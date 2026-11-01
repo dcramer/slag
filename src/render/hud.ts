@@ -5,6 +5,7 @@ import { POINTS } from '../game/scoring';
 import type { Role } from '../gen/props';
 import { deviceHints, deviceLabel } from '../input/input';
 import { MAX_PLAYERS, RUN_COUNTDOWN, TARGET_SCORE, VIEW_H, VIEW_W } from '../sim/constants';
+import { THEME_LABELS } from '../themes';
 import { drawCharacter } from './character';
 import { circle, glowDot, type RC, rrect } from './kit';
 import { drawPreview } from './props';
@@ -177,8 +178,8 @@ export class Hud {
     this.logo(VIEW_W / 2, 58, 64, t);
     this.text('build it · break it · beat it', VIEW_W / 2, 104, 10, '#f3d9c4', 'center', UI, 500);
     this.panel(VIEW_W / 2 - 170, 116, 340, 22, 11, 'rgba(255,170,90,0.35)');
-    this.text(`${m.level.theme.name}`, VIEW_W / 2 - 160, 127, 9, '#ffd9a8', 'left', UI, 700);
-    this.text(`${m.level.style} · seed ${seedToString(m.seed)}`, VIEW_W / 2 + 160, 127, 8, '#bba', 'right', UI, 500);
+    this.text(`${THEME_LABELS[m.level.theme.id].toUpperCase()} · ${m.level.theme.name}`, VIEW_W / 2 - 160, 127, 9, '#ffd9a8', 'left', UI, 700);
+    this.text(`seed ${seedToString(m.seed)}`, VIEW_W / 2 + 160, 127, 8, '#bba', 'right', UI, 500);
 
     const bw = 152;
     const bh = 186;
