@@ -8,6 +8,7 @@ import type { Level } from '../sim/level';
 import { canPlace, detonate, footprint, type PlacedProp } from '../sim/props';
 import { RunWorld } from '../sim/run';
 import { type GameEvent, type InputFrame, NO_INPUT } from '../sim/types';
+import type { ThemeId } from '../themes';
 import { type RoundResult, scoreRound } from './scoring';
 
 export type Phase = 'lobby' | 'pick' | 'place' | 'run' | 'score' | 'victory';
@@ -58,9 +59,13 @@ export class Match {
   private charRolls = 0;
   private pendingAdvance: number | undefined;
 
-  constructor(seed: number) {
+  /** When set, every generated level uses this theme (debug / future playlist option). */
+  themeOverride: ThemeId | undefined;
+
+  constructor(seed: number, theme?: ThemeId) {
     this.seed = seed >>> 0;
-    this.level = generateLevel(this.seed);
+    this.themeOverride = theme;
+    this.level = generateLevel(this.seed, theme);
   }
 
   drainEvents(): GameEvent[] {
@@ -115,9 +120,10 @@ export class Match {
     return generateCharacter(deriveSeed(this.seed, `char:${this.charRolls++}`));
   }
 
-  newLevel(seed: number) {
+  newLevel(seed: number, theme: ThemeId | undefined = this.themeOverride) {
     this.seed = seed >>> 0;
-    this.level = generateLevel(this.seed);
+    this.themeOverride = theme;
+    this.level = generateLevel(this.seed, theme);
     this.placed = [];
   }
 

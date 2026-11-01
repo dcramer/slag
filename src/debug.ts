@@ -3,12 +3,14 @@ import type { Match } from './game/match';
 import { ARCHETYPE_WEIGHTS, type Archetype, generateProp } from './gen/props';
 import type { Renderer } from './render/renderer';
 import { canPlace } from './sim/props';
+import type { ThemeId } from './themes';
 
 /**
  * Debug/automation API, exposed as `window.slagDebug` and driven by URL
  * params. Used by tools/shot.ts; handy in the browser console too.
  *
  *   ?seed=abc           level seed
+ *   ?theme=farm         force a theme (see src/themes.ts)
  *   ?players=2          auto-join N keyboard/pad players and start the match
  *   ?race=saw,laser     drop those archetypes in and jump straight to a race
  *   ?race=all           one of every archetype
@@ -23,8 +25,8 @@ export interface SlagDebug {
   addProps(kinds: Archetype[], seed?: number): number;
   /** Skip pick/place and start a race now. */
   race(kinds?: Archetype[], seed?: number): void;
-  /** Regenerate the level for a new seed and return to the lobby. */
-  loadLevel(seed: string | number): void;
+  /** Regenerate the level for a seed (optionally forcing a theme). */
+  loadLevel(seed: string | number, theme?: ThemeId): void;
   phase(): string;
   /** Freeze/unfreeze the real-time loop (for deterministic screenshots). */
   pause(on?: boolean): void;
@@ -71,8 +73,8 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
       api.addProps(kinds, seed);
       match.startRun();
     },
-    loadLevel(seed) {
-      match.newLevel(typeof seed === 'number' ? seed : parseSeed(seed));
+    loadLevel(seed, theme) {
+      match.newLevel(typeof seed === 'number' ? seed : parseSeed(seed), theme ?? match.themeOverride);
     },
     phase: () => match.phase,
     pause(on = true) {

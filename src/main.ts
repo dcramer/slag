@@ -4,6 +4,7 @@ import { Match } from './game/match';
 import { InputManager } from './input/input';
 import { Renderer } from './render/renderer';
 import { DT } from './sim/constants';
+import { THEME_IDS } from './themes';
 
 const glCanvas = document.getElementById('game') as HTMLCanvasElement;
 const hudCanvas = document.getElementById('hud') as HTMLCanvasElement;
@@ -11,7 +12,11 @@ glCanvas.focus();
 
 const params = new URLSearchParams(location.search);
 const seedParam = params.get('seed');
-const match = new Match(seedParam ? parseSeed(seedParam) : randomSeed());
+const themeParam = params.get('theme');
+const match = new Match(
+  seedParam ? parseSeed(seedParam) : randomSeed(),
+  THEME_IDS.find((t) => t === themeParam),
+);
 const input = new InputManager(window);
 const renderer = new Renderer(glCanvas, hudCanvas);
 

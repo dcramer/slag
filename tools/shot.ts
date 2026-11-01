@@ -9,6 +9,7 @@
  *   npm run shot -- props --count 24            → prop gallery (crate cards)
  *
  * Options: --out shots  --size 1280x720  --players 2  --frames N (sim frames to advance)
+ *          --theme farm (force a theme; `levels --themes all` renders one level per theme)
  * Software GL is slow; frames are advanced deterministically via slagDebug.step().
  */
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -25,6 +26,8 @@ const opt = (k: string, d?: string) => {
 const out = resolve(opt('out', 'shots')!);
 const [W, H] = opt('size', '1280x720')!.split('x').map(Number);
 const seed = opt('seed', 'demo');
+const theme = opt('theme');
+const tq = theme ? `&theme=${theme}` : '';
 const players = Number(opt('players', '2'));
 const frames = Number(opt('frames', '150'));
 mkdirSync(out, { recursive: true });
@@ -42,7 +45,7 @@ page.on('pageerror', (e: Error) => errors.push(String(e)));
 page.on('console', (m: { type(): string; text(): string }) => m.type() === 'error' && errors.push(m.text()));
 
 async function open(q: string) {
-  await page.goto(`${base}?${q}`);
+  await page.goto(`${base}?${q}${tq}`);
   await page.waitForFunction(() => 'slagDebug' in window, null, { timeout: 30_000 });
   await page.evaluate(() => document.fonts.ready);
   await page.evaluate(() => (window as any).slagDebug.pause(true));
@@ -110,14 +113,16 @@ try {
       break;
     }
     case 'levels': {
-      const seeds = opt('seeds')?.split(',') ?? Array.from({ length: Number(opt('count', '9')) }, (_, i) => `lv${i}`);
+      const themes = opt('themes') === 'all' ? ['farm', 'factory', 'castle', 'jungle', 'volcano', 'harbor', 'mine', 'rooftops'] : opt('themes')?.split(',');
+      const seeds = opt('seeds')?.split(',') ?? Array.from({ length: themes ? themes.length : Number(opt('count', '9')) }, (_, i) => `lv${i}`);
       const files: string[] = [];
       await open(`seed=${seeds[0]}`);
-      for (const s of seeds) {
-        await page.evaluate((x) => (window as any).slagDebug.loadLevel(x), s);
+      for (let i = 0; i < seeds.length; i++) {
+        const th = themes?.[i % themes.length] ?? theme;
+        await page.evaluate(([x, t]) => (window as any).slagDebug.loadLevel(x, t || undefined), [seeds[i], th ?? ''] as const);
         await page.evaluate(() => (window as any).slagDebug.match.join('kb1'));
         await step(90);
-        files.push(await snap(`level-${s}`));
+        files.push(await snap(`level-${th ? `${th}-` : ''}${seeds[i]}`));
       }
       await sheet('levels', files);
       break;
