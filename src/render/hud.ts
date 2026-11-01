@@ -181,56 +181,62 @@ export class Hud {
     this.text(`${THEME_LABELS[m.level.theme.id].toUpperCase()} · ${m.level.theme.name}`, VIEW_W / 2 - 160, 127, 9, '#ffd9a8', 'left', UI, 700);
     this.text(`seed ${seedToString(m.seed)}`, VIEW_W / 2 + 160, 127, 8, '#bba', 'right', UI, 500);
 
-    const bw = 152;
-    const bh = 186;
-    const gap = 16;
-    const x0 = (VIEW_W - (MAX_PLAYERS * bw + (MAX_PLAYERS - 1) * gap)) / 2;
-    for (let i = 0; i < MAX_PLAYERS; i++) {
-      const x = x0 + i * (bw + gap);
-      const y = 150;
-      const p = m.players.find((p) => p.slot === i);
+    // Up to MAX_PLAYERS (8) slots in a 4-wide grid: joined players + one "join" slot (min 4 shown).
+    const shown = Math.min(MAX_PLAYERS, Math.max(4, m.players.length + 1));
+    const cols = 4;
+    const bw = 172;
+    const bh = shown > 4 ? 96 : 150;
+    const gap = 10;
+    const x0 = (VIEW_W - (cols * bw + (cols - 1) * gap)) / 2;
+    for (let i = 0; i < shown; i++) {
+      const x = x0 + (i % cols) * (bw + gap);
+      const y = 146 + Math.floor(i / cols) * (bh + gap);
+      const p = m.players[i];
       const col = p ? p.character.body : { h: 0, s: 0, l: 40 };
       this.panel(x, y, bw, bh, 12, p?.ready ? css({ h: 120, s: 80, l: 55 }, 0, 0.9) : p ? css(col, 0, 0.5) : 'rgba(255,255,255,0.1)');
       if (!p) {
         const pulse = 0.5 + 0.5 * Math.sin(t * 3 + i);
-        this.text('PRESS TO JOIN', x + bw / 2, y + bh / 2 - 10, 11, `rgba(255,255,255,${0.35 + pulse * 0.4})`, 'center', DISPLAY, 400);
+        this.text('PRESS TO JOIN', x + bw / 2, y + bh / 2 - 8, 11, `rgba(255,255,255,${0.35 + pulse * 0.4})`, 'center', DISPLAY, 400);
         this.text('Space · Enter · Ⓐ', x + bw / 2, y + bh / 2 + 10, 8, '#777', 'center', UI, 500);
         continue;
       }
-      // Spotlight.
-      const sg = c.createRadialGradient(x + bw / 2, y + 80, 4, x + bw / 2, y + 80, 70);
+      // Character on the left with a spotlight, details on the right.
+      const cx = x + 44;
+      const feet = y + bh - 16;
+      const sg = c.createRadialGradient(cx, feet - 24, 4, cx, feet - 24, 52);
       sg.addColorStop(0, css(col, 10, 0.45));
       sg.addColorStop(1, css(col, 0, 0));
       c.fillStyle = sg;
       c.fillRect(x, y, bw, bh);
       c.fillStyle = 'rgba(0,0,0,0.35)';
       c.beginPath();
-      c.ellipse(x + bw / 2, y + 116, 26, 5, 0, 0, Math.PI * 2);
+      c.ellipse(cx, feet, 20, 4, 0, 0, Math.PI * 2);
       c.fill();
-      drawCharacter({ s: c, g: this.gctx }, p.character, x + bw / 2, y + 116, {
+      drawCharacter({ s: c, g: this.gctx }, p.character, cx, feet, {
         facing: Math.sin(t * 0.8 + i) > 0 ? 1 : -1,
         vx: 0,
         vy: 0,
         grounded: true,
         t,
-        scale: 3.6,
+        scale: bh > 100 ? 3.4 : 2.7,
         celebrate: p.ready,
       });
-      this.text(p.character.name, x + bw / 2, y + 134, 15, '#fff', 'center', DISPLAY, 400, 3);
-      this.text(deviceLabel(p.device), x + bw / 2, y + 150, 7.5, '#aaa', 'center', UI, 500);
+      const tx = x + 88;
+      const ty = y + bh / 2;
+      this.text(p.character.name, tx, ty - 22, 12, '#fff', 'left', DISPLAY, 400, 3);
+      this.text(`P${p.slot + 1} · ${deviceLabel(p.device)}`, tx, ty - 7, 7.5, '#aaa', 'left', UI, 500);
       const h = deviceHints(p.device);
-      const pillC = p.ready ? css({ h: 120, s: 70, l: 45 }) : 'rgba(255,255,255,0.1)';
-      c.fillStyle = pillC;
-      rrect(c, x + 22, y + 159, bw - 44, 15, 7.5);
+      c.fillStyle = p.ready ? css({ h: 120, s: 70, l: 45 }) : 'rgba(255,255,255,0.1)';
+      rrect(c, tx, ty + 3, bw - 96, 14, 7);
       c.fill();
-      this.text(p.ready ? 'READY!' : `${h.confirm} — ready up`, x + bw / 2, y + 166.5, 8.5, '#fff', 'center', UI, 700);
-      this.text(`${h.alt}: new look`, x + bw / 2, y + 181, 7, '#888', 'center', UI, 500);
+      this.text(p.ready ? 'READY!' : `${h.confirm}: ready`, tx + (bw - 96) / 2, ty + 10, 7.5, '#fff', 'center', UI, 700);
+      this.text(`${h.alt}: new look`, tx, ty + 26, 6.5, '#888', 'left', UI, 500);
     }
-    this.text(`S / ↓ new level   ·   first to ${TARGET_SCORE} wins`, VIEW_W / 2, 356, 9, '#ddd', 'center', UI, 600);
+    this.text(`S / ↓ new level   ·   first to ${TARGET_SCORE} wins`, VIEW_W / 2, 366, 9, '#ddd', 'center', UI, 600);
     this.text(
       `finish +${POINTS.finish} · first +${POINTS.first} · trap kill +${POINTS.trap} · if everyone finishes, nobody scores`,
       VIEW_W / 2,
-      372,
+      381,
       8,
       '#999',
       'center',
@@ -359,10 +365,14 @@ export class Hud {
     this.text(String(secs), VIEW_W / 2, 17.5, 15, urgent ? css({ h: 0, s: 100, l: 65 + Math.sin(t * 12) * 10 }) : '#fff', 'center', DISPLAY, 400);
     m.players.forEach((p, i) => {
       const r = run.runners.find((r) => r.slot === p.slot);
-      const x = 8 + i * 96;
+      // Up to 4 chips per row so 8 players fit left of the timer.
+      const x = 8 + (i % 4) * 87;
+      const cy = 6 + Math.floor(i / 4) * 25;
+      c.save();
+      c.translate(0, cy - 6);
       const dead = r && !r.alive;
       const done = r?.finished;
-      this.panel(x, 6, 90, 22, 11, done ? 'rgba(160,240,60,0.8)' : dead ? 'rgba(255,80,80,0.6)' : css(p.character.body, 0, 0.5), 0.6);
+      this.panel(x, 6, 84, 22, 11, done ? 'rgba(160,240,60,0.8)' : dead ? 'rgba(255,80,80,0.6)' : css(p.character.body, 0, 0.5), 0.6);
       c.globalAlpha = dead ? 0.4 : 1;
       drawCharacter({ s: c, g: null }, p.character, x + 12, 25, { facing: 1, vx: 0, vy: 0, grounded: true, t, scale: 1.05, celebrate: done });
       c.globalAlpha = 1;
@@ -375,6 +385,7 @@ export class Hud {
             : 'splat'
           : `${p.score} pts`;
       this.text(status, x + 24, 22, 6.5, done ? '#b7f56a' : dead ? '#ff8a8a' : '#bbb', 'left', UI, 600);
+      c.restore();
     });
     this.text('alt: self-destruct', VIEW_W - 8, VIEW_H - 8, 6.5, 'rgba(255,255,255,0.45)', 'right', UI, 500);
   }
@@ -391,8 +402,13 @@ export class Hud {
     const anim = Math.min(1, Math.max(0, (m.phaseFrame - 20) / 60));
     const barX = 220;
     const barW = 400;
-    const rowH = 50;
-    const y0 = 104;
+    // Compact rows when more than 4 players so 8 fit on screen.
+    const compact = m.players.length > 4;
+    const rowH = compact ? 36 : 50;
+    const L = compact
+      ? { feet: 31, scale: 1.55, name: 7, nameSize: 9, bar: 13, barH: 10, award: 26, awardH: 8 }
+      : { feet: 34, scale: 2.2, name: 10, nameSize: 11, bar: 20, barH: 14, award: 37, awardH: 10 };
+    const y0 = compact ? 100 : 104;
     this.panel(130, y0 - 10, 540, m.players.length * rowH + 20, 14);
     // Finish line marker.
     c.fillStyle = 'rgba(255,210,63,0.5)';
@@ -400,37 +416,37 @@ export class Hud {
     this.text(`${TARGET_SCORE}`, barX + barW, y0 - 4, 7, '#ffd23f', 'center', UI, 700);
     m.players.forEach((p, i) => {
       const y = y0 + i * rowH;
-      drawCharacter({ s: c, g: this.gctx }, p.character, 164, y + 34, {
+      drawCharacter({ s: c, g: this.gctx }, p.character, 164, y + L.feet, {
         facing: 1,
         vx: 0,
         vy: 0,
         grounded: true,
         t,
-        scale: 2.2,
+        scale: L.scale,
         celebrate: res.finishers.includes(p.slot),
       });
-      this.text(p.character.name, barX, y + 10, 11, '#fff', 'left', DISPLAY, 400);
+      this.text(p.character.name, barX, y + L.name, L.nameSize, '#fff', 'left', DISPLAY, 400);
       const prev = m.prevScores.get(p.slot) ?? 0;
       const shown = prev + (p.score - prev) * anim;
       c.fillStyle = 'rgba(255,255,255,0.07)';
-      rrect(c, barX, y + 20, barW, 14, 7);
+      rrect(c, barX, y + L.bar, barW, L.barH, L.barH / 2);
       c.fill();
       const wPrev = (barW * Math.min(prev, TARGET_SCORE)) / TARGET_SCORE;
       const wNow = (barW * Math.min(shown, TARGET_SCORE)) / TARGET_SCORE;
       if (wNow > 0) {
-        const bg = c.createLinearGradient(0, y + 20, 0, y + 34);
+        const bg = c.createLinearGradient(0, y + L.bar, 0, y + L.bar + L.barH);
         bg.addColorStop(0, css(p.character.body, 15));
         bg.addColorStop(1, css(p.character.body, -15));
         c.fillStyle = bg;
-        rrect(c, barX, y + 20, Math.max(14, wNow), 14, 7);
+        rrect(c, barX, y + L.bar, Math.max(L.barH, wNow), L.barH, L.barH / 2);
         c.fill();
         if (wNow > wPrev + 1) {
-          glowDot(this.gctx, barX + wNow, y + 27, 16, p.character.body, 0.6);
+          glowDot(this.gctx, barX + wNow, y + L.bar + L.barH / 2, 16, p.character.body, 0.6);
           c.fillStyle = 'rgba(255,255,255,0.35)';
-          c.fillRect(barX + wPrev, y + 21, wNow - wPrev, 3);
+          c.fillRect(barX + wPrev, y + L.bar + 1, wNow - wPrev, 3);
         }
       }
-      this.text(String(Math.round(shown)), barX + barW + 22, y + 27, 13, '#fff', 'center', DISPLAY, 400);
+      this.text(String(Math.round(shown)), barX + barW + 22, y + L.bar + L.barH / 2, compact ? 11 : 13, '#fff', 'center', DISPLAY, 400);
       const awards = res.awards.filter((a) => a.slot === p.slot);
       let ax = barX;
       for (const a of awards) {
@@ -439,9 +455,9 @@ export class Hud {
         const w = c.measureText(label).width + 10;
         const col: HSL = a.reason === 'trap' ? { h: 355, s: 80, l: 55 } : a.reason === 'first' ? { h: 45, s: 100, l: 50 } : { h: 130, s: 65, l: 45 };
         c.fillStyle = css(col, 0, Math.min(1, anim * 2));
-        rrect(c, ax, y + 37, w, 10, 5);
+        rrect(c, ax, y + L.award, w, L.awardH, L.awardH / 2);
         c.fill();
-        this.text(label, ax + w / 2, y + 42.3, 7, '#fff', 'center', UI, 700);
+        this.text(label, ax + w / 2, y + L.award + L.awardH / 2 + 0.3, compact ? 6 : 7, '#fff', 'center', UI, 700);
         ax += w + 4;
       }
     });

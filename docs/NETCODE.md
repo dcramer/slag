@@ -6,12 +6,12 @@ Status: **planned**. Local multiplayer ships first. This document is the contrac
 
 - Hosting is **Vercel**: a static Vite build plus, optionally, serverless functions. There are no long-lived servers or WebSockets on Vercel.
 - Running costs should be about $0. No dedicated game servers.
-- The game is 1–4 players, fast precision platforming, and short rounds.
+- The game is 1–8 players, fast precision platforming, and short rounds.
 
 ## Topology: shareable room link, peer-to-peer
 
 1. The host picks **Online → Create room**. The client generates a room code (for example `K7QX`, base32, 4–6 characters) and shows `https://<app>/r/K7QX`. `vercel.json` rewrites `/r/*` to `index.html`.
-2. Guests open the link and join the room over WebRTC data channels. The connection is a star: every guest connects to the host. That's simpler than a full mesh, and with four players it costs the same.
+2. Guests open the link and join the room over WebRTC data channels. The connection is a star: every guest connects to the host. That's simpler than a full mesh, and with up to eight players the host's upload is still tiny because only inputs are sent.
 3. **The host is authoritative for meta-state**: joins and leaves, the seed, phase changes, picks and placements, and scoring decisions. Every peer runs the same deterministic sim.
 
 ### Signaling (finding peers)

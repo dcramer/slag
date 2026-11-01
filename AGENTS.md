@@ -10,7 +10,7 @@ slag is a browser-based competitive party platformer in the genre of party trap-
 2. **Place**: they place the props in the level.
 3. **Run**: everyone races to the flag.
 
-Scoring rewards levels that are hard but not impossible. If everyone finishes, nobody scores. If nobody finishes, nobody scores.
+Matches have 1–8 players (`MAX_PLAYERS`). Scoring rewards levels that are hard but not impossible. If everyone finishes, nobody scores. If nobody finishes, nobody scores.
 
 The differentiator is **procedural generation everywhere**:
 

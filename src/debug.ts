@@ -19,7 +19,7 @@ import type { ThemeId } from './themes';
 export interface SlagDebug {
   match: Match;
   renderer: Renderer;
-  /** Join N players (kb1, kb2, pad0, pad1) and start round 1. */
+  /** Join N players (kb1, kb2, pad0…pad5) and start round 1. */
   quickStart(players?: number): void;
   /** Place one prop of each archetype at deterministic legal spots (owner = player 1). */
   addProps(kinds: Archetype[], seed?: number): number;
@@ -40,7 +40,7 @@ export interface LoopControl {
   paused: boolean;
 }
 
-const DEVICES = ['kb1', 'kb2', 'pad0', 'pad1'];
+const DEVICES = ['kb1', 'kb2', 'pad0', 'pad1', 'pad2', 'pad3', 'pad4', 'pad5'];
 
 export function installDebug(match: Match, renderer: Renderer, loop: LoopControl): SlagDebug {
   let uid = 5000;

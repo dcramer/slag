@@ -34,7 +34,7 @@ export const PHYS = {
 /** Sinking this far into the pool at the bottom kills. */
 export const KILL_Y = LEVEL_H * TILE - 2;
 
-export const MAX_PLAYERS = 4;
+export const MAX_PLAYERS = 8;
 export const TARGET_SCORE = 50;
 export const RUN_TIME_LIMIT = FPS * 45;
 export const RUN_COUNTDOWN = FPS; // frozen frames before GO

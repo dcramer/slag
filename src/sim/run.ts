@@ -80,7 +80,8 @@ export class RunWorld {
     const n = slots.length;
     this.runners = slots.map((slot, i) => ({
       slot,
-      body: bodyAtCell(level.spawn.tx, level.spawn.ty, (i - (n - 1) / 2) * (PLAYER_W * 0.7)),
+      // Fan players out over the spawn pad; tighter spacing for big lobbies.
+      body: bodyAtCell(level.spawn.tx, level.spawn.ty, (i - (n - 1) / 2) * Math.min(PLAYER_W * 0.7, 40 / Math.max(1, n - 1))),
       alive: true,
       finished: false,
       finishFrame: -1,

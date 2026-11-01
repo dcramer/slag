@@ -176,20 +176,24 @@ export class Match {
     this.run = null;
     const count = Math.max(3, this.players.length + 2);
     const defs = generateCrate(this.seed, this.round, count);
+    // Cards in rows of up to 5 (8 players → 10 cards → 2 rows).
+    const perRow = Math.min(count, 5);
+    const rows = Math.ceil(count / perRow);
     const cw = 112;
-    const ch = 128;
-    const gap = 12;
-    const total = count * cw + (count - 1) * gap;
-    this.crate = defs.map((def, i) => ({
-      def,
-      claimedBy: -1,
-      rect: { x: (VIEW_W - total) / 2 + i * (cw + gap), y: VIEW_H / 2 - ch / 2 + 20, w: cw, h: ch },
-    }));
+    const ch = rows > 1 ? 120 : 128;
+    const gap = rows > 1 ? 10 : 12;
+    const top = rows > 1 ? 96 : VIEW_H / 2 - ch / 2 + 20;
+    this.crate = defs.map((def, i) => {
+      const row = Math.floor(i / perRow);
+      const inRow = Math.min(perRow, count - row * perRow);
+      const total = inRow * cw + (inRow - 1) * gap;
+      return { def, claimedBy: -1, rect: { x: (VIEW_W - total) / 2 + (i % perRow) * (cw + gap), y: top + row * (ch + gap), w: cw, h: ch } };
+    });
     this.players.forEach((p, i) => {
       p.claim = -1;
       p.placed = false;
       p.rot = 0;
-      p.cursor = { x: VIEW_W * ((i + 1) / (this.players.length + 1)), y: VIEW_H - 70 };
+      p.cursor = { x: VIEW_W * ((i + 1) / (this.players.length + 1)), y: VIEW_H - 40 };
     });
     this.setPhase('pick');
   }
