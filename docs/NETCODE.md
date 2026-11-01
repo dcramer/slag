@@ -20,7 +20,6 @@ WebRTC needs a way to exchange connection details (SDP offers and answers). The 
 
 1. **Trystero** (npm `trystero`). Serverless signaling over public Nostr relays, MQTT, or BitTorrent trackers. Zero backend and zero cost. The risk is relying on third-party public infrastructure.
 2. **A first-party fallback**: a Vercel function at `api/signal.ts` backed by Upstash Redis on the free tier. Peers POST their offers and answers under `room:<code>` with a 60 s TTL and poll every 500 ms during the handshake. This is a few dozen lines of code.
-3. An optional public room list. This is the same Redis setup with a `rooms` sorted set kept alive by heartbeats every 15 s, where entries expire automatically. It's only needed if we want a "browse games" screen. Shared links cover the main use case.
 
 ### NAT traversal
 
@@ -54,4 +53,6 @@ The sim is a pure function of `(seed, per-frame inputs)`, so peers only exchange
 3. A transport interface (`src/net/transport.ts`) with a Trystero implementation and an in-memory loopback for tests.
 4. Lockstep and rollback session (`src/net/session.ts`), plus a headless two-peer test over loopback with injected latency and loss.
 5. UI: the Online menu, room creation and join through `/r/<code>`, a ping display, and a "reconnecting…" state.
-6. Optional extras: `api/signal.ts` (Upstash) as a fallback, `api/turn.ts`, and the public room list.
+6. Optional extras: `api/signal.ts` (Upstash) as a fallback and `api/turn.ts`.
+
+Out of scope for now: matchmaking, public room lists, and lobbies. Players join only through shared links.
