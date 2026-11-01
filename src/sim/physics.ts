@@ -8,9 +8,11 @@ export interface Surface {
   conveyor: number;
   speedMult: number;
   jumpMult: number;
+  /** Restitution when landing hard (jelly). */
+  bounce: number;
 }
 
-export const DEFAULT_SURFACE: Surface = { friction: 1, conveyor: 0, speedMult: 1, jumpMult: 1 };
+export const DEFAULT_SURFACE: Surface = { friction: 1, conveyor: 0, speedMult: 1, jumpMult: 1, bounce: 0 };
 
 export interface Solid extends Rect {
   /** Stable across frames so a standing body can be carried by it. Tiles use TILE_SOLID_ID. */
@@ -244,7 +246,12 @@ export function stepBody(b: Body, c: Controls, world: CollisionWorld): boolean {
   // Integrate.
   if (moveX(b, b.vx * DT, world)) b.vx = 0;
   const hitY = moveY(b, b.vy * DT, world);
-  if (hitY && b.vy > 0) {
+  if (hitY && b.vy > 0 && hitY.surface.bounce > 0 && b.vy > 140) {
+    b.vy = -b.vy * hitY.surface.bounce;
+    b.onGround = false;
+    b.groundRef = -1;
+    b.jumping = false;
+  } else if (hitY && b.vy > 0) {
     b.onGround = true;
     b.groundRef = hitY.id;
     b.surface = hitY.surface;

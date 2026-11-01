@@ -34,9 +34,27 @@ npm run build      # static bundle in dist/, deployable anywhere
 
 Everything is derived from a 32-bit seed with a deterministic PRNG (`src/core/rng.ts`). Sim code never calls `Math.random`.
 
-- **Levels** (`src/gen/level.ts`): a critical path of platforms marches from a spawn on the left to a goal on the right. Then one of four style passes (islands, caverns, ruins, towers) adds decoration, avoiding a keep-clear mask over walkways and jump arcs. Every candidate is then **verified with the real player controller** (`src/sim/reach.ts`). Ghost players run scripted jumps from every standable cell, and a BFS over the landings must reach the goal. If a candidate fails, generation retries with a new sub-seed. In practice it averages about 1.05 attempts and about 15 ms per level. The theme (palette, skyline, name) comes from the seed too.
-- **Props** (`src/gen/props.ts`): there are nine archetypes: block (stone, ice, conveyor, or sticky), spikes, crumble, moving platform, saw, spring, turret, fan, and bomb. Each one rolls its own parameters: polyomino shapes, speeds, ranges, radii, fire rates. Names come from the rolled parameters, so a big saw might be called a "Mega Buzzsaw" from "Quoxglenk Works". Every crate is guaranteed at least one building piece and one hazard.
-- **Characters** (`src/gen/character.ts`): body shape, palette, eyes, mouth, topper, pattern, and name are all generated. They are **cosmetic only**. Every character shares one hitbox and one physics model, so the game stays fair.
+- **Levels** (`src/gen/level.ts`): a critical path of platforms marches from a spawn on the left to a goal on the right. Then one of four style passes (islands, caverns, ruins, towers) adds decoration, avoiding a keep-clear mask over walkways and jump arcs. Every candidate is then **verified with the real player controller** (`src/sim/reach.ts`). Ghost players run scripted jumps from every standable cell, and a BFS over the landings must reach the goal. If a candidate fails, generation retries with a new sub-seed. In practice it averages about 1.05 attempts and about 15 ms per level. The theme comes from the seed too: mood (day, dusk, night, infernal, or toxic), sky, sun, moon, planet, or eclipse, skyline layers, terrain material, the liquid pool at the bottom, ambient particles, decor, and color grade.
+- **Props** (`src/gen/props.ts`): props are assembled from **modules** by archetype recipes, and every parameter is rolled.
+  - **Modules**: bodies (stone, metal, wood, ice, conveyor, goo, bouncy jelly, crumble), spike strips, swinging heads (saws, maces, axes on rods or chains; static, orbiting, or pendulum), launchers, flamethrowers, lasers (fixed or sweeping), tesla gates, crushers, springs, and fans. Whole props can also ride a rail or a loop.
+  - **Launchers**: crossbow, ballista, cannon, fire totem, plasma turret, and star thrower. They fire bolts, arrows, cannonballs, fireballs, plasma, or shuriken. Aim can be fixed, sweeping, or tracking. Tracking launchers solve a ballistic arc when their ammo has gravity.
+  - **Styling and names**: each prop also rolls cosmetic styling (metal type, trim, glow color). Names come from the rolled stats, so you get things like "Paranoid Arbalest", "Twin Orbit Saw", or "Hiccuping Dragon Vent Mk II".
+  - **Crates**: every crate has at least one building piece and one hazard.
+- **Characters** (`src/gen/character.ts`): body shape, palette, eyes (some glow in the dark), mouth, topper, pattern, a physics-driven scarf, tail, or cape, and the name are all generated. They are **cosmetic only**. Every character shares one hitbox and one physics model, so the game stays fair.
+
+## Rendering
+
+Canvas2D paints three world-space layers through a smoothed, zooming camera:
+
+- **albedo**: sky, parallax skylines, terrain, props, and characters
+- **emissive**: fire, lasers, crystals, sparks, and windows
+- **light map**: ambient light plus about 100 dynamic point lights
+
+A WebGL2 compositor (`src/render/post.ts`) multiplies the albedo by the light map and adds the emissive layer. It then applies two-level bloom, ACES tonemapping, a per-theme color grade, vignette, chromatic aberration (it pulses on deaths and explosions), and film grain. If WebGL2 isn't available, it falls back to plain Canvas2D blending. The HUD is drawn on its own 2D canvas.
+
+Terrain uses a procedurally generated, tileable material texture (rock strata, bricks, riveted metal panels, crystal veins, roots, or sand). It's baked through a rounded-corner mask with an outline, depth shading, rim light, caps (grass, moss, snow, rust, or crystal), and a blurred drop shadow. Grass sways and parts around players. Gibs paint splat decals onto the terrain.
+
+For a debug showcase, run `slagShowcase(['saw','launcher','laser','tesla'])` in the console during the pick phase. It drops those archetypes into the level.
 
 ## Architecture
 
@@ -47,7 +65,7 @@ src/
   sim/      deterministic simulation: physics, level, prop runtime, run world, reachability
   game/     match state machine (lobby → pick → place → run → score → victory), scoring
   input/    keyboard + gamepad → per-device InputFrame
-  render/   Canvas2D renderer (reads sim state; owns only particles & caches)
+  render/   Canvas2D layers + WebGL2 post (reads sim state; owns only particles, rigs & caches)
   main.ts   fixed 60 Hz timestep loop
 ```
 

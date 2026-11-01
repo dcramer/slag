@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { generateCharacter } from '../src/gen/character';
-import { generateCrate, generateProp, polyomino, type PropKind } from '../src/gen/props';
+import { ARCHETYPE_WEIGHTS, generateCrate, generateProp, polyomino } from '../src/gen/props';
 import { Rng } from '../src/core/rng';
 import { footprint } from '../src/sim/props';
 
@@ -35,19 +35,31 @@ describe('props', () => {
     for (let r = 1; r < 30; r++) {
       const a = generateCrate(99, r, 5);
       expect(a).toEqual(generateCrate(99, r, 5));
-      const kinds = a.map((d) => d.kind);
-      expect(kinds.some((k) => ['block', 'mover', 'spring', 'crumble'].includes(k))).toBe(true);
-      expect(kinds.some((k) => ['spikes', 'saw', 'turret'].includes(k))).toBe(true);
+      const kinds = a.map((d) => d.archetype);
+      expect(kinds.some((k) => ['platform', 'crumble', 'spring'].includes(k))).toBe(true);
+      expect(kinds.some((k) => ['spikeblock', 'saw', 'flail', 'launcher', 'flamer', 'laser', 'tesla', 'crusher'].includes(k))).toBe(true);
     }
   });
 
-  it('every kind generates with a name and a rotatable footprint', () => {
-    const kinds: PropKind[] = ['block', 'spikes', 'crumble', 'mover', 'saw', 'spring', 'turret', 'fan', 'bomb'];
-    for (const k of kinds) {
-      const d = generateProp(new Rng(1), k, 'x');
-      expect(d.kind).toBe(k);
-      expect(d.name.length).toBeGreaterThan(2);
-      for (let rot = 0; rot < 4; rot++) expect(footprint(d, rot).length).toBeGreaterThan(0);
+  it('every archetype generates varied, well-formed props', () => {
+    for (const [k] of ARCHETYPE_WEIGHTS) {
+      const names = new Set<string>();
+      for (let i = 0; i < 40; i++) {
+        const d = generateProp(new Rng(i * 31 + k.length), k, 'x');
+        names.add(d.name);
+        expect(d.archetype).toBe(k);
+        expect(d.modules.length).toBeGreaterThan(0);
+        expect(d.footprint.length).toBeGreaterThan(0);
+        expect(Math.min(...d.footprint.map((c) => c[0]))).toBe(0);
+        expect(Math.min(...d.footprint.map((c) => c[1]))).toBe(0);
+        for (let rot = 0; rot < 4; rot++) {
+          const fp = footprint(d, rot);
+          expect(fp.length).toBe(d.footprint.length);
+          expect(Math.min(...fp.map((c) => c[0]))).toBe(0);
+          expect(Math.min(...fp.map((c) => c[1]))).toBe(0);
+        }
+      }
+      expect(names.size).toBeGreaterThan(8);
     }
   });
 });

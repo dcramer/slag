@@ -31,8 +31,8 @@ export const PHYS = {
   wallJumpLockFrames: 9,
 } as const;
 
-/** Falling this far below the level kills. */
-export const KILL_Y = LEVEL_H * TILE + 32;
+/** Sinking this far into the pool at the bottom kills. */
+export const KILL_Y = LEVEL_H * TILE - 2;
 
 export const MAX_PLAYERS = 4;
 export const TARGET_SCORE = 50;

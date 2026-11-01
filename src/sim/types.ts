@@ -25,10 +25,11 @@ export const NO_INPUT: InputFrame = Object.freeze({
 
 /** Things that happened this frame, for audio/fx. Never read back by the sim. */
 export type GameEvent =
-  | { type: 'death'; slot: number; x: number; y: number; cause: string }
+  | { type: 'death'; slot: number; x: number; y: number; cause: string; vx: number; vy: number }
   | { type: 'finish'; slot: number; place: number; x: number; y: number }
   | { type: 'spring'; x: number; y: number }
-  | { type: 'pop'; x: number; y: number }
+  | { type: 'pop'; x: number; y: number; ammo: string }
+  | { type: 'fire'; x: number; y: number; angle: number; style: string }
   | { type: 'crumble-start'; uid: number }
   | { type: 'crumble-break'; uid: number }
   | { type: 'explosion'; x: number; y: number; r: number }

@@ -1,538 +1,442 @@
-import { hash2, seedToString } from '../core/rng';
-import { Match } from '../game/match';
-import { POINTS } from '../game/scoring';
-import type { Theme } from '../gen/theme';
-import { deviceHints, deviceLabel } from '../input/input';
-import { MAX_PLAYERS, RUN_COUNTDOWN, TARGET_SCORE, TILE, VIEW_H, VIEW_W } from '../sim/constants';
+import { css, shift, toRgb, type HSL } from '../core/color';
+import type { Match } from '../game/match';
+import { TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import { tileAt, type Level } from '../sim/level';
-import { footprint } from '../sim/props';
+import { canPlace, footprint, resolveProp } from '../sim/props';
 import type { GameEvent } from '../sim/types';
-import { drawCharacter, roundRect } from './character';
-import { drawProp, drawPropPreview } from './props';
+import { Backdrop } from './background';
+import { Camera } from './camera';
+import { drawAccessory, drawCharacter, Rig } from './character';
+import { Fx } from './fx';
+import { Hud } from './hud';
+import { circle, glowDot, light, type Light, type RC } from './kit';
+import { createCompositor, type Compositor } from './post';
+import { drawProjectile, drawResolved, type Emit } from './props';
+import { TerrainPainter } from './terrain';
 
-interface Particle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  life: number;
-  max: number;
-  color: string;
-  size: number;
-  g: number;
-}
+const MAX_W = 1920;
 
-const FONT = '600 {s}px ui-monospace, "SF Mono", Menlo, Consolas, monospace';
-const font = (s: number) => FONT.replace('{s}', String(s));
-
-/** Canvas2D renderer. Reads match state; owns only cosmetic state (particles, caches). */
+/**
+ * Orchestrates a frame: Canvas2D paints albedo/emissive/light layers in
+ * world space through a smoothed camera, the WebGL compositor lights and
+ * post-processes them, and a separate 2D canvas carries the HUD.
+ */
 export class Renderer {
-  private ctx: CanvasRenderingContext2D;
-  private scale = 1;
-  private dpr = 1;
-  private ox = 0;
-  private oy = 0;
-  private tileCache: { canvas: HTMLCanvasElement; key: string } | null = null;
-  private particles: Particle[] = [];
-  private shake = 0;
+  private scene = document.createElement('canvas');
+  private glow = document.createElement('canvas');
+  private lightC = document.createElement('canvas');
+  private sctx = this.scene.getContext('2d')!;
+  private gctx = this.glow.getContext('2d')!;
+  private lctx = this.lightC.getContext('2d')!;
+  private comp: Compositor;
+  private hud: Hud;
+  private cam = new Camera();
+  private backdrop = new Backdrop();
+  private terrain = new TerrainPainter();
+  private fx = new Fx();
+  private rigs = new Map<number, Rig>();
+  private pw = 2;
+  private ph = 2;
+  private last = 0;
+  private aberr = 0;
+  private flash = 0;
+  private lobbyDrift = 0;
 
-  constructor(private canvas: HTMLCanvasElement) {
-    this.ctx = canvas.getContext('2d')!;
+  constructor(
+    private glCanvas: HTMLCanvasElement,
+    private hudCanvas: HTMLCanvasElement,
+  ) {
+    this.comp = createCompositor(glCanvas);
+    this.hud = new Hud(hudCanvas.getContext('2d')!);
+    this.fx.onSplat = (x, y, r, c) => this.terrain.splat(x, y, r, c);
     this.resize();
     window.addEventListener('resize', () => this.resize());
   }
 
   resize() {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    this.dpr = window.devicePixelRatio || 1;
-    this.scale = Math.min(w / VIEW_W, h / VIEW_H);
-    this.canvas.width = Math.round(w * this.dpr);
-    this.canvas.height = Math.round(h * this.dpr);
-    this.ox = (w - VIEW_W * this.scale) / 2;
-    this.oy = (h - VIEW_H * this.scale) / 2;
-    this.tileCache = null;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const dpr = window.devicePixelRatio || 1;
+    const scale = Math.min(vw / VIEW_W, vh / VIEW_H);
+    const cssW = VIEW_W * scale;
+    const cssH = VIEW_H * scale;
+    for (const c of [this.glCanvas, this.hudCanvas]) {
+      c.style.position = 'absolute';
+      c.style.left = `${(vw - cssW) / 2}px`;
+      c.style.top = `${(vh - cssH) / 2}px`;
+      c.style.width = `${cssW}px`;
+      c.style.height = `${cssH}px`;
+    }
+    this.pw = Math.max(2, Math.round(Math.min(MAX_W, cssW * dpr)));
+    this.ph = Math.round((this.pw * VIEW_H) / VIEW_W);
+    for (const c of [this.scene, this.glow, this.glCanvas, this.hudCanvas]) {
+      c.width = this.pw;
+      c.height = this.ph;
+    }
+    this.lightC.width = Math.max(2, this.pw >> 1);
+    this.lightC.height = Math.max(2, this.ph >> 1);
+    this.comp.resize(this.pw, this.ph);
+    this.hud.resize(this.pw, this.ph);
   }
 
   render(m: Match, now: number) {
-    const ctx = this.ctx;
     const t = now / 1000;
-    this.consume(m, m.drainEvents());
-
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.fillStyle = '#0b0b10';
-    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    const k = this.scale * this.dpr;
-    const sx = this.shake > 0 ? (Math.random() - 0.5) * this.shake : 0;
-    const sy = this.shake > 0 ? (Math.random() - 0.5) * this.shake : 0;
-    this.shake *= 0.85;
-    if (this.shake < 0.2) this.shake = 0;
-    ctx.setTransform(k, 0, 0, k, (this.ox + sx) * this.dpr, (this.oy + sy) * this.dpr);
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(0, 0, VIEW_W, VIEW_H);
-    ctx.clip();
-
+    const dt = Math.min(0.05, this.last ? t - this.last : 1 / 60);
+    this.last = t;
     const level = m.level;
-    this.drawBackground(level.theme, t);
-    this.drawTiles(level);
-    this.drawMarkers(level, t);
+    const kb = Math.min(4, (this.pw / VIEW_W) * 1.45);
+    this.terrain.ensure(level, kb);
+    const emit: Emit = (kind, x, y, vx, vy, color) => this.fx.add(kind, x, y, vx, vy, color ?? { h: 40, s: 100, l: 70 }, kind === 'spark' ? 1 : kind === 'smoke' ? 2 : 1.2, kind === 'smoke' ? 1.2 : kind === 'spark' ? 0.35 : 0.8);
+    this.consume(m, m.drainEvents());
+    this.fx.update(dt, level);
+    this.updateCamera(m, dt);
 
-    const run = m.run;
-    const pf = run ? run.frame : m.frame;
-    for (const pp of m.placed) {
-      const st = run?.propState.get(pp.uid);
-      drawProp(ctx, level, pp, pf, {
-        broken: run ? run.isBroken(pp.uid) : false,
-        shake: st && st.triggerFrame >= 0 && pp.def.kind === 'crumble' ? (pf - st.triggerFrame) / pp.def.breakFrames : 0,
-        sinceFire: st ? pf - st.lastFire : undefined,
-      }, m.phase !== 'run');
+    const s = this.sctx;
+    const g = this.gctx;
+    const lights: Light[] = [];
+    const frame = m.run && m.phase === 'run' ? m.run.frame : m.frame;
+    const rc: RC = { s, g, lights, t, frame };
+
+    // --- background (screen space, parallax from camera)
+    const sk = this.pw / VIEW_W;
+    s.setTransform(sk, 0, 0, sk, 0, 0);
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, this.pw, this.ph);
+    g.globalCompositeOperation = 'lighter';
+    g.setTransform(sk, 0, 0, sk, 0, 0);
+    // Zoom the backdrop a little with the camera so parallax feels physical.
+    const bz = 1 + (this.cam.zoom - 1) * 0.35;
+    for (const c of [s, g]) {
+      c.translate(VIEW_W / 2, VIEW_H / 2);
+      c.scale(bz, bz);
+      c.translate(-VIEW_W / 2, -VIEW_H / 2);
+    }
+    this.backdrop.draw(rc, level.theme, this.cam, Math.min(2.5, sk * 1.2));
+
+    // --- world
+    this.cam.apply(s, this.pw);
+    this.cam.apply(g, this.pw);
+    this.terrain.drawShadow(rc);
+    this.terrain.draw(rc);
+    const pushers = m.run ? m.run.runners.filter((r) => r.alive).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h })) : [];
+    this.terrain.drawLive(rc, level, pushers);
+    this.drawMarkers(rc, level);
+
+    const run = m.phase === 'run' ? m.run : null;
+    const resolved = run ? run.resolved : m.placed.map(resolveProp);
+    for (const r of resolved) {
+      drawResolved(rc, r, { level, state: run?.propState.get(r.pp.uid), broken: run ? run.isBroken(r.pp.uid) : false, showPath: m.phase !== 'run', emit: run ? emit : undefined });
     }
 
-    if (run && m.phase === 'run') {
-      for (const p of run.projectiles) {
-        ctx.fillStyle = '#ffde59';
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = 'rgba(255,120,40,0.5)';
-        ctx.beginPath();
-        ctx.arc(p.x - p.vx * 0.02, p.y - p.vy * 0.02, 2, 0, Math.PI * 2);
-        ctx.fill();
-      }
+    if (m.phase === 'place') this.drawGhosts(rc, m);
+    if (m.phase === 'lobby' || m.phase === 'pick' || m.phase === 'place') this.drawIdlers(rc, m, dt);
+
+    if (run) {
+      for (const p of run.projectiles) drawProjectile(rc, p, emit);
       for (const r of run.runners) {
         if (!r.alive) continue;
         const pl = m.player(r.slot);
         if (!pl) continue;
-        const b = r.body;
-        drawCharacter(ctx, pl.character, b.x + b.w / 2, b.y + b.h, { facing: b.facing, vx: b.vx, vy: b.vy, grounded: b.onGround, t, celebrate: r.finished });
+        this.drawRunner(rc, level, pl.character, r.slot, r.body.x + r.body.w / 2, r.body.y + r.body.h, r.body.vx, r.body.vy, r.body.onGround, r.body.facing, r.finished, dt);
       }
     }
+    this.fx.draw(rc);
+    this.backdrop.drawLiquid(rc, level.theme);
+    this.backdrop.drawMotes(rc, level.theme, dt);
+    g.globalCompositeOperation = 'source-over';
 
-    this.drawParticles();
+    // --- light map
+    this.paintLights(level, lights);
 
-    switch (m.phase) {
-      case 'lobby':
-        this.drawLobby(m, t);
-        break;
-      case 'pick':
-        this.drawPick(m, t);
-        break;
-      case 'place':
-        this.drawPlace(m, t);
-        break;
-      case 'run':
-        this.drawRunHud(m);
-        break;
-      case 'score':
-        this.drawScore(m, t);
-        break;
-      case 'victory':
-        this.drawVictory(m, t);
-        break;
-    }
-    ctx.restore();
+    // --- composite
+    this.aberr *= Math.exp(-dt * 5);
+    this.flash *= Math.exp(-dt * 9);
+    this.comp.render(this.scene, this.lightC, this.glow, {
+      time: t,
+      aberration: this.aberr,
+      exposure: level.theme.grade.exposure,
+      flash: this.flash,
+      tint: level.theme.grade.tint,
+      lift: level.theme.grade.lift,
+    });
+    this.hud.draw(m, t, this.pw, this.ph);
   }
 
-  // ------------------------------------------------------------- fx
+  private updateCamera(m: Match, dt: number) {
+    if (m.phase === 'run' && m.run) {
+      const pts = m.run.runners.filter((r) => r.alive && !r.finished).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y }));
+      if (pts.length) this.cam.focus(pts, 1.45, 120);
+      else this.cam.wide();
+    } else if (m.phase === 'lobby') {
+      // Slow cinematic drift over the level preview.
+      this.lobbyDrift += dt;
+      const a = this.lobbyDrift * 0.12;
+      this.cam.focus([{ x: VIEW_W / 2 + Math.cos(a) * 200, y: VIEW_H / 2 + Math.sin(a * 1.3) * 60 }], 1.18, 160);
+    } else this.cam.wide();
+    this.cam.update(dt);
+  }
+
+  private paintLights(level: Level, lights: Light[]) {
+    const l = this.lctx;
+    const th = level.theme;
+    const [ar, ag, ab] = toRgb(th.ambientTint);
+    const amb = th.ambientLight * 0.5;
+    l.setTransform(1, 0, 0, 1, 0, 0);
+    l.globalCompositeOperation = 'source-over';
+    l.fillStyle = `rgb(${Math.round(255 * amb * (0.65 + ar * 0.35))} ${Math.round(255 * amb * (0.65 + ag * 0.35))} ${Math.round(255 * amb * (0.65 + ab * 0.35))})`;
+    l.fillRect(0, 0, this.lightC.width, this.lightC.height);
+    // Sky light falls from above: brighten the upper part a little.
+    const sky = l.createLinearGradient(0, 0, 0, this.lightC.height);
+    sky.addColorStop(0, `rgba(255,255,255,${0.1 * th.ambientLight})`);
+    sky.addColorStop(1, 'rgba(255,255,255,0)');
+    l.globalCompositeOperation = 'lighter';
+    l.fillStyle = sky;
+    l.fillRect(0, 0, this.lightC.width, this.lightC.height);
+    this.cam.apply(l, this.lightC.width);
+    for (const L of lights) {
+      const a = Math.min(1, L.intensity) * 0.55;
+      if (a <= 0.01) continue;
+      const gr = l.createRadialGradient(L.x, L.y, 0, L.x, L.y, L.r);
+      gr.addColorStop(0, css(L.color, 5, a));
+      gr.addColorStop(0.4, css(L.color, 0, a * 0.45));
+      gr.addColorStop(1, css(L.color, 0, 0));
+      l.fillStyle = gr;
+      l.fillRect(L.x - L.r, L.y - L.r, L.r * 2, L.r * 2);
+    }
+  }
+
+  private drawMarkers(rc: RC, level: Level) {
+    const s = rc.s;
+    const g = rc.g;
+    const t = rc.t;
+    const th = level.theme;
+    // Spawn portal.
+    const sx = level.spawn.tx * TILE + TILE / 2;
+    const sy = (level.spawn.ty + 1) * TILE;
+    const pc: HSL = shift(th.accent, 0, 0, 40);
+    for (let i = 0; i < 3; i++) {
+      g.strokeStyle = css(pc, 10, 0.5 - i * 0.12);
+      g.lineWidth = 1.5;
+      g.beginPath();
+      g.ellipse(sx, sy - 1, 16 - i * 3, 3.5 - i * 0.6, 0, t * (2 + i) % (Math.PI * 2), (t * (2 + i) % (Math.PI * 2)) + Math.PI * 1.4);
+      g.stroke();
+    }
+    const beam = g.createLinearGradient(0, sy - 40, 0, sy);
+    beam.addColorStop(0, css(pc, 0, 0));
+    beam.addColorStop(1, css(pc, 10, 0.25));
+    g.fillStyle = beam;
+    g.fillRect(sx - 14, sy - 40, 28, 40);
+    light(rc, sx, sy - 8, 70, pc, 0.6);
+
+    // Goal beacon: flag + light column.
+    const gx = level.goal.tx * TILE + TILE / 2;
+    const gy = (level.goal.ty + 1) * TILE;
+    const ac = th.accent;
+    const col = g.createLinearGradient(0, 0, 0, gy);
+    col.addColorStop(0, css(ac, 10, 0));
+    col.addColorStop(1, css(ac, 10, 0.32 + Math.sin(t * 3) * 0.06));
+    g.fillStyle = col;
+    g.fillRect(gx - 9, 0, 18, gy);
+    g.fillStyle = css(ac, 30, 0.35);
+    g.fillRect(gx - 2, 0, 4, gy);
+    s.fillStyle = '#d8dce4';
+    s.fillRect(gx - 1, gy - 28, 2, 28);
+    s.fillStyle = '#ffd23f';
+    circle(s, gx, gy - 29, 1.8);
+    const fg = s.createLinearGradient(gx, 0, gx + 16, 0);
+    fg.addColorStop(0, css(ac, -5));
+    fg.addColorStop(1, css(ac, 15));
+    s.fillStyle = fg;
+    s.beginPath();
+    s.moveTo(gx + 1, gy - 28);
+    for (let i = 0; i <= 7; i++) s.lineTo(gx + 1 + i * 2.2, gy - 28 + Math.sin(t * 6 - i * 0.8) * 1.4 * (i / 7));
+    s.lineTo(gx + 16, gy - 19 + Math.sin(t * 6 - 5.6) * 1.4);
+    for (let i = 7; i >= 0; i--) s.lineTo(gx + 1 + i * 2.2, gy - 19 + Math.sin(t * 6 - i * 0.8) * 1.4 * (i / 7));
+    s.closePath();
+    s.fill();
+    glowDot(g, gx + 6, gy - 22, 22, ac, 0.3);
+    light(rc, gx, gy - 20, 120, ac, 0.9);
+  }
+
+  private drawGhosts(rc: RC, m: Match) {
+    const s = rc.s;
+    // Off-limits zones.
+    s.save();
+    for (const r of m.level.protectedRects) {
+      s.fillStyle = 'rgba(255,50,50,0.08)';
+      s.fillRect(r.x * TILE, r.y * TILE, r.w * TILE, r.h * TILE);
+      s.strokeStyle = 'rgba(255,80,80,0.35)';
+      s.setLineDash([3, 3]);
+      s.strokeRect(r.x * TILE + 0.5, r.y * TILE + 0.5, r.w * TILE - 1, r.h * TILE - 1);
+    }
+    s.setLineDash([]);
+    s.restore();
+    for (const p of m.players) {
+      if (p.placed) continue;
+      const gh = m.ghostOrigin(p);
+      if (!gh) continue;
+      const ok = canPlace(m.level, m.placed, gh.def, p.rot, gh.tx, gh.ty);
+      const col = ok ? p.character.body : { h: 0, s: 90, l: 55 };
+      s.globalAlpha = 0.85;
+      rc.g.globalAlpha = 0.85;
+      drawResolved(rc, resolveProp({ uid: 900 + p.slot, def: gh.def, owner: p.slot, tx: gh.tx, ty: gh.ty, rot: p.rot }), { level: m.level, showPath: true });
+      s.globalAlpha = 1;
+      rc.g.globalAlpha = 1;
+      const bomb = gh.def.modules.find((x) => x.type === 'bomb');
+      if (bomb && bomb.type === 'bomb') {
+        rc.g.strokeStyle = css({ h: 25, s: 100, l: 60 }, 0, 0.6 + Math.sin(rc.t * 10) * 0.2);
+        rc.g.setLineDash([4, 3]);
+        rc.g.lineWidth = 1.5;
+        rc.g.beginPath();
+        rc.g.arc((gh.tx + 0.5) * TILE, (gh.ty + 0.5) * TILE, bomb.radius * TILE, 0, Math.PI * 2);
+        rc.g.stroke();
+        rc.g.setLineDash([]);
+      }
+      rc.g.strokeStyle = css(col, 10, 0.75);
+      rc.g.lineWidth = 1;
+      for (const [x, y] of footprint(gh.def, p.rot)) rc.g.strokeRect((gh.tx + x) * TILE + 0.5, (gh.ty + y) * TILE + 0.5, TILE - 1, TILE - 1);
+    }
+  }
+
+  /** Outside the race, players' characters idle on the spawn pad so the world feels inhabited. */
+  private drawIdlers(rc: RC, m: Match, dt: number) {
+    const lv = m.level;
+    const n = m.players.length;
+    m.players.forEach((p, i) => {
+      const x = lv.spawn.tx * TILE + TILE / 2 + (i - (n - 1) / 2) * 9;
+      const y = (lv.spawn.ty + 1) * TILE;
+      this.drawRunner(rc, lv, p.character, p.slot, x, y, 0, 0, true, Math.sin(rc.t * 0.5 + i) > 0 ? 1 : -1, p.ready, dt);
+    });
+  }
+
+  private drawRunner(rc: RC, level: Level, c: Match['players'][number]['character'], slot: number, x: number, y: number, vx: number, vy: number, grounded: boolean, facing: number, celebrate: boolean, dt: number) {
+    let rig = this.rigs.get(slot);
+    if (!rig || rig.rope.length === 0 || Math.hypot(rig.rope[0].x - x, rig.rope[0].y - y) > 60) {
+      rig = new Rig();
+      this.rigs.set(slot, rig);
+    }
+    // Landing / jump dust and fast-motion trail.
+    if (grounded && !rig.wasGrounded && rig.lastVy > 180) this.fx.burst('dust', x, y, 8, 50, [shift(level.theme.terrain.light, 10)], 1.6, 0.6);
+    if (!grounded && rig.wasGrounded && vy < -100) this.fx.burst('dust', x, y, 5, 35, [shift(level.theme.terrain.light, 10)], 1.2, 0.5);
+    if (grounded && Math.abs(vx) > 100 && Math.random() < 0.25) this.fx.add('dust', x - Math.sign(vx) * 4, y - 1, -vx * 0.15, -10, shift(level.theme.terrain.light, 10), 1, 0.4);
+    rig.wasGrounded = grounded;
+    rig.lastVy = vy;
+    const speed = Math.hypot(vx, vy);
+    if (speed > 240) rig.trail.push({ x, y, a: 0.5 });
+    rig.trail = rig.trail.filter((p) => (p.a -= dt * 2.5) > 0);
+    for (const p of rig.trail) {
+      rc.s.globalAlpha = p.a * 0.5;
+      drawCharacter(rc, c, p.x, p.y, { facing, vx, vy, grounded, t: rc.t });
+    }
+    rc.s.globalAlpha = 1;
+
+    // Contact shadow on whatever is below.
+    const tx = Math.floor(x / TILE);
+    let gy = -1;
+    for (let ty = Math.floor((y - 1) / TILE); ty < level.h && ty < Math.floor(y / TILE) + 8; ty++) {
+      if (tileAt(level, tx, ty)) {
+        gy = ty * TILE;
+        break;
+      }
+    }
+    if (gy >= 0) {
+      const d = Math.max(0, gy - y);
+      const a = Math.max(0, 0.4 - d / 200);
+      rc.s.fillStyle = `rgba(0,0,0,${a})`;
+      rc.s.beginPath();
+      rc.s.ellipse(x, gy, 7 - Math.min(4, d / 25), 1.8, 0, 0, Math.PI * 2);
+      rc.s.fill();
+    }
+
+    const anchorX = x - facing * 4;
+    const anchorY = c.accessory === 'tail' ? y - 4 : c.accessory === 'cape' ? y - 12 : y - 10;
+    rig.step(c, anchorX, anchorY, dt, -vx * 0.6);
+    drawAccessory(rc, c, rig);
+    drawCharacter(rc, c, x, y, { facing, vx, vy, grounded, t: rc.t, celebrate });
+    light(rc, x, y - 8, 38, c.body, 0.3);
+  }
 
   private consume(m: Match, events: GameEvent[]) {
+    const th = m.level.theme;
     for (const e of events) {
       switch (e.type) {
         case 'death': {
           const c = m.player(e.slot)?.character;
-          this.burst(e.x, e.y, 22, [c?.body ?? '#fff', c?.bodyDark ?? '#888', '#fff'], 160, 2.5);
-          this.shake = Math.max(this.shake, 4);
+          const body = c?.body ?? { h: 0, s: 0, l: 80 };
+          if (e.cause === 'fall') {
+            this.fx.burst('splash', e.x, Math.min(e.y, VIEW_H - 10), 26, 180, [th.liquid.glow, th.liquid.color], 2, 0.9, 120);
+            this.fx.burst('smoke', e.x, VIEW_H - 12, 8, 30, [{ h: 0, s: 0, l: 50 }], 3, 1.4);
+          } else {
+            this.fx.burst('gib', e.x, e.y, 14, 220, [body, c?.accent ?? body, shift(body, -15), c?.belly ?? body], 1.8, 2.2, 120);
+            this.fx.burst('spark', e.x, e.y, 18, 260, [{ h: 45, s: 100, l: 70 }, body], 1.2, 0.5);
+            this.fx.add('ring', e.x, e.y, 0, 0, body, 40, 0.45);
+            this.fx.add('flash', e.x, e.y, 0, 0, shift(body, 20), 26, 0.25);
+            this.terrain.splat(e.x, e.y + 6, 4, body);
+          }
+          this.cam.shake = Math.max(this.cam.shake, 6);
+          this.aberr = 0.012;
+          this.flash = Math.max(this.flash, 0.08);
           break;
         }
-        case 'finish':
-          this.burst(e.x, e.y, 30, ['#ffd23f', '#3ec1d3', '#ff3d7f', '#9ef01a'], 200, 2, -200);
+        case 'finish': {
+          const c = m.player(e.slot)?.character;
+          this.fx.burst('confetti', e.x, e.y, 50, 240, [{ h: 45, s: 100, l: 60 }, { h: 190, s: 90, l: 55 }, { h: 330, s: 90, l: 60 }, { h: 100, s: 90, l: 55 }, c?.body ?? th.accent], 1.6, 2.4, 220);
+          this.fx.add('ring', e.x, e.y, 0, 0, th.accent, 60, 0.6);
+          this.fx.add('flash', e.x, e.y, 0, 0, th.accent, 40, 0.35);
           break;
+        }
         case 'spring':
-          this.burst(e.x, e.y, 6, ['#fff'], 60, 1.5);
+          this.fx.add('ring', e.x, e.y, 0, 0, { h: 50, s: 100, l: 70 }, 18, 0.3);
+          this.fx.burst('dust', e.x, e.y, 6, 60, [{ h: 0, s: 0, l: 85 }], 1.2, 0.4);
           break;
         case 'pop':
-          this.burst(e.x, e.y, 5, ['#ffde59', '#ff7a2f'], 70, 1.5);
+          if (e.ammo === 'cannonball') {
+            this.fx.burst('debris', e.x, e.y, 10, 160, [th.terrain.base, th.terrain.dark], 1.4, 1.2, 80);
+            this.fx.burst('smoke', e.x, e.y, 6, 40, [{ h: 0, s: 0, l: 50 }], 3, 1);
+            this.fx.add('flash', e.x, e.y, 0, 0, { h: 35, s: 100, l: 60 }, 20, 0.2);
+            this.cam.shake = Math.max(this.cam.shake, 3);
+          } else if (e.ammo === 'fireball' || e.ammo === 'plasma') {
+            const col = e.ammo === 'fireball' ? { h: 30, s: 100, l: 60 } : { h: 190, s: 100, l: 60 };
+            this.fx.burst('ember', e.x, e.y, 14, 120, [col], 1.4, 0.6);
+            this.fx.add('flash', e.x, e.y, 0, 0, col, 18, 0.2);
+          } else this.fx.burst('spark', e.x, e.y, 8, 140, [{ h: 45, s: 60, l: 80 }], 1, 0.3);
           break;
+        case 'fire':
+          if (e.style === 'cannon') {
+            this.fx.burst('smoke', e.x, e.y, 8, 50, [{ h: 0, s: 0, l: 55 }], 2.6, 1.1);
+            this.cam.shake = Math.max(this.cam.shake, 1.5);
+          } else this.fx.burst('smoke', e.x, e.y, 2, 20, [{ h: 0, s: 0, l: 60 }], 1.2, 0.5);
+          break;
+        case 'crumble-break': {
+          const r = m.run?.resolved.find((x) => x.pp.uid === e.uid);
+          if (r) {
+            for (const mod of r.mods) {
+              if (mod.type !== 'body') continue;
+              for (const [cx, cy] of mod.cells) this.fx.burst('debris', (cx + 0.5) * TILE, (cy + 0.5) * TILE, 6, 80, [{ h: 32, s: 42, l: 54 }, { h: 30, s: 40, l: 35 }], 1.6, 1.2);
+            }
+          }
+          break;
+        }
         case 'explosion':
-          this.burst(e.x, e.y, 60, ['#ffd23f', '#ff6b35', '#555', '#222'], 260, 3);
-          this.shake = 10;
+          this.fx.burst('debris', e.x, e.y, 40, 300, [th.terrain.base, th.terrain.dark, th.terrain.light], 2, 1.6, 150);
+          this.fx.burst('ember', e.x, e.y, 30, 220, [{ h: 30, s: 100, l: 60 }, { h: 50, s: 100, l: 70 }], 1.5, 0.8);
+          this.fx.burst('smoke', e.x, e.y, 16, 80, [{ h: 0, s: 0, l: 40 }], 4, 1.6);
+          this.fx.add('ring', e.x, e.y, 0, 0, { h: 35, s: 100, l: 65 }, e.r * 1.6, 0.5);
+          this.fx.add('flash', e.x, e.y, 0, 0, { h: 35, s: 100, l: 65 }, e.r, 0.4);
+          this.cam.shake = 14;
+          this.aberr = 0.02;
+          this.flash = 0.25;
           break;
-        case 'place':
-          this.burst(e.x, e.y, 10, ['#fff'], 80, 1.5);
+        case 'place': {
+          const c = m.player(e.slot)?.character.body ?? th.accent;
+          this.fx.add('ring', e.x, e.y, 0, 0, c, 30, 0.4);
+          this.fx.burst('dust', e.x, e.y, 10, 70, [{ h: 0, s: 0, l: 85 }], 1.4, 0.5);
+          this.cam.shake = Math.max(this.cam.shake, 2);
           break;
+        }
         default:
           break;
       }
     }
   }
-
-  private burst(x: number, y: number, n: number, colors: string[], speed: number, size: number, vyBias = 0) {
-    for (let i = 0; i < n; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const s = speed * (0.3 + Math.random() * 0.7);
-      const life = 0.4 + Math.random() * 0.6;
-      this.particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s + vyBias * Math.random(), life, max: life, color: colors[i % colors.length], size: size * (0.5 + Math.random()), g: 500 });
-    }
-  }
-
-  private drawParticles() {
-    const ctx = this.ctx;
-    const dt = 1 / 60;
-    this.particles = this.particles.filter((p) => (p.life -= dt) > 0);
-    for (const p of this.particles) {
-      p.vy += p.g * dt;
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
-      ctx.globalAlpha = Math.min(1, (p.life / p.max) * 1.5);
-      ctx.fillStyle = p.color;
-      ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  // ------------------------------------------------------------- world
-
-  private drawBackground(th: Theme, t: number) {
-    const ctx = this.ctx;
-    const g = ctx.createLinearGradient(0, 0, 0, VIEW_H);
-    g.addColorStop(0, th.skyTop);
-    g.addColorStop(1, th.skyBottom);
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
-    if (th.stars) {
-      for (let i = 0; i < 70; i++) {
-        const x = hash2(i, 1, th.hue | 0) * VIEW_W;
-        const y = hash2(i, 2, th.hue | 0) * VIEW_H * 0.6;
-        ctx.globalAlpha = 0.4 + 0.6 * Math.abs(Math.sin(t * (0.5 + hash2(i, 3)) + i));
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(x, y, 1.2, 1.2);
-      }
-      ctx.globalAlpha = 1;
-    }
-    th.layers.forEach((L, li) => {
-      ctx.fillStyle = li === 0 ? th.far : th.near;
-      ctx.beginPath();
-      ctx.moveTo(0, VIEW_H);
-      const step = th.skyline === 'spires' ? 12 : 6;
-      for (let x = 0; x <= VIEW_W + step; x += step) {
-        const u = x / VIEW_W;
-        let h = L.base;
-        L.freqs.forEach((f, i) => (h += Math.sin(u * f * Math.PI * 2 + L.phases[i]) * L.amp * (1 / (i + 1))));
-        if (th.skyline === 'spires') h -= (x / step) % 2 ? 0 : L.amp * 0.8 * hash2(x, li);
-        if (th.skyline === 'mesas') h = Math.round(h * 12) / 12;
-        if (th.skyline === 'blobs') h += Math.abs(Math.sin(u * 40 + li)) * -0.03;
-        ctx.lineTo(x, h * VIEW_H);
-      }
-      ctx.lineTo(VIEW_W, VIEW_H);
-      ctx.closePath();
-      ctx.fill();
-    });
-  }
-
-  private drawTiles(level: Level) {
-    const k = this.scale * this.dpr;
-    const key = `${level.seed}:${level.version}:${k}`;
-    if (!this.tileCache || this.tileCache.key !== key) {
-      const c = document.createElement('canvas');
-      c.width = Math.ceil(VIEW_W * k);
-      c.height = Math.ceil(VIEW_H * k);
-      const g = c.getContext('2d')!;
-      g.scale(k, k);
-      paintTiles(g, level);
-      this.tileCache = { canvas: c, key };
-    }
-    this.ctx.drawImage(this.tileCache.canvas, 0, 0, VIEW_W, VIEW_H);
-  }
-
-  private drawMarkers(level: Level, t: number) {
-    const ctx = this.ctx;
-    // Spawn pad.
-    const sx = level.spawn.tx * TILE + TILE / 2;
-    const sy = (level.spawn.ty + 1) * TILE;
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.fillRect(sx - 14, sy - 2, 28, 2);
-    // Goal flag.
-    const gx = level.goal.tx * TILE + TILE / 2;
-    const gy = (level.goal.ty + 1) * TILE;
-    ctx.fillStyle = '#ddd';
-    ctx.fillRect(gx - 1, gy - 26, 2, 26);
-    ctx.fillStyle = level.theme.accent;
-    ctx.beginPath();
-    ctx.moveTo(gx + 1, gy - 26);
-    for (let i = 0; i <= 6; i++) ctx.lineTo(gx + 1 + i * 2.2, gy - 26 + Math.sin(t * 6 + i * 0.8) * 1.2);
-    ctx.lineTo(gx + 14, gy - 17 + Math.sin(t * 6 + 5) * 1.2);
-    for (let i = 6; i >= 0; i--) ctx.lineTo(gx + 1 + i * 2.2, gy - 17 + Math.sin(t * 6 + i * 0.8) * 1.2);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  // ------------------------------------------------------------- overlays
-
-  private text(s: string, x: number, y: number, size: number, color = '#fff', align: CanvasTextAlign = 'center', shadow = true) {
-    const ctx = this.ctx;
-    ctx.font = font(size);
-    ctx.textAlign = align;
-    ctx.textBaseline = 'middle';
-    if (shadow) {
-      ctx.fillStyle = 'rgba(0,0,0,0.65)';
-      ctx.fillText(s, x + 1, y + 1);
-    }
-    ctx.fillStyle = color;
-    ctx.fillText(s, x, y);
-  }
-
-  private dim(a = 0.55) {
-    this.ctx.fillStyle = `rgba(8,8,14,${a})`;
-    this.ctx.fillRect(0, 0, VIEW_W, VIEW_H);
-  }
-
-  private banner(title: string, sub?: string) {
-    const ctx = this.ctx;
-    ctx.fillStyle = 'rgba(8,8,14,0.7)';
-    ctx.fillRect(0, 8, VIEW_W, sub ? 40 : 28);
-    this.text(title, VIEW_W / 2, 22, 14);
-    if (sub) this.text(sub, VIEW_W / 2, 39, 9, '#bbb');
-  }
-
-  private drawLobby(m: Match, t: number) {
-    const ctx = this.ctx;
-    this.dim(0.45);
-    this.text('SLAG', VIEW_W / 2, 52, 44, m.level.theme.accent);
-    this.text('build it. break it. beat it.', VIEW_W / 2, 84, 10, '#ccc');
-    this.text(`${m.level.theme.name}  ·  ${m.level.style}  ·  seed ${seedToString(m.seed)}`, VIEW_W / 2, 104, 9, '#aaa');
-
-    const bw = 150;
-    const bh = 170;
-    const gap = 18;
-    const x0 = (VIEW_W - (MAX_PLAYERS * bw + (MAX_PLAYERS - 1) * gap)) / 2;
-    for (let i = 0; i < MAX_PLAYERS; i++) {
-      const x = x0 + i * (bw + gap);
-      const y = 124;
-      const p = m.players.find((p) => p.slot === i);
-      ctx.fillStyle = 'rgba(20,20,30,0.8)';
-      roundRect(ctx, x, y, bw, bh, 8);
-      ctx.fill();
-      ctx.strokeStyle = p?.ready ? '#9ef01a' : 'rgba(255,255,255,0.15)';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      if (!p) {
-        this.text('press to join', x + bw / 2, y + bh / 2 - 8, 9, '#888');
-        this.text('SPACE · ENTER · Ⓐ', x + bw / 2, y + bh / 2 + 8, 9, '#666');
-        continue;
-      }
-      const c = p.character;
-      drawCharacter(ctx, c, x + bw / 2, y + 92, { facing: Math.sin(t + i) > 0 ? 1 : -1, vx: 0, vy: 0, grounded: true, t, scale: 3.2 });
-      this.text(c.name, x + bw / 2, y + 112, 12, '#fff');
-      this.text(deviceLabel(p.device), x + bw / 2, y + 128, 8, '#999');
-      const h = deviceHints(p.device);
-      this.text(p.ready ? 'READY!' : `${h.confirm}: ready`, x + bw / 2, y + 146, 9, p.ready ? '#9ef01a' : '#ccc');
-      this.text(`${h.alt}: new look`, x + bw / 2, y + 159, 8, '#888');
-    }
-    this.text('S / ↓ : new level   ·   first to ' + TARGET_SCORE + ' wins', VIEW_W / 2, 316, 9, '#aaa');
-    this.text(`finish +${POINTS.finish} · first +${POINTS.first} · trap kill +${POINTS.trap} · everyone finishes = no points`, VIEW_W / 2, 332, 8, '#888');
-  }
-
-  private drawCursor(x: number, y: number, color: string, label: string) {
-    const ctx = this.ctx;
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.fillStyle = color;
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(0, 12);
-    ctx.lineTo(3.5, 9);
-    ctx.lineTo(6, 14);
-    ctx.lineTo(8, 13);
-    ctx.lineTo(5.5, 8);
-    ctx.lineTo(10, 8);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
-    this.text(label, x + 12, y + 16, 8, color, 'left');
-  }
-
-  private drawPick(m: Match, t: number) {
-    const ctx = this.ctx;
-    this.dim(0.6);
-    this.banner(`ROUND ${m.round} — PICK A PROP`, 'move your cursor onto a prop and confirm');
-    for (const item of m.crate) {
-      const r = item.rect;
-      const owner = item.claimedBy >= 0 ? m.player(item.claimedBy) : undefined;
-      const hovered = m.players.some((p) => p.claim < 0 && m.crateItemAt(p.cursor.x, p.cursor.y) === m.crate.indexOf(item));
-      ctx.fillStyle = owner ? 'rgba(40,40,50,0.6)' : hovered ? 'rgba(60,60,80,0.95)' : 'rgba(30,30,42,0.95)';
-      roundRect(ctx, r.x, r.y, r.w, r.h, 8);
-      ctx.fill();
-      ctx.strokeStyle = owner ? owner.character.body : hovered ? '#fff' : 'rgba(255,255,255,0.2)';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.globalAlpha = owner ? 0.4 : 1;
-      drawPropPreview(ctx, item.def, r.x + r.w / 2, r.y + 34, m.frame, 44);
-      ctx.globalAlpha = 1;
-      wrapText(this, item.def.name, r.x + r.w / 2, r.y + r.h - 24, r.w - 8, 8, '#fff');
-      this.text(item.def.maker, r.x + r.w / 2, r.y + r.h - 8, 6, '#888', 'center', false);
-      if (owner) drawCharacter(ctx, owner.character, r.x + r.w - 14, r.y + 22, { facing: -1, vx: 0, vy: 0, grounded: true, t, scale: 1.3 });
-    }
-    for (const p of m.players) if (p.claim < 0) this.drawCursor(p.cursor.x, p.cursor.y, p.character.body, p.character.name);
-  }
-
-  private drawPlace(m: Match, t: number) {
-    const ctx = this.ctx;
-    this.banner(`ROUND ${m.round} — PLACE IT`, 'rotate with alt · confirm to place · spawn & goal zones are off-limits');
-    // Protected zones.
-    ctx.fillStyle = 'rgba(255,60,60,0.10)';
-    for (const r of m.level.protectedRects) ctx.fillRect(r.x * TILE, r.y * TILE, r.w * TILE, r.h * TILE);
-    for (const p of m.players) {
-      if (p.placed) continue;
-      const g = m.ghostOrigin(p);
-      if (!g) continue;
-      const ok = m.canPlaceFor(p);
-      ctx.globalAlpha = 0.75;
-      drawProp(ctx, m.level, { uid: 999 + p.slot, def: g.def, owner: p.slot, tx: g.tx, ty: g.ty, rot: p.rot }, m.frame, {}, true);
-      ctx.globalAlpha = 1;
-      ctx.strokeStyle = ok ? p.character.body : '#ff4040';
-      ctx.lineWidth = 1.5;
-      if (g.def.kind === 'bomb') {
-        ctx.setLineDash([4, 3]);
-        ctx.beginPath();
-        ctx.arc((g.tx + 0.5) * TILE, (g.ty + 0.5) * TILE, g.def.radius * TILE, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
-      for (const [x, y] of footprint(g.def, p.rot)) ctx.strokeRect((g.tx + x) * TILE + 0.5, (g.ty + y) * TILE + 0.5, TILE - 1, TILE - 1);
-      this.drawCursor(p.cursor.x, p.cursor.y, p.character.body, p.character.name);
-    }
-    const waiting = m.players.filter((p) => p.placed).length;
-    if (waiting) this.text(`${waiting}/${m.players.length} placed`, VIEW_W - 8, VIEW_H - 10, 8, '#ccc', 'right');
-    void t;
-  }
-
-  private drawRunHud(m: Match) {
-    const run = m.run!;
-    if (run.frame < RUN_COUNTDOWN) {
-      const n = Math.ceil(((RUN_COUNTDOWN - run.frame) / RUN_COUNTDOWN) * 3);
-      this.text(String(n), VIEW_W / 2, VIEW_H / 2 - 40, 40, '#fff');
-    } else if (run.frame < RUN_COUNTDOWN + 30) {
-      this.text('GO!', VIEW_W / 2, VIEW_H / 2 - 40, 40, '#9ef01a');
-    }
-    const secs = Math.ceil(run.timeLeft / 60);
-    this.text(String(secs), VIEW_W / 2, 16, 14, secs <= 10 ? '#ff5050' : '#fff');
-    // Mini status per player.
-    m.players.forEach((p, i) => {
-      const r = run.runners.find((r) => r.slot === p.slot);
-      const x = 12 + i * 92;
-      drawCharacter(this.ctx, p.character, x + 8, 30, { facing: 1, vx: 0, vy: 0, grounded: true, t: 0, scale: 1.1 });
-      const status = !r ? '' : r.finished ? `#${run.finishOrder.indexOf(p.slot) + 1}` : r.alive ? '' : '✕';
-      this.text(`${p.character.name} ${status}`, x + 20, 22, 8, r && !r.alive ? '#ff6b6b' : r?.finished ? '#9ef01a' : '#fff', 'left');
-    });
-    this.text(`alt: give up`, VIEW_W - 8, VIEW_H - 10, 7, 'rgba(255,255,255,0.5)', 'right');
-  }
-
-  private drawScore(m: Match, t: number) {
-    const ctx = this.ctx;
-    this.dim(0.65);
-    const res = m.result!;
-    const title = res.verdict === 'too-easy' ? 'TOO EASY! nobody scores' : res.verdict === 'too-hard' ? 'NOBODY MADE IT' : `ROUND ${m.round}`;
-    this.text(title, VIEW_W / 2, 70, 20, res.verdict === 'normal' ? '#fff' : '#ffb347');
-    const anim = Math.min(1, Math.max(0, (m.phaseFrame - 20) / 60));
-    const barX = 200;
-    const barW = 440;
-    ctx.fillStyle = 'rgba(255,255,255,0.15)';
-    ctx.fillRect(barX + barW, 100, 1.5, m.players.length * 44);
-    m.players.forEach((p, i) => {
-      const y = 110 + i * 44;
-      drawCharacter(ctx, p.character, 150, y + 16, { facing: 1, vx: 0, vy: 0, grounded: true, t, scale: 2, celebrate: res.finishers.includes(p.slot) });
-      this.text(p.character.name, 172, y + 4, 9, '#fff', 'left');
-      const prev = m.prevScores.get(p.slot) ?? 0;
-      const shown = prev + (p.score - prev) * anim;
-      ctx.fillStyle = 'rgba(255,255,255,0.08)';
-      ctx.fillRect(barX, y + 10, barW, 14);
-      ctx.fillStyle = p.character.bodyDark;
-      ctx.fillRect(barX, y + 10, (barW * Math.min(prev, TARGET_SCORE)) / TARGET_SCORE, 14);
-      ctx.fillStyle = p.character.body;
-      ctx.fillRect(barX + (barW * Math.min(prev, TARGET_SCORE)) / TARGET_SCORE, y + 10, (barW * Math.max(0, Math.min(shown, TARGET_SCORE) - prev)) / TARGET_SCORE, 14);
-      this.text(String(Math.round(shown)), barX + barW + 16, y + 17, 10, '#fff', 'left');
-      const awards = res.awards.filter((a) => a.slot === p.slot);
-      const label = awards.map((a) => `+${a.points} ${a.reason}`).join('  ');
-      if (label) this.text(label, barX + 4, y + 32, 7, '#ffd23f', 'left', false);
-    });
-    this.text('confirm to continue', VIEW_W / 2, VIEW_H - 24, 8, '#888');
-  }
-
-  private drawVictory(m: Match, t: number) {
-    this.dim(0.7);
-    const winners = m.winners.map((s) => m.player(s)!).filter(Boolean);
-    this.text(winners.length > 1 ? 'TIE!' : 'WINNER', VIEW_W / 2, 80, 22, '#ffd23f');
-    winners.forEach((p, i) => {
-      const x = VIEW_W / 2 + (i - (winners.length - 1) / 2) * 120;
-      drawCharacter(this.ctx, p.character, x, 250, { facing: 1, vx: 0, vy: 0, grounded: true, t, scale: 6, celebrate: true });
-      this.text(p.character.name, x, 280, 14, '#fff');
-    });
-    if (m.phaseFrame % 20 === 0) this.burst(Math.random() * VIEW_W, -10, 12, ['#ffd23f', '#3ec1d3', '#ff3d7f', '#9ef01a'], 80, 2.5, 100);
-    if (m.phaseFrame > 120) this.text('confirm to return to lobby', VIEW_W / 2, VIEW_H - 30, 9, '#aaa');
-  }
-
-  /** Used by wrapText. */
-  drawText(s: string, x: number, y: number, size: number, color: string) {
-    this.text(s, x, y, size, color);
-  }
-
-  get context() {
-    return this.ctx;
-  }
 }
-
-function wrapText(r: Renderer, s: string, cx: number, y: number, maxW: number, size: number, color: string) {
-  const ctx = r.context;
-  ctx.font = font(size);
-  const words = s.split(' ');
-  const lines: string[] = [];
-  let cur = '';
-  for (const w of words) {
-    const next = cur ? `${cur} ${w}` : w;
-    if (ctx.measureText(next).width > maxW && cur) {
-      lines.push(cur);
-      cur = w;
-    } else cur = next;
-  }
-  lines.push(cur);
-  const shown = lines.slice(0, 2);
-  shown.forEach((l, i) => r.drawText(l, cx, y + (i - (shown.length - 1) / 2) * (size + 2), size, color));
-}
-
-/** Static terrain, painted once per level version. */
-function paintTiles(g: CanvasRenderingContext2D, level: Level) {
-  const th = level.theme;
-  for (let ty = 0; ty < level.h; ty++) {
-    for (let tx = 0; tx < level.w; tx++) {
-      if (!tileAt(level, tx, ty)) continue;
-      const x = tx * TILE;
-      const y = ty * TILE;
-      g.fillStyle = th.ground;
-      g.fillRect(x, y, TILE, TILE);
-      const n = hash2(tx, ty, level.seed);
-      g.fillStyle = th.groundDark;
-      g.globalAlpha = 0.5;
-      g.fillRect(x + ((n * 97) % 12) + 1, y + ((n * 53) % 10) + 4, 2, 2);
-      g.fillRect(x + ((n * 31) % 12) + 2, y + ((n * 71) % 9) + 5, 1.5, 1.5);
-      g.globalAlpha = 1;
-      const open = (dx: number, dy: number) => !tileAt(level, tx + dx, ty + dy) && tx + dx >= 0 && tx + dx < level.w;
-      g.fillStyle = th.groundDark;
-      if (open(0, 1)) g.fillRect(x, y + TILE - 2, TILE, 2);
-      if (open(-1, 0)) g.fillRect(x, y, 1.5, TILE);
-      if (open(1, 0)) g.fillRect(x + TILE - 1.5, y, 1.5, TILE);
-      if (ty > 0 && open(0, -1)) {
-        g.fillStyle = th.groundTop;
-        g.fillRect(x, y, TILE, 3);
-        // Tufts.
-        for (let i = 0; i < 3; i++) {
-          if (hash2(tx * 3 + i, ty, 7) > 0.55) g.fillRect(x + 2 + i * 5, y - 1.5, 1.5, 2);
-        }
-      }
-    }
-  }
-}
-

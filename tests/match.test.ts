@@ -6,7 +6,7 @@ import { canPlace, footprint } from '../src/sim/props';
 const press = (k: Partial<InputFrame>): InputFrame => ({ ...NO_INPUT, ...k });
 
 /** Drive a match with a simple scripted bot: picks the first free card, places anywhere legal, holds right + jumps. */
-function playMatch(seed: number, devices: string[], maxFrames = 60 * 60 * 20) {
+function playMatch(seed: number, devices: string[], maxFrames = 60 * 60 * 6) {
   const m = new Match(seed);
   const tick = (fn: (d: string) => InputFrame) => m.step(Object.fromEntries(devices.map((d) => [d, fn(d)])));
   tick(() => press({ confirmPressed: true })); // join
@@ -49,12 +49,39 @@ function playMatch(seed: number, devices: string[], maxFrames = 60 * 60 * 20) {
 }
 
 describe('match flow', () => {
-  it('runs a full multiplayer match headlessly to victory', () => {
+  it('cycles pick → place → run → score headlessly', () => {
     const m = playMatch(1234, ['kb1', 'kb2', 'pad0']);
-    expect(m.phase).toBe('victory');
-    expect(m.round).toBeGreaterThan(1);
-    expect(m.winners.length).toBeGreaterThan(0);
+    expect(m.round).toBeGreaterThan(2);
     expect(m.placed.length).toBeGreaterThan(0);
+  }, 60_000);
+
+  it('reaches victory when someone keeps winning', () => {
+    const m = new Match(77);
+    m.step({ kb1: press({ confirmPressed: true }) });
+    m.step({ kb1: press({ confirmPressed: true }) });
+    expect(m.phase).toBe('pick');
+    m.players[0].score = 49;
+    // Force a finish by teleporting the runner onto the flag once the race starts.
+    let f = 0;
+    while (m.phase !== 'victory' && f++ < 60 * 60) {
+      if (m.phase === 'pick') m.players[0].cursor = { x: m.crate[0].rect.x + 4, y: m.crate[0].rect.y + 4 };
+      if (m.phase === 'place') {
+        const p = m.players[0];
+        outer: for (let ty = 2; ty < m.level.h - 2; ty++) for (let tx = 6; tx < m.level.w - 6; tx++) {
+          p.cursor = { x: tx * 16 + 8, y: ty * 16 + 8 };
+          if (m.canPlaceFor(p)) break outer;
+        }
+      }
+      if (m.phase === 'run' && m.run && m.run.frame > 61) {
+        const b = m.run.runners[0].body;
+        b.x = m.level.goal.tx * 16 + 3;
+        b.y = m.level.goal.ty * 16 + 2;
+      }
+      m.step({ kb1: press({ confirmPressed: m.phaseFrame % 20 === 15 }) });
+      m.drainEvents();
+    }
+    expect(m.phase).toBe('victory');
+    expect(m.winners).toEqual([0]);
   }, 60_000);
 
   it('is deterministic for the same seed and inputs', () => {

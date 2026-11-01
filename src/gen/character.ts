@@ -1,86 +1,99 @@
+import { hsl3, type HSL } from '../core/color';
 import { Rng } from '../core/rng';
 import { word } from './names';
-import { hsl } from './theme';
 
-export type BodyShape = 'round' | 'box' | 'capsule' | 'pear' | 'wide';
-export type EyeStyle = 'dot' | 'ring' | 'sleepy' | 'visor';
-export type Mouth = 'smile' | 'fang' | 'o' | 'flat' | 'none' | 'teeth';
-export type Topper = 'none' | 'antenna' | 'horns' | 'ears' | 'tuft' | 'cap' | 'crown' | 'leaf';
-export type Pattern = 'none' | 'stripes' | 'spots' | 'belly';
+export type BodyShape = 'round' | 'box' | 'capsule' | 'pear' | 'wide' | 'drop';
+export type EyeStyle = 'dot' | 'ring' | 'sleepy' | 'visor' | 'angry';
+export type Mouth = 'smile' | 'fang' | 'o' | 'flat' | 'none' | 'teeth' | 'grin';
+export type Topper = 'none' | 'antenna' | 'horns' | 'ears' | 'tuft' | 'cap' | 'crown' | 'leaf' | 'mohawk' | 'halo';
+export type Pattern = 'none' | 'stripes' | 'spots' | 'belly' | 'gradient';
+export type Accessory = 'none' | 'scarf' | 'tail' | 'cape';
 
 /**
- * A procedurally generated character. Purely cosmetic — every character uses
- * the same hitbox and physics so the competitive game stays fair.
+ * A procedurally generated character. Purely cosmetic — every character
+ * uses the same hitbox and physics so the competitive game stays fair.
  */
 export interface CharacterDef {
   seed: number;
   name: string;
   hue: number;
-  body: string;
-  bodyDark: string;
-  belly: string;
-  accent: string;
+  body: HSL;
+  belly: HSL;
+  accent: HSL;
   shape: BodyShape;
   /** Visual size multipliers around the shared hitbox. */
   sw: number;
   sh: number;
-  eyes: { count: 1 | 2 | 3; size: number; style: EyeStyle; iris: string; spread: number; y: number };
+  eyes: { count: 1 | 2 | 3; size: number; style: EyeStyle; iris: HSL; spread: number; y: number; glow: boolean };
   mouth: Mouth;
   topper: Topper;
   pattern: Pattern;
   feet: boolean;
+  accessory: Accessory;
+  accessoryColor: HSL;
+  /** Ribbon length in segments. */
+  accessoryLength: number;
 }
 
 export function generateCharacter(seed: number): CharacterDef {
   const rng = new Rng(seed);
   const hue = rng.range(0, 360);
-  const sat = rng.range(55, 90);
+  const sat = rng.range(60, 92);
   const shape = rng.weighted<BodyShape>([
     ['round', 3],
     ['box', 2],
     ['capsule', 2],
     ['pear', 2],
     ['wide', 1.5],
+    ['drop', 1.5],
   ]);
   const count = rng.weighted<1 | 2 | 3>([
     [2, 6],
     [1, 2],
     [3, 1],
   ]);
+  const accessory = rng.weighted<Accessory>([
+    ['none', 1.5],
+    ['scarf', 3],
+    ['tail', 2.5],
+    ['cape', 1.5],
+  ]);
   return {
     seed,
     name: word(rng, 2, 3),
     hue,
-    body: hsl(hue, sat, rng.range(52, 64)),
-    bodyDark: hsl(hue, sat, 30),
-    belly: hsl(hue + rng.range(-30, 30), sat * 0.6, 82),
-    accent: hsl(hue + rng.pick([120, 180, 210, 150]), 85, 58),
+    body: hsl3(hue, sat, rng.range(52, 62)),
+    belly: hsl3(hue + rng.range(-30, 30), sat * 0.5, 84),
+    accent: hsl3(hue + rng.pick([120, 180, 210, 150, 60]), 88, 58),
     shape,
     sw: shape === 'wide' ? rng.range(1.15, 1.3) : shape === 'capsule' ? rng.range(0.85, 0.95) : rng.range(0.95, 1.1),
     sh: shape === 'capsule' ? rng.range(1.1, 1.25) : shape === 'wide' ? rng.range(0.8, 0.9) : rng.range(0.92, 1.08),
     eyes: {
       count,
-      size: count === 1 ? rng.range(2.6, 3.6) : rng.range(1.7, 2.5),
+      size: count === 1 ? rng.range(2.8, 3.8) : rng.range(1.8, 2.6),
       style: rng.weighted<EyeStyle>([
         ['dot', 4],
-        ['ring', 2],
-        ['sleepy', 1.5],
+        ['ring', 2.5],
+        ['sleepy', 1.2],
+        ['angry', 1.5],
         ['visor', count === 2 ? 0.8 : 0],
       ]),
-      iris: hsl(rng.range(0, 360), 80, 45),
+      iris: hsl3(rng.range(0, 360), 85, 50),
       spread: rng.range(0.22, 0.32),
       y: rng.range(0.55, 0.7),
+      glow: rng.chance(0.2),
     },
     mouth: rng.weighted<Mouth>([
       ['smile', 3],
       ['fang', 2],
-      ['o', 1.5],
-      ['flat', 1.5],
-      ['none', 1],
+      ['o', 1.2],
+      ['flat', 1.2],
+      ['none', 0.8],
       ['teeth', 1],
+      ['grin', 1.5],
     ]),
     topper: rng.weighted<Topper>([
-      ['none', 2],
+      ['none', 1.5],
       ['antenna', 2],
       ['horns', 2],
       ['ears', 2],
@@ -88,13 +101,19 @@ export function generateCharacter(seed: number): CharacterDef {
       ['cap', 1],
       ['crown', 0.6],
       ['leaf', 1],
+      ['mohawk', 1],
+      ['halo', 0.5],
     ]),
     pattern: rng.weighted<Pattern>([
-      ['none', 3],
+      ['none', 1.5],
       ['belly', 3],
       ['stripes', 1.5],
       ['spots', 1.5],
+      ['gradient', 1.5],
     ]),
-    feet: rng.chance(0.75),
+    feet: rng.chance(0.8),
+    accessory,
+    accessoryColor: hsl3(hue + rng.pick([150, 180, 200, 30, -30]), 85, 55),
+    accessoryLength: rng.int(5, 9),
   };
 }

@@ -163,14 +163,14 @@ export class Match {
     this.run = null;
     const count = Math.max(3, this.players.length + 2);
     const defs = generateCrate(this.seed, this.round, count);
-    const cw = 104;
-    const ch = 92;
-    const gap = 14;
+    const cw = 112;
+    const ch = 128;
+    const gap = 12;
     const total = count * cw + (count - 1) * gap;
     this.crate = defs.map((def, i) => ({
       def,
       claimedBy: -1,
-      rect: { x: (VIEW_W - total) / 2 + i * (cw + gap), y: VIEW_H / 2 - ch / 2, w: cw, h: ch },
+      rect: { x: (VIEW_W - total) / 2 + i * (cw + gap), y: VIEW_H / 2 - ch / 2 + 20, w: cw, h: ch },
     }));
     this.players.forEach((p, i) => {
       p.claim = -1;
@@ -245,9 +245,10 @@ export class Match {
       if (inp.confirmPressed && this.phaseFrame > 10) {
         const g = this.ghostOrigin(p);
         if (g && canPlace(this.level, this.placed, g.def, p.rot, g.tx, g.ty)) {
-          if (g.def.kind === 'bomb') {
-            this.placed = detonate(this.level, this.placed, g.def.radius, g.tx, g.ty);
-            this.events.push({ type: 'explosion', x: (g.tx + 0.5) * TILE, y: (g.ty + 0.5) * TILE, r: g.def.radius * TILE });
+          const bomb = g.def.modules.find((m) => m.type === 'bomb');
+          if (bomb) {
+            this.placed = detonate(this.level, this.placed, bomb.radius, g.tx, g.ty);
+            this.events.push({ type: 'explosion', x: (g.tx + 0.5) * TILE, y: (g.ty + 0.5) * TILE, r: bomb.radius * TILE });
           } else {
             this.placed.push({ uid: this.nextUid++, def: g.def, owner: p.slot, tx: g.tx, ty: g.ty, rot: p.rot });
             this.events.push({ type: 'place', slot: p.slot, x: p.cursor.x, y: p.cursor.y });
