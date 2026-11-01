@@ -13,7 +13,14 @@ describe('scoring', () => {
     expect(r.awards).toEqual([]);
   });
   it('finish, first, and trap points', () => {
-    const r = scoreRound([0, 1, 2], [2], [{ victim: 0, killer: 2 }, { victim: 1, killer: 1 }]);
+    const r = scoreRound(
+      [0, 1, 2],
+      [2],
+      [
+        { victim: 0, killer: 2 },
+        { victim: 1, killer: 1 },
+      ],
+    );
     expect(total(r, 2)).toBe(POINTS.finish + POINTS.first + POINTS.trap);
     expect(total(r, 1)).toBe(0); // self-kill earns nothing
     expect(total(r, 0)).toBe(0);

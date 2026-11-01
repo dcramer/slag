@@ -1,7 +1,7 @@
 import { css, type HSL } from '../core/color';
 import { clamp } from '../core/geom';
 import type { CharacterDef } from '../gen/character';
-import { circle, ellipse, glowDot, rrect, type RC } from './kit';
+import { circle, ellipse, glowDot, type RC, rrect } from './kit';
 
 export interface CharPose {
   facing: number;
@@ -151,7 +151,13 @@ export function drawAccessory(rc: RC, c: CharacterDef, rig: Rig) {
 }
 
 /** Draw a character with feet centered at (x, y). */
-export function drawCharacter(rc: RC | { s: CanvasRenderingContext2D; g: CanvasRenderingContext2D | null }, c: CharacterDef, x: number, y: number, pose: CharPose): void {
+export function drawCharacter(
+  rc: RC | { s: CanvasRenderingContext2D; g: CanvasRenderingContext2D | null },
+  c: CharacterDef,
+  x: number,
+  y: number,
+  pose: CharPose,
+): void {
   const ctx = rc.s;
   const g = rc.g;
   const sc = pose.scale ?? 1;
@@ -271,7 +277,7 @@ export function drawCharacter(rc: RC | { s: CanvasRenderingContext2D; g: CanvasR
       }
       if (c.eyes.glow && g) {
         // Eyes glow in the dark (emissive layer, world space).
-        const wx = x + (cx * sx * sc);
+        const wx = x + cx * sx * sc;
         const wy = y - hop * sc + ey * sy * sc;
         glowDot(g, wx, wy, r * 3 * sc, c.eyes.iris, 0.5);
       }
@@ -370,7 +376,18 @@ function drawPattern(ctx: CanvasRenderingContext2D, c: CharacterDef, W: number, 
   }
 }
 
-function drawTopper(ctx: CanvasRenderingContext2D, g: CanvasRenderingContext2D | null, c: CharacterDef, W: number, H: number, by: number, pose: CharPose, wx: number, wy: number, sc: number) {
+function drawTopper(
+  ctx: CanvasRenderingContext2D,
+  g: CanvasRenderingContext2D | null,
+  c: CharacterDef,
+  W: number,
+  H: number,
+  by: number,
+  pose: CharPose,
+  wx: number,
+  wy: number,
+  sc: number,
+) {
   const top = by - H;
   const wob = Math.sin(pose.t * 6) * 1.2 - pose.vx / 120;
   const dark: HSL = { ...c.body, l: c.body.l * 0.45 };

@@ -32,7 +32,7 @@ export function inset(r: Rect, d: number): Rect {
 }
 
 export function clamp(v: number, lo: number, hi: number): number {
-  return v < lo ? lo : v > hi ? hi : v;
+  return v < lo ? lo : Math.min(v, hi);
 }
 
 export function approach(v: number, target: number, delta: number): number {
@@ -54,7 +54,7 @@ export function pingPong(t: number): number {
  */
 export function rotateVec(v: Vec, rot: number): Vec {
   let [x, y] = v;
-  for (let i = 0; i < (((rot % 4) + 4) % 4); i++) [x, y] = [-y, x];
+  for (let i = 0; i < ((rot % 4) + 4) % 4; i++) [x, y] = [-y, x];
   return [x + 0, y + 0]; // +0 normalizes -0
 }
 
@@ -66,9 +66,7 @@ export function normalizeCells(cells: readonly Cell[]): Cell[] {
     mx = Math.min(mx, x);
     my = Math.min(my, y);
   }
-  return cells
-    .map(([x, y]) => [x - mx, y - my] as Cell)
-    .sort((a, b) => a[1] - b[1] || a[0] - b[0]);
+  return cells.map(([x, y]) => [x - mx, y - my] as Cell).sort((a, b) => a[1] - b[1] || a[0] - b[0]);
 }
 
 export function rotateCells(cells: readonly Cell[], rot: number): Cell[] {

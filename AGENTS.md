@@ -1,0 +1,190 @@
+# AGENTS.md
+
+Guidance for AI agents (and humans) working on **slag**. Read this before you change anything.
+
+## What this is
+
+slag is a browser-based competitive party platformer in the genre of party trap-builders. Each round:
+
+1. **Pick**: players pick props from a crate.
+2. **Place**: they place the props in the level.
+3. **Run**: everyone races to the flag.
+
+Scoring rewards levels that are hard but not impossible. If everyone finishes, nobody scores. If nobody finishes, nobody scores.
+
+The differentiator is **procedural generation everywhere**:
+
+- themed levels (farm, factory, castle, …) with set pieces
+- props assembled from modules
+- characters
+- names
+- visuals
+
+The movement should feel **fast and tight**, like a precision platformer: fast run, variable jumps, wall slides and wall jumps, coyote time, and jump buffering.
+
+Build original content. Use the genre's mechanics, but never copy another game's names, characters, art, or level designs.
+
+## Ground rules
+
+- **Commit to `main` and push. Always.**
+  - Pull first: `git pull --rebase origin main`.
+  - Make small, focused commits.
+  - After every meaningful, green change, push: `git push origin main`. Don't leave work uncommitted, because the dev containers are ephemeral.
+  - Never create feature branches or PRs unless the user asks. The one exception is parallel subagents in worktrees (see below).
+- **Keep it green.** Run `npm run check` (typecheck + lint + tests) before every commit. Don't skip, disable, or weaken tests to get green.
+- **Look at what you render.** Any visual change must be verified with `npm run shot` and inspected. Typechecking isn't enough.
+- **Determinism is sacred** (see below).
+- **Stay in your lane.** Each subsystem has an owner module and an extension point. Extend through the registry instead of adding `switch` statements elsewhere.
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `npm run dev` | Vite dev server (http://localhost:5173). URL params are listed below. |
+| `npm run check` | `tsc` + `biome check` + `vitest run`. Must pass before you commit. |
+| `npm run format` | Biome format + organize imports + safe lint fixes. |
+| `npm test` | Vitest only. Run one file with `npx vitest run tests/foo.test.ts`. |
+| `npm run level -- <seed>` | ASCII dump of a generated level, plus stats: `#` solid, `=` one-way, `S`/`G` spawn/goal, `·` reachable stand cell, `P` set piece. |
+| `npm run level -- --stats 200` | Generation stats across many seeds: time, styles, how often a level is solvable without props. |
+| `npm run shot -- <scenario> [opts]` | Headless screenshots into `shots/` (gitignored). Boots Vite itself. |
+| `npm run build` | Production bundle in `dist/`. |
+
+Screenshot scenarios (`tools/shot.ts`):
+
+- `race --seed S --race saw,laser,launcher --frames 200` plays a race with those prop archetypes. `--race all` uses one of everything.
+- `lobby`, `pick`, `place` with `--seed S --players N`.
+- `levels --count 9` or `--seeds a,b,c` renders a contact sheet of levels to `shots/levels.png`.
+- `props` produces crate-card galleries.
+
+The harness pauses the real-time loop and advances the sim with `slagDebug.step(n)`, so shots are deterministic even on slow software GL. It exits non-zero if the page logged errors.
+
+Dev URL params (`src/debug.ts`):
+
+- `?seed=abc`
+- `?players=2` auto-joins and starts.
+- `?race=saw,laser` or `?race=all` jumps straight into a race with those props.
+- `?propseed=3`
+
+In the console, `slagDebug` exposes `quickStart`, `race`, `addProps`, `loadLevel`, `pause`, `step`, and `render`.
+
+## Architecture
+
+```
+src/
+  core/          pure utils: rng (seeded, deterministic), geom, color
+  themes.ts      ThemeId list + pickThemeId(seed)  ← theme registry root
+  sim/           deterministic simulation. NO DOM, NO Math.random, NO wall clock
+    constants.ts   world size, tile size, PHYS tuning, match constants
+    physics.ts     player controller + collision (stepBody)
+    level.ts       Level type, tile kinds (T_EMPTY/T_SOLID/T_ONEWAY), tileAt
+    reach.ts       reachability analysis using the real controller (used by worldgen)
+    run.ts         RunWorld: one race. Delegates all prop behavior to modules
+    props/         prop data model + module plugins
+      types.ts       Module union, PropDef, PlacedProp, Resolved, PropState
+      registry.ts    ModuleSim contract (resolve/anchors/build/tick/onStand), Hazard/Contrib types
+      transform.ts   rotation/resolve, footprint, canPlace, detonate, motion, cycles, raycasts
+      modules/*.ts   one file per module type (body, spikes, swinger, launcher, flame, laser, …)
+  gen/           procedural generators (deterministic given seed)
+    level/         level pipeline (index.ts) + per-theme sculptors (sculptors/*.ts)
+    setpieces/     per-theme set-piece placers (pre-placed level props)
+    props.ts       archetype recipes → PropDefs; crate generation
+    theme.ts       look generation (palette, sky, terrain material, liquid, decor, grade)
+    character.ts   cosmetic characters
+    names.ts       word/name generators
+  game/          match state machine (lobby → pick → place → run → score → victory), scoring
+  input/         keyboard + gamepad → per-device InputFrame
+  render/        presentation only (reads sim state, never mutates it)
+    renderer.ts    frame orchestration: layers, camera, events → fx
+    post.ts        WebGL2 compositor (lighting, bloom, tonemap, grade) + Canvas2D fallback
+    kit.ts         drawing helpers, materials, lights
+    background.ts  sky, celestial, skylines, liquid, ambient motes
+    terrain.ts     terrain texture/bake, caps, decor, grass, splats
+    character.ts   character art + cosmetic verlet rig
+    props/         prop art: common.ts (ModuleArt registry), modules/*.ts (one per module type), projectiles.ts
+    fx.ts camera.ts hud.ts
+  debug.ts       window.slagDebug + URL params
+tools/           shot.ts (screenshots), level.ts (ASCII/stats)
+tests/           vitest
+```
+
+### Data flow per frame
+
+1. `main.ts` samples input once per fixed 60 Hz step and calls `Match.step(inputs)`.
+2. During a race, `Match` calls `RunWorld.step`, which:
+   - asks every prop module to `build` this frame's solids, hazards, and triggers;
+   - steps the runners with `stepBody`;
+   - resolves hazards, springs, and the goal;
+   - runs each module's `tick` (timers, projectiles).
+3. Events go into a queue that the renderer drains for effects. The sim never reads them back.
+4. `Renderer.render` paints three Canvas2D layers in world space through a camera:
+   - **albedo**
+   - **emissive** (additive)
+   - **light map** (0.5 means neutral)
+
+   `post.ts` composites them in WebGL2. The HUD is drawn on its own canvas.
+
+### Determinism (non-negotiable)
+
+- All randomness in `sim/`, `gen/`, `game/`, and `themes.ts` comes from `Rng` (`src/core/rng.ts`). Derive sub-seeds with `deriveSeed(seed, 'label')`, which keeps streams independent and stable.
+- The sim is a pure function of `(seed, per-frame inputs)`. Tests assert that two identical headless matches produce identical results. This is what makes future lockstep or rollback netcode possible.
+- `render/` and `fx` can use `Math.random`, because it's cosmetic. They must never write to sim state.
+
+### Extension points
+
+- **New prop module type** (for example a rotating platform):
+  1. Add the variant to the `Module` union in `sim/props/types.ts`.
+  2. Implement `ModuleSim` in `sim/props/modules/<type>.ts` and export it from `modules/index.ts`.
+  3. Add art in `render/props/modules/<type>.ts` and import it in its `index.ts`.
+  4. Add tests.
+- **New player prop archetype**: add a recipe in `gen/props.ts` (`RECIPES`, `ARCHETYPE_WEIGHTS`). Names come from rolled params.
+- **New theme**: add the id to `THEME_IDS`, then entries in `SCULPTORS`, `SET_PIECES`, and the look generator. `Record<ThemeId, …>` makes the compiler list them for you.
+- **Set pieces**: these are `PlacedProp`s with `owner = -1` and uids starting at `SET_PIECE_UID`, stored on `level.setPieces`. `RunWorld` simulates them like any other prop.
+
+## Game design rules
+
+- **The world** is `LEVEL_W × LEVEL_H` tiles = 48×27 tiles of 16 px (768×432 logical px). Tile kinds:
+  - `T_SOLID`
+  - `T_ONEWAY` (jump-through from below; drop through with down)
+  - `T_EMPTY`
+- **Fairness**: characters are cosmetic only. Every player shares one hitbox and one physics model.
+- **Levels**:
+  - The spawn is on the left and the goal on the right.
+  - Protected rects around both can't be built on or bombed.
+  - The pit at the bottom kills.
+- **Solvability policy**:
+  - A level must be completable. Either the goal is reachable without props, or it becomes reachable after placing at most two small building props (for example a 3-wide platform) somewhere in the level.
+  - Aim for roughly half of levels requiring props, as in the genre.
+  - Always verify with `sim/reach.ts`, which uses the real controller. Never use hand-waved jump distances.
+- **Themes**: each map has a coherent theme. The theme affects terrain shapes, palette, skyline, decor, liquid, and set pieces. A farm should read as a farm at a glance.
+- **Scoring**: see `game/scoring.ts`.
+- **Movement feel targets**:
+  - fast ground speed with quick acceleration
+  - variable jump height
+  - coyote time and jump buffering
+  - wall slide and wall jump with a kick-away
+  - fast-fall on down
+  - forgiving corner correction
+
+  Tune numbers in `sim/constants.ts` (`PHYS`). Worldgen must not hardcode jump distances. It must ask `reach.ts`.
+
+## Code conventions
+
+- TypeScript strict mode, ES modules, no runtime dependencies. Dev tooling only: vite, vitest, biome, tsx, playwright.
+- Biome formats with 2-space indentation, single quotes, and 160-column lines. Run `npm run format` before committing.
+- Write doc comments on modules and exported functions that explain *why*. Keep functions small. Prefer data plus registries over sprawling `switch` statements.
+- Units: world pixels and sim frames (60 per second). Tile coordinates are in `TILE` units. Angles are radians in screen space, so +y points down and +π/2 points down.
+- Write tests for every generator invariant (determinism, validity), for every prop module's runtime behavior, and for physics feel regressions.
+
+## Parallel subagents
+
+When work is split across subagents:
+
+- The orchestrator defines the contracts (types and registries) first and commits them to `main`.
+- Each subagent works in its own git worktree or branch, owns a disjoint set of files (listed in its brief), and **commits but does not push**. The orchestrator merges into `main`, runs `npm run check`, and pushes.
+- If a subagent truly needs to change a shared contract (for example `sim/props/types.ts` or `themes.ts`), keep the change additive and minimal, and call it out in its final report.
+- Each subagent must finish with a green `npm run check` in its worktree and attach screenshot paths for any visual work.
+
+## Assets
+
+- Prefer procedural art. Third-party assets are fine only if they're CC0 or otherwise free for commercial use with no attribution traps. Record every asset in `public/ASSETS.md` with its source URL and license.
+- Keep shipped assets small (downscale textures to ≤256 px tiles and compress them).

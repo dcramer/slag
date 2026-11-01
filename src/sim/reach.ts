@@ -1,6 +1,6 @@
 import { TILE } from './constants';
-import { tileAt, type Level } from './level';
-import { bodyAtCell, stepBody, type CollisionWorld } from './physics';
+import { type Level, tileAt } from './level';
+import { bodyAtCell, type CollisionWorld, stepBody } from './physics';
 
 /**
  * Reachability analysis that uses the *real* player controller: from every

@@ -1,6 +1,7 @@
 import type { Rect } from '../core/geom';
 import type { Theme } from '../gen/theme';
 import { TILE } from './constants';
+import type { PlacedProp } from './props/types';
 
 export interface TileRect {
   x: number;
@@ -8,6 +9,12 @@ export interface TileRect {
   w: number;
   h: number;
 }
+
+/** Tile kinds stored in Level.tiles. */
+export const T_EMPTY = 0;
+export const T_SOLID = 1;
+/** Jump-through platform: solid only from above. */
+export const T_ONEWAY = 2;
 
 export interface Level {
   seed: number;
@@ -23,10 +30,13 @@ export interface Level {
   protectedRects: TileRect[];
   theme: Theme;
   style: string;
+  /** Pre-placed, theme-driven set pieces (owner -1). Persist for the whole match. */
+  setPieces: PlacedProp[];
   /** Bumped whenever tiles change so renderers can invalidate caches. */
   version: number;
 }
 
+/** Tile kind at (tx, ty). Outside x is a solid wall; outside y is empty. */
 export function tileAt(level: Level, tx: number, ty: number): number {
   if (tx < 0 || tx >= level.w) return 1;
   if (ty < 0 || ty >= level.h) return 0;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PHYS, TILE } from '../src/sim/constants';
-import { bodyAtCell, stepBody, type CollisionWorld } from '../src/sim/physics';
+import { bodyAtCell, type CollisionWorld, stepBody } from '../src/sim/physics';
 
 // Flat floor at row 10 and below.
 const world: CollisionWorld = { tileAt: (x, y) => (x < 0 || x >= 40 ? 1 : y >= 10 ? 1 : 0), solids: [] };
@@ -39,7 +39,7 @@ describe('player controller', () => {
       stepBody(b, { ...idle, jump: i < 4, jumpPressed: i === 0 }, world);
       minY = Math.min(minY, b.y);
     }
-    expect(y0 - minY).toBeLessThan(PHYS.jumpVel ** 2 / (2 * PHYS.gravity) * 0.6);
+    expect(y0 - minY).toBeLessThan((PHYS.jumpVel ** 2 / (2 * PHYS.gravity)) * 0.6);
   });
 
   it('cannot walk through walls', () => {

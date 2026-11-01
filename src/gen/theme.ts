@@ -1,5 +1,6 @@
-import { hsl3, type HSL } from '../core/color';
+import { type HSL, hsl3 } from '../core/color';
 import { deriveSeed, Rng } from '../core/rng';
+import type { ThemeId } from '../themes';
 import { placeName } from './names';
 
 export type SkylineKind = 'mountains' | 'spires' | 'mesas' | 'city' | 'forest' | 'islands' | 'crystals';
@@ -22,6 +23,8 @@ export interface SkyLayer {
 }
 
 export interface Theme {
+  /** Which theme this look was generated for. */
+  id: ThemeId;
   name: string;
   seed: number;
   night: boolean;
@@ -53,7 +56,11 @@ const LIQUID: Record<LiquidKind, { color: HSL; glow: HSL; emissive: boolean }> =
   tar: { color: hsl3(250, 15, 10), glow: hsl3(30, 70, 50), emissive: false },
 };
 
-export function generateTheme(seed: number): Theme {
+/**
+ * Generate the look of a level. TODO(look owner): make every field depend on
+ * `id` (farm = warm fields & barns, factory = smog & girders, ...).
+ */
+export function generateTheme(seed: number, id: ThemeId): Theme {
   const rng = new Rng(deriveSeed(seed, 'theme'));
   const hue = rng.range(0, 360);
   const mood = rng.weighted([
@@ -66,9 +73,36 @@ export function generateTheme(seed: number): Theme {
   const night = mood === 'night' || mood === 'infernal' || mood === 'toxic';
   const skyS = rng.range(40, 75);
 
-  const skyTop = mood === 'day' ? hsl3(hue, skyS, 55) : mood === 'dusk' ? hsl3(hue + 220, skyS, 25) : mood === 'infernal' ? hsl3(5, 70, 8) : mood === 'toxic' ? hsl3(150, 50, 8) : hsl3(hue, skyS * 0.8, 7);
-  const skyMid = mood === 'day' ? hsl3(hue + 15, skyS + 5, 64) : mood === 'dusk' ? hsl3(hue + 300, skyS + 10, 45) : mood === 'infernal' ? hsl3(15, 80, 20) : mood === 'toxic' ? hsl3(110, 60, 18) : hsl3(hue + 20, skyS * 0.7, 16);
-  const skyBottom = mood === 'day' ? hsl3(hue + 35, skyS + 15, 78) : mood === 'dusk' ? hsl3(30, 90, 65) : mood === 'infernal' ? hsl3(28, 90, 42) : mood === 'toxic' ? hsl3(90, 70, 35) : hsl3(hue + 40, skyS * 0.7, 28);
+  const skyTop =
+    mood === 'day'
+      ? hsl3(hue, skyS, 55)
+      : mood === 'dusk'
+        ? hsl3(hue + 220, skyS, 25)
+        : mood === 'infernal'
+          ? hsl3(5, 70, 8)
+          : mood === 'toxic'
+            ? hsl3(150, 50, 8)
+            : hsl3(hue, skyS * 0.8, 7);
+  const skyMid =
+    mood === 'day'
+      ? hsl3(hue + 15, skyS + 5, 64)
+      : mood === 'dusk'
+        ? hsl3(hue + 300, skyS + 10, 45)
+        : mood === 'infernal'
+          ? hsl3(15, 80, 20)
+          : mood === 'toxic'
+            ? hsl3(110, 60, 18)
+            : hsl3(hue + 20, skyS * 0.7, 16);
+  const skyBottom =
+    mood === 'day'
+      ? hsl3(hue + 35, skyS + 15, 78)
+      : mood === 'dusk'
+        ? hsl3(30, 90, 65)
+        : mood === 'infernal'
+          ? hsl3(28, 90, 42)
+          : mood === 'toxic'
+            ? hsl3(90, 70, 35)
+            : hsl3(hue + 40, skyS * 0.7, 28);
 
   const terrainKind = rng.weighted<TerrainKind>([
     ['rock', 3],
@@ -94,16 +128,48 @@ export function generateTheme(seed: number): Theme {
   const capHue = cap === 'grass' ? rng.range(70, 150) : cap === 'moss' ? rng.range(80, 160) : cap === 'snow' ? 210 : cap === 'rust' ? 20 : rng.range(170, 320);
   const capColor = cap === 'snow' ? hsl3(210, 30, 92) : cap === 'rust' ? hsl3(capHue, 65, 38) : hsl3(capHue, rng.range(45, 75), night ? 38 : 45);
 
-  const liquidKind = mood === 'infernal' ? 'slag' : mood === 'toxic' ? 'acid' : rng.weighted<LiquidKind>([
-    ['slag', 3],
-    ['acid', 1.5],
-    ['void', 1.5],
-    ['water', night ? 0.6 : 1.5],
-    ['tar', 0.8],
-  ]);
+  const liquidKind =
+    mood === 'infernal'
+      ? 'slag'
+      : mood === 'toxic'
+        ? 'acid'
+        : rng.weighted<LiquidKind>([
+            ['slag', 3],
+            ['acid', 1.5],
+            ['void', 1.5],
+            ['water', night ? 0.6 : 1.5],
+            ['tar', 0.8],
+          ]);
 
-  const celestialKind = rng.weighted<Celestial>(mood === 'day' ? [['sun', 4], ['planet', 1], ['none', 1]] : mood === 'dusk' ? [['sun', 4], ['planet', 1]] : [['moon', 4], ['planet', 2], ['eclipse', 1], ['none', 0.5]]);
-  const celestialColor = celestialKind === 'sun' ? (mood === 'dusk' ? hsl3(25, 100, 70) : hsl3(50, 100, 88)) : celestialKind === 'moon' ? hsl3(hue + 200, 25, 85) : celestialKind === 'eclipse' ? hsl3(0, 0, 4) : hsl3(rng.range(0, 360), 50, 60);
+  const celestialKind = rng.weighted<Celestial>(
+    mood === 'day'
+      ? [
+          ['sun', 4],
+          ['planet', 1],
+          ['none', 1],
+        ]
+      : mood === 'dusk'
+        ? [
+            ['sun', 4],
+            ['planet', 1],
+          ]
+        : [
+            ['moon', 4],
+            ['planet', 2],
+            ['eclipse', 1],
+            ['none', 0.5],
+          ],
+  );
+  const celestialColor =
+    celestialKind === 'sun'
+      ? mood === 'dusk'
+        ? hsl3(25, 100, 70)
+        : hsl3(50, 100, 88)
+      : celestialKind === 'moon'
+        ? hsl3(hue + 200, 25, 85)
+        : celestialKind === 'eclipse'
+          ? hsl3(0, 0, 4)
+          : hsl3(rng.range(0, 360), 50, 60);
 
   const skylineKinds: SkylineKind[] = ['mountains', 'spires', 'mesas', 'city', 'forest', 'islands', 'crystals'];
   const farKind = rng.pick(skylineKinds);
@@ -118,7 +184,11 @@ export function generateTheme(seed: number): Theme {
       amp: rng.range(0.06, 0.16) * (1 - t * 0.4),
       freqs: [rng.range(0.8, 2), rng.range(2.5, 5), rng.range(6, 11)],
       phases: [rng.range(0, 6.28), rng.range(0, 6.28), rng.range(0, 6.28)],
-      color: night ? hsl3(hue + 15 + t * 10, skyS * 0.5, 9 + (1 - t) * 9) : mood === 'dusk' ? hsl3(hue + 250 + t * 20, skyS * 0.45, 34 - t * 14) : hsl3(hue + 20 + t * 25, skyS * 0.55, 52 - t * 20),
+      color: night
+        ? hsl3(hue + 15 + t * 10, skyS * 0.5, 9 + (1 - t) * 9)
+        : mood === 'dusk'
+          ? hsl3(hue + 250 + t * 20, skyS * 0.45, 34 - t * 14)
+          : hsl3(hue + 20 + t * 25, skyS * 0.55, 52 - t * 20),
       depth: 0.15 + t * 0.35,
       seed: rng.int(0, 1e9),
     };
@@ -139,6 +209,7 @@ export function generateTheme(seed: number): Theme {
   const ambientLight = mood === 'day' ? rng.range(0.85, 1) : mood === 'dusk' ? rng.range(0.6, 0.75) : rng.range(0.32, 0.5);
   const lq = LIQUID[liquidKind];
   return {
+    id,
     name: placeName(rng),
     seed,
     night,
@@ -146,7 +217,14 @@ export function generateTheme(seed: number): Theme {
     skyMid,
     skyBottom,
     fog: night ? hsl3(skyMid.h, skyS * 0.5, 18) : hsl3(skyBottom.h, skyS * 0.6, 80),
-    celestial: { kind: celestialKind, x: rng.range(0.15, 0.85), y: rng.range(0.12, 0.35), r: celestialKind === 'planet' ? rng.range(30, 60) : rng.range(14, 26), color: celestialColor, glow: celestialKind === 'eclipse' ? hsl3(rng.range(0, 360), 90, 70) : celestialColor },
+    celestial: {
+      kind: celestialKind,
+      x: rng.range(0.15, 0.85),
+      y: rng.range(0.12, 0.35),
+      r: celestialKind === 'planet' ? rng.range(30, 60) : rng.range(14, 26),
+      color: celestialColor,
+      glow: celestialKind === 'eclipse' ? hsl3(rng.range(0, 360), 90, 70) : celestialColor,
+    },
     layers,
     clouds: mood === 'day' ? rng.int(5, 10) : mood === 'dusk' ? rng.int(4, 8) : rng.int(0, 4),
     rays: mood === 'day' || mood === 'dusk' ? rng.chance(0.8) : rng.chance(0.3),
@@ -161,13 +239,27 @@ export function generateTheme(seed: number): Theme {
       veins: terrainKind === 'crystal' || rng.chance(night ? 0.45 : 0.2),
     },
     liquid: { kind: liquidKind, ...lq },
-    ambient: mood === 'infernal' ? 'embers' : mood === 'toxic' ? 'spores' : rng.pick(night ? (['fireflies', 'embers', 'spores', 'snow', 'dust'] as const) : (['dust', 'snow', 'spores', 'bubbles'] as const)),
+    ambient:
+      mood === 'infernal'
+        ? 'embers'
+        : mood === 'toxic'
+          ? 'spores'
+          : rng.pick(night ? (['fireflies', 'embers', 'spores', 'snow', 'dust'] as const) : (['dust', 'snow', 'spores', 'bubbles'] as const)),
     ambientLight,
     ambientTint: night ? hsl3(skyTop.h, 40, 60) : hsl3(skyBottom.h, 30, 85),
     decor: decorPool.slice(0, 3),
     accent: hsl3((hue + 180) % 360, 85, 60),
     grade: {
-      tint: mood === 'day' ? [1.02, 1.0, 0.97] : mood === 'dusk' ? [1.06, 0.97, 0.92] : mood === 'infernal' ? [1.1, 0.95, 0.85] : mood === 'toxic' ? [0.95, 1.08, 0.9] : [0.95, 0.98, 1.08],
+      tint:
+        mood === 'day'
+          ? [1.02, 1.0, 0.97]
+          : mood === 'dusk'
+            ? [1.06, 0.97, 0.92]
+            : mood === 'infernal'
+              ? [1.1, 0.95, 0.85]
+              : mood === 'toxic'
+                ? [0.95, 1.08, 0.9]
+                : [0.95, 0.98, 1.08],
       lift: night ? [0.01, 0.012, 0.03] : [0.01, 0.008, 0.0],
       exposure: night ? 1.15 : 1.0,
     },

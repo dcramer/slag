@@ -67,6 +67,6 @@ export class Camera {
 
   /** World → normalized screen (0..1). */
   toScreen(x: number, y: number): { x: number; y: number } {
-    return { x: (x - this.x) * this.zoom / VIEW_W + 0.5, y: (y - this.y) * this.zoom / VIEW_H + 0.5 };
+    return { x: ((x - this.x) * this.zoom) / VIEW_W + 0.5, y: ((y - this.y) * this.zoom) / VIEW_H + 0.5 };
   }
 }

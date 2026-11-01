@@ -1,8 +1,8 @@
-import { css, shift, toRgb, type HSL } from '../core/color';
+import { css, type HSL, shift, toRgb } from '../core/color';
 import { hash2, Rng } from '../core/rng';
 import type { Theme } from '../gen/theme';
 import { TILE, VIEW_H, VIEW_W } from '../sim/constants';
-import { tileAt, type Level } from '../sim/level';
+import { type Level, tileAt } from '../sim/level';
 import { circle, ellipse, glowDot, light, makeNoise, type RC } from './kit';
 
 /**
@@ -221,11 +221,36 @@ export class TerrainPainter {
         }
         if (top && rng.chance(0.13)) {
           const kind = rng.pick(th.decor.filter((k) => k !== 'lantern' && k !== 'vine'));
-          if (kind) this.decor.push({ kind, x: tx * TILE + rng.range(4, 12), y: ty * TILE, tx, ty, seed: rng.int(0, 1e9), size: rng.range(0.8, 1.4), color: decorColor(th, kind, rng) });
+          if (kind)
+            this.decor.push({
+              kind,
+              x: tx * TILE + rng.range(4, 12),
+              y: ty * TILE,
+              tx,
+              ty,
+              seed: rng.int(0, 1e9),
+              size: rng.range(0.8, 1.4),
+              color: decorColor(th, kind, rng),
+            });
         }
         if (under && rng.chance(0.12)) {
-          const kind = th.decor.includes('lantern') && rng.chance(0.4) ? 'lantern' : th.decor.includes('vine') || th.terrain.cap === 'moss' || th.terrain.cap === 'grass' ? 'vine' : null;
-          if (kind) this.decor.push({ kind, x: tx * TILE + rng.range(3, 13), y: (ty + 1) * TILE, tx, ty, seed: rng.int(0, 1e9), size: rng.range(0.8, 1.5), color: decorColor(th, kind, rng) });
+          const kind =
+            th.decor.includes('lantern') && rng.chance(0.4)
+              ? 'lantern'
+              : th.decor.includes('vine') || th.terrain.cap === 'moss' || th.terrain.cap === 'grass'
+                ? 'vine'
+                : null;
+          if (kind)
+            this.decor.push({
+              kind,
+              x: tx * TILE + rng.range(3, 13),
+              y: (ty + 1) * TILE,
+              tx,
+              ty,
+              seed: rng.int(0, 1e9),
+              size: rng.range(0.8, 1.5),
+              color: decorColor(th, kind, rng),
+            });
         }
       }
     }
@@ -693,7 +718,11 @@ function makeTexture(th: Theme, kb: number): [HTMLCanvasElement, HTMLCanvasEleme
           if (ix < 1.2 || iy < 1.2) col = mix(col, dark, 0.7);
           else if (ix < 2.4 || iy < 2.4) col = mix(col, lite, 0.35);
           else if (ix > P - 2.4 || iy > P - 2.4) col = mix(col, dark, 0.35);
-          const rv = (Math.abs(ix - 5) < 1.4 && Math.abs(iy - 5) < 1.4) || (Math.abs(ix - P + 5) < 1.4 && Math.abs(iy - 5) < 1.4) || (Math.abs(ix - 5) < 1.4 && Math.abs(iy - P + 5) < 1.4) || (Math.abs(ix - P + 5) < 1.4 && Math.abs(iy - P + 5) < 1.4);
+          const rv =
+            (Math.abs(ix - 5) < 1.4 && Math.abs(iy - 5) < 1.4) ||
+            (Math.abs(ix - P + 5) < 1.4 && Math.abs(iy - 5) < 1.4) ||
+            (Math.abs(ix - 5) < 1.4 && Math.abs(iy - P + 5) < 1.4) ||
+            (Math.abs(ix - P + 5) < 1.4 && Math.abs(iy - P + 5) < 1.4);
           if (rv) col = mix(lite, dark, (ix % 1) * 0.5);
           if (Math.abs(Math.sin(wx * 0.9 + wy * 0.25 + n * 8)) > 0.995) col = mix(col, lite, 0.4);
           if (m > 0.62) col = mix(col, [0.45, 0.22, 0.1], (m - 0.62) * 1.6);

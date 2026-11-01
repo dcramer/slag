@@ -1,6 +1,6 @@
 import { css, type HSL } from '../core/color';
 import { TILE, VIEW_H } from '../sim/constants';
-import { tileAt, type Level } from '../sim/level';
+import { type Level, tileAt } from '../sim/level';
 import { circle, glowDot, light, type RC } from './kit';
 
 export type PKind = 'spark' | 'ember' | 'smoke' | 'dust' | 'gib' | 'confetti' | 'debris' | 'ring' | 'splash' | 'flash';
@@ -34,7 +34,16 @@ export class Fx {
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2;
       const s = speed * (0.25 + Math.random() * 0.75);
-      this.add(kind, x, y, Math.cos(a) * s, Math.sin(a) * s - up * Math.random(), colors[i % colors.length], size * (0.6 + Math.random() * 0.8), life * (0.6 + Math.random() * 0.8));
+      this.add(
+        kind,
+        x,
+        y,
+        Math.cos(a) * s,
+        Math.sin(a) * s - up * Math.random(),
+        colors[i % colors.length],
+        size * (0.6 + Math.random() * 0.8),
+        life * (0.6 + Math.random() * 0.8),
+      );
     }
   }
 

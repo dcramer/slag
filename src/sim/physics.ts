@@ -21,7 +21,10 @@ export interface Solid extends Rect {
   dx: number;
   dy: number;
   surface: Surface;
+  /** Owning placed prop uid, or -1 for terrain. */
   propUid: number;
+  /** Index of the owning module within the prop, or -1. */
+  mi: number;
 }
 
 export const TILE_SOLID_ID = -2;
@@ -91,6 +94,7 @@ const tileScratch: Solid = {
   dy: 0,
   surface: DEFAULT_SURFACE,
   propUid: -1,
+  mi: -1,
 };
 
 /** First solid overlapping `r`, tiles first. The returned tile object is reused; copy if you keep it. */
@@ -203,11 +207,7 @@ export function stepBody(b: Body, c: Controls, world: CollisionWorld): boolean {
   // Horizontal.
   const surf = b.onGround ? b.surface : DEFAULT_SURFACE;
   const target = dir * PHYS.runSpeed * surf.speedMult + (b.onGround ? surf.conveyor : 0);
-  let accel = b.onGround
-    ? (dir !== 0 ? PHYS.groundAccel : PHYS.groundDecel) * surf.friction
-    : dir !== 0
-      ? PHYS.airAccel
-      : PHYS.airDecel;
+  let accel = b.onGround ? (dir !== 0 ? PHYS.groundAccel : PHYS.groundDecel) * surf.friction : dir !== 0 ? PHYS.airAccel : PHYS.airDecel;
   if (b.wallLock > 0) {
     b.wallLock--;
     accel *= 0.15;

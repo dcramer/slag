@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
-import { ARCHETYPE_WEIGHTS, generateProp } from '../src/gen/props';
 import { generateLevel } from '../src/gen/level';
-import { canPlace, footprintCells, resolveProp, type PlacedProp } from '../src/sim/props';
+import { ARCHETYPE_WEIGHTS, generateProp } from '../src/gen/props';
+import { canPlace, footprintCells, type PlacedProp, resolveProp } from '../src/sim/props';
 import { RunWorld } from '../src/sim/run';
 import { NO_INPUT } from '../src/sim/types';
 

@@ -1,4 +1,4 @@
-import { hsl3, type HSL } from '../core/color';
+import { type HSL, hsl3 } from '../core/color';
 import { Rng } from '../core/rng';
 import { word } from './names';
 

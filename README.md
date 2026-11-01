@@ -9,7 +9,9 @@ The twist: **levels, props, and characters are all procedurally generated** from
 ```sh
 npm install
 npm run dev        # http://localhost:5173  (add ?seed=anything for a specific level)
-npm test           # vitest
+npm run check      # typecheck + lint + tests
+npm run shot -- race --race all   # headless screenshots into shots/
+npm run level -- myseed           # ASCII level inspector
 npm run build      # static bundle in dist/, deployable anywhere
 ```
 
@@ -57,6 +59,8 @@ Terrain uses a procedurally generated, tileable material texture (rock strata, b
 For a debug showcase, run `slagShowcase(['saw','launcher','laser','tesla'])` in the console during the pick phase. It drops those archetypes into the level.
 
 ## Architecture
+
+See [AGENTS.md](AGENTS.md) for the full architecture, conventions, and extension points.
 
 ```
 src/

@@ -1,33 +1,14 @@
-import { clamp } from '../core/geom';
-import { deriveSeed, Rng } from '../core/rng';
-import { LEVEL_H, LEVEL_W } from '../sim/constants';
-import type { Level, TileRect } from '../sim/level';
-import { analyzeReach } from '../sim/reach';
-import { generateTheme, type Theme } from './theme';
+import { clamp } from '../../../core/geom';
+import type { Rng } from '../../../core/rng';
+import { LEVEL_H, LEVEL_W } from '../../../sim/constants';
+import type { TileRect } from '../../../sim/level';
+import type { Sculptor } from '../types';
 
-export type LevelStyle = 'islands' | 'caverns' | 'ruins' | 'towers';
+export type LegacyStyle = 'islands' | 'caverns' | 'ruins' | 'towers';
+type LevelStyle = LegacyStyle;
 
 const MIN_ROW = 5;
 const MAX_ROW = LEVEL_H - 4;
-const MAX_ATTEMPTS = 60;
-
-/**
- * Generate a level for `seed`. Candidates are built from a guaranteed-ish
- * critical path plus style-specific decoration, then verified with the real
- * controller (see reach.ts). The first candidate that passes wins.
- */
-export let lastGenAttempts = 0;
-
-export function generateLevel(seed: number): Level {
-  const theme = generateTheme(seed);
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    const rng = new Rng(deriveSeed(seed, `level:${attempt}`));
-    const lvl = buildCandidate(seed, rng, theme);
-    lastGenAttempts = attempt + 1;
-    if (analyzeReach(lvl).goalReached) return lvl;
-  }
-  return buildFallback(seed, theme);
-}
 
 class Grid {
   tiles = new Uint8Array(LEVEL_W * LEVEL_H);
@@ -61,7 +42,8 @@ interface Platform {
   row: number; // the empty row players stand in
 }
 
-function buildCandidate(seed: number, rng: Rng, theme: Theme): Level {
+/** The original generator: critical path of platforms + one of four decoration styles. */
+export const legacy: Sculptor = ({ rng }) => {
   const g = new Grid();
   const style = rng.weighted<LevelStyle>([
     ['islands', 3],
@@ -114,18 +96,13 @@ function buildCandidate(seed: number, rng: Rng, theme: Theme): Level {
   ];
 
   return {
-    seed,
-    w: LEVEL_W,
-    h: LEVEL_H,
     tiles: g.tiles,
     spawn: { tx: 2, ty: spawnRow },
     goal: { tx: Math.max(gx0 + 1, LEVEL_W - 3), ty: goalRow },
     protectedRects,
-    theme,
-    style,
-    version: 0,
+    style: `legacy:${style}`,
   };
-}
+};
 
 function decorate(g: Grid, rng: Rng, style: LevelStyle, path: Platform[]) {
   switch (style) {
@@ -185,30 +162,4 @@ function decorate(g: Grid, rng: Rng, style: LevelStyle, path: Platform[]) {
       break;
     }
   }
-}
-
-/** Flat floor, always solvable. Only used if every candidate fails. */
-function buildFallback(seed: number, theme: Theme): Level {
-  const tiles = new Uint8Array(LEVEL_W * LEVEL_H);
-  const row = LEVEL_H - 6;
-  for (let y = row + 1; y < LEVEL_H; y++) for (let x = 0; x < LEVEL_W; x++) tiles[y * LEVEL_W + x] = 1;
-  return {
-    seed,
-    w: LEVEL_W,
-    h: LEVEL_H,
-    tiles,
-    spawn: { tx: 2, ty: row },
-    goal: { tx: LEVEL_W - 3, ty: row },
-    protectedRects: [
-      { x: 0, y: row - 3, w: 5, h: 5 },
-      { x: LEVEL_W - 5, y: row - 3, w: 5, h: 5 },
-    ],
-    theme,
-    style: 'fallback',
-    version: 0,
-  };
-}
-
-export function cloneLevel(l: Level): Level {
-  return { ...l, tiles: new Uint8Array(l.tiles), protectedRects: l.protectedRects.map((r) => ({ ...r })) };
 }

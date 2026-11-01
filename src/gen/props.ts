@@ -1,4 +1,13 @@
-import { normalizeCells, type Cell, type Vec } from '../core/geom';
+import { type Cell, normalizeCells, type Vec } from '../core/geom';
+import { moduleSim } from '../sim/props/registry';
+import '../sim/props/modules';
+import type { Aim, Ammo, Archetype, Head, LauncherStyle, Material, MetalStyle, Module, Motion, PropDef, PropStyle, Role, Trim } from '../sim/props/types';
+
+import { AMMO } from '../sim/props/types';
+
+export type { Aim, Ammo, Archetype, Head, LauncherStyle, Material, MetalStyle, Module, Motion, PropDef, PropStyle, Role, Trim };
+export { AMMO };
+
 import { deriveSeed, Rng } from '../core/rng';
 import { makerName, word } from './names';
 
@@ -11,98 +20,6 @@ import { makerName, word } from './names';
  * Coordinates in a PropDef are in tiles, relative to the top-left of the
  * footprint's bounding box. Angles are radians in screen space (y down).
  */
-
-export type Material = 'stone' | 'metal' | 'wood' | 'ice' | 'conveyor' | 'goo' | 'jelly' | 'crumble';
-export type MetalStyle = 'steel' | 'brass' | 'copper' | 'rust' | 'obsidian' | 'bone' | 'jade' | 'gold';
-export type Trim = 'none' | 'stripes' | 'rivets' | 'runes' | 'gems';
-export type Ammo = 'bolt' | 'arrow' | 'cannonball' | 'fireball' | 'plasma' | 'shuriken';
-export type LauncherStyle = 'crossbow' | 'ballista' | 'cannon' | 'totem' | 'turret' | 'thrower';
-export type Head = 'saw' | 'mace' | 'axe';
-export type Aim = 'fixed' | 'sweep' | 'track';
-
-export interface AmmoSpec {
-  gravity: number;
-  radius: number;
-  /** Lateral wobble amplitude in px/frame. */
-  wobble: number;
-  emissive: boolean;
-}
-
-export const AMMO: Record<Ammo, AmmoSpec> = {
-  bolt: { gravity: 0, radius: 2.5, wobble: 0, emissive: false },
-  arrow: { gravity: 260, radius: 2.5, wobble: 0, emissive: false },
-  cannonball: { gravity: 520, radius: 5, wobble: 0, emissive: false },
-  fireball: { gravity: 0, radius: 4, wobble: 0.9, emissive: true },
-  plasma: { gravity: 0, radius: 3, wobble: 0, emissive: true },
-  shuriken: { gravity: 40, radius: 3.5, wobble: 0, emissive: false },
-};
-
-export interface PropStyle {
-  metal: MetalStyle;
-  trim: Trim;
-  hue: number;
-  glowHue: number;
-  woodHue: number;
-}
-
-export type Module =
-  | { type: 'body'; cells: Cell[]; material: Material; conveyor: number; breakFrames: number; respawnFrames: number }
-  | { type: 'spikes'; cells: Cell[]; angle: number }
-  | {
-      type: 'swinger';
-      head: Head;
-      hub: Vec;
-      /** Arm length (tiles); 0 = head sits on the hub. */
-      arm: number;
-      angle0: number;
-      period: number;
-      /** Pendulum amplitude in radians; 0 = full rotation. */
-      swing: number;
-      dir: 1 | -1;
-      radius: number;
-      count: number;
-      link: 'none' | 'rod' | 'chain';
-    }
-  | {
-      type: 'launcher';
-      style: LauncherStyle;
-      ammo: Ammo;
-      at: Vec;
-      angle: number;
-      aim: Aim;
-      sweep: number;
-      sweepPeriod: number;
-      interval: number;
-      burst: number;
-      spread: number;
-      spreadAngle: number;
-      speed: number;
-    }
-  | { type: 'flame'; at: Vec; angle: number; length: number; on: number; off: number; warn: number }
-  | { type: 'laser'; at: Vec; angle: number; charge: number; fire: number; off: number; sweep: number; sweepPeriod: number }
-  | { type: 'tesla'; a: Vec; b: Vec; on: number; off: number; warn: number }
-  | { type: 'piston'; at: Vec; angle: number; reach: number; width: number; period: number }
-  | { type: 'spring'; at: Vec; angle: number; power: number }
-  | { type: 'fan'; at: Vec; angle: number; length: number; strength: number }
-  | { type: 'bomb'; radius: number };
-
-export type Motion = { type: 'none' } | { type: 'rail'; angle: number; range: number; period: number } | { type: 'loop'; radius: number; period: number; dir: 1 | -1 };
-
-export type Archetype = 'platform' | 'crumble' | 'spikeblock' | 'saw' | 'flail' | 'launcher' | 'flamer' | 'laser' | 'tesla' | 'crusher' | 'spring' | 'fan' | 'bomb';
-export type Role = 'build' | 'hazard' | 'utility' | 'demolish';
-
-export interface PropDef {
-  key: string;
-  name: string;
-  maker: string;
-  archetype: Archetype;
-  role: Role;
-  style: PropStyle;
-  motion: Motion;
-  modules: Module[];
-  /** Cells that must be free to place it (rot 0, normalized). */
-  footprint: Cell[];
-}
 
 export const ARCHETYPE_WEIGHTS: readonly (readonly [Archetype, number])[] = [
   ['platform', 3.5],
@@ -151,7 +68,25 @@ export function exposed(cells: readonly Cell[], dx: number, dy: number): Cell[] 
   return cells.filter(([x, y]) => !set.has(`${x + dx},${y + dy}`));
 }
 
-const GENERIC_ADJ = ['Suspicious', 'Vintage', 'Cursed', 'Deluxe', 'Discount', 'Haunted', 'Artisanal', 'Bootleg', 'Certified', 'Recalled', 'Sentient', 'Lukewarm', 'Forbidden', 'Gilded', 'Feral', 'Bespoke', 'Ominous'];
+const GENERIC_ADJ = [
+  'Suspicious',
+  'Vintage',
+  'Cursed',
+  'Deluxe',
+  'Discount',
+  'Haunted',
+  'Artisanal',
+  'Bootleg',
+  'Certified',
+  'Recalled',
+  'Sentient',
+  'Lukewarm',
+  'Forbidden',
+  'Gilded',
+  'Feral',
+  'Bespoke',
+  'Ominous',
+];
 const SUFFIX = ['Mk II', 'Mk III', 'XL', 'Deluxe', 'Pro', '9000', 'of Regret', 'of Doom', 'Jr.', 'Classic', 'Ultra'];
 
 function title(rng: Rng, adjs: string[], nouns: string[]): string {
@@ -190,35 +125,7 @@ const center = (x = 0, y = 0): Vec => [x + 0.5, y + 0.5];
 
 function footprintOf(modules: Module[]): Cell[] {
   const set = new Map<string, Cell>();
-  const add = (c: Cell) => set.set(`${c[0]},${c[1]}`, c);
-  const addPt = (p: Vec) => add([Math.floor(p[0]), Math.floor(p[1])]);
-  for (const m of modules) {
-    switch (m.type) {
-      case 'body':
-        m.cells.forEach(add);
-        break;
-      case 'spikes':
-        break;
-      case 'swinger':
-        addPt(m.hub);
-        break;
-      case 'launcher':
-      case 'flame':
-      case 'laser':
-      case 'piston':
-      case 'spring':
-      case 'fan':
-        addPt(m.at);
-        break;
-      case 'tesla':
-        addPt(m.a);
-        addPt(m.b);
-        break;
-      case 'bomb':
-        add([0, 0]);
-        break;
-    }
-  }
+  for (const m of modules) for (const c of moduleSim(m.type).anchors(m)) set.set(`${c[0]},${c[1]}`, c);
   return normalizeCells([...set.values()]);
 }
 
@@ -285,7 +192,9 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     }
     let motion: Motion = { type: 'none' };
     if (moving) {
-      motion = rng.chance(0.7) ? { type: 'rail', angle: rng.pick([AXIS[0], AXIS[3]]), range: rng.int(2, 6), period: rng.int(110, 260) } : { type: 'loop', radius: rng.range(1.2, 2.5), period: rng.int(160, 300), dir: rng.sign() };
+      motion = rng.chance(0.7)
+        ? { type: 'rail', angle: rng.pick([AXIS[0], AXIS[3]]), range: rng.int(2, 6), period: rng.int(110, 260) }
+        : { type: 'loop', radius: rng.range(1.2, 2.5), period: rng.int(160, 300), dir: rng.sign() };
     }
     const nouns: Record<Material, string[]> = {
       stone: ['Slab', 'Boulder', 'Chunk', 'Brick'],
@@ -320,23 +229,40 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
   },
 
   spikeblock(rng) {
-    const cells = polyomino(rng, rng.weighted([
-      [1, 2],
-      [2, 3],
-      [3, 2],
-      [4, 1],
-    ] as const), 0.6);
+    const cells = polyomino(
+      rng,
+      rng.weighted([
+        [1, 2],
+        [2, 3],
+        [3, 2],
+        [4, 1],
+      ] as const),
+      0.6,
+    );
     const modules: Module[] = [metalBody(cells)];
-    const dirs = rng.shuffle([0, 1, 2, 3]).slice(0, rng.weighted([
-      [1, 3],
-      [2, 2],
-      [4, 1],
-    ] as const));
+    const dirs = rng.shuffle([0, 1, 2, 3]).slice(
+      0,
+      rng.weighted([
+        [1, 3],
+        [2, 2],
+        [4, 1],
+      ] as const),
+    );
     for (const d of dirs) {
       const a = AXIS[d];
       modules.push({ type: 'spikes', cells: exposed(cells, Math.round(Math.cos(a)), Math.round(Math.sin(a))), angle: a });
     }
-    return { archetype: 'spikeblock', role: 'hazard', name: title(rng, dirs.length === 4 ? ['Very Pointy', 'Hostile', 'Urchin'] : ['Pointy', 'Rude', 'Prickly'], ['Spike Block', 'Caltrop', 'Thornbox', 'Pincushion']), modules };
+    return {
+      archetype: 'spikeblock',
+      role: 'hazard',
+      name: title(rng, dirs.length === 4 ? ['Very Pointy', 'Hostile', 'Urchin'] : ['Pointy', 'Rude', 'Prickly'], [
+        'Spike Block',
+        'Caltrop',
+        'Thornbox',
+        'Pincushion',
+      ]),
+      modules,
+    };
   },
 
   saw(rng) {
@@ -351,7 +277,12 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     switch (variant) {
       case 'static': {
         const radius = rng.range(0.6, 1.35);
-        return { archetype: 'saw', role: 'hazard', name: title(rng, radius > 1.1 ? ['Mega', 'Industrial'] : ['Stationary', 'Lazy', 'Loyal'], ['Buzzsaw', 'Grinder', 'Shredder']), modules: [{ ...base, arm: 0, angle0: 0, period: rng.int(20, 40), swing: 0, radius, count: 1 }] };
+        return {
+          archetype: 'saw',
+          role: 'hazard',
+          name: title(rng, radius > 1.1 ? ['Mega', 'Industrial'] : ['Stationary', 'Lazy', 'Loyal'], ['Buzzsaw', 'Grinder', 'Shredder']),
+          modules: [{ ...base, arm: 0, angle0: 0, period: rng.int(20, 40), swing: 0, radius, count: 1 }],
+        };
       }
       case 'rail': {
         const range = rng.int(2, 6);
@@ -359,7 +290,11 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
         return {
           archetype: 'saw',
           role: 'hazard',
-          name: title(rng, (range * 2) / period > 0.06 ? ['Frantic', 'Unhinged', 'Zippy'] : ['Patrolling', 'Wandering'], ['Rail Saw', 'Track Grinder', 'Saw Sled']),
+          name: title(rng, (range * 2) / period > 0.06 ? ['Frantic', 'Unhinged', 'Zippy'] : ['Patrolling', 'Wandering'], [
+            'Rail Saw',
+            'Track Grinder',
+            'Saw Sled',
+          ]),
           modules: [{ ...base, arm: 0, angle0: 0, period: 30, swing: 0, radius: rng.range(0.5, 1), count: 1 }],
           motion: { type: 'rail', angle: rng.pick([AXIS[0], AXIS[3]]), range, period },
         };
@@ -374,16 +309,39 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
         return {
           archetype: 'saw',
           role: 'hazard',
-          name: title(rng, count > 1 ? ['Twin', 'Triple', 'Spinny'] : period < 120 ? ['Frantic', 'Dizzy'] : ['Orbiting', 'Lazy'], ['Orbit Saw', 'Saw Carousel', 'Blade Wheel']),
-          modules: [metalBody([[0, 0]]), { ...base, link: 'rod', arm: rng.range(1.4, 3), angle0: rng.range(0, Math.PI * 2), period, swing: 0, radius: rng.range(0.45, 0.8), count }],
+          name: title(rng, count > 1 ? ['Twin', 'Triple', 'Spinny'] : period < 120 ? ['Frantic', 'Dizzy'] : ['Orbiting', 'Lazy'], [
+            'Orbit Saw',
+            'Saw Carousel',
+            'Blade Wheel',
+          ]),
+          modules: [
+            metalBody([[0, 0]]),
+            { ...base, link: 'rod', arm: rng.range(1.4, 3), angle0: rng.range(0, Math.PI * 2), period, swing: 0, radius: rng.range(0.45, 0.8), count },
+          ],
         };
       }
       case 'pendulum': {
         return {
           archetype: 'saw',
           role: 'hazard',
-          name: title(rng, ['Swinging', 'Hypnotic', 'Tick-Tock'], head === 'axe' ? ['Pendulum Axe', 'Guillotine', 'Executioner'] : ['Pendulum Saw', 'Swing Blade']),
-          modules: [metalBody([[0, 0]]), { ...base, link: rng.chance(0.5) ? 'chain' : 'rod', arm: rng.range(2, 3.6), angle0: Math.PI / 2, period: rng.int(100, 200), swing: rng.range(0.7, 1.3), radius: rng.range(0.6, 1), count: 1 }],
+          name: title(
+            rng,
+            ['Swinging', 'Hypnotic', 'Tick-Tock'],
+            head === 'axe' ? ['Pendulum Axe', 'Guillotine', 'Executioner'] : ['Pendulum Saw', 'Swing Blade'],
+          ),
+          modules: [
+            metalBody([[0, 0]]),
+            {
+              ...base,
+              link: rng.chance(0.5) ? 'chain' : 'rod',
+              arm: rng.range(2, 3.6),
+              angle0: Math.PI / 2,
+              period: rng.int(100, 200),
+              swing: rng.range(0.7, 1.3),
+              radius: rng.range(0.6, 1),
+              count: 1,
+            },
+          ],
         };
       }
     }
@@ -395,10 +353,26 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     return {
       archetype: 'flail',
       role: 'hazard',
-      name: title(rng, radius > 0.95 ? ['Wrecking', 'Hefty'] : pend ? ['Swinging', 'Medieval'] : ['Whirling', 'Dizzy'], radius > 0.95 ? ['Wrecking Ball', 'Demolisher'] : ['Flail', 'Morning Star', 'Mace']),
+      name: title(
+        rng,
+        radius > 0.95 ? ['Wrecking', 'Hefty'] : pend ? ['Swinging', 'Medieval'] : ['Whirling', 'Dizzy'],
+        radius > 0.95 ? ['Wrecking Ball', 'Demolisher'] : ['Flail', 'Morning Star', 'Mace'],
+      ),
       modules: [
         metalBody([[0, 0]]),
-        { type: 'swinger', head: 'mace', hub: center(), link: 'chain', arm: rng.range(1.8, 3.4), angle0: pend ? Math.PI / 2 : rng.range(0, 6.28), period: rng.int(100, 230), swing: pend ? rng.range(0.8, 1.4) : 0, dir: rng.sign(), radius, count: !pend && rng.chance(0.25) ? 2 : 1 },
+        {
+          type: 'swinger',
+          head: 'mace',
+          hub: center(),
+          link: 'chain',
+          arm: rng.range(1.8, 3.4),
+          angle0: pend ? Math.PI / 2 : rng.range(0, 6.28),
+          period: rng.int(100, 230),
+          swing: pend ? rng.range(0.8, 1.4) : 0,
+          dir: rng.sign(),
+          radius,
+          count: !pend && rng.chance(0.25) ? 2 : 1,
+        },
       ],
     };
   },
@@ -412,7 +386,16 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
       ['turret', 1.5],
       ['thrower', 1.2],
     ]);
-    const ammo: Ammo = ({ crossbow: rng.chance(0.6) ? 'bolt' : 'arrow', ballista: 'bolt', cannon: 'cannonball', totem: 'fireball', turret: 'plasma', thrower: 'shuriken' } as const)[style];
+    const ammo: Ammo = (
+      {
+        crossbow: rng.chance(0.6) ? 'bolt' : 'arrow',
+        ballista: 'bolt',
+        cannon: 'cannonball',
+        totem: 'fireball',
+        turret: 'plasma',
+        thrower: 'shuriken',
+      } as const
+    )[style];
     const aim = rng.weighted<Aim>([
       ['fixed', 5],
       ['sweep', 2],
@@ -420,14 +403,26 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     ]);
     const lobbed = AMMO[ammo].gravity > 200;
     const angle = lobbed ? -rng.range(0.35, 0.8) : 0;
-    const spread = style === 'totem' || style === 'thrower' ? rng.weighted([
-      [1, 2],
-      [3, 1.5],
-      [5, 0.4],
-    ] as const) : 1;
+    const spread =
+      style === 'totem' || style === 'thrower'
+        ? rng.weighted([
+            [1, 2],
+            [3, 1.5],
+            [5, 0.4],
+          ] as const)
+        : 1;
     const burst = style === 'turret' ? rng.int(2, 4) : style === 'crossbow' && rng.chance(0.25) ? 2 : 1;
     const interval = style === 'ballista' ? rng.int(110, 170) : style === 'turret' ? rng.int(80, 140) : rng.int(55, 140);
-    const speed = ({ crossbow: rng.range(200, 300), ballista: rng.range(330, 420), cannon: rng.range(220, 300), totem: rng.range(80, 140), turret: rng.range(200, 270), thrower: rng.range(150, 220) } as const)[style];
+    const speed = (
+      {
+        crossbow: rng.range(200, 300),
+        ballista: rng.range(330, 420),
+        cannon: rng.range(220, 300),
+        totem: rng.range(80, 140),
+        turret: rng.range(200, 270),
+        thrower: rng.range(150, 220),
+      } as const
+    )[style];
     const nouns: Record<LauncherStyle, string[]> = {
       crossbow: ['Crossbow', 'Arbalest', 'Bolt Thrower'],
       ballista: ['Ballista', 'Siege Bow', 'Scorpion'],
@@ -447,8 +442,29 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
       role: 'hazard',
       name: title(rng, adjs, nouns[style]),
       modules: [
-        { type: 'body', cells: [[0, 0]], material: style === 'crossbow' || style === 'totem' ? 'wood' : 'metal', conveyor: 0, breakFrames: 0, respawnFrames: 0 },
-        { type: 'launcher', style, ammo, at: center(), angle, aim, sweep: aim === 'sweep' ? rng.range(0.4, 1.1) : 0, sweepPeriod: rng.int(150, 300), interval, burst, spread, spreadAngle: rng.range(0.18, 0.35), speed },
+        {
+          type: 'body',
+          cells: [[0, 0]],
+          material: style === 'crossbow' || style === 'totem' ? 'wood' : 'metal',
+          conveyor: 0,
+          breakFrames: 0,
+          respawnFrames: 0,
+        },
+        {
+          type: 'launcher',
+          style,
+          ammo,
+          at: center(),
+          angle,
+          aim,
+          sweep: aim === 'sweep' ? rng.range(0.4, 1.1) : 0,
+          sweepPeriod: rng.int(150, 300),
+          interval,
+          burst,
+          spread,
+          spreadAngle: rng.range(0.18, 0.35),
+          speed,
+        },
       ],
     };
   },
@@ -459,7 +475,12 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     return {
       archetype: 'flamer',
       role: 'hazard',
-      name: title(rng, length >= 4 ? ['Long-Range', 'Ambitious'] : on > 80 ? ['Relentless', 'Hungry'] : ['Hiccuping', 'Grumpy'], ['Flamethrower', 'Dragon Vent', 'Furnace Jet', 'Fire Spout']),
+      name: title(rng, length >= 4 ? ['Long-Range', 'Ambitious'] : on > 80 ? ['Relentless', 'Hungry'] : ['Hiccuping', 'Grumpy'], [
+        'Flamethrower',
+        'Dragon Vent',
+        'Furnace Jet',
+        'Fire Spout',
+      ]),
       modules: [metalBody([[0, 0]]), { type: 'flame', at: center(), angle: AXIS[3], length, on, off: rng.int(60, 140), warn: rng.int(24, 40) }],
     };
   },
@@ -469,8 +490,25 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     return {
       archetype: 'laser',
       role: 'hazard',
-      name: title(rng, sweep ? ['Sweeping', 'Lighthouse', 'Searching'] : ['Focused', 'Unblinking', 'Judgmental'], ['Laser', 'Death Ray', 'Lumen Lance', 'Photon Pike']),
-      modules: [metalBody([[0, 0]]), { type: 'laser', at: center(), angle: AXIS[0], charge: rng.int(45, 75), fire: rng.int(30, 80), off: rng.int(60, 160), sweep, sweepPeriod: rng.int(170, 300) }],
+      name: title(rng, sweep ? ['Sweeping', 'Lighthouse', 'Searching'] : ['Focused', 'Unblinking', 'Judgmental'], [
+        'Laser',
+        'Death Ray',
+        'Lumen Lance',
+        'Photon Pike',
+      ]),
+      modules: [
+        metalBody([[0, 0]]),
+        {
+          type: 'laser',
+          at: center(),
+          angle: AXIS[0],
+          charge: rng.int(45, 75),
+          fire: rng.int(30, 80),
+          off: rng.int(60, 160),
+          sweep,
+          sweepPeriod: rng.int(170, 300),
+        },
+      ],
     };
   },
 
@@ -480,7 +518,13 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
       archetype: 'tesla',
       role: 'hazard',
       name: title(rng, d >= 4 ? ['Wide', 'Ambitious'] : ['Crackling', 'Buzzing', 'Static'], ['Tesla Gate', 'Arc Pylons', 'Zap Fence', 'Spark Gap']),
-      modules: [metalBody([[0, 0], [d, 0]]), { type: 'tesla', a: center(0, 0), b: center(d, 0), on: rng.int(40, 90), off: rng.int(60, 130), warn: 30 }],
+      modules: [
+        metalBody([
+          [0, 0],
+          [d, 0],
+        ]),
+        { type: 'tesla', a: center(0, 0), b: center(d, 0), on: rng.int(40, 90), off: rng.int(60, 130), warn: 30 },
+      ],
     };
   },
 
@@ -495,7 +539,13 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     return {
       archetype: 'crusher',
       role: 'hazard',
-      name: title(rng, period < 120 ? ['Eager', 'Hyperactive'] : width === 3 ? ['Mega', 'Industrial'] : ['Patient', 'Grumpy'], ['Crusher', 'Piston', 'Smasher', 'Thwacker', 'Stamper']),
+      name: title(rng, period < 120 ? ['Eager', 'Hyperactive'] : width === 3 ? ['Mega', 'Industrial'] : ['Patient', 'Grumpy'], [
+        'Crusher',
+        'Piston',
+        'Smasher',
+        'Thwacker',
+        'Stamper',
+      ]),
       modules: [metalBody(cells), { type: 'piston', at: [width / 2, 0.5], angle: AXIS[1], reach: rng.range(2, 5), width, period }],
     };
   },
@@ -505,7 +555,12 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     return {
       archetype: 'spring',
       role: 'utility',
-      name: title(rng, power > 720 ? ['Overclocked', 'Ballistic'] : power < 600 ? ['Wimpy', 'Polite'] : ['Bouncy', 'Springy'], ['Spring', 'Launcher', 'Boing', 'Trampoline']),
+      name: title(rng, power > 720 ? ['Overclocked', 'Ballistic'] : power < 600 ? ['Wimpy', 'Polite'] : ['Bouncy', 'Springy'], [
+        'Spring',
+        'Launcher',
+        'Boing',
+        'Trampoline',
+      ]),
       modules: [{ type: 'spring', at: center(), angle: AXIS[3], power }],
     };
   },
@@ -515,7 +570,12 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     return {
       archetype: 'fan',
       role: 'utility',
-      name: title(rng, strength > 2300 ? ['Hurricane', 'Industrial'] : strength < 1700 ? ['Gentle', 'Asthmatic'] : ['Breezy', 'Gusty'], ['Fan', 'Blower', 'Gust Box', 'Turbine']),
+      name: title(rng, strength > 2300 ? ['Hurricane', 'Industrial'] : strength < 1700 ? ['Gentle', 'Asthmatic'] : ['Breezy', 'Gusty'], [
+        'Fan',
+        'Blower',
+        'Gust Box',
+        'Turbine',
+      ]),
       modules: [metalBody([[0, 0]]), { type: 'fan', at: center(), angle: AXIS[3], length: rng.int(3, 8), strength }],
     };
   },
@@ -525,7 +585,12 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     return {
       archetype: 'bomb',
       role: 'demolish',
-      name: title(rng, radius > 3 ? ['Big', 'Excessive'] : radius < 2.1 ? ['Polite', 'Small'] : ['Volatile', 'Grumpy'], ['Bomb', 'Charge', 'Kaboom', `${word(rng, 1, 2)}-Bomb`]),
+      name: title(rng, radius > 3 ? ['Big', 'Excessive'] : radius < 2.1 ? ['Polite', 'Small'] : ['Volatile', 'Grumpy'], [
+        'Bomb',
+        'Charge',
+        'Kaboom',
+        `${word(rng, 1, 2)}-Bomb`,
+      ]),
       modules: [{ type: 'bomb', radius }],
     };
   },

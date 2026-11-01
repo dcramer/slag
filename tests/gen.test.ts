@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { Rng } from '../src/core/rng';
 import { generateCharacter } from '../src/gen/character';
 import { ARCHETYPE_WEIGHTS, generateCrate, generateProp, polyomino } from '../src/gen/props';
-import { Rng } from '../src/core/rng';
 import { footprint } from '../src/sim/props';
 
 const connected = (cells: readonly (readonly [number, number])[]) => {
@@ -11,8 +11,16 @@ const connected = (cells: readonly (readonly [number, number])[]) => {
   const q = [cells[0]];
   while (q.length) {
     const [x, y] = q.pop()!;
-    for (const n of [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]] as const) {
-      if (set.has(key(n)) && !seen.has(key(n))) { seen.add(key(n)); q.push(n); }
+    for (const n of [
+      [x + 1, y],
+      [x - 1, y],
+      [x, y + 1],
+      [x, y - 1],
+    ] as const) {
+      if (set.has(key(n)) && !seen.has(key(n))) {
+        seen.add(key(n));
+        q.push(n);
+      }
     }
   }
   return seen.size === set.size;

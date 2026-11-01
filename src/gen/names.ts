@@ -1,6 +1,37 @@
 import type { Rng } from '../core/rng';
 
-const ONSETS = ['b', 'bl', 'br', 'd', 'dr', 'f', 'g', 'gl', 'gr', 'k', 'kl', 'kr', 'm', 'n', 'p', 'pl', 'qu', 'r', 's', 'sk', 'sn', 'sp', 'st', 't', 'tw', 'v', 'vr', 'w', 'z', 'zh'];
+const ONSETS = [
+  'b',
+  'bl',
+  'br',
+  'd',
+  'dr',
+  'f',
+  'g',
+  'gl',
+  'gr',
+  'k',
+  'kl',
+  'kr',
+  'm',
+  'n',
+  'p',
+  'pl',
+  'qu',
+  'r',
+  's',
+  'sk',
+  'sn',
+  'sp',
+  'st',
+  't',
+  'tw',
+  'v',
+  'vr',
+  'w',
+  'z',
+  'zh',
+];
 const VOWELS = ['a', 'e', 'i', 'o', 'u', 'oo', 'ee', 'ai', 'au', 'y'];
 const CODAS = ['', '', '', 'b', 'k', 'l', 'm', 'n', 'p', 'rk', 'sh', 'x', 'z', 'g', 'mp', 'nk'];
 
@@ -25,8 +56,44 @@ export function makerName(rng: Rng): string {
   return `${word(rng, 1, 2)} ${rng.pick(MAKER_SUFFIX)}`;
 }
 
-const PLACE_ADJ = ['Gloomy', 'Sunken', 'Shattered', 'Humming', 'Velvet', 'Rusted', 'Molten', 'Frosted', 'Lonely', 'Crooked', 'Glass', 'Feral', 'Hollow', 'Upside', 'Forgotten', 'Sticky', 'Electric', 'Sour'];
-const PLACE_NOUN = ['Sprawl', 'Gardens', 'Foundry', 'Reach', 'Abyss', 'Steppes', 'Canopy', 'Junkyard', 'Ziggurat', 'Bog', 'Spires', 'Quarry', 'Attic', 'Basin', 'Terraces', 'Gutter'];
+const PLACE_ADJ = [
+  'Gloomy',
+  'Sunken',
+  'Shattered',
+  'Humming',
+  'Velvet',
+  'Rusted',
+  'Molten',
+  'Frosted',
+  'Lonely',
+  'Crooked',
+  'Glass',
+  'Feral',
+  'Hollow',
+  'Upside',
+  'Forgotten',
+  'Sticky',
+  'Electric',
+  'Sour',
+];
+const PLACE_NOUN = [
+  'Sprawl',
+  'Gardens',
+  'Foundry',
+  'Reach',
+  'Abyss',
+  'Steppes',
+  'Canopy',
+  'Junkyard',
+  'Ziggurat',
+  'Bog',
+  'Spires',
+  'Quarry',
+  'Attic',
+  'Basin',
+  'Terraces',
+  'Gutter',
+];
 
 export function placeName(rng: Rng): string {
   const base = `${rng.pick(PLACE_ADJ)} ${rng.pick(PLACE_NOUN)}`;

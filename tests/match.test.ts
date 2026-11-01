@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Match } from '../src/game/match';
-import { NO_INPUT, type InputFrame } from '../src/sim/types';
 import { canPlace, footprint } from '../src/sim/props';
+import { type InputFrame, NO_INPUT } from '../src/sim/types';
 
 const press = (k: Partial<InputFrame>): InputFrame => ({ ...NO_INPUT, ...k });
 
@@ -67,10 +67,11 @@ describe('match flow', () => {
       if (m.phase === 'pick') m.players[0].cursor = { x: m.crate[0].rect.x + 4, y: m.crate[0].rect.y + 4 };
       if (m.phase === 'place') {
         const p = m.players[0];
-        outer: for (let ty = 2; ty < m.level.h - 2; ty++) for (let tx = 6; tx < m.level.w - 6; tx++) {
-          p.cursor = { x: tx * 16 + 8, y: ty * 16 + 8 };
-          if (m.canPlaceFor(p)) break outer;
-        }
+        outer: for (let ty = 2; ty < m.level.h - 2; ty++)
+          for (let tx = 6; tx < m.level.w - 6; tx++) {
+            p.cursor = { x: tx * 16 + 8, y: ty * 16 + 8 };
+            if (m.canPlaceFor(p)) break outer;
+          }
       }
       if (m.phase === 'run' && m.run && m.run.frame > 61) {
         const b = m.run.runners[0].body;

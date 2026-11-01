@@ -6,7 +6,7 @@ import type { Role } from '../gen/props';
 import { deviceHints, deviceLabel } from '../input/input';
 import { MAX_PLAYERS, RUN_COUNTDOWN, TARGET_SCORE, VIEW_H, VIEW_W } from '../sim/constants';
 import { drawCharacter } from './character';
-import { circle, glowDot, rrect, type RC } from './kit';
+import { circle, glowDot, type RC, rrect } from './kit';
 import { drawPreview } from './props';
 
 const DISPLAY = '"Lilita One", "Arial Rounded MT Bold", system-ui, sans-serif';
@@ -206,7 +206,15 @@ export class Hud {
       c.beginPath();
       c.ellipse(x + bw / 2, y + 116, 26, 5, 0, 0, Math.PI * 2);
       c.fill();
-      drawCharacter({ s: c, g: this.gctx }, p.character, x + bw / 2, y + 116, { facing: Math.sin(t * 0.8 + i) > 0 ? 1 : -1, vx: 0, vy: 0, grounded: true, t, scale: 3.6, celebrate: p.ready });
+      drawCharacter({ s: c, g: this.gctx }, p.character, x + bw / 2, y + 116, {
+        facing: Math.sin(t * 0.8 + i) > 0 ? 1 : -1,
+        vx: 0,
+        vy: 0,
+        grounded: true,
+        t,
+        scale: 3.6,
+        celebrate: p.ready,
+      });
       this.text(p.character.name, x + bw / 2, y + 134, 15, '#fff', 'center', DISPLAY, 400, 3);
       this.text(deviceLabel(p.device), x + bw / 2, y + 150, 7.5, '#aaa', 'center', UI, 500);
       const h = deviceHints(p.device);
@@ -218,7 +226,16 @@ export class Hud {
       this.text(`${h.alt}: new look`, x + bw / 2, y + 181, 7, '#888', 'center', UI, 500);
     }
     this.text(`S / ↓ new level   ·   first to ${TARGET_SCORE} wins`, VIEW_W / 2, 356, 9, '#ddd', 'center', UI, 600);
-    this.text(`finish +${POINTS.finish} · first +${POINTS.first} · trap kill +${POINTS.trap} · if everyone finishes, nobody scores`, VIEW_W / 2, 372, 8, '#999', 'center', UI, 500);
+    this.text(
+      `finish +${POINTS.finish} · first +${POINTS.first} · trap kill +${POINTS.trap} · if everyone finishes, nobody scores`,
+      VIEW_W / 2,
+      372,
+      8,
+      '#999',
+      'center',
+      UI,
+      500,
+    );
   }
 
   private cursor(x: number, y: number, col: HSL, label: string, t: number) {
@@ -287,7 +304,15 @@ export class Hud {
       wrap(this, item.def.name, r.x + r.w / 2, y + r.h - 25, r.w - 10, 8.5);
       this.text(item.def.maker, r.x + r.w / 2, y + r.h - 9, 6, '#8a8796', 'center', UI, 500);
       if (owner) {
-        drawCharacter({ s: c, g: this.gctx }, owner.character, r.x + r.w - 16, y + 30, { facing: -1, vx: 0, vy: 0, grounded: true, t, scale: 1.6, celebrate: true });
+        drawCharacter({ s: c, g: this.gctx }, owner.character, r.x + r.w - 16, y + 30, {
+          facing: -1,
+          vx: 0,
+          vy: 0,
+          grounded: true,
+          t,
+          scale: 1.6,
+          celebrate: true,
+        });
       }
     });
     for (const p of m.players) if (p.claim < 0) this.cursor(p.cursor.x, p.cursor.y, p.character.body, p.character.name, t);
@@ -341,7 +366,13 @@ export class Hud {
       drawCharacter({ s: c, g: null }, p.character, x + 12, 25, { facing: 1, vx: 0, vy: 0, grounded: true, t, scale: 1.05, celebrate: done });
       c.globalAlpha = 1;
       this.text(p.character.name, x + 24, 13, 7.5, '#fff', 'left', UI, 700);
-      const status = done ? `#${run.finishOrder.indexOf(p.slot) + 1} SAFE` : dead ? (r!.killer >= 0 && r!.killer !== p.slot ? `got by ${m.player(r!.killer)?.character.name ?? '?'}` : 'splat') : `${p.score} pts`;
+      const status = done
+        ? `#${run.finishOrder.indexOf(p.slot) + 1} SAFE`
+        : dead
+          ? r!.killer >= 0 && r!.killer !== p.slot
+            ? `got by ${m.player(r!.killer)?.character.name ?? '?'}`
+            : 'splat'
+          : `${p.score} pts`;
       this.text(status, x + 24, 22, 6.5, done ? '#b7f56a' : dead ? '#ff8a8a' : '#bbb', 'left', UI, 600);
     });
     this.text('alt: self-destruct', VIEW_W - 8, VIEW_H - 8, 6.5, 'rgba(255,255,255,0.45)', 'right', UI, 500);
@@ -368,7 +399,15 @@ export class Hud {
     this.text(`${TARGET_SCORE}`, barX + barW, y0 - 4, 7, '#ffd23f', 'center', UI, 700);
     m.players.forEach((p, i) => {
       const y = y0 + i * rowH;
-      drawCharacter({ s: c, g: this.gctx }, p.character, 164, y + 34, { facing: 1, vx: 0, vy: 0, grounded: true, t, scale: 2.2, celebrate: res.finishers.includes(p.slot) });
+      drawCharacter({ s: c, g: this.gctx }, p.character, 164, y + 34, {
+        facing: 1,
+        vx: 0,
+        vy: 0,
+        grounded: true,
+        t,
+        scale: 2.2,
+        celebrate: res.finishers.includes(p.slot),
+      });
       this.text(p.character.name, barX, y + 10, 11, '#fff', 'left', DISPLAY, 400);
       const prev = m.prevScores.get(p.slot) ?? 0;
       const shown = prev + (p.score - prev) * anim;
@@ -435,7 +474,8 @@ export class Hud {
       this.text(p.character.name, x, 300, 22, '#fff', 'center', DISPLAY, 400, 4);
       this.text(`${p.score} pts`, x, 322, 10, '#ffd9a8', 'center', UI, 700);
     });
-    if (m.phaseFrame > 120) this.text('confirm to return to the lobby', VIEW_W / 2, VIEW_H - 24, 9, `rgba(255,255,255,${0.5 + Math.sin(t * 4) * 0.3})`, 'center', UI, 600);
+    if (m.phaseFrame > 120)
+      this.text('confirm to return to the lobby', VIEW_W / 2, VIEW_H - 24, 9, `rgba(255,255,255,${0.5 + Math.sin(t * 4) * 0.3})`, 'center', UI, 600);
   }
 
   /** For wrap(). */

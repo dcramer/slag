@@ -11,7 +11,9 @@ export function css(c: HSL, dl = 0, a = 1, ds = 0, dh = 0): string {
   const h = (((c.h + dh) % 360) + 360) % 360;
   const s = Math.max(0, Math.min(100, c.s + ds));
   const l = Math.max(0, Math.min(100, c.l + dl));
-  return a >= 1 ? `hsl(${h.toFixed(1)} ${s.toFixed(1)}% ${l.toFixed(1)}%)` : `hsl(${h.toFixed(1)} ${s.toFixed(1)}% ${l.toFixed(1)}% / ${Math.max(0, a).toFixed(3)})`;
+  return a >= 1
+    ? `hsl(${h.toFixed(1)} ${s.toFixed(1)}% ${l.toFixed(1)}%)`
+    : `hsl(${h.toFixed(1)} ${s.toFixed(1)}% ${l.toFixed(1)}% / ${Math.max(0, a).toFixed(3)})`;
 }
 
 export function shift(c: HSL, dl = 0, ds = 0, dh = 0): HSL {
@@ -19,7 +21,7 @@ export function shift(c: HSL, dl = 0, ds = 0, dh = 0): HSL {
 }
 
 export function mixHsl(a: HSL, b: HSL, t: number): HSL {
-  let dh = ((b.h - a.h + 540) % 360) - 180;
+  const dh = ((b.h - a.h + 540) % 360) - 180;
   return { h: a.h + dh * t, s: a.s + (b.s - a.s) * t, l: a.l + (b.l - a.l) * t };
 }
 

@@ -1,9 +1,9 @@
-import { css, shift, type HSL } from '../core/color';
+import { css, type HSL, shift } from '../core/color';
 import { hash2, Rng } from '../core/rng';
 import type { SkyLayer, Theme } from '../gen/theme';
 import { VIEW_H, VIEW_W } from '../sim/constants';
-import { circle, glowDot, light, type RC } from './kit';
 import type { Camera } from './camera';
+import { circle, glowDot, light, type RC } from './kit';
 
 /**
  * Sky, celestial body, god rays, clouds, parallax silhouettes (with emissive
@@ -41,9 +41,19 @@ export class Backdrop {
     const clouds = Array.from({ length: th.clouds }, () => {
       const w = rng.range(70, 180);
       const h = w * rng.range(0.3, 0.45);
-      return { c: bakeCloud(rng, w, h, th, kb), x: rng.range(-100, VIEW_W), y: rng.range(10, VIEW_H * 0.45), speed: rng.range(2, 8), w, h, depth: rng.range(0.05, 0.25) };
+      return {
+        c: bakeCloud(rng, w, h, th, kb),
+        x: rng.range(-100, VIEW_W),
+        y: rng.range(10, VIEW_H * 0.45),
+        speed: rng.range(2, 8),
+        w,
+        h,
+        depth: rng.range(0.05, 0.25),
+      };
     });
-    const stars = th.night ? Array.from({ length: 140 }, () => ({ x: rng.range(0, VIEW_W), y: rng.range(0, VIEW_H * 0.7), r: rng.range(0.4, 1.3), tw: rng.range(0.5, 3) })) : [];
+    const stars = th.night
+      ? Array.from({ length: 140 }, () => ({ x: rng.range(0, VIEW_W), y: rng.range(0, VIEW_H * 0.7), r: rng.range(0.4, 1.3), tw: rng.range(0.5, 3) }))
+      : [];
     this.baked = { key, layers, clouds, stars };
     this.motes = [];
   }
@@ -255,13 +265,21 @@ export class Backdrop {
         x: Math.random() * VIEW_W,
         y: spawnBottom ? VIEW_H + Math.random() * 20 : this.motes.length < target / 2 ? Math.random() * VIEW_H : -5,
         vx: (Math.random() - 0.5) * 10,
-        vy: kind === 'snow' ? 12 + Math.random() * 14 : kind === 'embers' ? -(15 + Math.random() * 30) : kind === 'bubbles' ? -(8 + Math.random() * 10) : (Math.random() - 0.5) * 6,
+        vy:
+          kind === 'snow'
+            ? 12 + Math.random() * 14
+            : kind === 'embers'
+              ? -(15 + Math.random() * 30)
+              : kind === 'bubbles'
+                ? -(8 + Math.random() * 10)
+                : (Math.random() - 0.5) * 6,
         life: 4 + Math.random() * 10,
         seed: Math.random() * 100,
       });
     }
     const t = rc.t;
-    const col = kind === 'embers' ? th.liquid.glow : kind === 'fireflies' ? ({ h: 70, s: 100, l: 65 } as HSL) : kind === 'spores' ? shift(th.accent, 10) : th.fog;
+    const col =
+      kind === 'embers' ? th.liquid.glow : kind === 'fireflies' ? ({ h: 70, s: 100, l: 65 } as HSL) : kind === 'spores' ? shift(th.accent, 10) : th.fog;
     this.motes = this.motes.filter((m) => {
       m.life -= dt;
       m.x += (m.vx + Math.sin(t * 0.8 + m.seed) * 8) * dt;

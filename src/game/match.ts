@@ -1,14 +1,14 @@
 import { clamp, type Rect } from '../core/geom';
 import { deriveSeed } from '../core/rng';
-import { generateCharacter, type CharacterDef } from '../gen/character';
+import { type CharacterDef, generateCharacter } from '../gen/character';
 import { generateLevel } from '../gen/level';
 import { generateCrate, type PropDef } from '../gen/props';
 import { DT, MAX_PLAYERS, TARGET_SCORE, TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import type { Level } from '../sim/level';
 import { canPlace, detonate, footprint, type PlacedProp } from '../sim/props';
 import { RunWorld } from '../sim/run';
-import { NO_INPUT, type GameEvent, type InputFrame } from '../sim/types';
-import { scoreRound, type RoundResult } from './scoring';
+import { type GameEvent, type InputFrame, NO_INPUT } from '../sim/types';
+import { type RoundResult, scoreRound } from './scoring';
 
 export type Phase = 'lobby' | 'pick' | 'place' | 'run' | 'score' | 'victory';
 
@@ -125,13 +125,7 @@ export class Match {
     for (const [device, inp] of Object.entries(inputs)) {
       const p = this.players.find((p) => p.device === device);
       if (!p) {
-        if (inp.confirmPressed && this.players.length < MAX_PLAYERS) {
-          const used = new Set(this.players.map((p) => p.slot));
-          let slot = 0;
-          while (used.has(slot)) slot++;
-          this.players.push({ slot, device, character: this.rollCharacter(), score: 0, ready: false, cursor: { x: 0, y: 0 }, claim: -1, rot: 0, placed: false });
-          this.players.sort((a, b) => a.slot - b.slot);
-        }
+        if (inp.confirmPressed) this.join(device);
         continue;
       }
       if (inp.altPressed) {
@@ -147,7 +141,20 @@ export class Match {
     if (this.players.length > 0 && this.players.every((p) => p.ready)) this.startMatch();
   }
 
-  private startMatch() {
+  /** Add a player for `device` (no-op if full or already joined). */
+  join(device: string): Player | undefined {
+    if (this.players.length >= MAX_PLAYERS || this.players.some((p) => p.device === device)) return undefined;
+    const used = new Set(this.players.map((p) => p.slot));
+    let slot = 0;
+    while (used.has(slot)) slot++;
+    const p: Player = { slot, device, character: this.rollCharacter(), score: 0, ready: false, cursor: { x: 0, y: 0 }, claim: -1, rot: 0, placed: false };
+    this.players.push(p);
+    this.players.sort((a, b) => a.slot - b.slot);
+    return p;
+  }
+
+  /** Leave the lobby and start round 1 (normally triggered by everyone readying up). */
+  startMatch() {
     this.round = 0;
     this.placed = [];
     this.result = null;
@@ -268,7 +275,8 @@ export class Match {
 
   // ---------------------------------------------------------------- run
 
-  private startRun() {
+  /** Skip straight to the race with whatever is placed (used by pick/place flow and debug tools). */
+  startRun() {
     this.run = new RunWorld(
       this.level,
       this.placed,

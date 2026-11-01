@@ -1,7 +1,7 @@
-import { css, shift, toRgb, type HSL } from '../core/color';
+import { css, type HSL, shift, toRgb } from '../core/color';
 import type { Match } from '../game/match';
 import { TILE, VIEW_H, VIEW_W } from '../sim/constants';
-import { tileAt, type Level } from '../sim/level';
+import { type Level, tileAt } from '../sim/level';
 import { canPlace, footprint, resolveProp } from '../sim/props';
 import type { GameEvent } from '../sim/types';
 import { Backdrop } from './background';
@@ -9,8 +9,8 @@ import { Camera } from './camera';
 import { drawAccessory, drawCharacter, Rig } from './character';
 import { Fx } from './fx';
 import { Hud } from './hud';
-import { circle, glowDot, light, type Light, type RC } from './kit';
-import { createCompositor, type Compositor } from './post';
+import { circle, glowDot, type Light, light, type RC } from './kit';
+import { type Compositor, createCompositor } from './post';
 import { drawProjectile, drawResolved, type Emit } from './props';
 import { TerrainPainter } from './terrain';
 
@@ -86,7 +86,17 @@ export class Renderer {
     const level = m.level;
     const kb = Math.min(4, (this.pw / VIEW_W) * 1.45);
     this.terrain.ensure(level, kb);
-    const emit: Emit = (kind, x, y, vx, vy, color) => this.fx.add(kind, x, y, vx, vy, color ?? { h: 40, s: 100, l: 70 }, kind === 'spark' ? 1 : kind === 'smoke' ? 2 : 1.2, kind === 'smoke' ? 1.2 : kind === 'spark' ? 0.35 : 0.8);
+    const emit: Emit = (kind, x, y, vx, vy, color) =>
+      this.fx.add(
+        kind,
+        x,
+        y,
+        vx,
+        vy,
+        color ?? { h: 40, s: 100, l: 70 },
+        kind === 'spark' ? 1 : kind === 'smoke' ? 2 : 1.2,
+        kind === 'smoke' ? 1.2 : kind === 'spark' ? 0.35 : 0.8,
+      );
     this.consume(m, m.drainEvents());
     this.fx.update(dt, level);
     this.updateCamera(m, dt);
@@ -125,7 +135,13 @@ export class Renderer {
     const run = m.phase === 'run' ? m.run : null;
     const resolved = run ? run.resolved : m.placed.map(resolveProp);
     for (const r of resolved) {
-      drawResolved(rc, r, { level, state: run?.propState.get(r.pp.uid), broken: run ? run.isBroken(r.pp.uid) : false, showPath: m.phase !== 'run', emit: run ? emit : undefined });
+      drawResolved(rc, r, {
+        level,
+        state: run?.propState.get(r.pp.uid),
+        broken: run ? run.isBroken(r.pp.uid) : false,
+        showPath: m.phase !== 'run',
+        emit: run ? emit : undefined,
+      });
     }
 
     if (m.phase === 'place') this.drawGhosts(rc, m);
@@ -137,7 +153,20 @@ export class Renderer {
         if (!r.alive) continue;
         const pl = m.player(r.slot);
         if (!pl) continue;
-        this.drawRunner(rc, level, pl.character, r.slot, r.body.x + r.body.w / 2, r.body.y + r.body.h, r.body.vx, r.body.vy, r.body.onGround, r.body.facing, r.finished, dt);
+        this.drawRunner(
+          rc,
+          level,
+          pl.character,
+          r.slot,
+          r.body.x + r.body.w / 2,
+          r.body.y + r.body.h,
+          r.body.vx,
+          r.body.vy,
+          r.body.onGround,
+          r.body.facing,
+          r.finished,
+          dt,
+        );
       }
     }
     this.fx.draw(rc);
@@ -218,7 +247,7 @@ export class Renderer {
       g.strokeStyle = css(pc, 10, 0.5 - i * 0.12);
       g.lineWidth = 1.5;
       g.beginPath();
-      g.ellipse(sx, sy - 1, 16 - i * 3, 3.5 - i * 0.6, 0, t * (2 + i) % (Math.PI * 2), (t * (2 + i) % (Math.PI * 2)) + Math.PI * 1.4);
+      g.ellipse(sx, sy - 1, 16 - i * 3, 3.5 - i * 0.6, 0, (t * (2 + i)) % (Math.PI * 2), ((t * (2 + i)) % (Math.PI * 2)) + Math.PI * 1.4);
       g.stroke();
     }
     const beam = g.createLinearGradient(0, sy - 40, 0, sy);
@@ -309,7 +338,20 @@ export class Renderer {
     });
   }
 
-  private drawRunner(rc: RC, level: Level, c: Match['players'][number]['character'], slot: number, x: number, y: number, vx: number, vy: number, grounded: boolean, facing: number, celebrate: boolean, dt: number) {
+  private drawRunner(
+    rc: RC,
+    level: Level,
+    c: Match['players'][number]['character'],
+    slot: number,
+    x: number,
+    y: number,
+    vx: number,
+    vy: number,
+    grounded: boolean,
+    facing: number,
+    celebrate: boolean,
+    dt: number,
+  ) {
     let rig = this.rigs.get(slot);
     if (!rig || rig.rope.length === 0 || Math.hypot(rig.rope[0].x - x, rig.rope[0].y - y) > 60) {
       rig = new Rig();
@@ -318,7 +360,8 @@ export class Renderer {
     // Landing / jump dust and fast-motion trail.
     if (grounded && !rig.wasGrounded && rig.lastVy > 180) this.fx.burst('dust', x, y, 8, 50, [shift(level.theme.terrain.light, 10)], 1.6, 0.6);
     if (!grounded && rig.wasGrounded && vy < -100) this.fx.burst('dust', x, y, 5, 35, [shift(level.theme.terrain.light, 10)], 1.2, 0.5);
-    if (grounded && Math.abs(vx) > 100 && Math.random() < 0.25) this.fx.add('dust', x - Math.sign(vx) * 4, y - 1, -vx * 0.15, -10, shift(level.theme.terrain.light, 10), 1, 0.4);
+    if (grounded && Math.abs(vx) > 100 && Math.random() < 0.25)
+      this.fx.add('dust', x - Math.sign(vx) * 4, y - 1, -vx * 0.15, -10, shift(level.theme.terrain.light, 10), 1, 0.4);
     rig.wasGrounded = grounded;
     rig.lastVy = vy;
     const speed = Math.hypot(vx, vy);
@@ -380,7 +423,17 @@ export class Renderer {
         }
         case 'finish': {
           const c = m.player(e.slot)?.character;
-          this.fx.burst('confetti', e.x, e.y, 50, 240, [{ h: 45, s: 100, l: 60 }, { h: 190, s: 90, l: 55 }, { h: 330, s: 90, l: 60 }, { h: 100, s: 90, l: 55 }, c?.body ?? th.accent], 1.6, 2.4, 220);
+          this.fx.burst(
+            'confetti',
+            e.x,
+            e.y,
+            50,
+            240,
+            [{ h: 45, s: 100, l: 60 }, { h: 190, s: 90, l: 55 }, { h: 330, s: 90, l: 60 }, { h: 100, s: 90, l: 55 }, c?.body ?? th.accent],
+            1.6,
+            2.4,
+            220,
+          );
           this.fx.add('ring', e.x, e.y, 0, 0, th.accent, 60, 0.6);
           this.fx.add('flash', e.x, e.y, 0, 0, th.accent, 40, 0.35);
           break;
@@ -412,14 +465,39 @@ export class Renderer {
           if (r) {
             for (const mod of r.mods) {
               if (mod.type !== 'body') continue;
-              for (const [cx, cy] of mod.cells) this.fx.burst('debris', (cx + 0.5) * TILE, (cy + 0.5) * TILE, 6, 80, [{ h: 32, s: 42, l: 54 }, { h: 30, s: 40, l: 35 }], 1.6, 1.2);
+              for (const [cx, cy] of mod.cells)
+                this.fx.burst(
+                  'debris',
+                  (cx + 0.5) * TILE,
+                  (cy + 0.5) * TILE,
+                  6,
+                  80,
+                  [
+                    { h: 32, s: 42, l: 54 },
+                    { h: 30, s: 40, l: 35 },
+                  ],
+                  1.6,
+                  1.2,
+                );
             }
           }
           break;
         }
         case 'explosion':
           this.fx.burst('debris', e.x, e.y, 40, 300, [th.terrain.base, th.terrain.dark, th.terrain.light], 2, 1.6, 150);
-          this.fx.burst('ember', e.x, e.y, 30, 220, [{ h: 30, s: 100, l: 60 }, { h: 50, s: 100, l: 70 }], 1.5, 0.8);
+          this.fx.burst(
+            'ember',
+            e.x,
+            e.y,
+            30,
+            220,
+            [
+              { h: 30, s: 100, l: 60 },
+              { h: 50, s: 100, l: 70 },
+            ],
+            1.5,
+            0.8,
+          );
           this.fx.burst('smoke', e.x, e.y, 16, 80, [{ h: 0, s: 0, l: 40 }], 4, 1.6);
           this.fx.add('ring', e.x, e.y, 0, 0, { h: 35, s: 100, l: 65 }, e.r * 1.6, 0.5);
           this.fx.add('flash', e.x, e.y, 0, 0, { h: 35, s: 100, l: 65 }, e.r, 0.4);
