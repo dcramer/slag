@@ -1,0 +1,19 @@
+{
+  "name": "slag",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser-based competitive party platformer with procedurally generated levels, props, and characters.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
+}

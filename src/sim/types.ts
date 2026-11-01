@@ -1,0 +1,37 @@
+/** One sim frame of input for one device/player. */
+export interface InputFrame {
+  left: boolean;
+  right: boolean;
+  up: boolean;
+  down: boolean;
+  jump: boolean;
+  jumpPressed: boolean;
+  confirmPressed: boolean;
+  altPressed: boolean;
+  downPressed: boolean;
+}
+
+export const NO_INPUT: InputFrame = Object.freeze({
+  left: false,
+  right: false,
+  up: false,
+  down: false,
+  jump: false,
+  jumpPressed: false,
+  confirmPressed: false,
+  altPressed: false,
+  downPressed: false,
+});
+
+/** Things that happened this frame, for audio/fx. Never read back by the sim. */
+export type GameEvent =
+  | { type: 'death'; slot: number; x: number; y: number; cause: string }
+  | { type: 'finish'; slot: number; place: number; x: number; y: number }
+  | { type: 'spring'; x: number; y: number }
+  | { type: 'pop'; x: number; y: number }
+  | { type: 'crumble-start'; uid: number }
+  | { type: 'crumble-break'; uid: number }
+  | { type: 'explosion'; x: number; y: number; r: number }
+  | { type: 'place'; slot: number; x: number; y: number }
+  | { type: 'claim'; slot: number }
+  | { type: 'phase'; phase: string };
