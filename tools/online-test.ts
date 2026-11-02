@@ -223,7 +223,7 @@ async function startMatch(r: Room, n: number): Promise<{ pages: Page[]; ids: str
   for (const p of pages) await p.keyboard.press('Enter');
   await waitFor(pages[0], 'everyone seated', (v) => v.players.length === n);
   for (const p of pages) await p.keyboard.press('Enter');
-  await waitFor(pages[0], 'match start', (v) => v.phase === 'pick');
+  for (const p of pages) await waitFor(p, 'match start', (v) => v.phase === 'pick');
   return { pages, ids };
 }
 

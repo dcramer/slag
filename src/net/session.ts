@@ -836,9 +836,7 @@ export class NetSession {
       if (this.isLocal(p.device)) {
         const dev = p.device.slice(p.device.indexOf(':') + 1);
         for (const u of this.unacked) {
-          const e = u.f[dev];
-          if (e === undefined) continue;
-          const inp = decode(e);
+          const inp = decode(u.f[dev]); // a frame with no buttons still ends a held direction's speed ramp
           d.moveCursor(p, inp);
           if (pick && inp.confirmPressed && p.claim < 0 && m.phaseFrame > 10) {
             const i = m.crateItemAt(p.cursor.x, p.cursor.y);

@@ -129,6 +129,20 @@ describe('match snapshots', () => {
     expect([...checked]).toEqual(expect.arrayContaining(['pick', 'place', 'run']));
   }, 60_000);
 
+  it("carries a held controller cursor's speed ramp, or it would jump after a resync", () => {
+    const a = new Match(4242);
+    a.join('a:kb1');
+    a.startMatch();
+    for (let f = 0; f < 40; f++) a.step({ 'a:kb1': press({ right: true }) });
+    expect(a.players[0].cursorHeld).toBeGreaterThan(0);
+    const b = new Match(1);
+    restoreMatch(b, JSON.parse(JSON.stringify(snapshotMatch(a))));
+    expect(b.players[0].cursorHeld).toBe(a.players[0].cursorHeld);
+    for (const m of [a, b]) for (let f = 0; f < 20; f++) m.step({ 'a:kb1': press({ right: true }) });
+    expect(b.players[0].cursor).toEqual(a.players[0].cursor);
+    expect(hashMatch(b)).toBe(hashMatch(a));
+  });
+
   it('round-trips a race with held items, loose items and smoke, then runs on identically', () => {
     const a = raceWithItems();
     expect(a.run!.items.drops.length).toBeGreaterThan(0);

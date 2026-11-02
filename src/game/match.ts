@@ -21,6 +21,8 @@ export interface Player {
   score: number;
   ready: boolean;
   cursor: { x: number; y: number };
+  /** Frames a direction has been held, up to the cursor's ramp. */
+  cursorHeld: number;
   /** Index into the crate of the claimed prop, -1 if none. */
   claim: number;
   rot: number;
@@ -42,7 +44,10 @@ export interface CrateItem {
   rect: Rect;
 }
 
-const CURSOR_SPEED = 250;
+/** Directional cursor speed, px/s: slow enough for one-tile taps, ramping while held so crossing the screen doesn't drag. */
+const CURSOR_SPEED_MIN = 200;
+const CURSOR_SPEED_MAX = 640;
+const CURSOR_RAMP_FRAMES = 24;
 
 const SCORE_FRAMES = 60 * 4;
 
@@ -177,6 +182,7 @@ export class Match {
       score: 0,
       ready: false,
       cursor: { x: 0, y: 0 },
+      cursorHeld: 0,
       claim: -1,
       rot: 0,
       placed: false,
@@ -245,14 +251,17 @@ export class Match {
   /** One frame of cursor movement. Public so the online view can run a guest's own cursor ahead of the host. */
   moveCursor(p: Player, inp: InputFrame) {
     if (inp.pointer) {
+      p.cursorHeld = 0;
       p.cursor.x = clamp(inp.pointer.x, 0, VIEW_W - 1);
       p.cursor.y = clamp(inp.pointer.y, 0, VIEW_H - 1);
       return;
     }
     const dx = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
     const dy = (inp.down ? 1 : 0) - (inp.up ? 1 : 0);
-    p.cursor.x = clamp(p.cursor.x + dx * CURSOR_SPEED * DT, 0, VIEW_W - 1);
-    p.cursor.y = clamp(p.cursor.y + dy * CURSOR_SPEED * DT, 0, VIEW_H - 1);
+    p.cursorHeld = dx || dy ? Math.min(p.cursorHeld + 1, CURSOR_RAMP_FRAMES) : 0;
+    const speed = CURSOR_SPEED_MIN + ((CURSOR_SPEED_MAX - CURSOR_SPEED_MIN) * p.cursorHeld) / CURSOR_RAMP_FRAMES;
+    p.cursor.x = clamp(p.cursor.x + dx * speed * DT, 0, VIEW_W - 1);
+    p.cursor.y = clamp(p.cursor.y + dy * speed * DT, 0, VIEW_H - 1);
   }
 
   crateItemAt(x: number, y: number): number {
