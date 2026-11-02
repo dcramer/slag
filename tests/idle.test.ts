@@ -84,6 +84,30 @@ describe('idle players', () => {
     expect(m.player(0)!.afkRounds).toBeUndefined();
   });
 
+  it('a timed phase ends the wait itself: nobody is marked AFK there', () => {
+    const m = new Match(777, undefined, { ...DEFAULT_RULES, pickSeconds: 0, placeSeconds: 45, raceSeconds: 60 });
+    m.join('a');
+    m.join('b');
+    m.startMatch();
+    m.crate.forEach((c, i) => {
+      if (i < 2) c.claimedBy = i;
+    });
+    m.players.forEach((p, i) => (p.claim = i));
+    expect(
+      stepUntil(
+        m,
+        () => m.phase === 'place',
+        () => ({}),
+        100,
+      ),
+    ).toBeGreaterThanOrEqual(0);
+    m.player(0)!.placed = true;
+    expect(stepUntil(m, () => m.phase === 'run', busy, 45 * 60 + 100)).toBeGreaterThan(IDLE_FRAMES);
+    expect(m.player(1)!.afk).toBeUndefined();
+    for (let f = 0; f < IDLE_FRAMES + 60; f++) m.step({});
+    expect(m.players.every((p) => !p.afk)).toBe(true);
+  });
+
   it('a finished runner may watch the rest of the race as long as it likes', () => {
     const m = pair();
     m.startMatch();

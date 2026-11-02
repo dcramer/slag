@@ -29,7 +29,7 @@ export function arrival(hud: Hud, m: Match, t: number) {
   const failed = a.stage === 'failed';
   const countdown = a.rejoinIn !== undefined;
   const w = 320;
-  const h = failed ? (countdown ? 116 : 96) : 118;
+  const h = failed ? (countdown && a.rejoinIn! > 0 ? 116 : 96) : 118;
   const cy = (f.safeY0 + f.y1) / 2;
   const done = hud.grow(VIEW_W / 2, cy, Math.min(hud.uiScale, (f.w - 24) / (w + 20), (f.h - 16) / 290));
   hud.logo(VIEW_W / 2, cy - 104, 34);
