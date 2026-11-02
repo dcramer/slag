@@ -13,12 +13,13 @@ Package manager is **pnpm** (`packageManager` in package.json). Never use npm or
 | `pnpm install` | First thing in a fresh checkout or worktree (`node_modules` is not shared). |
 | `pnpm check` | The gate: typecheck + lint + format check + tests (~10 s). Must pass before every commit. |
 | `pnpm check:fast` | Typecheck + lint + format check (~2 s). Use while iterating. |
-| `pnpm test:slow` | Generator and statistical suites at full sample size. CI runs it; don't run it as a routine step. |
-| `pnpm vitest run tests/foo.test.ts` | One test file, at its small sample. Add `-t "name"` for one test. |
+| `pnpm test` | Behavior and invariants at fixed small seed counts, in `tests/`. The test half of `pnpm check`. |
+| `pnpm vitest run tests/foo.test.ts` | One test file. Add `-t "name"` for one test. |
+| `pnpm test:stats` | Distribution and balance over many seeds, in `tests/stats/` (`pnpm test:stats level-styles` for one file). CI runs it. Run it yourself only when deliberately tuning the generator or balance. |
 | `pnpm format` | `oxlint --fix` then `oxfmt`: fixes formatting and safe lint issues. |
 | `pnpm build` | Production build into `.next/`, exactly what Vercel runs. |
 | `pnpm shot <scenario> [opts]` | Headless screenshots into `shots/` (gitignored). See "Verify visually". |
-| `pnpm perf [--only race8,gen,load]` | Frame-time, level-gen and page-load numbers into `shots/perf/`; `--compare <json>` flags regressions. Options are in `tools/perf.ts`. |
+| `pnpm perf [--only race8,gen,load]` | Benchmarks: frame-time, level-gen and page-load numbers into `shots/perf/`; `--compare <json>` flags regressions. Options are in `tools/perf.ts`. Run it on purpose, never as a routine step. |
 | `pnpm level <seed> [--theme farm]` | ASCII level dump: `#` solid, `=` one-way, `S`/`G` spawn/goal, `·` reachable stand cell, `P` set piece. |
 | `pnpm level --stats 50` | Per-theme stats over N seeds: ms/level, styles, `needBridges`, `fallbacks` (~2 min at 50). |
 | `pnpm dev` | Dev server at http://localhost:3000; `/` is the main menu (Play opens a fresh lobby `/r/<code>`, passing `?seed`/`?theme` through). |
@@ -33,7 +34,7 @@ Lint: `oxlint` (type-aware, `.oxlintrc.json`). Errors fail CI; warnings are real
 2. `pnpm build` passes if you touched `app/`, `next.config.ts`, `package.json`, or what `app/` imports from `src/`.
 3. Visual change: you took a screenshot and looked at it (see below). Typechecking says nothing about pixels.
 4. Generator change: `pnpm level --stats 50` shows `fallbacks: 0` and no unexplained jump in ms/level or `needBridges`; compare against a run on the parent commit.
-5. Behavior change: a test covers it (generator invariants, prop module runtime behavior, physics feel regressions). Test behavior and invariants, not every tunable or weight. Keep tests cheap, because every second is paid on every iteration by every agent; sample a few seeds rather than hundreds unless the invariant needs more. If a suite's full sample is too slow for `pnpm check`, size it with `sample(fast, slow)` from `tests/lib/tier.ts`, guard distribution assertions with `SLOW`, and add the file to `SLOW_FILES` in `vitest.config.ts`.
+5. Behavior change: a test covers it (generator invariants, prop module runtime behavior, physics feel regressions). Test behavior and invariants, not every tunable or weight. Keep tests cheap, because every second is paid on every iteration by every agent; give each test one fixed seed count, a few seeds rather than hundreds. An assertion that needs many seeds to mean anything (a share, a variety count) goes in a file under `tests/stats/` named for what it measures. No skips, and no seed counts that depend on the environment.
 6. In your final message, show evidence: the commands you ran with their result, and screenshot paths.
 
 ### Verify visually
@@ -70,7 +71,7 @@ Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm
 
 - `src/game-client.ts`: `bootGame(container, room)`: canvases, input, menus, fixed 60 Hz loop. Each step: input → `Match.step` → `RunWorld.step` (props `build` solids/hazards, then `trace` rays → `stepBody` → hazards/springs/goal → props `tick`) → events queue → `Renderer.render`.
 - `src/sim/`: deterministic simulation (physics, level, reachability, run world, prop modules). `src/gen/`: generators (levels, set pieces, props, theme looks, characters, names). `src/game/`: match state machine (lobby → pick → place → run → score → victory) and `scoring.ts`. `src/render/`: Canvas2D layers + WebGL2 post. `src/input/`: keyboard/gamepad → `InputFrame` (bindings in `bindings.ts`). `src/audio/`: procedural SFX and per-theme music. `src/ui/`: menus. `src/codex/`: the `/codex` parts catalog.
-- `tools/`: `shot.ts`, `level.ts`. `tests/`: vitest, one file per subsystem.
+- `tools/`: `shot.ts`, `level.ts`. `tests/`: vitest, one file per subsystem. `tests/stats/`: distribution and balance suites, one file per measure. `tests/lib/`: the per-seed checks both share.
 
 ## Extension points
 

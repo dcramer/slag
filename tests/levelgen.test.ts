@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { canPlaceBridge, generateLevel, lastGenInfo, MAX_BRIDGES, withBridges } from '../src/gen/level';
-import { analyzeReach, isStandable } from '../src/sim/reach';
-import { sample, SLOW } from './lib/tier';
+import { generateLevel } from '../src/gen/level';
+import { expectSolvableLevel } from './lib/level-checks';
 
 describe('level generation', () => {
   it('is deterministic', () => {
@@ -12,22 +11,7 @@ describe('level generation', () => {
     expect(a.spawn).toEqual(b.spawn);
   });
 
-  it('produces policy-solvable, non-fallback levels for many seeds', { timeout: 240_000 }, () => {
-    const styles = new Set<string>();
-    let fallbacks = 0;
-    for (let i = 0; i < sample(12, 150); i++) {
-      const seed = (i * 2654435761) >>> 0;
-      const l = generateLevel(seed);
-      const { bridges, fallback } = lastGenInfo;
-      styles.add(l.style);
-      if (fallback) fallbacks++;
-      expect(isStandable(l, l.spawn.tx, l.spawn.ty)).toBe(true);
-      expect(isStandable(l, l.goal.tx, l.goal.ty)).toBe(true);
-      expect(bridges.length).toBeLessThanOrEqual(MAX_BRIDGES);
-      expect(bridges.every((b) => canPlaceBridge(l, b))).toBe(true);
-      expect(analyzeReach(bridges.length ? withBridges(l, bridges) : l).goalReached).toBe(true);
-    }
-    expect(fallbacks).toBe(0);
-    if (SLOW) expect(styles.size).toBeGreaterThanOrEqual(12);
-  }); // 150 full generations in the slow tier: generous timeout for loaded machines
+  it('produces policy-solvable, non-fallback levels', { timeout: 120_000 }, () => {
+    for (let i = 0; i < 12; i++) expectSolvableLevel((i * 2654435761) >>> 0);
+  });
 });

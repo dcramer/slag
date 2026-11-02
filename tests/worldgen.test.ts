@@ -1,81 +1,22 @@
 import { jumpMetrics } from '../src/sim/physics';
 import { describe, expect, it } from 'vitest';
-import { BRIDGE_W, canPlaceBridge, generateLevel, judge, lastGenInfo, MAX_BRIDGES, withBridges } from '../src/gen/level';
+import { BRIDGE_W, generateLevel, judge } from '../src/gen/level';
 import { jumpProfile } from '../src/gen/level/probe';
 import { LEVEL_H, LEVEL_W } from '../src/sim/constants';
-import { isProtected, type Level, T_EMPTY, T_ONEWAY, T_SOLID } from '../src/sim/level';
-import { analyzeReach, isStandable } from '../src/sim/reach';
+import { type Level, T_SOLID } from '../src/sim/level';
+import { analyzeReach } from '../src/sim/reach';
 import { THEME_IDS } from '../src/themes';
-import { sample, SLOW } from './lib/tier';
+import { checkPolicy, expectThemedLevel } from './lib/level-checks';
 
-const SEEDS = sample(2, 30);
+const SEEDS = 2;
 const seedAt = (i: number) => (i * 2654435761 + 12345) >>> 0;
 
-/** Independent policy check: solvable bare, or with the reported ≤2 bridges re-verified here. */
-function checkPolicy(l: Level, bridges: { x: number; y: number }[]): boolean {
-  if (bridges.length === 0) return analyzeReach(l).goalReached;
-  if (bridges.length > MAX_BRIDGES) return false;
-  for (const b of bridges) {
-    if (!canPlaceBridge(l, b)) return false;
-    for (let i = 0; i < BRIDGE_W; i++) if (isProtected(l, b.x + i, b.y)) return false;
-  }
-  return analyzeReach(withBridges(l, bridges)).goalReached;
-}
-
 describe('worldgen per theme', () => {
-  let bridged = 0;
-  let twoParts = 0;
-  let total = 0;
-  const styles = new Map<string, Set<string>>();
   for (const theme of THEME_IDS) {
-    it(`${theme}: deterministic, valid, policy-solvable, themed`, { timeout: 180_000 }, () => {
-      let themeBridged = 0;
-      const themeStyles = new Set<string>();
-      styles.set(theme, themeStyles);
-      for (let i = 0; i < SEEDS; i++) {
-        const seed = seedAt(i);
-        const l = generateLevel(seed, theme);
-        const info = { ...lastGenInfo };
-        themeStyles.add(l.style);
-        const again = generateLevel(seed, theme);
-        expect(Array.from(again.tiles), `${theme} seed ${seed} determinism`).toEqual(Array.from(l.tiles));
-        expect(again.spawn).toEqual(l.spawn);
-        expect(again.goal).toEqual(l.goal);
-        expect(lastGenInfo.bridges).toEqual(info.bridges);
-
-        expect(info.fallback, `${theme} seed ${seed} fallback`).toBe(false);
-        expect(l.style.startsWith(`${theme}:`), l.style).toBe(true);
-        expect(l.tiles.length).toBe(l.w * l.h);
-        expect(l.profile && l.w === l.profile.w && l.h === l.profile.h).toBe(true);
-        expect(l.tiles.every((t) => t === T_EMPTY || t === T_SOLID || t === T_ONEWAY)).toBe(true);
-        // Spawn left, goal right, both standable and protected.
-        expect(l.spawn.tx).toBeLessThan(5);
-        expect(l.goal.tx).toBeGreaterThan(l.w - 6);
-        expect(isStandable(l, l.spawn.tx, l.spawn.ty)).toBe(true);
-        expect(isStandable(l, l.goal.tx, l.goal.ty)).toBe(true);
-        expect(isProtected(l, l.spawn.tx, l.spawn.ty)).toBe(true);
-        expect(isProtected(l, l.goal.tx, l.goal.ty)).toBe(true);
-        expect(checkPolicy(l, info.bridges), `${theme} seed ${seed} policy`).toBe(true);
-        if (info.bridges.length) themeBridged++;
-        if (info.bridges.length >= 2) twoParts++;
-      }
-      // Almost nothing is passable bare, in any theme.
-      if (SLOW) expect(themeBridged).toBeGreaterThanOrEqual(SEEDS * 0.85);
-      bridged += themeBridged;
-      total += SEEDS;
+    it(`${theme}: deterministic, valid, policy-solvable, themed`, { timeout: 60_000 }, () => {
+      for (let i = 0; i < SEEDS; i++) expectThemedLevel(theme, seedAt(i));
     });
   }
-  it.runIf(SLOW)('about 99% of levels need parts, and 20-30% need more than one', () => {
-    expect(total).toBe(SEEDS * THEME_IDS.length);
-    expect(bridged / total).toBeGreaterThanOrEqual(0.95);
-    expect(twoParts / total).toBeGreaterThan(0.18);
-    expect(twoParts / total).toBeLessThan(0.32);
-  });
-
-  // Reuses the sweep's levels: 192 extra generations proved nothing the 240 above don't.
-  it.runIf(SLOW)('themes have several sub-styles each', () => {
-    for (const theme of THEME_IDS) expect(styles.get(theme)?.size, theme).toBeGreaterThanOrEqual(2);
-  });
 });
 
 /**

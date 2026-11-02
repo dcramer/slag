@@ -5,12 +5,11 @@ import { POINTS } from '../src/game/scoring';
 import { RUN_COUNTDOWN, TILE, VIEW_W } from '../src/sim/constants';
 import { canPlace, footprint } from '../src/sim/props';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
-import { sample } from './lib/tier';
 
 const press = (k: Partial<InputFrame>): InputFrame => ({ ...NO_INPUT, ...k });
 
 /** Drive a match with a simple scripted bot: picks the first free card, places anywhere legal, holds right + jumps. */
-function playMatch(seed: number, devices: string[], maxFrames = 60 * 60 * sample(2, 6)) {
+function playMatch(seed: number, devices: string[], maxFrames = 60 * 60 * 6) {
   const m = new Match(seed);
   // The dumb bot may never finish or find a spot: races and placement must end.
   m.rules = { ...m.rules, raceSeconds: 20, placeSeconds: 5 };
