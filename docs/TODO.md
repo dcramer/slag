@@ -49,7 +49,6 @@ Size tiers for parts are a mapping of the old rolled ranges, so check them too; 
 `pnpm check` prints 7 warnings, in `src/ui/touch/overlay.ts`, `src/ui/touch/device.ts`, `src/input/input.ts`, `src/render/props/modules/vehicle.ts` and `src/audio/system.ts`. AGENTS.md treats warnings as real findings. Do it with or after item 6, which also touches the touch code.
 
 ## 21. Ink art leftovers
-- On wide space levels a few tall rock pillars from the surroundings show inside the play area without outlines (seed `sheet4`). It's a `surround.ts` question.
 - Small cog lifts and small spin bars stay small on crate cards, because small parts draw at 0.6 scale.
 
 ## 15. Parody names: decide on sound-alikes
