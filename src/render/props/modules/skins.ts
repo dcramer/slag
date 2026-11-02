@@ -1,13 +1,13 @@
 import { css, type HSL } from '../../../core/color';
 import type { Rect } from '../../../core/geom';
 import { hash2 } from '../../../core/rng';
-import type { CannonLook, ModuleOf, RotorArm, RotorLook } from '../../../sim/props';
+import type { CannonLook, DecoKind, ModuleOf, RotorArm, RotorLook } from '../../../sim/props';
 import type { ThemeId } from '../../../themes';
 import { blob, line, type P, stroke } from '../../ink';
-import { ball, boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, tick, tone } from '../../ink-props';
-import { circle, glowDot, light, type RC } from '../../kit';
+import { ball, boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
+import { circle, glowDot, light, METALS, type RC } from '../../kit';
 import type { DrawCtx } from '../common';
-import { ceilingAbovePx, groundBelowPx } from './setpiece';
+import { ceilingAbovePx, groundBelowPx, lattice } from './setpiece';
 
 /**
  * Theme skins for set pieces. The sim gives the glacier and space their pieces through looks other themes
@@ -429,4 +429,93 @@ export const CANNON_SKINS: Partial<Record<ThemeId, Partial<Record<CannonLook, (r
 export function cannonSkin(m: Cannon, d: DrawCtx) {
   const t = themeOf(d);
   return t ? CANNON_SKINS[t]?.[m.look] : undefined;
+}
+
+/**
+ * Comm Array: two white station trusses on a deck, each with a dish turned to the other (they're talking,
+ * and the arc is the conversation), a solar wing on the outside, a sagging data cable between, and the
+ * station's red and green nav lights. Baked per size; the lights blink live.
+ */
+function commTrusses(w: number, h: number) {
+  return sprite(`sk|comm|${w}|${h}`, -16, 6, w + 32, h - 4, (g) => {
+    const top = 13;
+    const paint: HSL = { h: 210, s: 8, l: 86 };
+    const band: HSL = { h: 14, s: 82, l: 52 };
+    const deck = h;
+    // The data cable, sagging from truss to truss behind them.
+    const cable: P[] = [];
+    for (let i = 0; i <= 12; i++) {
+      const t = i / 12;
+      cable.push({ x: 8 + (w - 16) * t, y: top + 26 + Math.sin(t * Math.PI) * 5 });
+    }
+    g.fillStyle = INK;
+    stroke(g, cable, { w: 1.6, seed: 201, taper: [0, 0], press: 0.1 });
+    g.fillStyle = css({ h: 40, s: 70, l: 52 });
+    stroke(g, cable, { w: 0.6, seed: 202, taper: [0, 0], press: 0 });
+    for (const [i, mx] of [8, w - 8].entries()) {
+      const out = i === 0 ? -1 : 1;
+      lattice(g, mx, top, h, 5, METALS.steel, paint);
+      // An orange band round the truss, the way station hardware is marked.
+      part(g, boxPts(mx - 3.6, top + 6, 7.2, 2.6, 0.5, 203 + i), band, 203 + i, { depth: 0.3, thin: 0.35, thick: 0.8 });
+      // The solar wing, out on a strut: a dark panel cut into cells.
+      tick(g, mx + out * 2.5, top + 11, mx + out * 7, top + 11, 1.4, 205 + i);
+      const px = out > 0 ? mx + 6.5 : mx - 15.5;
+      const panel = boxPts(px, top + 7.5, 9, 7, 0.5, 206 + i, 0.1);
+      part(g, panel, { h: 222, s: 55, l: 30 }, 206 + i, { depth: 0.5, thin: 0.4, thick: 0.9 });
+      g.save();
+      path(g, panel);
+      g.clip();
+      for (let cx = px + 3; cx < px + 9; cx += 3) tick(g, cx, top + 7.5, cx, top + 14.5, 0.4, cx, 'rgba(150,190,255,0.7)');
+      tick(g, px, top + 11, px + 9, top + 11, 0.4, 208 + i, 'rgba(150,190,255,0.7)');
+      glint(g, poly(px + 0.8, top + 8.6, px + 2.6, top + 8.4), 'rgba(220,235,255,0.9)', 0.5);
+      g.restore();
+      // The dish, turned to the other truss: a bowl on a yoke with a feed horn at its focus.
+      const dx = mx - out * 4.5;
+      const dy = top + 19;
+      // The mount, a wedge off the truss, then the dish seen three-quarter on: a rim and the dark bowl in it.
+      part(g, poly(mx, dy - 2.4, dx + out * 0.6, dy - 1, dx + out * 0.6, dy + 1, mx, dy + 2.4), METALS.steel.base, 209 + i, {
+        depth: 0.3,
+        thin: 0.35,
+        thick: 0.8,
+      });
+      part(g, ovalPts(dx, dy, 2.9, 7.4, 210 + i, 0.03, 18), paint, 210 + i, { depth: 0.5, thin: 0.45, thick: 1.15 });
+      g.fillStyle = css(paint, -34);
+      path(g, ovalPts(dx - out * 0.55, dy + 0.3, 1.8, 6, 211 + i, 0.03, 16));
+      g.fill();
+      g.fillStyle = INK;
+      line(g, dx - out * 0.8, dy - 6.4, dx - out * 7.5, dy, { w: 0.55, seed: 211 + i, taper: [0, 0], press: 0 });
+      line(g, dx - out * 0.8, dy + 6.4, dx - out * 7.5, dy, { w: 0.55, seed: 212 + i, taper: [0, 0], press: 0 });
+      ball(g, dx - out * 7.8, dy, 1.25, METALS.steel.base, 213 + i);
+      // A deck plate under each truss, bolted to the floor.
+      part(g, boxPts(mx - 6.5, deck - 3, 13, 3.2, 0.6, 214 + i), METALS.steel.base, 214 + i, { depth: 0.5, thin: 0.45, thick: 1 });
+      for (const rx of [mx - 5, mx + 5]) dot(g, rx, deck - 1.4, 0.5, rx, css(METALS.steel.light));
+    }
+  });
+}
+
+function commArray(rc: RC, m: ModuleOf<'deco'>, d: DrawCtx) {
+  const s = rc.s;
+  const x = m.at[0] + d.off[0];
+  const y = m.at[1] + d.off[1];
+  stamp(s, commTrusses(m.w, m.h), x, y);
+  // Nav lights on the solar wings' tips: red to port, green to starboard.
+  for (const [i, lx] of [x - 7.5, x + m.w + 7.5].entries()) {
+    const on = Math.floor(rc.t * 1.2 + i * 0.5) % 2 === 0;
+    const col: HSL = i === 0 ? { h: 2, s: 100, l: 55 } : { h: 130, s: 90, l: 50 };
+    s.fillStyle = INK;
+    circle(s, lx, y + 19.5, 1.6);
+    s.fillStyle = css(col, on ? 8 : -30);
+    circle(s, lx, y + 19.5, 1.05);
+    if (on) glowDot(rc.g, lx, y + 19.5, 6, col, 0.8);
+  }
+}
+
+/** Scenery dressing a theme draws its own way, by deco kind. */
+export const DECO_SKINS: Partial<Record<ThemeId, Partial<Record<DecoKind, (rc: RC, m: ModuleOf<'deco'>, d: DrawCtx) => void>>>> = {
+  space: { antenna: commArray },
+};
+
+export function decoSkin(m: ModuleOf<'deco'>, d: DrawCtx) {
+  const t = themeOf(d);
+  return t ? DECO_SKINS[t]?.[m.kind] : undefined;
 }
