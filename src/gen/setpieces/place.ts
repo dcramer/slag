@@ -61,6 +61,8 @@ export interface Piece {
 export interface Recipe {
   name: string;
   weight: number;
+  /** What the piece mostly does (danger knob tilts weights toward hazards or helpers). Default 'hazard'. */
+  role?: Role;
   /** Allow a second copy in the same level. */
   repeat?: boolean;
   /** Lazily yields candidates, best first. The placer takes the first valid one. */
@@ -336,7 +338,7 @@ export function finalize(s: Site, piece: Piece, uid: number, key: string): Place
     const vx = Math.cos(m.angle) * m.speed;
     let vy = Math.sin(m.angle) * m.speed;
     for (let f = 0; f < 60 * 8; f++) {
-      vy += spec.gravity * DT;
+      vy += spec.gravity * (level.gravity ?? 1) * DT;
       x += vx * DT;
       y += vy * DT;
       if (spec.wobble) {
@@ -377,26 +379,49 @@ export function commit(s: Site, pp: PlacedProp): void {
   for (const [x, y] of pp.def.footprint) s.taken.add((y + pp.ty) * s.w + (x + pp.tx));
 }
 
+/** Level-profile knobs for the placer. */
+export interface PlacerOpts {
+  /** How many pieces to aim for (0–4). Default: a 1–3 roll. */
+  count?: number;
+  /** 0 = favour build/utility recipes (lifts, platforms) … 1 = favour hazard recipes. Default 0.5 (recipe weights as written). */
+  danger?: number;
+}
+
+/** Recipe weight scaled by the level's danger: hazards up to ×2.4 on nasty levels, ×0.4 on tame ones (and the reverse for helpers). */
+function dangerWeight(r: Recipe, danger: number): number {
+  const hazard = r.role === 'hazard' || r.role === undefined;
+  const k = hazard ? 0.4 + 2 * danger : 2.4 - 2 * danger;
+  return r.weight * Math.max(0.15, k);
+}
+
 /**
- * Build a theme placer from recipes: pick 1–3 pieces, trying recipes in a
- * weighted random order and each recipe's candidates best-first.
+ * Build a theme placer from recipes: pick `opts.count` pieces (default a 1–3
+ * roll), trying recipes in a weighted random order (weights tilted by
+ * `opts.danger`) and each recipe's candidates best-first. Bigger levels get
+ * more candidate tries per recipe.
  */
 export function makePlacer(themeKey: string, recipes: readonly Recipe[], uidBase: number) {
-  return (rng: Rng, level: Level): PlacedProp[] => {
+  return (rng: Rng, level: Level, opts: PlacerOpts = {}): PlacedProp[] => {
     const s = new Site(level);
-    const want = rng.weighted([
+    const rolled = rng.weighted([
       [1, 2],
       [2, 4],
       [3, 3],
     ] as const);
-    const pool = recipes.map((r) => ({ r, k: rng.next() ** (1 / r.weight) })).sort((a, b) => b.k - a.k);
+    const want = opts.count ?? rolled;
+    if (want <= 0) return [];
+    const danger = opts.danger ?? 0.5;
+    const tryCap = Math.round(16 * Math.max(1, Math.sqrt((level.w * level.h) / (48 * 27))));
+    const pool = recipes
+      .map((r) => ({ r, k: (rng.next() + 1e-9) ** (1 / (opts.danger === undefined ? r.weight : dangerWeight(r, danger))) }))
+      .sort((a, b) => b.k - a.k);
     const order = [...pool.map((p) => p.r), ...pool.filter((p) => p.r.repeat).map((p) => p.r)];
     const out: PlacedProp[] = [];
     for (const recipe of order) {
       if (out.length >= want) break;
       let tries = 0;
       for (const cand of recipe.candidates(rng, s)) {
-        if (++tries > 16) break;
+        if (++tries > tryCap) break;
         const pp = finalize(s, cand, uidBase + out.length, `setpiece:${themeKey}:${recipe.name}`);
         if (pp) {
           out.push(pp);

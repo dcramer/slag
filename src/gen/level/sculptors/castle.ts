@@ -1,7 +1,8 @@
 import type { Rng } from '../../../core/rng';
 import { finish, Grid } from '../kit';
 import type { Sculptor } from '../types';
-import { easyGap, easyRise, H, hardGap, pit, rollChallenges, Slots, W } from './common';
+import { easyGap, easyRise, hardGap, knobs, pit, rollChallenges, Slots, stepRows } from './common';
+import { castleTall } from './tall';
 
 type CastleStyle = 'bailey' | 'gatehouse' | 'dungeon';
 
@@ -17,31 +18,30 @@ interface Module {
  * over an arched gate, a moat (often with a collapsed bridge — the classic
  * place to need a bridge prop), and dungeon ceilings with portcullis teeth.
  */
-export const castle: Sculptor = ({ rng, attempt }) => {
+export const castle: Sculptor = (ctx) => {
+  if (ctx.profile.size === 'tall') return castleTall(ctx);
+  const { rng, attempt } = ctx;
+  const k = knobs(ctx);
+  const { W, H } = k;
   const style = rng.weighted<CastleStyle>([
     ['bailey', 3],
     ['gatehouse', 3],
-    ['dungeon', 2],
+    ['dungeon', 1 + 2 * k.density],
   ]);
-  const g = new Grid();
-  const slots = new Slots();
-  const f = rng.int(19, 22);
-  const floor: number[] = [];
-  for (let row = f; floor.length < W;) {
-    const len = rng.int(6, 12);
-    for (let i = 0; i < len && floor.length < W; i++) floor.push(row);
-    if (rng.chance(0.6)) row = Math.max(f - 3, Math.min(f + 2, row + rng.pick([-2, -1, 1, 2])));
-  }
+  const g = new Grid(W, H);
+  const slots = new Slots(6, W - 7);
+  const f = H - rng.int(5, 8);
+  const floor = stepRows(rng, k, f, [6, 12], 0.6, 2);
   const level = (a: number, b: number, row = floor[Math.max(0, a)]) => {
     for (let x = Math.max(0, a); x <= Math.min(W - 1, b); x++) floor[x] = row;
     return row;
   };
 
   // Moats: hard ones keep a collapsed bridge's stubs, easy ones are a hop.
-  const challenges = rollChallenges(rng, 0.82, 0.15, attempt);
+  const challenges = rollChallenges(rng, 0.82, 0.15, attempt, k.propNeed);
   g.wantsProps = challenges > 0;
   const moats: { a: number; b: number; hard: boolean; stubs: [number, number] }[] = [];
-  for (let i = 0; i < Math.max(challenges, rng.int(0, 1)); i++) {
+  for (let i = 0; i < Math.max(challenges, rng.int(0, 1) + Math.floor((k.wide - 1) * 2 * rng.next())); i++) {
     const hard = i < challenges;
     const open = hard ? hardGap(rng) : easyGap(rng, 2);
     const stubs: [number, number] = hard && rng.chance(0.7) ? [rng.int(1, 2), rng.int(1, 2)] : [0, 0];
@@ -54,12 +54,14 @@ export const castle: Sculptor = ({ rng, attempt }) => {
 
   // The goal often sits on a donjon at the right edge, reached by a stair.
   let goalKeep = 0;
-  if (rng.chance(0.4) && slots.free(W - 13, W - 7, 2)) {
+  if (rng.chance(0.4) && slots.free(W - 13, W - 7, 2) && Math.min(...floor.slice(W - 13)) > 15) {
     goalKeep = rng.int(5, 8);
     slots.mark(W - 13, W - 7);
   }
   const placed: { m: Module; x: number; w: number }[] = [];
-  for (const m of BAGS[style](rng)) {
+  const bag: Module[] = [];
+  for (let r = 0; r < Math.max(1, Math.round(k.wide * (0.55 + 0.7 * k.density))); r++) bag.push(...BAGS[style](rng));
+  for (const m of bag) {
     let w = m.w(rng);
     let x = slots.take(rng, w, 1);
     if (x === null) {
@@ -94,6 +96,7 @@ export const castle: Sculptor = ({ rng, attempt }) => {
   for (const p of placed) p.m.stamp(g, rng, p.x, p.w, floor[p.x]);
 
   if (style === 'dungeon') dungeonCeiling(g, rng, floor);
+  else if (k.density > 0.7 && rng.chance(0.5)) dungeonCeiling(g, rng, floor);
 
   return finish(g, { row: sRow - 1 }, { row: gRow - 1 }, `castle:${style}`);
 };
@@ -199,8 +202,9 @@ const KEEP: Module = {
 };
 
 function dungeonCeiling(g: Grid, rng: Rng, floor: number[]): void {
-  const a = rng.int(6, 16);
-  const b = Math.min(W - 7, a + rng.int(14, 24));
+  const W = g.w;
+  const a = rng.int(6, Math.max(6, W - 32));
+  const b = Math.min(W - 7, a + Math.round(rng.int(14, 24) * Math.max(1, W / 60)));
   let depth = rng.int(3, 5);
   for (let x = a; x <= b; x++) {
     if (rng.chance(0.3)) depth = Math.max(2, Math.min(7, depth + rng.pick([-1, 1])));

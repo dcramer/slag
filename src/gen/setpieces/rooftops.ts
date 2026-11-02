@@ -6,6 +6,7 @@ export const ROOFTOPS: Recipe[] = [
   {
     name: 'ac updraft',
     weight: 3,
+    role: 'utility',
     repeat: true,
     candidates: (rng, s) =>
       acUnits(rng, s, {
@@ -18,6 +19,7 @@ export const ROOFTOPS: Recipe[] = [
   {
     name: 'antennas',
     weight: 2,
+    role: 'hazard',
     candidates: (rng, s) =>
       antennas(rng, s, {
         name: 'Pirate Antenna',
@@ -30,6 +32,7 @@ export const ROOFTOPS: Recipe[] = [
   {
     name: 'gondola',
     weight: 2,
+    role: 'build',
     candidates: (rng, s) =>
       pendulums(rng, s, {
         name: 'Window Gondola',

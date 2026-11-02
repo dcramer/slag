@@ -1,7 +1,8 @@
 import type { Rng } from '../../../core/rng';
 import { finish, Grid, hintGap, noise1D } from '../kit';
 import type { Sculptor } from '../types';
-import { easyGap, easyRise, H, hardGap, pit, relax, rollChallenges, Slots, W } from './common';
+import { easyGap, easyRise, hardGap, knobs, pit, relax, rollChallenges, Slots } from './common';
+import { volcanoTall } from './tall';
 
 type VolcanoStyle = 'spires' | 'caldera' | 'flows';
 
@@ -12,17 +13,21 @@ type VolcanoStyle = 'spires' | 'caldera' | 'flows';
  * as stepping stones over lava lakes ('flows'); or a huge cone with a crater
  * to cross at the top ('caldera').
  */
-export const volcano: Sculptor = ({ rng, attempt }) => {
+export const volcano: Sculptor = (ctx) => {
+  if (ctx.profile.size === 'tall') return volcanoTall(ctx);
+  const { rng, attempt } = ctx;
+  const k = knobs(ctx);
+  const { W, H } = k;
   const style = rng.weighted<VolcanoStyle>([
-    ['spires', 3],
+    ['spires', 1 + 3 * k.density],
     ['caldera', 2],
-    ['flows', 3],
+    ['flows', 4 - 2 * k.density],
   ]);
-  const g = new Grid();
-  const slots = new Slots();
-  const base = rng.int(19, 22);
+  const g = new Grid(W, H);
+  const slots = new Slots(6, W - 7);
+  const base = H - rng.int(5, 8);
   const n = noise1D(rng, W, rng.int(5, 8), 3, 0.6);
-  const surf = n.map((v, x) => Math.max(12, Math.min(24, Math.round(base + v * 4 + (x % 2 ? rng.int(0, 1) : 0)))));
+  const surf = n.map((v, x) => Math.max(6, Math.min(H - 3, Math.round(base + k.ramp(x) + v * 4 + (x % 2 ? rng.int(0, 1) : 0)))));
   const locked = new Uint8Array(W);
   const sRow = surf[2];
   const gRow = surf[W - 3];
@@ -30,13 +35,13 @@ export const volcano: Sculptor = ({ rng, attempt }) => {
   for (let x = W - 6; x < W; x++) surf[x] = gRow;
   locked.fill(1, 0, 6);
   locked.fill(1, W - 6, W);
-  const challenges = rollChallenges(rng, 0.82, 0.15, attempt);
+  const challenges = rollChallenges(rng, 0.82, 0.15, attempt, k.propNeed);
   g.wantsProps = challenges > 0;
   let hardLeft = challenges;
 
   // Lava lake with floating stepping stones.
   const stones: { x: number; y: number; w: number }[] = [];
-  if (style === 'flows') {
+  for (let lake = style === 'flows' ? Math.max(1, Math.round(k.wide * 0.8)) : 0; lake > 0; lake--) {
     const lw = rng.int(16, 24);
     const a = slots.take(rng, lw, 2, 8, W - 9);
     if (a !== null) {
@@ -73,7 +78,7 @@ export const volcano: Sculptor = ({ rng, attempt }) => {
     const x = slots.take(rng, cw, 0, 8, W - 9);
     if (x !== null) {
       const mid = x + (cw >> 1);
-      const peak = rng.int(9, 12);
+      const peak = Math.max(5, Math.min(...surf.slice(x, x + cw)) - rng.int(7, 10));
       const cr = hardLeft > 0 ? hardGap(rng) : easyGap(rng, 2);
       if (hardLeft > 0) hardLeft--;
       const ca = mid - (cr >> 1);
@@ -91,7 +96,7 @@ export const volcano: Sculptor = ({ rng, attempt }) => {
   }
   // Remaining lava pits.
   const pits: { a: number; b: number; hard: boolean }[] = [];
-  for (let i = 0; i < hardLeft + rng.int(1, 2); i++) {
+  for (let i = 0; i < hardLeft + k.count(rng.int(1, 2), 1); i++) {
     const hard = i < hardLeft;
     const w = hard ? hardGap(rng) : easyGap(rng, 2);
     const a = slots.take(rng, w, 3, 8, W - 9);
@@ -103,7 +108,7 @@ export const volcano: Sculptor = ({ rng, attempt }) => {
     }
     pits.push({ a, b: a + w - 1, hard });
   }
-  relax(surf, locked, 2);
+  relax(surf, H, locked, 2);
   for (let x = 0; x < W; x++) if (surf[x] < H) g.fill(x, surf[x], x, H - 1);
   for (const p of pits) pit(g, p.a, p.b, surf[p.a - 1], p.hard);
   if (crater) {
@@ -115,14 +120,14 @@ export const volcano: Sculptor = ({ rng, attempt }) => {
   for (const s of stones) rock(g, rng, s.x, s.y, s.w);
 
   // Spires and basalt clusters on the remaining ground.
-  const nSpires = style === 'spires' ? rng.int(2, 4) : rng.int(0, 2);
+  const nSpires = k.count(style === 'spires' ? rng.int(2, 4) : rng.int(0, 2));
   for (let i = 0; i < nSpires; i++) {
     const w = rng.pick([4, 5, 6, 7]);
     const x = slots.take(rng, w, 1);
     if (x === null) continue;
     spire(g, rng, x, w, surf);
   }
-  const nBasalt = style === 'spires' ? rng.int(1, 2) : rng.int(0, 1);
+  const nBasalt = k.count(style === 'spires' ? rng.int(1, 2) : rng.int(0, 1));
   for (let i = 0; i < nBasalt; i++) {
     const w = rng.int(4, 7);
     const x = slots.take(rng, w, 1);
@@ -130,9 +135,9 @@ export const volcano: Sculptor = ({ rng, attempt }) => {
     basalt(g, rng, x, w, surf);
   }
   // Floating chunks in the sky over open ground.
-  for (let i = rng.int(0, 2); i > 0; i--) {
+  for (let i = k.count(rng.int(0, 2)); i > 0; i--) {
     const x = rng.int(8, W - 12);
-    const y = rng.int(7, 12);
+    const y = Math.max(5, (surf[x] < H ? surf[x] : base) - rng.int(8, 13));
     let clean = true;
     for (let yy = y - 3; yy <= y + 5 && clean; yy++) for (let xx = x - 2; xx <= x + 6; xx++) if (!g.empty(xx, yy)) clean = false;
     if (clean) rock(g, rng, x, y, rng.int(3, 5));
@@ -151,7 +156,7 @@ function rock(g: Grid, rng: Rng, x: number, y: number, w: number): void {
 
 /** Tapered spire with ragged flanks: steps in by a column every 1–2 rows, topped by a short needle. */
 function spire(g: Grid, rng: Rng, x: number, w: number, surf: number[]): void {
-  const f = Math.max(...surf.slice(x, x + w).filter((v) => v < H));
+  const f = Math.max(...surf.slice(x, x + w).filter((v) => v < g.h));
   let a = x;
   let b = x + w - 1;
   let y = f - 1;
@@ -176,7 +181,7 @@ function basalt(g: Grid, rng: Rng, x: number, w: number, surf: number[]): void {
   let h = rng.int(2, 3);
   for (let i = 0; i < w; i++) {
     const f = surf[x + i];
-    if (f >= H) continue;
+    if (f >= g.h) continue;
     g.fill(x + i, f - h, x + i, f - 1);
     h = Math.max(1, Math.min(6, h + rng.pick([-1, 1, 1])));
   }

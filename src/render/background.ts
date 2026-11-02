@@ -81,8 +81,18 @@ export class Backdrop {
     const b = this.baked!;
     const s = rc.s;
     const t = rc.t;
-    const px = (depth: number) => -(cam.x - VIEW_W / 2) * depth;
-    const py = (depth: number) => -(cam.y - VIEW_H / 2) * depth * 0.6;
+    // Parallax from the camera's offset within the level. Classic levels keep
+    // the original travel; big levels compress it so the baked layers (PAD
+    // wide each side) never run out. Vertical offsets are measured from the
+    // bottom-most camera position, so climbing a tall level sinks the skyline.
+    const MAX_D = 0.4;
+    const halfX = Math.max(1, cam.ww / 2 - VIEW_W / (2 * 1.45));
+    const kx = Math.min(1, (VIEW_W * PAD * 0.9) / (MAX_D * halfX));
+    const refY = cam.wh - VIEW_H / 2;
+    const spanY = Math.max(1, refY - VIEW_H / (2 * 1.45));
+    const ky = Math.min(1, (VIEW_H * 0.45) / (MAX_D * 0.6 * spanY));
+    const px = (depth: number) => -(cam.x - cam.ww / 2) * depth * kx;
+    const py = (depth: number) => -(cam.y - refY) * depth * 0.6 * ky;
 
     const sky = s.createLinearGradient(0, 0, 0, VIEW_H);
     sky.addColorStop(0, css(th.skyTop));
@@ -208,20 +218,28 @@ export class Backdrop {
     }
   }
 
-  /** Liquid pool along the bottom of the world (drawn in world space, in front of terrain). */
-  drawLiquid(rc: RC, th: Theme) {
+  /**
+   * Liquid pool along the bottom of the world (drawn in world space, in front
+   * of terrain). `ww`×`wh` is the world size; only the visible stretch (`view`)
+   * is drawn, and the pool extends below the world for letterboxed views.
+   */
+  drawLiquid(rc: RC, th: Theme, ww: number, wh: number, view: { x: number; y: number; w: number; h: number }) {
     const L = th.liquid;
     const s = rc.s;
     const g = rc.g;
     const t = rc.t;
     const kind = L.kind;
+    const VIEW_H = wh;
+    const xa = Math.floor((Math.max(-20, view.x) - 20) / 6) * 6;
+    const xb = Math.min(ww + 20, view.x + view.w + 20);
+    const below = Math.max(wh + 20, view.y + view.h + 40);
     const y0 = VIEW_H - (kind === 'sea' ? 11 : 9);
     const amp = kind === 'sea' ? 1.8 : kind === 'swamp' || kind === 'tar' ? 0.5 : kind === 'street' ? 0 : 1;
     const wave = (x: number) => y0 + (Math.sin(x * 0.045 + t * 1.6) * 1.6 + Math.sin(x * 0.11 - t * 2.4) * 0.9 + Math.sin(x * 0.023 + t * 0.6) * 1.2) * amp;
     const path = new Path2D();
-    path.moveTo(-20, VIEW_H + 20);
-    for (let x = -20; x <= VIEW_W + 20; x += 6) path.lineTo(x, wave(x));
-    path.lineTo(VIEW_W + 20, VIEW_H + 20);
+    path.moveTo(xa, below);
+    for (let x = xa; x <= xb + 6; x += 6) path.lineTo(x, wave(x));
+    path.lineTo(xb + 6, below);
     path.closePath();
     // Heat haze / glow above emissive liquids.
     if (L.emissive) {
@@ -229,7 +247,7 @@ export class Backdrop {
       hz.addColorStop(0, css(L.glow, 0, 0));
       hz.addColorStop(1, css(L.glow, 0, (kind === 'street' ? 0.3 : 0.22) + Math.sin(t * 1.3) * 0.04));
       g.fillStyle = hz;
-      g.fillRect(-20, y0 - 70, VIEW_W + 40, 72);
+      g.fillRect(xa, y0 - 70, xb - xa + 6, 72);
     }
     if (kind === 'swamp' || kind === 'sea') {
       // Low mist / spray over the surface.
@@ -237,7 +255,7 @@ export class Backdrop {
       m.addColorStop(0, css(th.fog, 0, 0));
       m.addColorStop(1, css(th.fog, 0, kind === 'swamp' ? 0.35 : 0.18));
       s.fillStyle = m;
-      s.fillRect(-20, y0 - 26, VIEW_W + 40, 27);
+      s.fillRect(xa, y0 - 26, xb - xa + 6, 27);
     }
     const gr = s.createLinearGradient(0, y0 - 3, 0, VIEW_H);
     gr.addColorStop(0, css(L.color, kind === 'tar' ? 8 : 15));
@@ -255,27 +273,28 @@ export class Backdrop {
         g.globalAlpha = 1;
         // Crust patches drifting on the surface.
         s.fillStyle = css(L.color, kind === 'acid' ? -18 : -30, 0.55);
-        for (let i = 0; i < 14; i++) {
-          const cx = ((i * 97.3 + t * (6 + (i % 3) * 3)) % (VIEW_W + 60)) - 30;
+        for (let i = 0; i < 14 * Math.ceil(ww / 768); i++) {
+          const cx = ((i * 97.3 + t * (6 + (i % 3) * 3)) % (ww + 60)) - 30;
           ellipse(s, cx, wave(cx) + 4.5, 9 + (i % 4) * 4, 1.6);
         }
         if (kind === 'acid' || kind === 'lava') {
-          for (let i = 0; i < 8; i++) {
+          for (let i = 0; i < 8 * Math.ceil(ww / 768); i++) {
             const p = (t * 0.7 + i * 0.37) % 1;
-            const bx = (i * 131.7 + Math.floor(t * 0.7 + i * 0.37) * 53) % VIEW_W;
+            const bx = (i * 131.7 + Math.floor(t * 0.7 + i * 0.37) * 53) % ww;
             g.fillStyle = css(L.glow, 15, 0.6 * (1 - p));
             circle(g, bx, wave(bx) + 2 - p * 3, 0.8 + p * 1.6);
           }
         }
-        for (let x = 32; x < VIEW_W; x += 72) light(rc, x, y0 + 4, 90, L.glow, 0.5 + Math.sin(t * 2 + x) * 0.08);
+        for (let x = 32 + Math.max(0, Math.floor((view.x - 100) / 72)) * 72; x < Math.min(ww, view.x + view.w + 100); x += 72)
+          light(rc, x, y0 + 4, 90, L.glow, 0.5 + Math.sin(t * 2 + x) * 0.08);
         break;
       }
       case 'street': {
         // A street far below: dark void with streaking car lights.
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 10 * Math.ceil(ww / 768); i++) {
           const dir = i % 2 ? 1 : -1;
           const sp = 60 + (i % 3) * 25;
-          const cx = ((((i * 173 + t * sp * dir) % (VIEW_W + 80)) + VIEW_W + 80) % (VIEW_W + 80)) - 40;
+          const cx = ((((i * 173 + t * sp * dir) % (ww + 80)) + ww + 80) % (ww + 80)) - 40;
           const cy = VIEW_H - 3 + (i % 2) * 1.5;
           const col = dir > 0 ? hsl3(45, 90, 75) : hsl3(0, 100, 55);
           const lg = g.createLinearGradient(cx - dir * 22, 0, cx, 0);
@@ -284,15 +303,15 @@ export class Backdrop {
           g.fillStyle = lg;
           g.fillRect(Math.min(cx, cx - dir * 22), cy, 22, 1.2);
         }
-        for (let x = 40; x < VIEW_W; x += 110) light(rc, x, VIEW_H, 90, L.glow, 0.5);
+        for (let x = 40; x < ww; x += 110) if (x > view.x - 100 && x < view.x + view.w + 100) light(rc, x, VIEW_H, 90, L.glow, 0.5);
         break;
       }
       case 'water':
       case 'sea':
       case 'swamp': {
         // Reflections: drifting glints and darker ripple bands.
-        for (let i = 0; i < 16; i++) {
-          const gx = ((((i * 61.7 + t * (kind === 'sea' ? 14 : 5) * (i % 2 ? 1 : -1)) % (VIEW_W + 40)) + VIEW_W + 40) % (VIEW_W + 40)) - 20;
+        for (let i = 0; i < 16 * Math.ceil(ww / 768); i++) {
+          const gx = ((((i * 61.7 + t * (kind === 'sea' ? 14 : 5) * (i % 2 ? 1 : -1)) % (ww + 40)) + ww + 40) % (ww + 40)) - 20;
           const gy = wave(gx) + 2.5 + (i % 3) * 2;
           const a = 0.25 + 0.25 * Math.sin(t * 2 + i);
           s.fillStyle = css(L.glow, 10, a * (kind === 'swamp' ? 0.4 : 1));
@@ -300,8 +319,8 @@ export class Backdrop {
         }
         if (kind === 'swamp') {
           const rr = new Rng(th.seed ^ 0x1e1);
-          for (let i = 0; i < 9; i++) {
-            const lx = rr.range(0, VIEW_W);
+          for (let i = 0; i < 9 * Math.ceil(ww / 768); i++) {
+            const lx = rr.range(0, ww);
             const ly = wave(lx) + 1;
             s.fillStyle = css(hsl3(105, 45, 30), 0, 0.95);
             s.beginPath();
@@ -319,7 +338,7 @@ export class Backdrop {
           s.strokeStyle = 'rgba(240,250,255,0.7)';
           s.lineWidth = 1;
           s.beginPath();
-          for (let x = -20; x <= VIEW_W + 20; x += 6) {
+          for (let x = xa; x <= xb; x += 6) {
             const crest = Math.sin(x * 0.045 + t * 1.6);
             if (crest > 0.55) {
               s.moveTo(x, wave(x) + 0.3);
@@ -331,9 +350,9 @@ export class Backdrop {
         break;
       }
       case 'tar': {
-        for (let i = 0; i < 6; i++) {
+        for (let i = 0; i < 6 * Math.ceil(ww / 768); i++) {
           const p = (t * 0.25 + i * 0.29) % 1;
-          const bx = (i * 151.3 + Math.floor(t * 0.25 + i * 0.29) * 71) % VIEW_W;
+          const bx = (i * 151.3 + Math.floor(t * 0.25 + i * 0.29) * 71) % ww;
           s.strokeStyle = `rgba(150,140,170,${0.5 * (1 - p)})`;
           s.lineWidth = 0.6;
           s.beginPath();
@@ -348,21 +367,25 @@ export class Backdrop {
       g.lineWidth = 1.4;
       g.strokeStyle = css(L.glow, 15, L.emissive ? 0.9 : 0.4);
       g.beginPath();
-      for (let x = -20; x <= VIEW_W + 20; x += 6) (x === -20 ? g.moveTo : g.lineTo).call(g, x, wave(x));
+      for (let x = xa; x <= xb + 6; x += 6) (x === xa ? g.moveTo : g.lineTo).call(g, x, wave(x));
       g.stroke();
     }
   }
 
   /** Ambient particles (cosmetic, non-deterministic). */
-  drawMotes(rc: RC, th: Theme, dt: number) {
+  drawMotes(rc: RC, th: Theme, dt: number, view: { x: number; y: number; w: number; h: number }) {
     const kind = th.ambient;
-    const target = kind === 'snow' ? 90 : kind === 'rain' ? 140 : kind === 'dust' ? 50 : kind === 'leaves' ? 26 : 60;
+    // Motes live in world space around the visible rect; zoomed-out views get proportionally more (capped).
+    const area = Math.max(1, Math.min(2.5, (view.w * view.h) / (VIEW_W * VIEW_H)));
+    const target = Math.round((kind === 'snow' ? 90 : kind === 'rain' ? 140 : kind === 'dust' ? 50 : kind === 'leaves' ? 26 : 60) * area);
+    const vx0 = view.x;
+    const vy0 = view.y;
     while (this.motes.length < target) {
       const fromBottom = kind === 'embers' || kind === 'bubbles';
       const falls = kind === 'snow' || kind === 'rain' || kind === 'ash' || kind === 'leaves';
       this.motes.push({
-        x: Math.random() * (VIEW_W + 60) - 30,
-        y: fromBottom ? VIEW_H + Math.random() * 20 : this.motes.length < target / 2 || !falls ? Math.random() * VIEW_H : -5,
+        x: vx0 + Math.random() * (view.w + 60) - 30,
+        y: vy0 + (fromBottom ? view.h + Math.random() * 20 : this.motes.length < target / 2 || !falls ? Math.random() * view.h : -5),
         vx: kind === 'rain' ? -40 : kind === 'leaves' ? 12 + Math.random() * 10 : (Math.random() - 0.5) * 10,
         vy:
           kind === 'snow'
@@ -401,7 +424,7 @@ export class Backdrop {
       m.life -= dt;
       m.x += (m.vx + (kind === 'rain' ? 0 : Math.sin(t * 0.8 + m.seed) * 8)) * dt;
       m.y += m.vy * dt;
-      if (m.life <= 0 || m.y < -10 || m.y > VIEW_H + 25 || m.x < -40 || m.x > VIEW_W + 40) return false;
+      if (m.life <= 0 || m.y < vy0 - 10 || m.y > vy0 + view.h + 25 || m.x < vx0 - 40 || m.x > vx0 + view.w + 40) return false;
       const fade = Math.min(1, m.life);
       switch (kind) {
         case 'embers': {

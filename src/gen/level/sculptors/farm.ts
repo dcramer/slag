@@ -1,7 +1,7 @@
 import type { Rng } from '../../../core/rng';
 import { finish, Grid, groundFromHeights, noise1D } from '../kit';
 import type { Sculptor } from '../types';
-import { easyGap, easyRise, flatten, H, hardGap, pit, relax, rollChallenges, Slots, W } from './common';
+import { easyGap, easyRise, flatten, hardGap, type Knobs, knobs, pit, relax, rollChallenges, Slots } from './common';
 
 type FarmStyle = 'fields' | 'barnyard' | 'windmill' | 'orchard';
 type Stamp = (g: Grid, rng: Rng, x: number, w: number, f: number) => void;
@@ -18,23 +18,26 @@ interface Feature {
  * one-way gallery, fruit trees with branch perches, hay wagons, fence rows
  * with one-way rails and haystack mounds.
  */
-export const farm: Sculptor = ({ rng, attempt }) => {
+export const farm: Sculptor = (ctx) => {
+  const { rng, attempt } = ctx;
+  const k = knobs(ctx);
+  const { W, H } = k;
   const style = rng.weighted<FarmStyle>([
-    ['fields', 3],
+    ['fields', k.wide > 1.4 ? 5 : 3],
     ['barnyard', 4],
     ['windmill', 3],
     ['orchard', 3],
   ]);
-  const g = new Grid();
-  const slots = new Slots();
+  const g = new Grid(W, H);
+  const slots = new Slots(6, W - 7);
   const locked = new Uint8Array(W);
-  const surf = heights(rng);
+  const surf = heights(rng, k);
 
-  // Ponds first: hard ones need a bridge, easy ones are a hop.
-  const challenges = rollChallenges(rng, 0.76, 0.15, attempt);
+  // Ponds first: hard ones need a bridge, easy ones are a hop. Wide farms get more of them.
+  const challenges = rollChallenges(rng, 0.76, 0.15, attempt, k.propNeed);
   g.wantsProps = challenges > 0;
   const pits: { x0: number; x1: number; hard: boolean }[] = [];
-  const nEasy = rng.int(0, style === 'fields' ? 2 : 1);
+  const nEasy = rng.int(0, style === 'fields' ? 2 : 1) + Math.floor((k.wide - 1) * rng.range(1, 2.5));
   for (let i = 0; i < challenges + nEasy; i++) {
     const hard = i < challenges;
     const w = hard ? hardGap(rng) : easyGap(rng, 2);
@@ -50,33 +53,35 @@ export const farm: Sculptor = ({ rng, attempt }) => {
     pits.push({ x0, x1, hard });
   }
 
-  // Landmarks on flattened ground.
-  const bag: Feature[] = FEATURES[style](rng);
+  // Landmarks on flattened ground: one bag per ~48 columns, thinned on sparse maps.
+  const bag: Feature[] = [];
+  for (let r = 0; r < Math.max(1, Math.round(k.wide * (0.6 + 0.6 * k.density))); r++) bag.push(...FEATURES[style](rng));
+  if (k.density < 0.3 && bag.length > 1) bag.length = Math.max(1, bag.length - 1);
   const placed: { f: Feature; x: number; w: number }[] = [];
   for (const f of bag) {
     const w = f.w(rng);
     const x = slots.take(rng, w, 2);
     if (x === null) continue;
-    flatten(surf, x - 1, x + w);
+    flatten(surf, H, x - 1, x + w);
     for (let i = x - 1; i <= x + w; i++) locked[i] = 1;
     placed.push({ f, x, w });
   }
-  const sRow = flatten(surf, 0, 5);
-  const gRow = flatten(surf, W - 6, W - 1);
+  const sRow = flatten(surf, H, 0, 5);
+  const gRow = flatten(surf, H, W - 6, W - 1);
   for (const x of [0, 1, 2, 3, 4, 5, W - 6, W - 5, W - 4, W - 3, W - 2, W - 1]) locked[x] = 1;
-  relax(surf, locked, 1);
+  relax(surf, H, locked, 1);
   groundFromHeights(g, surf);
   for (const p of pits) pit(g, p.x0, p.x1, surf[p.x0 - 1], p.hard);
   for (const p of placed) p.f.stamp(g, rng, p.x, p.w, surf[p.x]);
 
   // Small decor on whatever flat ground is left.
   const decor: Feature[] = [FENCE, HAYSTACK, HAYSTACK, WAGON];
-  for (let i = rng.int(1, 3); i > 0; i--) {
+  for (let i = k.count(rng.int(1, 3)); i > 0; i--) {
     const f = rng.pick(decor);
     const w = f.w(rng);
     for (let tries = 0; tries < 12; tries++) {
       const x = rng.int(7, W - 8 - w);
-      if (!slots.free(x, x + w - 1, 1) || !isFlat(surf, x, x + w - 1)) continue;
+      if (!slots.free(x, x + w - 1, 1) || !isFlat(surf, H, x, x + w - 1)) continue;
       slots.mark(x, x + w - 1);
       f.stamp(g, rng, x, w, surf[x]);
       break;
@@ -86,15 +91,17 @@ export const farm: Sculptor = ({ rng, attempt }) => {
   return finish(g, { row: sRow - 1 }, { row: gRow - 1 }, `farm:${style}`);
 };
 
-function heights(rng: Rng): number[] {
-  const base = rng.int(19, 22);
-  const amp = rng.range(2, 4.5);
+/** Rolling hills on a route ramp (climbing farms terrace uphill toward the goal). */
+function heights(rng: Rng, k: Knobs): number[] {
+  const { W, H } = k;
+  const base = H - rng.int(5, 8);
+  const amp = rng.range(2, 4.5) * (0.7 + 0.6 * k.density);
   const n = noise1D(rng, W, rng.int(10, 18), 2, 0.35);
-  const out = n.map((v) => Math.max(12, Math.min(24, Math.round(base + v * amp * 1.4))));
-  return relax(out, new Uint8Array(W), 1);
+  const out = n.map((v, x) => Math.max(6, Math.min(H - 3, Math.round(base + k.ramp(x) + v * amp * 1.4))));
+  return relax(out, H, new Uint8Array(W), 1);
 }
 
-function isFlat(surf: number[], a: number, b: number): boolean {
+function isFlat(surf: number[], H: number, a: number, b: number): boolean {
   for (let x = a; x <= b; x++) if (surf[x] !== surf[a] || surf[x] >= H) return false;
   return true;
 }

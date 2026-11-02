@@ -16,6 +16,37 @@ export const T_SOLID = 1;
 /** Jump-through platform: solid only from above. */
 export const T_ONEWAY = 2;
 
+/** World-size class of a level (see gen/level/profile.ts). */
+export type SizeClass = 'classic' | 'wide' | 'tall';
+/**
+ * Overall route shape: ltr = left to right at roughly one height; climb =
+ * goal well above spawn; descent = goal well below spawn; zigzag = switchback
+ * storeys climbing a tall level. Spawn is always on the left, goal on the right.
+ */
+export type RouteShape = 'ltr' | 'climb' | 'descent' | 'zigzag';
+
+/**
+ * Per-level variety knobs, rolled deterministically from the seed (and theme)
+ * before sculpting. Plain data, so it survives snapshots.
+ */
+export interface LevelProfile {
+  size: SizeClass;
+  /** World size in tiles (same as Level.w/h). */
+  w: number;
+  h: number;
+  /** 0 = sparse (lots of open air, few landmarks) … 1 = dense (packed terrain, ceilings, clutter). */
+  density: number;
+  /** Target number of theme set pieces (0–4); the placer may find room for fewer. */
+  hazards: number;
+  /** 0 = tame set-piece mix (platforms, lifts) … 1 = nasty (cannons, saws, presses). */
+  danger: number;
+  route: RouteShape;
+  /** Scales how often the sculptor builds a crossing that needs a bridge prop (≈ chance a level needs props). */
+  propNeed: number;
+  /** World gravity scale (copied to Level.gravity). */
+  gravity: number;
+}
+
 export interface Level {
   seed: number;
   w: number;
@@ -38,6 +69,10 @@ export interface Level {
    * Set by worldgen; used by validation, tools and tests.
    */
   solution?: { x: number; y: number }[];
+  /** World gravity scale (1 = normal; see CollisionWorld.gravity). Physics, reach and projectiles all use it. */
+  gravity?: number;
+  /** Variety knobs this level was generated with (absent for hand-built test levels). */
+  profile?: LevelProfile;
   /** Bumped whenever tiles change so renderers can invalidate caches. */
   version: number;
 }
@@ -54,6 +89,16 @@ export function isProtected(level: Level, tx: number, ty: number): boolean {
     if (tx >= r.x && tx < r.x + r.w && ty >= r.y && ty < r.y + r.h) return true;
   }
   return false;
+}
+
+/** World size in px. */
+export function worldSize(level: Level): { w: number; h: number } {
+  return { w: level.w * TILE, h: level.h * TILE };
+}
+
+/** Bodies below this y have sunk into the pit at the bottom of the level. */
+export function killY(level: Level): number {
+  return level.h * TILE - 2;
 }
 
 /** Goal trigger reach: px past each side of the flag cell, and tiles above it. */

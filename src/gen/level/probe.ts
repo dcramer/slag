@@ -23,16 +23,38 @@ const MIN_DY = -6;
 const MAX_DY = 10;
 const MAX_GAP = 16;
 
-let cached: JumpProfile | null = null;
+const cached = new Map<number, JumpProfile>();
+let current = 1;
 
-export function jumpProfile(): JumpProfile {
-  if (cached) return cached;
+/**
+ * Gravity the sculptor helpers measure at (set by the pipeline per level:
+ * sculpting is synchronous, so a module-level "current" is safe and keeps
+ * every gap/step helper's signature unchanged).
+ */
+export function setProbeGravity(gravity: number): void {
+  current = gravity;
+}
+
+export function probeGravity(): number {
+  return current;
+}
+
+export function jumpProfile(gravity = current): JumpProfile {
+  const hit = cached.get(gravity);
+  if (hit) return hit;
   const table = new Map<number, number>();
   for (let dy = MIN_DY; dy <= MAX_DY; dy++) {
+    // Reachability is monotone in gap width: binary-search the widest jumpable gap.
     let best = -1;
-    for (let gap = 0; gap <= MAX_GAP; gap++) {
-      if (!probe(gap, dy)) break;
-      best = gap;
+    if (probe(0, dy, gravity)) {
+      let lo = 0;
+      let hi = MAX_GAP + 1;
+      while (hi - lo > 1) {
+        const mid = (lo + hi) >> 1;
+        if (probe(mid, dy, gravity)) lo = mid;
+        else hi = mid;
+      }
+      best = lo;
     }
     table.set(dy, best);
     if (dy > 0 && best < 0) break;
@@ -40,15 +62,16 @@ export function jumpProfile(): JumpProfile {
   let rise = 0;
   while ((table.get(rise + 1) ?? -1) >= 0) rise++;
   const gap = table.get(0) ?? 1;
-  cached = {
+  const p: JumpProfile = {
     gap,
     rise,
     gapAt: (dy) => (dy < MIN_DY ? (table.get(MIN_DY) ?? gap) : (table.get(dy) ?? -1)),
   };
-  return cached;
+  cached.set(gravity, p);
+  return p;
 }
 
-function probe(gap: number, dy: number): boolean {
+function probe(gap: number, dy: number, gravity: number): boolean {
   const w = LEVEL_W;
   const h = LEVEL_H;
   const tiles = new Uint8Array(w * h);
@@ -62,6 +85,7 @@ function probe(gap: number, dy: number): boolean {
     seed: 0,
     w,
     h,
+    gravity,
     tiles,
     spawn: { tx: leftEnd, ty: row },
     goal: { tx: rx0 + 1, ty: rRow },

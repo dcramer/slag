@@ -8,40 +8,50 @@ import type { BridgeHint, Shape } from './types';
  * "keep" mask (cells later stamps must leave empty), 1-D value noise for
  * heightmaps, cellular-automaton smoothing for organic shapes, and the
  * spawn/goal pocket finisher every sculptor ends with.
+ *
+ * Levels come in any size (gen/level/profile.ts), so everything here is
+ * parametrized by the grid's own `w`×`h`; there are no global dimensions.
+ * Determinism: only Rng and plain arithmetic (no Math.exp/sin/pow…), so
+ * results are bit-identical across JS engines.
  */
 
-export const W = LEVEL_W;
-export const H = LEVEL_H;
 export { T_EMPTY, T_ONEWAY, T_SOLID };
 
-/** Spawn stands in column 2, the goal in column W-3; their pockets are 5 wide. */
+/** Spawn stands in column 2, the goal in column w-3; their pockets are 5 wide. */
 export const SPAWN_X = 2;
-export const GOAL_X = W - 3;
 export const POCKET = 5;
 
 export class Grid {
-  readonly t = new Uint8Array(W * H);
+  readonly t: Uint8Array;
   /** Cells that non-forced stamps must leave untouched (walk lanes, pockets). */
-  readonly keep = new Uint8Array(W * H);
+  readonly keep: Uint8Array;
   readonly hints: BridgeHint[] = [];
   /** Set by sculptors that built a crossing meant to need a bridge prop. */
   wantsProps = false;
 
+  constructor(
+    readonly w: number = LEVEL_W,
+    readonly h: number = LEVEL_H,
+  ) {
+    this.t = new Uint8Array(w * h);
+    this.keep = new Uint8Array(w * h);
+  }
+
   inb(x: number, y: number): boolean {
-    return x >= 0 && x < W && y >= 0 && y < H;
+    return x >= 0 && x < this.w && y >= 0 && y < this.h;
   }
   /** Like tileAt: outside x is solid wall, outside y is empty. */
   get(x: number, y: number): number {
-    if (x < 0 || x >= W) return T_SOLID;
-    if (y < 0 || y >= H) return T_EMPTY;
-    return this.t[y * W + x];
+    if (x < 0 || x >= this.w) return T_SOLID;
+    if (y < 0 || y >= this.h) return T_EMPTY;
+    return this.t[y * this.w + x];
   }
   empty(x: number, y: number): boolean {
     return this.get(x, y) === T_EMPTY;
   }
   set(x: number, y: number, v: number, force = false): void {
     if (!this.inb(x, y)) return;
-    const k = y * W + x;
+    const k = y * this.w + x;
     if (!force && this.keep[k] && v !== T_EMPTY) return;
     this.t[k] = v;
   }
@@ -49,7 +59,8 @@ export class Grid {
   fill(x0: number, y0: number, x1: number, y1: number, v: number = T_SOLID, force = false): void {
     const [ax, bx] = x0 <= x1 ? [x0, x1] : [x1, x0];
     const [ay, by] = y0 <= y1 ? [y0, y1] : [y1, y0];
-    for (let y = Math.max(0, ay); y <= Math.min(H - 1, by); y++) for (let x = Math.max(0, ax); x <= Math.min(W - 1, bx); x++) this.set(x, y, v, force);
+    for (let y = Math.max(0, ay); y <= Math.min(this.h - 1, by); y++)
+      for (let x = Math.max(0, ax); x <= Math.min(this.w - 1, bx); x++) this.set(x, y, v, force);
   }
   clear(x0: number, y0: number, x1: number, y1: number): void {
     this.fill(x0, y0, x1, y1, T_EMPTY, true);
@@ -60,17 +71,17 @@ export class Grid {
   }
   /** Mark an inclusive rect as must-stay-empty for later non-forced stamps. */
   reserve(x0: number, y0: number, x1: number, y1: number): void {
-    for (let y = Math.max(0, Math.min(y0, y1)); y <= Math.min(H - 1, Math.max(y0, y1)); y++)
-      for (let x = Math.max(0, Math.min(x0, x1)); x <= Math.min(W - 1, Math.max(x0, x1)); x++) this.keep[y * W + x] = 1;
+    for (let y = Math.max(0, Math.min(y0, y1)); y <= Math.min(this.h - 1, Math.max(y0, y1)); y++)
+      for (let x = Math.max(0, Math.min(x0, x1)); x <= Math.min(this.w - 1, Math.max(x0, x1)); x++) this.keep[y * this.w + x] = 1;
   }
-  /** Topmost non-empty row in column x at or below `from` (H if none). */
+  /** Topmost non-empty row in column x at or below `from` (this.h if none). */
   surface(x: number, from = 0): number {
-    for (let y = from; y < H; y++) if (this.get(x, y) !== T_EMPTY) return y;
-    return H;
+    for (let y = from; y < this.h; y++) if (this.get(x, y) !== T_EMPTY) return y;
+    return this.h;
   }
   /** Fill column x from row `top` to the bottom. */
   column(x: number, top: number, v: number = T_SOLID, force = false): void {
-    this.fill(x, top, x, H - 1, v, force);
+    this.fill(x, top, x, this.h - 1, v, force);
   }
   hint(x: number, y: number): void {
     this.hints.push({ x, y });
@@ -108,7 +119,7 @@ export function noise1D(rng: Rng, n: number, scale: number, octaves = 2, persist
  * solid with ≥ birth solid neighbors (of 8), stays solid with ≥ survive.
  * Out-of-bounds counts as `edge`.
  */
-export function smoothCA(mask: Uint8Array, iters: number, birth = 5, survive = 4, edge = 1): Uint8Array {
+export function smoothCA(W: number, H: number, mask: Uint8Array, iters: number, birth = 5, survive = 4, edge = 1): Uint8Array {
   let cur = mask;
   for (let it = 0; it < iters; it++) {
     const nxt = new Uint8Array(W * H);
@@ -133,11 +144,11 @@ export function smoothCA(mask: Uint8Array, iters: number, birth = 5, survive = 4
 
 /** Fill a ground heightmap: `surf[x]` is the top solid row of column x (≥ H means pit). */
 export function groundFromHeights(g: Grid, surf: readonly number[], v: number = T_SOLID): void {
-  for (let x = 0; x < W; x++) if (surf[x] < H) g.column(x, surf[x], v);
+  for (let x = 0; x < g.w; x++) if (surf[x] < g.h) g.column(x, surf[x], v);
 }
 
-/** Limit neighbor height differences so the walk stays climbable. */
-export function limitSlope(surf: number[], maxStep: number): number[] {
+/** Limit neighbor height differences so the walk stays climbable (values ≥ H are pits). */
+export function limitSlope(surf: number[], maxStep: number, H: number): number[] {
   for (let pass = 0; pass < 3; pass++) {
     for (let x = 1; x < surf.length; x++) {
       if (surf[x] >= H || surf[x - 1] >= H) continue;
@@ -166,6 +177,8 @@ export interface Pocket {
  * floor; the protected rects cover pocket + floor row.
  */
 export function finish(g: Grid, spawn: Pocket, goal: Pocket, style: string): Shape {
+  const W = g.w;
+  const H = g.h;
   const pocket = (x0: number, p: Pocket) => {
     g.clear(x0, p.row - 3, x0 + POCKET - 1, p.row);
     const bottom = p.depth ? Math.min(H - 1, p.row + p.depth) : H - 1;
@@ -175,9 +188,11 @@ export function finish(g: Grid, spawn: Pocket, goal: Pocket, style: string): Sha
   pocket(0, spawn);
   pocket(W - POCKET, goal);
   return {
+    w: g.w,
+    h: g.h,
     tiles: g.t,
     spawn: { tx: SPAWN_X, ty: spawn.row },
-    goal: { tx: GOAL_X, ty: goal.row },
+    goal: { tx: W - 3, ty: goal.row },
     protectedRects: [
       { x: 0, y: spawn.row - 3, w: POCKET, h: 5 },
       { x: W - POCKET, y: goal.row - 3, w: POCKET, h: 5 },
@@ -209,15 +224,20 @@ export function hintGap(g: Grid, x0: number, x1: number, row: number): void {
  * `surf[x]` is the nominal ground row; `soft` is how many rows the
  * transition blurs over.
  */
-export function organicMask(rng: Rng, surf: readonly number[], soft = 3, iters = 4): Uint8Array {
+export function organicMask(rng: Rng, W: number, H: number, surf: readonly number[], soft = 3, iters = 4): Uint8Array {
   const m = new Uint8Array(W * H);
   for (let y = 0; y < H; y++)
     for (let x = 0; x < W; x++) {
       const d = (y - surf[x]) / soft; // >0 below the surface
-      const p = 1 / (1 + Math.exp(-d * 2.2));
+      const p = sigmoid(d * 2.2);
       m[y * W + x] = rng.next() < p ? 1 : 0;
     }
-  return smoothCA(m, iters, 5, 4, 0);
+  return smoothCA(W, H, m, iters, 5, 4, 0);
+}
+
+/** Smooth 0→1 step (an algebraic logistic stand-in; no Math.exp so it's bit-identical everywhere). */
+export function sigmoid(z: number): number {
+  return 0.5 + (0.5 * z) / (1 + Math.abs(z));
 }
 
 /**
@@ -226,6 +246,8 @@ export function organicMask(rng: Rng, surf: readonly number[], soft = 3, iters =
  * Returns the stand row per column (NaN outside the corridor).
  */
 export function carveCorridor(g: Grid, rng: Rng, x0: number, y0: number, x1: number, y1: number, clear = 4, wander = 0.35): number[] {
+  const W = g.w;
+  const H = g.h;
   const rows = new Array<number>(W).fill(Number.NaN);
   let y = y0;
   for (let x = x0; x <= x1; x++) {
@@ -242,7 +264,7 @@ export function carveCorridor(g: Grid, rng: Rng, x0: number, y0: number, x1: num
 }
 
 /** 2-D value noise over the tile grid in [-1, 1] (smoothstep-interpolated lattice every `scale` tiles, 2 octaves). */
-export function noise2D(rng: Rng, scale: number, octaves = 2): Float32Array {
+export function noise2D(rng: Rng, W: number, H: number, scale: number, octaves = 2): Float32Array {
   const out = new Float32Array(W * H);
   let amp = 1;
   let norm = 0;

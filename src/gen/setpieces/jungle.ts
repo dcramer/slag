@@ -6,6 +6,7 @@ export const JUNGLE: Recipe[] = [
   {
     name: 'log swing',
     weight: 3,
+    role: 'build',
     candidates: (rng, s) =>
       pendulums(rng, s, {
         name: 'Vine Log',
@@ -22,6 +23,7 @@ export const JUNGLE: Recipe[] = [
   {
     name: 'boulder',
     weight: 2,
+    role: 'hazard',
     candidates: (rng, s) =>
       vehicles(rng, s, {
         name: 'Temple Boulder',
@@ -36,6 +38,7 @@ export const JUNGLE: Recipe[] = [
   {
     name: 'dart idol',
     weight: 2,
+    role: 'hazard',
     repeat: true,
     candidates: (rng, s) =>
       cannons(rng, s, {

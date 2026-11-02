@@ -29,7 +29,7 @@ export function ballisticAngle(dx: number, dy: number, speed: number, gravity: n
 }
 
 /** Turn toward the nearest active runner within a 100° cone of the mount's facing. */
-function trackAim(cur: number, x: number, y: number, m: Launcher, runners: readonly RunnerView[]): number {
+function trackAim(cur: number, x: number, y: number, m: Launcher, runners: readonly RunnerView[], gravityScale: number): number {
   let best: [number, number] | null = null;
   let bestD = Infinity;
   for (const r of runners) {
@@ -42,7 +42,7 @@ function trackAim(cur: number, x: number, y: number, m: Launcher, runners: reado
       best = [tx, ty];
     }
   }
-  const target = best ? ballisticAngle(best[0] - x, best[1] - y, m.speed, AMMO[m.ammo].gravity) : m.angle;
+  const target = best ? ballisticAngle(best[0] - x, best[1] - y, m.speed, AMMO[m.ammo].gravity * gravityScale) : m.angle;
   return cur + Math.max(-TRACK_TURN, Math.min(TRACK_TURN, angleDiff(target, cur)));
 }
 
@@ -58,7 +58,7 @@ export const launcher = defineModule<'launcher'>({
     const y = m.at[1] + ctx.off[1];
     let angle = launcherAngle(m, f, ctx.r.phase);
     if (m.aim === 'track') {
-      angle = trackAim(ctx.state.aim.get(ctx.mi) ?? m.angle, x, y, m, ctx.runners);
+      angle = trackAim(ctx.state.aim.get(ctx.mi) ?? m.angle, x, y, m, ctx.runners, ctx.level.gravity ?? 1);
       ctx.state.aim.set(ctx.mi, angle);
     }
     const k = (f - RUN_COUNTDOWN + Math.floor(ctx.r.phase * m.interval)) % m.interval;

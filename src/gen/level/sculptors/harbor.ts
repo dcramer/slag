@@ -2,7 +2,7 @@ import type { Rng } from '../../../core/rng';
 import { finish, Grid, hintGap } from '../kit';
 import { jumpProfile } from '../probe';
 import type { Sculptor } from '../types';
-import { easyGap, easyRise, H, hardGap, rollChallenges, W } from './common';
+import { easyGap, easyRise, hardGap, knobs, rollChallenges } from './common';
 
 type HarborStyle = 'docks' | 'galleon' | 'marina';
 type Kind = 'pier' | 'ship' | 'boat' | 'buoys';
@@ -15,15 +15,18 @@ type Kind = 'pier' | 'ship' | 'boat' | 'buoys';
  * forecastle and quarterdeck, masts with one-way yards, diagonal rigging
  * ratlines and a crow's nest), small boats, and buoy hops.
  */
-export const harbor: Sculptor = ({ rng, attempt }) => {
+export const harbor: Sculptor = (ctx) => {
+  const { rng, attempt } = ctx;
+  const kn = knobs(ctx, 5);
+  const { W, H } = kn;
   const style = rng.weighted<HarborStyle>([
     ['docks', 3],
     ['galleon', 4],
     ['marina', 2],
   ]);
-  const g = new Grid();
-  const q = rng.int(17, 20); // quay top row
-  const challenges = rollChallenges(rng, 0.82, 0.15, attempt);
+  const g = new Grid(W, H);
+  const q = H - rng.int(7, 10); // quay top row
+  const challenges = rollChallenges(rng, 0.82, 0.15, attempt, kn.propNeed);
   g.wantsProps = challenges > 0;
   const kinds: Kind[] =
     style === 'galleon'
@@ -31,7 +34,18 @@ export const harbor: Sculptor = ({ rng, attempt }) => {
       : style === 'docks'
         ? rng.shuffle<Kind>(['pier', rng.pick<Kind>(['boat', 'pier'])])
         : rng.shuffle<Kind>(['boat', 'buoys', 'boat']);
-  const widths = kinds.map((k) => (k === 'ship' ? rng.int(20, 24) : k === 'pier' ? rng.int(7, 11) : k === 'boat' ? rng.int(6, 8) : rng.int(5, 8)));
+  const widthOf = (k: Kind) =>
+    k === 'ship' ? rng.int(20, 24) : k === 'pier' ? rng.int(7, 11 + Math.round(kn.density * 4)) : k === 'boat' ? rng.int(6, 8) : rng.int(5, 8);
+  const widths = kinds.map(widthOf);
+  // Wide harbors sprawl: keep adding moorings (sparse maps leave more open water) until the waterfront is full.
+  const pool: Kind[] = style === 'galleon' ? ['pier', 'boat', 'ship'] : style === 'docks' ? ['pier', 'boat', 'pier'] : ['boat', 'buoys', 'pier'];
+  const fill = 0.62 + 0.16 * kn.density;
+  while (widths.reduce((a, b) => a + b, 0) + (kinds.length + 1) * 4 + 12 < W * fill) {
+    const kind = rng.pick(pool);
+    const at = rng.int(0, kinds.length);
+    kinds.splice(at, 0, kind);
+    widths.splice(at, 0, widthOf(kind));
+  }
 
   // Lay out: quay | gap | element | gap | ... | quay. A galleon's hard gap is
   // usually the boarding gap (its masts would give a long falling jump after it).
@@ -69,15 +83,16 @@ export const harbor: Sculptor = ({ rng, attempt }) => {
   const quayR = W - used - quayL;
   if (quayR < 6) return finish(g, { row: q - 1 }, { row: q - 1 }, 'harbor:broken'); // validator rejects; next attempt
 
-  const gR = q + rng.int(-2, 1);
-  quay(g, rng, 0, quayL - 1, q, 'left');
+  const qL = q + kn.ramp(0);
+  const gR = Math.max(6, Math.min(H - 5, q + kn.ramp(W - 1) + rng.int(-2, 1)));
+  quay(g, rng, 0, quayL - 1, qL, 'left');
   quay(g, rng, W - quayR, W - 1, gR, 'right');
   let x = quayL;
-  let prevDeck = q;
+  let prevDeck = qL;
   for (let i = 0; i < kinds.length; i++) {
     const gap = gaps[i];
     const x0 = x + gap;
-    const deck = elementDeck(rng, kinds[i], q);
+    const deck = elementDeck(rng, kinds[i], q, kn.ramp(x + (widths[i] >> 1)));
     if (hardIdx.has(i)) hintGap(g, x, x0 - 1, Math.max(prevDeck, deck));
     const top = stamp(g, rng, kinds[i], x0, widths[i], deck);
     prevDeck = top;
@@ -85,15 +100,16 @@ export const harbor: Sculptor = ({ rng, attempt }) => {
   }
   if (hardIdx.has(kinds.length)) hintGap(g, x, W - quayR - 1, Math.max(prevDeck, gR));
 
-  return finish(g, { row: q - 1 }, { row: gR - 1 }, `harbor:${style}`);
+  return finish(g, { row: qL - 1 }, { row: gR - 1 }, `harbor:${style}`);
 };
 
-function elementDeck(rng: Rng, kind: Kind, q: number): number {
+/** Deck row of a mooring; piers and ships follow the route ramp (stilted jetties, high-sided hulls), boats float. */
+function elementDeck(rng: Rng, kind: Kind, q: number, ramp: number): number {
   switch (kind) {
     case 'ship':
-      return q + rng.int(-2, 0);
+      return q + rng.int(-2, 0) + Math.round(ramp * 0.6);
     case 'pier':
-      return q + rng.int(0, 1);
+      return q + rng.int(0, 1) + ramp;
     case 'boat':
       return q + rng.int(1, 2);
     case 'buoys':
@@ -107,8 +123,8 @@ function stamp(g: Grid, rng: Rng, kind: Kind, x: number, w: number, d: number): 
   switch (kind) {
     case 'pier': {
       g.plank(x, r, d);
-      for (let px = x; px <= r; px += rng.int(3, 4)) g.fill(px, d + 1, px, H - 1);
-      g.fill(r, d + 1, r, H - 1);
+      for (let px = x; px <= r; px += rng.int(3, 4)) g.fill(px, d + 1, px, g.h - 1);
+      g.fill(r, d + 1, r, g.h - 1);
       if (rng.chance(0.6)) g.fill(r, d - 1, r, d - 1); // bollard at the end
       if (rng.chance(0.5)) g.fill(x + 2, d - 2, x + 3, d - 1); // crate
       return d;
@@ -177,13 +193,13 @@ function ship(g: Grid, rng: Rng, a: number, b: number, d: number): number {
 
 /** Stone quay from x0..x1 at row q, with harbor clutter. */
 function quay(g: Grid, rng: Rng, x0: number, x1: number, q: number, side: 'left' | 'right'): void {
-  g.fill(x0, q, x1, H - 1);
+  g.fill(x0, q, x1, g.h - 1);
   // The far quay's coping overhangs the water, so nobody climbs the sea wall out of the drink.
-  if (side === 'right') g.clear(x0, q + 2, x0 + 1, H - 1);
+  if (side === 'right') g.clear(x0, q + 2, x0 + 1, g.h - 1);
   // Sea wall step down to the water edge.
   const edge = side === 'left' ? x1 : x0;
   g.set(edge, q, 2, true);
-  for (let y = q + 1; y < H; y += 3) g.set(edge, y, 0, true);
+  for (let y = q + 1; y < g.h; y += 3) g.set(edge, y, 0, true);
   const inner = side === 'left' ? [x0 + 5, x1 - 1] : [x0 + 1, x1 - 5];
   if (inner[1] - inner[0] < 1) return;
   const pick = rng.int(0, 2);

@@ -6,6 +6,7 @@ export const FACTORY: Recipe[] = [
   {
     name: 'press',
     weight: 3,
+    role: 'hazard',
     repeat: true,
     candidates: (rng, s) =>
       presses(rng, s, {
@@ -19,6 +20,7 @@ export const FACTORY: Recipe[] = [
   {
     name: 'forklift',
     weight: 2.5,
+    role: 'hazard',
     candidates: (rng, s) =>
       vehicles(rng, s, {
         name: `${rng.pick(['Unlicensed', 'Speedy', 'Overworked', 'Model T'])} Forklift`,
@@ -35,6 +37,7 @@ export const FACTORY: Recipe[] = [
   {
     name: 'cog lift',
     weight: 2,
+    role: 'build',
     candidates: (rng, s) =>
       wheels(rng, s, {
         name: 'Cog Lift',

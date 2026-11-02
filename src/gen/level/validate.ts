@@ -1,6 +1,6 @@
 import { PHYS } from '../../sim/constants';
 import { footprintCells } from '../../sim/props';
-import { LEVEL_H, LEVEL_W, TILE } from '../../sim/constants';
+import { TILE } from '../../sim/constants';
 import { isProtected, type Level, T_EMPTY, T_SOLID } from '../../sim/level';
 import { bodyAtCell, type CollisionWorld, stepBody } from '../../sim/physics';
 import { analyzeReach } from '../../sim/reach';
@@ -105,15 +105,13 @@ const SCRIPTS: Script[] = (() => {
 })();
 const NS = SCRIPTS.length;
 const MAX_FRAMES = 110;
-const W = LEVEL_W;
-const H = LEVEL_H;
 
 interface CellInfo {
   /** Landing cell key per script (-1 = none). */
   land: Int32Array;
   /** Tile-space bounding box per script (x0, y0, x1, y1), padded by one tile. */
   box: Int16Array;
-  /** Bridge keys (y * W + leftX) whose top a descending trajectory crosses. */
+  /** Bridge keys (y * w + leftX) whose top a descending trajectory crosses. */
   cands: number[];
 }
 
@@ -126,15 +124,20 @@ interface RunResult {
 
 class BridgeSearch {
   evals = 0;
+  private readonly W: number;
+  private readonly H: number;
   private readonly base: Uint8Array;
-  private readonly prot = new Uint8Array(W * H);
+  private readonly prot: Uint8Array;
   private readonly baseInfo = new Map<number, CellInfo>();
   private readonly gx: number;
   private readonly gy: number;
 
   constructor(private readonly level: Level) {
+    this.W = level.w;
+    this.H = level.h;
+    this.prot = new Uint8Array(this.W * this.H);
     this.base = level.tiles;
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (isProtected(level, x, y)) this.prot[y * W + x] = 1;
+    for (let y = 0; y < this.H; y++) for (let x = 0; x < this.W; x++) if (isProtected(level, x, y)) this.prot[y * this.W + x] = 1;
     this.gx = level.goal.tx;
     this.gy = level.goal.ty;
   }
@@ -142,7 +145,7 @@ class BridgeSearch {
   solve(hints: readonly Bridge[], verify: (bs: Bridge[]) => boolean): Bridge[] | null {
     const r0 = this.run([]);
     if (r0.goal && verify([])) return [];
-    const hintKeys = hints.map((h) => h.y * W + h.x).filter((k) => this.placeable(this.base, k));
+    const hintKeys = hints.map((h) => h.y * this.W + h.x).filter((k) => this.placeable(this.base, k));
     const tried = new Set<string>();
     interface Node {
       keys: number[];
@@ -174,7 +177,7 @@ class BridgeSearch {
   }
 
   private bridge(k: number): Bridge {
-    return { x: k % W, y: Math.floor(k / W) };
+    return { x: k % this.W, y: Math.floor(k / this.W) };
   }
 
   private dist(x: number, y: number): number {
@@ -188,12 +191,12 @@ class BridgeSearch {
     const out: number[] = [];
     for (const h of hints) if (ok(h) && !out.includes(h)) out.push(h);
     const scored: [number, number][] = [];
-    for (const k of cands) if (ok(k)) scored.push([this.dist((k % W) + 1, Math.floor(k / W) - 1), k]);
+    for (const k of cands) if (ok(k)) scored.push([this.dist((k % this.W) + 1, Math.floor(k / this.W) - 1), k]);
     scored.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
     const bins = new Set<number>();
     for (const [, k] of scored) {
       if (out.length >= n + hints.length) break;
-      const bin = Math.floor(k / W) * 100 + Math.floor((k % W) / 2);
+      const bin = Math.floor(k / this.W) * 100 + Math.floor((k % this.W) / 2);
       if (bins.has(bin) || out.includes(k)) continue;
       bins.add(bin);
       out.push(k);
@@ -202,11 +205,11 @@ class BridgeSearch {
   }
 
   private placeable(tiles: Uint8Array, k: number): boolean {
-    const x = k % W;
-    const y = Math.floor(k / W);
-    if (y < 1 || x < 0 || x + BRIDGE_W > W) return false;
+    const x = k % this.W;
+    const y = Math.floor(k / this.W);
+    if (y < 1 || x < 0 || x + BRIDGE_W > this.W) return false;
     for (let i = 0; i < BRIDGE_W; i++) if (tiles[k + i] !== T_EMPTY || this.prot[k + i]) return false;
-    return tiles[k - W + 1] === T_EMPTY;
+    return tiles[k - this.W + 1] === T_EMPTY;
   }
 
   private tilesWith(keys: readonly number[]): Uint8Array {
@@ -220,21 +223,25 @@ class BridgeSearch {
   private run(keys: readonly number[]): RunResult {
     this.evals++;
     const tiles = this.tilesWith(keys);
-    const boxes = keys.map((k) => [k % W, Math.floor(k / W), (k % W) + BRIDGE_W - 1, Math.floor(k / W)]);
+    const boxes = keys.map((k) => [k % this.W, Math.floor(k / this.W), (k % this.W) + BRIDGE_W - 1, Math.floor(k / this.W)]);
     const touches = (info: CellInfo, s: number) => {
       const b = info.box;
       for (const [x0, y0, x1, y1] of boxes) if (b[s * 4] <= x1 && b[s * 4 + 2] >= x0 && b[s * 4 + 1] <= y1 && b[s * 4 + 3] >= y0) return true;
       return false;
     };
-    const world: CollisionWorld = { tileAt: (x, y) => (x < 0 || x >= W ? 1 : y < 0 || y >= H ? 0 : tiles[y * W + x]), solids: [] };
-    const standable = (x: number, y: number) => x >= 0 && x < W && y >= 0 && y < H - 1 && !tiles[y * W + x] && !!tiles[(y + 1) * W + x];
+    const world: CollisionWorld = {
+      tileAt: (x, y) => (x < 0 || x >= this.W ? 1 : y < 0 || y >= this.H ? 0 : tiles[y * this.W + x]),
+      solids: [],
+      gravity: this.level.gravity ?? 1,
+    };
+    const standable = (x: number, y: number) => x >= 0 && x < this.W && y >= 0 && y < this.H - 1 && !tiles[y * this.W + x] && !!tiles[(y + 1) * this.W + x];
     const sx = this.level.spawn.tx;
     const sy = this.level.spawn.ty;
-    const goalKey = this.gy * W + this.gx;
+    const goalKey = this.gy * this.W + this.gx;
     const res: RunResult = { goal: false, score: Infinity, cands: new Set() };
     if (!standable(sx, sy)) return res;
-    const seen = new Uint8Array(W * H);
-    const queue: number[] = [sy * W + sx];
+    const seen = new Uint8Array(this.W * this.H);
+    const queue: number[] = [sy * this.W + sx];
     seen[queue[0]] = 1;
     let bestNatural = Infinity;
     let bestAny = Infinity;
@@ -246,8 +253,8 @@ class BridgeSearch {
     };
     for (let qi = 0; qi < queue.length; qi++) {
       const k = queue[qi];
-      const tx = k % W;
-      const ty = (k - tx) / W;
+      const tx = k % this.W;
+      const ty = (k - tx) / this.W;
       if (k === goalKey) {
         res.goal = true;
         res.score = -1;
@@ -255,7 +262,7 @@ class BridgeSearch {
       }
       const d = this.dist(tx, ty);
       if (d < bestAny) bestAny = d;
-      const natural = this.base[k + W] !== T_EMPTY;
+      const natural = this.base[k + this.W] !== T_EMPTY;
       if (natural && d < bestNatural) bestNatural = d;
       if (standable(tx - 1, ty)) push(k - 1);
       if (standable(tx + 1, ty)) push(k + 1);
@@ -265,7 +272,7 @@ class BridgeSearch {
         info = this.simulateCell(world, tiles, tx, ty);
         let clean = true;
         for (let s = 0; s < NS && clean; s++) if (keys.length && touches(info, s)) clean = false;
-        if (clean && this.base[k + W] !== T_EMPTY && this.base[k] === T_EMPTY) this.baseInfo.set(k, info);
+        if (clean && this.base[k + this.W] !== T_EMPTY && this.base[k] === T_EMPTY) this.baseInfo.set(k, info);
       }
       for (let s = 0; s < NS; s++) if (info.land[s] >= 0) push(info.land[s]);
       for (const c of info.cands) res.cands.add(c);
@@ -277,11 +284,24 @@ class BridgeSearch {
   private simulateCell(world: CollisionWorld, tiles: Uint8Array, tx: number, ty: number): CellInfo {
     const info: CellInfo = { land: new Int32Array(NS).fill(-1), box: new Int16Array(NS * 4), cands: [] };
     const seenC = new Set<number>();
+    // Run-up available behind this cell in each direction (reach.ts only runs from platforms ≥ 4 cells long;
+    // 3 cells of travel reach full run speed). Short ledges — like a 3-wide bridge — only get walking jumps.
+    const W = this.W;
+    const st = (x: number) => x >= 0 && x < W && !tiles[ty * W + x] && !!tiles[(ty + 1) * W + x];
+    const behind = (d: number) => {
+      let n = 0;
+      while (n < 3 && st(tx - d * (n + 1))) n++;
+      return n;
+    };
+    // Like reach.ts: running jumps leave from a platform edge after a full run-up; everything else starts from rest, walking.
+    const runL = behind(-1) >= 3 && !st(tx - 1);
+    const runR = behind(1) >= 3 && !st(tx + 1);
     for (let s = 0; s < NS; s++) {
       const sc = SCRIPTS[s];
       const b = bodyAtCell(tx, ty);
-      // Guess model only (answers are re-verified with analyzeReach): assume a full run-up.
-      if (sc.dir !== 0) b.vx = sc.dir * PHYS.runSpeed;
+      // Guess model only (answers are re-verified with analyzeReach): assume a full run-up where there's room for one.
+      const run = sc.dir !== 0 && (sc.dir > 0 ? runR : runL);
+      if (run) b.vx = sc.dir * PHYS.runSpeed;
       let x0 = tx;
       let x1 = tx;
       let y0 = ty;
@@ -292,7 +312,7 @@ class BridgeSearch {
         const holdDir = f < sc.dirFrames;
         stepBody(
           b,
-          { left: holdDir && sc.dir < 0, right: holdDir && sc.dir > 0, run: true, jump: f < sc.jumpFrames, jumpPressed: f === 0 && sc.jumpFrames > 0 },
+          { left: holdDir && sc.dir < 0, right: holdDir && sc.dir > 0, run, jump: f < sc.jumpFrames, jumpPressed: f === 0 && sc.jumpFrames > 0 },
           world,
         );
         const bx0 = Math.floor(b.x / TILE);
@@ -303,14 +323,14 @@ class BridgeSearch {
         if (bx1 > x1) x1 = bx1;
         if (by0 < y0) y0 = by0;
         if (by1 > y1) y1 = by1;
-        if (b.y > H * TILE) break;
+        if (b.y > this.H * TILE) break;
         const bottom = b.y + b.h;
         if (!b.onGround && bottom > prevBottom) {
           // Descending: every tile row whose top we just passed could hold a bridge that catches us.
           const r = Math.floor(bottom / TILE);
-          if (r * TILE > prevBottom - 1e-6 && r >= 1 && r < H) {
+          if (r * TILE > prevBottom - 1e-6 && r >= 1 && r < this.H) {
             const cx = Math.floor((b.x + b.w / 2) / TILE);
-            const key = r * W + cx - 1;
+            const key = r * this.W + cx - 1;
             if (!seenC.has(key) && this.placeable(tiles, key)) {
               seenC.add(key);
               info.cands.push(key);
@@ -321,8 +341,8 @@ class BridgeSearch {
         else if (airborne) {
           const fy = Math.floor((b.y + b.h - 1) / TILE);
           for (const fx of [Math.floor((b.x + b.w / 2) / TILE), Math.floor(b.x / TILE), Math.floor((b.x + b.w - 1) / TILE)]) {
-            if (fx >= 0 && fx < W && fy >= 0 && fy < H - 1 && !tiles[fy * W + fx] && tiles[(fy + 1) * W + fx]) {
-              info.land[s] = fy * W + fx;
+            if (fx >= 0 && fx < this.W && fy >= 0 && fy < this.H - 1 && !tiles[fy * this.W + fx] && tiles[(fy + 1) * this.W + fx]) {
+              info.land[s] = fy * this.W + fx;
               break;
             }
           }

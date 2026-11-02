@@ -1,4 +1,10 @@
-/** World units are pixels. The level is a fixed-size tile grid that fills the view. */
+/**
+ * World units are pixels. Levels are tile grids of varying size (Level.w/h,
+ * rolled per level by gen/level/profile.ts); LEVEL_W×LEVEL_H is the
+ * "classic" size, which exactly fills the logical view. The view (screen,
+ * HUD, pointer coords) is always VIEW_W×VIEW_H logical px; a camera maps the
+ * world into it (render/camera.ts, game/view.ts).
+ */
 export const TILE = 16;
 export const LEVEL_W = 48;
 export const LEVEL_H = 27;
@@ -120,7 +126,7 @@ export const PHYS = {
   bounceMinVy: 140,
 } as const;
 
-/** Sinking this far into the pool at the bottom kills. */
+/** Sinking this far into the pool at the bottom of a classic-size level kills (use level.killY() for any size). */
 export const KILL_Y = LEVEL_H * TILE - 2;
 
 export const MAX_PLAYERS = 8;

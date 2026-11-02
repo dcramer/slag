@@ -254,7 +254,7 @@ export interface ReachResult {
 }
 
 export function analyzeReach(level: Level, stopAtGoal = true): ReachResult {
-  const world: CollisionWorld = { tileAt: (x, y) => tileAt(level, x, y), solids: [] };
+  const world: CollisionWorld = { tileAt: (x, y) => tileAt(level, x, y), solids: [], gravity: level.gravity ?? 1 };
   const key = (x: number, y: number) => y * level.w + x;
   const goalKey = key(level.goal.tx, level.goal.ty);
   const seen = new Set<number>();

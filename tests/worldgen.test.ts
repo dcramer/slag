@@ -25,7 +25,7 @@ describe('worldgen per theme', () => {
   let bridged = 0;
   let total = 0;
   for (const theme of THEME_IDS) {
-    it(`${theme}: deterministic, valid, policy-solvable, themed`, { timeout: 60_000 }, () => {
+    it(`${theme}: deterministic, valid, policy-solvable, themed`, { timeout: 180_000 }, () => {
       let themeBridged = 0;
       for (let i = 0; i < SEEDS; i++) {
         const seed = seedAt(i);
@@ -39,11 +39,12 @@ describe('worldgen per theme', () => {
 
         expect(info.fallback, `${theme} seed ${seed} fallback`).toBe(false);
         expect(l.style.startsWith(`${theme}:`), l.style).toBe(true);
-        expect(l.tiles.length).toBe(LEVEL_W * LEVEL_H);
+        expect(l.tiles.length).toBe(l.w * l.h);
+        expect(l.profile && l.w === l.profile.w && l.h === l.profile.h).toBe(true);
         expect(l.tiles.every((t) => t === T_EMPTY || t === T_SOLID || t === T_ONEWAY)).toBe(true);
         // Spawn left, goal right, both standable and protected.
         expect(l.spawn.tx).toBeLessThan(5);
-        expect(l.goal.tx).toBeGreaterThan(LEVEL_W - 6);
+        expect(l.goal.tx).toBeGreaterThan(l.w - 6);
         expect(isStandable(l, l.spawn.tx, l.spawn.ty)).toBe(true);
         expect(isStandable(l, l.goal.tx, l.goal.ty)).toBe(true);
         expect(isProtected(l, l.spawn.tx, l.spawn.ty)).toBe(true);
@@ -51,8 +52,10 @@ describe('worldgen per theme', () => {
         expect(checkPolicy(l, info.bridges), `${theme} seed ${seed} policy`).toBe(true);
         if (info.bridges.length) themeBridged++;
       }
-      // Most levels need props (playtest target ~70-85%), but every theme keeps some prop-free ones.
-      expect(themeBridged).toBeGreaterThan(SEEDS * 0.5);
+      // Many levels need props, but every theme keeps some prop-free ones. The level profile varies
+      // this on purpose (propNeed knob; tall levels lean on climbing instead), so the floor is lower
+      // than the classic-only ~70-85%.
+      expect(themeBridged).toBeGreaterThan(SEEDS * 0.3);
       expect(themeBridged).toBeLessThan(SEEDS);
       bridged += themeBridged;
       total += SEEDS;
@@ -61,11 +64,11 @@ describe('worldgen per theme', () => {
   it('overall share of levels needing bridges is in a sane band', () => {
     expect(total).toBe(SEEDS * THEME_IDS.length);
     const share = bridged / total;
-    expect(share).toBeGreaterThan(0.65);
+    expect(share).toBeGreaterThan(0.5);
     expect(share).toBeLessThan(0.92);
   });
 
-  it('themes have several sub-styles each', { timeout: 60_000 }, () => {
+  it('themes have several sub-styles each', { timeout: 180_000 }, () => {
     for (const theme of THEME_IDS) {
       const styles = new Set<string>();
       for (let i = 0; i < 24; i++) styles.add(generateLevel(seedAt(i + 100), theme).style);

@@ -1,7 +1,8 @@
 import { carveCorridor, finish, Grid, hintGap, noise2D, smoothCA } from '../kit';
 import { jumpProfile } from '../probe';
 import type { Sculptor } from '../types';
-import { easyGap, easyRise, H, rollChallenges, W } from './common';
+import { easyGap, easyRise, knobs, rollChallenges } from './common';
+import { mineTall } from './tall';
 
 type MineStyle = 'galleries' | 'cavern' | 'shafts';
 
@@ -12,43 +13,53 @@ type MineStyle = 'galleries' | 'cavern' | 'shafts';
  * ceiling; flat rail ledges with sleepers across big caverns; chasms that
  * drop through the floor into the abyss (the bridge challenge).
  */
-export const mine: Sculptor = ({ rng, attempt }) => {
+export const mine: Sculptor = (ctx) => {
+  if (ctx.profile.size === 'tall') return mineTall(ctx);
+  const { rng, attempt } = ctx;
+  const k = knobs(ctx);
+  const { W, H } = k;
   const style = rng.weighted<MineStyle>([
     ['galleries', 3],
-    ['cavern', 3],
-    ['shafts', 2],
+    ['cavern', 4 - 2 * k.density],
+    ['shafts', 1 + 2 * k.density],
   ]);
-  const g = new Grid();
+  const g = new Grid(W, H);
   g.fill(0, 0, W - 1, H - 1);
   const rise = easyRise();
 
   // Background caverns from thresholded noise, roughened by CA.
-  const n = noise2D(rng, rng.int(5, 8), 2);
-  const thr = style === 'cavern' ? 0.05 : 0.3;
+  const n = noise2D(rng, W, H, rng.int(5, 8), 2);
+  // Sparse mines are hollowed out into big caverns; dense ones stay mostly rock.
+  const thr = (style === 'cavern' ? 0.05 : 0.3) + (0.5 - k.density) * 0.3;
   const m = new Uint8Array(W * H);
   for (let y = 0; y < H; y++)
     for (let x = 0; x < W; x++) {
       const edge = y < 2 || y > H - 3;
       m[y * W + x] = edge || n[y * W + x] < thr || rng.chance(0.06) ? 1 : 0;
     }
-  const sm = smoothCA(m, 3, 5, 4, 1);
+  const sm = smoothCA(W, H, m, 3, 5, 4, 1);
   for (let i = 0; i < W * H; i++) if (!sm[i]) g.t[i] = 0;
 
-  // Tunnel levels: segments alternate between an upper and a lower floor row.
-  const upper = rng.int(8, 12);
+  // Tunnel levels: segments alternate between an upper and a lower floor row
+  // (ltr), or step monotonically up (climb) / down (descent) through the rock.
+  const upper = Math.max(7, H - rng.int(15, 19));
   const lower = rng.int(upper + 8, Math.min(H - 4, upper + 12));
-  const challenges = rollChallenges(rng, 0.82, 0.15, attempt);
+  const challenges = rollChallenges(rng, 0.82, 0.15, attempt, k.propNeed);
   g.wantsProps = challenges > 0;
-  // Three segments leave no room for a chasm, so a challenged 'shafts' map gets two.
-  const nSeg = style === 'shafts' && !challenges ? 3 : style === 'cavern' ? 1 : 2;
-  const startUpper = rng.chance(0.5);
+  // Three segments leave no room for a chasm, so a challenged 'shafts' map gets two. Wide mines get more segments.
+  const per = style === 'shafts' && !challenges ? 3 : style === 'cavern' ? 1 : 2;
+  const nSeg = Math.max(1, Math.round(per * k.wide * (k.wide > 1 ? rng.range(0.8, 1.1) : 1)));
+  const startUpper = k.route === 'descent' ? true : k.route === 'climb' ? false : rng.chance(0.5);
   const cuts: number[] = [0];
   for (let i = 1; i < nSeg; i++) cuts.push(Math.round((W * i) / nSeg) + rng.int(-3, 3));
   cuts.push(W - 1);
   const rows: number[] = [];
+  const mono = (k.route === 'climb' || k.route === 'descent') && nSeg > 1;
   for (let i = 0; i < nSeg; i++) {
     const isUpper = (i % 2 === 0) === startUpper;
-    const row = (isUpper ? upper : lower) + rng.int(-1, 1);
+    const t = i / Math.max(1, nSeg - 1);
+    const monoRow = Math.round(k.route === 'climb' ? lower + (upper - lower) * t : upper + (lower - upper) * t);
+    const row = (mono ? monoRow : isUpper ? upper : lower) + rng.int(-1, 1);
     const end = i === nSeg - 1 ? cuts[i + 1] : cuts[i + 1] + 2;
     const r = carveCorridor(g, rng, cuts[i], row, end, row + rng.int(-1, 1), style === 'cavern' ? rng.int(5, 6) : rng.int(4, 5), 0.25);
     for (let x = cuts[i]; x <= end; x++) if (!Number.isNaN(r[x])) rows[x] = r[x];
@@ -102,7 +113,7 @@ export const mine: Sculptor = ({ rng, attempt }) => {
   }
 
   // Timber: cap beams under the ceiling, rail ledges across caverns.
-  for (let x = rng.int(6, 9); x < W - 6; x += rng.int(6, 9)) {
+  for (let x = rng.int(6, 9); x < W - 6; x += rng.int(5, 8) + Math.round((1 - k.density) * 3)) {
     const fy = rows[x];
     if (Number.isNaN(fy)) continue;
     let cy = fy - 1;
@@ -112,7 +123,7 @@ export const mine: Sculptor = ({ rng, attempt }) => {
     g.set(x - 1, cy, 1);
   }
   if (style !== 'shafts') {
-    for (let k = rng.int(1, 2); k > 0; k--) {
+    for (let n = k.count(rng.int(1, 2)); n > 0; n--) {
       const len = rng.int(6, 10);
       const x0 = rng.int(6, W - 7 - len);
       const y = rng.int(5, H - 8);

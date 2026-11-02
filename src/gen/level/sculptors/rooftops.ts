@@ -1,7 +1,7 @@
 import type { Rng } from '../../../core/rng';
 import { finish, Grid, hintGap } from '../kit';
 import type { Sculptor } from '../types';
-import { easyGap, easyRise, H, hardGap, rollChallenges, undercut, W } from './common';
+import { easyGap, easyRise, hardGap, knobs, rollChallenges, undercut } from './common';
 
 type RoofStyle = 'downtown' | 'tenements' | 'skyline';
 
@@ -20,23 +20,32 @@ interface Building {
  * fire-escape landings on the alley wall so the climb stays honest. A wide
  * alley is the bridge challenge.
  */
-export const rooftops: Sculptor = ({ rng, attempt }) => {
+export const rooftops: Sculptor = (ctx) => {
+  // Tall: the same street of buildings, but a skyline that steps up (or down) most of the map's height,
+  // climbed by fire escapes and wall jumps up the facades.
+  const tall = ctx.profile.size === 'tall';
+  const { rng, attempt } = ctx;
+  const k = tall ? knobs(ctx, undefined, [0.55, 0.7]) : knobs(ctx);
+  const { W, H } = k;
   const style = rng.weighted<RoofStyle>([
     ['downtown', 3],
-    ['tenements', 3],
-    ['skyline', 2],
+    ['tenements', 1 + 3 * k.density],
+    ['skyline', 3 - k.density],
   ]);
-  const g = new Grid();
+  const g = new Grid(W, H);
   const rise = easyRise();
-  const challenges = rollChallenges(rng, 0.82, 0.15, attempt);
+  const challenges = rollChallenges(rng, 0.82, 0.15, attempt, k.propNeed);
   g.wantsProps = challenges > 0;
 
   // Plan buildings left → right until the map is full.
   const bs: Building[] = [];
   const gaps: { a: number; b: number; hard: boolean }[] = [];
-  const sRoof = rng.int(14, 20);
+  const baseRoof = tall ? H - rng.int(5, 8) : H - rng.int(7, 13);
+  const sRoof = Math.max(7, baseRoof + k.ramp(0));
   bs.push({ x: 0, w: rng.int(6, 9), roof: sRoof });
-  let hardLeft = challenges;
+  // Tall skylines spend their width climbing; only a descending one has room for an unjumpable alley.
+  let hardLeft = tall ? (k.climb < 0 ? Math.min(1, challenges) : 0) : challenges;
+  g.wantsProps = hardLeft > 0;
   const minW = style === 'tenements' ? 4 : 5;
   const maxW = style === 'skyline' ? 12 : style === 'tenements' ? 8 : 10;
   for (;;) {
@@ -46,7 +55,12 @@ export const rooftops: Sculptor = ({ rng, attempt }) => {
     const hard = hardLeft > 0 && rng.chance(0.5 + (remaining < 24 ? 0.5 : 0));
     const gap = hard ? hardGap(rng) : easyGap(rng, style === 'tenements' ? 1 : 2);
     const w = rng.int(minW, maxW);
-    let roof = Math.max(8, Math.min(22, prev.roof + rng.int(-5, 5)));
+    // Random walk around the route ramp (climbing skylines step up toward the goal).
+    const want = baseRoof + k.ramp(end + gap + (w >> 1));
+    let roof = Math.max(6, Math.min(H - 5, prev.roof + rng.int(-5, 5)));
+    if (tall) roof = Math.max(6, Math.min(H - 5, want + rng.int(-2, 2)));
+    else if (roof - want > 4) roof -= rng.int(2, 4);
+    else if (want - roof > 4) roof += rng.int(2, 4);
     if (end + gap + w + 7 > W || remaining - gap - w < 6) {
       // Final building holds the goal and runs to the right edge.
       const fx = end + gap;
@@ -76,7 +90,7 @@ export const rooftops: Sculptor = ({ rng, attempt }) => {
   }
   for (const gp of gaps) {
     if (!gp.hard) continue;
-    hintGap(g, gp.a, gp.b, Math.max(roofAt(bs, gp.a - 1), roofAt(bs, gp.b + 1)));
+    hintGap(g, gp.a, gp.b, Math.max(roofAt(bs, gp.a - 1, H), roofAt(bs, gp.b + 1, H)));
     undercut(g, gp.b + 1); // cantilevered top floor: the facade below can't be wall-climbed to the roof
   }
 
@@ -97,6 +111,7 @@ export const rooftops: Sculptor = ({ rng, attempt }) => {
 
   // Rooftop clutter on interior buildings (not the spawn/goal roofs' pockets).
   for (let i = 0; i < bs.length; i++) {
+    if (k.density < 0.3 && rng.chance(0.5)) continue; // sparse: bare roofs
     const b = bs[i];
     const a = Math.max(b.x, i === 0 ? 6 : b.x);
     const z = Math.min(b.x + b.w - 1, i === bs.length - 1 ? W - 7 : b.x + b.w - 1);
@@ -104,10 +119,10 @@ export const rooftops: Sculptor = ({ rng, attempt }) => {
     decorate(g, rng, a, z, b.roof, style);
   }
 
-  return finish(g, { row: sRoof - 1 }, { row: bs[bs.length - 1].roof - 1 }, `rooftops:${style}`);
+  return finish(g, { row: sRoof - 1 }, { row: bs[bs.length - 1].roof - 1 }, `rooftops:${tall ? (k.climb >= 0 ? 'highrise' : 'descent') : style}`);
 };
 
-function roofAt(bs: Building[], x: number): number {
+function roofAt(bs: Building[], x: number, H: number): number {
   for (const b of bs) if (x >= b.x && x < b.x + b.w) return b.roof;
   return H;
 }

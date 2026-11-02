@@ -1,8 +1,8 @@
 import type { Match } from '../game/match';
-import { VIEW_H, VIEW_W } from '../sim/constants';
+import { TILE, VIEW_H, VIEW_W } from '../sim/constants';
 
 /**
- * Stereo placement. The whole 768×432 world is (almost) always on screen,
+ * Stereo placement. The view (768×432) shows most of the action (levels can be bigger; see listenerFor),
  * so one-shots are panned by screen position and only gently attenuated;
  * continuous hazard loops are attenuated hard by the distance to the
  * nearest active runner, so a level full of saws only whines where the
@@ -23,7 +23,9 @@ export function listenerFor(m: Match): Listener {
   if (m.phase === 'run' && m.run) {
     for (const r of m.run.runners) if (r.alive && !r.finished) runners.push({ x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h / 2 });
   }
-  if (!runners.length) return { x: VIEW_W / 2, y: VIEW_H / 2, zoom: 1, runners };
+  const ww = m.level.w * TILE;
+  const wh = m.level.h * TILE;
+  if (!runners.length) return { x: ww / 2, y: wh / 2, zoom: 1, runners };
   let x0 = Infinity;
   let y0 = Infinity;
   let x1 = -Infinity;
@@ -34,12 +36,12 @@ export function listenerFor(m: Match): Listener {
     x1 = Math.max(x1, p.x);
     y1 = Math.max(y1, p.y);
   }
-  const zoom = Math.max(1, Math.min(1.45, VIEW_W / (x1 - x0 + 240), VIEW_H / (y1 - y0 + 240)));
+  const zoom = Math.max(Math.min(1, VIEW_W / ww, VIEW_H / wh), Math.min(1.45, VIEW_W / (x1 - x0 + 240), VIEW_H / (y1 - y0 + 240)));
   const hw = VIEW_W / (2 * zoom);
   const hh = VIEW_H / (2 * zoom);
   return {
-    x: Math.max(hw, Math.min(VIEW_W - hw, (x0 + x1) / 2)),
-    y: Math.max(hh, Math.min(VIEW_H - hh, (y0 + y1) / 2)),
+    x: hw * 2 >= ww ? ww / 2 : Math.max(hw, Math.min(ww - hw, (x0 + x1) / 2)),
+    y: hh * 2 >= wh ? wh / 2 : Math.max(hh, Math.min(wh - hh, (y0 + y1) / 2)),
     zoom,
     runners,
   };

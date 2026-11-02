@@ -1,14 +1,19 @@
 /**
  * Level inspector (no browser).
  *
- *   npm run level -- <seed> [--theme farm]     ASCII map + stats
- *   npm run level -- --stats 200 [--theme farm] per-theme generation stats over N seeds
+ *   npm run level -- <seed> [--theme farm]     ASCII map + stats (incl. the level profile)
+ *   npm run level -- --stats 200 [--theme farm] per-theme generation stats over N seeds,
+ *                                               then per size class / gravity class / route
+ *   Force profile knobs on either: --size classic|wide|tall --route ltr|climb|descent|zigzag
+ *                                  --density 0..1 --gravity 0.7 --hazards 0..4
  *
  * Legend: # solid  = one-way  S spawn  G goal  · reachable stand cell  P set-piece footprint
  *         B a bridge from the validator's solution (levels that need props)
  */
-import { parseSeed } from '../src/core/rng';
-import { BRIDGE_W, generateLevel, lastGenInfo } from '../src/gen/level';
+import { deriveSeed, parseSeed, Rng } from '../src/core/rng';
+import { SCULPTORS } from '../src/gen/level/sculptors';
+import { BRIDGE_W, describeProfile, generateLevel, gravityClass, judge, lastGenInfo, type ProfileOverride } from '../src/gen/level';
+import type { RouteShape, SizeClass } from '../src/sim/level';
 import { T_ONEWAY, T_SOLID } from '../src/sim/level';
 import { footprintCells } from '../src/sim/props';
 import { analyzeReach } from '../src/sim/reach';
@@ -20,6 +25,36 @@ const opt = (name: string) => {
   return i >= 0 ? args[i + 1] : undefined;
 };
 const themeOpt = opt('theme') as ThemeId | undefined;
+const force: ProfileOverride = {};
+if (opt('size')) force.size = opt('size') as SizeClass;
+if (opt('route')) force.route = opt('route') as RouteShape;
+if (opt('density')) force.density = Number(opt('density'));
+if (opt('gravity')) force.gravity = Number(opt('gravity'));
+if (opt('hazards')) force.hazards = Number(opt('hazards'));
+
+interface Agg {
+  n: number;
+  ms: number;
+  maxMs: number;
+  bridged: number;
+  fallbacks: number;
+  attempts: number;
+  pieces: number;
+  solid: number;
+}
+const groups = new Map<string, Agg>();
+function addTo(key: string, ms: number, bridged: boolean, fallback: boolean, attempts: number, pieces: number, solid: number) {
+  const a = groups.get(key) ?? { n: 0, ms: 0, maxMs: 0, bridged: 0, fallbacks: 0, attempts: 0, pieces: 0, solid: 0 };
+  a.n++;
+  a.ms += ms;
+  a.maxMs = Math.max(a.maxMs, ms);
+  if (bridged) a.bridged++;
+  if (fallback) a.fallbacks++;
+  a.attempts += attempts;
+  a.pieces += pieces;
+  a.solid += solid;
+  groups.set(key, a);
+}
 
 if (args.includes('--stats')) {
   const n = Number(opt('stats') ?? 100);
@@ -36,8 +71,13 @@ if (args.includes('--stats')) {
     let attempts = 0;
     for (let i = 0; i < n; i++) {
       const t0 = performance.now();
-      const l = generateLevel((i * 2654435761) >>> 0, th);
+      const l = generateLevel((i * 2654435761) >>> 0, th, force);
       const dt = performance.now() - t0;
+      const p = l.profile!;
+      const solid = l.tiles.reduce((a, t) => a + (t ? 1 : 0), 0) / l.tiles.length;
+      const info = lastGenInfo;
+      for (const key of [`size:${p.size}`, `gravity:${gravityClass(p.gravity)}`, `route:${p.route}`, `hazards:${l.setPieces.length}`])
+        addTo(key, dt, info.bridges.length > 0, info.fallback, info.attempts, l.setPieces.length, solid);
       ms += dt;
       maxMs = Math.max(maxMs, dt);
       const sub = l.style.split(':')[1] ?? l.style;
@@ -67,6 +107,21 @@ if (args.includes('--stats')) {
     });
   }
   console.table(rows);
+  console.table(
+    [...groups.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([k, a]) => ({
+        group: k,
+        levels: a.n,
+        msPerLevel: +(a.ms / a.n).toFixed(1),
+        maxMs: +a.maxMs.toFixed(0),
+        needBridges: `${((a.bridged / a.n) * 100).toFixed(0)}%`,
+        fallbacks: a.fallbacks,
+        attempts: +(a.attempts / a.n).toFixed(2),
+        setPieces: +(a.pieces / a.n).toFixed(2),
+        solidShare: +(a.solid / a.n).toFixed(2),
+      })),
+  );
   console.log({
     levels: total.n,
     msPerLevel: +(total.ms / total.n).toFixed(1),
@@ -77,7 +132,17 @@ if (args.includes('--stats')) {
 } else {
   const seedArg = args.find((a, i) => !a.startsWith('--') && !args[i - 1]?.startsWith('--')) ?? 'demo';
   const t0 = performance.now();
-  const l = generateLevel(parseSeed(seedArg), themeOpt);
+  const seedNum = /^\d+$/.test(seedArg) ? Number(seedArg) >>> 0 : parseSeed(seedArg);
+  let l = generateLevel(seedNum, themeOpt, force);
+  const rawAttempt = opt('raw');
+  if (rawAttempt !== undefined) {
+    // Debug a sculptor: show attempt N's raw shape (before validation) instead of the accepted level.
+    const themeId = l.theme.id;
+    const rng = new Rng(deriveSeed(seedNum, `level:${rawAttempt}`));
+    const shape = SCULPTORS[themeId]({ rng, themeId, theme: l.theme, attempt: Number(rawAttempt), profile: l.profile! });
+    l = { ...l, tiles: shape.tiles, spawn: shape.spawn, goal: shape.goal, protectedRects: shape.protectedRects, style: shape.style, setPieces: [] };
+    console.log('raw attempt', rawAttempt, 'judge:', judge(l, shape.bridgeHints));
+  }
   const ms = performance.now() - t0;
   const info = lastGenInfo;
   const reach = analyzeReach(l, false);
@@ -111,6 +176,7 @@ if (args.includes('--stats')) {
   console.log({
     seed: seedArg,
     style: l.style,
+    profile: describeProfile(l.profile!),
     theme: l.theme.name,
     setPieces: l.setPieces.map((p) => p.def.name),
     goalReachableWithoutProps: reach.goalReached,

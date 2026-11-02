@@ -1,11 +1,14 @@
 import type { Rng } from '../../core/rng';
-import type { TileRect } from '../../sim/level';
+import type { LevelProfile, TileRect } from '../../sim/level';
 import type { ThemeId } from '../../themes';
 import type { Theme } from '../theme';
 
 /** The terrain a sculptor produces: everything in a Level except identity, look and set pieces. */
 export interface Shape {
-  /** Row-major LEVEL_W×LEVEL_H tile kinds (T_EMPTY/T_SOLID/T_ONEWAY). */
+  /** Grid size in tiles (the profile's w×h). */
+  w: number;
+  h: number;
+  /** Row-major w×h tile kinds (T_EMPTY/T_SOLID/T_ONEWAY). */
   tiles: Uint8Array;
   spawn: { tx: number; ty: number };
   goal: { tx: number; ty: number };
@@ -38,6 +41,8 @@ export interface SculptCtx {
   theme: Theme;
   /** 0-based attempt number; sculptors may relax constraints on later attempts. */
   attempt: number;
+  /** Variety knobs: world size (build a Grid of profile.w×profile.h), density, route shape, prop need. */
+  profile: LevelProfile;
 }
 
 /** Builds a level shape for a theme. Must be deterministic in ctx.rng. */
