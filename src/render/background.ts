@@ -3,6 +3,7 @@ import { hash2, Rng } from '../core/rng';
 import type { SkyLayer, Theme } from '../gen/theme';
 import { VIEW_H, VIEW_W } from '../sim/constants';
 import type { Camera } from './camera';
+import type { ViewFrame } from './frame';
 import { circle, ellipse, flame, glowDot, light, type RC } from './kit';
 import { type Feature, SKYLINES } from './skylines';
 
@@ -10,6 +11,9 @@ import { type Feature, SKYLINES } from './skylines';
  * Sky, horizon glow, celestial body, god rays, clouds, parallax skylines
  * (baked once per theme, with emissive windows/lava and a handful of animated
  * features), the liquid pool at the bottom, and ambient particles.
+ *
+ * Everything fills the window, not just the play view: layers are baked to
+ * the window's shape (so they never stretch) and rebaked if it changes.
  *
  * Perf: everything heavy is baked into canvases when the theme changes; per
  * frame we draw ~10 images plus a few dozen small animated shapes.
@@ -45,29 +49,33 @@ export class Backdrop {
   private baked: Baked | null = null;
   private motes: Mote[] = [];
 
-  private ensure(th: Theme, kb: number) {
-    const key = `${th.seed}:${th.id}:${th.name}:${kb.toFixed(2)}`;
+  private ensure(th: Theme, kb: number, f: ViewFrame) {
+    const key = `${th.seed}:${th.id}:${th.name}:${kb.toFixed(2)}:${f.w.toFixed(0)}x${f.h.toFixed(0)}`;
     if (this.baked?.key === key) return;
     const rng = new Rng(th.seed ^ 0xbac);
-    const W = VIEW_W * (1 + PAD * 2);
-    const layers = th.layers.map((L, i) => bakeLayer(L, th, W, kb, i === 0 ? 1.1 : i === th.layers.length - 1 ? 0 : 0.5));
+    const W = f.w * (1 + PAD * 2);
+    // Layers run on down past the play view on a tall window, ground and all.
+    const H = Math.max(VIEW_H, f.y1);
+    const layers = th.layers.map((L, i) => bakeLayer(L, th, W, H, kb, i === 0 ? 1.1 : i === th.layers.length - 1 ? 0 : 0.5));
     const clouds = Array.from({ length: th.clouds }, () => {
       const wide = th.cloudStyle !== 'puffy';
       const w = wide ? rng.range(160, 320) : rng.range(70, 170);
       const h = w * (wide ? rng.range(0.12, 0.22) : rng.range(0.32, 0.45));
       return {
         c: bakeCloud(rng, w, h, th, kb),
-        x: rng.range(-100, VIEW_W),
-        y: rng.range(th.cloudStyle === 'smog' ? VIEW_H * 0.15 : 6, VIEW_H * (th.cloudStyle === 'smog' ? 0.55 : 0.42)),
+        x: rng.range(f.x0 - 100, f.x1),
+        y: rng.range(th.cloudStyle === 'smog' ? VIEW_H * 0.15 : Math.min(6, f.y0 + 6), VIEW_H * (th.cloudStyle === 'smog' ? 0.55 : 0.42)),
         speed: rng.range(2, 8),
         w,
         h,
         depth: rng.range(0.03, 0.14),
       };
     });
-    const stars = Array.from({ length: th.stars }, () => ({
-      x: rng.range(0, VIEW_W),
-      y: rng.range(0, VIEW_H * 0.65),
+    // A wider or taller window gets more sky, at the same density of stars.
+    const starCount = Math.round((th.stars * f.w * (VIEW_H * 0.65 - f.y0)) / (VIEW_W * VIEW_H * 0.65));
+    const stars = Array.from({ length: starCount }, () => ({
+      x: rng.range(f.x0, f.x1),
+      y: rng.range(f.y0, VIEW_H * 0.65),
       r: rng.range(0.4, 1.4),
       tw: rng.range(0.5, 3),
     }));
@@ -77,7 +85,8 @@ export class Backdrop {
 
   /** Background in screen space (camera only drives parallax). */
   draw(rc: RC, th: Theme, cam: Camera, kb: number) {
-    this.ensure(th, kb);
+    const f = cam.frame;
+    this.ensure(th, kb, f);
     const b = this.baked!;
     const s = rc.s;
     const t = rc.t;
@@ -94,12 +103,12 @@ export class Backdrop {
     const px = (depth: number) => -(cam.x - cam.ww / 2) * depth * kx;
     const py = (depth: number) => -(cam.y - refY) * depth * 0.6 * ky;
 
-    const sky = s.createLinearGradient(0, 0, 0, VIEW_H);
+    const sky = s.createLinearGradient(0, f.y0, 0, f.y1);
     sky.addColorStop(0, css(th.skyTop));
     sky.addColorStop(0.55, css(th.skyMid));
     sky.addColorStop(1, css(th.skyBottom));
     s.fillStyle = sky;
-    s.fillRect(-40, -40, VIEW_W + 80, VIEW_H + 80);
+    s.fillRect(f.x0 - 40, f.y0 - 40, f.w + 80, f.h + 80);
 
     // Horizon glow band.
     if (th.horizon.strength > 0) {
@@ -109,7 +118,7 @@ export class Backdrop {
       hz.addColorStop(0.65, css(th.horizon.color, 0, th.horizon.strength * 0.55));
       hz.addColorStop(1, css(th.horizon.color, 0, th.horizon.strength * 0.25));
       s.fillStyle = hz;
-      s.fillRect(-40, hy - VIEW_H * 0.35, VIEW_W + 80, VIEW_H * 0.55);
+      s.fillRect(f.x0 - 40, hy - VIEW_H * 0.35, f.w + 80, VIEW_H * 0.55);
     }
 
     for (const st of b.stars) {
@@ -122,21 +131,23 @@ export class Backdrop {
     if (th.rays) this.drawRays(rc, th, px(0.04), py(0.04));
 
     for (const cl of b.clouds) {
-      const span = VIEW_W + cl.w * 2;
-      const x = ((((cl.x + t * cl.speed + px(cl.depth)) % span) + span) % span) - cl.w;
+      const span = f.w + cl.w * 2;
+      const x = f.x0 + ((((cl.x - f.x0 + t * cl.speed + px(cl.depth)) % span) + span) % span) - cl.w;
       s.drawImage(cl.c, x, cl.y + py(cl.depth), cl.w, cl.h);
     }
 
     b.layers.forEach((L, i) => {
-      const x = -VIEW_W * PAD + px(L.depth);
+      const x = f.x0 - f.w * PAD + px(L.depth);
       const y = py(L.depth);
-      s.drawImage(L.c, x, y, VIEW_W * (1 + PAD * 2), VIEW_H);
+      const lw = f.w * (1 + PAD * 2);
+      const lh = Math.max(VIEW_H, f.y1);
+      s.drawImage(L.c, x, y, lw, lh);
       if (L.glow) {
         rc.g.globalAlpha = (0.85 + 0.15 * Math.sin(t * 0.7 + i)) * Math.max(0.25, 1 - L.haze * 1.3);
-        rc.g.drawImage(L.glow, x, y, VIEW_W * (1 + PAD * 2), VIEW_H);
+        rc.g.drawImage(L.glow, x, y, lw, lh);
         rc.g.globalAlpha = 1;
       }
-      for (const f of L.feats) drawFeature(rc, f, x, y, L.haze, th);
+      for (const ft of L.feats) drawFeature(rc, ft, x, y, L.haze, th, f);
     });
   }
 
@@ -221,17 +232,21 @@ export class Backdrop {
   /**
    * Liquid pool along the bottom of the world (drawn in world space, in front
    * of terrain). `ww`×`wh` is the world size; only the visible stretch (`view`)
-   * is drawn, and the pool extends below the world for letterboxed views.
+   * is drawn. The pool isn't the world's: it carries on `margin` px past either
+   * edge with the surroundings, and deepens below the world to the window's edge.
    */
-  drawLiquid(rc: RC, th: Theme, ww: number, wh: number, view: { x: number; y: number; w: number; h: number }) {
+  drawLiquid(rc: RC, th: Theme, ww: number, wh: number, view: { x: number; y: number; w: number; h: number }, margin = 0) {
     const L = th.liquid;
     const s = rc.s;
     const g = rc.g;
     const t = rc.t;
     const kind = L.kind;
     const VIEW_H = wh;
-    const xa = Math.floor((Math.max(-20, view.x) - 20) / 6) * 6;
-    const xb = Math.min(ww + 20, view.x + view.w + 20);
+    const xa = Math.floor((view.x - 20) / 6) * 6;
+    const xb = view.x + view.w + 20;
+    // Scattered details run over the pool's whole length, not just the world's.
+    const reach = ww + margin * 2;
+    const spots = Math.ceil(reach / VIEW_W);
     const below = Math.max(wh + 20, view.y + view.h + 40);
     const y0 = VIEW_H - (kind === 'sea' ? 11 : 9);
     const amp = kind === 'sea' ? 1.8 : kind === 'swamp' || kind === 'tar' ? 0.5 : kind === 'street' ? 0 : 1;
@@ -262,6 +277,21 @@ export class Backdrop {
     gr.addColorStop(1, css(L.color, -20));
     s.fillStyle = gr;
     s.fill(path);
+    if (below > wh + 20) {
+      // Below the world the pool falls away into its own depth, lit from within if it glows.
+      const dp = s.createLinearGradient(0, wh, 0, below);
+      dp.addColorStop(0, css(L.color, -20, 0));
+      dp.addColorStop(1, css(L.color, -52, 0.95));
+      s.fillStyle = dp;
+      s.fillRect(xa, wh, xb - xa + 6, below - wh);
+      if (L.emissive) {
+        const hg = g.createLinearGradient(0, wh - 10, 0, below);
+        hg.addColorStop(0, css(L.glow, 0, 0.5));
+        hg.addColorStop(1, css(L.glow, -15, 0.04));
+        g.fillStyle = hg;
+        g.fillRect(xa, wh - 10, xb - xa + 6, below - wh + 10);
+      }
+    }
     switch (kind) {
       case 'slag':
       case 'lava':
@@ -273,28 +303,28 @@ export class Backdrop {
         g.globalAlpha = 1;
         // Crust patches drifting on the surface.
         s.fillStyle = css(L.color, kind === 'acid' ? -18 : -30, 0.55);
-        for (let i = 0; i < 14 * Math.ceil(ww / 768); i++) {
-          const cx = ((i * 97.3 + t * (6 + (i % 3) * 3)) % (ww + 60)) - 30;
+        for (let i = 0; i < 14 * spots; i++) {
+          const cx = ((i * 97.3 + t * (6 + (i % 3) * 3)) % (reach + 60)) - 30 - margin;
           ellipse(s, cx, wave(cx) + 4.5, 9 + (i % 4) * 4, 1.6);
         }
         if (kind === 'acid' || kind === 'lava') {
-          for (let i = 0; i < 8 * Math.ceil(ww / 768); i++) {
+          for (let i = 0; i < 8 * spots; i++) {
             const p = (t * 0.7 + i * 0.37) % 1;
-            const bx = (i * 131.7 + Math.floor(t * 0.7 + i * 0.37) * 53) % ww;
+            const bx = ((i * 131.7 + Math.floor(t * 0.7 + i * 0.37) * 53) % reach) - margin;
             g.fillStyle = css(L.glow, 15, 0.6 * (1 - p));
             circle(g, bx, wave(bx) + 2 - p * 3, 0.8 + p * 1.6);
           }
         }
-        for (let x = 32 + Math.max(0, Math.floor((view.x - 100) / 72)) * 72; x < Math.min(ww, view.x + view.w + 100); x += 72)
+        for (let x = 32 + Math.floor((view.x - 100) / 72) * 72; x < view.x + view.w + 100; x += 72)
           light(rc, x, y0 + 4, 90, L.glow, 0.5 + Math.sin(t * 2 + x) * 0.08);
         break;
       }
       case 'street': {
         // A street far below: dark void with streaking car lights.
-        for (let i = 0; i < 10 * Math.ceil(ww / 768); i++) {
+        for (let i = 0; i < 10 * spots; i++) {
           const dir = i % 2 ? 1 : -1;
           const sp = 60 + (i % 3) * 25;
-          const cx = ((((i * 173 + t * sp * dir) % (ww + 80)) + ww + 80) % (ww + 80)) - 40;
+          const cx = ((((i * 173 + t * sp * dir) % (reach + 80)) + reach + 80) % (reach + 80)) - 40 - margin;
           const cy = VIEW_H - 3 + (i % 2) * 1.5;
           const col = dir > 0 ? hsl3(45, 90, 75) : hsl3(0, 100, 55);
           const lg = g.createLinearGradient(cx - dir * 22, 0, cx, 0);
@@ -303,15 +333,15 @@ export class Backdrop {
           g.fillStyle = lg;
           g.fillRect(Math.min(cx, cx - dir * 22), cy, 22, 1.2);
         }
-        for (let x = 40; x < ww; x += 110) if (x > view.x - 100 && x < view.x + view.w + 100) light(rc, x, VIEW_H, 90, L.glow, 0.5);
+        for (let x = 40 - margin; x < ww + margin; x += 110) if (x > view.x - 100 && x < view.x + view.w + 100) light(rc, x, VIEW_H, 90, L.glow, 0.5);
         break;
       }
       case 'water':
       case 'sea':
       case 'swamp': {
         // Reflections: drifting glints and darker ripple bands.
-        for (let i = 0; i < 16 * Math.ceil(ww / 768); i++) {
-          const gx = ((((i * 61.7 + t * (kind === 'sea' ? 14 : 5) * (i % 2 ? 1 : -1)) % (ww + 40)) + ww + 40) % (ww + 40)) - 20;
+        for (let i = 0; i < 16 * spots; i++) {
+          const gx = ((((i * 61.7 + t * (kind === 'sea' ? 14 : 5) * (i % 2 ? 1 : -1)) % (reach + 40)) + reach + 40) % (reach + 40)) - 20 - margin;
           const gy = wave(gx) + 2.5 + (i % 3) * 2;
           const a = 0.25 + 0.25 * Math.sin(t * 2 + i);
           s.fillStyle = css(L.glow, 10, a * (kind === 'swamp' ? 0.4 : 1));
@@ -319,8 +349,8 @@ export class Backdrop {
         }
         if (kind === 'swamp') {
           const rr = new Rng(th.seed ^ 0x1e1);
-          for (let i = 0; i < 9 * Math.ceil(ww / 768); i++) {
-            const lx = rr.range(0, ww);
+          for (let i = 0; i < 9 * spots; i++) {
+            const lx = rr.range(-margin, ww + margin);
             const ly = wave(lx) + 1;
             s.fillStyle = css(hsl3(105, 45, 30), 0, 0.95);
             s.beginPath();
@@ -350,9 +380,9 @@ export class Backdrop {
         break;
       }
       case 'tar': {
-        for (let i = 0; i < 6 * Math.ceil(ww / 768); i++) {
+        for (let i = 0; i < 6 * spots; i++) {
           const p = (t * 0.25 + i * 0.29) % 1;
-          const bx = (i * 151.3 + Math.floor(t * 0.25 + i * 0.29) * 71) % ww;
+          const bx = ((i * 151.3 + Math.floor(t * 0.25 + i * 0.29) * 71) % reach) - margin;
           s.strokeStyle = `rgba(150,140,170,${0.5 * (1 - p)})`;
           s.lineWidth = 0.6;
           s.beginPath();
@@ -491,10 +521,10 @@ export class Backdrop {
 }
 
 /** Animated skyline feature, drawn at the layer's current parallax offset. */
-function drawFeature(rc: RC, f: Feature, ox: number, oy: number, haze: number, th: Theme) {
+function drawFeature(rc: RC, f: Feature, ox: number, oy: number, haze: number, th: Theme, frame: ViewFrame) {
   const x = ox + f.x;
   const y = oy + f.y;
-  if (x < -60 || x > VIEW_W + 60) return;
+  if (x < frame.x0 - 60 || x > frame.x1 + 60) return;
   const s = rc.s;
   const g = rc.g;
   const t = rc.t + f.phase;
@@ -623,11 +653,11 @@ function drawFeature(rc: RC, f: Feature, ox: number, oy: number, haze: number, t
   }
 }
 
-function bakeLayer(L: SkyLayer, th: Theme, W: number, kb: number, blur: number): BakedLayer {
+function bakeLayer(L: SkyLayer, th: Theme, W: number, H: number, kb: number, blur: number): BakedLayer {
   const def = SKYLINES[L.kind];
   const c = document.createElement('canvas');
   c.width = Math.ceil(W * kb);
-  c.height = Math.ceil(VIEW_H * kb);
+  c.height = Math.ceil(H * kb);
   const g = c.getContext('2d')!;
   g.scale(kb, kb);
   let glowC: HTMLCanvasElement | null = null;
@@ -639,12 +669,12 @@ function bakeLayer(L: SkyLayer, th: Theme, W: number, kb: number, blur: number):
     e = glowC.getContext('2d')!;
     e.scale(kb, kb);
   }
-  const H = VIEW_H;
+  // The silhouette keeps its place in the view however tall the layer is; only what's under it runs on.
   const ridge = (x: number) => {
     const u = x / VIEW_W;
     let h = L.base;
     L.freqs.forEach((f, i) => (h += Math.sin(u * f * Math.PI * 2 + L.phases[i]) * L.amp * (1 / (i + 1))));
-    return h * H;
+    return h * VIEW_H;
   };
   const feats: Feature[] = [];
   def.bake({ g, e, L, th, W, H, rng: new Rng(L.seed), feats, ridge });

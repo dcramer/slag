@@ -181,11 +181,11 @@ async function mobile(deviceName: string) {
     await touch('touchEnd', []);
     await mp.waitForTimeout(250);
   };
-  /** View (768×432) → CSS px via the canvas box. */
+  /** View (768×432) → CSS px via the play view's box. */
   const v2c = (x: number, y: number) =>
     mp.evaluate(
       ([vx, vy]) => {
-        const r = document.querySelector('canvas')!.getBoundingClientRect();
+        const r = document.querySelector('[data-slag-view]')!.getBoundingClientRect();
         return { x: r.left + (vx / 768) * r.width, y: r.top + (vy / 432) * r.height };
       },
       [x, y] as const,

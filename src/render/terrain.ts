@@ -2,7 +2,7 @@ import { css, type HSL, toRgb } from '../core/color';
 import { hash2, Rng } from '../core/rng';
 import type { TerrainKind, TerrainLook, Theme } from '../gen/theme';
 import { TILE } from '../sim/constants';
-import { type Level, T_ONEWAY, tileAt } from '../sim/level';
+import { type Level, T_ONEWAY, tileAt, type TileRect } from '../sim/level';
 import { DECOR, type Decor } from './decor';
 import { circle, makeNoise, mixRgb, type RC } from './kit';
 
@@ -162,7 +162,11 @@ export class TerrainPainter {
   private ww = 0;
   private wh = 0;
 
-  ensure(level: Level, kb: number) {
+  /**
+   * Bake `level` if anything changed; true if it did. `skip` leaves decor out
+   * of a tile rect (the surroundings' hole where the real level goes).
+   */
+  ensure(level: Level, kb: number, skip?: TileRect): boolean {
     const th = level.theme;
     const T = th.terrain;
     // Re-bake only when this theme's own textures change state (not when other themes' load).
@@ -173,18 +177,18 @@ export class TerrainPainter {
       this.main = makeTexture(T, T.veins, th, kb, 0x1234);
       this.sub = T.sub ? makeTexture({ ...T.sub, vein: T.vein }, T.veins, th, kb, 0x4321) : null;
     }
-    const dk = `${level.seed}:${th.seed}:${th.id}`;
+    const dk = `${level.seed}:${th.seed}:${th.id}:${level.w}x${level.h}`;
     if (dk !== this.decorKey) {
       this.decorKey = dk;
-      this.makeDecor(level);
+      this.makeDecor(level, skip);
       this.bakeKey = '';
     }
     const bk = `${tk}:${level.seed}:${level.version}:${level.w}x${level.h}`;
-    if (bk !== this.bakeKey) {
-      this.bakeKey = bk;
-      this.kb = kb;
-      this.bakeTerrain(level, kb);
-    }
+    if (bk === this.bakeKey) return false;
+    this.bakeKey = bk;
+    this.kb = kb;
+    this.bakeTerrain(level, kb);
+    return true;
   }
 
   private bakeTerrain(level: Level, kb: number) {
@@ -422,7 +426,7 @@ export class TerrainPainter {
     g.drawImage(layer, 0, 0, worldW, worldH);
   }
 
-  private makeDecor(level: Level) {
+  private makeDecor(level: Level, skip?: TileRect) {
     const th = level.theme;
     const rng = new Rng(level.seed ^ 0xdec0);
     this.decor = [];
@@ -447,6 +451,7 @@ export class TerrainPainter {
     for (let ty = 1; ty < level.h; ty++) {
       for (let tx = 0; tx < level.w; tx++) {
         if (!solid(tx, ty)) continue;
+        if (skip && tx >= skip.x && tx < skip.x + skip.w && ty >= skip.y && ty < skip.y + skip.h) continue;
         const top = air(tx, ty - 1);
         const under = ty < level.h - 1 && air(tx, ty + 1);
         if (top && (th.terrain.cap === 'grass' || th.terrain.cap === 'moss')) {

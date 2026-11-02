@@ -46,10 +46,10 @@ export function bootGame(container: HTMLElement, room: string): void {
   // Host-rolled per-match salt (crate order); re-rolled while in the lobby so every game differs.
   match.nextSalt = (Math.random() * 4294967296) >>> 0;
   const input = new InputManager(window);
-  input.viewEl = glCanvas;
   // In the lobby only real buttons act; a stray click must not join/ready/start.
   input.clickConfirms = () => match.phase !== 'lobby';
   const renderer = new Renderer(glCanvas, hudCanvas);
+  input.viewEl = renderer.viewBox;
   renderer.hud.devices = input;
   renderer.hud.room = room;
   renderer.hud.hidden = params.get('ui') === '0';

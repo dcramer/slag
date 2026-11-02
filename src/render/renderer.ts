@@ -10,10 +10,12 @@ import { Backdrop } from './background';
 import { Camera } from './camera';
 import { drawAccessory, drawCharacter, Rig } from './character';
 import { Fx } from './fx';
+import { VIEW_FRAME, type ViewFrame, viewFrame } from './frame';
 import { Hud } from './hud';
 import { circle, glowDot, type Light, light, type RC } from './kit';
 import { type Compositor, createCompositor } from './post';
 import { drawBlastPreview, drawProjectile, drawResolved, drawRunnerStatus, type Emit, propEventFx } from './props';
+import { Surround } from './surround';
 import { TerrainPainter } from './terrain';
 // Mobile: quality tiers / adaptive resolution / safe-area insets (owned by the touch module).
 import { detectQuality, FrameBudget, QUALITY, type QualityTier, safeInsets, TIERS } from '../ui/touch/device';
@@ -40,10 +42,14 @@ export class Renderer {
   private cam = new Camera();
   private backdrop = new Backdrop();
   private terrain = new TerrainPainter();
+  private surround = new Surround();
   private fx = new Fx();
   private rigs = new Map<number, Rig>();
   private pw = 2;
   private ph = 2;
+  private frameBox: ViewFrame = VIEW_FRAME;
+  /** Invisible box over the play view: the 0..VIEW_W×0..VIEW_H area that pointers map through. */
+  readonly viewBox = document.createElement('div');
   private last = 0;
   private aberr = 0;
   private flash = 0;
@@ -59,6 +65,9 @@ export class Renderer {
   ) {
     this.comp = createCompositor(glCanvas);
     this.hud = new Hud(hudCanvas.getContext('2d')!);
+    this.viewBox.dataset.slagView = '';
+    this.viewBox.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none';
+    glCanvas.parentElement?.append(this.viewBox);
     this.fx.onSplat = (x, y, r, c) => this.terrain.splat(x, y, r, c);
     ({ tier: this.quality, adaptive: this.adaptive } = detectQuality());
     this.resize();
@@ -78,23 +87,24 @@ export class Renderer {
     const vh = window.innerHeight;
     const q = QUALITY[this.quality];
     const dpr = Math.min(q.dprCap, window.devicePixelRatio || 1);
-    // Mobile: fit inside the notch / status-bar safe area (left/right/top). The bottom
-    // home-indicator strip may overlap the picture; touch controls keep clear of it.
-    const ins = safeInsets();
-    const aw = Math.max(2, vw - ins.left - ins.right);
-    const ah = Math.max(2, vh - ins.top);
-    const scale = Math.min(aw / VIEW_W, ah / VIEW_H);
-    const cssW = VIEW_W * scale;
-    const cssH = VIEW_H * scale;
+    // Canvases fill the window; the play view keeps its aspect and scale inside it, clear of the
+    // notch and status bar. Layers fill the rest (frame.ts). The bottom home-indicator strip may
+    // overlap the picture; touch controls keep clear of it.
+    const f = viewFrame(vw, vh, safeInsets());
+    this.frameBox = f;
+    this.cam.setFrame(f);
+    this.hud.setFrame(f);
     for (const c of [this.glCanvas, this.hudCanvas]) {
       c.style.position = 'absolute';
-      c.style.left = `${ins.left + (aw - cssW) / 2}px`;
-      c.style.top = `${ins.top + (ah - cssH) / 2}px`;
-      c.style.width = `${cssW}px`;
-      c.style.height = `${cssH}px`;
+      c.style.left = '0';
+      c.style.top = '0';
+      c.style.width = `${vw}px`;
+      c.style.height = `${vh}px`;
     }
-    this.pw = Math.max(2, Math.round(Math.min(q.maxW, cssW * dpr)));
-    this.ph = Math.round((this.pw * VIEW_H) / VIEW_W);
+    Object.assign(this.viewBox.style, { left: `${f.left}px`, top: `${f.top}px`, width: `${f.width}px`, height: `${f.height}px` });
+    // The quality cap is per play-view width; the same pixel density carries over the whole window.
+    this.pw = Math.max(2, Math.round(Math.min((q.maxW * f.w) / VIEW_W, vw * dpr)));
+    this.ph = Math.round((this.pw * vh) / vw);
     for (const c of [this.scene, this.glow, this.glCanvas, this.hudCanvas]) {
       c.width = this.pw;
       c.height = this.ph;
@@ -120,8 +130,15 @@ export class Renderer {
     const ww = level.w * TILE;
     const wh = level.h * TILE;
     // Bake resolution: enough for the race zoom, capped by a pixel budget so huge levels stay cheap.
-    const kb = Math.min(4, (this.pw / VIEW_W) * 1.45, Math.sqrt(MAX_BAKE_PX / (ww * wh)));
+    const frameBox = this.frameBox;
+    const sk = this.pw / frameBox.w;
+    const kb = Math.min(4, sk * 1.45, Math.sqrt(MAX_BAKE_PX / (ww * wh)));
     this.terrain.ensure(level, kb);
+    // The surroundings reach as far as the most zoomed-out view of this level can see.
+    const ov = overview(level);
+    const reachX = Math.max(0, frameBox.w / ov.zoom - ww) / 2;
+    const reachY = Math.max(0, frameBox.h / ov.zoom - wh);
+    this.surround.ensure(level, reachX, reachY, Math.min(kb, Math.sqrt(MAX_BAKE_PX / ((ww + reachX * 2) * (wh + reachY)))));
     const emit: Emit = (kind, x, y, vx, vy, color) =>
       this.fx.add(
         kind,
@@ -144,12 +161,13 @@ export class Renderer {
     const rc: RC = { s, g, lights, t, frame };
 
     // --- background (screen space, parallax from camera)
-    const sk = this.pw / VIEW_W;
-    s.setTransform(sk, 0, 0, sk, 0, 0);
+    const ox = -frameBox.x0 * sk;
+    const oy = -frameBox.y0 * sk;
+    s.setTransform(sk, 0, 0, sk, ox, oy);
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.clearRect(0, 0, this.pw, this.ph);
     g.globalCompositeOperation = 'lighter';
-    g.setTransform(sk, 0, 0, sk, 0, 0);
+    g.setTransform(sk, 0, 0, sk, ox, oy);
     // Zoom the backdrop a little with the camera so parallax feels physical.
     const bz = 1 + Math.max(0, this.cam.zoom - 1) * 0.35;
     for (const c of [s, g]) {
@@ -162,7 +180,7 @@ export class Renderer {
     // --- world
     this.cam.apply(s, this.pw);
     this.cam.apply(g, this.pw);
-    this.drawBounds(rc, level);
+    this.surround.draw(rc);
     this.terrain.drawShadow(rc);
     this.terrain.draw(rc);
     const pushers = m.run ? m.run.runners.filter((r) => r.alive).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h })) : [];
@@ -211,7 +229,7 @@ export class Renderer {
       }
     }
     this.fx.draw(rc);
-    this.backdrop.drawLiquid(rc, level.theme, ww, wh, this.cam.visible());
+    this.backdrop.drawLiquid(rc, level.theme, ww, wh, this.cam.visible(), this.surround.margin);
     this.backdrop.drawMotes(rc, level.theme, dt, this.cam.visible());
     g.globalCompositeOperation = 'source-over';
 
@@ -265,35 +283,9 @@ export class Renderer {
     this.cam.update(dt);
   }
 
-  /** World → view coords (0..VIEW_W × 0..VIEW_H) through the current camera; for HUD overlays drawn in screen space. */
+  /** World → view coords (0..VIEW_W × 0..VIEW_H in the play view) through the current camera; for HUD overlays drawn in screen space. */
   worldToScreen(x: number, y: number): { x: number; y: number } {
     return this.cam.worldToView(x, y);
-  }
-
-  /** Outside x the sim treats the world as solid wall: when letterboxed, show it as dark rock rather than open sky. */
-  private drawBounds(rc: RC, level: Level) {
-    const v = this.cam.visible();
-    const ww = level.w * TILE;
-    if (v.x >= 0 && v.x + v.w <= ww) return;
-    const th = level.theme;
-    const s = rc.s;
-    const wall = shift(th.terrain.outline, 0, 0, 0);
-    s.fillStyle = css(wall, 0, 0.92);
-    const y0 = v.y - 50;
-    const h = v.h + 100;
-    if (v.x < 0) s.fillRect(v.x - 50, y0, -v.x + 50, h);
-    if (v.x + v.w > ww) s.fillRect(ww, y0, v.x + v.w - ww + 50, h);
-    // Soft inner edge so the boundary reads as a wall face.
-    for (const [x0, dir] of [
-      [0, -1],
-      [ww, 1],
-    ] as const) {
-      const gr = s.createLinearGradient(x0, 0, x0 + dir * 24, 0);
-      gr.addColorStop(0, css(th.terrain.base, -10, 0.9));
-      gr.addColorStop(1, css(wall, 0, 0));
-      s.fillStyle = gr;
-      s.fillRect(Math.min(x0, x0 + dir * 24), y0, 24, h);
-    }
   }
 
   private paintLights(level: Level, lights: Light[]) {

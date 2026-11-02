@@ -1,29 +1,35 @@
 import { clamp } from '../core/geom';
 import type { ViewXform } from '../game/view';
 import { VIEW_H, VIEW_W } from '../sim/constants';
+import { VIEW_FRAME, type ViewFrame } from './frame';
 
 /**
- * Smoothed 2D camera over a world of any size (`setBounds`). The view is
- * always VIEW_W×VIEW_H logical px. Zoom may drop below 1 to show more of a
- * big level; whenever the visible span is wider/taller than the world on an
- * axis, the camera centres the world on that axis (letterbox) instead of
- * showing past one edge.
+ * Smoothed 2D camera. Two things are handed to it and nothing else is assumed:
+ * the world's size (`setBounds`, from the level) and the window (`setFrame`).
+ *
+ * The camera maps world px into logical view coordinates: its centre lands on
+ * the middle of the VIEW_W×VIEW_H play view, at `zoom` view px per world px.
+ * Framing decisions (`focus`, `wide`) are made against the play view, which
+ * never changes shape, while what's visible is the whole frame around it.
+ * On an axis where the frame is bigger than the world, the world is centred
+ * on the play view and the renderer shows what lies beyond it.
  */
 export class Camera {
-  x = VIEW_W / 2;
-  y = VIEW_H / 2;
+  x = 0;
+  y = 0;
   zoom = 1;
-  private tx = VIEW_W / 2;
-  private ty = VIEW_H / 2;
+  private tx = 0;
+  private ty = 0;
   private tz = 1;
   shake = 0;
   private sx = 0;
   private sy = 0;
   /** World size in px. */
-  ww = VIEW_W;
-  wh = VIEW_H;
+  ww = 0;
+  wh = 0;
   /** Lowest zoom `focus` may pick (the fit-whole-level zoom, or a readability floor). */
   minZoom = 1;
+  frame: ViewFrame = VIEW_FRAME;
 
   setBounds(ww: number, wh: number, minZoom: number) {
     if (ww !== this.ww || wh !== this.wh) {
@@ -33,6 +39,10 @@ export class Camera {
       this.y = this.ty = wh / 2;
     }
     this.minZoom = minZoom;
+  }
+
+  setFrame(frame: ViewFrame) {
+    this.frame = frame;
   }
 
   /** Frame the given points (or the whole world if empty), capping zoom. */
@@ -72,47 +82,48 @@ export class Camera {
     this.zoom = this.tz = v.zoom;
   }
 
-  private clampAxis(v: number, half: number, size: number): number {
-    return half * 2 >= size ? size / 2 : clamp(v, half, size - half);
+  /** Keep `size` world px covering the frame's `before`/`after` px either side of the view centre, or centre it if it can't. */
+  private clampAxis(v: number, before: number, after: number, size: number): number {
+    return before + after >= size ? size / 2 : clamp(v, before, size - after);
+  }
+
+  private clampX(v: number): number {
+    return this.clampAxis(v, (VIEW_W / 2 - this.frame.x0) / this.zoom, (this.frame.x1 - VIEW_W / 2) / this.zoom, this.ww);
+  }
+
+  private clampY(v: number): number {
+    return this.clampAxis(v, (VIEW_H / 2 - this.frame.y0) / this.zoom, (this.frame.y1 - VIEW_H / 2) / this.zoom, this.wh);
   }
 
   update(dt: number, smooth = true) {
     const k = smooth ? 1 - Math.exp(-dt * 3.2) : 1;
     this.zoom += (this.tz - this.zoom) * k;
-    const hw = VIEW_W / (2 * this.zoom);
-    const hh = VIEW_H / (2 * this.zoom);
-    const tx = this.clampAxis(this.tx, hw, this.ww);
-    const ty = this.clampAxis(this.ty, hh, this.wh);
-    this.x += (tx - this.x) * k;
-    this.y += (ty - this.y) * k;
-    this.x = this.clampAxis(this.x, hw, this.ww);
-    this.y = this.clampAxis(this.y, hh, this.wh);
+    this.x += (this.clampX(this.tx) - this.x) * k;
+    this.y += (this.clampY(this.ty) - this.y) * k;
+    this.x = this.clampX(this.x);
+    this.y = this.clampY(this.y);
     this.shake *= Math.exp(-dt * 7);
     if (this.shake < 0.05) this.shake = 0;
     this.sx = (Math.random() - 0.5) * this.shake;
     this.sy = (Math.random() - 0.5) * this.shake;
   }
 
-  /** Canvas transform mapping world → buffer pixels for a buffer `pw` px wide. */
+  /** Canvas transform mapping world → buffer pixels for a window-filling buffer `pw` px wide. */
   apply(ctx: CanvasRenderingContext2D, pw: number) {
-    const k = (pw / VIEW_W) * this.zoom;
-    ctx.setTransform(k, 0, 0, k, pw / 2 - (this.x + this.sx) * k, (pw * VIEW_H) / VIEW_W / 2 - (this.y + this.sy) * k);
+    const f = this.frame;
+    const px = pw / f.w;
+    const k = px * this.zoom;
+    ctx.setTransform(k, 0, 0, k, (VIEW_W / 2 - f.x0) * px - (this.x + this.sx) * k, (VIEW_H / 2 - f.y0) * px - (this.y + this.sy) * k);
   }
 
-  /** World → view coords (0..VIEW_W × 0..VIEW_H), ignoring shake. */
+  /** World → view coords (0..VIEW_W × 0..VIEW_H inside the play view, beyond it in the frame), ignoring shake. */
   worldToView(x: number, y: number): { x: number; y: number } {
     return { x: (x - this.x) * this.zoom + VIEW_W / 2, y: (y - this.y) * this.zoom + VIEW_H / 2 };
   }
 
-  /** World → normalized screen (0..1). */
-  toScreen(x: number, y: number): { x: number; y: number } {
-    return { x: ((x - this.x) * this.zoom) / VIEW_W + 0.5, y: ((y - this.y) * this.zoom) / VIEW_H + 0.5 };
-  }
-
-  /** Visible world rect (no shake). */
+  /** Visible world rect: the whole window (no shake). */
   visible(): { x: number; y: number; w: number; h: number } {
-    const w = VIEW_W / this.zoom;
-    const h = VIEW_H / this.zoom;
-    return { x: this.x - w / 2, y: this.y - h / 2, w, h };
+    const f = this.frame;
+    return { x: this.x + (f.x0 - VIEW_W / 2) / this.zoom, y: this.y + (f.y0 - VIEW_H / 2) / this.zoom, w: f.w / this.zoom, h: f.h / this.zoom };
   }
 }

@@ -10,6 +10,7 @@ import { glyphsFor, type InputMode, type PromptAction, promptModes } from '../ui
 import { FONT, PAL, TYPE } from '../ui/style';
 import { drawCharacter } from './character';
 import { bay, buttonText, type ButtonStyle, hazardTape, icon, type IconName, plate, stampButton, tag } from './hud-kit';
+import { VIEW_FRAME, type ViewFrame } from './frame';
 import { circle, glowDot, type RC, rrect } from './kit';
 import { drawPreview } from './props';
 
@@ -119,6 +120,7 @@ export class Hud {
   padCount = 0;
   /** Clickable regions from the last frame (lobby buttons). */
   private buttons: HudButton[] = [];
+  private frame: ViewFrame = VIEW_FRAME;
 
   constructor(private ctx: CanvasRenderingContext2D) {}
 
@@ -206,17 +208,31 @@ export class Hud {
     c.fillText(s, x, y);
   }
 
+  /** The window, in view coords: the HUD lays out in the play view, and full-screen washes fill this. */
+  setFrame(f: ViewFrame) {
+    this.frame = f;
+  }
+
+  /** Wash the whole window, not just the play view, with the current fill. */
+  private wash() {
+    const f = this.frame;
+    this.ctx.fillRect(f.x0, f.y0, f.w, f.h);
+  }
+
   draw(m: Match, t: number, pw: number, ph: number) {
     this.buttons = [];
     const c = this.ctx;
-    const k = pw / VIEW_W;
+    const f = this.frame;
+    const k = pw / f.w;
+    const ox = -f.x0 * k;
+    const oy = -f.y0 * k;
     const dt = this.lastT ? Math.min(0.1, t - this.lastT) : 0;
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.clearRect(0, 0, pw, ph);
     this.gctx.setTransform(1, 0, 0, 1, 0, 0);
     this.gctx.clearRect(0, 0, pw, ph);
-    c.setTransform(k, 0, 0, k, 0, 0);
-    this.gctx.setTransform(k, 0, 0, k, 0, 0);
+    c.setTransform(k, 0, 0, k, ox, oy);
+    this.gctx.setTransform(k, 0, 0, k, ox, oy);
     if (m.phase !== this.lastPhase) {
       // No shutter on the very first frame (page load), only on phase changes.
       if (this.lastPhase) this.wipe = 1;
@@ -251,24 +267,26 @@ export class Hud {
     c.globalCompositeOperation = 'lighter';
     c.drawImage(this.glow, 0, 0);
     c.globalCompositeOperation = 'source-over';
-    c.setTransform(k, 0, 0, k, 0, 0);
+    c.setTransform(k, 0, 0, k, ox, oy);
     if (this.wipe > 0 && this.lastT) {
       // Diagonal shutter wipe on phase change: an iron door with a molten edge.
       const p = 1 - this.wipe;
       c.fillStyle = PAL.soot;
       c.beginPath();
-      const x = -200 + p * (VIEW_W + 400);
-      c.moveTo(x, 0);
-      c.lineTo(x + 140, 0);
-      c.lineTo(x + 40, VIEW_H);
-      c.lineTo(x - 100, VIEW_H);
+      // The door sweeps the whole window, keeping its slant (100 px over VIEW_H) at any height.
+      const lean = (100 * f.h) / VIEW_H;
+      const x = f.x0 - 200 - lean + p * (f.w + 400 + lean);
+      c.moveTo(x, f.y0);
+      c.lineTo(x + lean + 40, f.y0);
+      c.lineTo(x + 40, f.y1);
+      c.lineTo(x - lean, f.y1);
       c.fill();
       c.fillStyle = PAL.molten;
       c.beginPath();
-      c.moveTo(x + 140, 0);
-      c.lineTo(x + 146, 0);
-      c.lineTo(x + 46, VIEW_H);
-      c.lineTo(x + 40, VIEW_H);
+      c.moveTo(x + lean + 40, f.y0);
+      c.lineTo(x + lean + 46, f.y0);
+      c.lineTo(x + 46, f.y1);
+      c.lineTo(x + 40, f.y1);
       c.fill();
       this.wipe -= (t - this.lastT) * 2.6;
     }
@@ -349,7 +367,7 @@ export class Hud {
     vg.addColorStop(0.75, 'rgba(18,10,7,0.45)');
     vg.addColorStop(1, 'rgba(40,12,4,0.85)');
     c.fillStyle = vg;
-    c.fillRect(0, 0, VIEW_W, VIEW_H);
+    this.wash();
     glowDot(this.gctx, VIEW_W / 2, VIEW_H + 60, 330, { h: 18, s: 100, l: 45 }, 0.22, 0.2);
     this.stepEmbers(dt);
 
@@ -554,7 +572,7 @@ export class Hud {
   private pick(m: Match, t: number) {
     const c = this.ctx;
     c.fillStyle = 'rgba(18,10,7,0.68)';
-    c.fillRect(0, 0, VIEW_W, VIEW_H);
+    this.wash();
     const twoRows = m.crate.length > 5;
     this.heading(`ROUND ${m.round}`, 'Choose a Part', twoRows ? 30 : 52, twoRows ? 24 : TYPE.title);
     this.phaseTimer(m, t, VIEW_W / 2 + 120, twoRows ? 34 : 56);
@@ -611,7 +629,7 @@ export class Hud {
     g.addColorStop(0, 'rgba(18,10,7,0.82)');
     g.addColorStop(1, 'rgba(18,10,7,0)');
     c.fillStyle = g;
-    c.fillRect(0, 0, VIEW_W, 54);
+    c.fillRect(this.frame.x0, this.frame.y0, this.frame.w, 54 - this.frame.y0);
     this.text(`ROUND ${m.round}`, 14, 16, 14, PAL.amber, 'left', DISPLAY, 400, 3);
     this.text('PLACE YOUR PART', VIEW_W / 2, 17, TYPE.head + 2, PAL.bone, 'center', DISPLAY, 400, 4);
     this.text('Spawn and goal zones are off-limits', VIEW_W / 2, 35, TYPE.caption + 1, PAL.ash, 'center', UI, 600);
@@ -698,7 +716,7 @@ export class Hud {
   private score(m: Match, t: number) {
     const c = this.ctx;
     c.fillStyle = 'rgba(18,10,7,0.72)';
-    c.fillRect(0, 0, VIEW_W, VIEW_H);
+    this.wash();
     const res = m.result!;
     const TARGET = m.rules.targetScore;
     const title = res.verdict === 'too-easy' ? 'TOO EASY!' : res.verdict === 'too-hard' ? 'NOBODY MADE IT' : `ROUND ${m.round}`;
@@ -775,7 +793,7 @@ export class Hud {
     g.addColorStop(0, 'rgba(18,10,7,0.35)');
     g.addColorStop(1, 'rgba(18,10,7,0.88)');
     c.fillStyle = g;
-    c.fillRect(0, 0, VIEW_W, VIEW_H);
+    this.wash();
     const winners = m.winners.map((s) => m.player(s)!).filter(Boolean);
     // God-ray burst behind the winner.
     const gg = this.gctx;
@@ -889,7 +907,8 @@ export class Hud {
     const fh = touch ? 30 : FOOT_H;
     const gh = touch ? 16 : 12;
     const size = touch ? TYPE.label + 1 : TYPE.body + 0.5;
-    const y = VIEW_H - fh;
+    const win = this.frame;
+    const y = win.y1 - fh;
     const cy = y + fh / 2 + 1;
     const present = {
       keyboard: true,
@@ -901,10 +920,10 @@ export class Hud {
     c.globalAlpha = alpha;
     if (bar && (items.length || left)) {
       c.fillStyle = 'rgba(16,9,6,0.88)';
-      c.fillRect(0, y, VIEW_W, fh);
-      hazardTape(c, 0, y - 2, VIEW_W, 2, 0.8);
+      c.fillRect(win.x0, y, win.w, fh);
+      hazardTape(c, win.x0, y - 2, win.w, 2, 0.8);
       c.fillStyle = PAL.ink;
-      c.fillRect(0, y, VIEW_W, 1);
+      c.fillRect(win.x0, y, win.w, 1);
     }
     if (left) this.text(left, 14, cy, size, PAL.ash, 'left', UI, 700);
     if (m.phase === 'lobby' && this.room) {
