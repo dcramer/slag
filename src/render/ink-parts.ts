@@ -12,7 +12,8 @@ import type { MetalPalette, RC } from './kit';
  * find out what a part costs in this style: each of these is a rewrite of that part's art, not a filter.
  */
 
-const INK = '#1a0f0a';
+/** The pen's own dark, as `INK` in ink-props.ts (which imports this file, so it can't import that). */
+const INK = '#2a1c15';
 
 /** Stroke round a closed shape in `n` overlapping pieces, heavier where it faces away from the light. */
 export function inkLoop(g: CanvasRenderingContext2D, pts: readonly P[], cx: number, cy: number, seed: number, thin: number, thick: number, pieces = 3) {
