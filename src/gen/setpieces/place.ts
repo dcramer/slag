@@ -30,6 +30,7 @@ import {
 import '../../sim/props/modules';
 import { ReachCache } from '../../sim/reach';
 import { noFreeRide } from '../level/winnable';
+import { tellFaults } from './contract';
 
 /**
  * Shared machinery for set-piece placers: a terrain scan (`Site`) that
@@ -75,6 +76,11 @@ export interface Recipe {
   role?: Role;
   /** Allow a second copy in the same level. */
   repeat?: boolean;
+  /**
+   * A hazard no other theme has (docs/DESIGN.md: at least 3 per theme): its hazard signature
+   * (`hazardSignature`, ./contract.ts) matches no other theme's recipe, which tests/conformance checks.
+   */
+  unique?: boolean;
   /** Lazily yields candidates, best first. The placer takes the first valid one. */
   candidates(rng: Rng, s: Site): Iterable<Piece>;
 }
@@ -475,6 +481,7 @@ export function makePlacer(themeKey: string, recipes: readonly Recipe[], uidBase
       let tries = 0;
       for (const cand of recipe.candidates(rng, s)) {
         if (++tries > tryCap) break;
+        if (tellFaults(cand.modules).length) continue;
         const pp = finalize(s, cand, uidBase + first + out.length, `setpiece:${themeKey}:${recipe.name}`);
         if (pp && (!opts.keep || opts.keep([...out, pp])) && noFreeRide(level, pp, [...standing, ...out], s.cache)) {
           out.push(pp);

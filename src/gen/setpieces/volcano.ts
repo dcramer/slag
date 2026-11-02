@@ -204,6 +204,7 @@ export const VOLCANO: Recipe[] = [
   },
   {
     name: 'spitter',
+    unique: true,
     weight: 2,
     role: 'hazard',
     candidates: (rng, s) =>

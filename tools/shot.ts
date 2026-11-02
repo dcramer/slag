@@ -17,7 +17,7 @@
  *   pnpm shot levels --seeds a,b,c,d      (or --count 12) → contact sheet
  *   pnpm shot props --count 24            → prop gallery (crate cards)
  *   pnpm shot cards --arch saw,block       → crate cards of those parts at every size (`platform:tetra`: only parts with that body look)
- *   pnpm shot parts --arch saw,flail       → those parts placed and raced, shot close up (`--styles all`: every launcher style; `--material conveyor`: platforms of that block; `--bait`: a runner in front of each)
+ *   pnpm shot parts --arch saw,flail       → those parts placed and raced, shot close up (`--styles all`: every launcher style; `--material conveyor`: platforms of that block; `--bait`: a runner in front of each; `--rot 1`: every part turned)
  *   pnpm shot parody --seed abc            → Launch Plate, Boost Strip, Panic Button, Fuse Crate, Y-Fling and Four-Square each worked by a runner
  *   pnpm shot looks [--only spikes,geysers,droppers] → set-piece looks: spikes on every face, geysers every way, droppers mid-drop
  *   pnpm shot buildparts                   → every building part in a race, on crate cards, and as place ghosts
@@ -39,6 +39,7 @@
  *   pnpm shot landmarks [--theme T] [--concept id] [--count N] → one level per stage concept at three phases, on a contact sheet
  *                                           (themes with none: a test landmark per skin and shell; --concept filters those by skin or shell)
  *   pnpm shot flood [--look lava|toxic|water] [--low 2] [--high 5] → a tide let into the level, at warn, rise and high water
+ *   pnpm shot join [--only full]           → the join-and-watch storyboard: connecting, Join or Watch, observing, AFK, failures (desktop + phone)
  *   pnpm shot home                         → main menu (desktop + 390×844 mobile)
  *   pnpm shot rules                        → the match rules card (fails if it doesn't fit the window)
  *   pnpm shot settings                     → every settings tab over the lobby, driven by keys and a fake pad,
@@ -54,6 +55,7 @@
  *          --q high (pin the quality tier: slow software GL otherwise reads as a slow device and drops it)
  *          --runframe N (race: stop on exact sim frame N)  --campin x,y,zoom (race: pin the view, for before/after sheets)
  *          --spread (race: stand the runners on open ground)
+ *          --pop N (race: after --frames, the first runner holds self-destruct N frames: ring and countdown)  --popall (every runner)
  *          --mode keyboard|gamepad|touch (footer prompt glyphs)  --net (fake online-lobby info)
  *          --noletters (no impact words)
  * Software GL is slow; frames are advanced deterministically via slagDebug.step().
@@ -62,6 +64,7 @@
 import { shots as cast } from './shot/cast';
 import { browser, errors, scenario, server } from './shot/ctx';
 import { shots as flood } from './shot/flood';
+import { shots as join } from './shot/join';
 import { shots as landmarks } from './shot/landmarks';
 import { shots as motion } from './shot/motion';
 import { shots as mobile } from './shot/mobile';
@@ -71,7 +74,7 @@ import { shots as phases } from './shot/phases';
 import { shots as renderer } from './shot/renderer';
 import { shots as riders } from './shot/riders';
 
-const SCENARIOS = { ...phases, ...renderer, ...motion, ...parts, ...pages, ...mobile, ...landmarks, ...cast, ...flood, ...riders };
+const SCENARIOS = { ...phases, ...renderer, ...motion, ...parts, ...pages, ...mobile, ...landmarks, ...cast, ...flood, ...riders, ...join };
 
 try {
   const run = SCENARIOS[scenario];

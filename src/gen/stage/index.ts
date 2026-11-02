@@ -7,6 +7,21 @@ import { VOLCANO_CONCEPTS } from './volcano';
 import type { Concept } from './types';
 
 export type { Concept, Landmark } from './types';
+export {
+  contractOf,
+  defineConcept,
+  type Footing,
+  footingFaults,
+  LANDMARK_RULES,
+  type LandmarkContract,
+  landmarkFaults,
+  layoutDiff,
+  layoutOf,
+  measureScale,
+  ownPieces,
+  protectedFaults,
+  type Scale,
+} from './contract';
 
 /**
  * Stage concepts per theme (docs/SETPIECES.md): one file per theme in this

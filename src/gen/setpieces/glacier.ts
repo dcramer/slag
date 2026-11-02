@@ -5,6 +5,7 @@ import { makeStyle, type Recipe } from './place';
 export const GLACIER: Recipe[] = [
   {
     name: 'frost cannon',
+    unique: true,
     weight: 2.5,
     role: 'hazard',
     repeat: true,

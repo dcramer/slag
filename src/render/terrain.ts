@@ -3,6 +3,7 @@ import { Rng } from '../core/rng';
 import { TILE } from '../sim/constants';
 import { type Level, levelKey, T_ONEWAY, tileAt, type TileRect } from '../sim/level';
 import { coatTerrain } from './weather';
+import { placeDecor } from '../gen/decor';
 import { DECOR, type Decor } from './decor';
 import { capLoops, inkIce, inkIceTops } from './ink-ground';
 import {
@@ -18,7 +19,6 @@ import {
   inkMaterial,
   inkPlatforms,
   inkUnder,
-  inSkin,
   inkVeins,
   makeTufts,
   skinLoops,
@@ -317,86 +317,10 @@ export class TerrainPainter {
     gg.restore();
   }
 
+  /** Where the decor goes is gen's call (`placeDecor`); its tint comes from each spot's own seed. */
   private makeDecor(level: Level, skip?: TileRect) {
     const th = level.theme;
-    const rng = new Rng(level.seed ^ 0xdec0);
-    this.decor = [];
-    const solid = (x: number, y: number) => tileAt(level, x, y) !== 0 && tileAt(level, x, y) !== T_ONEWAY;
-    const air = (x: number, y: number) => tileAt(level, x, y) === 0 && x >= 0 && x < level.w;
-    const near = (tx: number, ty: number, p: { tx: number; ty: number }) => Math.abs(tx - p.tx) <= 1 && ty >= p.ty && ty <= p.ty + 2;
-    const tops = th.decor.filter((k) => DECOR[k].place === 'top');
-    const unders = th.decor.filter((k) => DECOR[k].place === 'under');
-    const pick = (list: typeof th.decor) => {
-      let total = 0;
-      for (const k of list) total += DECOR[k].weight;
-      let r = rng.next() * total;
-      for (const k of list) {
-        r -= DECOR[k].weight;
-        if (r < 0) return k;
-      }
-      return list[list.length - 1];
-    };
-    const taken = new Set<number>();
-    const skin = skinOf(level);
-    for (let ty = 1; ty < level.h; ty++) {
-      for (let tx = 0; tx < level.w; tx++) {
-        if (!solid(tx, ty)) continue;
-        if (skip && tx >= skip.x && tx < skip.x + skip.w && ty >= skip.y && ty < skip.y + skip.h) continue;
-        // A landmark is dressed by its own art, not the theme's scatter.
-        if (inSkin(skin, tx, ty) || inSkin(skin, tx, ty - 1)) continue;
-        const top = air(tx, ty - 1);
-        const under = ty < level.h - 1 && air(tx, ty + 1);
-        const roll = rng.next();
-        const spot = near(tx, ty - 1, level.spawn) || near(tx, ty - 1, level.goal);
-        if (top && tops.length && roll < th.decorDensity && !spot && !taken.has(ty * level.w + tx)) {
-          const kind = pick(tops);
-          const def = DECOR[kind];
-          let ok = true;
-          for (let k = 1; k <= def.clear; k++) if (!air(tx, ty - k)) ok = false;
-          if (ok) {
-            let span = 1;
-            if (kind === 'fence') {
-              while (span < 4 && solid(tx + span, ty) && air(tx + span, ty - 1) && !taken.has(ty * level.w + tx + span)) span++;
-              if (span < 2) ok = false;
-            }
-            if (ok) {
-              for (let k = 0; k < span; k++) taken.add(ty * level.w + tx + k);
-              this.decor.push({
-                kind,
-                x: kind === 'fence' ? tx * TILE + 1 : tx * TILE + rng.range(4, 12),
-                y: ty * TILE,
-                tx,
-                ty,
-                seed: rng.int(0, 1e9),
-                size: rng.range(0.85, 1.25),
-                span,
-                color: def.color(th, rng),
-                flip: rng.chance(0.5),
-              });
-            }
-          }
-        }
-        if (under && unders.length && rng.chance(th.decorDensity * 0.9)) {
-          const kind = pick(unders);
-          const def = DECOR[kind];
-          let ok = true;
-          for (let k = 1; k <= def.clear; k++) if (!air(tx, ty + k)) ok = false;
-          if (ok)
-            this.decor.push({
-              kind,
-              x: tx * TILE + rng.range(3, 13),
-              y: (ty + 1) * TILE,
-              tx,
-              ty,
-              seed: rng.int(0, 1e9),
-              size: rng.range(0.85, 1.3),
-              span: 1,
-              color: def.color(th, rng),
-              flip: rng.chance(0.5),
-            });
-        }
-      }
-    }
+    this.decor = placeDecor(level, th, skip).map((d) => ({ ...d, color: DECOR[d.kind].color(th, new Rng(d.seed ^ 0xc010)) }));
     this.live = this.decor.filter((d) => DECOR[d.kind].live);
   }
 

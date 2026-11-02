@@ -1,4 +1,5 @@
 import type { Match } from '../game/match';
+import { popCountdown } from '../sim/run';
 import { RUN_COUNTDOWN, TILE } from '../sim/constants';
 import type { GameEvent } from '../sim/types';
 import { RunnerTracker } from './actions';
@@ -63,6 +64,8 @@ export class WebAudioSystem implements AudioSystem {
   private lobbySeed = -1;
   private hover = new Map<number, number>();
   private rot = new Map<number, number>();
+  private popSecs = new Map<number, number>();
+  isLocal?: (device: string) => boolean;
   private victoryAt = -1;
   private emitters: Emitter[] = [];
   private transients: PropCue[] = [];
@@ -328,6 +331,13 @@ export class WebAudioSystem implements AudioSystem {
       this.lobby.clear();
       for (const p of m.players) this.lobby.set(p.slot, { ready: false, char: p.character.seed });
       this.lobbySeed = -1;
+    }
+
+    // A tick on each number of this screen's self-destruct countdowns, higher as it runs out.
+    for (const r of m.phase === 'run' ? (m.run?.runners ?? []) : []) {
+      const secs = r.alive && r.pop > 0 && (this.isLocal?.(m.player(r.slot)?.device ?? '') ?? true) ? popCountdown(r.pop).secs : 0;
+      if (secs > 0 && secs !== this.popSecs.get(r.slot)) play({ name: 'ui-tick', variant: 'urgent', pitch: 1 + (3 - secs) * 0.15 });
+      this.popSecs.set(r.slot, secs);
     }
 
     // Pick: a soft tick as each cursor moves onto a new card. Place: rotate clicks.

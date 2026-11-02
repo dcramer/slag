@@ -5,7 +5,23 @@ import type { Rig } from './character';
 import { line, type P, sn, stroke } from './ink';
 import { arm, contour, eyes, hand, type InkTarget, type Look, lookOf, moodOf, mouth, path, type RunnerPose, STRIDE, toned, tonedOval } from './ink-figure';
 import { TOY_ART } from './toys';
-import { type D, type Feet, IRON, IRON_SH, inked, ORANGE, ORANGE_SH, type Part, ribbon, TIN, TIN_SH, type ToyArt, wheel } from './toys/kit';
+import {
+  type D,
+  type Feet,
+  type GaitIn,
+  IRON,
+  IRON_SH,
+  inked,
+  ORANGE,
+  ORANGE_SH,
+  outlinePts,
+  type Part,
+  ribbon,
+  TIN,
+  TIN_SH,
+  type ToyArt,
+  wheel,
+} from './toys/kit';
 
 /**
  * A runner, inked: a toy out of the foundry's moulds (docs/CHARACTERS.md). Players watch these more than
@@ -46,16 +62,19 @@ function faceOf(c: CharacterDef, art: ToyArt): CharacterDef {
   return fc;
 }
 
-const shapes = new WeakMap<CharacterDef, P[]>();
+/** Each kind's outline at its size, facing right: authored once, sampled once. */
+const shapes = new Map<ToyArt, P[]>();
 
-function shapeOf(c: CharacterDef, art: ToyArt): P[] {
-  let pts = shapes.get(c);
+function shapeOf(art: ToyArt): P[] {
+  let pts = shapes.get(art);
   if (!pts) {
-    pts = art.shape(14 * art.size[0], 15 * art.size[1], c.vary);
-    shapes.set(c, pts);
+    pts = outlinePts(art.outline, 14 * art.size[0], 15 * art.size[1]);
+    shapes.set(art, pts);
   }
   return pts;
 }
+
+const gaitIn: GaitIn = { m: 'idle', ph: 0, t: 0, vx: 0, vy: 0, grounded: true, moving: false, run: 0, seed: 0 };
 
 /** Hands per material, so the per-frame draw builds no objects. */
 const hands = new WeakMap<CharacterDef, Look>();
@@ -71,8 +90,6 @@ function handLook(c: CharacterDef, art: ToyArt, lk: Look): Look {
 }
 
 const GLINT = '#fffaf0';
-
-const BY: Record<Feet, number> = { peg: -3.2, web: -2.8, wheels: -4.9, spring: -6, none: -2.3 };
 
 function feet(d: D, kind: Feet, sx: number) {
   const { s, lk, m, f, ph, p, W, k } = d;
@@ -176,59 +193,75 @@ export function drawInkRunner(rc: InkTarget, c: CharacterDef, x: number, y: numb
     sy = 1 + b;
     sx = 1 - b;
   }
-  const boing = art.hop && moving ? Math.abs(Math.sin(ph)) * (m === 'run' ? 2.2 : 1.4) : 0;
-  const hop = ((p.celebrate ? Math.abs(Math.sin(p.t * 9)) * 5 : 0) + boing) * sc;
-  // A wind-up waddles side to side with its stride; a top precesses all the time.
-  const waddle = art.waddle && moving && p.grounded ? Math.sin(ph) * 0.08 : 0;
-  const spin = art.spin ? Math.sin(p.t * 7 + c.seed) * 0.06 : 0;
+  // The kind's own way of moving: a hop, a rock, a spin, a waddle, on top of the shared squash.
+  gaitIn.m = m;
+  gaitIn.ph = ph;
+  gaitIn.t = p.t;
+  gaitIn.vx = p.vx;
+  gaitIn.vy = p.vy;
+  gaitIn.grounded = p.grounded;
+  gaitIn.moving = moving && p.grounded;
+  gaitIn.run = clamp((Math.abs(p.vx) - 100) / 160, 0, 1);
+  gaitIn.seed = c.seed;
+  const g = art.gait(gaitIn);
+  sx *= g.sx ?? 1;
+  sy *= g.sy ?? 1;
+  const hop = ((p.celebrate ? Math.abs(Math.sin(p.t * 9)) * 5 : 0) + (g.hop ?? 0)) * sc;
   const lean =
-    waddle +
-    spin +
     (m === 'run'
       ? clamp(p.vx / 215, -1, 1) * 0.2
       : p.grounded
         ? clamp(p.vx / 140, -1, 1) * 0.08
         : m === 'wall'
           ? -(p.wall ?? 0) * 0.1
-          : clamp(p.vx / 200, -1, 1) * 0.12);
+          : clamp(p.vx / 200, -1, 1) * 0.12) * (g.upright ?? 1);
+  const by = -art.lift;
+  const top = by - H;
+  // The body bends toward where it goes instead of tipping over as a box: its top carries furthest.
+  const bend = (lean * 0.9 + (g.bend ?? 0) * f) * H;
+  // A squash on landing bulges the bottom of the outline more than the top.
+  const bulge = sy < 1 ? (1 - sy) * 1.4 : 0;
+  const pivot = by - H * (g.pivot ?? 0);
   s.save();
   s.translate(x, y - hop);
-  s.scale(sx * sc, sy * sc);
-  s.rotate(lean);
+  s.scale(sc, sc);
+  s.translate(0, pivot);
+  s.rotate((g.rot ?? 0) * f);
+  s.translate(0, -pivot);
+  s.scale(sx, sy);
 
-  const by = art.lift !== undefined ? -art.lift : BY[art.feet];
-  const top = by - H;
   const wob = Math.sin(p.t * 6) * 1.1 - clamp(p.vx / 110, -2, 2) - clamp(p.vy / 300, -1, 1) * 0.5;
   const sd = c.seed & 0xffff;
-  const d: D = { s, g: rc.g, c: fc, lk, W, H, by, top, f, m, p, t: p.t, wob, k, v: c.vary, ph, wx: x, wy: y - hop, sc, sd };
-  const shoulderY = by - H * 0.38;
-  const shoulderX = W * 0.46;
+  const bx = (u: number) => bend * u * u;
+  const d: D = { s, g: rc.g, c: fc, lk, W, H, by, top, f, m, p, t: p.t, wob, k, v: c.vary, ph, wx: x, wy: y - hop, sc, sd, bx, gait: g };
+  const shoulderY = by - H * 0.42;
+  const shoulderX = W * 0.42;
   const L = lk.arm;
   const wall = p.wall ?? 0;
   const backSide = -f;
   const hl = art.arms === 'mitten' ? handLook(c, art, lk) : lk;
 
-  if (art.arms === 'mitten') arm(s, hl, backSide * shoulderX, shoulderY, hand(m, backSide, f, ph, p.t, L, wall), backSide, k);
+  if (art.arms === 'mitten') arm(s, hl, backSide * shoulderX + bx(0.58), shoulderY, hand(m, backSide, f, ph, p.t, L, wall), backSide, k);
   feet(d, art.feet, sx);
   art.back?.(d);
 
   // A slow boil on threes: the drawing is alive even when the toy stands still.
   const boil = Math.floor(p.t * 8) % 3;
-  const src = shapeOf(c, art);
+  const src = shapeOf(art);
   const pts: P[] = new Array(src.length);
   for (let i = 0; i < src.length; i++) {
     const q = src[i];
     const u = -q.y / H;
-    pts[i] = { x: q.x + f * lk.skew * u + sn(i * 0.45, boil * 3.1, sd) * 0.2, y: q.y + by + sn(i * 0.45 + 9, boil * 3.1, sd) * 0.2 };
+    pts[i] = {
+      x: q.x * f * (1 + bulge * Math.max(0, 1 - u)) + bend * u * u + sn(i * 0.45, boil * 3.1, sd) * 0.2,
+      y: q.y + by + sn(i * 0.45 + 9, boil * 3.1, sd) * 0.2,
+    };
   }
   contour(s, pts, lk.paint, lk.ink, k, sd);
   s.save();
   path(s, pts);
   s.clip();
-  s.save();
-  s.translate(f * lk.skew * 0.4, 0);
   art.print?.(d);
-  s.restore();
   // One hard shadow shape: the body less itself pulled up-left, a crescent below and right. It goes on
   // after the print and multiplies, so a band or panel sits in the same light as the body.
   path(s, pts);
@@ -245,7 +278,7 @@ export function drawInkRunner(rc: InkTarget, c: CharacterDef, x: number, y: numb
   if (art.shine) {
     // One hard glint where shiny metal or enamel catches the light; matte toys get none.
     s.fillStyle = GLINT;
-    line(s, -W * 0.34 + f * lk.skew * 0.7, by - H * 0.7, -W * 0.18 + f * lk.skew * 0.85, by - H * 0.84, { w: 1.1, seed: sd, taper: [0.3, 0.4], press: 0.1 });
+    line(s, -W * 0.26 + bx(0.7), by - H * 0.66, -W * 0.14 + bx(0.8), by - H * 0.78, { w: 1.1, seed: sd, taper: [0.3, 0.4], press: 0.1 });
   }
   art.over?.(d);
   s.restore();
@@ -253,7 +286,7 @@ export function drawInkRunner(rc: InkTarget, c: CharacterDef, x: number, y: numb
   art.front?.(d);
   s.save();
   // The face rides the body's lean toward where it's going.
-  s.translate(f * (lk.skew * 0.55 + W * (art.faceX ?? 0)), 0);
+  s.translate(f * W * (art.faceX ?? 0) + bx(0.7), 0);
   if (art.paintFace) art.paintFace(d);
   else {
     eyes(s, fc, lk, W, H, by, p, m);
@@ -262,7 +295,7 @@ export function drawInkRunner(rc: InkTarget, c: CharacterDef, x: number, y: numb
   art.snout?.(d);
   s.restore();
 
-  if (art.arms === 'mitten') arm(s, hl, f * shoulderX, shoulderY, hand(m, f, f, ph, p.t, L, wall), f, k);
+  if (art.arms === 'mitten') arm(s, hl, f * shoulderX + bx(0.58), shoulderY, hand(m, f, f, ph, p.t, L, wall), f, k);
   s.restore();
 }
 
@@ -292,13 +325,11 @@ export function drawInkAccessory(s: CanvasRenderingContext2D, c: CharacterDef, r
 /** A flat ghost of the body for the fast-motion trail, on the background layer. */
 export function drawInkAfterimage(s: CanvasRenderingContext2D, c: CharacterDef, x: number, y: number, alpha: number) {
   const art = artOf(c);
-  const pts = shapeOf(c, art);
-  const by = art.lift !== undefined ? -art.lift : BY[art.feet];
   s.save();
-  s.translate(x, y + by);
+  s.translate(x, y - art.lift);
   s.globalAlpha = alpha;
   s.fillStyle = css(c.body);
-  path(s, pts);
+  path(s, shapeOf(art));
   s.fill();
   s.restore();
 }
