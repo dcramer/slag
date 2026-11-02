@@ -10,6 +10,7 @@ import { DEFAULT_ICE, type Mail, type MemberInfo, type Signal } from '../src/net
 import { hashMatch } from '../src/net/snapshot';
 import type { Member } from '../src/net/transport';
 import { type RtcChannel, type RtcPeer, WebRtcTransport } from '../src/net/webrtc-transport';
+import { Rng } from '../src/core/rng';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
 
 /**
@@ -27,6 +28,8 @@ class FakeNet {
   /** Pairs with no route, like two strict NATs. */
   blocked = new Set<string>();
   slowIce = false;
+  /** A crashed remote never answers ICE checks, so a handshake with it hangs instead of failing, as in a real browser. */
+  deadHangs = false;
   n = 0;
   route(a: string, b: string) {
     return !this.dead.has(a) && !this.dead.has(b) && !this.blocked.has([a, b].sort().join());
@@ -95,6 +98,7 @@ class FakePc implements RtcPeer {
     if (d.type !== 'answer') return;
     const remote = this.net.pcs.get(d.sdp)!;
     setTimeout(() => {
+      if (this.net.deadHangs && this.net.dead.has(remote.owner)) return;
       if (!this.net.route(this.owner, remote.owner)) {
         this.connectionState = 'failed';
         this.onconnectionstatechange?.();
@@ -128,7 +132,8 @@ class DirectSignal implements SignalApi {
   private async call(op: Parameters<typeof handleOp>[0], extra: Record<string, unknown> = {}): Promise<any> {
     if (this.world.net.dead.has(this.peer) || this.world.apiDown || this.world.apiDownFor.has(this.peer)) throw new SignalError('network');
     this.calls++;
-    if (this.world.apiLatency) await new Promise((r) => setTimeout(r, this.world.apiLatency));
+    const latency = this.world.apiLatencyFor.get(this.peer) ?? this.world.apiLatency;
+    if (latency) await new Promise((r) => setTimeout(r, latency));
     return handleOp(op, { room: this.room, peer: this.peer, ...extra }, { store: this.store, ice: DEFAULT_ICE });
   }
   join = () => this.call('join');
@@ -136,8 +141,10 @@ class DirectSignal implements SignalApi {
   members = (): Promise<MemberInfo[]> => this.call('members').then((r) => r.members);
   gone = (peer: string, order: number): Promise<MemberInfo[]> => this.call('gone', { gone: peer, order }).then((r) => r.members);
   send = async (to: string, signal: Signal): Promise<boolean> => {
+    if (this.world.lose(this.peer, to, signal)) return true; // the store took it and it vanished
     const r = await this.call('signal', { to, signal });
-    if (signal.k === 'answer' && this.world.dieAfterAnswer === this.peer) this.world.crash(this.peer);
+    const die = this.world.dieAfterAnswer;
+    if (signal.k === 'answer' && (die === this.peer || die === `${this.peer}>${to}`)) this.world.crash(this.peer);
     return r.delivered;
   };
   poll = (): Promise<Mail[]> => {
@@ -164,7 +171,15 @@ class World {
   apiDown = false;
   apiDownFor = new Set<string>();
   apiLatency = 0;
+  apiLatencyFor = new Map<string, number>();
+  /** `peer` crashes right after sending any answer; `peer>to`, right after answering `to`. */
   dieAfterAnswer = '';
+  /** Handshake messages the store says it delivered but nobody ever reads. */
+  lose: (from: string, to: string, s: Signal) => boolean = () => false;
+  /** Most live peers ever hosting at once, sampled every tick: anything over 1 is a split brain. */
+  maxHosts = 0;
+  /** How long more than one live peer hosted. */
+  splitMs = 0;
   peers = new Map<string, Peer>();
   hidden = false;
 
@@ -209,6 +224,9 @@ class World {
         void p.session.view;
         p.session.drainEvents();
       }
+      const hosts = [...this.peers.values()].filter((p) => !p.gone && p.session.isHost && p.session.status !== 'unavailable').length;
+      this.maxHosts = Math.max(this.maxHosts, hosts);
+      if (hosts > 1) this.splitMs += TICK;
     }
   }
 
@@ -255,6 +273,8 @@ class World {
     }
     await this.runUntil(() => this.settled() && [...this.peers.values()].every((p) => p.session.members.length === ids.length), 20_000);
     expect(this.settled()).toBe(true);
+    this.maxHosts = 0;
+    this.splitMs = 0;
     return ids.map((id) => this.peers.get(id)!);
   }
 }
@@ -395,6 +415,7 @@ describe('host migration', () => {
     expect(c.session.hostId).toBe('bbbb');
     expect(Date.now() - t0).toBeLessThan(8000);
     expect(took).toBeLessThan(8000);
+    expect(w.maxHosts).toBe(1);
     expect(new Set(await w.drained()).size).toBe(1);
   });
 
@@ -428,6 +449,7 @@ describe('host migration', () => {
     expect(w.settled()).toBe(true);
     expect(c.session.isHost).toBe(true);
     expect(d.session.hostId).toBe('cccc');
+    expect(w.maxHosts).toBe(1);
     expect(new Set(await w.drained()).size).toBe(1);
   });
 
@@ -444,11 +466,16 @@ describe('host migration', () => {
     expect(c.session.isHost).toBe(true);
     expect(d.session.hostId).toBe('cccc');
     expect(c.session.stats.migrations + d.session.stats.migrations).toBe(1);
+    expect(w.maxHosts).toBe(1);
   });
 
-  it('a new host dying between its answer and the link opening costs no more than one dying silently', async () => {
+  it.each([
+    ['fails at once', false],
+    ['hangs, as with a real crashed peer', true],
+  ])('a new host dying between its answer and the link opening costs no more than one dying silently (handshake %s)', async (_, hangs) => {
     const w = new World();
     const [, b, c, d] = await w.room('aaaa', 'bbbb', 'cccc', 'dddd');
+    w.net.deadHangs = hangs;
     w.dieAfterAnswer = 'bbbb';
     w.crash('aaaa');
     await w.runUntil(() => b.session.status === 'online' && w.peers.get('bbbb')!.gone, 12_000);
@@ -459,6 +486,30 @@ describe('host migration', () => {
     expect(c.session.isHost).toBe(true);
     expect(d.session.hostId).toBe('cccc');
     expect(Date.now() - t0).toBeLessThan(10_000);
+    expect(w.maxHosts).toBe(1);
+  });
+
+  it('a candidate still settling its own handshake is not presumed dead: no split brain after a double failure', async () => {
+    // The online-test failure: B takes over and dies having linked D but only answered C. D notices the silence and offers
+    // to C at once; C was still waiting out its handshake with B and couldn't answer, so D wrote C off and hosted, C hosted
+    // too when its own wait ran out, and the store settled it 30 s later for the wrong peer.
+    const w = new World();
+    const [, b, c, d] = await w.room('aaaa', 'bbbb', 'cccc', 'dddd');
+    w.net.deadHangs = true;
+    w.apiLatencyFor.set('cccc', 1200); // a loaded machine: C's offer reaches B last, so D links first, and C is slow to settle
+    w.dieAfterAnswer = 'bbbb>cccc';
+    w.crash('aaaa');
+    await w.runUntil(() => b.gone, 15_000);
+    expect(b.gone).toBe(true);
+    expect(d.transport['links'].has('bbbb')).toBe(true);
+    const t0 = Date.now();
+    await w.runUntil(() => w.settled(), 40_000);
+    expect(w.settled()).toBe(true);
+    expect(c.session.isHost).toBe(true);
+    expect(d.session.hostId).toBe('cccc');
+    expect(w.maxHosts).toBe(1);
+    expect(Date.now() - t0).toBeLessThan(10_000);
+    expect(new Set(await w.drained()).size).toBe(1);
   });
 
   it('a lower peer leaving at the same moment: everyone still lands on one host', async () => {
@@ -470,6 +521,7 @@ describe('host migration', () => {
     expect(w.settled()).toBe(true);
     expect(c.session.isHost).toBe(true);
     expect(d.session.hostId).toBe('cccc');
+    expect(w.maxHosts).toBe(1);
   });
 
   it('a flaky guest does not move the room: the live host answers its re-offer', async () => {
@@ -542,10 +594,28 @@ describe('host migration', () => {
     await w.runUntil(() => b.session.isHost && c.session.isHost, 25_000);
     expect(b.session.isHost && c.session.isHost).toBe(true);
     w.apiDownFor.delete('bbbb');
-    await w.runUntil(() => w.settled() && !b.session.isHost, 60_000);
+    const took = await w.runUntil(() => w.settled() && !b.session.isHost, 60_000);
+    expect(took).toBeLessThan(8000); // B checks the store as soon as its API is back, not at its next heartbeat
     expect(w.settled()).toBe(true);
     expect(c.session.isHost).toBe(true);
     expect(b.session.hostId).toBe('cccc');
+    expect(new Set(await w.drained()).size).toBe(1);
+  });
+
+  it('two hosts with the store up: the one written off steps down within seconds, not a heartbeat later', async () => {
+    const w = new World();
+    const [, b, c, d] = await w.room('aaaa', 'bbbb', 'cccc', 'dddd');
+    w.crash('aaaa');
+    await w.runUntil(() => b.session.isHost, 10_000);
+    // D's offers to C are lost, so C, still waiting out its own windows, can't answer: D writes it off and hosts.
+    w.lose = (from, to, s) => from === 'dddd' && to === 'cccc' && s.k === 'offer';
+    w.crash('bbbb');
+    await w.runUntil(() => c.session.isHost && d.session.isHost, 30_000);
+    expect(c.session.isHost && d.session.isHost).toBe(true);
+    w.lose = () => false;
+    const took = await w.runUntil(() => w.settled() && w.peers.get('cccc')!.session.members.length === 2, 30_000);
+    expect(w.settled()).toBe(true);
+    expect(took).toBeLessThan(4000);
     expect(new Set(await w.drained()).size).toBe(1);
   });
 
@@ -597,5 +667,67 @@ describe('host migration', () => {
     expect(b.session.match.frame).toBeGreaterThanOrEqual(cFrame);
     expect(new Set(await w.drained()).size).toBe(1);
     expect(a.gone).toBe(true);
+  });
+});
+
+describe('election under varied timing', () => {
+  // Seeded runs over the knobs that decide who hears what when: API latency per peer, whether a dead peer's handshake
+  // fails or hangs, when the second host dies (before, while or after answering). Each seed is one deterministic room.
+  const seeds = (n: number, from: number) => Array.from({ length: n }, (_, i) => from + i);
+
+  it.each(seeds(32, 1000))('a double failure lands on the third peer, never two hosts, within 10 s (seed %i)', async (seed) => {
+    const r = new Rng(seed);
+    const w = new World();
+    const [, b, c, d] = await w.room('aaaa', 'bbbb', 'cccc', 'dddd');
+    w.net.deadHangs = r.chance(0.6);
+    for (const id of ['bbbb', 'cccc', 'dddd']) if (r.chance(0.5)) w.apiLatencyFor.set(id, r.int(0, 900));
+    const mode = r.next();
+    if (mode < 0.3) w.dieAfterAnswer = 'bbbb';
+    else if (mode < 0.5) w.dieAfterAnswer = r.chance(0.5) ? 'bbbb>cccc' : 'bbbb>dddd';
+    const together = mode > 0.9;
+    const after = r.int(0, 2500);
+    w.crash('aaaa');
+    if (together) w.crash('bbbb');
+    await w.runUntil(() => b.gone || b.session.isHost, 15_000);
+    if (!b.gone) {
+      await w.run(after);
+      w.crash('bbbb');
+    }
+    const t0 = Date.now();
+    await w.runUntil(() => w.settled(), 40_000);
+    expect(w.settled()).toBe(true);
+    expect(c.session.isHost).toBe(true);
+    expect(d.session.hostId).toBe('cccc');
+    expect(w.maxHosts).toBe(1);
+    expect(Date.now() - t0).toBeLessThan(together ? 15_000 : 10_000);
+  });
+
+  it.each(seeds(24, 2000))('flaky guests: one alone never moves the room, and any split is over within 5 s (seed %i)', async (seed) => {
+    const r = new Rng(seed);
+    const w = new World();
+    const ids = ['aaaa', 'bbbb', 'cccc', 'dddd'];
+    const peers = await w.room(...ids);
+    const a = peers[0];
+    for (const id of ids) if (r.chance(0.5)) w.apiLatencyFor.set(id, r.int(0, 900));
+    let flaky = ids.slice(1).filter(() => r.chance(0.4));
+    if (!flaky.length) flaky = [ids[r.int(1, 3)]];
+    const pairs = flaky.map((f) => ['aaaa', f].sort().join());
+    for (const p of pairs) w.net.blocked.add(p);
+    await w.run(r.int(2000, 4000));
+    for (const p of pairs) w.net.blocked.delete(p);
+    // A guest whose handshakes with the host keep failing drops to local play by design ('Cannot Reach Host'): it's out.
+    const done = () => {
+      for (const p of peers) if (p.session.status === 'unavailable') p.gone = true;
+      const host = peers.find((p) => !p.gone && p.session.isHost);
+      return w.settled() && !!host && !host.session.members.some((m) => m.linking);
+    };
+    await w.runUntil(done, 30_000);
+    expect(done()).toBe(true);
+    // Two guests losing the host at once look exactly like the host dying, so the room may move then, but only once.
+    expect(w.splitMs).toBeLessThan(5000);
+    if (flaky.length === 1 && !a.gone) {
+      expect(a.session.isHost).toBe(true);
+      expect(w.maxHosts).toBe(1);
+    }
   });
 });

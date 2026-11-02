@@ -21,9 +21,13 @@ import { type LinkStatus, type Member, sortMembers, type Transport, type Transpo
  *
  * Disagreement. A candidate that won't answer inside its window is presumed
  * dead too and the walk moves on, so everyone lands on the same peer, even
- * when a lower peer left at the same moment. If two peers do end up hosting
- * (a pair that can't connect), the store settles it: a host's heartbeat reports
- * the room's lowest order and the higher host hands its guests to the lower.
+ * when a lower peer left at the same moment. Proof runs both ways: a peer with
+ * no host that gets an offer from one behind it takes over at once (claim), so
+ * it's never written off for being slow to settle its own handshake. If two
+ * peers do end up hosting (a pair that can't connect), the store settles it: a
+ * host's heartbeat reports the room's lowest order, or that it was written
+ * off, and the higher host hands its guests to the lower. Fresh hosts check
+ * every few seconds (RIVAL_CHECK_MS), so that takes seconds, not a heartbeat.
  *
  * The store is only ever told a peer is gone after that peer failed an offer.
  * Rejoining always gets a later order, so a peer that was wrongly written off
@@ -88,6 +92,12 @@ const OFFER_SEND_MS = 6000;
 const JOIN_OFFER_MS = 12_000;
 /** After an answer, how long the channels get to open before we call the pair unreachable. */
 const OPEN_MS = 6000;
+/**
+ * Mid-migration, an answered handshake still not open after this long may be
+ * with a peer that died right after answering: ask the next in line as well
+ * (see stuck). Channels open well within it on a working pair.
+ */
+const STUCK_MS = 2000;
 const UNREACHABLE_TRIES = 2;
 /** Non-trickle ICE: one offer and one answer carrying all candidates, so a connection costs two store writes. */
 const ICE_GATHER_MS = 1000;
@@ -109,6 +119,13 @@ const SOLO_AFTER_MS = 10 * 60_000;
 /** A hidden tab alone in a room this long leaves it, and rejoins when shown. A forgotten tab must not spend the free tier. */
 const SLEEP_AFTER_MS = 10 * 60_000;
 const BACKOFF_MAX_MS = 30_000;
+/**
+ * A host fresh from a migration, or whose API just came back, asks the store
+ * this often for a while whether a lower order is hosting too or it was written
+ * off, instead of waiting for the next BEAT_MS: two hosts must not run for long.
+ */
+const RIVAL_CHECK_MS = 2000;
+const RIVAL_WINDOW_MS = 12_000;
 /** Offers read while we weren't host, kept in case we become it. */
 const STASH_MS = 10_000;
 /** Safe across browsers; bigger messages are split. */
@@ -192,6 +209,10 @@ export class WebRtcTransport implements Transport {
   private beatTimer: ReturnType<typeof setInterval> | null = null;
   private watchdog: ReturnType<typeof setInterval> | null = null;
   private lastWatch = 0;
+  private lastBeat = -1e9;
+  private beating = false;
+  /** Until when a host checks the store for a rival every RIVAL_CHECK_MS. */
+  private checkUntil = 0;
 
   constructor(
     readonly room: string,
@@ -388,6 +409,7 @@ export class WebRtcTransport implements Transport {
     d.link.answered = true;
     clearTimeout(d.timer);
     d.timer = setTimeout(() => this.dialFailed(from, d.link), OPEN_MS);
+    if (d.window < JOIN_OFFER_MS) setTimeout(() => this.stuck(from, d.link), STUCK_MS);
     try {
       await d.link.pc.setRemoteDescription({ type: 'answer', sdp: s.sdp });
     } catch {
@@ -407,6 +429,24 @@ export class WebRtcTransport implements Transport {
       this.emitMembers();
       this.dial(s.to, CANDIDATE_MS);
     }
+  }
+
+  private stuck(id: string, link: Link) {
+    if (this.dials.get(id)?.link === link && !link.open) this.reachPast(id);
+  }
+
+  /**
+   * Mid-migration, `id` answered but the link didn't open (yet). It may have
+   * died just after answering, and waiting out OPEN_MS and a retry costs
+   * everyone over 10 s, so reach whoever is next as well, as a probe does: a
+   * peer stuck on the same host takes our offer as proof (claim) and hosts. If
+   * `id` was only slow, whichever link opens first wins and the store settles
+   * the rest.
+   */
+  private reachPast(id: string) {
+    if (this.closed || this.role !== 'guest') return;
+    const next = sortMembers([...this.roster.values()].filter((m) => m.id !== id && m.id !== this.probing))[0]?.id;
+    if (next && next !== this.self && !this.links.has(next)) this.dial(next, CANDIDATE_MS);
   }
 
   private dropDial(id: string) {
@@ -430,6 +470,7 @@ export class WebRtcTransport implements Transport {
       this.failures.set(id, tries);
       if (tries >= UNREACHABLE_TRIES) return this.giveUp('Cannot Reach Host');
       this.dial(id, window);
+      if (window < JOIN_OFFER_MS) this.reachPast(id);
       return;
     }
     this.confirmDead(id);
@@ -464,14 +505,7 @@ export class WebRtcTransport implements Transport {
 
   /** `id` failed to answer an offer (or said goodbye): it's out of the roster and the store, and the walk moves on. */
   private confirmDead(id: string) {
-    const was = this.roster.get(id);
-    if (this.probing === id) this.probing = '';
-    this.closeLink(id);
-    if (was) {
-      this.roster.delete(id);
-      this.dead.set(id, was.order);
-      void this.reportDead(id, was.order);
-    }
+    this.writeOff(id);
     if (this.role !== 'guest' || this.hostId !== id) {
       if (this.role === 'guest' && !this.links.has(this.hostId) && !this.dials.has(this.hostId)) this.reachNext();
       return;
@@ -484,6 +518,18 @@ export class WebRtcTransport implements Transport {
     }
     this.emitMembers();
     if (!this.links.has(next)) this.dial(next, CANDIDATE_MS);
+  }
+
+  /** Out of the roster and, once the report lands, the store. */
+  private writeOff(id: string) {
+    const was = this.roster.get(id);
+    if (this.probing === id) this.probing = '';
+    this.closeLink(id);
+    if (!was) return;
+    this.roster.delete(id);
+    if (was.order < 0) return; // a redirect's placeholder: we never knew which session it was
+    this.dead.set(id, was.order);
+    void this.reportDead(id, was.order);
   }
 
   private async reportDead(id: string, order: number) {
@@ -507,6 +553,7 @@ export class WebRtcTransport implements Transport {
     this.roster = new Map(hadRoster.map((m) => [m.id, { ...m, linking: true }]));
     this.roster.set(this.self, { id: this.self, order: this.order });
     if (hadRoster.length) {
+      this.checkUntil = Date.now() + RIVAL_WINDOW_MS;
       if (this.graceTimer) clearTimeout(this.graceTimer);
       this.graceTimer = setTimeout(() => this.endGrace(), LINK_GRACE_MS);
     }
@@ -632,6 +679,8 @@ export class WebRtcTransport implements Transport {
     if (m && !goodbye) {
       this.roster.set(link.id, { ...m, linking: true });
       setTimeout(() => this.expireGuest(link.id), GUEST_GRACE_MS);
+      // Guests that lost us take over from us if they find each other: the store would know before we do.
+      this.checkUntil = Date.now() + RIVAL_WINDOW_MS;
     } else this.roster.delete(link.id);
     this.emitMembers();
     this.pushRoster();
@@ -771,6 +820,7 @@ export class WebRtcTransport implements Transport {
       if (this.role === 'guest') this.onHostLost(l.id, false);
       else this.onGuestLost(l);
     }
+    if (this.role === 'host' && t < this.checkUntil && t - this.lastBeat >= RIVAL_CHECK_MS) void this.heartbeat();
     this.maybeSleep(t);
   }
 
@@ -784,7 +834,10 @@ export class WebRtcTransport implements Transport {
   }
 
   private async heartbeat() {
-    if (this.order < 0 || this.closed) return;
+    // One at a time: two overlapping beats that both find us forgotten would join twice.
+    if (this.order < 0 || this.closed || this.beating) return;
+    this.beating = true;
+    this.lastBeat = Date.now();
     for (const [id, order] of this.dead) void this.reportDead(id, order);
     try {
       const r = await this.signal.beat(this.role === 'host');
@@ -794,6 +847,8 @@ export class WebRtcTransport implements Transport {
       else if (this.role === 'host' && r.head && r.head !== this.self && !this.dead.has(r.head)) await this.checkRival();
     } catch {
       this.noteSignalFail();
+    } finally {
+      this.beating = false;
     }
   }
 
@@ -818,6 +873,8 @@ export class WebRtcTransport implements Transport {
   }
 
   private noteSignalOk() {
+    // Back from an outage: someone may have written us off, or hosted, meanwhile.
+    if (this.pollFails && this.role === 'host') this.checkUntil = Date.now() + RIVAL_WINDOW_MS;
     this.pollFails = 0;
     if (this.role === 'host' && this.lastStatus.startsWith('reconnecting')) this.setStatus('open');
   }
@@ -891,6 +948,24 @@ export class WebRtcTransport implements Transport {
     this.stash.push({ mail: m, at: Date.now() });
     // We were waiting on our own probe, and now someone else has lost the same host: that's proof, take over.
     if (this.candidate && this.roster.has(m.from) && this.probing) this.confirmDead(this.probing);
+    else if (this.role === 'guest' && (this.roster.get(m.from)?.order ?? -1) > this.order) this.claim();
+  }
+
+  /**
+   * A peer behind us in the roster offered to us while we have no host. It only
+   * offers here once it can't reach anyone ahead of us, and we can't reach them
+   * either: that's the proof a candidate waits for, so take over now. Waiting
+   * out our own windows instead (a handshake that was answered and then never
+   * opened costs OPEN_MS and a retry) is how it ends up writing us off and
+   * hosting alongside us.
+   */
+  private claim() {
+    for (const m of sortMembers([...this.roster.values()])) {
+      if (m.id === this.self) break;
+      this.dropDial(m.id);
+      this.writeOff(m.id);
+    }
+    this.takeOver();
   }
 }
 
