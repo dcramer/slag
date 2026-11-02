@@ -1,8 +1,8 @@
 import { css, type HSL, hsl3, shift } from '../core/color';
 import { hash2 } from '../core/rng';
 import type { Decor, DecorDef } from './decor';
-import { line, type P, stroke } from './ink';
-import { boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, tick, tone } from './ink-props';
+import { inkFor, line, type P, stroke } from './ink';
+import { boxPts, glint, ovalPts, part, path, pen, poly, tick, tone } from './ink-props';
 import { bulb, circle, flutter, light } from './kit';
 
 /**
@@ -34,10 +34,10 @@ const at = (d: Decor, ...xy: number[]) => {
 };
 
 /** A stroke with an ink edge: a post, a rail, a pipe. */
-function rod(s: CanvasRenderingContext2D, pts: readonly P[], w: number, c: string, seed: number) {
-  s.fillStyle = INK;
-  stroke(s, pts, { w: w + 0.9, seed, taper: [0.02, 0.1], press: 0.1 });
-  s.fillStyle = c;
+function rod(s: CanvasRenderingContext2D, pts: readonly P[], w: number, base: HSL, seed: number) {
+  s.fillStyle = inkFor(base);
+  stroke(s, pts, { w: w + 0.7, seed, taper: [0.02, 0.1], press: 0.1 });
+  s.fillStyle = css(base);
   stroke(s, pts, { w, seed, taper: [0.02, 0.2], press: 0.1 });
 }
 
@@ -60,7 +60,7 @@ function pigeon(s: CanvasRenderingContext2D, x: number, y: number, dir: number, 
   const hy = y - 5.2 * k + peck;
   s.fillStyle = css(hsl3(160, 30, 42));
   circle(s, x + dir * 2 * k, y - 4.4 * k + peck * 0.5, 1.5 * k);
-  s.fillStyle = INK;
+  s.fillStyle = inkFor(PIGEON);
   circle(s, hx, hy, 1.45 * k);
   s.fillStyle = css(PIGEON, -6);
   circle(s, hx, hy, 1.1 * k);
@@ -123,7 +123,7 @@ export const ROOFTOPS_DECOR = {
           thin: 0.3,
           thick: 0.7,
         });
-        s.fillStyle = INK;
+        s.fillStyle = inkFor(TERRA);
         s.fillRect(px - 1, d.y - h - 1.8 - ph, 2, 0.8);
       }
     },
@@ -144,7 +144,7 @@ export const ROOFTOPS_DECOR = {
         line(s, d.x - w / 2 + 0.6 + (w - 1.2) * u, d.y - curb, d.x - 1.5 + 3 * u, top, { w: 0.45, seed: i, taper: [0, 0], press: 0 });
       }
       glint(s, poly(d.x - w / 2 + 2.4, d.y - curb - 0.8, d.x - 3.4, top + 1.6), 'rgba(220,235,255,0.6)', 0.6);
-      pen(s, roof, sd(d) + 1, 0.3, 0.8);
+      pen(s, roof, sd(d) + 1, 0.3, 0.8, 3, inkFor(GLASS));
     },
     live(rc, d) {
       // Someone's home: a warm lamp under the glass at night.
@@ -169,7 +169,7 @@ export const ROOFTOPS_DECOR = {
             s.fill();
           }
           if (k01(d, i + 5) < 0.6) {
-            s.fillStyle = INK;
+            s.fillStyle = inkFor(hsl3(6, 70, 50));
             circle(s, px + 1.2, d.y - h - 3.6, 1.25);
             s.fillStyle = css(hsl3(6, 70, 50));
             circle(s, px + 1.2, d.y - h - 3.6, 0.9);
@@ -206,7 +206,7 @@ export const ROOFTOPS_DECOR = {
       const body = boxPts(d.x - w / 2, d.y - 1.6 - h, w, h, 1.4, sd(d), 0.3);
       part(s, body, d.color, sd(d), { depth: 0.9, thin: 0.4, thick: 1 });
       for (const u of [0.22, 0.78]) tick(s, d.x - w / 2 + 0.4, d.y - 1.6 - h * u, d.x + w / 2 - 0.4, d.y - 1.6 - h * u, 0.55, u * 10, css(d.color, -22));
-      rod(s, at(d, 1.5, -12.6, 1.5, -14.5, 4, -14.5), 1, css(TIN, -6), sd(d) + 4);
+      rod(s, at(d, 1.5, -12.6, 1.5, -14.5, 4, -14.5), 1, shift(TIN, -6), sd(d) + 4);
     },
   },
   roofdoor: {
@@ -218,10 +218,10 @@ export const ROOFTOPS_DECOR = {
       const frame = boxPts(d.x - w / 2, d.y - h, w, h + 0.5, 0.5, sd(d), 0.05);
       part(s, frame, d.color, sd(d), { depth: 0.6, thin: 0.35, thick: 0.9 });
       const door = boxPts(d.x - w / 2 + 1.6, d.y - h + 3.4, w - 3.2, h - 3.4, 0.3, sd(d) + 1, 0.04);
-      part(s, door, shift(hsl3(k01(d, 3) < 0.5 ? 150 : 8, 30, 32), 0, 0, 0), sd(d) + 1, { depth: 0.5, thin: 0.3, thick: 0.7 });
+      part(s, door, hsl3(k01(d, 3) < 0.5 ? 150 : 8, 30, 32), sd(d) + 1, { depth: 0.5, thin: 0.3, thick: 0.7 });
       // The bar, the knob, and the hood over it all.
       tick(s, d.x - w / 2 + 2.2, d.y - h * 0.48, d.x + w / 2 - 2.2, d.y - h * 0.48, 0.6, 2, css(TIN, 6));
-      dot(s, d.x + w / 2 - 2.6, d.y - h * 0.4, 0.5, 3);
+      tick(s, d.x + w / 2 - 2.9, d.y - h * 0.4, d.x + w / 2 - 2.3, d.y - h * 0.4, 0.9, 3, css(TIN, 10));
       part(
         s,
         poly(d.x - w / 2 - 1.6, d.y - h + 0.2, d.x - w / 2 - 0.6, d.y - h - 1.8, d.x + w / 2 + 0.6, d.y - h - 1.8, d.x + w / 2 + 1.6, d.y - h + 0.2),
@@ -248,8 +248,8 @@ export const ROOFTOPS_DECOR = {
       const x0 = d.x + 1;
       const x1 = d.x + d.span * 16 - 3;
       for (const x of [x0, x1]) {
-        rod(s, poly(x, d.y + 0.5, x, d.y - 19), 0.9, css(TIN, -14), x);
-        rod(s, poly(x - 2.4, d.y - 18, x + 2.4, d.y - 18), 0.6, css(TIN, -14), x + 1);
+        rod(s, poly(x, d.y + 0.5, x, d.y - 19), 0.9, shift(TIN, -14), x);
+        rod(s, poly(x - 2.4, d.y - 18, x + 2.4, d.y - 18), 0.6, shift(TIN, -14), x + 1);
       }
     },
     live(rc, d) {
@@ -264,7 +264,7 @@ export const ROOFTOPS_DECOR = {
         const u = i / 8;
         pts.push({ x: x0 + (x1 - x0) * u, y: y + sag * 4 * u * (1 - u) });
       }
-      s.fillStyle = INK;
+      s.fillStyle = inkFor(TIN);
       stroke(s, pts, { w: 0.5, seed: sd(d), taper: [0, 0], press: 0 });
       const n = Math.max(2, Math.floor((x1 - x0) / 7));
       for (let i = 0; i < n; i++) {
@@ -272,7 +272,7 @@ export const ROOFTOPS_DECOR = {
         const gx = x0 + (x1 - x0) * u;
         const gy = y + sag * 4 * u * (1 - u);
         const sw = flutter(rc, 1.6, i * 1.3 + (d.seed % 7)) * 0.22;
-        const c = shift(d.color, (hash2(i, 4, sd(d)) - 0.5) * 220, 0, (hash2(i, 5, sd(d)) - 0.5) * 20);
+        const c = shift(d.color, (hash2(i, 5, sd(d)) - 0.5) * 20, 0, (hash2(i, 4, sd(d)) - 0.5) * 220);
         garment(s, gx, gy, Math.floor(hash2(i, 6, sd(d)) * 4), c, sw, sd(d) + i);
       }
     },
@@ -282,14 +282,14 @@ export const ROOFTOPS_DECOR = {
     bake(s, d) {
       // A turbine vent: a short stack under a dome of curved vanes.
       const k = d.size;
-      part(s, boxPts(d.x - 2, d.y - 4 * k, 4, 4 * k + 0.5, 0.3, sd(d), 0.05), shift(TIN, 0, -10, 0), sd(d), { depth: 0.4, thin: 0.3, thick: 0.8 });
+      part(s, boxPts(d.x - 2, d.y - 4 * k, 4, 4 * k + 0.5, 0.3, sd(d), 0.05), shift(TIN, -10), sd(d), { depth: 0.4, thin: 0.3, thick: 0.8 });
       const dome: P[] = [];
       for (let i = 0; i <= 10; i++) {
         const a = Math.PI + (i / 10) * Math.PI;
         dome.push({ x: d.x + Math.cos(a) * 4.6 * k, y: d.y - 4 * k + Math.sin(a) * 6 * k });
       }
       part(s, dome, TIN, sd(d) + 1, { depth: 0.6, thin: 0.35, thick: 0.9 });
-      tick(s, d.x, d.y - 10 * k, d.x, d.y - 11.4 * k, 0.8, 2);
+      tick(s, d.x, d.y - 10 * k, d.x, d.y - 11.4 * k, 0.8, 2, inkFor(TIN));
     },
     live(rc, d) {
       // The vanes: they turn in a gust and sit still in calm air.
@@ -309,10 +309,10 @@ export const ROOFTOPS_DECOR = {
       // A fire escape's drop ladder hanging under a ledge on its hooks: two rails and the rungs between.
       const h = 24 * Math.min(1.1, d.size);
       const w = 6;
-      for (const x of [-w / 2, w / 2]) rod(s, poly(d.x + x, d.y - 0.5, d.x + x, d.y + h), 0.8, css(IRON, 10), x);
+      for (const x of [-w / 2, w / 2]) rod(s, poly(d.x + x, d.y - 0.5, d.x + x, d.y + h), 0.8, shift(IRON, 10), x);
       for (let y = d.y + 3; y < d.y + h - 1; y += 3.4) tick(s, d.x - w / 2, y, d.x + w / 2, y, 0.6, y, css(IRON, 16));
       for (const x of [-w / 2 - 1, w / 2 + 1]) {
-        s.fillStyle = INK;
+        s.fillStyle = inkFor(IRON);
         line(s, d.x + x, d.y - 0.2, d.x + x * 0.6, d.y + 2.2, { w: 0.9, seed: x, taper: [0, 0.3], press: 0 });
       }
     },

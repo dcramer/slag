@@ -3,8 +3,8 @@ import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { type Level, T_EMPTY, tileAt } from '../../../sim/level';
 import { type ModuleOf, SIGN_FALL, SIGN_LIFT, SIGN_LIVE, SIGN_WARN, signCycle, signRect } from '../../../sim/props';
-import { line } from '../../ink';
-import { boxPts, dot, INK, part, sprite, stamp, tick, tone } from '../../ink-props';
+import { blob, inkFor, line } from '../../ink';
+import { boxPts, part, sprite, stamp, tick, tone } from '../../ink-props';
 import { glowDot, light, lightning, type RC } from '../../kit';
 import { type DrawCtx, defineArt } from '../common';
 
@@ -89,10 +89,9 @@ function face(m: Sign) {
     }
     // A long sign's bulbs, top and bottom.
     if (m.h >= TILE * 1.5) {
-      g.fillStyle = css({ h: 46, s: 50, l: 78 });
       for (let x = 4; x < m.w - 2; x += 5) {
-        dot(g, x, 2.2, 0.75, x);
-        dot(g, x, m.h - 2.2, 0.75, x + 1);
+        pip(g, x, 2.2, 0.65, css({ h: 46, s: 50, l: 78 }), x);
+        pip(g, x, m.h - 2.2, 0.65, css({ h: 46, s: 50, l: 78 }), x + 1);
       }
     }
     // A lit edge along the top.
@@ -100,15 +99,21 @@ function face(m: Sign) {
   });
 }
 
-/** A hanging chain from (ax, ay) to (bx, by): ink links on a thin line. */
+/** A small filled spot in `col`: a rivet, a bulb, a link. */
+function pip(g: CanvasRenderingContext2D, x: number, y: number, r: number, col: string, seed: number) {
+  g.fillStyle = col;
+  blob(g, x, y, r, seed, 1, 0.12);
+  g.fill();
+}
+
+/** A hanging chain from (ax, ay) to (bx, by): a dark of the iron, links lit along it. */
 function chain(s: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, seed: number) {
-  s.fillStyle = INK;
-  line(s, ax, ay, bx, by, { w: 0.85, seed, taper: [0, 0], press: 0 });
-  s.fillStyle = css(CHAIN, 16);
+  s.fillStyle = inkFor(CHAIN);
+  line(s, ax, ay, bx, by, { w: 0.8, seed, taper: [0, 0], press: 0 });
   const len = Math.hypot(bx - ax, by - ay);
   for (let t = 1.5; t < len - 1; t += 2.6) {
     const u = t / len;
-    dot(s, ax + (bx - ax) * u, ay + (by - ay) * u, 0.45, t);
+    pip(s, ax + (bx - ax) * u, ay + (by - ay) * u, 0.4, css(CHAIN, 16), t);
   }
 }
 
@@ -142,15 +147,15 @@ function draw(rc: RC, m: Sign, d: DrawCtx) {
   if (mount.wall) {
     const wx = mount.wall < 0 ? hx - 1 : hx + m.w + 1;
     const ex = mount.wall < 0 ? hx + m.w - 2 : hx + 2;
-    s.fillStyle = INK;
-    line(s, wx, top, ex, top, { w: 2.1, seed: m.seed, taper: [0, 0], press: 0 });
+    s.fillStyle = inkFor(CHAIN);
+    line(s, wx, top, ex, top, { w: 1.9, seed: m.seed, taper: [0, 0], press: 0 });
     s.fillStyle = css(CHAIN, -4);
-    line(s, wx, top - 0.3, ex, top - 0.3, { w: 1.2, seed: m.seed + 1, taper: [0, 0], press: 0 });
+    line(s, wx, top - 0.2, ex, top - 0.2, { w: 1.1, seed: m.seed + 1, taper: [0, 0], press: 0 });
     // The strut under the arm, back to the wall.
-    s.fillStyle = INK;
-    line(s, wx, top + 6, wx + (ex - wx) * 0.45, top + 0.6, { w: 1, seed: m.seed + 2, taper: [0, 0], press: 0 });
+    s.fillStyle = inkFor(CHAIN);
+    line(s, wx, top + 6, wx + (ex - wx) * 0.45, top + 0.6, { w: 0.8, seed: m.seed + 2, taper: [0, 0], press: 0 });
   } else if (mount.up !== null) {
-    for (const [x] of hooks) dot(s, x, top + 0.6, 0.9, x);
+    for (const [x] of hooks) pip(s, x, top + 0.6, 0.9, inkFor(CHAIN), x);
   }
   // Which end lets go: the one away from the wall, else the seed's.
   const loose = mount.wall ? (mount.wall < 0 ? 1 : 0) : m.seed % 2;
@@ -189,8 +194,7 @@ function draw(rc: RC, m: Sign, d: DrawCtx) {
     sparks(rc, loose ? r.x + r.w - 3 : r.x + 3, r.y + 1, u);
     if (Math.random() < 0.3 * u) {
       // A bolt or a flake of paint, dropping ahead of it.
-      s.fillStyle = INK;
-      dot(s, r.x + Math.random() * r.w, r.y + r.h + Math.random() * 10, 0.6, rc.frame);
+      pip(s, r.x + Math.random() * r.w, r.y + r.h + Math.random() * 10, 0.6, inkFor(paintOf(m)[1]), rc.frame);
     }
   }
   if (c.seg === SIGN_FALL) {
@@ -203,7 +207,7 @@ function draw(rc: RC, m: Sign, d: DrawCtx) {
   }
   if (c.seg === SIGN_LIVE) {
     // Cracked across its face, and live: sparks crawling along it and its light flickering.
-    s.fillStyle = INK;
+    s.fillStyle = inkFor(paintOf(m)[0]);
     const cx = r.x + r.w * (0.3 + 0.4 * hash2(1, 2, m.seed));
     line(s, cx, r.y + 1.5, cx + 3, r.y + r.h * 0.6, { w: 0.6, seed: 4, taper: [0.1, 0.6], press: 0 });
     line(s, cx + 3, r.y + r.h * 0.6, cx - 2, r.y + r.h - 1.5, { w: 0.5, seed: 5, taper: [0.2, 0.7], press: 0 });

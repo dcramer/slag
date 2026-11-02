@@ -1,8 +1,8 @@
 import { css, type HSL } from '../../../core/color';
 import { TILE } from '../../../sim/constants';
 import { type ModuleOf, SPARK_R, sparkAt, WIRE_RUN, WIRE_WARN, wireCycle, wirePoint } from '../../../sim/props';
-import { line, type P, stroke } from '../../ink';
-import { boxPts, dot, INK, ovalPts, part, sprite, stamp, tick } from '../../ink-props';
+import { blob, inkFor, line, type P, stroke } from '../../ink';
+import { boxPts, ovalPts, part, sprite, stamp, tick } from '../../ink-props';
 import { glowDot, light, lightning, type RC } from '../../kit';
 import { type DrawCtx, defineArt } from '../common';
 import { groundBelowPx } from './setpiece';
@@ -19,6 +19,7 @@ type Wire = ModuleOf<'wire'>;
 const WOOD: HSL = { h: 24, s: 30, l: 30 };
 const GLASS: HSL = { h: 160, s: 30, l: 62 };
 const SPARK: HSL = { h: 200, s: 100, l: 78 };
+const CABLE: HSL = { h: 220, s: 10, l: 18 };
 
 /** A pole from its top (x, y) down to the ground at `gy`: a tarred post, a crossarm, a glass insulator on it. Baked per height. */
 function pole(h: number, flip: boolean) {
@@ -28,7 +29,7 @@ function pole(h: number, flip: boolean) {
     tick(g, -0.3, 3, -0.2, h - 2, 0.35, 4, css(WOOD, -14));
     // The crossarm, and its brace.
     part(g, boxPts(-5.5, 1.2, 11, 1.8, 0.4, 5, 0.05), WOOD, 5, { depth: 0.4, thin: 0.3, thick: 0.8 });
-    g.fillStyle = INK;
+    g.fillStyle = inkFor(WOOD);
     line(g, flip ? 1.2 : -1.2, 7, flip ? 4.4 : -4.4, 3, { w: 0.6, seed: 6, taper: [0, 0], press: 0 });
     // The insulators on the arm: the cable's on the near one.
     for (const ix of [-4, 4]) part(g, ovalPts(ix, 0.2, 1.3, 1.6, 7 + ix, 0.04, 10), GLASS, 8 + ix, { depth: 0.3, thin: 0.3, thick: 0.7 });
@@ -72,9 +73,9 @@ function draw(rc: RC, m: Wire, d: DrawCtx) {
   }
   // The cable.
   const pts = curve(m, d, 0, 1, 18);
-  s.fillStyle = INK;
-  stroke(s, pts, { w: 1.05, seed: m.seed, taper: [0, 0], press: 0.05 });
-  s.fillStyle = 'rgba(160,170,180,0.55)';
+  s.fillStyle = css(CABLE);
+  stroke(s, pts, { w: 0.95, seed: m.seed, taper: [0, 0], press: 0.05 });
+  s.fillStyle = css(CABLE, 30, 0.6);
   stroke(
     s,
     pts.map((p) => ({ x: p.x, y: p.y - 0.25 })),
@@ -100,9 +101,11 @@ function draw(rc: RC, m: Wire, d: DrawCtx) {
   const r = SPARK_R * TILE;
   glowDot(rc.g, p[0], p[1], r * 2.4, SPARK, 0.9);
   s.fillStyle = css(SPARK, 8);
-  dot(s, p[0], p[1], r * 0.8, rc.frame);
+  blob(s, p[0], p[1], r * 0.8, rc.frame, 1, 0.25);
+  s.fill();
   s.fillStyle = '#ffffff';
-  dot(s, p[0], p[1], r * 0.42, rc.frame + 1);
+  blob(s, p[0], p[1], r * 0.42, rc.frame + 1, 1, 0.2);
+  s.fill();
   crackle(rc, p[0], p[1], 0.9);
   light(rc, p[0], p[1], 50, SPARK, 0.9);
   if (u > 0.92) crackle(rc, ends[1][0], ends[1][1], 1);

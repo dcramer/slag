@@ -153,8 +153,8 @@ function rooftopsStage(ctx: SculptCtx, k: Knobs): Shape {
   if (x - 5 >= 8) decorate(g, rng, 6, x - 5, G, 'downtown');
   const l = raiseLandmark(g, ctx, { concept, at: { x, y: G - h, w: box.w, h }, ground: G }, own);
   windows(g, l.rect.x, l.rect.x + l.rect.w - 1, G, 1);
-  // Lanes keep off the landmark's columns altogether: it brings its own ways through.
-  l.air.push({ x: l.rect.x, y: l.rect.y, w: l.rect.w, h: 1 });
+  // Lanes keep off the landmark's columns altogether, and filler off its box: it brings its own ways and pieces.
+  l.air.push({ ...l.rect });
 
   // On to the goal: easy hops, the last one hard when a second alley is asked for and there's room for it.
   const extra = challenges > own;

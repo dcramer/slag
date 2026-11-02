@@ -2,8 +2,8 @@ import { css, type HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { type ModuleOf, NEON_ON, NEON_WARN, neonCycle } from '../../../sim/props';
-import { line, type P, stroke } from '../../ink';
-import { boxPts, dot, INK, part, sprite, stamp } from '../../ink-props';
+import { blob, inkFor, line, type P, stroke } from '../../ink';
+import { boxPts, part, sprite, stamp } from '../../ink-props';
 import { glowDot, light, lightning, type RC } from '../../kit';
 import { type DrawCtx, defineArt } from '../common';
 
@@ -99,21 +99,24 @@ export function neonWord(n: number, seed: number): string {
   return w.length >= n ? w.slice(0, n) : w.padEnd(n, '*');
 }
 
+const BOX: HSL = { h: 230, s: 10, l: 20 };
 const glowOf = (d: DrawCtx): HSL => ({ h: d.style.glowHue, s: 100, l: 64 });
 
 /** The letter box: dark sheet metal on the cell, rivets at its corners. Baked. */
 function box(seed: number) {
   return sprite(`neon|box|${seed & 7}`, 0, 0, TILE, TILE, (g) => {
     const pts = boxPts(0.4, 0.6, TILE - 0.8, TILE - 0.6, 1.1, seed, 0.1);
-    part(g, pts, { h: 230, s: 10, l: 20 }, seed, { depth: 0.6, thin: 0.4, thick: 0.9 });
-    g.fillStyle = 'rgba(255,255,255,0.18)';
+    part(g, pts, BOX, seed, { depth: 0.6, thin: 0.4, thick: 0.9 });
+    g.fillStyle = css(BOX, 22);
     for (const [x, y] of [
       [2.4, 2.6],
       [TILE - 2.4, 2.6],
       [2.4, TILE - 2.2],
       [TILE - 2.4, TILE - 2.2],
-    ])
-      dot(g, x, y, 0.5, x + y);
+    ]) {
+      blob(g, x, y, 0.45, x + y, 1, 0.1);
+      g.fill();
+    }
   });
 }
 
@@ -152,8 +155,8 @@ function draw(rc: RC, m: Neon, d: DrawCtx) {
     const tube = strokes(word[i], x, y);
     for (const [k, pts] of tube.entries()) {
       if (pts.length < 2) continue;
-      s.fillStyle = INK;
-      stroke(s, pts, { w: 2.1, seed: i * 7 + k, taper: [0.02, 0.02], press: 0.05 });
+      s.fillStyle = inkFor(col);
+      stroke(s, pts, { w: 1.9, seed: i * 7 + k, taper: [0.02, 0.02], press: 0.05 });
       s.fillStyle = lit ? css(col, 6) : css(col, -38, 1, -40);
       stroke(s, pts, { w: 1.3, seed: i * 7 + k + 1, taper: [0.02, 0.02], press: 0.05 });
       if (lit) {
@@ -177,7 +180,7 @@ function draw(rc: RC, m: Neon, d: DrawCtx) {
   if (order.length > 1) {
     const a = order[0];
     const b = order[order.length - 1];
-    s.fillStyle = INK;
+    s.fillStyle = inkFor(BOX);
     line(s, a[0] * TILE + d.off[0] + 2, a[1] * TILE + d.off[1] + TILE - 0.6, b[0] * TILE + d.off[0] + TILE - 2, b[1] * TILE + d.off[1] + TILE - 0.6, {
       w: 0.6,
       seed: m.seed,
