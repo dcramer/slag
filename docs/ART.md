@@ -7,7 +7,7 @@ These rules cover the menus, the lobby, and the in-game HUD. The world art (leve
 **The main menu is the quality bar for every screen.** The owner loves it: the molten drip logo, the rising embers and heat shimmer, the crowd on the slag heap under the pour, and that it fills the window's full height. Keep its look exactly, and bring every other screen up to it, never the other way round.
 
 - **One logo.** It's `logoHTML()` in `src/ui/screens/markup.ts` with its CSS: an ink outline and hard drop behind a molten gradient, with drips. The lobby shows that same element over its top bar, scaled as a whole (`FloatingLogo`), so treatment, proportions and crispness can't drift. Don't draw a second logo on a canvas.
-- **One settings menu** (`SettingsMenu` in `src/ui/menus.ts`), the same over the main menu and in a game.
+- **One settings menu** (`SettingsMenu` in `src/ui/menus/settings.ts`), the same over the main menu and in a game.
 - Every screen is a game screen with the game's input: keyboard, gamepad and touch, the console-style selection below, and a footer prompt bar.
 
 ## Identity: a molten foundry that doubles as a toy box
@@ -87,7 +87,7 @@ On pages, body text is 15–18 px and menu items are 30 px display.
 - On phones the HUD grows by groups, each about its own anchor, up to about 1.8×: chips, timers, headings, crate cards, the score panel. A logical px is only ~0.75 CSS px there, so the type scale above would otherwise land below a readable size. The lobby's top-bar buttons become icons, and its footer loses the prompts the cards already carry. Hit rects grow to 44 CSS px even where the art doesn't.
 - Selection works like a console menu: one item is always active, shown with a molten fill, a diamond marker, a chevron, and a slight nudge. Mouse hover, keyboard arrows, the d-pad, and the stick all move the same selection.
 - Buttons are stamped: a top face over a darker side that sinks 1.5–3 px on hover or press. Primary buttons are molten with ink text, secondary are iron with bone text, and confirmed buttons are toxic.
-- Overlays (`src/ui/menus.ts`) are a single iron card with a hazard-tape top edge over a dark scrim. They have no blur and no glass.
+- Overlays (`src/ui/menus/`) are a single iron card with a hazard-tape top edge over a dark scrim. They have no blur and no glass.
 - Settings tabs are stamped plates in display type, with the active one molten and pressed in. Rows use the console selection above: the row holding the selected control fills molten, gets the diamond and nudges. Tab prompts flank the strip and Done carries its back prompt.
 
 ## World art: ink

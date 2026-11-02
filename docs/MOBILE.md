@@ -115,7 +115,7 @@ A phone squeezes the play view into ~570–720 CSS px, so a tile is ~12 px. The 
 
 ## Settings on phones
 
-At 760 CSS px wide or 520 tall, Settings and Match Rules become a full-screen sheet (`.slag-sheet` in `src/ui/menus.ts`): safe-area padding, rows of at least 60 px, buttons of at least 48 px, bigger slider thumbs and switches, and a panel that scrolls. In landscape, Done and Leave Lobby share the tab row, so the rows keep the height.
+At 760 CSS px wide or 520 tall, Settings and Match Rules become a full-screen sheet (`.slag-sheet` in `src/ui/menus/overlay.ts`): safe-area padding, rows of at least 60 px, buttons of at least 48 px, bigger slider thumbs and switches, and a panel that scrolls. In landscape, Done and Leave Lobby share the tab row, so the rows keep the height.
 
 ## Layout
 
