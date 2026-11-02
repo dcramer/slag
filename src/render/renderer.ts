@@ -286,7 +286,7 @@ export class Renderer {
     this.terrain.draw(rc);
     rc.s.restore();
     g.restore();
-    const pushers = m.run ? m.run.runners.filter((r) => r.alive).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h })) : [];
+    const pushers = m.run ? m.run.runners.filter((r) => r.alive).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h, vy: r.body.vy })) : [];
     this.terrain.drawLive(rc, level, pushers);
     this.drawMarkers(rc, level);
     drawBlood(rc, m, frame);

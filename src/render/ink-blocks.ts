@@ -4,7 +4,8 @@ import { hash2 } from '../core/rng';
 import { TILE } from '../sim/constants';
 import type { Material, PropStyle } from '../sim/props';
 import { blob, type EdgeP, line, looseLoop, type P, shadeOf, sn, stroke, traceCorners, vn } from './ink';
-import { type Block, markBiscuit, markMetal, markStone, markWood, overIce, overWood, retroTile, runsOf, type Tones } from './ink-build';
+import { markBiscuit, markMetal, markStone, markWood, overIce, overWood, retroTile, runsOf, type Tones } from './ink-build';
+import { type Belt, beltsOf, type Cut, markConveyor, markGoo, markJelly, overGoo } from './ink-surface';
 import type { MetalPalette } from './kit';
 
 /**
@@ -31,6 +32,8 @@ interface Bake {
   w: number;
   h: number;
   loops: EdgeP[][];
+  /** A conveyor's belts, for the live cleats and spokes. */
+  belts?: Belt[];
 }
 
 const bakes = new Map<string, Bake>();
@@ -183,7 +186,7 @@ function tonesOf(material: Material, st: PropStyle, pal: MetalPalette): Tones {
  * What a block is made of, said with marks, inside its own outline. Stone, metal, wood and biscuit are
  * built objects (`ink-build.ts`); the rest are surfaces with marks on them.
  */
-const MARKS: Record<Material, (g: CanvasRenderingContext2D, cells: readonly Cell[], set: Set<number>, T: Tones, seed: number, b: Block) => void> = {
+const MARKS: Record<Material, (g: CanvasRenderingContext2D, cells: readonly Cell[], set: Set<number>, T: Tones, seed: number, b: Cut) => void> = {
   stone(g, _cells, _set, _T, _seed, b) {
     markStone(g, b, { h: b.st.hue, s: 14, l: 52 });
   },
@@ -224,106 +227,14 @@ const MARKS: Record<Material, (g: CanvasRenderingContext2D, cells: readonly Cell
     }
   },
 
-  conveyor(g, cells, set, T, seed) {
-    for (const [x, y] of cells) {
-      const px = x * TILE;
-      const py = y * TILE;
-      if (!has(set, x, y - 1)) {
-        // The belt: black rubber over the top, with its lip.
-        g.fillStyle = '#16151a';
-        g.fillRect(px - 1, py, TILE + 2, 4.6);
-        g.fillStyle = T.ink;
-        line(g, px - 0.5, py + 4.8, px + TILE + 0.5, py + 4.7, { w: 0.9, seed: seed + x, taper: [0, 0], press: 0.2 });
-      }
-      // A roller socket: the roller itself turns, so it's drawn live.
-      g.fillStyle = T.ink;
-      blob(g, px + TILE / 2, py + TILE - 5.2, 3.7, seed + x, 1, 0.06);
-      g.fill();
-      g.fillStyle = 'rgb(120 124 134)';
-      blob(g, px + TILE / 2, py + TILE - 5.2, 2.8, seed + x + 1, 1, 0.06);
-      g.fill();
-      g.fillStyle = 'rgb(180 184 192)';
-      blob(g, px + TILE / 2 - 0.8, py + TILE - 6, 1.1, seed + x + 2, 1, 0.1);
-      g.fill();
-    }
+  conveyor(g, _cells, _set, _T, _seed, b) {
+    markConveyor(g, b);
   },
-
-  goo(g, cells, set, T, seed) {
-    for (const [x, y] of cells) {
-      const px = x * TILE;
-      const py = y * TILE;
-      const r = (k: number) => hash2(x, y + k * 23, seed);
-      if (!has(set, x, y - 1)) {
-        g.fillStyle = T.light;
-        stroke(
-          g,
-          [
-            { x: px + 2, y: py + 3.2 },
-            { x: px + 7, y: py + 2.4 },
-            { x: px + 12, y: py + 3 },
-          ],
-          { w: 1.7, seed: seed + x, taper: [0.25, 0.35], press: 0.2 },
-        );
-      }
-      // Bubbles caught in it: a ring and a speck.
-      for (let i = 0; i < 2; i++) {
-        const bx = px + 3 + r(1 + i) * 10;
-        const by = py + 6 + r(3 + i) * 7;
-        const br = 0.9 + r(5 + i) * 1.1;
-        g.fillStyle = T.light;
-        blob(g, bx, by, br + 0.6, seed + i, 1, 0.1);
-        g.fill();
-        g.fillStyle = T.base;
-        blob(g, bx + 0.3, by + 0.3, br, seed + i, 1, 0.1);
-        g.fill();
-      }
-      g.fillStyle = T.shade;
-      blob(g, px + 4 + r(7) * 8, py + 9 + r(8) * 4, 1.6, seed + x * 7, 1, 0.4);
-      g.fill();
-    }
+  goo(g, _cells, _set, _T, _seed, b) {
+    markGoo(g, b);
   },
-
-  jelly(g, cells, set, T, seed) {
-    for (const [x, y] of cells) {
-      const px = x * TILE;
-      const py = y * TILE;
-      const r = (k: number) => hash2(x, y + k * 19, seed);
-      // Light goes through jelly: it comes out as a bright line just inside the shadow side, under a
-      // big wet shine at the top. Bubbles hang in it.
-      if (!has(set, x, y + 1)) {
-        g.fillStyle = T.light;
-        line(g, px + 1.5, py + TILE - 2.6, px + TILE - 1.5, py + TILE - 2.8, { w: 1.3, seed: seed + x, taper: [0.2, 0.2], press: 0.3 });
-      }
-      if (!has(set, x + 1, y)) {
-        g.fillStyle = T.light;
-        line(g, px + TILE - 2.6, py + 3, px + TILE - 2.8, py + TILE - 3.5, { w: 1.2, seed: seed + y, taper: [0.2, 0.2], press: 0.3 });
-      }
-      for (let i = 0; i < 2; i++) {
-        const bx = px + 4 + r(3 + i) * 8;
-        const by = py + 6 + r(5 + i) * 6;
-        g.fillStyle = T.light;
-        blob(g, bx, by, 1.2 + i * 0.4, seed + i, 1, 0.1);
-        g.fill();
-        g.fillStyle = T.base;
-        blob(g, bx + 0.35, by + 0.35, 0.8 + i * 0.4, seed + i, 1, 0.1);
-        g.fill();
-      }
-      if (!has(set, x, y - 1)) {
-        g.fillStyle = 'rgb(255 250 252)';
-        stroke(
-          g,
-          [
-            { x: px + 2.6, y: py + 6 },
-            { x: px + 3.4, y: py + 3.4 },
-            { x: px + 7, y: py + 2.6 },
-          ],
-          { w: 1.9, seed: seed + x, taper: [0.25, 0.35], press: 0.1 },
-        );
-      }
-      g.fillStyle = 'rgb(255 250 252)';
-      blob(g, px + 10 + r(1) * 3, py + 6 + r(2) * 4, 0.75, seed + y, 1, 0.1);
-      g.fill();
-    }
+  jelly(g, _cells, _set, _T, _seed, b) {
+    markJelly(g, b);
   },
 
   crumble(g, _cells, _set, _T, _seed, b) {
@@ -331,13 +242,13 @@ const MARKS: Record<Material, (g: CanvasRenderingContext2D, cells: readonly Cell
   },
 };
 
-/** What a block wears past its outline, after the pen: thin things only (ropes, knots). */
-const OVER: Partial<Record<Material, (g: CanvasRenderingContext2D, b: Block) => void>> = { wood: overWood, ice: overIce };
+/** What a block wears past its outline, after the pen: thin things only (ropes, knots, strings of tar). */
+const OVER: Partial<Record<Material, (g: CanvasRenderingContext2D, b: Cut) => void>> = { wood: overWood, ice: overIce, goo: overGoo };
 
 /** Materials whose own structure carries the form, so hatching would only muddy it. */
-const NO_HATCH = new Set<Material>(['jelly', 'goo', 'metal', 'wood', 'crumble', 'stone']);
+const NO_HATCH = new Set<Material>(['jelly', 'goo', 'metal', 'wood', 'crumble', 'stone', 'conveyor']);
 
-function bake(cells: readonly Cell[], material: Material, st: PropStyle, pal: MetalPalette, key: string): Bake {
+function bake(cells: readonly Cell[], material: Material, st: PropStyle, pal: MetalPalette, key: string, dir: number): Bake {
   const seed = hashStr(key);
   const loops = outline(cells, seed);
   const set = new Set(cells.map(([x, y]) => keyOf(x, y)));
@@ -369,7 +280,8 @@ function bake(cells: readonly Cell[], material: Material, st: PropStyle, pal: Me
   trace(g, loops, -1.8, -2);
   g.fill();
   const has = (x: number, y: number) => set.has(keyOf(x, y));
-  const blk: Block = { cells, has, runs: runsOf(cells, has), seed, T, st, pal };
+  const blk: Cut = { cells, has, runs: runsOf(cells, has), seed, T, st, pal, loops, dir };
+  if (material === 'conveyor') b.belts = beltsOf(blk);
   MARKS[material](g, cells, set, T, seed, blk);
   if (cells.length >= 3 && !NO_HATCH.has(material)) hatch(g, loops, T.hatch, seed);
   g.restore();
@@ -378,19 +290,23 @@ function bake(cells: readonly Cell[], material: Material, st: PropStyle, pal: Me
   return b;
 }
 
-function bakeOf(cells: readonly Cell[], material: Material, st: PropStyle, pal: MetalPalette): Bake {
+function bakeOf(cells: readonly Cell[], material: Material, st: PropStyle, pal: MetalPalette, dir = 1): Bake {
   const sig = cells.map(([x, y]) => `${x},${y}`).join(';');
-  const key = `${material}|${st.trim}|${st.hue | 0}|${st.woodHue | 0}|${pal.base.h},${pal.base.l}|${sig}`;
+  const key = `${material}|${st.trim}|${st.hue | 0}|${st.woodHue | 0}|${pal.base.h},${pal.base.l}|${material === 'conveyor' ? dir : ''}|${sig}`;
   let b = bakes.get(key);
   if (!b) {
     if (bakes.size >= CACHE_MAX) bakes.clear();
-    b = bake(cells, material, st, pal, key);
+    b = bake(cells, material, st, pal, key, dir);
     bakes.set(key, b);
   }
   return b;
 }
 
-/** Stamp a baked block at offset `O` (world px of the cells' origin). `jiggle` squashes it about its base. */
+/**
+ * Stamp a baked block at offset `O` (world px of the cells' origin). `squash` presses it down about its
+ * base by that many px (negative stretches it), bulging the sides a little less. `dir` is a conveyor's
+ * travel, which its painted arrows show.
+ */
 export function stampBlock(
   s: CanvasRenderingContext2D,
   cells: readonly Cell[],
@@ -398,15 +314,17 @@ export function stampBlock(
   material: Material,
   st: PropStyle,
   pal: MetalPalette,
-  jiggle = 0,
+  squash = 0,
+  dir = 1,
 ): Bake {
-  const b = bakeOf(cells, material, st, pal);
-  if (jiggle) {
+  const b = bakeOf(cells, material, st, pal, dir);
+  if (squash) {
     const base = b.y + b.h - PAD;
     const cx = b.x + b.w / 2;
+    const bulge = Math.max(-0.5, Math.min(1, squash * 0.7));
     s.save();
     s.translate(O[0] + cx, O[1] + base);
-    s.scale(1 - jiggle * 0.6, 1 + jiggle);
+    s.scale(1 + (2 * bulge) / (b.w - PAD * 2), 1 - squash / (b.h - PAD * 2));
     s.drawImage(b.canvas, b.x - cx, b.y - base, b.w, b.h);
     s.restore();
   } else s.drawImage(b.canvas, O[0] + b.x, O[1] + b.y, b.w, b.h);
