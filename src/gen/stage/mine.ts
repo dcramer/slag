@@ -337,7 +337,8 @@ function buildTrestle(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark 
   const n = len >= 26 ? rng.int(2, 3) : len >= 18 ? rng.int(1, 2) : 1;
   for (let i = 0, tries = 0; i < n && tries < 40; tries++) {
     const w = hopGap(rng, 2);
-    const x = rng.int(d0 + 4, d1 - 3 - w);
+    // A lone break sits toward one end, leaving a long stretch for a cart to get going on.
+    const x = n === 1 ? (rng.chance(0.5) ? d0 + 3 + rng.int(0, 1) : d1 - 2 - w - rng.int(0, 1)) : rng.int(d0 + 4, d1 - 3 - w);
     if (breaks.some(([b, bw]) => x + w + 4 > b && x < b + bw + 4)) continue;
     breaks.push([x, w]);
     i++;
@@ -414,7 +415,7 @@ export const TRESTLE_LINE = defineConcept({
   ownsCrossing: true,
   family: ['runaway cart', 'minecart', 'cave-in'],
   names: ['The Trestle Line of {place}', '{place} Railway', 'The {place} Express', 'The High Line at {place}'],
-  box: (k, rng) => boxFor(k, rng, TR_MIN, [24, 40], 3 + rng.int(5, 7)),
+  box: (k, rng) => boxFor(k, rng, TR_MIN, [24, 40], 3 + rng.int(7, 9)),
   build: buildTrestle,
   pieces: (rng, _s, l) => trestlePieces(rng, l),
 });
@@ -434,9 +435,13 @@ function buildCrusher(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark 
   g.clear(h0, G - 3, h1, G - 1);
   const hx = rng.int(h0 + 3, h1 - 4);
   g.clear(hx, T, hx + 1, G - 4);
-  // A step on the roof's far end now and then: a motor housing.
+  // The crusher's own tower on the near side of the hopper, the feed shed past it a step lower now and then.
+  const dz = hH - easyRise() >= 7 && rng.chance(0.6) ? easyRise() : 0;
+  if (dz) g.clear(hx + 2, T, h1, T + dz - 1);
+  const TF = T + dz;
+  // A motor housing at the shed's far end now and then.
   const motor = h1 - hx >= 6 && rng.chance(0.5);
-  if (motor) g.fill(h1 - 1, T - 1, h1, T - 1, 1, true);
+  if (motor) g.fill(h1 - 1, TF - 1, h1, TF - 1, 1, true);
   rungs(g, s0, T, G);
   const wc = Math.floor((h0 + hx) / 2);
   return {
@@ -450,7 +455,7 @@ function buildCrusher(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark 
       house: [h0, h1],
       roof: [T, G],
       hopper: [hx, T],
-      motor: [motor ? 1 : 0, 0],
+      motor: [motor ? 1 : 0, TF],
       shell: [h0, T - 4],
       shellSize: [h1 - h0 + 1, G + 1 - (T - 4)],
       ...ways([
@@ -458,7 +463,7 @@ function buildCrusher(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark 
         { x: wc, y: at.y, w: 1, h: T - at.y },
       ]),
       sig0: [hH, h1 - h0],
-      sig1: [hx - h0, motor ? 1 : 0],
+      sig1: [hx - h0, (motor ? 1 : 0) + 10 * dz],
     },
     skin: 'rustplate',
   };
@@ -482,7 +487,7 @@ function* crusherPieces(rng: Rng, l: Landmark): Generator<Piece> {
   const near: [number, number][] = [];
   const far: [number, number][] = [];
   for (let x = h0 + 1; x < hx; x++) near.push([x, T - 1]);
-  for (let x = hx + 2; x < h1 - (a.motor[0] ? 1 : 0); x++) far.push([x, T - 1]);
+  for (let x = hx + 2; x < h1 - (a.motor[0] ? 1 : 0); x++) far.push([x, a.motor[1] - 1]);
   const belts: Module[] = [];
   if (near.length >= 2) belts.push({ type: 'body', cells: near, material: 'conveyor', conveyor: speed, breakFrames: 0, respawnFrames: 0 });
   if (far.length >= 2) belts.push({ type: 'body', cells: far, material: 'conveyor', conveyor: -speed, breakFrames: 0, respawnFrames: 0 });
@@ -508,7 +513,7 @@ function* crusherPieces(rng: Rng, l: Landmark): Generator<Piece> {
 
 export const ORE_CRUSHER = defineConcept({
   id: 'ore-crusher',
-  varies: ['house width and height', 'where the hopper is', 'a motor housing on the roof or none', 'belt speed', 'a cart in the tunnel or none'],
+  varies: ['house width and height', 'where the hopper is', 'a lower feed shed past it or none', 'a motor housing on the roof or none', 'belt speed', 'a cart in the tunnel or none'],
   weight: 2,
   sizes: ['classic', 'wide'],
   fits: (p) => roomFor(p, OC_MIN),
@@ -544,7 +549,7 @@ function buildGeode(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   for (let y = top; y < G; y++)
     for (let x = gx0; x <= gx1; x++) {
       const out = inside(x, y, a + 0.5, b + 0.5);
-      const inn = inside(x, y, a - 0.6, b - 0.7);
+      const inn = inside(x, y, a - 1.5, b - 1.4);
       if (out && !inn) g.set(x, y, 1, true);
     }
   // The crack in at the floor on the near side, a window high in the far side.
