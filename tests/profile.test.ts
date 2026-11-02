@@ -8,6 +8,7 @@ import { jumpMetrics } from '../src/sim/physics';
 import { analyzeReach, isStandable } from '../src/sim/reach';
 import { NO_INPUT } from '../src/sim/types';
 import { THEME_IDS } from '../src/themes';
+import { sample, SLOW } from './lib/tier';
 
 const seedAt = (i: number) => (i * 2654435761 + 777) >>> 0;
 
@@ -59,7 +60,7 @@ describe('levels of every size class', () => {
   it('generate valid, policy-solvable levels with zero fallbacks (real analyzeReach)', { timeout: 240_000 }, () => {
     const hazards = new Set<number>();
     for (const { t, size } of cases) {
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < sample(1, 3); i++) {
         const seed = seedAt(i + 40);
         const l = generateLevel(seed, t, { size });
         const info = { ...lastGenInfo };
@@ -77,7 +78,7 @@ describe('levels of every size class', () => {
         for (const p of l.setPieces) for (const [x, y] of p.def.footprint) expect(x + p.tx < l.w && y + p.ty < l.h).toBe(true);
       }
     }
-    expect(hazards.size).toBeGreaterThanOrEqual(3);
+    if (SLOW) expect(hazards.size).toBeGreaterThanOrEqual(3);
   });
 
   it('tall routes really climb (or descend) most of the height', { timeout: 120_000 }, () => {

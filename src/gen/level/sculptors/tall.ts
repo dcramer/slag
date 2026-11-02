@@ -327,15 +327,13 @@ const CASTLE: TallKit = {
     return stairFlight(g, l, easyRise(), T_SOLID, 2);
   },
   dress(g, rng, storeys, links) {
-    const top = storeys[storeys.length - 1];
-    // Battlements on the top storey's open ends; banners (one-way) under floors.
+    // Banners (one-way) under floors.
     for (const s of storeys.slice(1)) {
       if (rng.chance(0.6)) {
         const x = rng.int(s.x0 + 3, Math.max(s.x0 + 3, s.x1 - 5));
         if (!links.some((l) => x + 2 >= l.x - 1 && x <= l.x + l.w)) g.plank(x, x + 2, s.row + 4);
       }
     }
-    for (let x = 0; x < g.w; x += 2) if (g.empty(x, top.row - 3) && g.empty(x, top.row)) g.set(x, top.row - 4, T_SOLID);
   },
   shell(g, rng, storeys) {
     // Tower walls up both edges with arrow slits; they stop at the top storey.

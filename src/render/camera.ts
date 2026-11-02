@@ -1,5 +1,5 @@
 import { clamp } from '../core/geom';
-import type { ViewXform } from '../game/view';
+import { restY, type ViewXform } from '../game/view';
 import { VIEW_H, VIEW_W } from '../sim/constants';
 import { VIEW_FRAME, type ViewFrame } from './frame';
 
@@ -11,8 +11,9 @@ import { VIEW_FRAME, type ViewFrame } from './frame';
  * the middle of the VIEW_W×VIEW_H play view, at `zoom` view px per world px.
  * Framing decisions (`focus`, `wide`) are made against the play view, which
  * never changes shape, while what's visible is the whole frame around it.
- * On an axis where the frame is bigger than the world, the world is centred
- * on the play view and the renderer shows what lies beyond it.
+ * On an axis where the frame is bigger than the world, the world rests in the
+ * play view (centred across, standing on the ground) and the renderer shows
+ * what lies beyond it.
  */
 export class Camera {
   x = 0;
@@ -70,9 +71,9 @@ export class Camera {
 
   /** Show the whole world (down to minZoom). */
   wide() {
-    this.tx = this.ww / 2;
-    this.ty = this.wh / 2;
     this.tz = clamp(Math.min(VIEW_W / this.ww, VIEW_H / this.wh), this.minZoom, 1);
+    this.tx = this.ww / 2;
+    this.ty = restY(this.wh, this.tz);
   }
 
   /** Jump straight to a deterministic mapping (pick/place overview): no smoothing, so ghosts sit under cursors. */
@@ -82,17 +83,17 @@ export class Camera {
     this.zoom = this.tz = v.zoom;
   }
 
-  /** Keep `size` world px covering the frame's `before`/`after` px either side of the view centre, or centre it if it can't. */
-  private clampAxis(v: number, before: number, after: number, size: number): number {
-    return before + after >= size ? size / 2 : clamp(v, before, size - after);
+  /** Keep the frame's `before`/`after` px either side of the view centre inside `size` world px, or rest at `rest` if they don't fit. */
+  private clampAxis(v: number, before: number, after: number, size: number, rest: number): number {
+    return before + after >= size ? rest : clamp(v, before, size - after);
   }
 
   private clampX(v: number): number {
-    return this.clampAxis(v, (VIEW_W / 2 - this.frame.x0) / this.zoom, (this.frame.x1 - VIEW_W / 2) / this.zoom, this.ww);
+    return this.clampAxis(v, (VIEW_W / 2 - this.frame.x0) / this.zoom, (this.frame.x1 - VIEW_W / 2) / this.zoom, this.ww, this.ww / 2);
   }
 
   private clampY(v: number): number {
-    return this.clampAxis(v, (VIEW_H / 2 - this.frame.y0) / this.zoom, (this.frame.y1 - VIEW_H / 2) / this.zoom, this.wh);
+    return this.clampAxis(v, (VIEW_H / 2 - this.frame.y0) / this.zoom, (this.frame.y1 - VIEW_H / 2) / this.zoom, this.wh, restY(this.wh, this.zoom));
   }
 
   update(dt: number, smooth = true) {

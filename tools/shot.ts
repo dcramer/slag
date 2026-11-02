@@ -16,7 +16,7 @@
  *   pnpm shot mobile [--device "Pixel 7 landscape"]  → phone emulation driven by real
  *                                           multi-touch: lobby/join, pick, place, race, portrait
  *
- * Options: --out shots  --size 1280x720  --players 2  --frames N (sim frames to advance)
+ * Options: --out shots  --size 1280x720 (window)  --world classic|wide|tall (level size)  --players 2  --frames N (sim frames to advance)
  *          --theme farm (force a theme; `levels --themes all` renders one level per theme)
  *          --noui (hide the HUD, e.g. to review level shapes)
  *          --mode keyboard|gamepad|touch (footer prompt glyphs)  --net (fake online-lobby info)
@@ -36,7 +36,8 @@ const out = resolve(opt('out', 'shots')!);
 const [W, H] = opt('size', '1280x720')!.split('x').map(Number);
 const seed = opt('seed', 'demo');
 const theme = opt('theme');
-const tq = (theme ? `&theme=${theme}` : '') + (argv.includes('--noui') ? '&ui=0' : '');
+const world = opt('world');
+const tq = (theme ? `&theme=${theme}` : '') + (world ? `&size=${world}` : '') + (argv.includes('--noui') ? '&ui=0' : '');
 const players = Number(opt('players', '2'));
 const frames = Number(opt('frames', '150'));
 mkdirSync(out, { recursive: true });
@@ -164,8 +165,8 @@ async function mobile(deviceName: string) {
     m.join('kb2');
     m.players.find((q: any) => q.device === 'kb2').ready = true;
   });
-  // Ready pill sits right of the character (bw-96 wide at tx = x+88, ty+3).
-  p = await v2c(25 + 88 + 38, 146 + 75 + 10);
+  // The Ready pill runs along the bottom of the first card.
+  p = await v2c(96, 331);
   await tap(p.x, p.y);
   await phase('pick');
   await mp.waitForTimeout(500);

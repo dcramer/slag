@@ -241,14 +241,13 @@ export class Backdrop {
     const g = rc.g;
     const t = rc.t;
     const kind = L.kind;
-    const VIEW_H = wh;
     const xa = Math.floor((view.x - 20) / 6) * 6;
     const xb = view.x + view.w + 20;
     // Scattered details run over the pool's whole length, not just the world's.
     const reach = ww + margin * 2;
     const spots = Math.ceil(reach / VIEW_W);
     const below = Math.max(wh + 20, view.y + view.h + 40);
-    const y0 = VIEW_H - (kind === 'sea' ? 11 : 9);
+    const y0 = wh - (kind === 'sea' ? 11 : 9);
     const amp = kind === 'sea' ? 1.8 : kind === 'swamp' || kind === 'tar' ? 0.5 : kind === 'street' ? 0 : 1;
     const wave = (x: number) => y0 + (Math.sin(x * 0.045 + t * 1.6) * 1.6 + Math.sin(x * 0.11 - t * 2.4) * 0.9 + Math.sin(x * 0.023 + t * 0.6) * 1.2) * amp;
     const path = new Path2D();
@@ -272,7 +271,7 @@ export class Backdrop {
       s.fillStyle = m;
       s.fillRect(xa, y0 - 26, xb - xa + 6, 27);
     }
-    const gr = s.createLinearGradient(0, y0 - 3, 0, VIEW_H);
+    const gr = s.createLinearGradient(0, y0 - 3, 0, wh);
     gr.addColorStop(0, css(L.color, kind === 'tar' ? 8 : 15));
     gr.addColorStop(1, css(L.color, -20));
     s.fillStyle = gr;
@@ -325,7 +324,7 @@ export class Backdrop {
           const dir = i % 2 ? 1 : -1;
           const sp = 60 + (i % 3) * 25;
           const cx = ((((i * 173 + t * sp * dir) % (reach + 80)) + reach + 80) % (reach + 80)) - 40 - margin;
-          const cy = VIEW_H - 3 + (i % 2) * 1.5;
+          const cy = wh - 3 + (i % 2) * 1.5;
           const col = dir > 0 ? hsl3(45, 90, 75) : hsl3(0, 100, 55);
           const lg = g.createLinearGradient(cx - dir * 22, 0, cx, 0);
           lg.addColorStop(0, css(col, 0, 0));
@@ -333,7 +332,7 @@ export class Backdrop {
           g.fillStyle = lg;
           g.fillRect(Math.min(cx, cx - dir * 22), cy, 22, 1.2);
         }
-        for (let x = 40 - margin; x < ww + margin; x += 110) if (x > view.x - 100 && x < view.x + view.w + 100) light(rc, x, VIEW_H, 90, L.glow, 0.5);
+        for (let x = 40 - margin; x < ww + margin; x += 110) if (x > view.x - 100 && x < view.x + view.w + 100) light(rc, x, wh, 90, L.glow, 0.5);
         break;
       }
       case 'water':
@@ -722,7 +721,7 @@ function bakeCloud(rng: Rng, w: number, h: number, th: Theme, kb: number): HTMLC
         for (let i = 0; i < puffs; i++) {
           const px = w * (0.15 + 0.7 * (i / (puffs - 1)));
           const r = h * rng.range(0.25, 0.45) * (1 - Math.abs(i / (puffs - 1) - 0.5));
-          const py = h * 0.62 - r * 0.6;
+          const py = Math.max(r * 1.1 + 1, h * 0.62 - r * 0.6); // Never over the top of the canvas.
           const gr = g.createRadialGradient(px - r * 0.3, py - r * 0.4, r * 0.1, px, py + r * 0.3, r * 1.1);
           gr.addColorStop(0, css(base, pass ? (dark ? 6 : 10) : 2, 0.97));
           gr.addColorStop(1, css(under, pass ? -6 : -14, 0.95));
@@ -745,8 +744,9 @@ function bakeCloud(rng: Rng, w: number, h: number, th: Theme, kb: number): HTMLC
       for (let i = 0; i < n; i++) {
         const cx = rng.range(w * 0.15, w * 0.85);
         const cy = rng.range(h * 0.3, h * 0.7);
-        const rx = rng.range(w * 0.15, w * 0.4);
-        const ry = rng.range(h * 0.2, h * 0.45);
+        // Radii stop at the canvas edge, or the bake would clip the puff to a hard line.
+        const rx = Math.min(rng.range(w * 0.15, w * 0.4), cx, w - cx);
+        const ry = Math.min(rng.range(h * 0.2, h * 0.45), cy * 0.75, (h - cy) * 0.75);
         const gr = g.createRadialGradient(cx, cy - ry * 0.3, 0, cx, cy, rx);
         gr.addColorStop(0, css(base, 6, a));
         gr.addColorStop(0.6, css(under, -2, a * 0.6));

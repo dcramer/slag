@@ -26,12 +26,22 @@ export interface ViewXform {
 /** Smallest overview zoom we allow (a 60-row level fits at 0.45); profile sizes stay above it. */
 export const MIN_OVERVIEW_ZOOM = 0.4;
 
-/** Whole level, letterboxed and centred; never magnified above 1. */
+/**
+ * Where a camera at `zoom` rests on a world `wh` px tall that doesn't fill the
+ * view: a level stands on the bottom of the view with the sky above it, the
+ * way the ground stands in any landscape, rather than floating in the middle.
+ */
+export function restY(wh: number, zoom: number): number {
+  const span = VIEW_H / zoom;
+  return wh <= span ? wh - span / 2 : wh / 2;
+}
+
+/** Whole level, centred across and resting on the ground; never magnified above 1. */
 export function overview(level: Level): ViewXform {
   const ww = level.w * TILE;
   const wh = level.h * TILE;
   const zoom = Math.max(MIN_OVERVIEW_ZOOM, Math.min(1, VIEW_W / ww, VIEW_H / wh));
-  return { cx: ww / 2, cy: wh / 2, zoom };
+  return { cx: ww / 2, cy: restY(wh, zoom), zoom };
 }
 
 export function worldToView(v: ViewXform, x: number, y: number): { x: number; y: number } {

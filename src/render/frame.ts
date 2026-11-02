@@ -18,6 +18,10 @@ export interface ViewFrame {
   /** Logical size of the window. */
   w: number;
   h: number;
+  /** The usable corners of the window (clear of notches), in logical coordinates: where corner UI anchors. */
+  safeX0: number;
+  safeY0: number;
+  safeX1: number;
   /** The play view's box in the window, in CSS px. */
   left: number;
   top: number;
@@ -26,13 +30,27 @@ export interface ViewFrame {
 }
 
 /** A window exactly the shape of the view, or anything that hasn't been laid out yet. */
-export const VIEW_FRAME: ViewFrame = { x0: 0, y0: 0, x1: VIEW_W, y1: VIEW_H, w: VIEW_W, h: VIEW_H, left: 0, top: 0, width: VIEW_W, height: VIEW_H };
+export const VIEW_FRAME: ViewFrame = {
+  x0: 0,
+  y0: 0,
+  x1: VIEW_W,
+  y1: VIEW_H,
+  w: VIEW_W,
+  h: VIEW_H,
+  safeX0: 0,
+  safeY0: 0,
+  safeX1: VIEW_W,
+  left: 0,
+  top: 0,
+  width: VIEW_W,
+  height: VIEW_H,
+};
 
 /**
  * Share of spare height that goes above the play view: the sky can take it,
  * while below the level there's only the pool.
  */
-const SKY_SHARE = 0.65;
+const SKY_SHARE = 0.8;
 
 /** Lay the play view out in a `vw`×`vh` CSS px window, inside the insets (notches, status bars). */
 export function viewFrame(vw: number, vh: number, ins: { left: number; right: number; top: number }): ViewFrame {
@@ -43,9 +61,23 @@ export function viewFrame(vw: number, vh: number, ins: { left: number; right: nu
   const height = VIEW_H * scale;
   const left = ins.left + (aw - width) / 2;
   const top = ins.top + (ah - height) * SKY_SHARE;
-  const x0 = -left / scale;
-  const y0 = -top / scale;
+  const x0 = 0 - left / scale;
+  const y0 = 0 - top / scale;
   const w = vw / scale;
   const h = vh / scale;
-  return { x0, y0, x1: x0 + w, y1: y0 + h, w, h, left, top, width, height };
+  return {
+    x0,
+    y0,
+    x1: x0 + w,
+    y1: y0 + h,
+    w,
+    h,
+    safeX0: x0 + ins.left / scale,
+    safeY0: y0 + ins.top / scale,
+    safeX1: x0 + w - ins.right / scale,
+    left,
+    top,
+    width,
+    height,
+  };
 }

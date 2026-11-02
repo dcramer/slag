@@ -627,15 +627,17 @@ export class Hud {
 
   private place(m: Match) {
     const c = this.ctx;
-    const g = c.createLinearGradient(0, 0, 0, 54);
+    // The header runs along the top of the window, whatever its shape.
+    const { x0, y0, w, safeX0, safeY0, safeX1 } = this.frame;
+    const g = c.createLinearGradient(0, y0, 0, safeY0 + 54);
     g.addColorStop(0, 'rgba(18,10,7,0.82)');
     g.addColorStop(1, 'rgba(18,10,7,0)');
     c.fillStyle = g;
-    c.fillRect(this.frame.x0, this.frame.y0, this.frame.w, 54 - this.frame.y0);
-    this.text(roundLabel(m), 14, 16, 14, PAL.amber, 'left', DISPLAY, 400, 3);
-    this.text('PLACE YOUR PART', VIEW_W / 2, 17, TYPE.head + 2, PAL.bone, 'center', DISPLAY, 400, 4);
-    this.text('Spawn and goal zones are off-limits', VIEW_W / 2, 35, TYPE.caption + 1, PAL.ash, 'center', UI, 600);
-    this.phaseTimer(m, m.frame / 60, VIEW_W - 24, 20);
+    c.fillRect(x0, y0, w, safeY0 + 54 - y0);
+    this.text(roundLabel(m), safeX0 + 14, safeY0 + 16, 14, PAL.amber, 'left', DISPLAY, 400, 3);
+    this.text('PLACE YOUR PART', VIEW_W / 2, safeY0 + 17, TYPE.head + 2, PAL.bone, 'center', DISPLAY, 400, 4);
+    this.text('Spawn and goal zones are off-limits', VIEW_W / 2, safeY0 + 35, TYPE.caption + 1, PAL.ash, 'center', UI, 600);
+    this.phaseTimer(m, m.frame / 60, safeX1 - 24, safeY0 + 20);
     for (const p of m.players) {
       if (p.placed) continue;
       const def = p.claim >= 0 ? m.crate[p.claim].def : null;
@@ -684,14 +686,23 @@ export class Hud {
     if (Number.isFinite(run.timeLeft)) {
       const secs = Math.ceil(run.timeLeft / 60);
       const urgent = secs <= 10;
-      plate(c, VIEW_W / 2 - 28, 6, 56, 24, { rivets: false, stroke: urgent ? PAL.danger : undefined });
-      this.text(String(secs), VIEW_W / 2, 18.5, TYPE.head, urgent ? css({ h: 4, s: 100, l: 62 + Math.sin(t * 12) * 10 }) : PAL.bone, 'center', DISPLAY, 400);
+      plate(c, VIEW_W / 2 - 28, this.frame.safeY0 + 6, 56, 24, { rivets: false, stroke: urgent ? PAL.danger : undefined });
+      this.text(
+        String(secs),
+        VIEW_W / 2,
+        this.frame.safeY0 + 18.5,
+        TYPE.head,
+        urgent ? css({ h: 4, s: 100, l: 62 + Math.sin(t * 12) * 10 }) : PAL.bone,
+        'center',
+        DISPLAY,
+        400,
+      );
     }
     m.players.forEach((p, i) => {
       const r = run.runners.find((r) => r.slot === p.slot);
       // Up to 4 chips per row so 8 players fit left of the timer.
-      const x = 8 + (i % 4) * 87;
-      const y = 6 + Math.floor(i / 4) * 29;
+      const x = this.frame.safeX0 + 8 + (i % 4) * 87;
+      const y = this.frame.safeY0 + 6 + Math.floor(i / 4) * 29;
       const dead = r && !r.alive;
       const done = r?.finished;
       plate(c, x, y, 84, 25, { rivets: false, drop: 2, stroke: done ? PAL.toxic : dead ? PAL.danger : undefined, alpha: 0.92 });

@@ -1,5 +1,4 @@
 import type { Rng } from '../../core/rng';
-import { LEVEL_H, LEVEL_W } from '../../sim/constants';
 import { T_EMPTY, T_ONEWAY, T_SOLID } from '../../sim/level';
 import type { BridgeHint, Shape } from './types';
 
@@ -34,8 +33,8 @@ export class Grid {
   carve = false;
 
   constructor(
-    readonly w: number = LEVEL_W,
-    readonly h: number = LEVEL_H,
+    readonly w: number,
+    readonly h: number,
   ) {
     this.t = new Uint8Array(w * h);
     this.keep = new Uint8Array(w * h);

@@ -122,19 +122,19 @@ function toLevel(seed: number, s: Shape, theme: Theme, profile: LevelProfile): L
 }
 
 /** Flat floor, always solvable. Only used if every candidate fails. */
-function fallbackShape(LEVEL_W: number, LEVEL_H: number): Shape {
-  const tiles = new Uint8Array(LEVEL_W * LEVEL_H);
-  const row = LEVEL_H - 6;
-  for (let y = row + 1; y < LEVEL_H; y++) for (let x = 0; x < LEVEL_W; x++) tiles[y * LEVEL_W + x] = 1;
+function fallbackShape(w: number, h: number): Shape {
+  const tiles = new Uint8Array(w * h);
+  const row = h - 6;
+  for (let y = row + 1; y < h; y++) for (let x = 0; x < w; x++) tiles[y * w + x] = 1;
   return {
-    w: LEVEL_W,
-    h: LEVEL_H,
+    w,
+    h,
     tiles,
     spawn: { tx: 2, ty: row },
-    goal: { tx: LEVEL_W - 3, ty: row },
+    goal: { tx: w - 3, ty: row },
     protectedRects: [
       { x: 0, y: row - 3, w: 5, h: 5 },
-      { x: LEVEL_W - 5, y: row - 3, w: 5, h: 5 },
+      { x: w - 5, y: row - 3, w: 5, h: 5 },
     ],
     style: 'fallback',
   };

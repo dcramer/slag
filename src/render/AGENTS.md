@@ -2,6 +2,8 @@
 
 - Read sim state, never write it. Render-side state (particles, verlet rigs, caches) must never influence the sim. `Math.random` is fine here: it's cosmetic.
 - `Renderer.render` (`renderer.ts`) paints three world-space Canvas2D layers through the camera: **albedo**, **emissive** (additive), **light map** (0.5 = neutral). `post.ts` composites them in WebGL2 (lighting, bloom, tonemap, grade) with a Canvas2D fallback. The HUD (`hud.ts`) is its own canvas.
+- Everything draws in logical view coordinates, and the window is `ViewFrame` (`frame.ts`): the VIEW_W×VIEW_H play view sits inside it at a fixed aspect, and a layer's job is to fill the frame, not the view. Full-screen fills use the frame (`Hud.wash`). The camera's only inputs are `setBounds` (world size, from the level) and `setFrame`.
+- Past the world's edge is `surround.ts`: scenery built from the level, painted by `TerrainPainter`, one recipe per theme in `SIDES`.
 - Prop art is a registry: one file per module type in `props/modules/<type>.ts` registering `ModuleArt` (`props/common.ts`), imported from `props/modules/index.ts`. A type may register several arts on different layers. Don't add per-type `switch`es elsewhere.
 - Shared drawing helpers, materials and lights are in `kit.ts`; reuse them before writing new ones.
 - Keep per-frame allocation low: the game targets 60 fps with up to 8 players and ~100 lights.

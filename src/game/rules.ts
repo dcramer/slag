@@ -43,7 +43,7 @@ export const RULE_CHOICES: { [K in keyof MatchRules]: MatchRules[K][] } = {
 /** Button text for a rule value (menus). */
 export function ruleValueLabel(k: keyof MatchRules, v: MatchRules[keyof MatchRules]): string {
   if (k === 'gravity') return v === 'auto' ? 'Auto' : v === 'low' ? 'Low' : v === 'high' ? 'High' : 'Normal';
-  if (k === 'targetScore') return String(v);
+  if (k === 'targetScore' || k === 'maxRounds') return String(v);
   return v === 0 ? 'Off' : `${v}s`;
 }
 

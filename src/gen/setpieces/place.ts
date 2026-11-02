@@ -1,6 +1,6 @@
 import { type Cell, overlaps, type Rect, rectCircle } from '../../core/geom';
 import type { Rng } from '../../core/rng';
-import { DT, LEVEL_H, PLAYER_H, PLAYER_W, RUN_COUNTDOWN, TILE } from '../../sim/constants';
+import { DT, PLAYER_H, PLAYER_W, RUN_COUNTDOWN, TILE } from '../../sim/constants';
 import { isProtected, type Level, T_EMPTY, T_SOLID, tileAt } from '../../sim/level';
 import {
   AMMO,
@@ -139,12 +139,12 @@ export class Site {
     return false;
   }
   /** Row of the first ground tile at or below y in column x, or -1. */
-  groundBelow(x: number, y: number, max = LEVEL_H): number {
+  groundBelow(x: number, y: number, max = this.h): number {
     for (let yy = Math.max(0, y); yy < Math.min(this.h, y + max); yy++) if (this.ground(x, yy)) return yy;
     return -1;
   }
   /** Row of the first solid tile above y in column x, or -1. */
-  ceilingAbove(x: number, y: number, max = LEVEL_H): number {
+  ceilingAbove(x: number, y: number, max = this.h): number {
     for (let yy = y - 1; yy >= Math.max(0, y - max); yy--) if (this.solid(x, yy)) return yy;
     return -1;
   }
