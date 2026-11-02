@@ -17,6 +17,7 @@
       "Bash(pnpm test)",
       "Bash(pnpm test *)",
       "Bash(pnpm build)",
+      "Bash(pnpm land *)",
       "Bash(pnpm level *)",
       "Bash(pnpm shot *)",
       "Bash(pnpm vitest run *)",

@@ -1,7 +1,7 @@
 import { inset, overlaps, type Rect, type Vec } from '../core/geom';
 import { deriveSeed, Rng } from '../core/rng';
 import { type BloodCell, buildBlood, groundOf, spillBlood } from './blood';
-import { PLAYER_W, RUN_COUNTDOWN } from './constants';
+import { FPS, PLAYER_W, POP_HOLD, RUN_COUNTDOWN } from './constants';
 import { collideRunners, contactStart, footing as stackFooting } from './collide';
 import {
   absorbHit,
@@ -89,8 +89,26 @@ export interface Runner {
   attach: RunnerAttach;
   /** Slot of the runner this one is standing on, or -1 (sim/collide.ts). */
   ride: number;
+  /** Frames this runner has held alt toward a self-destruct (`popCharge`), 0 when not charging. Everyone sees it fill. */
+  pop: number;
   /** Frames this runner has been held up by other bodies; enough of them and it slips through (sim/collide.ts). */
   press: number;
+}
+
+/**
+ * The self-destruct charge after one more frame of `inp`. It starts only on a fresh alt press, so a hold carried
+ * over from place (where alt rotates) or the countdown never counts, and a resting thumb never does it. Releasing alt,
+ * steering, jumping or using an item ends it, and the next try needs a new press. At POP_HOLD the runner pops.
+ */
+export function popCharge(n: number, inp: InputFrame): number {
+  if (!inp.alt || inp.left || inp.right || inp.jump || inp.jumpPressed || inp.usePressed) return 0;
+  return n > 0 || inp.altPressed ? n + 1 : 0;
+}
+
+/** A charge as the on-screen countdown reads it: whole seconds left (3, 2, 1), and frames since that number came up. */
+export function popCountdown(pop: number): { secs: number; since: number } {
+  const secs = Math.ceil((POP_HOLD - pop) / FPS);
+  return { secs, since: pop - (POP_HOLD - secs * FPS) };
 }
 
 /**
@@ -160,6 +178,7 @@ export class RunWorld {
       items: newRunnerItems(),
       attach: newAttach(),
       ride: -1,
+      pop: 0,
       press: 0,
     }));
     this.resolved = [...level.setPieces, ...placed].map(resolveProp);
@@ -253,9 +272,12 @@ export class RunWorld {
         if (r.body.y <= this.killY) stepBody(r.body, NO_INPUT, this.world, windAt(r.body, this.out.winds));
         return;
       }
-      const inp = itemInput(r.items, statusInput(r.status, live ? (inputs[i] ?? NO_INPUT) : NO_INPUT));
+      const raw = live ? (inputs[i] ?? NO_INPUT) : NO_INPUT;
+      // Counted from the raw input, so frozen, dazed or held runners can still give up.
+      r.pop = popCharge(r.pop, raw);
+      if (r.pop >= POP_HOLD) return this.kill(r, -1, 'pop');
+      const inp = itemInput(r.items, statusInput(r.status, raw));
       const b = r.body;
-      if (inp.altPressed) return this.kill(r, -1, 'pop');
       // A rope, keg or pipe moves this body instead of the controller, and a held runner skips springs, fields and kickers.
       const held = stepHold(this, r, inp, f);
       if (!held) statusPreStep(r.status, b);

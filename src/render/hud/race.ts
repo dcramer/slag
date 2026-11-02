@@ -1,9 +1,10 @@
 import { css } from '../../core/color';
 import type { Match } from '../../game/match';
-import { RUN_COUNTDOWN, VIEW_H, VIEW_W } from '../../sim/constants';
+import { POP_HOLD, RUN_COUNTDOWN, VIEW_H, VIEW_W } from '../../sim/constants';
+import { popCountdown } from '../../sim/run';
 import { PAL, TYPE } from '../../ui/style';
 import { drawInkRunner } from '../ink-character';
-import { plate, standings } from '../hud-kit';
+import { icon, plate, standings } from '../hud-kit';
 import { drawItemIcon } from '../items';
 import { glowDot } from '../kit';
 import type { Hud } from '../hud';
@@ -14,6 +15,7 @@ import { DISPLAY, UI, MAX_CHIPS_H } from './layout';
 export function race(hud: Hud, m: Match, t: number) {
   const run = m.run!;
   const c = hud.ctx;
+  popRings(hud, m, t);
   if (run.frame < RUN_COUNTDOWN + 30) {
     const left = RUN_COUNTDOWN - run.frame;
     const label = left > 0 ? String(Math.ceil((left / RUN_COUNTDOWN) * 3)) : 'GO!';
@@ -73,8 +75,12 @@ export function race(hud: Hud, m: Match, t: number) {
         ? r.killer >= 0 && r.killer !== p.slot
           ? `Got by ${m.player(r.killer)?.character.name ?? '?'}`
           : 'Splat'
-        : `${p.score} Pts`;
+        : p.afk
+          ? 'AFK'
+          : `${p.score} Pts`;
     hud.text(status, x + 26, y + 18, TYPE.caption, done ? PAL.toxic : dead ? '#ff8a7a' : PAL.ash, 'left', UI, 600);
+    // Gone (no link to its peer): the same on every screen, from the host's sequenced `away`.
+    if (p.away) icon(c, 'unplugged', x + 76, y + 8, 9, PAL.danger);
     const held = r?.items.held;
     if (held) {
       // On the status line: names fill the row above.
@@ -83,6 +89,118 @@ export function race(hud: Hud, m: Match, t: number) {
     }
   });
   done();
+  popCountdowns(hud, m);
+}
+
+/**
+ * This screen's own self-destruct charges as a big 3, 2, 1 in the middle, so a hold you didn't mean can't go
+ * unseen. Remote players' charges only get the ring. Couch players charging at once stand side by side, smaller,
+ * each on a burst rimmed in their color, their name under it.
+ */
+function popCountdowns(hud: Hud, m: Match) {
+  const local = (d: string) => hud.devices.isLocal?.(d) ?? true;
+  const charging = m.run!.runners.filter((r) => r.alive && !r.finished && r.pop > 0 && local(m.player(r.slot)?.device ?? ''));
+  if (!charging.length) return;
+  const c = hud.ctx;
+  const many = charging.length > 1;
+  const size = many ? 40 : 64;
+  const gap = Math.min(size * 1.9, (VIEW_W - 120) / charging.length);
+  const cy = VIEW_H / 2 - 30;
+  const done = hud.grow(VIEW_W / 2, cy, Math.min(hud.uiScale, 1.4));
+  charging.forEach((r, i) => {
+    const p = m.player(r.slot)!;
+    const { secs, since } = popCountdown(r.pop);
+    // Punch in: slam down from big over a few frames, dip under size, settle.
+    const e = Math.min(1, since / 6);
+    const z = since < 6 ? 1 + 1.3 * (1 - e) ** 2 : since < 12 ? 1 - 0.07 * Math.sin(((since - 6) / 6) * Math.PI) : 1;
+    const x = VIEW_W / 2 + (i - (charging.length - 1) / 2) * gap;
+    c.save();
+    c.translate(x, cy);
+    c.rotate((secs % 2 ? -1 : 1) * 0.06);
+    c.scale(z, z);
+    c.globalAlpha = Math.min(1, (since + 1) / 3);
+    countBurst(c, size, css(p.character.body), secs);
+    countDigit(c, String(secs), size);
+    c.restore();
+    if (many) hud.text(p.character.name, x, cy + size * 0.95, TYPE.label, PAL.bone, 'center', UI, 800, 3);
+  });
+  done();
+}
+
+/** Jagged ink balloon behind a countdown number, rimmed in the player's color. */
+function countBurst(c: CanvasRenderingContext2D, size: number, rim: string, seed: number) {
+  const n = 11;
+  const r = size * 0.78;
+  c.beginPath();
+  for (let i = 0; i < n * 2; i++) {
+    const a = (i / (n * 2)) * Math.PI * 2;
+    const jag = i % 2 ? 0.74 : 1 + 0.12 * Math.sin(seed * 2.3 + i * 1.7);
+    c.lineTo(Math.cos(a) * r * jag, Math.sin(a) * r * jag);
+  }
+  c.closePath();
+  c.lineJoin = 'round';
+  c.fillStyle = PAL.ink;
+  c.save();
+  c.translate(0, size * 0.06);
+  c.fill();
+  c.restore();
+  c.fillStyle = 'rgba(18,11,8,0.82)';
+  c.fill();
+  c.lineWidth = Math.max(2, size * 0.05);
+  c.strokeStyle = rim;
+  c.stroke();
+}
+
+/** The impact-word lettering: display face, heavy ink pen, a hard shadow straight down, molten fill. */
+function countDigit(c: CanvasRenderingContext2D, s: string, size: number) {
+  c.font = `400 ${size}px ${DISPLAY}`;
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.lineJoin = 'round';
+  c.strokeStyle = PAL.ink;
+  c.fillStyle = PAL.ink;
+  c.lineWidth = size * 0.28;
+  const y = size * 0.06;
+  c.strokeText(s, 0, y + size * 0.1);
+  c.fillText(s, 0, y + size * 0.1);
+  c.strokeText(s, 0, y);
+  c.fillStyle = PAL.molten;
+  c.fillText(s, 0, y);
+}
+
+/**
+ * Self-destruct charges: a ring around each charging runner that fills over POP_HOLD, read from the sim so every
+ * peer sees the same one. On the HUD canvas so terrain never hides it and the cel pass never inks it.
+ */
+function popRings(hud: Hud, m: Match, t: number) {
+  const c = hud.ctx;
+  for (const r of m.run!.runners) {
+    if (!r.alive || r.finished || r.pop <= 0) continue;
+    const p = Math.min(1, r.pop / POP_HOLD);
+    const wx = r.body.x + r.body.w / 2;
+    const wy = r.body.y + r.body.h / 2;
+    const v = hud.worldToView(wx, wy);
+    const k = hud.worldToView(wx + 1, wy).x - v.x;
+    // The last stretch shudders, so a hold you didn't mean is hard to miss.
+    const shake = p > 0.6 ? (p - 0.6) * 4 * Math.sin(t * 70) : 0;
+    const x = v.x + shake;
+    const R = (r.body.h * 0.5 + 10) * k;
+    const lw = Math.max(2.5, 2 * k);
+    const a0 = -Math.PI / 2;
+    c.save();
+    c.lineCap = 'round';
+    c.strokeStyle = 'rgba(18,11,8,0.75)';
+    c.lineWidth = lw + 2.5;
+    c.beginPath();
+    c.arc(x, v.y, R, 0, Math.PI * 2);
+    c.stroke();
+    c.strokeStyle = p > 0.8 && Math.sin(t * 40) > 0 ? PAL.whiteHot : PAL.molten;
+    c.lineWidth = lw;
+    c.beginPath();
+    c.arc(x, v.y, R, a0, a0 + p * Math.PI * 2);
+    c.stroke();
+    c.restore();
+  }
 }
 
 /** How race chips wrap: whichever layout lets them grow most without reaching the timer or taking over the screen. */

@@ -34,6 +34,8 @@ export interface AudioSystem {
   unlock(): void;
   /** Optional: UI feedback for menus and HUD buttons. */
   ui?(cue: UiCue): void;
+  /** Does this player device play on this screen? Only its self-destruct countdown ticks. Absent: everyone does. */
+  isLocal?: (device: string) => boolean;
   /** Optional: stop every sound and release the audio device; the game that owned it is gone. */
   dispose?(): void;
 }

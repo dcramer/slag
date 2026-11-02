@@ -5,6 +5,7 @@ import { makeStyle, type Recipe } from './place';
 export const FACTORY: Recipe[] = [
   {
     name: 'press',
+    unique: true,
     weight: 3,
     role: 'hazard',
     repeat: true,

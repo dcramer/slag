@@ -1,5 +1,6 @@
 import { SNAP_VERSION, type MatchSnap } from './snapshot';
 import type { NetState } from './actions';
+import { ROOM_EMPTY_MS } from './signal-protocol';
 
 /**
  * Peer identity and per-room local persistence.
@@ -110,23 +111,44 @@ export function acquirePeerId(room: string): PeerIdentity {
   };
 }
 
+// ---------------------------------------------------------------- client id
+
+const KEY_CLIENT = 'slag.client';
+
+/**
+ * This browser's own id: random, anonymous, and in localStorage, so every tab and every visit share it. A
+ * peer id is per tab and changes with a new tab or a cleared session; this doesn't, which is what a kick's
+ * ban needs to hold. It says nothing about the person. A browser that can't store it gets a fresh one per load.
+ */
+export function clientId(): string {
+  const ls = storage('local');
+  const held = read(ls, KEY_CLIENT);
+  if (typeof held === 'string' && /^[a-z0-9]{12}$/.test(held)) return held;
+  const id = randomPeerId() + randomPeerId().slice(0, 4);
+  write(ls, KEY_CLIENT, id);
+  return id;
+}
+
 // ---------------------------------------------------------------- kicked
 
 const keyKicked = (room: string) => `slag.kicked.${room}`;
 
-/** This tab was removed from `room`. Per tab: a kick mustn't follow the rest of the browser, which may be the host. */
-export function markKicked(room: string) {
-  write(storage('session'), keyKicked(room), true);
+/**
+ * This tab was removed from `room` until `until` (ms epoch): it shows the countdown again on a reload instead
+ * of asking the host to refuse it. Per tab, because another tab of this browser may be the host. The host's
+ * ban, by client id, is what keeps every other tab out.
+ */
+export function markKicked(room: string, until: number) {
+  write(storage('session'), keyKicked(room), until);
 }
 
-export function wasKicked(room: string): boolean {
-  return read(storage('session'), keyKicked(room)) === true;
+/** When this tab may come back to `room` (ms epoch), or 0. */
+export function kickedUntil(room: string): number {
+  const v = read(storage('session'), keyKicked(room));
+  return typeof v === 'number' && v > Date.now() ? v : 0;
 }
 
 // ---------------------------------------------------------------- resume save
-
-/** How long a room's last state stays resumable on this browser. */
-const RESUME_MS = 30 * 60 * 1000;
 
 export interface ResumeSave {
   at: number;
@@ -143,8 +165,9 @@ export function saveResume(room: string, snap: MatchSnap, ns: NetState) {
  * A session passes when it opened: it saves while its join is still in flight, and resuming that save once the
  * join lands would rewind its own lobby, undoing the saved name and look it had just applied.
  */
-export function loadResume(room: string, before = Infinity): ResumeSave | null {
+export function loadResume(room: string, before = Infinity, maxAge = ROOM_EMPTY_MS): ResumeSave | null {
   const r = read(storage('local'), keyResume(room)) as ResumeSave | null;
-  if (!r || r.snap?.v !== SNAP_VERSION || Date.now() - r.at > RESUME_MS || r.at >= before) return null;
+  // A save is the last moment this browser saw the room; older than ROOM_EMPTY_MS, the room is over.
+  if (!r || r.snap?.v !== SNAP_VERSION || Date.now() - r.at > maxAge || r.at >= before) return null;
   return r;
 }

@@ -67,34 +67,37 @@ function hub(pal: MetalPalette) {
   });
 }
 
-/** A band of rivets round the mace's waist, turning with its spikes. */
-function maceBand(R: number, pal: MetalPalette) {
-  return sprite(`sw|band|${R.toFixed(2)}|${palKey(pal)}`, -R, -R, R * 2, R * 2, (g) => {
-    const r = R * 0.86;
-    const band = poly(
-      -r * 0.98,
-      -r * 0.2,
-      -r * 0.5,
-      -r * 0.27,
-      r * 0.5,
-      -r * 0.27,
-      r * 0.98,
-      -r * 0.2,
-      r * 0.98,
-      r * 0.2,
-      r * 0.5,
-      r * 0.27,
-      -r * 0.5,
-      r * 0.27,
-      -r * 0.98,
-      r * 0.2,
-    );
-    g.fillStyle = css(IRON(pal), -8);
-    path(g, band);
-    g.fill();
+/**
+ * A spike that points out of the ball at you: a four-faceted pyramid on a forged collar, seen nose-on. The
+ * light on its facets stays put while it rides round the ball, so it reads as a spike turning, not a seam.
+ */
+function maceStud(R: number, pal: MetalPalette) {
+  const r = Math.max(1.3, R * 0.24);
+  return sprite(`sw|stud|${R.toFixed(2)}|${palKey(pal)}`, -r - 1.5, -r - 1.5, r * 2 + 3, r * 2 + 3, (g) => {
     g.fillStyle = INK;
-    stroke(g, poly(-r * 0.98, r * 0.2, -r * 0.5, r * 0.27, r * 0.5, r * 0.27, r * 0.98, r * 0.2), { w: 0.6, seed: 2, taper: [0.2, 0.2], press: 0.3 });
-    for (let i = -2; i <= 2; i++) dot(g, i * r * 0.36, 0, Math.max(0.45, R * 0.06), i + 3, css(pal.spec, -10));
+    path(g, ovalPts(0.25, 0.3, r * 1.08, r * 1.08, 61, 0.05, 12));
+    g.fill();
+    g.fillStyle = css(IRON(pal), -10);
+    path(g, ovalPts(0, 0, r * 0.95, r * 0.95, 62, 0.05, 12));
+    g.fill();
+    const k = r * 0.78;
+    const tip = { x: -r * 0.12, y: -r * 0.14 };
+    const n = { x: 0, y: -k };
+    const e = { x: k, y: 0 };
+    const so = { x: 0, y: k };
+    const w = { x: -k, y: 0 };
+    for (const [a, b, col] of [
+      [w, n, '#eef1f6'],
+      [n, e, '#b9bfca'],
+      [e, so, '#6c7380'],
+      [so, w, '#9aa1ad'],
+    ] as const) {
+      g.fillStyle = col;
+      path(g, [a, b, tip]);
+      g.fill();
+    }
+    g.fillStyle = INK;
+    stroke(g, [n, e, so], { w: 0.45, seed: 63, taper: [0.2, 0.2], press: 0.2 });
   });
 }
 
@@ -305,11 +308,14 @@ function drawSwinger(rc: RC, m: Swinger, r: Resolved, off: Vec, pal: MetalPalett
       stamp(s, maceSpikes(m.radius));
       s.restore();
       stamp(s, maceBall(m.radius, pal), h.x, h.y);
-      s.save();
-      s.translate(h.x, h.y);
-      s.rotate(f * 0.03 * m.dir);
-      stamp(s, maceBand(m.radius, pal));
-      s.restore();
+      // Spikes on its face, riding round with the ones on its rim.
+      const stud = maceStud(m.radius, pal);
+      const spin = f * 0.03 * m.dir;
+      for (let i = 0; i < 4; i++) {
+        const a = spin + Math.PI / 4 + (i * Math.PI) / 2;
+        stamp(s, stud, h.x + Math.cos(a) * m.radius * 0.46, h.y + Math.sin(a) * m.radius * 0.46);
+      }
+      stamp(s, stud, h.x, h.y);
     } else {
       s.save();
       s.translate(h.x, h.y);

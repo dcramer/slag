@@ -120,7 +120,7 @@ function playRound(m: Match, spot: { x: number; y: number }, finish = false) {
   p.cursor = { x: (spot.x + 1.5) * TILE, y: (spot.y + 0.5) * TILE };
   for (let f = 0; f < 60 && m.phase === 'place'; f++) press({ confirmPressed: f === 15 });
   if (finish) m.run!.finishOrder.push(p.slot);
-  for (let f = 0; f < 400 && m.phase === 'run'; f++) press({ altPressed: f === 100 });
+  for (let f = 0; f < 400 && m.phase === 'run'; f++) press({ altPressed: f === 100, alt: f >= 100 });
   for (let f = 0; f < 900 && m.phase === 'score'; f++) press({ confirmPressed: f % 30 === 29 });
 }
 

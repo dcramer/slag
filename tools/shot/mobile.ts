@@ -182,7 +182,43 @@ async function mobile(deviceName: string) {
       const r = m.run.runners.find((q: any) => q.slot === slot);
       return { x: Math.round(r.body.x), y: Math.round(r.body.y), vx: Math.round(r.body.vx), vy: Math.round(r.body.vy), alive: r.alive };
     });
-  const before = await runner();
+  // Hold the self-destruct button through the 3, 2, 1 (POP_HOLD is 3 s), standing still, and let go on 1: the rings
+  // and the countdown show, and letting go cancels.
+  const charge = () =>
+    mp.evaluate(() => {
+      const m = (window as any).slagDebug.match;
+      const slot = m.players.find((q: any) => q.device === 'touch').slot;
+      return m.run.runners.find((q: any) => q.slot === slot).pop as number;
+    });
+  await touch('touchStart', [{ x: L.pop.x, y: L.pop.y, id: 3 }]);
+  let mid = 0;
+  for (const [n, at] of [
+    [3, 20],
+    [2, 80],
+    [1, 140],
+  ]) {
+    // Real time runs slow under software GL: wait on the sim, not the clock.
+    await mp.waitForFunction(
+      (k) => {
+        const m = (window as any).slagDebug.match;
+        const slot = m.players.find((q: any) => q.device === 'touch').slot;
+        return m.run.runners.find((q: any) => q.slot === slot).pop >= k;
+      },
+      at,
+      { timeout: 30_000, polling: 'raf' },
+    );
+    // Paused for the shot, which takes longer than the rest of the hold would.
+    await mp.evaluate(() => (window as any).slagDebug.pause(true));
+    mid = await charge();
+    await shotM(`race-pop-${n}`);
+    if (n === 1) await touch('touchEnd', []);
+    await mp.evaluate(() => (window as any).slagDebug.pause(false));
+  }
+  await mp.waitForTimeout(100);
+  const after = await runner();
+  console.log('self-destruct charge on 1', mid, 'after letting go', await charge(), JSON.stringify(after));
+  if (!mid || !after?.alive) throw new Error('a hold of the self-destruct button let go on 1 should charge and then cancel');
+  const before = after;
   // Multi-touch: left thumb pushes the stick right (past 70% → run) while the right thumb holds JUMP.
   const st = { x: L.stickHome.x, y: L.stickHome.y };
   await touch('touchStart', [{ ...st, id: 1 }]);
@@ -195,14 +231,29 @@ async function mobile(deviceName: string) {
   await mp.waitForTimeout(60);
   await shotM('race');
   console.log('touch runner before/after stick+jump', JSON.stringify(before), JSON.stringify(await runner()));
-  // Hold ALT: the self-destruct ring fills, then pops the runner.
   await touch('touchEnd', []);
-  await touch('touchStart', [{ x: L.secondary.x, y: L.secondary.y, id: 3 }]);
-  await mp.waitForTimeout(120);
-  await shotM('race-alt');
-  await mp.waitForTimeout(600);
-  await touch('touchEnd', []);
-  console.log('after ALT hold', JSON.stringify(await runner()));
+  await mp.waitForTimeout(100);
+  // Now the whole hold pops the runner, unless the jump already found the pit.
+  if ((await runner())?.alive) {
+    await touch('touchStart', [{ x: L.pop.x, y: L.pop.y, id: 3 }]);
+    await mp
+      .waitForFunction(
+        () => {
+          const m = (window as any).slagDebug.match;
+          const slot = m.players.find((q: any) => q.device === 'touch').slot;
+          return m.phase !== 'run' || !m.run.runners.find((q: any) => q.slot === slot).alive;
+        },
+        null,
+        { timeout: 30_000, polling: 'raf' },
+      )
+      .catch(() => {});
+    await mp.waitForTimeout(100);
+    await touch('touchEnd', []);
+    const popped = await runner();
+    console.log('after a full self-destruct hold', JSON.stringify(popped));
+    if (popped?.alive && (await mp.evaluate(() => (window as any).slagDebug.match.phase)) === 'run')
+      throw new Error('holding the self-destruct button did not pop the runner');
+  }
   // The run may already be over (the jump can find the pit on some levels) and the score screen gone with it.
   await mp.waitForFunction(() => ['score', 'pick', 'victory'].includes((window as any).slagDebug.match.phase), null, { timeout: 60_000 });
   await mp.waitForTimeout(1800);

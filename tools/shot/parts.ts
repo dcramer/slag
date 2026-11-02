@@ -71,7 +71,7 @@ export const shots: Scenarios = {
     // `--material conveyor,jelly` (instead of `--arch`): `--count` platforms of each block material.
     const materials = opt('material')?.split(',') ?? [];
     await page.evaluate(
-      ([as, n, styles, aim, bait, mats]) => {
+      ([as, n, styles, aim, bait, mats, rot]) => {
         const d = (window as any).slagDebug;
         d.match.placed.length = 0;
         if (mats.length) {
@@ -107,6 +107,8 @@ export const shots: Scenarios = {
                 d.match.placed.length = before;
               }
             }
+        // `--rot 1`: every part turned that way, to check the art follows (it may not be a legal placement).
+        if (rot) for (const p of d.match.placed) p.rot = rot;
         d.race([], 1);
         // `--bait`: each runner stands on the nearest floor a few tiles in front of a part, to set it off (a sentry, a dropstone).
         if (bait) {
@@ -128,7 +130,7 @@ export const shots: Scenarios = {
           });
         }
       },
-      [arch, Number(opt('count', '2')), styles, opt('aim') ?? '', argv.includes('--bait'), materials] as const,
+      [arch, Number(opt('count', '2')), styles, opt('aim') ?? '', argv.includes('--bait'), materials, Number(opt('rot', '0'))] as const,
     );
     await step(Number(opt('frames', '60')));
     const spots = await page.evaluate(() =>

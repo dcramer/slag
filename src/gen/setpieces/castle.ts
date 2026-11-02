@@ -202,7 +202,7 @@ export const CASTLE: Recipe[] = [
         flip: 0.5,
       }),
   },
-  { name: 'glass', weight: 2.5, role: 'hazard', repeat: true, candidates: glassWalls },
-  { name: 'axe', weight: 2, role: 'hazard', candidates: axes },
-  { name: 'chandrop', weight: 2, role: 'hazard', candidates: chandrops },
+  { name: 'glass', weight: 2.5, role: 'hazard', repeat: true, unique: true, candidates: glassWalls },
+  { name: 'axe', weight: 2, role: 'hazard', unique: true, candidates: axes },
+  { name: 'chandrop', weight: 2, role: 'hazard', unique: true, candidates: chandrops },
 ];

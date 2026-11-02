@@ -53,7 +53,9 @@ function plinth(fail: (n: number) => boolean = () => false): Concept {
     ownsCrossing: false,
     family: [],
     names: ['The Test Plinth of {place}'],
-    box: () => ({ w: 7, h: 6 }),
+    // A fixture of the hook, not content: a box just big enough to measure large (gen/stage/contract.ts), and one flat plinth has one way past it.
+    ways: 1,
+    box: () => ({ w: 8, h: 19 }),
     build(g, _rng, at) {
       const ground = at.y + at.h;
       g.fill(at.x, ground - 1, at.x + at.w - 1, ground - 1);
@@ -161,7 +163,7 @@ describe('stage concepts', () => {
       ownsCrossing: false,
       family: [],
       carrier: {},
-      box: () => ({ w: carrierReach().cols + 5, h: 4 }),
+      box: () => ({ w: carrierReach().cols + 5, h: 10 }),
       build(g, _rng, at) {
         const ground = at.y + at.h;
         g.clear(at.x + 2, 0, at.x + at.w - 3, g.h - 1);

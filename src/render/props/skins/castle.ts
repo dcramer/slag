@@ -1,6 +1,6 @@
 import { css, type HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
-import { type Manor, manorWithin, throneHallPlan } from '../../../gen/stage/castle';
+import { CEIL, HALL_AIR, MANOR_H, type Manor, manorWithin, throneHallPlan, TOWER } from '../../../gen/stage/castle';
 import { TILE } from '../../../sim/constants';
 import { line, type P } from '../../ink';
 import { boxPts, ovalPts, path, pen, poly, sprite, stamp, tone } from '../../ink-props';
@@ -18,6 +18,10 @@ import type { Deco, DecoSkin, ThemeSkins } from './common';
  * The Throne Hall's is dressed stone with tall stained-glass windows, the house banners and the throne on
  * its dais. Both are flat tones sunk toward the sky's haze with a thin pen of their own dark: scenery,
  * never a slab to stand on (docs/ART.md, Fair play). Baked once; only flames and eyes are live.
+ *
+ * Each covers its landmark's every column down to the ground under it, so where a doorway is cut through a
+ * wall the wall doesn't hang over open sky: behind the opening it draws the door's reveal and the dark
+ * beyond, the threshold on the ground (docs/SETPIECES.md §4, Grounding).
  */
 
 const HAZE = 0.28;
@@ -33,6 +37,18 @@ type Hz = ReturnType<typeof hz>;
 function flat(g: CanvasRenderingContext2D, pts: readonly P[], base: HSL, t: Hz, seed: number, depth = 0.6) {
   tone(g, pts, t.hsl(base), { depth });
   pen(g, pts, seed, 0.3, 0.8, 3, t.ink(base));
+}
+
+/** A doorway through a wall, seen behind its opening: the wall's reveal down both sides, a dark arch, a threshold. */
+function doorway(g: CanvasRenderingContext2D, t: Hz, x: number, y: number, w: number, h: number, wall: HSL, seed: number) {
+  flat(g, boxPts(x, y, w, h, 0.4, seed, 0.05), wall, t, seed, 0.5);
+  const j = 4;
+  const r = (w - 2 * j) / 2;
+  const arch: P[] = [{ x: x + j, y: y + h }];
+  for (let k = 0; k <= 10; k++) arch.push({ x: x + j + r - Math.cos((k / 10) * Math.PI) * r, y: y + r + 2 - Math.sin((k / 10) * Math.PI) * r });
+  arch.push({ x: x + w - j, y: y + h });
+  flat(g, arch, { h: 250, s: 18, l: 7 }, t, seed + 1, 0.2);
+  flat(g, boxPts(x - 1, y + h - 3, w + 2, 3, 0.3, seed + 2), { h: 30, s: 6, l: 40 }, t, seed + 2, 0.3);
 }
 
 const GILT: HSL = { h: 42, s: 58, l: 46 };
@@ -59,7 +75,7 @@ interface Room {
 function rooms(m: Deco): { rooms: Room[]; plan: Manor } {
   const L0 = Math.round(m.at[0] / TILE);
   const top = Math.round(m.at[1] / TILE);
-  const p = manorWithin(L0, L0 + Math.round(m.w / TILE) - 1, top + Math.round(m.h / TILE));
+  const p = manorWithin(L0, L0 + Math.round(m.w / TILE) - 1, top + MANOR_H);
   const X = (tx: number) => tx * TILE - m.at[0];
   const Y = (ty: number) => ty * TILE - m.at[1];
   const x0 = X(p.ix0);
@@ -183,6 +199,17 @@ function manorWall(m: Deco, t: Hz) {
       g.fillStyle = t.c({ h: 48, s: 20, l: 80 });
       g.fillRect(s.x - 0.9, s.y - 5, 1.8, 5);
     }
+    // The footing course under it all, down to the ground: the terrain hides it but for the cab's pit.
+    const X = (tx: number) => tx * TILE - m.at[0];
+    const Y = (ty: number) => ty * TILE - m.at[1];
+    flat(g, boxPts(0, Y(plan.G), m.w, m.h - Y(plan.G), 0.4, 11, 0.05), { h: 30, s: 6, l: 30 }, t, 11, 0.4);
+    g.fillStyle = t.c({ h: 240, s: 12, l: 8 });
+    g.fillRect(X(plan.sx) + 1, Y(plan.G), plan.S * TILE - 2, m.h - Y(plan.G));
+    // The doors: front and back on the hall, and the one off the top floor.
+    const PLASTER: HSL = { h: 36, s: 16, l: 40 };
+    doorway(g, t, X(plan.L0), Y(plan.G - 3), 2 * TILE, 3 * TILE, PLASTER, 31);
+    doorway(g, t, X(plan.R1), Y(plan.G - 3), 2 * TILE, 3 * TILE, PLASTER, 37);
+    doorway(g, t, X(plan.R1), Y(plan.F2 - 3), 2 * TILE, 3 * TILE, PLASTER, 41);
   });
 }
 
@@ -241,23 +268,32 @@ const BANNER: HSL = { h: 354, s: 62, l: 32 };
 
 function hallWall(m: Deco, t: Hz) {
   return sprite(`castle|hall|${m.w}|${m.h}|${m.seed}|${t.k}`, -2, -2, m.w + 4, m.h + 4, (g) => {
-    const at = { x: Math.round(m.at[0] / TILE) - 2, y: 0, w: Math.round(m.w / TILE) + 4, h: 0 };
-    const top = 2 * TILE;
-    const bot = m.h;
-    // Dressed stone, coursed and jointed.
+    // The box runs tower to tower and down to the ground: the hall's air sits between the towers.
+    const at = { x: Math.round(m.at[0] / TILE), y: 0, w: Math.round(m.w / TILE), h: 0 };
+    const G = Math.round(m.at[1] / TILE) + CEIL + HALL_AIR;
+    const top = CEIL * TILE;
+    const bot = G * TILE - m.at[1];
+    const ix = TOWER * TILE;
+    const iw = m.w - 2 * ix;
+    // Dressed stone, coursed and jointed, down to the footing.
     g.fillStyle = t.c(STONE);
     g.fillRect(0, 0, m.w, m.h);
+    // The towers' doors.
+    doorway(g, t, 0, bot - 3 * TILE, TOWER * TILE, 3 * TILE, STONE, 51);
+    doorway(g, t, m.w - TOWER * TILE, bot - 5 * TILE, TOWER * TILE, 3 * TILE, STONE, 53);
+    g.save();
+    g.translate(ix, 0);
     g.fillStyle = t.ink(STONE);
     for (let y = top, row = 0; y < bot; y += 10, row++) {
-      g.fillRect(0, y, m.w, 0.8);
-      for (let x = (row & 1) * 11; x < m.w; x += 22) g.fillRect(x, y, 0.8, 10);
+      g.fillRect(0, y, iw, 0.8);
+      for (let x = (row & 1) * 11; x < iw; x += 22) g.fillRect(x, y, 0.8, 10);
     }
     // Tall arched stained-glass windows, banners between them.
-    const n = Math.max(1, Math.floor(m.w / 64));
-    const step = m.w / n;
+    const n = Math.max(1, Math.floor(iw / 64));
+    const step = iw / n;
     for (let i = 0; i < n; i++) {
       const cx = step * (i + 0.5) - 14;
-      if (cx < 10 || cx > m.w - 50) continue;
+      if (cx < 10 || cx > iw - 50) continue;
       const wt = top + 8;
       const wb = bot - 26;
       const win: P[] = [{ x: cx - 7, y: wb }];
@@ -273,7 +309,7 @@ function hallWall(m: Deco, t: Hz) {
       line(g, cx, wt, cx, wb, { w: 0.9, seed: i, taper: [0, 0], press: 0 });
       // The banner beside it.
       const bx = cx + step / 2;
-      if (bx > m.w - 30) continue;
+      if (bx > iw - 30) continue;
       const bn = poly(bx - 7, top + 2, bx + 7, top + 2, bx + 7, top + 40, bx, top + 34, bx - 7, top + 40);
       flat(g, bn, BANNER, t, i + 9, 0.6);
       g.fillStyle = t.c(GILT, 6);
@@ -285,7 +321,7 @@ function hallWall(m: Deco, t: Hz) {
     }
     // The throne, on the dais at the far end.
     const p = throneHallPlan({ x: at.x, y: 0, w: at.w, h: Math.round(m.h / TILE) });
-    const tx = (p.dx0 + 3) * TILE - m.at[0];
+    const tx = (p.dx0 + 3) * TILE - m.at[0] - ix;
     const ty = bot - 2 * TILE;
     const back = poly(tx - 9, ty, tx - 9, ty - 34, tx - 5, ty - 46, tx, ty - 52, tx + 5, ty - 46, tx + 9, ty - 34, tx + 9, ty);
     flat(g, back, { h: 354, s: 54, l: 28 }, t, 21, 0.8);
@@ -299,6 +335,7 @@ function hallWall(m: Deco, t: Hz) {
     g.fillRect(0, bot - 2.6, tx - 6, 2.6);
     g.fillStyle = t.c(GILT);
     g.fillRect(0, bot - 2.8, tx - 6, 0.7);
+    g.restore();
   });
 }
 
@@ -306,8 +343,10 @@ const hall: DecoSkin = (rc, m, d) => {
   const t = hz(d);
   stamp(rc.s, hallWall(m, t), m.at[0] + d.off[0], m.at[1] + d.off[1]);
   // Moonlight through the stained glass.
-  const n = Math.max(1, Math.floor(m.w / 64));
-  for (let i = 0; i < n; i++) light(rc, m.at[0] + d.off[0] + (m.w / n) * (i + 0.5) - 14, m.at[1] + d.off[1] + m.h * 0.5, 60, MOON, 0.3);
+  const iw = m.w - 2 * TOWER * TILE;
+  const n = Math.max(1, Math.floor(iw / 64));
+  for (let i = 0; i < n; i++)
+    light(rc, m.at[0] + d.off[0] + TOWER * TILE + (iw / n) * (i + 0.5) - 14, m.at[1] + d.off[1] + (CEIL + HALL_AIR / 2) * TILE, 60, MOON, 0.3);
 };
 
 const facade: DecoSkin = (rc, m, d) => {
