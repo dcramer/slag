@@ -77,6 +77,9 @@ Both are now visible in Sentry.
 ## 14. Clear the lint warnings
 `pnpm check` prints 7 warnings, in `src/ui/touch/overlay.ts`, `src/ui/touch/device.ts`, `src/input/input.ts`, `src/render/props/modules/vehicle.ts` and `src/audio/system.ts`. AGENTS.md treats warnings as real findings. Do it with or after item 6, which also touches the touch code.
 
+## 21. Hand-drawn ink art
+Approved direction: ink strokes in code, no textures or generated art. In progress: real path, blast-area rebake, GPU check, fair hitboxes, then castle, the other themes, characters and parts. The ink rules go in `docs/ART.md`.
+
 ## 15. Parody pass on items and parts
 The game's goal is to parody other games, especially with items (`docs/DESIGN.md` → Parody). The current items and parts were written to be neutral, so they don't do that yet: Foam Sword, Ricochet Puck, Boomerang, Pop Shield, Pocket Rocket, Smoke Bomb, and the parts from the content work.
 
