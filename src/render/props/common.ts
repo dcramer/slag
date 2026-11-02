@@ -21,6 +21,11 @@ export interface PropDrawOpts {
   beams?: readonly Beam[];
   /** Where the live runners stand (feet), for art that watches them. */
   runners?: readonly { x: number; y: number }[];
+  /**
+   * A crate card: a still picture a few tiles across, judged at a glance. Art may pose itself, draw a
+   * thin part bolder and add the motion lines a still can't otherwise show; nothing here is a hitbox.
+   */
+  card?: boolean;
 }
 
 /** Everything a module's art function gets. */

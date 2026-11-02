@@ -5,7 +5,7 @@ import { TILE } from '../sim/constants';
 import { type Level, T_ONEWAY, tileAt, type TileRect } from '../sim/level';
 import { blob, type EdgeP, line, looseLoop, type P, shadeOf, sn, stroke, type StrokeOpts, traceCorners, vn } from './ink';
 import { INK_MATERIALS, type Tones } from './ink-material';
-import { flutter, pxRect, type RC, scratch } from './kit';
+import { clearAround, flutter, pxRect, type RC, scratch } from './kit';
 
 /**
  * Terrain as an ink drawing instead of a textured mask. Each layer is marks a hand would make: flat tones
@@ -138,15 +138,22 @@ export function inkMaterial(g: CanvasRenderingContext2D, level: Level, th: Theme
   lg.globalCompositeOperation = 'destination-in';
   lg.fillStyle = '#000';
   lg.beginPath();
+  const kept = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
   for (let y = span.ty0; y <= span.ty1; y++) {
     for (let x = span.tx0; x <= span.tx1; x++) {
       if (!deep(x, y)) continue;
       const cx = (x + 0.5) * TILE;
       const cy = (y + 0.5) * TILE;
       blob(lg, cx, cy, 13, x * 31 + y * 17 + seed, 1, 0.3, true);
+      kept.x0 = Math.min(kept.x0, cx - 18);
+      kept.y0 = Math.min(kept.y0, cy - 18);
+      kept.x1 = Math.max(kept.x1, cx + 18);
+      kept.y1 = Math.max(kept.y1, cy + 18);
     }
   }
   lg.fill();
+  // The blobs overlap, so they can't cut by complement: clear what lies past all of them by hand.
+  clearAround(lg, r, pxRect(lg, kept));
   lg.restore();
   g.save();
   g.setTransform(1, 0, 0, 1, 0, 0);

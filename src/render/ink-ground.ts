@@ -7,7 +7,7 @@ import type { Level } from '../sim/level';
 import { type EdgeP, line } from './ink';
 import { INK_MATERIALS, type Tones } from './ink-material';
 import type { Area } from './ink-terrain';
-import { pxRect, scratch } from './kit';
+import { clearAround, pxRect, scratch } from './kit';
 
 /**
  * A theme's own ground (sim/ground.ts) drawn into the terrain: glacier ice
@@ -62,6 +62,7 @@ export function inkIce(g: CanvasRenderingContext2D, level: Level, th: Theme, see
   lg.globalCompositeOperation = 'destination-in';
   lg.fillStyle = '#000';
   lg.beginPath();
+  const kept = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
   const corner = (cx: number, cy: number): [number, number] => [
     cx * TILE + (hash2(cx, cy, seed + 31) - 0.5) * 2.2,
     cy * TILE + (hash2(cy, cx, seed + 32) - 0.5) * 2.2,
@@ -76,9 +77,15 @@ export function inkIce(g: CanvasRenderingContext2D, level: Level, th: Theme, see
       lg.lineTo(pts[2][0] + 0.4, pts[2][1] + 0.4);
       lg.lineTo(pts[3][0] - 0.4, pts[3][1] + 0.4);
       lg.closePath();
+      kept.x0 = Math.min(kept.x0, x * TILE - 3);
+      kept.y0 = Math.min(kept.y0, y * TILE - 3);
+      kept.x1 = Math.max(kept.x1, (x + 1) * TILE + 3);
+      kept.y1 = Math.max(kept.y1, (y + 1) * TILE + 3);
     }
   }
   lg.fill();
+  // The slabs overlap, so they can't cut by complement: clear what lies past all of them by hand.
+  clearAround(lg, r, pxRect(lg, kept));
   // A seam of ink where ice meets rock inside the terrain, broken like every other line.
   const rockSide = (x: number, y: number) => solid(x, y) && !iceAt(level, x, y);
   lg.globalCompositeOperation = 'source-over';

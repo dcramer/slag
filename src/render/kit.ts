@@ -243,6 +243,50 @@ export function scratch(key: string, w: number, h: number): HTMLCanvasElement {
   return c;
 }
 
+/**
+ * Erase everything in `a` (current transform units) outside the closed, non-overlapping loops of `mask`.
+ * A destination-in fill should do this, but Chrome's GPU raster can bound it to part of the canvas and
+ * leave what lies outside the path: a chunk of a progressive bake kept its material's flat fill wherever
+ * the terrain's outline didn't reach, flat blocks of ground hanging in the sky. Cutting with the mask's
+ * complement only ever erases what it covers, so it holds however the op is bounded.
+ */
+export function cutOutside(g: CanvasRenderingContext2D, mask: Path2D, a: { x0: number; y0: number; x1: number; y1: number }) {
+  const inv = new Path2D();
+  inv.rect(a.x0 - 2, a.y0 - 2, a.x1 - a.x0 + 4, a.y1 - a.y0 + 4);
+  inv.addPath(mask);
+  g.save();
+  g.globalCompositeOperation = 'destination-out';
+  g.fillStyle = '#000';
+  g.fill(inv, 'evenodd');
+  g.restore();
+}
+
+/**
+ * Erase the px rect `r` of `g` outside `keep` (also px): what a bounded destination-in (see `cutOutside`)
+ * may have left beyond the shapes it was given, when those shapes overlap and can't be cut by complement.
+ */
+export function clearAround(
+  g: CanvasRenderingContext2D,
+  r: { x: number; y: number; w: number; h: number },
+  keep: { x: number; y: number; w: number; h: number },
+) {
+  const x0 = Math.max(r.x, keep.x);
+  const y0 = Math.max(r.y, keep.y);
+  const x1 = Math.min(r.x + r.w, keep.x + keep.w);
+  const y1 = Math.min(r.y + r.h, keep.y + keep.h);
+  g.save();
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalCompositeOperation = 'source-over';
+  if (x1 <= x0 || y1 <= y0) g.clearRect(r.x, r.y, r.w, r.h);
+  else {
+    g.clearRect(r.x, r.y, r.w, y0 - r.y);
+    g.clearRect(r.x, y1, r.w, r.y + r.h - y1);
+    g.clearRect(r.x, y0, x0 - r.x, y1 - y0);
+    g.clearRect(x1, y0, r.x + r.w - x1, y1 - y0);
+  }
+  g.restore();
+}
+
 /** The px rect of `g` that world rect `a` covers under its current transform, clamped to the canvas. */
 export function pxRect(g: CanvasRenderingContext2D, a: { x0: number; y0: number; x1: number; y1: number }): { x: number; y: number; w: number; h: number } {
   const m = g.getTransform();

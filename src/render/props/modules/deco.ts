@@ -7,6 +7,7 @@ import { ball, boxPts, dot, INK, ovalPts, part, path, pen, poly, sprite, stamp, 
 import { circle, glowDot, light, METALS, type MetalPalette, type RC } from '../../kit';
 import { BACKDROP, type DrawCtx, defineArt } from '../common';
 import { lattice } from './setpiece';
+import { decoSkin } from './skins';
 
 /**
  * Scenery dressing for set pieces, inked: the press gantry and the antenna masts under tesla coils stand
@@ -199,7 +200,9 @@ defineArt<'deco'>({
   type: 'deco',
   layer: BACKDROP,
   draw: (rc, m, d) => {
-    if (m.kind === 'press') pressBack(rc, m, d);
+    const skin = decoSkin(m, d);
+    if (skin) skin(rc, m, d);
+    else if (m.kind === 'press') pressBack(rc, m, d);
     else if (m.kind === 'antenna') antennaMasts(rc, m, d);
   },
 });

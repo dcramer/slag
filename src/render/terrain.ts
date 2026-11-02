@@ -21,7 +21,7 @@ import {
   makeTufts,
   type Tuft,
 } from './ink-terrain';
-import type { RC } from './kit';
+import { cutOutside, type RC } from './kit';
 
 export { flame } from './kit';
 
@@ -212,10 +212,8 @@ export class TerrainPainter {
     inkMaterial(lg, level, th, seed, solid, area);
     inkIce(lg, level, th, seed, solid, area);
     inkHatch(lg, loops, th, seed, area);
-    lg.globalCompositeOperation = 'destination-in';
-    lg.fillStyle = '#000';
     // An empty path cuts nothing at all, so a stretch of open air (a chunk of sky) would keep its fill.
-    if (loops.length) lg.fill(mask);
+    if (loops.length) cutOutside(lg, mask, area);
     else {
       lg.setTransform(1, 0, 0, 1, 0, 0);
       lg.clearRect(0, 0, lw, lh);
@@ -286,9 +284,7 @@ export class TerrainPainter {
     gg.clearRect(px, py, pw, ph);
     gg.setTransform(kb, 0, 0, kb, 0, 0);
     inkVeins(gg, level, th, th.seed ^ 0x1a4c, solid, area);
-    gg.globalCompositeOperation = 'destination-in';
-    gg.fillStyle = '#000';
-    gg.fill(mask);
+    cutOutside(gg, mask, area);
     gg.restore();
   }
 

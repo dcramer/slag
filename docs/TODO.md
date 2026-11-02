@@ -59,14 +59,9 @@ Size tiers for parts are a mapping of the old rolled ranges, so check them too; 
 ## 14. Clear the lint warnings
 `pnpm check` prints 7 warnings, in `src/ui/touch/overlay.ts`, `src/ui/touch/device.ts`, `src/input/input.ts`, `src/render/props/modules/vehicle.ts` and `src/audio/system.ts`. AGENTS.md treats warnings as real findings. Do it with or after item 6, which also touches the touch code.
 
-## 21. Ink art polish
-Everything is inked, from terrain and characters to parts, items, set pieces and decor. What's left:
-
-- Sky, cloud and blur canvases are reallocated on every level load, which is the likely cause of farm's ~110 ms first-load spike.
-- Crate cards: the crusher head reads thin, and the Chain Chump ball is small.
-- The space comm array uses the shared antenna art.
-- Rooftops' big grey blocks have outlines but no marks.
-- Ice and slime coat gags from `docs/PARODY.md` aren't drawn.
+## 21. Ink art leftovers
+- On wide space levels a few tall rock pillars from the surroundings show inside the play area without outlines (seed `sheet4`). It's a `surround.ts` question.
+- Small cog lifts and small spin bars stay small on crate cards, because small parts draw at 0.6 scale.
 
 ## 15. Parody names: decide on sound-alikes
 Names now parody genre tropes (`docs/PARODY.md`). A few are deliberate sound-alikes of trademarked names: Chain Chump, Thwunk, the -omb suffix, Master Noodle, Yolo Blocks, Coil Pup. Decide whether to keep them.

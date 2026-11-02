@@ -15,6 +15,12 @@ type Piston = ModuleOf<'piston'>;
  * drawn on exactly the rect the sim crushes with; only the ridges, thin as pen lines, stand off the face.
  */
 
+/**
+ * Extra depth (px) a crate card draws the head with. The sim's head is half a tile deep, a sliver at card
+ * size; the card's grows out from its face, so it never sinks into the body.
+ */
+export const PISTON_CARD_HEAD = 6;
+
 /** The head, baked in a frame where it strikes toward +y: `w` across, `h` deep. */
 function head(w: number, h: number, pal: MetalPalette) {
   return sprite(`ps|${w.toFixed(1)}|${h.toFixed(1)}|${pal.base.h},${pal.base.l}`, -w / 2 - 2, -h / 2 - 2, w + 4, h + 5, (g) => {
@@ -73,10 +79,14 @@ function drawPistonHead(rc: RC, m: Piston, r: Resolved, mi: number, off: Vec, pa
   const hd = pistonHead(m, st.ext, off, beamOf(o, r, mi)?.len);
   const s = rc.s;
   const [dx, dy] = dirOf(m.angle);
-  const cx = hd.x + hd.w / 2;
-  const cy = hd.y + hd.h / 2;
+  let cx = hd.x + hd.w / 2;
+  let cy = hd.y + hd.h / 2;
   const across = dx !== 0 ? hd.h : hd.w;
-  const deep = dx !== 0 ? hd.w : hd.h;
+  const deep = (dx !== 0 ? hd.w : hd.h) + (o.card ? PISTON_CARD_HEAD : 0);
+  if (o.card) {
+    cx += (dx * PISTON_CARD_HEAD) / 2;
+    cy += (dy * PISTON_CARD_HEAD) / 2;
+  }
   if (st.slamming) {
     // Speed lines behind a head that's coming down.
     s.fillStyle = 'rgba(255,255,255,0.7)';
