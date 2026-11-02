@@ -27,6 +27,12 @@ export const THEME_LABELS: Record<ThemeId, string> = {
   space: 'Space',
 };
 
+/**
+ * Themes whose ground floats (space): nothing stands on anything. The renderer ends a body at the top or
+ * bottom row instead of running it on as a column, and a landmark there may float (gen/stage/contract.ts).
+ */
+export const FLOATS: ReadonlySet<ThemeId> = new Set(['space']);
+
 /** The themes every seed was dealt from before later themes arrived. */
 const FIRST_THEMES: readonly ThemeId[] = THEME_IDS.slice(0, 8);
 /**

@@ -307,6 +307,9 @@ function rollPart(rng: Rng, recipeOf: (rng: Rng, style: PropStyle) => Recipe, id
   return { id, archetype: recipe.archetype, role: recipe.role, variants };
 }
 
+/** Every archetype with a part recipe. */
+export const partArchetypes = (): Archetype[] => Object.keys(RECIPES) as Archetype[];
+
 /** One part of the given archetype, with all its sizes. */
 export function generatePart(rng: Rng, archetype: Archetype, id: string): Part {
   return rollPart(rng, RECIPES[archetype], id);
@@ -488,7 +491,18 @@ function fourSquare(rng: Rng): Recipe {
   };
 }
 
-const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
+/**
+ * A part: rolls its identity (name, material, numbers) from `rng`, then returns its shape, or `sized`
+ * for one that comes in sizes. The part contract (tests/conformance/parts): `sized` only scales (same
+ * modules, same motion, the name untouched), every module it uses has art and a codex entry, and nothing
+ * it draws has a face. Register one with `definePart` in RECIPES, keyed by its archetype.
+ */
+export type PartRecipe = (rng: Rng, style: PropStyle) => Recipe;
+
+/** Register a part recipe: the recipe as written, typed. */
+export const definePart = (recipe: PartRecipe): PartRecipe => recipe;
+
+const RECIPES: Record<Archetype, PartRecipe> = {
   spikestrip(rng) {
     return {
       archetype: 'spikestrip',
