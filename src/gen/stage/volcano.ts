@@ -773,7 +773,8 @@ function buildRibs(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
     const y0 = G - sh(c) + 1;
     const n = G - y0;
     for (let t = 0; t < n; t++) {
-      const rx = c + Math.round(dir * 1.6 * (t / Math.max(1, n - 1)) ** 2);
+      const u = t / Math.max(1, n - 1);
+      const rx = c + Math.round(dir * 1.6 * u * u);
       if (rx >= spineA && rx <= spineB) g.set(rx, y0 + t, T_ONEWAY, true);
     }
     ribs.push(c);
