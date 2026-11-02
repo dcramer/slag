@@ -134,7 +134,11 @@ class DirectSignal implements SignalApi {
   beat = (host: boolean) => this.call('beat', { host });
   members = (): Promise<MemberInfo[]> => this.call('members').then((r) => r.members);
   gone = (peer: string, order: number): Promise<MemberInfo[]> => this.call('gone', { gone: peer, order }).then((r) => r.members);
-  send = (to: string, signal: Signal): Promise<boolean> => this.call('signal', { to, signal }).then((r) => r.delivered);
+  send = async (to: string, signal: Signal): Promise<boolean> => {
+    const r = await this.call('signal', { to, signal });
+    if (signal.k === 'answer' && this.world.dieAfterAnswer === this.peer) this.world.crash(this.peer);
+    return r.delivered;
+  };
   poll = (): Promise<Mail[]> => {
     this.polls++;
     return this.call('poll').then((r) => r.mail);
@@ -159,6 +163,7 @@ class World {
   apiDown = false;
   apiDownFor = new Set<string>();
   apiLatency = 0;
+  dieAfterAnswer = '';
   peers = new Map<string, Peer>();
   hidden = false;
 
@@ -438,6 +443,21 @@ describe('host migration', () => {
     expect(c.session.isHost).toBe(true);
     expect(d.session.hostId).toBe('cccc');
     expect(c.session.stats.migrations + d.session.stats.migrations).toBe(1);
+  });
+
+  it('a new host dying between its answer and the link opening costs no more than one dying silently', async () => {
+    const w = new World();
+    const [, b, c, d] = await w.room('aaaa', 'bbbb', 'cccc', 'dddd');
+    w.dieAfterAnswer = 'bbbb';
+    w.crash('aaaa');
+    await w.runUntil(() => b.session.status === 'online' && w.peers.get('bbbb')!.gone, 12_000);
+    expect(w.peers.get('bbbb')!.gone).toBe(true);
+    const t0 = Date.now();
+    await w.runUntil(() => w.settled(), 30_000);
+    expect(w.settled()).toBe(true);
+    expect(c.session.isHost).toBe(true);
+    expect(d.session.hostId).toBe('cccc');
+    expect(Date.now() - t0).toBeLessThan(10_000);
   });
 
   it('a lower peer leaving at the same moment: everyone still lands on one host', async () => {

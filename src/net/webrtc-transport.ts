@@ -87,7 +87,7 @@ const OFFER_SEND_MS = 6000;
 /** A first join may land on a host polling at its idle rate (hidden tabs: twice that). */
 const JOIN_OFFER_MS = 12_000;
 /** After an answer, how long the channels get to open before we call the pair unreachable. */
-const OPEN_MS = 8000;
+const OPEN_MS = 6000;
 const UNREACHABLE_TRIES = 2;
 /** Non-trickle ICE: one offer and one answer carrying all candidates, so a connection costs two store writes. */
 const ICE_GATHER_MS = 1000;
@@ -127,6 +127,8 @@ interface Link {
 interface Dial {
   link: Link;
   timer: ReturnType<typeof setTimeout>;
+  /** Answer window, kept for a retry: a peer we're waiting on mid-migration doesn't get a newcomer's patience. */
+  window: number;
 }
 
 /** Ways the join can fail for good; the session turns the text into the UI's status line. */
@@ -352,7 +354,7 @@ export class WebRtcTransport implements Transport {
     this.wire(link, rel);
     this.wire(link, rt);
     const timer = setTimeout(() => this.dialFailed(id, link), timeout + OFFER_SEND_MS);
-    this.dials.set(id, { link, timer });
+    this.dials.set(id, { link, timer, window: timeout });
     this.wake();
     void this.sendOffer(id, link, timeout);
   }
@@ -414,13 +416,14 @@ export class WebRtcTransport implements Transport {
     const d = this.dials.get(id);
     if (!d || d.link !== link) return;
     const answered = link.answered;
+    const window = d.window;
     this.dropDial(id);
     if (answered) {
-      // It's alive but we can't get through: a NAT problem, not a dead peer. Never evict for this.
+      // It answered but we can't get through: a NAT problem, or it died just now. Try again: a dead peer won't answer twice.
       const tries = (this.failures.get(id) ?? 0) + 1;
       this.failures.set(id, tries);
       if (tries >= UNREACHABLE_TRIES) return this.giveUp('Cannot Reach Host');
-      this.dial(id, JOIN_OFFER_MS);
+      this.dial(id, window);
       return;
     }
     this.confirmDead(id);
