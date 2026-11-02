@@ -144,7 +144,7 @@ tests/           vitest
 
 - **The world** is `LEVEL_W × LEVEL_H` tiles = 48×27 tiles of 16 px (768×432 logical px). Tile kinds:
   - `T_SOLID`
-  - `T_ONEWAY` (jump-through from below; drop through with down)
+  - `T_ONEWAY` (jump-through from below; drop through with down + jump)
   - `T_EMPTY`
 - **Fairness**: characters are cosmetic only. Every player shares one hitbox and one physics model.
 - **Levels**:
