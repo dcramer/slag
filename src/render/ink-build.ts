@@ -720,3 +720,23 @@ export function spikeSprite(angle: number, seed: number, rail: HSL): Sprite {
   const v = seed & 3;
   return sprite(`spk|${upLit}|${v}|${rail.h | 0},${rail.s | 0},${rail.l | 0}`, 4.5, -9.5, 13.5, 19, (g) => spikeRail(g, upLit, v * 7 + 3, rail));
 }
+
+// ------------------------------------------------------------------------------------------------- ice
+
+/** Short icicles under an ice block's open bottoms: thin, so they're decoration, and they say "frozen" at a glance. */
+export function overIce(g: CanvasRenderingContext2D, b: Block) {
+  for (const [x, y] of b.cells) {
+    if (b.has(x, y + 1)) continue;
+    const Y = (y + 1) * TILE - 0.6;
+    for (let i = 0; i < 2; i++) {
+      if (hash2(x, y * 2 + i, b.seed) < 0.35) continue;
+      const ix = x * TILE + 3.5 + i * 7 + hash2(x + i, y, b.seed + 1) * 3;
+      const h = 2 + hash2(x, y + i, b.seed + 2) * 1.4;
+      const tri = poly(ix - 1.1, Y, ix + 1.1, Y, ix + 0.2, Y + h);
+      fillPoly(g, tri, 'hsl(196 72% 84%)');
+      g.fillStyle = 'hsl(212 60% 16%)';
+      stroke(g, [tri[1], tri[2]], { w: 0.6, seed: x + i, taper: [0.1, 0.7], press: 0.1 });
+      stroke(g, [tri[0], tri[2]], { w: 0.35, seed: x + i + 3, taper: [0.1, 0.7], press: 0.1 });
+    }
+  }
+}

@@ -4,7 +4,7 @@ import { hash2 } from '../core/rng';
 import { TILE } from '../sim/constants';
 import type { Material, PropStyle } from '../sim/props';
 import { blob, type EdgeP, line, looseLoop, type P, shadeOf, sn, stroke, traceCorners, vn } from './ink';
-import { type Block, markBiscuit, markMetal, markStone, markWood, overWood, retroTile, runsOf, type Tones } from './ink-build';
+import { type Block, markBiscuit, markMetal, markStone, markWood, overIce, overWood, retroTile, runsOf, type Tones } from './ink-build';
 import type { MetalPalette } from './kit';
 
 /**
@@ -332,7 +332,7 @@ const MARKS: Record<Material, (g: CanvasRenderingContext2D, cells: readonly Cell
 };
 
 /** What a block wears past its outline, after the pen: thin things only (ropes, knots). */
-const OVER: Partial<Record<Material, (g: CanvasRenderingContext2D, b: Block) => void>> = { wood: overWood };
+const OVER: Partial<Record<Material, (g: CanvasRenderingContext2D, b: Block) => void>> = { wood: overWood, ice: overIce };
 
 /** Materials whose own structure carries the form, so hatching would only muddy it. */
 const NO_HATCH = new Set<Material>(['jelly', 'goo', 'metal', 'wood', 'crumble', 'stone']);
