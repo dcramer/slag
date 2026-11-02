@@ -361,9 +361,17 @@ export function stepBody(b: Body, c: Controls, world: CollisionWorld): boolean {
   if (b.groundRef >= 0) {
     const s = findSolid(world, b.groundRef);
     if (s) {
-      moveX(b, s.dx, world);
-      // Move up freely; moving down we snap to the platform below.
-      if (s.dy !== 0) moveY(b, s.dy, world);
+      // The platform has already moved. If it rose, the rider now overlaps it, so lift
+      // first; otherwise a sideways move would collide with the platform itself and
+      // shove the rider off (diagonal movers: rotors, pendulums, loops).
+      if (s.dy < 0) {
+        moveY(b, s.dy, world);
+        moveX(b, s.dx, world);
+      } else {
+        moveX(b, s.dx, world);
+        // Moving down we snap to the platform below.
+        if (s.dy !== 0) moveY(b, s.dy, world);
+      }
     }
   }
   if (!depenetrate(b, world)) return false;
