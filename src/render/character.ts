@@ -6,8 +6,8 @@ interface Pt {
 }
 
 /**
- * Cosmetic per-character state that lives in the renderer: a verlet ribbon for a pull string or a
- * scarf (`ropeOf` in ink-character.ts), an afterimage trail, and landing detection.
+ * Cosmetic per-character state that lives in the renderer: a verlet ribbon for a tail (`ropeOf` in
+ * ink-character.ts), an afterimage trail, and landing detection.
  */
 export class Rig {
   rope: Pt[] = [];
@@ -15,14 +15,15 @@ export class Rig {
   wasGrounded = true;
   lastVy = 0;
 
-  /** `floor`: world y the ribbon may not sink below (a string drags on the ground, never through it). */
-  step(rope: { kind: 'string' | 'scarf'; len: number }, ax: number, ay: number, dt: number, wind = 0, floor = Infinity) {
+  /** `floor`: world y the ribbon may not sink below (a tail brushes the ground, never through it). */
+  step(rope: { kind: string; len: number }, ax: number, ay: number, dt: number, wind = 0, floor = Infinity) {
     const n = rope.len;
     // A long frame (a hitch, or a stepped screenshot) would fling the ribbon: it's cosmetic, so it just runs slow.
     dt = Math.min(dt, 1 / 40);
     if (this.rope.length !== n) this.rope = Array.from({ length: n }, (_, i) => ({ x: ax, y: ay + i, px: ax, py: ay + i }));
-    const seg = rope.kind === 'string' ? 1.7 : 1.9;
-    const grav = 220;
+    const seg = 1.7;
+    // A bushy tail is carried up and back; a ringed one hangs a little.
+    const grav = rope.kind === 'tail' ? -260 : 90;
     const p0 = this.rope[0];
     p0.x = p0.px = ax;
     p0.y = p0.py = ay;

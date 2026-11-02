@@ -302,7 +302,7 @@ describe('lobby', () => {
   it('seats eight different toys, and a new look keeps it that way', () => {
     const m = new Match(5);
     for (const d of ['kb1', 'kb2', 'pad0', 'pad1', 'pad2', 'pad3', 'pad4', 'pad5']) m.join(d);
-    const toys = () => new Set(m.players.map((p) => p.character.toy)).size;
+    const toys = () => new Set(m.players.map((p) => p.character.kind)).size;
     expect(toys()).toBe(8);
     for (let i = 0; i < 6; i++) {
       m.step({ pad5: press({ altPressed: true }) });
