@@ -506,6 +506,45 @@ export type Module =
       off: number;
       warn: number;
       flight: number;
+    }
+  | {
+      /**
+       * World-only, mine: a span of cave roof that gives way on a cycle (./modules/cavein.ts). The box is
+       * `w`×`h` tiles from its top-left `at`, hung from the rock over it down to the floor under it. Off →
+       * warn (drawn, never felt: grit trickles and the roof creaks for `rocks`, firedamp seeps and pools
+       * for `gas`) → on, for `on` frames. `rocks`: a curtain of boulders drops from the roof to the floor,
+       * one per column, each a circle that kills where it is. `gas`: the pocket of firedamp ignites, the
+       * whole box a flash of fire.
+       */
+      type: 'cavein';
+      kind: CaveinKind;
+      at: Vec;
+      w: number;
+      h: number;
+      off: number;
+      warn: number;
+      on: number;
+      seed: number;
+    }
+  | {
+      /**
+       * World-only, mine: a runaway minecart on a stretch of flat rail (./modules/cart.ts). Parked at the
+       * top of its run (`at`, the bottom-left of the cart, tiles) for `off` frames, it rocks and its bell
+       * rings for `warn`, then breaks loose: it rolls `span` tiles toward `dir`, gathering speed the whole
+       * way, for `run` frames, and kills whatever it hits. It's winched back up for `back` frames,
+       * harmless. Never solid: nobody rides a runaway.
+       */
+      type: 'cart';
+      at: Vec;
+      w: number;
+      h: number;
+      span: number;
+      dir: 1 | -1;
+      off: number;
+      warn: number;
+      run: number;
+      back: number;
+      seed: number;
     };
 
 export type Motion =
@@ -534,6 +573,8 @@ export type DropperLook = 'icicle' | 'chandelier';
 export type FloodLook = 'lava' | 'toxic' | 'water';
 /** What a `lob` throws: a magma serpent of linked segments, or a volcanic bomb out of the sky. */
 export type LobLook = 'serpent' | 'bomb';
+/** What a cave-in brings down: boulders out of the roof, or a pocket of firedamp catching light. */
+export type CaveinKind = 'rocks' | 'gas';
 
 export type Archetype =
   | 'platform'
