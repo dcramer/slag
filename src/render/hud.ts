@@ -8,8 +8,10 @@ import { THEME_LABELS } from '../themes';
 import { drawGlyph, type Glyph, glyphWidth } from '../ui/glyphs';
 import { glyphsFor, type InputMode, type PromptAction, promptModes } from '../ui/prompts';
 import { FONT, PAL, TYPE } from '../ui/style';
+import { ITEMS } from '../sim/items';
 import { drawCharacter } from './character';
 import { bay, buttonText, type ButtonStyle, hazardTape, icon, type IconName, plate, stampButton, tag } from './hud-kit';
+import { drawItemIcon } from './items';
 import { circle, glowDot, type RC, rrect } from './kit';
 import { drawPreview } from './props';
 
@@ -690,6 +692,11 @@ export class Hud {
             : 'Splat'
           : `${p.score} Pts`;
       this.text(status, x + 26, y + 18, TYPE.caption, done ? PAL.toxic : dead ? '#ff8a7a' : PAL.ash, 'left', UI, 600);
+      const held = r?.items.held;
+      if (held) {
+        drawItemIcon(c, held.kind, x + 74, y + 11, 0.8, t);
+        if (held.uses > 1) this.text(`×${held.uses}`, x + 74, y + 20, TYPE.caption, PAL.bone, 'center', UI, 800);
+      }
     });
   }
 
@@ -808,6 +815,14 @@ export class Hud {
     return (kbs.find((d) => d.device === this.mouseDevice) ?? kbs[0])?.profile;
   }
 
+  /** The Use prompt for the held item of the pointer's player, else of the first local holder. */
+  private usePrompt(m: Match): FooterItem[] | null {
+    const mine = m.players.find((p) => p.device === this.mouseDevice)?.slot;
+    const holders = m.run?.runners.filter((r) => r.alive && !r.finished && r.items.held) ?? [];
+    const held = (holders.find((r) => r.slot === mine) ?? holders[0])?.items.held;
+    return held ? [{ action: 'use', label: ITEMS[held.kind].verb }] : null;
+  }
+
   /** Footer prompts and the left-hand context label for this phase. */
   private footerItems(m: Match): { items: FooterItem[]; left: string; alpha: number; bar: boolean } {
     const touch = this.mode === 'touch';
@@ -847,6 +862,7 @@ export class Hud {
       }
       case 'run': {
         if (touch) return { items: [], left: '', alpha: 0, bar: false };
+        const use = this.usePrompt(m);
         const f = m.run?.frame ?? 0;
         const full = RUN_COUNTDOWN + 180;
         // Full controls during the countdown, then only the escape hatch, quietly.
@@ -856,6 +872,7 @@ export class Hud {
             items: [
               { action: 'jump', label: 'Jump' },
               { action: 'run', label: 'Run' },
+              ...(use ?? [{ action: 'use' as const, label: 'Use Item' }]),
               { action: 'alt', label: 'Self-Destruct' },
             ],
             left: '',
@@ -863,7 +880,7 @@ export class Hud {
             bar: a > 0.6,
           };
         }
-        return { items: [{ action: 'alt', label: 'Self-Destruct' }], left: '', alpha: 0.55, bar: false };
+        return { items: [...(use ?? []), { action: 'alt', label: 'Self-Destruct' }], left: '', alpha: use ? 0.9 : 0.55, bar: false };
       }
       case 'score':
         return {

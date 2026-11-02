@@ -1,5 +1,5 @@
 import type { LiquidKind } from '../gen/theme';
-import type { GameEvent } from '../sim/types';
+import type { GameEvent, ItemEventKind } from '../sim/types';
 import type { ThemeId } from '../themes';
 import type { SurfaceTone } from './actions';
 import type { SfxName } from './sfx';
@@ -95,6 +95,10 @@ export function cuesForEvent(e: GameEvent, env: CueEnv): Cue[] {
       if (e.phase === 'pick' || e.phase === 'score') return [{ name: 'whoosh' }];
       if (e.phase === 'place') return [{ name: 'ui-toggle', variant: 'on' }];
       return [];
+    case 'item': {
+      const name = itemName(e.what, e.kind);
+      return name ? [{ name, x: e.x, y: e.y }] : [];
+    }
   }
 }
 
@@ -113,6 +117,8 @@ const POP: Record<string, SfxName> = {
   goo: 'pop-arrow',
   frost: 'pop-plasma',
   ricochet: 'pop-plasma',
+  puck: 'pop-arrow',
+  smokebomb: 'pop-cannonball',
 };
 /** Sounds for generic prop moments (teleports, bumps, thuds...). Unlisted kinds are silent. */
 const PROP_CUE: Record<string, SfxName> = {
@@ -142,5 +148,23 @@ const FIRE: Record<string, SfxName> = {
   cryo: 'fire-turret',
   prism: 'fire-turret',
 };
+/** Held-item moments borrow existing sounds until they get their own. Unlisted moments are silent. */
+const ITEM_CUE: Partial<Record<ItemEventKind, SfxName>> = {
+  pop: 'spring',
+  pickup: 'ui-tick',
+  drop: 'drop',
+  block: 'pop-plasma',
+  catch: 'ui-tick',
+  smoke: 'pop-cannonball',
+  hit: 'land',
+};
+const ITEM_USE_CUE: Record<string, SfxName> = {
+  sword: 'walljump',
+  puck: 'fire-thrower',
+  boomerang: 'fire-thrower',
+  rocket: 'fire-cannon',
+  smoke: 'fire-totem',
+};
+export const itemName = (what: ItemEventKind, kind: string): SfxName | undefined => (what === 'use' ? ITEM_USE_CUE[kind] : ITEM_CUE[what]);
 export const popName = (ammo: string): SfxName => POP[ammo] ?? 'pop-bolt';
 export const fireName = (style: string): SfxName => FIRE[style] ?? 'fire-crossbow';

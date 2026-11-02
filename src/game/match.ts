@@ -344,6 +344,7 @@ export class Match {
       this.placed,
       this.players.map((p) => p.slot),
       this.rules.raceSeconds * 60,
+      deriveSeed(this.seed ^ this.salt, `items:${this.round}`),
     );
     this.setPhase('run');
   }

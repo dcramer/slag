@@ -19,6 +19,7 @@ import './coat';
 import './portal';
 import './bumper';
 import './magnet';
+import './mystery';
 import './web';
 import './phase';
 import './dropper';

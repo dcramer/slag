@@ -1,6 +1,8 @@
 import 'client-only';
-import type { RC } from '../render/kit';
+import { glowDot, type RC } from '../render/kit';
+import { drawItemIcon, ITEM_HUE } from '../render/items';
 import { drawHostCells, drawProjectile, drawResolved } from '../render/props';
+import type { ItemKind } from '../sim/items';
 import { TILE } from '../sim/constants';
 import { AMMO, type Ammo, footprint, makeProjectile, type PropDef, resolveProp } from '../sim/props';
 import { PART_INFO, summarize } from './describe';
@@ -121,6 +123,14 @@ function drawProp(rc: RC, def: PropDef, rot: number, w: number, h: number) {
   rc.g.restore();
 }
 
+/** A held item, big, bobbing over its glow (codex item cards). */
+function drawItemCard(rc: RC, kind: ItemKind, w: number, h: number) {
+  const k = Math.min(4, Math.min(w, h) / 34);
+  const y = h / 2 + Math.sin(rc.t * 2.5) * 3;
+  glowDot(rc.g, w / 2, y, 16 * k, ITEM_HUE[kind], 0.5);
+  drawItemIcon(rc.s, kind, w / 2, y, k, rc.t);
+}
+
 function openModal(def: PropDef) {
   let rot = 0;
   const modal = document.createElement('div');
@@ -162,7 +172,7 @@ function render() {
   observer.disconnect();
   root.innerHTML = '';
   const header = document.createElement('header');
-  header.innerHTML = `<h1>SLAG CODEX</h1><a href="/">← play</a><nav>${['parts', 'projectiles'].map((s) => `<a href="#${s}">${s}</a>`).join('')}</nav>`;
+  header.innerHTML = `<h1>SLAG CODEX</h1><a href="/">← play</a><nav>${['parts', 'items', 'projectiles'].map((s) => `<a href="#${s}">${s}</a>`).join('')}</nav>`;
   root.append(header);
   const main = document.createElement('main');
   root.append(main);
@@ -173,6 +183,7 @@ function render() {
   parts.innerHTML = `<h2>Parts</h2><p>The building blocks. Every prop in the crate is assembled from these, with its numbers (size, timing, speed, reach…) rolled procedurally.</p>`;
   for (const g of partGroups()) {
     const h = document.createElement('div');
+    h.id = g.id;
     h.className = 'arch';
     h.textContent = g.title;
     const blurb = document.createElement('p');
@@ -185,7 +196,8 @@ function render() {
     for (const e of g.entries) {
       const card = document.createElement('div');
       card.className = 'card';
-      card.append(stage((rc, w, h2) => drawProp(rc, e.def, 0, w, h2)));
+      const item = e.item;
+      card.append(stage((rc, w, h2) => (item ? drawItemCard(rc, item, w, h2) : drawProp(rc, e.def, 0, w, h2))));
       const meta = document.createElement('div');
       meta.className = 'meta';
       meta.innerHTML = `<div class="name"></div><div class="stat"></div>`;

@@ -45,6 +45,8 @@ const CSS = `
 export interface OverlayState {
   /** Place phase: can the touch player's ghost be placed where it is? */
   canPlace?: boolean;
+  /** Race: what the USE button does right now (the held item's verb); omitted when empty-handed. */
+  use?: string;
 }
 
 export class TouchOverlay {
@@ -53,6 +55,7 @@ export class TouchOverlay {
   private knob = div('c knob');
   private primary = div('c btn primary');
   private secondary = div('c btn secondary');
+  private useBtn = div('c btn secondary');
   private ring = div('ring');
   private menu = button('c btn ui', '⚙\uFE0E', 'Settings');
   private full = button('c btn ui', '⛶', 'Fullscreen');
@@ -75,7 +78,7 @@ export class TouchOverlay {
     this.base.append(div('runring'));
     this.ring.style.mask = this.ring.style.webkitMask = 'radial-gradient(circle, transparent 62%, #000 64%)';
     this.secondary.append(this.ring);
-    this.root.append(this.base, this.knob, this.moveTag, this.secondary, this.primary, this.menu, this.full);
+    this.root.append(this.base, this.knob, this.moveTag, this.secondary, this.useBtn, this.primary, this.menu, this.full);
     this.menu.addEventListener('click', onMenu);
     this.full.addEventListener('click', () => void goFullscreen());
 
@@ -108,6 +111,7 @@ export class TouchOverlay {
     const L = this.layout;
     place(this.primary, L.primary);
     place(this.secondary, L.secondary);
+    place(this.useBtn, L.use);
     place(this.menu, L.menu);
     place(this.full, { x: ins.left + 10 + L.menu.r, y: L.menu.y, r: L.menu.r });
     place(this.base, { x: L.stickHome.x, y: L.stickHome.y, r: L.stickR });
@@ -130,6 +134,7 @@ export class TouchOverlay {
     show(this.moveTag, race && !t.stick());
     show(this.primary, race || placeMode);
     show(this.secondary, race || placeMode);
+    show(this.useBtn, race && !!s.use);
     show(this.menu, m !== 'lobby'); // the lobby HUD has its own settings button
     show(this.full, m === 'lobby' && !!document.fullscreenEnabled && !document.fullscreenElement);
     if (race) {
@@ -156,6 +161,8 @@ export class TouchOverlay {
       const p = t.altProgress();
       this.secondary.classList.toggle('on', p > 0);
       this.ring.style.background = p > 0 ? `conic-gradient(#ff5a1f ${p * 360}deg, transparent 0)` : 'none';
+      if (s.use) setLabel(this.useBtn, s.use.toUpperCase());
+      this.useBtn.classList.toggle('on', t.holding('use'));
     }
     show(this.knob, race);
     if (placeMode) {

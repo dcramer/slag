@@ -3,6 +3,7 @@ import { DT, TILE } from '../constants';
 import { isProtected, type Level, T_EMPTY, T_SOLID, tileAt } from '../level';
 import { type Body, DEFAULT_SURFACE, type Solid, type Surface } from '../physics';
 import type { GameEvent } from '../types';
+import type { ItemKind, ItemSpawn } from '../items/types';
 import { COAT_PX, COAT_SURFACES } from './modules/coat';
 import type { Contrib, ProjectileSpawn } from './registry';
 import { FREEZE_FRAMES, type RunnerStatus, SLOW_FRAMES } from './status';
@@ -41,6 +42,8 @@ export interface Projectile extends ProjectileSpawn {
   /** Displacement (px) of the last move: platform projectiles (gliders) report it as their solid's dx/dy. */
   mx: number;
   my: number;
+  /** Runner index that threw it, or -1 for prop shots. */
+  thrower: number;
 }
 
 /** What a projectile sees of a runner. `safe`: in the spawn zone, so shots pop harmlessly. */
@@ -63,6 +66,19 @@ export interface ProjWorld {
   emit(e: GameEvent): void;
   /** A lethal projectile hit runner `i`. */
   kill(i: number, owner: number): void;
+  /** Held-item side of a shot (src/sim/items). Optional so headless callers can omit it. */
+  items?: ProjItems;
+}
+
+export interface ProjItems {
+  /** Runner `i` caught a shot back: it returns to their hand. */
+  caught(i: number, kind: ItemKind): void;
+  /** Add a loose item. */
+  loose(s: ItemSpawn): void;
+  /** Stars and kill credit for bonking runner `i`. */
+  bonk(i: number, owner: number): void;
+  /** A smoke bomb burst here. */
+  burst(x: number, y: number): void;
 }
 
 export type EndReason = 'wall' | 'runner' | 'life' | 'fuse';
@@ -83,7 +99,12 @@ export interface AmmoSim {
   fuse?(p: Projectile, f: number): boolean;
   /** The shot ended (not when it simply leaves the world). */
   end?(p: Projectile, w: ProjWorld, why: EndReason): void;
+  /** Its thrower touched it after THROW_GRACE. Return true if they caught it, which ends it quietly. */
+  caught?(p: Projectile, w: ProjWorld, i: number): boolean;
 }
+
+/** Frames a thrown shot ignores its thrower, so it can leave their hand. */
+export const THROW_GRACE = 12;
 
 const DEFAULT_LIFE = 60 * 8;
 
@@ -95,7 +116,7 @@ export const FACE: readonly (readonly [number, number])[] = [
   [0, -1],
 ];
 
-function solidAt(w: ProjWorld, x: number, y: number, age: number): boolean {
+export function solidAt(w: ProjWorld, x: number, y: number, age: number): boolean {
   if (tileAt(w.level, Math.floor(x / TILE), Math.floor(y / TILE)) === T_SOLID) return true;
   return age > 2 && w.solids.some((s) => pointInRect(x, y, s));
 }
@@ -166,6 +187,10 @@ export const PATCH_PX = COAT_PX;
 export const PATCH_SURFACES: Partial<Record<Ammo, Surface>> = { goo: COAT_SURFACES.slime, frost: COAT_SURFACES.ice };
 /** How strongly a boomerang is pulled back, relative to its launch speed (1/s). */
 export const BOOMERANG_PULL = 1.8;
+/** Thrown boomerangs curve back at the thrower: turn rate 0.2 rad/frame (cos, sin precomputed), and speed gained per frame on the way (px/s). */
+export const RETURN_C = 0.9800665778;
+export const RETURN_S = 0.1986693308;
+export const RETURN_GAIN = 12;
 
 /** Gliders: a flying plank you can ride. Size (px), level-flight time (frames), sink speeds (px/s): idle, under one rider, per extra rider. */
 export const GLIDER_W = 30;
@@ -257,13 +282,33 @@ export const AMMO_SIM: Partial<Record<Ammo, AmmoSim>> = {
       // Pull straight back along the throw: out, stop, and return through the thrower.
       p.ax = -p.vx * BOOMERANG_PULL;
       p.ay = -p.vy * BOOMERANG_PULL;
+      p.sp = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+      p.n = 0;
     },
-    move(p) {
-      p.vx += p.ax * DT;
-      p.vy += p.ay * DT;
+    move(p, w) {
+      const home = p.thrower >= 0 ? w.runners[p.thrower] : undefined;
+      // `n` marks a thrown one that has turned around. A launcher's stays on its line.
+      if (home?.active && (p.n > 0 || p.vx * p.ax + p.vy * p.ay > 0)) {
+        p.n = 1;
+        const b = home.body;
+        const sp = Math.min(p.sp, Math.sqrt(p.vx * p.vx + p.vy * p.vy) + RETURN_GAIN);
+        steer(p, b.x + b.w / 2 - p.x, b.y + b.h / 2 - p.y, RETURN_C, RETURN_S, sp);
+      } else {
+        p.vx += p.ax * DT;
+        p.vy += p.ay * DT;
+      }
       p.x += p.vx * DT;
       p.y += p.vy * DT;
       return true;
+    },
+    caught(_p, w, i) {
+      if (!w.items) return false;
+      w.items.caught(i, 'boomerang');
+      return true;
+    },
+    end(p, w) {
+      // A thrown one clatters down for anyone to grab; a launcher's just breaks.
+      if (p.thrower >= 0) w.items?.loose({ kind: 'boomerang', uses: 1, x: p.x - p.vx * DT, y: p.y - p.vy * DT, vx: -p.vx * 0.15, vy: -90, grace: 8 });
     },
   },
   rubber: {
@@ -320,8 +365,13 @@ export const AMMO_SIM: Partial<Record<Ammo, AmmoSim>> = {
   frost: { wall: stick },
 };
 
+/** Register behavior for an ammo kind (the held-item shots do this from src/sim/items). */
+export function defineAmmo(ammo: Ammo, sim: AmmoSim): void {
+  AMMO_SIM[ammo] = sim;
+}
+
 export function makeProjectile(s: ProjectileSpawn, born: number, id: number): Projectile {
-  const p: Projectile = { ...s, born, id, n: 0, ax: 0, ay: 0, sp: 0, stuck: -1, hx: 0, hy: 0, until: 0, mx: 0, my: 0 };
+  const p: Projectile = { ...s, born, id, n: 0, ax: 0, ay: 0, sp: 0, stuck: -1, hx: 0, hy: 0, until: 0, mx: 0, my: 0, thrower: s.thrower ?? -1 };
   AMMO_SIM[s.ammo]?.init?.(p);
   return p;
 }
@@ -353,6 +403,10 @@ const HIT: Record<HitEffect, (p: Projectile, w: ProjWorld, i: number) => void> =
     w.runners[i].status.slowed = SLOW_FRAMES;
   },
   knock: (p, w, i) => knock(w.runners[i].body, p),
+  bonk: (p, w, i) => {
+    knock(w.runners[i].body, p);
+    w.items?.bonk(i, p.owner);
+  },
   none: () => {},
 };
 
@@ -390,7 +444,11 @@ export function stepProjectile(p: Projectile, w: ProjWorld): boolean {
     for (let i = 0; i < w.runners.length; i++) {
       const r = w.runners[i];
       if (!r.active || !rectCircle(r.body, p.x, p.y, spec.radius)) continue;
-      if (!r.safe) HIT[spec.effect ?? 'kill'](p, w, i);
+      if (i === p.thrower) {
+        if (age < THROW_GRACE) continue;
+        if (sim?.caught?.(p, w, i)) return false;
+      }
+      if (!r.safe) HIT[p.effect ?? spec.effect ?? 'kill'](p, w, i);
       alive = false;
       why = 'runner';
       break;
