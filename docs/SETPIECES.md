@@ -591,10 +591,10 @@ Each task:
 
 **Done when:**
 
-- `pnpm check` passes.
+- `pnpm check` passes, which now includes the conformance suite (`tests/conformance/`, below): every concept, recipe and decor kind the task registers is held to its contract with no test of its own.
 - `pnpm level --stats 50` passes the bar above.
 - The landmarks contact sheet is looked at.
-- A behaviour test covers each concept: it appears, its supports are grounded, and the proof doesn't use its movers.
+- A behaviour test covers what's particular to each concept (a cab parks at every floor, glass kills where it's drawn); the generic rules (it appears, it's grounded, the proof doesn't use its movers, no free ride) are the conformance suite's.
 
 | Wave | Themes | Why this order |
 |---|---|---|
@@ -648,6 +648,17 @@ Run `pnpm test:stats`. Update `docs/PARODY.md` (set piece rows), `docs/DESIGN.md
 - **The Stamping Line**: three to five presses under a girder (a solid row you walk along, reached by ladders of one-way rungs), slamming onto a conveyor bed in sequence. `piston.lag` (additive) offsets each press's cycle within one prop; the slams roll down the line at about 9 tiles a second, mostly away from the spawn. The conveyor is a no-go for the plan, so the girder is the proof.
 - **Filler** stays the theme's recipes: the wheel's family is press and forklift, the line's forklift and cog lift. A molten pour from the roof was tried and dropped: it needs a ceiling most factory levels don't have.
 - **Shot**: `pnpm shot landmarks --theme factory --ride` stands three runners on the wheel's cars before the three phases.
+
+### Contracts and the conformance suite
+
+The owner: "landmarks should have generators and rules they adhere to, the level design does, the decor does, etc etc should make it really easy to extend and have the game engine itself make sure they do the right thing." So every generated kind declares its contract as data on its registry entry, and the engine checks it twice: while generating, where a violating instance is rejected and retried through the pipeline above, and in `tests/conformance/`, which runs every registered entry over a few fixed seeds, sizes and gravities. `src/gen/AGENTS.md` (Generators, contracts and the conformance suite) has the field-by-field guide; `src/gen/kinds.ts` has the table.
+
+- **Landmarks** (`gen/stage/contract.ts`, `defineConcept`): `scale` (`large` by default: a third of the view along its biggest side; `grand`: it owns the view), `footing` (`grounded` by default, `hanging`, or `floating` where the ground floats), `ways` (2), `varies` (what its seed changes). The pipeline's `landmarkFaults` rejects a landmark that measures smaller than declared, has a column over open air, takes a protected cell or leaves one way past itself (`Routes.landmark`, the mostly-open share in its own columns). Its pieces must also warn before they hurt (`tellFaults`). The `Concept` literal keeps working: absent fields take the defaults.
+- **Set pieces** (`gen/setpieces/contract.ts`): `unique` marks a hazard no other theme has, compared by mechanism (`hazardSignature`), never by look; every module that hurts has a tell in `TELLS`, and one that switches on warns for at least `MIN_TELL` frames.
+- **Decor** (`gen/decor`): placement moved out of `render/terrain.ts` into `placeDecor`, behind the rules registry (`defineDecor`: themes, top or under, weight, room); the theme looks draw from the kinds registered for the theme. `render/decor.ts` only draws.
+- **Per theme**: the owner's minimums (5 landmarks, 12 decor pieces, 3 unique hazards) are counted by `themeShortfalls`; `tests/conformance/themes` lists what each theme lacks as todos until it has them.
+
+What it found in existing content when it landed: one Great Wheel (factory, stats seed 22, wide) had a single way past it (73% of the way with no second); the pipeline now retries it. The classic Throne Hall and Stamping Line don't yet vary with their seed (their plans are functions of their box), waived in `tests/conformance/lib.ts` until the owner's "every landmark varies" lands for them.
 
 ## 6. Decisions
 

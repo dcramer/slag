@@ -2,7 +2,8 @@ import { type HSL, hsl3 } from '../../core/color';
 import { Rng } from '../../core/rng';
 import type { ThemeId } from '../../themes';
 import { word } from '../names';
-import type { Ambient, Celestial, CloudStyle, DecorKind, LiquidKind, Mood, SkyLayer, SkylineKind, TerrainLook, Theme } from './types';
+import { type DecorKind, pickDecor } from '../decor';
+import type { Ambient, Celestial, CloudStyle, LiquidKind, Mood, SkyLayer, SkylineKind, TerrainLook, Theme } from './types';
 
 /**
  * Per-theme look recipes. Each recipe rolls a mood (time of day / weather)
@@ -60,11 +61,6 @@ function mat(base: HSL, dl = 0.55, ll = 1.45): { base: HSL; dark: HSL; light: HS
 
 function celestial(rng: Rng, kind: Celestial, color: HSL, x: [number, number], y: [number, number], r: [number, number], glow?: HSL): Theme['celestial'] {
   return { kind, x: rng.range(x[0], x[1]), y: rng.range(y[0], y[1]), r: rng.range(r[0], r[1]), color, glow: glow ?? color };
-}
-
-function pickDecor(rng: Rng, required: DecorKind[], optional: DecorKind[], n: number): DecorKind[] {
-  const opt = rng.shuffle(optional.slice());
-  return [...required, ...opt.slice(0, Math.max(0, n - required.length))];
 }
 
 interface Common {
@@ -204,7 +200,7 @@ function farm(rng: Rng): Look {
     ambient: mood === 'dusk' ? 'fireflies' : 'pollen',
     ambientLight: mood === 'day' ? rng.range(0.86, 0.94) : mood === 'golden' ? rng.range(0.74, 0.82) : rng.range(0.55, 0.65),
     ambientTint: mood === 'day' ? hsl3(50, 30, 92) : mood === 'golden' ? hsl3(35, 70, 80) : hsl3(320, 40, 70),
-    decor: pickDecor(rng, ['fence', 'haybale'], ['wheat', 'flower', 'pumpkin', 'sunflower'], 5),
+    decor: pickDecor(rng, 'farm', ['fence', 'haybale'], 5),
     decorDensity: 0.2,
     lamp: hsl3(40, 95, 62),
     accent: hsl3(rng.pick([5, 48, 200]), 90, 58),
@@ -312,7 +308,7 @@ function factory(rng: Rng): Look {
     ambient: 'embers',
     ambientLight: smog ? rng.range(0.62, 0.72) : rng.range(0.4, 0.5),
     ambientTint: smog ? hsl3(32, 50, 72) : hsl3(230, 30, 60),
-    decor: pickDecor(rng, ['pipe', 'barrel'], ['vent', 'crate', 'beacon', 'chain', 'cable', 'cagelamp'], 6),
+    decor: pickDecor(rng, 'factory', ['pipe', 'barrel'], 6),
     decorDensity: 0.16,
     lamp: hsl3(38, 100, 60),
     accent: hsl3(rng.pick([190, 50, 140]), 95, 58),
@@ -409,7 +405,7 @@ function castle(rng: Rng): Look {
     ambient: night ? 'fireflies' : 'dust',
     ambientLight: mood === 'overcast' ? rng.range(0.72, 0.82) : mood === 'dusk' ? rng.range(0.58, 0.66) : rng.range(0.38, 0.46),
     ambientTint: mood === 'dusk' ? hsl3(310, 40, 70) : night ? hsl3(220, 45, 62) : hsl3(210, 15, 85),
-    decor: pickDecor(rng, ['torch', 'banner'], ['chain', 'skull', 'vine', 'bones'], 5),
+    decor: pickDecor(rng, 'castle', ['torch', 'banner'], 5),
     decorDensity: 0.14,
     lamp: hsl3(34, 100, 60),
     accent: hsl3(rng.pick([48, 0, 200]), 90, 58),
@@ -494,7 +490,7 @@ function jungle(rng: Rng): Look {
     ambient: night ? 'fireflies' : rng.pick(['pollen', 'spores'] as const),
     ambientLight: mood === 'day' ? rng.range(0.82, 0.92) : mood === 'golden' ? rng.range(0.75, 0.85) : rng.range(0.4, 0.48),
     ambientTint: mood === 'day' ? hsl3(90, 40, 85) : mood === 'golden' ? hsl3(45, 55, 84) : hsl3(170, 45, 60),
-    decor: pickDecor(rng, ['fern', 'vine'], ['bigleaf', 'flower', 'mushroom', 'roots'], 5),
+    decor: pickDecor(rng, 'jungle', ['fern', 'vine'], 5),
     decorDensity: 0.26,
     lamp: hsl3(60, 100, 65),
     accent: hsl3(rng.pick([330, 45, 190]), 90, 60),
@@ -567,7 +563,7 @@ function volcano(rng: Rng): Look {
     // The backdrop prints at about ambient^0.6 of itself: below this the smoky sky goes back to near black.
     ambientLight: inf ? rng.range(0.58, 0.66) : rng.range(0.5, 0.58),
     ambientTint: hsl3(lavaHue, 80, 62),
-    decor: pickDecor(rng, ['fumarole', 'obsidian'], ['bones', 'skull', 'crystal'], 4),
+    decor: pickDecor(rng, 'volcano', ['fumarole', 'obsidian'], 4),
     decorDensity: 0.13,
     lamp: hsl3(lavaHue + 8, 100, 58),
     accent: hsl3(rng.pick([190, 280, 50]), 95, 62),
@@ -659,7 +655,7 @@ function harbor(rng: Rng): Look {
     ambient: 'dust',
     ambientLight: golden ? rng.range(0.74, 0.82) : night ? rng.range(0.42, 0.5) : rng.range(0.86, 0.94),
     ambientTint: golden ? hsl3(32, 75, 78) : night ? hsl3(220, 45, 62) : hsl3(200, 25, 92),
-    decor: pickDecor(rng, ['barrel', 'rope', 'lamppost'], ['crate', 'bollard', 'gull', 'net', 'lantern'], 7),
+    decor: pickDecor(rng, 'harbor', ['barrel', 'rope', 'lamppost'], 7),
     decorDensity: 0.17,
     lamp: hsl3(40, 100, 62),
     accent: hsl3(rng.pick([5, 50, 160]), 90, 58),
@@ -725,7 +721,7 @@ function mine(rng: Rng): Look {
     ambient: rng.pick(['dust', 'spores'] as const),
     ambientLight: rng.range(0.34, 0.42),
     ambientTint: hsl3(32, 45, 60),
-    decor: pickDecor(rng, ['lantern', 'support', 'crystal'], ['minecart', 'pickaxe', 'mushroom', 'bones'], 6),
+    decor: pickDecor(rng, 'mine', ['lantern', 'support', 'crystal'], 6),
     decorDensity: 0.16,
     lamp: hsl3(36, 100, 60),
     accent: hsl3(crystalHue, 90, 62),
@@ -811,7 +807,7 @@ function rooftops(rng: Rng): Look {
     ambient: 'dust',
     ambientLight: dusk ? rng.range(0.6, 0.68) : rng.range(0.42, 0.5),
     ambientTint: dusk ? hsl3(320, 45, 72) : hsl3(265, 45, 64),
-    decor: pickDecor(rng, ['antenna', 'acunit', 'neon'], ['vent', 'dish', 'cable', 'pipe'], 6),
+    decor: pickDecor(rng, 'rooftops', ['antenna', 'acunit', 'neon'], 6),
     decorDensity: 0.15,
     lamp: hsl3(45, 95, 65),
     accent: hsl3(rng.pick([50, 160, 20]), 95, 58),
@@ -930,7 +926,7 @@ function glacier(rng: Rng): Look {
     ambient: 'dust',
     ambientLight: night ? rng.range(0.44, 0.52) : overcast ? rng.range(0.78, 0.86) : rng.range(0.88, 0.96),
     ambientTint: night ? hsl3(aur, 35, 70) : hsl3(200, 30, 94),
-    decor: pickDecor(rng, ['cairn', 'icicles'], ['pennant', 'bones', 'lantern'], 4),
+    decor: pickDecor(rng, 'glacier', ['cairn', 'icicles'], 4),
     decorDensity: 0.12,
     lamp: hsl3(40, 95, 62),
     accent: hsl3(rng.pick([5, 28, 48]), 92, 56),
@@ -1038,8 +1034,8 @@ function space(rng: Rng): Look {
     ambientLight: rng.range(0.5, 0.6),
     ambientTint: hsl3(neb, 30, 80),
     decor: station
-      ? pickDecor(rng, ['beacon', 'dish'], ['antenna', 'cable', 'lander'], 4)
-      : pickDecor(rng, ['crystal', 'lander'], ['pennant', 'beacon', 'bones'], 4),
+      ? pickDecor(rng, 'space', ['beacon', 'dish'], 4, ['antenna', 'cable', 'lander'])
+      : pickDecor(rng, 'space', ['crystal', 'lander'], 4, ['pennant', 'beacon', 'bones']),
     decorDensity: 0.1,
     lamp: hsl3(195, 80, 70),
     accent: hsl3(rng.pick([48, 190, 330]), 95, 60),

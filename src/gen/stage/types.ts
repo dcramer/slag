@@ -5,6 +5,7 @@ import type { Grid } from '../level/kit';
 import type { Knobs } from '../level/sculptors/common';
 import type { Piece, Site } from '../setpieces/place';
 import type { TerrainKind } from '../theme';
+import type { Footing, Scale } from './contract';
 
 /**
  * A stage concept: the place a level is (docs/SETPIECES.md). The concept is
@@ -74,6 +75,18 @@ export interface Concept {
    * the ride proof checks the rider's own room.
    */
   carrier?: { minGap?: number };
+  /*
+   * The contract (./contract.ts): declared here, enforced by the pipeline and tests/conformance. Absent
+   * fields take `defineConcept`'s defaults: large, grounded, two ways through.
+   */
+  /** `large` (a third of the view along its biggest side) or `grand` (it owns the view), measured from its box. */
+  scale?: Scale;
+  /** What holds it up: `grounded` (default), `hanging` from a ceiling, or `floating` in a theme whose ground floats. */
+  footing?: Footing;
+  /** Distinct ways through or past it, measured on the level's route graph; at least 2. */
+  ways?: number;
+  /** What its seed changes ('storeys', 'door side', 'stair side'...), for people; the engine measures the layout itself. */
+  varies?: readonly string[];
 }
 
 /** What a concept built: the structure's box, the air its movers need, where they hang from. */
