@@ -6,7 +6,7 @@ import type { GameEvent } from '../sim/types';
 import type { Fx } from './fx';
 import { blob, line, type P, stroke } from './ink';
 import { ball, boxPts, glint, INK, part, path, pen, poly, sprite, stamp, tick } from './ink-props';
-import { circle, ellipse, glowDot, light, type RC } from './kit';
+import { circle, ellipse, light, type RC } from './kit';
 
 /**
  * Held-item art, inked as the genre staples they mock (docs/PARODY.md, Held items): icons (shared by
@@ -247,29 +247,51 @@ export function drawItemIcon(s: CanvasRenderingContext2D, kind: ItemKind, x: num
   s.restore();
 }
 
-/** Loose items: a bobbing icon on a glow halo, blinking before they fizzle. */
+/** Ring of shine lines round a loose item, cut once per hue. */
+const shine = (kind: ItemKind) =>
+  sprite(`it|shine|${kind}`, -13, -13, 26, 26, (g) => {
+    g.fillStyle = css(ITEM_HUE[kind], 14);
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2 + 0.2;
+      const r0 = i % 2 ? 9.5 : 8.5;
+      const r1 = i % 2 ? 11.8 : 12.8;
+      line(g, Math.cos(a) * r0, Math.sin(a) * r0, Math.cos(a) * r1, Math.sin(a) * r1, { w: 2.2, seed: i, taper: [0.15, 0.7], press: 0 });
+    }
+  });
+
+/**
+ * Loose items: a bobbing icon in a slow-turning ring of shine lines, blinking before they fizzle. The
+ * lines are a comic's "shiny!" mark, on the background so they never ink over what's behind; the cel
+ * pass gives the icon its own hard shadow.
+ */
 export function drawDrops(rc: RC, run: RunWorld): void {
   for (const d of run.items.drops) {
     const left = DROP_LIFE - (run.frame - d.born);
     if (left < DROP_BLINK && Math.floor(left / (left < 40 ? 3 : 6)) % 2 === 0) continue;
     const col = ITEM_HUE[d.kind];
     const y = d.y + (d.onGround ? Math.sin(rc.t * 4 + d.id) * 1.2 - 1.5 : 0);
-    glowDot(rc.g, d.x, y, 13, col, 0.4);
-    rc.s.fillStyle = 'rgba(0,0,0,0.25)';
-    ellipse(rc.s, d.x, d.y + 5, 4.5, 1.2);
+    const bg = rc.bg;
+    const pulse = 0.88 + 0.12 * Math.sin(rc.t * 5 + d.id);
+    bg.save();
+    bg.translate(d.x, y);
+    bg.rotate(rc.t * 0.8 + d.id);
+    bg.scale(pulse, pulse);
+    stamp(bg, shine(d.kind));
+    bg.restore();
     drawItemIcon(rc.s, d.kind, d.x, y, 1, rc.t);
     // A twinkle, so items read as pick-ups and not scenery.
     const tw = (rc.t * 1.3 + d.id * 0.37) % 1;
-    if (tw < 0.25) {
-      const a = Math.sin((tw / 0.25) * Math.PI);
-      rc.g.fillStyle = css(col, 30, a);
-      const sx = d.x + 4;
-      const sy = y - 5;
-      line(rc.g, sx - 2.5 * a, sy, sx + 2.5 * a, sy, { w: 1, seed: 1, taper: [0.3, 0.3], press: 0 });
-      line(rc.g, sx, sy - 2.5 * a, sx, sy + 2.5 * a, { w: 1, seed: 2, taper: [0.3, 0.3], press: 0 });
-    }
+    if (tw < 0.25) twinkle(rc.s, d.x + 4.5, y - 5.5, 2.8 * Math.sin((tw / 0.25) * Math.PI), css(col, 34, 1, -20));
     light(rc, d.x, y, 26, col, 0.25);
   }
+}
+
+/** A four-point twinkle: two crossed pen flicks. */
+function twinkle(c: CanvasRenderingContext2D, x: number, y: number, r: number, col: string) {
+  if (r < 0.4) return;
+  c.fillStyle = col;
+  line(c, x - r, y, x + r, y, { w: r * 0.45, seed: 1, taper: [0.5, 0.5], press: 0 });
+  line(c, x, y - r, x, y + r, { w: r * 0.45, seed: 2, taper: [0.5, 0.5], press: 0 });
 }
 
 function drawSword(rc: RC, r: Runner, cxp: number): void {
@@ -285,42 +307,85 @@ function drawSword(rc: RC, r: Runner, cxp: number): void {
   s.save();
   s.translate(cxp + fc * 3, b.y + 7);
   s.scale(fc, 1);
+  if (it.swing >= SWORD.activeLo && it.swing <= SWORD.activeHi) swingSmear(s, -Math.PI / 2 - 1.1, -Math.PI / 2 + ang);
   s.rotate(ang);
   s.translate(0, -9);
   masterNoodle(s, bend);
   s.restore();
-  if (it.swing >= SWORD.activeLo && it.swing <= SWORD.activeHi) {
-    const g = rc.g;
-    g.save();
-    g.translate(cxp + fc * 3, b.y + 7);
-    g.scale(fc, 1);
-    g.strokeStyle = 'rgba(190,255,150,0.55)';
-    g.lineWidth = 4;
-    g.lineCap = 'round';
-    g.beginPath();
-    g.arc(0, 0, 15, -Math.PI / 2 - 1.1, -Math.PI / 2 + ang);
-    g.stroke();
-    g.restore();
+}
+
+const SMEAR_N = 14;
+const smearPts: P[] = Array.from({ length: SMEAR_N * 2 }, () => ({ x: 0, y: 0 }));
+const arcPts: P[] = Array.from({ length: SMEAR_N }, () => ({ x: 0, y: 0 }));
+const SMEAR_CUTS = [
+  [8, css(NOODLE, 12, 1, -8)],
+  [3.2, css(NOODLE, 30, 1, -30)],
+] as const;
+const SMEAR_LINE = css(NOODLE, -30);
+
+/**
+ * The swing as a comic draws it: a flat crescent smear behind the blade, fattest at the blade and thinning
+ * to nothing at the tail, with two pen speed lines curving through it. Only while the swing can hit, so
+ * the smear is exactly the danger.
+ */
+function swingSmear(s: CanvasRenderingContext2D, a0: number, a1: number) {
+  const R = 18.5;
+  // Two cuts: the smear, and a brighter band along its outer edge where the tip moved fastest.
+  for (const [w, col] of SMEAR_CUTS) {
+    for (let i = 0; i < SMEAR_N; i++) {
+      const t = i / (SMEAR_N - 1);
+      const a = a0 + (a1 - a0) * t;
+      const th = w * Math.sqrt(t);
+      smearPts[i].x = Math.cos(a) * R;
+      smearPts[i].y = Math.sin(a) * R;
+      const back = smearPts[SMEAR_N * 2 - 1 - i];
+      back.x = Math.cos(a) * (R - th);
+      back.y = Math.sin(a) * (R - th);
+    }
+    s.fillStyle = col;
+    path(s, smearPts);
+    s.fill();
+  }
+  s.fillStyle = SMEAR_LINE;
+  for (const [r, from, w] of [
+    [14.6, 0.45, 0.8],
+    [12.4, 0.68, 0.6],
+  ]) {
+    for (let i = 0; i < SMEAR_N; i++) {
+      const a = a0 + (a1 - a0) * (from + (0.97 - from) * (i / (SMEAR_N - 1)));
+      arcPts[i].x = Math.cos(a) * r;
+      arcPts[i].y = Math.sin(a) * r;
+    }
+    stroke(s, arcPts, { w, seed: r, taper: [0.7, 0.1], press: 0 });
   }
 }
 
-function star(c: CanvasRenderingContext2D, x: number, y: number, r: number) {
+/** A cartoon five-point star, turned by `rot`. */
+function star(c: CanvasRenderingContext2D, x: number, y: number, r: number, rot: number) {
   c.beginPath();
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2;
-    const rr = i % 2 ? r * 0.4 : r;
+  for (let i = 0; i < 10; i++) {
+    const a = rot + (i / 10) * Math.PI * 2 - Math.PI / 2;
+    const rr = i % 2 ? r * 0.46 : r;
     c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
   }
   c.closePath();
   c.fill();
 }
 
-/** Stars that circle something dazed, or a Stunnerang in flight. */
+/**
+ * Stars that circle something dazed, or a Stunnerang in flight: flat yellow cartoon stars, each with its
+ * lit face cut up-left. The one behind the head shrinks, so the ring reads as going round.
+ */
 export function dazeStars(g: CanvasRenderingContext2D, x: number, y: number, t: number, rx = 6, ry = 2) {
-  g.fillStyle = 'rgba(255,230,120,0.9)';
   for (let i = 0; i < 3; i++) {
     const a = t * 6 + (i * Math.PI * 2) / 3;
-    star(g, x + Math.cos(a) * rx, y + Math.sin(a) * ry, 2);
+    const r = 2.1 + Math.sin(a) * 0.45;
+    const sx = x + Math.cos(a) * rx;
+    const sy = y + Math.sin(a) * ry;
+    g.fillStyle = '#e09a14';
+    star(g, sx, sy, r, a * 0.5);
+    g.fillStyle = '#ffe066';
+    star(g, sx - r * 0.14, sy - r * 0.16, r * 0.72, a * 0.5);
   }
 }
 
@@ -330,7 +395,6 @@ export function dazeStars(g: CanvasRenderingContext2D, x: number, y: number, t: 
  */
 function bubbleWrap(rc: RC, x: number, cy: number, slot: number, popped: number) {
   const s = rc.s;
-  const g = rc.g;
   const wob = Math.sin(rc.t * 6 + slot) * 0.6;
   const rx = 11 + wob;
   const ry = 11 - wob;
@@ -349,13 +413,13 @@ function bubbleWrap(rc: RC, x: number, cy: number, slot: number, popped: number)
       if ((bx - x) ** 2 / (rx * rx) + (by - cy) ** 2 / (ry * ry) > 0.92) continue;
       const order = hash2(i, j, slot);
       if (order < popped) {
-        // Popped: a flat ring and, just after, a burst.
+        // Popped: just after, a little burst of pen flicks.
         if (order > popped - 0.15) {
-          g.fillStyle = 'rgba(255,255,255,0.9)';
+          s.fillStyle = WRAP_INK;
           for (let k = 0; k < 4; k++) {
             const a = (k / 4) * Math.PI * 2 + order * 6;
-            line(g, bx + Math.cos(a) * 1.2, by + Math.sin(a) * 1.2, bx + Math.cos(a) * 2.6, by + Math.sin(a) * 2.6, {
-              w: 0.5,
+            line(s, bx + Math.cos(a) * 1.3, by + Math.sin(a) * 1.3, bx + Math.cos(a) * 2.9, by + Math.sin(a) * 2.9, {
+              w: 0.6,
               seed: k,
               taper: [0.1, 0.6],
               press: 0,
@@ -371,45 +435,87 @@ function bubbleWrap(rc: RC, x: number, cy: number, slot: number, popped: number)
     }
   s.restore();
   if (popped <= 0) {
-    g.strokeStyle = 'rgba(160,236,255,0.6)';
-    g.lineWidth = 1.1;
-    g.beginPath();
-    g.ellipse(x, cy, rx, ry, 0, 0, Math.PI * 2);
-    g.stroke();
+    // The sheet's edge in pen: three runs with gaps, thin toward the light and heavy away from it, and one shine.
+    for (let k = 0; k < 3; k++) {
+      const from = -2.2 + k * 2.15 + 0.1 * Math.sin(slot + k);
+      for (let i = 0; i < RIM_N; i++) {
+        const a = from + (i / (RIM_N - 1)) * 1.85;
+        rimPts[i].x = x + Math.cos(a) * rx;
+        rimPts[i].y = cy + Math.sin(a) * ry;
+      }
+      // Heaviest on the run facing away from the light (lower right).
+      s.fillStyle = WRAP_INK;
+      stroke(s, rimPts, { w: k === 1 ? 1.5 : k === 0 ? 0.9 : 0.7, seed: slot * 3 + k, taper: [0.3, 0.35], press: 0.3 });
+    }
+    s.fillStyle = 'rgba(255,255,255,0.9)';
+    for (let i = 0; i < RIM_N; i++) {
+      const a = -2.75 + (i / (RIM_N - 1)) * 0.9;
+      rimPts[i].x = x + Math.cos(a) * (rx - 2.2);
+      rimPts[i].y = cy + Math.sin(a) * (ry - 2.2);
+    }
+    stroke(s, rimPts, { w: 1.1, seed: 9, taper: [0.4, 0.5], press: 0 });
     light(rc, x, cy, 30, ITEM_HUE.shield, 0.35);
   }
 }
+
+const WRAP_INK = 'hsl(196 55% 26%)';
+const RIM_N = 9;
+const rimPts: P[] = Array.from({ length: RIM_N }, () => ({ x: 0, y: 0 }));
+
+/**
+ * A flame tongue hanging from (x, y): a jagged teardrop with a lick out of each side, the way a comic
+ * cuts fire. `flick` (-1..1) sways the tip and the licks.
+ */
+function tongue(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, flick: number) {
+  const tip = flick * w * 0.5;
+  g.beginPath();
+  g.moveTo(x - w * 0.8, y);
+  g.lineTo(x - w, y + h * 0.22);
+  g.lineTo(x - w * 0.62, y + h * 0.5);
+  g.lineTo(x - w * (0.95 + 0.2 * flick), y + h * 0.64);
+  g.lineTo(x - w * 0.3, y + h * 0.76);
+  g.lineTo(x + tip, y + h);
+  g.lineTo(x + w * 0.3, y + h * 0.7);
+  g.lineTo(x + w * (0.9 - 0.2 * flick), y + h * 0.58);
+  g.lineTo(x + w * 0.62, y + h * 0.4);
+  g.lineTo(x + w, y + h * 0.18);
+  g.lineTo(x + w * 0.8, y);
+  g.closePath();
+  g.fill();
+}
+
+const PUFF_BITS = [
+  [-1.6, 1.7],
+  [0.4, 2.1],
+  [2, 1.5],
+] as const;
 
 /** The trial jetpack's flame: one big flame that runs out in a puff, a price tag dangling under it. */
 function trialFlame(rc: RC, fx: number, fy: number, k: number, fc: number) {
   const g = rc.g;
   const len = (6 + Math.sin(rc.t * 40) * 1.2) * k;
-  glowDot(g, fx, fy + 2, 15, { h: 30, s: 100, l: 60 }, 0.9);
-  g.fillStyle = 'rgba(255,240,200,0.9)';
-  ellipse(g, fx, fy + len * 0.5, 2.1, len * 0.6);
+  // Hot, so emissive: three flat cuts of the molten palette, never a soft disc.
+  const flick = Math.sin(rc.t * 31);
+  g.fillStyle = '#ff6a1f';
+  tongue(g, fx, fy - 0.5, 2.6, len * 1.15, flick);
+  g.fillStyle = '#ffb02e';
+  tongue(g, fx, fy - 0.5, 1.75, len * 0.8, -flick);
+  g.fillStyle = '#fff1b8';
+  tongue(g, fx, fy - 0.5, 0.95, len * 0.48, flick);
   // The puff it ends in.
   const s = rc.s;
   const py = fy + len + 2.6;
   s.fillStyle = INK;
-  for (const [ox, r] of [
-    [-1.6, 1.7],
-    [0.4, 2.1],
-    [2, 1.5],
-  ]) {
-    s.beginPath();
-    s.arc(fx + ox, py, r + 0.55, 0, Math.PI * 2);
-    s.fill();
-  }
+  s.beginPath();
+  for (const [ox, r] of PUFF_BITS) blob(s, fx + ox, py, r + 0.55, 31 + ox, 1, 0.1, true);
+  s.fill();
   s.fillStyle = '#e9e4dc';
-  for (const [ox, r] of [
-    [-1.6, 1.7],
-    [0.4, 2.1],
-    [2, 1.5],
-  ]) {
-    s.beginPath();
-    s.arc(fx + ox, py, r, 0, Math.PI * 2);
-    s.fill();
-  }
+  s.beginPath();
+  for (const [ox, r] of PUFF_BITS) blob(s, fx + ox, py, r, 31 + ox, 1, 0.1, true);
+  s.fill();
+  s.fillStyle = '#b9b1a6';
+  blob(s, fx + 0.9, py + 0.7, 1.3, 37, 0.8, 0.1);
+  s.fill();
   // The price tag, on a string, swinging.
   const sw = Math.sin(rc.t * 9) * 1.4;
   const tx = fx + fc * 4 + sw;
@@ -435,7 +541,6 @@ function trialFlame(rc: RC, fx: number, fy: number, k: number, fc: number) {
 /** The held item and item effects on one live runner (drawn over the character). */
 export function drawRunnerItems(rc: RC, r: Runner): void {
   const s = rc.s;
-  const g = rc.g;
   const b = r.body;
   const it = r.items;
   const x = b.x + b.w / 2;
@@ -447,7 +552,7 @@ export function drawRunnerItems(rc: RC, r: Runner): void {
   else if (h) drawItemIcon(s, h.kind, x + fc * 8, b.y + 8, 0.95, rc.t, fc);
   if (it.thrust > 0) trialFlame(rc, x - fc * 6, b.y + 15.5, 0.6 + (it.thrust / ROCKET.thrust) * 0.4, fc);
   if (it.guard > 0) bubbleWrap(rc, x, b.y + b.h / 2, r.slot, 1 - it.guard / SHIELD.guard + 0.05);
-  if (it.daze > 0) dazeStars(g, x, b.y - 4, rc.t);
+  if (it.daze > 0) dazeStars(s, x, b.y - 4, rc.t);
 }
 
 /**
@@ -488,11 +593,18 @@ export function drawClouds(rc: RC, run: RunWorld): void {
 /** Held-item shots in flight (the projectile art registry points here; boomerangs are ordinary launcher art). */
 export function drawItemShot(rc: RC, p: Projectile): void {
   if (p.ammo === 'smokebomb') return drawItemIcon(rc.s, 'smoke', p.x, p.y, 0.8, rc.t, 1, rc.t * 8);
-  // The shell slides on its rim, spinning; its notice flutters on top.
-  glowDot(rc.g, p.x, p.y, 10, ITEM_HUE.puck, 0.3);
-  drawItemIcon(rc.s, 'puck', p.x, p.y, 0.85, rc.t, p.vx < 0 ? -1 : 1);
-  rc.g.fillStyle = 'rgba(160,210,255,0.3)';
-  line(rc.g, p.x, p.y + 1, p.x - p.vx * 0.05, p.y + 1, { w: 2, seed: 1, taper: [0.1, 0.9], press: 0 });
+  // The shell slides on its rim, spinning; its notice flutters on top. Pen speed lines trail it, staggered.
+  const s = rc.s;
+  const back = Math.min(14, Math.abs(p.vx) * 0.06);
+  const dir = p.vx < 0 ? -1 : 1;
+  s.fillStyle = INK;
+  for (let i = 0; i < 3; i++) {
+    const y = p.y - 2.6 + i * 2.8;
+    const x0 = p.x - dir * (6.5 + (i === 1 ? 0 : 1.6));
+    const len = back * (i === 1 ? 1 : 0.65) * (0.85 + 0.15 * Math.sin(rc.t * 30 + i * 2));
+    if (len > 1) line(s, x0, y, x0 - dir * len, y, { w: 0.9, seed: i, taper: [0.1, 0.85], press: 0 });
+  }
+  drawItemIcon(s, 'puck', p.x, p.y, 0.85, rc.t, dir);
 }
 
 type ItemEvent = Extract<GameEvent, { type: 'item' }>;
@@ -523,11 +635,13 @@ const ITEM_FX: Partial<Record<ItemEvent['what'], (fx: Fx, e: ItemEvent, col: HSL
       { h: 265, s: 10, l: 35 },
     ];
     fx.burst('smoke', e.x, e.y, 14, 70, grey, 3.5, 1.4);
-    fx.add('flash', e.x, e.y, 0, 0, { h: 280, s: 40, l: 70 }, 24, 0.2);
+    // A smoke bomb goes poof, not bang: speed lines, no flash of heat.
+    fx.add('ring', e.x, e.y, 0, 0, { h: 275, s: 30, l: 60 }, 26, 0.3);
     shake(3);
   },
   hit(fx, e, _col, shake) {
     fx.add('flash', e.x, e.y, 0, 0, GOLD, 16, 0.18);
+    fx.add('ring', e.x, e.y, 0, 0, GOLD, 20, 0.22);
     fx.burst('spark', e.x, e.y, 12, 180, [GOLD, WHITE], 1, 0.35);
     shake(4);
   },
