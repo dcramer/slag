@@ -139,6 +139,11 @@ Every game design decision, preference and direction the owner has given, groupe
   Changed: toys replaced by animals plus parody critters.
 - **The cast is mostly homages: about two thirds parody famous game characters, with a few plain animals for contrast, and the art is raised further.** "its better but you still need more parody and the art needs to be better yet..."
   2026-11-02 · `in progress` · CHARACTERS.md, DESIGN.md → Players
+- **Every character is a homage, which fits the lore (the cast is knock-off heroes who almost got their own game).** "tbqh EVERY character can be an homage so it fits our story design"
+  2026-11-02 · `planned` · CHARACTERS.md → Roster (all homages)
+  Changed: four plain animals (fox, frog, penguin, chicken) were kept for contrast.
+- **Hand-drawn character art pauses until the art pipeline (generated concept, traced into rigged vector parts) is tested.** "its prob worth just waiting for our pipeline test tho because the art is still jank"
+  2026-11-02 · `open` · CHARACTERS.md → History
 - **Recognisability is the top criterion: each homage must read as its original at a glance, so its iconic palette wins and the player's colour moves to a secondary slot (a ring at its feet).** "the only thing that remotely resembles the thing its mimicking is the puff ball (kirby)"
   2026-11-02 · `in progress` · CHARACTERS.md
   Changed: the player's colour was always the body or a big worn piece.

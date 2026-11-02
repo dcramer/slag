@@ -8,7 +8,7 @@ The runners are a cast of fourteen: ten homages to famous game characters in our
 
 From the owner (logged in [DECISIONS.md](DECISIONS.md) → Characters):
 
-1. **Mostly homages.** About two thirds of the cast parodies famous game characters; a few plain animals stay for contrast.
+1. **Every character is a homage.** The lore makes the runners the knock-off heroes who almost got their own game, so the whole cast parodies famous game characters (see Roster). Until the art pipeline lands, four plain animals from round 5 are still in the game.
 2. **Recognisability comes first.** A stranger should name each homage at a glance. For each one we list the three or four traits people actually know it by and make every one of them unmistakable at play scale.
 3. **Homages, never copies.** Each is our own design, read from its silhouette and one or two signature props, never the original's exact design or its real name. Sound-alike names are data (`KIND_NAMES` in `src/gen/character.ts`) and appear nowhere else. Player characters may have faces and personas; parts and machines stay faceless (DESIGN.md → Parody).
 4. **The iconic palette wins, and the player's color moves.** A homage keeps the colors it's known by (the plumber's red cap and blue overalls, the speedster's cobalt, the mouse's yellow). The player's color goes on a secondary but always-visible slot: a flat ring at its feet, no glow. A plain animal, or a homage that comes in every color anyway (the impostor crewmate, the puffball), is drawn in the player's color. Either way it's that player's HUD color, and with eight different kinds per lobby plus the ring, eight players stay told apart.
@@ -48,6 +48,156 @@ So each kind has: a clear head-to-body ratio, a readable expression, a line of a
 
 **Is it the homage?** `cast-recognise.png` puts each kind close up beside "This is ___". As of this round, every homage reads as its caption to us: the plumber, speedster, elf, mouse, impostor, puffball, jelly and goose at once; the bounty hunter and the engineer a beat slower, because their reads lean on props (the shoulder pads and cannon, the hat and wrench) more than on a silhouette nobody else shares. The silhouette test still separates every kind, though the plumber and the hunter are the closest pair of stout shapes.
 
+## Roster (all homages)
+
+The cast this is heading to: sixteen kinds, every one a homage, because the lore makes the runners the characters who never made the cut, the knock-off heroes who almost got their own game. The ten homages from round 5 stay. The four plain animals (fox, frog, penguin, chicken) are replaced by six more homages. Reserves, if one of these won't read: the shovel-wielding knight, the spinning bandicoot, the red-haired mountain climber.
+
+This spec feeds the art pipeline: a generated concept image, traced into vector parts and rigged on the gait system. Each entry is written to be used as prompt material, so it describes traits only and never names a real character. Every kind is our own design: it must read as the homage from its silhouette and props, never copy the original's exact design, and never carry its name or logo. Sound-alike names stay in data (`KIND_NAMES`).
+
+These rules apply to every kind:
+
+- **Size.** About 16 world px tall at play scale, inside the shared 14×15 body envelope. One hitbox for everyone.
+- **Style.** Clean, confident curves; few shapes; smooth tapered lines in a dark of each part's own color; two or three flat tones per surface; one soft, hard-edged shadow shape; calm color; no glow, no gradients.
+- **Facing.** Drawn facing right, standing on the floor.
+- **Player's color.** A flat ring round the feet, except where a kind says "body".
+- **Faces.** Expressive eyes with highlights, and brows that react to running, jumping, falling and cheering.
+
+### The mustached plumber
+- **A stranger should say:** "that's the plumber with the mustache."
+- **Silhouette:** stout and big-headed, about 45% head. A round cap with its bill sticking out front, and a big round nose that breaks the profile.
+- **Traits:** red cap with a round white badge on the front carrying our own small mark (a tiny wrench, never a letter); a big round nose; a thick dark-brown mustache under it; blue overalls with two gold buttons over a red shirt; white gloves; brown shoes.
+- **Palette:** cap and shirt `#c9473f` (shade `#9c3530`); overalls `#3f62b4` (shade `#2e4a8c`); skin `#efc9a4`; mustache and hair `#4d3426`; buttons `#e8c24a`; gloves `#f4efe6`; shoes `#6b4a35`; badge `#fbf6ee`.
+- **Color slot:** ring.
+- **Gait:** a jaunty run with a bounce on every step and arms pumping; one fist high on the jump.
+
+### The blue speedster
+- **A stranger should say:** "the fast blue hedgehog."
+- **Silhouette:** a big head with three or four long spikes swept straight back, a small body, thin legs, big shoes.
+- **Traits:** cobalt-blue quills swept back; one joined white eye shape with green irises; peach muzzle and belly; a cocky one-sided grin; red sneakers with a white strap and white cuffs; white gloves.
+- **Palette:** quills `#2f5bd0` (shade `#2346a6`); muzzle and belly `#f0c99c`; irises `#3a9a46`; sneakers `#d8382f` (shade `#a8281f`); strap and gloves `#fbf6ee`.
+- **Color slot:** ring.
+- **Gait:** runs leaning hard forward, legs a blur; curls into a spinning ball in the air.
+
+### The green-tunic elf hero
+- **A stranger should say:** "the elf hero with the green cap."
+- **Silhouette:** slim. A long green cap flopping back like a tail, a pointed ear sticking out, and a tunic flared at the hem.
+- **Traits:** long floppy green cap; blond fringe; long pointed ear; green tunic with a brown belt and gold buckle; a kite shield and a sword hilt on the back; brown boots and gloves.
+- **Palette:** cap and tunic `#3f7a34` (shade `#2c5a25`); hair `#e6c25a`; skin `#efc9a4`; belt, boots and gloves `#6b4a35`; shield `#3b5fa8` with a silver rim `#c9ccd2`; hilt `#5a7fc0`.
+- **Color slot:** ring.
+- **Gait:** strides out with the cap tip swinging; a forward somersault on the jump.
+
+### The armored bounty hunter
+- **A stranger should say:** "the bounty hunter in the orange power suit."
+- **Silhouette:** a round helmet, two huge round shoulder pads wider than the body, a narrow waist, chunky legs, and an arm cannon held out front.
+- **Traits:** orange armor; red spherical shoulder pads; a green visor across the helmet; a gray arm cannon with a green light; green lights on the chest.
+- **Palette:** armor `#d9661f` (shade `#a84b14`); shoulders `#c9473f`; visor `#2f7a3c` with glint `#9fe08a`; cannon mouth `#3a3a40`; lights `#7fd06a`; waist `#4a4a52`.
+- **Color slot:** ring.
+- **Gait:** heavy, steady strides; raises the cannon on the jump; tucks into a ball on a long fall.
+
+### The yellow electric mouse
+- **A stranger should say:** "the yellow electric mouse."
+- **Silhouette:** chubby and round, with two long pointed ears and a lightning-bolt tail that breaks the outline behind.
+- **Traits:** yellow; ears tipped black; round red cheeks; a zigzag lightning-bolt tail, brown at the root; two brown stripes across the back; small black eyes with a white glint.
+- **Palette:** body `#f2c62a` (shade `#c99c14`); ear tips `#2a1f1a`; cheeks `#e0473b`; stripes and tail root `#6b4a35`.
+- **Color slot:** ring.
+- **Gait:** a quick scamper on all fours at a run, ears streaming back.
+
+### The impostor crewmate
+- **A stranger should say:** "the crewmate from the impostor game."
+- **Silhouette:** a bean on two stubby legs, a wide visor standing proud of the front, and a backpack behind.
+- **Traits:** a smooth bean body; a pale-blue visor with a white glint; a backpack; no arms.
+- **Palette:** body is the player's color; visor `#a9dbe8` (shade `#6aa6ba`); glint `#ffffff`.
+- **Color slot:** body, because the original comes in every color.
+- **Gait:** a waddling shuffle on its stubby legs.
+
+### The pink puffball
+- **A stranger should say:** "the little pink puffball."
+- **Silhouette:** a near-perfect ball on two big oval feet, with stubby round arms.
+- **Traits:** tall oval eyes with a shine at the top; blush marks; a tiny mouth; big red feet.
+- **Palette:** body is the player's color, pink by default; feet `#c9473f`; eyes `#2a1f1a`; blush `rgba(232,96,120,0.55)`.
+- **Color slot:** body, because the original comes in every color.
+- **Gait:** toddles on its big feet; puffs up round and floats in the air.
+
+### The jellyfish parasite
+- **A stranger should say:** "the floating jellyfish thing from the space game."
+- **Silhouette:** a translucent dome with four fangs hooked underneath; it floats and never touches the floor.
+- **Traits:** a see-through green membrane; three red nuclei inside it; a pale rim; four ivory fangs.
+- **Palette:** membrane `#9ee38a` at 60% opacity; nuclei `#c9473f` (shade `#9c3530`); rim `#d8f2c8`; fangs `#efe6d2` (shade `#c8bba0`).
+- **Color slot:** ring.
+- **Gait:** hovers with a slow bob and chomps its fangs, faster when moving.
+
+### The goose up to no good
+- **A stranger should say:** "the troublemaking goose."
+- **Silhouette:** a long body, an S-shaped neck and a tail tipped up. On the run it takes the honk pose: neck thrust out flat, wings flung up.
+- **Traits:** white feathers; an orange beak and webbed feet; a small black eye; the honk with its beak wide open.
+- **Palette:** body `#f3f0ea` (shade `#bdb5a8`); beak and feet `#d9894a` (shade `#a35f2b`); eye `#2a1f1a`.
+- **Color slot:** ring.
+- **Gait:** a waddle; when running, the honk charge with neck out and wings up.
+
+### The team shooter's engineer
+- **A stranger should say:** "the engineer with the hard hat and the wrench."
+- **Silhouette:** stocky, with a square jaw, a domed hard hat with a wide brim, and a huge wrench over the shoulder.
+- **Traits:** yellow hard hat; dark goggles strapped around it; square jaw; red or blue work shirt; khaki trousers with a belt; leather work glove; a huge steel wrench.
+- **Palette:** hat `#e9b730` (shade `#bb8a1c`); goggles `#3a4246`; shirt `#b8433c` or `#3f62a8`; trousers `#8c7a58`; belt `#6b4a35`; glove `#a8794a`; wrench `#8e8a84` (shade `#5c5852`); skin `#efc9a4`.
+- **Color slot:** ring.
+- **Gait:** trudges, heavy-stepped, the wrench swinging.
+
+### The horned bug knight (new)
+- **A stranger should say:** "the little bug knight with the white mask."
+- **Silhouette:** a big round white mask-head about half its height, two tall horns curving up and out from it, a small dark body in a cloak, and a thin blade at its side.
+- **Traits:** a white mask with two large hollow black eyes and no mouth; two curved horns; a dark gray cloak with a ragged hem; a thin pale blade.
+- **Palette:** mask and horns `#f2efe8` (shade `#c9c4b8`); eyes `#14121a`; body `#2a2d38`; cloak `#4a5060` (shade `#363b48`); blade `#c9ccd2`.
+- **Color slot:** ring.
+- **Gait:** a quick, light scuttle, cloak fluttering; lunges forward with the blade on the jump.
+
+### The green saddled dino (new)
+- **A stranger should say:** "the green dinosaur with the saddle."
+- **Silhouette:** upright, with a big round snout well out in front, eyes high on top of the head, a short tail, a saddle on its back, and big boots.
+- **Traits:** green skin; a bulbous round snout; a white belly and cheeks; a red saddle with a white rim; orange spikes down the back of the head; red boots; big eyes set on top of the head.
+- **Palette:** skin `#4cbf4a` (shade `#35913a`); belly and cheeks `#f6f2e8`; saddle `#d8382f` (rim `#fbf6ee`); spikes `#e8853a`; boots `#d8442f` (shade `#a83222`).
+- **Color slot:** ring.
+- **Gait:** a happy trot, head bobbing; on the jump, legs paddling in the air.
+
+### The necktie ape (new)
+- **A stranger should say:** "the big ape with the red tie."
+- **Silhouette:** hunched, with huge shoulders and long arms, a small head low and forward, and a protruding muzzle.
+- **Traits:** brown fur; a tan face, muzzle and chest; a red necktie carrying our own small mark (never letters); big knuckles.
+- **Palette:** fur `#7a4e2c` (shade `#5a3820`); face and chest `#e2b98a`; tie `#d03a30` with mark `#e8c24a`.
+- **Color slot:** ring.
+- **Gait:** knuckle-gallops on all fours at a run, arms leading; beats its chest on a cheer.
+
+### The cup-headed toon (new)
+- **A stranger should say:** "the cartoon guy with a cup for a head."
+- **Silhouette:** a white cup for a head with a handle on the side and a striped straw sticking up out of the top; a small rubber-hose body.
+- **Traits:** a cup head with liquid at the rim; a red-and-white striped straw; pie-cut black eyes; a small red nose; white gloves; red shorts; brown shoes; drawn in a 1930s cartoon spirit.
+- **Palette:** cup `#f6f1e6` (shade `#cfc6b8`); liquid `#5a3a2a`; straw `#d8382f` and `#fbf6ee`; eyes `#14121a`; nose `#d8382f`; shorts `#c9473f`; gloves `#fbf6ee`; shoes `#6b4a35`.
+- **Color slot:** ring.
+- **Gait:** a bouncy, rubber-hose strut with arms swinging; the straw wobbles.
+
+### The round dot-eater (new)
+- **A stranger should say:** "the yellow ball that eats dots."
+- **Silhouette:** a yellow circle with a wedge-shaped mouth cut into its front.
+- **Traits:** pure yellow; a wedge mouth that opens and shuts; one small eye above the mouth; no limbs.
+- **Palette:** body `#f6d02a` (shade `#cba214`); mouth interior `#2a1f1a`; eye `#14121a`.
+- **Color slot:** ring.
+- **Gait:** bounces along, chomping with every stride.
+
+### The barnyard party game's horse (new)
+- **A stranger should say:** "the horse from the chicken-horse game."
+- **Silhouette:** upright, with a long head and muzzle out in front, two upright ears, a mane down the neck, and a tail behind.
+- **Traits:** brown coat; a dark mane and tail; a pale muzzle with nostrils; hooves; a goofy grin.
+- **Palette:** coat `#9a6a40` (shade `#734e2e`); mane and tail `#3a2a20`; muzzle `#e6cfae`; hooves `#2a1f1a`.
+- **Color slot:** ring.
+- **Gait:** a high-stepping prance, mane bouncing; kicks its heels on the jump.
+
+**What to check.** No two kinds may rhyme. Watch these pairs:
+
+- The puffball and the dot-eater: they're split by feet, arms and a mouth against a wedge and no limbs.
+- The goose and the horse: two farmyard homages, but white versus brown and an S-neck versus a long muzzle.
+- The bug knight and the elf: both carry a blade, but a white mask with horns versus a cap and pointed ear.
+
+Every kind must also pass the silhouette sheet and the "is it the homage?" sheet before it ships.
+
 ## What every kind keeps
 
 - **One hitbox, one physics.** Every kind is drawn around the same 14×15 world-px body, inside the range the old blobs used. Hats, ears, tails, shields and wrenches are thin or behind the body. `tests/ink-character.test.ts` holds every kind inside one box around the hitbox, standing on the floor.
@@ -69,3 +219,4 @@ Add the id to `CAST`, its sound-alike name to `KIND_NAMES` and its own colors to
 - **Rounds 1–3** built the toys and the hand-authored outline, gait and silhouette-test system.
 - **Round 4** swapped the toys for animals and a few parody critters, drawn lighter.
 - **Round 5** made the cast mostly homages, put recognisability first (iconic palettes, the player's color on a ring), and raised the craft: proportions, reacting faces, pose outlines, a card-scale rim tone.
+- **Round 6** wrote the all-homage roster as prompt material for the art pipeline (generated concept, traced into rigged vector parts); hand-drawn art work stopped to wait for it.
