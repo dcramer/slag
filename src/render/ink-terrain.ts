@@ -1,4 +1,4 @@
-import { css, type HSL, shift } from '../core/color';
+import { css, type HSL, mixHsl, shift } from '../core/color';
 import { hash2 } from '../core/rng';
 import type { CapKind, PlatformKind, TerrainKind, TerrainLook, Theme } from '../gen/theme';
 import { TILE } from '../sim/constants';
@@ -106,7 +106,225 @@ export function inkContours(level: Level, seed: number, solid: (x: number, y: nu
   return { mask, loops };
 }
 
-/** The terrain's material, and a second one for deep tiles when the look has it. */
+/**
+ * How a landmark skin looks when nothing else says: its tones, what runs along its tops, and its
+ * jump-through boards. Kinds without an entry take the theme's own tones when the theme lays that
+ * material (as its ground or its deep layer), and a plain stone otherwise.
+ */
+interface SkinLook {
+  base: HSL;
+  dark: HSL;
+  light: HSL;
+  cap: CapKind;
+  capColor: HSL;
+  platform?: PlatformKind;
+}
+
+const look = (base: HSL, cap: CapKind, capColor: HSL, platform?: PlatformKind, dark?: HSL, light?: HSL): SkinLook => ({
+  base,
+  dark: dark ?? { h: base.h + 6, s: base.s * 0.95, l: base.l * 0.55 },
+  light: light ?? { h: base.h - 6, s: Math.min(100, base.s * 1.05), l: Math.min(85, base.l * 1.45) },
+  cap,
+  capColor,
+  ...(platform ? { platform } : {}),
+});
+
+const SKIN_LOOKS: Partial<Record<TerrainKind, SkinLook>> = {
+  planks: look({ h: 27, s: 38, l: 38 }, 'beam', { h: 24, s: 36, l: 30 }, 'wood'),
+  // Plaster between dark timbers: the dark tone is the timber, not a shadow of the plaster.
+  timber: look({ h: 40, s: 24, l: 76 }, 'beam', { h: 20, s: 32, l: 24 }, 'wood', { h: 20, s: 34, l: 20 }, { h: 44, s: 30, l: 88 }),
+  brick: look({ h: 9, s: 46, l: 40 }, 'ledge', { h: 30, s: 8, l: 62 }, 'stone'),
+  metal: look({ h: 212, s: 10, l: 46 }, 'trim', { h: 212, s: 12, l: 40 }, 'grate'),
+  rustplate: look({ h: 18, s: 38, l: 36 }, 'trim', { h: 16, s: 34, l: 30 }, 'grate'),
+  hull: look({ h: 214, s: 10, l: 60 }, 'trim', { h: 214, s: 12, l: 50 }, 'grate'),
+  stone: look({ h: 34, s: 9, l: 52 }, 'ledge', { h: 34, s: 8, l: 60 }, 'stone'),
+  carved: look({ h: 38, s: 17, l: 55 }, 'ledge', { h: 38, s: 15, l: 62 }, 'stone'),
+  concrete: look({ h: 30, s: 5, l: 58 }, 'ledge', { h: 30, s: 5, l: 66 }, 'grate'),
+  ice: look({ h: 196, s: 46, l: 72 }, 'none', { h: 196, s: 40, l: 86 }),
+  iceblock: look({ h: 198, s: 42, l: 74 }, 'none', { h: 198, s: 40, l: 88 }, undefined, { h: 205, s: 40, l: 46 }, { h: 192, s: 50, l: 90 }),
+  crystal: look({ h: 284, s: 44, l: 52 }, 'none', { h: 284, s: 40, l: 70 }, undefined, { h: 270, s: 40, l: 22 }, { h: 296, s: 60, l: 80 }),
+  bone: look({ h: 42, s: 30, l: 78 }, 'none', { h: 42, s: 26, l: 84 }, 'stone', { h: 34, s: 22, l: 40 }),
+};
+
+/** A landmark's skin: the box its tiles are drawn in, and the look they're drawn with. */
+export interface Skin {
+  rect: TileRect;
+  T: TerrainLook;
+}
+
+const SKINS = new WeakMap<Level, { key: string; skin: Skin | null }>();
+
+/** The level's landmark skin, or null: nothing to draw differently. Cached per level, theme and landmark. */
+export function skinOf(level: Level): Skin | null {
+  const lm = level.landmark;
+  const th = level.theme;
+  const key = lm?.skin ? `${lm.skin}:${lm.rect.x},${lm.rect.y},${lm.rect.w},${lm.rect.h}:${th.seed}:${th.id}` : '';
+  const hit = SKINS.get(level);
+  if (hit && hit.key === key) return hit.skin;
+  const skin = lm?.skin ? { rect: lm.rect, T: skinTerrain(lm.skin, th) } : null;
+  SKINS.set(level, { key, skin });
+  return skin;
+}
+
+function skinTerrain(kind: TerrainKind, th: Theme): TerrainLook {
+  const T = th.terrain;
+  const own = T.kind === kind ? T : T.sub?.kind === kind ? T.sub : null;
+  const s = SKIN_LOOKS[kind] ?? look({ h: 34, s: 9, l: 52 }, 'ledge', { h: 34, s: 8, l: 60 });
+  // At night the built thing sits in the same dusk as the ground around it.
+  const dim = (c: HSL) => (th.night ? { ...c, l: c.l * 0.78 } : c);
+  return {
+    ...T,
+    kind,
+    base: own?.base ?? dim(s.base),
+    dark: own?.dark ?? dim(s.dark),
+    light: own?.light ?? dim(s.light),
+    cap: s.cap,
+    capColor: dim(s.capColor),
+    veins: false,
+    sub: null,
+    platform: s.platform ? { kind: s.platform, color: dim(s.capColor) } : T.platform,
+  };
+}
+
+/** Is tile (x, y) inside the skin's box? */
+export const inSkin = (s: Skin | null, x: number, y: number) => !!s && x >= s.rect.x && x < s.rect.x + s.rect.w && y >= s.rect.y && y < s.rect.y + s.rect.h;
+
+/** The tile a contour point bounds, stepping in against its outward normal. */
+const tileUnder = (p: EdgeP) => [Math.floor((p.x - p.nx * 2) / TILE), Math.floor((p.y - p.ny * 2) / TILE)] as const;
+
+/** Is this contour point on the skin's tiles? */
+export const edgeInSkin = (s: Skin | null, p: EdgeP) => !!s && inSkin(s, ...tileUnder(p));
+
+/** A floor inside the landmark's box: ground whose top is the landmark's own room, where nothing of the theme's grows. */
+const floorInSkin = (s: Skin, p: EdgeP) => {
+  if (p.ny > -0.3) return false;
+  const [x, y] = tileUnder(p);
+  return inSkin(s, x, y - 1);
+};
+
+/**
+ * The contour with every point hidden on one side of the skin's box: `keep` 'skin' hides the theme's
+ * ground, 'ground' hides the skin (and the floors inside its box).
+ */
+export function skinLoops(s: Skin | null, loops: readonly EdgeP[][], keep: 'skin' | 'ground'): readonly EdgeP[][] {
+  if (!s) return keep === 'ground' ? loops : [];
+  const shown = keep === 'skin' ? (p: EdgeP) => edgeInSkin(s, p) : (p: EdgeP) => !edgeInSkin(s, p) && !floorInSkin(s, p);
+  return loops.map((l) => l.map((p) => (p.hidden || shown(p) ? p : { ...p, hidden: true })));
+}
+
+/** Width in world px a skin's clip runs past its tiles into open air, so the loose contour never shows the ground's material there. */
+const SKIN_BLEED = 4;
+
+/**
+ * The skin over the ground's material on its tiles, cut on the tile grid where it meets the theme's own
+ * ground (a seam a builder made) and run a little past its tiles into the air (the contour cuts that).
+ */
+function paintSkin(
+  g: CanvasRenderingContext2D,
+  level: Level,
+  skin: Skin,
+  paint: (t: Tones, kind: TerrainKind) => void,
+  solid: (x: number, y: number) => boolean,
+  area: Area,
+) {
+  const { rect } = skin;
+  const span = tilesIn(area, level);
+  const x0 = Math.max(rect.x, span.tx0);
+  const x1 = Math.min(rect.x + rect.w - 1, span.tx1);
+  const y0 = Math.max(rect.y, span.ty0);
+  const y1 = Math.min(rect.y + rect.h - 1, span.ty1);
+  if (x0 > x1 || y0 > y1) return;
+  const ground = (x: number, y: number) => solid(x, y) && !inSkin(skin, x, y);
+  g.save();
+  g.beginPath();
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      if (!solid(x, y)) continue;
+      // A side that faces air reaches past the tile; one against ground stops dead on the grid.
+      const l = ground(x - 1, y) ? 0 : SKIN_BLEED;
+      const r = ground(x + 1, y) ? 0 : SKIN_BLEED;
+      const t = ground(x, y - 1) ? 0 : SKIN_BLEED;
+      const b = ground(x, y + 1) ? 0 : SKIN_BLEED;
+      g.rect(x * TILE - l, y * TILE - t, TILE + l + r, TILE + t + b);
+    }
+  }
+  g.clip();
+  paint(skin.T, skin.T.kind);
+  g.restore();
+  inkSeams(g, level, skin, solid, area);
+}
+
+/**
+ * Where the built thing meets the ground: a footing course along its foot with rubble heaped against it,
+ * a post where it's set into a bank, a lintel where rock runs over it. One roll per tile, keyed to the world.
+ */
+function inkSeams(g: CanvasRenderingContext2D, level: Level, skin: Skin, solid: (x: number, y: number) => boolean, area: Area) {
+  const S = skin.T;
+  const G = level.theme.terrain;
+  const span = tilesIn(area, level);
+  const ink = inkOf2(G);
+  const footing = css(shift(S.dark, 6, -4));
+  const footLit = css(shift(S.light, -4, -6));
+  const rubble = [css(G.base), css(shift(G.base, -6, 2)), css(shift(G.light, -4, -4))];
+  const ground = (x: number, y: number) => solid(x, y) && !inSkin(skin, x, y);
+  const { rect } = skin;
+  for (let y = Math.max(rect.y, span.ty0); y <= Math.min(rect.y + rect.h - 1, span.ty1); y++) {
+    for (let x = Math.max(rect.x, span.tx0); x <= Math.min(rect.x + rect.w - 1, span.tx1); x++) {
+      if (!solid(x, y)) continue;
+      const wx = x * TILE;
+      const wy = y * TILE;
+      const sd = x * 4099 + y * 131;
+      if (ground(x, y + 1)) {
+        // The footing: a course of the skin's own dark, lit along its top, inked hard where it bears.
+        const fy = wy + TILE;
+        g.fillStyle = footing;
+        g.fillRect(wx - 0.5, fy - 3.6, TILE + 1, 3.6);
+        g.fillStyle = footLit;
+        line(g, wx, fy - 3.4, wx + TILE, fy - 3.4, { w: 0.8, seed: sd, taper: [0.15, 0.2], press: 0 });
+        g.fillStyle = ink;
+        line(g, wx - 0.6, fy, wx + TILE + 0.6, fy + (hash2(x, y, 3) - 0.5) * 0.6, { w: 1.7, seed: sd + 1, taper: [0.06, 0.08], press: 0.55 });
+        if (hash2(x, y, 4) > 0.45)
+          line(g, wx + 4 + hash2(x, y, 5) * 8, fy - 3.6, wx + 4.4 + hash2(x, y, 5) * 8, fy, { w: 0.8, seed: sd + 2, taper: [0.1, 0.2] });
+        // Ground heaped against the foot, so the two meet rather than butt.
+        for (let i = 0; i < 2; i++) {
+          if (hash2(x, y + i, 6) < 0.4) continue;
+          const rx = wx + 2 + hash2(x, y + i, 7) * 12;
+          const rr = 1.4 + hash2(x, y + i, 8) * 1.6;
+          g.fillStyle = ink;
+          blob(g, rx, fy + 0.3, rr + 0.5, sd + i, 0.6, 0.25);
+          g.fill();
+          g.fillStyle = rubble[Math.floor(hash2(x, y + i, 9) * rubble.length)];
+          blob(g, rx, fy, rr, sd + i, 0.58, 0.25);
+          g.fill();
+        }
+      }
+      for (const dir of [-1, 1]) {
+        if (!ground(x + dir, y)) continue;
+        // Set into a bank: a post down the joint, inked on the ground's side.
+        const sx = dir < 0 ? wx : wx + TILE;
+        g.fillStyle = footing;
+        g.fillRect(dir < 0 ? sx : sx - 3, wy - 0.5, 3, TILE + 1);
+        g.fillStyle = ink;
+        line(g, sx, wy - 0.4, sx + (hash2(x, y, 10) - 0.5) * 0.5, wy + TILE + 0.4, {
+          w: dir < 0 ? 1.2 : 1.6,
+          seed: sd + 3 + dir,
+          taper: [0.08, 0.08],
+          press: 0.5,
+        });
+      }
+      if (ground(x, y - 1)) {
+        // Rock running over it: a lintel under the rock.
+        g.fillStyle = footing;
+        g.fillRect(wx - 0.5, wy, TILE + 1, 3);
+        g.fillStyle = ink;
+        line(g, wx - 0.5, wy + 3, wx + TILE + 0.5, wy + 3, { w: 1.1, seed: sd + 5, taper: [0.1, 0.15], press: 0.4 });
+        line(g, wx - 0.5, wy, wx + TILE + 0.5, wy, { w: 1.3, seed: sd + 6, taper: [0.08, 0.1], press: 0.5 });
+      }
+    }
+  }
+}
+
+/** The terrain's material, a second one for deep tiles when the look has it, and a landmark's skin over its own tiles. */
 export function inkMaterial(g: CanvasRenderingContext2D, level: Level, th: Theme, seed: number, solid: (x: number, y: number) => boolean, area: Area) {
   const T = th.terrain;
   const dist = airDistance(level, solid);
@@ -116,10 +334,24 @@ export function inkMaterial(g: CanvasRenderingContext2D, level: Level, th: Theme
   const paint = (c: CanvasRenderingContext2D, t: Tones, kind: TerrainKind, inside: (x: number, y: number) => boolean) =>
     INK_MATERIALS[kind]!({ g: c, seed: seed + (t === T ? 0 : 1000), T: t, ink, span, area, inside, depth });
   paint(g, T, T.kind, solid);
-  if (!T.sub) return;
+  if (T.sub) inkSub(g, T.sub, span, area, solid, depth, paint, seed);
+  const skin = skinOf(level);
+  if (skin) paintSkin(g, level, skin, (t, kind) => paint(g, t, kind, (x, y) => solid(x, y) && inSkin(skin, x, y)), solid, area);
+}
+
+/** The deep tiles' second material, cut to blobs round each one so the change reads as a hand's, not the grid's. */
+function inkSub(
+  g: CanvasRenderingContext2D,
+  sub: NonNullable<TerrainLook['sub']>,
+  span: ReturnType<typeof tilesIn>,
+  area: Area,
+  solid: (x: number, y: number) => boolean,
+  depth: (x: number, y: number) => number,
+  paint: (c: CanvasRenderingContext2D, t: Tones, kind: TerrainKind, inside: (x: number, y: number) => boolean) => void,
+  seed: number,
+) {
   // By distance from air, not depth below the surface: a depth reaches all the way down a column, so one
   // crater would change tiles a redraw can't see. Distance stays local.
-  const sub = T.sub;
   const deep = (x: number, y: number) => solid(x, y) && depth(x, y) >= sub.depth;
   let any = false;
   for (let y = span.ty0; y <= span.ty1 && !any; y++) for (let x = span.tx0; x <= span.tx1 && !any; x++) any = deep(x, y);
@@ -190,10 +422,12 @@ export function inkVeins(g: CanvasRenderingContext2D, level: Level, th: Theme, s
   const T = th.terrain;
   const span = tilesIn(area, level);
   const rate = T.kind === 'basalt' ? 0.2 : 0.05;
+  // A built thing doesn't glow from inside: the veins are the theme's ground.
+  const skin = skinOf(level);
   g.fillStyle = css(T.vein, 6);
   for (let y = span.ty0; y <= span.ty1; y++) {
     for (let x = span.tx0; x <= span.tx1; x++) {
-      if (!solid(x, y)) continue;
+      if (!solid(x, y) || inSkin(skin, x, y)) continue;
       const wx = x * TILE;
       const wy = y * TILE;
       if (hash2(wx, wy, seed + 90) > rate) continue;
@@ -205,7 +439,7 @@ export function inkVeins(g: CanvasRenderingContext2D, level: Level, th: Theme, s
   g.fillStyle = css(T.vein, 15, 0.8);
   for (let y = span.ty0; y <= span.ty1; y++) {
     for (let x = span.tx0; x <= span.tx1; x++) {
-      if (!solid(x, y) || solid(x, y - 1) || y === 0) continue;
+      if (!solid(x, y) || solid(x, y - 1) || y === 0 || inSkin(skin, x, y)) continue;
       for (let i = 0; i < 2; i++) {
         blob(g, x * TILE + hash2(x, y + i, seed + 94) * 15, y * TILE + hash2(y, x + i, seed + 95) * 2, 0.5, i, 1, 0.1);
         g.fill();
@@ -214,13 +448,14 @@ export function inkVeins(g: CanvasRenderingContext2D, level: Level, th: Theme, s
   }
 }
 
-/** Parallel strokes hanging off every edge that faces away from the light; they fade into the fill. */
-export function inkHatch(g: CanvasRenderingContext2D, loops: readonly EdgeP[][], th: Theme, seed: number, area: Area) {
+/** Parallel strokes hanging off every edge that faces away from the light; they fade into the fill. A skin hatches in its own dark. */
+export function inkHatch(g: CanvasRenderingContext2D, loops: readonly EdgeP[][], th: Theme, seed: number, area: Area, skin: Skin | null = null) {
   const dx = -0.6;
   const dy = -0.8;
   const col = css(shift(th.terrain.dark, -8, 4));
+  // A skin hatches in a shade of itself: a pale one (plaster, bone, ice) would drown under the ground's dark.
+  const skinCol = skin ? css(mixHsl(skin.T.base, skin.T.dark, 0.55)) : col;
   const SP = 2.7;
-  g.fillStyle = col;
   for (const loop of loops) {
     for (let i = 0; i < loop.length; i++) {
       const p = loop[i];
@@ -235,6 +470,7 @@ export function inkHatch(g: CanvasRenderingContext2D, loops: readonly EdgeP[][],
       const skip = hash2(k, 11, seed);
       if (skip < 0.14) continue;
       const len = (5 + 15 * (sh - 0.74) * 3.2) * (0.55 + 0.75 * hash2(k, 12, seed)) * (0.7 + 0.6 * vn(p.x * 0.06, p.y * 0.06, seed + 40));
+      g.fillStyle = edgeInSkin(skin, p) ? skinCol : col;
       const sx = p.x - p.nx * 0.5;
       const sy = p.y - p.ny * 0.5;
       line(g, sx, sy, sx + dx * len, sy + dy * len, { w: 1.05, seed: k, taper: [0.02, 0.85], wobble: 0.25 });
@@ -363,7 +599,12 @@ function hardCap(height: number, seam: number, fix: 'rivet' | 'nail' | 'none', o
         // Follow the run's own points: they sit on the world grid, so a crater at one end moves nothing at the other.
         const x0 = run[0].x - over;
         const x1 = run[run.length - 1].x + over;
-        const y = run[run.length >> 1].y - 1.2;
+        // Height along the run from its nearest point, never from its middle: a crater at one end moves the middle.
+        const yAt = (x: number) => {
+          let best = run[0];
+          for (const p of run) if (Math.abs(p.x - x) < Math.abs(best.x - x)) best = p;
+          return best.y - 1.2;
+        };
         const along = [{ x: x0, y: run[0].y }, ...run, { x: x1, y: run[run.length - 1].y }];
         const topE = along.map((p) => ({ x: p.x, y: p.y - 1.2 + sn(p.x * 0.04, p.y * 0.04, seed) * 0.25 }));
         const botE = along.map((p) => ({ x: p.x, y: p.y - 1.2 + height + sn(p.x * 0.06, p.y * 0.06, seed + 1) * 0.4 }));
@@ -397,6 +638,7 @@ function hardCap(height: number, seam: number, fix: 'rivet' | 'nail' | 'none', o
         g.fillStyle = ink;
         for (let k = Math.ceil(x0 / seam); k * seam < x1 - 4; k++) {
           const sx = k * seam;
+          const y = yAt(sx);
           if (!near(area, sx, y, 12)) continue;
           if (hash2(k, 5, seed) > 0.3) line(g, sx, y + 0.2, sx + (hash2(k, 6, seed) - 0.5), y + height, { w: 0.95, seed: k, taper: [0.1, 0.25] });
           if (fix === 'none') continue;
@@ -408,8 +650,8 @@ function hardCap(height: number, seam: number, fix: 'rivet' | 'nail' | 'none', o
         }
         cellStrokes(g, botE, area, { w: 1.7, seed: seed + 3, taper: [0.06, 0.06], press: 0.5 });
         cellStrokes(g, topE, area, { w: 0.8, seed: seed + 4, taper: [0.1, 0.12], press: 0.6 });
-        line(g, x0, y, x0, y + height, { w: 1.1, seed: seed + 5, taper: [0.1, 0.1] });
-        line(g, x1, y, x1, y + height, { w: 1.5, seed: seed + 6, taper: [0.1, 0.1] });
+        line(g, x0, yAt(x0), x0, yAt(x0) + height, { w: 1.1, seed: seed + 5, taper: [0.1, 0.1] });
+        line(g, x1, yAt(x1), x1, yAt(x1) + height, { w: 1.5, seed: seed + 6, taper: [0.1, 0.1] });
       }
     },
   };
@@ -836,6 +1078,8 @@ const INK_PLATFORMS: Record<PlatformKind, (r: Run) => void> = {
 export function inkPlatforms(g: CanvasRenderingContext2D, level: Level, th: Theme, seed: number, solid: (x: number, y: number) => boolean, area: Area) {
   const P = th.terrain.platform;
   const ink = inkOf(th);
+  // A landmark's boards are its own: a grating in a steel tower, planks in a manor.
+  const skin = skinOf(level);
   for (let ty = 0; ty < level.h; ty++) {
     for (let tx = 0; tx < level.w; tx++) {
       if (tileAt(level, tx, ty) !== T_ONEWAY || tileAt(level, tx - 1, ty) === T_ONEWAY) continue;
@@ -845,7 +1089,8 @@ export function inkPlatforms(g: CanvasRenderingContext2D, level: Level, th: Them
       const x1 = (end + 1) * TILE + (solid(end + 1, ty) ? 2 : 0.5);
       const y = ty * TILE;
       if (x1 + 8 < area.x0 || x0 - 8 > area.x1 || y + 14 < area.y0 || y - 2 > area.y1) continue;
-      INK_PLATFORMS[P.kind]({ g, x0, x1, y, freeL: !solid(tx - 1, ty), freeR: !solid(end + 1, ty), c: P.color, ink, seed, tx });
+      const own = inSkin(skin, tx, ty) ? skin!.T.platform : P;
+      INK_PLATFORMS[own.kind]({ g, x0, x1, y, freeL: !solid(tx - 1, ty), freeR: !solid(end + 1, ty), c: own.color, ink, seed, tx });
     }
   }
 }

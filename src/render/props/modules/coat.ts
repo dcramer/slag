@@ -268,5 +268,14 @@ function drawSlime(rc: RC, m: Coat, card: boolean) {
 defineArt<'coat'>({
   type: 'coat',
   layer: 2,
-  draw: (rc, m, d) => (m.kind === 'spikes' ? drawSpikeStrip(rc, m) : m.kind === 'ice' ? drawIce(rc, m, !!d.o.card) : drawSlime(rc, m, !!d.o.card)),
+  draw(rc, m, d) {
+    // A coat riding a mover is drawn where the sim has carried it: the same offset, so it stays stuck on.
+    const s = rc.s;
+    s.save();
+    s.translate(d.off[0], d.off[1]);
+    if (m.kind === 'spikes') drawSpikeStrip(rc, m);
+    else if (m.kind === 'ice') drawIce(rc, m, !!d.o.card);
+    else drawSlime(rc, m, !!d.o.card);
+    s.restore();
+  },
 });

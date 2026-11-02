@@ -153,6 +153,134 @@ export const shots: Scenarios = {
     }
     await sheet(`parts-${seed}`, files.slice(1), 4);
   },
+  async belts() {
+    // A conveyor at every rotation: held as place-phase ghosts, then placed in an empty room with a runner
+    // on each belt face (carried on the top, dragged on a side, shoved under the bottom), whole and close up.
+    // `--propseed` picks the platform roll (35: a three-cell conveyor running forwards, so its left face climbs).
+    const ps = Number(opt('propseed', '35'));
+    await open(`seed=${seed}&players=4`);
+    await step(20);
+    await page.evaluate((ps) => {
+      const d = (window as any).slagDebug;
+      const m = d.match;
+      m.placed.length = 0;
+      d.addProps(['platform'], ps);
+      const def = m.placed[0].def;
+      m.placed.length = 0;
+      m.players.forEach((p: any, i: number) => {
+        m.crate[i].def = def;
+        m.crate[i].claimedBy = p.slot;
+        p.claim = i;
+      });
+    }, ps);
+    await step(60);
+    await page.evaluate(() => {
+      const m = (window as any).slagDebug.match;
+      m.players.forEach((p: any, i: number) => {
+        p.rot = i;
+        p.cursor = { x: 120 + i * 170, y: 250 };
+      });
+    });
+    await step(2);
+    const files = [await snap(`belts-${seed}-ghosts`)];
+    // The race: an empty room on a floor, one conveyor per rotation.
+    const boxes: { x: number; y: number; w: number; h: number; rot: number }[] = await page.evaluate((ps) => {
+      const d = (window as any).slagDebug;
+      const m = d.match;
+      m.placed.length = 0;
+      d.addProps(['platform'], ps);
+      const def = m.placed[0].def;
+      m.placed.length = 0;
+      [
+        [7, 20, 0],
+        [17, 17, 1],
+        [26, 21, 2],
+        [33, 18, 3],
+      ].forEach(([tx, ty, rot], i) => m.placed.push({ uid: 900 + i, def, owner: m.players[0].slot, tx, ty, rot }));
+      d.race([], 1);
+      d.step(70);
+      // Clear the room once the race has its level, and lay a floor.
+      const L = m.level;
+      for (let y = 2; y < 24; y++) for (let x = 3; x < L.w - 3; x++) L.tiles[y * L.w + x] = 0;
+      for (let x = 1; x < L.w - 1; x++) L.tiles[24 * L.w + x] = 1;
+      L.version++;
+      return m.placed.map((p: any) => {
+        const mine = m.run.solids.filter((s: any) => s.propUid === p.uid);
+        const x = Math.min(...mine.map((s: any) => s.x));
+        const y = Math.min(...mine.map((s: any) => s.y));
+        return { x, y, w: Math.max(...mine.map((s: any) => s.x + s.w)) - x, h: Math.max(...mine.map((s: any) => s.y + s.h)) - y, rot: p.rot };
+      });
+    }, ps);
+    // A runner on each belt face, holding into it.
+    const devices: string[] = await page.evaluate((bx) => {
+      const m = (window as any).slagDebug.match;
+      const floor = 24 * 16;
+      return m.run.runners.slice(0, 4).map((r: any, i: number) => {
+        const b = r.body;
+        const k = bx[i];
+        if (k.rot === 0) [b.x, b.y] = [k.x + 6, k.y - b.h];
+        else if (k.rot === 1) [b.x, b.y] = [k.x + k.w + 0.5, k.y + 2];
+        else if (k.rot === 2) [b.x, b.y] = [k.x + k.w / 2 - b.w / 2, floor - b.h];
+        else [b.x, b.y] = [k.x - b.w - 0.5, k.y + 30];
+        b.vx = b.vy = 0;
+        return m.player(r.slot).device;
+      });
+    }, boxes);
+    const none = {
+      left: false,
+      right: false,
+      up: false,
+      down: false,
+      jump: false,
+      jumpPressed: false,
+      confirmPressed: false,
+      altPressed: false,
+      downPressed: false,
+    };
+    for (let f = 0; f < Number(opt('frames', '14')); f++) {
+      const hop = f % 30 === 0;
+      const inputs = {
+        [devices[0]]: none,
+        [devices[1]]: { ...none, left: true },
+        [devices[2]]: { ...none, jump: f % 30 < 12, jumpPressed: hop },
+        [devices[3]]: { ...none, right: true },
+      };
+      await page.evaluate((inp) => (window as any).slagDebug.step(1, inp), inputs);
+    }
+    console.log(
+      'runners',
+      JSON.stringify(
+        await page.evaluate(() =>
+          (window as any).slagDebug.match.run.runners.map((r: any) => ({
+            x: Math.round(r.body.x),
+            y: Math.round(r.body.y),
+            vx: Math.round(r.body.vx),
+            vy: Math.round(r.body.vy),
+            wall: r.body.wallDir,
+            ground: r.body.onGround,
+            alive: r.alive,
+          })),
+        ),
+      ),
+      JSON.stringify(boxes),
+    );
+    files.push(await snap(`belts-${seed}-race`));
+    for (const k of boxes) {
+      await page.evaluate(
+        ([x, y]) => {
+          const d = (window as any).slagDebug;
+          const cam = d.renderer.cam;
+          cam.update = () => {};
+          cam.snap({ cx: x, cy: y, zoom: 3.2 });
+          cam.shake = 0;
+          d.render();
+        },
+        [k.x + k.w / 2, k.y + k.h / 2 + 6] as const,
+      );
+      files.push(await snap(`belts-${seed}-rot${k.rot}`));
+    }
+    await sheet(`belts-${seed}`, files, 2);
+  },
   async pipes() {
     // Warp pipes facing every way: two linked pairs and one waiting, in place with a pipe ghost tethered
     // to the waiting one, each pipe close up, then a race with runners caught going in and coming out.

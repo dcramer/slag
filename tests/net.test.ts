@@ -1,3 +1,4 @@
+import { generateCharacter } from '../src/gen/character';
 import { describe, expect, it, vi } from 'vitest';
 import { Rng } from '../src/core/rng';
 import { Match } from '../src/game/match';
@@ -251,7 +252,10 @@ describe('lobby seats', () => {
     r.run(5);
     const b = r.join('bbbb');
     r.run(40);
-    const look = 123456;
+    // A look the first seat could take: its color and toy are free of the second's.
+    const pa = a.match.players.find((p) => p.device === 'aaaa:kb1')!;
+    let look = 123456;
+    while (!a.match.looksFree({ ...generateCharacter(look), name: pa.character.name }, pa)) look++;
     a.act({ t: 'look', dev: 'aaaa:kb1', seed: look });
     r.run(30);
     b.act({ t: 'look', dev: 'bbbb:kb1', seed: look });

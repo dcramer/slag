@@ -134,6 +134,10 @@ const ITEM_NOTES: Record<ItemKind, string> = {
   shield: 'Pop.',
   rocket: 'Trial expired.',
   smoke: 'Unexplored.',
+  bat: 'Going, going…',
+  tremor: 'Off the charts.',
+  tax: 'Progressive.',
+  block: 'Some assembly required.',
 };
 
 const crate = (name: string, pool: ItemKind[], uses: number, look: MysteryLook): PropDef =>

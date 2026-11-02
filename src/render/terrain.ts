@@ -18,8 +18,11 @@ import {
   inkMaterial,
   inkPlatforms,
   inkUnder,
+  inSkin,
   inkVeins,
   makeTufts,
+  skinLoops,
+  skinOf,
   type Tuft,
 } from './ink-terrain';
 import { cutOutside, type RC } from './kit';
@@ -210,12 +213,16 @@ export class TerrainPainter {
     if (layer) g.drawImage(layer, 0, 0, lw, lh, px0, py0, lw, lh);
     g.setTransform(kb, 0, 0, kb, 0, 0);
     inkEdges(g, loops, th, seed, area);
-    inkCap(g, capLoops(level, loops), th.terrain, seed, area);
-    inkUnder(g, loops, th.terrain, seed, area);
+    // A landmark wears its own cap, and nothing grows on it or hangs off it.
+    const skin = skinOf(level);
+    const caps = capLoops(level, loops);
+    inkCap(g, skinLoops(skin, caps, 'ground'), th.terrain, seed, area);
+    if (skin) inkCap(g, skinLoops(skin, caps, 'skin'), skin.T, seed, area);
+    inkUnder(g, skinLoops(skin, loops, 'ground'), th.terrain, seed, area);
     inkIceTops(g, level, th, seed, loops, area);
     inkPlatforms(g, level, th, seed, solid, area);
     // A partial trace only knows the ground around it: keep every tuft past that and replace the rest.
-    const fresh = INK_CAPS[th.terrain.cap].tufts ? makeTufts(loops, seed, this.decor) : [];
+    const fresh = INK_CAPS[th.terrain.cap].tufts ? makeTufts(skinLoops(skin, loops, 'ground'), seed, this.decor) : [];
     this.tufts = tiles
       ? [
           ...this.tufts.filter((t) => t.x < area.x0 || t.x > area.x1 || t.y < area.y0 || t.y > area.y1),
@@ -269,7 +276,7 @@ export class TerrainPainter {
     lg.setTransform(kb, 0, 0, kb, -px0, -py0);
     inkMaterial(lg, level, th, seed, solid, area);
     inkIce(lg, level, th, seed, solid, area);
-    inkHatch(lg, loops, th, seed, area);
+    inkHatch(lg, loops, th, seed, area, skinOf(level));
     cutOutside(lg, mask, area);
     lg.restore();
     return layer;
@@ -330,10 +337,13 @@ export class TerrainPainter {
       return list[list.length - 1];
     };
     const taken = new Set<number>();
+    const skin = skinOf(level);
     for (let ty = 1; ty < level.h; ty++) {
       for (let tx = 0; tx < level.w; tx++) {
         if (!solid(tx, ty)) continue;
         if (skip && tx >= skip.x && tx < skip.x + skip.w && ty >= skip.y && ty < skip.y + skip.h) continue;
+        // A landmark is dressed by its own art, not the theme's scatter.
+        if (inSkin(skin, tx, ty) || inSkin(skin, tx, ty - 1)) continue;
         const top = air(tx, ty - 1);
         const under = ty < level.h - 1 && air(tx, ty + 1);
         const roll = rng.next();

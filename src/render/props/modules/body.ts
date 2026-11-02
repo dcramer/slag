@@ -3,6 +3,7 @@ import type { Vec } from '../../../core/geom';
 import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import type { Module, ModuleOf, PropStyle, Resolved } from '../../../sim/props';
+import { beltTurn } from '../../../sim/props/modules/body';
 import { blob, line, type P, stroke } from '../../ink';
 import { blockLoops, stampBlock } from '../../ink-blocks';
 import { drawBelts } from '../../ink-surface';
@@ -123,10 +124,11 @@ function drawBody(rc: RC, m: M<'body'>, st: PropStyle, pal: MetalPalette, off: V
     }
   }
   const O: Vec = [off[0] + shake, off[1]];
-  // The sim's own belt speed, signed the way the top run carries you (sim/props/modules/body.ts).
-  const speed = r.pp.rot >= 2 ? -m.conveyor : m.conveyor;
+  // The sim's own belt: its speed clockwise round the block, on the face the part was turned to (sim/props/modules/body.ts).
+  const speed = m.conveyor;
+  const turn = m.material === 'conveyor' ? beltTurn(r.pp) : 0;
   const squash = m.material === 'jelly' ? jellySquash(m, r.pp.uid, O, f, o) : 0;
-  const bake = stampBlock(s, m.cells, O, m.material, st, pal, squash, speed < 0 ? -1 : 1);
+  const bake = stampBlock(s, m.cells, O, m.material, st, pal, squash, speed < 0 ? -1 : 1, turn);
   const set = new Set(m.cells.map(([x, y]) => `${x},${y}`));
 
   switch (m.material) {
@@ -165,7 +167,7 @@ function drawBody(rc: RC, m: M<'body'>, st: PropStyle, pal: MetalPalette, off: V
       break;
     }
     case 'conveyor':
-      if (bake.belts) drawBelts(s, bake.belts, bake.loops, O[0], O[1], f, speed, pal, st.hue);
+      if (bake.belts) drawBelts(s, bake.belts, bake.loops, O[0], O[1], f, speed, pal, st.hue, turn);
       break;
     case 'goo': {
       // Drips that gather, stretch and let go under every bottom edge: thin, so they're decoration.
