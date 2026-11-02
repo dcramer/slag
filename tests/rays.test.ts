@@ -614,6 +614,44 @@ describe('crushers', () => {
     expect(rs[0].killer).toBe(7);
   });
 
+  it('a fast slam crushes a lone runner on the floor instead of popping them onto its head', () => {
+    // Its stroke ends 8 px above the floor, too low for a runner, and the head covers 12 px in its last frame:
+    // deeper than half the overlap, so pushing out by the shallowest side would lift the runner on top.
+    const top = FLOOR - 8;
+    const p = place(crusher, 20, top);
+    const { run, rs } = race(testLevel(), [p]);
+    standAt(rs[0], 20, FLOOR - 1);
+    const y0 = rs[0].body.y;
+    for (let i = 0; i < 120 && rs[0].alive; i++) {
+      steps(run, 1);
+      expect(rs[0].body.y).toBeGreaterThanOrEqual(y0);
+    }
+    expect([rs[0].alive, rs[0].cause, rs[0].killer]).toEqual([false, 'crush', 7]);
+  });
+
+  it('a fast slam sideways pins a runner against a wall', () => {
+    const lane = FLOOR - 1;
+    const p = place(def([body(), { ...press, angle: RIGHT, reach: 8 }]), 20, lane);
+    const level = testLevel();
+    for (let y = 0; y < FLOOR; y++) level.tiles[y * LEVEL_W + 30] = 1;
+    const { run, rs } = race(level, [p]);
+    standAt(rs[0], 29, lane);
+    rs[0].body.x = 30 * TILE - rs[0].body.w;
+    for (let i = 0; i < 120 && rs[0].alive; i++) steps(run, 1);
+    expect([rs[0].alive, rs[0].cause, rs[0].killer]).toEqual([false, 'crush', 7]);
+  });
+
+  it('a runner beside a slam is left alone', () => {
+    const top = FLOOR - 9;
+    const p = place(crusher, 20, top);
+    const { run, rs } = race(testLevel(), [p]);
+    standAt(rs[0], 22, FLOOR - 1);
+    const x0 = rs[0].body.x;
+    steps(run, 240);
+    expect(rs[0].alive).toBe(true);
+    expect(rs[0].body.x).toBe(x0);
+  });
+
   it('its head blocks a laser', () => {
     const lane = FLOOR - 4;
     const top = lane - 3;
