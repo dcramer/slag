@@ -401,7 +401,7 @@ export class Backdrop {
     }
   }
 
-  /** Ambient particles (cosmetic, non-deterministic). */
+  /** Ambient particles (cosmetic, non-deterministic). On the background layer: with ink they read as stray projectiles. */
   drawMotes(rc: RC, th: Theme, dt: number, view: { x: number; y: number; w: number; h: number }) {
     const kind = th.ambient;
     // Motes live in world space around the visible rect; zoomed-out views get proportionally more (capped).
@@ -469,20 +469,20 @@ export class Backdrop {
           break;
         }
         case 'snow':
-          rc.s.fillStyle = `rgba(255,255,255,${0.85 * fade})`;
-          circle(rc.s, m.x, m.y, 0.7 + (m.seed % 1) * 0.8);
+          rc.bg.fillStyle = `rgba(255,255,255,${0.85 * fade})`;
+          circle(rc.bg, m.x, m.y, 0.7 + (m.seed % 1) * 0.8);
           break;
         case 'rain':
-          rc.s.strokeStyle = `rgba(200,215,240,${0.32 * fade})`;
-          rc.s.lineWidth = 0.6;
-          rc.s.beginPath();
-          rc.s.moveTo(m.x, m.y);
-          rc.s.lineTo(m.x + m.vx * 0.025, m.y + m.vy * 0.025);
-          rc.s.stroke();
+          rc.bg.strokeStyle = `rgba(200,215,240,${0.32 * fade})`;
+          rc.bg.lineWidth = 0.6;
+          rc.bg.beginPath();
+          rc.bg.moveTo(m.x, m.y);
+          rc.bg.lineTo(m.x + m.vx * 0.025, m.y + m.vy * 0.025);
+          rc.bg.stroke();
           break;
         case 'ash':
-          rc.s.fillStyle = `rgba(70,64,62,${0.6 * fade})`;
-          rc.s.fillRect(m.x, m.y, 1.3, 1);
+          rc.bg.fillStyle = `rgba(70,64,62,${0.6 * fade})`;
+          rc.bg.fillRect(m.x, m.y, 1.3, 1);
           if (m.seed % 5 < 1) {
             rc.g.fillStyle = css(th.lamp, 10, 0.6 * fade * (0.5 + 0.5 * Math.sin(t * 6 + m.seed)));
             rc.g.fillRect(m.x, m.y, 1, 1);
@@ -490,8 +490,8 @@ export class Backdrop {
           break;
         case 'leaves': {
           const a = t * 2 + m.seed;
-          rc.s.fillStyle = css(col, (m.seed % 3) * 5, 0.9 * fade);
-          ellipse(rc.s, m.x, m.y, 2, 0.6 + Math.abs(Math.sin(a)) * 0.9, a * 0.7);
+          rc.bg.fillStyle = css(col, (m.seed % 3) * 5, 0.9 * fade);
+          ellipse(rc.bg, m.x, m.y, 2, 0.6 + Math.abs(Math.sin(a)) * 0.9, a * 0.7);
           break;
         }
         case 'pollen':
@@ -503,15 +503,15 @@ export class Backdrop {
           circle(rc.g, m.x, m.y, 1);
           break;
         case 'dust':
-          rc.s.fillStyle = css(mixHsl(th.fog, hsl3(45, 60, 95), 0.6), 0, 0.3 * fade);
-          rc.s.fillRect(m.x, m.y, 1, 1);
+          rc.bg.fillStyle = css(mixHsl(th.fog, hsl3(45, 60, 95), 0.6), 0, 0.3 * fade);
+          rc.bg.fillRect(m.x, m.y, 1, 1);
           break;
         case 'bubbles':
-          rc.s.strokeStyle = `rgba(220,255,255,${0.5 * fade})`;
-          rc.s.lineWidth = 0.6;
-          rc.s.beginPath();
-          rc.s.arc(m.x, m.y, 1.4 + (m.seed % 1.5), 0, Math.PI * 2);
-          rc.s.stroke();
+          rc.bg.strokeStyle = `rgba(220,255,255,${0.5 * fade})`;
+          rc.bg.lineWidth = 0.6;
+          rc.bg.beginPath();
+          rc.bg.arc(m.x, m.y, 1.4 + (m.seed % 1.5), 0, Math.PI * 2);
+          rc.bg.stroke();
           break;
       }
       return true;

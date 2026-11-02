@@ -192,10 +192,6 @@ export class Surround {
   private key = '';
   private mx = 0;
   private top = 0;
-  /** Cel style: scenery is printed like the terrain it continues. */
-  set cel(on: boolean) {
-    this.painter.cel = on;
-  }
 
   /** World px of scenery on each side. */
   get margin(): number {

@@ -10,7 +10,7 @@ import type { GameEvent } from '../sim/types';
 import { Backdrop } from './background';
 import { Camera } from './camera';
 import { drawAccessory, drawAfterimage, drawCharacter, Rig } from './character';
-import { CelLayer, Lettering } from './cel';
+import { ForegroundLayer, Lettering, letteringAllowed } from './cel';
 import { Fx } from './fx';
 import { VIEW_FRAME, type ViewFrame, viewFrame } from './frame';
 import { Hud } from './hud';
@@ -19,7 +19,6 @@ import { circle, glowDot, type Light, light, type RC } from './kit';
 import { type Compositor, createCompositor } from './post';
 import { drawBackdrop, drawBlastPreview, drawForeground, drawProjectile, drawResolved, drawRunnerStatus, drawStuffed, type Emit, propEventFx } from './props';
 import { Surround } from './surround';
-import { initialStyle, letteringAllowed, type RenderStyle, saveRenderSettings, STYLES } from './style';
 import { TerrainPainter } from './terrain';
 // Mobile: quality tiers / adaptive resolution / safe-area insets (owned by the touch module).
 import { detectQuality, FrameBudget, QUALITY, type QualityTier, safeInsets, TIERS } from '../ui/touch/device';
@@ -45,9 +44,9 @@ const TRAIL_GAP = 7;
 const TRAIL_LIFE = 0.2;
 
 /**
- * Orchestrates a frame: Canvas2D paints albedo/emissive/light layers in
- * world space through a smoothed camera, the WebGL compositor lights and
- * post-processes them, and a separate 2D canvas carries the HUD.
+ * Orchestrates a frame: Canvas2D paints background, foreground, emissive and
+ * light layers in world space through a smoothed camera, the WebGL compositor
+ * runs them through the cel pass, and a separate 2D canvas carries the HUD.
  */
 export class Renderer {
   private scene = document.createElement('canvas');
@@ -70,18 +69,15 @@ export class Renderer {
   /** Invisible box over the play view: the 0..VIEW_W×0..VIEW_H area that pointers map through. */
   readonly viewBox = document.createElement('div');
   private last = 0;
-  private aberr = 0;
   private flash = 0;
   private lobbyDrift = 0;
   /** Render quality tier: caps internal resolution (MAX_W) and DPR. See src/ui/touch/device.ts. */
   quality: QualityTier;
   private adaptive: boolean;
   private budget = new FrameBudget();
-  private style: RenderStyle = initialStyle(typeof location !== 'undefined' ? location.search : '');
   private letters = new Lettering();
-  private celLayer: CelLayer | null = null;
-  /** Impact words for this page, on top of what the style asks for (`?lettering=0`). */
-  lettering = letteringAllowed(typeof location !== 'undefined' ? location.search : '');
+  private foreground = new ForegroundLayer();
+  private wordsOn = letteringAllowed(typeof location !== 'undefined' ? location.search : '');
 
   constructor(
     private glCanvas: HTMLCanvasElement,
@@ -109,17 +105,6 @@ export class Renderer {
   setQuality(q: QualityTier) {
     this.quality = q;
     this.resize();
-  }
-
-  /** Current look. */
-  getStyle(): RenderStyle {
-    return this.style;
-  }
-
-  /** Switch the look at runtime; persisted to `slag.render.v1` unless `persist` is false. */
-  setStyle(style: RenderStyle, persist = true) {
-    this.style = style;
-    if (persist) saveRenderSettings({ style });
   }
 
   resize() {
@@ -173,8 +158,6 @@ export class Renderer {
     const frameBox = this.frameBox;
     const sk = this.pw / frameBox.w;
     const kb = Math.min(4, sk * 1.45, Math.sqrt(MAX_BAKE_PX / (ww * wh)));
-    this.terrain.cel = this.celPass;
-    this.surround.cel = this.celPass;
     this.terrain.ensure(level, kb);
     // The surroundings reach as far as the most zoomed-out view of this level can see.
     const floor = raceFloor(level);
@@ -201,7 +184,7 @@ export class Renderer {
     const g = this.gctx;
     const lights: Light[] = [];
     const frame = m.run && m.phase === 'run' ? m.run.frame : m.frame;
-    const rc: RC = { s, g, lights, t, frame };
+    const rc: RC = { s, bg: s, g, lights, t, frame };
 
     // --- background (screen space, parallax from camera)
     const ox = -frameBox.x0 * sk;
@@ -229,15 +212,12 @@ export class Renderer {
     const resolved = run ? run.resolved : [...level.setPieces, ...m.placed].map(resolveProp);
     // Scenery goes down first so the terrain stands in front of it and shadows it.
     for (const r of resolved) drawBackdrop(rc, r, { level });
-    // Cel: the rest of the world goes on its own transparent layer (see CelLayer); `s` stays the background.
-    if (this.celPass) {
-      rc.s = (this.celLayer ??= new CelLayer()).begin(this.scene, s, g, level.theme.ambientLight);
-      this.cam.apply(rc.s, this.pw);
-    }
-    this.terrain.drawShadow(rc);
+    // The rest of the world goes on its own transparent layer (see ForegroundLayer); `s` stays the background.
+    rc.s = this.foreground.begin(this.scene, s, g, level.theme.ambientLight);
+    this.cam.apply(rc.s, this.pw);
     this.terrain.draw(rc);
     const pushers = m.run ? m.run.runners.filter((r) => r.alive).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h })) : [];
-    this.terrain.drawLive(rc, level, pushers, s);
+    this.terrain.drawLive(rc, level, pushers);
     this.drawMarkers(rc, level);
 
     const grips = run?.runners.flatMap((r) => r.attach.grip ?? []);
@@ -297,10 +277,8 @@ export class Renderer {
       }
       drawClouds(rc, run);
     }
-    this.fx.draw(rc, s);
+    this.fx.draw(rc);
     this.backdrop.drawLiquid(rc, level.theme, ww, wh, this.cam.visible(), this.surround.margin);
-    const world = rc.s;
-    rc.s = s; // Cel: ambient motes stay un-inked, or they read as stray projectiles.
     this.backdrop.drawMotes(rc, level.theme, dt, this.cam.visible());
     g.globalCompositeOperation = 'source-over';
 
@@ -308,29 +286,18 @@ export class Renderer {
     this.paintLights(level, lights);
 
     // --- composite
-    this.aberr *= Math.exp(-dt * 5);
     this.flash *= Math.exp(-dt * 9);
-    this.comp.render(this.scene, this.lightC, this.glow, {
-      time: t,
-      aberration: this.aberr,
+    this.comp.render(this.scene, this.foreground.canvas, this.lightC, this.glow, {
       exposure: level.theme.grade.exposure,
       flash: this.flash,
       tint: level.theme.grade.tint,
       lift: level.theme.grade.lift,
-      cel: this.celPass ? { fg: this.celLayer!.canvas, scale: world.getTransform().a, ambient: level.theme.ambientLight } : undefined,
+      scale: rc.s.getTransform().a,
+      ambient: level.theme.ambientLight,
     });
     if (!this.hud.hidden) this.hud.draw(m, t, this.pw, this.ph);
     else this.hud.clear(this.pw, this.ph);
     if (this.wordsOn) this.letters.draw(this.hudCanvas.getContext('2d')!, this.cam, this.pw);
-  }
-
-  /** The cel pass needs WebGL2; without it the style keeps only its impact words. */
-  private get celPass() {
-    return STYLES[this.style].cel && this.comp.webgl;
-  }
-
-  private get wordsOn() {
-    return STYLES[this.style].lettering && this.lettering;
   }
 
   /**
@@ -604,8 +571,8 @@ export class Renderer {
     drawAccessory(rc, c, rig);
     drawCharacter(rc, c, x, y, { facing, vx, vy, grounded, t: rc.t, celebrate });
     light(rc, x, y - 8, 38, c.body, 0.3);
-    // Cel: a key light so a runner in shade still reads, not so much that it loses its hue.
-    if (STYLES[this.style].cel) light(rc, x, y - 8, 20, RUNNER_KEY, 0.28);
+    // A key light so a runner in shade still reads, not so much that it loses its hue.
+    light(rc, x, y - 8, 20, RUNNER_KEY, 0.28);
   }
 
   private propCenter(m: Match, uid: number): { x: number; y: number } | undefined {
@@ -636,7 +603,6 @@ export class Renderer {
             this.terrain.splat(e.x, e.y + 6, 4, body);
           }
           this.cam.shake = Math.max(this.cam.shake, 6);
-          this.aberr = 0.012;
           this.flash = Math.max(this.flash, 0.08);
           break;
         }
@@ -721,7 +687,6 @@ export class Renderer {
           this.fx.add('ring', e.x, e.y, 0, 0, { h: 35, s: 100, l: 65 }, e.r * 1.6, 0.5);
           this.fx.add('flash', e.x, e.y, 0, 0, { h: 35, s: 100, l: 65 }, e.r, 0.4);
           this.cam.shake = 14;
-          this.aberr = 0.02;
           this.flash = 0.25;
           break;
         case 'place': {

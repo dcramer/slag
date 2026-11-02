@@ -274,7 +274,7 @@ function frame(now: number) {
       c.clearRect(0, 0, l.base.width, l.base.height);
       c.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
-    l.draw({ s, g, lights: null, t, frame: frameNo }, w, h);
+    l.draw({ s, bg: s, g, lights: null, t, frame: frameNo }, w, h);
   }
   requestAnimationFrame(frame);
 }

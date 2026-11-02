@@ -49,13 +49,14 @@ Everything is derived from a 32-bit seed with a deterministic PRNG (`src/core/rn
 
 Canvas2D paints three world-space layers through a smoothed, zooming camera:
 
-- **albedo**: sky, parallax skylines, terrain, props, and characters
+- **background**: sky, parallax skylines, and scenery
+- **foreground**: terrain, props, and characters
 - **emissive**: fire, lasers, crystals, sparks, and windows
 - **light map**: ambient light plus about 100 dynamic point lights
 
-A WebGL2 compositor (`src/render/post.ts`) multiplies the albedo by the light map and adds the emissive layer. It then applies two-level bloom, ACES tonemapping, a per-theme color grade, vignette, chromatic aberration (it pulses on deaths and explosions), and film grain. If WebGL2 isn't available, it falls back to plain Canvas2D blending. The HUD is drawn on its own 2D canvas.
+A WebGL2 compositor (`src/render/post.ts`) runs them through a cel pass: flat tones, the light map cut into hard bands, ink from the foreground's silhouettes, hard offset shadows, and solid emissive shapes with a bloom halo, then a per-theme color grade and vignette. If WebGL2 isn't available, it falls back to plain Canvas2D blending. The HUD is drawn on its own 2D canvas.
 
-Terrain uses a procedurally generated, tileable material texture (rock strata, bricks, riveted metal panels, crystal veins, roots, or sand). It's baked through a rounded-corner mask with an outline, depth shading, rim light, caps (grass, moss, snow, rust, or crystal), and a blurred drop shadow. Grass sways and parts around players. Gibs paint splat decals onto the terrain.
+Terrain uses a procedurally generated, tileable material texture (rock strata, bricks, riveted metal panels, crystal veins, roots, or sand). It's flattened to a base color and its thin dark lines, then baked through a rounded-corner mask with depth shading, rim light, and caps (grass, moss, snow, rust, or crystal). Grass sways and parts around players. Gibs paint splat decals onto the terrain.
 
 For a debug showcase, run `slagShowcase(['saw','launcher','laser','tesla'])` in the console during the pick phase. It drops those archetypes into the level.
 
