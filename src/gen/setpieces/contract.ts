@@ -50,6 +50,7 @@ export const TELLS: { [T in Module['type']]?: Tell<ModuleOf<T>> } = {
   sign: (m) => m.warn,
   neon: (m) => m.warn,
   wire: (m) => m.warn,
+  thaw: (m) => m.warn,
 };
 
 /** Modules among `mods` whose tell is a warning shorter than MIN_TELL. */

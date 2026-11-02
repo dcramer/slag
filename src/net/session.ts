@@ -988,10 +988,13 @@ export class NetSession {
       if (!present.has(peer) && m.phase !== 'lobby' && p.away && !p.leaving && m.frame - (p.awayAt ?? m.frame) >= this.dropFrames)
         out.push({ t: 'leave', dev: p.device });
     }
-    // Idle (game/match.ts): moved to the watchers, at once in the lobby, and mid-match after IDLE_ROUNDS rounds AFK, freeing the seat at the boundary.
+    // Idle (game/match.ts): moved to the watchers, freeing the seat. In the lobby only when a watcher could use it (an
+    // idle lobby holds nobody up: AFK doesn't block Ready, and people wait there for friends); mid-match after
+    // IDLE_ROUNDS rounds AFK, the seat freeing at the boundary.
+    const wanted = m.players.length >= MAX_PLAYERS && this.members.some((x) => !m.players.some((p) => peerOf(p.device) === x.id));
     for (const peer of new Set(m.players.map((p) => peerOf(p.device)))) {
       const mine = m.players.filter((p) => peerOf(p.device) === peer);
-      const gone = (p: (typeof mine)[number]) => p.afk && !p.away && (m.phase === 'lobby' || (p.afkRounds ?? 0) >= IDLE_ROUNDS);
+      const gone = (p: (typeof mine)[number]) => p.afk && !p.away && (m.phase === 'lobby' ? wanted : (p.afkRounds ?? 0) >= IDLE_ROUNDS);
       if (!peer || this.ns.watching[peer] || !present.has(peer) || !mine.every(gone)) continue;
       out.push({ t: 'watch', dev: mine[0].device, on: true, afk: true });
     }

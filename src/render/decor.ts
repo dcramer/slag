@@ -4,6 +4,7 @@ import type { DecorKind, DecorSpot } from '../gen/decor';
 import type { Theme } from '../gen/theme';
 import { FARM_DECOR } from './decor-farm';
 import { FRONTIER_DECOR } from './decor-frontier';
+import { GLACIER_DECOR } from './decor-glacier';
 import { HARBOR_DECOR } from './decor-harbor';
 import { JUNGLE_DECOR } from './decor-jungle';
 import { MINE_DECOR } from './decor-mine';
@@ -954,4 +955,5 @@ export const DECOR: Record<DecorKind, DecorDef> = {
   ...JUNGLE_DECOR,
   ...MINE_DECOR,
   ...ROOFTOPS_DECOR,
+  ...GLACIER_DECOR,
 };

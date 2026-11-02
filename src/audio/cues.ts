@@ -122,6 +122,7 @@ const POP: Record<string, SfxName> = {
   frost: 'pop-plasma',
   ricochet: 'pop-plasma',
   slug: 'pop-bolt',
+  snowball: 'pop-arrow',
   puck: 'pop-arrow',
   smokebomb: 'pop-cannonball',
 };
@@ -170,6 +171,7 @@ const FIRE: Record<string, SfxName> = {
   cryo: 'fire-turret',
   prism: 'fire-turret',
   sentry: 'fire-sentry',
+  cornice: 'drop',
 };
 /** Held-item moments borrow existing sounds until they get their own. Unlisted moments are silent. */
 const ITEM_CUE: Partial<Record<ItemEventKind, SfxName>> = {

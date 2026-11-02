@@ -36,6 +36,7 @@ export * from './spikes';
 export * from './spring';
 export * from './swinger';
 export * from './tesla';
+export * from './thaw';
 export * from './vehicle';
 export * from './web';
 export * from './wire';

@@ -1,9 +1,27 @@
 import type { Rng } from '../../../core/rng';
 import { GROUND_ICE } from '../../../sim/ground';
 import { T_EMPTY, T_SOLID } from '../../../sim/level';
+import { glacierOwns, rectsOf } from '../../stage/glacier';
 import { finish, Grid, noise1D } from '../kit';
-import type { Sculptor, Shape } from '../types';
-import { easyGap, easyRise, flatten, hardGap, keepClear, knobs, pit, relax, rollChallenges, Slots, stepRows } from './common';
+import type { SculptCtx, Sculptor, Shape } from '../types';
+import {
+  type Claim,
+  claimSite,
+  easyGap,
+  easyRise,
+  flatten,
+  hardGap,
+  hopGap,
+  keepClear,
+  type Knobs,
+  knobs,
+  pit,
+  raiseLandmark,
+  relax,
+  rollChallenges,
+  Slots,
+  stepRows,
+} from './common';
 import { glacierTall } from './tall';
 
 type GlacierStyle = 'crevasses' | 'icefall' | 'cave';
@@ -20,6 +38,9 @@ type GlacierStyle = 'crevasses' | 'icefall' | 'cave';
  * footing matters: the lips, the banks of a hard crossing, the pockets,
  * anything too short to skate on. Seracs, frozen falls and the cave's ceiling
  * are ice right through, so their faces can't be wall-jumped.
+ *
+ * A stage concept's landmark (stage/glacier.ts) claims its site first, on an ice field (never in a cave,
+ * whose roof would bury it), owns the level's hard crossing, and says which of its tiles are ice.
  */
 export const glacier: Sculptor = (ctx) => {
   if (ctx.profile.size === 'tall') return glaze(glacierTall(ctx), new Uint8Array(ctx.profile.w * ctx.profile.h), ctx.rng, 0.75);
@@ -29,7 +50,7 @@ export const glacier: Sculptor = (ctx) => {
   const style = rng.weighted<GlacierStyle>([
     ['crevasses', 4],
     ['icefall', 3],
-    ['cave', 1.5 + 2 * k.density],
+    ['cave', ctx.concept ? 0 : 1.5 + 2 * k.density],
   ]);
   const g = new Grid(W, H);
   const ice = new Uint8Array(W * H);
@@ -45,12 +66,18 @@ export const glacier: Sculptor = (ctx) => {
     surf = n.map((v, x) => Math.max(style === 'cave' ? 12 : 6, Math.min(H - 3, Math.round(base + k.ramp(x) + v * amp))));
   }
 
+  // The stage concept's landmark comes first; it owns one crossing, or both where its box made room for a two-part one.
+  const claim = ctx.concept ? claimGlacierSite(ctx, k, slots, surf, locked) : null;
+  if (ctx.concept && !claim) return finish(g, { row: surf[2] - 1 }, { row: surf[W - 3] - 1 }, 'glacier:unclaimed');
+
   // Crevasses: hard ones need a bridge, easy ones are a hop. Each gets rock lips to land on.
   const challenges = rollChallenges(attempt, k);
   g.wantsProps = challenges > 0;
+  const own = claim ? glacierOwns(claim.concept, k, attempt, challenges) : 0;
+  const left = challenges - own;
   // Two parts is often one crevasse two bridges wide: two one-bridge crevasses and their banks crowd a classic level.
-  const double = challenges === 2 && (W < 64 || rng.chance(0.4));
-  const hards = double ? 1 : challenges;
+  const double = left === 2 && (W < 64 || rng.chance(0.4));
+  const hards = double ? 1 : Math.max(0, left);
   const pits: { x0: number; x1: number; hard: boolean }[] = [];
   const nEasy = rng.int(1, 2) + Math.floor((k.wide - 1) * rng.range(1, 2));
   for (let i = 0; i < hards + nEasy; i++) {
@@ -88,11 +115,60 @@ export const glacier: Sculptor = (ctx) => {
   for (const p of pits) pit(g, p.x0, p.x1, surf[p.x0 - 1], p.hard);
   for (const s of seracs) serac(g, ice, rng, s.x, s.w, surf[s.x]);
   if (style === 'icefall') frozenFalls(g, ice, surf);
-  if (style !== 'cave') shelves(g, ice, rng, k.count(rng.int(0, 2)), surf, pits);
+  const lm = claim ? raiseLandmark(g, ctx, claim, own) : null;
+  // The landmark's own ice, and no shelf hung in its sky.
+  if (lm)
+    for (const r of rectsOf(lm, 'ice'))
+      for (let y = Math.max(0, r.y); y < Math.min(H, r.y + r.h); y++)
+        for (let x = Math.max(0, r.x); x < Math.min(W, r.x + r.w); x++) if (g.get(x, y) === T_SOLID) ice[y * W + x] = 1;
+  const off = lm ? [{ x0: lm.rect.x - 3, x1: lm.rect.x + lm.rect.w + 2 }] : [];
+  if (style !== 'cave') shelves(g, ice, rng, k.count(rng.int(0, 2)), surf, [...pits, ...off]);
   else ceiling(g, ice, rng, surf, pits);
+  // A landmark leaves the field little room for crevasses of its own: a melt pond goes where it can.
+  if (lm) meltPond(g, rng, lm.rect, pits);
 
   return glaze(finish(g, { row: sRow - 1 }, { row: gRow - 1 }, `glacier:${style}`), ice, rng, style === 'icefall' ? 0.75 : 0.85);
 };
+
+/**
+ * The landmark's site (claimSite), on ground levelled a couple of columns past it either side and never so
+ * low that its crevasse has no bank under it. Nothing else lands within a running jump of its far side, where
+ * a crevasse could be cleared bare off its top.
+ */
+function claimGlacierSite(ctx: SculptCtx, k: Knobs, slots: Slots, surf: number[], locked: Uint8Array): Claim | null {
+  const claim = claimSite(ctx, k, slots, surf, locked);
+  if (!claim) return null;
+  const { x, w } = claim.at;
+  const ground = Math.min(claim.ground, k.H - 5);
+  slots.mark(x - 3, x + w + 8);
+  flatten(surf, k.H, x - 2, x + w + 1, ground);
+  for (let i = Math.max(0, x - 3); i <= Math.min(k.W - 1, x + w + 2); i++) locked[i] = 1;
+  return { ...claim, ground, at: { ...claim.at, y: ground - claim.at.h } };
+}
+
+/**
+ * A melt pond: a hollow a hop wide and two rows deep in a flat stretch of the field, off the landmark and off
+ * every crevasse's lips, for thin ice to skin over (setpieces/glacier.ts). A hop on the proof, so it never
+ * changes what a level asks for.
+ */
+function meltPond(g: Grid, rng: Rng, lm: { x: number; w: number }, pits: readonly { x0: number; x1: number }[]): void {
+  const w = Math.min(3, hopGap(rng, 2));
+  const spots: number[] = [];
+  for (let x = 8; x + w + 2 < g.w - 8; x++) {
+    if (x + w + 2 >= lm.x - 1 && x - 2 <= lm.x + lm.w) continue;
+    if (pits.some((p) => x + w + 6 >= p.x0 && x - 6 <= p.x1) || g.crossings.some(([a, b]) => x + w + 6 >= a && x - 6 <= b)) continue;
+    const row = g.surface(x - 2);
+    if (row >= g.h - 3) continue;
+    let flat = true;
+    for (let c = x - 2; c < x + w + 2 && flat; c++)
+      if (g.surface(c) !== row || !g.empty(c, row - 1) || !g.empty(c, row - 2) || !g.empty(c, row - 3)) flat = false;
+    if (flat) spots.push(x);
+  }
+  if (!spots.length) return;
+  const x = rng.pick(spots);
+  const row = g.surface(x);
+  g.clear(x, row, x + w - 1, row + 1);
+}
 
 /** A serac: a block of ice with one corner sheared off, standing on row f. */
 function serac(g: Grid, ice: Uint8Array, rng: Rng, x: number, w: number, f: number): void {

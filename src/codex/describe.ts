@@ -44,6 +44,7 @@ export const PART_INFO: Record<Module['type'], { title: string; blurb: string }>
   sign: { title: 'Falling sign', blurb: 'Under new management. Under the sign, too.' },
   neon: { title: 'Neon letters', blurb: 'Open 24 hours. Touch at your own risk.' },
   wire: { title: 'Live wire', blurb: 'Somebody forgot to pay the electric bill. The bill remembers.' },
+  thaw: { title: 'Thin ice', blurb: 'Rated for one penguin.' },
 };
 
 const AIM_TAG: Record<string, string> = { fixed: 'FIXED', sweep: 'SWEEPS', track: 'TRACKS' };

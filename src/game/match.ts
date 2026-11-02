@@ -73,7 +73,7 @@ export interface Player {
   leaving?: boolean;
 }
 
-/** No input for this long in pick, place or a race (counted from the phase's start): the phase stops waiting on you. */
+/** No input for this long in an untimed pick, place or race (counted from the phase's start): the phase stops waiting on you. A timer already ends the wait, so a timed phase never marks anyone AFK. */
 export const IDLE_FRAMES = 30 * 60;
 /** The lobby gives longer: people wait there for friends. */
 export const LOBBY_IDLE_FRAMES = 60 * 60;
@@ -513,7 +513,7 @@ export class Match {
     for (const p of this.players) {
       const inp = this.input(p, inputs);
       this.moveCursor(p, inp);
-      if (p.claim < 0 && this.idleFrames(p) >= IDLE_FRAMES) p.afk = true;
+      if (!this.rules.pickSeconds && p.claim < 0 && this.idleFrames(p) >= IDLE_FRAMES) p.afk = true; // a timer already ends the wait
       if (this.gone(p) && p.claim < 0 && this.phaseFrame > 10) {
         const i = this.crate.findIndex((c) => c.claimedBy < 0);
         if (i >= 0) this.claim(p, i);
@@ -613,7 +613,7 @@ export class Match {
 
   private stepPlace(inputs: Readonly<Record<string, InputFrame>>) {
     for (const p of this.players) {
-      if (!p.placed && this.idleFrames(p) >= IDLE_FRAMES) p.afk = true;
+      if (!this.rules.placeSeconds && !p.placed && this.idleFrames(p) >= IDLE_FRAMES) p.afk = true;
       if (p.placed || this.gone(p)) continue; // not a forfeit: back in time, they can still place
       const inp = this.input(p, inputs);
       this.moveCursor(p, inp);
@@ -710,7 +710,7 @@ export class Match {
     for (const r of run.runners) {
       const p = this.player(r.slot);
       // Only someone still racing holds the round open: a finished or dead runner may watch as long as they like.
-      if (p && r.alive && !r.finished && this.idleFrames(p) >= IDLE_FRAMES) p.afk = true;
+      if (!this.rules.raceSeconds && p && r.alive && !r.finished && this.idleFrames(p) >= IDLE_FRAMES) p.afk = true;
     }
     run.step(this.players.map((p) => (this.gone(p) ? AWAY_RUN_INPUT : this.input(p, inputs))));
     if (run.endFrame >= 0 && run.frame - run.endFrame > 75) this.finishRound();
