@@ -285,7 +285,7 @@ export class TerrainPainter {
 
   /** Per-frame: swaying grass (parted by players), decor with animated/emissive bits. */
   drawLive(rc: RC, level: Level, pushers: { x: number; y: number }[]) {
-    drawTufts(rc.s, this.tufts, level, level.theme.terrain.capColor, rc.t, pushers);
+    drawTufts(rc, rc.s, this.tufts, level, level.theme.terrain.capColor, pushers);
     const th = level.theme;
     for (const d of this.live) {
       if (!tileAt(level, d.tx, d.ty)) continue;

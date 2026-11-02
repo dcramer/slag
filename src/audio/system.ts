@@ -232,7 +232,7 @@ export class WebAudioSystem implements AudioSystem {
       this.run = null;
       this.emitters.length = 0;
       // You pick and build with the weather already in your ears.
-      if (match.phase === 'pick' || match.phase === 'place') weatherEmitters(match.level, -1, L.x, L.y, this.emitters);
+      if (match.phase === 'pick' || match.phase === 'place') weatherEmitters(match.level, match.frame, L.x, L.y, this.emitters);
       if (this.emitters.length) {
         e.loops.update(this.emitters, L);
         this.loopsLive = true;

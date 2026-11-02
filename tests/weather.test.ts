@@ -311,7 +311,6 @@ describe('solvability under weather', () => {
   it('wind only lands where a gust does no part’s job', () => {
     for (const seed of seedsFor('wind', 'harbor', 4)) {
       const l = generateLevel(seed, 'harbor');
-      if (l.theme.ambient === 'rain') continue;
       expect(l.weather!.kind).toBe('wind');
       expect(l.solution!.length).toBeLessThanOrEqual(MAX_BRIDGES);
       if (l.solution?.length) expect(analyzeReach(l, true, undefined, [0, l.weather!.dir * GUST.speed]).goalReached, `seed ${seed}`).toBe(false);

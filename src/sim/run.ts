@@ -60,7 +60,7 @@ import {
   traceRays,
 } from './props';
 import type { GameEvent, InputFrame } from './types';
-import { footing, gustAir, gustWind } from './weather';
+import { footing, gustAir, gustWind, wetSolids } from './weather';
 import { windAt } from './wind';
 import { NO_INPUT } from './types';
 
@@ -376,6 +376,7 @@ export class RunWorld {
     for (const p of this.projectiles) buildProjectile(p, f, this.out);
     buildBlood(this.blood, f, this.solids);
     traceRays(this.resolved, ctx, this.out); // Last, so what travels sees every solid whatever order the props came in.
+    wetSolids(this.solids, this.level);
     const gust = gustWind(this.level, f);
     if (gust) this.out.winds.push(gust);
   }
