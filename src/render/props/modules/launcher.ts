@@ -1,8 +1,8 @@
 import { css, type HSL } from '../../../core/color';
 import type { Vec } from '../../../core/geom';
-import { launcherAngle, type Module, type ModuleOf, type PropStyle, type Resolved, rayToWall } from '../../../sim/props';
+import { launcherAngle, type Module, type ModuleOf, type PropStyle, type Resolved } from '../../../sim/props';
 import { circle, ellipse, glowDot, light, type MetalPalette, metalFill, type RC, rrect, sphereFill } from '../../kit';
-import { defineArt, drawBoltShape, drawStar, type PropDrawOpts } from '../common';
+import { beamOf, defineArt, drawBoltShape, drawStar, type PropDrawOpts } from '../common';
 import { drawExtraLauncher, drawTrackerEye } from './launcher-extra';
 
 type M<T extends Module['type']> = ModuleOf<T>;
@@ -21,16 +21,17 @@ function drawLauncher(rc: RC, m: M<'launcher'>, r: Resolved, off: Vec, pal: Meta
   const wood: HSL = { h: st.woodHue, s: 45, l: 38 };
   const recoil = since < 8 ? (8 - since) * 0.5 : 0;
 
-  if (m.aim === 'track' && o.state) {
+  const sight = o.state && beamOf(o, r, mi);
+  if (sight) {
     // Targeting laser sight.
-    const len = o.level ? rayToWall(o.level, x, y, angle, 600, 8) : 60;
+    const a = sight.angle ?? angle;
     g.strokeStyle = 'rgba(255,40,40,0.35)';
     g.lineWidth = 0.7;
     g.beginPath();
-    g.moveTo(x + Math.cos(angle) * 8, y + Math.sin(angle) * 8);
-    g.lineTo(x + Math.cos(angle) * len, y + Math.sin(angle) * len);
+    g.moveTo(x + Math.cos(a) * 8, y + Math.sin(a) * 8);
+    g.lineTo(x + Math.cos(a) * sight.len, y + Math.sin(a) * sight.len);
     g.stroke();
-    glowDot(g, x + Math.cos(angle) * len, y + Math.sin(angle) * len, 4, { h: 0, s: 100, l: 55 }, 0.8);
+    glowDot(g, x + Math.cos(a) * sight.len, y + Math.sin(a) * sight.len, 4, { h: 0, s: 100, l: 55 }, 0.8);
   }
 
   s.save();

@@ -47,6 +47,23 @@ export interface Trigger {
   key: number;
 }
 
+/**
+ * How far something that travels through space reaches this frame (props/rays.ts).
+ * The sim cuts its hazard or column to this and the art draws from it, so a beam
+ * stops exactly where it stops hurting. Reported every frame, lit or not: telegraphs
+ * draw it, and the renderer shows the frame after the last one built.
+ */
+export interface Beam {
+  uid: number;
+  mi: number;
+  /** Reach (px). */
+  len: number;
+  /** Stopped short of its full length. */
+  hit: boolean;
+  /** Direction it was cast in, for emitters that sweep or track. */
+  angle?: number;
+}
+
 /** What a module adds to the world for one frame. */
 export interface Contrib {
   solids: Solid[];
@@ -55,6 +72,8 @@ export interface Contrib {
   winds: Wind[];
   /** Touch zones (optional so older Contrib literals stay valid). */
   triggers?: Trigger[];
+  /** Filled for whoever draws them; a caller that only wants hazards can leave it out. */
+  beams?: Beam[];
 }
 
 export function addTrigger(out: Contrib, t: Trigger): void {
@@ -115,6 +134,8 @@ export interface ProjectileSpawn {
   thrower?: number;
   /** Replaces the ammo's hit effect: a thrown boomerang bonks where a launched one kills. */
   effect?: HitEffect;
+  /** Prop that fired it (uid), so leaving its own body doesn't stop it. Omitted for shots from a hand. */
+  source?: number;
 }
 
 export interface TickCtx extends PropCtx {
@@ -125,6 +146,8 @@ export interface TickCtx extends PropCtx {
   spawnItem?(s: ItemSpawn): void;
   /** Seed of this race's item rolls: differs per round, so a crate that survives a round doesn't repeat itself. */
   itemSeed?: number;
+  /** This frame's solids, for anything that looks or moves through the world. Optional so headless callers can omit them. */
+  solids?: readonly Solid[];
 }
 
 /** Tile→world transform handed to `resolve`. */
@@ -145,8 +168,17 @@ export interface ModuleSim<M extends Module = Module> {
   resolve(m: M, x: Xform): M;
   /** Prop-local cells this module occupies (used to build the placement footprint). */
   anchors(m: M): Cell[];
-  /** Add solids/hazards/triggers for this frame. */
+  /** Add solids/hazards/triggers for this frame. Runs before other props' solids are all in, so anything that travels belongs in `trace`. */
   build?(m: M, ctx: PropCtx, out: Contrib): void;
+  /**
+   * For a part that stops on what's in its way and is itself solid (a piston): runs
+   * after every `build`, and whatever it adds still blocks rays. It stops on the
+   * first `fixed` solids only, never on another settling part, which keeps it
+   * independent of prop order.
+   */
+  settle?(m: M, ctx: PropCtx, out: Contrib, fixed: number): void;
+  /** Cast rays and add what they carry (props/rays.ts). Runs last, when every solid of the frame is in `out.solids`. */
+  trace?(m: M, ctx: PropCtx, out: Contrib): void;
   /** Advance timers, fire projectiles, emit events. Runs after runners move. */
   tick?(m: M, ctx: TickCtx): void;
   /** A runner is standing on one of this module's solids. */

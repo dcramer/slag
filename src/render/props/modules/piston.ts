@@ -3,13 +3,13 @@ import type { Vec } from '../../../core/geom';
 import { TILE } from '../../../sim/constants';
 import { dirOf, type Module, type ModuleOf, pistonHead, pistonState, type Resolved } from '../../../sim/props';
 import { hazardStripes, METALS, type MetalPalette, metalFill, type RC, rrect } from '../../kit';
-import { defineArt } from '../common';
+import { beamOf, defineArt, type PropDrawOpts } from '../common';
 
 type M<T extends Module['type']> = ModuleOf<T>;
 
-function drawPistonShaft(rc: RC, m: M<'piston'>, r: Resolved, off: Vec, pal: MetalPalette) {
+function drawPistonShaft(rc: RC, m: M<'piston'>, r: Resolved, mi: number, off: Vec, pal: MetalPalette, o: PropDrawOpts) {
   const st = pistonState(m, rc.frame, r.phase);
-  const head = pistonHead(m, st.ext, off);
+  const head = pistonHead(m, st.ext, off, beamOf(o, r, mi)?.len);
   const [dx, dy] = dirOf(m.angle);
   const s = rc.s;
   const fx = m.at[0] + off[0] + dx * TILE * 0.5;
@@ -29,9 +29,9 @@ function drawPistonShaft(rc: RC, m: M<'piston'>, r: Resolved, off: Vec, pal: Met
   void pal;
 }
 
-function drawPistonHead(rc: RC, m: M<'piston'>, r: Resolved, off: Vec, pal: MetalPalette) {
+function drawPistonHead(rc: RC, m: M<'piston'>, r: Resolved, mi: number, off: Vec, pal: MetalPalette, o: PropDrawOpts) {
   const st = pistonState(m, rc.frame, r.phase);
-  const head = pistonHead(m, st.ext, off);
+  const head = pistonHead(m, st.ext, off, beamOf(o, r, mi)?.len);
   const s = rc.s;
   const [dx, dy] = dirOf(m.angle);
   if (st.slamming) {
@@ -75,5 +75,5 @@ function drawPistonHead(rc: RC, m: M<'piston'>, r: Resolved, off: Vec, pal: Meta
   );
 }
 
-defineArt<'piston'>({ type: 'piston', layer: 0, draw: (rc, m, d) => drawPistonShaft(rc, m, d.r, d.off, d.pal) });
-defineArt<'piston'>({ type: 'piston', layer: 2, draw: (rc, m, d) => drawPistonHead(rc, m, d.r, d.off, d.pal) });
+defineArt<'piston'>({ type: 'piston', layer: 0, draw: (rc, m, d) => drawPistonShaft(rc, m, d.r, d.mi, d.off, d.pal, d.o) });
+defineArt<'piston'>({ type: 'piston', layer: 2, draw: (rc, m, d) => drawPistonHead(rc, m, d.r, d.mi, d.off, d.pal, d.o) });

@@ -258,7 +258,7 @@ describe('wind: steam geysers', () => {
     let active = 0;
     for (let f = 0; f < 600; f++) {
       const out: Contrib = { solids: [], hazards: [], springs: [], winds: [] };
-      moduleSim('geyser').build!(m, { level, frame: f, r, off: [0, 0], prev: [0, 0], state, mi: 0, live: true }, out);
+      moduleSim('geyser').trace!(m, { level, frame: f, r, off: [0, 0], prev: [0, 0], state, mi: 0, live: true }, out);
       const c = geyserCycle(m, f, r.phase);
       if (c.seg !== 2) expect(out.winds.length).toBe(0);
       else if (out.winds.length) {

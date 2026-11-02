@@ -3,7 +3,7 @@ import { css } from '../../core/color';
 import type { Cell, Vec } from '../../core/geom';
 import { TILE } from '../../sim/constants';
 import type { Level } from '../../sim/level';
-import type { Grip, Module, PlacedProp, PropState, PropStyle, Resolved } from '../../sim/props';
+import type { Beam, Grip, Module, PlacedProp, PropState, PropStyle, Resolved } from '../../sim/props';
 import { circle, type MetalPalette, metalFill, type RC, rrect } from '../kit';
 
 export type Emit = (kind: 'spark' | 'smoke' | 'ember' | 'debris', x: number, y: number, vx: number, vy: number, color?: HSL) => void;
@@ -18,6 +18,8 @@ export interface PropDrawOpts {
   grips?: readonly Grip[];
   /** Placed props, for art that depends on what's around it. */
   placed?: readonly PlacedProp[];
+  /** How far everything that travels reaches. Art draws from these and never casts its own rays. */
+  beams?: readonly Beam[];
 }
 
 /** Everything a module's art function gets. */
@@ -30,6 +32,11 @@ export interface DrawCtx {
   style: PropStyle;
   pal: MetalPalette;
   o: PropDrawOpts;
+}
+
+/** What the sim resolved for this module, or undefined with no world to resolve it in (crate cards, the codex). */
+export function beamOf(o: PropDrawOpts, r: Resolved, mi: number): Beam | undefined {
+  return o.beams?.find((b) => b.uid === r.pp.uid && b.mi === mi);
 }
 
 /** The runner held by this very module, if any. */

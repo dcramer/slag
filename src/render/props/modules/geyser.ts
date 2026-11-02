@@ -3,7 +3,7 @@ import { TILE } from '../../../sim/constants';
 import { geyserColumn, geyserCycle, geyserWind, type ModuleOf } from '../../../sim/props';
 import { windProfile } from '../../../sim/wind';
 import { circle, ellipse, glowDot, light, type RC, sphereFill } from '../../kit';
-import { type DrawCtx, defineArt } from '../common';
+import { beamOf, type DrawCtx, defineArt } from '../common';
 
 /**
  * Geyser art: a vent mound (ground vents), a rumbling telegraph, and the
@@ -102,7 +102,7 @@ function drawColumn(rc: RC, m: Geyser, d: DrawCtx) {
     }
     return;
   }
-  const col = geyserColumn(m, f, d.r.phase, d.o.level, d.off[0], d.off[1]);
+  const col = geyserColumn(m, f, d.r.phase, beamOf(d.o, d.r, d.mi)?.len ?? m.length, d.off[0], d.off[1]);
   if (!col) return;
   const top = col.y - col.len;
   const w = m.width;
