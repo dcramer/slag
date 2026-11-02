@@ -1,4 +1,5 @@
 import { type Insets, type TouchInput, type TouchLayout, touchLayout } from '../../input/touch';
+import { FONT, PAL } from '../style';
 import { safeInsets } from './device';
 
 /**
@@ -15,12 +16,12 @@ import { safeInsets } from './device';
  */
 
 const CSS = `
-.slag-touch{position:fixed;inset:0;pointer-events:none;z-index:5;user-select:none;-webkit-user-select:none;font:700 13px Rubik,system-ui,sans-serif;color:#fff;touch-action:none}
+.slag-touch{position:fixed;inset:0;pointer-events:none;z-index:5;user-select:none;-webkit-user-select:none;font:700 13px ${FONT.ui};color:#fff;touch-action:none}
 .slag-touch.hidden{display:none}
 .slag-touch .c{position:absolute;border-radius:50%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;flex-direction:column;letter-spacing:.06em;transition:transform .06s,background-color .1s,opacity .2s}
-.slag-touch .btn{background:rgba(18,15,28,.55);border:2px solid rgba(255,255,255,.32);box-shadow:0 2px 10px rgba(0,0,0,.35);text-shadow:0 1px 2px rgba(0,0,0,.7)}
+.slag-touch .btn{background:rgba(18,11,8,.55);border:2px solid rgba(255,255,255,.32);box-shadow:0 2px 10px rgba(0,0,0,.35);text-shadow:0 1px 2px rgba(0,0,0,.7)}
 .slag-touch .btn.on{background:rgba(255,150,50,.45);border-color:#ffc27a;transform:scale(.94)}
-.slag-touch .primary{font:400 20px "Lilita One",system-ui,sans-serif;letter-spacing:.08em}
+.slag-touch .primary{font:400 20px ${FONT.display};letter-spacing:.08em}
 .slag-touch .primary.place{background:rgba(40,140,70,.6);border-color:rgba(140,255,170,.7)}
 .slag-touch .primary.place.bad{background:rgba(120,40,40,.4);border-color:rgba(255,120,120,.55);opacity:.75}
 .slag-touch .secondary{font-size:12px}
@@ -29,17 +30,17 @@ const CSS = `
 .slag-touch .base{border:2px solid rgba(255,255,255,.22);background:radial-gradient(circle,rgba(255,255,255,.06) 0,rgba(255,255,255,.06) 69%,rgba(255,190,110,.10) 70%,rgba(255,190,110,.10) 100%)}
 .slag-touch .base.idle{opacity:.45}
 .slag-touch .runring{position:absolute;inset:15%;border-radius:50%;border:1px dashed rgba(255,255,255,.22)}
+.slag-touch .knob.idle{opacity:.3}
 .slag-touch .knob{background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.55),rgba(255,255,255,.18));border:2px solid rgba(255,255,255,.5);box-shadow:0 2px 8px rgba(0,0,0,.4)}
 .slag-touch .knob.run{border-color:#ffb02e;box-shadow:0 0 14px rgba(255,160,40,.7)}
-.slag-touch .tag{position:absolute;font:700 10px Rubik,system-ui;letter-spacing:.12em;color:rgba(255,255,255,.55);text-shadow:0 1px 2px #000;transform:translate(-50%,-50%);white-space:nowrap}
 .slag-touch .ui{pointer-events:auto;color:#fff;touch-action:manipulation;cursor:pointer;-webkit-tap-highlight-color:transparent;font-size:18px}
 .slag-touch .ui:active{background:rgba(255,150,50,.45)}
-.slag-rotate{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#07060b;color:#f3d9c4;font:600 15px Rubik,system-ui,sans-serif;text-align:center;padding:24px;box-sizing:border-box;touch-action:none}
+.slag-rotate{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:${PAL.ink};color:${PAL.bone};font:600 15px ${FONT.ui};text-align:center;padding:24px;box-sizing:border-box;touch-action:none}
 .slag-rotate.hidden{display:none}
-.slag-rotate .ph{width:46px;height:78px;border:4px solid #ffb02e;border-radius:10px;animation:slagrot 2.2s ease-in-out infinite}
+.slag-rotate .ph{width:46px;height:78px;border:4px solid ${PAL.amber};border-radius:10px;animation:slagrot 2.2s ease-in-out infinite}
 @keyframes slagrot{0%,20%{transform:rotate(0)}50%,80%{transform:rotate(-90deg)}100%{transform:rotate(0)}}
-.slag-rotate h2{font:400 30px "Lilita One",system-ui,sans-serif;color:#ffb02e;margin:0}
-.slag-rotate button{font:700 13px Rubik,system-ui;color:#bbb;background:none;border:1px solid rgba(255,255,255,.2);border-radius:9px;padding:8px 14px;touch-action:manipulation}
+.slag-rotate h2{font:400 30px ${FONT.display};color:${PAL.amber};margin:0}
+.slag-rotate button{font:700 15px ${FONT.ui};min-height:44px;color:${PAL.ash};background:none;border:2px solid ${PAL.steel};border-radius:5px;padding:8px 16px;touch-action:manipulation}
 `;
 
 export interface OverlayState {
@@ -59,7 +60,6 @@ export class TouchOverlay {
   private ring = div('ring');
   private menu = button('c btn ui', '⚙\uFE0E', 'Settings');
   private full = button('c btn ui', '⛶', 'Fullscreen');
-  private moveTag = tag('MOVE · push far = RUN');
   private rotate = div('slag-rotate hidden');
   private portraitOk = false;
   private layout: TouchLayout = touchLayout(1, 1);
@@ -76,23 +76,22 @@ export class TouchOverlay {
     hardenGestures(container);
 
     this.base.append(div('runring'));
-    this.ring.style.mask = this.ring.style.webkitMask = 'radial-gradient(circle, transparent 62%, #000 64%)';
+    // setProperty: Safari before 15.4 only knows the prefixed name, and the DOM's alias for it is deprecated.
+    for (const name of ['mask', '-webkit-mask']) this.ring.style.setProperty(name, 'radial-gradient(circle, transparent 62%, #000 64%)');
     this.secondary.append(this.ring);
-    this.root.append(this.base, this.knob, this.moveTag, this.secondary, this.useBtn, this.primary, this.menu, this.full);
+    this.root.append(this.base, this.knob, this.secondary, this.useBtn, this.primary, this.menu, this.full);
     this.menu.addEventListener('click', onMenu);
     this.full.addEventListener('click', () => void goFullscreen());
 
-    const later = button('', 'play in portrait anyway', 'Play in portrait');
+    const later = button('', 'Play in Portrait', 'Play in portrait');
     later.addEventListener('click', () => {
       this.portraitOk = true;
       this.rotate.classList.add('hidden');
     });
     const ph = div('ph');
     const h2 = document.createElement('h2');
-    h2.textContent = 'Turn it sideways';
-    const p = document.createElement('div');
-    p.textContent = 'slag plays in landscape — rotate your phone.';
-    this.rotate.append(ph, h2, p, later);
+    h2.textContent = 'Turn It Sideways';
+    this.rotate.append(ph, h2, later);
     this.rotate.dataset.slagUi = '';
     document.body.append(this.root, this.rotate);
     touch.vibrate = (ms) => navigator.vibrate?.(ms);
@@ -113,10 +112,9 @@ export class TouchOverlay {
     place(this.secondary, L.secondary);
     place(this.useBtn, L.use);
     place(this.menu, L.menu);
-    place(this.full, { x: ins.left + 10 + L.menu.r, y: L.menu.y, r: L.menu.r });
+    // Bottom right: the phone lobby's top bar runs into the corners, and its footer has this end free.
+    place(this.full, { x: L.menu.x, y: h - ins.bottom - 6 - L.menu.r, r: L.menu.r });
     place(this.base, { x: L.stickHome.x, y: L.stickHome.y, r: L.stickR });
-    this.moveTag.style.left = `${L.stickHome.x}px`;
-    this.moveTag.style.top = `${L.stickHome.y + L.stickR + 12}px`;
   }
 
   /** Call once per rendered frame. */
@@ -131,12 +129,11 @@ export class TouchOverlay {
     const race = m === 'race';
     const placeMode = m === 'place';
     show(this.base, race);
-    show(this.moveTag, race && !t.stick());
     show(this.primary, race || placeMode);
     show(this.secondary, race || placeMode);
     show(this.useBtn, race && !!s.use);
     show(this.menu, m !== 'lobby'); // the lobby HUD has its own settings button
-    show(this.full, m === 'lobby' && !!document.fullscreenEnabled && !document.fullscreenElement);
+    show(this.full, m === 'lobby' && document.fullscreenEnabled && !document.fullscreenElement);
     if (race) {
       const L = this.layout;
       const st = t.stick();
@@ -154,6 +151,7 @@ export class TouchOverlay {
         this.knob.classList.remove('run');
       }
       this.base.classList.toggle('idle', !st);
+      this.knob.classList.toggle('idle', !st); // the runner often starts right under it
       setLabel(this.primary, 'JUMP');
       this.primary.classList.remove('place', 'bad');
       this.primary.classList.toggle('on', t.holding('jump'));
@@ -180,12 +178,6 @@ export class TouchOverlay {
 function div(cls: string) {
   const d = document.createElement('div');
   d.className = cls;
-  return d;
-}
-
-function tag(text: string) {
-  const d = div('tag');
-  d.textContent = text;
   return d;
 }
 
@@ -242,7 +234,7 @@ function hardenGestures(container: HTMLElement) {
   const s = container.style as CSSStyleDeclaration & { webkitTouchCallout?: string; webkitTapHighlightColor?: string };
   s.touchAction = 'none';
   s.userSelect = 'none';
-  s.webkitUserSelect = 'none';
+  s.setProperty('-webkit-user-select', 'none'); // iOS Safari has only the prefixed one
   s.webkitTouchCallout = 'none';
   s.webkitTapHighlightColor = 'transparent';
   for (const el of [document.documentElement, document.body]) el.style.overscrollBehavior = 'none';

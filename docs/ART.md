@@ -71,11 +71,12 @@ On pages, body text is 15–18 px and menu items are 30 px display.
 - Which glyph goes with which action is decided in `src/ui/prompts.ts`. Key labels always come from the **live bindings** (`InputManager.settings` → `capLabel`), so remaps show up immediately.
 - Show the active input family first: the one used last (`InputModeTracker`) or the one forced by `hud.inputMode`. Add the other family only if it's present (a pad is connected or joined). Touch shows touch glyphs only.
 - Every phase has a **footer prompt bar** at the bottom: ink bar, a hazard-tape top edge, prompts right-aligned, context on the left (`2/4 Ready`, `LOBBY K7QX2`). In-game screens never put prompts anywhere else. Footer prompts that map to a HUD action can be clicked or tapped.
-- During races the footer shows Jump, Run, and Self-Destruct through the countdown, then fades to a quiet Self-Destruct hint. While a local player holds an item a Use prompt joins them, labelled with that item's verb (`Swing`, `Throw`). In touch mode it's hidden, because the on-screen controls carry the labels.
+- During races the footer shows Jump, Run, and Self-Destruct through the countdown, then fades to a quiet Self-Destruct hint. While a local player holds an item a Use prompt joins them, labelled with that item's verb (`Swing`, `Throw`). In touch mode it's hidden, because the on-screen controls carry the labels. The same goes for Place's prompts on phones.
 
 ## Layout and interaction
 
-- Touch and click targets are at least 22 logical px on the HUD and 44 CSS px on pages. Empty lobby slots are whole-card targets.
+- Touch and click targets are at least 22 logical px on the HUD and 44 CSS px on pages and on phones. Empty lobby slots are whole-card targets.
+- On phones the HUD grows by groups, each about its own anchor, up to about 1.8×: chips, timers, headings, crate cards, the score panel. A logical px is only ~0.75 CSS px there, so the type scale above would otherwise land below a readable size. The lobby's top-bar buttons become icons, and its footer loses the prompts the cards already carry. Hit rects grow to 44 CSS px even where the art doesn't.
 - Selection works like a console menu: one item is always active, shown with a molten fill, a diamond marker, a chevron, and a slight nudge. Mouse hover, keyboard arrows, the d-pad, and the stick all move the same selection.
 - Buttons are stamped: a top face over a darker side that sinks 1.5–3 px on hover or press. Primary buttons are molten with ink text, secondary are iron with bone text, and confirmed buttons are toxic.
 - Overlays (`src/ui/menus.ts`) are a single iron card with a hazard-tape top edge over a dark scrim. They have no blur and no glass.
