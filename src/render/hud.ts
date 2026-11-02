@@ -9,7 +9,7 @@ import { drawGlyph, type Glyph, glyphWidth } from '../ui/glyphs';
 import { glyphsFor, type InputMode, type PromptAction, promptModes } from '../ui/prompts';
 import { FONT, PAL, TYPE } from '../ui/style';
 import { ITEMS } from '../sim/items';
-import { drawCharacter } from './character';
+import { drawInkRunner } from './ink-character';
 import { bay, buttonText, type ButtonStyle, hazardTape, icon, type IconName, plate, stampButton, standings, tag } from './hud-kit';
 import { VIEW_FRAME, type ViewFrame } from './frame';
 import { drawItemIcon } from './items';
@@ -568,13 +568,13 @@ export class Hud {
     c.ellipse(cx, feet + 1.5, big ? 32 : 24, big ? 5.5 : 4, 0, 0, Math.PI * 2);
     c.fill();
     glowDot(this.gctx, cx, feet + 3, big ? 34 : 24, { h: 22, s: 100, l: 50 }, 0.35, 0.2);
-    drawCharacter({ s: c, g: this.gctx }, p.character, cx, feet, {
+    drawInkRunner({ s: c, g: this.gctx }, p.character, cx, feet, {
       facing: Math.sin(t * 0.8 + i) > 0 ? 1 : -1,
       vx: 0,
       vy: 0,
       grounded: true,
       t,
-      scale: big ? 4.4 : h > 150 ? 3.2 : 2.7,
+      scale: big ? 4.1 : h > 150 ? 2.95 : 2.5,
       celebrate: p.ready,
     });
     // Name (click to rename for the mouse player).
@@ -852,7 +852,7 @@ export class Hud {
       c.fillRect(x, y, 3, 25);
       c.save();
       c.globalAlpha = dead ? 0.4 : 1;
-      drawCharacter({ s: c, g: null }, p.character, x + 14, y + 21, { facing: 1, vx: 0, vy: 0, grounded: true, t, scale: 1.05, celebrate: done });
+      drawInkRunner({ s: c, g: null }, p.character, x + 14, y + 21, { facing: 1, vx: 0, vy: 0, grounded: true, t, scale: 1.05, celebrate: done });
       c.restore();
       this.text(p.character.name, x + 26, y + 8.5, TYPE.caption + 0.5, PAL.bone, 'left', UI, 700);
       const status = done
@@ -905,8 +905,8 @@ export class Hud {
     const compact = m.players.length > 4;
     const rowH = compact ? 35 : 50;
     const L = compact
-      ? { feet: 30, scale: 1.55, name: 8, nameSize: 11, bar: 15, barH: 9, award: 28, awardH: 11, band: -1 }
-      : { feet: 36, scale: 2.2, name: 10, nameSize: 13, bar: 20, barH: 12, award: 38, awardH: 12, band: -6 };
+      ? { feet: 30, scale: 1.38, name: 8, nameSize: 11, bar: 15, barH: 9, award: 28, awardH: 11, band: -1 }
+      : { feet: 37, scale: 1.95, name: 10, nameSize: 13, bar: 20, barH: 12, award: 38, awardH: 12, band: -6 };
     const y0 = compact ? 98 : 104;
     const panelH = m.players.length * rowH + 22;
     const f = this.frame;
@@ -936,7 +936,7 @@ export class Hud {
         c.fillStyle = PAL.amber;
         c.fillRect(148, y + L.band, 3, rowH - 6);
       }
-      drawCharacter({ s: c, g: this.gctx }, p.character, 182, y + L.feet, {
+      drawInkRunner({ s: c, g: this.gctx }, p.character, 182, y + L.feet, {
         facing: 1,
         vx: 0,
         vy: 0,
@@ -1016,7 +1016,7 @@ export class Hud {
     winners.forEach((p, i) => {
       const x = VIEW_W / 2 + (i - (winners.length - 1) / 2) * gap;
       glowDot(gg, x, 220, 90 * k, p.character.body, 0.35);
-      drawCharacter({ s: c, g: gg }, p.character, x, 270, { facing: 1, vx: 0, vy: 0, grounded: true, t, scale: 7 * k, celebrate: true });
+      drawInkRunner({ s: c, g: gg }, p.character, x, 270, { facing: 1, vx: 0, vy: 0, grounded: true, t, scale: 7 * k, celebrate: true });
       this.text(p.character.name, x, 300, 24 * k, PAL.bone, 'center', DISPLAY, 400, 5 * k);
       this.text(`${p.score} Points`, x, 323, TYPE.label, PAL.amber, 'center', UI, 700);
     });
