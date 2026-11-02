@@ -5,6 +5,7 @@ import { Match } from '../src/game/match';
 import { generateProp } from '../src/gen/props';
 import { generateTheme } from '../src/gen/theme';
 import { Predictor } from '../src/net/predict';
+import { drawnVelocity } from '../src/net/session';
 import { hashMatch, restoreMatch, snapshotMatch } from '../src/net/snapshot';
 import { COLLIDE } from '../src/sim/collide';
 import { DT, LEVEL_H, LEVEL_W, PHYS, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
@@ -1088,8 +1089,8 @@ describe('online', () => {
   it('a mispredicted contact stays inside the 24 px teleport budget', () => {
     /**
      * A guest shows the confirmed state plus `lag` frames predicted from the other side's last known buttons.
-     * Same measure as the netcode latency scenario: how far a drawn runner moves sideways past what its speed
-     * explains. `ease` is that branch's presentation easing, which keeps 85% of an error each frame.
+     * Same measure as the netcode contact scenario: how far a drawn runner moves sideways past what its speed
+     * explains. `ease` is the session's presentation easing (`drawnVelocity`), which keeps 85% of an error each frame.
      */
     const replay = (lag: number, ease: boolean) => {
       const live = match(testLevel());
@@ -1106,13 +1107,14 @@ describe('online', () => {
         const shown = predictor.copy(confirmed);
         const known = history[Math.max(0, f - lag)].b;
         for (let k = Math.max(0, f - lag + 1); k <= f; k++) shown.step({ a: history[k].a, b: { ...known, jumpPressed: false } });
-        const bodies = shown.run!.runners.map((r) => r.body);
-        const now = bodies.map((b, i) => {
+        const runners = shown.run!.runners;
+        const v = runners.map((r) => drawnVelocity(runners, r));
+        const now = runners.map(({ body: b }, i) => {
           const was = drawn[i];
           if (!was || !ease) return { x: b.x, y: b.y };
-          return { x: b.x + (was.x + b.vx * DT - b.x) * 0.85, y: b.y + (was.y + b.vy * DT - b.y) * 0.85 };
+          return { x: b.x + (was.x + v[i].x * DT - b.x) * 0.85, y: b.y + (was.y + v[i].y * DT - b.y) * 0.85 };
         });
-        if (drawn.length) bodies.forEach((b, i) => (snap = Math.max(snap, Math.abs(now[i].x - drawn[i].x) - Math.abs(b.vx) * DT)));
+        if (drawn.length) runners.forEach((_, i) => (snap = Math.max(snap, Math.abs(now[i].x - drawn[i].x) - Math.abs(v[i].x) * DT)));
         drawn = now;
         if (confirmed.run!.runners.some((r) => r.ride >= 0 || r.press > 0)) contact++;
       }

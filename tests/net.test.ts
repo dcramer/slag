@@ -3,9 +3,12 @@ import { Rng } from '../src/core/rng';
 import { Match } from '../src/game/match';
 import { DEFAULT_RULES } from '../src/game/rules';
 import { roomSeed } from '../src/game/room';
-import { NetSession } from '../src/net/session';
+import { GRAVITY } from '../src/gen/level';
+import { sanitizeRules } from '../src/net/actions';
+import { drawnVelocity, NetSession } from '../src/net/session';
 import { hashMatch } from '../src/net/snapshot';
 import { LoopbackHub, type LoopbackOptions } from '../src/net/transport';
+import type { Runner } from '../src/sim/run';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
 
 const TICK = 1000 / 60;
@@ -22,14 +25,17 @@ class Room {
   frame = 0;
   logs: string[] = [];
 
-  constructor(opts: LoopbackOptions = {}) {
+  constructor(
+    opts: LoopbackOptions = {},
+    private code = 'TEST',
+  ) {
     this.hub = new LoopbackHub(opts);
   }
 
   join(id: string, script: Script = idle): NetSession {
     const s = new NetSession({
       transport: this.hub.transport(id),
-      match: new Match(roomSeed('TEST')),
+      match: new Match(roomSeed(this.code)),
       now: () => this.hub.now,
       log: (m) => this.logs.push(`${id}: ${m}`),
     });
@@ -65,11 +71,9 @@ class Room {
   /** Let guests catch up with a frozen host, then compare state hashes at the same frame. */
   settle() {
     const h = this.host();
-    // A guest only notices a lost bundle when a later one arrives, so a frozen host needs one last, safe send.
-    this.hub.opts.loss = 0;
-    h.tick({});
-    h.flush();
     for (let i = 0; i < 200; i++) {
+      // A frozen host sends nothing new, so a lost last bundle leaves no gap to ask about: repeat it.
+      if (i % 20 === 0) h.flush();
       this.hub.advance(TICK);
       for (const s of this.peers.values()) if (s !== h) s.tick({});
     }
@@ -91,6 +95,15 @@ const player: Script = (s, f, rng) => {
     return { kb1: press({ pointer: { x: rng.range(40, 720), y: rng.range(40, 400) }, confirmPressed: rng.next() < 0.08, altPressed: rng.next() < 0.02 }) };
   if (m.phase === 'run') return { kb1: press({ right: rng.next() < 0.8, left: rng.next() < 0.1, jump: f % 30 < 15, jumpPressed: f % 30 === 0 }) };
   return f % 30 === 0 ? { kb1: press({ confirmPressed: true }) } : {};
+};
+
+/** `player`, but racing with everything: run, drop through, use items, grab. */
+const rough: Script = (s, f, rng) => {
+  if (s.match.phase !== 'run') return player(s, f, rng);
+  const down = rng.next() < 0.05;
+  const jump = { jump: f % 40 < 18, jumpPressed: f % 40 === 0 || rng.next() < 0.03 };
+  const moves = { right: rng.next() < 0.7, left: rng.next() < 0.15, run: rng.next() < 0.5, up: rng.next() < 0.1, usePressed: rng.next() < 0.04 };
+  return { kb1: press({ ...moves, ...jump, down, downPressed: down && rng.next() < 0.5 }) };
 };
 
 function fastRules(s: NetSession) {
@@ -177,7 +190,327 @@ describe('lockstep', () => {
   });
 });
 
+describe('lobby seats', () => {
+  const seats = (s: NetSession) => s.match.players.map((p) => `${p.device}/${p.character.name}/${p.character.seed}`);
+
+  it('seats every connected peer with nobody pressing anything, identically on every peer, within a second', () => {
+    const r = new Room({ latency: 40, jitter: 10 });
+    const a = r.join('aaaa');
+    r.run(20);
+    expect(a.match.players.map((p) => p.device)).toEqual(['aaaa:kb1']);
+    const b = r.join('bbbb');
+    r.run(5);
+    const c = r.join('cccc');
+    r.run(60);
+    for (const s of [a, b, c]) expect(s.match.players).toHaveLength(3);
+    expect(seats(b)).toEqual(seats(a));
+    expect(seats(c)).toEqual(seats(a));
+  });
+
+  it('gives every player a distinct name and color, however many seats fill', () => {
+    const r = new Room({ latency: 10 });
+    const ids = ['aaaa', 'bbbb', 'cccc', 'dddd', 'eeee', 'ffff', 'gggg', 'hhhh'];
+    for (const id of ids) {
+      r.join(id);
+      r.run(10);
+    }
+    r.run(60);
+    const a = r.peers.get('aaaa')!;
+    expect(a.match.players).toHaveLength(8);
+    expect(new Set(a.match.players.map((p) => p.character.name)).size).toBe(8);
+    expect(new Set(a.match.players.map((p) => p.character.seed)).size).toBe(8);
+    const gaps = (n: number) => {
+      const hues = a.match.players.slice(0, n).map((p) => p.character.hue);
+      return hues.flatMap((h, i) => hues.slice(i + 1).map((o) => Math.min(Math.abs(h - o), 360 - Math.abs(h - o))));
+    };
+    // A party reads apart at a glance. A full lobby can't always keep that, but never lands on a near twin.
+    expect(Math.min(...gaps(4))).toBeGreaterThanOrEqual(30);
+    expect(Math.min(...gaps(8))).toBeGreaterThanOrEqual(15);
+  });
+
+  it('refuses a look someone here already has, so two tabs sharing a saved look still differ', () => {
+    const r = new Room({ latency: 20 });
+    const a = r.join('aaaa');
+    r.run(5);
+    const b = r.join('bbbb');
+    r.run(40);
+    const look = 123456;
+    a.act({ t: 'look', dev: 'aaaa:kb1', seed: look });
+    r.run(30);
+    b.act({ t: 'look', dev: 'bbbb:kb1', seed: look });
+    r.run(30);
+    expect(a.match.players.find((p) => p.device === 'aaaa:kb1')!.character.seed).toBe(look);
+    expect(a.match.players.find((p) => p.device === 'bbbb:kb1')!.character.seed).not.toBe(look);
+    expect(seats(b)).toEqual(seats(a));
+    b.act({ t: 'name', dev: 'bbbb:kb1', name: a.match.players[0].character.name });
+    r.run(30);
+    expect(new Set(a.match.players.map((p) => p.character.name)).size).toBe(2);
+  });
+
+  it('syncs a new look to every peer', () => {
+    const r = new Room({ latency: 20 });
+    const a = r.join('aaaa');
+    r.run(5);
+    const b = r.join('bbbb', (_s, f) => (f === 70 ? { kb1: press({ altPressed: true }) } : {}));
+    r.run(60);
+    const before = seats(a);
+    r.run(40);
+    expect(seats(a)).not.toEqual(before);
+    expect(seats(b)).toEqual(seats(a));
+  });
+
+  it('keeps every bay through a refresh, a late join and a host migration', () => {
+    const r = new Room({ latency: 30 });
+    const a = r.join('aaaa');
+    r.run(5);
+    r.join('bbbb');
+    r.run(5);
+    const c = r.join('cccc');
+    r.run(60);
+    const name = (s: NetSession, dev: string) => s.match.players.find((p) => p.device === dev)?.character.name;
+    const cName = name(a, 'cccc:kb1');
+    r.leave('cccc');
+    r.run(30);
+    expect(a.match.players).toHaveLength(2);
+    const c2 = r.join('cccc');
+    r.run(60);
+    expect(name(c2, 'cccc:kb1')).toBe(cName);
+    expect(seats(c2)).toEqual(seats(a));
+    const d = r.join('dddd');
+    r.run(60);
+    expect(seats(d)).toEqual(seats(a));
+    expect(a.match.players).toHaveLength(4);
+    r.leave('aaaa');
+    r.run(90);
+    const b = r.peers.get('bbbb')!;
+    expect(b.isHost).toBe(true);
+    expect(b.match.players.map((p) => p.device).sort()).toEqual(['bbbb:kb1', 'cccc:kb1', 'dddd:kb1']);
+    expect(seats(d)).toEqual(seats(b));
+    expect(c).toBeDefined();
+  });
+});
+
+describe('rough play', () => {
+  // A gusty level and a misty one with a drill: weather, deaths, fire, grabs and runner contact, with the host's link cut mid-race.
+  for (const code of ['FUZZB2', 'FUZZC3']) {
+    it(`${code}: 4 peers through latency, jitter and loss, 3 rounds, the host dropping mid-race, stay bit-identical`, () => {
+      const r = new Room({ latency: 45, jitter: 30, loss: 0.05, seed: code.charCodeAt(4) }, code);
+      const a = r.join('aaaa', rough);
+      fastRules(a);
+      for (const id of ['bbbb', 'cccc', 'dddd']) {
+        r.run(10);
+        r.join(id, rough);
+      }
+      let rounds = 0;
+      let dropped = false;
+      let last = a.match.phase;
+      for (let i = 0; i < 60 * 200 && rounds < 3; i++) {
+        r.run(1);
+        const h = r.host();
+        if (!h) continue; // between hosts
+        if (h.match.phase !== last && last === 'run') rounds++;
+        last = h.match.phase;
+        if (!dropped && rounds === 1 && h.match.run && h.match.run.frame > 200) {
+          dropped = true;
+          h.transport!.close(); // the link drops, with no last flush from the session
+          r.peers.delete([...r.peers].find(([, s]) => s === h)![0]);
+        }
+      }
+      const res = r.settle();
+      if (process.env.NETDBG) console.log(res, r.logs.slice(-40));
+      expect(dropped && rounds >= 3).toBe(true);
+      expect(new Set(res.map((x) => x.frame)).size).toBe(1);
+      expect(new Set(res.map((x) => x.hash)).size).toBe(1);
+      expect([...r.peers.values()].reduce((n, s) => n + s.stats.desyncs, 0)).toBe(0);
+    }, 60_000);
+  }
+});
+
+describe('rules', () => {
+  it("regenerates the level from the host's gravity, identically on every peer", () => {
+    const r = new Room({ latency: 20 });
+    const a = r.join('aaaa');
+    r.run(5);
+    const b = r.join('bbbb');
+    r.run(60);
+    const before = a.match.level.gravity;
+    const pick = before === GRAVITY.low ? 'high' : 'low';
+    a.act({ t: 'rules', rules: { ...a.match.rules, gravity: pick } });
+    r.run(30);
+    expect(a.match.rules.gravity).toBe(pick);
+    expect(b.match.rules.gravity).toBe(pick);
+    expect(a.match.level.gravity).toBe(GRAVITY[pick]);
+    expect(b.match.level.gravity).toBe(GRAVITY[pick]);
+    expect([...b.match.level.tiles]).toEqual([...a.match.level.tiles]);
+  });
+
+  it('turns a junk gravity into the default', () => {
+    expect(sanitizeRules({ gravity: 'sideways' as 'low' }).gravity).toBe('auto');
+  });
+});
+
+describe('kick', () => {
+  function lobby() {
+    const r = new Room({ latency: 20 });
+    const a = r.join('aaaa');
+    r.run(5);
+    const b = r.join('bbbb');
+    r.run(5);
+    const c = r.join('cccc');
+    r.run(60);
+    return { r, a, b, c };
+  }
+  const devices = (s: NetSession) => s.match.players.map((p) => p.device);
+
+  it('removes the peer on every peer, by host authority', () => {
+    const { r, a, b, c } = lobby();
+    a.kick('bbbb');
+    r.run(30);
+    expect(b.status).toBe('kicked');
+    expect(devices(a)).toEqual(['aaaa:kb1', 'cccc:kb1']);
+    expect(devices(c)).toEqual(['aaaa:kb1', 'cccc:kb1']);
+    expect(a.members.map((m) => m.id)).toEqual(['aaaa', 'cccc']);
+  });
+
+  it('refuses a kicked peer that comes back, and never seats it', () => {
+    const { r, a } = lobby();
+    a.kick('bbbb');
+    r.run(30);
+    const back = r.join('bbbb');
+    r.run(60);
+    expect(back.status).toBe('kicked');
+    expect(devices(a)).toEqual(['aaaa:kb1', 'cccc:kb1']);
+  });
+
+  it('ignores a kick asked for by a guest', () => {
+    const { r, a, b, c } = lobby();
+    c.act({ t: 'kick', peer: 'bbbb' });
+    c.kick('bbbb');
+    r.run(30);
+    expect(b.status).toBe('online');
+    expect(devices(a)).toHaveLength(3);
+    expect(a.ns.kicked).toEqual({});
+  });
+
+  it('ignores a kick forged by a peer that is not the host, in a bundle or as a notice', () => {
+    const { r, a, b, c } = lobby();
+    const frame = b.match.frame + 2;
+    c.transport!.send({ t: 'b', b: [{ f: frame, a: [{ t: 'kick', peer: 'bbbb' }] }] }, 'bbbb');
+    c.transport!.send({ t: 'kicked' }, 'bbbb');
+    r.run(30);
+    expect(b.status).toBe('online');
+    expect(devices(b)).toHaveLength(3);
+    expect(b.ns.kicked).toEqual({});
+    expect(a.isHost).toBe(true);
+  });
+
+  it('applies in the lobby only', () => {
+    const { r, a, b, c } = lobby();
+    const ready = press({ confirmPressed: true });
+    r.scripts.set('aaaa', (_s, f) => (f % 40 === 0 ? { kb1: ready } : {}));
+    r.scripts.set('bbbb', (_s, f) => (f % 40 === 0 ? { kb1: ready } : {}));
+    r.scripts.set('cccc', (_s, f) => (f % 40 === 0 ? { kb1: ready } : {}));
+    for (let i = 0; i < 200 && a.match.phase === 'lobby'; i++) r.run(1);
+    expect(a.match.phase).toBe('pick');
+    r.scripts.clear();
+    for (const id of ['aaaa', 'bbbb', 'cccc']) r.scripts.set(id, () => ({}));
+    a.kick('bbbb');
+    a.act({ t: 'kick', peer: 'bbbb' });
+    r.run(30);
+    expect(b.status).toBe('online');
+    expect(devices(c)).toHaveLength(3);
+  });
+
+  it('survives a host migration: the new host still refuses the peer', () => {
+    const { r, a, b, c } = lobby();
+    a.kick('bbbb');
+    r.run(30);
+    expect(b.status).toBe('kicked');
+    r.leave('aaaa');
+    r.run(60);
+    expect(c.isHost).toBe(true);
+    const back = r.join('bbbb');
+    r.run(60);
+    expect(back.status).toBe('kicked');
+    expect(devices(c)).toEqual(['cccc:kb1']);
+  });
+});
+
+describe('stalls', () => {
+  it('keeps a click made during a stall longer than the unacked window', () => {
+    const r = new Room({ latency: 20 });
+    const a = r.join('aaaa');
+    r.run(5);
+    const b = r.join('bbbb');
+    r.run(40);
+    // The guest keeps ticking while nothing reaches the host, so its oldest frame has to go somewhere.
+    const hub = r.hub as unknown as { route: (from: string, data: unknown, to?: string) => void };
+    const route = hub.route.bind(r.hub);
+    hub.route = () => {};
+    b.tick({ kb1: press({ altPressed: true }) });
+    const look = a.match.players.find((p) => p.device === 'bbbb:kb1')!.character.seed;
+    for (let i = 0; i < 200; i++) b.tick({});
+    hub.route = route;
+    r.run(60);
+    expect(a.match.players.find((p) => p.device === 'bbbb:kb1')!.character.seed).not.toBe(look);
+  });
+});
+
+describe('away', () => {
+  it('holds up nobody, and is no forfeit: back in time, the player can still place', () => {
+    const r = new Room({ latency: 20 });
+    const a = r.join('aaaa', player);
+    a.act({ t: 'rules', rules: { ...DEFAULT_RULES, pickSeconds: 10, placeSeconds: 0, raceSeconds: 30 } });
+    r.run(5);
+    r.join('bbbb', player);
+    while (a.match.phase !== 'place') r.run(1);
+    r.scripts.set('aaaa', idle);
+    r.scripts.set('bbbb', idle);
+    r.run(20);
+    const back = () => a.match.players.find((p) => p.device === 'bbbb:kb1')!;
+    r.leave('bbbb');
+    r.run(20);
+    expect(back().away).toBe(true);
+    expect(back().placed).toBe(false);
+    r.join('bbbb');
+    r.run(40);
+    expect(back().away).toBeUndefined();
+    expect(back().placed).toBe(false);
+    // Gone again, with everyone else done: the phase doesn't wait.
+    a.match.players.find((p) => p.device === 'aaaa:kb1')!.placed = true;
+    r.leave('bbbb');
+    for (let i = 0; i < 90 && a.match.phase === 'place'; i++) r.run(1);
+    expect(a.match.phase).toBe('run');
+  });
+});
+
 describe('reconnect and late join', () => {
+  it('a guest on another build says so instead of joining forever, asks rarely, and joins once it can', () => {
+    const r = new Room({ latency: 20 });
+    const a = r.join('aaaa');
+    // Another build: every snapshot the host sends is one this guest can't load.
+    const t = a.transport!;
+    const send = t.send.bind(t);
+    let syncs = 0;
+    let otherBuild = true;
+    t.send = (m, to, lossy) => {
+      const msg = m as { t: string; s: { v: number } };
+      if (msg.t === 'sync') syncs++;
+      send(otherBuild && msg.t === 'sync' ? { ...msg, s: { ...msg.s, v: -1 } } : m, to, lossy);
+    };
+    r.run(5);
+    const b = r.join('bbbb');
+    r.run(60 * 15);
+    expect(b.synced).toBe(false);
+    expect(b.refused).toBe(true);
+    expect(syncs).toBeLessThanOrEqual(3); // not a whole snapshot every second
+    // The host reloads onto this build (here: its snapshots load again); the next ask joins.
+    otherBuild = false;
+    r.run(60 * 11);
+    expect(b.synced).toBe(true);
+    expect(b.refused).toBe(false);
+  });
+
   it('a refresh mid-match gets the same slot, character and score back', () => {
     const r = new Room({ latency: 30 });
     const a = r.join('aaaa', player);
@@ -263,4 +596,26 @@ describe('reconnect and late join', () => {
     expect(new Set(res.map((x) => x.hash)).size).toBe(1);
     expect(c.match.frame).toBe(b.match.frame);
   }, 30_000);
+});
+
+describe('drawn runners', () => {
+  const runner = (slot: number, vx: number, vy: number, ride = -1, press = 0) => ({ slot, ride, press, body: { vx, vy } }) as unknown as Runner;
+
+  it('projects a pusher held up by bodies as standing, and a rider by its own walk plus its base', () => {
+    const base = runner(0, 106, -50);
+    const rider = runner(1, 20, 0, 0);
+    const pusher = runner(2, 106, 0, -1, 3);
+    const onPusher = runner(3, 0, 0, 2);
+    const all = [base, rider, pusher, onPusher];
+    expect(drawnVelocity(all, base)).toEqual({ x: 106, y: -50 });
+    expect(drawnVelocity(all, rider)).toEqual({ x: 126, y: -50 });
+    expect(drawnVelocity(all, pusher)).toEqual({ x: 0, y: 0 });
+    expect(drawnVelocity(all, onPusher)).toEqual({ x: 0, y: 0 });
+  });
+
+  it('survives a riding loop without hanging', () => {
+    const a = runner(0, 10, 0, 1);
+    const b = runner(1, 10, 0, 0);
+    expect(drawnVelocity([a, b], a).x).toBe(20);
+  });
 });

@@ -1,6 +1,7 @@
 import type { Match } from '../game/match';
-import { MAX_PLAYERS } from '../sim/constants';
+import { DT, MAX_PLAYERS } from '../sim/constants';
 import { addBreadcrumb, reportEvent } from '../telemetry';
+import type { Runner } from '../sim/run';
 import type { GameEvent, InputFrame } from '../sim/types';
 import { applyAction, type NetAction, type NetState, newNetState, peerOf, sanitizeRules } from './actions';
 import { CONFIRM_BIT, decode, type Enc, encode, held, heldPeerFrame, mergePeerFrames, type PeerFrame, PRESSED } from './codec';
@@ -28,19 +29,30 @@ export const HASH_EVERY = 60;
 const HISTORY = 600;
 const PING_MS = 1000;
 const HELLO_RETRY_MS = 1000;
+const REFUSED_RETRY_MS = 10_000;
 const NEED_AFTER_MS = 150;
 const MAX_UNACKED = 90;
-const QUEUE_HIGH = 6;
-const QUEUE_KEEP = 3;
+/**
+ * Frames a guest may have waiting on the host. Every frame beyond one is 17 ms
+ * of lag for everyone watching, and the host only eats one a tick, so a queue
+ * left alone never drains. Two absorbs ordinary jitter.
+ */
+const QUEUE_MAX = 2;
 const MAX_APPLY_PER_TICK = 900;
+const WANT_RETRY_MS = 1000;
 const MAX_PREDICT = 24;
 /** How long a new host waits for the room to report in, and for the furthest peer's snapshot. */
 const COLLECT_MS = 7000;
 const PULL_MS = 1500;
 /** Per-view-update step of a remote cursor toward its confirmed position. Presentation only. */
 const CURSOR_SMOOTH = 0.5;
+/** What's left of a drawn runner's prediction error after one frame. Presentation only. */
+const CORRECTION_KEEP = 0.85;
+/** A correction this large (px) is a respawn or a portal, not an error: show it. A late jump at 100 ms round trip is already about 50. */
+const CORRECTION_MAX = 120;
+const CORRECTION_MAX_STEPS = 4;
 
-export type NetStatus = 'offline' | 'connecting' | 'online' | 'reconnecting' | 'unavailable';
+export type NetStatus = 'offline' | 'connecting' | 'online' | 'reconnecting' | 'unavailable' | 'kicked';
 export type Role = 'host' | 'guest';
 
 /** Per-peer info for the HUD (lobby list, crown, ping). */
@@ -80,14 +92,16 @@ type Msg =
   | { t: 'state'; s: MatchSnap; k: Record<string, [number, number]>; ns: NetState; last: Record<string, Enc> }
   | { t: 'ping'; ts: number }
   | { t: 'pong'; ts: number }
-  | { t: 'pings'; p: Record<string, number> };
+  | { t: 'pings'; p: Record<string, number> }
+  /** Host to a peer it removed. */
+  | { t: 'kicked' };
 
 export interface SessionOptions {
   transport: Transport | null;
   match: Match;
   /** Monotonic ms clock (injectable for tests). */
   now?: () => number;
-  /** Guests send input every N ticks and the host flushes bundles every N ticks (1 = every frame). */
+  /** Guests send input every N ticks and the host flushes bundles every N ticks. Waiting saves little and costs 17 ms each way. */
   sendEvery?: number;
   /** Client-side prediction during races (guests). */
   predict?: boolean;
@@ -95,6 +109,8 @@ export interface SessionOptions {
   primaryDevice?: string;
   /** Called with a resumable snapshot when we become host of an empty room; return one to resume. */
   resume?: () => { snap: MatchSnap; ns: NetState } | null;
+  /** The host removed this peer: it's already out of the room. */
+  onKicked?: () => void;
   log?: (msg: string) => void;
 }
 
@@ -118,15 +134,18 @@ export class NetSession {
   members: Member[] = [];
   /** Guests: true once the host's snapshot arrived (before that we show a frozen lobby). */
   synced = true;
+  /** Guests: the host's snapshot is from another build (see restoreMatch), so this page can't join until one of us reloads. */
+  refused = false;
   /** Crate card this peer has clicked and the host hasn't ruled on yet (-1: none). Never a claim: the host decides those. */
   pendingCard = -1;
   /** Counters for the HUD/debug overlay and tests. */
-  stats = { desyncs: 0, syncs: 0, migrations: 0, bundles: 0, predicted: 0 };
+  stats = { desyncs: 0, syncs: 0, migrations: 0, bundles: 0, predicted: 0, dryTicks: 0, foldedFrames: 0, queuedFrames: 0, hostTicks: 0 };
 
   private now: () => number;
   private sendEvery: number;
   private predict: boolean;
   private resumeFn: SessionOptions['resume'];
+  private onKickedFn: SessionOptions['onKicked'];
   private log: (msg: string) => void;
   private ticks = 0;
   private events: GameEvent[] = [];
@@ -140,6 +159,7 @@ export class NetSession {
   private queues = new Map<string, RemoteQueue>();
   private history: Bundle[] = [];
   private outbox: Bundle[] = [];
+  private resend: Bundle | null = null;
   private hostActions: NetAction[] = [];
   private hashes = new Map<number, number>();
   private wants = new Set<string>();
@@ -158,12 +178,16 @@ export class NetSession {
   private lastHello = -1e9;
   private pendingHash: [number, number] | undefined;
   private wantSentTo = '';
+  private wantAt = 0;
   private stash: { from: string; msg: Msg; at: number }[] = [];
   /** True once this peer has followed the room's timeline, so its frame number means something to a new host. */
   private onTimeline = false;
   /** Set while a freshly promoted host gathers the room (see collectTick). */
   private collecting: { until: number; got: Map<string, number>; pulled: string; pullAt: number } | null = null;
   private smooth = new Map<number, { x: number; y: number }>();
+  /** Where each runner was last drawn in a predicted view. */
+  private eased = new Map<number, { x: number; y: number }>();
+  private easedFrame = 0;
 
   // pings
   private rtt = new Map<string, number>();
@@ -171,6 +195,7 @@ export class NetSession {
   private remotePings: Record<string, number> = {};
   private lastPing = -1e9;
   private resumed = false;
+  private reportedRefusal = false;
 
   constructor(opts: SessionOptions) {
     this.match = opts.match;
@@ -179,9 +204,10 @@ export class NetSession {
     this.self = opts.transport?.self ?? 'local';
     this.hostId = this.self;
     this.now = opts.now ?? (() => performance.now());
-    this.sendEvery = Math.max(1, opts.sendEvery ?? 2);
+    this.sendEvery = Math.max(1, opts.sendEvery ?? 1);
     this.predict = opts.predict ?? true;
     this.resumeFn = opts.resume;
+    this.onKickedFn = opts.onKicked;
     this.primary = opts.primaryDevice ?? 'kb1';
     this.log = opts.log ?? (() => {});
     // Input/action sequence numbers start at wall-clock ms: a refreshed page always counts higher than its old self.
@@ -248,6 +274,11 @@ export class NetSession {
     else this.pendingActs.push([++this.actN, a]);
   }
 
+  /** Host, lobby: remove a peer. Goes out in a bundle like any action, so every peer applies it at the same frame. */
+  kick(peer: string) {
+    if (this.role === 'host' && this.match.phase === 'lobby' && peer !== this.self) this.hostActions.push({ t: 'kick', peer });
+  }
+
   /** True while an action this peer requested hasn't been applied yet. */
   get pending(): boolean {
     return this.pendingActs.length > 0 || this.hostActions.length > 0;
@@ -276,9 +307,9 @@ export class NetSession {
     });
   }
 
-  /** Send any batched bundles now (e.g. before the page hides). */
+  /** Send any batched bundles now (e.g. before the page hides), repeating the last one in case it was lost. */
   flush() {
-    if (this.role === 'host' && this.outbox.length && this.remoteCount) this.send({ t: 'b', b: this.outbox }, undefined, true);
+    if (this.role === 'host' && (this.outbox.length || this.resend) && this.remoteCount) this.sendBundles();
     this.outbox = [];
   }
 
@@ -292,6 +323,7 @@ export class NetSession {
    * local device ('kb1', 'pad0'; HUD presses may already be global ids).
    */
   tick(local: Readonly<Record<string, InputFrame>>): void {
+    if (this.status === 'kicked') return;
     this.ticks++;
     const frame = this.localFrame(local);
     const t = this.now();
@@ -310,6 +342,7 @@ export class NetSession {
   // ------------------------------------------------------------------ transport events
 
   private onStatus(s: LinkStatus, detail?: string) {
+    if (this.status === 'kicked') return;
     this.detail = detail ?? '';
     this.status =
       s === 'open' ? 'online' : s === 'connecting' ? 'connecting' : s === 'reconnecting' ? 'reconnecting' : s === 'closed' ? 'offline' : 'unavailable';
@@ -323,6 +356,7 @@ export class NetSession {
   }
 
   private onMembers(list: Member[]) {
+    if (this.status === 'kicked') return;
     if (!list.some((m) => m.id === this.self)) list = [...list, { id: this.self, order: Number.MAX_SAFE_INTEGER }];
     if (list.length !== this.members.length) addBreadcrumb('net', list.length > this.members.length ? 'peer joined' : 'peer left', { peers: list.length });
     this.members = list;
@@ -431,7 +465,7 @@ export class NetSession {
   private onState(from: string, msg: Extract<Msg, { t: 'state' }>) {
     if (this.collecting?.pulled !== from) return;
     if (this.tryRestore(msg.s)) {
-      this.ns.parked = msg.ns.parked;
+      this.adoptNet(msg.ns);
       this.acks = msg.k;
       this.lastInputs = msg.last;
       this.emittedThrough = Math.max(this.emittedThrough, this.match.frame);
@@ -447,9 +481,24 @@ export class NetSession {
       return true;
     } catch (e) {
       this.log(`snapshot refused: ${String(e)}`);
-      reportEvent('snapshot-refused', 'warning', { error: String(e), frame: this.match.frame });
+      // Once a page: a refused guest asks again every few seconds.
+      if (!this.reportedRefusal) reportEvent('snapshot-refused', 'warning', { error: String(e), frame: this.match.frame });
+      this.reportedRefusal = true;
       return false;
     }
+  }
+
+  /** Tolerates a resume save from before a field existed. */
+  private adoptNet(ns: Partial<NetState>) {
+    this.ns.parked = ns.parked ?? {};
+    this.ns.kicked = ns.kicked ?? {};
+  }
+
+  private onKicked() {
+    if (this.status === 'kicked') return;
+    this.status = 'kicked';
+    this.onKickedFn?.();
+    this.transport?.close();
   }
 
   private tryResume() {
@@ -459,7 +508,7 @@ export class NetSession {
     if (!r) return;
     try {
       restoreMatch(this.match, r.snap);
-      this.ns.parked = r.ns.parked ?? {};
+      this.adoptNet(r.ns);
       this.emittedThrough = this.match.frame;
       this.log(`resumed saved room state at frame ${this.match.frame}`);
     } catch (e) {
@@ -492,6 +541,10 @@ export class NetSession {
       else if (msg.t === 'b' || msg.t === 'sync') this.stashMsg(from, msg); // someone else thinks they're host: presence lag
       return;
     }
+    if (msg.t === 'kicked') {
+      if (from === this.hostId) this.onKicked();
+      return;
+    }
     if (msg.t === 'pull') {
       if (from === this.hostId) {
         const last = { ...this.lastInputs };
@@ -505,7 +558,14 @@ export class NetSession {
       return;
     }
     if (msg.t === 'sync') this.onSync(msg);
-    else for (const b of msg.b) if (b.f >= this.match.frame && !this.inbox.has(b.f)) this.inbox.set(b.f, b);
+    else {
+      for (const b of msg.b) if (b.f >= this.match.frame && !this.inbox.has(b.f)) this.inbox.set(b.f, b);
+      // Now, not on the next tick: that wait would only add to what everyone sees.
+      if (this.synced) {
+        this.applyInbox(this.now());
+        this.viewDirty = true;
+      }
+    }
   }
 
   /** Host-only messages from a peer we don't (yet) consider host: presence may lag behind. Keep briefly. */
@@ -527,7 +587,7 @@ export class NetSession {
   }
 
   private onInput(from: string, msg: Extract<Msg, { t: 'in' }>) {
-    if (!this.members.some((m) => m.id === from)) return;
+    if (!this.members.some((m) => m.id === from) || this.ns.kicked[from]) return;
     const q = this.queue(from);
     const tail = q.frames.length ? q.frames[q.frames.length - 1].seq : q.consumed;
     msg.f.forEach((f, j) => {
@@ -554,11 +614,12 @@ export class NetSession {
 
   /** Guests may only act for their own devices; rules and seating belong to the host. */
   private allowed(from: string, a: NetAction): boolean {
-    if (a.t === 'rules' || a.t === 'join' || a.t === 'salt') return false;
+    if (a.t === 'rules' || a.t === 'join' || a.t === 'salt' || a.t === 'kick') return false;
     return peerOf(a.dev) === from;
   }
 
   private onHello(from: string, f: number) {
+    if (this.ns.kicked[from]) return this.send({ t: 'kicked' }, from);
     if (this.collecting) this.collecting.got.set(from, typeof f === 'number' ? f : -1);
     else this.send(this.syncMsg('hello'), from);
   }
@@ -588,15 +649,17 @@ export class NetSession {
     for (const [d, e] of Object.entries(own)) inputs[this.globalDevice(d)] = e;
     const k: Record<string, [number, number]> = {};
     for (const [peer, q] of this.queues) {
-      // Bound latency: if a burst piled up, fold the oldest frames together (edges are kept, see codec.merge).
-      if (q.frames.length > QUEUE_HIGH) {
-        while (q.frames.length > QUEUE_KEEP) {
-          const [a, b] = q.frames;
-          q.frames.splice(0, 2, { seq: b.seq, f: mergePeerFrames(a.f, b.f) });
-        }
+      // Bound latency: fold the oldest frames together (edges are kept, see codec.merge).
+      while (q.frames.length > QUEUE_MAX) {
+        const [a, b] = q.frames;
+        q.frames.splice(0, 2, { seq: b.seq, f: mergePeerFrames(a.f, b.f) });
+        this.stats.foldedFrames++;
       }
+      this.stats.hostTicks++;
+      this.stats.queuedFrames += q.frames.length;
       const next = q.frames.shift();
       let f: PeerFrame;
+      if (!next) this.stats.dryTicks++;
       if (next) {
         q.consumed = next.seq;
         q.last = next.f;
@@ -627,9 +690,16 @@ export class NetSession {
     }
     this.outbox.push(b);
     if (this.ticks % this.sendEvery === 0 || actions.length) {
-      this.send({ t: 'b', b: this.outbox }, undefined, true);
+      this.sendBundles();
       this.outbox = [];
     }
+  }
+
+  /** Each send repeats the last bundle: on an unreliable channel that turns a lost packet into nothing instead of a stall. */
+  private sendBundles() {
+    const b = this.resend ? [this.resend, ...this.outbox] : this.outbox;
+    this.send({ t: 'b', b }, undefined, true);
+    this.resend = this.outbox.at(-1) ?? this.resend;
   }
 
   /**
@@ -664,8 +734,9 @@ export class NetSession {
       }
     }
     if (m.phase === 'lobby' || m.phase === 'score' || m.phase === 'victory') {
+      if (!m.players.some((p) => peerOf(p.device) === this.self)) this.wants.add(this.globalDevice(this.primary));
       for (const dev of this.wants) {
-        if (!present.has(peerOf(dev)) || seated.has(dev) || seats >= MAX_PLAYERS) continue;
+        if (!present.has(peerOf(dev)) || seated.has(dev) || seats >= MAX_PLAYERS || this.ns.kicked[peerOf(dev)]) continue;
         out.push({ t: 'join', dev });
         seats++;
         seated.add(dev);
@@ -679,15 +750,20 @@ export class NetSession {
 
   private guestTick(own: PeerFrame, t: number) {
     if (!this.synced) {
-      if (this.status === 'online' && t - this.lastHello > HELLO_RETRY_MS) {
+      // Refused: every hello costs the host a whole snapshot, and only a reload or a new host can change the answer.
+      if (this.status === 'online' && t - this.lastHello > (this.refused ? REFUSED_RETRY_MS : HELLO_RETRY_MS)) {
         this.lastHello = t;
         this.send({ t: 'hello', f: this.onTimeline ? this.match.frame : -1 }, this.hostId);
       }
       return;
     }
     this.unacked.push({ seq: ++this.seq, f: own });
-    if (this.unacked.length > MAX_UNACKED) this.unacked.shift();
-    this.maybeWant(own);
+    // Fold, not drop: through a long stall the oldest frames can hold a click.
+    if (this.unacked.length > MAX_UNACKED) {
+      const [a, b] = this.unacked;
+      this.unacked.splice(0, 2, { seq: b.seq, f: mergePeerFrames(a.f, b.f) });
+    }
+    this.maybeWant(own, t);
     this.applyInbox(t);
     const pressed = Object.values(own).some((e) => (typeof e === 'number' ? e : e[0]) & PRESSED);
     if (this.ticks % this.sendEvery === 0 || pressed || this.pendingActs.length) {
@@ -699,20 +775,25 @@ export class NetSession {
     }
   }
 
-  /** Spectators (joined mid-match) ask for a seat; the host grants it between rounds. */
-  private maybeWant(own: PeerFrame) {
+  /**
+   * Being connected is being in the room, so every peer asks for a seat without
+   * anyone pressing a thing: the host seats it in the lobby, or between rounds
+   * if the match is running. Asked again until seated: a seat can go to someone
+   * else, and a new host starts with a clean slate.
+   */
+  private maybeWant(own: PeerFrame, t: number) {
     const m = this.match;
-    if (m.phase === 'lobby') return;
-    const mine = m.players.some((p) => peerOf(p.device) === this.self);
-    if (mine || this.wantSentTo === this.hostId) return;
+    if (m.players.some((p) => peerOf(p.device) === this.self)) return;
+    const lobby = m.phase === 'lobby';
+    if (this.wantSentTo === this.hostId && (!lobby || t - this.wantAt < WANT_RETRY_MS)) return;
     const dev = Object.keys(own).find((d) => {
       const e = own[d];
       return ((typeof e === 'number' ? e : e[0]) & CONFIRM_BIT) !== 0;
     });
-    const auto = this.wantSentTo === '' ? this.primary : undefined;
-    const pick = dev ?? auto;
+    const pick = dev ?? (lobby || this.wantSentTo === '' ? this.primary : undefined);
     if (!pick) return;
     this.wantSentTo = this.hostId;
+    this.wantAt = t;
     this.pendingActs.push([++this.actN, { t: 'join', dev: this.globalDevice(pick) }]);
   }
 
@@ -740,8 +821,12 @@ export class NetSession {
   private onSync(msg: Extract<Msg, { t: 'sync' }>) {
     const m = this.match;
     const fresh = !this.synced;
-    if ((fresh || m.frame !== msg.s.frame || hashMatch(m) !== hashSnap(msg.s)) && !this.tryRestore(msg.s)) return;
-    this.ns.parked = msg.ns.parked;
+    if ((fresh || m.frame !== msg.s.frame || hashMatch(m) !== hashSnap(msg.s)) && !this.tryRestore(msg.s)) {
+      if (fresh) this.refused = true;
+      return;
+    }
+    this.refused = false;
+    this.adoptNet(msg.ns);
     this.acks = msg.k;
     this.lastInputs = msg.last;
     for (const f of this.inbox.keys()) if (f < m.frame) this.inbox.delete(f);
@@ -767,6 +852,11 @@ export class NetSession {
     for (const a of b.a ?? []) {
       if (a.t === 'rules') applyAction(m, this.ns, { t: 'rules', rules: sanitizeRules(a.rules) });
       else applyAction(m, this.ns, a);
+      // By what was applied, not what was asked: outside the lobby this did nothing.
+      if (a.t === 'kick' && this.ns.kicked[a.peer]) {
+        if (a.peer === this.self) return this.onKicked();
+        if (this.role === 'host') this.send({ t: 'kicked' }, a.peer);
+      }
     }
     const inputs: Record<string, InputFrame> = {};
     for (const [d, e] of Object.entries(b.i ?? {})) inputs[d] = decode(e);
@@ -811,7 +901,7 @@ export class NetSession {
       return;
     }
     if (m.phase === 'pick' || m.phase === 'place') this.cursorView();
-    else if (this.role === 'guest' && this.synced && m.phase === 'run' && this.unacked.length) this.raceView();
+    else if (this.role === 'guest' && this.synced && m.phase === 'run') this.raceView();
     else this.viewMatch = m;
   }
 
@@ -830,7 +920,36 @@ export class NetSession {
       this.collect(d);
       if (d.phase !== 'run') break;
     }
+    if (d.run) this.easeRunners(d);
     this.viewMatch = d;
+  }
+
+  /**
+   * Prediction guesses others keep holding their buttons, so every jump or
+   * turn is wrong for a round trip and then corrected. Drawn straight, that's
+   * a teleport. Each runner keeps moving from where it was drawn and the error
+   * bleeds away over a few frames. This writes only to the view copy, which
+   * is rebuilt from confirmed state every update and never stepped again.
+   */
+  private easeRunners(d: Match) {
+    const run = d.run!;
+    if (run.frame < this.easedFrame || run.frame - this.easedFrame > CORRECTION_MAX_STEPS) this.eased.clear();
+    const steps = run.frame - this.easedFrame;
+    this.easedFrame = run.frame;
+    for (const r of run.runners) {
+      const b = r.body;
+      const was = this.eased.get(r.slot);
+      if (was) {
+        const v = drawnVelocity(run.runners, r);
+        const dx = was.x + v.x * DT * steps - b.x;
+        const dy = was.y + v.y * DT * steps - b.y;
+        if (Math.sqrt(dx * dx + dy * dy) <= CORRECTION_MAX) {
+          b.x += dx * CORRECTION_KEEP;
+          b.y += dy * CORRECTION_KEEP;
+        }
+      }
+      this.eased.set(r.slot, { x: b.x, y: b.y });
+    }
   }
 
   /**
@@ -870,6 +989,26 @@ export class NetSession {
     }
     this.viewMatch = d;
   }
+}
+
+/**
+ * How fast a runner really moves, for projecting where it's drawn. `vx` is what
+ * it's trying to do: one held up by bodies (sim/collide.ts) barely moves however
+ * hard it walks, and a rider goes where its base goes on top of its own walk.
+ * Projecting by `vx` alone draws pushers inside who they push and riders lagging
+ * their base.
+ */
+export function drawnVelocity(runners: readonly Runner[], r: Runner): { x: number; y: number } {
+  let x = 0;
+  let y = 0;
+  let at: Runner | undefined = r;
+  for (let n = 0; at && n < runners.length; n++) {
+    if (at.press <= 0) x += at.body.vx;
+    y += at.body.vy;
+    const under: number = at.ride;
+    at = under >= 0 ? runners.find((o) => o.slot === under) : undefined;
+  }
+  return { x, y };
 }
 
 function structuredCloneJson<T>(v: T): T {
