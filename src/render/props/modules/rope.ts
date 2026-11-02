@@ -3,8 +3,8 @@ import { css, type HSL, mixHsl } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { openSky, ropeStrain } from '../../../sim/props';
-import { blob, line, stroke } from '../../ink';
-import { boxPts, dot, glint, INK, part, pen, poly, sprite, stamp, tone } from '../../ink-props';
+import { blob, inkFor, line } from '../../ink';
+import { bar, barLine, boxPts, dot, glint, part, pen, poly, sprite, stamp, tone } from '../../ink-props';
 import { glowDot, light } from '../../kit';
 import { defineArt, gripOf } from '../common';
 import { arcPts, capsulePts, place } from '../ink-motion';
@@ -22,6 +22,8 @@ const RAW: HSL = { h: 11, s: 56, l: 43 };
 const SEARED: HSL = { h: 14, s: 78, l: 30 };
 const HOT: HSL = { h: 8, s: 95, l: 52 };
 const TWINE: HSL = { h: 40, s: 40, l: 80 };
+const HOOK: HSL = { h: 223, s: 12, l: 80 };
+const PLATE: HSL = { h: 220, s: 8, l: 52 };
 /** Heat steps a link is baked at. */
 const COOK = 4;
 
@@ -44,7 +46,7 @@ function link(cook: number) {
       for (const y of [-1.8, 1.2]) line(g, -1.8, y - 0.7, 1.4, y + 0.7, { w: 0.7, seed: y, taper: [0.2, 0.3], press: 0.1 });
     }
     glint(g, poly(-1.2, -3.2, -1.5, -0.6, -1.3, 2), 'rgba(255,236,226,0.9)', 0.7, 4);
-    pen(g, pts, 11 + cook, 0.45, 1.3, 3);
+    pen(g, pts, 11 + cook, 0.45, 1.3, 3, inkFor(c));
   });
 }
 
@@ -53,10 +55,7 @@ function knot() {
   return sprite('rope|knot', -3, -2, 6, 4.5, (g) => {
     const band = boxPts(-1.1, -0.6, 2.2, 1.2, 0.5, 3, 0.1);
     part(g, band, { ...TWINE, l: 68 }, 3, { depth: 0.25, thin: 0.25, thick: 0.5 });
-    g.fillStyle = INK;
-    stroke(g, poly(1.4, 0.2, 2.3, 1.4, 2.4, 2.4), { w: 0.6, seed: 2, taper: [0.1, 0.5], press: 0 });
-    g.fillStyle = css(TWINE);
-    stroke(g, poly(1.4, 0.2, 2.3, 1.4, 2.4, 2.3), { w: 0.3, seed: 2, taper: [0.1, 0.5], press: 0 });
+    bar(g, poly(1.4, 0.2, 2.3, 1.4, 2.4, 2.4), 0.3, TWINE, 2, { taper: [0.1, 0.5], press: 0, rim: 0.15 });
   });
 }
 
@@ -65,17 +64,14 @@ function hook(sky: boolean) {
   return sprite(`rope|hook|${sky}`, -6, -2, 12, 10, (g) => {
     if (!sky) {
       const plate = boxPts(-4.6, -1.2, 9.2, 2.6, 0.7, 5, 0.15);
-      part(g, plate, { h: 220, s: 8, l: 52 }, 5, { depth: 0.5, thin: 0.35, thick: 0.9 });
-      for (const x of [-3.1, 3.1]) dot(g, x, 0.1, 0.55, x, '#e4e7ee');
+      part(g, plate, PLATE, 5, { depth: 0.5, thin: 0.35, thick: 0.9 });
+      for (const x of [-3.1, 3.1]) dot(g, x, 0.1, 0.55, x, '#e4e7ee', inkFor(PLATE));
     }
     // An S: a top curl over the plate, a bottom curl the first link hangs in.
     const s1 = arcPts(0.9, 2.4, 1.3, Math.PI * 2.05, Math.PI * 1.1, 8);
     const s2 = arcPts(-0.2, 5.1, 1.5, -Math.PI * 0.55, Math.PI * 0.9, 9);
     const sPath = [...s1, ...s2];
-    g.fillStyle = INK;
-    stroke(g, sPath, { w: 1.9, seed: 6, taper: [0.15, 0.25], press: 0.1 });
-    g.fillStyle = '#c4c8d2';
-    stroke(g, sPath, { w: 0.75, seed: 6, taper: [0.2, 0.3], press: 0.1 });
+    bar(g, sPath, 0.75, HOOK, 6, { taper: [0.15, 0.25], press: 0.1, rim: 0.575 });
   });
 }
 
@@ -108,10 +104,7 @@ defineArt<'rope'>({
     };
     const sky = !!d.o.level && openSky(d.o.level, d.o.placed ?? [], Math.floor(ax / TILE), Math.floor(ay / TILE));
     if (sky) {
-      s.fillStyle = INK;
-      line(s, ax, ay + 1, ax, 0, { w: 1.24, seed: 3, taper: [0, 0], press: 0 });
-      s.fillStyle = css(TWINE);
-      line(s, ax, ay + 1, ax, 0, { w: 0.7, seed: 3, taper: [0, 0], press: 0 });
+      barLine(s, ax, ay + 1, ax, 0, 0.7, TWINE, 3, { taper: [0, 0], press: 0, rim: 0.27 });
     }
     // Strain thins the links, and cooks them hotter the longer it lasts.
     const cook = Math.min(COOK, Math.round(heat * COOK));

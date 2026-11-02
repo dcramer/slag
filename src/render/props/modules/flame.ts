@@ -2,13 +2,18 @@ import { css, type HSL } from '../../../core/color';
 import type { Vec } from '../../../core/geom';
 import { TILE } from '../../../sim/constants';
 import { dirOf, flameCycle, type Module, type ModuleOf, type PropStyle, type Resolved } from '../../../sim/props';
-import { line, type P, stroke } from '../../ink';
-import { INK, part, pen, sprite, stamp, tone } from '../../ink-props';
+import { inkFor, line, type P, stroke } from '../../ink';
+import { part, pen, sprite, stamp, tone } from '../../ink-props';
 import { circle, glowDot, light, type MetalPalette, type RC } from '../../kit';
 import { beamOf, defineArt, type PropDrawOpts } from '../common';
 import { disc, type Face, faceOf, flange, flat, housed, iron, lbox, lp, ltick, tf, within } from '../machine';
 
 type M<T extends Module['type']> = ModuleOf<T>;
+
+/** A flame's outer tier, and its line: a dark of that red, not a black. */
+const FIRE_RED: HSL = { h: 11, s: 79, l: 49 };
+const FIRE = css(FIRE_RED);
+const FIRE_INK = css(FIRE_RED, -35, 1, 10);
 
 /**
  * A flame as it's inked in a comic: three flat tiers, red, orange and a yellow heart, licking at the
@@ -43,15 +48,19 @@ export function inkTongue(s: CanvasRenderingContext2D, x: number, y: number, dx:
     s.fill();
     return [a, b];
   };
-  const [a, b] = tier(0, width, len, 'rgb(226 64 26)');
+  const [a, b] = tier(0, width, len, FIRE);
   tier(1, width * 0.66, len * 0.8, 'rgb(255 150 34)');
   tier(2, width * 0.34, len * 0.55, 'rgb(255 228 110)');
-  s.fillStyle = 'rgb(70 12 4)';
+  s.fillStyle = FIRE_INK;
   stroke(s, a, { w: 1.1, seed: 3, taper: [0.1, 0.6], press: 0.3 });
   stroke(s, b, { w: 1.1, seed: 4, taper: [0.6, 0.1], press: 0.3 });
 }
 
 const TANK: HSL = { h: 4, s: 68, l: 47 };
+/** The gauge's face, the flammable diamond's yellow, and the brass of the nozzle. */
+const DIAL: HSL = { h: 40, s: 59, l: 90 };
+const DIAMOND: HSL = { h: 45, s: 92, l: 58 };
+const NOZZLE: HSL = { h: 40, s: 50, l: 56 };
 
 /** The bottle's outline in the local frame: domed shoulders up top, a flat foot. */
 function bottle(): P[] {
@@ -71,7 +80,7 @@ function bottle(): P[] {
  */
 function burner(k: Face, pal: MetalPalette) {
   return sprite(`fl|${k}|${pal.base.h},${pal.base.l}`, -13, -13, 26, 26, (g) => {
-    flange(g, k, -6.8, 6.8, 5, pal, 2);
+    flange(g, k, -6.8, 6.8, 5, pal, 2, inkFor(pal.dark));
     const tank = bottle().map((p) => tf(k, p.x, p.y));
     tone(g, tank, TANK, { depth: 1.4, shade: -19 });
     within(g, tank, () => {
@@ -80,28 +89,29 @@ function burner(k: Face, pal: MetalPalette) {
       ltick(g, k, -8, -0.4, 8, -0.4, 0.5, 4, css(TANK, 18), [0, 0]);
       ltick(g, k, -5.8, -2.4, -3.2, -5.4, 1.2, 5, 'rgba(255,226,210,0.95)', [0.2, 0.35]);
     });
-    pen(g, tank, 6, 0.55, 1.6);
+    pen(g, tank, 6, 0.55, 1.6, 3, inkFor(TANK));
     // The gauge: what its needle says is drawn live.
     const c = tf(k, -3, 2.3);
-    g.fillStyle = INK;
+    g.fillStyle = inkFor(TANK);
     disc(g, c.x + 0.15, c.y + 0.2, 2.35, 7);
     g.fill();
-    g.fillStyle = '#f3ead6';
+    g.fillStyle = css(DIAL);
     disc(g, c.x, c.y, 1.75, 8);
     g.fill();
     // A flammable diamond.
     const dm = lp(k, 3.3, 0.3, 5.3, 2.3, 3.3, 4.3, 1.3, 2.3);
-    flat(g, dm, '#f6c632');
-    pen(g, dm, 9, 0.35, 0.7);
+    flat(g, dm, css(DIAMOND));
+    pen(g, dm, 9, 0.35, 0.7, 3, inkFor(DIAMOND));
     ltick(g, k, 3.3, 3.4, 3.4, 1.5, 0.75, 10, '#c0181e', [0.1, 0.6]);
     // The valve collar: a steel ring with two hand holes, the nozzle flaring up out of it.
     const collar = lbox(k, -4.8, -8.3, 9.6, 3.6, 1.2, 11);
-    part(g, collar, iron(pal, 48), 11, { depth: 0.6, thin: 0.45, thick: 1.2 });
-    for (const x of [-2.9, 2.9]) flat(g, lbox(k, x - 0.9, -7.5, 1.8, 1.6, 0.6, 12 + x), '#1a1210');
+    const steel = iron(pal, 48);
+    part(g, collar, steel, 11, { depth: 0.6, thin: 0.45, thick: 1.2 });
+    for (const x of [-2.9, 2.9]) flat(g, lbox(k, x - 0.9, -7.5, 1.8, 1.6, 0.6, 12 + x), inkFor(steel));
     const cone = lp(k, -1.3, -7.8, -1.3, -9.2, -3.3, -11.3, 3.3, -11.3, 1.3, -9.2, 1.3, -7.8);
-    part(g, cone, { h: 40, s: 50, l: 56 }, 13, { depth: 0.6, thin: 0.45, thick: 1.2 });
+    part(g, cone, NOZZLE, 13, { depth: 0.6, thin: 0.45, thick: 1.2 });
     ltick(g, k, -2.4, -10.6, -1, -9, 0.55, 14, 'rgba(255,240,200,0.9)', [0.2, 0.3]);
-    flat(g, lp(k, -2.8, -11.4, 2.8, -11.4, 2.3, -10.6, -2.3, -10.6), '#1b120d');
+    flat(g, lp(k, -2.8, -11.4, 2.8, -11.4, 2.3, -10.6, -2.3, -10.6), css(NOZZLE, -44, 1, -12));
   });
 }
 
@@ -112,7 +122,7 @@ function needle(s: CanvasRenderingContext2D, k: Face, x: number, y: number, u: n
   const tip = tf(k, -3 + Math.cos(a) * 1.6, 2.3 + Math.sin(a) * 1.6);
   s.fillStyle = '#b3160f';
   line(s, x + c.x, y + c.y, x + tip.x, y + tip.y, { w: 0.6, seed: 1, taper: [0, 0.6], press: 0 });
-  s.fillStyle = INK;
+  s.fillStyle = inkFor(DIAL);
   circle(s, x + c.x, y + c.y, 0.4);
 }
 

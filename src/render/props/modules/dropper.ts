@@ -15,7 +15,7 @@ import {
   type ModuleOf,
 } from '../../../sim/props';
 import { blob, inkFor, line, type P, shadeOf, stroke } from '../../ink';
-import { boxPts, dot, INK, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
+import { boxPts, dot, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import { glowDot, light, type RC } from '../../kit';
 import { beamOf, type DrawCtx, defineArt } from '../common';
 import { bevel } from '../machine';
@@ -46,7 +46,8 @@ function block(w: number, h: number, stone: HSL) {
     g.save();
     path(g, body);
     g.clip();
-    bevel(g, 0, 0, w, h, b, stone);
+    const ink = inkFor(stone);
+    bevel(g, 0, 0, w, h, b, stone, ink);
     // A rim of stone teeth round the face: the crushing block's spiked edge, cut inside its own
     // outline so the hitbox stays the block. Each tooth is lit on the side facing the light.
     const teeth = (ax: number, ay: number, bx: number, by: number, nx: number, ny: number, lit: number) => {
@@ -65,7 +66,7 @@ function block(w: number, h: number, stone: HSL) {
         g.fillStyle = css(stone, lit - 14, 1, 4);
         path(g, [mid, tip, { x: x0 + ux, y: y0 + uy }]);
         g.fill();
-        g.fillStyle = INK;
+        g.fillStyle = ink;
         stroke(g, [{ x: x0, y: y0 }, tip, { x: x0 + ux, y: y0 + uy }], { w: 0.4 * k + 0.15, seed: i + nx * 3 + ny * 7, taper: [0.1, 0.1], press: 0.2 });
       }
     };
@@ -90,7 +91,7 @@ function block(w: number, h: number, stone: HSL) {
     stroke(g, [fork, { x: b + 2 * k, y: h - b - 4.2 * k }], { w: 0.35 * k + 0.15, seed: 22, taper: [0.1, 0.7], press: 0.2 });
     stroke(g, poly(w - 2.4 * k, 2.2 * k, w - 3.8 * k, 3.8 * k, w - 3.9 * k, 5.2 * k), { w: 0.4 * k + 0.15, seed: 23, taper: [0.1, 0.7], press: 0.2 });
     g.restore();
-    pen(g, body, 5, 0.6, 1.7);
+    pen(g, body, 5, 0.6, 1.7, 3, ink);
     // The sunk panel: in shade under its top and left walls, lit along its lower right lip.
     const panel = boxPts(cx - pw, cy - pw, pw * 2, pw * 2, 1.1 * k, 9, 0.12);
     g.fillStyle = css(stone, -24, 1, 4);
@@ -105,7 +106,7 @@ function block(w: number, h: number, stone: HSL) {
     g.restore();
     g.fillStyle = css(stone, 20);
     stroke(g, poly(cx - pw + 0.8, cy + pw, cx + pw, cy + pw, cx + pw, cy - pw + 0.8), { w: 0.45 * k + 0.2, seed: 11, taper: [0.3, 0.3], press: 0.2 });
-    g.fillStyle = INK;
+    g.fillStyle = ink;
     stroke(g, poly(cx - pw, cy + pw - 0.6, cx - pw, cy - pw, cx + pw - 0.6, cy - pw), { w: 0.5 * k + 0.25, seed: 12, taper: [0.2, 0.2], press: 0.3 });
   });
 }
@@ -122,7 +123,7 @@ function rune(s: CanvasRenderingContext2D, cx: number, cy: number, dx: number, d
     pts.map((p) => ({ x: p.x + 0.4 * k, y: p.y + 0.45 * k })),
     { w: 1 * k, seed: 3, taper: [0.1, 0.1], press: 0 },
   );
-  s.fillStyle = INK;
+  s.fillStyle = css(stone, -34, 1, 6);
   stroke(s, pts, { w: 1.25 * k, seed: 4, taper: [0.1, 0.1], press: 0 });
   if (hot) {
     s.fillStyle = css(hot, 12);
@@ -278,6 +279,7 @@ function drawIcicle(o: Head) {
 
 const IRON: HSL = { h: 28, s: 12, l: 24 };
 const WAX: HSL = { h: 44, s: 52, l: 86 };
+const IRON_INK = inkFor(IRON);
 const FLAME: HSL = { h: 36, s: 100, l: 60 };
 
 /** Candle positions across a chandelier W wide (local x). */
@@ -301,7 +303,7 @@ function chandelierHead(W: number, H: number) {
     const bandH = Math.max(4, H * 0.24);
     const cupY = y0 + H * 0.3;
     // Arms: scrolls up from the hoop to each cup, and the crown ring the chain takes.
-    g.fillStyle = INK;
+    g.fillStyle = inkFor(IRON);
     for (const cx of candles(W))
       stroke(
         g,
@@ -339,7 +341,7 @@ function chandelierHead(W: number, H: number) {
     part(g, band, IRON, 9, { depth: 1, shade: -10, thin: 0.6, thick: 1.4 });
     g.fillStyle = css(IRON, 26);
     line(g, x0 + 1.6, bandTop + 0.9, -x0 - 1.6, bandTop + 0.9, { w: 0.6, seed: 4, taper: [0.2, 0.2], press: 0.3 });
-    for (let x = x0 + 3; x < -x0 - 2; x += 4.5) dot(g, x, bandTop + bandH * 0.58, 0.65, x | 0, css(IRON, 40));
+    for (let x = x0 + 3; x < -x0 - 2; x += 4.5) dot(g, x, bandTop + bandH * 0.58, 0.65, x | 0, css(IRON, 40), inkFor(IRON));
     // Candles in their cups, wax run down one side.
     for (const cx of candles(W)) {
       const top = y0 + 3.2;
@@ -348,7 +350,7 @@ function chandelierHead(W: number, H: number) {
       line(g, cx + 0.9, top + 0.3, cx + 1, top + 2.6, { w: 0.8, seed: cx, taper: [0.1, 0.6], press: 0 });
       const cup = poly(cx - 2.4, cupY - 0.6, cx + 2.4, cupY - 0.6, cx + 1.4, cupY + 1.4, cx - 1.4, cupY + 1.4);
       part(g, cup, IRON, cx + 2, { depth: 0.4, shade: -8, thin: 0.35, thick: 0.8 });
-      tick(g, cx, top - 0.1, cx, top - 1.1, 0.4, cx | 0);
+      tick(g, cx, top - 0.1, cx, top - 1.1, 0.4, cx | 0, inkFor(WAX));
     }
   });
 }
@@ -374,7 +376,7 @@ function candleFlame(s: CanvasRenderingContext2D, x: number, y: number, lean: nu
 function chain(s: CanvasRenderingContext2D, y0: number, y1: number, rattle: number) {
   for (let y = y0, i = 0; y > y1; y -= 2.6, i++) {
     const jx = rattle ? Math.sin(y * 0.9 + rattle) * 0.6 : 0;
-    s.fillStyle = INK;
+    s.fillStyle = IRON_INK;
     if (i % 2) line(s, jx, y, jx, y - 2.8, { w: 1.1, seed: i, taper: [0.1, 0.1], press: 0 });
     else {
       blob(s, jx, y - 1.3, 1.25, i, 1.5, 0.05);
@@ -453,7 +455,7 @@ function grille(W: number, H: number) {
     for (let r = 0; r < rows; r++) {
       const y = -H / 2 + 2.2 + ((H - 6) * r) / Math.max(1, rows - 1);
       bar(-W / 2 + 0.6, y, W / 2 - 0.6, y, 1.3, 20 + r, r ? -4 : 4);
-      for (const x of xs) dot(g, x, y, 0.55, (x * 7 + r) | 0, css(GRILLE, 22));
+      for (const x of xs) dot(g, x, y, 0.55, (x * 7 + r) | 0, css(GRILLE, 22), ink);
     }
   });
 }
@@ -533,7 +535,7 @@ defineArt<'dropper'>({
       const t = (i + 0.5) / n;
       const fx = dy !== 0 ? x + w * t : dx > 0 ? x + w - 1.6 : x + 1.6;
       const fy = dy !== 0 ? (dy > 0 ? y + h - 1.6 : y + 1.6) : y + h * t;
-      dot(s, fx, fy, 1.05, i, css(d.pal.light));
+      dot(s, fx, fy, 1.05, i, css(d.pal.light), inkFor(stone));
     }
     const k = Math.min(w, h) / TILE;
     rune(s, cx, cy, dx, dy, k, coming ? hot : null, stone);

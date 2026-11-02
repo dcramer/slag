@@ -4,7 +4,7 @@ import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import type { Module, ModuleOf, PropStyle, Resolved } from '../../../sim/props';
 import { beltTurn } from '../../../sim/props/modules/body';
-import { blob, line, type P, stroke } from '../../ink';
+import { blob, inkFor, line, type P, stroke } from '../../ink';
 import { blockLoops, stampBlock } from '../../ink-blocks';
 import { boxPts, path, pen, poly, sprite, stamp } from '../../ink-props';
 import { drawBelts } from '../../ink-surface';
@@ -240,7 +240,7 @@ function tetraCell(hue: number, v: number) {
     g.fillRect(B, B, TILE - B * 2, TILE - B * 2);
     g.fillStyle = 'rgba(255,255,255,0.8)';
     g.fillRect(B + 1, B + 1, 2.2, 1.2);
-    pen(g, boxPts(0.2, 0.2, TILE - 0.4, TILE - 0.4, 0.5, v + 3, 0.04), v + 3, 0.6, 1.2, 4);
+    pen(g, boxPts(0.2, 0.2, TILE - 0.4, TILE - 0.4, 0.5, v + 3, 0.04), v + 3, 0.6, 1.2, 4, inkFor(c));
   });
 }
 
