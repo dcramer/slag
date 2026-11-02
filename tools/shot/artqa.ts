@@ -10,7 +10,7 @@ import { SET_PIECE_RECIPES } from '../../src/gen/setpieces';
 import { decorFor } from '../../src/gen/decor';
 import { CONCEPTS } from '../../src/gen/stage';
 import { THEME_IDS, type ThemeId } from '../../src/themes';
-import { open, opt, out, page, seed, sheet, step, theme, type Scenarios } from './ctx';
+import { open, opt, out, page, pet, seed, sheet, step, theme, type Scenarios } from './ctx';
 
 /** The parts every subject stands beside: one building block, one hazard, one machine. */
 const PARTS = ['platform', 'saw', 'launcher'];
@@ -65,6 +65,7 @@ async function shoot(name: string, b: Box, zoom: number, margin: number) {
   const path = `${out}/${name}.png`;
   await page.screenshot({ path, clip: { x: (size.width - w) / 2, y: (size.height - h) / 2, width: w, height: h } });
   console.log(path);
+  pet();
   return path;
 }
 
@@ -135,7 +136,16 @@ async function decor(th: ThemeId) {
     },
     [seed, th] as const,
   );
-  await raceWithParts({ tx: 24, ty: 14 });
+  // The parts stand on the ground near the middle, where the decor nearest them grows.
+  const ground = await page.evaluate(() => {
+    const lv = (window as any).slagDebug.match.level;
+    for (const dx of [0, 2, -2, 4, -4, 6, -6, 8, -8]) {
+      const tx = Math.floor(lv.w / 2) + dx;
+      for (let ty = 2; ty < lv.h - 1; ty++) if (lv.tiles[ty * lv.w + tx] === 1 && lv.tiles[(ty - 1) * lv.w + tx] === 0) return { tx, ty: ty - 1 };
+    }
+    return { tx: Math.floor(lv.w / 2), ty: Math.floor(lv.h / 2) };
+  });
+  await raceWithParts(ground);
   for (const [i, kind] of decorFor(th).entries()) {
     // Only this kind, on most of the ground there's room on; the piece nearest the parts is the one shot.
     const at = await page.evaluate(

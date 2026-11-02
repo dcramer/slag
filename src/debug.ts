@@ -98,7 +98,8 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
         if (!near) return Array.from({ length: 4000 }, (_, n) => [6 + ((i * 7 + n * 13) % (match.level.w - 12)), 3 + ((i * 5 + n * 7) % (match.level.h - 6))]);
         const out: [number, number][] = [];
         for (let r = 0; r < 24; r++)
-          for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (Math.max(Math.abs(dx), Math.abs(dy)) === r) out.push([near.tx + dx, near.ty + dy]);
+          for (let dy = -r; dy <= r; dy++)
+            for (let dx = -r; dx <= r; dx++) if (Math.max(Math.abs(dx), Math.abs(dy)) === r) out.push([near.tx + dx, near.ty + dy]);
         return out;
       };
       kinds.forEach((k, i) => {
