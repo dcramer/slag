@@ -1141,7 +1141,12 @@ async function r2(A: Page, B: Page, label: string) {
 }
 
 /** Who the lobby labels as host, on this page. */
-const hostLabel = (p: Page) => p.evaluate(() => (window as any).slagDebug.renderer.hud.net?.hostSlot as number | undefined);
+/** Read from the last drawn frame, so first wait for one that has a label: with four pages on software GL a guest's last frame can predate its sync. */
+async function hostLabel(p: Page): Promise<number | undefined> {
+  const drawn = () => (window as any).slagDebug.renderer.hud.net?.hostSlot !== undefined;
+  await p.waitForFunction(drawn, null, { timeout: 5000 }).catch(() => {});
+  return p.evaluate(() => (window as any).slagDebug.renderer.hud.net?.hostSlot as number | undefined);
+}
 
 /** The host label on every screen, and following a migration; a kick by keyboard, then by mouse, with no way back. */
 async function kickScenario(browser: Browser, base: string) {
