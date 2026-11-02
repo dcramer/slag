@@ -14,28 +14,77 @@ import { defineArt, defineHeld } from '../common';
 type Pipe = ModuleOf<'pipe'>;
 
 /**
- * The warped pipe (docs/PARODY.md, pipe): the plumber's warp pipe, drawn our way. A chunky shaft
- * with a wider lip, seen a touch from the mouth's side so its bevelled rim and opening read. Three
- * flat tones of the match's material: the lit stripe, the body and the shade, and the lip's rim a
- * step brighter. A plumber's job tag hangs off the lip with the pair's number on it. A lone pipe's
- * mouth is a dead black hole; a linked one breathes a faint draft and a glint deep inside.
+ * The warped pipe (docs/PARODY.md, pipe): the plumber's warp pipe, drawn our way. A round shaft a
+ * quarter tile in from each side under a chunky lip the full two tiles across, exactly the solids the
+ * sim stands you on. Both are cylinders in cel bands of the match's material: a lit band left of
+ * center with a thin specular stroke in it, the body, a hard shade band on the right and a deeper one
+ * at the edge. The lip throws a dark band of shadow onto the shaft under it. The mouth, seen a touch
+ * from its own side, is a bevelled rim round a dark ellipse with a light inner lip on its far wall.
+ * A plumber's job tag on the shaft carries the pair's number. A lone pipe's mouth is a dead black
+ * hole; a linked one breathes a faint draft and a glint deep inside.
  *
- * Everything is drawn in the pipe's own frame (u across the mouth, v down the shaft from the mouth)
+ * Everything is drawn in the pipe's own frame (u across the mouth, v down the pipe from the mouth)
  * and turned into the world before it's toned, so the light stays up-left whichever way it faces.
  */
 
 const W = PIPE.wide * TILE;
-/** Depth of the lip down the shaft (px). */
-const LIP = 9;
-/** The shaft sits this much inside the lip on each side: within the art's hitbox slack. */
-const NECK = 1;
+const LIP = PIPE.lip;
+/** Half the shaft's width: the lip stands out PIPE.overhang past it on each side. */
+const SHAFT = W / 2 - PIPE.overhang;
 
-const LOOKS: Record<PipeLook, { base: HSL; band?: HSL; fleck?: HSL }> = {
-  green: { base: { h: 122, s: 58, l: 40 } },
-  brass: { base: { h: 38, s: 58, l: 45 }, band: { h: 28, s: 50, l: 30 } },
-  rust: { base: { h: 16, s: 46, l: 34 }, fleck: { h: 26, s: 80, l: 46 } },
-  porcelain: { base: { h: 210, s: 14, l: 88 }, band: { h: 214, s: 70, l: 46 } },
-  copper: { base: { h: 168, s: 34, l: 47 }, fleck: { h: 22, s: 62, l: 50 } },
+/** Each material's tones, darkest to brightest: every look gets the same bands in its own palette. */
+interface Tones {
+  deep: HSL;
+  shade: HSL;
+  base: HSL;
+  lit: HSL;
+  spec: HSL;
+  /** A painted collar round the shaft (brass's darker ring, porcelain's blue pinstripe). */
+  band?: HSL;
+  /** Spots in another color (rust, copper through verdigris). */
+  fleck?: HSL;
+}
+
+const LOOKS: Record<PipeLook, Tones> = {
+  green: {
+    deep: { h: 135, s: 75, l: 17 },
+    shade: { h: 128, s: 70, l: 27 },
+    base: { h: 118, s: 72, l: 38 },
+    lit: { h: 104, s: 70, l: 55 },
+    spec: { h: 90, s: 80, l: 86 },
+  },
+  brass: {
+    deep: { h: 28, s: 60, l: 18 },
+    shade: { h: 32, s: 58, l: 29 },
+    base: { h: 40, s: 62, l: 43 },
+    lit: { h: 46, s: 74, l: 60 },
+    spec: { h: 52, s: 90, l: 88 },
+    band: { h: 30, s: 55, l: 26 },
+  },
+  rust: {
+    deep: { h: 10, s: 45, l: 14 },
+    shade: { h: 14, s: 45, l: 23 },
+    base: { h: 18, s: 48, l: 33 },
+    lit: { h: 24, s: 52, l: 45 },
+    spec: { h: 30, s: 50, l: 68 },
+    fleck: { h: 28, s: 85, l: 46 },
+  },
+  porcelain: {
+    deep: { h: 215, s: 14, l: 52 },
+    shade: { h: 212, s: 14, l: 70 },
+    base: { h: 210, s: 16, l: 86 },
+    lit: { h: 200, s: 25, l: 95 },
+    spec: { h: 0, s: 0, l: 100 },
+    band: { h: 214, s: 70, l: 46 },
+  },
+  copper: {
+    deep: { h: 176, s: 40, l: 18 },
+    shade: { h: 172, s: 36, l: 30 },
+    base: { h: 166, s: 36, l: 44 },
+    lit: { h: 158, s: 40, l: 60 },
+    spec: { h: 150, s: 50, l: 86 },
+    fleck: { h: 22, s: 64, l: 48 },
+  },
 };
 
 /** A frame turning pipe space (u across, v into the shaft) into offsets from the mouth. */
@@ -54,6 +103,33 @@ function frameOf(angle: number): Frame {
 const at = (f: Frame, u: number, v: number): P => ({ x: f.a[0] * u - f.d[0] * v, y: f.a[1] * u - f.d[1] * v });
 const map = (f: Frame, pts: readonly P[]): P[] => pts.map((p) => at(f, p.x, p.y));
 
+/**
+ * Cel bands down a cylinder `hw` half-wide from v0 to v1: a reflected dark edge, the lit band left of
+ * center, the body, then a hard shade and a deeper one at the right edge. Light is up-left in the
+ * world, so "left" is whichever side of the pipe faces it.
+ */
+function bands(g: CanvasRenderingContext2D, f: Frame, t: Tones, hw: number, v0: number, v1: number, flip: boolean) {
+  const k = flip ? -1 : 1;
+  const band = (a: number, b: number, c: HSL) => {
+    g.fillStyle = css(c);
+    path(g, map(f, poly(a * hw * k, v0, b * hw * k, v0, b * hw * k, v1, a * hw * k, v1)));
+    g.fill();
+  };
+  band(-1.1, -0.84, t.shade);
+  band(-0.8, -0.22, t.lit);
+  band(0.28, 1.1, t.shade);
+  band(0.7, 1.1, t.deep);
+  // The specular: one thin stroke down the lit band.
+  g.fillStyle = css(t.spec, 0, 0.95);
+  stroke(g, map(f, poly(-0.56 * hw * k, v0 + 1.2, -0.56 * hw * k, v1 - 1.2)), { w: Math.max(0.9, hw * 0.09), seed: 5, taper: [0.25, 0.35], press: 0.2 });
+}
+
+/** Which side of the pipe's frame faces the light (up-left): the bands put their lit side there. */
+function litFlip(f: Frame): boolean {
+  // The bands put the lit side at -u: flip them when -u faces away from up-left.
+  return f.a[0] + f.a[1] < 0;
+}
+
 /** The pipe's still body, baked once per material, length and facing. Its origin is the mouth's center. */
 function body(look: PipeLook, len: number, f: Frame) {
   const L = len * TILE;
@@ -63,81 +139,73 @@ function body(look: PipeLook, len: number, f: Frame) {
   const y0 = Math.min(c0.y, c1.y);
   const key = `pipe|${look}|${len}|${f.d[0]}|${f.d[1]}`;
   return sprite(key, x0, y0, Math.abs(c1.x - c0.x), Math.abs(c1.y - c0.y), (g) => {
-    const { base, band, fleck } = LOOKS[look];
-    const seed = len * 7 + (look.length % 5);
-    // The shaft: three flat tones, lit stripe toward the mouth's left, shade to the right.
-    const shaft = map(f, boxPts(-W / 2 + NECK, LIP - 1, W - NECK * 2, L - LIP + 1, 1.2, seed, 0.15));
-    tone(g, shaft, base, { depth: 1.2, shade: -14 });
+    const t = LOOKS[look];
+    const flip = litFlip(f);
+    const seed = len * 7 + look.length;
+    // The shaft, exactly its solid: a cylinder in bands.
+    const shaft = map(f, boxPts(-SHAFT, LIP - 0.5, SHAFT * 2, L - LIP + 0.5, 1.4, seed, 0.12));
+    tone(g, shaft, t.base, { depth: 0.8, shade: -10 });
     g.save();
     path(g, shaft);
     g.clip();
-    rounded(g, f, base, LIP - 1, L, 0);
-    if (band) {
-      // A painted band round the shaft: brass gets a darker collar, porcelain its blue pinstripe.
-      g.fillStyle = css(band);
-      path(g, map(f, poly(-W / 2, LIP + 5, W / 2, LIP + 5, W / 2, LIP + 7, -W / 2, LIP + 7)));
+    bands(g, f, t, SHAFT, LIP - 1, L + 1, flip);
+    if (t.band) {
+      g.fillStyle = css(t.band);
+      path(g, map(f, poly(-W / 2, LIP + 6, W / 2, LIP + 6, W / 2, LIP + 7.6, -W / 2, LIP + 7.6)));
       g.fill();
     }
-    if (fleck) {
-      // Rust spots, or copper showing through the verdigris.
-      for (let i = 0; i < 3 + len; i++) {
-        const u = (hash2(i, 3, seed) - 0.5) * (W - 8);
-        const v = LIP + 3 + hash2(i, 5, seed) * (L - LIP - 5);
-        g.fillStyle = css(fleck, 0, 0.85);
-        path(g, map(f, ovalPts(u, v, 1.6 + hash2(i, 7, seed), 1.1, seed + i, 0.2, 7)));
+    if (t.fleck) {
+      for (let i = 0; i < 3 + len * 2; i++) {
+        const u = (hash2(i, 3, seed) - 0.5) * (SHAFT * 2 - 5);
+        const v = LIP + 5 + hash2(i, 5, seed) * (L - LIP - 7);
+        g.fillStyle = css(t.fleck, 0, 0.85);
+        path(g, map(f, ovalPts(u, v, 1.4 + hash2(i, 7, seed) * 1.2, 1, seed + i, 0.25, 7)));
         g.fill();
       }
     }
+    // The lip's shadow falls hard across the top of the shaft.
+    g.fillStyle = css(t.deep, -4, 0.9);
+    path(g, map(f, poly(-W / 2, LIP - 1, W / 2, LIP - 1, W / 2, LIP + 2.6, 0, LIP + 3.4, -W / 2, LIP + 2.6)));
+    g.fill();
     g.restore();
-    pen(g, shaft, seed, 0.6, 1.5, 4);
-    // The lip: the full width, a step brighter, with its own lit stripe and a hard shade under it.
-    const lip = map(f, boxPts(-W / 2, 0, W, LIP, 2.2, seed + 1, 0.15));
-    tone(g, lip, base, { depth: 1, shade: -10 });
+    pen(g, shaft, seed, 0.45, 1.9, 5);
+    // The lip: the full two tiles across, chunkier and a step brighter, banded the same way.
+    const lip = map(f, boxPts(-W / 2, 0, W, LIP, 2.2, seed + 1, 0.12));
+    tone(g, lip, t.base, { depth: 0.8, shade: -10 });
     g.save();
     path(g, lip);
     g.clip();
-    rounded(g, f, base, 0, LIP, 4);
-    g.fillStyle = css(base, -16, 1, 4);
-    path(g, map(f, poly(-W / 2, LIP - 1.6, W / 2, LIP - 1.6, W / 2, LIP, -W / 2, LIP)));
+    bands(g, f, t, W / 2, -1, LIP + 1, flip);
+    // Its underside edge in shade, so it reads as a collar standing proud of the shaft.
+    g.fillStyle = css(t.shade);
+    path(g, map(f, poly(-W / 2, LIP - 1.4, W / 2, LIP - 1.4, W / 2, LIP + 1, -W / 2, LIP + 1)));
     g.fill();
     g.restore();
-    pen(g, lip, seed + 1, 0.6, 1.6, 4);
-    // The bevelled rim round the opening, seen a touch from the mouth's side.
-    const rim = map(f, ovalPts(0, 3.4, W / 2 - 2.2, 2.6, seed + 2, 0.03, 18));
-    part(g, rim, { ...base, l: Math.min(92, base.l + 14) }, seed + 2, { depth: 0.5, shade: -20, thin: 0.35, thick: 0.8 });
-    // Rivets where the lip meets the shaft.
-    for (const u of [-W / 2 + 3.2, W / 2 - 3.2]) {
-      const p = at(f, u, LIP + 2.4);
-      dot(g, p.x, p.y, 0.7, u, css(base, 30));
-    }
+    pen(g, lip, seed + 1, 0.5, 2, 5);
+    // The mouth's rim, seen a touch from its own side: a bevelled ring round the opening.
+    const rim = map(f, ovalPts(0, 3.4, W / 2 - 2, 2.7, seed + 2, 0.02, 20));
+    part(g, rim, t.base, seed + 2, { depth: 0.6, shade: -12, thin: 0.3, thick: 0.9 });
   });
 }
 
-/**
- * Stripes down a length of pipe (`v0`..`v1`) that make it round: a wide lit band toward the light with a
- * bright line in it, and two steps of shade on the far side. `lift` brightens the lip a little.
- */
-function rounded(g: CanvasRenderingContext2D, f: Frame, base: HSL, v0: number, v1: number, lift: number) {
-  const band = (u0: number, u1: number, dl: number, ds = 0) => {
-    g.fillStyle = css(base, dl + lift, 1, ds);
-    path(g, map(f, poly(u0, v0, u1, v0, u1, v1, u0, v1)));
-    g.fill();
-  };
-  band(-W / 2, -W / 2 + 2.5, -8, 2);
-  band(-W / 2 + 3, -W / 2 + 10, 16);
-  band(-W / 2 + 5, -W / 2 + 6.6, 34, -10);
-  band(W / 2 - 10, W / 2, -12, 4);
-  band(W / 2 - 4.5, W / 2, -24, 6);
+/** The opening: a dark ellipse inside the rim. Live, because a linked one breathes. */
+function hole(f: Frame): P[] {
+  return map(f, ovalPts(0, 3.6, W / 2 - 5, 1.7, 9, 0.02, 18));
 }
 
-/** The opening: a dark hole inside the rim. Live, because a linked one breathes. */
-function hole(f: Frame): P[] {
-  return map(f, ovalPts(0, 3.6, W / 2 - 5, 1.5, 9, 0.02, 16));
+/** The far wall's lip inside the opening, catching the light: a thin arc along its back half. */
+function innerRim(f: Frame): P[] {
+  const pts: P[] = [];
+  for (let i = 0; i <= 8; i++) {
+    const a = Math.PI * (1.12 + (i / 8) * 0.76);
+    pts.push({ x: Math.cos(a) * (W / 2 - 5.6), y: 3.75 + Math.sin(a) * 1.25 });
+  }
+  return map(f, pts);
 }
 
 /** A plumber's job tag stuck on the shaft below the lip, upright whichever way the pipe faces, with the pair's number. */
 function tag(s: CanvasRenderingContext2D, x: number, y: number, n: number, f: Frame, len: number) {
-  const p = at(f, W / 2 - 6.5, Math.max(LIP + 4, (len * TILE) / 2 + 2));
+  const p = at(f, SHAFT - 5, Math.max(LIP + 5, (len * TILE) / 2 + 3));
   const tx = x + p.x;
   const ty = y + p.y;
   const card = boxPts(tx - 3.1, ty - 3.5, 6.2, 7, 0.8, n, 0.1);
@@ -183,21 +251,30 @@ defineArt<'pipe'>({
     stamp(s, body(m.look, m.cells.length / PIPE.wide, f), x, y);
     const placed = d.o.placed;
     const linked = linkedIn(d.r.pp, placed);
-    const { base } = LOOKS[m.look];
+    const t = LOOKS[m.look];
+    const base = t.base;
     const h = hole(f).map((p) => ({ x: x + p.x, y: y + p.y }));
-    s.fillStyle = linked ? css(base, -34, 1, -10) : INK;
+    s.fillStyle = linked ? css(t.deep, -8) : INK;
     path(s, h);
     s.fill();
-    const since = d.o.state ? rc.frame - d.o.state.lastFire : 999;
     if (linked) {
-      // A glint deep inside and a breath of air: something's down there.
-      const gl = at(f, -4, 3.6);
+      // The far wall's lip catching the light, a glint deep inside and a breath of air: something's down there.
+      s.fillStyle = css(t.lit, 10, 0.9);
+      stroke(
+        s,
+        innerRim(f).map((p) => ({ x: x + p.x, y: y + p.y })),
+        { w: 0.7, seed: 4, taper: [0.3, 0.3], press: 0 },
+      );
+      const gl = at(f, -3, 3.9);
       s.fillStyle = 'rgba(255,255,240,0.8)';
-      stroke(s, [h[9], { x: x + gl.x, y: y + gl.y }], { w: 0.6, seed: 2, taper: [0.3, 0.3], press: 0 });
+      stroke(s, [h[11], { x: x + gl.x, y: y + gl.y }], { w: 0.55, seed: 2, taper: [0.3, 0.3], press: 0 });
       draft(rc, x, y, f, base);
-      const flare = since < 24 ? 1 - since / 24 : 0;
-      glowDot(rc.g, x, y, 6 + flare * 10, { ...base, l: 70 }, 0.18 + flare * 0.5);
-      if (flare > 0) light(rc, x, y, 30, { ...base, l: 70 }, flare * 0.6);
+      // It flares as someone goes in, and again at the far end as they come out.
+      const since = d.o.state ? rc.frame - d.o.state.lastFire : 999;
+      const out = d.o.grips?.find((g) => g.to === d.r.pp.uid && g.uid !== d.r.pp.uid);
+      const flare = Math.max(since < 24 ? 1 - since / 24 : 0, out ? Math.max(0, 1 - (out.t - PIPE.in) / PIPE.out) : 0);
+      glowDot(rc.g, x, y, 6 + flare * 10, t.lit, 0.18 + flare * 0.5);
+      if (flare > 0) light(rc, x, y, 30, t.lit, flare * 0.6);
       const n = placed && pipePairs(placed).get(d.r.pp.uid);
       if (n) tag(s, x, y, n, f, m.cells.length / PIPE.wide);
     } else if (d.o.showPath && placed && !d.o.card) {

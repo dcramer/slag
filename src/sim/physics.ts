@@ -75,6 +75,8 @@ export interface Solid extends Rect {
   mi: number;
   /** Lands from above only, like a one-way tile: it never blocks sideways or from below, and can't pin or crush anyone. */
   oneWay?: boolean;
+  /** Climbed like a ledge lip when its top is up to this many px above your feet (default PHYS.ledgeLip): a sub-tile step a part wants walked over, like a pipe's lip. */
+  step?: number;
   /** A wet film on a surface (blood): footing for runners only. Rays, crushers and shots pass through to what's under it. */
   film?: boolean;
 }
@@ -266,7 +268,7 @@ export function moveX(b: Body, dx: number, world: CollisionWorld): Solid | null 
     // Ledge lip: a step whose top is ≤ ledgeLip px above our feet is climbed instead of blocking.
     // (Tiles are scanned top row first, so s0 is the highest blocking tile.)
     const lip = b.y + b.h - s0.y;
-    if (lip > 0 && lip <= PHYS.ledgeLip && !blockedAt(b, b.x, s0.y - b.h, world)) {
+    if (lip > 0 && lip <= (s0.step ?? PHYS.ledgeLip) && !blockedAt(b, b.x, s0.y - b.h, world)) {
       b.y = s0.y - b.h;
       continue;
     }

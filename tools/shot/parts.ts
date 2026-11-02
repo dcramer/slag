@@ -214,6 +214,19 @@ export const shots: Scenarios = {
     await raceAt(20, 'coming-out');
     for (const [i, p] of pipes.slice(0, 2).entries()) await zoomOn(p.link, `race-out-${i}`);
     await sheet(`pipes-${seed}`, files, 3);
+    // Every material, on a pipe facing up and one facing down (a match only ever has one).
+    const looks: string[] = [];
+    for (const look of ['green', 'brass', 'rust', 'porcelain', 'copper']) {
+      await page.evaluate((l) => {
+        const d = (window as any).slagDebug;
+        for (const r of d.match.run.resolved) for (const m of r.mods) if (m.type === 'pipe') m.look = l;
+      }, look);
+      for (const p of [pipes[0], pipes[2]]) {
+        await zoomOn(p.uid, `look-${look}-rot${p.rot}`);
+        looks.push(files.pop()!);
+      }
+    }
+    await sheet(`pipes-${seed}-looks`, looks, 4);
   },
   async buildparts() {
     // Every building part: each block material at every size in a race (whole view and close up), then

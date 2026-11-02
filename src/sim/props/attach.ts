@@ -55,6 +55,20 @@ export interface RunnerAttach {
   cdMi: number;
   /** Frame a backfire's soot wears off (art). */
   soot: number;
+  /**
+   * Inputs (LATCH bits) still held from leaving a part: a part you work with the controls ignores
+   * them until they're let go and pressed again, so holding down out of a pipe doesn't send you
+   * straight back in. Cleared bit by bit as they're released.
+   */
+  latch: number;
+}
+
+/** Bits of `RunnerAttach.latch`. */
+export const LATCH = { down: 1, up: 2, left: 4, right: 8, jump: 16 } as const;
+
+/** The LATCH bits of what this input holds. */
+export function latchOf(inp: InputFrame): number {
+  return (inp.down ? LATCH.down : 0) | (inp.up ? LATCH.up : 0) | (inp.left ? LATCH.left : 0) | (inp.right ? LATCH.right : 0) | (inp.jump ? LATCH.jump : 0);
 }
 
 /** What a module's `touch` asks for through `ctx.grab`. */
@@ -80,7 +94,7 @@ export interface GrabRequest {
 export const REGRAB = 20;
 
 export function newAttach(): RunnerAttach {
-  return { grip: null, cd: 0, cdUid: -1, cdMi: -1, soot: 0 };
+  return { grip: null, cd: 0, cdUid: -1, cdMi: -1, soot: 0, latch: 0 };
 }
 
 /** World gravity (px/s²) at this level's setting. `Level.gravity` lands with the level-variety work; until then it's absent, which means normal. */
@@ -111,6 +125,7 @@ function shoved(r: Runner, g: Grip): boolean {
 export function stepHold(w: RunWorld, r: Runner, inp: InputFrame, f: number): boolean {
   const a = r.attach;
   if (a.cd > 0) a.cd--;
+  if (a.latch) a.latch &= latchOf(inp);
   const g = a.grip;
   if (!g) return false;
   const rp = w.resolved.find((x) => x.pp.uid === g.uid);
