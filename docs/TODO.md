@@ -56,18 +56,10 @@ The user's feedback on a real phone: "almost playable but not quite; resolution 
 - **Settings:** a full-screen sheet on phones with big rows that scrolls.
 - **Verify:** `pnpm shot mobile` on iPhone SE, iPhone 13 and Pixel 7 in landscape. Nothing has been tested on real hardware yet.
 
-## 7. Grab props: rope and blast barrel
-No branch yet. `origin/wip/content` has a dropped launch barrel (module and art) worth reading for the blast barrel, but its name and `status.hold` must not be reused.
-
-- **Rope:** hangs from a ceiling. You grab it automatically when you touch it in the air, with a short re-grab cooldown. Left and right pump the swing; jump lets go and keeps the swing's momentum.
-- **Blast barrel:** it pulls you in on contact and rotates (or holds a fixed aim). Jump fires you out along its direction after a short delay. It must be an original design, not a copy.
-- Both put the runner in an "attached" state inside `RunWorld`. That state must stay snapshot-friendly and deterministic.
-- Add both to `reach.ts` only if worldgen ever relies on them. For now it shouldn't.
-
 ## 8. Render polish
 - **Liquid draw order:** `drawLiquid` still paints after players and effects, while `docs/DESIGN.md` lists liquids behind terrain.
 - **`pnpm shot race` without `--race`** never starts a race: it stays in pick at frame 0.
-- **Cel-shaded look:** the owner wants cel shading (flat colors, hard light bands, clean thin ink), likely as the game's main look rather than an option. Switching art style may stay as a fun gimmick, so keep styles in a registry. In progress; the owner picks whether it becomes the default once it's seen, ideally in motion and on a real phone. Anything thin or soft drawn on `rc.s` gets silhouette ink, so soft effects should draw on the background context.
+- **Cel-shaded look (`?style=cel`):** the owner picks whether it becomes the main look. Flipping is `DEFAULT_STYLE` in `src/render/style.ts`. Play it first, and try a real phone. Mine is weakest (band arcs on rock walls). Impact words can hide a hazard for most of a second; `?lettering=0` turns them off. Big plain walls are a taste call. With adoption, note in `src/render/AGENTS.md` that thin or soft things on `rc.s` get ink.
 
 ## 9. Weather (new)
 A per-level random variable:
@@ -99,7 +91,7 @@ The rest of this item is the home screen, the first and biggest piece of it. The
 - Do this after items 2 and 3, which both change `src/game-client.ts`.
 
 ## 13. Playtest and tune the new parts
-Nothing from the content or held-items work has been played by hand, so the tuning is test-level only: magnet drift, bumper power, slow and freeze durations, item strength. Gamepad `use` (Y and LT) hasn't been tried on a real pad, and item sounds borrow existing cues and haven't been heard. Dropstones and crushers stop only on terrain, so they pass through placed blocks; decide whether that's right.
+Nothing from the content, held-items or grab-props work has been played by hand, so the tuning is test-level only: magnet drift, bumper power, slow and freeze durations, item strength. Gamepad `use` (Y and LT) hasn't been tried on a real pad, and item sounds borrow existing cues and haven't been heard. Dropstones and crushers stop only on terrain, so they pass through placed blocks; decide whether that's right.
 
 Also confirm the Match Length values (Short 30 points / 10 rounds, Normal 50 / 15, Long 80 / 25). They come from a Monte Carlo model of scoring with a fixed finish rate, and real finish rates probably fall as props pile up. The limit decides about 25% of 2-player Normal matches at typical finish rates and about 60% at very low or very high ones.
 
