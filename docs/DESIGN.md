@@ -6,6 +6,7 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - Lobby → **Pick** (claim one prop from a crate) → **Place** (put it in the level) → **Race** to the flag → **Score**. Repeat until someone reaches the target score or the round limit, whichever comes first, then **Victory**.
 - Matches have 1–8 players. Players can be local (any mix of keyboard, gamepads and touch) or online.
 - Props persist for the whole match, so levels get more dangerous every round.
+- Round 1 is often unfinishable, especially with few players. That's expected: nearly every level needs parts, and parts build up over the match.
 
 ## Discovery
 - Part of the joy of the game is the unknown. Players learn parts, rules and tricks by playing and by watching each other.
