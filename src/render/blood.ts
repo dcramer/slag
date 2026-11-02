@@ -4,7 +4,8 @@ import type { Match } from '../game/match';
 import { type BloodCell, FACE_UP, OOZE_FRAMES } from '../sim/blood';
 import { TILE } from '../sim/constants';
 import { COAT_PX, FACE } from '../sim/props';
-import { glowDot, type RC } from './kit';
+import { blob, line } from './ink';
+import { type RC } from './kit';
 
 /**
  * Blood as the sim has it (`Match.blood`), redrawn every frame so it can't
@@ -87,36 +88,69 @@ function drawRun(rc: RC, run: readonly BloodCell[], color: HSL, frame: number) {
   s.closePath();
   s.fill();
 
-  // Wet: long bright dashes riding the crest. A light tint of the blood, not white, or they ink over.
-  s.strokeStyle = css(color, 34, 1, -24);
-  s.lineWidth = 1.5;
-  s.lineCap = 'round';
+  // Lit: the crest's top cut in a lighter tone, pulled toward the light (upper left) so the far end stays body color.
+  if (x1 - x0 > 5) {
+    s.fillStyle = css(color, 11, 1, -6);
+    s.beginPath();
+    s.moveTo(x0 + 1.2, -crest(x0 + 1.2) * 0.7);
+    for (let x = x0 + 1.2; x < x1 - 3; x += STEP) s.lineTo(x - 0.5, -crest(x) - 0.05);
+    for (let x = x1 - 3; x > x0 + 1.2; x -= STEP) s.lineTo(x, -crest(x) * 0.62);
+    s.closePath();
+    s.fill();
+  }
+
+  // Wet: long bright pen dashes riding the crest. A light tint of the blood, not white, or they ink over.
+  s.fillStyle = css(color, 34, 1, -24);
   for (let x = x0 + 4 + hash2(along(first), across(first), 3) * 3; x < x1 - 6; x += TILE * 0.9) {
     const len = 3 + hash2(Math.floor(x), across(first), 4) * 4;
-    const y = -crest(x + len / 2) * 0.62;
-    s.beginPath();
-    s.moveTo(x, y);
-    s.lineTo(Math.min(x + len, x1 - 3), y);
-    s.stroke();
+    const y = -crest(x + len / 2) * 0.66;
+    line(s, x, y, Math.min(x + len, x1 - 3), y - 0.2, { w: 1.5, seed: Math.floor(x), taper: [0.2, 0.55], press: 0.15 });
   }
 }
 
-/** What only a floor gets: drips over its lip, and a glint that travels along it so a still puddle looks wet from across the screen. */
-function drawFloorExtras(rc: RC, run: readonly BloodCell[], color: HSL) {
+/** A drip over a floor's lip: a tapering run that ends in a hanging bead. */
+function drip(s: CanvasRenderingContext2D, x: number, y: number, len: number) {
+  s.beginPath();
+  s.moveTo(x - 1.1, y - 0.5);
+  s.lineTo(x + 1.1, y - 0.5);
+  s.lineTo(x + 0.45, y + len);
+  s.lineTo(x - 0.45, y + len);
+  s.closePath();
+  s.fill();
+  blob(s, x + 0.1, y + len + 0.3, 1.05, Math.floor(x), 1.15, 0.12);
+  s.fill();
+}
+
+/**
+ * What only a floor gets: drips over its lip, and a glint that travels along it so a still puddle looks
+ * wet from across the screen. The glint is a hard highlight with a four-point twinkle, not a soft glow:
+ * blood isn't hot.
+ */
+function drawFloorExtras(rc: RC, run: readonly BloodCell[], color: HSL, frame: number) {
   const s = rc.s;
   const first = run[0];
   const y = first.ty * TILE;
   s.fillStyle = css(color, -16);
   for (const c of run) {
     if (hash2(c.tx, c.ty, 7) > 0.55) continue;
-    s.beginPath();
-    s.roundRect((c.tx + 0.2 + hash2(c.tx, c.ty, 8) * 0.6) * TILE - 1, y, 2, LAP + 1.5 + hash2(c.tx, c.ty, 9) * 2.5, 1);
-    s.fill();
+    drip(s, (c.tx + 0.2 + hash2(c.tx, c.ty, 8) * 0.6) * TILE, y + 0.5, LAP + 1 + hash2(c.tx, c.ty, 9) * 2.5 * filled(c, frame));
   }
-  const x0 = first.tx * TILE;
   const sweep = (rc.t * 0.35 + first.tx * 0.17 + first.ty * 0.11) % 1;
-  if (sweep < 0.35)
-    glowDot(rc.g, x0 + (run.length * TILE * sweep) / 0.35, y - CREST * 0.6, 7, { h: color.h, s: 60, l: 86 }, 0.5 * Math.sin((sweep / 0.35) * Math.PI));
+  if (sweep >= 0.35) return;
+  const u = sweep / 0.35;
+  const k = Math.sin(u * Math.PI);
+  const gx = first.tx * TILE + 3 + (run.length * TILE - 8) * u;
+  const gy = y - CREST * 0.7;
+  s.fillStyle = css(color, 44, 1, -30);
+  line(s, gx - 4.5 * k, gy + 0.3, gx + 1, gy - 0.2, { w: 1.5 * k + 0.3, seed: 5, taper: [0.7, 0.2], press: 0 });
+  twinkle(s, gx + 1, gy - 0.6, 2.6 * k);
+}
+
+/** A four-point twinkle: two crossed pen flicks. */
+function twinkle(s: CanvasRenderingContext2D, x: number, y: number, r: number) {
+  if (r < 0.4) return;
+  line(s, x - r, y, x + r, y, { w: r * 0.42, seed: 1, taper: [0.5, 0.5], press: 0 });
+  line(s, x, y - r, x, y + r, { w: r * 0.42, seed: 2, taper: [0.5, 0.5], press: 0 });
 }
 
 /** Every puddle and smear. `frame` is the race frame; anything does once none are still oozing. */
@@ -137,6 +171,6 @@ export function drawBlood(rc: RC, m: Match, frame: number) {
     }
     drawRun(rc, run, color, frame);
     s.restore();
-    if (isFloor(c)) drawFloorExtras(rc, run, color);
+    if (isFloor(c)) drawFloorExtras(rc, run, color, frame);
   }
 }
