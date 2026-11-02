@@ -14,7 +14,7 @@ import { PhoneCam, phoneView } from './camera-follow';
 import { drawAccessory, drawAfterimage, drawCharacter, Rig } from './character';
 import { ForegroundLayer, Lettering, letteringAllowed } from './cel';
 import { Fx } from './fx';
-import { VIEW_FRAME, type ViewFrame, viewFrame } from './frame';
+import { frameReach, VIEW_FRAME, type ViewFrame, viewFrame } from './frame';
 import { Hud } from './hud';
 import { drawClouds, drawDrops, drawRunnerItems, itemFx } from './items';
 import { circle, glowDot, type Light, light, type RC } from './kit';
@@ -183,10 +183,8 @@ export class Renderer {
     const kb = Math.min(4, sk * Math.max(1.45, this.phone.enabled ? this.phone.zoom : 0), Math.sqrt(MAX_BAKE_PX / (ww * wh)));
     this.terrain.ensure(level, kb);
     // The surroundings reach as far as the most zoomed-out view of this level can see.
-    const floor = raceFloor(level);
-    const reachX = Math.max(0, frameBox.w / floor - ww) / 2;
-    const reachY = Math.max(0, frameBox.h / floor - wh);
-    this.surround.ensure(level, reachX, reachY, Math.min(kb, Math.sqrt(MAX_BAKE_PX / ((ww + reachX * 2) * (wh + reachY)))));
+    const reach = frameReach(frameBox, ww, wh, raceFloor(level));
+    this.surround.ensure(level, reach, Math.min(kb, Math.sqrt(MAX_BAKE_PX / ((ww + reach.x * 2) * (wh + reach.up + reach.down)))));
     const emit: Emit = (kind, x, y, vx, vy, color) =>
       this.fx.add(
         kind,
@@ -302,7 +300,7 @@ export class Renderer {
       drawClouds(rc, run);
     }
     this.fx.draw(rc);
-    this.backdrop.drawLiquid(rc, level.theme, ww, wh, this.cam.visible(), this.surround.margin);
+    this.backdrop.drawLiquid(rc, level.theme, ww, wh, this.cam.visible(), this.surround.margin, (c) => this.surround.drawSunken(c, level));
     this.backdrop.drawMotes(rc, level.theme, dt, this.cam.visible(), calmMotes(level.theme));
     this.weather.draw(rc, m, this.cam.visible(), this.fx);
     g.globalCompositeOperation = 'source-over';

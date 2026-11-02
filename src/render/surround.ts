@@ -14,6 +14,11 @@ import { TerrainPainter } from './terrain';
  * painter so caps, decor and lighting match across the seam, rising at the
  * edge where the sim's wall is and falling away into haze behind it.
  *
+ * Below the world it's simpler: whatever stands on the bottom row just runs on
+ * down, and the pool carries on with it. Those columns are only ever seen
+ * through the liquid (`drawSunken`), so there's still one unbroken surface at
+ * the kill line and nothing down there looks like somewhere to land.
+ *
  * This is scenery. It's built from the level's tiles but never fed back; the
  * sim still sees only the level.
  */
@@ -105,13 +110,13 @@ const SIDES: Record<ThemeId, (c: SideCtx) => void> = {
 
 /**
  * The surroundings of `level` as a level of their own: `mx` extra columns each
- * side, `top` extra rows above, the real level left out but for a ring at its
- * edge. World tile (x, y) is scenery tile (x + mx, y + top).
+ * side, `top` extra rows above, `bottom` below, the real level left out but for
+ * a ring at its edge. World tile (x, y) is scenery tile (x + mx, y + top).
  */
-export function surroundLevel(level: Level, mx: number, top: number): Level {
+export function surroundLevel(level: Level, mx: number, top: number, bottom = 0): Level {
   const { w, h } = level;
   const W = w + mx * 2;
-  const H = h + top;
+  const H = h + top + bottom;
   const tiles = new Uint8Array(W * H);
   const put = (x: number, y: number) => {
     if (x >= 0 && x < W && y >= 0 && y < H) tiles[y * W + x] = T_SOLID;
@@ -164,10 +169,15 @@ export function surroundLevel(level: Level, mx: number, top: number): Level {
     const reach = level.theme.id === 'mine' ? top : Math.min(top, rng.int(2, 5));
     for (let y = 1; y <= reach; y++) put(x + mx, top - y);
   }
+  // What stands on the bottom row runs on down.
+  for (let x = 0; x < w; x++) {
+    if (!solidAt(x, h - 1)) continue;
+    for (let y = h; y < h + bottom; y++) put(x + mx, y + top);
+  }
   // The ring: real tiles under the level's own edge, so neighbours join.
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      if (x >= RING && x < w - RING && y >= RING) continue;
+      if (x >= RING && x < w - RING && y >= RING && (bottom === 0 || y < h - RING)) continue;
       if (solidAt(x, y)) put(x + mx, y + top);
     }
   }
@@ -192,22 +202,25 @@ export class Surround {
   private key = '';
   private mx = 0;
   private top = 0;
+  private bottom = 0;
 
   /** World px of scenery on each side. */
   get margin(): number {
     return this.mx * TILE;
   }
 
-  /** `reachX`/`reachY`: how far past the world the frame reaches at its most zoomed out, in world px. */
-  ensure(level: Level, reachX: number, reachY: number, kb: number) {
-    const mx = Math.ceil(reachX / TILE) + 2;
-    const top = Math.ceil(reachY / TILE) + 2;
-    const key = `${level.seed}:${level.theme.seed}:${level.w}x${level.h}:${mx}:${top}`;
+  /** `reach`: how far past the world the frame reaches at its most zoomed out, in world px (`frameReach`). */
+  ensure(level: Level, reach: { x: number; up: number; down: number }, kb: number) {
+    const mx = Math.ceil(reach.x / TILE) + 2;
+    const top = Math.ceil(reach.up / TILE) + 2;
+    const bottom = Math.ceil(reach.down / TILE) + 2;
+    const key = `${level.seed}:${level.theme.seed}:${level.w}x${level.h}:${mx}:${top}:${bottom}`;
     if (key !== this.key) {
       this.key = key;
       this.mx = mx;
       this.top = top;
-      this.land = surroundLevel(level, mx, top);
+      this.bottom = bottom;
+      this.land = surroundLevel(level, mx, top, bottom);
     }
     const land = this.land!;
     const inner = { x: mx + RING, y: top + RING, w: level.w - RING * 2, h: level.h - RING };
@@ -260,6 +273,20 @@ export class Surround {
       else glow.fillRect(seam, 0, land.w * TILE - seam, land.h * TILE);
     }
     glow.restore();
+  }
+
+  /**
+   * The rows from the level's bottom edge on down, for the pool to show through
+   * itself. In world space; the caller clips to the liquid. It's the bake `draw`
+   * already made, so this costs one blit and nothing at load.
+   */
+  drawSunken(s: CanvasRenderingContext2D, level: Level) {
+    const bake = this.painter.bake;
+    const land = this.land;
+    if (!bake || !land) return;
+    const k = bake.height / (land.h * TILE);
+    const sy = (this.top + level.h - RING) * TILE * k;
+    s.drawImage(bake, 0, sy, bake.width, bake.height - sy, -this.mx * TILE, (level.h - RING) * TILE, land.w * TILE, (RING + this.bottom) * TILE);
   }
 
   /** In world space, before the level's own terrain. */

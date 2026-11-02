@@ -421,8 +421,8 @@ export class Hud {
     if (this.embers.length < 46 && Math.random() < dt * 30) {
       const max = 2.5 + Math.random() * 3;
       this.embers.push({
-        x: Math.random() * VIEW_W,
-        y: VIEW_H + 4,
+        x: this.frame.x0 + Math.random() * this.frame.w,
+        y: this.frame.y1 + 4,
         vx: (Math.random() - 0.5) * 14,
         vy: -18 - Math.random() * 30,
         life: max,
@@ -447,14 +447,14 @@ export class Hud {
 
   private lobby(m: Match, t: number, dt: number) {
     const c = this.ctx;
-    const vg = c.createLinearGradient(0, 0, 0, VIEW_H);
+    const vg = c.createLinearGradient(0, this.frame.y0, 0, this.frame.y1);
     vg.addColorStop(0, 'rgba(18,10,7,0.78)');
     vg.addColorStop(0.3, 'rgba(18,10,7,0.35)');
     vg.addColorStop(0.75, 'rgba(18,10,7,0.45)');
     vg.addColorStop(1, 'rgba(40,12,4,0.85)');
     c.fillStyle = vg;
     this.wash();
-    glowDot(this.gctx, VIEW_W / 2, VIEW_H + 60, 330, { h: 18, s: 100, l: 45 }, 0.22, 0.2);
+    glowDot(this.gctx, VIEW_W / 2, this.frame.y1 + 60, 330, { h: 18, s: 100, l: 45 }, 0.22, 0.2);
     this.stepEmbers(dt);
 
     // Top bar: logo · level plate · menu buttons. On phones its ends hug the window and the buttons are icons.

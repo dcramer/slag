@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { generateLevel } from '../src/gen/level';
-import { overview, restY, worldToView } from '../src/game/view';
+import { overview, raceFloor, worldToView } from '../src/game/view';
 import { Camera } from '../src/render/camera';
-import { viewFrame } from '../src/render/frame';
+import { frameReach, viewFrame } from '../src/render/frame';
 import { surroundLevel } from '../src/render/surround';
 import { TILE, VIEW_H, VIEW_W } from '../src/sim/constants';
 import { T_SOLID } from '../src/sim/level';
@@ -40,9 +40,23 @@ describe('view frame', () => {
     });
   }
 
-  it('spare height goes mostly to the sky', () => {
-    const f = viewFrame(1024, 768, NO_INSETS);
-    expect(-f.y0).toBeGreaterThan((f.y1 - VIEW_H) * 2);
+  it('spare height splits evenly above and below the play view', () => {
+    for (const [vw, vh] of [
+      [1600, 1200],
+      [1280, 1024],
+      [1000, 1200],
+      [390, 844],
+    ]) {
+      const f = viewFrame(vw, vh, NO_INSETS);
+      expect(-f.y0).toBeGreaterThan(0);
+      expect(-f.y0).toBeCloseTo(f.y1 - VIEW_H, 5);
+      expect(f.top).toBeCloseTo((vh - f.height) / 2, 5);
+    }
+  });
+
+  it('a status bar only centres the view in what is left of the window', () => {
+    const f = viewFrame(1000, 1200, { left: 0, right: 0, top: 40 });
+    expect(f.top - 40).toBeCloseTo(1200 - f.top - f.height, 5);
   });
 
   it('the play view stays out of a notch, and the frame still covers it', () => {
@@ -117,10 +131,86 @@ describe('camera in a frame', () => {
     }
   });
 
-  it('a level shorter than the view stands on the bottom of it, sky above', () => {
-    const wh = 24 * TILE;
-    const y = worldToView({ cx: 0, cy: restY(wh, 0.5), zoom: 0.5 }, 0, wh).y;
-    expect(y).toBeCloseTo(VIEW_H);
+  it('a level shorter than the view sits centred in it', () => {
+    const l = generateLevel(77, 'castle', { size: 'wide' });
+    const ov = overview(l);
+    const wh = l.h * TILE;
+    expect(wh * ov.zoom).toBeLessThan(VIEW_H);
+    const top = worldToView(ov, 0, 0).y;
+    const bottom = worldToView(ov, 0, wh).y;
+    expect(top).toBeGreaterThan(0);
+    expect(top).toBeCloseTo(VIEW_H - bottom, 5);
+  });
+
+  it('wide() rests a short level centred, in every window', () => {
+    for (const [vw, vh] of [
+      [1536, 864],
+      [1600, 1200],
+      [1000, 1200],
+      [2520, 1080],
+    ]) {
+      const c = new Camera();
+      c.setFrame(viewFrame(vw, vh, NO_INSETS));
+      c.setBounds(96 * TILE, 24 * TILE, 0.45);
+      c.wide();
+      c.update(1 / 60, false);
+      expect(c.worldToView(0, 12 * TILE).y).toBeCloseTo(VIEW_H / 2, 5);
+    }
+  });
+
+  it('zooming through the point a level starts to fit the window never jumps', () => {
+    for (const ins of [NO_INSETS, { left: 0, right: 0, top: 40 }]) {
+      const c = new Camera();
+      c.setFrame(viewFrame(1600, 1200, ins));
+      c.setBounds(96 * TILE, 60 * TILE, 0.3);
+      c.snap({ cx: 0, cy: 1e6, zoom: 1.2 });
+      c.update(1 / 60, false);
+      let y = c.y;
+      for (let zoom = 1.2; zoom > 0.3; zoom -= 0.002) {
+        c.snap({ cx: 0, cy: 1e6, zoom });
+        c.update(1 / 60, false);
+        expect(Math.abs(c.y - y)).toBeLessThan(4);
+        y = c.y;
+      }
+    }
+  });
+
+  it('the scenery covers everything the camera can show, at any window and zoom', () => {
+    for (const size of ['classic', 'wide', 'tall'] as const) {
+      const l = generateLevel(77, 'castle', { size });
+      const ww = l.w * TILE;
+      const wh = l.h * TILE;
+      const floor = raceFloor(l);
+      for (const [vw, vh, top] of [
+        [1536, 864, 0],
+        [1600, 1200, 0],
+        [1000, 1200, 0],
+        [2560, 1080, 0],
+        [390, 844, 44],
+      ]) {
+        const f = viewFrame(vw, vh, { left: 0, right: 0, top });
+        const reach = frameReach(f, ww, wh, floor);
+        const c = new Camera();
+        c.setFrame(f);
+        c.setBounds(ww, wh, floor);
+        for (const [cx, cy] of [
+          [0, 0],
+          [ww, wh],
+          [0, wh],
+          [ww / 2, wh / 2],
+        ]) {
+          for (let zoom = floor; zoom <= 1.45; zoom += 0.05) {
+            c.snap({ cx, cy, zoom });
+            c.update(1 / 60, false);
+            const v = c.visible();
+            expect(v.x, `${size} ${vw}x${vh} zoom ${zoom}`).toBeGreaterThanOrEqual(-reach.x - 1e-6);
+            expect(v.x + v.w, `${size} ${vw}x${vh} zoom ${zoom}`).toBeLessThanOrEqual(ww + reach.x + 1e-6);
+            expect(v.y, `${size} ${vw}x${vh} zoom ${zoom}`).toBeGreaterThanOrEqual(-reach.up - 1e-6);
+            expect(v.y + v.h, `${size} ${vw}x${vh} zoom ${zoom}`).toBeLessThanOrEqual(wh + reach.down + 1e-6);
+          }
+        }
+      }
+    }
   });
 });
 
@@ -134,6 +224,7 @@ describe('the land around a level', () => {
       expect(a.w).toBe(l.w + 24);
       expect(a.h).toBe(l.h + 8);
       expect(a.tiles.length).toBe(a.w * a.h);
+      expect(surroundLevel(l, 12, 8, 6).h).toBe(l.h + 14);
       expect(a.tiles.some((t) => t === T_SOLID)).toBe(true);
       expect(Array.from(l.tiles)).toEqual(Array.from(before));
       expect(Array.from(surroundLevel(l, 12, 8).tiles)).toEqual(Array.from(a.tiles));
@@ -144,6 +235,17 @@ describe('the land around a level', () => {
     const l = levels[0];
     const a = surroundLevel(l, 6, 4);
     for (let y = 6; y < l.h; y++) for (let x = 8; x < l.w - 2; x++) expect(a.tiles[(y + 4) * a.w + x + 6]).toBe(0);
+  });
+
+  it('runs what stands on the bottom row on down, and leaves the pits open', () => {
+    for (const l of levels) {
+      const [mx, top, bottom] = [6, 4, 10];
+      const a = surroundLevel(l, mx, top, bottom);
+      for (let x = 0; x < l.w; x++) {
+        const solid = l.tiles[(l.h - 1) * l.w + x] === T_SOLID;
+        for (let y = l.h; y < l.h + bottom; y++) expect(a.tiles[(y + top) * a.w + x + mx], `${l.theme.id} column ${x} row ${y}`).toBe(solid ? T_SOLID : 0);
+      }
+    }
   });
 
   it('carries solid terrain that reaches the edge on past it, so nothing ends in a cut', () => {

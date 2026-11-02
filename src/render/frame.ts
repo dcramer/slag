@@ -46,13 +46,7 @@ export const VIEW_FRAME: ViewFrame = {
   height: VIEW_H,
 };
 
-/**
- * Share of spare height that goes above the play view: the sky can take it,
- * while below the level there's only the pool.
- */
-const SKY_SHARE = 0.8;
-
-/** Lay the play view out in a `vw`×`vh` CSS px window, inside the insets (notches, status bars). */
+/** Lay the play view out centred in a `vw`×`vh` CSS px window, inside the insets (notches, status bars): spare height goes evenly above and below it. */
 export function viewFrame(vw: number, vh: number, ins: { left: number; right: number; top: number }): ViewFrame {
   const aw = Math.max(2, vw - ins.left - ins.right);
   const ah = Math.max(2, vh - ins.top);
@@ -60,7 +54,7 @@ export function viewFrame(vw: number, vh: number, ins: { left: number; right: nu
   const width = VIEW_W * scale;
   const height = VIEW_H * scale;
   const left = ins.left + (aw - width) / 2;
-  const top = ins.top + (ah - height) * SKY_SHARE;
+  const top = ins.top + (ah - height) / 2;
   const x0 = 0 - left / scale;
   const y0 = 0 - top / scale;
   const w = vw / scale;
@@ -79,5 +73,17 @@ export function viewFrame(vw: number, vh: number, ins: { left: number; right: nu
     top,
     width,
     height,
+  };
+}
+
+/**
+ * World px the frame shows past each edge of a `ww`×`wh` world at `zoom`, with
+ * the world centred in the play view. The scenery has to reach this far.
+ */
+export function frameReach(f: ViewFrame, ww: number, wh: number, zoom: number): { x: number; up: number; down: number } {
+  return {
+    x: Math.max(0, Math.max(VIEW_W / 2 - f.x0, f.x1 - VIEW_W / 2) / zoom - ww / 2),
+    up: Math.max(0, (VIEW_H / 2 - f.y0) / zoom - wh / 2),
+    down: Math.max(0, (f.y1 - VIEW_H / 2) / zoom - wh / 2),
   };
 }
