@@ -9,13 +9,12 @@ Design intent for everything below is in `docs/DESIGN.md`.
 ---
 
 ## 2. Online follow-ups
-Online play is on `main`, verified by 139 real-browser checks in `pnpm online-test` and the Upstash-compatible `pnpm test:store`. See `docs/NETCODE.md`.
+Online play is on `main`, verified by real-browser checks in `pnpm online-test` and the Upstash-compatible `pnpm test:store`. See `docs/NETCODE.md`.
 
 - **Owner:** connect `slag-upstash-kv` to the Vercel project for Production and Preview, then redeploy.
 - **Not verified:** real Upstash, real NAT traversal, TURN, Firefox, Safari, real phones, and cross-engine determinism. dmath has only run on V8.
 - **Decide:** two-peer host loss takes about 7.7 s, against about 4 s with three or more peers. Lowering `PROBE_MS` to about 3 s for two-peer rooms saves about 1 s but risks two hosts when the store is slow.
-- **Bug, being fixed:** in a double host failure, three peers each declared themselves host at the same frame, and the room took 31 s to settle on the wrong host.
-- A double host failure (the new host dies at once) takes 11–18 s to recover, and that varies a lot.
+- Two guests that lose a live host at the same moment still move the room to the next peer, as if the host had died. The brief second host steps down within about 3 s.
 
 ## 3. Level follow-ups
 - The winnability proof assumes timed hazards can be passed in their 30-frame openings, and only uses 2-bridge plans.
