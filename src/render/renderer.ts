@@ -3,7 +3,7 @@ import { clamp } from '../core/geom';
 import type { Match, Player } from '../game/match';
 import { overview, raceFloor } from '../game/view';
 import { TILE, VIEW_H, VIEW_W } from '../sim/constants';
-import { type Level, tileAt } from '../sim/level';
+import { floorY, type Level, tileAt } from '../sim/level';
 import { type Beam, canPlace, footprint, type Resolved, resolveProp, traceBeams } from '../sim/props';
 import type { RunWorld } from '../sim/run';
 import type { GameEvent } from '../sim/types';
@@ -395,7 +395,7 @@ export class Renderer {
     const th = level.theme;
     // Spawn portal.
     const sx = level.spawn.tx * TILE + TILE / 2;
-    const sy = (level.spawn.ty + 1) * TILE;
+    const sy = floorY(level.spawn);
     const pc: HSL = shift(th.accent, 0, 0, 40);
     for (let i = 0; i < 3; i++) {
       g.strokeStyle = css(pc, 10, 0.5 - i * 0.12);
@@ -413,7 +413,7 @@ export class Renderer {
 
     // Goal beacon: flag + light column.
     const gx = level.goal.tx * TILE + TILE / 2;
-    const gy = (level.goal.ty + 1) * TILE;
+    const gy = floorY(level.goal);
     const ac = th.accent;
     const col = g.createLinearGradient(0, 0, 0, gy);
     col.addColorStop(0, css(ac, 10, 0));
@@ -448,7 +448,7 @@ export class Renderer {
     const g = rc.g;
     const pc: HSL = shift(level.theme.accent, 0, 0, 40);
     // Only the air above the spawn floor; the rect also covers the floor row.
-    const bottom = Math.min(z.y + z.h, (level.spawn.ty + 1) * TILE);
+    const bottom = Math.min(z.y + z.h, floorY(level.spawn));
     const h = bottom - z.y;
     if (h <= 0) return;
     const a = 0.07 + Math.sin(rc.t * 2.2) * 0.02;
@@ -525,7 +525,7 @@ export class Renderer {
     const n = m.players.length;
     m.players.forEach((p, i) => {
       const x = lv.spawn.tx * TILE + TILE / 2 + (i - (n - 1) / 2) * 9;
-      const y = (lv.spawn.ty + 1) * TILE;
+      const y = floorY(lv.spawn);
       this.drawRunner(rc, lv, p.character, p.slot, x, y, 0, 0, true, Math.sin(rc.t * 0.5 + i) > 0 ? 1 : -1, p.ready, dt);
     });
   }
