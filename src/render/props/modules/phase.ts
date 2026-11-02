@@ -8,7 +8,7 @@ import { light } from '../../kit';
 import { defineArt } from '../common';
 
 /**
- * Blink blocks, as retro blocks: the first set is bricks, a paired second set is reversed question
+ * Blink blocks, as retro blocks: the first set is bricks, a paired second set is exclamation switch
  * blocks in the complementary color, so you can see which set is next. Solid cells flicker in their last
  * PHASE_WARN frames. A gone cell is its four corners in pencil, and fills from the bottom in the
  * PHASE_WARN frames before it returns.

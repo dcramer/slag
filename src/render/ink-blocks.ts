@@ -462,7 +462,7 @@ export function stampTile(
 
 /**
  * One retro blink-block tile in `hue`, stamped: `brick` for the famous brick block's courses, otherwise
- * the reversed question block (`retroTile`). A row of them reads as separate blocks that come and go one
+ * the exclamation switch block (`retroTile`). A row of them reads as separate blocks that come and go one
  * at a time. `variant` picks one of a few hands.
  */
 export function stampPhaseTile(s: CanvasRenderingContext2D, px: number, py: number, hue: number, variant: number, brick: boolean) {

@@ -10,7 +10,7 @@ import type { MetalPalette } from './kit';
 /**
  * Building parts drawn as the things they parody: a riveted truss girder, a vault-plate block, a coursed
  * stone ledge with its capstone, a rope-lashed plank raft, a slatted crate, a sandwich biscuit, retro
- * bricks and their reversed-question blocks, and bolted spike rails.
+ * bricks and their exclamation switch blocks, and bolted spike rails.
  *
  * Every piece is cut on the cell grid: a part of any length is end caps plus a repeating middle with its
  * joints on tile lines, so one tile and five tiles are the same object at two sizes. All of it is baked
@@ -594,8 +594,8 @@ export function markBiscuit(g: CanvasRenderingContext2D, b: Block) {
 
 /**
  * A retro block tile, baked into `g` at (0, 0). `brick`: the famous brick block's course of bricks, in the
- * blink set's own color. Otherwise the "question" block, reversed: bevelled rim, a rivet in each corner,
- * and a mirrored question mark, because it doesn't know either.
+ * blink set's own color. Otherwise a switch block: a bevelled rim round a pressed-in face with an
+ * exclamation mark, since these are blocks that toggle. The question block belongs to the loot box alone.
  */
 export function retroTile(g: CanvasRenderingContext2D, hue: number, brick: boolean, seed: number) {
   const c: HSL = { h: hue, s: 86, l: brick ? 50 : 56 };
@@ -626,32 +626,23 @@ export function retroTile(g: CanvasRenderingContext2D, hue: number, brick: boole
   // The rim: lit on top and left, dark on the bottom and right, round a flat face.
   slab(g, -2, -2, TILE + 4, TILE + 4, seed, css(c, -20, 1, 6), css(c, 14, 1, -8), 1.9, 1, 0);
   slab(g, 2.2, 2.2, TILE - 4.4, TILE - 4.4, seed + 1, css(c, -6), css(c), 0.5, 1, 0.15);
-  for (const [x, y] of [
-    [2.6, 2.6],
-    [TILE - 2.6, 2.6],
-    [2.6, TILE - 2.6],
-    [TILE - 2.6, TILE - 2.6],
-  ]) {
-    g.fillStyle = dark;
-    blob(g, x + 0.2, y + 0.2, 0.75, seed + x + y, 1, 0.1);
-    g.fill();
-    g.fillStyle = css(c, 26, 1, -12);
-    g.fillRect(x - 0.45, y - 0.5, 0.4, 0.35);
-  }
-  // A mirrored question mark: hook opening the wrong way, then the dot.
-  const hook = poly(10.6, 5.7, 10.2, 4.3, 8.9, 3.6, 7.2, 3.6, 5.9, 4.4, 5.5, 5.8, 6.1, 7.1, 7.6, 8.1, 8, 9, 8, 10);
+  // The face's lower-right lip catches the light, so it reads as a button pressed into the rim.
+  g.fillStyle = css(c, 20, 1, -10);
+  line(g, 3.4, TILE - 2.6, TILE - 2.8, TILE - 2.7, { w: 0.7, seed: seed + 2, taper: [0.2, 0.3], press: 0.2 });
+  line(g, TILE - 2.6, 3.4, TILE - 2.7, TILE - 2.8, { w: 0.7, seed: seed + 4, taper: [0.2, 0.3], press: 0.2 });
+  // The exclamation mark: a wedge that narrows as it drops, leaning a hair, then the dot.
+  const bar = poly(6.4, 3.2, 9.8, 3.1, 8.7, 9.9, 7.3, 9.9);
+  const drop = (pts: P[], dx: number, dy: number) => pts.map((p) => ({ x: p.x + dx, y: p.y + dy }));
+  fillPoly(g, drop(bar, 0.7, 0.8), dark);
   g.fillStyle = dark;
-  stroke(
-    g,
-    hook.map((p) => ({ x: p.x + 0.7, y: p.y + 0.8 })),
-    { w: 2.6, seed, taper: [0.08, 0.05], press: 0.15 },
-  );
-  blob(g, 8.7, 13.2, 1.35, seed + 3, 1, 0.08);
+  blob(g, 8.7, 13, 1.45, seed + 3, 1, 0.08);
   g.fill();
+  fillPoly(g, bar, 'rgb(255 247 226)');
   g.fillStyle = 'rgb(255 247 226)';
-  stroke(g, hook, { w: 2.3, seed, taper: [0.08, 0.05], press: 0.15 });
-  blob(g, 8, 12.4, 1.2, seed + 3, 1, 0.08);
+  blob(g, 8, 12.2, 1.3, seed + 3, 1, 0.08);
   g.fill();
+  g.fillStyle = dark;
+  stroke(g, [bar[1], bar[2]], { w: 0.55, seed: seed + 5, taper: [0.1, 0.4], press: 0.2 });
 }
 
 /** Where a gone retro block will come back: its four corners, pencilled, so the space reads as held. */

@@ -50,7 +50,7 @@ Each row gives what the item or part mocks, its silhouette (what must read at ga
 | bumper | Bumper, Pinball Bumper, Casino Bumper, Jackpot | Casino-level pinball bumpers | A pop bumper: skirt, rubber ring, and a star on the cap | A score pops up on every hit, always 100. |
 | magnet | Gravity Well, Tractor Beam, Black Hole Lite, Social Distancer, Force Push | Gravity puzzles and tractor beams | An orb and a field ring | Black Hole Lite has a diet-soda label. The repulsor wears a "6 ft" ring marking. |
 | web | Cobweb, Spider Level, World Wide Web, Net | The spider level | Strands between cells | One strand ends in a tiny cursor arrow. |
-| blinker | Yolo Blocks, Blink Blocks, On/Off Bricks, Lag Bricks | Infamous appearing and disappearing blocks | Retro bricks; a paired set's other half is question blocks with the mark drawn backwards. A gone block leaves its corners. | Lag Bricks stutter in a frame late, with a tiny loading spinner. |
+| blinker | Yolo Blocks, Blink Blocks, On/Off Bricks, Lag Bricks | Infamous appearing and disappearing blocks | Retro bricks; a paired set's other half is exclamation switch blocks. A gone block leaves its corners. | Lag Bricks stutter in a frame late, with a tiny loading spinner. |
 | dropper | Thwunk, Grudge Block, Angry Brick, Ceiling Grump | The angry slamming stone face | A heavy block with a face | Its eyes follow the nearest runner, and it has a vein on its brow. |
 | snapper | Gotcha Plate, Pressure Plate, Pop-Up Spikes, Surprise Party | Temple pressure-plate traps | A flat plate on a face | Party streamers burst out with the spikes. |
 | wheel | Ferris Wheel, Cog Lift, Hamster Wheel, Lazy Susan | Ferris-wheel lifts | A hub with platforms on arms | Hamster Wheel has a water bottle hanging off the hub. |
