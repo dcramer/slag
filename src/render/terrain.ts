@@ -6,7 +6,7 @@ import { type Level, T_ONEWAY, tileAt, type TileRect } from '../sim/level';
 import { coatTerrain } from './weather';
 import { DECOR, type Decor } from './decor';
 import { flattenMaterial } from './cel-terrain';
-import { circle, makeNoise, mixRgb, type RC } from './kit';
+import { circle, flutter, makeNoise, mixRgb, type RC } from './kit';
 
 export { flame } from './kit';
 
@@ -533,12 +533,11 @@ export class TerrainPainter {
   drawLive(rc: RC, level: Level, pushers: { x: number; y: number }[]) {
     // Grass goes on the background layer: an outline per blade turns it into black scrub.
     const s = rc.bg;
-    const t = rc.t;
     s.lineCap = 'round';
     s.lineWidth = 1.1;
     for (const b of this.blades) {
       if (!tileAt(level, b.tx, b.ty) || tileAt(level, b.tx, b.ty - 1)) continue;
-      let sway = Math.sin(t * 2.1 + b.x * 0.15) * 0.25 + Math.sin(t * 0.7 + b.x * 0.03) * 0.2 + b.lean;
+      let sway = flutter(rc, 2.1, b.x * 0.15) * 0.55 + b.lean;
       for (const p of pushers) {
         const dx = b.x - p.x;
         const dy = b.y - p.y;
@@ -625,19 +624,6 @@ function drawCap(g: CanvasRenderingContext2D, th: Theme, tx: number, ty: number,
           g.fill();
         }
       }
-      break;
-    }
-    case 'snow': {
-      g.fillStyle = css({ h: 215, s: 30, l: 72 });
-      g.beginPath();
-      g.roundRect(x0 - 0.5, y - 2.5, x1 - x0 + 1, 5.5, 2.5);
-      g.fill();
-      g.fillStyle = css(T.capColor);
-      g.beginPath();
-      g.roundRect(x0 - 0.5, y - 3, x1 - x0 + 1, 4.5, 2.5);
-      g.fill();
-      g.fillStyle = '#fff';
-      g.fillRect(x0 + 2, y - 2.5, x1 - x0 - 5, 1);
       break;
     }
     case 'rust': {
@@ -772,15 +758,7 @@ function drawUnder(g: CanvasRenderingContext2D, th: Theme, tx: number, ty: numbe
   const T = th.terrain;
   const x = tx * TILE;
   const y = (ty + 1) * TILE;
-  if (T.cap === 'snow' && rng.chance(0.35)) {
-    g.fillStyle = 'rgba(220,240,255,0.85)';
-    const ix = x + rng.range(3, 13);
-    g.beginPath();
-    g.moveTo(ix - 1.5, y - 0.5);
-    g.lineTo(ix, y + rng.range(3, 7));
-    g.lineTo(ix + 1.5, y - 0.5);
-    g.fill();
-  } else if ((T.kind === 'cave' || T.kind === 'basalt' || T.kind === 'rock') && rng.chance(0.35)) {
+  if ((T.kind === 'cave' || T.kind === 'basalt' || T.kind === 'rock') && rng.chance(0.35)) {
     // Stalactite.
     const ix = x + rng.range(3, 13);
     const h = rng.range(3, 8);

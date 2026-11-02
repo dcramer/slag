@@ -111,9 +111,7 @@ export function gustHolds(level: Level, air: number): boolean {
 
 /** A level's weather, deterministic from (seed, theme, terrain). `force` skips the roll and the gate (dev only). */
 export function rollWeather(seed: number, theme: Theme, level: Level, force?: WeatherKind): Weather {
-  const rolled = rollKind(seed, theme.id);
-  // A sky already rolled as rainy or snowy keeps the weather its look promises, without making weather any likelier.
-  const kind = force ?? (rolled !== 'clear' && (theme.ambient === 'rain' || theme.ambient === 'snow') ? theme.ambient : rolled);
+  const kind = force ?? rollKind(seed, theme.id);
   const w = spec(seed, kind);
   if (force || kind === 'clear' || kind === 'mist') return w;
   if (kind !== 'wind') return footingHolds(level, w) ? w : CLEAR;
