@@ -1,30 +1,40 @@
-import { inset, overlaps, pointInRect, type Rect, rectCircle } from '../core/geom';
-import { DT, PLAYER_W, RUN_COUNTDOWN, TILE } from './constants';
+import { inset, overlaps, type Rect, rectCircle } from '../core/geom';
+import { PLAYER_W, RUN_COUNTDOWN } from './constants';
 import { type CrowdMember, nudgeCrowd } from './crowd';
-import { goalRect, killY, type Level, spawnZone, T_SOLID, tileAt } from './level';
-import { type Body, bodyAtCell, type CollisionWorld, type Solid, stepBody } from './physics';
+import { goalRect, killY, type Level, spawnZone, tileAt } from './level';
+import { type Body, bodyAtCell, type CollisionWorld, firstOverlap, type Solid, stepBody } from './physics';
 import {
-  AMMO,
-  type Ammo,
+  buildProjectile,
   type Contrib,
   dirOf,
   type Hazard,
+  makeProjectile,
   moduleSim,
   motionOffset,
   newPropState,
+  newStatus,
+  type Projectile,
+  type ProjWorld,
   type PlacedProp,
   type PropCtx,
   type PropState,
   type Resolved,
+  type RunnerStatus,
   type RunnerView,
   resolveProp,
+  statusInput,
+  statusPostStep,
+  statusPreStep,
+  stepProjectile,
   type TickCtx,
+  type TouchCtx,
+  touchesTrigger,
 } from './props';
 import type { GameEvent, InputFrame } from './types';
 import { windAt } from './wind';
 import { NO_INPUT } from './types';
 
-export type { PropState } from './props';
+export type { Projectile, PropState } from './props';
 
 export type DeathCause = 'hazard' | 'fall' | 'crush' | 'pop' | 'timeout';
 
@@ -39,16 +49,8 @@ export interface Runner {
   killer: number;
   cause: DeathCause | null;
   springCooldown: number;
-}
-
-export interface Projectile {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  owner: number;
-  born: number;
-  ammo: Ammo;
+  /** Status effects (frozen, slowed) and trigger contact (props/status.ts). */
+  status: RunnerStatus;
 }
 
 /**
@@ -74,9 +76,11 @@ export class RunWorld {
    * Falling into the pit, giving up and the race timer still apply.
    */
   readonly safeZone: Rect | null;
+  /** Projectiles spawned so far (ids for projectile-owned solids). */
+  private seq = 0;
 
   solids: Solid[] = [];
-  private out: Contrib = { solids: this.solids, hazards: [], springs: [], winds: [] };
+  private out: Contrib = { solids: this.solids, hazards: [], springs: [], winds: [], triggers: [] };
   private world: CollisionWorld;
   private goal: Rect;
   private killY: number;
@@ -100,6 +104,7 @@ export class RunWorld {
       killer: -1,
       cause: null,
       springCooldown: 0,
+      status: newStatus(),
     }));
     this.resolved = [...level.setPieces, ...placed].map(resolveProp);
     for (const r of this.resolved) {
@@ -150,7 +155,7 @@ export class RunWorld {
     return {
       ...this.ctx(r, mi, f),
       runners,
-      spawn: (p) => this.projectiles.push({ ...p, born: f }),
+      spawn: (p) => this.projectiles.push(makeProjectile(p, f, this.seq++)),
       emit: (e) => this.events.push(e),
     };
   }
@@ -169,9 +174,10 @@ export class RunWorld {
         if (r.body.y <= this.killY) stepBody(r.body, NO_INPUT, this.world, windAt(r.body, this.out.winds));
         return;
       }
-      const inp = live ? (inputs[i] ?? NO_INPUT) : NO_INPUT;
+      const inp = statusInput(r.status, live ? (inputs[i] ?? NO_INPUT) : NO_INPUT);
       const b = r.body;
       if (inp.altPressed) return this.kill(r, -1, 'pop');
+      statusPreStep(r.status, b);
 
       // Wind is a velocity field applied inside stepBody (sim/wind.ts); grounding stays physics' call.
       if (!stepBody(b, inp, this.world, windAt(b, this.out.winds)) && !this.isSafe(r)) {
@@ -180,6 +186,7 @@ export class RunWorld {
         const owner = s ? (this.resolved.find((x) => x.pp.uid === s.propUid)?.pp.owner ?? -1) : -1;
         return this.kill(r, owner, 'crush');
       }
+      statusPostStep(r.status, b);
 
       if (b.onGround && b.groundRef >= 0) {
         const s = this.solids.find((s) => s.id === b.groundRef);
@@ -205,6 +212,10 @@ export class RunWorld {
           this.events.push({ type: 'spring', x: b.x + b.w / 2, y: b.y + b.h });
         }
       }
+
+      // The spawn zone shields you from fields and kickers too (see safeZone).
+      if (this.isSafe(r)) r.status.inside.length = 0;
+      else this.touchTriggers(r, f);
 
       const hb = inset(b, 1.5);
       if (!this.isSafe(r)) {
@@ -245,45 +256,63 @@ export class RunWorld {
     this.events.push({ type: 'death', slot: r.slot, x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h / 2, cause, vx: r.body.vx, vy: r.body.vy });
   }
 
-  /** Rebuild this frame's solids, hazards and triggers from all props. */
+  /**
+   * Call `touch` on every module whose trigger this runner overlaps (once per
+   * trigger key), tracking entries frame to frame.
+   */
+  private touchTriggers(r: Runner, f: number) {
+    const st = r.status;
+    const now: number[] = [];
+    for (const t of this.out.triggers!) {
+      if (now.includes(t.key) || !touchesTrigger(r.body, t)) continue;
+      now.push(t.key);
+      const rp = this.resolved.find((x) => x.pp.uid === t.uid);
+      if (!rp) continue;
+      const m = rp.mods[t.mi];
+      const sim = moduleSim(m.type);
+      if (!sim.touch) continue;
+      const ctx: TouchCtx = {
+        ...this.tickCtx(rp, t.mi, f),
+        blocked: (q) => firstOverlap(q, this.world) !== null,
+        mark: (key) => now.includes(key) || now.push(key),
+      };
+      sim.touch(m, ctx, r, t, !st.inside.includes(t.key));
+    }
+    st.inside = now;
+  }
+
+  /** Rebuild this frame's solids, hazards and triggers from all props (and projectile patches). */
   private buildProps(f: number) {
     this.solids.length = 0;
     this.out.hazards.length = 0;
     this.out.springs.length = 0;
     this.out.winds.length = 0;
+    this.out.triggers!.length = 0;
     for (const rp of this.resolved) rp.mods.forEach((m, mi) => moduleSim(m.type).build?.(m, this.ctx(rp, mi, f), this.out));
+    for (const p of this.projectiles) buildProjectile(p, f, this.out);
   }
 
+  /** Projectile behavior lives in props/ammo.ts; this just wires it to the world. */
   private stepProjectiles(f: number) {
+    if (this.projectiles.length === 0) return;
+    const spawned: Projectile[] = [];
+    const runners = this.runners.map((r) => ({ body: r.body, status: r.status, active: r.alive && !r.finished, safe: this.isSafe(r) }));
+    const w: ProjWorld = {
+      level: this.level,
+      frame: f,
+      solids: this.solids,
+      gravity: this.level.gravity ?? 1,
+      runners,
+      spawn: (p) => spawned.push(makeProjectile(p, f, this.seq++)),
+      emit: (e) => this.events.push(e),
+      kill: (i, owner) => {
+        this.kill(this.runners[i], owner, 'hazard');
+        runners[i].active = false;
+      },
+    };
     const keep: Projectile[] = [];
-    for (const p of this.projectiles) {
-      const spec = AMMO[p.ammo];
-      p.vy += spec.gravity * (this.level.gravity ?? 1) * DT;
-      p.x += p.vx * DT;
-      p.y += p.vy * DT;
-      if (spec.wobble) {
-        const sp = Math.hypot(p.vx, p.vy) || 1;
-        const w = Math.sin((f - p.born) * 0.25) * spec.wobble;
-        p.x += (-p.vy / sp) * w;
-        p.y += (p.vx / sp) * w;
-      }
-      let dead = f - p.born > 60 * 8 || p.x < -16 || p.x > this.level.w * TILE + 16 || p.y > this.level.h * TILE + 16 || p.y < -200;
-      if (!dead && tileAt(this.level, Math.floor(p.x / TILE), Math.floor(p.y / TILE)) === T_SOLID) dead = true;
-      if (!dead && f - p.born > 2 && this.solids.some((s) => pointInRect(p.x, p.y, s))) dead = true;
-      if (!dead) {
-        for (const r of this.runners) {
-          if (r.alive && !r.finished && rectCircle(r.body, p.x, p.y, spec.radius)) {
-            // Shots that reach a runner in the spawn zone pop harmlessly.
-            if (!this.isSafe(r)) this.kill(r, p.owner, 'hazard');
-            dead = true;
-            break;
-          }
-        }
-      }
-      if (dead) this.events.push({ type: 'pop', x: p.x, y: p.y, ammo: p.ammo });
-      else keep.push(p);
-    }
-    this.projectiles = keep;
+    for (const p of this.projectiles) if (stepProjectile(p, w)) keep.push(p);
+    this.projectiles = keep.concat(spawned);
   }
 
   drainEvents(): GameEvent[] {

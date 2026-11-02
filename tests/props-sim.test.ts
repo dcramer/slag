@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
 import { generateLevel } from '../src/gen/level';
-import { ARCHETYPE_WEIGHTS, generateProp } from '../src/gen/props';
+import { ARCHETYPE_WEIGHTS, DEMOLISH, generateProp } from '../src/gen/props';
 import { canPlace, footprintCells, type PlacedProp, resolveProp } from '../src/sim/props';
 import { RunWorld } from '../src/sim/run';
 import { NO_INPUT } from '../src/sim/types';
@@ -11,7 +11,7 @@ describe('prop runtime', () => {
     // Attachments need suitable exposed faces (e.g. long ceiling undersides); try a few levels.
     const levels = [5, 6, 7, 8, 9, 10].map((s) => generateLevel(s));
     for (const [k] of ARCHETYPE_WEIGHTS) {
-      if (k === 'bomb') continue;
+      if (DEMOLISH.has(k)) continue;
       for (let rot = 0; rot < 4; rot++) {
         const def = generateProp(new Rng(rot + k.length * 7), k, 'x');
         let placed: PlacedProp | null = null;
@@ -38,8 +38,11 @@ describe('prop runtime', () => {
   });
 
   it('a tracking crossbow aimed at a runner kills them and credits the owner', () => {
-    // A classic-size, normal-gravity level (the profile would otherwise roll size/gravity from the seed).
-    const level = generateLevel(5, undefined, { size: 'classic', gravity: 1 });
+    // A flat floor at the spawn row: what's under test is the aim, not whether this seed's terrain leaves a clear shot.
+    const base = generateLevel(5, undefined, { size: 'classic', gravity: 1 });
+    const tiles = new Uint8Array(base.w * base.h);
+    for (let y = base.spawn.ty + 1; y < base.h; y++) tiles.fill(1, y * base.w, (y + 1) * base.w);
+    const level = { ...base, tiles, setPieces: [] };
     // Find a launcher def that tracks.
     let def = null;
     for (let i = 0; i < 500 && !def; i++) {

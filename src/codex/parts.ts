@@ -1,5 +1,5 @@
 import { type Cell, normalizeCells, type Vec } from '../core/geom';
-import { type Ammo, type Material, type MetalStyle, type Module, type Motion, moduleSim, type PropDef, type PropStyle, type Trim } from '../sim/props';
+import { AMMO, type Ammo, type Material, type MetalStyle, type Module, type Motion, moduleSim, type PropDef, type PropStyle, type Trim } from '../sim/props';
 
 /**
  * The codex "parts" catalog: every building block in isolation, with fixed
@@ -28,7 +28,7 @@ function style(over: Partial<PropStyle> = {}): PropStyle {
   return { metal: 'steel', trim: 'rivets', hue: 20, glowHue: 190, woodHue: 28, ...over };
 }
 
-function def(name: string, modules: Module[], opts: { style?: Partial<PropStyle>; motion?: Motion } = {}): PropDef {
+function def(name: string, modules: Module[], opts: { style?: Partial<PropStyle>; motion?: Motion; footprint?: Cell[] } = {}): PropDef {
   const cells = new Map<string, Cell>();
   for (const m of modules) for (const cell of moduleSim(m.type).anchors(m)) cells.set(`${cell[0]},${cell[1]}`, cell);
   return {
@@ -40,7 +40,7 @@ function def(name: string, modules: Module[], opts: { style?: Partial<PropStyle>
     style: style(opts.style),
     motion: opts.motion ?? { type: 'none' },
     modules,
-    footprint: normalizeCells([...cells.values()]),
+    footprint: opts.footprint ?? normalizeCells([...cells.values()]),
   };
 }
 
@@ -72,6 +72,14 @@ const LAUNCHER_NOTES: Record<string, [Ammo, string]> = {
   totem: ['fireball', 'Wobbly, glowing fireballs; often fans out.'],
   turret: ['plasma', 'Rapid bursts of plasma.'],
   thrower: ['shuriken', 'Spinning stars, sometimes several at once.'],
+  rocket: ['seeker', 'Slow homing missiles. Lure them into walls.'],
+  glaive: ['boomerang', 'Throws a boomerang that comes back along the same line.'],
+  gumball: ['rubber', 'Lobs bouncy balls that shove you (not lethal).'],
+  mortar: ['cluster', 'Shells that burst into a fan of shrapnel at the top of their arc.'],
+  gooper: ['goo', 'Goo globs: slow you on a hit, coat walls and floors in slime.'],
+  cryo: ['frost', 'Frost shards: freeze you briefly, glaze surfaces with ice.'],
+  prism: ['ricochet', 'Bolts that bank off walls up to three times.'],
+  hangar: ['glider', 'Launches gliders you can ride. They sink under you.'],
 };
 
 export const PROJECTILE_NOTES: Record<Ammo, string> = {
@@ -81,6 +89,15 @@ export const PROJECTILE_NOTES: Record<Ammo, string> = {
   fireball: 'Slow, wobbles side to side, glows.',
   plasma: 'Fast glowing bolt.',
   shuriken: 'Spins, slight drop.',
+  seeker: 'Homing: slow, turns toward the nearest runner a little each frame. Telegraphed by its red eye.',
+  boomerang: 'Flies out, stops, and comes back through its thrower.',
+  rubber: 'Bounces off walls and floors (five times). A hit shoves you instead of killing.',
+  cluster: 'Lobbed shell that splits into five pieces of shrapnel.',
+  shrapnel: 'Short-lived fragment from a cluster shell.',
+  goo: 'Not lethal: slows you for a couple of seconds, or sticks to terrain as a slime coat.',
+  frost: 'Not lethal: freezes you solid for a moment, or glazes terrain with ice.',
+  ricochet: 'Fast bolt that reflects off walls up to three times.',
+  glider: 'Not a bullet: a flying plank you can ride. Flies level, then sinks, faster with a rider.',
 };
 
 export function partGroups(): PartGroup[] {
@@ -194,11 +211,11 @@ export function partGroups(): PartGroup[] {
     {
       id: 'launchers',
       title: 'Launchers',
-      blurb: 'Fire projectiles on a schedule. Aim can be fixed, sweeping, or tracking the nearest runner.',
+      blurb: 'Fire projectiles on a schedule. Each one states how it aims: Fixed, Sweeps or Tracks.',
       entries: [
         ...Object.entries(LAUNCHER_NOTES).map(([styleName, [ammo, note]]) => ({
           title: styleName,
-          note,
+          note: `Fixed. ${note}`,
           def: def(styleName, [
             body([[0, 0]], styleName === 'crossbow' || styleName === 'totem' ? 'wood' : 'metal'),
             {
@@ -206,7 +223,7 @@ export function partGroups(): PartGroup[] {
               style: styleName as 'crossbow',
               ammo,
               at: c(),
-              angle: ammo === 'cannonball' ? -0.5 : 0,
+              angle: AMMO[ammo].gravity > 200 ? -0.5 : 0,
               aim: 'fixed',
               sweep: 0,
               sweepPeriod: 200,
@@ -219,8 +236,30 @@ export function partGroups(): PartGroup[] {
           ]),
         })),
         {
+          title: 'tracking aim',
+          note: 'Tracks. Red sensor eye: turns toward runners within 60° of its facing.',
+          def: def('track', [
+            body([[0, 0]], 'wood'),
+            {
+              type: 'launcher',
+              style: 'crossbow',
+              ammo: 'bolt',
+              at: c(),
+              angle: 0,
+              aim: 'track',
+              sweep: 0,
+              sweepPeriod: 200,
+              interval: 90,
+              burst: 1,
+              spread: 1,
+              spreadAngle: 0.25,
+              speed: 220,
+            },
+          ]),
+        },
+        {
           title: 'sweeping aim',
-          note: 'Aim oscillates back and forth.',
+          note: 'Sweeps. Aim swings back and forth on a timer.',
           def: def('sweep', [
             body([[0, 0]]),
             {
@@ -303,7 +342,193 @@ export function partGroups(): PartGroup[] {
           note: 'Steady wind along its column: lifts you and lets you float at the top.',
           def: def('fan', [body([[0, 0]]), { type: 'fan', at: c(), angle: UP, length: 4, strength: 2200 }]),
         },
-        { title: 'bomb', note: 'Detonates where you place it, clearing terrain and props.', def: def('bomb', [{ type: 'bomb', radius: 2.5 }]) },
+      ],
+    },
+    {
+      id: 'movers',
+      title: 'Movers & fields',
+      blurb: 'Things that move you rather than kill you. Every one has an upside and a catch.',
+      entries: [
+        {
+          title: 'warp pads',
+          note: 'In one, out the other, speed intact.',
+          def: def('portal', [{ type: 'portal', a: c(0, 0), b: c(4, 0) }]),
+        },
+        { title: 'bumper', note: 'Kicks you away from its center.', def: def('bumper', [{ type: 'bumper', at: c(), radius: 0.55, power: 420 }]) },
+        {
+          title: 'gravity well',
+          note: 'Pulls you toward its core.',
+          def: def('well', [body([[0, 0]]), { type: 'magnet', at: c(), radius: 2.6, strength: 1200, polarity: 1, on: 0, off: 0, warn: 30 }], {
+            style: { glowHue: 275 },
+          }),
+        },
+        {
+          title: 'repulsor',
+          note: 'Pushes you away; this one pulses.',
+          def: def('repulsor', [body([[0, 0]]), { type: 'magnet', at: c(), radius: 2.6, strength: 1500, polarity: -1, on: 80, off: 60, warn: 30 }]),
+        },
+        {
+          title: 'web',
+          note: 'Catches falls; slows everything.',
+          def: def('web', [
+            {
+              type: 'web',
+              cells: [
+                [0, 0],
+                [1, 0],
+                [0, 1],
+                [1, 1],
+              ] as Cell[],
+              drag: 0.25,
+            },
+          ]),
+        },
+        {
+          title: 'wheel',
+          note: 'Platforms you ride around a hub.',
+          def: def(
+            'wheel',
+            [
+              {
+                type: 'rotor',
+                look: 'cog',
+                support: 'none',
+                mastX: 0,
+                hub: c(2, 2),
+                arm: 2,
+                count: 3,
+                angle0: 0,
+                period: 300,
+                swing: 0,
+                dir: 1,
+                width: 1.6,
+                thick: 0.5,
+                material: 'metal',
+                seed: 1,
+              },
+            ],
+            {
+              footprint: [
+                [0, 0],
+                [4, 4],
+              ],
+            },
+          ),
+        },
+      ],
+    },
+    {
+      id: 'triggered',
+      title: 'Timed & triggered',
+      blurb: 'Blocks on a clock and traps that wait for you. Each has a visible tell before it changes.',
+      entries: [
+        {
+          title: 'blink blocks',
+          note: 'Solid on a timer; flicker first.',
+          def: def('blink', [
+            {
+              type: 'phase',
+              cells: [
+                [0, 0],
+                [1, 0],
+                [2, 0],
+              ] as Cell[],
+              on: 100,
+              off: 70,
+              offset: 0,
+            },
+          ]),
+        },
+        {
+          title: 'blink pair',
+          note: 'Two sets take turns.',
+          def: def('blinkpair', [
+            {
+              type: 'phase',
+              cells: [
+                [0, 0],
+                [1, 0],
+              ] as Cell[],
+              on: 90,
+              off: 90,
+              offset: 0,
+            },
+            {
+              type: 'phase',
+              cells: [
+                [2, 0],
+                [3, 0],
+              ] as Cell[],
+              on: 90,
+              off: 90,
+              offset: 90,
+            },
+          ]),
+        },
+        {
+          title: 'dropstone',
+          note: 'Slams when you pass underneath.',
+          def: def('dropper', [
+            {
+              type: 'dropper',
+              cells: [
+                [0, 0],
+                [1, 0],
+                [0, 1],
+                [1, 1],
+              ] as Cell[],
+              angle: R,
+              reach: 3,
+              warn: 20,
+              rest: 60,
+            },
+          ]),
+        },
+        {
+          title: 'snap trap',
+          note: 'Spikes pop when you step on it.',
+          def: {
+            ...def('snapper', [
+              {
+                type: 'snapper',
+                cells: [
+                  [0, 0],
+                  [1, 0],
+                ] as Cell[],
+                angle: UP,
+                warn: 18,
+                up: 30,
+                cool: 60,
+              },
+            ]),
+            mount: 'face' as const,
+          },
+        },
+      ],
+    },
+    {
+      id: 'demolition',
+      title: 'Demolition',
+      blurb: 'Detonated, not built. Each blast has a shape and a target; the placement preview shows exactly which cells and props it takes.',
+      entries: [
+        { title: 'bomb', note: 'Disk: terrain and props.', def: def('bomb', [{ type: 'bomb', radius: 2.5, look: 'bomb' }]) },
+        { title: 'EMP', note: 'Disk: props only, terrain untouched.', def: def('emp', [{ type: 'bomb', radius: 3.5, target: 'props', look: 'emp' }]) },
+        {
+          title: 'drill',
+          note: 'Bores a tunnel the way it faces.',
+          def: def('drill', [{ type: 'bomb', radius: 7, shape: 'line', target: 'terrain', look: 'drill' }]),
+        },
+        { title: 'cross charge', note: 'Blasts a plus shape.', def: def('cross', [{ type: 'bomb', radius: 4, shape: 'cross', look: 'charge' }]) },
+        {
+          title: 'ring charge',
+          note: 'Hollow ring: the middle survives.',
+          def: def('ring', [{ type: 'bomb', radius: 3.2, shape: 'ring', width: 1.3, look: 'charge' }]),
+        },
+        {
+          title: 'time bomb',
+          note: 'Goes off at race start, after everyone places.',
+          def: def('timebomb', [{ type: 'bomb', radius: 2.5, look: 'clock', delay: true }]),
+        },
       ],
     },
     {

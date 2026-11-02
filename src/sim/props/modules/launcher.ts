@@ -4,6 +4,8 @@ import { AMMO, type ModuleOf } from '../types';
 
 type Launcher = ModuleOf<'launcher'>;
 const TRACK_TURN = 0.045; // rad/frame
+/** Trackers only notice runners within ±60° of the way they're mounted, so they read as "watching that side". */
+export const TRACK_CONE = Math.PI / 3;
 
 export function launcherAngle(m: Launcher, f: number, phase: number): number {
   return m.aim === 'sweep' ? m.angle + m.sweep * Math.sin(Math.PI * 2 * (f / m.sweepPeriod + phase)) : m.angle;
@@ -28,7 +30,7 @@ export function ballisticAngle(dx: number, dy: number, speed: number, gravity: n
   return dx >= 0 ? -th : Math.PI + th;
 }
 
-/** Turn toward the nearest active runner within a 100° cone of the mount's facing. */
+/** Turn toward the nearest active runner within TRACK_CONE of the mount's facing. */
 function trackAim(cur: number, x: number, y: number, m: Launcher, runners: readonly RunnerView[], gravityScale: number): number {
   let best: [number, number] | null = null;
   let bestD = Infinity;
@@ -37,7 +39,7 @@ function trackAim(cur: number, x: number, y: number, m: Launcher, runners: reado
     const tx = r.x + r.w / 2;
     const ty = r.y + r.h / 2;
     const d = (tx - x) ** 2 + (ty - y) ** 2;
-    if (Math.abs(angleDiff(Math.atan2(ty - y, tx - x), m.angle)) < 1.75 && d < bestD) {
+    if (Math.abs(angleDiff(Math.atan2(ty - y, tx - x), m.angle)) < TRACK_CONE && d < bestD) {
       bestD = d;
       best = [tx, ty];
     }

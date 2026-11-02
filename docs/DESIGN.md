@@ -47,13 +47,17 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - **Grab props (planned):**
   - **Rope:** hangs from the ceiling. You grab it automatically when you touch it in the air (with a short cooldown after letting go, so you don't instantly re-grab). Left and right pump the swing; jump lets go and keeps the swing's momentum.
   - **Blast barrel:** you're sucked in on contact and it rotates (or aims at a fixed angle). Jump fires you out after a short delay along the barrel's direction. It's an original take on the genre's barrel cannon.
-- **Launcher aim is legible:** most launchers face a fixed direction; some sweep and a few track. Projectiles never home. A tracker shows a visible sensor and says so in its name.
 - Props are assembled from **parts**: blocks of various materials, spikes, swinging heads, launchers, emitters, motion, springs, fans and bombs. Every number is rolled, and names come from the rolled stats.
 - Every crate contains at least one building piece and one hazard. Crate contents are tied to the level seed and round, but the card order is shuffled with a per-match salt the host rolls, so it differs every game.
 - **Attachments** (spike strips, ice coats, slime coats) must mount flush on an exposed face of a solid block, and rotation picks the face.
   - Ice makes floors slippery and walls slick (no wall jump).
   - Slime makes floors slow and walls sticky (you cling).
-- Bombs clear terrain and props. Attachments fall off when their host block is destroyed.
+- Bombs clear terrain and/or props depending on their kind. Attachments fall off when their host block is destroyed.
+- **Movers and traps with a catch.** Warp pads (keep your velocity; misdirection), bumpers (aimable kick), gravity wells / repulsors (bend jumps and drag you along the ground), webs (catch falls, slow you), blink blocks (solid on a timer, pairs alternate, never reappear inside you), cog wheels (ride platforms), dropstones (slam when you pass under, ride them back up) and snap traps (face-mounted spikes that pop when you linger). Every timed or triggered part shows a tell first.
+- **Status effects are plain, short and visible**: frozen (no control, ~0.8 s, ice block) and slowed (capped speed and jumps, ~2 s, goo drips). The spawn zone shields you from them, and from fields and kicks, as it does from hazards.
+- **Launcher aim is legible.** Aim rolls fixed 7 : sweep 2 : track 1.5, so most launchers hold a fixed direction. Trackers only watch ±60° of their mount, always carry a tracking word in their name, show a red sensor eye, and crate cards and the codex state the aim (Fixed, Sweeps, Tracks).
+- **Projectiles vary.** Only one kind homes: the seeker, which is rare, slower than a run, has a blinking red eye and is tagged HOMING on its card. The rest: boomerangs, rubber balls (bounce; shove, don't kill), cluster shells (split at the top of the arc), goo and frost (non-lethal; slow or freeze you, coat open terrain in slime or ice for a few seconds, never inside a protected zone or a one-tile gap), ricochets (bank off walls) and **gliders** (a launcher fires one-way planks you can ride: they fly level, then sink, faster the more riders they carry, and can never pin you).
+- **Demolition variants**: bomb (disk, everything), EMP (props only), drill (terrain-only bore in the rotation direction, leaving props alone), cross and ring charges, and time bombs (go off as the race starts, so they catch whatever was placed that round; a charge caught in an earlier blast is defused). The placement ghost shows every affected cell and outlines the props that will go.
 - **Updrafts are steady**: inside a fan column you rise or are pushed at a constant speed, standing in a column never stops you from jumping, and the visuals match exactly when it pushes.
 
 ## Rules ("level settings", set by the host)
