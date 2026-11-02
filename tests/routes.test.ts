@@ -7,8 +7,10 @@ import { easyGap, hopGap, rollChallenges } from '../src/gen/level/sculptors/comm
 import { LEVEL_H, LEVEL_W } from '../src/sim/constants';
 import { type Level, T_ONEWAY, T_SOLID } from '../src/sim/level';
 import { THEME_IDS } from '../src/themes';
+import { SLOW, sample } from './lib/tier';
 
 const seedAt = (i: number) => (i * 2654435761 + 4242) >>> 0;
+const SEEDS = sample(2, 12);
 
 /** A flat floor from pocket to pocket; `build` adds to it. */
 function floorLevel(build: (tiles: Uint8Array, row: number) => void = () => {}): Level {
@@ -88,7 +90,7 @@ describe('levels are mostly open', () => {
     let measured = 0;
     let sculptedClosed = 0;
     for (const theme of THEME_IDS) {
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < SEEDS; i++) {
         const l = generateLevel(seedAt(i), theme);
         const info = { ...lastGenInfo };
         expect(info.fallback, `${theme} ${l.seed}`).toBe(false);
@@ -100,8 +102,8 @@ describe('levels are mostly open', () => {
         measured++;
       }
     }
-    // The rule is doing work: most sculpts need the lane pass, so this isn't vacuous.
-    expect(sculptedClosed / measured).toBeGreaterThan(0.3);
+    // A share, so only a full sweep can show it: the rule does work, most sculpts need the lane pass.
+    if (SLOW) expect(sculptedClosed / measured).toBeGreaterThan(0.3);
   });
 
   it('isAcceptable enforces it on a real level', { timeout: 60_000 }, () => {

@@ -20,6 +20,7 @@ import type { ThemeId } from './themes';
  *   ?route=zigzag       force the route shape (ltr|climb|descent|zigzag)
  *   ?density=0.9        force terrain density (0..1)
  *   ?gravity=0.7        force world gravity scale
+ *   ?debug=1            open the dev overlay (see installDevtoolsHooks)
  */
 export interface SlagDebug {
   match: Match;
@@ -107,6 +108,7 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
     match.forceProfile = force;
     match.newLevel(match.seed);
   }
+  installDevtoolsHooks(api, q.get('debug'));
   const players = Number(q.get('players') ?? 0);
   const race = q.get('race');
   if (race) {
@@ -115,4 +117,30 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
     api.race(kinds, Number(q.get('propseed') ?? 1));
   } else if (players) api.quickStart(players);
   return api;
+}
+
+/**
+ * Dev overlay (src/devtools). A production page does nothing here unless its URL asks: `?debug=1`
+ * opens the overlay, `?debug=perf` installs the profiler (window.slagPerf) for tools/perf.ts without
+ * showing it, `?debug=load` only marks `slag:first-frame`. `next dev`, or any `?debug`, also toggles
+ * the overlay with ` (backquote). The dynamic import keeps it out of what players download.
+ */
+function installDevtoolsHooks(api: SlagDebug, mode: string | null) {
+  if (!mode && process.env.NODE_ENV === 'production') return;
+  const { renderer } = api;
+  const render = renderer.render;
+  let first = true;
+  // A flag, not an unwrap: the profiler may wrap render on top of this before the first frame.
+  renderer.render = (...a) => {
+    render.apply(renderer, a);
+    if (first) performance.mark('slag:first-frame');
+    first = false;
+  };
+  const devtools = () => import('./devtools/overlay').then(({ installDevtools }) => installDevtools(api));
+  if (mode === 'perf') void devtools();
+  if (mode === '1') void devtools().then((d) => d.show(true));
+  window.addEventListener('keydown', (e) => {
+    if (e.code !== 'Backquote' || e.repeat || e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+    void devtools().then((d) => d.show());
+  });
 }

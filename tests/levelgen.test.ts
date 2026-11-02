@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { canPlaceBridge, generateLevel, lastGenInfo, MAX_BRIDGES, withBridges } from '../src/gen/level';
 import { analyzeReach, isStandable } from '../src/sim/reach';
+import { sample, SLOW } from './lib/tier';
 
 describe('level generation', () => {
   it('is deterministic', () => {
@@ -14,7 +15,7 @@ describe('level generation', () => {
   it('produces policy-solvable, non-fallback levels for many seeds', { timeout: 240_000 }, () => {
     const styles = new Set<string>();
     let fallbacks = 0;
-    for (let i = 0; i < 150; i++) {
+    for (let i = 0; i < sample(12, 150); i++) {
       const seed = (i * 2654435761) >>> 0;
       const l = generateLevel(seed);
       const { bridges, fallback } = lastGenInfo;
@@ -27,6 +28,6 @@ describe('level generation', () => {
       expect(analyzeReach(bridges.length ? withBridges(l, bridges) : l).goalReached).toBe(true);
     }
     expect(fallbacks).toBe(0);
-    expect(styles.size).toBeGreaterThanOrEqual(12);
-  }); // 150 full generations: generous timeout for loaded machines
+    if (SLOW) expect(styles.size).toBeGreaterThanOrEqual(12);
+  }); // 150 full generations in the slow tier: generous timeout for loaded machines
 });

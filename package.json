@@ -13,10 +13,12 @@
     "format": "oxlint --fix && oxfmt src tests tools app next.config.ts vitest.config.ts",
     "format:check": "oxfmt --check src tests tools app next.config.ts vitest.config.ts",
     "test": "vitest run",
-    "check:fast": "pnpm typecheck && pnpm lint && pnpm format:check",
+    "test:slow": "vitest run --mode slow",
+    "check:fast": "tsc --noEmit && oxlint && pnpm format:check",
     "check": "pnpm check:fast && pnpm test",
     "shot": "tsx tools/shot.ts",
-    "level": "tsx tools/level.ts"
+    "level": "tsx tools/level.ts",
+    "perf": "tsx tools/perf.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

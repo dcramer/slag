@@ -11,4 +11,4 @@ Every generator is deterministic given its seed: same seed (and theme), same out
 - Looks (`theme/presets.ts`, `RECIPES`): palette, sky, skyline, terrain material, liquid, decor, grade per theme. A theme must read as itself at a glance.
 - Player prop archetypes (`props.ts`): `RECIPES` + `ARCHETYPE_WEIGHTS`. Every crate has at least one building piece and one hazard.
 
-Verify: `pnpm vitest run tests/worldgen.test.ts tests/levelgen.test.ts tests/setpieces.test.ts` (slow, ~1–2 min), `pnpm level <seed> --theme <t>` for the ASCII map, `pnpm level --stats 50` for fallbacks, timing and `needBridges`, and `pnpm shot levels --themes all` to look at the result.
+Verify: `pnpm test:slow` (required for any change here, ~35 s), `pnpm level <seed> --theme <t>` for the ASCII map, `pnpm level --stats 50` for fallbacks, timing and `needBridges`, and `pnpm shot levels --themes all` to look at the result.

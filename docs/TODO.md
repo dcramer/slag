@@ -2,23 +2,11 @@
 
 These are the open work items, ordered by priority. Each one is sized for one agent. Several have unfinished work on a `wip/*` branch: those agents were stopped mid-task, and their work was saved as-is, **unreviewed**. Read the branch diff before reusing it. Every `wip/*` branch is behind `main`, so merge `origin/main` first.
 
-Run **at most 3–4 agents on one 4-core machine**. At about 8 agents the load hit ~20 and every `pnpm check` took minutes. While iterating, run only the test files you touch (`pnpm vitest run tests/x.test.ts`) plus `pnpm check:fast`. Run the full `pnpm check` once, before committing. Test behavior and invariants, not every tunable.
+Limit agents by file overlap first. On a small machine, also run at most 3–4 at once. While iterating, run only the test files you touch (`pnpm vitest run tests/x.test.ts`) plus `pnpm check:fast`. Run the full `pnpm check` once, before committing. Test behavior and invariants, not every tunable.
 
 Design intent for everything below is in `docs/DESIGN.md`.
 
 ---
-
-## 1. Iteration speed (do this first)
-**Branch:** `wip/devtools-perf` (~1k lines, unreviewed: dev overlay, perf harness and optimizations in progress).
-
-- Split the tests into tiers:
-  - `pnpm check` runs typecheck, lint, format and **fast** tests only, under ~20 s of tests on an idle machine.
-  - The heavy generator and statistical suites move to `pnpm test:slow`, which runs in CI and whenever you touch `src/gen` or `src/sim/reach.ts`. Today that means levelgen (150 seeds), setpieces (64 levels), the match bot and the worldgen sweeps.
-  - Cut seed counts wherever a smaller sample still proves the invariant.
-- `pnpm shot` must not rebuild Next unnecessarily, and it must **exit** after writing its PNGs. Today it hangs and agents have to kill it.
-- Measure what type-aware lint (tsgolint) costs in `check:fast`. If it dominates, cache it or make it CI-only.
-- `typescript/no-unnecessary-type-assertion` is off because its autofix broke `tsc`. Re-enable it only if that bug is fixed.
-- Update the AGENTS.md commands table and the Definition of done to match.
 
 ## 2. Online play on Vercel (decision needed)
 **Branch:** `wip/netcode-cloudflare` (+5 commits). It contains:
@@ -117,12 +105,10 @@ The rest of this item is the home screen, the first and biggest piece of it. The
 - **The home screen is the quality bar for the whole game.** The owner loves how it looks and that it fills the full window height. Keep its look exactly (drips, embers, character stage), and bring the lobby, menus and in-game screens up to it, not the other way round. Record that bar in `docs/ART.md`.
 - Do this after items 2 and 3, which both change `src/game-client.ts`.
 
-## 12. Max rounds
-A match ends at the target score **or** a round limit, so a match that nobody can win still finishes.
-
-- Add `rules.maxRounds` beside `rules.targetScore`, set in the lobby like the other rules. Default it high enough that normal matches end on score.
-- At the limit, the top score wins and ties are joint winners. If nobody has any points, say so on the victory screen instead of naming a winner.
-- The HUD shows `ROUND 7/20`, and the score screen states both win conditions.
-
 ## 13. Playtest and tune the new parts
 Nothing from item 4 has been played by hand, so the tuning is test-level only: magnet drift, bumper power, slow and freeze durations. Dropstones and crushers stop only on terrain, so they pass through placed blocks; decide whether that's right.
+
+Also confirm the round limit default of 40. It comes from a Monte Carlo model of scoring with a fixed finish rate, and real finish rates probably fall as props pile up. An unwinnable match takes all 40 rounds to end.
+
+## 14. Clear the lint warnings
+`pnpm check` prints 7 warnings, in `src/ui/touch/overlay.ts`, `src/ui/touch/device.ts`, `src/input/input.ts`, `src/render/props/modules/vehicle.ts` and `src/audio/system.ts`. AGENTS.md treats warnings as real findings. Do it with or after item 6, which also touches the touch code.

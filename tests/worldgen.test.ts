@@ -6,8 +6,9 @@ import { LEVEL_H, LEVEL_W } from '../src/sim/constants';
 import { isProtected, type Level, T_EMPTY, T_ONEWAY, T_SOLID } from '../src/sim/level';
 import { analyzeReach, isStandable } from '../src/sim/reach';
 import { THEME_IDS } from '../src/themes';
+import { sample, SLOW } from './lib/tier';
 
-const SEEDS = 30;
+const SEEDS = sample(2, 30);
 const seedAt = (i: number) => (i * 2654435761 + 12345) >>> 0;
 
 /** Independent policy check: solvable bare, or with the reported ≤2 bridges re-verified here. */
@@ -24,13 +25,17 @@ function checkPolicy(l: Level, bridges: { x: number; y: number }[]): boolean {
 describe('worldgen per theme', () => {
   let bridged = 0;
   let total = 0;
+  const styles = new Map<string, Set<string>>();
   for (const theme of THEME_IDS) {
     it(`${theme}: deterministic, valid, policy-solvable, themed`, { timeout: 180_000 }, () => {
       let themeBridged = 0;
+      const themeStyles = new Set<string>();
+      styles.set(theme, themeStyles);
       for (let i = 0; i < SEEDS; i++) {
         const seed = seedAt(i);
         const l = generateLevel(seed, theme);
         const info = { ...lastGenInfo };
+        themeStyles.add(l.style);
         const again = generateLevel(seed, theme);
         expect(Array.from(again.tiles), `${theme} seed ${seed} determinism`).toEqual(Array.from(l.tiles));
         expect(again.spawn).toEqual(l.spawn);
@@ -55,25 +60,24 @@ describe('worldgen per theme', () => {
       // Many levels need props, but every theme keeps some prop-free ones. The level profile varies
       // this on purpose (propNeed knob; tall levels lean on climbing instead), so the floor is lower
       // than the classic-only ~70-85%.
-      expect(themeBridged).toBeGreaterThan(SEEDS * 0.3);
-      expect(themeBridged).toBeLessThan(SEEDS);
+      if (SLOW) {
+        expect(themeBridged).toBeGreaterThan(SEEDS * 0.3);
+        expect(themeBridged).toBeLessThan(SEEDS);
+      }
       bridged += themeBridged;
       total += SEEDS;
     });
   }
-  it('overall share of levels needing bridges is in a sane band', () => {
+  it.runIf(SLOW)('overall share of levels needing bridges is in a sane band', () => {
     expect(total).toBe(SEEDS * THEME_IDS.length);
     const share = bridged / total;
     expect(share).toBeGreaterThan(0.5);
     expect(share).toBeLessThan(0.92);
   });
 
-  it('themes have several sub-styles each', { timeout: 180_000 }, () => {
-    for (const theme of THEME_IDS) {
-      const styles = new Set<string>();
-      for (let i = 0; i < 24; i++) styles.add(generateLevel(seedAt(i + 100), theme).style);
-      expect(styles.size, theme).toBeGreaterThanOrEqual(2);
-    }
+  // Reuses the sweep's levels: 192 extra generations proved nothing the 240 above don't.
+  it.runIf(SLOW)('themes have several sub-styles each', () => {
+    for (const theme of THEME_IDS) expect(styles.get(theme)?.size, theme).toBeGreaterThanOrEqual(2);
   });
 });
 

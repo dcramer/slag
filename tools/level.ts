@@ -62,6 +62,8 @@ if (args.includes('--stats')) {
   const themes = themeOpt ? [themeOpt] : THEME_IDS;
   const rows: Record<string, unknown>[] = [];
   const total = { n: 0, ms: 0, bridged: 0, fallbacks: 0, attempts: 0, closed: 0, openAsSculpted: 0 };
+  // CPU time is steadier than wall time on a shared machine; both are reported.
+  const cpu0 = process.cpuUsage();
   for (const th of themes) {
     const styles: Record<string, number> = {};
     let ms = 0;
@@ -131,9 +133,11 @@ if (args.includes('--stats')) {
         solidShare: +(a.solid / a.n).toFixed(2),
       })),
   );
+  const cpu = process.cpuUsage(cpu0);
   console.log({
     levels: total.n,
     msPerLevel: +(total.ms / total.n).toFixed(1),
+    cpuMsPerLevel: +((cpu.user + cpu.system) / 1000 / total.n).toFixed(1),
     needBridges: `${((total.bridged / total.n) * 100).toFixed(0)}%`,
     fallbacks: total.fallbacks,
     attempts: +(total.attempts / total.n).toFixed(2),

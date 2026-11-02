@@ -420,6 +420,7 @@ export class SettingsMenu extends Overlay {
 
 const RULE_LABELS: Record<keyof MatchRules, string> = {
   targetScore: 'Points to Win',
+  maxRounds: 'Round Limit',
   pickSeconds: 'Pick Timer',
   placeSeconds: 'Place Timer',
   raceSeconds: 'Race Timer',
