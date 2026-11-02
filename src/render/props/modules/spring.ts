@@ -1,46 +1,44 @@
-import { css, type HSL } from '../../../core/color';
+import type { HSL } from '../../../core/color';
 import type { Vec } from '../../../core/geom';
 import type { Module, ModuleOf, PropStyle } from '../../../sim/props';
 import { inkSpring } from '../../ink-parts';
-import { stroke } from '../../ink';
-import { INK, path, poly } from '../../ink-props';
-import { circle, glowDot, type RC } from '../../kit';
+import { boxPts, dot, part, path, tick } from '../../ink-props';
+import { glowDot, type RC } from '../../kit';
 import { defineArt, type PropDrawOpts } from '../common';
 
 type M<T extends Module['type']> = ModuleOf<T>;
 
-function drawSpring(rc: RC, m: M<'spring'>, off: Vec, st: PropStyle, o: PropDrawOpts, pup: boolean) {
+const TICKING: HSL = { h: 40, s: 30, l: 90 };
+
+/** The Bedspring's top: a scrap of striped mattress ticking over the plate, tufted with one button. */
+function ticking(s: CanvasRenderingContext2D, top: number) {
+  const pad = boxPts(-7.6, top - 4.4, 15.2, 3.8, 1.4, 7, 0.3);
+  part(s, pad, TICKING, 7, { depth: 0.5, thin: 0.4, thick: 1, shade: -14 });
+  s.save();
+  path(s, pad);
+  s.clip();
+  for (let x = -7; x < 8; x += 2.4) tick(s, x, top - 4.6, x - 0.3, top - 0.4, 0.55, x * 3, '#3d64a8');
+  s.restore();
+  // The button pulls the ticking in: two creases into it.
+  tick(s, -2.2, top - 3.4, -0.5, top - 2.6, 0.35, 8, 'rgba(18,11,8,0.6)');
+  tick(s, 2.2, top - 3.4, 0.5, top - 2.6, 0.35, 9, 'rgba(18,11,8,0.6)');
+  dot(s, 0, top - 2.5, 0.65, 10, '#e8e2d4');
+}
+
+function drawSpring(rc: RC, m: M<'spring'>, off: Vec, st: PropStyle, o: PropDrawOpts, bed: boolean) {
   const since = o.state ? rc.frame - o.state.lastFire : 99;
   const pop = since < 10 ? Math.sin((since / 10) * Math.PI) : 0;
   const pad: HSL = { h: st.hue, s: 85, l: 55 };
   inkSpring(rc, [m.at[0] + off[0], m.at[1] + off[1]], m.angle, st.hue, pop, 11);
-  if (pup) {
-    // The Coil Pup: ears up on its top plate, and a tail that wags.
+  if (bed) {
     const s = rc.s;
-    const top = -1 - pop * 6 - 1.8;
     s.save();
     s.translate(m.at[0] + off[0], m.at[1] + off[1]);
     s.rotate(m.angle + Math.PI / 2);
-    for (const ex of [-5.4, -2.2]) {
-      const ear = poly(ex - 1.6, top - 1.6, ex + 0.2, top - 5.4, ex + 1.6, top - 1.6);
-      s.fillStyle = css(pad, -22, 1, 6);
-      path(s, ear);
-      s.fill();
-      s.fillStyle = INK;
-      stroke(s, ear, { w: 0.7, seed: ex, taper: [0.1, 0.1], press: 0.2 });
-    }
-    const wag = Math.sin(rc.t * 14) * 0.6;
-    const tail = poly(7.4, top - 0.4, 9 + wag, top - 2.6, 9.6 + wag * 1.8, top - 4.8);
-    s.fillStyle = INK;
-    stroke(s, tail, { w: 2.2, seed: 3, taper: [0, 0.6], press: 0 });
-    s.fillStyle = css(pad, -10);
-    stroke(s, tail, { w: 1.1, seed: 3, taper: [0, 0.7], press: 0 });
-    s.fillStyle = INK;
-    circle(s, -6.6, top + 0.2, 0.75);
-    circle(s, -3.6, top - 0.6, 0.45);
+    ticking(s, -1 - pop * 6);
     s.restore();
   }
   if (pop > 0) glowDot(rc.g, m.at[0] + off[0], m.at[1] + off[1], 14, pad, pop * 0.5);
 }
 
-defineArt<'spring'>({ type: 'spring', layer: 2, draw: (rc, m, d) => drawSpring(rc, m, d.off, d.style, d.o, d.r.pp.def.name.includes('Pup')) });
+defineArt<'spring'>({ type: 'spring', layer: 2, draw: (rc, m, d) => drawSpring(rc, m, d.off, d.style, d.o, d.r.pp.def.name.includes('Bedspring')) });

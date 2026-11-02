@@ -4,8 +4,8 @@
  * files. The outputs are committed host files; nothing in src/ reads them.
  *
  *   pnpm brand                → icons, then og
- *   pnpm brand icons          → from tools/brand-mark.svg (the master mark): app/icon.svg (plus a
- *                               hand-placed 16 px layer), app/favicon.ico (16/32/48),
+ *   pnpm brand icons          → from the logo's inked S (markSVG in src/ui/screens/logo-art.ts):
+ *                               app/icon.svg (plus a hand-placed 16 px layer), app/favicon.ico (16/32/48),
  *                               app/apple-icon.png (180), public/icons/icon-{192,512}.png,
  *                               public/icons/maskable-512.png
  *   pnpm brand og             → app/opengraph-image.* and app/r/[room]/opengraph-image.* (1200×630,
@@ -23,6 +23,7 @@ import { deflateSync, inflateSync } from 'node:zlib';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright';
+import { markSVG } from '../src/ui/screens/logo-art';
 import { argReader, launchBrowser, startServer, watchdog } from './lib/server';
 
 const argv = process.argv.slice(2);
@@ -31,9 +32,6 @@ const { opt } = argReader(argv);
 const SHOTS = resolve('shots');
 mkdirSync(SHOTS, { recursive: true });
 mkdirSync('public/icons', { recursive: true });
-
-/** The master mark, vector only. `icons` adds the hand-placed 16 px layer and writes app/icon.svg. */
-const MASTER = 'tools/brand-mark.svg';
 
 /** The plate behind the mark on home-screen icons: soot with molten light pooling at the bottom, like the main menu. */
 const PLATE = 'radial-gradient(70% 55% at 50% 100%, rgba(255,106,31,0.5), rgba(184,35,15,0.18) 55%, transparent 80%), linear-gradient(#2b201b, #120b08)';
@@ -77,45 +75,26 @@ async function renderIcon(browser: Browser, spec: IconSpec, markUrl: string): Pr
  */
 const PIXEL_16 = [
   '................',
-  '.....xxxxxxxx...',
-  '....xxxxxxxxxx..',
+  '.....xxxxxx.....',
+  '....xxxxxxxxx...',
+  '...xxxx...xx....',
   '...xxxx.........',
-  '...xxxx.........',
+  '...xxxxxxxx.....',
+  '....xxxxxxxxx...',
+  '.......xxxxxx...',
+  '..xx.....xxxx...',
+  '..xxxxxxxxxxx...',
   '...xxxxxxxxx....',
-  '....xxxxxxxxxx..',
-  '..........xxxx..',
-  '..........xxxx..',
-  '..xxxxxxxxxxxx..',
-  '...xxxxxxxxxx...',
-  '.....xx...x.....',
+  '.....xx..x......',
   '.....xx.........',
   '................',
   '................',
   '................',
 ];
 
-/** White-hot → amber → molten → ember down the glyph, as on the logo. */
-const MOLTEN: [number, [number, number, number]][] = [
-  [0.1, [0xff, 0xf1, 0xb8]],
-  [0.35, [0xff, 0xb0, 0x2e]],
-  [0.62, [0xff, 0x6a, 0x1f]],
-  [0.92, [0xb8, 0x23, 0x0f]],
-];
+/** The logo's three hard cel bands down the glyph: light, middle and deep molten. */
 const INK = '#120b08';
-
-function molten(t: number): string {
-  let c = MOLTEN.at(-1)![1];
-  if (t <= MOLTEN[0][0]) c = MOLTEN[0][1];
-  else
-    for (let i = 1; i < MOLTEN.length; i++) {
-      const [t1, c1] = MOLTEN[i];
-      const [t0, c0] = MOLTEN[i - 1];
-      if (t > t1) continue;
-      c = c0.map((v, k) => Math.round(v + ((c1[k] - v) * (t - t0)) / (t1 - t0))) as [number, number, number];
-      break;
-    }
-  return `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
-}
+const molten = (t: number) => (t < 0.36 ? '#ffc83f' : t < 0.7 ? '#ff7a22' : '#e0471a');
 
 /** The grid as crisp horizontal runs, one path per colour, in a 16-unit space. */
 function pixelLayer(grid: string[]): string {
@@ -145,7 +124,7 @@ function pixelLayer(grid: string[]): string {
  * the query get the vector mark.
  */
 function iconSvg(): string {
-  const master = readFileSync(MASTER, 'utf8');
+  const master = markSVG();
   const style = '<style>.px{display:none}@media (max-width:24px){.px{display:inline}.vec{display:none}}</style>';
   const open = master.indexOf('>', master.indexOf('<svg')) + 1;
   const close = master.lastIndexOf('</svg>');
@@ -333,6 +312,7 @@ async function raceArt(browser: Browser, base: string, pet: () => void): Promise
  * opengraph-image.alt.txt, so there's none; app/site.ts carries alt text where it's set by hand.)
  */
 const CARDS = [
+  // The site card is the title alone; app/site.ts's description travels in the tags beside it.
   { dir: 'app', kicker: null },
   { dir: 'app/r/[room]', kicker: 'Lobby Invite · 1–8 Players' },
 ];
@@ -369,7 +349,7 @@ async function og(browser: Browser) {
       styles: [...document.querySelectorAll('style')].map((s) => s.textContent ?? '').join('\n'),
     }));
     for (const card of CARDS) {
-      const kicker = card.kicker ? brand.replace(/(<div class="kicker">)[^<]*(<\/div>)/, `$1${card.kicker}$2`) : brand;
+      const kicker = card.kicker ? brand.replace(/<\/div>$/, `<div class="kicker">${card.kicker}</div></div>`) : brand;
       await page.setContent(
         `<html><head>${css.map((h) => `<link rel="stylesheet" href="${h}">`).join('')}<style>${styles}</style><style>
           body { margin: 0; width: ${OG_W}px; height: ${OG_H}px; overflow: hidden; background: #0e0806; }
@@ -379,8 +359,11 @@ async function og(browser: Browser) {
               linear-gradient(rgba(14, 8, 6, 0.25), rgba(14, 8, 6, 0) 30%, rgba(14, 8, 6, 0) 70%, rgba(14, 8, 6, 0.35)); }
           .og .brand { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; zoom: 1.3; }
           .og .logo { font-size: 150px; }
-          .og .drips span { animation: none; }
-          .og .kicker { margin: 30px 0 0; color: var(--bone); text-shadow: 0 2px 0 var(--ink); }
+          .og .logo-drip { animation: none; }
+          .og .brand { margin: 0; }
+          .og .kicker { margin: 30px 0 0; display: inline-flex; align-items: center; gap: 10px; font: 800 13px/1 var(--ui);
+            letter-spacing: 0.18em; text-transform: uppercase; color: var(--bone); text-shadow: 0 2px 0 var(--ink); }
+          .og .kicker::before { content: ''; width: 34px; height: 8px; background: var(--tape); border: 2px solid var(--ink); }
         </style></head><body><div class="og">${kicker}</div></body></html>`,
       );
       await page.evaluate(() => document.fonts.ready);

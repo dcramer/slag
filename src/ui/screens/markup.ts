@@ -1,4 +1,5 @@
 import { type Glyph, glyphSVG, type PadButton } from '../glyphs';
+import { logoSVG } from './logo-art';
 
 /**
  * Markup of the DOM screens as plain strings: the main menu, the 404 and
@@ -17,36 +18,13 @@ export const MENU_ITEMS: readonly { id: MenuItemId; title: string; sub: string }
   { id: 'settings', title: 'SETTINGS', sub: 'Audio, Video and Controls' },
 ];
 
-/** Drip lengths under the logo, left to right, in px at the logo's full size. */
-const DRIPS = [26, 14, 34, 18, 30, 12, 24];
-
 /**
- * The logo's outline as a pen line, like the world's ink (docs/ART.md → World art): slow noise pushes
- * the ink layer a few px either way so the edge swells and thins, and a small lean makes it heaviest
- * away from the light, instead of tracing the letters evenly. A blur and a steep alpha curve put a
- * clean edge back. Filter units are CSS px, so the menu's smaller logo (a phone's) gets its own,
- * scaled. Fixed seed: it lands the same on every load. It ships in the logo's markup so it paints
- * before any script; a page without it just shows the even outline.
- */
-const pen = (id: string, k: number) =>
-  `<filter id="${id}" x="-5%" y="-5%" width="110%" height="120%">` +
-  `<feTurbulence type="fractalNoise" baseFrequency="${(0.02 / k).toFixed(4)}" numOctaves="1" seed="11"/>` +
-  `<feDisplacementMap in="SourceGraphic" scale="${7 * k}" xChannelSelector="R" yChannelSelector="G"/>` +
-  `<feOffset dx="${2.5 * k}" dy="${k}"/><feGaussianBlur stdDeviation="${1.2 * k}"/>` +
-  `<feColorMatrix values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 9 -4"/></filter>`;
-const PEN_FILTER = `<svg class="logo-pen" width="0" height="0" aria-hidden="true" focusable="false">${pen('slag-pen', 1)}${pen('slag-pen-s', 0.6)}</svg>`;
-
-/**
- * The SLAG logo: an ink outline and hard drop behind a molten fill, with drips.
+ * The SLAG logo: the inked SVG (./logo-art.ts), with the word as text for screen readers.
  * One logo everywhere: the main menu shows it as is, the lobby scales it into
  * its top bar (./logo.ts), and the link-preview card is cut from the menu's.
  */
 export function logoHTML(tag: 'h1' | 'div' = 'h1'): string {
-  const drips = DRIPS.map((len, i) => `<span style="--len:${len}px;--d:${(-i * 0.7).toFixed(1)}s"></span>`).join('');
-  return (
-    `<${tag} class="logo">${PEN_FILTER}<span class="logo-o" aria-hidden="true">SLAG</span>` +
-    `<span class="drips" aria-hidden="true">${drips}</span><span class="logo-f">SLAG</span></${tag}>`
-  );
+  return `<${tag} class="logo"><span class="logo-t">SLAG</span>${logoSVG()}</${tag}>`;
 }
 
 /** A fixed ember field: same sparks on every visit, and on server and client alike. */
@@ -106,10 +84,10 @@ export function homeHTML(): string {
   ).join('');
   return (
     `<div class="home" data-screen="home"><div class="embers" aria-hidden="true">${embersHTML()}</div>` +
-    `<main class="home-main"><div class="brand">${logoHTML()}<div class="kicker">Party Platformer · 1–8 Players</div></div>` +
+    `<main class="home-main"><div class="brand">${logoHTML()}</div>` +
     `<nav class="menu-wrap" aria-label="Main menu"><ul class="menu">${items}</ul></nav>` +
     `<div class="stage" aria-hidden="true"><canvas></canvas></div></main>` +
-    `<footer class="footbar"><div class="prompts" aria-hidden="true">${homePromptsHTML(false, false)}</div></footer></div>`
+    `<footer class="footbar"><span class="meta">1–8 Players</span><div class="prompts" aria-hidden="true">${homePromptsHTML(false, false)}</div></footer></div>`
   );
 }
 

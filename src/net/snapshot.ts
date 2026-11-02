@@ -28,7 +28,7 @@ import type { ThemeId } from '../themes';
  * A new field on Match or RunWorld must be added here or listed as derived:
  * tests/snapshot.test.ts fails until it is.
  */
-export const SNAP_VERSION = 11;
+export const SNAP_VERSION = 13;
 
 export interface RunSnap {
   slots: number[];
@@ -191,6 +191,15 @@ export function rememberPristine(seed: number, theme: ThemeId | undefined, level
 
 // ---------------------------------------------------------------- snapshot / restore
 
+/**
+ * The stage concept the level was built with, when the profile alone wouldn't rebuild it: its
+ * landmark's, or a forced one (a forced concept that fell back, or a forced plain level).
+ */
+function levelConcept(m: Match): ProfileOverride {
+  const concept = m.level.landmark?.concept ?? m.forceProfile.concept;
+  return concept ? { concept } : {};
+}
+
 export function snapshotMatch(m: Match): MatchSnap {
   const mp = m as unknown as MatchPrivate;
   const run = m.run;
@@ -203,7 +212,7 @@ export function snapshotMatch(m: Match): MatchSnap {
     frame: m.frame,
     round: m.round,
     dryRounds: m.dryRounds,
-    profile: m.level.profile ? { ...m.level.profile } : m.profileOverride(),
+    profile: m.level.profile ? { ...m.level.profile, ...levelConcept(m) } : m.profileOverride(),
     force: { ...m.forceProfile },
     players: toWire(m.players),
     placed: toWire(m.placed),

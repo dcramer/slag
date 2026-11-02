@@ -1,5 +1,5 @@
 import { TILE as TILE_IMPORT } from './constants';
-import { type Level, T_ONEWAY as T_ONEWAY_IMPORT, T_SOLID as T_SOLID_IMPORT } from './level';
+import { type Level, type Ride, T_EMPTY, T_ONEWAY as T_ONEWAY_IMPORT, T_SOLID as T_SOLID_IMPORT } from './level';
 import {
   type Body,
   bodyAtCell as bodyAtCellImport,
@@ -420,6 +420,7 @@ export class ReachCache {
       return below === T_SOLID || below === T_ONEWAY;
     };
     if (!extend && !stand(level.spawn.tx, level.spawn.ty)) return { goalReached: false, cells };
+    const rides = this.rides(level);
     const changed = this.findDiff(tiles);
     const tracer = this.tracer;
     tracer.use(tiles);
@@ -470,8 +471,20 @@ export class ReachCache {
           if (cands) for (let i = 0; i < t.cands.length; i++) cands[t.cands[i]] = 1;
         }
       }
+      if (rides) for (const r of rides) if (r.board === k && stand(r.alight % w, (r.alight - (r.alight % w)) / w)) reached(r.alight);
     }
     return { goalReached: seen[goalKey] === 1, cells };
+  }
+
+  /**
+   * The level's proven rides (Level.rides, gen/level/ride.ts) that still hold on these tiles: the rider's
+   * path is empty. Never in a side wind: a rider standing still on a carrier could be blown off it.
+   */
+  private rides(level: Level): Ride[] | null {
+    if (!level.rides?.length || this.winds.some((wf) => wf)) return null;
+    const { tiles } = level;
+    const out = level.rides.filter((r) => r.path.every((k) => tiles[k] === T_EMPTY));
+    return out.length ? out : null;
   }
 }
 

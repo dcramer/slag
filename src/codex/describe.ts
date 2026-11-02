@@ -10,6 +10,7 @@ export const PART_INFO: Record<Module['type'], { title: string; blurb: string }>
   spikes: { title: 'Spikes', blurb: 'One hit. Any angle. No refunds.' },
   swinger: { title: 'Swinger', blurb: 'Every castle has a guy who installs these.' },
   launcher: { title: 'Launcher', blurb: 'A mailman with a grudge and a schedule.' },
+  sentry: { title: 'Sentry', blurb: 'Beeps once. That was your warning.' },
   flame: { title: 'Flame jet', blurb: 'Clears its throat first. Polite, for a dragon.' },
   laser: { title: 'Laser', blurb: 'Charges like a phone, rules like a judge.' },
   tesla: { title: 'Tesla gate', blurb: 'Bzzzt. You are the bug.' },
@@ -24,15 +25,16 @@ export const PART_INFO: Record<Module['type'], { title: string; blurb: string }>
   coat: { title: 'Attachment', blurb: 'Paint jobs with consequences.' },
   mystery: { title: 'Mystery crate', blurb: 'Contents may vary. Odds not disclosed.' },
   bomb: { title: 'Demolition', blurb: 'Renovation, the fast way.' },
-  portal: { title: 'Warp pads', blurb: 'Two holes, no plot.' },
+  pipe: { title: 'Pipe', blurb: 'Sold separately. Works in pairs.' },
   bumper: { title: 'Bumper', blurb: 'Ding ding ding. Extra ball not included.' },
   magnet: { title: 'Gravity well', blurb: 'Needy or aloof, never in between.' },
   web: { title: 'Web', blurb: 'Spider not included. Spider is somewhere.' },
   phase: { title: 'Blink blocks', blurb: 'Now you see it. Now you’re falling.' },
-  dropper: { title: 'Dropstone', blurb: 'Has been waiting all day for you specifically.' },
+  dropper: { title: 'Dropstone', blurb: 'A ton of bricks with a lane to itself.' },
   snapper: { title: 'Snap trap', blurb: 'Surprise!' },
   rope: { title: 'Sausage Vine', blurb: 'Fresh from the hook.' },
   keg: { title: 'Kegapult', blurb: 'XXX.' },
+  flood: { title: 'Flood', blurb: 'The tide waits for no runner.' },
 };
 
 const AIM_TAG: Record<string, string> = { fixed: 'FIXED', sweep: 'SWEEPS', track: 'TRACKS' };
@@ -42,6 +44,7 @@ export function propTag(def: PropDef): string | null {
   for (const m of def.modules) {
     if (m.type === 'launcher') return m.ammo === 'seeker' ? 'HOMING' : m.ammo === 'glider' ? 'RIDEABLE' : AIM_TAG[m.aim];
     if (m.type === 'bomb') return m.delay ? 'AT RACE START' : m.target === 'props' ? 'PROPS ONLY' : m.target === 'terrain' ? 'TERRAIN ONLY' : null;
+    if (m.type === 'sentry') return AIM_TAG.track;
     if (m.type === 'keg') return m.dirs.length > 1 ? AIM_TAG.sweep : AIM_TAG.fixed;
   }
   return null;
@@ -73,6 +76,11 @@ export function summarize(def: PropDef): string[] {
           `${m.style} → ${m.ammo}${AMMO[m.ammo].gravity > 200 ? ' (lobbed)' : ''} · ${{ fixed: 'Fixed', sweep: 'Sweeps', track: 'Tracks' }[m.aim]} · every ${secs(m.interval)}${m.burst > 1 ? ` ×${m.burst} burst` : ''}${m.spread > 1 ? ` · ${m.spread}-way` : ''} · ${fmt(m.speed)}px/s`,
         );
         break;
+      case 'sentry':
+        out.push(
+          `sentry · ${fmt(m.range)} tiles · ±${fmt((m.cone * 180) / Math.PI)}° · turns ${fmt((m.turn * 60 * 180) / Math.PI)}°/s · spin-up ${secs(m.spin)} · ×${m.burst} burst · cools ${secs(m.cool)}`,
+        );
+        break;
       case 'flame':
         out.push(`flame ${fmt(m.length)} tiles · on ${secs(m.on)} / off ${secs(m.off)}`);
         break;
@@ -102,8 +110,8 @@ export function summarize(def: PropDef): string[] {
         );
         break;
       }
-      case 'portal':
-        out.push(`warp pads ${fmt(Math.abs(m.b[0] - m.a[0]))}×${fmt(Math.abs(m.b[1] - m.a[1]))} tiles apart · keeps your speed`);
+      case 'pipe':
+        out.push(`${m.look} pipe ${fmt(m.cells.length / 2)} tiles long · pairs with the next one placed`);
         break;
       case 'bumper':
         out.push(`bumper r${fmt(m.radius, 2)} · kick ${fmt(m.power)}px/s`);

@@ -3,9 +3,10 @@ import type { Match } from './game/match';
 import { ARCHETYPE_WEIGHTS, type Archetype, DEMOLISH, generateProp } from './gen/props';
 import type { NetSession } from './net/session';
 import { hashMatch } from './net/snapshot';
+import { castBench, castCatalog } from './render/cast/sheet';
 import type { Renderer } from './render/renderer';
 import { giveItem, ITEM_KINDS, type ItemKind } from './sim/items';
-import { canPlace, landedDef } from './sim/props';
+import { canPlace, landedDef, linkPipes } from './sim/props';
 import type { ProfileOverride } from './gen/level';
 import type { InputFrame } from './sim/types';
 import { WEATHER_KINDS } from './sim/weather';
@@ -26,9 +27,11 @@ import type { ThemeId } from './themes';
  *   ?density=0.9        force terrain density (0..1)
  *   ?gravity=0.7        force world gravity scale
  *   ?weather=rain       force the weather (clear|wind|mist|rain|snow), skipping worldgen's solvability gate
+ *   ?concept=id         force a stage concept of the theme's (gen/stage), or `plain`
  *   ?debug=1            open the dev overlay (see installDevtoolsHooks)
  *   ?give=sword,puck    hand race runners these held items, cycled (`all` = one of each)
  *   ?lettering=0        no impact words (read by the Renderer)
+ *   ?cast=b             character-direction prototype a|b|c (docs/CHARACTERS.md); render only
  *   ?zoom=1             force the phone camera on (`?zoom=0` off, `?zoom=2.4` pins a zoom); see render/camera-follow.ts
  */
 export interface SlagDebug {
@@ -38,8 +41,8 @@ export interface SlagDebug {
   net: NetSession | null;
   /** Join N players (kb1, kb2, pad0…pad5) and start round 1. */
   quickStart(players?: number): void;
-  /** Place one prop of each archetype at deterministic legal spots (owner = player 1). */
-  addProps(kinds: Archetype[], seed?: number): number;
+  /** Place one prop of each archetype at deterministic legal spots (owner = player 1), turned `rot` quarter turns. */
+  addProps(kinds: Archetype[], seed?: number, rot?: number): number;
   /** Skip pick/place and start a race now. */
   race(kinds?: Archetype[], seed?: number): void;
   /** Hand each race runner a held item, cycling through `kinds`. */
@@ -55,6 +58,8 @@ export interface SlagDebug {
   render(ms?: number): void;
   /** Deterministic state hash of the confirmed match (peers in sync ⇔ equal hashes at equal frames). */
   hash(): number;
+  /** Character-direction prototypes (`?cast=a|b|c`, docs/CHARACTERS.md): a catalog canvas, and a draw-cost bench. */
+  cast: { catalog: typeof castCatalog; bench: typeof castBench };
 }
 
 export interface LoopControl {
@@ -72,24 +77,26 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
     match,
     renderer,
     net,
+    cast: { catalog: castCatalog, bench: castBench },
     quickStart(players = 2) {
       for (let i = 0; i < players; i++) match.join(dev(DEVICES[i]));
       if (match.phase === 'lobby') match.startMatch();
     },
-    addProps(kinds, seed = 1) {
+    addProps(kinds, seed = 1, rot = 0) {
       let added = 0;
       kinds.forEach((k, i) => {
         const def = generateProp(new Rng(seed * 977 + i * 131), k, `dbg-${i}`);
         for (let n = 0; n < 4000; n++) {
           const tx = 6 + ((i * 7 + n * 13) % (match.level.w - 12));
           const ty = 3 + ((i * 5 + n * 7) % (match.level.h - 6));
-          if (canPlace(match.level, match.placed, def, 0, tx, ty)) {
-            match.placed.push({ uid: uid++, def: landedDef(match.level, match.placed, def, 0, tx, ty), owner: match.players[1]?.slot ?? 0, tx, ty, rot: 0 });
+          if (canPlace(match.level, match.placed, def, rot, tx, ty)) {
+            match.placed.push({ uid: uid++, def: landedDef(match.level, match.placed, def, rot, tx, ty), owner: match.players[1]?.slot ?? 0, tx, ty, rot });
             added++;
             return;
           }
         }
       });
+      linkPipes(match.placed);
       return added;
     },
     race(kinds = [], seed = 1) {
@@ -135,6 +142,8 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
   if (q.get('gravity')) force.gravity = Number(q.get('gravity'));
   const weather = WEATHER_KINDS.find((k) => k === q.get('weather'));
   if (weather) force.weather = weather;
+  const concept = q.get('concept');
+  if (concept) force.concept = concept;
   if (Object.keys(force).length) {
     match.forceProfile = force;
     match.newLevel(match.seed);

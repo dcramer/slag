@@ -16,7 +16,8 @@ import { BRIDGE_W, type BridgeHint, type Shape } from './types';
  * reached simply doesn't count and the pipeline tries another sculpt.
  *
  * Lanes keep away from hard crossings: a platform near one would turn a gap
- * that needs a bridge into a gap you can jump.
+ * that needs a bridge into a gap you can jump. They keep out of a landmark's
+ * air too, by whole columns.
  */
 
 /** Rounds of "find the worst stretch, lay a lane over it". */
@@ -64,6 +65,8 @@ function forbiddenColumns(level: Level, shape: Shape, bridges: readonly BridgeHi
   };
   for (const [x0, x1] of shape.crossings ?? []) mark(x0 - CROSSING_MARGIN, x1 + CROSSING_MARGIN);
   for (const b of bridges) mark(b.x - CROSSING_MARGIN, b.x + BRIDGE_W + CROSSING_MARGIN - 1);
+  // A second route never runs through the air a landmark's movers sweep (a wheel's disc, a lift's shaft).
+  for (const a of shape.landmark?.air ?? []) mark(a.x, a.x + a.w - 1);
   return out;
 }
 

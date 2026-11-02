@@ -250,7 +250,7 @@ export class RunWorld {
       const inp = itemInput(r.items, statusInput(r.status, live ? (inputs[i] ?? NO_INPUT) : NO_INPUT));
       const b = r.body;
       if (inp.altPressed) return this.kill(r, -1, 'pop');
-      // A rope or keg moves this body instead of the controller, and a held runner skips springs, fields and kickers.
+      // A rope, keg or pipe moves this body instead of the controller, and a held runner skips springs, fields and kickers.
       const held = stepHold(this, r, inp, f);
       if (!held) statusPreStep(r.status, b);
 
@@ -291,7 +291,7 @@ export class RunWorld {
 
       // The spawn zone shields you from fields and kickers too (see safeZone).
       if (this.isSafe(r)) r.status.inside.length = 0;
-      else if (!held) this.touchTriggers(r, f);
+      else if (!held) this.touchTriggers(r, f, inp);
 
       const hb = inset(b, 1.5);
       if (!this.isSafe(r)) {
@@ -347,7 +347,7 @@ export class RunWorld {
    * Call `touch` on every module whose trigger this runner overlaps (once per
    * trigger key), tracking entries frame to frame.
    */
-  private touchTriggers(r: Runner, f: number) {
+  private touchTriggers(r: Runner, f: number, inp: InputFrame) {
     const st = r.status;
     const now: number[] = [];
     for (const t of this.out.triggers!) {
@@ -358,18 +358,20 @@ export class RunWorld {
       const m = rp.mods[t.mi];
       const sim = moduleSim(m.type);
       if (!sim.touch) continue;
-      sim.touch(m, this.touchCtx(rp, t.mi, f, r, now), r, t, !st.inside.includes(t.key));
+      sim.touch(m, this.touchCtx(rp, t.mi, f, r, now, inp), r, t, !st.inside.includes(t.key));
     }
     st.inside = now;
   }
 
-  /** What a module gets while it touches or holds `r`. `seen` is the runner's trigger list this frame. */
-  touchCtx(rp: Resolved, mi: number, f: number, r: Runner, seen: number[] = r.status.inside): TouchCtx {
+  /** What a module gets while it touches or holds `r`. `seen` is the runner's trigger list this frame, `inp` its input. */
+  touchCtx(rp: Resolved, mi: number, f: number, r: Runner, seen: number[] = r.status.inside, inp?: InputFrame): TouchCtx {
     return {
       ...this.tickCtx(rp, mi, f),
       blocked: (q) => firstOverlap(q, this.world) !== null,
       mark: (key) => seen.includes(key) || seen.push(key),
       grab: (g) => this.grabs.push({ r, uid: rp.pp.uid, mi, g }),
+      inp,
+      peer: (uid) => this.resolved.find((x) => x.pp.uid === uid),
     };
   }
 

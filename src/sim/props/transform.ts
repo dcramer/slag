@@ -1,4 +1,4 @@
-import { dcos, dsin, sq } from '../../core/dmath';
+import { dcos, dhypot, dsin, sq } from '../../core/dmath';
 import { type Cell, cellsBounds, frac, pingPong, type Vec } from '../../core/geom';
 import { TILE } from '../constants';
 import { isProtected, type Level, T_EMPTY, T_SOLID, tileAt } from '../level';
@@ -60,6 +60,13 @@ function rotPoint(p: Vec, rot: number, w: number, h: number): Vec {
   return [x, y];
 }
 
+/** A tile offset turned the way rotPoint turns the prop, in px (track motion's points). */
+function turnOffset(p: Vec, rot: number): Vec {
+  let [x, y] = p;
+  for (let i = 0; i < rot; i++) [x, y] = [-y, x];
+  return [x * TILE, y * TILE];
+}
+
 function rotCell(c: Cell, rot: number, w: number, h: number): Cell {
   const [x, y] = rotPoint([c[0] + 0.5, c[1] + 0.5], rot, w, h);
   return [Math.floor(x), Math.floor(y)];
@@ -100,7 +107,13 @@ export function resolveProp(pp: PlacedProp): Resolved {
   const mods = pp.def.modules.map((m) => moduleSim(m.type).resolve(m, x));
   const mo = pp.def.motion;
   const motion: Motion =
-    mo.type === 'rail' ? { ...mo, angle: mo.angle + x.da, range: mo.range * TILE } : mo.type === 'loop' ? { ...mo, radius: mo.radius * TILE } : mo;
+    mo.type === 'rail'
+      ? { ...mo, angle: mo.angle + x.da, range: mo.range * TILE }
+      : mo.type === 'loop'
+        ? { ...mo, radius: mo.radius * TILE }
+        : mo.type === 'track'
+          ? { ...mo, pts: mo.pts.map((p) => turnOffset(p, rot)) }
+          : mo;
   return { pp, mods, motion, phase: propPhase(pp.uid) };
 }
 
@@ -117,14 +130,71 @@ export function dirOf(angle: number): Vec {
 export function motionOffset(r: Resolved, f: number): Vec {
   const m = r.motion;
   if (m.type === 'rail') {
-    const d = pingPong(f / m.period + r.phase) * m.range;
+    const d = (m.dwell ? liftAt(f, m.period, m.dwell, r.phase) : pingPong(f / m.period + r.phase)) * m.range;
     return [snap(dcos(m.angle)) * d, snap(dsin(m.angle)) * d];
   }
   if (m.type === 'loop') {
     const a = m.dir * Math.PI * 2 * (f / m.period + r.phase);
     return [(dcos(a) - 1) * m.radius, dsin(a) * m.radius];
   }
+  if (m.type === 'track') return trackAt(m.pts, m.closed, frac(f / m.period + r.phase));
   return [0, 0];
+}
+
+/**
+ * A rail with stops, 0 → 1 → 0 over `period + 2 * dwell` frames: parked at 0
+ * for `dwell` frames, eased out over half the period, parked at 1 for `dwell`,
+ * eased back. Counted in whole frames, so every stop lasts exactly as long and
+ * parks exactly at its end: a lift's floor lines up with the tiles it serves,
+ * which is what the carrier ride proof needs (gen/level/ride.ts).
+ */
+function liftAt(f: number, period: number, dwell: number, phase: number): number {
+  const total = period + 2 * dwell;
+  const half = period / 2;
+  let t = (((f + Math.floor(phase * total)) % total) + total) % total;
+  if (t < dwell) return 0;
+  t -= dwell;
+  if (t < half) return (1 - dcos((Math.PI * t) / half)) / 2;
+  t -= half;
+  if (t < dwell) return 1;
+  t -= dwell;
+  return (1 + dcos((Math.PI * t) / half)) / 2;
+}
+
+/**
+ * Where a track puts its body at lap fraction `u`, in px: constant speed along
+ * the polyline. A closed track runs pts[0] → … → pts[n-1] → pts[0], one way
+ * round; an open one runs out to its last point and back the way it came, so a
+ * lap is twice its length and it turns round only at its ends. Arithmetic and
+ * square roots only (both exact across browsers), and nothing allocated: this
+ * runs for every module of every moving prop, every frame.
+ */
+function trackAt(pts: readonly Vec[], closed: boolean, u: number): Vec {
+  const n = pts.length;
+  if (n < 2) return n ? [pts[0][0], pts[0][1]] : [0, 0];
+  const segs = closed ? n : n - 1;
+  let len = 0;
+  for (let i = 0; i < segs; i++) len += segLen(pts, i);
+  if (len === 0) return [pts[0][0], pts[0][1]];
+  let s = u * (closed ? len : 2 * len);
+  if (!closed && s > len) s = 2 * len - s;
+  for (let i = 0; i < segs; i++) {
+    const l = segLen(pts, i);
+    if (s <= l || i === segs - 1) {
+      const a = pts[i];
+      const b = pts[(i + 1) % n];
+      const k = l ? Math.min(1, s / l) : 0;
+      return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+    }
+    s -= l;
+  }
+  return [pts[0][0], pts[0][1]];
+}
+
+function segLen(pts: readonly Vec[], i: number): number {
+  const a = pts[i];
+  const b = pts[(i + 1) % pts.length];
+  return dhypot(b[0] - a[0], b[1] - a[1]);
 }
 
 export interface CycleState {

@@ -7,7 +7,7 @@ import { boxPts, INK, ovalPts, part, path, poly, sprite, stamp, tick } from '../
 import { circle, ellipse, glowDot, light, type RC } from '../../kit';
 import type { ThemeId } from '../../../themes';
 import { beamOf, type DrawCtx, defineArt } from '../common';
-import { themeOf } from './skins';
+import { themeOf } from '../skins';
 
 /**
  * Geyser art: a vent mound (ground vents), a rumbling telegraph, and the

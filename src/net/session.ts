@@ -48,7 +48,7 @@ const PULL_MS = 1500;
 const CURSOR_SMOOTH = 0.5;
 /** What's left of a drawn runner's prediction error after one frame. Presentation only. */
 const CORRECTION_KEEP = 0.85;
-/** A correction this large (px) is a respawn or a portal, not an error: show it. A late jump at 100 ms round trip is already about 50. */
+/** A correction this large (px) is a respawn or a pipe, not an error: show it. A late jump at 100 ms round trip is already about 50. */
 const CORRECTION_MAX = 120;
 const CORRECTION_MAX_STEPS = 4;
 

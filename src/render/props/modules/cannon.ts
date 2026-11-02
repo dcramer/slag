@@ -6,11 +6,11 @@ import { ball, boxPts, glint, INK, ovalPts, part, path, pen, poly, sprite, stamp
 import { glowDot, light, METALS, type RC } from '../../kit';
 import { type DrawCtx, defineArt } from '../common';
 import { wheel } from './setpiece';
-import { cannonSkin } from './skins';
+import { cannonSkin } from '../skins';
 
 /**
  * Set-piece guns, inked: the castle's boss-room cannon, the ship's gun, the jungle's cursed idol and the
- * volcano's magma spitter. The fuse/eye/maw telegraph follows cannonTiming (the sim's own schedule), so
+ * volcano's magma spitter. The fuse/gem/maw telegraph follows cannonTiming (the sim's own schedule), so
  * the glow peaks exactly when the shot leaves. Still parts are baked once; the barrel turns with recoil,
  * and the tells are drawn live.
  */
@@ -83,44 +83,56 @@ function barrel(L: number, pal: typeof METALS.steel, ship: boolean) {
   });
 }
 
-/** The cursed idol's head, facing +x: carved stone, a headdress, eye sockets and a maw. Eyes glow live. */
+/** The cursed idol's gem, a cut rhombus in its crown, in the stela's frame. */
+const GEM = { x: 0, y: -31.5, r: 3 };
+
+/**
+ * The cursed idol, facing +x: a carved stone stela, not a head (docs/ART.md, Objects, not characters).
+ * A stepped crown with a gem set in it, a band of carved glyphs, a zigzag frieze, and a square stone
+ * spout out the front that the darts leave by. The gem glows live.
+ */
 function idol(stoneHue: number, uid: number) {
   return sprite(`cn|idol|${stoneHue | 0}|${uid % 5}`, -17, -40, 34, 42, (g) => {
     const stone: HSL = { h: stoneHue, s: 22, l: 44 };
-    for (let k = -2; k <= 2; k++) {
-      g.save();
-      g.translate(k * 4.5, -25);
-      g.rotate(k * 0.25);
-      part(g, ovalPts(0, -6, 2.2, 6.5, k + 11, 0.05, 14), { h: [0, 40, 130, 190, 300][(k + 2 + uid) % 5], s: 75, l: 50 }, k + 11, {
-        depth: 0.5,
-        thin: 0.35,
-        thick: 0.8,
-      });
-      tick(g, 0, -11, 0, -2, 0.4, k, 'rgba(0,0,0,0.35)');
-      g.restore();
-    }
-    const head = boxPts(-12, -27, 24, 27, 6, 12, 0.3);
+    const groove = css(stone, -26, 1, 6);
+    // The crown: a capstone over the slab and a smaller block on that, the gem cut into its face.
+    part(g, boxPts(-9, -36, 18, 9, 2, 11, 0.25), { ...stone, l: 48 }, 11, { depth: 1, thin: 0.5, thick: 1.3 });
+    part(g, boxPts(-14, -29, 28, 4, 1.2, 12, 0.2), { ...stone, l: 50 }, 12, { depth: 0.8, thin: 0.5, thick: 1.4 });
+    const head = boxPts(-12, -26, 24, 26, 2.5, 13, 0.3);
     tone(g, head, stone, { depth: 2 });
     g.save();
     path(g, head);
     g.clip();
+    // A band of glyphs: squared spirals and bars, cut in.
     g.fillStyle = css(stone, -18, 1, 6);
-    g.fillRect(-12, -21, 24, 2);
-    tick(g, -10, -10, -4, -7, 0.7, 13, css(stone, -26));
-    tick(g, -9, -5, -3, -3, 0.7, 14, css(stone, -26));
+    g.fillRect(-12, -21, 24, 1.6);
+    g.fillRect(-12, -13, 24, 1.6);
+    for (let k = 0; k < 4; k++) {
+      const gx = -9.5 + k * 5.5;
+      const pts = (uid + k) % 2 ? poly(gx, -15, gx, -18.6, gx + 3.4, -18.6, gx + 3.4, -16.4, gx + 1.4, -16.4) : poly(gx, -18.6, gx + 1.7, -15, gx + 3.4, -18.6);
+      g.fillStyle = groove;
+      stroke(g, pts, { w: 0.8, seed: k + 14, taper: [0.1, 0.1], press: 0.2 });
+    }
+    // A zigzag frieze low down.
+    const zig: P[] = [];
+    for (let k = 0; k <= 8; k++) zig.push({ x: -12 + k * 3, y: k % 2 ? -9.4 : -6.6 });
+    g.fillStyle = groove;
+    stroke(g, zig, { w: 0.8, seed: 19, taper: [0, 0], press: 0.2 });
+    tick(g, -10, -3.5, -5, -2, 0.6, 20, css(stone, -26));
     g.restore();
     pen(g, head, 15, 0.6, 1.6);
+    // The spout: a square stone tube out the front, its bore dark.
+    part(g, boxPts(9.5, -9, 5, 5, 0.8, 18), { ...stone, l: 40 }, 18, { depth: 0.5, thin: 0.4, thick: 1 });
     g.fillStyle = INK;
-    path(g, boxPts(-3, -17, 5, 4, 1, 16));
+    path(g, ovalPts(14.3, -6.5, 0.9, 1.7, 21, 0.03, 10));
     g.fill();
-    path(g, boxPts(5, -17, 5, 4, 1, 17));
-    g.fill();
-    part(g, boxPts(9, -14, 4, 6, 1, 18), { ...stone, l: 38 }, 18, { depth: 0.4, thin: 0.35, thick: 0.8 });
+    // The gem's socket: a sunk ring, and the stone dull until it lights.
     g.fillStyle = INK;
-    path(g, boxPts(4, -7.5, 9, 4, 1.5, 19));
+    path(g, ovalPts(GEM.x, GEM.y, GEM.r + 1, GEM.r + 0.8, 22, 0.03, 14));
     g.fill();
-    g.fillStyle = css({ h: 45, s: 15, l: 80 });
-    for (let k = 0; k < 3; k++) g.fillRect(5 + k * 3, -7.5, 1.6, 1.4);
+    g.fillStyle = css({ h: 150, s: 30, l: 24 });
+    path(g, poly(GEM.x, GEM.y - GEM.r, GEM.x + GEM.r, GEM.y, GEM.x, GEM.y + GEM.r, GEM.x - GEM.r, GEM.y));
+    g.fill();
   });
 }
 
@@ -196,21 +208,24 @@ function drawCannon(rc: RC, m: Cannon, d: DrawCtx) {
   } else if (m.look === 'totem') {
     const glowC: HSL = { h: st.glowHue, s: 95, l: 58 };
     const hx = x - dir * 4;
-    const top = gy - 27;
     s.save();
     s.translate(hx, gy);
     s.scale(dir, 1);
     stamp(s, idol(st.hue, d.r.pp.uid));
     s.restore();
-    // The tell: its eyes glow as it winds up.
+    // The tell: the gem in its crown lights as it winds up.
     const k = 0.25 + warn * 0.75;
-    for (const ex of [-0.5, 7.5]) {
-      const px = hx + dir * ex;
-      g.fillStyle = css(glowC, 15, k);
-      g.fillRect(px - 2, top + 11, 4, 2.4);
-      glowDot(g, px, top + 12, 5 + warn * 6, glowC, 0.4 * k + 0.2);
-    }
-    light(rc, hx + dir * 4, top + 12, 40 + warn * 30, glowC, 0.25 + warn * 0.6);
+    const gx = hx + dir * GEM.x;
+    const gyy = gy + GEM.y;
+    const r = GEM.r - 0.4;
+    g.fillStyle = css(glowC, 15, k);
+    path(g, poly(gx, gyy - r, gx + r, gyy, gx, gyy + r, gx - r, gyy));
+    g.fill();
+    g.fillStyle = css(glowC, 40, k);
+    path(g, poly(gx - r * 0.5, gyy - r * 0.2, gx, gyy - r * 0.75, gx + r * 0.2, gyy - r * 0.25));
+    g.fill();
+    glowDot(g, gx, gyy, 5 + warn * 7, glowC, 0.4 * k + 0.2);
+    light(rc, gx, gyy, 40 + warn * 30, glowC, 0.25 + warn * 0.6);
   } else {
     // Magma spitter: a lumpy basalt mound with a glowing maw.
     const hot: HSL = { h: st.glowHue, s: 100, l: 55 };

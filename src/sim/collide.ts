@@ -25,7 +25,7 @@ import type { Runner } from './run';
  * Nobody can be held up for good. Press against bodies for `slipFrames` and you
  * slip through them, which also unjams head-on runners in a corridor. A pair that
  * already overlaps at the start of a frame passes through each other until they
- * have come apart, which covers a slip, the spawn pile, a portal exit and a pair
+ * have come apart, which covers a slip, the spawn pile, a pipe exit and a pair
  * squeezed together by a crusher, with nothing to remember but the positions.
  * That rule is why a pair that can't be separated stays harmless: nobody is ever
  * pushed into terrain, and only the world can crush a runner.

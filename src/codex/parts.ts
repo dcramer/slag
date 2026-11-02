@@ -95,7 +95,7 @@ const LAUNCHER_NOTES: Record<string, [Ammo, string, string]> = {
   totem: ['fireball', 'heartburn idol', 'Spicy.'],
   turret: ['plasma', 'sorry turret', 'It feels bad about this.'],
   thrower: ['shuriken', 'ninja box', 'Stars, vended.'],
-  rocket: ['seeker', 'grudge launcher', 'Never forgets a face.'],
+  rocket: ['seeker', 'grudge launcher', 'Keeps count.'],
   glaive: ['boomerang', 'boomerang bruh', 'It always comes back.'],
   gumball: ['rubber', 'dodgeball coach', 'Gym class flashbacks.'],
   mortar: ['cluster', 'banana mortar', 'Share the bunch.'],
@@ -122,6 +122,7 @@ export const PROJECTILE_NOTES: Record<Ammo, [string, string]> = {
   frost: ['slushie', 'Brain freeze.'],
   ricochet: ['trick shot', 'Called it.'],
   glider: ['economy seat', 'Delays likely.'],
+  slug: ['slug', 'Nothing personal.'],
   puck: ['evicted shell', 'Nobody home.'],
   smokebomb: ['fog of war', 'Unexplored.'],
 };
@@ -296,7 +297,7 @@ export function partGroups(): PartGroup[] {
           ]),
         },
         {
-          title: 'indecisive sentry gun',
+          title: 'indecisive dome turret',
           note: 'Sweeps. Can’t decide.',
           def: def('sweep', [
             body([[0, 0]]),
@@ -314,6 +315,28 @@ export function partGroups(): PartGroup[] {
               spread: 1,
               spreadAngle: 0.25,
               speed: 220,
+            },
+          ]),
+        },
+        {
+          title: 'auto-turret',
+          note: 'Tracks. Beeps first.',
+          def: def('sentry', [
+            body([[0, 0]]),
+            {
+              type: 'sentry',
+              at: c(),
+              angle: 0,
+              cone: 1,
+              sweepPeriod: 240,
+              range: 8,
+              turn: 0.036,
+              spin: 30,
+              burst: 4,
+              gap: 5,
+              cool: 90,
+              speed: 420,
+              ammo: 'slug',
             },
           ]),
         },
@@ -374,7 +397,7 @@ export function partGroups(): PartGroup[] {
             { type: 'piston', at: [1, 0.5], angle: R, reach: 2.5, width: 2, period: 130 },
           ]),
         },
-        { title: 'coil pup', note: 'Good boy.', def: def('spring', [{ type: 'spring', at: c(), angle: UP, power: 700 }]) },
+        { title: 'bedspring', note: 'No jumping on the bed.', def: def('Bedspring', [{ type: 'spring', at: c(), angle: UP, power: 700 }]) },
         {
           title: 'hair dryer',
           note: 'Big hair day.',
@@ -388,9 +411,24 @@ export function partGroups(): PartGroup[] {
       blurb: 'Upside, catch, repeat.',
       entries: [
         {
-          title: 'plot holes',
-          note: 'Nobody will notice.',
-          def: def('portal', [{ type: 'portal', a: c(0, 0), b: c(4, 0) }]),
+          title: 'pipe dream',
+          note: 'Some assembly required. Two, actually.',
+          def: def('pipe', [
+            {
+              type: 'pipe',
+              cells: [
+                [0, 0],
+                [1, 0],
+                [0, 1],
+                [1, 1],
+                [0, 2],
+                [1, 2],
+              ],
+              at: [1, 0],
+              angle: UP,
+              look: 'green',
+            },
+          ]),
         },
         { title: 'pinball bumper', note: 'Tilt.', def: def('bumper', [{ type: 'bumper', at: c(), radius: 0.55, power: 420 }]) },
         {
@@ -516,7 +554,7 @@ export function partGroups(): PartGroup[] {
         },
         {
           title: 'thwunk',
-          note: 'Waiting for you, specifically.',
+          note: 'Gravity, on a hair trigger.',
           def: def('dropper', [
             {
               type: 'dropper',

@@ -6,7 +6,19 @@ import { scoreRound } from '../src/game/scoring';
 import { generateLevel, judge, lastGenInfo, MAX_BRIDGES, partsNeeded } from '../src/gen/level';
 import { setProbeGravity } from '../src/gen/level/probe';
 import { hardGap } from '../src/gen/level/sculptors/common';
-import { ARCHETYPE_WEIGHTS, DEMOLISH, dryLean, generateBridge, generateCrate, generateProp, generateRoster, isBridgePart, rosterSize } from '../src/gen/props';
+import {
+  ARCHETYPE_WEIGHTS,
+  crateLean,
+  DEMOLISH,
+  dryLean,
+  generateBridge,
+  generateCrate,
+  generateProp,
+  generateRoster,
+  isBridgePart,
+  PIPE_PITY,
+  rosterSize,
+} from '../src/gen/props';
 import { restoreMatch, snapshotMatch } from '../src/net/snapshot';
 import { LEVEL_H, LEVEL_W, TILE } from '../src/sim/constants';
 import type { Level } from '../src/sim/level';
@@ -258,6 +270,39 @@ describe('a stuck match leans on the crate', () => {
     expect(copy.dryRounds).toBe(1);
     playRound(m, level.solution![1], true);
     expect(m.dryRounds).toBe(0);
+  });
+});
+
+describe('pipes in the crate', () => {
+  /** Seeds whose 6-card roster has the pipe. */
+  const piped = Array.from({ length: 80 }, (_, i) => seedAt(i)).filter((s) => generateRoster(s, rosterSize(6)).some((p) => p.archetype === 'pipe'));
+  const pipesIn = (seed: number, round: number, lone: boolean) => generateCrate(seed, round, 6, 1, 0, lone).filter((d) => d.archetype === 'pipe');
+
+  it('come as one part per match: one name and one material on every card', () => {
+    expect(piped.length).toBeGreaterThan(2);
+    for (const seed of piped.slice(0, 4)) {
+      const cards = Array.from({ length: 12 }, (_, r) => pipesIn(seed, r + 1, r % 2 === 0)).flat();
+      expect(cards.length).toBeGreaterThan(0);
+      expect(new Set(cards.map((d) => d.part)).size).toBe(1);
+      expect(new Set(cards.map((d) => d.name.replace(/^(Small|Big) /, ''))).size).toBe(1);
+      expect(new Set(cards.flatMap((d) => d.modules.map((m) => (m.type === 'pipe' ? m.look : '')))).size).toBe(1);
+    }
+  });
+
+  it('a lone pipe in the level raises the odds of its partner, and nothing else', () => {
+    for (const [a] of ARCHETYPE_WEIGHTS) {
+      for (const dry of [0, 3]) expect(crateLean(a, dry, true)).toBeCloseTo(dryLean(a, dry) * (a === 'pipe' ? PIPE_PITY : 1), 9);
+      expect(crateLean(a, 2, false)).toBe(dryLean(a, 2));
+    }
+    let plain = 0;
+    let lone = 0;
+    for (const seed of piped.slice(0, 4)) {
+      for (let round = 1; round <= 10; round++) {
+        plain += pipesIn(seed, round, false).length ? 1 : 0;
+        lone += pipesIn(seed, round, true).length ? 1 : 0;
+      }
+    }
+    expect(lone).toBeGreaterThan(plain);
   });
 });
 

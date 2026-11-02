@@ -8,7 +8,9 @@ import { PAGE_CHROME } from '../src/routes';
  */
 
 export const NAME = 'SLAG';
-export const DESCRIPTION = 'A party platformer for 1–8 players. Build traps, then race through them.';
+/** The one description: page meta, Open Graph and Twitter cards, oEmbed, and the manifest. */
+export const DESCRIPTION =
+  "A party platformer where every round you and your friends add a part to the level, then race through it. Make it when they don't and you score. Make it too easy and nobody does.";
 /** The molten-dark of the menu: browser chrome, splash screens and the manifest match it. */
 export const THEME_COLOR = PAGE_CHROME.themeColor;
 

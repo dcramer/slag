@@ -17,18 +17,21 @@
  *   pnpm shot levels --seeds a,b,c,d      (or --count 12) → contact sheet
  *   pnpm shot props --count 24            → prop gallery (crate cards)
  *   pnpm shot cards --arch saw,block       → crate cards of those parts at every size
- *   pnpm shot parts --arch saw,flail       → those parts placed and raced, shot close up (`--styles all`: every launcher style)
+ *   pnpm shot parts --arch saw,flail       → those parts placed and raced, shot close up (`--styles all`: every launcher style; `--bait`: a runner in front of each)
  *   pnpm shot buildparts                   → every building part in a race, on crate cards, and as place ghosts
+ *   pnpm shot pipes [--propseed 3]         → warp pipes facing every way: placing (with the pair tether), close up, and mid-trip
  *   pnpm shot items --seed abc             → held items: in hand, loose, and each one used
  *   pnpm shot blood --theme farm --players 4 --noletters → staged deaths over four rounds: ooze, settled, place phase, expiry
  *   pnpm shot stack --seed abc             → stepped frames of runners stacking, walking as a stack, and a head-bounce
  *   pnpm shot grabs                        → stepped frames of a rope swing, a keg shot and a backfire
  *   pnpm shot lineup [--seeds a,b]         → eight runners in a spread of poses, at play scale and close up
+ *   pnpm shot cast [--cast a|b|c|all]     → character-direction prototypes (docs/CHARACTERS.md): lineups, lobby, catalog, sheets
  *   pnpm shot codex                        → /codex: full page, top, a part up close, and on a phone
  *   pnpm shot screens                      → the 404 and error screens, desktop and phone
  *   pnpm shot webgl                        → a race through a lost and restored WebGL context, then with shaders that won't build and with no WebGL2
  *   pnpm shot inkdraw                      → times the cel pass alone
  *   pnpm shot inkblast --seed S --theme T  → craters bitten out of a level, each partial redraw checked against a full bake
+ *   pnpm shot landmarks [--theme T] [--concept id] [--count N] → one level per stage concept, on a contact sheet
  *   pnpm shot home                         → main menu (desktop + 390×844 mobile)
  *   pnpm shot rules                        → the match rules card (fails if it doesn't fit the window)
  *   pnpm shot settings                     → every settings tab over the lobby, driven by keys and a fake pad,
@@ -39,6 +42,7 @@
  * Options: --out shots  --size 1280x720 (window)  --world classic|wide|tall (level size)  --players 2  --frames N (sim frames to advance)
  *          --theme farm (force a theme; `levels --themes all` renders one level per theme)
  *          --weather rain (force the weather: clear|wind|mist|rain|snow)
+ *          --concept id (force a stage concept of the theme's, or plain; src/gen/stage)
  *          --noui (hide the HUD, e.g. to review level shapes)
  *          --q high (pin the quality tier: slow software GL otherwise reads as a slow device and drops it)
  *          --runframe N (race: stop on exact sim frame N)  --campin x,y,zoom (race: pin the view, for before/after sheets)
@@ -48,7 +52,9 @@
  * Software GL is slow; frames are advanced deterministically via slagDebug.step().
  */
 
+import { shots as cast } from './shot/cast';
 import { browser, errors, scenario, server } from './shot/ctx';
+import { shots as landmarks } from './shot/landmarks';
 import { shots as motion } from './shot/motion';
 import { shots as mobile } from './shot/mobile';
 import { shots as pages } from './shot/pages';
@@ -56,7 +62,7 @@ import { shots as parts } from './shot/parts';
 import { shots as phases } from './shot/phases';
 import { shots as renderer } from './shot/renderer';
 
-const SCENARIOS = { ...phases, ...renderer, ...motion, ...parts, ...pages, ...mobile };
+const SCENARIOS = { ...phases, ...renderer, ...motion, ...parts, ...pages, ...mobile, ...landmarks, ...cast };
 
 try {
   const run = SCENARIOS[scenario];

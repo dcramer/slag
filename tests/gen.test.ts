@@ -46,7 +46,9 @@ describe('props', () => {
       const kinds = a.map((d) => d.archetype);
       expect(kinds.some((k) => ['platform', 'crumble', 'spring'].includes(k))).toBe(true);
       expect(
-        kinds.some((k) => ['spikestrip', 'spikeblock', 'saw', 'flail', 'launcher', 'flamer', 'laser', 'tesla', 'crusher', 'dropper', 'snapper'].includes(k)),
+        kinds.some((k) =>
+          ['spikestrip', 'spikeblock', 'saw', 'flail', 'launcher', 'sentry', 'flamer', 'laser', 'tesla', 'crusher', 'dropper', 'snapper'].includes(k),
+        ),
       ).toBe(true);
     }
   });

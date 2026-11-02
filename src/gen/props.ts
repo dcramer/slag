@@ -14,6 +14,7 @@ import type {
   Module,
   Motion,
   PartSize,
+  PipeLook,
   PropDef,
   PropStyle,
   Role,
@@ -48,6 +49,7 @@ export const ARCHETYPE_WEIGHTS: readonly (readonly [Archetype, number])[] = [
   ['saw', 2.6],
   ['flail', 1.3],
   ['launcher', 3.8],
+  ['sentry', 1.1],
   ['flamer', 1.2],
   ['laser', 1.2],
   ['tesla', 1],
@@ -62,7 +64,7 @@ export const ARCHETYPE_WEIGHTS: readonly (readonly [Archetype, number])[] = [
   ['spikestrip', 1.8],
   ['icecoat', 1.1],
   ['slimecoat', 1.1],
-  ['portal', 1],
+  ['pipe', 1],
   ['bumper', 0.9],
   ['magnet', 0.9],
   ['web', 0.8],
@@ -110,6 +112,17 @@ export function dryLean(archetype: Archetype, dry: number): number {
   return push ? 1 + push * k : HAZARD.includes(archetype) ? 1 / (1 + DRY_HAZARD_FADE * k) : 1;
 }
 
+/**
+ * How much more likely a crate is to deal a pipe card while one pipe stands
+ * alone in the level: a lone pipe is only a block until its partner turns up.
+ */
+export const PIPE_PITY = 4;
+
+/** Everything that tilts a crate's draw: the dry-round lean, and the pull a lone pipe has on its partner. */
+export function crateLean(archetype: Archetype, dry: number, lone: boolean): number {
+  return dryLean(archetype, dry) * (lone && archetype === 'pipe' ? PIPE_PITY : 1);
+}
+
 /** Demolition archetypes: detonated (now or at race start) rather than built. */
 export const DEMOLISH: ReadonlySet<Archetype> = new Set(['bomb', 'emp', 'drill', 'charge', 'timebomb']);
 
@@ -120,7 +133,7 @@ export const LAUNCHER_AIM_WEIGHTS: readonly (readonly [Aim, number])[] = [
   ['track', 1.5],
 ];
 
-const HAZARD: Archetype[] = ['spikestrip', 'spikeblock', 'saw', 'flail', 'launcher', 'flamer', 'laser', 'tesla', 'crusher', 'dropper', 'snapper'];
+const HAZARD: Archetype[] = ['spikestrip', 'spikeblock', 'saw', 'flail', 'launcher', 'sentry', 'flamer', 'laser', 'tesla', 'crusher', 'dropper', 'snapper'];
 
 const R = Math.PI / 2;
 const AXIS = [0, R, 2 * R, 3 * R]; // right, down, left, up
@@ -656,8 +669,8 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
       crossbow: ['Arrow Trap', 'Kneecapper', 'Crossbow'],
       ballista: ['Ballista', 'Siege Bow', 'Tower Defense'],
       cannon: ['Cannon', 'Pirate Cannon', 'Bombard'],
-      totem: ['Tiki Spitter', 'Fire Totem', 'Heartburn Idol'],
-      turret: ['Sentry Gun', 'Sorry Turret', 'Blaster'],
+      totem: ['Tiki Torch', 'Fire Totem', 'Heartburn Idol'],
+      turret: ['Dome Turret', 'Sorry Turret', 'Blaster'],
       thrower: ['Ninja Box', 'Star Thrower', 'Shuriken Vendor'],
       rocket: ['Seeker Pod', 'Homing Rack', 'Grudge Launcher'],
       glaive: ['Boomerang Bruh', 'Glaive Flinger', 'Return Policy'],
@@ -677,7 +690,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
       prism: ['Reflective', 'Angular'],
     };
     const adjs: string[] = [...(STYLE_ADJ[style] ?? [])];
-    // Moving aim always shows in the name (tracking also gets an eye on the art).
+    // Moving aim always shows in the name (tracking also gets a sensor camera on the art).
     const aimAdj =
       aim === 'track' ? rng.pick(['Vigilant', 'Paranoid', 'Watchful', 'Tracking']) : aim === 'sweep' ? rng.pick(['Sweeping', 'Indecisive', 'Swiveling']) : null;
     if (interval < 70) adjs.push('Trigger-happy', 'Twitchy');
@@ -712,6 +725,38 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
           speed,
         },
       ],
+    };
+  },
+
+  // The team shooter's engineer sentry, as a squat tripod gun that beeps before it chatters.
+  sentry(rng) {
+    const turn = rng.range(0.028, 0.045);
+    const spin = rng.int(22, 40);
+    const burst = rng.int(3, 5);
+    const gap = rng.int(4, 6);
+    // Never fewer than MIN_OPENING frames between bursts (sim/props/barrier.ts): the lull is the way past.
+    const cool = rng.int(70, 120);
+    const speed = rng.range(380, 460);
+    const cone = rng.range(0.85, 1.2);
+    const sweepPeriod = rng.int(200, 320);
+    const adjs: string[] = [];
+    if (turn > 0.039) adjs.push('Twitchy', 'Hair-Trigger');
+    if (turn < 0.033) adjs.push('Rusty', 'Sluggish');
+    if (spin < 28) adjs.push('Trigger-Happy', 'Jumpy');
+    if (spin > 34) adjs.push('Dramatic', 'Wind-Up');
+    if (burst >= 5) adjs.push('Chatty', 'Spammy');
+    if (cool > 105) adjs.push('Overheating', 'Lazy');
+    if (cone > 1.1) adjs.push('Nosy', 'Wide-Eyed');
+    return {
+      archetype: 'sentry',
+      role: 'hazard',
+      name: title(rng, adjs, ['Auto-Turret', 'Sentry Nest', 'Level 1 Sentry', 'Spy Checker', 'Lawn Defender']),
+      sized: (size) => ({
+        modules: [
+          metalBody([[0, 0]]),
+          { type: 'sentry', at: center(), angle: 0, cone, sweepPeriod, range: by(size, 6, 8, 10), turn, spin, burst, gap, cool, speed, ammo: 'slug' },
+        ],
+      }),
     };
   },
 
@@ -797,7 +842,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
       role: 'utility',
       name: title(rng, power > 720 ? ['Overclocked', 'Ballistic'] : power < 600 ? ['Wimpy', 'Polite'] : ['Bouncy', 'Springy'], [
         'Spring',
-        'Coil Pup',
+        'Bedspring',
         'Boing',
         'Launch Pad',
       ]),
@@ -820,14 +865,32 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     };
   },
 
-  portal(rng) {
-    const dy = rng.chance(0.4) ? rng.int(-3, 3) : 0;
-    const ay = dy < 0 ? -dy : 0;
+  pipe(rng) {
+    // One material per match: a roster has one pipe part, and every pipe card is a size of it.
+    const look = rng.weighted<PipeLook>([
+      ['green', 3],
+      ['brass', 1.5],
+      ['rust', 1.5],
+      ['porcelain', 1],
+      ['copper', 1.2],
+    ]);
+    const adjs: Record<PipeLook, string[]> = {
+      green: ['Classic', 'Regulation', 'Mossy'],
+      brass: ['Polished', 'Fancy', 'Steampunk'],
+      rust: ['Rusty', 'Leaky', 'Condemned'],
+      porcelain: ['Porcelain', 'Flushed', 'Bathroom'],
+      copper: ['Verdigris', 'Copper', 'Antique'],
+    };
     return {
-      archetype: 'portal',
+      archetype: 'pipe',
       role: 'utility',
-      name: title(rng, ['Twin', 'Quantum', 'Entangled', 'Speedrun', 'Non-Euclidean'], ['Plot Holes', 'Wormholes', 'Warp Pads', 'Sequence Break']),
-      sized: (size) => ({ modules: [{ type: 'portal', a: center(0, ay), b: center(by(size, 3, 5, 8), ay + dy) }] }),
+      name: title(rng, adjs[look], ['Warped Pipe', 'Pipe Dream', 'Down Pipe', 'Shortcut Pipe', 'Plumbing']),
+      sized(size) {
+        const len = by(size, 2, 3, 4);
+        const cells: Cell[] = [];
+        for (let y = 0; y < len; y++) cells.push([0, y], [1, y]);
+        return { modules: [{ type: 'pipe', cells, at: [1, 0], angle: AXIS[3], look }] };
+      },
     };
   },
 
@@ -938,12 +1001,12 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     return {
       archetype: 'dropper',
       role: 'hazard',
-      name: title(rng, warn < 17 ? ['Twitchy', 'Jumpy', 'Short-Tempered'] : ['Grumpy', 'Glowering', 'Patient', 'Brooding'], [
+      name: title(rng, warn < 17 ? ['Twitchy', 'Jumpy', 'Short-Tempered'] : ['Grumpy', 'Looming', 'Patient', 'Brooding'], [
         'Thwunk',
         'Grudge Block',
-        'Angry Brick',
+        'Ton of Bricks',
         'Dropstone',
-        'Ceiling Grump',
+        'Pile Driver',
       ]),
       sized(size) {
         const w = by(size, 1, 2, 2);
@@ -1198,7 +1261,7 @@ const ROSTER_SLOTS = [
   HAZARDS,
   HAZARDS,
   HAZARDS,
-  pool('spring', 'fan', 'slimecoat', 'portal', 'bumper', 'magnet', 'web', 'hangar', 'rope', 'keg'),
+  pool('spring', 'fan', 'slimecoat', 'pipe', 'bumper', 'magnet', 'web', 'hangar', 'rope', 'keg'),
   pool('platform', 'crumble', 'blinker', 'wheel'),
 ];
 
@@ -1238,9 +1301,11 @@ const REPEAT_WEIGHT = 0.3;
  * place): what the level still needs, so a match can't run out of ways to
  * reach the flag. Past that no card is shown twice, but a part can show up
  * again at another size. `dry`, rounds in a row nobody finished, tilts the rest
- * toward parts that unstick a match (dryLean); nothing says so on screen.
+ * toward parts that unstick a match (dryLean), and `lone`, a pipe in the level
+ * still waiting for its partner, toward the pipe (crateLean); nothing says so
+ * on screen.
  */
-export function generateCrate(seed: number, round: number, count: number, bridges = 1, dry = 0): PropDef[] {
+export function generateCrate(seed: number, round: number, count: number, bridges = 1, dry = 0, lone = false): PropDef[] {
   const rng = new Rng(deriveSeed(seed, `crate:${round}`));
   const roster = generateRoster(seed, rosterSize(count));
   const need = Math.max(1, Math.min(bridges, count - 1));
@@ -1250,7 +1315,7 @@ export function generateCrate(seed: number, round: number, count: number, bridge
   draw(rng.pick(roster.filter((p) => HAZARD.includes(p.archetype))));
   while (cards.length < count) {
     const open = roster.filter((p) => left(p).length);
-    draw(rng.weighted(open.map((p) => [p, dryLean(p.archetype, dry) * (cards.some((c) => c.part === p.id) ? REPEAT_WEIGHT : 1)] as const)));
+    draw(rng.weighted(open.map((p) => [p, crateLean(p.archetype, dry, lone) * (cards.some((c) => c.part === p.id) ? REPEAT_WEIGHT : 1)] as const)));
   }
   return rng.shuffle(cards.map((c, i) => ({ ...c, key: `${round}-${i}` })));
 }
@@ -1258,13 +1323,13 @@ export function generateCrate(seed: number, round: number, count: number, bridge
 /**
  * Secret Parts: the part behind a role card, rolled when the card is claimed.
  * It comes from the match roster (the same one the crate drew from), filtered
- * to the card's role and weighted like the crate (dryLean, and less likely to
+ * to the card's role and weighted like the crate (crateLean, and less likely to
  * repeat a part already rolled this round, `taken`). The roster always holds
  * every role, so the filter only comes up empty for a role it can't have.
  */
-export function rollSecret(rng: Rng, roster: readonly Part[], role: Role, dry: number, taken: readonly string[]): PropDef {
+export function rollSecret(rng: Rng, roster: readonly Part[], role: Role, dry: number, taken: readonly string[], lone = false): PropDef {
   const fits = roster.filter((p) => p.role === role);
   const from = fits.length ? fits : roster;
-  const part = rng.weighted(from.map((p) => [p, dryLean(p.archetype, dry) * (taken.includes(p.id) ? REPEAT_WEIGHT : 1)] as const));
+  const part = rng.weighted(from.map((p) => [p, crateLean(p.archetype, dry, lone) * (taken.includes(p.id) ? REPEAT_WEIGHT : 1)] as const));
   return rng.pick(part.variants);
 }

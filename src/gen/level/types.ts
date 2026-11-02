@@ -1,6 +1,7 @@
 import type { Rng } from '../../core/rng';
 import type { LevelProfile, TileRect } from '../../sim/level';
 import type { ThemeId } from '../../themes';
+import type { Concept, Landmark } from '../stage/types';
 import type { Theme } from '../theme';
 
 /** The terrain a sculptor produces: everything in a Level except identity, look and set pieces. */
@@ -36,6 +37,8 @@ export interface Shape {
   carve?: boolean;
   /** Per-tile ground kinds (sim/ground.ts), for themes that lay their own: glacier ice. Becomes Level.ground. */
   ground?: Uint8Array;
+  /** The stage concept's landmark, when the sculptor raised one (sculptors/common.ts: claimSite, raiseLandmark). */
+  landmark?: Landmark;
 }
 
 /** Width of a bridge prop in tiles. */
@@ -57,6 +60,8 @@ export interface SculptCtx {
   profile: LevelProfile;
   /** Uniform [0, 1) rolled once per level, for decisions that must not change between attempts. */
   challenge: number;
+  /** The level's stage concept (gen/stage), fixed per level; absent for a plain level. Sculptors give it a site with claimSite. */
+  concept?: Concept;
 }
 
 /** Builds a level shape for a theme. Must be deterministic in ctx.rng. */

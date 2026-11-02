@@ -1,0 +1,57 @@
+import { deriveSeed, Rng } from '../../core/rng';
+import type { LevelProfile } from '../../sim/level';
+import type { ThemeId } from '../../themes';
+import type { Concept } from './types';
+
+export type { Concept, Landmark } from './types';
+
+/**
+ * Stage concepts per theme (docs/SETPIECES.md): one file per theme in this
+ * folder adds its list here. Empty means every level of the theme is plain.
+ */
+export const CONCEPTS: Record<ThemeId, Concept[]> = {
+  farm: [],
+  factory: [],
+  castle: [],
+  jungle: [],
+  volcano: [],
+  harbor: [],
+  mine: [],
+  rooftops: [],
+  glacier: [],
+  space: [],
+};
+
+/** Share of levels that stay plain where a concept would fit: the counterpoint that keeps landmarks special. */
+export const PLAIN_SHARE = 0.2;
+
+/** `ProfileOverride.concept` value that forces a plain level. */
+export const PLAIN = 'plain';
+
+/**
+ * The level's concept, or null for a plain level. Fixed per level, from its
+ * own stream: a per-attempt roll would quietly select for the concepts that
+ * are easiest to sculpt. Only concepts that fit the level's size and route
+ * are drawn. `force` (tools, `?concept=`) picks one by id regardless, or
+ * `PLAIN`; an id the theme doesn't have is plain.
+ */
+export function rollConcept(seed: number, themeId: ThemeId, profile: Pick<LevelProfile, 'size' | 'route'>, force?: string): Concept | null {
+  const all = CONCEPTS[themeId];
+  if (force !== undefined) return all.find((c) => c.id === force) ?? null;
+  const pool = all.filter((c) => fits(c, profile));
+  if (!pool.length) return null;
+  const rng = new Rng(deriveSeed(seed, `concept:${themeId}`));
+  if (rng.next() < PLAIN_SHARE) return null;
+  return rng.weighted(pool.map((c) => [c, c.weight] as const));
+}
+
+/** Does the concept support this size and route? */
+export function fits(c: Concept, p: Pick<LevelProfile, 'size' | 'route'>): boolean {
+  return c.sizes.includes(p.size) && (!c.routes || c.routes.includes(p.route));
+}
+
+/** The level's name with a concept: one of its `names`, `{place}` filled with the theme's place name. */
+export function conceptName(seed: number, c: Concept, place: string): string {
+  if (!c.names?.length) return place;
+  return new Rng(deriveSeed(seed, `concept-name:${c.id}`)).pick(c.names).replaceAll('{place}', place);
+}

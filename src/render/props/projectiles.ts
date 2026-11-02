@@ -10,7 +10,7 @@ import type { Emit } from './common';
 
 /**
  * Everything a launcher throws, inked (docs/PARODY.md, Launchers): each round is a baked sprite drawn
- * along +x, stamped turned to its flight. Rounds that fly upright (anything with a face or a stem) are
+ * along +x, stamped turned to its flight. Rounds that fly upright (anything with a top, a label or a stem) are
  * mirrored when they fly left, so their top stays on top and the light stays where it is.
  */
 
@@ -54,6 +54,7 @@ const ROUNDS: Partial<Record<Ammo | 'arrowhead', () => Sprite>> = {
       g.fillStyle = css({ h: 105, s: 55, l: 42 });
       stroke(g, poly(-5, -0.6, -6.2, -1.2, -7, -2.4), { w: 0.6, seed: 2, taper: [0, 0.3], press: 0 });
     }),
+  slug: () => sprite('ammo|slug', -3.4, -1.8, 7, 3.6, slug),
   // Sorry: every shot is a little speech bubble, trailing off.
   plasma: () =>
     sprite('ammo|bubble', -5.5, -4.5, 11, 9.5, (g) => {
@@ -81,19 +82,23 @@ const ROUNDS: Partial<Record<Ammo | 'arrowhead', () => Sprite>> = {
       part(g, pts, STEEL, 21, { depth: 0.6, thin: 0.45, thick: 1 });
       dot(g, 0, 0, 0.95, 22);
     }),
-  // Grudge: a missile that's angry about it.
+  // Grudge: a missile with a red seeker lens in its nose cone and a chalk tally on its side.
   seeker: () =>
     sprite('ammo|grudge', -8.5, -5, 17, 10, (g) => {
       for (const sg of [-1, 1])
         part(g, poly(-3.8, sg * 1.8, -7.4, sg * 4, -6.6, sg * 1.2), { h: 2, s: 70, l: 46 }, 30 + sg, { depth: 0.3, thin: 0.35, thick: 0.7 });
       part(g, boxPts(-6, -2.1, 9.6, 4.2, 1.6, 31), { h: 220, s: 8, l: 86 }, 32, { depth: 0.6, thin: 0.45, thick: 1 });
+      // A red band behind the nose, and the chalk tally of everyone it caught.
+      tick(g, 1.6, -2, 1.6, 2, 0.9, 36, css({ h: 2, s: 70, l: 46 }));
+      for (const x of [-3.6, -2.9, -2.2]) tick(g, x, -1.2, x - 0.1, 1, 0.3, x * 9, 'rgba(18,11,8,0.7)');
       part(g, poly(3.2, -2.1, 7.2, 0, 3.2, 2.1), { h: 2, s: 75, l: 48 }, 33, { depth: 0.4, thin: 0.4, thick: 0.9 });
-      g.fillStyle = '#fff';
-      circle(g, 1.6, -0.1, 1.15);
+      // The seeker: a dark glass dome on the cone's tip, its lit LED drawn live.
+      g.fillStyle = INK;
+      circle(g, 5.4, 0, 1.05);
       g.fillStyle = '#d0141f';
-      circle(g, 1.85, -0.05, 0.7);
-      dot(g, 2, 0, 0.3, 34);
-      tick(g, 0.1, -1.9, 3, -0.9, 0.85, 35);
+      circle(g, 5.45, 0, 0.6);
+      g.fillStyle = 'rgba(255,220,215,0.9)';
+      g.fillRect(5.05, -0.45, 0.35, 0.3);
     }),
   boomerang: () => sprite('ammo|rang', -6.5, -4, 13, 8.5, (g) => rang(g)),
   // Dodgeball: the red playground ball, seams and all.
@@ -149,6 +154,12 @@ const ROUNDS: Partial<Record<Ammo | 'arrowhead', () => Sprite>> = {
     }),
 };
 
+/** A sentry's slug: a stubby brass round with a dark nose, drawn along +x. */
+function slug(g: CanvasRenderingContext2D) {
+  part(g, boxPts(-2.2, -0.9, 3.6, 1.8, 0.6, 41), { h: 42, s: 70, l: 58 }, 41, { depth: 0.25, thin: 0.25, thick: 0.5 });
+  part(g, poly(1.2, -0.8, 2.6, 0, 1.2, 0.8), { h: 24, s: 30, l: 34 }, 42, { depth: 0.15, thin: 0.25, thick: 0.4 });
+}
+
 function bolt(g: CanvasRenderingContext2D, arrow: boolean) {
   g.fillStyle = INK;
   line(g, -10, 0, 1.6, 0, { w: 1.7, seed: 1, taper: [0.02, 0.02], press: 0 });
@@ -201,6 +212,14 @@ function drawBolt(rc: RC, p: Projectile, a: number) {
   streak(rc.bg, p, 0.06, 'rgba(255,255,255,0.22)', 1);
 }
 
+/** A slug flies too fast to read alone: a hard tracer streak behind it, hot at the round and cut off square. */
+function drawSlug(rc: RC, p: Projectile, a: number) {
+  const hot: HSL = { h: 44, s: 100, l: 66 };
+  streak(rc.bg, p, 0.045, 'rgba(255,214,120,0.55)', 1.6);
+  round(rc, p, a, false);
+  glowDot(rc.g, p.x, p.y, 4, hot, 0.5);
+}
+
 function drawCannonball(rc: RC, p: Projectile, _a: number, emit?: Emit) {
   const sp = ROUNDS.cannonball!();
   stamp(rc.s, sp, p.x, p.y);
@@ -234,7 +253,7 @@ function drawSeeker(rc: RC, p: Projectile, a: number, emit?: Emit) {
   flame(g, p.x - Math.cos(a) * 7, p.y - Math.sin(a) * 7, 1.6, 4, { h: 35, s: 100, l: 60 }, rc.t);
   round(rc, p, a);
   const up = Math.cos(a) < 0 ? 1 : -1;
-  glowDot(g, p.x + Math.cos(a) * 1.8 + Math.sin(a) * up * 0.1, p.y + Math.sin(a) * 1.8, 5, red, 0.45 + Math.sin(rc.t * 20) * 0.2);
+  glowDot(g, p.x + Math.cos(a) * 5.4 + Math.sin(a) * up * 0.1, p.y + Math.sin(a) * 5.4, 5, red, 0.45 + Math.sin(rc.t * 20) * 0.2);
   light(rc, p.x, p.y, 40, red, 0.6);
   if (emit && Math.random() < 0.6) emit('smoke', p.x - Math.cos(a) * 7, p.y - Math.sin(a) * 7, -p.vx * 0.2, -p.vy * 0.2 - 10);
 }
@@ -338,6 +357,7 @@ const AMMO_ART: Record<Ammo, (rc: RC, p: Projectile, angle: number, emit?: Emit)
   frost: drawFrost,
   ricochet: drawRicochet,
   glider: gliderShot,
+  slug: drawSlug,
   puck: drawItemShot,
   smokebomb: drawItemShot,
 };

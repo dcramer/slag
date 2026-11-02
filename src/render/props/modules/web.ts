@@ -133,7 +133,7 @@ function bake(m: Web, uid: number) {
   });
 }
 
-/** A small spider: a round body, a head, eight bent legs and two white eyes, inked by hand. */
+/** A small spider in silhouette: a round body, a head and eight bent legs, inked by hand. No face (docs/ART.md, Objects, not characters). */
 function spider(g: CanvasRenderingContext2D, x: number, y: number, seed: number) {
   g.fillStyle = INK;
   for (let i = 0; i < 4; i++) {
@@ -151,9 +151,6 @@ function spider(g: CanvasRenderingContext2D, x: number, y: number, seed: number)
   g.fillStyle = '#4b3b5c';
   blob(g, x - 0.6, y, 0.8, seed + 2, 1.1, 0.1);
   g.fill();
-  g.fillStyle = '#ffffff';
-  circle(g, x - 0.5, y - 1.7, 0.42);
-  circle(g, x + 0.5, y - 1.7, 0.42);
 }
 
 defineArt<'web'>({

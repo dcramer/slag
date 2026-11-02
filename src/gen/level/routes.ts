@@ -16,7 +16,8 @@ import { BRIDGE_W, type BridgeHint } from './types';
  * Two kinds of place don't count, for either route, because no route choice
  * is possible there: the spawn and goal pockets, which every route shares by
  * definition, and bridge spans, which are open air a player can build across
- * wherever they like.
+ * wherever they like. A carrier landmark's ride (gen/level/ride.ts) is the
+ * third: one way across a chasm, by design.
  *
  * Why lanes and not vertex-disjoint paths: running jumps skip cells, so a flat
  * corridor has many "disjoint" paths through the same tiles. Lanes are
@@ -151,6 +152,12 @@ export function analyzeRoutes(level: Level, bridges: readonly BridgeHint[] = [],
   for (const b of bridges) {
     for (let y = Math.max(0, b.y - BRIDGE_REACH_Y); y <= Math.min(h - 1, b.y + BRIDGE_REACH_Y); y++)
       for (let x = Math.max(0, b.x - BRIDGE_REACH_X); x <= Math.min(w - 1, b.x + BRIDGE_W + BRIDGE_REACH_X - 1); x++) exempt[y * w + x] = 1;
+  }
+  // Nor along a carrier's ride (Level.rides): one way across by design, like a bridge span, and the step on and off.
+  for (const r of level.rides ?? []) {
+    const [bx, by, ax, ay] = [r.board % w, Math.floor(r.board / w), r.alight % w, Math.floor(r.alight / w)];
+    for (let y = Math.max(0, Math.min(by, ay) - 1); y <= Math.min(h - 1, Math.max(by, ay)); y++)
+      for (let x = Math.max(0, Math.min(bx, ax) - 1); x <= Math.min(w - 1, Math.max(bx, ax) + 1); x++) exempt[y * w + x] = 1;
   }
 
   // Fraction of an edge in counted tiles, and in counted tiles of the lane.

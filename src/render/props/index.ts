@@ -6,11 +6,12 @@ import { BACKDROP, moduleArt, type PropDrawOpts } from './common';
 import './modules';
 import { PISTON_CARD_HEAD } from './modules/piston';
 import { cardAngles } from './modules/swinger';
+import { drawTrack } from './track';
 
 export type { Emit, PropDrawOpts } from './common';
 export { drawProjectile } from './projectiles';
 export { drawBlastPreview } from './modules/bomb';
-export { drawStuffed } from './modules/keg';
+export { drawHeld } from './common';
 export { drawRunnerStatus, propEventFx } from './status';
 
 type M<T extends Module['type']> = Extract<Module, { type: T }>;
@@ -28,6 +29,7 @@ function drawLayers(rc: RC, r: Resolved, o: PropDrawOpts, first: number, last: n
 
 /** The scenery half of a prop. The renderer paints this before the terrain, which then occludes it (emissives included). */
 export function drawBackdrop(rc: RC, r: Resolved, o: PropDrawOpts): void {
+  drawTrack(rc, r);
   drawLayers(rc, r, o, BACKDROP, BACKDROP);
 }
 
@@ -72,24 +74,15 @@ function cardDef(full: PropDef): PropDef {
         return { ...m, length: Math.min(m.length, 2.2) };
       case 'rotor':
         return { ...m, arm: Math.min(m.arm * 0.75, 1.2), width: Math.min(m.width, 1.6) };
-      case 'portal': {
-        // Two rings eight tiles apart are two dots: bring them in, still further apart for a bigger pair.
-        const [dx, dy] = [m.b[0] - m.a[0], m.b[1] - m.a[1]];
-        const d = Math.hypot(dx, dy) || 1;
-        const k = Math.min(1, (1.6 + d * 0.15) / d);
-        return { ...m, b: [m.a[0] + dx * k, m.a[1] + dy * k] };
-      }
       default:
         return m;
     }
   };
   const modules = full.modules.map(trim);
-  // A wheel's footprint is the disk it sweeps, and a portal's spans both rings: the card fits what it draws.
-  const hub = modules.find((m) => m.type === 'rotor' || m.type === 'portal');
-  if (!hub) return { ...full, modules };
-  const at = (v: Vec): [number, number] => [Math.floor(v[0]), Math.floor(v[1])];
-  const footprint = hub.type === 'rotor' ? [at(hub.hub)] : hub.type === 'portal' ? [at(hub.a), at(hub.b)] : full.footprint;
-  return { ...full, modules, footprint };
+  // A wheel's footprint is the disk it sweeps: the card fits what it draws.
+  const hub = modules.find((m) => m.type === 'rotor');
+  if (!hub || hub.type !== 'rotor') return { ...full, modules };
+  return { ...full, modules, footprint: [[Math.floor(hub.hub[0]), Math.floor(hub.hub[1])]] };
 }
 
 /** What a part's card picture covers, in tiles of its own frame: its cells and whatever reaches out of them. */
@@ -124,7 +117,6 @@ function cardBounds(def: PropDef): { x0: number; y0: number; x1: number; y1: num
     }
     if (m.type === 'magnet') grow(m.at[0], m.at[1], m.radius);
     if (m.type === 'rotor') grow(m.hub[0], m.hub[1], m.arm + m.width / 2 + 0.2);
-    if (m.type === 'portal') for (const p of [m.a, m.b]) grow(p[0], p[1], 0.8);
     if (m.type === 'keg') grow(w / 2, h / 2, w / 2 + 0.8, h / 2 + 0.8);
   }
   // An attachment shows its host blocks, with what it adds standing off them.
@@ -165,7 +157,8 @@ export function drawPreview(rc: RC, full: PropDef, cx: number, cy: number, bw: n
 
 function drawPath(rc: RC, r: Resolved) {
   const m = r.motion;
-  if (m.type === 'none') return;
+  // A track or a lift draws its own guide, always (track.ts).
+  if (m.type === 'none' || m.type === 'track' || (m.type === 'rail' && m.dwell)) return;
   const s = rc.s;
   const cells = r.mods.flatMap((x) => (x.type === 'body' ? x.cells : []));
   let cx: number;

@@ -1,5 +1,5 @@
 import type { Rect } from '../core/geom';
-import type { Theme } from '../gen/theme';
+import type { TerrainKind, Theme } from '../gen/theme';
 import { TILE } from './constants';
 import type { PlacedProp } from './props/types';
 import type { Weather } from './weather';
@@ -78,6 +78,36 @@ export interface Level {
   weather?: Weather;
   /** Bumped whenever tiles change so renderers can invalidate caches. */
   version: number;
+  /** The stage concept's landmark (gen/stage), for the renderer: its box and how its tiles are drawn. The sim ignores it. */
+  landmark?: LevelLandmark;
+  /** Crossings a carrier landmark is proven to make (gen/level/ride.ts). reach.ts walks them; the sim ignores them. */
+  rides?: Ride[];
+}
+
+/** What the renderer knows of a level's landmark. Render-only: nothing in the sim reads it. */
+export interface LevelLandmark {
+  /** Stage concept id ('great-wheel'). */
+  concept: string;
+  /** The structure's box (tiles). */
+  rect: TileRect;
+  /** How the landmark's tiles are drawn, in place of the theme's material. */
+  skin?: TerrainKind;
+}
+
+/**
+ * A crossing a carrier set piece makes, proven by riding it standing still
+ * (gen/level/ride.ts): step onto it from `board` while it's parked at one
+ * end, step off at `alight` when it's parked at the other. Cells are keyed
+ * `y * w + x`. reach.ts takes it as one more move, from `board` to `alight`,
+ * while both are standable and every cell the rider passes through is empty.
+ */
+export interface Ride {
+  /** The carrier set piece. */
+  uid: number;
+  board: number;
+  alight: number;
+  /** Every cell the standing rider passes through between the two, excluding both ends. */
+  path: number[];
 }
 
 const PROFILE_KEYS = new WeakMap<LevelProfile, string>();
@@ -92,7 +122,8 @@ const PROFILE_KEYS = new WeakMap<LevelProfile, string>();
 export function levelKey(l: Level): string {
   let pk = l.profile ? PROFILE_KEYS.get(l.profile) : '-';
   if (pk === undefined) PROFILE_KEYS.set(l.profile!, (pk = JSON.stringify(l.profile)));
-  return `${l.seed}:${l.w}x${l.h}:${l.gravity ?? 1}:${pk}:${l.weather?.kind ?? 'clear'}`;
+  // A forced concept (?concept=) is another level at the same seed and profile.
+  return `${l.seed}:${l.w}x${l.h}:${l.gravity ?? 1}:${pk}:${l.weather?.kind ?? 'clear'}${l.landmark ? `:${l.landmark.concept}` : ''}`;
 }
 
 /** Tile kind at (tx, ty). Outside x is a solid wall; outside y is empty. */

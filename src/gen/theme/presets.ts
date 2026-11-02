@@ -1,5 +1,5 @@
 import { type HSL, hsl3 } from '../../core/color';
-import type { Rng } from '../../core/rng';
+import { Rng } from '../../core/rng';
 import type { ThemeId } from '../../themes';
 import { word } from '../names';
 import type { Ambient, Celestial, CloudStyle, DecorKind, LiquidKind, Mood, SkyLayer, SkylineKind, TerrainLook, Theme } from './types';
@@ -43,6 +43,15 @@ function layers(rng: Rng, specs: LayerSpec[]): SkyLayer[] {
     haze: s.haze,
     seed: rng.int(0, 1e9),
   }));
+}
+
+/**
+ * Another backdrop layer slipped in at `at`, rolled from its own stream seeded off the layers already
+ * rolled: the main stream draws exactly what it did before, so every seed keeps its look and adds depth.
+ */
+function deeper(ls: SkyLayer[], at: number, spec: LayerSpec): SkyLayer[] {
+  const extra = layers(new Rng((ls[0].seed ^ 0x5eedbac) >>> 0), [spec]);
+  return [...ls.slice(0, at), ...extra, ...ls.slice(at)];
 }
 
 function mat(base: HSL, dl = 0.55, ll = 1.45): { base: HSL; dark: HSL; light: HSL } {
@@ -235,41 +244,55 @@ function factory(rng: Rng): Look {
       ? celestial(rng, 'sun', hsl3(28, 100, 72), [0.25, 0.75], [0.2, 0.34], [26, 34], hsl3(30, 90, 60))
       : celestial(rng, 'moon', hsl3(40, 25, 78), [0.15, 0.85], [0.12, 0.25], [12, 16]),
     stars: smog ? 0 : 50,
-    layers: layers(rng, [
-      {
-        kind: 'industry',
-        base: 0.5,
-        amp: 0.05,
-        color: smog ? hsl3(25, 18, 36) : hsl3(250, 18, 15),
-        detail: smog ? hsl3(25, 15, 44) : hsl3(250, 15, 22),
-        glow: hsl3(35, 100, 62),
-        lit: smog ? 0.25 : 0.5,
-        haze: 0.5,
-        depth: 0.08,
-      },
+    layers: deeper(
+      layers(rng, [
+        {
+          kind: 'industry',
+          base: 0.5,
+          amp: 0.05,
+          color: smog ? hsl3(25, 18, 36) : hsl3(250, 18, 15),
+          detail: smog ? hsl3(25, 15, 44) : hsl3(250, 15, 22),
+          glow: hsl3(35, 100, 62),
+          lit: smog ? 0.25 : 0.5,
+          haze: 0.5,
+          depth: 0.08,
+        },
+        {
+          kind: 'refinery',
+          base: 0.6,
+          amp: 0.05,
+          color: smog ? hsl3(20, 16, 24) : hsl3(245, 16, 10),
+          detail: smog ? hsl3(25, 15, 34) : hsl3(240, 12, 20),
+          glow: hsl3(rng.pick([30, 45, 190]), 100, 62),
+          lit: 0.45,
+          haze: 0.3,
+          depth: 0.2,
+        },
+        {
+          kind: 'industry',
+          base: 0.72,
+          amp: 0.04,
+          color: smog ? hsl3(15, 18, 15) : hsl3(240, 15, 7),
+          detail: smog ? hsl3(15, 18, 24) : hsl3(240, 15, 15),
+          glow: hsl3(38, 100, 60),
+          lit: 0.5,
+          haze: 0.12,
+          depth: 0.36,
+        },
+      ]),
+      0,
       {
         kind: 'refinery',
-        base: 0.6,
+        base: 0.43,
         amp: 0.05,
-        color: smog ? hsl3(20, 16, 24) : hsl3(245, 16, 10),
-        detail: smog ? hsl3(25, 15, 34) : hsl3(240, 12, 20),
-        glow: hsl3(rng.pick([30, 45, 190]), 100, 62),
-        lit: 0.45,
-        haze: 0.3,
-        depth: 0.2,
+        color: smog ? hsl3(28, 20, 40) : hsl3(252, 18, 18),
+        detail: smog ? hsl3(28, 18, 46) : hsl3(252, 15, 24),
+        glow: hsl3(32, 100, 62),
+        lit: 0.2,
+        haze: 0.62,
+        depth: 0.035,
       },
-      {
-        kind: 'industry',
-        base: 0.72,
-        amp: 0.04,
-        color: smog ? hsl3(15, 18, 15) : hsl3(240, 15, 7),
-        detail: smog ? hsl3(15, 18, 24) : hsl3(240, 15, 15),
-        glow: hsl3(38, 100, 60),
-        lit: 0.5,
-        haze: 0.12,
-        depth: 0.36,
-      },
-    ]),
+    ),
     clouds: rng.int(4, 7),
     cloudStyle: 'wispy',
     cloudColor: smog ? hsl3(28, 25, 52) : hsl3(250, 15, 22),
@@ -501,9 +524,11 @@ function volcano(rng: Rng): Look {
     ]),
     mood,
     night: true,
-    sky: inf ? [hsl3(355, 55, 9), hsl3(8, 65, 20), hsl3(24, 90, 40)] : [hsl3(260, 20, 6), hsl3(345, 25, 12), hsl3(14, 60, 26)],
-    fog: inf ? hsl3(12, 50, 26) : hsl3(350, 20, 14),
-    horizon: { color: hsl3(lavaHue, 100, 55), strength: inf ? 0.6 : 0.45, y: 0.7 },
+    // A lit, smoky sky behind the play band: the basalt and the ridges are dark against it, never dark on dark.
+    sky: inf ? [hsl3(355, 32, 30), hsl3(12, 46, 54), hsl3(26, 75, 64)] : [hsl3(262, 22, 28), hsl3(345, 32, 50), hsl3(18, 60, 58)],
+    fog: inf ? hsl3(14, 36, 50) : hsl3(348, 22, 42),
+    // The lava's light on the smoke sits behind the play band, not down at the pool.
+    horizon: { color: hsl3(lavaHue, 100, 58), strength: inf ? 0.75 : 0.65, y: 0.56 },
     celestial: inf
       ? celestial(rng, 'eclipse', hsl3(0, 0, 4), [0.2, 0.8], [0.12, 0.22], [14, 20], hsl3(lavaHue + 10, 100, 62))
       : celestial(rng, 'moon', hsl3(15, 50, 70), [0.2, 0.8], [0.12, 0.22], [14, 18], hsl3(10, 80, 55)),
@@ -513,18 +538,18 @@ function volcano(rng: Rng): Look {
         kind: 'volcano',
         base: 0.4,
         amp: 0.05,
-        color: inf ? hsl3(5, 30, 13) : hsl3(300, 12, 10),
+        color: inf ? hsl3(5, 26, 17) : hsl3(300, 12, 15),
         glow: hsl3(lavaHue + 5, 100, 58),
         lit: 1,
         haze: 0.4,
         depth: 0.05,
       },
-      { kind: 'crags', base: 0.6, amp: 0.08, color: inf ? hsl3(5, 25, 9) : hsl3(300, 10, 7), glow: hsl3(lavaHue, 100, 55), lit: 0.6, haze: 0.25, depth: 0.18 },
+      { kind: 'crags', base: 0.6, amp: 0.08, color: inf ? hsl3(5, 22, 8) : hsl3(300, 10, 8), glow: hsl3(lavaHue, 100, 55), lit: 0.6, haze: 0.16, depth: 0.18 },
       { kind: 'crags', base: 0.76, amp: 0.06, color: hsl3(10, 15, 5), glow: hsl3(lavaHue, 100, 55), lit: 0.8, haze: 0.08, depth: 0.34 },
     ]),
     clouds: rng.int(5, 8),
     cloudStyle: 'ash',
-    cloudColor: inf ? hsl3(6, 30, 15) : hsl3(330, 12, 13),
+    cloudColor: inf ? hsl3(8, 26, 30) : hsl3(330, 14, 28),
     rays: false,
     terrain: {
       kind: 'basalt',
@@ -539,7 +564,8 @@ function volcano(rng: Rng): Look {
     },
     liquid: { kind: 'lava', color: hsl3(lavaHue, 100, 48), glow: hsl3(lavaHue + 14, 100, 60), emissive: true },
     ambient: 'embers',
-    ambientLight: inf ? rng.range(0.5, 0.58) : rng.range(0.4, 0.48),
+    // The backdrop prints at about ambient^0.6 of itself: below this the smoky sky goes back to near black.
+    ambientLight: inf ? rng.range(0.58, 0.66) : rng.range(0.5, 0.58),
     ambientTint: hsl3(lavaHue, 80, 62),
     decor: pickDecor(rng, ['fumarole', 'obsidian'], ['bones', 'skull', 'crystal'], 4),
     decorDensity: 0.13,
@@ -585,7 +611,7 @@ function harbor(rng: Rng): Look {
         base: 0.6,
         amp: 0.04,
         color: sea,
-        detail: night ? hsl3(225, 25, 14) : golden ? hsl3(250, 18, 42) : hsl3(150, 18, 55),
+        detail: night ? hsl3(225, 30, 7) : golden ? hsl3(250, 18, 42) : hsl3(150, 18, 55),
         glow: hsl3(48, 100, 75),
         lit: 1,
         haze: 0.24,
@@ -725,43 +751,43 @@ function rooftops(rng: Rng): Look {
     ]),
     mood,
     night: !dusk,
-    sky: dusk ? [hsl3(250, 40, 22), hsl3(320, 42, 44), hsl3(28, 85, 62)] : [hsl3(245, 45, 7), hsl3(265, 35, 15), hsl3(295, 38, 27)],
-    fog: dusk ? hsl3(310, 24, 40) : hsl3(280, 30, 22),
-    horizon: { color: dusk ? hsl3(28, 100, 62) : neonA, strength: dusk ? 0.5 : 0.35, y: 0.75 },
+    sky: dusk ? [hsl3(250, 36, 17), hsl3(312, 30, 29), hsl3(16, 48, 40)] : [hsl3(245, 42, 7), hsl3(262, 30, 12), hsl3(285, 28, 18)],
+    fog: dusk ? hsl3(300, 20, 27) : hsl3(272, 24, 15),
+    horizon: { color: dusk ? hsl3(22, 80, 55) : neonA, strength: dusk ? 0.26 : 0.16, y: 0.75 },
     celestial: dusk
-      ? celestial(rng, 'sun', hsl3(18, 100, 64), [0.25, 0.75], [0.44, 0.52], [24, 30])
+      ? celestial(rng, 'sun', hsl3(16, 70, 56), [0.25, 0.75], [0.44, 0.52], [24, 30])
       : celestial(rng, 'moon', hsl3(260, 30, 88), [0.15, 0.85], [0.1, 0.2], [14, 20]),
-    stars: mood === 'night' ? 70 : 0,
+    stars: 0,
     layers: layers(rng, [
       {
         kind: 'skyscrapers',
         base: 0.36,
         amp: 0.08,
-        color: dusk ? hsl3(290, 20, 36) : hsl3(255, 25, 14),
+        color: dusk ? hsl3(290, 18, 26) : hsl3(255, 22, 12),
         glow: hsl3(45, 90, 70),
-        lit: dusk ? 0.08 : 0.14,
-        haze: 0.5,
+        lit: 0,
+        haze: 0.62,
         depth: 0.06,
       },
       {
         kind: 'skyscrapers',
         base: 0.48,
         amp: 0.08,
-        color: dusk ? hsl3(280, 20, 22) : hsl3(250, 25, 9),
+        color: dusk ? hsl3(280, 18, 17) : hsl3(250, 22, 9),
         detail: neonA,
-        glow: hsl3(48, 90, 68),
-        lit: dusk ? 0.1 : 0.15,
-        haze: 0.28,
+        glow: hsl3(46, 80, 62),
+        lit: dusk ? 0.09 : 0.13,
+        haze: 0.42,
         depth: 0.16,
       },
       {
         kind: 'rooftops',
         base: 0.7,
         amp: 0.04,
-        color: dusk ? hsl3(270, 22, 12) : hsl3(245, 22, 5),
+        color: dusk ? hsl3(270, 20, 10) : hsl3(245, 22, 5),
         detail: neonA,
-        glow: hsl3(42, 100, 62),
-        lit: 0.35,
+        glow: hsl3(42, 90, 58),
+        lit: 0.22,
         haze: 0.08,
         depth: 0.32,
       },
@@ -942,39 +968,43 @@ function space(rng: Rng): Look {
     horizon: { color: hsl3(planetHue, 70, 58), strength: 0.3, y: 0.82 },
     celestial: celestial(rng, rng.chance(0.6) ? 'sun' : 'moon', hsl3(rng.pick([45, 200]), 40, 96), [0.15, 0.85], [0.1, 0.22], [6, 9], hsl3(45, 80, 80)),
     stars: 320,
-    layers: layers(rng, [
-      {
-        kind: 'planet',
-        base: 0.62,
-        amp: 0.05,
-        color: hsl3(planetHue, 40, mood === 'dusk' ? 40 : 30),
-        detail: hsl3(planetHue + 25, 45, 52),
-        glow: hsl3(planetHue, 80, 66),
-        lit: 1,
-        haze: 0.1,
-        depth: 0.03,
-      },
-      {
-        kind: 'orbital',
-        base: 0.45,
-        amp: 0.06,
-        color: hsl3(225, 18, 22),
-        detail: hsl3(215, 25, 40),
-        glow: hsl3(rng.pick([0, 190, 48]), 100, 62),
-        lit: 0.7,
-        haze: 0.3,
-        depth: 0.12,
-      },
-      {
-        kind: 'debris',
-        base: 0.7,
-        amp: 0.12,
-        color: hsl3(250, 14, 12),
-        detail: hsl3(250, 14, 24),
-        haze: 0.1,
-        depth: 0.3,
-      },
-    ]),
+    layers: deeper(
+      layers(rng, [
+        {
+          kind: 'planet',
+          base: 0.62,
+          amp: 0.05,
+          color: hsl3(planetHue, 40, mood === 'dusk' ? 40 : 30),
+          detail: hsl3(planetHue + 25, 45, 52),
+          glow: hsl3(planetHue, 80, 66),
+          lit: 1,
+          haze: 0.1,
+          depth: 0.03,
+        },
+        {
+          kind: 'orbital',
+          base: 0.45,
+          amp: 0.06,
+          color: hsl3(225, 18, 22),
+          detail: hsl3(215, 25, 40),
+          glow: hsl3(rng.pick([0, 190, 48]), 100, 62),
+          lit: 0.7,
+          haze: 0.3,
+          depth: 0.12,
+        },
+        {
+          kind: 'debris',
+          base: 0.7,
+          amp: 0.12,
+          color: hsl3(250, 14, 12),
+          detail: hsl3(250, 14, 24),
+          haze: 0.1,
+          depth: 0.3,
+        },
+      ]),
+      1,
+      { kind: 'debris', base: 0.42, amp: 0.1, color: hsl3(neb, 16, 16), detail: hsl3(neb, 18, 28), haze: 0.45, depth: 0.07 },
+    ),
     clouds: 0,
     cloudStyle: 'wispy',
     cloudColor: hsl3(neb, 30, 24),

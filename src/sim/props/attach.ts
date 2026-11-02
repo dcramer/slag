@@ -7,7 +7,7 @@ import type { InputFrame } from '../types';
 import { moduleSim } from './registry';
 
 /**
- * Being held by a prop. A rope or keg grabs a runner and then owns their body:
+ * Being held by a prop. A rope, keg or pipe grabs a runner and then owns their body:
  * RunWorld skips the controller while `Runner.attach.grip` is set, and the
  * module's `hold` writes position and velocity instead. The hitbox never
  * changes and everything stays plain data beside `status` and `items`.
@@ -40,6 +40,8 @@ export interface Grip {
   aim: number;
   /** Stuffed inside the part: no held items. */
   sealed: boolean;
+  /** Pipe: uid of the pipe the runner comes out of, or -1 while still going in. */
+  to: number;
   /** Velocity the module last wrote; anything else means something hit this runner. */
   vx: number;
   vy: number;
@@ -53,6 +55,20 @@ export interface RunnerAttach {
   cdMi: number;
   /** Frame a backfire's soot wears off (art). */
   soot: number;
+  /**
+   * Inputs (LATCH bits) still held from leaving a part: a part you work with the controls ignores
+   * them until they're let go and pressed again, so holding down out of a pipe doesn't send you
+   * straight back in. Cleared bit by bit as they're released.
+   */
+  latch: number;
+}
+
+/** Bits of `RunnerAttach.latch`. */
+export const LATCH = { down: 1, up: 2, left: 4, right: 8, jump: 16 } as const;
+
+/** The LATCH bits of what this input holds. */
+export function latchOf(inp: InputFrame): number {
+  return (inp.down ? LATCH.down : 0) | (inp.up ? LATCH.up : 0) | (inp.left ? LATCH.left : 0) | (inp.right ? LATCH.right : 0) | (inp.jump ? LATCH.jump : 0);
 }
 
 /** What a module's `touch` asks for through `ctx.grab`. */
@@ -78,7 +94,7 @@ export interface GrabRequest {
 export const REGRAB = 20;
 
 export function newAttach(): RunnerAttach {
-  return { grip: null, cd: 0, cdUid: -1, cdMi: -1, soot: 0 };
+  return { grip: null, cd: 0, cdUid: -1, cdMi: -1, soot: 0, latch: 0 };
 }
 
 /** World gravity (px/s²) at this level's setting. `Level.gravity` lands with the level-variety work; until then it's absent, which means normal. */
@@ -109,6 +125,7 @@ function shoved(r: Runner, g: Grip): boolean {
 export function stepHold(w: RunWorld, r: Runner, inp: InputFrame, f: number): boolean {
   const a = r.attach;
   if (a.cd > 0) a.cd--;
+  if (a.latch) a.latch &= latchOf(inp);
   const g = a.grip;
   if (!g) return false;
   const rp = w.resolved.find((x) => x.pp.uid === g.uid);
@@ -118,7 +135,7 @@ export function stepHold(w: RunWorld, r: Runner, inp: InputFrame, f: number): bo
     letGo(r);
     return false;
   }
-  const keep = sim.hold(m, w.touchCtx(rp, g.mi, f, r), r, g, inp);
+  const keep = sim.hold(m, w.touchCtx(rp, g.mi, f, r, undefined, inp), r, g, inp);
   g.t++;
   g.vx = r.body.vx;
   g.vy = r.body.vy;
@@ -156,7 +173,7 @@ export function settleGrabs(w: RunWorld, grabs: GrabRequest[]): void {
     if (w.runners.some((o) => o.attach.grip?.uid === uid && o.attach.grip.mi === mi)) continue;
     stick(r);
     const { vx, vy } = r.body;
-    a.grip = { uid, mi, t: 0, x: g.x, y: g.y, len: g.len ?? 0, s: g.s ?? 0, hooked: !!g.hooked, fuse: -1, aim: 0, sealed: !!g.sealed, vx, vy };
+    a.grip = { uid, mi, t: 0, x: g.x, y: g.y, len: g.len ?? 0, s: g.s ?? 0, hooked: !!g.hooked, fuse: -1, aim: 0, sealed: !!g.sealed, to: -1, vx, vy };
     w.events.push({ type: 'prop', kind: g.kind, x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h / 2 });
   }
   grabs.length = 0;
