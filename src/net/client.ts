@@ -141,6 +141,7 @@ export function connectRoom(room: string, match: Match, opts: { primaryDevice: s
         status: statusLine(),
         inviteUrl: cutOff() ? undefined : inviteUrl,
         offline: cutOff(),
+        stranded: net.refused && !net.synced,
         hostSlot: match.players.find((p) => peerOf(p.device) === net.hostId)?.slot,
         kickable: kickable(),
         kickSlot,

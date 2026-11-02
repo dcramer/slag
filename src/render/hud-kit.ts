@@ -241,7 +241,7 @@ export function tag(
   return w;
 }
 
-export type IconName = 'gear' | 'dice' | 'flag' | 'refresh' | 'copy' | 'pencil' | 'crown' | 'keyboard' | 'gamepad' | 'check';
+export type IconName = 'gear' | 'dice' | 'flag' | 'refresh' | 'copy' | 'pencil' | 'crown' | 'keyboard' | 'gamepad' | 'check' | 'alert';
 
 /** Simple line/solid icons, `s` px tall, centered at (cx, cy). */
 export function icon(c: Ctx, name: IconName, cx: number, cy: number, s: number, color: string) {
@@ -376,6 +376,18 @@ export function icon(c: Ctx, name: IconName, cx: number, cy: number, s: number, 
       c.lineTo(-1, 3);
       c.lineTo(4.5, -3.5);
       c.stroke();
+      break;
+    case 'alert':
+      // A warning triangle with the mark knocked out of it.
+      c.beginPath();
+      c.moveTo(0, -5);
+      c.lineTo(5.2, 4.5);
+      c.lineTo(-5.2, 4.5);
+      c.closePath();
+      c.fill();
+      c.fillStyle = PAL.ink;
+      c.fillRect(-0.75, -1.8, 1.5, 3.6);
+      c.fillRect(-0.75, 2.6, 1.5, 1.2);
       break;
   }
   c.restore();

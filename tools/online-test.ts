@@ -1155,6 +1155,13 @@ async function refusedScenario(browser: Browser, base: string) {
   const status = (await B.evaluate(() => (window as any).slagDebug.renderer.hud.net?.status)) as string;
   check(refused && status === 'Different Version · Reload', `a guest that can't load the host's state says so (${status})`);
   await r.shot(B, 'guest');
+  const hud = (await B.evaluate(() => {
+    const h = (window as any).slagDebug.renderer.hud;
+    return { bad: h.toastBad as boolean, actions: (h.buttons as { action: string }[]).map((b) => b.action) };
+  })) as { bad: boolean; actions: string[] };
+  check(hud.bad, 'the toast reads as bad news, not a success check');
+  const seatControls = hud.actions.filter((a) => ['join', 'ready', 'look', 'level', 'name'].includes(a));
+  check(seatControls.length === 0, `no seat or join controls on a guest that can't join (${seatControls.join(', ') || 'none'})`);
   await r.dispose();
 }
 

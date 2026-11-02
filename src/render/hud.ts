@@ -68,6 +68,8 @@ export interface NetInfo {
   kickable?: number[];
   /** Player picked with the keyboard or gamepad. */
   kickSlot?: number;
+  /** In no room's match, and can't join this one (another build): its local seats mean nothing, so none are drawn. */
+  stranded?: boolean;
 }
 
 interface FooterItem {
@@ -181,6 +183,7 @@ export class Hud {
   /** Draws deferred until after the footer (player cursors). */
   private pending: (() => void)[] = [];
   private toastUntil = 0;
+  private toastBad = false;
 
   /** Device labels/hints from the live key bindings (set by main). */
   devices: DeviceInfo = {
@@ -237,8 +240,10 @@ export class Hud {
   }
 
   /** Show a short confirmation message (e.g. "Invite Link Copied"). */
-  toast(msg: string, ms = 1800) {
+  /** A short notice under the top bar. `bad` is news the player didn't want (a lost link, a kick): no success check on it. */
+  toast(msg: string, ms = 1800, bad = false) {
     this.toastMsg = msg;
+    this.toastBad = bad;
     this.toastUntil = performance.now() + ms;
   }
 
@@ -365,7 +370,9 @@ export class Hud {
     this.ctx.fillRect(f.x0, f.y0, f.w, f.h);
   }
 
-  draw(m: Match, t: number, pw: number, ph: number) {
+  draw(match: Match, t: number, pw: number, ph: number) {
+    // Prototype-backed, so the match's methods and every other field read through untouched.
+    const m: Match = this.net?.stranded ? Object.assign(Object.create(match) as Match, { players: [] }) : match;
     this.buttons = [];
     const c = this.ctx;
     const f = this.frame;
@@ -566,7 +573,7 @@ export class Hud {
     const gridH = rows * bh + (rows - 1) * gap;
     const y0 = phone ? 0 : top + (bottom - top - gridH) / 2;
     const x0 = (VIEW_W - gridW) / 2;
-    const joinable = !me;
+    const joinable = !me && !this.net?.stranded;
     done = this.begin(gs, phone ? (win.safeX0 + win.safeX1) / 2 - (VIEW_W / 2) * gs : 0, phone ? (top + bottom) / 2 - (gridH / 2) * gs : 0);
     for (let i = 0; i < shown; i++) {
       const x = x0 + (i % cols) * (bw + gap);
@@ -1122,8 +1129,9 @@ export class Hud {
         // A phone's lobby buttons are all on the cards and the top bar, big enough for a thumb.
         if (this.phone)
           return { items, left: m.players.length ? `${m.players.filter((p) => p.ready).length}/${m.players.length} Ready` : '', alpha: 1, bar: true };
-        if (!primary) items.push({ action: 'confirm', label: 'Join', hud: 'join', device: this.mouseDevice });
-        else {
+        if (!primary) {
+          if (!this.net?.stranded) items.push({ action: 'confirm', label: 'Join', hud: 'join', device: this.mouseDevice });
+        } else {
           items.push({ action: 'confirm', label: primary.ready ? 'Not Ready' : 'Ready Up', hud: 'ready', device: primary.device });
           items.push({ action: 'alt', label: 'New Look', hud: 'look', device: primary.device });
           items.push({ action: 'down', label: 'New Level', hud: 'level', device: primary.device });
@@ -1268,8 +1276,9 @@ export class Hud {
     c.font = `700 ${TYPE.label}px ${UI}`;
     const w = c.measureText(this.toastMsg).width + 34;
     const x = VIEW_W / 2 - w / 2;
-    plate(c, x, 52, w, 24, { rivets: false, stroke: PAL.toxic });
-    icon(c, 'check', x + 13, 64, 9, PAL.toxic);
+    const tone = this.toastBad ? PAL.amber : PAL.toxic;
+    plate(c, x, 52, w, 24, { rivets: false, stroke: tone });
+    icon(c, this.toastBad ? 'alert' : 'check', x + 13, 64, 9, tone);
     this.text(this.toastMsg, x + 23, 64.5, TYPE.label, PAL.bone, 'left', UI, 700);
     c.restore();
     done();

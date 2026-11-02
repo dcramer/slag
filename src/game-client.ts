@@ -294,7 +294,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     uiHover();
     renderer.hud.mouseDevice = myDevice();
     renderer.hud.net = conn.hudInfo();
-    conn.toast((msg) => renderer.hud.toast(msg, 3000));
+    conn.toast((msg) => renderer.hud.toast(msg, 3000, true)); // every net toast is bad news
     inputMode.update();
     // Touch controls are authoritative for "touch"; otherwise the last keyboard/mouse vs pad input wins.
     renderer.hud.lastInput = input.touch.active ? 'touch' : inputMode.mode === 'touch' ? 'keyboard' : inputMode.mode;
