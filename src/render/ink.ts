@@ -197,6 +197,8 @@ export interface LooseOpts {
   seed: number;
   /** Multiplies how far the outline strays from the grid. */
   loose: number;
+  /** Tile window being traced, when it isn't the whole level: lines along its rim aren't real edges. */
+  edge?: { x: number; y: number; w: number; h: number };
 }
 
 /**
@@ -262,7 +264,11 @@ export function looseLoop(corners: readonly P[], o: LooseOpts): EdgeP[] {
       y: q.y + ny * wander * amp,
       nx,
       ny,
-      hidden: q.x <= 0.5 || q.y <= 0.5 || q.x >= o.w * T - 0.5 || q.y >= o.h * T - 0.5,
+      hidden:
+        q.x <= (o.edge?.x ?? 0) * T + 0.5 ||
+        q.y <= (o.edge?.y ?? 0) * T + 0.5 ||
+        q.x >= ((o.edge?.x ?? 0) + (o.edge?.w ?? o.w)) * T - 0.5 ||
+        q.y >= ((o.edge?.y ?? 0) + (o.edge?.h ?? o.h)) * T - 0.5,
     };
   });
 }

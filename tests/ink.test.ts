@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { type EdgeP, looseLoop, traceCorners } from '../src/render/ink';
+import { dirtyTiles } from '../src/render/ink-terrain';
 
 /** Build a grid from rows of `#` (solid) and `.` (air). Out of bounds is solid, as at the world's edge. */
 function grid(rows: string[]) {
@@ -60,5 +61,29 @@ describe('ink contours', () => {
       .filter((p) => p.x < 17 * 16);
     expect(far.length).toBeGreaterThan(20);
     for (const p of far) expect(was.has(key(p))).toBe(true);
+  });
+});
+
+describe('dirtyTiles', () => {
+  const w = 20;
+  const h = 10;
+  const blank = () => new Uint8Array(w * h);
+
+  it('is null when no tile changed', () => {
+    expect(dirtyTiles(blank(), blank(), w, h)).toBeNull();
+  });
+
+  it('wraps every change in the margin one tile can reach', () => {
+    const now = blank();
+    now[5 * w + 10] = 1;
+    now[6 * w + 12] = 1;
+    expect(dirtyTiles(blank(), now, w, h, 2)).toEqual({ x: 8, y: 3, w: 7, h: 6 });
+  });
+
+  it('stops at the level, so a change at the edge never leaves it', () => {
+    const now = blank();
+    now[0] = 1;
+    now[(h - 1) * w + w - 1] = 1;
+    expect(dirtyTiles(blank(), now, w, h, 6)).toEqual({ x: 0, y: 0, w, h });
   });
 });

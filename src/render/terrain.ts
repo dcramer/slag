@@ -7,7 +7,7 @@ import type { ThemeId } from '../themes';
 import { DECOR, type Decor } from './decor';
 import { flattenMaterial } from './cel-terrain';
 import { inkFence, inkHay } from './ink-parts';
-import { drawTufts, inkContours, inkEdges, inkGrass, inkHatch, inkMaterial, inkPlatforms, makeTufts, type Tuft } from './ink-terrain';
+import { type Area, dirtyTiles, drawTufts, inkContours, inkEdges, inkGrass, inkHatch, inkMaterial, inkPlatforms, makeTufts, type Tuft } from './ink-terrain';
 import { circle, makeNoise, mixRgb, type RC } from './kit';
 
 export { flame } from './kit';
@@ -169,8 +169,13 @@ export class TerrainPainter {
   /** World size in px of the baked level. */
   private ww = 0;
   private wh = 0;
+  /** Debug: bake whole levels, to compare a partial redraw against the truth (`pnpm shot inkblast`). */
+  fullBakes = false;
   private tufts: Tuft[] = [];
   private inkLayer: HTMLCanvasElement | null = null;
+  /** The tiles the ink bake last drew, and which level and look they belong to: all a partial redraw needs. */
+  private inkTiles: Uint8Array | null = null;
+  private inkKey = '';
 
   /**
    * Bake `level` if anything changed; true if it did. `skip` leaves decor out
@@ -201,8 +206,18 @@ export class TerrainPainter {
     const bk = `${tk}:${level.seed}:${level.version}:${level.w}x${level.h}`;
     if (bk === this.bakeKey) return false;
     this.bakeKey = bk;
+    // The same level with some tiles gone: redraw what changed. A bomb must not cost a whole bake.
+    const ik = `${tk}:${level.seed}:${level.w}x${level.h}`;
+    if (ink && this.bake && ik === this.inkKey && this.inkTiles && !this.fullBakes) {
+      const dirty = dirtyTiles(this.inkTiles, level.tiles, level.w, level.h);
+      if (dirty) this.bakeInk(this.bake.getContext('2d')!, level, kb, this.solidOf(level), dirty);
+      this.inkTiles = level.tiles.slice();
+      return true;
+    }
     this.kb = kb;
+    this.inkKey = ik;
     this.bakeTerrain(level, kb);
+    this.inkTiles = ink ? level.tiles.slice() : null;
     return true;
   }
 
@@ -221,7 +236,7 @@ export class TerrainPainter {
     const g = c.getContext('2d')!;
     g.setTransform(kb, 0, 0, kb, 0, 0);
     g.clearRect(0, 0, worldW, worldH);
-    const solid = (x: number, y: number) => tileAt(level, x, y) !== 0 && tileAt(level, x, y) !== T_ONEWAY && y < level.h;
+    const solid = this.solidOf(level);
     if (INK_THEMES.has(th.id)) {
       this.bakeInk(g, level, kb, solid);
       return;
@@ -430,38 +445,66 @@ export class TerrainPainter {
     g.drawImage(layer, 0, 0, worldW, worldH);
   }
 
-  /** The terrain as an ink drawing (`ink-terrain.ts`). */
-  private bakeInk(g: CanvasRenderingContext2D, level: Level, kb: number, solid: (x: number, y: number) => boolean) {
+  private solidOf(level: Level) {
+    return (x: number, y: number) => tileAt(level, x, y) !== 0 && tileAt(level, x, y) !== T_ONEWAY && y < level.h;
+  }
+
+  /**
+   * The terrain as an ink drawing (`ink-terrain.ts`), whole or just `tiles`. One path for both: the
+   * clip and the layer sit on whole pixels, and nothing is resampled, so a partial redraw is pixel-exact.
+   */
+  private bakeInk(g: CanvasRenderingContext2D, level: Level, kb: number, solid: (x: number, y: number) => boolean, tiles?: TileRect) {
     const th = level.theme;
     const seed = th.seed ^ 0x1a4c;
-    const { mask, loops } = inkContours(level, seed, solid);
+    const { mask, loops } = inkContours(level, seed, solid, tiles);
+    const W = g.canvas.width;
+    const H = g.canvas.height;
+    const px0 = tiles ? Math.floor(tiles.x * TILE * kb) : 0;
+    const py0 = tiles ? Math.floor(tiles.y * TILE * kb) : 0;
+    const px1 = tiles ? Math.min(W, Math.ceil((tiles.x + tiles.w) * TILE * kb)) : W;
+    const py1 = tiles ? Math.min(H, Math.ceil((tiles.y + tiles.h) * TILE * kb)) : H;
+    const area: Area = { x0: px0 / kb, y0: py0 / kb, x1: px1 / kb, y1: py1 / kb };
     // Paint on a layer and cut it once: thousands of small fills under a clip this complex take seconds.
     const layer = (this.inkLayer ??= document.createElement('canvas'));
-    layer.width = g.canvas.width;
-    layer.height = g.canvas.height;
+    layer.width = px1 - px0;
+    layer.height = py1 - py0;
     const lg = layer.getContext('2d')!;
-    lg.setTransform(kb, 0, 0, kb, 0, 0);
-    inkMaterial(lg, level, th, seed, solid);
-    inkHatch(lg, loops, th, seed);
+    lg.setTransform(kb, 0, 0, kb, -px0, -py0);
+    inkMaterial(lg, level, th, seed, solid, area);
+    inkHatch(lg, loops, th, seed, area);
     lg.globalCompositeOperation = 'destination-in';
     lg.fillStyle = '#000';
     lg.fill(mask);
-    g.drawImage(layer, 0, 0, level.w * TILE, level.h * TILE);
-    inkEdges(g, loops, th, seed);
-    inkGrass(g, loops, th.terrain.capColor, seed);
-    inkPlatforms(g, level, th, seed, solid);
-    this.tufts = makeTufts(loops, seed, this.decor);
+    g.save();
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.beginPath();
+    g.rect(px0, py0, px1 - px0, py1 - py0);
+    g.clip();
+    g.clearRect(px0, py0, px1 - px0, py1 - py0);
+    g.drawImage(layer, px0, py0);
+    g.setTransform(kb, 0, 0, kb, 0, 0);
+    inkEdges(g, loops, th, seed, area);
+    inkGrass(g, loops, th.terrain.capColor, seed, area);
+    inkPlatforms(g, level, th, seed, solid, area);
+    // A partial trace only knows the ground around it: keep every tuft past that and replace the rest.
+    const fresh = makeTufts(loops, seed, this.decor);
+    this.tufts = tiles
+      ? [
+          ...this.tufts.filter((t) => t.x < area.x0 || t.x > area.x1 || t.y < area.y0 || t.y > area.y1),
+          ...fresh.filter((t) => t.x >= area.x0 && t.x <= area.x1 && t.y >= area.y0 && t.y <= area.y1),
+        ]
+      : fresh;
     for (const d of this.decor) {
       if (!tileAt(level, d.tx, d.ty)) continue;
       const def = DECOR[d.kind];
-      if (def.bake) {
-        g.save();
-        if (d.kind === 'haybale') inkHay(g, d);
-        else if (d.kind === 'fence') inkFence(g, d);
-        else def.bake(g, d, th);
-        g.restore();
-      }
+      if (!def.bake || d.x + 96 < area.x0 || d.x - 96 > area.x1 || d.y + 96 < area.y0 || d.y - 96 > area.y1) continue;
+      g.save();
+      if (d.kind === 'haybale') inkHay(g, d);
+      else if (d.kind === 'fence') inkFence(g, d);
+      else def.bake(g, d, th);
+      g.restore();
     }
+    g.restore();
     this.glowBake = null;
   }
 
