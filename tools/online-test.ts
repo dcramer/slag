@@ -474,12 +474,19 @@ async function hiddenScenario(browser: Browser, base: string) {
   await r.dispose();
 }
 
-type Body = { slot: number; x: number; y: number; ride: number; press: number };
+type Body = { slot: number; x: number; y: number; ride: number; press: number; ground: boolean };
 
 /** Every runner as the page's confirmed match has it: on the host, the truth. */
 const bodies = (p: Page) =>
   p.evaluate(() =>
-    ((window as any).slagDebug.match.run?.runners ?? []).map((r: any) => ({ slot: r.slot, x: r.body.x, y: r.body.y, ride: r.ride, press: r.press })),
+    ((window as any).slagDebug.match.run?.runners ?? []).map((r: any) => ({
+      slot: r.slot,
+      x: r.body.x,
+      y: r.body.y,
+      ride: r.ride,
+      press: r.press,
+      ground: r.body.onGround,
+    })),
   ) as Promise<Body[]>;
 
 /**
@@ -574,33 +581,44 @@ async function walkTo(host: Page, p: Page, slot: number, x: number) {
   await sleep(400);
 }
 
-/** Puts B standing on A's head: B steps away from A, then jumps back over it and lets go of the direction once it's above. */
+/**
+ * Puts B standing on A's head: B steps away from A, jumps, and steers toward A's
+ * x until it lands. Steering, not timing: gravity and air control vary by level.
+ */
 async function mount(A: Page, B: Page, a: number, b: number): Promise<boolean> {
   const both = async () => {
     const rs = await bodies(A);
     return [rs.find((r) => r.slot === a)!, rs.find((r) => r.slot === b)!] as const;
   };
+  let held = '';
+  const steer = async (key: string) => {
+    if (key === held) return;
+    if (held) await B.keyboard.up(held);
+    if (key) await B.keyboard.down(key);
+    held = key;
+  };
   for (let attempt = 0; attempt < 8; attempt++) {
     const [ra, rb] = await both();
     if (rb.ride === a) return true;
-    const away = rb.x >= ra.x ? 1 : -1;
-    const [out, back] = away > 0 ? ['ArrowRight', 'ArrowLeft'] : ['ArrowLeft', 'ArrowRight'];
+    const out = rb.x >= ra.x ? 'ArrowRight' : 'ArrowLeft';
     await B.keyboard.down(out);
-    await sleep(attempt % 2 ? 260 : 180);
+    await sleep(140 + 60 * (attempt % 3));
     await B.keyboard.up(out);
     await sleep(500);
     await B.keyboard.down('Space');
-    await B.keyboard.down(back);
     const t0 = Date.now();
-    while (Date.now() - t0 < 900) {
-      const [ra2, rb2] = await both();
-      if ((rb2.x - ra2.x) * away <= 1) break;
+    while (Date.now() - t0 < 2500) {
       await sleep(8);
+      const [ra2, rb2] = await both();
+      if (rb2.ride === a || (rb2.ground && Date.now() - t0 > 200)) break;
+      const dx = ra2.x - rb2.x;
+      // Feet still below the head: keep clear of A sideways, or we'd only bump into it.
+      const below = rb2.y + 14 > ra2.y;
+      await steer(below ? '' : dx > 1 ? 'ArrowRight' : dx < -1 ? 'ArrowLeft' : '');
     }
-    await B.keyboard.up(back);
-    await sleep(150);
+    await steer('');
     await B.keyboard.up('Space');
-    await sleep(900);
+    await sleep(600);
   }
   return (await both())[1].ride === a;
 }
@@ -1156,8 +1174,8 @@ function roomWithRunway(): string {
     }
     return open;
   };
-  // The first fit, found by the search below at the time of writing: generating hundreds of levels is slow.
-  if (fits('CONTACT1Y')) return 'CONTACT1Y';
+  // A speed hint only: the first fit when last checked. Generator changes move it, and then the search below finds the new one.
+  if (fits('CONTACT1E')) return 'CONTACT1E';
   for (let i = 0; i < 500; i++) {
     const code = `CONTACT${i.toString(36).toUpperCase()}`;
     if (fits(code)) return code;
