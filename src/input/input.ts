@@ -237,6 +237,7 @@ export class InputManager {
           run: held('run'),
           confirmPressed: pressed('confirm'),
           altPressed: pressed('alt'),
+          alt: held('alt'),
           downPressed: pressed('down'),
           usePressed: pressed('use'),
         };
@@ -292,6 +293,7 @@ export class InputManager {
         jumpPressed: jump && !prev.jump,
         confirmPressed: jump && !prev.jump,
         altPressed: alt && !prev.alt,
+        alt,
         downPressed: down && !prev.down,
         usePressed: use && !prev.use,
       };

@@ -124,6 +124,30 @@ export const shots: Scenarios = {
       await snap(`race-${seed}-${exact}`);
       return;
     }
+    const pop = Number(opt('pop', '0'));
+    if (pop) {
+      // `--pop N`: after `--frames`, the first runner presses self-destruct and holds it N frames: the charge ring mid-fill.
+      await step(frames);
+      await page.evaluate((n) => {
+        const d = (window as any).slagDebug;
+        const idle = {
+          left: false,
+          right: false,
+          up: false,
+          down: false,
+          jump: false,
+          jumpPressed: false,
+          confirmPressed: false,
+          altPressed: false,
+          downPressed: false,
+        };
+        const dev = d.match.players[0].device;
+        d.step(1, { [dev]: { ...idle, alt: true, altPressed: true } });
+        d.step(n - 1, { [dev]: { ...idle, alt: true } });
+      }, pop);
+      await snap(`race-${seed}-pop${pop}`);
+      return;
+    }
     for (const f of [frames, 40, 40]) {
       await step(f);
       await snap(`race-${seed}-${await page.evaluate(() => (window as any).slagDebug.match.run?.frame ?? 0)}`);

@@ -21,7 +21,12 @@ interface FooterItem {
   hud?: HudAction;
   device?: string;
   mouse?: boolean;
+  /** The action wants a long hold: `Hold` goes in front of the glyphs. */
+  hold?: boolean;
 }
+
+/** What goes in front of a held action's glyphs: `Hold [R] Ⓑ  Self-Destruct`. */
+const HOLD = 'Hold';
 
 /** Keyboard profile prompts are drawn from (the mouse player's keyboard). */
 function profile(hud: Hud): KeyProfile | undefined {
@@ -99,13 +104,13 @@ function footerItems(hud: Hud, m: Match): { items: FooterItem[]; left: string; a
       if (f < full + 40) {
         const a = f < full ? 1 : 1 - (f - full) / 40;
         return {
-          items: [{ action: 'jump', label: 'Jump' }, { action: 'run', label: 'Run' }, ...(use ?? []), { action: 'alt', label: 'Self-Destruct' }],
+          items: [{ action: 'jump', label: 'Jump' }, { action: 'run', label: 'Run' }, ...(use ?? []), { action: 'alt', label: 'Self-Destruct', hold: true }],
           left: '',
           alpha: Math.max(0.55, a),
           bar: a > 0.6,
         };
       }
-      return { items: [...(use ?? []), { action: 'alt', label: 'Self-Destruct' }], left: '', alpha: use ? 0.9 : 0.55, bar: false };
+      return { items: [...(use ?? []), { action: 'alt', label: 'Self-Destruct', hold: true }], left: '', alpha: use ? 0.9 : 0.55, bar: false };
     }
     case 'score':
       return {
@@ -178,9 +183,10 @@ export function footer(hud: Hud, m: Match) {
     if (!glyphs.length) continue;
     c.font = `700 ${size}px ${UI}`;
     const lw = c.measureText(it.label).width;
+    const hw = it.hold ? c.measureText(HOLD).width + 4 : 0;
     let gw = 0;
     for (const g of glyphs) gw += glyphWidth(c, g, gh) + 3;
-    const w = gw + 3 + lw;
+    const w = hw + gw + 3 + lw;
     const x0 = x - w;
     let hover = false;
     if (it.hud && alpha > 0.5) hover = hud.button({ x: x0 - 5, y, w: w + 10, h: fh, action: it.hud, device: it.device });
@@ -188,7 +194,8 @@ export function footer(hud: Hud, m: Match) {
       c.fillStyle = 'rgba(255,140,40,0.18)';
       c.fillRect(x0 - 5, y + 2, w + 10, fh - 3);
     }
-    let gx = x0;
+    if (it.hold) hud.text(HOLD, x0, cy, size, PAL.ash, 'left', UI, 700);
+    let gx = x0 + hw;
     for (const g of glyphs) gx += drawGlyph(c, g, gx, cy - 0.5, gh) + 3;
     hud.text(it.label, gx + 3, cy, size, hover ? PAL.amber : PAL.bone, 'left', UI, 700);
     x = x0 - (touch ? 22 : 16);

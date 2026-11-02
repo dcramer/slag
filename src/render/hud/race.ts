@@ -1,6 +1,6 @@
 import { css } from '../../core/color';
 import type { Match } from '../../game/match';
-import { RUN_COUNTDOWN, VIEW_H, VIEW_W } from '../../sim/constants';
+import { POP_HOLD, RUN_COUNTDOWN, VIEW_H, VIEW_W } from '../../sim/constants';
 import { PAL, TYPE } from '../../ui/style';
 import { drawInkRunner } from '../ink-character';
 import { plate, standings } from '../hud-kit';
@@ -14,6 +14,7 @@ import { DISPLAY, UI, MAX_CHIPS_H } from './layout';
 export function race(hud: Hud, m: Match, t: number) {
   const run = m.run!;
   const c = hud.ctx;
+  popRings(hud, m, t);
   if (run.frame < RUN_COUNTDOWN + 30) {
     const left = RUN_COUNTDOWN - run.frame;
     const label = left > 0 ? String(Math.ceil((left / RUN_COUNTDOWN) * 3)) : 'GO!';
@@ -83,6 +84,41 @@ export function race(hud: Hud, m: Match, t: number) {
     }
   });
   done();
+}
+
+/**
+ * Self-destruct charges: a ring around each charging runner that fills over POP_HOLD, read from the sim so every
+ * peer sees the same one. On the HUD canvas so terrain never hides it and the cel pass never inks it.
+ */
+function popRings(hud: Hud, m: Match, t: number) {
+  const c = hud.ctx;
+  for (const r of m.run!.runners) {
+    if (!r.alive || r.finished || r.pop <= 0) continue;
+    const p = Math.min(1, r.pop / POP_HOLD);
+    const wx = r.body.x + r.body.w / 2;
+    const wy = r.body.y + r.body.h / 2;
+    const v = hud.worldToView(wx, wy);
+    const k = hud.worldToView(wx + 1, wy).x - v.x;
+    // The last stretch shudders, so a hold you didn't mean is hard to miss.
+    const shake = p > 0.6 ? (p - 0.6) * 4 * Math.sin(t * 70) : 0;
+    const x = v.x + shake;
+    const R = (r.body.h * 0.5 + 10) * k;
+    const lw = Math.max(2.5, 2 * k);
+    const a0 = -Math.PI / 2;
+    c.save();
+    c.lineCap = 'round';
+    c.strokeStyle = 'rgba(18,11,8,0.75)';
+    c.lineWidth = lw + 2.5;
+    c.beginPath();
+    c.arc(x, v.y, R, 0, Math.PI * 2);
+    c.stroke();
+    c.strokeStyle = p > 0.8 && Math.sin(t * 40) > 0 ? PAL.whiteHot : PAL.molten;
+    c.lineWidth = lw;
+    c.beginPath();
+    c.arc(x, v.y, R, a0, a0 + p * Math.PI * 2);
+    c.stroke();
+    c.restore();
+  }
 }
 
 /** How race chips wrap: whichever layout lets them grow most without reaching the timer or taking over the screen. */

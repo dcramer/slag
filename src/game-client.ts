@@ -19,7 +19,7 @@ import { type CharacterDef, generateCharacter } from './gen/character';
 import type { InputFrame } from './sim/types';
 import { Renderer } from './render/renderer';
 import type { Level } from './sim/level';
-import { DT } from './sim/constants';
+import { DT, POP_HOLD } from './sim/constants';
 import { addBreadcrumb, reportEvent, setContext, setTelemetryContext, type TelemetryContext, type TelemetryData } from './telemetry';
 import { THEME_IDS } from './themes';
 import { InputModeTracker } from './ui/input-mode';
@@ -454,7 +454,11 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     input.touch.useReady = !!held;
     renderer.phone.dragPoint = input.touch.dragView();
     input.touch.pinchWait = renderer.phone.enabled ? PINCH_WAIT_FRAMES : 0;
-    touchOverlay.update({ canPlace: tp && match.phase === 'place' ? match.canPlaceFor(tp) : undefined, use: held ? ITEMS[held.kind].verb : undefined });
+    touchOverlay.update({
+      canPlace: tp && match.phase === 'place' ? match.canPlaceFor(tp) : undefined,
+      use: held ? ITEMS[held.kind].verb : undefined,
+      pop: tr ? tr.pop / POP_HOLD : 0,
+    });
     const view = net.view; // guests mid-race: the locally predicted match. Pick and place: live cursors.
     renderer.hud.pendingCard = net.pendingCard;
     updateCard(now);

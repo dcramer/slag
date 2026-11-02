@@ -233,7 +233,7 @@ describe('winnability with secret parts', () => {
       expect(m.phase).toBe('place');
       p.cursor = { x: (spot.x + 1.5) * TILE, y: (spot.y + 0.5) * TILE };
       for (let f = 0; f < 60 && m.phase === 'place'; f++) step({ confirmPressed: f === 15 });
-      for (let f = 0; f < 400 && m.phase === 'run'; f++) step({ altPressed: f === 100 });
+      for (let f = 0; f < 400 && m.phase === 'run'; f++) step({ altPressed: f === 100, alt: f >= 100 });
       for (let f = 0; f < 900 && m.phase === 'score'; f++) step({ confirmPressed: f % 30 === 29 });
     }
     expect(m.placed.length).toBe(2);
