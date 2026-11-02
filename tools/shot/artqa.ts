@@ -159,8 +159,9 @@ async function decor(th: ThemeId) {
         const ps = d.match.placed.map((p: any) => [p.tx * 16, p.ty * 16]);
         const px = ps.reduce((a: number, p: number[]) => a + p[0], 0) / Math.max(1, ps.length) || lv.w * 8;
         const py = ps.reduce((a: number, p: number[]) => a + p[1], 0) / Math.max(1, ps.length) || lv.h * 8;
+        // About 90 px from the parts: beside them in the frame, never under them.
         let best: any = null;
-        for (const sp of spots) if (!best || Math.hypot(sp.x - px, sp.y - py) < Math.hypot(best.x - px, best.y - py)) best = sp;
+        for (const sp of spots) if (!best || Math.abs(Math.hypot(sp.x - px, sp.y - py) - 90) < Math.abs(Math.hypot(best.x - px, best.y - py) - 90)) best = sp;
         return best ? [best.x, best.y] : null;
       },
       [kind, i] as const,
@@ -183,9 +184,10 @@ export const shots: Scenarios = {
     const want = (k: string) => !only || only.includes(k);
     if (page.viewportSize()!.width !== 1920) await page.setViewportSize({ width: 1920, height: 1080 });
     // Clear air: mist would veil the very pieces under review.
-    await open(`seed=${seed}&ui=0&lettering=0${opt('weather') ? '' : '&weather=clear'}`);
     for (const th of themes) {
       if (!THEME_IDS.includes(th)) throw new Error(`artqa: unknown theme ${th}`);
+      // A fresh page per theme: a backdrop left over from the last theme's levels would veil this one's.
+      await open(`seed=${seed}&ui=0&lettering=0${opt('weather') ? '' : '&weather=clear'}`);
       if (want('landmarks')) await landmarks(th);
       if (want('hazards')) await hazards(th);
       if (want('decor')) await decor(th);
