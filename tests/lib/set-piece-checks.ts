@@ -4,7 +4,7 @@ import { generateLevel, isAcceptable } from '../../src/gen/level';
 import { SAFE_TILES, SET_PIECE_UID } from '../../src/gen/setpieces';
 import { RUN_COUNTDOWN, TILE } from '../../src/sim/constants';
 import { isProtected, type Level, tileAt } from '../../src/sim/level';
-import { type Contrib, footprintCells, type Hazard, moduleSim, newPropState, resolveProp } from '../../src/sim/props';
+import { type Contrib, footprintCells, type Hazard, moduleSim, newPropState, type PlacedProp, resolveProp } from '../../src/sim/props';
 import { RunWorld } from '../../src/sim/run';
 import { THEME_IDS, type ThemeId } from '../../src/themes';
 
@@ -39,9 +39,12 @@ function hits(h: Hazard, z: Rect): boolean {
   return false;
 }
 
-/** The profile caps a level's pieces, and four is the most any level gets. */
+/** A stage concept's own pieces (src/gen/stage): every one required, so the hazard count doesn't cap them. */
+export const isLandmarkPiece = (level: Level, p: PlacedProp) => !!level.landmark && p.def.key.endsWith(`:${level.landmark.concept}`);
+
+/** The profile caps a level's filler pieces, and four is the most any level gets. */
 export function expectPieceCap({ level }: ThemedLevel) {
-  expect(level.setPieces.length).toBeLessThanOrEqual(Math.min(4, level.profile!.hazards));
+  expect(level.setPieces.filter((p) => !isLandmarkPiece(level, p)).length).toBeLessThanOrEqual(Math.min(4, level.profile!.hazards));
 }
 
 /** Uids, owner, free unprotected cells, no overlap; the level stays acceptable. */
@@ -99,6 +102,8 @@ export function expectSafeWindows({ level }: ThemedLevel) {
     const state = newPropState();
     let quiet = 0;
     let any = false;
+    let first: string | null = null;
+    let still = true;
     /** Per cell a hazard touched: the frame it was last touched and the longest clear stretch so far. */
     const cells = new Map<number, [number, number]>();
     for (let f = RUN_COUNTDOWN; f < RUN_COUNTDOWN + FRAMES; f++) {
@@ -106,6 +111,9 @@ export function expectSafeWindows({ level }: ThemedLevel) {
       r.mods.forEach((m, mi) => moduleSim(m.type).build?.(m, { level, frame: f, r, off: [0, 0], prev: [0, 0], state, mi, live: true }, out));
       if (out.hazards.length) any = true;
       else quiet++;
+      const key = JSON.stringify(out.hazards);
+      if (first === null) first = key;
+      else if (key !== first) still = false;
       for (const h of out.hazards) {
         const b = hazardBox(h);
         for (let y = Math.floor(b.y / TILE); y <= Math.floor((b.y + b.h) / TILE); y++)
@@ -122,6 +130,8 @@ export function expectSafeWindows({ level }: ThemedLevel) {
     }
     if (!any) continue;
     if (quiet > WINDOW) continue;
+    // A hazard that never moves (a spike strip, a broken window's glass) is a wall of its own: the proof keeps clear of it.
+    if (still) continue;
     for (const [k, [last, open]] of cells) expect(Math.max(open, RUN_COUNTDOWN + FRAMES - 1 - last), `${pp.def.name} cell ${k}`).toBeGreaterThan(WINDOW);
   }
 }

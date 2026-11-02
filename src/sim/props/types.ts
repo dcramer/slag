@@ -87,7 +87,9 @@ export type DecoKind =
   | 'headframe'
   | 'hull'
   | 'billboard'
-  | 'clockface';
+  | 'clockface'
+  // The cage of a lift's cab, riding with it (the manor's dumbwaiter).
+  | 'cab';
 export type MysteryLook = 'crate' | 'chest' | 'gift';
 /** What a match's warp pipes are made of: one per match, since a roster has one pipe part. */
 export type PipeLook = 'green' | 'brass' | 'rust' | 'porcelain' | 'copper';
@@ -145,6 +147,9 @@ export interface PropStyle {
   woodHue: number;
 }
 
+/** A rect in tiles (x, y, w, h), in the frame of the def's cells. */
+export type TileBox = readonly [number, number, number, number];
+
 export type Module =
   | {
       type: 'body';
@@ -153,6 +158,13 @@ export type Module =
       conveyor: number;
       breakFrames: number;
       respawnFrames: number;
+      /**
+       * Sub-tile solids, when the thing standing in these cells doesn't fill them (a hangar's arched roof,
+       * a gun carriage's steps): it collides as these rects instead of whole cells, and isn't plain ground.
+       * Drawn upright, so a half turn mirrors them rather than standing them on their heads (Xform.U).
+       * Tiles in a def; world px once resolved.
+       */
+      shape?: TileBox[];
       /** Art only: 'tetra' draws each cell as a bevelled square in one colour, `hue` (Four-Square). The sim treats it as its material. */
       look?: BlockLook;
       hue?: number;
@@ -450,12 +462,31 @@ export type Module =
       rise: number;
       hold: number;
       fall: number;
+    }
+  | {
+      /**
+       * A broken window's glass, world-only and big: jagged shards 2–4 tiles tall standing out of a wall
+       * face (or a window frame cut into it) toward `dir`, lethal exactly where a shard is
+       * (./modules/shards.ts). The box is `w`×`h` tiles from its top-left `at`; the wall is on the side
+       * opposite `dir`, and the first `inset` columns from it sit inside the frame's recess, where shards
+       * also hang from the lintel and stand on the sill.
+       */
+      type: 'shards';
+      at: Vec;
+      w: number;
+      h: number;
+      dir: 1 | -1;
+      inset: number;
+      seed: number;
     };
 
 export type Motion =
   | { type: 'none' }
-  /** `dwell`: frames parked at each end, so a lift reads as one (stage concepts). */
-  | { type: 'rail'; angle: number; range: number; period: number; dwell?: number }
+  /**
+   * `dwell`: frames parked at each end, so a lift reads as one (stage concepts). `stops`: floors it
+   * also parks at on the way, in tiles along the rail (0 < stop < range, ascending), each for `dwell`.
+   */
+  | { type: 'rail'; angle: number; range: number; period: number; dwell?: number; stops?: number[] }
   | { type: 'loop'; radius: number; period: number; dir: 1 | -1 }
   // Stage concepts (docs/SETPIECES.md): follows the polyline `pts` (offsets from where it was placed, tiles)
   // at constant speed, `period` frames per lap; an open track runs back the way it came.

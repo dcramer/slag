@@ -3,7 +3,8 @@
  * With no concept registered for a theme, a test landmark stands in: a building raised on the level's own
  * ground with each landmark skin, and each backdrop shell behind it (`forceLandmark`).
  */
-import type { DecoKind } from '../../src/sim/props';
+import { cycleFrames } from '../../src/gen/setpieces/place';
+import { type DecoKind, motionOffset, type PlacedProp, resolveProp } from '../../src/sim/props';
 import type { TerrainKind } from '../../src/gen/theme';
 import { CONCEPTS } from '../../src/gen/stage';
 import { THEME_IDS, type ThemeId } from '../../src/themes';
@@ -162,6 +163,36 @@ export async function forceLandmark(skin: string, shell?: string) {
   );
 }
 
+/**
+ * A landmark with a lift (a rail that parks) is shot once parked at each of its stops instead of at
+ * fixed phases: the steps that land in the middle of each stop, from the sim's own motion on the frame
+ * the renderer moves props by outside a race. Null when the level has no lift.
+ */
+async function liftStops(): Promise<[number, number][] | null> {
+  const { frame, pieces } = await page.evaluate(() => {
+    const m = (window as any).slagDebug.match;
+    return { frame: m.frame as number, pieces: JSON.parse(JSON.stringify(m.level.setPieces)) as PlacedProp[] };
+  });
+  const lift = pieces.find((p) => p.def.motion.type === 'rail' && p.def.motion.dwell);
+  if (!lift) return null;
+  const r = resolveProp(lift);
+  const P = cycleFrames(r.mods, r.motion);
+  const parks: { y: number; mid: number }[] = [];
+  let run = 0;
+  for (let f = frame + 1; f < frame + 2 * P; f++) {
+    const y = motionOffset(r, f)[1];
+    run = y === motionOffset(r, f - 1)[1] ? run + 1 : 0;
+    // Halfway through a stop, once per floor.
+    if (run === 20 && !parks.some((p) => p.y === y)) parks.push({ y, mid: f });
+  }
+  let at = frame;
+  return parks.map((p, i) => {
+    const n = p.mid - at;
+    at = p.mid;
+    return [i, n];
+  });
+}
+
 export const shots: Scenarios = {
   /**
    * `pnpm shot landmarks [--theme T] [--concept id|skin|shell] [--count N] [--ride]`: N seeds of each concept (default 1), three
@@ -182,7 +213,7 @@ export const shots: Scenarios = {
     const files: string[] = [];
     await open(`seed=${seed}&ui=0`);
     const shoot = async (name: string) => {
-      for (const [i, n] of PHASES.entries()) {
+      for (const [i, n] of (await liftStops()) ?? PHASES.entries()) {
         await step(n);
         files.push(await snap(`${name}-${i}`));
       }

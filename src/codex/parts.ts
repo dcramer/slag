@@ -4,6 +4,9 @@ import { ITEM_KINDS, type ItemKind } from '../sim/items/types';
 import {
   AMMO,
   type Ammo,
+  launcherBody,
+  launcherFrame,
+  type LauncherStyle,
   type Material,
   type MetalStyle,
   type Module,
@@ -261,12 +264,12 @@ export function partGroups(): PartGroup[] {
           title: label,
           note: `Fixed. ${note}`,
           def: def(styleName, [
-            body([[0, 0]], styleName === 'crossbow' || styleName === 'totem' ? 'wood' : 'metal'),
+            launcherBody(styleName as LauncherStyle, styleName === 'crossbow' || styleName === 'totem' || styleName === 'hangar' ? 'wood' : 'metal'),
             {
               type: 'launcher',
-              style: styleName as 'crossbow',
+              style: styleName as LauncherStyle,
               ammo,
-              at: c(),
+              at: launcherFrame(styleName as LauncherStyle).at,
               angle: AMMO[ammo].gravity > 200 ? -0.5 : 0,
               aim: 'fixed',
               sweep: 0,

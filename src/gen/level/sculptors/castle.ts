@@ -1,7 +1,22 @@
 import type { Rng } from '../../../core/rng';
 import { finish, Grid } from '../kit';
-import type { Sculptor } from '../types';
-import { easyGap, easyRise, hardGap, knobs, pit, keepClear, rollChallenges, Slots, stepRows } from './common';
+import type { SculptCtx, Sculptor } from '../types';
+import {
+  type Claim,
+  claimSite,
+  easyGap,
+  easyRise,
+  flatten,
+  hardGap,
+  keepClear,
+  type Knobs,
+  knobs,
+  pit,
+  raiseLandmark,
+  rollChallenges,
+  Slots,
+  stepRows,
+} from './common';
 import { castleTall } from './tall';
 
 type CastleStyle = 'bailey' | 'gatehouse' | 'dungeon';
@@ -36,13 +51,16 @@ export const castle: Sculptor = (ctx) => {
     for (let x = Math.max(0, a); x <= Math.min(W - 1, b); x++) floor[x] = row;
     return row;
   };
+  const claim = ctx.concept ? claimCastleSite(ctx, k, slots, floor) : null;
 
   // Moats: hard ones keep a collapsed bridge's stubs, easy ones are a hop.
   const challenges = rollChallenges(attempt, k);
   g.wantsProps = challenges > 0;
+  // A landmark that owns the crossing digs one of them itself, in front of it.
+  const own = claim?.concept.ownsCrossing && challenges > 0 ? 1 : 0;
   const moats: { a: number; b: number; hard: boolean; stubs: [number, number] }[] = [];
-  for (let i = 0; i < Math.max(challenges, rng.int(0, 1) + Math.floor((k.wide - 1) * 2 * rng.next())); i++) {
-    const hard = i < challenges;
+  for (let i = 0; i < Math.max(challenges - own, rng.int(0, 1) + Math.floor((k.wide - 1) * 2 * rng.next())); i++) {
+    const hard = i < challenges - own;
     const open = hard ? hardGap(rng) : easyGap(rng, 2);
     const stubs: [number, number] = hard && rng.chance(0.7) ? [rng.int(1, 2), rng.int(1, 2)] : [0, 0];
     const w = open + stubs[0] + stubs[1];
@@ -96,11 +114,27 @@ export const castle: Sculptor = (ctx) => {
   }
   for (const p of placed) p.m.stamp(g, rng, p.x, p.w, floor[p.x]);
 
-  if (style === 'dungeon') dungeonCeiling(g, rng, floor);
-  else if (k.density > 0.7 && rng.chance(0.5)) dungeonCeiling(g, rng, floor);
+  if (style === 'dungeon') dungeonCeiling(g, rng, floor, claim);
+  else if (k.density > 0.7 && rng.chance(0.5)) dungeonCeiling(g, rng, floor, claim);
+  // Last, so it stands whole over anything a neighbour's stair spilled into its box.
+  if (claim) raiseLandmark(g, ctx, claim, own);
 
   return finish(g, { row: sRow - 1 }, { row: gRow - 1 }, `castle:${style}`);
 };
+
+/**
+ * The landmark's site (claimSite) on a courtyard levelled a column or two past it, so its doors and
+ * glass face open ground. Nothing else lands just right of it: a moat there could be cleared bare by a
+ * jump off its roof.
+ */
+function claimCastleSite(ctx: SculptCtx, k: Knobs, slots: Slots, floor: number[]): Claim | null {
+  const claim = claimSite(ctx, k, slots, floor);
+  if (!claim) return null;
+  const { x, w } = claim.at;
+  slots.mark(x - 2, x + w + 5);
+  flatten(floor, k.H, x - 2, x + w + 1, claim.ground);
+  return claim;
+}
 
 /** Alternating merlons on row y over [a, b], both ends included. */
 function crenellate(g: Grid, a: number, b: number, y: number): void {
@@ -202,13 +236,15 @@ const KEEP: Module = {
   },
 };
 
-function dungeonCeiling(g: Grid, rng: Rng, floor: number[]): void {
+function dungeonCeiling(g: Grid, rng: Rng, floor: number[], claim: Claim | null): void {
   const W = g.w;
   const a = rng.int(6, Math.max(6, W - 32));
   const b = Math.min(W - 7, a + Math.round(rng.int(14, 24) * Math.max(1, W / 60)));
   let depth = rng.int(3, 5);
   for (let x = a; x <= b; x++) {
     if (rng.chance(0.3)) depth = Math.max(2, Math.min(7, depth + rng.pick([-1, 1])));
+    // The landmark keeps its sky (and its roof), with a column of air either side.
+    if (claim && x >= claim.at.x - 2 && x <= claim.at.x + claim.at.w + 1) continue;
     const lim = Math.min(depth, floor[x] - 8);
     for (let y = 0; y <= lim; y++) if (g.empty(x, y)) g.set(x, y, 1);
     // Portcullis teeth / chains.

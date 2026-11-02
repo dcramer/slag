@@ -15,7 +15,8 @@ import type { PlacedProp, Resolved } from './types';
  * is covered the day it lands:
  *
  * - `ground`: plain static blocks (stone, metal, wood; no motion, no
- *   crumbling, no belt, not riding a mover). The real controller stands on them like terrain.
+ *   crumbling, no belt, not riding a mover, whole tiles rather than a
+ *   sub-tile shape). The real controller stands on them like terrain.
  * - `noGo`: cells something holds for most of the time: a block of any other
  *   kind (ice, goo, jelly, a conveyor, a crumbling block), a spike strip, a
  *   coat, a spring pad, a fan's column, a trigger zone (pipe mouth, bumper, web,
@@ -68,7 +69,8 @@ function groundModules(r: Resolved): Set<number> {
   const out = new Set<number>();
   if (r.motion.type !== 'none' || r.carry) return out;
   r.mods.forEach((m, mi) => {
-    if (m.type === 'body' && m.breakFrames === 0 && m.conveyor === 0 && m.material !== 'crumble' && SURFACES[m.material] === DEFAULT_SURFACE) out.add(mi);
+    if (m.type === 'body' && !m.shape && m.breakFrames === 0 && m.conveyor === 0 && m.material !== 'crumble' && SURFACES[m.material] === DEFAULT_SURFACE)
+      out.add(mi);
   });
   return out;
 }

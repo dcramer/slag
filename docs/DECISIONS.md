@@ -195,6 +195,12 @@ Every game design decision, preference and direction the owner has given, groupe
   Changed: an up-front Join-or-Watch choice on arrival.
 - **Characters on the join card stay random-roll only: the New Look dice, no picker.**
   2026-11-02 · `done` · DESIGN.md → Online (Join)
+- **Landmarks offer several ways through, so blocking one with a part forces rivals another way.** "the nice thing about level design like this: you could block off one exit and forces players to go a diff way (with a beam, as a player)"
+  2026-11-02 · `done` · DESIGN.md → Stage concepts
+- **At least 5 landmarks per theme; all large, some grand, every one with randomness in its layout.** "things like the haunted wing are cool. i'd want no less than 5 landmarks per theme, all should be at least large on scale, some _grand_ all should have a little bit of randomness built into them in terms of layout/etc as well"
+  2026-11-02 · `in progress` · SETPIECES.md → 3, DESIGN.md → Stage concepts
+- **Every theme has at least 12 decor pieces and at least 3 hazards unique to it.** "similarly we probably want no less than a dozen 'decor' pieces that can exist in each theme? and maybe no less than 3 unique hazards per theme?"
+  2026-11-02 · `in progress` · DESIGN.md → Stage concepts
 - **Lobby browser: a list of lobbies, showing only ones that aren't full by default.** Lobbies are public by default with a Private option. "lets make lobbies public by default with a private option"
   2026-11-02 · `planned` · TODO.md → 26
 - **Conveyors rotate: the rotation picks the belt's face.** A side belt grips and carries a clinging runner (an escalator when it runs up), a bottom belt shoves a head that bonks it. "you cant rotate conveyors.. the conveyor always stays on the top"

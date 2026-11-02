@@ -103,12 +103,14 @@ export function resolveProp(pp: PlacedProp): Resolved {
       }),
     da: (rot * Math.PI) / 2,
     T: TILE,
+    U: (p) => (rot === 2 ? [(pp.tx + w - p[0]) * TILE, (pp.ty + p[1]) * TILE] : x.P(p)),
+    UA: (a) => (rot === 2 ? Math.PI - a : a + x.da),
   };
   const mods = pp.def.modules.map((m) => moduleSim(m.type).resolve(m, x));
   const mo = pp.def.motion;
   const motion: Motion =
     mo.type === 'rail'
-      ? { ...mo, angle: mo.angle + x.da, range: mo.range * TILE }
+      ? { ...mo, angle: mo.angle + x.da, range: mo.range * TILE, ...(mo.stops ? { stops: mo.stops.map((s) => s * TILE) } : {}) }
       : mo.type === 'loop'
         ? { ...mo, radius: mo.radius * TILE }
         : mo.type === 'track'
@@ -162,7 +164,9 @@ export function carrierPos(r: Resolved, mi: number, part: number, f: number): Ve
 function ownOffset(r: Resolved, f: number): Vec {
   const m = r.motion;
   if (m.type === 'rail') {
-    const d = (m.dwell ? liftAt(f, m.period, m.dwell, r.phase) : pingPong(f / m.period + r.phase)) * m.range;
+    const d = m.stops?.length
+      ? stopsAt(f, m.period, m.dwell ?? 0, m.range, m.stops, r.phase)
+      : (m.dwell ? liftAt(f, m.period, m.dwell, r.phase) : pingPong(f / m.period + r.phase)) * m.range;
     return [snap(dcos(m.angle)) * d, snap(dsin(m.angle)) * d];
   }
   if (m.type === 'loop') {
@@ -191,6 +195,33 @@ function liftAt(f: number, period: number, dwell: number, phase: number): number
   if (t < dwell) return 1;
   t -= dwell;
   return (1 + dcos((Math.PI * t) / half)) / 2;
+}
+
+/**
+ * A rail lift that also parks at `stops` on the way (a manor's floors), in px
+ * along the rail: parked at 0, eased up leg by leg with a `dwell` at every
+ * stop, parked at `range`, and back down the same way. Each leg takes its
+ * share of half the period by its length, so the cab keeps one pace; every
+ * park returns its stop exactly, so the cab's floor lines up with the tiles.
+ */
+function stopsAt(f: number, period: number, dwell: number, range: number, stops: readonly number[], phase: number): number {
+  const legs = stops.length + 1;
+  const total = period + dwell * 2 * legs;
+  let t = (((f + Math.floor(phase * total)) % total) + total) % total;
+  const at = (i: number) => (i <= 0 ? 0 : i > stops.length ? range : stops[i - 1]);
+  for (let pass = 0; pass < 2; pass++) {
+    for (let i = 0; i < legs; i++) {
+      // Up: stop i to stop i + 1; down: the same legs from the top.
+      const a = pass === 0 ? at(i) : at(legs - i);
+      const b = pass === 0 ? at(i + 1) : at(legs - i - 1);
+      if (t < dwell) return a;
+      t -= dwell;
+      const span = (period / 2) * (Math.abs(b - a) / range);
+      if (t < span) return a + ((b - a) * (1 - dcos((Math.PI * t) / span))) / 2;
+      t -= span;
+    }
+  }
+  return 0;
 }
 
 /**
@@ -316,7 +347,8 @@ function staticBodyCells(placed: readonly PlacedProp[], w: number): Set<number> 
   for (const p of placed) {
     if (moves(p)) continue;
     for (const m of resolveProp(p).mods) {
-      if (m.type === 'body' && m.material !== 'crumble') for (const [x, y] of m.cells) out.add(y * w + x);
+      // A sub-tile shape has no flush face to mount on.
+      if (m.type === 'body' && m.material !== 'crumble' && !m.shape) for (const [x, y] of m.cells) out.add(y * w + x);
     }
   }
   return out;

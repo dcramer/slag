@@ -1,5 +1,6 @@
 import { dcos, dsin, sq } from '../core/dmath';
 import { type Cell, normalizeCells, type Vec } from '../core/geom';
+import { launcherBody, launcherFrame } from '../sim/props/launcher-frames';
 import { moduleSim } from '../sim/props/registry';
 import { cardExtent } from '../sim/props/transform';
 import '../sim/props/modules';
@@ -843,19 +844,12 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
       role: 'hazard',
       name: aimAdj ? `${aimAdj} ${rng.pick(nouns[style])}` : title(rng, adjs, nouns[style]),
       modules: [
-        {
-          type: 'body',
-          cells: [[0, 0]],
-          material: style === 'crossbow' || style === 'totem' || style === 'glaive' ? 'wood' : 'metal',
-          conveyor: 0,
-          breakFrames: 0,
-          respawnFrames: 0,
-        },
+        launcherBody(style, style === 'crossbow' || style === 'totem' || style === 'glaive' ? 'wood' : 'metal'),
         {
           type: 'launcher',
           style,
           ammo,
-          at: center(),
+          at: launcherFrame(style).at,
           angle,
           aim,
           sweep: aim === 'sweep' ? rng.range(0.4, 1.1) : 0,
@@ -1311,12 +1305,12 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
         'Paper Planery',
       ]),
       modules: [
-        { type: 'body', cells: [[0, 0]], material: 'wood', conveyor: 0, breakFrames: 0, respawnFrames: 0 },
+        launcherBody('hangar', 'wood'),
         {
           type: 'launcher',
           style: 'hangar',
           ammo: 'glider',
-          at: center(),
+          at: launcherFrame('hangar').at,
           angle: 0,
           aim: 'fixed',
           sweep: 0,

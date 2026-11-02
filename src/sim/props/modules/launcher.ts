@@ -59,10 +59,13 @@ function trackAim(cur: number, x: number, y: number, m: Launcher, ctx: TickCtx):
   return cur + Math.max(-TRACK_TURN, Math.min(TRACK_TURN, angleDiff(target, cur)));
 }
 
-/** Crossbows, cannons, totems, turrets, star throwers. */
+/**
+ * Crossbows, cannons, totems, turrets, star throwers. A launcher stands upright on its block, so a half turn
+ * mirrors it (Xform.U): it faces the other way on the same footing, and a lobber still lobs.
+ */
 export const launcher = defineModule<'launcher'>({
   type: 'launcher',
-  resolve: (m, x) => ({ ...m, at: x.P(m.at), angle: m.angle + x.da }),
+  resolve: (m, x) => ({ ...m, at: x.U(m.at), angle: x.UA(m.angle) }),
   anchors: (m) => [cellOf(m.at)],
   trace(m, ctx, out) {
     if (m.aim !== 'track') return;

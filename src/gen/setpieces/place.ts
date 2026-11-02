@@ -1,5 +1,5 @@
 import { dcos, dhypot, dpow, dsin } from '../../core/dmath';
-import { type Cell, overlaps, type Rect, rectCircle } from '../../core/geom';
+import { type Cell, overlaps, type Rect, rectCircle, type Vec } from '../../core/geom';
 import type { Rng } from '../../core/rng';
 import { DT, PLAYER_H, PLAYER_W, RUN_COUNTDOWN, TILE } from '../../sim/constants';
 import { isProtected, type Level, T_EMPTY, T_SOLID, tileAt, type TileRect } from '../../sim/level';
@@ -242,7 +242,7 @@ function hazardHits(h: Hazard, z: Rect): boolean {
 /** Frames for one full cycle of every timed module and the piece's own motion (bounded). */
 export function cycleFrames(mods: readonly Module[], motion: Motion = { type: 'none' }): number {
   let p = 120;
-  if (motion.type === 'rail') p = Math.max(p, motion.period + 2 * (motion.dwell ?? 0));
+  if (motion.type === 'rail') p = Math.max(p, motion.period + 2 * (motion.dwell ?? 0) * (1 + (motion.stops?.length ?? 0)));
   if (motion.type === 'loop' || motion.type === 'track') p = Math.max(p, motion.period);
   for (const m of mods) {
     if (m.type === 'rotor') p = Math.max(p, m.period);
@@ -400,7 +400,8 @@ export function finalize(s: Site, piece: Piece, uid: number, key: string): Place
   const cells = [...fp.values()];
   const tx = Math.min(...cells.map((c) => c[0]));
   const ty = Math.min(...cells.map((c) => c[1]));
-  const shift: Xform = { P: (p) => [p[0] - tx, p[1] - ty], C: (cs) => cs.map((c) => [c[0] - tx, c[1] - ty] as Cell), da: 0, T: 1 };
+  const shiftP = (p: Vec): Vec => [p[0] - tx, p[1] - ty];
+  const shift: Xform = { P: shiftP, U: shiftP, UA: (a) => a, C: (cs) => cs.map((c) => [c[0] - tx, c[1] - ty] as Cell), da: 0, T: 1 };
   const modules = piece.modules.map((m) => moduleSim(m.type).resolve(m, shift));
   const def: PropDef = { ...raw, modules, footprint: cells.map((c) => [c[0] - tx, c[1] - ty] as Cell).sort((a, b) => a[1] - b[1] || a[0] - b[0]) };
   return { uid, def, owner: -1, tx, ty, rot: 0 };
