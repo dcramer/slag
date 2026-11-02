@@ -8,6 +8,7 @@ export const spikes = defineModule<'spikes'>({
   type: 'spikes',
   resolve: (m, x) => ({ ...m, cells: x.C(m.cells), angle: m.angle + x.da }),
   anchors: () => [],
+  rides: true,
   build(m, ctx, out) {
     const [dx, dy] = dirOf(m.angle);
     const owner = ctx.r.pp.owner;

@@ -21,6 +21,9 @@ export const body = defineModule<'body'>({
   type: 'body',
   resolve: (m, x) => ({ ...m, cells: x.C(m.cells) }),
   anchors: (m) => m.cells.slice(),
+  rides: true,
+  // Its cells move only with the prop. A block that crumbles away would leave its riders hanging.
+  carrier: { at: (m) => (m.material === 'crumble' ? null : [0, 0]), drives: false, period: () => 0 },
   build(m, ctx, out) {
     if (m.material === 'crumble' && ctx.frame < ctx.state.brokenUntil) return;
     const surface = m.material === 'conveyor' ? conveyorSurface(ctx.r.pp.rot >= 2 ? -m.conveyor : m.conveyor) : SURFACES[m.material];

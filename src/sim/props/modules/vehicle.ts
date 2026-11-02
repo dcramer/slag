@@ -67,6 +67,8 @@ export const vehicle = defineModule<'vehicle'>({
   type: 'vehicle',
   resolve: (m, x) => ({ ...m, at: x.P(m.at), cols: m.cols.map((h) => h * x.T), colW: m.colW * x.T, span: m.span * x.T, speed: m.speed * x.T }),
   anchors: (m) => [cellOf([m.at[0] + 0.5, m.at[1] - 0.5])],
+  // The whole body slides along its route, so a rider just takes the route offset.
+  carrier: { at: (m, f, phase) => [vehiclePose(m, f, phase).x, 0], drives: true, period: (m) => 2 * (vehicleTravel(m) + Math.max(1, m.pause)) },
   build(m, ctx, out) {
     const p = vehiclePose(m, ctx.frame, ctx.r.phase);
     const q = vehiclePose(m, ctx.frame - 1, ctx.r.phase);

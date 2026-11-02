@@ -4,6 +4,7 @@ export * from './barrier';
 export * from './modules';
 export * from './rays';
 export * from './registry';
+export * from './ride';
 export * from './transform';
 export * from './types';
 export * from './status';

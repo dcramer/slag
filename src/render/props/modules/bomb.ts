@@ -3,7 +3,7 @@ import type { Cell } from '../../../core/geom';
 import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import type { Level } from '../../../sim/level';
-import { blastHits, blastSpec, type BombLook, footprintCells, type ModuleOf, type PlacedProp } from '../../../sim/props';
+import { blastHits, blastSpec, type BombLook, cellsAt, type ModuleOf, type PlacedProp } from '../../../sim/props';
 import { blob, line, stroke } from '../../ink';
 import { ball, boxPts, dot, glint, ovalPts, part, path, poly, sprite, stamp, tick } from '../../ink-props';
 import { glowDot, light, METALS, type RC } from '../../kit';
@@ -240,7 +240,7 @@ function squareFlame(g: CanvasRenderingContext2D, x: number, y: number, t: numbe
 export function drawBlastPreview(rc: RC, level: Level, placed: readonly PlacedProp[], m: Bomb, tx: number, ty: number, rot: number) {
   const g = rc.g;
   const spec = blastSpec(m);
-  const hits = blastHits(level, placed, spec, tx, ty, rot);
+  const hits = blastHits(level, placed, spec, tx, ty, rot, rc.frame);
   const pulse = 0.75 + Math.sin(rc.t * 10) * 0.25;
   const zone: HSL = spec.target === 'props' ? { h: 200, s: 100, l: 60 } : { h: 25, s: 100, l: 60 };
   if (m.shape === 'cross') for (const [x, y] of hits.cells) squareFlame(g, x * TILE, y * TILE, rc.t, pulse);
@@ -270,7 +270,7 @@ export function drawBlastPreview(rc: RC, level: Level, placed: readonly PlacedPr
   g.stroke();
   const red = css({ h: 0, s: 100, l: 60 }, 0, 0.85 * pulse);
   for (const p of [...hits.props, ...hits.setPieces]) {
-    const cells = footprintCells(p) as Cell[];
+    const cells = cellsAt(p, rc.frame) as Cell[];
     if (spec.target === 'props') {
       // Patch notes: struck through.
       let x0 = Infinity;

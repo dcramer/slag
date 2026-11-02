@@ -12,15 +12,15 @@ import {
   blastCells,
   blastEvent,
   blastSpec,
-  canPlace,
   detonate,
   detonateCharges,
   footprint,
   hangRow,
-  landedDef,
   linkPipes,
   lonePipe,
   type PlacedProp,
+  type Ride,
+  spotAt,
 } from '../sim/props';
 import { RunWorld } from '../sim/run';
 import { type GameEvent, type InputFrame, NO_INPUT } from '../sim/types';
@@ -512,8 +512,11 @@ export class Match {
 
   // ---------------------------------------------------------------- place
 
-  /** Where a player's held prop would land and what lands (`def`), centering its whole footprint on the cursor so a trimmed attachment doesn't jump. */
-  ghostOrigin(p: Player): { tx: number; ty: number; def: PropDef } | null {
+  /**
+   * Where a player's held prop would land and what lands (`def`), centering its whole footprint on the cursor so a trimmed attachment
+   * doesn't jump; whether it may (`ok`), and what it would ride (`ride`): movers keep moving while you place, so it's this frame's answer.
+   */
+  ghostOrigin(p: Player): { tx: number; ty: number; def: PropDef; ok: boolean; ride?: Ride } | null {
     if (p.claim < 0) return null;
     const def = this.crate[p.claim].def;
     const cells = footprint(def, p.rot);
@@ -526,12 +529,12 @@ export class Match {
     const tx = Math.floor(p.cursor.x / TILE - (w - 1) / 2);
     const y = Math.floor(p.cursor.y / TILE - (h - 1) / 2);
     const ty = def.mount === 'hang' ? hangRow(this.level, this.placed, def, tx, y) : y;
-    return { def: landedDef(this.level, this.placed, def, p.rot, tx, ty), tx, ty };
+    const spot = spotAt(this.level, this.placed, def, p.rot, tx, ty, this.frame);
+    return { ...spot, tx, ty };
   }
 
   canPlaceFor(p: Player): boolean {
-    const g = this.ghostOrigin(p);
-    return !!g && canPlace(this.level, this.placed, g.def, p.rot, g.tx, g.ty);
+    return !!this.ghostOrigin(p)?.ok;
   }
 
   private stepPlace(inputs: Readonly<Record<string, InputFrame>>) {
@@ -542,9 +545,9 @@ export class Match {
       if (inp.altPressed) p.rot = (p.rot + 1) % 4;
       if (inp.confirmPressed && this.phaseFrame > 10) {
         const g = this.ghostOrigin(p);
-        if (g && canPlace(this.level, this.placed, g.def, p.rot, g.tx, g.ty)) {
+        if (g?.ok) {
           const bomb = g.def.modules.find((m) => m.type === 'bomb');
-          const pp: PlacedProp = { uid: this.nextUid, def: g.def, owner: p.slot, tx: g.tx, ty: g.ty, rot: p.rot };
+          const pp: PlacedProp = { uid: this.nextUid, def: g.def, owner: p.slot, tx: g.tx, ty: g.ty, rot: p.rot, ...(g.ride && { ride: g.ride }) };
           if (!this.keepsWinnable(pp)) {
             this.events.push({ type: 'refuse', slot: p.slot, x: p.cursor.x, y: p.cursor.y });
             continue;
@@ -585,7 +588,7 @@ export class Match {
     let placed: PlacedProp[];
     if (bomb && bomb.type === 'bomb' && !bomb.delay) {
       level = { ...level, tiles: level.tiles.slice(), setPieces: level.setPieces.slice() };
-      placed = detonate(level, [...this.placed], blastSpec(bomb), pp.tx, pp.ty, pp.rot);
+      placed = detonate(level, [...this.placed], blastSpec(bomb), pp.tx, pp.ty, pp.rot, this.frame);
     } else placed = [...this.placed, pp];
     const s = settled(level, placed);
     const plan = prove(s.level, s.placed, this.plan, false);
@@ -622,7 +625,7 @@ export class Match {
 
   /** A blast in either phase: `props` is what's standing when it goes off. */
   private blast(props: PlacedProp[], spec: BlastSpec, tx: number, ty: number, rot: number) {
-    this.placed = detonate(this.level, props, spec, tx, ty, rot);
+    this.placed = detonate(this.level, props, spec, tx, ty, rot, this.frame);
     washBlood(this.blood, blastCells(spec, tx, ty, rot));
     this.events.push(blastEvent(spec, tx, ty, rot));
   }
