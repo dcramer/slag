@@ -75,7 +75,7 @@ Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm
 ## Extension points
 
 - **Prop module type**: add the variant to `Module` in `src/sim/props/types.ts`; implement `ModuleSim` in `src/sim/props/modules/<type>.ts` and export it from `modules/index.ts`; add art in `src/render/props/modules/<type>.ts` and import it from that `index.ts`; add tests.
-- **Player prop archetype**: a recipe in `src/gen/props.ts` (`RECIPES`, `ARCHETYPE_WEIGHTS`). Names come from rolled params.
+- **Player prop archetype**: a recipe in `src/gen/props.ts` (`RECIPES`, `ARCHETYPE_WEIGHTS`). Names come from rolled params; what scales goes in the recipe's `sized`.
 - **Projectile**: add to `Ammo` and `AMMO` (`src/sim/props/types.ts`); behavior goes in `AMMO_SIM` (`src/sim/props/ammo.ts`), art in `AMMO_ART` (`src/render/props/projectiles.ts`). A launcher style goes in the `launcher` recipe, with art in `src/render/props/modules/launcher-extra.ts`.
 - **Blast shape**: add to `BlastShape` and `BLAST_SHAPES` (`src/sim/props/transform.ts`).
 - **Theme**: add the id to `THEME_IDS` and `THEME_LABELS` in `src/themes.ts`, then `tsc` lists every `Record<ThemeId, …>` to fill: `SCULPTORS`, `SET_PIECE_RECIPES`, the look `RECIPES` in `src/gen/theme/presets.ts`, music `STYLES`, `GROUND_TONE`. A farm must read as a farm at a glance.
