@@ -97,7 +97,7 @@ interface Report {
     [setting: string]: unknown;
   };
   scenarios: ScenarioResult[];
-  gen?: { theme: string; genMs: number[]; bakeMs: number[] }[];
+  gen?: { theme: string; genMs: number[]; bakeMs: number[]; frameMs?: number[]; frames?: number[] }[];
   load?: Record<string, unknown>;
 }
 
@@ -276,9 +276,9 @@ async function genScenario(b: Browser) {
     ([themes, n]) => {
       const d = (window as any).slagDebug;
       d.pause(true);
-      const rows: { theme: string; genMs: number[]; bakeMs: number[] }[] = [];
+      const rows: { theme: string; genMs: number[]; bakeMs: number[]; frameMs: number[]; frames: number[] }[] = [];
       for (const theme of themes) {
-        const row = { theme, genMs: [] as number[], bakeMs: [] as number[] };
+        const row = { theme, genMs: [] as number[], bakeMs: [] as number[], frameMs: [] as number[], frames: [] as number[] };
         for (let i = 0; i < n; i++) {
           const t0 = performance.now();
           d.loadLevel(`gen-${theme}-${i}`, theme);
@@ -286,6 +286,21 @@ async function genScenario(b: Browser) {
           d.render();
           row.genMs.push(+(t1 - t0).toFixed(2));
           row.bakeMs.push(+(performance.now() - t1).toFixed(2));
+          // The same level again as the live game loads it: inked a chunk per frame. What a player
+          // feels is the worst of those frames, not the total.
+          d.loadLevel(`gen-${theme}-${i}b`, theme);
+          d.renderer.bakeBudgetMs = 5;
+          let worst = 0;
+          let frames = 0;
+          do {
+            const f0 = performance.now();
+            d.render();
+            worst = Math.max(worst, performance.now() - f0);
+            frames++;
+          } while ((d.renderer.terrain.baking || d.renderer.surround.baking) && frames < 2000);
+          d.renderer.bakeBudgetMs = Infinity;
+          row.frameMs.push(+worst.toFixed(2));
+          row.frames.push(frames);
         }
         rows.push(row);
       }
@@ -385,6 +400,9 @@ function printTables(r: Report) {
         genMsMax: Math.max(...g.genMs),
         bakeMsMedian: median(g.bakeMs),
         bakeMsMax: Math.max(...g.bakeMs),
+        // Progressive: the worst single frame while a new level inks in, and how many frames it took.
+        frameMsMax: g.frameMs ? Math.max(...g.frameMs) : undefined,
+        framesMax: g.frames ? Math.max(...g.frames) : undefined,
       })),
     );
   }

@@ -534,7 +534,13 @@ try {
             }
           }
         }
+        // The page inked its first level a chunk per frame before the harness paused it: start from a
+        // whole bake, so each crater is compared against the same picture it was cut into.
+        tp.fullBakes = true;
+        tp.inkKey = '';
+        lv.version++;
         render();
+        tp.fullBakes = false;
         let idle = 0;
         for (let i = 0; i < 5; i++) {
           const t0 = performance.now();

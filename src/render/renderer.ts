@@ -61,6 +61,8 @@ const TRAIL_LIFE = 0.2;
 export class Renderer {
   private scene = document.createElement('canvas');
   private glow = document.createElement('canvas');
+  /** Milliseconds a frame may spend inking a new level. Infinity bakes it whole at once (stepped screenshots, perf). */
+  bakeBudgetMs = 5;
   private lightC = document.createElement('canvas');
   private occluder = new LightOccluder();
   private sctx = this.scene.getContext('2d')!;
@@ -186,10 +188,19 @@ export class Renderer {
     const frameBox = this.frameBox;
     const sk = this.pw / frameBox.w;
     const kb = Math.min(4, sk * Math.max(1.45, this.phone.enabled ? this.phone.zoom : 0), Math.sqrt(MAX_BAKE_PX / (ww * wh)));
-    this.terrain.ensure(level, kb);
+    // A new level is inked a chunk at a time, nearest the camera first, so loading one never stalls a frame.
+    const focus = { x: this.cam.x, y: this.cam.y };
+    this.terrain.ensure(level, kb, undefined, this.bakeBudgetMs, { x: focus.x / TILE, y: focus.y / TILE });
     // The surroundings reach as far as the most zoomed-out view of this level can see.
     const reach = frameReach(frameBox, ww, wh, raceFloor(level));
-    this.surround.ensure(level, reach, Math.min(kb, Math.sqrt(MAX_BAKE_PX / ((ww + reach.x * 2) * (wh + reach.up + reach.down)))));
+    // The level first: until it's done, the surroundings wait their turn.
+    this.surround.ensure(
+      level,
+      reach,
+      Math.min(kb, Math.sqrt(MAX_BAKE_PX / ((ww + reach.x * 2) * (wh + reach.up + reach.down)))),
+      this.terrain.baking ? 0 : this.bakeBudgetMs,
+      focus,
+    );
     const emit: Emit = (kind, x, y, vx, vy, color) =>
       this.fx.add(
         kind,
@@ -375,7 +386,8 @@ export class Renderer {
     const th = level.theme;
     const [ar, ag, ab] = toRgb(th.ambientTint);
     const amb = th.ambientLight * 0.5;
-    const ambient = `rgb(${Math.round(255 * amb * (0.65 + ar * 0.35))} ${Math.round(255 * amb * (0.65 + ag * 0.35))} ${Math.round(255 * amb * (0.65 + ab * 0.35))})`;
+    const rgb = [ar, ag, ab].map((c) => Math.round(255 * amb * (0.65 + c * 0.35))) as [number, number, number];
+    const ambient = `rgb(${rgb[0]} ${rgb[1]} ${rgb[2]})`;
     l.setTransform(1, 0, 0, 1, 0, 0);
     l.globalCompositeOperation = 'source-over';
     l.fillStyle = ambient;
@@ -393,7 +405,7 @@ export class Renderer {
       l.fillRect(L.x - L.r, L.y - L.r, L.r * 2, L.r * 2);
     }
     l.globalCompositeOperation = 'source-over';
-    this.occluder.draw(l, level, ambient);
+    this.occluder.draw(l, level, rgb);
     // Sky light falls from above: brighten the upper part a little, rock and air alike.
     l.setTransform(1, 0, 0, 1, 0, 0);
     const sky = l.createLinearGradient(0, 0, 0, this.lightC.height);

@@ -107,6 +107,8 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
     phase: () => match.phase,
     pause(on = true) {
       loop.paused = on;
+      // Stepped frames are pictures of a finished level: ink a new one whole, not a chunk per render.
+      renderer.bakeBudgetMs = on ? Infinity : 5;
     },
     step(n = 1, inputs = {}) {
       for (let i = 0; i < n; i++) match.step(inputs);
