@@ -19,6 +19,7 @@ import { Fx } from './fx';
 import { frameReach, VIEW_FRAME, type ViewFrame, viewFrame } from './frame';
 import { Hud } from './hud';
 import { drawClouds, drawDrops, drawRunnerItems, itemFx } from './items';
+import { drawPocketBlocks, drawShells, drawShellShadows } from './items-extra';
 import { circle, flutter, glowDot, type Light, light, type RC } from './kit';
 import { type Compositor, createCompositor } from './post';
 import { drawBackdrop, drawBlastPreview, drawForeground, drawProjectile, drawResolved, drawHeld, drawRunnerStatus, type Emit, propEventFx } from './props';
@@ -320,6 +321,8 @@ export class Renderer {
     if (run) {
       for (const p of run.projectiles) drawProjectile(rc, p, emit);
       this.drawSafeZone(rc, level, run);
+      drawPocketBlocks(rc, run);
+      drawShellShadows(rc, run);
       drawDrops(rc, run);
       // All trails first: in a pack, nobody's trail may paint over another runner.
       for (const r of run.runners) {
@@ -355,6 +358,7 @@ export class Renderer {
         drawRunnerItems(rc, r);
       }
       drawClouds(rc, run);
+      drawShells(rc, run);
     }
     this.fx.draw(rc);
     this.backdrop.drawMotes(rc, level.theme, dt, this.cam.visible());

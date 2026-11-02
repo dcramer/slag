@@ -107,6 +107,13 @@ export function wordFor(e: GameEvent): Pick | null {
       return null;
     case 'crumble-break':
       return { text: 'CRUNCH!', fill: ORANGE, burst: WHITE, size: 14 };
+    case 'item':
+      if (e.what !== 'hit') return null;
+      // A full bat hit reads out how far it would have gone.
+      if (e.kind === 'homer') return { text: `${380 + Math.floor(Math.random() * 120)} FT`, fill: WHITE, burst: RED, size: 22 };
+      if (e.kind === 'tremor') return { text: 'THOOM!', fill: ORANGE, burst: WHITE, size: 22 };
+      if (e.kind === 'tax') return { text: 'AUDIT!', fill: RED, burst: WHITE, size: 20 };
+      return null;
     case 'prop':
       if (e.kind === 'keg-fire') return { text: 'FOOMP!', fill: YELLOW, burst: ORANGE, size: 16 };
       if (e.kind === 'keg-backfire') return { text: 'KAFF!', fill: WHITE, burst: RED, size: 18 };

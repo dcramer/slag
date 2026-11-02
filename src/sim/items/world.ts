@@ -7,8 +7,10 @@ import type { Body } from '../physics';
 import { AMMO_SIM, statusInput } from '../props';
 import type { DeathCause, Runner, RunWorld } from '../run';
 import { type InputFrame, NO_INPUT } from '../types';
-import { cx, cy, giveOrDrop, isActive, itemEvent, moveBox, spawnDrop } from './common';
-import { BONK_CREDIT, BONK_DAZE, ITEMS, ROCKET, SHIELD, SMOKE, SWORD, tossHeld } from './roster';
+import { bonk, cx, cy, giveOrDrop, isActive, itemEvent, launch, moveBox, spawnDrop } from './common';
+import { stepBlocks } from './pocket';
+import { BAT, ITEMS, ROCKET, SHIELD, SMOKE, SWORD, swingBat, TREMOR, tossHeld } from './roster';
+import { stepShells } from './tax';
 import { DROP_HALF, DROP_LIFE, type ItemKind, type ItemSpawn, type RunnerItems } from './types';
 
 /**
@@ -35,16 +37,18 @@ export function giveItem(r: Runner, kind: ItemKind, uses = ITEMS[kind].uses): vo
   r.items.held = { kind, uses };
 }
 
-/** The controls a runner actually gets. Like freezing, a daze leaves only giving up (alt). */
+/** The controls a runner actually gets. Like freezing, a daze leaves only giving up (alt); winding up a bat leaves that and letting go. */
 export function itemInput(it: RunnerItems, inp: InputFrame): InputFrame {
   if (it.daze > 0) return inp.altPressed ? { ...NO_INPUT, altPressed: true } : NO_INPUT;
+  if (it.windup > 0) return inp.altPressed || inp.usePressed ? { ...NO_INPUT, altPressed: inp.altPressed, usePressed: inp.usePressed } : NO_INPUT;
   return inp;
 }
 
-/** After `stepBody`: heavy items cap jumps, swings cap speed, the rocket keeps pushing and then dazes you. */
+/** After `stepBody`: heavy items cap jumps, a bat wind-up roots you, swings cap speed, the rocket keeps pushing and then dazes you. */
 export function itemPostStep(it: RunnerItems, b: Body): void {
   const cap = it.held ? ITEMS[it.held.kind].jumpCap : undefined;
   if (cap !== undefined && b.jumping && b.vy < -cap) b.vy = -cap;
+  if (it.windup > 0) b.vx = 0;
   if (it.swing > 0 && Math.abs(b.vx) > SWORD.crawl) b.vx = b.vx > 0 ? SWORD.crawl : -SWORD.crawl;
   if (it.thrust > 0) {
     if (b.vy > -ROCKET.vy) b.vy = -ROCKET.vy;
@@ -73,14 +77,6 @@ export function creditKill(r: Runner, killer: number, cause: DeathCause): number
   return it.bonkCredit > 0 && it.bonkedBy !== r.slot ? it.bonkedBy : killer;
 }
 
-/** Stars and kill credit for a bonk, however it landed. */
-export function bonk(r: Runner, by: number): void {
-  const it = r.items;
-  it.daze = Math.max(it.daze, BONK_DAZE);
-  it.bonkedBy = by;
-  it.bonkCredit = BONK_CREDIT;
-}
-
 /** A shot came back to the hand that threw it. */
 export function catchShot(w: RunWorld, r: Runner, kind: ItemKind): void {
   giveOrDrop(w, r, kind, 1, cx(r), r.body.y);
@@ -96,18 +92,10 @@ export function burstSmoke(w: RunWorld, x: number, y: number): void {
 
 const tick = (n: number) => (n > 0 ? n - 1 : 0);
 
-function launch(b: Body, vx: number, vy: number): void {
-  b.vx = vx;
-  b.vy = vy;
-  b.onGround = false;
-  b.groundRef = -1;
-  b.jumping = false;
-  b.coyote = 0;
-}
-
 function bladeBox(r: Runner): Rect {
   const b = r.body;
-  return { x: b.facing > 0 ? b.x + b.w - 2 : b.x + 2 - SWORD.reach, y: b.y - 6, w: SWORD.reach, h: b.h + 6 };
+  const reach = r.items.swingKind === 'bat' ? BAT.reach : SWORD.reach;
+  return { x: b.facing > 0 ? b.x + b.w - 2 : b.x + 2 - reach, y: b.y - 6, w: reach, h: b.h + 6 };
 }
 
 /** Timers, and letting go of what dead and finished runners held. Items that die in the pit are gone. */
@@ -118,6 +106,7 @@ function stepTimers(w: RunWorld): void {
     it.swing = tick(it.swing);
     it.guard = tick(it.guard);
     it.noPickup = tick(it.noPickup);
+    if (it.slam > 0 && !isActive(r)) it.slam = 0;
     if (it.thrust === 0) it.daze = tick(it.daze);
     if (it.bonkCredit > 0 && --it.bonkCredit === 0) it.bonkedBy = -1;
     if (isActive(r) || !it.held) continue;
@@ -138,14 +127,62 @@ function useHeld(w: RunWorld, inputs: readonly InputFrame[]): void {
     if (!inp.usePressed) return;
     if (inp.down) return tossHeld(w, r);
     const h = it.held;
-    if (ITEMS[h.kind].use(w, r, inp) && --h.uses <= 0) it.held = null;
+    if (ITEMS[h.kind].use(w, r, inp)) spend(r);
+  });
+}
+
+function spend(r: Runner): void {
+  const it = r.items;
+  if (it.held && --it.held.uses <= 0) it.held = null;
+}
+
+/**
+ * Bat wind-ups: a full one lets go by itself, so nobody stands rooted forever. Getting dazed, grabbed or
+ * losing the bat drops the wind-up, and the bat stays in hand.
+ */
+function windBats(w: RunWorld): void {
+  for (const r of w.runners) {
+    const it = r.items;
+    if (it.windup === 0) continue;
+    if (!isActive(r) || it.daze > 0 || r.attach.grip || it.held?.kind !== 'bat') {
+      it.windup = 0;
+      continue;
+    }
+    if (++it.windup > BAT.windup) {
+      swingBat(w, r);
+      spend(r);
+    }
+  }
+}
+
+/**
+ * Tremor Bricks coming down. Every rival standing on something when it lands is bonked and popped up;
+ * anyone in the air, in the spawn zone, finished or held by a part is untouched. Every slam this frame is
+ * judged before any of them throws anyone, so two at once can't depend on runner order.
+ */
+function slamBricks(w: RunWorld): void {
+  const rs = w.runners;
+  const slammers = rs.filter((r) => r.items.slam > 0 && --r.items.slam === 0 && isActive(r));
+  if (!slammers.length) return;
+  const by = rs.map((v) => {
+    if (!isActive(v) || !v.body.onGround || w.isSafe(v) || v.attach.grip) return -1;
+    let best = -1;
+    for (const a of slammers) if (a !== v && (best < 0 || a.slot < best)) best = a.slot;
+    return best;
+  });
+  for (const a of slammers) itemEvent(w, 'hit', 'tremor', a.slot, cx(a), a.body.y + a.body.h);
+  rs.forEach((v, i) => {
+    if (by[i] < 0) return;
+    launch(v.body, 0, -TREMOR.pop);
+    bonk(v, by[i]);
+    itemEvent(w, 'hit', 'quake', by[i], cx(v), v.body.y + v.body.h);
   });
 }
 
 /** Resolve every live swing against this frame's positions, then apply all the knocks at once. */
 function swingSwords(w: RunWorld): void {
   const rs = w.runners;
-  const knocks = rs.map(() => ({ vx: 0, by: -1 }));
+  const knocks = rs.map(() => ({ vx: 0, vy: 0, by: -1, kind: 'sword' as ItemKind, homer: false }));
   rs.forEach((a, ai) => {
     const it = a.items;
     if (!isActive(a) || it.swing < SWORD.activeLo || it.swing > SWORD.activeHi) return;
@@ -155,8 +192,14 @@ function swingSwords(w: RunWorld): void {
       if (vi === ai || !isActive(v) || w.isSafe(v) || it.swingHits & (1 << vi) || !overlaps(box, v.body)) return;
       it.swingHits |= 1 << vi;
       const k = knocks[vi];
-      k.vx += a.body.facing * SWORD.knockVx;
-      if (k.by < 0 || a.slot < k.by) k.by = a.slot;
+      const power = it.swingPower;
+      k.vx += a.body.facing * SWORD.knockVx * power;
+      k.vy = Math.max(k.vy, SWORD.knockVy * Math.min(power, BAT.lift));
+      if (it.swingKind === 'bat' && power >= BAT.full) k.homer = true;
+      if (k.by < 0 || a.slot < k.by) {
+        k.by = a.slot;
+        k.kind = it.swingKind;
+      }
     });
     for (const p of w.projectiles) {
       const sim = AMMO_SIM[p.ammo];
@@ -172,9 +215,9 @@ function swingSwords(w: RunWorld): void {
   rs.forEach((v, vi) => {
     const k = knocks[vi];
     if (k.by < 0) return;
-    launch(v.body, k.vx, -SWORD.knockVy);
+    launch(v.body, k.vx, -k.vy);
     bonk(v, k.by);
-    itemEvent(w, 'hit', 'sword', k.by, cx(v), cy(v));
+    itemEvent(w, 'hit', k.homer ? 'homer' : k.kind, k.by, cx(v), cy(v));
   });
 }
 
@@ -252,7 +295,11 @@ function stepClouds(w: RunWorld): void {
 export function stepItems(w: RunWorld, inputs: readonly InputFrame[], live: boolean): void {
   stepTimers(w);
   if (live) useHeld(w, inputs);
+  windBats(w);
+  slamBricks(w);
   swingSwords(w);
+  stepShells(w);
+  stepBlocks(w);
   pickUp(w);
   stepDrops(w);
   stepClouds(w);

@@ -20,7 +20,7 @@
  *   pnpm shot parts --arch saw,flail       → those parts placed and raced, shot close up (`--styles all`: every launcher style; `--bait`: a runner in front of each)
  *   pnpm shot buildparts                   → every building part in a race, on crate cards, and as place ghosts
  *   pnpm shot pipes [--propseed 3]         → warp pipes facing every way: placing (with the pair tether), close up, and mid-trip
- *   pnpm shot items --seed abc             → held items: in hand, loose, and each one used
+ *   pnpm shot items --seed abc             → held items: in hand, loose, and each one used (`--give bat,tax` picks them)
  *   pnpm shot blood --theme farm --players 4 --noletters → staged deaths over four rounds: ooze, settled, place phase, expiry
  *   pnpm shot stack --seed abc             → stepped frames of runners stacking, walking as a stack, and a head-bounce
  *   pnpm shot grabs                        → stepped frames of a rope swing, a keg shot and a backfire

@@ -1,4 +1,4 @@
-import { firstOverlap, type Solid } from '../physics';
+import { type Body, firstOverlap, type Solid } from '../physics';
 import type { Runner, RunWorld } from '../run';
 import type { ItemEventKind } from '../types';
 import type { ItemDrop, ItemKind, ItemSpawn } from './types';
@@ -36,6 +36,31 @@ export const cx = (r: Runner) => r.body.x + r.body.w / 2;
 export const cy = (r: Runner) => r.body.y + r.body.h / 2;
 
 export const isActive = (r: Runner) => r.alive && !r.finished;
+
+/** Frames of stars from a bonk (sword, puck, boomerang, bat, brick, tax). */
+export const BONK_DAZE = 28;
+/** A death this soon after a bonk credits the bonker. */
+export const BONK_CREDIT = 150;
+
+/** Stars and kill credit for a bonk, however it landed. */
+export function bonk(r: Runner, by: number): void {
+  const it = r.items;
+  it.daze = Math.max(it.daze, BONK_DAZE);
+  // A bat's wind-up is lost (the bat isn't).
+  it.windup = 0;
+  it.bonkedBy = by;
+  it.bonkCredit = BONK_CREDIT;
+}
+
+/** Throw a body: off the ground, out of any jump. */
+export function launch(b: Body, vx: number, vy: number): void {
+  b.vx = vx;
+  b.vy = vy;
+  b.onGround = false;
+  b.groundRef = -1;
+  b.jumping = false;
+  b.coyote = 0;
+}
 
 /** Put an item in a runner's hands, or drop it at (x, y) if they're full. */
 export function giveOrDrop(w: RunWorld, r: Runner, kind: ItemKind, uses: number, x: number, y: number): void {
