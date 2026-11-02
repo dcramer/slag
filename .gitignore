@@ -6,3 +6,4 @@ shots
 .DS_Store
 .claude/worktrees/
 *.tsbuildinfo
+CLAUDE.local.md

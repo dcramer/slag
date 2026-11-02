@@ -6,7 +6,7 @@ export interface InputFrame {
   down: boolean;
   jump: boolean;
   jumpPressed: boolean;
-  /** Held: run instead of walk (faster, longer jumps, more momentum). */
+  /** Held: run instead of walk (faster, longer jumps, more momentum). Touch sets it past 70% stick. */
   run?: boolean;
   confirmPressed: boolean;
   altPressed: boolean;

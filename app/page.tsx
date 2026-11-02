@@ -29,7 +29,7 @@ export default function Home() {
         </span>
         <span className="drips" aria-hidden="true">
           {drips.map((len, i) => (
-            <span key={i} style={{ '--len': `${len}px`, '--d': `${(-i * 0.7).toFixed(1)}s` } as CSSProperties} />
+            <span key={`d${len}-${String(i)}`} style={{ '--len': `${len}px`, '--d': `${(-i * 0.7).toFixed(1)}s` } as CSSProperties} />
           ))}
         </span>
         <span className="logo-f">SLAG</span>
@@ -40,8 +40,8 @@ export default function Home() {
   return (
     <div className="home">
       <div className="embers" aria-hidden="true">
-        {embers.map((style, i) => (
-          <i key={i} style={style} />
+        {embers.map((style) => (
+          <i key={String(style.left)} style={style} />
         ))}
       </div>
       <MainMenu brand={brand} stage={<HomeStage />} />

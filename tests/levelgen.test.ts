@@ -28,5 +28,5 @@ describe('level generation', () => {
     }
     expect(fallbacks).toBe(0);
     expect(styles.size).toBeGreaterThanOrEqual(12);
-  });
+  }); // 150 full generations: generous timeout for loaded machines
 });

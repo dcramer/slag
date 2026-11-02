@@ -6,6 +6,25 @@ import { glyphSVG, type Glyph } from './glyphs';
 import { capLabel } from './prompts';
 import { sanitizeName } from './profile';
 import { FONT, PAL } from './style';
+import type { QualityTier } from './touch/device';
+
+/** Graphics quality hook (game-client wires it to the renderer). `null` = automatic. */
+export interface QualityControl {
+  /** The pinned tier, or null when automatic. */
+  pinned(): QualityTier | null;
+  set(tier: QualityTier | null): void;
+}
+
+const HAPTICS_KEY = 'slag.haptics';
+
+/** Saved haptics preference (default on). */
+export function loadHaptics(): boolean {
+  try {
+    return localStorage.getItem(HAPTICS_KEY) !== '0';
+  } catch {
+    return true;
+  }
+}
 
 /**
  * DOM overlays for menus that need real text input or dense forms:
@@ -63,6 +82,7 @@ input[type=range].slag-range:focus-visible{outline:2px solid ${PAL.amber};outlin
 .slag-switch:focus-visible{outline:2px solid ${PAL.amber};outline-offset:2px}
 .slag-chips{display:flex;flex-wrap:wrap;gap:8px}
 .slag-chips .slag-btn{min-width:56px;padding:6px 10px}
+@media (max-height:520px){.slag-ov{align-items:flex-start}.slag-card h2{font-size:26px;margin-top:10px}}
 @media (max-width:520px){.slag-card{padding:6px 16px 16px}.slag-card::before{margin:-6px -16px 0}.slag-row>label,.slag-row>.lbl{flex-basis:84px}.slag-row{flex-wrap:wrap}}
 `;
 
@@ -142,6 +162,8 @@ export class SettingsMenu extends Overlay {
   private keyHandler = (e: KeyboardEvent) => this.onKey(e);
   /** When set, the menu shows a "Leave Lobby" button that calls it. */
   leave: (() => void) | null = null;
+  /** When set, the menu shows a graphics-quality picker. */
+  quality: QualityControl | null = null;
 
   constructor(
     input: InputManager,
@@ -216,6 +238,54 @@ export class SettingsMenu extends Overlay {
       ranges.push(range);
       card.append(el('div', { className: 'slag-row' }, el('label', { textContent: LABEL[k] }), range, val));
     }
+  }
+
+  private switchRow(label: string, on: boolean, toggle: (on: boolean) => void): HTMLElement {
+    const sw = el('button', { className: 'slag-switch', type: 'button' });
+    sw.setAttribute('role', 'switch');
+    sw.setAttribute('aria-checked', String(on));
+    sw.setAttribute('aria-label', label);
+    sw.onclick = () => {
+      on = !on;
+      sw.setAttribute('aria-checked', String(on));
+      toggle(on);
+    };
+    return el('div', { className: 'slag-row' }, el('span', { className: 'lbl wide', textContent: label }), sw);
+  }
+
+  private touchSection(card: HTMLElement) {
+    card.append(el('h3', { textContent: 'Touch' }));
+    card.append(
+      this.switchRow('Vibration', this.input.touch.haptics, (on) => {
+        this.input.touch.haptics = on;
+        try {
+          localStorage.setItem(HAPTICS_KEY, on ? '1' : '0');
+        } catch {
+          // Not persisted; still applies this session.
+        }
+      }),
+    );
+  }
+
+  private displaySection(card: HTMLElement, q: QualityControl) {
+    card.append(el('h3', { textContent: 'Graphics Quality' }));
+    const chips = el('div', { className: 'slag-chips' });
+    const opts: [QualityTier | null, string][] = [
+      [null, 'Auto'],
+      ['high', 'High'],
+      ['mid', 'Medium'],
+      ['low', 'Low'],
+    ];
+    const cur = q.pinned();
+    for (const [tier, label] of opts) {
+      const b = el('button', { className: `slag-btn ${cur === tier ? 'on' : ''}`, type: 'button', textContent: label });
+      b.onclick = () => {
+        q.set(tier);
+        for (const sib of chips.querySelectorAll('button')) sib.classList.toggle('on', sib === b);
+      };
+      chips.append(b);
+    }
+    card.append(chips);
   }
 
   private controlsSection(card: HTMLElement) {
@@ -319,8 +389,12 @@ export class SettingsMenu extends Overlay {
     card.setAttribute('role', 'dialog');
     card.setAttribute('aria-label', 'Settings');
     this.audioSection(card);
-    this.controlsSection(card);
+    // Under touch the key-rebind grid is noise: show the touch options instead.
+    if (this.input.touch.active) this.touchSection(card);
+    if (this.quality) this.displaySection(card, this.quality);
+    if (!this.input.touch.active) this.controlsSection(card);
     const reset = el('button', { className: 'slag-btn', type: 'button', textContent: 'Reset Controls' });
+    reset.hidden = this.input.touch.active;
     reset.onclick = () => {
       this.draft = { ...defaultSettings(), splitKeyboard: this.draft.splitKeyboard };
       this.input.apply(this.draft);

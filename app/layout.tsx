@@ -6,6 +6,9 @@ export const metadata: Metadata = {
   title: 'SLAG',
   description: 'A procedurally generated party platformer for 1–8 players. Build traps, then race through them.',
   icons: { icon: 'data:,' },
+  // Mobile: "Add to Home Screen" launches chromeless (iOS) with a dark status bar over the game.
+  appleWebApp: { capable: true, title: 'slag', statusBarStyle: 'black-translucent' },
+  other: { 'mobile-web-app-capable': 'yes' },
 };
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, themeColor: '#0e0806' };

@@ -30,6 +30,11 @@ export interface PromptContext {
   modes: readonly InputMode[];
   /** Also show the mouse button for actions that have one. */
   mouse?: boolean;
+  /**
+   * Touch: name the on-screen button for an action (e.g. { confirm: 'PLACE', alt: '⟳' }).
+   * Actions without one fall back to a plain tap for confirm, nothing otherwise.
+   */
+  touchButtons?: Partial<Record<PromptAction, string>>;
 }
 
 /** Glyphs (alternatives, shown side by side) for an action. */
@@ -43,7 +48,11 @@ export function glyphsFor(action: PromptAction, ctx: PromptContext): Glyph[] {
     } else if (mode === 'gamepad') {
       const b = PAD[action];
       if (b) out.push({ kind: 'pad', button: b });
-    } else if (action === 'confirm') out.push({ kind: 'touch' });
+    } else {
+      const label = ctx.touchButtons?.[action];
+      if (label) out.push({ kind: 'touch', label });
+      else if (action === 'confirm') out.push({ kind: 'touch' });
+    }
   }
   return out;
 }

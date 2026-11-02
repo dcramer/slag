@@ -14,7 +14,7 @@ export type MouseButton = 'left' | 'right' | 'wheel' | 'move';
 
 export type Glyph =
   /** A keyboard key. `label` is the cap text (see capLabel in prompts.ts). */
-  { kind: 'key'; label: string } | { kind: 'pad'; button: PadButton } | { kind: 'mouse'; button: MouseButton } | { kind: 'touch' };
+  { kind: 'key'; label: string } | { kind: 'pad'; button: PadButton } | { kind: 'mouse'; button: MouseButton } | { kind: 'touch'; label?: string };
 
 /** Xbox-layout face colors (the most common pad on PC). Y gets dark ink for contrast. */
 const FACE: Record<'A' | 'B' | 'X' | 'Y', { fill: string; ink: string }> = {
@@ -28,7 +28,14 @@ const CAP_SIDE = '#9c8a75';
 const PAD_BODY = '#3b3431';
 
 /** Rough cap text width as a fraction of the font size (for SVG, where we can't measure). */
-const approxTextW = (s: string, size: number) => [...s].reduce((w, ch) => w + (/[A-Z0-9]/.test(ch) ? 0.6 : /[a-z]/.test(ch) ? 0.52 : 0.62), 0) * size;
+function approxTextW(s: string, size: number): number {
+  let w = 0;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s.charAt(i);
+    w += /[A-Z0-9]/.test(ch) ? 0.6 : /[a-z]/.test(ch) ? 0.52 : 0.62;
+  }
+  return w * size;
+}
 
 function keyWidth(label: string, h: number, measure: (s: string, size: number) => number) {
   return Math.max(h, measure(label, h * 0.56) + h * 0.62);
@@ -53,7 +60,9 @@ export function glyphWidth(c: CanvasRenderingContext2D, g: Glyph, h: number): nu
     case 'mouse':
       return h * 0.72;
     case 'touch':
-      return h;
+      if (!g.label) return h;
+      c.font = `800 ${h * 0.5}px ${FONT.ui}`;
+      return Math.max(h, c.measureText(g.label).width + h * 0.8);
   }
 }
 
@@ -123,6 +132,22 @@ export function drawGlyph(c: CanvasRenderingContext2D, g: Glyph, x: number, cy: 
       break;
     }
     case 'touch': {
+      if (g.label) {
+        // An on-screen touch button (outlined disc/pill with its label), as the touch overlay draws them.
+        c.fillStyle = PAL.ink;
+        rr(c, x - 0.7, y - 0.7, w + 1.4, h + 1.4, h / 2 + 0.7);
+        c.fill();
+        c.fillStyle = 'rgba(246,234,216,0.16)';
+        c.strokeStyle = CAP_TOP;
+        c.lineWidth = Math.max(0.8, h * 0.08);
+        rr(c, x + 0.5, y + 0.5, w - 1, h - 1, h / 2);
+        c.fill();
+        c.stroke();
+        c.fillStyle = CAP_TOP;
+        c.font = `800 ${h * 0.5}px ${FONT.ui}`;
+        c.fillText(g.label, x + w / 2, cy + h * 0.03);
+        break;
+      }
       const cx = x + w / 2;
       c.strokeStyle = CAP_TOP;
       c.globalAlpha = 0.55;
@@ -327,6 +352,14 @@ export function glyphSVG(g: Glyph, h = 20): string {
       );
     }
     case 'touch':
+      if (g.label) {
+        const w = Math.max(h, approxTextW(g.label, h * 0.5) + h * 0.8);
+        return svg(
+          w,
+          `<rect width="${w}" height="${h}" rx="${h / 2}" fill="${PAL.ink}"/><rect x=".8" y=".8" width="${w - 1.6}" height="${h - 1.6}" rx="${h / 2 - 0.8}" fill="rgba(246,234,216,0.16)" stroke="${CAP_TOP}" stroke-width="${Math.max(0.8, h * 0.08)}"/>` +
+            text(g.label, w / 2, h * 0.53, h * 0.5, CAP_TOP, 800),
+        );
+      }
       return svg(
         h,
         `<circle cx="${h / 2}" cy="${h / 2}" r="${h * 0.42}" fill="none" stroke="${CAP_TOP}" stroke-opacity=".55" stroke-width="${h * 0.09}"/><circle cx="${h / 2}" cy="${h / 2}" r="${h * 0.24}" fill="${CAP_TOP}" stroke="${PAL.ink}" stroke-width="1.2"/>`,

@@ -7,12 +7,12 @@ The twist: **levels, props, and characters are all procedurally generated** from
 ## Running it
 
 ```sh
-npm install
-npm run dev        # http://localhost:3000 → redirects to a new lobby /r/<code>  (?seed=… forces a level)
-npm run check      # typecheck + lint + tests
-npm run shot -- race --race all   # headless screenshots into shots/
-npm run level -- myseed           # ASCII level inspector
-npm run build      # static bundle in dist/, deployable anywhere
+pnpm install
+pnpm dev        # http://localhost:3000 → main menu; Play opens a new lobby /r/<code>  (?seed=… forces a level)
+pnpm check      # typecheck + lint + tests
+pnpm shot -- race --race all   # headless screenshots into shots/
+pnpm level -- myseed           # ASCII level inspector
+pnpm build         # production build (what Vercel runs)
 ```
 
 ## Controls (local multiplayer, up to 4 players)
@@ -36,7 +36,7 @@ npm run build      # static bundle in dist/, deployable anywhere
 
 Everything is derived from a 32-bit seed with a deterministic PRNG (`src/core/rng.ts`). Sim code never calls `Math.random`.
 
-- **Levels** (`src/gen/level.ts`): a critical path of platforms marches from a spawn on the left to a goal on the right. Then one of four style passes (islands, caverns, ruins, towers) adds decoration, avoiding a keep-clear mask over walkways and jump arcs. Every candidate is then **verified with the real player controller** (`src/sim/reach.ts`). Ghost players run scripted jumps from every standable cell, and a BFS over the landings must reach the goal. If a candidate fails, generation retries with a new sub-seed. In practice it averages about 1.05 attempts and about 15 ms per level. The theme comes from the seed too: mood (day, dusk, night, infernal, or toxic), sky, sun, moon, planet, or eclipse, skyline layers, terrain material, the liquid pool at the bottom, ambient particles, decor, and color grade.
+- **Levels** (`src/gen/level/`): a critical path of platforms marches from a spawn on the left to a goal on the right. Then one of four style passes (islands, caverns, ruins, towers) adds decoration, avoiding a keep-clear mask over walkways and jump arcs. Every candidate is then **verified with the real player controller** (`src/sim/reach.ts`). Ghost players run scripted jumps from every standable cell, and a BFS over the landings must reach the goal. If a candidate fails, generation retries with a new sub-seed. In practice it averages about 1.05 attempts and about 15 ms per level. The theme comes from the seed too: mood (day, dusk, night, infernal, or toxic), sky, sun, moon, planet, or eclipse, skyline layers, terrain material, the liquid pool at the bottom, ambient particles, decor, and color grade.
 - **Props** (`src/gen/props.ts`): props are assembled from **modules** by archetype recipes, and every parameter is rolled.
   - **Modules**: bodies (stone, metal, wood, ice, conveyor, goo, bouncy jelly, crumble), spike strips, swinging heads (saws, maces, axes on rods or chains; static, orbiting, or pendulum), launchers, flamethrowers, lasers (fixed or sweeping), tesla gates, crushers, springs, and fans. Whole props can also ride a rail or a loop.
   - **Launchers**: crossbow, ballista, cannon, fire totem, plasma turret, and star thrower. They fire bolts, arrows, cannonballs, fireballs, plasma, or shuriken. Aim can be fixed, sweeping, or tracking. Tracking launchers solve a ballistic arc when their ammo has gravity.

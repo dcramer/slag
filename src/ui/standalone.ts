@@ -1,7 +1,8 @@
 import 'client-only';
 import { Silent } from '../audio';
 import { InputManager } from '../input/input';
-import { SettingsMenu } from './menus';
+import { loadHaptics, SettingsMenu } from './menus';
+import { isTouchFirst } from './touch/device';
 
 /**
  * The in-game SettingsMenu outside a game (main menu). The InputManager is
@@ -11,6 +12,9 @@ import { SettingsMenu } from './menus';
  */
 export function openStandaloneSettings(onClose: () => void): () => void {
   const input = new InputManager(new EventTarget() as unknown as Window);
+  // Phones get the touch options instead of the key-rebind grid.
+  input.touch.setActive(isTouchFirst());
+  input.touch.haptics = loadHaptics();
   const menu = new SettingsMenu(input, new Silent());
   let closed = false;
   menu.onClose = () => {

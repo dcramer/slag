@@ -1,7 +1,21 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { notFound } from 'next/navigation';
 import { roomFromPath } from '../../../src/game/room';
 import GameClient from './GameClient';
+
+/**
+ * Game route only (mobile): no pinch/double-tap zoom, and draw edge to edge
+ * under the notch (the renderer and touch controls inset themselves with
+ * env(safe-area-inset-*)). Scoped here so /codex stays zoomable.
+ */
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+  themeColor: '#07060b',
+};
 
 type Props = { params: Promise<{ room: string }> };
 

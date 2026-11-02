@@ -58,6 +58,10 @@ export interface NetInfo {
 interface FooterItem {
   action: PromptAction;
   label: string;
+  /** Touch: the on-screen button this action lives on (its label, e.g. 'PLACE'). */
+  touchButton?: string;
+  /** Only shown in touch mode. */
+  touchOnly?: boolean;
   hud?: HudAction;
   device?: string;
   mouse?: boolean;
@@ -137,7 +141,7 @@ export class Hud {
   }
 
   private get mode(): InputMode {
-    return this.inputMode ?? this.lastInput;
+    return this.inputMode ?? (this.mouseDevice === 'touch' ? 'touch' : this.lastInput);
   }
 
   private button(b: HudButton) {
@@ -376,7 +380,10 @@ export class Hud {
       const p = m.players[i];
       if (p) this.playerCard(p, i, x, y, bw, bh, t);
       else {
-        const hover = joinable && this.button({ x, y, w: bw, h: bh, action: 'join', device: this.mouseDevice });
+        // No hover under a finger: the first open bay advertises the tap instead.
+        const hover =
+          (joinable && this.button({ x, y, w: bw, h: bh, action: 'join', device: this.mouseDevice })) ||
+          (joinable && this.mode === 'touch' && i === m.players.length);
         bay(c, x, y, bw, bh, hover, t);
         this.text('OPEN', x + bw / 2, y + bh / 2 - (hover ? 8 : 4), rows === 1 ? 26 : 22, hover ? PAL.amber : PAL.dim, 'center', DISPLAY, 400);
         if (hover) {
@@ -403,7 +410,8 @@ export class Hud {
     c.font = `600 ${TYPE.caption}px ${UI}`;
     const lw = c.measureText(label).width;
     this.text(label, x + w - 10, y + 17.5, TYPE.caption, PAL.ash, 'right', UI, 600);
-    icon(c, pad ? 'gamepad' : 'keyboard', x + w - 18 - lw, y + 17.5, 9, PAL.ash);
+    if (p.device === 'touch') drawGlyph(c, { kind: 'touch' }, x + w - 24 - lw, y + 17.5, 11);
+    else icon(c, pad ? 'gamepad' : 'keyboard', x + w - 18 - lw, y + 17.5, 9, PAL.ash);
     // Character on a slag pedestal.
     const cx = x + w / 2;
     const feet = y + (big ? h * 0.6 : h * 0.56);
@@ -435,7 +443,8 @@ export class Hud {
     const nsize = big ? 17 : 14;
     c.font = `400 ${nsize}px ${DISPLAY}`;
     const nw = c.measureText(p.character.name).width;
-    const nameHover = mine && this.button({ x: cx - nw / 2 - 14, y: ny - nsize / 2 - 2, w: nw + 28, h: nsize + 4, action: 'name', device: p.device });
+    const nh = this.mode === 'touch' ? 26 : nsize + 4;
+    const nameHover = mine && this.button({ x: cx - nw / 2 - 14, y: ny - nh / 2, w: nw + 28, h: nh, action: 'name', device: p.device });
     this.text(p.character.name, cx, ny, nsize, nameHover ? PAL.amber : PAL.bone, 'center', DISPLAY, 400, 3.5);
     if (mine) icon(c, 'pencil', cx + nw / 2 + 8, ny, 8, nameHover ? PAL.amber : PAL.dim);
     // Status row.
@@ -667,8 +676,8 @@ export class Hud {
       const status = done
         ? `#${run.finishOrder.indexOf(p.slot) + 1} Safe`
         : dead
-          ? r!.killer >= 0 && r!.killer !== p.slot
-            ? `Got by ${m.player(r!.killer)?.character.name ?? '?'}`
+          ? r.killer >= 0 && r.killer !== p.slot
+            ? `Got by ${m.player(r.killer)?.character.name ?? '?'}`
             : 'Splat'
           : `${p.score} Pts`;
       this.text(status, x + 26, y + 18, TYPE.caption, done ? PAL.toxic : dead ? '#ff8a7a' : PAL.ash, 'left', UI, 600);
@@ -818,8 +827,9 @@ export class Hud {
         const near = m.players.some((p) => !p.placed && p.cursor.y > VIEW_H - FOOT_H - 26);
         return {
           items: [
-            { action: 'confirm', label: 'Place', mouse: true },
-            { action: 'alt', label: 'Rotate', mouse: true },
+            { action: 'confirm', label: 'Drag to Aim', touchOnly: true },
+            { action: 'alt', label: 'Rotate', mouse: true, touchButton: '⟳' },
+            { action: 'confirm', label: 'Place', mouse: true, touchButton: 'PLACE' },
           ],
           left: `${placed}/${m.players.length} Placed`,
           alpha: near ? 0.25 : 1,
@@ -899,7 +909,12 @@ export class Hud {
     let x = VIEW_W - 14;
     for (let i = items.length - 1; i >= 0; i--) {
       const it = items[i];
-      const glyphs = glyphsFor(it.action, { ...ctx, mouse: !!it.mouse && modes[0] === 'keyboard' });
+      if (it.touchOnly && !touch) continue;
+      const glyphs = glyphsFor(it.action, {
+        ...ctx,
+        mouse: !!it.mouse && modes[0] === 'keyboard',
+        touchButtons: it.touchButton ? { [it.action]: it.touchButton } : undefined,
+      });
       if (!glyphs.length) continue;
       c.font = `700 ${size}px ${UI}`;
       const lw = c.measureText(it.label).width;

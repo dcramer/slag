@@ -109,11 +109,12 @@ export default function MainMenu({ brand, stage }: { brand: ReactNode; stage: Re
       const cur = { up: false, down: false, a: false, b: false };
       for (const p of pads) {
         if (!p) continue;
-        const ay = p.axes[1] ?? 0;
-        cur.up ||= ay < -0.5 || !!p.buttons[12]?.pressed;
-        cur.down ||= ay > 0.5 || !!p.buttons[13]?.pressed;
-        cur.a ||= !!p.buttons[0]?.pressed;
-        cur.b ||= !!p.buttons[1]?.pressed;
+        const ay = p.axes.at(1) ?? 0;
+        const btn = (i: number) => p.buttons.at(i)?.pressed ?? false;
+        cur.up ||= ay < -0.5 || btn(12);
+        cur.down ||= ay > 0.5 || btn(13);
+        cur.a ||= btn(0);
+        cur.b ||= btn(1);
       }
       if (cur.up && !prev.up) move(-1);
       if (cur.down && !prev.down) move(1);
@@ -206,15 +207,15 @@ export default function MainMenu({ brand, stage }: { brand: ReactNode; stage: Re
             Select
           </span>
           <span className="prompt">
-            {confirmGlyphs.map((g, i) => (
-              <G key={i} g={g} />
+            {confirmGlyphs.map((g) => (
+              <G key={g.kind} g={g} />
             ))}
             Confirm
           </span>
           {joining && (
             <span className="prompt">
-              {backGlyphs.map((g, i) => (
-                <G key={i} g={g} />
+              {backGlyphs.map((g) => (
+                <G key={g.kind} g={g} />
               ))}
               Back
             </span>

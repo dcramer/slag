@@ -13,8 +13,8 @@ import { circle, glowDot, type Light, light, type RC } from './kit';
 import { type Compositor, createCompositor } from './post';
 import { drawProjectile, drawResolved, type Emit } from './props';
 import { TerrainPainter } from './terrain';
-
-const MAX_W = 1920;
+// Mobile: quality tiers / adaptive resolution / safe-area insets (owned by the touch module).
+import { detectQuality, FrameBudget, QUALITY, type QualityTier, safeInsets, TIERS } from '../ui/touch/device';
 
 /**
  * Orchestrates a frame: Canvas2D paints albedo/emissive/light layers in
@@ -41,6 +41,10 @@ export class Renderer {
   private aberr = 0;
   private flash = 0;
   private lobbyDrift = 0;
+  /** Render quality tier: caps internal resolution (MAX_W) and DPR. See src/ui/touch/device.ts. */
+  quality: QualityTier;
+  private adaptive: boolean;
+  private budget = new FrameBudget();
 
   constructor(
     private glCanvas: HTMLCanvasElement,
@@ -49,25 +53,40 @@ export class Renderer {
     this.comp = createCompositor(glCanvas);
     this.hud = new Hud(hudCanvas.getContext('2d')!);
     this.fx.onSplat = (x, y, r, c) => this.terrain.splat(x, y, r, c);
+    ({ tier: this.quality, adaptive: this.adaptive } = detectQuality());
     this.resize();
     window.addEventListener('resize', () => this.resize());
+    // Mobile: rotation can report stale sizes on the first resize; settle once more after it.
+    window.addEventListener('orientationchange', () => setTimeout(() => this.resize(), 250));
+  }
+
+  /** Change the render quality tier (e.g. from settings) and re-allocate buffers. */
+  setQuality(q: QualityTier) {
+    this.quality = q;
+    this.resize();
   }
 
   resize() {
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const dpr = window.devicePixelRatio || 1;
-    const scale = Math.min(vw / VIEW_W, vh / VIEW_H);
+    const q = QUALITY[this.quality];
+    const dpr = Math.min(q.dprCap, window.devicePixelRatio || 1);
+    // Mobile: fit inside the notch / status-bar safe area (left/right/top). The bottom
+    // home-indicator strip may overlap the picture; touch controls keep clear of it.
+    const ins = safeInsets();
+    const aw = Math.max(2, vw - ins.left - ins.right);
+    const ah = Math.max(2, vh - ins.top);
+    const scale = Math.min(aw / VIEW_W, ah / VIEW_H);
     const cssW = VIEW_W * scale;
     const cssH = VIEW_H * scale;
     for (const c of [this.glCanvas, this.hudCanvas]) {
       c.style.position = 'absolute';
-      c.style.left = `${(vw - cssW) / 2}px`;
-      c.style.top = `${(vh - cssH) / 2}px`;
+      c.style.left = `${ins.left + (aw - cssW) / 2}px`;
+      c.style.top = `${ins.top + (ah - cssH) / 2}px`;
       c.style.width = `${cssW}px`;
       c.style.height = `${cssH}px`;
     }
-    this.pw = Math.max(2, Math.round(Math.min(MAX_W, cssW * dpr)));
+    this.pw = Math.max(2, Math.round(Math.min(q.maxW, cssW * dpr)));
     this.ph = Math.round((this.pw * VIEW_H) / VIEW_W);
     for (const c of [this.scene, this.glow, this.glCanvas, this.hudCanvas]) {
       c.width = this.pw;
@@ -82,6 +101,12 @@ export class Renderer {
   /** Paint one frame. `events` are this frame's drained sim events (shared with audio). */
   render(m: Match, now: number, events: readonly GameEvent[] = []) {
     const t = now / 1000;
+    // Mobile: adaptive resolution. Sustained slow frames drop one quality tier (never back up).
+    if (this.adaptive && this.last && this.budget.push((t - this.last) * 1000)) {
+      const i = TIERS.indexOf(this.quality);
+      if (i < TIERS.length - 1) this.setQuality(TIERS[i + 1]);
+      else this.adaptive = false;
+    }
     const dt = Math.min(0.05, this.last ? t - this.last : 1 / 60);
     this.last = t;
     const level = m.level;
@@ -134,7 +159,8 @@ export class Renderer {
     this.drawMarkers(rc, level);
 
     const run = m.phase === 'run' ? m.run : null;
-    const resolved = run ? run.resolved : m.placed.map(resolveProp);
+    // Set pieces are part of the level: show them in every phase (lobby, pick, place), not just races.
+    const resolved = run ? run.resolved : [...level.setPieces, ...m.placed].map(resolveProp);
     for (const r of resolved) {
       drawResolved(rc, r, {
         level,
