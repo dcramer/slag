@@ -100,7 +100,6 @@ export class Renderer {
     this.viewBox.dataset.slagView = '';
     this.viewBox.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none';
     glCanvas.parentElement?.append(this.viewBox);
-    this.fx.onSplat = (x, y, r, c) => this.terrain.splat(x, y, r, c);
     ({ tier: this.quality, adaptive: this.adaptive } = detectQuality());
     this.resize();
     window.addEventListener('resize', () => this.resize());
@@ -628,7 +627,6 @@ export class Renderer {
             this.fx.burst('spark', e.x, e.y, 18, 260, [{ h: 45, s: 100, l: 70 }, body], 1.2, 0.5);
             this.fx.add('ring', e.x, e.y, 0, 0, body, 40, 0.45);
             this.fx.add('flash', e.x, e.y, 0, 0, shift(body, 20), 26, 0.25);
-            this.terrain.splat(e.x, e.y + 6, 4, body);
           }
           this.cam.shake = Math.max(this.cam.shake, 6);
           this.flash = Math.max(this.flash, 0.08);

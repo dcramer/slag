@@ -160,7 +160,6 @@ export class TerrainPainter {
   private decor: Decor[] = [];
   private live: Decor[] = [];
   private blades: Blade[] = [];
-  private kb = 1;
   /** World size in px of the baked level. */
   private ww = 0;
   private wh = 0;
@@ -192,7 +191,6 @@ export class TerrainPainter {
     const bk = `${tk}:${level.seed}:${level.version}:${level.w}x${level.h}:${level.weather?.kind}`;
     if (bk === this.bakeKey) return false;
     this.bakeKey = bk;
-    this.kb = kb;
     this.bakeTerrain(level, kb);
     return true;
   }
@@ -557,26 +555,6 @@ export class TerrainPainter {
       DECOR[d.kind].live!(rc, d, th);
       rc.s.restore();
     }
-  }
-
-  /** Paint a splat decal onto the terrain (only lands on solid pixels). */
-  splat(x: number, y: number, r: number, color: HSL) {
-    if (!this.bake) return;
-    const g = this.bake.getContext('2d')!;
-    g.save();
-    g.setTransform(this.kb, 0, 0, this.kb, 0, 0);
-    g.globalCompositeOperation = 'source-atop';
-    g.fillStyle = css(color, -5, 0.85);
-    const n = 5 + Math.floor(Math.random() * 5);
-    circle(g, x, y, r);
-    for (let i = 0; i < n; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const d = r * (0.8 + Math.random() * 1.4);
-      circle(g, x + Math.cos(a) * d, y + Math.sin(a) * d, r * (0.15 + Math.random() * 0.35));
-    }
-    g.fillStyle = css(color, 20, 0.5);
-    circle(g, x - r * 0.3, y - r * 0.3, r * 0.35);
-    g.restore();
   }
 }
 

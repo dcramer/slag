@@ -1,3 +1,4 @@
+import { isStandable } from '../src/sim/reach';
 import { describe, expect, it } from 'vitest';
 import { deriveSeed, Rng } from '../src/core/rng';
 import { Match } from '../src/game/match';
@@ -8,7 +9,7 @@ import { bloodColor } from '../src/render/blood';
 import { hashMatch, restoreMatch, snapshotMatch } from '../src/net/snapshot';
 import { BLOOD_CAP, type BloodCell, canBleed, FACE_UP, groundOf, OOZE_FRAMES, spillBlood } from '../src/sim/blood';
 import { LEVEL_H, LEVEL_W, PHYS, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
-import { type Level, T_ONEWAY } from '../src/sim/level';
+import { isProtected, type Level, T_ONEWAY, T_SOLID, tileAt } from '../src/sim/level';
 import { bodyAtCell, DEFAULT_SURFACE } from '../src/sim/physics';
 import { castRay, COAT_PX, COAT_SURFACES, type PlacedProp, type ProjWorld, type PropDef, solidAt } from '../src/sim/props';
 import { RunWorld } from '../src/sim/run';
@@ -458,9 +459,20 @@ describe('in a networked match', () => {
   });
 
   it('round-trips a snapshot mid-ooze and runs on identically', () => {
-    const a = matchIn(3);
+    // A generated level, not the test floor: restoring refuses terrain this build doesn't generate.
+    const a = new Match(4242);
+    for (let i = 0; i < 3; i++) a.join(`d${i}`);
+    a.startMatch();
+    a.startRun();
     for (let f = 0; f < RUN_COUNTDOWN + 5; f++) a.step({});
-    killAt(a.run!, 1, SPOT);
+    const l = a.level;
+    const floors: [number, number][] = [];
+    for (let ty = 2; ty < l.h - 1; ty++) {
+      for (let tx = 4; tx < l.w - 4; tx++) if (isStandable(l, tx, ty) && tileAt(l, tx, ty + 1) === T_SOLID && !isProtected(l, tx, ty)) floors.push([tx, ty]);
+    }
+    expect(floors.length).toBeGreaterThan(1);
+    killAt(a.run!, 1, ...floors[0]);
+    expect(a.blood.length).toBeGreaterThan(0);
     a.step({});
     const b = new Match(1);
     restoreMatch(b, JSON.parse(JSON.stringify(snapshotMatch(a))));
@@ -474,7 +486,7 @@ describe('in a networked match', () => {
     expect(iceStrips(b.run!)).toHaveLength(iceStrips(a.run!).length);
     expect(hashMatch(b)).toBe(hashMatch(a));
     // A later death on the restored race lands in the match's own list.
-    killAt(b.run!, 2, SPOT + 3);
+    killAt(b.run!, 2, ...floors[floors.length - 1]);
     expect(b.blood.some((c) => c.slot === 2)).toBe(true);
   });
 
