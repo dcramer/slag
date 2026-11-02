@@ -6,6 +6,7 @@ import { blob, line, type P, stroke } from '../../ink';
 import { circle, ellipse, glowDot, light, METALS, metalFill, type RC, rivet, rrect, sphereFill } from '../../kit';
 import { BACKDROP, type DrawCtx, defineArt } from '../common';
 import { ceilingAbovePx, chain, groundBelowPx, lattice, plank, rope } from './setpiece';
+import { rotorSkin } from './skins';
 
 /**
  * Rotor art: windmills, cog lifts and pendulum platforms (chandelier, hay
@@ -36,6 +37,8 @@ function hub(m: Rotor, d: DrawCtx): [number, number] {
 // Backdrop: supports. Layer 0: arms.
 
 function drawSupport(rc: RC, m: Rotor, d: DrawCtx) {
+  const skin = rotorSkin(m, d);
+  if (skin?.support) return skin.support(rc, m, d);
   const s = rc.s;
   const [hx, hy] = hub(m, d);
   const lv = d.o.level;
@@ -307,8 +310,14 @@ function drawArms(rc: RC, m: Rotor, d: DrawCtx, arms: RotorArm[]) {
     }
     return;
   }
+  const skin = rotorSkin(m, d);
   if (m.look === 'cog') {
-    inkCog(rc, m, d, arms, hx, hy);
+    if (skin?.wheel) skin.wheel(rc, m, d, arms, hx, hy);
+    else inkCog(rc, m, d, arms, hx, hy);
+    return;
+  }
+  if (skin?.link) {
+    for (const a of arms) skin.link(rc, m, d, a, rotorPlatform(m, a));
     return;
   }
   // Pendulums: link from the pivot to the platform.
@@ -497,6 +506,12 @@ function drawPlatform(rc: RC, m: Rotor, d: DrawCtx, a: RotorArm, i: number) {
   const p = rotorPlatform(m, a);
   const st = d.style;
   const seed = d.r.pp.uid * 7 + i;
+  const skin = rotorSkin(m, d);
+  if (skin?.platform) return skin.platform(rc, m, d, a, p, i);
+  if (skin?.over) {
+    drawPlatform(rc, { ...m, look: m.look }, { ...d, o: { ...d.o, level: null } }, a, i);
+    return skin.over(rc, m, d, a, p, i);
+  }
   switch (m.look) {
     case 'windmill':
       plank(s, p.x, p.y, p.w, p.h, st.woodHue, seed, 42);
@@ -871,6 +886,8 @@ function drawGondola(s: CanvasRenderingContext2D, p: Rect, d: DrawCtx) {
 // Layer 2: hub caps and pivots.
 
 function drawHub(rc: RC, m: Rotor, d: DrawCtx) {
+  const skin = rotorSkin(m, d);
+  if (skin?.hub) return skin.hub(rc, m, d);
   const s = rc.s;
   const [hx, hy] = hub(m, d);
   if (m.swing > 0) {
