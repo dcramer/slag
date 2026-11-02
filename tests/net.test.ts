@@ -90,7 +90,7 @@ const player: Script = (s, f, rng) => {
 };
 
 function fastRules(s: NetSession) {
-  s.act({ t: 'rules', rules: { targetScore: 120, pickSeconds: 10, placeSeconds: 15, raceSeconds: 30 } });
+  s.act({ t: 'rules', rules: { targetScore: 80, maxRounds: 25, pickSeconds: 10, placeSeconds: 15, raceSeconds: 30 } });
 }
 
 describe('host election', () => {

@@ -9,7 +9,8 @@ The twist: **levels, props, and characters are all procedurally generated** from
 ```sh
 pnpm install
 pnpm dev        # http://localhost:3000 → main menu; Play opens a new lobby /r/<code>  (?seed=… forces a level)
-pnpm check      # typecheck + lint + tests
+pnpm check      # typecheck + lint + fast tests
+pnpm test:slow  # full generator sweeps (CI always runs these)
 pnpm shot -- race --race all   # headless screenshots into shots/
 pnpm level -- myseed           # ASCII level inspector
 pnpm build         # production build (what Vercel runs)

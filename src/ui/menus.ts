@@ -1,7 +1,8 @@
 import type { AudioSystem } from '../audio';
-import { type MatchRules, RULE_CHOICES } from '../game/rules';
+import { MATCH_LENGTHS, type MatchRules, RULE_CHOICES, type TimerRule } from '../game/rules';
 import { BINDABLE, defaultSettings, type InputSettings, type KeyProfile, keyName, SLOTS } from '../input/bindings';
 import type { InputManager } from '../input/input';
+import type { RenderStyle } from '../render/style';
 import { glyphSVG, type Glyph } from './glyphs';
 import { capLabel } from './prompts';
 import { sanitizeName } from './profile';
@@ -14,6 +15,17 @@ export interface QualityControl {
   pinned(): QualityTier | null;
   set(tier: QualityTier | null): void;
 }
+
+/** Art style hook (game-client wires it to the renderer). */
+export interface StyleControl {
+  get(): RenderStyle;
+  set(style: RenderStyle): void;
+}
+
+const STYLE_CHOICES: [RenderStyle, string][] = [
+  ['default', 'Classic'],
+  ['comic', 'Comic'],
+];
 
 const HAPTICS_KEY = 'slag.haptics';
 
@@ -151,6 +163,7 @@ const BIND_LABELS: Record<(typeof BINDABLE)[number], string> = {
   down: 'Down / Drop',
   jump: 'Jump',
   run: 'Run (Hold)',
+  use: 'Use Item',
   confirm: 'Confirm / Pick',
   alt: 'Rotate / Alt',
 };
@@ -164,6 +177,8 @@ export class SettingsMenu extends Overlay {
   leave: (() => void) | null = null;
   /** When set, the menu shows a graphics-quality picker. */
   quality: QualityControl | null = null;
+  /** When set, the menu shows an art-style picker. */
+  artStyle: StyleControl | null = null;
 
   constructor(
     input: InputManager,
@@ -288,6 +303,20 @@ export class SettingsMenu extends Overlay {
     card.append(chips);
   }
 
+  private styleSection(card: HTMLElement, c: StyleControl) {
+    card.append(el('h3', { textContent: 'Art Style' }));
+    const chips = el('div', { className: 'slag-chips' });
+    for (const [style, label] of STYLE_CHOICES) {
+      const b = el('button', { className: `slag-btn ${c.get() === style ? 'on' : ''}`, type: 'button', textContent: label });
+      b.onclick = () => {
+        c.set(style);
+        for (const sib of chips.querySelectorAll('button')) sib.classList.toggle('on', sib === b);
+      };
+      chips.append(b);
+    }
+    card.append(chips);
+  }
+
   private controlsSection(card: HTMLElement) {
     card.append(el('h3', { textContent: 'Keyboard' }));
     const split = el('button', { className: 'slag-switch', type: 'button' });
@@ -375,6 +404,13 @@ export class SettingsMenu extends Overlay {
         },
         {
           glyphs: [
+            { kind: 'pad', button: 'Y' },
+            { kind: 'pad', button: 'LT' },
+          ],
+          label: 'Use Item',
+        },
+        {
+          glyphs: [
             { kind: 'pad', button: 'B' },
             { kind: 'pad', button: 'LB' },
           ],
@@ -392,6 +428,7 @@ export class SettingsMenu extends Overlay {
     // Under touch the key-rebind grid is noise: show the touch options instead.
     if (this.input.touch.active) this.touchSection(card);
     if (this.quality) this.displaySection(card, this.quality);
+    if (this.artStyle) this.styleSection(card, this.artStyle);
     if (!this.input.touch.active) this.controlsSection(card);
     const reset = el('button', { className: 'slag-btn', type: 'button', textContent: 'Reset Controls' });
     reset.hidden = this.input.touch.active;
@@ -418,8 +455,7 @@ export class SettingsMenu extends Overlay {
   }
 }
 
-const RULE_LABELS: Record<keyof MatchRules, string> = {
-  targetScore: 'Points to Win',
+const RULE_LABELS: Record<TimerRule, string> = {
   pickSeconds: 'Pick Timer',
   placeSeconds: 'Place Timer',
   raceSeconds: 'Race Timer',
@@ -430,24 +466,36 @@ export class RulesMenu extends Overlay {
   open(rules: MatchRules, onChange: (r: MatchRules) => void) {
     const draft = { ...rules };
     const card = el('div', { className: 'slag-card' }, el('h2', { textContent: 'Match Rules' }));
-    for (const k of Object.keys(RULE_CHOICES) as (keyof MatchRules)[]) {
+    const addRow = (title: string, choices: { label: string; on: boolean; apply: () => void }[]) => {
       const chips = el('div', { className: 'slag-chips' });
-      for (const v of RULE_CHOICES[k]) {
-        const b = el('button', {
-          className: `slag-btn ${draft[k] === v ? 'on' : ''}`,
-          type: 'button',
-          textContent: k === 'targetScore' ? String(v) : v === 0 ? 'Off' : `${v}s`,
-        });
+      for (const c of choices) {
+        const b = el('button', { className: `slag-btn ${c.on ? 'on' : ''}`, type: 'button', textContent: c.label });
         b.onclick = () => {
-          draft[k] = v;
+          c.apply();
           onChange({ ...draft });
           for (const sib of chips.querySelectorAll('button')) sib.classList.toggle('on', sib === b);
         };
         chips.append(b);
       }
-      card.append(el('h3', { textContent: RULE_LABELS[k] }), chips);
+      card.append(el('h3', { textContent: title }), chips);
+    };
+    addRow(
+      'Match Length',
+      MATCH_LENGTHS.map((l) => ({
+        label: l.label,
+        on: draft.targetScore === l.targetScore && draft.maxRounds === l.maxRounds,
+        apply: () => {
+          draft.targetScore = l.targetScore;
+          draft.maxRounds = l.maxRounds;
+        },
+      })),
+    );
+    for (const k of Object.keys(RULE_CHOICES) as TimerRule[]) {
+      addRow(
+        RULE_LABELS[k],
+        RULE_CHOICES[k].map((v) => ({ label: v === 0 ? 'Off' : `${v}s`, on: draft[k] === v, apply: () => (draft[k] = v) })),
+      );
     }
-    card.append(el('div', { className: 'slag-note', textContent: 'Saved on this device. Changes apply to the next match.' }));
     const done = el('button', { className: 'slag-btn primary', type: 'button', textContent: 'Done' });
     done.onclick = () => this.close();
     card.append(el('div', { className: 'slag-actions' }, done));
@@ -472,14 +520,7 @@ export class NamePrompt extends Overlay {
       e.stopPropagation();
       if (e.key === 'Enter') ok.click();
     };
-    const card = el(
-      'div',
-      { className: 'slag-card' },
-      el('h2', { textContent: 'Your Name' }),
-      input,
-      el('div', { className: 'slag-note', textContent: 'Up to 12 characters. Click your name in the lobby to change it later.' }),
-      el('div', { className: 'slag-actions' }, keep, ok),
-    );
+    const card = el('div', { className: 'slag-card' }, el('h2', { textContent: 'Your Name' }), input, el('div', { className: 'slag-actions' }, keep, ok));
     this.mount(card);
     setTimeout(() => {
       input.focus();

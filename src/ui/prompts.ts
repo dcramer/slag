@@ -10,10 +10,10 @@ import type { Glyph, PadButton } from './glyphs';
 export type InputMode = 'keyboard' | 'gamepad' | 'touch';
 
 /** Actions that get prompts. `menu` is Escape (settings); it has no pad binding yet. */
-export type PromptAction = Extract<Action, 'confirm' | 'alt' | 'jump' | 'run' | 'down'> | 'menu';
+export type PromptAction = Extract<Action, 'confirm' | 'alt' | 'jump' | 'run' | 'down' | 'use'> | 'menu';
 
-/** Fixed gamepad layout (see InputManager.sample): A jump/confirm, X run, B alt, d-pad down. */
-const PAD: Partial<Record<PromptAction, PadButton>> = { confirm: 'A', jump: 'A', alt: 'B', run: 'X', down: 'DDOWN' };
+/** Fixed gamepad layout (see InputManager.sample): A jump/confirm, X run, B alt, Y use, d-pad down. */
+const PAD: Partial<Record<PromptAction, PadButton>> = { confirm: 'A', jump: 'A', alt: 'B', run: 'X', use: 'Y', down: 'DDOWN' };
 
 /** Short keycap text for a KeyboardEvent.code ("ShiftLeft" → "Shift", "KeyR" → "R"). */
 export function capLabel(code: string | undefined): string {

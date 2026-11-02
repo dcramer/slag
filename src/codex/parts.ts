@@ -1,5 +1,19 @@
 import { type Cell, normalizeCells, type Vec } from '../core/geom';
-import { AMMO, type Ammo, type Material, type MetalStyle, type Module, type Motion, moduleSim, type PropDef, type PropStyle, type Trim } from '../sim/props';
+import { ITEMS } from '../sim/items/roster';
+import { ITEM_KINDS, type ItemKind } from '../sim/items/types';
+import {
+  AMMO,
+  type Ammo,
+  type Material,
+  type MetalStyle,
+  type Module,
+  type Motion,
+  moduleSim,
+  type MysteryLook,
+  type PropDef,
+  type PropStyle,
+  type Trim,
+} from '../sim/props';
 
 /**
  * The codex "parts" catalog: every building block in isolation, with fixed
@@ -11,6 +25,8 @@ export interface PartEntry {
   title: string;
   note: string;
   def: PropDef;
+  /** Held-item entries: draw this item instead of the def (a crate that only holds it). */
+  item?: ItemKind;
 }
 
 export interface PartGroup {
@@ -98,7 +114,12 @@ export const PROJECTILE_NOTES: Record<Ammo, string> = {
   frost: 'Not lethal: freezes you solid for a moment, or glazes terrain with ice.',
   ricochet: 'Fast bolt that reflects off walls up to three times.',
   glider: 'Not a bullet: a flying plank you can ride. Flies level, then sinks, faster with a rider.',
+  puck: 'Kicked, never launched.',
+  smokebomb: 'Lobbed, never launched.',
 };
+
+const crate = (name: string, pool: ItemKind[], uses: number, look: MysteryLook): PropDef =>
+  def(name, [{ type: 'mystery', cells: [[0, 0]], pool, uses, refill: 240, look, seed: 3 }], { style: { hue: 40, woodHue: 30 } });
 
 export function partGroups(): PartGroup[] {
   const materials: Material[] = ['stone', 'metal', 'wood', 'ice', 'conveyor', 'goo', 'jelly', 'crumble'];
@@ -529,6 +550,17 @@ export function partGroups(): PartGroup[] {
           note: 'Goes off at race start, after everyone places.',
           def: def('timebomb', [{ type: 'bomb', radius: 2.5, look: 'clock', delay: true }]),
         },
+      ],
+    },
+    {
+      id: 'items',
+      title: 'Items',
+      blurb: 'What mystery crates hold.',
+      entries: [
+        { title: 'mystery crate', note: 'Mixed pool. Refills.', def: crate('mystery crate', [...ITEM_KINDS], 0, 'crate') },
+        { title: 'lucky chest', note: 'Rationed.', def: crate('lucky chest', ['sword', 'puck', 'boomerang'], 3, 'chest') },
+        { title: 'gift box', note: 'One-shot.', def: crate('gift box', ['shield', 'rocket', 'smoke'], 1, 'gift') },
+        ...ITEM_KINDS.map((k) => ({ title: ITEMS[k].name.toLowerCase(), note: '', def: crate(ITEMS[k].name, [k], 0, 'crate'), item: k })),
       ],
     },
     {

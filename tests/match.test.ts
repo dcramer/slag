@@ -1,12 +1,15 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Match } from '../src/game/match';
+import { DEFAULT_RULES, loadRules, MATCH_LENGTHS, type MatchRules, nearestLength, RULE_CHOICES, type TimerRule } from '../src/game/rules';
+import { RUN_COUNTDOWN } from '../src/sim/constants';
 import { canPlace, footprint } from '../src/sim/props';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
+import { sample } from './lib/tier';
 
 const press = (k: Partial<InputFrame>): InputFrame => ({ ...NO_INPUT, ...k });
 
 /** Drive a match with a simple scripted bot: picks the first free card, places anywhere legal, holds right + jumps. */
-function playMatch(seed: number, devices: string[], maxFrames = 60 * 60 * 6) {
+function playMatch(seed: number, devices: string[], maxFrames = 60 * 60 * sample(2, 6)) {
   const m = new Match(seed);
   // The dumb bot may never finish or find a spot: races and placement must end.
   m.rules = { ...m.rules, raceSeconds: 20, placeSeconds: 5 };
@@ -100,6 +103,153 @@ describe('match flow', () => {
     expect(a.players.map((p) => p.score)).toEqual(b.players.map((p) => p.score));
     expect(a.frame).toBe(b.frame);
   }, 60_000);
+});
+
+/** A started match, sitting in round 1's pick. Races time out fast so idle runners end the round. */
+function started(players: number, rules: Partial<MatchRules>) {
+  const m = new Match(5);
+  m.rules = { ...m.rules, raceSeconds: 1, ...rules };
+  for (let i = 0; i < players; i++) m.join(`p${i}`);
+  m.startMatch();
+  return m;
+}
+
+/** Skip pick and place, drop `finishers` on the flag, and play through the score screen. */
+function playRound(m: Match, finishers: number[] = []) {
+  m.startRun();
+  while (m.phase === 'run') {
+    const run = m.run!;
+    for (const r of run.runners) {
+      if (r.finished || run.frame <= RUN_COUNTDOWN || !finishers.includes(r.slot)) continue;
+      r.body.x = m.level.goal.tx * 16 + 3;
+      r.body.y = m.level.goal.ty * 16 + 2;
+    }
+    m.step({});
+  }
+  while (m.phase === 'score') m.step({});
+  m.drainEvents();
+}
+
+describe('match end', () => {
+  it('ends at the round limit and the top score wins', () => {
+    const m = started(3, { maxRounds: 3 });
+    playRound(m, [1]);
+    playRound(m);
+    expect(m.phase).toBe('pick');
+    expect(m.round).toBe(3);
+    playRound(m);
+    expect(m.phase).toBe('victory');
+    expect(m.round).toBe(3);
+    expect(m.players.map((p) => p.score)).toEqual([0, 14, 0]);
+    expect(m.winners).toEqual([1]);
+  });
+
+  it('lets the target score win before the limit', () => {
+    const m = started(2, { targetScore: 14, maxRounds: 10 });
+    playRound(m, [0]);
+    expect(m.phase).toBe('victory');
+    expect(m.round).toBe(1);
+    expect(m.winners).toEqual([0]);
+  });
+
+  it('makes ties at the limit joint winners', () => {
+    const m = started(3, { maxRounds: 2 });
+    playRound(m, [0]);
+    playRound(m, [2]);
+    expect(m.phase).toBe('victory');
+    expect(m.players.map((p) => p.score)).toEqual([14, 0, 14]);
+    expect(m.winners).toEqual([0, 2]);
+  });
+
+  it('names no winner when nobody scored, and a rematch still starts clean', () => {
+    const m = started(2, { maxRounds: 2 });
+    playRound(m);
+    playRound(m);
+    expect(m.phase).toBe('victory');
+    expect(m.players.map((p) => p.score)).toEqual([0, 0]);
+    expect(m.winners).toEqual([]);
+    while (m.phase === 'victory') m.step({ p0: press({ confirmPressed: true }) });
+    expect(m.phase).toBe('lobby');
+    m.step({ p0: press({ confirmPressed: true }), p1: press({ confirmPressed: true }) });
+    expect(m.phase).toBe('pick');
+    expect(m.round).toBe(1);
+    expect(m.winners).toEqual([]);
+  });
+
+  it('is deterministic through the limit', () => {
+    const play = () => {
+      const m = started(3, { maxRounds: 2 });
+      playRound(m, [1]);
+      playRound(m, [1, 2]);
+      return { frame: m.frame, round: m.round, scores: m.players.map((p) => p.score), winners: m.winners };
+    };
+    expect(play()).toEqual(play());
+  });
+});
+
+describe('match lengths', () => {
+  it.each(MATCH_LENGTHS)('$label ends on its target score', ({ targetScore, maxRounds }) => {
+    const m = started(2, { targetScore, maxRounds });
+    m.players[0].score = targetScore - 14;
+    playRound(m, [0]);
+    expect(m.phase).toBe('victory');
+    expect(m.round).toBe(1);
+    expect(m.winners).toEqual([0]);
+  });
+
+  it.each(MATCH_LENGTHS)('$label ends on its round limit', ({ targetScore, maxRounds }) => {
+    const m = started(2, { targetScore, maxRounds });
+    m.players[1].score = 3;
+    for (let r = 1; r < maxRounds; r++) {
+      playRound(m);
+      expect(m.phase).toBe('pick');
+    }
+    playRound(m);
+    expect(m.phase).toBe('victory');
+    expect(m.round).toBe(maxRounds);
+    expect(m.winners).toEqual([1]);
+  });
+});
+
+describe('match rules', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const load = (saved: unknown) => {
+    vi.stubGlobal('localStorage', { getItem: () => JSON.stringify(saved) });
+    return loadRules();
+  };
+  const timers = { pickSeconds: 10, placeSeconds: 0, raceSeconds: 30 };
+
+  it('stay plain data, defaulting to Normal with every timer default on offer', () => {
+    expect(JSON.parse(JSON.stringify(DEFAULT_RULES))).toEqual(DEFAULT_RULES);
+    expect(DEFAULT_RULES).toMatchObject({ targetScore: 50, maxRounds: 15 });
+    for (const k of Object.keys(RULE_CHOICES) as TimerRule[]) expect(RULE_CHOICES[k]).toContain(DEFAULT_RULES[k]);
+  });
+
+  it.each([
+    [20, 'Short'],
+    [30, 'Short'],
+    [50, 'Normal'],
+    [80, 'Long'],
+    [120, 'Long'],
+  ])('maps an old %i point save to %s and keeps its timers', (targetScore, label) => {
+    const { targetScore: score, maxRounds } = MATCH_LENGTHS.find((l) => l.label === label)!;
+    expect(load({ targetScore, ...timers })).toEqual({ targetScore: score, maxRounds, ...timers });
+  });
+
+  it('ignores an old round limit, which was usually just the default of 40', () => {
+    expect(load({ targetScore: 50, maxRounds: 40, ...timers })).toMatchObject({ targetScore: 50, maxRounds: 15 });
+  });
+
+  it.each(MATCH_LENGTHS)('round-trips a saved $label', ({ targetScore, maxRounds }) => {
+    expect(load({ targetScore, maxRounds, ...timers })).toEqual({ targetScore, maxRounds, ...timers });
+  });
+
+  it('falls back to Normal on ties and junk', () => {
+    expect(nearestLength(40).label).toBe('Normal');
+    expect(nearestLength(65).label).toBe('Normal');
+    expect(load({ ...timers })).toMatchObject({ targetScore: 50, maxRounds: 15, ...timers });
+    expect(load({ targetScore: 'lots' })).toMatchObject({ targetScore: 50, maxRounds: 15 });
+  });
 });
 
 describe('big lobbies', () => {

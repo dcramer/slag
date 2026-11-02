@@ -20,6 +20,7 @@
     "typescript/no-explicit-any": "off",
     "typescript/no-unsafe-type-assertion": "off",
     // tsgolint false positives; its --fix removed assertions tsc needs (PropDef | null narrowing).
+    // Still broken in oxlint-tsgolint 7.0.2005: `pnpm format` would break tsc in tests/props-sim.test.ts.
     "typescript/no-unnecessary-type-assertion": "off",
     "typescript/unbound-method": "off",
     "typescript/consistent-return": "off",
@@ -53,11 +54,11 @@
           "error",
           {
             "paths": [
-              { "name": "react", "message": "src/ is framework-free game code; React lives only in app/." },
-              { "name": "react-dom", "message": "src/ is framework-free game code; React lives only in app/." },
-              { "name": "next", "message": "src/ is framework-free game code; Next.js lives only in app/." }
+              { "name": "react", "message": "src/ is framework-free so the game stays portable. Put React in app/ and have it call plain functions exported from src/." },
+              { "name": "react-dom", "message": "src/ is framework-free so the game stays portable. Put React in app/ and have it call plain functions exported from src/." },
+              { "name": "next", "message": "src/ is framework-free so the game stays portable. Put Next.js code in app/ and have it call plain functions exported from src/." }
             ],
-            "patterns": [{ "group": ["next/*"], "message": "src/ is framework-free game code; Next.js lives only in app/." }]
+            "patterns": [{ "group": ["next/*"], "message": "src/ is framework-free so the game stays portable. Put Next.js code in app/ and have it call plain functions exported from src/." }]
           }
         ]
       }
@@ -119,14 +120,14 @@
       "rules": {
         "no-restricted-globals": [
           "error",
-          { "name": "window", "message": "sim/ and gen/ have no DOM access." },
-          { "name": "document", "message": "sim/ and gen/ have no DOM access." },
-          { "name": "localStorage", "message": "sim/ and gen/ have no DOM access." },
-          { "name": "navigator", "message": "sim/ and gen/ have no DOM access." },
+          { "name": "window", "message": "sim/ and gen/ run headless and must stay deterministic, so there is no DOM. Read it in render/ or ui/ and pass the value in, or keep the state in the sim." },
+          { "name": "document", "message": "sim/ and gen/ run headless and must stay deterministic, so there is no DOM. Read it in render/ or ui/ and pass the value in, or keep the state in the sim." },
+          { "name": "localStorage", "message": "sim/ and gen/ run headless and must stay deterministic, so there is no DOM. Read it in render/ or ui/ and pass the value in, or keep the state in the sim." },
+          { "name": "navigator", "message": "sim/ and gen/ run headless and must stay deterministic, so there is no DOM. Read it in render/ or ui/ and pass the value in, or keep the state in the sim." },
           { "name": "performance", "message": "Deterministic code: no wall clock. Count sim frames instead." },
-          { "name": "requestAnimationFrame", "message": "sim/ is stepped by the caller at a fixed 60 Hz." },
-          { "name": "setTimeout", "message": "sim/ is stepped by the caller at a fixed 60 Hz; use frame counters." },
-          { "name": "setInterval", "message": "sim/ is stepped by the caller at a fixed 60 Hz; use frame counters." }
+          { "name": "requestAnimationFrame", "message": "sim/ is stepped by the caller at a fixed 60 Hz, so it cannot schedule itself. Do the work inside a step." },
+          { "name": "setTimeout", "message": "sim/ is stepped by the caller at a fixed 60 Hz, so timers break determinism. Count frames in sim state instead." },
+          { "name": "setInterval", "message": "sim/ is stepped by the caller at a fixed 60 Hz, so timers break determinism. Count frames in sim state instead." }
         ]
       }
     },
@@ -137,15 +138,15 @@
           "error",
           {
             "paths": [
-              { "name": "react", "message": "src/ is framework-free game code; React lives only in app/." },
-              { "name": "react-dom", "message": "src/ is framework-free game code; React lives only in app/." },
-              { "name": "next", "message": "src/ is framework-free game code; Next.js lives only in app/." }
+              { "name": "react", "message": "src/ is framework-free so the game stays portable. Put React in app/ and have it call plain functions exported from src/." },
+              { "name": "react-dom", "message": "src/ is framework-free so the game stays portable. Put React in app/ and have it call plain functions exported from src/." },
+              { "name": "next", "message": "src/ is framework-free so the game stays portable. Put Next.js code in app/ and have it call plain functions exported from src/." }
             ],
             "patterns": [
-              { "group": ["next/*"], "message": "src/ is framework-free game code; Next.js lives only in app/." },
+              { "group": ["next/*"], "message": "src/ is framework-free so the game stays portable. Put Next.js code in app/ and have it call plain functions exported from src/." },
               {
                 "group": ["**/render", "**/render/*", "**/input", "**/input/*", "**/audio", "**/audio/*", "**/ui/*", "**/debug", "**/game-client"],
-                "message": "sim/, gen/ and game/ must not depend on presentation, input or audio: they run headless and deterministically."
+                "message": "sim/, gen/ and game/ run headless and deterministically, so they cannot depend on presentation, input or audio. Push a GameEvent or expose state for render/ and audio/ to read; inputs arrive as InputFrame."
               }
             ]
           }

@@ -3,20 +3,32 @@
 This is a concise log of decided rules. It's the source of truth for gameplay intent. When a decision changes, update this file in the same commit. Implementation details live in AGENTS.md and the code.
 
 ## Core loop
-- Lobby → **Pick** (claim one prop from a crate) → **Place** (put it in the level) → **Race** to the flag → **Score**. Repeat until someone reaches the target score, then **Victory**.
+- Lobby → **Pick** (claim one prop from a crate) → **Place** (put it in the level) → **Race** to the flag → **Score**. Repeat until someone reaches the target score or the round limit, whichever comes first, then **Victory**.
 - Matches have 1–8 players. Players can be local (any mix of keyboard, gamepads and touch) or online.
 - Props persist for the whole match, so levels get more dangerous every round.
 
+## Discovery
+- Part of the joy of the game is the unknown. Players learn parts, rules and tricks by playing and by watching each other.
+- The game never explains the obvious: no sub lines, hints or notes that restate what's on screen or spell out a rule. If the screen can show it, don't say it.
+
+## Parody
+- Our goal is to parody other games, especially with items. Players should recognize what's being mocked and laugh at the twist.
+- A parody is ours: our own name, our own art and a comic twist on the idea. Never the original's real name, art, characters or level designs.
+
 ## Scoring
 - Finishing earns +10 points. The first player to finish gets an extra +4.
-- Each rival killed by your prop earns you +3, but only if someone finished that round.
+- Each rival killed by your prop, or by the level right after your bonk, earns you +3, but only if someone finished that round.
 - If everyone finishes, nobody scores ("too easy"). If nobody finishes, nobody scores either.
 - Solo play just rewards finishing.
+- A match always ends: scoreless rounds can run forever, so the round limit has no "off" setting.
+- The lobby sets both win conditions with one **Match Length**: Short (30 points or 10 rounds), Normal (50 points or 15 rounds, the default) or Long (80 points or 25 rounds). The limit is meant to decide some matches, mostly with 2 players, where a round only scores if exactly one player finishes.
+- At the end of a match the top score wins and ties are joint winners. If the round limit hits with nobody on the board, there is no winner.
+- Anything that lists scores shows the most points first, with ties in slot order. This is display only: player order in the sim never changes. On the score screen, rows slide to their new rank as the bars fill.
 
 ## Players
 - Characters are generated per player (body, face, accessory and name) and are **cosmetic only**: every player has the same hitbox and the same physics.
 - The local player's **name and look persist** across sessions (localStorage). On first join the game asks for a name, with the random one offered as the one-click default.
-- **Spawn zone is safe**: the starting zone is the protected rect around the spawn (the start pocket), shown during races as a faint shimmer. While your body touches it, props can't hurt you: hazards don't kill, projectiles that reach you pop harmlessly, and moving solids can't crush you. A faint bubble marks protected runners. The pit, giving up and the race timer still apply (the pit can't be reached from inside the zone anyway).
+- **Spawn zone is safe**: the starting zone is the protected rect around the spawn (the start pocket), shown during races as a faint shimmer. While your body touches it, props and items can't hurt you: hazards don't kill, projectiles that reach you pop harmlessly, bonks and smoke don't reach you, and moving solids can't crush you. A faint bubble marks protected runners. The pit, giving up and the race timer still apply (the pit can't be reached from inside the zone anyway).
 - **Players nudge each other**: side-by-side bodies resist each other instead of passing through. Walking into someone standing still shoves you both along at about an eighth of walking speed (a run-up shoves a little harder). If they push back, it nearly cancels: only the difference in effort leaks through as a tiny drift. Being rear-ended never slows you down. Nudges never push anyone into terrain; someone pinned against a wall just lets you squeeze into them. There's no hard blocking and no stacking: jumping onto or over someone passes through them (no head bonks). Finished and dead runners don't push.
 
 ## Movement (precision-platformer feel)
@@ -42,7 +54,14 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - **Not everything is death.** Most parts have an upside *and* a side effect you have to worry about: knockback, slow, freeze, sticky, misdirection, or a platform that sinks. Lethal parts exist, but disruption is the norm.
 - **Some projectiles are platforms.** For example, gliders fired from a launcher can be ridden, but they sag and sink under weight or over time.
 - **Demolition comes in variants:** prop-only charges that leave terrain, terrain drills or tunnelers, and different blast shapes and sizes. All respect spawn and goal protection.
-- **Mystery crate (planned):** a prop that pops out a random *held item* (an original roster, e.g. a sword that bonks, a kickable puck that ricochets, a boomerang, a shield) that players carry and use.
+- **Mystery crates** are solid one-tile blocks. Hit one from below or bump its side and a random *held item* from its pool pops out of the top (out of the bottom under a low roof). Standing on it does nothing. Crates roll their pool (mixed, shots or gadgets, hinted by the spark color), and either refill on a timer or run out and go dark. Which item pops is seeded per race, so a crate that survives a round doesn't repeat itself, and it's the same on every peer.
+- **Held items** are carried one at a time, grabbed by touching them (contested items go to the nearest runner). The Use button fires them; down + Use tosses them. Loose items fizzle out after 10 s. Runners who die or finish drop theirs, except into the pit. Nothing carries over between rounds. **Items never kill on their own**: they bonk (a shove plus ~0.5 s of seeing stars, with no control), and a death soon after a bonk credits the bonker, like any trap kill. Every item has a catch:
+  - **Foam Sword** (4 swings): bonks rivals and swats shots back, which makes them yours (rideable gliders and stuck patches are left alone). You crawl while you swing.
+  - **Ricochet Puck**: slides along floors and banks off walls, and can come back to bonk its kicker.
+  - **Boomerang**: bonks the first rival it meets and curves back to your hand, wherever you've run to. If it hits anything else it clatters down for anyone to grab. A launcher's boomerang stays lethal.
+  - **Pop Shield**: soaks one lethal hit and pops you upward, with a short guard after. It doesn't stop falls or crushes, and carrying it lowers your jumps. Use drops it.
+  - **Pocket Rocket**: one huge steerable burst upward, then the fumes daze you.
+  - **Smoke Bomb** (2 bombs): a thick cloud that hides the ground and slows everyone inside, you included.
 - **Grab props (planned):**
   - **Rope:** hangs from the ceiling. You grab it automatically when you touch it in the air (with a short cooldown after letting go, so you don't instantly re-grab). Left and right pump the swing; jump lets go and keeps the swing's momentum.
   - **Blast barrel:** you're sucked in on contact and it rotates (or aims at a fixed angle). Jump fires you out after a short delay along the barrel's direction. It's an original take on the genre's barrel cannon.
@@ -69,7 +88,7 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 ## Controls and UI
 - On PC, keyboard and mouse both work. One keyboard player can use WASD *and* the arrows. A "Split keyboard" setting turns the keyboard into two local players. Everything can be remapped.
 - The mouse drives the menu cursor: click to pick or place, right-click or the wheel to rotate.
-- **Touch (mobile)**: left half is a floating stick (push past ~70% to run), right half is jump (hold for height), self-destruct needs a short hold. Pick by tapping a card; place by dragging a ghost that floats above your finger, with ROTATE and PLACE buttons. Landscape first.
+- **Touch (mobile)**: left half is a floating stick (push past ~70% to run), right half is jump (hold for height), self-destruct needs a short hold, and a Use button appears above jump while you hold an item. Pick by tapping a card; place by dragging a ghost that floats above your finger, with ROTATE and PLACE buttons. Landscape first.
 - In the lobby, a stray click does nothing; only buttons act.
 - UI copy is proper title case, with no twee lowercase taglines.
 - Inputs are shown as **button prompts** (keycap, gamepad and mouse glyphs) in a footer, the way console games do it, and are never spelled out in prose.

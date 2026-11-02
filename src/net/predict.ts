@@ -31,6 +31,7 @@ export class Predictor {
   copy(src: Match): Match {
     const d = this.display as unknown as Record<string, unknown>;
     Object.assign(d, src);
+    dropOwnFunctions(d); // a profiler's wrappers close over the live match: stepping them would step it
     d.events = [];
     this.display.players = src.players.map((p) => ({ ...p, cursor: { ...p.cursor } }));
     this.display.prevScores = new Map(src.prevScores);
@@ -52,6 +53,7 @@ export class Predictor {
     }
     const d = this.run;
     Object.assign(d, src);
+    dropOwnFunctions(d as unknown as Record<string, unknown>);
     const di = d as unknown as RunInternals;
     const si = src as unknown as RunInternals;
     const solids: unknown[] = [];
@@ -66,6 +68,11 @@ export class Predictor {
     d.finishOrder = [...src.finishOrder];
     d.kills = src.kills.map((k) => ({ ...k }));
     d.propState = structuredClone(src.propState);
+    d.items = structuredClone(src.items);
     return d;
   }
+}
+
+function dropOwnFunctions(o: Record<string, unknown>) {
+  for (const k of Object.keys(o)) if (typeof o[k] === 'function') delete o[k];
 }

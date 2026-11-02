@@ -1,7 +1,8 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { Match } from '../src/game/match';
 import { roomSeed } from '../src/game/room';
-import { decode, encode, held, INPUT_KEYS } from '../src/net/codec';
+import { decode, encode, held, INPUT_KEYS, merge } from '../src/net/codec';
 import { Predictor } from '../src/net/predict';
 import { NetSession } from '../src/net/session';
 import { hashMatch, snapshotMatch } from '../src/net/snapshot';
@@ -45,7 +46,7 @@ function inPick() {
   r.run(5);
   const c = r.join('cccc');
   r.run(30);
-  a.act({ t: 'rules', rules: { targetScore: 120, pickSeconds: 10, placeSeconds: 15, raceSeconds: 30 } });
+  a.act({ t: 'rules', rules: { targetScore: 80, maxRounds: 25, pickSeconds: 10, placeSeconds: 15, raceSeconds: 30 } });
   const ready = press({ confirmPressed: true });
   r.tick({ aaaa: { kb1: ready }, bbbb: { kb1: ready }, cccc: { kb1: ready } });
   r.run(30);
@@ -197,10 +198,17 @@ describe('remote ghosts', () => {
 
 describe('input codec', () => {
   it('carries every input field: a new one must not silently vanish online', () => {
-    const all: Record<string, boolean> = {};
-    for (const k of Object.keys({ ...NO_INPUT, run: false })) all[k] = true;
-    expect(new Set(INPUT_KEYS)).toEqual(new Set(Object.keys(all)));
+    const block = /interface InputFrame \{([\s\S]*?)\n\}/.exec(readFileSync('src/sim/types.ts', 'utf8'))![1];
+    const fields = [...block.matchAll(/^ {2}(\w+)\??: boolean;/gm)].map((m) => m[1]);
+    expect(new Set(INPUT_KEYS), 'add the new InputFrame field to INPUT_KEYS in src/net/codec.ts (and PRESSED if it is an edge)').toEqual(new Set(fields));
     for (const k of INPUT_KEYS) expect(decode(encode({ ...NO_INPUT, [k]: true }))[k]).toBe(true);
+  });
+
+  it('keeps every one-frame edge when frames fold, and never repeats one', () => {
+    for (const k of ['jumpPressed', 'confirmPressed', 'altPressed', 'downPressed', 'usePressed'] as const) {
+      expect(decode(merge(encode(press({ [k]: true })), encode(press({}))))[k]).toBe(true);
+      expect(decode(held(encode(press({ [k]: true }))))[k]).toBeFalsy();
+    }
   });
 
   it('keeps run held when a queue runs dry, and rounds the pointer for the wire', () => {

@@ -8,10 +8,10 @@ import { type InputFrame, NO_INPUT } from '../sim/types';
 export type Enc = number | [number, number, number];
 
 /** Every boolean in InputFrame, in bit order. Append only; tests/net-codec.test.ts fails if a new input field is missing here. */
-export const INPUT_KEYS = ['left', 'right', 'up', 'down', 'jump', 'jumpPressed', 'confirmPressed', 'altPressed', 'downPressed', 'run'] as const;
+export const INPUT_KEYS = ['left', 'right', 'up', 'down', 'jump', 'jumpPressed', 'confirmPressed', 'altPressed', 'downPressed', 'run', 'usePressed'] as const;
 const KEYS = INPUT_KEYS;
 /** Bits that are one-frame edges: they must be OR-merged, never repeated. */
-export const PRESSED = (1 << 5) | (1 << 6) | (1 << 7) | (1 << 8);
+export const PRESSED = (1 << 5) | (1 << 6) | (1 << 7) | (1 << 8) | (1 << 10);
 /** The confirm edge: a spectator pressing it asks for a seat. */
 export const CONFIRM_BIT = 1 << 6;
 

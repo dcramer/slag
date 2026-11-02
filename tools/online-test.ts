@@ -197,7 +197,7 @@ async function newRoom(browser: Browser, base: string, label: string, query: str
   };
 }
 
-const FAST_RULES = { targetScore: 120, pickSeconds: 30, placeSeconds: 45, raceSeconds: 30 };
+const FAST_RULES = { targetScore: 80, maxRounds: 25, pickSeconds: 30, placeSeconds: 45, raceSeconds: 30 };
 
 /** n peers joined, seated and ready: the room is in `pick`. The first page is host. */
 async function startMatch(r: Room, n: number): Promise<{ pages: Page[]; ids: string[] }> {

@@ -8,14 +8,25 @@ import type { GameEvent } from '../sim/types';
 import { Backdrop } from './background';
 import { Camera } from './camera';
 import { drawAccessory, drawCharacter, Rig } from './character';
+import { ComicLayer, Lettering, speedLines } from './comic';
 import { Fx } from './fx';
 import { Hud } from './hud';
+import { drawClouds, drawDrops, drawRunnerItems, itemFx } from './items';
 import { circle, glowDot, type Light, light, type RC } from './kit';
 import { type Compositor, createCompositor } from './post';
 import { drawBlastPreview, drawProjectile, drawResolved, drawRunnerStatus, type Emit, propEventFx } from './props';
+import { initialStyle, type RenderStyle, saveRenderSettings } from './style';
 import { TerrainPainter } from './terrain';
 // Mobile: quality tiers / adaptive resolution / safe-area insets (owned by the touch module).
 import { detectQuality, FrameBudget, QUALITY, type QualityTier, safeInsets, TIERS } from '../ui/touch/device';
+
+const RUNNER_KEY: HSL = { h: 40, s: 30, l: 90 };
+
+/** Offset and scale of a context's current transform, for the comic pass's world-locked dots. */
+function camOf(ctx: CanvasRenderingContext2D): [number, number, number] {
+  const m = ctx.getTransform();
+  return [m.e, m.f, m.a];
+}
 
 /**
  * Orchestrates a frame: Canvas2D paints albedo/emissive/light layers in
@@ -46,6 +57,9 @@ export class Renderer {
   quality: QualityTier;
   private adaptive: boolean;
   private budget = new FrameBudget();
+  private style: RenderStyle = initialStyle(typeof location !== 'undefined' ? location.search : '');
+  private letters = new Lettering();
+  private comicLayer: ComicLayer | null = null;
 
   constructor(
     private glCanvas: HTMLCanvasElement,
@@ -65,6 +79,17 @@ export class Renderer {
   setQuality(q: QualityTier) {
     this.quality = q;
     this.resize();
+  }
+
+  /** Current look ('default' | 'comic'). */
+  getStyle(): RenderStyle {
+    return this.style;
+  }
+
+  /** Switch the look at runtime; persisted to `slag.render.v1` unless `persist` is false. */
+  setStyle(style: RenderStyle, persist = true) {
+    this.style = style;
+    if (persist) saveRenderSettings({ style });
   }
 
   resize() {
@@ -112,6 +137,7 @@ export class Renderer {
     this.last = t;
     const level = m.level;
     const kb = Math.min(4, (this.pw / VIEW_W) * 1.45);
+    this.terrain.comic = this.printed;
     this.terrain.ensure(level, kb);
     const emit: Emit = (kind, x, y, vx, vy, color) =>
       this.fx.add(
@@ -126,6 +152,7 @@ export class Renderer {
       );
     this.consume(m, events);
     this.fx.update(dt, level);
+    this.letters.update(dt);
     this.updateCamera(m, dt);
 
     const s = this.sctx;
@@ -151,12 +178,15 @@ export class Renderer {
     this.backdrop.draw(rc, level.theme, this.cam, Math.min(2.5, sk * 1.2));
 
     // --- world
+    // Comic: the world goes on its own transparent layer (see ComicLayer); `s` stays the background.
+    if (this.printed) rc.s = (this.comicLayer ??= new ComicLayer()).begin(this.scene, s, g);
     this.cam.apply(s, this.pw);
+    this.cam.apply(rc.s, this.pw);
     this.cam.apply(g, this.pw);
     this.terrain.drawShadow(rc);
     this.terrain.draw(rc);
     const pushers = m.run ? m.run.runners.filter((r) => r.alive).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h })) : [];
-    this.terrain.drawLive(rc, level, pushers);
+    this.terrain.drawLive(rc, level, pushers, s);
     this.drawMarkers(rc, level);
 
     const run = m.phase === 'run' ? m.run : null;
@@ -178,6 +208,7 @@ export class Renderer {
     if (run) {
       for (const p of run.projectiles) drawProjectile(rc, p, emit);
       this.drawSafeZone(rc, level, run);
+      drawDrops(rc, run);
       for (const r of run.runners) {
         if (!r.alive) continue;
         const pl = m.player(r.slot);
@@ -198,10 +229,14 @@ export class Renderer {
         );
         if (!r.finished && run.isSafe(r)) this.drawShield(rc, level, r.body.x + r.body.w / 2, r.body.y + r.body.h, r.slot);
         drawRunnerStatus(rc, r.body, r.status);
+        drawRunnerItems(rc, r);
       }
+      drawClouds(rc, run);
     }
-    this.fx.draw(rc);
+    this.fx.draw(rc, s);
     this.backdrop.drawLiquid(rc, level.theme);
+    const world = rc.s;
+    rc.s = s; // Comic: ambient motes stay un-inked, or they read as stray projectiles.
     this.backdrop.drawMotes(rc, level.theme, dt);
     g.globalCompositeOperation = 'source-over';
 
@@ -218,9 +253,16 @@ export class Renderer {
       flash: this.flash,
       tint: level.theme.grade.tint,
       lift: level.theme.grade.lift,
+      comic: this.printed ? { fg: this.comicLayer!.canvas, cam: camOf(world) } : undefined,
     });
     if (!this.hud.hidden) this.hud.draw(m, t, this.pw, this.ph);
     else this.hud.clear(this.pw, this.ph);
+    if (this.style === 'comic') this.letters.draw(this.hudCanvas.getContext('2d')!, this.cam, this.pw / VIEW_W);
+  }
+
+  /** The comic pass needs WebGL2; without it the style keeps only the lettering and speed lines. */
+  private get printed() {
+    return this.style === 'comic' && this.comp.webgl;
   }
 
   private updateCamera(m: Match, dt: number) {
@@ -436,11 +478,14 @@ export class Renderer {
     const speed = Math.hypot(vx, vy);
     if (speed > 240) rig.trail.push({ x, y, a: 0.5 });
     rig.trail = rig.trail.filter((p) => (p.a -= dt * 2.5) > 0);
-    for (const p of rig.trail) {
-      rc.s.globalAlpha = p.a * 0.5;
-      drawCharacter(rc, c, p.x, p.y, { facing, vx, vy, grounded, t: rc.t });
+    if (this.style === 'comic') speedLines(this.sctx, rc.t, x, y, vx, vy);
+    else {
+      for (const p of rig.trail) {
+        rc.s.globalAlpha = p.a * 0.5;
+        drawCharacter(rc, c, p.x, p.y, { facing, vx, vy, grounded, t: rc.t });
+      }
+      rc.s.globalAlpha = 1;
     }
-    rc.s.globalAlpha = 1;
 
     // Contact shadow on whatever is below.
     const tx = Math.floor(x / TILE);
@@ -466,11 +511,22 @@ export class Renderer {
     drawAccessory(rc, c, rig);
     drawCharacter(rc, c, x, y, { facing, vx, vy, grounded, t: rc.t, celebrate });
     light(rc, x, y - 8, 38, c.body, 0.3);
+    // Comic: cel bands would print a runner in shade dark, but not so much light that it loses its hue.
+    if (this.style === 'comic') light(rc, x, y - 8, 20, RUNNER_KEY, 0.28);
+  }
+
+  private propCenter(m: Match, uid: number): { x: number; y: number } | undefined {
+    const cells = m.run?.resolved.find((x) => x.pp.uid === uid)?.mods.flatMap((mod) => (mod.type === 'body' ? mod.cells : []));
+    if (!cells?.length) return undefined;
+    const x = cells.reduce((a, [cx]) => a + cx, 0) / cells.length;
+    const y = Math.min(...cells.map(([, cy]) => cy));
+    return { x: (x + 0.5) * TILE, y: y * TILE };
   }
 
   private consume(m: Match, events: readonly GameEvent[]) {
     const th = m.level.theme;
     for (const e of events) {
+      if (this.style === 'comic') this.letters.event(e, e.type === 'crumble-break' ? this.propCenter(m, e.uid) : undefined);
       switch (e.type) {
         case 'death': {
           const c = m.player(e.slot)?.character;
@@ -581,6 +637,9 @@ export class Renderer {
           this.cam.shake = Math.max(this.cam.shake, 2);
           break;
         }
+        case 'item':
+          itemFx(this.fx, e, (k) => (this.cam.shake = Math.max(this.cam.shake, k)));
+          break;
         case 'prop':
           propEventFx(this.fx, e, (k) => (this.cam.shake = Math.max(this.cam.shake, k)));
           break;

@@ -23,7 +23,7 @@ import type { ThemeId } from '../themes';
  * A new field on Match or RunWorld must be added here or listed as derived:
  * tests/snapshot.test.ts fails until it is.
  */
-export const SNAP_VERSION = 3;
+export const SNAP_VERSION = 4;
 
 export interface RunSnap {
   slots: number[];
@@ -36,6 +36,8 @@ export interface RunSnap {
   endFrame: number;
   propState: unknown;
   seq: number;
+  items: unknown;
+  itemSeed: number;
 }
 
 export interface MatchSnap {
@@ -191,6 +193,8 @@ export function snapshotMatch(m: Match): MatchSnap {
           endFrame: run.endFrame,
           propState: toWire(run.propState),
           seq: (run as unknown as RunPrivate).seq,
+          items: toWire(run.items),
+          itemSeed: run.itemSeed,
         }
       : null,
   };
@@ -246,7 +250,7 @@ export function restoreMatch(m: Match, s: MatchSnap): void {
     prev.level === m.level &&
     prev.placed === m.placed.map((p) => p.uid).join() &&
     sameSlots(prev.run, s.run.slots);
-  m.run = s.run ? restoreRun(sameRace ? prev.run! : new RunWorld(m.level, m.placed, s.run.slots, s.run.timeLimit), s.run) : null;
+  m.run = s.run ? restoreRun(sameRace ? prev.run! : new RunWorld(m.level, m.placed, s.run.slots, s.run.timeLimit, s.run.itemSeed), s.run) : null;
 }
 
 function restoreRun(run: RunWorld, s: RunSnap): RunWorld {
@@ -257,6 +261,7 @@ function restoreRun(run: RunWorld, s: RunSnap): RunWorld {
   run.kills = s.kills.map((k) => ({ ...k }));
   run.endFrame = s.endFrame;
   run.propState = fromWire(s.propState) as RunWorld['propState'];
+  run.items = fromWire(s.items) as RunWorld['items'];
   (run as unknown as RunPrivate).events = [];
   (run as unknown as RunPrivate).seq = s.seq;
   return run;

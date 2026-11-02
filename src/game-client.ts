@@ -8,6 +8,7 @@ import { loadRules, saveRules } from './game/rules';
 import { InputManager } from './input/input';
 import { TOUCH_DEVICE, touchModeFor } from './input/touch';
 import { connectRoom } from './net/client';
+import { ITEMS } from './sim/items';
 import { Renderer } from './render/renderer';
 import { DT } from './sim/constants';
 import { THEME_IDS } from './themes';
@@ -92,6 +93,7 @@ export function bootGame(container: HTMLElement, room: string): void {
       renderer.setQuality(tier ?? detectQuality().tier);
     },
   };
+  settingsMenu.artStyle = { get: () => renderer.getStyle(), set: (style) => renderer.setStyle(style) };
   const rulesMenu = new RulesMenu(input);
   const namePrompt = new NamePrompt(input);
   const profile = loadProfile();
@@ -262,7 +264,10 @@ export function bootGame(container: HTMLElement, room: string): void {
     renderer.hud.padCount = inputMode.pads;
     const touchDev = net.globalDevice(TOUCH_DEVICE);
     const tp = match.players.find((p) => p.device === touchDev);
-    touchOverlay.update({ canPlace: tp && match.phase === 'place' ? match.canPlaceFor(tp) : undefined });
+    const tr = tp && match.phase === 'run' ? match.run?.runners.find((r) => r.slot === tp.slot && r.alive && !r.finished) : undefined;
+    const held = tr?.items.held;
+    input.touch.useReady = !!held;
+    touchOverlay.update({ canPlace: tp && match.phase === 'place' ? match.canPlaceFor(tp) : undefined, use: held ? ITEMS[held.kind].verb : undefined });
     const view = net.view; // guests mid-race: the locally predicted match. Pick and place: live cursors.
     renderer.hud.pendingCard = net.pendingCard;
     const events = net.drainEvents();

@@ -1,6 +1,6 @@
 import type { CharacterDef } from '../gen/character';
 import type { Match } from '../game/match';
-import { DEFAULT_RULES, type MatchRules, RULE_CHOICES } from '../game/rules';
+import { DEFAULT_RULES, type MatchRules, nearestLength, RULE_CHOICES, type TimerRule } from '../game/rules';
 import { MAX_PLAYERS } from '../sim/constants';
 
 /**
@@ -91,9 +91,15 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
 /** Clamp to allowed values so a bad packet can't break a match. */
 export function sanitizeRules(r: Partial<MatchRules>): MatchRules {
   const out = { ...DEFAULT_RULES };
-  for (const k of Object.keys(RULE_CHOICES) as (keyof MatchRules)[]) {
+  for (const k of Object.keys(RULE_CHOICES) as TimerRule[]) {
     const v = r[k];
     if (typeof v === 'number' && RULE_CHOICES[k].includes(v)) out[k] = v;
+  }
+  // Points and rounds travel as a pair, so a packet can't invent a match that never ends.
+  if (typeof r.targetScore === 'number') {
+    const { targetScore, maxRounds } = nearestLength(r.targetScore);
+    out.targetScore = targetScore;
+    out.maxRounds = maxRounds;
   }
   return out;
 }
