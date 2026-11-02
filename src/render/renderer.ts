@@ -13,7 +13,7 @@ import { drawBlood } from './blood';
 import { Camera } from './camera';
 import { PhoneCam, phoneView } from './camera-follow';
 import { Rig } from './character';
-import { drawInkAccessory, drawInkAfterimage, drawInkRunner, partsOf, ropeOf } from './ink-character';
+import { drawInkAccessory, drawInkAfterimage, drawInkRunner, partsOf, ropeAnchor, ropeOf } from './ink-character';
 import { ForegroundLayer, Lettering, letteringAllowed } from './cel';
 import { Fx, type Part } from './fx';
 import { frameReach, VIEW_FRAME, type ViewFrame, viewFrame } from './frame';
@@ -50,7 +50,7 @@ const HUD_CSS_PER_PX = 1.25;
 const MAX_HUD_SCALE = 1.8;
 /** Smallest touch target, in CSS px. */
 const TAP_CSS = 44;
-/** The metal a toy's parts are made of, when they fly. */
+/** The colors of the parts a character breaks into (a robot's gears, a plumber's coins), when they fly. */
 const PART_COLOR: Record<Exclude<Part, 'shard'>, HSL> = {
   gear: { h: 40, s: 42, l: 50 },
   spring: { h: 30, s: 4, l: 64 },
@@ -698,8 +698,8 @@ export class Renderer {
     if (rope) {
       // A pull string trails from the chassis, a scarf from the neck. A little air always pulls it off
       // behind, so standing still it trails instead of hanging like a pole.
-      const anchorY = rope.kind === 'string' ? y - 3 : y - 10;
-      rig.step(rope, x - facing * 5, anchorY, dt, -vx * 0.6 - facing * 8 + (rc.gust ?? 0) * 60, gy >= 0 ? gy - 0.8 : Infinity);
+      const at = ropeAnchor(c, facing);
+      rig.step(rope, x + at.x, y + at.y, dt, -vx * 0.6 - facing * 8 + (rc.gust ?? 0) * 60, gy >= 0 ? gy - 0.8 : Infinity);
       drawInkAccessory(rc.s, c, rig);
     }
     drawInkRunner(rc, c, x, y, { facing, vx, vy, grounded, t: rc.t, celebrate, wall });
@@ -729,7 +729,7 @@ export class Renderer {
             this.fx.burst('splash', e.x, Math.min(e.y, pool - 10), 26, 180, [th.liquid.glow, th.liquid.color], 2, 0.9, 120);
             this.fx.burst('smoke', e.x, Math.min(e.y, pool - 12), 8, 30, [{ h: 0, s: 0, l: 50 }], 3, 1.4);
           } else {
-            // The toy comes apart: its own parts, and shards of its paint and the player's livery.
+            // The character comes apart: its own parts, if it has any, and shards of its colors and the player's.
             const parts = c ? partsOf(c) : ['shard' as const];
             for (let i = 0; i < 14; i++) {
               const part = i < 6 ? parts[i % parts.length] : 'shard';

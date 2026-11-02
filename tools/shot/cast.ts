@@ -140,14 +140,14 @@ async function catalog(): Promise<string> {
   await open(`seed=${seed}`);
   await page.evaluate(() => document.fonts.ready);
   const box = await page.evaluate(() => {
-    const cv = (window as any).slagDebug.toys.catalog();
+    const cv = (window as any).slagDebug.cast.catalog();
     return { width: cv.width, height: cv.height };
   });
   const path = `${out}/cast-catalog.png`;
   await page.screenshot({ path, clip: { x: 0, y: 0, ...box } });
   console.log(path);
   pet();
-  const bench = await page.evaluate(() => (window as any).slagDebug.toys.bench(300));
+  const bench = await page.evaluate(() => (window as any).slagDebug.cast.bench(300));
   console.log(`bench: ${bench.toFixed(3)} ms/runner`);
   return path;
 }
@@ -156,7 +156,7 @@ async function silhouettes(): Promise<string> {
   await open(`seed=${seed}`);
   await page.evaluate(() => document.fonts.ready);
   const box = await page.evaluate(() => {
-    const cv = (window as any).slagDebug.toys.silhouettes();
+    const cv = (window as any).slagDebug.cast.silhouettes();
     return { width: cv.width, height: cv.height };
   });
   const path = `${out}/cast-silhouettes.png`;

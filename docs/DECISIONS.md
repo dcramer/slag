@@ -133,13 +133,23 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Runners should have more identity and variety (a bumblebee pattern, say), maybe themed bodies instead of heads, the way the barnyard game uses animals.** "they're a little generic now and while they're cute and fun id love to see more interesting textures/variety"
   2026-11-02 16:30Z · `done` as a proposal · CHARACTERS.md
 - **Direction C, foundry toys.**
+  2026-11-02 17:16Z (answer) · `done`, then replaced · CHARACTERS.md
+- **The cast is a mix of animals and invented critters, and the critters may parody famous characters (a fake jellyfish-brain floater, a mustached plumber, a robot, a goose, a hard-hat engineer).** "idk how we ended up with toys. that wasnt the original goal, and its not on theme" · "critters could include other parody things... like a fake metroid, a fake mario, a robot, a goose, etc. a fake engineer from tf2 etc"
+  2026-11-02 · `in progress` · CHARACTERS.md, DESIGN.md → Players and Parody
+  Changed: toys replaced by animals plus parody critters.
+- **Player characters may parody famous characters under our own designs and sound-alike names; parts and machines stay faceless.**
+  2026-11-02 · `in progress` · DESIGN.md → Parody, CHARACTERS.md
+- **Characters are drawn cleaner, lighter and more hand-drawn: thinner, varied lines in a dark of the body color, calmer color, fewer bold outlines.** "i want more cleanly designed art that isnt so loud/bold lines etc and more visually hand draw"
+  2026-11-02 · `in progress` · CHARACTERS.md, ART.md → World art
+- **Each kind is a distinct character design (its own outline, signature part and gait), and fewer strong kinds beat many similar ones.** "ultimate chicken horse doesnt have this issue because the characters are clearly unique looking"
+  2026-11-02 · `done` · CHARACTERS.md
+- **The player's colour is the loudest note: the body, or a big worn piece for a kind whose palette is its identity.**
   2026-11-02 17:16Z (answer) · `in progress` · CHARACTERS.md
-- **A toy keeps its natural colours, and the player's colour goes on a worn or painted part.**
-  2026-11-02 17:16Z (answer) · `in progress` · CHARACTERS.md
+  Changed: on the toys it was always a worn or painted part, never the body.
 - **New characters come from a random roll only; players don't choose a kind.**
-  2026-11-02 17:16Z (answer) · `in progress` · CHARACTERS.md
-- **Everyone's saved look is re-rolled once.**
-  2026-11-02 17:16Z (answer) · `in progress` · CHARACTERS.md
+  2026-11-02 17:16Z (answer) · `done` · CHARACTERS.md
+- **Everyone's saved look is re-rolled once, and again whenever the cast changes what a seed means.**
+  2026-11-02 17:16Z (answer) · `done` · CHARACTERS.md
 - **Characters and the menu crowd take the art style, but stay as clean as they are.** "i like how they look right now so make sure ou keep it clean like it is and dont break it"
   2026-11-02 15:49Z · `done` · git `a6963c8`, `3eb7c44`; ART.md → World art
 
