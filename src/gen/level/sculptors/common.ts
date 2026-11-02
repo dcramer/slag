@@ -37,9 +37,12 @@ export function hardGap(rng: Rng): number {
 /**
  * Comfortable vertical spacing for steps, rungs and shelves: one less than a
  * plain full jump (no wall tricks), so structures keep their proportions.
+ * Never below 2: heavy gravity would otherwise give 1-row steps, and a solid
+ * flight of those starts on the floor and seals the storey it stands in
+ * instead of floating at head height.
  */
 export function easyRise(): number {
-  return Math.max(1, Math.floor(jumpMetrics(probeGravity()).jumpHeight) - 1);
+  return Math.max(2, Math.floor(jumpMetrics(probeGravity()).jumpHeight) - 1);
 }
 
 /**

@@ -110,7 +110,8 @@ export function rollProfile(seed: number, themeId: ThemeId, o: ProfileOverride =
     h = rng.int(WIDE_SIZES.h[0], WIDE_SIZES.h[1]);
   } else if (size === 'tall') {
     w = rng.int(TALL_SIZES.w[0] / 2, TALL_SIZES.w[1] / 2) * 2;
-    h = rng.int(TALL_SIZES.h[0], TALL_SIZES.h[1]);
+    // Taller than wide by a clear margin: 40×40 is a square, not a tower.
+    h = rng.int(Math.max(TALL_SIZES.h[0], w + 6), TALL_SIZES.h[1]);
   }
   const rolledRoute = rng.weighted(ROUTE_WEIGHTS[size]);
   const route = o.route && ROUTE_WEIGHTS[size].some(([r]) => r === o.route) ? o.route : rolledRoute;

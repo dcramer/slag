@@ -52,16 +52,24 @@ export const rooftops: Sculptor = (ctx) => {
     const prev = bs[bs.length - 1];
     const end = prev.x + prev.w;
     const remaining = W - end;
-    const hard = hardLeft > 0 && rng.chance(0.5 + (remaining < 24 ? 0.5 : 0));
-    const gap = hard ? hardGap(rng) : easyGap(rng, style === 'tenements' ? 1 : 2);
+    let hard = hardLeft > 0 && rng.chance(0.5 + (remaining < 24 ? 0.5 : 0));
+    let gap = hard ? hardGap(rng) : easyGap(rng, style === 'tenements' ? 1 : 2);
     const w = rng.int(minW, maxW);
-    // Random walk around the route ramp (climbing skylines step up toward the goal).
-    const want = baseRoof + k.ramp(end + gap + (w >> 1));
+    const finalBuilding = () => end + gap + w + 7 > W || remaining - gap - w < 6;
+    // A hard alley keeps both roofs level, so in a tall skyline it can't be the last crossing:
+    // the goal roof has to finish the climb or descent.
+    if (tall && hard && finalBuilding()) {
+      hard = false;
+      gap = easyGap(rng, 2);
+    }
+    // Random walk around the route ramp (climbing skylines step up toward the goal, measured at
+    // the far end of a tall skyline's building so the last one lands on the ramp's full height).
+    const want = baseRoof + k.ramp(end + gap + (tall ? w : w >> 1));
     let roof = Math.max(6, Math.min(H - 5, prev.roof + rng.int(-5, 5)));
     if (tall) roof = Math.max(6, Math.min(H - 5, want + rng.int(-2, 2)));
     else if (roof - want > 4) roof -= rng.int(2, 4);
     else if (want - roof > 4) roof += rng.int(2, 4);
-    if (end + gap + w + 7 > W || remaining - gap - w < 6) {
+    if (finalBuilding()) {
       // Final building holds the goal and runs to the right edge.
       const fx = end + gap;
       if (W - fx < 5) {
@@ -81,6 +89,7 @@ export const rooftops: Sculptor = (ctx) => {
     gaps.push({ a: end, b: end + gap - 1, hard });
     bs.push({ x: end + gap, w, roof });
   }
+  g.wantsProps = gaps.some((gp) => gp.hard);
 
   for (let i = 0; i < bs.length; i++) {
     const b = bs[i];
