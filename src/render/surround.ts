@@ -316,6 +316,31 @@ export class Surround {
     s.drawImage(bake, 0, sy, bake.width, bake.height - sy, -this.mx * TILE, (level.h - RING) * TILE, land.w * TILE, (RING + this.bottom) * TILE);
   }
 
+  /**
+   * Cut the pool out where the scenery past either side stands in it. The pool
+   * goes behind terrain, and scenery is terrain too, but it paints on the
+   * background, under the pool's layer, so the pool has to make way. Above the
+   * world's bottom only: below it, everything is seen through the pool. Outside
+   * the world only, where the level's own terrain cuts nothing. World space; call
+   * on both the albedo and the glow layer.
+   */
+  cutPool(c: CanvasRenderingContext2D, level: Level, rows: number) {
+    const bake = this.painter.bake;
+    const land = this.land;
+    if (!bake || !land) return;
+    const k = bake.height / (land.h * TILE);
+    const r0 = Math.max(-this.top, level.h - rows);
+    const n = level.h - r0;
+    const sy = (this.top + r0) * TILE * k;
+    const sw = this.mx * TILE * k;
+    c.save();
+    c.globalCompositeOperation = 'destination-out';
+    c.globalAlpha = 1;
+    c.drawImage(bake, 0, sy, sw, n * TILE * k, -this.mx * TILE, r0 * TILE, this.mx * TILE, n * TILE);
+    c.drawImage(bake, bake.width - sw, sy, sw, n * TILE * k, level.w * TILE, r0 * TILE, this.mx * TILE, n * TILE);
+    c.restore();
+  }
+
   /** In world space, before the level's own terrain. */
   draw(rc: RC) {
     if (!this.land) return;
