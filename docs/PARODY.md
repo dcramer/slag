@@ -103,8 +103,8 @@ Set pieces keep their theme. Where one mocks a cliché, it says so in its look.
 |---|---|---|---|
 | castle | Boss-Room Cannon, Load-Bearing Chandelier, Door Knocker | Castle chandelier rides, the boss door | The ram has a door-knocker ring on its head. |
 | factory | Pancake Press, Forklift, Cog Lift | The factory level | The press leaves a pancake-shaped dent. |
-| jungle | Log Ride, Chase-Scene Boulder, Cursed Idol | The rolling-boulder chase, the cursed idol | The boulder has a film-reel scratch line. The idol is a carved stone stela with a gem in its crown that glows when it fires. |
+| jungle | Log Ride, Chase-Scene Boulder, Cursed Idol, Snapjaw, Log Trap | The rolling-boulder chase, the cursed idol, the man-eating plant, the swinging log trap | The boulder has a film-reel scratch line. The idol is a carved stone stela with a gem in its crown that glows when it fires. The snapjaw's lobes twitch before they shut, a plant and nothing more. The log is spiked at both ends and swings level on two ropes. |
 | volcano | Floor Is Lava, Magma Vent, Magma Spitter | The floor is lava | A couch-cushion stepping stone sits beside the plume. |
-| mine | Mandatory Minecart, Tunnel Drill, Ore Bucket | The minecart level every game has | A "LEVEL 4-2"-style track sign on the cart. |
+| mine | Mandatory Minecart, Tunnel Drill, Ore Bucket, Runaway Cart, Cave-In, Firedamp | The minecart level every game has, the cave-in | A "LEVEL 4-2"-style track sign on the cart. The runaway rings its bell before it goes, like a level start. |
 | glacier | Brain Freeze Cannon, Frost Vent, Bunny Hill Chairlift, Icicle of Damocles | The ice level, ski lifts | The icicle hangs from a single hair-thin thread. The chairlift has a lift-pass tag. |
 | space | Solar Flare, Warranty-Void Turret, Comm Array, Salad Spinner Centrifuge, Docking Arm | The space station level | The turret has a "VOID IF REMOVED" sticker. The centrifuge has lettuce stuck to a platform. |

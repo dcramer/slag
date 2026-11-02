@@ -4,6 +4,9 @@ import type { DecorKind, DecorSpot } from '../gen/decor';
 import type { Theme } from '../gen/theme';
 import { FARM_DECOR } from './decor-farm';
 import { FRONTIER_DECOR } from './decor-frontier';
+import { HARBOR_DECOR } from './decor-harbor';
+import { JUNGLE_DECOR } from './decor-jungle';
+import { MINE_DECOR } from './decor-mine';
 import { VOLCANO_DECOR } from './decor-volcano';
 import { blob, line, type P, stroke } from './ink';
 import { inkFence, inkHay } from './ink-parts';
@@ -946,4 +949,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
   ...FRONTIER_DECOR,
   ...FARM_DECOR,
   ...VOLCANO_DECOR,
+  ...HARBOR_DECOR,
+  ...JUNGLE_DECOR,
+  ...MINE_DECOR,
 };

@@ -162,6 +162,14 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 17:16Z (answer) · `done` · CHARACTERS.md
 - **Characters and the menu crowd take the art style, but stay as clean as they are.** "i like how they look right now so make sure ou keep it clean like it is and dont break it"
   2026-11-02 15:49Z · `done` · git `a6963c8`, `3eb7c44`; ART.md → World art
+- **Character art comes from a generated-concept pipeline, tested before any rollout: no rollout until the owner picks one.** "Lets test that out. but dont duct tape like we need great results here" / "Not yet"
+  2026-11-02 · `in progress` · CHARACTERS.md
+- **Traced frames (round 2) look out of place beside the hand-drawn cast; wait for the 3D-to-2D test before choosing.** "i agree w/ your asssessment. they look out of place. lets wait on the new test"
+  2026-11-02 · `open` · branch `worktree-agent-ae6810c61c411904c`, behind `?traced=1`
+- **The traced homages look too much like the originals: every kind needs a clear twist of its own on top of the recognisable silhouette.** "they look TOO much like the things were trying to parody... so we'd need to spice it up too"
+  2026-11-02 · `open` · CHARACTERS.md → Roster
+- **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
+  2026-11-02 · `done` · public/ASSETS.md
 
 ## Parts and the crate
 
@@ -235,6 +243,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `done` (enforced) · `GRAND_LANDMARKS` in src/gen/kinds.ts, tests/conformance/themes.test.ts
 - **The cast needs much more parody, and each parody must be instantly recognisable; the art must improve further.** "its better but you still need more parody and the art needs to be better yet..." / "the only thing that remotely resembles the thing its mimicking is the puff ball (kirby)". Iconic palettes win over the player-colour body rule; the player's colour moves to a visible secondary slot.
   2026-11-02 · `in progress` · CHARACTERS.md
+- **Demolition parts rarely change terrain: the drill digs, plus one rare small bomb; the rest clear placed parts only.** "it should be RARE that they can change terrain.. so the drill is fine.. and maybe one other small one, but i think they commonly change terrain right now". Changed: bombs, charges and time bombs used to blast terrain too, and every roster held a terrain breaker.
+  2026-11-02 · `done` · DESIGN.md → Props, `src/gen/props.ts`
 - **Lobby browser: a list of lobbies, showing only ones that aren't full by default.** Lobbies are public by default with a Private option. "lets make lobbies public by default with a private option"
   2026-11-02 · `planned` · TODO.md → 26
 - **Conveyors rotate: the rotation picks the belt's face.** A side belt grips and carries a clinging runner (an escalator when it runs up), a bottom belt shoves a head that bonks it. "you cant rotate conveyors.. the conveyor always stays on the top"
@@ -375,6 +385,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 06:29Z · `done` · PARODY.md → Parts
 - **All of the art should be drawn well, not left as bad geometry.** "The art is still mostly the same as before ... a lot is still bad geometry" / "im just not sure 100% is drawn wlel"
   2026-11-02 15:29Z, 16:02Z · `done` (full ink pass), polish ongoing · ART.md → World art
+- **Theme art (landmarks, hazards, decor) must match the main ink style, and agents get concrete guidance and checks for it.** "the artwork rendering may need some guidance on e.g. black lines and stuff idk. they look just like wack compared to the main stuff right now for a lot of them"
+  2026-11-02 · `in progress` · ART.md → World art, `src/render/AGENTS.md`
 - **A launcher is its own machine, not "an image slapped on a square block."**
   2026-11-02 16:08Z · `done` · `src/render/AGENTS.md`
 - **The conveyor and the warp pipe are redrawn as built things.** "idk if conveyer is stil in the TODO on blocks but it looks dumb" / "that warp pipe also looks visually pretty bad..."
@@ -490,7 +502,7 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `done` · DESIGN.md → Online (Gone players), NETCODE.md → Joining and reconnecting
 - **Idle players are detected (a soft disconnect), so the game doesn't wait on them forever.** "we should also detect idles (soft disconnect) so the game doesnt wait on an idle player forever"
   2026-11-02 17:52Z · `done` · DESIGN.md → Players (Nobody waits), NETCODE.md → Idle players and soft disconnects
-- **The idle timeouts: 30 s without input in a pick, place or race (from the phase's start), 60 s in the lobby; after that a player is AFK until their next input. Online an AFK player moves to the watchers: at once in the lobby, mid-match after two rounds in a row ended AFK. A guest sending nothing for 1 s has its held buttons let go.**
+- **The idle timeouts: 30 s without input in an untimed pick, place or race (from the phase's start; a timed one just runs out), 60 s in the lobby; after that a player is AFK until their next input. Online an AFK player moves to the watchers: in the lobby when it's full and someone is watching, mid-match after two rounds in a row ended AFK. A guest sending nothing for 1 s has its held buttons let go.**
   2026-11-02 · `done` · DESIGN.md → Players, NETCODE.md
 - **Test the Upstash path locally with a compatible service.** "add to the TODO to have a compatible service locally for testing it? thats compat with upstash redis remote and their lib?"
   2026-11-02 03:46Z · `done` · AGENTS.md → `pnpm test:store`

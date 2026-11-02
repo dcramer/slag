@@ -45,6 +45,8 @@ export const TELLS: { [T in Module['type']]?: Tell<ModuleOf<T>> } = {
   flood: (m) => m.warn,
   fuse: (m) => m.count,
   lob: (m) => m.warn,
+  cavein: (m) => m.warn,
+  cart: (m) => m.warn,
 };
 
 /** Modules among `mods` whose tell is a warning shorter than MIN_TELL. */
@@ -74,6 +76,8 @@ const VARIANT: { [T in Module['type']]?: (m: ModuleOf<T>) => string } = {
   flood: (m) => m.look,
   // One thing falling on a spot, or a chain of segments sweeping an arc.
   lob: (m) => (m.count > 1 ? 'chain' : 'single'),
+  // Boulders falling through a span, or the whole span catching fire.
+  cavein: (m) => m.kind,
 };
 
 /** What a set piece's hazard is, for "unique to its theme": every module that hurts, by type and variant. Empty if nothing hurts. */

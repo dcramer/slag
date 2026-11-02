@@ -131,8 +131,10 @@ describe('a match roster', () => {
         const roster = generateRoster(seedAt(i), rosterSize(cardsFor(players)));
         const ctx = `${players}p seed ${seedAt(i)}`;
         expect(roster.flatMap((p) => p.variants).some(isBridgePart), ctx).toBe(true);
-        const breaker = roster.some((p) => p.variants.some((v) => v.modules.some((m) => m.type === 'bomb' && m.target !== 'props')));
-        expect(breaker, ctx).toBe(true);
+        expect(
+          roster.some((p) => p.role === 'demolish'),
+          ctx,
+        ).toBe(true);
         expect(
           roster.some((p) => dryLean(p.archetype, 5) > 3 && p.role === 'demolish'),
           ctx,
@@ -231,6 +233,21 @@ describe('crates', () => {
         expect(seen.size, `${players}p seed ${seedAt(i)}`).toBeGreaterThanOrEqual(rosterSize(count) - 1);
       }
     }
+  });
+
+  it('terrain-changing demolition is rare: only the drill and the small mining bomb dig', () => {
+    let parts = 0;
+    let digs = 0;
+    for (let i = 0; i < 400; i++)
+      for (const p of generateRoster(seedAt(i), 12).filter((q) => q.role === 'demolish')) {
+        parts++;
+        const dig = p.variants.some((v) => v.modules.some((m) => m.type === 'bomb' && m.target !== 'props'));
+        if (dig) {
+          digs++;
+          expect(p.archetype === 'drill' || p.archetype === 'bomb', p.archetype).toBe(true);
+        }
+      }
+    expect(digs / parts).toBeLessThan(0.35);
   });
 
   it('lean toward the roster breaker when a match is stuck', () => {

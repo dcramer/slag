@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { IDLE_FRAMES, LOBBY_IDLE_FRAMES, Match } from '../src/game/match';
 import { DEFAULT_RULES } from '../src/game/rules';
 import { roomSeed } from '../src/game/room';
+import { decode, type Enc } from '../src/net/codec';
 import { NetSession } from '../src/net/session';
 import { hashMatch } from '../src/net/snapshot';
 import { LoopbackHub } from '../src/net/transport';
@@ -247,20 +248,57 @@ describe('observers', () => {
 });
 
 describe('idle peers', () => {
-  it('a player idle in the lobby for a minute goes to the watchers, and any input brings them back', () => {
+  it('an idle lobby player keeps its seat until a watcher could use it, then goes to the watchers, and any input brings them back', () => {
     const r = new Room();
-    const a = r.join('aaaa', fidget);
-    r.run(5);
-    const b = r.join('bbbb', still);
-    r.until(() => seatedPeer(a, 'bbbb'), 300);
-    r.until(() => !!a.ns.watching.bbbb, LOBBY_IDLE_FRAMES + 120);
-    expect(a.ns.watching.bbbb.afk).toBe(true);
-    expect(seatedPeer(a, 'bbbb')).toBe(false);
+    const ids = Array.from({ length: MAX_PLAYERS }, (_, i) => `p${i}xx`);
+    for (const id of ids) {
+      r.join(id, id === 'p7xx' ? still : fidget);
+      r.run(3);
+    }
+    const a = r.peers.get('p0xx')!;
+    const b = r.peers.get('p7xx')!;
+    r.until(() => a.match.players.length === MAX_PLAYERS, 600);
+    r.until(() => !!a.match.players.find((p) => p.device === 'p7xx:kb1')?.afk, LOBBY_IDLE_FRAMES + 120);
+    r.run(30);
+    expect(seatedPeer(a, 'p7xx')).toBe(true); // full, but nobody waiting: an idle lobby holds nobody up
+    r.join('wwww', still, true);
+    r.until(() => !!a.ns.watching.p7xx, 300);
+    expect(a.ns.watching.p7xx.afk).toBe(true);
+    expect(seatedPeer(a, 'p7xx')).toBe(false);
     r.run(10);
     expect(b.intent).toBe('watch');
-    r.scripts.set('bbbb', (_s, f) => (f % 30 === 0 ? { kb1: press({ left: true }) } : {}));
-    r.until(() => seatedPeer(a, 'bbbb'), 300);
-    expect(a.ns.watching.bbbb).toBeUndefined();
+    r.scripts.set('p7xx', (_s, f) => (f % 30 === 0 ? { kb1: press({ left: true }) } : {}));
+    r.until(() => seatedPeer(a, 'p7xx'), 300);
+    expect(a.ns.watching.p7xx).toBeUndefined();
+  }, 30_000);
+
+  it('a guest holding one key steady for 5 s keeps it held on every peer, and is neither let go nor idle', () => {
+    const r = new Room();
+    const a = r.join('aaaa', player);
+    r.run(5);
+    a.act({ t: 'rules', rules: { ...FAST, raceSeconds: 0 } });
+    r.join('bbbb', player);
+    const c = r.join('cccc', player);
+    r.until(() => a.match.phase === 'run' && a.match.run!.frame > 70, 3000);
+    // The others hold a key that doesn't move them, so the race stays open whatever the level does to b.
+    for (const id of ['aaaa', 'cccc']) r.scripts.set(id, () => ({ kb1: press({ down: true }) }));
+    r.scripts.set('bbbb', () => ({ kb1: press({ right: true }) }));
+    r.run(10);
+    const slot = a.match.players.find((p) => p.device === 'bbbb:kb1')!.slot;
+    const runner = () => a.match.run?.runners.find((x) => x.slot === slot);
+    const x0 = runner()!.body.x;
+    let far = x0;
+    const held = (s: NetSession) => decode((s as unknown as { lastInputs: Record<string, Enc> }).lastInputs['bbbb:kb1']).right;
+    let always = true;
+    for (let i = 0; i < 300; i++) {
+      r.run(1);
+      if (!held(a) || !held(c)) always = false;
+      if (runner()?.alive) far = Math.max(far, runner()!.body.x);
+    }
+    expect(always).toBe(true);
+    expect(a.match.players.find((p) => p.device === 'bbbb:kb1')!.afk).toBeUndefined();
+    expect(far).toBeGreaterThan(x0);
+    expect(r.hashes().size).toBe(1);
   }, 20_000);
 
   it("a guest that stops sending has its buttons let go, gives up the race when idle, and agrees with the room when it's back", () => {
@@ -276,8 +314,11 @@ describe('idle peers', () => {
     r.frozen.add('bbbb');
     const slotB = a.match.players.find((p) => p.device === 'bbbb:kb1')!.slot;
     const runnerB = () => a.match.run!.runners.find((x) => x.slot === slotB)!;
+    const pB = a.match.player(slotB)!;
     r.run(90);
-    expect(Math.abs(runnerB().body.vx)).toBeLessThan(1); // let go after SOFT_TICKS, and it has stopped
+    // Let go after SOFT_TICKS: the host has stopped feeding it input whatever the level did to the runner, and a live one has stopped.
+    expect(a.match.frame - pB.lastInput).toBeGreaterThan(10);
+    if (runnerB().alive) expect(Math.abs(runnerB().body.vx)).toBeLessThan(1);
     // An idle runner gives up through the self-destruct hold, so it pops POP_HOLD after it goes idle.
     if (runnerB().alive) r.until(() => !runnerB().alive, IDLE_FRAMES + POP_HOLD + 60);
     r.frozen.delete('bbbb');

@@ -78,6 +78,8 @@ export type TerrainKind =
   | 'carved'
   | 'iceblock'
   | 'bone'
+  // Shipping containers, stacked on a quay (harbor landmarks).
+  | 'container'
   // A red barn's boards with white trim (farm landmarks).
   | 'barnboard';
 export type CapKind = 'grass' | 'moss' | 'rust' | 'crystal' | 'none' | 'ledge' | 'trim' | 'ash' | 'beam' | 'gravel';

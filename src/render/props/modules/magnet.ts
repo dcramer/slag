@@ -1,9 +1,10 @@
 import { css, type HSL } from '../../../core/color';
-import { magnetCycle } from '../../../sim/props';
+import { TILE } from '../../../sim/constants';
+import { magnetCycle, type ModuleOf } from '../../../sim/props';
 import { line, type P, stroke } from '../../ink';
 import { ball, INK, path, pen, sprite, stamp, tick, tone } from '../../ink-props';
-import { bulb, circle, light, type MetalPalette } from '../../kit';
-import { defineArt } from '../common';
+import { bulb, circle, light, type MetalPalette, type RC } from '../../kit';
+import { type DrawCtx, defineArt } from '../common';
 import { housed } from '../machine';
 
 /**
@@ -100,10 +101,70 @@ function horseshoe(pull: boolean, pal: MetalPalette) {
  * it's on. Pulsing fields show a dim dotted ring while off and a filling
  * ring while charging.
  */
+/**
+ * The harbor's whirlpool (look `whirlpool`): a waterspout twisting up out of the sea to the core of the pull
+ * and a little past it. Off, the water just turns; charging, the sea churns and a thin spout climbs, the
+ * field's edge drawing round; on, the spout is up and spinning, spray streaming in along the ring.
+ */
+function waterspout(rc: RC, m: ModuleOf<'magnet'>, d: DrawCtx) {
+  const s = rc.s;
+  const x = m.at[0] + d.off[0];
+  const y = m.at[1] + d.off[1];
+  const sea = (d.o.level?.h ?? 27) * TILE - 11;
+  const c = magnetCycle(m, rc.frame, d.r.phase);
+  const on = c.seg === 2;
+  const k = c.seg === 1 ? c.t / c.len : on ? 1 : 0;
+  const water: HSL = { h: 198, s: 46, l: 62 };
+  // The churn on the surface.
+  for (let i = 0; i < 3; i++) {
+    const u = (rc.t * (0.3 + k) + i / 3) % 1;
+    s.strokeStyle = `rgba(235,248,255,${(0.25 + k * 0.5) * (1 - u)})`;
+    s.lineWidth = 1;
+    s.beginPath();
+    s.ellipse(x, sea, 4 + u * (8 + k * 14), 1 + u * 2, 0, 0, Math.PI * 2);
+    s.stroke();
+  }
+  if (k > 0) {
+    // The spout: bands twisting round a column narrowing upward, up to just over the core.
+    const top = y - 6 - (on ? 6 : 0);
+    const h = Math.max(4, (sea - top) * (on ? 1 : k));
+    const n = Math.max(6, Math.round(h / 4));
+    const spin = rc.t * (on ? 9 : 4);
+    for (let i = 0; i < n; i++) {
+      const v = i / n;
+      const yy = sea - v * h;
+      const r = (1 - v * 0.55) * (4 + k * 5);
+      const ph = spin + v * 6;
+      s.fillStyle = INK;
+      line(s, x - r - 0.6, yy, x + r + 0.6, yy - 2.5, { w: 2.4, seed: i, taper: [0.2, 0.2], press: 0 });
+      s.fillStyle = css(water, Math.sin(ph) * 12 + 4);
+      line(s, x - r, yy, x + r, yy - 2.5, { w: 1.6, seed: i, taper: [0.2, 0.2], press: 0 });
+    }
+    // The field's edge, at the radius the sim pulls from, closing round as it charges.
+    s.strokeStyle = css(water, 20, on ? 0.5 : 0.2 + k * 0.4);
+    s.lineWidth = on ? 1.1 : 0.8;
+    s.setLineDash(on ? [] : [3, 4]);
+    s.beginPath();
+    s.arc(x, y, m.radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * k);
+    s.stroke();
+    s.setLineDash([]);
+  }
+  if (!on) return;
+  // Spray drawn in along the ring toward the core.
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2 + rc.t * 2;
+    const u = 1 - ((rc.t * 0.8 + i * 0.29) % 1);
+    const r = 5 + u * (m.radius - 5);
+    s.fillStyle = `rgba(235,248,255,${0.8 * Math.sin(u * Math.PI)})`;
+    circle(s, x + Math.cos(a) * r, y + Math.sin(a) * r, 1.1);
+  }
+}
+
 defineArt<'magnet'>({
   type: 'magnet',
   layer: 3,
   draw(rc, m, d) {
+    if (m.look === 'whirlpool') return waterspout(rc, m, d);
     const s = rc.s;
     const g = rc.g;
     const x = m.at[0] + d.off[0];

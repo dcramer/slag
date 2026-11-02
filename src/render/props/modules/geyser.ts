@@ -2,8 +2,8 @@ import { css, type HSL } from '../../../core/color';
 import { TILE } from '../../../sim/constants';
 import { dirOf, geyserColumn, geyserCycle, geyserWind, type GeyserLook, type ModuleOf } from '../../../sim/props';
 import { windProfile, windSpeed } from '../../../sim/wind';
-import { blob, line, stroke } from '../../ink';
-import { boxPts, INK, ovalPts, part, path, pen, poly, sprite, stamp, tick } from '../../ink-props';
+import { blob, line, type P, stroke } from '../../ink';
+import { boxPts, INK, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import { circle, ellipse, glowDot, light, type RC } from '../../kit';
 import type { ThemeId } from '../../../themes';
 import { beamOf, type DrawCtx, defineArt } from '../common';
@@ -494,6 +494,89 @@ function flowWarn(rc: RC, m: Geyser, d: DrawCtx, a: Aim, flow: Flow, p: number, 
   }
 }
 
+/**
+ * The harbor's tentacle (look `tentacle`): an arm out of the water, no face. Rumbling, the surface rings and
+ * bubbles where it'll come up; up, it stands in exactly its column, swaying inside it, suckers down one side,
+ * tapering only over its last third into its tip, and wearing a wedding ring. In the column's frame.
+ */
+function drawTentacle(rc: RC, m: Geyser, d: DrawCtx, a: Aim, seg: number, p: number, base: number, len: number, k: number) {
+  const s = rc.s;
+  const w = m.width;
+  const skin: HSL = { h: d.style.hue, s: 44, l: 36 };
+  const belly: HSL = { h: d.style.hue + 12, s: 40, l: 68 };
+  if (seg === 1) {
+    // The surface rings out from where it'll rise, faster and wider as it comes.
+    enter(s, a);
+    for (let i = 0; i < 3; i++) {
+      const u = ((rc.frame * (0.02 + p * 0.05) + i / 3) % 1) * (0.6 + p);
+      s.strokeStyle = `rgba(235,248,255,${(1 - u) * (0.4 + p * 0.5)})`;
+      s.lineWidth = 1;
+      s.beginPath();
+      s.ellipse(0, base, w * (0.4 + u * 1.4), 1.2 + u * 1.6, 0, 0, Math.PI * 2);
+      s.stroke();
+    }
+    // A shadow under the water, and the tip breaking the surface at the end.
+    s.fillStyle = css(skin, -14, 0.35 + p * 0.4);
+    ellipse(s, 0, base + 2, w * 0.45, 1.6);
+    if (p > 0.6) {
+      const tip: P[] = [];
+      for (let i = 0; i <= 6; i++) tip.push({ x: Math.sin(i * 0.9 + rc.t * 6) * 1.2, y: base - (i / 6) * (p - 0.6) * 18 });
+      s.fillStyle = INK;
+      stroke(s, tip, { w: w * 0.3 + 1, seed: 3, taper: [0, 0.9], press: 0 });
+      s.fillStyle = css(skin);
+      stroke(s, tip, { w: w * 0.3, seed: 3, taper: [0, 0.9], press: 0 });
+    }
+    s.restore();
+    if (d.o.emit && Math.random() < 0.1 + p * 0.4)
+      d.o.emit('debris', wx(a, (Math.random() - 0.5) * w, base), wy(a, 0, base), (Math.random() - 0.5) * 40, -40 - p * 60, { h: 200, s: 40, l: 86 });
+    return;
+  }
+  const n = 18;
+  const left: P[] = [];
+  const right: P[] = [];
+  const mid: P[] = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    const v = base - len * t;
+    const half = (w / 2) * k * (t < 0.66 ? 1 : 1 - ((t - 0.66) / 0.34) * 0.8);
+    const sway = Math.sin(rc.t * 3 + t * 4 + d.r.pp.uid) * w * 0.1 * t * (1 - t);
+    left.push({ x: sway - half, y: v });
+    right.unshift({ x: sway + half, y: v });
+    mid.push({ x: sway, y: v });
+  }
+  enter(s, a);
+  const body = [...left, ...right];
+  tone(s, body, skin, { depth: 1, shade: -14 });
+  // Its underside: a pale strip down one side, suckers along it.
+  s.save();
+  path(s, body);
+  s.clip();
+  s.fillStyle = css(belly);
+  path(s, [...mid, ...right]);
+  s.fill();
+  for (let t = 0.08; t < 0.8; t += 0.11) {
+    const i = Math.round(t * n);
+    const half = right[n - i].x - mid[i].x;
+    s.fillStyle = css(belly, -16);
+    circle(s, mid[i].x + half * 0.5, mid[i].y, Math.max(0.8, half * 0.32));
+  }
+  // The ring, gold, on the thick of it.
+  const ri = Math.round(n * 0.42);
+  s.fillStyle = '#e8c04a';
+  s.fillRect(-w, mid[ri].y - 1.2, w * 2, 2.2);
+  s.fillStyle = '#fff3c0';
+  s.fillRect(-w, mid[ri].y - 1.2, w * 2, 0.6);
+  s.restore();
+  pen(s, body, d.r.pp.uid, 0.5, 1.3);
+  // Water sheeting off where it leaves the sea.
+  s.fillStyle = 'rgba(235,248,255,0.85)';
+  for (let i = -1; i <= 1; i++) {
+    blob(s, i * w * 0.4, base - 1, 1.6, i + 4, 1, 0.3);
+    s.fill();
+  }
+  s.restore();
+}
+
 function drawColumn(rc: RC, m: Geyser, d: DrawCtx) {
   const s = rc.s;
   const g = rc.g;
@@ -509,6 +592,14 @@ function drawColumn(rc: RC, m: Geyser, d: DrawCtx) {
   const LAVA = v.lava;
   const HOT = v.hot;
   const emit = d.o.emit;
+  if (m.look === 'tentacle') {
+    if (c.seg === 1) drawTentacle(rc, m, d, a, 1, c.t / c.len, base, 0, 1);
+    else {
+      const col = geyserColumn(m, f, d.r.phase, beamOf(d.o, d.r, d.mi)?.len ?? m.length, d.off[0], d.off[1]);
+      if (col) drawTentacle(rc, m, d, a, 2, 1, base, col.len, col.k);
+    }
+    return;
+  }
   if (c.seg === 1) {
     const p = c.t / c.len;
     if (flow) flowWarn(rc, m, d, a, flow, p, base);
