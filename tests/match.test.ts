@@ -243,7 +243,15 @@ describe('match rules', () => {
     [120, 'Long'],
   ])('maps an old %i point save to %s and keeps its timers', (targetScore, label) => {
     const { targetScore: score, maxRounds } = MATCH_LENGTHS.find((l) => l.label === label)!;
-    expect(load({ targetScore, ...timers })).toEqual({ targetScore: score, maxRounds, gravity: 'auto', weather: true, bloodRounds: 2, ...timers });
+    expect(load({ targetScore, ...timers })).toEqual({
+      targetScore: score,
+      maxRounds,
+      gravity: 'auto',
+      weather: true,
+      bloodRounds: 2,
+      secretParts: false,
+      ...timers,
+    });
   });
 
   it('ignores an old round limit, which was usually just the default of 40', () => {
@@ -251,7 +259,15 @@ describe('match rules', () => {
   });
 
   it.each(MATCH_LENGTHS)('round-trips a saved $label', ({ targetScore, maxRounds }) => {
-    expect(load({ targetScore, maxRounds, ...timers })).toEqual({ targetScore, maxRounds, gravity: 'auto', weather: true, bloodRounds: 2, ...timers });
+    expect(load({ targetScore, maxRounds, ...timers })).toEqual({
+      targetScore,
+      maxRounds,
+      gravity: 'auto',
+      weather: true,
+      bloodRounds: 2,
+      secretParts: false,
+      ...timers,
+    });
   });
 
   it('falls back to Normal on ties and junk', () => {

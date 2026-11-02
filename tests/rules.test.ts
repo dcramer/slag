@@ -18,6 +18,7 @@ const CHANGED: MatchRules = {
   gravity: 'low',
   weather: false,
   bloodRounds: 3,
+  secretParts: true,
 };
 
 /** A seed whose farm level rolls weather, so turning the rule off changes something. */
@@ -46,6 +47,7 @@ describe('sanitizeRules', () => {
       gravity: 'sideways',
       weather: 'maybe',
       bloodRounds: 99,
+      secretParts: 1,
     } as unknown as Partial<MatchRules>;
     expect(sanitizeRules(junk)).toEqual(DEFAULT_RULES);
   });

@@ -3,7 +3,7 @@ import { deriveSeed, Rng } from '../core/rng';
 import { type CharacterDef, generateCharacter } from '../gen/character';
 import { type Bridge, GRAVITY, type GravityClass, MAX_BRIDGES, type ProfileOverride, prove, settled } from '../gen/level';
 import { buildLevel, type LevelRequest } from '../gen/level/pregen';
-import { generateCrate, type PropDef } from '../gen/props';
+import { generateCrate, generateRoster, isBridgePart, type PropDef, type Role, rollSecret, rosterSize } from '../gen/props';
 import { ageBlood, type BloodCell, cleanBlood, washBlood } from '../sim/blood';
 import { DT, MAX_PLAYERS, TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import type { Level } from '../sim/level';
@@ -65,6 +65,12 @@ export interface CrateItem {
   def: PropDef;
   claimedBy: number;
   rect: Rect;
+  /**
+   * Secret Parts: the card shows only this role. Until it's claimed, `def` is
+   * the crate's own draw for it, never shown; claiming rolls the real part
+   * (Match.reveal) and writes it here.
+   */
+  secret?: Role;
 }
 
 /** Directional cursor speed, px/s: slow enough for one-tile taps, ramping while held so crossing the screen doesn't drag. */
@@ -336,7 +342,9 @@ export class Match {
       const row = Math.floor(i / perRow);
       const inRow = Math.min(perRow, count - row * perRow);
       const total = inRow * cw + (inRow - 1) * gap;
-      return { def, claimedBy: -1, rect: { x: (VIEW_W - total) / 2 + (i % perRow) * (cw + gap), y: top + row * (ch + gap), w: cw, h: ch } };
+      const rect = { x: (VIEW_W - total) / 2 + (i % perRow) * (cw + gap), y: top + row * (ch + gap), w: cw, h: ch };
+      // Secret Parts keeps the crate's mix of roles (its bridge, its hazard, its dry-round lean) and hides the parts.
+      return this.rules.secretParts ? { def, claimedBy: -1, rect, secret: def.role } : { def, claimedBy: -1, rect };
     });
     this.players.forEach((p, i) => {
       p.claim = -1;
@@ -421,9 +429,27 @@ export class Match {
   }
 
   private claim(p: Player, i: number) {
-    this.crate[i].claimedBy = p.slot;
+    const card = this.crate[i];
+    if (card.secret) card.def = this.reveal(card, i, p);
+    card.claimedBy = p.slot;
     p.claim = i;
     this.events.push({ type: 'claim', slot: p.slot });
+  }
+
+  /**
+   * Secret Parts: what a role card turns out to be, rolled from the roster as
+   * it's claimed. The stream takes the claimer and the frame, so the crate's
+   * seed can't tell anyone in advance; every peer claims on the same frame, so
+   * every peer rolls the same part. A card that stood in for one of the crate's
+   * bridges stays the bridge while the plan needs one, so claiming every build
+   * card still yields as many bridges as the plan has.
+   */
+  private reveal(card: CrateItem, i: number, p: Player): PropDef {
+    if (this.plan.length > 0 && isBridgePart(card.def)) return card.def;
+    const rng = new Rng(deriveSeed(this.seed ^ this.salt, `secret:${this.round}:${i}:${p.slot}:${this.frame}`));
+    const roster = generateRoster(this.seed, rosterSize(this.crate.length));
+    const taken = this.crate.filter((c) => c.claimedBy >= 0).flatMap((c) => c.def.part ?? []);
+    return { ...rollSecret(rng, roster, card.secret!, this.dryRounds, taken), key: card.def.key };
   }
 
   /** Frames left in the current pick/place countdown (Infinity when untimed). */

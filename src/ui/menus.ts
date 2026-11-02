@@ -749,7 +749,7 @@ const RULE_LABELS: Record<TimerRule, string> = {
   raceSeconds: 'Race Timer',
 };
 
-/** Match rules. Timers and length apply from the next match; gravity and weather rebuild the lobby level at once. */
+/** Match rules. Timers, length and Secret Parts apply from the next match; gravity and weather rebuild the lobby level at once. */
 export class RulesMenu extends Overlay {
   open(rules: MatchRules, onChange: (r: MatchRules) => void) {
     const draft = { ...rules };
@@ -803,9 +803,16 @@ export class RulesMenu extends Overlay {
       [true, false].map((v) => ({ label: v ? 'On' : 'Off', on: draft.weather === v, apply: () => (draft.weather = v) })),
       right,
     );
+    const [blood, secret] = pair();
     addRow(
       'Blood Rounds',
       BLOOD_CHOICES.map((v) => ({ label: v === 0 ? 'Off' : `${v}`, on: draft.bloodRounds === v, apply: () => (draft.bloodRounds = v) })),
+      blood,
+    );
+    addRow(
+      'Secret Parts',
+      [false, true].map((v) => ({ label: v ? 'On' : 'Off', on: draft.secretParts === v, apply: () => (draft.secretParts = v) })),
+      secret,
     );
     const done = el('button', { className: 'slag-btn primary', type: 'button', textContent: 'Done' });
     done.onclick = () => this.close();
