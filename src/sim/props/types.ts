@@ -629,8 +629,8 @@ export type BlockLook = 'tetra' | 'obsidian';
 // --- Stage concepts (docs/SETPIECES.md): looks, art only -----------------------
 /** What a spike strip (or a spike coat) is made of; unset is plain metal spikes. */
 export type SpikeLook = 'glass' | 'thorn' | 'crystal' | 'icicle' | 'pitchfork';
-/** What a dropper's head is (art only); unset is the carved crusher stone. */
-export type DropperLook = 'icicle' | 'chandelier';
+/** What a dropper's head is (art only); unset is the carved crusher stone. A portcullis (castle) is the iron grille of a gate. */
+export type DropperLook = 'icicle' | 'chandelier' | 'portcullis';
 /** The liquid a flood fills with. */
 export type FloodLook = 'lava' | 'toxic' | 'water';
 /** What a `lob` throws: a magma serpent of linked segments, or a volcanic bomb out of the sky. */

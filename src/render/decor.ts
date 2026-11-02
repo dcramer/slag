@@ -2,6 +2,7 @@ import { css, type HSL, hsl3, shift } from '../core/color';
 import type { Rng } from '../core/rng';
 import type { DecorKind, DecorSpot } from '../gen/decor';
 import type { Theme } from '../gen/theme';
+import { CASTLE_DECOR } from './decor-castle';
 import { FARM_DECOR } from './decor-farm';
 import { FRONTIER_DECOR } from './decor-frontier';
 import { GLACIER_DECOR } from './decor-glacier';
@@ -949,6 +950,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   ...FRONTIER_DECOR,
+  ...CASTLE_DECOR,
   ...FARM_DECOR,
   ...VOLCANO_DECOR,
   ...HARBOR_DECOR,

@@ -75,6 +75,16 @@ const RULES = {
   // ---- castle -------------------------------------------------------------
   banner: defineDecor({ place: 'under', themes: ['castle'], weight: 1.2, clear: 2 }),
   skull: defineDecor({ place: 'top', themes: ['castle', 'volcano'], weight: 0.5, clear: 1 }),
+  // A suit of armour nobody's in, a brazier, a rack of polearms, a cluster of candles, the stocks; cobwebs
+  // and a gibbet cage hanging from a ceiling.
+  armour: defineDecor({ place: 'top', themes: ['castle'], weight: 0.6, clear: 2 }),
+  brazier: defineDecor({ place: 'top', themes: ['castle'], weight: 0.7, clear: 2 }),
+  weaponrack: defineDecor({ place: 'top', themes: ['castle'], weight: 0.6, clear: 2 }),
+  candles: defineDecor({ place: 'top', themes: ['castle'], weight: 0.8, clear: 1 }),
+  stocks: defineDecor({ place: 'top', themes: ['castle'], weight: 0.4, clear: 2 }),
+  rubble: defineDecor({ place: 'top', themes: ['castle'], weight: 0.9, clear: 1 }),
+  cobweb: defineDecor({ place: 'under', themes: ['castle'], weight: 0.9, clear: 1 }),
+  gibbet: defineDecor({ place: 'under', themes: ['castle'], weight: 0.5, clear: 3 }),
   // ---- jungle -------------------------------------------------------------
   fern: defineDecor({ place: 'top', themes: ['jungle'], weight: 1.6, clear: 1 }),
   bigleaf: defineDecor({ place: 'top', themes: ['jungle'], weight: 1, clear: 2 }),

@@ -3,11 +3,13 @@ import type { Rng } from '../../core/rng';
 import type { TileRect } from '../../sim/level';
 import type { Module, PropStyle } from '../../sim/props';
 import { type Grid, T_EMPTY, T_ONEWAY } from '../level/kit';
-import { jumpProfile } from '../level/probe';
-import { hardGap, pit } from '../level/sculptors/common';
-import { BRIDGE_W } from '../level/types';
 import { type Piece, makeStyle, type Site } from '../setpieces/place';
+import { digMoat, footing, moatMax, structureOf } from './castle-kit';
+import { BELL_TOWER, BOSS_BRIDGE, GATEHOUSE } from './castle-keep';
+import { defineConcept } from './contract';
 import type { Concept, Landmark } from './types';
+
+export { moatMax, structureOf } from './castle-kit';
 
 /**
  * Castle stage concepts (docs/SETPIECES.md, Castle).
@@ -21,54 +23,12 @@ import type { Concept, Landmark } from './types';
  * and the floor beside the cab's first stop is rotten through.
  *
  * The Throne Hall is a long stone hall between two towers: chandeliers swinging in step from the
- * ceiling, one hung to drop on whoever walks under it, and a dais at the far end with the throne and
- * the way out behind it.
+ * ceiling, one hung to drop on whoever climbs the dais at the far end to the throne, and the way out
+ * behind it. The seed sets its length, its towers, its roof and its dais.
  *
- * Both own the level's crossing: a moat in front, its far bank their doorstep, so the landmark is
- * where the level asks for its part. A classic level has no room for a moat beside a landmark this
- * size, and owning it keeps the structure from making the sculptor's moat bare-passable off its roof.
+ * The Gatehouse, the Bell Tower and the Boss Bridge are in ./castle-keep.ts. Every one owns the level's
+ * crossing: a moat in front, its far bank their doorstep (./castle-kit.ts).
  */
-
-// ------------------------------------------------------------------------------------------------ moat
-
-/** The widest one-part moat at this gravity (hardGap's top end): the box always has room for it. */
-export function moatMax(): number {
-  const j = jumpProfile();
-  return Math.max(j.gap + 2, BRIDGE_W + 2 * j.walkGap);
-}
-
-/** The structure's own box: everything right of the moat and the bank it lands on. */
-export function structureOf(at: TileRect): TileRect {
-  const m = moatMax() + 1;
-  return { x: at.x + m, y: at.y, w: at.w - m, h: at.h };
-}
-
-/**
- * The moat in front of the structure, sized for `parts` with hardGap and dug to the bottom against the
- * bank (pit hints the bridge and undercuts the bank). Whatever the moat doesn't take is courtyard.
- */
-function digMoat(g: Grid, rng: Rng, at: TileRect, parts: number): void {
-  const G = at.y + at.h;
-  const s = structureOf(at);
-  g.clear(at.x, at.y, s.x - 1, G - 1);
-  if (parts <= 0) return;
-  const x1 = s.x - 2;
-  pit(g, x1 - Math.min(moatMax(), hardGap(rng, parts)) + 1, x1, G, true);
-}
-
-/**
- * The row a backdrop shell over columns x0..x1 stands on: the lowest first solid tile at or below `from`
- * under any of them (a pit under one runs it down), so a doorway or a pit never shows sky under its wall.
- */
-function footing(s: Site, x0: number, x1: number, from: number): number {
-  let low = from;
-  for (let x = x0; x <= x1; x++) {
-    let y = from;
-    while (y < s.h && !s.solid(x, y)) y++;
-    low = Math.max(low, y);
-  }
-  return low;
-}
 
 // ------------------------------------------------------------------------------------------------ manor
 
@@ -367,62 +327,84 @@ export const HAUNTED_WING: Concept = {
 
 // ------------------------------------------------------------------------------------------------ throne hall
 
-/** Hall air (rows), the ceiling's thickness, tower thickness and how far the towers stand above the roof. */
+/** Hall air (rows), the ceiling's thickness, tower thickness. */
 export const HALL_AIR = 7;
 export const CEIL = 2;
 export const TOWER = 2;
-const THRONE_H = HALL_AIR + CEIL + 3;
 /** Columns one swinging chandelier needs, with room to push a rider aside. */
 const CHANDELIER_W = 7;
 
+/** What the hall's box alone says: the ground, both ends, the hall floor's first column and its top row of air. */
 export interface ThroneHall {
   G: number;
   x0: number;
   x1: number;
-  /** Hall floor columns, door to dais. */
+  /** First hall floor column, past the front tower. */
   fx0: number;
-  fx1: number;
-  /** Dais columns (the throne stands on the top step). */
-  dx0: number;
   /** Top row of hall air. */
   top: number;
 }
 
 export function throneHallPlan(at: TileRect): ThroneHall {
   const G = at.y + at.h;
-  const x0 = at.x;
-  const x1 = at.x + at.w - 1;
-  const dx0 = x1 - TOWER - 3;
-  return { G, x0, x1, fx0: x0 + TOWER, fx1: dx0 - 1, dx0, top: G - HALL_AIR };
+  return { G, x0: at.x, x1: at.x + at.w - 1, fx0: at.x + TOWER, top: G - HALL_AIR };
+}
+
+/** The dais the seed rolled: its first column, how many steps, and where its top step starts. */
+export interface Dais {
+  dx0: number;
+  steps: number;
+  ts: number;
+}
+
+/** The dais in front of the back tower, read back off the tiles (the art and the tests read it this way). */
+export function throneDais(solid: (x: number, y: number) => boolean, p: ThroneHall): Dais {
+  const inner = p.x1 - TOWER;
+  let steps = 0;
+  while (steps < 4 && solid(inner, p.G - 1 - steps)) steps++;
+  const first = (row: number) => {
+    let x = inner;
+    while (x > p.fx0 && solid(x - 1, row)) x--;
+    return x;
+  };
+  return { dx0: first(p.G - 1), steps, ts: first(p.G - Math.max(1, steps)) };
 }
 
 function buildThroneHall(g: Grid, rng: Rng, box: TileRect, parts: number): Landmark {
   digMoat(g, rng, box, parts);
   const at = structureOf(box);
   const p = throneHallPlan(at);
-  const { G, x0, x1, dx0, top } = p;
+  const { G, x0, x1, fx0, top } = p;
   g.clear(x0, at.y, x1, G - 1);
-  // Towers at both ends, above the roof, with merlons.
-  g.fill(x0, at.y + 1, x0 + TOWER - 1, G - 1, 1, true);
-  g.fill(x1 - TOWER + 1, at.y + 1, x1, G - 1, 1, true);
-  for (const tx of [x0, x1]) g.set(tx, at.y, 1, true);
+  // Towers at both ends, each standing a row or so proud of the roof by the seed, with merlons.
+  for (const tx of [x0, x1 - TOWER + 1]) {
+    const crown = at.y + rng.int(0, Math.max(0, at.h - HALL_AIR - CEIL - 2));
+    g.fill(tx, crown + 1, tx + TOWER - 1, G - 1, 1, true);
+    g.set(tx === x0 ? tx : tx + TOWER - 1, crown, 1, true);
+  }
   // The ceiling, and merlons along the roof.
   g.fill(x0 + TOWER, top - CEIL, x1 - TOWER, top - 1, 1, true);
-  for (let x = x0 + TOWER + 1; x < x1 - TOWER; x += 2) g.set(x, top - CEIL - 1, 1, true);
-  // The dais: two steps up to the throne, and the boss door behind it.
-  g.fill(dx0, G - 1, x1 - TOWER, G - 1, 1, true);
-  g.fill(dx0 + 2, G - 2, x1 - TOWER, G - 2, 1, true);
+  for (let x = x0 + TOWER + 1 + rng.int(0, 1); x < x1 - TOWER; x += 2) g.set(x, top - CEIL - 1, 1, true);
+  // The dais: one to three steps up to the throne, as deep as the floor spares beside its chandeliers.
+  const steps = rng.int(1, 3);
+  const sw = rng.int(1, 2);
+  const tw = rng.int(2, 3);
+  const room = x1 - TOWER - fx0 + 1 - CHANDELIER_W;
+  const daisW = Math.max(2, Math.min(room, tw + (steps - 1) * sw));
+  const dx0 = x1 - TOWER - daisW + 1;
+  for (let k = 0; k < steps; k++) g.fill(Math.min(x1 - TOWER - 1, dx0 + k * sw), G - 1 - k, x1 - TOWER, G - 1 - k, 1, true);
+  // The front door at the floor, the boss door behind the throne at its top step.
   g.clear(x0, G - 3, x0 + TOWER - 1, G - 1);
-  g.clear(x1 - TOWER + 1, G - 5, x1, G - 3);
+  g.clear(x1 - TOWER + 1, G - steps - 3, x1, G - steps - 1);
   return {
     concept: 'throne-hall',
     rect: at,
     air: [
-      { x: p.fx0, y: top, w: x1 - TOWER - p.fx0 + 1, h: G - top },
+      { x: fx0, y: top, w: x1 - TOWER - fx0 + 1, h: G - top - steps },
       { x: x0, y: G - 3, w: TOWER, h: 3 },
-      { x: x1 - TOWER + 1, y: G - 5, w: TOWER, h: 3 },
+      { x: x1 - TOWER + 1, y: G - steps - 3, w: TOWER, h: 3 },
     ],
-    anchors: { floor: [p.fx0, p.fx1], top: [top, G], dais: [dx0, G - 2], back: [x0, top - CEIL], backEnd: [x1, G] },
+    anchors: { floor: [fx0, dx0 - 1], top: [top, G], dais: [dx0, steps], back: [x0, top - CEIL], backEnd: [x1, G] },
     skin: 'stone',
   };
 }
@@ -430,7 +412,7 @@ function buildThroneHall(g: Grid, rng: Rng, box: TileRect, parts: number): Landm
 function* throneHallPieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
   const [fx0, fx1] = l.anchors.floor;
   const [top] = l.anchors.top;
-  const [dx0] = l.anchors.dais;
+  const d = throneDais((x, y) => s.solid(x, y), throneHallPlan(l.rect));
   const span = fx1 - fx0 + 1;
   // As many chandeliers as the floor holds, spaced along it, all on one prop so they swing as one.
   const n = Math.max(1, Math.min(3, Math.floor(span / CHANDELIER_W)));
@@ -470,7 +452,7 @@ function* throneHallPieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
     style,
     modules: [back, ...rotors],
   };
-  // The one over the dais drops on whoever climbs to the throne.
+  // The one over the throne drops on whoever climbs to it.
   yield {
     name: rng.pick(['Falling Chandelier', 'The Opera Special', 'Overhead Costs']),
     archetype: 'dropper',
@@ -480,8 +462,8 @@ function* throneHallPieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
       {
         type: 'dropper',
         cells: [
-          [dx0 + 1, top],
-          [dx0 + 2, top],
+          [d.ts, top],
+          [d.ts + 1, top],
         ],
         angle: Math.PI / 2,
         reach: HALL_AIR - 1,
@@ -493,10 +475,10 @@ function* throneHallPieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
   };
 }
 
-/** A classic level's hall: as long as its middle leaves beside the moat. */
-const classicHall = () => Math.max(16, Math.min(18, 30 - moatMax() - 1));
+/** A classic level's hall: as long as its middle leaves beside the moat, a column or two shorter by the seed. */
+const classicHall = (rng: Rng) => Math.max(16, Math.min(18, 30 - moatMax() - 1)) - rng.int(0, 2);
 
-export const THRONE_HALL: Concept = {
+export const THRONE_HALL = defineConcept({
   id: 'throne-hall',
   weight: 2,
   sizes: ['classic', 'wide'],
@@ -504,10 +486,10 @@ export const THRONE_HALL: Concept = {
   family: ['chandelier', 'ram', 'axe', 'cannon', 'chandrop'],
   budget: 1,
   names: ['The Throne Hall of {place}', 'The Boss Room of {place}', 'The Great Hall of {place}'],
-  varies: ['moat width', 'hall length (wide)'],
-  box: (k, rng) => ({ w: moatMax() + 1 + (k.W > 56 ? rng.int(26, 32) : classicHall()), h: THRONE_H }),
+  varies: ['moat width', 'hall length', 'tower heights', 'dais steps and depth', 'roof merlons'],
+  box: (k, rng) => ({ w: moatMax() + 1 + (k.W > 56 ? rng.int(26, 32) : classicHall(rng)), h: HALL_AIR + CEIL + rng.int(2, 3) }),
   build: buildThroneHall,
   pieces: (rng, s, l) => throneHallPieces(rng, s, l),
-};
+});
 
-export const CASTLE_CONCEPTS: Concept[] = [HAUNTED_WING, THRONE_HALL];
+export const CASTLE_CONCEPTS: Concept[] = [HAUNTED_WING, THRONE_HALL, GATEHOUSE, BELL_TOWER, BOSS_BRIDGE];

@@ -21,8 +21,6 @@ import { safeWindowFaults } from '../lib/set-piece-checks';
 
 /** `<kind>/<theme>/<id>/<rule>` → why it's waived, and what fixes it. */
 export const WAIVERS: Record<string, string> = {
-  'landmark/castle/throne-hall/varies':
-    'a classic Throne Hall is one building: its plan is a function of its box alone (manorPlan/throneHallPlan); pending the owner decision that every landmark varies with its seed',
   'landmark/factory/stamping-line/varies':
     'a classic Stamping Line rolls the same line on most seeds; pending the owner decision that every landmark varies with its seed',
 };

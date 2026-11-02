@@ -3,7 +3,7 @@ import type { Rect } from '../src/core/geom';
 import { fieldOf, generateLevel, lastGenInfo, planHolds, withBridges } from '../src/gen/level';
 import { noFreeRide } from '../src/gen/level/winnable';
 import { cycleFrames } from '../src/gen/setpieces/place';
-import { manorPlan, throneHallPlan } from '../src/gen/stage/castle';
+import { manorPlan, throneDais, throneHallPlan } from '../src/gen/stage/castle';
 import { EDGE_DRIFT } from '../src/render/ink';
 import { drawShardGlass } from '../src/render/props/modules/shards';
 import { TILE } from '../src/sim/constants';
@@ -20,7 +20,7 @@ import { analyzeReach } from '../src/sim/reach';
  */
 
 const MANOR_SEEDS = [1, 2];
-const HALL_SEEDS = [1];
+const HALL_SEEDS = [1, 2];
 
 function manor(seed: number, size?: 'classic' | 'wide'): Level {
   const l = generateLevel(seed, 'castle', { concept: 'haunted-wing', ...(size ? { size } : {}) });
@@ -129,9 +129,13 @@ describe('the Throne Hall', () => {
       for (const m of rotors) expect(solid(l, Math.floor(m.hub[0] / TILE), Math.floor(m.hub[1] / TILE) - 1), 'hung from the ceiling').toBe(true);
       const drop = resolveProp(l.setPieces.find((pp) => pp.def.modules.some((m) => m.type === 'dropper'))!).mods.find((m) => m.type === 'dropper')!;
       if (drop.type !== 'dropper') throw new Error('no drop chandelier');
+      const dais = throneDais((x, y) => solid(l, x, y), p);
+      expect(dais.steps).toBeGreaterThan(0);
       for (const [x, y] of drop.cells) {
         expect(solid(l, x, y - 1)).toBe(true);
-        expect(x >= p.dx0 && x <= p.x1).toBe(true);
+        expect(x >= dais.ts && x <= p.x1).toBe(true);
+        // It lands on the throne's top step.
+        expect(solid(l, x, p.G - dais.steps)).toBe(true);
       }
     }
   });
