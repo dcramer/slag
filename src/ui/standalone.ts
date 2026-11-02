@@ -1,14 +1,16 @@
 import 'client-only';
 import { Silent } from '../audio';
 import { InputManager } from '../input/input';
+import { loadRenderSettings, saveRenderSettings } from '../render/style';
 import { loadHaptics, SettingsMenu } from './menus';
-import { isTouchFirst } from './touch/device';
+import { isTouchFirst, savedQuality, saveQuality } from './touch/device';
 
 /**
  * The in-game SettingsMenu outside a game (main menu). The InputManager is
  * attached to a detached EventTarget so it doesn't swallow page keys; it is
  * only used to load/apply/persist bindings. Audio volumes persist through
- * the same storage the game reads. Returns a cleanup function.
+ * the same storage the game reads, as do the video options, which take
+ * effect the next time a game boots. Returns a cleanup function.
  */
 export function openStandaloneSettings(onClose: () => void): () => void {
   const input = new InputManager(new EventTarget() as unknown as Window);
@@ -16,6 +18,8 @@ export function openStandaloneSettings(onClose: () => void): () => void {
   input.touch.setActive(isTouchFirst());
   input.touch.haptics = loadHaptics();
   const menu = new SettingsMenu(input, new Silent());
+  menu.quality = { pinned: savedQuality, set: saveQuality };
+  menu.artStyle = { get: () => loadRenderSettings().style, set: (style) => saveRenderSettings({ style }) };
   let closed = false;
   menu.onClose = () => {
     closed = true;
