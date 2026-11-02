@@ -81,7 +81,9 @@ export type TerrainKind =
   // Shipping containers, stacked on a quay (harbor landmarks).
   | 'container'
   // A red barn's boards with white trim (farm landmarks).
-  | 'barnboard';
+  | 'barnboard'
+  // Riveted structural steel in red oxide primer, its decks I-beams (rooftops landmarks: a building going up).
+  | 'girder';
 export type CapKind = 'grass' | 'moss' | 'rust' | 'crystal' | 'none' | 'ledge' | 'trim' | 'ash' | 'beam' | 'gravel';
 export type LiquidKind = 'slag' | 'acid' | 'void' | 'water' | 'tar' | 'sea' | 'swamp' | 'lava' | 'street';
 export type Ambient = 'embers' | 'fireflies' | 'spores' | 'dust' | 'bubbles' | 'pollen';
@@ -90,7 +92,8 @@ import type { DecorKind } from '../decor';
 export type { DecorKind };
 export type Celestial = 'sun' | 'moon' | 'planet' | 'eclipse' | 'none';
 export type CloudStyle = 'puffy' | 'wispy' | 'ash';
-export type PlatformKind = 'wood' | 'grate' | 'bamboo' | 'stone';
+/** `girder`: an I-beam with rivets along its flanges and holes through its web (a rooftops landmark's decks). */
+export type PlatformKind = 'wood' | 'grate' | 'bamboo' | 'stone' | 'girder';
 
 export interface SkyLayer {
   kind: SkylineKind;

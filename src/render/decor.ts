@@ -8,6 +8,7 @@ import { GLACIER_DECOR } from './decor-glacier';
 import { HARBOR_DECOR } from './decor-harbor';
 import { JUNGLE_DECOR } from './decor-jungle';
 import { MINE_DECOR } from './decor-mine';
+import { ROOFTOPS_DECOR } from './decor-rooftops';
 import { SPACE_DECOR } from './decor-space';
 import { VOLCANO_DECOR } from './decor-volcano';
 import { blob, line, type P, stroke } from './ink';
@@ -954,6 +955,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
   ...HARBOR_DECOR,
   ...JUNGLE_DECOR,
   ...MINE_DECOR,
+  ...ROOFTOPS_DECOR,
   ...SPACE_DECOR,
   ...GLACIER_DECOR,
 };
