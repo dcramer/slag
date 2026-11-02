@@ -9,6 +9,7 @@ describe('mouse alt', () => {
     const target = new EventTarget();
     const input = new InputManager(target as unknown as Window);
     input.mouseAlts = () => place;
+    input.viewEl = { getBoundingClientRect: () => ({ left: 0, top: 0, width: 768, height: 432 }) } as HTMLElement;
     return { target, frame: () => input.sample()[input.mouseDevice] };
   };
 
