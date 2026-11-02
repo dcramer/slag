@@ -1,6 +1,9 @@
 import { shift } from '../../../src/core/color';
 import { drawFrame, hexHsl, paintOf } from '../../../src/render/cast/sprites/draw';
+import type { FaceMood } from '../../../src/render/cast/sprites/face';
 import type { SpriteSet } from '../../../src/render/cast/sprites/types';
+
+const MOODS: Record<string, FaceMood> = { idle: 'idle', walk: 'walk', run: 'run', air: 'up', wall: 'wall', cheer: 'cheer', death: 'dead' };
 import { ratio } from '../../../src/render/ink-figure';
 
 /**
@@ -52,7 +55,15 @@ export function contact(set: SpriteSet, zoom: number, opts: { facings?: ('r' | '
           7,
           0,
         );
-      else drawFrame(g, f, paints, body, ratio(main, shift(main, -14, 6)), 0.6, 7, j / 8);
+      else {
+        // The face acts as it would in that clip.
+        const name = r.label.split(' ')[0];
+        const mood = MOODS[name] ?? 'idle';
+        const face = set.face
+          ? { kit: set.face, mood: mood === 'up' && j >= r.frames.length / 2 ? ('fall' as const) : mood, facing: r.label.endsWith(' l') ? -1 : 1 }
+          : undefined;
+        drawFrame(g, f, paints, body, ratio(main, shift(main, -14, 6)), 0.6, 7, j / 8, face);
+      }
       g.restore();
     });
   });

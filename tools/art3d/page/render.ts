@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { BOX, type Clip, type Key, type Prop, type Settings } from '../settings';
+import { ballFrames } from './ball';
 import { loadModel } from './load';
 import { classify } from './roles';
-import { trace, type Traced } from './trace';
+import { steady, trace, type Traced } from './trace';
 import { rebind } from './weights';
 
 /**
@@ -17,11 +18,13 @@ const VERT = /* glsl */ `
 #include <common>
 #include <skinning_pars_vertex>
 out vec2 vUv;
+out vec3 vBind;
 out float vDepth;
 void main() {
   vUv = uv;
   #include <skinbase_vertex>
   #include <begin_vertex>
+  vBind = transformed;
   #include <skinning_vertex>
   #include <project_vertex>
   vDepth = -mvPosition.z;
@@ -32,11 +35,22 @@ precision highp float;
 precision highp usampler2D;
 uniform usampler2D roles;
 uniform int fixedRole;
+// Regions: texels of role \`from\` inside a box of the bind pose's bounds (fractions) become role \`to\`.
+uniform int regionFrom[4];
+uniform int regionTo[4];
+uniform vec3 regionMin[4];
+uniform vec3 regionMax[4];
+uniform vec3 bindMin;
+uniform vec3 bindSize;
+in vec3 vBind;
 in vec2 vUv;
 in float vDepth;
 out vec4 color;
 void main() {
   uint r = fixedRole >= 0 ? uint(fixedRole) : texture(roles, vUv).r;
+  vec3 u = (vBind - bindMin) / bindSize;
+  for (int i = 0; i < 4; i++)
+    if (fixedRole < 0 && regionFrom[i] == int(r) && all(greaterThanEqual(u, regionMin[i])) && all(lessThanEqual(u, regionMax[i]))) r = uint(regionTo[i]);
   float d = clamp(vDepth / 200.0, 0.0, 1.0) * 65535.0;
   float hi = floor(d / 256.0);
   color = vec4(float(r + 1u) / 255.0, hi / 255.0, (d - hi * 256.0) / 255.0, 1.0);
@@ -80,21 +94,39 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
   const names = Object.keys(s.roles);
   if (!model.texture) throw new Error('the model has no colour texture to read roles from');
   const roleTex = classify(model.texture, s.roles, names);
-  const material = (fixed: number) =>
-    new THREE.ShaderMaterial({
-      vertexShader: VERT,
-      fragmentShader: FRAG,
-      glslVersion: THREE.GLSL3,
-      uniforms: { roles: { value: roleTex }, fixedRole: { value: fixed } },
-      side: THREE.DoubleSide,
-    });
-  const body = material(-1);
-
   const bindBox = new THREE.Box3();
   for (const m of model.meshes) {
     m.geometry.computeBoundingBox();
     bindBox.union(m.geometry.boundingBox!);
   }
+  // Up to four regions; unused ones match no role.
+  const regions = Array.from({ length: 4 }, (_, i) => {
+    const r = s.regions?.[i];
+    if (!r) return { from: -2, to: 0, min: new THREE.Vector3(), max: new THREE.Vector3() };
+    const from = names.indexOf(r.from);
+    const to = names.indexOf(r.to);
+    if (from < 0 || to < 0) throw new Error(`region ${r.from} → ${r.to}: no such role`);
+    return { from, to, min: new THREE.Vector3(r.box[0], r.box[1], r.box[2]), max: new THREE.Vector3(r.box[3], r.box[4], r.box[5]) };
+  });
+  const material = (fixed: number) =>
+    new THREE.ShaderMaterial({
+      vertexShader: VERT,
+      fragmentShader: FRAG,
+      glslVersion: THREE.GLSL3,
+      uniforms: {
+        roles: { value: roleTex },
+        fixedRole: { value: fixed },
+        regionFrom: { value: regions.map((r) => r.from) },
+        regionTo: { value: regions.map((r) => r.to) },
+        regionMin: { value: regions.map((r) => r.min) },
+        regionMax: { value: regions.map((r) => r.max) },
+        bindMin: { value: bindBox.min },
+        bindSize: { value: bindBox.getSize(new THREE.Vector3()) },
+      },
+      side: THREE.DoubleSide,
+    });
+  const body = material(-1);
+
   const modelHeight = bindBox.max.y - bindBox.min.y;
   const skinned = model.meshes.filter((m) => (m as THREE.SkinnedMesh).isSkinnedMesh) as THREE.SkinnedMesh[];
   for (const m of skinned) for (const r of s.rebind ?? []) console.log(`rebind ${r.from} → ${r.to}: ${rebind(m, r, modelHeight)} vertices`);
@@ -303,6 +335,11 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
     if (only && !only.includes(name)) continue;
     const tc: TracedClip = { r: [], l: [] };
     for (const facing of ['r', 'l'] as const) {
+      if (c.ball) {
+        if (!s.ball) throw new Error(`clip ${name} is a ball, but the settings have no ball`);
+        tc[facing] = ballFrames(s.ball, names, c.frames, facing);
+        continue;
+      }
       // Forward is +z in the model; a right-facing figure turns it to screen right, then a little toward us.
       const base = rad((facing === 'r' ? 1 : -1) * (90 - s.yaw));
       for (const u of sampleTimes(c)) {
@@ -341,6 +378,41 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
           }
         }
         const tr = shoot();
+        if (!tr.eyes.length && s.face?.anchor) {
+          // No eye big enough to trace: set them by the nose, as an artist would.
+          const a = s.face.anchor;
+          const ri = names.indexOf(a.role);
+          let best: number[] | null = null;
+          for (const p of tr.parts) if (p.role === ri && (!best || p.ring.length > best.length)) best = p.ring;
+          if (best) {
+            let cx = 0;
+            let cy = 0;
+            for (let i = 0; i < best.length; i += 2) {
+              cx += best[i];
+              cy += best[i + 1];
+            }
+            cx /= best.length / 2;
+            cy /= best.length / 2;
+            const f = facing === 'r' ? 1 : -1;
+            tr.eyes.push(cx + f * a.near[0], cy + a.near[1], 0.5, cx + f * a.far[0], cy + a.far[1], 0.45);
+          }
+        }
+        for (const p of tr.parts) {
+          const grow = s.roles[names[p.role]].grow;
+          if (!grow) continue;
+          // Bigger about its back edge, so a bill or a nose reaches further forward from where it starts.
+          let x0 = Infinity;
+          let x1 = -Infinity;
+          let cy = 0;
+          for (let i = 0; i < p.ring.length; i += 2) {
+            x0 = Math.min(x0, p.ring[i]);
+            x1 = Math.max(x1, p.ring[i]);
+            cy += p.ring[i + 1];
+          }
+          cy /= p.ring.length / 2;
+          const ax = facing === 'r' ? x0 : x1;
+          p.ring = p.ring.map((v, i) => (i % 2 ? cy + (v - cy) * grow[1] : ax + (v - ax) * grow[0]));
+        }
         const girth = c.girth ?? s.girth ?? 1;
         if (girth !== 1) {
           // The figure drawn wider than the model, about the feet: a stout build reads at race size.
@@ -348,7 +420,7 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
           const wide = (r: number[]) => r.forEach((v, i) => i % 2 === 0 && (r[i] = v * g));
           tr.sil.forEach(wide);
           tr.parts.forEach((p) => wide(p.ring));
-          for (let i = 0; i < tr.glints.length; i += 3) tr.glints[i] *= g;
+          for (let i = 0; i < tr.eyes.length; i += 3) tr.eyes[i] *= g;
         }
         if (c.center) {
           // A figure lying down is as long as it was tall: centred on the spot, it stays inside the runner's box.
@@ -363,7 +435,7 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
           const by = (r: number[]) => r.forEach((v, i) => i % 2 === 0 && (r[i] = v - dx));
           tr.sil.forEach(by);
           tr.parts.forEach((p) => by(p.ring));
-          for (let i = 0; i < tr.glints.length; i += 3) tr.glints[i] -= dx;
+          for (let i = 0; i < tr.eyes.length; i += 3) tr.eyes[i] -= dx;
         }
         if (c.pin !== 'hips') {
           // A grounded clip stands on the floor: a sole it rolls under (a heel-toe walk, the camera's tilt)
@@ -376,9 +448,12 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
             const up = (r: number[]) => r.forEach((v, i) => i % 2 && (r[i] = v - lift));
             tr.sil.forEach(up);
             tr.parts.forEach((p) => up(p.ring));
-            for (let i = 1; i < tr.glints.length; i += 3) tr.glints[i] -= lift;
+            for (let i = 1; i < tr.eyes.length; i += 3) tr.eyes[i] -= lift;
           }
         }
+        // Shapes that only moved keep their lines from the frame before.
+        const before = tc[facing].at(-1);
+        if (before) steady(before, tr, 0.12);
         tc[facing].push(tr);
       }
     }

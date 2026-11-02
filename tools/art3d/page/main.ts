@@ -29,7 +29,8 @@ async function render(url: string, s: Settings, kind: string, only?: string[]): 
       fs.map((f) => ({
         sil: f.sil.map(enc),
         parts: f.parts.map((p) => [p.role, enc(p.ring)] as const),
-        ...(f.glints.length ? { glints: f.glints.map((v) => Math.round(v * 8)) } : {}),
+        ...(f.eyes.length ? { eyes: f.eyes.map((v) => Math.round(v * 8)) } : {}),
+        ...(f.marks?.length ? { marks: f.marks.map(enc) } : {}),
       }));
     clips[name] = {
       loop: c.loop,
@@ -45,7 +46,8 @@ async function render(url: string, s: Settings, kind: string, only?: string[]): 
     const r = s.roles[n];
     return { color: r.color, ...(r.slot ? { slot: r.slot } : {}) };
   });
-  return { kind, height: s.height, roles, clips };
+  const face = s.face ? { r: s.face.r, iris: s.face.iris, ...(s.face.mouth ? { mouth: s.face.mouth } : {}) } : null;
+  return { kind, height: s.height, roles, ...(face ? { face } : {}), clips };
 }
 
 const api = {

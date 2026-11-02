@@ -1,6 +1,6 @@
 import { type HSL, shift } from '../../../core/color';
 import type { CharacterDef, Kind } from '../../../gen/character';
-import { inkOf, lookOf, type RunnerPose, ratio } from '../../ink-figure';
+import { inkOf, lookOf, moodOf, type RunnerPose, ratio } from '../../ink-figure';
 import { drawFrame, hexHsl, type Paint, paintOf } from './draw';
 import { pick } from './play';
 import type { SpriteSet } from './types';
@@ -70,7 +70,8 @@ export function drawSprite(s: CanvasRenderingContext2D, set: SpriteSet, c: Chara
   const got = pick(set, p, x);
   if (!got) return false;
   const d = dress(set, c);
-  drawFrame(s, got.frame, d.paints, d.body, d.shadow, d.k, c.seed & 0xffff, p.t);
+  const face = set.face ? { kit: set.face, mood: p.dead !== undefined ? ('dead' as const) : moodOf(p), facing: got.facing } : undefined;
+  drawFrame(s, got.frame, d.paints, d.body, d.shadow, d.k, c.seed & 0xffff, p.t, face);
   return true;
 }
 

@@ -19,8 +19,15 @@ export interface Role {
   into?: string;
   /** The smallest part of this role worth a shape of its own, in world px² (default `trace.min`). */
   min?: number;
-  /** A catch-light: an eye. */
+  /** Its parts are the eyes the face kit draws on (the two biggest). */
   glint?: boolean;
+  /** Where on the figure an eye can be, as fractions of its height from the top (default 0 to 0.4): below a cap's goggles. */
+  band?: [number, number];
+  /**
+   * Drawn bigger than the model, about the part's back edge (x) and middle (y): a caricature of the trait
+   * that carries the read (the plumber's cap bill and nose).
+   */
+  grow?: [number, number];
 }
 
 /** A clip the game plays, cut from one of the model's animations or keyed from poses. */
@@ -29,6 +36,8 @@ export interface Clip {
   src?: string;
   /** ...or the keyed poses (`keys`) it runs through, in order. */
   keys?: string[];
+  /** ...or is the kind's spin ball (`ball`), turned through its frames. */
+  ball?: boolean;
   /** The part of the source to sample, as fractions of its length. */
   from?: number;
   to?: number;
@@ -66,6 +75,46 @@ export interface Key {
   yaw?: number;
   /** Bones stretched for this pose (an arm reaching past the head), on top of the caricature. */
   scale?: Record<string, number>;
+}
+
+/**
+ * A spin ball drawn as the genre draws it (page/ball.ts): `r` world px round, centred `at` px above the
+ * feet, `quills` swept back, reaching `reach` × r; painted in the `body`, `belly` and `shoe` roles.
+ */
+export interface Ball {
+  r: number;
+  at: number;
+  quills: number;
+  reach: number;
+  body: string;
+  belly: string;
+  shoe: string;
+}
+
+/**
+ * The cast's face kit drawn over the traced eyes (src/render/cast/sprites/face.ts): eye size in world
+ * px, the iris colour, and where the mouth sits from the near eye (world px, facing right), if it shows.
+ */
+export interface Face {
+  r: number;
+  iris: string;
+  mouth?: [number, number];
+  /**
+   * Where the eyes go when the model's own are too small to find: from the biggest part of `role` (the
+   * nose), the near and far eye's offsets in world px, facing right.
+   */
+  anchor?: { role: string; near: [number, number]; far: [number, number] };
+}
+
+/**
+ * A role split by place: texels of role `from` inside `box` (fractions of the bind pose's bounds: x to the
+ * figure's left, y up, z forward) are drawn as role `to`. The plumber's nose and cap are the shirt's red;
+ * a region makes them parts of their own, so they can be drawn bigger (`grow`).
+ */
+export interface Region {
+  from: string;
+  to: string;
+  box: [number, number, number, number, number, number];
 }
 
 /** Weight on bones matching `from` (a RegExp) held farther than `max` × height from their joint moves to `to`. */
@@ -107,6 +156,9 @@ export interface Settings {
   rebind?: Rebind[];
   props?: Prop[];
   keys?: Record<string, Key>;
+  regions?: Region[];
+  ball?: Ball;
+  face?: Face;
   roles: Record<string, Role>;
   clips: Record<string, Clip>;
 }

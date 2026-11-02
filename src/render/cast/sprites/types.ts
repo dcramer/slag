@@ -15,8 +15,10 @@ export interface VFrame {
   sil: readonly Ring[];
   /** Parts back to front: the role, then its outline. */
   parts: readonly (readonly [number, Ring])[];
-  /** Catch-lights in the eyes: x, y, radius in eighths of a world px. */
-  glints?: readonly number[];
+  /** The eyes the face is drawn on: x, y, radius in eighths of a world px, the near eye first. */
+  eyes?: readonly number[];
+  /** Open pen strokes drawn over the figure (a spin ball's motion marks). */
+  marks?: readonly Ring[];
 }
 
 export interface SpriteClip {
@@ -47,5 +49,7 @@ export interface SpriteSet {
   /** World px from soles to the top of the head at rest. */
   height: number;
   roles: readonly SpriteRole[];
+  /** The cast's face kit over the traced eyes: eye size (world px), iris, and the mouth's place from the near eye. */
+  face?: { r: number; iris: string; mouth?: readonly [number, number] };
   clips: Readonly<Record<string, SpriteClip>>;
 }
