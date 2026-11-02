@@ -4,8 +4,8 @@ import { TILE } from '../sim/constants';
 import { BAT, POCKET, TAX, TREMOR } from '../sim/items';
 import { T_EMPTY, tileAt } from '../sim/level';
 import type { Runner, RunWorld } from '../sim/run';
-import { line, type P, stroke } from './ink';
-import { ball, boxPts, glint, INK, part, path, pen, poly, sprite, stamp, tick } from './ink-props';
+import { inkFor, line, type P, stroke } from './ink';
+import { ball, boxPts, glint, part, path, pen, poly, sprite, stamp, tick } from './ink-props';
 import { ellipse, light, type RC } from './kit';
 
 /**
@@ -112,8 +112,8 @@ export function drawBat(
     twinkle(s, tipX, tipY, 3.2 + Math.sin(rc.t * 40), '#fff3c4');
     light(rc, tipX, tipY, 24, { h: 48, s: 100, l: 70 }, 0.6);
   } else if (charge > 0) {
-    // Charging: pen ticks crowd the swinger's back, more of them as it builds.
-    s.fillStyle = INK;
+    // Charging: pen ticks crowd the swinger's back, more of them as it builds, in a dark of the bat.
+    s.fillStyle = inkFor(WOOD);
     const n = 1 + Math.floor(charge * 3);
     for (let i = 0; i < n; i++) {
       const y = b.y + 3 + i * 3.6;
@@ -156,7 +156,7 @@ export function drawRaisedBrick(rc: RC, r: Runner, x: number) {
   const y = b.y - 7 - 3 * Math.sin(Math.min(1, u * 1.4) * Math.PI * 0.5);
   stamp(rc.s, brickSprite(), x + shake, y);
   // Strain ticks either side, the way a comic shows something heavy about to drop.
-  rc.s.fillStyle = INK;
+  rc.s.fillStyle = inkFor(BRICK);
   for (const d of [-1, 1]) {
     line(rc.s, x + d * 9, y - 3, x + d * 11.5, y - 4.5, { w: 0.6, seed: d + 2, taper: [0.1, 0.8], press: 0 });
     line(rc.s, x + d * 9.5, y + 1, x + d * 12.5, y + 1, { w: 0.6, seed: d + 5, taper: [0.1, 0.8], press: 0 });
@@ -165,8 +165,10 @@ export function drawRaisedBrick(rc: RC, r: Runner, x: number) {
 
 const DOME: HSL = { h: 222, s: 40, l: 40 };
 const SPIKE: HSL = { h: 45, s: 30, l: 88 };
-const PAPER = '#f4efe2';
-const SHADOW = '#1d1422';
+const PAPER_HSL: HSL = { h: 44, s: 48, l: 92 };
+const PAPER = css(PAPER_HSL);
+/** The hard shadow a shell casts: a dark of its dome. */
+const SHADOW = inkFor(DOME);
 
 /** The spiked dome, rim down at y 1.2. */
 const domeSprite = () =>
@@ -202,7 +204,7 @@ function wing(s: CanvasRenderingContext2D, d: number, flap: number, mark: boolea
   s.fillStyle = PAPER;
   path(s, pts);
   s.fill();
-  pen(s, pts, 44 + d, 0.4, 0.9, 2);
+  pen(s, pts, 44 + d, 0.4, 0.9, 2, inkFor(PAPER_HSL));
   // The fold down its middle, and on one wing the circled "1ST" marked up in red.
   tick(s, d * 3.8, -0.8, d * 12, tipY + 1.4, 0.3, 45 + d, 'rgba(90,80,70,0.7)');
   if (!mark) return;
@@ -267,10 +269,10 @@ export function drawShells(rc: RC, run: RunWorld) {
     const wob = sh.phase === 'hover' ? Math.sin(rc.t * 9) * 2.4 : 0;
     s.translate(sh.x + wob, sh.y + (sh.phase === 'hover' ? Math.cos(rc.t * 9) * 1.2 : 0));
     if (sh.phase === 'dive') {
-      s.fillStyle = INK;
+      s.fillStyle = inkFor(DOME);
       for (const ox of [-3.5, 0, 3.5]) line(s, ox, -7, ox, -16 - Math.abs(ox), { w: 0.8, seed: ox + 9, taper: [0.8, 0.1], press: 0 });
     } else if (sh.phase === 'fly') {
-      s.fillStyle = INK;
+      s.fillStyle = inkFor(DOME);
       for (let i = 0; i < 2; i++) line(s, -8, -1 + i * 3, -14 - i * 2, -1 + i * 3, { w: 0.7, seed: i + 3, taper: [0.1, 0.8], press: 0 });
     }
     taxShell(s, flap, sh.phase === 'dive');
@@ -281,6 +283,8 @@ export function drawShells(rc: RC, run: RunWorld) {
 
 const DIRT: HSL = { h: 26, s: 42, l: 36 };
 const GRASS: HSL = { h: 98, s: 52, l: 44 };
+const STICKER: HSL = { h: 50, s: 15, l: 96 };
+const HANDLE: HSL = { h: 0, s: 0, l: 54 };
 
 /** A turf cube a tile across, with the assembly-instructions sticker slapped on its face. */
 const turfSprite = () =>
@@ -302,12 +306,12 @@ const turfSprite = () =>
     g.save();
     g.translate(9.6, 9.2);
     g.rotate(-0.12);
-    part(g, boxPts(-3, -2.4, 6, 4.8, 0.2, 55), { h: 50, s: 15, l: 96 }, 55, { depth: 0.15, thin: 0.25, thick: 0.5 });
-    g.fillStyle = INK;
+    part(g, boxPts(-3, -2.4, 6, 4.8, 0.2, 55), STICKER, 55, { depth: 0.15, thin: 0.25, thick: 0.5 });
+    g.fillStyle = inkFor(STICKER);
     g.font = 'bold 1.6px sans-serif';
     g.textBaseline = 'middle';
     g.fillText('1', -2.6, -1.2);
-    g.strokeStyle = 'rgba(30,25,20,0.85)';
+    g.strokeStyle = inkFor(STICKER, 0.85);
     g.lineWidth = 0.22;
     g.strokeRect(-0.2, -0.2, 1.8, 1.6);
     g.beginPath();
@@ -324,9 +328,9 @@ const turfSprite = () =>
 /** The icon: a small turf cube carried by a handle, like a lunchbox. */
 const lunchbox = () =>
   sprite('it|lunch', -7, -8, 14, 15, (g) => {
-    g.fillStyle = INK;
+    g.fillStyle = inkFor(HANDLE);
     stroke(g, poly(-2.6, -2.6, -2.2, -5.6, 2.2, -5.6, 2.6, -2.6), { w: 0.98, seed: 56, taper: [0, 0], press: 0 });
-    g.fillStyle = '#8a8a8a';
+    g.fillStyle = css(HANDLE);
     stroke(g, poly(-2.6, -2.6, -2.2, -5.4, 2.2, -5.4, 2.6, -2.6), { w: 0.5, seed: 56, taper: [0, 0], press: 0 });
     g.save();
     g.translate(-5.4, -3);
@@ -361,7 +365,7 @@ export function drawPocketBlocks(rc: RC, run: RunWorld) {
     stamp(s, turfSprite(), -8, -8);
     if (warn > 0) {
       // Cracks spread from the corners as it gives out.
-      s.fillStyle = INK;
+      s.fillStyle = inkFor(DIRT);
       const n = Math.ceil(warn * 4);
       const reach = 0.35 + warn * 0.55;
       for (let i = 0; i < n; i++) {

@@ -2,8 +2,8 @@ import { css, type HSL } from '../../../core/color';
 import type { Vec } from '../../../core/geom';
 import { dirOf, fanColumn, type Module, type ModuleOf, type PropStyle, type Resolved } from '../../../sim/props';
 import { windProfile, windSpeed } from '../../../sim/wind';
-import { blob, stroke } from '../../ink';
-import { ball, dot, INK, ovalPts, part, path, pen, poly, sprite, stamp, tick } from '../../ink-props';
+import { blob, inkFor, stroke } from '../../ink';
+import { ball, dot, ovalPts, part, path, pen, poly, sprite, stamp, tick } from '../../ink-props';
 import type { MetalPalette, RC } from '../../kit';
 import { beamOf, defineArt, type PropDrawOpts } from '../common';
 import { type Face, faceOf, flange, housed, iron, lp, tf } from '../machine';
@@ -85,23 +85,25 @@ function housing(k: Face, pal: MetalPalette, plate: boolean) {
       flange(g, k, -6, 6, 5.2, pal, 3);
     }
     const c = tf(k, 0, -0.4);
-    part(g, ovalPts(c.x, c.y, 7.3, 7.3, 3, 0.02), iron(pal, 42), 3, { depth: 1.2, thin: 0.55, thick: 1.5 });
+    const cowl = iron(pal, 42);
+    part(g, ovalPts(c.x, c.y, 7.3, 7.3, 3, 0.02), cowl, 3, { depth: 1.2, thin: 0.55, thick: 1.5 });
     // The lip: a lighter band round the outlet side.
     g.save();
     path(g, ovalPts(c.x, c.y, 7.3, 7.3, 3, 0.02));
     g.clip();
     const lip = tf(k, 0, -4.6);
-    g.fillStyle = css(iron(pal, 42), 14);
+    g.fillStyle = css(cowl, 14);
     blob(g, lip.x, lip.y, 5.6, 6, 0.9, 0.05);
     g.fill();
     g.restore();
-    g.fillStyle = '#121218';
+    // The bore: deep inside the cowl, a dark of its iron.
+    g.fillStyle = css(cowl, -32, 1, -4);
     path(g, ovalPts(c.x, c.y, 5.6, 5.6, 4, 0.02));
     g.fill();
-    pen(g, ovalPts(c.x, c.y, 5.6, 5.6, 4, 0.02), 5, 0.9, 0.4);
+    pen(g, ovalPts(c.x, c.y, 5.6, 5.6, 4, 0.02), 5, 0.9, 0.4, 3, inkFor(cowl));
     for (let i = 0; i < 4; i++) {
       const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
-      dot(g, c.x + Math.cos(a) * 6.45, c.y + Math.sin(a) * 6.45, 0.55, 6 + i, css(pal.light));
+      dot(g, c.x + Math.cos(a) * 6.45, c.y + Math.sin(a) * 6.45, 0.55, 6 + i, css(pal.light), inkFor(cowl));
     }
   });
 }
@@ -144,7 +146,8 @@ function grip(hue: number, k: Face) {
     };
     part(g, at([-1.8, 0, 1.8, 0, 1.9, 5, 1.2, 6, -1.2, 6, -1.9, 5]), plastic, 6, { depth: 0.6, thin: 0.45, thick: 1 });
     part(g, at([-0.9, 1.6, 0.9, 1.6, 0.9, 4, -0.9, 4]), { h: 0, s: 0, l: 92 }, 7, { depth: 0.2, thin: 0.3, thick: 0.5 });
-    g.fillStyle = INK;
+    // The cord, in a dark of the plastic it comes out of.
+    g.fillStyle = inkFor(plastic);
     stroke(g, at([0, 5.8, 0.4, 7.2, -0.6, 8.2]), { w: 1, seed: 8, taper: [0, 0.4], press: 0 });
   });
 }

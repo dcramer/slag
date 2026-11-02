@@ -86,10 +86,10 @@ export function ltick(
   line(g, a.x, a.y, b.x, b.y, { w, seed, taper, press: 0.2 });
 }
 
-/** A bolt head: ink, a body tone and a lit fleck, at local (x, y). */
-export function bolt(g: CanvasRenderingContext2D, k: Face, x: number, y: number, r: number, pal: MetalPalette, seed: number) {
+/** A bolt head: ink (a dark of the plate it's in, `inkFor(plate)`, in world art), a body tone and a lit fleck, at local (x, y). */
+export function bolt(g: CanvasRenderingContext2D, k: Face, x: number, y: number, r: number, pal: MetalPalette, seed: number, ink = INK) {
   const p = tf(k, x, y);
-  dot(g, p.x, p.y, r, seed, css(pal.light, 6));
+  dot(g, p.x, p.y, r, seed, css(pal.light, 6), ink);
 }
 
 /** A round path with enough points that it never reads as a polygon at card size; fill it yourself. */
@@ -97,9 +97,9 @@ export function disc(g: CanvasRenderingContext2D, x: number, y: number, r: numbe
   path(g, ovalPts(x, y, r, r, seed, 0.03, Math.max(14, Math.round(r * 6))));
 }
 
-/** A smooth ball for a machine's big round parts (a dome, a terminal): `ball` from the kit, without its lumps at size. */
-export function orb(g: CanvasRenderingContext2D, x: number, y: number, r: number, base: HSL, seed: number) {
-  g.fillStyle = INK;
+/** A smooth ball for a machine's big round parts (a dome, a terminal): `ball` from the kit, without its lumps at size. Pass `inkFor(base)` as `ink` in world art. */
+export function orb(g: CanvasRenderingContext2D, x: number, y: number, r: number, base: HSL, seed: number, ink = INK) {
+  g.fillStyle = ink;
   disc(g, x + 0.25, y + 0.3, r + Math.min(1.1, r * 0.22), seed);
   g.fill();
   g.fillStyle = css(base, -14, 1, 4);
@@ -139,20 +139,22 @@ export function iron(pal: MetalPalette, min = 36): HSL {
 
 /**
  * A mounting flange across the back of a housing, local y from `y0` to the cell's back edge at 8: a
- * darker plate with a bolt at each end, the visible proof the machine is fixed to something.
+ * darker plate with a bolt at each end, the visible proof the machine is fixed to something. `boltInk`
+ * rims the bolts (`inkFor(pal.dark)` in world art).
  */
-export function flange(g: CanvasRenderingContext2D, k: Face, x0: number, x1: number, y0: number, pal: MetalPalette, seed: number) {
+export function flange(g: CanvasRenderingContext2D, k: Face, x0: number, x1: number, y0: number, pal: MetalPalette, seed: number, boltInk = INK) {
   const pts = lbox(k, x0, y0, x1 - x0, 8 - y0, 1.8, seed, 0.15);
   part(g, pts, { ...pal.dark, l: Math.max(26, pal.dark.l + 12), s: Math.min(35, pal.dark.s) }, seed, { depth: 0.7, thin: 0.5, thick: 1.3, shade: -9 });
   const mid = (y0 + 8) / 2;
-  for (const x of [x0 + 2.4, x1 - 2.4]) bolt(g, k, x, mid, 0.95, pal, seed + x);
+  for (const x of [x0 + 2.4, x1 - 2.4]) bolt(g, k, x, mid, 0.95, pal, seed + x, boltInk);
 }
 
 /**
  * Chiselled bevels round a dressed stone's face, `b` deep: lit on top and left, in shade below and right,
- * mitred at the corners, with the face's shadowed edges inked. Draw it clipped to the stone.
+ * mitred at the corners, with the face's shadowed edges inked (in `ink`: `inkFor(stone)` in world art).
+ * Draw it clipped to the stone.
  */
-export function bevel(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, b: number, stone: HSL) {
+export function bevel(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, b: number, stone: HSL, ink = INK) {
   const x1 = x + w;
   const y1 = y + h;
   const facet = (dl: number, ...xy: number[]) => {
@@ -174,7 +176,7 @@ export function bevel(g: CanvasRenderingContext2D, x: number, y: number, w: numb
     [x1, y1, x1 - b, y1 - b],
   ])
     line(g, ax, ay, bx, by, { w: 0.5, seed: ax + ay, taper: [0.1, 0.1], press: 0 });
-  g.fillStyle = INK;
+  g.fillStyle = ink;
   line(g, x1 - b, y + b + 0.4, x1 - b, y1 - b, { w: 0.7, seed: 3, taper: [0.2, 0.1], press: 0.3 });
   line(g, x + b + 0.4, y1 - b, x1 - b, y1 - b, { w: 0.8, seed: 4, taper: [0.2, 0.1], press: 0.3 });
 }

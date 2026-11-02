@@ -2,7 +2,7 @@ import { css, type HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
 import type { ModuleOf } from '../../../sim/props';
 import { shardSet } from '../../../sim/props/modules/shards';
-import { line, type P, stroke } from '../../ink';
+import { inkFor, line, type P, stroke } from '../../ink';
 import { boxPts, path, pen, sprite, stamp, tone } from '../../ink-props';
 import { glowDot, light, type RC } from '../../kit';
 import { BACKDROP, type DrawCtx, defineArt } from '../common';
@@ -19,13 +19,15 @@ import { BACKDROP, type DrawCtx, defineArt } from '../common';
 type Shards = ModuleOf<'shards'>;
 type Glass = Pick<Shards, 'w' | 'h' | 'dir' | 'inset' | 'seed'>;
 
+/** The glass's own tint, the night seen through it: its dark band and its pen are darks of it. */
+const TINT: HSL = { h: 200, s: 40, l: 34 };
 /** Glass is mostly what's behind it: the night, a sheen on the face that catches the moon, a white edge. */
 const GLASS = {
-  night: 'hsla(200 40% 34% / 0.45)',
+  night: css(TINT, 0, 0.45),
   sheen: 'hsla(170 40% 88% / 0.9)',
   mid: 'hsla(186 40% 62% / 0.6)',
-  dark: 'hsla(214 40% 12% / 0.7)',
-  ink: '#0b1922',
+  dark: css(TINT, -22, 0.7, 0, 14),
+  ink: inkFor(TINT),
 };
 const FRAME: HSL = { h: 22, s: 34, l: 22 };
 const GILT: HSL = { h: 44, s: 70, l: 58 };
@@ -106,7 +108,7 @@ function frame(g: CanvasRenderingContext2D, m: Glass, W: number, H: number) {
     const x0 = Math.min(u2x(u0), u2x(u1));
     const pts = boxPts(x0, v0, Math.abs(u2x(u1) - u2x(u0)), v1 - v0, 0.5, seed, 0.1);
     tone(g, pts, FRAME, { depth: 0.6 });
-    pen(g, pts, seed, 0.3, 0.8, 3);
+    pen(g, pts, seed, 0.3, 0.8, 3, inkFor(FRAME));
     return x0;
   };
   // The back of the frame, and with a recess the lintel and sill boards round it; without one, short caps on the face.
@@ -171,7 +173,7 @@ function nightSprite(m: Glass) {
           g.fill();
         }
       }
-    g.fillStyle = 'rgba(10,8,14,0.85)';
+    g.fillStyle = inkFor(NIGHT, 0.85);
     for (let k = -H; k < R + H; k += step) {
       line(g, x0 + k, 0, x0 + k + H, H, { w: 0.6, seed: k, taper: [0, 0], press: 0 });
       line(g, x0 + k + H, 0, x0 + k, H, { w: 0.6, seed: k + 1, taper: [0, 0], press: 0 });
