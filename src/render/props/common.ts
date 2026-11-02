@@ -1,10 +1,9 @@
 import type { HSL } from '../../core/color';
-import { css } from '../../core/color';
 import type { Cell, Vec } from '../../core/geom';
 import { TILE } from '../../sim/constants';
 import type { Level } from '../../sim/level';
 import type { Beam, Grip, Module, PlacedProp, PropState, PropStyle, Resolved } from '../../sim/props';
-import { type MetalPalette, metalFill, type RC, rrect } from '../kit';
+import type { MetalPalette, RC } from '../kit';
 
 export type Emit = (kind: 'spark' | 'smoke' | 'ember' | 'debris', x: number, y: number, vx: number, vy: number, color?: HSL) => void;
 
@@ -20,6 +19,8 @@ export interface PropDrawOpts {
   placed?: readonly PlacedProp[];
   /** How far everything that travels reaches. Art draws from these and never casts its own rays. */
   beams?: readonly Beam[];
+  /** Where the live runners stand (feet), for art that watches them. */
+  runners?: readonly { x: number; y: number }[];
 }
 
 /** Everything a module's art function gets. */
@@ -106,21 +107,6 @@ export function bbox(cells: Cell[], off: Vec) {
     y1 = Math.max(y1, y + 1);
   }
   return { x: x0 * TILE + off[0], y: y0 * TILE + off[1], w: (x1 - x0) * TILE, h: (y1 - y0) * TILE };
-}
-
-export function nozzle(s: CanvasRenderingContext2D, x: number, y: number, angle: number, pal: MetalPalette, w = 5, l = 9) {
-  s.save();
-  s.translate(x, y);
-  s.rotate(angle);
-  s.fillStyle = metalFill(s, pal, 0, -w / 2, l, w);
-  rrect(s, 1, -w / 2, l, w, 1.2);
-  s.fill();
-  s.strokeStyle = css(pal.dark, -10);
-  s.lineWidth = 0.8;
-  s.stroke();
-  s.fillStyle = css(pal.dark);
-  s.fillRect(l - 1, -w / 2 - 0.8, 2, w + 1.6);
-  s.restore();
 }
 
 /** A spinning V-shaped wooden boomerang. */

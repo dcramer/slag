@@ -1,10 +1,11 @@
-import type { HSL } from '../../../core/color';
+import { css, type HSL } from '../../../core/color';
 import type { Vec } from '../../../core/geom';
 import { TILE } from '../../../sim/constants';
 import { dirOf, flameCycle, type Module, type ModuleOf, type PropStyle, type Resolved } from '../../../sim/props';
 import { type P, stroke } from '../../ink';
 import { glowDot, light, type MetalPalette, type RC } from '../../kit';
-import { beamOf, defineArt, nozzle, type PropDrawOpts } from '../common';
+import { beamOf, defineArt, type PropDrawOpts } from '../common';
+import { boxPts, dot, glint, INK, part, path, poly, sprite, stamp } from '../../ink-props';
 
 type M<T extends Module['type']> = ModuleOf<T>;
 
@@ -49,13 +50,53 @@ function inkTongue(s: CanvasRenderingContext2D, x: number, y: number, dx: number
   stroke(s, b, { w: 1.1, seed: 4, taper: [0.6, 0.1], press: 0.3 });
 }
 
+/** The burner along +x: a flanged collar and a tapered nozzle with a sooty mouth. */
+function burner(pal: MetalPalette) {
+  return sprite(`fl|${pal.base.h},${pal.base.l}`, -2, -5.5, 14, 11, (g) => {
+    part(g, boxPts(0, -4.2, 3, 8.4, 0.8, 3), pal.base, 3, { depth: 0.5, thin: 0.45, thick: 1 });
+    part(g, poly(2.6, -3, 9.6, -2.1, 10.2, -2.6, 10.2, 2.6, 9.6, 2.1, 2.6, 3), pal.base, 4, { depth: 0.6, thin: 0.45, thick: 1.1 });
+    glint(g, poly(3.4, -2.2, 6.4, -1.9, 9, -1.6), css(pal.spec, -8), 0.5);
+    g.fillStyle = INK;
+    path(g, poly(9.6, -1.6, 10.2, -1.6, 10.2, 1.6, 9.6, 1.6));
+    g.fill();
+    for (const ry of [-2.8, 2.8]) dot(g, 1.5, ry, 0.45, ry * 3, css(pal.light));
+  });
+}
+
+/** Dragon Burp: through the warning it hiccups little smoke rings, one every few beats, drifting out and fading. */
+function hiccups(rc: RC, x: number, y: number, dx: number, dy: number, t: number) {
+  const bg = rc.bg;
+  const EVERY = 14;
+  for (let k = 0; k < 3; k++) {
+    const age = (t % EVERY) + k * EVERY;
+    if (age > t || age > 36) continue;
+    const u = age / 36;
+    const cx = x + dx * (2 + age * 0.45) + Math.sin(age * 0.3) * 0.6;
+    const cy = y + dy * (2 + age * 0.45) - age * 0.12;
+    const r = 1.4 + age * 0.08;
+    const ring: P[] = [];
+    for (let i = 0; i <= 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      ring.push({ x: cx + Math.cos(a) * r * (Math.abs(dy) > 0.5 ? 1 : 0.55), y: cy + Math.sin(a) * r * (Math.abs(dy) > 0.5 ? 0.55 : 1) });
+    }
+    bg.fillStyle = `rgba(200,196,192,${0.8 * (1 - u)})`;
+    stroke(bg, ring, { w: 0.9, seed: k, taper: [0, 0], press: 0.3 });
+  }
+}
+
 function drawFlame(rc: RC, m: M<'flame'>, r: Resolved, mi: number, off: Vec, pal: MetalPalette, _st: PropStyle, o: PropDrawOpts) {
   const f = rc.frame;
   const x = m.at[0] + off[0];
   const y = m.at[1] + off[1];
   const [dx, dy] = dirOf(m.angle);
-  nozzle(rc.s, x, y, m.angle, pal, 7, 9);
+  rc.s.save();
+  rc.s.translate(x, y);
+  rc.s.rotate(m.angle);
+  if (dx < -0.5) rc.s.scale(1, -1);
+  stamp(rc.s, burner(pal));
+  rc.s.restore();
   const c = flameCycle(m, f, r.phase);
+  if (c.seg === 1 && o.level) hiccups(rc, x + dx * 10, y + dy * 10, dx, dy, c.t);
   const fire: HSL = { h: 28, s: 100, l: 55 };
   const nx = x + dx * 10;
   const ny = y + dy * 10;

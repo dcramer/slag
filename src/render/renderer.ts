@@ -280,6 +280,7 @@ export class Renderer {
         grips,
         placed: m.placed,
         beams,
+        runners: pushers,
       });
     }
 

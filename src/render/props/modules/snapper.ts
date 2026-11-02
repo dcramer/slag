@@ -1,14 +1,27 @@
 import { css } from '../../../core/color';
 import { TILE } from '../../../sim/constants';
 import { SNAP_ARM, SNAP_COOL, SNAP_SPIKE, SNAP_UP, snapperPhase } from '../../../sim/props';
-import { glowDot, metalFill, rivet } from '../../kit';
+import { type P, stroke } from '../../ink';
+import { boxPts, dot, INK, part, path, sprite, stamp } from '../../ink-props';
+import { glowDot, type MetalPalette } from '../../kit';
 import { defineArt } from '../common';
 
+/** The plate, baked in the cell's frame with -y as the face normal: riveted, with a slot per spike. */
+function plate(pal: MetalPalette) {
+  return sprite(`sn|${pal.base.h},${pal.base.l}`, -9, -12, 18, 6, (g) => {
+    part(g, boxPts(-8, -11, 16, 3.2, 0.8, 3, 0.1), pal.base, 3, { depth: 0.6, thin: 0.45, thick: 1.1 });
+    g.fillStyle = INK;
+    for (let i = 0; i < 4; i++) g.fillRect(-6.8 + i * 4, -10.6, 1.6, 1);
+    for (const x of [-7, 7]) dot(g, x, -9.4, 0.5, x, css(pal.light));
+  });
+}
+
+const STREAMERS = ['#ff4f8b', '#ffd23a', '#3ad1ff', '#7be36a'];
+
 /**
- * Pop-up spike plate. Drawn in the cell's local frame with -y as the face
- * normal: a riveted plate with slots; tips peek and rattle while arming,
- * shoot out to SNAP_SPIKE px while up (exactly the sim's lethal strip), and
- * sink back during cooldown.
+ * Pop-up spike plate, a surprise party (docs/PARODY.md, snapper). Tips peek and rattle while arming, shoot
+ * out to SNAP_SPIKE px while up (exactly the sim's lethal strip) with party streamers curling out of the
+ * slots, and sink back during cooldown.
  */
 defineArt<'snapper'>({
   type: 'snapper',
@@ -21,33 +34,50 @@ defineArt<'snapper'>({
     if (ph.seg === SNAP_ARM) ext = 1.5 + (Math.floor(rc.frame / 2) % 2) * 1.2;
     else if (ph.seg === SNAP_UP) ext = SNAP_SPIKE * Math.min(1, ph.u * 6);
     else if (ph.seg === SNAP_COOL) ext = SNAP_SPIKE * (1 - Math.min(1, ph.u * 2.5)) * 0.8;
+    // Which half of a spike is lit: the one facing up-left, whichever way the face turns.
+    const ca = Math.cos(m.angle + Math.PI / 2);
     for (const [cx, cy] of m.cells) {
       s.save();
       s.translate((cx + 0.5) * TILE + d.off[0], (cy + 0.5) * TILE + d.off[1]);
       s.rotate(m.angle + Math.PI / 2);
       const top = -TILE / 2;
-      // Spikes (behind the plate edge so they rise out of the slots).
       if (ext > 0) {
-        s.fillStyle = metalFill(s, d.pal, -8, top - ext, 16, ext);
-        s.strokeStyle = css(d.pal.dark, -10);
-        s.lineWidth = 0.6;
+        if (ph.seg === SNAP_UP) {
+          // Streamers burst out between the spikes and curl.
+          const u = Math.min(1, ph.u * 4);
+          for (let i = 0; i < 3; i++) {
+            const bx = -4 + i * 4;
+            const pts: P[] = [];
+            for (let k = 0; k <= 8; k++) {
+              const t = k / 8;
+              pts.push({ x: bx + Math.sin(t * 7 + i * 2 + rc.t * 6) * 1.6 * t, y: top - t * (SNAP_SPIKE + 3) * u });
+            }
+            s.fillStyle = STREAMERS[(i + cx + cy) % STREAMERS.length];
+            stroke(s, pts, { w: 1.1, seed: i, taper: [0.05, 0.2], press: 0.1 });
+          }
+        }
         for (let i = 0; i < 4; i++) {
           const bx = -6 + i * 4;
-          s.beginPath();
-          s.moveTo(bx - 1.6, top);
-          s.lineTo(bx, top - ext);
-          s.lineTo(bx + 1.6, top);
-          s.closePath();
+          const tip = { x: bx, y: top - ext };
+          const l = { x: bx - 1.7, y: top };
+          const r = { x: bx + 1.7, y: top };
+          const mid = { x: bx, y: top };
+          s.fillStyle = INK;
+          path(s, [
+            { x: l.x - 0.5, y: l.y },
+            { x: tip.x, y: tip.y - 0.7 },
+            { x: r.x + 0.5, y: r.y },
+          ]);
           s.fill();
-          s.stroke();
+          s.fillStyle = ca >= 0 ? '#eef1f6' : '#8a909c';
+          path(s, [l, tip, mid]);
+          s.fill();
+          s.fillStyle = ca >= 0 ? '#8a909c' : '#eef1f6';
+          path(s, [mid, tip, r]);
+          s.fill();
         }
       }
-      s.fillStyle = metalFill(s, d.pal, -8, top - 3, 16, 3);
-      s.fillRect(-8, top - 3, 16, 3);
-      s.fillStyle = css(d.pal.dark, -15);
-      for (let i = 0; i < 4; i++) s.fillRect(-6.8 + i * 4, top - 2.6, 1.6, 1);
-      rivet(s, -7, top - 1.5, d.pal, 0.6);
-      rivet(s, 7, top - 1.5, d.pal, 0.6);
+      stamp(s, plate(d.pal));
       s.restore();
       if (ph.seg === SNAP_ARM) {
         const [nx, ny] = [Math.cos(m.angle), Math.sin(m.angle)];

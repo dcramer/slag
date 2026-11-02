@@ -1,10 +1,12 @@
 import { css, type HSL } from '../../../core/color';
 import type { Cell } from '../../../core/geom';
+import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import type { Level } from '../../../sim/level';
 import { blastHits, blastSpec, type BombLook, footprintCells, type ModuleOf, type PlacedProp } from '../../../sim/props';
-import { line, stroke } from '../../ink';
-import { circle, ellipse, glowDot, light, METALS, metalFill, type RC, rrect } from '../../kit';
+import { blob, line, stroke } from '../../ink';
+import { ball, boxPts, dot, glint, ovalPts, part, path, poly, sprite, stamp, tick } from '../../ink-props';
+import { circle, glowDot, light, METALS, type RC } from '../../kit';
 import { defineArt } from '../common';
 
 type Bomb = ModuleOf<'bomb'>;
@@ -58,9 +60,9 @@ function fuse(rc: RC, x: number, y: number) {
   glowDot(rc.g, x + 8.5, y - 8.5, 5 * fl, { h: 40, s: 100, l: 60 }, 1);
 }
 
-function drawBall(rc: RC, x: number, y: number) {
+function drawBall(rc: RC, x: number, y: number, base: HSL = { h: 230, s: 18, l: 22 }) {
   const s = rc.s;
-  inkBall(s, x, y + 1, 6.5, { h: 230, s: 18, l: 22 });
+  inkBall(s, x, y + 1, 6.5, base);
   // The cap the fuse goes into.
   s.fillStyle = INK;
   s.fillRect(x + 0.9, y - 7.1, 4.6, 4);
@@ -69,48 +71,109 @@ function drawBall(rc: RC, x: number, y: number) {
   fuse(rc, x, y);
 }
 
-/** One stick of dynamite: red paper, a darker side, pen lines, and a paper band. */
-function stick(s: CanvasRenderingContext2D, x: number, y: number, seed: number) {
-  s.fillStyle = INK;
-  s.beginPath();
-  s.roundRect(x - 2.6, y - 6.6, 5.2, 13.2, 1.8);
-  s.fill();
-  s.fillStyle = 'rgb(166 34 30)';
-  s.beginPath();
-  s.roundRect(x - 2, y - 6, 4, 12, 1.4);
-  s.fill();
-  s.fillStyle = 'rgb(222 64 48)';
-  s.fillRect(x - 2, y - 5.4, 2.2, 10.8);
-  s.fillStyle = 'rgba(255,230,210,0.85)';
-  line(s, x - 1.2, y - 4.4, x - 1.2, y + 3.6, { w: 0.6, seed, taper: [0.2, 0.3], press: 0 });
+/** Balance Patch: a disk device with an antenna and a version sticker. */
+function patchDisk() {
+  return sprite('bomb|emp', -9, -12.5, 18, 18, (g) => {
+    tick(g, 0, -4, 0, -10.6, 0.8, 1);
+    ball(g, 0, -11, 1.4, { h: 200, s: 80, l: 60 }, 2);
+    const shell = poly(-8, 2.4, -6.6, -1.4, -2.6, -3.6, 2.6, -3.6, 6.6, -1.4, 8, 2.4, 5, 4.4, -5, 4.4);
+    part(g, shell, METALS.steel.base, 3, { depth: 0.9, thin: 0.5, thick: 1.2 });
+    g.fillStyle = INK;
+    line(g, -7.6, 2, 7.6, 2, { w: 0.6, seed: 4, taper: [0.1, 0.1], press: 0.2 });
+    for (const lx of [-5, -2.5, 2.5, 5]) dot(g, lx, 3.2, 0.45, lx * 3, '#7fd6ff');
+    part(g, boxPts(-3.6, -2.8, 7.2, 3, 0.4, 5), { h: 50, s: 70, l: 88 }, 5, { depth: 0.2, thin: 0.3, thick: 0.55 });
+    g.fillStyle = '#1d2a50';
+    g.font = 'bold 2.2px sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText('v1.0.1', 0, -1.25);
+  });
 }
+
+/** The Mole: a drill with blinkers on, so it only ever sees straight ahead. */
+function mole() {
+  return sprite('bomb|drill', -8.5, -7.5, 18, 15, (g) => {
+    part(g, boxPts(-7.4, -4.2, 8.4, 8.4, 1.6, 6), METALS.brass.base, 6, { depth: 0.8, thin: 0.45, thick: 1.1 });
+    part(g, poly(0.6, -4, 8.6, 0, 0.6, 4), METALS.steel.light, 7, { depth: 0.6, thin: 0.45, thick: 1 });
+    // Blinkers: a leather flap either side, a strap over the top.
+    for (const sg of [-1, 1])
+      part(g, poly(-3.2, sg * 3.6, 0.8, sg * 4.2, 1.6, sg * 6.4, -2.6, sg * 6), { h: 22, s: 45, l: 26 }, 8 + sg, { depth: 0.3, thin: 0.35, thick: 0.8 });
+    tick(g, -2.4, -4.4, -2.4, 4.4, 0.9, 10, '#5a3418');
+    dot(g, -5, 0, 0.8, 11, css(METALS.brass.light));
+  });
+}
+
+/** The Moat Maker: a glazed donut with sprinkles. */
+function donut() {
+  return sprite('bomb|donut', -9, -7, 18, 14, (g) => {
+    const dough: HSL = { h: 32, s: 60, l: 58 };
+    const glaze: HSL = { h: 330, s: 70, l: 74 };
+    part(g, ovalPts(0, 1.6, 7.6, 4.6, 12, 0.03, 24), dough, 12, { depth: 0.9, thin: 0.5, thick: 1.2 });
+    g.fillStyle = css(glaze);
+    path(g, ovalPts(-0.2, 0.9, 6.9, 3.8, 13, 0.1, 24));
+    g.fill();
+    g.fillStyle = INK;
+    path(g, ovalPts(0, 1.4, 2.4, 1.2, 14, 0.05, 12));
+    g.fill();
+    const cols = ['#ffffff', '#ffd93a', '#5ad1ff', '#7be36a', '#ff6a3a'];
+    for (let i = 0; i < 14; i++) {
+      const a = (i / 14) * Math.PI * 2 + hash2(i, 1, 15);
+      const r = 3.4 + hash2(i, 2, 15) * 2.4;
+      const sx = Math.cos(a) * r;
+      const sy = 0.9 + Math.sin(a) * r * 0.5;
+      const t = hash2(i, 3, 15) * Math.PI;
+      g.fillStyle = cols[i % cols.length];
+      line(g, sx - Math.cos(t) * 0.7, sy - Math.sin(t) * 0.5, sx + Math.cos(t) * 0.7, sy + Math.sin(t) * 0.5, { w: 0.5, seed: i, taper: [0, 0], press: 0 });
+    }
+    glint(g, poly(-5.6, -0.6, -3.8, -1.9, -1.4, -2.4), 'rgba(255,255,255,0.85)', 0.55);
+  });
+}
+
+/** The alarm clock's face, with bells; the time is drawn live. */
+function alarm() {
+  return sprite('bomb|alarm', -6, -7, 12, 12, (g) => {
+    for (const sg of [-1, 1]) ball(g, sg * 2.8, -3.8, 1.3, METALS.brass.base, 20 + sg);
+    g.fillStyle = INK;
+    blob(g, 0, 0, 4.4, 22, 1, 0.03);
+    g.fill();
+    g.fillStyle = '#f1ead8';
+    blob(g, 0, 0, 3.6, 23, 1, 0.03);
+    g.fill();
+  });
+}
+
 /** Each demolition look says what it hits: fire = everything, blue = props only, drill = terrain in a line. */
 const LOOKS: Record<BombLook, (rc: RC, m: Bomb, x: number, y: number, rot: number) => void> = {
   bomb(rc, _m, x, y) {
+    // Two little feet under it, and its eyes screwed shut: it knows.
+    const s = rc.s;
+    for (const sg of [-1, 1]) {
+      s.fillStyle = INK;
+      s.beginPath();
+      s.ellipse(x + sg * 3.2, y + 7.6, 2.4, 1.4, 0, 0, Math.PI * 2);
+      s.fill();
+      s.fillStyle = '#e8b04a';
+      s.beginPath();
+      s.ellipse(x + sg * 3.2 - 0.2, y + 7.3, 1.7, 0.85, 0, 0, Math.PI * 2);
+      s.fill();
+    }
     drawBall(rc, x, y);
+    s.fillStyle = '#f2ede4';
+    for (const sg of [-1, 1]) {
+      line(s, x + sg * 3.6, y - 0.4, x + sg * 1.6, y + 0.6, { w: 0.75, seed: 3 + sg, taper: [0.1, 0.1], press: 0 });
+      line(s, x + sg * 1.6, y + 0.6, x + sg * 3.6, y + 1.6, { w: 0.75, seed: 5 + sg, taper: [0.1, 0.1], press: 0 });
+    }
   },
   emp(rc, _m, x, y) {
-    const s = rc.s;
     const g = rc.g;
     const blue: HSL = { h: 200, s: 100, l: 60 };
-    s.fillStyle = metalFill(s, METALS.steel, x - 7, y - 2, 14, 7);
-    rrect(s, x - 7, y - 2, 14, 7, 2);
-    s.fill();
-    for (let i = 0; i < 3; i++) {
-      s.fillStyle = css(METALS.copper.base, i * 6);
-      ellipse(s, x, y - 2 - i * 2.2, 4.5 - i, 1.4);
-    }
-    s.strokeStyle = '#2b2f38';
-    s.lineWidth = 0.8;
-    s.beginPath();
-    s.moveTo(x, y - 8);
-    s.lineTo(x, y - 12);
-    s.stroke();
     const pulse = 0.5 + 0.5 * Math.sin(rc.t * 8);
-    glowDot(g, x, y - 12, 4 + pulse * 3, blue, 0.9);
-    g.strokeStyle = css(blue, 10, 0.4 * pulse);
+    glowDot(g, x, y - 11, 3 + pulse * 3, blue, 0.8);
+    stamp(rc.s, patchDisk(), x, y);
+    g.strokeStyle = css(blue, 10, 0.35 * pulse);
+    g.lineWidth = 0.8;
     g.beginPath();
-    g.arc(x, y - 2, 8 + pulse * 3, 0, Math.PI * 2);
+    g.ellipse(x, y + 1, 9 + pulse * 3, 4 + pulse * 1.5, 0, 0, Math.PI * 2);
     g.stroke();
     light(rc, x, y, 40, blue, 0.5);
   },
@@ -119,68 +182,36 @@ const LOOKS: Record<BombLook, (rc: RC, m: Bomb, x: number, y: number, rot: numbe
     s.save();
     s.translate(x, y);
     s.rotate((rot & 3) * (Math.PI / 2));
-    s.fillStyle = metalFill(s, METALS.brass, -7, -4, 7, 8);
-    rrect(s, -7, -4, 7, 8, 1.5);
-    s.fill();
-    s.fillStyle = metalFill(s, METALS.steel, 0, -4, 8, 8);
-    s.beginPath();
-    s.moveTo(0, -4);
-    s.lineTo(8, 0);
-    s.lineTo(0, 4);
-    s.closePath();
-    s.fill();
-    s.strokeStyle = '#2b2f38';
-    s.lineWidth = 0.7;
+    stamp(s, mole());
+    // Flutes running down the bit as it turns.
+    s.fillStyle = INK;
     const sp = (rc.t * 20) % 2;
     for (let k = 0; k < 4; k++) {
       const u = (k + sp / 2) / 4;
-      s.beginPath();
-      s.moveTo(u * 8, -4 * (1 - u));
-      s.lineTo(u * 8 + 1.2, 4 * (1 - u));
-      s.stroke();
+      line(s, 1 + u * 7, -3.4 * (1 - u), 1.8 + u * 7, 3.4 * (1 - u), { w: 0.5, seed: k, taper: [0.1, 0.1], press: 0 });
     }
     s.restore();
   },
   charge(rc, m, x, y) {
-    const s = rc.s;
-    const g = rc.g;
     if (m.shape === 'ring') {
-      s.strokeStyle = '#3a3f35';
-      s.lineWidth = 3.5;
-      s.beginPath();
-      s.ellipse(x, y + 2, 6.5, 3.5, 0, 0, Math.PI * 2);
-      s.stroke();
-      s.strokeStyle = '#6f7a5a';
-      s.lineWidth = 1.5;
-      s.stroke();
-      for (let i = 0; i < 4; i++) {
-        const a = (i / 4) * Math.PI * 2 + 0.4;
-        g.fillStyle = 'rgba(255,80,60,0.9)';
-        circle(g, x + Math.cos(a) * 6.5, y + 2 + Math.sin(a) * 3.5, 0.9);
-      }
-    } else {
-      for (const dx of [-4, 0, 4]) stick(s, x + dx, y, dx + 7);
-      // Taped together, badly.
-      s.fillStyle = INK;
-      s.fillRect(x - 6.8, y - 1.6, 13.6, 3.2);
-      s.fillStyle = 'rgb(214 200 170)';
-      s.fillRect(x - 6.2, y - 1, 12.4, 2);
-      fuse(rc, x - 2, y);
+      stamp(rc.s, donut(), x, y);
+      return;
     }
+    // The arena bomber's bomb: round, navy-black, a fuse and a shine.
+    drawBall(rc, x, y, { h: 228, s: 34, l: 26 });
   },
   clock(rc, _m, x, y) {
     const s = rc.s;
-    const g = rc.g;
     drawBall(rc, x, y);
-    // An alarm clock strapped on: a cream face, a pen ring, and hands that mean it.
-    s.fillStyle = INK;
-    circle(s, x - 1, y + 1.5, 4.3);
-    s.fillStyle = '#f1ead8';
-    circle(s, x - 1, y + 1.5, 3.5);
-    s.fillStyle = INK;
-    line(s, x - 1, y + 1.5, x - 1 + Math.cos(rc.t * 3) * 2.8, y + 1.5 + Math.sin(rc.t * 3) * 2.8, { w: 0.8, seed: 1, taper: [0, 0.5], press: 0 });
-    line(s, x - 1, y + 1.5, x - 1, y - 0.6, { w: 1, seed: 2, taper: [0, 0.3], press: 0 });
-    if (Math.floor(rc.t * 2) % 2 === 0) glowDot(g, x - 6, y - 4, 4, { h: 0, s: 100, l: 55 }, 0.9);
+    // An alarm clock strapped on, out of time: 0:00, flashing red.
+    stamp(s, alarm(), x - 1, y + 1.5);
+    const on = Math.floor(rc.t * 2.5) % 2 === 0;
+    s.fillStyle = on ? '#e3201b' : '#7a2a24';
+    s.font = 'bold 3px sans-serif';
+    s.textAlign = 'center';
+    s.textBaseline = 'middle';
+    s.fillText('0:00', x - 1, y + 1.7);
+    if (on) glowDot(rc.g, x - 1, y + 1.5, 5, { h: 0, s: 100, l: 55 }, 0.7);
   },
 };
 
@@ -190,10 +221,21 @@ function drawBomb(rc: RC, m: Bomb, x: number, y: number, rot: number) {
 
 defineArt<'bomb'>({ type: 'bomb', layer: 2, draw: (rc, m, d) => drawBomb(rc, m, d.r.pp.tx * TILE + TILE / 2, d.r.pp.ty * TILE + TILE / 2, d.r.pp.rot) });
 
+/** A square flame filling one blast cell: how the arena bomber's plus-shaped blast is drawn. */
+function squareFlame(g: CanvasRenderingContext2D, x: number, y: number, t: number, k: number) {
+  const j = Math.sin(t * 14 + x * 0.3 + y * 0.7) * 0.6;
+  g.fillStyle = `rgba(255,120,30,${0.32 * k})`;
+  g.fillRect(x + 1.5, y + 1.5 + j, TILE - 3, TILE - 3);
+  g.fillStyle = `rgba(255,214,90,${0.38 * k})`;
+  g.fillRect(x + 4, y + 4 + j, TILE - 8, TILE - 8);
+  g.fillStyle = `rgba(255,250,220,${0.45 * k})`;
+  g.fillRect(x + 6.5, y + 6.5 + j, TILE - 13, TILE - 13);
+}
+
 /**
- * Place-phase preview for any demolition prop: every cell the blast covers
- * (from the same blastHits the detonation uses), terrain that will break in
- * orange, and red outlines on each prop/set piece it will remove.
+ * Place-phase preview for any demolition prop: every cell the blast covers (from the same blastHits the
+ * detonation uses), terrain that will break in orange, and every prop or set piece it will remove. A
+ * plus-shaped charge shows its blast as a grid of square flames; a patch strikes out what it nerfs.
  */
 export function drawBlastPreview(rc: RC, level: Level, placed: readonly PlacedProp[], m: Bomb, tx: number, ty: number, rot: number) {
   const g = rc.g;
@@ -201,8 +243,11 @@ export function drawBlastPreview(rc: RC, level: Level, placed: readonly PlacedPr
   const hits = blastHits(level, placed, spec, tx, ty, rot);
   const pulse = 0.75 + Math.sin(rc.t * 10) * 0.25;
   const zone: HSL = spec.target === 'props' ? { h: 200, s: 100, l: 60 } : { h: 25, s: 100, l: 60 };
-  g.fillStyle = css(zone, 0, 0.1 * pulse);
-  for (const [x, y] of hits.cells) g.fillRect(x * TILE, y * TILE, TILE, TILE);
+  if (m.shape === 'cross') for (const [x, y] of hits.cells) squareFlame(g, x * TILE, y * TILE, rc.t, pulse);
+  else {
+    g.fillStyle = css(zone, 0, 0.1 * pulse);
+    for (const [x, y] of hits.cells) g.fillRect(x * TILE, y * TILE, TILE, TILE);
+  }
   g.fillStyle = css({ h: 25, s: 100, l: 55 }, 0, 0.32 * pulse);
   for (const [x, y] of hits.tiles) g.fillRect(x * TILE + 1, y * TILE + 1, TILE - 2, TILE - 2);
   // Outline the blast area's edge.
@@ -223,8 +268,29 @@ export function drawBlastPreview(rc: RC, level: Level, placed: readonly PlacedPr
     if (!set.has(`${x + 1},${y}`)) edge(X + TILE, Y, X + TILE, Y + TILE);
   }
   g.stroke();
-  g.strokeStyle = css({ h: 0, s: 100, l: 60 }, 0, 0.85 * pulse);
-  g.lineWidth = 1.5;
-  for (const p of [...hits.props, ...hits.setPieces])
-    for (const [x, y] of footprintCells(p) as Cell[]) g.strokeRect(x * TILE + 1.5, y * TILE + 1.5, TILE - 3, TILE - 3);
+  const red = css({ h: 0, s: 100, l: 60 }, 0, 0.85 * pulse);
+  for (const p of [...hits.props, ...hits.setPieces]) {
+    const cells = footprintCells(p) as Cell[];
+    if (spec.target === 'props') {
+      // Patch notes: struck through.
+      let x0 = Infinity;
+      let x1 = -Infinity;
+      let y0 = Infinity;
+      let y1 = -Infinity;
+      for (const [x, y] of cells) {
+        x0 = Math.min(x0, x);
+        x1 = Math.max(x1, x + 1);
+        y0 = Math.min(y0, y);
+        y1 = Math.max(y1, y + 1);
+      }
+      g.fillStyle = red;
+      const my = ((y0 + y1) / 2) * TILE;
+      line(g, x0 * TILE - 2, my - 1, x1 * TILE + 2, my + 1, { w: 1.8, seed: x0 + y0, taper: [0.05, 0.05], press: 0.2 });
+      if (y1 - y0 > 1) line(g, x0 * TILE - 2, my + 5, x1 * TILE + 2, my + 7, { w: 1.4, seed: x0 + y0 + 1, taper: [0.05, 0.05], press: 0.2 });
+    } else {
+      g.strokeStyle = red;
+      g.lineWidth = 1.5;
+      for (const [x, y] of cells) g.strokeRect(x * TILE + 1.5, y * TILE + 1.5, TILE - 3, TILE - 3);
+    }
+  }
 }
