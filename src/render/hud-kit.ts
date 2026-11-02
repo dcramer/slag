@@ -9,6 +9,15 @@ import { rrect } from './kit';
 
 type Ctx = CanvasRenderingContext2D;
 
+/**
+ * Display order for anything that lists scores: most points first, ties by
+ * slot so rows never swap on an equal score. Always a sorted copy, because
+ * player order is sim state and has to stay in slot order for determinism.
+ */
+export function standings<T extends { slot: number }>(players: readonly T[], points: (p: T) => number): T[] {
+  return [...players].sort((a, b) => points(b) - points(a) || a.slot - b.slot);
+}
+
 let grain: CanvasPattern | null | undefined;
 /** Cached speckle pattern that gives plates a cast-iron texture. */
 function grainPattern(c: Ctx): CanvasPattern | null {

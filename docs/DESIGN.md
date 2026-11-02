@@ -12,8 +12,10 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - Each rival killed by your prop earns you +3, but only if someone finished that round.
 - If everyone finishes, nobody scores ("too easy"). If nobody finishes, nobody scores either.
 - Solo play just rewards finishing.
-- A match always ends: scoreless rounds can run forever, so the round limit has no "off" setting. It defaults to 40, high enough that normal matches end on score.
+- A match always ends: scoreless rounds can run forever, so the round limit has no "off" setting.
+- The lobby sets both win conditions with one **Match Length**: Short (30 points or 10 rounds), Normal (50 points or 15 rounds, the default) or Long (80 points or 25 rounds). The limit is meant to decide some matches, mostly with 2 players, where a round only scores if exactly one player finishes.
 - At the end of a match the top score wins and ties are joint winners. If the round limit hits with nobody on the board, there is no winner.
+- Anything that lists scores shows the most points first, with ties in slot order. This is display only: player order in the sim never changes. On the score screen, rows slide to their new rank as the bars fill.
 
 ## Players
 - Characters are generated per player (body, face, accessory and name) and are **cosmetic only**: every player has the same hitbox and the same physics.
