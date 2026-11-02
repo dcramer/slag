@@ -2,7 +2,7 @@ import { TILE } from '../sim/constants';
 import { dirOf, flameCycle, laserCycle, motionOffset, pistonState, swingAngles, swingHeads, teslaCycle } from '../sim/props';
 import type { Level } from '../sim/level';
 import type { RunWorld } from '../sim/run';
-import { gustPush, gustWarning, type WeatherKind } from '../sim/weather';
+import { gustShown, type WeatherKind } from '../sim/weather';
 import type { SfxName } from './sfx';
 
 /**
@@ -56,20 +56,18 @@ export interface PropCue {
   pitch?: number;
 }
 
-/** A gust's loudness and pitch through its warning and push; the rest of the time, the air barely moves. */
+/** A gust's loudness and pitch through its warning and push. Still air is silent. */
 const WEATHER_SOUND: Partial<Record<WeatherKind, (level: Level, f: number) => { level: number; p: number }>> = {
   wind(level, f) {
-    const w = level.weather;
-    const warn = gustWarning(w, f);
-    const push = gustPush(w, f);
-    return { level: Math.max(0.1, warn * 0.75, push), p: Math.max(warn * 0.7, push) };
+    const shown = Math.abs(gustShown(level.weather, f));
+    return { level: shown, p: shown };
   },
   rain: () => ({ level: 0.7, p: 0 }),
   snow: () => ({ level: 0.6, p: 0 }),
   mist: () => ({ level: 0.6, p: 0 }),
 };
 
-/** The level's weather as one sound. `f` is the race frame, or -1 outside a race. */
+/** The level's weather as one sound. `f` is the race frame, or the match clock before a race. */
 export function weatherEmitters(level: Level, f: number, x: number, y: number, out: Emitter[]): void {
   const kind = level.weather?.kind ?? 'clear';
   const s = WEATHER_SOUND[kind]?.(level, f);

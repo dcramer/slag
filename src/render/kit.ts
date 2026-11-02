@@ -26,6 +26,18 @@ export interface RC {
   t: number;
   /** Sim frame driving prop poses. */
   frame: number;
+  /** How hard the wind shows right now (`gustShown`, -1..1): 0 in still air. */
+  gust?: number;
+}
+
+/**
+ * Sideways play of anything loose (banners, grass, vines, hanging things), in
+ * px or radians at the caller's scale. Exactly 0 in still air: things only
+ * move in a wind that's really there, leaning downwind and shaking as it blows.
+ */
+export function flutter(rc: RC, rate: number, phase: number): number {
+  const g = rc.gust ?? 0;
+  return g === 0 ? 0 : g * 1.4 + Math.abs(g) * Math.sin(rc.t * rate * 2.5 + phase) * 0.8;
 }
 
 export function light(rc: RC, x: number, y: number, r: number, color: HSL, intensity = 1) {

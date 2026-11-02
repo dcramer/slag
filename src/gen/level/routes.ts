@@ -1,5 +1,5 @@
 import { isProtected, type Level, T_SOLID } from '../../sim/level';
-import { analyzeReach } from '../../sim/reach';
+import { ReachCache } from '../../sim/reach';
 import { BRIDGE_W, type BridgeHint } from './types';
 
 /**
@@ -122,14 +122,14 @@ export function lineTiles(w: number, a: number, b: number, visit: (x: number, y:
   for (let i = 0; i <= n; i++) visit(Math.round(ax + ((bx - ax) * i) / n), Math.round(ay + ((by - ay) * i) / n));
 }
 
-/** How `level`, with `bridges` placed, scores against the mostly-open rule. */
-export function analyzeRoutes(level: Level, bridges: readonly BridgeHint[] = []): Routes {
+/** How `level`, with `bridges` placed, scores against the mostly-open rule. Pass the level's `cache` if there is one. */
+export function analyzeRoutes(level: Level, bridges: readonly BridgeHint[] = [], cache = new ReachCache(level)): Routes {
   const { w, h } = level;
   const tiles = new Uint8Array(level.tiles);
   for (const b of bridges) for (let i = 0; i < BRIDGE_W; i++) tiles[b.y * w + b.x + i] = T_SOLID;
   const graph = new Map<number, Edge[]>();
   const seen = new Set<number>();
-  analyzeReach({ ...level, tiles }, false, (from, to) => {
+  const onEdge = (from: number, to: number) => {
     if (from === to) return;
     const id = from * w * h + to;
     if (seen.has(id)) return;
@@ -137,7 +137,8 @@ export function analyzeRoutes(level: Level, bridges: readonly BridgeHint[] = [])
     let list = graph.get(from);
     if (!list) graph.set(from, (list = []));
     list.push({ to, len: dist(w, from, to) });
-  });
+  };
+  cache.analyze({ ...level, tiles }, false, { onEdge });
   const start = level.spawn.ty * w + level.spawn.tx;
   const end = level.goal.ty * w + level.goal.tx;
   const fastest = cheapest(graph, start, end, (_, e) => e.len);

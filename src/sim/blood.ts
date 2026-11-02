@@ -8,8 +8,9 @@ import { COAT_PX, COAT_SURFACES, FACE, footprintCells, mountAngle, patchRect, ty
 /**
  * Blood: what a death leaves behind. A runner oozes a puddle in their own body
  * color onto the surface under them, and it's slippery for everyone, them
- * included, for three rounds. It is a list of cells on `Match`, so it outlives
- * the race that made it; a RunWorld reads that same list and adds to it.
+ * included, for as many rounds as the match's `bloodRounds` rule says. It is a
+ * list of cells on `Match`, so it outlives the race that made it; a RunWorld
+ * reads that same list and adds to it.
  *
  * On a floor a cell is a thin solid with the ice coat's surface, the same thing
  * a frost patch is, so stepBody needs nothing new. Whatever the weather does to
@@ -33,8 +34,6 @@ export interface BloodCell {
   at: number;
 }
 
-/** A cell goes at the end of its third round: spilled in round R, gone when R+2 ends. */
-export const BLOOD_ROUNDS = 3;
 /** Most cells in a match, oldest gone first. Each floor cell is a solid every frame, so this bounds what a long 8-player match adds to collision. */
 export const BLOOD_CAP = 64;
 /** Frames the ooze takes to fill one cell and move on to the next. */
@@ -170,11 +169,11 @@ function keepBlood(blood: BloodCell[], keep: (c: BloodCell) => boolean) {
   blood.length = n;
 }
 
-/** A round ended: everything settles, and what's had its three rounds goes. */
-export function ageBlood(blood: BloodCell[]): void {
+/** A round ended: everything settles, and what's had its `rounds` rounds goes. With 2, spilled in round R, it's gone when R+1 ends. */
+export function ageBlood(blood: BloodCell[], rounds: number): void {
   keepBlood(blood, (c) => {
     c.at = 0;
-    return ++c.age < BLOOD_ROUNDS;
+    return ++c.age < rounds;
   });
 }
 

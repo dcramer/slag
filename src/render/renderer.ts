@@ -18,13 +18,13 @@ import { Fx } from './fx';
 import { frameReach, VIEW_FRAME, type ViewFrame, viewFrame } from './frame';
 import { Hud } from './hud';
 import { drawClouds, drawDrops, drawRunnerItems, itemFx } from './items';
-import { circle, glowDot, type Light, light, type RC } from './kit';
+import { circle, flutter, glowDot, type Light, light, type RC } from './kit';
 import { type Compositor, createCompositor } from './post';
 import { drawBackdrop, drawBlastPreview, drawForeground, drawProjectile, drawResolved, drawRunnerStatus, drawStuffed, type Emit, propEventFx } from './props';
 import { LightOccluder } from './occlude';
 import { Surround } from './surround';
 import { TerrainPainter } from './terrain';
-import { calmMotes, WeatherLayer } from './weather';
+import { skyGust, WeatherLayer } from './weather';
 // Mobile: quality tiers / adaptive resolution / safe-area insets (owned by the touch module).
 import { detectQuality, FrameBudget, isTouchFirst, QUALITY, type QualityTier, safeInsets, TIERS } from '../ui/touch/device';
 
@@ -74,6 +74,8 @@ export class Renderer {
   private backdrop = new Backdrop();
   private terrain = new TerrainPainter();
   private surround = new Surround();
+  /** Per slot, the ghost the match last turned down (it would have left no way to the flag): it stays red until it moves. */
+  private refused = new Map<number, string>();
   private fx = new Fx();
   private weather = new WeatherLayer();
   private rigs = new Map<number, Rig>();
@@ -208,7 +210,7 @@ export class Renderer {
     const g = this.gctx;
     const lights: Light[] = [];
     const frame = m.run && m.phase === 'run' ? m.run.frame : m.frame;
-    const rc: RC = { s, bg: s, g, lights, t, frame };
+    const rc: RC = { s, bg: s, g, lights, t, frame, gust: skyGust(m) };
 
     // --- background (screen space, parallax from camera)
     const ox = -frameBox.x0 * sk;
@@ -305,7 +307,7 @@ export class Renderer {
     }
     this.fx.draw(rc);
     this.backdrop.drawLiquid(rc, level.theme, ww, wh, this.cam.visible(), this.surround.margin, (c) => this.surround.drawSunken(c, level));
-    this.backdrop.drawMotes(rc, level.theme, dt, this.cam.visible(), calmMotes(level.theme));
+    this.backdrop.drawMotes(rc, level.theme, dt, this.cam.visible());
     this.weather.draw(rc, m, this.cam.visible(), this.fx);
     g.globalCompositeOperation = 'source-over';
 
@@ -447,9 +449,12 @@ export class Renderer {
     s.fillStyle = fg;
     s.beginPath();
     s.moveTo(gx + 1, gy - 28);
-    for (let i = 0; i <= 7; i++) s.lineTo(gx + 1 + i * 2.2, gy - 28 + Math.sin(t * 6 - i * 0.8) * 1.4 * (i / 7));
-    s.lineTo(gx + 16, gy - 19 + Math.sin(t * 6 - 5.6) * 1.4);
-    for (let i = 7; i >= 0; i--) s.lineTo(gx + 1 + i * 2.2, gy - 19 + Math.sin(t * 6 - i * 0.8) * 1.4 * (i / 7));
+    // It hangs in still air, and only flies in a wind that's really blowing.
+    const fly = Math.abs(rc.gust ?? 0);
+    const flap = (i: number) => (flutter(rc, 6, -i * 0.8) * 1.4 + (1 - fly) * 7) * (i / 7);
+    for (let i = 0; i <= 7; i++) s.lineTo(gx + 1 + i * 2.2, gy - 28 + flap(i));
+    s.lineTo(gx + 16, gy - 19 + flap(7));
+    for (let i = 7; i >= 0; i--) s.lineTo(gx + 1 + i * 2.2, gy - 19 + flap(i));
     s.closePath();
     s.fill();
     glowDot(g, gx + 6, gy - 22, 22, ac, 0.3);
@@ -519,7 +524,7 @@ export class Renderer {
       const gh = m.ghostOrigin(p);
       const ghost = ghostProp(m, p);
       if (!gh || !ghost) continue;
-      const ok = canPlace(m.level, m.placed, gh.def, p.rot, gh.tx, gh.ty);
+      const ok = canPlace(m.level, m.placed, gh.def, p.rot, gh.tx, gh.ty) && this.refused.get(p.slot) !== ghostKey(m, p, gh);
       const col = ok ? p.character.body : { h: 0, s: 90, l: 55 };
       s.globalAlpha = 0.85;
       rc.g.globalAlpha = 0.85;
@@ -625,7 +630,7 @@ export class Renderer {
     const anchorX = x - facing * 4;
     const anchorY = c.accessory === 'tail' ? y - 4 : c.accessory === 'cape' ? y - 12 : y - 10;
     // A little air always pulls the ribbon off behind, so standing still it trails instead of hanging like a pole.
-    rig.step(c, anchorX, anchorY, dt, -vx * 0.6 - facing * 8, gy >= 0 ? gy - 0.8 : Infinity);
+    rig.step(c, anchorX, anchorY, dt, -vx * 0.6 - facing * 8 + (rc.gust ?? 0) * 60, gy >= 0 ? gy - 0.8 : Infinity);
     drawInkAccessory(rc.s, c, rig);
     drawInkRunner(rc, c, x, y, { facing, vx, vy, grounded, t: rc.t, celebrate, wall });
     light(rc, x, y - 8, 38, c.body, 0.3);
@@ -746,6 +751,13 @@ export class Renderer {
           this.cam.shake = 14;
           this.flash = 0.25;
           break;
+        case 'refuse': {
+          const p = m.player(e.slot);
+          const gh = p && m.ghostOrigin(p);
+          if (p && gh) this.refused.set(p.slot, ghostKey(m, p, gh));
+          this.fx.add('ring', e.x, e.y, 0, 0, { h: 0, s: 90, l: 55 }, 24, 0.35);
+          break;
+        }
         case 'place': {
           const c = m.player(e.slot)?.character.body ?? th.accent;
           this.fx.add('ring', e.x, e.y, 0, 0, c, 30, 0.4);
@@ -764,4 +776,9 @@ export class Renderer {
       }
     }
   }
+}
+
+/** What a ghost is: part, turn and spot, and what else stands (a refusal can lift once something else goes in). */
+function ghostKey(m: Match, p: Match['players'][number], gh: { def: { key: string }; tx: number; ty: number }): string {
+  return `${gh.def.key}:${p.rot}:${gh.tx}:${gh.ty}:${m.placed.length}:${m.level.version}`;
 }

@@ -45,6 +45,8 @@ export type GameEvent =
   /** Generic prop moment for fx/audio (teleport, bump, thud, snap, bounce, splat…). (x2, y2): a second point, e.g. a portal's exit. */
   | { type: 'prop'; kind: string; x: number; y: number; x2?: number; y2?: number; r?: number }
   | { type: 'place'; slot: number; x: number; y: number }
+  /** A placement the match turned down because it would leave no way to the flag (gen/level/winnable.ts). */
+  | { type: 'refuse'; slot: number; x: number; y: number }
   | { type: 'claim'; slot: number }
   | { type: 'phase'; phase: string }
   /** Held items (src/sim/items). `kind` is the item, or the ammo for a swatted shot; `slot` is the runner involved, or -1. */

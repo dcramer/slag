@@ -292,15 +292,38 @@ describe('across rounds', () => {
     m.startRun();
   };
 
-  it('is there through rounds R, R+1 and R+2 and clears when R+2 ends', () => {
+  /** A match where a puddle is spilled in round R under the rule, and how many rounds it was seen in. */
+  function lasts(bloodRounds: number): number {
     const m = matchIn(1);
+    m.rules = { ...m.rules, bloodRounds };
+    if (m.run) m.run.bleeds = bloodRounds > 0;
+    killAt(m.run!, 0, SPOT);
+    let rounds = 0;
+    while (m.blood.length) {
+      rounds++;
+      finishRace(m);
+      if (m.blood.length) nextRace(m);
+    }
+    return rounds;
+  }
+
+  it('lasts as many rounds as the rule says, and Off spills nothing', () => {
+    expect(lasts(0)).toBe(0);
+    expect(lasts(1)).toBe(1);
+    expect(lasts(2)).toBe(2);
+    expect(lasts(3)).toBe(3);
+  });
+
+  it('is there through rounds R and R+1 by default and clears when R+1 ends', () => {
+    const m = matchIn(1);
+    expect(m.rules.bloodRounds).toBe(2);
     const made = m.round;
     killAt(m.run!, 0, SPOT);
     const cols = floorCols(m.blood);
     expect(cols.length).toBeGreaterThan(0);
     for (const c of m.blood) c.at = Math.min(c.at, m.run!.frame); // the race ended early; its ooze is done
 
-    for (; m.round < made + 2;) {
+    for (; m.round < made + 1;) {
       finishRace(m);
       expect(floorCols(m.blood)).toEqual(cols);
       expect(m.blood.every((c) => c.at === 0)).toBe(true);
@@ -309,7 +332,7 @@ describe('across rounds', () => {
       m.step({});
       expect(iceStrips(m.run!)).toHaveLength(cols.length);
     }
-    expect(m.round).toBe(made + 2);
+    expect(m.round).toBe(made + 1);
     finishRace(m);
     expect(m.blood).toEqual([]);
   });
@@ -317,7 +340,7 @@ describe('across rounds', () => {
   it('is renewed by a new death on the same floor, in the new color', () => {
     const m = matchIn(2);
     killAt(m.run!, 0, SPOT);
-    for (const c of m.blood) c.age = 2;
+    for (const c of m.blood) c.age = 1;
     killAt(m.run!, 1, SPOT);
     const center = m.blood.find((c) => c.tx === SPOT)!;
     expect(center.slot).toBe(1);

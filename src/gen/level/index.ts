@@ -1,24 +1,27 @@
-import { footprintCells } from '../../sim/props';
+import { footprintCells, type PlacedProp } from '../../sim/props';
 import { BRIDGE_W } from './validate';
 import { deriveSeed, Rng } from '../../core/rng';
 import type { Level, LevelProfile } from '../../sim/level';
 import { pickThemeId, type ThemeId } from '../../themes';
 import { SET_PIECE_UID, SET_PIECES } from '../setpieces';
 import { generateTheme, type Theme } from '../theme';
-import { analyzeReach } from '../../sim/reach';
+import { ReachCache } from '../../sim/reach';
+import { footing } from '../../sim/weather';
 import { openUp } from './lanes';
 import { setProbeGravity } from './probe';
 import { type ProfileOverride, rollProfile } from './profile';
-import { MAX_SHARED } from './routes';
+import { analyzeRoutes, MAX_SHARED } from './routes';
 import { FALLBACK_SCULPTOR, SCULPTORS } from './sculptors';
 import { LAST_RESORT } from './sculptors/common';
 import type { Shape } from './types';
-import { type Bridge, judge } from './validate';
+import { type Bridge, judge, oneBridgeEnough } from './validate';
 import { rollWeather } from './weather';
+import { planHolds } from './winnable';
 
 export type { BridgeHint, SculptCtx, Sculptor, Shape } from './types';
 export { describeProfile, GRAVITY, type GravityClass, gravityClass, type ProfileOverride, rollProfile } from './profile';
-export { BRIDGE_W, type Bridge, canPlaceBridge, isAcceptable, judge, MAX_BRIDGES, partsNeeded, withBridges } from './validate';
+export { BRIDGE_W, type Bridge, canPlaceBridge, isAcceptable, judge, MAX_BRIDGES, withBridges } from './validate';
+export { fieldOf, partsNeeded, planHolds, prove, settled } from './winnable';
 export { WEATHER_WEIGHTS } from './weather';
 
 const MAX_ATTEMPTS = 30;
@@ -64,42 +67,63 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
     const sculptor = attempt < MAX_ATTEMPTS ? SCULPTORS[themeId] : FALLBACK_SCULPTOR;
     const shape = sculptor({ rng, themeId, theme, attempt, profile, challenge });
     const level = toLevel(seed, shape, theme, profile);
-    const v = judge(level, shape.bridgeHints, shape.crossings);
-    if (!v.ok) {
-      rejects.unsolvable++;
-      continue;
-    }
+    const cache = new ReachCache(level);
     // Passable bare: not a level. Only the very last attempts accept it, to keep generation total.
     const insist = attempt < LAST_RESORT;
-    if (v.bridges.length === 0 && insist) {
+    if (insist && cache.analyze(level).goalReached) {
       rejects.tooEasy++;
+      continue;
+    }
+    const v = judge(level, shape.bridgeHints, shape.crossings, cache);
+    if (!v.ok) {
+      rejects.unsolvable++;
       continue;
     }
     let shared = v.shared;
     if (!v.open) {
       // Mostly open: give the level the second route it lacks. Lanes stay away from bridges, so the
       // solution still stands; openUp's own analysis re-proves it (an unreachable goal scores 1).
-      const routes = openUp(level, shape, v.bridges, new Rng(deriveSeed(seed, `lanes:${attempt}`)));
+      const routes = openUp(level, shape, v.bridges, new Rng(deriveSeed(seed, `lanes:${attempt}`)), cache);
       if (routes.shared > MAX_SHARED) {
         rejects.closed++;
         continue;
       }
-      if (v.bridges.length && insist && analyzeReach(level).goalReached) {
+      if (v.bridges.length && insist && cache.analyze(level).goalReached) {
         rejects.tooEasy++;
         continue;
       }
       shared = routes.shared;
     }
-    lastGenAttempts = attempt + 1;
-    lastGenInfo = { attempts: attempt + 1, bridges: v.bridges, fallback: attempt >= MAX_ATTEMPTS, shared, sculpted: v.shared, rejects };
-    level.solution = v.bridges;
+    // The count sets what crates offer, so it has to be the real one, on the final terrain.
+    const one = v.bridges.length === 2 ? oneBridgeEnough(level, shape.bridgeHints, cache) : null;
+    const bridges = one ? [one] : v.bridges;
+    if (one) {
+      shared = analyzeRoutes(level, bridges, cache).shared;
+      if (shared > MAX_SHARED) {
+        rejects.closed++;
+        continue;
+      }
+    }
+    level.solution = bridges;
     // Before the set pieces: their placer checks the path with the ghost, which walks on this footing.
     level.weather = rollWeather(seed, theme, level, profileOverride?.weather);
-    // Set pieces must never block the known prop solution: drop any that reserve one of its cells.
-    const pieces = SET_PIECES[themeId](new Rng(deriveSeed(seed, `setpieces:${attempt}`)), level, { count: profile.hazards, danger: profile.danger });
-    const needed = new Set(v.bridges.flatMap((b) => Array.from({ length: BRIDGE_W }, (_, i) => b.y * level.w + b.x + i)));
+    // Rain and snow change the footing the routes were measured on (the gate kept them open): record what the level has.
+    if (footing(level)) shared = analyzeRoutes(level, bridges, cache).shared;
+    lastGenAttempts = attempt + 1;
+    lastGenInfo = { attempts: attempt + 1, bridges, fallback: attempt >= MAX_ATTEMPTS, shared, sculpted: v.shared, rejects };
+    // Set pieces must never block the known prop solution: a match starts from it, keeping clear of every
+    // piece's barrier (./winnable.ts), so a piece goes in only if the solution still holds that way.
+    const keep = (pieces: readonly PlacedProp[]) => planHolds(level, pieces, bridges, cache);
+    const pieces = SET_PIECES[themeId](new Rng(deriveSeed(seed, `setpieces:${attempt}`)), level, {
+      count: profile.hazards,
+      danger: profile.danger,
+      cache,
+      keep,
+    });
+    const needed = new Set(bridges.flatMap((b) => Array.from({ length: BRIDGE_W }, (_, i) => b.y * level.w + b.x + i)));
     // (The placer already avoids these cells; this is a safety net. Keep uids contiguous.)
     level.setPieces = pieces.filter((p) => !footprintCells(p).some(([x, y]) => needed.has(y * level.w + x))).map((p, i) => ({ ...p, uid: SET_PIECE_UID + i }));
+    while (level.setPieces.length && !planHolds(level, [], bridges, cache)) level.setPieces.pop();
     return level;
   }
   lastGenAttempts = MAX_ATTEMPTS + LEGACY_ATTEMPTS;

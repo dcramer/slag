@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { notFound } from 'next/navigation';
 import { roomFromPath } from '../../../src/game/room';
+import { DESCRIPTION, inviteTitle, NAME, oembedAlternate } from '../../site';
 import GameClient from './GameClient';
 
 /**
@@ -25,12 +26,19 @@ async function roomOf(props: Props): Promise<string> {
   return room;
 }
 
+/**
+ * An invite: the code in the title, and the invite card (`opengraph-image.jpg` beside this file).
+ * Lobbies are short-lived, so search engines may fetch them (link previews need that) but not index them.
+ */
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const room = await roomOf(props);
+  const path = `/r/${room}`;
   return {
-    title: `SLAG · Lobby ${room}`,
-    description: `Join lobby ${room} in SLAG, a party platformer for 1–8 players.`,
-    openGraph: { title: `Join my SLAG lobby: ${room}`, description: 'A procedurally generated party platformer. Build traps, then race through them.' },
+    title: `${NAME} · Lobby ${room}`,
+    description: DESCRIPTION,
+    robots: { index: false, follow: false },
+    alternates: { types: oembedAlternate(path) },
+    openGraph: { type: 'website', siteName: NAME, title: inviteTitle(room), description: DESCRIPTION, url: path },
   };
 }
 

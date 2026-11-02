@@ -450,7 +450,7 @@ export function stepProjectile(p: Projectile, w: ProjWorld): boolean {
   let why: EndReason | null = null;
   if (sim?.move) alive = sim.move(p, w);
   else defaultMove(p, f, w.gravity);
-  if (w.gust && !sim?.platform) p.x += w.gust * DT; // Gliders count the gust in their own move, or riders would slide off.
+  if (w.gust && !sim?.platform) p.x += w.gust * DT; // Gliders count the gust in their own move, which riders get as the plank's dx.
   if (alive && sim?.fuse?.(p, f)) alive = false;
   if (!alive) why = 'fuse';
   const age = f - p.born;

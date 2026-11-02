@@ -1,11 +1,6 @@
-import { PHYS } from '../../sim/constants';
-import { footprintCells, type PlacedProp, resolveProp } from '../../sim/props';
-import { TILE } from '../../sim/constants';
+import { footprintCells } from '../../sim/props';
 import { isProtected, type Level, T_EMPTY, T_SOLID } from '../../sim/level';
-import { bodyAtCell, type CollisionWorld, stepBody } from '../../sim/physics';
-import { analyzeReach } from '../../sim/reach';
-import { footing } from '../../sim/weather';
-import type { WindForce } from '../../sim/wind';
+import { ReachCache } from '../../sim/reach';
 import { analyzeRoutes, MAX_SHARED } from './routes';
 import { BRIDGE_W, type BridgeHint } from './types';
 
@@ -16,16 +11,12 @@ export { BRIDGE_W };
  * reachable from spawn without props, OR after placing at most MAX_BRIDGES
  * "bridges" — BRIDGE_W×1 solid platforms in empty, unprotected cells.
  *
- * The verdict is always confirmed with sim/reach.ts `analyzeReach` (the real
- * controller). Finding *where* bridges help is a search problem; re-running
- * the full analysis for every candidate is too slow, so the search uses a
- * cached transition graph built with the same controller (`stepBody`) and
- * the same jump scripts as reach.ts. A candidate placement only re-simulates
- * the cells whose recorded trajectories pass near the new tiles. Any solution
- * the search proposes is re-checked with analyzeReach before it counts, so
- * if reach.ts grows smarter (wall-jumps, one-way physics) the policy only
- * gets more permissive — the search is an under-approximation, never an
- * oracle.
+ * Every verdict comes from sim/reach.ts (the real controller). Finding *where*
+ * bridges help is a search problem, and each candidate is a full question to
+ * the analyzer: a ReachCache makes that cheap, since a bridge only re-traces
+ * the runs that read its tiles. The search proposes where a run could be
+ * caught and is an under-approximation: it may miss a solution, but anything
+ * it returns is proven.
  *
  * A solvable level must also be mostly open (./routes.ts): `open` says so,
  * measured with the solution's bridges in place. The two are separate so a
@@ -78,21 +69,30 @@ export function withBridges(level: Level, bridges: readonly Bridge[]): Level {
   return { ...level, tiles };
 }
 
-/** Policy verdict for a level, using sculptor hints to speed up the search. */
-export function judge(level: Level, hints: readonly Bridge[] = [], crossings: readonly [number, number][] = []): Verdict {
+/** Policy verdict for a level, using sculptor hints to speed up the search. Pass the level's `cache` if there is one. */
+export function judge(level: Level, hints: readonly Bridge[] = [], crossings: readonly [number, number][] = [], cache = new ReachCache(level)): Verdict {
   const scored = (bridges: Bridge[], evals: number): Verdict => {
-    const { shared } = analyzeRoutes(level, bridges);
+    const { shared } = analyzeRoutes(level, bridges, cache);
     return { ok: true, bridges, evals, shared, open: shared <= MAX_SHARED };
   };
-  if (analyzeReach(level).goalReached) return scored([], 0);
-  const s = new BridgeSearch(level);
-  const verify = (bs: Bridge[]) => bs.every((b) => canPlaceBridge(level, b)) && analyzeReach(withBridges(level, bs)).goalReached;
-  const sol = s.solve(hints, verify);
+  if (cache.analyze(level).goalReached) return scored([], 0);
+  const s = new BridgeSearch(level, cache);
+  const sol = s.solve(hints);
   if (!sol) return { ok: false, bridges: [], evals: s.evals, shared: 1, open: false };
-  // The search's model is rough: on a level with one crossing, two bridges may be one it didn't try.
+  // The search's candidates are rough: on a level with one crossing, two bridges may be one it didn't try.
   // A level's count sets what the crate must offer, so it has to be the real one.
+  const verify = (bs: Bridge[]) => bs.every((b) => canPlaceBridge(level, b)) && cache.analyze(withBridges(level, bs)).goalReached;
   const lone = sol.length === 2 && crossings.length === 1 ? loneBridge(crossings[0], hints, verify) : null;
   return scored(lone ? [lone] : sol, s.evals);
+}
+
+/**
+ * One bridge that does what `level`'s two do, if a full look finds one: everywhere
+ * a run falls past. The count sets what the crate offers, so it's worth asking
+ * again of the final terrain, where lanes may have opened a shorter way.
+ */
+export function oneBridgeEnough(level: Level, hints: readonly Bridge[] = [], cache = new ReachCache(level)): Bridge | null {
+  return new BridgeSearch(level, cache).lone(hints);
 }
 
 /** Try one bridge along a crossing, on and just above the ledges, with the real controller. */
@@ -107,31 +107,9 @@ function loneBridge([x0, x1]: readonly [number, number], hints: readonly Bridge[
   return null;
 }
 
-/**
- * How many more bridges `level` needs with `placed` parts standing in it: 0
- * if the goal is already reachable, and MAX_BRIDGES if nothing proves a
- * smaller number (better to over-offer than to strand a match). Static solid
- * parts count as ground; everything placed takes up its cells.
- */
-export function partsNeeded(level: Level, placed: readonly PlacedProp[]): number {
-  const tiles = new Uint8Array(level.tiles);
-  for (const pp of placed) {
-    const r = resolveProp(pp);
-    if (r.motion.type !== 'none') continue;
-    for (const m of r.mods) {
-      if (m.type !== 'body' || m.breakFrames > 0) continue;
-      for (const [x, y] of m.cells) if (x >= 0 && y >= 0 && x < level.w && y < level.h) tiles[y * level.w + x] = T_SOLID;
-    }
-  }
-  const now: Level = { ...level, tiles, setPieces: [...level.setPieces, ...placed] };
-  if (analyzeReach(now).goalReached) return 0;
-  const verify = (bs: Bridge[]) => bs.every((b) => canPlaceBridge(now, b)) && analyzeReach(withBridges(now, bs)).goalReached;
-  // What's left of the recorded solution counts as proof, whatever the rougher search finds.
-  const rest = (level.solution ?? []).filter((b) => canPlaceBridge(now, b));
-  const recorded = verify(rest) ? rest.length : Infinity;
-  const searched = new BridgeSearch(now).solve(level.solution ?? [], verify)?.length ?? Infinity;
-  const best = Math.min(recorded, searched);
-  return best === Infinity ? MAX_BRIDGES : best;
+/** Bridges that finish `level`, found by the search (seeded with `hints`) and proven by `cache`; null if it finds none. */
+export function searchBridges(level: Level, hints: readonly Bridge[], cache: ReachCache): Bridge[] | null {
+  return new BridgeSearch(level, cache).solve(hints);
 }
 
 /**
@@ -139,116 +117,151 @@ export function partsNeeded(level: Level, placed: readonly PlacedProp[]): number
  * px/s blows whenever the player likes. MAX_BRIDGES when it finds nothing better.
  */
 export function partsInAir(level: Level, air: number): number {
-  const airs = [0, air];
-  const verify = (bs: Bridge[]) => bs.every((b) => canPlaceBridge(level, b)) && analyzeReach(withBridges(level, bs), true, undefined, airs).goalReached;
-  return new BridgeSearch(level, { vx: air, vy: 0, ky: 0, dy: 0 }).solve(level.solution ?? [], verify)?.length ?? MAX_BRIDGES;
+  const cache = new ReachCache(level, [0, air]);
+  return new BridgeSearch(level, cache).solve(level.solution ?? [])?.length ?? MAX_BRIDGES;
 }
 
 /** Policy check; seeds the search with the level's recorded solution if it has one. */
 export function isAcceptable(level: Level): boolean {
   const solution = level.solution ?? [];
   // A recorded solution proves itself. The search is rougher and may not rediscover it.
-  const proven = solution.every((b) => canPlaceBridge(level, b)) && analyzeReach(withBridges(level, solution)).goalReached;
-  return (proven || judge(level, solution).ok) && analyzeRoutes(level, solution).shared <= MAX_SHARED;
+  const cache = new ReachCache(level);
+  const proven = solution.every((b) => canPlaceBridge(level, b)) && cache.analyze(withBridges(level, solution)).goalReached;
+  return (proven || judge(level, solution, [], cache).ok) && analyzeRoutes(level, solution, cache).shared <= MAX_SHARED;
 }
 
 // ---------------------------------------------------------------------------
-// Search-only reachability graph. Mirrors sim/reach.ts (scripts, frame cap,
-// landing rule) so that its answers agree with analyzeReach today.
 
-interface Script {
-  dir: -1 | 0 | 1;
-  jumpFrames: number;
-  dirFrames: number;
-}
-
-const SCRIPTS: Script[] = (() => {
-  const out: Script[] = [];
-  for (const dir of [-1, 1] as const) {
-    for (const jumpFrames of [0, 5, 99]) {
-      for (const dirFrames of [99, 10, 20]) {
-        if (jumpFrames === 0 && dirFrames !== 99) continue;
-        out.push({ dir, jumpFrames, dirFrames });
-      }
-    }
-  }
-  out.push({ dir: 0, jumpFrames: 99, dirFrames: 0 });
-  return out;
-})();
-const NS = SCRIPTS.length;
-const MAX_FRAMES = 110;
-
-interface CellInfo {
-  /** Landing cell key per script (-1 = none). */
-  land: Int32Array;
-  /** Tile-space bounding box per script (x0, y0, x1, y1), padded by one tile. */
-  box: Int16Array;
-  /** Bridge keys (y * w + leftX) whose top a descending trajectory crosses. */
-  cands: number[];
-}
-
-interface RunResult {
+/** What a set of bridges has opened up so far. */
+interface Reached {
+  keys: number[];
   goal: boolean;
-  /** Lower is closer to the goal. */
-  score: number;
-  cands: Set<number>;
+  /** Stand cells known to be reachable. */
+  known: Uint8Array;
+  /** Bridge keys (y * w + leftX) that would catch a run from here on its way down. */
+  cands: Uint8Array;
+  /** Closest stand cell to the goal, on the level's own ground and on anything. */
+  natural: number;
+  any: number;
 }
 
+/** Greedy search over bridge placements, asking a ReachCache about each one. */
 class BridgeSearch {
   evals = 0;
   private readonly W: number;
   private readonly H: number;
   private readonly base: Uint8Array;
-  private readonly prot: Uint8Array;
-  private readonly baseInfo = new Map<number, CellInfo>();
+  /** Cells a bridge can't take: protected ones, and set pieces and placed parts. */
+  private readonly closed: Uint8Array;
   private readonly gx: number;
   private readonly gy: number;
 
   constructor(
     private readonly level: Level,
-    private readonly wind: WindForce | null = null,
+    private readonly cache: ReachCache,
   ) {
     this.W = level.w;
     this.H = level.h;
-    this.prot = new Uint8Array(this.W * this.H);
     this.base = level.tiles;
-    for (let y = 0; y < this.H; y++) for (let x = 0; x < this.W; x++) if (isProtected(level, x, y)) this.prot[y * this.W + x] = 1;
+    this.closed = new Uint8Array(this.W * this.H);
+    for (let y = 0; y < this.H; y++) for (let x = 0; x < this.W; x++) if (isProtected(level, x, y)) this.closed[y * this.W + x] = 1;
+    for (const k of setPieceCells(level)) this.closed[k] = 1;
     this.gx = level.goal.tx;
     this.gy = level.goal.ty;
   }
 
-  solve(hints: readonly Bridge[], verify: (bs: Bridge[]) => boolean): Bridge[] | null {
-    const r0 = this.run([]);
-    if (r0.goal && verify([])) return [];
-    const hintKeys = hints.map((h) => h.y * this.W + h.x).filter((k) => this.placeable(this.base, k));
+  solve(hints: readonly Bridge[]): Bridge[] | null {
+    const root = this.explore();
+    if (root.goal) return [];
+    const hintKeys = this.hintKeys(hints);
     const tried = new Set<string>();
-    interface Node {
-      keys: number[];
-      score: number;
-      cands: Set<number>;
-    }
-    const level1: Node[] = [];
-    for (const k of this.rank(hintKeys, r0.cands, [], 14)) {
-      const r = this.run([k]);
+    const level1: Reached[] = [];
+    for (const k of this.rank(hintKeys, root.cands, [], 14)) {
+      const r = this.grow(root, k);
       tried.add(String(k));
-      if (r.goal && verify([this.bridge(k)])) return [this.bridge(k)];
-      level1.push({ keys: [k], score: r.score, cands: r.cands });
+      if (r.goal) return [this.bridge(k)];
+      level1.push(r);
     }
-    level1.sort((a, b) => a.score - b.score);
+    level1.sort((a, b) => a.natural + 0.3 * a.any - (b.natural + 0.3 * b.any));
     for (const n of level1.slice(0, 3)) {
       for (const k of this.rank(hintKeys, n.cands, n.keys, 10)) {
-        const keys = [...n.keys, k].sort((a, b) => a - b);
-        const id = keys.join(',');
+        const id = [...n.keys, k].sort((a, b) => a - b).join(',');
         if (tried.has(id)) continue;
         tried.add(id);
-        const r = this.run(keys);
-        if (r.goal) {
-          const bs = keys.map((kk) => this.bridge(kk));
-          if (verify(bs)) return bs;
-        }
+        if (this.grow(n, k).goal) return [...n.keys, k].map((kk) => this.bridge(kk));
       }
     }
     return null;
+  }
+
+  /**
+   * Any one bridge that works, among the places a run falls past: the hints,
+   * then one spot in every 2×2 block of them. Where one bridge does the job a
+   * neighbouring spot nearly always does too, and the full sweep was most of
+   * the time a two-part level took to generate.
+   */
+  lone(hints: readonly Bridge[]): Bridge | null {
+    const root = this.explore();
+    const hintKeys = this.hintKeys(hints);
+    const blocks = new Set<number>();
+    for (const k of this.rank(hintKeys, root.cands, [], Infinity, false)) {
+      const x = k % this.W;
+      const block = Math.floor((k - x) / this.W / 2) * this.W + Math.floor(x / 2);
+      if (!hintKeys.includes(k) && blocks.has(block)) continue;
+      blocks.add(block);
+      if (this.grow(root, k).goal) return this.bridge(k);
+    }
+    return null;
+  }
+
+  private hintKeys(hints: readonly Bridge[]): number[] {
+    return hints.map((h) => h.y * this.W + h.x).filter((k) => this.placeable(this.base, k));
+  }
+
+  /** What the level offers with no bridges. */
+  private explore(): Reached {
+    this.evals++;
+    const cands = new Uint8Array(this.W * this.H);
+    const { goalReached, cells } = this.cache.analyze(this.level, true, { cands });
+    const known = new Uint8Array(this.W * this.H);
+    const r: Reached = { keys: [], goal: goalReached, known, cands, natural: Infinity, any: Infinity };
+    this.absorb(r, cells);
+    return r;
+  }
+
+  /**
+   * Add bridge `k` to `from`. What's already reached stays explored, so a spot
+   * costs only what standing on it opens up: that's a guess (a bridge can also
+   * cut a route it doesn't stand on), and a goal found this way is proven in full.
+   */
+  private grow(from: Reached, k: number): Reached {
+    this.evals++;
+    const keys = [...from.keys, k];
+    const tiles = this.tilesWith(keys);
+    const view = { ...this.level, tiles };
+    const cands = from.cands.slice();
+    const top = [0, 1, 2].map((i) => k - this.W + i).filter((c) => tiles[c] === T_EMPTY);
+    const { goalReached, cells } = this.cache.analyze(view, true, { cands, from: { cells: top, known: from.known } });
+    const r: Reached = {
+      keys,
+      goal: goalReached && this.cache.analyze(view).goalReached,
+      known: from.known.slice(),
+      cands,
+      natural: from.natural,
+      any: from.any,
+    };
+    this.absorb(r, cells);
+    return r;
+  }
+
+  private absorb(r: Reached, cells: readonly number[]): void {
+    for (const k of cells) {
+      r.known[k] = 1;
+      const tx = k % this.W;
+      const d = this.dist(tx, (k - tx) / this.W);
+      if (d < r.any) r.any = d;
+      if (this.base[k + this.W] !== T_EMPTY && d < r.natural) r.natural = d;
+    }
   }
 
   private bridge(k: number): Bridge {
@@ -259,20 +272,20 @@ class BridgeSearch {
     return Math.abs(this.gx - x) + (y > this.gy ? 0.6 * (y - this.gy) : 0.25 * (this.gy - y));
   }
 
-  /** Hints first, then candidates by distance-to-goal, spread out so near-duplicates don't crowd the list. */
-  private rank(hints: number[], cands: Set<number>, placed: number[], n: number): number[] {
+  /** Hints first, then candidates by distance-to-goal, `spread` out so near-duplicates don't crowd the list. */
+  private rank(hints: number[], cands: Uint8Array, placed: number[], n: number, spread = true): number[] {
     const tiles = this.tilesWith(placed);
     const ok = (k: number) => this.placeable(tiles, k) && !placed.includes(k);
     const out: number[] = [];
     for (const h of hints) if (ok(h) && !out.includes(h)) out.push(h);
     const scored: [number, number][] = [];
-    for (const k of cands) if (ok(k)) scored.push([this.dist((k % this.W) + 1, Math.floor(k / this.W) - 1), k]);
+    for (let k = 0; k < cands.length; k++) if (cands[k] && ok(k)) scored.push([this.dist((k % this.W) + 1, Math.floor(k / this.W) - 1), k]);
     scored.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
     const bins = new Set<number>();
     for (const [, k] of scored) {
       if (out.length >= n + hints.length) break;
       const bin = Math.floor(k / this.W) * 100 + Math.floor((k % this.W) / 2);
-      if (bins.has(bin) || out.includes(k)) continue;
+      if ((spread && bins.has(bin)) || out.includes(k)) continue;
       bins.add(bin);
       out.push(k);
     }
@@ -283,7 +296,7 @@ class BridgeSearch {
     const x = k % this.W;
     const y = Math.floor(k / this.W);
     if (y < 1 || x < 0 || x + BRIDGE_W > this.W) return false;
-    for (let i = 0; i < BRIDGE_W; i++) if (tiles[k + i] !== T_EMPTY || this.prot[k + i]) return false;
+    for (let i = 0; i < BRIDGE_W; i++) if (tiles[k + i] !== T_EMPTY || this.closed[k + i]) return false;
     return tiles[k - this.W + 1] === T_EMPTY;
   }
 
@@ -292,146 +305,5 @@ class BridgeSearch {
     const t = new Uint8Array(this.base);
     for (const k of keys) for (let i = 0; i < BRIDGE_W; i++) t[k + i] = T_SOLID;
     return t;
-  }
-
-  /** BFS from spawn over the transition graph of the level with bridges `keys` placed. */
-  private run(keys: readonly number[]): RunResult {
-    this.evals++;
-    const tiles = this.tilesWith(keys);
-    const boxes = keys.map((k) => [k % this.W, Math.floor(k / this.W), (k % this.W) + BRIDGE_W - 1, Math.floor(k / this.W)]);
-    const touches = (info: CellInfo, s: number) => {
-      const b = info.box;
-      for (const [x0, y0, x1, y1] of boxes) if (b[s * 4] <= x1 && b[s * 4 + 2] >= x0 && b[s * 4 + 1] <= y1 && b[s * 4 + 3] >= y0) return true;
-      return false;
-    };
-    const world: CollisionWorld = {
-      tileAt: (x, y) => (x < 0 || x >= this.W ? 1 : y < 0 || y >= this.H ? 0 : tiles[y * this.W + x]),
-      solids: [],
-      gravity: this.level.gravity ?? 1,
-      tileSurface: footing(this.level),
-    };
-    const standable = (x: number, y: number) => x >= 0 && x < this.W && y >= 0 && y < this.H - 1 && !tiles[y * this.W + x] && !!tiles[(y + 1) * this.W + x];
-    const sx = this.level.spawn.tx;
-    const sy = this.level.spawn.ty;
-    const goalKey = this.gy * this.W + this.gx;
-    const res: RunResult = { goal: false, score: Infinity, cands: new Set() };
-    if (!standable(sx, sy)) return res;
-    const seen = new Uint8Array(this.W * this.H);
-    const queue: number[] = [sy * this.W + sx];
-    seen[queue[0]] = 1;
-    let bestNatural = Infinity;
-    let bestAny = Infinity;
-    const push = (k: number) => {
-      if (!seen[k]) {
-        seen[k] = 1;
-        queue.push(k);
-      }
-    };
-    for (let qi = 0; qi < queue.length; qi++) {
-      const k = queue[qi];
-      const tx = k % this.W;
-      const ty = (k - tx) / this.W;
-      if (k === goalKey) {
-        res.goal = true;
-        res.score = -1;
-        return res;
-      }
-      const d = this.dist(tx, ty);
-      if (d < bestAny) bestAny = d;
-      const natural = this.base[k + this.W] !== T_EMPTY;
-      if (natural && d < bestNatural) bestNatural = d;
-      if (standable(tx - 1, ty)) push(k - 1);
-      if (standable(tx + 1, ty)) push(k + 1);
-      let info = this.baseInfo.get(k);
-      if (info && keys.length) for (let s = 0; s < NS && info; s++) if (touches(info, s)) info = undefined;
-      if (!info) {
-        info = this.simulateCell(world, tiles, tx, ty);
-        let clean = true;
-        for (let s = 0; s < NS && clean; s++) if (keys.length && touches(info, s)) clean = false;
-        if (clean && this.base[k + this.W] !== T_EMPTY && this.base[k] === T_EMPTY) this.baseInfo.set(k, info);
-      }
-      for (let s = 0; s < NS; s++) if (info.land[s] >= 0) push(info.land[s]);
-      for (const c of info.cands) res.cands.add(c);
-    }
-    res.score = bestNatural + 0.3 * bestAny;
-    return res;
-  }
-
-  private simulateCell(world: CollisionWorld, tiles: Uint8Array, tx: number, ty: number): CellInfo {
-    const info: CellInfo = { land: new Int32Array(NS).fill(-1), box: new Int16Array(NS * 4), cands: [] };
-    const seenC = new Set<number>();
-    // Run-up available behind this cell in each direction (reach.ts only runs from platforms ≥ 4 cells long;
-    // 3 cells of travel reach full run speed). Short ledges — like a 3-wide bridge — only get walking jumps.
-    const W = this.W;
-    const st = (x: number) => x >= 0 && x < W && !tiles[ty * W + x] && !!tiles[(ty + 1) * W + x];
-    const behind = (d: number) => {
-      let n = 0;
-      while (n < 3 && st(tx - d * (n + 1))) n++;
-      return n;
-    };
-    // Like reach.ts: running jumps leave from a platform edge after a full run-up; everything else starts from rest, walking.
-    const runL = behind(-1) >= 3 && !st(tx - 1);
-    const runR = behind(1) >= 3 && !st(tx + 1);
-    for (let s = 0; s < NS; s++) {
-      const sc = SCRIPTS[s];
-      const b = bodyAtCell(tx, ty);
-      if (world.tileSurface) b.surface = world.tileSurface;
-      // Guess model only (answers are re-verified with analyzeReach): assume a full run-up where there's room for one.
-      const run = sc.dir !== 0 && (sc.dir > 0 ? runR : runL);
-      if (run) b.vx = sc.dir * PHYS.runSpeed;
-      let x0 = tx;
-      let x1 = tx;
-      let y0 = ty;
-      let y1 = ty;
-      let airborne = false;
-      for (let f = 0; f < MAX_FRAMES; f++) {
-        const prevBottom = b.y + b.h;
-        const holdDir = f < sc.dirFrames;
-        stepBody(
-          b,
-          { left: holdDir && sc.dir < 0, right: holdDir && sc.dir > 0, run, jump: f < sc.jumpFrames, jumpPressed: f === 0 && sc.jumpFrames > 0 },
-          world,
-          this.wind,
-        );
-        const bx0 = Math.floor(b.x / TILE);
-        const bx1 = Math.floor((b.x + b.w) / TILE);
-        const by0 = Math.floor(b.y / TILE);
-        const by1 = Math.floor((b.y + b.h) / TILE);
-        if (bx0 < x0) x0 = bx0;
-        if (bx1 > x1) x1 = bx1;
-        if (by0 < y0) y0 = by0;
-        if (by1 > y1) y1 = by1;
-        if (b.y > this.H * TILE) break;
-        const bottom = b.y + b.h;
-        if (!b.onGround && bottom > prevBottom) {
-          // Descending: every tile row whose top we just passed could hold a bridge that catches us.
-          const r = Math.floor(bottom / TILE);
-          if (r * TILE > prevBottom - 1e-6 && r >= 1 && r < this.H) {
-            const cx = Math.floor((b.x + b.w / 2) / TILE);
-            const key = r * this.W + cx - 1;
-            if (!seenC.has(key) && this.placeable(tiles, key)) {
-              seenC.add(key);
-              info.cands.push(key);
-            }
-          }
-        }
-        if (!b.onGround) airborne = true;
-        else if (airborne) {
-          const fy = Math.floor((b.y + b.h - 1) / TILE);
-          for (const fx of [Math.floor((b.x + b.w / 2) / TILE), Math.floor(b.x / TILE), Math.floor((b.x + b.w - 1) / TILE)]) {
-            if (fx >= 0 && fx < this.W && fy >= 0 && fy < this.H - 1 && !tiles[fy * this.W + fx] && tiles[(fy + 1) * this.W + fx]) {
-              info.land[s] = fy * this.W + fx;
-              break;
-            }
-          }
-          break;
-        } else if (f > 30) break;
-      }
-      info.box[s * 4] = x0 - 1;
-      info.box[s * 4 + 1] = y0 - 1;
-      info.box[s * 4 + 2] = x1 + 1;
-      info.box[s * 4 + 3] = y1 + 1;
-    }
-    return info;
   }
 }

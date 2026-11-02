@@ -2,7 +2,7 @@ import 'client-only';
 import { createAudio } from './audio';
 import { parseSeed } from './core/rng';
 import { installDebug } from './debug';
-import { Match } from './game/match';
+import { Match, rulesProfile } from './game/match';
 import { roomSeed } from './game/room';
 import { loadRules, saveRules } from './game/rules';
 import { InputManager } from './input/input';
@@ -14,6 +14,7 @@ import { DT } from './sim/constants';
 import { addBreadcrumb, setTelemetryContext } from './telemetry';
 import { THEME_IDS } from './themes';
 import { InputModeTracker } from './ui/input-mode';
+import { LevelAhead } from './level-ahead';
 import { loadHaptics, NamePrompt, RulesMenu, SettingsMenu } from './ui/menus';
 import { detectQuality, isTouchFirst, savedQuality, saveQuality } from './ui/touch/device';
 import { TouchOverlay } from './ui/touch/overlay';
@@ -27,12 +28,25 @@ const PINCH_WAIT_FRAMES = 6;
  * Boot the game into `container` for lobby `room`. All game logic runs
  * client-side; the Next.js route (/r/[room]) only server-renders the shell
  * and calls this once mounted. Debug URL params (?seed, ?theme, ?players,
- * ?race…) are still read from location.search.
+ * ?race…) are still read from location.search. The first level is built off
+ * the main thread, so the page stays alive while it loads.
  */
-export function bootGame(container: HTMLElement, room: string): void {
+export async function bootGame(container: HTMLElement, room: string): Promise<void> {
   if (booted) return; // React strict mode / remounts: one game per page
   booted = true;
   setTelemetryContext(() => ({ room })); // a failed boot still says which lobby
+  const params = new URLSearchParams(location.search);
+  const seedParam = params.get('seed'); // debug override
+  const themeParam = params.get('theme');
+  const seed = seedParam ? parseSeed(seedParam) : roomSeed(room);
+  const theme = THEME_IDS.find((t) => t === themeParam);
+  const rules = loadRules();
+  const levels = new LevelAhead();
+  await levels.first({ seed, theme, profile: rulesProfile(rules) });
+  startGame(container, room, params, new Match(seed, theme, rules), levels);
+}
+
+function startGame(container: HTMLElement, room: string, params: URLSearchParams, match: Match, levels: LevelAhead): void {
   const glCanvas = document.createElement('canvas');
   const hudCanvas = document.createElement('canvas');
   glCanvas.tabIndex = 0;
@@ -41,14 +55,6 @@ export function bootGame(container: HTMLElement, room: string): void {
   container.append(glCanvas, hudCanvas);
   glCanvas.focus();
 
-  const params = new URLSearchParams(location.search);
-  const seedParam = params.get('seed'); // debug override
-  const themeParam = params.get('theme');
-  const match = new Match(
-    seedParam ? parseSeed(seedParam) : roomSeed(room),
-    THEME_IDS.find((t) => t === themeParam),
-  );
-  match.setRules(loadRules());
   // Host-rolled per-match salt (crate order); re-rolled while in the lobby so every game differs.
   match.nextSalt = (Math.random() * 4294967296) >>> 0;
   const gameContext = () => ({
@@ -235,6 +241,14 @@ export function bootGame(container: HTMLElement, room: string): void {
   let acc = 0;
   let last = performance.now();
   let lastPhase = match.phase;
+  let ahead = '';
+  /** Keep what the match could ask for next built and waiting. */
+  function buildAhead() {
+    const key = `${match.seed}:${match.phase === 'lobby'}:${match.themeOverride}:${JSON.stringify(match.profileOverride())}`;
+    if (key === ahead) return;
+    ahead = key;
+    levels.want(match.upcoming());
+  }
   /** Run the fixed steps due by `now`. Online, the session sequences inputs (host) or applies bundles (guest). */
   function advance(now: number, maxCatchUp: number) {
     acc += Math.min(maxCatchUp, (now - last) / 1000);
@@ -253,6 +267,7 @@ export function bootGame(container: HTMLElement, room: string): void {
   }
   function frame(now: number) {
     advance(now, 0.25);
+    buildAhead();
     if (loop.paused) {
       requestAnimationFrame(frame);
       return;

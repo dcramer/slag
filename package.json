@@ -18,6 +18,7 @@
     "check:fast": "tsc --noEmit && oxlint && pnpm format:check",
     "check": "pnpm check:fast && pnpm test",
     "shot": "tsx tools/shot.ts",
+    "brand": "tsx tools/brand.ts",
     "level": "tsx tools/level.ts",
     "online-test": "tsx tools/online-test.ts",
     "perf": "tsx tools/perf.ts"

@@ -1,6 +1,6 @@
 import { Rng } from '../core/rng';
 import { TILE } from '../sim/constants';
-import { type Level, T_ONEWAY, tileAt, type TileRect } from '../sim/level';
+import { type Level, levelKey, T_ONEWAY, tileAt, type TileRect } from '../sim/level';
 import { coatTerrain } from './weather';
 import { DECOR, type Decor } from './decor';
 import { inkFence, inkHay } from './ink-parts';
@@ -55,13 +55,14 @@ export class TerrainPainter {
    */
   ensure(level: Level, kb: number, skip?: TileRect): boolean {
     const th = level.theme;
-    const dk = `${level.seed}:${th.seed}:${th.id}:${level.w}x${level.h}`;
+    const dk = `${levelKey(level)}:${th.seed}:${th.id}`;
     if (dk !== this.decorKey) {
       this.decorKey = dk;
       this.makeDecor(level, skip);
       this.bakeKey = '';
     }
-    const look = `${th.seed}:${th.id}:${th.name}:${kb.toFixed(2)}:${level.seed}:${level.w}x${level.h}:${level.weather?.kind}`;
+    // levelKey: a same-seed regen under other rules is another level, so it gets a full bake, never a patch.
+    const look = `${th.seed}:${th.id}:${th.name}:${kb.toFixed(2)}:${levelKey(level)}`;
     const bk = `${look}:${level.version}`;
     if (bk === this.bakeKey) return false;
     this.bakeKey = bk;
@@ -285,7 +286,7 @@ export class TerrainPainter {
 
   /** Per-frame: swaying grass (parted by players), decor with animated/emissive bits. */
   drawLive(rc: RC, level: Level, pushers: { x: number; y: number }[]) {
-    drawTufts(rc.s, this.tufts, level, level.theme.terrain.capColor, rc.t, pushers);
+    drawTufts(rc, rc.s, this.tufts, level, level.theme.terrain.capColor, pushers);
     const th = level.theme;
     for (const d of this.live) {
       if (!tileAt(level, d.tx, d.ty)) continue;

@@ -5,6 +5,7 @@ import { TILE } from '../sim/constants';
 import { type Level, T_ONEWAY, tileAt, type TileRect } from '../sim/level';
 import { blob, type EdgeP, line, looseLoop, type P, shadeOf, sn, stroke, type StrokeOpts, traceCorners, vn } from './ink';
 import { INK_MATERIALS, type Tones } from './ink-material';
+import { flutter, type RC } from './kit';
 
 /**
  * Terrain as an ink drawing instead of a textured mask. Each layer is marks a hand would make: flat tones
@@ -454,13 +455,6 @@ export const INK_CAPS: Record<CapKind, Cap> = {
   grass: bandCap({ band: 4.3, drip: 3.4, fringe: 1, tones: leafy, ink: leafInk }, true),
   // Moss creeps: thinner on top, longer in the drip, and nothing stands up out of it.
   moss: bandCap({ band: 2.8, drip: 6.5, fringe: 0.55, tones: leafy, ink: leafInk }),
-  snow: bandCap({
-    band: 3.4,
-    drip: 2.4,
-    fringe: 0,
-    tones: () => [css({ h: 215, s: 34, l: 66 }), css({ h: 212, s: 30, l: 82 }), css({ h: 210, s: 30, l: 95 }), '#fff'],
-    ink: () => css({ h: 218, s: 34, l: 46 }),
-  }),
   rust: bandCap({ band: 1.5, drip: 8, fringe: 0, tones: leafy, ink: dullInk }),
   ash: bandCap({ band: 1.8, drip: 2.2, fringe: 0.3, tones: leafy, ink: dullInk }),
   ledge: hardCap(5.2, 34, 'none', 1),
@@ -569,7 +563,6 @@ function spike(g: CanvasRenderingContext2D, x: number, y: number, h: number, w: 
 }
 
 const stalactite: Hanger = (g, x, y, h, T, ink, seed) => spike(g, x, y, Math.min(6, h), 2.6, css(T.base, -2), ink, seed);
-const icicle: Hanger = (g, x, y, h, _, ink, seed) => spike(g, x, y, Math.min(6, h), 1.9, css({ h: 200, s: 60, l: 90 }), ink, seed);
 const shard: Hanger = (g, x, y, h, T, ink, seed) => spike(g, x, y, Math.min(5, h), 2.4, css(T.vein, 6), ink, seed);
 const mossDrip: Hanger = (g, x, y, h, T, ink, seed) => spike(g, x, y, h, 2.1, css(T.capColor, -8), ink, seed);
 const root: Hanger = (g, x, y, h, T, _, seed) => {
@@ -580,7 +573,6 @@ const root: Hanger = (g, x, y, h, T, _, seed) => {
 };
 
 function hangerOf(T: TerrainLook): Hanger | null {
-  if (T.cap === 'snow') return icicle;
   if (T.cap === 'crystal') return shard;
   if (T.cap === 'moss') return mossDrip;
   if (T.kind === 'cave' || T.kind === 'rock' || T.kind === 'basalt') return stalactite;
@@ -647,12 +639,13 @@ export function makeTufts(loops: readonly EdgeP[][], seed: number, keepClear: re
   return tufts;
 }
 
-export function drawTufts(s: CanvasRenderingContext2D, tufts: readonly Tuft[], level: Level, capColor: HSL, t: number, pushers: readonly P[]) {
+/** Grass stands still in still air (`flutter`), and parts around anyone walking through it. */
+export function drawTufts(rc: RC, s: CanvasRenderingContext2D, tufts: readonly Tuft[], level: Level, capColor: HSL, pushers: readonly P[]) {
   const tones = [css(capColor, -4, 1, 4), css(capColor, 10), css(capColor, -14, 1, 6)];
   const ink = css({ h: capColor.h + 25, s: Math.min(80, capColor.s + 15), l: 9 });
   for (const tf of tufts) {
     if (!tileAt(level, tf.tx, tf.ty) || tileAt(level, tf.tx, tf.ty) === T_ONEWAY) continue;
-    let sway = Math.sin(t * 2.1 + tf.x * 0.15) * 0.14 + Math.sin(t * 0.7 + tf.x * 0.03) * 0.1;
+    let sway = flutter(rc, 2.1, tf.x * 0.15) * 0.3;
     for (const p of pushers) {
       const dx = tf.x - p.x;
       if (Math.abs(dx) < 10 && Math.abs(tf.y - p.y) < 12) sway += Math.sign(dx || 1) * (1 - Math.abs(dx) / 10) * 0.9;
