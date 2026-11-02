@@ -1260,12 +1260,21 @@ const RECIPES: Record<Archetype, PartRecipe> = {
     };
   },
 
+  /**
+   * Bombs clear placed parts, not the level: changing terrain is rare (the owner, 2026-11-02). The drill
+   * digs, and one bomb in five rolls the small mining kind that also bites rock.
+   */
   bomb(rng) {
+    const mining = rng.chance(0.2);
     return {
       archetype: 'bomb',
       role: 'demolish',
-      name: title(rng, ['Volatile', 'Grumpy', 'Polite', 'Excessive'], ['Cartoon Bomb', 'Kaboom', 'Fuse Ball', `${word(rng, 1, 2)}-omb`]),
-      sized: (size) => ({ modules: [{ type: 'bomb', radius: by(size, 1.6, 2.6, 4), look: 'bomb' }] }),
+      name: mining
+        ? title(rng, ['Blasting', 'Quarry', 'Pocket'], ['Mining Charge', 'Rock Popper', 'Pick Bomb'])
+        : title(rng, ['Volatile', 'Grumpy', 'Polite', 'Excessive'], ['Cartoon Bomb', 'Kaboom', 'Fuse Ball', `${word(rng, 1, 2)}-omb`]),
+      sized: (size) => ({
+        modules: [mining ? { type: 'bomb', radius: by(size, 1.4, 1.8, 2.2), look: 'bomb' } : { type: 'bomb', radius: by(size, 1.6, 2.6, 4), target: 'props', look: 'bomb' }],
+      }),
     };
   },
 
@@ -1300,7 +1309,7 @@ const RECIPES: Record<Archetype, PartRecipe> = {
       ),
       sized: (size) => ({
         modules: [
-          { type: 'bomb', radius: cross ? by(size, 3, 4, 6) : by(size, 2.6, 3.2, 4), shape: cross ? 'cross' : 'ring', width: cross ? 1 : 1.3, look: 'charge' },
+          { type: 'bomb', radius: cross ? by(size, 3, 4, 6) : by(size, 2.6, 3.2, 4), shape: cross ? 'cross' : 'ring', width: cross ? 1 : 1.3, target: 'props', look: 'charge' },
         ],
       }),
     };
@@ -1464,7 +1473,7 @@ const RECIPES: Record<Archetype, PartRecipe> = {
       archetype: 'timebomb',
       role: 'demolish',
       name: title(rng, emp ? ['Spiteful', 'Delayed'] : ['Ticking', 'Patient', 'Punctual'], ['Time Bomb', 'Alarm Clock', 'Hurry-Up Timer', 'Snooze Button']),
-      sized: (size) => ({ modules: [{ type: 'bomb', radius: by(size, 2, 2.6, 3.2), target: emp ? 'props' : 'all', look: 'clock', delay: true }] }),
+      sized: (size) => ({ modules: [{ type: 'bomb', radius: by(size, 2, 2.6, 3.2), target: 'props', look: 'clock', delay: true }] }),
     };
   },
 };
@@ -1479,13 +1488,13 @@ export const rosterSize = (cards: number): number => Math.max(ROSTER_MIN, cards 
 const pool = (...kinds: Archetype[]) => ARCHETYPE_WEIGHTS.filter(([k]) => kinds.includes(k));
 const HAZARDS = pool(...HAZARD);
 /**
- * What every roster holds after its bridge: a breaker that clears terrain,
- * since dry rounds lean on it (an EMP or a props-only time bomb wouldn't help),
- * held items, and a spread of roles. Hazards get three so the crate's hazard
+ * What every roster holds after its bridge: a demolition part, since dry rounds
+ * lean on it to clear what's in the way (mostly placed parts: changing terrain is
+ * rare, see the bomb recipe), held items, and a spread of roles. Hazards get three so the crate's hazard
  * card isn't always the same one.
  */
 const ROSTER_SLOTS = [
-  pool('bomb', 'charge', 'drill'),
+  pool('bomb', 'charge', 'drill', 'timebomb'),
   pool('mystery'),
   HAZARDS,
   HAZARDS,
