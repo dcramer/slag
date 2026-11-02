@@ -185,10 +185,13 @@ const penBuf: P[] = [];
  * line thins there but never breaks, so the silhouette stays as bold and closed as a solid outline.
  * The first lift sits on the lit side, nearest upper left, where a pen would start.
  */
-export function contour(s: CanvasRenderingContext2D, pts: readonly P[], fill: string, ink: string, k: number, seed: number) {
+export function contour(s: CanvasRenderingContext2D, pts: readonly P[], fill: string, ink: string, k: number, seed: number, glass = false) {
   const n = pts.length;
   const { x: cx, y: cy } = centroid(pts);
-  mass(s, pts, ink, MASS[0] * k, MASS[1] * k, cx, cy);
+  // Glass (a translucent fill) has no ink mass under it, or the mass would show through: the fill goes
+  // first and the pen over it.
+  if (glass) poly(s, pts, fill);
+  else mass(s, pts, ink, MASS[0] * k, MASS[1] * k, cx, cy);
   let lead = 0;
   let best = -2;
   for (let i = 0; i < n; i++) {
@@ -224,7 +227,7 @@ export function contour(s: CanvasRenderingContext2D, pts: readonly P[], fill: st
     const over = (PEN[0] + (PEN[1] - PEN[0]) * sh) * k;
     stroke(s, penBuf, { w: 2 * (mid * 0.6 + over), seed: seed + j, taper: [0.2, 0.26], press: 0.3 });
   }
-  poly(s, pts, fill);
+  if (!glass) poly(s, pts, fill);
 }
 
 /**

@@ -69,14 +69,15 @@ function faceOf(c: CharacterDef, art: KindArt): CharacterDef {
   return fc;
 }
 
-/** Each kind's outline at its size, facing right: authored once, sampled once. */
-const shapes = new Map<KindArt, P[]>();
+/** Each kind's outline (and its pose variants) at its size, facing right: authored once, sampled once. */
+const shapes = new Map<string, P[]>();
 
-function shapeOf(art: KindArt): P[] {
-  let pts = shapes.get(art);
+function shapeOf(art: KindArt, pose: 'rest' | 'run' | 'air' = 'rest'): P[] {
+  const spec = (pose !== 'rest' && art.poses?.[pose]) || art.outline;
+  let pts = shapes.get(spec);
   if (!pts) {
-    pts = outlinePts(art.outline, 14 * art.size[0], 15 * art.size[1]);
-    shapes.set(art, pts);
+    pts = outlinePts(spec, 14 * art.size[0], 15 * art.size[1]);
+    shapes.set(spec, pts);
   }
   return pts;
 }
@@ -91,7 +92,15 @@ function handLook(c: CharacterDef, art: KindArt, lk: Look): Look {
   if (!h) {
     const m = art.hands ?? 'body';
     const [hd, sh] =
-      m === 'glove' ? ['#f4efe6', '#cfc6b8'] : m === 'iron' ? [STEEL, STEEL_SH] : m === 'paint' ? [lk.paint, lk.paintShade] : [lk.fill, lk.fillShade];
+      m === 'glove'
+        ? ['#f4efe6', '#cfc6b8']
+        : m === 'leather'
+          ? ['#a8794a', '#7d5634']
+          : m === 'iron'
+            ? [STEEL, STEEL_SH]
+            : m === 'paint'
+              ? [lk.paint, lk.paintShade]
+              : [lk.fill, lk.fillShade];
     h = { ...lk, hand: hd, handShade: sh };
     hands.set(c, h);
   }
@@ -99,6 +108,27 @@ function handLook(c: CharacterDef, art: KindArt, lk: Look): Look {
 }
 
 const GLINT = '#fffaf0';
+/** Screened over the lit rim at card scale: lifts every color under it by the same flat step. */
+const RIM = 'rgb(52 46 38)';
+
+/** A flat ring round the feet, as an even-odd pair of ellipses `w` wide outside and `t` thick. */
+function ringPath(s: CanvasRenderingContext2D, rx: number, t: number, y: number) {
+  s.beginPath();
+  s.ellipse(0, y, rx, rx * 0.22 + t * 0.5, 0, 0, Math.PI * 2);
+  s.ellipse(0, y, Math.max(0.1, rx - t), Math.max(0.1, rx * 0.22 - t * 0.3), 0, 0, Math.PI * 2);
+}
+
+const glassFills = new WeakMap<Look, string>();
+
+/** The body's fill as glass: the same color at `a` opacity, so what's behind shows through. */
+function glassOf(lk: Look, a: number): string {
+  let g = glassFills.get(lk);
+  if (!g) {
+    g = lk.fill.replace(')', ` / ${a})`);
+    glassFills.set(lk, g);
+  }
+  return g;
+}
 
 /** A flipper or a wing: a blade off the shoulder that flaps instead of reaching. */
 function flipper(d: D, lk: Look, sx: number, sy: number, h: P, side: number) {
@@ -164,8 +194,19 @@ function feet(d: D, kind: Feet) {
       );
     } else if (kind === 'paw') {
       tonedOval(s, fx + f * 0.6, fy + 0.2, 1.8, 1.2, 9, lk.fillShade, lk.ink, lk.ink, 0.3, 0.6 * k, 0.4);
-    } else if (kind === 'boot') {
+    } else if (kind === 'boot' || kind === 'sneaker') {
+      if (kind === 'sneaker') {
+        // A thin leg down to a sneaker with a white strap, the speedster's.
+        s.fillStyle = lk.ink;
+        line(s, side * W * 0.1, d.by + 0.5, fx, fy - 0.8, { w: 1.5, seed: side, taper: [0, 0], press: 0 });
+        s.fillStyle = lk.fill;
+        line(s, side * W * 0.1, d.by + 0.5, fx, fy - 0.8, { w: 0.8, seed: side, taper: [0, 0], press: 0 });
+      }
       tonedOval(s, fx + f * 0.8, fy, 2.6, 1.7, 10, d.boot[0], d.boot[1], lk.ink, 0.4, 0.7 * k, 0.5);
+      if (kind === 'sneaker') {
+        s.fillStyle = '#fbf6ee';
+        line(s, fx + f * 0.4, fy - 1.4, fx + f * 0.9, fy + 1.4, { w: 0.9, seed: side, taper: [0, 0], press: 0 });
+      }
     } else {
       // peg: a stub leg and a flat steel foot, a robot's.
       s.fillStyle = lk.ink;
@@ -279,6 +320,8 @@ export function drawInkRunner(rc: InkTarget, c: CharacterDef, x: number, y: numb
     bx,
     gait: g,
     boot: art.boots ?? [lk.paint, lk.paintShade],
+    detail: sc >= 2,
+    pose: m === 'run' && p.grounded ? 'run' : p.grounded ? 'rest' : 'air',
   };
   const shoulderY = by - H * 0.42;
   const shoulderX = W * 0.42;
@@ -289,12 +332,21 @@ export function drawInkRunner(rc: InkTarget, c: CharacterDef, x: number, y: numb
 
   if (art.arms === 'mitten') arm(s, hl, backSide * shoulderX + bx(0.58), shoulderY, hand(m, backSide, f, ph, p.t, L, wall), backSide, k);
   else if (art.arms === 'flipper') flipper(d, hl, backSide * shoulderX + bx(0.58), shoulderY, hand(m, backSide, f, ph, p.t, L, wall), backSide);
+  if (art.ring) {
+    // The player's color on a homage in its own palette: a flat ring round its feet, no glow.
+    s.fillStyle = lk.ink;
+    ringPath(s, W * 0.56 + 0.7, 2.2, -0.6);
+    s.fill('evenodd');
+    s.fillStyle = lk.player;
+    ringPath(s, W * 0.56, 1.6, -0.6);
+    s.fill('evenodd');
+  }
   feet(d, art.feet);
   art.back?.(d);
 
   // A slow boil on threes: the drawing is alive even when the character stands still.
   const boil = Math.floor(p.t * 8) % 3;
-  const src = shapeOf(art);
+  const src = shapeOf(art, d.pose);
   const pts: P[] = new Array(src.length);
   for (let i = 0; i < src.length; i++) {
     const q = src[i];
@@ -304,7 +356,7 @@ export function drawInkRunner(rc: InkTarget, c: CharacterDef, x: number, y: numb
       y: q.y + by + sn(i * 0.45 + 9, boil * 3.1, sd) * 0.2,
     };
   }
-  contour(s, pts, lk.fill, lk.ink, k, sd);
+  contour(s, pts, art.glass ? glassOf(lk, art.glass) : lk.fill, lk.ink, k, sd, !!art.glass);
   s.save();
   path(s, pts);
   s.clip();
@@ -321,6 +373,20 @@ export function drawInkRunner(rc: InkTarget, c: CharacterDef, x: number, y: numb
   s.globalCompositeOperation = 'multiply';
   s.fillStyle = lk.shadow;
   s.fill('evenodd');
+  if (d.detail) {
+    // At card and menu scale a third tone: a rim of light up the lit side, screened over whatever's
+    // painted there, flat. At play scale it would be noise.
+    path(s, pts);
+    for (let i = 0; i < pts.length; i++) {
+      const q = pts[i];
+      if (i) s.lineTo(q.x + W * 0.07, q.y + H * 0.06);
+      else s.moveTo(q.x + W * 0.07, q.y + H * 0.06);
+    }
+    s.closePath();
+    s.globalCompositeOperation = 'screen';
+    s.fillStyle = RIM;
+    s.fill('evenodd');
+  }
   s.globalCompositeOperation = 'source-over';
   if (art.shine) {
     // One hard glint where shiny metal or a wet skin catches the light; fur and feathers get none.
