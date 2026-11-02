@@ -6,6 +6,8 @@ import { generateTheme } from '../src/gen/theme';
 import { LEVEL_H, LEVEL_W, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
 import type { Level } from '../src/sim/level';
 import {
+  barrierOf,
+  canPlace,
   detonate,
   dirOf,
   linkPipes,
@@ -15,6 +17,7 @@ import {
   mouthPose,
   PIPE,
   pipePairs,
+  pipeRects,
   type PlacedProp,
   type PropDef,
   resolveProp,
@@ -241,5 +244,98 @@ describe('pipe pairs', () => {
     const copy = new Match(7);
     restoreMatch(copy, snapshotMatch(m));
     expect(copy.placed.map((p) => p.link)).toEqual([b.uid, a.uid, undefined]);
+  });
+});
+
+describe('a pipe you just came out of', () => {
+  it('needs down let go and pressed again before it takes you back in', () => {
+    const a = place(10, FLOOR - 2);
+    const b = place(26, FLOOR - 2);
+    const { run, r } = race(testLevel(), [a, b]);
+    atMouth(r, a);
+    const down = { ...NO_INPUT, down: true };
+    run.step([down]);
+    // Hold down the whole way: out of b with a hop, and back down onto b's mouth.
+    for (let i = 0; i < TRIP + 60; i++) run.step([down]);
+    expect(r.attach.grip).toBeNull();
+    expect(r.body.onGround).toBe(true);
+    expect(Math.abs(center(r)[0] - mouth(b).at[0])).toBeLessThan(2);
+    run.step([NO_INPUT]);
+    run.step([down]);
+    expect(r.attach.grip?.uid).toBe(b.uid);
+  });
+});
+
+describe('the pipe shape', () => {
+  it('is a lip two tiles across and a shaft a quarter tile in from each side', () => {
+    const [lip, shaft] = pipeRects(mouth(place(10, FLOOR - 3, 0)));
+    expect(lip).toEqual({ x: 160, y: (FLOOR - 3) * TILE, w: 32, h: PIPE.lip });
+    expect(shaft).toEqual({ x: 164, y: (FLOOR - 3) * TILE + PIPE.lip, w: 24, h: 2 * TILE - PIPE.lip });
+    for (let rot = 0; rot < 4; rot++) {
+      const [l, sh] = pipeRects(mouth(place(10, 5, rot)));
+      expect(Math.max(l.w, l.h)).toBe(32);
+      expect(Math.min(sh.w, sh.h)).toBe(24);
+    }
+  });
+
+  it('still takes its whole footprint for placing and for the winnability proof', () => {
+    const level = testLevel();
+    const a = place(10, FLOOR - 2);
+    const block = {
+      ...pipeDef(),
+      modules: [{ type: 'body', cells: [[0, 0]], material: 'stone', conveyor: 0, breakFrames: 0, respawnFrames: 0 }],
+      footprint: [[0, 0]],
+    } as PropDef;
+    for (const [x, y] of [
+      [10, FLOOR - 1],
+      [11, FLOOR - 1],
+    ])
+      expect(canPlace(level, [a], block, 0, x, y)).toBe(false);
+    const noGo = barrierOf(level, a).noGo;
+    for (const [x, y] of [
+      [10, FLOOR - 2],
+      [11, FLOOR - 2],
+      [10, FLOOR - 1],
+      [11, FLOOR - 1],
+    ])
+      expect(noGo).toContain(y * level.w + x);
+  });
+
+  it('lets you jump up past the lip from beside the shaft and onto it', () => {
+    const a = place(10, FLOOR - 2);
+    const { run, r } = race(testLevel(), [a]);
+    Object.assign(r.body, { x: 164 - r.body.w, y: FLOOR * TILE - r.body.h, vx: 0, vy: 0 });
+    for (let i = 0; i < 70; i++) run.step([{ ...NO_INPUT, right: i < 18, jump: true, jumpPressed: i === 0 }]);
+    expect(r.body.onGround).toBe(true);
+    expect(r.body.y + r.body.h).toBeCloseTo(mouth(a).at[1], 3);
+  });
+
+  it('walks over a sideways lip without a jump', () => {
+    const a = place(10, FLOOR - 2, 1);
+    expect(dirOf(mouth(a).angle)).toEqual([1, 0]);
+    const { run, r } = race(testLevel(), [a]);
+    const top = pipeRects(mouth(a))[1].y;
+    Object.assign(r.body, { x: 162, y: top - r.body.h, vx: 0, vy: 0 });
+    for (let i = 0; i < 40; i++) run.step([{ ...NO_INPUT, right: true }]);
+    expect(r.body.x).toBeGreaterThan(mouth(a).at[0]);
+  });
+
+  it('can be stood on at the far end and on the lip, and walked off both', () => {
+    const a = place(10, FLOOR - 6, 2);
+    const { run, r } = race(testLevel(), [a, place(30, FLOOR - 2)], 2);
+    const [lip, shaft] = pipeRects(mouth(a));
+    const r2 = run.runners[1];
+    Object.assign(r.body, { x: 176 - r.body.w / 2, y: shaft.y - r.body.h - 4, vx: 0, vy: 0 });
+    Object.assign(r2.body, { x: 154, y: shaft.y, vx: 0, vy: 0 });
+    for (let i = 0; i < 30; i++) run.step([NO_INPUT, NO_INPUT]);
+    expect(r.body.onGround && r.body.y + r.body.h).toBeCloseTo(shaft.y, 3);
+    expect(r2.body.onGround && r2.body.y + r2.body.h).toBeCloseTo(lip.y, 3);
+    for (let i = 0; i < 40; i++)
+      run.step([
+        { ...NO_INPUT, right: true },
+        { ...NO_INPUT, left: true },
+      ]);
+    expect(r.body.y).toBeGreaterThan(lip.y);
+    expect(r2.body.y + r2.body.h).toBeCloseTo(FLOOR * TILE, 3);
   });
 });
