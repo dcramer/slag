@@ -5,7 +5,7 @@ import { LIST_POLL_MS, type ListedRoom } from '../../net/signal-protocol';
 import type { Nav, Unmount } from '../../router';
 import { HOME, lobby } from '../../routes';
 import { KEY_ACTIONS, type MenuAction, MenuPadReader, readMenuPad } from '../settings-nav';
-import { isFull, LOBBY_FILTERS, type LobbyFilter, lobbyRows, PHASE_TAGS, themeLabel } from './lobby-list';
+import { isFull, LOBBY_FILTERS, type LobbyFilter, lobbyRows, PHASE_TAGS, rowTitle, themeLabel } from './lobby-list';
 import { lobbiesHTML, lobbiesPromptsHTML } from './markup';
 
 /**
@@ -86,11 +86,23 @@ export function mountLobbies(root: HTMLElement, nav: Nav): Unmount {
     b.dataset.active = 'false';
     const pips = Array.from({ length: r.max }, (_, i) => `<i${i < r.players ? ' class="on"' : ''}></i>`).join('');
     b.innerHTML =
-      `<span class="t">${themeLabel(r.theme).toUpperCase()}</span><span class="s">${r.room}</span>` +
       `<span class="lb-seats"><span class="lb-pips">${pips}</span><span class="lb-count">${r.players}/${r.max}</span></span>` +
       `<span class="lb-eyes"${r.observers ? '' : ' data-none'}>${EYE}${r.observers}</span>` +
       `<span class="lb-phase"><span class="lb-tag" data-phase="${r.phase}">${PHASE_TAGS[r.phase]}</span></span><span class="chev"></span>`;
-    b.setAttribute('aria-label', `${themeLabel(r.theme)} ${r.room}, ${r.players} of ${r.max} players, ${r.observers} watching, ${PHASE_TAGS[r.phase]}`);
+    // The host's name is a stranger's text: it only ever goes in as text.
+    const { title, sub } = rowTitle(r);
+    const t = document.createElement('span');
+    t.className = 't';
+    t.textContent = title;
+    const s = document.createElement('span');
+    s.className = 's';
+    s.textContent = sub;
+    b.prepend(t, s);
+    b.dataset.named = String(!!r.host);
+    b.setAttribute(
+      'aria-label',
+      `${r.host ? `${r.host}, ` : ''}${themeLabel(r.theme)} ${r.room}, ${r.players} of ${r.max} players, ${r.observers} watching, ${PHASE_TAGS[r.phase]}`,
+    );
     b.addEventListener('mouseenter', () => select(shown.indexOf(r)), on);
     b.addEventListener('focus', () => select(shown.indexOf(r)), on);
     b.addEventListener('click', () => open(r), on);

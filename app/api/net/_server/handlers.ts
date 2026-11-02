@@ -32,7 +32,7 @@ import type { Store } from './store';
  *   slag:<ROOM>:m          sorted set of peers, scored by join order, plus LAST_ORDER (the last order handed out)
  *   slag:<ROOM>:p:<peer>   liveness marker, holding the joining session's stamp; a heartbeat renews it
  *   slag:<ROOM>:b:<peer>   list of handshakes waiting for that peer
- *   slag:<ROOM>:l          the room's listing (players, observers, max, theme, phase as JSON), written by its host's beat
+ *   slag:<ROOM>:l          the room's listing (players, observers, max, theme, phase, host name as JSON), written by its host's beat
  *   slag:lobbies           the lobby index: sorted set of listed rooms, scored by their host's last beat (ms)
  *
  * Joining and removing a session read and write as one step, in Lua scripts (scripts.ts): one peer id can have two

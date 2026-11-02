@@ -260,6 +260,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `done` · DESIGN.md → Props, `src/gen/props.ts`
 - **Lobby browser: a list of lobbies, showing only ones that aren't full by default.** Lobbies are public by default with a Private option. "lets make lobbies public by default with a private option"
   2026-11-02 · `done` · DESIGN.md → Online, Rules; NETCODE.md → Lobby list
+- **Each listed lobby shows its host's name, leading the row; after a host migration it's the new host's.** "i want each lobby to show the host's name"
+  2026-11-02 · `done` · NETCODE.md → Lobby list, `src/ui/screens/lobbies.ts`
 - **Conveyors rotate: the rotation picks the belt's face.** A side belt grips and carries a clinging runner (an escalator when it runs up), a bottom belt shoves a head that bonks it. "you cant rotate conveyors.. the conveyor always stays on the top"
   2026-11-02 · `done` · DESIGN.md → Props, Conveyors
 - **The parody first batch: Walk-Off Bat, Tremor Brick, Front-Runner Tax, Pocket Block, Launch Plate, Four-Square, Boost Strip, Panic Button, Fuse Crate, Y-Fling.**

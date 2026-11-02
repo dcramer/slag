@@ -336,6 +336,16 @@ describe('lobby list', () => {
     // Extra fields never reach anyone's list.
     await w.op('beat', { room: 'ROOMA', peer: 'aaaa', host: true, list: { ...farm, name: 'spam' } });
     expect(await w.list()).toEqual([{ room: 'ROOMA', ...farm }]);
+    // A host name that's junk loses the name, not the room.
+    await w.op('beat', { room: 'ROOMA', peer: 'aaaa', host: true, list: { ...farm, host: '\u202E\u0000 ' } });
+    expect(await w.list()).toEqual([{ room: 'ROOMA', ...farm }]);
+  });
+
+  it("lists the host's name, tidied", async () => {
+    const w = lobbyWorld();
+    await w.host('ROOMA');
+    await w.op('beat', { room: 'ROOMA', peer: 'aaaa', host: true, list: { ...farm, host: ' Wobble\u200Bsnout the Third' } });
+    expect(await w.list()).toEqual([{ room: 'ROOMA', ...farm, host: 'Wobblesnout' }]);
   });
 
   it('takes a room off when it goes Private, when its listed host leaves, and once its host stops beating', async () => {
