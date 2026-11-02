@@ -15,6 +15,7 @@ import type { ThemeId } from './themes';
  *   ?race=saw,laser     drop those archetypes in and jump straight to a race
  *   ?race=all           one of every archetype
  *   ?propseed=7         seed for debug-generated props
+ *   ?style=comic        render style (read by the Renderer, see render/style.ts)
  */
 export interface SlagDebug {
   match: Match;
