@@ -1,7 +1,7 @@
 import type { Match } from '../game/match';
 import type { InputFrame } from '../sim/types';
 import { peerOf } from './actions';
-import { acquirePeerId, loadResume, markKicked, saveResume, wasKicked } from './identity';
+import { acquirePeerId, loadResume, markKicked, saveResume } from './identity';
 import { NetSession, type NetStatus } from './session';
 import { HttpSignal } from './signal-client';
 import { snapshotMatch } from './snapshot';
@@ -74,9 +74,7 @@ const KICKED_MS = 1500;
 export function connectRoom(room: string, match: Match, opts: { primaryDevice: string; params?: URLSearchParams }): RoomConnection {
   const params = opts.params ?? new URLSearchParams(location.search);
   const ident = acquirePeerId(room);
-  const refused = wasKicked(room);
-  if (refused) location.replace('/');
-  const transport = refused ? null : chooseTransport(room, ident.id, params);
+  const transport = chooseTransport(room, ident.id, params);
   const net = new NetSession({
     transport,
     match,

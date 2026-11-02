@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
 import { Match } from '../src/game/match';
 import { roomSeed } from '../src/game/room';
+import { DEFAULT_RULES } from '../src/game/rules';
 import { generateProp } from '../src/gen/props';
 import { decode, encode, held, INPUT_KEYS, merge } from '../src/net/codec';
 import { Predictor } from '../src/net/predict';
@@ -248,7 +249,7 @@ function inRace(latency: number) {
   r.run(5);
   const b = r.join('bbbb');
   r.run(Math.ceil(latency / 8) + 30);
-  a.act({ t: 'rules', rules: { targetScore: 80, maxRounds: 25, pickSeconds: 10, placeSeconds: 15, raceSeconds: 0 } });
+  a.act({ t: 'rules', rules: { ...DEFAULT_RULES, targetScore: 80, maxRounds: 25, pickSeconds: 10, placeSeconds: 15, raceSeconds: 0 } });
   r.run(30);
   const ready = press({ confirmPressed: true });
   r.tick({ aaaa: { kb1: ready }, bbbb: { kb1: ready } });

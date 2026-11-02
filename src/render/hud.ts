@@ -3,6 +3,7 @@ import { propTag } from '../codex/describe';
 import type { Match, Player } from '../game/match';
 import type { Role } from '../gen/props';
 import { type InputSettings, type KeyProfile, keyboardDevices } from '../input/bindings';
+import { overview, worldToView } from '../game/view';
 import { MAX_PLAYERS, RUN_COUNTDOWN, VIEW_H, VIEW_W } from '../sim/constants';
 import { THEME_LABELS } from '../themes';
 import { drawGlyph, type Glyph, glyphWidth } from '../ui/glyphs';
@@ -641,7 +642,9 @@ export class Hud {
     for (const p of m.players) {
       if (p.placed) continue;
       const def = p.claim >= 0 ? m.crate[p.claim].def : null;
-      this.pending.push(() => this.cursor(p.cursor.x, p.cursor.y, p.character.body, def ? def.name : p.character.name, m.frame / 60));
+      // The cursor is in world px here, and the HUD draws in view px.
+      const at = worldToView(overview(m.level), p.cursor.x, p.cursor.y);
+      this.pending.push(() => this.cursor(at.x, at.y, p.character.body, def ? def.name : p.character.name, m.frame / 60));
     }
   }
 
@@ -910,7 +913,7 @@ export class Hud {
       case 'place': {
         const placed = m.players.filter((p) => p.placed).length;
         // Fade out of the way when a cursor is down near the footer.
-        const near = m.players.some((p) => !p.placed && p.cursor.y > VIEW_H - FOOT_H - 26);
+        const near = m.players.some((p) => !p.placed && worldToView(overview(m.level), p.cursor.x, p.cursor.y).y > VIEW_H - FOOT_H - 26);
         return {
           items: [
             { action: 'confirm', label: 'Drag to Aim', touchOnly: true },

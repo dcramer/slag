@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
 import { Match } from '../src/game/match';
 import { roomSeed } from '../src/game/room';
+import { GRAVITY } from '../src/gen/level';
+import { sanitizeRules } from '../src/net/actions';
 import { NetSession } from '../src/net/session';
 import { hashMatch } from '../src/net/snapshot';
 import { LoopbackHub, type LoopbackOptions } from '../src/net/transport';
@@ -270,6 +272,29 @@ describe('lobby seats', () => {
     expect(b.match.players.map((p) => p.device).sort()).toEqual(['bbbb:kb1', 'cccc:kb1', 'dddd:kb1']);
     expect(seats(d)).toEqual(seats(b));
     expect(c).toBeDefined();
+  });
+});
+
+describe('rules', () => {
+  it("regenerates the level from the host's gravity, identically on every peer", () => {
+    const r = new Room({ latency: 20 });
+    const a = r.join('aaaa');
+    r.run(5);
+    const b = r.join('bbbb');
+    r.run(60);
+    const before = a.match.level.gravity;
+    const pick = before === GRAVITY.low ? 'high' : 'low';
+    a.act({ t: 'rules', rules: { ...a.match.rules, gravity: pick } });
+    r.run(30);
+    expect(a.match.rules.gravity).toBe(pick);
+    expect(b.match.rules.gravity).toBe(pick);
+    expect(a.match.level.gravity).toBe(GRAVITY[pick]);
+    expect(b.match.level.gravity).toBe(GRAVITY[pick]);
+    expect([...b.match.level.tiles]).toEqual([...a.match.level.tiles]);
+  });
+
+  it('turns a junk gravity into the default', () => {
+    expect(sanitizeRules({ gravity: 'sideways' as 'low' }).gravity).toBe('auto');
   });
 });
 

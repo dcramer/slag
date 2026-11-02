@@ -8,6 +8,7 @@ import { loadRules, saveRules } from './game/rules';
 import { InputManager } from './input/input';
 import { TOUCH_DEVICE, touchModeFor } from './input/touch';
 import { connectRoom } from './net/client';
+import { wasKicked } from './net/identity';
 import { ITEMS } from './sim/items';
 import { Renderer } from './render/renderer';
 import { DT } from './sim/constants';
@@ -30,6 +31,7 @@ let booted = false;
 export function bootGame(container: HTMLElement, room: string): void {
   if (booted) return; // React strict mode / remounts: one game per page
   booted = true;
+  if (wasKicked(room)) return location.replace('/');
   setTelemetryContext(() => ({ room })); // a failed boot still says which lobby
   const glCanvas = document.createElement('canvas');
   const hudCanvas = document.createElement('canvas');
