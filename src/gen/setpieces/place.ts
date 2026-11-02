@@ -252,6 +252,7 @@ export function cycleFrames(mods: readonly Module[], motion: Motion = { type: 'n
     if (m.type === 'tesla') p = Math.max(p, m.off + m.warn + m.on);
     if (m.type === 'flame') p = Math.max(p, m.off + m.warn + m.on);
     if (m.type === 'flood') p = Math.max(p, m.off + m.warn + m.rise + m.hold + m.fall);
+    if (m.type === 'lob') p = Math.max(p, m.off + m.warn + m.flight + Math.max(0, m.count - 1) * m.lag);
   }
   return Math.min(p, 1600);
 }

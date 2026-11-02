@@ -1,7 +1,24 @@
 import type { Rng } from '../../../core/rng';
+import { volcanoOwns } from '../../stage/volcano';
 import { finish, Grid, hintGap, noise1D } from '../kit';
-import type { Sculptor } from '../types';
-import { easyGap, easyRise, hardGap, hopGap, knobs, pit, relax, keepClear, rollChallenges, Slots } from './common';
+import type { SculptCtx, Sculptor } from '../types';
+import {
+  type Claim,
+  claimSite,
+  easyGap,
+  easyRise,
+  flatten,
+  hardGap,
+  hopGap,
+  type Knobs,
+  knobs,
+  pit,
+  relax,
+  keepClear,
+  raiseLandmark,
+  rollChallenges,
+  Slots,
+} from './common';
 import { volcanoTall } from './tall';
 
 type VolcanoStyle = 'spires' | 'caldera' | 'flows';
@@ -20,7 +37,8 @@ export const volcano: Sculptor = (ctx) => {
   const { W, H } = k;
   const style = rng.weighted<VolcanoStyle>([
     ['spires', 1 + 3 * k.density],
-    ['caldera', 2],
+    // A landmark brings its own crater: the plain caldera would be a second one.
+    ['caldera', ctx.concept ? 0 : 2],
     ['flows', 4 - 2 * k.density],
   ]);
   const g = new Grid(W, H);
@@ -35,9 +53,13 @@ export const volcano: Sculptor = (ctx) => {
   for (let x = W - 6; x < W; x++) surf[x] = gRow;
   locked.fill(1, 0, 6);
   locked.fill(1, W - 6, W);
+  // The stage concept's landmark comes first; it owns one crossing, or both where its box made room for a two-part one.
+  const claim = ctx.concept ? claimVolcanoSite(ctx, k, slots, surf, locked) : null;
+  if (ctx.concept && !claim) return finish(g, { row: sRow - 1 }, { row: gRow - 1 }, 'volcano:unclaimed');
   const challenges = rollChallenges(attempt, k);
   g.wantsProps = challenges > 0;
-  let hardLeft = challenges;
+  const own = claim ? volcanoOwns(claim.concept, k, attempt, challenges) : 0;
+  let hardLeft = Math.max(0, challenges - own);
 
   // Lava lake with floating stepping stones.
   const stones: { x: number; y: number; w: number }[] = [];
@@ -137,8 +159,9 @@ export const volcano: Sculptor = (ctx) => {
     if (x === null) continue;
     basalt(g, rng, x, w, surf);
   }
+  if (claim) raiseLandmark(g, ctx, claim, own);
   // Floating chunks in the sky over open ground.
-  for (let i = k.count(rng.int(0, 2)); i > 0; i--) {
+  for (let i = claim ? 0 : k.count(rng.int(0, 2)); i > 0; i--) {
     const x = rng.int(8, W - 12);
     const y = Math.max(5, (surf[x] < H ? surf[x] : base) - rng.int(8, 13));
     let clean = true;
@@ -148,6 +171,22 @@ export const volcano: Sculptor = (ctx) => {
 
   return finish(g, { row: sRow - 1 }, { row: gRow - 1 }, `volcano:${style}`);
 };
+
+/**
+ * The landmark's site (claimSite), on ground levelled a couple of columns past it either side and never
+ * so low that its tubes have no rock under them. Nothing else lands within a running jump of its far
+ * side, where a pit could be cleared bare off its top.
+ */
+function claimVolcanoSite(ctx: SculptCtx, k: Knobs, slots: Slots, surf: number[], locked: Uint8Array): Claim | null {
+  const claim = claimSite(ctx, k, slots, surf, locked);
+  if (!claim) return null;
+  const { x, w } = claim.at;
+  const ground = Math.min(claim.ground, k.H - 5);
+  slots.mark(x - 3, x + w + 8);
+  flatten(surf, k.H, x - 2, x + w + 1, ground);
+  for (let i = Math.max(0, x - 3); i <= Math.min(k.W - 1, x + w + 2); i++) locked[i] = 1;
+  return { ...claim, ground, at: { ...claim.at, y: ground - claim.at.h } };
+}
 
 /** Floating rock: flat top at row y, tapering to a dripping point underneath. */
 function rock(g: Grid, rng: Rng, x: number, y: number, w: number): void {
