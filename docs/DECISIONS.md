@@ -184,6 +184,8 @@ Every game design decision, preference and direction the owner has given, groupe
 - **No part, item, projectile or set piece has a face or a persona; only runners have faces.** "for our props, i dont think any should be persona-like ... i dont want them to have faces/etc"
   2026-11-02 16:55Z · `done` · DESIGN.md → Parody, ART.md → Objects, not characters, PARODY.md
   Changed: faced parts were redrawn and renamed (Coil Pup → Bedspring, Angry Brick → Ton of Bricks, and others) (`dc9e6d7`).
+- **Decor that depicts people may show faces: portraits on a wall, a statue's painted likeness.** Paintings on a wall can have faces; the Haunted Wing's portraits keep theirs, eyes following the nearest runner. Parts, items, projectiles and machines still never do.
+  2026-11-02 · `done` · ART.md → Objects, not characters
 - **Add a sentry turret, after the team shooter's.** "we need a 'sentry turret' type thing"
   2026-11-02 16:55Z · `done` · DESIGN.md → Props (Sentry guns)
 - **Conveyors must rotate like any part: a belt on the side drags wall-sliders, and one underneath shoves you when you bonk your head.** "you cant rotate conveyros.. the conveyor always stays on the top"
@@ -275,6 +277,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 16:18Z · `done` (research and plan), waves under way · SETPIECES.md, DESIGN.md → Stage concepts
 - **No set piece floats: the lighthouse stands on rock.** "the lighthouse is sometimes floating which is a problem"
   2026-11-02 16:18Z · `done` · ART.md → The backdrop
+- **A landmark reaches the ground all the way down, its backdrop too: no wall hangs over a doorway's open sky.** "that has the same issue as we had in the past where in the backdrop the thing needs to go all the way down (its floating on one tile...)"
+  2026-11-02 · `done` · SETPIECES.md → 4 (Grounding), tests/landmark-grounding.test.ts
 - **Moving landmarks are optional routes, never the only way through.**
   2026-11-02 16:40Z (answer) · `done` · DESIGN.md → Stage concepts, SETPIECES.md → 6
 - **A giant contraption may carry you over a gap, but then the gap and the contraption are both large.** "A giant contraption could help you get past gaps fwiw so sometimes that's ok but if it's true the gap and contraption should be large"

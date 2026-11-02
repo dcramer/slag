@@ -6,7 +6,7 @@ import { type Grid, T_EMPTY, T_ONEWAY } from '../level/kit';
 import { jumpProfile } from '../level/probe';
 import { hardGap, pit } from '../level/sculptors/common';
 import { BRIDGE_W } from '../level/types';
-import { type Piece, makeStyle } from '../setpieces/place';
+import { type Piece, makeStyle, type Site } from '../setpieces/place';
 import type { Concept, Landmark } from './types';
 
 /**
@@ -56,6 +56,20 @@ function digMoat(g: Grid, rng: Rng, at: TileRect, parts: number): void {
   pit(g, x1 - Math.min(moatMax(), hardGap(rng, parts)) + 1, x1, G, true);
 }
 
+/**
+ * The row a backdrop shell over columns x0..x1 stands on: the lowest first solid tile at or below `from`
+ * under any of them (a pit under one runs it down), so a doorway or a pit never shows sky under its wall.
+ */
+function footing(s: Site, x0: number, x1: number, from: number): number {
+  let low = from;
+  for (let x = x0; x <= x1; x++) {
+    let y = from;
+    while (y < s.h && !s.solid(x, y)) y++;
+    low = Math.max(low, y);
+  }
+  return low;
+}
+
 // ------------------------------------------------------------------------------------------------ manor
 
 /** Hall air (rows) on the ground floor; the floors above get UPPER rows each. */
@@ -63,7 +77,7 @@ const HALL = 5;
 const UPPER = 3;
 const ROOF = 3;
 /** Box height: hall, two upper floors, three slabs, the gable. */
-const MANOR_H = HALL + 2 * UPPER + 3 + ROOF;
+export const MANOR_H = HALL + 2 * UPPER + 3 + ROOF;
 
 /** The dumbwaiter's shaft: a hop across under a low ceiling while the cab is away, at any gravity. */
 const shaftW = () => 2;
@@ -216,7 +230,7 @@ function buildManor(g: Grid, rng: Rng, box: TileRect, parts: number): Landmark {
       rot: ANCHOR(rot, F1),
       web: ANCHOR(ix1, F1 - UPPER),
       facade: ANCHOR(L0, at.y),
-      facadeSize: ANCHOR(R0 - L0 + 1, G - at.y),
+      facadeEnd: ANCHOR(R0, G),
     },
     skin: 'timber',
   };
@@ -224,7 +238,7 @@ function buildManor(g: Grid, rng: Rng, box: TileRect, parts: number): Landmark {
 
 const STEEL = (rng: Rng): PropStyle => makeStyle(rng, ['brass', 'gold'], [36], { glowHue: rng.range(32, 46), woodHue: rng.range(14, 24) });
 
-function* manorPieces(rng: Rng, l: Landmark): Generator<Piece> {
+function* manorPieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
   const a = l.anchors;
   const [sx, G] = a.shaft;
   const S = shaftW();
@@ -313,7 +327,10 @@ function* manorPieces(rng: Rng, l: Landmark): Generator<Piece> {
   };
   // Cobwebs in the first floor's far corner, out of every route's way, and the rooms' back wall behind it all.
   const [wx, wy] = a.web;
-  const [fw, fh] = a.facadeSize;
+  const [fx, fy] = a.facade;
+  const [fr, fg] = a.facadeEnd;
+  const fw = fr - fx + 1;
+  const fh = footing(s, fx, fr, fg) - fy;
   yield {
     name: 'Cobwebs',
     archetype: 'web',
@@ -344,15 +361,15 @@ export const HAUNTED_WING: Concept = {
   names: ['The Haunted Wing of {place}', 'The East Wing of {place}', 'The Unrentable Wing of {place}', '{place}: Viewing by Appointment'],
   box: (k, rng) => ({ w: moatMax() + 1 + 2 * glassMargin() + 4 + manorInterior(k.W > 56, rng), h: MANOR_H }),
   build: buildManor,
-  pieces: (rng, _s, l) => manorPieces(rng, l),
+  pieces: (rng, s, l) => manorPieces(rng, s, l),
 };
 
 // ------------------------------------------------------------------------------------------------ throne hall
 
 /** Hall air (rows), the ceiling's thickness, tower thickness and how far the towers stand above the roof. */
-const HALL_AIR = 7;
-const CEIL = 2;
-const TOWER = 2;
+export const HALL_AIR = 7;
+export const CEIL = 2;
+export const TOWER = 2;
 const THRONE_H = HALL_AIR + CEIL + 3;
 /** Columns one swinging chandelier needs, with room to push a rider aside. */
 const CHANDELIER_W = 7;
@@ -404,12 +421,12 @@ function buildThroneHall(g: Grid, rng: Rng, box: TileRect, parts: number): Landm
       { x: x0, y: G - 3, w: TOWER, h: 3 },
       { x: x1 - TOWER + 1, y: G - 5, w: TOWER, h: 3 },
     ],
-    anchors: { floor: [p.fx0, p.fx1], top: [top, G], dais: [dx0, G - 2], back: [x0 + TOWER, top - CEIL], backSize: [at.w - 2 * TOWER, G - top + CEIL] },
+    anchors: { floor: [p.fx0, p.fx1], top: [top, G], dais: [dx0, G - 2], back: [x0, top - CEIL], backEnd: [x1, G] },
     skin: 'stone',
   };
 }
 
-function* throneHallPieces(rng: Rng, l: Landmark): Generator<Piece> {
+function* throneHallPieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
   const [fx0, fx1] = l.anchors.floor;
   const [top] = l.anchors.top;
   const [dx0] = l.anchors.dais;
@@ -442,8 +459,9 @@ function* throneHallPieces(rng: Rng, l: Landmark): Generator<Piece> {
     });
   }
   // The hall's back wall (banners, tall windows, the throne and the door behind it) goes with them.
-  const [bw, bh] = l.anchors.backSize;
-  const back: Module = { type: 'deco', kind: 'facade', at: l.anchors.back, w: bw, h: bh, seed: rng.int(0, 1 << 20) };
+  const [bx, by] = l.anchors.back;
+  const [br, bg] = l.anchors.backEnd;
+  const back: Module = { type: 'deco', kind: 'facade', at: [bx, by], w: br - bx + 1, h: footing(s, bx, br, bg) - by, seed: rng.int(0, 1 << 20) };
   yield {
     name: rng.pick(['The Royal Chandeliers', 'Three Tenors', 'Synchronized Swinging']),
     archetype: 'platform',
@@ -487,7 +505,7 @@ export const THRONE_HALL: Concept = {
   names: ['The Throne Hall of {place}', 'The Boss Room of {place}', 'The Great Hall of {place}'],
   box: (k, rng) => ({ w: moatMax() + 1 + (k.W > 56 ? rng.int(26, 32) : classicHall()), h: THRONE_H }),
   build: buildThroneHall,
-  pieces: (rng, _s, l) => throneHallPieces(rng, l),
+  pieces: (rng, s, l) => throneHallPieces(rng, s, l),
 };
 
 export const CASTLE_CONCEPTS: Concept[] = [HAUNTED_WING, THRONE_HALL];
