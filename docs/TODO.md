@@ -93,6 +93,12 @@ Some steps need the owner. Run after setting the Vercel env vars.
 - Install the Sentry GitHub integration for suspect commits.
 - Move `app/global-error.tsx` into `src/` with item 11.
 
+## 22. Glacier and space themes
+- **Glacier:** ground is naturally slippery, using the shared ice surface rather than a new physics path.
+- **Space:** lower gravity, through `Level.gravity`.
+
+Add both through the theme extension point, drawn in ink, with set pieces, music, sounds, weather weights, parts-needed targets and parody tone.
+
 ## 19. Secret parts mode
 A mode where you don't see what a part is. You choose a type (hazard, utility, build, whatever the roles are) and get one at random from what's allowed. A lobby rule, with the roll deterministic from the seed and the same on every peer. The first time anyone sees the part is when it lands.
 
