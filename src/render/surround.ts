@@ -17,7 +17,11 @@ import { TerrainPainter } from './terrain';
  * Below the world it's simpler: whatever stands on the bottom row just runs on
  * down, and the pool carries on with it. Those columns are only ever seen
  * through the liquid (`drawSunken`), so there's still one unbroken surface at
- * the kill line and nothing down there looks like somewhere to land.
+ * the kill line and nothing down there looks like somewhere to land. Where the
+ * ground floats (`FLOATS`: space), nothing runs on up or down at all.
+ *
+ * None of it is drawn inside the level, past the ring at its edge: the play
+ * area shows the level's own ground and nothing else.
  *
  * This is scenery. It's built from the level's tiles but never fed back; the
  * sim still sees only the level.
@@ -111,15 +115,23 @@ const SIDES: Record<ThemeId, (c: SideCtx) => void> = {
     }),
   // Moraine slopes climbing to a jagged crest.
   glacier: (c) => ridge(c, 12, 3, 1),
-  // A bulkhead where the sim's wall is, then nothing: a few rocks adrift.
+  // No ground out there, and nothing standing on it: bodies adrift like the level's own, and debris between.
   space: (c) => {
-    for (let d = 1; d <= Math.min(2, c.cols); d++) c.fill(d, -1e4);
-    for (let i = Math.round(c.cols / 9); i > 0; i--) {
-      const d = c.rng.int(5, Math.max(5, c.cols - 2));
-      const y = c.rng.int(c.rows[0] + 2, c.rows[1] - 6);
-      const w = c.rng.int(1, 3);
-      for (let k = 0; k < w; k++) c.set(d + k, y, true);
-      if (w > 1) c.set(d + 1, y + 1, true);
+    const [r0, r1] = c.rows;
+    // Bodies: a flat top to land on (by the look of it) over a keel that narrows as it goes down.
+    for (let i = Math.max(1, Math.round(c.cols / 12)); i > 0; i--) {
+      const w = c.rng.int(3, 6);
+      const d = c.rng.int(2, Math.max(2, c.cols - w));
+      const y = c.rng.int(r0 + 3, Math.max(r0 + 3, r1 - 5));
+      const keel = c.rng.int(1, 2);
+      for (let j = 0; j <= keel; j++) for (let k = j; k < w - j; k++) c.set(d + k, y + j, true);
+    }
+    // Debris: a tile or two, here and there.
+    for (let i = Math.round((c.cols * (r1 - r0)) / 110); i > 0; i--) {
+      const d = c.rng.int(2, Math.max(2, c.cols));
+      const y = c.rng.int(r0 + 2, Math.max(r0 + 2, r1 - 3));
+      c.set(d, y, true);
+      if (c.rng.chance(0.5)) c.set(d + 1, y, true);
     }
   },
   harbor: (c) => {
@@ -132,6 +144,12 @@ const SIDES: Record<ThemeId, (c: SideCtx) => void> = {
     }
   },
 };
+
+/**
+ * Themes whose ground floats: nothing stands on anything, so a body that touches the top or bottom
+ * row ends there like any other instead of running on up or down as a column.
+ */
+const FLOATS: ReadonlySet<ThemeId> = new Set(['space']);
 
 /**
  * The surroundings of `level` as a level of their own: `mx` extra columns each
@@ -170,14 +188,15 @@ export function surroundLevel(level: Level, mx: number, top: number, bottom = 0)
       cols: mx,
       rows: [-top, h - 1],
       wave,
+      // Out of `1..cols`, a column isn't this side's: past the far edge, or inside the level itself.
       fill: (d, row) => {
+        if (d < 1 || d > mx) return;
         for (let y = Math.max(0, row + top); y < H; y++) put(side.edge(d), y);
       },
       set: (d, y, solid) => {
-        const X = side.edge(d);
         const Y = y + top;
-        if (X < 0 || X >= W || Y < 0 || Y >= H) return;
-        tiles[Y * W + X] = solid ? T_SOLID : 0;
+        if (d < 1 || d > mx || Y < 0 || Y >= H) return;
+        tiles[Y * W + side.edge(d)] = solid ? T_SOLID : 0;
       },
     };
     SIDES[level.theme.id](ctx);
@@ -188,16 +207,18 @@ export function surroundLevel(level: Level, mx: number, top: number, bottom = 0)
       for (let d = 1; d <= reach; d++) put(side.edge(d), y + top);
     }
   }
-  // Ceilings carry on upward (a mine's rock, a canopy), then break up.
-  for (let x = 0; x < w; x++) {
-    if (!solidAt(x, 0)) continue;
-    const reach = level.theme.id === 'mine' ? top : Math.min(top, rng.int(2, 5));
-    for (let y = 1; y <= reach; y++) put(x + mx, top - y);
-  }
-  // What stands on the bottom row runs on down.
-  for (let x = 0; x < w; x++) {
-    if (!solidAt(x, h - 1)) continue;
-    for (let y = h; y < h + bottom; y++) put(x + mx, y + top);
+  if (!FLOATS.has(level.theme.id)) {
+    // Ceilings carry on upward (a mine's rock, a canopy), then break up.
+    for (let x = 0; x < w; x++) {
+      if (!solidAt(x, 0)) continue;
+      const reach = level.theme.id === 'mine' ? top : Math.min(top, rng.int(2, 5));
+      for (let y = 1; y <= reach; y++) put(x + mx, top - y);
+    }
+    // What stands on the bottom row runs on down.
+    for (let x = 0; x < w; x++) {
+      if (!solidAt(x, h - 1)) continue;
+      for (let y = h; y < h + bottom; y++) put(x + mx, y + top);
+    }
   }
   // The ring: real tiles under the level's own edge, so neighbours join.
   for (let y = 0; y < h; y++) {
@@ -230,6 +251,9 @@ export class Surround {
   private mx = 0;
   private top = 0;
   private bottom = 0;
+  /** Everywhere but the level's middle (`draw`), and the land it was made for. */
+  private hole: Path2D | null = null;
+  private holeFor: Level | null = null;
 
   /** World px of scenery on each side. */
   get margin(): number {
@@ -361,15 +385,27 @@ export class Surround {
 
   /** In world space, before the level's own terrain. */
   draw(rc: RC) {
-    if (!this.land) return;
+    const land = this.land;
+    if (!land) return;
     const x = -this.mx * TILE;
     const y = -this.top * TILE;
+    // The level's own terrain covers the ring, and inside it the play area is the level's alone: cut
+    // a hole there, so whatever a bake might hold in the middle can't show up among the real ground.
+    if (this.holeFor !== land) {
+      this.holeFor = land;
+      this.hole = new Path2D();
+      this.hole.rect(-1e5, -1e5, 2e5, 2e5);
+      const lw = land.w - this.mx * 2;
+      const lh = land.h - this.top - this.bottom;
+      this.hole.rect(RING * TILE, RING * TILE, (lw - RING * 2) * TILE, (lh - RING * 2) * TILE);
+    }
     for (const c of [rc.s, rc.g]) {
       c.save();
+      c.clip(this.hole!, 'evenodd');
       c.translate(x, y);
     }
     this.painter.draw(rc);
-    this.painter.drawLive(rc, this.land, []);
+    this.painter.drawLive(rc, land, []);
     rc.s.restore();
     rc.g.restore();
   }
