@@ -13,11 +13,12 @@ import type { Concept, Landmark } from './types';
  * Castle stage concepts (docs/SETPIECES.md, Castle).
  *
  * The Haunted Wing is the owner's own example: a three-storey manor of plank and plaster that owns the
- * middle of the level. A switchback of stairs climbs inside it from the front door to a door out of
- * the top floor, and that static climb is the proof. A dumbwaiter cab rides a shaft up the middle,
- * parking at every floor: the quick way up, never needed. Both outer walls carry a huge broken window,
- * the glass standing out of its frame, so the walls you'd climb outside cut you. A chandelier hangs over
- * the hall waiting to drop, cobwebs fill the corners and the floor beside the cab's first stop is rotten through.
+ * middle of the level. Its hall runs straight through, and a stairwell of loose boards climbs from it to
+ * every floor and a door off the top one: the static way up, and with the hall the two ways past it.
+ * A dumbwaiter rides a shaft beside the stairs, parking flush at every floor: the quick way up, never
+ * needed. Both outer walls carry a huge broken window, the glass standing out of its frame, so the walls
+ * you'd climb outside cut you. A chandelier hangs over the hall waiting to drop, cobwebs fill a corner
+ * and the floor beside the cab's first stop is rotten through.
  *
  * The Throne Hall is a long stone hall between two towers: chandeliers swinging in step from the
  * ceiling, one hung to drop on whoever walks under it, and a dais at the far end with the throne and
