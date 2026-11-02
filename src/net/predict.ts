@@ -1,5 +1,4 @@
 import { Match } from '../game/match';
-import type { PropState } from '../sim/props';
 import { RunWorld } from '../sim/run';
 
 /**
@@ -11,15 +10,15 @@ import { RunWorld } from '../sim/run';
  * confirmed state (i.e. rollback + re-simulate).
  *
  * Only race state is deep-copied; the level, placed props and crate are
- * shared because nothing mutates them during a run (bombs only go off in
- * the place phase). Object identity of `display` and of its RunWorld is kept
+ * shared because nothing mutates them mid-race (bombs go off in the place
+ * phase or at the start of the race, and prediction stops at phase changes). Object identity of `display` and of its RunWorld is kept
  * stable within a race because audio/render trackers key on it.
  */
 
 interface RunInternals {
   events: unknown[];
   solids: unknown[];
-  out: { solids: unknown[]; hazards: unknown[]; springs: unknown[]; winds: unknown[] };
+  out: Record<string, unknown[]>;
   world: { tileAt: unknown; solids: unknown[] };
 }
 
@@ -57,16 +56,16 @@ export class Predictor {
     const si = src as unknown as RunInternals;
     const solids: unknown[] = [];
     di.solids = solids;
-    di.out = { solids, hazards: [], springs: [], winds: [] };
+    // Rebuilt from scratch every frame, so empty lists are a faithful copy of whatever props contribute.
+    di.out = Object.fromEntries(Object.keys(si.out).map((k) => [k, k === 'solids' ? solids : []]));
     di.world = { tileAt: si.world.tileAt, solids };
     di.events = [];
-    d.runners = src.runners.map((r) => ({ ...r, body: { ...r.body } }));
-    d.projectiles = src.projectiles.map((p) => ({ ...p }));
+    // Deep: a stepped copy must never reach confirmed state, and race state keeps growing nested fields.
+    d.runners = structuredClone(src.runners);
+    d.projectiles = structuredClone(src.projectiles);
     d.finishOrder = [...src.finishOrder];
     d.kills = src.kills.map((k) => ({ ...k }));
-    const ps = new Map<number, PropState>();
-    for (const [uid, st] of src.propState) ps.set(uid, { ...st, aim: new Map(st.aim), vars: new Map(st.vars) });
-    d.propState = ps;
+    d.propState = structuredClone(src.propState);
     return d;
   }
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Match } from '../src/game/match';
 import { fromWire, hashMatch, restoreMatch, snapshotMatch, toWire } from '../src/net/snapshot';
+import { RunWorld } from '../src/sim/run';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
 
 const press = (k: Partial<InputFrame>): InputFrame => ({ ...NO_INPUT, ...k });
@@ -20,6 +21,42 @@ function inputsAt(m: Match, f: number): Record<string, InputFrame> {
     }),
   );
 }
+
+/**
+ * Every instance field of Match and RunWorld, and how it crosses the wire. A field
+ * missing from a snapshot desyncs only after a join or a migration, which no
+ * ordinary test sees, so adding one fails here until it's decided.
+ */
+const MATCH_FIELDS = {
+  saved:
+    'seed level phase phaseFrame frame round players placed crate run result prevScores winners nextUid charRolls pendingAdvance themeOverride rules nextSalt salt',
+  derived: 'events', // render/audio only, drained every frame
+};
+const RUN_FIELDS = {
+  saved: 'frame runners projectiles finishOrder kills endFrame propState seq timeLimit',
+  // Rebuilt by the constructor from level, placed props and slots, or rebuilt every frame.
+  derived: 'level placed resolved events safeZone solids out world goal',
+};
+
+describe('snapshot coverage', () => {
+  const howTo = 'add it to snapshotMatch/restoreMatch in src/net/snapshot.ts and bump SNAP_VERSION, or list it as derived here if a restore rebuilds it';
+
+  it('accounts for every Match field', () => {
+    const known = new Set(`${MATCH_FIELDS.saved} ${MATCH_FIELDS.derived}`.split(' '));
+    const missing = Object.keys(new Match(1)).filter((k) => !known.has(k));
+    expect(missing, `new Match state: ${howTo}`).toEqual([]);
+  });
+
+  it('accounts for every RunWorld field', () => {
+    const m = new Match(1);
+    m.join('a:kb1');
+    m.startMatch();
+    const run = new RunWorld(m.level, [], [0], 0);
+    const known = new Set(`${RUN_FIELDS.saved} ${RUN_FIELDS.derived}`.split(' '));
+    const missing = Object.keys(run).filter((k) => !known.has(k));
+    expect(missing, `new RunWorld state: ${howTo}`).toEqual([]);
+  });
+});
 
 describe('match snapshots', () => {
   it('round-trips exotic numbers and maps through JSON', () => {

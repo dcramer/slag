@@ -18,8 +18,12 @@ import type { ThemeId } from '../themes';
  * survive JSON exactly (the sim must be bit-identical after a restore).
  */
 
-/** Snapshot format version; bump on incompatible changes (old saves are dropped). */
-export const SNAP_VERSION = 2;
+/**
+ * Snapshot format version; bump on incompatible changes (old saves are dropped).
+ * A new field on Match or RunWorld must be added here or listed as derived:
+ * tests/snapshot.test.ts fails until it is.
+ */
+export const SNAP_VERSION = 3;
 
 export interface RunSnap {
   slots: number[];
@@ -31,6 +35,7 @@ export interface RunSnap {
   kills: { victim: number; killer: number }[];
   endFrame: number;
   propState: unknown;
+  seq: number;
 }
 
 export interface MatchSnap {
@@ -68,6 +73,7 @@ interface MatchPrivate {
 /** RunWorld internals that are rebuilt on restore. */
 interface RunPrivate {
   events: unknown[];
+  seq: number;
 }
 
 // ---------------------------------------------------------------- wire codec
@@ -184,6 +190,7 @@ export function snapshotMatch(m: Match): MatchSnap {
           kills: run.kills.map((k) => ({ ...k })),
           endFrame: run.endFrame,
           propState: toWire(run.propState),
+          seq: (run as unknown as RunPrivate).seq,
         }
       : null,
   };
@@ -251,6 +258,7 @@ function restoreRun(run: RunWorld, s: RunSnap): RunWorld {
   run.endFrame = s.endFrame;
   run.propState = fromWire(s.propState) as RunWorld['propState'];
   (run as unknown as RunPrivate).events = [];
+  (run as unknown as RunPrivate).seq = s.seq;
   return run;
 }
 

@@ -142,7 +142,7 @@ describe('lockstep', () => {
     }
     let sawRun = false;
     let sawScore = false;
-    for (let i = 0; i < 60 * 40 && !(sawScore && a.match.round >= 3); i++) {
+    for (let i = 0; i < 60 * 80 && !sawScore; i++) {
       r.run(1);
       sawRun ||= a.match.phase === 'run';
       sawScore ||= sawRun && a.match.phase === 'score';

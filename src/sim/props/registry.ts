@@ -1,8 +1,9 @@
-import type { Cell, Rect, Vec } from '../../core/geom';
+import { type Cell, overlaps, type Rect, rectCircle, type Vec } from '../../core/geom';
 import type { Level } from '../level';
-import type { Solid } from '../physics';
+import type { Body, Solid } from '../physics';
 import type { GameEvent } from '../types';
 import type { Wind } from '../wind';
+import type { RunnerStatus } from './status';
 import type { Ammo, Module, PropState, Resolved } from './types';
 
 /**
@@ -29,12 +30,51 @@ export interface SpringTrigger {
 
 export type { Wind } from '../wind';
 
+/**
+ * A zone a runner can touch. While a runner overlaps it, RunWorld calls the
+ * owning module's `touch` (portals, bumpers, magnets, webs). `key`
+ * is stable across frames so modules can tell a fresh entry from staying in.
+ */
+export interface Trigger {
+  /** Bounding rect (px). */
+  r: Rect;
+  /** Optional circle test (px) on top of the rect test. */
+  circle?: { x: number; y: number; r: number };
+  uid: number;
+  mi: number;
+  key: number;
+}
+
 /** What a module adds to the world for one frame. */
 export interface Contrib {
   solids: Solid[];
   hazards: Hazard[];
   springs: SpringTrigger[];
   winds: Wind[];
+  /** Touch zones (optional so older Contrib literals stay valid). */
+  triggers?: Trigger[];
+}
+
+export function addTrigger(out: Contrib, t: Trigger): void {
+  (out.triggers ??= []).push(t);
+}
+
+export function touchesTrigger(b: Rect, t: Trigger): boolean {
+  if (!overlaps(b, t.r)) return false;
+  return !t.circle || rectCircle(b, t.circle.x, t.circle.y, t.circle.r);
+}
+
+/** Mutable access to one runner for `touch` handlers. Everything here is plain data. */
+export interface RunnerMut {
+  body: Body;
+  status: RunnerStatus;
+}
+
+export interface TouchCtx extends TickCtx {
+  /** Would a rect here overlap a solid tile or a prop solid? */
+  blocked(r: Rect): boolean;
+  /** Count trigger `key` as already entered by this runner (e.g. a portal's exit pad), so it won't fire as a fresh entry. */
+  mark(key: number): void;
 }
 
 export interface PropCtx {
@@ -98,6 +138,8 @@ export interface ModuleSim<M extends Module = Module> {
   tick?(m: M, ctx: TickCtx): void;
   /** A runner is standing on one of this module's solids. */
   onStand?(m: M, ctx: TickCtx): void;
+  /** A runner overlaps one of this module's triggers. `first` is true on the frame they enter it. */
+  touch?(m: M, ctx: TouchCtx, who: RunnerMut, t: Trigger, first: boolean): void;
 }
 
 // Heterogeneous registry: entries are keyed by module type.

@@ -227,6 +227,9 @@ describe('prediction copy', () => {
     const inputs = { 'a:kb1': press({ right: true, run: true, jump: true, jumpPressed: true }), 'b:kb1': press({ left: true }) };
     for (let i = 0; i < 24; i++) copy.step(inputs);
     expect(hashMatch(m)).toBe(before);
+    // Nested race state (status effects and the like) can't be shared with the copy.
+    expect(copy.run!.runners[0].status).not.toBe(m.run!.runners[0].status);
+    expect(copy.run!.runners[0].body).not.toBe(m.run!.runners[0].body);
     for (let i = 0; i < 24; i++) m.step(inputs);
     expect(JSON.stringify(snapshotMatch(copy).run)).toBe(JSON.stringify(snapshotMatch(m).run));
   });

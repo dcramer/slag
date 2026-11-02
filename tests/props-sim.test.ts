@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
 import { generateLevel } from '../src/gen/level';
-import { ARCHETYPE_WEIGHTS, generateProp } from '../src/gen/props';
+import { ARCHETYPE_WEIGHTS, DEMOLISH, generateProp } from '../src/gen/props';
 import { canPlace, footprintCells, type PlacedProp, resolveProp } from '../src/sim/props';
 import { RunWorld } from '../src/sim/run';
 import { NO_INPUT } from '../src/sim/types';
@@ -11,7 +11,7 @@ describe('prop runtime', () => {
     // Attachments need suitable exposed faces (e.g. long ceiling undersides); try a few levels.
     const levels = [5, 6, 7, 8, 9, 10].map((s) => generateLevel(s));
     for (const [k] of ARCHETYPE_WEIGHTS) {
-      if (k === 'bomb') continue;
+      if (DEMOLISH.has(k)) continue;
       for (let rot = 0; rot < 4; rot++) {
         const def = generateProp(new Rng(rot + k.length * 7), k, 'x');
         let placed: PlacedProp | null = null;

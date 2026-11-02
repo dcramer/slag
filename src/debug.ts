@@ -1,6 +1,6 @@
 import { parseSeed, Rng } from './core/rng';
 import type { Match } from './game/match';
-import { ARCHETYPE_WEIGHTS, type Archetype, generateProp } from './gen/props';
+import { ARCHETYPE_WEIGHTS, type Archetype, DEMOLISH, generateProp } from './gen/props';
 import type { NetSession } from './net/session';
 import { hashMatch } from './net/snapshot';
 import type { Renderer } from './render/renderer';
@@ -104,7 +104,7 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
   const players = Number(q.get('players') ?? 0);
   const race = q.get('race');
   if (race) {
-    const kinds = race === 'all' ? ARCHETYPE_WEIGHTS.map(([k]) => k).filter((k) => k !== 'bomb') : (race.split(',').filter(Boolean) as Archetype[]);
+    const kinds = race === 'all' ? ARCHETYPE_WEIGHTS.map(([k]) => k).filter((k) => !DEMOLISH.has(k)) : (race.split(',').filter(Boolean) as Archetype[]);
     if (players) api.quickStart(players);
     api.race(kinds, Number(q.get('propseed') ?? 1));
   } else if (players) api.quickStart(players);

@@ -6,7 +6,7 @@ Game design decisions live in [docs/DESIGN.md](docs/DESIGN.md): follow it, and u
 
 ## Commands
 
-Package manager is **pnpm** (`packageManager` in package.json). Never use npm or commit a `package-lock.json`. Node 22 (`.nvmrc`, `engines`).
+Package manager is **pnpm** (`packageManager` in package.json). Never use npm or commit a `package-lock.json`. pnpm settings live in `pnpm-workspace.yaml`, not `package.json`. Node 24 (`.nvmrc`, `engines`).
 
 | Command | Use |
 | --- | --- |
@@ -72,6 +72,8 @@ Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm
 
 - **Prop module type**: add the variant to `Module` in `src/sim/props/types.ts`; implement `ModuleSim` in `src/sim/props/modules/<type>.ts` and export it from `modules/index.ts`; add art in `src/render/props/modules/<type>.ts` and import it from that `index.ts`; add tests.
 - **Player prop archetype**: a recipe in `src/gen/props.ts` (`RECIPES`, `ARCHETYPE_WEIGHTS`). Names come from rolled params.
+- **Projectile**: add to `Ammo` and `AMMO` (`src/sim/props/types.ts`); behavior goes in `AMMO_SIM` (`src/sim/props/ammo.ts`), art in `AMMO_ART` (`src/render/props/projectiles.ts`). A launcher style goes in the `launcher` recipe, with art in `src/render/props/modules/launcher-extra.ts`.
+- **Blast shape**: add to `BlastShape` and `BLAST_SHAPES` (`src/sim/props/transform.ts`).
 - **Theme**: add the id to `THEME_IDS` and `THEME_LABELS` in `src/themes.ts`, then `tsc` lists every `Record<ThemeId, …>` to fill: `SCULPTORS`, `SET_PIECE_RECIPES`, the look `RECIPES` in `src/gen/theme/presets.ts`, music `STYLES`, `GROUND_TONE`. A farm must read as a farm at a glance.
 - **Set pieces**: per-theme recipes in `src/gen/setpieces/<theme>.ts` (see `src/gen/AGENTS.md`).
 
@@ -91,6 +93,7 @@ Vercel, Next.js App Router. Server code is limited to small, stateless route han
 
 - TypeScript strict, ES modules. Runtime deps are only `next`, `react`, `react-dom` (for the shell) and `client-only`; the game itself uses none. Don't add runtime dependencies without asking.
 - Doc comments explain *why*, on modules and exported functions. Small functions; data plus registries over sprawling `switch`es.
+- Custom lint and ast-grep rules are welcome where they enforce a rule better than convention. Every rule's error message must steer whoever hits it, usually an agent: say why the rule exists and what to do instead, naming the concrete replacement. Example: `Math.sin differs across browsers and desyncs lockstep. Use sin from src/core/dmath.ts.`
 - Assets: prefer procedural art. Third-party assets only if CC0 or free for commercial use without attribution traps; record each in `public/ASSETS.md` with source URL and license. Keep them small (≤256 px tiles, compressed).
 
 <!-- BEGIN:nextjs-agent-rules -->

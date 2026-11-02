@@ -5,7 +5,7 @@ import { generateTheme } from '../src/gen/theme';
 import { LEVEL_H, LEVEL_W, PHYS, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
 import { type Level, spawnZone, tileAt } from '../src/sim/level';
 import { bodyAtCell, firstOverlap } from '../src/sim/physics';
-import type { PlacedProp, PropDef } from '../src/sim/props';
+import { makeProjectile, type PlacedProp, type PropDef } from '../src/sim/props';
 import { RunWorld } from '../src/sim/run';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
 
@@ -76,7 +76,7 @@ describe('spawn safe zone', () => {
       run.runners[0].body = bodyAtCell(tx, FLOOR - 1);
       settle(run, 1);
       const b = run.runners[0].body;
-      run.projectiles.push({ x: b.x + b.w + 30, y: b.y + b.h / 2, vx: -300, vy: 0, owner: 5, born: run.frame, ammo: 'bolt' });
+      run.projectiles.push(makeProjectile({ x: b.x + b.w + 30, y: b.y + b.h / 2, vx: -300, vy: 0, owner: 5, ammo: 'bolt' }, run.frame, 0));
       const events: string[] = [];
       for (let f = 0; f < 30; f++) {
         run.step([NO_INPUT]);
