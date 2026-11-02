@@ -10,7 +10,7 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 
 ## Discovery
 - Part of the joy of the game is the unknown. Players learn parts, rules and tricks by playing and by watching each other.
-- The game never explains the obvious: no sub lines, hints or notes that restate what's on screen or spell out a rule. If the screen can show it, don't say it.
+- The game never explains the obvious: no sub lines, hints or notes that restate what's on screen or spell out a rule. If the screen can show it, don't say it. The main menu's short sub lines are the one exception, kept as part of the home screen's look.
 
 ## Parody
 - Our goal is to parody other games, especially with items. Players should recognize what's being mocked and laugh at the twist.

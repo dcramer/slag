@@ -30,7 +30,7 @@ Phone support (follow camera, pinch, scaled HUD, settings sheet) is on `main` bu
 
 ## 10. Housekeeping
 - Enable GitHub Actions and make `ci.yml` a required check. This must be done on GitHub by the repo owner.
-- Delete the old remote branch `claude/scaffold-procgen-platformer`, and the `wip/*` branches once they're merged.
+- Delete merged and superseded branches: remote `claude/scaffold-procgen-platformer` and all `wip/*` (each superseded by work on `main`), plus local `worktree-agent-*` and merge branches. Waiting on the owner's OK.
 - Consider stricter TS flags: `noUncheckedIndexedAccess` gives about 600 errors, so it's a project of its own.
 
 ## 11. Screen follow-ups
@@ -44,9 +44,6 @@ Size tiers for parts are a mapping of the old rolled ranges, so check them too; 
 **Undecided: character height.** Characters fit a one-block gap today. The owner wondered about a 1.5- or 2-block gap, since one block feels less interesting, then leaned back toward one. Decide in playtest. Changing it means redoing level design and `reach.ts` tuning.
 
 **Fast crushers** can pass through a lone runner standing on the floor and pop them on top instead of crushing them. The same happens with one runner, before collision.
-
-## 14. Clear the lint warnings
-`pnpm check` prints 7 warnings, in `src/ui/touch/overlay.ts`, `src/ui/touch/device.ts`, `src/input/input.ts`, `src/render/props/modules/vehicle.ts` and `src/audio/system.ts`. AGENTS.md treats warnings as real findings. Do it with or after item 6, which also touches the touch code.
 
 ## 21. Ink art leftovers
 - Small cog lifts and small spin bars stay small on crate cards, because small parts draw at 0.6 scale.
@@ -71,13 +68,5 @@ Some steps need the owner. Run after setting the Vercel env vars.
 - Move `app/global-error.tsx` into `src/` with item 11.
 
 ## 22. Glacier and space follow-ups
-Both themes are on `main`. Their set pieces reuse existing module art, so they need their own looks. Space has no weather. Ice skids and 0.55 space gravity are measured, not played by hand.
-
-## 20. Cleanup pass
-Run this once the current agents have landed, so it doesn't fight them. A lot arrived fast.
-
-- **Code:** dead exports, leftovers from merged branches, duplicated helpers, oversized files (`src/render/hud.ts`, `src/ui/menus.ts`, `tools/shot.ts`).
-- **Docs:** AGENTS.md files, `docs/DESIGN.md`, `docs/ART.md`, `docs/NETCODE.md`, `docs/MOBILE.md`, `README.md`, so each says what's true now and nothing else.
-- **Tooling:** `pnpm format`'s `oxlint --fix` broke `tests/roster.test.ts` by turning an array into a `Set`. Find the rule and fix it.
-- **Repo:** merged `wip/*` branches and worktree branches, the 7 lint warnings (item 14), and `netcode-merge-wip`.
+Both themes are on `main`. Space has no weather. Ice skids and 0.55 space gravity are measured, not played by hand.
 
