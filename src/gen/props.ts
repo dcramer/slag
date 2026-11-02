@@ -1,3 +1,4 @@
+import { dcos, dsin, sq } from '../core/dmath';
 import { type Cell, normalizeCells, type Vec } from '../core/geom';
 import { moduleSim } from '../sim/props/registry';
 import '../sim/props/modules';
@@ -54,9 +55,43 @@ export const ARCHETYPE_WEIGHTS: readonly (readonly [Archetype, number])[] = [
   ['wheel', 0.9],
   ['hangar', 1],
   ['mystery', 1.3],
+  ['rope', 1],
+  ['keg', 1],
 ];
 
 /** Demolition archetypes: detonated (now or at race start) rather than built. */
+/**
+ * Weight a stuck match adds to the parts that get it moving, per step of
+ * DRY_RAMP: bombs and breakers clear what's in the way, building parts cross
+ * it. Anything not listed here keeps its weight, and pure hazards give some up.
+ */
+const DRY_PUSH: Partial<Record<Archetype, number>> = {
+  bomb: 2.4,
+  charge: 2,
+  drill: 2,
+  timebomb: 1.6,
+  platform: 0.8,
+  crumble: 0.6,
+  spring: 0.4,
+};
+/** How much pure hazards fade per step of DRY_RAMP. */
+const DRY_HAZARD_FADE = 0.3;
+/**
+ * Strength of the push by rounds in a row nobody finished, last entry held.
+ * Round 1 of a level usually can't be finished, so one dry round is a nudge,
+ * and it's capped so a crate stays a crate rather than a pile of bombs.
+ */
+const DRY_RAMP = [0, 0.15, 0.8, 1.5, 2, 2.4];
+
+/** The archetype table a crate rolls from after `dry` rounds with no finisher. */
+export function crateWeights(dry: number): readonly (readonly [Archetype, number])[] {
+  const k = DRY_RAMP[Math.min(dry, DRY_RAMP.length - 1)];
+  return ARCHETYPE_WEIGHTS.map(([a, w]) => {
+    const push = DRY_PUSH[a];
+    return [a, push ? w * (1 + push * k) : HAZARD.includes(a) ? w / (1 + DRY_HAZARD_FADE * k) : w] as const;
+  });
+}
+
 export const DEMOLISH: ReadonlySet<Archetype> = new Set(['bomb', 'emp', 'drill', 'charge', 'timebomb']);
 
 /** Launcher aim mix: fixed clearly dominates so trackers stay special (cannons/mortars track a third as often). */
@@ -163,7 +198,7 @@ interface Recipe {
   name: string;
   modules: Module[];
   motion?: Motion;
-  mount?: 'face';
+  mount?: 'face' | 'hang';
   /** Placement cells when they're more than the modules' anchors (e.g. a wheel's swept disk). */
   footprint?: Cell[];
 }
@@ -295,7 +330,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     if (spiky) {
       const dir = rng.pick([1, 2]); // down or left/right
       const a = dir === 1 ? AXIS[1] : rng.pick([AXIS[0], AXIS[2]]);
-      const [dx, dy] = [Math.round(Math.cos(a)), Math.round(Math.sin(a))];
+      const [dx, dy] = [Math.round(dcos(a)), Math.round(dsin(a))];
       modules.push({ type: 'spikes', cells: exposed(cells, dx, dy), angle: a });
     }
     let motion: Motion = { type: 'none' };
@@ -358,7 +393,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     );
     for (const d of dirs) {
       const a = AXIS[d];
-      modules.push({ type: 'spikes', cells: exposed(cells, Math.round(Math.cos(a)), Math.round(Math.sin(a))), angle: a });
+      modules.push({ type: 'spikes', cells: exposed(cells, Math.round(dcos(a)), Math.round(dsin(a))), angle: a });
     }
     return {
       archetype: 'spikeblock',
@@ -980,7 +1015,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     const reach = arm + width / 2;
     const r = Math.floor(reach);
     const disk: Cell[] = [];
-    for (let y = 0; y <= 2 * r; y++) for (let x = 0; x <= 2 * r; x++) if ((x - r) ** 2 + (y - r) ** 2 <= reach * reach) disk.push([x, y]);
+    for (let y = 0; y <= 2 * r; y++) for (let x = 0; x <= 2 * r; x++) if (sq(x - r) + sq(y - r) <= reach * reach) disk.push([x, y]);
     return {
       archetype: 'wheel',
       role: 'build',
@@ -1102,6 +1137,52 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     };
   },
 
+  rope(rng) {
+    const length = rng.int(3, 7);
+    const strain = rng.int(240, 420);
+    const adjs =
+      length <= 3
+        ? ['Cocktail', 'Stubby', 'Snack-Size']
+        : length >= 6
+          ? ["Butcher's", 'Foot-Long', 'Unending']
+          : strain < 300
+            ? ['Overcooked', 'Day-Old', 'Bargain']
+            : ['Prime', 'Smoked', 'Cured'];
+    return {
+      archetype: 'rope',
+      role: 'utility',
+      mount: 'hang',
+      name: title(rng, adjs, ['Sausage Vine', 'Swinging Links', 'Banger Rope', 'Bratwurst Vine', 'Salami Swing']),
+      modules: [{ type: 'rope', at: [0.5, 0], length, strain, regrow: rng.int(240, 360) }],
+    };
+  },
+
+  keg(rng) {
+    const dirs = rng.chance(0.55)
+      ? rng.pick([
+          [5, 6, 7, 6],
+          [6, 7, 0, 7],
+          [4, 5, 6, 5],
+        ])
+      : [rng.pick([6, 7, 5, 0])];
+    const power = rng.int(460, 640);
+    const delay = rng.int(8, 16);
+    const adjs =
+      dirs.length > 1
+        ? ['Tipsy', 'Wobbly', 'Hiccuping']
+        : delay <= 10
+          ? ['Hair-Trigger', 'Jumpy', 'Twitchy']
+          : power > 570
+            ? ['Cask-Strength', 'High-Proof', 'Overproof']
+            : ['Aged', 'Oak-Barreled', 'Home-Brewed'];
+    return {
+      archetype: 'keg',
+      role: 'utility',
+      name: title(rng, adjs, ['Kegapult', 'Powder Keg', 'Cask Cannon', 'Moonshine Mortar', 'Hooch Howitzer']),
+      modules: [{ type: 'keg', at: center(0.5, 0.5), dirs, step: rng.int(28, 46), power, delay, burn: rng.int(130, 220) }],
+    };
+  },
+
   timebomb(rng) {
     const radius = rng.range(2, 3.2);
     const emp = rng.chance(0.3);
@@ -1122,13 +1203,15 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
  * A round's crate. It always holds a hazard and a bridge part, and at least
  * `bridges` parts that can stand in for a bridge (capped so the hazard keeps
  * its place): what the level still needs, so a match can't run out of ways
- * to reach the flag.
+ * to reach the flag. `dry`, rounds in a row nobody finished, tilts the rest
+ * toward parts that unstick a match (crateWeights); nothing says so on screen.
  */
-export function generateCrate(seed: number, round: number, count: number, bridges = 1): PropDef[] {
+export function generateCrate(seed: number, round: number, count: number, bridges = 1, dry = 0): PropDef[] {
   const rng = new Rng(deriveSeed(seed, `crate:${round}`));
+  const weights = crateWeights(dry);
   const need = Math.max(1, Math.min(bridges, count - 1));
   const kinds: Archetype[] = [rng.pick(HAZARD)];
-  while (kinds.length + need < count) kinds.push(rng.weighted(ARCHETYPE_WEIGHTS));
+  while (kinds.length + need < count) kinds.push(rng.weighted(weights));
   const made = kinds.map((k, i) => generateProp(new Rng(deriveSeed(seed, `prop:${round}:${i}`)), k, `${round}-${i}`));
   for (let i = 0; i < need; i++) made.push(generateBridge(new Rng(deriveSeed(seed, `bridge:${round}:${i}`)), `${round}-b${i}`));
   return rng.shuffle(made);

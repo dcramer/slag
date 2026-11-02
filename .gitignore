@@ -7,3 +7,6 @@ shots
 .claude/worktrees/
 *.tsbuildinfo
 CLAUDE.local.md
+
+# `vercel env pull` writes store credentials here
+.env*.local

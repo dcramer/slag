@@ -6,7 +6,8 @@ import { scoreRound } from '../src/game/scoring';
 import { generateLevel, judge, lastGenInfo, MAX_BRIDGES, partsNeeded } from '../src/gen/level';
 import { setProbeGravity } from '../src/gen/level/probe';
 import { hardGap } from '../src/gen/level/sculptors/common';
-import { ARCHETYPE_WEIGHTS, generateBridge, generateCrate, generateProp, isBridgePart } from '../src/gen/props';
+import { ARCHETYPE_WEIGHTS, crateWeights, DEMOLISH, generateBridge, generateCrate, generateProp, isBridgePart } from '../src/gen/props';
+import { restoreMatch, snapshotMatch } from '../src/net/snapshot';
 import { LEVEL_H, LEVEL_W, TILE } from '../src/sim/constants';
 import type { Level } from '../src/sim/level';
 import { canPlace, type PlacedProp } from '../src/sim/props';
@@ -96,7 +97,7 @@ describe('what a level still needs', () => {
 });
 
 /** Play rounds for real: claim a bridge part, stand it on the solution, give up the race. */
-function playRound(m: Match, spot: { x: number; y: number }) {
+function playRound(m: Match, spot: { x: number; y: number }, finish = false) {
   const device = 'kb1';
   const p = m.players[0];
   const press = (i: Partial<InputFrame>) => m.step({ [device]: { ...NO_INPUT, ...i } });
@@ -107,6 +108,7 @@ function playRound(m: Match, spot: { x: number; y: number }) {
   expect(m.phase).toBe('place');
   p.cursor = { x: (spot.x + 1.5) * TILE, y: (spot.y + 0.5) * TILE };
   for (let f = 0; f < 60 && m.phase === 'place'; f++) press({ confirmPressed: f === 15 });
+  if (finish) m.run!.finishOrder.push(p.slot);
   for (let f = 0; f < 400 && m.phase === 'run'; f++) press({ altPressed: f === 100 });
   for (let f = 0; f < 900 && m.phase === 'score'; f++) press({ confirmPressed: f % 30 === 29 });
 }
@@ -203,5 +205,70 @@ describe('every level asks for parts', () => {
         expect(analyzeReach(l).goalReached, `${theme} ${l.seed} bare`).toBe(false);
       }
     }
+  });
+});
+
+describe('a stuck match leans on the crate', () => {
+  const unstick = (a: string) => DEMOLISH.has(a as never) || ['platform', 'crumble', 'spring'].includes(a);
+  const share = (dry: number) => {
+    const w = crateWeights(dry);
+    const total = w.reduce((n, [, v]) => n + v, 0);
+    return w.filter(([a]) => unstick(a)).reduce((n, [, v]) => n + v, 0) / total;
+  };
+
+  it('a first dry round is a nudge, and the push builds from the second', () => {
+    const [d0, d1, d2, d3] = [share(0), share(1), share(2), share(3)];
+    expect(d1).toBeGreaterThan(d0);
+    expect(d2 - d1).toBeGreaterThan((d1 - d0) * 2);
+    expect(d3).toBeGreaterThan(d2);
+  });
+
+  it('is capped, so crates stay varied', () => {
+    expect(share(50)).toBeCloseTo(share(5), 9);
+    expect(share(50)).toBeLessThan(0.75);
+    const zero = crateWeights(50).filter(([, v]) => v <= 0);
+    expect(zero).toEqual([]);
+  });
+
+  it('shows up in real crates and stays deterministic', () => {
+    const cards = (dry: number) => {
+      const out = [];
+      for (let i = 0; i < 300; i++) out.push(...generateCrate(seedAt(i), 1 + (i % 9), 6, 1, dry));
+      return out.filter((d) => unstick(d.archetype) && !isBridgePart(d)).length;
+    };
+    expect(cards(5)).toBeGreaterThan(cards(0) * 1.4);
+    expect(generateCrate(5, 2, 6, 1, 3)).toEqual(generateCrate(5, 2, 6, 1, 3));
+  });
+
+  it('counts dry rounds, resets on a finish, and survives a snapshot', { timeout: 60_000 }, () => {
+    const { seed, level } = levelNeeding(2);
+    const m = new Match(seed, 'farm');
+    m.forceProfile = { size: 'classic' };
+    m.newLevel(seed, 'farm');
+    m.join('kb1');
+    m.startMatch();
+    expect(m.dryRounds).toBe(0);
+    playRound(m, level.solution![0]);
+    expect(m.dryRounds).toBe(1);
+    const copy = new Match(seed, 'farm');
+    restoreMatch(copy, snapshotMatch(m));
+    expect(copy.dryRounds).toBe(1);
+    playRound(m, level.solution![1], true);
+    expect(m.dryRounds).toBe(0);
+  });
+});
+
+describe('snapshots keep the level the rules asked for', () => {
+  it('a guest rebuilding a low-gravity level gets low gravity', { timeout: 30_000 }, () => {
+    const host = new Match(4321, 'castle');
+    host.setRules({ ...host.rules, gravity: 'low' });
+    host.forceProfile = { size: 'wide' };
+    host.newLevel(4321, 'castle');
+    const guest = new Match(99, 'farm');
+    restoreMatch(guest, snapshotMatch(host));
+    expect(guest.level.gravity).toBe(host.level.gravity);
+    expect([guest.level.w, guest.level.h]).toEqual([host.level.w, host.level.h]);
+    expect(guest.level.profile).toEqual(host.level.profile);
+    expect(guest.forceProfile).toEqual(host.forceProfile);
   });
 });

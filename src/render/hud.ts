@@ -59,6 +59,8 @@ export interface NetInfo {
   peers: NetPeer[];
   status: string;
   inviteUrl?: string;
+  /** The room is unreachable and play is local. */
+  offline?: boolean;
 }
 
 interface FooterItem {
@@ -116,6 +118,8 @@ export class Hud {
   pointer: { x: number; y: number } | null = null;
   /** Online lobby info (peers, status, invite link); set by the net layer when connected. */
   net?: NetInfo;
+  /** Online pick: the card this peer clicked and the host hasn't ruled on yet. Not a claim. */
+  pendingCard = -1;
   /** Force the prompt glyph family (e.g. the touch layer sets 'touch'). Otherwise `lastInput` is used. */
   inputMode?: InputMode;
   /** Last input family the person used (tracked by game-client). */
@@ -150,7 +154,7 @@ export class Hud {
   }
 
   private get mode(): InputMode {
-    return this.inputMode ?? (this.mouseDevice === 'touch' ? 'touch' : this.lastInput);
+    return this.inputMode ?? (this.mouseDevice.endsWith('touch') ? 'touch' : this.lastInput);
   }
 
   private button(b: HudButton) {
@@ -497,7 +501,7 @@ export class Hud {
     const c = this.ctx;
     const h = 30;
     plate(c, x, y, w, h, { rivets: false });
-    const tw = tag(c, 'ONLINE', x + 8, y + h / 2, PAL.toxic, PAL.ink, TYPE.caption);
+    const tw = tag(c, net.offline ? 'OFFLINE' : 'ONLINE', x + 8, y + h / 2, net.offline ? PAL.dim : PAL.toxic, PAL.ink, TYPE.caption);
     let px = x + 16 + tw;
     this.text(net.status, px, y + h / 2, TYPE.body, PAL.ash, 'left', UI, 600);
     c.font = `600 ${TYPE.body}px ${UI}`;
@@ -584,17 +588,16 @@ export class Hud {
     rc.t = t;
     rc.frame = m.frame;
     m.crate.forEach((item, idx) => {
+      if (item.claimedBy >= 0) return;
       const r = item.rect;
-      const owner = item.claimedBy >= 0 ? m.player(item.claimedBy) : undefined;
       const hoverer = m.players.find((p) => p.claim < 0 && m.crateItemAt(p.cursor.x, p.cursor.y) === idx);
-      const lift = hoverer && !owner ? -4 : 0;
+      const lift = hoverer ? -4 : 0;
       const y = r.y + lift;
       const role = ROLE[item.def.role];
-      if (hoverer && !owner) glowDot(this.gctx, r.x + r.w / 2, y + r.h / 2, r.w * 0.8, hoverer.character.body, 0.16);
+      if (hoverer) glowDot(this.gctx, r.x + r.w / 2, y + r.h / 2, r.w * 0.8, hoverer.character.body, 0.16);
       plate(c, r.x, y, r.w, r.h, {
         edge: css(role.color),
-        stroke: owner ? css(owner.character.body, 5) : hoverer ? css(hoverer.character.body, 15) : undefined,
-        alpha: owner ? 0.75 : 1,
+        stroke: idx === this.pendingCard ? PAL.bone : hoverer ? css(hoverer.character.body, 15) : undefined,
         drop: lift ? 6 : 3,
       });
       const sg = c.createRadialGradient(r.x + r.w / 2, y + 44, 2, r.x + r.w / 2, y + 44, 46);
@@ -602,27 +605,12 @@ export class Hud {
       sg.addColorStop(1, css(role.color, 0, 0));
       c.fillStyle = sg;
       c.fillRect(r.x + 1, y + 5, r.w - 2, r.h - 6);
-      c.globalAlpha = owner ? 0.35 : 1;
-      this.gctx.globalAlpha = owner ? 0.35 : 1;
       drawPreview(rc, item.def, r.x + r.w / 2, y + 44, 50);
-      c.globalAlpha = 1;
-      this.gctx.globalAlpha = 1;
       tag(c, role.label, r.x + 7, y + 15, css(role.color), PAL.ink, TYPE.caption);
       const stamp = propTag(item.def);
       if (stamp) tag(c, stamp, r.x + 7, y + 30, PAL.bone, PAL.ink, TYPE.caption);
       wrap(this, item.def.name, r.x + r.w / 2, y + r.h - 28, r.w - 12, TYPE.body);
       this.text(item.def.maker, r.x + r.w / 2, y + r.h - 11, TYPE.caption, PAL.dim, 'center', UI, 600);
-      if (owner) {
-        drawCharacter({ s: c, g: this.gctx }, owner.character, r.x + r.w - 18, y + 38, {
-          facing: -1,
-          vx: 0,
-          vy: 0,
-          grounded: true,
-          t,
-          scale: 1.7,
-          celebrate: true,
-        });
-      }
     });
     for (const p of m.players) if (p.claim < 0) this.pending.push(() => this.cursor(p.cursor.x, p.cursor.y, p.character.body, p.character.name, t));
   }
@@ -886,7 +874,7 @@ export class Hud {
     const touch = this.mode === 'touch';
     switch (m.phase) {
       case 'lobby': {
-        const primary = this.mode === 'gamepad' ? m.players.find((p) => p.device.startsWith('pad')) : m.players.find((p) => p.device === this.mouseDevice);
+        const primary = this.mode === 'gamepad' ? m.players.find((p) => /(^|:)pad/.test(p.device)) : m.players.find((p) => p.device === this.mouseDevice);
         const items: FooterItem[] = [];
         if (!primary) items.push({ action: 'confirm', label: 'Join', hud: 'join', device: this.mouseDevice });
         else {

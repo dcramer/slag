@@ -1,3 +1,4 @@
+import { dhypot } from '../core/dmath';
 import { inset, overlaps, type Rect, rectCircle } from '../core/geom';
 import { PLAYER_W, RUN_COUNTDOWN } from './constants';
 import { type CrowdMember, nudgeCrowd } from './crowd';
@@ -22,10 +23,13 @@ import {
   buildProjectile,
   type Contrib,
   dirOf,
+  type GrabRequest,
   type Hazard,
+  letGo,
   makeProjectile,
   moduleSim,
   motionOffset,
+  newAttach,
   newPropState,
   newStatus,
   type Projectile,
@@ -36,12 +40,15 @@ import {
   type PropCtx,
   type PropState,
   type Resolved,
+  type RunnerAttach,
   type RunnerStatus,
   type RunnerView,
   resolveProp,
+  settleGrabs,
   statusInput,
   statusPostStep,
   statusPreStep,
+  stepHold,
   stepProjectile,
   type TickCtx,
   type TouchCtx,
@@ -70,6 +77,8 @@ export interface Runner {
   status: RunnerStatus;
   /** Held item and its effects (src/sim/items). */
   items: RunnerItems;
+  /** The rope or keg holding this runner, and its re-grab cooldown (props/attach.ts). */
+  attach: RunnerAttach;
 }
 
 /**
@@ -99,6 +108,8 @@ export class RunWorld {
   readonly safeZone: Rect | null;
   /** Projectiles spawned so far (ids for projectile-owned solids). */
   private seq = 0;
+  /** Grabs asked for this frame; settled and emptied once everyone has moved. */
+  private grabs: GrabRequest[] = [];
 
   solids: Solid[] = [];
   private out: Contrib = { solids: this.solids, hazards: [], springs: [], winds: [], triggers: [] };
@@ -129,6 +140,7 @@ export class RunWorld {
       springCooldown: 0,
       status: newStatus(),
       items: newRunnerItems(),
+      attach: newAttach(),
     }));
     this.resolved = [...level.setPieces, ...placed].map(resolveProp);
     for (const r of this.resolved) {
@@ -208,17 +220,19 @@ export class RunWorld {
       const inp = itemInput(r.items, statusInput(r.status, live ? (inputs[i] ?? NO_INPUT) : NO_INPUT));
       const b = r.body;
       if (inp.altPressed) return this.kill(r, -1, 'pop');
-      statusPreStep(r.status, b);
+      // A rope or keg moves this body instead of the controller, and a held runner skips springs, fields and kickers.
+      const held = stepHold(this, r, inp, f);
+      if (!held) statusPreStep(r.status, b);
 
       // Wind is a velocity field applied inside stepBody (sim/wind.ts); grounding stays physics' call.
-      if (!stepBody(b, inp, this.world, windAt(b, this.out.winds)) && !this.isSafe(r)) {
+      if (!held && !stepBody(b, inp, this.world, windAt(b, this.out.winds)) && !this.isSafe(r)) {
         // Credit whoever's moving solid did the squishing.
         const s = this.solids.find((s) => s.propUid >= 0 && overlaps(b, s));
         const owner = s ? (this.resolved.find((x) => x.pp.uid === s.propUid)?.pp.owner ?? -1) : -1;
         return this.kill(r, owner, 'crush');
       }
       statusPostStep(r.status, b);
-      itemPostStep(r.items, b);
+      if (!held) itemPostStep(r.items, b);
 
       if (b.onGround && b.groundRef >= 0) {
         const s = this.solids.find((s) => s.id === b.groundRef);
@@ -228,7 +242,7 @@ export class RunWorld {
 
       if (r.springCooldown > 0) r.springCooldown--;
       for (const sp of this.out.springs) {
-        if (r.springCooldown === 0 && overlaps(b, sp.rect)) {
+        if (!held && r.springCooldown === 0 && overlaps(b, sp.rect)) {
           const [dx, dy] = dirOf(sp.angle);
           if (dy !== 0) b.vy = dy * sp.power;
           else {
@@ -247,7 +261,7 @@ export class RunWorld {
 
       // The spawn zone shields you from fields and kickers too (see safeZone).
       if (this.isSafe(r)) r.status.inside.length = 0;
-      else this.touchTriggers(r, f);
+      else if (!held) this.touchTriggers(r, f);
 
       const hb = inset(b, 1.5);
       if (!this.isSafe(r)) {
@@ -260,6 +274,7 @@ export class RunWorld {
       }
       if (b.y > this.killY) return this.kill(r, -1, 'fall');
       if (overlaps(b, this.goal)) {
+        letGo(r);
         r.finished = true;
         r.finishFrame = f;
         this.finishOrder.push(r.slot);
@@ -267,9 +282,11 @@ export class RunWorld {
       }
     });
 
+    settleGrabs(this, this.grabs);
+
     // Runners softly shove each other (src/sim/crowd.ts). Order-independent.
     const crowd: CrowdMember[] = [];
-    this.runners.forEach((r, i) => r.alive && !r.finished && crowd.push({ key: r.slot, body: r.body, x0: x0[i] }));
+    this.runners.forEach((r, i) => r.alive && !r.finished && !r.attach.grip && crowd.push({ key: r.slot, body: r.body, x0: x0[i] }));
     nudgeCrowd(crowd, this.world);
 
     stepItems(this, inputs, live);
@@ -286,6 +303,7 @@ export class RunWorld {
   /** Kill a runner, unless a shield cancels it. Bonks pass kill credit on. */
   private kill(r: Runner, killer: number, cause: DeathCause) {
     if (absorbHit(this, r, cause)) return;
+    letGo(r);
     killer = creditKill(r, killer, cause);
     r.alive = false;
     r.deathFrame = this.frame;
@@ -310,14 +328,19 @@ export class RunWorld {
       const m = rp.mods[t.mi];
       const sim = moduleSim(m.type);
       if (!sim.touch) continue;
-      const ctx: TouchCtx = {
-        ...this.tickCtx(rp, t.mi, f),
-        blocked: (q) => firstOverlap(q, this.world) !== null,
-        mark: (key) => now.includes(key) || now.push(key),
-      };
-      sim.touch(m, ctx, r, t, !st.inside.includes(t.key));
+      sim.touch(m, this.touchCtx(rp, t.mi, f, r, now), r, t, !st.inside.includes(t.key));
     }
     st.inside = now;
+  }
+
+  /** What a module gets while it touches or holds `r`. `seen` is the runner's trigger list this frame. */
+  touchCtx(rp: Resolved, mi: number, f: number, r: Runner, seen: number[] = r.status.inside): TouchCtx {
+    return {
+      ...this.tickCtx(rp, mi, f),
+      blocked: (q) => firstOverlap(q, this.world) !== null,
+      mark: (key) => seen.includes(key) || seen.push(key),
+      grab: (g) => this.grabs.push({ r, uid: rp.pp.uid, mi, g }),
+    };
   }
 
   /** Rebuild this frame's solids, hazards and triggers from all props (and projectile patches). */
@@ -331,12 +354,15 @@ export class RunWorld {
     for (const p of this.projectiles) buildProjectile(p, f, this.out);
   }
 
-  private projItems: ProjItems = {
-    caught: (i, kind) => catchShot(this, this.runners[i], kind),
-    loose: (s) => spawnItem(this, s),
-    bonk: (i, owner) => bonk(this.runners[i], owner),
-    burst: (x, y) => burstSmoke(this, x, y),
-  };
+  /** A method, not a field: prediction copies RunWorld, and a closure field would keep writing to the original. */
+  private projItems(): ProjItems {
+    return {
+      caught: (i, kind) => catchShot(this, this.runners[i], kind),
+      loose: (s) => spawnItem(this, s),
+      bonk: (i, owner) => bonk(this.runners[i], owner),
+      burst: (x, y) => burstSmoke(this, x, y),
+    };
+  }
 
   /** Projectile behavior lives in props/ammo.ts; this just wires it to the world. */
   private stepProjectiles(f: number) {
@@ -355,7 +381,7 @@ export class RunWorld {
         this.kill(this.runners[i], owner, 'hazard');
         runners[i].active = this.runners[i].alive;
       },
-      items: this.projItems,
+      items: this.projItems(),
     };
     const keep: Projectile[] = [];
     for (const p of this.projectiles) if (stepProjectile(p, w)) keep.push(p);
@@ -376,7 +402,7 @@ function hitHazard(b: Rect, h: Hazard): boolean {
     case 'circle':
       return rectCircle(b, h.x, h.y, h.r);
     case 'seg': {
-      const len = Math.hypot(h.x2 - h.x1, h.y2 - h.y1);
+      const len = dhypot(h.x2 - h.x1, h.y2 - h.y1);
       const n = Math.max(1, Math.ceil(len / 4));
       for (let i = 0; i <= n; i++) {
         const t = i / n;

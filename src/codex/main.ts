@@ -102,6 +102,7 @@ function drawProp(rc: RC, def: PropDef, rot: number, w: number, h: number) {
     if (m.type === 'laser') reach = Math.max(reach, 1);
     if (m.type === 'magnet') reach = Math.max(reach, m.radius - 0.5);
     if (m.type === 'dropper') reach = Math.max(reach, m.reach * 0.5);
+    if (m.type === 'keg') reach = Math.max(reach, 1.5);
   }
   const mo = def.motion;
   const travel = mo.type === 'rail' ? mo.range : mo.type === 'loop' ? mo.radius * 2 : 0;

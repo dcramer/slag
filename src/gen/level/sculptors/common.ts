@@ -143,6 +143,14 @@ export class Slots {
   }
 }
 
+/**
+ * Keep landmarks off a hard crossing's banks: a tower or spire on the lip
+ * leaves a bridge nowhere to land, and walls by the edge give walls to climb.
+ */
+export function keepClear(slots: Slots, a: number, w: number): void {
+  slots.mark(a - 4, a + w + 6);
+}
+
 /** Flatten a heightmap span to one row (the lower of its extremes by default) so a stamp sits level. */
 export function flatten(surf: number[], H: number, a: number, b: number, row?: number): number {
   const W = surf.length;

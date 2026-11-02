@@ -10,16 +10,16 @@ import type { GameEvent } from '../sim/types';
 import { Backdrop } from './background';
 import { Camera } from './camera';
 import { drawAccessory, drawAfterimage, drawCharacter, Rig } from './character';
-import { ComicLayer, Lettering, speedLines } from './comic';
+import { CelLayer, Lettering } from './cel';
 import { Fx } from './fx';
 import { VIEW_FRAME, type ViewFrame, viewFrame } from './frame';
 import { Hud } from './hud';
 import { drawClouds, drawDrops, drawRunnerItems, itemFx } from './items';
 import { circle, glowDot, type Light, light, type RC } from './kit';
 import { type Compositor, createCompositor } from './post';
-import { drawBackdrop, drawBlastPreview, drawForeground, drawProjectile, drawResolved, drawRunnerStatus, type Emit, propEventFx } from './props';
+import { drawBackdrop, drawBlastPreview, drawForeground, drawProjectile, drawResolved, drawRunnerStatus, drawStuffed, type Emit, propEventFx } from './props';
 import { Surround } from './surround';
-import { initialStyle, type RenderStyle, saveRenderSettings } from './style';
+import { initialStyle, letteringAllowed, type RenderStyle, saveRenderSettings, STYLES } from './style';
 import { TerrainPainter } from './terrain';
 // Mobile: quality tiers / adaptive resolution / safe-area insets (owned by the touch module).
 import { detectQuality, FrameBudget, QUALITY, type QualityTier, safeInsets, TIERS } from '../ui/touch/device';
@@ -28,11 +28,6 @@ import { detectQuality, FrameBudget, QUALITY, type QualityTier, safeInsets, TIER
 const MAX_BAKE_PX = 6_000_000;
 const RUNNER_KEY: HSL = { h: 40, s: 30, l: 90 };
 
-/** Offset and scale of a context's current transform, for the comic pass's world-locked dots. */
-function camOf(ctx: CanvasRenderingContext2D): [number, number, number] {
-  const m = ctx.getTransform();
-  return [m.e, m.f, m.a];
-}
 // Speed trail. Vertical speed counts for less: a jump's launch is fast, but a walking hop isn't speed.
 const TRAIL_RISE = 0.5;
 /** px/s where the trail starts (past a walk, so a flat-out run shows a short echo) and where it peaks. */
@@ -78,7 +73,9 @@ export class Renderer {
   private budget = new FrameBudget();
   private style: RenderStyle = initialStyle(typeof location !== 'undefined' ? location.search : '');
   private letters = new Lettering();
-  private comicLayer: ComicLayer | null = null;
+  private celLayer: CelLayer | null = null;
+  /** Impact words for this page, on top of what the style asks for (`?lettering=0`). */
+  lettering = letteringAllowed(typeof location !== 'undefined' ? location.search : '');
 
   constructor(
     private glCanvas: HTMLCanvasElement,
@@ -108,7 +105,7 @@ export class Renderer {
     this.resize();
   }
 
-  /** Current look ('default' | 'comic'). */
+  /** Current look. */
   getStyle(): RenderStyle {
     return this.style;
   }
@@ -170,8 +167,8 @@ export class Renderer {
     const frameBox = this.frameBox;
     const sk = this.pw / frameBox.w;
     const kb = Math.min(4, sk * 1.45, Math.sqrt(MAX_BAKE_PX / (ww * wh)));
-    this.terrain.comic = this.printed;
-    this.surround.comic = this.printed;
+    this.terrain.cel = this.celPass;
+    this.surround.cel = this.celPass;
     this.terrain.ensure(level, kb);
     // The surroundings reach as far as the most zoomed-out view of this level can see.
     const floor = raceFloor(level);
@@ -218,10 +215,7 @@ export class Renderer {
     this.backdrop.draw(rc, level.theme, this.cam, Math.min(2.5, sk * 1.2));
 
     // --- world
-    // Comic: the world goes on its own transparent layer (see ComicLayer); `s` stays the background.
-    if (this.printed) rc.s = (this.comicLayer ??= new ComicLayer()).begin(this.scene, s, g);
     this.cam.apply(s, this.pw);
-    this.cam.apply(rc.s, this.pw);
     this.cam.apply(g, this.pw);
     this.surround.draw(rc);
     const run = m.phase === 'run' ? m.run : null;
@@ -229,12 +223,18 @@ export class Renderer {
     const resolved = run ? run.resolved : [...level.setPieces, ...m.placed].map(resolveProp);
     // Scenery goes down first so the terrain stands in front of it and shadows it.
     for (const r of resolved) drawBackdrop(rc, r, { level });
+    // Cel: the rest of the world goes on its own transparent layer (see CelLayer); `s` stays the background.
+    if (this.celPass) {
+      rc.s = (this.celLayer ??= new CelLayer()).begin(this.scene, s, g, level.theme.ambientLight);
+      this.cam.apply(rc.s, this.pw);
+    }
     this.terrain.drawShadow(rc);
     this.terrain.draw(rc);
     const pushers = m.run ? m.run.runners.filter((r) => r.alive).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h })) : [];
     this.terrain.drawLive(rc, level, pushers, s);
     this.drawMarkers(rc, level);
 
+    const grips = run?.runners.flatMap((r) => r.attach.grip ?? []);
     for (const r of resolved) {
       drawForeground(rc, r, {
         level,
@@ -242,6 +242,8 @@ export class Renderer {
         broken: run ? run.isBroken(r.pp.uid) : false,
         showPath: m.phase !== 'run',
         emit: run ? emit : undefined,
+        grips,
+        placed: m.placed,
       });
     }
 
@@ -255,12 +257,17 @@ export class Renderer {
       // All trails first: in a pack, nobody's trail may paint over another runner.
       for (const r of run.runners) {
         const pl = m.player(r.slot);
-        if (r.alive && pl) this.drawTrail(rc, pl.character, r.slot, r.body.x + r.body.w / 2, r.body.y + r.body.h, r.body.vx, r.body.vy, dt);
+        if (r.alive && pl) this.drawTrail(pl.character, r.slot, r.body.x + r.body.w / 2, r.body.y + r.body.h, r.body.vx, r.body.vy, dt);
       }
       for (const r of run.runners) {
         if (!r.alive) continue;
         const pl = m.player(r.slot);
         if (!pl) continue;
+        if (r.attach.grip?.sealed) {
+          drawStuffed(rc, run, r, pl.character);
+          drawRunnerStatus(rc, r.body, r.status);
+          continue;
+        }
         this.drawRunner(
           rc,
           level,
@@ -276,7 +283,7 @@ export class Renderer {
           dt,
         );
         if (!r.finished && run.isSafe(r)) this.drawShield(rc, level, r.body.x + r.body.w / 2, r.body.y + r.body.h, r.slot);
-        drawRunnerStatus(rc, r.body, r.status);
+        drawRunnerStatus(rc, r.body, r.status, r.attach.soot - run.frame);
         drawRunnerItems(rc, r);
       }
       drawClouds(rc, run);
@@ -284,7 +291,7 @@ export class Renderer {
     this.fx.draw(rc, s);
     this.backdrop.drawLiquid(rc, level.theme, ww, wh, this.cam.visible(), this.surround.margin);
     const world = rc.s;
-    rc.s = s; // Comic: ambient motes stay un-inked, or they read as stray projectiles.
+    rc.s = s; // Cel: ambient motes stay un-inked, or they read as stray projectiles.
     this.backdrop.drawMotes(rc, level.theme, dt, this.cam.visible());
     g.globalCompositeOperation = 'source-over';
 
@@ -301,16 +308,20 @@ export class Renderer {
       flash: this.flash,
       tint: level.theme.grade.tint,
       lift: level.theme.grade.lift,
-      comic: this.printed ? { fg: this.comicLayer!.canvas, cam: camOf(world) } : undefined,
+      cel: this.celPass ? { fg: this.celLayer!.canvas, scale: world.getTransform().a, ambient: level.theme.ambientLight } : undefined,
     });
     if (!this.hud.hidden) this.hud.draw(m, t, this.pw, this.ph);
     else this.hud.clear(this.pw, this.ph);
-    if (this.style === 'comic') this.letters.draw(this.hudCanvas.getContext('2d')!, this.cam, this.pw);
+    if (this.wordsOn) this.letters.draw(this.hudCanvas.getContext('2d')!, this.cam, this.pw);
   }
 
-  /** The comic pass needs WebGL2; without it the style keeps only the lettering and speed lines. */
-  private get printed() {
-    return this.style === 'comic' && this.comp.webgl;
+  /** The cel pass needs WebGL2; without it the style keeps only its impact words. */
+  private get celPass() {
+    return STYLES[this.style].cel && this.comp.webgl;
+  }
+
+  private get wordsOn() {
+    return STYLES[this.style].lettering && this.lettering;
   }
 
   /**
@@ -521,15 +532,15 @@ export class Renderer {
   }
 
   /** Fades in with speed, so a walk leaves nothing and the trail only shows when a runner is really moving. */
-  private drawTrail(rc: RC, c: Match['players'][number]['character'], slot: number, x: number, y: number, vx: number, vy: number, dt: number) {
+  private drawTrail(c: Match['players'][number]['character'], slot: number, x: number, y: number, vx: number, vy: number, dt: number) {
     const rig = this.rigs.get(slot);
     if (!rig) return;
     const k = clamp((Math.hypot(vx, vy * TRAIL_RISE) - TRAIL_MIN_SPEED) / (TRAIL_FULL_SPEED - TRAIL_MIN_SPEED), 0, 1);
     const tail = rig.trail.at(-1);
     if (k > 0 && (!tail || Math.hypot(x - tail.x, y - tail.y) >= TRAIL_GAP)) rig.trail.push({ x, y, a: k * TRAIL_ALPHA });
     rig.trail = rig.trail.filter((p) => (p.a -= (dt * TRAIL_ALPHA) / TRAIL_LIFE) > 0);
-    if (this.style === 'comic') speedLines(this.sctx, rc.t, x, y, vx, vy);
-    else for (const p of rig.trail) drawAfterimage(rc.s, c, p.x, p.y, p.a);
+    // On the background layer: an afterimage is a flat ghost, and shouldn't get ink of its own.
+    for (const p of rig.trail) drawAfterimage(this.sctx, c, p.x, p.y, p.a);
   }
 
   private drawRunner(
@@ -583,8 +594,8 @@ export class Renderer {
     drawAccessory(rc, c, rig);
     drawCharacter(rc, c, x, y, { facing, vx, vy, grounded, t: rc.t, celebrate });
     light(rc, x, y - 8, 38, c.body, 0.3);
-    // Comic: cel bands would print a runner in shade dark, but not so much light that it loses its hue.
-    if (this.style === 'comic') light(rc, x, y - 8, 20, RUNNER_KEY, 0.28);
+    // Cel: a key light so a runner in shade still reads, not so much that it loses its hue.
+    if (STYLES[this.style].cel) light(rc, x, y - 8, 20, RUNNER_KEY, 0.28);
   }
 
   private propCenter(m: Match, uid: number): { x: number; y: number } | undefined {
@@ -598,7 +609,7 @@ export class Renderer {
   private consume(m: Match, events: readonly GameEvent[]) {
     const th = m.level.theme;
     for (const e of events) {
-      if (this.style === 'comic') this.letters.event(e, e.type === 'crumble-break' ? this.propCenter(m, e.uid) : undefined);
+      if (this.wordsOn) this.letters.event(e, e.type === 'crumble-break' ? this.propCenter(m, e.uid) : undefined);
       switch (e.type) {
         case 'death': {
           const c = m.player(e.slot)?.character;

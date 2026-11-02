@@ -8,6 +8,7 @@ import './modules';
 export type { Emit, PropDrawOpts } from './common';
 export { drawProjectile } from './projectiles';
 export { drawBlastPreview } from './modules/bomb';
+export { drawStuffed } from './modules/keg';
 export { drawRunnerStatus, propEventFx } from './status';
 
 type M<T extends Module['type']> = Extract<Module, { type: T }>;
@@ -46,7 +47,12 @@ export function drawPlaced(rc: RC, pp: PlacedProp, o: PropDrawOpts) {
 
 /** Card preview: draw a def centered at (cx, cy) scaled to fit `size`. */
 
-export function drawPreview(rc: RC, def: PropDef, cx: number, cy: number, size: number) {
+export function drawPreview(rc: RC, full: PropDef, cx: number, cy: number, size: number) {
+  // A long rope would shrink to a thread on a card, so show only its top links.
+  const def: PropDef =
+    full.mount === 'hang'
+      ? { ...full, footprint: full.footprint.slice(0, 4), modules: full.modules.map((m) => (m.type === 'rope' ? { ...m, length: Math.min(m.length, 4) } : m)) }
+      : full;
   let w = 1;
   let h = 1;
   for (const [x, y] of def.footprint) {
@@ -65,6 +71,10 @@ export function drawPreview(rc: RC, def: PropDef, cx: number, cy: number, size: 
     if (m.type === 'magnet') {
       reachX = Math.max(reachX, m.radius - 0.5);
       reachY = Math.max(reachY, m.radius - 0.5);
+    }
+    if (m.type === 'keg') {
+      reachX = Math.max(reachX, 0.8);
+      reachY = Math.max(reachY, 0.8);
     }
   }
   const ext = Math.max(w + reachX * 2, h + reachY * 2, 2);

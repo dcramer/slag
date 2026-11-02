@@ -1,3 +1,4 @@
+import { dcos, dsin } from '../../../core/dmath';
 import { RUN_COUNTDOWN } from '../../constants';
 import { cellOf, defineModule } from '../registry';
 import type { ModuleOf } from '../types';
@@ -26,7 +27,7 @@ export function cannonTiming(m: Cannon, f: number, phase: number): { k: number; 
 
 /** Muzzle point (px). */
 export function cannonMuzzle(m: Cannon, ox = 0, oy = 0): [number, number] {
-  return [m.at[0] + ox + Math.cos(m.angle) * m.length, m.at[1] + oy + Math.sin(m.angle) * m.length];
+  return [m.at[0] + ox + dcos(m.angle) * m.length, m.at[1] + oy + dsin(m.angle) * m.length];
 }
 
 /** Big fixed guns (castle cannons, dart totems, magma spitters). Shots on a fixed rhythm leave safe windows. */
@@ -38,7 +39,7 @@ export const cannon = defineModule<'cannon'>({
     const t = cannonTiming(m, ctx.frame, ctx.r.phase);
     if (!t.firing) return;
     const [x, y] = cannonMuzzle(m, ctx.off[0], ctx.off[1]);
-    ctx.spawn({ x, y, vx: Math.cos(m.angle) * m.speed, vy: Math.sin(m.angle) * m.speed, owner: ctx.r.pp.owner, ammo: m.ammo });
+    ctx.spawn({ x, y, vx: dcos(m.angle) * m.speed, vy: dsin(m.angle) * m.speed, owner: ctx.r.pp.owner, ammo: m.ammo });
     ctx.state.lastFire = ctx.frame;
     ctx.emit({ type: 'fire', x, y, angle: m.angle, style: m.look === 'totem' ? 'totem' : 'cannon' });
   },

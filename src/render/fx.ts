@@ -109,7 +109,7 @@ export class Fx {
     });
   }
 
-  /** `soft` takes smoke and dust; the comic style passes its un-inked layer, or stacked puffs ink into solid-looking discs. */
+  /** `soft` takes smoke and dust; the cel style passes its un-inked layer, or stacked puffs ink into solid-looking discs. */
   draw(rc: RC, soft: CanvasRenderingContext2D = rc.s) {
     const s = rc.s;
     const g = rc.g;

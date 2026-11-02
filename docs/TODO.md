@@ -16,25 +16,14 @@ Today the same test files run at two sample sizes (`tests/lib/tier.ts`, `SLOW_FI
 - `pnpm perf`: benchmarks. Same deal: run on purpose, never as a routine step.
 - Remove `tests/lib/tier.ts`, `SLOW_FILES`, `--mode slow` and the `SLOW` guards, and update the docs that mention them (AGENTS.md, README.md, `vitest.config.ts`, `ci.yml`).
 
-## 2. Online play on Vercel (decision needed)
-**Branch:** `wip/netcode-cloudflare` (+5 commits). It contains:
-- host-sequenced lockstep, presence-based host election and migration, refresh/rejoin, late join, desync detection and resync, and prediction;
-- `src/net/`, `dmath`, snapshots, a BroadcastChannel transport and `pnpm online-test`;
-- a **Cloudflare Durable Object relay** (`relay/`, wrangler). That relay contradicts our plan, because we host only on Vercel.
+## 2. Online follow-ups
+Online play is on `main`; see `docs/NETCODE.md`.
 
-Vercel functions can't hold a WebSocket open, so something else has to carry the messages. Options:
-
-| Option | What it is | Trade-off |
-|---|---|---|
-| **A (recommended)** | WebRTC data channels in a star around the host. Signaling and presence use small Next route handlers (`app/api/`) that short- or long-poll Redis from the Vercel Marketplace (Upstash free tier, REST via `fetch`). Local dev uses an in-memory store. On host migration, everyone re-signals to the new host. Public STUN, plus optional TURN from an env var. | Everything stays on Vercel and on free tiers. About 10–20% of player pairs can't connect without a TURN server. |
-| B | Keep the Cloudflare relay. | Most robust, with no NAT problems, but needs a second platform and account. |
-| C | A hosted realtime service (Ably or Pusher free tier). | Adds a third-party dependency and its limits. |
-
-Whichever option is chosen, keep the transport abstraction, the election logic, snapshots and dmath, and swap only the transport. Then update `docs/NETCODE.md`, which is stale and still mentions Vite.
-
-**Required for testing:** a local service compatible with remote Upstash and `@upstash/redis`, so the real store path runs outside production. Use [Serverless Redis HTTP](https://upstash.com/docs/redis/sdks/ts/developing) (`hiett/serverless-redis-http` plus Redis 6.2) in `docker-compose`, with `pnpm test:store` in CI. It only supports the body-based REST method, so the store must use that form.
-
-**Required online:** everyone sees each other's cursors and ghost parts live during pick and place. It matters most in pick, because the first player to pick a part gets it. A claim race has one winner on every peer, and nobody sees a claim that then gets revoked.
+- **Host label and kick:** someone is clearly labeled `Host` in the lobby, and the host can kick players there. The label follows host migration.
+- Owner: connect `slag-upstash-kv` to the Vercel project for Production and Preview, then redeploy.
+- Not verified yet: real Upstash, real NAT traversal, TURN, Firefox, Safari, real phones. Cross-engine determinism has never run; dmath has only been exercised on V8.
+- A guest whose link drops for 2.5 s is marked away, which pops their runner mid-race. Decide if that's right.
+- Measure recovery in a 2-peer room, where no third peer confirms the loss (about 7 s expected).
 
 ## 3. Level variety, gravity and the "mostly open" rule
 **Branches:**
@@ -60,25 +49,17 @@ Whichever option is chosen, keep the transport abstraction, the election logic, 
 
 The user's feedback on a real phone: "almost playable but not quite; resolution is tough; settings is bad; probably needs zoomed in more."
 
-- **Phone follow camera:** render-only, a tile at least ~24 CSS px, look-ahead, a vertical dead zone, clamped to the level. Pick and place start zoomed out, with pinch-zoom, two-finger pan and auto-pan near the edges. Multiple local players fall back to framing everyone. `?zoom=1` forces it on desktop. Keep it in its own module, because item 3 also changes the camera. Cursors must stay in world coordinates, so other players' cursors and ghost parts land in the right place whatever each player's zoom.
+- **Phone follow camera:** render-only, a tile at least ~24 CSS px, look-ahead, a vertical dead zone, clamped to the level. Pick and place start zoomed out, with pinch-zoom, two-finger pan and auto-pan near the edges. With more than one player in the match, local or remote, it frames everyone: the camera always keeps all live players on screen, which wins over the tile-size target. `?zoom=1` forces it on desktop. Keep it in its own module, because item 3 also changes the camera. Cursors must stay in world coordinates, so other players' cursors and ghost parts land in the right place whatever each player's zoom.
 - `pnpm shot mobile` fails on `main`, timing out in the lobby flow. Fix that first.
 - The touch tag `MOVE · push far = RUN` breaks the never-explain-the-obvious rule. Cut it.
 - **HUD readability:** scale HUD text, pills and crate cards up on small screens, with tap targets of at least 44 CSS px.
 - **Settings:** a full-screen sheet on phones with big rows that scrolls.
 - **Verify:** `pnpm shot mobile` on iPhone SE, iPhone 13 and Pixel 7 in landscape. Nothing has been tested on real hardware yet.
 
-## 7. Grab props: rope and blast barrel
-No branch yet. `origin/wip/content` has a dropped launch barrel (module and art) worth reading for the blast barrel, but its name and `status.hold` must not be reused.
-
-- **Rope:** hangs from a ceiling. You grab it automatically when you touch it in the air, with a short re-grab cooldown. Left and right pump the swing; jump lets go and keeps the swing's momentum.
-- **Blast barrel:** it pulls you in on contact and rotates (or holds a fixed aim). Jump fires you out along its direction after a short delay. It must be an original design, not a copy.
-- Both put the runner in an "attached" state inside `RunWorld`. That state must stay snapshot-friendly and deterministic.
-- Add both to `reach.ts` only if worldgen ever relies on them. For now it shouldn't.
-
 ## 8. Render polish
 - **Liquid draw order:** `drawLiquid` still paints after players and effects, while `docs/DESIGN.md` lists liquids behind terrain.
 - **`pnpm shot race` without `--race`** never starts a race: it stays in pick at frame 0.
-- **Cel-shaded look:** the owner wants cel shading (flat colors, hard light bands, clean thin ink), likely as the game's main look rather than an option. Switching art style may stay as a fun gimmick, so keep styles in a registry. In progress; the owner picks whether it becomes the default once it's seen, ideally in motion and on a real phone. Anything thin or soft drawn on `rc.s` gets silhouette ink, so soft effects should draw on the background context.
+- **Cel-shaded look (`?style=cel`):** the owner picks whether it becomes the main look. Flipping is `DEFAULT_STYLE` in `src/render/style.ts`. Play it first, and try a real phone. Mine is weakest (band arcs on rock walls). Impact words can hide a hazard for most of a second; `?lettering=0` turns them off. Big plain walls are a taste call. With adoption, note in `src/render/AGENTS.md` that thin or soft things on `rc.s` get ink.
 
 ## 9. Weather (new)
 A per-level random variable:
@@ -91,7 +72,6 @@ It's always telegraphed, weighted per theme, and must be deterministic from the 
 ## 10. Housekeeping
 - Enable GitHub Actions and make `ci.yml` a required check. This must be done on GitHub by the repo owner.
 - Delete the old remote branch `claude/scaffold-procgen-platformer`, and the `wip/*` branches once they're merged.
-- Swap the sim and gen transcendentals (`Math.sin`, `cos`, `atan2`, …) to `core/dmath.ts`. It lands with the netcode work.
 - Add the run controls to the README.
 - Consider stricter TS flags: `noUncheckedIndexedAccess` gives about 600 errors, so it's a project of its own.
 
@@ -111,7 +91,7 @@ The rest of this item is the home screen, the first and biggest piece of it. The
 - Do this after items 2 and 3, which both change `src/game-client.ts`.
 
 ## 13. Playtest and tune the new parts
-Nothing from the content or held-items work has been played by hand, so the tuning is test-level only: magnet drift, bumper power, slow and freeze durations, item strength. Gamepad `use` (Y and LT) hasn't been tried on a real pad, and item sounds borrow existing cues and haven't been heard. Dropstones and crushers stop only on terrain, so they pass through placed blocks; decide whether that's right.
+Nothing from the content, held-items or grab-props work has been played by hand, so the tuning is test-level only: magnet drift, bumper power, slow and freeze durations, item strength. Gamepad `use` (Y and LT) hasn't been tried on a real pad, and item sounds borrow existing cues and haven't been heard. Dropstones and crushers stop only on terrain, so they pass through placed blocks; decide whether that's right.
 
 Also confirm the Match Length values (Short 30 points / 10 rounds, Normal 50 / 15, Long 80 / 25). They come from a Monte Carlo model of scoring with a fixed finish rate, and real finish rates probably fall as props pile up. The limit decides about 25% of 2-player Normal matches at typical finish rates and about 60% at very low or very high ones.
 

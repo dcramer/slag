@@ -1,7 +1,7 @@
 import type { Rng } from '../../../core/rng';
 import { finish, Grid } from '../kit';
 import type { Sculptor } from '../types';
-import { easyGap, easyRise, hardGap, knobs, pit, rollChallenges, Slots, stepRows } from './common';
+import { easyGap, easyRise, hardGap, knobs, pit, keepClear, rollChallenges, Slots, stepRows } from './common';
 import { factoryTall } from './tall';
 
 type FactoryStyle = 'foundry' | 'warehouse' | 'assembly';
@@ -44,6 +44,7 @@ export const factory: Sculptor = (ctx) => {
     const w = hard ? hardGap(rng) : easyGap(rng, 2);
     const a = slots.take(rng, w, 3, 9, W - 10);
     if (a === null) continue;
+    if (hard) keepClear(slots, a, w);
     level(a - 2, a + w + 1, Math.max(floor[a - 2], floor[a + w + 1]));
     vats.push({ a, b: a + w - 1, hard });
   }

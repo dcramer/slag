@@ -22,6 +22,8 @@ Package manager is **pnpm** (`packageManager` in package.json). Never use npm or
 | `pnpm level <seed> [--theme farm]` | ASCII level dump: `#` solid, `=` one-way, `S`/`G` spawn/goal, `·` reachable stand cell, `P` set piece. |
 | `pnpm level --stats 50` | Per-theme stats over N seeds: ms/level, styles, `needBridges`, `fallbacks` (~2 min at 50). |
 | `pnpm dev` | Dev server at http://localhost:3000; `/` is the main menu (Play opens a fresh lobby `/r/<code>`, passing `?seed`/`?theme` through). |
+| `pnpm online-test` | Real WebRTC between headless Chromium pages against the signaling routes (in-memory store): play, host killed in pick/place/run, new host dying, graceful leave (~15 min). `-- --only pick,run` for a subset. |
+| `pnpm test:store` | The Upstash REST store path against real Redis behind SRH (needs Docker, starts `compose.store.yml`). `-- --browser pick,run,leave` adds real browsers. In CI, not in `pnpm check`. |
 
 Lint: `oxlint` (type-aware, `.oxlintrc.json`). Errors fail CI; warnings are real findings to fix, not noise. Format: `oxfmt` (`.oxfmtrc.json`: 2 spaces, single quotes, 160 columns). Don't add `oxlint-disable` comments to get green; fix the code or change the rule in `.oxlintrc.json` with a reason.
 
@@ -42,7 +44,7 @@ Lint: `oxlint` (type-aware, `.oxlintrc.json`). Errors fail CI; warnings are real
 - `lobby` | `pick` | `place` with `--seed S --players N`
 - `levels --count 9`, `--seeds a,b,c` or `--themes all` → contact sheet `shots/levels.png`
 - `props --count 24` (crate cards), `codex` (the `/codex` page)
-- `compare --seed S --players 4 --themes farm,mine` → default vs comic, same sim frame, `shots/compare-*-S.png`. Any scenario takes `--style comic` (`?style=comic` in the browser).
+- `compare --seed S --players 4 --themes farm,mine` → classic vs cel, same sim frame, `shots/compare-*-S.png`. Any scenario takes `--style cel` (`?style=cel` in the browser).
 - Options: `--theme farm`, `--noui` (hide HUD), `--size 1280x720`, `--out shots`
 
 Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm`, `?players=2` (auto-join and start), `?race=saw,laser` or `?race=all`, `?propseed=3`, `?ui=0`, `?debug=1` (dev overlay: frame-time breakdown, counts, level info; ` toggles it in `pnpm dev` or with any `?debug`). In the console, `slagDebug` has `quickStart`, `race`, `addProps`, `loadLevel`, `phase`, `pause`, `step`, `render`.
@@ -82,7 +84,7 @@ Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm
 ## Game rules
 
 - World: `LEVEL_W × LEVEL_H` = 48×27 tiles of 16 px (768×432). Tiles: `T_SOLID`, `T_ONEWAY` (jump through from below; drop with down + jump), `T_EMPTY`. Spawn left, goal right; protected rects around both can't be built on or bombed; the bottom pit kills.
-- Solvability: the goal is reachable bare, or after placing at most two small building props. Aim for about half of levels needing props. Always check with `src/sim/reach.ts` (the real controller), never hand-waved jump distances.
+- Solvability: about 99% of levels can't be finished bare, and 20–30% need two parts (`rollChallenges`); the rest need one. Every level is proven finishable with at most two small building props (`MAX_BRIDGES`), and the crate always offers what it still needs (`partsNeeded`, `generateCrate`). What stops a bare run is a gap or wall a part solves, never a sealed level. Always check with `src/sim/reach.ts` (the real controller), never hand-waved jump distances.
 - Placement validity lives in `canPlace` (`src/sim/props/transform.ts`). **Attachments** (spikes, ice coat, slime coat) mount flush on a solid face (terrain or placed block); the player's rotation picks the face. Spikes add a hazard strip. Coats change the surface: on floors ice is slippery and slime slow and sticky; on walls ice blocks wall slide/jump and slime makes a sticky cling.
 - Scoring: `src/game/scoring.ts`. Everyone finishing or nobody finishing scores nothing.
 - Units: world pixels and sim frames (60/s); tile coordinates in `TILE` units; angles in radians, screen space (+y down).

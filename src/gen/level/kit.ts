@@ -1,3 +1,4 @@
+import { dexp } from '../../core/dmath';
 import type { Rng } from '../../core/rng';
 import { T_EMPTY, T_ONEWAY, T_SOLID } from '../../sim/level';
 import { jumpProfile } from './probe';
@@ -240,15 +241,10 @@ export function organicMask(rng: Rng, W: number, H: number, surf: readonly numbe
   for (let y = 0; y < H; y++)
     for (let x = 0; x < W; x++) {
       const d = (y - surf[x]) / soft; // >0 below the surface
-      const p = sigmoid(d * 2.2);
+      const p = 1 / (1 + dexp(-d * 2.2));
       m[y * W + x] = rng.next() < p ? 1 : 0;
     }
   return smoothCA(W, H, m, iters, 5, 4, 0);
-}
-
-/** Smooth 0→1 step (an algebraic logistic stand-in; no Math.exp so it's bit-identical everywhere). */
-export function sigmoid(z: number): number {
-  return 0.5 + (0.5 * z) / (1 + Math.abs(z));
 }
 
 /**

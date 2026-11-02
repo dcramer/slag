@@ -111,7 +111,9 @@ export function sculptTall(ctx: SculptCtx, kit: TallKit): Shape {
   const goalMoat = challenges ? hardGap(rng, descent ? challenges : 1) : 0;
   let spawnMoat = challenges === 2 && !descent ? hardGap(rng) : 0;
   const goalMoatX = W - POCKET - 1 - goalMoat;
-  const goalEnd = challenges ? goalMoatX - 3 : hi;
+  // Falling a storey carries you far: a descent's last holes stay that far from the moat's far bank.
+  const fallClear = descent ? goalMoatX + goalMoat - j.gapAt(-6) - 6 : W;
+  const goalEnd = challenges ? Math.min(goalMoatX - 3, fallClear) : hi;
   const spawnStart = () => (spawnMoat ? POCKET + 2 + spawnMoat + 2 : lo + 1);
   if (n === 2 && goalEnd - spawnStart() + 1 < ALT_W) spawnMoat = 0;
   // Connectors of the first and last pair of storeys stay on the route's side of their moats.
@@ -144,9 +146,10 @@ export function sculptTall(ctx: SculptCtx, kit: TallKit): Shape {
     s.arrive = i === 0 ? 2 : linkX[i - 1] + (linkW[i - 1] >> 1);
     s.leave = i === n - 1 ? W - 3 : linkX[i] + (linkW[i] >> 1);
     // Storeys run wall to wall: the level's side walls are wall-jumpable, so a storey that stopped
-    // short would leave a free climb up the edge. Sparse levels open holes in them instead (easy gaps).
-    s.x0 = i === 0 || i === n - 1 ? 0 : lo;
-    s.x1 = i === 0 || i === n - 1 ? W - 1 : hi;
+    // short would leave a free climb up the edge (and a free drop past any moat). Sparse levels open
+    // holes in them instead (easy gaps).
+    s.x0 = 0;
+    s.x1 = W - 1;
   }
   // Spawn and goal storeys run to the level edges (pockets).
   storeys[order[0]].x0 = 0;

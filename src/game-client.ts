@@ -7,6 +7,7 @@ import { roomSeed } from './game/room';
 import { loadRules, saveRules } from './game/rules';
 import { InputManager } from './input/input';
 import { TOUCH_DEVICE, touchModeFor } from './input/touch';
+import { connectRoom } from './net/client';
 import { ITEMS } from './sim/items';
 import { Renderer } from './render/renderer';
 import { DT } from './sim/constants';
@@ -62,8 +63,21 @@ export function bootGame(container: HTMLElement, room: string): void {
   input.clickConfirms = () => match.phase !== 'lobby';
   const renderer = new Renderer(glCanvas, hudCanvas);
   input.viewEl = renderer.viewBox;
-  renderer.hud.devices = input;
   renderer.hud.room = room;
+
+  // --- online (src/net): every browser on /r/<room> runs the same lockstep match -------
+  // Match devices are global ids ('<peer>:kb1'); the session maps local devices in and out.
+  const conn = connectRoom(room, match, { primaryDevice: input.pointerDevice, params });
+  const net = conn.net;
+  const myDevice = () => net.globalDevice(input.pointerDevice);
+  const localDev = (d: string) => (net.isLocal(d) && d.includes(':') ? d.slice(d.indexOf(':') + 1) : d);
+  renderer.hud.devices = {
+    deviceLabel: (d) => (net.isLocal(d) ? input.deviceLabel(localDev(d)) : 'online'),
+    hints: (d) => input.hints(net.isLocal(d) ? localDev(d) : 'pad0'),
+    get settings() {
+      return input.settings;
+    },
+  };
   renderer.hud.hidden = params.get('ui') === '0';
   const audio = createAudio();
   const inputMode = new InputModeTracker(window);
@@ -98,7 +112,7 @@ export function bootGame(container: HTMLElement, room: string): void {
   const menus = [settingsMenu, rulesMenu, namePrompt];
 
   function promptName() {
-    const p = match.players.find((q) => q.device === input.pointerDevice);
+    const p = match.players.find((q) => q.device === myDevice());
     if (!p) return;
     let decided = false;
     // Whatever you end up with — typed, kept-random, or just closing the prompt — is remembered.
@@ -107,7 +121,7 @@ export function bootGame(container: HTMLElement, room: string): void {
       profile.name = name;
       profile.prompted = true;
       saveProfile(profile);
-      match.setName(p.slot, name);
+      net.act({ t: 'name', dev: p.device, name }); // sequenced by the host online
     };
     namePrompt.onClose = () => {
       if (!decided) keep(p.character.name);
@@ -134,8 +148,9 @@ export function bootGame(container: HTMLElement, room: string): void {
         return true;
       case 'rules':
         rulesMenu.open(match.rules, (r) => {
-          if (match.phase !== 'lobby') return;
-          match.setRules(r);
+          // Online the host's rules are authoritative; guests' edits are ignored (TODO HUD: read-only for guests).
+          if (match.phase !== 'lobby' || !net.isHost) return;
+          net.act({ t: 'rules', rules: r });
           saveRules(r);
         });
         return true;
@@ -143,7 +158,7 @@ export function bootGame(container: HTMLElement, room: string): void {
         promptName();
         return true;
       case 'invite': {
-        const url = renderer.hud.net?.inviteUrl ?? location.href;
+        const url = conn.inviteUrl;
         navigator.clipboard?.writeText(url).then(
           () => renderer.hud.toast('Invite Link Copied'),
           () => renderer.hud.toast(url, 4000),
@@ -171,22 +186,26 @@ export function bootGame(container: HTMLElement, room: string): void {
   const touchOverlay = new TouchOverlay(input.touch, container, () => input.onEscape?.());
 
   /** Keep the local keyboard/mouse player's chosen name; ask once on first join. */
+  // Online, look and name changes are host-sequenced actions: send each once, not every frame.
   let appliedLook: number | null = null;
+  let nameSent = '';
   function syncProfile() {
-    const p = match.players.find((q) => q.device === input.pointerDevice);
+    const p = match.players.find((q) => q.device === myDevice());
     if (!p) {
       appliedLook = null; // re-apply the saved look when they (re)join
       return;
     }
     // Look: restore the saved one on join; afterwards a new look (reroll) becomes the saved one.
     if (appliedLook === null) {
-      if (profile.look != null) match.setLook(p.slot, profile.look);
-      appliedLook = p.character.seed;
-      if (profile.look == null) {
+      if (profile.look != null) {
+        if (p.character.seed !== profile.look) net.act({ t: 'look', dev: p.device, seed: profile.look });
+        appliedLook = profile.look;
+      } else {
+        appliedLook = p.character.seed;
         profile.look = appliedLook;
         saveProfile(profile);
       }
-    } else if (p.character.seed !== appliedLook) {
+    } else if (p.character.seed !== appliedLook && !net.pending) {
       appliedLook = p.character.seed;
       profile.look = appliedLook;
       saveProfile(profile);
@@ -194,7 +213,11 @@ export function bootGame(container: HTMLElement, room: string): void {
     // Name: a reroll also rolls a random name, so re-apply the saved one.
     // Name: a reroll also rolls a random name, so re-apply the saved one (unless another local player already has it).
     const taken = match.players.some((q) => q !== p && q.character.name === profile.name);
-    if (profile.name && !taken && p.character.name !== profile.name) match.setName(p.slot, profile.name);
+    const want = `${p.slot}:${p.character.seed}:${profile.name}`;
+    if (profile.name && !taken && p.character.name !== profile.name && nameSent !== want) {
+      nameSent = want;
+      net.act({ t: 'name', dev: p.device, name: profile.name });
+    }
     if (!profile.prompted && match.phase === 'lobby' && !menus.some((m) => m.isOpen)) {
       profile.prompted = true;
       saveProfile(profile);
@@ -214,25 +237,33 @@ export function bootGame(container: HTMLElement, room: string): void {
   }
 
   const loop = { paused: false };
-  installDebug(match, renderer, loop);
+  installDebug(match, renderer, loop, net);
 
   // Fixed-timestep simulation, render as fast as the display allows.
   let acc = 0;
   let last = performance.now();
   let lastPhase = match.phase;
-  function frame(now: number) {
-    acc += Math.min(0.25, (now - last) / 1000);
+  /** Run the fixed steps due by `now`. Online, the session sequences inputs (host) or applies bundles (guest). */
+  function advance(now: number, maxCatchUp: number) {
+    acc += Math.min(maxCatchUp, (now - last) / 1000);
     last = now;
     if (loop.paused) {
       acc = 0;
-      requestAnimationFrame(frame);
       return;
     }
     while (acc >= DT) {
-      if (match.phase === 'lobby' && match.phaseFrame === 0) match.nextSalt = (Math.random() * 4294967296) >>> 0;
-      input.touch.setMode(touchModeFor(match));
-      match.step(input.sample());
+      // Host-rolled per-match salt, re-rolled on entering the lobby; a host action so every peer shares it.
+      if (net.isHost && !net.paused && match.phase === 'lobby' && match.phaseFrame === 0) net.act({ t: 'salt', salt: (Math.random() * 4294967296) >>> 0 });
+      input.touch.setMode(touchModeFor(match, net.globalDevice(TOUCH_DEVICE)));
+      net.tick(input.sample());
       acc -= DT;
+    }
+  }
+  function frame(now: number) {
+    advance(now, 0.25);
+    if (loop.paused) {
+      requestAnimationFrame(frame);
+      return;
     }
     if (match.phase !== lastPhase) {
       lastPhase = match.phase;
@@ -241,22 +272,50 @@ export function bootGame(container: HTMLElement, room: string): void {
     syncProfile();
     renderer.hud.pointer = input.touch.active ? null : input.pointerPos; // no hover highlights under a finger
     uiHover();
-    renderer.hud.mouseDevice = input.pointerDevice;
+    renderer.hud.mouseDevice = myDevice();
+    renderer.hud.net = conn.hudInfo();
+    conn.toast((msg) => renderer.hud.toast(msg, 3000));
     inputMode.update();
     // Touch controls are authoritative for "touch"; otherwise the last keyboard/mouse vs pad input wins.
     renderer.hud.lastInput = input.touch.active ? 'touch' : inputMode.mode === 'touch' ? 'keyboard' : inputMode.mode;
     renderer.hud.padCount = inputMode.pads;
-    const tp = match.players.find((p) => p.device === TOUCH_DEVICE);
+    const touchDev = net.globalDevice(TOUCH_DEVICE);
+    const tp = match.players.find((p) => p.device === touchDev);
     const tr = tp && match.phase === 'run' ? match.run?.runners.find((r) => r.slot === tp.slot && r.alive && !r.finished) : undefined;
     const held = tr?.items.held;
     input.touch.useReady = !!held;
     touchOverlay.update({ canPlace: tp && match.phase === 'place' ? match.canPlaceFor(tp) : undefined, use: held ? ITEMS[held.kind].verb : undefined });
-    const events = match.drainEvents();
+    const view = net.view; // guests mid-race: the locally predicted match. Pick and place: live cursors.
+    renderer.hud.pendingCard = net.pendingCard;
+    const events = net.drainEvents();
     if (tp && input.touch.active && events.some((e) => e.type === 'death' && e.slot === tp.slot)) input.touch.buzz(30);
-    audio.handle(events, match);
-    audio.update(match, now);
-    renderer.render(match, now, events);
+    audio.handle(events, view);
+    audio.update(view, now);
+    renderer.render(view, now, events);
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
+  // Background tabs get no animation frames; a hidden host would freeze the whole room.
+  // A worker timer (not throttled like page timers) keeps the sim ticking while hidden.
+  keepTickingWhenHidden((now) => advance(now, 1));
+}
+
+/** Calls `step(now)` ~20×/s while the page is hidden. */
+function keepTickingWhenHidden(step: (now: number) => void) {
+  let worker: Worker | null = null;
+  const sync = () => {
+    if (document.hidden && !worker) {
+      try {
+        const url = URL.createObjectURL(new Blob(['setInterval(() => postMessage(0), 50)'], { type: 'text/javascript' }));
+        worker = new Worker(url);
+        worker.onmessage = () => document.hidden && step(performance.now());
+      } catch {
+        worker = null;
+      }
+    } else if (!document.hidden && worker) {
+      worker.terminate();
+      worker = null;
+    }
+  };
+  document.addEventListener('visibilitychange', sync);
 }

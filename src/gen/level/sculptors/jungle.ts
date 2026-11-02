@@ -1,7 +1,7 @@
 import type { Rng } from '../../../core/rng';
 import { carveCorridor, finish, Grid, noise1D, noise2D, smoothCA } from '../kit';
 import type { Sculptor } from '../types';
-import { easyGap, easyRise, hardGap, knobs, pit, relax, rollChallenges, Slots } from './common';
+import { easyGap, easyRise, hardGap, knobs, pit, relax, keepClear, rollChallenges, Slots } from './common';
 import { jungleTall } from './tall';
 
 type JungleStyle = 'canopy' | 'temple' | 'grotto';
@@ -45,6 +45,7 @@ export const jungle: Sculptor = (ctx) => {
     const w = hard ? hardGap(rng) : easyGap(rng, 2);
     const a = slots.take(rng, w, 3, 8, W - 9);
     if (a === null) continue;
+    if (hard) keepClear(slots, a, w);
     const bank = Math.max(surf[a - 1], surf[a + w]);
     for (let x = a - 2; x <= a + w + 1; x++) {
       surf[x] = bank;

@@ -7,6 +7,7 @@
  *   pnpm shot race --seed abc --race saw,laser --frames 200
  *   pnpm shot race --race all
  *   pnpm shot lobby|pick|place --seed abc
+ *   pnpm shot pick --claim 2,5             → with those cards already taken
  *   pnpm shot levels --seeds a,b,c,d      (or --count 12) → contact sheet
  *   pnpm shot props --count 24            → prop gallery (crate cards)
  *   pnpm shot items --seed abc             → held items: in hand, loose, and each one used
@@ -14,7 +15,7 @@
  *   pnpm shot home                         → main menu (desktop + 390×844 mobile)
  *   pnpm shot settings                     → lobby with the settings overlay open
  *   pnpm shot score --players 4            → round-score screen
- *   pnpm shot compare --seed abc --players 4 [--themes farm,mine] → default vs comic sheets, same sim frame per row
+ *   pnpm shot compare --seed abc --players 4 [--themes farm,mine] → classic vs cel sheets, same sim frame per row
  *   pnpm shot mobile [--device "Pixel 7 landscape"]  → phone emulation driven by real
  *                                           multi-touch: lobby/join, pick, place, race, portrait
  *
@@ -22,7 +23,7 @@
  *          --theme farm (force a theme; `levels --themes all` renders one level per theme)
  *          --noui (hide the HUD, e.g. to review level shapes)
  *          --mode keyboard|gamepad|touch (footer prompt glyphs)  --net (fake online-lobby info)
- *          --style comic (render style, see src/render/style.ts; files get a `-comic` suffix)
+ *          --style cel (art style, see src/render/style.ts; files get a `-cel` suffix)  --noletters (no impact words)
  * Software GL is slow; frames are advanced deterministically via slagDebug.step().
  */
 
@@ -41,8 +42,13 @@ const seed = opt('seed', 'demo');
 const theme = opt('theme');
 const world = opt('world');
 const style = opt('style');
-const tq = (theme ? `&theme=${theme}` : '') + (world ? `&size=${world}` : '') + (argv.includes('--noui') ? '&ui=0' : '') + (style ? `&style=${style}` : '');
-const sfx = style && style !== 'default' ? `-${style}` : '';
+const tq =
+  (theme ? `&theme=${theme}` : '') +
+  (world ? `&size=${world}` : '') +
+  (argv.includes('--noui') ? '&ui=0' : '') +
+  (style ? `&style=${style}` : '') +
+  (argv.includes('--noletters') ? '&lettering=0' : '');
+const sfx = style ? `-${style}` : '';
 const players = Number(opt('players', '2'));
 const frames = Number(opt('frames', '150'));
 mkdirSync(out, { recursive: true });
@@ -60,7 +66,8 @@ page.on('console', (m: { type(): string; text(): string }) => m.type() === 'erro
 const mode = opt('mode');
 const fakeNet = argv.includes('--net');
 async function open(q: string) {
-  await page.goto(`${base}r/SHOTS?${q}${tq}`);
+  // net=off: screenshots are single-player and must never join a real online room.
+  await page.goto(`${base}r/SHOTS?${q}${tq}&net=off`);
   await page.waitForFunction(() => 'slagDebug' in window, null, { timeout: 30_000 });
   await page.evaluate(() => document.fonts.ready);
   await page.evaluate(() => (window as any).slagDebug.pause(true));
@@ -260,18 +267,35 @@ try {
     case 'pick':
       await open(`seed=${seed}&players=${players}`);
       await step(40);
+      if (opt('claim')) {
+        // `--claim 2,5`: those cards are taken, as if players had picked them.
+        await page.evaluate((cards) => {
+          const m = (window as any).slagDebug.match;
+          for (const i of cards) m.crate[i].claimedBy = m.players[0].slot;
+        }, opt('claim')!.split(',').map(Number));
+        await step(1);
+      }
       await snap(`pick-${seed}`);
       break;
     case 'place':
       await open(`seed=${seed}&players=${players}`);
-      await page.evaluate(() => {
-        const m = (window as any).slagDebug.match;
-        m.players.forEach((p: any, i: number) => {
-          p.claim = i;
-          m.crate[i].claimedBy = p.slot;
-          p.cursor = { x: 300 + i * 150, y: 180 };
-        });
-      });
+      // `--card rope` gives the first player that archetype, if the crate has one.
+      await page.evaluate(
+        (card) => {
+          const m = (window as any).slagDebug.match;
+          const first = Math.max(
+            0,
+            m.crate.findIndex((c: any) => c.def.archetype === card),
+          );
+          m.players.forEach((p: any, i: number) => {
+            const at = (first + i) % m.crate.length;
+            p.claim = at;
+            m.crate[at].claimedBy = p.slot;
+            p.cursor = { x: 300 + i * 150, y: 180 };
+          });
+        },
+        opt('card', ''),
+      );
       await step(60);
       await snap(`place-${seed}`);
       break;
@@ -282,6 +306,90 @@ try {
         await step(f);
         await snap(`race-${seed}-${await page.evaluate(() => (window as any).slagDebug.match.run?.frame ?? 0)}`);
       }
+      break;
+    }
+    case 'grabs': {
+      // Swing, keg shot and backfire as stepped frames: motion can't be judged from a single still.
+      await open(`seed=${seed}&players=1&race=rope,rope,keg,keg&propseed=${opt('propseed', '1')}`);
+      await step(70);
+      const [vw] = [page.viewportSize()!.width];
+      const k = vw / 768;
+      const go = (type: string, vx: number): Promise<[number, number]> =>
+        page.evaluate(
+          ([t, v]) => {
+            const run = (window as any).slagDebug.match.run;
+            const m = run.resolved.find((r: any) => r.mods[0].type === t).mods[0];
+            const b = run.runners[0].body;
+            b.x = m.at[0] - b.w / 2;
+            b.y = (t === 'rope' ? m.at[1] + m.length * 0.75 : m.at[1]) - b.h / 2;
+            b.vx = v;
+            b.vy = 0;
+            b.onGround = false;
+            b.groundRef = -1;
+            // The last sequence may have flung them onto the flag or into something.
+            Object.assign(run.runners[0], { alive: true, finished: false });
+            run.endFrame = -1;
+            run.runners[0].items.daze = 0;
+            return [m.at[0], m.at[1]];
+          },
+          [type, vx] as const,
+        );
+      const press = (n: number, inp: object) => page.evaluate(([c, i]) => (window as any).slagDebug.step(c, { kb1: i }), [n, inp] as const);
+      /** Press along whichever way the rope is swinging. */
+      const pump = () =>
+        page.evaluate(() => {
+          const g = (window as any).slagDebug.match.run.runners[0].attach.grip;
+          (window as any).slagDebug.step(1, { kb1: g && g.s >= 0 ? { right: true } : { left: true } });
+        });
+      const crop = async (name: string, [x, y]: [number, number], files: string[]) => {
+        // The camera drifts and zooms during a race, so ask it where the world point landed.
+        const cam = await page.evaluate(() => {
+          const c = (window as any).slagDebug.renderer.cam;
+          return { x: c.x, y: c.y, zoom: c.zoom };
+        });
+        const w = 260 * k;
+        const h = 180 * k;
+        const px = ((x - cam.x) * cam.zoom + 384) * k;
+        const py = ((y - cam.y) * cam.zoom + 216) * k;
+        const path = `${out}/${name}${sfx}.png`;
+        const size = page.viewportSize()!;
+        await page.screenshot({
+          path,
+          clip: { x: Math.min(size.width - w, Math.max(0, px - w / 2)), y: Math.min(size.height - h, Math.max(0, py - h / 2)), width: w, height: h },
+        });
+        files.push(path);
+      };
+      const swing: string[] = [];
+      const rope = await go('rope', 215);
+      for (let i = 0; i < 12; i++) {
+        for (let n = 0; n < 9; n++) await pump();
+        await crop(`grabs-swing-${String(i).padStart(2, '0')}`, rope, swing);
+      }
+      await press(1, { jump: true, jumpPressed: true });
+      for (let i = 12; i < 15; i++) {
+        await press(8, {});
+        await crop(`grabs-swing-${i}`, rope, swing);
+      }
+      await sheet(`grabs-swing-${seed}`, swing, 5);
+      const shot: string[] = [];
+      const keg = await go('keg', 0);
+      for (const n of [1, 3, 8, 30]) {
+        await press(n, {});
+        await crop(`grabs-shot-${String(shot.length).padStart(2, '0')}`, keg, shot);
+      }
+      await press(1, { jump: true, jumpPressed: true });
+      for (const n of [3, 6, 4, 4, 4, 6, 8, 10, 12, 14, 16]) {
+        await press(n, {});
+        await crop(`grabs-shot-${String(shot.length).padStart(2, '0')}`, keg, shot);
+      }
+      await sheet(`grabs-shot-${seed}`, shot, 5);
+      const back: string[] = [];
+      await go('keg', 0);
+      for (const n of [40, 40, 30, 14, 10, 8, 4, 4, 4, 8, 10, 20, 30, 30, 30]) {
+        await press(n, {});
+        await crop(`grabs-back-${String(back.length).padStart(2, '0')}`, keg, back);
+      }
+      await sheet(`grabs-back-${seed}`, back, 5);
       break;
     }
     case 'items': {
@@ -342,12 +450,12 @@ try {
       break;
     }
     case 'compare': {
-      // Default vs comic from one paused page, so both columns are literally the same sim frame.
+      // Classic vs cel from one paused page, so both columns are literally the same sim frame.
       const themes = (opt('themes') ?? 'farm,factory,castle,volcano').split(',');
       const shoot = async (name: string, files: string[], at?: number) => {
         // One timestamp for both columns; it must not run behind the renderer's clock (negative dt flings the camera).
         const ms = at ?? (await page.evaluate(() => performance.now()));
-        for (const st of ['default', 'comic']) {
+        for (const st of ['classic', 'cel']) {
           await page.evaluate(
             ([s, t]) => {
               const d = (window as any).slagDebug;
@@ -361,13 +469,16 @@ try {
       };
       const scene: string[] = [];
       for (const th of themes) {
-        await open(`seed=${seed}&theme=${th}&players=${players}&race=${opt('race', 'saw,laser,launcher,flamer,spring')}&propseed=${opt('propseed', '1')}`);
+        const give = opt('give');
+        await open(
+          `seed=${seed}&theme=${th}&players=${players}&race=${opt('race', 'saw,laser,launcher,flamer,spring')}&propseed=${opt('propseed', '1')}${give ? `&give=${give}` : ''}`,
+        );
         // Scripted runners so hazards, deaths and lettering are in frame. Past `frames`, stop just after the
-        // next death to catch an impact. Runs in the comic style so its lettering is live; the default
+        // next death to catch an impact. Runs in the cel style so its lettering is live; the classic
         // column draws the same state without it.
         const ms = await page.evaluate((n) => {
           const d = (window as any).slagDebug;
-          d.renderer.setStyle('comic', false);
+          d.renderer.setStyle('cel', false);
           let stop = n + 90;
           let was = 0;
           const t0 = performance.now();

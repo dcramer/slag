@@ -18,6 +18,8 @@ import './deco';
 import './coat';
 import './portal';
 import './bumper';
+import './keg';
+import './rope';
 import './magnet';
 import './mystery';
 import './web';

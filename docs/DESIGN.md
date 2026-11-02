@@ -6,6 +6,7 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - Lobby → **Pick** (claim one prop from a crate) → **Place** (put it in the level) → **Race** to the flag → **Score**. Repeat until someone reaches the target score or the round limit, whichever comes first, then **Victory**.
 - Matches have 1–8 players. Players can be local (any mix of keyboard, gamepads and touch) or online.
 - Props persist for the whole match, so levels get more dangerous every round.
+- Round 1 is often unfinishable, especially with few players. That's expected: nearly every level needs parts, and parts build up over the match.
 
 ## Discovery
 - Part of the joy of the game is the unknown. Players learn parts, rules and tricks by playing and by watching each other.
@@ -17,7 +18,7 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 
 ## Scoring
 - Finishing earns +10 points. The first player to finish gets an extra +4.
-- Each rival killed by your prop, or by the level right after your bonk, earns you +3, but only if someone finished that round.
+- If you finish, each rival killed by your prop, or by the level right after your bonk, earns you +2. Traps alone don't pay: you have to reach the flag too.
 - If everyone finishes, nobody scores ("too easy"). If nobody finishes, nobody scores either.
 - Solo play just rewards finishing.
 - A match always ends: scoreless rounds can run forever, so the round limit has no "off" setting.
@@ -42,9 +43,9 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 ## Levels
 - Every level has a **theme**: farm, factory, castle, jungle, volcano, harbor, mine or rooftops. The theme drives the terrain shapes, look, music and set pieces, so a farm reads as a farm.
 - **Levels vary**: size and aspect (wide, classic, tall), sparse vs dense terrain, few vs many hazards, and route shape (sprawl, climb, descent, zig-zag).
-- **Levels are mostly open.** Corridors are fine in places, but there's never only one narrow way to the goal: there are always route options, with hazards and choices along them. Measured on the real controller's routes: take the fastest route and widen it by 2 tiles either side; a second route must stay out of that lane for at least 40% of the way. The spawn and goal pockets and the span of a bridge don't count, since nobody has a choice there. A level short of that gets raised lanes of jump-through platforms (carved galleries in a mine), and towers get two connectors between every pair of storeys.
+- **Levels are mostly open.** Corridors are fine in places, but there's never only one narrow way to the goal: there are always route options, with hazards and choices along them. Measured on the real controller's routes with a level's required parts in place: take the fastest route and widen it by 2 tiles either side; a second route must stay out of that lane for at least 40% of the way. The spawn and goal pockets and the span of a bridge don't count, since nobody has a choice there. A level short of that gets raised lanes of jump-through platforms (carved galleries in a mine), and towers get two connectors between every pair of storeys. A tower's parts go on moats every route has to cross, on the goal storey and, for a second part, the spawn storey.
 - **Run is a choice.** Most gaps can be walked across and some take a run-up; platforms too short to run on are always a walking hop apart.
-- **Most levels need props.** Roughly 70–85% can't be finished bare. Every level must be finishable with **at most two small bridges**, verified with the real movement controller and never with hand-waved distances.
+- **Levels need parts.** About 99% can't be finished bare, and 20–30% need two parts; the rest need one. What stops a bare run is a gap or a wall a part solves, never a sealed level. Every level must be finishable with **at most two small bridges**, verified with the real movement controller and never with hand-waved distances.
 - The spawn and goal zones are protected: nothing can be built or bombed there.
 - **The flag is generous**: its finish trigger is a bit wider than the flag and reaches 4 tiles up, so jumping clear over it still counts. Touching it ends your control: you drop, land and ride platforms with normal physics, and nothing can hurt you anymore.
 - **Weather (planned)** is a per-level random variable: wind gusts that push runners and projectiles, mist that limits sight distance, rain or snow that changes footing. It's always telegraphed and it's tuned per theme.
@@ -65,11 +66,12 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
   - **Pop Shield**: soaks one lethal hit and pops you upward, with a short guard after. It doesn't stop falls or crushes, and carrying it lowers your jumps. Use drops it.
   - **Pocket Rocket**: one huge steerable burst upward, then the fumes daze you.
   - **Smoke Bomb** (2 bombs): a thick cloud that hides the ground and slows everyone inside, you included.
-- **Grab props (planned):**
-  - **Rope:** hangs from the ceiling. You grab it automatically when you touch it in the air (with a short cooldown after letting go, so you don't instantly re-grab). Left and right pump the swing; jump lets go and keeps the swing's momentum.
-  - **Blast barrel:** you're sucked in on contact and it rotates (or aims at a fixed angle). Jump fires you out after a short delay along the barrel's direction. It's an original take on the genre's barrel cannon.
+- **Grab props** hold you and move your body in place of the controller; your hitbox doesn't change. A part holds one runner at a time, and a contested grab goes to the nearest runner, then the lower slot. There's a short cooldown before you can re-grab the part you just left, but any other part is fair game at once, so they chain. While held, fields, springs, wind and kickers skip you and nobody nudges you. Hazards, the pit, the flag and self-destruct all still apply. If the part goes away, a solid moves into you, or anything shoves you (a knock, a shield pop, a rocket), it lets go and you keep your speed.
+  - **Sausage Vine** (the jungle-vine swing, on a butcher's hook): hangs from a ceiling or a placed block. Where there's no ceiling at all above it, it's lowered in on a string from open sky, so it can always be placed; it drops rows to reach a ceiling, and rotation does nothing. It falls with the ceiling it hangs from. You grab it automatically when you touch it in the air, wherever you touch it, and your speed becomes swing speed. Left and right pump the swing; jump lets go along the swing with a little extra fling, enough that a good release beats a running jump. **The catch:** it snaps if you hang on too long and grows back later. The links sear and thin first. Held items work on it.
+  - **Kegapult** (the barrel cannon, as a moonshine keg): pulls you in on contact, on foot or in the air. Some hold a fixed aim and some tip between stops. Jump locks the aim and fires you after a short delay. **The catch:** a fuse burns down while you sit inside, and if it runs out the keg backfires, out of the rear and slower, and leaves you sooty. Held items stay in your pocket inside a keg. A shot that falls back into its own keg gets caught again.
 - Props are assembled from **parts**: blocks of various materials, spikes, swinging heads, launchers, emitters, motion, springs, fans and bombs. Every number is rolled, and names come from the rolled stats.
-- Every crate contains at least one building piece and one hazard. Crate contents are tied to the level seed and round, but the card order is shuffled with a per-match salt the host rolls, so it differs every game.
+- Every crate contains at least one hazard and enough plain building parts for what the level still needs, counting what's already placed, so a match can always be finished. After rounds where nobody finishes, crates quietly lean toward bombs and building parts, gently after one dry round and more from the second, up to a cap. Crate contents are tied to the level seed and round, but the card order is shuffled with a per-match salt the host rolls, so it differs every game.
+- **Every part can always be placed somewhere**, or a pick could stall the place phase on a level without the right surface.
 - **Attachments** (spike strips, ice coats, slime coats) must mount flush on an exposed face of a solid block, and rotation picks the face.
   - Ice makes floors slippery and walls slick (no wall jump).
   - Slime makes floors slow and walls sticky (you cling).
@@ -89,6 +91,7 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - Gravity: default Auto.
 
 ## Controls and UI
+- A picked part's card leaves the crate entirely. The other cards stay where they are.
 - On PC, keyboard and mouse both work. One keyboard player can use WASD *and* the arrows. A "Split keyboard" setting turns the keyboard into two local players. Everything can be remapped.
 - The mouse drives the menu cursor: click to pick or place, right-click or the wheel to rotate.
 - **Touch (mobile)**: left half is a floating stick (push past ~70% to run), right half is jump (hold for height), self-destruct needs a short hold, and a Use button appears above jump while you hold an item. Pick by tapping a card; place by dragging a ghost that floats above your finger, with ROTATE and PLACE buttons. Landscape first.
@@ -101,6 +104,8 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - The URL `/r/<code>` identifies a lobby; the homepage is a normal main menu. There's no matchmaking, and you join only through a shared link.
 - **Host = the earliest-joined connected player.** When the host leaves, the next player in join order takes over seamlessly. When everyone leaves, the next arrival becomes host. A refresh rejoins the same slot.
 - Netcode sends inputs only over a deterministic simulation that must be bit-identical across browsers.
+- Peers connect over WebRTC in a star around the host, so a pair that can't connect directly drops to local play. Details: `docs/NETCODE.md`.
+- In pick and place everyone sees everyone's cursor and held part live. A card belongs to whoever the host hears first; nobody sees a claim that gets taken back.
 
 ## Platform
-- Built with Next.js on Vercel. All game logic runs client-side, and the server only renders thin route shells.
+- Built with Next.js on Vercel. All game logic runs client-side. The server renders thin route shells and runs small, stateless signaling routes for online play.

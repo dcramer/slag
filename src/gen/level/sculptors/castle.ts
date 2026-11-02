@@ -1,7 +1,7 @@
 import type { Rng } from '../../../core/rng';
 import { finish, Grid } from '../kit';
 import type { Sculptor } from '../types';
-import { easyGap, easyRise, hardGap, knobs, pit, rollChallenges, Slots, stepRows } from './common';
+import { easyGap, easyRise, hardGap, knobs, pit, keepClear, rollChallenges, Slots, stepRows } from './common';
 import { castleTall } from './tall';
 
 type CastleStyle = 'bailey' | 'gatehouse' | 'dungeon';
@@ -48,6 +48,7 @@ export const castle: Sculptor = (ctx) => {
     const w = open + stubs[0] + stubs[1];
     const a = slots.take(rng, w, 3, 8, W - 9);
     if (a === null) continue;
+    if (hard) keepClear(slots, a, w);
     level(a - 2, a + w + 1, Math.max(floor[a - 2], floor[a + w + 1]));
     moats.push({ a, b: a + w - 1, hard, stubs });
   }

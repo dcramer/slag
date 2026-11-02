@@ -1,7 +1,7 @@
 import type { Rng } from '../../../core/rng';
 import { finish, Grid, hintGap, noise1D } from '../kit';
 import type { Sculptor } from '../types';
-import { easyGap, easyRise, hardGap, hopGap, knobs, pit, relax, rollChallenges, Slots } from './common';
+import { easyGap, easyRise, hardGap, hopGap, knobs, pit, relax, keepClear, rollChallenges, Slots } from './common';
 import { volcanoTall } from './tall';
 
 type VolcanoStyle = 'spires' | 'caldera' | 'flows';
@@ -101,8 +101,11 @@ export const volcano: Sculptor = (ctx) => {
     const w = hard ? hardGap(rng) : easyGap(rng, 2);
     const a = slots.take(rng, w, 3, 8, W - 9);
     if (a === null) continue;
+    if (hard) keepClear(slots, a, w);
     const bank = Math.max(surf[a - 1], surf[a + w]);
-    for (let x = a - 1; x <= a + w; x++) {
+    // Level banks either side of a hard pit, wide enough to walk up to and land on.
+    const lip = hard ? 4 : 1;
+    for (let x = a - lip; x < a + w + lip; x++) {
       surf[x] = x >= a && x < a + w ? H : bank;
       locked[x] = 1;
     }
