@@ -30,7 +30,7 @@ import type { ThemeId } from '../themes';
  * Worktree branches never bump it, since two bumps always conflict: `pnpm land` bumps it once
  * for a batch that touched this file or that test (`--snap` for a change in what a field means).
  */
-export const SNAP_VERSION = 21;
+export const SNAP_VERSION = 22;
 
 export interface RunSnap {
   slots: number[];
