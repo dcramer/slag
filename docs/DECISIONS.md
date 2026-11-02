@@ -170,6 +170,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `open` · CHARACTERS.md → Roster
 - **3D-to-2D round 1 misses on art style and on "parody the original"; try a round 2 with a model sheet and a pose sheet, restroked in the game's own ink.** "the main issue with that 3d to 2d pipeline is the art style, and that its not following our 'parody the original'. i also agree that we could do a pose sheet/etc. lets try another round with improvements"
   2026-11-02 · `in progress` · branch `worktree-agent-aacd068f51e46176c`, behind `?sprites=1`
+- **3D-to-2D round 2 (a model sheet and a pose sheet, traced into flat parts and inked by the cast's own pen) is the direction: "thats SO MUCH BETTER".** Polish these two kinds before rolling out to the rest.
+  2026-11-02 · `in progress` · `src/render/cast/sprites/`, behind `?sprites=1`; CHARACTERS.md
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
   2026-11-02 · `done` · public/ASSETS.md
 
