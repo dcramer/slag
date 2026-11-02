@@ -32,7 +32,7 @@ export const TWO_PART_ASK: Partial<Record<ThemeId, number>> = {
   castle: 0.5,
   jungle: 0.33,
   volcano: 0.13,
-  harbor: 0.16,
+  harbor: 0.6,
   mine: 0.02,
   rooftops: 0.38,
   // Only a wide space level has room for two crossings (sculptors/space.ts), so its ask is the theme's share over the wide ones.
