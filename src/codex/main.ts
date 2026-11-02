@@ -15,15 +15,15 @@ import { PROJECTILE_NOTES, partGroups } from './parts';
 
 const CSS = `
 :root{color-scheme:dark}
-body{margin:0;background:radial-gradient(1200px 600px at 20% -10%,#2a1a18,transparent),#0b0a10;color:#e9e6f2;font:500 14px Rubik,system-ui,sans-serif}
+body{margin:0;background:radial-gradient(1200px 600px at 20% -10%,#2a1a18,transparent),#0b0a10;color:#e9e6f2;font:500 14px Barlow,system-ui,sans-serif}
 header{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:14px 22px;background:rgba(11,10,16,.85);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,160,60,.2)}
 header h1{font:400 34px "Lilita One",system-ui;margin:0 12px 0 0;background:linear-gradient(#fff3b0,#ffb02e 40%,#ff5a1f 75%,#a8160f);-webkit-background-clip:text;background-clip:text;color:transparent}
 header a{color:#ffb46a;text-decoration:none;font-weight:700}
 nav{display:flex;flex-wrap:wrap;gap:6px}
 nav a{padding:5px 10px;border-radius:99px;background:#1c1928;border:1px solid rgba(255,255,255,.08);font-size:12px}
 .ctl{display:flex;gap:8px;align-items:center;margin-left:auto}
-.ctl input,.ctl select{background:#14121d;color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:6px 8px;font:600 13px Rubik}
-button{font:700 13px Rubik;color:#fff;background:linear-gradient(#ff9a2e,#e2561c);border:0;border-radius:9px;padding:7px 12px;cursor:pointer}
+.ctl input,.ctl select{background:#14121d;color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:6px 8px;font:600 13px Barlow}
+button{font:700 13px Barlow;color:#fff;background:linear-gradient(#ff9a2e,#e2561c);border:0;border-radius:9px;padding:7px 12px;cursor:pointer}
 button.ghost{background:#2c2840}
 main{padding:10px 22px 60px}
 section{margin:28px 0}
@@ -36,12 +36,12 @@ section>p{margin:0 0 14px;color:#a39cb8;max-width:900px}
 .stage canvas{position:absolute;inset:0;width:100%;height:100%}
 .stage canvas.glow{mix-blend-mode:plus-lighter}
 .meta{padding:8px 10px 10px}
-.name{font:700 14px Rubik;color:#fff}
+.name{font:700 14px Barlow;color:#fff}
 .maker{font-size:11px;color:#8a8499;margin-bottom:6px}
 .stat{font-size:11px;color:#c9c3d9;line-height:1.45}
-.tag{position:absolute;top:8px;left:8px;font:800 10px Rubik;letter-spacing:1px;padding:2px 7px;border-radius:99px;color:#fff;z-index:2}
+.tag{position:absolute;top:8px;left:8px;font:800 10px Barlow;letter-spacing:1px;padding:2px 7px;border-radius:99px;color:#fff;z-index:2}
 .tag.build{background:#2f9e4f}.tag.hazard{background:#d4334a}.tag.utility{background:#2c86c9}.tag.demolish{background:#e07a1f}
-.arch{margin:18px 0 8px;font:700 13px Rubik;text-transform:uppercase;letter-spacing:1.5px;color:#9a93ad}
+.arch{margin:18px 0 8px;font:700 13px Barlow;text-transform:uppercase;letter-spacing:1.5px;color:#9a93ad}
 .parts{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
 .part{background:#16141f;border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:12px 14px}
 .part b{font:400 18px "Lilita One";color:#ffb46a}

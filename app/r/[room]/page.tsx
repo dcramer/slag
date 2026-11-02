@@ -28,9 +28,9 @@ async function roomOf(props: Props): Promise<string> {
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const room = await roomOf(props);
   return {
-    title: `slag · lobby ${room}`,
-    description: `Join lobby ${room} — build it, break it, beat it.`,
-    openGraph: { title: `Join my slag lobby: ${room}`, description: 'A procedurally generated party platformer.' },
+    title: `SLAG · Lobby ${room}`,
+    description: `Join lobby ${room} in SLAG, a party platformer for 1–8 players.`,
+    openGraph: { title: `Join my SLAG lobby: ${room}`, description: 'A procedurally generated party platformer. Build traps, then race through them.' },
   };
 }
 

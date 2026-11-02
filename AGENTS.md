@@ -2,7 +2,7 @@
 
 **slag** is a browser party platformer: each round players **pick** a prop from a crate, **place** it in the level, then **run** to the flag (1–8 players, `MAX_PLAYERS`). Levels, props, characters, names and visuals are all procedurally generated from a seed. Movement is a tight precision platformer: walk by default, hold **run** for speed and long jumps, variable jumps, wall slide/jump, coyote time, jump buffering. Use the genre's mechanics, never another game's names, art, characters or level designs.
 
-Game design decisions live in [docs/DESIGN.md](docs/DESIGN.md): follow it, and update it in the same commit when a decision changes. Folders with their own rules have a nested `AGENTS.md`: `src/sim/`, `src/gen/`, `src/render/`, `app/`. Read it before editing there.
+Game design decisions live in [docs/DESIGN.md](docs/DESIGN.md): follow it, and update it in the same commit when a decision changes. UI art direction (palette, type, casing, input prompts) is in [docs/ART.md](docs/ART.md). Folders with their own rules have a nested `AGENTS.md`: `src/sim/`, `src/gen/`, `src/render/`, `app/`. Read it before editing there.
 
 ## Commands
 
@@ -19,7 +19,7 @@ Package manager is **pnpm** (`packageManager` in package.json). Never use npm or
 | `pnpm shot <scenario> [opts]` | Headless screenshots into `shots/` (gitignored). See "Verify visually". |
 | `pnpm level <seed> [--theme farm]` | ASCII level dump: `#` solid, `=` one-way, `S`/`G` spawn/goal, `·` reachable stand cell, `P` set piece. |
 | `pnpm level --stats 50` | Per-theme stats over N seeds: ms/level, styles, `needBridges`, `fallbacks` (~2 min at 50). |
-| `pnpm dev` | Dev server at http://localhost:3000; `/` redirects to a fresh lobby `/r/<code>`. |
+| `pnpm dev` | Dev server at http://localhost:3000; `/` is the main menu (Play opens a fresh lobby `/r/<code>`, passing `?seed`/`?theme` through). |
 
 Lint: `oxlint` (type-aware, `.oxlintrc.json`). Errors fail CI; warnings are real findings to fix, not noise. Format: `oxfmt` (`.oxfmtrc.json`: 2 spaces, single quotes, 160 columns). Don't add `oxlint-disable` comments to get green; fix the code or change the rule in `.oxlintrc.json` with a reason.
 

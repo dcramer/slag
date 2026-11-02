@@ -10,8 +10,9 @@ import { TOUCH_DEVICE, touchModeFor } from './input/touch';
 import { Renderer } from './render/renderer';
 import { DT } from './sim/constants';
 import { THEME_IDS } from './themes';
-import { NamePrompt, RulesMenu, SettingsMenu } from './ui/menus';
-import { isTouchFirst } from './ui/touch/device';
+import { InputModeTracker } from './ui/input-mode';
+import { loadHaptics, NamePrompt, RulesMenu, SettingsMenu } from './ui/menus';
+import { detectQuality, isTouchFirst } from './ui/touch/device';
 import { TouchOverlay } from './ui/touch/overlay';
 import { loadProfile, saveProfile } from './ui/profile';
 
@@ -53,9 +54,30 @@ export function bootGame(container: HTMLElement, room: string): void {
   renderer.hud.room = room;
   renderer.hud.hidden = params.get('ui') === '0';
   const audio = createAudio();
+  const inputMode = new InputModeTracker(window);
 
   // --- local menus (DOM overlays) and profile ---------------------------------
   const settingsMenu = new SettingsMenu(input, audio);
+  settingsMenu.leave = () => location.assign('/');
+  settingsMenu.quality = {
+    pinned: () => {
+      try {
+        const q = localStorage.getItem('slag.quality');
+        return q === 'high' || q === 'mid' || q === 'low' ? q : null;
+      } catch {
+        return null;
+      }
+    },
+    set: (tier) => {
+      try {
+        if (tier) localStorage.setItem('slag.quality', tier);
+        else localStorage.removeItem('slag.quality');
+      } catch {
+        // Not persisted; still applies this session.
+      }
+      renderer.setQuality(tier ?? detectQuality().tier);
+    },
+  };
   const rulesMenu = new RulesMenu(input);
   const namePrompt = new NamePrompt(input);
   const profile = loadProfile();
@@ -89,7 +111,7 @@ export function bootGame(container: HTMLElement, room: string): void {
   input.hitTest = (x, y) => {
     audio.unlock();
     if (menus.some((m) => m.isOpen)) return null;
-    const b = match.phase === 'lobby' ? renderer.hud.hit(x, y) : null;
+    const b = renderer.hud.hit(x, y);
     if (!b) return null;
     audio.ui?.('click');
     switch (b.action) {
@@ -106,8 +128,17 @@ export function bootGame(container: HTMLElement, room: string): void {
       case 'name':
         promptName();
         return true;
+      case 'invite': {
+        const url = renderer.hud.net?.inviteUrl ?? location.href;
+        navigator.clipboard?.writeText(url).then(
+          () => renderer.hud.toast('Invite Link Copied'),
+          () => renderer.hud.toast(url, 4000),
+        );
+        return true;
+      }
       case 'join':
       case 'ready':
+      case 'continue':
         return { device: b.device ?? input.pointerDevice, confirm: true };
       case 'look':
         return { device: b.device ?? input.pointerDevice, alt: true };
@@ -121,6 +152,7 @@ export function bootGame(container: HTMLElement, room: string): void {
   // Touch is its own device ('touch'); pointerDevice switches the HUD's "mine"
   // buttons to it while touch is the latest input.
   input.touch.setActive(isTouchFirst());
+  input.touch.haptics = loadHaptics();
   input.touch.onGesture = () => audio.unlock(); // iOS only unlocks audio inside a touch gesture
   const touchOverlay = new TouchOverlay(input.touch, container, () => input.onEscape?.());
 
@@ -160,8 +192,9 @@ export function bootGame(container: HTMLElement, room: string): void {
   let hoverKey = '';
   function uiHover() {
     const pt = input.pointerPos;
-    const b = pt && match.phase === 'lobby' && !menus.some((m) => m.isOpen) ? renderer.hud.hit(pt.x, pt.y) : null;
+    const b = pt && !menus.some((m) => m.isOpen) ? renderer.hud.hit(pt.x, pt.y) : null;
     const key = b ? `${b.action}:${b.device ?? ''}` : '';
+    glCanvas.style.cursor = b ? 'pointer' : '';
     if (key && key !== hoverKey) audio.ui?.('hover');
     hoverKey = key;
   }
@@ -190,6 +223,10 @@ export function bootGame(container: HTMLElement, room: string): void {
     renderer.hud.pointer = input.touch.active ? null : input.pointerPos; // no hover highlights under a finger
     uiHover();
     renderer.hud.mouseDevice = input.pointerDevice;
+    inputMode.update();
+    // Touch controls are authoritative for "touch"; otherwise the last keyboard/mouse vs pad input wins.
+    renderer.hud.lastInput = input.touch.active ? 'touch' : inputMode.mode === 'touch' ? 'keyboard' : inputMode.mode;
+    renderer.hud.padCount = inputMode.pads;
     const tp = match.players.find((p) => p.device === TOUCH_DEVICE);
     touchOverlay.update({ canPlace: tp && match.phase === 'place' ? match.canPlaceFor(tp) : undefined });
     const events = match.drainEvents();

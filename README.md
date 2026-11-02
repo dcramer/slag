@@ -8,7 +8,7 @@ The twist: **levels, props, and characters are all procedurally generated** from
 
 ```sh
 pnpm install
-pnpm dev        # http://localhost:3000 → redirects to a new lobby /r/<code>  (?seed=… forces a level)
+pnpm dev        # http://localhost:3000 → main menu; Play opens a new lobby /r/<code>  (?seed=… forces a level)
 pnpm check      # typecheck + lint + tests
 pnpm shot -- race --race all   # headless screenshots into shots/
 pnpm level -- myseed           # ASCII level inspector

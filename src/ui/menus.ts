@@ -1,8 +1,30 @@
 import type { AudioSystem } from '../audio';
 import { type MatchRules, RULE_CHOICES } from '../game/rules';
-import { ACTION_LABELS, BINDABLE, defaultSettings, type InputSettings, type KeyProfile, keyName, SLOTS } from '../input/bindings';
+import { BINDABLE, defaultSettings, type InputSettings, type KeyProfile, keyName, SLOTS } from '../input/bindings';
 import type { InputManager } from '../input/input';
+import { glyphSVG, type Glyph } from './glyphs';
+import { capLabel } from './prompts';
 import { sanitizeName } from './profile';
+import { FONT, PAL } from './style';
+import type { QualityTier } from './touch/device';
+
+/** Graphics quality hook (game-client wires it to the renderer). `null` = automatic. */
+export interface QualityControl {
+  /** The pinned tier, or null when automatic. */
+  pinned(): QualityTier | null;
+  set(tier: QualityTier | null): void;
+}
+
+const HAPTICS_KEY = 'slag.haptics';
+
+/** Saved haptics preference (default on). */
+export function loadHaptics(): boolean {
+  try {
+    return localStorage.getItem(HAPTICS_KEY) !== '0';
+  } catch {
+    return true;
+  }
+}
 
 /**
  * DOM overlays for menus that need real text input or dense forms:
@@ -11,26 +33,57 @@ import { sanitizeName } from './profile';
  * the callbacks they're given (localStorage lives in the owners).
  */
 
+const GRAIN = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .35 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E")`;
+
+/** Foundry-style overlay CSS (tokens from ./style; rules in docs/ART.md). */
 const CSS = `
-.slag-ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(6,5,10,.72);backdrop-filter:blur(3px);z-index:10;font:500 14px Rubik,system-ui,sans-serif;color:#eee}
-.slag-card{background:linear-gradient(#1e1b2c,#120f1b);border:1px solid rgba(255,170,90,.35);border-radius:16px;padding:20px 24px;min-width:min(520px,92vw);max-width:94vw;max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.6)}
-.slag-card h2{font:400 30px "Lilita One",system-ui,sans-serif;margin:0 0 12px;color:#ffb02e;letter-spacing:.5px}
-.slag-card h3{font:700 12px Rubik,system-ui;text-transform:uppercase;letter-spacing:1.5px;color:#9a93ad;margin:18px 0 8px}
-.slag-row{display:flex;align-items:center;gap:10px;margin:6px 0}
-.slag-row label{flex:1;color:#ddd}
-.slag-btn{font:700 13px Rubik,system-ui;color:#fff;background:#2c2840;border:1px solid rgba(255,255,255,.14);border-radius:9px;padding:7px 12px;cursor:pointer;min-width:64px}
-.slag-btn:hover{background:#3a3555;border-color:rgba(255,170,90,.6)}
-.slag-btn.primary{background:linear-gradient(#ff9a2e,#e2561c);border-color:#ffb46a}
-.slag-btn.on{background:#2f7d3c;border-color:#7fe08f}
-.slag-btn.listen{background:#7a2d8e;border-color:#e08fff;animation:slagpulse .8s infinite alternate}
-@keyframes slagpulse{to{filter:brightness(1.4)}}
-.slag-grid{display:grid;gap:6px 10px;align-items:center}
-.slag-grid .h{font:700 11px Rubik;color:#9a93ad;text-transform:uppercase;letter-spacing:1px}
-.slag-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
-.slag-input{font:600 20px Rubik,system-ui;background:#0d0b14;color:#fff;border:1px solid rgba(255,170,90,.5);border-radius:10px;padding:10px 12px;width:100%;box-sizing:border-box;outline:none}
-.slag-input:focus{border-color:#ffb02e;box-shadow:0 0 0 3px rgba(255,160,40,.25)}
-.slag-note{color:#9a93ad;font-size:12px;margin-top:6px}
-input[type=range].slag-range{flex:1.2;accent-color:#ff9a2e}
+.slag-ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(14,8,5,.8);z-index:10;font:500 15px ${FONT.ui};color:${PAL.bone};padding:12px;box-sizing:border-box}
+.slag-card{position:relative;background:${GRAIN},linear-gradient(${PAL.iron},#1f1612);border:2px solid ${PAL.ink};border-radius:6px;box-shadow:0 6px 0 ${PAL.ink},0 26px 70px rgba(0,0,0,.65);padding:6px 26px 20px;width:min(600px,100%);max-height:100%;overflow:auto;box-sizing:border-box}
+.slag-card::before{content:"";position:sticky;display:block;top:-6px;margin:-6px -26px 0;height:7px;background:repeating-linear-gradient(-45deg,${PAL.hazard} 0 9px,#17110c 9px 18px);border-bottom:2px solid ${PAL.ink};z-index:1}
+.slag-card h2{font:400 34px ${FONT.display};text-transform:uppercase;color:${PAL.amber};margin:16px 0 4px;letter-spacing:.5px;text-shadow:0 3px 0 ${PAL.ink}}
+.slag-card h3{font:800 12px ${FONT.ui};text-transform:uppercase;letter-spacing:.16em;color:${PAL.ash};margin:22px 0 10px;display:flex;align-items:center;gap:10px}
+.slag-card h3::after{content:"";flex:1;height:2px;background:linear-gradient(90deg,${PAL.steel},transparent)}
+.slag-row{display:flex;align-items:center;gap:12px;margin:8px 0;min-height:32px}
+.slag-row>label,.slag-row>.lbl{flex:0 0 112px;color:${PAL.bone};font-weight:600}
+.slag-row>.lbl.wide{flex:1}
+.slag-val{flex:0 0 44px;text-align:right;font:700 14px ${FONT.ui};color:${PAL.ash};font-variant-numeric:tabular-nums}
+.slag-btn{font:700 15px ${FONT.ui};color:${PAL.bone};background:#4a3a31;border:2px solid ${PAL.ink};border-radius:5px;padding:7px 14px;box-shadow:0 3px 0 ${PAL.ink};cursor:pointer;min-height:36px;transition:transform .06s,box-shadow .06s,background .1s}
+.slag-btn:hover{background:#5d4a3e}
+.slag-btn:focus-visible{outline:2px solid ${PAL.amber};outline-offset:2px}
+.slag-btn:active{transform:translateY(2px);box-shadow:0 1px 0 ${PAL.ink}}
+.slag-btn.primary{background:#ff8a2a;color:${PAL.ink}}
+.slag-btn.primary:hover{background:#ffa04a}
+.slag-btn.on{background:${PAL.toxic};color:${PAL.ink}}
+.slag-btn.danger{background:#6a2216}
+.slag-btn.key{background:${PAL.soot};padding:4px 8px;min-width:84px;display:inline-flex;align-items:center;justify-content:center}
+.slag-btn.key:hover{background:#2c1f19}
+.slag-btn.listen{background:#7a2d0e;color:${PAL.whiteHot};font-size:13px;animation:slagpulse .7s infinite alternate}
+.slag-btn .slag-empty{color:${PAL.dim};font-weight:600}
+@keyframes slagpulse{to{background:#b8410f}}
+.slag-grid{display:grid;gap:8px 10px;align-items:center}
+.slag-grid .h{font:800 11px ${FONT.ui};color:${PAL.ash};text-transform:uppercase;letter-spacing:.14em}
+.slag-actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;align-items:center;margin-top:22px}
+.slag-actions .grow{flex:1}
+.slag-input{font:700 22px ${FONT.ui};background:${PAL.soot};color:${PAL.bone};border:2px solid ${PAL.ink};box-shadow:inset 0 3px 0 rgba(0,0,0,.4);border-radius:5px;padding:10px 12px;width:100%;box-sizing:border-box;outline:none}
+.slag-input:focus{border-color:${PAL.molten}}
+.slag-note{color:${PAL.ash};font-size:14px;line-height:1.45;margin-top:10px}
+.slag-prompts{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;margin-top:8px;color:${PAL.bone};font-weight:700;font-size:14px}
+.slag-prompt{display:inline-flex;align-items:center;gap:6px}
+.slag-glyph{display:inline-block;vertical-align:middle;flex:none}
+input[type=range].slag-range{-webkit-appearance:none;appearance:none;flex:1;min-width:80px;height:14px;margin:0;border:2px solid ${PAL.ink};border-radius:4px;background:linear-gradient(90deg,${PAL.ember},${PAL.molten} calc(var(--p) * .7),${PAL.amber} var(--p),${PAL.soot} var(--p));box-shadow:inset 0 2px 0 rgba(0,0,0,.35);cursor:pointer}
+input[type=range].slag-range:disabled{filter:grayscale(1) brightness(.7);cursor:default}
+input[type=range].slag-range::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:26px;border-radius:4px;background:${PAL.bone};border:2px solid ${PAL.ink};box-shadow:0 2px 0 ${PAL.ink}}
+input[type=range].slag-range::-moz-range-thumb{width:14px;height:24px;border-radius:4px;background:${PAL.bone};border:2px solid ${PAL.ink}}
+input[type=range].slag-range:focus-visible{outline:2px solid ${PAL.amber};outline-offset:3px}
+.slag-switch{position:relative;width:52px;height:28px;flex:none;border:2px solid ${PAL.ink};border-radius:14px;background:${PAL.soot};box-shadow:inset 0 2px 0 rgba(0,0,0,.4);cursor:pointer;padding:0}
+.slag-switch::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:${PAL.ash};border:2px solid ${PAL.ink};box-sizing:border-box;transition:left .12s}
+.slag-switch[aria-checked=true]{background:${PAL.molten}}
+.slag-switch[aria-checked=true]::after{left:26px;background:${PAL.bone}}
+.slag-switch:focus-visible{outline:2px solid ${PAL.amber};outline-offset:2px}
+.slag-chips{display:flex;flex-wrap:wrap;gap:8px}
+.slag-chips .slag-btn{min-width:56px;padding:6px 10px}
+@media (max-height:520px){.slag-ov{align-items:flex-start}.slag-card h2{font-size:26px;margin-top:10px}}
+@media (max-width:520px){.slag-card{padding:6px 16px 16px}.slag-card::before{margin:-6px -16px 0}.slag-row>label,.slag-row>.lbl{flex-basis:84px}.slag-row{flex-wrap:wrap}}
 `;
 
 let styled = false;
@@ -74,11 +127,43 @@ abstract class Overlay {
   onClose: (() => void) | null = null;
 }
 
+/** Inline glyph (keycap, pad button, mouse) as a DOM node. */
+export function glyphEl(g: Glyph, h = 22): HTMLElement {
+  const span = el('span', { className: 'slag-glyph' });
+  span.innerHTML = glyphSVG(g, h);
+  return span;
+}
+
+/** A row of "glyph glyph Label" prompts, like the in-game footer. */
+export function promptRow(items: { glyphs: Glyph[]; label: string }[], h = 22): HTMLElement {
+  const row = el('div', { className: 'slag-prompts' });
+  for (const it of items) row.append(el('span', { className: 'slag-prompt' }, ...it.glyphs.map((g) => glyphEl(g, h)), it.label));
+  return row;
+}
+
+const pct = (v: number) => `${Math.round(v * 100)}%`;
+
+/** Title Case labels for the binding grid (ACTION_LABELS is the input module's plain list). */
+const BIND_LABELS: Record<(typeof BINDABLE)[number], string> = {
+  left: 'Move Left',
+  right: 'Move Right',
+  up: 'Up / Aim',
+  down: 'Down / Drop',
+  jump: 'Jump',
+  run: 'Run (Hold)',
+  confirm: 'Confirm / Pick',
+  alt: 'Rotate / Alt',
+};
+
 /** Controls (remapping, split keyboard) + audio volumes. */
 export class SettingsMenu extends Overlay {
   private draft!: InputSettings;
   private listening: { profile: keyof Pick<InputSettings, 'single' | 'left' | 'right'>; action: (typeof BINDABLE)[number]; slot: number } | null = null;
   private keyHandler = (e: KeyboardEvent) => this.onKey(e);
+  /** When set, the menu shows a "Leave Lobby" button that calls it. */
+  leave: (() => void) | null = null;
+  /** When set, the menu shows a graphics-quality picker. */
+  quality: QualityControl | null = null;
 
   constructor(
     input: InputManager,
@@ -122,34 +207,108 @@ export class SettingsMenu extends Overlay {
     this.render();
   }
 
-  private render() {
-    const card = el('div', { className: 'slag-card' }, el('h2', { textContent: 'Settings' }));
-    // Audio.
+  private audioSection(card: HTMLElement) {
     card.append(el('h3', { textContent: 'Audio' }));
+    const muted = !!this.audio.volumes.muted;
+    const sw = el('button', { className: 'slag-switch', type: 'button' });
+    sw.setAttribute('role', 'switch');
+    sw.setAttribute('aria-checked', String(muted));
+    sw.setAttribute('aria-label', 'Mute all sound');
+    const ranges: HTMLInputElement[] = [];
+    sw.onclick = () => {
+      const on = !this.audio.volumes.muted;
+      this.audio.setVolumes({ muted: on });
+      sw.setAttribute('aria-checked', String(on));
+      for (const r of ranges) r.disabled = on;
+    };
+    card.append(el('div', { className: 'slag-row' }, el('span', { className: 'lbl wide', textContent: 'Mute All Sound' }), sw));
+    const LABEL = { master: 'Master', music: 'Music', sfx: 'Effects' } as const;
     for (const k of ['master', 'music', 'sfx'] as const) {
-      const range = el('input', { type: 'range', min: '0', max: '1', step: '0.05', className: 'slag-range' });
+      const range = el('input', { type: 'range', min: '0', max: '1', step: '0.05', className: 'slag-range', disabled: muted });
       range.value = String(this.audio.volumes[k]);
-      range.oninput = () => this.audio.setVolumes({ [k]: Number(range.value) });
-      card.append(el('div', { className: 'slag-row' }, el('label', { textContent: k === 'sfx' ? 'Effects' : k[0].toUpperCase() + k.slice(1) }), range));
+      const val = el('span', { className: 'slag-val', textContent: pct(this.audio.volumes[k]) });
+      const paint = () => range.style.setProperty('--p', pct(Number(range.value)));
+      paint();
+      range.oninput = () => {
+        this.audio.setVolumes({ [k]: Number(range.value) });
+        val.textContent = pct(Number(range.value));
+        paint();
+      };
+      range.setAttribute('aria-label', `${LABEL[k]} volume`);
+      ranges.push(range);
+      card.append(el('div', { className: 'slag-row' }, el('label', { textContent: LABEL[k] }), range, val));
     }
-    // Controls.
-    card.append(el('h3', { textContent: 'Keyboard & mouse' }));
-    const split = el('button', { className: `slag-btn ${this.draft.splitKeyboard ? 'on' : ''}`, textContent: this.draft.splitKeyboard ? 'On' : 'Off' });
+  }
+
+  private switchRow(label: string, on: boolean, toggle: (on: boolean) => void): HTMLElement {
+    const sw = el('button', { className: 'slag-switch', type: 'button' });
+    sw.setAttribute('role', 'switch');
+    sw.setAttribute('aria-checked', String(on));
+    sw.setAttribute('aria-label', label);
+    sw.onclick = () => {
+      on = !on;
+      sw.setAttribute('aria-checked', String(on));
+      toggle(on);
+    };
+    return el('div', { className: 'slag-row' }, el('span', { className: 'lbl wide', textContent: label }), sw);
+  }
+
+  private touchSection(card: HTMLElement) {
+    card.append(el('h3', { textContent: 'Touch' }));
+    card.append(
+      this.switchRow('Vibration', this.input.touch.haptics, (on) => {
+        this.input.touch.haptics = on;
+        try {
+          localStorage.setItem(HAPTICS_KEY, on ? '1' : '0');
+        } catch {
+          // Not persisted; still applies this session.
+        }
+      }),
+    );
+  }
+
+  private displaySection(card: HTMLElement, q: QualityControl) {
+    card.append(el('h3', { textContent: 'Graphics Quality' }));
+    const chips = el('div', { className: 'slag-chips' });
+    const opts: [QualityTier | null, string][] = [
+      [null, 'Auto'],
+      ['high', 'High'],
+      ['mid', 'Medium'],
+      ['low', 'Low'],
+    ];
+    const cur = q.pinned();
+    for (const [tier, label] of opts) {
+      const b = el('button', { className: `slag-btn ${cur === tier ? 'on' : ''}`, type: 'button', textContent: label });
+      b.onclick = () => {
+        q.set(tier);
+        for (const sib of chips.querySelectorAll('button')) sib.classList.toggle('on', sib === b);
+      };
+      chips.append(b);
+    }
+    card.append(chips);
+  }
+
+  private controlsSection(card: HTMLElement) {
+    card.append(el('h3', { textContent: 'Keyboard' }));
+    const split = el('button', { className: 'slag-switch', type: 'button' });
+    split.setAttribute('role', 'switch');
+    split.setAttribute('aria-checked', String(this.draft.splitKeyboard));
+    split.setAttribute('aria-label', 'Split keyboard');
     split.onclick = () => {
       this.draft.splitKeyboard = !this.draft.splitKeyboard;
       this.input.apply(this.draft);
       this.render();
     };
-    card.append(el('div', { className: 'slag-row' }, el('label', { textContent: 'Split keyboard (two players on one keyboard)' }), split));
+    card.append(el('div', { className: 'slag-row' }, el('span', { className: 'lbl wide', textContent: 'Split Keyboard (Two Players)' }), split));
     const profiles: { key: 'single' | 'left' | 'right'; title: string }[] = this.draft.splitKeyboard
       ? [
-          { key: 'left', title: 'Keys A' },
-          { key: 'right', title: 'Keys B' },
+          { key: 'left', title: 'Player A' },
+          { key: 'right', title: 'Player B' },
         ]
-      : [{ key: 'single', title: 'Keyboard' }];
+      : [{ key: 'single', title: 'Keys' }];
     const cols = profiles.length * SLOTS;
     const grid = el('div', { className: 'slag-grid' });
-    grid.style.gridTemplateColumns = `minmax(120px,1fr) repeat(${cols}, minmax(70px, auto))`;
+    grid.style.gridTemplateColumns = `minmax(110px,1fr) repeat(${cols}, auto)`;
     grid.append(el('div'));
     for (const p of profiles) {
       const h = el('div', { className: 'h', textContent: p.title });
@@ -157,14 +316,16 @@ export class SettingsMenu extends Overlay {
       grid.append(h);
     }
     for (const a of BINDABLE) {
-      grid.append(el('div', { textContent: ACTION_LABELS[a] }));
+      grid.append(el('div', { textContent: BIND_LABELS[a] }));
       for (const p of profiles) {
         for (let slot = 0; slot < SLOTS; slot++) {
           const listening = this.listening?.profile === p.key && this.listening.action === a && this.listening.slot === slot;
-          const b = el('button', {
-            className: `slag-btn ${listening ? 'listen' : ''}`,
-            textContent: listening ? 'press…' : keyName(this.draft[p.key][a][slot]),
-          });
+          const code = this.draft[p.key][a][slot];
+          const b = el('button', { className: `slag-btn key ${listening ? 'listen' : ''}`, type: 'button' });
+          if (listening) b.textContent = 'Press a Key';
+          else if (code) b.append(glyphEl({ kind: 'key', label: capLabel(code) }, 24));
+          else b.append(el('span', { className: 'slag-empty', textContent: 'Empty' }));
+          b.setAttribute('aria-label', `${BIND_LABELS[a]}, ${p.title} ${slot + 1}: ${code ? keyName(code) : 'empty'}`);
           b.onclick = () => {
             this.listening = { profile: p.key, action: a, slot };
             this.render();
@@ -174,75 +335,138 @@ export class SettingsMenu extends Overlay {
       }
     }
     card.append(grid);
+    card.append(el('div', { className: 'slag-note', textContent: 'Select a slot, then press the new key.' }));
     card.append(
-      el('div', {
-        className: 'slag-note',
-        textContent:
-          'Click a slot, then press a key. Backspace clears, Esc cancels. Mouse: move/left-click to pick & place, right-click or wheel to rotate. Gamepads: stick/d-pad, A = jump/confirm, X/RB/RT = run, B/Y/LB = rotate.',
-      }),
+      promptRow([
+        { glyphs: [{ kind: 'key', label: '⌫' }], label: 'Clear' },
+        { glyphs: [{ kind: 'key', label: 'Esc' }], label: 'Cancel' },
+      ]),
     );
-    const reset = el('button', { className: 'slag-btn', textContent: 'Reset controls' });
+    card.append(el('h3', { textContent: 'Mouse' }));
+    card.append(
+      promptRow([
+        { glyphs: [{ kind: 'mouse', button: 'left' }], label: 'Pick / Place' },
+        {
+          glyphs: [
+            { kind: 'mouse', button: 'right' },
+            { kind: 'mouse', button: 'wheel' },
+          ],
+          label: 'Rotate',
+        },
+      ]),
+    );
+    card.append(el('h3', { textContent: 'Gamepad' }));
+    card.append(
+      promptRow([
+        {
+          glyphs: [
+            { kind: 'pad', button: 'LS' },
+            { kind: 'pad', button: 'DPAD' },
+          ],
+          label: 'Move',
+        },
+        { glyphs: [{ kind: 'pad', button: 'A' }], label: 'Jump / Confirm' },
+        {
+          glyphs: [
+            { kind: 'pad', button: 'X' },
+            { kind: 'pad', button: 'RB' },
+          ],
+          label: 'Run',
+        },
+        {
+          glyphs: [
+            { kind: 'pad', button: 'B' },
+            { kind: 'pad', button: 'LB' },
+          ],
+          label: 'Rotate / Self-Destruct',
+        },
+      ]),
+    );
+  }
+
+  private render() {
+    const card = el('div', { className: 'slag-card' }, el('h2', { textContent: 'Settings' }));
+    card.setAttribute('role', 'dialog');
+    card.setAttribute('aria-label', 'Settings');
+    this.audioSection(card);
+    // Under touch the key-rebind grid is noise: show the touch options instead.
+    if (this.input.touch.active) this.touchSection(card);
+    if (this.quality) this.displaySection(card, this.quality);
+    if (!this.input.touch.active) this.controlsSection(card);
+    const reset = el('button', { className: 'slag-btn', type: 'button', textContent: 'Reset Controls' });
+    reset.hidden = this.input.touch.active;
     reset.onclick = () => {
       this.draft = { ...defaultSettings(), splitKeyboard: this.draft.splitKeyboard };
       this.input.apply(this.draft);
       this.render();
     };
-    const done = el('button', { className: 'slag-btn primary', textContent: 'Done' });
+    const done = el('button', { className: 'slag-btn primary', type: 'button', textContent: 'Done' });
     done.onclick = () => this.close();
-    card.append(el('div', { className: 'slag-actions' }, reset, done));
+    const actions = el('div', { className: 'slag-actions' });
+    if (this.leave) {
+      const leave = el('button', { className: 'slag-btn danger', type: 'button', textContent: 'Leave Lobby' });
+      leave.onclick = () => this.leave?.();
+      actions.append(leave, el('span', { className: 'grow' }));
+    }
+    actions.append(reset, done);
+    card.append(actions);
     if (this.root) {
+      const scroll = this.root.querySelector('.slag-card')?.scrollTop ?? 0;
       this.root.replaceChildren(card);
+      card.scrollTop = scroll;
     } else this.mount(card);
   }
 }
 
 const RULE_LABELS: Record<keyof MatchRules, string> = {
-  targetScore: 'Points to win',
-  pickSeconds: 'Pick timer',
-  placeSeconds: 'Place timer',
-  raceSeconds: 'Race timer',
+  targetScore: 'Points to Win',
+  pickSeconds: 'Pick Timer',
+  placeSeconds: 'Place Timer',
+  raceSeconds: 'Race Timer',
 };
 
-/** Match rules ("level settings"); applied when the next match starts. */
+/** Match rules; applied when the next match starts. */
 export class RulesMenu extends Overlay {
   open(rules: MatchRules, onChange: (r: MatchRules) => void) {
     const draft = { ...rules };
-    const card = el('div', { className: 'slag-card' }, el('h2', { textContent: 'Level settings' }));
+    const card = el('div', { className: 'slag-card' }, el('h2', { textContent: 'Match Rules' }));
     for (const k of Object.keys(RULE_CHOICES) as (keyof MatchRules)[]) {
-      const row = el('div', { className: 'slag-row' }, el('label', { textContent: RULE_LABELS[k] }));
+      const chips = el('div', { className: 'slag-chips' });
       for (const v of RULE_CHOICES[k]) {
         const b = el('button', {
           className: `slag-btn ${draft[k] === v ? 'on' : ''}`,
+          type: 'button',
           textContent: k === 'targetScore' ? String(v) : v === 0 ? 'Off' : `${v}s`,
         });
         b.onclick = () => {
           draft[k] = v;
           onChange({ ...draft });
-          for (const sib of row.querySelectorAll('button')) sib.classList.toggle('on', sib === b);
+          for (const sib of chips.querySelectorAll('button')) sib.classList.toggle('on', sib === b);
         };
-        row.append(b);
+        chips.append(b);
       }
-      card.append(row);
+      card.append(el('h3', { textContent: RULE_LABELS[k] }), chips);
     }
-    card.append(el('div', { className: 'slag-note', textContent: 'More variations coming. Settings are saved on this device.' }));
-    const done = el('button', { className: 'slag-btn primary', textContent: 'Done' });
+    card.append(el('div', { className: 'slag-note', textContent: 'Saved on this device. Changes apply to the next match.' }));
+    const done = el('button', { className: 'slag-btn primary', type: 'button', textContent: 'Done' });
     done.onclick = () => this.close();
     card.append(el('div', { className: 'slag-actions' }, done));
     this.mount(card);
   }
 }
 
-/** "What should we call you?" with a one-click keep-random option. */
+/** Name entry, with a one-click keep-random option. */
 export class NamePrompt extends Overlay {
   open(randomName: string, current: string | null, onDone: (name: string | null) => void) {
     const input = el('input', { className: 'slag-input', value: current ?? randomName, maxLength: 12, placeholder: randomName });
+    input.setAttribute('aria-label', 'Your name');
     const finish = (name: string | null) => {
       onDone(name);
       this.close();
     };
-    const ok = el('button', { className: 'slag-btn primary', textContent: "That's me" });
+    const ok = el('button', { className: 'slag-btn primary', type: 'button', textContent: 'Save Name' });
     ok.onclick = () => finish(sanitizeName(input.value) || null);
-    const keep = el('button', { className: 'slag-btn', textContent: `🎲 Keep "${randomName}"` });
+    const keep = el('button', { className: 'slag-btn', type: 'button', textContent: `Keep “${randomName}”` });
     keep.onclick = () => finish(null);
     input.onkeydown = (e) => {
       e.stopPropagation();
@@ -251,9 +475,9 @@ export class NamePrompt extends Overlay {
     const card = el(
       'div',
       { className: 'slag-card' },
-      el('h2', { textContent: 'What should we call you?' }),
+      el('h2', { textContent: 'Your Name' }),
       input,
-      el('div', { className: 'slag-note', textContent: 'Up to 12 characters. You can change it any time by clicking your name in the lobby.' }),
+      el('div', { className: 'slag-note', textContent: 'Up to 12 characters. Click your name in the lobby to change it later.' }),
       el('div', { className: 'slag-actions' }, keep, ok),
     );
     this.mount(card);

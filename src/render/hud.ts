@@ -1,17 +1,28 @@
 import { css, type HSL } from '../core/color';
-import { seedToString } from '../core/rng';
-import type { Match } from '../game/match';
+import type { Match, Player } from '../game/match';
 import type { Role } from '../gen/props';
+import { type InputSettings, type KeyProfile, keyboardDevices } from '../input/bindings';
 import { MAX_PLAYERS, RUN_COUNTDOWN, VIEW_H, VIEW_W } from '../sim/constants';
 import { THEME_LABELS } from '../themes';
+import { drawGlyph, type Glyph, glyphWidth } from '../ui/glyphs';
+import { glyphsFor, type InputMode, type PromptAction, promptModes } from '../ui/prompts';
+import { FONT, PAL, TYPE } from '../ui/style';
 import { drawCharacter } from './character';
+import { bay, buttonText, type ButtonStyle, hazardTape, icon, type IconName, plate, stampButton, tag } from './hud-kit';
 import { circle, glowDot, type RC, rrect } from './kit';
 import { drawPreview } from './props';
 
-const DISPLAY = '"Lilita One", "Arial Rounded MT Bold", system-ui, sans-serif';
-const UI = 'Rubik, "Segoe UI", system-ui, sans-serif';
+/**
+ * Screen-space UI on its own canvas (logical 768×432, scaled), in the
+ * foundry style described in docs/ART.md. Every phase gets a footer prompt
+ * bar with glyphs for the active input family; the lobby is the only screen
+ * with real clickable buttons (plus a few footer prompts).
+ */
 
-export type HudAction = 'join' | 'ready' | 'look' | 'name' | 'level' | 'settings' | 'rules';
+const DISPLAY = FONT.display;
+const UI = FONT.ui;
+
+export type HudAction = 'join' | 'ready' | 'look' | 'name' | 'level' | 'settings' | 'rules' | 'invite' | 'continue';
 
 export interface HudButton {
   x: number;
@@ -25,14 +36,51 @@ export interface HudButton {
 export interface DeviceInfo {
   deviceLabel(device: string): string;
   hints(device: string): { confirm: string; alt: string; jump: string; down: string };
+  /** Live key bindings (InputManager has this), so prompts show remapped keys as keycaps. */
+  settings?: InputSettings;
+}
+
+/** A connected peer in an online lobby (provided by the net layer). */
+export interface NetPeer {
+  name: string;
+  isHost: boolean;
+  pingMs?: number;
+  local: boolean;
+}
+
+/** Online-lobby status for the HUD. Absent = local play. */
+export interface NetInfo {
+  peers: NetPeer[];
+  status: string;
+  inviteUrl?: string;
+}
+
+interface FooterItem {
+  action: PromptAction;
+  label: string;
+  /** Touch: the on-screen button this action lives on (its label, e.g. 'PLACE'). */
+  touchButton?: string;
+  /** Only shown in touch mode. */
+  touchOnly?: boolean;
+  hud?: HudAction;
+  device?: string;
+  mouse?: boolean;
 }
 
 const ROLE: Record<Role, { label: string; color: HSL }> = {
-  build: { label: 'BUILD', color: { h: 140, s: 70, l: 50 } },
-  hazard: { label: 'HAZARD', color: { h: 355, s: 85, l: 58 } },
-  utility: { label: 'UTILITY', color: { h: 200, s: 85, l: 58 } },
-  demolish: { label: 'DEMOLISH', color: { h: 30, s: 95, l: 55 } },
+  build: { label: 'BUILD', color: { h: 95, s: 60, l: 48 } },
+  hazard: { label: 'HAZARD', color: { h: 358, s: 78, l: 54 } },
+  utility: { label: 'UTILITY', color: { h: 198, s: 75, l: 52 } },
+  demolish: { label: 'DEMOLISH', color: { h: 28, s: 95, l: 52 } },
 };
+
+const AWARD: Record<string, { label: string; color: HSL }> = {
+  finish: { label: 'Finish', color: { h: 95, s: 60, l: 40 } },
+  first: { label: 'First', color: { h: 42, s: 95, l: 48 } },
+  trap: { label: 'Trap', color: { h: 358, s: 75, l: 50 } },
+};
+
+const FOOT_H = 22;
 
 /** Screen-space UI on its own canvas (logical 768×432, scaled). */
 export class Hud {
@@ -41,6 +89,11 @@ export class Hud {
   private wipe = 0;
   private lastPhase = '';
   private lastT = 0;
+  private embers: { x: number; y: number; vx: number; vy: number; life: number; max: number; r: number }[] = [];
+  private toastMsg = '';
+  /** Draws deferred until after the footer (player cursors). */
+  private pending: (() => void)[] = [];
+  private toastUntil = 0;
 
   /** Device labels/hints from the live key bindings (set by main). */
   devices: DeviceInfo = {
@@ -55,6 +108,14 @@ export class Hud {
   mouseDevice = 'kb1';
   /** Latest pointer position in view coords, for hover highlights. */
   pointer: { x: number; y: number } | null = null;
+  /** Online lobby info (peers, status, invite link); set by the net layer when connected. */
+  net?: NetInfo;
+  /** Force the prompt glyph family (e.g. the touch layer sets 'touch'). Otherwise `lastInput` is used. */
+  inputMode?: InputMode;
+  /** Last input family the person used (tracked by game-client). */
+  lastInput: InputMode = 'keyboard';
+  /** Connected gamepads (for showing pad glyphs next to keys). */
+  padCount = 0;
   /** Clickable regions from the last frame (lobby buttons). */
   private buttons: HudButton[] = [];
 
@@ -75,24 +136,38 @@ export class Hud {
     return null;
   }
 
+  /** Show a short confirmation message (e.g. "Invite Link Copied"). */
+  toast(msg: string, ms = 1800) {
+    this.toastMsg = msg;
+    this.toastUntil = performance.now() + ms;
+  }
+
+  private get mode(): InputMode {
+    return this.inputMode ?? (this.mouseDevice === 'touch' ? 'touch' : this.lastInput);
+  }
+
   private button(b: HudButton) {
     this.buttons.push(b);
     return this.pointer !== null && this.pointer.x >= b.x && this.pointer.x < b.x + b.w && this.pointer.y >= b.y && this.pointer.y < b.y + b.h;
   }
 
-  /** Small pill button with hover state. */
-  private pill(b: HudButton, label: string, size = 8, accent?: string) {
+  /** Stamped button with optional icon. */
+  private btn(b: HudButton, label: string, style: ButtonStyle = 'secondary', ico?: IconName, size: number = TYPE.body) {
     const hover = this.button(b);
     const c = this.ctx;
-    c.fillStyle = hover ? 'rgba(255,160,60,0.35)' : (accent ?? 'rgba(255,255,255,0.1)');
-    rrect(c, b.x, b.y, b.w, b.h, b.h / 2);
-    c.fill();
-    if (hover) {
-      c.strokeStyle = 'rgba(255,180,90,0.8)';
-      c.lineWidth = 1;
-      c.stroke();
+    const sink = stampButton(c, b.x, b.y, b.w, b.h - 3, style, hover);
+    const ink = buttonText(style);
+    const cy = b.y + (b.h - 3) / 2 + sink;
+    if (!label && ico) {
+      icon(c, ico, b.x + b.w / 2, cy, Math.min(11, b.h * 0.55), ink);
+      return;
     }
-    this.text(label, b.x + b.w / 2, b.y + b.h / 2 + 0.5, size, '#fff', 'center', UI, 700);
+    c.font = `700 ${size}px ${UI}`;
+    const tw = c.measureText(label).width;
+    const iw = ico ? size + 3 : 0;
+    const x0 = b.x + (b.w - tw - iw) / 2;
+    if (ico) icon(c, ico, x0 + size / 2, cy, size, ink);
+    this.text(label, x0 + iw, cy + 0.5, size, ink, 'left', UI, 700, 0, true);
   }
 
   resize(w: number, h: number) {
@@ -100,7 +175,19 @@ export class Hud {
     this.glow.height = h;
   }
 
-  private text(s: string, x: number, y: number, size: number, color = '#fff', align: CanvasTextAlign = 'center', font = UI, weight = 600, stroke = 0) {
+  /** Text with a hard 1px ink shadow (or a thick ink outline when `stroke` > 0). */
+  private text(
+    s: string,
+    x: number,
+    y: number,
+    size: number,
+    color: string = PAL.bone,
+    align: CanvasTextAlign = 'center',
+    font: string = UI,
+    weight = 600,
+    stroke = 0,
+    flat = false,
+  ) {
     const c = this.ctx;
     c.font = `${weight} ${size}px ${font}`;
     c.textAlign = align;
@@ -108,38 +195,21 @@ export class Hud {
     if (stroke) {
       c.lineJoin = 'round';
       c.lineWidth = stroke;
-      c.strokeStyle = 'rgba(8,6,14,0.9)';
+      c.strokeStyle = PAL.ink;
       c.strokeText(s, x, y);
-    } else {
-      c.fillStyle = 'rgba(0,0,0,0.55)';
-      c.fillText(s, x + 0.8, y + 1.2);
+    } else if (!flat) {
+      c.fillStyle = 'rgba(10,5,3,0.85)';
+      c.fillText(s, x, y + 1);
     }
     c.fillStyle = color;
     c.fillText(s, x, y);
-  }
-
-  private panel(x: number, y: number, w: number, h: number, r = 10, border = 'rgba(255,255,255,0.12)', a = 0.72) {
-    const c = this.ctx;
-    const g = c.createLinearGradient(0, y, 0, y + h);
-    g.addColorStop(0, `rgba(30,28,44,${a})`);
-    g.addColorStop(1, `rgba(12,11,20,${a + 0.1})`);
-    c.fillStyle = g;
-    rrect(c, x, y, w, h, r);
-    c.fill();
-    c.strokeStyle = border;
-    c.lineWidth = 1.2;
-    c.stroke();
-    c.strokeStyle = 'rgba(255,255,255,0.07)';
-    c.beginPath();
-    c.moveTo(x + r, y + 1.5);
-    c.lineTo(x + w - r, y + 1.5);
-    c.stroke();
   }
 
   draw(m: Match, t: number, pw: number, ph: number) {
     this.buttons = [];
     const c = this.ctx;
     const k = pw / VIEW_W;
+    const dt = this.lastT ? Math.min(0.1, t - this.lastT) : 0;
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.clearRect(0, 0, pw, ph);
     this.gctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -147,12 +217,13 @@ export class Hud {
     c.setTransform(k, 0, 0, k, 0, 0);
     this.gctx.setTransform(k, 0, 0, k, 0, 0);
     if (m.phase !== this.lastPhase) {
+      // No shutter on the very first frame (page load), only on phase changes.
+      if (this.lastPhase) this.wipe = 1;
       this.lastPhase = m.phase;
-      this.wipe = 1;
     }
     switch (m.phase) {
       case 'lobby':
-        this.lobby(m, t);
+        this.lobby(m, t, dt);
         break;
       case 'pick':
         this.pick(m, t);
@@ -170,15 +241,20 @@ export class Hud {
         this.victory(m, t);
         break;
     }
+    this.footer(m);
+    // Cursors stay on top of the footer so their labels are never covered.
+    for (const f of this.pending) f();
+    this.pending = [];
+    this.drawToast();
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.globalCompositeOperation = 'lighter';
     c.drawImage(this.glow, 0, 0);
     c.globalCompositeOperation = 'source-over';
     c.setTransform(k, 0, 0, k, 0, 0);
     if (this.wipe > 0 && this.lastT) {
-      // Diagonal shutter wipe on phase change.
+      // Diagonal shutter wipe on phase change: an iron door with a molten edge.
       const p = 1 - this.wipe;
-      c.fillStyle = '#0a0910';
+      c.fillStyle = PAL.soot;
       c.beginPath();
       const x = -200 + p * (VIEW_W + 400);
       c.moveTo(x, 0);
@@ -186,7 +262,7 @@ export class Hud {
       c.lineTo(x + 40, VIEW_H);
       c.lineTo(x - 100, VIEW_H);
       c.fill();
-      c.fillStyle = 'rgba(255,140,40,0.9)';
+      c.fillStyle = PAL.molten;
       c.beginPath();
       c.moveTo(x + 140, 0);
       c.lineTo(x + 146, 0);
@@ -208,110 +284,230 @@ export class Hud {
     c.textAlign = 'center';
     c.textBaseline = 'middle';
     c.lineJoin = 'round';
-    c.lineWidth = size * 0.16;
-    c.strokeStyle = '#140a08';
+    c.lineWidth = size * 0.18;
+    c.strokeStyle = PAL.ink;
     c.strokeText('SLAG', x, y);
     const g = c.createLinearGradient(0, y - size / 2, 0, y + size / 2);
-    g.addColorStop(0, '#fff3b0');
-    g.addColorStop(0.35, '#ffb02e');
-    g.addColorStop(0.7, '#ff5a1f');
-    g.addColorStop(1, '#a8160f');
+    g.addColorStop(0, PAL.whiteHot);
+    g.addColorStop(0.35, PAL.amber);
+    g.addColorStop(0.7, PAL.molten);
+    g.addColorStop(1, PAL.ember);
     c.fillStyle = g;
     c.fillText('SLAG', x, y);
     // Molten drips.
     const w = c.measureText('SLAG').width;
-    for (let i = 0; i < 7; i++) {
-      const dx = x - w / 2 + 10 + (i / 6) * (w - 20);
-      const len = 6 + ((Math.sin(t * 0.9 + i * 2.3) + 1) / 2) * size * 0.18 + (i % 3) * 3;
-      const dy = y + size * 0.33;
-      c.fillStyle = '#c42412';
-      rrect(c, dx - 2.2, dy - 4, 4.4, len, 2.2);
+    const k = size / 64;
+    for (let i = 0; i < 6; i++) {
+      const dx = x - w / 2 + 8 * k + (i / 5) * (w - 16 * k);
+      const len = (6 + ((Math.sin(t * 0.9 + i * 2.3) + 1) / 2) * 10 + (i % 3) * 3) * k;
+      const dy = y + size * 0.3;
+      c.fillStyle = PAL.ember;
+      rrect(c, dx - 2.2 * k, dy - 4 * k, 4.4 * k, len, 2.2 * k);
       c.fill();
-      c.fillStyle = '#ff6a1f';
-      circle(c, dx, dy + len - 3, 2.6);
+      c.fillStyle = PAL.molten;
+      circle(c, dx, dy + len - 3 * k, 2.6 * k);
     }
-    glowDot(this.gctx, x, y, size * 1.2, { h: 25, s: 100, l: 55 }, 0.25 + Math.sin(t * 2) * 0.05, 0.3);
+    glowDot(this.gctx, x, y, size * 1.2, { h: 25, s: 100, l: 55 }, 0.22 + Math.sin(t * 2) * 0.04, 0.3);
   }
 
-  private lobby(m: Match, t: number) {
+  /** Rising embers from the bottom of the screen (lobby ambience). */
+  private stepEmbers(dt: number) {
+    const g = this.gctx;
+    if (this.embers.length < 46 && Math.random() < dt * 30) {
+      const max = 2.5 + Math.random() * 3;
+      this.embers.push({
+        x: Math.random() * VIEW_W,
+        y: VIEW_H + 4,
+        vx: (Math.random() - 0.5) * 14,
+        vy: -18 - Math.random() * 30,
+        life: max,
+        max,
+        r: 0.6 + Math.random() * 1.2,
+      });
+    }
+    for (const e of this.embers) {
+      e.life -= dt;
+      e.x += (e.vx + Math.sin(e.life * 3 + e.r * 9) * 8) * dt;
+      e.y += e.vy * dt;
+      const a = Math.min(1, e.life / e.max) * 0.9;
+      g.fillStyle = `rgba(255,${140 + Math.round(a * 80)},60,${a})`;
+      g.beginPath();
+      g.arc(e.x, e.y, e.r, 0, Math.PI * 2);
+      g.fill();
+    }
+    this.embers = this.embers.filter((e) => e.life > 0);
+  }
+
+  // ------------------------------------------------------------------ lobby
+
+  private lobby(m: Match, t: number, dt: number) {
     const c = this.ctx;
     const vg = c.createLinearGradient(0, 0, 0, VIEW_H);
-    vg.addColorStop(0, 'rgba(8,6,14,0.55)');
-    vg.addColorStop(0.4, 'rgba(8,6,14,0.1)');
-    vg.addColorStop(1, 'rgba(8,6,14,0.7)');
+    vg.addColorStop(0, 'rgba(18,10,7,0.78)');
+    vg.addColorStop(0.3, 'rgba(18,10,7,0.35)');
+    vg.addColorStop(0.75, 'rgba(18,10,7,0.45)');
+    vg.addColorStop(1, 'rgba(40,12,4,0.85)');
     c.fillStyle = vg;
     c.fillRect(0, 0, VIEW_W, VIEW_H);
-    this.logo(VIEW_W / 2, 58, 64, t);
-    this.text('build it · break it · beat it', VIEW_W / 2, 104, 10, '#f3d9c4', 'center', UI, 500);
-    this.panel(VIEW_W / 2 - 170, 116, 340, 22, 11, 'rgba(255,170,90,0.35)');
-    this.text(`${THEME_LABELS[m.level.theme.id].toUpperCase()} · ${m.level.theme.name}`, VIEW_W / 2 - 160, 127, 9, '#ffd9a8', 'left', UI, 700);
-    this.text(this.room ? `lobby ${this.room}` : `seed ${seedToString(m.seed)}`, VIEW_W / 2 + 160, 127, 8, '#bba', 'right', UI, 600);
+    glowDot(this.gctx, VIEW_W / 2, VIEW_H + 60, 330, { h: 18, s: 100, l: 45 }, 0.22, 0.2);
+    this.stepEmbers(dt);
 
-    // Up to MAX_PLAYERS (8) slots in a 4-wide grid: joined players + one "join" slot (min 4 shown).
+    // Top bar: logo · level plate · menu buttons.
+    this.logo(64, 30, 38, t);
+    const me = m.players.find((p) => p.device === this.mouseDevice);
+    const lv = m.level.theme;
+    const themeLabel = THEME_LABELS[lv.id].toUpperCase();
+    const lx = 140;
+    const lw = 360;
+    plate(c, lx, 13, lw, 30, { rivets: false });
+    c.font = `800 ${TYPE.caption}px ${UI}`;
+    const tw = tag(c, themeLabel, lx + 8, 28, PAL.hazard, PAL.ink, TYPE.caption);
+    this.text(lv.name, lx + 16 + tw, 28.5, 14, PAL.bone, 'left', DISPLAY, 400);
+    if (m.players.length)
+      this.btn({ x: lx + lw - 92, y: 17, w: 86, h: 23, action: 'level', device: me?.device ?? m.players[0].device }, 'New Level', 'ghost', 'refresh');
+    this.btn({ x: VIEW_W - 196, y: 15, w: 84, h: 26, action: 'rules' }, 'Rules', 'secondary', 'flag');
+    this.btn({ x: VIEW_W - 104, y: 15, w: 92, h: 26, action: 'settings' }, 'Settings', 'secondary', 'gear');
+
+    // Player bays: joined players + open slots (min 4 shown, 4 per row).
     const shown = Math.min(MAX_PLAYERS, Math.max(4, m.players.length + 1));
+    const rows = shown > 4 ? 2 : 1;
     const cols = 4;
-    const bw = 172;
-    const bh = shown > 4 ? 96 : 150;
     const gap = 10;
+    const bw = 174;
+    const top = 60;
+    const bottom = VIEW_H - FOOT_H - (this.net ? 46 : 12);
+    const bh = Math.min(rows === 1 ? 250 : 999, (bottom - top - gap * (rows - 1)) / rows);
+    const y0 = top + (bottom - top - (rows * bh + (rows - 1) * gap)) / 2;
     const x0 = (VIEW_W - (cols * bw + (cols - 1) * gap)) / 2;
+    const joinable = !me;
     for (let i = 0; i < shown; i++) {
       const x = x0 + (i % cols) * (bw + gap);
-      const y = 146 + Math.floor(i / cols) * (bh + gap);
+      const y = y0 + Math.floor(i / cols) * (bh + gap);
       const p = m.players[i];
-      const col = p ? p.character.body : { h: 0, s: 0, l: 40 };
-      this.panel(x, y, bw, bh, 12, p?.ready ? css({ h: 120, s: 80, l: 55 }, 0, 0.9) : p ? css(col, 0, 0.5) : 'rgba(255,255,255,0.1)');
-      if (!p) {
-        const joinable = !m.players.some((q) => q.device === this.mouseDevice);
-        const hover = joinable && this.button({ x, y, w: bw, h: bh, action: 'join', device: this.mouseDevice });
-        const pulse = 0.5 + 0.5 * Math.sin(t * 3 + i);
-        this.text('PRESS TO JOIN', x + bw / 2, y + bh / 2 - 8, 11, hover ? '#ffd9a8' : `rgba(255,255,255,${0.35 + pulse * 0.4})`, 'center', DISPLAY, 400);
-        this.text(joinable ? 'click · Space/Enter · Ⓐ' : 'Ⓐ on a gamepad', x + bw / 2, y + bh / 2 + 10, 8, '#777', 'center', UI, 500);
-        continue;
-      }
-      // Character on the left with a spotlight, details on the right.
-      const cx = x + 44;
-      const feet = y + bh - 16;
-      const sg = c.createRadialGradient(cx, feet - 24, 4, cx, feet - 24, 52);
-      sg.addColorStop(0, css(col, 10, 0.45));
-      sg.addColorStop(1, css(col, 0, 0));
-      c.fillStyle = sg;
-      c.fillRect(x, y, bw, bh);
-      c.fillStyle = 'rgba(0,0,0,0.35)';
-      c.beginPath();
-      c.ellipse(cx, feet, 20, 4, 0, 0, Math.PI * 2);
-      c.fill();
-      drawCharacter({ s: c, g: this.gctx }, p.character, cx, feet, {
-        facing: Math.sin(t * 0.8 + i) > 0 ? 1 : -1,
-        vx: 0,
-        vy: 0,
-        grounded: true,
-        t,
-        scale: bh > 100 ? 3.4 : 2.7,
-        celebrate: p.ready,
-      });
-      const tx = x + 88;
-      const ty = y + bh / 2;
-      const mine = p.device === this.mouseDevice;
-      const nameHover = mine && this.button({ x: tx - 2, y: ty - 31, w: bw - 88, h: 17, action: 'name', device: p.device });
-      this.text(p.character.name + (nameHover ? ' ✎' : ''), tx, ty - 22, 12, nameHover ? '#ffd9a8' : '#fff', 'left', DISPLAY, 400, 3);
-      this.text(`P${p.slot + 1} · ${this.devices.deviceLabel(p.device)}`, tx, ty - 7, 7.5, '#aaa', 'left', UI, 500);
-      const h = this.devices.hints(p.device);
-      const readyB: HudButton = { x: tx, y: ty + 3, w: bw - 96, h: 14, action: 'ready', device: p.device };
-      if (mine) this.pill(readyB, p.ready ? 'READY!' : 'Ready up', 7.5, p.ready ? css({ h: 120, s: 70, l: 45 }) : undefined);
+      if (p) this.playerCard(p, i, x, y, bw, bh, t);
       else {
-        c.fillStyle = p.ready ? css({ h: 120, s: 70, l: 45 }) : 'rgba(255,255,255,0.1)';
-        rrect(c, tx, ty + 3, bw - 96, 14, 7);
-        c.fill();
-        this.text(p.ready ? 'READY!' : `${h.confirm}: ready`, tx + (bw - 96) / 2, ty + 10, 7.5, '#fff', 'center', UI, 700);
+        // No hover under a finger: the first open bay advertises the tap instead.
+        const hover =
+          (joinable && this.button({ x, y, w: bw, h: bh, action: 'join', device: this.mouseDevice })) ||
+          (joinable && this.mode === 'touch' && i === m.players.length);
+        bay(c, x, y, bw, bh, hover, t);
+        this.text('OPEN', x + bw / 2, y + bh / 2 - (hover ? 8 : 4), rows === 1 ? 26 : 22, hover ? PAL.amber : PAL.dim, 'center', DISPLAY, 400);
+        if (hover) {
+          const gx = x + bw / 2 - 18;
+          const glyph: Glyph = this.mode === 'touch' ? { kind: 'touch' } : { kind: 'mouse', button: 'left' };
+          drawGlyph(c, glyph, gx, y + bh / 2 + 16, 13);
+          this.text('Join', gx + 15, y + bh / 2 + 16.5, TYPE.label, PAL.bone, 'left', UI, 700);
+        }
       }
-      if (mine) this.pill({ x: tx, y: ty + 21, w: 54, h: 11, action: 'look', device: p.device }, '🎲 new look', 6);
-      else this.text(`${h.alt}: new look`, tx, ty + 26, 6.5, '#888', 'left', UI, 500);
     }
-    // Top-right menu buttons.
-    this.pill({ x: VIEW_W - 92, y: 10, w: 82, h: 16, action: 'settings' }, '⚙ Settings  (Esc)', 7);
-    this.pill({ x: VIEW_W - 92, y: 30, w: 82, h: 16, action: 'rules' }, '⚑ Level settings', 7);
-    if (m.players.length) this.pill({ x: VIEW_W / 2 - 40, y: 358, w: 80, h: 16, action: 'level', device: m.players[0].device }, '↻ new level', 7.5);
-    if (!m.players.length) this.text('press Space / Enter or click a slot to join  ·  gamepads: Ⓐ', VIEW_W / 2, 366, 8.5, '#bbb', 'center', UI, 600);
+    if (this.net) this.netPanel(this.net, x0, VIEW_H - FOOT_H - 40, cols * bw + (cols - 1) * gap);
+  }
+
+  private playerCard(p: Player, i: number, x: number, y: number, w: number, h: number, t: number) {
+    const c = this.ctx;
+    const col = p.character.body;
+    const big = h > 200;
+    const mine = p.device === this.mouseDevice;
+    plate(c, x, y, w, h, { edge: css(col, 5), stroke: p.ready ? PAL.toxic : undefined });
+    // Header: player number + device.
+    this.text(`P${p.slot + 1}`, x + 10, y + 17, 15, css(col, 22), 'left', DISPLAY, 400, 3);
+    const pad = p.device.startsWith('pad');
+    const label = this.devices.deviceLabel(p.device);
+    c.font = `600 ${TYPE.caption}px ${UI}`;
+    const lw = c.measureText(label).width;
+    this.text(label, x + w - 10, y + 17.5, TYPE.caption, PAL.ash, 'right', UI, 600);
+    if (p.device === 'touch') drawGlyph(c, { kind: 'touch' }, x + w - 24 - lw, y + 17.5, 11);
+    else icon(c, pad ? 'gamepad' : 'keyboard', x + w - 18 - lw, y + 17.5, 9, PAL.ash);
+    // Character on a slag pedestal.
+    const cx = x + w / 2;
+    const feet = y + (big ? h * 0.6 : h * 0.56);
+    const sg = c.createRadialGradient(cx, feet - 24, 4, cx, feet - 24, big ? 70 : 50);
+    sg.addColorStop(0, css(col, 5, 0.32));
+    sg.addColorStop(1, css(col, 0, 0));
+    c.fillStyle = sg;
+    c.fillRect(x + 2, y + 26, w - 4, feet - y - 20);
+    c.fillStyle = PAL.ink;
+    c.beginPath();
+    c.ellipse(cx, feet + 3, big ? 34 : 26, big ? 7 : 5, 0, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = '#3a2a22';
+    c.beginPath();
+    c.ellipse(cx, feet + 1.5, big ? 32 : 24, big ? 5.5 : 4, 0, 0, Math.PI * 2);
+    c.fill();
+    glowDot(this.gctx, cx, feet + 3, big ? 34 : 24, { h: 22, s: 100, l: 50 }, 0.35, 0.2);
+    drawCharacter({ s: c, g: this.gctx }, p.character, cx, feet, {
+      facing: Math.sin(t * 0.8 + i) > 0 ? 1 : -1,
+      vx: 0,
+      vy: 0,
+      grounded: true,
+      t,
+      scale: big ? 4.4 : h > 150 ? 3.2 : 2.7,
+      celebrate: p.ready,
+    });
+    // Name (click to rename for the mouse player).
+    const ny = feet + (big ? 22 : 17);
+    const nsize = big ? 17 : 14;
+    c.font = `400 ${nsize}px ${DISPLAY}`;
+    const nw = c.measureText(p.character.name).width;
+    const nh = this.mode === 'touch' ? 26 : nsize + 4;
+    const nameHover = mine && this.button({ x: cx - nw / 2 - 14, y: ny - nh / 2, w: nw + 28, h: nh, action: 'name', device: p.device });
+    this.text(p.character.name, cx, ny, nsize, nameHover ? PAL.amber : PAL.bone, 'center', DISPLAY, 400, 3.5);
+    if (mine) icon(c, 'pencil', cx + nw / 2 + 8, ny, 8, nameHover ? PAL.amber : PAL.dim);
+    // Status row.
+    const by = y + h - (big ? 34 : 28);
+    const bh = big ? 25 : 22;
+    if (mine) {
+      this.btn(
+        { x: x + 10, y: by, w: w - 50, h: bh, action: 'ready', device: p.device },
+        p.ready ? 'Ready!' : 'Ready Up',
+        p.ready ? 'ready' : 'primary',
+        p.ready ? 'check' : undefined,
+        TYPE.label,
+      );
+      this.btn({ x: x + w - 36, y: by, w: 26, h: bh, action: 'look', device: p.device }, '', 'secondary', 'dice');
+    } else if (p.ready) {
+      tag(c, 'READY', cx, by + bh / 2 - 1, PAL.toxic, PAL.ink, TYPE.label, 'center');
+    } else this.text('Not Ready', cx, by + bh / 2 - 1, TYPE.body, PAL.dim, 'center', UI, 600);
+  }
+
+  private netPanel(net: NetInfo, x: number, y: number, w: number) {
+    const c = this.ctx;
+    const h = 30;
+    plate(c, x, y, w, h, { rivets: false });
+    const tw = tag(c, 'ONLINE', x + 8, y + h / 2, PAL.toxic, PAL.ink, TYPE.caption);
+    let px = x + 16 + tw;
+    this.text(net.status, px, y + h / 2, TYPE.body, PAL.ash, 'left', UI, 600);
+    c.font = `600 ${TYPE.body}px ${UI}`;
+    px += c.measureText(net.status).width + 14;
+    const right = net.inviteUrl ? x + w - 136 : x + w - 8;
+    for (const peer of net.peers) {
+      const name = peer.local ? `${peer.name} (You)` : peer.name;
+      c.font = `700 ${TYPE.body}px ${UI}`;
+      const nw = c.measureText(name).width;
+      const cw = nw + (peer.isHost ? 14 : 0) + (peer.pingMs !== undefined ? 34 : 0) + 14;
+      if (px + cw > right) break;
+      c.fillStyle = 'rgba(0,0,0,0.35)';
+      rrect(c, px, y + 6, cw, h - 12, 3);
+      c.fill();
+      let cx = px + 7;
+      if (peer.isHost) {
+        icon(c, 'crown', cx + 4, y + h / 2, 9, PAL.amber);
+        cx += 14;
+      }
+      this.text(name, cx, y + h / 2 + 0.5, TYPE.body, PAL.bone, 'left', UI, 700);
+      cx += nw + 5;
+      if (peer.pingMs !== undefined) {
+        const q = peer.pingMs < 80 ? 3 : peer.pingMs < 160 ? 2 : 1;
+        const colr = q === 3 ? PAL.toxic : q === 2 ? PAL.amber : PAL.danger;
+        for (let b = 0; b < 3; b++) {
+          c.fillStyle = b < q ? colr : 'rgba(255,255,255,0.15)';
+          c.fillRect(cx + b * 3, y + h / 2 + 3 - (b + 1) * 2.4, 2, (b + 1) * 2.4);
+        }
+        this.text(`${Math.round(peer.pingMs)}`, cx + 11, y + h / 2 + 0.5, TYPE.caption, PAL.ash, 'left', UI, 600);
+      }
+      px += cw + 6;
+    }
+    if (net.inviteUrl) this.btn({ x: x + w - 130, y: y + 4, w: 124, h: 23, action: 'invite' }, 'Copy Invite Link', 'primary', 'copy');
   }
 
   private cursor(x: number, y: number, col: HSL, label: string, t: number) {
@@ -320,8 +516,8 @@ export class Hud {
     c.save();
     c.translate(x, y);
     c.fillStyle = css(col, 8);
-    c.strokeStyle = '#0b0a12';
-    c.lineWidth = 1.4;
+    c.strokeStyle = PAL.ink;
+    c.lineWidth = 1.6;
     c.lineJoin = 'round';
     c.beginPath();
     c.moveTo(0, 0);
@@ -335,21 +531,32 @@ export class Hud {
     c.stroke();
     c.fill();
     c.restore();
-    c.font = `700 8px ${UI}`;
-    const w = c.measureText(label).width + 8;
-    c.fillStyle = css(col, -10, 0.9);
-    rrect(c, x + 12, y + 13, w, 11, 5.5);
+    c.font = `700 ${TYPE.caption}px ${UI}`;
+    const w = c.measureText(label).width + 10;
+    c.fillStyle = PAL.ink;
+    rrect(c, x + 11, y + 12, w + 2, 14, 3);
     c.fill();
-    this.text(label, x + 16, y + 18.8, 8, '#fff', 'left', UI, 700);
+    c.fillStyle = css(col, -12);
+    rrect(c, x + 12, y + 13, w, 12, 2);
+    c.fill();
+    this.text(label, x + 17, y + 19.3, TYPE.caption, '#fff', 'left', UI, 700);
   }
+
+  /** Big phase heading with a sub line. */
+  private heading(title: string, sub: string, y: number, size: number = TYPE.title) {
+    this.text(title, VIEW_W / 2, y, size, PAL.bone, 'center', DISPLAY, 400, size * 0.2);
+    if (sub) this.text(sub, VIEW_W / 2, y + size * 0.5 + 10, TYPE.label, PAL.ash, 'center', UI, 600);
+  }
+
+  // ------------------------------------------------------------------ pick / place
 
   private pick(m: Match, t: number) {
     const c = this.ctx;
-    c.fillStyle = 'rgba(8,6,14,0.6)';
+    c.fillStyle = 'rgba(18,10,7,0.68)';
     c.fillRect(0, 0, VIEW_W, VIEW_H);
-    this.text(`ROUND ${m.round}`, VIEW_W / 2, 52, 30, '#fff', 'center', DISPLAY, 400, 5);
-    this.text('pick your poison', VIEW_W / 2, 80, 10, '#f3c9a0', 'center', UI, 500);
-    this.phaseTimer(m, t, VIEW_W / 2 + 110, 52);
+    const twoRows = m.crate.length > 5;
+    this.heading(`ROUND ${m.round}`, 'Choose a Part', twoRows ? 30 : 52, twoRows ? 24 : TYPE.title);
+    this.phaseTimer(m, t, VIEW_W / 2 + 120, twoRows ? 34 : 56);
     const rc = this.rc();
     rc.t = t;
     rc.frame = m.frame;
@@ -360,58 +567,57 @@ export class Hud {
       const lift = hoverer && !owner ? -4 : 0;
       const y = r.y + lift;
       const role = ROLE[item.def.role];
-      const border = owner ? css(owner.character.body, 0, 0.9) : hoverer ? css(hoverer.character.body, 10) : 'rgba(255,255,255,0.14)';
-      if (hoverer && !owner) glowDot(this.gctx, r.x + r.w / 2, y + r.h / 2, r.w * 0.8, hoverer.character.body, 0.18);
-      this.panel(r.x, y, r.w, r.h, 10, border, owner ? 0.5 : 0.85);
-      // Spotlight behind the prop.
-      const sg = c.createRadialGradient(r.x + r.w / 2, y + 36, 2, r.x + r.w / 2, y + 36, 46);
+      if (hoverer && !owner) glowDot(this.gctx, r.x + r.w / 2, y + r.h / 2, r.w * 0.8, hoverer.character.body, 0.16);
+      plate(c, r.x, y, r.w, r.h, {
+        edge: css(role.color),
+        stroke: owner ? css(owner.character.body, 5) : hoverer ? css(hoverer.character.body, 15) : undefined,
+        alpha: owner ? 0.75 : 1,
+        drop: lift ? 6 : 3,
+      });
+      const sg = c.createRadialGradient(r.x + r.w / 2, y + 44, 2, r.x + r.w / 2, y + 44, 46);
       sg.addColorStop(0, css(role.color, 0, 0.22));
       sg.addColorStop(1, css(role.color, 0, 0));
       c.fillStyle = sg;
-      c.fillRect(r.x, y, r.w, r.h);
+      c.fillRect(r.x + 1, y + 5, r.w - 2, r.h - 6);
       c.globalAlpha = owner ? 0.35 : 1;
       this.gctx.globalAlpha = owner ? 0.35 : 1;
-      drawPreview(rc, item.def, r.x + r.w / 2, y + 36, 52);
+      drawPreview(rc, item.def, r.x + r.w / 2, y + 44, 50);
       c.globalAlpha = 1;
       this.gctx.globalAlpha = 1;
-      c.fillStyle = css(role.color, -10, 0.9);
-      rrect(c, r.x + 6, y + 6, 40, 10, 5);
-      c.fill();
-      this.text(role.label, r.x + 26, y + 11.2, 6, '#fff', 'center', UI, 800);
-      wrap(this, item.def.name, r.x + r.w / 2, y + r.h - 25, r.w - 10, 8.5);
-      this.text(item.def.maker, r.x + r.w / 2, y + r.h - 9, 6, '#8a8796', 'center', UI, 500);
+      tag(c, role.label, r.x + 7, y + 15, css(role.color), PAL.ink, TYPE.caption);
+      wrap(this, item.def.name, r.x + r.w / 2, y + r.h - 28, r.w - 12, TYPE.body);
+      this.text(item.def.maker, r.x + r.w / 2, y + r.h - 11, TYPE.caption, PAL.dim, 'center', UI, 600);
       if (owner) {
-        drawCharacter({ s: c, g: this.gctx }, owner.character, r.x + r.w - 16, y + 30, {
+        drawCharacter({ s: c, g: this.gctx }, owner.character, r.x + r.w - 18, y + 38, {
           facing: -1,
           vx: 0,
           vy: 0,
           grounded: true,
           t,
-          scale: 1.6,
+          scale: 1.7,
           celebrate: true,
         });
       }
     });
-    for (const p of m.players) if (p.claim < 0) this.cursor(p.cursor.x, p.cursor.y, p.character.body, p.character.name, t);
+    for (const p of m.players) if (p.claim < 0) this.pending.push(() => this.cursor(p.cursor.x, p.cursor.y, p.character.body, p.character.name, t));
   }
 
   private place(m: Match) {
     const c = this.ctx;
-    const g = c.createLinearGradient(0, 0, 0, 50);
-    g.addColorStop(0, 'rgba(8,6,14,0.75)');
-    g.addColorStop(1, 'rgba(8,6,14,0)');
+    const g = c.createLinearGradient(0, 0, 0, 54);
+    g.addColorStop(0, 'rgba(18,10,7,0.82)');
+    g.addColorStop(1, 'rgba(18,10,7,0)');
     c.fillStyle = g;
-    c.fillRect(0, 0, VIEW_W, 50);
-    this.text(`ROUND ${m.round} — PLACE IT`, VIEW_W / 2, 16, 16, '#fff', 'center', DISPLAY, 400, 3);
-    this.text('alt / right-click / wheel rotates · confirm / click places · spawn & flag zones are off-limits', VIEW_W / 2, 32, 7.5, '#ddd', 'center', UI, 500);
-    this.phaseTimer(m, m.frame / 60, VIEW_W - 40, 18);
+    c.fillRect(0, 0, VIEW_W, 54);
+    this.text(`ROUND ${m.round}`, 14, 16, 14, PAL.amber, 'left', DISPLAY, 400, 3);
+    this.text('PLACE YOUR PART', VIEW_W / 2, 17, TYPE.head + 2, PAL.bone, 'center', DISPLAY, 400, 4);
+    this.text('Spawn and goal zones are off-limits', VIEW_W / 2, 35, TYPE.caption + 1, PAL.ash, 'center', UI, 600);
+    this.phaseTimer(m, m.frame / 60, VIEW_W - 24, 20);
     for (const p of m.players) {
       if (p.placed) continue;
       const def = p.claim >= 0 ? m.crate[p.claim].def : null;
-      this.cursor(p.cursor.x, p.cursor.y, p.character.body, def ? def.name : p.character.name, m.frame / 60);
+      this.pending.push(() => this.cursor(p.cursor.x, p.cursor.y, p.character.body, def ? def.name : p.character.name, m.frame / 60));
     }
-    const done = m.players.filter((p) => p.placed).length;
-    if (done) this.text(`${done}/${m.players.length} placed`, VIEW_W - 10, VIEW_H - 12, 8, '#ddd', 'right', UI, 600);
   }
 
   /** Countdown ring for timed pick/place phases. */
@@ -421,18 +627,20 @@ export class Hud {
     const total = (m.phase === 'pick' ? m.rules.pickSeconds : m.rules.placeSeconds) * 60;
     const c = this.ctx;
     const urgent = left < 5 * 60;
-    c.fillStyle = 'rgba(12,10,20,0.8)';
-    c.beginPath();
-    c.arc(x, y, 14, 0, Math.PI * 2);
-    c.fill();
-    c.strokeStyle = urgent ? css({ h: 0, s: 100, l: 60 + Math.sin(t * 12) * 10 }) : '#ffb02e';
+    c.fillStyle = PAL.ink;
+    circle(c, x, y, 16);
+    c.fillStyle = PAL.iron;
+    circle(c, x, y, 14.5);
+    c.strokeStyle = urgent ? css({ h: 4, s: 100, l: 58 + Math.sin(t * 12) * 10 }) : PAL.amber;
     c.lineWidth = 3;
     c.lineCap = 'round';
     c.beginPath();
     c.arc(x, y, 12, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * left) / total);
     c.stroke();
-    this.text(String(Math.ceil(left / 60)), x, y + 0.5, 11, urgent ? '#ff8a8a' : '#fff', 'center', DISPLAY, 400);
+    this.text(String(Math.ceil(left / 60)), x, y + 0.5, 12, urgent ? PAL.danger : PAL.bone, 'center', DISPLAY, 400);
   }
+
+  // ------------------------------------------------------------------ race
 
   private run(m: Match, t: number) {
     const run = m.run!;
@@ -446,71 +654,72 @@ export class Hud {
       c.translate(VIEW_W / 2, VIEW_H / 2 - 30);
       c.scale(sc, sc);
       c.globalAlpha = left > 0 ? 1 : 1 - sub;
-      this.text(label, 0, 0, 56, left > 0 ? '#fff' : '#9ef01a', 'center', DISPLAY, 400, 8);
+      this.text(label, 0, 0, TYPE.hero, left > 0 ? PAL.bone : PAL.toxic, 'center', DISPLAY, 400, 9);
       c.restore();
       glowDot(this.gctx, VIEW_W / 2, VIEW_H / 2 - 30, 90, left > 0 ? { h: 30, s: 100, l: 60 } : { h: 90, s: 100, l: 55 }, 0.3);
     }
     if (Number.isFinite(run.timeLeft)) {
       const secs = Math.ceil(run.timeLeft / 60);
       const urgent = secs <= 10;
-      this.panel(VIEW_W / 2 - 28, 6, 56, 22, 11, urgent ? 'rgba(255,80,80,0.8)' : 'rgba(255,255,255,0.15)');
-      this.text(String(secs), VIEW_W / 2, 17.5, 15, urgent ? css({ h: 0, s: 100, l: 65 + Math.sin(t * 12) * 10 }) : '#fff', 'center', DISPLAY, 400);
+      plate(c, VIEW_W / 2 - 28, 6, 56, 24, { rivets: false, stroke: urgent ? PAL.danger : undefined });
+      this.text(String(secs), VIEW_W / 2, 18.5, TYPE.head, urgent ? css({ h: 4, s: 100, l: 62 + Math.sin(t * 12) * 10 }) : PAL.bone, 'center', DISPLAY, 400);
     }
     m.players.forEach((p, i) => {
       const r = run.runners.find((r) => r.slot === p.slot);
       // Up to 4 chips per row so 8 players fit left of the timer.
       const x = 8 + (i % 4) * 87;
-      const cy = 6 + Math.floor(i / 4) * 25;
-      c.save();
-      c.translate(0, cy - 6);
+      const y = 6 + Math.floor(i / 4) * 29;
       const dead = r && !r.alive;
       const done = r?.finished;
-      this.panel(x, 6, 84, 22, 11, done ? 'rgba(160,240,60,0.8)' : dead ? 'rgba(255,80,80,0.6)' : css(p.character.body, 0, 0.5), 0.6);
+      plate(c, x, y, 84, 25, { rivets: false, drop: 2, stroke: done ? PAL.toxic : dead ? PAL.danger : undefined, alpha: 0.92 });
+      c.fillStyle = css(p.character.body);
+      c.fillRect(x, y, 3, 25);
+      c.save();
       c.globalAlpha = dead ? 0.4 : 1;
-      drawCharacter({ s: c, g: null }, p.character, x + 12, 25, { facing: 1, vx: 0, vy: 0, grounded: true, t, scale: 1.05, celebrate: done });
-      c.globalAlpha = 1;
-      this.text(p.character.name, x + 24, 13, 7.5, '#fff', 'left', UI, 700);
-      const status = done
-        ? `#${run.finishOrder.indexOf(p.slot) + 1} SAFE`
-        : dead
-          ? r!.killer >= 0 && r!.killer !== p.slot
-            ? `got by ${m.player(r!.killer)?.character.name ?? '?'}`
-            : 'splat'
-          : `${p.score} pts`;
-      this.text(status, x + 24, 22, 6.5, done ? '#b7f56a' : dead ? '#ff8a8a' : '#bbb', 'left', UI, 600);
+      drawCharacter({ s: c, g: null }, p.character, x + 14, y + 21, { facing: 1, vx: 0, vy: 0, grounded: true, t, scale: 1.05, celebrate: done });
       c.restore();
+      this.text(p.character.name, x + 26, y + 8.5, TYPE.caption + 0.5, PAL.bone, 'left', UI, 700);
+      const status = done
+        ? `#${run.finishOrder.indexOf(p.slot) + 1} Safe`
+        : dead
+          ? r.killer >= 0 && r.killer !== p.slot
+            ? `Got by ${m.player(r.killer)?.character.name ?? '?'}`
+            : 'Splat'
+          : `${p.score} Pts`;
+      this.text(status, x + 26, y + 18, TYPE.caption, done ? PAL.toxic : dead ? '#ff8a7a' : PAL.ash, 'left', UI, 600);
     });
-    this.text('alt: self-destruct', VIEW_W - 8, VIEW_H - 8, 6.5, 'rgba(255,255,255,0.45)', 'right', UI, 500);
   }
+
+  // ------------------------------------------------------------------ score / victory
 
   private score(m: Match, t: number) {
     const c = this.ctx;
-    c.fillStyle = 'rgba(8,6,14,0.7)';
+    c.fillStyle = 'rgba(18,10,7,0.72)';
     c.fillRect(0, 0, VIEW_W, VIEW_H);
     const res = m.result!;
+    const TARGET = m.rules.targetScore;
     const title = res.verdict === 'too-easy' ? 'TOO EASY!' : res.verdict === 'too-hard' ? 'NOBODY MADE IT' : `ROUND ${m.round}`;
-    const sub = res.verdict === 'too-easy' ? 'everyone finished — no points' : res.verdict === 'too-hard' ? 'no finishers, no points' : 'scores';
-    this.text(title, VIEW_W / 2, 56, 32, res.verdict === 'normal' ? '#fff' : '#ffb347', 'center', DISPLAY, 400, 5);
-    this.text(sub, VIEW_W / 2, 84, 9, '#ccc', 'center', UI, 500);
+    const sub =
+      res.verdict === 'too-easy' ? 'Everyone made it, so nobody scores.' : res.verdict === 'too-hard' ? 'No finishers, no points.' : `First to ${TARGET} Wins`;
+    this.text(title, VIEW_W / 2, 46, TYPE.title, res.verdict === 'normal' ? PAL.bone : PAL.amber, 'center', DISPLAY, 400, 6);
+    this.text(sub, VIEW_W / 2, 72, TYPE.label, PAL.ash, 'center', UI, 600);
     const anim = Math.min(1, Math.max(0, (m.phaseFrame - 20) / 60));
-    const barX = 220;
-    const barW = 400;
+    const barX = 236;
+    const barW = 380;
     // Compact rows when more than 4 players so 8 fit on screen.
     const compact = m.players.length > 4;
-    const rowH = compact ? 36 : 50;
+    const rowH = compact ? 35 : 50;
     const L = compact
-      ? { feet: 31, scale: 1.55, name: 7, nameSize: 9, bar: 13, barH: 10, award: 26, awardH: 8 }
-      : { feet: 34, scale: 2.2, name: 10, nameSize: 11, bar: 20, barH: 14, award: 37, awardH: 10 };
-    const y0 = compact ? 100 : 104;
-    this.panel(130, y0 - 10, 540, m.players.length * rowH + 20, 14);
+      ? { feet: 30, scale: 1.55, name: 8, nameSize: 11, bar: 15, barH: 9, award: 28, awardH: 11 }
+      : { feet: 36, scale: 2.2, name: 10, nameSize: 13, bar: 20, barH: 12, award: 38, awardH: 12 };
+    const y0 = compact ? 98 : 104;
+    plate(c, 140, y0 - 12, 520, m.players.length * rowH + 22);
     // Finish line marker.
-    c.fillStyle = 'rgba(255,210,63,0.5)';
-    c.fillRect(barX + barW, y0, 2, m.players.length * rowH);
-    const TARGET = m.rules.targetScore;
-    this.text(`${TARGET}`, barX + barW, y0 - 4, 7, '#ffd23f', 'center', UI, 700);
+    hazardTape(c, barX + barW, y0 - 2, 4, m.players.length * rowH, 0.9);
+    this.text(`${TARGET}`, barX + barW + 2, y0 - 7, TYPE.caption, PAL.hazard, 'center', UI, 800);
     m.players.forEach((p, i) => {
       const y = y0 + i * rowH;
-      drawCharacter({ s: c, g: this.gctx }, p.character, 164, y + L.feet, {
+      drawCharacter({ s: c, g: this.gctx }, p.character, 182, y + L.feet, {
         facing: 1,
         vx: 0,
         vy: 0,
@@ -519,11 +728,14 @@ export class Hud {
         scale: L.scale,
         celebrate: res.finishers.includes(p.slot),
       });
-      this.text(p.character.name, barX, y + L.name, L.nameSize, '#fff', 'left', DISPLAY, 400);
+      this.text(p.character.name, barX, y + L.name, L.nameSize, PAL.bone, 'left', DISPLAY, 400);
       const prev = m.prevScores.get(p.slot) ?? 0;
       const shown = prev + (p.score - prev) * anim;
-      c.fillStyle = 'rgba(255,255,255,0.07)';
-      rrect(c, barX, y + L.bar, barW, L.barH, L.barH / 2);
+      c.fillStyle = PAL.ink;
+      rrect(c, barX - 1, y + L.bar - 1, barW + 2, L.barH + 2, 3);
+      c.fill();
+      c.fillStyle = PAL.soot;
+      rrect(c, barX, y + L.bar, barW, L.barH, 2);
       c.fill();
       const wPrev = (barW * Math.min(prev, TARGET)) / TARGET;
       const wNow = (barW * Math.min(shown, TARGET)) / TARGET;
@@ -532,7 +744,7 @@ export class Hud {
         bg.addColorStop(0, css(p.character.body, 15));
         bg.addColorStop(1, css(p.character.body, -15));
         c.fillStyle = bg;
-        rrect(c, barX, y + L.bar, Math.max(L.barH, wNow), L.barH, L.barH / 2);
+        rrect(c, barX, y + L.bar, Math.max(4, wNow), L.barH, 2);
         c.fill();
         if (wNow > wPrev + 1) {
           glowDot(this.gctx, barX + wNow, y + L.bar + L.barH / 2, 16, p.character.body, 0.6);
@@ -540,29 +752,25 @@ export class Hud {
           c.fillRect(barX + wPrev, y + L.bar + 1, wNow - wPrev, 3);
         }
       }
-      this.text(String(Math.round(shown)), barX + barW + 22, y + L.bar + L.barH / 2, compact ? 11 : 13, '#fff', 'center', DISPLAY, 400);
+      this.text(String(Math.round(shown)), barX + barW + 24, y + L.bar + L.barH / 2, compact ? 13 : 16, PAL.bone, 'center', DISPLAY, 400);
       const awards = res.awards.filter((a) => a.slot === p.slot);
-      let ax = barX;
+      c.font = `400 ${L.nameSize}px ${DISPLAY}`;
+      let ax = barX + c.measureText(p.character.name).width + 8;
       for (const a of awards) {
-        const label = `+${a.points} ${a.reason}`;
-        c.font = `700 7px ${UI}`;
-        const w = c.measureText(label).width + 10;
-        const col: HSL = a.reason === 'trap' ? { h: 355, s: 80, l: 55 } : a.reason === 'first' ? { h: 45, s: 100, l: 50 } : { h: 130, s: 65, l: 45 };
-        c.fillStyle = css(col, 0, Math.min(1, anim * 2));
-        rrect(c, ax, y + L.award, w, L.awardH, L.awardH / 2);
-        c.fill();
-        this.text(label, ax + w / 2, y + L.award + L.awardH / 2 + 0.3, compact ? 6 : 7, '#fff', 'center', UI, 700);
-        ax += w + 4;
+        const info = AWARD[a.reason] ?? { label: a.reason, color: { h: 0, s: 0, l: 50 } };
+        c.save();
+        c.globalAlpha = Math.min(1, anim * 2);
+        ax += tag(c, `+${a.points} ${info.label}`, ax, y + L.name, css(info.color), '#fff', TYPE.caption) + 4;
+        c.restore();
       }
     });
-    if (m.phaseFrame > 90) this.text('confirm to continue', VIEW_W / 2, VIEW_H - 20, 8, `rgba(255,255,255,${0.5 + Math.sin(t * 4) * 0.3})`, 'center', UI, 600);
   }
 
   private victory(m: Match, t: number) {
     const c = this.ctx;
     const g = c.createRadialGradient(VIEW_W / 2, VIEW_H / 2, 40, VIEW_W / 2, VIEW_H / 2, VIEW_W * 0.6);
-    g.addColorStop(0, 'rgba(8,6,14,0.35)');
-    g.addColorStop(1, 'rgba(8,6,14,0.85)');
+    g.addColorStop(0, 'rgba(18,10,7,0.35)');
+    g.addColorStop(1, 'rgba(18,10,7,0.88)');
     c.fillStyle = g;
     c.fillRect(0, 0, VIEW_W, VIEW_H);
     const winners = m.winners.map((s) => m.player(s)!).filter(Boolean);
@@ -570,23 +778,187 @@ export class Hud {
     const gg = this.gctx;
     for (let i = 0; i < 14; i++) {
       const a = (i / 14) * Math.PI * 2 + t * 0.3;
-      gg.fillStyle = `rgba(255,210,90,${0.08 + 0.04 * Math.sin(t * 2 + i)})`;
+      gg.fillStyle = `rgba(255,190,80,${0.08 + 0.04 * Math.sin(t * 2 + i)})`;
       gg.beginPath();
       gg.moveTo(VIEW_W / 2, 250);
       gg.lineTo(VIEW_W / 2 + Math.cos(a - 0.08) * 500, 250 + Math.sin(a - 0.08) * 500);
       gg.lineTo(VIEW_W / 2 + Math.cos(a + 0.08) * 500, 250 + Math.sin(a + 0.08) * 500);
       gg.fill();
     }
-    this.text(winners.length > 1 ? 'TIE!' : 'WINNER', VIEW_W / 2, 70, 44, '#ffd23f', 'center', DISPLAY, 400, 7);
+    this.text(winners.length > 1 ? 'TIE!' : 'WINNER', VIEW_W / 2, 66, 46, PAL.amber, 'center', DISPLAY, 400, 8);
     winners.forEach((p, i) => {
-      const x = VIEW_W / 2 + (i - (winners.length - 1) / 2) * 140;
+      const x = VIEW_W / 2 + (i - (winners.length - 1) / 2) * 150;
       glowDot(gg, x, 220, 90, p.character.body, 0.35);
       drawCharacter({ s: c, g: gg }, p.character, x, 270, { facing: 1, vx: 0, vy: 0, grounded: true, t, scale: 7, celebrate: true });
-      this.text(p.character.name, x, 300, 22, '#fff', 'center', DISPLAY, 400, 4);
-      this.text(`${p.score} pts`, x, 322, 10, '#ffd9a8', 'center', UI, 700);
+      this.text(p.character.name, x, 300, 24, PAL.bone, 'center', DISPLAY, 400, 5);
+      this.text(`${p.score} Points`, x, 323, TYPE.label, PAL.amber, 'center', UI, 700);
     });
-    if (m.phaseFrame > 120)
-      this.text('confirm to return to the lobby', VIEW_W / 2, VIEW_H - 24, 9, `rgba(255,255,255,${0.5 + Math.sin(t * 4) * 0.3})`, 'center', UI, 600);
+  }
+
+  // ------------------------------------------------------------------ footer prompts
+
+  /** Keyboard profile prompts are drawn from (the mouse player's keyboard). */
+  private profile(): KeyProfile | undefined {
+    const s = this.devices.settings;
+    if (!s) return undefined;
+    const kbs = keyboardDevices(s);
+    return (kbs.find((d) => d.device === this.mouseDevice) ?? kbs[0])?.profile;
+  }
+
+  /** Footer prompts and the left-hand context label for this phase. */
+  private footerItems(m: Match): { items: FooterItem[]; left: string; alpha: number; bar: boolean } {
+    const touch = this.mode === 'touch';
+    switch (m.phase) {
+      case 'lobby': {
+        const primary = this.mode === 'gamepad' ? m.players.find((p) => p.device.startsWith('pad')) : m.players.find((p) => p.device === this.mouseDevice);
+        const items: FooterItem[] = [];
+        if (!primary) items.push({ action: 'confirm', label: 'Join', hud: 'join', device: this.mouseDevice });
+        else {
+          items.push({ action: 'confirm', label: primary.ready ? 'Not Ready' : 'Ready Up', hud: 'ready', device: primary.device });
+          items.push({ action: 'alt', label: 'New Look', hud: 'look', device: primary.device });
+          items.push({ action: 'down', label: 'New Level', hud: 'level', device: primary.device });
+        }
+        if (!touch) items.push({ action: 'menu', label: 'Settings', hud: 'settings' });
+        const ready = m.players.filter((p) => p.ready).length;
+        const left = m.players.length ? `${ready}/${m.players.length} Ready` : '';
+        return { items, left, alpha: 1, bar: true };
+      }
+      case 'pick': {
+        const picked = m.players.filter((p) => p.claim >= 0).length;
+        return { items: [{ action: 'confirm', label: 'Pick', mouse: true }], left: `${picked}/${m.players.length} Picked`, alpha: 1, bar: true };
+      }
+      case 'place': {
+        const placed = m.players.filter((p) => p.placed).length;
+        // Fade out of the way when a cursor is down near the footer.
+        const near = m.players.some((p) => !p.placed && p.cursor.y > VIEW_H - FOOT_H - 26);
+        return {
+          items: [
+            { action: 'confirm', label: 'Drag to Aim', touchOnly: true },
+            { action: 'alt', label: 'Rotate', mouse: true, touchButton: '⟳' },
+            { action: 'confirm', label: 'Place', mouse: true, touchButton: 'PLACE' },
+          ],
+          left: `${placed}/${m.players.length} Placed`,
+          alpha: near ? 0.25 : 1,
+          bar: true,
+        };
+      }
+      case 'run': {
+        if (touch) return { items: [], left: '', alpha: 0, bar: false };
+        const f = m.run?.frame ?? 0;
+        const full = RUN_COUNTDOWN + 180;
+        // Full controls during the countdown, then only the escape hatch, quietly.
+        if (f < full + 40) {
+          const a = f < full ? 1 : 1 - (f - full) / 40;
+          return {
+            items: [
+              { action: 'jump', label: 'Jump' },
+              { action: 'run', label: 'Run' },
+              { action: 'alt', label: 'Self-Destruct' },
+            ],
+            left: '',
+            alpha: Math.max(0.55, a),
+            bar: a > 0.6,
+          };
+        }
+        return { items: [{ action: 'alt', label: 'Self-Destruct' }], left: '', alpha: 0.55, bar: false };
+      }
+      case 'score':
+        return {
+          items: m.phaseFrame > 90 ? [{ action: 'confirm', label: 'Continue', hud: 'continue', device: this.mouseDevice }] : [],
+          left: '',
+          alpha: 1,
+          bar: true,
+        };
+      case 'victory':
+        return {
+          items: m.phaseFrame > 120 ? [{ action: 'confirm', label: 'Back to Lobby', hud: 'continue', device: this.mouseDevice }] : [],
+          left: '',
+          alpha: 1,
+          bar: true,
+        };
+    }
+  }
+
+  private footer(m: Match) {
+    const { items, left, alpha, bar } = this.footerItems(m);
+    const c = this.ctx;
+    const touch = this.mode === 'touch';
+    const fh = touch ? 30 : FOOT_H;
+    const gh = touch ? 16 : 12;
+    const size = touch ? TYPE.label + 1 : TYPE.body + 0.5;
+    const y = VIEW_H - fh;
+    const cy = y + fh / 2 + 1;
+    const present = {
+      keyboard: true,
+      gamepad: this.padCount > 0 || m.players.some((p) => p.device.startsWith('pad')),
+    };
+    const modes = promptModes(this.mode, present);
+    const ctx = { profile: this.profile(), modes, mouse: false };
+    c.save();
+    c.globalAlpha = alpha;
+    if (bar && (items.length || left)) {
+      c.fillStyle = 'rgba(16,9,6,0.88)';
+      c.fillRect(0, y, VIEW_W, fh);
+      hazardTape(c, 0, y - 2, VIEW_W, 2, 0.8);
+      c.fillStyle = PAL.ink;
+      c.fillRect(0, y, VIEW_W, 1);
+    }
+    if (left) this.text(left, 14, cy, size, PAL.ash, 'left', UI, 700);
+    if (m.phase === 'lobby' && this.room) {
+      const code = this.room;
+      c.font = `400 ${size + 3}px ${DISPLAY}`;
+      const x = left ? 110 : 14;
+      this.text('LOBBY', x, cy, TYPE.caption, PAL.dim, 'left', UI, 800);
+      this.text(code, x + 34, cy + 0.5, size + 3, PAL.amber, 'left', DISPLAY, 400);
+    }
+    // Right-aligned prompts, laid out right to left.
+    let x = VIEW_W - 14;
+    for (let i = items.length - 1; i >= 0; i--) {
+      const it = items[i];
+      if (it.touchOnly && !touch) continue;
+      const glyphs = glyphsFor(it.action, {
+        ...ctx,
+        mouse: !!it.mouse && modes[0] === 'keyboard',
+        touchButtons: it.touchButton ? { [it.action]: it.touchButton } : undefined,
+      });
+      if (!glyphs.length) continue;
+      c.font = `700 ${size}px ${UI}`;
+      const lw = c.measureText(it.label).width;
+      let gw = 0;
+      for (const g of glyphs) gw += glyphWidth(c, g, gh) + 3;
+      const w = gw + 3 + lw;
+      const x0 = x - w;
+      let hover = false;
+      if (it.hud && alpha > 0.5) hover = this.button({ x: x0 - 5, y, w: w + 10, h: fh, action: it.hud, device: it.device });
+      if (hover) {
+        c.fillStyle = 'rgba(255,140,40,0.18)';
+        c.fillRect(x0 - 5, y + 2, w + 10, fh - 3);
+      }
+      let gx = x0;
+      for (const g of glyphs) gx += drawGlyph(c, g, gx, cy - 0.5, gh) + 3;
+      this.text(it.label, gx + 3, cy, size, hover ? PAL.amber : PAL.bone, 'left', UI, 700);
+      x = x0 - (touch ? 22 : 16);
+    }
+    c.restore();
+  }
+
+  private drawToast() {
+    if (!this.toastMsg) return;
+    const left = this.toastUntil - performance.now();
+    if (left <= 0) {
+      this.toastMsg = '';
+      return;
+    }
+    const c = this.ctx;
+    c.save();
+    c.globalAlpha = Math.min(1, left / 250);
+    c.font = `700 ${TYPE.label}px ${UI}`;
+    const w = c.measureText(this.toastMsg).width + 34;
+    const x = VIEW_W / 2 - w / 2;
+    plate(c, x, 52, w, 24, { rivets: false, stroke: PAL.toxic });
+    icon(c, 'check', x + 13, 64, 9, PAL.toxic);
+    this.text(this.toastMsg, x + 23, 64.5, TYPE.label, PAL.bone, 'left', UI, 700);
+    c.restore();
   }
 
   /** For wrap(). */
@@ -595,7 +967,7 @@ export class Hud {
     return this.ctx.measureText(s).width;
   }
   line(s: string, x: number, y: number, size: number) {
-    this.text(s, x, y, size, '#fff', 'center', UI, 700);
+    this.text(s, x, y, size, PAL.bone, 'center', UI, 700);
   }
 }
 
