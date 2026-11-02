@@ -60,3 +60,13 @@ Some steps need the owner. Run after setting the Vercel env vars.
 ## 22. Glacier and space follow-ups
 Both themes are on `main`. Space has no weather. Ice skids and 0.55 space gravity are measured, not played by hand.
 
+## 24. Parody backlog: owner questions
+`docs/PARODY-BACKLOG.md` → 5 asks three things nobody has answered yet. If the first-batch work settles one, confirm it with the owner.
+
+- Can items make solids mid-race?
+- For Front-Runner Tax, is "first" the shortest real route to the flag, or straight-line distance?
+- Is the noodle's pogo a swing while falling fast, or does toss move off down + Use?
+
+## 25. Idea: switchable art styles
+The owner called switching art styles "a fun gimmick" while making cel the only look (`docs/DECISIONS.md` → World art). It's not scheduled. If it comes back, cel stays the default and the switch is a novelty, never a setting players need.
+

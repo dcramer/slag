@@ -1,5 +1,7 @@
 # Characters: three directions (Phase 1 proposal)
 
+**Decided (2026-11-02):** the owner picked **C, foundry toys**, in natural colors with the player's color on a worn or painted part, from a random roll only (no choosing a kind), with every saved look re-rolled once. The rest of this doc is the proposal as written.
+
 The owner finds today's runners cute but generic: a soft blob with a body shape, palette, eyes, mouth, topper, pattern and ribbon. This doc proposes three ways to give them more identity, each prototyped in-engine behind `?cast=a|b|c`. Nothing changes for players until a direction is picked.
 
 See them: `pnpm shot cast` writes one sheet per direction (`shots/cast/cast-a.png`, `-b`, `-c`) and the three side by side with today's blobs (`shots/cast/cast-all.png`). Each sheet has the 8-player lineup at play scale on a light theme (farm) and a dark one (mine), the race start, a 3× close-up, the lobby cards, and a catalog of every kind on two seeds with the poses (idle, walk, run, jump, fall, wall, cheer). `--only catalog` re-shoots just the catalogs.
