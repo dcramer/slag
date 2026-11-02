@@ -151,6 +151,8 @@ const SKIN_LOOKS: Partial<Record<TerrainKind, SkinLook>> = {
   sand: look({ h: 40, s: 44, l: 66 }, 'none', { h: 40, s: 40, l: 74 }),
   // Shipping containers: the material paints each box its own colour; these are the frames and the rails.
   container: look({ h: 14, s: 46, l: 38 }, 'trim', { h: 210, s: 8, l: 44 }, 'grate'),
+  // Space's planetoids and asteroids, where the level's own ground is a station's hull.
+  regolith: look({ h: 30, s: 10, l: 46 }, 'gravel', { h: 30, s: 8, l: 56 }),
 };
 
 /** A landmark's skin: the box its tiles are drawn in, and the look they're drawn with. */

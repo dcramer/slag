@@ -142,8 +142,28 @@ const RULES = {
   cairn: defineDecor({ place: 'top', themes: ['glacier'], weight: 1, clear: 2 }),
   pennant: defineDecor({ place: 'top', themes: ['glacier', 'space'], weight: 0.7, clear: 3 }),
   icicles: defineDecor({ place: 'under', themes: ['glacier'], weight: 1.2, clear: 1 }),
+  snowdrift: defineDecor({ place: 'top', themes: ['glacier'], weight: 1.3, clear: 1, span: [2, 3] }),
+  snowman: defineDecor({ place: 'top', themes: ['glacier'], weight: 0.5, clear: 2 }),
+  skis: defineDecor({ place: 'top', themes: ['glacier'], weight: 0.6, clear: 2 }),
+  sled: defineDecor({ place: 'top', themes: ['glacier'], weight: 0.6, clear: 1 }),
+  frozenfish: defineDecor({ place: 'top', themes: ['glacier'], weight: 0.5, clear: 1 }),
+  fishhole: defineDecor({ place: 'top', themes: ['glacier'], weight: 0.6, clear: 1 }),
+  snowpine: defineDecor({ place: 'top', themes: ['glacier'], weight: 0.9, clear: 3 }),
+  supplycrate: defineDecor({ place: 'top', themes: ['glacier'], weight: 0.5, clear: 1 }),
+  signpost: defineDecor({ place: 'top', themes: ['glacier'], weight: 0.5, clear: 2 }),
+  icecrystal: defineDecor({ place: 'top', themes: ['glacier'], weight: 0.9, clear: 1 }),
   // ---- space --------------------------------------------------------------
   lander: defineDecor({ place: 'top', themes: ['space'], weight: 0.8, clear: 2 }),
+  // A station's: cargo pods, a solar panel, a warning lamp, a wrench someone let go of.
+  cargopod: defineDecor({ place: 'top', themes: ['space'], weight: 1, clear: 2 }),
+  solarpanel: defineDecor({ place: 'top', themes: ['space'], weight: 0.9, clear: 1 }),
+  warnlamp: defineDecor({ place: 'top', themes: ['space'], weight: 0.8, clear: 1 }),
+  wrench: defineDecor({ place: 'top', themes: ['space'], weight: 0.5, clear: 1 }),
+  // Out on the rocks: moon rock, a planted flag, a satellite that came down, a helmet with nobody in it.
+  moonrock: defineDecor({ place: 'top', themes: ['space'], weight: 1.2, clear: 1 }),
+  moonflag: defineDecor({ place: 'top', themes: ['space'], weight: 0.5, clear: 2 }),
+  minisat: defineDecor({ place: 'top', themes: ['space'], weight: 0.6, clear: 1 }),
+  helmet: defineDecor({ place: 'top', themes: ['space'], weight: 0.5, clear: 1 }),
 } satisfies Record<string, DecorRule>;
 
 export type DecorKind = keyof typeof RULES;

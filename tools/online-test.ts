@@ -1538,18 +1538,43 @@ async function viewScenario(browser: Browser, base: string, kind: string, fits: 
 }
 
 /** Click a HUD button by its action, where the last drawn frame put it (drawing must be on). */
-async function clickHud(p: Page, action: string) {
-  const handle = await p.waitForFunction((a) => (window as any).slagDebug.renderer.hud.buttons?.find((x: any) => x.action === a) ?? null, action, {
-    timeout: 15_000,
-  });
-  const b = (await handle.jsonValue()) as { x: number; y: number; w: number; h: number };
-  await clickView(p, b.x + b.w / 2, b.y + b.h / 2);
+async function clickHud(p: Page, action: string): Promise<boolean> {
+  try {
+    const handle = await p.waitForFunction((a) => (window as any).slagDebug.renderer.hud.buttons?.find((x: any) => x.action === a) ?? null, action, {
+      timeout: 15_000,
+    });
+    const b = (await handle.jsonValue()) as { x: number; y: number; w: number; h: number };
+    await clickView(p, b.x + b.w / 2, b.y + b.h / 2);
+    return true;
+  } catch (e) {
+    check(false, `no ${action} button to click (${String(e).split('\n')[0]})`);
+    return false;
+  }
 }
 
-/** A watcher's Join by keys: confirm opens the card, confirm again asks the host. */
-async function joinByKeys(p: Page) {
+/** A watcher's Join by keys: confirm opens the card (true once it's up), and confirm again asks the host. A miss is a FAIL, not a crash. */
+async function joinByKeys(p: Page): Promise<boolean> {
   await p.keyboard.press('Enter');
-  await p.waitForFunction(() => (window as any).slagDebug.renderer.hud.joinCard?.stage === 'edit', null, { timeout: 15_000 });
+  try {
+    await p.waitForFunction(() => (window as any).slagDebug.renderer.hud.joinCard?.stage === 'edit', null, { timeout: 15_000 });
+    return true;
+  } catch (e) {
+    check(false, `the join card opened (${String(e).split('\n')[0]})`);
+    return false;
+  }
+}
+
+/**
+ * Someone at each of these pages, moving the mouse now and then: the pages stand for seated people, and a lobby
+ * left alone benches its idle players once someone is watching (DESIGN.md → Players). Returns the stop.
+ */
+function keepPresent(pages: Page[]): () => void {
+  let i = 0;
+  const timer = setInterval(() => {
+    i++;
+    for (const p of pages) if (!p.isClosed()) void p.mouse.move(40 + (i % 2) * 6, 40).catch(() => {});
+  }, 4000);
+  return () => clearInterval(timer);
 }
 
 /** Sim frames per second on the host over `ms`: the room isn't waiting on anyone. */
@@ -1628,15 +1653,21 @@ async function seatRaceScenario(browser: Browser, base: string) {
   const players: Page[] = [];
   for (let i = 0; i < MAX_PLAYERS - 1; i++) players.push(await r.open(`P${i}`));
   const host = players[0];
+  const stop = keepPresent(players);
   await waitFor(host, 'seven seated', (v) => v.players.length === MAX_PLAYERS - 1, 120_000);
   const X = await r.open('X', { query: 'watch' });
   const Y = await r.open('Y', { query: 'watch' });
   for (const p of [X, Y]) await waitFor(p, 'watcher in', (v) => v.synced && v.watching && v.space === 1, 60_000);
   for (const p of [X, Y]) await joinByKeys(p);
   await Promise.all([X.keyboard.press('Enter'), Y.keyboard.press('Enter')]);
-  const [x, y] = await Promise.all([X, Y].map((p) => waitFor(p, 'seat answered', (v) => v.seatAsk === 'won' || v.seatAsk === 'taken')));
-  check([x.seatAsk, y.seatAsk].sort().join() === 'taken,won', `one Join wins the last seat and one is told it's taken (${x.seatAsk}, ${y.seatAsk})`);
-  const [loser, lv] = x.seatAsk === 'taken' ? [X, x] : [Y, y];
+  // Settled when one has won and the other either lost the host's ruling or saw the seat go before its press counted
+  // (Join is disabled on a full match, so it never asked): either way it's watching a full match.
+  const settled = (v: NetView) => v.seatAsk === 'won' || v.seatAsk === 'taken' || (v.seatAsk === 'none' && v.space === 0);
+  const [x, y] = await Promise.all([X, Y].map((p) => waitFor(p, 'seat answered', settled)));
+  const won = [x, y].filter((v) => v.seatAsk === 'won').length;
+  check(won === 1, `exactly one Join wins the last seat (${x.seatAsk}, ${y.seatAsk})`);
+  const [loser, lv] = x.seatAsk === 'won' ? [Y, y] : [X, x];
+  check(lv.seatAsk === 'taken' || lv.seatAsk === 'none', `the other is told it's taken, or never got to ask (${lv.seatAsk})`);
   const h = await waitFor(host, 'full', (v) => v.players.length === MAX_PLAYERS);
   check(h.players.length === MAX_PLAYERS && !h.players.some((p) => p.device.startsWith(`${lv.self}:`)), 'eight seated, the loser not among them');
   const l2 = await waitFor(loser, 'loser watching', (v) => v.watching && v.space === 0);
@@ -1646,12 +1677,12 @@ async function seatRaceScenario(browser: Browser, base: string) {
   // A player leaves: the loser's Join lights up, and works.
   await players[MAX_PLAYERS - 2].close();
   await waitFor(loser, 'a seat frees', (v) => v.space === 1, 30_000);
-  await joinByKeys(loser);
-  await loser.keyboard.press('Enter');
+  if (await joinByKeys(loser)) await loser.keyboard.press('Enter');
   // The first answer is still 'taken' until this one is asked: wait for the new answer.
   const again = await waitFor(loser, 'Join on the freed seat won', (v) => v.seatAsk === 'won', 30_000);
   check(again.seatAsk === 'won', `Join on a freed seat wins it (${again.seatAsk})`);
   await waitFor(host, 'loser seated', (v) => v.players.some((p) => p.device.startsWith(`${lv.self}:`)));
+  stop();
   const real = r.errors.filter((e) => !/favicon/.test(e));
   check(real.length === 0, `no page errors${real.length ? `:\n${real.join('\n')}` : ''}`);
   await r.dispose();
@@ -1783,45 +1814,58 @@ async function unsetScenario(browser: Browser) {
 }
 
 // Real host candidates: mDNS names don't resolve between isolated headless contexts.
+/**
+ * Runs one scenario so that a wait that throws (a timeout inside Playwright) is a FAIL, not the end of the run: the
+ * next scenario still runs. Its pages are closed, so a stuck one can't load the rest.
+ */
+async function guarded(run: () => Promise<unknown>) {
+  try {
+    await run();
+  } catch (e) {
+    check(false, `scenario aborted: ${String(e).split('\n')[0]}`);
+    for (const c of browser.contexts()) await c.close().catch(() => {});
+  }
+}
+
 const browser = await launchBrowser(['--disable-features=WebRtcHideLocalIpsWithMdns']);
 const server = await startServer({ env: storeEnv });
 console.log(`signaling store: ${srh ? 'Upstash REST (SRH)' : 'in memory'}`);
 try {
   if (wanted('flow')) {
-    await realFlowScenario(browser, server.base, 'flow two browsers', false, false);
-    await realFlowScenario(browser, server.base, 'flow two tabs saved look', true, true);
+    await guarded(() => realFlowScenario(browser, server.base, 'flow two browsers', false, false));
+    await guarded(() => realFlowScenario(browser, server.base, 'flow two tabs saved look', true, true));
   }
   if (wanted('fresh')) {
-    await freshScenario(browser, server.base, 'fresh desktop, phone joins', undefined, { phone: 'Pixel 7' });
-    await freshScenario(browser, server.base, 'fresh phone, desktop joins', 'iPhone 13', {});
+    await guarded(() => freshScenario(browser, server.base, 'fresh desktop, phone joins', undefined, { phone: 'Pixel 7' }));
+    await guarded(() => freshScenario(browser, server.base, 'fresh phone, desktop joins', 'iPhone 13', {}));
   }
-  if (wanted('kick')) await kickScenario(browser, server.base);
-  if (wanted('refused')) await refusedScenario(browser, server.base);
+  if (wanted('kick')) await guarded(() => kickScenario(browser, server.base));
+  if (wanted('refused')) await guarded(() => refusedScenario(browser, server.base));
   if (wanted('view')) {
-    await viewScenario(browser, server.base, 'classic', (w, h) => w === 48 && h === 27);
-    await viewScenario(browser, server.base, 'wide', (w) => w > 48);
+    await guarded(() => viewScenario(browser, server.base, 'classic', (w, h) => w === 48 && h === 27));
+    await guarded(() => viewScenario(browser, server.base, 'wide', (w) => w > 48));
   }
-  if (wanted('view') || wanted('view-tall')) await viewScenario(browser, server.base, 'tall', (_w, h) => h > 27);
-  if (wanted('play')) await playScenario(browser, server.base);
-  if (wanted('pick')) await killScenario(browser, server.base, 'pick');
-  if (wanted('place')) await killScenario(browser, server.base, 'place');
-  if (wanted('run')) await killScenario(browser, server.base, 'run');
-  if (wanted('duo')) await killScenario(browser, server.base, 'run', 2);
-  if (wanted('leave')) await leaveScenario(browser, server.base);
-  if (wanted('twice')) await twiceScenario(browser, server.base);
-  if (wanted('latency')) await latencyScenario(browser, server.base);
-  if (wanted('hidden')) await hiddenScenario(browser, server.base);
-  if (wanted('contact')) await contactScenario(browser, server.base);
-  if (wanted('bc')) await bcScenario(browser, server.base);
-  if (wanted('observe')) await observeScenario(browser, server.base);
-  if (wanted('seatrace')) await seatRaceScenario(browser, server.base);
-  if (wanted('idle')) await idleScenario(browser, server.base);
-  if (wanted('gone')) await goneScenario(browser, server.base);
+  if (wanted('view') || wanted('view-tall')) await guarded(() => viewScenario(browser, server.base, 'tall', (_w, h) => h > 27));
+  if (wanted('play')) await guarded(() => playScenario(browser, server.base));
+  if (wanted('pick')) await guarded(() => killScenario(browser, server.base, 'pick'));
+  if (wanted('place')) await guarded(() => killScenario(browser, server.base, 'place'));
+  if (wanted('run')) await guarded(() => killScenario(browser, server.base, 'run'));
+  if (wanted('duo')) await guarded(() => killScenario(browser, server.base, 'run', 2));
+  if (wanted('leave')) await guarded(() => leaveScenario(browser, server.base));
+  if (wanted('twice')) await guarded(() => twiceScenario(browser, server.base));
+  if (wanted('latency')) await guarded(() => latencyScenario(browser, server.base));
+  if (wanted('hidden')) await guarded(() => hiddenScenario(browser, server.base));
+  if (wanted('contact')) await guarded(() => contactScenario(browser, server.base));
+  if (wanted('bc')) await guarded(() => bcScenario(browser, server.base));
+  if (wanted('observe')) await guarded(() => observeScenario(browser, server.base));
+  if (wanted('seatrace')) await guarded(() => seatRaceScenario(browser, server.base));
+  if (wanted('idle')) await guarded(() => idleScenario(browser, server.base));
+  if (wanted('gone')) await guarded(() => goneScenario(browser, server.base));
 } finally {
   await server.close();
 }
 try {
-  if (wanted('unset')) await unsetScenario(browser);
+  if (wanted('unset')) await guarded(() => unsetScenario(browser));
 } finally {
   await browser.close();
 }

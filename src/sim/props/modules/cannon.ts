@@ -41,6 +41,7 @@ export const cannon = defineModule<'cannon'>({
     const [x, y] = cannonMuzzle(m, ctx.off[0], ctx.off[1]);
     ctx.spawn({ x, y, vx: dcos(m.angle) * m.speed, vy: dsin(m.angle) * m.speed, owner: ctx.r.pp.owner, ammo: m.ammo, source: ctx.r.pp.uid });
     ctx.state.lastFire = ctx.frame;
-    ctx.emit({ type: 'fire', x, y, angle: m.angle, style: m.look === 'totem' ? 'totem' : 'cannon' });
+    // A snowball isn't fired: the cornice lets go of it.
+    ctx.emit({ type: 'fire', x, y, angle: m.angle, style: m.look === 'totem' ? 'totem' : m.ammo === 'snowball' ? 'cornice' : 'cannon' });
   },
 });

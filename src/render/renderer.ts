@@ -786,7 +786,11 @@ export class Renderer {
           this.fx.burst('dust', e.x, e.y, 6, 60, [{ h: 0, s: 0, l: 85 }], 1.2, 0.4);
           break;
         case 'pop':
-          if (e.ammo === 'cannonball') {
+          if (e.ammo === 'snowball') {
+            // A snowball bursts into powder and clods.
+            this.fx.burst('dust', e.x, e.y, 10, 90, [{ h: 205, s: 22, l: 94 }], 1.8, 0.7);
+            this.fx.burst('debris', e.x, e.y, 6, 120, [{ h: 205, s: 20, l: 90 }], 1.2, 0.8, 80);
+          } else if (e.ammo === 'cannonball') {
             this.fx.burst('debris', e.x, e.y, 10, 160, [th.terrain.base, th.terrain.dark], 1.4, 1.2, 80);
             this.fx.burst('smoke', e.x, e.y, 6, 40, [{ h: 0, s: 0, l: 50 }], 3, 1);
             this.fx.add('flash', e.x, e.y, 0, 0, { h: 35, s: 100, l: 60 }, 20, 0.2);
@@ -801,7 +805,8 @@ export class Renderer {
           if (e.style === 'cannon') {
             this.fx.burst('smoke', e.x, e.y, 8, 50, [{ h: 0, s: 0, l: 55 }], 2.6, 1.1);
             this.cam.shake = Math.max(this.cam.shake, 1.5);
-          } else this.fx.burst('smoke', e.x, e.y, 2, 20, [{ h: 0, s: 0, l: 60 }], 1.2, 0.5);
+          } else if (e.style === 'cornice') this.fx.burst('smoke', e.x, e.y, 5, 30, [{ h: 205, s: 22, l: 94 }], 1.6, 0.6);
+          else this.fx.burst('smoke', e.x, e.y, 2, 20, [{ h: 0, s: 0, l: 60 }], 1.2, 0.5);
           break;
         case 'crumble-break': {
           const r = m.run?.resolved.find((x) => x.pp.uid === e.uid);

@@ -1034,8 +1034,8 @@ function space(rng: Rng): Look {
     ambientLight: rng.range(0.5, 0.6),
     ambientTint: hsl3(neb, 30, 80),
     decor: station
-      ? pickDecor(rng, 'space', ['beacon', 'dish'], 4, ['antenna', 'cable', 'lander'])
-      : pickDecor(rng, 'space', ['crystal', 'lander'], 4, ['pennant', 'beacon', 'bones']),
+      ? pickDecor(rng, 'space', ['beacon', 'dish'], 5, ['antenna', 'cable', 'lander', 'cargopod', 'solarpanel', 'warnlamp', 'wrench', 'helmet'])
+      : pickDecor(rng, 'space', ['crystal', 'moonrock'], 5, ['lander', 'pennant', 'beacon', 'bones', 'moonflag', 'minisat', 'helmet', 'wrench']),
     decorDensity: 0.1,
     lamp: hsl3(195, 80, 70),
     accent: hsl3(rng.pick([48, 190, 330]), 95, 60),
