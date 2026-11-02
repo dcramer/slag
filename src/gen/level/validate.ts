@@ -37,6 +37,8 @@ export interface Verdict {
   shared: number;
   /** Solvable and within the mostly-open limit. */
   open: boolean;
+  /** The same share in the landmark's columns alone (`Routes.landmark`), on a level with one. */
+  landmark?: number;
 }
 
 /** True if a bridge with left cell (x, y) fits: all cells in-bounds, empty, unprotected. */
@@ -72,8 +74,8 @@ export function withBridges(level: Level, bridges: readonly Bridge[]): Level {
 /** Policy verdict for a level, using sculptor hints to speed up the search. Pass the level's `cache` if there is one. */
 export function judge(level: Level, hints: readonly Bridge[] = [], crossings: readonly [number, number][] = [], cache = new ReachCache(level)): Verdict {
   const scored = (bridges: Bridge[], evals: number): Verdict => {
-    const { shared } = analyzeRoutes(level, bridges, cache);
-    return { ok: true, bridges, evals, shared, open: shared <= MAX_SHARED };
+    const { shared, landmark } = analyzeRoutes(level, bridges, cache);
+    return { ok: true, bridges, evals, shared, open: shared <= MAX_SHARED, ...(landmark !== undefined ? { landmark } : {}) };
   };
   if (cache.analyze(level).goalReached) return scored([], 0);
   const s = new BridgeSearch(level, cache);

@@ -37,6 +37,7 @@ export const JUNGLE: Recipe[] = [
   },
   {
     name: 'dart idol',
+    unique: true,
     weight: 2,
     role: 'hazard',
     repeat: true,

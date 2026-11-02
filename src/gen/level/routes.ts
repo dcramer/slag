@@ -47,6 +47,11 @@ export interface Routes {
   alternative: number[];
   /** Index ranges [from, to] into `alternative` that run inside the fastest route's lane, longest first. */
   overlaps: [number, number][];
+  /**
+   * The same sharing, counted only in the landmark's columns (`Level.landmark`): how much of the way past
+   * the landmark has no second way. Absent on a level without one; 0 where none of it counts (a bridge span).
+   */
+  landmark?: number;
 }
 
 interface Edge {
@@ -160,14 +165,14 @@ export function analyzeRoutes(level: Level, bridges: readonly BridgeHint[] = [],
       for (let x = Math.max(0, Math.min(bx, ax) - 1); x <= Math.min(w - 1, Math.max(bx, ax) + 1); x++) exempt[y * w + x] = 1;
   }
 
-  // Fraction of an edge in counted tiles, and in counted tiles of the lane.
-  const counted = (a: number, b: number, lane: Uint8Array | null) => {
+  // Fraction of an edge in counted tiles, and in counted tiles of the lane (and, with `x0`..`x1`, of those columns).
+  const counted = (a: number, b: number, lane: Uint8Array | null, x0 = 0, x1 = w - 1) => {
     let hits = 0;
     let n = 0;
     lineTiles(w, a, b, (x, y) => {
       n++;
       const k = y * w + x;
-      if (!exempt[k] && (!lane || lane[k])) hits++;
+      if (!exempt[k] && (!lane || lane[k]) && x >= x0 && x <= x1) hits++;
     });
     return (dist(w, a, b) * hits) / n;
   };
@@ -175,8 +180,12 @@ export function analyzeRoutes(level: Level, bridges: readonly BridgeHint[] = [],
   // The lane: every tile within CLEARANCE of the fastest route's polyline.
   const lane = new Uint8Array(w * h);
   let length = 0;
+  const lm = level.landmark?.rect;
+  const [lx0, lx1] = lm ? [lm.x, lm.x + lm.w - 1] : [0, -1];
+  let lmLength = 0;
   for (let i = 1; i < fastest.length; i++) {
     length += counted(fastest[i - 1], fastest[i], null);
+    if (lm) lmLength += counted(fastest[i - 1], fastest[i], null, lx0, lx1);
     lineTiles(w, fastest[i - 1], fastest[i], (x, y) => {
       for (let yy = Math.max(0, y - CLEARANCE); yy <= Math.min(h - 1, y + CLEARANCE); yy++)
         for (let xx = Math.max(0, x - CLEARANCE); xx <= Math.min(w - 1, x + CLEARANCE); xx++) lane[yy * w + xx] = 1;
@@ -186,11 +195,13 @@ export function analyzeRoutes(level: Level, bridges: readonly BridgeHint[] = [],
   // Route around the lane; a tiny price on plain length keeps the detour sensible.
   const alternative = cheapest(graph, start, end, (a, e) => counted(a, e.to, lane) + e.len * 1e-3);
   let shared = 0;
+  let lmShared = 0;
   const overlaps: [number, number][] = [];
   let open = -1;
   for (let i = 1; i < alternative.length; i++) {
     const s = counted(alternative[i - 1], alternative[i], lane);
     shared += s;
+    if (lm && s > 0) lmShared += counted(alternative[i - 1], alternative[i], lane, lx0, lx1);
     if (s > 0 && open < 0) open = i - 1;
     if (s === 0 && open >= 0) {
       overlaps.push([open, i - 1]);
@@ -199,5 +210,12 @@ export function analyzeRoutes(level: Level, bridges: readonly BridgeHint[] = [],
   }
   if (open >= 0) overlaps.push([open, alternative.length - 1]);
   overlaps.sort((p, q) => q[1] - q[0] - (p[1] - p[0]) || p[0] - q[0]);
-  return { shared: length > 0 ? Math.min(1, shared / length) : 0, length, fastest, alternative, overlaps };
+  return {
+    shared: length > 0 ? Math.min(1, shared / length) : 0,
+    length,
+    fastest,
+    alternative,
+    overlaps,
+    ...(lm ? { landmark: lmLength > 0 ? Math.min(1, lmShared / lmLength) : 0 } : {}),
+  };
 }
