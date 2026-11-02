@@ -18,7 +18,8 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 
 ## Scoring
 - Finishing earns +10 points. The first player to finish gets an extra +4.
-- Each rival killed by your prop, or by the level right after your bonk, earns you +3, but only if someone finished that round.
+- If you finish, each rival killed by your prop, or by the level right after your bonk, earns you +2. Traps alone don't pay: you have to reach the flag too.
+- If you finish while trailing the leader, after 2 or more rounds in a row without a point, you earn an underdog bonus of +3.
 - If everyone finishes, nobody scores ("too easy"). If nobody finishes, nobody scores either.
 - Solo play just rewards finishing.
 - A match always ends: scoreless rounds can run forever, so the round limit has no "off" setting.
@@ -69,7 +70,8 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - Props are assembled from **parts**: blocks of various materials, spikes, swinging heads, launchers, emitters, motion, springs, fans and bombs. Every number is rolled, and names come from the rolled stats.
 - Every crate contains at least one building piece and one hazard. Crate contents are tied to the level seed and round, but the card order is shuffled with a per-match salt the host rolls, so it differs every game.
 - **Every part can always be placed somewhere**, or a pick could stall the place phase on a level without the right surface.
-- **Attachments** (spike strips, ice coats, slime coats) must mount flush on an exposed face of a solid block, and rotation picks the face.
+- **Attachments** (spike strips, ice coats, slime coats, snap traps) must mount flush on an exposed face of a solid block, and rotation picks the face.
+  - A strip too long for its spot still places: only the cells that can mount land, the rest are gone for good, and the ghost shows exactly what lands.
   - Ice makes floors slippery and walls slick (no wall jump).
   - Slime makes floors slow and walls sticky (you cling).
 - Bombs clear terrain and/or props depending on their kind. Attachments fall off when their host block is destroyed.
@@ -78,6 +80,7 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - **Launcher aim is legible.** Aim rolls fixed 7 : sweep 2 : track 1.5, so most launchers hold a fixed direction. Trackers only watch ±60° of their mount, always carry a tracking word in their name, show a red sensor eye, and crate cards and the codex state the aim (Fixed, Sweeps, Tracks).
 - **Projectiles vary.** Only one kind homes: the seeker, which is rare, slower than a run, has a blinking red eye and is tagged HOMING on its card. The rest: boomerangs, rubber balls (bounce; shove, don't kill), cluster shells (split at the top of the arc), goo and frost (non-lethal; slow or freeze you, coat open terrain in slime or ice for a few seconds, never inside a protected zone or a one-tile gap), ricochets (bank off walls) and **gliders** (a launcher fires one-way planks you can ride: they fly level, then sink, faster the more riders they carry, and can never pin you).
 - **Demolition variants**: bomb (disk, everything), EMP (props only), drill (terrain-only bore in the rotation direction, leaving props alone), cross and ring charges, and time bombs (go off as the race starts, so they catch whatever was placed that round; a charge caught in an earlier blast is defused). The placement ghost shows every affected cell and outlines the props that will go.
+- **Solids stop whatever travels.** Flames, lasers, geysers, fan columns, shots, crushers and tracker sight stop at terrain and at any block that's solid on that frame, so a block is a shield; a tesla arc needs a clear line between its coils. One-way platforms, gliders and a part's own body don't stop them, and runners never do: a beam goes through everyone in it.
 - **Updrafts are steady**: inside a fan column you rise or are pushed at a constant speed, standing in a column never stops you from jumping, and the visuals match exactly when it pushes.
 
 ## Rules ("level settings", set by the host)
@@ -88,12 +91,14 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - Gravity: default Auto.
 
 ## Controls and UI
+- A picked part's card leaves the crate entirely. The other cards stay where they are.
 - On PC, keyboard and mouse both work. One keyboard player can use WASD *and* the arrows. A "Split keyboard" setting turns the keyboard into two local players. Everything can be remapped.
-- The mouse drives the menu cursor: click to pick or place, right-click or the wheel to rotate.
+- The mouse drives the menu cursor: click to pick or place, right-click or the wheel to rotate. They do nothing else, so a stray click can't self-destruct.
 - **Touch (mobile)**: left half is a floating stick (push past ~70% to run), right half is jump (hold for height), self-destruct needs a short hold, and a Use button appears above jump while you hold an item. Pick by tapping a card; place by dragging a ghost that floats above your finger, with ROTATE and PLACE buttons. Landscape first.
 - In the lobby, a stray click does nothing; only buttons act.
 - UI copy is proper title case, with no twee lowercase taglines.
 - Inputs are shown as **button prompts** (keycap, gamepad and mouse glyphs) in a footer, the way console games do it, and are never spelled out in prose.
+- Settings are tabs, one screen each with no scrolling at 720p: Audio, Video, Keyboard, Mouse, Gamepad (Touch replaces the last three under touch). The same menu opens on the home screen and in-game, and works with mouse, touch, keyboard (Q/E tabs, arrows) and gamepad (LB/RB tabs, Start opens, B closes). It reopens on the last tab of that page load. Reset Controls shows on the Keyboard tab only, since nothing else it resets is on screen.
 - Empty lobby slots show **OPEN**.
 
 ## Online

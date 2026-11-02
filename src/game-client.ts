@@ -15,7 +15,7 @@ import { addBreadcrumb, setTelemetryContext } from './telemetry';
 import { THEME_IDS } from './themes';
 import { InputModeTracker } from './ui/input-mode';
 import { loadHaptics, NamePrompt, RulesMenu, SettingsMenu } from './ui/menus';
-import { detectQuality, isTouchFirst } from './ui/touch/device';
+import { detectQuality, isTouchFirst, savedQuality, saveQuality } from './ui/touch/device';
 import { TouchOverlay } from './ui/touch/overlay';
 import { loadProfile, saveProfile } from './ui/profile';
 
@@ -62,6 +62,7 @@ export function bootGame(container: HTMLElement, room: string): void {
   input.viewEl = glCanvas;
   // In the lobby only real buttons act; a stray click must not join/ready/start.
   input.clickConfirms = () => match.phase !== 'lobby';
+  input.mouseAlts = () => match.phase === 'place';
   const renderer = new Renderer(glCanvas, hudCanvas);
   renderer.hud.room = room;
 
@@ -87,21 +88,9 @@ export function bootGame(container: HTMLElement, room: string): void {
   const settingsMenu = new SettingsMenu(input, audio);
   settingsMenu.leave = () => location.assign('/');
   settingsMenu.quality = {
-    pinned: () => {
-      try {
-        const q = localStorage.getItem('slag.quality');
-        return q === 'high' || q === 'mid' || q === 'low' ? q : null;
-      } catch {
-        return null;
-      }
-    },
+    pinned: savedQuality,
     set: (tier) => {
-      try {
-        if (tier) localStorage.setItem('slag.quality', tier);
-        else localStorage.removeItem('slag.quality');
-      } catch {
-        // Not persisted; still applies this session.
-      }
+      saveQuality(tier);
       renderer.setQuality(tier ?? detectQuality().tier);
     },
   };

@@ -5,7 +5,7 @@ import { generateLevel } from '../gen/level';
 import { generateCrate, type PropDef } from '../gen/props';
 import { DT, MAX_PLAYERS, TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import type { Level } from '../sim/level';
-import { blastEvent, blastSpec, canPlace, detonate, footprint, hangRow, type PlacedProp } from '../sim/props';
+import { blastEvent, blastSpec, canPlace, detonate, footprint, hangRow, landedDef, type PlacedProp } from '../sim/props';
 import { RunWorld } from '../sim/run';
 import { type GameEvent, type InputFrame, NO_INPUT } from '../sim/types';
 import type { ThemeId } from '../themes';
@@ -19,6 +19,8 @@ export interface Player {
   device: string;
   character: CharacterDef;
   score: number;
+  /** Rounds in a row without a point, for the underdog bonus. */
+  scoreless: number;
   ready: boolean;
   cursor: { x: number; y: number };
   /** Frames a direction has been held, up to the cursor's ramp. */
@@ -217,6 +219,7 @@ export class Match {
       device,
       character: character ?? this.rollCharacter(),
       score: 0,
+      scoreless: 0,
       ready: false,
       cursor: { x: 0, y: 0 },
       cursorHeld: 0,
@@ -252,7 +255,10 @@ export class Match {
     this.placed = [];
     this.result = null;
     this.winners = [];
-    for (const p of this.players) p.score = 0;
+    for (const p of this.players) {
+      p.score = 0;
+      p.scoreless = 0;
+    }
     this.startRound();
   }
 
@@ -363,7 +369,7 @@ export class Match {
 
   // ---------------------------------------------------------------- place
 
-  /** Tile origin a player's held prop would be placed at, centering the footprint on the cursor. */
+  /** Where a player's held prop would land and what lands (`def`), centering its whole footprint on the cursor so a trimmed attachment doesn't jump. */
   ghostOrigin(p: Player): { tx: number; ty: number; def: PropDef } | null {
     if (p.claim < 0) return null;
     const def = this.crate[p.claim].def;
@@ -375,8 +381,9 @@ export class Match {
       h = Math.max(h, y + 1);
     }
     const tx = Math.floor(p.cursor.x / TILE - (w - 1) / 2);
-    const ty = Math.floor(p.cursor.y / TILE - (h - 1) / 2);
-    return { def, tx, ty: def.mount === 'hang' ? hangRow(this.level, this.placed, def, tx, ty) : ty };
+    const y = Math.floor(p.cursor.y / TILE - (h - 1) / 2);
+    const ty = def.mount === 'hang' ? hangRow(this.level, this.placed, def, tx, y) : y;
+    return { def: landedDef(this.level, this.placed, def, p.rot, tx, ty), tx, ty };
   }
 
   canPlaceFor(p: Player): boolean {
@@ -464,12 +471,14 @@ export class Match {
       this.players.map((p) => p.slot),
       run.finishOrder,
       run.kills,
+      Object.fromEntries(this.players.map((p) => [p.slot, { score: p.score, scoreless: p.scoreless }])),
     );
     this.prevScores = new Map(this.players.map((p) => [p.slot, p.score]));
     for (const a of result.awards) {
       const p = this.player(a.slot);
       if (p) p.score += a.points;
     }
+    for (const p of this.players) p.scoreless = result.awards.some((a) => a.slot === p.slot) ? 0 : p.scoreless + 1;
     this.result = result;
     this.setPhase('score');
   }
@@ -497,6 +506,7 @@ export class Match {
       for (const p of this.players) {
         p.ready = false;
         p.score = 0;
+        p.scoreless = 0;
       }
       this.setPhase('lobby');
     }

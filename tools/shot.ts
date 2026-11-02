@@ -7,12 +7,15 @@
  *   pnpm shot race --seed abc --race saw,laser --frames 200
  *   pnpm shot race --race all
  *   pnpm shot lobby|pick|place --seed abc
+ *   pnpm shot pick --claim 2,5             → with those cards already taken
+ *   pnpm shot place --card spikestrip --cursor 296,184 --then-race 90 → aim the first ghost, place it, shoot the race
  *   pnpm shot levels --seeds a,b,c,d      (or --count 12) → contact sheet
  *   pnpm shot props --count 24            → prop gallery (crate cards)
  *   pnpm shot items --seed abc             → held items: in hand, loose, and each one used
  *   pnpm shot codex                        → /codex page (full-page screenshot)
  *   pnpm shot home                         → main menu (desktop + 390×844 mobile)
- *   pnpm shot settings                     → lobby with the settings overlay open
+ *   pnpm shot settings                     → every settings tab over the lobby, driven by keys and a fake pad,
+ *                                           then over the main menu on a phone (portrait and landscape), by tap
  *   pnpm shot score --players 4            → round-score screen
  *   pnpm shot compare --seed abc --players 4 [--themes farm,mine] → classic vs cel sheets, same sim frame per row
  *   pnpm shot mobile [--device "Pixel 7 landscape"]  → phone emulation driven by real
@@ -264,6 +267,14 @@ try {
     case 'pick':
       await open(`seed=${seed}&players=${players}`);
       await step(40);
+      if (opt('claim')) {
+        // `--claim 2,5`: those cards are taken, as if players had picked them.
+        await page.evaluate((cards) => {
+          const m = (window as any).slagDebug.match;
+          for (const i of cards) m.crate[i].claimedBy = m.players[0].slot;
+        }, opt('claim')!.split(',').map(Number));
+        await step(1);
+      }
       await snap(`pick-${seed}`);
       break;
     case 'place':
@@ -285,8 +296,25 @@ try {
         },
         opt('card', ''),
       );
+      // `--cursor x,y` aims the first player's ghost (view px); `--then-race N` places it and shoots the race N frames in.
+      await page.evaluate(
+        (at) => {
+          if (at) (window as any).slagDebug.match.players[0].cursor = { x: at[0], y: at[1] };
+        },
+        opt('cursor')?.split(',').map(Number) ?? null,
+      );
       await step(60);
       await snap(`place-${seed}`);
+      if (opt('then-race')) {
+        await page.evaluate(() => {
+          const d = (window as any).slagDebug;
+          for (const p of d.match.players.slice(1)) p.placed = true;
+          d.step(1, { [d.match.players[0].device]: { confirmPressed: true } });
+        });
+        await page.waitForFunction(() => (window as any).slagDebug.match.players[0].placed, null, { timeout: 5000 });
+        await step(45 + Number(opt('then-race')));
+        await snap(`place-${seed}-race`);
+      }
       break;
     case 'race': {
       const race = opt('race', '')!;
@@ -567,14 +595,176 @@ try {
       await mctx.close();
       break;
     }
-    case 'settings':
+    case 'settings': {
+      // Fails the run if a tab doesn't fit, or an input doesn't do what its prompt says.
+      const tabOf = (p: typeof page) => p.evaluate(() => document.querySelector('.slag-panel')?.getAttribute('data-tab'));
+      const expectTab = async (p: typeof page, want: string) => {
+        await p.waitForTimeout(150);
+        if ((await tabOf(p)) !== want) throw new Error(`settings: on tab ${await tabOf(p)}, expected ${want}`);
+      };
+      const expectFit = async (p: typeof page, label: string) => {
+        const over = await p.evaluate(() => {
+          const panel = document.querySelector('.slag-panel')!;
+          return panel.scrollHeight - panel.clientHeight;
+        });
+        if (over > 0) throw new Error(`settings: ${label} overflows by ${over}px`);
+      };
+      // A pad that exists from the first frame; the page reads window.slagShotPad like hardware.
+      await page.addInitScript(() => {
+        const pressed = new Set<number>();
+        (window as any).slagShotPad = pressed;
+        navigator.getGamepads = () =>
+          [
+            {
+              index: 0,
+              connected: true,
+              axes: [0, 0, 0, 0],
+              buttons: Array.from({ length: 17 }, (_, i) => ({ pressed: pressed.has(i), touched: false, value: pressed.has(i) ? 1 : 0 })),
+            },
+          ] as unknown as Gamepad[];
+      });
+      const presses = async (key: string, n: number) => {
+        for (let i = 0; i < n; i++) await page.keyboard.press(key);
+      };
+      const pad = async (button: number) => {
+        await page.evaluate((b) => (window as any).slagShotPad.add(b), button);
+        await page.waitForTimeout(120);
+        await page.evaluate((b) => (window as any).slagShotPad.delete(b), button);
+        await page.waitForTimeout(120);
+      };
       await open(`seed=${seed}`);
       await page.evaluate(() => (window as any).slagDebug.match.join('kb1'));
       await step(5);
       await page.keyboard.press('Escape');
+      await page.waitForSelector('.slag-panel');
+      const tabs = ['audio', 'video', 'keyboard', 'mouse', 'gamepad'];
+      for (const [i, tab] of tabs.entries()) {
+        if (i > 0) await page.keyboard.press('e');
+        await expectTab(page, tab);
+        await expectFit(page, tab);
+        await snap(`settings-${tab}${mode === 'gamepad' ? '-pad' : ''}`);
+      }
+      await page.keyboard.press('e');
+      await expectTab(page, 'audio');
+      await page.keyboard.press('q');
+      await expectTab(page, 'gamepad');
+      // The biggest page: two players' worth of slots.
+      await page.click('#slag-tab-keyboard');
+      await expectTab(page, 'keyboard');
+      await page.click('[aria-label="Split Keyboard (Two Players)"]');
+      await page.waitForTimeout(100);
+      await expectFit(page, 'split keyboard');
+      await snap('settings-keyboard-split');
+      await page.click('[aria-label="Split Keyboard (Two Players)"]');
+      await page.waitForTimeout(100);
+      // Rebinding by key: Q is captured as the new key, not read as "previous tab". Selection stays put.
+      const selected = () => page.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.textContent);
+      const bindings = () => page.evaluate(() => JSON.parse(localStorage.getItem('slag.input.v1') ?? '{}').single?.jump);
+      await page.mouse.move(2, 2);
+      await page.locator('[aria-label="Split Keyboard (Two Players)"]').focus();
+      await presses('ArrowDown', 5);
+      await page.keyboard.press('ArrowLeft');
+      await page.waitForTimeout(100);
+      if (!String(await selected()).startsWith('Jump, Keys 1')) throw new Error(`settings: arrows landed on ${await selected()}`);
+      await snap('settings-keyboard-selection');
+      await page.keyboard.press('Enter');
+      await page.waitForSelector('.slag-btn.listen');
+      await snap('settings-keyboard-listen');
+      await page.keyboard.press('q');
+      await page.waitForTimeout(100);
+      await expectTab(page, 'keyboard');
+      if ((await bindings())?.[0] !== 'KeyQ') throw new Error(`settings: rebinding saved ${await bindings()}`);
+      if (!String(await selected()).startsWith('Jump, Keys 1')) throw new Error(`settings: rebinding moved the selection to ${await selected()}`);
+      await page.click('text=Reset Controls');
+      await page.waitForTimeout(100);
+      if ((await bindings())?.[0] !== 'Space') throw new Error(`settings: Reset Controls left ${await bindings()}`);
+      // The pad walks the tabs, sweeps a slider, and backs out.
+      await pad(5);
+      await expectTab(page, 'mouse');
+      await pad(4);
+      await pad(4);
+      await pad(4);
+      await expectTab(page, 'audio');
+      await pad(13); // Mute → Master
+      await pad(15);
+      await pad(15);
+      await snap('settings-pad-selection');
+      const volume = () => page.evaluate(() => JSON.parse(localStorage.getItem('slag.audio.v1') ?? '{}').master);
+      if ((await volume()) !== 0.9) throw new Error(`settings: pad slider left master at ${await volume()}`);
+      await pad(1);
+      if (await page.$('.slag-panel')) throw new Error('settings: pad B did not close the menu');
+      // Opening runs through the game loop's input sampling, which screenshots keep paused.
+      await page.evaluate(() => (window as any).slagDebug.pause(false));
+      await pad(9);
+      await page.waitForSelector('.slag-panel');
+      await expectTab(page, 'audio');
+      await pad(9);
+      if (await page.$('.slag-panel')) throw new Error('settings: pad Start did not close the menu');
+
+      // Saved settings survive a reload. Reopening lands on the tab you left.
+      await page.reload();
+      await page.waitForFunction(() => 'slagDebug' in window);
+      await page.keyboard.press('Escape');
+      await page.waitForSelector('.slag-panel');
+      const master = await page.evaluate(() => (document.querySelector('[aria-label="Master volume"]') as HTMLInputElement).value);
+      if (master !== '0.9') throw new Error(`settings: master reloaded as ${master}`);
+      await page.keyboard.press('e');
+      await page.keyboard.press('Escape');
+      await page.keyboard.press('Escape');
+      await page.waitForSelector('.slag-panel');
+      await expectTab(page, 'video');
+
+      // The same menu over the main menu: picks persist for the game to read, and no A falls through on Done.
+      await page.goto(base);
+      await page.evaluate(() => document.fonts.ready);
+      await page.click('text=SETTINGS');
+      await page.waitForSelector('.slag-panel');
+      await page.keyboard.press('e');
+      await expectTab(page, 'video');
+      await page.waitForTimeout(200);
+      await page.click('.slag-chips >> text=Cel');
+      await page.click('.slag-chips >> text=Low');
+      await snap('settings-home');
+      const saved = await page.evaluate(() => [localStorage.getItem('slag.quality'), localStorage.getItem('slag.render.v1')]);
+      if (saved[0] !== 'low' || !saved[1]?.includes('cel')) throw new Error(`settings: home saved ${saved.join()}`);
+      // Tab stays inside the card; the arrows reach Done from the page.
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('Shift+Tab');
+      const inCard = await page.evaluate(() => !!document.activeElement?.closest('.slag-card'));
+      if (!inCard) throw new Error('settings: Tab left the card');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      if ((await selected())?.trim().endsWith('Done') !== true) throw new Error(`settings: arrows landed on ${await selected()}`);
+      await pad(0);
       await page.waitForTimeout(300);
-      await snap(`settings-${seed}`);
+      if (await page.$('.slag-panel')) throw new Error('settings: pad A on Done left the menu open, or reopened it');
+
+      for (const [name, width, height] of [
+        ['phone', 390, 844],
+        ['phone-landscape', 844, 390],
+      ] as const) {
+        const ctx = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+        const phone = await ctx.newPage();
+        phone.on('pageerror', (e: Error) => errors.push(String(e)));
+        await phone.goto(base);
+        await phone.evaluate(() => document.fonts.ready);
+        await phone.tap('text=SETTINGS');
+        await phone.waitForSelector('.slag-panel');
+        for (const tab of ['audio', 'video', 'touch']) {
+          await phone.tap(`#slag-tab-${tab}`);
+          await expectTab(phone, tab);
+          const small = await phone.evaluate(
+            () => [...document.querySelectorAll('.slag-tab,.slag-settings .slag-btn')].filter((b) => b.getBoundingClientRect().height < 44).length,
+          );
+          if (small) throw new Error(`settings: ${small} controls under 44 px on ${name}`);
+          await phone.screenshot({ path: `${out}/settings-${name}-${tab}.png` });
+          console.log(`${out}/settings-${name}-${tab}.png`);
+          pet();
+        }
+        await ctx.close();
+      }
       break;
+    }
     case 'score':
       await open(`seed=${seed}&players=${players}&race=saw`);
       await page.evaluate(() => {

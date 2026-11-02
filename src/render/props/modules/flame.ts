@@ -1,13 +1,13 @@
 import type { HSL } from '../../../core/color';
 import type { Vec } from '../../../core/geom';
 import { TILE } from '../../../sim/constants';
-import { dirOf, flameCycle, type Module, type ModuleOf, type PropStyle, type Resolved, rayToWall } from '../../../sim/props';
+import { dirOf, flameCycle, type Module, type ModuleOf, type PropStyle, type Resolved } from '../../../sim/props';
 import { glowDot, light, type MetalPalette, type RC } from '../../kit';
-import { defineArt, nozzle, type PropDrawOpts } from '../common';
+import { beamOf, defineArt, nozzle, type PropDrawOpts } from '../common';
 
 type M<T extends Module['type']> = ModuleOf<T>;
 
-function drawFlame(rc: RC, m: M<'flame'>, r: Resolved, off: Vec, pal: MetalPalette, _st: PropStyle, o: PropDrawOpts) {
+function drawFlame(rc: RC, m: M<'flame'>, r: Resolved, mi: number, off: Vec, pal: MetalPalette, _st: PropStyle, o: PropDrawOpts) {
   const f = rc.frame;
   const x = m.at[0] + off[0];
   const y = m.at[1] + off[1];
@@ -25,7 +25,8 @@ function drawFlame(rc: RC, m: M<'flame'>, r: Resolved, off: Vec, pal: MetalPalet
     if (o.emit && Math.random() < p) o.emit('ember', nx, ny, dx * 80 + (Math.random() - 0.5) * 40, dy * 80 + (Math.random() - 0.5) * 40, fire);
     light(rc, nx, ny, 30, { h: 210, s: 100, l: 60 }, 0.4);
   } else if (c.seg === 2) {
-    const len = o.level ? rayToWall(o.level, x, y, m.angle, m.length + TILE / 2, 8) : m.length + TILE / 2;
+    const beam = beamOf(o, r, mi);
+    const len = beam?.len ?? m.length + TILE / 2;
     const g = rc.g;
     const ramp = Math.min(1, c.t / 6) * Math.min(1, (c.len - c.t) / 6);
     const n = Math.ceil(len / 4);
@@ -49,9 +50,21 @@ function drawFlame(rc: RC, m: M<'flame'>, r: Resolved, off: Vec, pal: MetalPalet
     g.lineTo(x + dx * (10 + (len - 10) * 0.45 * ramp), y + dy * (10 + (len - 10) * 0.45 * ramp));
     g.stroke();
     for (let d = 10; d < len; d += 28) light(rc, x + dx * d, y + dy * d, 70, fire, 0.9 * ramp);
-    if (o.emit && Math.random() < 0.8) o.emit('ember', x + dx * len * 0.8, y + dy * len * 0.8, dx * 60 + (Math.random() - 0.5) * 60, dy * 60 - 30, fire);
-    if (o.emit && Math.random() < 0.3) o.emit('smoke', x + dx * len, y + dy * len, dx * 30, dy * 30 - 20);
+    if (beam?.hit) {
+      // Whatever stopped it, it spreads out along the face.
+      const ex = x + dx * len;
+      const ey = y + dy * len;
+      for (const side of [-1, 1]) {
+        glowDot(g, ex + px * side * 6 * ramp, ey + py * side * 6 * ramp, 9 * ramp, { h: 34, s: 100, l: 62 }, 0.5, 0.35);
+        if (o.emit && Math.random() < 0.4) o.emit('ember', ex, ey, px * side * 90 - dx * 25, py * side * 90 - dy * 25, fire);
+      }
+    }
+    // A stopped flame throws its embers back rather than through what stopped it.
+    const on = beam?.hit ? -0.4 : 1;
+    if (o.emit && Math.random() < 0.8)
+      o.emit('ember', x + dx * len * 0.8, y + dy * len * 0.8, dx * 60 * on + (Math.random() - 0.5) * 60, dy * 60 * on - 30, fire);
+    if (o.emit && Math.random() < 0.3) o.emit('smoke', x + dx * len, y + dy * len, dx * 30 * on, dy * 30 * on - 20);
   }
 }
 
-defineArt<'flame'>({ type: 'flame', layer: 3, draw: (rc, m, d) => drawFlame(rc, m, d.r, d.off, d.pal, d.style, d.o) });
+defineArt<'flame'>({ type: 'flame', layer: 3, draw: (rc, m, d) => drawFlame(rc, m, d.r, d.mi, d.off, d.pal, d.style, d.o) });

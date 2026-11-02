@@ -12,10 +12,10 @@ export const PART_INFO: Record<Module['type'], { title: string; blurb: string }>
   launcher: {
     title: 'Launcher',
     blurb:
-      'Fires projectiles on a schedule: fixed aim, sweeping, or tracking the nearest runner (lobbed ammo solves a ballistic arc). Bursts and spreads vary.',
+      'Fires projectiles on a schedule: fixed aim, sweeping, or tracking the nearest runner it can see (lobbed ammo solves a ballistic arc). Bursts and spreads vary.',
   },
   flame: { title: 'Flame jet', blurb: 'Off → sputtering warning → roaring flame for a while. Stops at walls.' },
-  laser: { title: 'Laser', blurb: 'Charges with a flickering telegraph, then fires a beam to the first wall. Some sweep back and forth.' },
+  laser: { title: 'Laser', blurb: 'Charges with a flickering telegraph, then fires a beam to the first solid thing in its way. Some sweep back and forth.' },
   tesla: { title: 'Tesla gate', blurb: 'Two pylons that periodically arc lightning between them.' },
   piston: { title: 'Crusher', blurb: 'A solid head that slams out (deadly leading edge), holds, then slowly retracts. Can crush you against walls.' },
   spring: { title: 'Spring', blurb: 'Launches whoever touches it in the direction it faces.' },
@@ -71,7 +71,7 @@ export const PART_INFO: Record<Module['type'], { title: string; blurb: string }>
   dropper: {
     title: 'Dropstone',
     blurb:
-      'Watches the lane under it. When you enter, it glares and shakes, then slams down until it hits the ground, and slowly rises again. You can ride it back up.',
+      'Watches the lane under it. When you enter, it glares and shakes, then slams down until it lands on something, and slowly rises again. You can ride it back up.',
   },
   snapper: {
     title: 'Snap trap',

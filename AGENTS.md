@@ -68,7 +68,7 @@ Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm
 
 ## Where things live
 
-- `src/game-client.ts`: `bootGame(container, room)`: canvases, input, menus, fixed 60 Hz loop. Each step: input → `Match.step` → `RunWorld.step` (props `build` solids/hazards → `stepBody` → hazards/springs/goal → props `tick`) → events queue → `Renderer.render`.
+- `src/game-client.ts`: `bootGame(container, room)`: canvases, input, menus, fixed 60 Hz loop. Each step: input → `Match.step` → `RunWorld.step` (props `build` solids/hazards, then `trace` rays → `stepBody` → hazards/springs/goal → props `tick`) → events queue → `Renderer.render`.
 - `src/sim/`: deterministic simulation (physics, level, reachability, run world, prop modules). `src/gen/`: generators (levels, set pieces, props, theme looks, characters, names). `src/game/`: match state machine (lobby → pick → place → run → score → victory) and `scoring.ts`. `src/render/`: Canvas2D layers + WebGL2 post. `src/input/`: keyboard/gamepad → `InputFrame` (bindings in `bindings.ts`). `src/audio/`: procedural SFX and per-theme music. `src/ui/`: menus. `src/codex/`: the `/codex` parts catalog.
 - `tools/`: `shot.ts`, `level.ts`. `tests/`: vitest, one file per subsystem.
 
@@ -85,7 +85,7 @@ Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm
 
 - World: `LEVEL_W × LEVEL_H` = 48×27 tiles of 16 px (768×432). Tiles: `T_SOLID`, `T_ONEWAY` (jump through from below; drop with down + jump), `T_EMPTY`. Spawn left, goal right; protected rects around both can't be built on or bombed; the bottom pit kills.
 - Solvability: the goal is reachable bare, or after placing at most two small building props. Aim for about half of levels needing props. Always check with `src/sim/reach.ts` (the real controller), never hand-waved jump distances.
-- Placement validity lives in `canPlace` (`src/sim/props/transform.ts`). **Attachments** (spikes, ice coat, slime coat) mount flush on a solid face (terrain or placed block); the player's rotation picks the face. Spikes add a hazard strip. Coats change the surface: on floors ice is slippery and slime slow and sticky; on walls ice blocks wall slide/jump and slime makes a sticky cling.
+- Placement validity lives in `canPlace` (`src/sim/props/transform.ts`). **Attachments** (spikes, ice coat, slime coat) mount flush on a solid face (terrain or placed block); the player's rotation picks the face. They place if at least one cell can mount and permanently keep only those cells (`mountCells`, `landedDef`); everything else needs every cell free. Spikes add a hazard strip. Coats change the surface: on floors ice is slippery and slime slow and sticky; on walls ice blocks wall slide/jump and slime makes a sticky cling.
 - Scoring: `src/game/scoring.ts`. Everyone finishing or nobody finishing scores nothing.
 - Units: world pixels and sim frames (60/s); tile coordinates in `TILE` units; angles in radians, screen space (+y down).
 

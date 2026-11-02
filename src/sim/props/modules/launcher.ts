@@ -1,10 +1,13 @@
-import { datan, datan2, dcos, dsin, sq } from '../../../core/dmath';
+import { datan, datan2, dcos, dhypot, dsin, sq } from '../../../core/dmath';
 import { RUN_COUNTDOWN } from '../../constants';
-import { cellOf, defineModule, type RunnerView } from '../registry';
+import { castBeam, castRay } from '../rays';
+import { cellOf, defineModule, type TickCtx } from '../registry';
 import { AMMO, type ModuleOf } from '../types';
 
 type Launcher = ModuleOf<'launcher'>;
 const TRACK_TURN = 0.045; // rad/frame
+/** Px of its own housing a tracker's eye sees past. */
+const SIGHT_SKIP = 8;
 /** Trackers only notice runners within ±60° of the way they're mounted, so they read as "watching that side". */
 export const TRACK_CONE = Math.PI / 3;
 
@@ -31,16 +34,22 @@ export function ballisticAngle(dx: number, dy: number, speed: number, gravity: n
   return dx >= 0 ? -th : Math.PI + th;
 }
 
-/** Turn toward the nearest active runner within TRACK_CONE of the mount's facing. */
-function trackAim(cur: number, x: number, y: number, m: Launcher, runners: readonly RunnerView[]): number {
+/** Can the eye at (x, y) see this point? Terrain and solids hide a runner; other runners don't. */
+function inSight(ctx: TickCtx, x: number, y: number, tx: number, ty: number): boolean {
+  const d = dhypot(tx - x, ty - y);
+  return d <= SIGHT_SKIP || castRay(ctx.level, ctx.solids ?? [], x, y, (tx - x) / d, (ty - y) / d, d, SIGHT_SKIP, ctx.r.pp.uid) >= d;
+}
+
+/** Turn toward the nearest active runner it can see within TRACK_CONE of the mount's facing. */
+function trackAim(cur: number, x: number, y: number, m: Launcher, ctx: TickCtx): number {
   let best: [number, number] | null = null;
   let bestD = Infinity;
-  for (const r of runners) {
+  for (const r of ctx.runners) {
     if (!r.active) continue;
     const tx = r.x + r.w / 2;
     const ty = r.y + r.h / 2;
     const d = sq(tx - x) + sq(ty - y);
-    if (Math.abs(angleDiff(datan2(ty - y, tx - x), m.angle)) < TRACK_CONE && d < bestD) {
+    if (d < bestD && Math.abs(angleDiff(datan2(ty - y, tx - x), m.angle)) < TRACK_CONE && inSight(ctx, x, y, tx, ty)) {
       bestD = d;
       best = [tx, ty];
     }
@@ -54,6 +63,11 @@ export const launcher = defineModule<'launcher'>({
   type: 'launcher',
   resolve: (m, x) => ({ ...m, at: x.P(m.at), angle: m.angle + x.da }),
   anchors: (m) => [cellOf(m.at)],
+  trace(m, ctx, out) {
+    if (m.aim !== 'track') return;
+    const a = ctx.state.aim.get(ctx.mi) ?? m.angle;
+    castBeam(ctx, out, m.at[0] + ctx.off[0], m.at[1] + ctx.off[1], dcos(a), dsin(a), 600, SIGHT_SKIP, a);
+  },
   tick(m, ctx) {
     const f = ctx.frame;
     if (f < RUN_COUNTDOWN) return;
@@ -61,7 +75,7 @@ export const launcher = defineModule<'launcher'>({
     const y = m.at[1] + ctx.off[1];
     let angle = launcherAngle(m, f, ctx.r.phase);
     if (m.aim === 'track') {
-      angle = trackAim(ctx.state.aim.get(ctx.mi) ?? m.angle, x, y, m, ctx.runners);
+      angle = trackAim(ctx.state.aim.get(ctx.mi) ?? m.angle, x, y, m, ctx);
       ctx.state.aim.set(ctx.mi, angle);
     }
     const k = (f - RUN_COUNTDOWN + Math.floor(ctx.r.phase * m.interval)) % m.interval;
@@ -75,6 +89,7 @@ export const launcher = defineModule<'launcher'>({
           vy: dsin(a) * m.speed,
           owner: ctx.r.pp.owner,
           ammo: m.ammo,
+          source: ctx.r.pp.uid,
         });
       }
       ctx.state.lastFire = f;

@@ -1,6 +1,7 @@
 import { sq } from '../../../core/dmath';
 import { frac, type Rect, type Vec } from '../../../core/geom';
 import { TILE } from '../../constants';
+import { reportBeam, solidGap, tileGap } from '../rays';
 import { cellOf, defineModule, solidId } from '../registry';
 import { dirOf } from '../transform';
 import type { ModuleOf } from '../types';
@@ -20,10 +21,14 @@ export function pistonState(m: Piston, f: number, phase: number): { ext: number;
   return { ext: 0, slamming: false };
 }
 
-export function pistonHead(m: Piston, ext: number, off: Vec): Rect {
+/** Head thickness (px). At rest it sits just past the prop's body, this far out. */
+const HEAD = TILE * 0.5;
+
+/** The head at extension `ext`, held back at `cap` px of travel by whatever's in its way. */
+export function pistonHead(m: Piston, ext: number, off: Vec, cap = m.reach): Rect {
   const [dx, dy] = dirOf(m.angle);
-  const thick = TILE * 0.5;
-  const d = TILE * 0.5 + thick / 2 + ext * m.reach;
+  const thick = HEAD;
+  const d = TILE * 0.5 + thick / 2 + Math.min(ext * m.reach, cap);
   const cx = m.at[0] + off[0] + dx * d;
   const cy = m.at[1] + off[1] + dy * d;
   const w = dx !== 0 ? thick : m.width;
@@ -31,15 +36,26 @@ export function pistonHead(m: Piston, ext: number, off: Vec): Rect {
   return { x: cx - w / 2, y: cy - h / 2, w, h };
 }
 
-/** Crusher: a solid head that slams out (lethal leading edge) and slowly retracts. */
+/**
+ * Crusher: a solid head that slams out (lethal leading edge) and slowly retracts.
+ * It runs on a timer with no memory, so what's in its way only caps the stroke:
+ * the head stops on terrain or a block, and pins whoever's in between.
+ */
 export const piston = defineModule<'piston'>({
   type: 'piston',
   resolve: (m, x) => ({ ...m, at: x.P(m.at), angle: m.angle + x.da, reach: m.reach * x.T, width: m.width * x.T }),
   anchors: (m) => [cellOf(m.at)],
-  build(m, ctx, out) {
+  settle(m, ctx, out, fixed) {
+    const [mx, my] = dirOf(m.angle);
+    // Measured from the body's face, so a block flush against it holds the head at rest instead of being inside the head and ignored.
+    const rest = pistonHead(m, 0, ctx.off);
+    const face = { ...rest, x: rest.x - mx * HEAD, y: rest.y - my * HEAD };
+    const clear = solidGap(out.solids, face, mx, my, tileGap(ctx.level, face, mx, my, m.reach + HEAD), ctx.r.pp.uid, fixed);
+    const cap = Math.max(0, clear - HEAD);
+    reportBeam(ctx, out, cap, cap < m.reach);
     const st = pistonState(m, ctx.frame, ctx.r.phase);
-    const head = pistonHead(m, st.ext, ctx.off);
-    const prevHead = pistonHead(m, pistonState(m, ctx.frame - 1, ctx.r.phase).ext, ctx.prev);
+    const head = pistonHead(m, st.ext, ctx.off, cap);
+    const prevHead = pistonHead(m, pistonState(m, ctx.frame - 1, ctx.r.phase).ext, ctx.prev, cap);
     out.solids.push({
       ...head,
       id: solidId(ctx.r.pp.uid, ctx.mi, 63),

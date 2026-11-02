@@ -30,7 +30,7 @@ export function snapperPhase(m: Snapper, st: PropState | undefined, mi: number, 
   return { seg: SNAP_IDLE, u: 0 };
 }
 
-/** The zone in front of the plate that sets it off. */
+/** The box around the zones in front of the plate: where it sounds from when one is tripped. */
 export function snapperSense(m: Snapper): Rect {
   let x0 = Infinity;
   let y0 = Infinity;
@@ -63,8 +63,10 @@ export const snapper = defineModule<'snapper'>({
   },
   tick(m, ctx) {
     if (!ctx.live || snapperPhase(m, ctx.state, ctx.mi, ctx.frame + 1).seg !== SNAP_IDLE) return;
-    const z = snapperSense(m);
-    if (ctx.runners.some((r) => r.active && r.x < z.x + z.w && r.x + r.w > z.x && r.y < z.y + z.h && r.y + r.h > z.y)) {
+    // Cell by cell: a plate split by trimming has no sensor over the gap.
+    const zones = m.cells.map(([cx, cy]) => faceRect(cx, cy, m.angle, SNAP_SENSE));
+    if (ctx.runners.some((r) => r.active && zones.some((z) => r.x < z.x + z.w && r.x + r.w > z.x && r.y < z.y + z.h && r.y + r.h > z.y))) {
+      const z = snapperSense(m);
       ctx.state.vars.set(t0Key(ctx.mi), ctx.frame + 1);
       ctx.emit({ type: 'prop', kind: 'snap-arm', x: z.x + z.w / 2, y: z.y + z.h / 2 });
     }

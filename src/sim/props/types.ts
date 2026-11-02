@@ -163,7 +163,7 @@ export type Module =
    * Attachment on the faces of existing solids: `cells` are the HOST cells
    * (terrain or a static placed block), `angle` is the outward face normal.
    * Spikes add a lethal strip; ice/slime add a thin coat that changes the
-   * surface (floors and walls). See canPlace for the mounting rule.
+   * surface (floors and walls). See mountCells for the mounting rule.
    */
   | { type: 'coat'; cells: Cell[]; angle: number; kind: CoatKind }
   | {
@@ -267,8 +267,8 @@ export type Module =
   /**
    * Proximity crusher: a solid head (cells) that watches the lane in
    * direction `angle`; when a runner enters it shakes for `warn` frames,
-   * slams until it hits terrain (≤ `reach` tiles), rests, then slowly
-   * returns (rideable on the way back).
+   * slams until it hits terrain or a solid (≤ `reach` tiles), rests, then
+   * slowly returns (rideable on the way back).
    */
   | { type: 'dropper'; cells: Cell[]; angle: number; reach: number; warn: number; rest: number }
   /** Face-mounted spike plate that pops when someone comes near: click (warn) → spikes (up) → cooldown. */
@@ -364,8 +364,10 @@ export interface PropDef {
   style: PropStyle;
   motion: Motion;
   modules: Module[];
-  /** Cells that must be free to place it (rot 0, normalized). For `mount: 'face'` these are the host cells instead. */
+  /** Cells that must be free to place it (rot 0, normalized). For `mount: 'face'` these are the host cells instead: once placed, only the ones that mounted. */
   footprint: Cell[];
+  /** Size (w, h) of the box rotation turns cells in, when the footprint no longer spans it: a trimmed attachment keeps its original box so its cells stay put. */
+  box?: [number, number];
   /**
    * 'face': an attachment that must be mounted flush on exposed faces of solids (rotation picks the face).
    * 'hang': the footprint hangs under something solid and rotation does nothing, because a rope only points one way.

@@ -16,6 +16,7 @@ export function newPropState(): PropState {
 }
 
 function box(def: PropDef): { w: number; h: number } {
+  if (def.box) return { w: def.box[0], h: def.box[1] };
   let w = 1;
   let h = 1;
   for (const [x, y] of def.footprint) {
@@ -121,30 +122,16 @@ export function cycle(f: number, phase: number, lens: number[]): CycleState {
   return { seg: lens.length - 1, t: 0, len: lens[lens.length - 1] };
 }
 
-/** Distance (px) along a ray before it enters a solid tile. */
-export function rayToWall(level: Level, x: number, y: number, angle: number, maxLen: number, skip = 6): number {
-  const dx = dcos(angle);
-  const dy = dsin(angle);
-  for (let d = skip; d < maxLen; d += 2) {
-    const px = x + dx * d;
-    const py = y + dy * d;
-    if (px < 0 || px >= level.w * TILE || py >= level.h * TILE + 16 || py < -64) return d;
-    if (tileAt(level, Math.floor(px / TILE), Math.floor(py / TILE)) === 1) return d;
-  }
-  return maxLen;
-}
-
 /** Can this prop go here? Bombs can go anywhere in-bounds; everything else needs free, unprotected cells. */
 export function canPlace(level: Level, placed: readonly PlacedProp[], def: PropDef, rot: number, tx: number, ty: number): boolean {
+  if (def.mount === 'face') return mountCells(level, placed, def, rot, tx, ty).length > 0;
   const cells = footprint(def, rot).map(([x, y]) => [x + tx, y + ty] as Cell);
   for (const [x, y] of cells) {
     if (x < 0 || y < 0 || x >= level.w || y >= level.h) return false;
   }
   if (def.modules.some((m) => m.type === 'bomb')) return true;
   const taken = new Set<number>();
-  const others = [...level.setPieces, ...(def.mount === 'face' ? placed.filter((p) => p.def.mount !== 'face') : placed)];
-  for (const p of others) for (const [x, y] of footprintCells(p)) taken.add(y * level.w + x);
-  if (def.mount === 'face') return canMount(level, placed, def, rot, cells, taken);
+  for (const p of [...level.setPieces, ...placed]) for (const [x, y] of footprintCells(p)) taken.add(y * level.w + x);
   for (const [x, y] of cells) {
     if (tileAt(level, x, y) || isProtected(level, x, y) || taken.has(y * level.w + x)) return false;
   }
@@ -209,31 +196,63 @@ function staticBodyCells(placed: readonly PlacedProp[], w: number): Set<number> 
 }
 
 /**
- * Attachment rule: every cell must be a host (solid terrain or a static placed
- * block), unprotected, with its face (in the mount direction) exposed to an
- * empty, unclaimed cell that isn't already coated on that face.
+ * Attachment rule, cell by cell: a cell mounts if it's an in-bounds host (solid
+ * terrain or a static placed block), unprotected, with its face (in the mount
+ * direction) exposed to an empty, unclaimed cell, and that face isn't coated
+ * yet. Returns the def's own rot 0 cells that mount, in footprint order.
+ * An attachment places when any cell mounts (`canPlace`) and keeps only those
+ * (`landedDef`): this is the one rule behind both.
  */
-function canMount(level: Level, placed: readonly PlacedProp[], def: PropDef, rot: number, cells: Cell[], taken: Set<number>): boolean {
-  const [dx, dy] = dirOf(mountAngle(def, rot));
+export function mountCells(level: Level, placed: readonly PlacedProp[], def: PropDef, rot: number, tx: number, ty: number): Cell[] {
+  const angle = mountAngle(def, rot);
+  const [dx, dy] = dirOf(angle);
+  const face = Math.round(angle / (Math.PI / 2)) & 3;
   const blocks = staticBodyCells(placed, level.w);
+  const taken = new Set<number>();
+  for (const p of level.setPieces) for (const [x, y] of footprintCells(p)) taken.add(y * level.w + x);
   const coated = new Set<string>();
   for (const p of placed) {
-    if (p.def.mount !== 'face') continue;
+    if (p.def.mount !== 'face') {
+      for (const [x, y] of footprintCells(p)) taken.add(y * level.w + x);
+      continue;
+    }
     const a = mountAngle(p.def, p.rot);
     for (const [x, y] of footprintCells(p)) coated.add(`${x},${y},${Math.round(a / (Math.PI / 2)) & 3}`);
   }
-  const face = Math.round(mountAngle(def, rot) / (Math.PI / 2)) & 3;
-  for (const [x, y] of cells) {
-    const k = y * level.w + x;
-    const host = tileAt(level, x, y) === T_SOLID || blocks.has(k);
+  const cells = footprint(def, rot);
+  return def.footprint.filter((_, i) => {
+    const x = cells[i][0] + tx;
+    const y = cells[i][1] + ty;
+    if (x < 0 || y < 0 || x >= level.w || y >= level.h) return false;
+    const host = tileAt(level, x, y) === T_SOLID || blocks.has(y * level.w + x);
     if (!host || isProtected(level, x, y)) return false;
     const nx = x + dx;
     const ny = y + dy;
     if (nx < 0 || ny < 0 || nx >= level.w || ny >= level.h) return false;
     if (tileAt(level, nx, ny) !== T_EMPTY || blocks.has(ny * level.w + nx) || taken.has(ny * level.w + nx)) return false;
-    if (coated.has(`${x},${y},${face}`)) return false;
-  }
-  return true;
+    return !coated.has(`${x},${y},${face}`);
+  });
+}
+
+/**
+ * The def that really lands at this spot: an attachment trimmed to the cells
+ * that mount, so what's dropped is gone for good and nothing has to re-check
+ * it later. The ghost draws this and placing stores it. It keeps its full
+ * rotation box, so the cells stay where they were whatever got dropped. A
+ * spot where nothing mounts returns the def whole, for the refused ghost.
+ */
+export function landedDef(level: Level, placed: readonly PlacedProp[], def: PropDef, rot: number, tx: number, ty: number): PropDef {
+  if (def.mount !== 'face') return def;
+  const kept = mountCells(level, placed, def, rot, tx, ty);
+  if (kept.length === 0 || kept.length === def.footprint.length) return def;
+  const keep = new Set(kept.map(([x, y]) => `${x},${y}`));
+  const { w, h } = box(def);
+  return {
+    ...def,
+    box: [w, h],
+    footprint: kept,
+    modules: def.modules.map((m) => ('cells' in m ? { ...m, cells: m.cells.filter(([x, y]) => keep.has(`${x},${y}`)) } : m)),
+  };
 }
 
 export interface BlastSpec {

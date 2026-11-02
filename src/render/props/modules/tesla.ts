@@ -2,11 +2,11 @@ import { css, type HSL } from '../../../core/color';
 import type { Vec } from '../../../core/geom';
 import { type Module, type ModuleOf, type PropStyle, type Resolved, teslaCycle } from '../../../sim/props';
 import { circle, ellipse, glowDot, light, lightning, METALS, type MetalPalette, type RC, sphereFill } from '../../kit';
-import { defineArt, type PropDrawOpts } from '../common';
+import { beamOf, defineArt, type PropDrawOpts } from '../common';
 
 type M<T extends Module['type']> = ModuleOf<T>;
 
-function drawTesla(rc: RC, m: M<'tesla'>, r: Resolved, off: Vec, pal: MetalPalette, st: PropStyle, o: PropDrawOpts) {
+function drawTesla(rc: RC, m: M<'tesla'>, r: Resolved, mi: number, off: Vec, pal: MetalPalette, st: PropStyle, o: PropDrawOpts) {
   const s = rc.s;
   const g = rc.g;
   const c = teslaCycle(m, rc.frame, r.phase);
@@ -39,6 +39,7 @@ function drawTesla(rc: RC, m: M<'tesla'>, r: Resolved, off: Vec, pal: MetalPalet
     }
   }
   const [a, b] = tops;
+  if (beamOf(o, r, mi)?.hit) return; // Shorted: the coils charge, and nothing crosses.
   if (c.seg === 1 && Math.random() < c.t / c.len) {
     g.strokeStyle = css(col, 20, 0.35);
     g.lineWidth = 0.8;
@@ -66,4 +67,4 @@ function drawTesla(rc: RC, m: M<'tesla'>, r: Resolved, off: Vec, pal: MetalPalet
   }
 }
 
-defineArt<'tesla'>({ type: 'tesla', layer: 3, draw: (rc, m, d) => drawTesla(rc, m, d.r, d.off, d.pal, d.style, d.o) });
+defineArt<'tesla'>({ type: 'tesla', layer: 3, draw: (rc, m, d) => drawTesla(rc, m, d.r, d.mi, d.off, d.pal, d.style, d.o) });

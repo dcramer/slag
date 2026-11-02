@@ -4,8 +4,26 @@ import { BINDABLE, defaultSettings, type InputSettings, type KeyProfile, keyName
 import type { InputManager } from '../input/input';
 import { type RenderStyle, STYLE_IDS, STYLES } from '../render/style';
 import { glyphSVG, type Glyph } from './glyphs';
-import { capLabel } from './prompts';
+import { capLabel, type InputMode, promptModes } from './prompts';
 import { sanitizeName } from './profile';
+import {
+  cycleTab,
+  KEY_ACTIONS,
+  type MenuAction,
+  type MenuDirection,
+  MenuPadReader,
+  type NavRect,
+  navTarget,
+  readMenuPad,
+  resolveTab,
+  SETTINGS_TABS,
+  type SettingsSection,
+  type SettingsTab,
+  TAB_LABELS,
+  tabSections,
+  type TabContext,
+  visibleTabs,
+} from './settings-nav';
 import { FONT, PAL } from './style';
 import type { QualityTier } from './touch/device';
 
@@ -91,6 +109,41 @@ input[type=range].slag-range:focus-visible{outline:2px solid ${PAL.amber};outlin
 .slag-chips .slag-btn{min-width:56px;padding:6px 10px}
 @media (max-height:520px){.slag-ov{align-items:flex-start}.slag-card h2{font-size:26px;margin-top:10px}}
 @media (max-width:520px){.slag-card{padding:6px 16px 16px}.slag-card::before{margin:-6px -16px 0}.slag-row>label,.slag-row>.lbl{flex-basis:84px}.slag-row{flex-wrap:wrap}}
+.slag-settings{display:flex;flex-direction:column;width:min(780px,100%);height:min(100%,720px);overflow:hidden;padding-bottom:16px}
+.slag-settings h2{flex:none;margin:12px 0 6px}
+.slag-tabs{flex:none;display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.slag-tablist{flex:1;min-width:0;display:flex;gap:6px;padding:5px 5px 9px}
+.slag-tab{all:unset;box-sizing:border-box;flex:1 0 auto;min-height:48px;padding:7px 12px 9px;text-align:center;cursor:pointer;font:400 21px/1.2 ${FONT.display};letter-spacing:.02em;text-transform:uppercase;color:${PAL.bone};text-shadow:0 2px 0 ${PAL.ink};background:${GRAIN},linear-gradient(${PAL.ironHi},${PAL.iron});border:2px solid ${PAL.ink};border-radius:6px;box-shadow:0 4px 0 ${PAL.ink};transition:transform .08s,box-shadow .08s}
+.slag-tab:hover{background:${GRAIN},linear-gradient(#4f3d33,${PAL.ironHi})}
+.slag-tab[aria-selected=true]{color:${PAL.ink};text-shadow:0 1px 0 rgba(255,240,200,.45);background:${GRAIN},linear-gradient(#ff8a2a,#e8571a);transform:translateY(2px);box-shadow:0 2px 0 ${PAL.ink}}
+.slag-tab:focus{outline:3px solid ${PAL.amber};outline-offset:2px}
+.slag-tabkey{flex:none;display:inline-flex;align-items:center;gap:4px}
+.slag-tabkey:empty{display:none}
+.slag-panel{flex:1;min-height:0;overflow:hidden auto;margin:0 -14px;padding:2px 22px 2px 20px;outline:none}
+.slag-settings .slag-row{position:relative;min-height:60px;margin:0 0 4px;padding:4px 14px;box-sizing:border-box;border:2px solid transparent;border-radius:6px;font-size:18px;transition:transform .08s}
+.slag-settings .slag-row>label,.slag-settings .slag-row>.lbl{flex:0 0 156px;font-weight:700}
+.slag-settings .slag-row>.lbl.wide{flex:1}
+.slag-settings .slag-row:has(:focus){color:${PAL.ink};background:${GRAIN},linear-gradient(#ff8a2a,#e8571a);border-color:${PAL.ink};transform:translateX(6px)}
+.slag-settings .slag-row:has(:focus)>label,.slag-settings .slag-row:has(:focus)>.lbl,.slag-settings .slag-row:has(:focus) .slag-val{color:${PAL.ink}}
+.slag-settings .slag-row:has(:focus)::before{content:"";position:absolute;left:-19px;top:50%;width:10px;height:10px;margin-top:-5px;background:${PAL.amber};border:2px solid ${PAL.ink};transform:rotate(45deg)}
+.slag-settings .slag-btn{min-height:44px}
+.slag-settings .slag-btn:focus,.slag-settings .slag-switch:focus{outline:3px solid ${PAL.whiteHot};outline-offset:1px}
+.slag-settings .slag-switch::before{content:"";position:absolute;inset:-10px -6px}
+.slag-settings .slag-chips .slag-btn{min-width:72px}
+.slag-settings input[type=range].slag-range:focus{outline:none}
+.slag-binds{display:inline-flex;align-items:center;gap:8px}
+.slag-keys.slag-row{display:grid;gap:8px;min-height:42px;margin:0;padding:1px 14px;font-size:16px}
+.slag-keys.slag-row .h{font:800 11px ${FONT.ui};color:${PAL.ash};text-transform:uppercase;letter-spacing:.14em}
+.slag-keys.head{min-height:20px;padding-block:0}
+.slag-panel[data-tab=keyboard] .slag-row:not(.slag-keys){min-height:48px}
+.slag-keys .slag-btn.key{min-width:0;min-height:36px;padding:2px}
+.slag-keyfoot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 18px;padding:4px 14px 0}
+.slag-keyfoot .slag-note,.slag-keyfoot .slag-prompts{margin:0}
+.slag-settings .slag-actions{flex:none;margin-top:10px}
+.slag-actions .slag-btn{display:inline-flex;align-items:center;gap:8px}
+@media (max-height:520px){.slag-settings h2{display:none}.slag-tablist{padding-block:6px 8px}.slag-settings .slag-row{min-height:48px;margin-bottom:2px}.slag-settings .slag-actions{margin-top:6px}.slag-settings{padding-bottom:10px}}
+@media (max-width:640px){.slag-tablist{overflow-x:auto;scrollbar-width:none}.slag-tabkey{display:none}.slag-tab{font-size:18px;padding-inline:10px}}
+@media (max-width:520px){.slag-settings .slag-row>label{flex-basis:76px}.slag-settings .slag-row:has(.slag-range){flex-wrap:nowrap}.slag-settings .slag-row:has(.slag-chips)>.lbl{flex-basis:100%}.slag-settings .slag-row:has(.slag-chips){padding-block:8px}.slag-settings .slag-chips{flex:1 0 100%}.slag-settings .slag-chips .slag-btn{flex:1;min-width:0;padding-inline:6px}}
 `;
 
 let styled = false;
@@ -163,11 +216,94 @@ const BIND_LABELS: Record<(typeof BINDABLE)[number], string> = {
   alt: 'Rotate / Alt',
 };
 
-/** Controls (remapping, split keyboard) + audio volumes. */
+/** A read-only line of a control sheet. */
+interface BindRow {
+  label: string;
+  glyphs: Glyph[];
+}
+
+const MOUSE_ROWS: readonly BindRow[] = [
+  { label: 'Pick / Place', glyphs: [{ kind: 'mouse', button: 'left' }] },
+  {
+    label: 'Rotate',
+    glyphs: [
+      { kind: 'mouse', button: 'right' },
+      { kind: 'mouse', button: 'wheel' },
+    ],
+  },
+];
+
+const PAD_ROWS: readonly BindRow[] = [
+  {
+    label: 'Move',
+    glyphs: [
+      { kind: 'pad', button: 'LS' },
+      { kind: 'pad', button: 'DPAD' },
+    ],
+  },
+  { label: 'Jump / Confirm', glyphs: [{ kind: 'pad', button: 'A' }] },
+  {
+    label: 'Run',
+    glyphs: [
+      { kind: 'pad', button: 'X' },
+      { kind: 'pad', button: 'RB' },
+    ],
+  },
+  {
+    label: 'Use Item',
+    glyphs: [
+      { kind: 'pad', button: 'Y' },
+      { kind: 'pad', button: 'LT' },
+    ],
+  },
+  {
+    label: 'Rotate / Self-Destruct',
+    glyphs: [
+      { kind: 'pad', button: 'B' },
+      { kind: 'pad', button: 'LB' },
+    ],
+  },
+  { label: 'Settings', glyphs: [{ kind: 'pad', button: 'MENU' }] },
+];
+
+/** What the prompts inside the Settings card show per input family. Touch has no prompts: everything there is a tap. */
+const MENU_PROMPTS = {
+  prev: { keyboard: { kind: 'key', label: 'Q' }, gamepad: { kind: 'pad', button: 'LB' } },
+  next: { keyboard: { kind: 'key', label: 'E' }, gamepad: { kind: 'pad', button: 'RB' } },
+  back: { keyboard: { kind: 'key', label: 'Esc' }, gamepad: { kind: 'pad', button: 'B' } },
+} as const satisfies Record<string, Partial<Record<InputMode, Glyph>>>;
+
+/** Where the arrows can land: the active tab, the page's controls, the footer. */
+const MENU_ITEMS = '.slag-tab[aria-selected=true],.slag-panel button,.slag-panel input,.slag-actions button';
+
+/** Reopening lands on the last tab of this page load. */
+let lastTab: SettingsTab = SETTINGS_TABS[0];
+
+function connectedPads(): Gamepad[] {
+  return navigator.getGamepads ? [...navigator.getGamepads()].filter((p): p is Gamepad => !!p?.connected) : [];
+}
+
+/** Controls (remapping, split keyboard), audio volumes and video options, one tab per page. */
 export class SettingsMenu extends Overlay {
   private draft!: InputSettings;
   private listening: { profile: keyof Pick<InputSettings, 'single' | 'left' | 'right'>; action: (typeof BINDABLE)[number]; slot: number } | null = null;
   private keyHandler = (e: KeyboardEvent) => this.onKey(e);
+  private tab = lastTab;
+  private raf = 0;
+  private padReader: MenuPadReader | null = null;
+  private padCount = 0;
+  /** The last input was a pad: its prompts go first. */
+  private padFirst = false;
+  private refocus: HTMLElement | null = null;
+  private sections: Record<SettingsSection, (panel: HTMLElement) => void> = {
+    audio: (p) => this.audioSection(p),
+    touch: (p) => this.touchSection(p),
+    quality: (p) => this.displaySection(p),
+    style: (p) => this.styleSection(p),
+    keyboard: (p) => this.keyboardSection(p),
+    mouse: (p) => this.bindSection(p, MOUSE_ROWS),
+    gamepad: (p) => this.bindSection(p, PAD_ROWS),
+  };
   /** When set, the menu shows a "Leave Lobby" button that calls it. */
   leave: (() => void) | null = null;
   /** When set, the menu shows a graphics-quality picker. */
@@ -184,18 +320,154 @@ export class SettingsMenu extends Overlay {
 
   open() {
     this.draft = structuredClone(this.input.settings);
+    this.tab = lastTab;
     this.render();
+    this.refocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    if (!this.input.touch.active) this.selectPanel();
     window.addEventListener('keydown', this.keyHandler, true);
+    const pads = connectedPads();
+    this.padCount = pads.length;
+    this.padReader = new MenuPadReader(readMenuPad(pads));
+    this.input.capturePads(true);
+    this.paintPrompts();
+    cancelAnimationFrame(this.raf);
+    this.raf = requestAnimationFrame(this.poll);
   }
 
   override close() {
     window.removeEventListener('keydown', this.keyHandler, true);
+    cancelAnimationFrame(this.raf);
     this.listening = null;
+    if (this.isOpen) this.input.capturePads(false);
+    const refocus = this.refocus;
+    this.refocus = null;
     super.close();
+    refocus?.focus();
+  }
+
+  /** Gamepads don't raise key events: poll them, and watch for one being plugged in. */
+  private poll = () => {
+    this.raf = requestAnimationFrame(this.poll);
+    const pads = connectedPads();
+    if (pads.length !== this.padCount) {
+      this.padCount = pads.length;
+      this.paintPrompts();
+    }
+    for (const a of this.padReader?.step(readMenuPad(pads), performance.now()) ?? []) {
+      this.setPadFirst(true);
+      this.act(a);
+    }
+  };
+
+  private setPadFirst(on: boolean) {
+    if (this.padFirst === on) return;
+    this.padFirst = on;
+    this.paintPrompts();
+  }
+
+  private tabContext(): TabContext {
+    return { touch: this.input.touch.active, quality: !!this.quality, style: !!this.artStyle };
+  }
+
+  /** The active tab, the current page's controls and the footer buttons, in reading order. */
+  private items(): HTMLElement[] {
+    return [...(this.root?.querySelectorAll<HTMLElement>(MENU_ITEMS) ?? [])].filter((e) => !e.matches(':disabled'));
+  }
+
+  private selected(): HTMLElement | null {
+    const a = document.activeElement;
+    return a instanceof HTMLElement && this.root?.contains(a) ? a : null;
+  }
+
+  /** Select the first control on the page, or the tab itself on a page with nothing to change. */
+  private selectPanel() {
+    const first = this.root?.querySelector<HTMLElement>('.slag-panel button:enabled,.slag-panel input:enabled');
+    (first ?? this.root?.querySelector<HTMLElement>('.slag-tab[aria-selected=true]'))?.focus({ preventScroll: true });
+  }
+
+  private switchTab(tab: SettingsTab, stayOnTab: boolean) {
+    if (tab !== this.tab) {
+      this.tab = lastTab = tab;
+      this.audio.ui?.('click');
+      this.render();
+    }
+    if (stayOnTab) this.root?.querySelector<HTMLElement>('.slag-tab[aria-selected=true]')?.focus();
+    else this.selectPanel();
+  }
+
+  /** Every input ends up here: keys, the pad, and (through focus) the mouse move one selection. */
+  private act(a: MenuAction) {
+    if (this.listening) {
+      if (a === 'back') {
+        this.listening = null;
+        this.render();
+      }
+      return;
+    }
+    if (a === 'back') {
+      this.audio.ui?.('close');
+      this.close();
+    } else if (a === 'prevTab' || a === 'nextTab') {
+      this.switchTab(cycleTab(visibleTabs(this.tabContext()), this.tab, a === 'prevTab' ? -1 : 1), false);
+    } else if (a === 'confirm') {
+      const cur = this.selected();
+      if (cur) cur.click();
+      else this.selectPanel();
+    } else this.move(a);
+  }
+
+  private move(dir: MenuDirection) {
+    const items = this.items();
+    const cur = this.selected();
+    const from = cur ? items.indexOf(cur) : -1;
+    if (!cur || from < 0) {
+      this.selectPanel();
+      return;
+    }
+    const sideways = dir === 'left' || dir === 'right';
+    const d = dir === 'left' ? -1 : 1;
+    if (sideways && cur.getAttribute('role') === 'tab') {
+      this.switchTab(cycleTab(visibleTabs(this.tabContext()), this.tab, d), true);
+    } else if (sideways && cur instanceof HTMLInputElement && cur.type === 'range') {
+      if (d < 0) cur.stepDown();
+      else cur.stepUp();
+      cur.dispatchEvent(new Event('input'));
+    } else {
+      const next = navTarget(this.itemBoxes(items), from, dir);
+      if (next !== null) items[next].focus();
+    }
+  }
+
+  /** Boxes as if the page weren't scrolled: rows clipped behind the tabs or the footer still sit between them. */
+  private itemBoxes(items: readonly HTMLElement[]): NavRect[] {
+    const panel = this.root?.querySelector('.slag-panel');
+    return items.map((e) => {
+      const { left, top, width, height } = e.getBoundingClientRect();
+      if (!panel) return { left, top, width, height };
+      const below = e.closest('.slag-actions') ? panel.scrollHeight - panel.clientHeight : 0;
+      return { left, top: top + below + (panel.contains(e) ? panel.scrollTop : 0), width, height };
+    });
   }
 
   private onKey(e: KeyboardEvent) {
-    if (!this.listening) return;
+    if (!this.listening) {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      this.setPadFirst(false);
+      if (e.code === 'Tab') {
+        // Tab walks the card and never falls out to the page behind it.
+        e.preventDefault();
+        const items = this.items();
+        const at = items.indexOf(this.selected() ?? items[0]);
+        items[(at + (e.shiftKey ? items.length - 1 : 1)) % items.length]?.focus();
+        return;
+      }
+      const action = KEY_ACTIONS[e.code];
+      if (action) {
+        e.preventDefault();
+        this.act(action);
+      }
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
     const { profile, action, slot } = this.listening;
@@ -218,20 +490,14 @@ export class SettingsMenu extends Overlay {
   }
 
   private audioSection(card: HTMLElement) {
-    card.append(el('h3', { textContent: 'Audio' }));
     const muted = !!this.audio.volumes.muted;
-    const sw = el('button', { className: 'slag-switch', type: 'button' });
-    sw.setAttribute('role', 'switch');
-    sw.setAttribute('aria-checked', String(muted));
-    sw.setAttribute('aria-label', 'Mute all sound');
     const ranges: HTMLInputElement[] = [];
-    sw.onclick = () => {
-      const on = !this.audio.volumes.muted;
-      this.audio.setVolumes({ muted: on });
-      sw.setAttribute('aria-checked', String(on));
-      for (const r of ranges) r.disabled = on;
-    };
-    card.append(el('div', { className: 'slag-row' }, el('span', { className: 'lbl wide', textContent: 'Mute All Sound' }), sw));
+    card.append(
+      this.switchRow('Mute All Sound', muted, (on) => {
+        this.audio.setVolumes({ muted: on });
+        for (const r of ranges) r.disabled = on;
+      }),
+    );
     const LABEL = { master: 'Master', music: 'Music', sfx: 'Effects' } as const;
     for (const k of ['master', 'music', 'sfx'] as const) {
       const range = el('input', { type: 'range', min: '0', max: '1', step: '0.05', className: 'slag-range', disabled: muted });
@@ -260,11 +526,12 @@ export class SettingsMenu extends Overlay {
       sw.setAttribute('aria-checked', String(on));
       toggle(on);
     };
-    return el('div', { className: 'slag-row' }, el('span', { className: 'lbl wide', textContent: label }), sw);
+    const name = el('span', { className: 'lbl wide', textContent: label });
+    name.onclick = () => sw.click();
+    return el('div', { className: 'slag-row' }, name, sw);
   }
 
   private touchSection(card: HTMLElement) {
-    card.append(el('h3', { textContent: 'Touch' }));
     card.append(
       this.switchRow('Vibration', this.input.touch.haptics, (on) => {
         this.input.touch.haptics = on;
@@ -277,8 +544,13 @@ export class SettingsMenu extends Overlay {
     );
   }
 
-  private displaySection(card: HTMLElement, q: QualityControl) {
-    card.append(el('h3', { textContent: 'Graphics Quality' }));
+  private chipRow(card: HTMLElement, label: string, chips: HTMLElement) {
+    card.append(el('div', { className: 'slag-row' }, el('span', { className: 'lbl', textContent: label }), chips));
+  }
+
+  private displaySection(card: HTMLElement) {
+    const q = this.quality;
+    if (!q) return;
     const chips = el('div', { className: 'slag-chips' });
     const opts: [QualityTier | null, string][] = [
       [null, 'Auto'],
@@ -295,11 +567,12 @@ export class SettingsMenu extends Overlay {
       };
       chips.append(b);
     }
-    card.append(chips);
+    this.chipRow(card, 'Graphics Quality', chips);
   }
 
-  private styleSection(card: HTMLElement, c: StyleControl) {
-    card.append(el('h3', { textContent: 'Art Style' }));
+  private styleSection(card: HTMLElement) {
+    const c = this.artStyle;
+    if (!c) return;
     const chips = el('div', { className: 'slag-chips' });
     for (const style of STYLE_IDS) {
       const b = el('button', { className: `slag-btn ${c.get() === style ? 'on' : ''}`, type: 'button', textContent: STYLES[style].label });
@@ -309,38 +582,40 @@ export class SettingsMenu extends Overlay {
       };
       chips.append(b);
     }
-    card.append(chips);
+    this.chipRow(card, 'Art Style', chips);
   }
 
-  private controlsSection(card: HTMLElement) {
-    card.append(el('h3', { textContent: 'Keyboard' }));
-    const split = el('button', { className: 'slag-switch', type: 'button' });
-    split.setAttribute('role', 'switch');
-    split.setAttribute('aria-checked', String(this.draft.splitKeyboard));
-    split.setAttribute('aria-label', 'Split keyboard');
-    split.onclick = () => {
-      this.draft.splitKeyboard = !this.draft.splitKeyboard;
-      this.input.apply(this.draft);
-      this.render();
-    };
-    card.append(el('div', { className: 'slag-row' }, el('span', { className: 'lbl wide', textContent: 'Split Keyboard (Two Players)' }), split));
+  private keyboardSection(card: HTMLElement) {
+    card.append(
+      this.switchRow('Split Keyboard (Two Players)', this.draft.splitKeyboard, (on) => {
+        this.draft.splitKeyboard = on;
+        this.input.apply(this.draft);
+        this.render();
+      }),
+    );
     const profiles: { key: 'single' | 'left' | 'right'; title: string }[] = this.draft.splitKeyboard
       ? [
           { key: 'left', title: 'Player A' },
           { key: 'right', title: 'Player B' },
         ]
       : [{ key: 'single', title: 'Keys' }];
-    const cols = profiles.length * SLOTS;
-    const grid = el('div', { className: 'slag-grid' });
-    grid.style.gridTemplateColumns = `minmax(110px,1fr) repeat(${cols}, auto)`;
-    grid.append(el('div'));
+    const columns = `minmax(72px,1fr) repeat(${profiles.length * SLOTS},minmax(56px,96px))`;
+    const keyRow = (head = false) => {
+      const row = el('div', { className: `slag-row slag-keys ${head ? 'head' : ''}` });
+      row.style.gridTemplateColumns = columns;
+      return row;
+    };
+    const head = keyRow(true);
+    head.append(el('div'));
     for (const p of profiles) {
       const h = el('div', { className: 'h', textContent: p.title });
       h.style.gridColumn = `span ${SLOTS}`;
-      grid.append(h);
+      head.append(h);
     }
+    card.append(head);
     for (const a of BINDABLE) {
-      grid.append(el('div', { textContent: BIND_LABELS[a] }));
+      const row = keyRow();
+      row.append(el('div', { className: 'lbl', textContent: BIND_LABELS[a] }));
       for (const p of profiles) {
         for (let slot = 0; slot < SLOTS; slot++) {
           const listening = this.listening?.profile === p.key && this.listening.action === a && this.listening.slot === slot;
@@ -354,85 +629,77 @@ export class SettingsMenu extends Overlay {
             this.listening = { profile: p.key, action: a, slot };
             this.render();
           };
-          grid.append(b);
+          row.append(b);
         }
       }
+      card.append(row);
     }
-    card.append(grid);
-    card.append(el('div', { className: 'slag-note', textContent: 'Select a slot, then press the new key.' }));
     card.append(
-      promptRow([
-        { glyphs: [{ kind: 'key', label: '⌫' }], label: 'Clear' },
-        { glyphs: [{ kind: 'key', label: 'Esc' }], label: 'Cancel' },
-      ]),
-    );
-    card.append(el('h3', { textContent: 'Mouse' }));
-    card.append(
-      promptRow([
-        { glyphs: [{ kind: 'mouse', button: 'left' }], label: 'Pick / Place' },
-        {
-          glyphs: [
-            { kind: 'mouse', button: 'right' },
-            { kind: 'mouse', button: 'wheel' },
-          ],
-          label: 'Rotate',
-        },
-      ]),
-    );
-    card.append(el('h3', { textContent: 'Gamepad' }));
-    card.append(
-      promptRow([
-        {
-          glyphs: [
-            { kind: 'pad', button: 'LS' },
-            { kind: 'pad', button: 'DPAD' },
-          ],
-          label: 'Move',
-        },
-        { glyphs: [{ kind: 'pad', button: 'A' }], label: 'Jump / Confirm' },
-        {
-          glyphs: [
-            { kind: 'pad', button: 'X' },
-            { kind: 'pad', button: 'RB' },
-          ],
-          label: 'Run',
-        },
-        {
-          glyphs: [
-            { kind: 'pad', button: 'Y' },
-            { kind: 'pad', button: 'LT' },
-          ],
-          label: 'Use Item',
-        },
-        {
-          glyphs: [
-            { kind: 'pad', button: 'B' },
-            { kind: 'pad', button: 'LB' },
-          ],
-          label: 'Rotate / Self-Destruct',
-        },
-      ]),
+      el(
+        'div',
+        { className: 'slag-keyfoot' },
+        el('div', { className: 'slag-note', textContent: 'Select a slot, then press the new key.' }),
+        promptRow([
+          { glyphs: [{ kind: 'key', label: '⌫' }], label: 'Clear' },
+          { glyphs: [{ kind: 'key', label: 'Esc' }], label: 'Cancel' },
+        ]),
+      ),
     );
   }
 
+  /** A control sheet: the fixed bindings of an input that can't be remapped. */
+  private bindSection(card: HTMLElement, rows: readonly BindRow[]) {
+    for (const r of rows) {
+      const binds = el('span', { className: 'slag-binds' }, ...r.glyphs.map((g) => glyphEl(g, 30)));
+      card.append(el('div', { className: 'slag-row' }, el('span', { className: 'lbl wide', textContent: r.label }), binds));
+    }
+  }
+
+  private tabBar(tabs: readonly SettingsTab[]): HTMLElement {
+    const list = el('div', { className: 'slag-tablist' });
+    list.setAttribute('role', 'tablist');
+    list.setAttribute('aria-label', 'Settings');
+    for (const t of tabs) {
+      const b = el('button', { className: 'slag-tab', type: 'button', id: `slag-tab-${t}`, textContent: TAB_LABELS[t] });
+      b.setAttribute('role', 'tab');
+      b.setAttribute('aria-selected', String(t === this.tab));
+      b.setAttribute('aria-controls', 'slag-panel');
+      b.onclick = () => this.switchTab(t, true);
+      list.append(b);
+    }
+    return el('div', { className: 'slag-tabs' }, this.promptSlot('prev'), list, this.promptSlot('next'));
+  }
+
+  /** A spot for a prompt: `paintPrompts` fills it for the inputs in play. */
+  private promptSlot(prompt: keyof typeof MENU_PROMPTS): HTMLElement {
+    const slot = el('span', { className: 'slag-tabkey' });
+    slot.dataset.prompt = prompt;
+    slot.setAttribute('aria-hidden', 'true');
+    return slot;
+  }
+
+  private paintPrompts() {
+    const active: InputMode = this.input.touch.active ? 'touch' : this.padFirst ? 'gamepad' : 'keyboard';
+    const modes = promptModes(active, { keyboard: true, gamepad: this.padCount > 0 });
+    for (const slot of this.root?.querySelectorAll<HTMLElement>('[data-prompt]') ?? []) {
+      const glyphs: Partial<Record<InputMode, Glyph>> = MENU_PROMPTS[slot.dataset.prompt as keyof typeof MENU_PROMPTS];
+      slot.replaceChildren(...modes.flatMap((m) => glyphs[m] ?? []).map((g) => glyphEl(g, 24)));
+    }
+  }
   private render() {
-    const card = el('div', { className: 'slag-card' }, el('h2', { textContent: 'Settings' }));
+    const context = this.tabContext();
+    const tabs = visibleTabs(context);
+    this.tab = resolveTab(tabs, this.tab);
+    const card = el('div', { className: 'slag-card slag-settings' }, el('h2', { textContent: 'Settings' }), this.tabBar(tabs));
     card.setAttribute('role', 'dialog');
     card.setAttribute('aria-label', 'Settings');
-    this.audioSection(card);
-    // Under touch the key-rebind grid is noise: show the touch options instead.
-    if (this.input.touch.active) this.touchSection(card);
-    if (this.quality) this.displaySection(card, this.quality);
-    if (this.artStyle) this.styleSection(card, this.artStyle);
-    if (!this.input.touch.active) this.controlsSection(card);
-    const reset = el('button', { className: 'slag-btn', type: 'button', textContent: 'Reset Controls' });
-    reset.hidden = this.input.touch.active;
-    reset.onclick = () => {
-      this.draft = { ...defaultSettings(), splitKeyboard: this.draft.splitKeyboard };
-      this.input.apply(this.draft);
-      this.render();
-    };
-    const done = el('button', { className: 'slag-btn primary', type: 'button', textContent: 'Done' });
+    const panel = el('div', { className: 'slag-panel', id: 'slag-panel' });
+    panel.setAttribute('role', 'tabpanel');
+    panel.setAttribute('aria-labelledby', `slag-tab-${this.tab}`);
+    panel.dataset.tab = this.tab;
+    for (const s of tabSections(this.tab, context)) this.sections[s](panel);
+    card.append(panel);
+    const done = el('button', { className: 'slag-btn primary', type: 'button' }, this.promptSlot('back'), 'Done');
     done.onclick = () => this.close();
     const actions = el('div', { className: 'slag-actions' });
     if (this.leave) {
@@ -440,13 +707,40 @@ export class SettingsMenu extends Overlay {
       leave.onclick = () => this.leave?.();
       actions.append(leave, el('span', { className: 'grow' }));
     }
-    actions.append(reset, done);
+    if (this.tab === 'keyboard') {
+      const reset = el('button', { className: 'slag-btn', type: 'button', textContent: 'Reset Controls' });
+      reset.onclick = () => {
+        this.draft = { ...defaultSettings(), splitKeyboard: this.draft.splitKeyboard };
+        this.input.apply(this.draft);
+        this.render();
+      };
+      actions.append(reset);
+    }
+    actions.append(done);
     card.append(actions);
+    card.addEventListener('pointermove', (e) => this.onPointerMove(e));
+    card.addEventListener('pointerdown', () => this.setPadFirst(false));
     if (this.root) {
-      const scroll = this.root.querySelector('.slag-card')?.scrollTop ?? 0;
+      // A rebuild keeps your place: same scroll on the same page, same control selected.
+      const old = this.root.querySelector('.slag-panel');
+      const scroll = old instanceof HTMLElement && old.dataset.tab === this.tab ? old.scrollTop : 0;
+      const before = this.items();
+      const cur = this.selected();
+      const at = cur ? before.indexOf(cur) : -1;
       this.root.replaceChildren(card);
-      card.scrollTop = scroll;
+      panel.scrollTop = scroll;
+      const after = this.items();
+      if (at >= 0) after[Math.min(at, after.length - 1)]?.focus({ preventScroll: true });
     } else this.mount(card);
+    this.paintPrompts();
+    card.querySelector('.slag-tab[aria-selected=true]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+
+  /** Mouse hover moves the same selection the arrows do. Only real movement: the DOM changing under a still mouse isn't a choice. */
+  private onPointerMove(e: PointerEvent) {
+    if (e.pointerType !== 'mouse' || e.buttons || (!e.movementX && !e.movementY)) return;
+    const item = (e.target as Element | null)?.closest<HTMLElement>('.slag-panel button,.slag-panel input,.slag-actions button');
+    if (item && !item.matches(':disabled') && item !== document.activeElement) item.focus({ preventScroll: true });
   }
 }
 
