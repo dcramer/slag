@@ -108,7 +108,7 @@ export interface NetInfo {
   arrival?: NetArrival;
 }
 
-/** The join card: the toy you'd play as, and how asking for the seat is going. */
+/** The join card: the character you'd play as, and how asking for the seat is going. */
 export interface JoinCardInfo {
   character: CharacterDef;
   /** `edit`: looking and naming; `asking`: with the host; `won`: seated or owed a seat; `taken`: someone was quicker. */

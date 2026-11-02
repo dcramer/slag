@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { generateCharacter, TOYS } from '../src/gen/character';
+import { generateCharacter, CAST } from '../src/gen/character';
 import { drawInkRunner, type RunnerPose } from '../src/render/ink-character';
-import { TOY_ART } from '../src/render/toys';
+import { CAST_ART } from '../src/render/cast';
 
 /** A 2D context that only records where paths go, in the character's own space (transforms are ignored). */
 function recorder() {
@@ -35,23 +35,23 @@ describe('inked runner', () => {
   // another or reads as a different size of player.
   it('draws every toy, seed and pose within a fixed box around the hitbox', () => {
     for (let seed = 1; seed <= 64; seed++) {
-      const c = generateCharacter(seed, TOYS[seed % TOYS.length]);
+      const c = generateCharacter(seed, CAST[seed % CAST.length]);
       for (const [name, pose] of Object.entries(POSES)) {
         const { ctx, pts } = recorder();
         drawInkRunner({ s: ctx, g: null }, c, 0, 0, pose);
         expect(pts.length, name).toBeGreaterThan(40);
         for (const [x, y] of pts) {
-          expect(Math.abs(x), `${c.toy} ${seed} ${name}`).toBeLessThanOrEqual(17);
-          expect(y, `${c.toy} ${seed} ${name}`).toBeGreaterThanOrEqual(-32);
+          expect(Math.abs(x), `${c.kind} ${seed} ${name}`).toBeLessThanOrEqual(17);
+          expect(y, `${c.kind} ${seed} ${name}`).toBeGreaterThanOrEqual(-32);
           // Feet stand on the floor: ink below it would sink a standing runner into the ground.
-          if (pose.grounded) expect(y, `${c.toy} ${seed} ${name}`).toBeLessThanOrEqual(1.1);
+          if (pose.grounded) expect(y, `${c.kind} ${seed} ${name}`).toBeLessThanOrEqual(1.1);
         }
       }
     }
   });
 
   it('has art for every toy', () => {
-    for (const t of TOYS) expect(TOY_ART[t], t).toBeDefined();
+    for (const t of CAST) expect(CAST_ART[t], t).toBeDefined();
   });
 
   it('draws the same runner the same way every time', () => {

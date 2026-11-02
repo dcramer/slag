@@ -5,8 +5,8 @@ import { inked, type Look, type Mood, oval, poly, type RunnerPose, toned, tonedO
 import type { Part } from '../fx';
 
 /**
- * What every toy's art is built from: the hooks a kind fills in (`ToyArt`), what a hook is handed (`D`),
- * the toy shop's materials, and the shared parts (shapes, keys, rivets, wheels, bands).
+ * What every character's art is built from: the hooks a kind fills in (`KindArt`), what a hook is handed
+ * (`D`), a few shared colors, and the shared parts (outlines, bands, stalks, rivets).
  */
 
 /** Everything a hook needs about this draw. Body space: feet at y = 0, body bottom at `by`, top at `top`. */
@@ -40,6 +40,8 @@ export interface D {
   bx: (u: number) => number;
   /** This frame's gait, for secondary motion (a lid lifting on the hop, a clapper swinging against the rock). */
   gait: Gait;
+  /** Boot colors, lit and shade. */
+  boot: [string, string];
 }
 
 /** What the frame hands a gait: the body's motion this frame. */
@@ -77,12 +79,16 @@ export interface Gait {
   k?: number;
 }
 
-export type Feet = 'peg' | 'web' | 'wheels' | 'spring' | 'none';
-export type Arms = 'mitten' | 'none';
-/** What a toy bursts into when it dies. */
+export type Feet = 'peg' | 'web' | 'paw' | 'boot' | 'stilt' | 'none';
+export type Arms = 'mitten' | 'flipper' | 'none';
+/** A ribbon the rig trails: a bushy tail, a ringed one. */
+export type Rope = { kind: 'tail' | 'ringtail'; len: number };
+/** Where a tail hangs from, in world px from the feet, facing right. */
+export type Anchor = { x: number; y: number };
+/** What a character bursts into when it dies. */
 export type { Part } from '../fx';
 
-export interface ToyArt {
+export interface KindArt {
   /** Body multipliers around the shared 14×15 envelope, inside the range every kind shares. */
   size: [number, number];
   /**
@@ -95,28 +101,34 @@ export interface ToyArt {
   feet: Feet;
   arms: Arms;
   gait: (g: GaitIn) => Gait;
-  /** The face's shift toward where the toy faces, as a fraction of its width (a train's face is on its front). */
+  /** The face's shift toward where the character faces, as a fraction of its width (a fox's face is out on its snout). */
   faceX?: number;
-  /** A trailing ribbon from the rig: a pull string, or a long scarf in the player's color. */
-  rope?: { kind: 'string' | 'scarf'; len: number };
-  /** The toy's own face (painted dots, a visor, a lamp...), in place of the shared cartoon eyes and mouth. */
+  /** What the body is drawn in: the player's color (most kinds), or the kind's own, for one whose palette is its identity. */
+  fill?: 'player' | 'paint';
+  /** A tail the rig trails behind it. */
+  rope?: Rope;
+  /** The kind's own face (a side eye, a visor, goggles, a mask...), in place of the shared cartoon eyes and mouth. */
   paintFace?: (d: D) => void;
-  /** Shiny metal or enamel: one hard glint on the lit shoulder. Matte paint and wood get none. */
+  /** Shiny metal or a wet skin: one hard glint on the lit shoulder. Fur and feathers get none. */
   shine?: boolean;
   /** Face overrides on the character's rolled one, for kinds that keep the cartoon face. */
   face?: (c: CharacterDef) => { eyes?: Partial<CharacterDef['eyes']>; mouth?: CharacterDef['mouth'] };
-  /** Mitten color. */
-  hands?: 'tin' | 'iron' | 'paint';
+  /** Mitten (or flipper) color: white gloves, the body, the kind's own color, steel. */
+  hands?: 'glove' | 'body' | 'paint' | 'iron';
   /** Behind the body (keys, handles, legs, fins). */
   back?: (d: D) => void;
-  /** Inside the body, before the shadow: the player's band, label or panel, and the toy's own marks. */
+  /** Inside the body, before the shadow: a pale chest, overalls, the kind's own marks. */
   print?: (d: D) => void;
   /** Inside the body, after the shadow: seams, rivets, glints. */
   over?: (d: D) => void;
   /** On the body, before the face (hats, caps, spouts, stacks). */
   front?: (d: D) => void;
-  /** Over the face (beaks, bills, grilles). */
+  /** Over the face (beaks, snouts, a mustache). */
   snout?: (d: D) => void;
+  /** Held in the front hand, drawn under the mitten at the hand's position (a wrench). */
+  tool?: (d: D, hx: number, hy: number) => void;
+  /** Boot colors when they aren't the kind's own `paint`. */
+  boots?: [string, string];
   parts: readonly Part[];
 }
 
@@ -284,7 +296,7 @@ export function spot(s: CanvasRenderingContext2D, x: number, y: number, rx: numb
 
 /** A level band across the body from u0 to u1, cut off by the body's own edge (a print hook draws inside the clip). It stops just past the widest body, so nothing drawn reaches beyond it even unclipped. */
 export function band(d: D, u0: number, u1: number, fill: string, tilt = 0) {
-  // Never below the body's own bottom: on a toy standing low (a top on its point) it would reach the floor.
+  // Never below the body's own bottom: on a character standing low it would reach the floor.
   u0 = Math.max(u0, -0.4 / d.H);
   poly(
     d.s,
@@ -332,98 +344,6 @@ export function stalk(d: D, x0: number, y0: number, x1: number, y1: number, r: n
 export function rivet(d: D, x: number, y: number) {
   poly(d.s, oval(x, y, 0.7, 0.7, 6), IRON_SH);
   poly(d.s, oval(x - 0.2, y - 0.2, 0.32, 0.32, 5), TIN);
-}
-
-/** The mould's parting line down the middle. */
-export function seam(d: D) {
-  mark(
-    d.s,
-    d.lk.paintShade,
-    [
-      { x: 0.3, y: d.top - 1 },
-      { x: 0, y: Y(d, 0.5) },
-      { x: 0.3, y: d.by + 1 },
-    ],
-    0.7,
-    d.sd,
-    [0, 0],
-  );
-}
-
-/**
- * The wind-up key in the back: small, in steel, turning as the toy goes, its bow foreshortening edge-on.
- * Quiet on purpose: the player's color is the loudest thing on a toy.
- */
-export function key(d: D, u = 0.52, edge = 0.46) {
-  const speed = d.m === 'run' ? 14 : d.m === 'walk' ? 7 : d.m === 'idle' ? 1.2 : 9;
-  const a = d.t * speed + d.sd;
-  const x0 = -d.f * d.W * edge + d.bx(u);
-  const y0 = Y(d, u);
-  const x1 = x0 - d.f * 2.4;
-  d.s.fillStyle = d.lk.ink;
-  line(d.s, x0 + d.f, y0, x1, y0, { w: 1.7 * d.k, seed: 1, taper: [0, 0], press: 0 });
-  const w = Math.max(0.6, Math.abs(Math.cos(a)) * 1.9);
-  const cx = x1 - d.f * w * 0.5;
-  const bow = [
-    { x: cx, y: y0 },
-    { x: cx - w, y: y0 - 1.8 },
-    { x: cx - w * 0.5, y: y0 - 3.2 },
-    { x: cx + w * 0.5, y: y0 - 3.2 },
-    { x: cx + w, y: y0 - 1.8 },
-    { x: cx, y: y0 },
-    { x: cx + w, y: y0 + 1.8 },
-    { x: cx + w * 0.5, y: y0 + 3.2 },
-    { x: cx - w * 0.5, y: y0 + 3.2 },
-    { x: cx - w, y: y0 + 1.8 },
-  ];
-  toned(d.s, bow, STEEL, STEEL_SH, d.lk.ink, 0.5, 0.9 * d.k, 0.4);
-}
-
-/** A wheel at (x, y) turning with the stride: iron rim, brass hub, two spokes. */
-export function wheel(d: D, x: number, y: number, r: number) {
-  tonedOval(d.s, x, y, r, r, 12, IRON, IRON_SH, d.lk.ink, 0.5, 0.95 * d.k, 0.5);
-  const a = -d.ph * (4.2 / r) * d.f;
-  d.s.fillStyle = TIN_SH;
-  for (const k of [0, Math.PI / 2]) {
-    const c = Math.cos(a + k) * r * 0.7;
-    const s = Math.sin(a + k) * r * 0.7;
-    line(d.s, x - c, y - s, x + c, y + s, { w: 0.7, seed: k, taper: [0, 0], press: 0 });
-  }
-  poly(d.s, oval(x, y, r * 0.32, r * 0.32, 7), BRASS);
-}
-
-/** A small inked box: hats, slots, grilles, cabs. */
-export function inkBox(d: D, x: number, y: number, w: number, h: number, fill: string, shade = IRON_SH) {
-  toned(
-    d.s,
-    [
-      { x, y },
-      { x: x + w, y: y - 0.2 },
-      { x: x + w, y: y + h },
-      { x, y: y + h + 0.1 },
-    ],
-    fill,
-    shade,
-    d.lk.ink,
-    0.5,
-    0.9 * d.k,
-    0.5,
-  );
-}
-
-/** An ink ring with an open middle. */
-export function inkLoop(d: D, pts: readonly P[], fill: string) {
-  const ring = [...pts, pts[0], pts[1]];
-  d.s.fillStyle = d.lk.ink;
-  for (let i = 1; i < ring.length; i++) line(d.s, ring[i - 1].x, ring[i - 1].y, ring[i].x, ring[i].y, { w: 2.2 * d.k, seed: i, taper: [0, 0], press: 0 });
-  d.s.fillStyle = fill;
-  for (let i = 1; i < ring.length; i++) line(d.s, ring[i - 1].x, ring[i - 1].y, ring[i].x, ring[i].y, { w: 1, seed: i, taper: [0, 0], press: 0 });
-}
-
-/** A molten crack across the body: flat hot color in a dark rim, no glow, so it stays a mark on the toy. */
-export function crack(d: D, pts: readonly P[], seed: number) {
-  mark(d.s, '#3a1a0c', pts, 1.9, seed, [0.1, 0.4]);
-  mark(d.s, HOT_CSS, pts, 1, seed, [0.1, 0.4]);
 }
 
 /** Where `mouth()` puts the mouth, in face space. */

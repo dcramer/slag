@@ -1,13 +1,13 @@
 import { deriveSeed } from '../../core/rng';
-import { type CharacterDef, generateCharacter, TOYS } from '../../gen/character';
+import { type CharacterDef, generateCharacter, CAST } from '../../gen/character';
 import { Rig } from '../character';
-import { drawInkAccessory, drawInkRunner, ropeOf, type RunnerPose } from '../ink-character';
+import { drawInkAccessory, drawInkRunner, ropeAnchor, ropeOf, type RunnerPose } from '../ink-character';
 import { STRIDE } from '../ink-figure';
 
 /**
- * The toy catalog for docs/CHARACTERS.md and `pnpm shot cast`: every kind on two seeds, a row of
+ * The cast catalog for docs/CHARACTERS.md and `pnpm shot cast`: every kind on two seeds, a row of
  * poses, and the whole cast at play scale on dark and light ground, on a canvas over the page. Debug
- * only (`slagDebug.toys`).
+ * only (`slagDebug.cast`).
  */
 
 const POSES: [string, Partial<RunnerPose>][] = [
@@ -20,7 +20,7 @@ const POSES: [string, Partial<RunnerPose>][] = [
   ['cheer', { grounded: true, celebrate: true }],
 ];
 
-const def = (i: number, salt: string, toy = TOYS[i % TOYS.length]): CharacterDef => generateCharacter(deriveSeed(0x5ca7, `${salt}:${i}`), toy);
+const def = (i: number, salt: string, kind = CAST[i % CAST.length]): CharacterDef => generateCharacter(deriveSeed(0x5ca7, `${salt}:${i}`), kind);
 
 /** Stride phase for a mid-run pose: every gait is well into its stride here, none at rest. */
 const MID_RUN = 2.4 * STRIDE;
@@ -36,8 +36,8 @@ function runner(
   t: number,
   stride = 0,
 ) {
-  // In world units at the origin, then scaled, so the rig's string or scarf hangs as it does in a race.
-  // The runner's x sets its stride phase, so `stride` shifts it there and back.
+  // In world units at the origin, then scaled, so the rig's tail hangs as it does in a race. The runner's
+  // x sets its stride phase, so `stride` shifts it there and back.
   s.save();
   s.translate(x, y);
   s.scale(scale, scale);
@@ -45,18 +45,18 @@ function runner(
   const rope = ropeOf(c);
   if (rope) {
     const rig = new Rig();
-    for (let i = 0; i < 90; i++) rig.step(rope, -facing * 5, rope.kind === 'string' ? -3 : -10, 1 / 60, -(p.vx ?? 0) * 0.6 - facing * 8, -0.8);
+    const at = ropeAnchor(c, facing);
+    for (let i = 0; i < 90; i++) rig.step(rope, at.x + stride, at.y, 1 / 60, -(p.vx ?? 0) * 0.6 - facing * 8, -0.8);
     drawInkAccessory(s, c, rig);
   }
-  if (rope) s.translate(stride, 0);
-  drawInkRunner({ s, g: null }, c, rope ? 0 : stride, 0, { facing, vy: 0, grounded: true, t, ...p, vx: (p.vx ?? 0) * facing });
+  drawInkRunner({ s, g: null }, c, stride, 0, { facing, vy: 0, grounded: true, t, ...p, vx: (p.vx ?? 0) * facing });
   s.restore();
 }
 
 /** Draws the catalog on a full-window canvas and returns it (call `.remove()` to clear). */
-export function toyCatalog(t = 0.4): HTMLCanvasElement {
+export function castCatalog(t = 0.4): HTMLCanvasElement {
   const cols = 8;
-  const rows = Math.ceil(TOYS.length / cols);
+  const rows = Math.ceil(CAST.length / cols);
   const cell = 230;
   const big = 5.4;
   const W = cols * cell + 40;
@@ -74,8 +74,8 @@ export function toyCatalog(t = 0.4): HTMLCanvasElement {
     s.fillStyle = color;
     s.fillText(txt, x, y);
   };
-  label(`The foundry toys: ${TOYS.length} kinds, two seeds each`, W / 2, 30, 20, '#f6ead8');
-  TOYS.forEach((name, i) => {
+  label(`The cast: ${CAST.length} kinds, two seeds each`, W / 2, 30, 20, '#f6ead8');
+  CAST.forEach((name, i) => {
     const cx = 20 + (i % cols) * cell + cell / 2;
     const cy = 50 + Math.floor(i / cols) * 200;
     for (let j = 0; j < 2; j++)
@@ -95,8 +95,8 @@ export function toyCatalog(t = 0.4): HTMLCanvasElement {
   label('Play scale', 70, qy + 20, 15, '#f6ead8');
   s.fillStyle = '#d9cbb2';
   s.fillRect(W / 2, qy, W / 2, 120);
-  const step = (W / 2 - 60) / TOYS.length;
-  TOYS.forEach((name, i) => {
+  const step = (W / 2 - 60) / CAST.length;
+  CAST.forEach((name, i) => {
     const c = def(i * 2, 'cat', name);
     runner(s, c, 60 + step * (i + 0.5), qy + 80, { grounded: true }, 2.5, 1, t);
     runner(s, c, W / 2 + 30 + step * (i + 0.5), qy + 80, { grounded: true }, 2.5, 1, t);
@@ -110,8 +110,8 @@ export function toyCatalog(t = 0.4): HTMLCanvasElement {
  * runner about 16 px tall) and at play scale (2.5×, as at 1080p), then mid-run in color on dark and light
  * ground. Each should be nameable from its shape alone, and no two should share one.
  */
-export function toySilhouettes(t = 0.4): HTMLCanvasElement {
-  const n = TOYS.length;
+export function castSilhouettes(t = 0.4): HTMLCanvasElement {
+  const n = CAST.length;
   const cell = 150;
   const W = n * cell + 40;
   const H = 860;
@@ -153,23 +153,23 @@ export function toySilhouettes(t = 0.4): HTMLCanvasElement {
   label(`The silhouette test: ${n} kinds`, W / 2, 24, 20, '#120b08');
   for (const [name, y, pose, scale, stride] of rows) {
     label(name, 110, y - (scale > 1 ? 70 : 34), 13);
-    TOYS.forEach((toy, i) => solid(def(i * 2, 'cat', toy), 20 + cell * (i + 0.5), y, scale, pose, stride));
+    CAST.forEach((kind, i) => solid(def(i * 2, 'cat', kind), 20 + cell * (i + 0.5), y, scale, pose, stride));
   }
-  TOYS.forEach((toy, i) => label(toy, 20 + cell * (i + 0.5), 476));
+  CAST.forEach((kind, i) => label(kind, 20 + cell * (i + 0.5), 476));
   // Mid-run, in color, on light ground and on dark.
   label('Mid-run, in color, play scale', 110, 520, 13);
-  TOYS.forEach((toy, i) => runner(s, def(i * 2, 'cat', toy), 20 + cell * (i + 0.5), 640, { grounded: true, vx: 260 }, 2.5, 1, t, MID_RUN));
-  TOYS.forEach((toy, i) => {
+  CAST.forEach((kind, i) => runner(s, def(i * 2, 'cat', kind), 20 + cell * (i + 0.5), 640, { grounded: true, vx: 260 }, 2.5, 1, t, MID_RUN));
+  CAST.forEach((kind, i) => {
     const x = (W / 2 / n) * (i + 0.5);
-    runner(s, def(i * 2, 'cat', toy), x, 820, { grounded: true, vx: 260 }, 2.5, 1, t, MID_RUN);
+    runner(s, def(i * 2, 'cat', kind), x, 820, { grounded: true, vx: 260 }, 2.5, 1, t, MID_RUN);
   });
-  TOYS.forEach((toy, i) => runner(s, def(i * 2, 'cat', toy), W / 2 + (W / 2 / n) * (i + 0.5), 820, { grounded: true, vx: 260 }, 2.5, 1, t, MID_RUN));
+  CAST.forEach((kind, i) => runner(s, def(i * 2, 'cat', kind), W / 2 + (W / 2 / n) * (i + 0.5), 820, { grounded: true, vx: 260 }, 2.5, 1, t, MID_RUN));
   document.body.appendChild(cv);
   return cv;
 }
 
-/** Milliseconds to draw one runner, averaged over `n` frames of 8 different toys running. */
-export function toyBench(n = 200): number {
+/** Milliseconds to draw one runner, averaged over `n` frames of 8 different kinds running. */
+export function castBench(n = 200): number {
   const cv = document.createElement('canvas');
   cv.width = 800;
   cv.height = 200;
