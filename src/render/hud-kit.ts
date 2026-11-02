@@ -201,7 +201,7 @@ export interface PlateOpts {
   side?: string;
   /** State ring inside the edge (ready, picked, hovered). */
   stroke?: string;
-  /** Hard drop shadow depth (default 3). */
+  /** Hard drop shadow depth (default 2). */
   drop?: number;
   radius?: number;
   rivets?: boolean;
@@ -211,14 +211,17 @@ export interface PlateOpts {
   seed?: number;
 }
 
-/** Thin and thick ends of the pen round a plate, in logical px. */
-const PEN_THIN = 0.8;
-const PEN_THICK = 2.1;
+/** Thin and thick ends of the pen round a plate, in logical px (before the pen's weight, `PEN` in ink.ts). */
+const PEN_THIN = 0.6;
+const PEN_THICK = 1.45;
+/** The rim's ink and the hard shadow's: the UI's ink, let off a little so a plate's edge is drawn and not cut out. */
+const RIM = 'rgba(18,11,8,0.82)';
+const DROP = 'rgba(18,11,8,0.62)';
 
 /** A riveted iron plate: cut by hand, two flat tones, a hard ink shadow straight down and a pen round it. */
 export function plate(c: Ctx, x: number, y: number, w: number, h: number, o: PlateOpts = {}) {
   const r = o.radius ?? 4;
-  const drop = o.drop ?? 3;
+  const drop = o.drop ?? 2;
   const fill = o.fill ?? PAL.iron;
   const seed = o.seed ?? sizeSeed(w, h);
   const rivets = o.rivets !== false && w > 30 && h > 24;
@@ -228,7 +231,7 @@ export function plate(c: Ctx, x: number, y: number, w: number, h: number, o: Pla
   baked(c, key, x, y, w, h, drop + 3, (g) => {
     const pts = cutPts(0, 0, w, h, r, seed);
     if (drop) {
-      g.fillStyle = PAL.ink;
+      g.fillStyle = DROP;
       g.save();
       g.translate(0.5, drop);
       path(g, pts);
@@ -258,11 +261,11 @@ export function plate(c: Ctx, x: number, y: number, w: number, h: number, o: Pla
       g.fillRect(0, 0, 3.5, h);
     }
     g.restore();
-    g.fillStyle = PAL.ink;
+    g.fillStyle = RIM;
     penLoop(g, pts, seed, PEN_THIN, PEN_THICK);
     if (o.stroke) {
       g.fillStyle = o.stroke;
-      penLoop(g, cutPts(2, 2, w - 4, h - 4, Math.max(1, r - 1), seed), seed + 31, 1.3, 2);
+      penLoop(g, cutPts(2, 2, w - 4, h - 4, Math.max(1, r - 1), seed), seed + 31, 1.1, 1.6);
     }
     if (rivets) {
       const top = o.edge ? 8.5 : 4.8;
@@ -308,7 +311,7 @@ export function bay(c: Ctx, x: number, y: number, w: number, h: number, hot: boo
     g.closePath();
     g.fill();
     g.restore();
-    g.fillStyle = PAL.ink;
+    g.fillStyle = RIM;
     penLoop(g, pts, seed, PEN_THIN + 0.3, PEN_THICK);
   });
   // Live: the slow hazard tape and the dashed cut line, clipped to the same edge.
@@ -385,8 +388,8 @@ export function stampButton(c: Ctx, x: number, y: number, w: number, h: number, 
     g.fill();
     g.fillStyle = 'rgba(255,240,220,0.3)';
     line(g, r + 0.5, sink + 1.6, Math.max(r + 2, w * 0.55), sink + 1.6, { w: 1.1, seed: seed + 2, taper: [0.1, 0.7], press: 0.2 });
-    g.fillStyle = PAL.ink;
-    penLoop(g, body, seed, 0.8, 1.9);
+    g.fillStyle = RIM;
+    penLoop(g, body, seed, 0.6, 1.35);
     if (hover) {
       g.fillStyle = PAL.amber;
       penLoop(g, cutPts(-2.6, -2.6, w + 5.2, h + depth + 5.2, r + 2, seed + 1), seed + 40, 0.9, 1.5);
@@ -404,7 +407,7 @@ export function pill(c: Ctx, x: number, y: number, w: number, h: number, fill: s
   baked(c, `t|${w}|${h}|${fill}`, x, y, w, h, 3, (g) => {
     const seed = sizeSeed(w, h) + 17;
     const pts = cutPts(0, 0, w, h, 2.2, seed);
-    g.fillStyle = PAL.ink;
+    g.fillStyle = DROP;
     g.save();
     g.translate(0.4, 1.3);
     path(g, pts);
@@ -413,8 +416,8 @@ export function pill(c: Ctx, x: number, y: number, w: number, h: number, fill: s
     g.fillStyle = fill;
     path(g, pts);
     g.fill();
-    g.fillStyle = PAL.ink;
-    penLoop(g, pts, seed, 0.75, 1.35);
+    g.fillStyle = RIM;
+    penLoop(g, pts, seed, 0.55, 1.0);
   });
 }
 
@@ -426,7 +429,7 @@ export function brick(c: Ctx, x: number, y: number, w: number, h: number, fill: 
   baked(c, `bk|${w}|${h}|${fill}|${lit}`, x, y, w, h, 3, (g) => {
     const seed = sizeSeed(w, h) + 19;
     const pts = cutPts(0, 0, w, h, Math.min(2.4, h / 3), seed);
-    g.fillStyle = PAL.ink;
+    g.fillStyle = DROP;
     g.save();
     g.translate(0.4, 1.4);
     path(g, pts);
@@ -448,8 +451,8 @@ export function brick(c: Ctx, x: number, y: number, w: number, h: number, fill: 
     g.closePath();
     g.fill();
     g.restore();
-    g.fillStyle = PAL.ink;
-    penLoop(g, pts, seed, 0.7, 1.4);
+    g.fillStyle = RIM;
+    penLoop(g, pts, seed, 0.55, 1.0);
   });
 }
 
@@ -484,7 +487,7 @@ export function tag(
 export function dial(c: Ctx, cx: number, cy: number, r: number) {
   baked(c, `d|${r}`, cx - r, cy - r, r * 2, r * 2, 4, (g) => {
     const pts = discPts(r, r, r, 23);
-    g.fillStyle = PAL.ink;
+    g.fillStyle = DROP;
     g.save();
     g.translate(0.3, 2);
     path(g, pts);
@@ -500,8 +503,8 @@ export function dial(c: Ctx, cx: number, cy: number, r: number) {
     path(g, pts);
     g.fill();
     g.restore();
-    g.fillStyle = PAL.ink;
-    penLoop(g, pts, 23, 0.9, 2.2);
+    g.fillStyle = RIM;
+    penLoop(g, pts, 23, 0.65, 1.5);
   });
 }
 
@@ -540,8 +543,8 @@ export function track(c: Ctx, x: number, y: number, w: number, h: number, fill?:
   }
   // The rim goes over the fill, so a bar never draws past its track's edge.
   baked(c, `trp|${w}|${h}`, x, y, w, h, 3, (g) => {
-    g.fillStyle = PAL.ink;
-    penLoop(g, cutPts(0, 0, w, h, r, seed), seed, 0.8, 1.5);
+    g.fillStyle = RIM;
+    penLoop(g, cutPts(0, 0, w, h, r, seed), seed, 0.6, 1.1);
   });
 }
 
@@ -554,7 +557,7 @@ export function inkShape(c: Ctx, pts: readonly P[], fill: string, seed: number, 
   if (drop) {
     c.save();
     c.translate(0.4, drop);
-    c.fillStyle = PAL.ink;
+    c.fillStyle = DROP;
     path(c, pts);
     c.fill();
     c.restore();
@@ -562,7 +565,7 @@ export function inkShape(c: Ctx, pts: readonly P[], fill: string, seed: number, 
   c.fillStyle = fill;
   path(c, pts);
   c.fill();
-  c.fillStyle = PAL.ink;
+  c.fillStyle = RIM;
   penLoop(c, pts, seed, PEN_THIN * 0.8, PEN_THICK * 0.7);
 }
 

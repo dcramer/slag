@@ -28,7 +28,7 @@ export function drawTrack(rc: RC, r: Resolved): void {
   // pressure has something to work on and its tapers stay at the very ends.
   const pts = dense(g.pts);
   s.fillStyle = INK;
-  stroke(s, pts, { w: 3.8, seed, taper: [0.01, 0.01], press: 0.15, wobble: 0.15 });
+  stroke(s, pts, { w: 3.12, seed, taper: [0.01, 0.01], press: 0.15, wobble: 0.15 });
   s.fillStyle = css(pal.base, -4);
   stroke(s, pts, { w: 2.1, seed: seed + 1, taper: [0.02, 0.02], press: 0.1 });
   s.fillStyle = css(pal.light);

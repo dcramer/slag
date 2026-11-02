@@ -47,7 +47,7 @@ function link(pal: MetalPalette, edge: boolean) {
     g.fill();
     g.globalCompositeOperation = 'source-over';
     g.fillStyle = INK;
-    stroke(g, [...inner, inner[0]], { w: 0.5, seed: 7, taper: [0, 0], press: 0.2 });
+    stroke(g, [...inner, inner[0]], { w: 0.35, seed: 7, taper: [0, 0], press: 0.2 });
   });
 }
 
@@ -281,7 +281,7 @@ function drawSwinger(rc: RC, m: Swinger, r: Resolved, off: Vec, pal: MetalPalett
       }
     } else {
       s.fillStyle = INK;
-      line(s, hx, hy, h.x, h.y, { w: 4.4, seed: 3, taper: [0, 0], press: 0.1 });
+      line(s, hx, hy, h.x, h.y, { w: 3.56, seed: 3, taper: [0, 0], press: 0.1 });
       s.fillStyle = css(pal.base);
       line(s, hx, hy, h.x, h.y, { w: 2.3, seed: 4, taper: [0, 0], press: 0.1 });
       s.fillStyle = css(pal.spec, 0, 0.75);

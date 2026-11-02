@@ -245,7 +245,7 @@ function flag(hud: Hud, x: number, top: number, foot: number, target: number, t:
   inkShape(c, pts, PAL.amber, 71);
   // The pole: an ink stroke with a lit steel core, a knob on top.
   c.fillStyle = PAL.ink;
-  line(c, x, top, x, foot, { w: 3.6, seed: 73, taper: [0.01, 0.02], press: 0.15 });
+  line(c, x, top, x, foot, { w: 2.52, seed: 73, taper: [0.01, 0.02], press: 0.15 });
   c.fillStyle = PAL.ash;
   line(c, x - 0.3, top + 1, x - 0.3, foot - 1, { w: 1.2, seed: 79, taper: [0.1, 0.1], press: 0.2 });
   inkShape(c, discPts(x, top - 1, 2.6, 83), PAL.amber, 83, 1);

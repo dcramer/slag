@@ -1,34 +1,15 @@
 import type { Kind } from '../../gen/character';
 import type { P } from '../ink';
-import { eye, goggles, mask, mouthMark, pair, sideEye, slit, tallEyes } from './faces';
-import {
-  type D,
-  IRON,
-  type KindArt,
-  line,
-  livery,
-  mark,
-  ORANGE,
-  ORANGE_SH,
-  oval,
-  poly,
-  rivet,
-  spot,
-  stalk,
-  STEEL,
-  STEEL_SH,
-  stroke,
-  toned,
-  tonedOval,
-  Y,
-} from './kit';
+import { brows, eye, mouthMark, pair, sideEye, tallEyes, toonEyes } from './faces';
+import { type D, type KindArt, line, mark, ORANGE, ORANGE_SH, oval, poly, spot, STEEL, STEEL_SH, stroke, toned, tonedOval, Y } from './kit';
 
 /**
- * The cast, one hand-designed character per kind (docs/CHARACTERS.md): six animals and six critters, some
- * of them homages to famous game characters in our own designs. Each is its own character the way a
- * barnyard party game's animals are: its own outline inked as curves, one signature part that breaks the
- * outline, and a way of moving that's its own. The seed only picks the kind, the natural colors and the
- * player's color; the design is fixed.
+ * The cast, one hand-designed character per kind (docs/CHARACTERS.md): ten homages to famous game
+ * characters in our own designs, and four plain animals for contrast. A homage reads from its
+ * silhouette and the three or four traits people actually know it by (the plumber's cap, nose and
+ * mustache; the speedster's swept spikes and red sneakers), in its own iconic palette, with the player's
+ * color on a ring at its feet. Never the real character's exact design, and never its real name: the
+ * sound-alike names are data (`KIND_NAMES`).
  *
  * Outlines are authored facing right in body units (x across -0.5..0.5 of the width, y up to -1); hooks
  * put a part on the front with `d.f`. Gaits are animation only: everyone's physics are the same.
@@ -38,11 +19,20 @@ const S = Math.sin;
 const abs = Math.abs;
 const SKIN = '#efc9a4';
 const SKIN_SH = '#cf9f7c';
+const PEACH = '#f0c99c';
 const BONE = '#efe6d2';
 const BONE_SH = '#c8bba0';
 const BROWN = '#6b4a35';
 const BROWN_SH = '#4d3426';
-const DENIM = '#55606e';
+const BLUE = '#3f62b4';
+const BLUE_SH = '#2e4a8c';
+const RED = '#c9473f';
+const RED_SH = '#9c3530';
+const GOLD = '#e8c24a';
+const YELLOW = '#e9b730';
+const YELLOW_SH = '#bb8a1c';
+const KHAKI = '#8c7a58';
+const KHAKI_SH = '#6c5c40';
 
 /** A pointed ear standing on the head: base from x0 to x1, tip at (tx, ty). */
 function ear(d: D, x0: number, x1: number, tx: number, ty: number, fill: string, shade: string, inner?: string) {
@@ -90,9 +80,776 @@ function beak(d: D, x: number, y: number, len: number, h: number, open = 0) {
   );
 }
 
-const moving = (d: D) => d.m === 'walk' || d.m === 'run';
+/** A level band of cloth across the body from u0 to u1 in two tones (lit, and a shade along its foot), cut by the outline. */
+function tone(d: D, u0: number, u1: number, fill: string, shade: string) {
+  const lo = Math.min(Y(d, u0), d.by + 0.4);
+  const hi = Y(d, u1);
+  const band = (a: number, b: number, c: string) =>
+    poly(
+      d.s,
+      [
+        { x: -d.W * 0.62, y: a },
+        { x: d.W * 0.62, y: a },
+        { x: d.W * 0.62, y: b },
+        { x: -d.W * 0.62, y: b },
+      ],
+      c,
+    );
+  band(hi, lo, fill);
+  band(lo - (lo - hi) * 0.22, lo, shade);
+}
 
 export const KINDS: Record<Kind, KindArt> = {
+  // The mustached plumber: red cap with a round white badge, a big round nose, a thick mustache, blue
+  // overalls with two gold buttons, white gloves, brown shoes. Big-headed and stout. Runs jaunty.
+  plumber: {
+    size: [0.94, 1.02],
+    outline:
+      'M -0.02 -0.98 C 0.24 -1 0.4 -0.86 0.4 -0.7 C 0.5 -0.7 0.6 -0.64 0.58 -0.56 C 0.56 -0.5 0.46 -0.48 0.4 -0.48 C 0.46 -0.4 0.5 -0.3 0.48 -0.18 C 0.46 -0.04 0.34 0 0.2 0 L -0.28 0 C -0.42 0 -0.5 -0.1 -0.48 -0.24 C -0.46 -0.4 -0.38 -0.48 -0.34 -0.52 C -0.42 -0.6 -0.42 -0.76 -0.36 -0.86 C -0.28 -0.96 -0.16 -0.98 -0.02 -0.98 Z',
+    lift: 2.8,
+    feet: 'boot',
+    boots: [BROWN, BROWN_SH],
+    arms: 'mitten',
+    hands: 'glove',
+    fill: 'paint',
+    ring: true,
+    faceX: 0.12,
+    gait: (g) => (g.moving ? { hop: abs(S(g.ph)) * 1.1, bend: 0.06, upright: 0.9 } : {}),
+    paintFace: (d) => toonEyes(d, 0.74, 0.09, 1.05, '#3c6fd0'),
+    print: (d) => {
+      // Skin for the face, hair at the back of the head, blue overalls up to two straps and gold buttons.
+      spot(d.s, d.f * d.W * 0.1, Y(d, 0.7), d.W * 0.4, d.H * 0.18, d.sd, SKIN, 0.05);
+      spot(d.s, -d.f * d.W * 0.34, Y(d, 0.68), d.W * 0.14, d.H * 0.12, d.sd + 1, BROWN_SH, 0.2);
+      tone(d, -0.2, 0.36, BLUE, BLUE_SH);
+      for (const sd of [-1, 1]) {
+        mark(
+          d.s,
+          BLUE,
+          [
+            { x: sd * d.W * 0.2, y: Y(d, 0.34) },
+            { x: sd * d.W * 0.18, y: Y(d, 0.52) },
+          ],
+          2,
+          sd,
+          [0, 0],
+        );
+        poly(d.s, oval(sd * d.W * 0.18, Y(d, 0.36), 0.75, 0.75, 7), GOLD);
+      }
+    },
+    front: (d) => {
+      // The cap: a dome over the head, its bill out front, a round white badge with our own mark.
+      const x = d.bx(0.9);
+      const brim = Y(d, 0.8);
+      toned(
+        d.s,
+        [
+          { x: x - d.W * 0.46, y: brim + 0.6 },
+          { x: x - d.W * 0.38, y: d.top - 1.4 },
+          { x: x + d.f * d.W * 0.06, y: d.top - 2.8 },
+          { x: x + d.W * 0.38, y: d.top - 1.2 },
+          { x: x + d.W * 0.46, y: brim + 0.6 },
+        ],
+        d.lk.paint,
+        d.lk.paintShade,
+        d.lk.ink,
+        0.4,
+        0.8 * d.k,
+        0.6,
+      );
+      toned(
+        d.s,
+        [
+          { x: x + d.f * d.W * 0.18, y: brim - 0.6 },
+          { x: x + d.f * d.W * 0.7, y: brim + 0.2 },
+          { x: x + d.f * d.W * 0.64, y: brim + 1.3 },
+          { x: x + d.f * d.W * 0.16, y: brim + 0.9 },
+        ],
+        d.lk.paint,
+        d.lk.paintShade,
+        d.lk.ink,
+        0.3,
+        0.7 * d.k,
+        0.4,
+      );
+      const bx = x + d.f * 0.8;
+      const by = Y(d, 0.93);
+      tonedOval(d.s, bx, by, 1.7, 1.6, 10, '#fbf6ee', '#d8d0c2', d.lk.ink, 0.25, 0.5, 0.4);
+      // Our mark on the badge: a little wrench, not a letter.
+      mark(
+        d.s,
+        d.lk.paint,
+        [
+          { x: bx - 0.8, y: by + 0.7 },
+          { x: bx + 0.6, y: by - 0.6 },
+        ],
+        0.7,
+        1,
+        [0, 0],
+      );
+      poly(d.s, oval(bx + 0.7, by - 0.7, 0.45, 0.45, 6), d.lk.paint);
+    },
+    snout: (d) => {
+      // The big round nose and the thick mustache under it.
+      const x = d.f * d.W * 0.34;
+      const y = Y(d, 0.56);
+      const m: P[] = [];
+      for (let i = 0; i <= 10; i++) {
+        const a = Math.PI * (i / 10);
+        m.push({ x: x - d.f * 0.6 + Math.cos(a) * 3.6, y: y + 0.9 + Math.sin(a) * 1.8 - (i % 2) * 0.6 });
+      }
+      poly(d.s, m, BROWN_SH);
+      tonedOval(d.s, x, y - 0.7, 2.2, 1.9, 12, SKIN, SKIN_SH, d.lk.ink, 0.35, 0.7 * d.k, 0.5);
+    },
+    parts: ['coin', 'coin', 'shard'],
+  },
+
+  // The blue speedster: cobalt, spikes swept back off a big head, a peach muzzle and belly, joined eyes
+  // with green irises, a cocky grin, red sneakers with a white strap. Runs leaning hard; spins in the air.
+  hedgehog: {
+    size: [0.96, 1.04],
+    outline:
+      'M 0.1 -1 C 0.32 -1 0.46 -0.88 0.46 -0.72 C 0.56 -0.7 0.6 -0.64 0.56 -0.6 C 0.52 -0.56 0.44 -0.56 0.4 -0.54 C 0.36 -0.48 0.3 -0.46 0.24 -0.44 C 0.3 -0.34 0.3 -0.14 0.22 -0.04 C 0.16 0 0.04 0 -0.04 -0.02 C -0.14 -0.06 -0.18 -0.2 -0.16 -0.34 C -0.24 -0.36 -0.36 -0.38 -0.56 -0.44 C -0.4 -0.5 -0.32 -0.54 -0.26 -0.58 C -0.42 -0.64 -0.56 -0.72 -0.7 -0.82 C -0.5 -0.8 -0.36 -0.8 -0.26 -0.78 C -0.38 -0.88 -0.5 -0.98 -0.58 -1.06 C -0.4 -1.02 -0.2 -1.02 0.1 -1 Z',
+    lift: 3.6,
+    feet: 'sneaker',
+    boots: [RED, RED_SH],
+    arms: 'mitten',
+    hands: 'glove',
+    fill: 'paint',
+    ring: true,
+    faceX: 0.16,
+    gait: (g) => {
+      if (!g.grounded && g.vy < 120) return { rot: (g.t * 16) % (Math.PI * 2), pivot: 0.5, sx: 0.92, sy: 0.92 };
+      return g.moving ? { hop: abs(S(g.ph)) * 0.6, bend: 0.08 + g.run * 0.08, upright: 1 } : {};
+    },
+    paintFace: (d) => {
+      toonEyes(d, 0.74, 0.09, 1.2, '#3a9a46', true);
+      // The grin, up on one side.
+      const y = Y(d, 0.54);
+      const x = d.f * d.W * 0.12;
+      if (d.m === 'fall') poly(d.s, oval(x, y, 0.8, 1, 8), d.lk.eye);
+      else
+        mark(
+          d.s,
+          d.lk.eye,
+          [
+            { x: x - d.f * 1.2, y: y + 0.2 },
+            { x, y: y + 0.7 },
+            { x: x + d.f * 1.6, y: y - 0.6 },
+          ],
+          0.8,
+          d.sd,
+          [0.15, 0.3],
+        );
+    },
+    print: (d) => {
+      // The peach muzzle and belly.
+      spot(d.s, d.f * d.W * 0.26, Y(d, 0.56), d.W * 0.24, d.H * 0.1, d.sd, PEACH, 0.08);
+      spot(d.s, d.f * d.W * 0.06, Y(d, 0.24), d.W * 0.17, d.H * 0.16, d.sd + 1, PEACH, 0.08);
+    },
+    snout: (d) => poly(d.s, oval(d.f * d.W * 0.42, Y(d, 0.6), 0.75, 0.6, 7), d.lk.eye),
+    parts: ['shard', 'shard', 'coin'],
+  },
+
+  // The green-tunic elf: a long green cap flopping back, pointed ears, a blond fringe, a tunic flared at
+  // the hem with a brown belt, a shield and a sword hilt on the back. Strides out.
+  elf: {
+    size: [0.84, 1],
+    outline:
+      'M 0.04 -0.86 C 0.24 -0.88 0.36 -0.78 0.36 -0.64 C 0.36 -0.56 0.32 -0.5 0.24 -0.48 C 0.3 -0.4 0.34 -0.3 0.36 -0.2 L 0.46 -0.04 L 0.3 0 L -0.32 0 L -0.46 -0.04 L -0.34 -0.2 C -0.32 -0.3 -0.3 -0.4 -0.24 -0.48 C -0.32 -0.52 -0.36 -0.6 -0.34 -0.68 C -0.32 -0.8 -0.18 -0.86 0.04 -0.86 Z',
+    lift: 2.8,
+    feet: 'boot',
+    boots: [BROWN, BROWN_SH],
+    arms: 'mitten',
+    hands: 'leather',
+    fill: 'paint',
+    ring: true,
+    faceX: 0.1,
+    gait: (g) => (g.moving ? { hop: abs(S(g.ph)) * 0.8, bend: 0.06, upright: 0.8 } : {}),
+    paintFace: (d) => toonEyes(d, 0.66, 0.11, 0.95, '#3c74c8'),
+    print: (d) => {
+      spot(d.s, d.f * d.W * 0.06, Y(d, 0.66), d.W * 0.36, d.H * 0.16, d.sd, SKIN, 0.05);
+      tone(d, 0.26, 0.32, BROWN, BROWN_SH);
+      poly(d.s, oval(d.f * d.W * 0.06, Y(d, 0.29), 0.9, 0.7, 6), GOLD);
+    },
+    back: (d) => {
+      // A kite shield and a sword hilt on the back.
+      const x = -d.f * d.W * 0.4;
+      const y = Y(d, 0.44);
+      toned(
+        d.s,
+        [
+          { x: x - 2.4, y: y - 3 },
+          { x: x + 2.4, y: y - 3 },
+          { x: x + 2.2, y: y + 1 },
+          { x, y: y + 3.6 },
+          { x: x - 2.2, y: y + 1 },
+        ],
+        '#3b5fa8',
+        '#2b4680',
+        d.lk.ink,
+        0.4,
+        0.8 * d.k,
+        0.5,
+      );
+      mark(
+        d.s,
+        '#c9ccd2',
+        [
+          { x: x - 1.8, y: y - 2.5 },
+          { x: x + 1.8, y: y - 2.5 },
+        ],
+        0.7,
+        1,
+        [0, 0],
+      );
+      mark(
+        d.s,
+        d.lk.ink,
+        [
+          { x: x + d.f * 1.6, y: Y(d, 0.58) },
+          { x: x + d.f * 3.4, y: Y(d, 0.86) },
+        ],
+        1.6,
+        2,
+        [0, 0],
+      );
+      mark(
+        d.s,
+        '#5a7fc0',
+        [
+          { x: x + d.f * 1.6, y: Y(d, 0.58) },
+          { x: x + d.f * 3.4, y: Y(d, 0.86) },
+        ],
+        0.8,
+        2,
+        [0, 0],
+      );
+    },
+    front: (d) => {
+      // The long cap: a cone off the crown, its tip flopping back and swinging as he goes.
+      const x = d.bx(0.95);
+      const sway = d.wob * 0.5 + (d.m === 'run' ? S(d.ph * 2) * 0.8 : 0);
+      toned(
+        d.s,
+        [
+          { x: x + d.f * d.W * 0.36, y: Y(d, 0.76) },
+          { x: x + d.f * d.W * 0.2, y: d.top - 2.2 },
+          { x: x - d.f * d.W * 0.2, y: d.top - 1.6 },
+          { x: x - d.f * (d.W * 0.62 + 2), y: Y(d, 0.6) + sway },
+          { x: x - d.f * d.W * 0.36, y: Y(d, 0.72) },
+        ],
+        d.lk.paint,
+        d.lk.paintShade,
+        d.lk.ink,
+        0.4,
+        0.8 * d.k,
+        0.6,
+      );
+      // A blond fringe under the cap, and a pointed ear.
+      for (let i = 0; i < 3; i++)
+        mark(
+          d.s,
+          '#e6c25a',
+          [
+            { x: x + d.f * (d.W * (0.32 - i * 0.12)), y: Y(d, 0.78) },
+            { x: x + d.f * (d.W * (0.26 - i * 0.12)), y: Y(d, 0.66) },
+          ],
+          1.1,
+          i,
+          [0.1, 0.6],
+        );
+      toned(
+        d.s,
+        [
+          { x: x - d.f * d.W * 0.12, y: Y(d, 0.68) },
+          { x: x - d.f * (d.W * 0.12 + 3.4), y: Y(d, 0.76) },
+          { x: x - d.f * d.W * 0.1, y: Y(d, 0.6) },
+        ],
+        SKIN,
+        SKIN_SH,
+        d.lk.ink,
+        0.3,
+        0.6 * d.k,
+        0.4,
+      );
+    },
+    parts: ['shard', 'shard'],
+  },
+
+  // The orange bounty hunter: a round helmet with a green visor, huge round shoulder pads, an arm cannon
+  // held out front. Strides heavily; raises the cannon in the air.
+  hunter: {
+    size: [0.98, 1.02],
+    outline:
+      'M 0 -1 C 0.2 -1 0.3 -0.9 0.3 -0.78 C 0.48 -0.8 0.6 -0.7 0.58 -0.56 C 0.56 -0.44 0.44 -0.4 0.32 -0.42 C 0.3 -0.34 0.26 -0.28 0.28 -0.2 C 0.34 -0.12 0.36 -0.04 0.34 0 L -0.34 0 C -0.36 -0.04 -0.34 -0.12 -0.28 -0.2 C -0.26 -0.28 -0.3 -0.34 -0.32 -0.42 C -0.44 -0.4 -0.56 -0.44 -0.58 -0.56 C -0.6 -0.7 -0.48 -0.8 -0.3 -0.78 C -0.3 -0.9 -0.2 -1 0 -1 Z',
+    lift: 2.8,
+    feet: 'boot',
+    arms: 'none',
+    fill: 'paint',
+    ring: true,
+    shine: true,
+    gait: (g) => (g.moving ? { hop: abs(S(g.ph)) * 0.7, sy: 1 - abs(S(g.ph)) * 0.03, bend: 0.04, upright: 0.8 } : {}),
+    paintFace: (d) => {
+      // The visor: green glass across the helmet's front, a hard glint on it.
+      const y = Y(d, 0.86);
+      const x0 = -d.W * 0.12 * d.f;
+      const x1 = d.f * d.W * 0.3;
+      poly(
+        d.s,
+        [
+          { x: x0, y: y - 1.5 },
+          { x: x1, y: y - 1.2 },
+          { x: x1 + d.f * 0.4, y: y + 1.2 },
+          { x: x0, y: y + 1.6 },
+        ],
+        '#2f7a3c',
+      );
+      mark(
+        d.s,
+        '#9fe08a',
+        [
+          { x: x0 + d.f * 0.8, y: y - 0.6 },
+          { x: x1 - d.f * 0.6, y: y - 0.7 },
+        ],
+        0.6,
+        1,
+        [0.2, 0.2],
+      );
+    },
+    print: (d) => {
+      // Red shoulder spheres, a dark waist, green lights on the chest.
+      for (const sd of [-1, 1]) tonedOval(d.s, sd * d.W * 0.42, Y(d, 0.6), 2.6, 2.4, 12, RED, RED_SH, d.lk.ink, 0.1, 0.2, 0.6);
+      tone(d, 0.26, 0.34, '#4a4a52', '#33333a');
+      poly(d.s, oval(d.f * d.W * 0.08, Y(d, 0.5), 0.6, 0.6, 6), '#7fd06a');
+    },
+    front: (d) => {
+      // The arm cannon, held out front, pointed up on a jump.
+      const up = d.m === 'up' ? -0.5 : d.m === 'fall' ? 0.3 : 0;
+      const x = d.f * d.W * 0.3;
+      const y = Y(d, 0.46);
+      const a = up;
+      const len = 6.4;
+      const tx = x + d.f * Math.cos(a) * len;
+      const ty = y + Math.sin(a) * len;
+      const nx = -Math.sin(a) * 1.8;
+      const ny = Math.cos(a) * 1.8;
+      toned(
+        d.s,
+        [
+          { x: x - nx, y: y - ny },
+          { x: tx - nx * 0.8, y: ty - ny * 0.8 },
+          { x: tx + nx * 0.8, y: ty + ny * 0.8 },
+          { x: x + nx, y: y + ny },
+        ],
+        d.lk.paint,
+        d.lk.paintShade,
+        d.lk.ink,
+        0.35,
+        0.7 * d.k,
+        0.5,
+      );
+      tonedOval(d.s, tx, ty, 1.1, 1.5, 8, '#3a3a40', '#26262a', d.lk.ink, 0.3, 0.5, 0.3);
+      mark(
+        d.s,
+        '#7fd06a',
+        [
+          { x: (x + tx) / 2 - nx * 0.6, y: (y + ty) / 2 - ny * 0.6 },
+          { x: (x + tx) / 2 + nx * 0.6, y: (y + ty) / 2 + ny * 0.6 },
+        ],
+        0.6,
+        2,
+        [0, 0],
+      );
+    },
+    parts: ['shard', 'shard', 'bolt'],
+  },
+
+  // The yellow electric mouse: chubby, long ears with black tips, red cheeks, a lightning-bolt tail,
+  // brown stripes across the back. Scampers; ears and tail sway.
+  zapmouse: {
+    size: [0.9, 0.84],
+    outline:
+      'M 0.02 -0.94 C 0.3 -0.96 0.46 -0.78 0.46 -0.58 C 0.5 -0.4 0.48 -0.18 0.38 -0.06 C 0.3 0.02 -0.3 0.02 -0.38 -0.06 C -0.48 -0.18 -0.5 -0.4 -0.46 -0.58 C -0.46 -0.78 -0.26 -0.96 0.02 -0.94 Z',
+    lift: 2.2,
+    feet: 'paw',
+    arms: 'mitten',
+    hands: 'body',
+    fill: 'paint',
+    ring: true,
+    faceX: 0.08,
+    gait: (g) => (g.moving ? { hop: abs(S(g.ph * 1.4)) * 1, rot: S(g.ph * 1.4) * 0.04, pivot: 0, bend: 0.05 } : {}),
+    paintFace: (d) => {
+      const y = Y(d, 0.66);
+      for (const sd of [-1, 1]) {
+        const x = sd * d.W * 0.16 + d.f * 0.6;
+        eye(d, x, y, 1);
+        poly(d.s, oval(x + sd * 1.6, y + 2.6, 1.5, 1.3, 10), '#e0473b');
+      }
+      brows(d, [-d.W * 0.16 + d.f * 0.6, d.W * 0.16 + d.f * 0.6], y, 1);
+      mouthMark(d, d.f * 0.6, y + 2.6, 1.6);
+    },
+    print: (d) => {
+      for (const u of [0.42, 0.58])
+        mark(
+          d.s,
+          BROWN,
+          [
+            { x: -d.f * d.W * 0.5, y: Y(d, u) },
+            { x: -d.f * d.W * 0.22, y: Y(d, u + 0.03) },
+          ],
+          1.4,
+          u * 10,
+          [0.1, 0.5],
+        );
+    },
+    back: (d) => {
+      // The lightning-bolt tail, brown at the root.
+      const sw = d.wob * 0.4;
+      const x = -d.f * d.W * 0.44;
+      const y = Y(d, 0.3);
+      const pts: P[] = [
+        { x, y },
+        { x: x - d.f * 2.2, y: y - 2.4 + sw * 0.2 },
+        { x: x - d.f * 1.2, y: y - 3.2 },
+        { x: x - d.f * 4, y: y - 6.6 + sw * 0.4 },
+        { x: x - d.f * 2.6, y: y - 7.2 },
+        { x: x - d.f * 6.4, y: y - 11.4 + sw },
+        { x: x - d.f * 3.4, y: y - 8.8 },
+        { x: x - d.f * 4.4, y: y - 8.2 },
+        { x: x - d.f * 1.4, y: y - 4.6 },
+        { x: x - d.f * 2.2, y: y - 4.2 },
+        { x: x + d.f * 0.6, y: y - 1.4 },
+      ];
+      toned(d.s, pts, d.lk.paint, d.lk.paintShade, d.lk.ink, 0.35, 0.7 * d.k, 0.5);
+      poly(
+        d.s,
+        [
+          { x, y },
+          { x: x - d.f * 2.2, y: y - 2.4 },
+          { x: x - d.f * 1.2, y: y - 3.2 },
+          { x: x + d.f * 0.6, y: y - 1.4 },
+        ],
+        BROWN,
+      );
+    },
+    front: (d) => {
+      // Long ears, black at the tips, splayed and swaying.
+      for (const sd of [-1, 1]) {
+        const x0 = d.bx(1) + sd * d.W * 0.2;
+        const sway = sd * 0.12 + d.wob * 0.03;
+        const tx = x0 + sd * 2.6 + Math.sin(sway) * 4;
+        const ty = d.top - 6.4;
+        toned(
+          d.s,
+          [
+            { x: x0 - 1.6, y: d.top + 2 },
+            { x: tx, y: ty },
+            { x: x0 + 1.6, y: d.top + 2 },
+          ],
+          d.lk.paint,
+          d.lk.paintShade,
+          d.lk.ink,
+          0.35,
+          0.7 * d.k,
+          0.5,
+        );
+        poly(
+          d.s,
+          [
+            { x: tx + (x0 - 1.6 - tx) * 0.32, y: ty + (d.top + 2 - ty) * 0.32 },
+            { x: tx, y: ty },
+            { x: tx + (x0 + 1.6 - tx) * 0.32, y: ty + (d.top + 2 - ty) * 0.32 },
+          ],
+          '#2a1f1a',
+        );
+      }
+    },
+    parts: ['shard', 'shard'],
+  },
+
+  // The impostor bean: a bean on two stubby legs, a wide visor, a backpack. Shuffles. Its body is the
+  // player's color, as the original's crew comes in every color anyway.
+  impostor: {
+    size: [0.9, 0.98],
+    outline:
+      'M 0.04 -1 C 0.3 -1 0.42 -0.84 0.42 -0.6 L 0.42 -0.18 C 0.42 -0.06 0.36 0 0.26 0 L 0.12 0 C 0.12 -0.08 0.08 -0.1 0.02 -0.1 C -0.04 -0.1 -0.08 -0.08 -0.08 0 L -0.24 0 C -0.34 0 -0.4 -0.06 -0.4 -0.18 L -0.4 -0.6 C -0.4 -0.84 -0.24 -1 0.04 -1 Z',
+    lift: 2.3,
+    feet: 'none',
+    arms: 'none',
+    gait: (g) => (g.moving ? { rot: S(g.ph * 1.5) * 0.07, hop: abs(S(g.ph * 1.5)) * 0.5, pivot: 0, bend: 0.03 } : {}),
+    paintFace: (d) => {
+      // The visor: a wide pale capsule standing proud of the front, darker below, a hard glint.
+      const y = Y(d, 0.7);
+      const x0 = -d.W * 0.06;
+      const x1 = d.W * 0.56;
+      const cap: P[] = [];
+      for (let i = 0; i <= 10; i++) {
+        const a = -Math.PI / 2 + (i / 10) * Math.PI;
+        cap.push({ x: d.f * (x1 - 2 + Math.cos(a) * 2), y: y + Math.sin(a) * 2 });
+      }
+      for (let i = 0; i <= 10; i++) {
+        const a = Math.PI / 2 + (i / 10) * Math.PI;
+        cap.push({ x: d.f * (x0 + 2 + Math.cos(a) * 2), y: y + Math.sin(a) * 2 });
+      }
+      toned(d.s, cap, '#a9dbe8', '#6aa6ba', d.lk.ink, 0.4, 0.8 * d.k, 0.6);
+      mark(
+        d.s,
+        '#ffffff',
+        [
+          { x: d.f * (x0 + 2.4), y: y - 0.9 },
+          { x: d.f * (x1 - 2.4), y: y - 0.9 },
+        ],
+        0.7,
+        1,
+        [0.2, 0.3],
+      );
+    },
+    back: (d) => {
+      const x = -d.f * d.W * 0.42;
+      toned(
+        d.s,
+        [
+          { x, y: Y(d, 0.66) },
+          { x: x - d.f * 2.8, y: Y(d, 0.64) },
+          { x: x - d.f * 3, y: Y(d, 0.2) },
+          { x, y: Y(d, 0.18) },
+        ],
+        d.lk.fillShade,
+        d.lk.playerDark,
+        d.lk.ink,
+        0.35,
+        0.7 * d.k,
+        0.5,
+      );
+    },
+    parts: ['shard', 'shard'],
+  },
+
+  // The jellyfish-brain floater: a translucent green dome over three red nuclei, a pale rim, four ivory
+  // fangs hooked under it. Hovers, bobbing, and chomps.
+  jelly: {
+    size: [1.1, 0.92],
+    outline:
+      'M 0 -1 C 0.34 -1 0.52 -0.76 0.52 -0.5 C 0.52 -0.36 0.46 -0.3 0.4 -0.28 C 0.3 -0.3 0.24 -0.26 0.16 -0.28 C 0.06 -0.3 -0.06 -0.3 -0.16 -0.28 C -0.24 -0.26 -0.3 -0.3 -0.4 -0.28 C -0.46 -0.3 -0.52 -0.36 -0.52 -0.5 C -0.52 -0.76 -0.34 -1 0 -1 Z',
+    lift: 1.2,
+    feet: 'none',
+    arms: 'none',
+    fill: 'paint',
+    glass: 0.62,
+    ring: true,
+    shine: true,
+    gait: (g) => {
+      const b = S(g.t * 3 + g.seed);
+      return { hop: 1.6 + b * 0.9 + (g.moving ? abs(S(g.ph)) * 0.6 : 0), sx: 1 + b * 0.04, sy: 1 - b * 0.04, upright: 0.4, k: S(g.t * (g.moving ? 9 : 4)) };
+    },
+    paintFace: () => {},
+    print: (d) => {
+      // Three red nuclei seen through the membrane, and a pale band inside the hem.
+      for (const [u, x, r] of [
+        [0.68, -0.16, 2.4],
+        [0.7, 0.16, 2.2],
+        [0.5, 0, 2],
+      ] as const)
+        tonedOval(d.s, d.f * d.W * x, Y(d, u), r, r * 0.9, 10, RED, RED_SH, d.lk.ink, 0.25, 0.5, 0.5);
+      tone(d, 0.28, 0.36, '#d8f2c8', '#b6dca4');
+    },
+    back: (d) => {
+      const chomp = (d.gait.k ?? 0) * 0.25;
+      for (const [x, sd] of [
+        [-0.3, -1],
+        [-0.1, -1],
+        [0.1, 1],
+        [0.3, 1],
+      ] as const) {
+        const x0 = d.W * x;
+        const y0 = Y(d, 0.3);
+        const a = Math.PI / 2 + sd * (0.25 + chomp);
+        const tip = { x: x0 + Math.cos(a) * 4.8, y: y0 + Math.sin(a) * 4.8 };
+        toned(
+          d.s,
+          [
+            { x: x0 - 1, y: y0 },
+            { x: (x0 + tip.x) / 2 - sd * 0.9, y: (y0 + tip.y) / 2 },
+            tip,
+            { x: (x0 + tip.x) / 2 + sd * 0.2, y: (y0 + tip.y) / 2 },
+            { x: x0 + 1, y: y0 },
+          ],
+          BONE,
+          BONE_SH,
+          d.lk.ink,
+          0.3,
+          0.6 * d.k,
+          0.3,
+        );
+      }
+    },
+    parts: ['shard', 'shard'],
+  },
+
+  // The goose up to no good: white, an orange beak and feet, an S of a neck. On the run it's the honk
+  // pose: neck thrust out flat, wings flung up.
+  goose: {
+    size: [1.16, 1.06],
+    outline:
+      'M -0.56 -0.36 C -0.44 -0.32 -0.34 -0.34 -0.22 -0.38 C -0.02 -0.44 0.08 -0.44 0.12 -0.52 C 0.14 -0.64 0.06 -0.76 0.1 -0.88 C 0.12 -0.98 0.26 -1.02 0.3 -0.94 C 0.32 -0.9 0.28 -0.86 0.24 -0.84 C 0.2 -0.74 0.24 -0.62 0.3 -0.5 C 0.46 -0.4 0.5 -0.22 0.38 -0.1 C 0.26 0 -0.1 0 -0.3 -0.06 C -0.46 -0.14 -0.52 -0.24 -0.56 -0.36 Z',
+    poses: {
+      run: 'M -0.56 -0.36 C -0.44 -0.32 -0.34 -0.34 -0.22 -0.4 C -0.04 -0.48 0.14 -0.56 0.3 -0.6 C 0.42 -0.64 0.5 -0.7 0.6 -0.68 C 0.68 -0.66 0.68 -0.56 0.6 -0.54 C 0.5 -0.52 0.42 -0.5 0.36 -0.44 C 0.46 -0.36 0.48 -0.2 0.38 -0.1 C 0.26 0 -0.1 0 -0.3 -0.06 C -0.46 -0.14 -0.52 -0.24 -0.56 -0.36 Z',
+    },
+    lift: 2.4,
+    feet: 'web',
+    arms: 'none',
+    fill: 'paint',
+    ring: true,
+    gait: (g) => (g.moving ? { rot: S(g.ph) * 0.08, pivot: 0, upright: 0.4 } : { rot: S(g.t * 1.4) * 0.02, pivot: 0 }),
+    paintFace: (d) => {
+      const [hx, hu] = d.pose === 'run' ? [0.6, 0.62] : [0.2, 0.93];
+      sideEye(d, hu, d.f * d.W * hx, 0.6);
+    },
+    back: (d) => {
+      // Wings: folded at rest, flung up behind on the run, the jump and the honk.
+      const out = d.pose !== 'rest' || d.m === 'cheer' ? 1 : 0;
+      const flap = out ? S(d.t * 22) * 0.2 : 0;
+      for (const sd of [-1, 1]) {
+        const x0 = -d.f * d.W * 0.1 + sd * 0.8;
+        const y0 = Y(d, 0.42);
+        const a = -Math.PI / 2 - d.f * (1.15 - out * 0.85 + flap) * (sd > 0 ? 1 : 0.8);
+        const len = out ? 7 : 6;
+        const tip = { x: x0 + Math.cos(a) * len, y: y0 + Math.sin(a) * (out ? len : 2.4) };
+        toned(
+          d.s,
+          [{ x: x0 + d.f * 2, y: y0 + 0.4 }, { x: (x0 + tip.x) / 2, y: Math.min(y0, tip.y) - 1 }, tip, { x: x0 - d.f * 2, y: y0 + 1.4 }],
+          '#eae5dc',
+          '#bdb5a8',
+          d.lk.ink,
+          0.35,
+          0.7 * d.k,
+          0.4,
+        );
+      }
+    },
+    snout: (d) => {
+      const [hx, hu] = d.pose === 'run' ? [0.66, 0.6] : [0.28, 0.91];
+      beak(d, d.f * d.W * hx, Y(d, hu), 3.2, 0.75, d.m === 'cheer' || d.m === 'fall' || d.pose === 'run' ? 1.3 : 0);
+    },
+    parts: ['shard', 'shard'],
+  },
+
+  // The team shooter's engineer: a yellow hard hat with dark goggles on it, a square jaw, a work shirt in
+  // red or blue, khaki trousers, a leather glove and a huge wrench. Trudges, heavy-stepped.
+  engineer: {
+    size: [1.04, 0.96],
+    outline:
+      'M -0.04 -0.84 C 0.2 -0.86 0.36 -0.78 0.38 -0.64 L 0.43 -0.48 L 0.34 -0.43 C 0.48 -0.4 0.52 -0.26 0.48 -0.12 C 0.46 -0.04 0.38 0 0.28 0 L -0.32 0 C -0.44 0 -0.5 -0.1 -0.5 -0.24 C -0.5 -0.44 -0.42 -0.56 -0.34 -0.6 C -0.38 -0.74 -0.26 -0.84 -0.04 -0.84 Z',
+    lift: 2.8,
+    feet: 'boot',
+    boots: [BROWN, BROWN_SH],
+    arms: 'mitten',
+    hands: 'leather',
+    fill: 'paint',
+    ring: true,
+    faceX: 0.08,
+    gait: (g) => (g.moving ? { hop: abs(S(g.ph)) * 0.5, sy: 1 - abs(S(g.ph)) * 0.05, upright: 0.6 } : {}),
+    paintFace: (d) => {
+      const y = Y(d, 0.66);
+      for (const sd of [-1, 1]) eye(d, sd * d.W * 0.1 + d.f * 0.8, y, 0.75);
+      brows(d, [-d.W * 0.1 + d.f * 0.8, d.W * 0.1 + d.f * 0.8], y, 0.9);
+      mouthMark(d, d.f * 1.4, Y(d, 0.5), 2.6);
+    },
+    print: (d) => {
+      // The face and square jaw in skin, khaki trousers and a belt under the shirt.
+      spot(d.s, d.f * d.W * 0.14, Y(d, 0.62), d.W * 0.36, d.H * 0.2, d.sd, SKIN, 0.05);
+      tone(d, -0.2, 0.24, KHAKI, KHAKI_SH);
+      tone(d, 0.22, 0.27, BROWN, BROWN_SH);
+    },
+    front: (d) => {
+      // The hard hat, yellow, with dark goggles strapped round it.
+      const x = d.bx(0.95);
+      const brim = Y(d, 0.8);
+      toned(
+        d.s,
+        [
+          { x: x - d.W * 0.4, y: brim },
+          { x: x - d.W * 0.34, y: d.top - 2.8 },
+          { x, y: d.top - 4 },
+          { x: x + d.W * 0.34, y: d.top - 2.8 },
+          { x: x + d.W * 0.4, y: brim },
+        ],
+        YELLOW,
+        YELLOW_SH,
+        d.lk.ink,
+        0.4,
+        0.8 * d.k,
+        0.6,
+      );
+      toned(
+        d.s,
+        [
+          { x: x - d.W * 0.6, y: brim - 0.4 },
+          { x: x + d.W * 0.6, y: brim - 0.6 },
+          { x: x + d.W * 0.56, y: brim + 0.9 },
+          { x: x - d.W * 0.56, y: brim + 1.1 },
+        ],
+        YELLOW,
+        YELLOW_SH,
+        d.lk.ink,
+        0.3,
+        0.7 * d.k,
+        0.4,
+      );
+      const gy = d.top - 1.4;
+      mark(
+        d.s,
+        '#2a2624',
+        [
+          { x: x - d.W * 0.36, y: gy + 0.3 },
+          { x: x + d.W * 0.36, y: gy - 0.1 },
+        ],
+        1,
+        1,
+        [0, 0],
+      );
+      for (const sd of [-0.5, 0.5]) {
+        const gx = x + d.f * d.W * (0.1 + sd * 0.36);
+        tonedOval(d.s, gx, gy, 1.6, 1.4, 10, '#3a4246', '#262c2f', d.lk.ink, 0.3, 0.6 * d.k, 0.4);
+        mark(
+          d.s,
+          '#a9c4cc',
+          [
+            { x: gx - 0.7, y: gy - 0.3 },
+            { x: gx - 0.2, y: gy - 0.8 },
+          ],
+          0.4,
+          sd,
+          [0.2, 0.2],
+        );
+      }
+    },
+    tool: (d, hx, hy) => {
+      // A huge wrench: a long handle and an open jaw, up over his shoulder.
+      const a = -Math.PI / 2 + d.f * (d.m === 'run' ? 0.55 : 0.3);
+      const tx = hx + Math.cos(a) * 7.4;
+      const ty = hy + Math.sin(a) * 7.4;
+      d.s.fillStyle = d.lk.ink;
+      line(d.s, hx, hy, tx, ty, { w: 2.6, seed: 2, taper: [0, 0], press: 0 });
+      d.s.fillStyle = STEEL;
+      line(d.s, hx, hy, tx, ty, { w: 1.4, seed: 2, taper: [0, 0], press: 0 });
+      const ca = Math.cos(a);
+      const sa = Math.sin(a);
+      const at = (u: number, v: number) => ({ x: tx + ca * u - sa * v, y: ty + sa * u + ca * v });
+      toned(
+        d.s,
+        [at(-0.6, -2.6), at(2.6, -3), at(2.8, -1.2), at(1, -1), at(1, 1), at(2.8, 1.2), at(2.6, 3), at(-0.6, 2.6)],
+        STEEL,
+        STEEL_SH,
+        d.lk.ink,
+        0.3,
+        0.6 * d.k,
+        0.3,
+      );
+    },
+    parts: ['gear', 'bolt', 'spring', 'shard'],
+  },
+
   // Long and low, a pointed snout well out in front, tall ears, a bushy tail streaming behind. Trots.
   fox: {
     size: [1.24, 0.8],
@@ -120,7 +877,6 @@ export const KINDS: Record<Kind, KindArt> = {
     },
     parts: ['shard', 'shard'],
   },
-
   // Crouched flat, haunches high at the back, two eye bumps up front. Crouches and leaps.
   frog: {
     size: [1.3, 0.7],
@@ -185,72 +941,6 @@ export const KINDS: Record<Kind, KindArt> = {
     },
     parts: ['shard', 'shard'],
   },
-
-  // A dome of spines, ragged along the back, a pointed snout. Scurries; curls into a spinning ball in the air.
-  hedgehog: {
-    size: [1.14, 0.84],
-    outline:
-      'M -0.44 -0.04 L -0.56 -0.24 L -0.46 -0.32 L -0.58 -0.5 L -0.42 -0.56 L -0.48 -0.76 L -0.3 -0.74 L -0.28 -0.94 L -0.12 -0.84 L -0.02 -1 L 0.1 -0.86 L 0.24 -0.96 L 0.28 -0.78 L 0.4 -0.8 C 0.42 -0.66 0.5 -0.52 0.64 -0.4 C 0.62 -0.32 0.54 -0.28 0.46 -0.26 C 0.42 -0.12 0.32 0 0.16 0 L -0.32 0 C -0.4 0 -0.44 -0.02 -0.44 -0.04 Z',
-    lift: 2.2,
-    feet: 'paw',
-    arms: 'none',
-    faceX: 0.34,
-    gait: (g) => {
-      if (!g.grounded && g.vy < 120) return { rot: (g.t * 16) % (Math.PI * 2), pivot: 0.5, sx: 0.92, sy: 0.92 };
-      return g.moving ? { hop: abs(S(g.ph * 3)) * 0.4, rot: S(g.ph * 3) * 0.03, pivot: 0 } : {};
-    },
-    paintFace: (d) => {
-      eye(d, d.f * 0.2, Y(d, 0.56), 0.7);
-      poly(d.s, oval(d.f * d.W * 0.3, Y(d, 0.4), 0.7, 0.6, 7), d.lk.eye);
-    },
-    print: (d) => {
-      // The bare face and belly, and a few spine strokes.
-      spot(d.s, d.f * d.W * 0.4, Y(d, 0.32), d.W * 0.24, d.H * 0.34, d.sd, d.lk.paint, 0.1);
-      for (let i = 0; i < 4; i++)
-        mark(
-          d.s,
-          d.lk.fillShade,
-          [
-            { x: -d.W * (0.36 - i * 0.12), y: Y(d, 0.3 + i * 0.1) },
-            { x: -d.W * (0.44 - i * 0.12), y: Y(d, 0.56 + i * 0.1) },
-          ],
-          0.7,
-          d.sd + i,
-          [0.1, 0.5],
-        );
-    },
-    parts: ['shard', 'shard'],
-  },
-
-  // Squat and round-backed, a short snout, round ears, a masked face and a ringed tail. Sneaks, hunched.
-  raccoon: {
-    size: [1.1, 0.86],
-    outline:
-      'M -0.42 -0.06 C -0.52 -0.4 -0.36 -0.7 -0.06 -0.76 C -0.04 -0.92 0.06 -1 0.2 -0.98 C 0.36 -0.96 0.44 -0.86 0.46 -0.74 C 0.56 -0.68 0.6 -0.62 0.56 -0.56 C 0.5 -0.5 0.44 -0.5 0.42 -0.46 C 0.46 -0.3 0.42 -0.1 0.3 0 L -0.32 0 C -0.38 0 -0.42 -0.02 -0.42 -0.06 Z',
-    lift: 2.4,
-    feet: 'paw',
-    arms: 'none',
-    faceX: 0.2,
-    rope: { kind: 'ringtail', len: 7 },
-    gait: (g) => (g.moving ? { hop: abs(S(g.ph)) * 0.4, bend: 0.08, sy: 0.95, upright: 0.5 } : { bend: 0.03 }),
-    paintFace: (d) => {
-      mask(d, 0.76, 0.1);
-      poly(d.s, oval(d.f * d.W * 0.34, Y(d, 0.56), 0.7, 0.6, 7), d.lk.eye);
-    },
-    print: (d) => {
-      spot(d.s, d.f * d.W * 0.36, Y(d, 0.56), d.W * 0.18, d.H * 0.1, d.sd, d.lk.paint, 0.1);
-      spot(d.s, d.f * d.W * 0.18, Y(d, 0.18), d.W * 0.24, d.H * 0.2, d.sd + 1, d.lk.paint, 0.1);
-    },
-    front: (d) => {
-      for (const u of [0.06, 0.32]) {
-        const x = d.bx(1) + d.f * d.W * u;
-        tonedOval(d.s, x, d.top + 0.6, 1.8, 1.7, 10, d.lk.fill, d.lk.fillShade, d.lk.ink, 0.4, 0.8 * d.k, 0.5);
-        poly(d.s, oval(x, d.top + 0.9, 0.9, 0.8, 8), d.lk.paint);
-      }
-    },
-    parts: ['shard', 'shard'],
-  },
-
   // Upright, a pale front, flippers, a little beak. Waddles side to side.
   penguin: {
     size: [0.84, 1],
@@ -274,7 +964,6 @@ export const KINDS: Record<Kind, KindArt> = {
     snout: (d) => beak(d, d.f * d.W * 0.22, Y(d, 0.72), 2.2, 0.8, d.m === 'cheer' ? 0.8 : 0),
     parts: ['shard', 'shard'],
   },
-
   // Tall and bottom-heavy on thin legs, a red comb, tail feathers up behind. Struts, head bobbing.
   chicken: {
     size: [0.9, 1.04],
@@ -303,364 +992,6 @@ export const KINDS: Record<Kind, KindArt> = {
     },
     parts: ['shard', 'shard'],
   },
-
-  // A jellyfish-brained floater: a domed membrane over glowing-looking nuclei (flat, not glowing), four
-  // fangs hanging under it. Bobs in the air and chomps; never touches the floor.
-  jelly: {
-    size: [1.1, 1],
-    outline:
-      'M 0 -1 C 0.34 -1 0.52 -0.76 0.52 -0.5 C 0.52 -0.36 0.46 -0.3 0.4 -0.28 C 0.3 -0.3 0.24 -0.26 0.16 -0.28 C 0.06 -0.3 -0.06 -0.3 -0.16 -0.28 C -0.24 -0.26 -0.3 -0.3 -0.4 -0.28 C -0.46 -0.3 -0.52 -0.36 -0.52 -0.5 C -0.52 -0.76 -0.34 -1 0 -1 Z',
-    lift: 1,
-    feet: 'none',
-    arms: 'none',
-    shine: true,
-    gait: (g) => {
-      const b = S(g.t * 3 + g.seed);
-      return { hop: 1.6 + b * 0.9 + (g.moving ? abs(S(g.ph)) * 0.6 : 0), sx: 1 + b * 0.04, sy: 1 - b * 0.04, upright: 0.4, k: S(g.t * (g.moving ? 9 : 4)) };
-    },
-    paintFace: () => {},
-    print: (d) => {
-      // The nuclei, and a pale rim inside the membrane's hem.
-      livery(d, 0.28, 0.36);
-      for (const [u, x, r] of [
-        [0.66, -0.16, 2.2],
-        [0.7, 0.14, 2],
-        [0.5, 0, 1.8],
-      ] as const)
-        tonedOval(d.s, d.f * d.W * x, Y(d, u), r, r * 0.9, 10, d.lk.paint, d.lk.paintShade, d.lk.ink, 0.2, 0.4, 0.4);
-      for (let i = 0; i < 3; i++) poly(d.s, oval(d.f * d.W * (-0.3 + i * 0.3), Y(d, 0.84 - (i % 2) * 0.04), 0.6, 0.5, 6), d.lk.playerHi);
-    },
-    back: (d) => {
-      // Four fangs that chomp.
-      const chomp = (d.gait.k ?? 0) * 0.25;
-      for (const [x, sd] of [
-        [-0.3, -1],
-        [-0.1, -1],
-        [0.1, 1],
-        [0.3, 1],
-      ] as const) {
-        const x0 = d.W * x;
-        const y0 = Y(d, 0.3);
-        const a = Math.PI / 2 + sd * (0.25 + chomp);
-        const tip = { x: x0 + Math.cos(a) * 4.6, y: y0 + Math.sin(a) * 4.6 };
-        toned(
-          d.s,
-          [
-            { x: x0 - 1, y: y0 },
-            { x: (x0 + tip.x) / 2 - sd * 0.8, y: (y0 + tip.y) / 2 },
-            tip,
-            { x: (x0 + tip.x) / 2 + sd * 0.2, y: (y0 + tip.y) / 2 },
-            { x: x0 + 1, y: y0 },
-          ],
-          BONE,
-          BONE_SH,
-          d.lk.ink,
-          0.3,
-          0.6 * d.k,
-          0.3,
-        );
-      }
-    },
-    parts: ['shard', 'shard'],
-  },
-
-  // A mustached plumber: a cap with its bill out front, a big round nose, overalls, white gloves, boots.
-  // Runs jaunty, arms pumping. His cap and overalls are the player's color.
-  plumber: {
-    size: [0.92, 1],
-    outline:
-      'M -0.02 -0.86 C 0.2 -0.88 0.36 -0.8 0.38 -0.66 C 0.5 -0.66 0.58 -0.6 0.54 -0.54 C 0.5 -0.5 0.42 -0.5 0.38 -0.48 C 0.4 -0.42 0.42 -0.36 0.42 -0.3 C 0.46 -0.14 0.4 0 0.24 0 L -0.3 0 C -0.42 0 -0.48 -0.14 -0.46 -0.3 C -0.44 -0.5 -0.3 -0.6 -0.32 -0.7 C -0.34 -0.82 -0.2 -0.86 -0.02 -0.86 Z',
-    lift: 2.8,
-    feet: 'boot',
-    boots: [BROWN, BROWN_SH],
-    arms: 'mitten',
-    hands: 'glove',
-    fill: 'paint',
-    faceX: 0.1,
-    gait: (g) => (g.moving ? { hop: abs(S(g.ph)) * 1, bend: 0.04, upright: 0.8 } : {}),
-    paintFace: (d) => {
-      for (const sd of [-1, 1]) {
-        const x = sd * d.W * 0.1 + d.f * 0.8;
-        if (d.m === 'cheer')
-          mark(
-            d.s,
-            d.lk.eye,
-            [
-              { x: x - 0.8, y: Y(d, 0.7) + 0.3 },
-              { x, y: Y(d, 0.7) - 0.5 },
-              { x: x + 0.8, y: Y(d, 0.7) + 0.3 },
-            ],
-            0.8,
-            sd,
-            [0.2, 0.2],
-          );
-        else poly(d.s, oval(x, Y(d, 0.7), 0.6, d.m === 'fall' ? 1.3 : 1.05, 8), d.lk.eye);
-      }
-    },
-    print: (d) => {
-      // Skin for the face, the player's overalls up to two straps, two buttons.
-      spot(d.s, d.f * d.W * 0.1, Y(d, 0.68), d.W * 0.42, d.H * 0.2, d.sd, SKIN, 0.05);
-      livery(d, -0.2, 0.36);
-      for (const sd of [-1, 1]) {
-        mark(
-          d.s,
-          d.lk.player,
-          [
-            { x: sd * d.W * 0.2, y: Y(d, 0.34) },
-            { x: sd * d.W * 0.18, y: Y(d, 0.5) },
-          ],
-          1.8,
-          sd,
-          [0, 0],
-        );
-        poly(d.s, oval(sd * d.W * 0.18, Y(d, 0.36), 0.6, 0.6, 6), '#f2d37a');
-      }
-    },
-    front: (d) => {
-      // The cap: a dome over the head, its bill out front, a pale badge.
-      const x = d.bx(0.9);
-      const brim = Y(d, 0.78);
-      toned(
-        d.s,
-        [
-          { x: x - d.W * 0.44, y: brim + 0.6 },
-          { x: x - d.W * 0.36, y: d.top - 1.6 },
-          { x: x + d.f * d.W * 0.06, y: d.top - 2.6 },
-          { x: x + d.W * 0.36, y: d.top - 1.4 },
-          { x: x + d.W * 0.44, y: brim + 0.6 },
-        ],
-        d.lk.player,
-        d.lk.playerShade,
-        d.lk.ink,
-        0.4,
-        0.8 * d.k,
-        0.6,
-      );
-      toned(
-        d.s,
-        [
-          { x: x + d.f * d.W * 0.2, y: brim - 0.6 },
-          { x: x + d.f * d.W * 0.66, y: brim + 0.2 },
-          { x: x + d.f * d.W * 0.6, y: brim + 1.2 },
-          { x: x + d.f * d.W * 0.18, y: brim + 0.8 },
-        ],
-        d.lk.player,
-        d.lk.playerShade,
-        d.lk.ink,
-        0.3,
-        0.7 * d.k,
-        0.4,
-      );
-      tonedOval(d.s, x + d.f * 0.6, Y(d, 0.9), 1.4, 1.3, 9, '#fbf6ee', '#d8d0c2', d.lk.ink, 0.25, 0.5, 0.4);
-    },
-    snout: (d) => {
-      // The nose, and the mustache under it.
-      const x = d.f * d.W * 0.36;
-      const y = Y(d, 0.57);
-      tonedOval(d.s, x, y - 0.6, 1.9, 1.6, 10, SKIN, SKIN_SH, d.lk.ink, 0.35, 0.7 * d.k, 0.5);
-      const m: P[] = [];
-      for (let i = 0; i <= 8; i++) {
-        const a = Math.PI * (i / 8);
-        m.push({ x: x - d.f * 1 + Math.cos(a) * 3.2, y: y + 1.2 + Math.sin(a) * 1.4 - (i % 2) * 0.5 });
-      }
-      poly(d.s, m, BROWN_SH);
-    },
-    parts: ['coin', 'coin', 'shard'],
-  },
-
-  // A robot: a big TV-set head, dented on one corner, on a neck pinch and a barrel chest. Stomps, jerky.
-  robot: {
-    size: [0.9, 1.04],
-    outline:
-      'M -0.36 -1 L 0.36 -0.98 C 0.44 -0.98 0.46 -0.94 0.45 -0.86 L 0.42 -0.68 C 0.41 -0.63 0.3 -0.62 0.14 -0.6 C 0.4 -0.56 0.5 -0.42 0.48 -0.24 C 0.46 -0.06 0.3 0 0 0 C -0.3 0 -0.46 -0.06 -0.48 -0.24 C -0.5 -0.42 -0.4 -0.56 -0.14 -0.6 C -0.3 -0.62 -0.41 -0.63 -0.42 -0.68 L -0.44 -0.9 C -0.44 -0.97 -0.41 -1 -0.36 -1 Z',
-    lift: 3.2,
-    feet: 'peg',
-    arms: 'mitten',
-    hands: 'iron',
-    fill: 'paint',
-    shine: true,
-    gait: (g) => (g.moving ? { hop: S(g.ph) > 0 ? 0.8 : 0, rot: (S(g.ph) > 0 ? 1 : -1) * 0.04, upright: 0.4 } : {}),
-    paintFace: (d) => slit(d, 0.82),
-    print: (d) => {
-      livery(d, -0.2, 0.58);
-      tonedOval(d.s, d.f * 0.6, Y(d, 0.3), 2, 1.8, 10, STEEL, STEEL_SH, d.lk.ink, 0.3, 0.5 * d.k, 0.4);
-      mark(
-        d.s,
-        d.lk.eye,
-        [
-          { x: d.f * 0.6, y: Y(d, 0.3) },
-          { x: d.f * 0.6 + 1.4 * Math.cos(d.t * 2), y: Y(d, 0.3) - 1.1 },
-        ],
-        0.6,
-        d.sd,
-        [0, 0.5],
-      );
-    },
-    over: (d) => {
-      for (const x of [-1, 1]) rivet(d, x * d.W * 0.32, Y(d, 0.94));
-    },
-    back: (d) => {
-      for (const sd of [-1, 1]) tonedOval(d.s, sd * d.W * 0.47 + d.bx(0.8), Y(d, 0.8), 1, 1.5, 8, STEEL, STEEL_SH, d.lk.ink, 0.3, 0.6 * d.k, 0.4);
-    },
-    front: (d) => {
-      const wob = S(d.t * 9) * (moving(d) ? 1.6 : 0.5) + d.wob * 0.4;
-      stalk(d, d.bx(1) - d.f * 1.6, d.top + 1, d.bx(1) - d.f * 1.6 + wob, d.top - 4.6, 1.4, d.lk.player, d.lk.playerShade);
-    },
-    snout: (d) => {
-      const y = Y(d, 0.68);
-      poly(
-        d.s,
-        [
-          { x: -2.2, y: y - 0.9 },
-          { x: 2.2, y: y - 1 },
-          { x: 2.2, y: y + 0.9 },
-          { x: -2.2, y: y + 1 },
-        ],
-        IRON,
-      );
-      d.s.fillStyle = STEEL;
-      for (let i = -1; i <= 1; i++) d.s.fillRect(i * 1.4 - 0.25, y - 0.6, 0.5, 1.2);
-    },
-    parts: ['gear', 'spring', 'bolt'],
-  },
-
-  // A goose up to no good: an S of a neck, a long body, a tail tipped up, an orange beak. Waddles, neck
-  // thrust forward when it runs, wings out; honks on a cheer.
-  goose: {
-    size: [1.16, 1.06],
-    outline:
-      'M -0.56 -0.36 C -0.44 -0.32 -0.34 -0.34 -0.22 -0.38 C -0.02 -0.44 0.08 -0.44 0.12 -0.52 C 0.14 -0.64 0.06 -0.76 0.1 -0.88 C 0.12 -0.98 0.26 -1.02 0.3 -0.94 C 0.32 -0.9 0.28 -0.86 0.24 -0.84 C 0.2 -0.74 0.24 -0.62 0.3 -0.5 C 0.46 -0.4 0.5 -0.22 0.38 -0.1 C 0.26 0 -0.1 0 -0.3 -0.06 C -0.46 -0.14 -0.52 -0.24 -0.56 -0.36 Z',
-    lift: 2.4,
-    feet: 'web',
-    arms: 'none',
-    faceX: 0.2,
-    gait: (g) => (g.moving ? { rot: S(g.ph) * 0.08, pivot: 0, bend: 0.06 + g.run * 0.08, upright: 0.4 } : { rot: S(g.t * 1.4) * 0.02, pivot: 0 }),
-    paintFace: (d) => sideEye(d, 0.93, 0, 0.55),
-    back: (d) => {
-      // Wings: folded at a walk, flung up and out on the run.
-      const out = d.m === 'run' || !d.p.grounded ? 1 : 0;
-      const flap = out ? S(d.t * 22) * 0.2 : 0;
-      for (const sd of [-1, 1]) {
-        const x0 = -d.f * d.W * 0.06 + sd * 0.8;
-        const y0 = Y(d, 0.42);
-        const a = -Math.PI / 2 - d.f * (1.1 - out * 0.7 + flap) * (sd > 0 ? 1 : 0.85);
-        const tip = { x: x0 + Math.cos(a) * 6.2, y: y0 + Math.sin(a) * (out ? 6.2 : 2.4) };
-        toned(
-          d.s,
-          [{ x: x0 + d.f * 1.8, y: y0 + 0.4 }, { x: (x0 + tip.x) / 2, y: Math.min(y0, tip.y) - 1 }, tip, { x: x0 - d.f * 1.8, y: y0 + 1.4 }],
-          d.lk.fillShade,
-          d.lk.playerDark,
-          d.lk.ink,
-          0.35,
-          0.7 * d.k,
-          0.4,
-        );
-      }
-    },
-    snout: (d) => beak(d, d.f * d.W * 0.08, Y(d, 0.91), 3.2, 0.7, d.m === 'cheer' || d.m === 'fall' ? 1.2 : 0),
-    parts: ['shard', 'shard'],
-  },
-
-  // A hard-hat engineer: a dome hat with a wide brim, welding goggles, a big square chin, a stocky build,
-  // a wrench in his gloved hand. Trudges, heavy-stepped. His work shirt is the player's color.
-  engineer: {
-    size: [1, 0.98],
-    outline:
-      'M -0.04 -0.84 C 0.18 -0.86 0.34 -0.78 0.36 -0.64 C 0.4 -0.58 0.42 -0.5 0.4 -0.46 C 0.48 -0.42 0.5 -0.28 0.46 -0.12 C 0.44 -0.04 0.36 0 0.26 0 L -0.32 0 C -0.42 0 -0.48 -0.1 -0.48 -0.24 C -0.48 -0.44 -0.4 -0.56 -0.34 -0.6 C -0.36 -0.74 -0.24 -0.84 -0.04 -0.84 Z',
-    lift: 2.8,
-    feet: 'boot',
-    boots: [BROWN, BROWN_SH],
-    arms: 'mitten',
-    hands: 'glove',
-    faceX: 0.06,
-    gait: (g) => (g.moving ? { hop: abs(S(g.ph)) * 0.5, sy: 1 - abs(S(g.ph)) * 0.05, upright: 0.6 } : {}),
-    paintFace: (d) => {
-      goggles(d, 0.72, 0.16);
-      mouthMark(d, d.f * 1.2, Y(d, 0.52), 2.6);
-    },
-    print: (d) => {
-      // The face and chin in skin, dark work overalls below the shirt.
-      spot(d.s, d.f * d.W * 0.12, Y(d, 0.62), d.W * 0.36, d.H * 0.2, d.sd, SKIN, 0.05);
-      band(d, -0.2, 0.22);
-      for (const sd of [-1, 1])
-        mark(
-          d.s,
-          DENIM,
-          [
-            { x: sd * d.W * 0.18, y: Y(d, 0.2) },
-            { x: sd * d.W * 0.16, y: Y(d, 0.42) },
-          ],
-          1.6,
-          sd,
-          [0, 0],
-        );
-    },
-    front: (d) => {
-      // The hard hat: a dome with a wide brim, in its own yellow.
-      const x = d.bx(0.95);
-      const brim = Y(d, 0.82);
-      toned(
-        d.s,
-        [
-          { x: x - d.W * 0.4, y: brim },
-          { x: x - d.W * 0.34, y: d.top - 2.8 },
-          { x: x, y: d.top - 4 },
-          { x: x + d.W * 0.34, y: d.top - 2.8 },
-          { x: x + d.W * 0.4, y: brim },
-        ],
-        d.lk.paint,
-        d.lk.paintShade,
-        d.lk.ink,
-        0.4,
-        0.8 * d.k,
-        0.6,
-      );
-      toned(
-        d.s,
-        [
-          { x: x - d.W * 0.6, y: brim - 0.4 },
-          { x: x + d.W * 0.6, y: brim - 0.6 },
-          { x: x + d.W * 0.56, y: brim + 0.9 },
-          { x: x - d.W * 0.56, y: brim + 1.1 },
-        ],
-        d.lk.paint,
-        d.lk.paintShade,
-        d.lk.ink,
-        0.3,
-        0.7 * d.k,
-        0.4,
-      );
-    },
-    tool: (d, hx, hy) => {
-      // A wrench, jaw up, swinging with the arm.
-      const a = -Math.PI / 2 + d.f * 0.5;
-      const tx = hx + Math.cos(a) * 6;
-      const ty = hy + Math.sin(a) * 6;
-      d.s.fillStyle = d.lk.ink;
-      line(d.s, hx, hy, tx, ty, { w: 2, seed: 2, taper: [0, 0], press: 0 });
-      d.s.fillStyle = STEEL;
-      line(d.s, hx, hy, tx, ty, { w: 1, seed: 2, taper: [0, 0], press: 0 });
-      toned(
-        d.s,
-        [
-          { x: tx - 1.6, y: ty + 0.6 },
-          { x: tx - 1.8, y: ty - 1.6 },
-          { x: tx - 0.4, y: ty - 0.6 },
-          { x: tx + 0.4, y: ty - 0.6 },
-          { x: tx + 1.8, y: ty - 1.6 },
-          { x: tx + 1.6, y: ty + 0.6 },
-        ],
-        STEEL,
-        STEEL_SH,
-        d.lk.ink,
-        0.3,
-        0.6 * d.k,
-        0.3,
-      );
-    },
-    parts: ['gear', 'bolt', 'spring', 'shard'],
-  },
-
   // A round puffball on big feet, stubby arms, tall eyes. Toddles; puffs up round in the air.
   puffball: {
     size: [0.96, 0.9],
@@ -677,17 +1008,3 @@ export const KINDS: Record<Kind, KindArt> = {
     parts: ['shard', 'shard'],
   },
 };
-
-/** A level band across the body in the overalls' dark, cut by the outline. */
-function band(d: D, u0: number, u1: number) {
-  poly(
-    d.s,
-    [
-      { x: -d.W * 0.62, y: Y(d, u1) },
-      { x: d.W * 0.62, y: Y(d, u1) },
-      { x: d.W * 0.62, y: Math.min(Y(d, u0), d.by + 0.4) },
-      { x: -d.W * 0.62, y: Math.min(Y(d, u0), d.by + 0.4) },
-    ],
-    DENIM,
-  );
-}

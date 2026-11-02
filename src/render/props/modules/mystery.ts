@@ -52,7 +52,7 @@ function glyph(lit: boolean) {
     g.transform(1, 0, -0.12, 1, 0, 0);
     // Ink first, fat, then the hard drop shadow down and right, then the face.
     g.fillStyle = INK;
-    stroke(g, HOOK, { w: 4.4, seed: 3, taper: [0.06, 0.04], press: 0.1 });
+    stroke(g, HOOK, { w: 3.72, seed: 3, taper: [0.06, 0.04], press: 0.1 });
     star(g, 0.25, 4.5, 2.5);
     g.fillStyle = lit ? css(GOLD, -26, 1, 6) : css(GOLD, -34, 1, -10);
     g.save();
@@ -118,7 +118,7 @@ function cube(spent: boolean) {
     // The coin slot on top: the loot-box gag.
     part(g, boxPts(T / 2 - 3, -0.8, 6, 1.7, 0.4, 8, 0), { h: 220, s: 8, l: spent ? 34 : 56 }, 8, { depth: 0.3, thin: 0.3, thick: 0.6 });
     g.fillStyle = INK;
-    line(g, T / 2 - 2, 0.05, T / 2 + 2, 0.05, { w: 0.75, seed: 4, taper: [0, 0], press: 0 });
+    line(g, T / 2 - 2, 0.05, T / 2 + 2, 0.05, { w: 0.52, seed: 4, taper: [0, 0], press: 0 });
   });
 }
 

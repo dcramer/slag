@@ -96,8 +96,8 @@ const dockArm: RotorSkin = {
     const hx = m.hub[0] + d.off[0];
     const hy = m.hub[1] + d.off[1];
     s.fillStyle = INK;
-    line(s, hx, hy, a.x, p.y - 4, { w: 0.9, seed: 81, taper: [0, 0], press: 0 });
-    for (const ex of [p.x + 3, p.x + p.w - 3]) line(s, a.x, p.y - 4, ex, p.y, { w: 0.7, seed: ex, taper: [0, 0], press: 0 });
+    line(s, hx, hy, a.x, p.y - 4, { w: 0.82, seed: 81, taper: [0, 0], press: 0 });
+    for (const ex of [p.x + 3, p.x + p.w - 3]) line(s, a.x, p.y - 4, ex, p.y, { w: 0.49, seed: ex, taper: [0, 0], press: 0 });
     ball(s, a.x, p.y - 4.2, 1.6, { h: 210, s: 12, l: 60 }, 82);
   },
   platform(rc, _m, d, _a, p, i) {
@@ -181,7 +181,7 @@ function commTrusses(w: number, h: number) {
       cable.push({ x: 8 + (w - 16) * t, y: top + 26 + Math.sin(t * Math.PI) * 5 });
     }
     g.fillStyle = INK;
-    stroke(g, cable, { w: 1.6, seed: 201, taper: [0, 0], press: 0.1 });
+    stroke(g, cable, { w: 1.2, seed: 201, taper: [0, 0], press: 0.1 });
     g.fillStyle = css({ h: 40, s: 70, l: 52 });
     stroke(g, cable, { w: 0.6, seed: 202, taper: [0, 0], press: 0 });
     for (const [i, mx] of [8, w - 8].entries()) {
@@ -215,8 +215,8 @@ function commTrusses(w: number, h: number) {
       path(g, ovalPts(dx - out * 0.55, dy + 0.3, 1.8, 6, 211 + i, 0.03, 16));
       g.fill();
       g.fillStyle = INK;
-      line(g, dx - out * 0.8, dy - 6.4, dx - out * 7.5, dy, { w: 0.55, seed: 211 + i, taper: [0, 0], press: 0 });
-      line(g, dx - out * 0.8, dy + 6.4, dx - out * 7.5, dy, { w: 0.55, seed: 212 + i, taper: [0, 0], press: 0 });
+      line(g, dx - out * 0.8, dy - 6.4, dx - out * 7.5, dy, { w: 0.39, seed: 211 + i, taper: [0, 0], press: 0 });
+      line(g, dx - out * 0.8, dy + 6.4, dx - out * 7.5, dy, { w: 0.39, seed: 212 + i, taper: [0, 0], press: 0 });
       ball(g, dx - out * 7.8, dy, 1.25, METALS.steel.base, 213 + i);
       // A deck plate under each truss, bolted to the floor.
       part(g, boxPts(mx - 6.5, deck - 3, 13, 3.2, 0.6, 214 + i), METALS.steel.base, 214 + i, { depth: 0.5, thin: 0.45, thick: 1 });

@@ -87,7 +87,7 @@ function housing(k: Face, n: number, pal: MetalPalette) {
       const e = sg * (W / 2);
       const hose = lp(k, e - sg * 1.4, 5.4, e + sg * 1.6, 4.6, e + sg * 2.5, 1.2, e + sg * 1.9, -2.6, e - sg * 0.6, -4.6);
       g.fillStyle = INK;
-      stroke(g, hose, { w: 1.7, seed: 12 + sg, taper: [0, 0], press: 0.1 });
+      stroke(g, hose, { w: 1.36, seed: 12 + sg, taper: [0, 0], press: 0.1 });
       g.fillStyle = '#3b3633';
       stroke(g, hose, { w: 0.85, seed: 13 + sg, taper: [0, 0], press: 0.1 });
     }
@@ -126,7 +126,7 @@ function drawPistonShaft(rc: RC, m: Piston, r: Resolved, mi: number, off: Vec, p
   const hx = hd.x + hd.w / 2 - (dx * hd.w) / 2;
   const hy = hd.y + hd.h / 2 - (dy * hd.h) / 2;
   s.fillStyle = INK;
-  line(s, fx, fy, hx, hy, { w: 4.6, seed: 1, taper: [0, 0], press: 0 });
+  line(s, fx, fy, hx, hy, { w: 3.88, seed: 1, taper: [0, 0], press: 0 });
   s.fillStyle = '#b9c0cb';
   line(s, fx, fy, hx, hy, { w: 2.8, seed: 2, taper: [0, 0], press: 0 });
   s.fillStyle = 'rgba(255,255,255,0.75)';

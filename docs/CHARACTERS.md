@@ -1,62 +1,222 @@
-# Characters: animals and critters
+# Characters: homages and animals
 
-The runners are a cast of twelve: six animals and six invented critters, most of the critters homages to famous game characters in our own designs. In the lore (DESIGN.md) they're the characters who never made the cut, from stray animals to knock-off heroes who almost got their own game. Each kind is a character design of its own, the way the barnyard party game's animals are: its own outline, one signature part, and a way of moving.
+The runners are a cast of fourteen: ten homages to famous game characters in our own designs, and four plain animals for contrast. In the lore (DESIGN.md) they're the characters who never made the cut, from stray animals to knock-off heroes who almost got their own game. Each kind is a character design of its own, the way the barnyard party game's animals are: its own outline, its signature props, and a way of moving.
 
-`pnpm shot cast` shoots the sheet: the 8-player lineup at play scale on farm and mine, the race start, deaths, a 3× close-up, the lobby cards, the silhouette test (`cast-silhouettes.png`) and the catalog of every kind (`--only catalog` for the last two). In the console, `slagDebug.cast` has `catalog()`, `silhouettes()` and `bench()`.
+`pnpm shot cast` shoots the sheet: the 8-player lineup at play scale on farm and mine, the race start, deaths, a 3× close-up, the lobby cards, the "is it the homage?" sheet (`cast-recognise.png`), the silhouette test (`cast-silhouettes.png`) and the catalog of every kind (`--only catalog` for the last three). In the console, `slagDebug.cast` has `catalog()`, `silhouettes()`, `recognise()` and `bench()`.
 
 ## Decisions
 
 From the owner (logged in [DECISIONS.md](DECISIONS.md) → Characters):
 
-1. **Animals and critters, not toys.** The foundry toys of the earlier rounds were off theme. The cast mixes animals with invented critters.
-2. **Critters may parody famous characters.** A jellyfish-brained floater, a mustached plumber, a goose up to no good, a hard-hat engineer: each is our own design under a sound-alike name, recognisable at a glance as the homage, never the real character, its real name or its art. This is the one exception to "props are objects, not characters" (DESIGN.md → Parody): player characters have faces and personas; parts and machines stay faceless.
-3. **Each kind is a design, not a variation.** A hand-inked outline, a signature part that breaks it, and a gait of its own. Fewer strong kinds beat many similar ones.
-4. **The player's color is the loudest note**: the body for most kinds; for a kind whose palette is its identity, a big worn piece (the plumber's cap and overalls, the engineer's work shirt). It's the HUD color too.
+1. **Every character is a homage.** The lore makes the runners the knock-off heroes who almost got their own game, so the whole cast parodies famous game characters (see Roster). Until the art pipeline lands, four plain animals from round 5 are still in the game.
+2. **Recognisability comes first.** A stranger should name each homage at a glance. For each one we list the three or four traits people actually know it by and make every one of them unmistakable at play scale.
+3. **Homages, never copies.** Each is our own design, read from its silhouette and one or two signature props, never the original's exact design or its real name. Sound-alike names are data (`KIND_NAMES` in `src/gen/character.ts`) and appear nowhere else. Player characters may have faces and personas; parts and machines stay faceless (DESIGN.md → Parody).
+4. **The iconic palette wins, and the player's color moves.** A homage keeps the colors it's known by (the plumber's red cap and blue overalls, the speedster's cobalt, the mouse's yellow). The player's color goes on a secondary but always-visible slot: a flat ring at its feet, no glow. A plain animal, or a homage that comes in every color anyway (the impostor crewmate, the puffball), is drawn in the player's color. Either way it's that player's HUD color, and with eight different kinds per lobby plus the ring, eight players stay told apart.
 5. **Random roll only.** New Look rolls everything, the kind included. A lobby never seats two of the same kind (`Match.looksFree`).
-6. **Saved looks re-roll once** whenever the cast changes what a seed means: `LOOK_CAST` in `src/ui/profile.ts` (now 5).
-7. **Clean, light, hand-drawn.** A thin pen that varies along the line, in a dark of the body's own color rather than near-black; calm color; one soft shadow shape; no glow.
+6. **Saved looks re-roll once** whenever the cast changes what a seed means: `LOOK_CAST` in `src/ui/profile.ts` (now 6).
+7. **Clean, light, hand-drawn.** A thin pen that varies along the line, in a dark of the body's own color; two or three flat tones per surface; one soft, hard-edged shadow shape; calm color; no glow.
+
+## The bar
+
+What polished small-character games do, and what we hold the cast to:
+
+- **Silhouette first, judged at real size.** Clever Endeavour judges *Ultimate Chicken Horse* art in the game at actual scale, added Snake for "a unique silhouette", and dropped a reskin that read in-game as "a beige Snake" ([Behind the scenes: Snake](https://cleverendeavourgames.com/blog/2020/9/21/behind-the-scenes-snake)). Mediatonic tells *Fall Guys* designers to zoom out and check the main elements still read ([PlayStation Blog](https://blog.playstation.com/?p=224711)).
+- **Few colors, chosen hard.** Yacht Club holds *Shovel Knight* characters to about five colors each, inside an NES-like palette, and iterated the Hengineer's silhouette and attitude until both were solid ([Kotaku](https://kotaku.com/how-a-shovel-knight-npc-gets-made-1842271950); [Shovel Knight: Official Design Works](https://shovelknight.fandom.com/wiki/Shovel_Knight:_Official_Design_Works)). A grayscale check of contrast is a standard test ([80.lv](https://80.lv/articles/celeste-fan-art-highlighting-character-with-texturing-pose)).
+- **One trait carries identity; color tells players apart.** Multiplayer Kirbys differ by color alone ([WiKirby: Color](https://www.wikirby.com/wiki/Color)); a fighter's icon is its silhouette plus one prop.
+- **Readability and juice in motion.** *Celeste*'s tiny protagonist reads through pose and a strong line of action more than through detail ([review notes](https://www.sonicstadium.org/blogs/entry/384-spoilers-brief-thoughts-on-celeste/)).
+
+So each kind has: a clear head-to-body ratio, a readable expression, a line of action in its run and jump poses, secondary motion on its garments, ears and tails, brows that react, and more detail at card and menu scale (a third, lit tone) than at play scale.
 
 ## The cast
 
-| Kind | Homage | Silhouette | Signature | Gait | Player's color |
-|---|---|---|---|---|---|
-| fox | — | long and low, snout well out in front | tall ears, a bushy tail carried up | trots | body |
-| frog | — | crouched flat, haunches high, two eye bumps | a hind leg that folds and kicks | crouches and leaps | body |
-| hedgehog | the blue speedster, a little | a ragged dome of spines, a pointed snout | the spines | scurries; curls into a spinning ball in the air | body |
-| raccoon | — | squat and round-backed, short snout | masked face, round ears, a ringed tail | sneaks, hunched | body |
-| penguin | — | upright egg, pale front | flippers, a little beak | waddles side to side | body |
-| chicken | the barnyard game's chicken | tall and bottom-heavy on thin legs | red comb, tail feathers up | struts, head bobbing | body |
-| jelly | the space bounty hunter's jellyfish parasite | a domed membrane over three nuclei | four fangs under it | floats, bobs and chomps | body |
-| plumber | the mustached plumber | round and stout, a big nose out front | a cap with its bill forward, the mustache | runs jaunty, arms pumping | cap and overalls |
-| robot | — | a TV-set head on a neck pinch and a barrel chest | antenna, visor slit, ear bolts | stomps, jerky, antenna wobbling | chest panel, antenna bulb |
-| goose | the goose up to no good | long body, an S of a neck, tail tipped up | the neck and beak; wings flung out | waddles, neck thrust forward; honks on a cheer | body |
-| engineer | the team shooter's engineer | stocky, square-chinned | a dome hard hat with a wide brim, goggles, a wrench | trudges, heavy-stepped | work shirt |
-| puffball | the pink puffball | round on big feet | stubby arms, tall eyes | toddles; puffs up round in the air | body |
+| Kind | Homage (what a stranger should say) | Signature traits | Player's color |
+|---|---|---|---|
+| plumber | the mustached plumber | red cap with a round white badge (our own mark, a little wrench, never the letter), big round nose, thick mustache, blue overalls with two gold buttons, white gloves, brown shoes; big head, stout | ring at the feet |
+| hedgehog | the blue speedster | cobalt, spikes swept straight back, joined eyes with green irises, peach muzzle and belly, a one-sided grin, red sneakers with a white strap; runs leaning hard, spins in the air | ring |
+| elf | the green-tunic elf hero | long green cap flopping back, pointed ear, blond fringe, flared green tunic with a belt, a kite shield and a sword hilt on the back | ring |
+| hunter | the armored bounty hunter | orange armor, huge round red shoulder pads, a round helmet with a green visor, an arm cannon held out | ring |
+| zapmouse | the yellow electric mouse | yellow, long ears with black tips, red cheeks, a lightning-bolt tail, brown back stripes | ring |
+| impostor | the impostor crewmate | a bean on stubby legs, a wide pale visor standing proud, a backpack | body |
+| puffball | the pink puffball | a ball on big red feet, stubby arms, tall eyes with a shine, blush; puffs up in the air | body |
+| jelly | the jellyfish parasite | a translucent green dome, three red nuclei inside, four ivory fangs, a hovering bob | ring |
+| goose | the goose up to no good | white, orange beak and feet, an S of a neck; on the run the honk pose, neck flat out and wings up | ring |
+| engineer | the team shooter's engineer | yellow hard hat with dark goggles on it, a square jaw, a red or blue work shirt, khaki trousers, a leather glove, a huge wrench | ring |
+| fox | — | long and low, snout out front, tall ears, bushy tail carried up | body |
+| frog | — | crouched flat, two eye bumps; crouches and leaps | body |
+| penguin | — | upright egg, pale front, flippers; waddles | body |
+| chicken | — | tall and bottom-heavy on thin legs, red comb; struts | body |
 
-The silhouette test renders all twelve solid black, at rest and mid-run, at 1 px per world px and at play scale: each is nameable from its shape, and no two share one. The closest are the plumber and the engineer, both stout figures in hats; at play scale the plumber's forward bill and nose and the engineer's wide brim and wrench part them.
+**Is it the homage?** `cast-recognise.png` puts each kind close up beside "This is ___". As of this round, every homage reads as its caption to us: the plumber, speedster, elf, mouse, impostor, puffball, jelly and goose at once; the bounty hunter and the engineer a beat slower, because their reads lean on props (the shoulder pads and cannon, the hat and wrench) more than on a silhouette nobody else shares. The silhouette test still separates every kind, though the plumber and the hunter are the closest pair of stout shapes.
+
+## Roster (all homages)
+
+The cast this is heading to: sixteen kinds, every one a homage, because the lore makes the runners the characters who never made the cut, the knock-off heroes who almost got their own game. The ten homages from round 5 stay. The four plain animals (fox, frog, penguin, chicken) are replaced by six more homages. Reserves, if one of these won't read: the shovel-wielding knight, the spinning bandicoot, the red-haired mountain climber.
+
+This spec feeds the art pipeline: a generated concept image, traced into vector parts and rigged on the gait system. Each entry is written to be used as prompt material, so it describes traits only and never names a real character. Every kind is our own design: it must read as the homage from its silhouette and props, never copy the original's exact design, and never carry its name or logo. Sound-alike names stay in data (`KIND_NAMES`).
+
+These rules apply to every kind:
+
+- **Size.** About 16 world px tall at play scale, inside the shared 14×15 body envelope. One hitbox for everyone.
+- **Style.** Clean, confident curves; few shapes; smooth tapered lines in a dark of each part's own color; two or three flat tones per surface; one soft, hard-edged shadow shape; calm color; no glow, no gradients.
+- **Facing.** Drawn facing right, standing on the floor.
+- **Player's color.** A flat ring round the feet, except where a kind says "body".
+- **Faces.** Expressive eyes with highlights, and brows that react to running, jumping, falling and cheering.
+
+### The mustached plumber
+- **A stranger should say:** "that's the plumber with the mustache."
+- **Silhouette:** stout and big-headed, about 45% head. A round cap with its bill sticking out front, and a big round nose that breaks the profile.
+- **Traits:** red cap with a round white badge on the front carrying our own small mark (a tiny wrench, never a letter); a big round nose; a thick dark-brown mustache under it; blue overalls with two gold buttons over a red shirt; white gloves; brown shoes.
+- **Palette:** cap and shirt `#c9473f` (shade `#9c3530`); overalls `#3f62b4` (shade `#2e4a8c`); skin `#efc9a4`; mustache and hair `#4d3426`; buttons `#e8c24a`; gloves `#f4efe6`; shoes `#6b4a35`; badge `#fbf6ee`.
+- **Color slot:** ring.
+- **Gait:** a jaunty run with a bounce on every step and arms pumping; one fist high on the jump.
+
+### The blue speedster
+- **A stranger should say:** "the fast blue hedgehog."
+- **Silhouette:** a big head with three or four long spikes swept straight back, a small body, thin legs, big shoes.
+- **Traits:** cobalt-blue quills swept back; one joined white eye shape with green irises; peach muzzle and belly; a cocky one-sided grin; red sneakers with a white strap and white cuffs; white gloves.
+- **Palette:** quills `#2f5bd0` (shade `#2346a6`); muzzle and belly `#f0c99c`; irises `#3a9a46`; sneakers `#d8382f` (shade `#a8281f`); strap and gloves `#fbf6ee`.
+- **Color slot:** ring.
+- **Gait:** runs leaning hard forward, legs a blur; curls into a spinning ball in the air.
+
+### The green-tunic elf hero
+- **A stranger should say:** "the elf hero with the green cap."
+- **Silhouette:** slim. A long green cap flopping back like a tail, a pointed ear sticking out, and a tunic flared at the hem.
+- **Traits:** long floppy green cap; blond fringe; long pointed ear; green tunic with a brown belt and gold buckle; a kite shield and a sword hilt on the back; brown boots and gloves.
+- **Palette:** cap and tunic `#3f7a34` (shade `#2c5a25`); hair `#e6c25a`; skin `#efc9a4`; belt, boots and gloves `#6b4a35`; shield `#3b5fa8` with a silver rim `#c9ccd2`; hilt `#5a7fc0`.
+- **Color slot:** ring.
+- **Gait:** strides out with the cap tip swinging; a forward somersault on the jump.
+
+### The armored bounty hunter
+- **A stranger should say:** "the bounty hunter in the orange power suit."
+- **Silhouette:** a round helmet, two huge round shoulder pads wider than the body, a narrow waist, chunky legs, and an arm cannon held out front.
+- **Traits:** orange armor; red spherical shoulder pads; a green visor across the helmet; a gray arm cannon with a green light; green lights on the chest.
+- **Palette:** armor `#d9661f` (shade `#a84b14`); shoulders `#c9473f`; visor `#2f7a3c` with glint `#9fe08a`; cannon mouth `#3a3a40`; lights `#7fd06a`; waist `#4a4a52`.
+- **Color slot:** ring.
+- **Gait:** heavy, steady strides; raises the cannon on the jump; tucks into a ball on a long fall.
+
+### The yellow electric mouse
+- **A stranger should say:** "the yellow electric mouse."
+- **Silhouette:** chubby and round, with two long pointed ears and a lightning-bolt tail that breaks the outline behind.
+- **Traits:** yellow; ears tipped black; round red cheeks; a zigzag lightning-bolt tail, brown at the root; two brown stripes across the back; small black eyes with a white glint.
+- **Palette:** body `#f2c62a` (shade `#c99c14`); ear tips `#2a1f1a`; cheeks `#e0473b`; stripes and tail root `#6b4a35`.
+- **Color slot:** ring.
+- **Gait:** a quick scamper on all fours at a run, ears streaming back.
+
+### The impostor crewmate
+- **A stranger should say:** "the crewmate from the impostor game."
+- **Silhouette:** a bean on two stubby legs, a wide visor standing proud of the front, and a backpack behind.
+- **Traits:** a smooth bean body; a pale-blue visor with a white glint; a backpack; no arms.
+- **Palette:** body is the player's color; visor `#a9dbe8` (shade `#6aa6ba`); glint `#ffffff`.
+- **Color slot:** body, because the original comes in every color.
+- **Gait:** a waddling shuffle on its stubby legs.
+
+### The pink puffball
+- **A stranger should say:** "the little pink puffball."
+- **Silhouette:** a near-perfect ball on two big oval feet, with stubby round arms.
+- **Traits:** tall oval eyes with a shine at the top; blush marks; a tiny mouth; big red feet.
+- **Palette:** body is the player's color, pink by default; feet `#c9473f`; eyes `#2a1f1a`; blush `rgba(232,96,120,0.55)`.
+- **Color slot:** body, because the original comes in every color.
+- **Gait:** toddles on its big feet; puffs up round and floats in the air.
+
+### The jellyfish parasite
+- **A stranger should say:** "the floating jellyfish thing from the space game."
+- **Silhouette:** a translucent dome with four fangs hooked underneath; it floats and never touches the floor.
+- **Traits:** a see-through green membrane; three red nuclei inside it; a pale rim; four ivory fangs.
+- **Palette:** membrane `#9ee38a` at 60% opacity; nuclei `#c9473f` (shade `#9c3530`); rim `#d8f2c8`; fangs `#efe6d2` (shade `#c8bba0`).
+- **Color slot:** ring.
+- **Gait:** hovers with a slow bob and chomps its fangs, faster when moving.
+
+### The goose up to no good
+- **A stranger should say:** "the troublemaking goose."
+- **Silhouette:** a long body, an S-shaped neck and a tail tipped up. On the run it takes the honk pose: neck thrust out flat, wings flung up.
+- **Traits:** white feathers; an orange beak and webbed feet; a small black eye; the honk with its beak wide open.
+- **Palette:** body `#f3f0ea` (shade `#bdb5a8`); beak and feet `#d9894a` (shade `#a35f2b`); eye `#2a1f1a`.
+- **Color slot:** ring.
+- **Gait:** a waddle; when running, the honk charge with neck out and wings up.
+
+### The team shooter's engineer
+- **A stranger should say:** "the engineer with the hard hat and the wrench."
+- **Silhouette:** stocky, with a square jaw, a domed hard hat with a wide brim, and a huge wrench over the shoulder.
+- **Traits:** yellow hard hat; dark goggles strapped around it; square jaw; red or blue work shirt; khaki trousers with a belt; leather work glove; a huge steel wrench.
+- **Palette:** hat `#e9b730` (shade `#bb8a1c`); goggles `#3a4246`; shirt `#b8433c` or `#3f62a8`; trousers `#8c7a58`; belt `#6b4a35`; glove `#a8794a`; wrench `#8e8a84` (shade `#5c5852`); skin `#efc9a4`.
+- **Color slot:** ring.
+- **Gait:** trudges, heavy-stepped, the wrench swinging.
+
+### The horned bug knight (new)
+- **A stranger should say:** "the little bug knight with the white mask."
+- **Silhouette:** a big round white mask-head about half its height, two tall horns curving up and out from it, a small dark body in a cloak, and a thin blade at its side.
+- **Traits:** a white mask with two large hollow black eyes and no mouth; two curved horns; a dark gray cloak with a ragged hem; a thin pale blade.
+- **Palette:** mask and horns `#f2efe8` (shade `#c9c4b8`); eyes `#14121a`; body `#2a2d38`; cloak `#4a5060` (shade `#363b48`); blade `#c9ccd2`.
+- **Color slot:** ring.
+- **Gait:** a quick, light scuttle, cloak fluttering; lunges forward with the blade on the jump.
+
+### The green saddled dino (new)
+- **A stranger should say:** "the green dinosaur with the saddle."
+- **Silhouette:** upright, with a big round snout well out in front, eyes high on top of the head, a short tail, a saddle on its back, and big boots.
+- **Traits:** green skin; a bulbous round snout; a white belly and cheeks; a red saddle with a white rim; orange spikes down the back of the head; red boots; big eyes set on top of the head.
+- **Palette:** skin `#4cbf4a` (shade `#35913a`); belly and cheeks `#f6f2e8`; saddle `#d8382f` (rim `#fbf6ee`); spikes `#e8853a`; boots `#d8442f` (shade `#a83222`).
+- **Color slot:** ring.
+- **Gait:** a happy trot, head bobbing; on the jump, legs paddling in the air.
+
+### The necktie ape (new)
+- **A stranger should say:** "the big ape with the red tie."
+- **Silhouette:** hunched, with huge shoulders and long arms, a small head low and forward, and a protruding muzzle.
+- **Traits:** brown fur; a tan face, muzzle and chest; a red necktie carrying our own small mark (never letters); big knuckles.
+- **Palette:** fur `#7a4e2c` (shade `#5a3820`); face and chest `#e2b98a`; tie `#d03a30` with mark `#e8c24a`.
+- **Color slot:** ring.
+- **Gait:** knuckle-gallops on all fours at a run, arms leading; beats its chest on a cheer.
+
+### The cup-headed toon (new)
+- **A stranger should say:** "the cartoon guy with a cup for a head."
+- **Silhouette:** a white cup for a head with a handle on the side and a striped straw sticking up out of the top; a small rubber-hose body.
+- **Traits:** a cup head with liquid at the rim; a red-and-white striped straw; pie-cut black eyes; a small red nose; white gloves; red shorts; brown shoes; drawn in a 1930s cartoon spirit.
+- **Palette:** cup `#f6f1e6` (shade `#cfc6b8`); liquid `#5a3a2a`; straw `#d8382f` and `#fbf6ee`; eyes `#14121a`; nose `#d8382f`; shorts `#c9473f`; gloves `#fbf6ee`; shoes `#6b4a35`.
+- **Color slot:** ring.
+- **Gait:** a bouncy, rubber-hose strut with arms swinging; the straw wobbles.
+
+### The round dot-eater (new)
+- **A stranger should say:** "the yellow ball that eats dots."
+- **Silhouette:** a yellow circle with a wedge-shaped mouth cut into its front.
+- **Traits:** pure yellow; a wedge mouth that opens and shuts; one small eye above the mouth; no limbs.
+- **Palette:** body `#f6d02a` (shade `#cba214`); mouth interior `#2a1f1a`; eye `#14121a`.
+- **Color slot:** ring.
+- **Gait:** bounces along, chomping with every stride.
+
+### The barnyard party game's horse (new)
+- **A stranger should say:** "the horse from the chicken-horse game."
+- **Silhouette:** upright, with a long head and muzzle out in front, two upright ears, a mane down the neck, and a tail behind.
+- **Traits:** brown coat; a dark mane and tail; a pale muzzle with nostrils; hooves; a goofy grin.
+- **Palette:** coat `#9a6a40` (shade `#734e2e`); mane and tail `#3a2a20`; muzzle `#e6cfae`; hooves `#2a1f1a`.
+- **Color slot:** ring.
+- **Gait:** a high-stepping prance, mane bouncing; kicks its heels on the jump.
+
+**What to check.** No two kinds may rhyme. Watch these pairs:
+
+- The puffball and the dot-eater: they're split by feet, arms and a mouth against a wedge and no limbs.
+- The goose and the horse: two farmyard homages, but white versus brown and an S-neck versus a long muzzle.
+- The bug knight and the elf: both carry a blade, but a white mask with horns versus a cap and pointed ear.
+
+Every kind must also pass the silhouette sheet and the "is it the homage?" sheet before it ships.
 
 ## What every kind keeps
 
-- **One hitbox, one physics.** Every kind is drawn around the same 14×15 world-px body, scaled 0.84–1.3 wide and 0.7–1.06 tall, inside the range the old blobs used. Ears, hats, tails and fins are thin or behind the body. `tests/ink-character.test.ts` holds every kind inside one box around the hitbox, standing on the floor.
-- **Outlines as data.** Each silhouette is authored as curves, facing right, in body units (`outline` in `src/render/cast/kinds.ts`), sampled once per kind. The seed picks the kind, the natural colors and the player's color; it doesn't shape anything.
-- **The body bends.** Squash and stretch bend the outline: the top carries the lean furthest, a landing bulges the bottom. Ears, hats and antennae ride the bend; each kind's `gait` adds its own hop, rock, spin or waddle about its own pivot.
-- **Faces belong to the kind** (`src/render/cast/faces.ts`): small hand-drawn eyes in a warm dark, a side eye on the birds, a visor on the robot, goggles on the engineer, a mask on the raccoon, tall eyes on the puffball, a nose and mustache on the plumber. They blink, squint on a cheer and go wide on a fall.
-- **Death.** Shards of the body's and the kind's colors, and a few kinds' own bits (the robot's gears and springs, the engineer's bolts, the plumber's coins).
+- **One hitbox, one physics.** Every kind is drawn around the same 14×15 world-px body, inside the range the old blobs used. Hats, ears, tails, shields and wrenches are thin or behind the body. `tests/ink-character.test.ts` holds every kind inside one box around the hitbox, standing on the floor.
+- **Outlines as data.** Each silhouette is authored as curves, facing right, in body units (`outline` in `src/render/cast/kinds.ts`), with variants where the line of action changes the shape (the goose's run). Sampled once per kind and pose.
+- **The body bends.** Squash and stretch bend the outline; each kind's `gait` adds its own hop, rock, spin or waddle about its own pivot. Caps, ears and tails sway on their own.
+- **Faces belong to the kind** (`src/render/cast/faces.ts`): cartoon eyes with irises, highlights and brows that set on a run, lift on a jump and worry on a fall; a visor, goggles or a side eye where that's the character.
+- **Glass.** The jelly's dome is translucent (no ink mass under it), the one see-through body.
+- **Death.** Shards of the character's colors, and a few kinds' own bits (the plumber's coins, the engineer's bolts and springs).
 - **Determinism.** `generateCharacter(seed)` is a pure function of the seed, and the kind is one of its rolls.
-- **Cost.** About 0.04 ms per runner on a software canvas; outlines are sampled once per kind and nothing needs baking.
+- **Cost.** About 0.04–0.07 ms per runner on a software canvas; outlines are sampled once per kind and pose, and nothing needs baking.
 
 ## Adding a kind
 
-Add the id to `CAST` and its natural colors to `PAINTS` (`src/gen/character.ts`), and a `KindArt` to `KINDS` (`src/render/cast/kinds.ts`): an outline inked as curves facing right, a signature part, a gait, a face, the player's color on the body or a big worn piece, and the parts it breaks into. A homage gets our own design and a sound-alike name, never the original's. Then run `pnpm shot cast` and look at `cast-silhouettes.png`: if its silhouette could be mistaken for another kind's, it isn't done. A new kind changes which kind every seed rolls, so bump `LOOK_CAST` with it.
+Add the id to `CAST`, its sound-alike name to `KIND_NAMES` and its own colors to `PAINTS` (`src/gen/character.ts`), and a `KindArt` to `KINDS` (`src/render/cast/kinds.ts`): an outline inked as curves facing right, the three or four traits people recognise, a gait, a face, the player's color on the body or a `ring`, and the parts it breaks into. Add its caption to `READS_AS` in `src/render/cast/sheet.ts`. Then run `pnpm shot cast` and look at `cast-recognise.png` and `cast-silhouettes.png`: if a stranger wouldn't name it, or its silhouette could be mistaken for another kind's, it isn't done. A new kind changes which kind every seed rolls, so bump `LOOK_CAST` with it.
 
 ## History
 
-- **Phase 1** proposed three directions (creature prints on the blob, a species cast, foundry toys) with in-engine prototypes; the owner picked the toys.
-- **Rounds 1–3** built and refined the foundry toys: worn player color, per-object faces, no glow, then twelve hand-designed outlines with their own gaits.
-- **Round 4** replaced the toys with this cast, kept the outline, gait and silhouette-test system, and lightened the pen.
-
-## Research behind it
-
-- **One trait per character, judged at real scale.** Clever Endeavour added Snake to *Ultimate Chicken Horse* for "a unique silhouette" and dropped a reskin that read in-game as "a beige Snake" ([Behind the scenes: Snake](https://cleverendeavourgames.com/blog/2020/9/21/behind-the-scenes-snake)).
-- **Read it small, then add pattern.** Mediatonic asks *Fall Guys* designers to zoom out and check the main elements still read ([PlayStation Blog](https://blog.playstation.com/?p=224711)).
-- **Color as the player, shape as the character.** Multiplayer Kirbys are told apart by color alone ([WiKirby: Color](https://www.wikirby.com/wiki/Color)), and Yoshi is one species in many colors ([MarioWiki](https://www.mariowiki.com/Yoshi_(species))).
+- **Phase 1** proposed three directions; the owner picked foundry toys.
+- **Rounds 1–3** built the toys and the hand-authored outline, gait and silhouette-test system.
+- **Round 4** swapped the toys for animals and a few parody critters, drawn lighter.
+- **Round 5** made the cast mostly homages, put recognisability first (iconic palettes, the player's color on a ring), and raised the craft: proportions, reacting faces, pose outlines, a card-scale rim tone.
+- **Round 6** wrote the all-homage roster as prompt material for the art pipeline (generated concept, traced into rigged vector parts); hand-drawn art work stopped to wait for it.
