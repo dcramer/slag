@@ -18,6 +18,7 @@
  *   pnpm shot props --count 24            → prop gallery (crate cards)
  *   pnpm shot cards --arch saw,block       → crate cards of those parts at every size
  *   pnpm shot parts --arch saw,flail       → those parts placed and raced, shot close up (`--styles all`: every launcher style; `--bait`: a runner in front of each)
+ *   pnpm shot looks [--only spikes,geysers,droppers] → set-piece looks: spikes on every face, geysers every way, droppers mid-drop
  *   pnpm shot buildparts                   → every building part in a race, on crate cards, and as place ghosts
  *   pnpm shot pipes [--propseed 3]         → warp pipes facing every way: placing (with the pair tether), close up, and mid-trip
  *   pnpm shot items --seed abc             → held items: in hand, loose, and each one used
