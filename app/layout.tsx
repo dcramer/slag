@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   description: DESCRIPTION,
   applicationName: NAME,
   openGraph: { type: 'website', siteName: NAME, title: NAME, description: DESCRIPTION },
-  twitter: { card: 'summary_large_image' },
+  twitter: { card: 'summary_large_image', title: NAME, description: DESCRIPTION },
   // Mobile: "Add to Home Screen" launches chromeless (iOS) with a dark status bar over the game.
   // (Next emits mobile-web-app-capable for `capable`.)
   appleWebApp: { capable: true, title: NAME, statusBarStyle: 'black-translucent' },
