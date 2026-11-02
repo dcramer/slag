@@ -3,7 +3,19 @@ import { DT, MAX_PLAYERS } from '../sim/constants';
 import { addBreadcrumb, reportEvent, reportLog } from '../telemetry';
 import type { Runner } from '../sim/run';
 import type { GameEvent, InputFrame } from '../sim/types';
-import { applyAction, freeSeats, type NetAction, type NetState, newNetState, peerOf, sanitizeRules, SEAT_PHASES, type Watcher } from './actions';
+import {
+  applyAction,
+  bannedFor,
+  freeSeats,
+  KICK_BAN_FRAMES,
+  type NetAction,
+  type NetState,
+  newNetState,
+  peerOf,
+  sanitizeRules,
+  SEAT_PHASES,
+  type Watcher,
+} from './actions';
 import { CONFIRM_BIT, decode, type Enc, encode, held, heldPeerFrame, mergePeerFrames, type PeerFrame, PRESSED } from './codec';
 import { Predictor } from './predict';
 import { hashMatch, hashSnap, type MatchSnap, restoreMatch, snapshotMatch } from './snapshot';
@@ -111,7 +123,7 @@ type Msg =
   | { t: 'b'; b: Bundle[] }
   | { t: 'sync'; s: MatchSnap; k: Record<string, [number, number]>; ns: NetState; last: Record<string, Enc>; why: string }
   /** `f`: the furthest frame this peer holds, -1 if it never joined this room's timeline. */
-  | { t: 'hello'; f: number }
+  | { t: 'hello'; f: number; c?: string }
   | { t: 'need'; f: number }
   /** New host to the furthest guest: send me your state. */
   | { t: 'pull' }
@@ -119,8 +131,8 @@ type Msg =
   | { t: 'ping'; ts: number }
   | { t: 'pong'; ts: number }
   | { t: 'pings'; p: Record<string, number> }
-  /** Host to a peer it removed. */
-  | { t: 'kicked' };
+  /** Host to a peer it removed, or refuses: `left` ms until it may come back. */
+  | { t: 'kicked'; left?: number };
 
 export interface SessionOptions {
   transport: Transport | null;
@@ -139,7 +151,11 @@ export interface SessionOptions {
   /** Called with a resumable snapshot when we become host of an empty room; return one to resume. */
   resume?: () => { snap: MatchSnap; ns: NetState } | null;
   /** The host removed this peer: it's already out of the room. */
-  onKicked?: () => void;
+  onKicked?: (until: number) => void;
+  /** This browser's own id (identity.ts): a kick keeps it out, whatever tab or peer id it comes back with. */
+  client?: string;
+  /** How long a kick keeps someone out, in sim frames (KICK_BAN_FRAMES; tests shorten it). Only the host's counts. */
+  banFrames?: number;
   /** Arrive as an observer (an invite opened with `?watch`). */
   watch?: boolean;
   /** The name an observer's chip shows, read when it starts watching. */
@@ -185,6 +201,12 @@ export class NetSession {
   private predict: boolean;
   private resumeFn: SessionOptions['resume'];
   private onKickedFn: SessionOptions['onKicked'];
+  private client: string;
+  private banFrames: number;
+  /** Host: each guest's client id, from its hello. A new host learns them as everyone says hello again. */
+  private clients = new Map<string, string>();
+  /** Wall-clock ms when this peer may come back, once kicked or refused. For the screen only. */
+  kickedUntil = 0;
   private log: (msg: string) => void;
   private ticks = 0;
   private events: GameEvent[] = [];
@@ -264,6 +286,8 @@ export class NetSession {
     this.predict = opts.predict ?? true;
     this.resumeFn = opts.resume;
     this.onKickedFn = opts.onKicked;
+    this.client = opts.client ?? '';
+    this.banFrames = Math.max(1, Math.round(opts.banFrames ?? KICK_BAN_FRAMES));
     const primary = opts.primaryDevice ?? 'kb1';
     this.primaryFn = typeof primary === 'function' ? primary : () => primary;
     this.nameFn = opts.name ?? (() => '');
@@ -335,7 +359,16 @@ export class NetSession {
 
   /** Host, lobby: remove a peer. Goes out in a bundle like any action, so every peer applies it at the same frame. */
   kick(peer: string) {
-    if (this.role === 'host' && this.match.phase === 'lobby' && peer !== this.self) this.hostActions.push({ t: 'kick', peer });
+    if (this.role !== 'host' || this.match.phase !== 'lobby' || peer === this.self) return;
+    // Never our own browser's id: a host that kicks another tab of its own would lock itself out.
+    const c = this.clients.get(peer);
+    this.hostActions.push({ t: 'kick', peer, client: c && c !== this.client ? c : undefined, until: this.match.frame + this.banFrames });
+  }
+
+  /** Refused before connecting: this tab was kicked and its ban hasn't run out (client.ts keeps it per tab). */
+  refuse(until: number) {
+    this.kickedUntil = until;
+    this.status = 'kicked';
   }
 
   /** This peer holds a seat in the match. Offline, everyone on this machine does. */
@@ -680,16 +713,24 @@ export class NetSession {
   /** Tolerates a resume save from before a field existed. */
   private adoptNet(ns: Partial<NetState>) {
     this.ns.parked = ns.parked ?? {};
-    this.ns.kicked = ns.kicked ?? {};
+    // Numbers only: a save from before bans ran out marked a kick `true`.
+    this.ns.kicked = Object.fromEntries(Object.entries(ns.kicked ?? {}).filter(([, v]) => typeof v === 'number'));
+    this.ns.banned = ns.banned ?? {};
     this.ns.watching = ns.watching ?? {};
     this.ns.queue = ns.queue ?? [];
   }
 
-  private onKicked() {
+  private onKicked(left: number) {
     if (this.status === 'kicked') return;
     this.status = 'kicked';
-    this.onKickedFn?.();
+    this.kickedUntil = Date.now() + Math.max(0, left);
+    this.onKickedFn?.(this.kickedUntil);
     this.transport?.close();
+  }
+
+  /** Ms until a peer may come back, by the room's frame count. */
+  private banLeft(peer: string, client?: string): number {
+    return (bannedFor(this.match, this.ns, peer, client) * 1000) / 60;
   }
 
   private tryResume() {
@@ -727,14 +768,14 @@ export class NetSession {
     }
     if (this.role === 'host') {
       if (msg.t === 'in') this.onInput(from, msg);
-      else if (msg.t === 'hello') this.onHello(from, msg.f);
+      else if (msg.t === 'hello') this.onHello(from, msg.f, typeof msg.c === 'string' ? msg.c : undefined);
       else if (msg.t === 'need') this.onNeed(from, msg.f);
       else if (msg.t === 'state') this.onState(from, msg);
       else if (msg.t === 'b' || msg.t === 'sync') this.stashMsg(from, msg); // someone else thinks they're host: presence lag
       return;
     }
     if (msg.t === 'kicked') {
-      if (from === this.hostId) this.onKicked();
+      if (from === this.hostId) this.onKicked(typeof msg.left === 'number' ? msg.left : (this.banFrames * 1000) / 60);
       return;
     }
     if (msg.t === 'pull') {
@@ -779,7 +820,7 @@ export class NetSession {
   }
 
   private onInput(from: string, msg: Extract<Msg, { t: 'in' }>) {
-    if (!this.members.some((m) => m.id === from) || this.ns.kicked[from]) return;
+    if (!this.members.some((m) => m.id === from) || this.banLeft(from, this.clients.get(from)) > 0) return;
     const q = this.queue(from);
     const tail = q.frames.length ? q.frames[q.frames.length - 1].seq : q.consumed;
     // Observers send no input, and anything one sends anyway (a seat just given up) plays no part.
@@ -813,8 +854,13 @@ export class NetSession {
     return peerOf(a.dev) === from;
   }
 
-  private onHello(from: string, f: number) {
-    if (this.ns.kicked[from]) return this.send({ t: 'kicked' }, from);
+  private onHello(from: string, f: number, client?: string) {
+    if (client) this.clients.set(from, client);
+    const left = this.banLeft(from, client);
+    if (left > 0) {
+      addBreadcrumb('room', 'rejoin refused (banned)', { peer: from, left: Math.round(left) });
+      return this.send({ t: 'kicked', left }, from);
+    }
     if (this.collecting) this.collecting.got.set(from, typeof f === 'number' ? f : -1);
     else this.send(this.syncMsg('hello'), from);
   }
@@ -959,7 +1005,7 @@ export class NetSession {
     if (m.phase === 'lobby' || m.phase === 'score' || m.phase === 'victory') {
       if (m.phase === 'lobby' && !this.seated && this.intent === 'play' && !this.watching) this.wants.add(this.globalDevice(this.primaryFn()));
       for (const dev of this.wants) {
-        if (!present.has(peerOf(dev)) || seated.has(dev) || seats >= MAX_PLAYERS || this.ns.kicked[peerOf(dev)]) continue;
+        if (!present.has(peerOf(dev)) || seated.has(dev) || seats >= MAX_PLAYERS || this.banLeft(peerOf(dev), this.clients.get(peerOf(dev))) > 0) continue;
         out.push({ t: 'join', dev });
         seats++;
         seated.add(dev);
@@ -976,7 +1022,7 @@ export class NetSession {
       // Refused: every hello costs the host a whole snapshot, and only a reload or a new host can change the answer.
       if (this.status === 'online' && t - this.lastHello > (this.refused ? REFUSED_RETRY_MS : HELLO_RETRY_MS)) {
         this.lastHello = t;
-        this.send({ t: 'hello', f: this.onTimeline ? this.match.frame : -1 }, this.hostId);
+        this.send({ t: 'hello', f: this.onTimeline ? this.match.frame : -1, c: this.client || undefined }, this.hostId);
       }
       return;
     }
@@ -1081,15 +1127,17 @@ export class NetSession {
   private apply(b: Bundle) {
     const m = this.match;
     for (const a of b.a ?? []) {
+      const was = a.t === 'kick' ? this.ns.kicked[a.peer] : undefined;
       if (a.t === 'rules') applyAction(m, this.ns, { t: 'rules', rules: sanitizeRules(a.rules) });
       else applyAction(m, this.ns, a);
       if (a.t === 'join' || a.t === 'leave') addBreadcrumb('room', a.t, { dev: a.dev });
       else if (a.t === 'away') addBreadcrumb('room', a.on ? 'away' : 'back', { dev: a.dev });
       // By what was applied, not what was asked: outside the lobby this did nothing.
-      if (a.t === 'kick' && this.ns.kicked[a.peer]) {
+      if (a.t === 'kick' && this.ns.kicked[a.peer] !== was) {
         addBreadcrumb('room', 'kick', { peer: a.peer });
-        if (a.peer === this.self) return this.onKicked();
-        if (this.role === 'host') this.send({ t: 'kicked' }, a.peer);
+        const left = this.banLeft(a.peer);
+        if (a.peer === this.self) return this.onKicked(left);
+        if (this.role === 'host') this.send({ t: 'kicked', left }, a.peer);
       }
       // Seats changing hands, by peer id (never a name). The asker's own join request, won and lost are in play/settleAsk.
       if (a.t === 'watch' && a.on && this.ns.watching[peerOf(a.dev)]) addBreadcrumb('room', a.afk ? 'idle' : 'watch', { peer: peerOf(a.dev), frame: m.frame });

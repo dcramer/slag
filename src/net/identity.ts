@@ -110,17 +110,41 @@ export function acquirePeerId(room: string): PeerIdentity {
   };
 }
 
+// ---------------------------------------------------------------- client id
+
+const KEY_CLIENT = 'slag.client';
+
+/**
+ * This browser's own id: random, anonymous, and in localStorage, so every tab and every visit share it. A
+ * peer id is per tab and changes with a new tab or a cleared session; this doesn't, which is what a kick's
+ * ban needs to hold. It says nothing about the person. A browser that can't store it gets a fresh one per load.
+ */
+export function clientId(): string {
+  const ls = storage('local');
+  const held = read(ls, KEY_CLIENT);
+  if (typeof held === 'string' && /^[a-z0-9]{12}$/.test(held)) return held;
+  const id = randomPeerId() + randomPeerId().slice(0, 4);
+  write(ls, KEY_CLIENT, id);
+  return id;
+}
+
 // ---------------------------------------------------------------- kicked
 
 const keyKicked = (room: string) => `slag.kicked.${room}`;
 
-/** This tab was removed from `room`. Per tab: a kick mustn't follow the rest of the browser, which may be the host. */
-export function markKicked(room: string) {
-  write(storage('session'), keyKicked(room), true);
+/**
+ * This tab was removed from `room` until `until` (ms epoch): it shows the countdown again on a reload instead
+ * of asking the host to refuse it. Per tab, because another tab of this browser may be the host. The host's
+ * ban, by client id, is what keeps every other tab out.
+ */
+export function markKicked(room: string, until: number) {
+  write(storage('session'), keyKicked(room), until);
 }
 
-export function wasKicked(room: string): boolean {
-  return read(storage('session'), keyKicked(room)) === true;
+/** When this tab may come back to `room` (ms epoch), or 0. */
+export function kickedUntil(room: string): number {
+  const v = read(storage('session'), keyKicked(room));
+  return typeof v === 'number' && v > Date.now() ? v : 0;
 }
 
 // ---------------------------------------------------------------- resume save

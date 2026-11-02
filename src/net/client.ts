@@ -4,7 +4,7 @@ import type { HudAction, NetArrival, NetInfo, NetWatcher } from '../render/hud';
 import type { InputFrame } from '../sim/types';
 import { addBreadcrumb } from '../telemetry';
 import { peerOf } from './actions';
-import { acquirePeerId, loadResume, markKicked, saveResume } from './identity';
+import { acquirePeerId, clientId, kickedUntil, loadResume, markKicked, saveResume } from './identity';
 import { NetSession, type NetStatus } from './session';
 import { HttpSignal } from './signal-client';
 import { snapshotMatch } from './snapshot';
@@ -46,6 +46,8 @@ export interface RoomConnection {
   watch(): void;
   /** The room failed: play on here, offline, without the joining screen. */
   stayOffline(): void;
+  /** Kicked, and the ban has run out: try the room again. */
+  rejoin(): void;
   /** Leave the room for good: save, say goodbye so it re-elects at once, and stop every timer and listener. */
   close(): void;
 }
@@ -54,8 +56,8 @@ export interface ConnectOptions {
   /** The local device to seat, read when the seat is asked for (see `SessionOptions.primaryDevice`). */
   primaryDevice: () => string;
   params?: URLSearchParams;
-  /** This tab was removed from the room; called once there has been time to read why. */
-  onKicked(): void;
+  /** Try the room again: a kicked tab whose ban ran out pressed Rejoin. */
+  onRejoin(): void;
   /** The page came back from the back/forward cache after the session was closed: start the room over. */
   onRestored(): void;
   /** The name an observer's chip shows. */
@@ -91,16 +93,18 @@ const STATUS_LABEL: Record<NetStatus, string> = {
 /** The host runs another build: its snapshots don't load here. */
 const REFUSED = 'Different Version · Reload';
 
-/** Long enough to read before landing on the main menu. */
-const KICKED_MS = 1500;
-
 export function connectRoom(room: string, match: Match, opts: ConnectOptions): RoomConnection {
   const params = opts.params ?? new URLSearchParams(location.search);
   const ident = acquirePeerId(room);
   const opened = Date.now();
   const life = new AbortController();
   const on = { signal: life.signal };
-  const transport = chooseTransport(room, ident.id, params);
+  // Kicked from here and still banned: don't even ask, the host would only refuse. The screen counts down instead.
+  const banned = kickedUntil(room);
+  const chosen = chooseTransport(room, ident.id, params);
+  const transport: Transport | null = chosen && banned ? { kind: chosen.kind, self: ident.id, start: () => {}, send: () => {}, close: () => {} } : chosen;
+  // `?ban=<seconds>`: a host's kicks last that long (tests; the default is KICK_BAN_FRAMES).
+  const banSeconds = Number(params.get('ban'));
   const net = new NetSession({
     transport,
     match,
@@ -108,16 +112,16 @@ export function connectRoom(room: string, match: Match, opts: ConnectOptions): R
     watch: params.has('watch'),
     name: opts.name,
     resume: () => loadResume(room, opened), // a previous visit's state, never this one's
-    onKicked: () => {
-      markKicked(room);
-      setTimeout(() => !life.signal.aborted && opts.onKicked(), KICKED_MS);
-    },
+    client: clientId(),
+    banFrames: banSeconds > 0 ? banSeconds * 60 : undefined,
+    onKicked: (until) => markKicked(room, until),
     // The session only logs what changes the room (links, migrations, syncs, desyncs): each is a step in the trail.
     log: (m) => {
       console.info(`[net] ${m}`);
       addBreadcrumb('net', m);
     },
   });
+  if (banned) net.refuse(banned);
 
   // Resume-save: the last state this browser saw, so a room everyone left can pick up where it was.
   let lastSave = 0;
@@ -184,7 +188,9 @@ export function connectRoom(room: string, match: Match, opts: ConnectOptions): R
     if (cutOff()) {
       const kicked = net.status === 'kicked';
       const title = kicked ? STATUS_LABEL.kicked : net.refused ? 'Different Version' : net.detail || STATUS_LABEL.unavailable;
-      return { stage: 'failed', title, here: 0, offline: !kicked };
+      // Kicked: a countdown to when the room will have us back, then Rejoin.
+      const rejoinIn = kicked ? Math.max(0, Math.ceil((net.kickedUntil - Date.now()) / 1000)) : undefined;
+      return { stage: 'failed', title, here: 0, offline: !kicked, rejoinIn };
     }
     wasIn ||= net.status === 'online' && (net.role === 'host' ? !net.paused : net.synced);
     if (wasIn || Date.now() - opened < ARRIVAL_DELAY_MS) return undefined;
@@ -224,6 +230,7 @@ export function connectRoom(room: string, match: Match, opts: ConnectOptions): R
     },
     play: () => net.play(),
     watch: () => net.watch(),
+    rejoin: () => opts.onRejoin(),
     stayOffline: () => {
       offline = true;
     },
@@ -236,7 +243,7 @@ export function connectRoom(room: string, match: Match, opts: ConnectOptions): R
       let out: HudAction | null = null;
       for (const f of Object.values(frames)) {
         if (f.confirmPressed) {
-          if (a) out = a.stage === 'failed' ? (a.offline ? 'offline' : 'home') : null;
+          if (a) out = a.stage === 'failed' ? (a.rejoinIn === 0 ? 'rejoin' : a.offline ? 'offline' : 'home') : null;
           else if (net.space > 0) out = 'play';
         }
         f.confirmPressed = f.altPressed = f.downPressed = f.usePressed = false;

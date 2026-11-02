@@ -39,8 +39,15 @@ class Room {
   frozen = new Set<string>();
   frame = 0;
 
-  join(id: string, script: Script = still, watch = false): NetSession {
-    const s = new NetSession({ transport: this.hub.transport(id), match: new Match(roomSeed('SEATS')), now: () => this.hub.now, watch, name: () => `W${id}` });
+  join(id: string, script: Script = still, watch = false, more: { client?: string; banFrames?: number } = {}): NetSession {
+    const s = new NetSession({
+      transport: this.hub.transport(id),
+      match: new Match(roomSeed('SEATS')),
+      now: () => this.hub.now,
+      watch,
+      name: () => `W${id}`,
+      ...more,
+    });
     this.peers.set(id, s);
     this.scripts.set(id, script);
     return s;
@@ -274,6 +281,41 @@ describe('idle peers', () => {
     if (runnerB().alive) r.until(() => !runnerB().alive, IDLE_FRAMES + 60);
     r.frozen.delete('bbbb');
     r.run(30);
+    expect(r.hashes().size).toBe(1);
+  }, 20_000);
+});
+
+describe('kicks', () => {
+  it('keep the browser out until the ban runs out, whatever peer id it comes back with, across a host migration', () => {
+    const r = new Room();
+    const ban = 240;
+    const a = r.join('aaaa', still, false, { client: 'clientaaaaaa', banFrames: ban });
+    r.run(5);
+    const b = r.join('bbbb', still, false, { client: 'clientbbbbbb', banFrames: ban });
+    r.run(5);
+    const c = r.join('cccc', still, false, { client: 'clientcccccc', banFrames: ban });
+    r.until(() => seatedPeer(a, 'bbbb') && seatedPeer(a, 'cccc'), 300);
+    a.kick('bbbb');
+    r.run(20);
+    expect(b.status).toBe('kicked');
+    expect(b.kickedUntil).toBeGreaterThan(Date.now() + 2000);
+    r.leave('bbbb');
+    // A new tab of the same browser: a new peer id, the same client id.
+    const tab = r.join('b2b2', still, false, { client: 'clientbbbbbb' });
+    r.until(() => tab.status === 'kicked', 120);
+    expect(seatedPeer(a, 'b2b2')).toBe(false);
+    r.leave('b2b2');
+    // The host goes: the new host refuses it just the same.
+    r.leave('aaaa');
+    r.until(() => c.isHost && !c.paused, 600);
+    const again = r.join('b3b3', still, false, { client: 'clientbbbbbb' });
+    r.until(() => again.status === 'kicked', 120);
+    r.leave('b3b3');
+    // Once the ban has run out, it's let back in and seated.
+    r.until(() => c.match.frame > (c.ns.banned.clientbbbbbb ?? 0), ban + 600);
+    const back = r.join('b4b4', still, false, { client: 'clientbbbbbb' });
+    r.until(() => seatedPeer(c, 'b4b4'), 300);
+    expect(back.status).toBe('online');
     expect(r.hashes().size).toBe(1);
   }, 20_000);
 });

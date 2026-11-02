@@ -23,8 +23,11 @@ export type NetAction =
   | { t: 'salt'; salt: number }
   /** Host only, lobby only. */
   | { t: 'rules'; rules: MatchRules }
-  /** Host only, lobby only: out of the room, and refused if it comes back. */
-  | { t: 'kick'; peer: string }
+  /**
+   * Host only, lobby only: out of the room, and refused until match frame `until` if it comes back, by its peer
+   * id and by `client`, the browser's own id (identity.ts), which a new tab or a cleared session doesn't change.
+   */
+  | { t: 'kick'; peer: string; client?: string; until?: number }
   /**
    * A peer watches (`on`) or wants to play again. Watching gives up the peer's seats: at once in the lobby,
    * at the round boundary mid-match. `name` labels its chip. `afk` is the host's: it saw the player idle.
@@ -42,7 +45,10 @@ export interface NetState {
   /** peer id → players removed from the lobby while that peer was away. */
   parked: Record<string, { dev: string; char: CharacterDef }[]>;
   /** Peers the host removed. Replicated, so a new host keeps refusing them. */
-  kicked: Record<string, true>;
+  /** Peers the host removed → the match frame until which they're refused. Replicated, so a new host keeps refusing them. */
+  kicked: Record<string, number>;
+  /** The same, by client id (identity.ts): the browser, whatever tab or peer id it comes back with. */
+  banned: Record<string, number>;
   /** Peers watching rather than playing, by choice or for being idle. A refresh keeps it: the peer id survives one. */
   watching: Record<string, Watcher>;
   /** Seats won mid-round, taken at the next round boundary in this order. */
@@ -55,11 +61,20 @@ export interface Watcher {
   afk?: true;
 }
 
+/** How long a kick keeps someone out by default, in sim frames: long enough that rejoining at once isn't worth it. */
+export const KICK_BAN_FRAMES = 60 * 60;
+
 /** Remembered watchers, oldest dropped first: entries outlive peers that never come back. */
 const MAX_WATCHERS = 16;
 
 export function newNetState(): NetState {
-  return { parked: {}, kicked: {}, watching: {}, queue: [] };
+  return { parked: {}, kicked: {}, banned: {}, watching: {}, queue: [] };
+}
+
+/** Frames until a peer (or the browser it's in) may come back; 0 when it may. */
+export function bannedFor(m: Match, ns: NetState, peer: string, client?: string): number {
+  const until = Math.max(ns.kicked[peer] ?? 0, client ? (ns.banned[client] ?? 0) : 0);
+  return Math.max(0, until - m.frame);
 }
 
 /** Seats nobody holds or is owed at the next round boundary: the seats a request can still win. */
@@ -100,7 +115,7 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
     }
     case 'seat': {
       const peer = peerOf(a.dev);
-      if (!peer || ns.kicked[peer]) return;
+      if (!peer || bannedFor(m, ns, peer) > 0) return;
       if (!a.on) {
         ns.queue = ns.queue.filter((q) => q.peer !== peer);
         return;
@@ -159,11 +174,17 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
       delete ns.parked[a.peer];
       delete ns.watching[a.peer];
       ns.queue = ns.queue.filter((q) => q.peer !== a.peer);
-      ns.kicked[a.peer] = true;
+      {
+        const until = Number.isSafeInteger(a.until) ? (a.until as number) : m.frame + KICK_BAN_FRAMES;
+        // Bans that ran out go, so the lists stay as short as the room's recent kicks.
+        for (const list of [ns.kicked, ns.banned]) for (const [k, v] of Object.entries(list)) if (v <= m.frame) delete list[k];
+        ns.kicked[a.peer] = until;
+        if (typeof a.client === 'string' && a.client) ns.banned[a.client] = until;
+      }
       return;
     case 'watch': {
       const peer = peerOf(a.dev);
-      if (!peer || ns.kicked[peer]) return;
+      if (!peer || bannedFor(m, ns, peer) > 0) return;
       const mine = m.players.filter((q) => peerOf(q.device) === peer);
       if (!a.on) {
         delete ns.watching[peer];
