@@ -88,6 +88,7 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - Gravity: default Auto.
 
 ## Controls and UI
+- A picked part's card leaves the crate entirely. The other cards stay where they are.
 - On PC, keyboard and mouse both work. One keyboard player can use WASD *and* the arrows. A "Split keyboard" setting turns the keyboard into two local players. Everything can be remapped.
 - The mouse drives the menu cursor: click to pick or place, right-click or the wheel to rotate.
 - **Touch (mobile)**: left half is a floating stick (push past ~70% to run), right half is jump (hold for height), self-destruct needs a short hold, and a Use button appears above jump while you hold an item. Pick by tapping a card; place by dragging a ghost that floats above your finger, with ROTATE and PLACE buttons. Landscape first.

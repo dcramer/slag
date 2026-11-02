@@ -7,6 +7,7 @@
  *   pnpm shot race --seed abc --race saw,laser --frames 200
  *   pnpm shot race --race all
  *   pnpm shot lobby|pick|place --seed abc
+ *   pnpm shot pick --claim 2,5             → with those cards already taken
  *   pnpm shot levels --seeds a,b,c,d      (or --count 12) → contact sheet
  *   pnpm shot props --count 24            → prop gallery (crate cards)
  *   pnpm shot items --seed abc             → held items: in hand, loose, and each one used
@@ -264,6 +265,14 @@ try {
     case 'pick':
       await open(`seed=${seed}&players=${players}`);
       await step(40);
+      if (opt('claim')) {
+        // `--claim 2,5`: those cards are taken, as if players had picked them.
+        await page.evaluate((cards) => {
+          const m = (window as any).slagDebug.match;
+          for (const i of cards) m.crate[i].claimedBy = m.players[0].slot;
+        }, opt('claim')!.split(',').map(Number));
+        await step(1);
+      }
       await snap(`pick-${seed}`);
       break;
     case 'place':
