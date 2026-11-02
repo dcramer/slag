@@ -5,7 +5,7 @@ import { generateLevel } from '../gen/level';
 import { generateCrate, type PropDef } from '../gen/props';
 import { DT, MAX_PLAYERS, TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import type { Level } from '../sim/level';
-import { blastEvent, blastSpec, canPlace, detonate, footprint, hangRow, type PlacedProp } from '../sim/props';
+import { blastEvent, blastSpec, canPlace, detonate, footprint, hangRow, landedDef, type PlacedProp } from '../sim/props';
 import { RunWorld } from '../sim/run';
 import { type GameEvent, type InputFrame, NO_INPUT } from '../sim/types';
 import type { ThemeId } from '../themes';
@@ -326,7 +326,7 @@ export class Match {
 
   // ---------------------------------------------------------------- place
 
-  /** Tile origin a player's held prop would be placed at, centering the footprint on the cursor. */
+  /** Where a player's held prop would land and what lands (`def`), centering its whole footprint on the cursor so a trimmed attachment doesn't jump. */
   ghostOrigin(p: Player): { tx: number; ty: number; def: PropDef } | null {
     if (p.claim < 0) return null;
     const def = this.crate[p.claim].def;
@@ -338,8 +338,9 @@ export class Match {
       h = Math.max(h, y + 1);
     }
     const tx = Math.floor(p.cursor.x / TILE - (w - 1) / 2);
-    const ty = Math.floor(p.cursor.y / TILE - (h - 1) / 2);
-    return { def, tx, ty: def.mount === 'hang' ? hangRow(this.level, this.placed, def, tx, ty) : ty };
+    const y = Math.floor(p.cursor.y / TILE - (h - 1) / 2);
+    const ty = def.mount === 'hang' ? hangRow(this.level, this.placed, def, tx, y) : y;
+    return { def: landedDef(this.level, this.placed, def, p.rot, tx, ty), tx, ty };
   }
 
   canPlaceFor(p: Player): boolean {
