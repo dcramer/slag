@@ -608,7 +608,7 @@ function harbor(rng: Rng): Look {
         base: 0.6,
         amp: 0.04,
         color: sea,
-        detail: night ? hsl3(225, 25, 14) : golden ? hsl3(250, 18, 42) : hsl3(150, 18, 55),
+        detail: night ? hsl3(225, 30, 7) : golden ? hsl3(250, 18, 42) : hsl3(150, 18, 55),
         glow: hsl3(48, 100, 75),
         lit: 1,
         haze: 0.24,

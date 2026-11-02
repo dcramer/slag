@@ -1021,7 +1021,9 @@ const sea: SkylineDef = {
     const land: P[] = [{ x: hx0 - (side ? 30 : 0), y: hy + 1 }];
     for (let x = hx0; x <= hx1; x += 6) land.push({ x, y: landY(x) });
     land.push({ x: hx1 + (side ? 0 : 30), y: hy + 1 });
-    shape(g, land, L.detail, pen, rng.int(0, 1e6), { shade: -5, foot: hy });
+    // The headland must stand off the sky behind it, or what stands on it seems to hang in the air.
+    const rock = Math.abs(L.detail.l - th.skyBottom.l) < 18 ? hsl3(L.detail.h, L.detail.s, Math.max(4, th.skyBottom.l - 20)) : L.detail;
+    shape(g, land, rock, pen, rng.int(0, 1e6), { shade: -5, foot: hy });
     // The lighthouse stands on the lowest rock under its foot, sunk into a plinth of rocks that runs on
     // down to the waterline: whatever the headland does under it, there is no air beneath it.
     const lx = side ? hx0 + (hx1 - hx0) * 0.55 : hx0 + (hx1 - hx0) * 0.45;
@@ -1045,7 +1047,7 @@ const sea: SkylineDef = {
       7,
       { shade: -14, cut: 0.6, foot: ly - 3 },
     );
-    shape(g, plinth, shift(L.detail, -6), pen * 0.8, 9, { shade: -6, cut: 0.55, foot: hy });
+    shape(g, plinth, shift(rock, -4), pen * 0.8, 9, { shade: -6, cut: 0.55, foot: hy });
     g.fillStyle = css(hsl3(0, 70, 45), -10);
     g.fillRect(lx - 3, ly - 8, 6, 3);
     g.fillRect(lx - 2.5, ly - 16, 5, 3);

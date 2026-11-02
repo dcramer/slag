@@ -104,25 +104,50 @@ const peaks: SkylineDef = {
         [ax + 2, H],
       ]);
     }
-    // Snow on every top, its lower edge torn, its far side in shade.
-    const ink = inkOf(L.detail, 0.55);
-    for (const [tx, ty] of tops) {
-      const depth = rng.range(14, 30);
-      const half = rng.range(12, 24);
-      const snow: [number, number][] = [[tx, ty - 1]];
-      for (let k = 0; k <= 6; k++) {
-        const u = k / 6;
-        snow.push([tx + half * (u * 2 - 1) * 1.2, ty + depth * (0.5 + 0.5 * Math.sin(u * Math.PI)) + rng.range(-6, 4) + Math.abs(u - 0.5) * -depth]);
+    // Snow on every top: its upper edge is the crest itself, its lower edge torn, its far side in shade.
+    // Laid on the crest, never hung under the tip: off the crest, a far peak's body can be as pale as the
+    // sky, and snow there reads as a shard floating in the air.
+    const crestAt = (x: number) => {
+      for (let i = 1; i < pts.length; i++) {
+        const [ax, ay] = pts[i - 1];
+        const [bx, by] = pts[i];
+        if (x >= ax && x <= bx) return ay + ((by - ay) * (x - ax)) / Math.max(1e-6, bx - ax);
       }
+      return H;
+    };
+    const ink = inkOf(L.detail, 0.55);
+    for (const [tx] of tops) {
+      const depth = rng.range(12, 26);
+      const half = rng.range(10, 20);
+      const top: { x: number; y: number }[] = [];
+      const hem: { x: number; y: number }[] = [];
+      for (let k = 0; k <= 8; k++) {
+        const u = k / 8;
+        const x = tx - half + half * 2 * u;
+        const cy = crestAt(x);
+        top.push({ x, y: cy - 0.5 });
+        const reach = Math.pow(Math.max(0, 1 - Math.abs(u - 0.5) * 2), 0.8);
+        hem.push({ x, y: cy + depth * reach * (0.7 + 0.3 * rng.next()) });
+      }
+      const snow = [...top, ...backward(hem)];
       g.fillStyle = css(L.detail);
-      poly(g, snow);
+      poly(
+        g,
+        snow.map((p) => [p.x, p.y] as const),
+      );
+      g.save();
+      g.beginPath();
+      snow.forEach((p, i) => (i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)));
+      g.closePath();
+      g.clip();
       g.fillStyle = css(L.detail, -12);
       poly(g, [
-        [tx, ty - 1],
-        [tx + half * 1.2, ty + depth * 0.6],
-        [tx + half * 0.3, ty + depth * 0.9],
+        [tx, crestAt(tx) - 2],
+        [tx + half + 2, crestAt(tx) - 2],
+        [tx + half + 2, crestAt(tx) + depth + 2],
+        [tx + 1, crestAt(tx) + depth + 2],
       ]);
-      const hem = snow.slice(1).map(([sx, sy]) => ({ x: sx, y: sy }));
+      g.restore();
       penPath(g, backward(hem), false, { w: pen * 0.45, col: ink, seed: Math.round(tx), run: 14, lift: 0.6, facing: 0 });
     }
     g.restore();
