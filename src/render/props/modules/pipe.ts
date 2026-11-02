@@ -7,7 +7,7 @@ import { dirOf, isPipe, lonePipe, type ModuleOf, PIPE, pipePairs, type PipeLook,
 import type { Runner, RunWorld } from '../../../sim/run';
 import { type P, stroke } from '../../ink';
 import { drawInkRunner } from '../../ink-character';
-import { boxPts, dot, INK, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
+import { boxPts, dot, INK, ovalPts, part, path, pen, poly, sprite, stamp, tone } from '../../ink-props';
 import { glowDot, light, type RC } from '../../kit';
 import { defineArt, defineHeld } from '../common';
 
@@ -135,19 +135,19 @@ function hole(f: Frame): P[] {
   return map(f, ovalPts(0, 3.6, W / 2 - 5, 1.5, 9, 0.02, 16));
 }
 
-/** A plumber's job tag tied to the lip, with the pair's number. */
-function tag(s: CanvasRenderingContext2D, x: number, y: number, n: number, f: Frame) {
-  const p = at(f, W / 2 - 5, LIP + 2);
+/** A plumber's job tag stuck on the shaft below the lip, upright whichever way the pipe faces, with the pair's number. */
+function tag(s: CanvasRenderingContext2D, x: number, y: number, n: number, f: Frame, len: number) {
+  const p = at(f, W / 2 - 6.5, Math.max(LIP + 4, (len * TILE) / 2 + 2));
   const tx = x + p.x;
   const ty = y + p.y;
-  tick(s, tx, ty, tx + 2.2, ty + 3.4, 0.35, 4, INK);
-  const card = boxPts(tx - 0.6, ty + 3, 6.2, 7, 0.8, n, 0.1);
+  const card = boxPts(tx - 3.1, ty - 3.5, 6.2, 7, 0.8, n, 0.1);
   part(s, card, { h: 44, s: 40, l: 88 }, n + 3, { depth: 0.35, thin: 0.3, thick: 0.6 });
+  dot(s, tx, ty - 2.4, 0.45, n);
   s.fillStyle = INK;
   s.font = 'bold 6px sans-serif';
   s.textAlign = 'center';
   s.textBaseline = 'middle';
-  s.fillText(String(n), tx + 2.5, ty + 6.8);
+  s.fillText(String(n), tx, ty + 0.6);
 }
 
 /** Thin curls of air rising out of a linked mouth, on the layer that takes no ink. */
@@ -199,7 +199,7 @@ defineArt<'pipe'>({
       glowDot(rc.g, x, y, 6 + flare * 10, { ...base, l: 70 }, 0.18 + flare * 0.5);
       if (flare > 0) light(rc, x, y, 30, { ...base, l: 70 }, flare * 0.6);
       const n = placed && pipePairs(placed).get(d.r.pp.uid);
-      if (n) tag(s, x, y, n, f);
+      if (n) tag(s, x, y, n, f, m.cells.length / PIPE.wide);
     } else if (d.o.showPath && placed && !d.o.card) {
       // Placing a pipe while another waits: a dotted line shows the two will pair.
       const lone = lonePipe(placed);
