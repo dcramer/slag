@@ -524,9 +524,11 @@ function volcano(rng: Rng): Look {
     ]),
     mood,
     night: true,
-    sky: inf ? [hsl3(355, 38, 22), hsl3(10, 50, 36), hsl3(24, 80, 52)] : [hsl3(262, 22, 18), hsl3(342, 28, 29), hsl3(14, 60, 42)],
-    fog: inf ? hsl3(12, 42, 32) : hsl3(348, 24, 24),
-    horizon: { color: hsl3(lavaHue, 100, 55), strength: inf ? 0.6 : 0.45, y: 0.7 },
+    // A lit, smoky sky behind the play band: the basalt and the ridges are dark against it, never dark on dark.
+    sky: inf ? [hsl3(355, 32, 30), hsl3(12, 46, 54), hsl3(26, 75, 64)] : [hsl3(262, 22, 28), hsl3(345, 32, 50), hsl3(18, 60, 58)],
+    fog: inf ? hsl3(14, 36, 50) : hsl3(348, 22, 42),
+    // The lava's light on the smoke sits behind the play band, not down at the pool.
+    horizon: { color: hsl3(lavaHue, 100, 58), strength: inf ? 0.75 : 0.65, y: 0.56 },
     celestial: inf
       ? celestial(rng, 'eclipse', hsl3(0, 0, 4), [0.2, 0.8], [0.12, 0.22], [14, 20], hsl3(lavaHue + 10, 100, 62))
       : celestial(rng, 'moon', hsl3(15, 50, 70), [0.2, 0.8], [0.12, 0.22], [14, 18], hsl3(10, 80, 55)),
@@ -542,12 +544,12 @@ function volcano(rng: Rng): Look {
         haze: 0.4,
         depth: 0.05,
       },
-      { kind: 'crags', base: 0.6, amp: 0.08, color: inf ? hsl3(5, 22, 12) : hsl3(300, 10, 11), glow: hsl3(lavaHue, 100, 55), lit: 0.6, haze: 0.3, depth: 0.18 },
+      { kind: 'crags', base: 0.6, amp: 0.08, color: inf ? hsl3(5, 22, 8) : hsl3(300, 10, 8), glow: hsl3(lavaHue, 100, 55), lit: 0.6, haze: 0.16, depth: 0.18 },
       { kind: 'crags', base: 0.76, amp: 0.06, color: hsl3(10, 15, 5), glow: hsl3(lavaHue, 100, 55), lit: 0.8, haze: 0.08, depth: 0.34 },
     ]),
     clouds: rng.int(5, 8),
     cloudStyle: 'ash',
-    cloudColor: inf ? hsl3(8, 30, 24) : hsl3(330, 14, 20),
+    cloudColor: inf ? hsl3(8, 26, 30) : hsl3(330, 14, 28),
     rays: false,
     terrain: {
       kind: 'basalt',
@@ -562,7 +564,8 @@ function volcano(rng: Rng): Look {
     },
     liquid: { kind: 'lava', color: hsl3(lavaHue, 100, 48), glow: hsl3(lavaHue + 14, 100, 60), emissive: true },
     ambient: 'embers',
-    ambientLight: inf ? rng.range(0.5, 0.58) : rng.range(0.4, 0.48),
+    // The backdrop prints at about ambient^0.6 of itself: below this the smoky sky goes back to near black.
+    ambientLight: inf ? rng.range(0.58, 0.66) : rng.range(0.5, 0.58),
     ambientTint: hsl3(lavaHue, 80, 62),
     decor: pickDecor(rng, ['fumarole', 'obsidian'], ['bones', 'skull', 'crystal'], 4),
     decorDensity: 0.13,

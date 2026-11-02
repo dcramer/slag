@@ -4,7 +4,7 @@ import type { LiquidKind, SkyLayer, Theme } from '../gen/theme';
 import { VIEW_H, VIEW_W } from '../sim/constants';
 import type { Camera } from './camera';
 import type { ViewFrame } from './frame';
-import { blob, line, type P, sn } from './ink';
+import { blob, line, type P, sn, stroke } from './ink';
 import { circle, ellipse, flame, flutter, glowDot, light, type RC } from './kit';
 import { along, backward, fillPts, inkOf, penPath } from './skyline-ink';
 import { type Feature, ridgeOf, SKYLINES } from './skylines';
@@ -97,6 +97,10 @@ interface Mote {
   seed: number;
 }
 
+/** Reused point lists for the pool's per-frame pen strokes. */
+const foam: P[] = [];
+const crest: P[] = [];
+
 /** World px under a glowing liquid's bottom edge that its heat reaches. */
 const HOT_DEPTH = 70;
 /** How much of what's under the surface shows through each liquid. */
@@ -120,12 +124,16 @@ export class Backdrop {
     const layers = th.layers.map((L) => bakeLayer(this.pool, L, th, W, H, kb));
     const clouds = Array.from({ length: th.clouds }, () => {
       const wide = th.cloudStyle !== 'puffy';
-      const w = wide ? rng.range(160, 320) : rng.range(70, 170);
+      const y = rng.range(Math.min(6, f.y0 + 6), VIEW_H * 0.42);
+      // Big and bright up high; the lower a cloud sits, the more it's behind the play band, so the smaller
+      // and fainter it gets, sinking toward the sky's own color.
+      const low = Math.max(0, Math.min(1, (y - VIEW_H * 0.1) / (VIEW_H * 0.24)));
+      const w = (wide ? rng.range(160, 320) : rng.range(70, 170)) * (1 - 0.45 * low);
       const h = w * (wide ? rng.range(0.12, 0.22) : rng.range(0.42, 0.56));
       return {
-        c: bakeCloud(this.pool, rng, w, h, th, kb),
+        c: bakeCloud(this.pool, rng, w, h, th, kb, low * 0.5),
         x: rng.range(f.x0 - 100, f.x1),
-        y: rng.range(Math.min(6, f.y0 + 6), VIEW_H * 0.42),
+        y,
         speed: rng.range(2, 8),
         w,
         h,
@@ -255,25 +263,32 @@ export class Backdrop {
     for (let x = xa; x <= xb + 6; x += 6) dry.lineTo(x, wave(x) - 0.7);
     dry.lineTo(xb + 6, -1e5);
     dry.closePath();
-    // Heat haze / glow above emissive liquids.
-    if (L.emissive) {
-      const hz = g.createLinearGradient(0, y0 - 70, 0, y0);
-      hz.addColorStop(0, css(L.glow, 0, 0));
-      hz.addColorStop(1, css(L.glow, 0, (kind === 'street' ? 0.3 : 0.22) + Math.sin(t * 1.3) * 0.04));
-      g.fillStyle = hz;
-      g.fillRect(xa, y0 - 70, xb - xa + 6, 72);
+    // A flat band between two edges over the drawn stretch: every tone of the pool is one of these.
+    const band = (top: (x: number) => number, bot: (x: number) => number) => {
+      const p = new Path2D();
+      p.moveTo(xa, top(xa));
+      for (let x = xa + 6; x <= xb + 6; x += 6) p.lineTo(x, top(x));
+      for (let x = xb + 6; x >= xa; x -= 6) p.lineTo(x, bot(x));
+      p.closePath();
+      return p;
+    };
+    // Only fire glows: lava and slag. The void is the top of a planet's air and the street is lit by its
+    // cars, so each keeps a faint light of its own; water and acid never glow.
+    const fire = kind === 'lava' || kind === 'slag';
+    const glows = L.emissive && kind !== 'acid';
+    // Heat haze over the pool: two flat steps with a hand's edge, breathing, never a falloff.
+    if (glows) {
+      const a = (fire ? 0.17 : kind === 'street' ? 0.14 : 0.1) + Math.sin(t * 1.3) * 0.03;
+      g.fillStyle = css(L.glow, 0, a * 0.45);
+      g.fill(band((x) => y0 - 56 + sn(x * 0.02, 1.7, 7) * 7, wave));
+      g.fillStyle = css(L.glow, 0, a);
+      g.fill(band((x) => y0 - 22 + sn(x * 0.03, 4.1, 7) * 4, wave));
     }
-    const gr = s.createLinearGradient(0, y0 - 3, 0, wh);
-    gr.addColorStop(0, css(L.color, kind === 'tar' ? 8 : 15));
-    gr.addColorStop(1, css(L.color, -20));
-    // A liquid's heat stays near its surface: glow prints as opaque color, and a whole window of it hides everything under it.
-    const hotEnd = Math.min(below, wh + HOT_DEPTH);
-    const hot = g.createLinearGradient(0, y0 - 3, 0, hotEnd);
-    hot.addColorStop(0, css(L.color, 15));
-    hot.addColorStop((wh - y0 + 3) / (hotEnd - y0 + 3), css(L.color, -20));
-    hot.addColorStop(1, css(L.color, -20, 0));
-    s.fillStyle = gr;
+    // The body, then a lighter skin along the top: two flat tones.
+    s.fillStyle = css(L.color, kind === 'tar' ? 0 : -6);
     s.fill(path);
+    s.fillStyle = css(L.color, kind === 'tar' ? 6 : 9);
+    s.fill(band(wave, (x) => wave(x) + 3 + sn(x * 0.07, 2.3, 5) * 0.9));
     if (sunken) {
       s.save();
       s.clip(path);
@@ -281,20 +296,40 @@ export class Backdrop {
       sunken(s);
       s.restore();
     }
+    // A liquid's heat stays near its surface: glow prints as opaque color, and a whole window of it hides everything under it.
+    const hotEnd = Math.min(below, wh + HOT_DEPTH);
     if (below > wh + 20) {
-      // Below the world the pool falls away into its own depth, lit from within if it glows.
-      const dp = s.createLinearGradient(0, wh, 0, below);
-      dp.addColorStop(0, css(L.color, -20, 0));
-      dp.addColorStop(1, css(L.color, -52, 0.95));
-      s.fillStyle = dp;
-      s.fillRect(xa, wh, xb - xa + 6, below - wh);
+      // Below the world the pool falls away into its own depth, in three flat steps.
+      for (const [d, dl, a] of [
+        [0, -24, 0.3],
+        [24, -36, 0.6],
+        [64, -52, 0.92],
+      ] as const) {
+        if (wh + d >= below) break;
+        s.fillStyle = css(L.color, dl, a);
+        s.fill(
+          band(
+            (x) => wh + d + sn(x * 0.03, d * 0.1 + 1, 3) * 2,
+            () => below,
+          ),
+        );
+      }
       // A street is lit by its cars, not from below.
-      if (L.emissive && kind !== 'street') {
-        const hg = g.createLinearGradient(0, wh - 10, 0, hotEnd);
-        hg.addColorStop(0, css(L.glow, 0, 0.5));
-        hg.addColorStop(1, css(L.glow, -15, 0));
-        g.fillStyle = hg;
-        g.fillRect(xa, wh - 10, xb - xa + 6, hotEnd - wh + 10);
+      if (glows && kind !== 'street') {
+        g.fillStyle = css(L.glow, 0, fire ? 0.32 : 0.18);
+        g.fill(
+          band(
+            () => wh - 10,
+            (x) => wh + HOT_DEPTH * 0.4 + sn(x * 0.03, 6.6, 3) * 3,
+          ),
+        );
+        g.fillStyle = css(L.glow, -15, fire ? 0.14 : 0.08);
+        g.fill(
+          band(
+            (x) => wh + HOT_DEPTH * 0.4 + sn(x * 0.03, 6.6, 3) * 3,
+            () => hotEnd,
+          ),
+        );
       }
     }
     switch (kind) {
@@ -302,10 +337,13 @@ export class Backdrop {
       case 'lava':
       case 'acid':
       case 'void': {
-        g.globalAlpha = kind === 'lava' ? 0.9 : 0.75;
-        g.fillStyle = hot;
-        g.fill(path);
-        g.globalAlpha = 1;
+        if (glows) {
+          // The heat on the surface: a flat body of light with a bright skin on it.
+          g.fillStyle = css(L.color, -12, kind === 'lava' ? 0.55 : 0.42);
+          g.fill(path);
+          g.fillStyle = css(L.color, 16, kind === 'lava' ? 0.9 : 0.75);
+          g.fill(band(wave, (x) => wave(x) + 3 + sn(x * 0.07, 2.3, 5) * 0.9));
+        }
         // Crust patches drifting on the surface.
         s.fillStyle = css(L.color, kind === 'acid' ? -18 : -30, 0.55);
         for (let i = 0; i < 14 * spots; i++) {
@@ -316,27 +354,27 @@ export class Backdrop {
           for (let i = 0; i < 8 * spots; i++) {
             const p = (t * 0.7 + i * 0.37) % 1;
             const bx = ((i * 131.7 + Math.floor(t * 0.7 + i * 0.37) * 53) % reach) - margin;
-            g.fillStyle = css(L.glow, 15, 0.6 * (1 - p));
-            circle(g, bx, wave(bx) + 2 - p * 3, 0.8 + p * 1.6);
+            (kind === 'lava' ? g : s).fillStyle = css(L.glow, 15, 0.6 * (1 - p));
+            circle(kind === 'lava' ? g : s, bx, wave(bx) + 2 - p * 3, 0.8 + p * 1.6);
           }
         }
-        for (let x = 32 + Math.floor((view.x - 100) / 72) * 72; x < view.x + view.w + 100; x += 72)
-          light(rc, x, y0 + 4, 90, L.glow, 0.5 + Math.sin(t * 2 + x) * 0.08);
+        if (glows)
+          for (let x = 32 + Math.floor((view.x - 100) / 72) * 72; x < view.x + view.w + 100; x += 72)
+            light(rc, x, y0 + 4, 90, L.glow, 0.5 + Math.sin(t * 2 + x) * 0.08);
         break;
       }
       case 'street': {
-        // A street far below: dark void with streaking car lights.
+        // A street far below: dark void with streaking car lights, each a hard head and a fainter tail.
         for (let i = 0; i < 10 * spots; i++) {
           const dir = i % 2 ? 1 : -1;
           const sp = 60 + (i % 3) * 25;
           const cx = ((((i * 173 + t * sp * dir) % (reach + 80)) + reach + 80) % (reach + 80)) - 40 - margin;
           const cy = wh - 3 + (i % 2) * 1.5;
           const col = dir > 0 ? hsl3(45, 90, 75) : hsl3(0, 100, 55);
-          const lg = g.createLinearGradient(cx - dir * 22, 0, cx, 0);
-          lg.addColorStop(0, css(col, 0, 0));
-          lg.addColorStop(1, css(col, 10, 0.8));
-          g.fillStyle = lg;
-          g.fillRect(Math.min(cx, cx - dir * 22), cy, 22, 1.2);
+          g.fillStyle = css(col, 0, 0.25);
+          g.fillRect(Math.min(cx - dir * 8, cx - dir * 22), cy, 14, 1.2);
+          g.fillStyle = css(col, 10, 0.8);
+          g.fillRect(Math.min(cx, cx - dir * 8), cy, 8, 1.2);
         }
         for (let x = 40 - margin; x < ww + margin; x += 110) if (x > view.x - 100 && x < view.x + view.w + 100) light(rc, x, wh, 90, L.glow, 0.5);
         break;
@@ -344,13 +382,21 @@ export class Backdrop {
       case 'water':
       case 'sea':
       case 'swamp': {
-        // Reflections: drifting glints and darker ripple bands.
+        // Reflections: drifting glints, each a hard sliver, never a soft dot.
         for (let i = 0; i < 16 * spots; i++) {
           const gx = ((((i * 61.7 + t * (kind === 'sea' ? 14 : 5) * (i % 2 ? 1 : -1)) % (reach + 40)) + reach + 40) % (reach + 40)) - 20 - margin;
-          const gy = wave(gx) + 2.5 + (i % 3) * 2;
-          const a = 0.25 + 0.25 * Math.sin(t * 2 + i);
+          const gy = wave(gx) + 4 + (i % 3) * 2;
+          const a = 0.3 + 0.3 * Math.sin(t * 2 + i);
+          if (a < 0.08) continue;
+          const len = 4 + (i % 4) * 2;
           s.fillStyle = css(L.glow, 10, a * (kind === 'swamp' ? 0.4 : 1));
-          s.fillRect(gx, gy, 4 + (i % 4) * 2, 0.7);
+          s.beginPath();
+          s.moveTo(gx, gy);
+          s.lineTo(gx + len * 0.2, gy - 0.5);
+          s.lineTo(gx + len, gy);
+          s.lineTo(gx + len * 0.8, gy + 0.5);
+          s.closePath();
+          s.fill();
         }
         if (kind === 'swamp') {
           const rr = new Rng(th.seed ^ 0x1e1);
@@ -369,35 +415,33 @@ export class Backdrop {
           }
         }
         if (kind === 'sea') {
-          // Foam crests.
-          s.strokeStyle = 'rgba(240,250,255,0.7)';
-          s.lineWidth = 1;
-          s.beginPath();
-          for (let x = xa; x <= xb; x += 6) {
-            const crest = Math.sin(x * 0.045 + t * 1.6);
-            if (crest > 0.55) {
-              s.moveTo(x, wave(x) + 0.3);
-              s.lineTo(x + 5, wave(x + 5) + 0.3);
-            }
+          // Foam on the crests: short pen strokes riding the swell.
+          s.fillStyle = 'rgba(240,250,255,0.8)';
+          for (let x = Math.floor(xa / 6) * 6; x <= xb; x += 6) {
+            if (Math.sin(x * 0.045 + t * 1.6) <= 0.55 || Math.sin((x - 6) * 0.045 + t * 1.6) > 0.55) continue;
+            foam.length = 0;
+            for (let k = 0; k <= 5; k++) foam.push({ x: x + k * 2.4, y: wave(x + k * 2.4) + 0.4 });
+            stroke(s, foam, { w: 1.1, seed: x, taper: [0.2, 0.5], press: 0.3 });
           }
-          s.stroke();
         }
         break;
       }
       case 'tar': {
+        // Bubbles: flat rings that thin as they rise and pop.
         for (let i = 0; i < 6 * spots; i++) {
           const p = (t * 0.25 + i * 0.29) % 1;
           const bx = ((i * 151.3 + Math.floor(t * 0.25 + i * 0.29) * 71) % reach) - margin;
-          s.strokeStyle = `rgba(150,140,170,${0.5 * (1 - p)})`;
-          s.lineWidth = 0.6;
+          const r = 1 + p * 3;
+          s.fillStyle = `rgba(150,140,170,${0.5 * (1 - p)})`;
           s.beginPath();
-          s.arc(bx, wave(bx) + 1, 1 + p * 3, Math.PI, 0);
-          s.stroke();
+          s.arc(bx, wave(bx) + 1, r, Math.PI, 0);
+          s.arc(bx, wave(bx) + 1, Math.max(0, r - 0.6), 0, Math.PI, true);
+          s.fill();
         }
         break;
       }
     }
-    if (sunken && L.emissive) {
+    if (sunken && glows) {
       // What's under the surface dims the heat in front of it, or the glow prints right over it.
       g.save();
       g.clip(path);
@@ -406,13 +450,30 @@ export class Backdrop {
       sunken(g);
       g.restore();
     }
-    // Bright surface line.
     if (kind !== 'street') {
-      g.lineWidth = 1.4;
-      g.strokeStyle = css(L.glow, 15, L.emissive ? 0.9 : 0.4);
-      g.beginPath();
-      for (let x = xa; x <= xb + 6; x += 6) (x === xa ? g.moveTo : g.lineTo).call(g, x, wave(x));
-      g.stroke();
+      // The surface line: one unbroken band cut by hand along the wave, from half its width above the
+      // wave (where ground drawn after the pool stops, see `dry`) to a little under it, so nothing shows
+      // between the ground's foot and the pool. Fire's line glows.
+      const line = band(
+        (x) => wave(x) - 0.7,
+        (x) => wave(x) + 0.75 + 0.45 * (0.5 + 0.5 * sn(x * 0.09, 8.8, 5)),
+      );
+      // The glow color itself, lifted: mixing hues across the wheel turns a blue sea under a gold sky green.
+      s.fillStyle = css(L.glow, 6, 1, -12);
+      s.fill(line);
+      if (glows) {
+        g.fillStyle = css(L.glow, 15, 0.9);
+        g.fill(line);
+      }
+      // The pen under it, many strokes keyed to the world so they ride the swell without sliding along it.
+      s.fillStyle = inkOf(L.color, glows ? 0.55 : 0.45);
+      for (let x0 = Math.floor(xa / 40) * 40; x0 < xb; x0 += 40) {
+        const len = 14 + 20 * hash2(x0, 3, 11);
+        if (hash2(x0, 7, 11) < 0.2) continue;
+        crest.length = 0;
+        for (let x = x0 + 3; x <= x0 + 3 + len; x += 3) crest.push({ x, y: wave(x) + 1.6 });
+        stroke(s, crest, { w: 0.9, seed: x0, taper: [0.2, 0.35], press: 0.35 });
+      }
     }
     return dry;
   }
@@ -614,7 +675,7 @@ function drawFeature(rc: RC, f: Feature, ox: number, oy: number, haze: number, t
         const a = 0.7 * (1 - p) * Math.min(1, p * 6);
         const px = x + p * 70 * f.s + Math.sin(p * 5 + i) * 6;
         const py = y - p * 150 * f.s - 4;
-        s.fillStyle = css(mixHsl(f.color, lava, Math.max(0, 0.55 - p)), 4 - p * 4, a);
+        s.fillStyle = css(mixHsl(f.color, lava, Math.max(0, 0.85 - p * 1.2)), 8 - p * 6, a);
         circle(s, px, py, r);
         s.fillStyle = css(f.color, -2 - p * 6, a);
         circle(s, px - r * 0.08, py - r * 0.24, r * 0.84);
@@ -865,9 +926,10 @@ function bakeOrb(pool: CanvasPool, th: Theme, kb: number): Baked['orb'] {
  * lenses stacked. Each is its shadow tone with the lit body cut up-left over it, and a light pen
  * along the crest that lifts often; the base gets only a few strokes.
  */
-function bakeCloud(pool: CanvasPool, rng: Rng, w: number, h: number, th: Theme, kb: number): Surface {
+function bakeCloud(pool: CanvasPool, rng: Rng, w: number, h: number, th: Theme, kb: number, fade = 0): Surface {
   const [c, g] = pool.take(Math.ceil(w * kb), Math.ceil(h * kb), kb);
-  const base = th.cloudColor;
+  // `fade` sinks the whole cloud toward the sky it sits in.
+  const base = mixHsl(th.cloudColor, th.skyMid, fade);
   // The underside takes the sky's own color, warmed by the horizon.
   const under = mixHsl(base, mixHsl(th.skyMid, th.horizon.color, 0.4), 0.35);
   const seed = rng.int(1, 1e6);

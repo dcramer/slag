@@ -1250,16 +1250,54 @@ const docks: SkylineDef = {
       }
     }
     ground(c, 16, 10, shift(L.color, -4));
-    // Pier with posts in front.
+    // The quay ends in a pier over the harbor: dark water under the deck, pilings standing in it with a
+    // brace here and there, a few seams on the deck. It turns the band under the sheds into things
+    // without filling it with marks.
     const py = V * (L.base + 0.06);
-    fillPts(g, slabPts(-2, py, W + 4, py + 3, 9), css(L.color, -2));
+    const water = mixHsl(shift(c.th.layers[0]?.color ?? L.color, -4), L.color, 0.3);
+    fillPts(
+      g,
+      [
+        { x: -2, y: py + 2 },
+        { x: W + 4, y: py + 2 },
+        { x: W + 4, y: H + 2 },
+        { x: -2, y: H + 2 },
+      ],
+      css(water),
+    );
+    for (let k = 0; k < W / 70; k++) {
+      const x = rng.range(0, W);
+      const y = py + rng.range(10, 40);
+      mark(
+        g,
+        along(x, x + rng.range(6, 14), 2, () => y),
+        css(water, 7, 0.8),
+        0.7,
+        k,
+      );
+    }
+    for (let px = 0; px < W; px += 18) {
+      slab(g, px, py + 3, 2.6, H, shift(L.color, 5), pen * 0.6, px, -6);
+      if (Math.floor(px / 18) % 3 === 1) bar(g, px + 2.4, py + 4, px + 18, py + 16, 0.8, css(L.color, 3), px);
+    }
+    fillPts(g, slabPts(-2, py - 1, W + 4, py + 3.5, 9), css(L.color, 4));
+    for (let x = rng.range(0, 20); x < W; x += rng.range(16, 34))
+      mark(
+        g,
+        [
+          { x, y: py - 0.4 },
+          { x: x + 0.2, y: py + 3 },
+        ],
+        inkOf(L.color, 0.7),
+        0.5,
+        x,
+      );
     penPath(
       g,
-      along(-2, W + 2, 6, () => py),
+      along(-2, W + 2, 6, () => py - 1),
       false,
       { w: pen, col: inkOf(L.color), seed: 4, run: 40 },
     );
-    for (let px = 0; px < W; px += 18) slab(g, px, py + 3, 2.5, H, shift(L.color, -2), pen * 0.6, px, 0);
   },
 };
 
