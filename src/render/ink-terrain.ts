@@ -5,7 +5,7 @@ import { TILE } from '../sim/constants';
 import { type Level, T_ONEWAY, tileAt, type TileRect } from '../sim/level';
 import { blob, type EdgeP, line, looseLoop, type P, shadeOf, sn, stroke, type StrokeOpts, traceCorners, vn } from './ink';
 import { INK_MATERIALS, type Tones } from './ink-material';
-import { flutter, type RC } from './kit';
+import { flutter, pxRect, type RC, scratch } from './kit';
 
 /**
  * Terrain as an ink drawing instead of a textured mask. Each layer is marks a hand would make: flat tones
@@ -125,10 +125,14 @@ export function inkMaterial(g: CanvasRenderingContext2D, level: Level, th: Theme
   for (let y = span.ty0; y <= span.ty1 && !any; y++) for (let x = span.tx0; x <= span.tx1 && !any; x++) any = deep(x, y);
   // Nothing deep here: and an empty path would cut nothing away, leaving the whole layer to paste over the first material.
   if (!any) return;
-  const layer = document.createElement('canvas');
-  layer.width = g.canvas.width;
-  layer.height = g.canvas.height;
+  const r = pxRect(g, area);
+  if (!r.w || !r.h) return;
+  const layer = scratch('ink-sub', g.canvas.width, g.canvas.height);
   const lg = layer.getContext('2d')!;
+  lg.save();
+  lg.setTransform(1, 0, 0, 1, 0, 0);
+  lg.globalCompositeOperation = 'source-over';
+  lg.clearRect(r.x, r.y, r.w, r.h);
   lg.setTransform(g.getTransform());
   paint(lg, sub, sub.kind, deep);
   lg.globalCompositeOperation = 'destination-in';
@@ -143,9 +147,10 @@ export function inkMaterial(g: CanvasRenderingContext2D, level: Level, th: Theme
     }
   }
   lg.fill();
+  lg.restore();
   g.save();
   g.setTransform(1, 0, 0, 1, 0, 0);
-  g.drawImage(layer, 0, 0);
+  g.drawImage(layer, r.x, r.y, r.w, r.h, r.x, r.y, r.w, r.h);
   g.restore();
 }
 

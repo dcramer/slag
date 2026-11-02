@@ -120,9 +120,7 @@ export class TerrainPainter {
   private startProgressive(level: Level, kb: number, focus: { x: number; y: number }) {
     this.ww = level.w * TILE;
     this.wh = level.h * TILE;
-    const c = (this.bake ??= document.createElement('canvas'));
-    c.width = Math.ceil(this.ww * kb);
-    c.height = Math.ceil(this.wh * kb);
+    const c = this.sized(kb);
     const g = c.getContext('2d')!;
     g.setTransform(kb, 0, 0, kb, 0, 0);
     g.clearRect(0, 0, this.ww, this.wh);
@@ -155,10 +153,24 @@ export class TerrainPainter {
   private bakeTerrain(level: Level, kb: number) {
     this.ww = level.w * TILE;
     this.wh = level.h * TILE;
+    // bakeInk clears what it paints, so a reused canvas needs no clear of its own.
+    this.bakeInk(this.sized(kb).getContext('2d')!, level, kb, this.solidOf(level));
+  }
+
+  /**
+   * The bake canvas at this level's size. Setting a canvas's size throws its pixels away and makes the GPU
+   * find new memory, which is a stall on a big one, so it's only done when the size really changes; a new
+   * level the same size (most of them) just clears it.
+   */
+  private sized(kb: number): HTMLCanvasElement {
     const c = (this.bake ??= document.createElement('canvas'));
-    c.width = Math.ceil(this.ww * kb);
-    c.height = Math.ceil(this.wh * kb);
-    this.bakeInk(c.getContext('2d')!, level, kb, this.solidOf(level));
+    const w = Math.ceil(this.ww * kb);
+    const h = Math.ceil(this.wh * kb);
+    if (c.width !== w || c.height !== h) {
+      c.width = w;
+      c.height = h;
+    }
+    return c;
   }
 
   private solidOf(level: Level) {

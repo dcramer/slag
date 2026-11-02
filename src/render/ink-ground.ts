@@ -7,6 +7,7 @@ import type { Level } from '../sim/level';
 import { type EdgeP, line } from './ink';
 import { INK_MATERIALS, type Tones } from './ink-material';
 import type { Area } from './ink-terrain';
+import { pxRect, scratch } from './kit';
 
 /**
  * A theme's own ground (sim/ground.ts) drawn into the terrain: glacier ice
@@ -45,10 +46,14 @@ export function inkIce(g: CanvasRenderingContext2D, level: Level, th: Theme, see
     while (d < 4 && inside(x - d - 1, y) && inside(x + d + 1, y) && inside(x, y - d - 1) && inside(x, y + d + 1)) d++;
     return d + 1;
   };
-  const layer = document.createElement('canvas');
-  layer.width = g.canvas.width;
-  layer.height = g.canvas.height;
+  const r = pxRect(g, area);
+  if (!r.w || !r.h) return;
+  const layer = scratch('ink-ice', g.canvas.width, g.canvas.height);
   const lg = layer.getContext('2d')!;
+  lg.save();
+  lg.setTransform(1, 0, 0, 1, 0, 0);
+  lg.globalCompositeOperation = 'source-over';
+  lg.clearRect(r.x, r.y, r.w, r.h);
   lg.setTransform(g.getTransform());
   const ink = css(shift(th.terrain.outline, -4, 6));
   INK_MATERIALS.ice({ g: lg, seed: seed + 2000, T: th.terrain.ice ?? ICE, ink, span, area, inside, depth });
@@ -94,9 +99,10 @@ export function inkIce(g: CanvasRenderingContext2D, level: Level, th: Theme, see
       }
     }
   }
+  lg.restore();
   g.save();
   g.setTransform(1, 0, 0, 1, 0, 0);
-  g.drawImage(layer, 0, 0);
+  g.drawImage(layer, r.x, r.y, r.w, r.h, r.x, r.y, r.w, r.h);
   g.restore();
 }
 
