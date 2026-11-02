@@ -305,23 +305,36 @@ const fields: SkylineDef = {
         for (let xx = x; xx <= x + w; xx += 8) g.lineTo(xx, c.ridge(xx) + yo);
         g.stroke();
       }
-      // Hedgerow between fields.
-      g.fillStyle = css(L.color, -10);
-      for (let yy = 0; yy < 70; yy += 3) circle(g, x + w + Math.sin(yy) * 1.5, c.ridge(x + w) + yy, 2.6);
+      // Hedgerow between fields, fading down the slope.
+      for (let yy = 0; yy < 40; yy += 3) {
+        g.fillStyle = css(L.color, -10, 1 - yy / 40);
+        circle(g, x + w + Math.sin(yy) * 1.5, c.ridge(x + w) + yy, 2.6 - yy * 0.03);
+      }
       x += w + 4;
     }
     g.restore();
-    // Hedges and round bales along the crest.
-    for (let x2 = rng.range(0, 40); x2 < W; x2 += rng.range(20, 70)) {
+    // Round hay bales and bushes along the crest.
+    for (let x2 = rng.range(0, 40); x2 < W; x2 += rng.range(30, 90)) {
       const y = c.ridge(x2);
-      if (rng.chance(0.5)) {
-        g.fillStyle = css(L.detail, -8);
-        circle(g, x2, y + 1, 3);
-        g.fillStyle = css(L.detail, 6);
-        circle(g, x2 - 0.8, y + 0.2, 1.4);
+      if (rng.chance(0.55)) {
+        for (let i = 0; i < rng.int(1, 3); i++) {
+          const bx = x2 + i * 9;
+          const by = c.ridge(bx);
+          g.fillStyle = css(L.detail, -18);
+          g.beginPath();
+          g.roundRect(bx - 4, by - 6, 8, 6.5, 2.5);
+          g.fill();
+          g.fillStyle = css(L.detail, 4);
+          ellipse(g, bx + 2.2, by - 2.8, 1.8, 3);
+          g.strokeStyle = css(L.detail, -12);
+          g.lineWidth = 0.5;
+          g.beginPath();
+          g.arc(bx + 2.2, by - 2.8, 1, 0, Math.PI * 2);
+          g.stroke();
+        }
       } else {
         g.fillStyle = css(L.color, -12);
-        for (let i = 0; i < 4; i++) circle(g, x2 + i * 3, y - 1, 3);
+        for (let i = 0; i < 4; i++) circle(g, x2 + i * 3, y - 1.5, 3.2 - Math.abs(i - 1.5) * 0.5);
       }
     }
   },
@@ -392,7 +405,7 @@ const industry: SkylineDef = {
             x: sx + w / 2,
             y: y - h,
             s: w / 5,
-            color: mixHsl(shift(c.th.cloudColor, 12), c.th.horizon.color, 0.25),
+            color: mixHsl(hsl3(25, 8, c.th.night ? 30 : 46), c.th.horizon.color, 0.2),
             phase: rng.range(0, 10),
           });
           if (c.e && rng.chance(0.5)) {
@@ -896,12 +909,10 @@ const crags: SkylineDef = {
         const px = rng.range(0, W);
         const py = c.ridge(px) + 18;
         const gr = e.createRadialGradient(px, py, 0, px, py, 46);
-        gr.addColorStop(0, css(L.glow, 0, 0.3 * L.lit));
+        gr.addColorStop(0, css(L.glow, 0, 0.2 * L.lit));
         gr.addColorStop(1, css(L.glow, 0, 0));
         e.fillStyle = gr;
         e.fillRect(px - 46, py - 46, 92, 92);
-        e.fillStyle = css(L.glow, 10, 0.6 * L.lit);
-        ellipse(e, px, py + 4, rng.range(8, 18), 1.4);
       }
     }
   },

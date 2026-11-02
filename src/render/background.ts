@@ -181,7 +181,7 @@ export class Backdrop {
         circle(s, x, y, c.r);
         break;
     }
-    light(rc, x, y, 260, c.glow, c.kind === 'sun' ? 0.6 : 0.25);
+    light(rc, x, y, 260, c.glow, c.kind === 'sun' ? 0.45 : 0.25);
   }
 
   private drawRays(rc: RC, th: Theme, ox: number, oy: number) {
@@ -547,7 +547,7 @@ function drawFeature(rc: RC, f: Feature, ox: number, oy: number, haze: number, t
       const h = f.h ?? 3;
       g.fillStyle = css(f.color, 12, fl * fade);
       g.fillRect(x - w / 2, y - h / 2, w, h);
-      glowDot(g, x, y, Math.max(w, h) * 1.4 + 6, f.color, 0.28 * fl * fade);
+      glowDot(g, x, y, Math.max(w, h) * 1.1 + 6, f.color, 0.18 * fl * fade);
       break;
     }
     case 'torch': {
@@ -688,7 +688,7 @@ function bakeCloud(rng: Rng, w: number, h: number, th: Theme, kb: number): HTMLC
     case 'ash':
     case 'storm': {
       const n = th.cloudStyle === 'storm' || th.cloudStyle === 'ash' ? 10 : 7;
-      const a = th.cloudStyle === 'smog' ? 0.35 : th.cloudStyle === 'storm' ? 0.85 : th.cloudStyle === 'ash' ? 0.75 : 0.55;
+      const a = th.cloudStyle === 'smog' ? 0.35 : th.cloudStyle === 'storm' ? 0.85 : th.cloudStyle === 'ash' ? 0.6 : 0.55;
       for (let i = 0; i < n; i++) {
         const cx = rng.range(w * 0.15, w * 0.85);
         const cy = rng.range(h * 0.3, h * 0.7);

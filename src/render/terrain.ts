@@ -50,7 +50,7 @@ const MATERIALS: Record<TerrainKind, MaterialSpec> = {
   rock: { tex: 'rock', size: 224, contrast: 0.75, relief: 0.9, proc: 'rock' },
   cave: { tex: 'cave', size: 224, contrast: 0.75, relief: 0.9, proc: 'rock' },
   strata: { tex: 'strata', size: 224, contrast: 0.75, relief: 0.9, proc: 'rock' },
-  basalt: { tex: 'basalt', size: 176, contrast: 0.8, relief: 1.0, proc: 'rock' },
+  basalt: { tex: 'basalt', size: 176, contrast: 0.6, relief: 1.0, proc: 'rock' },
   crystal: { tex: 'cave', size: 224, contrast: 0.7, relief: 0.8, proc: 'crystal' },
   organic: { tex: 'mossrock', size: 160, contrast: 0.7, relief: 1.0, proc: 'organic' },
   loam: { tex: 'forest', size: 160, contrast: 0.7, relief: 0.8, proc: 'organic' },
@@ -66,7 +66,6 @@ const MATERIALS: Record<TerrainKind, MaterialSpec> = {
 };
 
 const detailCache = new Map<string, Detail | null | 'loading'>();
-let detailVersion = 0;
 
 function textureUrl(name: string): string {
   const base = (import.meta as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? './';
@@ -104,7 +103,6 @@ function getDetail(name: string): Detail | null {
           }
         }
         detailCache.set(name, { w, h, alb, rel });
-        detailVersion++;
       })
       .catch(() => detailCache.set(name, null));
     return null;
@@ -164,10 +162,9 @@ export class TerrainPainter {
   ensure(level: Level, kb: number) {
     const th = level.theme;
     const T = th.terrain;
-    // Touch both textures so they start loading; the version bump re-bakes when they land.
-    getDetail(MATERIALS[T.kind].tex);
-    if (T.sub) getDetail(MATERIALS[T.sub.kind].tex);
-    const tk = `${th.seed}:${th.id}:${th.name}:${kb.toFixed(2)}:${detailVersion}`;
+    // Re-bake only when this theme's own textures change state (not when other themes' load).
+    const ready = `${!!getDetail(MATERIALS[T.kind].tex)}${T.sub ? !!getDetail(MATERIALS[T.sub.kind].tex) : ''}`;
+    const tk = `${th.seed}:${th.id}:${th.name}:${kb.toFixed(2)}:${ready}`;
     if (tk !== this.texKey) {
       this.texKey = tk;
       this.main = makeTexture(T, T.veins, th, kb, 0x1234);
@@ -524,7 +521,7 @@ export class TerrainPainter {
     rc.g.drawImage(this.bake, 0, 0, VIEW_W, VIEW_H);
     rc.g.globalCompositeOperation = 'lighter';
     if (this.glowBake) {
-      rc.g.globalAlpha = 0.6 + Math.sin(rc.t * 1.7) * 0.2;
+      rc.g.globalAlpha = 0.5 + Math.sin(rc.t * 1.7) * 0.15;
       rc.g.drawImage(this.glowBake, 0, 0, VIEW_W, VIEW_H);
       rc.g.globalAlpha = 1;
     }
@@ -968,8 +965,10 @@ function makeTexture(T: Pick<TerrainLook, 'kind' | 'base' | 'dark' | 'light' | '
   const det = getDetail(spec.tex);
   const ww = spec.size;
   const wh = det ? Math.round((spec.size * det.h) / det.w) : spec.size;
-  const SX = Math.max(32, Math.round(ww * kb));
-  const SY = Math.max(32, Math.round(wh * kb));
+  // The detail source is 256 px wide, so more than ~512 px per repeat adds cost, not detail.
+  const kt = Math.min(kb, 512 / ww);
+  const SX = Math.max(32, Math.round(ww * kt));
+  const SY = Math.max(32, Math.round(wh * kt));
   const c = document.createElement('canvas');
   c.width = SX;
   c.height = SY;
@@ -991,7 +990,8 @@ function makeTexture(T: Pick<TerrainLook, 'kind' | 'base' | 'dark' | 'light' | '
       const wy = (py / SY) * wh;
       const n = n1(u, v, 5);
       const m = n2(u * 2, v * 2, 3);
-      let col = proc(spec.proc, wx, wy, u, v, n, m, n2, dark, base, lite, th.seed, px, py);
+      // With a detail texture the procedural pattern is replaced by a cheap noise ramp.
+      let col = det ? ramp(0.5 + (n - 0.5) * 0.6) : proc(spec.proc, wx, wy, u, v, n, m, n2, dark, base, lite, th.seed, px, py);
       let a = 0.5;
       if (det) {
         const tx = (px / SX) * det.w;
