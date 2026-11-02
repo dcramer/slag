@@ -5,6 +5,9 @@ export const metadata: Metadata = {
   title: 'slag',
   description: 'A procedurally generated party platformer: build it, break it, beat it.',
   icons: { icon: 'data:,' },
+  // Mobile: "Add to Home Screen" launches chromeless (iOS) with a dark status bar over the game.
+  appleWebApp: { capable: true, title: 'slag', statusBarStyle: 'black-translucent' },
+  other: { 'mobile-web-app-capable': 'yes' },
 };
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, themeColor: '#07060b' };

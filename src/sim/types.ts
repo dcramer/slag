@@ -5,6 +5,11 @@ export interface InputFrame {
   up: boolean;
   down: boolean;
   jump: boolean;
+  /**
+   * Held RUN modifier (walk vs run). Optional until the movement split lands
+   * on main; touch sets it when the stick is pushed past 70%.
+   */
+  run?: boolean;
   jumpPressed: boolean;
   confirmPressed: boolean;
   altPressed: boolean;
