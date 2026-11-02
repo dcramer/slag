@@ -7,7 +7,20 @@ import type { DecoKind } from '../types';
  * its walls and rooms. They claim no cells, so a shell can stand behind tiles; a piece with one in it
  * claims its cells through its other modules.
  */
-export const SHELLS: ReadonlySet<DecoKind> = new Set(['facade', 'gantry', 'flywheel', 'headframe', 'hull', 'billboard', 'clockface']);
+export const SHELLS: ReadonlySet<DecoKind> = new Set([
+  'facade',
+  'gantry',
+  'flywheel',
+  'headframe',
+  'hull',
+  'billboard',
+  'clockface',
+  'windmill',
+  'headhouse',
+  'barn',
+  'flume',
+  'trestle',
+]);
 /** Shells that turn with what's in front of them (a wheel's rim): they stand on a stand drawn to the ground, not on their box's bottom. */
 export const TURNING_SHELLS: ReadonlySet<DecoKind> = new Set(['flywheel']);
 

@@ -4,7 +4,7 @@ import { generateLevel, isAcceptable } from '../../src/gen/level';
 import { SAFE_TILES, SET_PIECE_UID } from '../../src/gen/setpieces';
 import { RUN_COUNTDOWN, TILE } from '../../src/sim/constants';
 import { isProtected, type Level, tileAt } from '../../src/sim/level';
-import { type Contrib, footprintCells, type Hazard, moduleSim, newPropState, type PlacedProp, resolveProp } from '../../src/sim/props';
+import { type Contrib, footprintCells, type Hazard, moduleSim, motionOffset, newPropState, type PlacedProp, resolveProp } from '../../src/sim/props';
 import { RunWorld } from '../../src/sim/run';
 import { THEME_IDS, type ThemeId } from '../../src/themes';
 
@@ -74,7 +74,10 @@ export function expectClearOfSpawnAndGoal({ theme, seed, level }: ThemedLevel) {
     for (let f = RUN_COUNTDOWN; f < RUN_COUNTDOWN + 900; f += 2) {
       out.solids.length = 0;
       out.hazards.length = 0;
-      r.mods.forEach((m, mi) => moduleSim(m.type).build?.(m, { level, frame: f, r, off: [0, 0], prev: [0, 0], state, mi, live: true }, out));
+      // Where the piece's own motion has carried it (a combine on its rail): its hazards ride along.
+      const off = motionOffset(r, f);
+      const prev = motionOffset(r, f - 1);
+      r.mods.forEach((m, mi) => moduleSim(m.type).build?.(m, { level, frame: f, r, off, prev, state, mi, live: true }, out));
       for (const h of out.hazards) for (const z of zs) expect(hits(h, z), `${theme} ${seed} ${pp.def.name} hazard @${f}`).toBe(false);
       for (const s of out.solids) if (s.dx || s.dy) for (const z of zs) expect(overlaps(s, z), `${theme} ${seed} ${pp.def.name} solid`).toBe(false);
     }
@@ -115,7 +118,10 @@ export function safeWindowFaults(level: Level, pp: PlacedProp): string[] {
   const cells = new Map<number, [number, number]>();
   for (let f = RUN_COUNTDOWN; f < RUN_COUNTDOWN + FRAMES; f++) {
     const out: Contrib = { solids: [], hazards: [], springs: [], winds: [] };
-    r.mods.forEach((m, mi) => moduleSim(m.type).build?.(m, { level, frame: f, r, off: [0, 0], prev: [0, 0], state, mi, live: true }, out));
+    // Where the piece's own motion has carried it (a combine on its rail): its hazards ride along.
+    const off = motionOffset(r, f);
+    const prev = motionOffset(r, f - 1);
+    r.mods.forEach((m, mi) => moduleSim(m.type).build?.(m, { level, frame: f, r, off, prev, state, mi, live: true }, out));
     if (out.hazards.length) any = true;
     else quiet++;
     const key = JSON.stringify(out.hazards);

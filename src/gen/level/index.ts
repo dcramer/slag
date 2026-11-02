@@ -50,6 +50,8 @@ export interface GenInfo {
   concept?: string;
   /** A concept was rolled but the level fell back to plain after MAX_LANDMARK_REJECTS. */
   conceptFallback: boolean;
+  /** What the landmark's build returned, anchors included (tests and tools read its ways past from them). */
+  landmark?: Landmark;
   /** Why landmark attempts broke the concept's contract (../stage/contract.ts), one line per rejected attempt. */
   landmarkFaults?: string[];
 }
@@ -204,7 +206,7 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
       shared,
       sculpted: v.shared,
       rejects,
-      ...(live && landmark ? { concept: live.id } : {}),
+      ...(live && landmark ? { concept: live.id, landmark } : {}),
       conceptFallback: !!concept && !landmark,
       ...(faults.length ? { landmarkFaults: faults } : {}),
     };

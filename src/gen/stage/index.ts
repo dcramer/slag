@@ -3,6 +3,7 @@ import type { LevelProfile } from '../../sim/level';
 import type { ThemeId } from '../../themes';
 import { CASTLE_CONCEPTS } from './castle';
 import { FACTORY_CONCEPTS } from './factory';
+import { FARM_CONCEPTS } from './farm';
 import { VOLCANO_CONCEPTS } from './volcano';
 import type { Concept } from './types';
 
@@ -28,7 +29,7 @@ export {
  * folder adds its list here. Empty means every level of the theme is plain.
  */
 export const CONCEPTS: Record<ThemeId, Concept[]> = {
-  farm: [],
+  farm: FARM_CONCEPTS,
   factory: FACTORY_CONCEPTS,
   castle: CASTLE_CONCEPTS,
   jungle: [],

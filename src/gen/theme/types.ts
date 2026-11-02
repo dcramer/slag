@@ -77,7 +77,9 @@ export type TerrainKind =
   | 'timber'
   | 'carved'
   | 'iceblock'
-  | 'bone';
+  | 'bone'
+  // A red barn's boards with white trim (farm landmarks).
+  | 'barnboard';
 export type CapKind = 'grass' | 'moss' | 'rust' | 'crystal' | 'none' | 'ledge' | 'trim' | 'ash' | 'beam' | 'gravel';
 export type LiquidKind = 'slag' | 'acid' | 'void' | 'water' | 'tar' | 'sea' | 'swamp' | 'lava' | 'street';
 export type Ambient = 'embers' | 'fireflies' | 'spores' | 'dust' | 'bubbles' | 'pollen';

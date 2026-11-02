@@ -89,7 +89,14 @@ export type DecoKind =
   | 'billboard'
   | 'clockface'
   // The cage of a lift's cab, riding with it (the manor's dumbwaiter).
-  | 'cab';
+  | 'cab'
+  // Farm landmarks (gen/stage/farm.ts): a windmill's tower and cap, a grain elevator's headhouse, a barn's
+  // back wall and rafters, a water mill's flume trestle, a farm track's trestle legs.
+  | 'windmill'
+  | 'headhouse'
+  | 'barn'
+  | 'flume'
+  | 'trestle';
 export type MysteryLook = 'crate' | 'chest' | 'gift';
 /** What a match's warp pipes are made of: one per match, since a roster has one pipe part. */
 export type PipeLook = 'green' | 'brass' | 'rust' | 'porcelain' | 'copper';

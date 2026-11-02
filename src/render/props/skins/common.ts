@@ -1,6 +1,6 @@
 import { css, type HSL } from '../../../core/color';
 import type { Rect } from '../../../core/geom';
-import type { CannonLook, DecoKind, ModuleOf, RotorArm, RotorLook } from '../../../sim/props';
+import type { CannonLook, DecoKind, Module, ModuleOf, RotorArm, RotorLook } from '../../../sim/props';
 import type { ThemeId } from '../../../themes';
 import { line } from '../../ink';
 import { boxPts, INK, tone } from '../../ink-props';
@@ -79,9 +79,18 @@ export interface CannonPose {
 export type CannonSkin = (rc: RC, m: Cannon, d: DrawCtx, q: CannonPose) => void;
 export type DecoSkin = (rc: RC, m: Deco, d: DrawCtx) => void;
 
-/** Everything one theme draws its own way: by rotor look, cannon look and deco kind. */
+/**
+ * A theme's own art for one of its set pieces, module by module: called on every layer for every module
+ * of a piece from that theme's recipes or concepts; true when it drew that module on that layer in place
+ * of the module's own art. A world-only hazard a theme has and no other (a farm's live fence is a tesla
+ * strung between fence posts) is drawn this way, on exactly the shapes the sim hurts with.
+ */
+export type PieceSkin = (rc: RC, layer: number, m: Module, d: DrawCtx) => boolean;
+
+/** Everything one theme draws its own way: by rotor look, cannon look and deco kind, and its own set pieces. */
 export interface ThemeSkins {
   rotor?: Partial<Record<RotorLook, RotorSkin>>;
   cannon?: Partial<Record<CannonLook, CannonSkin>>;
   deco?: Partial<Record<DecoKind, DecoSkin>>;
+  piece?: PieceSkin;
 }

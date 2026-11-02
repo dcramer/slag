@@ -1,7 +1,7 @@
 import type { ThemeId } from '../../../themes';
 import type { DrawCtx } from '../common';
 import { CASTLE } from './castle';
-import { type Cannon, type Deco, type Rotor, themeOf, type ThemeSkins } from './common';
+import { type Cannon, type Deco, type PieceSkin, type Rotor, themeOf, type ThemeSkins } from './common';
 import { FACTORY } from './factory';
 import { FARM } from './farm';
 import { GLACIER } from './glacier';
@@ -12,7 +12,7 @@ import { ROOFTOPS } from './rooftops';
 import { SPACE } from './space';
 import { VOLCANO } from './volcano';
 
-export { type CannonPose, type CannonSkin, type DecoSkin, type RotorSkin, themeOf, type ThemeSkins } from './common';
+export { type CannonPose, type CannonSkin, type DecoSkin, type PieceSkin, type RotorSkin, themeOf, type ThemeSkins } from './common';
 
 /**
  * Theme skins for set pieces, one file per theme (./<theme>.ts). A theme reaches some pieces through looks
@@ -47,4 +47,11 @@ export function cannonSkin(m: Cannon, d: DrawCtx) {
 export function decoSkin(m: Deco, d: DrawCtx) {
   const t = themeOf(d);
   return t ? SKINS[t].deco?.[m.kind] : undefined;
+}
+
+/** The theme's own art for a set piece of its own (key `setpiece:<theme>:<name>`), if it has any. */
+export function pieceSkin(key: string): PieceSkin | undefined {
+  if (!key.startsWith('setpiece:')) return undefined;
+  const t = key.slice(9, key.indexOf(':', 9)) as ThemeId;
+  return SKINS[t]?.piece;
 }
