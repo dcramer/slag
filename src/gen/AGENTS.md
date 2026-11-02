@@ -2,6 +2,9 @@
 
 Every generator is deterministic given its seed: same seed (and theme), same output, on every machine.
 
+- `generateLevel` is a pure function of its arguments and of nothing generated before it: the browser builds the next levels ahead in a worker (`src/level-ahead.ts`) and the match takes them through `buildLevel` (`level/pregen.ts`). Module-level caches are fine only if they can't change an answer.
+- Reachability questions about one level go through one `ReachCache` (`src/sim/reach.ts`): it re-traces only what a change touches, with exactly a fresh analysis's answer. Pass the level's cache down instead of calling `analyzeReach` again.
+
 - Randomness only from a seeded `Rng`; derive independent streams with `deriveSeed(seed, 'label')` so adding a roll in one place doesn't shift every other stream. No `Math.random`, wall clock, DOM, or imports from `render/`, `input/`, `audio/`, `ui/` (lint enforces this).
 - Level pipeline (`level/index.ts`): pick theme → `generateTheme` look → theme sculptor (`level/sculptors/<theme>.ts`, registered in `SCULPTORS`) retried until `level/validate.ts` accepts it → set pieces. Falling back to the legacy sculptor or the flat floor counts as `fallback`, and tests assert it never happens.
 - Solvability policy: almost no level is passable bare. Each asks for one part, or two on `TWO_PARTS` of levels, decided once per level by `rollChallenges`, and the pipeline rejects a bare-passable sculpt until `LAST_RESORT`. Every level is proven solvable with at most `MAX_BRIDGES` static `BRIDGE_W` strips, and `level.solution` is that count: `generateCrate` must always cover it, so it has to be the real minimum. Ask `src/sim/reach.ts`; never hardcode jump distances. Size hard crossings with `hardGap(rng, parts)` and easy ones with `easyGap` where the ledge can be run on, `hopGap` from anything shorter. Keep landmarks off a hard crossing's banks (`keepClear`).

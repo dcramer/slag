@@ -1,4 +1,5 @@
-import { generateLevel, type ProfileOverride } from '../gen/level';
+import type { ProfileOverride } from '../gen/level';
+import { buildLevel } from '../gen/level/pregen';
 import type { CrateItem, Match, Phase, Player } from '../game/match';
 import type { MatchRules } from '../game/rules';
 import type { RoundResult } from '../game/scoring';
@@ -151,7 +152,7 @@ function pristineLevel(seed: number, theme: ThemeId | undefined, profile: Profil
   const key = pristineKey(seed, theme, profile);
   let l = pristine.get(key);
   if (!l) {
-    l = generateLevel(seed, theme, profile);
+    l = buildLevel(seed, theme, profile);
     l = { ...l, tiles: l.tiles.slice(), setPieces: [...l.setPieces] };
     pristine.set(key, l);
     if (pristine.size > 6) pristine.delete(pristine.keys().next().value!);

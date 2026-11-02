@@ -1,7 +1,8 @@
 import { clamp, type Rect } from '../core/geom';
 import { deriveSeed, Rng } from '../core/rng';
 import { type CharacterDef, generateCharacter } from '../gen/character';
-import { GRAVITY, generateLevel, partsNeeded, type ProfileOverride } from '../gen/level';
+import { GRAVITY, type GravityClass, partsNeeded, type ProfileOverride } from '../gen/level';
+import { buildLevel, type LevelRequest } from '../gen/level/pregen';
 import { generateCrate, type PropDef } from '../gen/props';
 import { DT, MAX_PLAYERS, TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import type { Level } from '../sim/level';
@@ -59,6 +60,13 @@ const CURSOR_SPEED_MAX = 640;
 const CURSOR_RAMP_FRAMES = 24;
 
 const SCORE_FRAMES = 60 * 4;
+/** New Level presses kept ready: more than anyone gets through before the worker catches up. */
+const REROLLS_AHEAD = 3;
+
+/** Level-profile knobs the rules force (gravity class). */
+export function rulesProfile(rules: MatchRules): ProfileOverride {
+  return rules.gravity === 'auto' ? {} : { gravity: GRAVITY[rules.gravity] };
+}
 
 /**
  * The full match state machine: lobby → (pick → place → run → score)* → victory.
@@ -92,20 +100,33 @@ export class Match {
   /** Match rules (time limits, target score…). Change only in the lobby. */
   rules: MatchRules = { ...DEFAULT_RULES };
 
-  constructor(seed: number, theme?: ThemeId) {
+  constructor(seed: number, theme?: ThemeId, rules?: MatchRules) {
     this.seed = seed >>> 0;
     this.themeOverride = theme;
-    this.level = generateLevel(this.seed, theme, this.profileOverride());
+    if (rules) this.rules = { ...rules };
+    this.level = buildLevel(this.seed, theme, this.profileOverride());
   }
 
   /** Level-profile knobs forced by the rules (gravity class). */
   profileOverride(): ProfileOverride {
-    const g = this.rules?.gravity ?? 'auto';
-    return { ...this.forceProfile, ...(g === 'auto' ? {} : { gravity: GRAVITY[g] }) };
+    return { ...this.forceProfile, ...rulesProfile(this.rules) };
   }
 
   /** Debug/tools: force level-profile knobs (size, route, density…) for every generated level. */
   forceProfile: ProfileOverride = {};
+
+  /** What the next few level changes could ask for, likeliest first, so they can be built ahead (gen/level/pregen.ts). */
+  upcoming(): LevelRequest[] {
+    const profile = this.profileOverride();
+    const at = (seed: number, p = profile): LevelRequest => ({ seed, theme: this.themeOverride, profile: p });
+    if (this.phase !== 'lobby') return [at(deriveSeed(this.seed, 'next-match'))];
+    const rerolls = [deriveSeed(this.seed, 'reroll')];
+    while (rerolls.length < REROLLS_AHEAD) rerolls.push(deriveSeed(rerolls[rerolls.length - 1], 'reroll'));
+    // The Rules menu can ask for this seed again at any gravity.
+    const gravities = (Object.keys(GRAVITY) as GravityClass[]).map((g) => at(this.seed, { ...this.forceProfile, gravity: GRAVITY[g] }));
+    const here = JSON.stringify(profile);
+    return [...rerolls.map((s) => at(s)), ...[at(this.seed, this.forceProfile), ...gravities].filter((r) => JSON.stringify(r.profile) !== here)];
+  }
 
   /**
    * Replace the rules. In the lobby, a gravity change regenerates the level
@@ -172,7 +193,7 @@ export class Match {
   newLevel(seed: number, theme: ThemeId | undefined = this.themeOverride) {
     this.seed = seed >>> 0;
     this.themeOverride = theme;
-    this.level = generateLevel(this.seed, theme, this.profileOverride());
+    this.level = buildLevel(this.seed, theme, this.profileOverride());
     this.placed = [];
   }
 
