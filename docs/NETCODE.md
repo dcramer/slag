@@ -48,6 +48,7 @@ app/api/net/
   _server/handlers.ts   one function per op
   _server/store.ts      Store interface; Upstash REST and in-memory implementations
   _server/guard.ts      request gates and ICE configuration
+  _server/report.ts     store-failure reports: tags and the once-a-minute throttle
 ```
 
 ### Portability
@@ -203,7 +204,7 @@ IEEE-754 `+ - * /` and `Math.sqrt` are exact everywhere, but `Math.sin/cos/atan2
 
 ## Monitoring
 
-`src/net` reports through `src/telemetry.ts`, never the SDK: `desync` (error, from the host), `host-migration` (warning, from the new host, so one per migration), `net-unavailable` (warning), `snapshot-refused` (warning, once a page, from a guest on another build), and breadcrumbs for peers joining and leaving and for link changes. Names are fixed and variables go in `data`; they carry frames, hashes and peer ids, never player names, which players type themselves. The routes run on the Node runtime. A store failure is answered as a 503, so the route reports it itself, at most once a minute per instance, because an exhausted free tier would otherwise report every poll.
+`src/net` reports through `src/telemetry.ts`, never the SDK; [TELEMETRY.md](TELEMETRY.md) has the full list. Events: `desync` (error, from the host), `slow-host-migration` (warning, from the new host, over 20 s), `net-unavailable` (warning, grouped by why), `snapshot-refused` (warning, once a page, from a guest on another build). Every session log line (links, host changes, syncs, desyncs) is a `net` breadcrumb, seat actions are `room` breadcrumbs, and failed signaling calls are `signal` breadcrumbs. A finished migration is a `host migration` log with its duration from the new host, and a resync other than a join's is a `net resync` log: that is how migration times in the field are seen without an issue for each. Names are fixed and variables go in `data`; they carry frames, hashes and peer ids, never player names, which players type themselves. The routes run on the Node runtime. A store failure is answered as a 503, so the route reports it itself, tagged with the op and the store's status, at most once a minute per instance (`_server/report.ts`), because an exhausted free tier would otherwise report every poll.
 
 ## Testing
 

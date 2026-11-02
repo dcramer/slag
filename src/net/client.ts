@@ -1,5 +1,6 @@
 import type { Match } from '../game/match';
 import type { InputFrame } from '../sim/types';
+import { addBreadcrumb } from '../telemetry';
 import { peerOf } from './actions';
 import { acquirePeerId, loadResume, markKicked, saveResume } from './identity';
 import { NetSession, type NetStatus } from './session';
@@ -102,7 +103,11 @@ export function connectRoom(room: string, match: Match, opts: ConnectOptions): R
       markKicked(room);
       setTimeout(() => !life.signal.aborted && opts.onKicked(), KICKED_MS);
     },
-    log: (m) => console.info(`[net] ${m}`),
+    // The session only logs what changes the room (links, migrations, syncs, desyncs): each is a step in the trail.
+    log: (m) => {
+      console.info(`[net] ${m}`);
+      addBreadcrumb('net', m);
+    },
   });
 
   // Resume-save: the last state this browser saw, so a room everyone left can pick up where it was.

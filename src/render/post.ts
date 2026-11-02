@@ -10,7 +10,7 @@
  * Falls back to Canvas2D blending if WebGL2 isn't available, and while a lost context is away.
  */
 
-import { reportError, reportEvent } from '../telemetry';
+import { addBreadcrumb, reportError, setTag } from '../telemetry';
 import { CEL_FS, CEL_SHADOW, celNoise, MIST_MAX, NOISE_SIZE } from './cel-shader';
 
 const VS = `#version 300 es
@@ -68,10 +68,9 @@ export interface Compositor {
 
 export function createCompositor(canvas: HTMLCanvasElement): Compositor {
   const gl = canvas.getContext('webgl2', { antialias: false, alpha: false, premultipliedAlpha: false, preserveDrawingBuffer: false });
-  if (!gl) {
-    reportEvent('webgl2 unavailable');
-    return new Fallback(canvas);
-  }
+  // A device fact, not a failure: it tags every report instead of costing one.
+  setTag('render.webgl2', !!gl);
+  if (!gl) return new Fallback(canvas);
   try {
     return new GLCompositor(canvas, gl);
   } catch (e) {
@@ -130,7 +129,7 @@ class GLCompositor implements Compositor {
       (e) => {
         // Without this the browser never offers the context back.
         e.preventDefault();
-        reportEvent('webgl context lost');
+        addBreadcrumb('render', 'webgl context lost'); // routine on phones: only worth seeing next to a failure
         this.standIn();
       },
       on,
@@ -197,7 +196,7 @@ class GLCompositor implements Compositor {
     }
     this.stand?.canvas.remove();
     this.stand = null;
-    reportEvent('webgl context restored', 'info');
+    addBreadcrumb('render', 'webgl context restored');
   }
 
   /** One clear texel, so a clear level pays for neither an upload nor a branch in the frame loop. */
