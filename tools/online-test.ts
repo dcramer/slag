@@ -17,6 +17,8 @@
  *   kick        the Host label everywhere and through a migration; kicks by keyboard and mouse; a kicked page reloads into
  *               its countdown, never seated, and Rejoins once the (shortened) ban runs out
  *   refused     a guest whose build can't load the host's snapshots says so
+ *   browse      the lobby list: a host shows on another browser's list, a guest joins from it, Private takes it off,
+ *               and the room drops off once everyone has left
  *   view        real mouse input lands under the pointer, at every window shape, on every level size
  *   play        join, live cursors, claim race, a remote ghost, a race, refresh keeps the slot, next round
  *   pick place run   the host's renderer is killed (no goodbye) in that phase
@@ -54,7 +56,7 @@ import { launchBrowser, startServer } from './lib/server';
 const argv = process.argv.slice(2);
 /** Named groups, each short enough to run alone on a loaded machine. */
 const GROUPS: Record<string, string[]> = {
-  lobby: ['flow', 'fresh', 'kick', 'view', 'refused'],
+  lobby: ['flow', 'fresh', 'kick', 'view', 'refused', 'browse'],
   migration: ['pick', 'place', 'run', 'duo', 'leave', 'twice'],
   feel: ['latency', 'hidden', 'contact'],
   seats: ['observe', 'seatrace', 'idle', 'gone'],
@@ -1778,6 +1780,84 @@ async function goneScenario(browser: Browser, base: string) {
   await r.dispose();
 }
 
+/**
+ * The lobby list: a hosted room shows on another browser's Lobbies screen, a guest joins it from there through the
+ * joining screen, the count follows, the host's Private takes it off (and public puts it back), and once everyone has
+ * left it's gone.
+ */
+async function browseScenario(browser: Browser, base: string) {
+  const r = await newRoom(browser, base, 'browse', '');
+  const A = await r.open('A');
+  await waitFor(A, 'the host hosting', (v) => v.isHost && v.status === 'online');
+  const lister = async (tag: string) => {
+    const { ctx, p } = await personPage(browser, undefined, tag === 'L' ? 'Lister' : 'Browser', tag === 'L' ? 777 : 888, r.errors, tag);
+    await p.goto(`${base}lobbies`);
+    return { ctx, p };
+  };
+  const count = (p: Page) => p.evaluate((code) => document.querySelector(`.lb-row[data-room="${code}"] .lb-count`)?.textContent ?? null, r.name);
+  const until = async (p: Page, what: string, want: (c: string | null) => boolean, ms = 25_000) => {
+    const t0 = Date.now();
+    let c = await count(p);
+    while (!want(c) && Date.now() - t0 < ms) {
+      await sleep(250);
+      c = await count(p);
+    }
+    console.log(`     ${what}: ${c ?? 'not listed'} after ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+    return c;
+  };
+
+  const L = await lister('L');
+  check((await until(L.p, 'the room on the list', (c) => c !== null)) === '1/8', 'a hosted room shows on another browser’s list, one seat taken');
+  const shot = `${out}/online-browse-list.png`;
+  await L.p.screenshot({ path: shot });
+  console.log(`     ${shot}`);
+
+  // Join from the list, through the joining screen: seated in the lobby, like an invite link.
+  await L.p.click(`.lb-row[data-room="${r.name}"]`);
+  await L.p.waitForFunction(() => 'slagDebug' in window, null, { timeout: 60_000 });
+  await setDrawing(L.p, false);
+  const joined = await waitFor(L.p, 'the guest from the list seated', (v) => v.synced && v.players.length === 2, 30_000);
+  check(new URL(L.p.url()).pathname === `/r/${r.name}` && joined.hostId === (await view(A)).self, 'a guest joins the room from the list');
+  check(
+    (await waitFor(A, 'the host seeing the guest', (v) => v.players.length === 2, 10_000)).players.length === 2,
+    'the host sees the guest who came from the list',
+  );
+
+  const M = await lister('M');
+  check((await until(M.p, 'the count after the join', (c) => c === '2/8')) === '2/8', 'the list follows the room: two seats taken');
+
+  // Private, from the host's own rules card: off the list at once. At 720p, where the card must fit.
+  await A.setViewportSize({ width: 1280, height: 720 });
+  await setDrawing(A, true);
+  await sleep(1000); // drawn at the new size, so the HUD's buttons are where they now are
+  if (await clickHud(A, 'rules')) {
+    await A.click('.slag-sheet button:text-is("Private")');
+    await sleep(300); // past the chips' colour transition
+    const card = `${out}/online-browse-rules.png`;
+    await A.screenshot({ path: card });
+    console.log(`     ${card}`);
+    await A.click('.slag-sheet button:text-is("Done")');
+  }
+  await setDrawing(A, false);
+  await sleep(300);
+  check(await A.evaluate(() => (window as any).slagDebug.match.rules.private === true), 'the host makes the room Private from the rules card');
+  check((await until(M.p, 'after Private', (c) => c === null)) === null, 'a Private room leaves the list');
+  await A.evaluate(() => {
+    const d = (window as any).slagDebug;
+    d.net.act({ t: 'rules', rules: { ...d.match.rules, private: false } });
+  });
+  check((await until(M.p, 'public again', (c) => c !== null)) === '2/8', 'public again, it is back on the list');
+
+  // Everyone leaves: the room comes off the list.
+  await L.ctx.close();
+  await A.close();
+  check((await until(M.p, 'after everyone left', (c) => c === null)) === null, 'a room everyone left drops off the list');
+  await M.ctx.close();
+  const real = r.errors.filter((e) => !/favicon/.test(e));
+  check(real.length === 0, `no page errors${real.length ? `:\n${real.join('\n')}` : ''}`);
+  await r.dispose();
+}
+
 async function bcScenario(browser: Browser, base: string) {
   const r = await newRoom(browser, base, 'bc', 'net=bc', { shared: true });
   const { pages } = await startMatch(r, 2);
@@ -1841,6 +1921,7 @@ try {
   }
   if (wanted('kick')) await guarded(() => kickScenario(browser, server.base));
   if (wanted('refused')) await guarded(() => refusedScenario(browser, server.base));
+  if (wanted('browse')) await guarded(() => browseScenario(browser, server.base));
   if (wanted('view')) {
     await guarded(() => viewScenario(browser, server.base, 'classic', (w, h) => w === 48 && h === 27));
     await guarded(() => viewScenario(browser, server.base, 'wide', (w) => w > 48));

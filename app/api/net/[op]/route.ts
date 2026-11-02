@@ -1,5 +1,6 @@
 import { captureException, logger } from '@sentry/nextjs';
 import { MAX_BODY_BYTES, SIGNAL_OPS, type SignalErrorCode, type SignalOp } from '../../../../src/net/signal-protocol';
+import { ReplyCache } from '../_server/cache';
 import { clientKey, iceFromEnv, originAllowed, RateLimiter } from '../_server/guard';
 import { ApiError, handleOp } from '../_server/handlers';
 import { StoreFailureThrottle } from '../_server/report';
@@ -12,6 +13,8 @@ import { storeFromEnv } from '../_server/store';
 
 const limiter = new RateLimiter();
 const throttle = new StoreFailureThrottle();
+/** The lobby list, read once per instance per LIST_CACHE_MS however many people browse. */
+const lists = new ReplyCache<unknown>();
 
 /** Handled (the caller gets a 503), so nothing reports it automatically. See ../_server/report.ts for the throttle. */
 function reportStoreFailure(e: unknown, op: SignalOp) {
@@ -44,7 +47,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ op: string }> 
   }
 
   try {
-    const reply = await handleOp(op as SignalOp, body, { store, ice: iceFromEnv(process.env.SLAG_ICE_SERVERS) });
+    const ctx = { store, ice: iceFromEnv(process.env.SLAG_ICE_SERVERS) };
+    const reply = op === 'lobbies' ? await lists.get(() => handleOp(op, body, ctx)) : await handleOp(op as SignalOp, body, ctx);
     return Response.json(reply, { headers: { 'Cache-Control': 'no-store' } });
   } catch (e) {
     if (e instanceof ApiError) return fail(e.code, e.status);

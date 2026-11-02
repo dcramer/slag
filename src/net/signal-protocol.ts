@@ -10,7 +10,7 @@ import { MAX_PLAYERS } from '../sim/constants';
  * docs/NETCODE.md for the command budget these numbers add up to.
  */
 
-export const SIGNAL_OPS = ['join', 'beat', 'leave', 'gone', 'members', 'signal', 'poll'] as const;
+export const SIGNAL_OPS = ['join', 'beat', 'leave', 'gone', 'members', 'signal', 'poll', 'lobbies'] as const;
 export type SignalOp = (typeof SIGNAL_OPS)[number];
 
 /** Peers in one room: every player's machine plus a few spectators. The host uploads to each, so this stays small. */
@@ -38,6 +38,51 @@ export const BEAT_MS = 20_000;
  * then the store has let go of everyone too.
  */
 export const ROOM_EMPTY_MS = 60_000;
+
+/**
+ * The public lobby list. A host's beat writes its room there (unless the room is Private), so a room is listed for as
+ * long as its host's liveness would last: one that stops beating falls out on its own, inside ROOM_EMPTY_MS.
+ */
+export const LIST_TTL_S = PEER_TTL_S;
+/** Rooms a list read returns at most, most recently beaten first. */
+export const MAX_LISTED = 50;
+/** How often an open list asks again. */
+export const LIST_POLL_MS = 5000;
+
+/** Phases a listing may name: Match's, restated so the server needs nothing from the game. */
+export const LISTED_PHASES = ['lobby', 'pick', 'place', 'run', 'score', 'victory'] as const;
+export type ListedPhase = (typeof LISTED_PHASES)[number];
+
+/** What the list shows of a room. The host writes it; the API checks it, since anyone can claim to host. */
+export interface RoomListing {
+  /** Seats taken or owed, of `max`. */
+  players: number;
+  max: number;
+  /** Peers here without a seat. */
+  observers: number;
+  /** The current level's theme id (src/themes.ts). */
+  theme: string;
+  phase: ListedPhase;
+}
+
+export interface ListedRoom extends RoomListing {
+  room: string;
+}
+
+export interface LobbiesReply {
+  rooms: ListedRoom[];
+}
+
+const count = (v: unknown, max: number) => Number.isSafeInteger(v) && (v as number) >= 0 && (v as number) <= max;
+
+/** A listing off the wire or out of the store, or null: only these fields, in range, so a caller can't put anything else on everyone's list. */
+export function cleanListing(v: unknown): RoomListing | null {
+  if (typeof v !== 'object' || v === null) return null;
+  const l = v as Record<string, unknown>;
+  if (!count(l.max, MAX_PLAYERS) || (l.max as number) < 1 || !count(l.players, l.max as number) || !count(l.observers, MAX_PEERS)) return null;
+  if (typeof l.theme !== 'string' || !/^[a-z]{1,16}$/.test(l.theme) || !LISTED_PHASES.includes(l.phase as ListedPhase)) return null;
+  return { players: l.players as number, max: l.max as number, observers: l.observers as number, theme: l.theme, phase: l.phase as ListedPhase };
+}
 
 export interface MemberInfo {
   id: string;

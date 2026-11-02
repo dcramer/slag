@@ -155,6 +155,25 @@ export class MemoryStore implements Store {
         const window = sorted.slice(Number(rest[0]), stop < 0 ? sorted.length + stop + 1 : stop + 1);
         return rest.includes('WITHSCORES') ? window.flatMap(([m, s]) => [m, String(s)]) : window.map(([m]) => m);
       }
+      case 'ZREMRANGEBYSCORE': {
+        if (!e) return 0;
+        const z = e.v as Map<string, number>;
+        const [min, max] = [score(rest[0]), score(rest[1])];
+        let n = 0;
+        for (const [m, s] of z) if (s >= min && s <= max && z.delete(m)) n++;
+        if (z.size === 0) this.keys.delete(key);
+        return n;
+      }
+      case 'ZREVRANGEBYSCORE': {
+        // max min [LIMIT offset count], highest score first, ties in reverse member order, as Redis has them.
+        const z = (e?.v as Map<string, number> | undefined) ?? new Map<string, number>();
+        const [max, min] = [score(rest[0]), score(rest[1])];
+        const limit = rest.findIndex((x) => x.toUpperCase() === 'LIMIT');
+        const sorted = [...z.entries()].filter(([, s]) => s >= min && s <= max).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? 1 : -1));
+        const from = limit < 0 ? 0 : Number(rest[limit + 1]);
+        const n = limit < 0 ? sorted.length : Number(rest[limit + 2]);
+        return sorted.slice(from, from + n).map(([m]) => m);
+      }
       case 'RPUSH': {
         const l = (e?.v as string[] | undefined) ?? [];
         l.push(...rest);
@@ -180,6 +199,14 @@ export class MemoryStore implements Store {
         throw new Error(`MemoryStore: unsupported command ${op}`);
     }
   }
+}
+
+/** A sorted-set score bound as Redis reads one: a number, or ±inf. */
+function score(v: string): number {
+  const t = v.toLowerCase();
+  if (t === '-inf') return -Infinity;
+  if (t === '+inf' || t === 'inf') return Infinity;
+  return Number(v);
 }
 
 /** Keeps one store across Next's per-route module instances and dev reloads. */

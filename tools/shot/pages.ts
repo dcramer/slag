@@ -1,4 +1,5 @@
-/** Whole pages and contact sheets: levels, prop crates, the main menu, rules, settings and the codex. */
+/** Whole pages and contact sheets: levels, prop crates, the main menu, rules, settings, the lobby list and the codex. */
+import { devices } from 'playwright';
 import { base, browser, errors, H, mode, open, opt, out, page, pet, seed, sheet, snap, step, theme, W, type Scenarios } from './ctx';
 
 export const shots: Scenarios = {
@@ -292,6 +293,69 @@ export const shots: Scenarios = {
       console.log(`${out}/codex-mobile-open.png`);
     }
     await mctx.close();
+  },
+  /**
+   * The Lobbies screen with a made-up list (the API is stubbed, so the shot needs no rooms): the Join filter, Watch,
+   * and the empty state on a desktop; then a phone upright and on its side, failing on a tap target under 44 CSS px.
+   */
+  async lobbies() {
+    const ROOMS = [
+      { room: 'K7QX2', players: 3, max: 8, observers: 1, theme: 'farm', phase: 'lobby' },
+      { room: 'BRRR9', players: 6, max: 8, observers: 0, theme: 'glacier', phase: 'run' },
+      { room: 'ZAPZAP', players: 1, max: 8, observers: 0, theme: 'space', phase: 'lobby' },
+      { room: 'M4GMA', players: 2, max: 8, observers: 3, theme: 'volcano', phase: 'place' },
+      { room: 'PACKED', players: 8, max: 8, observers: 2, theme: 'castle', phase: 'pick' },
+      { room: 'CRAMMD', players: 8, max: 8, observers: 0, theme: 'harbor', phase: 'score' },
+    ];
+    let rooms = ROOMS;
+    const stub = (p: typeof page) =>
+      p.route('**/api/net/lobbies', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ rooms }) }));
+    await stub(page);
+    await page.goto(`${base}lobbies`);
+    await page.evaluate(() => document.fonts.ready);
+    await page.waitForSelector('.lb-row');
+    await page.waitForTimeout(600);
+    await snap('lobbies');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('e');
+    await page.waitForSelector('.lb-tab[data-filter=watch][aria-selected=true]');
+    await page.waitForTimeout(200);
+    await snap('lobbies-watch');
+    rooms = [];
+    await page.goto(`${base}lobbies`);
+    await page.waitForSelector('.lobbies[data-state=empty]');
+    await page.waitForTimeout(400);
+    await snap('lobbies-empty');
+    // Esc leaves for the main menu, and the menu's Lobbies item comes back here.
+    await page.keyboard.press('Escape');
+    await page.waitForSelector('[data-screen=home] .menu-item:not([disabled])');
+    await page.click('[data-id=lobbies]');
+    await page.waitForSelector('[data-screen=lobbies]');
+    rooms = ROOMS;
+    for (const d of ['iPhone 13', 'iPhone SE landscape']) {
+      const { defaultBrowserType: _ignored, ...desc } = devices[d];
+      const ctx = await browser.newContext(desc);
+      const mp = await ctx.newPage();
+      mp.on('pageerror', (e: Error) => errors.push(String(e)));
+      await stub(mp);
+      await mp.goto(`${base}lobbies`);
+      await mp.evaluate(() => document.fonts.ready);
+      await mp.waitForSelector('.lb-row');
+      await mp.waitForTimeout(500);
+      const small = await mp.evaluate(
+        () =>
+          [...document.querySelectorAll<HTMLElement>('[data-screen=lobbies] button')]
+            .filter((b) => b.offsetParent !== null)
+            .map((b) => b.getBoundingClientRect())
+            .filter((r) => r.width < 44 || r.height < 44).length,
+      );
+      if (small) throw new Error(`lobbies: ${small} tap targets under 44 px on ${d}`);
+      const name = `${out}/lobbies-${d.toLowerCase().replaceAll(/\W+/g, '-')}.png`;
+      await mp.screenshot({ path: name, fullPage: true });
+      console.log(name);
+      pet();
+      await ctx.close();
+    }
   },
   /** The 404 and error screens, on a desktop and a phone. The error screen is forced by refusing the codex's code. */
   async screens() {
