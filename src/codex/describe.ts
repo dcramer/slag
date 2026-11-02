@@ -41,6 +41,9 @@ export const PART_INFO: Record<Module['type'], { title: string; blurb: string }>
   shards: { title: 'Broken window', blurb: 'Seven years of bad luck, delivered all at once.' },
   cavein: { title: 'Cave-in', blurb: 'The roof was load-bearing. Was.' },
   cart: { title: 'Runaway cart', blurb: 'No brakes. Great bell, though.' },
+  sign: { title: 'Falling sign', blurb: 'Under new management. Under the sign, too.' },
+  neon: { title: 'Neon letters', blurb: 'Open 24 hours. Touch at your own risk.' },
+  wire: { title: 'Live wire', blurb: 'Somebody forgot to pay the electric bill. The bill remembers.' },
   thaw: { title: 'Thin ice', blurb: 'Rated for one penguin.' },
 };
 
