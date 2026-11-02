@@ -10,6 +10,11 @@ export interface InputFrame {
   run?: boolean;
   confirmPressed: boolean;
   altPressed: boolean;
+  /**
+   * Held: alt is down. A race counts self-destruct from it (`popCharge` in sim/run.ts), so the hold is decided by the sim on
+   * every peer, not by a client timer. Optional so older callers and recorded inputs stay valid.
+   */
+  alt?: boolean;
   downPressed: boolean;
   /** Edge: use the held item (down + use tosses it). Optional so older callers and recorded inputs stay valid. */
   usePressed?: boolean;

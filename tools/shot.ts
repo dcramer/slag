@@ -54,6 +54,7 @@
  *          --q high (pin the quality tier: slow software GL otherwise reads as a slow device and drops it)
  *          --runframe N (race: stop on exact sim frame N)  --campin x,y,zoom (race: pin the view, for before/after sheets)
  *          --spread (race: stand the runners on open ground)
+ *          --pop N (race: after --frames, the first runner holds self-destruct N frames: its charge ring mid-fill)
  *          --mode keyboard|gamepad|touch (footer prompt glyphs)  --net (fake online-lobby info)
  *          --noletters (no impact words)
  * Software GL is slow; frames are advanced deterministically via slagDebug.step().

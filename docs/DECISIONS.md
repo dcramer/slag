@@ -192,6 +192,12 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 17:36Z · `done` · DESIGN.md → Props, "Parts ride what they're stuck to"; `src/sim/props/ride.ts`
 - **Arriving mid-match puts you in as an observer; choosing Join opens a small lobby-style card (your toy with the New Look dice, your name) and seats you next round.** "when you join a match you'll default to observer fwiw, and then you can somehow choose to join, and if you do you might get a little screen to select your character/name almost like the lobby does"
   2026-11-02 · `in progress` · observer mode
+- **Landmarks offer several ways through, so blocking one with a part forces rivals another way.** "the nice thing about level design like this: you could block off one exit and forces players to go a diff way (with a beam, as a player)"
+  2026-11-02 · `done` · DESIGN.md → Stage concepts
+- **At least 5 landmarks per theme; all large, some grand, every one with randomness in its layout.** "things like the haunted wing are cool. i'd want no less than 5 landmarks per theme, all should be at least large on scale, some _grand_ all should have a little bit of randomness built into them in terms of layout/etc as well"
+  2026-11-02 · `in progress` · SETPIECES.md → 3, DESIGN.md → Stage concepts
+- **Every theme has at least 12 decor pieces and at least 3 hazards unique to it.** "similarly we probably want no less than a dozen 'decor' pieces that can exist in each theme? and maybe no less than 3 unique hazards per theme?"
+  2026-11-02 · `in progress` · DESIGN.md → Stage concepts
 - **Lobby browser: a list of lobbies, showing only ones that aren't full by default.** Lobbies are public by default with a Private option. "lets make lobbies public by default with a private option"
   2026-11-02 · `planned` · TODO.md → 26
 - **Conveyors rotate: the rotation picks the belt's face.** A side belt grips and carries a clinging runner (an escalator when it runs up), a bottom belt shoves a head that bonks it. "you cant rotate conveyors.. the conveyor always stays on the top"
@@ -387,6 +393,9 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 03:58Z · `done` · DESIGN.md → Controls and UI
 - **Touch controls: a floating stick with a run zone, hold-to-jump, held self-destruct, landscape first.**
   2026-11-02 · git `bb00a8e`, `c6a37ab` · `done` · DESIGN.md → Controls and UI, MOBILE.md
+- **Self-destruct is a deliberate 1.25 s hold on every input, counted by the sim from a fresh press, with a ring around the runner everyone sees; letting go, steering, jumping or using an item cancels it. On touch it moves to its own small button under Settings.** "also the default self destruct behavior should probably be a bit less accidental both for mobile and the hotkey"
+  2026-11-02 · `done` · DESIGN.md → Controls and UI, MOBILE.md, ART.md → Input prompts
+  Changed: one press of alt popped you on keyboard and pad, and touch popped after a 0.35 s hold on ALT, the button that rotates during place.
 - **Phones haven't been tried on real devices.**
   2026-11-02 · `open` · TODO.md → 6
 
@@ -466,3 +475,5 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 07:22Z, 16:20Z · `done`
 - **Make the GitHub Actions check required (an owner step).**
   2026-11-02 · `open` · TODO.md → 10
+- **Apply the quick wins from the transcript review: guard-safe commands for worktree agents, one `pnpm land` per batch instead of a merge and a gate per branch, and `SNAP_VERSION` bumped once at landing, never in a branch.** "Apply quick wins"
+  2026-11-02 · `done` · AGENTS.md → Git workflow, `tools/land.ts`, `src/net/snapshot.ts`
