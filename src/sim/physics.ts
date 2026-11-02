@@ -82,6 +82,8 @@ export interface CollisionWorld {
   solids: readonly Solid[];
   /** How terrain feels underfoot (weather's footing); default DEFAULT_SURFACE. Props keep their own surfaces. */
   tileSurface?: Surface;
+  /** Footing per tile (a theme's own ground, sim/ground.ts). When set it answers for every tile instead of `tileSurface`. */
+  surfaceAt?: (tx: number, ty: number) => Surface;
   /**
    * World gravity scale (Level.gravity; default 1). Scales gravity (and so
    * the apex/fall/fast-fall multipliers built on it); terminal speeds scale
@@ -202,7 +204,7 @@ export function firstOverlap(r: Rect, world: CollisionWorld, dynamicOnly = false
         tileScratch.x = tx * TILE;
         tileScratch.y = ty * TILE;
         tileScratch.id = k === T_ONEWAY ? TILE_ONEWAY_ID : TILE_SOLID_ID;
-        tileScratch.surface = world.tileSurface ?? DEFAULT_SURFACE;
+        tileScratch.surface = world.surfaceAt ? world.surfaceAt(tx, ty) : (world.tileSurface ?? DEFAULT_SURFACE);
         if (overlaps(r, tileScratch)) return tileScratch;
       }
     }

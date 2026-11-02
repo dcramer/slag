@@ -77,6 +77,15 @@ export const WEATHER_WEIGHTS: Record<ThemeId, Weights> = {
     ['rain', 12],
     ['snow', 6],
   ],
+  // Snow falls on the rock, never on the ice: the glacier's own ice is always ice.
+  glacier: [
+    ['clear', 60],
+    ['snow', 18],
+    ['wind', 12],
+    ['mist', 10],
+  ],
+  // No air, no weather.
+  space: [['clear', 1]],
 };
 
 /** The kind this seed rolls on its theme's weights, before the gate has its say. */

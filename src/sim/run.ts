@@ -60,6 +60,7 @@ import {
   traceRays,
 } from './props';
 import type { GameEvent, InputFrame } from './types';
+import { groundSurfaceAt } from './ground';
 import { footing, gustAir, gustWind } from './weather';
 import { windAt } from './wind';
 import { NO_INPUT } from './types';
@@ -162,7 +163,13 @@ export class RunWorld {
       r.mods.forEach((m, i) => m.type === 'launcher' && st.aim.set(i, m.angle));
       this.propState.set(r.pp.uid, st);
     }
-    this.world = { tileAt: (x, y) => tileAt(level, x, y), solids: this.solids, gravity: level.gravity ?? 1, tileSurface: footing(level) };
+    this.world = {
+      tileAt: (x, y) => tileAt(level, x, y),
+      solids: this.solids,
+      gravity: level.gravity ?? 1,
+      tileSurface: footing(level),
+      surfaceAt: groundSurfaceAt(level),
+    };
     this.goal = goalRect(level);
     this.safeZone = spawnZone(level);
     this.killY = killY(level);

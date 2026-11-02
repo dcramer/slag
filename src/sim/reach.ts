@@ -8,6 +8,7 @@ import {
   stepBody as stepBodyImport,
   TILE_ONEWAY_ID as TILE_ONEWAY_ID_IMPORT,
 } from './physics';
+import { groundSurfaceAt } from './ground';
 import { footing } from './weather';
 import type { WindForce } from './wind';
 
@@ -271,7 +272,13 @@ const CALM: readonly number[] = [0];
  * leaves open and `[0, air]` what a player gets by picking their moments.
  */
 export function analyzeReach(level: Level, stopAtGoal = true, onEdge?: (from: number, to: number) => void, airs: readonly number[] = CALM): ReachResult {
-  const world: CollisionWorld = { tileAt: (x, y) => tileAt(level, x, y), solids: [], gravity: level.gravity ?? 1, tileSurface: footing(level) };
+  const world: CollisionWorld = {
+    tileAt: (x, y) => tileAt(level, x, y),
+    solids: [],
+    gravity: level.gravity ?? 1,
+    tileSurface: footing(level),
+    surfaceAt: groundSurfaceAt(level),
+  };
   const key = (x: number, y: number) => y * level.w + x;
   const goalKey = key(level.goal.tx, level.goal.ty);
   const seen = new Set<number>();
@@ -312,7 +319,9 @@ export function analyzeReach(level: Level, stopAtGoal = true, onEdge?: (from: nu
     for (const tracer of tracers) {
       for (const p of policiesFor(oneWay, level, runFrom)) {
         const b = bodyAtCell(tx, ty);
-        if (world.tileSurface) b.surface = world.tileSurface; // It's already standing here: a jump on frame 0 leaves this ground.
+        // It's already standing here: a jump on frame 0 leaves this ground.
+        const under = world.surfaceAt ? world.surfaceAt(tx, ty + 1) : world.tileSurface;
+        if (under) b.surface = under;
         if (oneWay) b.groundRef = TILE_ONEWAY_ID;
         tracer.trace(b, 0, p, false);
       }

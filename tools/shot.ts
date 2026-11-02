@@ -931,7 +931,10 @@ try {
       break;
     }
     case 'levels': {
-      const themes = opt('themes') === 'all' ? ['farm', 'factory', 'castle', 'jungle', 'volcano', 'harbor', 'mine', 'rooftops'] : opt('themes')?.split(',');
+      const themes =
+        opt('themes') === 'all'
+          ? ['farm', 'factory', 'castle', 'jungle', 'volcano', 'harbor', 'mine', 'rooftops', 'glacier', 'space']
+          : opt('themes')?.split(',');
       const seeds = opt('seeds')?.split(',') ?? Array.from({ length: themes ? themes.length : Number(opt('count', '9')) }, (_, i) => `lv${i}`);
       const files: string[] = [];
       await open(`seed=${seeds[0]}`);

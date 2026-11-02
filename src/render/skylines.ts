@@ -2,6 +2,7 @@ import { css, type HSL, hsl3, mixHsl, shift } from '../core/color';
 import type { Rng } from '../core/rng';
 import type { SkyLayer, SkylineKind, Theme } from '../gen/theme';
 import { circle, ellipse } from './kit';
+import { FRONTIER_SKYLINES } from './skylines-frontier';
 
 /**
  * Parallax skyline bakers, one per SkylineKind. Each paints a silhouette
@@ -40,7 +41,7 @@ export interface BakeCtx {
   ridge(x: number): number;
 }
 
-interface SkylineDef {
+export interface SkylineDef {
   glow: boolean;
   bake(c: BakeCtx): void;
 }
@@ -1510,4 +1511,5 @@ export const SKYLINES: Record<SkylineKind, SkylineDef> = {
   mineshaft,
   skyscrapers,
   rooftops,
+  ...FRONTIER_SKYLINES,
 };

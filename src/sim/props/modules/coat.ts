@@ -1,5 +1,6 @@
 import type { Rect } from '../../../core/geom';
 import { TILE } from '../../constants';
+import { ICE_SURFACE } from '../../ground';
 import { DEFAULT_SURFACE, type Surface } from '../../physics';
 import { defineModule, solidId } from '../registry';
 import { dirOf } from '../transform';
@@ -9,7 +10,7 @@ import type { ModuleOf } from '../types';
 export const COAT_PX = 3;
 
 export const COAT_SURFACES: Record<'ice' | 'slime', Surface> = {
-  ice: { ...DEFAULT_SURFACE, friction: 0.1, speedMult: 1.15, wall: 'slick' },
+  ice: ICE_SURFACE,
   slime: { ...DEFAULT_SURFACE, friction: 1.5, speedMult: 0.45, jumpMult: 0.7, wall: 'sticky' },
 };
 

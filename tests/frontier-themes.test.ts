@@ -1,0 +1,163 @@
+import { describe, expect, it } from 'vitest';
+import { GRAVITY, generateLevel, isAcceptable, rollProfile } from '../src/gen/level';
+import { SPACE_GRAVITY } from '../src/gen/level/profile';
+import type { Theme } from '../src/gen/theme';
+import { Match } from '../src/game/match';
+import { TILE } from '../src/sim/constants';
+import { GROUND_ICE, groundSurfaceAt, ICE_SURFACE } from '../src/sim/ground';
+import { isProtected, type Level, T_SOLID } from '../src/sim/level';
+import { bodyAtCell, type CollisionWorld, type Controls, DEFAULT_SURFACE, jumpMetrics, stepBody } from '../src/sim/physics';
+import { COAT_SURFACES } from '../src/sim/props/modules/coat';
+import { analyzeReach } from '../src/sim/reach';
+import { RunWorld } from '../src/sim/run';
+import { pickThemeId, THEME_IDS } from '../src/themes';
+
+/**
+ * Glacier and space: the two themes that change how you move. Glacier lays
+ * the shared ice surface into its own beds (sim/ground.ts); space flies at
+ * its own gravity. Both must reach the runner through the same paths every
+ * other surface and gravity do, and leave every other theme exactly as it was.
+ */
+
+const seedAt = (i: number) => (i * 2654435761 + 4242) >>> 0;
+
+/** A floor 160 tiles long on row 20, all ice from tile 8 on when `ice` is set: room to build a skid and lose it. */
+function rink(ice: boolean): Level {
+  const w = 160;
+  const h = 27;
+  const tiles = new Uint8Array(w * h);
+  const ground = new Uint8Array(w * h);
+  for (let x = 0; x < w; x++) for (let y = 20; y < h; y++) tiles[y * w + x] = T_SOLID;
+  if (ice) for (let x = 8; x < w; x++) ground[20 * w + x] = GROUND_ICE;
+  return {
+    seed: 1,
+    w,
+    h,
+    tiles,
+    ground,
+    spawn: { tx: 2, ty: 19 },
+    goal: { tx: 45, ty: 19 },
+    protectedRects: [],
+    theme: {} as Theme,
+    style: 'test',
+    version: 0,
+    setPieces: [],
+  };
+}
+
+const press = (o: Partial<Controls>): Controls => ({ left: false, right: false, down: false, jump: false, jumpPressed: false, run: false, ...o });
+
+/** Run right from a standstill on tile 10 for `n` frames, let go, and report top speed and where it stopped. */
+function skid(level: Level, n: number): { top: number; slide: number } {
+  const world: CollisionWorld = {
+    tileAt: (x, y) => (x < 0 || x >= level.w ? 1 : y < 0 || y >= level.h ? 0 : level.tiles[y * level.w + x]),
+    solids: [],
+    surfaceAt: groundSurfaceAt(level),
+  };
+  const b = bodyAtCell(10, 19);
+  let top = 0;
+  for (let f = 0; f < n; f++) {
+    stepBody(b, press({ right: true, run: true }), world);
+    top = Math.max(top, b.vx);
+  }
+  const at = b.x;
+  for (let f = 0; f < 600 && b.vx > 0; f++) stepBody(b, press({}), world);
+  return { top, slide: (b.x - at) / TILE };
+}
+
+describe('glacier ice', () => {
+  it('is the ice coat surface, floors and walls alike', () => {
+    expect(ICE_SURFACE).toEqual(COAT_SURFACES.ice);
+    const s = groundSurfaceAt(rink(true))!;
+    expect(s(12, 20)).toBe(ICE_SURFACE);
+    expect(s(4, 20)).toEqual(DEFAULT_SURFACE);
+    expect(groundSurfaceAt({ ...rink(true), ground: undefined })).toBeUndefined();
+  });
+
+  it('skids: slow to start, faster at the top, a long slide to stop', () => {
+    const rock = skid(rink(false), 90);
+    const ice = skid(rink(true), 90);
+    const iceLong = skid(rink(true), 200);
+    // Grip: a runner on rock is at full speed long before one on ice.
+    expect(ice.top).toBeLessThan(rock.top);
+    // But ice's top speed is higher once you've built it up.
+    expect(iceLong.top).toBeGreaterThan(rock.top * 1.05);
+    expect(iceLong.slide).toBeGreaterThan(rock.slide * 3);
+  });
+
+  it('every glacier level lays ice on its own beds, never in a pocket, and stays solvable on it', { timeout: 120_000 }, () => {
+    let iced = 0;
+    for (let i = 0; i < 8; i++) {
+      const l = generateLevel(seedAt(i), 'glacier');
+      if (!l.ground) continue;
+      iced++;
+      expect(l.ground.length).toBe(l.w * l.h);
+      for (let k = 0; k < l.ground.length; k++) {
+        if (!l.ground[k]) continue;
+        expect(l.tiles[k], 'ice only on rock').toBe(T_SOLID);
+        expect(isProtected(l, k % l.w, Math.floor(k / l.w)), 'no ice in the pockets').toBe(false);
+      }
+      expect(isAcceptable(l)).toBe(true);
+    }
+    expect(iced).toBeGreaterThanOrEqual(6);
+  });
+
+  it('reaches the runner and the solver through the same footing', () => {
+    const l = generateLevel(seedAt(1), 'glacier', { size: 'classic' });
+    const run = new RunWorld(l, [], [0]);
+    const k = l.ground!.findIndex((g) => g === GROUND_ICE);
+    expect(k).toBeGreaterThanOrEqual(0);
+    expect(run.world.surfaceAt!(k % l.w, Math.floor(k / l.w))).toBe(ICE_SURFACE);
+  });
+
+  it('no other theme has ground of its own', () => {
+    for (const t of THEME_IDS) if (t !== 'glacier') expect(generateLevel(seedAt(2), t, { size: 'classic' }).ground, t).toBeUndefined();
+  });
+});
+
+describe('space gravity', () => {
+  it('is space’s own on Auto, floatier than Low', () => {
+    for (let i = 0; i < 20; i++) expect(rollProfile(seedAt(i), 'space').gravity).toBe(SPACE_GRAVITY);
+    expect(SPACE_GRAVITY).toBeLessThan(GRAVITY.low);
+    expect(jumpMetrics(SPACE_GRAVITY).jumpHeight).toBeGreaterThan(jumpMetrics(GRAVITY.low).jumpHeight * 1.15);
+    // Still a precision jump: about a second in the air at most.
+    expect(jumpMetrics(SPACE_GRAVITY).jumpAirFrames).toBeLessThanOrEqual(66);
+  });
+
+  it('reaches runners and projectiles through the level', () => {
+    const l = generateLevel(seedAt(3), 'space', { size: 'classic' });
+    expect(l.gravity).toBe(SPACE_GRAVITY);
+    expect(new RunWorld(l, [], [0]).world.gravity).toBe(SPACE_GRAVITY);
+    expect(analyzeReach(l).goalReached || (l.solution?.length ?? 0) > 0).toBe(true);
+  });
+
+  it('gives way to a host’s gravity rule', () => {
+    expect(rollProfile(seedAt(4), 'space', { gravity: GRAVITY.high }).gravity).toBe(GRAVITY.high);
+    const m = new Match(4242);
+    m.setRules({ ...m.rules, gravity: 'normal' });
+    expect(m.level.gravity).toBe(GRAVITY.normal);
+  });
+
+  it('floats: no ground under the level, nothing in the bottom rows', () => {
+    for (let i = 0; i < 4; i++) {
+      const l = generateLevel(seedAt(i), 'space', { size: 'classic' });
+      for (let x = 0; x < l.w; x++) expect(l.tiles[(l.h - 1) * l.w + x], `seed ${i} col ${x}`).toBe(0);
+    }
+  });
+});
+
+describe('theme picks', () => {
+  it('deal the new themes a share without crowding the old ones', () => {
+    const n = 4000;
+    const count = new Map<string, number>();
+    for (let i = 0; i < n; i++) {
+      const t = pickThemeId(seedAt(i));
+      count.set(t, (count.get(t) ?? 0) + 1);
+    }
+    for (const t of ['glacier', 'space']) {
+      expect(count.get(t)! / n, t).toBeGreaterThan(0.05);
+      expect(count.get(t)! / n, t).toBeLessThan(0.11);
+    }
+    for (const t of THEME_IDS.slice(0, 8)) expect(count.get(t)! / n, t).toBeGreaterThan(0.09);
+  });
+});

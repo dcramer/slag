@@ -8,7 +8,7 @@ const seedAt = (i: number) => (i * 2654435761 + 777) >>> 0;
 
 describe('size classes', () => {
   const cases = [
-    ...THEME_IDS.filter((t) => t !== 'farm' && t !== 'harbor').map((t) => ({ t, size: 'tall' as const })),
+    ...THEME_IDS.filter((t) => t !== 'farm' && t !== 'harbor' && t !== 'space').map((t) => ({ t, size: 'tall' as const })),
     ...THEME_IDS.map((t) => ({ t, size: 'wide' as const })),
   ];
 

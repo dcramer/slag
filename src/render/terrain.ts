@@ -3,6 +3,7 @@ import { TILE } from '../sim/constants';
 import { type Level, T_ONEWAY, tileAt, type TileRect } from '../sim/level';
 import { coatTerrain } from './weather';
 import { DECOR, type Decor } from './decor';
+import { capLoops, inkIce, inkIceTops } from './ink-ground';
 import { inkFence, inkHay } from './ink-parts';
 import {
   type Area,
@@ -113,6 +114,7 @@ export class TerrainPainter {
     const lg = layer.getContext('2d')!;
     lg.setTransform(kb, 0, 0, kb, -px0, -py0);
     inkMaterial(lg, level, th, seed, solid, area);
+    inkIce(lg, level, th, seed, solid, area);
     inkHatch(lg, loops, th, seed, area);
     lg.globalCompositeOperation = 'destination-in';
     lg.fillStyle = '#000';
@@ -126,8 +128,9 @@ export class TerrainPainter {
     g.drawImage(layer, px0, py0);
     g.setTransform(kb, 0, 0, kb, 0, 0);
     inkEdges(g, loops, th, seed, area);
-    inkCap(g, loops, th.terrain, seed, area);
+    inkCap(g, capLoops(level, loops), th.terrain, seed, area);
     inkUnder(g, loops, th.terrain, seed, area);
+    inkIceTops(g, level, th, seed, loops, area);
     inkPlatforms(g, level, th, seed, solid, area);
     // A partial trace only knows the ground around it: keep every tuft past that and replace the rest.
     const fresh = INK_CAPS[th.terrain.cap].tufts ? makeTufts(loops, seed, this.decor) : [];

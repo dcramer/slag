@@ -34,6 +34,8 @@ export interface Shape {
   crossings?: [number, number][];
   /** The level is cut from solid rock: a second route is a carved gallery, not platforms in the air. */
   carve?: boolean;
+  /** Per-tile ground kinds (sim/ground.ts), for themes that lay their own: glacier ice. Becomes Level.ground. */
+  ground?: Uint8Array;
 }
 
 /** Width of a bridge prop in tiles. */

@@ -4,6 +4,7 @@ import { TILE } from '../../sim/constants';
 import { isProtected, type Level, T_EMPTY, T_SOLID } from '../../sim/level';
 import { bodyAtCell, type CollisionWorld, stepBody } from '../../sim/physics';
 import { analyzeReach } from '../../sim/reach';
+import { groundSurfaceAt } from '../../sim/ground';
 import { footing } from '../../sim/weather';
 import type { WindForce } from '../../sim/wind';
 import { analyzeRoutes, MAX_SHARED } from './routes';
@@ -309,6 +310,7 @@ class BridgeSearch {
       solids: [],
       gravity: this.level.gravity ?? 1,
       tileSurface: footing(this.level),
+      surfaceAt: groundSurfaceAt(this.level),
     };
     const standable = (x: number, y: number) => x >= 0 && x < this.W && y >= 0 && y < this.H - 1 && !tiles[y * this.W + x] && !!tiles[(y + 1) * this.W + x];
     const sx = this.level.spawn.tx;
@@ -375,7 +377,8 @@ class BridgeSearch {
     for (let s = 0; s < NS; s++) {
       const sc = SCRIPTS[s];
       const b = bodyAtCell(tx, ty);
-      if (world.tileSurface) b.surface = world.tileSurface;
+      const under = world.surfaceAt ? world.surfaceAt(tx, ty + 1) : world.tileSurface;
+      if (under) b.surface = under;
       // Guess model only (answers are re-verified with analyzeReach): assume a full run-up where there's room for one.
       const run = sc.dir !== 0 && (sc.dir > 0 ? runR : runL);
       if (run) b.vx = sc.dir * PHYS.runSpeed;

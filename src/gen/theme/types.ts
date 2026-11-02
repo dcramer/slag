@@ -42,7 +42,15 @@ export type SkylineKind =
   | 'mineshaft'
   // rooftops
   | 'skyscrapers'
-  | 'rooftops';
+  | 'rooftops'
+  // glacier
+  | 'aurora'
+  | 'peaks'
+  | 'icefall'
+  // space
+  | 'planet'
+  | 'orbital'
+  | 'debris';
 
 /** Terrain materials. Each is drawn by a painter in src/render/ink-material.ts. */
 export type TerrainKind =
@@ -61,7 +69,10 @@ export type TerrainKind =
   | 'cave'
   | 'strata'
   | 'loam'
-  | 'rustplate';
+  | 'rustplate'
+  | 'ice'
+  | 'regolith'
+  | 'hull';
 export type CapKind = 'grass' | 'moss' | 'snow' | 'rust' | 'crystal' | 'none' | 'ledge' | 'trim' | 'ash' | 'beam' | 'gravel';
 export type LiquidKind = 'slag' | 'acid' | 'void' | 'water' | 'tar' | 'sea' | 'swamp' | 'lava' | 'street';
 export type Ambient = 'embers' | 'fireflies' | 'snow' | 'spores' | 'dust' | 'bubbles' | 'rain' | 'ash' | 'leaves' | 'pollen';
@@ -112,7 +123,13 @@ export type DecorKind =
   | 'antenna'
   | 'acunit'
   | 'neon'
-  | 'dish';
+  | 'dish'
+  // glacier
+  | 'cairn'
+  | 'pennant'
+  | 'icicles'
+  // space
+  | 'lander';
 export type Celestial = 'sun' | 'moon' | 'planet' | 'eclipse' | 'none';
 export type CloudStyle = 'puffy' | 'wispy' | 'smog' | 'ash' | 'storm';
 export type PlatformKind = 'wood' | 'grate' | 'bamboo' | 'stone';
@@ -156,6 +173,8 @@ export interface TerrainLook {
   detail: number;
   /** One-way (jump-through) platform style. */
   platform: { kind: PlatformKind; color: HSL };
+  /** Tones of the level's own ice (Level.ground), for themes that lay it: drawn as the 'ice' material. */
+  ice?: { base: HSL; dark: HSL; light: HSL };
 }
 
 export interface Theme {

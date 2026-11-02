@@ -47,6 +47,8 @@ export const GROUND_TONE: Record<ThemeId, SurfaceTone> = {
   harbor: 'wood',
   mine: 'stone',
   rooftops: 'metal',
+  glacier: 'ice',
+  space: 'metal',
 };
 
 /** Distinct, consonant pitch offsets (semitones) per player slot. */

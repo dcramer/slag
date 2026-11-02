@@ -17,6 +17,7 @@ const ALT_W = 4;
  *   jungle    giant edge trunks, branch decks, vine ladders, canopy crown
  *   rooftops  stacked roofs with window facades, fire-escape landings
  *   volcano   a cone of jagged rock ledges over lava, rock-step ramps
+ *   glacier   rock shelves up an icefall, rock-step flights, ice in the beds
  *
  * Route shapes (profile.route):
  *   zigzag   full-width storeys, connectors alternating ends (switchbacks)
@@ -542,6 +543,20 @@ const VOLCANO: TallKit = {
   },
 };
 
+/** Shelves of rock stacked up an icefall, rock-step flights between them; the ice is laid later (glacier.ts `glaze`). */
+const GLACIER: TallKit = {
+  style: 'glacier',
+  margin: 1,
+  linkW: (rise) => stairW(rise),
+  deck(g, rng, s, x0, x1, ground) {
+    for (let x = x0; x <= x1; x++) g.fill(x, s.row + 1, x, ground ? g.h - 1 : s.row + 2 + (rng.chance(0.15) ? 1 : 0), T_SOLID, true);
+  },
+  link(g, _rng, l) {
+    return stairFlight(g, l, easyRise(), T_SOLID, 1);
+  },
+};
+
+export const glacierTall = (ctx: SculptCtx): Shape => sculptTall(ctx, GLACIER);
 export const castleTall = (ctx: SculptCtx): Shape => sculptTall(ctx, CASTLE);
 export const factoryTall = (ctx: SculptCtx): Shape => sculptTall(ctx, FACTORY);
 export const mineTall = (ctx: SculptCtx): Shape => sculptTall(ctx, MINE);

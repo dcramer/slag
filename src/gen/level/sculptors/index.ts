@@ -3,11 +3,13 @@ import type { Sculptor } from '../types';
 import { castle } from './castle';
 import { factory } from './factory';
 import { farm } from './farm';
+import { glacier } from './glacier';
 import { harbor } from './harbor';
 import { jungle } from './jungle';
 import { legacy } from './legacy';
 import { mine } from './mine';
 import { rooftops } from './rooftops';
+import { space } from './space';
 import { volcano } from './volcano';
 
 /** Level-shape generator per theme (one file each in this folder). */
@@ -20,6 +22,8 @@ export const SCULPTORS: Record<ThemeId, Sculptor> = {
   harbor,
   mine,
   rooftops,
+  glacier,
+  space,
 };
 
 /**
