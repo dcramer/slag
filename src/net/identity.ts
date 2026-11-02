@@ -1,5 +1,6 @@
 import { SNAP_VERSION, type MatchSnap } from './snapshot';
 import type { NetState } from './actions';
+import { ROOM_EMPTY_MS } from './signal-protocol';
 
 /**
  * Peer identity and per-room local persistence.
@@ -149,8 +150,6 @@ export function kickedUntil(room: string): number {
 
 // ---------------------------------------------------------------- resume save
 
-/** How long a room's last state stays resumable on this browser. */
-const RESUME_MS = 30 * 60 * 1000;
 
 export interface ResumeSave {
   at: number;
@@ -167,8 +166,9 @@ export function saveResume(room: string, snap: MatchSnap, ns: NetState) {
  * A session passes when it opened: it saves while its join is still in flight, and resuming that save once the
  * join lands would rewind its own lobby, undoing the saved name and look it had just applied.
  */
-export function loadResume(room: string, before = Infinity): ResumeSave | null {
+export function loadResume(room: string, before = Infinity, maxAge = ROOM_EMPTY_MS): ResumeSave | null {
   const r = read(storage('local'), keyResume(room)) as ResumeSave | null;
-  if (!r || r.snap?.v !== SNAP_VERSION || Date.now() - r.at > RESUME_MS || r.at >= before) return null;
+  // A save is the last moment this browser saw the room; older than ROOM_EMPTY_MS, the room is over.
+  if (!r || r.snap?.v !== SNAP_VERSION || Date.now() - r.at > maxAge || r.at >= before) return null;
   return r;
 }

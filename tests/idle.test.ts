@@ -104,7 +104,7 @@ describe('idle players', () => {
       stepUntil(
         m,
         () => m.phase === 'score',
-        (f) => ({ a: press({ altPressed: f % 50 === 0 }), b: press({ altPressed: f % 50 === 0 }) }),
+        (f) => ({ a: press({ alt: f % 120 < 110, altPressed: f % 120 === 0 }), b: press({ alt: f % 120 < 110, altPressed: f % 120 === 0 }) }), // both hold self-destruct
         4000,
       ),
     ).toBeGreaterThan(0);

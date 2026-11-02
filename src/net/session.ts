@@ -78,6 +78,12 @@ const SOFT_TICKS = 60;
 /** An observer ahead of a player in join order waits this long, then moves to the back (see maybeReorder). */
 const REORDER_AFTER_MS = 2000;
 const REORDER_EVERY_MS = 10_000;
+/**
+ * A player whose peer has been gone this long mid-match (no goodbye, no return) is dropped: out at the round
+ * boundary, its seat free for a Join from then. Long enough for a reload, a dead phone battery swapped for a
+ * charger, or a browser restart; short enough that a closed tab doesn't hold a seat all match.
+ */
+export const DROP_FRAMES = 40 * 60;
 
 export type NetStatus = 'offline' | 'connecting' | 'online' | 'reconnecting' | 'unavailable' | 'kicked';
 export type Role = 'host' | 'guest';
@@ -156,6 +162,8 @@ export interface SessionOptions {
   client?: string;
   /** How long a kick keeps someone out, in sim frames (KICK_BAN_FRAMES; tests shorten it). Only the host's counts. */
   banFrames?: number;
+  /** How long a player may be gone mid-match before it's dropped, in sim frames (DROP_FRAMES; tests shorten it). */
+  dropFrames?: number;
   /** Arrive as an observer (an invite opened with `?watch`). */
   watch?: boolean;
   /** The name an observer's chip shows, read when it starts watching. */
@@ -203,6 +211,7 @@ export class NetSession {
   private onKickedFn: SessionOptions['onKicked'];
   private client: string;
   private banFrames: number;
+  private dropFrames: number;
   /** Host: each guest's client id, from its hello. A new host learns them as everyone says hello again. */
   private clients = new Map<string, string>();
   /** Wall-clock ms when this peer may come back, once kicked or refused. For the screen only. */
@@ -288,6 +297,7 @@ export class NetSession {
     this.onKickedFn = opts.onKicked;
     this.client = opts.client ?? '';
     this.banFrames = Math.max(1, Math.round(opts.banFrames ?? KICK_BAN_FRAMES));
+    this.dropFrames = Math.max(1, Math.round(opts.dropFrames ?? DROP_FRAMES));
     const primary = opts.primaryDevice ?? 'kb1';
     this.primaryFn = typeof primary === 'function' ? primary : () => primary;
     this.nameFn = opts.name ?? (() => '');
@@ -514,6 +524,8 @@ export class NetSession {
       // A watch link, or a match already running: watch, with Join a click away.
       if ((this.intent === 'watch' && !w) || (!w && !this.seated && this.match.phase !== 'lobby')) this.watch();
     }
+    // Without a seat mid-match and not asking for one (dropped while gone, say): watching, with Join a click away.
+    if (this.arrived && !w && this.intent === 'play' && !this.seated && !this.queued && !this.asked && this.match.phase !== 'lobby') this.watch();
     if (w?.afk && !this.backAsked && Object.keys(own).length) {
       this.backAsked = true;
       addBreadcrumb('room', 'back from idle', { frame: this.match.frame });
@@ -972,6 +984,9 @@ export class NetSession {
         if (m.phase === 'lobby') out.push({ t: 'leave', dev: p.device });
         else if (!p.away) out.push({ t: 'away', dev: p.device, on: true });
       } else if (p.away) out.push({ t: 'away', dev: p.device, on: false });
+      // Gone too long mid-match: dropped, its seat free for a watcher's Join (the leave action parks score and look).
+      if (!present.has(peer) && m.phase !== 'lobby' && p.away && !p.leaving && m.frame - (p.awayAt ?? m.frame) >= this.dropFrames)
+        out.push({ t: 'leave', dev: p.device });
     }
     // Idle (game/match.ts): moved to the watchers, at once in the lobby, and mid-match after IDLE_ROUNDS rounds AFK, freeing the seat at the boundary.
     for (const peer of new Set(m.players.map((p) => peerOf(p.device)))) {

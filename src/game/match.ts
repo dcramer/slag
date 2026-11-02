@@ -58,6 +58,8 @@ export interface Player {
    * the start of a race so nobody waits on them; cleared when they reconnect.
    */
   away?: boolean;
+  /** The frame `away` was set: gone this long mid-match, the host drops the player (NetSession DROP_FRAMES). */
+  awayAt?: number;
   /** Frame of this player's last input of any kind (a button down, the pointer moving). Idle rules count from it. */
   lastInput: number;
   /**

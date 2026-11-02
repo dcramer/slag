@@ -105,15 +105,19 @@ export function connectRoom(room: string, match: Match, opts: ConnectOptions): R
   const transport: Transport | null = chosen && banned ? { kind: chosen.kind, self: ident.id, start: () => {}, send: () => {}, close: () => {} } : chosen;
   // `?ban=<seconds>`: a host's kicks last that long (tests; the default is KICK_BAN_FRAMES).
   const banSeconds = Number(params.get('ban'));
+  // `?drop=<seconds>`: how long a gone player keeps its seat mid-match; `?expire=<seconds>`: how long an empty room lasts. Tests only.
+  const dropSeconds = Number(params.get('drop'));
+  const expireSeconds = Number(params.get('expire'));
   const net = new NetSession({
     transport,
     match,
     primaryDevice: opts.primaryDevice,
     watch: params.has('watch'),
     name: opts.name,
-    resume: () => loadResume(room, opened), // a previous visit's state, never this one's
+    resume: () => loadResume(room, opened, expireSeconds > 0 ? expireSeconds * 1000 : undefined), // a previous visit's state, never this one's
     client: clientId(),
     banFrames: banSeconds > 0 ? banSeconds * 60 : undefined,
+    dropFrames: dropSeconds > 0 ? dropSeconds * 60 : undefined,
     onKicked: (until) => markKicked(room, until),
     // The session only logs what changes the room (links, migrations, syncs, desyncs): each is a step in the trail.
     log: (m) => {

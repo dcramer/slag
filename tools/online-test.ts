@@ -14,7 +14,8 @@
  *   flow        as a person does it: Play on the menu, open the invite, press nothing; both peers see both bays
  *   fresh       Play on the menu, on a desktop and on a phone: alone in a new lobby, host, seated with the device in
  *               hand; then the other kind opens the invite and is seated the same way
- *   kick        the Host label everywhere and through a migration; kicks by keyboard and mouse, with no way back
+ *   kick        the Host label everywhere and through a migration; kicks by keyboard and mouse; a kicked page reloads into
+ *               its countdown, never seated, and Rejoins once the (shortened) ban runs out
  *   refused     a guest whose build can't load the host's snapshots says so
  *   view        real mouse input lands under the pointer, at every window shape, on every level size
  *   play        join, live cursors, claim race, a remote ghost, a race, refresh keeps the slot, next round
@@ -1180,7 +1181,7 @@ async function hostLabel(p: Page): Promise<number | undefined> {
 
 /** The host label on every screen, and following a migration; a kick by keyboard, then by mouse, with no way back. */
 async function kickScenario(browser: Browser, base: string) {
-  const r = await newRoom(browser, base, 'kick', '', { viewport: { width: 960, height: 540 }, visual: true });
+  const r = await newRoom(browser, base, 'kick', 'ban=4', { viewport: { width: 960, height: 540 }, visual: true });
   const A = await r.open('A');
   const a0 = await waitFor(A, 'host seated', (v) => v.players.length === 1 && v.isHost);
   const [B, C, D] = [await r.open('B'), await r.open('C'), await r.open('D')];
@@ -1224,18 +1225,30 @@ async function kickScenario(browser: Browser, base: string) {
       () => false,
     );
   check(seen, 'the kicked peer sees Kicked');
+  const kickedHud = async () => (await victim.evaluate(() => (window as any).slagDebug.renderer.hud.net?.arrival)) as { title: string; rejoinIn?: number } | undefined;
+  const k0 = await kickedHud();
+  check(k0?.title === 'Kicked' && (k0.rejoinIn ?? 0) > 0, `the kicked peer is told when it can come back (${k0?.title}, ${k0?.rejoinIn} s)`);
   await victim.screenshot({ path: `${out}/online-kick-kicked.png` }).catch(() => {});
-  await victim.waitForURL((u) => u.pathname === '/', { timeout: 30_000 }).catch(() => {});
-  check(new URL(victim.url()).pathname === '/', `the kicked peer lands on the main menu (${new URL(victim.url()).pathname})`);
   const after = await waitFor(A, 'kick applied', (v) => v.players.length === 3, 15_000);
   check(!after.players.some((q) => q.device.startsWith(`${victimId}:`)), 'the kicked player is gone from the host');
   const [watcher] = guests.values();
   const c1 = await waitFor(watcher, 'kick applied on a guest', (v) => v.players.length === 3, 15_000);
   check(!c1.players.some((q) => q.device.startsWith(`${victimId}:`)), 'the kicked player is gone for everyone');
-  // The history entry is the room; what's being checked is where that page sends you.
-  await victim.goBack({ waitUntil: 'commit', timeout: 60_000 }).catch(() => {});
-  await victim.waitForURL((u) => u.pathname === '/', { timeout: 60_000 }).catch(() => {});
-  check(new URL(victim.url()).pathname === '/', 'going back to the room lands on the main menu again');
+  // A reload inside the ban: the same screen, and the room never sees it.
+  await victim.reload();
+  await victim.waitForFunction(() => 'slagDebug' in window, null, { timeout: 60_000 });
+  const reloaded = await waitFor(victim, 'refused after a reload', (v) => v.status === 'kicked', 15_000);
+  check(reloaded.status === 'kicked' && ((await kickedHud())?.rejoinIn ?? 0) > 0, 'a reload during the ban is refused, with the countdown');
+  await sleep(1000);
+  check(!(await view(A)).players.some((q) => q.device.startsWith(`${victimId}:`)), 'the reloaded page is never seated');
+  // Once it runs out: Rejoin, and it's back in the lobby with a seat.
+  await victim.waitForFunction(() => (window as any).slagDebug.renderer.hud.net?.arrival?.rejoinIn === 0, null, { timeout: 30_000 });
+  await victim.keyboard.press('Enter');
+  await victim.waitForFunction(() => (window as any).slagDebug?.net?.status === 'online', null, { timeout: 60_000 }).catch(() => {});
+  const back = await waitFor(A, 'the kicked player back after the ban', (v) => v.players.length === 4, 30_000);
+  check(back.players.length === 4, 'after the ban, Rejoin seats it again');
+  const backId = (await view(victim)).self;
+  guests.set(backId, victim);
 
   // By mouse: the button on the bay.
   const spot = await A.evaluate(() => {
@@ -1246,10 +1259,13 @@ async function kickScenario(browser: Browser, base: string) {
   check(!!spot, 'each other bay has a Kick button');
   if (spot) {
     await clickView(A, spot.x, spot.y);
-    await waitFor(A, 'mouse kick applied', (v) => v.players.length === 2 && !v.players.some((q) => q.device === spot.device), 15_000);
+    await waitFor(A, 'mouse kick applied', (v) => v.players.length === 3 && !v.players.some((q) => q.device === spot.device), 15_000);
     guests.delete(spot.device.split(':')[0]);
   }
-  const [survivorId, survivor] = [...guests.entries()][0];
+  // The next host is the earliest to join of those left (the rejoined page came back last).
+  const order = (await A.evaluate(() => (window as any).slagDebug.net.members.map((m: any) => m.id))) as string[];
+  const survivorId = order.find((id) => guests.has(id))!;
+  const survivor = guests.get(survivorId)!;
   const left = (await view(A)).players.find((q) => q.device.startsWith(`${survivorId}:`))!;
 
   // The label moves with the host.

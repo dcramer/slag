@@ -39,7 +39,7 @@ class Room {
   frozen = new Set<string>();
   frame = 0;
 
-  join(id: string, script: Script = still, watch = false, more: { client?: string; banFrames?: number } = {}): NetSession {
+  join(id: string, script: Script = still, watch = false, more: { client?: string; banFrames?: number; dropFrames?: number } = {}): NetSession {
     const s = new NetSession({
       transport: this.hub.transport(id),
       match: new Match(roomSeed('SEATS')),
@@ -318,4 +318,38 @@ describe('kicks', () => {
     expect(back.status).toBe('online');
     expect(r.hashes().size).toBe(1);
   }, 20_000);
+});
+
+describe('players gone for good', () => {
+  it('a player gone too long mid-match shows as away, then is dropped: its seat frees, and its look and points come back with it', () => {
+    const r = new Room();
+    const drop = 180;
+    const a = r.join('aaaa', player, false, { dropFrames: drop });
+    r.run(5);
+    a.act({ t: 'rules', rules: FAST });
+    r.join('bbbb', player);
+    r.join('cccc', player);
+    r.until(() => a.match.phase === 'run', 3000);
+    const before = a.match.players.find((p) => p.device === 'bbbb:kb1')!;
+    const look = before.character.seed;
+    r.leave('bbbb'); // the tab closed: no goodbye that keeps a seat
+    r.until(() => !!a.match.players.find((p) => p.device === 'bbbb:kb1')?.away, 120);
+    r.run(10);
+    expect(r.peers.get('cccc')!.match.players.find((p) => p.device === 'bbbb:kb1')!.away).toBe(true);
+    const space = a.space;
+    r.until(() => !!a.match.players.find((p) => p.device === 'bbbb:kb1')?.leaving, drop + 60);
+    expect(a.space).toBe(space + 1);
+    r.until(() => !seatedPeer(a, 'bbbb'), 3000);
+    const score = a.ns.parked.bbbb?.[0]?.score;
+    expect(score).toBeDefined();
+    // Back later: watching, and a Join seats it next round as it was.
+    const back = r.join('bbbb', player);
+    r.until(() => back.synced && !!back.watching, 300);
+    back.play();
+    r.until(() => seatedPeer(a, 'bbbb'), 4000);
+    const again = a.match.players.find((p) => p.device === 'bbbb:kb1')!;
+    expect(again.character.seed).toBe(look);
+    expect(again.score).toBe(score);
+    expect(r.hashes().size).toBe(1);
+  }, 30_000);
 });

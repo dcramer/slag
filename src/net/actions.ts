@@ -43,7 +43,7 @@ export type NetAction =
 /** Replicated session state that isn't part of the Match (kept identical on every peer by the same actions). */
 export interface NetState {
   /** peer id → players removed from the lobby while that peer was away. */
-  parked: Record<string, { dev: string; char: CharacterDef }[]>;
+  parked: Record<string, { dev: string; char: CharacterDef; score?: number }[]>;
   /** Peers the host removed. Replicated, so a new host keeps refusing them. */
   /** Peers the host removed → the match frame until which they're refused. Replicated, so a new host keeps refusing them. */
   kicked: Record<string, number>;
@@ -98,7 +98,10 @@ export const SEAT_PHASES = new Set(['lobby', 'score', 'victory']);
 
 function seat(m: Match, ns: NetState, dev: string, char?: CharacterDef) {
   const peer = peerOf(dev);
-  m.join(dev, char);
+  // Dropped mid-match for being gone too long and back: the same look, and the points they had.
+  const park = ns.parked[peer]?.find((x) => x.dev === dev);
+  const p = m.join(dev, char ?? park?.char);
+  if (p && park?.score && m.phase !== 'lobby') p.score = park.score;
   ns.queue = ns.queue.filter((q) => q.peer !== peer);
   const parked = ns.parked[peer]?.filter((x) => x.dev !== dev);
   if (parked?.length) ns.parked[peer] = parked;
@@ -136,18 +139,31 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
       return;
     }
     case 'leave': {
-      const p = m.leave(a.dev);
-      if (!p) return;
       const peer = peerOf(a.dev);
-      (ns.parked[peer] ??= []).push({ dev: a.dev, char: p.character });
+      if (m.phase !== 'lobby') {
+        // Mid-match: gone too long (see NetSession DROP_FRAMES). Out at the round boundary, its seat free from now.
+        const p = m.players.find((q) => q.device === a.dev);
+        if (!p || p.leaving) return;
+        p.leaving = true;
+        (ns.parked[peer] ??= []).push({ dev: a.dev, char: p.character, score: p.score });
+      } else {
+        const p = m.leave(a.dev);
+        if (!p) return;
+        (ns.parked[peer] ??= []).push({ dev: a.dev, char: p.character });
+      }
       if (ns.parked[peer].length > 4) ns.parked[peer].shift();
       return;
     }
     case 'away': {
       const p = m.players.find((q) => q.device === a.dev);
       if (!p) return;
-      if (a.on) p.away = true;
-      else delete p.away; // keep snapshots canonical (no `away: false` vs missing)
+      if (a.on) {
+        p.away = true;
+        p.awayAt = m.frame;
+      } else {
+        delete p.away; // keep snapshots canonical (no `away: false` vs missing)
+        delete p.awayAt;
+      }
       return;
     }
     case 'name': {
@@ -196,7 +212,7 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
         if (m.phase === 'lobby') m.leave(p.device);
         else p.leaving = true;
       }
-      delete ns.parked[peer];
+      // Parked looks stay: a watcher's Join gets its look (and a dropped player its points) back; a join refuses watchers.
       ns.queue = ns.queue.filter((q) => q.peer !== peer);
       delete ns.watching[peer]; // re-inserted last: the oldest entries go first
       ns.watching[peer] = a.afk ? { name, afk: true } : { name };
