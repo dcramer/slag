@@ -9,6 +9,7 @@ import { InputManager } from './input/input';
 import { Renderer } from './render/renderer';
 import { DT } from './sim/constants';
 import { THEME_IDS } from './themes';
+import { InputModeTracker } from './ui/input-mode';
 import { NamePrompt, RulesMenu, SettingsMenu } from './ui/menus';
 import { loadProfile, saveProfile } from './ui/profile';
 
@@ -48,9 +49,11 @@ export function bootGame(container: HTMLElement, room: string): void {
   renderer.hud.room = room;
   renderer.hud.hidden = params.get('ui') === '0';
   const audio = createAudio();
+  const inputMode = new InputModeTracker(window);
 
   // --- local menus (DOM overlays) and profile ---------------------------------
   const settingsMenu = new SettingsMenu(input, audio);
+  settingsMenu.leave = () => location.assign('/');
   const rulesMenu = new RulesMenu(input);
   const namePrompt = new NamePrompt(input);
   const profile = loadProfile();
@@ -77,7 +80,7 @@ export function bootGame(container: HTMLElement, room: string): void {
   input.hitTest = (x, y) => {
     audio.unlock();
     if (menus.some((m) => m.isOpen)) return null;
-    const b = match.phase === 'lobby' ? renderer.hud.hit(x, y) : null;
+    const b = renderer.hud.hit(x, y);
     if (!b) return null;
     audio.ui?.('click');
     switch (b.action) {
@@ -94,8 +97,17 @@ export function bootGame(container: HTMLElement, room: string): void {
       case 'name':
         promptName();
         return true;
+      case 'invite': {
+        const url = renderer.hud.net?.inviteUrl ?? location.href;
+        navigator.clipboard?.writeText(url).then(
+          () => renderer.hud.toast('Invite Link Copied'),
+          () => renderer.hud.toast(url, 4000),
+        );
+        return true;
+      }
       case 'join':
       case 'ready':
+      case 'continue':
         return { device: b.device ?? input.mouseDevice, confirm: true };
       case 'look':
         return { device: b.device ?? input.mouseDevice, alt: true };
@@ -121,8 +133,9 @@ export function bootGame(container: HTMLElement, room: string): void {
   let hoverKey = '';
   function uiHover() {
     const pt = input.pointerPos;
-    const b = pt && match.phase === 'lobby' && !menus.some((m) => m.isOpen) ? renderer.hud.hit(pt.x, pt.y) : null;
+    const b = pt && !menus.some((m) => m.isOpen) ? renderer.hud.hit(pt.x, pt.y) : null;
     const key = b ? `${b.action}:${b.device ?? ''}` : '';
+    glCanvas.style.cursor = b ? 'pointer' : '';
     if (key && key !== hoverKey) audio.ui?.('hover');
     hoverKey = key;
   }
@@ -149,6 +162,9 @@ export function bootGame(container: HTMLElement, room: string): void {
     renderer.hud.pointer = input.pointerPos;
     uiHover();
     renderer.hud.mouseDevice = input.mouseDevice;
+    inputMode.update();
+    renderer.hud.lastInput = inputMode.mode;
+    renderer.hud.padCount = inputMode.pads;
     const events = match.drainEvents();
     audio.handle(events, match);
     audio.update(match, now);

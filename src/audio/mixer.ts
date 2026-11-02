@@ -1,5 +1,5 @@
 import { FLOOR, Voice } from './synth';
-import { sliderGain, type Volumes } from './volumes';
+import { masterGain, sliderGain, type Volumes } from './volumes';
 
 /**
  * Mixer graph:
@@ -146,7 +146,7 @@ export class Mixer {
         p.setTargetAtTime(val, t, 0.04);
       }
     };
-    set(this.master.gain, sliderGain(v.master));
+    set(this.master.gain, masterGain(v));
     set(this.musicBus.gain, sliderGain(v.music) * MUSIC_TRIM);
     set(this.sfxBus.gain, sliderGain(v.sfx) * SFX_TRIM);
   }
