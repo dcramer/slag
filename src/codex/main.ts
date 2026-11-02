@@ -224,7 +224,7 @@ function render() {
           ctx.save();
           ctx.scale(k, k);
         }
-        drawProjectile(rc, { ...makeProjectile({ x, y, vx, vy, owner: 0, ammo }, rc.frame - Math.floor(u * 60), 0), n: 3 });
+        drawProjectile(rc, { ...makeProjectile({ x, y, vx, vy, owner: 0, ammo }, rc.frame - Math.floor(u * 60), 0), n: ammo === 'glider' ? 0 : 3 });
         rc.s.restore();
         rc.g.restore();
       }),

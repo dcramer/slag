@@ -560,6 +560,18 @@ describe('projectiles', () => {
     };
     expect(sunk(2)).toBeGreaterThan(sunk(1) + 8);
   });
+  it('a hangar launches gliders that fly on their own', () => {
+    const level = testLevel();
+    const d = generateProp(new Rng(4), 'hangar', 'h');
+    const { run } = race(level, [place(d, 8, 10)]);
+    for (let i = 0; i < 260 && run.projectiles.length === 0; i++) run.step([NO_INPUT]);
+    const g = run.projectiles[0];
+    expect(g?.ammo).toBe('glider');
+    const x0 = g.x;
+    steps(run, 30);
+    expect(g.x).toBeGreaterThan(x0 + 20);
+    expect(run.solids.some((s) => s.id === gliderSolidId(g) && s.oneWay)).toBe(true);
+  });
   it('gliders carry a rider and sink under them', () => {
     const level = testLevel();
     const { run, r } = race(level, []);
