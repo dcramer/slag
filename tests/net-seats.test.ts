@@ -5,7 +5,7 @@ import { roomSeed } from '../src/game/room';
 import { NetSession } from '../src/net/session';
 import { hashMatch } from '../src/net/snapshot';
 import { LoopbackHub } from '../src/net/transport';
-import { MAX_PLAYERS } from '../src/sim/constants';
+import { MAX_PLAYERS, POP_HOLD } from '../src/sim/constants';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
 
 /** Observers, seats and idle peers online (docs/NETCODE.md → Seats and observers). */
@@ -278,7 +278,8 @@ describe('idle peers', () => {
     const runnerB = () => a.match.run!.runners.find((x) => x.slot === slotB)!;
     r.run(90);
     expect(Math.abs(runnerB().body.vx)).toBeLessThan(1); // let go after SOFT_TICKS, and it has stopped
-    if (runnerB().alive) r.until(() => !runnerB().alive, IDLE_FRAMES + 60);
+    // An idle runner gives up through the self-destruct hold, so it pops POP_HOLD after it goes idle.
+    if (runnerB().alive) r.until(() => !runnerB().alive, IDLE_FRAMES + POP_HOLD + 60);
     r.frozen.delete('bbbb');
     r.run(30);
     expect(r.hashes().size).toBe(1);
