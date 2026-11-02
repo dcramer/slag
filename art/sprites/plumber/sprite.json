@@ -340,8 +340,8 @@
       "swatches": [],
       "slot": "paint",
       "grow": [
-        1.12,
-        1.0
+        1.28,
+        1.05
       ]
     },
     "nose": {
@@ -349,8 +349,8 @@
       "swatches": [],
       "slot": "paint",
       "grow": [
-        1.55,
-        1.4
+        1.8,
+        1.55
       ],
       "min": 0.3
     },
@@ -398,7 +398,8 @@
       "src": "run",
       "frames": 8,
       "loop": true,
-      "stride": 72
+      "stride": 72,
+      "girth": 1.15
     },
     "air": {
       "keys": [
@@ -425,7 +426,8 @@
       ],
       "frames": 4,
       "loop": true,
-      "fps": 6
+      "fps": 6,
+      "girth": 1.15
     },
     "cheer": {
       "src": "cheer",
@@ -433,7 +435,8 @@
       "to": 0.42,
       "frames": 10,
       "loop": true,
-      "fps": 8
+      "fps": 8,
+      "girth": 1.15
     },
     "death": {
       "src": "fall",
@@ -536,7 +539,7 @@
           0
         ]
       },
-      "yaw": 30,
+      "yaw": 12,
       "scale": {
         "upperarm_near": 1.35,
         "hand_near": 0.9
@@ -591,7 +594,7 @@
           0
         ]
       },
-      "yaw": 30,
+      "yaw": 12,
       "scale": {
         "upperarm_near": 1.35,
         "hand_near": 0.9
@@ -871,7 +874,7 @@
       }
     }
   },
-  "girth": 1.25,
+  "girth": 1.28,
   "face": {
     "r": 1.15,
     "iris": "#3c6fd0",
