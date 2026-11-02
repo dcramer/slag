@@ -6,6 +6,7 @@ import { BACKDROP, moduleArt, type PropDrawOpts } from './common';
 import './modules';
 import { PISTON_CARD_HEAD } from './modules/piston';
 import { cardAngles } from './modules/swinger';
+import { pieceSkin } from './skins';
 import { drawTrack } from './track';
 
 export type { Emit, PropDrawOpts } from './common';
@@ -21,9 +22,13 @@ function drawLayers(rc: RC, r: Resolved, o: PropDrawOpts, first: number, last: n
   const off: Vec = motionOffset(r, rc.frame);
   const style = r.pp.def.style;
   const pal = METALS[style.metal];
+  // A theme's own set pieces may be drawn its own way (skins/<theme>.ts), module by module.
+  const skin = r.pp.owner < 0 ? pieceSkin(r.pp.def.key) : undefined;
   for (let layer = first; layer <= last; layer++) {
     r.mods.forEach((m, mi) => {
-      for (const art of moduleArt(m.type)) if (art.layer === layer) art.draw(rc, m, { r, off, mi, style, pal, o });
+      const d = { r, off, mi, style, pal, o };
+      if (skin?.(rc, layer, m, d)) return;
+      for (const art of moduleArt(m.type)) if (art.layer === layer) art.draw(rc, m, d);
     });
   }
 }

@@ -131,6 +131,8 @@ const look = (base: HSL, cap: CapKind, capColor: HSL, platform?: PlatformKind, d
 
 const SKIN_LOOKS: Partial<Record<TerrainKind, SkinLook>> = {
   planks: look({ h: 27, s: 38, l: 38 }, 'beam', { h: 24, s: 36, l: 30 }, 'wood'),
+  // Barn red boards under a white-painted beam.
+  barnboard: look({ h: 4, s: 52, l: 38 }, 'beam', { h: 40, s: 18, l: 84 }, 'wood', { h: 2, s: 50, l: 28 }, { h: 6, s: 50, l: 48 }),
   // Plaster between dark timbers: the dark tone is the timber, not a shadow of the plaster.
   timber: look({ h: 40, s: 24, l: 76 }, 'beam', { h: 20, s: 32, l: 24 }, 'wood', { h: 20, s: 34, l: 20 }, { h: 44, s: 30, l: 88 }),
   brick: look({ h: 9, s: 46, l: 40 }, 'ledge', { h: 30, s: 8, l: 62 }, 'stone'),

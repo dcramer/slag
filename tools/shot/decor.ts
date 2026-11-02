@@ -1,6 +1,6 @@
 /**
- * `pnpm shot decor --theme T [--seed S]`: a contact sheet of a theme's decor, one shot per kind registered for
- * it (src/gen/decor), each grown thick over a plain level of the theme so every piece shows on its ground.
+ * `pnpm shot decor --theme T [--seed S]`: a catalogue of a theme's decor (src/gen/decor), one frame per kind:
+ * the same plain level, its look showing only that kind, densely, with the camera in close.
  */
 import { decorFor } from '../../src/gen/decor';
 import type { ThemeId } from '../../src/themes';
@@ -8,20 +8,23 @@ import { open, page, seed, sheet, snap, step, theme, type Scenarios } from './ct
 
 export const shots: Scenarios = {
   async decor() {
-    const t = (theme ?? 'harbor') as ThemeId;
-    await open(`seed=${seed}&ui=0&theme=${t}&concept=plain&weather=clear&size=classic`);
-    await page.evaluate(() => (window as any).slagDebug.match.join('kb1'));
+    const th = (theme ?? 'volcano') as ThemeId;
+    await open(`seed=${seed}&theme=${th}&ui=0&zoom=2`);
     const files: string[] = [];
-    for (const kind of decorFor(t)) {
-      // A new look seed re-places the decor (the painter keys its decor on it).
-      await page.evaluate((k) => {
-        const lv = (window as any).slagDebug.match.level;
-        lv.theme = { ...lv.theme, decor: [k], decorDensity: 0.6, seed: lv.theme.seed + 1 };
-        lv.version++;
-      }, kind);
+    for (const [i, kind] of decorFor(th).entries()) {
+      await page.evaluate(
+        ([k, n]) => {
+          const d = (window as any).slagDebug;
+          const lv = d.match.level;
+          // A new look seed is a new decor layout: only this kind, on most of the ground there's room on.
+          lv.theme = { ...lv.theme, seed: lv.theme.seed + n + 1, decor: [k], decorDensity: 0.7 };
+          lv.version++;
+        },
+        [kind, i] as const,
+      );
       await step(2);
-      files.push(await snap(`decor-${t}-${kind}`));
+      files.push(await snap(`decor-${th}-${kind}`));
     }
-    await sheet(`decor-${t}`, files, 4);
+    await sheet(`decor-${th}`, files);
   },
 };

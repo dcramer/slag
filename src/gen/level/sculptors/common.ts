@@ -27,7 +27,7 @@ export const TWO_PARTS = 0.25;
  * near TWO_PARTS (measured over 100 seeds, see `pnpm level --stats`).
  */
 export const TWO_PART_ASK: Partial<Record<ThemeId, number>> = {
-  farm: 0.01,
+  farm: 0.1,
   factory: 0.41,
   castle: 0.5,
   jungle: 0.33,
