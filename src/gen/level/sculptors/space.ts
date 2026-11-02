@@ -2,9 +2,25 @@ import type { Rng } from '../../../core/rng';
 import { finish, Grid, hintGap } from '../kit';
 import { jumpProfile } from '../probe';
 import type { Sculptor } from '../types';
-import { easyRise, hardGap, hopGap, knobs, rollChallenges } from './common';
+import { easyRise, hardGap, knobs, rollChallenges } from './common';
 
 type SpaceStyle = 'asteroids' | 'station';
+
+/** Narrowest dock: the spawn or goal pocket plus the lipped column at its void end. */
+const DOCK = 6;
+/** Narrowest bank of a hard crossing: enough to run at the bridge from (reach.ts runs from 4). */
+const BANK = 5;
+
+/**
+ * The easy voids between bodies, in columns: the long end of a walking hop
+ * at this level's gravity, so space under its own low gravity spreads out
+ * and a host's Normal or High packs it back in. Denser fields reach a little
+ * further down for the short end.
+ */
+export function spaceHop(density: number): { lo: number; hi: number } {
+  const hi = jumpProfile().walkGap;
+  return { lo: Math.max(2, Math.min(hi, Math.ceil(hi * (0.8 - 0.3 * density)))), hi: Math.max(2, hi) };
+}
 
 /**
  * Space: nothing underfoot but what floats. There is no ground and no pit
@@ -20,7 +36,9 @@ type SpaceStyle = 'asteroids' | 'station';
  * asteroid field), so what you see is what was sculpted. Gravity is low
  * (gen/level/profile.ts SPACE_GRAVITY) and every gap is sized from jumps
  * measured at it, so the voids are wide: one a jump can't clear takes a
- * third of a classic level. So a classic level asks for one part, and a wide
+ * third of a classic level, and the rest are the long end of a walking hop
+ * between small bodies (spaceHop, chain), so the field reads as open void.
+ * So a classic level asks for one part, and a wide
  * one asks for two more often than other themes do (TWO_PART_ASK.space), which
  * keeps the theme's share of two-part levels where the rest are. A void two
  * bridges wide doesn't work here: at this gravity a long fall onto one low
@@ -32,47 +50,19 @@ export const space: Sculptor = (ctx) => {
   const k = knobs(ctx);
   const { W, H } = k;
   const g = new Grid(W, H);
-  const j = jumpProfile();
   const asked = rollChallenges(attempt, k);
   const challenges = asked && W < 64 ? 1 : asked;
   g.wantsProps = challenges > 0;
   const base = H - rng.int(7, 10);
 
-  const widthOf = () => (style === 'station' ? rng.int(6, 11) : rng.int(5, 10));
-  const widths: number[] = [widthOf()];
-  const fill = 0.5 + 0.2 * k.density;
-  while (widths.reduce((a, b) => a + b, 0) + (widths.length + 1) * 5 + 12 < W * fill) widths.push(widthOf());
-
-  const nGaps = widths.length + 1;
-  const hardIdx = new Set<number>();
-  while (hardIdx.size < Math.min(challenges, nGaps)) hardIdx.add(rng.int(0, nGaps - 1));
-  const hard = Array.from({ length: nGaps }, (_, i) => hardIdx.has(i));
-  // Easy voids stay a walking hop: a run-up's worth would leave no room for anything else.
-  const gaps = hard.map((h) => (h ? hardGap(rng) : hopGap(rng, 2)));
-  const minHard = j.gap + 2;
-  const total = () => widths.reduce((a, b) => a + b, 0) + gaps.reduce((a, b) => a + b, 0) + 12;
-  while (total() > W) {
-    const easy = gaps.findIndex((gp, i) => !hard[i] && gp > 2);
-    const wide = gaps.findIndex((gp, i) => hard[i] && gp > minHard);
-    const fat = widths.findIndex((w) => w > 5);
-    if (easy >= 0) gaps[easy]--;
-    else if (wide >= 0) gaps[wide]--;
-    else if (fat >= 0) widths[fat]--;
-    else if (widths.length > 1) {
-      // Drop the last body and the gap before it, keeping a hard flag on the final gap.
-      const at = widths.length - 1;
-      if (hard[at]) hard[at + 1] = true;
-      widths.pop();
-      gaps.splice(at, 1);
-      hard.splice(at, 1);
-    } else break;
-  }
+  const hop = spaceHop(k.density);
+  const { widths, gaps, hard } = chain(rng, W, hop, challenges, style === 'station' ? [4, 8] : [3, 7]);
   const used = widths.reduce((a, b) => a + b, 0) + gaps.reduce((a, b) => a + b, 0);
-  const dockL = Math.max(6, Math.min(W - used - 6, Math.floor((W - used) * rng.range(0.4, 0.6))));
+  const dockL = Math.max(DOCK, Math.min(W - used - DOCK, Math.floor((W - used) * rng.range(0.4, 0.6))));
   const dockR = W - used - dockL;
   const sTop = Math.max(8, Math.min(H - 7, base + k.ramp(0)));
   const gTop = Math.max(8, Math.min(H - 7, base + k.ramp(W - 1) + rng.int(-2, 1)));
-  if (dockR < 6) return finish(g, { row: sTop - 1, depth: 2 }, { row: gTop - 1, depth: 2 }, `space:broken`);
+  if (dockR < DOCK) return finish(g, { row: sTop - 1, depth: 2 }, { row: gTop - 1, depth: 2 }, `space:broken`);
 
   dock(g, 0, dockL - 1, sTop);
   dock(g, W - dockR, W - 1, gTop);
@@ -104,10 +94,66 @@ export const space: Sculptor = (ctx) => {
     const before = next < 0 ? tops[tops.length - 1] : tops[next - 1];
     return Math.max(before?.top ?? sTop, next < 0 ? gTop : tops[next].top);
   };
-  upperLane(g, rng, row, dockL - 3, W - dockR + 2, style === 'station');
+  upperLane(g, rng, row, dockL - 3, W - dockR + 2, style === 'station', hop);
 
   return finish(g, { row: sTop - 1, depth: 2 }, { row: gTop - 1, depth: 2 }, `space:${style}`);
 };
+
+/** The bodies between the docks, left to right, and the voids before, between and after them. */
+export interface Chain {
+  widths: number[];
+  /** One more than widths: gaps[i] is the void before body i, the last one the void before the goal dock. */
+  gaps: number[];
+  /** Which voids are hard crossings (hardGap: no jump clears them). */
+  hard: boolean[];
+}
+
+/**
+ * Lay out a chain that spans `W` columns with its docks: small bodies and
+ * wide voids, as many bodies as fit with every easy void at least `hop.lo`,
+ * so lower gravity spreads them further apart. Spare columns open the easy
+ * voids up to a full hop before the docks get them.
+ */
+export function chain(rng: Rng, W: number, hop: { lo: number; hi: number }, challenges: number, body: [number, number]): Chain {
+  const widthOf = () => rng.int(body[0], body[1]);
+  const hardGaps = Array.from({ length: challenges }, () => hardGap(rng));
+  const widths: number[] = [widthOf()];
+  const plan = (n: number) => n + hardGaps.reduce((a, b) => a + b, 0) + Math.max(0, widths.length + 2 - challenges) * hop.lo + 2 * DOCK;
+  const fits = (w: number) => plan(widths.reduce((a, b) => a + b, 0) + w) <= W;
+  // The last body that fits is a small one rather than none, so spare room is void, not a wider dock.
+  for (let next = widthOf(); fits(next) || fits(body[0]); next = widthOf()) widths.push(fits(next) ? next : body[0]);
+
+  const nGaps = widths.length + 1;
+  const hardIdx = new Set<number>();
+  while (hardIdx.size < Math.min(challenges, nGaps)) hardIdx.add(rng.int(0, nGaps - 1));
+  const hard = Array.from({ length: nGaps }, (_, i) => hardIdx.has(i));
+  const bank = (i: number) => hard[i] || hard[i + 1];
+  // A hard crossing's banks are long enough to run at the bridge from.
+  widths.forEach((w, i) => (widths[i] = bank(i) ? Math.max(w, BANK) : w));
+  // Easy voids stay a walking hop: a run-up's worth would leave no room for anything else.
+  let nextHard = 0;
+  const gaps = hard.map((h) => (h ? hardGaps[nextHard++] : rng.int(hop.lo, hop.hi)));
+  const minHard = jumpProfile().gap + 2;
+  const total = () => widths.reduce((a, b) => a + b, 0) + gaps.reduce((a, b) => a + b, 0) + 2 * DOCK;
+  for (let i = 0; total() < W && gaps.some((gp, n) => !hard[n] && gp < hop.hi); i = (i + 1) % nGaps) if (!hard[i] && gaps[i] < hop.hi) gaps[i]++;
+  while (total() > W) {
+    const easy = gaps.findIndex((gp, i) => !hard[i] && gp > hop.lo);
+    const wide = gaps.findIndex((gp, i) => hard[i] && gp > minHard);
+    const fat = widths.findIndex((w, i) => w > (bank(i) ? BANK : body[0]));
+    if (easy >= 0) gaps[easy]--;
+    else if (wide >= 0) gaps[wide]--;
+    else if (fat >= 0) widths[fat]--;
+    else if (widths.length > 1) {
+      // Drop the last body and one of the voids beside it, keeping a hard one.
+      const at = widths.length - 1;
+      const drop = hard[at] && !hard[at + 1] ? at + 1 : at;
+      widths.pop();
+      gaps.splice(drop, 1);
+      hard.splice(drop, 1);
+    } else break;
+  }
+  return { widths, gaps, hard };
+}
 
 /** A dock: a slab three thick with a lip at the void end, so its face can't be climbed. */
 function dock(g: Grid, x0: number, x1: number, top: number): void {
@@ -121,7 +167,8 @@ function dock(g: Grid, x0: number, x1: number, top: number): void {
 function asteroid(g: Grid, rng: Rng, x: number, w: number, t: number, farBank: boolean): void {
   g.fill(x, t, x + w - 1, t);
   // Underneath, a rounded body that hangs below the top: never wider than the row above, so every side is a lip.
-  const depth = rng.int(2, Math.min(6, 2 + (w >> 1)));
+  // No deeper than half its width, so a pebble of a rock stays a wedge instead of a nail.
+  const depth = rng.int(2, Math.max(2, Math.min(6, (w + 1) >> 1)));
   const mid = x + (w - 1) / 2 + rng.range(-1, 1);
   let a = x + (farBank ? 2 : 1);
   let b = x + w - 2;
@@ -161,10 +208,10 @@ function module(g: Grid, rng: Rng, x: number, w: number, t: number): void {
 
 /**
  * A second lane a plain jump above the chain, from dock to dock: pebbles in a field, one-way gantries on a
- * station, a hop apart. It breaks off over every hard crossing (anything there would be a way across), so
+ * station, a hop apart (a little short of the voids below, since they sit at different heights). It breaks off over every hard crossing (anything there would be a way across), so
  * the route splits and rejoins instead of needing lanes laid over it later.
  */
-function upperLane(g: Grid, rng: Rng, row: (x: number) => number, from: number, to: number, station: boolean): void {
+function upperLane(g: Grid, rng: Rng, row: (x: number) => number, from: number, to: number, station: boolean, hop: { lo: number; hi: number }): void {
   const rise = easyRise();
   const off = (x: number) => g.crossings.some(([a, b]) => x >= a - 5 && x <= b + 5);
   for (let x = Math.max(1, from); x < Math.min(g.w - 2, to);) {
@@ -179,6 +226,6 @@ function upperLane(g: Grid, rng: Rng, row: (x: number) => number, from: number, 
         if (w >= 3) g.set(x + rng.int(1, w - 2), y + 1, 1);
       }
     }
-    x += w + rng.int(2, Math.min(5, hopGap(rng, 2) + 1));
+    x += w + rng.int(Math.max(2, hop.lo - 1), Math.max(2, hop.hi - 1));
   }
 }
