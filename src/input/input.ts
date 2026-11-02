@@ -33,6 +33,8 @@ export class InputManager {
   hitTest: ((x: number, y: number) => UiPress | true | null) | null = null;
   /** Whether a plain left click (not on a HUD button) counts as "confirm" right now. Lobby: no. */
   clickConfirms: () => boolean = () => true;
+  /** Whether right click and the wheel count as "alt" right now. Only for rotating: alt also self-destructs in a race. */
+  mouseAlts: () => boolean = () => true;
   /** Element whose box maps to the 768×432 logical view. */
   viewEl: HTMLElement | null = null;
 
@@ -97,14 +99,14 @@ export class InputManager {
         }
       }
       if (this.captured) return;
-      if (e.button === 2) this.rclick = true;
+      if (e.button === 2) this.rclick = this.mouseAlts();
       else if (e.button === 0 && this.clickConfirms()) this.click = true;
     });
     target.addEventListener('contextmenu', (e) => e.preventDefault());
     target.addEventListener(
       'wheel',
       (e) => {
-        if (!this.captured && Math.abs(e.deltaY) > 0) this.rclick = true;
+        if (!this.captured && Math.abs(e.deltaY) > 0) this.rclick = this.mouseAlts();
       },
       { passive: true },
     );

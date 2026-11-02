@@ -90,7 +90,7 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 ## Controls and UI
 - A picked part's card leaves the crate entirely. The other cards stay where they are.
 - On PC, keyboard and mouse both work. One keyboard player can use WASD *and* the arrows. A "Split keyboard" setting turns the keyboard into two local players. Everything can be remapped.
-- The mouse drives the menu cursor: click to pick or place, right-click or the wheel to rotate.
+- The mouse drives the menu cursor: click to pick or place, right-click or the wheel to rotate. They do nothing else, so a stray click can't self-destruct.
 - **Touch (mobile)**: left half is a floating stick (push past ~70% to run), right half is jump (hold for height), self-destruct needs a short hold, and a Use button appears above jump while you hold an item. Pick by tapping a card; place by dragging a ghost that floats above your finger, with ROTATE and PLACE buttons. Landscape first.
 - In the lobby, a stray click does nothing; only buttons act.
 - UI copy is proper title case, with no twee lowercase taglines.

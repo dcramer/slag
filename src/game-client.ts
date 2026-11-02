@@ -62,6 +62,7 @@ export function bootGame(container: HTMLElement, room: string): void {
   input.viewEl = glCanvas;
   // In the lobby only real buttons act; a stray click must not join/ready/start.
   input.clickConfirms = () => match.phase !== 'lobby';
+  input.mouseAlts = () => match.phase === 'place';
   const renderer = new Renderer(glCanvas, hudCanvas);
   renderer.hud.room = room;
 
