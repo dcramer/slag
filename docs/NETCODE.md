@@ -138,7 +138,7 @@ Both windows run from when the offer lands, not from when we started. A handshak
 
 If two peers end up hosting anyway (say one lost the API at the wrong moment and the other wrote it off, or two guests lost a live host at once, which looks exactly like it dying), the store settles it, deterministically and within seconds: the lowest order the store still holds wins. A host that was written off is gone from the store, so `beat` tells it so and it rejoins later in the order; `beat` also tells a host the room's lowest order. Either way the higher host hands its guests to the lower one at once. A host normally beats every 20 s, which is too slow for this, so for 12 s after taking over, after losing a guest without a goodbye, or after its API comes back, it beats every 2 s (about 24 commands each time).
 
-An empty room needs nothing: the next arrival is host. If this browser saved the room's state in the last 30 minutes it resumes it, unless a generator change since then means this build can't rebuild that level, in which case the room starts fresh.
+An empty room needs nothing: the next arrival is host. If this browser saved the room's state in the last 30 minutes, on an earlier visit, it resumes it (never a save from this visit: a page saves while its join is in flight, and resuming that would rewind its own lobby), unless a generator change since then means this build can't rebuild that level, in which case the room starts fresh.
 
 If signaling fails while links are up, nothing happens: only a host that has lost its guests too reports `reconnecting`, and it freezes rather than fork the room.
 
