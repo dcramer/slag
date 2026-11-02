@@ -8,9 +8,9 @@
  * "attached to a prop" state can be added next to both without touching them.
  */
 
-export type ItemKind = 'sword' | 'puck' | 'boomerang' | 'shield' | 'rocket' | 'smoke';
+export type ItemKind = 'sword' | 'puck' | 'boomerang' | 'shield' | 'rocket' | 'smoke' | 'bat' | 'tremor' | 'tax' | 'block';
 
-export const ITEM_KINDS: readonly ItemKind[] = ['sword', 'puck', 'boomerang', 'shield', 'rocket', 'smoke'];
+export const ITEM_KINDS: readonly ItemKind[] = ['sword', 'puck', 'boomerang', 'shield', 'rocket', 'smoke', 'bat', 'tremor', 'tax', 'block'];
 
 /** What a runner holds. */
 export interface Held {
@@ -28,6 +28,13 @@ export interface RunnerItems {
   swing: number;
   /** Bitmask of runner indices the current swing already hit. */
   swingHits: number;
+  /** What's swinging (the noodle or the bat), and its knock as a multiple of the noodle's. */
+  swingKind: ItemKind;
+  swingPower: number;
+  /** Frames into a bat wind-up (0: not winding). The swinger is rooted until it lets go. */
+  windup: number;
+  /** Frames until a raised Tremor Brick comes down (0: none raised). */
+  slam: number;
   /** Seeing stars: controls ignored, as frozen, but with no ice block. */
   daze: number;
   /** Rocket burn left; the daze lands when it runs out. */
@@ -66,10 +73,39 @@ export interface SmokeCloud {
   until: number;
 }
 
+/** A Front-Runner Tax shell: flies over everything to the leader, hovers over them, then dives. */
+export interface TaxShell {
+  id: number;
+  /** Slot credited for its bonks. */
+  owner: number;
+  x: number;
+  y: number;
+  /** Runner index it's after, or -1. */
+  target: number;
+  phase: 'fly' | 'hover' | 'dive';
+  /** Frames into the current phase. */
+  t: number;
+  /** Where a dive lands, fixed when it starts. */
+  dx: number;
+  dy: number;
+  born: number;
+}
+
+/** A Pocket Block: one solid cell that crumbles at `until`. */
+export interface PocketBlock {
+  tx: number;
+  ty: number;
+  born: number;
+  until: number;
+  owner: number;
+}
+
 /** Item state for one race (lives on RunWorld). */
 export interface ItemWorld {
   drops: ItemDrop[];
   clouds: SmokeCloud[];
+  shells: TaxShell[];
+  blocks: PocketBlock[];
   nextId: number;
 }
 
@@ -85,11 +121,26 @@ export interface ItemSpawn {
 }
 
 export function newRunnerItems(): RunnerItems {
-  return { held: null, cooldown: 0, swing: 0, swingHits: 0, daze: 0, thrust: 0, guard: 0, bonkedBy: -1, bonkCredit: 0, noPickup: 0 };
+  return {
+    held: null,
+    cooldown: 0,
+    swing: 0,
+    swingHits: 0,
+    swingKind: 'sword',
+    swingPower: 1,
+    windup: 0,
+    slam: 0,
+    daze: 0,
+    thrust: 0,
+    guard: 0,
+    bonkedBy: -1,
+    bonkCredit: 0,
+    noPickup: 0,
+  };
 }
 
 export function newItemWorld(): ItemWorld {
-  return { drops: [], clouds: [], nextId: 1 };
+  return { drops: [], clouds: [], shells: [], blocks: [], nextId: 1 };
 }
 
 /** Loose items vanish this long after they appear, blinking for the last DROP_BLINK frames. */

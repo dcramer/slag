@@ -30,7 +30,7 @@ export const PART_INFO: Record<Module['type'], { title: string; blurb: string }>
   magnet: { title: 'Gravity well', blurb: 'Needy or aloof, never in between.' },
   web: { title: 'Web', blurb: 'Spider not included. Spider is somewhere.' },
   phase: { title: 'Blink blocks', blurb: 'Now you see it. Now you’re falling.' },
-  dropper: { title: 'Dropstone', blurb: 'Has been waiting all day for you specifically.' },
+  dropper: { title: 'Dropstone', blurb: 'A ton of bricks with a lane to itself.' },
   snapper: { title: 'Snap trap', blurb: 'Surprise!' },
   rope: { title: 'Sausage Vine', blurb: 'Fresh from the hook.' },
   keg: { title: 'Kegapult', blurb: 'XXX.' },

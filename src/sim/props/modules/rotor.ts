@@ -64,6 +64,15 @@ export const rotor = defineModule<'rotor'>({
     angle0: m.angle0 + x.da,
   }),
   anchors: (m) => [cellOf(m.hub)],
+  // Each platform stays level as it goes round, so what's stuck to one just follows its center.
+  carrier: {
+    at: (m, f, phase, part) => {
+      const p = rotorArms(m, f, phase)[part];
+      return p ? [p.x, p.y] : null;
+    },
+    drives: true,
+    period: (m) => m.period,
+  },
   build(m, ctx, out) {
     const now = rotorArms(m, ctx.frame, ctx.r.phase, ctx.off);
     const before = rotorArms(m, ctx.frame - 1, ctx.r.phase, ctx.prev);

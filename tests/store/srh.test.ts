@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { handleOp } from '../../app/api/net/_server/handlers';
+import { evalCmd, JOIN, REMOVE } from '../../app/api/net/_server/scripts';
 import { type Cmd, MemoryStore, storeFromEnv, upstashStore } from '../../app/api/net/_server/store';
 import { DEFAULT_ICE, MAX_MAILBOX, MAX_PEERS, MAILBOX_TTL_S, PEER_TTL_S, ROOM_TTL_S } from '../../src/net/signal-protocol';
 
@@ -27,11 +28,16 @@ describe('dev store and production store agree', () => {
     ['EXISTS', `${k}:s`],
     ['EXISTS', `${k}:missing`],
     ['MGET', `${k}:s`, `${k}:missing`],
+    ['SET', `${k}:t`, 1730000000123, 'EX', 60], // a session stamp as the liveness marker
+    ['GET', `${k}:t`],
+    ['GET', `${k}:missing`],
+    ['MGET', `${k}:t`],
     ['INCR', `${k}:n`],
     ['INCR', `${k}:n`],
     ['ZADD', `${k}:z`, 2, 'b'],
     ['ZADD', `${k}:z`, 1, 'a'],
     ['ZADD', `${k}:z`, 3, 'a'],
+    ['ZADD', `${k}:z`, 7, 'c', 8, '#'],
     ['ZRANGE', `${k}:z`, 0, -1, 'WITHSCORES'],
     ['ZRANGE', `${k}:z`, 0, 0],
     ['ZRANGE', `${k}:missing`, 0, -1, 'WITHSCORES'],
@@ -48,6 +54,7 @@ describe('dev store and production store agree', () => {
     ['LPOP', `${k}:l`, 16],
     ['DEL', `${k}:s`],
     ['DEL', `${k}:missing`],
+    ['DEL', `${k}:t`, `${k}:l`, `${k}:missing`],
   ];
 
   it('replies identically, command by command', async () => {
@@ -55,6 +62,57 @@ describe('dev store and production store agree', () => {
     const memory = await new MemoryStore().run(script('x'));
     const named = script('x').map((c) => c[0]);
     expect(real.map((r, i) => [named[i], r])).toEqual(memory.map((r, i) => [named[i], r]));
+  });
+
+  /** The presence scripts as real Lua and as MemoryStore's mirrors, through every branch, then the state they left. */
+  const scripted = (k: string): [string, Cmd][] => {
+    const m = `${k}:m`;
+    const p = `${k}:p:`;
+    const join = (peer: string, stamp: number | '', maxOthers = 12) => evalCmd(JOIN, [m], [peer, stamp, maxOthers, 60, 300, p]);
+    const remove = (peer: string, mode: 'stamp' | 'order', v: number) => evalCmd(REMOVE, [m, p + peer, `${k}:b:${peer}`], [peer, mode, v]);
+    return [
+      ['join, empty room', join('aaaa', 200)],
+      ['join, a client without a stamp', join('bbbb', '')],
+      ['join, an older session of aaaa', join('aaaa', 100)],
+      ['join, a newer session of aaaa', join('aaaa', 300)],
+      ['join cccc', join('cccc', 50)],
+      ['cccc lapses', ['DEL', p + 'cccc']],
+      ['join, pruning cccc', join('dddd', 60)],
+      ['join, full', join('eeee', 70, 2)],
+      ['remove by an older stamp', remove('aaaa', 'stamp', 250)],
+      ['remove by its stamp', remove('aaaa', 'stamp', 300)],
+      ['remove by the wrong order', remove('bbbb', 'order', 99)],
+      ['remove by its order', remove('bbbb', 'order', 2)],
+      ['remove someone absent', remove('zzzz', 'stamp', 1)],
+      ['what is left', ['ZRANGE', m, 0, -1, 'WITHSCORES']],
+      ['and alive', ['MGET', p + 'aaaa', p + 'bbbb', p + 'dddd']],
+    ];
+  };
+
+  it('runs the presence scripts identically as Lua and as mirrors', async () => {
+    const real = await store.run(scripted(`slag:parity:${room()}`).map(([, c]) => c));
+    const memory = await new MemoryStore().run(scripted('x').map(([, c]) => c));
+    const named = scripted('x').map(([n]) => n);
+    expect(real.map((r, i) => [named[i], r])).toEqual(memory.map((r, i) => [named[i], r]));
+  });
+});
+
+describe('two sessions of one peer', () => {
+  it('leaves the newest in the room, however their joins and leaves interleave', async () => {
+    for (let round = 0; round < 5; round++) {
+      const r = room();
+      await handleOp('join', { room: r, peer: 'bbbb', since: 1 }, ctx);
+      // A closed session (100) races a live one (200): both joins, and the closed one's leave, all at once.
+      const ops = [
+        () => handleOp('join', { room: r, peer: 'aaaa', since: 100 }, ctx),
+        () => handleOp('join', { room: r, peer: 'aaaa', since: 200 }, ctx),
+        () => handleOp('leave', { room: r, peer: 'aaaa', order: 0, since: 100 }, ctx),
+      ];
+      await Promise.all((round % 2 ? [2, 1, 0] : [0, 1, 2]).map((i) => ops[i]()));
+      const { members } = (await handleOp('members', { room: r, peer: 'bbbb' }, ctx)) as { members: { id: string }[] };
+      expect(members.map((x) => x.id)).toEqual(['bbbb', 'aaaa']);
+      expect(await store.run([['GET', `slag:${r}:p:aaaa`]])).toEqual(['200']);
+    }
   });
 });
 
@@ -111,11 +169,10 @@ describe('expiry', () => {
     await handleOp('signal', { room: r, peer: 'aaaa', to: 'bbbb', signal: { k: 'answer', c: 'a', sdp: 'x' } }, ctx);
     await handleOp('beat', { room: r, peer: 'aaaa', host: true }, ctx);
     const all = await keys(r);
-    expect(all.slice().sort()).toEqual([`slag:${r}:b:bbbb`, `slag:${r}:m`, `slag:${r}:n`, `slag:${r}:p:aaaa`, `slag:${r}:p:bbbb`].sort());
+    expect(all.slice().sort()).toEqual([`slag:${r}:b:bbbb`, `slag:${r}:m`, `slag:${r}:p:aaaa`, `slag:${r}:p:bbbb`].sort());
     const ttls = await store.run(all.map((k) => ['TTL', k]));
     const ttl = (k: string) => ttls[all.indexOf(k)] as number;
     expect(ttl(`slag:${r}:m`)).toBeGreaterThan(ROOM_TTL_S - 10);
-    expect(ttl(`slag:${r}:n`)).toBeGreaterThan(ROOM_TTL_S - 10);
     expect(ttl(`slag:${r}:p:aaaa`)).toBeGreaterThan(PEER_TTL_S - 10);
     expect(ttl(`slag:${r}:b:bbbb`)).toBeGreaterThan(MAILBOX_TTL_S - 10);
     expect(ttls.every((t) => (t as number) > 0)).toBe(true);
@@ -123,7 +180,7 @@ describe('expiry', () => {
 });
 
 describe('join order', () => {
-  it('stays unique and total under a stampede, with INCR the only coordination', async () => {
+  it('stays unique and total under a stampede, with the join script the only coordination', async () => {
     const r = room();
     const peers = Array.from({ length: MAX_PEERS }, (_, i) => `peer${i}`);
     const replies = (await Promise.all(peers.map((peer) => handleOp('join', { room: r, peer }, ctx)))) as { order: number }[];
@@ -167,7 +224,21 @@ describe('every op, end to end', () => {
     expect(list.members.map((m) => m.id)).toEqual(['bbbb']);
 
     await handleOp('leave', { room: r, peer: 'bbbb', order: b.order }, ctx);
-    expect((await keys(r)).filter((k) => k.includes(':p:') || k.endsWith(':m'))).toEqual([]);
+    expect((await keys(r)).filter((k) => k.includes(':p:'))).toEqual([]);
+    // The set keeps only the last order handed out, until its TTL, so whoever comes next joins above it.
+    expect(await store.run([['ZRANGE', `slag:${r}:m`, 0, -1]])).toEqual([['#']]);
+  });
+
+  it('keeps the newest session of a peer, and takes it out with its own stamp', async () => {
+    const r = room();
+    const ids = async () => ((await handleOp('members', { room: r, peer: 'aaaa' }, ctx)) as { members: { id: string; order: number }[] }).members;
+    const fresh = (await handleOp('join', { room: r, peer: 'aaaa', since: 1730000000200 }, ctx)) as { order: number };
+    const late = (await handleOp('join', { room: r, peer: 'aaaa', since: 1730000000100 }, ctx)) as { order: number };
+    expect(late.order).toBe(fresh.order);
+    await handleOp('leave', { room: r, peer: 'aaaa', order: late.order, since: 1730000000100 }, ctx);
+    expect(await ids()).toEqual([{ id: 'aaaa', order: fresh.order }]);
+    await handleOp('leave', { room: r, peer: 'aaaa', order: fresh.order, since: 1730000000200 }, ctx);
+    expect(await ids()).toEqual([]);
   });
 
   it('caps a room and a mailbox', async () => {

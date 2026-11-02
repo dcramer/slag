@@ -52,4 +52,4 @@ export type GameEvent =
   /** Held items (src/sim/items). `kind` is the item, or the ammo for a swatted shot; `slot` is the runner involved, or -1. */
   | { type: 'item'; what: ItemEventKind; kind: string; slot: number; x: number; y: number };
 
-export type ItemEventKind = 'pop' | 'pickup' | 'use' | 'drop' | 'block' | 'catch' | 'smoke' | 'hit' | 'fizzle';
+export type ItemEventKind = 'pop' | 'pickup' | 'use' | 'drop' | 'block' | 'catch' | 'smoke' | 'hit' | 'fizzle' | 'warn';

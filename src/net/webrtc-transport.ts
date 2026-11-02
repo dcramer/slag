@@ -1,4 +1,4 @@
-import { SignalError, type SignalApi } from './signal-client';
+import { SignalError, type SignalApi, sessionStamp } from './signal-client';
 import { BEAT_MS, DEFAULT_ICE, type IceServer, isSignal, type Mail, MAX_PEERS, type MemberInfo, type Signal } from './signal-protocol';
 import { type LinkStatus, type Member, sortMembers, type Transport, type TransportHandlers } from './transport';
 
@@ -175,6 +175,8 @@ export class WebRtcTransport implements Transport {
 
   private closed = false;
   private asleep = false;
+  /** This session's stamp in the store, so a late write from another session of this peer can't pass for ours. */
+  private readonly since = sessionStamp();
   private order = -1;
   private ice: IceServer[] = DEFAULT_ICE;
   private role: 'none' | 'host' | 'guest' = 'none';
@@ -234,8 +236,8 @@ export class WebRtcTransport implements Transport {
   private async enter() {
     for (let tries = 0; !this.closed; tries++) {
       try {
-        const r = await this.signal.join();
-        if (this.closed) return;
+        const r = await this.signal.join(this.since);
+        if (this.closed) return this.signal.leave(r.order, this.since); // closed while the join was on the way: take the seat back out
         this.order = r.order;
         this.ice = r.ice;
         this.startTimers();
@@ -266,7 +268,7 @@ export class WebRtcTransport implements Transport {
   private giveUp(why: string) {
     this.stopTimers();
     for (const id of [...this.links.keys(), ...this.dials.keys()]) this.dropPeer(id);
-    if (this.order >= 0) this.signal.leave(this.order);
+    if (this.order >= 0) this.signal.leave(this.order, this.since);
     this.order = -1;
     this.role = 'none';
     this.setStatus('unavailable', why);
@@ -308,7 +310,7 @@ export class WebRtcTransport implements Transport {
     this.closed = true;
     this.stopTimers();
     for (const l of this.links.values()) this.frame(l, 'x');
-    if (this.order >= 0) this.signal.leave(this.order);
+    if (this.order >= 0) this.signal.leave(this.order, this.since);
     for (const l of this.links.values()) l.pc.close();
     for (const d of this.dials.values()) {
       clearTimeout(d.timer);
@@ -827,7 +829,7 @@ export class WebRtcTransport implements Transport {
   private maybeSleep(t: number) {
     if (this.role !== 'host' || this.links.size > 0 || !this.soloSince || !this.hidden() || t - this.soloSince < SLEEP_AFTER_MS) return;
     this.stopTimers();
-    this.signal.leave(this.order);
+    this.signal.leave(this.order, this.since);
     this.order = -1;
     this.asleep = true;
     this.role = 'none';
@@ -854,8 +856,8 @@ export class WebRtcTransport implements Transport {
 
   /** The store forgot us (expired, or written off while we were away). We come back later in the order. */
   private async rejoin() {
-    const r = await this.signal.join();
-    if (this.closed) return;
+    const r = await this.signal.join(this.since);
+    if (this.closed) return this.signal.leave(r.order, this.since);
     this.order = r.order;
     this.ice = r.ice;
     const self = this.roster.get(this.self);

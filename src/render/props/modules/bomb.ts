@@ -3,7 +3,7 @@ import type { Cell } from '../../../core/geom';
 import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import type { Level } from '../../../sim/level';
-import { blastHits, blastSpec, type BombLook, footprintCells, type ModuleOf, type PlacedProp } from '../../../sim/props';
+import { blastHits, blastSpec, type BombLook, cellsAt, type ModuleOf, type PlacedProp } from '../../../sim/props';
 import { blob, line, stroke } from '../../ink';
 import { ball, boxPts, dot, glint, ovalPts, part, path, poly, sprite, stamp, tick } from '../../ink-props';
 import { glowDot, light, METALS, type RC } from '../../kit';
@@ -38,18 +38,11 @@ function fuse(rc: RC, x: number, y: number) {
 
 /**
  * The bomb's body, baked: an iron ball in two tones with its hard shadow and one glint, a band of
- * rivets at the neck, and the brass cap the fuse goes into. `face` adds the walking bomb's feet and
- * screwed-shut eyes.
+ * rivets at the neck, and the brass cap the fuse goes into. An object, never a character: no face, no
+ * feet (docs/ART.md, Objects, not characters).
  */
-function bombBody(base: HSL, face: boolean) {
-  return sprite(`bomb|body|${base.h},${base.s},${base.l}|${face}`, -10, -9, 20, 20.5, (g) => {
-    if (face) {
-      // Two stubby shoes, toes out.
-      for (const sg of [-1, 1]) {
-        const shoe = poly(sg * 1.6, 6.6, sg * 5.4, 6.2, sg * 7.6, 7.8, sg * 7.2, 9.6, sg * 1.4, 9.6);
-        part(g, shoe, { h: 36, s: 78, l: 52 }, 20 + sg, { depth: 0.5, shade: -24, thin: 0.4, thick: 1 });
-      }
-    }
+function bombBody(base: HSL) {
+  return sprite(`bomb|body|${base.h},${base.s},${base.l}`, -10, -9, 20, 20.5, (g) => {
     ball(g, 0, 1, 6.6, base, 4, 'rgba(255,255,255,0.9)');
     // A second, smaller glint under the first: wet black iron.
     g.fillStyle = 'rgba(255,255,255,0.55)';
@@ -60,25 +53,37 @@ function bombBody(base: HSL, face: boolean) {
     part(g, cap, { h: 42, s: 58, l: 50 }, 5, { depth: 0.6, shade: -22, thin: 0.4, thick: 1 });
     dot(g, 2, -5.6, 0.4, 6, '#fff3c0');
     dot(g, 4.3, -5.6, 0.4, 7, '#fff3c0');
-    if (face) {
-      // Eyes screwed shut: it knows.
-      g.fillStyle = '#f2ede4';
-      for (const sg of [-1, 1]) {
-        line(g, sg * 3.6, 0.7, sg * 1.3, 1.6, { w: 0.85, seed: 3 + sg, taper: [0.1, 0.1], press: 0 });
-        line(g, sg * 1.3, 1.6, sg * 3.6, 2.5, { w: 0.85, seed: 5 + sg, taper: [0.1, 0.1], press: 0 });
-      }
-      // A gritted little mouth and a bead of sweat.
-      g.fillStyle = '#f2ede4';
-      line(g, -1.5, 4.6, 1.5, 4.4, { w: 0.9, seed: 8, taper: [0.2, 0.2], press: 0 });
-      g.fillStyle = INK;
-      tick(g, 0, 4.1, 0, 5, 0.3, 9, INK);
-      part(g, poly(5.6, -2.2, 6.6, 0.4, 5.6, 1.2, 4.7, 0.4), { h: 195, s: 70, l: 82 }, 10, { depth: 0.2, thin: 0.25, thick: 0.5 });
-    }
   });
 }
 
-function drawBall(rc: RC, x: number, y: number, base: HSL = { h: 230, s: 18, l: 20 }, face = false) {
-  stamp(rc.s, bombBody(base, face), x, y);
+/**
+ * The walking bomb's wind-up key, in its side: a brass shaft into a riveted boss, and a bow of two
+ * lobes that turns while the fuse burns (seen edge-on half the time, so it reads as turning).
+ */
+function windKey(rc: RC, x: number, y: number) {
+  const s = rc.s;
+  const brass = METALS.brass.base;
+  const turn = Math.cos(rc.t * 4);
+  const bx = x - 9.8;
+  const by = y + 0.6;
+  s.fillStyle = INK;
+  line(s, x - 6.2, by, bx + 0.6, by, { w: 2.2, seed: 31, taper: [0, 0], press: 0 });
+  s.fillStyle = css(brass, 6);
+  line(s, x - 6.2, by - 0.2, bx + 0.6, by - 0.2, { w: 1, seed: 31, taper: [0, 0], press: 0 });
+  const k = Math.max(0.4, Math.abs(turn));
+  for (const sg of [-1, 1]) {
+    s.save();
+    s.translate(bx, by + sg * 2.7 * k);
+    s.scale(1, k);
+    part(s, ovalPts(0, 0, 2, 2.7, 32 + sg, 0.03, 12), turn > 0 ? brass : { ...brass, l: brass.l - 10 }, 33 + sg, { depth: 0.4, thin: 0.35, thick: 0.8 });
+    s.restore();
+  }
+  dot(s, bx, by, 0.9, 34, css(METALS.brass.light));
+}
+
+function drawBall(rc: RC, x: number, y: number, base: HSL = { h: 230, s: 18, l: 20 }, key = false) {
+  if (key) windKey(rc, x, y);
+  stamp(rc.s, bombBody(base), x, y);
   fuse(rc, x, y);
 }
 
@@ -235,7 +240,7 @@ function squareFlame(g: CanvasRenderingContext2D, x: number, y: number, t: numbe
 export function drawBlastPreview(rc: RC, level: Level, placed: readonly PlacedProp[], m: Bomb, tx: number, ty: number, rot: number) {
   const g = rc.g;
   const spec = blastSpec(m);
-  const hits = blastHits(level, placed, spec, tx, ty, rot);
+  const hits = blastHits(level, placed, spec, tx, ty, rot, rc.frame);
   const pulse = 0.75 + Math.sin(rc.t * 10) * 0.25;
   const zone: HSL = spec.target === 'props' ? { h: 200, s: 100, l: 60 } : { h: 25, s: 100, l: 60 };
   if (m.shape === 'cross') for (const [x, y] of hits.cells) squareFlame(g, x * TILE, y * TILE, rc.t, pulse);
@@ -265,7 +270,7 @@ export function drawBlastPreview(rc: RC, level: Level, placed: readonly PlacedPr
   g.stroke();
   const red = css({ h: 0, s: 100, l: 60 }, 0, 0.85 * pulse);
   for (const p of [...hits.props, ...hits.setPieces]) {
-    const cells = footprintCells(p) as Cell[];
+    const cells = cellsAt(p, rc.frame) as Cell[];
     if (spec.target === 'props') {
       // Patch notes: struck through.
       let x0 = Infinity;

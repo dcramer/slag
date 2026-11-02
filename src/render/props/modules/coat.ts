@@ -3,10 +3,10 @@ import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { COAT_PX, dirOf, type ModuleOf } from '../../../sim/props';
 import { blob, line, type P, sn, stroke } from '../../ink';
-import { spikeSprite } from '../../ink-build';
 import { boxPts, glint, pen, sprite, stamp, tick, tone } from '../../ink-props';
 import type { RC } from '../../kit';
 import { defineArt } from '../common';
+import { drawSpikeCells } from '../spike-looks';
 
 type Coat = ModuleOf<'coat'>;
 
@@ -79,16 +79,9 @@ function enter(s: CanvasRenderingContext2D, r: Run, card: boolean) {
   if (card) s.scale(1, CARD_THICK);
 }
 
-/** Spikes protruding from each host face (local frame: face at x=8, tips toward +x). */
+/** Spikes protruding from each host face: a gunmetal rail, or what the look says they're made of. */
 function drawSpikeStrip(rc: RC, m: Coat) {
-  const s = rc.s;
-  for (const [cx, cy] of m.cells) {
-    s.save();
-    s.translate((cx + 0.5) * TILE, (cy + 0.5) * TILE);
-    s.rotate(m.angle);
-    stamp(s, spikeSprite(m.angle, cx * 31 + cy * 17, STRIP_RAIL));
-    s.restore();
-  }
+  drawSpikeCells(rc.s, m.cells, m.angle, m.look, STRIP_RAIL);
 }
 
 /** One run of ice: the sheet, its shine, the resurfacer's two tread lines and the turn it made at the end. */
@@ -275,5 +268,14 @@ function drawSlime(rc: RC, m: Coat, card: boolean) {
 defineArt<'coat'>({
   type: 'coat',
   layer: 2,
-  draw: (rc, m, d) => (m.kind === 'spikes' ? drawSpikeStrip(rc, m) : m.kind === 'ice' ? drawIce(rc, m, !!d.o.card) : drawSlime(rc, m, !!d.o.card)),
+  draw(rc, m, d) {
+    // A coat riding a mover is drawn where the sim has carried it: the same offset, so it stays stuck on.
+    const s = rc.s;
+    s.save();
+    s.translate(d.off[0], d.off[1]);
+    if (m.kind === 'spikes') drawSpikeStrip(rc, m);
+    else if (m.kind === 'ice') drawIce(rc, m, !!d.o.card);
+    else drawSlime(rc, m, !!d.o.card);
+    s.restore();
+  },
 });
