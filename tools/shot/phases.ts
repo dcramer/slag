@@ -126,26 +126,31 @@ export const shots: Scenarios = {
     }
     const pop = Number(opt('pop', '0'));
     if (pop) {
-      // `--pop N`: after `--frames`, the first runner presses self-destruct and holds it N frames: the charge ring mid-fill.
+      // `--pop N`: after `--frames`, the first runner (`--popall`: every runner) presses self-destruct and holds it N frames.
+      const all = argv.includes('--popall');
       await step(frames);
-      await page.evaluate((n) => {
-        const d = (window as any).slagDebug;
-        const idle = {
-          left: false,
-          right: false,
-          up: false,
-          down: false,
-          jump: false,
-          jumpPressed: false,
-          confirmPressed: false,
-          altPressed: false,
-          downPressed: false,
-        };
-        const dev = d.match.players[0].device;
-        d.step(1, { [dev]: { ...idle, alt: true, altPressed: true } });
-        d.step(n - 1, { [dev]: { ...idle, alt: true } });
-      }, pop);
-      await snap(`race-${seed}-pop${pop}`);
+      await page.evaluate(
+        ([n, every]) => {
+          const d = (window as any).slagDebug;
+          const idle = {
+            left: false,
+            right: false,
+            up: false,
+            down: false,
+            jump: false,
+            jumpPressed: false,
+            confirmPressed: false,
+            altPressed: false,
+            downPressed: false,
+          };
+          const devs: string[] = d.match.players.slice(0, every ? undefined : 1).map((p: any) => p.device);
+          // No named helpers in here: the bundler's __name wrapper doesn't exist in the page.
+          d.step(1, Object.fromEntries(devs.map((dev) => [dev, { ...idle, alt: true, altPressed: true }])));
+          d.step(n - 1, Object.fromEntries(devs.map((dev) => [dev, { ...idle, alt: true }])));
+        },
+        [pop, all] as const,
+      );
+      await snap(`race-${seed}-pop${pop}${all ? '-all' : ''}`);
       return;
     }
     for (const f of [frames, 40, 40]) {
