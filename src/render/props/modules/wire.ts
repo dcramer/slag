@@ -5,7 +5,15 @@ import { blob, inkFor, line, type P, stroke } from '../../ink';
 import { boxPts, ovalPts, part, sprite, stamp, tick } from '../../ink-props';
 import { glowDot, light, lightning, type RC } from '../../kit';
 import { type DrawCtx, defineArt } from '../common';
-import { groundBelowPx } from './setpiece';
+import { type Level, T_EMPTY, tileAt } from '../../../sim/level';
+
+/** Top (px) of whatever a pole stands on under (x, y): a roof, or a walkway of grating. */
+function floorBelow(lv: Level | null, x: number, y: number): number {
+  if (!lv) return y + TILE * 3;
+  const tx = Math.floor(x / TILE);
+  for (let ty = Math.max(0, Math.floor(y / TILE)); ty < lv.h; ty++) if (tileAt(lv, tx, ty) !== T_EMPTY) return ty * TILE;
+  return lv.h * TILE + 8;
+}
 
 /**
  * A live wire (sim/props/modules/wire.ts): a power line strung between two wooden poles, sagging on the
@@ -68,7 +76,7 @@ function draw(rc: RC, m: Wire, d: DrawCtx) {
   ];
   // The poles, standing on whatever is under each end.
   for (const [i, [x, y]] of ends.entries()) {
-    const gy = groundBelowPx(lv, x, y + 2, TILE * 3);
+    const gy = floorBelow(lv, x, y + 2);
     stamp(s, pole(Math.max(4, gy - y + 0.5), i === 1), x, y);
   }
   // The cable.
