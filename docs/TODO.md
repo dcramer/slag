@@ -114,6 +114,12 @@ Nothing from the content or held-items work has been played by hand, so the tuni
 
 Also confirm the Match Length values (Short 30 points / 10 rounds, Normal 50 / 15, Long 80 / 25). They come from a Monte Carlo model of scoring with a fixed finish rate, and real finish rates probably fall as props pile up. The limit decides about 25% of 2-player Normal matches at typical finish rates and about 60% at very low or very high ones.
 
+## 16. Fix WebGL failure paths
+Both are now visible in Sentry.
+
+- `createCompositor` falls back to `Fallback` after a GL compile failure, but that canvas already has a WebGL context, so `getContext('2d')` returns null. The first render throws and kills the game loop.
+- There's no WebGL context-restore handling, so a lost context stays lost for that session.
+
 ## 14. Clear the lint warnings
 `pnpm check` prints 7 warnings, in `src/ui/touch/overlay.ts`, `src/ui/touch/device.ts`, `src/input/input.ts`, `src/render/props/modules/vehicle.ts` and `src/audio/system.ts`. AGENTS.md treats warnings as real findings. Do it with or after item 6, which also touches the touch code.
 
@@ -123,3 +129,11 @@ The game's goal is to parody other games, especially with items (`docs/DESIGN.md
 - Rework names, art and twists so each one mocks something recognizable.
 - Our own names and art only.
 - No explaining the joke.
+
+## 17. Finish Sentry setup
+Some steps need the owner. Run after setting the Vercel env vars.
+
+- Set `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and `SENTRY_PROJECT` in Vercel (Production and Preview). An organization auth token is best.
+- On the first deploy, confirm source maps upload and client frames resolve to source. Only the failure path has been tested.
+- Install the Sentry GitHub integration for suspect commits.
+- Move `app/global-error.tsx` into `src/` with item 11.

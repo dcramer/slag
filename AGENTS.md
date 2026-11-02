@@ -91,9 +91,17 @@ Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm
 
 Vercel, Next.js App Router. Server code is limited to small, stateless route handlers and server components in `app/`; no long-lived servers, nothing that costs money at our scale. Online play will be peer-to-peer WebRTC with serverless signaling (`docs/NETCODE.md`).
 
+Error monitoring is Sentry, in the host layer only, so the game stays portable. The game calls `reportError`, `reportEvent` and `addBreadcrumb` from `src/telemetry.ts`, which no-op until a host installs a reporter; lint bans `@sentry/*` in `src/` and telemetry in `sim/`, `gen/` and `game/`. Host files: `instrumentation-client.ts` (lazy-loads `app/sentry-browser.ts`), `instrumentation.ts` (server; covers every route handler), `app/sentry-options.ts` (DSN, privacy settings), `app/global-error.tsx`. It only reports from Vercel deploys, so dev, tests and `pnpm shot` send nothing.
+
+| Env var | Where | Use |
+| --- | --- | --- |
+| `SENTRY_AUTH_TOKEN` | Vercel, secret | Source map upload and release creation. Unset: the build skips both and generates no maps. |
+| `SENTRY_ORG`, `SENTRY_PROJECT` | Vercel | Slugs for the upload. |
+| `NEXT_PUBLIC_SENTRY_DSN` | Optional | Overrides the committed DSN at build time; empty turns Sentry off. Setting it also enables reporting from a local build, for testing against a stub. |
+
 ## Conventions
 
-- TypeScript strict, ES modules. Runtime deps are only `next`, `react`, `react-dom` (for the shell) and `client-only`; the game itself uses none. Don't add runtime dependencies without asking.
+- TypeScript strict, ES modules. Runtime deps are only `next`, `react`, `react-dom` (for the shell), `client-only`, and `@sentry/nextjs` and `@sentry/browser` (host layer only); the game itself uses none. Don't add runtime dependencies without asking.
 - Doc comments explain *why*, on modules and exported functions. Small functions; data plus registries over sprawling `switch`es.
 - **Never explain the obvious**, in the game, the docs or your reports. In the game it's a design rule: part of the joy is the unknown, so no sub lines, hints or notes that restate what's on screen or spell out a rule (`docs/DESIGN.md` → Discovery).
 - Custom lint and ast-grep rules are welcome where they enforce a rule better than convention. Every rule's error message must steer whoever hits it, usually an agent: say why the rule exists and what to do instead, naming the concrete replacement. Example: `Math.sin differs across browsers and desyncs lockstep. Use sin from src/core/dmath.ts.`

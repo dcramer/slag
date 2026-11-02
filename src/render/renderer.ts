@@ -75,6 +75,11 @@ export class Renderer {
     window.addEventListener('orientationchange', () => setTimeout(() => this.resize(), 250));
   }
 
+  /** Which compositor and quality tier this device ended up on, for error reports. */
+  get renderStyle(): string {
+    return `${this.comp.webgl ? 'webgl2' : 'canvas2d'}:${this.quality}`;
+  }
+
   /** Change the render quality tier (e.g. from settings) and re-allocate buffers. */
   setQuality(q: QualityTier) {
     this.quality = q;
