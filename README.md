@@ -7,12 +7,12 @@ The twist: **levels, props, and characters are all procedurally generated** from
 ## Running it
 
 ```sh
-npm install
-npm run dev        # http://localhost:3000 → redirects to a new lobby /r/<code>  (?seed=… forces a level)
-npm run check      # typecheck + lint + tests
-npm run shot -- race --race all   # headless screenshots into shots/
-npm run level -- myseed           # ASCII level inspector
-npm run build      # static bundle in dist/, deployable anywhere
+pnpm install
+pnpm dev        # http://localhost:3000 → redirects to a new lobby /r/<code>  (?seed=… forces a level)
+pnpm check      # typecheck + lint + tests
+pnpm shot -- race --race all   # headless screenshots into shots/
+pnpm level -- myseed           # ASCII level inspector
+pnpm build         # production build (what Vercel runs)
 ```
 
 ## Controls (local multiplayer, up to 4 players)

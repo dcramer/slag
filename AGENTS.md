@@ -33,23 +33,25 @@ Build original content. Use the genre's mechanics, but never copy another game's
   - Make small, focused commits.
   - After every meaningful, green change, push: `git push origin main`. Don't leave work uncommitted, because the dev containers are ephemeral.
   - Never create feature branches or PRs unless the user asks. The one exception is parallel subagents in worktrees (see below).
-- **Keep it green.** Run `npm run check` (typecheck + lint + tests) before every commit. Don't skip, disable, or weaken tests to get green.
-- **Look at what you render.** Any visual change must be verified with `npm run shot` and inspected. Typechecking isn't enough.
+- **Keep it green.** Run `pnpm check` (typecheck + lint + tests) before every commit. Don't skip, disable, or weaken tests to get green.
+- **Look at what you render.** Any visual change must be verified with `pnpm shot` and inspected. Typechecking isn't enough.
 - **Determinism is sacred** (see below).
 - **Stay in your lane.** Each subsystem has an owner module and an extension point. Extend through the registry instead of adding `switch` statements elsewhere.
 
 ## Commands
 
+The package manager is **pnpm** (`packageManager` in package.json; never commit a package-lock.json).
+
 | Command | What it does |
 |---|---|
-| `npm run dev` | Next.js dev server (http://localhost:3000). `/` redirects to a new lobby `/r/<code>`. URL params are listed below. |
-| `npm run check` | `tsc` + `oxlint` + `oxfmt --check` + `vitest run`. Must pass before you commit. |
-| `npm run format` | `oxfmt` (format) + `oxlint --fix` (safe lint fixes). |
-| `npm test` | Vitest only. Run one file with `npx vitest run tests/foo.test.ts`. |
-| `npm run level -- <seed>` | ASCII dump of a generated level, plus stats: `#` solid, `=` one-way, `S`/`G` spawn/goal, `·` reachable stand cell, `P` set piece. |
-| `npm run level -- --stats 200` | Generation stats across many seeds: time, styles, how often a level is solvable without props. |
-| `npm run shot -- <scenario> [opts]` | Headless screenshots into `shots/` (gitignored). Runs `next build` if sources changed, then `next start` (set `SHOT_DEV=1` to use `next dev`). |
-| `npm run build` | Production bundle in `dist/`, which Vercel serves. |
+| `pnpm dev` | Next.js dev server (http://localhost:3000). `/` redirects to a new lobby `/r/<code>`. URL params are listed below. |
+| `pnpm check` | `tsc` + `oxlint` + `oxfmt --check` + `vitest run`. Must pass before you commit. |
+| `pnpm format` | `oxfmt` (format) + `oxlint --fix` (safe lint fixes). |
+| `pnpm test` | Vitest only. Run one file with `pnpm vitest run tests/foo.test.ts`. |
+| `pnpm level -- <seed>` | ASCII dump of a generated level, plus stats: `#` solid, `=` one-way, `S`/`G` spawn/goal, `·` reachable stand cell, `P` set piece. |
+| `pnpm level -- --stats 200` | Generation stats across many seeds: time, styles, how often a level is solvable without props. |
+| `pnpm shot -- <scenario> [opts]` | Headless screenshots into `shots/` (gitignored). Runs `next build` if sources changed, then `next start` (set `SHOT_DEV=1` to use `next dev`). |
+| `pnpm build` | Production build (`.next/`), the same one Vercel runs. |
 
 Screenshot scenarios (`tools/shot.ts`):
 
@@ -191,7 +193,7 @@ tests/           vitest
 ## Code conventions
 
 - TypeScript strict mode, ES modules. Runtime deps are only next/react/react-dom (for routing and the shell); the game itself uses none. Dev tooling: vitest, oxlint, oxfmt, tsx, playwright.
-- oxfmt formats with 2-space indentation, single quotes, and 160-column lines (`.oxfmtrc.json`); oxlint config is `.oxlintrc.json`. Run `npm run format` before committing.
+- oxfmt formats with 2-space indentation, single quotes, and 160-column lines (`.oxfmtrc.json`); oxlint config is `.oxlintrc.json`. Run `pnpm format` before committing.
 - Write doc comments on modules and exported functions that explain *why*. Keep functions small. Prefer data plus registries over sprawling `switch` statements.
 - Units: world pixels and sim frames (60 per second). Tile coordinates are in `TILE` units. Angles are radians in screen space, so +y points down and +π/2 points down.
 - Write tests for every generator invariant (determinism, validity), for every prop module's runtime behavior, and for physics feel regressions.
@@ -201,9 +203,9 @@ tests/           vitest
 When work is split across subagents:
 
 - The orchestrator defines the contracts (types and registries) first and commits them to `main`.
-- Each subagent works in its own git worktree or branch, owns a disjoint set of files (listed in its brief), and **commits but does not push**. The orchestrator merges into `main`, runs `npm run check`, and pushes.
+- Each subagent works in its own git worktree or branch, owns a disjoint set of files (listed in its brief), and **commits but does not push**. The orchestrator merges into `main`, runs `pnpm check`, and pushes.
 - If a subagent truly needs to change a shared contract (for example `sim/props/types.ts` or `themes.ts`), keep the change additive and minimal, and call it out in its final report.
-- Each subagent must finish with a green `npm run check` in its worktree and attach screenshot paths for any visual work.
+- Each subagent must finish with a green `pnpm check` in its worktree and attach screenshot paths for any visual work.
 
 ## Assets
 
