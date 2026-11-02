@@ -3,9 +3,10 @@ import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { DROP_FALL, DROP_REST, DROP_WARN, dirOf, dropperPose, dropperRect, dropperTravel } from '../../../sim/props';
 import { blob, line, stroke } from '../../ink';
-import { boxPts, dot, INK, part, path, poly, sprite, stamp, tick } from '../../ink-props';
+import { boxPts, dot, INK, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import { circle, glowDot, light } from '../../kit';
 import { beamOf, defineArt } from '../common';
+import { bevel } from '../machine';
 
 /**
  * Proximity crusher: a carved stone block with a face. Idle it peers along
@@ -14,51 +15,73 @@ import { beamOf, defineArt } from '../common';
  * speed streaks. Drawn from the same pose the sim builds its solid from.
  */
 /**
- * The block, baked: carved stone, a heavy brow (angry or just brooding), white eyes that the pupils are
- * drawn into live, gritted teeth, and a vein standing out on its brow.
+ * The block, baked: a dressed stone with chiselled bevels round a raised face, so it reads as a carved
+ * mass and not a tile. On the face, a heavy brow cut as its own stone (knitted down when it's coming),
+ * white eyes that the pupils are drawn into live, gritted teeth, a chipped corner and a vein standing out.
  */
 function grudge(w: number, h: number, stone: HSL, angry: boolean) {
   return sprite(`dr|${w}|${h}|${stone.h | 0}|${angry}`, -2, -2, w + 4, h + 4, (g) => {
     const body = boxPts(0, 0, w, h, 2.6, 5, 0.2);
-    part(g, body, stone, 5, { depth: 1.4, thin: 0.6, thick: 1.6 });
+    tone(g, body, stone, { depth: 1, shade: -14 });
+    const k = Math.min(w, h) / TILE;
+    const b = 2.7 * k;
     g.save();
     path(g, body);
     g.clip();
-    for (let i = 0; i < 6; i++) {
-      const tx = 2 + hash2(i, 1, w) * (w - 4);
-      const ty = 2 + hash2(i, 2, h) * (h - 4);
-      tick(g, tx, ty, tx + 1.6, ty + 0.8, 0.45, i, css(stone, -20, 1, 4));
+    bevel(g, 0, 0, w, h, b, stone);
+    // A chipped corner, top right.
+    g.fillStyle = css(stone, -26, 1, 6);
+    path(g, poly(w - 4.2 * k, -1, w + 1, -1, w + 1, 3.6 * k, w - 1.4 * k, 1.4 * k));
+    g.fill();
+    for (let i = 0; i < 4; i++) {
+      const tx = b + 1 + hash2(i, 1, w) * (w - b * 2 - 2);
+      const ty = b + 1 + hash2(i, 2, h) * (h - b * 2 - 2);
+      if (Math.abs(tx - w / 2) < 6 * k && Math.abs(ty - h / 2) < 5 * k) continue;
+      tick(g, tx, ty, tx + 1.4, ty + 0.7, 0.45, i, css(stone, -22, 1, 4));
     }
     g.restore();
+    pen(g, body, 5, 0.6, 1.7);
     const cx = w / 2;
     const cy = h / 2;
-    const k = Math.min(w, h) / TILE;
     for (const sg of [-1, 1]) {
       g.fillStyle = INK;
-      blob(g, cx + sg * 3.6 * k, cy - 0.6 * k, 2.2 * k, 7 + sg, 0.85, 0.06);
+      blob(g, cx + sg * 3.6 * k, cy - 0.4 * k, 2.3 * k, 7 + sg, 0.85, 0.06);
       g.fill();
       g.fillStyle = '#f3ecdc';
-      blob(g, cx + sg * 3.6 * k, cy - 0.6 * k, 1.6 * k, 9 + sg, 0.85, 0.06);
+      blob(g, cx + sg * 3.6 * k, cy - 0.4 * k, 1.7 * k, 9 + sg, 0.85, 0.06);
       g.fill();
-      // The brow: knitted down to the middle when it's coming.
-      g.fillStyle = INK;
-      line(g, cx + sg * 6.2 * k, cy - (angry ? 5.2 : 4.2) * k, cx + sg * 1.2 * k, cy - (angry ? 2.4 : 3.8) * k, {
-        w: 1.5 * k,
-        seed: 11 + sg,
-        taper: [0.1, 0.2],
-        press: 0.2,
-      });
     }
+    // The brow: one heavy stone across both eyes, knitted down to the middle when it's coming.
+    const drop = angry ? 2.6 : 0.6;
+    const brow = poly(
+      cx - 6.8 * k,
+      cy - 4.4 * k,
+      cx - 1.2 * k,
+      cy - (3.6 - drop) * k,
+      cx,
+      cy - (3.1 - drop) * k,
+      cx + 1.2 * k,
+      cy - (3.6 - drop) * k,
+      cx + 6.8 * k,
+      cy - 4.4 * k,
+      cx + 6.6 * k,
+      cy - 6 * k,
+      cx,
+      cy - (5.6 - drop * 0.7) * k,
+      cx - 6.6 * k,
+      cy - 6 * k,
+    );
+    part(g, brow, { ...stone, l: stone.l + 6 }, 12, { depth: 0.7, thin: 0.6, thick: 1.4, shade: -22 });
     // The vein: a forked purple line standing out on its forehead.
     g.fillStyle = '#8a2a6a';
-    stroke(g, poly(cx + 3 * k, cy - 7.2 * k, cx + 3.9 * k, cy - 6.1 * k, cx + 3.4 * k, cy - 5.4 * k), { w: 0.7 * k, seed: 13, taper: [0.2, 0.3], press: 0.2 });
-    stroke(g, poly(cx + 3.9 * k, cy - 6.1 * k, cx + 5 * k, cy - 6.4 * k), { w: 0.55 * k, seed: 14, taper: [0.1, 0.5], press: 0.2 });
+    stroke(g, poly(cx + 3 * k, cy - 7.6 * k, cx + 3.9 * k, cy - 6.9 * k, cx + 3.4 * k, cy - 6.3 * k), { w: 0.7 * k, seed: 13, taper: [0.2, 0.3], press: 0.2 });
+    stroke(g, poly(cx + 3.9 * k, cy - 6.9 * k, cx + 5 * k, cy - 7.2 * k), { w: 0.55 * k, seed: 14, taper: [0.1, 0.5], press: 0.2 });
     // Gritted teeth.
     g.fillStyle = INK;
-    path(g, boxPts(cx - 4.8 * k, cy + 2.8 * k, 9.6 * k, 2.8 * k, 0.8, 15));
+    path(g, boxPts(cx - 4.6 * k, cy + 2.6 * k, 9.2 * k, 3 * k, 0.9, 15));
     g.fill();
-    g.fillStyle = css(stone, 34);
-    for (let i = 0; i < 4; i++) g.fillRect(cx - 4.2 * k + i * 2.3 * k, cy + 3.15 * k, 1.5 * k, 2.1 * k);
+    g.fillStyle = css(stone, 36);
+    for (let i = 0; i < 4; i++) g.fillRect(cx - 4 * k + i * 2.2 * k, cy + 3 * k, 1.5 * k, 2.2 * k);
   });
 }
 
@@ -131,10 +154,10 @@ defineArt<'dropper'>({
     const px = best < Infinity ? (lx / ll) * 0.9 * k : Math.sin(rc.t * 0.8 + d.r.pp.uid) * 0.6 * k;
     const py = best < Infinity ? (ly / ll) * 0.7 * k : 0;
     s.fillStyle = angry ? '#d0141f' : INK;
-    for (const ex of [-3.6, 3.6]) circle(s, cx + ex * k + px, cy - 0.6 * k + py, (angry ? 0.95 : 0.8) * k);
+    for (const ex of [-3.6, 3.6]) circle(s, cx + ex * k + px, cy - 0.4 * k + py, (angry ? 0.95 : 0.8) * k);
     if (angry) {
       g.fillStyle = css(eye, 15, 1);
-      for (const ex of [-3.6, 3.6]) circle(g, cx + ex * k + px, cy - 0.6 * k + py, 0.6 * k);
+      for (const ex of [-3.6, 3.6]) circle(g, cx + ex * k + px, cy - 0.4 * k + py, 0.6 * k);
       glowDot(g, cx, cy - 0.8 * k, 10 * k, eye, 0.35);
       light(rc, cx, cy, 40, eye, 0.5);
     }

@@ -1,9 +1,10 @@
 import { css, type HSL } from '../../../core/color';
 import { magnetCycle } from '../../../sim/props';
-import { type P, stroke } from '../../ink';
-import { ball, INK, sprite, stamp, tick } from '../../ink-props';
-import { circle, glowDot, light } from '../../kit';
+import { line, type P, stroke } from '../../ink';
+import { ball, dot, INK, path, pen, sprite, stamp, tick, tone } from '../../ink-props';
+import { circle, glowDot, light, type MetalPalette } from '../../kit';
 import { defineArt } from '../common';
+import { backplate, housed } from '../machine';
 
 /**
  * The core: a black hole in a jar (pull) or a hot pushy orb (push), inked. Black Hole Lite wears a diet
@@ -12,6 +13,8 @@ import { defineArt } from '../common';
 function orb(pull: boolean, lite: boolean) {
   return sprite(`mg|${pull}|${lite}`, -7, -7, 14, 14, (g) => {
     const base: HSL = pull ? { h: 268, s: 45, l: 26 } : { h: 22, s: 70, l: 46 };
+    // A touch smaller than the cell, so the horseshoe's arms show either side of it.
+    g.scale(0.86, 0.86);
     ball(g, 0, 0, 5, base, 3);
     if (pull) {
       // The event horizon swirl.
@@ -53,6 +56,47 @@ function orb(pull: boolean, lite: boolean) {
 }
 
 /**
+ * The housing, a whole cell: a cartoon horseshoe magnet standing on its bend, its poles up, cradling the
+ * core between its arms. A repulsor's is painted the other pole's blue.
+ */
+function horseshoe(pull: boolean, pal: MetalPalette) {
+  return sprite(`mg|shoe|${pull}|${pal.base.h},${pal.base.l}`, -10, -10, 20, 20, (g) => {
+    backplate(g, -8, -8, 16, 16, pal, 1);
+    for (const sx of [-6, 6]) dot(g, sx, 6.2, 0.85, 2 + sx, css(pal.light));
+    const paint: HSL = pull ? { h: 356, s: 72, l: 48 } : { h: 214, s: 66, l: 48 };
+    const R = 7.8;
+    const r = 3.3;
+    const cy = 0.2;
+    const shoe: P[] = [{ x: -R, y: -7.9 }];
+    for (let i = 0; i <= 12; i++) {
+      const a = Math.PI - (i / 12) * Math.PI;
+      shoe.push({ x: Math.cos(a) * R, y: cy + Math.sin(a) * R * 0.98 });
+    }
+    shoe.push({ x: R, y: -7.9 }, { x: r, y: -7.9 });
+    for (let i = 0; i <= 8; i++) {
+      const a = (i / 8) * Math.PI;
+      shoe.push({ x: Math.cos(a) * r, y: cy + Math.sin(a) * r });
+    }
+    shoe.push({ x: -r, y: -7.9 });
+    tone(g, shoe, paint, { depth: 1.2, shade: -18 });
+    g.save();
+    path(g, shoe);
+    g.clip();
+    // Steel pole pieces on the arms' ends, and a hard shine down the left arm.
+    g.fillStyle = css({ h: 210, s: 10, l: 82 });
+    g.fillRect(-9, -9, 18, 4.6);
+    g.fillStyle = css({ h: 210, s: 12, l: 60 });
+    g.fillRect(-9, -5.1, 18, 0.7);
+    g.fillStyle = INK;
+    line(g, -9, -4.4, 9, -4.4, { w: 0.7, seed: 3, taper: [0, 0], press: 0.2 });
+    g.fillStyle = css(paint, 26);
+    line(g, -6.6, -3.4, -6.4, 2.6, { w: 0.9, seed: 4, taper: [0.2, 0.4], press: 0.1 });
+    g.restore();
+    pen(g, shoe, 5, 0.6, 1.6);
+  });
+}
+
+/**
  * Gravity well / repulsor. The field edge is drawn as a ring at the exact
  * radius the sim uses; motes stream inward (pull) or outward (push) while
  * it's on. Pulsing fields show a dim dotted ring while off and a filling
@@ -73,6 +117,7 @@ defineArt<'magnet'>({
     const charge = c.seg === 1 ? c.t / c.len : on ? 1 : 0;
     // Core orb on the block, inked; the glow sits behind it so the pen stays on top.
     glowDot(g, x, y, 6 + charge * 6 + (on ? Math.sin(rc.t * 9) * 1.5 : 0), col, 0.4 + charge * 0.5);
+    if (housed(d.r)) stamp(s, horseshoe(pull, d.pal), x, y);
     stamp(s, orb(pull, d.r.pp.def.name.includes('Lite')), x, y);
     g.fillStyle = css(col, 30, 0.35 + charge * 0.5);
     circle(g, x, y, 1.2 + charge);

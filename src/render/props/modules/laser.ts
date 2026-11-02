@@ -1,17 +1,62 @@
 import { css, type HSL } from '../../../core/color';
 import type { Vec } from '../../../core/geom';
-import { laserAngle, laserCycle, type Module, type ModuleOf, type PropStyle, type Resolved } from '../../../sim/props';
-import { boxPts, dot, glint, INK, ovalPts, part, poly, sprite, stamp } from '../../ink-props';
-import { glowDot, light, type MetalPalette, type RC } from '../../kit';
+import { dirOf, laserAngle, laserCycle, type Module, type ModuleOf, type PropStyle, type Resolved } from '../../../sim/props';
+import { ball, boxPts, dot, glint, INK, part, pen, poly, sprite, stamp, tone } from '../../ink-props';
+import { circle, glowDot, light, type MetalPalette, type RC } from '../../kit';
 import { beamOf, defineArt, type PropDrawOpts } from '../common';
+import { backplate, disc, type Face, faceOf, flange, flat, housed, iron, lbox, ltick, tf, within } from '../machine';
 
 type M<T extends Module['type']> = ModuleOf<T>;
 
-/** The swivel the pointer sits in: a small bolted cup on the block. */
+/** Where the charge lamps sit on the flange, in the local frame. */
+const LAMPS = [-2.2, 0, 2.2];
+const RING_Y = 0;
+
+/**
+ * The emplacement, a whole cell: an armored housing bolted down at the back, vent slots down its flanks, a
+ * painted lip at the front, three charge lamps on the flange and a deep turret socket in the middle that
+ * the pointer swivels in. All that, for a pen.
+ */
+function bunker(k: Face, pal: MetalPalette, hue: number) {
+  return sprite(`lz|bunker|${k}|${pal.base.h},${pal.base.l}|${hue | 0}`, -11, -11, 22, 22, (g) => {
+    backplate(g, -8, -8, 16, 16, pal, 1);
+    flange(g, k, -8, 8, 4.6, pal, 2);
+    for (const x of LAMPS) {
+      const p = tf(k, x, 6.3);
+      g.fillStyle = INK;
+      disc(g, p.x, p.y, 0.95, 3 + x);
+      g.fill();
+    }
+    const body = lbox(k, -7.7, -7.6, 15.4, 12.4, 3, 4, 0.25);
+    tone(g, body, iron(pal, 40), { depth: 1.3, shade: -17 });
+    within(g, body, () => {
+      flat(g, lbox(k, -9, -9, 18, 3.4, 0, 5), css({ h: hue, s: 58, l: 46 }));
+      ltick(g, k, -8, -5.5, 8, -5.5, 0.7, 6, INK, [0, 0]);
+      for (const sg of [-1, 1])
+        for (const y of [-3.2, -0.9, 1.4]) {
+          flat(g, lbox(k, sg > 0 ? 5.3 : -7.4, y - 0.55, 2.1, 1.1, 0.5, 7 + y + sg), css(pal.dark, -8));
+          ltick(g, k, sg * 7.2, y + 0.95, sg * 5.5, y + 0.95, 0.45, 8 + y + sg, css(iron(pal, 40), 20), [0.1, 0.1]);
+        }
+    });
+    pen(g, body, 8, 0.55, 1.5);
+    // The socket: a dark well with a lit rim on its far side.
+    const c = tf(k, 0, RING_Y);
+    g.fillStyle = INK;
+    disc(g, c.x, c.y, 4.5, 9);
+    g.fill();
+    g.fillStyle = css(iron(pal, 40), 22);
+    disc(g, c.x + 0.45, c.y + 0.5, 3.7, 10);
+    g.fill();
+    g.fillStyle = '#16141a';
+    disc(g, c.x - 0.15, c.y - 0.1, 3.4, 11);
+    g.fill();
+  });
+}
+
+/** The swivel the pointer sits in: a ball in the socket. */
 function swivel(pal: MetalPalette) {
-  return sprite(`lz|swivel|${pal.base.h},${pal.base.l}`, -5, -5, 10, 10, (g) => {
-    part(g, ovalPts(0, 0.6, 3.6, 3.2, 3, 0.04), pal.base, 3, { depth: 0.7, thin: 0.45, thick: 1.1 });
-    dot(g, 0, 0.6, 1.4, 4);
+  return sprite(`lz|swivel|${pal.base.h},${pal.base.l}`, -4, -4, 8, 8, (g) => {
+    ball(g, 0, 0, 2.3, iron(pal, 46), 3);
   });
 }
 
@@ -53,6 +98,17 @@ function drawLaser(rc: RC, m: M<'laser'>, r: Resolved, mi: number, off: Vec, pal
   const ly = y + Math.sin(a) * 9.2;
   const charge = c.seg === 1 ? c.t / c.len : c.seg === 2 ? 1 : 0.1;
   glowDot(g, lx, ly, 3 + charge * 6, col, 0.6 + charge * 0.4);
+  if (housed(r)) {
+    // The charge lamps fill one by one through the warning; all three burn while it fires.
+    const k = faceOf(...dirOf(m.angle));
+    const lit = c.seg === 2 ? 3 : c.seg === 1 ? Math.ceil(charge * 3) : 0;
+    for (let i = 0; i < LAMPS.length; i++) {
+      const p = tf(k, LAMPS[i], 6.3);
+      s.fillStyle = i < lit ? css(col, 18) : '#4a3a34';
+      circle(s, x + p.x, y + p.y, 0.62);
+      if (i < lit) glowDot(g, x + p.x, y + p.y, 3, col, 0.85);
+    }
+  }
   const len = beam?.len ?? 40;
   const ex = x + Math.cos(a) * len;
   const ey = y + Math.sin(a) * len;
@@ -97,4 +153,11 @@ function drawLaser(rc: RC, m: M<'laser'>, r: Resolved, mi: number, off: Vec, pal
   }
 }
 
+defineArt<'laser'>({
+  type: 'laser',
+  layer: 1,
+  draw(rc, m, d) {
+    if (housed(d.r)) stamp(rc.s, bunker(faceOf(...dirOf(m.angle)), d.pal, d.style.hue), m.at[0] + d.off[0], m.at[1] + d.off[1]);
+  },
+});
 defineArt<'laser'>({ type: 'laser', layer: 3, draw: (rc, m, d) => drawLaser(rc, m, d.r, d.mi, d.off, d.pal, d.style, d.o) });

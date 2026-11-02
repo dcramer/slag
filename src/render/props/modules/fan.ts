@@ -2,10 +2,11 @@ import { css, type HSL } from '../../../core/color';
 import type { Vec } from '../../../core/geom';
 import { dirOf, fanColumn, type Module, type ModuleOf, type PropStyle, type Resolved } from '../../../sim/props';
 import { windProfile, windSpeed } from '../../../sim/wind';
-import { stroke } from '../../ink';
-import { ball, boxPts, INK, ovalPts, part, path, poly, sprite, stamp, tick } from '../../ink-props';
+import { blob, stroke } from '../../ink';
+import { ball, dot, INK, ovalPts, part, path, pen, poly, sprite, stamp, tick } from '../../ink-props';
 import type { MetalPalette, RC } from '../../kit';
 import { beamOf, defineArt, type PropDrawOpts } from '../common';
+import { backplate, bolt, type Face, faceOf, flange, housed, iron, lp, tf } from '../machine';
 
 type M<T extends Module['type']> = ModuleOf<T>;
 
@@ -56,34 +57,67 @@ function drawFan(rc: RC, m: M<'fan'>, r: Resolved, mi: number, off: Vec, pal: Me
     }
   }
   // The grip goes on the side away from where it blows, as a hair dryer's does.
-  stamp(s, grip(st.hue), x, y);
-  stamp(s, housing(pal), x, y);
-  s.save();
-  s.translate(x, y);
-  // Blades: a blur that gets stronger with the air. <= 0.35 rad/frame so a 4-blade rotor never strobes backwards.
+  const k = faceOf(...dirOf(m.angle));
+  stamp(s, grip(st.hue, k), x, y);
+  stamp(s, housing(k, pal, housed(r)), x, y);
+  const c = tf(k, 0, -0.4);
+  // Blades: a blur that gets stronger with the air, and the baked rotor turning over it. <= 0.35 rad/frame
+  // so a 4-blade rotor never strobes backwards.
   s.fillStyle = css({ h: st.hue, s: 40, l: 70 }, 0, Math.min(0.35, speed / 900));
   s.beginPath();
-  s.arc(0, 0, 5, 0, Math.PI * 2);
+  s.arc(x + c.x, y + c.y, 5.2, 0, Math.PI * 2);
   s.fill();
+  s.save();
+  s.translate(x + c.x, y + c.y);
   s.rotate(t * (speed / 12));
-  s.fillStyle = css({ h: st.hue, s: 50, l: 72 }, 0, 0.9);
-  for (let i = 0; i < 4; i++) {
-    s.rotate(Math.PI / 2);
-    s.beginPath();
-    s.ellipse(2.8, 0, 2.7, 1.3, 0.35, 0, Math.PI * 2);
-    s.fill();
-  }
+  stamp(s, blades(st.hue));
   s.restore();
-  stamp(s, grill(pal), x, y);
+  stamp(s, grill(pal), x + c.x, y + c.y);
 }
 
-/** The housing: a dark round mouth in a bezel. */
-function housing(pal: MetalPalette) {
-  return sprite(`fan|h|${pal.base.h},${pal.base.l}`, -8, -8, 16, 16, (g) => {
-    part(g, ovalPts(0, 0, 6.9, 6.9, 3, 0.02), pal.base, 3, { depth: 0.9, thin: 0.5, thick: 1.2 });
-    g.fillStyle = '#121218';
-    path(g, ovalPts(0, 0, 5.4, 5.4, 4, 0.02));
+/**
+ * The housing, a whole cell: a bolted plate with a mounting flange at the back and a deep round cowl in
+ * front of it, its lip thick on the side the air leaves by. A set piece (the AC unit) brings its own plate.
+ */
+function housing(k: Face, pal: MetalPalette, plate: boolean) {
+  return sprite(`fan|h|${k}|${plate}|${pal.base.h},${pal.base.l}`, -11, -11, 22, 22, (g) => {
+    if (plate) {
+      backplate(g, -8, -8, 16, 16, pal, 2);
+      flange(g, k, -8, 8, 5, pal, 3);
+      for (const x of [-6, 6]) bolt(g, k, x, -6, 0.85, pal, 4 + x);
+    }
+    const c = tf(k, 0, -0.4);
+    part(g, ovalPts(c.x, c.y, 7.3, 7.3, 3, 0.02), iron(pal, 42), 3, { depth: 1.2, thin: 0.55, thick: 1.5 });
+    // The lip: a lighter band round the outlet side.
+    g.save();
+    path(g, ovalPts(c.x, c.y, 7.3, 7.3, 3, 0.02));
+    g.clip();
+    const lip = tf(k, 0, -4.6);
+    g.fillStyle = css(iron(pal, 42), 14);
+    blob(g, lip.x, lip.y, 5.6, 6, 0.9, 0.05);
     g.fill();
+    g.restore();
+    g.fillStyle = '#121218';
+    path(g, ovalPts(c.x, c.y, 5.6, 5.6, 4, 0.02));
+    g.fill();
+    pen(g, ovalPts(c.x, c.y, 5.6, 5.6, 4, 0.02), 5, 0.9, 0.4);
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+      dot(g, c.x + Math.cos(a) * 6.45, c.y + Math.sin(a) * 6.45, 0.55, 6 + i, css(pal.light));
+    }
+  });
+}
+
+/** The rotor: four swept blades round a hub, baked once and turned. */
+function blades(hue: number) {
+  return sprite(`fan|b|${hue | 0}`, -6, -6, 12, 12, (g) => {
+    const col: HSL = { h: hue, s: 45, l: 70 };
+    for (let i = 0; i < 4; i++) {
+      g.save();
+      g.rotate((i / 4) * Math.PI * 2);
+      part(g, poly(0.6, -0.9, 3.2, -2.4, 5.1, -1.6, 5.2, 0.4, 3.4, 1.2, 0.8, 0.9), col, 7 + i, { depth: 0.5, thin: 0.3, thick: 0.7, shade: -20 });
+      g.restore();
+    }
   });
 }
 
@@ -91,26 +125,29 @@ function housing(pal: MetalPalette) {
 function grill(pal: MetalPalette) {
   return sprite(`fan|g|${pal.base.h},${pal.base.l}`, -7, -7, 14, 14, (g) => {
     g.save();
-    path(g, ovalPts(0, 0, 5.4, 5.4, 4, 0.02));
+    path(g, ovalPts(0, 0, 5.6, 5.6, 4, 0.02));
     g.clip();
     for (let i = -2; i <= 2; i++) tick(g, -6, i * 2.2, 6, i * 2.2 + 0.1, 0.45, i + 9, css(pal.light, -6, 0.85));
     g.restore();
-    ball(g, 0, 0, 1.5, pal.base, 5);
+    ball(g, 0, 0, 1.6, pal.base, 5);
   });
 }
-
-/** A household hair-dryer grip off the bottom-left, with a sliding switch and a bit of cord. */
-function grip(hue: number) {
-  return sprite(`fan|grip|${hue | 0}`, -12, -2, 12, 14, (g) => {
+/** A household hair-dryer grip off the back corner, with a sliding switch and a bit of cord. */
+function grip(hue: number, k: Face) {
+  return sprite(`fan|grip|${hue | 0}|${k}`, -13, -13, 26, 26, (g) => {
     const plastic: HSL = { h: hue, s: 55, l: 58 };
-    g.save();
-    g.translate(-4.4, 4);
-    g.rotate(0.55);
-    part(g, boxPts(-1.8, 0, 3.6, 6, 1.5, 6), plastic, 6, { depth: 0.6, thin: 0.45, thick: 1 });
-    part(g, boxPts(-0.9, 1.6, 1.8, 2.4, 0.6, 7), { h: 0, s: 0, l: 92 }, 7, { depth: 0.2, thin: 0.3, thick: 0.5 });
+    // Local grip frame: turned 0.55 rad and hung off (-4.4, 4), then to the face.
+    const at = (xy: number[]) => {
+      const c = Math.cos(0.55);
+      const sn = Math.sin(0.55);
+      const out: number[] = [];
+      for (let i = 0; i < xy.length; i += 2) out.push(-4.4 + xy[i] * c - xy[i + 1] * sn, 4 + xy[i] * sn + xy[i + 1] * c);
+      return lp(k, ...out);
+    };
+    part(g, at([-1.8, 0, 1.8, 0, 1.9, 5, 1.2, 6, -1.2, 6, -1.9, 5]), plastic, 6, { depth: 0.6, thin: 0.45, thick: 1 });
+    part(g, at([-0.9, 1.6, 0.9, 1.6, 0.9, 4, -0.9, 4]), { h: 0, s: 0, l: 92 }, 7, { depth: 0.2, thin: 0.3, thick: 0.5 });
     g.fillStyle = INK;
-    stroke(g, poly(0, 5.8, 0.4, 7.2, -0.6, 8.2), { w: 1, seed: 8, taper: [0, 0.4], press: 0 });
-    g.restore();
+    stroke(g, at([0, 5.8, 0.4, 7.2, -0.6, 8.2]), { w: 1, seed: 8, taper: [0, 0.4], press: 0 });
   });
 }
 

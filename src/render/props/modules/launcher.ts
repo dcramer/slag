@@ -5,7 +5,9 @@ import { blob, line, type P, stroke } from '../../ink';
 import { ball, boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import { circle, glowDot, light, type MetalPalette, type RC } from '../../kit';
 import { beamOf, defineArt, type DrawCtx } from '../common';
+import { bevel, housed } from '../machine';
 import { drawGlider, rang, roundSprite, stampRound } from '../projectiles';
+import { cabinet, hull, yoke } from './launcher-house';
 
 /**
  * Launchers, inked: each style is a parody of a genre staple (docs/PARODY.md, Launchers). A style is three
@@ -45,6 +47,8 @@ interface Live {
 }
 
 interface Look {
+  /** What it stands in, when the mount doesn't fill the cell itself (launcher-house.ts). */
+  house?: readonly [Box, (g: CanvasRenderingContext2D, k: Bk) => void];
   mount?: readonly [Box, (g: CanvasRenderingContext2D, k: Bk) => void];
   barrel?: readonly [Box, (g: CanvasRenderingContext2D, k: Bk) => void];
   front?: readonly [Box, (g: CanvasRenderingContext2D, k: Bk) => void];
@@ -88,19 +92,32 @@ const LOOKS: Record<LauncherStyle, Look> = {
   // Arrow Trap: a slot in a carved block, with a bandaged knee scratched into the stone.
   crossbow: {
     mount: [
-      [-8.5, -8.5, 17, 17],
+      [-9.5, -9.5, 19, 19],
       (g, k) => {
         const st = stone(k);
-        part(g, boxPts(-7.2, -7.2, 14.4, 14.4, 1.4, k.seed), st, k.seed, { depth: 1.1, thin: 0.5, thick: 1.2 });
+        const block = boxPts(-8, -8, 16, 16, 1.6, k.seed);
+        tone(g, block, st, { depth: 1, shade: -14 });
+        g.save();
+        path(g, block);
+        g.clip();
+        bevel(g, -8, -8, 16, 16, 2.4, st);
+        g.restore();
+        pen(g, block, k.seed, 0.55, 1.7);
         for (let i = 0; i < 6; i++) {
-          const x = -6 + hash2(i, 1, k.seed) * 12;
-          const y = -6 + hash2(i, 2, k.seed) * 12;
-          if (Math.hypot(x, y) < 6.2) continue;
+          const x = -5 + hash2(i, 1, k.seed) * 10;
+          const y = -5 + hash2(i, 2, k.seed) * 10;
+          if (Math.hypot(x, y) < 5.6) continue;
           tick(g, x, y, x + 1.3, y + 0.7, 0.45, i, css(st, -22, 1, 4));
         }
-        // Where the slot turns: a worn ring in the stone.
-        g.fillStyle = css(st, -12, 1, 4);
-        blob(g, 0, 0, 3.4, k.seed + 3, 1, 0.06);
+        // Where the slot turns: a drum cut into the face, sunk into shadow at its top and lit at its lip.
+        g.fillStyle = INK;
+        path(g, ovalPts(0, 0, 4.7, 4.7, k.seed + 3, 0.03, 20));
+        g.fill();
+        g.fillStyle = css(st, 10);
+        path(g, ovalPts(0.3, 0.35, 4, 4, k.seed + 4, 0.03, 20));
+        g.fill();
+        g.fillStyle = css(st, -16, 1, 4);
+        path(g, ovalPts(-0.15, -0.2, 3.7, 3.7, k.seed + 5, 0.03, 20));
         g.fill();
         // Scratched in the corner: a leg, bent at a bandaged knee.
         const sc = css(st, -34, 1, 6);
@@ -140,11 +157,11 @@ const LOOKS: Record<LauncherStyle, Look> = {
   // Tower Defense: a ballista on a tiny tower, price tag still on.
   ballista: {
     mount: [
-      [-8.5, -8.5, 17, 17],
+      [-9.5, -9.5, 19, 19],
       (g, k) => {
         const st = stone(k, 54);
-        const pts = boxPts(-7.2, -7.4, 14.4, 14.6, 1.2, k.seed);
-        tone(g, pts, st, { depth: 1.1 });
+        const pts = boxPts(-8, -8, 16, 16, 1.4, k.seed);
+        tone(g, pts, st, { depth: 1.3 });
         g.save();
         path(g, pts);
         g.clip();
@@ -152,18 +169,18 @@ const LOOKS: Record<LauncherStyle, Look> = {
         g.fillStyle = css(st, -34, 1, 6);
         for (const x of [-3.6, 1.4]) g.fillRect(x, -8, 2.2, 3.1);
         g.fillStyle = INK;
-        line(g, -7.4, -4.6, 7.4, -4.6, { w: 0.7, seed: 3, taper: [0.05, 0.05], press: 0.3 });
+        line(g, -8.4, -4.6, 8.4, -4.6, { w: 0.7, seed: 3, taper: [0.05, 0.05], press: 0.3 });
         const mortar = css(st, -24, 1, 4);
         for (const [y, off] of [
           [-1.4, 0],
           [1.9, 2.4],
           [5.2, 0],
         ] as const) {
-          tick(g, -7, y, 7, y + 0.2, 0.45, y * 9, mortar);
-          for (let x = -5.4 + off; x < 7; x += 4.8) tick(g, x, y - 3.1, x, y - 0.2, 0.42, x * 7 + y, mortar);
+          tick(g, -8, y, 8, y + 0.2, 0.45, y * 9, mortar);
+          for (let x = -5.4 + off; x < 8; x += 4.8) tick(g, x, y - 3.1, x, y - 0.2, 0.42, x * 7 + y, mortar);
         }
         g.restore();
-        pen(g, pts, k.seed + 1, 0.5, 1.3);
+        pen(g, pts, k.seed + 1, 0.55, 1.6);
         // The price tag, on a string from a merlon.
         tick(g, 6, -6.2, 5.6, -2.2, 0.35, 12, '#e9dfc8');
         g.save();
@@ -213,18 +230,7 @@ const LOOKS: Record<LauncherStyle, Look> = {
   },
   // Pirate Cannon: an eyepatch on the muzzle.
   cannon: {
-    mount: [
-      [-8.5, -1, 17, 9.5],
-      (g, k) => {
-        const wd = { ...k.wood, l: 36 };
-        part(g, poly(-7.4, 7.4, -6.8, 1.8, -3, 0.2, 3.6, 0.2, 6.8, 2.6, 7.4, 7.4), wd, k.seed, { depth: 0.9, thin: 0.5, thick: 1.2 });
-        tick(g, -6.4, 4.2, 6.6, 4.4, 0.45, 2, css(wd, -16));
-        for (const x of [-4, 4]) {
-          ball(g, x, 5.8, 2, { ...wd, l: 28 }, k.seed + x);
-          dot(g, x, 5.8, 0.6, k.seed + x + 1, css(STEEL, 10));
-        }
-      },
-    ],
+    house: [[-9.5, -9.5, 19, 19], (g, k) => hull(g, { ...k.wood, l: 34 }, k.pal, k.seed, true)],
     barrel: [
       [-9.5, -6, 23, 12],
       (g, k) => {
@@ -255,11 +261,11 @@ const LOOKS: Record<LauncherStyle, Look> = {
   // Heartburn Idol: it clutches its belly, and what comes up is chili-red.
   totem: {
     mount: [
-      [-9, -9, 18, 18],
+      [-9.5, -9.5, 19, 19],
       (g, k) => {
         const wd = { ...k.wood, l: 42 };
-        const head = boxPts(-7, -7.6, 14, 15.2, 3, k.seed);
-        part(g, head, wd, k.seed, { depth: 1.2, thin: 0.5, thick: 1.3 });
+        const head = boxPts(-8, -8, 16, 16, 3, k.seed);
+        part(g, head, wd, k.seed, { depth: 1.3, thin: 0.55, thick: 1.6 });
         g.save();
         path(g, head);
         g.clip();
@@ -323,13 +329,7 @@ const LOOKS: Record<LauncherStyle, Look> = {
   },
   // Sorry Turret: worried about all of this.
   turret: {
-    mount: [
-      [-8.5, 1, 17, 7.5],
-      (g, k) => {
-        part(g, poly(-7.2, 7.4, -5.6, 2.4, 5.6, 2.4, 7.2, 7.4), { ...k.pal.base, l: k.pal.base.l - 10 }, k.seed, { depth: 0.7, thin: 0.5, thick: 1.2 });
-        for (const x of [-4.6, 4.6]) dot(g, x, 5.4, 0.55, k.seed + x, css(k.pal.light));
-      },
-    ],
+    house: [[-9.5, -9.5, 19, 19], (g, k) => cabinet(g, { h: k.st.hue, s: 12, l: 86 }, k.pal, k.seed)],
     barrel: [
       [1, -4.5, 12, 9],
       (g, k) => {
@@ -370,8 +370,8 @@ const LOOKS: Record<LauncherStyle, Look> = {
     mount: [
       [-8.5, -8.5, 17, 17],
       (g, k) => {
-        const body = boxPts(-7.2, -7.4, 14.4, 14.8, 1.4, k.seed);
-        part(g, body, { h: k.st.hue, s: 60, l: 46 }, k.seed, { depth: 1, thin: 0.5, thick: 1.3 });
+        const body = boxPts(-8, -8, 16, 16, 1.6, k.seed);
+        part(g, body, { h: k.st.hue, s: 60, l: 46 }, k.seed, { depth: 1.3, thin: 0.55, thick: 1.6 });
         const win = boxPts(-5.9, -6, 8.4, 8.2, 0.6, k.seed + 1);
         tone(g, win, { h: 195, s: 35, l: 80 }, { depth: 0.6 });
         g.save();
@@ -413,6 +413,7 @@ const LOOKS: Record<LauncherStyle, Look> = {
   },
   // Grudge Launcher: it doesn't forget.
   rocket: {
+    house: [[-9.5, -9.5, 19, 19], (g, k) => yoke(g, k.pal, k.hue, k.seed)],
     barrel: [
       [-7, -7, 14, 14],
       (g, k) => {
@@ -444,6 +445,7 @@ const LOOKS: Record<LauncherStyle, Look> = {
   },
   // Return Policy: a launcher in a backwards cap.
   glaive: {
+    house: [[-9.5, -9.5, 19, 19], (g, k) => cabinet(g, { ...k.hue, l: 44 }, k.pal, k.seed)],
     faced: true,
     mount: [
       [-11, -9, 22, 17],
@@ -505,12 +507,12 @@ const LOOKS: Record<LauncherStyle, Look> = {
   },
   // Dodgeball Coach: a gumball machine with a whistle on a lanyard.
   gumball: {
+    house: [[-9.5, -9.5, 19, 19], (g, k) => cabinet(g, { h: k.st.hue, s: 70, l: 46 }, k.pal, k.seed)],
     mount: [
-      [-8, 0, 16, 8.5],
+      [-3, 0, 6, 6],
       (g, k) => {
-        part(g, boxPts(-6, 0.8, 12, 6.8, 1.2, k.seed), { h: k.st.hue, s: 70, l: 46 }, k.seed, { depth: 0.8, thin: 0.5, thick: 1.2 });
-        ball(g, 0, 4.2, 1.7, STEEL, k.seed + 1);
-        tick(g, -0.9, 4.2, 0.9, 4.2, 0.45, 2);
+        ball(g, 0, 2.9, 1.7, STEEL, k.seed + 1);
+        tick(g, -0.9, 2.9, 0.9, 2.9, 0.45, 2);
       },
     ],
     barrel: [
@@ -551,13 +553,7 @@ const LOOKS: Record<LauncherStyle, Look> = {
   },
   // Banana Mortar: the shell is a bunch.
   mortar: {
-    mount: [
-      [-8.5, 1.5, 17, 7],
-      (g, k) => {
-        part(g, boxPts(-7, 3.2, 14, 4.2, 1, k.seed), { ...k.pal.dark, l: k.pal.dark.l + 12 }, k.seed, { depth: 0.6, thin: 0.5, thick: 1.2 });
-        for (const x of [-5, 5]) dot(g, x, 5.3, 0.55, k.seed + x, css(k.pal.light));
-      },
-    ],
+    house: [[-9.5, -9.5, 19, 19], (g, k) => yoke(g, k.pal, k.hue, k.seed)],
     barrel: [
       [-5, -6, 16, 12],
       (g, k) => {
@@ -582,6 +578,7 @@ const LOOKS: Record<LauncherStyle, Look> = {
   },
   // Sneeze Cannon: a big nose on the muzzle.
   gooper: {
+    house: [[-9.5, -9.5, 19, 19], (g, k) => yoke(g, k.pal, k.hue, k.seed)],
     barrel: [
       [2, -4.5, 13.5, 10],
       (g, k) => {
@@ -629,6 +626,7 @@ const LOOKS: Record<LauncherStyle, Look> = {
   },
   // Slushie Gun: a cup, with the straw for a barrel.
   cryo: {
+    house: [[-9.5, -9.5, 19, 19], (g, k) => cabinet(g, { h: 350, s: 60, l: 50 }, k.pal, k.seed)],
     mount: [
       [-7.5, -9, 15, 17.5],
       (g, k) => {
@@ -690,12 +688,7 @@ const LOOKS: Record<LauncherStyle, Look> = {
   },
   // Trick-Shot Lens: a prism on a stand. Its shots drag a replay's dotted line.
   prism: {
-    mount: [
-      [-6.5, 1, 13, 7.5],
-      (g, k) => {
-        part(g, poly(-5.2, 7.4, -3.2, 3.2, 3.2, 3.2, 5.2, 7.4), { ...k.pal.base, l: k.pal.base.l - 8 }, k.seed, { depth: 0.6, thin: 0.45, thick: 1.1 });
-      },
-    ],
+    house: [[-9.5, -9.5, 19, 19], (g, k) => yoke(g, k.pal, k.hue, k.seed)],
     barrel: [
       [-6.5, -7.5, 15, 15],
       (g, k) => {
@@ -726,6 +719,7 @@ const LOOKS: Record<LauncherStyle, Look> = {
   },
   // Budget Airline: a little departures shed with a windsock.
   hangar: {
+    house: [[-9.5, -9.5, 19, 19], (g, k) => hull(g, { ...k.wood, l: 40 }, k.pal, k.seed, false)],
     mount: [
       [-9, -11, 21, 19.5],
       (g, k) => {
@@ -802,6 +796,7 @@ function drawLauncher(rc: RC, m: Launcher, d: DrawCtx) {
     glowDot(g, x + Math.cos(a) * sight.len, y + Math.sin(a) * sight.len, 4, { h: 0, s: 100, l: 55 }, 0.8);
   }
 
+  if (look.house && housed(d.r)) stamp(s, piece('h', m, k, false, look.house), x, y);
   if (look.mount) stamp(s, piece('m', m, k, !!look.faced, look.mount), x, y);
   if (look.barrel || look.aimed) {
     const recoil = since < 8 ? (8 - since) * (look.recoil ?? 0.3) : 0;
