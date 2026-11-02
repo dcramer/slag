@@ -181,3 +181,39 @@ export function makeNoise(seed: number, period: number) {
     return sum / norm;
   };
 }
+
+/** Layered flame shape on the emissive layer. */
+export function flame(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, color: HSL, t: number) {
+  const layers: [number, number, number][] = [
+    [1, 0, 0.7],
+    [0.7, 15, 0.8],
+    [0.4, 35, 0.95],
+  ];
+  for (const [k, dl, a] of layers) {
+    const ww = w * k;
+    const hh = h * k;
+    const wob = Math.sin(t * 13 + k * 5) * ww * 0.3;
+    g.fillStyle = css(color, dl, a);
+    g.beginPath();
+    g.moveTo(x - ww, y);
+    g.quadraticCurveTo(x - ww, y - hh * 0.6, x + wob, y - hh);
+    g.quadraticCurveTo(x + ww, y - hh * 0.6, x + ww, y);
+    g.quadraticCurveTo(x, y + ww * 0.8, x - ww, y);
+    g.fill();
+  }
+}
+
+/** Linear interpolation of two RGB triples (0..1). */
+export function mixRgb(a: readonly number[], b: readonly number[], t: number): [number, number, number] {
+  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+}
+
+/** Fresh offscreen canvas with a 2D context pre-scaled by `k`. */
+export function offscreen(w: number, h: number, k = 1): [HTMLCanvasElement, CanvasRenderingContext2D] {
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.ceil(w * k));
+  c.height = Math.max(1, Math.ceil(h * k));
+  const g = c.getContext('2d')!;
+  g.scale(k, k);
+  return [c, g];
+}
