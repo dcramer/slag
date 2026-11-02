@@ -11,7 +11,7 @@
  */
 
 import { reportError, reportEvent } from '../telemetry';
-import { CEL_FS, CEL_SHADOW, celNoise, NOISE_SIZE } from './cel-shader';
+import { CEL_FS, CEL_SHADOW, celNoise, MIST_MAX, NOISE_SIZE } from './cel-shader';
 
 const VS = `#version 300 es
 in vec2 p; out vec2 uv;
@@ -47,6 +47,8 @@ export interface PostParams {
   originY: number;
   /** The theme's ambient light, which the light bands sit relative to. */
   ambient: number;
+  /** Mist: a small canvas whose alpha is how thick the air is, or null for clear air (render/weather.ts). */
+  mist?: HTMLCanvasElement | null;
 }
 
 interface Target {
@@ -99,6 +101,8 @@ class GLCompositor implements Compositor {
   private texLight: WebGLTexture;
   private texGlow: WebGLTexture;
   private texNoise: WebGLTexture;
+  private texMist: WebGLTexture;
+  private hasMist = false;
   private half!: [Target, Target];
   private quarter!: [Target, Target];
   private w = 1;
@@ -126,7 +130,16 @@ class GLCompositor implements Compositor {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, NOISE_SIZE, NOISE_SIZE, 0, gl.RGBA, gl.UNSIGNED_BYTE, celNoise());
+    this.texMist = this.tex();
+    this.clearMist();
     this.resize(2, 2);
+  }
+
+  /** One clear texel, so a clear level pays for neither an upload nor a branch in the frame loop. */
+  private clearMist() {
+    const gl = this.gl;
+    gl.bindTexture(gl.TEXTURE_2D, this.texMist);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
   }
 
   private shader(type: number, src: string): WebGLShader {
@@ -235,6 +248,12 @@ class GLCompositor implements Compositor {
     this.upload(this.texLight, light, 1);
     this.upload(this.texGlow, glow, 2);
     this.upload(this.texFg, fg, 5);
+    if (p.mist) this.upload(this.texMist, p.mist, 6);
+    else if (this.hasMist) {
+      gl.activeTexture(gl.TEXTURE6);
+      this.clearMist();
+    }
+    this.hasMist = !!p.mist;
 
     // Bright pass → half.
     gl.useProgram(this.progBright);
@@ -264,12 +283,14 @@ class GLCompositor implements Compositor {
     this.bindTex(this.texGlow, 2);
     this.bindTex(this.half[0].tex, 3);
     this.bindTex(this.quarter[0].tex, 4);
+    this.bindTex(this.texMist, 6);
     gl.uniform1i(this.u(f, 'uScene'), 0);
     gl.uniform1i(this.u(f, 'uLight'), 1);
     gl.uniform1i(this.u(f, 'uGlow'), 2);
     gl.uniform1i(this.u(f, 'uBloomA'), 3);
     gl.uniform1i(this.u(f, 'uBloomB'), 4);
     gl.uniform1i(this.u(f, 'uFg'), 5);
+    gl.uniform1i(this.u(f, 'uMist'), 6);
     gl.uniform1f(this.u(f, 'uExposure'), p.exposure);
     gl.uniform1f(this.u(f, 'uFlash'), p.flash);
     gl.uniform3f(this.u(f, 'uTint'), ...p.tint);
@@ -278,9 +299,10 @@ class GLCompositor implements Compositor {
     gl.uniform1f(this.u(f, 'uAmbient'), p.ambient);
     gl.uniform2f(this.u(f, 'uShadow'), (-CEL_SHADOW[0] * p.scale) / this.w, (CEL_SHADOW[1] * p.scale) / this.h);
     gl.uniform3f(this.u(f, 'uView'), p.scale, p.originX, p.originY);
-    gl.activeTexture(gl.TEXTURE6);
+    // Unit 7: 0-6 are the layers, the bloom and the mist.
+    gl.activeTexture(gl.TEXTURE7);
     gl.bindTexture(gl.TEXTURE_2D, this.texNoise);
-    gl.uniform1i(this.u(f, 'uNoise'), 6);
+    gl.uniform1i(this.u(f, 'uNoise'), 7);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 }
@@ -311,6 +333,11 @@ class Fallback implements Compositor {
     c.globalCompositeOperation = 'lighter';
     c.drawImage(glow, 0, 0, w, h);
     c.globalCompositeOperation = 'source-over';
+    if (p.mist) {
+      c.globalAlpha = MIST_MAX;
+      c.drawImage(p.mist, 0, 0, w, h);
+      c.globalAlpha = 1;
+    }
     if (p.flash > 0) {
       c.fillStyle = `rgba(255,255,255,${p.flash})`;
       c.fillRect(0, 0, w, h);

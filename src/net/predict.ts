@@ -19,7 +19,7 @@ interface RunInternals {
   events: unknown[];
   solids: unknown[];
   out: Record<string, unknown[]>;
-  world: { tileAt: unknown; solids: unknown[] };
+  world: { solids: unknown[] };
 }
 
 export class Predictor {
@@ -36,7 +36,9 @@ export class Predictor {
     this.display.players = src.players.map((p) => ({ ...p, cursor: { ...p.cursor } }));
     this.display.prevScores = new Map(src.prevScores);
     this.display.winners = [...src.winners];
+    this.display.blood = src.blood.map((c) => ({ ...c }));
     this.display.run = src.run ? this.copyRun(src.run) : null;
+    if (this.display.run) this.display.run.blood = this.display.blood;
     return this.display;
   }
 
@@ -60,7 +62,7 @@ export class Predictor {
     di.solids = solids;
     // Rebuilt from scratch every frame, so empty lists are a faithful copy of whatever props contribute.
     di.out = Object.fromEntries(Object.keys(si.out).map((k) => [k, k === 'solids' ? solids : []]));
-    di.world = { tileAt: si.world.tileAt, solids };
+    di.world = { ...si.world, solids }; // Everything but the solids is the level's: gravity and footing have to carry over.
     di.events = [];
     // Deep: a stepped copy must never reach confirmed state, and race state keeps growing nested fields.
     d.runners = structuredClone(src.runners);

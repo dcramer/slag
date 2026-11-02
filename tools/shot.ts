@@ -12,6 +12,7 @@
  *   pnpm shot levels --seeds a,b,c,d      (or --count 12) → contact sheet
  *   pnpm shot props --count 24            → prop gallery (crate cards)
  *   pnpm shot items --seed abc             → held items: in hand, loose, and each one used
+ *   pnpm shot blood --theme farm --players 4 --noletters → staged deaths over four rounds: ooze, settled, place phase, expiry
  *   pnpm shot codex                        → /codex page (full-page screenshot)
  *   pnpm shot home                         → main menu (desktop + 390×844 mobile)
  *   pnpm shot settings                     → every settings tab over the lobby, driven by keys and a fake pad,
@@ -22,10 +23,11 @@
  *
  * Options: --out shots  --size 1280x720 (window)  --world classic|wide|tall (level size)  --players 2  --frames N (sim frames to advance)
  *          --theme farm (force a theme; `levels --themes all` renders one level per theme)
+ *          --weather rain (force the weather: clear|wind|mist|rain|snow)
  *          --noui (hide the HUD, e.g. to review level shapes)
  *          --q high (pin the quality tier: slow software GL otherwise reads as a slow device and drops it)
  *          --runframe N (race: stop on exact sim frame N)  --campin x,y,zoom (race: pin the view, for before/after sheets)
- *          --spread (race: stand the runners on open ground)
+ *          --spread (race: stand the runners on open ground)  --weather rain (force clear|wind|mist|rain|snow)
  *          --mode keyboard|gamepad|touch (footer prompt glyphs)  --net (fake online-lobby info)
  *          --noletters (no impact words)
  * Software GL is slow; frames are advanced deterministically via slagDebug.step().
@@ -45,11 +47,14 @@ const [W, H] = opt('size', '1280x720')!.split('x').map(Number);
 const seed = opt('seed', 'demo');
 const theme = opt('theme');
 const world = opt('world');
+const weather = opt('weather');
 const tq =
   (theme ? `&theme=${theme}` : '') +
   (world ? `&size=${world}` : '') +
+  (weather ? `&weather=${weather}` : '') +
   (argv.includes('--noui') ? '&ui=0' : '') +
   (opt('q') ? `&q=${opt('q')}` : '') +
+  (opt('weather') ? `&weather=${opt('weather')}` : '') +
   (argv.includes('--noletters') ? '&lettering=0' : '');
 const players = Number(opt('players', '2'));
 const frames = Number(opt('frames', '150'));
@@ -737,6 +742,102 @@ try {
       await snap(`items-${seed}-use`);
       await step(40);
       await snap(`items-${seed}-after`);
+      break;
+    }
+    case 'blood': {
+      // Stage deaths on open floors over four rounds: fresh ooze, a settled puddle with someone on it, the place phase, and the first round's blood gone.
+      await open(`seed=${seed}&players=${players}${tq}`);
+      const stage = (round: number) =>
+        page.evaluate((n: number) => {
+          const d = (window as any).slagDebug;
+          const m = d.match;
+          if (m.phase !== 'run') m.startRun();
+          const run = m.run;
+          const L = run.level;
+          run.frame = Math.max(run.frame, 100);
+          const spots: [number, number][] = [];
+          for (let tx = 8 + n * 3; tx < L.w - 8 && spots.length < 20; tx += 4) {
+            for (let ty = 2; ty < L.h - 1; ty++) {
+              if (L.tiles[ty * L.w + tx] === 1 && !L.tiles[(ty - 1) * L.w + tx] && !L.tiles[(ty - 2) * L.w + tx]) {
+                spots.push([tx, ty]);
+                break;
+              }
+            }
+          }
+          // The last runner lives, standing on the first puddle.
+          run.runners.slice(0, -1).forEach((r: any, i: number) => {
+            const [tx, ty] = spots[(i * 2 + n) % spots.length];
+            r.body.x = tx * 16 + 3;
+            r.body.y = ty * 16 - r.body.h;
+            r.body.vx = r.body.vy = 0;
+            run.kill(r, -1, 'hazard');
+          });
+          // One more against a wall with no floor near, if this level has one.
+          if (n === 0) {
+            const walls: [number, number][] = [];
+            for (let ty = 3; ty < L.h - 8; ty++) {
+              for (let tx = 6; tx < L.w - 6; tx++) {
+                const wall = L.tiles[ty * L.w + tx] === 1 && L.tiles[(ty + 1) * L.w + tx] === 1;
+                if (wall && [0, 1, 2, 3, 4, 5].every((d) => [1, 2, 3].every((a) => !L.tiles[(ty + d) * L.w + tx - a]))) walls.push([tx, ty]);
+              }
+            }
+            const smear = run.runners[1];
+            if (walls.length && smear) {
+              smear.alive = true;
+              smear.body.x = walls[0][0] * 16 - smear.body.w - 1;
+              smear.body.y = walls[0][1] * 16;
+              run.kill(smear, -1, 'hazard');
+            }
+          }
+          const [tx, ty] = spots[n % spots.length];
+          const r = run.runners.at(-1);
+          r.body.x = tx * 16 + 3;
+          r.body.y = ty * 16 - r.body.h - 8;
+          r.body.vx = r.body.vy = 0;
+        }, round);
+      const nextRound = () =>
+        page.evaluate(() => {
+          const m = (window as any).slagDebug.match;
+          m.run.kill(m.run.runners.at(-1), -1, 'pop');
+          m.run.frame += 1;
+          m.run.endFrame = 0;
+          m.step({});
+          m.phaseFrame = 100000;
+          m.step({});
+          m.run = null;
+        });
+      // Particles run on render calls, so rendering often lets the death burst clear.
+      const settle = async (n: number) => {
+        for (let i = 0; i < n; i += 4) await step(4);
+      };
+      await step(5);
+      await page.evaluate(() => (window as any).slagDebug.race());
+      await step(10);
+      await stage(0);
+      await step(12);
+      await snap(`blood-${seed}-r1-ooze`);
+      await settle(120);
+      await snap(`blood-${seed}-r1-settled`);
+      await nextRound();
+      await page.evaluate(() => {
+        const m = (window as any).slagDebug.match;
+        m.phase = 'place';
+        m.phaseFrame = 0;
+      });
+      await step(1);
+      await snap(`blood-${seed}-r2-place`);
+      await stage(1);
+      await settle(120);
+      await snap(`blood-${seed}-r2-race`);
+      await nextRound();
+      await stage(2);
+      await settle(120);
+      await snap(`blood-${seed}-r3-race`);
+      await nextRound();
+      await page.evaluate(() => (window as any).slagDebug.match.startRun());
+      await step(30);
+      console.log('cells', await page.evaluate(() => (window as any).slagDebug.match.blood.length));
+      await snap(`blood-${seed}-r4-race`);
       break;
     }
     case 'levels': {

@@ -4,6 +4,8 @@ import { TILE } from '../../sim/constants';
 import { isProtected, type Level, T_EMPTY, T_SOLID } from '../../sim/level';
 import { bodyAtCell, type CollisionWorld, stepBody } from '../../sim/physics';
 import { analyzeReach } from '../../sim/reach';
+import { footing } from '../../sim/weather';
+import type { WindForce } from '../../sim/wind';
 import { analyzeRoutes, MAX_SHARED } from './routes';
 import { BRIDGE_W, type BridgeHint } from './types';
 
@@ -132,6 +134,16 @@ export function partsNeeded(level: Level, placed: readonly PlacedProp[]): number
   return best === Infinity ? MAX_BRIDGES : best;
 }
 
+/**
+ * Fewest parts the search can finish `level` with when a side wind of `air`
+ * px/s blows whenever the player likes. MAX_BRIDGES when it finds nothing better.
+ */
+export function partsInAir(level: Level, air: number): number {
+  const airs = [0, air];
+  const verify = (bs: Bridge[]) => bs.every((b) => canPlaceBridge(level, b)) && analyzeReach(withBridges(level, bs), true, undefined, airs).goalReached;
+  return new BridgeSearch(level, { vx: air, vy: 0, ky: 0, dy: 0 }).solve(level.solution ?? [], verify)?.length ?? MAX_BRIDGES;
+}
+
 /** Policy check; seeds the search with the level's recorded solution if it has one. */
 export function isAcceptable(level: Level): boolean {
   const solution = level.solution ?? [];
@@ -192,7 +204,10 @@ class BridgeSearch {
   private readonly gx: number;
   private readonly gy: number;
 
-  constructor(private readonly level: Level) {
+  constructor(
+    private readonly level: Level,
+    private readonly wind: WindForce | null = null,
+  ) {
     this.W = level.w;
     this.H = level.h;
     this.prot = new Uint8Array(this.W * this.H);
@@ -293,6 +308,7 @@ class BridgeSearch {
       tileAt: (x, y) => (x < 0 || x >= this.W ? 1 : y < 0 || y >= this.H ? 0 : tiles[y * this.W + x]),
       solids: [],
       gravity: this.level.gravity ?? 1,
+      tileSurface: footing(this.level),
     };
     const standable = (x: number, y: number) => x >= 0 && x < this.W && y >= 0 && y < this.H - 1 && !tiles[y * this.W + x] && !!tiles[(y + 1) * this.W + x];
     const sx = this.level.spawn.tx;
@@ -359,6 +375,7 @@ class BridgeSearch {
     for (let s = 0; s < NS; s++) {
       const sc = SCRIPTS[s];
       const b = bodyAtCell(tx, ty);
+      if (world.tileSurface) b.surface = world.tileSurface;
       // Guess model only (answers are re-verified with analyzeReach): assume a full run-up where there's room for one.
       const run = sc.dir !== 0 && (sc.dir > 0 ? runR : runL);
       if (run) b.vx = sc.dir * PHYS.runSpeed;
@@ -374,6 +391,7 @@ class BridgeSearch {
           b,
           { left: holdDir && sc.dir < 0, right: holdDir && sc.dir > 0, run, jump: f < sc.jumpFrames, jumpPressed: f === 0 && sc.jumpFrames > 0 },
           world,
+          this.wind,
         );
         const bx0 = Math.floor(b.x / TILE);
         const bx1 = Math.floor((b.x + b.w) / TILE);

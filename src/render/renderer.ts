@@ -3,11 +3,12 @@ import { clamp } from '../core/geom';
 import type { Match, Player } from '../game/match';
 import { overview, raceFloor } from '../game/view';
 import { TILE, VIEW_H, VIEW_W } from '../sim/constants';
-import { type Level, tileAt } from '../sim/level';
+import { floorY, type Level, tileAt } from '../sim/level';
 import { type Beam, canPlace, footprint, type Resolved, resolveProp, traceBeams } from '../sim/props';
 import type { RunWorld } from '../sim/run';
 import type { GameEvent } from '../sim/types';
 import { Backdrop } from './background';
+import { drawBlood } from './blood';
 import { Camera } from './camera';
 import { PhoneCam, phoneView } from './camera-follow';
 import { drawAccessory, drawAfterimage, drawCharacter, Rig } from './character';
@@ -21,6 +22,7 @@ import { type Compositor, createCompositor } from './post';
 import { drawBackdrop, drawBlastPreview, drawForeground, drawProjectile, drawResolved, drawRunnerStatus, drawStuffed, type Emit, propEventFx } from './props';
 import { Surround } from './surround';
 import { TerrainPainter } from './terrain';
+import { calmMotes, WeatherLayer } from './weather';
 // Mobile: quality tiers / adaptive resolution / safe-area insets (owned by the touch module).
 import { detectQuality, FrameBudget, isTouchFirst, QUALITY, type QualityTier, safeInsets, TIERS } from '../ui/touch/device';
 
@@ -70,6 +72,7 @@ export class Renderer {
   private terrain = new TerrainPainter();
   private surround = new Surround();
   private fx = new Fx();
+  private weather = new WeatherLayer();
   private rigs = new Map<number, Rig>();
   private pw = 2;
   private ph = 2;
@@ -97,7 +100,6 @@ export class Renderer {
     this.viewBox.dataset.slagView = '';
     this.viewBox.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none';
     glCanvas.parentElement?.append(this.viewBox);
-    this.fx.onSplat = (x, y, r, c) => this.terrain.splat(x, y, r, c);
     ({ tier: this.quality, adaptive: this.adaptive } = detectQuality());
     this.resize();
     window.addEventListener('resize', () => this.resize());
@@ -240,6 +242,7 @@ export class Renderer {
     const pushers = m.run ? m.run.runners.filter((r) => r.alive).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h })) : [];
     this.terrain.drawLive(rc, level, pushers);
     this.drawMarkers(rc, level);
+    drawBlood(rc, m, frame);
 
     const grips = run?.runners.flatMap((r) => r.attach.grip ?? []);
     // A race's beams are the ones the sim hurts with. Before one, ghosts join in: a block you're holding cuts the flame it would stop.
@@ -300,7 +303,8 @@ export class Renderer {
     }
     this.fx.draw(rc);
     this.backdrop.drawLiquid(rc, level.theme, ww, wh, this.cam.visible(), this.surround.margin);
-    this.backdrop.drawMotes(rc, level.theme, dt, this.cam.visible());
+    this.backdrop.drawMotes(rc, level.theme, dt, this.cam.visible(), calmMotes(level.theme));
+    this.weather.draw(rc, m, this.cam.visible(), this.fx);
     g.globalCompositeOperation = 'source-over';
 
     // --- light map
@@ -309,7 +313,8 @@ export class Renderer {
     // --- composite
     this.flash *= Math.exp(-dt * 9);
     this.comp.render(this.scene, this.foreground.canvas, this.lightC, this.glow, {
-      exposure: level.theme.grade.exposure,
+      exposure: level.theme.grade.exposure * this.weather.exposure(level),
+      mist: this.weather.mist(m, this.cam, this.pw, this.ph, t),
       flash: this.flash,
       tint: level.theme.grade.tint,
       lift: level.theme.grade.lift,
@@ -397,7 +402,7 @@ export class Renderer {
     const th = level.theme;
     // Spawn portal.
     const sx = level.spawn.tx * TILE + TILE / 2;
-    const sy = (level.spawn.ty + 1) * TILE;
+    const sy = floorY(level.spawn);
     const pc: HSL = shift(th.accent, 0, 0, 40);
     for (let i = 0; i < 3; i++) {
       g.strokeStyle = css(pc, 10, 0.5 - i * 0.12);
@@ -415,7 +420,7 @@ export class Renderer {
 
     // Goal beacon: flag + light column.
     const gx = level.goal.tx * TILE + TILE / 2;
-    const gy = (level.goal.ty + 1) * TILE;
+    const gy = floorY(level.goal);
     const ac = th.accent;
     const col = g.createLinearGradient(0, 0, 0, gy);
     col.addColorStop(0, css(ac, 10, 0));
@@ -450,7 +455,7 @@ export class Renderer {
     const g = rc.g;
     const pc: HSL = shift(level.theme.accent, 0, 0, 40);
     // Only the air above the spawn floor; the rect also covers the floor row.
-    const bottom = Math.min(z.y + z.h, (level.spawn.ty + 1) * TILE);
+    const bottom = Math.min(z.y + z.h, floorY(level.spawn));
     const h = bottom - z.y;
     if (h <= 0) return;
     const a = 0.07 + Math.sin(rc.t * 2.2) * 0.02;
@@ -527,7 +532,7 @@ export class Renderer {
     const n = m.players.length;
     m.players.forEach((p, i) => {
       const x = lv.spawn.tx * TILE + TILE / 2 + (i - (n - 1) / 2) * 9;
-      const y = (lv.spawn.ty + 1) * TILE;
+      const y = floorY(lv.spawn);
       this.drawRunner(rc, lv, p.character, p.slot, x, y, 0, 0, true, Math.sin(rc.t * 0.5 + i) > 0 ? 1 : -1, p.ready, dt);
     });
   }
@@ -624,7 +629,6 @@ export class Renderer {
             this.fx.burst('spark', e.x, e.y, 18, 260, [{ h: 45, s: 100, l: 70 }, body], 1.2, 0.5);
             this.fx.add('ring', e.x, e.y, 0, 0, body, 40, 0.45);
             this.fx.add('flash', e.x, e.y, 0, 0, shift(body, 20), 26, 0.25);
-            this.terrain.splat(e.x, e.y + 6, 4, body);
           }
           this.cam.shake = Math.max(this.cam.shake, 6);
           this.flash = Math.max(this.flash, 0.08);

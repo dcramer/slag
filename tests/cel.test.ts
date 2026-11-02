@@ -5,7 +5,7 @@ import { createCompositor, type PostParams } from '../src/render/post';
 
 /** Just enough WebGL2 to run the compositor, recording which fragment shader each draw used. */
 function fakeGL(failCel = false) {
-  const log: { draws: string[]; compiled: string[] } = { draws: [], compiled: [] };
+  const log: { draws: string[]; compiled: string[]; samplers: Map<string, number> } = { draws: [], compiled: [], samplers: new Map() };
   const sources = new Map<object, string>();
   const attached = new Map<object, string>();
   let current = '';
@@ -23,7 +23,8 @@ function fakeGL(failCel = false) {
     useProgram: (p: object) => void (current = attached.get(p)!),
     drawArrays: () => void log.draws.push(current),
     getAttribLocation: () => 0,
-    getUniformLocation: () => ({}),
+    getUniformLocation: (_: object, name: string) => ({ name }),
+    uniform1i: (loc: { name: string }, v: number) => void (current === CEL_FS && log.samplers.set(loc.name, v)),
     createBuffer: () => ({}),
     createTexture: () => ({}),
     createFramebuffer: () => ({}),
@@ -46,6 +47,16 @@ describe('compositor', () => {
     const canvas = { getContext: () => gl, addEventListener: () => {} };
     createCompositor(canvas as unknown as HTMLCanvasElement).render(scene, fg, light, glow, params);
     expect(log.draws.at(-1)).toBe(CEL_FS);
+  });
+
+  it('gives every texture the cel pass reads its own unit', () => {
+    // Two samplers on one unit read the same texture, and nothing says so: one effect just quietly takes the other's place.
+    const { gl, log } = fakeGL();
+    const canvas = { getContext: () => gl, addEventListener: () => {} };
+    createCompositor(canvas as unknown as HTMLCanvasElement).render(scene, fg, light, glow, params);
+    const units = [...log.samplers.values()];
+    expect(units.length).toBeGreaterThanOrEqual(8);
+    expect(new Set(units).size).toBe(units.length);
   });
 
   describe('without the cel pass', () => {

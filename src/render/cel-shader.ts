@@ -10,6 +10,7 @@ import { hash2 } from '../core/rng';
  *   shadow      every foreground shape casts a hard offset shadow on the background
  *   glow        hot shapes print as opaque flat color with a thin ink casing, so a beam reads on any sky;
  *               faint glow stays soft, because a hard edge on it reads as a glass disc or a solid box
+ *   mist        last, over everything: flat bands of air, so a shape past the edge is gone, not just dim
  *
  * Bands sit relative to the theme's ambient light (`uAmbient`): the light map only ever adds to
  * ambient, so fixed thresholds would leave a bright theme all one band and a dark one all shadow.
@@ -62,6 +63,9 @@ const K = {
   lineTint: 0.62,
 };
 
+/** Thickest mist: a touch short of solid, so the deep bands read as air and not as a wall. */
+export const MIST_MAX = 0.94;
+
 /** Offset of the hard shadow, in world px. */
 export const CEL_SHADOW: [number, number] = [2.5, 3.5];
 
@@ -111,7 +115,7 @@ export function celNoise(): Uint8Array {
 export const CEL_FS = `#version 300 es
 precision highp float; in vec2 uv; out vec4 o;
 uniform sampler2D uScene; uniform sampler2D uFg; uniform sampler2D uLight; uniform sampler2D uGlow;
-uniform sampler2D uBloomA; uniform sampler2D uBloomB;
+uniform sampler2D uBloomA; uniform sampler2D uBloomB; uniform sampler2D uMist;
 uniform float uExposure; uniform float uFlash; uniform float uAmbient;
 uniform vec3 uTint; uniform vec3 uLift; uniform vec2 uRes; uniform vec2 uShadow;
 uniform vec3 uView; uniform sampler2D uNoise;
@@ -213,6 +217,10 @@ void main(){
   float casing = smoothstep(${f(K.hot)}, ${f(K.hot + 0.18)}, nearGlow) * big;
   c = mix(c, lineCol, line * (1.0 - hot));
   c = mix(c, INK, casing * (1.0 - hot));
+
+  // Mist: the small canvas's alpha, cut into flat bands.
+  vec4 mist = texture(uMist, uv);
+  if (mist.a > 0.003) c = mix(c, mist.rgb / mist.a, hard(mist.a, 3.0) * ${f(MIST_MAX)});
 
   o = vec4(mix(clamp(c, 0.0, 1.0), BONE, uFlash), 1.0);
 }`;

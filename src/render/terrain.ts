@@ -1,7 +1,7 @@
-import { css, type HSL } from '../core/color';
 import { Rng } from '../core/rng';
 import { TILE } from '../sim/constants';
 import { type Level, T_ONEWAY, tileAt, type TileRect } from '../sim/level';
+import { coatTerrain } from './weather';
 import { DECOR, type Decor } from './decor';
 import { inkFence, inkHay } from './ink-parts';
 import {
@@ -20,7 +20,7 @@ import {
   makeTufts,
   type Tuft,
 } from './ink-terrain';
-import { circle, type RC } from './kit';
+import type { RC } from './kit';
 
 export { flame } from './kit';
 
@@ -38,7 +38,6 @@ export class TerrainPainter {
   private decorKey = '';
   private decor: Decor[] = [];
   private live: Decor[] = [];
-  private kb = 1;
   /** World size in px of the baked level. */
   private ww = 0;
   private wh = 0;
@@ -62,7 +61,7 @@ export class TerrainPainter {
       this.makeDecor(level, skip);
       this.bakeKey = '';
     }
-    const look = `${th.seed}:${th.id}:${th.name}:${kb.toFixed(2)}:${level.seed}:${level.w}x${level.h}`;
+    const look = `${th.seed}:${th.id}:${th.name}:${kb.toFixed(2)}:${level.seed}:${level.w}x${level.h}:${level.weather?.kind}`;
     const bk = `${look}:${level.version}`;
     if (bk === this.bakeKey) return false;
     this.bakeKey = bk;
@@ -74,7 +73,6 @@ export class TerrainPainter {
       return true;
     }
     this.inkKey = look;
-    this.kb = kb;
     this.bakeTerrain(level, kb);
     this.inkTiles = level.tiles.slice();
     return true;
@@ -149,6 +147,7 @@ export class TerrainPainter {
       else def.bake(g, d, th);
       g.restore();
     }
+    coatTerrain(g, level, area);
     g.restore();
     this.bakeVeins(level, kb, solid, mask, area, px0, py0, px1 - px0, py1 - py0);
   }
@@ -294,25 +293,5 @@ export class TerrainPainter {
       DECOR[d.kind].live!(rc, d, th);
       rc.s.restore();
     }
-  }
-
-  /** Paint a splat decal onto the terrain (only lands on solid pixels). */
-  splat(x: number, y: number, r: number, color: HSL) {
-    if (!this.bake) return;
-    const g = this.bake.getContext('2d')!;
-    g.save();
-    g.setTransform(this.kb, 0, 0, this.kb, 0, 0);
-    g.globalCompositeOperation = 'source-atop';
-    g.fillStyle = css(color, -5, 0.85);
-    const n = 5 + Math.floor(Math.random() * 5);
-    circle(g, x, y, r);
-    for (let i = 0; i < n; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const d = r * (0.8 + Math.random() * 1.4);
-      circle(g, x + Math.cos(a) * d, y + Math.sin(a) * d, r * (0.15 + Math.random() * 0.35));
-    }
-    g.fillStyle = css(color, 20, 0.5);
-    circle(g, x - r * 0.3, y - r * 0.3, r * 0.35);
-    g.restore();
   }
 }

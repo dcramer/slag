@@ -174,6 +174,51 @@ export const LOOP_SPECS: Record<LoopKind, KindSpec> = {
       return (p, t) => bp.frequency.setTargetAtTime(p ? 900 : 2600, t, tc);
     },
   },
+  // A gust's whistle climbs through the warning, so you hear which part of it you're in.
+  gust: {
+    max: 1,
+    gain: 0.42,
+    build(b) {
+      const bp = b.filter(b.gain(b.out, 1), 'bandpass', 320, 1.6);
+      b.noise('pink', bp);
+      b.noise('brown', b.filter(b.gain(b.out, 0.5), 'lowpass', 260));
+      return (p, t) => {
+        bp.frequency.setTargetAtTime(320 + p * 900, t, 0.14);
+        bp.Q.setTargetAtTime(1.6 + p * 2.4, t, 0.14);
+      };
+    },
+  },
+  rain: {
+    max: 1,
+    gain: 0.2,
+    build(b) {
+      b.noise('white', b.filter(b.gain(b.out, 0.6), 'highpass', 2400));
+      b.noise('pink', b.filter(b.gain(b.out, 0.8), 'bandpass', 900, 0.5));
+      b.noise('crackle', b.filter(b.gain(b.out, 0.25), 'highpass', 3500), 0.7);
+      return () => {};
+    },
+  },
+  snow: {
+    max: 1,
+    gain: 0.22,
+    build(b) {
+      const lp = b.filter(b.gain(b.out, 1), 'lowpass', 420, 0.6);
+      b.noise('brown', lp);
+      b.osc('sine', 0.13, b.gain(lp.frequency, 160));
+      return () => {};
+    },
+  },
+  mist: {
+    max: 1,
+    gain: 0.2,
+    build(b) {
+      const amp = b.gain(b.out, 0.7);
+      b.noise('brown', b.filter(amp, 'lowpass', 180));
+      b.osc('sine', 58, b.gain(amp, 0.28));
+      b.osc('sine', 0.09, b.gain(amp.gain, 0.3));
+      return () => {};
+    },
+  },
 };
 
 interface Slot {
@@ -232,7 +277,7 @@ export class LoopBank {
     for (const [kind, slots] of this.slots) {
       const spec = LOOP_SPECS[kind];
       const list = this.byKind.get(kind)!;
-      const scored = list.map((e) => ({ e, g: e.level * loopGain(e.x, e.y, L) })).sort((a, b) => b.g - a.g);
+      const scored = list.map((e) => ({ e, g: e.level * (e.ambient ? 1 : loopGain(e.x, e.y, L)) })).sort((a, b) => b.g - a.g);
       // Fold the energy of emitters beyond the pool into the last voice.
       let rest = 0;
       for (let i = slots.length; i < scored.length; i++) rest += scored[i].g ** 2;

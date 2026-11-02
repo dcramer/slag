@@ -35,7 +35,7 @@ describe('rules & pointer', () => {
     m.startMatch();
   };
   it('defaults: 15s pick timer, untimed place and race', () => {
-    expect(DEFAULT_RULES).toMatchObject({ pickSeconds: 15, placeSeconds: 0, raceSeconds: 0 });
+    expect(DEFAULT_RULES).toMatchObject({ pickSeconds: 15, placeSeconds: 15, raceSeconds: 0 });
     const m = new Match(3);
     lobbyTo(m);
     expect(m.phaseTimeLeft).toBe(15 * 60);

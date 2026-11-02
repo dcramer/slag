@@ -20,10 +20,9 @@ interface P {
   bounced: number;
 }
 
-/** Cosmetic particles. Gibs bounce off terrain and paint splats via `onSplat`. */
+/** Cosmetic particles. Gibs bounce off terrain. */
 export class Fx {
   private ps: P[] = [];
-  onSplat: ((x: number, y: number, r: number, c: HSL) => void) | null = null;
 
   add(kind: PKind, x: number, y: number, vx: number, vy: number, color: HSL = { h: 0, s: 0, l: 90 }, size = 1, life = 1) {
     if (this.ps.length > 1800) this.ps.shift();
@@ -87,7 +86,6 @@ export class Fx {
           const ny = p.y + p.vy * dt;
           if (p.kind === 'gib' || p.kind === 'debris') {
             if (solid(nx, ny)) {
-              if (p.kind === 'gib' && p.bounced < 2 && this.onSplat) this.onSplat(nx, ny, 1.5 + p.size * 1.2, p.color);
               if (solid(nx, p.y)) p.vx *= -0.4;
               if (solid(p.x, ny)) p.vy *= -0.35;
               p.vx *= 0.7;

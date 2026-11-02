@@ -3,7 +3,7 @@ import { RUN_COUNTDOWN, TILE } from '../sim/constants';
 import type { GameEvent } from '../sim/types';
 import { RunnerTracker } from './actions';
 import { type Cue, type CueEnv, cuesForEvent, GROUND_TONE, slotPitch } from './cues';
-import { collectEmitters, type Emitter, type PropCue, propTransients } from './emitters';
+import { collectEmitters, type Emitter, type PropCue, propTransients, weatherEmitters } from './emitters';
 import { AudioEngine } from './engine';
 import type { AudioSystem, UiCue } from './index';
 import { composeSong } from './music/compose';
@@ -224,12 +224,19 @@ export class WebAudioSystem implements AudioSystem {
       for (const c of this.transients) play({ name: c.name, x: c.x, y: c.y, pitch: c.pitch });
       this.emitters.length = 0;
       collectEmitters(run, f1, this.emitters);
+      weatherEmitters(match.level, f1, L.x, L.y, this.emitters);
       e.loops.update(this.emitters, L);
       this.loopsLive = true;
       this.runFrame = f1;
     } else {
       this.run = null;
-      if (this.loopsLive) {
+      this.emitters.length = 0;
+      // You pick and build with the weather already in your ears.
+      if (match.phase === 'pick' || match.phase === 'place') weatherEmitters(match.level, -1, L.x, L.y, this.emitters);
+      if (this.emitters.length) {
+        e.loops.update(this.emitters, L);
+        this.loopsLive = true;
+      } else if (this.loopsLive) {
         e.loops.silence(L);
         this.loopsLive = e.loops.live > 0;
       }

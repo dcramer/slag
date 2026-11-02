@@ -63,6 +63,8 @@ export interface ProjWorld {
   solids: readonly Solid[];
   /** Multiplier on every ammo's gravity (the level's gravity setting). */
   gravity: number;
+  /** Side wind of this frame's gust (px/s, + right): whatever's flying moves with the air. */
+  gust?: number;
   /** Index matches RunWorld.runners. */
   runners: readonly ProjRunner[];
   spawn(p: ProjectileSpawn): void;
@@ -122,7 +124,7 @@ export const FACE: readonly (readonly [number, number])[] = [
 /** Is (x, y) inside terrain or a solid? For a shot's first frames it passes the prop that fired it, or, from a hand (`source` -1), every solid. */
 export function solidAt(w: ProjWorld, x: number, y: number, age: number, source = -1): boolean {
   if (tileAt(w.level, Math.floor(x / TILE), Math.floor(y / TILE)) === T_SOLID) return true;
-  return w.solids.some((s) => pointInRect(x, y, s) && (age > 2 || (source >= 0 && s.propUid !== source)));
+  return w.solids.some((s) => !s.film && pointInRect(x, y, s) && (age > 2 || (source >= 0 && s.propUid !== source)));
 }
 
 /** Which axis of the last move ran into something: 'x' (a wall), 'y' (floor/ceiling) or both (a corner). */
@@ -349,7 +351,7 @@ export const AMMO_SIM: Partial<Record<Ammo, AmmoSim>> = {
       const target = ridden ? GLIDER_LOADED_SINK + (riders - 1) * GLIDER_EXTRA_SINK : w.frame - p.born > GLIDER_CRUISE ? GLIDER_SINK : 0;
       const step = ridden ? 4 : 1.5;
       p.vy = p.vy < target ? Math.min(target, p.vy + step) : Math.max(target, p.vy - step);
-      p.mx = p.vx * DT;
+      p.mx = (p.vx + (w.gust ?? 0)) * DT;
       p.my = p.vy * DT;
       p.x += p.mx;
       p.y += p.my;
@@ -362,7 +364,7 @@ export const AMMO_SIM: Partial<Record<Ammo, AmmoSim>> = {
         [r.x + r.w, r.y + r.h],
       ])
         if (tileAt(w.level, Math.floor(x / TILE), Math.floor(y / TILE)) === T_SOLID) return false;
-      return !w.solids.some((s) => !s.oneWay && s.propUid !== p.source && overlaps(r, s));
+      return !w.solids.some((s) => !s.oneWay && !s.film && s.propUid !== p.source && overlaps(r, s));
     },
   },
   goo: { wall: stick },
@@ -446,6 +448,7 @@ export function stepProjectile(p: Projectile, w: ProjWorld): boolean {
   let why: EndReason | null = null;
   if (sim?.move) alive = sim.move(p, w);
   else defaultMove(p, f, w.gravity);
+  if (w.gust && !sim?.platform) p.x += w.gust * DT; // Gliders count the gust in their own move, or riders would slide off.
   if (alive && sim?.fuse?.(p, f)) alive = false;
   if (!alive) why = 'fuse';
   const age = f - p.born;

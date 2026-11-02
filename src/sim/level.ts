@@ -2,6 +2,7 @@ import type { Rect } from '../core/geom';
 import type { Theme } from '../gen/theme';
 import { TILE } from './constants';
 import type { PlacedProp } from './props/types';
+import type { Weather } from './weather';
 
 export interface TileRect {
   x: number;
@@ -71,6 +72,8 @@ export interface Level {
   gravity?: number;
   /** Variety knobs this level was generated with (absent for hand-built test levels). */
   profile?: LevelProfile;
+  /** This level's weather (sim/weather.ts). Absent means clear, as on hand-built test levels. */
+  weather?: Weather;
   /** Bumped whenever tiles change so renderers can invalidate caches. */
   version: number;
 }
@@ -92,6 +95,11 @@ export function isProtected(level: Level, tx: number, ty: number): boolean {
 /** World size in px. */
 export function worldSize(level: Level): { w: number; h: number } {
   return { w: level.w * TILE, h: level.h * TILE };
+}
+
+/** World y of the floor under a stand cell: where a runner's feet rest, and so where the spawn ring and the flag's base are drawn. */
+export function floorY(cell: { ty: number }): number {
+  return (cell.ty + 1) * TILE;
 }
 
 /** Bodies below this y have sunk into the pit at the bottom of the level. */

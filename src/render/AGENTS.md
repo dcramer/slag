@@ -8,6 +8,7 @@
 - Prop art is a registry: one file per module type in `props/modules/<type>.ts` registering `ModuleArt` (`props/common.ts`), imported from `props/modules/index.ts`. A type may register several arts on different layers. Don't add per-type `switch`es elsewhere.
 - Art on the `BACKDROP` layer paints before the terrain, which hides it: use it for the scenery half of a set piece (towers, masts, gantries), never for anything a player can touch or read a warning from. `tests/render-layers.test.ts` holds the list of module types allowed to use it.
 - Shared drawing helpers and lights are in `kit.ts`, and the pen is in `ink.ts`; reuse them before writing new ones.
+- Weather (`weather.ts`): `WEATHER_ART` is the registry. What's in the air is a stateless field drawn on `rc.bg`, what's on the ground is baked by the terrain painter through `coat`, and mist is one small canvas the cel pass cuts into bands over everything. Read gusts through `gustPush`/`gustWarning` so a warning you see is the one the sim is running. Rain and snow only fall when the footing is real (`calmMotes`).
 - Art never casts rays. Read how far a beam, column or lane reaches with `beamOf` (`props/common.ts`): the sim hurts with that same number, so what you draw stops where it stops hurting.
 - Keep per-frame allocation low: the game targets 60 fps with up to 8 players and ~100 lights.
 

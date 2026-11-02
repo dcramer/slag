@@ -2,9 +2,11 @@ import { generateLevel, type ProfileOverride } from '../gen/level';
 import type { CrateItem, Match, Phase, Player } from '../game/match';
 import type { MatchRules } from '../game/rules';
 import type { RoundResult } from '../game/scoring';
-import type { Level } from '../sim/level';
+import type { BloodCell } from '../sim/blood';
+import { isProtected, type Level, T_EMPTY } from '../sim/level';
 import type { PlacedProp } from '../sim/props';
 import { RunWorld } from '../sim/run';
+import type { Weather } from '../sim/weather';
 import type { ThemeId } from '../themes';
 
 /**
@@ -14,6 +16,8 @@ import type { ThemeId } from '../themes';
  *
  * The level is not shipped: it is regenerated from (seed, theme) and the
  * mutable bits (bomb craters, destroyed set pieces) are patched on top.
+ * Its weather is in the snapshot too, even though the same seed rolls the
+ * same weather, so a peer that somehow disagrees shows up in the hash.
  * Values go through `toWire` so -0, NaN, ±Infinity, Maps and typed arrays
  * survive JSON exactly (the sim must be bit-identical after a restore).
  */
@@ -23,7 +27,7 @@ import type { ThemeId } from '../themes';
  * A new field on Match or RunWorld must be added here or listed as derived:
  * tests/snapshot.test.ts fails until it is.
  */
-export const SNAP_VERSION = 5;
+export const SNAP_VERSION = 7;
 
 export interface RunSnap {
   slots: number[];
@@ -50,11 +54,16 @@ export interface MatchSnap {
   round: number;
   /** Rounds in a row nobody finished (it weights the next crate). */
   dryRounds: number;
-  /** What the level was generated with beyond (seed, theme): the gravity rule, forced knobs. */
+  /**
+   * What the level on screen was generated with beyond (seed, theme). Read from the level, not
+   * from the rules: rules can change after a level is built, and the recipe must still rebuild it.
+   */
   profile: ProfileOverride;
   force: ProfileOverride;
   players: unknown;
   placed: unknown;
+  /** Blood on the level (sim/blood.ts): small integers only, and it moves footing. */
+  blood: BloodCell[];
   crate: unknown;
   rules: MatchRules;
   result: unknown;
@@ -65,7 +74,7 @@ export interface MatchSnap {
   salt: number;
   nextSalt: number;
   pendingAdvance: number | null;
-  level: { tiles: string; setPieces: number[]; version: number };
+  level: { tiles: string; setPieces: number[]; version: number; weather: Weather | null };
   run: RunSnap | null;
 }
 
@@ -156,6 +165,21 @@ function pristineLevel(seed: number, theme: ThemeId | undefined, profile: Profil
   return l;
 }
 
+/**
+ * Can `tiles` be `base` as play left it? Bombs are the only thing that changes tiles once a level
+ * exists, and they only clear unprotected cells, so anything else is a different level: a save or a
+ * peer from a build whose generator gave this seed other terrain. SNAP_VERSION can't catch that,
+ * since a generator change leaves the snapshot format alone.
+ */
+function isPlayedCopy(base: Level, tiles: Uint8Array): boolean {
+  if (tiles.length !== base.tiles.length) return false;
+  for (let i = 0; i < tiles.length; i++) {
+    if (tiles[i] === base.tiles[i]) continue;
+    if (tiles[i] !== T_EMPTY || isProtected(base, i % base.w, Math.floor(i / base.w))) return false;
+  }
+  return true;
+}
+
 /** Remember a level as pristine (call right after generating it) so restores can skip regeneration. */
 export function rememberPristine(seed: number, theme: ThemeId | undefined, level: Level, profile: ProfileOverride = {}) {
   const key = pristineKey(seed, theme, profile);
@@ -176,10 +200,11 @@ export function snapshotMatch(m: Match): MatchSnap {
     frame: m.frame,
     round: m.round,
     dryRounds: m.dryRounds,
-    profile: m.profileOverride(),
+    profile: m.level.profile ? { ...m.level.profile } : m.profileOverride(),
     force: { ...m.forceProfile },
     players: toWire(m.players),
     placed: toWire(m.placed),
+    blood: m.blood.map((c) => ({ ...c })),
     crate: toWire(m.crate),
     rules: { ...m.rules },
     result: toWire(m.result),
@@ -190,7 +215,7 @@ export function snapshotMatch(m: Match): MatchSnap {
     salt: m.salt,
     nextSalt: m.nextSalt,
     pendingAdvance: mp.pendingAdvance ?? null,
-    level: { tiles: bytesToB64(m.level.tiles), setPieces: m.level.setPieces.map((p) => p.uid), version: m.level.version },
+    level: { tiles: bytesToB64(m.level.tiles), setPieces: m.level.setPieces.map((p) => p.uid), version: m.level.version, weather: m.level.weather ?? null },
     run: run
       ? {
           slots: run.runners.map((r) => r.slot),
@@ -212,7 +237,9 @@ export function snapshotMatch(m: Match): MatchSnap {
 
 /**
  * Overwrite `m` in place with snapshot `s` (references held by the renderer,
- * audio and debug tools stay valid). Pending events are dropped.
+ * audio and debug tools stay valid). Pending events are dropped. Throws, leaving `m` untouched, on
+ * a snapshot this build can't load: its spawn, goal and set pieces come from regenerating the level,
+ * so tiles from any other level would put the ring and flag on terrain the runners aren't on.
  */
 export function restoreMatch(m: Match, s: MatchSnap): void {
   if (s.v !== SNAP_VERSION) throw new Error(`snapshot v${s.v} != v${SNAP_VERSION}`);
@@ -221,9 +248,15 @@ export function restoreMatch(m: Match, s: MatchSnap): void {
   const prev = { run: m.run, round: m.round, phase: m.phase, level: m.level, placed: m.placed.map((p) => p.uid).join() };
   const base = pristineLevel(s.seed, theme, s.profile);
   const tiles = b64ToBytes(s.level.tiles);
+  if (!isPlayedCopy(base, tiles)) throw new Error(`snapshot of level ${s.seed} has terrain this build doesn't generate`);
   const keep = new Set(s.level.setPieces);
   const cur = m.level;
-  const same = cur.seed === s.seed && cur.theme.id === base.theme.id && cur.tiles.length === tiles.length && cur.tiles.every((t, i) => t === tiles[i]);
+  const same =
+    cur.seed === s.seed &&
+    cur.theme.id === base.theme.id &&
+    JSON.stringify(cur.profile) === JSON.stringify(base.profile) &&
+    cur.tiles.length === tiles.length &&
+    cur.tiles.every((t, i) => t === tiles[i]);
   if (!same || cur.setPieces.length !== keep.size || cur.setPieces.some((p) => !keep.has(p.uid))) {
     // Renderers cache terrain by (seed, version): bump past whatever is on screen when tiles change.
     const version = same ? s.level.version : Math.max(s.level.version, cur.version + 1);
@@ -231,6 +264,7 @@ export function restoreMatch(m: Match, s: MatchSnap): void {
   } else {
     m.level.version = s.level.version;
   }
+  m.level.weather = s.level.weather ?? undefined;
   m.seed = s.seed;
   m.themeOverride = theme;
   m.phase = s.phase;
@@ -241,6 +275,7 @@ export function restoreMatch(m: Match, s: MatchSnap): void {
   m.forceProfile = { ...s.force };
   m.players = fromWire(s.players) as Player[];
   m.placed = fromWire(s.placed) as PlacedProp[];
+  m.blood = s.blood.map((c) => ({ ...c }));
   m.crate = fromWire(s.crate) as CrateItem[];
   m.rules = { ...s.rules };
   m.result = fromWire(s.result) as RoundResult | null;
@@ -263,6 +298,7 @@ export function restoreMatch(m: Match, s: MatchSnap): void {
     prev.placed === m.placed.map((p) => p.uid).join() &&
     sameSlots(prev.run, s.run.slots);
   m.run = s.run ? restoreRun(sameRace ? prev.run! : new RunWorld(m.level, m.placed, s.run.slots, s.run.timeLimit, s.run.itemSeed), s.run) : null;
+  if (m.run) m.run.blood = m.blood;
 }
 
 function restoreRun(run: RunWorld, s: RunSnap): RunWorld {
@@ -301,6 +337,7 @@ export function hashSnap(s: MatchSnap): number {
   h.value(rest);
   h.value(level.tiles);
   h.value(level.setPieces);
+  h.value(level.weather);
   return h.h >>> 0;
 }
 

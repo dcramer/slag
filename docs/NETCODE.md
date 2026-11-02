@@ -136,7 +136,7 @@ Both windows run from when the offer lands, not from when we started. A handshak
 
 If two peers end up hosting anyway (say one lost the API at the wrong moment and the other wrote it off), the store settles it within a heartbeat: `beat` tells a host the room's lowest order, a higher host hands its guests to the lower one, and a host the store forgot rejoins later in the order.
 
-An empty room needs nothing: the next arrival is host. If this browser saved the room's state in the last 30 minutes it resumes it.
+An empty room needs nothing: the next arrival is host. If this browser saved the room's state in the last 30 minutes it resumes it, unless a generator change since then means this build can't rebuild that level, in which case the room starts fresh.
 
 If signaling fails while links are up, nothing happens: only a host that has lost its guests too reports `reconnecting`, and it freezes rather than fork the room.
 
@@ -167,7 +167,7 @@ The host plays with zero input delay. A guest renders a predicted copy: the conf
 
 ### Joining and reconnecting
 
-- **Join / reconnect**: a guest says `hello`; the host replies with a **snapshot**: the whole Match minus the level, which is regenerated from its seed with bomb craters patched on, plus ack state and last inputs. Bounded in size, and it also serves resync and migration.
+- **Join / reconnect**: a guest says `hello`; the host replies with a **snapshot**: the whole Match minus the level, which is regenerated from its seed and profile with bomb craters patched on, plus ack state and last inputs. Bounded in size, and it also serves resync and migration. Spawn, goal and set pieces come from that regeneration, so a peer refuses a snapshot whose tiles aren't its own level plus craters: tiles from another build's generator would put the ring and flag on terrain the runners aren't on.
 - **Refresh mid-match**: the player stays seated but `away` (auto-picks, forfeits placement, pops at GO, so nobody waits); on return they get the same slot, character, name and score.
 - **Refresh in the lobby**: the player is removed but parked with their character; on return they're re-seated with the same look.
 - **Join mid-match**: spectate until the next round boundary, then the host seats the peer's main device.

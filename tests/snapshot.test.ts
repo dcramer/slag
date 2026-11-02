@@ -33,13 +33,13 @@ function inputsAt(m: Match, f: number): Record<string, InputFrame> {
  */
 const MATCH_FIELDS = {
   saved:
-    'seed level phase phaseFrame frame round players placed crate run result prevScores winners nextUid charRolls pendingAdvance themeOverride rules nextSalt salt dryRounds forceProfile',
+    'seed level phase phaseFrame frame round players placed crate run result prevScores winners nextUid charRolls pendingAdvance themeOverride rules nextSalt salt dryRounds forceProfile blood',
   derived: 'events', // render/audio only, drained every frame
 };
 const RUN_FIELDS = {
   saved: 'frame runners projectiles finishOrder kills endFrame propState seq timeLimit items itemSeed',
   // Rebuilt by the constructor from level, placed props and slots, or rebuilt every frame.
-  derived: 'level placed resolved events safeZone solids out world goal grabs killY',
+  derived: 'level placed resolved events safeZone solids out world goal grabs killY blood', // `blood` is the Match's list, handed back on restore
 };
 
 /** A race two seconds in with every held item out: in hands, used, and loose in the world. */

@@ -14,6 +14,8 @@ Online play is on `main`; see `docs/NETCODE.md`.
 - **Host label and kick:** someone is clearly labeled `Host` in the lobby, and the host can kick players there. The label follows host migration.
 - Owner: connect `slag-upstash-kv` to the Vercel project for Production and Preview, then redeploy.
 - Not verified yet: real Upstash, real NAT traversal, TURN, Firefox, Safari, real phones. Cross-engine determinism has never run; dmath has only been exercised on V8.
+- A guest refused for being on another build waits on `Joining…` forever. It should say to reload.
+- **Gravity rule:** `sanitizeRules` (`src/net/actions.ts`) drops `gravity`, and the `rules` action skips `setRules`, so the Rules menu resets it and the level never regenerates. Fixing it needs the renderer's terrain, decor and surround caches to notice a same-seed regen.
 - A guest whose link drops for 2.5 s is marked away, which pops their runner mid-race. Decide if that's right.
 - Measure recovery in a 2-peer room, where no third peer confirms the loss (about 7 s expected).
 
@@ -34,14 +36,6 @@ Phone support (follow camera, pinch, scaled HUD, settings sheet) is on `main` bu
 - **`pnpm shot race` without `--race`** never starts a race: it stays in pick at frame 0.
 - **Crate cards:** the Dragon Vent draws as a tiny dot when its flame is off in that frame, and its sizes look alike. Medium and large ropes look the same too, because the preview caps at 4 links.
 - **Impact words** can hide a hazard for most of a second; `?lettering=0` turns them off. Decide whether they stay. Mine is the weakest theme in cel (band arcs on rock walls), and big plain walls are a taste call. Try a real phone.
-
-## 9. Weather (new)
-A per-level random variable:
-- wind gusts that push runners and projectiles (reuse `src/sim/wind.ts`);
-- mist that limits sight distance;
-- rain or snow that changes footing.
-
-It's always telegraphed, weighted per theme, and must be deterministic from the level seed.
 
 ## 10. Housekeeping
 - Enable GitHub Actions and make `ci.yml` a required check. This must be done on GitHub by the repo owner.
@@ -68,6 +62,8 @@ The rest of this item is the home screen, the first and biggest piece of it. The
 Nothing from the content, held-items or grab-props work has been played by hand, so the tuning is test-level only: magnet drift, bumper power, slow and freeze durations, item strength. Gamepad `use` (Y and LT) hasn't been tried on a real pad, and item sounds borrow existing cues and haven't been heard. Trackers can no longer see runners through terrain, which changes how lobbed trackers feel.
 
 Size tiers for parts are a mapping of the old rolled ranges, so check them too; bumper and spike strip changed most. Confirm the Match Length values (Short 30 points / 10 rounds, Normal 50 / 15, Long 80 / 25). They come from a Monte Carlo model of scoring with a fixed finish rate, and real finish rates probably fall as props pile up. The limit decides about 25% of 2-player Normal matches at typical finish rates and about 60% at very low or very high ones.
+
+**Undecided: character height.** Characters fit a one-block gap today. The owner wondered about a 1.5- or 2-block gap, since one block feels less interesting, then leaned back toward one. Decide in playtest. Changing it means redoing level design and `reach.ts` tuning.
 
 ## 16. Fix WebGL failure paths
 Both are now visible in Sentry.
@@ -103,5 +99,6 @@ Run this once the current agents have landed, so it doesn't fight them. A lot ar
 
 - **Code:** dead exports, leftovers from merged branches, duplicated helpers, oversized files (`src/render/hud.ts`, `src/ui/menus.ts`, `tools/shot.ts`).
 - **Docs:** AGENTS.md files, `docs/DESIGN.md`, `docs/ART.md`, `docs/NETCODE.md`, `docs/MOBILE.md`, `README.md`, so each says what's true now and nothing else.
+- **Tooling:** `pnpm format`'s `oxlint --fix` broke `tests/roster.test.ts` by turning an array into a `Set`. Find the rule and fix it.
 - **Repo:** merged `wip/*` branches and worktree branches, the 7 lint warnings (item 14), and `netcode-merge-wip`.
 
