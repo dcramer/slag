@@ -153,6 +153,19 @@ body {
   color: var(--ink);
   -webkit-text-stroke: 0.15em var(--ink);
   text-shadow: 0 0.07em 0 var(--ink);
+  filter: url(#slag-pen);
+}
+
+/* Holds the pen filters; takes no room. */
+.logo-pen {
+  position: absolute;
+}
+
+/* The menu's logo shrinks with the window below 1100 px (12vw); its pen shrinks with it. */
+@media (max-width: 1100px) {
+  .home .logo-o {
+    filter: url(#slag-pen-s);
+  }
 }
 
 .logo-f {
