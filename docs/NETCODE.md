@@ -148,15 +148,18 @@ The sim is a pure function of `(seed, per-frame inputs)`, so **inputs and host-s
 
 ### Lockstep (host-sequenced)
 
-- Every tick (60 Hz), each guest samples its devices, appends the frame to its *unacked* list, and every 2 ticks (immediately on a button press) sends **all** unacked frames to the host. Redundancy makes loss harmless.
-- The host consumes one queued frame per guest per tick. If a guest's queue runs dry it repeats held buttons, with no edges; if a burst piles up, the oldest frames are folded together (edges OR-ed), which bounds latency.
-- The host stamps `{frame, inputs, actions, ack deltas}` into a **bundle**, applies it, and broadcasts bundles every 2 ticks. Guests apply bundles strictly in frame order. A gap triggers `need`, and the host resends from its 10 s history or sends a snapshot.
+- Ticks don't depend on animation frames. Online, a worker's timer drives them, because a page that's hidden or slow to draw would otherwise hold up everyone waiting on it.
+- Every tick (60 Hz), each guest samples its devices, appends the frame to its *unacked* list, and sends **all** unacked frames to the host. Redundancy makes loss harmless.
+- The host consumes one queued frame per guest per tick. If a guest's queue runs dry it repeats held buttons, with no edges. More than two frames waiting are folded together (edges OR-ed): the host only eats one a tick, so a queue left alone never drains, and each frame in it is 17 ms of lag for everyone.
+- The host stamps `{frame, inputs, actions, ack deltas}` into a **bundle**, applies it, and broadcasts every tick, repeating the previous bundle so a lost packet costs nothing. Guests apply bundles strictly in frame order, the moment they arrive. A gap triggers `need`, and the host resends from its 10 s history or sends a snapshot.
 - Discrete changes (seat a rejoiner, drop a leaver, mark away, rename, a saved look, rules, the crate salt) are **actions** in bundles, applied by everyone at the same frame.
 - Sequence numbers start at wall-clock ms, so a refreshed page always counts higher than its old self.
 
 ### Prediction (races)
 
 The host plays with zero input delay. A guest renders a predicted copy: the confirmed state stepped forward with its unacked inputs, others holding their last known buttons. New bundles rebuild it from the confirmed state (rollback + re-simulate, at most 24 frames). Events are emitted the first time a frame is simulated, never twice.
+
+Prediction can't know a jump or a turn is coming, so remote runners are wrong for a round trip and then corrected. Drawn straight, a late jump teleports about 50 px at 100 ms. Instead each runner carries on from where it was drawn and the error bleeds away over a few frames, unless it's so large it must be a respawn. This only touches the view copy, which is rebuilt from confirmed state every update and never stepped, so it can't affect determinism.
 
 ### Pick and place
 
@@ -196,6 +199,7 @@ IEEE-754 `+ - * /` and `Math.sqrt` are exact everywhere, but `Math.sin/cos/atan2
 - `tests/snapshot.test.ts`: round trips with items in play, prediction isolation, and a guard that fails until any new `Match` or `RunWorld` field is snapshotted or declared derived. `tests/dmath.test.ts`.
 - `pnpm test:store`: the real Upstash REST code against real Redis behind [Serverless Redis HTTP](https://upstash.com/docs/redis/sdks/ts/developing) (`compose.store.yml`, Redis 6.2.21 and SRH 0.0.10, on port 8079). Every command the handlers use, reply parity with the in-memory store, TTL expiry, the join counter under a stampede, the handlers end to end. `-- --browser pick,run,leave` adds real browsers on the same store, with the app configured through the production env vars. Needs Docker, so it's a CI job rather than part of `pnpm check`. SRH needs `Content-Type: application/json` and differs from Upstash in edge cases, so handlers stick to plain commands.
 - `pnpm online-test`: real WebRTC between headless Chromium pages, one context per peer, against the real routes with the in-memory store. Hosts are killed with a renderer crash (no pagehide, no goodbye) in pick, place and run; also a graceful leave, and a new host dying straight after taking over. Each prints seconds to recovery and compares state hashes.
+- `pnpm online-test -- --only latency,hidden`: input-to-screen delay between pages, bundle cadence, stalls and teleports, at 0 and 40 ms each way, and with the host's tab hidden. Drawing is stubbed, because software GL would measure this machine. The delay and the hidden tab are simulated in the page (a delayed `RTCDataChannel.send`; `document.hidden`, no rAF, timers clamped to 1 Hz), since headless pages can't truly go hidden. The budget is loose enough for a loaded box: it catches regressions, not jitter.
 
 **Not exercised by any of this:** the real Upstash service (SRH stands in for it), real NAT traversal (all pages share a machine and connect over host candidates), TURN, browsers other than Chromium, and real phones.
 

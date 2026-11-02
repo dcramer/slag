@@ -270,10 +270,8 @@ async function measure(label: string, src: Page, viewer: Page, device: string, h
   const delays: number[] = [];
   for (const e of sent) {
     if (e.dir === 0) continue;
-    const at = seen.findIndex((s) => s[0] >= e.t - 100);
-    if (at < 0) continue;
-    const rest = seen[at][1];
-    const moved = seen.slice(at).find((s) => s[0] >= e.t && Math.abs(s[1] - rest) > 0.05 && Math.sign(s[1] - rest) === e.dir);
+    // Velocity, not position: an eased runner is still settling from the last pulse, and that drift looks like instant reaction.
+    const moved = seen.find((s) => s[0] >= e.t && s[2] * e.dir > 10);
     if (moved && moved[0] - e.t < 1000) delays.push(moved[0] - e.t);
   }
   const gaps = bundles.slice(1).map((t, i) => t - bundles[i]);
@@ -350,10 +348,9 @@ const ONE_WAY_MS = 40;
 const BUDGET_MS = 90;
 
 function budget(r: LatencyReport, networkMs: number) {
-  check(
-    r.samples >= 4 && r.delayP50 <= networkMs + BUDGET_MS,
-    `${r.label}: p50 within ${networkMs} ms network + ${BUDGET_MS} ms (${r.delayP50.toFixed(0)} ms)`,
-  );
+  // The floor catches a broken measurement: nothing beats the network.
+  const ok = r.samples >= 4 && r.delayP50 >= networkMs && r.delayP50 <= networkMs + BUDGET_MS;
+  check(ok, `${r.label}: p50 within ${networkMs} ms network + ${BUDGET_MS} ms (${r.delayP50.toFixed(0)} ms)`);
   check(r.maxSnap < 24, `${r.label}: no teleport (${r.maxSnap.toFixed(1)} px)`);
 }
 
