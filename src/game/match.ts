@@ -138,20 +138,42 @@ export class Match {
 
   // ---------------------------------------------------------------- lobby
 
-  /** A character nobody seated could be mistaken for. Rolls are counted, so every peer lands on the same one. */
+  /**
+   * A character nobody seated could be mistaken for. Rolls are counted, so every
+   * peer lands on the same one. A full lobby can't always keep everyone
+   * MIN_HUE_APART, so it keeps the roll furthest from anyone rather than the last.
+   */
   private rollCharacter(owner?: Player): CharacterDef {
-    let c = generateCharacter(deriveSeed(this.seed, `char:${this.charRolls++}`));
-    for (let i = 0; i < 16 && !this.looksFree(c, owner); i++) c = generateCharacter(deriveSeed(this.seed, `char:${this.charRolls++}`));
-    return c;
+    let best = this.rollOnce();
+    for (let i = 0; i < 32 && !this.looksFree(best, owner); i++) {
+      const c = this.rollOnce();
+      if (this.hueGap(c, owner) > this.hueGap(best, owner) && !this.nameTaken(c, owner)) best = c;
+    }
+    return best;
+  }
+
+  private rollOnce(): CharacterDef {
+    return generateCharacter(deriveSeed(this.seed, `char:${this.charRolls++}`));
+  }
+
+  /** Degrees to the nearest other player's color. */
+  private hueGap(c: CharacterDef, owner?: Player): number {
+    let gap = 180;
+    for (const q of this.players) {
+      if (q === owner) continue;
+      const apart = Math.abs(q.character.hue - c.hue) % 360;
+      gap = Math.min(gap, apart, 360 - apart);
+    }
+    return gap;
+  }
+
+  private nameTaken(c: CharacterDef, owner?: Player): boolean {
+    return this.players.some((q) => q !== owner && q.character.name === c.name);
   }
 
   /** True if no other player already has this look: colors must read apart at a glance, and names must differ. */
   looksFree(c: CharacterDef, owner?: Player): boolean {
-    return this.players.every((q) => {
-      if (q === owner) return true;
-      const apart = Math.abs(q.character.hue - c.hue) % 360;
-      return Math.min(apart, 360 - apart) >= MIN_HUE_APART && q.character.name !== c.name;
-    });
+    return this.hueGap(c, owner) >= MIN_HUE_APART && !this.nameTaken(c, owner);
   }
 
   newLevel(seed: number, theme: ThemeId | undefined = this.themeOverride) {

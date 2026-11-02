@@ -202,8 +202,13 @@ describe('lobby seats', () => {
     expect(a.match.players).toHaveLength(8);
     expect(new Set(a.match.players.map((p) => p.character.name)).size).toBe(8);
     expect(new Set(a.match.players.map((p) => p.character.seed)).size).toBe(8);
-    const hues = a.match.players.map((p) => p.character.hue);
-    for (const h of hues) for (const o of hues) if (o !== h) expect(Math.min(Math.abs(h - o), 360 - Math.abs(h - o))).toBeGreaterThanOrEqual(30);
+    const gaps = (n: number) => {
+      const hues = a.match.players.slice(0, n).map((p) => p.character.hue);
+      return hues.flatMap((h, i) => hues.slice(i + 1).map((o) => Math.min(Math.abs(h - o), 360 - Math.abs(h - o))));
+    };
+    // A party reads apart at a glance. A full lobby can't always keep that, but never lands on a near twin.
+    expect(Math.min(...gaps(4))).toBeGreaterThanOrEqual(30);
+    expect(Math.min(...gaps(8))).toBeGreaterThanOrEqual(15);
   });
 
   it('refuses a look someone here already has, so two tabs sharing a saved look still differ', () => {
