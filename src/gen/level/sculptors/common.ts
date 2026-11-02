@@ -28,7 +28,7 @@ export const TWO_PARTS = 0.25;
  */
 export const TWO_PART_ASK: Partial<Record<ThemeId, number>> = {
   farm: 0.01,
-  factory: 0.36,
+  factory: 0.41,
   castle: 0.5,
   jungle: 0.33,
   volcano: 0.13,

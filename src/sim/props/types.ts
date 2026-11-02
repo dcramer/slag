@@ -191,7 +191,16 @@ export type Module =
   | { type: 'flame'; at: Vec; angle: number; length: number; on: number; off: number; warn: number }
   | { type: 'laser'; at: Vec; angle: number; charge: number; fire: number; off: number; sweep: number; sweepPeriod: number }
   | { type: 'tesla'; a: Vec; b: Vec; on: number; off: number; warn: number }
-  | { type: 'piston'; at: Vec; angle: number; reach: number; width: number; period: number }
+  | {
+      type: 'piston';
+      at: Vec;
+      angle: number;
+      reach: number;
+      width: number;
+      period: number;
+      /** Fraction of a period this one runs behind the prop's other pistons: a line of presses slamming in sequence (stage concepts). */
+      lag?: number;
+    }
   | { type: 'spring'; at: Vec; angle: number; power: number }
   /** Always-on wind column along `angle` (`length` tiles); air speed = windSpeed(strength) (src/sim/wind.ts). */
   | { type: 'fan'; at: Vec; angle: number; length: number; strength: number }

@@ -1,6 +1,6 @@
 import type { Vec } from '../../core/geom';
 import type { Rng } from '../../core/rng';
-import type { RouteShape, SizeClass, TileRect } from '../../sim/level';
+import type { LevelProfile, RouteShape, SizeClass, TileRect } from '../../sim/level';
 import type { Grid } from '../level/kit';
 import type { Knobs } from '../level/sculptors/common';
 import type { Piece, Site } from '../setpieces/place';
@@ -24,6 +24,12 @@ export interface Concept {
   sizes: readonly SizeClass[];
   /** Route shapes it fits; any when absent. */
   routes?: readonly RouteShape[];
+  /**
+   * Anything else about the level it needs, checked with size and route when the concept is rolled: a
+   * landmark that owns the crossing may have no room beside it on a classic level whose gravity stretches the
+   * crossing. A concept that can't stand up costs attempts and ends plain, so say so up front.
+   */
+  fits?(p: Partial<LevelProfile>): boolean;
   /** Columns and rows it needs, measured from jumpProfile() at the level's gravity, never fixed numbers. */
   box(k: Knobs, rng: Rng): { w: number; h: number };
   /**

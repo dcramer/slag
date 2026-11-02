@@ -112,7 +112,7 @@ const LAMP_Y = -0.6;
 
 /** 0..1 how near the next slam is, over the last stretch of the rest: what the lamp and the shudder show. */
 function windup(m: Piston, f: number, phase: number): number {
-  const t = frac(f / m.period + phase);
+  const t = frac(f / m.period + phase - (m.lag ?? 0));
   return t > 0.78 ? (t - 0.78) / 0.22 : 0;
 }
 

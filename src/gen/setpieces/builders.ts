@@ -1,6 +1,7 @@
 import { dcos, dsin } from '../../core/dmath';
-import type { Cell } from '../../core/geom';
+import type { Cell, Vec } from '../../core/geom';
 import type { Rng } from '../../core/rng';
+import type { TileRect } from '../../sim/level';
 import type { Ammo, Archetype, CannonLook, GeyserLook, Material, Module, PropStyle, Role, RotorLook, RotorSupport, VehicleLook } from '../../sim/props';
 import { best, type Piece, SAFE_TILES, type Site } from './place';
 
@@ -455,6 +456,82 @@ export function* antennas(rng: Rng, s: Site, o: Common & { gap: Range; on: Range
       modules: [
         { type: 'deco', kind: 'antenna', at: [x0, top], w: D + 1, h: 3, seed: rng.int(0, 1 << 20) },
         { type: 'tesla', a: [x0 + 0.5, top + 0.5], b: [x0 + D + 0.5, top + 0.5], on: rollInt(rng, o.on), off: rollInt(rng, o.off), warn: 36 },
+      ],
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The Great Wheel (stage concept, gen/stage/factory.ts): a giant flywheel whose rim carries cars and whose spokes carry saws.
+
+export interface GreatWheelOpts extends Common {
+  /** Axle (tiles). */
+  hub: Vec;
+  /** Hub → car-centre distance (tiles). */
+  arm: number;
+  /** Cars round the rim; `saws` must divide it, so every saw rides in a gap between two cars. */
+  cars: number;
+  saws: number;
+  /** Car deck width (tiles). */
+  car: number;
+  /** Saw blade radius (tiles); the blades ride `inset` tiles inside the rim. */
+  saw: number;
+  inset: number;
+  /** Frames per revolution. */
+  period: Range;
+  /** The backdrop shell (the flywheel's lattice rim and its A-frame) over the wheel's air. */
+  shell: TileRect;
+}
+
+/**
+ * The wheel as one piece: a rotor of level cars on the rim and a swinger of saws on the same axle, with the
+ * same period and direction, so the saws keep their place between the cars and a rider standing still in
+ * the middle of a car is never touched: only a jump between cars meets a blade. The flywheel shell is a deco
+ * over the wheel's air, for the art. A landmark's pieces are all required, so this yields exactly one.
+ */
+export function* greatWheel(rng: Rng, _s: Site, o: GreatWheelOpts): Generator<Piece> {
+  const angle0 = rng.range(0, Math.PI * 2);
+  const period = rollInt(rng, o.period);
+  const seed = rng.int(0, 1 << 20);
+  const dir = rng.sign();
+  {
+    yield {
+      name: o.name,
+      archetype: o.archetype ?? 'platform',
+      role: o.role ?? 'build',
+      style: o.style,
+      modules: [
+        { type: 'deco', kind: 'flywheel', at: [o.shell.x, o.shell.y], w: o.shell.w, h: o.shell.h, seed },
+        {
+          type: 'rotor',
+          look: 'cog',
+          support: 'none',
+          mastX: o.hub[0],
+          hub: o.hub,
+          arm: o.arm,
+          count: o.cars,
+          angle0,
+          period,
+          swing: 0,
+          dir,
+          width: o.car,
+          thick: 0.5,
+          material: 'metal',
+          seed,
+        },
+        {
+          type: 'swinger',
+          head: 'saw',
+          hub: o.hub,
+          arm: o.arm - o.inset,
+          angle0: angle0 + Math.PI / o.cars,
+          period,
+          swing: 0,
+          dir,
+          radius: o.saw,
+          count: o.saws,
+          link: 'rod',
+        },
       ],
     };
   }
