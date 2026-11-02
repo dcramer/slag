@@ -18,6 +18,7 @@
  *   pnpm shot blood --theme farm --players 4 --noletters → staged deaths over four rounds: ooze, settled, place phase, expiry
  *   pnpm shot stack --seed abc             → stepped frames of runners stacking, walking as a stack, and a head-bounce
  *   pnpm shot codex                        → /codex page (full-page screenshot)
+ *   pnpm shot webgl                        → a race through a lost and restored WebGL context, then with shaders that won't build and with no WebGL2
  *   pnpm shot home                         → main menu (desktop + 390×844 mobile)
  *   pnpm shot settings                     → every settings tab over the lobby, driven by keys and a fake pad,
  *                                           then over the main menu on a phone (portrait and landscape), by tap
@@ -501,6 +502,59 @@ try {
         await step(f);
         await snap(`race-${seed}-${await page.evaluate(() => (window as any).slagDebug.match.run?.frame ?? 0)}`);
       }
+      break;
+    }
+    case 'webgl': {
+      // The compositor's failure paths: a context lost mid-race and given back, shaders that won't build, and no WebGL2.
+      const q = `seed=${seed}&players=${players}&race=${opt('race', 'saw,laser')}&propseed=1`;
+      await open(q);
+      await step(frames);
+      const style = () => page.evaluate(() => (window as any).slagDebug.renderer.renderStyle as string);
+      const raceFrame = () => page.evaluate(() => (window as any).slagDebug.match.run?.frame as number);
+      console.log('before', await style());
+      await snap(`webgl-${seed}-1-cel`);
+      const glCall = (what: 'loseContext' | 'restoreContext') =>
+        page.evaluate((w) => {
+          // A lost context hands out no extensions, so keep the one that can give it back.
+          const keep = window as unknown as { loseGL?: WEBGL_lose_context };
+          const gl = [...document.querySelectorAll('canvas')].map((c) => c.getContext('webgl2')).find(Boolean)!;
+          keep.loseGL ??= gl.getExtension('WEBGL_lose_context')!;
+          keep.loseGL[w]();
+        }, what);
+      await glCall('loseContext');
+      await page.waitForFunction(() => (window as any).slagDebug.renderer.renderStyle.startsWith('canvas2d'), null, { timeout: 10_000 });
+      const f0 = await raceFrame();
+      await step(30);
+      console.log('lost', await style(), 'race frames', f0, '→', await raceFrame());
+      await snap(`webgl-${seed}-2-lost`);
+      await glCall('restoreContext');
+      await page.waitForFunction(() => (window as any).slagDebug.renderer.renderStyle.startsWith('webgl2'), null, { timeout: 10_000 });
+      await step(30);
+      console.log('restored', await style());
+      await snap(`webgl-${seed}-3-restored`);
+      // A fresh page per broken GPU: the breakage has to be in place before the game boots.
+      const broken = async (name: string, script: string) => {
+        const bp = await browser.newPage({ viewport: { width: W, height: H } });
+        bp.on('pageerror', (e: Error) => errors.push(String(e)));
+        bp.on('console', (m: { type(): string; text(): string }) => m.type() === 'error' && errors.push(m.text()));
+        await bp.addInitScript(script);
+        await bp.goto(`${base}r/SHOTS?${q}${tq}&net=off`);
+        await bp.waitForFunction(() => 'slagDebug' in window, null, { timeout: 30_000 });
+        await bp.evaluate(() => document.fonts.ready);
+        await bp.evaluate(() => (window as any).slagDebug.pause(true));
+        await bp.evaluate((n) => (window as any).slagDebug.step(n), frames);
+        console.log(name, await bp.evaluate(() => (window as any).slagDebug.renderer.renderStyle));
+        const p = `${out}/webgl-${seed}-${name}.png`;
+        await bp.screenshot({ path: p });
+        console.log(p);
+        pet();
+        await bp.close();
+      };
+      await broken('4-shaderfail', 'WebGL2RenderingContext.prototype.getShaderParameter = function () { return false; };');
+      await broken(
+        '5-nowebgl2',
+        "{ const get = HTMLCanvasElement.prototype.getContext; HTMLCanvasElement.prototype.getContext = function (k, ...a) { return k === 'webgl2' ? null : get.call(this, k, ...a); }; }",
+      );
       break;
     }
     case 'inkdraw': {
