@@ -64,11 +64,23 @@ export const shots: Scenarios = {
     await open(`seed=${seed}&players=2&race=,&propseed=1`);
     // `--styles crossbow,cannon` (or `all`): one launcher of each style instead of `--arch`; `--aim track` keeps only trackers.
     const styles = opt('styles') ? (opt('styles') === 'all' ? LAUNCHER_STYLES : opt('styles')!).split(',') : [];
+    // `--material conveyor,jelly` (instead of `--arch`): `--count` platforms of each block material.
+    const materials = opt('material')?.split(',') ?? [];
     await page.evaluate(
-      ([as, n, styles, aim, bait]) => {
+      ([as, n, styles, aim, bait, mats]) => {
         const d = (window as any).slagDebug;
         d.match.placed.length = 0;
-        if (styles.length) {
+        if (mats.length) {
+          for (const want of mats) {
+            let got = 0;
+            for (let k = 1; k < 900 && got < n; k++) {
+              const before = d.match.placed.length;
+              d.addProps(['platform'], k);
+              if (d.match.placed[before]?.def.modules.some((m: any) => m.type === 'body' && m.material === want)) got++;
+              else d.match.placed.length = before;
+            }
+          }
+        } else if (styles.length) {
           // One launcher of each style: roll seeds until each turns up.
           for (const want of styles) {
             for (let k = 1; k < 900; k++) {
@@ -101,15 +113,19 @@ export const shots: Scenarios = {
           });
         }
       },
-      [arch, Number(opt('count', '2')), styles, opt('aim') ?? '', argv.includes('--bait')] as const,
+      [arch, Number(opt('count', '2')), styles, opt('aim') ?? '', argv.includes('--bait'), materials] as const,
     );
     await step(Number(opt('frames', '60')));
     const spots = await page.evaluate(() =>
       (window as any).slagDebug.match.placed.map((p: any) => {
         const xs = p.def.footprint.map((c: number[]) => c[0]);
         const ys = p.def.footprint.map((c: number[]) => c[1]);
+        const mods = p.def.modules;
         return {
-          name: p.def.modules.find((m: any) => m.type === 'launcher')?.style ?? p.def.archetype,
+          name:
+            mods.find((m: any) => m.type === 'launcher')?.style ??
+            (p.def.archetype === 'platform' ? mods.find((m: any) => m.type === 'body')?.material : undefined) ??
+            p.def.archetype,
           x: (p.tx + (Math.min(...xs) + Math.max(...xs) + 1) / 2) * 16,
           y: (p.ty + (Math.min(...ys) + Math.max(...ys) + 1) / 2) * 16,
         };
