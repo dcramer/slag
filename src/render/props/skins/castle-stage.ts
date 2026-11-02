@@ -3,8 +3,8 @@ import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { type Level, T_SOLID, tileAt } from '../../../sim/level';
 import { type Module, type ModuleOf, swingHeads } from '../../../sim/props';
-import { blob, inkFor, line, type P, stroke } from '../../ink';
-import { boxPts, ovalPts, part, path, poly, sprite, stamp } from '../../ink-props';
+import { blob, inkFor, line, type P } from '../../ink';
+import { bar, boxPts, ovalPts, part, path, poly, sprite, stamp } from '../../ink-props';
 import { circle, flame, flutter, glowDot, light, type RC } from '../../kit';
 import type { DrawCtx } from '../common';
 import { BANNER, doorway, flat, GILT, type Hz, hz, STONE, WOOD } from './castle-ink';
@@ -131,25 +131,9 @@ function pennant(rc: RC, x: number, y: number, col: HSL, seed: number) {
   part(s, cloth, col, seed, { depth: 0.4, thin: 0.25, thick: 0.6 });
 }
 
-/** A polyline cut every couple of px, so a tapered stroke along it keeps its width between its ends. */
-function dense(pts: readonly P[]): P[] {
-  const out: P[] = [pts[0]];
-  for (let i = 1; i < pts.length; i++) {
-    const a = pts[i - 1];
-    const b = pts[i];
-    const n = Math.max(2, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 2.5));
-    for (let k = 1; k <= n; k++) out.push({ x: a.x + ((b.x - a.x) * k) / n, y: a.y + ((b.y - a.y) * k) / n });
-  }
-  return out;
-}
-
 /** An iron rod or a wooden pole: a ribbon in a dark of its colour under the colour. */
 function rodPts(g: CanvasRenderingContext2D, pts: readonly P[], w: number, c: HSL, seed: number, ink = inkFor(c)) {
-  const d = dense(pts);
-  g.fillStyle = ink;
-  stroke(g, d, { w: w + 0.7, seed, taper: [0.02, 0.02], press: 0 });
-  g.fillStyle = css(c);
-  stroke(g, d, { w, seed: seed + 1, taper: [0.02, 0.02], press: 0 });
+  bar(g, pts, w, c, seed, { ink, rim: 0.35, taper: [0.02, 0.02], press: 0 });
 }
 
 // ------------------------------------------------------------------------------------------- gatehouse

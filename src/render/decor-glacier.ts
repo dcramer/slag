@@ -37,12 +37,7 @@ const Y = (d: Decor, y: number) => d.y + 0.5 + y * d.size;
 
 /** A stick, pole or post: a bar of its colour in a thin rim of its own dark, lit along its top when it's broad. */
 function stick(s: CanvasRenderingContext2D, pts: readonly P[], w: number, c: HSL, seed: number) {
-  // A bare pair of points gives the pen no length to swell over: sample it, as `line` does.
-  const run =
-    pts.length > 2
-      ? pts
-      : Array.from({ length: 7 }, (_, i) => ({ x: pts[0].x + ((pts[1].x - pts[0].x) * i) / 6, y: pts[0].y + ((pts[1].y - pts[0].y) * i) / 6 }));
-  bar(s, run, w, c, seed, { taper: [0.02, 0.08], lit: w >= 1.2 ? 14 : 0 });
+  bar(s, pts, w, c, seed, { taper: [0.02, 0.08], lit: w >= 1.2 ? 14 : 0 });
 }
 
 /** Snow heaped along a top edge from x0 to x1 at y: soft lumps, lit on top. */
