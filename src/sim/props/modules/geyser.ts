@@ -1,10 +1,10 @@
 import { dcos, dsin } from '../../../core/dmath';
 import type { Rect } from '../../../core/geom';
 import { TILE } from '../../constants';
-import type { Level } from '../../level';
 import { type Wind, windSpeed } from '../../wind';
+import { castBeam } from '../rays';
 import { cellOf, defineModule } from '../registry';
-import { cycle, dirOf, rayToWall } from '../transform';
+import { cycle, dirOf } from '../transform';
 import type { ModuleOf } from '../types';
 
 type Geyser = ModuleOf<'geyser'>;
@@ -15,15 +15,18 @@ export const geyserCycle = (m: Geyser, f: number, phase: number) => cycle(f, pha
 /** Frames for the column to shoot up / collapse at the ends of an eruption. */
 const RAMP = 8;
 
+/** Px above the vent a column starts looking for something to stop it: it stands on the ground it erupts from. */
+const VENT_SKIP = 2;
+
 /**
- * Current column: base point, direction, reach (px) and 0..1 strength.
- * Null when dormant or rumbling. The column stops at the first solid tile.
+ * Current column: base point, direction, reach (px) and 0..1 strength. Null
+ * when dormant or rumbling. `full` is how far it gets once it's fully up.
  */
 export function geyserColumn(
   m: Geyser,
   f: number,
   phase: number,
-  level: Level | null,
+  full: number,
   ox = 0,
   oy = 0,
 ): { x: number; y: number; dx: number; dy: number; len: number; k: number } | null {
@@ -32,7 +35,6 @@ export function geyserColumn(
   const k = Math.min(1, (c.t + 1) / RAMP, (c.len - c.t) / RAMP);
   const x = m.at[0] + ox;
   const y = m.at[1] + oy;
-  const full = level ? rayToWall(level, x, y, m.angle, m.length, 2) : m.length;
   const [dx, dy] = dirOf(m.angle);
   return { x, y, dx, dy, len: full * Math.min(1, (c.t + 1) / RAMP), k };
 }
@@ -74,9 +76,11 @@ export const geyser = defineModule<'geyser'>({
   resolve: (m, x) => ({ ...m, at: x.P(m.at), angle: m.angle + x.da, width: m.width * x.T, length: m.length * x.T }),
   // The first cell the column passes through (the vent sits on the ground surface).
   anchors: (m) => [cellOf([m.at[0] + dcos(m.angle) * 0.5, m.at[1] + dsin(m.angle) * 0.5])],
-  build(m, ctx, out) {
-    const col = geyserColumn(m, ctx.frame, ctx.r.phase, ctx.level, ctx.off[0], ctx.off[1]);
-    if (!col || col.len < 2) return;
+  trace(m, ctx, out) {
+    const [dx, dy] = dirOf(m.angle);
+    const beam = castBeam(ctx, out, m.at[0] + ctx.off[0], m.at[1] + ctx.off[1], dx, dy, m.length, VENT_SKIP);
+    const col = geyserColumn(m, ctx.frame, ctx.r.phase, beam.len, ctx.off[0], ctx.off[1]);
+    if (!col || col.len <= VENT_SKIP) return;
     if (m.lethal) out.hazards.push({ owner: ctx.r.pp.owner, kind: 'rect', r: geyserRect(m, col) });
     else out.winds.push(geyserWind(m, col));
   },
