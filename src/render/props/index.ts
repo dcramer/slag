@@ -1,6 +1,6 @@
 import { cellsBounds, type Vec } from '../../core/geom';
 import { TILE } from '../../sim/constants';
-import { cardExtent, dirOf, type Module, motionOffset, type PartSize, type PlacedProp, type PropDef, type Resolved, resolveProp } from '../../sim/props';
+import { dirOf, type Module, motionOffset, type PartSize, type PlacedProp, type PropDef, type Resolved, resolveProp } from '../../sim/props';
 import { circle, METALS, type RC } from '../kit';
 import { BACKDROP, moduleArt, type PropDrawOpts } from './common';
 import './modules';
@@ -47,24 +47,77 @@ export function drawPlaced(rc: RC, pp: PlacedProp, o: PropDrawOpts) {
 
 const BLAST_SCALE: Record<PartSize, number> = { small: 0.7, medium: 0.85, large: 1 };
 
-/** Card preview: draw a def centered at (cx, cy) scaled to fit `size`. */
-export function drawPreview(rc: RC, full: PropDef, cx: number, cy: number, size: number) {
-  // A long rope would shrink to a thread on a card, so show only its top links.
+/** How much a card shows of each size: big enough to read alone, and still smaller for a smaller part. */
+const CARD_SIZE: Record<PartSize, number> = { small: 0.6, medium: 0.8, large: 0.96 };
+
+/** Tiles a part's card picture spans across and down: its cells and whatever reaches out of them. */
+function cardBox(def: PropDef): { w: number; h: number } {
+  const { w, h } = cellsBounds(def.footprint);
+  let rx = 0;
+  let ry = 0;
+  let fx = 0;
+  let fy = 0;
+  for (const m of def.modules) {
+    if (m.type === 'swinger') {
+      rx = Math.max(rx, m.arm + m.radius);
+      ry = Math.max(ry, m.arm + m.radius);
+    }
+    if (m.type === 'piston') ry = Math.max(ry, m.reach * 0.6 + 1);
+    if (m.type === 'magnet') {
+      rx = Math.max(rx, m.radius - 0.5);
+      ry = Math.max(ry, m.radius - 0.5);
+    }
+    if (m.type === 'keg') {
+      rx = Math.max(rx, 0.8);
+      ry = Math.max(ry, 0.8);
+    }
+    if (m.type === 'flame') {
+      const [dx, dy] = dirOf(m.angle);
+      fx += Math.abs(dx) * m.length;
+      fy += Math.abs(dy) * m.length;
+    }
+  }
+  return { w: Math.max(1, w + rx * 2 + fx), h: Math.max(1, h + ry * 2 + fy + (def.mount === 'face' ? 0.6 : 0)) };
+}
+
+/**
+ * Card preview: draw a def centered at (cx, cy), filling a `bw` x `bh` box. The crate is the first thing
+ * players look at each round, so a part fills its card: a one-tile block is a block, not a speck. Its
+ * size still shows, a step smaller for each size down.
+ */
+export function drawPreview(rc: RC, full: PropDef, cx: number, cy: number, bw: number, bh = bw) {
+  // A long rope would shrink to a thread on a card, so show only its top links: fewer of them, but
+  // still more for a longer rope, or the medium and large cards are the same picture.
   const def: PropDef =
     full.mount === 'hang'
-      ? { ...full, footprint: full.footprint.slice(0, 4), modules: full.modules.map((m) => (m.type === 'rope' ? { ...m, length: Math.min(m.length, 4) } : m)) }
+      ? {
+          ...full,
+          footprint: full.footprint.slice(0, 4),
+          modules: full.modules.map((m) => (m.type === 'rope' ? { ...m, length: Math.min(4, 1 + m.length * 0.43) } : m)),
+        }
       : full;
   const { w, h } = cellsBounds(def.footprint);
-  // Sizes of a part share one scale, so a big one never looks smaller than a small one. A charge's art stays one tile whatever its blast, so it scales here.
+  // A jet shows its flame on the card, so the whole of it is centered and not just the nozzle.
+  let [sx, sy] = [0, 0];
+  for (const m of def.modules) {
+    if (m.type !== 'flame') continue;
+    const [dx, dy] = dirOf(m.angle);
+    sx -= (dx * m.length * TILE) / 2;
+    sy -= (dy * m.length * TILE) / 2;
+  }
+  // A charge's art stays one tile whatever its blast, so its size shows in the scale.
   const blast = def.modules[0]?.type === 'bomb' ? BLAST_SCALE[def.size ?? 'large'] : 1;
-  const k = Math.min(2.4, size / ((full.span ?? cardExtent(def)) * TILE)) * blast;
+  const box = cardBox(def);
+  const fit = Math.min(bw / (box.w * TILE), bh / (box.h * TILE));
+  // A one-tile charge steps by its blast alone, and stays clear of the tags above it.
+  const k = def.modules[0]?.type === 'bomb' ? Math.min(2.1, fit * 0.86) * blast : Math.min(2.6, fit * 0.86) * (def.size ? CARD_SIZE[def.size] : 0.9);
   const s = rc.s;
   const g = rc.g;
   for (const ctx of [s, g]) {
     ctx.save();
     ctx.translate(cx, cy);
     ctx.scale(k, k);
-    ctx.translate((-w * TILE) / 2, (-h * TILE) / 2);
+    ctx.translate((-w * TILE) / 2 + sx, (-h * TILE) / 2 + sy);
   }
   const preview: PropDef = { ...def, motion: { type: 'none' } };
   if (def.mount === 'face') drawHostCells(rc, def.footprint);

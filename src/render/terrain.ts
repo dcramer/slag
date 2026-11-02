@@ -1,3 +1,4 @@
+import { css } from '../core/color';
 import { Rng } from '../core/rng';
 import { TILE } from '../sim/constants';
 import { type Level, levelKey, T_ONEWAY, tileAt, type TileRect } from '../sim/level';
@@ -31,6 +32,9 @@ export { flame } from './kit';
  * drawn per frame on top.
  */
 
+/** Tiles a side of one chunk of a progressive bake: a few milliseconds of ink on the busiest materials. */
+const CHUNK = 8;
+
 export class TerrainPainter {
   private bakeKey = '';
   bake: HTMLCanvasElement | null = null;
@@ -45,16 +49,34 @@ export class TerrainPainter {
   /** Debug: bake whole levels, to compare a partial redraw against the truth (`pnpm shot inkblast`). */
   fullBakes = false;
   private tufts: Tuft[] = [];
-  private inkLayer: HTMLCanvasElement | null = null;
+  private inkLayers: (HTMLCanvasElement | undefined)[] = [];
+  private flip = 0;
   /** The tiles the ink bake last drew, and which level and look they belong to: all a partial redraw needs. */
   private inkTiles: Uint8Array | null = null;
   private inkKey = '';
 
+  /** Tile rects still to ink on a progressive bake, nearest the camera first. */
+  private queue: TileRect[] = [];
+  private levelId = '';
+  /** Tile rects inked by the last `ensure`, for callers that finish them off (the surroundings' haze). */
+  baked: TileRect[] = [];
+  /** True while a progressive bake is still under way. */
+  get baking(): boolean {
+    return this.queue.length > 0;
+  }
+
   /**
-   * Bake `level` if anything changed; true if it did. `skip` leaves decor out
-   * of a tile rect (the surroundings' hole where the real level goes).
+   * Bake `level` if anything changed; true if any of it was drawn. `skip` leaves decor out of a tile
+   * rect (the surroundings' hole where the real level goes).
+   *
+   * A new level used to be inked in one go, which stalled the page for up to a second on a big one. With
+   * a `budgetMs` it's inked a chunk at a time instead, nearest `focus` (tile coords) first, each frame
+   * spending about that much: the shapes go down flat at once and the pen goes over them in a few
+   * frames. Every chunk is a partial redraw, which is pixel-exact against a whole bake (`pnpm shot
+   * inkblast`), so the finished picture is the same either way.
    */
-  ensure(level: Level, kb: number, skip?: TileRect): boolean {
+  ensure(level: Level, kb: number, skip?: TileRect, budgetMs = Infinity, focus?: { x: number; y: number }): boolean {
+    this.baked = [];
     const th = level.theme;
     const dk = `${levelKey(level)}:${th.seed}:${th.id}`;
     if (dk !== this.decorKey) {
@@ -65,18 +87,68 @@ export class TerrainPainter {
     // levelKey: a same-seed regen under other rules is another level, so it gets a full bake, never a patch.
     const look = `${th.seed}:${th.id}:${th.name}:${kb.toFixed(2)}:${levelKey(level)}`;
     const bk = `${look}:${level.version}`;
-    if (bk === this.bakeKey) return false;
+    if (bk === this.bakeKey) return this.pump(level, kb, budgetMs);
     this.bakeKey = bk;
     // The same level with some tiles gone: redraw what changed. A bomb must not cost a whole bake.
     if (this.bake && look === this.inkKey && this.inkTiles && !this.fullBakes) {
       const dirty = dirtyTiles(this.inkTiles, level.tiles, level.w, level.h);
-      if (dirty) this.bakeInk(this.bake.getContext('2d')!, level, kb, this.solidOf(level), dirty);
       this.inkTiles = level.tiles.slice();
-      return true;
+      if (dirty && this.queue.length) this.queue.unshift(dirty);
+      else if (dirty) {
+        this.bakeInk(this.bake.getContext('2d')!, level, kb, this.solidOf(level), dirty);
+        this.baked.push(dirty);
+      }
+      return this.pump(level, kb, budgetMs) || !!dirty;
     }
     this.inkKey = look;
-    this.bakeTerrain(level, kb);
     this.inkTiles = level.tiles.slice();
+    // The same level at a new resolution (a resize) has nothing new to show: bake it whole, as before.
+    const fresh = dk !== this.levelId;
+    this.levelId = dk;
+    if (!fresh || budgetMs === Infinity) {
+      this.queue = [];
+      this.bakeTerrain(level, kb);
+      this.baked.push({ x: 0, y: 0, w: level.w, h: level.h });
+      return true;
+    }
+    this.startProgressive(level, kb, focus ?? { x: level.w / 2, y: level.h / 2 });
+    this.pump(level, kb, budgetMs);
+    return true;
+  }
+
+  /** Size the canvas, lay the level down as flat shapes, and queue its chunks for the pen. */
+  private startProgressive(level: Level, kb: number, focus: { x: number; y: number }) {
+    this.ww = level.w * TILE;
+    this.wh = level.h * TILE;
+    const c = (this.bake ??= document.createElement('canvas'));
+    c.width = Math.ceil(this.ww * kb);
+    c.height = Math.ceil(this.wh * kb);
+    const g = c.getContext('2d')!;
+    g.setTransform(kb, 0, 0, kb, 0, 0);
+    g.clearRect(0, 0, this.ww, this.wh);
+    const solid = this.solidOf(level);
+    g.fillStyle = css(level.theme.terrain.base);
+    for (let y = 0; y < level.h; y++) for (let x = 0; x < level.w; x++) if (solid(x, y)) g.fillRect(x * TILE, y * TILE, TILE, TILE);
+    if (this.glowBake) this.glowBake.getContext('2d')!.clearRect(0, 0, this.glowBake.width, this.glowBake.height);
+    this.tufts = [];
+    const q: TileRect[] = [];
+    for (let y = 0; y < level.h; y += CHUNK)
+      for (let x = 0; x < level.w; x += CHUNK) q.push({ x, y, w: Math.min(CHUNK, level.w - x), h: Math.min(CHUNK, level.h - y) });
+    const d = (r: TileRect) => Math.hypot(r.x + r.w / 2 - focus.x, r.y + r.h / 2 - focus.y);
+    this.queue = q.sort((a, b) => d(a) - d(b));
+  }
+
+  /** Ink queued chunks until `budgetMs` is spent (at least one); true if any were. */
+  private pump(level: Level, kb: number, budgetMs: number): boolean {
+    if (!this.queue.length || !this.bake || budgetMs <= 0) return false;
+    const t0 = performance.now();
+    const g = this.bake.getContext('2d')!;
+    const solid = this.solidOf(level);
+    do {
+      const r = this.queue.shift()!;
+      this.bakeInk(g, level, kb, solid, r);
+      this.baked.push(r);
+    } while (this.queue.length && performance.now() - t0 < budgetMs);
     return true;
   }
 
@@ -109,24 +181,42 @@ export class TerrainPainter {
     const py1 = tiles ? Math.min(H, Math.ceil((tiles.y + tiles.h) * TILE * kb)) : H;
     const area: Area = { x0: px0 / kb, y0: py0 / kb, x1: px1 / kb, y1: py1 / kb };
     // Paint on a layer and cut it once: thousands of small fills under a clip this complex take seconds.
-    const layer = (this.inkLayer ??= document.createElement('canvas'));
-    layer.width = px1 - px0;
-    layer.height = py1 - py0;
+    // Two layers, taken in turn and only ever grown: resizing or clearing a canvas the GPU still has a
+    // draw queued from stalls the page until that draw is done, and chunk after chunk that's seconds.
+    const lw = px1 - px0;
+    const lh = py1 - py0;
+    this.flip = 1 - this.flip;
+    const layer = (this.inkLayers[this.flip] ??= document.createElement('canvas'));
+    if (layer.width < lw || layer.height < lh) {
+      layer.width = Math.max(layer.width, lw);
+      layer.height = Math.max(layer.height, lh);
+    }
     const lg = layer.getContext('2d')!;
+    // A reused canvas keeps whatever state the painters left it in: they get a fresh one every time.
+    lg.save();
+    lg.setTransform(1, 0, 0, 1, 0, 0);
+    lg.globalCompositeOperation = 'source-over';
+    lg.clearRect(0, 0, lw, lh);
     lg.setTransform(kb, 0, 0, kb, -px0, -py0);
     inkMaterial(lg, level, th, seed, solid, area);
     inkIce(lg, level, th, seed, solid, area);
     inkHatch(lg, loops, th, seed, area);
     lg.globalCompositeOperation = 'destination-in';
     lg.fillStyle = '#000';
-    lg.fill(mask);
+    // An empty path cuts nothing at all, so a stretch of open air (a chunk of sky) would keep its fill.
+    if (loops.length) lg.fill(mask);
+    else {
+      lg.setTransform(1, 0, 0, 1, 0, 0);
+      lg.clearRect(0, 0, lw, lh);
+    }
+    lg.restore();
     g.save();
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.beginPath();
     g.rect(px0, py0, px1 - px0, py1 - py0);
     g.clip();
     g.clearRect(px0, py0, px1 - px0, py1 - py0);
-    g.drawImage(layer, px0, py0);
+    g.drawImage(layer, 0, 0, lw, lh, px0, py0, lw, lh);
     g.setTransform(kb, 0, 0, kb, 0, 0);
     inkEdges(g, loops, th, seed, area);
     inkCap(g, capLoops(level, loops), th.terrain, seed, area);

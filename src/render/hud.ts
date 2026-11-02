@@ -792,7 +792,8 @@ export class Hud {
       sg.addColorStop(1, css(role.color, 0, 0));
       c.fillStyle = sg;
       c.fillRect(r.x + 1, y + 5, r.w - 2, r.h - 6);
-      drawPreview(rc, item.def, r.x + r.w / 2, y + 44, 50);
+      // The picture gets the card between its tags and its name.
+      drawPreview(rc, item.def, r.x + r.w / 2, y + 49, r.w - 14, r.h - 62);
       tag(c, role.label, r.x + 7, y + 15, css(role.color), PAL.ink, TYPE.caption);
       const stamp = propTag(item.def);
       if (stamp) tag(c, stamp, r.x + 7, y + 30, PAL.bone, PAL.ink, TYPE.caption);

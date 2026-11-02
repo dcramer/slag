@@ -6,7 +6,7 @@ import type { Theme } from '../gen/theme';
 import { RUN_COUNTDOWN, TILE } from '../sim/constants';
 import { GROUND_PLAIN, groundAt } from '../sim/ground';
 import { type Level, levelKey, tileAt } from '../sim/level';
-import type { Solid } from '../sim/physics';
+import { DEFAULT_SURFACE, type Solid } from '../sim/physics';
 import { footing, gustPush, gustShown, type WeatherKind } from '../sim/weather';
 import type { Camera } from './camera';
 import type { Fx } from './fx';
@@ -284,8 +284,11 @@ export class WeatherLayer {
     return artOf(level).exposure ?? 1;
   }
 
-  /** Paint falling weather and spray from running feet. Call in the world pass. */
-  draw(rc: RC, m: Match, view: Air['view'], fx: Fx) {
+  /**
+   * Paint falling weather and spray from running feet. Call in the world pass. `solids` are this
+   * frame's parts and set pieces, the race's or a preview's: they're as wet in pick and place as in the race.
+   */
+  draw(rc: RC, m: Match, view: Air['view'], fx: Fx, solids: readonly Solid[]) {
     const level = m.level;
     const art = artOf(level);
     const run = m.phase === 'run' ? m.run : null;
@@ -294,9 +297,8 @@ export class WeatherLayer {
       rc.bg.fillRect(view.x - 40, view.y - 40, view.w + 80, view.h + 80);
     }
     art.draw?.({ rc, view, level, frame: skyFrame(m), tops: this.topsOf(level) });
-    if (!run) return;
-    if (art.lay) this.layOn(rc, level, run.solids, art.lay);
-    if (!art.kick) return;
+    if (art.lay) this.layOn(rc, level, solids, art.lay);
+    if (!run || !art.kick) return;
     for (const r of run.runners) {
       const b = r.body;
       if (r.alive && b.onGround && Math.abs(b.vx) > 70 && Math.random() < 0.4) {
@@ -311,12 +313,13 @@ export class WeatherLayer {
    * with a cell of the same part or terrain on it is inside a block, not on it.
    */
   private layOn(rc: RC, level: Level, solids: readonly Solid[], lay: NonNullable<WeatherArt['lay']>) {
+    // A race's solids come wet (sim `wetSolids`); a preview's are still dry, and plain footing is plain either way.
     const plain = footing(level);
     const under = this.under;
     under.clear();
     for (const s of solids) if (!s.film) under.add(`${s.x}:${s.y + s.h}`);
     for (const s of solids) {
-      if (s.surface !== plain || s.film || under.has(`${s.x}:${s.y}`)) continue;
+      if ((s.surface !== plain && s.surface !== DEFAULT_SURFACE) || s.film || under.has(`${s.x}:${s.y}`)) continue;
       if (tileAt(level, Math.floor((s.x + s.w / 2) / TILE), Math.floor((s.y - 1) / TILE))) continue;
       lay(rc.s, s);
     }

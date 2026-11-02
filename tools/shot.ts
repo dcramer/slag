@@ -4,11 +4,13 @@
  * window.slagDebug in headless Chromium, writes PNGs and exits. A run with no
  * progress for SHOT_TIMEOUT seconds (default 180) fails instead of hanging.
  *
+ *   pnpm shot race --seed abc              → a bare race: the level and its set pieces, no parts
  *   pnpm shot race --seed abc --race saw,laser --frames 200
  *   pnpm shot race --race all
  *   pnpm shot lobby|pick|place --seed abc
  *   pnpm shot pick --claim 2,5             → with those cards already taken
  *   pnpm shot pick|place --secret          → Secret Parts rule on: role cards, and the parts they rolled
+ *   pnpm shot pick|place --parts block,saw → with those parts already in the level, as from earlier rounds
  *   pnpm shot place --card spikestrip --cursor 296,184 --then-race 90 → aim the first ghost, place it, shoot the race
  *   pnpm shot levels --seeds a,b,c,d      (or --count 12) → contact sheet
  *   pnpm shot props --count 24            → prop gallery (crate cards)
@@ -16,6 +18,7 @@
  *   pnpm shot blood --theme farm --players 4 --noletters → staged deaths over four rounds: ooze, settled, place phase, expiry
  *   pnpm shot stack --seed abc             → stepped frames of runners stacking, walking as a stack, and a head-bounce
  *   pnpm shot codex                        → /codex page (full-page screenshot)
+ *   pnpm shot webgl                        → a race through a lost and restored WebGL context, then with shaders that won't build and with no WebGL2
  *   pnpm shot home                         → main menu (desktop + 390×844 mobile)
  *   pnpm shot settings                     → every settings tab over the lobby, driven by keys and a fake pad,
  *                                           then over the main menu on a phone (portrait and landscape), by tap
@@ -109,6 +112,11 @@ async function secretRule() {
     m.rules = { ...m.rules, secretParts: true };
     m.startMatch();
   });
+}
+/** `--parts block,saw`: parts already placed, as if from earlier rounds (pick and place). */
+async function parts() {
+  const kinds = opt('parts')?.split(',').filter(Boolean);
+  if (kinds?.length) await page.evaluate(([k, s]) => (window as any).slagDebug.addProps(k, s), [kinds, Number(opt('propseed', '1'))] as const);
 }
 async function snap(name: string) {
   const p = `${out}/${name}.png`;
@@ -380,6 +388,7 @@ try {
     case 'pick':
       await open(`seed=${seed}&players=${players}`);
       await secretRule();
+      await parts();
       await step(40);
       if (opt('claim')) {
         // `--claim 2,5`: those cards are taken, as if players had picked them.
@@ -394,6 +403,7 @@ try {
     case 'place':
       await open(`seed=${seed}&players=${players}`);
       await secretRule();
+      await parts();
       // `--secret`: everyone clicks a role card, so each part is rolled the way a claim rolls it.
       if (secret) {
         await step(12);
@@ -447,7 +457,8 @@ try {
       }
       break;
     case 'race': {
-      const race = opt('race', '')!;
+      // `?race=,` races the level as it stands (no parts but its set pieces); `?race=` alone would sit in pick.
+      const race = opt('race') || ',';
       await open(`seed=${seed}&players=${players}&race=${race}&propseed=${opt('propseed', '1')}`);
       const exact = opt('runframe');
       if (exact) {
@@ -491,6 +502,59 @@ try {
         await step(f);
         await snap(`race-${seed}-${await page.evaluate(() => (window as any).slagDebug.match.run?.frame ?? 0)}`);
       }
+      break;
+    }
+    case 'webgl': {
+      // The compositor's failure paths: a context lost mid-race and given back, shaders that won't build, and no WebGL2.
+      const q = `seed=${seed}&players=${players}&race=${opt('race', 'saw,laser')}&propseed=1`;
+      await open(q);
+      await step(frames);
+      const style = () => page.evaluate(() => (window as any).slagDebug.renderer.renderStyle as string);
+      const raceFrame = () => page.evaluate(() => (window as any).slagDebug.match.run?.frame as number);
+      console.log('before', await style());
+      await snap(`webgl-${seed}-1-cel`);
+      const glCall = (what: 'loseContext' | 'restoreContext') =>
+        page.evaluate((w) => {
+          // A lost context hands out no extensions, so keep the one that can give it back.
+          const keep = window as unknown as { loseGL?: WEBGL_lose_context };
+          const gl = [...document.querySelectorAll('canvas')].map((c) => c.getContext('webgl2')).find(Boolean)!;
+          keep.loseGL ??= gl.getExtension('WEBGL_lose_context')!;
+          keep.loseGL[w]();
+        }, what);
+      await glCall('loseContext');
+      await page.waitForFunction(() => (window as any).slagDebug.renderer.renderStyle.startsWith('canvas2d'), null, { timeout: 10_000 });
+      const f0 = await raceFrame();
+      await step(30);
+      console.log('lost', await style(), 'race frames', f0, '→', await raceFrame());
+      await snap(`webgl-${seed}-2-lost`);
+      await glCall('restoreContext');
+      await page.waitForFunction(() => (window as any).slagDebug.renderer.renderStyle.startsWith('webgl2'), null, { timeout: 10_000 });
+      await step(30);
+      console.log('restored', await style());
+      await snap(`webgl-${seed}-3-restored`);
+      // A fresh page per broken GPU: the breakage has to be in place before the game boots.
+      const broken = async (name: string, script: string) => {
+        const bp = await browser.newPage({ viewport: { width: W, height: H } });
+        bp.on('pageerror', (e: Error) => errors.push(String(e)));
+        bp.on('console', (m: { type(): string; text(): string }) => m.type() === 'error' && errors.push(m.text()));
+        await bp.addInitScript(script);
+        await bp.goto(`${base}r/SHOTS?${q}${tq}&net=off`);
+        await bp.waitForFunction(() => 'slagDebug' in window, null, { timeout: 30_000 });
+        await bp.evaluate(() => document.fonts.ready);
+        await bp.evaluate(() => (window as any).slagDebug.pause(true));
+        await bp.evaluate((n) => (window as any).slagDebug.step(n), frames);
+        console.log(name, await bp.evaluate(() => (window as any).slagDebug.renderer.renderStyle));
+        const p = `${out}/webgl-${seed}-${name}.png`;
+        await bp.screenshot({ path: p });
+        console.log(p);
+        pet();
+        await bp.close();
+      };
+      await broken('4-shaderfail', 'WebGL2RenderingContext.prototype.getShaderParameter = function () { return false; };');
+      await broken(
+        '5-nowebgl2',
+        "{ const get = HTMLCanvasElement.prototype.getContext; HTMLCanvasElement.prototype.getContext = function (k, ...a) { return k === 'webgl2' ? null : get.call(this, k, ...a); }; }",
+      );
       break;
     }
     case 'inkdraw': {
@@ -562,7 +626,13 @@ try {
             }
           }
         }
+        // The page inked its first level a chunk per frame before the harness paused it: start from a
+        // whole bake, so each crater is compared against the same picture it was cut into.
+        tp.fullBakes = true;
+        tp.inkKey = '';
+        lv.version++;
         render();
+        tp.fullBakes = false;
         let idle = 0;
         for (let i = 0; i < 5; i++) {
           const t0 = performance.now();
@@ -823,6 +893,235 @@ try {
         shots.filter((f) => f.endsWith('pack.png')),
         2,
       );
+      break;
+    }
+    case 'cards': {
+      // Crate cards for `--arch a,b,c`, each at small, medium and large, as many crates as that takes (`--players` sets the crate's size).
+      const arch = opt('arch', 'flamer,rope,saw,launcher')!.split(',');
+      await open(`seed=${seed}&players=${opt('players', '8')}`);
+      await step(30);
+      const defs = await page.evaluate((as) => {
+        const d = (window as any).slagDebug;
+        const out: any[] = [];
+        for (const a of as) {
+          const got = new Map<string, any>();
+          for (let k = 1; k < 80 && got.size < 3; k++) {
+            d.match.placed.length = 0;
+            d.addProps([a], k);
+            const def = d.match.placed[0]?.def;
+            if (def && !got.has(def.size)) got.set(def.size, def);
+          }
+          for (const sz of ['small', 'medium', 'large']) if (got.has(sz)) out.push(got.get(sz));
+        }
+        d.match.placed.length = 0;
+        return out;
+      }, arch);
+      const files: string[] = [];
+      const per = await page.evaluate(() => (window as any).slagDebug.match.crate.length);
+      for (let k = 0; k * per < defs.length; k++) {
+        await page.evaluate(
+          ([ds, from]) => {
+            const m = (window as any).slagDebug.match;
+            m.crate.forEach((c: any, i: number) => {
+              c.def = ds[(from + i) % ds.length];
+              c.claimedBy = -1;
+            });
+          },
+          [defs, k * per] as const,
+        );
+        await step(2);
+        files.push(await snap(`cards-${opt('players', '8')}p-${k}`));
+      }
+      await sheet('cards', files, 1);
+      break;
+    }
+    case 'parts': {
+      // Each of `--arch a,b,c` placed for real (`--count` of each), raced for `--frames`, then shot close up
+      // one by one: a contact sheet of parts at a close race zoom.
+      const arch = opt('arch', 'saw,launcher,spikeblock,spikestrip')!.split(',');
+      await open(`seed=${seed}&players=2&race=,&propseed=1`);
+      await page.evaluate(
+        ([as, n]) => {
+          const d = (window as any).slagDebug;
+          d.match.placed.length = 0;
+          for (let k = 0; k < n; k++) for (const a of as) d.addProps([a], 11 + k * 7);
+          d.race([], 1);
+        },
+        [arch, Number(opt('count', '2'))] as const,
+      );
+      await step(Number(opt('frames', '60')));
+      const spots = await page.evaluate(() =>
+        (window as any).slagDebug.match.placed.map((p: any) => {
+          const xs = p.def.footprint.map((c: number[]) => c[0]);
+          const ys = p.def.footprint.map((c: number[]) => c[1]);
+          return {
+            name: p.def.archetype,
+            x: (p.tx + (Math.min(...xs) + Math.max(...xs) + 1) / 2) * 16,
+            y: (p.ty + (Math.min(...ys) + Math.max(...ys) + 1) / 2) * 16,
+          };
+        }),
+      );
+      const files: string[] = [await snap(`parts-${seed}-race`)];
+      const zoom = Number(opt('zoom', '2.6'));
+      for (const [i, sp] of spots.entries()) {
+        await page.evaluate(
+          ([x, y, z]) => {
+            const d = (window as any).slagDebug;
+            const cam = d.renderer.cam;
+            cam.update = () => {};
+            cam.snap({ cx: x, cy: y, zoom: z });
+            cam.shake = 0;
+            d.render();
+          },
+          [sp.x, sp.y, zoom] as const,
+        );
+        const size = page.viewportSize()!;
+        const path = `${out}/parts-${seed}-${String(i).padStart(2, '0')}-${sp.name}.png`;
+        const w = Math.min(size.width, size.height);
+        await page.screenshot({ path, clip: { x: (size.width - w) / 2, y: 0, width: w, height: w } });
+        files.push(path);
+      }
+      await sheet(`parts-${seed}`, files.slice(1), 4);
+      break;
+    }
+    case 'buildparts': {
+      // Every building part: each block material at every size in a race (whole view and close up), then
+      // on crate cards, then as place-phase ghosts. `--theme` picks the backdrop.
+      const kinds = ['stone', 'metal', 'wood', 'ice', 'conveyor', 'goo', 'jelly', 'crumble'];
+      const shapes: [number, number][][] = [
+        [[0, 0]],
+        [
+          [0, 0],
+          [1, 0],
+          [2, 0],
+        ],
+        [
+          [0, 0],
+          [1, 0],
+          [2, 0],
+          [3, 0],
+          [4, 0],
+        ],
+        [
+          [0, 0],
+          [1, 0],
+          [2, 0],
+          [2, 1],
+          [3, 1],
+        ],
+      ];
+      // Build defs in the page from a real generated platform, so every field the art reads is there.
+      const defsOf = () =>
+        page.evaluate(
+          ([ks, sh]) => {
+            const d = (window as any).slagDebug;
+            d.match.placed.length = 0;
+            d.addProps(['platform', 'blinker', 'wheel', 'crumble'], 3);
+            const got = d.match.placed.map((p: any) => p.def);
+            d.match.placed.length = 0;
+            const base = got.find((x: any) => x.archetype === 'platform');
+            const out: any[] = [];
+            for (const k of ks)
+              for (const cells of sh) {
+                const def = structuredClone(base);
+                def.key = `bp-${k}-${cells.length}`;
+                def.name = k;
+                def.role = 'build';
+                def.motion = { type: 'none' };
+                def.modules = [
+                  {
+                    type: 'body',
+                    cells,
+                    material: k,
+                    conveyor: k === 'conveyor' ? 80 : 0,
+                    breakFrames: k === 'crumble' ? 30 : 0,
+                    respawnFrames: k === 'crumble' ? 200 : 0,
+                  },
+                ];
+                def.footprint = cells;
+                def.span = 3;
+                out.push(def);
+              }
+            for (const x of got) if (x.archetype !== 'platform') out.push(x);
+            return out;
+          },
+          [kinds, shapes] as const,
+        );
+      await open(`seed=${seed}&players=8`);
+      await step(30);
+      const defs = await defsOf();
+      // Cards: two crates' worth of the build parts.
+      const cardShots: string[] = [];
+      for (let k = 0; k < 2; k++) {
+        await page.evaluate(
+          ([ds, from]) => {
+            const m = (window as any).slagDebug.match;
+            m.crate.forEach((c: any, i: number) => {
+              c.def = ds[(from + i * 3) % ds.length];
+              c.claimedBy = -1;
+            });
+          },
+          [defs, k] as const,
+        );
+        await step(2);
+        cardShots.push(await snap(`buildparts-cards-${k}`));
+      }
+      // Ghosts: each player holds one and aims it over open air.
+      await page.evaluate((ds) => {
+        const m = (window as any).slagDebug.match;
+        const pick = [1, 6, 10, 14, 18, 22, 26, 33].map((i) => i % ds.length);
+        m.crate.forEach((c: any, i: number) => (c.def = ds[pick[i % pick.length]]));
+        m.players.forEach((p: any, i: number) => {
+          p.claim = i;
+          m.crate[i].claimedBy = p.slot;
+        });
+      }, defs);
+      await step(30);
+      await page.evaluate(() => {
+        const m = (window as any).slagDebug.match;
+        m.players.forEach((p: any, i: number) => (p.cursor = { x: 90 + (i % 4) * 170, y: 110 + Math.floor(i / 4) * 150 }));
+      });
+      await step(2);
+      const ghost = await snap(`buildparts-ghosts`);
+      // The race: an empty room with every part laid out on a grid.
+      await page.evaluate((ds) => {
+        const d = (window as any).slagDebug;
+        const m = d.match;
+        const L = m.level;
+        for (let y = 2; y < L.h - 3; y++) for (let x = 3; x < L.w - 3; x++) L.tiles[y * L.w + x] = 0;
+        L.version++;
+        m.placed.length = 0;
+        let uid = 900;
+        ds.forEach((def: any, i: number) => {
+          const blocks = i < 32;
+          const tx = blocks ? 4 + [0, 3, 8, 15][i % 4] : 26 + ((i - 32) % 2) * 9;
+          const ty = blocks ? 3 + Math.floor(i / 4) * 3 : 4 + Math.floor((i - 32) / 2) * 7;
+          m.placed.push({ uid: uid++, def, owner: m.players[0].slot, tx, ty, rot: 0 });
+        });
+        d.race([], 1);
+      }, defs);
+      await step(40);
+      const race = await snap(`buildparts-race`);
+      const close: string[] = [];
+      for (const [cx, cy] of [
+        [200, 110],
+        [200, 250],
+        [200, 370],
+        [560, 200],
+      ]) {
+        await page.evaluate(
+          ([x, y]) => {
+            const cam = (window as any).slagDebug.renderer.cam;
+            cam.update = () => {};
+            cam.snap({ cx: x, cy: y, zoom: 2.4 });
+            cam.shake = 0;
+            (window as any).slagDebug.render();
+          },
+          [cx, cy] as const,
+        );
+        close.push(await snap(`buildparts-race-close-${close.length}`));
+      }
+      await sheet('buildparts', [race, ...close, ...cardShots, ghost], 2);
       break;
     }
     case 'stack': {

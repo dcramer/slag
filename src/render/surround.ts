@@ -1,7 +1,7 @@
 import { css } from '../core/color';
 import { Rng } from '../core/rng';
 import { TILE } from '../sim/constants';
-import { type Level, T_SOLID, levelKey } from '../sim/level';
+import { type Level, type TileRect, T_SOLID, levelKey } from '../sim/level';
 import type { ThemeId } from '../themes';
 import type { RC } from './kit';
 import { TerrainPainter } from './terrain';
@@ -237,7 +237,7 @@ export class Surround {
   }
 
   /** `reach`: how far past the world the frame reaches at its most zoomed out, in world px (`frameReach`). */
-  ensure(level: Level, reach: { x: number; up: number; down: number }, kb: number) {
+  ensure(level: Level, reach: { x: number; up: number; down: number }, kb: number, budgetMs = Infinity, focus?: { x: number; y: number }) {
     const mx = Math.ceil(reach.x / TILE) + 2;
     const top = Math.ceil(reach.up / TILE) + 2;
     const bottom = Math.ceil(reach.down / TILE) + 2;
@@ -251,21 +251,38 @@ export class Surround {
     }
     const land = this.land!;
     const inner = { x: mx + RING, y: top + RING, w: level.w - RING * 2, h: level.h - RING };
-    if (this.painter.ensure(land, kb, inner)) this.haze(level, land);
+    const at = focus && { x: focus.x / TILE + mx, y: focus.y / TILE + top };
+    if (this.painter.ensure(land, kb, inner, budgetMs, at)) for (const r of this.painter.baked) this.haze(level, land, r);
+  }
+
+  /** True while the surroundings are still being inked a chunk at a time. */
+  get baking(): boolean {
+    return this.painter.baking;
   }
 
   /** Atmospheric depth: scenery recedes from the seam into the theme's haze (a mine into the dark). */
-  private haze(level: Level, land: Level) {
+  private haze(level: Level, land: Level, r: TileRect) {
     const bake = this.painter.bake;
     if (!bake) return;
     const th = level.theme;
     const g = bake.getContext('2d')!;
     const k = bake.width / (land.w * TILE);
+    // Only what was just inked: the rest is hazed already, and haze twice is a different color.
+    // The same pixel rect a partial bake clears, so chunk seams line up.
+    const clip = (c: CanvasRenderingContext2D) => {
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      const px0 = Math.floor(r.x * TILE * k);
+      const py0 = Math.floor(r.y * TILE * k);
+      c.beginPath();
+      c.rect(px0, py0, Math.min(bake.width, Math.ceil((r.x + r.w) * TILE * k)) - px0, Math.min(bake.height, Math.ceil((r.y + r.h) * TILE * k)) - py0);
+      c.clip();
+    };
     const mine = th.id === 'mine';
     const tint = mine ? th.terrain.outline : th.fog;
     const left = this.mx * TILE;
     const right = (this.mx + level.w) * TILE;
     g.save();
+    clip(g);
     g.setTransform(k, 0, 0, k, 0, 0);
     g.globalCompositeOperation = 'source-atop';
     for (const [seam, dir] of [
@@ -286,6 +303,7 @@ export class Surround {
     const glow = this.painter.glowBake?.getContext('2d');
     if (!glow) return;
     glow.save();
+    clip(glow);
     glow.setTransform(k, 0, 0, k, 0, 0);
     glow.globalCompositeOperation = 'destination-out';
     for (const [seam, dir] of [
@@ -314,6 +332,31 @@ export class Surround {
     const k = bake.height / (land.h * TILE);
     const sy = (this.top + level.h - RING) * TILE * k;
     s.drawImage(bake, 0, sy, bake.width, bake.height - sy, -this.mx * TILE, (level.h - RING) * TILE, land.w * TILE, (RING + this.bottom) * TILE);
+  }
+
+  /**
+   * Cut the pool out where the scenery past either side stands in it. The pool
+   * goes behind terrain, and scenery is terrain too, but it paints on the
+   * background, under the pool's layer, so the pool has to make way. Above the
+   * world's bottom only: below it, everything is seen through the pool. Outside
+   * the world only, where the level's own terrain cuts nothing. World space; call
+   * on both the albedo and the glow layer.
+   */
+  cutPool(c: CanvasRenderingContext2D, level: Level, rows: number) {
+    const bake = this.painter.bake;
+    const land = this.land;
+    if (!bake || !land) return;
+    const k = bake.height / (land.h * TILE);
+    const r0 = Math.max(-this.top, level.h - rows);
+    const n = level.h - r0;
+    const sy = (this.top + r0) * TILE * k;
+    const sw = this.mx * TILE * k;
+    c.save();
+    c.globalCompositeOperation = 'destination-out';
+    c.globalAlpha = 1;
+    c.drawImage(bake, 0, sy, sw, n * TILE * k, -this.mx * TILE, r0 * TILE, this.mx * TILE, n * TILE);
+    c.drawImage(bake, bake.width - sw, sy, sw, n * TILE * k, level.w * TILE, r0 * TILE, this.mx * TILE, n * TILE);
+    c.restore();
   }
 
   /** In world space, before the level's own terrain. */

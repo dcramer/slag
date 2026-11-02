@@ -4,7 +4,7 @@ import type { Match, Player } from '../game/match';
 import { overview, raceFloor } from '../game/view';
 import { TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import { floorY, type Level, tileAt } from '../sim/level';
-import { type Beam, canPlace, footprint, type Resolved, resolveProp, traceBeams } from '../sim/props';
+import { type Beam, canPlace, footprint, previewProps, type Resolved, resolveProp } from '../sim/props';
 import type { RunWorld } from '../sim/run';
 import type { GameEvent } from '../sim/types';
 import { Backdrop } from './background';
@@ -30,6 +30,8 @@ import { detectQuality, FrameBudget, isTouchFirst, QUALITY, type QualityTier, sa
 
 /** Terrain bake budget (px per baked canvas): a classic level at 1920 px wide is ~4.3 M. */
 const MAX_BAKE_PX = 6_000_000;
+/** Rows above the world's bottom that a pool reaches, its heat haze included: where scenery cuts it (Surround.cutPool). */
+const POOL_ROWS = 6;
 /** Phone HUD: enough scale for 1.25 CSS px per HUD px, within this limit. */
 const HUD_CSS_PER_PX = 1.25;
 const MAX_HUD_SCALE = 1.8;
@@ -61,6 +63,8 @@ const TRAIL_LIFE = 0.2;
 export class Renderer {
   private scene = document.createElement('canvas');
   private glow = document.createElement('canvas');
+  /** Milliseconds a frame may spend inking a new level. Infinity bakes it whole at once (stepped screenshots, perf). */
+  bakeBudgetMs = 5;
   private lightC = document.createElement('canvas');
   private occluder = new LightOccluder();
   private sctx = this.scene.getContext('2d')!;
@@ -186,10 +190,19 @@ export class Renderer {
     const frameBox = this.frameBox;
     const sk = this.pw / frameBox.w;
     const kb = Math.min(4, sk * Math.max(1.45, this.phone.enabled ? this.phone.zoom : 0), Math.sqrt(MAX_BAKE_PX / (ww * wh)));
-    this.terrain.ensure(level, kb);
+    // A new level is inked a chunk at a time, nearest the camera first, so loading one never stalls a frame.
+    const focus = { x: this.cam.x, y: this.cam.y };
+    this.terrain.ensure(level, kb, undefined, this.bakeBudgetMs, { x: focus.x / TILE, y: focus.y / TILE });
     // The surroundings reach as far as the most zoomed-out view of this level can see.
     const reach = frameReach(frameBox, ww, wh, raceFloor(level));
-    this.surround.ensure(level, reach, Math.min(kb, Math.sqrt(MAX_BAKE_PX / ((ww + reach.x * 2) * (wh + reach.up + reach.down)))));
+    // The level first: until it's done, the surroundings wait their turn.
+    this.surround.ensure(
+      level,
+      reach,
+      Math.min(kb, Math.sqrt(MAX_BAKE_PX / ((ww + reach.x * 2) * (wh + reach.up + reach.down)))),
+      this.terrain.baking ? 0 : this.bakeBudgetMs,
+      focus,
+    );
     const emit: Emit = (kind, x, y, vx, vy, color) =>
       this.fx.add(
         kind,
@@ -241,6 +254,9 @@ export class Renderer {
     // The rest of the world goes on its own transparent layer (see ForegroundLayer); `s` stays the background.
     rc.s = this.foreground.begin(this.scene, s, g, level.theme.ambientLight);
     this.cam.apply(rc.s, this.pw);
+    // Liquids sit behind the terrain (docs/DESIGN.md, render layers): it stands in the pool, and its bake cuts the pool's glow.
+    this.backdrop.drawLiquid(rc, level.theme, ww, wh, this.cam.visible(), this.surround.margin, (c) => this.surround.drawSunken(c, level));
+    for (const c of [rc.s, g]) this.surround.cutPool(c, level, POOL_ROWS);
     this.terrain.draw(rc);
     const pushers = m.run ? m.run.runners.filter((r) => r.alive).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h })) : [];
     this.terrain.drawLive(rc, level, pushers);
@@ -249,7 +265,11 @@ export class Renderer {
 
     const grips = run?.runners.flatMap((r) => r.attach.grip ?? []);
     // A race's beams are the ones the sim hurts with. Before one, ghosts join in: a block you're holding cuts the flame it would stop.
-    const beams = run ? run.beams : traceBeams(level, [...resolved, ...m.players.flatMap((p) => ghostProp(m, p) ?? [])], frame);
+    const ghosts = run ? [] : m.players.flatMap((p) => ghostProp(m, p) ?? []);
+    const still = run ? null : previewProps(level, [...resolved, ...ghosts], frame);
+    const beams = still ? still.beams : run!.beams;
+    // Weather lies on what's built in every phase, but not on a ghost: that's only where a part would go.
+    const solids = still ? still.solids.filter((x) => !ghosts.some((gh) => gh.pp.uid === x.propUid)) : run!.solids;
     for (const r of resolved) {
       drawForeground(rc, r, {
         level,
@@ -306,9 +326,8 @@ export class Renderer {
       drawClouds(rc, run);
     }
     this.fx.draw(rc);
-    this.backdrop.drawLiquid(rc, level.theme, ww, wh, this.cam.visible(), this.surround.margin, (c) => this.surround.drawSunken(c, level));
     this.backdrop.drawMotes(rc, level.theme, dt, this.cam.visible());
-    this.weather.draw(rc, m, this.cam.visible(), this.fx);
+    this.weather.draw(rc, m, this.cam.visible(), this.fx, solids);
     g.globalCompositeOperation = 'source-over';
 
     // --- light map
@@ -375,7 +394,8 @@ export class Renderer {
     const th = level.theme;
     const [ar, ag, ab] = toRgb(th.ambientTint);
     const amb = th.ambientLight * 0.5;
-    const ambient = `rgb(${Math.round(255 * amb * (0.65 + ar * 0.35))} ${Math.round(255 * amb * (0.65 + ag * 0.35))} ${Math.round(255 * amb * (0.65 + ab * 0.35))})`;
+    const rgb = [ar, ag, ab].map((c) => Math.round(255 * amb * (0.65 + c * 0.35))) as [number, number, number];
+    const ambient = `rgb(${rgb[0]} ${rgb[1]} ${rgb[2]})`;
     l.setTransform(1, 0, 0, 1, 0, 0);
     l.globalCompositeOperation = 'source-over';
     l.fillStyle = ambient;
@@ -393,7 +413,7 @@ export class Renderer {
       l.fillRect(L.x - L.r, L.y - L.r, L.r * 2, L.r * 2);
     }
     l.globalCompositeOperation = 'source-over';
-    this.occluder.draw(l, level, ambient);
+    this.occluder.draw(l, level, rgb);
     // Sky light falls from above: brighten the upper part a little, rock and air alike.
     l.setTransform(1, 0, 0, 1, 0, 0);
     const sky = l.createLinearGradient(0, 0, 0, this.lightC.height);
@@ -533,9 +553,28 @@ export class Renderer {
       rc.g.globalAlpha = 1;
       const bomb = gh.def.modules.find((x) => x.type === 'bomb');
       if (bomb && bomb.type === 'bomb') drawBlastPreview(rc, m.level, m.placed, bomb, gh.tx, gh.ty, p.rot);
-      rc.g.strokeStyle = css(col, 10, 0.75);
-      rc.g.lineWidth = 1;
-      for (const [x, y] of footprint(gh.def, p.rot)) rc.g.strokeRect((gh.tx + x) * TILE + 0.5, (gh.ty + y) * TILE + 0.5, TILE - 1, TILE - 1);
+      // The footprint as one outline round its tiles: exact enough to line up by, and it doesn't rule a grid over the part.
+      const cells = footprint(gh.def, p.rot);
+      const set = new Set(cells.map(([x, y]) => `${x},${y}`));
+      rc.g.strokeStyle = css(col, 10, 0.8);
+      rc.g.lineWidth = 1.2;
+      rc.g.beginPath();
+      for (const [x, y] of cells) {
+        const x0 = (gh.tx + x) * TILE + 0.5;
+        const y0 = (gh.ty + y) * TILE + 0.5;
+        const x1 = x0 + TILE - 1;
+        const y1 = y0 + TILE - 1;
+        const side = (open: boolean, ax: number, ay: number, bx: number, by: number) => {
+          if (!open) return;
+          rc.g.moveTo(ax, ay);
+          rc.g.lineTo(bx, by);
+        };
+        side(!set.has(`${x},${y - 1}`), x0, y0, x1, y0);
+        side(!set.has(`${x + 1},${y}`), x1, y0, x1, y1);
+        side(!set.has(`${x},${y + 1}`), x0, y1, x1, y1);
+        side(!set.has(`${x - 1},${y}`), x0, y0, x0, y1);
+      }
+      rc.g.stroke();
     }
   }
 

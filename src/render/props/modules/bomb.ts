@@ -3,32 +3,87 @@ import type { Cell } from '../../../core/geom';
 import { TILE } from '../../../sim/constants';
 import type { Level } from '../../../sim/level';
 import { blastHits, blastSpec, type BombLook, footprintCells, type ModuleOf, type PlacedProp } from '../../../sim/props';
-import { circle, ellipse, glowDot, light, METALS, metalFill, type RC, rrect, sphereFill } from '../../kit';
+import { line, stroke } from '../../ink';
+import { circle, ellipse, glowDot, light, METALS, metalFill, type RC, rrect } from '../../kit';
 import { defineArt } from '../common';
 
 type Bomb = ModuleOf<'bomb'>;
 
+const INK = '#120b08';
+
+/** A ball in two flat tones, its lit side cut toward the light, a pen round it and one hard glint. */
+function inkBall(s: CanvasRenderingContext2D, x: number, y: number, r: number, base: HSL) {
+  s.fillStyle = INK;
+  circle(s, x + 0.35, y + 0.4, r + 1.15);
+  s.fillStyle = css(base, -6, 1, 4);
+  circle(s, x, y, r);
+  s.save();
+  s.beginPath();
+  s.arc(x, y, r, 0, Math.PI * 2);
+  s.clip();
+  s.fillStyle = css(base, 6);
+  circle(s, x - r * 0.24, y - r * 0.26, r * 0.9);
+  s.restore();
+  s.fillStyle = 'rgba(255,255,255,0.9)';
+  stroke(
+    s,
+    [
+      { x: x - r * 0.62, y: y - r * 0.1 },
+      { x: x - r * 0.5, y: y - r * 0.48 },
+      { x: x - r * 0.18, y: y - r * 0.64 },
+    ],
+    { w: 1.3, seed: 2, taper: [0.25, 0.35], press: 0.1 },
+  );
+}
+
+/** A fuse: a twist of cord with an ink edge, and a spark at the end that's actually hot. */
 function fuse(rc: RC, x: number, y: number) {
   const s = rc.s;
-  s.strokeStyle = '#a07040';
-  s.lineWidth = 1.2;
-  s.beginPath();
-  s.moveTo(x + 3.2, y - 6);
-  s.quadraticCurveTo(x + 6, y - 11, x + 8.5, y - 8.5);
-  s.stroke();
+  const pts = [
+    { x: x + 3.2, y: y - 6 },
+    { x: x + 4.6, y: y - 9.4 },
+    { x: x + 6.8, y: y - 10.4 },
+    { x: x + 8.5, y: y - 8.5 },
+  ];
+  s.fillStyle = INK;
+  stroke(s, pts, { w: 2.4, seed: 4, taper: [0, 0.2], press: 0 });
+  s.fillStyle = '#c9925a';
+  stroke(s, pts, { w: 1.1, seed: 4, taper: [0, 0.3], press: 0 });
   const fl = 0.7 + Math.sin(rc.t * 30) * 0.3;
+  s.fillStyle = 'rgb(255 214 90)';
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 + rc.t * 9;
+    line(s, x + 8.5, y - 8.5, x + 8.5 + Math.cos(a) * 2.6 * fl, y - 8.5 + Math.sin(a) * 2.6 * fl, { w: 0.9, seed: i, taper: [0.1, 0.8], press: 0 });
+  }
   glowDot(rc.g, x + 8.5, y - 8.5, 5 * fl, { h: 40, s: 100, l: 60 }, 1);
 }
 
 function drawBall(rc: RC, x: number, y: number) {
   const s = rc.s;
-  s.fillStyle = sphereFill(s, x, y + 1, 6.5, { h: 230, s: 15, l: 18 }, 35, 10);
-  circle(s, x, y + 1, 6.5);
-  s.fillStyle = '#444a55';
-  s.fillRect(x + 1.5, y - 6.5, 3.5, 3);
+  inkBall(s, x, y + 1, 6.5, { h: 230, s: 18, l: 22 });
+  // The cap the fuse goes into.
+  s.fillStyle = INK;
+  s.fillRect(x + 0.9, y - 7.1, 4.6, 4);
+  s.fillStyle = '#5b6170';
+  s.fillRect(x + 1.6, y - 6.5, 3.2, 2.8);
   fuse(rc, x, y);
 }
 
+/** One stick of dynamite: red paper, a darker side, pen lines, and a paper band. */
+function stick(s: CanvasRenderingContext2D, x: number, y: number, seed: number) {
+  s.fillStyle = INK;
+  s.beginPath();
+  s.roundRect(x - 2.6, y - 6.6, 5.2, 13.2, 1.8);
+  s.fill();
+  s.fillStyle = 'rgb(166 34 30)';
+  s.beginPath();
+  s.roundRect(x - 2, y - 6, 4, 12, 1.4);
+  s.fill();
+  s.fillStyle = 'rgb(222 64 48)';
+  s.fillRect(x - 2, y - 5.4, 2.2, 10.8);
+  s.fillStyle = 'rgba(255,230,210,0.85)';
+  line(s, x - 1.2, y - 4.4, x - 1.2, y + 3.6, { w: 0.6, seed, taper: [0.2, 0.3], press: 0 });
+}
 /** Each demolition look says what it hits: fire = everything, blue = props only, drill = terrain in a line. */
 const LOOKS: Record<BombLook, (rc: RC, m: Bomb, x: number, y: number, rot: number) => void> = {
   bomb(rc, _m, x, y) {
@@ -104,13 +159,12 @@ const LOOKS: Record<BombLook, (rc: RC, m: Bomb, x: number, y: number, rot: numbe
         circle(g, x + Math.cos(a) * 6.5, y + 2 + Math.sin(a) * 3.5, 0.9);
       }
     } else {
-      for (const dx of [-4, 0, 4]) {
-        s.fillStyle = sphereFill(s, x + dx, y, 3, { h: 2, s: 75, l: 44 }, 20, 15);
-        rrect(s, x + dx - 2, y - 6, 4, 12, 1.5);
-        s.fill();
-      }
-      s.fillStyle = '#2a2a2a';
-      s.fillRect(x - 6, y - 1, 12, 2);
+      for (const dx of [-4, 0, 4]) stick(s, x + dx, y, dx + 7);
+      // Taped together, badly.
+      s.fillStyle = INK;
+      s.fillRect(x - 6.8, y - 1.6, 13.6, 3.2);
+      s.fillStyle = 'rgb(214 200 170)';
+      s.fillRect(x - 6.2, y - 1, 12.4, 2);
       fuse(rc, x - 2, y);
     }
   },
@@ -118,16 +172,14 @@ const LOOKS: Record<BombLook, (rc: RC, m: Bomb, x: number, y: number, rot: numbe
     const s = rc.s;
     const g = rc.g;
     drawBall(rc, x, y);
+    // An alarm clock strapped on: a cream face, a pen ring, and hands that mean it.
+    s.fillStyle = INK;
+    circle(s, x - 1, y + 1.5, 4.3);
     s.fillStyle = '#f1ead8';
-    circle(s, x - 1, y + 1.5, 3.6);
-    s.strokeStyle = '#222';
-    s.lineWidth = 0.7;
-    s.beginPath();
-    s.moveTo(x - 1, y + 1.5);
-    s.lineTo(x - 1 + Math.cos(rc.t * 3) * 2.8, y + 1.5 + Math.sin(rc.t * 3) * 2.8);
-    s.moveTo(x - 1, y + 1.5);
-    s.lineTo(x - 1, y - 0.6);
-    s.stroke();
+    circle(s, x - 1, y + 1.5, 3.5);
+    s.fillStyle = INK;
+    line(s, x - 1, y + 1.5, x - 1 + Math.cos(rc.t * 3) * 2.8, y + 1.5 + Math.sin(rc.t * 3) * 2.8, { w: 0.8, seed: 1, taper: [0, 0.5], press: 0 });
+    line(s, x - 1, y + 1.5, x - 1, y - 0.6, { w: 1, seed: 2, taper: [0, 0.3], press: 0 });
     if (Math.floor(rc.t * 2) % 2 === 0) glowDot(g, x - 6, y - 4, 4, { h: 0, s: 100, l: 55 }, 0.9);
   },
 };

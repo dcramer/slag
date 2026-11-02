@@ -235,8 +235,8 @@ export class Backdrop {
   }
 
   /**
-   * Liquid pool along the bottom of the world (drawn in world space, in front
-   * of terrain). `ww`×`wh` is the world size; only the visible stretch (`view`)
+   * Liquid pool along the bottom of the world (drawn in world space, behind the
+   * terrain, which stands in it). `ww`×`wh` is the world size; only the visible stretch (`view`)
    * is drawn. The pool isn't the world's: it carries on `margin` px past either
    * edge with the surroundings, and deepens below the world to the window's edge.
    * `sunken` paints what's under the surface: it shows through the liquid, so

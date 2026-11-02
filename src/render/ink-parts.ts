@@ -323,3 +323,41 @@ export function inkFence(g: CanvasRenderingContext2D, d: Decor) {
     line(g, px + 0.4 + lean, d.y - 10.4, px + 0.4, d.y - 3, { w: 0.65, seed: seed + i, taper: [0.2, 0.5] });
   }
 }
+
+/**
+ * A row of three thorns on one tile face, in a frame where the face is at x = 8 and the tips point to
+ * +x (`angle` is that frame's rotation, so the shadow side stays away from the light). Each thorn is two
+ * flat tones split down its spine, a pen line heavier on its dark side, and a red tip that says "ow".
+ */
+export function inkThorns(s: CanvasRenderingContext2D, angle: number, seed: number, rail = '#2c2f38') {
+  // Which half of a thorn faces the light: the one on local -y, turned into the world.
+  const upLit = shadeOf(Math.sin(angle), -Math.cos(angle)) < 0.5;
+  s.fillStyle = INK;
+  line(s, 7.6, -7.8, 7.6, 7.8, { w: 3.2, seed, taper: [0.05, 0.05], press: 0.2 });
+  s.fillStyle = rail;
+  line(s, 7.3, -7.2, 7.3, 7.2, { w: 1.5, seed: seed + 1, taper: [0.05, 0.05], press: 0.2 });
+  for (let i = 0; i < 3; i++) {
+    const y0 = -7.2 + i * 4.8;
+    const len = 6.4 + hash2(i, 3, seed) * 1.6;
+    const lean = (hash2(i, 4, seed) - 0.5) * 1.2;
+    const tip = { x: 8.4 + len, y: y0 + 2.4 + lean };
+    const a = { x: 8.4, y: y0 + 0.1 };
+    const b = { x: 8.4, y: y0 + 4.7 };
+    const mid = { x: 8.4, y: y0 + 2.4 };
+    const tri = (p: P, q: P, r: P, fill: string) => {
+      s.fillStyle = fill;
+      s.beginPath();
+      s.moveTo(p.x, p.y);
+      s.lineTo(q.x, q.y);
+      s.lineTo(r.x, r.y);
+      s.closePath();
+      s.fill();
+    };
+    tri(a, tip, mid, upLit ? '#eef1f6' : '#8a909c');
+    tri(mid, tip, b, upLit ? '#8a909c' : '#eef1f6');
+    tri({ x: tip.x - 2.6, y: tip.y - 0.75 }, tip, { x: tip.x - 2.6, y: tip.y + 0.75 }, '#c0182a');
+    s.fillStyle = INK;
+    stroke(s, [a, tip], { w: upLit ? 0.7 : 1.3, seed: seed + i, taper: [0.1, 0.6], press: 0.2 });
+    stroke(s, [b, tip], { w: upLit ? 1.3 : 0.7, seed: seed + i + 5, taper: [0.1, 0.6], press: 0.2 });
+  }
+}

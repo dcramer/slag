@@ -1,6 +1,7 @@
 import { css } from '../../../core/color';
 import { TILE } from '../../../sim/constants';
 import { COAT_PX, dirOf, faceRect, type ModuleOf } from '../../../sim/props';
+import { inkThorns } from '../../ink-parts';
 import { circle, glowDot, type RC } from '../../kit';
 import { defineArt } from '../common';
 
@@ -13,27 +14,7 @@ function drawSpikeStrip(rc: RC, m: Coat) {
     s.save();
     s.translate((cx + 0.5) * TILE, (cy + 0.5) * TILE);
     s.rotate(m.angle);
-    s.fillStyle = '#3a3f4a';
-    s.fillRect(7.2, -7.5, 1.8, 15);
-    for (let i = 0; i < 3; i++) {
-      const y0 = -7 + i * 4.67;
-      const gr = s.createLinearGradient(8, y0, 8, y0 + 4.67);
-      gr.addColorStop(0, '#f2f4f8');
-      gr.addColorStop(0.5, '#b6bcc8');
-      gr.addColorStop(1, '#5d6370');
-      s.fillStyle = gr;
-      s.beginPath();
-      s.moveTo(8.6, y0 + 0.2);
-      s.lineTo(15.4, y0 + 2.33);
-      s.lineTo(8.6, y0 + 4.47);
-      s.fill();
-      s.fillStyle = 'rgba(160,20,30,0.85)';
-      s.beginPath();
-      s.moveTo(13.2, y0 + 1.6);
-      s.lineTo(15.4, y0 + 2.33);
-      s.lineTo(13.2, y0 + 3.1);
-      s.fill();
-    }
+    inkThorns(s, m.angle, cx * 31 + cy * 17);
     s.restore();
   }
 }

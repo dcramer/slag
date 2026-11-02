@@ -2,10 +2,52 @@ import type { HSL } from '../../../core/color';
 import type { Vec } from '../../../core/geom';
 import { TILE } from '../../../sim/constants';
 import { dirOf, flameCycle, type Module, type ModuleOf, type PropStyle, type Resolved } from '../../../sim/props';
+import { type P, stroke } from '../../ink';
 import { glowDot, light, type MetalPalette, type RC } from '../../kit';
 import { beamOf, defineArt, nozzle, type PropDrawOpts } from '../common';
 
 type M<T extends Module['type']> = ModuleOf<T>;
+
+/**
+ * A flame as it's inked in a comic: three flat tiers, red, orange and a yellow heart, licking at the
+ * edges and splitting into tongues at the tip, with a dark line round the outside. `ramp` grows it.
+ */
+function inkTongue(s: CanvasRenderingContext2D, x: number, y: number, dx: number, dy: number, len: number, width: number, t: number, ramp: number) {
+  const px = -dy;
+  const py = dx;
+  const N = 14;
+  const side = (k: number, wid: number, L: number, sgn: number) => {
+    const pts: P[] = [];
+    for (let i = 0; i <= N; i++) {
+      const u = i / N;
+      // Fat near the base, tapering to licks: the edge wanders more the further out it is.
+      const prof = Math.pow(Math.sin(Math.min(1, u * 1.15) * Math.PI * 0.5 + 0.35), 1.2) * (1 - u * 0.85);
+      const lick = Math.sin(u * 9 - t * 14 + sgn * 1.7 + k) * u * 1.6;
+      const w = (wid * prof + lick) * ramp;
+      const d = L * u * ramp;
+      pts.push({ x: x + dx * d + px * w * sgn, y: y + dy * d + py * w * sgn });
+    }
+    return pts;
+  };
+  const tier = (k: number, wid: number, L: number, fill: string) => {
+    const a = side(k, wid, L, 1);
+    const back = side(k, wid, L, -1);
+    const b: P[] = [];
+    for (let i = back.length - 1; i >= 0; i--) b.push(back[i]);
+    s.fillStyle = fill;
+    s.beginPath();
+    [...a, ...b].forEach((q, i) => (i ? s.lineTo(q.x, q.y) : s.moveTo(q.x, q.y)));
+    s.closePath();
+    s.fill();
+    return [a, b];
+  };
+  const [a, b] = tier(0, width, len, 'rgb(226 64 26)');
+  tier(1, width * 0.66, len * 0.8, 'rgb(255 150 34)');
+  tier(2, width * 0.34, len * 0.55, 'rgb(255 228 110)');
+  s.fillStyle = 'rgb(70 12 4)';
+  stroke(s, a, { w: 1.1, seed: 3, taper: [0.1, 0.6], press: 0.3 });
+  stroke(s, b, { w: 1.1, seed: 4, taper: [0.6, 0.1], press: 0.3 });
+}
 
 function drawFlame(rc: RC, m: M<'flame'>, r: Resolved, mi: number, off: Vec, pal: MetalPalette, _st: PropStyle, o: PropDrawOpts) {
   const f = rc.frame;
@@ -17,6 +59,11 @@ function drawFlame(rc: RC, m: M<'flame'>, r: Resolved, mi: number, off: Vec, pal
   const fire: HSL = { h: 28, s: 100, l: 55 };
   const nx = x + dx * 10;
   const ny = y + dy * 10;
+  if (!o.level) {
+    // On a card it's always lit: what a jet is for is the flame, not the nozzle.
+    inkTongue(rc.s, nx - dx * 1.5, ny - dy * 1.5, dx, dy, m.length - 4, 7, rc.t, 1);
+    return;
+  }
   if (c.seg === 1) {
     // Pilot light + sputter.
     const p = c.t / c.len;
@@ -32,6 +79,7 @@ function drawFlame(rc: RC, m: M<'flame'>, r: Resolved, mi: number, off: Vec, pal
     const n = Math.ceil(len / 4);
     const px = -dy;
     const py = dx;
+    inkTongue(rc.s, nx - dx * 1.5, ny - dy * 1.5, dx, dy, len - 8, 7, rc.t, ramp);
     for (let i = 0; i < n; i++) {
       const tt = i / n;
       const d = 10 + (len - 10) * tt * ramp;

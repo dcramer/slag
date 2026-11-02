@@ -27,10 +27,8 @@ Online play is on `main`; see `docs/NETCODE.md`.
 Phone support (follow camera, pinch, scaled HUD, settings sheet) is on `main` but has only run in Chromium emulation. Try iOS Safari and a real Android phone: `:has()` in the sheet CSS, safe-area insets, pinch feel, and frame rate.
 
 ## 8. Render polish
-- **Liquid draw order:** `drawLiquid` still paints after players and effects, while `docs/DESIGN.md` lists liquids behind terrain.
-- **`pnpm shot race` without `--race`** never starts a race: it stays in pick at frame 0.
-- **Crate cards:** the Dragon Vent draws as a tiny dot when its flame is off in that frame, and its sizes look alike. Medium and large ropes look the same too, because the preview caps at 4 links.
-- **Impact words** can hide a hazard for most of a second; `?lettering=0` turns them off. Decide whether they stay. Mine is the weakest theme in cel (band arcs on rock walls), and big plain walls are a taste call. Try a real phone.
+- **Impact words** can hide a hazard for most of a second; `?lettering=0` turns them off. Decide whether they stay. Big plain walls are a taste call. Try a real phone.
+- In pits the liquid surface sits 9 px above the kill line, so the waterline steps where a column meets the pool.
 
 ## 10. Housekeeping
 - Enable GitHub Actions and make `ci.yml` a required check. This must be done on GitHub by the repo owner.
@@ -62,23 +60,16 @@ Size tiers for parts are a mapping of the old rolled ranges, so check them too; 
 
 **Fast crushers** can pass through a lone runner standing on the floor and pop them on top instead of crushing them. The same happens with one runner, before collision.
 
-## 16. Fix WebGL failure paths
-Both are now visible in Sentry.
-
-- There's no WebGL context-restore handling, so a lost context stays lost for that session.
-
 ## 14. Clear the lint warnings
 `pnpm check` prints 7 warnings, in `src/ui/touch/overlay.ts`, `src/ui/touch/device.ts`, `src/input/input.ts`, `src/render/props/modules/vehicle.ts` and `src/audio/system.ts`. AGENTS.md treats warnings as real findings. Do it with or after item 6, which also touches the touch code.
 
 ## 21. Hand-drawn ink art
-Approved direction: ink strokes in code, no textures or generated art. In progress: real path, blast-area rebake, GPU check, fair hitboxes, then castle, the other themes, characters and parts. The ink rules go in `docs/ART.md`.
+Terrain, characters, building parts, spikes, the mystery crate and bombs are inked. Still to do, following `docs/PARODY.md`: drill, ring charge, EMP, launchers, flail and swinger arms, piston, laser, tesla, magnet, fan, portal, vehicles, the flame nozzle, decor, and glacier and space set pieces.
 
-## 15. Parody pass on items and parts
-The game's goal is to parody other games, especially with items (`docs/DESIGN.md` → Parody). The current items and parts were written to be neutral, so they don't do that yet: Foam Sword, Ricochet Puck, Boomerang, Pop Shield, Pocket Rocket, Smoke Bomb, and the parts from the content work.
+Rare 165–260 ms stalls remain on level load (likely GC from resizing bake canvases; try grow-only canvases).
 
-- Rework names, art and twists so each one mocks something recognizable.
-- Our own names and art only.
-- No explaining the joke.
+## 15. Parody names: decide on sound-alikes
+Names now parody genre tropes (`docs/PARODY.md`). A few are deliberate sound-alikes of trademarked names: Chain Chump, Thwunk, the -omb suffix, Master Noodle, Yolo Blocks, Coil Pup. Decide whether to keep them.
 
 ## 23. Check link previews on a deploy
 Icons, manifest, Open Graph and Twitter tags, and oEmbed are on `main`, regenerated with `pnpm brand`. These need a deployed URL to check:
