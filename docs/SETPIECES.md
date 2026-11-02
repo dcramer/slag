@@ -489,7 +489,8 @@ There are seven, all additive. Several themes share each one, so they come first
 
   Anything hung shows its chain, cable or strut all the way to the anchor.
 - **Space** is the exception: there, every piece shows its clamp or strut to a module or asteroid.
-- **A test enforces it:** extend `tests/setpieces.test.ts` so every landmark's supports end on a solid tile, except in `FLOATS` themes.
+- **Doorways and openings don't break it.** A doorway cut through a wall leaves the wall above it hanging over open sky, so the landmark's backdrop shell covers every column of its structure and stands on the lowest ground under it: behind a doorway it draws the door's frame and the dark room beyond, so the wall reads as running down to its threshold.
+- **A test enforces it** (`tests/landmark-grounding.test.ts`): every column of a landmark's box that holds structure reaches the terrain under it, through solid tiles or through its backdrop shell, unless the column only holds something that hangs. It runs across every registered concept.
 
 **Layering** (`src/render/AGENTS.md`):
 
