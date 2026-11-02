@@ -104,7 +104,8 @@ describe('idle players', () => {
       stepUntil(
         m,
         () => m.phase === 'score',
-        (f) => ({ a: press({ alt: f % 120 < 110, altPressed: f % 120 === 0 }), b: press({ alt: f % 120 < 110, altPressed: f % 120 === 0 }) }), // both hold self-destruct
+        // Self-destruct is a hold that needs a fresh press in the race: hold alt, pressing again now and then.
+        (f) => ({ a: press({ alt: true, altPressed: f % 400 === 0 }), b: press({ alt: true, altPressed: f % 400 === 0 }) }),
         4000,
       ),
     ).toBeGreaterThan(0);
