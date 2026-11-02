@@ -3,29 +3,41 @@ import type { Vec } from '../../../core/geom';
 import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import type { Module, ModuleOf, PropStyle, Resolved } from '../../../sim/props';
-import { inkWood } from '../../ink-parts';
-import { circle, ellipse, glowDot, hazardStripes, light, type MetalPalette, metalFill, type RC, rivet, sphereFill } from '../../kit';
-import { bbox, bodyPath, cornerRadii, defineArt, type PropDrawOpts } from '../common';
+import { line, type P, stroke } from '../../ink';
+import { blockLoops, stampBlock } from '../../ink-blocks';
+import { glowDot, light, type MetalPalette, type RC } from '../../kit';
+import { bbox, defineArt, type PropDrawOpts } from '../common';
 
 type M<T extends Module['type']> = ModuleOf<T>;
 
+const has = (set: Set<string>, x: number, y: number) => set.has(`${x},${y}`);
+
+/**
+ * Building blocks. The block itself is inked once and stamped (`ink-blocks.ts`); what's drawn here is
+ * only what moves: belt treads and rollers, goo drips, a jelly's jiggle, a biscuit giving way, and the
+ * glow in a gem.
+ */
 function drawBody(rc: RC, m: M<'body'>, st: PropStyle, pal: MetalPalette, off: Vec, r: Resolved, o: PropDrawOpts) {
   const s = rc.s;
   const g = rc.g;
   const t = rc.t;
   const f = rc.frame;
-  const set = new Set(m.cells.map(([x, y]) => `${x},${y}`));
-  let shake = 0;
-  if (m.material === 'crumble') {
-    if (o.broken) {
-      s.save();
-      s.strokeStyle = 'rgba(255,255,255,0.18)';
-      s.setLineDash([2, 3]);
-      s.stroke(bodyPath(m.cells, off, 3, 1.5));
-      s.restore();
-      return;
+  if (m.material === 'crumble' && o.broken) {
+    // Where it will come back: its own outline, as a dotted pencil line.
+    s.fillStyle = 'rgba(255,240,215,0.32)';
+    for (const loop of blockLoops(m.cells, m.material, st, pal)) {
+      for (let i = 0; i < loop.length; i += 2) {
+        const a = loop[i];
+        const b = loop[(i + 1) % loop.length];
+        line(s, a.x + off[0], a.y + off[1], b.x + off[0], b.y + off[1], { w: 0.9, seed: i, taper: [0.2, 0.2], press: 0 });
+      }
     }
-    const trig = o.state && o.state.triggerFrame >= 0 ? (f - o.state.triggerFrame) / Math.max(1, m.breakFrames) : 0;
+    return;
+  }
+  let shake = 0;
+  let trig = 0;
+  if (m.material === 'crumble') {
+    trig = o.state && o.state.triggerFrame >= 0 ? (f - o.state.triggerFrame) / Math.max(1, m.breakFrames) : 0;
     shake = trig ? Math.sin(f * 2.7) * trig * 1.6 : 0;
     if (trig && o.emit && Math.random() < 0.3) {
       const c = m.cells[Math.floor(Math.random() * m.cells.length)];
@@ -33,263 +45,117 @@ function drawBody(rc: RC, m: M<'body'>, st: PropStyle, pal: MetalPalette, off: V
     }
   }
   const O: Vec = [off[0] + shake, off[1]];
-  const path = bodyPath(m.cells, O, 4);
-  const bb = bbox(m.cells, O);
-  // Contact shadow.
-  s.fillStyle = 'rgba(0,0,0,0.25)';
-  s.save();
-  s.translate(1.5, 2.5);
-  s.fill(path);
-  s.restore();
-
-  const outline = (c: string, w = 2.4) => {
-    s.lineJoin = 'round';
-    s.strokeStyle = c;
-    s.lineWidth = w;
-    s.stroke(path);
-  };
+  const jiggle = m.material === 'jelly' ? Math.sin(t * 6 + r.pp.uid) * 0.03 : 0;
+  stampBlock(s, m.cells, O, m.material, st, pal, jiggle);
+  const set = new Set(m.cells.map(([x, y]) => `${x},${y}`));
 
   switch (m.material) {
     case 'metal': {
-      outline(css(pal.dark, -8));
-      s.fillStyle = metalFill(s, pal, bb.x, bb.y, bb.w, bb.h);
-      s.fill(path);
-      s.save();
-      s.clip(path);
-      // Panel seams + bevels.
+      if (st.trim !== 'gems' && st.trim !== 'runes') break;
+      const glowC: HSL = { h: st.glowHue, s: 95, l: 60 };
+      const pulse = 0.7 + 0.3 * Math.sin(t * 3 + r.pp.uid);
       for (const [x, y] of m.cells) {
-        const px = x * TILE + O[0];
-        const py = y * TILE + O[1];
-        s.fillStyle = css(pal.light, 0, 0.35);
-        s.fillRect(px + 1, py + 1, TILE - 2, 1);
-        s.fillStyle = css(pal.dark, 0, 0.5);
-        s.fillRect(px + 1, py + TILE - 2, TILE - 2, 1);
-        if (st.trim === 'rivets' || st.trim === 'gems') {
-          rivet(s, px + 3, py + 3, pal);
-          rivet(s, px + TILE - 3, py + 3, pal);
-          rivet(s, px + 3, py + TILE - 3, pal);
-          rivet(s, px + TILE - 3, py + TILE - 3, pal);
+        const cx = (x + 0.5) * TILE + O[0];
+        const cy = (y + 0.5) * TILE + O[1];
+        if (st.trim === 'gems') {
+          g.fillStyle = css(glowC, 10, 0.85 * pulse);
+          g.beginPath();
+          g.moveTo(cx, cy - 3);
+          g.lineTo(cx + 2.5, cy);
+          g.lineTo(cx, cy + 3);
+          g.lineTo(cx - 2.5, cy);
+          g.fill();
+        } else {
+          g.fillStyle = css(glowC, 10, 0.8 * pulse);
+          const k = hash2(x, y, r.pp.uid);
+          stroke(
+            g,
+            [
+              { x: cx - 2.4, y: cy - 2.6 },
+              { x: cx + (k > 0.5 ? 2 : 0), y: cy },
+              { x: cx - 2.4, y: cy + 2.6 },
+            ],
+            { w: 1, seed: x + y, taper: [0.1, 0.1], press: 0 },
+          );
         }
-        if (st.trim === 'stripes' && !set.has(`${x},${y - 1}`)) hazardStripes(s, px, py + 1, TILE, 3.5);
+        glowDot(g, cx, cy, 7, glowC, 0.22 * pulse);
       }
-      s.restore();
-      if (st.trim === 'gems' || st.trim === 'runes') {
-        const glowC: HSL = { h: st.glowHue, s: 95, l: 60 };
-        const pulse = 0.7 + 0.3 * Math.sin(t * 3 + r.pp.uid);
-        for (const [x, y] of m.cells) {
-          const cx = (x + 0.5) * TILE + O[0];
-          const cy = (y + 0.5) * TILE + O[1];
-          if (st.trim === 'gems') {
-            s.fillStyle = css(glowC, -25);
-            s.beginPath();
-            s.moveTo(cx, cy - 3.5);
-            s.lineTo(cx + 3, cy);
-            s.lineTo(cx, cy + 3.5);
-            s.lineTo(cx - 3, cy);
-            s.fill();
-            g.fillStyle = css(glowC, 10, 0.8 * pulse);
-            g.beginPath();
-            g.moveTo(cx, cy - 3);
-            g.lineTo(cx + 2.4, cy);
-            g.lineTo(cx, cy + 3);
-            g.lineTo(cx - 2.4, cy);
-            g.fill();
-          } else {
-            g.strokeStyle = css(glowC, 10, 0.75 * pulse);
-            g.lineWidth = 1;
-            g.beginPath();
-            const k = hash2(x, y, r.pp.uid);
-            g.moveTo(cx - 3, cy - 3);
-            g.lineTo(cx + (k > 0.5 ? 3 : 0), cy);
-            g.lineTo(cx - 3, cy + 3);
-            g.moveTo(cx + 2, cy - 3.5);
-            g.lineTo(cx + 2, cy + 3.5);
-            g.stroke();
-          }
-          glowDot(g, cx, cy, 8, glowC, 0.25 * pulse);
-        }
-        const c = bb;
-        light(rc, c.x + c.w / 2, c.y + c.h / 2, 45, glowC, 0.4 * pulse);
-      }
-      break;
-    }
-    case 'stone': {
-      const base: HSL = { h: st.hue, s: 12, l: 48 };
-      outline(css(base, -30));
-      const gr = s.createLinearGradient(0, bb.y, 0, bb.y + bb.h);
-      gr.addColorStop(0, css(base, 14));
-      gr.addColorStop(1, css(base, -14));
-      s.fillStyle = gr;
-      s.fill(path);
-      s.save();
-      s.clip(path);
-      for (const [x, y] of m.cells) {
-        for (let i = 0; i < 6; i++) {
-          const k = hash2(x * 7 + i, y * 13, r.pp.uid);
-          s.fillStyle = css(base, k > 0.5 ? 10 : -12, 0.6);
-          circle(s, x * TILE + O[0] + 2 + hash2(i, x, y) * 12, y * TILE + O[1] + 2 + hash2(y, i, x) * 12, 0.6 + k);
-        }
-        if (!set.has(`${x},${y - 1}`)) {
-          s.fillStyle = css(base, 22, 0.6);
-          s.fillRect(x * TILE + O[0], y * TILE + O[1], TILE, 2);
-        }
-      }
-      s.restore();
-      break;
-    }
-    case 'wood': {
-      const base: HSL = { h: st.woodHue, s: 45, l: 38 };
-      outline(css(base, -24));
-      s.fillStyle = css(base);
-      s.fill(path);
-      s.save();
-      s.clip(path);
-      inkWood(s, m.cells, O, st.woodHue, r.pp.uid + 3);
-      s.restore();
-      break;
-    }
-    case 'ice': {
-      const base: HSL = { h: 195, s: 80, l: 78 };
-      outline(css(base, -30, 0.9), 2);
-      const gr = s.createLinearGradient(bb.x, bb.y, bb.x + bb.w, bb.y + bb.h);
-      gr.addColorStop(0, css(base, 15, 0.95));
-      gr.addColorStop(1, css(base, -15, 0.85));
-      s.fillStyle = gr;
-      s.fill(path);
-      s.save();
-      s.clip(path);
-      s.strokeStyle = 'rgba(255,255,255,0.55)';
-      s.lineWidth = 0.8;
-      for (const [x, y] of m.cells) {
-        const px = x * TILE + O[0];
-        const py = y * TILE + O[1];
-        s.beginPath();
-        s.moveTo(px + 2, py + 12);
-        s.lineTo(px + 7, py + 6);
-        s.lineTo(px + 14, py + 9);
-        s.stroke();
-      }
-      const sweep = ((t * 40 + r.pp.uid * 30) % (bb.w + 60)) - 30;
-      g.save();
-      g.clip(path);
-      g.fillStyle = 'rgba(255,255,255,0.35)';
-      g.beginPath();
-      g.moveTo(bb.x + sweep, bb.y);
-      g.lineTo(bb.x + sweep + 6, bb.y);
-      g.lineTo(bb.x + sweep - 6, bb.y + bb.h);
-      g.lineTo(bb.x + sweep - 12, bb.y + bb.h);
-      g.fill();
-      g.restore();
-      s.restore();
+      const c = bbox(m.cells, O);
+      light(rc, c.x + c.w / 2, c.y + c.h / 2, 45, glowC, 0.4 * pulse);
       break;
     }
     case 'conveyor': {
-      outline('#0b0b0f');
-      s.fillStyle = '#26262e';
-      s.fill(path);
-      s.save();
-      s.clip(path);
       const dir = Math.sign(r.pp.rot >= 2 ? -m.conveyor : m.conveyor) || 1;
-      const offx = ((f * Math.abs(m.conveyor)) / 60) % 8;
+      const run = (f * Math.abs(m.conveyor)) / 60;
+      const a = (f * m.conveyor) / 180;
       for (const [x, y] of m.cells) {
         const px = x * TILE + O[0];
         const py = y * TILE + O[1];
-        if (!set.has(`${x},${y - 1}`)) {
-          for (let i = -1; i < 3; i++) {
-            const bx = px + ((((i * 8 + dir * offx) % 16) + 16) % 16);
-            s.fillStyle = '#3a3a44';
-            s.fillRect(bx, py, 2, 3);
-            g.strokeStyle = 'rgba(255,190,60,0.85)';
-            g.lineWidth = 1.2;
-            g.beginPath();
-            g.moveTo(bx - dir * 2 + 1, py + 5);
-            g.lineTo(bx + dir * 1 + 1, py + 7.5);
-            g.lineTo(bx - dir * 2 + 1, py + 10);
-            g.stroke();
+        if (!has(set, x, y - 1)) {
+          // Treads on the belt, sliding the way it carries you.
+          s.fillStyle = 'rgb(92 92 104)';
+          for (let i = -1; i < 4; i++) {
+            const bx = px + ((((i * 5 + dir * run) % 20) + 20) % 20) - 2;
+            if (bx < px - 0.5 || bx > px + TILE - 1) continue;
+            s.fillRect(bx, py + 0.8, 1.3, 3);
           }
+          // Lit arrows on the skirt, so the way it runs reads from anywhere.
+          g.fillStyle = 'rgba(255,190,60,0.9)';
+          const ax = px + 8 + ((((dir * run * 0.5) % 8) + 8) % 8) - 4;
+          line(g, ax - dir * 1.8, py + 5.9, ax + dir * 0.8, py + 7.4, { w: 1.1, seed: x, taper: [0, 0], press: 0 });
+          line(g, ax + dir * 0.8, py + 7.4, ax - dir * 1.8, py + 8.9, { w: 1.1, seed: x + 1, taper: [0, 0], press: 0 });
         }
-        // Rollers.
+        // The roller turning in its socket.
+        s.fillStyle = '#16151a';
         const rx = px + TILE / 2;
-        const ry = py + TILE - 4;
-        s.fillStyle = sphereFill(s, rx, ry, 3, { h: 220, s: 8, l: 55 });
-        circle(s, rx, ry, 3);
-        s.strokeStyle = '#111';
-        s.lineWidth = 0.8;
-        const a = (f * m.conveyor) / 180;
-        s.beginPath();
-        s.moveTo(rx + Math.cos(a) * 2.5, ry + Math.sin(a) * 2.5);
-        s.lineTo(rx - Math.cos(a) * 2.5, ry - Math.sin(a) * 2.5);
-        s.stroke();
+        const ry = py + TILE - 5.2;
+        line(s, rx + Math.cos(a) * 2.4, ry + Math.sin(a) * 2.4, rx - Math.cos(a) * 2.4, ry - Math.sin(a) * 2.4, { w: 0.9, seed: x, taper: [0, 0], press: 0 });
+        line(s, rx - Math.sin(a) * 2.4, ry + Math.cos(a) * 2.4, rx + Math.sin(a) * 2.4, ry - Math.cos(a) * 2.4, {
+          w: 0.9,
+          seed: x + 3,
+          taper: [0, 0],
+          press: 0,
+        });
       }
-      s.restore();
       break;
     }
-    case 'goo':
-    case 'jelly': {
-      const jelly = m.material === 'jelly';
-      const base: HSL = jelly ? { h: (st.hue + 300) % 360, s: 85, l: 62 } : { h: st.hue, s: 75, l: 42 };
-      const wob = (x: number, y: number) => Math.sin(t * (jelly ? 6 : 2) + x * 0.6 + y) * (jelly ? 0.9 : 0.5);
-      const wpath = new Path2D();
-      for (const [x, y] of m.cells)
-        wpath.roundRect(x * TILE + O[0] - wob(x, y) * 0.5, y * TILE + O[1] + wob(y, x), TILE + wob(x, y), TILE - wob(y, x), cornerRadii(set, x, y, 6));
-      s.lineJoin = 'round';
-      s.strokeStyle = css(base, -28, 0.9);
-      s.lineWidth = 2.4;
-      s.stroke(wpath);
-      const gr = s.createLinearGradient(0, bb.y, 0, bb.y + bb.h);
-      gr.addColorStop(0, css(base, 18, jelly ? 0.85 : 1));
-      gr.addColorStop(1, css(base, -10, jelly ? 0.8 : 1));
-      s.fillStyle = gr;
-      s.fill(wpath);
-      g.globalAlpha = jelly ? 0.35 : 0.2;
-      g.fillStyle = css(base, 10);
-      g.fill(wpath);
-      g.globalAlpha = 1;
-      s.fillStyle = 'rgba(255,255,255,0.55)';
+    case 'goo': {
+      // Drips that gather, stretch and let go under every bottom edge: thin, so they're decoration.
+      const base: HSL = { h: st.hue, s: 62, l: 42 };
       for (const [x, y] of m.cells) {
-        if (!set.has(`${x},${y - 1}`)) ellipse(s, x * TILE + O[0] + 5, y * TILE + O[1] + 3.5, 3, 1.2);
-        if (jelly) {
-          s.fillStyle = 'rgba(255,255,255,0.3)';
-          circle(s, x * TILE + O[0] + 10 + Math.sin(t + x) * 2, y * TILE + O[1] + 10 + Math.cos(t * 1.3 + y) * 2, 1.4);
-          s.fillStyle = 'rgba(255,255,255,0.55)';
-        } else if (!set.has(`${x},${y + 1}`)) {
-          const dp = (t * 0.5 + hash2(x, y, 3)) % 1;
-          s.fillStyle = css(base, 0);
-          ellipse(s, x * TILE + O[0] + 4 + hash2(x, y, 9) * 8, (y + 1) * TILE + O[1] + dp * 4, 1.4, 1 + dp * 2.5);
-          s.fillStyle = 'rgba(255,255,255,0.55)';
-        }
+        if (has(set, x, y + 1)) continue;
+        const dp = (t * 0.5 + hash2(x, y, 3)) % 1;
+        const dx = (x + 0.25 + hash2(x, y, 9) * 0.5) * TILE + O[0];
+        const dy = (y + 1) * TILE + O[1] - 0.6;
+        const len = 1.5 + dp * 4.5;
+        const pts: P[] = [
+          { x: dx, y: dy },
+          { x: dx, y: dy + len * 0.6 },
+          { x: dx, y: dy + len },
+        ];
+        s.fillStyle = css(base, -34, 1, 8);
+        stroke(s, pts, { w: 2.6, seed: x, taper: [0, 0.2], press: 0 });
+        s.fillStyle = css(base, -6);
+        stroke(s, pts, { w: 1.5, seed: x, taper: [0, 0.25], press: 0 });
       }
       break;
     }
     case 'crumble': {
-      const base: HSL = { h: 32, s: 42, l: 54 };
-      outline(css(base, -30));
-      const gr = s.createLinearGradient(0, bb.y, 0, bb.y + bb.h);
-      gr.addColorStop(0, css(base, 10));
-      gr.addColorStop(1, css(base, -12));
-      s.fillStyle = gr;
-      s.fill(path);
-      s.save();
-      s.clip(path);
-      s.strokeStyle = css(base, -32);
-      s.lineWidth = 0.9;
+      if (!trig) break;
+      // Cracks run in from the edges as it gives.
+      s.fillStyle = css({ h: 30, s: 50, l: 14 });
       for (const [x, y] of m.cells) {
         const px = x * TILE + O[0];
         const py = y * TILE + O[1];
-        s.beginPath();
-        s.moveTo(px + 3, py);
-        s.lineTo(px + 7, py + 6);
-        s.lineTo(px + 5, py + 11);
-        s.lineTo(px + 8, py + TILE);
-        s.moveTo(px + 7, py + 6);
-        s.lineTo(px + TILE, py + 8);
-        s.stroke();
-        s.fillStyle = css(base, 18, 0.7);
-        s.fillRect(px + 1, py + 1, TILE - 2, 1.5);
+        const pts: P[] = [{ x: px + 2 + hash2(x, y, 1) * 12, y: py }];
+        const steps = Math.ceil(Math.min(1, trig * 1.4) * 5);
+        for (let i = 1; i <= steps; i++) pts.push({ x: pts[i - 1].x + (hash2(x, y + i, 2) - 0.5) * 6, y: py + i * 3.2 });
+        stroke(s, pts, { w: 1.1, seed: x * 7 + y, taper: [0.05, 0.6], press: 0.2 });
       }
-      s.restore();
       break;
     }
+    default:
+      break;
   }
 }
 

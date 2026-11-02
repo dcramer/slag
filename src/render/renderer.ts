@@ -528,9 +528,28 @@ export class Renderer {
       rc.g.globalAlpha = 1;
       const bomb = gh.def.modules.find((x) => x.type === 'bomb');
       if (bomb && bomb.type === 'bomb') drawBlastPreview(rc, m.level, m.placed, bomb, gh.tx, gh.ty, p.rot);
-      rc.g.strokeStyle = css(col, 10, 0.75);
-      rc.g.lineWidth = 1;
-      for (const [x, y] of footprint(gh.def, p.rot)) rc.g.strokeRect((gh.tx + x) * TILE + 0.5, (gh.ty + y) * TILE + 0.5, TILE - 1, TILE - 1);
+      // The footprint as one outline round its tiles: exact enough to line up by, and it doesn't rule a grid over the part.
+      const cells = footprint(gh.def, p.rot);
+      const set = new Set(cells.map(([x, y]) => `${x},${y}`));
+      rc.g.strokeStyle = css(col, 10, 0.8);
+      rc.g.lineWidth = 1.2;
+      rc.g.beginPath();
+      for (const [x, y] of cells) {
+        const x0 = (gh.tx + x) * TILE + 0.5;
+        const y0 = (gh.ty + y) * TILE + 0.5;
+        const x1 = x0 + TILE - 1;
+        const y1 = y0 + TILE - 1;
+        const side = (open: boolean, ax: number, ay: number, bx: number, by: number) => {
+          if (!open) return;
+          rc.g.moveTo(ax, ay);
+          rc.g.lineTo(bx, by);
+        };
+        side(!set.has(`${x},${y - 1}`), x0, y0, x1, y0);
+        side(!set.has(`${x + 1},${y}`), x1, y0, x1, y1);
+        side(!set.has(`${x},${y + 1}`), x0, y1, x1, y1);
+        side(!set.has(`${x - 1},${y}`), x0, y0, x0, y1);
+      }
+      rc.g.stroke();
     }
   }
 

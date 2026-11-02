@@ -797,6 +797,146 @@ try {
       );
       break;
     }
+    case 'buildparts': {
+      // Every building part: each block material at every size in a race (whole view and close up), then
+      // on crate cards, then as place-phase ghosts. `--theme` picks the backdrop.
+      const kinds = ['stone', 'metal', 'wood', 'ice', 'conveyor', 'goo', 'jelly', 'crumble'];
+      const shapes: [number, number][][] = [
+        [[0, 0]],
+        [
+          [0, 0],
+          [1, 0],
+          [2, 0],
+        ],
+        [
+          [0, 0],
+          [1, 0],
+          [2, 0],
+          [3, 0],
+          [4, 0],
+        ],
+        [
+          [0, 0],
+          [1, 0],
+          [2, 0],
+          [2, 1],
+          [3, 1],
+        ],
+      ];
+      // Build defs in the page from a real generated platform, so every field the art reads is there.
+      const defsOf = () =>
+        page.evaluate(
+          ([ks, sh]) => {
+            const d = (window as any).slagDebug;
+            d.match.placed.length = 0;
+            d.addProps(['platform', 'blinker', 'wheel', 'crumble'], 3);
+            const got = d.match.placed.map((p: any) => p.def);
+            d.match.placed.length = 0;
+            const base = got.find((x: any) => x.archetype === 'platform');
+            const out: any[] = [];
+            for (const k of ks)
+              for (const cells of sh) {
+                const def = structuredClone(base);
+                def.key = `bp-${k}-${cells.length}`;
+                def.name = k;
+                def.role = 'build';
+                def.motion = { type: 'none' };
+                def.modules = [
+                  {
+                    type: 'body',
+                    cells,
+                    material: k,
+                    conveyor: k === 'conveyor' ? 80 : 0,
+                    breakFrames: k === 'crumble' ? 30 : 0,
+                    respawnFrames: k === 'crumble' ? 200 : 0,
+                  },
+                ];
+                def.footprint = cells;
+                def.span = 3;
+                out.push(def);
+              }
+            for (const x of got) if (x.archetype !== 'platform') out.push(x);
+            return out;
+          },
+          [kinds, shapes] as const,
+        );
+      await open(`seed=${seed}&players=8`);
+      await step(30);
+      const defs = await defsOf();
+      // Cards: two crates' worth of the build parts.
+      const cardShots: string[] = [];
+      for (let k = 0; k < 2; k++) {
+        await page.evaluate(
+          ([ds, from]) => {
+            const m = (window as any).slagDebug.match;
+            m.crate.forEach((c: any, i: number) => {
+              c.def = ds[(from + i * 3) % ds.length];
+              c.claimedBy = -1;
+            });
+          },
+          [defs, k] as const,
+        );
+        await step(2);
+        cardShots.push(await snap(`buildparts-cards-${k}`));
+      }
+      // Ghosts: each player holds one and aims it over open air.
+      await page.evaluate((ds) => {
+        const m = (window as any).slagDebug.match;
+        const pick = [1, 6, 10, 14, 18, 22, 26, 33].map((i) => i % ds.length);
+        m.crate.forEach((c: any, i: number) => (c.def = ds[pick[i % pick.length]]));
+        m.players.forEach((p: any, i: number) => {
+          p.claim = i;
+          m.crate[i].claimedBy = p.slot;
+        });
+      }, defs);
+      await step(30);
+      await page.evaluate(() => {
+        const m = (window as any).slagDebug.match;
+        m.players.forEach((p: any, i: number) => (p.cursor = { x: 90 + (i % 4) * 170, y: 110 + Math.floor(i / 4) * 150 }));
+      });
+      await step(2);
+      const ghost = await snap(`buildparts-ghosts`);
+      // The race: an empty room with every part laid out on a grid.
+      await page.evaluate((ds) => {
+        const d = (window as any).slagDebug;
+        const m = d.match;
+        const L = m.level;
+        for (let y = 2; y < L.h - 3; y++) for (let x = 3; x < L.w - 3; x++) L.tiles[y * L.w + x] = 0;
+        L.version++;
+        m.placed.length = 0;
+        let uid = 900;
+        ds.forEach((def: any, i: number) => {
+          const blocks = i < 32;
+          const tx = blocks ? 4 + [0, 3, 8, 15][i % 4] : 26 + ((i - 32) % 2) * 9;
+          const ty = blocks ? 3 + Math.floor(i / 4) * 3 : 4 + Math.floor((i - 32) / 2) * 7;
+          m.placed.push({ uid: uid++, def, owner: m.players[0].slot, tx, ty, rot: 0 });
+        });
+        d.race([], 1);
+      }, defs);
+      await step(40);
+      const race = await snap(`buildparts-race`);
+      const close: string[] = [];
+      for (const [cx, cy] of [
+        [200, 110],
+        [200, 250],
+        [200, 370],
+        [560, 200],
+      ]) {
+        await page.evaluate(
+          ([x, y]) => {
+            const cam = (window as any).slagDebug.renderer.cam;
+            cam.update = () => {};
+            cam.snap({ cx: x, cy: y, zoom: 2.4 });
+            cam.shake = 0;
+            (window as any).slagDebug.render();
+          },
+          [cx, cy] as const,
+        );
+        close.push(await snap(`buildparts-race-close-${close.length}`));
+      }
+      await sheet('buildparts', [race, ...close, ...cardShots, ghost], 2);
+      break;
+    }
     case 'stack': {
       // Body contact as stepped frames: three runners stack, the bottom one walks them along, and a fourth bounces off the top.
       await open(`seed=${seed}&players=4&race=mystery&propseed=${opt('propseed', '1')}`);

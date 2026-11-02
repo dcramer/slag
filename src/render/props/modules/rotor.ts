@@ -2,9 +2,10 @@ import { css, type HSL } from '../../../core/color';
 import type { Rect } from '../../../core/geom';
 import { hash2 } from '../../../core/rng';
 import { type ModuleOf, type RotorArm, rotorAngles, rotorArms, rotorPlatform } from '../../../sim/props';
-import { circle, ellipse, glowDot, hazardStripes, light, METALS, metalFill, type RC, rivet, rrect, sphereFill } from '../../kit';
+import { blob, line, type P, stroke } from '../../ink';
+import { circle, ellipse, glowDot, light, METALS, metalFill, type RC, rivet, rrect, sphereFill } from '../../kit';
 import { BACKDROP, type DrawCtx, defineArt } from '../common';
-import { bar, ceilingAbovePx, chain, groundBelowPx, lattice, plank, rope } from './setpiece';
+import { ceilingAbovePx, chain, groundBelowPx, lattice, plank, rope } from './setpiece';
 
 /**
  * Rotor art: windmills, cog lifts and pendulum platforms (chandelier, hay
@@ -307,40 +308,7 @@ function drawArms(rc: RC, m: Rotor, d: DrawCtx, arms: RotorArm[]) {
     return;
   }
   if (m.look === 'cog') {
-    for (const a of arms) bar(s, hx, hy, a.x, a.y, 3.2, d.pal);
-    const base = rotorAngles(m, rc.frame, d.r.phase)[0];
-    const R = Math.min(m.arm * 0.5, 30);
-    s.save();
-    s.translate(hx, hy);
-    s.rotate(base);
-    const teeth = Math.max(10, Math.round(R * 0.55));
-    s.beginPath();
-    for (let i = 0; i < teeth; i++) {
-      const a0 = (i / teeth) * Math.PI * 2;
-      const da = (Math.PI * 2) / teeth;
-      s.lineTo(Math.cos(a0) * R, Math.sin(a0) * R);
-      s.lineTo(Math.cos(a0 + da * 0.12) * (R + 3.5), Math.sin(a0 + da * 0.12) * (R + 3.5));
-      s.lineTo(Math.cos(a0 + da * 0.45) * (R + 3.5), Math.sin(a0 + da * 0.45) * (R + 3.5));
-      s.lineTo(Math.cos(a0 + da * 0.57) * R, Math.sin(a0 + da * 0.57) * R);
-    }
-    s.closePath();
-    s.fillStyle = metalFill(s, d.pal, -R, -R, R * 2, R * 2, -base);
-    s.fill();
-    s.strokeStyle = css(d.pal.dark, -10);
-    s.lineWidth = 1;
-    s.stroke();
-    s.fillStyle = 'rgba(10,10,14,0.7)';
-    const holes = 5;
-    for (let i = 0; i < holes; i++) {
-      const a = (i / holes) * Math.PI * 2;
-      circle(s, Math.cos(a) * R * 0.58, Math.sin(a) * R * 0.58, R * 0.2);
-    }
-    s.strokeStyle = css(d.pal.light, 0, 0.5);
-    s.lineWidth = 0.8;
-    s.beginPath();
-    s.arc(0, 0, R * 0.86, 0, Math.PI * 2);
-    s.stroke();
-    s.restore();
+    inkCog(rc, m, d, arms, hx, hy);
     return;
   }
   // Pendulums: link from the pivot to the platform.
@@ -405,6 +373,121 @@ function leavesAlong(s: CanvasRenderingContext2D, hx: number, hy: number, ends: 
   }
 }
 
+/**
+ * A cog lift's wheel: a hand-cut gear whose shadow stays where the light puts it while the teeth turn,
+ * on inked spokes out to each paddle.
+ */
+function inkCog(rc: RC, m: Rotor, d: DrawCtx, arms: RotorArm[], hx: number, hy: number) {
+  const s = rc.s;
+  const pal = d.pal;
+  const ink = css({ h: pal.dark.h, s: pal.dark.s, l: 8 });
+  for (const a of arms) {
+    s.fillStyle = ink;
+    line(s, hx, hy, a.x, a.y, { w: 4.4, seed: 3, taper: [0, 0], press: 0 });
+    s.fillStyle = css(pal.base, -8);
+    line(s, hx, hy, a.x, a.y, { w: 2.2, seed: 3, taper: [0, 0], press: 0 });
+  }
+  const base = rotorAngles(m, rc.frame, d.r.phase)[0];
+  const R = Math.min(m.arm * 0.5, 30);
+  const teeth = Math.max(10, Math.round(R * 0.55));
+  const pts: P[] = [];
+  for (let i = 0; i < teeth; i++) {
+    const a0 = base + (i / teeth) * Math.PI * 2;
+    const da = (Math.PI * 2) / teeth;
+    const wob = 1 + (hash2(i, 1, m.seed) - 0.5) * 0.05;
+    for (const [u, r] of [
+      [0, R],
+      [0.1, R + 3.6 * wob],
+      [0.45, R + 3.6 * wob],
+      [0.57, R],
+    ] as const)
+      pts.push({ x: hx + Math.cos(a0 + da * u) * r, y: hy + Math.sin(a0 + da * u) * r });
+  }
+  const path = () => {
+    s.beginPath();
+    pts.forEach((q, i) => (i ? s.lineTo(q.x, q.y) : s.moveTo(q.x, q.y)));
+    s.closePath();
+  };
+  s.fillStyle = css(pal.dark, 8);
+  path();
+  s.fill();
+  s.save();
+  s.clip();
+  // The lit face: a disc shifted toward the light, fixed while the gear turns.
+  s.fillStyle = css(pal.base);
+  s.beginPath();
+  s.arc(hx - R * 0.12, hy - R * 0.14, R * 1.08, 0, Math.PI * 2);
+  s.fill();
+  s.fillStyle = css(pal.light, -6);
+  s.beginPath();
+  s.arc(hx - R * 0.12, hy - R * 0.14, R * 0.86, Math.PI * 1.05, Math.PI * 1.6);
+  s.arc(hx - R * 0.12, hy - R * 0.14, R * 0.72, Math.PI * 1.6, Math.PI * 1.05, true);
+  s.fill();
+  s.restore();
+  s.fillStyle = ink;
+  stroke(s, [...pts, pts[0], pts[1]], { w: 1.3, seed: m.seed & 0xffff, taper: [0.01, 0.01], press: 0.35 });
+  // Lightening holes, each a dark with a lit far rim, inked.
+  for (let i = 0; i < 5; i++) {
+    const a = base + (i / 5) * Math.PI * 2;
+    const cx = hx + Math.cos(a) * R * 0.58;
+    const cy = hy + Math.sin(a) * R * 0.58;
+    const r = R * 0.19;
+    s.fillStyle = css(pal.base, -6);
+    blob(s, cx, cy, r, i + 3, 1, 0.05);
+    s.fill();
+    s.fillStyle = css(pal.dark, -12);
+    blob(s, cx - r * 0.25, cy - r * 0.25, r * 0.92, i + 3, 1, 0.05);
+    s.fill();
+    s.fillStyle = ink;
+    const ring: P[] = [];
+    for (let k = 0; k <= 10; k++) ring.push({ x: cx + Math.cos((k / 10) * Math.PI * 2) * r, y: cy + Math.sin((k / 10) * Math.PI * 2) * r });
+    stroke(s, ring, { w: 0.8, seed: i, taper: [0.1, 0.4] });
+  }
+}
+
+/** A cog lift's paddle: a steel tread plate with a hazard lip and grip slots, inked. */
+function inkPaddle(s: CanvasRenderingContext2D, p: Rect, d: DrawCtx, a: RotorArm, seed: number) {
+  const pal = d.pal;
+  const ink = css({ h: pal.dark.h, s: pal.dark.s, l: 8 });
+  const r = 2;
+  const box = (x: number, y: number, w: number, h: number) => {
+    s.beginPath();
+    s.roundRect(x, y, w, h, r);
+  };
+  s.fillStyle = css(pal.dark, 10);
+  box(p.x, p.y, p.w, p.h);
+  s.fill();
+  s.save();
+  s.clip();
+  s.fillStyle = css(pal.base);
+  box(p.x - 1.2, p.y - 1.2, p.w, p.h);
+  s.fill();
+  // Hazard lip along the top, flat.
+  s.fillStyle = '#1b1a18';
+  s.fillRect(p.x, p.y, p.w, 2.2);
+  s.fillStyle = 'rgb(246 196 38)';
+  for (let x = p.x - 4; x < p.x + p.w + 4; x += 5) {
+    s.beginPath();
+    s.moveTo(x, p.y + 2.2);
+    s.lineTo(x + 2.5, p.y + 2.2);
+    s.lineTo(x + 4.7, p.y);
+    s.lineTo(x + 2.2, p.y);
+    s.fill();
+  }
+  s.fillStyle = ink;
+  for (let x = p.x + 3.5; x < p.x + p.w - 3; x += 4.2) line(s, x, p.y + 3.8, x, p.y + p.h - 1.4, { w: 1.1, seed: seed + x, taper: [0.15, 0.15], press: 0.1 });
+  s.restore();
+  // The outline, heavy underneath.
+  s.fillStyle = ink;
+  line(s, p.x + 0.5, p.y + p.h, p.x + p.w - 0.5, p.y + p.h, { w: 1.9, seed, taper: [0.1, 0.1], press: 0.3 });
+  line(s, p.x + p.w, p.y + 0.5, p.x + p.w, p.y + p.h - 0.5, { w: 1.6, seed: seed + 1, taper: [0.1, 0.1], press: 0.3 });
+  line(s, p.x + 0.5, p.y, p.x + p.w - 0.5, p.y, { w: 0.9, seed: seed + 2, taper: [0.1, 0.2], press: 0.3 });
+  line(s, p.x, p.y + 0.5, p.x, p.y + p.h - 0.5, { w: 0.9, seed: seed + 3, taper: [0.1, 0.2], press: 0.3 });
+  s.fillStyle = ink;
+  blob(s, a.x, a.y + 1, 1.3, seed, 1, 0.1);
+  s.fill();
+}
+
 // ---------------------------------------------------------------------------
 // Layer 1: the platforms you stand on.
 
@@ -420,21 +503,9 @@ function drawPlatform(rc: RC, m: Rotor, d: DrawCtx, a: RotorArm, i: number) {
       s.fillStyle = css(d.pal.dark);
       circle(s, a.x, a.y, 1.6);
       break;
-    case 'cog': {
-      s.fillStyle = 'rgba(0,0,0,0.3)';
-      s.fillRect(p.x + 1, p.y + 2, p.w, p.h);
-      s.fillStyle = metalFill(s, d.pal, p.x, p.y, p.w, p.h);
-      rrect(s, p.x, p.y, p.w, p.h, 1.5);
-      s.fill();
-      s.strokeStyle = css(d.pal.dark, -10);
-      s.lineWidth = 1;
-      s.stroke();
-      s.fillStyle = 'rgba(10,10,14,0.55)';
-      for (let x = p.x + 3; x < p.x + p.w - 3; x += 4) s.fillRect(x, p.y + 2.5, 2, p.h - 4);
-      hazardStripes(s, p.x + 1, p.y + 0.5, p.w - 2, 1.6, 0.85);
-      rivet(s, a.x, a.y + 1, d.pal, 1.2);
+    case 'cog':
+      inkPaddle(s, p, d, a, seed);
       break;
-    }
     case 'chandelier':
       drawChandelier(rc, p, d, seed);
       break;
