@@ -38,27 +38,30 @@ Best first. "Redrawn" marks the parts this pass brought up from the bottom; thei
 23. **Balance Patch / EMP** (redrawn): a squat steel puck with a glass dome and a copper coil inside, vents and lamps round its side, the version sticker slapped on crooked; was a flat grey saucer.
 24. **Spring / Bedspring** (redrawn): bolted steel base, two turns of wire with a shaded back and a lit front, a thick pad in the part's colour; baked whole at rest. Still reads as rings more than a helix at 6 px of travel.
 25. **Trick-Shot Lens** (touched up): a brass clamp now holds the prism and a scored brass dial sits on the tripod head; its charge is a flat lit core instead of a soft glow (a lens isn't hot).
-26. **Arrow Trap** (crossbow shrine): round-headed stone, drum slot; the knee scratch is invisible at play scale.
-27. **Seeker Pod** (rocket drum): crosshair roundel and drum read; the chalk tally doesn't.
-28. **Sorry Turret**: dome and visor fine; the sticky note is the only colour accent and it's small.
-29. **Boomerang Bruh** (glaive trap): squat box and arm read; receipt too small.
-30. **Banana Mortar**: stubby pipe on a bipod; plain.
-31. **Sneeze Cannon** (gooper): the tissue box gag reads; the body is a green ball with no material.
-32. **Slushie Gun** (cryo): cup and straw read; flat stripes, no shadow shape on the cup.
-33. **Fire Spout** (flamer): the gas bottle, gauge and diamond are well drawn but it's small next to its flame; fine at play scale, weak on a card.
-34. **Tesla / Zap Fence**: the zapper-grid pylons are small lanterns; the arc carries it.
-35. **Doomsday Laser**: emitter body fine; the pointer-clicker gag is lost.
-36. **Cog Lift / Ferris Wheel** (part): great in a level, spindly on small cards (TODO 21).
-37. **Magnet**: the horseshoe is good when housed; the bare orb with a thin field ring is weak.
-38. **Platforms** (stone, crate, jelly, ice, conveyor, Discount Elevator): materials read; jelly is a flat salmon slab.
-39. **Crumble biscuit**: docked biscuits and cream read; a little flat on cards.
-40. **Spike strip / snapper**: spikes read; the welcome-mat fringe and party streamers are near invisible.
-41. **Ice / slime / boost coats**: thin by design; the zamboni lines and the bubble are fine.
-42. **Rope** (sausage vine): links on a hook; small but honest.
-43. **Web**: orb webs read; the cursor arrow gag is lost.
-44. **Blinker / Lag Bricks**: retro bricks, corners left behind; plain.
-45. **Launch Plate**: plate, hinge and chalk X read; the base is small.
-46. **Mole drill, cartoon bomb, Plus Bomb, Donut, Alarm Clock**: one-tile charges; the donut is the best gag, the drill the weakest silhouette.
+26. **Magnet** (redrawn): the horseshoe stands on its bend, poles up, steel pole pieces with a seam, a shine down the lit arm and a plate bolted across the bend; the core floats between the poles instead of sitting over the whole thing. The big soft bulb that washed the horseshoe out on cards (it read as a bare orb) is gone: a magnet isn't hot, so charging lights a small flat core. Cards draw the field ring tight round it.
+27. **Bug Zapper / Zap Fence** (redrawn): a peaked cap, a stack of ceramic insulators up to the copper terminal, fat grid wires over two UV tubes that light flat as it charges (no halo through the bars), a bolted tray with a yellow high-voltage sticker, the scorched moth on it. Cards stand a long fence's pylons two tiles apart so they aren't specks.
+28. **Sneeze Cannon** (redrawn body): a glass globe two-thirds full of green goo, a lit line at the goo's surface, bubbles, a steel cap and a red valve wheel, strapped to a flatbed on the cart; was a green ball with no material.
+29. **Slushie Gun** (touched up): the cup's far third is a shadow shape, its stripes narrower and darker as they wrap away, a lit run down the near side and a rolled rim.
+30. **Arrow Trap** (touched up): the knee gag is an arrow stuck fast low in the stone, red fletching out, a sticking plaster over the wound; reads at play scale, where the scratched leg didn't.
+31. **Seeker Pod** (touched up): the chalk tally is a gate of five, twice the size, and three more behind the roundel; readable at play scale.
+32. **Mole** (redrawn): a tunnelling machine seen side on: a fat yellow drum with a riveted band and an exhaust, a steel collar, a cone bit with flutes turning live, the leather blinkers on a buckled strap. Was a brass box and a triangle.
+33. **Death Carpet** (spike strip, touched up): the spikes stand on a red carpet runner with a gold border, a gold fringe off both ends of each run.
+34. **Web** (touched up): the cursor the strand ends in is twice the size, white in a dark rim with a hard shadow.
+35. **Jelly** (touched up): a fat double gloss window, bigger bubbles, and a deep band low in each bottom cell with a line of light pooled under it, so it reads as gel you see into; still the plainest platform material.
+36. **Cog Lift / Ferris Wheel, spin bars** (card fix): a part that's an open frame round a hub steps down less on its card (small 0.84, not 0.6), and a wheel is boxed by how far its level cars reach, not as a disc, so small ones are no longer a few strokes in the middle of the card.
+37. **Sorry Turret**: dome and visor fine; the sticky note is the only colour accent and it's small.
+38. **Boomerang Bruh** (glaive trap): squat box and arm read; receipt too small.
+39. **Banana Mortar**: stubby pipe on a bipod; plain.
+40. **Fire Spout** (flamer): the gas bottle, gauge and diamond are well drawn but it's small next to its flame; fine at play scale, weak on a card.
+41. **Doomsday Laser**: emitter body fine; the pointer-clicker gag is lost.
+42. **Platforms** (stone, crate, ice, conveyor, Discount Elevator): materials read.
+43. **Crumble biscuit**: docked biscuits and cream read; a little flat on cards.
+44. **Snapper**: the plate reads; the party streamers are near invisible.
+45. **Ice / slime / boost coats**: thin by design; the zamboni lines and the bubble are fine.
+46. **Rope** (sausage vine): links on a hook; small but honest.
+47. **Blinker / Lag Bricks**: retro bricks, corners left behind; plain.
+48. **Launch Plate**: plate, hinge and chalk X read; the base is small.
+49. **Cartoon bomb, Plus Bomb, Donut, Alarm Clock**: one-tile charges; the donut is the best gag.
 
 ### Set pieces and vehicles
 
@@ -71,8 +74,12 @@ Best first. "Redrawn" marks the parts this pass brought up from the bottom; thei
 
 ## Needs a sim change
 
-- **Geyser vent mound.** To stand the vent up as a real cone (what "tiny" really asks for), the vent needs a solid: a stepped rim the sim stands on, in `src/sim/props/modules/geyser.ts`, and the column's `VENT_SKIP` raised to its lip. Until then the art stays under 3 px so it doesn't promise footing.
+- **Geyser vent mound.** To stand the vent up as a real cone (what "tiny" really asks for), the vent needs a solid: a stepped rim the sim stands on, in `src/sim/props/modules/geyser.ts`, and the column's `VENT_SKIP` raised to its lip. Until then the art stays under 3 px so it doesn't promise footing. Looked at and left (2026-11-02): it isn't small. Vents are set pieces in eight stage concepts, on floors, walls and ceilings; `reach.ts` proves levels without prop solids, so a rim of two 3 px steps (`PHYS.ledgeLip`) would be invisible to the proof and could close a one-tile tunnel a vent sits in, and every vent would gain a bump-and-dip runners walk through. It needs the set-piece placer to keep a vent's headroom and the reach proof to see the rim, with `pnpm level --stats 50` before and after.
+
+## Ink rules
+
+`tests/ink-rules.test.ts` holds crate-part art (every file in `props/modules/`, `ink-parts.ts`, `items*.ts`) to the same mechanical rules as theme art: no `INK`, no pen helper left on its near-black default, no hard-coded near-blacks, no gradients. Every part now inks in a dark of its own colour.
 
 ## Next in the queue
 
-The bottom of "Solid, not yet at the bar": magnet's bare orb, the jelly slab, the gooper and cryo bodies, Mole drill, Tesla pylons, and the gags that vanish at play scale (knee scratch, chalk tally, welcome mat, cursor arrow).
+The bottom of "Solid, not yet at the bar", worst first: the snapper's streamers, the laser's pointer-clicker, the mortar's plain pipe, the turret's sticky note and the glaive's receipt (gags too small to read at play scale), then the jelly, which reads better but is still the plainest material.
