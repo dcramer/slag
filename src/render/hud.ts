@@ -23,6 +23,8 @@ import { drawPreview } from './props';
 const DISPLAY = FONT.display;
 const UI = FONT.ui;
 
+const roundLabel = (m: Match) => `ROUND ${m.round}/${m.rules.maxRounds}`;
+
 export type HudAction = 'join' | 'ready' | 'look' | 'name' | 'level' | 'settings' | 'rules' | 'invite' | 'continue';
 
 export interface HudButton {
@@ -556,7 +558,7 @@ export class Hud {
     c.fillStyle = 'rgba(18,10,7,0.68)';
     c.fillRect(0, 0, VIEW_W, VIEW_H);
     const twoRows = m.crate.length > 5;
-    this.heading(`ROUND ${m.round}`, 'Choose a Part', twoRows ? 30 : 52, twoRows ? 24 : TYPE.title);
+    this.heading(roundLabel(m), 'Choose a Part', twoRows ? 30 : 52, twoRows ? 24 : TYPE.title);
     this.phaseTimer(m, t, VIEW_W / 2 + 120, twoRows ? 34 : 56);
     const rc = this.rc();
     rc.t = t;
@@ -612,7 +614,7 @@ export class Hud {
     g.addColorStop(1, 'rgba(18,10,7,0)');
     c.fillStyle = g;
     c.fillRect(0, 0, VIEW_W, 54);
-    this.text(`ROUND ${m.round}`, 14, 16, 14, PAL.amber, 'left', DISPLAY, 400, 3);
+    this.text(roundLabel(m), 14, 16, 14, PAL.amber, 'left', DISPLAY, 400, 3);
     this.text('PLACE YOUR PART', VIEW_W / 2, 17, TYPE.head + 2, PAL.bone, 'center', DISPLAY, 400, 4);
     this.text('Spawn and goal zones are off-limits', VIEW_W / 2, 35, TYPE.caption + 1, PAL.ash, 'center', UI, 600);
     this.phaseTimer(m, m.frame / 60, VIEW_W - 24, 20);
@@ -701,11 +703,17 @@ export class Hud {
     c.fillRect(0, 0, VIEW_W, VIEW_H);
     const res = m.result!;
     const TARGET = m.rules.targetScore;
-    const title = res.verdict === 'too-easy' ? 'TOO EASY!' : res.verdict === 'too-hard' ? 'NOBODY MADE IT' : `ROUND ${m.round}`;
-    const sub =
-      res.verdict === 'too-easy' ? 'Everyone made it, so nobody scores.' : res.verdict === 'too-hard' ? 'No finishers, no points.' : `First to ${TARGET} Wins`;
-    this.text(title, VIEW_W / 2, 46, TYPE.title, res.verdict === 'normal' ? PAL.bone : PAL.amber, 'center', DISPLAY, 400, 6);
-    this.text(sub, VIEW_W / 2, 72, TYPE.label, PAL.ash, 'center', UI, 600);
+    const normal = res.verdict === 'normal';
+    const goal = `First to ${TARGET} or Top Score After ${m.rules.maxRounds} Rounds`;
+    const title = res.verdict === 'too-easy' ? 'TOO EASY!' : res.verdict === 'too-hard' ? 'NOBODY MADE IT' : roundLabel(m);
+    const sub = res.verdict === 'too-easy' ? 'Everyone made it, so nobody scores.' : res.verdict === 'too-hard' ? 'No finishers, no points.' : goal;
+    this.text(title, VIEW_W / 2, normal ? 46 : 38, TYPE.title, normal ? PAL.bone : PAL.amber, 'center', DISPLAY, 400, 6);
+    this.text(sub, VIEW_W / 2, normal ? 72 : 62, TYPE.label, PAL.ash, 'center', UI, 600);
+    // Scoreless rounds are the ones that run a match into the limit, so they keep the count and the win conditions too.
+    if (!normal) {
+      this.text(roundLabel(m), 14, 16, 14, PAL.amber, 'left', DISPLAY, 400, 3);
+      this.text(goal, VIEW_W / 2, 76, TYPE.caption + 1, PAL.ash, 'center', UI, 600);
+    }
     const anim = Math.min(1, Math.max(0, (m.phaseFrame - 20) / 60));
     const barX = 236;
     const barW = 380;
@@ -777,6 +785,12 @@ export class Hud {
     c.fillStyle = g;
     c.fillRect(0, 0, VIEW_W, VIEW_H);
     const winners = m.winners.map((s) => m.player(s)!).filter(Boolean);
+    if (!winners.length) {
+      // The round limit hit with nobody on the board: no podium to light.
+      this.text('NO WINNER', VIEW_W / 2, VIEW_H / 2 - 40, 46, PAL.amber, 'center', DISPLAY, 400, 8);
+      this.text('Nobody scored, so nobody wins.', VIEW_W / 2, VIEW_H / 2, TYPE.label, PAL.ash, 'center', UI, 600);
+      return;
+    }
     // God-ray burst behind the winner.
     const gg = this.gctx;
     for (let i = 0; i < 14; i++) {
@@ -789,11 +803,14 @@ export class Hud {
       gg.fill();
     }
     this.text(winners.length > 1 ? 'TIE!' : 'WINNER', VIEW_W / 2, 66, 46, PAL.amber, 'center', DISPLAY, 400, 8);
+    // A low-scoring match can tie at the round limit, up to 8 ways: shrink the podium so everyone fits.
+    const gap = Math.min(150, (VIEW_W - 64) / winners.length);
+    const k = gap / 150;
     winners.forEach((p, i) => {
-      const x = VIEW_W / 2 + (i - (winners.length - 1) / 2) * 150;
-      glowDot(gg, x, 220, 90, p.character.body, 0.35);
-      drawCharacter({ s: c, g: gg }, p.character, x, 270, { facing: 1, vx: 0, vy: 0, grounded: true, t, scale: 7, celebrate: true });
-      this.text(p.character.name, x, 300, 24, PAL.bone, 'center', DISPLAY, 400, 5);
+      const x = VIEW_W / 2 + (i - (winners.length - 1) / 2) * gap;
+      glowDot(gg, x, 220, 90 * k, p.character.body, 0.35);
+      drawCharacter({ s: c, g: gg }, p.character, x, 270, { facing: 1, vx: 0, vy: 0, grounded: true, t, scale: 7 * k, celebrate: true });
+      this.text(p.character.name, x, 300, 24 * k, PAL.bone, 'center', DISPLAY, 400, 5 * k);
       this.text(`${p.score} Points`, x, 323, TYPE.label, PAL.amber, 'center', UI, 700);
     });
   }

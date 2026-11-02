@@ -420,6 +420,7 @@ export class SettingsMenu extends Overlay {
 
 const RULE_LABELS: Record<keyof MatchRules, string> = {
   targetScore: 'Points to Win',
+  maxRounds: 'Round Limit',
   pickSeconds: 'Pick Timer',
   placeSeconds: 'Place Timer',
   raceSeconds: 'Race Timer',
@@ -436,7 +437,7 @@ export class RulesMenu extends Overlay {
         const b = el('button', {
           className: `slag-btn ${draft[k] === v ? 'on' : ''}`,
           type: 'button',
-          textContent: k === 'targetScore' ? String(v) : v === 0 ? 'Off' : `${v}s`,
+          textContent: !k.endsWith('Seconds') ? String(v) : v === 0 ? 'Off' : `${v}s`,
         });
         b.onclick = () => {
           draft[k] = v;

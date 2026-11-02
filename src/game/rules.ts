@@ -7,6 +7,11 @@
  */
 export interface MatchRules {
   targetScore: number;
+  /**
+   * Last round of the match. Scoreless rounds don't move anyone toward
+   * targetScore, so this is what guarantees a match ends: there is no "off".
+   */
+  maxRounds: number;
   /** Pick phase limit; stragglers get a random leftover. */
   pickSeconds: number;
   /** Place phase limit; unplaced props are forfeited. */
@@ -15,11 +20,12 @@ export interface MatchRules {
   raceSeconds: number;
 }
 
-export const DEFAULT_RULES: MatchRules = { targetScore: 50, pickSeconds: 15, placeSeconds: 0, raceSeconds: 0 };
+export const DEFAULT_RULES: MatchRules = { targetScore: 50, maxRounds: 40, pickSeconds: 15, placeSeconds: 0, raceSeconds: 0 };
 
 /** Allowed values for each rule (used by the rules menu). */
 export const RULE_CHOICES: { [K in keyof MatchRules]: number[] } = {
   targetScore: [20, 30, 50, 80, 120],
+  maxRounds: [10, 20, 30, 40, 60],
   pickSeconds: [0, 10, 15, 20, 30],
   placeSeconds: [0, 15, 20, 30, 45],
   raceSeconds: [0, 30, 45, 60, 90],
