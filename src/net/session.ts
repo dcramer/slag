@@ -750,7 +750,11 @@ export class NetSession {
       return;
     }
     this.unacked.push({ seq: ++this.seq, f: own });
-    if (this.unacked.length > MAX_UNACKED) this.unacked.shift();
+    // Fold, not drop: through a long stall the oldest frames can hold a click.
+    if (this.unacked.length > MAX_UNACKED) {
+      const [a, b] = this.unacked;
+      this.unacked.splice(0, 2, { seq: b.seq, f: mergePeerFrames(a.f, b.f) });
+    }
     this.maybeWant(own, t);
     this.applyInbox(t);
     const pressed = Object.values(own).some((e) => (typeof e === 'number' ? e : e[0]) & PRESSED);

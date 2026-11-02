@@ -153,6 +153,17 @@ async function mouseAt(p: Page, x: number, y: number): Promise<[number, number]>
   );
 }
 
+/** Where a pick-phase point is drawn on this page: small windows zoom the crate, and the game inverts that for pointers. */
+async function pickAim(p: Page, x: number, y: number): Promise<{ x: number; y: number }> {
+  const c = (await p.evaluate(() => (window as any).slagDebug.renderer.hud.cards)) as { s: number; ox: number; oy: number };
+  return { x: c.ox + x * c.s, y: c.oy + y * c.s };
+}
+
+async function clickPick(p: Page, x: number, y: number) {
+  const v = await pickAim(p, x, y);
+  await clickView(p, v.x, v.y);
+}
+
 async function clickView(p: Page, x: number, y: number) {
   const [mx, my] = await mouseAt(p, x, y);
   await p.mouse.move(mx, my);
@@ -557,7 +568,7 @@ async function toPlace(pages: Page[]) {
   for (let i = 0; i < pages.length; i++) {
     const v = await waitFor(pages[i], 'crate ready', (x) => x.phase === 'pick' && x.crate.length > i);
     await clicksLive(pages[i]);
-    await clickView(pages[i], v.crate[i].x, v.crate[i].y);
+    await clickPick(pages[i], v.crate[i].x, v.crate[i].y);
   }
   for (const p of pages) await waitFor(p, 'place phase', (v) => v.phase === 'place');
 }
@@ -698,19 +709,22 @@ async function playScenario(browser: Browser, base: string) {
   const start = await waitFor(C, 'crate', (v) => v.crate.length >= 3);
   for (const p of pages) await clicksLive(p);
   const devB = `${ids[1]}:kb1`;
-  const [bx, by] = await mouseAt(B, 300, 300);
-  await B.mouse.move(bx, by);
   const moved = (v: NetView) => {
     const q = v.players.find((p) => p.device === devB);
     return !!q && Math.abs(q.cursor.x - 300) < 3 && Math.abs(q.cursor.y - 300) < 3;
   };
-  await waitFor(A, "B's cursor on the host", moved, 15_000);
-  const seen = await waitFor(C, "B's cursor on the other guest", moved, 15_000);
+  const aimB = async () => {
+    const v = await pickAim(B, 300, 300);
+    const [bx, by] = await mouseAt(B, v.x, v.y);
+    await B.mouse.move(bx, by);
+  };
+  await aimUntil(aimB, A, moved);
+  const seen = await aimUntil(aimB, C, moved);
   check(moved(seen), 'a remote cursor moves live, with no click');
 
   // --- claim race: two guests click one card at once. Exactly one wins, everywhere, and the loser never saw it as theirs.
   const card = start.crate[0];
-  await Promise.all([clickView(B, card.x, card.y), clickView(C, card.x, card.y)]);
+  await Promise.all([clickPick(B, card.x, card.y), clickPick(C, card.x, card.y)]);
   const claimed = await waitFor(A, 'the card to be claimed', (v) => v.crate[0].claimedBy >= 0, 15_000);
   await sleep(600);
   const views = await Promise.all(pages.map(view));
@@ -724,7 +738,7 @@ async function playScenario(browser: Browser, base: string) {
     const me = v.players.find((p) => p.device === `${ids[i]}:kb1`)!;
     if (me.claim >= 0) continue;
     const free = v.crate.findIndex((c) => c.claimedBy < 0);
-    await clickView(pages[i], v.crate[free].x, v.crate[free].y);
+    await clickPick(pages[i], v.crate[free].x, v.crate[free].y);
     await sleep(300);
   }
   await waitFor(A, 'place phase', (v) => v.phase === 'place');
@@ -1022,19 +1036,20 @@ async function viewScenario(browser: Browser, base: string, kind: string, fits: 
       return !!q && Math.abs(q.cursor.x - card.x) < 3 && Math.abs(q.cursor.y - card.y) < 3;
     };
     const aim = async () => {
-      const [mx, my] = await mouseAt(B, card.x, card.y);
+      const at = await pickAim(B, card.x, card.y);
+      const [mx, my] = await mouseAt(B, at.x, at.y);
       await B.mouse.move(mx, my);
     };
     const seen = await aimUntil(aim, A, near);
     check(near(seen), `${kind} ${win.name}: the mouse is on the card, for both peers`);
   }
   const last = crate[(WINDOWS.length - 1) % crate.length];
-  await clickView(B, last.x, last.y);
+  await clickPick(B, last.x, last.y);
   const taken = await waitFor(A, 'the card taken', (v) => v.players.find((p) => p.device === devB)!.claim >= 0, 15_000);
   check(taken.crate[taken.players.find((p) => p.device === devB)!.claim].x === last.x, `${kind}: a click takes the card under the pointer`);
   const other = (await view(A)).crate.findIndex((c) => c.claimedBy < 0);
   const free = (await view(A)).crate[other];
-  await clickView(A, free.x, free.y);
+  await clickPick(A, free.x, free.y);
   for (const p of pages) await waitFor(p, 'place', (v) => v.phase === 'place', 30_000);
   await clicksLive(B);
 

@@ -386,6 +386,26 @@ describe('kick', () => {
   });
 });
 
+describe('stalls', () => {
+  it('keeps a click made during a stall longer than the unacked window', () => {
+    const r = new Room({ latency: 20 });
+    const a = r.join('aaaa');
+    r.run(5);
+    const b = r.join('bbbb');
+    r.run(40);
+    // The guest keeps ticking while nothing reaches the host, so its oldest frame has to go somewhere.
+    const hub = r.hub as unknown as { route: (from: string, data: unknown, to?: string) => void };
+    const route = hub.route.bind(r.hub);
+    hub.route = () => {};
+    b.tick({ kb1: press({ altPressed: true }) });
+    const look = a.match.players.find((p) => p.device === 'bbbb:kb1')!.character.seed;
+    for (let i = 0; i < 200; i++) b.tick({});
+    hub.route = route;
+    r.run(60);
+    expect(a.match.players.find((p) => p.device === 'bbbb:kb1')!.character.seed).not.toBe(look);
+  });
+});
+
 describe('away', () => {
   it('holds up nobody, and is no forfeit: back in time, the player can still place', () => {
     const r = new Room({ latency: 20 });
