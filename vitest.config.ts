@@ -1,24 +1,15 @@
 import { configDefaults, defineConfig } from 'vitest/config';
 
 /**
- * `pnpm test` runs every file at its small sample. `pnpm test:slow` (`--mode slow`) runs the heavy
- * generator and statistical files at full size (see tests/lib/tier.ts). Add a file to `SLOW_FILES`
- * when its full sample is too slow for `pnpm check`. `tests/store` needs Docker and runs only through
+ * Suites are split by what they check. `pnpm test` is behavior and invariants at fixed small seed
+ * counts. `pnpm test:stats` (`tests/stats`) measures distributions and balance over many seeds, which
+ * takes minutes, so it isn't part of `pnpm check`. `tests/store` needs Docker and runs only through
  * `pnpm test:store`.
  */
-const SLOW_FILES = [
-  'tests/levelgen.test.ts',
-  'tests/match.test.ts',
-  'tests/profile.test.ts',
-  'tests/routes.test.ts',
-  'tests/setpieces.test.ts',
-  'tests/worldgen.test.ts',
-];
-
 export default defineConfig(({ mode }) => {
   const exclude = [...configDefaults.exclude, '.claude/**', 'shots/**'];
   if (mode === 'store') return { test: { exclude, include: ['tests/store/**/*.test.ts'] } };
-  exclude.push('tests/store/**'); // needs Docker: `pnpm test:store`
-  if (mode === 'slow') return { test: { exclude, include: SLOW_FILES, env: { SLAG_TEST_TIER: 'slow' }, testTimeout: 180_000 } };
+  if (mode === 'stats') return { test: { exclude, include: ['tests/stats/**/*.test.ts'], testTimeout: 180_000 } };
+  exclude.push('tests/store/**', 'tests/stats/**');
   return { test: { exclude, testTimeout: 30_000 } };
 });

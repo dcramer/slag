@@ -9,27 +9,28 @@ import type { RunWorld } from '../sim/run';
 import type { GameEvent } from '../sim/types';
 import { Backdrop } from './background';
 import { Camera } from './camera';
+import { PhoneCam, phoneView } from './camera-follow';
 import { drawAccessory, drawAfterimage, drawCharacter, Rig } from './character';
-import { CelLayer, Lettering } from './cel';
+import { ForegroundLayer, Lettering, letteringAllowed } from './cel';
 import { Fx } from './fx';
 import { VIEW_FRAME, type ViewFrame, viewFrame } from './frame';
 import { Hud } from './hud';
-import { artMode, hand } from './ink';
 import { drawClouds, drawDrops, drawRunnerItems, itemFx } from './items';
 import { circle, glowDot, type Light, light, type RC } from './kit';
 import { type Compositor, createCompositor } from './post';
 import { drawBackdrop, drawBlastPreview, drawForeground, drawProjectile, drawResolved, drawRunnerStatus, drawStuffed, type Emit, propEventFx } from './props';
 import { Surround } from './surround';
-import { initialStyle, letteringAllowed, type RenderStyle, saveRenderSettings, STYLES } from './style';
 import { TerrainPainter } from './terrain';
 // Mobile: quality tiers / adaptive resolution / safe-area insets (owned by the touch module).
-import { detectQuality, FrameBudget, QUALITY, type QualityTier, safeInsets, TIERS } from '../ui/touch/device';
-
-/** ART SPIKE: redraws per second of the line boil (`?boil=1`), on threes like hand-inked cels. */
-const BOIL_HZ = 8;
+import { detectQuality, FrameBudget, isTouchFirst, QUALITY, type QualityTier, safeInsets, TIERS } from '../ui/touch/device';
 
 /** Terrain bake budget (px per baked canvas): a classic level at 1920 px wide is ~4.3 M. */
 const MAX_BAKE_PX = 6_000_000;
+/** Phone HUD: enough scale for 1.25 CSS px per HUD px, within this limit. */
+const HUD_CSS_PER_PX = 1.25;
+const MAX_HUD_SCALE = 1.8;
+/** Smallest touch target, in CSS px. */
+const TAP_CSS = 44;
 const RUNNER_KEY: HSL = { h: 40, s: 30, l: 90 };
 
 /** The prop a player is about to place, as it would stand under their cursor. */
@@ -49,9 +50,9 @@ const TRAIL_GAP = 7;
 const TRAIL_LIFE = 0.2;
 
 /**
- * Orchestrates a frame: Canvas2D paints albedo/emissive/light layers in
- * world space through a smoothed camera, the WebGL compositor lights and
- * post-processes them, and a separate 2D canvas carries the HUD.
+ * Orchestrates a frame: Canvas2D paints background, foreground, emissive and
+ * light layers in world space through a smoothed camera, the WebGL compositor
+ * runs them through the cel pass, and a separate 2D canvas carries the HUD.
  */
 export class Renderer {
   private scene = document.createElement('canvas');
@@ -63,6 +64,8 @@ export class Renderer {
   private comp: Compositor;
   readonly hud: Hud;
   private cam = new Camera();
+  /** Phones: the close race camera and hand-moved pick/place view (off elsewhere). See camera-follow.ts. */
+  readonly phone = new PhoneCam(this.cam);
   private backdrop = new Backdrop();
   private terrain = new TerrainPainter();
   private surround = new Surround();
@@ -74,23 +77,15 @@ export class Renderer {
   /** Invisible box over the play view: the 0..VIEW_W×0..VIEW_H area that pointers map through. */
   readonly viewBox = document.createElement('div');
   private last = 0;
-  private aberr = 0;
   private flash = 0;
   private lobbyDrift = 0;
   /** Render quality tier: caps internal resolution (MAX_W) and DPR. See src/ui/touch/device.ts. */
   quality: QualityTier;
   private adaptive: boolean;
   private budget = new FrameBudget();
-  private style: RenderStyle = initialStyle(typeof location !== 'undefined' ? location.search : '');
   private letters = new Lettering();
-  private celLayer: CelLayer | null = null;
-  /** ART SPIKE: which treatment this page shows (`?art=`). */
-  private art = artMode(typeof location !== 'undefined' ? location.search : '');
-  private boil = typeof location !== 'undefined' && new URLSearchParams(location.search).get('boil') === '1';
-  /** Let painted color past the cel pass's tone steps (`?feed=0`), to compare feeding it with bypassing it. */
-  private bypass = typeof location !== 'undefined' && new URLSearchParams(location.search).get('feed') === '0';
-  /** Impact words for this page, on top of what the style asks for (`?lettering=0`). */
-  lettering = letteringAllowed(typeof location !== 'undefined' ? location.search : '');
+  private foreground = new ForegroundLayer();
+  private wordsOn = letteringAllowed(typeof location !== 'undefined' ? location.search : '');
 
   constructor(
     private glCanvas: HTMLCanvasElement,
@@ -98,6 +93,7 @@ export class Renderer {
   ) {
     this.comp = createCompositor(glCanvas);
     this.hud = new Hud(hudCanvas.getContext('2d')!);
+    this.hud.worldToView = (x, y) => this.cam.worldToView(x, y);
     this.viewBox.dataset.slagView = '';
     this.viewBox.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none';
     glCanvas.parentElement?.append(this.viewBox);
@@ -118,17 +114,6 @@ export class Renderer {
   setQuality(q: QualityTier) {
     this.quality = q;
     this.resize();
-  }
-
-  /** Current look. */
-  getStyle(): RenderStyle {
-    return this.style;
-  }
-
-  /** Switch the look at runtime; persisted to `slag.render.v1` unless `persist` is false. */
-  setStyle(style: RenderStyle, persist = true) {
-    this.style = style;
-    if (persist) saveRenderSettings({ style });
   }
 
   resize() {
@@ -162,6 +147,18 @@ export class Renderer {
     this.lightC.height = Math.max(2, this.ph >> 1);
     this.comp.resize(this.pw, this.ph);
     this.hud.resize(this.pw, this.ph);
+    const cssPerView = f.width / VIEW_W;
+    const { enabled, zoom } = phoneView(location.search, Math.min(vw, vh), isTouchFirst(), cssPerView);
+    this.phone.enabled = enabled;
+    this.phone.zoom = zoom;
+    this.hud.uiScale = enabled ? Math.max(1, Math.min(MAX_HUD_SCALE, HUD_CSS_PER_PX / cssPerView)) : 1;
+    this.hud.tapMin = enabled ? TAP_CSS / cssPerView : 0;
+  }
+
+  /** A view-px pointer as the match reads it this phase: through this device's card zoom in pick and its camera in place. */
+  pointerToMatch(phase: string, p: { x: number; y: number }): { x: number; y: number } {
+    if (phase === 'pick') return this.hud.pickToLogical(p);
+    return phase === 'place' ? this.phone.toBoard(p) : p;
   }
 
   /** Paint one frame. `events` are this frame's drained sim events (shared with audio). */
@@ -181,17 +178,7 @@ export class Renderer {
     // Bake resolution: enough for the race zoom, capped by a pixel budget so huge levels stay cheap.
     const frameBox = this.frameBox;
     const sk = this.pw / frameBox.w;
-    const kb = Math.min(4, sk * 1.45, Math.sqrt(MAX_BAKE_PX / (ww * wh)));
-    this.terrain.cel = this.celPass;
-    this.surround.cel = this.celPass;
-    const inked = this.celPass && this.art !== null && level.theme.id === 'farm';
-    this.terrain.ink = inked;
-    this.surround.ink = inked;
-    if (this.art) {
-      this.terrain.art = this.art;
-      this.surround.art = this.art;
-    }
-    hand.on = inked && this.art !== 'b';
+    const kb = Math.min(4, sk * Math.max(1.45, this.phone.enabled ? this.phone.zoom : 0), Math.sqrt(MAX_BAKE_PX / (ww * wh)));
     this.terrain.ensure(level, kb);
     // The surroundings reach as far as the most zoomed-out view of this level can see.
     const floor = raceFloor(level);
@@ -218,7 +205,7 @@ export class Renderer {
     const g = this.gctx;
     const lights: Light[] = [];
     const frame = m.run && m.phase === 'run' ? m.run.frame : m.frame;
-    const rc: RC = { s, g, lights, t, frame };
+    const rc: RC = { s, bg: s, g, lights, t, frame };
 
     // --- background (screen space, parallax from camera)
     const ox = -frameBox.x0 * sk;
@@ -246,15 +233,12 @@ export class Renderer {
     const resolved = run ? run.resolved : [...level.setPieces, ...m.placed].map(resolveProp);
     // Scenery goes down first so the terrain stands in front of it and shadows it.
     for (const r of resolved) drawBackdrop(rc, r, { level });
-    // Cel: the rest of the world goes on its own transparent layer (see CelLayer); `s` stays the background.
-    if (this.celPass) {
-      rc.s = (this.celLayer ??= new CelLayer()).begin(this.scene, s, g, level.theme.ambientLight);
-      this.cam.apply(rc.s, this.pw);
-    }
-    this.terrain.drawShadow(rc);
+    // The rest of the world goes on its own transparent layer (see ForegroundLayer); `s` stays the background.
+    rc.s = this.foreground.begin(this.scene, s, g, level.theme.ambientLight);
+    this.cam.apply(rc.s, this.pw);
     this.terrain.draw(rc);
     const pushers = m.run ? m.run.runners.filter((r) => r.alive).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h })) : [];
-    this.terrain.drawLive(rc, level, pushers, s);
+    this.terrain.drawLive(rc, level, pushers);
     this.drawMarkers(rc, level);
 
     const grips = run?.runners.flatMap((r) => r.attach.grip ?? []);
@@ -314,10 +298,8 @@ export class Renderer {
       }
       drawClouds(rc, run);
     }
-    this.fx.draw(rc, s);
+    this.fx.draw(rc);
     this.backdrop.drawLiquid(rc, level.theme, ww, wh, this.cam.visible(), this.surround.margin);
-    const world = rc.s;
-    rc.s = s; // Cel: ambient motes stay un-inked, or they read as stray projectiles.
     this.backdrop.drawMotes(rc, level.theme, dt, this.cam.visible());
     g.globalCompositeOperation = 'source-over';
 
@@ -325,44 +307,25 @@ export class Renderer {
     this.paintLights(level, lights);
 
     // --- composite
-    this.aberr *= Math.exp(-dt * 5);
     this.flash *= Math.exp(-dt * 9);
-    this.comp.render(this.scene, this.lightC, this.glow, {
-      time: t,
-      aberration: this.aberr,
+    this.comp.render(this.scene, this.foreground.canvas, this.lightC, this.glow, {
       exposure: level.theme.grade.exposure,
       flash: this.flash,
       tint: level.theme.grade.tint,
       lift: level.theme.grade.lift,
-      cel: this.celPass
-        ? {
-            fg: this.celLayer!.canvas,
-            scale: world.getTransform().a,
-            ambient: level.theme.ambientLight,
-            hand: this.art
-              ? { dx: world.getTransform().e, dy: world.getTransform().f, boil: this.boil ? Math.floor(t * BOIL_HZ) : 0, bypass: this.bypass }
-              : undefined,
-          }
-        : undefined,
+      scale: rc.s.getTransform().a,
+      ambient: level.theme.ambientLight,
     });
     if (!this.hud.hidden) this.hud.draw(m, t, this.pw, this.ph);
     else this.hud.clear(this.pw, this.ph);
     if (this.wordsOn) this.letters.draw(this.hudCanvas.getContext('2d')!, this.cam, this.pw);
   }
 
-  /** The cel pass needs WebGL2; without it the style keeps only its impact words. */
-  private get celPass() {
-    return STYLES[this.style].cel && this.comp.webgl;
-  }
-
-  private get wordsOn() {
-    return STYLES[this.style].lettering && this.lettering;
-  }
-
   /**
    * Race: follow the live runners (zooming out to keep them all in, down to
    * a readability floor). Lobby: slow drift over the level. Pick/place: snap
-   * to the deterministic whole-level overview the match uses for cursors.
+   * to the deterministic whole-level overview the match uses for cursors, or
+   * to where this phone's fingers moved it.
    */
   private updateCamera(m: Match, dt: number) {
     const lv = m.level;
@@ -371,16 +334,16 @@ export class Renderer {
     const ov = overview(lv);
     if (m.phase === 'pick' || m.phase === 'place') {
       this.cam.setBounds(ww, wh, ov.zoom);
-      this.cam.snap(ov);
+      this.cam.snap(this.phone.board(m, dt));
       this.cam.update(dt, false);
       return;
     }
     this.cam.setBounds(ww, wh, raceFloor(lv));
     if (m.phase === 'run' && m.run) {
-      const pts = m.run.runners.filter((r) => r.alive && !r.finished).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y }));
-      if (pts.length) this.cam.frameAll(pts, 1.45, 120);
-      else this.cam.wide();
-    } else if (m.phase === 'lobby') {
+      this.phone.frameRace(m, dt);
+      return;
+    }
+    if (m.phase === 'lobby') {
       // Slow cinematic drift over the level preview (wider sweep on big levels).
       this.lobbyDrift += dt;
       const a = this.lobbyDrift * 0.12;
@@ -628,10 +591,10 @@ export class Renderer {
     const anchorY = c.accessory === 'tail' ? y - 4 : c.accessory === 'cape' ? y - 12 : y - 10;
     rig.step(c, anchorX, anchorY, dt, -vx * 0.6);
     drawAccessory(rc, c, rig);
-    drawCharacter(rc, c, x, y, { facing, vx, vy, grounded, t: rc.t, celebrate, ink: hand.on });
+    drawCharacter(rc, c, x, y, { facing, vx, vy, grounded, t: rc.t, celebrate });
     light(rc, x, y - 8, 38, c.body, 0.3);
-    // Cel: a key light so a runner in shade still reads, not so much that it loses its hue.
-    if (STYLES[this.style].cel) light(rc, x, y - 8, 20, RUNNER_KEY, 0.28);
+    // A key light so a runner in shade still reads, not so much that it loses its hue.
+    light(rc, x, y - 8, 20, RUNNER_KEY, 0.28);
   }
 
   private propCenter(m: Match, uid: number): { x: number; y: number } | undefined {
@@ -662,7 +625,6 @@ export class Renderer {
             this.terrain.splat(e.x, e.y + 6, 4, body);
           }
           this.cam.shake = Math.max(this.cam.shake, 6);
-          this.aberr = 0.012;
           this.flash = Math.max(this.flash, 0.08);
           break;
         }
@@ -747,7 +709,6 @@ export class Renderer {
           this.fx.add('ring', e.x, e.y, 0, 0, { h: 35, s: 100, l: 65 }, e.r * 1.6, 0.5);
           this.fx.add('flash', e.x, e.y, 0, 0, { h: 35, s: 100, l: 65 }, e.r, 0.4);
           this.cam.shake = 14;
-          this.aberr = 0.02;
           this.flash = 0.25;
           break;
         case 'place': {

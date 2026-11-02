@@ -51,10 +51,10 @@ jobs:
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm test
 
-      # `pnpm check` skips these locally; CI is what guarantees they run on every push.
-      - name: Test (slow tier)
+      # Distribution and balance over many seeds. `pnpm check` leaves these out, so this is what runs them on every push.
+      - name: Test stats
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: pnpm test:slow
+        run: pnpm test:stats
 
       - uses: actions/cache@v6
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}

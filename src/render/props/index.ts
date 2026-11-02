@@ -1,6 +1,6 @@
-import type { Vec } from '../../core/geom';
+import { cellsBounds, type Vec } from '../../core/geom';
 import { TILE } from '../../sim/constants';
-import { dirOf, type Module, motionOffset, type PlacedProp, type PropDef, type Resolved, resolveProp } from '../../sim/props';
+import { cardExtent, dirOf, type Module, motionOffset, type PartSize, type PlacedProp, type PropDef, type Resolved, resolveProp } from '../../sim/props';
 import { circle, METALS, type RC } from '../kit';
 import { BACKDROP, moduleArt, type PropDrawOpts } from './common';
 import './modules';
@@ -45,40 +45,19 @@ export function drawPlaced(rc: RC, pp: PlacedProp, o: PropDrawOpts) {
   drawResolved(rc, resolveProp(pp), o);
 }
 
-/** Card preview: draw a def centered at (cx, cy) scaled to fit `size`. */
+const BLAST_SCALE: Record<PartSize, number> = { small: 0.7, medium: 0.85, large: 1 };
 
+/** Card preview: draw a def centered at (cx, cy) scaled to fit `size`. */
 export function drawPreview(rc: RC, full: PropDef, cx: number, cy: number, size: number) {
   // A long rope would shrink to a thread on a card, so show only its top links.
   const def: PropDef =
     full.mount === 'hang'
       ? { ...full, footprint: full.footprint.slice(0, 4), modules: full.modules.map((m) => (m.type === 'rope' ? { ...m, length: Math.min(m.length, 4) } : m)) }
       : full;
-  let w = 1;
-  let h = 1;
-  for (const [x, y] of def.footprint) {
-    w = Math.max(w, x + 1);
-    h = Math.max(h, y + 1);
-  }
-  let reachX = 0;
-  let reachY = 0;
-  for (const m of def.modules) {
-    if (m.type === 'swinger') {
-      reachX = Math.max(reachX, m.arm + m.radius);
-      reachY = Math.max(reachY, m.arm + m.radius);
-    }
-    if (m.type === 'piston') reachY = Math.max(reachY, m.reach * 0.6 + 1);
-    if (m.type === 'flame') reachY = Math.max(reachY, m.length * 0.7);
-    if (m.type === 'magnet') {
-      reachX = Math.max(reachX, m.radius - 0.5);
-      reachY = Math.max(reachY, m.radius - 0.5);
-    }
-    if (m.type === 'keg') {
-      reachX = Math.max(reachX, 0.8);
-      reachY = Math.max(reachY, 0.8);
-    }
-  }
-  const ext = Math.max(w + reachX * 2, h + reachY * 2, 2);
-  const k = Math.min(2.4, size / (ext * TILE));
+  const { w, h } = cellsBounds(def.footprint);
+  // Sizes of a part share one scale, so a big one never looks smaller than a small one. A charge's art stays one tile whatever its blast, so it scales here.
+  const blast = def.modules[0]?.type === 'bomb' ? BLAST_SCALE[def.size ?? 'large'] : 1;
+  const k = Math.min(2.4, size / ((full.span ?? cardExtent(def)) * TILE)) * blast;
   const s = rc.s;
   const g = rc.g;
   for (const ctx of [s, g]) {

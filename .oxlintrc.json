@@ -172,6 +172,23 @@
       }
     },
     {
+      "files": ["tests/**/*.ts"],
+      "rules": {
+        "no-restricted-properties": [
+          "error",
+          { "object": "it", "property": "skip", "message": "A conditional test is how a speed tier comes back: it hides an assertion from `pnpm check` and nothing says so. Give the test one fixed seed count; if it needs many seeds to mean anything, move it to tests/stats/ (`pnpm test:stats`)." },
+          { "object": "it", "property": "skipIf", "message": "A conditional test is how a speed tier comes back: it hides an assertion from `pnpm check` and nothing says so. Give the test one fixed seed count; if it needs many seeds to mean anything, move it to tests/stats/ (`pnpm test:stats`)." },
+          { "object": "it", "property": "runIf", "message": "A conditional test is how a speed tier comes back: it hides an assertion from `pnpm check` and nothing says so. Give the test one fixed seed count; if it needs many seeds to mean anything, move it to tests/stats/ (`pnpm test:stats`)." },
+          { "object": "test", "property": "skip", "message": "A conditional test is how a speed tier comes back: it hides an assertion from `pnpm check` and nothing says so. Give the test one fixed seed count; if it needs many seeds to mean anything, move it to tests/stats/ (`pnpm test:stats`)." },
+          { "object": "test", "property": "skipIf", "message": "A conditional test is how a speed tier comes back: it hides an assertion from `pnpm check` and nothing says so. Give the test one fixed seed count; if it needs many seeds to mean anything, move it to tests/stats/ (`pnpm test:stats`)." },
+          { "object": "test", "property": "runIf", "message": "A conditional test is how a speed tier comes back: it hides an assertion from `pnpm check` and nothing says so. Give the test one fixed seed count; if it needs many seeds to mean anything, move it to tests/stats/ (`pnpm test:stats`)." },
+          { "object": "describe", "property": "skip", "message": "A conditional test is how a speed tier comes back: it hides an assertion from `pnpm check` and nothing says so. Give the test one fixed seed count; if it needs many seeds to mean anything, move it to tests/stats/ (`pnpm test:stats`)." },
+          { "object": "describe", "property": "skipIf", "message": "A conditional test is how a speed tier comes back: it hides an assertion from `pnpm check` and nothing says so. Give the test one fixed seed count; if it needs many seeds to mean anything, move it to tests/stats/ (`pnpm test:stats`)." },
+          { "object": "describe", "property": "runIf", "message": "A conditional test is how a speed tier comes back: it hides an assertion from `pnpm check` and nothing says so. Give the test one fixed seed count; if it needs many seeds to mean anything, move it to tests/stats/ (`pnpm test:stats`)." }
+        ]
+      }
+    },
+    {
       "files": ["src/game/room.ts"],
       "rules": { "no-restricted-properties": "off" }
     }

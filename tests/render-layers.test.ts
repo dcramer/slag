@@ -65,7 +65,7 @@ function recorder(log: unknown[]): CanvasRenderingContext2D {
 function rc(frame: number): RC & { lights: Light[]; log: unknown[] } {
   const log: unknown[] = [];
   const ctx = recorder(log);
-  return { s: ctx, g: ctx, lights: [], t: 1, frame, log };
+  return { s: ctx, bg: ctx, g: ctx, lights: [], t: 1, frame, log };
 }
 
 function setPiece(...modules: Module[]) {

@@ -4,19 +4,16 @@ import type { TerrainKind, TerrainLook, Theme } from '../gen/theme';
 import { TILE } from '../sim/constants';
 import { type Level, T_ONEWAY, tileAt, type TileRect } from '../sim/level';
 import { DECOR, type Decor } from './decor';
-import type { ArtMode } from './ink';
-import { paintedFill } from './ink-paint';
-import { inkFence, inkHay } from './ink-parts';
 import { flattenMaterial } from './cel-terrain';
-import { airDepth, drawTufts, inkContours, inkEdges, inkGrass, inkHatch, inkMaterial, inkPlatforms, makeTufts, type Tuft } from './ink-terrain';
 import { circle, makeNoise, mixRgb, type RC } from './kit';
 
 export { flame } from './kit';
 
 /**
- * Terrain: a tileable material per theme, baked through a rounded-corner mask
- * with outline, depth shading, rim light, caps, ceiling details, jump-through
- * platforms and static decor. Animated bits (grass, live decor, glowing
+ * Terrain: a tileable material per theme, flattened for the cel pass, baked
+ * through a rounded-corner mask with depth shading, rim light, caps, ceiling
+ * details, jump-through platforms and static decor. The pass inks silhouettes
+ * and casts the shadow, so the bake has neither. Animated bits (grass, live decor, glowing
  * veins) are drawn per frame on top.
  *
  * Materials are procedural, theme-colored gradients modulated by small CC0
@@ -158,7 +155,6 @@ export class TerrainPainter {
   bake: HTMLCanvasElement | null = null;
   /** Emissive veins, when the material has them. */
   glowBake: HTMLCanvasElement | null = null;
-  private shadow: HTMLCanvasElement | null = null;
   private decorKey = '';
   private decor: Decor[] = [];
   private live: Decor[] = [];
@@ -167,16 +163,6 @@ export class TerrainPainter {
   /** World size in px of the baked level. */
   private ww = 0;
   private wh = 0;
-  /** Flat materials, no baked outline (the cel pass inks silhouettes) and no soft shadow (it casts a hard one). */
-  cel = false;
-  /** ART SPIKE: draw this theme's terrain in ink. World px of the bake's origin keep noise aligned across the surround's seam. */
-  ink = false;
-  /** Which spike treatment: `a` ink marks, `b` painted fill, `c` painted fill under ink. */
-  art: ArtMode = 'a';
-  originX = 0;
-  originY = 0;
-  private tufts: Tuft[] = [];
-  private inkLayer: HTMLCanvasElement | null = null;
 
   /**
    * Bake `level` if anything changed; true if it did. `skip` leaves decor out
@@ -186,18 +172,15 @@ export class TerrainPainter {
     const th = level.theme;
     const T = th.terrain;
     // Re-bake only when this theme's own textures change state (not when other themes' load).
-    // Ink uses no detail textures, so one landing is no reason to bake again.
-    const ready = this.ink ? '' : `${!!getDetail(MATERIALS[T.kind].tex)}${T.sub ? !!getDetail(MATERIALS[T.sub.kind].tex) : ''}`;
-    const tk = `${th.seed}:${th.id}:${th.name}:${kb.toFixed(2)}:${ready}:${this.cel}:${this.ink}:${this.art}`;
+    const ready = `${!!getDetail(MATERIALS[T.kind].tex)}${T.sub ? !!getDetail(MATERIALS[T.sub.kind].tex) : ''}`;
+    const tk = `${th.seed}:${th.id}:${th.name}:${kb.toFixed(2)}:${ready}`;
     if (tk !== this.texKey) {
       this.texKey = tk;
-      this.main = this.ink ? null : makeTexture(T, T.veins, th, kb, 0x1234);
-      this.sub = !this.ink && T.sub ? makeTexture({ ...T.sub, vein: T.vein }, T.veins, th, kb, 0x4321) : null;
-      if (this.cel && !this.ink && this.main) {
-        const built = (k: TerrainKind) => ['brick', 'planks', 'metal'].includes(MATERIALS[k].proc);
-        this.main.tex = flattenMaterial(this.main.tex, this.main.w, T, built(T.kind));
-        if (this.sub && T.sub) this.sub.tex = flattenMaterial(this.sub.tex, this.sub.w, T.sub, built(T.sub.kind));
-      }
+      const built = (k: TerrainKind) => ['brick', 'planks', 'metal'].includes(MATERIALS[k].proc);
+      this.main = makeTexture(T, T.veins, th, kb, 0x1234);
+      this.main.tex = flattenMaterial(this.main.tex, this.main.w, T, built(T.kind));
+      this.sub = T.sub ? makeTexture({ ...T.sub, vein: T.vein }, T.veins, th, kb, 0x4321) : null;
+      if (this.sub && T.sub) this.sub.tex = flattenMaterial(this.sub.tex, this.sub.w, T.sub, built(T.sub.kind));
     }
     const dk = `${level.seed}:${th.seed}:${th.id}:${level.w}x${level.h}`;
     if (dk !== this.decorKey) {
@@ -229,10 +212,6 @@ export class TerrainPainter {
     g.setTransform(kb, 0, 0, kb, 0, 0);
     g.clearRect(0, 0, worldW, worldH);
     const solid = (x: number, y: number) => tileAt(level, x, y) !== 0 && tileAt(level, x, y) !== T_ONEWAY && y < level.h;
-    if (this.ink) {
-      this.bakeInk(g, level, kb, solid);
-      return;
-    }
     const mask = new Path2D();
     const R = 5;
     for (let ty = 0; ty < level.h; ty++) {
@@ -245,13 +224,7 @@ export class TerrainPainter {
         mask.roundRect(tx * TILE, ty * TILE, TILE, TILE, [u && l ? R : 0, u && r ? R : 0, d && r ? R : 0, d && l ? R : 0]);
       }
     }
-    // Outline (internal strokes get covered by the fill below).
     g.lineJoin = 'round';
-    if (!this.cel) {
-      g.strokeStyle = css(T.outline);
-      g.lineWidth = 3.2;
-      g.stroke(mask);
-    }
     // Material.
     const fillMat = (ctx: CanvasRenderingContext2D, m: MatTex) => {
       const pat = ctx.createPattern(m.tex, 'repeat')!;
@@ -283,9 +256,8 @@ export class TerrainPainter {
     tiny.height = level.h;
     const tg = tiny.getContext('2d')!;
     const img = tg.createImageData(level.w, level.h);
-    // Cel keeps this gentle: it becomes one hard band, and at full strength that band is a huge dark shape.
-    const [depthMax, depthStep] = this.cel ? [62, 20] : [125, 38];
-    for (let i = 0; i < dist.length; i++) img.data[i * 4 + 3] = Math.min(depthMax, Math.max(0, (dist[i] - 1) * depthStep));
+    // Gentle: this becomes one hard band, and at full strength that band is a huge dark shape.
+    for (let i = 0; i < dist.length; i++) img.data[i * 4 + 3] = Math.min(62, Math.max(0, (dist[i] - 1) * 20));
     tg.putImageData(img, 0, 0);
     g.imageSmoothingEnabled = true;
     g.imageSmoothingQuality = 'high';
@@ -389,60 +361,9 @@ export class TerrainPainter {
           }
       }
     } else this.glowBake = null;
-
-    // Drop shadow cast onto the background.
-    const sc = (this.shadow ??= document.createElement('canvas'));
-    const sk = Math.min(kb, 1);
-    sc.width = Math.ceil(worldW * sk);
-    sc.height = Math.ceil(worldH * sk);
-    const sg = sc.getContext('2d')!;
-    sg.setTransform(sk, 0, 0, sk, 0, 0);
-    sg.clearRect(0, 0, worldW, worldH);
-    sg.filter = 'blur(5px)';
-    sg.fillStyle = 'rgba(0,0,0,0.6)';
-    sg.fill(mask);
-    sg.filter = 'none';
   }
 
-  /** ART SPIKE: the same bake, as an ink drawing (`ink-terrain.ts`). */
-  private bakeInk(g: CanvasRenderingContext2D, level: Level, kb: number, solid: (x: number, y: number) => boolean) {
-    const th = level.theme;
-    const seed = th.seed ^ 0x1a4c;
-    const ox = this.originX;
-    const oy = this.originY;
-    const { mask, loops } = inkContours(level, seed, ox, oy, solid);
-    // Paint on a layer and cut it once: thousands of small fills under a clip this complex take seconds.
-    const layer = (this.inkLayer ??= document.createElement('canvas'));
-    layer.width = g.canvas.width;
-    layer.height = g.canvas.height;
-    const lg = layer.getContext('2d')!;
-    lg.setTransform(kb, 0, 0, kb, 0, 0);
-    if (this.art === 'a') inkMaterial(lg, level, th, seed, ox, oy, solid);
-    else paintedFill(lg, level, th, seed, airDepth(level, solid));
-    if (this.art !== 'b') inkHatch(lg, loops, th, seed, ox, oy);
-    lg.globalCompositeOperation = 'destination-in';
-    lg.fillStyle = '#000';
-    lg.fill(mask);
-    g.drawImage(layer, 0, 0, level.w * TILE, level.h * TILE);
-    if (this.art !== 'b') inkEdges(g, loops, th, seed, ox, oy);
-    inkGrass(g, loops, th.terrain.capColor, seed, ox, oy);
-    inkPlatforms(g, level, th, seed, ox, oy, solid);
-    this.tufts = makeTufts(loops, seed, ox, oy, this.decor);
-    for (const d of this.decor) {
-      if (!tileAt(level, d.tx, d.ty)) continue;
-      const def = DECOR[d.kind];
-      if (def.bake) {
-        g.save();
-        if (d.kind === 'haybale') inkHay(g, d);
-        else if (d.kind === 'fence') inkFence(g, d);
-        else def.bake(g, d, th);
-        g.restore();
-      }
-    }
-    this.glowBake = null;
-  }
-
-  /** Second material for deep tiles, with a noisy soft boundary. */
+  /** Second material for deep tiles, with a noisy boundary. */
   private paintSub(
     g: CanvasRenderingContext2D,
     level: Level,
@@ -474,8 +395,8 @@ export class TerrainPainter {
         const ay = fy - y0;
         const dd = (D(x0, y0) * (1 - ax) + D(x0 + 1, y0) * ax) * (1 - ay) + (D(x0, y0 + 1) * (1 - ax) + D(x0 + 1, y0 + 1) * ax) * ay;
         const v = dd + (noise((x / mw) * 16, (y / mh) * 16, 3) - 0.5) * 1.6;
-        // Cel wants a clean boundary between materials, not a soft smear.
-        const a = Math.max(0, Math.min(1, (v - depth - 0.3) * (this.cel ? 16 : 3)));
+        // A clean boundary between materials, not a soft smear.
+        const a = Math.max(0, Math.min(1, (v - depth - 0.3) * 16));
         img.data[(y * mw + x) * 4 + 3] = a * 255;
       }
     }
@@ -591,11 +512,6 @@ export class TerrainPainter {
     this.live = this.decor.filter((d) => DECOR[d.kind].live);
   }
 
-  drawShadow(rc: RC) {
-    if (!this.shadow || this.cel) return;
-    rc.s.drawImage(this.shadow, 3, 5, this.ww, this.wh);
-  }
-
   draw(rc: RC) {
     if (!this.bake) return;
     rc.s.drawImage(this.bake, 0, 0, this.ww, this.wh);
@@ -611,14 +527,13 @@ export class TerrainPainter {
   }
 
   /** Per-frame: swaying grass (parted by players), decor with animated/emissive bits. */
-  drawLive(rc: RC, level: Level, pushers: { x: number; y: number }[], under: CanvasRenderingContext2D = rc.s) {
-    // `under` is the un-inked layer in the cel style: an outline per blade turns grass into black scrub.
-    const s = under;
+  drawLive(rc: RC, level: Level, pushers: { x: number; y: number }[]) {
+    // Grass goes on the background layer: an outline per blade turns it into black scrub.
+    const s = rc.bg;
     const t = rc.t;
-    if (this.ink) drawTufts(rc.s, this.tufts, level, level.theme.terrain.capColor, t, pushers);
     s.lineCap = 'round';
     s.lineWidth = 1.1;
-    for (const b of this.ink ? [] : this.blades) {
+    for (const b of this.blades) {
       if (!tileAt(level, b.tx, b.ty) || tileAt(level, b.tx, b.ty - 1)) continue;
       let sway = Math.sin(t * 2.1 + b.x * 0.15) * 0.25 + Math.sin(t * 0.7 + b.x * 0.03) * 0.2 + b.lean;
       for (const p of pushers) {

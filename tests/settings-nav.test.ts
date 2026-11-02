@@ -16,8 +16,8 @@ import {
   visibleTabs,
 } from '../src/ui/settings-nav';
 
-const desktop = { touch: false, quality: true, style: true };
-const phone = { touch: true, quality: true, style: true };
+const desktop = { touch: false, quality: true };
+const phone = { touch: true, quality: true };
 const rest: MenuPadState = { up: false, down: false, left: false, right: false, a: false, b: false, lb: false, rb: false, start: false };
 
 describe('settings tabs', () => {
@@ -27,23 +27,19 @@ describe('settings tabs', () => {
   });
 
   it('drops a tab with nothing on it', () => {
-    expect(visibleTabs({ touch: false, quality: false, style: false })).toEqual(['audio', 'keyboard', 'mouse', 'gamepad']);
+    expect(visibleTabs({ touch: false, quality: false })).toEqual(['audio', 'keyboard', 'mouse', 'gamepad']);
   });
 
   it('keeps every section on exactly one tab', () => {
-    const all: SettingsSection[] = ['audio', 'quality', 'style', 'touch', 'keyboard', 'mouse', 'gamepad'];
+    const all: SettingsSection[] = ['audio', 'quality', 'touch', 'keyboard', 'mouse', 'gamepad'];
     const placed = SETTINGS_TABS.flatMap((t) => TAB_SECTIONS[t]);
     expect([...placed].sort()).toEqual([...all].sort());
   });
 
   it('can reach every section the old single page showed in that input mode', () => {
     const reach = (c: typeof desktop) => visibleTabs(c).flatMap((t) => tabSections(t, c));
-    expect(reach(desktop).sort()).toEqual(['audio', 'gamepad', 'keyboard', 'mouse', 'quality', 'style']);
-    expect(reach(phone).sort()).toEqual(['audio', 'quality', 'style', 'touch']);
-  });
-
-  it('shows only the half of Video that was wired up', () => {
-    expect(tabSections('video', { touch: false, quality: false, style: true })).toEqual(['style']);
+    expect(reach(desktop).sort()).toEqual(['audio', 'gamepad', 'keyboard', 'mouse', 'quality']);
+    expect(reach(phone).sort()).toEqual(['audio', 'quality', 'touch']);
   });
 
   it('cycles with wraparound', () => {

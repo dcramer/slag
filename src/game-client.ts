@@ -20,6 +20,8 @@ import { TouchOverlay } from './ui/touch/overlay';
 import { loadProfile, saveProfile } from './ui/profile';
 
 let booted = false;
+/** About the gap between a pinch's two fingers landing, in sim frames. */
+const PINCH_WAIT_FRAMES = 6;
 
 /**
  * Boot the game into `container` for lobby `room`. All game logic runs
@@ -94,7 +96,6 @@ export function bootGame(container: HTMLElement, room: string): void {
       renderer.setQuality(tier ?? detectQuality().tier);
     },
   };
-  settingsMenu.artStyle = { get: () => renderer.getStyle(), set: (style) => renderer.setStyle(style) };
   const rulesMenu = new RulesMenu(input);
   const namePrompt = new NamePrompt(input);
   const profile = loadProfile();
@@ -172,6 +173,8 @@ export function bootGame(container: HTMLElement, room: string): void {
   input.touch.setActive(isTouchFirst());
   input.touch.haptics = loadHaptics();
   input.touch.onGesture = () => audio.unlock(); // iOS only unlocks audio inside a touch gesture
+  input.touch.onPinch = (ratio, mid, delta) => renderer.phone.pinch(ratio, mid, delta);
+  input.pointerMap = (p) => renderer.pointerToMatch(match.phase, p);
   const touchOverlay = new TouchOverlay(input.touch, container, () => input.onEscape?.());
 
   /** Keep the local keyboard/mouse player's chosen name; ask once on first join. */
@@ -273,6 +276,8 @@ export function bootGame(container: HTMLElement, room: string): void {
     const tr = tp && match.phase === 'run' ? match.run?.runners.find((r) => r.slot === tp.slot && r.alive && !r.finished) : undefined;
     const held = tr?.items.held;
     input.touch.useReady = !!held;
+    renderer.phone.dragPoint = input.touch.dragView();
+    input.touch.pinchWait = renderer.phone.enabled ? PINCH_WAIT_FRAMES : 0;
     touchOverlay.update({ canPlace: tp && match.phase === 'place' ? match.canPlaceFor(tp) : undefined, use: held ? ITEMS[held.kind].verb : undefined });
     const view = net.view; // guests mid-race: the locally predicted match. Pick and place: live cursors.
     renderer.hud.pendingCard = net.pendingCard;

@@ -4,7 +4,7 @@
  * on which tab, where a directional press lands, and what a gamepad did.
  */
 
-export type SettingsSection = 'audio' | 'quality' | 'style' | 'touch' | 'keyboard' | 'mouse' | 'gamepad';
+export type SettingsSection = 'audio' | 'quality' | 'touch' | 'keyboard' | 'mouse' | 'gamepad';
 
 export const SETTINGS_TABS = ['audio', 'video', 'touch', 'keyboard', 'mouse', 'gamepad'] as const;
 export type SettingsTab = (typeof SETTINGS_TABS)[number];
@@ -21,7 +21,7 @@ export const TAB_LABELS: Record<SettingsTab, string> = {
 /** Every section sits on exactly one tab. */
 export const TAB_SECTIONS: Record<SettingsTab, readonly SettingsSection[]> = {
   audio: ['audio'],
-  video: ['quality', 'style'],
+  video: ['quality'],
   touch: ['touch'],
   keyboard: ['keyboard'],
   mouse: ['mouse'],
@@ -33,14 +33,11 @@ export interface TabContext {
   touch: boolean;
   /** The menu was given a graphics-quality hook. */
   quality: boolean;
-  /** The menu was given an art-style hook. */
-  style: boolean;
 }
 
 function hasSection(s: SettingsSection, c: TabContext): boolean {
   if (s === 'audio') return true;
   if (s === 'quality') return c.quality;
-  if (s === 'style') return c.style;
   return s === 'touch' ? c.touch : !c.touch;
 }
 

@@ -8,14 +8,6 @@ Design intent for everything below is in `docs/DESIGN.md`.
 
 ---
 
-## 1. Organize tests by function, not by speed
-Today the same test files run at two sample sizes (`tests/lib/tier.ts`, `SLOW_FILES` in `vitest.config.ts`, `pnpm test:slow`). Suites should be named for what they check, and agents shouldn't routinely run anything but the behavior tests. Do this after item 3, which is editing these test files.
-
-- `pnpm test`: behavior and invariants, at fixed small seed counts, with no skips. This is what `pnpm check` runs.
-- `pnpm test:stats`: distribution and balance statistics over many seeds, in their own files under `tests/stats/`. CI runs them. Agents run them only for deliberate generator or balance tuning.
-- `pnpm perf`: benchmarks. Same deal: run on purpose, never as a routine step.
-- Remove `tests/lib/tier.ts`, `SLOW_FILES`, `--mode slow` and the `SLOW` guards, and update the docs that mention them (AGENTS.md, README.md, `vitest.config.ts`, `ci.yml`).
-
 ## 2. Online follow-ups
 Online play is on `main`; see `docs/NETCODE.md`.
 
@@ -34,22 +26,14 @@ Level profiles, gravity, variable size, full-window background, the open-levels 
 - **Visible edge:** block themes (harbor, castle, factory) show a straight wall line where the map meets the scenery.
 - `pnpm online-test --only play,bc` failed once after a clean gate and passed on rerun. Find the flake.
 
-## 6. Mobile, round 2
-**Branch:** `wip/mobile-2` (~1k lines, unreviewed). Round 1 (touch controls) is merged.
-
-The user's feedback on a real phone: "almost playable but not quite; resolution is tough; settings is bad; probably needs zoomed in more."
-
-- **Phone follow camera:** render-only, a tile at least ~24 CSS px, look-ahead, a vertical dead zone, clamped to the level. Pick and place start zoomed out, with pinch-zoom, two-finger pan and auto-pan near the edges. With more than one player in the match, local or remote, it frames everyone: the camera always keeps all live players on screen, which wins over the tile-size target. `?zoom=1` forces it on desktop. Keep it in its own module, because item 3 also changes the camera. Cursors must stay in world coordinates, so other players' cursors and ghost parts land in the right place whatever each player's zoom.
-- `pnpm shot mobile` fails on `main`, timing out in the lobby flow. Fix that first.
-- The touch tag `MOVE · push far = RUN` breaks the never-explain-the-obvious rule. Cut it.
-- **HUD readability:** scale HUD text, pills and crate cards up on small screens, with tap targets of at least 44 CSS px.
-- **Settings:** a full-screen sheet on phones with big rows that scrolls.
-- **Verify:** `pnpm shot mobile` on iPhone SE, iPhone 13 and Pixel 7 in landscape. Nothing has been tested on real hardware yet.
+## 6. Real phones
+Phone support (follow camera, pinch, scaled HUD, settings sheet) is on `main` but has only run in Chromium emulation. Try iOS Safari and a real Android phone: `:has()` in the sheet CSS, safe-area insets, pinch feel, and frame rate.
 
 ## 8. Render polish
 - **Liquid draw order:** `drawLiquid` still paints after players and effects, while `docs/DESIGN.md` lists liquids behind terrain.
 - **`pnpm shot race` without `--race`** never starts a race: it stays in pick at frame 0.
-- **Cel-shaded look (`?style=cel`):** the owner picks whether it becomes the main look. Flipping is `DEFAULT_STYLE` in `src/render/style.ts`. Play it first, and try a real phone. Mine is weakest (band arcs on rock walls). Impact words can hide a hazard for most of a second; `?lettering=0` turns them off. Big plain walls are a taste call. With adoption, note in `src/render/AGENTS.md` that thin or soft things on `rc.s` get ink.
+- **Crate cards:** the Dragon Vent draws as a tiny dot when its flame is off in that frame, and its sizes look alike. Medium and large ropes look the same too, because the preview caps at 4 links.
+- **Impact words** can hide a hazard for most of a second; `?lettering=0` turns them off. Decide whether they stay. Mine is the weakest theme in cel (band arcs on rock walls), and big plain walls are a taste call. Try a real phone.
 
 ## 9. Weather (new)
 A per-level random variable:
@@ -83,16 +67,18 @@ The rest of this item is the home screen, the first and biggest piece of it. The
 ## 13. Playtest and tune the new parts
 Nothing from the content, held-items or grab-props work has been played by hand, so the tuning is test-level only: magnet drift, bumper power, slow and freeze durations, item strength. Gamepad `use` (Y and LT) hasn't been tried on a real pad, and item sounds borrow existing cues and haven't been heard. Trackers can no longer see runners through terrain, which changes how lobbed trackers feel.
 
-Also confirm the Match Length values (Short 30 points / 10 rounds, Normal 50 / 15, Long 80 / 25). They come from a Monte Carlo model of scoring with a fixed finish rate, and real finish rates probably fall as props pile up. The limit decides about 25% of 2-player Normal matches at typical finish rates and about 60% at very low or very high ones.
+Size tiers for parts are a mapping of the old rolled ranges, so check them too; bumper and spike strip changed most. Confirm the Match Length values (Short 30 points / 10 rounds, Normal 50 / 15, Long 80 / 25). They come from a Monte Carlo model of scoring with a fixed finish rate, and real finish rates probably fall as props pile up. The limit decides about 25% of 2-player Normal matches at typical finish rates and about 60% at very low or very high ones.
 
 ## 16. Fix WebGL failure paths
 Both are now visible in Sentry.
 
-- `createCompositor` falls back to `Fallback` after a GL compile failure, but that canvas already has a WebGL context, so `getContext('2d')` returns null. The first render throws and kills the game loop.
 - There's no WebGL context-restore handling, so a lost context stays lost for that session.
 
 ## 14. Clear the lint warnings
 `pnpm check` prints 7 warnings, in `src/ui/touch/overlay.ts`, `src/ui/touch/device.ts`, `src/input/input.ts`, `src/render/props/modules/vehicle.ts` and `src/audio/system.ts`. AGENTS.md treats warnings as real findings. Do it with or after item 6, which also touches the touch code.
+
+## 21. Hand-drawn ink art
+Approved direction: ink strokes in code, no textures or generated art. In progress: real path, blast-area rebake, GPU check, fair hitboxes, then castle, the other themes, characters and parts. The ink rules go in `docs/ART.md`.
 
 ## 15. Parody pass on items and parts
 The game's goal is to parody other games, especially with items (`docs/DESIGN.md` → Parody). The current items and parts were written to be neutral, so they don't do that yet: Foam Sword, Ricochet Puck, Boomerang, Pop Shield, Pocket Rocket, Smoke Bomb, and the parts from the content work.
@@ -109,14 +95,13 @@ Some steps need the owner. Run after setting the Vercel env vars.
 - Install the Sentry GitHub integration for suspect commits.
 - Move `app/global-error.tsx` into `src/` with item 11.
 
-## 18. Fewer, clearer parts per match
-There's too much variety in the crate, and it's confusing. **Next up once item 3 lands**, because that changes `generateCrate`.
-
-- Each match picks N unique parts, from the seed, and every crate that match draws only from those. Players learn a small set.
-- A part's variants differ in size only. No other rolled differences in a match, so a part always behaves the way you remember.
-- The roster must always include enough building and demolition parts for item 3's crate guarantee and dry-round weighting.
-- Pick N from how it plays, per player count, and consider per-Match-Length if it helps.
-- Names stay stable across a match. Do this before item 15's parody pass.
-
 ## 19. Secret parts mode
 A mode where you don't see what a part is. You choose a type (hazard, utility, build, whatever the roles are) and get one at random from what's allowed. A lobby rule, with the roll deterministic from the seed and the same on every peer. The first time anyone sees the part is when it lands.
+
+## 20. Cleanup pass
+Run this once the current agents have landed, so it doesn't fight them. A lot arrived fast.
+
+- **Code:** dead exports, leftovers from merged branches, duplicated helpers, oversized files (`src/render/hud.ts`, `src/ui/menus.ts`, `tools/shot.ts`).
+- **Docs:** AGENTS.md files, `docs/DESIGN.md`, `docs/ART.md`, `docs/NETCODE.md`, `docs/MOBILE.md`, `README.md`, so each says what's true now and nothing else.
+- **Repo:** merged `wip/*` branches and worktree branches, the 7 lint warnings (item 14), and `netcode-merge-wip`.
+

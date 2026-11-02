@@ -16,7 +16,10 @@ export interface Light {
  * same world-space transform.
  */
 export interface RC {
+  /** Albedo. In the world pass this is the foreground layer, which the final pass inks along every edge. */
   s: CanvasRenderingContext2D;
+  /** The background layer, which gets no ink: for thin or soft things that would turn into solid-looking shapes on `s`. */
+  bg: CanvasRenderingContext2D;
   g: CanvasRenderingContext2D;
   lights: Light[] | null;
   /** Seconds. */

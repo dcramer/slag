@@ -26,8 +26,9 @@ import type { ThemeId } from './themes';
  *   ?gravity=0.7        force world gravity scale
  *   ?debug=1            open the dev overlay (see installDevtoolsHooks)
  *   ?give=sword,puck    hand race runners these held items, cycled (`all` = one of each)
- *   ?style=cel          art style (read by the Renderer, see render/style.ts)
+ *   ?lettering=0        no impact words (read by the Renderer)
  *   ?lettering=0        no impact words in styles that have them
+ *   ?zoom=1             force the phone camera on (`?zoom=0` off, `?zoom=2.4` pins a zoom); see render/camera-follow.ts
  */
 export interface SlagDebug {
   match: Match;

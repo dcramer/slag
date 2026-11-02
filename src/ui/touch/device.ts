@@ -46,7 +46,7 @@ export function pickTier(d: DeviceHints): QualityTier {
 /** True on touch-first devices (phones, tablets): show touch controls from the start. */
 export function isTouchFirst(): boolean {
   if (typeof window === 'undefined') return false;
-  return (navigator.maxTouchPoints ?? 0) > 0 && !!window.matchMedia?.('(pointer: coarse)').matches;
+  return (navigator.maxTouchPoints ?? 0) > 0 && window.matchMedia?.('(pointer: coarse)').matches;
 }
 
 /** Tier for this device, plus whether runtime downgrades are allowed. */

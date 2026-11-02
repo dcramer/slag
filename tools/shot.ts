@@ -17,7 +17,6 @@
  *   pnpm shot settings                     → every settings tab over the lobby, driven by keys and a fake pad,
  *                                           then over the main menu on a phone (portrait and landscape), by tap
  *   pnpm shot score --players 4            → round-score screen
- *   pnpm shot compare --seed abc --players 4 [--themes farm,mine] → classic vs cel sheets, same sim frame per row
  *   pnpm shot mobile [--device "Pixel 7 landscape"]  → phone emulation driven by real
  *                                           multi-touch: lobby/join, pick, place, race, portrait
  *
@@ -25,7 +24,7 @@
  *          --theme farm (force a theme; `levels --themes all` renders one level per theme)
  *          --noui (hide the HUD, e.g. to review level shapes)
  *          --mode keyboard|gamepad|touch (footer prompt glyphs)  --net (fake online-lobby info)
- *          --style cel (art style, see src/render/style.ts; files get a `-cel` suffix)  --noletters (no impact words)
+ *          --noletters (no impact words)
  * Software GL is slow; frames are advanced deterministically via slagDebug.step().
  */
 
@@ -43,19 +42,11 @@ const [W, H] = opt('size', '1280x720')!.split('x').map(Number);
 const seed = opt('seed', 'demo');
 const theme = opt('theme');
 const world = opt('world');
-const style = opt('style');
-const art = opt('art');
 const tq =
   (theme ? `&theme=${theme}` : '') +
   (world ? `&size=${world}` : '') +
   (argv.includes('--noui') ? '&ui=0' : '') +
-  (style ? `&style=${style}` : '') +
-  (art ? `&art=${art}` : '') +
-  (opt('boil') ? `&boil=${opt('boil')}` : '') +
-  (opt('q') ? `&q=${opt('q')}` : '') +
-  (opt('feed') ? `&feed=${opt('feed')}` : '') +
   (argv.includes('--noletters') ? '&lettering=0' : '');
-const sfx = (style ? `-${style}` : '') + (art ? `-${art}` : '') + (opt('feed') === '0' ? '-bypass' : '');
 const players = Number(opt('players', '2'));
 const frames = Number(opt('frames', '150'));
 mkdirSync(out, { recursive: true });
@@ -99,7 +90,7 @@ async function open(q: string) {
 }
 const step = (n: number) => page.evaluate((k) => (window as any).slagDebug.step(k), n);
 async function snap(name: string) {
-  const p = `${out}/${name}${sfx}.png`;
+  const p = `${out}/${name}.png`;
   await page.screenshot({ path: p });
   console.log(p);
   pet();
@@ -161,70 +152,139 @@ async function mobile(deviceName: string) {
       },
       [x, y] as const,
     );
-  const phase = (p: string) => mp.waitForFunction((q) => (window as any).slagDebug.match.phase === q, p, { timeout: 60_000 });
+  /** The HUD's tap targets this frame, in CSS px: its own hit rects, so nothing here hard-codes a layout. */
+  const hudButtons = () =>
+    mp.evaluate(() => {
+      const r = document.querySelector('[data-slag-view]')!.getBoundingClientRect();
+      const k = r.width / 768;
+      return (window as any).slagDebug.renderer.hud.buttons.map((b: any) => ({
+        action: b.action as string,
+        x: r.left + b.x * k,
+        y: r.top + b.y * k,
+        w: b.w * k,
+        h: b.h * k,
+      }));
+    }) as Promise<{ action: string; x: number; y: number; w: number; h: number }[]>;
+  const tapHud = async (action: string) => {
+    const b = (await hudButtons()).find((q) => q.action === action);
+    if (!b) throw new Error(`no ${action} button on screen`);
+    await tap(b.x + b.w / 2, b.y + b.h / 2);
+  };
+  /** Every tap target on screen is at least 44 CSS px, or the run fails. */
+  const checkTargets = async (where: string) => {
+    const all = await hudButtons();
+    const small = all.filter((b) => b.w < 43.9 || b.h < 43.9);
+    console.log(`${where}: ${all.length} tap targets, smallest ${Math.min(...all.map((b) => Math.min(b.w, b.h))).toFixed(1)} CSS px`);
+    if (small.length) throw new Error(`${where}: tap targets under 44 CSS px: ${JSON.stringify(small)}`);
+  };
+  const phase = (q: string) => mp.waitForFunction((want) => (window as any).slagDebug.match.phase === want, q, { timeout: 60_000 });
+  const pose = () =>
+    mp.evaluate(() => {
+      const c = (window as any).slagDebug.renderer.cam;
+      const w = document.querySelector('[data-slag-view]')!.getBoundingClientRect().width;
+      return { x: Math.round(c.x), y: Math.round(c.y), zoom: +c.zoom.toFixed(2), tileCss: +((16 * c.zoom * w) / 768).toFixed(1) };
+    });
   // Same geometry the game uses (emulation reports no safe-area insets).
   const layout = async () => touchLayout(...(await mp.evaluate(() => [innerWidth, innerHeight] as [number, number])));
 
-  await mp.goto(`${base}r/SHOTS?seed=${seed}${tq}`);
+  await mp.goto(`${base}r/SHOTS?seed=${seed}${tq}&net=off`);
   await mp.waitForFunction(() => 'slagDebug' in window, null, { timeout: 30_000 });
   await mp.evaluate(() => document.fonts.ready);
   await mp.waitForTimeout(800);
   await shotM('lobby');
-  // Join by tapping the first slot (HUD hit-test via touch), then dismiss the name prompt.
-  let p = await v2c(111, 221);
-  await tap(p.x, p.y);
+  await checkTargets('lobby');
+  // Settings: one sheet per tab, then back out.
+  await tapHud('settings');
+  await mp.waitForTimeout(300);
+  await shotM('settings');
+  await mp.tap('.slag-tab:nth-child(2)');
+  await mp.waitForTimeout(200);
+  await shotM('settings-video');
+  const smallest = await mp.evaluate(() =>
+    Math.min(
+      ...[...document.querySelectorAll('.slag-sheet button')].map((b) => b.getBoundingClientRect()).map((r) => Math.min(r.width, Math.max(r.height, 0))),
+    ),
+  );
+  console.log(`settings: smallest button ${smallest.toFixed(1)} CSS px`);
+  await mp.tap('.slag-ov .slag-actions .primary');
+  await mp.waitForTimeout(200);
+  // Join by tapping the first open slot, then dismiss the name prompt.
+  await tapHud('join');
   await mp.waitForTimeout(400);
   await shotM('name');
   await mp.tap('.slag-ov .slag-btn:not(.primary)');
   await mp.waitForTimeout(300);
   await shotM('lobby-joined');
-  // A ready keyboard bot keeps the round alive if the touch runner dies (it never acts).
-  await mp.evaluate(() => {
-    const m = (window as any).slagDebug.match;
-    m.join('kb2');
-    m.players.find((q: any) => q.device === 'kb2').ready = true;
-  });
-  // The Ready pill runs along the bottom of the first card.
-  p = await v2c(96, 331);
-  await tap(p.x, p.y);
+  await checkTargets('lobby-joined');
+  // Solo on purpose: the close follow only exists with one player in the match.
+  await tapHud('ready');
   await phase('pick');
   await mp.waitForTimeout(500);
   await shotM('pick');
-  // Prefer a harmless card so the race shot isn't cut short by our own trap.
+  // Prefer a harmless card so the race shot isn't cut short by our own trap. Cards draw zoomed on phones, so tap where they're seen.
   const card = await mp.evaluate(() => {
-    const crate = (window as any).slagDebug.match.crate;
-    return (crate.find((c: any) => c.def.role === 'build' || c.def.role === 'utility') ?? crate[0]).rect;
+    const d = (window as any).slagDebug;
+    const crate = d.match.crate;
+    const r = (crate.find((c: any) => c.def.role === 'build' || c.def.role === 'utility') ?? crate[0]).rect;
+    const { s, ox, oy } = d.renderer.hud.cards;
+    return { x: ox + (r.x + r.w / 2) * s, y: oy + (r.y + r.h / 2) * s, w: r.w * s, h: r.h * s };
   });
-  p = await v2c(card.x + card.w / 2, card.y + card.h / 2);
+  let p = await v2c(card.x, card.y);
+  const css = await mp.evaluate(() => document.querySelector('[data-slag-view]')!.getBoundingClientRect().width / 768);
+  console.log(`pick: card ${(card.w * css).toFixed(0)}×${(card.h * css).toFixed(0)} CSS px`);
   await tap(p.x, p.y);
   await phase('place');
   await mp.waitForTimeout(400);
-  // Drag the ghost with a finger held down (ghost floats above it), rotate, then place.
-  p = await v2c(400, 260);
+  await shotM('place');
+  console.log('place starts', JSON.stringify(await pose()));
+  // Pinch out around the middle of the level: the camera zooms about the fingers.
+  const c0 = await v2c(384, 200);
+  await touch('touchStart', [{ x: c0.x - 30, y: c0.y, id: 1 }]);
+  await touch('touchStart', [
+    { x: c0.x - 30, y: c0.y, id: 1 },
+    { x: c0.x + 30, y: c0.y, id: 2 },
+  ]);
+  for (let i = 1; i <= 8; i++) {
+    await touch('touchMove', [
+      { x: c0.x - 30 - i * 12, y: c0.y, id: 1 },
+      { x: c0.x + 30 + i * 12, y: c0.y, id: 2 },
+    ]);
+    await mp.waitForTimeout(30);
+  }
+  await touch('touchEnd', []);
+  await mp.waitForTimeout(300);
+  const pinched = await pose();
+  console.log('after pinch', JSON.stringify(pinched));
+  await shotM('place-pinch');
+  // Drag the ghost with a finger held down (ghost floats above it), then hold it at the window's edge: the camera pans.
+  p = await v2c(380, 260);
+  const edge = await mp.evaluate(() => innerWidth - 8);
   await touch('touchStart', [{ ...p, id: 1 }]);
   for (let i = 1; i <= 6; i++) {
-    await touch('touchMove', [{ x: p.x + i * 8, y: p.y - i * 4, id: 1 }]);
+    await touch('touchMove', [{ x: p.x + ((edge - p.x) * i) / 6, y: p.y, id: 1 }]);
     await mp.waitForTimeout(40);
   }
-  await mp.waitForTimeout(300);
+  await mp.waitForTimeout(500);
+  console.log('after edge drag', JSON.stringify(await pose()));
   await shotM('place-drag');
   await touch('touchEnd', []);
   const L = await layout();
   await tap(L.secondary.x, L.secondary.y);
   await mp.waitForTimeout(300);
   await shotM('place-rotated');
-  await mp.evaluate(() => {
-    const m = (window as any).slagDebug.match;
-    m.players.find((q: any) => q.device === 'kb2').placed = true;
-  });
-  // Try placing; if this spot is illegal, sweep the ghost (away from spawn) until PLACE takes.
-  for (let i = 0; i < 24 && (await mp.evaluate(() => (window as any).slagDebug.match.phase)) === 'place'; i++) {
-    const q = await v2c(560 - (i % 6) * 60, 90 + Math.floor(i / 6) * 50);
+  // Try placing; if this spot is illegal, sweep the ghost until PLACE takes.
+  for (let i = 0; i < 36 && (await mp.evaluate(() => (window as any).slagDebug.match.phase)) === 'place'; i++) {
+    const q = await v2c(520 - (i % 6) * 70, 90 + Math.floor(i / 6) * 40);
     await tap(q.x, q.y);
     await tap(L.primary.x, L.primary.y);
   }
   await phase('run');
-  await mp.waitForFunction(() => (window as any).slagDebug.match.run.frame > 70, null, { timeout: 60_000 });
+  await mp.waitForTimeout(600);
+  await shotM('race-countdown');
+  await mp.waitForFunction(() => (window as any).slagDebug.match.run.frame > 200, null, { timeout: 60_000 });
+  await mp.waitForTimeout(700);
+  await shotM('race-follow');
+  console.log('race follow', JSON.stringify(await pose()));
   const runner = () =>
     mp.evaluate(() => {
       const m = (window as any).slagDebug.match;
@@ -254,9 +314,34 @@ async function mobile(deviceName: string) {
   await mp.waitForTimeout(600);
   await touch('touchEnd', []);
   console.log('after ALT hold', JSON.stringify(await runner()));
+  await phase('score');
+  await mp.waitForTimeout(1800);
+  await shotM('score');
   await mp.setViewportSize({ width: desc.viewport.height, height: desc.viewport.width });
   await mp.waitForTimeout(500);
   await shotM('portrait');
+  await mp.setViewportSize(desc.viewport);
+
+  // The owner's rule: two players, one at each end of the level, are both on screen, whatever it costs in tile size.
+  await mp.goto(`${base}r/SHOTM?seed=${seed}${tq}&net=off&players=2&race=saw`);
+  await mp.waitForFunction(() => 'slagDebug' in window && (window as any).slagDebug.match.run?.frame > 200, null, { timeout: 60_000 });
+  await mp.evaluate(() => {
+    const m = (window as any).slagDebug.match;
+    const [a, b] = m.run.runners;
+    a.body.x = 40;
+    b.body.x = m.level.w * 16 - 60;
+  });
+  await mp.waitForTimeout(150);
+  const both = await mp.evaluate(() => {
+    const d = (window as any).slagDebug;
+    const v = d.renderer.cam.visible();
+    return d.match.run.runners
+      .filter((r: any) => r.alive)
+      .map((r: any) => r.body.x >= v.x && r.body.x <= v.x + v.w && r.body.y >= v.y && r.body.y <= v.y + v.h);
+  });
+  await shotM('race-two-players');
+  console.log('two players on screen', JSON.stringify(both), JSON.stringify(await pose()));
+  if (both.includes(false)) throw new Error('a live runner left the screen');
   await ctx.close();
 }
 
@@ -326,146 +411,9 @@ try {
     case 'race': {
       const race = opt('race', '')!;
       await open(`seed=${seed}&players=${players}&race=${race}&propseed=${opt('propseed', '1')}`);
-      const exact = opt('runframe');
-      if (exact) {
-        // Boot time decides how far the race got before the pause, so step to the frame rather than by a count.
-        const now = await page.evaluate(() => (window as any).slagDebug.match.run?.frame ?? 0);
-        await step(Number(exact) - now - 4);
-        // `--spread`: stand the runners on open ground, away from the spawn's glow, to judge the character art.
-        if (argv.includes('--spread')) {
-          await page.evaluate(() => {
-            const d = (window as any).slagDebug;
-            const lv = d.match.level;
-            const T = 16;
-            d.match.run.runners.forEach((r: any, i: number) => {
-              for (let tx = lv.spawn.tx + 3 + i * 2; tx < lv.w; tx++) {
-                for (let ty = 1; ty < lv.h; ty++) {
-                  if (lv.tiles[ty * lv.w + tx] === 1 && lv.tiles[(ty - 1) * lv.w + tx] === 0 && ty > lv.spawn.ty - 6) {
-                    r.body.x = tx * T + 4;
-                    r.body.y = ty * T - r.body.h;
-                    r.body.vx = r.body.vy = 0;
-                    return;
-                  }
-                }
-              }
-            });
-          });
-        }
-        // `--campin x,y,zoom`: the sim frame alone isn't "the same frame": camera smoothing depends on how
-        // many frames rendered before the pause, so sheets pin the view as well.
-        const pin = opt('campin')?.split(',').map(Number);
-        await page.evaluate((v) => {
-          const cam = (window as any).slagDebug.renderer.cam;
-          if (v) {
-            cam.update = () => {};
-            cam.snap({ cx: v[0], cy: v[1], zoom: v[2] });
-            cam.shake = 0;
-          }
-        }, pin ?? null);
-        await step(4);
-        console.log(
-          JSON.stringify(
-            await page.evaluate(() => {
-              const c = (window as any).slagDebug.renderer.cam;
-              return { cx: c.x, cy: c.y, zoom: c.zoom };
-            }),
-          ),
-        );
-        await snap(`race-${seed}-${exact}`);
-        break;
-      }
       for (const f of [frames, 40, 40]) {
         await step(f);
         await snap(`race-${seed}-${await page.evaluate(() => (window as any).slagDebug.match.run?.frame ?? 0)}`);
-      }
-      break;
-    }
-    case 'inkperf': {
-      // ART SPIKE: where a frame's time goes. readPixels forces software GL to finish, or the clock lies.
-      const race = opt('race', '')!;
-      await open(`seed=${seed}&players=${players}&race=${race}&propseed=${opt('propseed', '1')}`);
-      const report = await page.evaluate(async () => {
-        const d = (window as any).slagDebug;
-        const px = new Uint8Array(4);
-        const gl = [...document.querySelectorAll('canvas')].map((c) => c.getContext('webgl2')).find(Boolean) as WebGL2RenderingContext;
-        const times: number[] = [];
-        for (let i = 0; i < 12; i++) {
-          const t0 = performance.now();
-          d.step(1);
-          d.render?.();
-          gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
-          times.push(Math.round(performance.now() - t0));
-          await new Promise((r) => setTimeout(r, 0));
-        }
-        const frame = times[times.length - 1];
-        const rebakes: number[] = [];
-        for (let i = 0; i < 4; i++) {
-          d.match.level.version++;
-          const t0 = performance.now();
-          d.render?.();
-          gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
-          rebakes.push(Math.round(performance.now() - t0 - frame));
-          await new Promise((r) => setTimeout(r, 0));
-        }
-        return { times, rebakes, level: `${d.match.level.w}x${d.match.level.h}`, bakePx: d.renderer?.terrain?.bake?.width };
-      });
-      console.log(JSON.stringify(report));
-      break;
-    }
-    case 'inkbomb': {
-      // ART SPIKE: carve a crater the way a bomb does, re-bake, and report what the re-bake cost and what moved.
-      await open(`seed=${seed}&players=${players}&race=&propseed=1`);
-      await step(30);
-      const before = await snap(`inkbomb-${seed}-before`);
-      // The bake itself, so clouds and runners can't count as "moved". Compare these with an exact diff.
-      const bakeOut = async (name: string) => {
-        const url: string = await page.evaluate(() => (window as any).slagDebug.renderer.terrain.bake.toDataURL('image/png'));
-        writeFileSync(`${out}/${name}.png`, Buffer.from(url.split(',')[1], 'base64'));
-      };
-      await bakeOut('bake-before');
-      const report = await page.evaluate(() => {
-        const d = (window as any).slagDebug;
-        const lv = d.match.level;
-        let cx = -1;
-        let cy = -1;
-        // A surface tile near the middle of the level, deep enough to bite a real hole.
-        for (let x = Math.floor(lv.w / 3); x < lv.w && cx < 0; x++) {
-          for (let y = 2; y < lv.h - 2; y++) {
-            if (lv.tiles[y * lv.w + x] === 1 && lv.tiles[(y - 1) * lv.w + x] === 0) {
-              cx = x;
-              cy = y;
-              break;
-            }
-          }
-        }
-        for (let y = cy - 3; y <= cy + 3; y++) {
-          for (let x = cx - 3; x <= cx + 3; x++)
-            if ((x - cx) ** 2 + (y - cy) ** 2 <= 10 && y >= 0 && y < lv.h && x >= 0 && x < lv.w) lv.tiles[y * lv.w + x] = 0;
-        }
-        lv.version++;
-        d.step(1);
-        d.render?.();
-        return { cx, cy, tileW: lv.w, tileH: lv.h, bakeW: d.renderer.terrain.bake.width };
-      });
-      console.log(JSON.stringify(report));
-      await bakeOut('bake-after');
-      await snap(`inkbomb-${seed}-after`);
-      console.log(before);
-      break;
-    }
-    case 'inkframes': {
-      // ART SPIKE: consecutive frames, to look for shimmer (static terrain must not change) and judge the boil.
-      await open(`seed=${seed}&players=${players}&race=${opt('race', '')}&propseed=${opt('propseed', '1')}`);
-      await step(Number(opt('frames', '120')));
-      // Hold the camera, or the numbers measure the camera and not the drawing.
-      await page.evaluate(() => {
-        const cam = (window as any).slagDebug.renderer.cam;
-        cam.update = () => {};
-        cam.shake = 0;
-      });
-      for (let i = 0; i < 8; i++) {
-        await step(5);
-        await snap(`frames-${String(i).padStart(2, '0')}`);
       }
       break;
     }
@@ -512,7 +460,7 @@ try {
         const h = 180 * k;
         const px = ((x - cam.x) * cam.zoom + 384) * k;
         const py = ((y - cam.y) * cam.zoom + 216) * k;
-        const path = `${out}/${name}${sfx}.png`;
+        const path = `${out}/${name}.png`;
         const size = page.viewportSize()!;
         await page.screenshot({
           path,
@@ -608,81 +556,6 @@ try {
       await snap(`items-${seed}-use`);
       await step(40);
       await snap(`items-${seed}-after`);
-      break;
-    }
-    case 'compare': {
-      // Classic vs cel from one paused page, so both columns are literally the same sim frame.
-      const themes = (opt('themes') ?? 'farm,factory,castle,volcano').split(',');
-      const shoot = async (name: string, files: string[], at?: number) => {
-        // One timestamp for both columns; it must not run behind the renderer's clock (negative dt flings the camera).
-        const ms = at ?? (await page.evaluate(() => performance.now()));
-        for (const st of ['classic', 'cel']) {
-          await page.evaluate(
-            ([s, t]) => {
-              const d = (window as any).slagDebug;
-              d.renderer.setStyle(s, false);
-              d.render(t);
-            },
-            [st, ms] as const,
-          );
-          files.push(await snap(`cmp-${name}-${st}`));
-        }
-      };
-      const scene: string[] = [];
-      for (const th of themes) {
-        const give = opt('give');
-        await open(
-          `seed=${seed}&theme=${th}&players=${players}&race=${opt('race', 'saw,laser,launcher,flamer,spring')}&propseed=${opt('propseed', '1')}${give ? `&give=${give}` : ''}`,
-        );
-        // Scripted runners so hazards, deaths and lettering are in frame. Past `frames`, stop just after the
-        // next death to catch an impact. Runs in the cel style so its lettering is live; the classic
-        // column draws the same state without it.
-        const ms = await page.evaluate((n) => {
-          const d = (window as any).slagDebug;
-          d.renderer.setStyle('cel', false);
-          let stop = n + 90;
-          let was = 0;
-          const t0 = performance.now();
-          let now = t0;
-          for (let f = 0; f < stop; f++) {
-            const dead = d.match.run?.runners.filter((r: any) => !r.alive).length ?? 0;
-            if (f >= n && stop === n + 90 && dead > was) stop = f + 11;
-            if (f < n) was = dead;
-            const inputs: Record<string, object> = {};
-            d.match.players.forEach((p: any, i: number) => {
-              // The last player stays home, so the round survives everyone else dying.
-              const go = i < d.match.players.length - 1;
-              const c = f + i * 13;
-              inputs[p.device] = { left: false, right: go, up: false, down: false, jump: go && c % 46 < 16, jumpPressed: go && c % 46 === 0, run: go };
-            });
-            d.match.step(inputs);
-            now = t0 + (f * 1000) / 60;
-            if (f > n - 40 || f % 6 === 0) d.render(now);
-          }
-          return now;
-        }, frames);
-        await shoot(`race-${th}`, scene, ms);
-      }
-      await sheet(`compare-race-${seed}`, scene, 2);
-      const menus: string[] = [];
-      await open(`seed=${seed}&theme=${themes[0]}`);
-      await page.evaluate(() => (window as any).slagDebug.match.join('kb1'));
-      await step(40);
-      await shoot('lobby', menus);
-      await open(`seed=${seed}&theme=${themes[0]}&players=${players}`);
-      await step(40);
-      await shoot('pick', menus);
-      await page.evaluate(() => {
-        const m = (window as any).slagDebug.match;
-        m.players.forEach((p: any, i: number) => {
-          p.claim = i;
-          m.crate[i].claimedBy = p.slot;
-          p.cursor = { x: 300 + i * 150, y: 180 };
-        });
-      });
-      await step(60);
-      await shoot('place', menus);
-      await sheet(`compare-menus-${seed}`, menus, 2);
       break;
     }
     case 'levels': {
@@ -866,17 +739,15 @@ try {
       await page.keyboard.press('e');
       await expectTab(page, 'video');
       await page.waitForTimeout(200);
-      await page.click('.slag-chips >> text=Cel');
       await page.click('.slag-chips >> text=Low');
       await snap('settings-home');
-      const saved = await page.evaluate(() => [localStorage.getItem('slag.quality'), localStorage.getItem('slag.render.v1')]);
-      if (saved[0] !== 'low' || !saved[1]?.includes('cel')) throw new Error(`settings: home saved ${saved.join()}`);
+      const saved = await page.evaluate(() => localStorage.getItem('slag.quality'));
+      if (saved !== 'low') throw new Error(`settings: home saved ${saved}`);
       // Tab stays inside the card; the arrows reach Done from the page.
       await page.keyboard.press('Tab');
       await page.keyboard.press('Shift+Tab');
       const inCard = await page.evaluate(() => !!document.activeElement?.closest('.slag-card'));
       if (!inCard) throw new Error('settings: Tab left the card');
-      await page.keyboard.press('ArrowDown');
       await page.keyboard.press('ArrowDown');
       if ((await selected())?.trim().endsWith('Done') !== true) throw new Error(`settings: arrows landed on ${await selected()}`);
       await pad(0);

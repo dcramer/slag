@@ -147,7 +147,7 @@ describe('attachment behavior', () => {
 });
 
 describe('partial mounting', () => {
-  const two = coatDef('spikestrip', 2);
+  const two = coatDef('icecoat', 2);
   const three = coatDef('spikestrip', 3);
 
   /** testLevel plus a one-tile perch, a ledge, a split ledge and a ceiling band. */
@@ -270,7 +270,7 @@ describe('partial mounting', () => {
     let def: PropDef | null = null;
     for (let i = 0; i < 200 && !def; i++) {
       const d = generateProp(new Rng(i), 'platform', 'x');
-      if (d.footprint.length === 2 && d.motion.type === 'none') def = d;
+      if (d.footprint.length === 3 && d.motion.type === 'none') def = d;
     }
     expect(canPlace(lv, [], def!, 0, 20, 8)).toBe(true);
     expect(canPlace(lv, [], def!, 0, 20, 12)).toBe(false);

@@ -2,7 +2,6 @@ import type { AudioSystem } from '../audio';
 import { GRAVITY_CHOICES, gravityLabel, MATCH_LENGTHS, type MatchRules, RULE_CHOICES, type TimerRule } from '../game/rules';
 import { BINDABLE, defaultSettings, type InputSettings, type KeyProfile, keyName, SLOTS } from '../input/bindings';
 import type { InputManager } from '../input/input';
-import { type RenderStyle, STYLE_IDS, STYLES } from '../render/style';
 import { glyphSVG, type Glyph } from './glyphs';
 import { capLabel, type InputMode, promptModes } from './prompts';
 import { sanitizeName } from './profile';
@@ -32,12 +31,6 @@ export interface QualityControl {
   /** The pinned tier, or null when automatic. */
   pinned(): QualityTier | null;
   set(tier: QualityTier | null): void;
-}
-
-/** Art style hook (game-client wires it to the renderer). */
-export interface StyleControl {
-  get(): RenderStyle;
-  set(style: RenderStyle): void;
 }
 
 const HAPTICS_KEY = 'slag.haptics';
@@ -129,7 +122,8 @@ input[type=range].slag-range:focus-visible{outline:2px solid ${PAL.amber};outlin
 .slag-settings .slag-btn{min-height:44px}
 .slag-settings .slag-btn:focus,.slag-settings .slag-switch:focus{outline:3px solid ${PAL.whiteHot};outline-offset:1px}
 .slag-settings .slag-switch::before{content:"";position:absolute;inset:-10px -6px}
-.slag-settings .slag-chips .slag-btn{min-width:72px}
+.slag-settings .slag-chips{flex:1}
+.slag-settings .slag-chips .slag-btn{flex:1;min-width:72px}
 .slag-settings input[type=range].slag-range:focus{outline:none}
 .slag-binds{display:inline-flex;align-items:center;gap:8px}
 .slag-keys.slag-row{display:grid;gap:8px;min-height:42px;margin:0;padding:1px 14px;font-size:16px}
@@ -143,6 +137,31 @@ input[type=range].slag-range:focus-visible{outline:2px solid ${PAL.amber};outlin
 .slag-actions .slag-btn{display:inline-flex;align-items:center;gap:8px}
 @media (max-height:520px){.slag-settings h2{display:none}.slag-tablist{padding-block:6px 8px}.slag-settings .slag-row{min-height:48px;margin-bottom:2px}.slag-settings .slag-actions{margin-top:6px}.slag-settings{padding-bottom:10px}}
 @media (max-width:640px){.slag-tablist{overflow-x:auto;scrollbar-width:none}.slag-tabkey{display:none}.slag-tab{font-size:18px;padding-inline:10px}}
+@media (max-width:760px),(max-height:520px){
+.slag-ov:has(.slag-sheet){padding:0;align-items:stretch}
+.slag-card.slag-sheet{width:100%;height:100%;max-height:none;border:0;border-radius:0;box-shadow:none;padding:0 calc(16px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
+.slag-card.slag-sheet::before{margin-inline:calc(-16px - env(safe-area-inset-left)) calc(-16px - env(safe-area-inset-right))}
+.slag-sheet{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.slag-sheet .slag-chips .slag-btn{min-height:48px;min-width:64px}
+.slag-sheet .slag-actions .slag-btn{min-height:48px;padding-inline:20px}
+.slag-tablist{overflow-x:auto;scrollbar-width:none}
+.slag-tab{min-height:50px;font-size:19px}
+.slag-settings .slag-tabkey{display:none}
+.slag-panel{margin:0 calc(-16px - env(safe-area-inset-right)) 0 calc(-16px - env(safe-area-inset-left));padding:2px calc(22px + env(safe-area-inset-right)) 2px calc(22px + env(safe-area-inset-left));overscroll-behavior:contain;touch-action:pan-y}
+.slag-settings .slag-row,.slag-panel[data-tab=keyboard] .slag-row:not(.slag-keys){min-height:60px;margin-bottom:4px;font-size:18px}
+.slag-settings .slag-btn{min-height:48px}
+.slag-keys .slag-btn.key{min-height:44px}
+.slag-settings .slag-switch{width:64px;height:36px}
+.slag-settings .slag-switch::after{width:28px;height:28px}
+.slag-settings .slag-switch[aria-checked=true]::after{left:30px}
+.slag-settings .slag-switch::before{inset:-8px}
+input[type=range].slag-range{height:20px;background-clip:padding-box}
+input[type=range].slag-range::-webkit-slider-thumb{width:32px;height:44px}
+input[type=range].slag-range::-moz-range-thumb{width:30px;height:42px}
+.slag-settings .slag-row:has(:focus){transform:none}
+.slag-settings .slag-row:has(:focus)::before{display:none}
+}
+@media (max-height:520px){.slag-settings{display:grid;grid-template:auto minmax(0,1fr)/minmax(0,1fr) auto;column-gap:12px;padding-top:0}.slag-settings::before{grid-column:1/-1}.slag-settings .slag-tabs{margin-bottom:2px}.slag-settings .slag-panel{grid-row:3;grid-column:1/-1}.slag-settings .slag-actions{grid-row:2;grid-column:2;margin:0 0 4px;align-self:center;flex-wrap:nowrap}.slag-settings .slag-actions .grow{display:none}.slag-card.slag-sheet.slag-settings{padding-bottom:calc(6px + env(safe-area-inset-bottom))}.slag-settings{grid-template-rows:auto auto minmax(0,1fr)}.slag-sheet:not(.slag-settings) h2{display:none}}
 @media (max-width:520px){.slag-settings .slag-row>label{flex-basis:76px}.slag-settings .slag-row:has(.slag-range){flex-wrap:nowrap}.slag-settings .slag-row:has(.slag-chips)>.lbl{flex-basis:100%}.slag-settings .slag-row:has(.slag-chips){padding-block:8px}.slag-settings .slag-chips{flex:1 0 100%}.slag-settings .slag-chips .slag-btn{flex:1;min-width:0;padding-inline:6px}}
 `;
 
@@ -299,7 +318,6 @@ export class SettingsMenu extends Overlay {
     audio: (p) => this.audioSection(p),
     touch: (p) => this.touchSection(p),
     quality: (p) => this.displaySection(p),
-    style: (p) => this.styleSection(p),
     keyboard: (p) => this.keyboardSection(p),
     mouse: (p) => this.bindSection(p, MOUSE_ROWS),
     gamepad: (p) => this.bindSection(p, PAD_ROWS),
@@ -309,7 +327,6 @@ export class SettingsMenu extends Overlay {
   /** When set, the menu shows a graphics-quality picker. */
   quality: QualityControl | null = null;
   /** When set, the menu shows an art-style picker. */
-  artStyle: StyleControl | null = null;
 
   constructor(
     input: InputManager,
@@ -366,7 +383,7 @@ export class SettingsMenu extends Overlay {
   }
 
   private tabContext(): TabContext {
-    return { touch: this.input.touch.active, quality: !!this.quality, style: !!this.artStyle };
+    return { touch: this.input.touch.active, quality: !!this.quality };
   }
 
   /** The active tab, the current page's controls and the footer buttons, in reading order. */
@@ -544,10 +561,6 @@ export class SettingsMenu extends Overlay {
     );
   }
 
-  private chipRow(card: HTMLElement, label: string, chips: HTMLElement) {
-    card.append(el('div', { className: 'slag-row' }, el('span', { className: 'lbl', textContent: label }), chips));
-  }
-
   private displaySection(card: HTMLElement) {
     const q = this.quality;
     if (!q) return;
@@ -567,22 +580,7 @@ export class SettingsMenu extends Overlay {
       };
       chips.append(b);
     }
-    this.chipRow(card, 'Graphics Quality', chips);
-  }
-
-  private styleSection(card: HTMLElement) {
-    const c = this.artStyle;
-    if (!c) return;
-    const chips = el('div', { className: 'slag-chips' });
-    for (const style of STYLE_IDS) {
-      const b = el('button', { className: `slag-btn ${c.get() === style ? 'on' : ''}`, type: 'button', textContent: STYLES[style].label });
-      b.onclick = () => {
-        c.set(style);
-        for (const sib of chips.querySelectorAll('button')) sib.classList.toggle('on', sib === b);
-      };
-      chips.append(b);
-    }
-    this.chipRow(card, 'Art Style', chips);
+    card.append(el('div', { className: 'slag-row' }, el('span', { className: 'lbl', textContent: 'Graphics Quality' }), chips));
   }
 
   private keyboardSection(card: HTMLElement) {
@@ -690,7 +688,7 @@ export class SettingsMenu extends Overlay {
     const context = this.tabContext();
     const tabs = visibleTabs(context);
     this.tab = resolveTab(tabs, this.tab);
-    const card = el('div', { className: 'slag-card slag-settings' }, el('h2', { textContent: 'Settings' }), this.tabBar(tabs));
+    const card = el('div', { className: 'slag-card slag-sheet slag-settings' }, el('h2', { textContent: 'Settings' }), this.tabBar(tabs));
     card.setAttribute('role', 'dialog');
     card.setAttribute('aria-label', 'Settings');
     const panel = el('div', { className: 'slag-panel', id: 'slag-panel' });
@@ -754,7 +752,7 @@ const RULE_LABELS: Record<TimerRule, string> = {
 export class RulesMenu extends Overlay {
   open(rules: MatchRules, onChange: (r: MatchRules) => void) {
     const draft = { ...rules };
-    const card = el('div', { className: 'slag-card' }, el('h2', { textContent: 'Match Rules' }));
+    const card = el('div', { className: 'slag-card slag-sheet' }, el('h2', { textContent: 'Match Rules' }));
     const addRow = (title: string, choices: { label: string; on: boolean; apply: () => void }[]) => {
       const chips = el('div', { className: 'slag-chips' });
       for (const c of choices) {

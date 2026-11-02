@@ -1,7 +1,7 @@
 /**
- * Final pass for the cel style. Everything here is a hard decision, not a gradient: base colors
+ * The final pass. Everything here is a hard decision, not a gradient: base colors
  * are flat, and the renderer's real light map is cut into a few bands, so a torch throws a clean
- * shape instead of a soft pool. It needs two albedo layers (see `CelLayer`), treated differently:
+ * shape instead of a soft pool. It needs two albedo layers (see `ForegroundLayer`), treated differently:
  *
  *   background  smooth and dimmed, like a painted backdrop: it stays quiet, and the world carries the light
  *   foreground  flat tones from albedo, light bands on top, thin ink from real alpha
@@ -62,7 +62,7 @@ const K = {
   handTint: 0.62,
 };
 
-/** Offset of the hard shadow, in world px (same direction as the classic terrain shadow). */
+/** Offset of the hard shadow, in world px. */
 export const CEL_SHADOW: [number, number] = [2.5, 3.5];
 
 const f = (n: number) => n.toFixed(4);

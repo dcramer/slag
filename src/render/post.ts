@@ -1,13 +1,13 @@
 /**
- * WebGL2 compositor. Canvas2D paints three layers; this combines them:
+ * WebGL2 compositor. Canvas2D paints the layers and the cel pass (cel-shader.ts) combines them:
  *
- *   scene  — albedo (everything solid), multiplied by the light map
+ *   scene  — the background: sky, skyline, scenery
+ *   fg     — everything the player interacts with, on transparency
  *   light  — half-res light map; 0.5 = neutral, so lights can overbright
  *   glow   — additive emissive layer (fire, lasers, crystals, sparks)
  *
- * then adds two-level bloom, ACES tonemapping, a color grade, vignette,
- * chromatic aberration and film grain. Falls back to Canvas2D blending if
- * WebGL2 isn't available.
+ * Two levels of bloom over the glow layer feed the pass's halos, and tell a beam from a spark.
+ * Falls back to Canvas2D blending if WebGL2 isn't available.
  */
 
 import { reportError, reportEvent } from '../telemetry';
@@ -17,24 +17,11 @@ const VS = `#version 300 es
 in vec2 p; out vec2 uv;
 void main(){ uv = p * 0.5 + 0.5; gl_Position = vec4(p, 0.0, 1.0); }`;
 
-const LIT = `
-uniform sampler2D uScene; uniform sampler2D uLight; uniform sampler2D uGlow;
-vec3 lit(vec2 uv){
-  vec3 s = texture(uScene, uv).rgb;
-  vec3 l = texture(uLight, uv).rgb * 2.0;
-  return s * l + texture(uGlow, uv).rgb;
-}`;
-
+/** Bloom only from what is actually emissive: a white cloud shouldn't halo. */
 const BRIGHT_FS = `#version 300 es
 precision highp float; in vec2 uv; out vec4 o;
-${LIT}
-uniform float uThreshold;
-void main(){
-  vec3 c = lit(uv);
-  float l = max(c.r, max(c.g, c.b));
-  vec3 g = texture(uGlow, uv).rgb;
-  o = vec4(c * smoothstep(uThreshold, uThreshold + 0.45, l) * 0.6 + g * 0.7, 1.0);
-}`;
+uniform sampler2D uGlow;
+void main(){ o = vec4(texture(uGlow, uv).rgb * 0.7, 1.0); }`;
 
 const BLUR_FS = `#version 300 es
 precision highp float; in vec2 uv; out vec4 o;
@@ -48,55 +35,15 @@ void main(){
   o = vec4(c, 1.0);
 }`;
 
-const FINAL_FS = `#version 300 es
-precision highp float; in vec2 uv; out vec4 o;
-uniform sampler2D uScene; uniform sampler2D uLight; uniform sampler2D uGlow;
-uniform sampler2D uBloomA; uniform sampler2D uBloomB;
-uniform float uTime; uniform float uAberr; uniform float uExposure; uniform float uFlash;
-uniform vec3 uTint; uniform vec3 uLift; uniform vec2 uRes;
-float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
-vec3 aces(vec3 x){ return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
-void main(){
-  vec2 d = uv - 0.5;
-  float r2 = dot(d, d);
-  vec2 off = d * (0.0025 + uAberr) * (0.4 + r2 * 3.0);
-  vec3 l = texture(uLight, uv).rgb * 2.0;
-  vec3 s = vec3(texture(uScene, uv + off).r, texture(uScene, uv).g, texture(uScene, uv - off).b);
-  vec3 g = vec3(texture(uGlow, uv + off).r, texture(uGlow, uv).g, texture(uGlow, uv - off).b);
-  vec3 c = s * l + g;
-  c += texture(uBloomA, uv).rgb * 0.4 + texture(uBloomB, uv).rgb * 0.5;
-  c *= uExposure;
-  c = aces(c * 1.05);
-  c = clamp((c - 0.5) * 1.08 + 0.5, 0.0, 1.0);
-  float luma = dot(c, vec3(0.299, 0.587, 0.114));
-  c = mix(vec3(luma), c, 1.12);
-  c = c * uTint + uLift;
-  c = mix(c, vec3(1.0), uFlash);
-  c *= 1.0 - smoothstep(0.18, 0.75, r2) * 0.55;
-  c += (hash(uv * uRes + fract(uTime) * 91.7) - 0.5) * 0.035;
-  o = vec4(pow(max(c, 0.0), vec3(0.98)), 1.0);
-}`;
-
 export interface PostParams {
-  time: number;
-  aberration: number;
   exposure: number;
   flash: number;
   tint: [number, number, number];
   lift: [number, number, number];
-  /** Present only in cel styles: swaps the tonemapped composite for the cel pass. */
-  cel?: CelParams;
-}
-
-export interface CelParams {
-  /** Foreground albedo (transparent); `scene` then holds the background alone. */
-  fg: HTMLCanvasElement;
   /** Pixels per world unit of `fg`. */
   scale: number;
   /** The theme's ambient light, which the light bands sit relative to. */
   ambient: number;
-  /** ART SPIKE: hand-ink treatment. `dx`,`dy` are the world origin in canvas px, so the line noise is pinned to the world. */
-  hand?: { dx: number; dy: number; boil: number; bypass: boolean };
 }
 
 interface Target {
@@ -109,7 +56,7 @@ interface Target {
 export interface Compositor {
   readonly webgl: boolean;
   resize(w: number, h: number): void;
-  render(scene: HTMLCanvasElement, light: HTMLCanvasElement, glow: HTMLCanvasElement, p: PostParams): void;
+  render(scene: HTMLCanvasElement, fg: HTMLCanvasElement, light: HTMLCanvasElement, glow: HTMLCanvasElement, p: PostParams): void;
 }
 
 export function createCompositor(canvas: HTMLCanvasElement): Compositor {
@@ -124,41 +71,51 @@ export function createCompositor(canvas: HTMLCanvasElement): Compositor {
   } catch (e) {
     console.warn('WebGL compositor failed, falling back', e);
     reportError(e, { where: 'compositor-init' });
-    return new Fallback(canvas);
+    return new Fallback(overlay(canvas));
   }
+}
+
+/**
+ * A canvas that has handed out a WebGL context never gives a 2D one, so a shader that won't build
+ * needs a new canvas for the picture. The old one stays underneath: it holds focus and the cursor.
+ */
+function overlay(canvas: HTMLCanvasElement): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none';
+  canvas.after(c);
+  return c;
 }
 
 class GLCompositor implements Compositor {
   readonly webgl = true;
   private progBright: WebGLProgram;
   private progBlur: WebGLProgram;
-  private progFinal: WebGLProgram;
-  /** Built on first use: default players never compile it, and a failure can't touch the default path. */
-  private progCel: WebGLProgram | null | undefined;
-  private texFg: WebGLTexture | null = null;
+  private progCel: WebGLProgram;
   private texScene: WebGLTexture;
+  private texFg: WebGLTexture;
   private texLight: WebGLTexture;
   private texGlow: WebGLTexture;
   private half!: [Target, Target];
   private quarter!: [Target, Target];
   private w = 1;
   private h = 1;
-  private loc = new Map<string, WebGLUniformLocation | null>();
+  private loc = new Map<WebGLProgram, Map<string, WebGLUniformLocation | null>>();
 
   constructor(private gl: WebGL2RenderingContext) {
     const vs = this.shader(gl.VERTEX_SHADER, VS);
     this.progBright = this.program(vs, BRIGHT_FS);
     this.progBlur = this.program(vs, BLUR_FS);
-    this.progFinal = this.program(vs, FINAL_FS);
+    this.progCel = this.program(vs, CEL_FS);
     const buf = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-    for (const p of [this.progBright, this.progBlur, this.progFinal]) {
+    for (const p of [this.progBright, this.progBlur, this.progCel]) {
       const a = gl.getAttribLocation(p, 'p');
       gl.enableVertexAttribArray(a);
       gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
     }
     this.texScene = this.tex();
+    this.texFg = this.tex();
     this.texLight = this.tex();
     this.texGlow = this.tex();
     this.resize(2, 2);
@@ -223,13 +180,10 @@ class GLCompositor implements Compositor {
   }
 
   private u(p: WebGLProgram, name: string) {
-    const key = `${this.progName(p)}:${name}`;
-    if (!this.loc.has(key)) this.loc.set(key, this.gl.getUniformLocation(p, name));
-    return this.loc.get(key)!;
-  }
-
-  private progName(p: WebGLProgram) {
-    return p === this.progBright ? 'b' : p === this.progBlur ? 'z' : p === this.progCel ? 'c' : 'f';
+    let names = this.loc.get(p);
+    if (!names) this.loc.set(p, (names = new Map()));
+    if (!names.has(name)) names.set(name, this.gl.getUniformLocation(p, name));
+    return names.get(name)!;
   }
 
   private upload(t: WebGLTexture, src: HTMLCanvasElement, unit: number) {
@@ -264,35 +218,19 @@ class GLCompositor implements Compositor {
     }
   }
 
-  private celProgram(): WebGLProgram | null {
-    if (this.progCel === undefined) {
-      try {
-        this.progCel = this.program(this.shader(this.gl.VERTEX_SHADER, VS), CEL_FS);
-      } catch (e) {
-        console.warn('Cel pass failed to build, keeping the classic look', e);
-        this.progCel = null;
-      }
-    }
-    return this.progCel;
-  }
-
-  render(scene: HTMLCanvasElement, light: HTMLCanvasElement, glow: HTMLCanvasElement, p: PostParams) {
+  render(scene: HTMLCanvasElement, fg: HTMLCanvasElement, light: HTMLCanvasElement, glow: HTMLCanvasElement, p: PostParams) {
     const gl = this.gl;
-    const cel = p.cel && this.celProgram() ? p.cel : null;
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     // Canvas pixels are premultiplied internally; ask for that so faint additive glow stays faint.
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
     this.upload(this.texScene, scene, 0);
     this.upload(this.texLight, light, 1);
     this.upload(this.texGlow, glow, 2);
+    this.upload(this.texFg, fg, 5);
 
     // Bright pass → half.
     gl.useProgram(this.progBright);
-    gl.uniform1i(this.u(this.progBright, 'uScene'), 0);
-    gl.uniform1i(this.u(this.progBright, 'uLight'), 1);
     gl.uniform1i(this.u(this.progBright, 'uGlow'), 2);
-    // Cel: bloom only from what is actually emissive; a white cloud shouldn't halo.
-    gl.uniform1f(this.u(this.progBright, 'uThreshold'), cel ? 99 : 0.92);
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.half[0].fb);
     gl.viewport(0, 0, this.half[0].w, this.half[0].h);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
@@ -308,39 +246,8 @@ class GLCompositor implements Compositor {
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     this.blur(this.quarter[0], this.quarter[1], 3);
 
-    if (cel) return this.renderCel(cel, p);
-
     // Final.
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.viewport(0, 0, this.w, this.h);
-    gl.useProgram(this.progFinal);
-    this.bindTex(this.texScene, 0);
-    this.bindTex(this.texLight, 1);
-    this.bindTex(this.texGlow, 2);
-    this.bindTex(this.half[0].tex, 3);
-    this.bindTex(this.quarter[0].tex, 4);
-    const f = this.progFinal;
-    gl.uniform1i(this.u(f, 'uScene'), 0);
-    gl.uniform1i(this.u(f, 'uLight'), 1);
-    gl.uniform1i(this.u(f, 'uGlow'), 2);
-    gl.uniform1i(this.u(f, 'uBloomA'), 3);
-    gl.uniform1i(this.u(f, 'uBloomB'), 4);
-    gl.uniform1f(this.u(f, 'uTime'), p.time);
-    gl.uniform1f(this.u(f, 'uAberr'), p.aberration);
-    gl.uniform1f(this.u(f, 'uExposure'), p.exposure);
-    gl.uniform1f(this.u(f, 'uFlash'), p.flash);
-    gl.uniform3f(this.u(f, 'uTint'), ...p.tint);
-    gl.uniform3f(this.u(f, 'uLift'), ...p.lift);
-    gl.uniform2f(this.u(f, 'uRes'), this.w, this.h);
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
-  }
-
-  /** Cel pass: same layers as the final pass plus the foreground, see cel-shader.ts. */
-  private renderCel(c: CelParams, p: PostParams) {
-    const gl = this.gl;
-    const f = this.progCel!;
-    this.texFg ??= this.tex();
-    this.upload(this.texFg, c.fg, 5);
+    const f = this.progCel;
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, this.w, this.h);
     gl.useProgram(f);
@@ -360,29 +267,29 @@ class GLCompositor implements Compositor {
     gl.uniform3f(this.u(f, 'uTint'), ...p.tint);
     gl.uniform3f(this.u(f, 'uLift'), ...p.lift);
     gl.uniform2f(this.u(f, 'uRes'), this.w, this.h);
-    gl.uniform1f(this.u(f, 'uAmbient'), c.ambient);
-    gl.uniform2f(this.u(f, 'uShadow'), (-CEL_SHADOW[0] * c.scale) / this.w, (CEL_SHADOW[1] * c.scale) / this.h);
-    gl.uniform1f(this.u(f, 'uHand'), c.hand ? 1 : 0);
-    gl.uniform3f(this.u(f, 'uView'), c.scale, c.hand?.dx ?? 0, c.hand?.dy ?? 0);
-    gl.uniform1f(this.u(f, 'uBoil'), c.hand?.boil ?? 0);
-    gl.uniform1f(this.u(f, 'uBypass'), c.hand?.bypass ? 1 : 0);
+    gl.uniform1f(this.u(f, 'uAmbient'), p.ambient);
+    gl.uniform2f(this.u(f, 'uShadow'), (-CEL_SHADOW[0] * p.scale) / this.w, (CEL_SHADOW[1] * p.scale) / this.h);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 }
 
-/** Plain Canvas2D blending for browsers without WebGL2. No bloom/tonemap, and no cel pass: it needs per-pixel work. */
+/** Plain Canvas2D blending for browsers without WebGL2. No bloom, bands or ink: those need per-pixel work. */
 class Fallback implements Compositor {
   readonly webgl = false;
   private ctx: CanvasRenderingContext2D;
   constructor(private canvas: HTMLCanvasElement) {
     this.ctx = canvas.getContext('2d')!;
   }
-  resize() {}
-  render(scene: HTMLCanvasElement, light: HTMLCanvasElement, glow: HTMLCanvasElement, p: PostParams) {
+  resize(w: number, h: number) {
+    this.canvas.width = w;
+    this.canvas.height = h;
+  }
+  render(scene: HTMLCanvasElement, fg: HTMLCanvasElement, light: HTMLCanvasElement, glow: HTMLCanvasElement, p: PostParams) {
     const c = this.ctx;
     const { width: w, height: h } = this.canvas;
     c.globalCompositeOperation = 'source-over';
     c.drawImage(scene, 0, 0, w, h);
+    c.drawImage(fg, 0, 0, w, h);
     c.globalCompositeOperation = 'multiply';
     c.drawImage(light, 0, 0, w, h);
     c.globalCompositeOperation = 'color-dodge';

@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { GRAVITY, generateLevel, gravityClass, lastGenInfo, MAX_BRIDGES, rollProfile, withBridges } from '../src/gen/level';
+import { GRAVITY, generateLevel, gravityClass, lastGenInfo, rollProfile, withBridges } from '../src/gen/level';
 import { Match } from '../src/game/match';
 import { overview, viewToWorld, worldToView } from '../src/game/view';
 import { TILE, VIEW_H, VIEW_W } from '../src/sim/constants';
 import type { SizeClass } from '../src/sim/level';
 import { jumpMetrics } from '../src/sim/physics';
-import { analyzeReach, isStandable } from '../src/sim/reach';
+import { analyzeReach } from '../src/sim/reach';
 import { NO_INPUT } from '../src/sim/types';
 import { THEME_IDS } from '../src/themes';
-import { sample, SLOW } from './lib/tier';
+import { expectSizedLevel } from './lib/level-checks';
 
 const seedAt = (i: number) => (i * 2654435761 + 777) >>> 0;
 
@@ -57,28 +57,8 @@ describe('levels of every size class', () => {
     ...THEME_IDS.filter((t) => t !== 'farm' && t !== 'harbor').map((t) => ({ t, size: 'tall' as SizeClass })),
     ...THEME_IDS.map((t) => ({ t, size: 'wide' as SizeClass })),
   ];
-  it('generate valid, policy-solvable levels with zero fallbacks (real analyzeReach)', { timeout: 240_000 }, () => {
-    const hazards = new Set<number>();
-    for (const { t, size } of cases) {
-      for (let i = 0; i < sample(1, 3); i++) {
-        const seed = seedAt(i + 40);
-        const l = generateLevel(seed, t, { size });
-        const info = { ...lastGenInfo };
-        expect(info.fallback, `${t} ${size} ${seed}`).toBe(false);
-        expect(l.profile!.size).toBe(size);
-        expect(l.tiles.length).toBe(l.w * l.h);
-        if (size === 'tall') expect(l.h).toBeGreaterThan(l.w);
-        else expect(l.w).toBeGreaterThan(l.h * 2);
-        expect(isStandable(l, l.spawn.tx, l.spawn.ty)).toBe(true);
-        expect(isStandable(l, l.goal.tx, l.goal.ty)).toBe(true);
-        expect(info.bridges.length).toBeLessThanOrEqual(MAX_BRIDGES);
-        expect(analyzeReach(info.bridges.length ? withBridges(l, info.bridges) : l).goalReached, `${t} ${size} ${seed}`).toBe(true);
-        expect(l.setPieces.length).toBeLessThanOrEqual(l.profile!.hazards);
-        hazards.add(l.setPieces.length);
-        for (const p of l.setPieces) for (const [x, y] of p.def.footprint) expect(x + p.tx < l.w && y + p.ty < l.h).toBe(true);
-      }
-    }
-    if (SLOW) expect(hazards.size).toBeGreaterThanOrEqual(3);
+  it('generate valid, policy-solvable levels with zero fallbacks (real analyzeReach)', { timeout: 120_000 }, () => {
+    for (const { t, size } of cases) expectSizedLevel(t, size, seedAt(40));
   });
 
   it('tall routes really climb (or descend) most of the height', { timeout: 120_000 }, () => {
