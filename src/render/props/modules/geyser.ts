@@ -674,13 +674,12 @@ function drawColumn(rc: RC, m: Geyser, d: DrawCtx) {
     s.restore();
     enter(g, a);
     for (let yy = 0; yy > top; yy -= 7) glowDot(g, Math.sin(yy * 0.3 + rc.t * 9) * 1.5, yy, w * 0.95, LAVA, 0.55 * k, 0.4);
-    // The white-hot core: a ribbon swaying with the column's glow, rounded off under the crown.
+    // The white-hot core: a ribbon swaying with the column's glow, thinning out under the crown.
     const core: P[] = [];
     for (let yy = 0; yy > top + 4; yy -= 4) core.push({ x: Math.sin(yy * 0.3 + rc.t * 9) * 0.6, y: yy });
     core.push({ x: 0, y: top + 4 });
     g.fillStyle = css(HOT, 25, 0.9 * k);
-    stroke(g, core, { w: w * 0.25, seed: 7, taper: [0, 0.06], press: 0.25 });
-    circle(g, 0, top + 4 + w * 0.06, w * 0.11);
+    stroke(g, core, { w: w * 0.25, seed: 7, taper: [0, 0.1], press: 0.25 });
     for (let i = 0; i < 5; i++) {
       const an = -Math.PI / 2 + (i - 2) * 0.5 + Math.sin(rc.t * 7 + i) * 0.2;
       const r = 3 + (i % 2) * 2;
