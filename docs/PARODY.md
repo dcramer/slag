@@ -103,6 +103,7 @@ Set pieces keep their theme. Where one mocks a cliché, it says so in its look.
 |---|---|---|---|
 | castle | Boss-Room Cannon, Load-Bearing Chandelier, Door Knocker | Castle chandelier rides, the boss door | The ram has a door-knocker ring on its head. |
 | factory | Pancake Press, Forklift, Cog Lift | The factory level | The press leaves a pancake-shaped dent. |
+| factory | Slag Ladle, Robot Arm; the Foundry, the Boiler House, the Robot Line | The molten-metal factory level, the car plant's robots, the bad factory's boiler room | The ladle pours on a schedule and the slag spills along the floor. The robots weld a car body between them on the line, and a car goes by on the overhead hooks. The stack's lamp blinks on its cap. |
 | jungle | Log Ride, Chase-Scene Boulder, Cursed Idol, Snapjaw, Log Trap | The rolling-boulder chase, the cursed idol, the man-eating plant, the swinging log trap | The boulder has a film-reel scratch line. The idol is a carved stone stela with a gem in its crown that glows when it fires. The snapjaw's lobes twitch before they shut, a plant and nothing more. The log is spiked at both ends and swings level on two ropes. |
 | volcano | Floor Is Lava, Magma Vent, Magma Spitter | The floor is lava | A couch-cushion stepping stone sits beside the plume. |
 | mine | Mandatory Minecart, Tunnel Drill, Ore Bucket, Runaway Cart, Cave-In, Firedamp | The minecart level every game has, the cave-in | A "LEVEL 4-2"-style track sign on the cart. The runaway rings its bell before it goes, like a level start. |
