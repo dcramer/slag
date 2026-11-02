@@ -19,6 +19,8 @@
     "typescript/no-deprecated": "warn",
     "typescript/no-explicit-any": "off",
     "typescript/no-unsafe-type-assertion": "off",
+    // tsgolint false positives; its --fix removed assertions tsc needs (PropDef | null narrowing).
+    "typescript/no-unnecessary-type-assertion": "off",
     "typescript/unbound-method": "off",
     "typescript/consistent-return": "off",
     "unicorn/no-array-for-each": "off",

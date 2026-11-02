@@ -1,12 +1,16 @@
-import type { Rect, Vec } from '../../../core/geom';
+import type { Vec } from '../../../core/geom';
 import { TILE } from '../../constants';
 import { type Level, tileAt } from '../../level';
+import { type Wind, windSpeed } from '../../wind';
 import { cellOf, defineModule } from '../registry';
 import { dirOf } from '../transform';
 import type { ModuleOf } from '../types';
 
-/** Wind zone of a fan, truncated at the first solid tile. */
-export function fanZone(level: Level, m: ModuleOf<'fan'>, off: Vec = [0, 0]): Rect & { ax: number; ay: number } {
+/**
+ * Wind column of a fan, truncated at the first solid tile. Fans never cycle:
+ * the column is always on at windSpeed(strength). The art draws from this too.
+ */
+export function fanZone(level: Level, m: ModuleOf<'fan'>, off: Vec = [0, 0]): Wind {
   const [dx, dy] = dirOf(m.angle);
   const tx = Math.floor(m.at[0] / TILE);
   const ty = Math.floor(m.at[1] / TILE);
@@ -16,7 +20,7 @@ export function fanZone(level: Level, m: ModuleOf<'fan'>, off: Vec = [0, 0]): Re
   const y0 = Math.min(ty, ty + dy * len) + (dy > 0 ? 1 : 0);
   const w = dx !== 0 ? len : 1;
   const h = dy !== 0 ? len : 1;
-  return { x: x0 * TILE - 2 + off[0], y: y0 * TILE - 2 + off[1], w: w * TILE + 4, h: h * TILE + 4, ax: dx * m.strength, ay: dy * m.strength };
+  return { x: x0 * TILE - 2 + off[0], y: y0 * TILE - 2 + off[1], w: w * TILE + 4, h: h * TILE + 4, dx, dy, speed: windSpeed(m.strength), k: 1 };
 }
 
 export const fan = defineModule<'fan'>({

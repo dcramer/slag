@@ -2,6 +2,7 @@ import type { Cell, Rect, Vec } from '../../core/geom';
 import type { Level } from '../level';
 import type { Solid } from '../physics';
 import type { GameEvent } from '../types';
+import type { Wind } from '../wind';
 import type { Ammo, Module, PropState, Resolved } from './types';
 
 /**
@@ -26,10 +27,7 @@ export interface SpringTrigger {
   uid: number;
 }
 
-export interface Wind extends Rect {
-  ax: number;
-  ay: number;
-}
+export type { Wind } from '../wind';
 
 /** What a module adds to the world for one frame. */
 export interface Contrib {

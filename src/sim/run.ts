@@ -21,6 +21,7 @@ import {
   type TickCtx,
 } from './props';
 import type { GameEvent, InputFrame } from './types';
+import { windAt } from './wind';
 import { NO_INPUT } from './types';
 
 export type { PropState } from './props';
@@ -163,22 +164,15 @@ export class RunWorld {
       // Finished runners lose control but keep falling, landing and riding
       // platforms naturally. Nothing can hurt them and they don't push anyone.
       if (r.finished) {
-        if (r.body.y <= KILL_Y) stepBody(r.body, NO_INPUT, this.world);
+        if (r.body.y <= KILL_Y) stepBody(r.body, NO_INPUT, this.world, windAt(r.body, this.out.winds));
         return;
       }
       const inp = live ? (inputs[i] ?? NO_INPUT) : NO_INPUT;
       const b = r.body;
       if (inp.altPressed) return this.kill(r, -1, 'pop');
 
-      for (const w of this.out.winds) {
-        if (overlaps(b, w)) {
-          b.vx += w.ax * DT;
-          b.vy += w.ay * DT;
-          if (b.vy < -420) b.vy = -420;
-          if (w.ay < 0) b.onGround = false;
-        }
-      }
-      if (!stepBody(b, inp, this.world) && !this.isSafe(r)) {
+      // Wind is a velocity field applied inside stepBody (sim/wind.ts); grounding stays physics' call.
+      if (!stepBody(b, inp, this.world, windAt(b, this.out.winds)) && !this.isSafe(r)) {
         // Credit whoever's moving solid did the squishing.
         const s = this.solids.find((s) => s.propUid >= 0 && overlaps(b, s));
         const owner = s ? (this.resolved.find((x) => x.pp.uid === s.propUid)?.pp.owner ?? -1) : -1;

@@ -1,6 +1,7 @@
 import { approach as approachImport, overlaps as overlapsImport, type Rect } from '../core/geom';
 import { DT as DT_IMPORT, PHYS as PHYS_IMPORT, PLAYER_H, PLAYER_W, TILE as TILE_IMPORT } from './constants';
 import { T_EMPTY as T_EMPTY_IMPORT, T_ONEWAY as T_ONEWAY_IMPORT } from './level';
+import { WIND, type WindForce, windGravityScale, windPushY } from './wind';
 
 // Hot-path imports rebound to module locals: under vitest (vite SSR transform)
 // every access to an imported binding becomes a namespace getter call, which
@@ -365,10 +366,11 @@ function wallJump(b: Body, dir: -1 | 1, surf: Surface, held: number): void {
 }
 
 /**
- * Advance one body one fixed step. Deterministic given (body, controls, world).
+ * Advance one body one fixed step. Deterministic given (body, controls, world, wind).
+ * `wind` (see sim/wind.ts) is the air this body is in this frame, if any.
  * Returns false if the body was crushed.
  */
-export function stepBody(b: Body, c: Controls, world: CollisionWorld): boolean {
+export function stepBody(b: Body, c: Controls, world: CollisionWorld, wind: WindForce | null = null): boolean {
   // Ride whatever we were standing on.
   if (b.groundRef >= 0) {
     const s = findSolid(world, b.groundRef);
@@ -399,7 +401,9 @@ export function stepBody(b: Body, c: Controls, world: CollisionWorld): boolean {
   if (b.onGround) b.coyote = PHYS.coyoteFrames;
   else if (b.coyote > 0) b.coyote--;
 
-  // Horizontal.
+  // Horizontal. In a side wind the controller steers relative to the moving air.
+  const airVx = wind ? wind.vx : 0;
+  b.vx -= airVx;
   const surf = b.onGround ? b.surface : DEFAULT_SURFACE;
   const top = (c.run ? PHYS.runSpeed : PHYS.walkSpeed) * surf.speedMult;
   const target = dir * top + (b.onGround ? surf.conveyor : 0);
@@ -408,7 +412,8 @@ export function stepBody(b: Body, c: Controls, world: CollisionWorld): boolean {
     b.wallLock--;
     accel *= PHYS.wallJumpLockAccelMult;
   }
-  b.vx = approach(b.vx, target, accel * DT);
+  if (airVx !== 0 && dir === 0 && accel < WIND.grip) accel = WIND.grip;
+  b.vx = approach(b.vx, target, accel * DT) + airVx;
 
   // Vertical.
   let g = PHYS.gravity;
@@ -419,7 +424,7 @@ export function stepBody(b: Body, c: Controls, world: CollisionWorld): boolean {
     maxFall = PHYS.fastFallMax;
   } else if (air && b.jumping && c.jump && b.vy > -PHYS.apexVelBand && b.vy < PHYS.apexVelBand) g *= PHYS.apexGravityMult;
   else if (b.vy > 0) g *= PHYS.fallGravityMult;
-  b.vy += g * DT;
+  b.vy += g * (wind ? windGravityScale(b.vy, wind) : 1) * DT;
   if (air && b.wallDir !== 0 && dir === b.wallDir && !down) {
     const kind = wallKind(b.wallSurface);
     const cap = kind === 'sticky' ? PHYS.wallStickySlideMax : kind === 'normal' ? PHYS.wallSlideMax : maxFall;
@@ -452,6 +457,7 @@ export function stepBody(b: Body, c: Controls, world: CollisionWorld): boolean {
     if (b.vy < -PHYS.jumpCutVel) b.vy = -PHYS.jumpCutVel;
     b.jumping = false;
   }
+  if (wind) windPushY(b, wind, g);
 
   // Integrate.
   if (moveX(b, b.vx * DT, world)) b.vx = 0;
