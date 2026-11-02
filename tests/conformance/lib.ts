@@ -1,0 +1,95 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { expect, it } from 'vitest';
+import { moduleArt } from '../../src/render/props/common';
+import '../../src/render/props/modules';
+import { RUN_COUNTDOWN } from '../../src/sim/constants';
+import type { Level } from '../../src/sim/level';
+import { type Contrib, moduleSim, newPropState, type PlacedProp, resolveProp, traceRays, type Module } from '../../src/sim/props';
+import { TELLS, tellFaults } from '../../src/gen/setpieces';
+import { safeWindowFaults } from '../lib/set-piece-checks';
+
+/**
+ * The conformance suite's shared machinery (tests/conformance/*.test.ts): every registered entry of every
+ * generated kind, held to its declared contract on a fixed small set of seeds, sizes and gravities. A new
+ * landmark, decor piece, hazard or part is covered the moment it's registered.
+ *
+ * Each rule of each entry is one test. A known violation that can't be fixed in the change that found it
+ * goes in WAIVERS with the reason, and its test shows as a todo until the entry is fixed; delete the line
+ * then. Never waive a new entry: fix it.
+ */
+
+/** `<kind>/<theme>/<id>/<rule>` → why it's waived, and what fixes it. */
+export const WAIVERS: Record<string, string> = {
+  'landmark/castle/throne-hall/varies':
+    'a classic Throne Hall is one building: its plan is a function of its box alone (manorPlan/throneHallPlan); pending the owner decision that every landmark varies with its seed',
+  'landmark/factory/stamping-line/varies':
+    'a classic Stamping Line rolls the same line on most seeds; pending the owner decision that every landmark varies with its seed',
+};
+
+/** One rule of one entry: fails listing every fault it finds, or a todo while it's waived. */
+export function rule(key: string, name: string, faults: () => string[]): void {
+  const why = WAIVERS[key];
+  if (why) {
+    it.todo(`${name} — waived: ${why}`);
+    return;
+  }
+  it(name, () => {
+    const found = faults();
+    expect(found, `${key}:\n  ${found.join('\n  ')}`).toEqual([]);
+  });
+}
+
+/** Computed on first use, then shared by every test that asks. */
+export function once<T>(make: () => T): () => T {
+  let v: { t: T } | null = null;
+  return () => (v ??= { t: make() }).t;
+}
+
+const ART_DIR = join(__dirname, '../../src/render/props/modules');
+const artSources = once(() => readdirSync(ART_DIR).map((f) => readFileSync(join(ART_DIR, f), 'utf8')));
+
+/** Modules of `pp` with no art registered (src/render/props/modules). */
+export function artFaults(pp: PlacedProp): string[] {
+  return [...new Set(pp.def.modules.map((m) => m.type))].filter((t) => moduleArt(t).length === 0).map((t) => `${pp.def.name}: no art for ${t}`);
+}
+
+/**
+ * The hazard half of a set piece's contract, simulated over a cycle: everything that hurts declares how
+ * it telegraphs (TELLS) and warns long enough, what reaches through space is drawn from the sim's reach
+ * (its art reads `beamOf`, so the beam stops where it stops hurting), and nothing is lethal every frame
+ * unless it never moves.
+ */
+export function hazardFaults(level: Level, pp: PlacedProp): string[] {
+  const out = tellFaults(pp.def.modules).map((f) => `${pp.def.name}: ${f}`);
+  const r = resolveProp(pp);
+  const state = newPropState();
+  const hurts = new Set<string>();
+  const beams = new Set<string>();
+  for (let f = RUN_COUNTDOWN; f < RUN_COUNTDOWN + 600; f += 4) {
+    const c: Contrib = { solids: [], hazards: [], springs: [], winds: [], beams: [] };
+    const ctx = (rp: typeof r, mi: number) => ({
+      level,
+      frame: f,
+      r: rp,
+      off: [0, 0] as [number, number],
+      prev: [0, 0] as [number, number],
+      state,
+      mi,
+      live: true,
+    });
+    r.mods.forEach((m: Module, mi) => {
+      const n = c.hazards.length;
+      moduleSim(m.type).build?.(m, ctx(r, mi), c);
+      if (c.hazards.length > n) hurts.add(m.type);
+    });
+    traceRays([r], ctx, c);
+    for (const b of c.beams ?? []) beams.add(r.mods[b.mi].type);
+  }
+  for (const t of hurts) if (!(t in TELLS)) out.push(`${pp.def.name}: ${t} hurts but has no tell in TELLS (src/gen/setpieces/contract.ts)`);
+  for (const t of beams)
+    if (!artSources().some((src) => src.includes(`type: '${t}'`) && src.includes('beamOf(')))
+      out.push(`${pp.def.name}: ${t} reaches through space but its art doesn't draw from beamOf`);
+  out.push(...safeWindowFaults(level, pp));
+  return out;
+}
