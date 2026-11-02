@@ -1,0 +1,51 @@
+/**
+ * The shape of a kind rendered from 3D (tools/art3d): generated `frames.ts` modules fill it, and
+ * `src/render/cast/sprites` draws it. A frame is the figure cut into flat parts, traced and simplified,
+ * so the game fills and inks it with the cast's own pen at whatever size it's shown.
+ */
+
+/**
+ * An outline: x, y pairs in eighths of a world px about the feet (y down), as little-endian int16s in
+ * base64, so a kind's frames are one compact string per shape (`ringPoints` decodes it).
+ */
+export type Ring = string;
+
+export interface VFrame {
+  /** The silhouette's outer outlines. */
+  sil: readonly Ring[];
+  /** Parts back to front: the role, then its outline. */
+  parts: readonly (readonly [number, Ring])[];
+  /** Catch-lights in the eyes: x, y, radius in eighths of a world px. */
+  glints?: readonly number[];
+}
+
+export interface SpriteClip {
+  loop: boolean;
+  /** Plays at this rate... */
+  fps?: number;
+  /** ...or advances with distance: world px of travel per loop, so the feet keep pace. */
+  stride?: number;
+  /** ...or is posed by vertical speed: the first frame at `vy[0]` px/s, the last at `vy[1]`. */
+  vy?: readonly [number, number];
+  /** Seconds on each frame, instead of an even rate. */
+  holds?: readonly number[];
+  /** Facing right and facing left: each facing is rendered from the model, so the light stays up-left. */
+  r: readonly VFrame[];
+  l: readonly VFrame[];
+}
+
+/** One material, as the game paints it. */
+export interface SpriteRole {
+  /** The roster's flat colour (hex), unless a slot moves it. */
+  color: string;
+  /** Drawn in the kind's own colour (`paint`) or the player's (`player`). */
+  slot?: 'paint' | 'player';
+}
+
+export interface SpriteSet {
+  kind: string;
+  /** World px from soles to the top of the head at rest. */
+  height: number;
+  roles: readonly SpriteRole[];
+  clips: Readonly<Record<string, SpriteClip>>;
+}

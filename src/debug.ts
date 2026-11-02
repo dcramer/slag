@@ -1,9 +1,11 @@
 import { parseSeed, Rng } from './core/rng';
 import type { Match } from './game/match';
+import { CAST, generateCharacter, type Kind } from './gen/character';
 import { ARCHETYPE_WEIGHTS, type Archetype, DEMOLISH, generateProp } from './gen/props';
 import type { NetSession } from './net/session';
 import { hashMatch, snapshotMatch, toWire } from './net/snapshot';
-import { castBench, castCatalog, castRecognise, castSilhouettes } from './render/cast/sheet';
+import { blindOrder, castBench, castBlind, castCatalog, castRecognise, castSilhouettes } from './render/cast/sheet';
+import { useSprites } from './render/cast/sprites';
 import type { Renderer } from './render/renderer';
 import { giveItem, ITEM_KINDS, type ItemKind } from './sim/items';
 import { canPlace, landedDef, linkPipes, type PropDef } from './sim/props';
@@ -33,6 +35,7 @@ import type { ThemeId } from './themes';
  *   ?debug=1            open the dev overlay (see installDevtoolsHooks)
  *   ?give=sword,puck    hand race runners these held items, cycled (`all` = one of each)
  *   ?lettering=0        no impact words (read by the Renderer)
+ *   ?sprites=1          draw the kinds rendered from 3D models (render/cast/sprites, tools/art3d) in place of their hand-drawn bodies
  *   ?zoom=1             force the phone camera on (`?zoom=0` off, `?zoom=2.4` pins a zoom); see render/camera-follow.ts
  */
 export interface SlagDebug {
@@ -68,7 +71,16 @@ export interface SlagDebug {
   /** The confirmed match as wire data, exactly what `hash` covers: tools diff two of these to find where peers or engines part. */
   snapshot(): unknown;
   /** The cast (docs/CHARACTERS.md): a catalog canvas of every kind, the silhouette test, and a draw-cost bench. */
-  cast: { catalog: typeof castCatalog; silhouettes: typeof castSilhouettes; recognise: typeof castRecognise; bench: typeof castBench };
+  cast: {
+    catalog: typeof castCatalog;
+    silhouettes: typeof castSilhouettes;
+    recognise: typeof castRecognise;
+    bench: typeof castBench;
+    blind: typeof castBlind;
+    blindOrder: typeof blindOrder;
+  };
+  /** Kinds rendered from 3D models (tools/art3d): turn them on or off. */
+  sprites: { use: typeof useSprites; dress(slot: number, kind: string): void };
 }
 
 export interface LoopControl {
@@ -86,7 +98,15 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
     match,
     renderer,
     net,
-    cast: { catalog: castCatalog, silhouettes: castSilhouettes, recognise: castRecognise, bench: castBench },
+    cast: { catalog: castCatalog, silhouettes: castSilhouettes, recognise: castRecognise, bench: castBench, blind: castBlind, blindOrder },
+    sprites: {
+      use: useSprites,
+      // For shots: put a seated player in a given kind (a look is cosmetic, and only this match sees it).
+      dress(slot: number, kind: string) {
+        const p = match.player(slot);
+        if (p && (CAST as readonly string[]).includes(kind)) p.character = { ...generateCharacter(p.character.seed, kind as Kind), name: p.character.name };
+      },
+    },
     quickStart(players = 2) {
       for (let i = 0; i < players; i++) match.join(dev(DEVICES[i]));
       if (match.phase === 'lobby') match.startMatch();
@@ -146,6 +166,7 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
   });
 
   const q = new URLSearchParams(location.search);
+  if (q.get('sprites') === '1') useSprites(true);
   const force: ProfileOverride = {};
   const size = q.get('size');
   if (size === 'classic' || size === 'wide' || size === 'tall') force.size = size;
