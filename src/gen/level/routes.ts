@@ -28,7 +28,7 @@ import { BRIDGE_W, type BridgeHint } from './types';
  * platform 3 rows above the floor is a separate lane, and one plain jump
  * from the floor below it.
  */
-export const CLEARANCE = 2;
+const CLEARANCE = 2;
 /** Most of the fastest route its best alternative may share. */
 export const MAX_SHARED = 0.6;
 

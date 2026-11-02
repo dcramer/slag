@@ -169,8 +169,6 @@ export interface TerrainLook {
   outline: HSL;
   /** Optional second material for deep tiles (e.g. topsoil over rock, planks over a stone quay). */
   sub: { kind: TerrainKind; base: HSL; dark: HSL; light: HSL; depth: number } | null;
-  /** 0..1 how strongly the CC0 detail texture shows through. */
-  detail: number;
   /** One-way (jump-through) platform style. */
   platform: { kind: PlatformKind; color: HSL };
   /** Tones of the level's own ice (Level.ground), for themes that lay it: drawn as the 'ice' material. */

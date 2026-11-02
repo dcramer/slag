@@ -74,7 +74,7 @@ export interface TallKit {
 }
 
 /** Plan and build a tall level with a theme kit. */
-export function sculptTall(ctx: SculptCtx, kit: TallKit): Shape {
+function sculptTall(ctx: SculptCtx, kit: TallKit): Shape {
   const { rng, attempt } = ctx;
   const k = knobs(ctx);
   const { W, H } = k;
@@ -276,7 +276,7 @@ function stairW(rise: number): number {
  * storey to the upper one in direction l.dir, with the upper floor cleared
  * above the lower steps (a stairwell).
  */
-export function stairFlight(g: Grid, l: Link, rise: number, v: number = T_SOLID, thick = 1): void {
+function stairFlight(g: Grid, l: Link, rise: number, v: number = T_SOLID, thick = 1): void {
   const D = l.lower.row - l.upper.row;
   const m = Math.ceil(D / rise);
   const start = l.dir > 0 ? l.x : l.x + l.w - 2;
@@ -303,7 +303,7 @@ export function stairFlight(g: Grid, l: Link, rise: number, v: number = T_SOLID,
  * upper floor, with staggered one-way rungs every `rise` rows; the upper
  * floor over the shaft becomes one-way (jump up through it).
  */
-export function rungShaft(g: Grid, l: Link, rise: number, rungW = 2): void {
+function rungShaft(g: Grid, l: Link, rise: number, rungW = 2): void {
   const x0 = l.x;
   const x1 = l.x + l.w - 1;
   g.clear(x0, l.upper.row + 1, x1, l.lower.row);

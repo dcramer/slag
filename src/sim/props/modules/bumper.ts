@@ -3,7 +3,7 @@ import { addTrigger, cellOf, defineModule, solidId } from '../registry';
 /** Frames the bumper stays lit after a kick (art). */
 export const BUMPER_FLASH = 12;
 /** Minimum upward speed (px/s) after a kick, so side hits on the ground still hop you clear. */
-export const BUMPER_LIFT = 140;
+const BUMPER_LIFT = 140;
 
 /**
  * Pinball bumper: touching it sets your velocity straight away from its

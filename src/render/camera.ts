@@ -4,7 +4,7 @@ import { VIEW_H, VIEW_W } from '../sim/constants';
 import { VIEW_FRAME, type ViewFrame } from './frame';
 
 /** View px every framed runner stays inside the window's edge: clear of the corner chips and footer. */
-export const FRAME_MARGIN = 36;
+const FRAME_MARGIN = 36;
 /** Rate zoom eases back in at (per second), against 3.2 for everything else. */
 const ZOOM_IN_RATE = 1.2;
 

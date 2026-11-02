@@ -109,11 +109,6 @@ export function isProtected(level: Level, tx: number, ty: number): boolean {
   return false;
 }
 
-/** World size in px. */
-export function worldSize(level: Level): { w: number; h: number } {
-  return { w: level.w * TILE, h: level.h * TILE };
-}
-
 /** World y of the floor under a stand cell: where a runner's feet rest, and so where the spawn ring and the flag's base are drawn. */
 export function floorY(cell: { ty: number }): number {
   return (cell.ty + 1) * TILE;
@@ -125,8 +120,8 @@ export function killY(level: Level): number {
 }
 
 /** Goal trigger reach: px past each side of the flag cell, and tiles above it. */
-export const GOAL_PAD_X = 6;
-export const GOAL_REACH_UP = 4;
+const GOAL_PAD_X = 6;
+const GOAL_REACH_UP = 4;
 
 /**
  * The flag's finish trigger: the flag cell widened by GOAL_PAD_X px each side

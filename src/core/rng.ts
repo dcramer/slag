@@ -16,7 +16,7 @@ export function hashString(s: string): number {
 }
 
 /** Mix two 32-bit ints into a well-distributed 32-bit int (murmur3 finalizer). */
-export function mix32(a: number, b: number): number {
+function mix32(a: number, b: number): number {
   let h = (a ^ Math.imul(b, 0x9e3779b1)) >>> 0;
   h ^= h >>> 16;
   h = Math.imul(h, 0x85ebca6b);
@@ -90,11 +90,6 @@ export class Rng {
     }
     return arr;
   }
-}
-
-/** Non-deterministic seed for the app layer (picking a new match). Never call from sim code. */
-export function randomSeed(): number {
-  return (Math.random() * 4294967296) >>> 0;
 }
 
 export function seedToString(seed: number): string {

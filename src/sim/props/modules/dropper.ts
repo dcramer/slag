@@ -18,10 +18,10 @@ export const DROP_REST = 3;
 export const DROP_RISE = 4;
 
 /** Slam acceleration and top speed (px/frame², px/frame), return speed (px/frame), re-arm delay (frames). */
-export const DROP_ACCEL = 0.6;
-export const DROP_MAX = 9;
-export const DROP_RISE_SPEED = 0.75;
-export const DROP_COOL = 30;
+const DROP_ACCEL = 0.6;
+const DROP_MAX = 9;
+const DROP_RISE_SPEED = 0.75;
+const DROP_COOL = 30;
 
 export interface DropperPose {
   state: number;

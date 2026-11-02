@@ -35,7 +35,7 @@ const RACE_MAX_ZOOM = 1.45;
 const RACE_PAD = 120;
 
 /** Look-ahead at full run speed, as a share of the visible width. */
-export const LOOK_AHEAD = 0.2;
+const LOOK_AHEAD = 0.2;
 /** Facing bias standing still, as a share of the full look-ahead. */
 const IDLE_LOOK = 0.25;
 /** Half the vertical dead zone, as a share of the visible height. */

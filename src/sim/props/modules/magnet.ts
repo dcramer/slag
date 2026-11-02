@@ -6,14 +6,14 @@ import type { ModuleOf } from '../types';
 type Magnet = ModuleOf<'magnet'>;
 
 /** Speed caps (px/s) inside a field, so a strong well can't fling you across the map. */
-export const MAGNET_VX = 300;
-export const MAGNET_UP = 360;
+const MAGNET_VX = 300;
+const MAGNET_UP = 360;
 /**
  * Seconds of field force a grounded runner feels per frame as direct drift
  * (px/s = force × this). Ground friction would otherwise eat the whole force,
  * and a well that can't drag you off a ledge isn't much of a well.
  */
-export const MAGNET_GROUND_DRIFT = 0.12;
+const MAGNET_GROUND_DRIFT = 0.12;
 
 /** Segments: 0 off, 1 warn (charging), 2 on. Always-on fields (off 0) report seg 2. */
 export function magnetCycle(m: Magnet, f: number, phase: number) {

@@ -69,8 +69,6 @@ describe('theme look generation', () => {
         expect(th.celestial.x).toBeGreaterThanOrEqual(0);
         expect(th.celestial.x).toBeLessThanOrEqual(1);
         expect(th.stars).toBeGreaterThanOrEqual(0);
-        expect(th.terrain.detail).toBeGreaterThanOrEqual(0);
-        expect(th.terrain.detail).toBeLessThanOrEqual(1);
       }
     }
   });

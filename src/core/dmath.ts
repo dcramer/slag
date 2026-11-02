@@ -37,11 +37,6 @@ function withHighWord(x: number, hi: number): number {
   return F64[0];
 }
 
-function lowWord(x: number): number {
-  F64[0] = x;
-  return U32[LO] >>> 0;
-}
-
 /** 2^k, exact, for integer k in [-1074, 1023]. */
 function pow2(k: number): number {
   if (k > 1023) return Infinity;
@@ -314,9 +309,4 @@ export function dpow(x: number, y: number): number {
 /** x², spelled out (the `**` operator is Math.pow under the hood). */
 export function sq(x: number): number {
   return x * x;
-}
-
-/** Exposed for tests: bit pattern of a double as [hi, lo]. */
-export function bitsOf(x: number): [number, number] {
-  return [highWord(x) >>> 0, lowWord(x)];
 }

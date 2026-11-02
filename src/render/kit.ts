@@ -92,56 +92,11 @@ export const METALS: Record<MetalStyle, MetalPalette> = {
   gold: { base: { h: 46, s: 85, l: 52 }, dark: { h: 36, s: 80, l: 24 }, light: { h: 50, s: 95, l: 74 }, spec: { h: 55, s: 100, l: 94 } },
 };
 
-/** Brushed-metal fill: vertical-ish gradient with a specular band. */
-export function metalFill(ctx: CanvasRenderingContext2D, m: MetalPalette, x: number, y: number, w: number, h: number, angle = 0): CanvasGradient {
-  const c = Math.cos(angle + Math.PI / 2);
-  const s = Math.sin(angle + Math.PI / 2);
-  const cx = x + w / 2;
-  const cy = y + h / 2;
-  const L = Math.max(w, h) / 2;
-  const g = ctx.createLinearGradient(cx - c * L, cy - s * L, cx + c * L, cy + s * L);
-  g.addColorStop(0, css(m.light));
-  g.addColorStop(0.18, css(m.spec));
-  g.addColorStop(0.32, css(m.base));
-  g.addColorStop(0.75, css(m.base, -6));
-  g.addColorStop(1, css(m.dark));
-  return g;
-}
-
-/** Spherical shading for balls, hubs, eyes. */
-export function sphereFill(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, base: HSL, lift = 30, drop = 25): CanvasGradient {
-  const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.05, x, y, r);
-  g.addColorStop(0, css(base, lift));
-  g.addColorStop(0.45, css(base));
-  g.addColorStop(1, css(base, -drop));
-  return g;
-}
-
 export function rivet(ctx: CanvasRenderingContext2D, x: number, y: number, m: MetalPalette, r = 1.1) {
   ctx.fillStyle = css(m.dark);
   circle(ctx, x + 0.3, y + 0.4, r);
   ctx.fillStyle = css(m.light);
   circle(ctx, x - 0.2, y - 0.2, r * 0.8);
-}
-
-/** Yellow/black hazard stripes clipped to a rect. */
-export function hazardStripes(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, a = 0.9) {
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(x, y, w, h);
-  ctx.clip();
-  ctx.fillStyle = `rgba(20,20,20,${a})`;
-  ctx.fillRect(x, y, w, h);
-  ctx.fillStyle = `rgba(250,200,40,${a})`;
-  for (let i = -h; i < w + h; i += 6) {
-    ctx.beginPath();
-    ctx.moveTo(x + i, y + h);
-    ctx.lineTo(x + i + 3, y + h);
-    ctx.lineTo(x + i + 3 + h, y);
-    ctx.lineTo(x + i + h, y);
-    ctx.fill();
-  }
-  ctx.restore();
 }
 
 /** A tiny wobbly jagged polyline (lightning). Cosmetic randomness is fine here. */
@@ -159,42 +114,6 @@ export function lightning(ctx: CanvasRenderingContext2D, x1: number, y1: number,
     ctx.lineTo(x1 + dx * t + nx * o, y1 + dy * t + ny * o);
   }
   ctx.lineTo(x2, y2);
-}
-
-/** Tileable value noise generator for procedural textures. */
-export function makeNoise(seed: number, period: number) {
-  const N = period;
-  const vals = new Float32Array(N * N);
-  let s = seed >>> 0 || 1;
-  for (let i = 0; i < vals.length; i++) {
-    s = (Math.imul(s ^ (s >>> 15), 0x2c1b3c6d) + 0x9e3779b9) >>> 0;
-    vals[i] = (s >>> 8) / 16777216;
-  }
-  const v = (x: number, y: number) => vals[(((y % N) + N) % N) * N + (((x % N) + N) % N)];
-  const sm = (t: number) => t * t * (3 - 2 * t);
-  const noise = (x: number, y: number) => {
-    const xi = Math.floor(x);
-    const yi = Math.floor(y);
-    const fx = sm(x - xi);
-    const fy = sm(y - yi);
-    const a = v(xi, yi) + (v(xi + 1, yi) - v(xi, yi)) * fx;
-    const b = v(xi, yi + 1) + (v(xi + 1, yi + 1) - v(xi, yi + 1)) * fx;
-    return a + (b - a) * fy;
-  };
-  /** fbm in [0,1], tileable over `period` lattice cells at octave 0. */
-  return (x: number, y: number, oct = 4) => {
-    let amp = 0.5;
-    let f = 1;
-    let sum = 0;
-    let norm = 0;
-    for (let o = 0; o < oct; o++) {
-      sum += noise(x * f, y * f) * amp;
-      norm += amp;
-      amp *= 0.5;
-      f *= 2;
-    }
-    return sum / norm;
-  };
 }
 
 /** Layered flame shape on the emissive layer. */
@@ -216,11 +135,6 @@ export function flame(g: CanvasRenderingContext2D, x: number, y: number, w: numb
     g.quadraticCurveTo(x, y + ww * 0.8, x - ww, y);
     g.fill();
   }
-}
-
-/** Linear interpolation of two RGB triples (0..1). */
-export function mixRgb(a: readonly number[], b: readonly number[], t: number): [number, number, number] {
-  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 }
 
 const scratches = new Map<string, { n: number; cs: HTMLCanvasElement[] }>();

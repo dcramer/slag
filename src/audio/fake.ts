@@ -6,7 +6,7 @@
  * would otherwise only throw in a browser. Not used by the game itself.
  */
 
-export class FakeParam {
+class FakeParam {
   value: number;
   events = 0;
   constructor(

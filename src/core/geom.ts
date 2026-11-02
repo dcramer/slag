@@ -50,16 +50,6 @@ export function pingPong(t: number): number {
   return (1 - dcos(frac(t) * Math.PI * 2)) / 2;
 }
 
-/**
- * Rotate a vector by `rot` quarter turns clockwise in screen space (y down):
- * right → down → left → up.
- */
-export function rotateVec(v: Vec, rot: number): Vec {
-  let [x, y] = v;
-  for (let i = 0; i < ((rot % 4) + 4) % 4; i++) [x, y] = [-y, x];
-  return [x + 0, y + 0]; // +0 normalizes -0
-}
-
 /** Shift cells so the minimum x and y are 0, and sort for stable comparison. */
 export function normalizeCells(cells: readonly Cell[]): Cell[] {
   let mx = Infinity;
@@ -69,10 +59,6 @@ export function normalizeCells(cells: readonly Cell[]): Cell[] {
     my = Math.min(my, y);
   }
   return cells.map(([x, y]) => [x - mx, y - my] as Cell).sort((a, b) => a[1] - b[1] || a[0] - b[0]);
-}
-
-export function rotateCells(cells: readonly Cell[], rot: number): Cell[] {
-  return normalizeCells(cells.map((c) => rotateVec(c, rot)));
 }
 
 export function cellsBounds(cells: readonly Cell[]): { w: number; h: number } {

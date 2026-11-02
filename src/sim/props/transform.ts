@@ -7,7 +7,7 @@ import { moduleSim, type Xform } from './registry';
 import type { BlastShape, BlastTarget, ModuleOf, Motion, PlacedProp, PropDef, PropState, Resolved } from './types';
 
 /** Deterministic per-prop phase offset so identical props don't move in lockstep. */
-export function propPhase(uid: number): number {
+function propPhase(uid: number): number {
   return frac(uid * 0.6180339887);
 }
 

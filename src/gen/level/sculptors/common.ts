@@ -125,20 +125,6 @@ export function undercut(g: Grid, x: number, depth = 2, from = 0): void {
   if (top < g.h - 3) g.clear(x, top + 2, x + depth - 1, g.h - 1);
 }
 
-/** Pick `n` distinct, spaced x positions in [lo, hi] (sorted). */
-export function spacedXs(rng: Rng, n: number, lo: number, hi: number, minSep: number): number[] {
-  const out: number[] = [];
-  for (let tries = 0; tries < 60 && out.length < n; tries++) {
-    const x = rng.int(lo, hi);
-    if (out.every((o) => Math.abs(o - x) >= minSep)) out.push(x);
-  }
-  return out.sort((a, b) => a - b);
-}
-
-export function clampRow(r: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, r));
-}
-
 /**
  * Horizontal space allocator for landmark stamps: keeps structures from
  * overlapping each other, pits, and the spawn/goal pockets.

@@ -5,8 +5,8 @@ import type { ModuleOf } from '../types';
 type Portal = ModuleOf<'portal'>;
 
 /** Pad trigger size (px): about a runner's size. */
-export const PORTAL_W = 10;
-export const PORTAL_H = 14;
+const PORTAL_W = 10;
+const PORTAL_H = 14;
 
 /** Pad centers (px) including motion offset. */
 export function portalPads(m: Portal, off: Vec): [Vec, Vec] {

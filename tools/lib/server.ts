@@ -81,7 +81,7 @@ export function needsBuild(root = '.'): boolean {
 }
 
 /** `next build` if needed (or if `force`). Returns build wall time in ms, or 0 when skipped. */
-export function ensureBuild(force = false): number {
+function ensureBuild(force = false): number {
   if (!force && !needsBuild()) return 0;
   console.log('building (sources changed since last build)…');
   const t0 = performance.now();

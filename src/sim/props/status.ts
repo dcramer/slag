@@ -19,9 +19,9 @@ export interface RunnerStatus {
 export const FREEZE_FRAMES = 50;
 export const SLOW_FRAMES = 110;
 /** Horizontal speed cap (px/s) applied before each step while slowed (one frame of acceleration lands on top: ~70 px/s on foot). */
-export const SLOW_VX = 40;
+const SLOW_VX = 40;
 /** Take-off speed cap (px/s) while slowed: about half a normal jump's height. */
-export const SLOW_JUMP = 330;
+const SLOW_JUMP = 330;
 
 export function newStatus(): RunnerStatus {
   return { frozen: 0, slowed: 0, inside: [] };

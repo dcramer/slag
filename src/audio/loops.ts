@@ -69,7 +69,7 @@ class PatchBuilder {
 
 const tc = 0.06;
 
-export const LOOP_SPECS: Record<LoopKind, KindSpec> = {
+const LOOP_SPECS: Record<LoopKind, KindSpec> = {
   saw: {
     max: 2,
     gain: 0.3,

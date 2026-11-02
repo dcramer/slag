@@ -208,14 +208,14 @@ abstract class Overlay {
 }
 
 /** Inline glyph (keycap, pad button, mouse) as a DOM node. */
-export function glyphEl(g: Glyph, h = 22): HTMLElement {
+function glyphEl(g: Glyph, h = 22): HTMLElement {
   const span = el('span', { className: 'slag-glyph' });
   span.innerHTML = glyphSVG(g, h);
   return span;
 }
 
 /** A row of "glyph glyph Label" prompts, like the in-game footer. */
-export function promptRow(items: { glyphs: Glyph[]; label: string }[], h = 22): HTMLElement {
+function promptRow(items: { glyphs: Glyph[]; label: string }[], h = 22): HTMLElement {
   const row = el('div', { className: 'slag-prompts' });
   for (const it of items) row.append(el('span', { className: 'slag-prompt' }, ...it.glyphs.map((g) => glyphEl(g, h)), it.label));
   return row;
