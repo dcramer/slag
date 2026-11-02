@@ -96,16 +96,6 @@ export function trapBox(g: CanvasRenderingContext2D, col: HSL, pal: MetalPalette
   for (const y of [4.2, 5.4, 6.6]) tick(g, -8.9, y, -8.3, y + 0.1, 0.25, seed + y, 'rgba(18,11,8,0.55)');
 }
 
-/** A gumball machine's cast stand: a waist under the globe flaring to a heavy foot, with a coin plate. */
-export function stand(g: CanvasRenderingContext2D, col: HSL, seed: number) {
-  const pts = poly(-4.2, 1, 4.2, 1, 5.2, 5.4, 7.4, 6.2, 7.4, 8, -7.4, 8, -7.4, 6.2, -5.2, 5.4);
-  part(g, pts, col, seed, { depth: 1, thin: 0.55, thick: 1.5, shade: -18 });
-  g.fillStyle = css(col, -28, 1, 6);
-  line(g, -7, 6.3, 7, 6.3, { w: 0.6, seed: seed + 1, taper: [0, 0], press: 0.2 });
-  g.fillStyle = css(col, 20);
-  line(g, -3.6, 1.8, -4.4, 5, { w: 0.7, seed: seed + 2, taper: [0.2, 0.3], press: 0.1 });
-}
-
 /** A mortar's baseplate: a heavy dished disc seen edge-on, with a lip and two bolts. */
 export function baseplate(g: CanvasRenderingContext2D, pal: MetalPalette, seed: number) {
   const pts = poly(-7.8, 7.9, 7.8, 7.9, 7.2, 5.8, 3, 5, -3, 5, -7.2, 5.8);

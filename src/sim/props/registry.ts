@@ -194,6 +194,14 @@ export interface Xform {
   da: number;
   /** Tile size in px, for converting lengths. */
   T: number;
+  /**
+   * P for things that stand upright on a footing (a machine on its block): a quarter turn turns them like
+   * P, but a half turn mirrors them left to right instead of standing them on their heads, the way their
+   * art is drawn. Only for points inside a footprint that is its own mirror image (a rect).
+   */
+  U(p: Vec): Vec;
+  /** The angle that goes with U: `a + da`, except that a half turn mirrors it. */
+  UA(a: number): number;
 }
 
 export interface ModuleSim<M extends Module = Module> {

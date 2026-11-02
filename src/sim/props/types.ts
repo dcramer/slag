@@ -147,6 +147,9 @@ export interface PropStyle {
   woodHue: number;
 }
 
+/** A rect in tiles (x, y, w, h), in the frame of the def's cells. */
+export type TileBox = readonly [number, number, number, number];
+
 export type Module =
   | {
       type: 'body';
@@ -155,6 +158,13 @@ export type Module =
       conveyor: number;
       breakFrames: number;
       respawnFrames: number;
+      /**
+       * Sub-tile solids, when the thing standing in these cells doesn't fill them (a hangar's arched roof,
+       * a gun carriage's steps): it collides as these rects instead of whole cells, and isn't plain ground.
+       * Drawn upright, so a half turn mirrors them rather than standing them on their heads (Xform.U).
+       * Tiles in a def; world px once resolved.
+       */
+      shape?: TileBox[];
       /** Art only: 'tetra' draws each cell as a bevelled square in one colour, `hue` (Four-Square). The sim treats it as its material. */
       look?: BlockLook;
       hue?: number;
