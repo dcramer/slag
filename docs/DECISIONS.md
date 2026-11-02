@@ -228,6 +228,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `planned` · TODO.md → 27
 - **Each theme has at least 1 and at most 3 grand landmarks among its 5+.** "id like at least one grand landmark, no more than 3 (in the min 5 landmarks)"
   2026-11-02 · `done` (enforced) · `GRAND_LANDMARKS` in src/gen/kinds.ts, tests/conformance/themes.test.ts
+- **The cast needs much more parody, and each parody must be instantly recognisable; the art must improve further.** "its better but you still need more parody and the art needs to be better yet..." / "the only thing that remotely resembles the thing its mimicking is the puff ball (kirby)". Iconic palettes win over the player-colour body rule; the player's colour moves to a visible secondary slot.
+  2026-11-02 · `in progress` · CHARACTERS.md
 - **Lobby browser: a list of lobbies, showing only ones that aren't full by default.** Lobbies are public by default with a Private option. "lets make lobbies public by default with a private option"
   2026-11-02 · `planned` · TODO.md → 26
 - **Conveyors rotate: the rotation picks the belt's face.** A side belt grips and carries a clinging runner (an escalator when it runs up), a bottom belt shoves a head that bonks it. "you cant rotate conveyors.. the conveyor always stays on the top"

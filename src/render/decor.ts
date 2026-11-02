@@ -2,7 +2,9 @@ import { css, type HSL, hsl3, shift } from '../core/color';
 import type { Rng } from '../core/rng';
 import type { DecorKind, DecorSpot } from '../gen/decor';
 import type { Theme } from '../gen/theme';
+import { FARM_DECOR } from './decor-farm';
 import { FRONTIER_DECOR } from './decor-frontier';
+import { VOLCANO_DECOR } from './decor-volcano';
 import { blob, line, type P, stroke } from './ink';
 import { inkFence, inkHay } from './ink-parts';
 import { ball, boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, tick, tone } from './ink-props';
@@ -942,4 +944,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   ...FRONTIER_DECOR,
+  ...FARM_DECOR,
+  ...VOLCANO_DECOR,
 };

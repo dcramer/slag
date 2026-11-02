@@ -11,6 +11,7 @@ import { drawBelts } from '../../ink-surface';
 import { light, type MetalPalette, type RC } from '../../kit';
 import { bbox, defineArt, type PropDrawOpts } from '../common';
 import { housed } from '../machine';
+import { drawObsidian } from './body-obsidian';
 
 type M<T extends Module['type']> = ModuleOf<T>;
 
@@ -251,5 +252,10 @@ function drawTetra(rc: RC, m: M<'body'>, off: Vec) {
 defineArt<'body'>({
   type: 'body',
   layer: 1,
-  draw: (rc, m, d) => (m.look === 'tetra' && !housed(d.r) ? drawTetra(rc, m, d.off) : drawBody(rc, m, d.style, d.pal, d.off, d.r, d.o)),
+  draw: (rc, m, d) =>
+    m.look === 'obsidian'
+      ? drawObsidian(rc, m, d.off, d.o)
+      : m.look === 'tetra' && !housed(d.r)
+        ? drawTetra(rc, m, d.off)
+        : drawBody(rc, m, d.style, d.pal, d.off, d.r, d.o),
 });

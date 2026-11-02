@@ -89,7 +89,14 @@ export type DecoKind =
   | 'billboard'
   | 'clockface'
   // The cage of a lift's cab, riding with it (the manor's dumbwaiter).
-  | 'cab';
+  | 'cab'
+  // Farm landmarks (gen/stage/farm.ts): a windmill's tower and cap, a grain elevator's headhouse, a barn's
+  // back wall and rafters, a water mill's flume trestle, a farm track's trestle legs.
+  | 'windmill'
+  | 'headhouse'
+  | 'barn'
+  | 'flume'
+  | 'trestle';
 export type MysteryLook = 'crate' | 'chest' | 'gift';
 /** What a match's warp pipes are made of: one per match, since a roster has one pipe part. */
 export type PipeLook = 'green' | 'brass' | 'rust' | 'porcelain' | 'copper';
@@ -478,6 +485,27 @@ export type Module =
       dir: 1 | -1;
       inset: number;
       seed: number;
+    }
+  | {
+      /**
+       * World-only, volcano: molten things thrown along one arc from `from` to `to` (tiles) on a cycle
+       * (./modules/lob.ts). Off → warn (drawn, never felt: the lava boils where it leaves, a shadow grows
+       * where it lands) → flight, `flight` frames for the head and each of the `count` segments `lag`
+       * frames behind the one before. The arc is the straight line between the ends lifted by
+       * `apex` tiles at its middle. Each segment kills where it is, a circle of `radius` tiles: a magma
+       * serpent leaping out of the lava and diving back, or a volcanic bomb falling out of the sky.
+       */
+      type: 'lob';
+      look: LobLook;
+      from: Vec;
+      to: Vec;
+      apex: number;
+      count: number;
+      lag: number;
+      radius: number;
+      off: number;
+      warn: number;
+      flight: number;
     };
 
 export type Motion =
@@ -494,8 +522,8 @@ export type Motion =
 
 /** 'boost': a strip of arrows that kicks you along its face (Boost Strip; see BOOST in ./modules/coat.ts). */
 export type CoatKind = 'spikes' | 'ice' | 'slime' | 'boost';
-/** Art-only block looks on a body. */
-export type BlockLook = 'tetra';
+/** Art-only block looks on a body. 'obsidian': volcanic glass over lava, cracking red as it gives (a volcano bridge). */
+export type BlockLook = 'tetra' | 'obsidian';
 
 // --- Stage concepts (docs/SETPIECES.md): looks, art only -----------------------
 /** What a spike strip (or a spike coat) is made of; unset is plain metal spikes. */
@@ -504,6 +532,8 @@ export type SpikeLook = 'glass' | 'thorn' | 'crystal' | 'icicle' | 'pitchfork';
 export type DropperLook = 'icicle' | 'chandelier';
 /** The liquid a flood fills with. */
 export type FloodLook = 'lava' | 'toxic' | 'water';
+/** What a `lob` throws: a magma serpent of linked segments, or a volcanic bomb out of the sky. */
+export type LobLook = 'serpent' | 'bomb';
 
 export type Archetype =
   | 'platform'

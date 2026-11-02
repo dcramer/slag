@@ -1,7 +1,7 @@
 import type { Rng } from '../../../core/rng';
 import { finish, Grid, groundFromHeights, noise1D } from '../kit';
-import type { Sculptor } from '../types';
-import { easyGap, easyRise, flatten, hardGap, type Knobs, knobs, pit, relax, rollChallenges, Slots } from './common';
+import type { SculptCtx, Sculptor } from '../types';
+import { type Claim, claimSite, easyGap, easyRise, flatten, hardGap, type Knobs, knobs, pit, raiseLandmark, relax, rollChallenges, Slots } from './common';
 
 type FarmStyle = 'fields' | 'barnyard' | 'windmill' | 'orchard';
 type Stamp = (g: Grid, rng: Rng, x: number, w: number, f: number) => void;
@@ -32,13 +32,17 @@ export const farm: Sculptor = (ctx) => {
   const slots = new Slots(6, W - 7);
   const locked = new Uint8Array(W);
   const surf = heights(rng, k);
+  // The stage concept's landmark comes first: it owns the level's hard pond (stage/farm.ts).
+  const claim = ctx.concept ? claimFarmSite(ctx, k, slots, surf, locked) : null;
+  if (ctx.concept && !claim) return finish(g, { row: surf[2] - 1 }, { row: surf[W - 3] - 1 }, 'farm:unclaimed');
 
   // Ponds first: hard ones need a bridge, easy ones are a hop. Wide farms get more of them.
   const challenges = rollChallenges(attempt, k);
   g.wantsProps = challenges > 0;
+  const own = claim?.concept.ownsCrossing ? Math.min(1, challenges) : 0;
   const pits: { x0: number; x1: number; hard: boolean }[] = [];
   const nEasy = rng.int(0, style === 'fields' ? 2 : 1) + Math.floor((k.wide - 1) * rng.range(1, 2.5));
-  for (let i = 0; i < challenges + nEasy; i++) {
+  for (let i = own; i < challenges + nEasy; i++) {
     const hard = i < challenges;
     const w = hard ? hardGap(rng) : easyGap(rng, 2);
     const a = slots.take(rng, w + 4, 2, 8, W - 9);
@@ -88,8 +92,24 @@ export const farm: Sculptor = (ctx) => {
     }
   }
 
+  // Last, so it stands whole over anything a neighbour spilled into its box.
+  if (claim) raiseLandmark(g, ctx, claim, own);
+
   return finish(g, { row: sRow - 1 }, { row: gRow - 1 }, `farm:${style}`);
 };
+
+/**
+ * The landmark's site (claimSite), with a column of farmyard levelled either side. Nothing else lands just
+ * right of it: a pond there could be cleared bare by a jump off its roof or its sails.
+ */
+function claimFarmSite(ctx: SculptCtx, k: Knobs, slots: Slots, surf: number[], locked: Uint8Array): Claim | null {
+  const claim = claimSite(ctx, k, slots, surf, locked);
+  if (!claim) return null;
+  const { x, w } = claim.at;
+  slots.mark(x - 2, x + w + 8);
+  flatten(surf, k.H, x - 1, x + w, claim.ground);
+  return claim;
+}
 
 /** Rolling hills on a route ramp (climbing farms terrace uphill toward the goal). */
 function heights(rng: Rng, k: Knobs): number[] {

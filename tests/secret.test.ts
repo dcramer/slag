@@ -225,7 +225,8 @@ describe('winnability with secret parts', () => {
     const step = (i: Partial<InputFrame> = {}) => m.step({ kb0: press(i) });
     for (const spot of level.solution!) {
       for (let f = 0; f < 30 && m.phase !== 'pick'; f++) step();
-      const i = m.crate.findIndex((c) => c.secret === 'build');
+      // A crate may offer more build cards than the plan still needs; the bridge is among them.
+      const i = m.crate.findIndex((c) => c.secret === 'build' && isBridgePart(c.def));
       expect(i).toBeGreaterThanOrEqual(0);
       p.cursor = middle(m, i);
       for (let f = 0; f < 60 && m.phase === 'pick'; f++) step({ confirmPressed: f === 15 });
