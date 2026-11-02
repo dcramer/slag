@@ -19,7 +19,7 @@ const TERRA: HSL = hsl3(18, 52, 44);
 const WOOD: HSL = hsl3(28, 34, 36);
 const GLASS: HSL = hsl3(214, 30, 30);
 const TIN: HSL = hsl3(205, 8, 62);
-const PIGEON: HSL = hsl3(225, 8, 58);
+const PIGEON: HSL = hsl3(222, 10, 50);
 const LEAF: HSL = hsl3(110, 36, 34);
 
 const sd = (d: Decor) => d.seed & 0xffff;
@@ -93,12 +93,12 @@ export const ROOFTOPS_DECOR = {
     color: () => PIGEON,
     live(rc, d) {
       // Two or three on the roof, a beat apart; now and then one pecks at the gravel.
-      const n = 2 + (d.seed % 2);
+      const n = 1 + (d.seed % 2);
       for (let i = 0; i < n; i++) {
         const dir = (i + (d.flip ? 1 : 0)) % 2 ? -1 : 1;
         const t = rc.t * 1.1 + i * 1.7 + (d.seed % 13);
         const peck = Math.sin(t) > 0.9 ? 1.6 : 0;
-        pigeon(rc.s, d.x + (i - (n - 1) / 2) * 6, d.y + 0.5, dir, 0.82 * d.size, peck, sd(d) + i);
+        pigeon(rc.s, d.x + (i - (n - 1) / 2) * 9, d.y + 0.5, dir, 1.2 * d.size, peck, sd(d) + i);
       }
     },
   },

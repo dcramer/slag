@@ -890,8 +890,8 @@ const facade: DecoSkin = (rc, m, d) => {
 
 /**
  * The rails behind a stack of rungs near a shell that reaches the roof, so the rungs read as a ladder (or a
- * stair's stringers) fixed to something, not slats hung in the air. Rungs are two-wide one-way rows, at
- * least two of them over one another.
+ * stair's stringers) fixed to something, not slats hung in the air. Rungs are two-wide one-way rows; one
+ * alone (low gravity's tall step) gets its rails too.
  */
 function rails(rc: RC, m: Deco, d: DrawCtx, t: Hz) {
   const lv = d.o.level;
@@ -903,7 +903,7 @@ function rails(rc: RC, m: Deco, d: DrawCtx, t: Hz) {
   for (let x = b.x - 3; x < b.x + b.w + 2; x++) {
     const ys: number[] = [];
     for (let y = 1; y < lv.h - 1; y++) if (rung(x, y)) ys.push(y);
-    if (ys.length < 2) continue;
+    if (!ys.length) continue;
     const top = Math.min(...ys);
     const roof = roofRow(lv, x, Math.max(...ys) + 1);
     if (bottom < roof - 1) continue;
