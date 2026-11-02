@@ -1,10 +1,11 @@
 import 'client-only';
-import { type CharacterDef, generateCharacter } from '../gen/character';
-import { drawCharacter } from '../render/character';
+import { type CharacterDef, generateCharacter, TOYS } from '../gen/character';
+import { Rig } from '../render/character';
+import { drawInkAccessory, drawInkRunner, ropeOf } from '../render/ink-character';
 import { buildScene, drawSplash, drawStream, paintCrane, paintHeap, type Scene } from './home-scene';
 
 /**
- * Main-menu stage: a crowd of freshly generated characters loitering on a
+ * Main-menu stage: a crowd of freshly generated toys, no two alike, loitering on a
  * slag heap while a crucible on a crane pours molten metal beside them
  * (./home-scene.ts draws the foundry). Purely cosmetic (Math.random is fine
  * here). Tap a character to reroll it. Returns a cleanup function.
@@ -12,6 +13,7 @@ import { buildScene, drawSplash, drawStream, paintCrane, paintHeap, type Scene }
 
 interface Guy {
   def: CharacterDef;
+  rig: Rig;
   hop: number;
   vy: number;
   facing: number;
@@ -35,8 +37,13 @@ export function mountStage(canvas: HTMLCanvasElement): () => void {
   let dpr = 1;
   const seed0 = Math.floor(Math.random() * 1e9);
   let rolls = 0;
-  const roll = () => generateCharacter((seed0 + rolls++ * 7919) >>> 0);
-  const guys: Guy[] = Array.from({ length: 6 }, (_, i) => ({ def: roll(), hop: 0, vy: 0, facing: i < 3 ? 1 : -1, next: 0.6 + i * 0.7 }));
+  // Each one a different toy: a new roll takes a kind nobody on the heap has.
+  const roll = (taken: readonly CharacterDef[] = []) => {
+    const free = TOYS.filter((t) => !taken.some((c) => c.toy === t));
+    return generateCharacter((seed0 + rolls++ * 7919) >>> 0, free[Math.floor(Math.random() * free.length)]);
+  };
+  const guys: Guy[] = [];
+  for (let i = 0; i < 6; i++) guys.push({ def: roll(guys.map((g) => g.def)), rig: new Rig(), hop: 0, vy: 0, facing: i < 3 ? 1 : -1, next: 0.6 + i * 0.7 });
   const sparks: Spark[] = [];
 
   // What holds still is painted once per size: the heap, and the crane over the top of the pour.
@@ -75,7 +82,8 @@ export function mountStage(canvas: HTMLCanvasElement): () => void {
       const gx = scene!.runX[i];
       const gy = scene!.foot(gx) - g.hop;
       if (Math.abs(x - gx) < 10 * s && y < gy + 4 && y > gy - 20 * s) {
-        g.def = roll();
+        g.def = roll(guys.map((o) => o.def));
+        g.rig = new Rig();
         g.vy = 260;
         for (let k = 0; k < 14; k++) sparks.push({ x: gx, y: gy - 8 * s, vx: rand(-90, 90), vy: rand(-160, -40), life: rand(0.4, 0.8) });
       }
@@ -122,15 +130,24 @@ export function mountStage(canvas: HTMLCanvasElement): () => void {
       ctx.beginPath();
       ctx.ellipse(x, y, 7 * s * Math.max(0.5, 1 - g.hop / 120), 1.6 * s, 0, 0, Math.PI * 2);
       ctx.fill();
-      drawCharacter({ s: ctx, g: null }, g.def, x, y - g.hop, {
+      // In world units, scaled to the stage, so a string or scarf hangs as it does in a race.
+      ctx.save();
+      ctx.translate(x, y - g.hop);
+      ctx.scale(s, s);
+      const rope = ropeOf(g.def);
+      if (rope) {
+        g.rig.step(rope, -g.facing * 5, rope.kind === 'string' ? -3 : -10, dt, -g.facing * 8, 0);
+        drawInkAccessory(ctx, g.def, g.rig);
+      }
+      drawInkRunner({ s: ctx, g: null }, g.def, 0, 0, {
         facing: g.facing,
         vx: 0,
         vy: g.hop > 0 ? -g.vy : 0,
         grounded: g.hop === 0,
         t: t + i * 1.3,
-        scale: s,
         celebrate: g.hop > 0,
       });
+      ctx.restore();
     });
 
     // Sparks.

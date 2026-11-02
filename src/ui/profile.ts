@@ -7,7 +7,15 @@ export interface Profile {
   prompted: boolean;
   /** Seed of the character look the player last had (persisted across sessions); null = roll one. */
   look?: number | null;
+  /** Which cast `look` was rolled in. A look from another cast means nothing now and is dropped. */
+  lookCast?: number;
 }
+
+/**
+ * Bump when a seed stops meaning the same character, so every saved look is discarded once and the
+ * next one is saved from the new cast. 2: the foundry toys (docs/CHARACTERS.md).
+ */
+export const LOOK_CAST = 2;
 
 const KEY = 'slag.profile.v1';
 
@@ -16,7 +24,7 @@ export function loadProfile(): Profile {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const p = JSON.parse(raw) as Profile;
-      if (p.version === 1) return p;
+      if (p.version === 1) return p.lookCast === LOOK_CAST ? p : { ...p, look: null, lookCast: LOOK_CAST };
     }
   } catch {
     // ignore
@@ -26,7 +34,7 @@ export function loadProfile(): Profile {
 
 export function saveProfile(p: Profile) {
   try {
-    localStorage.setItem(KEY, JSON.stringify(p));
+    localStorage.setItem(KEY, JSON.stringify({ ...p, lookCast: LOOK_CAST }));
   } catch {
     // ignore
   }

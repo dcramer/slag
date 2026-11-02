@@ -749,6 +749,342 @@ function hullMarks(p: Paint, x0: number, y0: number, x1: number, y1: number, sd:
 
 const hullPlates = masonry({ h: 16, w: 32, stray: 0, round: 1.2, long: 0.25, stack: true, mark: hullMarks });
 
+/*
+ * Landmark skins (docs/SETPIECES.md): what a built thing is made of, for the tiles inside a landmark's box.
+ * No theme lays these as its ground, so each says "somebody built this" at a glance next to the theme's own.
+ */
+
+/** Storey and bay of a half-timbered wall, in world px: a frame member lands on every one, wherever the wall starts. */
+const STOREY = 32;
+const BAY = 24;
+
+/**
+ * Half-timbering: plaster panels in a frame of dark beams, a brace across some bays, pegs at the joints,
+ * and here and there plaster fallen away to show the laths. `base` is the plaster, `dark` the timber.
+ */
+const halfTimber: InkMaterial = (p) => {
+  const { g, T, seed, ink, area } = p;
+  fillArea(p, css(T.base));
+  const plaster = [css(T.base), css(shift(T.base, -4, 2)), css(shift(T.light, -5, -4)), css(shift(T.base, 2, -2))];
+  const wood = css(T.dark);
+  const woodLit = css(shift(T.dark, 13, -6));
+  const grain = css(shift(T.dark, 7, -4));
+  const r0 = Math.floor(area.y0 / STOREY) - 1;
+  const r1 = Math.ceil(area.y1 / STOREY) + 1;
+  const j0 = Math.floor(area.x0 / BAY) - 1;
+  const j1 = Math.ceil(area.x1 / BAY) + 1;
+  // Panels first: each its own tone, its own wear.
+  for (let r = r0; r <= r1; r++) {
+    for (let j = j0; j <= j1; j++) {
+      const x = j * BAY;
+      const y = r * STOREY;
+      const sd = j * 977 + r * 131 + seed;
+      g.fillStyle = plaster[Math.floor(hash2(j, r, seed + 1) * plaster.length)];
+      g.fillRect(x + 1.5, y + 1.5, BAY - 3, STOREY - 3);
+      const roll = hash2(j, r, seed + 2);
+      if (roll < 0.1) {
+        // Plaster fallen off: the laths behind it, in a ragged hole.
+        const hx = x + 5 + hash2(j, r, seed + 3) * (BAY - 14);
+        const hy = y + 7 + hash2(j, r, seed + 4) * (STOREY - 18);
+        g.fillStyle = css(shift(T.dark, 16, -10));
+        blob(g, hx + 3, hy + 3, 3.6, sd, 0.8, 0.45);
+        g.fill();
+        g.fillStyle = css(shift(T.dark, 26, -14));
+        for (let i = 0; i < 3; i++) line(g, hx - 0.5, hy + 1 + i * 2.2, hx + 6.5, hy + 1 + i * 2.2, { w: 0.9, seed: sd + i, taper: [0.1, 0.1], press: 0 });
+        g.fillStyle = ink;
+        const rim: P[] = [];
+        for (let i = 0; i <= 8; i++) {
+          const a = 3.4 + (i / 8) * 3.2;
+          rim.push({ x: hx + 3 + Math.cos(a) * 4, y: hy + 3 + Math.sin(a) * 3.2 });
+        }
+        stroke(g, rim, { w: 0.9, seed: sd, taper: [0.2, 0.4] });
+      } else if (roll < 0.22) crack(p, x + 4 + hash2(j, r, seed + 5) * (BAY - 8), y + 4, 1.2 + hash2(j, r, seed + 6) * 0.8, 8 + hash2(j, r, seed + 7) * 9, sd);
+    }
+  }
+  /** One frame member: a band of timber with a lit edge, grain, and ink along its underside. */
+  const member = (ax: number, ay: number, bx: number, by: number, w: number, sd: number) => {
+    g.fillStyle = wood;
+    line(g, ax, ay, bx, by, { w, seed: sd, taper: [0, 0], press: 0.05, wobble: 0.15 });
+    const d = Math.hypot(bx - ax, by - ay) || 1;
+    const nx = (by - ay) / d;
+    const ny = -(bx - ax) / d;
+    const k = ny > 0 || (ny === 0 && nx > 0) ? -1 : 1;
+    g.fillStyle = woodLit;
+    line(g, ax + nx * k * w * 0.32, ay + ny * k * w * 0.32, bx + nx * k * w * 0.32, by + ny * k * w * 0.32, {
+      w: w * 0.28,
+      seed: sd + 1,
+      taper: [0.15, 0.2],
+      press: 0,
+    });
+    if (hash2(sd, 2, 4) > 0.4) {
+      g.fillStyle = grain;
+      const t = 0.2 + hash2(sd, 3, 4) * 0.4;
+      line(g, ax + (bx - ax) * t, ay + (by - ay) * t, ax + (bx - ax) * (t + 0.3), ay + (by - ay) * (t + 0.3), { w: 0.6, seed: sd + 2, taper: [0.3, 0.5] });
+    }
+    g.fillStyle = ink;
+    line(g, ax - nx * k * w * 0.5, ay - ny * k * w * 0.5, bx - nx * k * w * 0.5, by - ny * k * w * 0.5, {
+      w: 0.9,
+      seed: sd + 3,
+      taper: [0.15, 0.2],
+      press: 0.5,
+    });
+  };
+  for (let r = r0; r <= r1; r++) {
+    for (let j = j0; j <= j1; j++) {
+      const x = j * BAY;
+      const y = r * STOREY;
+      const sd = j * 977 + r * 131 + seed;
+      if (hash2(j, r, seed + 8) < 0.32) {
+        const up = hash2(j, r, seed + 9) < 0.5;
+        member(x + 2, up ? y + STOREY - 2 : y + 2, x + BAY - 2, up ? y + 2 : y + STOREY - 2, 2.6, sd + 10);
+      }
+      member(x, y + 1, x, y + STOREY - 1, 3.6, sd + 20);
+    }
+  }
+  for (let r = r0; r <= r1; r++)
+    for (let j = j0; j <= j1; j++) member(j * BAY - 1, r * STOREY, (j + 1) * BAY + 1, r * STOREY, 4, j * 977 + r * 131 + seed + 30);
+  // Pegs where post meets rail.
+  g.fillStyle = ink;
+  for (let r = r0; r <= r1; r++) {
+    for (let j = j0; j <= j1; j++) {
+      if (hash2(j, r, seed + 11) < 0.35) continue;
+      blob(g, j * BAY + 0.3, r * STOREY + 3.6, 0.6, j * 31 + r, 1, 0.15);
+      g.fill();
+    }
+  }
+};
+
+/** A line cut into stone: the shadowed wall of the groove, then the lit one just under it. */
+function incise(g: CanvasRenderingContext2D, pts: readonly P[], shade: string, lit: string, sd: number) {
+  g.fillStyle = shade;
+  stroke(g, pts, { w: 1.15, seed: sd, taper: [0.15, 0.25], press: 0.3 });
+  g.fillStyle = lit;
+  stroke(
+    g,
+    pts.map((q) => ({ x: q.x + 0.55, y: q.y + 0.6 })),
+    { w: 0.55, seed: sd + 1, taper: [0.2, 0.3], press: 0 },
+  );
+}
+
+const MOSS: HSL = { h: 96, s: 34, l: 31 };
+
+/**
+ * Carved stone: dressed blocks, a course of chevrons now and then, and blocks cut with spirals, sun discs
+ * and step frets, with moss creeping over their tops. The carvings are grooves, not ink: shadow and lit lip.
+ */
+function carvedMarks(p: Paint, x0: number, y0: number, x1: number, y1: number, sd: number) {
+  const { g, T, seed } = p;
+  const shade = css(shift(T.dark, 4, 4));
+  const lit = css(shift(T.light, 8, -8));
+  const w = x1 - x0;
+  const h = y1 - y0;
+  const cx = (x0 + x1) / 2;
+  const cy = (y0 + y1) / 2;
+  const course = Math.round(y0 / 16);
+  if (hash2(course, 7, seed) < 0.22) {
+    // A frieze: the whole course carries the same chevrons, so it reads as one band across the wall.
+    const pts: P[] = [];
+    for (let x = Math.ceil(x0 / 4) * 4; x <= x1 - 1; x += 4) pts.push({ x, y: cy + ((x / 4) & 1 ? -2.4 : 2.4) });
+    if (pts.length >= 2) incise(g, pts, shade, lit, sd);
+  } else {
+    const roll = hash2(sd, 21, 3);
+    if (roll < 0.14) {
+      // A spiral, two and a half turns.
+      const rmax = Math.min(w, h) * 0.36;
+      const pts: P[] = [];
+      for (let i = 0; i <= 26; i++) {
+        const t = i / 26;
+        const a = t * Math.PI * 5 + sd;
+        pts.push({ x: cx + Math.cos(a) * rmax * t, y: cy + Math.sin(a) * rmax * t * 0.9 });
+      }
+      incise(g, pts, shade, lit, sd);
+    } else if (roll < 0.22) {
+      // A sun: a ring and its rays.
+      const r = Math.min(w, h) * 0.22;
+      const ring: P[] = [];
+      for (let i = 0; i <= 12; i++) ring.push({ x: cx + Math.cos((i / 12) * 6.28) * r, y: cy + Math.sin((i / 12) * 6.28) * r });
+      incise(g, ring, shade, lit, sd);
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * 6.28 + 0.2;
+        incise(
+          g,
+          [
+            { x: cx + Math.cos(a) * (r + 1.2), y: cy + Math.sin(a) * (r + 1.2) },
+            { x: cx + Math.cos(a) * (r + 3.2), y: cy + Math.sin(a) * (r + 3.2) },
+          ],
+          shade,
+          lit,
+          sd + i,
+        );
+      }
+    } else if (roll < 0.32) {
+      // A step fret: the key pattern, climbing.
+      const s = Math.min(3, h / 4);
+      const pts: P[] = [{ x: x0 + 2, y: y1 - 2 }];
+      for (let x = x0 + 2; x < x1 - s - 2; x += s * 2) {
+        const last = pts[pts.length - 1];
+        pts.push({ x: x + s, y: last.y }, { x: x + s, y: last.y === y1 - 2 ? y0 + 2.5 : y1 - 2 });
+      }
+      incise(g, pts, shade, lit, sd);
+    } else if (roll < 0.5) {
+      g.fillStyle = shade;
+      for (let i = 0; i < 3; i++) line(g, cx + i * 1.6, cy + i * 0.5, cx + i * 1.6 + 1.2, cy + i * 0.5 + 2.2, { w: 0.65, seed: sd + i, taper: [0.2, 0.6] });
+    }
+  }
+  if (hash2(sd, 22, 3) < 0.2) {
+    // Moss on the block's top, a drip or two hanging off it.
+    const mx = x0 + 3 + hash2(sd, 23, 3) * (w - 6);
+    g.fillStyle = css(MOSS);
+    blob(g, mx, y0 + 0.8, 2.6 + hash2(sd, 24, 3) * 2, sd, 0.5, 0.4);
+    g.fill();
+    g.fillStyle = css(MOSS, 9);
+    blob(g, mx - 0.8, y0 + 0.2, 1.6, sd + 1, 0.5, 0.3);
+    g.fill();
+    g.fillStyle = css(MOSS, -6);
+    line(g, mx + 1, y0 + 1.5, mx + 1.3, y0 + 3.5 + hash2(sd, 25, 3) * 4, { w: 1.2, seed: sd, taper: [0.1, 0.9], press: 0 });
+  }
+}
+
+const carvedStone = masonry({ h: 16, w: 24, stray: 0.14, round: 1.3, long: 0.12, mark: carvedMarks });
+
+/** A cut block of ice: a lighter facet off its top corner, a sheen, now and then bubbles. No cracks of ink: it's clear. */
+function iceMarks(p: Paint, x0: number, y0: number, x1: number, y1: number, sd: number) {
+  const { g, T } = p;
+  const w = x1 - x0;
+  const h = y1 - y0;
+  const r = hash2(sd, 1, 11);
+  g.fillStyle = css(shift(T.light, -3, -6));
+  g.beginPath();
+  g.moveTo(x0 + 1.4, y0 + 1.4);
+  g.lineTo(x0 + w * (0.45 + 0.25 * r), y0 + 1.4);
+  g.lineTo(x0 + 1.4, y0 + h * (0.55 + 0.3 * hash2(sd, 2, 11)));
+  g.closePath();
+  g.fill();
+  const sheen = css(shift(T.light, 8, -12));
+  g.fillStyle = sheen;
+  if (r < 0.45) {
+    const sx = x0 + w * 0.35;
+    const sy = y1 - 2.5;
+    line(g, sx, sy, sx + 5, sy - 6, { w: 1.1, seed: sd, taper: [0.2, 0.5], press: 0.4 });
+    line(g, sx + 2.6, sy, sx + 5, sy - 3, { w: 0.7, seed: sd + 1, taper: [0.2, 0.5] });
+  } else if (r < 0.62) {
+    for (let i = 0; i < 3; i++) {
+      blob(g, x0 + 3 + hash2(sd, i, 12) * (w - 6), y0 + 3 + hash2(sd, i, 13) * (h - 6), 0.45 + hash2(sd, i, 14) * 0.5, sd + i, 1, 0.1);
+      g.fill();
+    }
+  }
+}
+
+const iceBlocks = masonry({ h: 14, w: 22, stray: 0.2, round: 2.2, long: 0.06, mark: iceMarks });
+
+/**
+ * Crystal: a cluster of prisms grown at their own angles, each split down its length into a lit face and
+ * a shadow face, with a hard glint near the tip and ink only down the shadow side.
+ */
+const crystalline: InkMaterial = (p) => {
+  const { g, T, seed, ink, area } = p;
+  fillArea(p, css(shift(T.dark, -4)));
+  const C = 20;
+  for (let cy = Math.floor(area.y0 / C) - 2; cy * C < area.y1 + 2 * C; cy++) {
+    for (let cx = Math.floor(area.x0 / C) - 2; cx * C < area.x1 + 2 * C; cx++) {
+      const sd = cx * 131 + cy * 977 + seed;
+      const x = (cx + 0.5 + (hash2(cx, cy, seed + 1) - 0.5) * 0.6) * C;
+      const y = (cy + 0.5 + (hash2(cx, cy, seed + 2) - 0.5) * 0.6) * C;
+      const a = -Math.PI / 2 + (hash2(cx, cy, seed + 3) - 0.5) * 1.9;
+      const L = C * (0.9 + 0.6 * hash2(cx, cy, seed + 4));
+      const W = C * (0.34 + 0.22 * hash2(cx, cy, seed + 5));
+      const dx = Math.cos(a);
+      const dy = Math.sin(a);
+      const nx = -dy;
+      const ny = dx;
+      const bx = x - (dx * L) / 2;
+      const by = y - (dy * L) / 2;
+      const sx = x + dx * (L / 2 - W * 0.65);
+      const sy = y + dy * (L / 2 - W * 0.65);
+      const tip = { x: x + (dx * L) / 2, y: y + (dy * L) / 2 };
+      const hw = W / 2;
+      const side = (k: number): P[] => [
+        { x: bx, y: by },
+        { x: bx + nx * hw * k, y: by + ny * hw * k },
+        { x: sx + nx * hw * k, y: sy + ny * hw * k },
+        tip,
+        { x: sx, y: sy },
+      ];
+      // The face whose normal leans toward the light (upper left) is the lit one.
+      const litK = nx * -0.6 + ny * -0.8 > 0 ? 1 : -1;
+      const deep = p.depth(Math.floor(x / TILE), Math.floor(y / TILE)) >= 3;
+      const fill = (pts: P[], c: string) => {
+        g.fillStyle = c;
+        g.beginPath();
+        pts.forEach((q, i) => (i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)));
+        g.closePath();
+        g.fill();
+      };
+      const tone = hash2(cx, cy, seed + 6);
+      fill(side(-litK), css(shift(T.base, deep ? -10 : -3 - tone * 4, 2)));
+      fill(side(litK), css(shift(T.light, deep ? -12 : -2 - tone * 6, -4)));
+      // The tip's own facet, lighter still.
+      fill([{ x: sx + nx * hw * litK, y: sy + ny * hw * litK }, tip, { x: sx, y: sy }], css(shift(T.light, deep ? -4 : 8, -10)));
+      g.fillStyle = ink;
+      stroke(g, [{ x: bx - nx * hw * litK, y: by - ny * hw * litK }, { x: sx - nx * hw * litK, y: sy - ny * hw * litK }, tip], {
+        w: 1.15,
+        seed: sd,
+        taper: [0.1, 0.35],
+        press: 0.5,
+      });
+      if (!deep && hash2(cx, cy, seed + 7) > 0.35) {
+        g.fillStyle = css({ h: T.light.h, s: 30, l: 96 });
+        const gx = sx + nx * hw * litK * 0.5;
+        const gy = sy + ny * hw * litK * 0.5;
+        line(g, gx - dx * 4, gy - dy * 4, gx + dx * 1.5, gy + dy * 1.5, { w: 0.9, seed: sd + 1, taper: [0.3, 0.4], press: 0 });
+      }
+    }
+  }
+};
+
+/** Bone: ivory with long grain, pores in clusters, a crack, and the odd dark knuckle where two pieces meet. */
+const ivory: InkMaterial = (p) => {
+  const { g, T, seed, ink, area } = p;
+  fillArea(p, css(T.base));
+  g.fillStyle = css(shift(T.base, -5, 3));
+  tonePatch(p, (d) => d >= 2);
+  g.fillStyle = css(shift(T.dark, 12, -6));
+  const G = 30;
+  for (let k = Math.floor(area.y0 / 5) - 1; k * 5 < area.y1 + 5; k++) {
+    for (let c = Math.floor(area.x0 / G) - 1; c * G < area.x1 + G; c++) {
+      if (hash2(c, k, seed + 1) < 0.55) continue;
+      const x = c * G + hash2(c, k, seed + 2) * 10;
+      const y = k * 5 + hash2(k, c, seed + 3) * 2;
+      const len = 10 + hash2(c, k, seed + 4) * 14;
+      const pts: P[] = [];
+      for (let i = 0; i <= 5; i++) pts.push({ x: x + (len * i) / 5, y: y + sn((x + (len * i) / 5) * 0.06, k, seed) * 1.1 });
+      stroke(g, pts, { w: 0.6, seed: c * 31 + k, taper: [0.3, 0.6] });
+    }
+  }
+  const pore = css(shift(T.dark, 2, 2));
+  eachTile(p, (_, __, wx, wy) => {
+    const r = hash2(wx, wy, seed + 5);
+    const sd = wx * 7 + wy * 13 + seed;
+    if (r < 0.35) {
+      g.fillStyle = pore;
+      const px = wx + 3 + hash2(wx, wy, seed + 6) * 10;
+      const py = wy + 3 + hash2(wx, wy, seed + 7) * 10;
+      for (let i = 0; i < 4; i++) {
+        blob(g, px + hash2(i, wx, seed + 8) * 5 - 2.5, py + hash2(i, wy, seed + 9) * 5 - 2.5, 0.35 + hash2(i, sd, 1) * 0.35, sd + i, 1, 0.1);
+        g.fill();
+      }
+    } else if (r < 0.43) crack(p, wx + 4, wy + 4, 0.8 + hash2(wx, wy, seed + 10) * 1.5, 8 + hash2(wx, wy, seed + 11) * 8, sd);
+    else if (r < 0.48) {
+      // A knuckle: a darker band across, inked on its shadow side.
+      g.fillStyle = css(shift(T.dark, 8, -2));
+      blob(g, wx + 8, wy + 8, 4.5, sd, 0.45, 0.25);
+      g.fill();
+      g.fillStyle = ink;
+      line(g, wx + 4, wy + 10, wx + 12, wy + 10.4, { w: 0.8, seed: sd, taper: [0.2, 0.4] });
+    }
+  });
+};
+
 export const INK_MATERIALS: Record<TerrainKind, InkMaterial> = {
   dirt: soil,
   loam: soil,
@@ -757,7 +1093,7 @@ export const INK_MATERIALS: Record<TerrainKind, InkMaterial> = {
   strata,
   rock: rockface,
   cave: rockface,
-  crystal: rockface,
+  crystal: crystalline,
   basalt: columnar,
   stone: ashlar,
   brick: brickwork,
@@ -769,4 +1105,8 @@ export const INK_MATERIALS: Record<TerrainKind, InkMaterial> = {
   ice: glass,
   regolith,
   hull: hullPlates,
+  timber: halfTimber,
+  carved: carvedStone,
+  iceblock: iceBlocks,
+  bone: ivory,
 };

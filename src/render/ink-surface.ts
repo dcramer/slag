@@ -2,7 +2,7 @@ import { css, type HSL } from '../core/color';
 import { hash2 } from '../core/rng';
 import { TILE } from '../sim/constants';
 import { blob, type EdgeP, line, type P, stroke } from './ink';
-import type { Block, Run } from './ink-build';
+import { type Block, type Run, runsOf } from './ink-build';
 import { boxPts, dot, INK, ovalPts, path, pen, poly, sprite, stamp, tone } from './ink-props';
 import type { MetalPalette } from './kit';
 
@@ -15,7 +15,11 @@ import type { MetalPalette } from './kit';
  * live, and they move by the sim's own belt speed and frame, never a clock.
  */
 
-export type Cut = Block & { loops: readonly EdgeP[][]; dir: number };
+/**
+ * A block as baked: its hand-cut outline, and for a conveyor the way its belt runs (`dir`, ±1) and the
+ * face it's on (`turn`, quarter turns clockwise from the top, as the part was rotated).
+ */
+export type Cut = Block & { loops: readonly EdgeP[][]; dir: number; turn: number };
 
 const mod = (a: number, m: number) => ((a % m) + m) % m;
 
@@ -36,6 +40,46 @@ const topOpen = (b: Block, r: Run) => {
   for (let x = r.x0; x <= r.x1; x++) if (!b.has(x, r.y - 1)) return true;
   return false;
 };
+
+/** Quarter turns clockwise, the way the canvas turns: cos and sin of each. */
+const COS = [1, 0, -1, 0];
+const SIN = [0, 1, 0, -1];
+
+/** A point turned `t` quarter turns clockwise about the cells' origin. */
+const turnPt = (t: number, x: number, y: number): P => ({ x: x * COS[t] - y * SIN[t], y: x * SIN[t] + y * COS[t] });
+
+/**
+ * The block as its belt sees it: the cells turned back so the belt's face is the top. Drawn under a
+ * canvas turned `turn` quarter turns, everything lands back on the real cells.
+ */
+function beltFrame(b: Cut): Block {
+  if (!b.turn) return b;
+  const back = (4 - b.turn) & 3;
+  const cells = b.cells.map(([x, y]) => {
+    const c = turnPt(back, x + 0.5, y + 0.5);
+    return [Math.floor(c.x), Math.floor(c.y)] as [number, number];
+  });
+  const set = new Set(cells.map(([x, y]) => `${x},${y}`));
+  const has = (x: number, y: number) => set.has(`${x},${y}`);
+  return { ...b, cells, has, runs: runsOf(cells, has) };
+}
+
+/** Where `tone` pulls a lit shape in the belt's frame, so the light still comes from the world's upper left. */
+let LIGHT: P = { x: -1, y: -1.1 };
+
+/** Two flat tones and a hard shadow, lit from the world's upper left whichever way the belt is turned. */
+function lit(g: CanvasRenderingContext2D, pts: readonly P[], base: HSL, depth: number, shade: number) {
+  g.fillStyle = css(base, shade, 1, 6);
+  path(g, pts);
+  g.fill();
+  g.save();
+  g.clip();
+  g.translate(LIGHT.x * depth, LIGHT.y * depth);
+  g.fillStyle = css(base);
+  path(g, pts);
+  g.fill();
+  g.restore();
+}
 
 function trace(g: CanvasRenderingContext2D, loops: readonly EdgeP[][], dx: number, dy: number) {
   g.beginPath();
@@ -92,7 +136,10 @@ function beltOf(r: Run, dir: number): Belt {
   return { X0, X1, Y, bt, rl, rr, nx, ny, lap, pitch: lap / Math.max(4, Math.round(lap / 5.5)) };
 }
 
-export const beltsOf = (b: Cut): Belt[] => b.runs.filter((r) => topOpen(b, r)).map((r) => beltOf(r, b.dir));
+export const beltsOf = (b: Cut): Belt[] => {
+  const f = beltFrame(b);
+  return f.runs.filter((r) => topOpen(f, r)).map((r) => beltOf(r, b.dir));
+};
 
 /** Machinery paint for the side rail, picked by the part's hue: safety yellow, orange, blue, green, red. */
 const PAINTS: HSL[] = [
@@ -177,7 +224,7 @@ function chevron(g: CanvasRenderingContext2D, x: number, y: number, h: number, d
 }
 
 /** One conveyor: the steel side frame and its feet, the rubber belt, the painted rail inside it, and the drums' still parts. */
-function beltMachine(g: CanvasRenderingContext2D, b: Cut, bl: Belt, tag: boolean) {
+function beltMachine(g: CanvasRenderingContext2D, b: Cut, bl: Belt, tag: boolean): P | null {
   const { pal, seed } = b;
   const { X0, X1, Y, bt, rl, rr, nx, ny } = bl;
   const B = Y + TILE;
@@ -196,33 +243,37 @@ function beltMachine(g: CanvasRenderingContext2D, b: Cut, bl: Belt, tag: boolean
     const out = e < 0 ? X0 - 3 : X1 + 3;
     const inn = e < 0 ? xl + 1.6 : xr - 1.6;
     const [l, r] = e < 0 ? [out, inn] : [inn, out];
-    tone(g, poly(l, Y - 3, r, Y - 3, r + (e < 0 ? 1.2 : 0), B + 3, l - (e < 0 ? 0 : 1.2), B + 3), steel, { depth: 0.9, shade: -24 });
+    lit(g, poly(l, Y - 3, r, Y - 3, r + (e < 0 ? 1.2 : 0), B + 3, l - (e < 0 ? 0 : 1.2), B + 3), steel, 0.9, -24);
     const low = Y + 2 * (e < 0 ? rl : rr);
     if (B - low > 2.2) dot(g, e < 0 ? X0 + 2.4 : X1 - 2.4, (low + B) / 2 + 0.2, 0.55, k, css(pal.light, -4));
   }
   for (let k = Math.ceil(X0 / TILE) + 1; k * TILE < X1; k++) {
     const x = k * TILE;
     if (k % 2 !== 0 || x < xl + 6 || x > xr - 6) continue;
-    tone(g, poly(x - 1.2, Y + 6, x + 1.2, Y + 6, x + 1.8, B + 3, x - 1.8, B + 3), steel, { depth: 0.7, shade: -22 });
-    tone(g, boxPts(x - 3, B - 1.5, 6, 4.5, 0.8, seed + x, 0.1), steel, { depth: 0.5, shade: -22 });
+    lit(g, poly(x - 1.2, Y + 6, x + 1.2, Y + 6, x + 1.8, B + 3, x - 1.8, B + 3), steel, 0.7, -22);
+    lit(g, boxPts(x - 3, B - 1.5, 6, 4.5, 0.8, seed + x, 0.1), steel, 0.5, -22);
   }
 
-  // The belt: rubber round both drums, its top run lit, its return run in shadow.
+  // The belt: rubber round both drums. Its outer run is lit when it faces up or left (a top, or a left
+  // face) and its return run is in shadow; turned the other way round, so are the tones.
+  const outerLit = b.turn === 0 || b.turn === 3;
   g.save();
   path(g, loopPts(bl, 0, 3));
-  g.fillStyle = RUBBER;
+  g.fillStyle = outerLit ? RUBBER : RUBBER_LOW;
   g.fill();
   g.clip();
-  g.fillStyle = RUBBER_LOW;
+  g.fillStyle = outerLit ? RUBBER_LOW : RUBBER;
   path(g, poly(X0 - 3, Y + rl + 0.6, X1 + 3, Y + rr + 0.6, X1 + 3, B + 3, X0 - 3, B + 3));
   g.fill();
-  g.fillStyle = RUBBER_TOP;
-  g.fillRect(X0 - 3, Y - 3, X1 - X0 + 6, 3.8);
-  // Wear on the top run: a long dull sheen, broken where the hand lifted.
-  g.fillStyle = 'rgb(128 122 136)';
-  for (let x = Math.floor(X0 / 8) * 8; x < xr; x += 8) {
-    if (x < xl - 2 || hash2(x, Y, seed) < 0.45) continue;
-    line(g, x + 1, Y + 0.35, x + 4 + hash2(x, Y, seed + 1) * 3, Y + 0.35, { w: 0.5, seed: seed + x, taper: [0.3, 0.3], press: 0.1 });
+  if (outerLit) {
+    g.fillStyle = RUBBER_TOP;
+    g.fillRect(X0 - 3, Y - 3, X1 - X0 + 6, 3.8);
+    // Wear on the top run: a long dull sheen, broken where the hand lifted.
+    g.fillStyle = 'rgb(128 122 136)';
+    for (let x = Math.floor(X0 / 8) * 8; x < xr; x += 8) {
+      if (x < xl - 2 || hash2(x, Y, seed) < 0.45) continue;
+      line(g, x + 1, Y + 0.35, x + 4 + hash2(x, Y, seed + 1) * 3, Y + 0.35, { w: 0.5, seed: seed + x, taper: [0.3, 0.3], press: 0.1 });
+    }
   }
   g.restore();
   // Inside the loop: the dark gap, then the painted side rail between the drum axles, its underside
@@ -235,13 +286,16 @@ function beltMachine(g: CanvasRenderingContext2D, b: Cut, bl: Belt, tag: boolean
   const pl = { x: xl + ins(rl) * nx, y: Y + rl + ins(rl) * ny };
   const pr = { x: xr + ins(rr) * nx, y: Y + rr + ins(rr) * ny };
   const rb = (x: number) => pl.y + ((pr.y - pl.y) * (x - pl.x)) / (pr.x - pl.x || 1);
+  let hang: P | null = null;
   if (xr - xl > 0.5) {
-    tone(g, [{ x: xl, y: rt }, { x: xr, y: rt }, pr, pl], paint, { depth: 0.7, shade: -18 });
-    // The belt's shadow along the rail's top, and the rail's own lit lip under it.
-    g.fillStyle = css(paint, -30, 1, 6);
-    g.fillRect(xl, rt, xr - xl, 0.75);
-    g.fillStyle = css(paint, 16, 1, -8);
-    line(g, xl + 0.5, rt + 1.25, xr - 0.5, rt + 1.2, { w: 0.5, seed: seed + 4, taper: [0.1, 0.4], press: 0.2 });
+    lit(g, [{ x: xl, y: rt }, { x: xr, y: rt }, pr, pl], paint, 0.7, -18);
+    if (outerLit) {
+      // The belt's shadow along the rail's top, and the rail's own lit lip under it.
+      g.fillStyle = css(paint, -30, 1, 6);
+      g.fillRect(xl, rt, xr - xl, 0.75);
+      g.fillStyle = css(paint, 16, 1, -8);
+      line(g, xl + 0.5, rt + 1.25, xr - 0.5, rt + 1.2, { w: 0.5, seed: seed + 4, taper: [0.1, 0.4], press: 0.2 });
+    }
     // Arrows on tile lines (or one in the middle), bolts on tile centres: keyed to the grid, not the run.
     const ca = xl + rl - bt + 1.6;
     const ce = xr - rr + bt - 1.6;
@@ -255,7 +309,7 @@ function beltMachine(g: CanvasRenderingContext2D, b: Cut, bl: Belt, tag: boolean
       dot(g, bx, rt + 1.9, 0.62, seed + bx, css(paint, 26, 1, -10));
       dot(g, bx, rb(bx) - 1.4, 0.62, seed + bx + 1, css(paint, 26, 1, -10));
     }
-    if (tag && bolts.length) luggageTag(g, bolts[0], rt + 1.9, seed + 9);
+    if (tag && bolts.length) hang = { x: bolts[0], y: rt + 1.9 };
   }
 
   // The drums' still parts: a lit steel rim round a recessed face. Spokes and hubs turn, so they're live.
@@ -263,7 +317,7 @@ function beltMachine(g: CanvasRenderingContext2D, b: Cut, bl: Belt, tag: boolean
     const k = seed + i * 31;
     const rd = R - bt;
     const rim = ovalPts(cx, cy, rd, rd, k, 0.015, 18);
-    tone(g, rim, steel, { depth: 0.8, shade: -22 });
+    lit(g, rim, steel, 0.8, -22);
     g.fillStyle = css(pal.dark, 2);
     path(g, ovalPts(cx + 0.2, cy + 0.25, rd - 0.95, rd - 0.95, k + 1, 0.015, 16));
     g.fill();
@@ -271,13 +325,14 @@ function beltMachine(g: CanvasRenderingContext2D, b: Cut, bl: Belt, tag: boolean
     stroke(
       g,
       [0, 1, 2].map((j) => {
-        const a = Math.PI * (1.1 + j * 0.16);
+        const a = Math.PI * (1.1 + j * 0.16) - (b.turn * Math.PI) / 2;
         return { x: cx + Math.cos(a) * (rd - 0.45), y: cy + Math.sin(a) * (rd - 0.45) };
       }),
       { w: 0.55, seed: k, taper: [0.25, 0.35], press: 0.1 },
     );
     pen(g, rim, k, 0.35, 0.85, 3);
   }
+  return hang;
 }
 
 /** A row under another row: the belt's drive housing, a louvred steel box. */
@@ -289,7 +344,7 @@ function housing(g: CanvasRenderingContext2D, b: Cut, r: Run) {
   for (let x = r.x0; x <= r.x1; x++) {
     const px = x * TILE;
     const k = seed + x * 17 + r.y * 7;
-    tone(g, boxPts(px + 0.7, Y + 0.7, TILE - 1.4, TILE - 1.4, 1.2, k, 0.15), pal.base, { depth: 1, shade: -20 });
+    lit(g, boxPts(px + 0.7, Y + 0.7, TILE - 1.4, TILE - 1.4, 1.2, k, 0.15), pal.base, 1, -20);
     for (let i = 0; i < 3; i++) {
       const ly = Y + 5 + i * 2.6;
       g.fillStyle = INK;
@@ -307,17 +362,29 @@ function housing(g: CanvasRenderingContext2D, b: Cut, r: Run) {
   }
 }
 
-/** The conveyor's still parts, inside the block's cut: a belt machine on every row a foot can reach. */
+/**
+ * The conveyor's still parts, inside the block's cut: a belt machine on every row of the belt's own frame
+ * that its belt face is open on, turned onto the face the part was rotated to. The luggage tag hangs the
+ * world's way down whichever way that is.
+ */
 export function markConveyor(g: CanvasRenderingContext2D, b: Cut) {
-  let tag = true;
-  for (const r of b.runs) {
+  const f = beltFrame(b);
+  LIGHT = turnPt((4 - b.turn) & 3, -1, -1.1);
+  let tag: P | null = null;
+  g.save();
+  g.rotate((b.turn * Math.PI) / 2);
+  for (const r of f.runs) {
     g.save();
-    clipRun(g, b, r);
-    if (topOpen(b, r)) {
-      beltMachine(g, b, beltOf(r, b.dir), tag);
-      tag = false;
-    } else housing(g, b, r);
+    clipRun(g, f, r);
+    if (topOpen(f, r)) tag ??= beltMachine(g, b, beltOf(r, b.dir), !tag);
+    else housing(g, b, r);
     g.restore();
+  }
+  g.restore();
+  LIGHT = { x: -1, y: -1.1 };
+  if (tag) {
+    const p = turnPt(b.turn, tag.x, tag.y);
+    luggageTag(g, p.x, p.y, b.seed + 9);
   }
 }
 
@@ -377,8 +444,9 @@ const at = { x: 0, y: 0, nx: 0, ny: 0 };
 
 /**
  * The belt's moving parts, at offset (ox, oy): cleats riding the whole lap and the drums' spokes, both at
- * `speed` (the sim's belt speed, px/s, signed the way the top run carries you) on sim frame `frame`.
- * Clipped to the block's cut, so nothing moving ever pokes past the shape that's solid.
+ * `speed` (the sim's belt speed, px/s, clockwise round the block for positive) on sim frame `frame`, on
+ * the face `turn` quarter turns clockwise from the top. Clipped to the block's cut, so nothing moving
+ * ever pokes past the shape that's solid.
  */
 export function drawBelts(
   s: CanvasRenderingContext2D,
@@ -390,13 +458,20 @@ export function drawBelts(
   speed: number,
   pal: MetalPalette,
   hue: number,
+  turn = 0,
 ) {
   const dir = speed < 0 ? -1 : 1;
   const travel = (frame * Math.abs(speed)) / 60;
+  const c0 = COS[turn];
+  const s0 = SIN[turn];
   s.save();
   trace(s, loops, ox, oy);
   s.clip();
   for (const bl of belts) {
+    // In the belt's own frame, turned onto its face.
+    s.save();
+    s.translate(ox, oy);
+    s.rotate((turn * Math.PI) / 2);
     const n = Math.round(bl.lap / bl.pitch);
     const ph = mod(dir * travel, bl.pitch);
     const o = 0.75;
@@ -407,11 +482,12 @@ export function drawBelts(
       s.beginPath();
       for (let c = 0; c < n; c++) {
         onLap(bl, mod(c * bl.pitch + ph, bl.lap), at);
-        if (at.ny < 0.25 !== lit) continue;
+        // Lit where the belt faces the world's upper left.
+        if (0.55 * (at.nx * c0 - at.ny * s0) + 0.83 * (at.nx * s0 + at.ny * c0) < 0.2 !== lit) continue;
         const tx = -at.ny;
         const ty = at.nx;
-        const x = at.x + ox;
-        const y = at.y + oy;
+        const x = at.x;
+        const y = at.y;
         const ax = x - at.nx * o + tx * lean;
         const ay = y - at.ny * o + ty * lean;
         const bx = x - at.nx * i - tx * lean;
@@ -432,8 +508,8 @@ export function drawBelts(
         const rd = R - bl.bt;
         if (rd < 2.2) continue;
         const spin = (dir * travel) / rd + cx0 * 0.13;
-        const cx = cx0 + ox;
-        const cy = cy0 + oy;
+        const cx = cx0;
+        const cy = cy0;
         const r1 = rd - 0.9;
         for (let k = painted ? 0 : 1; k < (painted ? 1 : 3); k++) {
           const a = spin + (k * Math.PI * 2) / 3;
@@ -449,8 +525,13 @@ export function drawBelts(
       s.fillStyle = painted ? css(paintOf(hue)) : css(pal.base, 4);
       s.fill();
     }
+    s.restore();
+    // Hubs go on in the world's frame, so their glint stays upper left.
     const hub = hubOf(pal);
-    for (const [cx, cy] of drumsOf(bl)) stamp(s, hub, cx + ox, cy + oy);
+    for (const [cx, cy] of drumsOf(bl)) {
+      const w = turnPt(turn, cx, cy);
+      stamp(s, hub, w.x + ox, w.y + oy);
+    }
   }
   s.restore();
 }

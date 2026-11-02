@@ -4,6 +4,7 @@ import { DROP_BLINK, DROP_LIFE, type ItemKind, ROCKET, SHIELD, SWORD } from '../
 import type { Projectile, Runner, RunWorld } from '../sim/run';
 import type { GameEvent } from '../sim/types';
 import type { Fx } from './fx';
+import { drawBat, drawRaisedBrick, EXTRA_ICONS } from './items-extra';
 import { blob, line, type P, stroke } from './ink';
 import { ball, boxPts, glint, INK, part, path, pen, poly, sprite, stamp, tick } from './ink-props';
 import { circle, ellipse, light, type RC } from './kit';
@@ -22,6 +23,10 @@ export const ITEM_HUE: Record<ItemKind, HSL> = {
   shield: { h: 185, s: 95, l: 62 },
   rocket: { h: 355, s: 85, l: 58 },
   smoke: { h: 275, s: 60, l: 62 },
+  bat: { h: 34, s: 80, l: 60 },
+  tremor: { h: 14, s: 85, l: 56 },
+  tax: { h: 222, s: 70, l: 62 },
+  block: { h: 98, s: 60, l: 50 },
 };
 
 const NOODLE: HSL = { h: 96, s: 72, l: 56 };
@@ -235,6 +240,7 @@ const ICONS: Record<ItemKind, Icon> = {
     s.fillStyle = Math.sin(t * 30) > 0 ? '#ffd36a' : '#ff7a2a';
     circle(s, 3.7, -6, 0.9);
   },
+  ...EXTRA_ICONS,
 };
 
 /** Draw an item icon centered at (x, y), scaled by k, mirrored when facing left. */
@@ -307,7 +313,7 @@ function drawSword(rc: RC, r: Runner, cxp: number): void {
   s.save();
   s.translate(cxp + fc * 3, b.y + 7);
   s.scale(fc, 1);
-  if (it.swing >= SWORD.activeLo && it.swing <= SWORD.activeHi) swingSmear(s, -Math.PI / 2 - 1.1, -Math.PI / 2 + ang);
+  if (it.swing >= SWORD.activeLo && it.swing <= SWORD.activeHi) swingSmear(s, -Math.PI / 2 - 1.1, -Math.PI / 2 + ang, NOODLE_SMEAR);
   s.rotate(ang);
   s.translate(0, -9);
   masterNoodle(s, bend);
@@ -317,21 +323,30 @@ function drawSword(rc: RC, r: Runner, cxp: number): void {
 const SMEAR_N = 14;
 const smearPts: P[] = Array.from({ length: SMEAR_N * 2 }, () => ({ x: 0, y: 0 }));
 const arcPts: P[] = Array.from({ length: SMEAR_N }, () => ({ x: 0, y: 0 }));
-const SMEAR_CUTS = [
-  [8, css(NOODLE, 12, 1, -8)],
-  [3.2, css(NOODLE, 30, 1, -30)],
-] as const;
-const SMEAR_LINE = css(NOODLE, -30);
+interface Smear {
+  r: number;
+  /** The smear's two cuts, as [thickness, color]: the body, then the bright band along its outer edge. */
+  cuts: readonly (readonly [number, string])[];
+  line: string;
+}
+const NOODLE_SMEAR: Smear = {
+  r: 18.5,
+  cuts: [
+    [8, css(NOODLE, 12, 1, -8)],
+    [3.2, css(NOODLE, 30, 1, -30)],
+  ],
+  line: css(NOODLE, -30),
+};
 
 /**
  * The swing as a comic draws it: a flat crescent smear behind the blade, fattest at the blade and thinning
  * to nothing at the tail, with two pen speed lines curving through it. Only while the swing can hit, so
  * the smear is exactly the danger.
  */
-function swingSmear(s: CanvasRenderingContext2D, a0: number, a1: number) {
-  const R = 18.5;
+function swingSmear(s: CanvasRenderingContext2D, a0: number, a1: number, sm: Smear) {
+  const R = sm.r;
   // Two cuts: the smear, and a brighter band along its outer edge where the tip moved fastest.
-  for (const [w, col] of SMEAR_CUTS) {
+  for (const [w, col] of sm.cuts) {
     for (let i = 0; i < SMEAR_N; i++) {
       const t = i / (SMEAR_N - 1);
       const a = a0 + (a1 - a0) * t;
@@ -346,10 +361,10 @@ function swingSmear(s: CanvasRenderingContext2D, a0: number, a1: number) {
     path(s, smearPts);
     s.fill();
   }
-  s.fillStyle = SMEAR_LINE;
+  s.fillStyle = sm.line;
   for (const [r, from, w] of [
-    [14.6, 0.45, 0.8],
-    [12.4, 0.68, 0.6],
+    [R - 3.9, 0.45, 0.8],
+    [R - 6.1, 0.68, 0.6],
   ]) {
     for (let i = 0; i < SMEAR_N; i++) {
       const a = a0 + (a1 - a0) * (from + (0.97 - from) * (i / (SMEAR_N - 1)));
@@ -546,7 +561,12 @@ export function drawRunnerItems(rc: RC, r: Runner): void {
   const x = b.x + b.w / 2;
   const fc = b.facing;
   const h = it.held;
-  if (h?.kind === 'sword' || it.swing > 0) drawSword(rc, r, x);
+  const batSwing = it.swing > 0 && it.swingKind === 'bat';
+  if (h?.kind === 'bat' || batSwing) {
+    const u = batSwing ? 1 - it.swing / SWORD.swing : -1;
+    drawBat(rc, r, x, swingSmear, u, batSwing && it.swing >= SWORD.activeLo && it.swing <= SWORD.activeHi);
+  } else if (h?.kind === 'sword' || it.swing > 0) drawSword(rc, r, x);
+  else if (it.slam > 0) drawRaisedBrick(rc, r, x);
   else if (h?.kind === 'shield') bubbleWrap(rc, x, b.y + b.h / 2, r.slot, 0);
   else if (h?.kind === 'rocket' || it.thrust > 0) drawItemIcon(s, 'rocket', x - fc * 6, b.y + 8, 0.9, rc.t, fc);
   else if (h) drawItemIcon(s, h.kind, x + fc * 8, b.y + 8, 0.95, rc.t, fc);
@@ -659,6 +679,70 @@ const ITEM_FX: Partial<Record<ItemEvent['what'], (fx: Fx, e: ItemEvent, col: HSL
   },
 };
 
+const PAPER: HSL = { h: 45, s: 40, l: 94 };
+const DIRT: HSL = { h: 26, s: 42, l: 36 };
+const TURF: HSL = { h: 98, s: 52, l: 44 };
+
+/** Moments that need more than their `what`'s fx, keyed `what:kind`. */
+const KIND_FX: Record<string, (fx: Fx, e: ItemEvent, shake: (k: number) => void) => void> = {
+  // A full-charge bat hit: the biggest starburst in the game, and a long ring of speed lines.
+  'hit:homer'(fx, e, shake) {
+    fx.add('flash', e.x, e.y, 0, 0, GOLD, 34, 0.3);
+    fx.add('flash', e.x, e.y, 0, 0, WHITE, 16, 0.18);
+    fx.add('ring', e.x, e.y, 0, 0, GOLD, 46, 0.4);
+    fx.burst('spark', e.x, e.y, 22, 320, [GOLD, WHITE], 1.3, 0.45);
+    shake(9);
+  },
+  'hit:bat'(fx, e, shake) {
+    fx.add('flash', e.x, e.y, 0, 0, GOLD, 20, 0.2);
+    fx.add('ring', e.x, e.y, 0, 0, GOLD, 24, 0.25);
+    fx.burst('spark', e.x, e.y, 12, 200, [GOLD, WHITE], 1, 0.35);
+    shake(5);
+  },
+  // The brick comes down: a starburst at the slammer's feet and a shock of speed lines and dust along the floor.
+  'hit:tremor'(fx, e, shake) {
+    fx.add('flash', e.x, e.y, 0, 0, ITEM_HUE.tremor, 26, 0.25);
+    fx.add('ring', e.x, e.y, 0, 0, WHITE, 52, 0.45);
+    fx.burst('dust', e.x, e.y - 2, 16, 160, [{ h: 30, s: 12, l: 78 }], 2.2, 0.6);
+    fx.burst('debris', e.x, e.y - 2, 8, 140, [{ h: 14, s: 50, l: 45 }], 1, 0.6, 120);
+    shake(10);
+  },
+  // Each rival the floor bucked.
+  'hit:quake'(fx, e) {
+    fx.add('flash', e.x, e.y, 0, 0, GOLD, 12, 0.18);
+    fx.burst('dust', e.x, e.y - 1, 6, 70, [{ h: 30, s: 12, l: 78 }], 1.4, 0.4);
+  },
+  // The tax lands: a starburst and a blizzard of paperwork.
+  'hit:tax'(fx, e, shake) {
+    fx.add('flash', e.x, e.y, 0, 0, ITEM_HUE.tax, 30, 0.28);
+    fx.add('ring', e.x, e.y, 0, 0, WHITE, 40, 0.4);
+    fx.burst('confetti', e.x, e.y - 4, 18, 180, [PAPER, WHITE, { h: 4, s: 80, l: 55 }], 1.5, 1, 120);
+    shake(8);
+  },
+  'warn:tax'(fx, e) {
+    fx.add('ring', e.x, e.y, 0, 0, { h: 4, s: 90, l: 60 }, 16, 0.3);
+  },
+  'fizzle:tax'(fx, e) {
+    fx.add('flash', e.x, e.y, 0, 0, WHITE, 10, 0.15);
+    fx.burst('confetti', e.x, e.y, 8, 90, [PAPER, WHITE], 1.2, 0.7, 40);
+  },
+  // A block pops into place, and later crumbles to dirt and turf.
+  'use:block'(fx, e, shake) {
+    fx.add('ring', e.x, e.y, 0, 0, TURF, 18, 0.25);
+    fx.burst('dust', e.x, e.y + 6, 6, 60, [{ h: 30, s: 15, l: 75 }], 1.2, 0.4);
+    shake(1.5);
+  },
+  'fizzle:block'(fx, e) {
+    fx.burst('debris', e.x, e.y, 10, 90, [DIRT, TURF], 1.1, 0.7, 60);
+    fx.burst('dust', e.x, e.y, 6, 50, [{ h: 28, s: 20, l: 60 }], 1.6, 0.6);
+  },
+  'use:tremor'(fx, e) {
+    fx.burst('dust', e.x, e.y + 14, 4, 40, [{ h: 0, s: 0, l: 85 }], 1, 0.3);
+  },
+};
+
 export function itemFx(fx: Fx, e: ItemEvent, shake: (k: number) => void): void {
+  const own = KIND_FX[`${e.what}:${e.kind}`];
+  if (own) return own(fx, e, shake);
   ITEM_FX[e.what]?.(fx, e, (ITEM_HUE as Record<string, HSL>)[e.kind] ?? GOLD, shake);
 }

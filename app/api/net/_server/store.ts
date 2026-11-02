@@ -6,6 +6,8 @@
  * Every command is billed, so handlers batch into a single `run` and the set
  * of commands stays small. No client library: this is one `fetch`.
  */
+import { SCRIPTS } from './scripts';
+
 export type Cmd = (string | number)[];
 
 /** The store answered, but not with results: `status` is its HTTP status, absent when it rejected a command. */
@@ -85,8 +87,17 @@ export class MemoryStore implements Store {
     return cmds.map((c) => this.exec(c));
   }
 
+  /** Runs a script's TypeScript mirror (see scripts.ts): one command for the EVAL, then one per call it makes, as Upstash bills it. */
+  private evalScript([, lua, numKeys, ...rest]: Cmd): unknown {
+    const script = SCRIPTS.get(String(lua));
+    if (!script) throw new Error('MemoryStore: unknown script. Scripts run here through their mirror: add it to SCRIPTS in scripts.ts.');
+    const n = Number(numKeys);
+    return script.mirror((c) => this.exec(c), rest.slice(0, n).map(String), rest.slice(n).map(String));
+  }
+
   private exec(cmd: Cmd): unknown {
     this.count++;
+    if (String(cmd[0]).toUpperCase() === 'EVAL') return this.evalScript(cmd);
     const [op, key, ...rest] = cmd.map(String);
     const e = this.live(key);
     switch (op.toUpperCase()) {
@@ -108,7 +119,7 @@ export class MemoryStore implements Store {
       case 'EXISTS':
         return e ? 1 : 0;
       case 'DEL':
-        return this.keys.delete(key) && e ? 1 : 0;
+        return [key, ...rest].filter((k) => this.live(k) !== undefined && this.keys.delete(k)).length;
       case 'GET':
         return typeof e?.v === 'string' ? e.v : null;
       case 'MGET':
@@ -118,10 +129,13 @@ export class MemoryStore implements Store {
         });
       case 'ZADD': {
         const z = (e?.v as Map<string, number> | undefined) ?? new Map<string, number>();
-        const fresh = !z.has(rest[1]);
-        z.set(rest[1], Number(rest[0]));
+        let fresh = 0;
+        for (let i = 0; i + 1 < rest.length; i += 2) {
+          if (!z.has(rest[i + 1])) fresh++;
+          z.set(rest[i + 1], Number(rest[i]));
+        }
         if (!e) this.keys.set(key, { v: z });
-        return fresh ? 1 : 0;
+        return fresh;
       }
       case 'ZREM': {
         if (!e) return 0;
