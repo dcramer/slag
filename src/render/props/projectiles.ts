@@ -300,6 +300,34 @@ function drawFrost(rc: RC, p: Projectile, a: number, emit?: Emit) {
   if (emit && Math.random() < 0.3) emit('spark', p.x, p.y, -p.vx * 0.1, -p.vy * 0.1, ice);
 }
 
+const SNOW: HSL = { h: 205, s: 22, l: 94 };
+
+/**
+ * An avalanche's snowball (glacier), on exactly the circle that kills (AMMO.snowball.radius): packed snow,
+ * shaded away from the light, with clumps that turn as far as it has rolled, and powder kicked up behind it
+ * while it's on the ground.
+ */
+function drawSnowball(rc: RC, p: Projectile, _a: number, emit?: Emit) {
+  const s = rc.s;
+  const r = 5.5;
+  const spin = p.x / r;
+  ball(s, p.x, p.y, r, SNOW, p.id);
+  s.fillStyle = css(SNOW, -16);
+  for (let k = 0; k < 3; k++) {
+    const a = spin + k * 2.1;
+    circle(s, p.x + Math.cos(a) * r * 0.55, p.y + Math.sin(a) * r * 0.55, 0.9 + (k % 2) * 0.4);
+  }
+  if (p.vy === 0) {
+    const back = p.x - Math.sign(p.vx || 1) * r;
+    for (let k = 0; k < 3; k++) {
+      const q = (rc.frame * 0.12 + k / 3 + p.id * 0.37) % 1;
+      rc.bg.fillStyle = `rgba(240,246,252,${0.55 * (1 - q)})`;
+      circle(rc.bg, back - Math.sign(p.vx || 1) * q * 6, p.y + r - 1 - q * 4, 1 + q * 2.4);
+    }
+    if (emit && Math.random() < 0.15) emit('debris', back, p.y + r - 1, -p.vx * 0.1, -30, SNOW);
+  }
+}
+
 /** Where each trick shot has been, newest last: render-side memory, so the line follows its bounces. */
 const trails = new Map<number, { pts: number[]; seen: number }>();
 
@@ -356,6 +384,7 @@ const AMMO_ART: Record<Ammo, (rc: RC, p: Projectile, angle: number, emit?: Emit)
   ricochet: drawRicochet,
   glider: gliderShot,
   slug: drawSlug,
+  snowball: drawSnowball,
   puck: drawItemShot,
   smokebomb: drawItemShot,
 };
