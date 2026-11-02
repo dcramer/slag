@@ -17,7 +17,7 @@ import type { Concept, Landmark } from './types';
  * the top floor, and that static climb is the proof. A dumbwaiter cab rides a shaft up the middle,
  * parking at every floor: the quick way up, never needed. Both outer walls carry a huge broken window,
  * the glass standing out of its frame, so the walls you'd climb outside cut you. A chandelier hangs over
- * the hall waiting to drop, cobwebs fill the corners and the top floor is rotten through.
+ * the hall waiting to drop, cobwebs fill the corners and the floor beside the cab's first stop is rotten through.
  *
  * The Throne Hall is a long stone hall between two towers: chandeliers swinging in step from the
  * ceiling, one hung to drop on whoever walks under it, and a dais at the far end with the throne and
@@ -73,6 +73,8 @@ export interface Manor {
   G: number;
   x0: number;
   x1: number;
+  /** Columns of open air either side for the glass to stand out into. */
+  gm: number;
   /** Outer and inner wall columns, left and right. */
   L0: number;
   L1: number;
@@ -85,29 +87,44 @@ export interface Manor {
   F1: number;
   F2: number;
   RB: number;
-  /** Shaft's left column and width. */
+  /** Shaft's left column and width; the stairwell starts right of it, at `sw`. */
   sx: number;
   S: number;
+  sw: number;
 }
 
 export function manorPlan(at: TileRect): Manor {
-  const G = at.y + at.h;
-  const x0 = at.x;
-  const x1 = at.x + at.w - 1;
-  const ix0 = x0 + 3;
-  const ix1 = x1 - 3;
-  const S = shaftW();
-  // The stairwell takes four columns on the left and the rotten boards four on the right; the shaft splits what's left.
-  const spare = ix1 - ix0 + 1 - STAIRWELL - S - BACK;
-  const sx = ix0 + STAIRWELL + Math.floor(spare * 0.5);
-  const F1 = G - HALL - 1;
-  const F2 = F1 - UPPER - 1;
-  return { G, x0, x1, L0: x0 + 1, L1: x0 + 2, R1: x1 - 2, R0: x1 - 1, ix0, ix1, F1, F2, RB: F2 - UPPER - 1, sx, S };
+  const gm = glassMargin();
+  return manorWithin(at.x + gm, at.x + at.w - 1 - gm, at.y + at.h, gm);
 }
 
-/** Columns the stairwell takes at the hall's front end. */
+/**
+ * The manor between its outer walls' columns, standing on row G: what the art reads back from the back
+ * wall's box, which spans exactly those columns, without having to know the level's gravity.
+ */
+export function manorWithin(L0: number, R0: number, G: number, gm = 0): Manor {
+  const ix0 = L0 + 2;
+  const ix1 = R0 - 2;
+  const S = shaftW();
+  // The shaft against the front wall, the stairwell beside it, and the rooms beyond: nothing on a route crosses the shaft.
+  const sx = ix0;
+  const F1 = G - HALL - 1;
+  const F2 = F1 - UPPER - 1;
+  return { G, x0: L0 - gm, x1: R0 + gm, gm, L0, L1: L0 + 1, R1: R0 - 1, R0, ix0, ix1, F1, F2, RB: F2 - UPPER - 1, sx, S, sw: sx + S };
+}
+
+/**
+ * Open columns either side of the walls the glass stands out into: two, unless a classic level's middle
+ * can't spare them beside the moat (low gravity's moat is wide). Gravity alone decides it, so the plan
+ * reads it back from the box.
+ */
+function glassMargin(): number {
+  return moatMax() + 1 + 2 * 2 + 4 + STAIRWELL + shaftW() + BACK <= 30 ? 2 : 1;
+}
+
+/** Columns the stairwell takes beside the shaft. */
 const STAIRWELL = 4;
-/** Columns between the shaft and the back wall: a landing, then the rotten boards. */
+/** Columns past the stairwell at the least: the top floor's walk to its door, the hall's drop chandelier, the rotten boards. */
 const BACK = 4;
 
 /** Columns of the manor's interior: the least its rooms take on a classic level, more on a wide one. */
@@ -119,16 +136,16 @@ function manorInterior(wide: boolean, rng: Rng): number {
 const ANCHOR = (x: number, y: number): Vec => [x, y];
 
 /**
- * The manor. Its hall runs straight through, front door to back door, under a stairwell of loose
- * boards that climbs at the front: up through the first floor, up again to the top one, and along the
- * top floor (over the shaft and the rotten boards) to a door high in the back wall. So there are two
+ * The manor. Its hall runs straight through, front door to back door, past the dumbwaiter's shaft
+ * against the front wall and under a stairwell of loose boards beside it: up through the first floor,
+ * up again to the top one, and along the top floor to a door high in the back wall. So there are two
  * ways past it, the hall and the floors above, and the stairs reach every floor the cab stops at.
  */
 function buildManor(g: Grid, rng: Rng, box: TileRect, parts: number): Landmark {
   digMoat(g, rng, box, parts);
   const at = structureOf(box);
   const p = manorPlan(at);
-  const { G, x0, x1, L0, L1, R1, R0, ix0, ix1, F1, F2, RB, sx, S } = p;
+  const { G, x0, x1, L0, L1, R1, R0, ix0, ix1, F1, F2, RB, sx, S, sw } = p;
   g.clear(x0, at.y, x1, G - 1);
   // Walls two thick (the outer column takes the window frames), three floors of slabs, the ceiling.
   g.fill(L0, RB, L1, G - 1, 1, true);
@@ -155,17 +172,17 @@ function buildManor(g: Grid, rng: Rng, box: TileRect, parts: number): Landmark {
 
   // The stairwell: loose boards up from the hall (you walk under them), a hole to the first floor,
   // a board up to the hole into the top floor.
-  for (let j = 0; j < 2; j++) g.set(ix0 + j, G - 2 - j, T_ONEWAY, true);
-  g.clear(ix0 + 1, F1, ix0 + 2, F1);
-  g.set(ix0, F1 - 2, T_ONEWAY, true);
-  g.clear(ix0, F2, ix0 + 1, F2);
-  // The rotten boards: a gap in the top floor between the shaft and the door, floored by a crumbling piece.
+  for (let j = 0; j < 2; j++) g.set(sw + j, G - 2 - j, T_ONEWAY, true);
+  g.clear(sw + 1, F1, sw + 2, F1);
+  g.set(sw + 3, F1 - 2, T_ONEWAY, true);
+  g.clear(sw + 2, F2, sw + 3, F2);
+  // The rotten boards: a gap in the first floor beside the cab's stop, floored by a crumbling piece and off every route.
   const rot = ix1 - 1;
-  g.clear(rot, F2, rot + 1, F2);
+  g.clear(rot, F1, rot + 1, F1);
 
   // Window frames cut into the outer walls, between the doors.
   const glass = (outer: number, lo: number, hi: number): Vec => {
-    const h = Math.min(hi - lo + 1, rng.int(3, 4));
+    const h = Math.min(hi - lo + 1, rng.chance(0.75) ? 4 : 3);
     const y = rng.int(lo, hi - h + 1);
     for (let yy = y; yy < y + h; yy++) g.set(outer, yy, T_EMPTY, true);
     return [y, h];
@@ -179,8 +196,8 @@ function buildManor(g: Grid, rng: Rng, box: TileRect, parts: number): Landmark {
     // The rooms and the air in front of the glass stay empty: lanes, filler and decor keep out.
     air: [
       { x: ix0, y: RB + 1, w: ix1 - ix0 + 1, h: G - RB - 1 },
-      { x: x0, y: at.y, w: 1, h: G - at.y },
-      { x: x1, y: at.y, w: 1, h: G - at.y },
+      { x: x0, y: at.y, w: p.gm, h: G - at.y },
+      { x: R0 + 1, y: at.y, w: p.gm, h: G - at.y },
       // The doorways.
       { x: L0, y: G - 3, w: 2, h: 3 },
       { x: R1, y: G - 3, w: 2, h: 3 },
@@ -190,14 +207,17 @@ function buildManor(g: Grid, rng: Rng, box: TileRect, parts: number): Landmark {
       glassL: ANCHOR(x0, ly),
       glassLh: ANCHOR(lh, 0),
       glassR: ANCHOR(R0, ry),
+      glassW: ANCHOR(p.gm + 1, 0),
       glassRh: ANCHOR(rh, 0),
       shaft: ANCHOR(sx, G),
       stops: ANCHOR(G - F1, G - F2),
-      chandelier: ANCHOR(sx + S, F1 + 1),
-      rot: ANCHOR(rot, F2),
+      chandelier: ANCHOR(ix1 - 3, F1 + 1),
+      rot: ANCHOR(rot, F1),
       web: ANCHOR(ix1, F1 - UPPER),
+      facade: ANCHOR(L0, at.y),
+      facadeSize: ANCHOR(R0 - L0 + 1, G - at.y),
     },
-    skin: 'planks',
+    skin: 'timber',
   };
 }
 
@@ -214,7 +234,7 @@ function* manorPieces(rng: Rng, l: Landmark): Generator<Piece> {
     name: rng.pick(['Dumbwaiter', 'Service Lift', 'Ghost Elevator', 'Going Up?']),
     archetype: 'platform',
     role: 'build',
-    style: STEEL(rng),
+    style: makeStyle(rng, ['rust', 'obsidian'], [20], { trim: 'rivets' }),
     modules: [
       {
         type: 'body',
@@ -242,7 +262,7 @@ function* manorPieces(rng: Rng, l: Landmark): Generator<Piece> {
       archetype: 'spikestrip',
       role: 'hazard',
       style: STEEL(rng),
-      modules: [{ type: 'shards', at: [x, y], w: 2, h, dir, inset: 1, seed: rng.int(0, 1 << 20) }],
+      modules: [{ type: 'shards', at: [x, y], w: a.glassW[0], h, dir, inset: 1, seed: rng.int(0, 1 << 20) }],
       pathSafe: true,
     };
   }
@@ -268,7 +288,7 @@ function* manorPieces(rng: Rng, l: Landmark): Generator<Piece> {
       },
     ],
   };
-  // The rotten boards in the top floor.
+  // The rotten boards in the first floor.
   const [rx, ry] = a.rot;
   yield {
     name: rng.pick(['Rotten Boards', 'Termite Buffet', 'Creaky Floor']),
@@ -290,14 +310,16 @@ function* manorPieces(rng: Rng, l: Landmark): Generator<Piece> {
     ],
     pathSafe: true,
   };
-  // Cobwebs in the first floor's far corner, out of every route's way.
+  // Cobwebs in the first floor's far corner, out of every route's way, and the rooms' back wall behind it all.
   const [wx, wy] = a.web;
+  const [fw, fh] = a.facadeSize;
   yield {
     name: 'Cobwebs',
     archetype: 'web',
     role: 'utility',
     style: STEEL(rng),
     modules: [
+      { type: 'deco', kind: 'facade', at: a.facade, w: fw, h: fh, seed: rng.int(0, 1 << 20) },
       {
         type: 'web',
         cells: [
@@ -319,7 +341,7 @@ export const HAUNTED_WING: Concept = {
   family: ['glass', 'chandelier', 'axe', 'chandrop'],
   budget: 2,
   names: ['The Haunted Wing of {place}', 'The East Wing of {place}', 'The Unrentable Wing of {place}', '{place}: Viewing by Appointment'],
-  box: (k, rng) => ({ w: moatMax() + 1 + 6 + manorInterior(k.W > 56, rng), h: MANOR_H }),
+  box: (k, rng) => ({ w: moatMax() + 1 + 2 * glassMargin() + 4 + manorInterior(k.W > 56, rng), h: MANOR_H }),
   build: buildManor,
   pieces: (rng, _s, l) => manorPieces(rng, l),
 };
@@ -381,7 +403,7 @@ function buildThroneHall(g: Grid, rng: Rng, box: TileRect, parts: number): Landm
       { x: x0, y: G - 3, w: TOWER, h: 3 },
       { x: x1 - TOWER + 1, y: G - 5, w: TOWER, h: 3 },
     ],
-    anchors: { floor: [p.fx0, p.fx1], top: [top, G], dais: [dx0, G - 2] },
+    anchors: { floor: [p.fx0, p.fx1], top: [top, G], dais: [dx0, G - 2], back: [x0 + TOWER, top - CEIL], backSize: [at.w - 2 * TOWER, G - top + CEIL] },
     skin: 'stone',
   };
 }
@@ -418,7 +440,16 @@ function* throneHallPieces(rng: Rng, l: Landmark): Generator<Piece> {
       seed: rng.int(0, 1 << 20),
     });
   }
-  yield { name: rng.pick(['The Royal Chandeliers', 'Three Tenors', 'Synchronized Swinging']), archetype: 'platform', role: 'build', style, modules: rotors };
+  // The hall's back wall (banners, tall windows, the throne and the door behind it) goes with them.
+  const [bw, bh] = l.anchors.backSize;
+  const back: Module = { type: 'deco', kind: 'facade', at: l.anchors.back, w: bw, h: bh, seed: rng.int(0, 1 << 20) };
+  yield {
+    name: rng.pick(['The Royal Chandeliers', 'Three Tenors', 'Synchronized Swinging']),
+    archetype: 'platform',
+    role: 'build',
+    style,
+    modules: [back, ...rotors],
+  };
   // The one over the dais drops on whoever climbs to the throne.
   yield {
     name: rng.pick(['Falling Chandelier', 'The Opera Special', 'Overhead Costs']),

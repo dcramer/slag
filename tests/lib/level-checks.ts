@@ -4,6 +4,7 @@ import { analyzeRoutes, MAX_SHARED } from '../../src/gen/level/routes';
 import { isProtected, type Level, type SizeClass, T_EMPTY, T_ONEWAY, T_SOLID } from '../../src/sim/level';
 import { analyzeReach, isStandable } from '../../src/sim/reach';
 import type { ThemeId } from '../../src/themes';
+import { isLandmarkPiece } from './set-piece-checks';
 
 /**
  * What every generated level must satisfy, one seed at a time. The behavior suites call these on a
@@ -86,7 +87,7 @@ export function expectSizedLevel(theme: ThemeId, size: SizeClass, seed: number):
   expect(isStandable(l, l.goal.tx, l.goal.ty)).toBe(true);
   expect(info.bridges.length).toBeLessThanOrEqual(MAX_BRIDGES);
   expect(analyzeReach(info.bridges.length ? withBridges(l, info.bridges) : l).goalReached, `${theme} ${size} ${seed}`).toBe(true);
-  expect(l.setPieces.length).toBeLessThanOrEqual(l.profile!.hazards);
+  expect(l.setPieces.filter((p) => !isLandmarkPiece(l, p)).length).toBeLessThanOrEqual(l.profile!.hazards);
   for (const p of l.setPieces) for (const [x, y] of p.def.footprint) expect(x + p.tx < l.w && y + p.ty < l.h).toBe(true);
   return l;
 }

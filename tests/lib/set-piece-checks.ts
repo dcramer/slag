@@ -4,7 +4,7 @@ import { generateLevel, isAcceptable } from '../../src/gen/level';
 import { SAFE_TILES, SET_PIECE_UID } from '../../src/gen/setpieces';
 import { RUN_COUNTDOWN, TILE } from '../../src/sim/constants';
 import { isProtected, type Level, tileAt } from '../../src/sim/level';
-import { type Contrib, footprintCells, type Hazard, moduleSim, newPropState, resolveProp } from '../../src/sim/props';
+import { type Contrib, footprintCells, type Hazard, moduleSim, newPropState, type PlacedProp, resolveProp } from '../../src/sim/props';
 import { RunWorld } from '../../src/sim/run';
 import { THEME_IDS, type ThemeId } from '../../src/themes';
 
@@ -39,9 +39,12 @@ function hits(h: Hazard, z: Rect): boolean {
   return false;
 }
 
-/** The profile caps a level's pieces, and four is the most any level gets. */
+/** A stage concept's own pieces (src/gen/stage): every one required, so the hazard count doesn't cap them. */
+export const isLandmarkPiece = (level: Level, p: PlacedProp) => !!level.landmark && p.def.key.endsWith(`:${level.landmark.concept}`);
+
+/** The profile caps a level's filler pieces, and four is the most any level gets. */
 export function expectPieceCap({ level }: ThemedLevel) {
-  expect(level.setPieces.length).toBeLessThanOrEqual(Math.min(4, level.profile!.hazards));
+  expect(level.setPieces.filter((p) => !isLandmarkPiece(level, p)).length).toBeLessThanOrEqual(Math.min(4, level.profile!.hazards));
 }
 
 /** Uids, owner, free unprotected cells, no overlap; the level stays acceptable. */
@@ -91,14 +94,43 @@ export function expectSafeWindows({ level }: ThemedLevel) {
   for (const pp of level.setPieces) {
     const r = resolveProp(pp);
     const state = newPropState();
-    let quiet = 0;
-    let any = false;
-    for (let f = RUN_COUNTDOWN; f < RUN_COUNTDOWN + 900; f++) {
+    const lethal = new Map<number, number>();
+    let frames = 0;
+    let first: string | null = null;
+    let still = true;
+    for (let f = RUN_COUNTDOWN; f < RUN_COUNTDOWN + 900; f++, frames++) {
       const out: Contrib = { solids: [], hazards: [], springs: [], winds: [] };
       r.mods.forEach((m, mi) => moduleSim(m.type).build?.(m, { level, frame: f, r, off: [0, 0], prev: [0, 0], state, mi, live: true }, out));
-      if (out.hazards.length) any = true;
-      else quiet++;
+      const key = JSON.stringify(out.hazards);
+      if (first === null) first = key;
+      else if (key !== first) still = false;
+      const here = new Set<number>();
+      for (const h of out.hazards) for (const k of hazardCells(level, h)) here.add(k);
+      for (const k of here) lethal.set(k, (lethal.get(k) ?? 0) + 1);
     }
-    if (any) expect(quiet, pp.def.name).toBeGreaterThan(60);
+    // A hazard that never moves (a spike strip, a broken window's glass) is a wall of its own: the proof keeps clear of it.
+    if (still) continue;
+    // Anything else leaves every spot it reaches clear for a while.
+    for (const [k, n] of lethal) expect(frames - n, `${pp.def.name} at ${k % level.w},${Math.floor(k / level.w)}`).toBeGreaterThan(60);
   }
+}
+
+/** Cells a hazard covers (its bounding box, a beam's boxes along it). */
+function hazardCells(level: Level, h: Hazard): number[] {
+  const boxes: Rect[] =
+    h.kind === 'rect'
+      ? [h.r]
+      : h.kind === 'circle'
+        ? [{ x: h.x - h.r, y: h.y - h.r, w: 2 * h.r, h: 2 * h.r }]
+        : Array.from({ length: 21 }, (_, i) => ({
+            x: h.x1 + ((h.x2 - h.x1) * i) / 20 - h.r,
+            y: h.y1 + ((h.y2 - h.y1) * i) / 20 - h.r,
+            w: 2 * h.r,
+            h: 2 * h.r,
+          }));
+  const out: number[] = [];
+  for (const b of boxes)
+    for (let y = Math.floor(b.y / TILE); y <= Math.floor((b.y + b.h - 1e-6) / TILE); y++)
+      for (let x = Math.floor(b.x / TILE); x <= Math.floor((b.x + b.w - 1e-6) / TILE); x++) out.push(y * level.w + x);
+  return out;
 }
