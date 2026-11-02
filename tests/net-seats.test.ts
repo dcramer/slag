@@ -280,19 +280,24 @@ describe('idle peers', () => {
     r.join('bbbb', player);
     const c = r.join('cccc', player);
     r.until(() => a.match.phase === 'run' && a.match.run!.frame > 70, 3000);
+    // The others hold a key that doesn't move them, so the race stays open whatever the level does to b.
+    for (const id of ['aaaa', 'cccc']) r.scripts.set(id, () => ({ kb1: press({ down: true }) }));
     r.scripts.set('bbbb', () => ({ kb1: press({ right: true }) }));
     r.run(10);
     const slot = a.match.players.find((p) => p.device === 'bbbb:kb1')!.slot;
-    const x0 = a.match.run!.runners.find((x) => x.slot === slot)!.body.x;
+    const runner = () => a.match.run?.runners.find((x) => x.slot === slot);
+    const x0 = runner()!.body.x;
+    let far = x0;
     const held = (s: NetSession) => decode((s as unknown as { lastInputs: Record<string, Enc> }).lastInputs['bbbb:kb1']).right;
     let always = true;
     for (let i = 0; i < 300; i++) {
       r.run(1);
       if (!held(a) || !held(c)) always = false;
+      if (runner()?.alive) far = Math.max(far, runner()!.body.x);
     }
     expect(always).toBe(true);
     expect(a.match.players.find((p) => p.device === 'bbbb:kb1')!.afk).toBeUndefined();
-    expect(a.match.run!.runners.find((x) => x.slot === slot)!.body.x).toBeGreaterThan(x0);
+    expect(far).toBeGreaterThan(x0);
     expect(r.hashes().size).toBe(1);
   }, 20_000);
 
