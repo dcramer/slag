@@ -1,7 +1,3 @@
-import { deriveSeed, parseSeed, Rng, randomSeed, seedToString } from '../core/rng';
-import { generateCharacter } from '../gen/character';
-import { ARCHETYPE_WEIGHTS, type Archetype, generateProp } from '../gen/props';
-import { drawCharacter } from '../render/character';
 import type { RC } from '../render/kit';
 import { drawProjectile, drawResolved } from '../render/props';
 import { TILE } from '../sim/constants';
@@ -10,10 +6,10 @@ import { PART_INFO, summarize } from './describe';
 import { PROJECTILE_NOTES, partGroups } from './parts';
 
 /**
- * /codex — a browsable encyclopedia of everything procedural: every prop
- * archetype with live animated variants, the module "parts" they're built
- * from, ammo, and a wall of random characters. Pure client-side; uses the
- * same generators and art as the game.
+ * /codex — the catalog of potential components: every part (blocks,
+ * heads, launchers, emitters, motion, finishes) and every projectile, drawn
+ * live with the same art as the game. These are global, not per-seed; the
+ * crate assembles them into props with procedurally rolled numbers.
  */
 
 const CSS = `
@@ -121,23 +117,6 @@ function drawProp(rc: RC, def: PropDef, rot: number, w: number, h: number) {
   rc.g.restore();
 }
 
-function propCard(def: PropDef, onOpen: () => void): HTMLDivElement {
-  const card = document.createElement('div');
-  card.className = 'card';
-  card.innerHTML = `<span class="tag ${def.role}">${def.role.toUpperCase()}</span>`;
-  card.append(stage((rc, w, h) => drawProp(rc, def, 0, w, h)));
-  const meta = document.createElement('div');
-  meta.className = 'meta';
-  meta.innerHTML = `<div class="name"></div><div class="maker"></div>${summarize(def)
-    .map((s) => `<div class="stat">• ${s}</div>`)
-    .join('')}`;
-  meta.querySelector('.name')!.textContent = def.name;
-  meta.querySelector('.maker')!.textContent = `${def.maker} · ${def.style.metal} / ${def.style.trim}`;
-  card.append(meta);
-  card.onclick = onOpen;
-  return card;
-}
-
 function openModal(def: PropDef) {
   let rot = 0;
   const modal = document.createElement('div');
@@ -173,17 +152,13 @@ function openModal(def: PropDef) {
   document.body.append(modal);
 }
 
-function render(seed: number, variants: number) {
+function render() {
   const root = document.getElementById('codex')!;
   for (const l of lives) lives.delete(l);
   observer.disconnect();
-  const archetypes = ARCHETYPE_WEIGHTS.map(([a]) => a);
   root.innerHTML = '';
   const header = document.createElement('header');
-  header.innerHTML = `<h1>SLAG CODEX</h1><a href="/">← play</a><nav>${['parts', 'projectiles', 'props', 'characters'].map((s) => `<a href="#${s}">${s === 'props' ? 'assembled props' : s}</a>`).join('')}</nav>
-    <div class="ctl"><label>seed <input id="seed" size="9" value="${seedToString(seed)}"></label>
-    <label>variants <select id="variants">${[2, 4, 6, 8, 12].map((n) => `<option ${n === variants ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
-    <button id="reroll">🎲 reroll</button></div>`;
+  header.innerHTML = `<h1>SLAG CODEX</h1><a href="/">← play</a><nav>${['parts', 'projectiles'].map((s) => `<a href="#${s}">${s}</a>`).join('')}</nav>`;
   root.append(header);
   const main = document.createElement('main');
   root.append(main);
@@ -259,65 +234,6 @@ function render(seed: number, variants: number) {
   }
   proj.append(pgrid);
   main.append(proj);
-
-  // Props.
-  const props = document.createElement('section');
-  props.id = 'props';
-  props.innerHTML = `<h2>Assembled props</h2><p>What actually shows up in the crate: parts combined by archetype recipes with every number rolled. Each card is a fresh random variant — click for a big view, rotation and its raw definition.</p>`;
-  for (const a of archetypes as Archetype[]) {
-    const h = document.createElement('div');
-    h.className = 'arch';
-    h.textContent = a;
-    const grid = document.createElement('div');
-    grid.className = 'grid';
-    for (let i = 0; i < variants; i++) {
-      const def = generateProp(new Rng(deriveSeed(seed, `${a}:${i}`)), a, `${a}-${i}`);
-      grid.append(propCard(def, () => openModal(def)));
-    }
-    props.append(h, grid);
-  }
-  main.append(props);
-
-  // Characters.
-  const chars = document.createElement('section');
-  chars.id = 'characters';
-  chars.innerHTML = `<h2>Characters</h2><p>Cosmetic only — everyone shares one hitbox and one physics model.</p>`;
-  const cg = document.createElement('div');
-  cg.className = 'grid';
-  cg.style.gridTemplateColumns = 'repeat(auto-fill,minmax(130px,1fr))';
-  for (let i = 0; i < variants * 4; i++) {
-    const c = generateCharacter(deriveSeed(seed, `char:${i}`));
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.append(
-      stage((rc, w, h) => {
-        drawCharacter(rc, c, w / 2, h * 0.82, {
-          facing: Math.sin(rc.t * 0.7 + i) > 0 ? 1 : -1,
-          vx: 0,
-          vy: 0,
-          grounded: true,
-          t: rc.t,
-          scale: Math.min(w, h) / 34,
-        });
-      }),
-    );
-    const meta = document.createElement('div');
-    meta.className = 'meta';
-    meta.innerHTML = `<div class="name"></div><div class="stat">${c.shape} · ${c.topper} · ${c.accessory} · ${c.eyes.count} eye${c.eyes.count > 1 ? 's' : ''}</div>`;
-    meta.querySelector('.name')!.textContent = c.name;
-    card.append(meta);
-    cg.append(card);
-  }
-  chars.append(cg);
-  main.append(chars);
-
-  const go = (s: number, v: number) => {
-    history.replaceState(null, '', `?seed=${seedToString(s)}&variants=${v}${location.hash}`);
-    render(s, v);
-  };
-  (header.querySelector('#reroll') as HTMLButtonElement).onclick = () => go(randomSeed(), variants);
-  (header.querySelector('#seed') as HTMLInputElement).onchange = (e) => go(parseSeed((e.target as HTMLInputElement).value), variants);
-  (header.querySelector('#variants') as HTMLSelectElement).onchange = (e) => go(seed, Number((e.target as HTMLSelectElement).value));
 }
 
 function frame(now: number) {
@@ -344,6 +260,5 @@ function frame(now: number) {
 const st = document.createElement('style');
 st.textContent = CSS;
 document.head.append(st);
-const q = new URLSearchParams(location.search);
-render(q.get('seed') ? parseSeed(q.get('seed')!) : randomSeed(), Number(q.get('variants') ?? 4));
+render();
 requestAnimationFrame(frame);
