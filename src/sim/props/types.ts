@@ -1,4 +1,5 @@
 import type { Cell, Vec } from '../../core/geom';
+import type { ItemKind } from '../items/types';
 
 /**
  * Prop data model. A PropDef is a bag of modules (bodies, spikes, swinging
@@ -30,7 +31,10 @@ export type Ammo =
   | 'goo'
   | 'frost'
   | 'ricochet'
-  | 'glider';
+  | 'glider'
+  // Held-item shots (src/sim/items): never loaded in a launcher.
+  | 'puck'
+  | 'smokebomb';
 export type LauncherStyle =
   | 'crossbow'
   | 'ballista'
@@ -55,6 +59,7 @@ export type VehicleLook = 'tractor' | 'forklift' | 'ram' | 'boulder' | 'minecart
 export type CannonLook = 'castle' | 'ship' | 'totem' | 'spitter';
 export type GeyserLook = 'lava' | 'steam';
 export type DecoKind = 'press' | 'ac' | 'antenna';
+export type MysteryLook = 'crate' | 'chest' | 'gift';
 /** Blast footprints: a filled disk, a line (bore) in the rotation direction, a plus, or a hollow ring. */
 export type BlastShape = 'disk' | 'line' | 'cross' | 'ring';
 /** What a blast removes: terrain and props, placed props only (EMP), or terrain only (drill). */
@@ -62,7 +67,7 @@ export type BlastTarget = 'all' | 'props' | 'terrain';
 export type BombLook = 'bomb' | 'emp' | 'drill' | 'charge' | 'clock';
 
 /** What a shot does to a runner it reaches. Only 'kill' is lethal; see HIT in ./ammo.ts. */
-export type HitEffect = 'kill' | 'freeze' | 'slow' | 'knock' | 'none';
+export type HitEffect = 'kill' | 'freeze' | 'slow' | 'knock' | 'bonk' | 'none';
 
 export interface AmmoSpec {
   gravity: number;
@@ -94,6 +99,9 @@ export const AMMO: Record<Ammo, AmmoSpec> = {
   ricochet: { gravity: 0, radius: 2.5, wobble: 0, emissive: true, life: 300 },
   // A rideable flying plank (ammo.ts: platform projectile). Radius is only its art/pop size.
   glider: { gravity: 0, radius: 8, wobble: 0, emissive: false, life: 420, effect: 'none' },
+  // Held-item shots; src/sim/items/ammo.ts registers their behavior.
+  puck: { gravity: 1200, radius: 4, wobble: 0, emissive: false, life: 360, effect: 'bonk' },
+  smokebomb: { gravity: 700, radius: 3.5, wobble: 0, emissive: false, life: 180, effect: 'none' },
 };
 
 export interface PropStyle {
@@ -266,6 +274,23 @@ export type Module =
   /** Face-mounted spike plate that pops when someone comes near: click (warn) → spikes (up) → cooldown. */
   | { type: 'snapper'; cells: Cell[]; angle: number; warn: number; up: number; cool: number }
   | {
+      /**
+       * Mystery crate: a solid block that pops a random held item from `pool`
+       * out of its top when someone hits it from below or bumps its side.
+       * Standing on it does nothing.
+       */
+      type: 'mystery';
+      cells: Cell[];
+      pool: ItemKind[];
+      /** Pops before it's spent (then it's a plain block); 0 = refills forever. */
+      uses: number;
+      /** Frames before it can pop again. */
+      refill: number;
+      look: MysteryLook;
+      /** Cosmetic variation seed. */
+      seed: number;
+    }
+  | {
       /** Pure scenery dressing for a set piece (press gantry, AC housing, antenna masts). No sim behavior. */
       type: 'deco';
       kind: DecoKind;
@@ -311,7 +336,8 @@ export type Archetype =
   | 'blinker'
   | 'dropper'
   | 'snapper'
-  | 'wheel';
+  | 'wheel'
+  | 'mystery';
 export type Role = 'build' | 'hazard' | 'utility' | 'demolish';
 
 export interface PropDef {

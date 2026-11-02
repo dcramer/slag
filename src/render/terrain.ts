@@ -4,6 +4,7 @@ import type { TerrainKind, TerrainLook, Theme } from '../gen/theme';
 import { TILE } from '../sim/constants';
 import { type Level, T_ONEWAY, tileAt, type TileRect } from '../sim/level';
 import { DECOR, type Decor } from './decor';
+import { flattenMaterial, TERRAIN_INK } from './comic-terrain';
 import { circle, makeNoise, mixRgb, type RC } from './kit';
 
 export { flame } from './kit';
@@ -162,6 +163,8 @@ export class TerrainPainter {
   /** World size in px of the baked level. */
   private ww = 0;
   private wh = 0;
+  /** Comic style: flat cel materials, ink outline, no soft shadow (the print pass casts a hard one). */
+  comic = false;
 
   /**
    * Bake `level` if anything changed; true if it did. `skip` leaves decor out
@@ -172,11 +175,16 @@ export class TerrainPainter {
     const T = th.terrain;
     // Re-bake only when this theme's own textures change state (not when other themes' load).
     const ready = `${!!getDetail(MATERIALS[T.kind].tex)}${T.sub ? !!getDetail(MATERIALS[T.sub.kind].tex) : ''}`;
-    const tk = `${th.seed}:${th.id}:${th.name}:${kb.toFixed(2)}:${ready}`;
+    const tk = `${th.seed}:${th.id}:${th.name}:${kb.toFixed(2)}:${ready}:${this.comic}`;
     if (tk !== this.texKey) {
       this.texKey = tk;
       this.main = makeTexture(T, T.veins, th, kb, 0x1234);
       this.sub = T.sub ? makeTexture({ ...T.sub, vein: T.vein }, T.veins, th, kb, 0x4321) : null;
+      if (this.comic) {
+        const built = (k: TerrainKind) => ['brick', 'planks', 'metal'].includes(MATERIALS[k].proc);
+        this.main.tex = flattenMaterial(this.main.tex, this.main.w, T, built(T.kind));
+        if (this.sub && T.sub) this.sub.tex = flattenMaterial(this.sub.tex, this.sub.w, T.sub, built(T.sub.kind));
+      }
     }
     const dk = `${level.seed}:${th.seed}:${th.id}:${level.w}x${level.h}`;
     if (dk !== this.decorKey) {
@@ -222,7 +230,7 @@ export class TerrainPainter {
     }
     // Outline (internal strokes get covered by the fill below).
     g.lineJoin = 'round';
-    g.strokeStyle = css(T.outline);
+    g.strokeStyle = this.comic ? TERRAIN_INK : css(T.outline);
     g.lineWidth = 3.2;
     g.stroke(mask);
     // Material.
@@ -524,7 +532,7 @@ export class TerrainPainter {
   }
 
   drawShadow(rc: RC) {
-    if (!this.shadow) return;
+    if (!this.shadow || this.comic) return;
     rc.s.drawImage(this.shadow, 3, 5, this.ww, this.wh);
   }
 
@@ -543,8 +551,9 @@ export class TerrainPainter {
   }
 
   /** Per-frame: swaying grass (parted by players), decor with animated/emissive bits. */
-  drawLive(rc: RC, level: Level, pushers: { x: number; y: number }[]) {
-    const s = rc.s;
+  drawLive(rc: RC, level: Level, pushers: { x: number; y: number }[], under: CanvasRenderingContext2D = rc.s) {
+    // `under` is the un-inked layer in the comic style: an outline per blade turns grass into black scrub.
+    const s = under;
     const t = rc.t;
     s.lineCap = 'round';
     s.lineWidth = 1.1;
@@ -565,9 +574,9 @@ export class TerrainPainter {
     const th = level.theme;
     for (const d of this.live) {
       if (!tileAt(level, d.tx, d.ty)) continue;
-      s.save();
+      rc.s.save();
       DECOR[d.kind].live!(rc, d, th);
-      s.restore();
+      rc.s.restore();
     }
   }
 

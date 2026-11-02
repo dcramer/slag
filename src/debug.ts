@@ -2,8 +2,10 @@ import { parseSeed, Rng } from './core/rng';
 import type { Match } from './game/match';
 import { ARCHETYPE_WEIGHTS, type Archetype, DEMOLISH, generateProp } from './gen/props';
 import type { Renderer } from './render/renderer';
+import { giveItem, ITEM_KINDS, type ItemKind } from './sim/items';
 import { canPlace } from './sim/props';
 import type { ProfileOverride } from './gen/level';
+import type { InputFrame } from './sim/types';
 import type { ThemeId } from './themes';
 
 /**
@@ -21,6 +23,8 @@ import type { ThemeId } from './themes';
  *   ?density=0.9        force terrain density (0..1)
  *   ?gravity=0.7        force world gravity scale
  *   ?debug=1            open the dev overlay (see installDevtoolsHooks)
+ *   ?give=sword,puck    hand race runners these held items, cycled (`all` = one of each)
+ *   ?style=comic        render style (read by the Renderer, see render/style.ts)
  */
 export interface SlagDebug {
   match: Match;
@@ -31,13 +35,15 @@ export interface SlagDebug {
   addProps(kinds: Archetype[], seed?: number): number;
   /** Skip pick/place and start a race now. */
   race(kinds?: Archetype[], seed?: number): void;
+  /** Hand each race runner a held item, cycling through `kinds`. */
+  give(kinds: ItemKind[]): void;
   /** Regenerate the level for a seed (optionally forcing a theme). */
   loadLevel(seed: string | number, theme?: ThemeId): void;
   phase(): string;
   /** Freeze/unfreeze the real-time loop (for deterministic screenshots). */
   pause(on?: boolean): void;
-  /** Advance the sim `n` frames with no input, then render once. */
-  step(n?: number): void;
+  /** Advance the sim `n` frames with these per-device inputs (default none), then render once. */
+  step(n?: number, inputs?: Record<string, InputFrame>): void;
   /** Render one frame at time `ms` (defaults to now). */
   render(ms?: number): void;
 }
@@ -79,6 +85,9 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
       api.addProps(kinds, seed);
       match.startRun();
     },
+    give(kinds) {
+      if (kinds.length) match.run?.runners.forEach((r, i) => giveItem(r, kinds[i % kinds.length]));
+    },
     loadLevel(seed, theme) {
       match.newLevel(typeof seed === 'number' ? seed : parseSeed(seed), theme ?? match.themeOverride);
     },
@@ -86,8 +95,8 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
     pause(on = true) {
       loop.paused = on;
     },
-    step(n = 1) {
-      for (let i = 0; i < n; i++) match.step({});
+    step(n = 1, inputs = {}) {
+      for (let i = 0; i < n; i++) match.step(inputs);
       renderer.render(match, performance.now(), match.drainEvents());
     },
     render(ms) {
@@ -115,6 +124,8 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
     const kinds = race === 'all' ? ARCHETYPE_WEIGHTS.map(([k]) => k).filter((k) => !DEMOLISH.has(k)) : (race.split(',').filter(Boolean) as Archetype[]);
     if (players) api.quickStart(players);
     api.race(kinds, Number(q.get('propseed') ?? 1));
+    const give = q.get('give');
+    if (give) api.give(give === 'all' ? [...ITEM_KINDS] : (give.split(',').filter(Boolean) as ItemKind[]));
   } else if (players) api.quickStart(players);
   return api;
 }

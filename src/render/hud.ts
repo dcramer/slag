@@ -8,9 +8,11 @@ import { THEME_LABELS } from '../themes';
 import { drawGlyph, type Glyph, glyphWidth } from '../ui/glyphs';
 import { glyphsFor, type InputMode, type PromptAction, promptModes } from '../ui/prompts';
 import { FONT, PAL, TYPE } from '../ui/style';
+import { ITEMS } from '../sim/items';
 import { drawCharacter } from './character';
-import { bay, buttonText, type ButtonStyle, hazardTape, icon, type IconName, plate, stampButton, tag } from './hud-kit';
+import { bay, buttonText, type ButtonStyle, hazardTape, icon, type IconName, plate, stampButton, standings, tag } from './hud-kit';
 import { VIEW_FRAME, type ViewFrame } from './frame';
+import { drawItemIcon } from './items';
 import { circle, glowDot, type RC, rrect } from './kit';
 import { drawPreview } from './props';
 
@@ -636,7 +638,6 @@ export class Hud {
     c.fillRect(x0, y0, w, safeY0 + 54 - y0);
     this.text(roundLabel(m), safeX0 + 14, safeY0 + 16, 14, PAL.amber, 'left', DISPLAY, 400, 3);
     this.text('PLACE YOUR PART', VIEW_W / 2, safeY0 + 17, TYPE.head + 2, PAL.bone, 'center', DISPLAY, 400, 4);
-    this.text('Spawn and goal zones are off-limits', VIEW_W / 2, safeY0 + 35, TYPE.caption + 1, PAL.ash, 'center', UI, 600);
     this.phaseTimer(m, m.frame / 60, safeX1 - 24, safeY0 + 20);
     for (const p of m.players) {
       if (p.placed) continue;
@@ -698,7 +699,8 @@ export class Hud {
         400,
       );
     }
-    m.players.forEach((p, i) => {
+    // Scores can't change during a race, so these chips hold still until the next round.
+    standings(m.players, (p) => p.score).forEach((p, i) => {
       const r = run.runners.find((r) => r.slot === p.slot);
       // Up to 4 chips per row so 8 players fit left of the timer.
       const x = this.frame.safeX0 + 8 + (i % 4) * 87;
@@ -721,6 +723,12 @@ export class Hud {
             : 'Splat'
           : `${p.score} Pts`;
       this.text(status, x + 26, y + 18, TYPE.caption, done ? PAL.toxic : dead ? '#ff8a7a' : PAL.ash, 'left', UI, 600);
+      const held = r?.items.held;
+      if (held) {
+        // On the status line: names fill the row above.
+        drawItemIcon(c, held.kind, x + 75, y + 17, 0.7, t);
+        if (held.uses > 1) this.text(`×${held.uses}`, x + 67, y + 18, TYPE.caption, PAL.bone, 'right', UI, 800);
+      }
     });
   }
 
@@ -733,16 +741,10 @@ export class Hud {
     const res = m.result!;
     const TARGET = m.rules.targetScore;
     const normal = res.verdict === 'normal';
-    const goal = `First to ${TARGET} or Top Score After ${m.rules.maxRounds} Rounds`;
     const title = res.verdict === 'too-easy' ? 'TOO EASY!' : res.verdict === 'too-hard' ? 'NOBODY MADE IT' : roundLabel(m);
-    const sub = res.verdict === 'too-easy' ? 'Everyone made it, so nobody scores.' : res.verdict === 'too-hard' ? 'No finishers, no points.' : goal;
-    this.text(title, VIEW_W / 2, normal ? 46 : 38, TYPE.title, normal ? PAL.bone : PAL.amber, 'center', DISPLAY, 400, 6);
-    this.text(sub, VIEW_W / 2, normal ? 72 : 62, TYPE.label, PAL.ash, 'center', UI, 600);
-    // Scoreless rounds are the ones that run a match into the limit, so they keep the count and the win conditions too.
-    if (!normal) {
-      this.text(roundLabel(m), 14, 16, 14, PAL.amber, 'left', DISPLAY, 400, 3);
-      this.text(goal, VIEW_W / 2, 76, TYPE.caption + 1, PAL.ash, 'center', UI, 600);
-    }
+    this.text(title, VIEW_W / 2, 50, TYPE.title, normal ? PAL.bone : PAL.amber, 'center', DISPLAY, 400, 6);
+    // Scoreless rounds are the ones that run a match into the limit, so they keep the count too.
+    if (!normal) this.text(roundLabel(m), 14, 16, 14, PAL.amber, 'left', DISPLAY, 400, 3);
     const anim = Math.min(1, Math.max(0, (m.phaseFrame - 20) / 60));
     const barX = 236;
     const barW = 380;
@@ -750,15 +752,32 @@ export class Hud {
     const compact = m.players.length > 4;
     const rowH = compact ? 35 : 50;
     const L = compact
-      ? { feet: 30, scale: 1.55, name: 8, nameSize: 11, bar: 15, barH: 9, award: 28, awardH: 11 }
-      : { feet: 36, scale: 2.2, name: 10, nameSize: 13, bar: 20, barH: 12, award: 38, awardH: 12 };
+      ? { feet: 30, scale: 1.55, name: 8, nameSize: 11, bar: 15, barH: 9, award: 28, awardH: 11, band: -1 }
+      : { feet: 36, scale: 2.2, name: 10, nameSize: 13, bar: 20, barH: 12, award: 38, awardH: 12, band: -6 };
     const y0 = compact ? 98 : 104;
     plate(c, 140, y0 - 12, 520, m.players.length * rowH + 22);
     // Finish line marker.
     hazardTape(c, barX + barW, y0 - 2, 4, m.players.length * rowH, 0.9);
     this.text(`${TARGET}`, barX + barW + 2, y0 - 7, TYPE.caption, PAL.hazard, 'center', UI, 800);
-    m.players.forEach((p, i) => {
-      const y = y0 + i * rowH;
+    // Rows start in the old standings and slide to the new ones as the bars fill.
+    const before = standings(m.players, (p) => m.prevScores.get(p.slot) ?? 0);
+    const after = standings(m.players, (p) => p.score);
+    const slide = anim * anim * (3 - 2 * anim);
+    const top = Math.max(...m.players.map((p) => p.score));
+    // Bottom row first, so a climbing row passes over the ones it overtakes.
+    for (let rank = after.length - 1; rank >= 0; rank--) {
+      const p = after[rank];
+      const from = before.indexOf(p);
+      const y = y0 + (from + (rank - from) * slide) * rowH;
+      const leader = m.players.length > 1 && top > 0 && p.score === top;
+      // A row being overtaken dims mid-slide, or a straight swap is two rows printed on top of each other.
+      c.globalAlpha = rank > from ? 1 - 0.75 * Math.sin(slide * Math.PI) : 1;
+      if (leader) {
+        c.fillStyle = 'rgba(255,176,46,0.13)';
+        c.fillRect(148, y + L.band, 504, rowH - 6);
+        c.fillStyle = PAL.amber;
+        c.fillRect(148, y + L.band, 3, rowH - 6);
+      }
       drawCharacter({ s: c, g: this.gctx }, p.character, 182, y + L.feet, {
         facing: 1,
         vx: 0,
@@ -768,7 +787,7 @@ export class Hud {
         scale: L.scale,
         celebrate: res.finishers.includes(p.slot),
       });
-      this.text(p.character.name, barX, y + L.name, L.nameSize, PAL.bone, 'left', DISPLAY, 400);
+      this.text(p.character.name, barX, y + L.name, L.nameSize, leader ? PAL.amber : PAL.bone, 'left', DISPLAY, 400);
       const prev = m.prevScores.get(p.slot) ?? 0;
       const shown = prev + (p.score - prev) * anim;
       c.fillStyle = PAL.ink;
@@ -792,18 +811,19 @@ export class Hud {
           c.fillRect(barX + wPrev, y + L.bar + 1, wNow - wPrev, 3);
         }
       }
-      this.text(String(Math.round(shown)), barX + barW + 24, y + L.bar + L.barH / 2, compact ? 13 : 16, PAL.bone, 'center', DISPLAY, 400);
+      this.text(String(Math.round(shown)), barX + barW + 24, y + L.bar + L.barH / 2, compact ? 13 : 16, leader ? PAL.amber : PAL.bone, 'center', DISPLAY, 400);
       const awards = res.awards.filter((a) => a.slot === p.slot);
       c.font = `400 ${L.nameSize}px ${DISPLAY}`;
       let ax = barX + c.measureText(p.character.name).width + 8;
       for (const a of awards) {
         const info = AWARD[a.reason] ?? { label: a.reason, color: { h: 0, s: 0, l: 50 } };
         c.save();
-        c.globalAlpha = Math.min(1, anim * 2);
+        c.globalAlpha *= Math.min(1, anim * 2);
         ax += tag(c, `+${a.points} ${info.label}`, ax, y + L.name, css(info.color), '#fff', TYPE.caption) + 4;
         c.restore();
       }
-    });
+    }
+    c.globalAlpha = 1;
   }
 
   private victory(m: Match, t: number) {
@@ -816,8 +836,7 @@ export class Hud {
     const winners = m.winners.map((s) => m.player(s)!).filter(Boolean);
     if (!winners.length) {
       // The round limit hit with nobody on the board: no podium to light.
-      this.text('NO WINNER', VIEW_W / 2, VIEW_H / 2 - 40, 46, PAL.amber, 'center', DISPLAY, 400, 8);
-      this.text('Nobody scored, so nobody wins.', VIEW_W / 2, VIEW_H / 2, TYPE.label, PAL.ash, 'center', UI, 600);
+      this.text('NO WINNER', VIEW_W / 2, VIEW_H / 2 - 20, 46, PAL.amber, 'center', DISPLAY, 400, 8);
       return;
     }
     // God-ray burst behind the winner.
@@ -852,6 +871,14 @@ export class Hud {
     if (!s) return undefined;
     const kbs = keyboardDevices(s);
     return (kbs.find((d) => d.device === this.mouseDevice) ?? kbs[0])?.profile;
+  }
+
+  /** The Use prompt for the held item of the pointer's player, else of the first local holder. */
+  private usePrompt(m: Match): FooterItem[] | null {
+    const mine = m.players.find((p) => p.device === this.mouseDevice)?.slot;
+    const holders = m.run?.runners.filter((r) => r.alive && !r.finished && r.items.held) ?? [];
+    const held = (holders.find((r) => r.slot === mine) ?? holders[0])?.items.held;
+    return held ? [{ action: 'use', label: ITEMS[held.kind].verb }] : null;
   }
 
   /** Footer prompts and the left-hand context label for this phase. */
@@ -893,23 +920,20 @@ export class Hud {
       }
       case 'run': {
         if (touch) return { items: [], left: '', alpha: 0, bar: false };
+        const use = this.usePrompt(m);
         const f = m.run?.frame ?? 0;
         const full = RUN_COUNTDOWN + 180;
         // Full controls during the countdown, then only the escape hatch, quietly.
         if (f < full + 40) {
           const a = f < full ? 1 : 1 - (f - full) / 40;
           return {
-            items: [
-              { action: 'jump', label: 'Jump' },
-              { action: 'run', label: 'Run' },
-              { action: 'alt', label: 'Self-Destruct' },
-            ],
+            items: [{ action: 'jump', label: 'Jump' }, { action: 'run', label: 'Run' }, ...(use ?? []), { action: 'alt', label: 'Self-Destruct' }],
             left: '',
             alpha: Math.max(0.55, a),
             bar: a > 0.6,
           };
         }
-        return { items: [{ action: 'alt', label: 'Self-Destruct' }], left: '', alpha: 0.55, bar: false };
+        return { items: [...(use ?? []), { action: 'alt', label: 'Self-Destruct' }], left: '', alpha: use ? 0.9 : 0.55, bar: false };
       }
       case 'score':
         return {

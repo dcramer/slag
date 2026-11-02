@@ -109,7 +109,8 @@ export class Fx {
     });
   }
 
-  draw(rc: RC) {
+  /** `soft` takes smoke and dust; the comic style passes its un-inked layer, or stacked puffs ink into solid-looking discs. */
+  draw(rc: RC, soft: CanvasRenderingContext2D = rc.s) {
     const s = rc.s;
     const g = rc.g;
     for (const p of this.ps) {
@@ -129,12 +130,12 @@ export class Fx {
           circle(g, p.x, p.y, p.size * 0.9);
           break;
         case 'smoke':
-          s.fillStyle = `rgba(60,58,66,${0.28 * a})`;
-          circle(s, p.x, p.y, p.size * 2);
+          soft.fillStyle = `rgba(60,58,66,${0.28 * a})`;
+          circle(soft, p.x, p.y, p.size * 2);
           break;
         case 'dust':
-          s.fillStyle = css(p.color, 0, 0.45 * a);
-          circle(s, p.x, p.y, p.size * 1.5);
+          soft.fillStyle = css(p.color, 0, 0.45 * a);
+          circle(soft, p.x, p.y, p.size * 1.5);
           break;
         case 'gib':
           s.save();

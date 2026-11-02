@@ -1,7 +1,8 @@
 import { css, type HSL } from '../../../core/color';
 import type { LauncherStyle, PropStyle } from '../../../sim/props';
 import { circle, ellipse, glowDot, light, type MetalPalette, metalFill, type RC, rrect, sphereFill } from '../../kit';
-import { drawBoomerang, drawGlider } from '../projectiles';
+import { drawBoomerang } from '../common';
+import { drawGlider } from '../projectiles';
 
 /** The mount, for an extra launcher's art. The albedo context is already translated to it. */
 interface Mount {

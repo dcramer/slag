@@ -7,6 +7,7 @@ interface PadPrev {
   jump: boolean;
   alt: boolean;
   down: boolean;
+  use: boolean;
 }
 
 /** A synthetic press produced by clicking a HUD button. */
@@ -161,14 +162,14 @@ export class InputManager {
   }
 
   /** Key hints for a device (for HUD prompts). */
-  hints(device: string): { confirm: string; alt: string; jump: string; down: string } {
+  hints(device: string): { confirm: string; alt: string; jump: string; down: string; use: string } {
     const kb = keyboardDevices(this.settings).find((d) => d.device === device);
     if (kb) {
       const p: KeyProfile = kb.profile;
-      return { confirm: hint(p, 'confirm'), alt: hint(p, 'alt'), jump: hint(p, 'jump'), down: hint(p, 'down') };
+      return { confirm: hint(p, 'confirm'), alt: hint(p, 'alt'), jump: hint(p, 'jump'), down: hint(p, 'down'), use: hint(p, 'use') };
     }
-    if (device === TOUCH_DEVICE) return { confirm: 'tap', alt: 'ALT', jump: 'JUMP', down: '▼' };
-    return { confirm: 'A', alt: 'B/Y', jump: 'A', down: '↓' };
+    if (device === TOUCH_DEVICE) return { confirm: 'tap', alt: 'ALT', jump: 'JUMP', down: '▼', use: 'USE' };
+    return { confirm: 'A', alt: 'B', jump: 'A', down: '↓', use: 'Y' };
   }
 
   deviceLabel(device: string): string {
@@ -196,6 +197,7 @@ export class InputManager {
           confirmPressed: pressed('confirm'),
           altPressed: pressed('alt'),
           downPressed: pressed('down'),
+          usePressed: pressed('use'),
         };
       }
       // Mouse → first keyboard device.
@@ -229,11 +231,12 @@ export class InputManager {
       const ax = pad.axes[0] ?? 0;
       const ay = pad.axes[1] ?? 0;
       const jump = btn(0);
-      // X / RB / RT run; B / Y / LB are alt (rotate, self-destruct).
+      // X / RB / RT run; B / LB are alt (rotate, self-destruct); Y / LT use the held item.
       const run = btn(2) || btn(5) || (pad.buttons[7]?.value ?? 0) > 0.3;
-      const alt = btn(1) || btn(3) || btn(4);
+      const alt = btn(1) || btn(4);
+      const use = btn(3) || (pad.buttons[6]?.value ?? 0) > 0.3;
       const down = ay > 0.5 || btn(13);
-      const prev = this.padPrev.get(id) ?? { jump: false, alt: false, down: false };
+      const prev = this.padPrev.get(id) ?? { jump: false, alt: false, down: false, use: false };
       if (pad.buttons.some((b) => b.pressed) || Math.abs(ax) > 0.5 || Math.abs(ay) > 0.5) this.touch.setActive(false);
       out[id] = {
         left: ax < -0.4 || btn(14),
@@ -246,8 +249,9 @@ export class InputManager {
         confirmPressed: jump && !prev.jump,
         altPressed: alt && !prev.alt,
         downPressed: down && !prev.down,
+        usePressed: use && !prev.use,
       };
-      this.padPrev.set(id, { jump, alt, down });
+      this.padPrev.set(id, { jump, alt, down, use });
     }
     return out;
   }

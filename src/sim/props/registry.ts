@@ -1,10 +1,11 @@
 import { type Cell, overlaps, type Rect, rectCircle, type Vec } from '../../core/geom';
+import type { ItemSpawn } from '../items/types';
 import type { Level } from '../level';
 import type { Body, Solid } from '../physics';
 import type { GameEvent } from '../types';
 import type { Wind } from '../wind';
 import type { RunnerStatus } from './status';
-import type { Ammo, Module, PropState, Resolved } from './types';
+import type { Ammo, HitEffect, Module, PropState, Resolved } from './types';
 
 /**
  * Plugin contract for prop modules. Each module type lives in
@@ -106,12 +107,20 @@ export interface ProjectileSpawn {
   vy: number;
   owner: number;
   ammo: Ammo;
+  /** Runner index that threw it (held items); omitted for prop shots. See THROW_GRACE and AmmoSim.caught in ./ammo.ts. */
+  thrower?: number;
+  /** Replaces the ammo's hit effect: a thrown boomerang bonks where a launched one kills. */
+  effect?: HitEffect;
 }
 
 export interface TickCtx extends PropCtx {
   runners: readonly RunnerView[];
   spawn(p: ProjectileSpawn): void;
   emit(e: GameEvent): void;
+  /** Drop a loose held item into the run (mystery crates). Optional so headless callers can omit it. */
+  spawnItem?(s: ItemSpawn): void;
+  /** Seed of this race's item rolls: differs per round, so a crate that survives a round doesn't repeat itself. */
+  itemSeed?: number;
 }
 
 /** Tile→world transform handed to `resolve`. */

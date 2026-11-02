@@ -4,7 +4,8 @@ import { AMMO, type Ammo, CLUSTER_FUSE, FACE, GLIDER_CRUISE, GLIDER_H, GLIDER_W,
 import type { Projectile } from '../../sim/run';
 import { circle, ellipse, glowDot, light, METALS, type RC, rrect, sphereFill } from '../kit';
 import { flame } from '../terrain';
-import { drawBoltShape, drawStar, type Emit } from './common';
+import { drawItemShot } from '../items';
+import { drawBoltShape, drawBoomerang, drawStar, type Emit } from './common';
 
 function drawBolt(rc: RC, p: Projectile, a: number) {
   const s = rc.s;
@@ -240,35 +241,13 @@ const AMMO_ART: Record<Ammo, (rc: RC, p: Projectile, angle: number, emit?: Emit)
   frost: drawFrost,
   ricochet: drawRicochet,
   glider: gliderShot,
+  puck: drawItemShot,
+  smokebomb: drawItemShot,
 };
 
 export function drawProjectile(rc: RC, p: Projectile, emit?: Emit) {
   if (p.stuck >= 0) return drawPatch(rc, p);
   AMMO_ART[p.ammo](rc, p, Math.atan2(p.vy, p.vx), emit);
-}
-
-/** A spinning V-shaped wooden boomerang. */
-export function drawBoomerang(s: CanvasRenderingContext2D, x: number, y: number, rot: number, R: number) {
-  s.save();
-  s.translate(x, y);
-  s.rotate(rot);
-  s.strokeStyle = '#4a2f18';
-  s.lineWidth = 3.4;
-  s.lineCap = 'round';
-  s.beginPath();
-  s.moveTo(-R, R * 0.55);
-  s.quadraticCurveTo(0, -R * 0.7, R, R * 0.55);
-  s.stroke();
-  s.strokeStyle = '#c89150';
-  s.lineWidth = 2.2;
-  s.stroke();
-  s.strokeStyle = '#e6402f';
-  s.lineWidth = 2.2;
-  s.beginPath();
-  s.moveTo(-R * 0.15, -R * 0.1);
-  s.lineTo(R * 0.15, -R * 0.1);
-  s.stroke();
-  s.restore();
 }
 
 /**

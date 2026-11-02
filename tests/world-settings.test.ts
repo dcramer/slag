@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { generateLevel } from '../src/gen/level';
 import { RUN_COUNTDOWN, TILE } from '../src/sim/constants';
+import { ITEM_KINDS, spawnItem } from '../src/sim/items';
 import { killY, type Level } from '../src/sim/level';
 import { type Ammo, makeProjectile, type Projectile } from '../src/sim/props';
 import { RunWorld } from '../src/sim/run';
@@ -87,6 +88,32 @@ describe('level gravity reaches projectiles', () => {
     const path = (g: number) => fly(open(80, 40, g), 'glider', 20 * TILE, 20 * TILE, 90, 0, 120).far;
     expect(path(0.7)).toBeCloseTo(path(1), 3);
     expect(path(1.35)).toBeCloseTo(path(1), 3);
+  });
+});
+
+describe('held items in the level, not in a classic world', () => {
+  /** Frames a dropped item takes to fall from row 4, and whether it survived the fall. */
+  const fall = (l: Level) => {
+    const run = new RunWorld(l, [], [0]);
+    spawnItem(run, { kind: ITEM_KINDS[0], x: 16 * TILE, y: 4 * TILE, vx: 0, vy: 0, grace: 0 });
+    const drop = run.items.drops[0];
+    for (let f = 0; f < 240; f++) {
+      run.step([NO_INPUT]);
+      if (drop.onGround) return { frames: f, kept: run.items.drops.includes(drop) };
+      if (!run.items.drops.includes(drop)) break;
+    }
+    return { frames: Infinity, kept: run.items.drops.includes(drop) };
+  };
+
+  it('a drop on a tall level falls past the classic bottom and lands on the real floor', () => {
+    const r = fall(open(32, 60, 1));
+    expect(r.kept).toBe(true);
+    expect(r.frames).toBeLessThan(Infinity);
+  });
+
+  it('drops fall faster under high gravity', () => {
+    expect(fall(open(32, 60, 1.35)).frames).toBeLessThan(fall(open(32, 60, 1)).frames);
+    expect(fall(open(32, 60, 0.7)).frames).toBeGreaterThan(fall(open(32, 60, 1)).frames);
   });
 });
 

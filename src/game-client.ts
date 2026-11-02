@@ -7,6 +7,7 @@ import { roomSeed } from './game/room';
 import { loadRules, saveRules } from './game/rules';
 import { InputManager } from './input/input';
 import { TOUCH_DEVICE, touchModeFor } from './input/touch';
+import { ITEMS } from './sim/items';
 import { Renderer } from './render/renderer';
 import { DT } from './sim/constants';
 import { THEME_IDS } from './themes';
@@ -78,6 +79,7 @@ export function bootGame(container: HTMLElement, room: string): void {
       renderer.setQuality(tier ?? detectQuality().tier);
     },
   };
+  settingsMenu.artStyle = { get: () => renderer.getStyle(), set: (style) => renderer.setStyle(style) };
   const rulesMenu = new RulesMenu(input);
   const namePrompt = new NamePrompt(input);
   const profile = loadProfile();
@@ -228,7 +230,10 @@ export function bootGame(container: HTMLElement, room: string): void {
     renderer.hud.lastInput = input.touch.active ? 'touch' : inputMode.mode === 'touch' ? 'keyboard' : inputMode.mode;
     renderer.hud.padCount = inputMode.pads;
     const tp = match.players.find((p) => p.device === TOUCH_DEVICE);
-    touchOverlay.update({ canPlace: tp && match.phase === 'place' ? match.canPlaceFor(tp) : undefined });
+    const tr = tp && match.phase === 'run' ? match.run?.runners.find((r) => r.slot === tp.slot && r.alive && !r.finished) : undefined;
+    const held = tr?.items.held;
+    input.touch.useReady = !!held;
+    touchOverlay.update({ canPlace: tp && match.phase === 'place' ? match.canPlaceFor(tp) : undefined, use: held ? ITEMS[held.kind].verb : undefined });
     const events = match.drainEvents();
     if (tp && input.touch.active && events.some((e) => e.type === 'death' && e.slot === tp.slot)) input.touch.buzz(30);
     audio.handle(events, match);

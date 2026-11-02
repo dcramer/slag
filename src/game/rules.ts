@@ -28,23 +28,57 @@ export interface MatchRules {
 
 export type GravityRule = 'auto' | 'low' | 'normal' | 'high';
 
-export const DEFAULT_RULES: MatchRules = { targetScore: 50, maxRounds: 40, pickSeconds: 15, placeSeconds: 0, raceSeconds: 0, gravity: 'auto' };
+/**
+ * The lobby's one match length setting. Each entry pairs a target with a
+ * limit, so a length is written straight into MatchRules as plain numbers and
+ * the sim and HUD never need to know lengths exist.
+ */
+export interface MatchLength {
+  label: string;
+  targetScore: number;
+  maxRounds: number;
+}
 
-/** Allowed values for each rule (used by the rules menu). */
-export const RULE_CHOICES: { [K in keyof MatchRules]: MatchRules[K][] } = {
-  targetScore: [20, 30, 50, 80, 120],
-  maxRounds: [10, 20, 30, 40, 60],
+export const MATCH_LENGTHS: readonly MatchLength[] = [
+  { label: 'Short', targetScore: 30, maxRounds: 10 },
+  { label: 'Normal', targetScore: 50, maxRounds: 15 },
+  { label: 'Long', targetScore: 80, maxRounds: 25 },
+];
+
+const NORMAL = MATCH_LENGTHS[1];
+
+export const DEFAULT_RULES: MatchRules = {
+  targetScore: NORMAL.targetScore,
+  maxRounds: NORMAL.maxRounds,
+  pickSeconds: 15,
+  placeSeconds: 0,
+  raceSeconds: 0,
+  gravity: 'auto',
+};
+
+export type TimerRule = 'pickSeconds' | 'placeSeconds' | 'raceSeconds';
+
+/** Allowed values for each timer (used by the rules menu). */
+export const RULE_CHOICES: Record<TimerRule, number[]> = {
   pickSeconds: [0, 10, 15, 20, 30],
   placeSeconds: [0, 15, 20, 30, 45],
   raceSeconds: [0, 30, 45, 60, 90],
-  gravity: ['auto', 'low', 'normal', 'high'],
 };
 
-/** Button text for a rule value (menus). */
-export function ruleValueLabel(k: keyof MatchRules, v: MatchRules[keyof MatchRules]): string {
-  if (k === 'gravity') return v === 'auto' ? 'Auto' : v === 'low' ? 'Low' : v === 'high' ? 'High' : 'Normal';
-  if (k === 'targetScore' || k === 'maxRounds') return String(v);
-  return v === 0 ? 'Off' : `${v}s`;
+export const GRAVITY_CHOICES: readonly GravityRule[] = ['auto', 'low', 'normal', 'high'];
+
+/** Button text for a gravity choice (menus). */
+export function gravityLabel(v: GravityRule): string {
+  return v === 'auto' ? 'Auto' : v === 'low' ? 'Low' : v === 'high' ? 'High' : 'Normal';
+}
+
+/**
+ * The length closest to a points target; ties and junk land on Normal. Points
+ * alone decide because they were the setting players actually chose: an old
+ * save's maxRounds is usually just the old default of 40.
+ */
+export function nearestLength(targetScore: number): MatchLength {
+  return MATCH_LENGTHS.reduce((best, l) => (Math.abs(l.targetScore - targetScore) < Math.abs(best.targetScore - targetScore) ? l : best), NORMAL);
 }
 
 const KEY = 'slag.rules.v1';
@@ -52,7 +86,11 @@ const KEY = 'slag.rules.v1';
 export function loadRules(): MatchRules {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return { ...DEFAULT_RULES, ...(JSON.parse(raw) as Partial<MatchRules>) };
+    if (raw) {
+      const saved = JSON.parse(raw) as Partial<MatchRules>;
+      const { targetScore, maxRounds } = nearestLength(saved.targetScore ?? NORMAL.targetScore);
+      return { ...DEFAULT_RULES, ...saved, targetScore, maxRounds };
+    }
   } catch {
     // ignore
   }

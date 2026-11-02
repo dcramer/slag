@@ -1,6 +1,6 @@
 # AGENTS.md
 
-**slag** is a browser party platformer: each round players **pick** a prop from a crate, **place** it in the level, then **run** to the flag (1–8 players, `MAX_PLAYERS`). Levels, props, characters, names and visuals are all procedurally generated from a seed. Movement is a tight precision platformer: walk by default, hold **run** for speed and long jumps, variable jumps, wall slide/jump, coyote time, jump buffering. Use the genre's mechanics, never another game's names, art, characters or level designs.
+**slag** is a browser party platformer: each round players **pick** a prop from a crate, **place** it in the level, then **run** to the flag (1–8 players, `MAX_PLAYERS`). Levels, props, characters, names and visuals are all procedurally generated from a seed. Movement is a tight precision platformer: walk by default, hold **run** for speed and long jumps, variable jumps, wall slide/jump, coyote time, jump buffering. Use the genre's mechanics. Parody other games, especially with items, but never use their real names, art, characters or level designs (`docs/DESIGN.md` → Parody).
 
 Game design decisions live in [docs/DESIGN.md](docs/DESIGN.md): follow it, and update it in the same commit when a decision changes. Open work, with its `wip/*` branches, is in [docs/TODO.md](docs/TODO.md); remove items when they land. UI art direction (palette, type, casing, input prompts) is in [docs/ART.md](docs/ART.md). Folders with their own rules have a nested `AGENTS.md`: `src/sim/`, `src/gen/`, `src/render/`, `app/`. Read it before editing there.
 
@@ -11,10 +11,10 @@ Package manager is **pnpm** (`packageManager` in package.json). Never use npm or
 | Command | Use |
 | --- | --- |
 | `pnpm install` | First thing in a fresh checkout or worktree (`node_modules` is not shared). |
-| `pnpm check` | The gate: typecheck + lint + format check + fast tests (~10 s). Must pass before every commit. |
+| `pnpm check` | The gate: typecheck + lint + format check + tests (~10 s). Must pass before every commit. |
 | `pnpm check:fast` | Typecheck + lint + format check (~2 s). Use while iterating. |
-| `pnpm test:slow` | Generator and statistical suites at full sample size (~35 s). See "Definition of done" for when it's required; CI always runs it. |
-| `pnpm vitest run tests/foo.test.ts` | One test file, at its small sample. Add `-t "name"` for one test. `pnpm test:slow tests/foo.test.ts` runs a heavy file at full size. |
+| `pnpm test:slow` | Generator and statistical suites at full sample size. CI runs it; don't run it as a routine step. |
+| `pnpm vitest run tests/foo.test.ts` | One test file, at its small sample. Add `-t "name"` for one test. |
 | `pnpm format` | `oxlint --fix` then `oxfmt`: fixes formatting and safe lint issues. |
 | `pnpm build` | Production build into `.next/`, exactly what Vercel runs. |
 | `pnpm shot <scenario> [opts]` | Headless screenshots into `shots/` (gitignored). See "Verify visually". |
@@ -28,12 +28,11 @@ Lint: `oxlint` (type-aware, `.oxlintrc.json`). Errors fail CI; warnings are real
 ## Definition of done
 
 1. `pnpm check` passes, run **once before committing**. While iterating, run only the test files you touch (`pnpm vitest run tests/x.test.ts`) plus `pnpm check:fast`. Never skip, delete or weaken a test to get there.
-2. `pnpm test:slow` passes if you touched `src/gen`, `src/sim/reach.ts` or `PHYS` (`reach.ts` uses the real controller, so solvability moves with movement tuning). `pnpm check` only samples a few seeds, so it can't catch a rare failing seed or a drifting distribution.
-3. `pnpm build` passes if you touched `app/`, `next.config.ts`, `package.json`, or what `app/` imports from `src/`.
-4. Visual change: you took a screenshot and looked at it (see below). Typechecking says nothing about pixels.
-5. Generator change: `pnpm level --stats 50` shows `fallbacks: 0` and no unexplained jump in ms/level or `needBridges`; compare against a run on the parent commit.
-6. Behavior change: a test covers it (generator invariants, prop module runtime behavior, physics feel regressions). Test behavior and invariants, not every tunable or weight. Keep tests cheap, because every second is paid on every iteration by every agent; sample a few seeds rather than hundreds unless the invariant needs more. If a suite's full sample is too slow for `pnpm check`, size it with `sample(fast, slow)` from `tests/lib/tier.ts`, guard distribution assertions with `SLOW`, and add the file to `SLOW_FILES` in `vitest.config.ts`.
-7. In your final message, show evidence: the commands you ran with their result, and screenshot paths.
+2. `pnpm build` passes if you touched `app/`, `next.config.ts`, `package.json`, or what `app/` imports from `src/`.
+3. Visual change: you took a screenshot and looked at it (see below). Typechecking says nothing about pixels.
+4. Generator change: `pnpm level --stats 50` shows `fallbacks: 0` and no unexplained jump in ms/level or `needBridges`; compare against a run on the parent commit.
+5. Behavior change: a test covers it (generator invariants, prop module runtime behavior, physics feel regressions). Test behavior and invariants, not every tunable or weight. Keep tests cheap, because every second is paid on every iteration by every agent; sample a few seeds rather than hundreds unless the invariant needs more. If a suite's full sample is too slow for `pnpm check`, size it with `sample(fast, slow)` from `tests/lib/tier.ts`, guard distribution assertions with `SLOW`, and add the file to `SLOW_FILES` in `vitest.config.ts`.
+6. In your final message, show evidence: the commands you ran with their result, and screenshot paths.
 
 ### Verify visually
 
@@ -43,6 +42,7 @@ Lint: `oxlint` (type-aware, `.oxlintrc.json`). Errors fail CI; warnings are real
 - `lobby` | `pick` | `place` with `--seed S --players N`
 - `levels --count 9`, `--seeds a,b,c` or `--themes all` → contact sheet `shots/levels.png`
 - `props --count 24` (crate cards), `codex` (the `/codex` page)
+- `compare --seed S --players 4 --themes farm,mine` → default vs comic, same sim frame, `shots/compare-*-S.png`. Any scenario takes `--style comic` (`?style=comic` in the browser).
 - Options: `--theme farm`, `--noui` (hide HUD), `--size 1280x720`, `--out shots`
 
 Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm`, `?players=2` (auto-join and start), `?race=saw,laser` or `?race=all`, `?propseed=3`, `?ui=0`, `?debug=1` (dev overlay: frame-time breakdown, counts, level info; ` toggles it in `pnpm dev` or with any `?debug`). In the console, `slagDebug` has `quickStart`, `race`, `addProps`, `loadLevel`, `phase`, `pause`, `step`, `render`.
@@ -95,6 +95,7 @@ Vercel, Next.js App Router. Server code is limited to small, stateless route han
 
 - TypeScript strict, ES modules. Runtime deps are only `next`, `react`, `react-dom` (for the shell) and `client-only`; the game itself uses none. Don't add runtime dependencies without asking.
 - Doc comments explain *why*, on modules and exported functions. Small functions; data plus registries over sprawling `switch`es.
+- **Never explain the obvious**, in the game, the docs or your reports. In the game it's a design rule: part of the joy is the unknown, so no sub lines, hints or notes that restate what's on screen or spell out a rule (`docs/DESIGN.md` → Discovery).
 - Custom lint and ast-grep rules are welcome where they enforce a rule better than convention. Every rule's error message must steer whoever hits it, usually an agent: say why the rule exists and what to do instead, naming the concrete replacement. Example: `Math.sin differs across browsers and desyncs lockstep. Use sin from src/core/dmath.ts.`
 - Assets: prefer procedural art. Third-party assets only if CC0 or free for commercial use without attribution traps; record each in `public/ASSETS.md` with source URL and license. Keep them small (≤256 px tiles, compressed).
 

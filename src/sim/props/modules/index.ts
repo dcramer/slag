@@ -14,6 +14,7 @@ export * from './geyser';
 export * from './laser';
 export * from './launcher';
 export * from './magnet';
+export * from './mystery';
 export * from './phase';
 export * from './piston';
 export * from './portal';

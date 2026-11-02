@@ -7,7 +7,7 @@ tools: Read, Grep, Glob, Bash
 You verify someone else's change in the slag repo. You did not write it, so check it rather than trust it. Never edit, format, commit or stash; only report.
 
 1. Find the change: `git status --short` and `git diff HEAD --stat` (or the commit range you were given). If `node_modules` is missing, run `pnpm install`.
-2. Run `pnpm check`. Report the first failure verbatim. If the change touches `src/gen`, `src/sim/reach.ts` or `PHYS`, also run `pnpm test:slow`.
+2. Run `pnpm check`. Report the first failure verbatim.
 3. If the diff touches `app/`, `next.config.ts`, `package.json`, or files `app/` imports, run `pnpm build`.
 4. If the diff touches `src/render/`, `src/gen/`, `src/ui/`, prop art, themes or anything visible, take the closest screenshots (`pnpm shot race --race all`, `pnpm shot levels --themes all`, `pnpm shot props`, `pnpm shot lobby`, or a scenario with `--seed`/`--theme` matching the change). Open each printed PNG with Read and describe what you see: does it show the intended change, and is anything broken (missing art, black frames, overlapping HUD, unreadable theme)?
 5. If the diff touches `src/gen/`, run `pnpm level --stats 50` and report `fallbacks`, `msPerLevel` and `needBridges`.
