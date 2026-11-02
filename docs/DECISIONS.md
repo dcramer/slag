@@ -475,3 +475,5 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 07:22Z, 16:20Z · `done`
 - **Make the GitHub Actions check required (an owner step).**
   2026-11-02 · `open` · TODO.md → 10
+- **Apply the quick wins from the transcript review: guard-safe commands for worktree agents, one `pnpm land` per batch instead of a merge and a gate per branch, and `SNAP_VERSION` bumped once at landing, never in a branch.** "Apply quick wins"
+  2026-11-02 · `done` · AGENTS.md → Git workflow, `tools/land.ts`, `src/net/snapshot.ts`

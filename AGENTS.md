@@ -20,6 +20,7 @@ Package manager is **pnpm** (`packageManager` in package.json). Never use npm or
 | `pnpm build` | Production build into `.next/`, exactly what Vercel runs. |
 | `pnpm shot <scenario> [opts]` | Headless screenshots into `shots/` (gitignored). See "Verify visually". |
 | `pnpm perf [--only race8,gen,load]` | Benchmarks: frame-time, level-gen and page-load numbers into `shots/perf/`; `--compare <json>` flags regressions. Options are in `tools/perf.ts`. Run it on purpose, never as a routine step. |
+| `pnpm land [branch…]` | Orchestrators: merge worktree branches onto `origin/main`, gate once, push (`tools/land.ts`; see "Git workflow"). |
 | `pnpm brand [icons\|og\|preview]` | Regenerate the favicon, app icons and link-preview cards (`tools/brand.ts`); `preview` → `shots/brand-icons.png`. |
 | `pnpm level <seed> [--theme farm]` | ASCII level dump: `#` solid, `=` one-way, `S`/`G` spawn/goal, `·` reachable stand cell, `P` set piece. |
 | `pnpm level --stats 50` | Per-theme stats over N seeds: ms/level, styles, `needBridges`, `fallbacks` (~2 min at 50). |
@@ -55,7 +56,13 @@ Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm
 ## Git workflow
 
 - Main session: work on `main`. `git pull --rebase origin main`, make small focused commits, and `git push origin main` after every green change. Dev containers are ephemeral, so unpushed work is lost. No feature branches or PRs unless the user asks.
-- Subagents in worktrees: run `pnpm install` first, edit only the files your brief assigns, commit to your worktree branch, and **do not push or touch `main`**; the orchestrator merges, re-runs `pnpm check`, and pushes. Never use bare `git stash` (the stash is shared across worktrees).
+- Subagents in worktrees: run `pnpm install` first, edit only the files your brief assigns, commit to your worktree branch, and **do not push or touch `main`**. Never use bare `git stash` (the stash is shared across worktrees).
+  - Before you report done, run `git merge origin/main` into your branch, resolve any conflicts there, and run `pnpm check` on the result, so the orchestrator lands a tree that was already gated.
+  - Leave `SNAP_VERSION` and `docs/TODO.md` alone: every branch bumping one integer or editing one list conflicts with every other. Say in your report that the snapshot changed, or which TODO items are done.
+  - The worktree guard refuses any command it can't prove stays in your worktree, and each refusal costs a turn. Give `git` a Bash call of its own (no `&&`, pipes, subshells or variables around it) and never `git -C` another worktree. Don't loop over `pnpm shot` with a shell variable: pass a list where the scenario takes one (`levels --seeds a,b`) or make separate calls.
+  - The app's task list and wrap-up (`update_plan`, `wrap_up`) belong to the main conversation; a subagent's calls are refused.
+- Orchestrators land branches with `pnpm land <branch>…` (`tools/land.ts`): it merges the batch, bumps `SNAP_VERSION` once if the snapshot changed, runs the gate once (plus `pnpm build` when the host changed) and pushes. Batch the branches that are ready instead of landing each as it finishes. A conflict stops it with the merge in progress: resolve, commit, run it again with the branches left.
+- Orchestrators stay small: hand screenshot review to the `verifier` agent instead of opening PNGs in the coordinating conversation. While agents run, send new requests as messages; stopping the orchestrator's turn stops every background agent with it.
 - If you must change a shared contract (`src/sim/props/types.ts`, `src/sim/props/registry.ts`, `src/themes.ts`, `src/sim/types.ts`), keep it additive and call it out in your report.
 - Orchestrators define contracts (types, registries) and commit them to `main` before fanning out.
 - Commit messages: imperative summary line saying what changed and why it matters.
