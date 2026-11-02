@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { GRAVITY, generateLevel, isAcceptable, rollProfile } from '../src/gen/level';
+import { jumpProfile, probeGravity, setProbeGravity } from '../src/gen/level/probe';
 import { SPACE_GRAVITY } from '../src/gen/level/profile';
+import { chain, spaceHop } from '../src/gen/level/sculptors/space';
+import { Rng } from '../src/core/rng';
 import type { Theme } from '../src/gen/theme';
 import { Match } from '../src/game/match';
 import { TILE } from '../src/sim/constants';
@@ -160,6 +163,54 @@ describe('space gravity', () => {
     const m = new Match(4242);
     m.setRules({ ...m.rules, gravity: 'normal' });
     expect(m.level.gravity).toBe(GRAVITY.normal);
+  });
+
+  it('spaces its bodies by the walking reach at the level’s gravity', () => {
+    const was = probeGravity();
+    const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+    const easyAt = new Map<number, number>();
+    for (const g of [SPACE_GRAVITY, GRAVITY.low, GRAVITY.normal, GRAVITY.high]) {
+      setProbeGravity(g);
+      const j = jumpProfile(g);
+      for (const density of [0, 1]) {
+        const hop = spaceHop(density);
+        // The long end of a walking hop: never more than one, never a seam.
+        expect(hop.hi, `${g}`).toBe(Math.max(2, j.walkGap));
+        expect(hop.lo, `${g}`).toBeGreaterThanOrEqual(Math.min(hop.hi, Math.max(2, j.walkGap / 2)));
+      }
+      const easy: number[] = [];
+      for (let seed = 1; seed <= 4; seed++) {
+        for (const [W, parts] of [
+          [48, 1],
+          [86, 2],
+        ]) {
+          const c = chain(new Rng(seed), W, spaceHop(0.5), parts, [3, 7]);
+          c.gaps.forEach((gap, i) => {
+            if (c.hard[i]) expect(gap, `${g} hard`).toBeGreaterThan(j.gap);
+            else easy.push(gap);
+          });
+          expect(c.hard.filter(Boolean).length).toBe(parts);
+        }
+      }
+      expect(Math.max(...easy), `${g}`).toBeLessThanOrEqual(Math.max(2, j.walkGap));
+      easyAt.set(g, mean(easy));
+    }
+    setProbeGravity(was);
+    // Lower gravity, wider voids.
+    expect(easyAt.get(SPACE_GRAVITY)!).toBeGreaterThan(easyAt.get(GRAVITY.low)!);
+    expect(easyAt.get(GRAVITY.low)!).toBeGreaterThan(easyAt.get(GRAVITY.normal)!);
+    expect(easyAt.get(GRAVITY.normal)!).toBeGreaterThan(easyAt.get(GRAVITY.high)!);
+  });
+
+  it('floats sparser at its own gravity than under a host’s Normal', () => {
+    const solid = (l: Level) => l.tiles.reduce((a, t) => a + (t ? 1 : 0), 0);
+    let own = 0;
+    let normal = 0;
+    for (let i = 0; i < 3; i++) {
+      own += solid(generateLevel(seedAt(i), 'space', { size: 'classic' }));
+      normal += solid(generateLevel(seedAt(i), 'space', { size: 'classic', gravity: GRAVITY.normal }));
+    }
+    expect(own).toBeLessThan(normal * 0.9);
   });
 
   it('floats: no ground under the level, nothing in the bottom rows', () => {

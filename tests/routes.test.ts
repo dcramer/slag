@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
 import { generateLevel, isAcceptable, lastGenInfo } from '../src/gen/level';
-import { jumpProfile, setProbeGravity } from '../src/gen/level/probe';
+import { jumpProfile, probeGravity, setProbeGravity } from '../src/gen/level/probe';
 import { analyzeRoutes, MAX_SHARED } from '../src/gen/level/routes';
-import { easyGap, hopGap, rollChallenges, TWO_PART_TRIES, TWO_PARTS } from '../src/gen/level/sculptors/common';
+import { easyGap, hopGap, reachMin, rollChallenges, TWO_PART_TRIES, TWO_PARTS } from '../src/gen/level/sculptors/common';
 import { LEVEL_H, LEVEL_W } from '../src/sim/constants';
 import { type Level, T_ONEWAY, T_SOLID } from '../src/sim/level';
 import { THEME_IDS } from '../src/themes';
@@ -136,6 +136,25 @@ describe('sculptor tuning', () => {
     expect(walking).toBeGreaterThan(0.45);
     expect(walking).toBeLessThan(0.75);
     for (let i = 0; i < 100; i++) expect(hopGap(rng)).toBeLessThanOrEqual(j.walkGap);
+  });
+
+  it('stretches the narrowest easy gap with the walking reach, leaving normal and high gravity as they were', () => {
+    const was = probeGravity();
+    const rng = new Rng(9);
+    for (const g of [1, 1.35]) {
+      setProbeGravity(g);
+      expect(reachMin(2)).toBe(2);
+      expect(reachMin(1)).toBe(1);
+    }
+    setProbeGravity(0.7);
+    const lo = reachMin(2);
+    expect(lo).toBeGreaterThan(2);
+    expect(lo).toBeLessThanOrEqual(jumpProfile(0.7).walkGap);
+    for (let i = 0; i < 100; i++) {
+      expect(easyGap(rng)).toBeGreaterThanOrEqual(lo);
+      expect(hopGap(rng, 2)).toBeGreaterThanOrEqual(lo);
+    }
+    setProbeGravity(was);
   });
 
   it('decides a challenge once per level, so retries cannot select it away', () => {
