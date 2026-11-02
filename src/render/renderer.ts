@@ -2,7 +2,7 @@ import { css, type HSL, shift, toRgb } from '../core/color';
 import { clamp } from '../core/geom';
 import type { Match, Player } from '../game/match';
 import { overview, raceFloor } from '../game/view';
-import { TILE, VIEW_H, VIEW_W } from '../sim/constants';
+import { PLAYER_H, TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import { floorY, type Level, tileAt } from '../sim/level';
 import type { Solid } from '../sim/physics';
 import { type Beam, footprint, motionOffset, previewProps, type Resolved, resolveProp } from '../sim/props';
@@ -12,6 +12,8 @@ import { Backdrop } from './background';
 import { drawBlood } from './blood';
 import { Camera } from './camera';
 import { PhoneCam, phoneView } from './camera-follow';
+import type { CharacterDef } from '../gen/character';
+import { spritesOf } from './cast/sprites';
 import { Rig } from './character';
 import { drawInkAccessory, drawInkAfterimage, drawInkRunner, partsOf, ropeAnchor, ropeOf } from './ink-character';
 import { ForegroundLayer, Lettering, letteringAllowed } from './cel';
@@ -75,6 +77,8 @@ const TRAIL_MIN_SPEED = 140;
 const TRAIL_FULL_SPEED = 300;
 /** Peak opacity of one sample, how far apart samples sit (px), and seconds to fade out. */
 const TRAIL_ALPHA = 0.28;
+/** Seconds a rendered kind lies where it died (its death clip, then a fade). */
+const FALLEN_LIFE = 0.5;
 const TRAIL_GAP = 7;
 const TRAIL_LIFE = 0.2;
 
@@ -106,6 +110,8 @@ export class Renderer {
   private fx = new Fx();
   private weather = new WeatherLayer();
   private rigs = new Map<number, Rig>();
+  /** Rendered kinds (`?sprites=1`) play their death clip for a moment where they came apart. */
+  private fallen: { c: CharacterDef; x: number; y: number; facing: number; age: number }[] = [];
   private pw = 2;
   private ph = 2;
   private frameBox: ViewFrame = VIEW_FRAME;
@@ -381,6 +387,7 @@ export class Renderer {
       drawClouds(rc, run);
       drawShells(rc, run);
     }
+    this.drawFallen(rc, dt);
     this.fx.draw(rc);
     this.backdrop.drawMotes(rc, level.theme, dt, this.cam.visible());
     this.weather.draw(rc, m, this.cam.visible(), this.fx, solids);
@@ -636,6 +643,18 @@ export class Renderer {
     });
   }
 
+  /** A rendered kind knocked flat where it died, under its burst, for as long as the clip takes. */
+  private drawFallen(rc: RC, dt: number) {
+    if (!this.fallen.length) return;
+    this.fallen = this.fallen.filter((f) => (f.age += dt) < FALLEN_LIFE);
+    for (const f of this.fallen) {
+      rc.s.save();
+      rc.s.globalAlpha = Math.min(1, (FALLEN_LIFE - f.age) / 0.15);
+      drawInkRunner(rc, f.c, f.x, f.y, { facing: f.facing, vx: 0, vy: 0, grounded: true, t: rc.t, dead: f.age });
+      rc.s.restore();
+    }
+  }
+
   /** Fades in with speed, so a walk leaves nothing and the trail only shows when a runner is really moving. */
   private drawTrail(c: Match['players'][number]['character'], slot: number, x: number, y: number, vx: number, vy: number, dt: number) {
     const rig = this.rigs.get(slot);
@@ -724,6 +743,7 @@ export class Renderer {
         case 'death': {
           const c = m.player(e.slot)?.character;
           const body = c?.body ?? { h: 0, s: 0, l: 80 };
+          if (c && e.cause !== 'fall' && spritesOf(c)) this.fallen.push({ c, x: e.x, y: e.y + PLAYER_H / 2, facing: Math.sign(e.vx) || 1, age: 0 });
           if (e.cause === 'fall') {
             const pool = m.level.h * TILE;
             this.fx.burst('splash', e.x, Math.min(e.y, pool - 10), 26, 180, [th.liquid.glow, th.liquid.color], 2, 0.9, 120);

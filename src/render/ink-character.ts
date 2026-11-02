@@ -19,6 +19,7 @@ import {
   STEEL,
   STEEL_SH,
 } from './cast/kit';
+import { drawSprite, type SpriteSet, spritesOf } from './cast/sprites';
 import type { Rig } from './character';
 import { line, type P, sn } from './ink';
 import { arm, contour, eyes, hand, type InkTarget, type Look, lookOf, moodOf, mouth, path, type RunnerPose, STRIDE, toned, tonedOval } from './ink-figure';
@@ -228,6 +229,33 @@ function feet(d: D, kind: Feet) {
   }
 }
 
+/** The player's ring round the feet, for a kind in its own palette. */
+function ring(s: CanvasRenderingContext2D, lk: Look, W: number) {
+  s.fillStyle = lk.ink;
+  ringPath(s, W * 0.56 + 0.7, 2.2, -0.6);
+  s.fill('evenodd');
+  s.fillStyle = lk.player;
+  ringPath(s, W * 0.56, 1.6, -0.6);
+  s.fill('evenodd');
+}
+
+/**
+ * A kind rendered from its 3D model (`cast/sprites`): the same ring and the same squash and stretch about
+ * the feet as the hand-drawn body, with the model's own clip for the pose. False while its sheet loads.
+ */
+function drawSpriteRunner(rc: InkTarget, c: CharacterDef, art: KindArt, lk: Look, set: SpriteSet, x: number, y: number, p: RunnerPose, sx: number, sy: number) {
+  const s = rc.s;
+  const sc = p.scale ?? 1;
+  s.save();
+  s.translate(x, y);
+  s.scale(sc, sc);
+  if (art.ring) ring(s, lk, 14 * art.size[0]);
+  s.scale(sx, sy);
+  const ok = drawSprite(s, set, c, p, x / sc);
+  s.restore();
+  return ok;
+}
+
 /** Draw a runner with feet centered at (x, y). */
 export function drawInkRunner(rc: InkTarget, c: CharacterDef, x: number, y: number, p: RunnerPose) {
   const s = rc.s;
@@ -256,6 +284,8 @@ export function drawInkRunner(rc: InkTarget, c: CharacterDef, x: number, y: numb
     sy = 1 + b;
     sx = 1 - b;
   }
+  const sprite = spritesOf(c);
+  if (sprite && drawSpriteRunner(rc, c, art, lk, sprite, x, y, p, sx, sy)) return;
   // The kind's own way of moving: a hop, a rock, a spin, a waddle, on top of the shared squash.
   gaitIn.m = m;
   gaitIn.ph = ph;
@@ -332,15 +362,8 @@ export function drawInkRunner(rc: InkTarget, c: CharacterDef, x: number, y: numb
 
   if (art.arms === 'mitten') arm(s, hl, backSide * shoulderX + bx(0.58), shoulderY, hand(m, backSide, f, ph, p.t, L, wall), backSide, k);
   else if (art.arms === 'flipper') flipper(d, hl, backSide * shoulderX + bx(0.58), shoulderY, hand(m, backSide, f, ph, p.t, L, wall), backSide);
-  if (art.ring) {
-    // The player's color on a homage in its own palette: a flat ring round its feet, no glow.
-    s.fillStyle = lk.ink;
-    ringPath(s, W * 0.56 + 0.7, 2.2, -0.6);
-    s.fill('evenodd');
-    s.fillStyle = lk.player;
-    ringPath(s, W * 0.56, 1.6, -0.6);
-    s.fill('evenodd');
-  }
+  // The player's color on a homage in its own palette: a flat ring round its feet, no glow.
+  if (art.ring) ring(s, lk, W);
   feet(d, art.feet);
   art.back?.(d);
 
