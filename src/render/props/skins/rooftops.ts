@@ -379,9 +379,9 @@ function billboardAd(rc: RC, m: Deco, d: DrawCtx) {
       for (const [i, [dy, c]] of layers.entries())
         part(g, ovalPts(px, py + dy * r, r, r * (i === 0 ? 0.45 : 0.22), 10 + i, 0.05, 18), c, 10 + i, { depth: 0.5, thin: 0.35, thick: 0.9 });
     }
-    // The headline: hand-painted glyphs across the rest of it, and a starburst with the price.
+    // The headline: a word or two of hand-painted glyphs, never a wall of them, and a starburst with the price.
     const hx0 = ad.kind % 2 ? 6 : h * 1.25;
-    const hx1 = ad.kind % 2 ? w - h * 1.3 : w - 6;
+    const hx1 = Math.min(ad.kind % 2 ? w - h * 1.3 : w - 6, hx0 + 10 * Math.min(10, h * 0.28) * 0.8);
     const gh = Math.min(10, h * 0.28);
     const pitch = gh * 0.8;
     for (let x = hx0, i = 0; x + pitch * 0.7 < hx1; x += pitch, i++) {
@@ -810,6 +810,16 @@ function elBack(rc: RC, m: Deco, d: DrawCtx) {
       for (let y = under + 4; y < floor - 3; y += 5) for (const k of [-1, 1]) g.fillRect(x + k * 3.4 - 0.4, y, 0.8, 0.8);
       flat(g, boxPts(x - 7.5, floor - 2, 15, 2.4, 0.4, i), CONCRETE, t, i, 0.3);
     }
+    // The signal bridge's posts down to the track, and its signal head, where the track has one.
+    for (let y = b.y; y < V - 1; y++)
+      for (let x = v0; x <= v1; x++) {
+        if (tileAt(lv, x, y) !== T_ONEWAY || tileAt(lv, x - 1, y) === T_ONEWAY) continue;
+        let e = x;
+        while (tileAt(lv, e + 1, y) === T_ONEWAY) e++;
+        for (const px of [X(x) + 2, X(e + 1) - 2]) member(g, px, Y(y) + 4, px, Y(V), 1.1, GREEN, t, px + y);
+        flat(g, boxPts((X(x) + X(e + 1)) / 2 - 2.5, Y(y) + 5, 5, 8, 0.8, x + 30, 0.1), { h: 220, s: 10, l: 16 }, t, x + 30, 0.4);
+        x = e;
+      }
     // The station's canopy over the near end: two posts and a shallow roof, a name board under it.
     const c0 = X(v0) + 2;
     const c1 = Math.min(X(v1 + 1) - 2, c0 + TILE * 5);
