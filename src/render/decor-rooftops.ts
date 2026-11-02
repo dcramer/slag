@@ -213,15 +213,20 @@ export const ROOFTOPS_DECOR = {
     color: () => hsl3(30, 8, 52),
     bake(s, d) {
       // The stairwell's way out onto the roof: a narrow doorway in its frame under a little tin hood.
-      const w = 9;
+      // A brick doorway, wider than its door, a step at its foot.
+      const w = 13;
       const h = 19 * Math.min(1.1, d.size);
-      const frame = boxPts(d.x - w / 2, d.y - h, w, h + 0.5, 0.5, sd(d), 0.05);
-      part(s, frame, d.color, sd(d), { depth: 0.6, thin: 0.35, thick: 0.9 });
-      const door = boxPts(d.x - w / 2 + 1.6, d.y - h + 3.4, w - 3.2, h - 3.4, 0.3, sd(d) + 1, 0.04);
-      part(s, door, hsl3(k01(d, 3) < 0.5 ? 150 : 8, 30, 32), sd(d) + 1, { depth: 0.5, thin: 0.3, thick: 0.7 });
-      // The bar, the knob, and the hood over it all.
-      tick(s, d.x - w / 2 + 2.2, d.y - h * 0.48, d.x + w / 2 - 2.2, d.y - h * 0.48, 0.6, 2, css(TIN, 6));
-      tick(s, d.x + w / 2 - 2.9, d.y - h * 0.4, d.x + w / 2 - 2.3, d.y - h * 0.4, 0.9, 3, css(TIN, 10));
+      const frame = boxPts(d.x - w / 2, d.y - h, w, h + 0.5, 0.6, sd(d), 0.05);
+      part(s, frame, shift(BRICK, -4), sd(d), { depth: 0.6, thin: 0.35, thick: 0.9 });
+      for (let y = d.y - 3; y > d.y - h + 2; y -= 3.5) tick(s, d.x - w / 2 + 0.6, y, d.x - w / 2 + 2.2, y, 0.35, y, css(BRICK, -20));
+      const dx0 = d.x - 3.6;
+      const door = boxPts(dx0, d.y - h + 3.2, 7.2, h - 4.4, 0.3, sd(d) + 1, 0.04);
+      const paint = hsl3(k01(d, 3) < 0.5 ? 150 : 8, 30, 34);
+      part(s, door, paint, sd(d) + 1, { depth: 0.5, thin: 0.3, thick: 0.7 });
+      // Its wired glass pane, the push bar, and a step.
+      part(s, boxPts(dx0 + 1.6, d.y - h + 5, 4, 3.6, 0.3, sd(d) + 4, 0.05), GLASS, sd(d) + 4, { depth: 0.3, thin: 0.25, thick: 0.6 });
+      tick(s, dx0 + 1, d.y - h * 0.45, dx0 + 6.2, d.y - h * 0.45, 0.6, 2, css(TIN, 6));
+      part(s, boxPts(d.x - 5, d.y - 1.4, 10, 1.9, 0.3, sd(d) + 5, 0.05), hsl3(30, 6, 56), sd(d) + 5, { depth: 0.3, thin: 0.25, thick: 0.6 });
       part(
         s,
         poly(d.x - w / 2 - 1.6, d.y - h + 0.2, d.x - w / 2 - 0.6, d.y - h - 1.8, d.x + w / 2 + 0.6, d.y - h - 1.8, d.x + w / 2 + 1.6, d.y - h + 0.2),
