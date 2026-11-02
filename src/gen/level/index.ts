@@ -6,6 +6,7 @@ import { pickThemeId, type ThemeId } from '../../themes';
 import { SET_PIECE_UID, SET_PIECES } from '../setpieces';
 import { generateTheme, type Theme } from '../theme';
 import { ReachCache } from '../../sim/reach';
+import { footing } from '../../sim/weather';
 import { openUp } from './lanes';
 import { setProbeGravity } from './probe';
 import { type ProfileOverride, rollProfile } from './profile';
@@ -103,11 +104,13 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
         continue;
       }
     }
-    lastGenAttempts = attempt + 1;
-    lastGenInfo = { attempts: attempt + 1, bridges, fallback: attempt >= MAX_ATTEMPTS, shared, sculpted: v.shared, rejects };
     level.solution = bridges;
     // Before the set pieces: their placer checks the path with the ghost, which walks on this footing.
     level.weather = rollWeather(seed, theme, level, profileOverride?.weather);
+    // Rain and snow change the footing the routes were measured on (the gate kept them open): record what the level has.
+    if (footing(level)) shared = analyzeRoutes(level, bridges, cache).shared;
+    lastGenAttempts = attempt + 1;
+    lastGenInfo = { attempts: attempt + 1, bridges, fallback: attempt >= MAX_ATTEMPTS, shared, sculpted: v.shared, rejects };
     // Set pieces must never block the known prop solution: a match starts from it, keeping clear of every
     // piece's barrier (./winnable.ts), so a piece goes in only if the solution still holds that way.
     const keep = (pieces: readonly PlacedProp[]) => planHolds(level, pieces, bridges, cache);
