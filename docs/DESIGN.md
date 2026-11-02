@@ -11,6 +11,10 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - Part of the joy of the game is the unknown. Players learn parts, rules and tricks by playing and by watching each other.
 - The game never explains the obvious: no sub lines, hints or notes that restate what's on screen or spell out a rule. If the screen can show it, don't say it.
 
+## Parody
+- Our goal is to parody other games, especially with items. Players should recognize what's being mocked and laugh at the twist.
+- A parody is ours: our own name, our own art and a comic twist on the idea. Never the original's real name, art, characters or level designs.
+
 ## Scoring
 - Finishing earns +10 points. The first player to finish gets an extra +4.
 - Each rival killed by your prop, or by the level right after your bonk, earns you +3, but only if someone finished that round.
