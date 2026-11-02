@@ -189,13 +189,15 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Conveyors must rotate like any part: a belt on the side drags wall-sliders, and one underneath shoves you when you bonk your head.** "you cant rotate conveyros.. the conveyor always stays on the top"
   2026-11-02 17:51Z · `in progress`
 - **Coats and blocks stick to moving parts and ride them, as honey rides a turning conveyor.** "if you had honey on something like a conveyor (that rotated around), the honey would rotate with it, and then you could also stick another block on it"
-  2026-11-02 17:36Z · `in progress`
+  2026-11-02 17:36Z · `done` · DESIGN.md → Props, "Parts ride what they're stuck to"; `src/sim/props/ride.ts`
+- **Conveyors rotate: the rotation picks the belt's face.** A side belt grips and carries a clinging runner (an escalator when it runs up), a bottom belt shoves a head that bonks it. "you cant rotate conveyors.. the conveyor always stays on the top"
+  2026-11-02 · `done` · DESIGN.md → Props, Conveyors
 - **The parody first batch: Walk-Off Bat, Tremor Brick, Front-Runner Tax, Pocket Block, Launch Plate, Four-Square, Boost Strip, Panic Button, Fuse Crate, Y-Fling.**
-  2026-11-02 · `in progress` · PARODY-BACKLOG.md → 3
+  2026-11-02 · items `done` (DESIGN.md → held items), parts `in progress` · PARODY-BACKLOG.md → 3
+- **Backlog questions settled by the coordinator** (the owner may override): items may make solids mid-race (Pocket Block; no proof counts on them); Front-Runner Tax measures "first" by real route distance (`goalField` in `src/sim/reach.ts`); the noodle pogo is dropped, since down + Use already tosses.
+  2026-11-02 · `done`
 - **The rest of the parody backlog.**
   2026-11-02 · `planned` · PARODY-BACKLOG.md → 1
-- **The backlog's open questions (items that make solids mid-race, how "first" is measured, the pogo trigger) aren't answered.**
-  2026-11-02 · `open` · PARODY-BACKLOG.md → 5, TODO.md → 24
 - **Small parts still draw small on crate cards.**
   2026-11-02 · `open` · TODO.md → 21
 
