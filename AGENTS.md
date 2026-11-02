@@ -25,11 +25,11 @@ Lint: `oxlint` (type-aware, `.oxlintrc.json`). Errors fail CI; warnings are real
 
 ## Definition of done
 
-1. `pnpm check` passes. Never skip, delete or weaken a test to get there.
+1. `pnpm check` passes, run **once before committing**. While iterating, run only the test files you touch (`pnpm vitest run tests/x.test.ts`) plus `pnpm check:fast`. Never skip, delete or weaken a test to get there.
 2. `pnpm build` passes if you touched `app/`, `next.config.ts`, `package.json`, or what `app/` imports from `src/`.
 3. Visual change: you took a screenshot and looked at it (see below). Typechecking says nothing about pixels.
 4. Generator change: `pnpm level --stats 50` shows `fallbacks: 0` and no unexplained jump in ms/level or `needBridges`; compare against a run on the parent commit.
-5. Behavior change: a test covers it (generator invariants, prop module runtime behavior, physics feel regressions).
+5. Behavior change: a test covers it (generator invariants, prop module runtime behavior, physics feel regressions). Test behavior and invariants, not every tunable or weight. Keep tests cheap, because every second is paid on every iteration by every agent; sample a few seeds rather than hundreds unless the invariant needs more.
 6. In your final message, show evidence: the commands you ran with their result, and screenshot paths.
 
 ### Verify visually
