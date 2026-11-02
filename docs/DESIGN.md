@@ -1,6 +1,6 @@
 # Game design decisions
 
-This is a concise log of decided rules. It's the source of truth for gameplay intent. When a decision changes, update this file in the same commit. Implementation details live in AGENTS.md and the code.
+This is a concise log of decided rules. It's the source of truth for gameplay intent. When a decision changes, update this file in the same commit. Implementation details live in AGENTS.md and the code. The full log of the owner's decisions, with dates, status and what each one replaced, is [DECISIONS.md](DECISIONS.md).
 
 ## Core loop
 - Lobby → **Pick** (claim one prop from a crate) → **Place** (put it in the level) → **Race** to the flag → **Score**. Repeat until someone reaches the target score or the round limit, whichever comes first, then **Victory**.
@@ -14,7 +14,7 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 
 ## Parody
 - Our goal is to parody other games, especially with items. Players should recognize what's being mocked and laugh at the twist.
-- What we parody: the build-then-race party platformer is the core loop's inspiration. Nintendo's platformers are the main well: homages across many franchises, the plumber's blocks, pipes and shells, the ape's barrels and girders, and more. The big crossover brawler is the model for items and stage hazards: lots of them, chaotic and readable.
+- What we parody: the build-then-race party platformer is the core loop's inspiration. Nintendo's platformers are the main well: homages across many franchises, the plumber's blocks, pipes and shells, the ape's barrels and girders, and more. The big crossover brawler is the model for items and stage hazards: lots of them, chaotic and readable. Past those, any iconic pop-culture game is fair game, as the team shooter's sentry gun was; [PARODY-BACKLOG.md](PARODY-BACKLOG.md) ranks the candidates.
 - A parody is ours: our own name, our own art and a comic twist on the idea. Never the original's real name, art, characters or level designs.
 - Mock the trope before any one game; a nod at one game gets a sound-alike or spoof name. Each part's target, silhouette and visual gag are in [PARODY.md](PARODY.md).
 - Props are objects, not characters. No item, part, projectile or set piece has a face or a persona (eyes, a mouth, an expression, little feet, a cap worn like a character); only runners have faces. The parody comes through the object's shape, material and mechanism.
@@ -32,7 +32,8 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 
 ## Players
 - Characters are generated per player (body, face, accessory and name) and are **cosmetic only**: every player has the same hitbox and the same physics.
-- The local player's **name and look persist** across sessions (localStorage). On first join the game asks for a name, with the random one offered as the one-click default.
+- The local player's **name and look persist** across sessions (localStorage). On first join the game asks for a name, with the random one offered as the one-click default. New Look rerolls the look and keeps the name.
+- **Everyone in a lobby looks different**: no two players share a name or a look, and their colors sit well apart.
 - **Spawn zone is safe**: the starting zone is the protected rect around the spawn (the start pocket), shown during races as a faint shimmer. While your body touches it, props and items can't hurt you: hazards don't kill, projectiles that reach you pop harmlessly, bonks and smoke don't reach you, and moving solids can't crush you. A faint bubble marks protected runners. The pit, giving up and the race timer still apply (the pit can't be reached from inside the zone anyway).
 - **Players are solid.** A head is a one-way platform: land on it, stand on it, ride it as it moves, jump off it, drop through it with down + jump. It counts as ground for coyote time and jump buffering. Whoever is underneath carries whoever is on top, a rising runner lifts them, and a ceiling stops the stack (the jumper bonks, nobody is squeezed). Stacking to reach higher is a feature, and the generator never counts on it: levels stay finishable alone. Being stood on never hurts.
 - **Side contact blocks and shoves.** Walking into someone standing still moves you both at about a quarter of walking speed (a run-up shoves harder). Equal efforts stall, a stronger push wins by the difference, and being rear-ended never slows you down. Nobody is ever pushed into terrain. A hazard you're shoved or carried into kills as usual, credited the usual way: the shover gets nothing. No wall slides or wall jumps off people.
@@ -141,6 +142,7 @@ A level is a place with one landmark you'd name it after: the Great Wheel, the H
 - A picked part's card leaves the crate entirely. The other cards stay where they are.
 - On PC, keyboard and mouse both work. One keyboard player can use WASD *and* the arrows. A "Split keyboard" setting turns the keyboard into two local players. Everything can be remapped.
 - The mouse drives the menu cursor: click to pick or place, right-click or the wheel to rotate. They do nothing else, so a stray click can't self-destruct.
+- A gamepad's cursor ramps up while the stick is held: a tap moves it a little, a long push crosses the screen fast.
 - **Touch (mobile)**: left half is a floating stick (push past ~70% to run), right half is jump (hold for height), self-destruct needs a short hold, and a Use button appears above jump while you hold an item. Pick by tapping a card; place by dragging a ghost that floats above your finger, with ROTATE and PLACE buttons. Landscape first.
 - **Phones see the game closer up**, and it stays render-only: a phone's camera is its own, and cursors stay in world coordinates so every peer sees them land in the same place. Solo, the race camera follows you with a tile at least ~24 CSS px, with look-ahead and a vertical dead zone, clamped to the level. **With more than one player in the match, local or remote, every live runner stays on screen, and that always beats the tile size.** Pick and place start zoomed out, with pinch-zoom, two-finger pan, and auto-pan when a ghost nears an edge. HUD text, buttons and crate cards scale up, and every tap target is at least 44 CSS px.
 - In the lobby, a stray click does nothing; only buttons act.
@@ -152,9 +154,9 @@ A level is a place with one landmark you'd name it after: the Great Wheel, the H
 ## Online
 - The URL `/r/<code>` identifies a lobby; the homepage is a normal main menu. There's no matchmaking, and you join only through a shared link (or by typing its code under Join a Lobby).
 - Everyone connected has a seat in the lobby without pressing anything, up to 8 players. Past that they spectate.
-- The host wears a `HOST` label in the lobby, and it moves with the host. The host can kick a player from the lobby only, by mouse, or with Use, then Confirm on keyboard or gamepad. A kicked player lands on the main menu and can't refresh back in.
+- The host wears a `HOST` label in the lobby, and it moves with the host; a remote player's card shows their ping in the same spot, and there's no separate list of names. The host can kick a player from the lobby only, by mouse, or with Use, then Confirm on keyboard or gamepad. A kicked player lands on the main menu and can't refresh back in.
 - **Host = the earliest-joined connected player.** When the host leaves, the next player in join order takes over seamlessly. When everyone leaves, the next arrival becomes host. A refresh is a new join: mid-match you get your slot, look and score back, in the lobby your look, and a host who refreshes comes back as a guest.
-- Netcode sends inputs, not state, over a deterministic simulation that must be bit-identical across browsers. Snapshots are only for joining, resync and host migration.
+- Netcode sends inputs, not state, over a deterministic simulation that must be bit-identical across browsers. Snapshots are only for joining, resync and host migration. The host is the decider: when a guest's state drifts, the host's state wins.
 - Peers connect over WebRTC in a star around the host. A guest that can't reach the host directly (and has no TURN server) drops to local play. Details: `docs/NETCODE.md`.
 - In pick and place everyone sees everyone's cursor and held part live. A card belongs to whoever the host hears first; nobody sees a claim that gets taken back.
 

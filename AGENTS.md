@@ -2,7 +2,7 @@
 
 **slag** is a browser party platformer: each round players **pick** a prop from a crate, **place** it in the level, then **run** to the flag (1–8 players, `MAX_PLAYERS`). Levels, props, characters, names and visuals are all procedurally generated from a seed. Movement is a tight precision platformer: walk by default, hold **run** for speed and long jumps, variable jumps, wall slide/jump, coyote time, jump buffering. Use the genre's mechanics. Parody other games, especially with items, but never use their real names, art, characters or level designs (`docs/DESIGN.md` → Parody).
 
-Game design decisions live in [docs/DESIGN.md](docs/DESIGN.md): follow it, and update it in the same commit when a decision changes. Open work is in [docs/TODO.md](docs/TODO.md); remove items when they land. UI art direction (palette, type, casing, input prompts) is in [docs/ART.md](docs/ART.md). Folders with their own rules have a nested `AGENTS.md`: `src/sim/`, `src/gen/`, `src/render/`, `app/`. Read it before editing there.
+Game design decisions live in [docs/DESIGN.md](docs/DESIGN.md): follow it, and update it in the same commit when a decision changes. [docs/DECISIONS.md](docs/DECISIONS.md) logs every owner decision with its date, status and what it replaced; add the owner's new decisions there too. Open work is in [docs/TODO.md](docs/TODO.md); remove items when they land. UI art direction (palette, type, casing, input prompts) is in [docs/ART.md](docs/ART.md). Folders with their own rules have a nested `AGENTS.md`: `src/sim/`, `src/gen/`, `src/render/`, `app/`. Read it before editing there.
 
 ## Commands
 
