@@ -297,6 +297,9 @@ async function genScenario(b: Browser) {
             d.render();
             worst = Math.max(worst, performance.now() - f0);
             frames++;
+            // Untimed, as the game's own loop presents every frame: frames run back to back without it pile up
+            // GPU work until one random frame stalls for all of it, a spike no player sees.
+            (window as any).slagPerf.profiler.flushGpu();
           } while ((d.renderer.terrain.baking || d.renderer.surround.baking) && frames < 2000);
           d.renderer.bakeBudgetMs = Infinity;
           row.frameMs.push(+worst.toFixed(2));

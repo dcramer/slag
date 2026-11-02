@@ -4,7 +4,7 @@ import type { LiquidKind, SkyLayer, Theme } from '../gen/theme';
 import { VIEW_H, VIEW_W } from '../sim/constants';
 import type { Camera } from './camera';
 import type { ViewFrame } from './frame';
-import { circle, ellipse, flame, flutter, glowDot, light, type RC } from './kit';
+import { circle, ellipse, flame, flutter, glowDot, light, type RC, scratch } from './kit';
 import { type Feature, SKYLINES } from './skylines';
 
 /**
@@ -21,9 +21,50 @@ import { type Feature, SKYLINES } from './skylines';
 
 const PAD = 0.18; // extra width baked on each side for parallax travel
 
-interface BakedLayer {
+/** A baked bitmap: the top-left `w`×`h` px of a pooled canvas, which may be bigger from an earlier bake. */
+interface Surface {
   c: HTMLCanvasElement;
-  glow: HTMLCanvasElement | null;
+  w: number;
+  h: number;
+}
+
+/**
+ * The canvases the backdrop keeps between bakes, grown and never shrunk. A level load paints over the last
+ * level's bitmaps instead of allocating a window's worth of fresh ones: that allocation, and collecting the
+ * old ones, was the first-frame stall on every load.
+ */
+class CanvasPool {
+  private cs: HTMLCanvasElement[] = [];
+  private n = 0;
+  reset() {
+    this.n = 0;
+  }
+  /** A cleared surface of `w`×`h` px, with a context scaled by `k` (logical px in). */
+  take(w: number, h: number, k: number): [Surface, CanvasRenderingContext2D] {
+    const c = (this.cs[this.n++] ??= document.createElement('canvas'));
+    return [{ c, w, h }, prepare(c, w, h, k)];
+  }
+}
+
+/** Grow `c` to hold `w`×`h` px if it can't, clear all of it (a blur reads past the used rect), and scale it by `k`. */
+function prepare(c: HTMLCanvasElement, w: number, h: number, k: number): CanvasRenderingContext2D {
+  if (c.width < w || c.height < h) {
+    c.width = Math.max(c.width, w);
+    c.height = Math.max(c.height, h);
+  }
+  const g = c.getContext('2d')!;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalAlpha = 1;
+  g.globalCompositeOperation = 'source-over';
+  g.filter = 'none';
+  g.clearRect(0, 0, c.width, c.height);
+  g.setTransform(k, 0, 0, k, 0, 0);
+  return g;
+}
+
+interface BakedLayer {
+  c: Surface;
+  glow: Surface | null;
   depth: number;
   haze: number;
   feats: Feature[];
@@ -32,7 +73,7 @@ interface BakedLayer {
 interface Baked {
   key: string;
   layers: BakedLayer[];
-  clouds: { c: HTMLCanvasElement; x: number; y: number; speed: number; w: number; h: number; depth: number }[];
+  clouds: { c: Surface; x: number; y: number; speed: number; w: number; h: number; depth: number }[];
   stars: { x: number; y: number; r: number; tw: number }[];
 }
 
@@ -53,6 +94,7 @@ const SEEN_THROUGH: Record<LiquidKind, number> = { water: 0.5, sea: 0.5, swamp: 
 export class Backdrop {
   private baked: Baked | null = null;
   private motes: Mote[] = [];
+  private pool = new CanvasPool();
 
   private ensure(th: Theme, kb: number, f: ViewFrame) {
     const key = `${th.seed}:${th.id}:${th.name}:${kb.toFixed(2)}:${f.w.toFixed(0)}x${f.h.toFixed(0)}`;
@@ -61,13 +103,14 @@ export class Backdrop {
     const W = f.w * (1 + PAD * 2);
     // Layers run on down past the play view on a tall window, ground and all.
     const H = Math.max(VIEW_H, f.y1);
-    const layers = th.layers.map((L, i) => bakeLayer(L, th, W, H, kb, i === 0 ? 1.1 : i === th.layers.length - 1 ? 0 : 0.5));
+    this.pool.reset();
+    const layers = th.layers.map((L, i) => bakeLayer(this.pool, L, th, W, H, kb, i === 0 ? 1.1 : i === th.layers.length - 1 ? 0 : 0.5));
     const clouds = Array.from({ length: th.clouds }, () => {
       const wide = th.cloudStyle !== 'puffy';
       const w = wide ? rng.range(160, 320) : rng.range(70, 170);
       const h = w * (wide ? rng.range(0.12, 0.22) : rng.range(0.32, 0.45));
       return {
-        c: bakeCloud(rng, w, h, th, kb),
+        c: bakeCloud(this.pool, rng, w, h, th, kb),
         x: rng.range(f.x0 - 100, f.x1),
         y: rng.range(Math.min(6, f.y0 + 6), VIEW_H * 0.42),
         speed: rng.range(2, 8),
@@ -138,7 +181,7 @@ export class Backdrop {
     for (const cl of b.clouds) {
       const span = f.w + cl.w * 2;
       const x = f.x0 + ((((cl.x - f.x0 + t * cl.speed + px(cl.depth)) % span) + span) % span) - cl.w;
-      s.drawImage(cl.c, x, cl.y + py(cl.depth), cl.w, cl.h);
+      s.drawImage(cl.c.c, 0, 0, cl.c.w, cl.c.h, x, cl.y + py(cl.depth), cl.w, cl.h);
     }
 
     b.layers.forEach((L, i) => {
@@ -146,10 +189,10 @@ export class Backdrop {
       const y = py(L.depth);
       const lw = f.w * (1 + PAD * 2);
       const lh = Math.max(VIEW_H, f.y1);
-      s.drawImage(L.c, x, y, lw, lh);
+      s.drawImage(L.c.c, 0, 0, L.c.w, L.c.h, x, y, lw, lh);
       if (L.glow) {
         rc.g.globalAlpha = (0.85 + 0.15 * Math.sin(t * 0.7 + i)) * Math.max(0.25, 1 - L.haze * 1.3);
-        rc.g.drawImage(L.glow, x, y, lw, lh);
+        rc.g.drawImage(L.glow.c, 0, 0, L.glow.w, L.glow.h, x, y, lw, lh);
         rc.g.globalAlpha = 1;
       }
       for (const ft of L.feats) drawFeature(rc, ft, x, y, L.haze, th, f);
@@ -641,21 +684,21 @@ function drawFeature(rc: RC, f: Feature, ox: number, oy: number, haze: number, t
   }
 }
 
-function bakeLayer(L: SkyLayer, th: Theme, W: number, H: number, kb: number, blur: number): BakedLayer {
+function bakeLayer(pool: CanvasPool, L: SkyLayer, th: Theme, W: number, H: number, kb: number, blur: number): BakedLayer {
   const def = SKYLINES[L.kind];
-  const c = document.createElement('canvas');
-  c.width = Math.ceil(W * kb);
-  c.height = Math.ceil(H * kb);
-  const g = c.getContext('2d')!;
-  g.scale(kb, kb);
-  let glowC: HTMLCanvasElement | null = null;
+  const pw = Math.ceil(W * kb);
+  const ph = Math.ceil(H * kb);
+  const soft = blur > 0.2;
+  // A layer that gets blurred is drawn on a shared scratch first; only what's kept comes from the pool.
+  const [c, g] = soft ? [{ c: scratch('bg-layer', pw, ph), w: pw, h: ph }, null] : pool.take(pw, ph, kb);
+  const gg = g ?? prepare(c.c, pw, ph, kb);
+  let glowC: Surface | null = null;
   let e: CanvasRenderingContext2D | null = null;
   if (def.glow) {
-    glowC = document.createElement('canvas');
-    glowC.width = c.width;
-    glowC.height = c.height;
-    e = glowC.getContext('2d')!;
-    e.scale(kb, kb);
+    if (soft) {
+      glowC = { c: scratch('bg-glow', pw, ph), w: pw, h: ph };
+      e = prepare(glowC.c, pw, ph, kb);
+    } else [glowC, e] = pool.take(pw, ph, kb);
   }
   // The silhouette keeps its place in the view however tall the layer is; only what's under it runs on.
   const ridge = (x: number) => {
@@ -665,41 +708,33 @@ function bakeLayer(L: SkyLayer, th: Theme, W: number, H: number, kb: number, blu
     return h * VIEW_H;
   };
   const feats: Feature[] = [];
-  def.bake({ g, e, L, th, W, H, rng: new Rng(L.seed), feats, ridge });
+  def.bake({ g: gg, e, L, th, W, H, rng: new Rng(L.seed), feats, ridge });
   // Atmospheric perspective: tint toward the fog, more so near the ground.
   if (L.haze > 0) {
-    g.save();
-    g.setTransform(1, 0, 0, 1, 0, 0);
-    g.globalCompositeOperation = 'source-atop';
-    const hz = g.createLinearGradient(0, 0, 0, c.height);
+    gg.save();
+    gg.setTransform(1, 0, 0, 1, 0, 0);
+    gg.globalCompositeOperation = 'source-atop';
+    const hz = gg.createLinearGradient(0, 0, 0, ph);
     hz.addColorStop(0, css(th.fog, 0, Math.min(1, L.haze * 0.8)));
     hz.addColorStop(1, css(th.fog, 0, Math.min(1, L.haze * 1.15)));
-    g.fillStyle = hz;
-    g.fillRect(0, 0, c.width, c.height);
-    g.restore();
+    gg.fillStyle = hz;
+    gg.fillRect(0, 0, pw, ph);
+    gg.restore();
   }
+  if (!soft) return { c, glow: glowC, depth: L.depth, haze: L.haze, feats };
   // Depth of field: soften farther layers.
-  if (blur > 0.2) {
-    const blurred = (src: HTMLCanvasElement, r: number) => {
-      const b = document.createElement('canvas');
-      b.width = src.width;
-      b.height = src.height;
-      const bg = b.getContext('2d')!;
-      bg.filter = `blur(${(r * kb).toFixed(1)}px)`;
-      bg.drawImage(src, 0, 0);
-      return b;
-    };
-    return { c: blurred(c, blur), glow: glowC ? blurred(glowC, blur * 0.6) : null, depth: L.depth, haze: L.haze, feats };
-  }
-  return { c, glow: glowC, depth: L.depth, haze: L.haze, feats };
+  const blurred = (src: Surface, r: number): Surface => {
+    const [b, bg] = pool.take(src.w, src.h, 1);
+    bg.filter = `blur(${(r * kb).toFixed(1)}px)`;
+    bg.drawImage(src.c, 0, 0, src.w, src.h, 0, 0, src.w, src.h);
+    bg.filter = 'none';
+    return b;
+  };
+  return { c: blurred(c, blur), glow: glowC ? blurred(glowC, blur * 0.6) : null, depth: L.depth, haze: L.haze, feats };
 }
 
-function bakeCloud(rng: Rng, w: number, h: number, th: Theme, kb: number): HTMLCanvasElement {
-  const c = document.createElement('canvas');
-  c.width = Math.ceil(w * kb);
-  c.height = Math.ceil(h * kb);
-  const g = c.getContext('2d')!;
-  g.scale(kb, kb);
+function bakeCloud(pool: CanvasPool, rng: Rng, w: number, h: number, th: Theme, kb: number): Surface {
+  const [c, g] = pool.take(Math.ceil(w * kb), Math.ceil(h * kb), kb);
   const base = th.cloudColor;
   const under = mixHsl(base, th.horizon.color, 0.35);
   switch (th.cloudStyle) {
