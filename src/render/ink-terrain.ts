@@ -90,7 +90,7 @@ const TRACE_PAD = 5;
  * Shapes of the terrain in world px, for the whole level or just around `tiles`. Points are keyed to the
  * world, so tracing a window gives the same outline inside it as tracing the level does.
  */
-export function inkContours(level: Level, seed: number, solid: (x: number, y: number) => boolean, tiles?: TileRect, loose = 1): InkBake {
+export function inkContours(level: Level, seed: number, solid: (x: number, y: number) => boolean, tiles?: TileRect): InkBake {
   const x0 = tiles ? Math.max(0, tiles.x - TRACE_PAD) : 0;
   const y0 = tiles ? Math.max(0, tiles.y - TRACE_PAD) : 0;
   const x1 = tiles ? Math.min(level.w, tiles.x + tiles.w + TRACE_PAD) : level.w;
@@ -98,7 +98,7 @@ export function inkContours(level: Level, seed: number, solid: (x: number, y: nu
   const r = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
   const corners = traceCorners(windowSolid(level, solid, r), r.w, r.h);
   const shifted = corners.map((c) => c.map((p) => ({ x: p.x + x0, y: p.y + y0 })));
-  const loops = shifted.map((c) => looseLoop(c, { tile: TILE, w: level.w, h: level.h, seed, loose, edge: tiles ? r : undefined }));
+  const loops = shifted.map((c) => looseLoop(c, { tile: TILE, w: level.w, h: level.h, seed, edge: tiles ? r : undefined }));
   const mask = new Path2D();
   for (const l of loops) {
     l.forEach((p, i) => (i ? mask.lineTo(p.x, p.y) : mask.moveTo(p.x, p.y)));

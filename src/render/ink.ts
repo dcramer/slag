@@ -190,13 +190,23 @@ function simplify(loop: P[]): P[] {
   });
 }
 
+/**
+ * How far the drawn shape may leave the collision shape, in world px. The art must not lie about the
+ * hitbox: nothing should block a player where the picture shows air, or hold one up where it shows
+ * none. Floors are held tightest because feet are where a pixel shows. Only thin marks (grass, ink
+ * lines, a brace) may hang past these, and thin is what lets the eye read them as decoration.
+ */
+export const FLOOR_DRIFT = 0.5;
+export const EDGE_DRIFT = 1.25;
+/** Corner radii: a cut corner hides 0.354 r of solid, a filled one shows that much solid that isn't there. */
+const OUTER_CORNER = 3;
+const INNER_CORNER = 2.5;
+
 export interface LooseOpts {
   tile: number;
   w: number;
   h: number;
   seed: number;
-  /** Multiplies how far the outline strays from the grid. */
-  loose: number;
   /** Tile window being traced, when it isn't the whole level: lines along its rim aren't real edges. */
   edge?: { x: number; y: number; w: number; h: number };
 }
@@ -208,7 +218,7 @@ export interface LooseOpts {
 export function looseLoop(corners: readonly P[], o: LooseOpts): EdgeP[] {
   const T = o.tile;
   const n = corners.length;
-  const raw: { x: number; y: number; tx: number; ty: number }[] = [];
+  const raw: { x: number; y: number; tx: number; ty: number; drift: number }[] = [];
   const dir = (from: P, to: P) => ({ x: Math.sign(to.x - from.x), y: Math.sign(to.y - from.y) });
   const len = (from: P, to: P) => (Math.abs(to.x - from.x) + Math.abs(to.y - from.y)) * T;
   // Radii first: a side is shared, and each end has to know how much the other took.
@@ -219,9 +229,7 @@ export function looseLoop(corners: readonly P[], o: LooseOpts): EdgeP[] {
     const out = dir(p, b);
     const convex = inn.x * out.y - inn.y * out.x > 0;
     const h = hash2(p.x, p.y, o.seed);
-    // A top corner is standing room: round it too much and a player stands on air.
-    const floor = convex && (out.x > 0 || inn.x > 0);
-    const want = floor ? 2 + 1.6 * h : (convex ? 3.5 + 4 * h : 2 + 2.5 * h) * (1 + 0.5 * o.loose);
+    const want = (convex ? OUTER_CORNER : INNER_CORNER) * (0.65 + 0.35 * h);
     return Math.min(len(a, p) / 2, len(p, b) / 2, want);
   });
   for (let i = 0; i < n; i++) {
@@ -241,6 +249,8 @@ export function looseLoop(corners: readonly P[], o: LooseOpts): EdgeP[] {
         y: iu * iu * (wy - inn.y * r) + 2 * iu * u * wy + u * u * (wy + out.y * r),
         tx: iu * inn.x + u * out.x,
         ty: iu * inn.y + u * out.y,
+        // A corner is already off the grid by its radius: drift fades out so the two can't add up.
+        drift: Math.abs(u * 2 - 1),
       });
     }
     // Along the side, samples sit on a world grid and not spaced from the corner: a crater that
@@ -250,14 +260,16 @@ export function looseLoop(corners: readonly P[], o: LooseOpts): EdgeP[] {
     const c0 = (horizontal ? wx : wy) + sign * r;
     const c1 = (horizontal ? wx : wy) + sign * (len(p, b) - radii[(i + 1) % n]);
     for (let k = sign > 0 ? Math.ceil((c0 + 0.75) / 3) : Math.floor((c0 - 0.75) / 3); sign > 0 ? k * 3 < c1 - 0.75 : k * 3 > c1 + 0.75; k += sign) {
-      raw.push(horizontal ? { x: k * 3, y: wy, tx: out.x, ty: 0 } : { x: wx, y: k * 3, tx: 0, ty: out.y });
+      raw.push(horizontal ? { x: k * 3, y: wy, tx: out.x, ty: 0, drift: 1 } : { x: wx, y: k * 3, tx: 0, ty: out.y, drift: 1 });
     }
   }
   return raw.map((q) => {
     const d = Math.hypot(q.tx, q.ty) || 1;
     const nx = q.ty / d;
     const ny = -q.tx / d;
-    const amp = (ny < 0 ? 0.3 + 0.95 * (1 + ny) : 1.25 + 0.6 * ny) * o.loose;
+    // Floors barely move; walls and ceilings wander up to their limit. `wander` peaks at 1.35.
+    const limit = ny < -0.5 ? FLOOR_DRIFT : EDGE_DRIFT - 0.25;
+    const amp = (limit / 1.35) * q.drift;
     const wander = sn(q.x * 0.05, q.y * 0.05, o.seed) + 0.35 * sn(q.x * 0.17, q.y * 0.17, o.seed + 1);
     return {
       x: q.x + nx * wander * amp,
