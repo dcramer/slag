@@ -6,7 +6,7 @@ Game design decisions live in [docs/DESIGN.md](docs/DESIGN.md): follow it, and u
 
 ## Commands
 
-Package manager is **pnpm** (`packageManager` in package.json). Never use npm or commit a `package-lock.json`. Node 22 (`.nvmrc`, `engines`).
+Package manager is **pnpm** (`packageManager` in package.json). Never use npm or commit a `package-lock.json`. pnpm settings live in `pnpm-workspace.yaml`, not `package.json`. Node 24 (`.nvmrc`, `engines`).
 
 | Command | Use |
 | --- | --- |
