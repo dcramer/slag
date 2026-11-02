@@ -1,8 +1,8 @@
 import { css, type HSL, hsl3 } from '../core/color';
 import { hash2 } from '../core/rng';
 import type { Decor, DecorDef } from './decor';
-import { blob, line, type P, stroke } from './ink';
-import { ball, boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, tick } from './ink-props';
+import { inkFor, line, type P, stroke } from './ink';
+import { ball, barLine, boxPts, dot, glint, ovalPts, part, path, pen, poly, tick } from './ink-props';
 
 /**
  * Farm decor, inked: the yard's clutter between the fields. A scarecrow with a sack for a head, a water
@@ -36,12 +36,9 @@ function shape(g: CanvasRenderingContext2D, pts: readonly P[], c: HSL, seed: num
   part(g, pts, c, seed, { depth, thin: 0.4, thick: 1 });
 }
 
-/** A pole or rail: an ink ribbon with its tone over it. */
+/** A pole or rail: a bar in its own colour inside a rim that's a dark of it. */
 function pole(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, c: HSL, seed: number) {
-  g.fillStyle = INK;
-  line(g, ax, ay, bx, by, { w: w + 1.1, seed, taper: [0.02, 0.05], press: 0.1 });
-  g.fillStyle = css(c);
-  line(g, ax, ay, bx, by, { w, seed: seed + 1, taper: [0.02, 0.08], press: 0.1 });
+  barLine(g, ax, ay, bx, by, w, c, seed, { taper: [0.02, 0.05], press: 0.1 });
 }
 
 /** A few straw strokes fanning out of a point. */
@@ -55,7 +52,7 @@ function straw(g: CanvasRenderingContext2D, x: number, y: number, dir: number, n
 
 export const FARM_DECOR = {
   scarecrow: {
-    color: (_th, rng) => hsl3(rng.pick([4, 210, 130, 30]), 45, 42),
+    color: (_th, rng) => hsl3(rng.pick([4, 210, 130, 30]), 36, 42),
     bake(g, d) {
       const k = d.size;
       const x = d.x;
@@ -84,9 +81,8 @@ export const FARM_DECOR = {
         top + 10.4 * k,
       );
       shape(g, shirt, d.color, s + 3, 0.7);
-      g.fillStyle = css(d.color, -22, 0.8);
-      for (const px of [-2, 2]) g.fillRect(x + px * k - 0.3, top + 11 * k, 0.6, 8 * k);
-      g.fillRect(x - 5 * k, top + 14 * k, 10 * k, 0.6);
+      tick(g, x - 2 * k, top + 11.5 * k, x - 2.2 * k, top + 18 * k, 0.45, s + 13, css(d.color, -24));
+      tick(g, x - 4.4 * k, top + 14 * k, x + 1 * k, top + 13.8 * k, 0.4, s + 14, css(d.color, -24));
       straw(g, x - 9 * k, top + 8.5 * k, Math.PI, 3, s + 4);
       straw(g, x + 9 * k, top + 8 * k, 0, 3, s + 5);
       straw(g, x, top + 19.4 * k, Math.PI / 2, 4, s + 6);
@@ -191,7 +187,7 @@ export const FARM_DECOR = {
     },
   },
   barrow: {
-    color: (_th, rng) => hsl3(rng.pick([4, 120, 210, 48]), 50, 44),
+    color: (_th, rng) => hsl3(rng.pick([4, 120, 210, 48]), 36, 44),
     bake(g, d) {
       const k = d.size;
       const f = fx(d);
@@ -202,10 +198,7 @@ export const FARM_DECOR = {
       pole(g, x - 4 * k * f, y - 4.4 * k, x - 4.6 * k * f, y, 0.9, OLDWOOD, sd(d) + 2);
       const tray = poly(x - 6 * k * f, y - 9 * k, x + 6 * k * f, y - 9.6 * k, x + 4 * k * f, y - 4 * k, x - 3.6 * k * f, y - 4 * k);
       shape(g, tray, d.color, sd(d) + 3, 0.8);
-      g.fillStyle = INK;
-      blob(g, wx, y - 3, 3.3 * k, sd(d) + 4, 1, 0.05);
-      g.fill();
-      ball(g, wx, y - 3, 2.4 * k, hsl3(30, 10, 26), sd(d) + 5);
+      ball(g, wx, y - 3, 2.8 * k, hsl3(30, 10, 30), sd(d) + 5);
       // A spade left in it.
       pole(g, x - 1 * k * f, y - 8 * k, x + 2 * k * f, y - 17 * k, 0.8, WOOD, sd(d) + 6);
     },
@@ -222,7 +215,7 @@ export const FARM_DECOR = {
       // The points of the compass on their arms, and the arrow over them.
       const ay = top + 7;
       pole(g, x - 6 * k, ay, x + 6 * k, ay, 0.6, d.color, sd(d) + 2);
-      for (const ex of [-6, 6]) dot(g, x + ex * k, ay, 0.9, sd(d) + ex);
+      for (const ex of [-6, 6]) dot(g, x + ex * k, ay, 0.9, sd(d) + ex, undefined, inkFor(d.color));
       const f = fx(d);
       const arrow = poly(
         x - 9 * k * f,
@@ -264,7 +257,7 @@ export const FARM_DECOR = {
     },
   },
   coop: {
-    color: (_th, rng) => hsl3(rng.pick([4, 30, 200, 90]), 36, 50),
+    color: (_th, rng) => hsl3(rng.pick([4, 30, 200, 90]), 28, 50),
     bake(g, d) {
       const k = d.size;
       const f = fx(d);
@@ -285,7 +278,7 @@ export const FARM_DECOR = {
     },
   },
   hive: {
-    color: (_th, rng) => (rng.chance(0.6) ? hsl3(48, 30, 82) : hsl3(46, 60, 56)),
+    color: (_th, rng) => (rng.chance(0.6) ? hsl3(48, 30, 82) : hsl3(46, 48, 58)),
     bake(g, d) {
       const k = d.size;
       const x = d.x;
@@ -301,12 +294,13 @@ export const FARM_DECOR = {
         0.3,
       );
       // The entrance slot at the foot.
-      g.fillStyle = INK;
-      g.fillRect(x - 2 * k, y - 3.4 * k, 4 * k, 0.9);
+      g.fillStyle = css(d.color, -38);
+      path(g, boxPts(x - 2 * k, y - 3.5 * k, 4 * k, 1, 0.4, sd(d) + 6, 0.1));
+      g.fill();
     },
   },
   tyre: {
-    color: () => hsl3(220, 8, 18),
+    color: () => hsl3(220, 6, 27),
     bake(g, d) {
       const k = d.size;
       const x = d.x;
@@ -322,11 +316,13 @@ export const FARM_DECOR = {
       g.fillStyle = css(hsl3(30, 30, 30));
       path(g, ovalPts(x, y - R * 0.55, R * 0.48, R * 0.44, sd(d) + 2, 0.03, 14));
       g.fill();
-      pen(g, ovalPts(x, y - R * 0.55, R * 0.48, R * 0.44, sd(d) + 2, 0.03, 14), sd(d) + 3, 0.3, 0.7);
-      g.fillStyle = css(d.color, 14);
-      for (let i = 0; i < 12; i++) {
-        const a = Math.PI + (i / 11) * Math.PI;
-        g.fillRect(x + Math.cos(a) * R * 0.78 - 0.6, y - R * 0.55 + Math.sin(a) * R * 0.72 - 0.6, 1.2, 1.2);
+      pen(g, ovalPts(x, y - R * 0.55, R * 0.48, R * 0.44, sd(d) + 2, 0.03, 14), sd(d) + 3, 0.3, 0.7, 3, inkFor(d.color));
+      // Tread on the lit shoulder only: a few lifted ticks across it.
+      for (let i = 0; i < 4; i++) {
+        const a = Math.PI * 1.08 + i * 0.3;
+        const cx = x + Math.cos(a) * R * 0.8;
+        const cy = y - R * 0.55 + Math.sin(a) * R * 0.74;
+        tick(g, cx - Math.cos(a) * 1.1, cy - Math.sin(a) * 1.1, cx + Math.cos(a) * 1.1, cy + Math.sin(a) * 1.1, 0.5, sd(d) + 6 + i, css(d.color, 16));
       }
       g.restore();
     },
@@ -342,21 +338,21 @@ export const FARM_DECOR = {
       for (const px of [-w / 2 + 1, w / 2 - 1]) pole(g, x + px, y - 5, x + px, y - 24 * k, 1.3, OLDWOOD, sd(d) + px);
       shape(g, poly(x - w / 2 - 3, y - 22 * k, x, y - 29 * k, x + w / 2 + 3, y - 22 * k), hsl3(10, 34, 32), sd(d) + 1, 0.5);
       pole(g, x - w / 2 + 1, y - 17 * k, x + w / 2 - 1, y - 17 * k, 1.2, WOOD, sd(d) + 2);
-      g.fillStyle = INK;
-      line(g, x + 1, y - 17 * k, x + 1, y - 10 * k, { w: 0.5, seed: 3, taper: [0, 0], press: 0 });
+      barLine(g, x + 1, y - 17 * k, x + 1, y - 10 * k, 0.5, hsl3(36, 30, 52), 3, { rim: 0.2 });
       box(g, x - 1, y - 10 * k, 4, 3.4, WOOD, sd(d) + 3, 0.4);
       const ring = boxPts(x - w / 2 - 1, y - 7 * k, w + 2, 7 * k, 1.6, sd(d) + 4, 0.2);
       shape(g, ring, d.color, sd(d) + 4, 0.9);
       g.save();
       path(g, ring);
       g.clip();
-      g.fillStyle = css(d.color, -26);
-      for (let row = 0; row < 3; row++)
-        for (let i = 0; i < 5; i++) {
-          const sx = x - w / 2 + ((i + (row % 2) * 0.5) * (w + 2)) / 5;
-          g.fillRect(sx, y - 7 * k + row * 2.4 * k, 0.5, 2.4 * k);
-        }
-      for (let row = 1; row < 3; row++) g.fillRect(x - w / 2 - 1, y - 7 * k + row * 2.4 * k, w + 2, 0.5);
+      // One course line, lifted halfway, and a few joints off it: the stones, not a grid of them.
+      const joint = css(d.color, -28);
+      tick(g, x - w / 2, y - 4.6 * k, x - 1, y - 4.7 * k, 0.4, sd(d) + 5, joint);
+      tick(g, x + 2, y - 4.5 * k, x + w / 2, y - 4.6 * k, 0.4, sd(d) + 6, joint);
+      for (const [i, jx] of [-0.3, 0.1, 0.36].entries()) {
+        const up = i % 2 ? 0 : 1;
+        tick(g, x + jx * w, y - (up ? 7 : 4.5) * k + 0.4, x + jx * w + 0.2, y - (up ? 4.8 : 2.2) * k, 0.4, sd(d) + 7 + i, joint);
+      }
       g.restore();
     },
   },

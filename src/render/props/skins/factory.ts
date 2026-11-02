@@ -2,8 +2,8 @@ import { css, type HSL } from '../../../core/color';
 import { frac, type Rect } from '../../../core/geom';
 import { TILE } from '../../../sim/constants';
 import { type ModuleOf, pistonHead, pistonState, type RotorArm, rotorAngles, swingHeads } from '../../../sim/props';
-import { blob, line, type P, stroke } from '../../ink';
-import { ball, boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
+import { blob, inkFor, line, type P, stroke } from '../../ink';
+import { ball, bar, barLine, boxPts, dot, glint, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import { light, type RC } from '../../kit';
 import { beamOf, type DrawCtx } from '../common';
 import { SHELLS } from '../modules/deco-shells';
@@ -32,10 +32,10 @@ type Piston = ModuleOf<'piston'>;
 const STEEL: HSL = { h: 212, s: 9, l: 46 };
 const IRON: HSL = { h: 215, s: 10, l: 30 };
 const CONCRETE: HSL = { h: 34, s: 8, l: 46 };
-const HAZARD: HSL = { h: 46, s: 90, l: 52 };
-const PAINT: HSL = { h: 12, s: 62, l: 44 };
+const HAZARD: HSL = { h: 46, s: 78, l: 54 };
+const PAINT: HSL = { h: 12, s: 48, l: 44 };
 /** The wheel's stand, in machinery yellow. */
-const FRAME: HSL = { h: 44, s: 70, l: 48 };
+const FRAME: HSL = { h: 44, s: 56, l: 50 };
 
 /** Share of the way a shell's tones go toward the sky's haze: back, but still the biggest thing in the level. */
 const HAZE = 0.26;
@@ -53,23 +53,14 @@ function hazer(d: DrawCtx) {
 }
 type Haze = ReturnType<typeof hazer>;
 
-/** A girder drawn with the backdrop pen: a dark ribbon, its tone over it, and a lit flange on the side toward the light. */
+/** A girder drawn with the backdrop pen: its hazed tone in a thin rim of its own dark, and a lit flange toward the light. */
 function member(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, base: HSL, t: Haze, seed: number) {
-  g.fillStyle = t.ink(base);
-  line(g, ax, ay, bx, by, { w: w + 1.4, seed, taper: [0, 0], press: 0.05 });
-  g.fillStyle = t.c(base);
-  line(g, ax, ay, bx, by, { w, seed: seed + 1, taper: [0, 0], press: 0.05 });
-  const L = Math.hypot(bx - ax, by - ay) || 1;
-  const nx = (by - ay) / L;
-  const ny = -(bx - ax) / L;
-  const k = ny > 0 || (ny === 0 && nx > 0) ? -1 : 1;
-  g.fillStyle = t.c(base, 12);
-  line(g, ax + nx * k * w * 0.3, ay + ny * k * w * 0.3, bx + nx * k * w * 0.3, by + ny * k * w * 0.3, {
-    w: w * 0.22,
-    seed: seed + 2,
-    taper: [0.1, 0.1],
-    press: 0,
-  });
+  barLine(g, ax, ay, bx, by, w, t.hsl(base), seed, { ink: t.ink(base), rim: 0.3, press: 0.05, lit: w > 1.5 ? 12 : 0 });
+}
+
+/** A closed ring of girder: its hazed tone in a thin rim of its own dark. */
+function hoop(g: CanvasRenderingContext2D, r: number, w: number, base: HSL, t: Haze, seed: number, dl = 0) {
+  bar(g, ringPts(r), w, t.hsl({ ...base, l: base.l + dl }), seed, { ink: t.ink(base), rim: 0.3, taper: [0, 0], press: 0 });
 }
 
 /** A flat shape in a hazed tone, penned in a dark of itself. */
@@ -97,7 +88,7 @@ function bands(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: 
   g.clip();
   g.fillStyle = t ? t.c(HAZARD) : css(HAZARD);
   g.fillRect(x, y, w, h);
-  g.fillStyle = t ? t.ink(HAZARD) : INK;
+  g.fillStyle = t ? t.ink(HAZARD) : inkFor(HAZARD);
   for (let k = x - h; k < x + w + h; k += 5) {
     path(g, poly(k, y + h, k + 2.4, y + h, k + 2.4 + h, y, k + h, y));
     g.fill();
@@ -142,10 +133,7 @@ function flywheel(R: number, cars: number, t: Haze) {
     }
     // The inner ring, where the spokes are braced.
     const mid = R * 0.56;
-    g.fillStyle = t.ink(IRON);
-    stroke(g, ringPts(mid), { w: 3.6, seed: 3, taper: [0, 0], press: 0 });
-    g.fillStyle = t.c(IRON, 6);
-    stroke(g, ringPts(mid), { w: 2, seed: 4, taper: [0, 0], press: 0 });
+    hoop(g, mid, 2, IRON, t, 3, 6);
     // The rim: two flanges and a zigzag web, open lattice all the way round.
     const n = Math.max(24, Math.round((Math.PI * 2 * R) / 11));
     for (let i = 0; i < n; i++) {
@@ -158,14 +146,11 @@ function flywheel(R: number, cars: number, t: Haze) {
       [outer, 3.4, 7],
       [inner, 3.8, 9],
     ] as const) {
-      g.fillStyle = t.ink(PAINT);
-      stroke(g, ringPts(r), { w: w + 1.4, seed: sd, taper: [0, 0], press: 0 });
-      g.fillStyle = t.c(PAINT);
-      stroke(g, ringPts(r), { w, seed: sd + 1, taper: [0, 0], press: 0 });
+      hoop(g, r, w, PAINT, t, sd);
     }
-    // Bolts round both flanges, and a bolted plate where each car's pin meets the rim.
+    // Bolts round both flanges at every third joint, and a bolted plate where each car's pin meets the rim.
     g.fillStyle = t.ink(STEEL);
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; i < n; i += 3) {
       const a = ((i + 0.5) / n) * Math.PI * 2;
       for (const r of [outer, inner]) {
         blob(g, Math.cos(a) * r, Math.sin(a) * r, 0.75, i * 3 + r, 1, 0.1);
@@ -180,7 +165,8 @@ function flywheel(R: number, cars: number, t: Haze) {
     flat(g, ovalPts(0, 0, 25, 25, 50, 0.02, 24), IRON, t, 51, 1.2);
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * Math.PI * 2;
-      dot(g, Math.cos(a) * 20, Math.sin(a) * 20, 0.9, i + 60);
+      if (i % 2) continue;
+      dot(g, Math.cos(a) * 20, Math.sin(a) * 20, 0.9, i + 60, undefined, t.ink(IRON));
     }
   });
 }
@@ -221,7 +207,7 @@ function aFrame(spread: number, drop: number, R: number, t: Haze) {
       // Foot plate on a concrete plinth.
       flat(g, boxPts(fx - 14, drop - 9, 28, 9, 1, k * 3 + 70), CONCRETE, t, k * 3 + 71, 0.8);
       flat(g, boxPts(fx - 10, drop - 12, 20, 4, 0.6, k * 3 + 72), IRON, t, k * 3 + 73, 0.5);
-      for (const ox of [-6, 6]) dot(g, fx + ox, drop - 10, 0.8, ox + k);
+      for (const ox of [-6, 6]) dot(g, fx + ox, drop - 10, 0.8, ox + k, undefined, t.ink(IRON));
     }
     // The cross-tie, at the height the rim's bottom cars pass well above.
     const ty = drop * 0.4;
@@ -252,12 +238,12 @@ function aFrame(spread: number, drop: number, R: number, t: Haze) {
     // The pillow block the axle turns in, bolted across the apex.
     flat(g, boxPts(-22, -12, 44, 22, 3, 80), IRON, t, 81, 1.4);
     flat(g, boxPts(-27, 7, 54, 7, 1, 82), PAINT, t, 83, 0.8);
-    for (const ox of [-18, -9, 9, 18]) dot(g, ox, -6, 1, ox + 84);
+    for (const ox of [-18, 18]) dot(g, ox, -6, 1, ox + 84, undefined, t.ink(IRON));
     // The drive: a motor between the feet, its pulley belted up to the axle.
     const mx = R * 0.42;
     const my = drop - 26;
     flat(g, boxPts(mx - 18, my - 4, 36, 22, 3, 100), { h: 150, s: 20, l: 34 }, t, 101, 1.2);
-    for (let x = mx - 13; x < mx + 13; x += 4) tick(g, x, my, x, my + 13, 0.6, x, t.ink(IRON));
+    for (let x = mx - 10; x < mx + 13; x += 7) tick(g, x, my + 1, x, my + 12, 0.6, x, t.ink(IRON));
     flat(g, boxPts(mx - 22, my + 16, 44, 6, 1, 102), CONCRETE, t, 103, 0.6);
   });
 }
@@ -276,10 +262,7 @@ function belt(rc: RC, ax: number, ay: number, bx: number, by: number, ra: number
     const y0 = ay + ny * ra * k;
     const x1 = bx + nx * rb * k;
     const y1 = by + ny * rb * k;
-    g.fillStyle = t.ink(IRON);
-    line(g, x0, y0, x1, y1, { w: 3, seed: 5 + k, taper: [0, 0], press: 0 });
-    g.fillStyle = t.c({ h: 25, s: 25, l: 26 });
-    line(g, x0, y0, x1, y1, { w: 1.8, seed: 6 + k, taper: [0, 0], press: 0 });
+    barLine(g, x0, y0, x1, y1, 1.8, t.hsl({ h: 25, s: 25, l: 30 }), 5 + k, { ink: t.ink(IRON), rim: 0.3, taper: [0, 0], press: 0 });
     // Lugs on the belt, carried along it.
     const seg = Math.hypot(x1 - x0, y1 - y0);
     const off = frac((shift * dir) / 9) * 9;
@@ -342,18 +325,14 @@ const greatWheelShell = (rc: RC, m: Deco, d: DrawCtx) => {
 function car(w: number, h: number, base: HSL, key: string) {
   return sprite(`gw|car|${w | 0}|${h | 0}|${key}`, -2, -12, w + 4, h + 15, (g) => {
     // Rails: two posts and a top bar, thin enough to read as fencing, not floor.
-    for (const x of [2.5, w - 2.5]) tick(g, x, 0, x, -9, 1.3, x, INK);
-    g.fillStyle = INK;
-    line(g, 2, -9, w - 2, -9, { w: 1.08, seed: 4, taper: [0, 0], press: 0.1 });
-    g.fillStyle = css(HAZARD);
-    line(g, 2.5, -9, w - 2.5, -9, { w: 0.6, seed: 5, taper: [0, 0], press: 0 });
+    for (const x of [2.5, w - 2.5]) barLine(g, x, 0, x, -9, 0.7, STEEL, x, { rim: 0.25 });
+    barLine(g, 2, -9, w - 2, -9, 0.7, HAZARD, 4, { rim: 0.25, taper: [0, 0], press: 0.1 });
     const deck = boxPts(0, 0, w, h, 1, 7, 0.08);
     tone(g, deck, base, { depth: 0.8 });
     bands(g, 1, h * 0.45, w - 2, h * 0.5);
-    g.fillStyle = css(base, 18);
-    g.fillRect(0.8, 0.4, w - 1.6, 1);
-    pen(g, deck, 8, 0.5, 1.4);
-    for (let x = 4; x < w - 2; x += 6) dot(g, x, 1.6, 0.55, x, css(base, 30));
+    glint(g, poly(1.4, 0.9, w - 1.8, 0.8), css(base, 18), 0.9, 6);
+    pen(g, deck, 8, 0.45, 1.2, 3, inkFor(base));
+    for (const x of [4, w - 4]) dot(g, x, 1.8, 0.5, x, css(base, 30), inkFor(base));
   });
 }
 
@@ -366,15 +345,12 @@ function sawSpoke(s: CanvasRenderingContext2D, hx: number, hy: number, x: number
   const uy = dy / L;
   const ex = x - ux * R * 0.4;
   const ey = y - uy * R * 0.4;
-  s.fillStyle = INK;
-  line(s, hx, hy, ex, ey, { w: 7.5, seed, taper: [0, 0.05], press: 0.1 });
-  s.fillStyle = css(base, -14);
-  line(s, hx, hy, ex, ey, { w: 6, seed: seed + 1, taper: [0, 0], press: 0 });
+  barLine(s, hx, hy, ex, ey, 6, { ...base, l: base.l - 14 }, seed, { rim: 0.45, taper: [0, 0.05], press: 0.1 });
   const k = -uy > 0 || (uy === 0 && ux < 0) ? 1 : -1;
   s.fillStyle = css(base, 14);
   line(s, hx - uy * k * 2.1, hy + ux * k * 2.1, ex - uy * k * 2.1, ey + ux * k * 2.1, { w: 1.4, seed: seed + 2, taper: [0.05, 0.1], press: 0 });
-  s.fillStyle = INK;
-  for (let u = 0.2; u < 0.82; u += 0.11) {
+  s.fillStyle = inkFor(base);
+  for (let u = 0.25; u < 0.82; u += 0.18) {
     blob(s, hx + dx * u + uy * k * 1.6, hy + dy * u - ux * k * 1.6, 0.7, seed + u * 10, 1, 0.1);
     s.fill();
   }
@@ -387,7 +363,7 @@ function sawSpoke(s: CanvasRenderingContext2D, hx: number, hy: number, x: number
   const collar = boxPts(-3.5, -5.5, 7, 11, 1, seed + 3, 0.1);
   tone(s, collar, HAZARD, { depth: 0.5 });
   bands(s, -3.5, -5.5, 7, 11);
-  pen(s, collar, seed + 4, 0.5, 1.2);
+  pen(s, collar, seed + 4, 0.5, 1.2, 3, inkFor(HAZARD));
   s.restore();
 }
 
@@ -425,19 +401,16 @@ const greatWheel = {
     // The boss: a domed cap with a bolt circle that turns with the wheel, and the axle nut.
     const a = rotorAngles(m, rc.frame, d.r.phase)[0];
     const R = 15;
-    s.fillStyle = INK;
-    blob(s, hx + 0.6, hy + 0.8, R + 2.2, 5, 1, 0.03);
-    s.fill();
     ball(s, hx, hy, R, d.pal.base, 131);
     s.fillStyle = css(d.pal.dark, 4, 0.9);
     stroke(
       s,
       ringPts(R * 0.72, 32).map((q) => ({ x: q.x + hx, y: q.y + hy })),
-      { w: 0.9, seed: 3, taper: [0, 0], press: 0.2 },
+      { w: 0.9, seed: 3, taper: [0.12, 0.2], press: 0.3 },
     );
     for (let i = 0; i < 8; i++) {
       const b = a + (i / 8) * Math.PI * 2;
-      dot(s, hx + Math.cos(b) * R * 0.72, hy + Math.sin(b) * R * 0.72, 1.3, 140 + i, css(d.pal.spec, -6));
+      dot(s, hx + Math.cos(b) * R * 0.72, hy + Math.sin(b) * R * 0.72, 1.3, 140 + i, css(d.pal.spec, -6), inkFor(d.pal.base));
     }
     part(s, ovalPts(hx, hy, 5, 5, 7, 0.02, 6), { h: 44, s: 60, l: 50 }, 8, { depth: 0.6, thin: 0.5, thick: 1 });
   },
@@ -467,7 +440,7 @@ function pressFrame(w: number, down: number, crown: number, n: number, t: Haze) 
       const cx = k * w * 0.24;
       flat(g, boxPts(cx - 5, -crown - 4, 10, 14, 4, n + k + 20), STEEL, t, n + k + 21, 1);
       g.fillStyle = t.ink(STEEL);
-      line(g, cx + k * 5, -crown + 2, cx + k * 12, -crown + 16, { w: 1.2, seed: n + k, taper: [0, 0], press: 0 });
+      line(g, cx + k * 5, -crown + 2, cx + k * 12, -crown + 16, { w: 1.2, seed: n + k, taper: [0.05, 0.05], press: 0.1 });
     }
     bands(g, -cw / 2 + 2, -4, cw - 4, 4, t);
     g.fillStyle = t.c({ h: 48, s: 30, l: 86 });

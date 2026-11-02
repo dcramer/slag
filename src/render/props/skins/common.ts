@@ -1,9 +1,8 @@
-import { css, type HSL } from '../../../core/color';
+import { type HSL } from '../../../core/color';
 import type { Rect } from '../../../core/geom';
 import type { CannonLook, DecoKind, Module, ModuleOf, RotorArm, RotorLook } from '../../../sim/props';
 import type { ThemeId } from '../../../themes';
-import { line } from '../../ink';
-import { boxPts, INK, tone } from '../../ink-props';
+import { barLine, boxPts, tone } from '../../ink-props';
 import type { RC } from '../../kit';
 import type { DrawCtx } from '../common';
 
@@ -18,23 +17,9 @@ export type Deco = ModuleOf<'deco'>;
 
 export const themeOf = (d: DrawCtx): ThemeId | undefined => d.o.level?.theme.id;
 
-/** A tube drawn with the pen: an ink ribbon under a colored one, and a lit stripe along its top. */
+/** A tube drawn with the pen: the colour inside a rim that's a dark of it, and a lit stripe along its top. */
 export function tube(s: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, col: HSL, seed: number) {
-  s.fillStyle = INK;
-  line(s, ax, ay, bx, by, { w: w + 0.85, seed, taper: [0, 0], press: 0.05 });
-  s.fillStyle = css(col);
-  line(s, ax, ay, bx, by, { w, seed: seed + 1, taper: [0, 0], press: 0.05 });
-  const d = Math.hypot(bx - ax, by - ay) || 1;
-  const nx = (by - ay) / d;
-  const ny = -(bx - ax) / d;
-  const k = ny > 0 ? -1 : 1;
-  s.fillStyle = css(col, 22);
-  line(s, ax + nx * k * w * 0.25, ay + ny * k * w * 0.25, bx + nx * k * w * 0.25, by + ny * k * w * 0.25, {
-    w: w * 0.22,
-    seed: seed + 2,
-    taper: [0.1, 0.1],
-    press: 0,
-  });
+  barLine(s, ax, ay, bx, by, w, col, seed, { taper: [0, 0], press: 0.05, lit: 22 });
 }
 
 /** A rect platform inked with the pen, exactly on the rect the sim builds. */
