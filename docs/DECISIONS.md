@@ -387,6 +387,9 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 03:58Z · `done` · DESIGN.md → Controls and UI
 - **Touch controls: a floating stick with a run zone, hold-to-jump, held self-destruct, landscape first.**
   2026-11-02 · git `bb00a8e`, `c6a37ab` · `done` · DESIGN.md → Controls and UI, MOBILE.md
+- **Self-destruct is a deliberate 1.25 s hold on every input, counted by the sim from a fresh press, with a ring around the runner everyone sees; letting go, steering, jumping or using an item cancels it. On touch it moves to its own small button under Settings.** "also the default self destruct behavior should probably be a bit less accidental both for mobile and the hotkey"
+  2026-11-02 · `done` · DESIGN.md → Controls and UI, MOBILE.md, ART.md → Input prompts
+  Changed: one press of alt popped you on keyboard and pad, and touch popped after a 0.35 s hold on ALT, the button that rotates during place.
 - **Phones haven't been tried on real devices.**
   2026-11-02 · `open` · TODO.md → 6
 
