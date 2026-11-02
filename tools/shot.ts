@@ -984,6 +984,20 @@ try {
       await mctx.close();
       break;
     }
+    case 'rules': {
+      // Fails the run if the card doesn't fit the window.
+      await open(`seed=${seed}`);
+      await step(5);
+      await page.mouse.click(((768 - 196 + 42) / 768) * W, (28 / 432) * H);
+      await page.waitForSelector('.slag-sheet', { timeout: 5000 });
+      await snap(`rules-${W}x${H}`);
+      const over = await page.evaluate(() => {
+        const c = document.querySelector('.slag-sheet')!;
+        return c.scrollHeight - c.clientHeight;
+      });
+      if (over > 0) throw new Error(`rules card overflows by ${over}px`);
+      break;
+    }
     case 'settings': {
       // Fails the run if a tab doesn't fit, or an input doesn't do what its prompt says.
       const tabOf = (p: typeof page) => p.evaluate(() => document.querySelector('.slag-panel')?.getAttribute('data-tab'));

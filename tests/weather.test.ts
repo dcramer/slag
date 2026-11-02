@@ -6,13 +6,30 @@ import { footingHolds, gustHolds, rollKind, rollWeather, WEATHER_WEIGHTS } from 
 import { generateTheme } from '../src/gen/theme';
 import { Predictor } from '../src/net/predict';
 import { hashMatch, restoreMatch, snapshotMatch } from '../src/net/snapshot';
-import { LEVEL_H, LEVEL_W, PHYS, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
-import type { Level } from '../src/sim/level';
+import { flutter, type RC } from '../src/render/kit';
+import { WEATHER_ART } from '../src/render/weather';
+import { LEVEL_H, LEVEL_W, PHYS, PLAYER_H, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
+import { spawnItem } from '../src/sim/items';
+import { type Level, T_ONEWAY } from '../src/sim/level';
+import { COAT_SURFACES, conveyorSurface, type PropDef, SURFACES } from '../src/sim/props';
 import { DEFAULT_SURFACE, wallKind } from '../src/sim/physics';
 import { analyzeReach, LONGEST_MOVE } from '../src/sim/reach';
 import { RunWorld } from '../src/sim/run';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
-import { CLEAR, GUST, gustAir, gustPush, gustWarning, WEATHER, type Weather, type WeatherKind } from '../src/sim/weather';
+import {
+  CLEAR,
+  GUST,
+  gustAir,
+  gustPush,
+  gustShown,
+  gustWarning,
+  underfoot,
+  WEATHER,
+  WEATHER_KINDS,
+  type Weather,
+  type WeatherKind,
+  wetSolids,
+} from '../src/sim/weather';
 import { THEME_IDS, type ThemeId } from '../src/themes';
 
 const FLOOR = LEVEL_H - 4;
@@ -100,8 +117,9 @@ describe('gust clock', () => {
     expect(best).toBeGreaterThan(LONGEST_MOVE);
   });
 
-  it('stays slower than a walk, or a runner could not hold their ground', () => {
-    expect(GUST.speed).toBeLessThan(PHYS.walkSpeed);
+  it('beats a walk and loses to a run: you feel it, and you can always hold your ground', () => {
+    expect(GUST.speed).toBeGreaterThan(PHYS.walkSpeed);
+    expect(GUST.speed).toBeLessThan(PHYS.runSpeed * 0.7);
   });
 });
 
@@ -116,7 +134,7 @@ describe('gusts in a race', () => {
       expect(b.x).toBe(x0);
     }
     for (let i = 0; i < 40; i++) run.step([NO_INPUT]);
-    expect(b.x).toBeGreaterThan(x0 + 20);
+    expect(b.x).toBeGreaterThan(x0 + 3 * TILE);
     expect(b.vx).toBeCloseTo(GUST.speed, 3);
   });
 
@@ -127,12 +145,16 @@ describe('gusts in a race', () => {
     expect(run.runners[0].body.x).toBeLessThan(x0 - 20);
   });
 
-  it('lets a runner gain ground against the gust, and lets them hold a spot through all of it', () => {
-    const into = raceAt(arena(WIND), 30, firstPush + GUST.rise);
-    const b = into.runners[0].body;
-    const x0 = b.x;
-    for (let i = 0; i < 60; i++) into.step([input({ left: true })]);
-    expect(b.x).toBeLessThan(x0 - 10);
+  it('walks a stroller backwards, lets a runner gain ground, and lets them hold a spot through all of it', () => {
+    const into = (run: boolean) => {
+      const race = raceAt(arena(WIND), 30, firstPush + GUST.rise);
+      const b = race.runners[0].body;
+      const x0 = b.x;
+      for (let i = 0; i < 60; i++) race.step([input({ left: true, run })]);
+      return b.x - x0;
+    };
+    expect(into(false)).toBeGreaterThan(0);
+    expect(into(true)).toBeLessThan(-TILE * 3);
 
     // Feathering the stick, the way a person stands on a ledge in a gale.
     const hold = raceAt(arena(WIND), 30, firstPush);
@@ -140,10 +162,27 @@ describe('gusts in a race', () => {
     const home = h.x;
     let worst = 0;
     for (let i = 0; i < GUST.rise + GUST.hold + GUST.fall; i++) {
-      hold.step([input({ left: h.x > home })]);
+      hold.step([input({ left: h.x > home, run: true })]);
       worst = Math.max(worst, Math.abs(h.x - home));
     }
     expect(worst).toBeLessThan(TILE / 2);
+  });
+
+  it('is felt in the air: a jump goes tiles further with it and tiles shorter into it', () => {
+    const leap = (weather?: Weather) => {
+      const run = raceAt(arena(weather), 22, firstPush + GUST.rise - 40);
+      const b = run.runners[0].body;
+      for (let i = 0; i < 40; i++) run.step([NO_INPUT]);
+      b.x = 22 * TILE;
+      b.vx = 0;
+      const x0 = b.x;
+      run.step([input({ right: true, run: true, jump: true, jumpPressed: true })]);
+      for (let i = 0; i < 90 && !b.onGround; i++) run.step([input({ right: true, run: true, jump: true })]);
+      return b.x - x0;
+    };
+    const calm = leap();
+    expect(leap(WIND) - calm).toBeGreaterThan(2.5 * TILE);
+    expect(calm - leap({ ...WIND, dir: -1 })).toBeGreaterThan(2.5 * TILE);
   });
 
   it('carries projectiles with the air', () => {
@@ -159,6 +198,28 @@ describe('gusts in a race', () => {
     expect(calm.x).toBe(bolt.x);
     expect(blown.x - bolt.x).toBeCloseTo(GUST.speed * 0.5, 3);
     expect(fly({ ...WIND, dir: -1 }).x - bolt.x).toBeCloseTo(-GUST.speed * 0.5, 3);
+  });
+
+  it('carries everything else that flies: held items\u2019 shots, gliders and loose items', () => {
+    const frames = 20;
+    const fly = (add: (run: RunWorld) => void, read: (run: RunWorld) => number, weather?: Weather) => {
+      const run = raceAt(arena(weather), 20, firstPush + GUST.rise);
+      add(run);
+      for (let i = 0; i < frames; i++) run.step([NO_INPUT]);
+      return read(run);
+    };
+    const drift = (add: (run: RunWorld) => void, read: (run: RunWorld) => number) => fly(add, read, WIND) - fly(add, read);
+    const carried = GUST.speed * (frames / 60);
+    const shot = (run: RunWorld) => run.projectiles[0].x;
+    for (const ammo of ['boomerang', 'smokebomb', 'puck'] as const) {
+      expect(
+        drift((run) => run.spawnProjectile({ x: 300, y: 120, vx: 40, vy: -5, owner: 1, ammo, thrower: 0 }), shot),
+        ammo,
+      ).toBeGreaterThan(carried * 0.9);
+    }
+    expect(drift((run) => run.spawnProjectile({ x: 300, y: 120, vx: 60, vy: 0, owner: 1, ammo: 'glider' }), shot)).toBeCloseTo(carried, 3);
+    const loose = (run: RunWorld) => spawnItem(run, { kind: 'puck', x: 300, y: 60, vx: 0, vy: 0 } as Parameters<typeof spawnItem>[1]);
+    expect(drift(loose, (run) => run.items.drops[0].x)).toBeCloseTo(carried, 3);
   });
 
   it('leaves projectiles alone during the warning', () => {
@@ -197,8 +258,79 @@ describe('footing', () => {
     expect(wet.slide).toBeGreaterThan(dry.slide * 1.8);
   });
 
-  it('snow slows you down', () => {
-    expect(skid(SNOW).top).toBeLessThan(skid().top * 0.9);
+  it('snow is a little slower and a lot further to stop', () => {
+    const dry = skid();
+    const snow = skid(SNOW);
+    expect(snow.top).toBeLessThan(dry.top * 0.97);
+    expect(snow.top).toBeGreaterThan(dry.top * 0.9);
+    expect(snow.slide).toBeGreaterThan(dry.slide * 1.6);
+  });
+
+  /** A long row of plain placed blocks at FLOOR - 3, above the floor. */
+  function blockRow(weather?: Weather, oneWay = false): RunWorld {
+    const lv = arena(weather);
+    const row = FLOOR - 3;
+    if (oneWay) for (let x = 2; x < 44; x++) lv.tiles[row * LEVEL_W + x] = T_ONEWAY;
+    const cells = Array.from({ length: 42 }, (_, i) => [2 + i, row] as [number, number]);
+    const def: PropDef = {
+      key: 'row',
+      name: 'row',
+      maker: 'test',
+      archetype: 'platform',
+      role: 'utility',
+      style: { metal: 'steel', trim: 'none', hue: 0, glowHue: 0, woodHue: 30 },
+      motion: { type: 'none' },
+      modules: [{ type: 'body', cells, material: 'metal', conveyor: 0, breakFrames: 0, respawnFrames: 0 }],
+      footprint: cells,
+    };
+    const run = new RunWorld(lv, oneWay ? [] : [{ uid: 1, def, owner: 0, tx: 0, ty: 0, rot: 0 }], [0]);
+    const b = run.runners[0].body;
+    b.x = 4 * TILE;
+    b.y = row * TILE - PLAYER_H;
+    run.frame = RUN_COUNTDOWN;
+    return run;
+  }
+
+  /** Px a runner slides on `run` after a flat-out run. */
+  function stopFrom(run: RunWorld): number {
+    const b = run.runners[0].body;
+    for (let i = 0; i < 90; i++) run.step([input({ right: true, run: true })]);
+    const x = b.x;
+    for (let i = 0; i < 90 && b.vx > 0; i++) run.step([NO_INPUT]);
+    return b.x - x;
+  }
+
+  it('is as slick on a placed block or a one-way as on the ground', () => {
+    for (const weather of [RAIN, SNOW]) {
+      const terrain = skid(weather).slide;
+      expect(stopFrom(blockRow(weather)), `${weather.kind} on a block`).toBeCloseTo(terrain, -1);
+      expect(stopFrom(blockRow(weather, true)), `${weather.kind} on a one-way`).toBeCloseTo(terrain, -1);
+      expect(stopFrom(blockRow(weather))).toBeGreaterThan(stopFrom(blockRow()) * 1.6);
+    }
+  });
+
+  it('reaches gliders, whatever else is built, and leaves blood on top', () => {
+    const run = raceAt(arena(SNOW), 20, RUN_COUNTDOWN);
+    run.spawnProjectile({ x: 300, y: 100, vx: 60, vy: 0, owner: 1, ammo: 'glider' });
+    run.step([NO_INPUT]);
+    run.step([NO_INPUT]);
+    expect(run.solids[0].surface).toEqual(WEATHER.snow.surface);
+    const film = { x: 0, y: 0, w: 16, h: 2, id: -2, dx: 0, dy: 0, surface: COAT_SURFACES.ice, propUid: -1, mi: -1, film: true };
+    wetSolids([film], arena(SNOW));
+    expect(film.surface).toBe(COAT_SURFACES.ice);
+  });
+
+  it('adds to what a surface already is', () => {
+    const snow = WEATHER.snow.surface!;
+    const ice = underfoot(COAT_SURFACES.ice, snow);
+    expect(ice.friction).toBeLessThan(COAT_SURFACES.ice.friction);
+    expect(wallKind(ice)).toBe('slick');
+    const slime = underfoot(COAT_SURFACES.slime, snow);
+    expect(wallKind(slime)).toBe('sticky');
+    expect(underfoot(SURFACES.jelly, snow).bounce).toBe(SURFACES.jelly.bounce);
+    const belt = conveyorSurface(80);
+    expect(underfoot(belt, snow).conveyor).toBe(80);
+    expect(underfoot(belt, snow)).toBe(underfoot(belt, snow));
   });
 
   it('goes through the Surface every body already has', () => {
@@ -323,6 +455,51 @@ describe('solvability under weather', () => {
     for (const theme of ['rooftops', 'harbor'] as const) {
       for (const seed of seedsFor('wind', theme, 2)) expect(generateLevel(seed, theme).weather).toEqual(generateLevel(seed, theme).weather);
     }
+  });
+});
+
+describe('nothing cosmetic pretends to be weather', () => {
+  /** What a theme may have floating around on its own: nothing that falls or blows. */
+  const STILL_MOTES = ['embers', 'fireflies', 'spores', 'dust', 'bubbles', 'pollen'];
+
+  it('no theme or mood brings its own rain, snow, fog, ash or leaves', () => {
+    for (const theme of THEME_IDS) {
+      for (let seed = 0; seed < 300; seed++) {
+        const t = generateTheme((seed * 2654435761) >>> 0, theme);
+        expect(STILL_MOTES, `${theme} ${seed}`).toContain(t.ambient);
+        expect(t.terrain.cap as string).not.toBe('snow');
+        expect(['rain', 'mist']).not.toContain(t.mood);
+        expect(['smog', 'storm']).not.toContain(t.cloudStyle);
+      }
+    }
+  });
+
+  it('every kind of weather you can see does something', () => {
+    for (const kind of WEATHER_KINDS) {
+      const art = WEATHER_ART[kind];
+      const shows = !!(art.draw || art.coat || art.lay || art.kick || art.overcast);
+      if (shows) expect(!!WEATHER[kind].surface || !!WEATHER[kind].gusts, kind).toBe(true);
+      if (WEATHER[kind].surface) expect(art.coat && art.lay && art.draw, kind).toBeTruthy();
+    }
+    expect(WEATHER_ART.clear).toEqual({});
+  });
+
+  it('shows wind only when a gust is coming or blowing', () => {
+    for (let f = 0; f < 3000; f++) {
+      const shown = gustShown(WIND, f);
+      expect(shown !== 0, `frame ${f}`).toBe(gustWarning(WIND, f) > 0 || gustPush(WIND, f) > 0);
+      if (gustPush(WIND, f) >= 1) expect(shown).toBe(1);
+    }
+    for (const kind of ['clear', 'mist', 'rain', 'snow'] as const) expect(gustShown({ ...CLEAR, kind }, 900)).toBe(0);
+    expect(gustShown(undefined, 900)).toBe(0);
+  });
+
+  it('nothing sways in still air', () => {
+    const rc = { t: 3.3 } as RC;
+    expect(flutter(rc, 2, 1)).toBe(0);
+    expect(flutter({ ...rc, gust: 0 }, 2, 1)).toBe(0);
+    expect(flutter({ ...rc, gust: 1 }, 2, 1)).toBeGreaterThan(0);
+    expect(flutter({ ...rc, gust: -1 }, 2, 1)).toBeLessThan(0);
   });
 });
 

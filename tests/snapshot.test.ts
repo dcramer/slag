@@ -39,7 +39,7 @@ const MATCH_FIELDS = {
 const RUN_FIELDS = {
   saved: 'frame runners projectiles finishOrder kills endFrame propState seq timeLimit items itemSeed',
   // Rebuilt by the constructor from level, placed props and slots, or rebuilt every frame.
-  derived: 'level placed resolved events safeZone solids out world goal grabs killY blood', // `blood` is the Match's list, handed back on restore
+  derived: 'bleeds level placed resolved events safeZone solids out world goal grabs killY blood', // `blood` is the Match's list and `bleeds` its blood rule, both handed back on restore
 };
 
 /** A race two seconds in with every held item out: in hands, used, and loose in the world. */

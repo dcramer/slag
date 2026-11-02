@@ -1,7 +1,7 @@
 import { css } from '../core/color';
 import { Rng } from '../core/rng';
 import { TILE } from '../sim/constants';
-import { type Level, T_SOLID } from '../sim/level';
+import { type Level, T_SOLID, levelKey } from '../sim/level';
 import type { ThemeId } from '../themes';
 import type { RC } from './kit';
 import { TerrainPainter } from './terrain';
@@ -214,7 +214,7 @@ export class Surround {
     const mx = Math.ceil(reach.x / TILE) + 2;
     const top = Math.ceil(reach.up / TILE) + 2;
     const bottom = Math.ceil(reach.down / TILE) + 2;
-    const key = `${level.seed}:${level.theme.seed}:${level.w}x${level.h}:${mx}:${top}:${bottom}`;
+    const key = `${levelKey(level)}:${level.theme.seed}:${mx}:${top}:${bottom}`;
     if (key !== this.key) {
       this.key = key;
       this.mx = mx;

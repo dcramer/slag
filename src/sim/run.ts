@@ -137,6 +137,8 @@ export class RunWorld {
     readonly itemSeed = level.seed,
     /** The match's blood, shared with it: deaths add to this list and its floors are solid. */
     public blood: BloodCell[] = [],
+    /** False under the blood rule's Off: deaths spill nothing. */
+    public bleeds = true,
   ) {
     const n = slots.length;
     this.runners = slots.map((slot, i) => ({
@@ -330,7 +332,8 @@ export class RunWorld {
     r.cause = cause;
     if (killer >= 0) this.kills.push({ victim: r.slot, killer });
     this.events.push({ type: 'death', slot: r.slot, x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h / 2, cause, vx: r.body.vx, vy: r.body.vy });
-    spillBlood(this.blood, groundOf(this.level, this.placed), r.body, r.slot, this.frame, new Rng(deriveSeed(this.itemSeed, `blood:${r.slot}`)));
+    if (this.bleeds)
+      spillBlood(this.blood, groundOf(this.level, this.placed), r.body, r.slot, this.frame, new Rng(deriveSeed(this.itemSeed, `blood:${r.slot}`)));
   }
 
   /**

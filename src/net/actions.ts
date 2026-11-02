@@ -1,6 +1,6 @@
 import type { CharacterDef } from '../gen/character';
 import type { Match } from '../game/match';
-import { DEFAULT_RULES, type MatchRules, nearestLength, RULE_CHOICES, type TimerRule } from '../game/rules';
+import { BLOOD_CHOICES, DEFAULT_RULES, GRAVITY_CHOICES, type MatchRules, nearestLength, RULE_CHOICES } from '../game/rules';
 import { MAX_PLAYERS } from '../sim/constants';
 
 /**
@@ -83,23 +83,38 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
       if (Number.isInteger(a.salt)) m.nextSalt = a.salt >>> 0;
       return;
     case 'rules':
-      if (m.phase === 'lobby') m.rules = sanitizeRules(a.rules);
+      if (m.phase === 'lobby') m.setRules(sanitizeRules(a.rules));
       return;
   }
 }
 
+const choice =
+  <T>(allowed: readonly T[]) =>
+  (v: unknown): T | undefined =>
+    allowed.includes(v as T) ? (v as T) : undefined;
+
+/**
+ * One check per rule, and the mapped type won't compile with one missing: a
+ * field left out here would silently reset to its default on every change.
+ * Points and rounds travel as a pair, so a packet can't invent a match that never ends.
+ */
+const RULE_CHECKS: { [K in keyof MatchRules]: (v: unknown, r: Partial<MatchRules>) => MatchRules[K] | undefined } = {
+  targetScore: (v) => (typeof v === 'number' ? nearestLength(v).targetScore : undefined),
+  maxRounds: (_v, r) => (typeof r.targetScore === 'number' ? nearestLength(r.targetScore).maxRounds : undefined),
+  pickSeconds: choice(RULE_CHOICES.pickSeconds),
+  placeSeconds: choice(RULE_CHOICES.placeSeconds),
+  raceSeconds: choice(RULE_CHOICES.raceSeconds),
+  gravity: choice(GRAVITY_CHOICES),
+  weather: (v) => (typeof v === 'boolean' ? v : undefined),
+  bloodRounds: choice(BLOOD_CHOICES),
+};
+
 /** Clamp to allowed values so a bad packet can't break a match. */
 export function sanitizeRules(r: Partial<MatchRules>): MatchRules {
-  const out = { ...DEFAULT_RULES };
-  for (const k of Object.keys(RULE_CHOICES) as TimerRule[]) {
-    const v = r[k];
-    if (typeof v === 'number' && RULE_CHOICES[k].includes(v)) out[k] = v;
+  const out: Record<string, unknown> = { ...DEFAULT_RULES };
+  for (const [k, check] of Object.entries(RULE_CHECKS)) {
+    const v = check(r[k as keyof MatchRules], r);
+    if (v !== undefined) out[k] = v;
   }
-  // Points and rounds travel as a pair, so a packet can't invent a match that never ends.
-  if (typeof r.targetScore === 'number') {
-    const { targetScore, maxRounds } = nearestLength(r.targetScore);
-    out.targetScore = targetScore;
-    out.maxRounds = maxRounds;
-  }
-  return out;
+  return out as unknown as MatchRules;
 }

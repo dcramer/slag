@@ -101,21 +101,27 @@ export class Match {
     this.level = generateLevel(this.seed, theme, this.profileOverride());
   }
 
-  /** Level-profile knobs forced by the rules (gravity class). */
-  profileOverride(): ProfileOverride {
-    const g = this.rules?.gravity ?? 'auto';
-    return { ...this.forceProfile, ...(g === 'auto' ? {} : { gravity: GRAVITY[g] }) };
+  /**
+   * Level-profile knobs forced by the rules (gravity class, weather off). The
+   * one place a rule reaches worldgen: `setRules` rebuilds the lobby's level
+   * whenever this comes out different, so a new level-shaping rule only has to
+   * be added here.
+   */
+  profileOverride(rules: MatchRules = this.rules): ProfileOverride {
+    const g = rules.gravity;
+    return { ...this.forceProfile, ...(g === 'auto' ? {} : { gravity: GRAVITY[g] }), ...(!rules.weather ? { weather: 'clear' as const } : {}) };
   }
 
   /** Debug/tools: force level-profile knobs (size, route, density…) for every generated level. */
   forceProfile: ProfileOverride = {};
 
   /**
-   * Replace the rules. In the lobby, a gravity change regenerates the level
-   * (same seed) so it's built and validated for the new gravity.
+   * Replace the rules. In the lobby, a change to a rule the level is built
+   * from regenerates it (same seed), so it's validated under the new rules.
+   * The only way rules change: peers apply it on the same frame (net/actions.ts).
    */
   setRules(r: MatchRules) {
-    const regen = this.phase === 'lobby' && r.gravity !== this.rules.gravity;
+    const regen = this.phase === 'lobby' && JSON.stringify(this.profileOverride(r)) !== JSON.stringify(this.profileOverride());
     this.rules = { ...r };
     if (regen) this.newLevel(this.seed);
   }
@@ -457,6 +463,7 @@ export class Match {
       this.rules.raceSeconds * 60,
       deriveSeed(this.seed ^ this.salt, `items:${this.round}`),
       this.blood,
+      this.rules.bloodRounds > 0,
     );
     this.setPhase('run');
   }
@@ -492,7 +499,7 @@ export class Match {
 
   private finishRound() {
     const run = this.run!;
-    ageBlood(this.blood);
+    ageBlood(this.blood, this.rules.bloodRounds);
     this.dryRounds = run.finishOrder.length ? 0 : this.dryRounds + 1;
     const result = scoreRound(
       this.players.map((p) => p.slot),

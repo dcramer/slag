@@ -732,9 +732,7 @@ function rooftops(rng: Rng): Look {
     ]),
     mood,
     night: !dusk,
-    sky: dusk
-      ? [hsl3(250, 40, 22), hsl3(320, 42, 44), hsl3(28, 85, 62)]
-      : [hsl3(245, 45, 7), hsl3(265, 35, 15), hsl3(295, 38, 27)],
+    sky: dusk ? [hsl3(250, 40, 22), hsl3(320, 42, 44), hsl3(28, 85, 62)] : [hsl3(245, 45, 7), hsl3(265, 35, 15), hsl3(295, 38, 27)],
     fog: dusk ? hsl3(310, 24, 40) : hsl3(280, 30, 22),
     horizon: { color: dusk ? hsl3(28, 100, 62) : neonA, strength: dusk ? 0.5 : 0.35, y: 0.75 },
     celestial: dusk

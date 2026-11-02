@@ -27,7 +27,7 @@ import type { ThemeId } from '../themes';
  * A new field on Match or RunWorld must be added here or listed as derived:
  * tests/snapshot.test.ts fails until it is.
  */
-export const SNAP_VERSION = 8;
+export const SNAP_VERSION = 9;
 
 export interface RunSnap {
   slots: number[];
@@ -298,7 +298,10 @@ export function restoreMatch(m: Match, s: MatchSnap): void {
     prev.placed === m.placed.map((p) => p.uid).join() &&
     sameSlots(prev.run, s.run.slots);
   m.run = s.run ? restoreRun(sameRace ? prev.run! : new RunWorld(m.level, m.placed, s.run.slots, s.run.timeLimit, s.run.itemSeed), s.run) : null;
-  if (m.run) m.run.blood = m.blood;
+  if (m.run) {
+    m.run.blood = m.blood;
+    m.run.bleeds = m.rules.bloodRounds > 0;
+  }
 }
 
 function restoreRun(run: RunWorld, s: RunSnap): RunWorld {

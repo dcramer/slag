@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
 import { Match } from '../src/game/match';
+import { DEFAULT_RULES } from '../src/game/rules';
 import { roomSeed } from '../src/game/room';
 import { NetSession } from '../src/net/session';
 import { hashMatch } from '../src/net/snapshot';
@@ -90,7 +91,7 @@ const player: Script = (s, f, rng) => {
 };
 
 function fastRules(s: NetSession) {
-  s.act({ t: 'rules', rules: { targetScore: 80, maxRounds: 25, pickSeconds: 10, placeSeconds: 15, raceSeconds: 30, gravity: 'auto' } });
+  s.act({ t: 'rules', rules: { ...DEFAULT_RULES, targetScore: 80, maxRounds: 25, pickSeconds: 10, placeSeconds: 15, raceSeconds: 30 } });
 }
 
 describe('host election', () => {

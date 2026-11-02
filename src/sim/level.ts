@@ -78,6 +78,21 @@ export interface Level {
   version: number;
 }
 
+const PROFILE_KEYS = new WeakMap<LevelProfile, string>();
+
+/**
+ * Which generated level this is, for anything cached per level. A seed
+ * regenerated under other rules (gravity, weather, any profile knob) is
+ * another level at the same seed, size and version, so the key carries the
+ * whole profile and the weather. A crater only bumps `version`, so it keeps
+ * this key. The profile is fixed once generated, so its part is memoized.
+ */
+export function levelKey(l: Level): string {
+  let pk = l.profile ? PROFILE_KEYS.get(l.profile) : '-';
+  if (pk === undefined) PROFILE_KEYS.set(l.profile!, (pk = JSON.stringify(l.profile)));
+  return `${l.seed}:${l.w}x${l.h}:${l.gravity ?? 1}:${pk}:${l.weather?.kind ?? 'clear'}`;
+}
+
 /** Tile kind at (tx, ty). Outside x is a solid wall; outside y is empty. */
 export function tileAt(level: Level, tx: number, ty: number): number {
   if (tx < 0 || tx >= level.w) return 1;

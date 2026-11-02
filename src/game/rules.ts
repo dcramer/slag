@@ -24,6 +24,10 @@ export interface MatchRules {
    * (gen/level/profile.ts GRAVITY). Changing it in the lobby regenerates the level.
    */
   gravity: GravityRule;
+  /** Off makes every level clear. Changing it in the lobby regenerates the level. */
+  weather: boolean;
+  /** Rounds a puddle lasts, counting the one it was spilled in. 0 = no blood at all. */
+  bloodRounds: number;
 }
 
 export type GravityRule = 'auto' | 'low' | 'normal' | 'high';
@@ -54,6 +58,8 @@ export const DEFAULT_RULES: MatchRules = {
   placeSeconds: 15,
   raceSeconds: 0,
   gravity: 'auto',
+  weather: true,
+  bloodRounds: 2,
 };
 
 export type TimerRule = 'pickSeconds' | 'placeSeconds' | 'raceSeconds';
@@ -66,6 +72,8 @@ export const RULE_CHOICES: Record<TimerRule, number[]> = {
 };
 
 export const GRAVITY_CHOICES: readonly GravityRule[] = ['auto', 'low', 'normal', 'high'];
+
+export const BLOOD_CHOICES: readonly number[] = [0, 1, 2, 3];
 
 /** Button text for a gravity choice (menus). */
 export function gravityLabel(v: GravityRule): string {

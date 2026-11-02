@@ -4,7 +4,7 @@ import { hash2, Rng } from '../core/rng';
 import type { Match } from '../game/match';
 import type { Theme } from '../gen/theme';
 import { RUN_COUNTDOWN, TILE } from '../sim/constants';
-import { type Level, tileAt } from '../sim/level';
+import { type Level, levelKey, tileAt } from '../sim/level';
 import { gustPush, gustShown, type WeatherKind } from '../sim/weather';
 import type { Camera } from './camera';
 import type { Fx } from './fx';
@@ -303,7 +303,7 @@ export class WeatherLayer {
   }
 
   private topsOf(level: Level): number[] {
-    const key = `${level.seed}:${level.version}:${level.w}:${level.h}`;
+    const key = `${levelKey(level)}:${level.version}`;
     if (key !== this.topsKey) {
       this.topsKey = key;
       this.tops = topCells(level).flatMap(([x, y]) => [(x + 0.5) * TILE, y * TILE]);

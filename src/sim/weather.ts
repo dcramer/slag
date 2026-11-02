@@ -146,8 +146,8 @@ export function underfoot(base: Surface, f: Surface): Surface {
   return s;
 }
 
-/** Put the level's footing on everything standing in it this frame: blocks, platforms, set pieces, gliders. */
+/** Put the level's footing on everything standing in it this frame: blocks, platforms, set pieces, gliders. Blood sits on top of the weather. */
 export function wetSolids(solids: Solid[], level: Level): void {
   const f = footing(level);
-  if (f) for (const s of solids) s.surface = underfoot(s.surface, f);
+  if (f) for (const s of solids) if (!s.film) s.surface = underfoot(s.surface, f);
 }
