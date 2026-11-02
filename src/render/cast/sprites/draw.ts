@@ -101,10 +101,14 @@ export function drawFrame(
   seed: number,
   t: number,
   face?: { kit: NonNullable<SpriteSet['face']>; mood: FaceMood; facing: number },
+  /** The option each accessory slot shows (the first, if not given). */
+  pick?: readonly number[],
 ) {
   const boil = Math.floor(t * 8) % 3;
   for (const r of f.sil) contour(s, boiled(r, boil, seed), body.fill, body.ink, k, seed);
-  for (const [role, r] of f.parts) {
+  for (const part of f.parts) {
+    const [role, r] = part;
+    if (part.length === 4 && (pick?.[part[2]] ?? 0) !== part[3]) continue;
     const p = paints[role];
     toned(s, boiled(r, boil, seed + role), p.fill, p.shade, p.ink, PART_THIN, PART_THICK * k, SLIVER);
   }

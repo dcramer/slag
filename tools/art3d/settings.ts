@@ -28,6 +28,14 @@ export interface Role {
    * that carries the read (the plumber's cap bill and nose).
    */
   grow?: [number, number];
+  /**
+   * Other colours this role may take, one rolled per character from \`vary[vary]\` (src/gen/character.ts),
+   * so the same seed always wears the same: an accessory's colour, never one the read depends on.
+   */
+  alts?: string[];
+  vary?: number;
+  /** Not part of the silhouette: a swappable prop's own role, inked on its own. */
+  free?: boolean;
 }
 
 /** A clip the game plays, cut from one of the model's animations or keyed from poses. */
@@ -133,7 +141,19 @@ export interface Prop {
   at: [number, number, number];
   /** Degrees about the figure's x, y, z. */
   rot: [number, number, number];
-  parts: { shape: 'cylinder' | 'cup' | 'sphere'; role: string; size: [number, number, number]; at?: [number, number, number] }[];
+  parts: {
+    shape: 'cylinder' | 'cup' | 'sphere' | 'box';
+    role: string;
+    size: [number, number, number];
+    at?: [number, number, number];
+    rot?: [number, number, number];
+  }[];
+  /**
+   * A swappable accessory: props sharing a \`slot\` are its options, one rolled per character from
+   * \`vary[slots[slot]]\`. Each option renders in a pass of its own and its parts are tagged, so the game
+   * draws the one the character rolled. Their roles are their own, and \`free\` (off the silhouette).
+   */
+  slot?: string;
 }
 
 export interface Settings {
@@ -155,6 +175,8 @@ export interface Settings {
   /** Weight fixes for the auto-rig, applied in order. */
   rebind?: Rebind[];
   props?: Prop[];
+  /** Each accessory slot's roll: an index into the character's \`vary\`. */
+  slots?: Record<string, number>;
   keys?: Record<string, Key>;
   regions?: Region[];
   ball?: Ball;

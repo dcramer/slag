@@ -41,6 +41,8 @@ export function spritesOf(c: CharacterDef): SpriteSet | null {
 
 interface Dressed {
   paints: Paint[];
+  /** The accessory option each slot shows, from the character's rolls. */
+  pick: number[];
   body: Paint;
   shadow: string;
   k: number;
@@ -52,11 +54,15 @@ const dressed = new WeakMap<CharacterDef, Dressed>();
 function dress(set: SpriteSet, c: CharacterDef): Dressed {
   let d = dressed.get(c);
   if (!d) {
-    const hsl = set.roles.map((r): HSL => (r.slot === 'paint' ? c.paint : r.slot === 'player' ? c.body : hexHsl(r.color)));
+    // A roll in 0..1 picks one of n, the same for the same seed.
+    const roll = (vary: number, n: number) => Math.min(n - 1, Math.floor((c.vary[vary] ?? 0) * n));
+    const colour = (r: SpriteSet['roles'][number]) => (r.alts ? [r.color, ...r.alts][roll(r.vary ?? 0, r.alts.length + 1)] : r.color);
+    const hsl = set.roles.map((r): HSL => (r.slot === 'paint' ? c.paint : r.slot === 'player' ? c.body : hexHsl(colour(r))));
+    const pick = (set.slots ?? []).map((sl) => roll(sl.vary, sl.options));
     const paints = set.roles.map((_, i) => paintOf(hsl[i]));
     // The silhouette is inked in a dark of the kind's own colour, as a hand-drawn homage's is.
     const main = hsl[set.roles.findIndex((r) => r.slot === 'paint')] ?? hsl[0];
-    d = { paints, body: { ...paintOf(main), ink: inkOf(main) }, shadow: ratio(main, shift(main, -14, 6)), k: lookOf(c, false).weight };
+    d = { paints, pick, body: { ...paintOf(main), ink: inkOf(main) }, shadow: ratio(main, shift(main, -14, 6)), k: lookOf(c, false).weight };
     dressed.set(c, d);
   }
   return d;
@@ -66,12 +72,88 @@ function dress(set: SpriteSet, c: CharacterDef): Dressed {
  * Draws the body with its feet at the origin of the current transform (the caller has applied the
  * runner's position, scale and squash). False when the kind has no frame for the pose.
  */
-export function drawSprite(s: CanvasRenderingContext2D, set: SpriteSet, c: CharacterDef, p: RunnerPose, x: number): boolean {
+/**
+ * Each drawn frame is kept as a bitmap, per character, boil step, mood and scale: drawing the shapes with
+ * the pen is several times a hand-drawn runner's cost, and a runner shows the same few frames over and
+ * over. The scale is bucketed to quarter octaves, so a zoom draws fresh only when it changes a step; the
+ * squash and stretch are applied to the bitmap as a transform. Bitmaps are kept up to a pixel budget,
+ * oldest first out.
+ */
+interface Cached {
+  cv: HTMLCanvasElement;
+  /** Where the feet are in it, and its px per world px. */
+  ax: number;
+  ay: number;
+  px: number;
+}
+
+const cache = new Map<string, Cached>();
+const ids = new WeakMap<object, number>();
+let nextId = 1;
+const idOf = (o: object) => {
+  let i = ids.get(o);
+  if (i === undefined) ids.set(o, (i = nextId++));
+  return i;
+};
+let cachedPixels = 0;
+/** About 24 MB of bitmaps. */
+const PIXEL_BUDGET = 6_000_000;
+/** World px the frame box reaches from the feet, pen included. */
+const REACH = { x0: -19, x1: 19, y0: -34, y1: 3 };
+
+function bitmap(key: string, px: number, paint: (g: CanvasRenderingContext2D) => void): Cached {
+  const got = cache.get(key);
+  if (got) {
+    // Most recently used goes to the back of the line.
+    cache.delete(key);
+    cache.set(key, got);
+    return got;
+  }
+  const w = Math.ceil((REACH.x1 - REACH.x0) * px);
+  const h = Math.ceil((REACH.y1 - REACH.y0) * px);
+  const cv = document.createElement('canvas');
+  cv.width = w;
+  cv.height = h;
+  const g = cv.getContext('2d')!;
+  g.translate(-REACH.x0 * px, -REACH.y0 * px);
+  g.scale(px, px);
+  paint(g);
+  const made = { cv, ax: -REACH.x0 * px, ay: -REACH.y0 * px, px };
+  cache.set(key, made);
+  cachedPixels += w * h;
+  for (const [k, v] of cache) {
+    if (cachedPixels <= PIXEL_BUDGET) break;
+    cache.delete(k);
+    cachedPixels -= v.cv.width * v.cv.height;
+  }
+  return made;
+}
+
+/**
+ * Draws the body with its feet at the origin of the current transform (the caller has applied the
+ * runner's position, scale and squash). `px` is screen px per world px before the squash: the scale the
+ * frame's bitmap is drawn at. False when the kind has no frame for the pose.
+ */
+export function drawSprite(s: CanvasRenderingContext2D, set: SpriteSet, c: CharacterDef, p: RunnerPose, x: number, px?: number): boolean {
   const got = pick(set, p, x);
   if (!got) return false;
   const d = dress(set, c);
-  const face = set.face ? { kit: set.face, mood: p.dead !== undefined ? ('dead' as const) : moodOf(p), facing: got.facing } : undefined;
-  drawFrame(s, got.frame, d.paints, d.body, d.shadow, d.k, c.seed & 0xffff, p.t, face);
+  const mood = p.dead !== undefined ? ('dead' as const) : moodOf(p);
+  const face = set.face ? { kit: set.face, mood, facing: got.facing } : undefined;
+  const t = p.t;
+  const seed = c.seed & 0xffff;
+  const draw = (g: CanvasRenderingContext2D) => drawFrame(g, got.frame, d.paints, d.body, d.shadow, d.k, seed, t, face, d.pick);
+  if (!px || px > 24) {
+    draw(s);
+    return true;
+  }
+  // The things that change a frame's drawing: its boil step, the face's mood and a blink.
+  const boil = Math.floor(t * 8) % 3;
+  const blink = mood === 'idle' && Math.sin(t * 1.3 + seed * 7) > 0.985;
+  const bucket = 2 ** (Math.ceil(Math.log2(px) * 4) / 4);
+  const key = `${idOf(d)}:${idOf(got.frame)}:${boil}:${mood}:${blink ? 1 : 0}:${bucket}`;
+  const b = bitmap(key, bucket, draw);
+  s.drawImage(b.cv, -b.ax / b.px, -b.ay / b.px, b.cv.width / b.px, b.cv.height / b.px);
   return true;
 }
 

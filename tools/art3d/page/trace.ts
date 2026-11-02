@@ -15,6 +15,8 @@ export interface Part {
   ring: number[];
   /** Mean depth, for painting back to front. */
   depth: number;
+  /** An accessory's part: its slot and option. */
+  option?: [number, number];
 }
 
 export interface Traced {
@@ -399,11 +401,12 @@ export function trace(role: Int16Array, depth: Float32Array, W: number, H: numbe
   parts.sort((a, b) => b.depth - a.depth);
 
   // 5. The silhouette: every outer outline of the figure.
-  const fg = (x: number, y: number) => x >= 0 && y >= 0 && x < W && y < H && r[y * W + x] >= 0;
+  const free = names.map((n) => !!s.roles[n].free);
+  const fg = (x: number, y: number) => x >= 0 && y >= 0 && x < W && y < H && r[y * W + x] >= 0 && !free[r[y * W + x]];
   const sil: number[][] = [];
   const seen = new Uint8Array(n);
   for (let i = 0; i < n; i++) {
-    if (r[i] < 0 || seen[i]) continue;
+    if (r[i] < 0 || free[r[i]] || seen[i]) continue;
     const st = [i];
     seen[i] = 1;
     let count = 0;
@@ -412,7 +415,7 @@ export function trace(role: Int16Array, depth: Float32Array, W: number, H: numbe
       count++;
       const x = p % W;
       for (const q of [x > 0 ? p - 1 : -1, x < W - 1 ? p + 1 : -1, p - W, p + W, p - W - 1, p - W + 1, p + W - 1, p + W + 1])
-        if (q >= 0 && q < n && r[q] >= 0 && !seen[q]) {
+        if (q >= 0 && q < n && r[q] >= 0 && !free[r[q]] && !seen[q]) {
           seen[q] = 1;
           st.push(q);
         }

@@ -75,20 +75,34 @@ describe('rendered kinds: frames', () => {
     // The shared drawer's squash and stretch reach sx 1.12 and sy 1.25 in the air; on the ground, 1.04.
     for (const s of SETS) {
       const paints = s.roles.map((r) => paintOf(hexHsl(r.color)));
+      // Every accessory option, each slot showing the same option number where it has one.
+      const most = Math.max(1, ...(s.slots ?? []).map((sl) => sl.options));
       for (const [name, c] of Object.entries(s.clips))
-        for (const f of extremes([...c.r, ...c.l])) {
-          const { ctx, pts } = recorder();
-          drawFrame(ctx, f, paints, paints[0], '#000', 0.7, 1, 0);
-          const ground = name !== 'air' && name !== 'wall';
-          const sx = ground ? 1.04 : 1.12;
-          const sy = ground ? 1.04 : 1.25;
-          for (const [x, y] of pts) {
-            expect(Math.abs(x) * sx, `${s.kind} ${name} width`).toBeLessThanOrEqual(17);
-            expect(y * sy, `${s.kind} ${name} top`).toBeGreaterThanOrEqual(-32);
-            // Feet stand on the floor: ink below it would sink a standing runner into the ground.
-            if (ground) expect(y, `${s.kind} ${name} feet`).toBeLessThanOrEqual(1.1);
+        for (const f of extremes([...c.r, ...c.l]))
+          for (let o = 0; o < most; o++) {
+            const { ctx, pts } = recorder();
+            drawFrame(
+              ctx,
+              f,
+              paints,
+              paints[0],
+              '#000',
+              0.7,
+              1,
+              0,
+              undefined,
+              (s.slots ?? []).map((sl) => Math.min(o, sl.options - 1)),
+            );
+            const ground = name !== 'air' && name !== 'wall';
+            const sx = ground ? 1.04 : 1.12;
+            const sy = ground ? 1.04 : 1.25;
+            for (const [x, y] of pts) {
+              expect(Math.abs(x) * sx, `${s.kind} ${name} width`).toBeLessThanOrEqual(17);
+              expect(y * sy, `${s.kind} ${name} top`).toBeGreaterThanOrEqual(-32);
+              // Feet stand on the floor: ink below it would sink a standing runner into the ground.
+              if (ground) expect(y, `${s.kind} ${name} feet`).toBeLessThanOrEqual(1.1);
+            }
           }
-        }
     }
   });
 

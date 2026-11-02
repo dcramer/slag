@@ -187,8 +187,22 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
   const inModel = (o: THREE.Object3D, rq: THREE.Quaternion) => rq.clone().multiply(o.getWorldQuaternion(new THREE.Quaternion()));
 
   // Props, on their bones, in the rest pose's axes and world px.
-  for (const p of s.props ?? []) addProp(p);
-  function addProp(p: Prop) {
+  // Accessory slots: each slot's options in order, and the roles that are theirs.
+  const slotNames = Object.keys(s.slots ?? {});
+  const options: THREE.Group[][] = slotNames.map(() => []);
+  const optionRoles: Set<number>[][] = slotNames.map(() => []);
+  for (const p of s.props ?? []) {
+    const holder = addProp(p);
+    if (!p.slot) continue;
+    const si = slotNames.indexOf(p.slot);
+    if (si < 0) throw new Error(`prop slot "${p.slot}" isn't in slots`);
+    options[si].push(holder);
+    optionRoles[si].push(new Set(p.parts.map((q) => names.indexOf(q.role))));
+  }
+  /** Shows option `k` of slot `si` and hides its others. */
+  const show = (si: number, k: number) => options[si].forEach((h, i) => (h.visible = i === k));
+  options.forEach((_, si) => show(si, 0));
+  function addProp(p: Prop): THREE.Group {
     const b = bone(p.bone);
     const rq = rootQ();
     const holder = new THREE.Group();
@@ -206,13 +220,17 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
           ? new THREE.CylinderGeometry(a, a, h, 14)
           : part.shape === 'cup'
             ? new THREE.SphereGeometry(a, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, h / a, 1)
-            : new THREE.SphereGeometry(1, 16, 12).scale(a, h, c);
+            : part.shape === 'box'
+              ? new THREE.BoxGeometry(a, h, c)
+              : new THREE.SphereGeometry(1, 16, 12).scale(a, h, c);
       const mesh = new THREE.Mesh(geo, material(names.indexOf(part.role)));
       if (part.at) mesh.position.set(...part.at);
+      if (part.rot) mesh.rotation.set(rad(part.rot[0]), rad(part.rot[1]), rad(part.rot[2]));
       mesh.frustumCulled = false;
       rig.add(mesh);
     }
     b.add(holder);
+    return holder;
   }
 
   scene.updateMatrixWorld(true);
@@ -378,6 +396,24 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
           }
         }
         const tr = shoot();
+        // Accessories: option 0 of every slot is in this pass; each other option gets a pass of its own, and
+        // only its parts are kept. Every option's parts are tagged with their slot and option.
+        for (let si = 0; si < slotNames.length; si++) {
+          for (const p of tr.parts) if (optionRoles[si][0].has(p.role)) p.option = [si, 0];
+          for (let k = 1; k < options[si].length; k++) {
+            show(si, k);
+            scene.updateMatrixWorld(true);
+            const alt = shoot();
+            for (const p of alt.parts)
+              if (optionRoles[si][k].has(p.role)) {
+                p.option = [si, k];
+                tr.parts.push(p);
+              }
+          }
+          show(si, 0);
+          scene.updateMatrixWorld(true);
+        }
+        tr.parts.sort((a, b) => b.depth - a.depth);
         if (!tr.eyes.length && s.face?.anchor) {
           // No eye big enough to trace: set them by the nose, as an artist would.
           const a = s.face.anchor;
@@ -426,7 +462,7 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
           // A figure lying down is as long as it was tall: centred on the spot, it stays inside the runner's box.
           let x0 = Infinity;
           let x1 = -Infinity;
-          for (const ring of tr.sil)
+          for (const ring of [...tr.sil, ...tr.parts.map((p) => p.ring)])
             for (let i = 0; i < ring.length; i += 2) {
               x0 = Math.min(x0, ring[i]);
               x1 = Math.max(x1, ring[i]);

@@ -28,7 +28,7 @@ async function render(url: string, s: Settings, kind: string, only?: string[]): 
     const frames = (fs: typeof tc.r) =>
       fs.map((f) => ({
         sil: f.sil.map(enc),
-        parts: f.parts.map((p) => [p.role, enc(p.ring)] as const),
+        parts: f.parts.map((p) => (p.option ? ([p.role, enc(p.ring), p.option[0], p.option[1]] as const) : ([p.role, enc(p.ring)] as const))),
         ...(f.eyes.length ? { eyes: f.eyes.map((v) => Math.round(v * 8)) } : {}),
         ...(f.marks?.length ? { marks: f.marks.map(enc) } : {}),
       }));
@@ -44,10 +44,11 @@ async function render(url: string, s: Settings, kind: string, only?: string[]): 
   }
   const roles = got.roles.map((n) => {
     const r = s.roles[n];
-    return { color: r.color, ...(r.slot ? { slot: r.slot } : {}) };
+    return { color: r.color, ...(r.slot ? { slot: r.slot } : {}), ...(r.alts ? { alts: r.alts, vary: r.vary ?? 0 } : {}) };
   });
   const face = s.face ? { r: s.face.r, iris: s.face.iris, ...(s.face.mouth ? { mouth: s.face.mouth } : {}) } : null;
-  return { kind, height: s.height, roles, ...(face ? { face } : {}), clips };
+  const slots = Object.entries(s.slots ?? {}).map(([name, vary]) => ({ vary, options: (s.props ?? []).filter((p) => p.slot === name).length }));
+  return { kind, height: s.height, roles, ...(slots.length ? { slots } : {}), ...(face ? { face } : {}), clips };
 }
 
 const api = {
