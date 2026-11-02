@@ -24,13 +24,17 @@ export const shots: Scenarios = {
             }
           }
         }
-        for (const a of styles.length ? [] : as) {
+        for (const want of styles.length ? [] : as) {
+          // `platform:tetra`: only parts with a body of that look (a Four-Square).
+          const [a, look] = want.split(':');
           const got = new Map<string, any>();
-          for (let k = 1; k < 80 && got.size < 3; k++) {
+          for (let k = 1; k < 400 && got.size < 3; k++) {
             d.match.placed.length = 0;
             d.addProps([a], k);
             const def = d.match.placed[0]?.def;
+            if (look && !def?.modules.some((m: any) => m.look === look)) continue;
             if (def && !got.has(def.size)) got.set(def.size, def);
+            if (look && got.size) break;
           }
           for (const sz of ['small', 'medium', 'large']) if (got.has(sz)) out.push(got.get(sz));
         }
@@ -79,7 +83,18 @@ export const shots: Scenarios = {
               d.match.placed.length = before;
             }
           }
-        } else for (let k = 0; k < n; k++) for (const a of as) d.addProps([a], 11 + k * 7);
+        } else
+          for (let k = 0; k < n; k++)
+            for (const want of as) {
+              // `platform:tetra`: roll until the part has a body of that look.
+              const [a, look] = want.split(':');
+              for (let j = 0; j < 400; j++) {
+                const before = d.match.placed.length;
+                d.addProps([a], 11 + k * 7 + j * 101);
+                if (!look || d.match.placed[before]?.def.modules.some((m: any) => m.look === look)) break;
+                d.match.placed.length = before;
+              }
+            }
         d.race([], 1);
         // `--bait`: each runner stands on the nearest floor a few tiles in front of a part, to set it off (a sentry, a dropstone).
         if (bait) {
@@ -136,6 +151,134 @@ export const shots: Scenarios = {
       files.push(path);
     }
     await sheet(`parts-${seed}`, files.slice(1), 4);
+  },
+  async parody() {
+    // The parody batch in action (docs/PARODY-BACKLOG.md): a Launch Plate, Boost Strip, Panic Button, Fuse
+    // Crate, Y-Fling and Four-Square, each on the first stretch of flat floor a level has, worked by a runner
+    // on a script, shot close up in the place phase (a plate's dotted flight) and at a few moments of the race.
+    const none = {
+      left: false,
+      right: false,
+      up: false,
+      down: false,
+      jump: false,
+      jumpPressed: false,
+      confirmPressed: false,
+      altPressed: false,
+      downPressed: false,
+    };
+    /** Per part: when to shoot, and what the runner holds on each frame after it's put in place. */
+    const stages: { kind: string; at: number[]; inp: (f: number) => Record<string, boolean> }[] = [
+      { kind: 'launchplate', at: [14, 30, 50], inp: (f) => ({ right: f < 12, run: f < 12 }) },
+      { kind: 'boost', at: [30, 40, 54], inp: (f) => ({ right: f < 30 }) },
+      { kind: 'panic', at: [36, 290, 345], inp: (f) => ({ right: f < 30 }) },
+      { kind: 'fling', at: [24, 44, 58], inp: (f) => ({ left: f < 40, down: f < 40, jump: f === 40, jumpPressed: f === 40 }) },
+      { kind: 'platform:tetra', at: [10], inp: () => ({}) },
+      // Last: its blast's smoke would drift into the next stage's shots.
+      { kind: 'fuse', at: [70, 150, 182], inp: (f) => ({ left: f > 30 && f < 60 }) },
+    ];
+    const files: string[] = [];
+    const closeup = async (sp: { x: number; y: number }, tag: string) => {
+      await page.evaluate(
+        ([x, y]) => {
+          const d = (window as any).slagDebug;
+          const cam = d.renderer.cam;
+          cam.update = () => {};
+          d.renderer.updateCamera = () => {};
+          cam.snap({ cx: x, cy: y, zoom: 2 });
+          cam.shake = 0;
+          d.render();
+        },
+        [(sp.x + 8) * 16, (sp.y - 2) * 16] as const,
+      );
+      const size = page.viewportSize()!;
+      const path = `${out}/parody-${seed}-${tag}.png`;
+      const w = Math.min(size.width, size.height);
+      await page.screenshot({ path, clip: { x: (size.width - w) / 2, y: 0, width: w, height: w } });
+      files.push(path);
+    };
+    await open(`seed=${seed}&players=1&race=,&propseed=1`);
+    for (const st of stages) {
+      const sp: { x: number; y: number } | null = await page.evaluate(
+        ([kind, base]) => {
+          // (No named helpers in here: the bundler wraps them in a __name the page doesn't have.)
+          const d = (window as any).slagDebug;
+          // Levels have no long flat floors on purpose, so cut one: a stage 16 wide in the middle of the level,
+          // seven rows of air on two rows of ground, cleared of set pieces (a bomb's redraw paints the change).
+          d.loadLevel(base, 'farm');
+          const lv = d.match.level;
+          const spot = { x: Math.floor(lv.w / 2) - 8, y: Math.floor(lv.h / 2) + 2 };
+          for (let x = spot.x - 1; x < spot.x + 17; x++) {
+            for (let y = spot.y - 7; y <= spot.y; y++) lv.tiles[y * lv.w + x] = 0;
+            for (let y = spot.y + 1; y <= spot.y + 2; y++) lv.tiles[y * lv.w + x] = 1;
+          }
+          lv.setPieces = [];
+          lv.version++;
+          d.match.placed.length = 0;
+          const [a, look] = kind.split(':');
+          let p: any = null;
+          for (let j = 0; j < 400 && !p; j++) {
+            // A few at once: addProps tries spots by index, and on some level sizes the first index never meets a floor.
+            d.addProps([a, a, a, a], 3 + j * 17);
+            p = d.match.placed.find((q: any) => (a !== 'boost' || q.def.footprint.length >= 2) && (!look || q.def.modules.some((m: any) => m.look === look)));
+            d.match.placed.length = 0;
+          }
+          if (!p) return null;
+          d.match.placed.push(p);
+          p.rot = 0;
+          const m = p.def.modules[0];
+          // The plate, button and crate stand on the floor, the strip lies on it, the fork's stem is planted in it,
+          // and the Four-Square floats three rows up.
+          p.tx = spot.x + (a === 'launchplate' ? 2 : 3);
+          p.ty =
+            a === 'boost' ? spot.y + 1 : a === 'fling' ? spot.y - 1 : a === 'platform' ? spot.y - 3 : a === 'panic' ? spot.y - Math.floor(m.at[1]) : spot.y;
+          d.race([], 1);
+          // A new level's ink goes down a chunk per frame: let it finish before anything is shot.
+          for (let i = 0; i < 40; i++) d.render();
+          return spot;
+        },
+        [st.kind, seed] as const,
+      );
+      if (!sp) {
+        console.log(`no floor for ${st.kind}`);
+        continue;
+      }
+      const tag = st.kind.replace(':', '-');
+      // The place phase dots in a plate's whole flight. (Rendered, not stepped: a place-phase step would run the
+      // place phase on a race.)
+      if (st.kind === 'launchplate') {
+        await page.evaluate(() => (window as any).slagDebug.match.setPhase('place'));
+        await closeup(sp, `${tag}-place`);
+        await page.evaluate(() => (window as any).slagDebug.match.setPhase('run'));
+      }
+      await step(60);
+      await page.evaluate(
+        ([kind, s]) => {
+          const d = (window as any).slagDebug;
+          const b = d.match.run.runners[0].body;
+          const p = d.match.placed[0];
+          let tx = s.x;
+          let ty = s.y;
+          if (kind === 'fuse') tx = p.tx;
+          if (kind === 'fuse') ty = p.ty - 1;
+          if (kind === 'platform:tetra') tx = p.tx + p.def.footprint.find((c: number[]) => c[1] === 0)[0];
+          if (kind === 'platform:tetra') ty = p.ty - 1;
+          b.x = tx * 16 + 8 - b.w / 2;
+          b.y = (ty + 1) * 16 - b.h;
+          if (kind === 'fling') b.x = (p.tx + 1) * 16 - b.w / 2;
+          if (kind === 'fling') b.y = (p.ty + 1) * 16 - b.h / 2;
+          b.vx = 0;
+          b.vy = 0;
+        },
+        [st.kind, sp] as const,
+      );
+      const last = Math.max(...st.at);
+      for (let f = 0; f <= last; f++) {
+        await page.evaluate(([inp]) => (window as any).slagDebug.step(1, { kb1: inp }), [{ ...none, ...st.inp(f) }] as const);
+        if (st.at.includes(f)) await closeup(sp, `${tag}-${f}`);
+      }
+    }
+    await sheet(`parody-${seed}`, files, 4);
   },
   async pipes() {
     // Warp pipes facing every way: two linked pairs and one waiting, in place with a pipe ghost tethered

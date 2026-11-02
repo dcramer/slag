@@ -16,8 +16,9 @@
  *   pnpm shot score --players 4            → round-score screen
  *   pnpm shot levels --seeds a,b,c,d      (or --count 12) → contact sheet
  *   pnpm shot props --count 24            → prop gallery (crate cards)
- *   pnpm shot cards --arch saw,block       → crate cards of those parts at every size
+ *   pnpm shot cards --arch saw,block       → crate cards of those parts at every size (`platform:tetra`: only parts with that body look)
  *   pnpm shot parts --arch saw,flail       → those parts placed and raced, shot close up (`--styles all`: every launcher style; `--bait`: a runner in front of each)
+ *   pnpm shot parody --seed abc            → Launch Plate, Boost Strip, Panic Button, Fuse Crate, Y-Fling and Four-Square each worked by a runner
  *   pnpm shot buildparts                   → every building part in a race, on crate cards, and as place ghosts
  *   pnpm shot pipes [--propseed 3]         → warp pipes facing every way: placing (with the pair tether), close up, and mid-trip
  *   pnpm shot items --seed abc             → held items: in hand, loose, and each one used

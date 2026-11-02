@@ -146,6 +146,14 @@ const PROP_CUE: Record<string, SfxName> = {
   'keg-fire': 'fire-cannon',
   'keg-backfire': 'explosion',
   'sentry-lock': 'sentry-beep',
+  boost: 'swoosh',
+  'button-press': 'ui-toggle',
+  'button-off': 'ui-tick',
+  'fuse-lit': 'flame-ignite',
+  'fuse-tick': 'ui-tick',
+  'fling-in': 'ui-tick',
+  'fling-fire': 'whoosh',
+  'fling-snap': 'crumble-break',
 };
 const FIRE: Record<string, SfxName> = {
   crossbow: 'fire-crossbow',

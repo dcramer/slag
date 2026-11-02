@@ -5,6 +5,7 @@ import { overview, raceFloor } from '../game/view';
 import { TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import { floorY, type Level, tileAt } from '../sim/level';
 import { type Beam, canPlace, footprint, previewProps, type Resolved, resolveProp } from '../sim/props';
+import type { Solid } from '../sim/physics';
 import type { RunWorld } from '../sim/run';
 import type { GameEvent } from '../sim/types';
 import { Backdrop } from './background';
@@ -310,11 +311,12 @@ export class Renderer {
         grips,
         placed: m.placed,
         beams,
+        solids,
         runners: pushers,
       });
     }
 
-    if (m.phase === 'place') this.drawGhosts(rc, m, beams);
+    if (m.phase === 'place') this.drawGhosts(rc, m, beams, solids);
     if (m.phase === 'lobby' || m.phase === 'pick' || m.phase === 'place') this.drawIdlers(rc, m, dt);
 
     if (run) {
@@ -558,7 +560,7 @@ export class Renderer {
     g.stroke();
   }
 
-  private drawGhosts(rc: RC, m: Match, beams: readonly Beam[]) {
+  private drawGhosts(rc: RC, m: Match, beams: readonly Beam[], solids: readonly Solid[]) {
     const s = rc.s;
     // Off-limits zones.
     s.save();
@@ -580,7 +582,7 @@ export class Renderer {
       const col = ok ? p.character.body : { h: 0, s: 90, l: 55 };
       s.globalAlpha = 0.85;
       rc.g.globalAlpha = 0.85;
-      drawResolved(rc, ghost, { level: m.level, showPath: true, beams, placed: m.placed });
+      drawResolved(rc, ghost, { level: m.level, showPath: true, beams, solids, placed: m.placed });
       s.globalAlpha = 1;
       rc.g.globalAlpha = 1;
       const bomb = gh.def.modules.find((x) => x.type === 'bomb');

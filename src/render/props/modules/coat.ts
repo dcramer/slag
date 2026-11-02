@@ -1,11 +1,11 @@
 import { css, type HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
-import { COAT_PX, dirOf, type ModuleOf } from '../../../sim/props';
+import { boostDir, COAT_PX, dirOf, type ModuleOf } from '../../../sim/props';
 import { blob, line, type P, sn, stroke } from '../../ink';
 import { spikeSprite } from '../../ink-build';
 import { boxPts, glint, pen, sprite, stamp, tick, tone } from '../../ink-props';
-import type { RC } from '../../kit';
+import { glowDot, light, type RC } from '../../kit';
 import { defineArt } from '../common';
 
 type Coat = ModuleOf<'coat'>;
@@ -272,8 +272,81 @@ function drawSlime(rc: RC, m: Coat, card: boolean) {
   });
 }
 
-defineArt<'coat'>({
-  type: 'coat',
-  layer: 2,
-  draw: (rc, m, d) => (m.kind === 'spikes' ? drawSpikeStrip(rc, m) : m.kind === 'ice' ? drawIce(rc, m, !!d.o.card) : drawSlime(rc, m, !!d.o.card)),
-});
+const ASPHALT: HSL = { h: 220, s: 8, l: 26 };
+const ROAD_PAINT: HSL = { h: 46, s: 95, l: 58 };
+const ROAD_INK = '#0f0d12';
+
+/** One run of a Boost Strip: a strip of road with a painted chevron on every tile, all pointing +x, and a skid mark or two. */
+function boostRun(len: number, seed: number) {
+  return sprite(`ct|boost|${len}|${seed % 7}`, -1.5, -T - 1.5, len + 3, T + 3, (g) => {
+    const body = boxPts(0, -T, len, T + 0.5, 0.8, seed, 0.08);
+    tone(g, body, ASPHALT, { depth: 0.4, shade: -8 });
+    g.save();
+    g.beginPath();
+    for (let i = 0; i < body.length; i++) (i ? g.lineTo : g.moveTo).call(g, body[i].x, body[i].y);
+    g.closePath();
+    g.clip();
+    // Skid marks: someone braked here once. It didn't help.
+    g.fillStyle = 'rgba(8,6,10,0.7)';
+    for (let x = 1; x < len - 4; x += 7) {
+      if (hash2(x, 3, seed) < 0.5) continue;
+      line(g, x, -T + 0.8, x + 4 + hash2(x, 4, seed) * 3, -T + 1, { w: 0.5, seed: seed + x, taper: [0.3, 0.6], press: 0.3 });
+    }
+    g.restore();
+    pen(g, body, seed, 0.3, 0.7, 3, ROAD_INK);
+  });
+}
+
+/** A painted chevron at x along a run, pointing +x: a road arrow squashed to the coat's thickness. */
+function chevron(s: CanvasRenderingContext2D, x: number, col: string) {
+  s.fillStyle = col;
+  s.beginPath();
+  s.moveTo(x - 3.2, -T + 0.4);
+  s.lineTo(x - 0.6, -T + 0.4);
+  s.lineTo(x + 2.4, -T / 2);
+  s.lineTo(x - 0.6, -0.4);
+  s.lineTo(x - 3.2, -0.4);
+  s.lineTo(x - 0.2, -T / 2);
+  s.closePath();
+  s.fill();
+}
+
+/**
+ * Boost Strip (docs/PARODY.md, boost): a strip of road with a chevron painted on each tile, pointing
+ * the way it throws you (a quarter turn on from the way out: right on a floor, up a wall's left face).
+ * The chevrons light in turn along it, so the way it runs reads from anywhere; a card holds them lit.
+ */
+function drawBoost(rc: RC, m: Coat, card: boolean) {
+  const s = rc.s;
+  const [ax, ay] = boostDir(m.angle);
+  for (const r of runsOf(m)) {
+    enter(s, r, card);
+    stamp(s, boostRun(r.len, r.seed));
+    // Run frame +x is (ux, uy): the arrow runs with it or against it.
+    const sign = ax * r.ux + ay * r.uy >= 0 ? 1 : -1;
+    if (sign < 0) {
+      s.translate(r.len, 0);
+      s.scale(-1, 1);
+    }
+    const march = card ? 0 : (rc.t * 3) % 1;
+    for (let x = TILE / 2; x < r.len; x += TILE) {
+      const k = card ? 1 : Math.max(0, 1 - Math.abs(((x / TILE + 1 - march) % 3) - 1));
+      chevron(s, x - 2.2, css(ROAD_PAINT, -18));
+      chevron(s, x + 2.2, css(ROAD_PAINT, k * 22, 1));
+    }
+    s.restore();
+    const cx = r.ox + (r.ux * r.len) / 2;
+    const cy = r.oy + (r.uy * r.len) / 2;
+    light(rc, cx + r.nx * 3, cy + r.ny * 3, 22 + r.len / 3, ROAD_PAINT, 0.25);
+    if (!card) glowDot(rc.g, cx + r.nx * 2, cy + r.ny * 2, 6 + r.len / 4, ROAD_PAINT, 0.18);
+  }
+}
+
+const COATS: Record<Coat['kind'], (rc: RC, m: Coat, card: boolean) => void> = {
+  spikes: (rc, m) => drawSpikeStrip(rc, m),
+  ice: drawIce,
+  slime: drawSlime,
+  boost: drawBoost,
+};
+
+defineArt<'coat'>({ type: 'coat', layer: 2, draw: (rc, m, d) => COATS[m.kind](rc, m, !!d.o.card) });

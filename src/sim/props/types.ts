@@ -135,7 +135,17 @@ export interface PropStyle {
 }
 
 export type Module =
-  | { type: 'body'; cells: Cell[]; material: Material; conveyor: number; breakFrames: number; respawnFrames: number }
+  | {
+      type: 'body';
+      cells: Cell[];
+      material: Material;
+      conveyor: number;
+      breakFrames: number;
+      respawnFrames: number;
+      /** Art only: 'tetra' draws each cell as a bevelled square in one colour, `hue` (Four-Square). The sim treats it as its material. */
+      look?: BlockLook;
+      hue?: number;
+    }
   | { type: 'spikes'; cells: Cell[]; angle: number; look?: SpikeLook }
   | {
       type: 'swinger';
@@ -192,7 +202,20 @@ export type Module =
   | { type: 'laser'; at: Vec; angle: number; charge: number; fire: number; off: number; sweep: number; sweepPeriod: number }
   | { type: 'tesla'; a: Vec; b: Vec; on: number; off: number; warn: number }
   | { type: 'piston'; at: Vec; angle: number; reach: number; width: number; period: number }
-  | { type: 'spring'; at: Vec; angle: number; power: number }
+  | {
+      type: 'spring';
+      at: Vec;
+      angle: number;
+      power: number;
+      /**
+       * Launch Plate: the plate *sets* the runner's velocity to `arc` (px/s) from its center instead of
+       * kicking along `angle`, so every launch flies the same arc and lands on the same spot
+       * (`plateArc`). It always lies on a floor; rotation picks the throw: rot 0 and 1 to the right,
+       * 2 and 3 mirrored to the left, odd turns a higher, shorter lob. `arc` is the rot 0 throw.
+       */
+      exact?: true;
+      arc?: Vec;
+    }
   /** Always-on wind column along `angle` (`length` tiles); air speed = windSpeed(strength) (src/sim/wind.ts). */
   | { type: 'fan'; at: Vec; angle: number; length: number; strength: number }
   /**
@@ -349,7 +372,23 @@ export type Module =
    * Jump locks the aim and fires `delay` frames later at `power` px/s. Nobody
    * firing for `burn` frames backfires out of the rear.
    */
-  | { type: 'keg'; at: Vec; dirs: number[]; step: number; power: number; delay: number; burn: number }
+  | {
+      type: 'keg';
+      at: Vec;
+      dirs: number[];
+      step: number;
+      power: number;
+      delay: number;
+      burn: number;
+      /**
+       * 'player': a slingshot (Y-Fling). The runner aims by pulling the stick the other way, the pull
+       * builds over `charge` frames from a weak flick to `power`, and jump fires. `dirs[0]` is the rest
+       * aim; `burn` is how long the band holds before it snaps, and it takes `regrow` frames to come back.
+       */
+      aim?: 'player';
+      charge?: number;
+      regrow?: number;
+    }
   | {
       /** Pure scenery dressing for a set piece (press gantry, AC housing, antenna masts). No sim behavior. */
       type: 'deco';
@@ -359,6 +398,19 @@ export type Module =
       h: number;
       seed: number;
     }
+  /**
+   * Panic Button: a button at `at` (its pad on the face `angle` points out of) and an outline of
+   * `cells` that turn solid for `on` frames when it's pressed, ticking in the last `warn`. A cell with
+   * a runner in it waits until it's clear. Pressing again while it's on restarts the timer.
+   */
+  | { type: 'button'; at: Vec; angle: number; cells: Cell[]; on: number; warn: number }
+  /**
+   * Fuse Crate: solid `cells` that count down `count` frames once lit, then blast everything within
+   * `radius` tiles of their center (runners only: no terrain, no props) and stay gone for `regrow`
+   * frames. 'land' lights when stood on; either trigger goes off at once when a shot, flame, laser,
+   * arc or another blast touches it.
+   */
+  | { type: 'fuse'; cells: Cell[]; trigger: 'land' | 'shot'; count: number; radius: number; regrow: number }
   // --- Stage concepts (docs/SETPIECES.md) -----------------------------------
   | {
       /**
@@ -389,7 +441,10 @@ export type Motion =
   // at constant speed, `period` frames per lap; an open track runs back the way it came.
   | { type: 'track'; pts: Vec[]; period: number; closed: boolean };
 
-export type CoatKind = 'spikes' | 'ice' | 'slime';
+/** 'boost': a strip of arrows that kicks you along its face (Boost Strip; see BOOST in ./modules/coat.ts). */
+export type CoatKind = 'spikes' | 'ice' | 'slime' | 'boost';
+/** Art-only block looks on a body. */
+export type BlockLook = 'tetra';
 
 // --- Stage concepts (docs/SETPIECES.md): looks, art only -----------------------
 /** What a spike strip (or a spike coat) is made of; unset is plain metal spikes. */
@@ -430,7 +485,13 @@ export type Archetype =
   | 'wheel'
   | 'mystery'
   | 'rope'
-  | 'keg';
+  | 'keg'
+  // The parody backlog's first batch (docs/PARODY-BACKLOG.md).
+  | 'launchplate'
+  | 'boost'
+  | 'panic'
+  | 'fuse'
+  | 'fling';
 
 export type Role = 'build' | 'hazard' | 'utility' | 'demolish';
 /** Crate parts come in up to three sizes; nothing else differs between them. */
