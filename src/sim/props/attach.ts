@@ -7,7 +7,7 @@ import type { InputFrame } from '../types';
 import { moduleSim } from './registry';
 
 /**
- * Being held by a prop. A rope or keg grabs a runner and then owns their body:
+ * Being held by a prop. A rope, keg or pipe grabs a runner and then owns their body:
  * RunWorld skips the controller while `Runner.attach.grip` is set, and the
  * module's `hold` writes position and velocity instead. The hitbox never
  * changes and everything stays plain data beside `status` and `items`.
@@ -40,6 +40,8 @@ export interface Grip {
   aim: number;
   /** Stuffed inside the part: no held items. */
   sealed: boolean;
+  /** Pipe: uid of the pipe the runner comes out of, or -1 while still going in. */
+  to: number;
   /** Velocity the module last wrote; anything else means something hit this runner. */
   vx: number;
   vy: number;
@@ -118,7 +120,7 @@ export function stepHold(w: RunWorld, r: Runner, inp: InputFrame, f: number): bo
     letGo(r);
     return false;
   }
-  const keep = sim.hold(m, w.touchCtx(rp, g.mi, f, r), r, g, inp);
+  const keep = sim.hold(m, w.touchCtx(rp, g.mi, f, r, undefined, inp), r, g, inp);
   g.t++;
   g.vx = r.body.vx;
   g.vy = r.body.vy;
@@ -156,7 +158,7 @@ export function settleGrabs(w: RunWorld, grabs: GrabRequest[]): void {
     if (w.runners.some((o) => o.attach.grip?.uid === uid && o.attach.grip.mi === mi)) continue;
     stick(r);
     const { vx, vy } = r.body;
-    a.grip = { uid, mi, t: 0, x: g.x, y: g.y, len: g.len ?? 0, s: g.s ?? 0, hooked: !!g.hooked, fuse: -1, aim: 0, sealed: !!g.sealed, vx, vy };
+    a.grip = { uid, mi, t: 0, x: g.x, y: g.y, len: g.len ?? 0, s: g.s ?? 0, hooked: !!g.hooked, fuse: -1, aim: 0, sealed: !!g.sealed, to: -1, vx, vy };
     w.events.push({ type: 'prop', kind: g.kind, x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h / 2 });
   }
   grabs.length = 0;

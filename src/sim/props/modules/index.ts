@@ -18,7 +18,7 @@ export * from './magnet';
 export * from './mystery';
 export * from './phase';
 export * from './piston';
-export * from './portal';
+export * from './pipe';
 export * from './rope';
 export * from './rotor';
 export * from './snapper';

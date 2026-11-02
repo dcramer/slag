@@ -18,6 +18,8 @@ import {
   footprint,
   hangRow,
   landedDef,
+  linkPipes,
+  lonePipe,
   type PlacedProp,
 } from '../sim/props';
 import { RunWorld } from '../sim/run';
@@ -367,7 +369,7 @@ export class Match {
     const s = settled(this.level, this.placed);
     const plan = prove(s.level, s.placed, this.plan);
     if (plan) this.plan = plan;
-    const crate = generateCrate(this.seed, this.round, count, plan?.length ?? MAX_BRIDGES, this.dryRounds);
+    const crate = generateCrate(this.seed, this.round, count, plan?.length ?? MAX_BRIDGES, this.dryRounds, !!lonePipe(this.placed));
     const defs = new Rng(deriveSeed(this.seed ^ this.salt, `crate-order:${this.round}`)).shuffle(crate);
     // Cards in rows of up to 5 (8 players → 10 cards → 2 rows).
     const perRow = Math.min(count, 5);
@@ -487,7 +489,7 @@ export class Match {
     const rng = new Rng(deriveSeed(this.seed ^ this.salt, `secret:${this.round}:${i}:${p.slot}:${this.frame}`));
     const roster = generateRoster(this.seed, rosterSize(this.crate.length));
     const taken = this.crate.filter((c) => c.claimedBy >= 0).flatMap((c) => c.def.part ?? []);
-    return { ...rollSecret(rng, roster, card.secret!, this.dryRounds, taken), key: card.def.key };
+    return { ...rollSecret(rng, roster, card.secret!, this.dryRounds, taken, !!lonePipe(this.placed)), key: card.def.key };
   }
 
   /** Frames left in the current pick/place countdown (Infinity when untimed). */
@@ -554,6 +556,7 @@ export class Match {
             this.placed.push(pp);
             this.events.push({ type: 'place', slot: p.slot, x: p.cursor.x, y: p.cursor.y });
           }
+          linkPipes(this.placed);
           cleanBlood(this.blood, this.level, this.placed);
           p.placed = true;
         }
@@ -614,6 +617,7 @@ export class Match {
       washBlood(this.blood, blastCells(spec, tx, ty, rot));
       this.events.push(blastEvent(spec, tx, ty, rot));
     });
+    linkPipes(this.placed);
   }
 
   /** A blast in either phase: `props` is what's standing when it goes off. */

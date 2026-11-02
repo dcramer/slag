@@ -42,7 +42,7 @@ export type GameEvent =
   | { type: 'crumble-start'; uid: number }
   | { type: 'crumble-break'; uid: number }
   | { type: 'explosion'; x: number; y: number; r: number }
-  /** Generic prop moment for fx/audio (teleport, bump, thud, snap, bounce, splat…). (x2, y2): a second point, e.g. a portal's exit. */
+  /** Generic prop moment for fx/audio (pipe, bump, thud, snap, bounce, splat…). (x2, y2): a second point, e.g. a pipe's far mouth. */
   | { type: 'prop'; kind: string; x: number; y: number; x2?: number; y2?: number; r?: number }
   | { type: 'place'; slot: number; x: number; y: number }
   /** A placement the match turned down because it would leave no way to the flag (gen/level/winnable.ts). */

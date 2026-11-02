@@ -49,22 +49,16 @@ export function drawRunnerStatus(rc: RC, b: Body, st: RunnerStatus, soot = 0): v
   }
 }
 
-const PURPLE: HSL = { h: 275, s: 90, l: 65 };
 const GOLD: HSL = { h: 45, s: 100, l: 65 };
 const AMBER: HSL = { h: 36, s: 100, l: 59 };
 
 type PropEvent = Extract<GameEvent, { type: 'prop' }>;
 
-/** Effects for generic prop events (teleports, bumps, slams, splats, EMPs...), keyed by event kind. */
+/** Effects for generic prop events (pipes, bumps, slams, splats, EMPs...), keyed by event kind. */
 const PROP_FX: Record<string, (fx: Fx, e: PropEvent, shake: (k: number) => void) => void> = {
-  teleport(fx, e) {
-    fx.add('ring', e.x, e.y, 0, 0, PURPLE, 18, 0.35);
-    fx.burst('spark', e.x, e.y, 10, 120, [PURPLE], 1, 0.4);
-    if (e.x2 !== undefined && e.y2 !== undefined) {
-      fx.add('ring', e.x2, e.y2, 0, 0, PURPLE, 22, 0.4);
-      fx.add('flash', e.x2, e.y2, 0, 0, PURPLE, 18, 0.2);
-      fx.burst('spark', e.x2, e.y2, 12, 140, [PURPLE, { h: 200, s: 90, l: 70 }], 1, 0.45);
-    }
+  'pipe-out'(fx, e) {
+    // A puff of dust where you come out.
+    if (e.x2 !== undefined && e.y2 !== undefined) fx.burst('dust', e.x2, e.y2, 8, 60, [{ h: 40, s: 10, l: 80 }], 1, 0.4);
   },
   bump(fx, e, shake) {
     fx.add('ring', e.x, e.y, 0, 0, GOLD, 16, 0.25);

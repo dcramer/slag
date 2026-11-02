@@ -19,6 +19,7 @@
  *   pnpm shot cards --arch saw,block       → crate cards of those parts at every size
  *   pnpm shot parts --arch saw,flail       → those parts placed and raced, shot close up (`--styles all`: every launcher style)
  *   pnpm shot buildparts                   → every building part in a race, on crate cards, and as place ghosts
+ *   pnpm shot pipes [--propseed 3]         → warp pipes facing every way: placing (with the pair tether), close up, and mid-trip
  *   pnpm shot items --seed abc             → held items: in hand, loose, and each one used
  *   pnpm shot blood --theme farm --players 4 --noletters → staged deaths over four rounds: ooze, settled, place phase, expiry
  *   pnpm shot stack --seed abc             → stepped frames of runners stacking, walking as a stack, and a head-bounce

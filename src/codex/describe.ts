@@ -24,7 +24,7 @@ export const PART_INFO: Record<Module['type'], { title: string; blurb: string }>
   coat: { title: 'Attachment', blurb: 'Paint jobs with consequences.' },
   mystery: { title: 'Mystery crate', blurb: 'Contents may vary. Odds not disclosed.' },
   bomb: { title: 'Demolition', blurb: 'Renovation, the fast way.' },
-  portal: { title: 'Warp pads', blurb: 'Two holes, no plot.' },
+  pipe: { title: 'Pipe', blurb: 'Sold separately. Works in pairs.' },
   bumper: { title: 'Bumper', blurb: 'Ding ding ding. Extra ball not included.' },
   magnet: { title: 'Gravity well', blurb: 'Needy or aloof, never in between.' },
   web: { title: 'Web', blurb: 'Spider not included. Spider is somewhere.' },
@@ -102,8 +102,8 @@ export function summarize(def: PropDef): string[] {
         );
         break;
       }
-      case 'portal':
-        out.push(`warp pads ${fmt(Math.abs(m.b[0] - m.a[0]))}×${fmt(Math.abs(m.b[1] - m.a[1]))} tiles apart · keeps your speed`);
+      case 'pipe':
+        out.push(`${m.look} pipe ${fmt(m.cells.length / 2)} tiles long · pairs with the next one placed`);
         break;
       case 'bumper':
         out.push(`bumper r${fmt(m.radius, 2)} · kick ${fmt(m.power)}px/s`);

@@ -101,38 +101,6 @@ const steps = (run: RunWorld, n: number, inp: InputFrame = NO_INPUT) => {
   for (let i = 0; i < n; i++) run.step([inp]);
 };
 
-describe('warp pads', () => {
-  const portal = def([{ type: 'portal', a: c(0, 0), b: c(6, 0) }]);
-  it('move you to the other pad with velocity intact, and do not bounce you back', () => {
-    const level = testLevel();
-    const { run, r } = race(level, [place(portal, 10, FLOOR - 1)]);
-    standAt(r, 8, FLOOR - 1);
-    r.body.vx = 150;
-    let jumped = -1;
-    for (let i = 0; i < 20 && jumped < 0; i++) {
-      const x0 = r.body.x;
-      run.step([{ ...NO_INPUT, right: true }]);
-      if (r.body.x - x0 > 3 * TILE) jumped = i;
-    }
-    expect(jumped).toBeGreaterThanOrEqual(0);
-    expect(r.body.x).toBeGreaterThan(16 * TILE - 8);
-    expect(r.body.vx).toBeGreaterThan(100);
-    // Standing on the exit pad doesn't send you back.
-    const x1 = r.body.x;
-    steps(run, 30);
-    expect(Math.abs(r.body.x - x1)).toBeLessThan(2 * TILE);
-  });
-  it('does nothing when the exit is blocked', () => {
-    const level = testLevel();
-    const p = place(portal, 10, FLOOR - 1);
-    const { run, r } = race(level, [p]);
-    level.tiles[(FLOOR - 1) * LEVEL_W + 16] = 1; // wall over pad B
-    standAt(r, 10, FLOOR - 1);
-    steps(run, 3);
-    expect(r.body.x).toBeLessThan(12 * TILE);
-  });
-});
-
 describe('bumper', () => {
   it('kicks you straight away from its center at its power', () => {
     const level = testLevel();
@@ -727,7 +695,7 @@ describe('wheel', () => {
 });
 
 describe('new archetypes', () => {
-  const NEW = ['portal', 'bumper', 'magnet', 'web', 'blinker', 'dropper', 'snapper', 'wheel', 'hangar'] as const;
+  const NEW = ['pipe', 'bumper', 'magnet', 'web', 'blinker', 'dropper', 'snapper', 'wheel', 'hangar'] as const;
   it('are all in the crate weights and generate deterministically', () => {
     const names = ARCHETYPE_WEIGHTS.map(([k]) => k);
     for (const k of NEW) {

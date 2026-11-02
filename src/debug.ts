@@ -5,7 +5,7 @@ import type { NetSession } from './net/session';
 import { hashMatch } from './net/snapshot';
 import type { Renderer } from './render/renderer';
 import { giveItem, ITEM_KINDS, type ItemKind } from './sim/items';
-import { canPlace, landedDef } from './sim/props';
+import { canPlace, landedDef, linkPipes } from './sim/props';
 import type { ProfileOverride } from './gen/level';
 import type { InputFrame } from './sim/types';
 import { WEATHER_KINDS } from './sim/weather';
@@ -38,8 +38,8 @@ export interface SlagDebug {
   net: NetSession | null;
   /** Join N players (kb1, kb2, pad0…pad5) and start round 1. */
   quickStart(players?: number): void;
-  /** Place one prop of each archetype at deterministic legal spots (owner = player 1). */
-  addProps(kinds: Archetype[], seed?: number): number;
+  /** Place one prop of each archetype at deterministic legal spots (owner = player 1), turned `rot` quarter turns. */
+  addProps(kinds: Archetype[], seed?: number, rot?: number): number;
   /** Skip pick/place and start a race now. */
   race(kinds?: Archetype[], seed?: number): void;
   /** Hand each race runner a held item, cycling through `kinds`. */
@@ -76,20 +76,21 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
       for (let i = 0; i < players; i++) match.join(dev(DEVICES[i]));
       if (match.phase === 'lobby') match.startMatch();
     },
-    addProps(kinds, seed = 1) {
+    addProps(kinds, seed = 1, rot = 0) {
       let added = 0;
       kinds.forEach((k, i) => {
         const def = generateProp(new Rng(seed * 977 + i * 131), k, `dbg-${i}`);
         for (let n = 0; n < 4000; n++) {
           const tx = 6 + ((i * 7 + n * 13) % (match.level.w - 12));
           const ty = 3 + ((i * 5 + n * 7) % (match.level.h - 6));
-          if (canPlace(match.level, match.placed, def, 0, tx, ty)) {
-            match.placed.push({ uid: uid++, def: landedDef(match.level, match.placed, def, 0, tx, ty), owner: match.players[1]?.slot ?? 0, tx, ty, rot: 0 });
+          if (canPlace(match.level, match.placed, def, rot, tx, ty)) {
+            match.placed.push({ uid: uid++, def: landedDef(match.level, match.placed, def, rot, tx, ty), owner: match.players[1]?.slot ?? 0, tx, ty, rot });
             added++;
             return;
           }
         }
       });
+      linkPipes(match.placed);
       return added;
     },
     race(kinds = [], seed = 1) {

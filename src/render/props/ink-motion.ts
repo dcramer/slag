@@ -1,7 +1,7 @@
 import { type P, stroke } from '../ink';
 
 /**
- * Shapes and marks for parts that move: saws, maces, wheels, ropes, kegs, portals. The pen and the flat
+ * Shapes and marks for parts that move: saws, maces, wheels, ropes, kegs. The pen and the flat
  * tones are `ink-props.ts`; this is what a moving part adds on top: shapes cut along an axis (a link, a
  * stave, a sausage), arcs for spin and swing, and the motion lines a turning thing trails.
  */
