@@ -11,7 +11,7 @@
  */
 
 import { reportError, reportEvent } from '../telemetry';
-import { CEL_FS, CEL_SHADOW, MIST_MAX } from './cel-shader';
+import { CEL_FS, CEL_SHADOW, celNoise, MIST_MAX, NOISE_SIZE } from './cel-shader';
 
 const VS = `#version 300 es
 in vec2 p; out vec2 uv;
@@ -42,6 +42,9 @@ export interface PostParams {
   lift: [number, number, number];
   /** Pixels per world unit of `fg`. */
   scale: number;
+  /** Canvas px of the world's origin: the line's noise is pinned to the world, so it stays put as the camera moves. */
+  originX: number;
+  originY: number;
   /** The theme's ambient light, which the light bands sit relative to. */
   ambient: number;
   /** Mist: a small canvas whose alpha is how thick the air is, or null for clear air (render/weather.ts). */
@@ -97,6 +100,7 @@ class GLCompositor implements Compositor {
   private texFg: WebGLTexture;
   private texLight: WebGLTexture;
   private texGlow: WebGLTexture;
+  private texNoise: WebGLTexture;
   private texMist: WebGLTexture;
   private hasMist = false;
   private half!: [Target, Target];
@@ -122,6 +126,10 @@ class GLCompositor implements Compositor {
     this.texFg = this.tex();
     this.texLight = this.tex();
     this.texGlow = this.tex();
+    this.texNoise = this.tex();
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, NOISE_SIZE, NOISE_SIZE, 0, gl.RGBA, gl.UNSIGNED_BYTE, celNoise());
     this.texMist = this.tex();
     this.clearMist();
     this.resize(2, 2);
@@ -290,6 +298,11 @@ class GLCompositor implements Compositor {
     gl.uniform2f(this.u(f, 'uRes'), this.w, this.h);
     gl.uniform1f(this.u(f, 'uAmbient'), p.ambient);
     gl.uniform2f(this.u(f, 'uShadow'), (-CEL_SHADOW[0] * p.scale) / this.w, (CEL_SHADOW[1] * p.scale) / this.h);
+    gl.uniform3f(this.u(f, 'uView'), p.scale, p.originX, p.originY);
+    // Unit 7: 0-6 are the layers, the bloom and the mist.
+    gl.activeTexture(gl.TEXTURE7);
+    gl.bindTexture(gl.TEXTURE_2D, this.texNoise);
+    gl.uniform1i(this.u(f, 'uNoise'), 7);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 }

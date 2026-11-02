@@ -1,5 +1,5 @@
 import { css, type HSL, mixHsl, shift } from '../core/color';
-import { Rng } from '../core/rng';
+import { hash2, Rng } from '../core/rng';
 import type { Match } from '../game/match';
 import type { Ambient, Theme } from '../gen/theme';
 import { RUN_COUNTDOWN, TILE } from '../sim/constants';
@@ -7,6 +7,7 @@ import { type Level, tileAt } from '../sim/level';
 import { gustPush, gustWarning, type WeatherKind } from '../sim/weather';
 import type { Camera } from './camera';
 import type { Fx } from './fx';
+import { blob, line, type P, sn, stroke } from './ink';
 import type { RC } from './kit';
 
 /**
@@ -156,42 +157,51 @@ function drawSnow({ rc, view }: Air) {
   c.fill();
 }
 
+/** Snow lies in a drift with a lumpy underside, inked where it hangs over the edge. */
 function coatSnow(g: CanvasRenderingContext2D, x: number, y: number, rng: Rng) {
-  const lump = () => rng.range(3.2, 5.6);
-  const a = lump();
-  const b = lump();
-  const m = lump();
-  g.fillStyle = '#bccbe0';
-  g.beginPath();
-  g.moveTo(x, y - 1);
-  g.lineTo(x + TILE, y - 1);
-  g.lineTo(x + TILE, y + b + 1.4);
-  g.lineTo(x + 8, y + m + 1.4);
-  g.lineTo(x, y + a + 1.4);
-  g.closePath();
-  g.fill();
-  g.fillStyle = '#f2f6fb';
-  g.beginPath();
-  g.moveTo(x, y - 1);
-  g.lineTo(x + TILE, y - 1);
-  g.lineTo(x + TILE, y + b);
-  g.lineTo(x + 8, y + m);
-  g.lineTo(x, y + a);
-  g.closePath();
-  g.fill();
+  const lip: P[] = [];
+  const top: P[] = [];
+  for (let i = 0; i <= 6; i++) {
+    const px = x + (TILE * i) / 6;
+    top.push({ x: px, y: y - 1.2 - Math.abs(sn(px * 0.21, y, 3)) * 0.7 });
+    lip.push({ x: px, y: y + 3 + rng.range(0, 2.4) + Math.abs(sn(px * 0.3, y, 4)) * 1.4 });
+  }
+  const shape = (a: readonly P[], b: readonly P[], fill: string, dy = 0) => {
+    g.fillStyle = fill;
+    g.beginPath();
+    a.forEach((q, i) => (i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)));
+    for (let i = b.length - 1; i >= 0; i--) g.lineTo(b[i].x, b[i].y + dy);
+    g.closePath();
+    g.fill();
+  };
+  shape(top, lip, '#b4c4dc', 1.2);
+  shape(top, lip, '#f2f6fb');
+  g.fillStyle = '#4f5f80';
+  stroke(
+    g,
+    lip.map((q) => ({ x: q.x, y: q.y + 1.3 })),
+    { w: 0.9, seed: (x + y) | 0, taper: [0.2, 0.2], press: 0.5 },
+  );
 }
 
+/** Wet ground: a dark sheen, highlights in broken dashes, and the odd puddle with an inked rim. */
 function coatRain(g: CanvasRenderingContext2D, x: number, y: number, rng: Rng) {
   g.fillStyle = 'rgba(14,24,48,0.34)';
   g.fillRect(x, y, TILE, 3);
   g.fillStyle = 'rgba(206,230,255,0.95)';
-  // Broken highlights and the odd puddle: a wet floor shines in dashes, it isn't a stripe.
-  for (let px = x + rng.range(0, 4); px < x + TILE - 2; px += rng.range(4, 7)) g.fillRect(px, y, Math.min(rng.range(2.5, 6), x + TILE - px), 1.5);
+  for (let px = x + rng.range(0, 4); px < x + TILE - 3; px += rng.range(4.5, 7.5)) {
+    line(g, px, y + 0.7, Math.min(x + TILE - 1, px + rng.range(2.5, 5.5)), y + 0.6, { w: 1.2, seed: px | 0, taper: [0.25, 0.35], press: 0.3 });
+  }
   if (rng.chance(0.35)) {
+    const cx = x + 8;
+    g.fillStyle = '#1f2c48';
+    blob(g, cx, y + 1.2, 6.9, x | 0, 0.24, 0.1);
+    g.fill();
     g.fillStyle = 'rgba(112,156,218,0.95)';
-    g.fillRect(x + 1, y, 13, 2.4);
+    blob(g, cx, y + 1, 6.2, x | 0, 0.2, 0.1);
+    g.fill();
     g.fillStyle = 'rgba(232,244,255,1)';
-    g.fillRect(x + 3, y, 5, 1.2);
+    line(g, cx - 4, y + 0.6, cx - 0.5, y + 0.5, { w: 0.9, seed: x | 0, taper: [0.2, 0.4] });
   }
 }
 
@@ -208,14 +218,18 @@ const artOf = (level: Level): WeatherArt => WEATHER_ART[level.weather?.kind ?? '
 /** A theme's own motes, except rain and snow: those fall only when the footing is real. */
 export const calmMotes = (th: Theme): Ambient => (th.ambient === 'rain' || th.ambient === 'snow' ? 'dust' : th.ambient);
 
-/** Bake weather onto the terrain's exposed tops. */
-export function coatTerrain(g: CanvasRenderingContext2D, level: Level): void {
+/**
+ * Bake weather onto the terrain's exposed tops, or just those in `area` (world px). Each cell rolls from
+ * its own position, never from a walk across the level: a blast redraws only what it touched, so a coat
+ * that depended on every cell before it would come out different on each side of the redraw.
+ */
+export function coatTerrain(g: CanvasRenderingContext2D, level: Level, area?: { x0: number; y0: number; x1: number; y1: number }): void {
   const coat = artOf(level).coat;
   if (!coat) return;
-  const rng = new Rng(level.seed ^ 0x5eed);
   for (const [x, y] of topCells(level)) {
+    if (area && ((x + 1) * TILE < area.x0 - 8 || x * TILE > area.x1 + 8 || (y + 1) * TILE < area.y0 - 8 || y * TILE > area.y1 + 8)) continue;
     g.save();
-    coat(g, x * TILE, y * TILE, rng);
+    coat(g, x * TILE, y * TILE, new Rng(Math.floor(hash2(x, y, level.seed ^ 0x5eed) * 0x7fffffff)));
     g.restore();
   }
 }

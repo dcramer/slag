@@ -211,7 +211,11 @@ export async function startServer(opts: { dev?: boolean; port?: number } = {}): 
 export async function launchBrowser(extraArgs: string[] = []): Promise<Browser> {
   const { chromium } = await import('playwright');
   const executablePath = process.env.PW_CHROMIUM ?? (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
-  return chromium.launch({ executablePath, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', ...extraArgs] });
+  // PW_GPU=1 measures on this machine's real GPU, still headless. Software GL is the default so results don't depend on the machine.
+  const gl = process.env.PW_GPU
+    ? ['--use-gl=angle', '--use-angle=gl-egl', '--ignore-gpu-blocklist', '--enable-gpu-rasterization']
+    : ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'];
+  return chromium.launch({ executablePath, args: [...gl, ...extraArgs] });
 }
 
 /** Tiny `--key value` / `--flag` argv reader. */

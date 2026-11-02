@@ -1,6 +1,6 @@
 # SLAG UI art direction
 
-These rules cover the menus, the lobby, and the in-game HUD. The world art (levels, props, characters) is cel shaded, with its own procedural rules in `src/render/`.
+These rules cover the menus, the lobby, and the in-game HUD. The world art (levels, props, characters) is hand-inked in code: see [World art](#world-art-ink) at the end.
 
 ## Identity: a molten foundry that doubles as a toy box
 
@@ -81,3 +81,23 @@ On pages, body text is 15–18 px and menu items are 30 px display.
 - Buttons are stamped: a top face over a darker side that sinks 1.5–3 px on hover or press. Primary buttons are molten with ink text, secondary are iron with bone text, and confirmed buttons are toxic.
 - Overlays (`src/ui/menus.ts`) are a single iron card with a hazard-tape top edge over a dark scrim. They have no blur and no glass.
 - Settings tabs are stamped plates in display type, with the active one molten and pressed in. Rows use the console selection above: the row holding the selected control fills molten, gets the diamond and nudges. Tab prompts flank the strip and Done carries its back prompt.
+
+## World art: ink
+
+Everything in the world is drawn the way a person inks a comic: flat tones, hard shadow shapes and a pen. There are no gradients and no textures, and all of it is made in code. It's judged at gameplay scale, where 1 world px is about 2.5 screen px at 1080p.
+
+**The line.** Draw with `stroke()` and `line()` from `src/render/ink.ts`: a filled ribbon that swells, tapers and lifts off the page.
+
+- Contours run 1 to 3 world px: thin on the side facing the light (upper left), heaviest away from it.
+- A long edge is many strokes, not one. Lift the pen, and leave some joints undrawn: the gaps are what make it look drawn and not stamped.
+- Lines are a dark of what they outline, not one black. The cel pass does this for silhouettes, and adds the same wobble and lean to anything without strokes of its own.
+
+**Tone.** Two or three flat tones per surface, cut as shapes with a hand's edge (`blob`, or a block's own bowed sides). Color comes from the theme (`base`, `dark`, `light`, `outline`), so art recolors with the seed.
+
+**Marks.** What a surface is made of is said with marks: chisel ticks, grain, rivets, cracks, pebbles. Add them through a registry: `INK_MATERIALS`, `INK_CAPS`, `INK_PLATFORMS`. Marks are sparse. If it reads as noise at gameplay scale, there are too many.
+
+**Hatching.** Parallel tapered strokes that hang off edges facing away from the light and fade into the fill. Use them on terrain and anything bigger than about two tiles. Hatching vanishes at character size: small things get silhouette and one hard shadow shape instead.
+
+**Fair play.** The art must not lie about the hitbox. The drawn fill stays within `EDGE_DRIFT` (1.25 px) of the collision shape and floors within `FLOOR_DRIFT` (0.5 px); corners round by at most 3 px. Only thin things may hang past that (grass, vines, ink lines, a brace), and thin is what makes them read as decoration. Anything that looks solid is solid.
+
+**Banned.** `ctx.stroke()` for an outline; gradients as shading; soft glows on things that aren't hot; photo or painted textures; anything that traces a rectangle with an even line; `Math.random` in a mark, because marks must land in the same place every time.

@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Lettering, letteringAllowed, wordFor } from '../src/render/cel';
-import { CEL_FS } from '../src/render/cel-shader';
+import { CEL_FS, celNoise, NOISE_SIZE } from '../src/render/cel-shader';
 import { createCompositor, type PostParams } from '../src/render/post';
 
 /** Just enough WebGL2 to run the compositor, recording which fragment shader each draw used. */
 function fakeGL(failCel = false) {
-  const log: { draws: string[]; compiled: string[] } = { draws: [], compiled: [] };
+  const log: { draws: string[]; compiled: string[]; samplers: Map<string, number> } = { draws: [], compiled: [], samplers: new Map() };
   const sources = new Map<object, string>();
   const attached = new Map<object, string>();
   let current = '';
@@ -23,7 +23,8 @@ function fakeGL(failCel = false) {
     useProgram: (p: object) => void (current = attached.get(p)!),
     drawArrays: () => void log.draws.push(current),
     getAttribLocation: () => 0,
-    getUniformLocation: () => ({}),
+    getUniformLocation: (_: object, name: string) => ({ name }),
+    uniform1i: (loc: { name: string }, v: number) => void (current === CEL_FS && log.samplers.set(loc.name, v)),
     createBuffer: () => ({}),
     createTexture: () => ({}),
     createFramebuffer: () => ({}),
@@ -37,7 +38,7 @@ function fake2D() {
   return { ctx: { drawImage: (c: unknown) => void drawn.push(c), fillRect: () => {} }, drawn };
 }
 
-const params: PostParams = { exposure: 1, flash: 0, tint: [1, 1, 1], lift: [0, 0, 0], scale: 1, ambient: 0.8 };
+const params: PostParams = { exposure: 1, flash: 0, tint: [1, 1, 1], lift: [0, 0, 0], scale: 1, originX: 0, originY: 0, ambient: 0.8 };
 const [scene, fg, light, glow] = ['scene', 'fg', 'light', 'glow'].map((name) => ({ name }) as unknown as HTMLCanvasElement);
 
 describe('compositor', () => {
@@ -46,6 +47,16 @@ describe('compositor', () => {
     const canvas = { getContext: () => gl, addEventListener: () => {} };
     createCompositor(canvas as unknown as HTMLCanvasElement).render(scene, fg, light, glow, params);
     expect(log.draws.at(-1)).toBe(CEL_FS);
+  });
+
+  it('gives every texture the cel pass reads its own unit', () => {
+    // Two samplers on one unit read the same texture, and nothing says so: one effect just quietly takes the other's place.
+    const { gl, log } = fakeGL();
+    const canvas = { getContext: () => gl, addEventListener: () => {} };
+    createCompositor(canvas as unknown as HTMLCanvasElement).render(scene, fg, light, glow, params);
+    const units = [...log.samplers.values()];
+    expect(units.length).toBeGreaterThanOrEqual(8);
+    expect(new Set(units).size).toBe(units.length);
   });
 
   describe('without the cel pass', () => {
@@ -101,5 +112,29 @@ describe('impact words', () => {
       l.update(1 / 60);
     }
     expect((l as unknown as { words: unknown[] }).words).toHaveLength(1);
+  });
+});
+
+describe('line noise', () => {
+  it('tiles, so the wrap never shows as a seam in the line', () => {
+    const n = celNoise();
+    const S = NOISE_SIZE;
+    const at = (x: number, y: number, c: number) => n[(y * S + x) * 4 + c];
+    let worst = 0;
+    for (let i = 0; i < S; i++) {
+      for (let c = 0; c < 3; c++) {
+        worst = Math.max(worst, Math.abs(at(i, 0, c) - at(i, S - 1, c)), Math.abs(at(0, i, c) - at(S - 1, i, c)));
+      }
+    }
+    // Neighbours across the wrap differ no more than neighbours anywhere: a seam would jump far more.
+    expect(worst).toBeLessThan(24);
+  });
+
+  it('covers a range wide enough to move the line', () => {
+    const n = celNoise();
+    for (const c of [0, 1, 2]) {
+      const vals = Array.from({ length: NOISE_SIZE * NOISE_SIZE }, (_, i) => n[i * 4 + c]);
+      expect(Math.max(...vals) - Math.min(...vals)).toBeGreaterThan(120);
+    }
   });
 });

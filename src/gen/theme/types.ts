@@ -44,10 +44,7 @@ export type SkylineKind =
   | 'skyscrapers'
   | 'rooftops';
 
-/**
- * Terrain materials. Each maps to a CC0 detail texture (public/textures) plus a
- * procedural fallback in src/render/terrain.ts.
- */
+/** Terrain materials. Each is drawn by a painter in src/render/ink-material.ts. */
 export type TerrainKind =
   | 'rock'
   | 'brick'
