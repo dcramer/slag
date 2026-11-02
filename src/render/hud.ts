@@ -1,16 +1,31 @@
 import { css, type HSL } from '../core/color';
 import { seedToString } from '../core/rng';
 import type { Match } from '../game/match';
-import { POINTS } from '../game/scoring';
 import type { Role } from '../gen/props';
-import { deviceHints, deviceLabel } from '../input/input';
-import { MAX_PLAYERS, RUN_COUNTDOWN, TARGET_SCORE, VIEW_H, VIEW_W } from '../sim/constants';
+import { MAX_PLAYERS, RUN_COUNTDOWN, VIEW_H, VIEW_W } from '../sim/constants';
+import { THEME_LABELS } from '../themes';
 import { drawCharacter } from './character';
 import { circle, glowDot, type RC, rrect } from './kit';
 import { drawPreview } from './props';
 
 const DISPLAY = '"Lilita One", "Arial Rounded MT Bold", system-ui, sans-serif';
 const UI = 'Rubik, "Segoe UI", system-ui, sans-serif';
+
+export type HudAction = 'join' | 'ready' | 'look' | 'name' | 'level' | 'settings' | 'rules';
+
+export interface HudButton {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  action: HudAction;
+  device?: string;
+}
+
+export interface DeviceInfo {
+  deviceLabel(device: string): string;
+  hints(device: string): { confirm: string; alt: string; jump: string; down: string };
+}
 
 const ROLE: Record<Role, { label: string; color: HSL }> = {
   build: { label: 'BUILD', color: { h: 140, s: 70, l: 50 } },
@@ -27,7 +42,48 @@ export class Hud {
   private lastPhase = '';
   private lastT = 0;
 
+  /** Device labels/hints from the live key bindings (set by main). */
+  devices: DeviceInfo = {
+    deviceLabel: (d) => d,
+    hints: () => ({ confirm: 'Confirm', alt: 'Alt', jump: 'Jump', down: 'Down' }),
+  };
+  /** Device the mouse controls (gets name/settings buttons). */
+  mouseDevice = 'kb1';
+  /** Latest pointer position in view coords, for hover highlights. */
+  pointer: { x: number; y: number } | null = null;
+  /** Clickable regions from the last frame (lobby buttons). */
+  private buttons: HudButton[] = [];
+
   constructor(private ctx: CanvasRenderingContext2D) {}
+
+  /** Topmost clickable region at (x, y) in view coords. */
+  hit(x: number, y: number): HudButton | null {
+    for (let i = this.buttons.length - 1; i >= 0; i--) {
+      const b = this.buttons[i];
+      if (x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h) return b;
+    }
+    return null;
+  }
+
+  private button(b: HudButton) {
+    this.buttons.push(b);
+    return this.pointer !== null && this.pointer.x >= b.x && this.pointer.x < b.x + b.w && this.pointer.y >= b.y && this.pointer.y < b.y + b.h;
+  }
+
+  /** Small pill button with hover state. */
+  private pill(b: HudButton, label: string, size = 8, accent?: string) {
+    const hover = this.button(b);
+    const c = this.ctx;
+    c.fillStyle = hover ? 'rgba(255,160,60,0.35)' : (accent ?? 'rgba(255,255,255,0.1)');
+    rrect(c, b.x, b.y, b.w, b.h, b.h / 2);
+    c.fill();
+    if (hover) {
+      c.strokeStyle = 'rgba(255,180,90,0.8)';
+      c.lineWidth = 1;
+      c.stroke();
+    }
+    this.text(label, b.x + b.w / 2, b.y + b.h / 2 + 0.5, size, '#fff', 'center', UI, 700);
+  }
 
   resize(w: number, h: number) {
     this.glow.width = w;
@@ -71,6 +127,7 @@ export class Hud {
   }
 
   draw(m: Match, t: number, pw: number, ph: number) {
+    this.buttons = [];
     const c = this.ctx;
     const k = pw / VIEW_W;
     c.setTransform(1, 0, 0, 1, 0, 0);
@@ -177,65 +234,74 @@ export class Hud {
     this.logo(VIEW_W / 2, 58, 64, t);
     this.text('build it · break it · beat it', VIEW_W / 2, 104, 10, '#f3d9c4', 'center', UI, 500);
     this.panel(VIEW_W / 2 - 170, 116, 340, 22, 11, 'rgba(255,170,90,0.35)');
-    this.text(`${m.level.theme.name}`, VIEW_W / 2 - 160, 127, 9, '#ffd9a8', 'left', UI, 700);
-    this.text(`${m.level.style} · seed ${seedToString(m.seed)}`, VIEW_W / 2 + 160, 127, 8, '#bba', 'right', UI, 500);
+    this.text(`${THEME_LABELS[m.level.theme.id].toUpperCase()} · ${m.level.theme.name}`, VIEW_W / 2 - 160, 127, 9, '#ffd9a8', 'left', UI, 700);
+    this.text(`seed ${seedToString(m.seed)}`, VIEW_W / 2 + 160, 127, 8, '#bba', 'right', UI, 500);
 
-    const bw = 152;
-    const bh = 186;
-    const gap = 16;
-    const x0 = (VIEW_W - (MAX_PLAYERS * bw + (MAX_PLAYERS - 1) * gap)) / 2;
-    for (let i = 0; i < MAX_PLAYERS; i++) {
-      const x = x0 + i * (bw + gap);
-      const y = 150;
-      const p = m.players.find((p) => p.slot === i);
+    // Up to MAX_PLAYERS (8) slots in a 4-wide grid: joined players + one "join" slot (min 4 shown).
+    const shown = Math.min(MAX_PLAYERS, Math.max(4, m.players.length + 1));
+    const cols = 4;
+    const bw = 172;
+    const bh = shown > 4 ? 96 : 150;
+    const gap = 10;
+    const x0 = (VIEW_W - (cols * bw + (cols - 1) * gap)) / 2;
+    for (let i = 0; i < shown; i++) {
+      const x = x0 + (i % cols) * (bw + gap);
+      const y = 146 + Math.floor(i / cols) * (bh + gap);
+      const p = m.players[i];
       const col = p ? p.character.body : { h: 0, s: 0, l: 40 };
       this.panel(x, y, bw, bh, 12, p?.ready ? css({ h: 120, s: 80, l: 55 }, 0, 0.9) : p ? css(col, 0, 0.5) : 'rgba(255,255,255,0.1)');
       if (!p) {
+        const joinable = !m.players.some((q) => q.device === this.mouseDevice);
+        const hover = joinable && this.button({ x, y, w: bw, h: bh, action: 'join', device: this.mouseDevice });
         const pulse = 0.5 + 0.5 * Math.sin(t * 3 + i);
-        this.text('PRESS TO JOIN', x + bw / 2, y + bh / 2 - 10, 11, `rgba(255,255,255,${0.35 + pulse * 0.4})`, 'center', DISPLAY, 400);
-        this.text('Space · Enter · Ⓐ', x + bw / 2, y + bh / 2 + 10, 8, '#777', 'center', UI, 500);
+        this.text('PRESS TO JOIN', x + bw / 2, y + bh / 2 - 8, 11, hover ? '#ffd9a8' : `rgba(255,255,255,${0.35 + pulse * 0.4})`, 'center', DISPLAY, 400);
+        this.text(joinable ? 'click · Space/Enter · Ⓐ' : 'Ⓐ on a gamepad', x + bw / 2, y + bh / 2 + 10, 8, '#777', 'center', UI, 500);
         continue;
       }
-      // Spotlight.
-      const sg = c.createRadialGradient(x + bw / 2, y + 80, 4, x + bw / 2, y + 80, 70);
+      // Character on the left with a spotlight, details on the right.
+      const cx = x + 44;
+      const feet = y + bh - 16;
+      const sg = c.createRadialGradient(cx, feet - 24, 4, cx, feet - 24, 52);
       sg.addColorStop(0, css(col, 10, 0.45));
       sg.addColorStop(1, css(col, 0, 0));
       c.fillStyle = sg;
       c.fillRect(x, y, bw, bh);
       c.fillStyle = 'rgba(0,0,0,0.35)';
       c.beginPath();
-      c.ellipse(x + bw / 2, y + 116, 26, 5, 0, 0, Math.PI * 2);
+      c.ellipse(cx, feet, 20, 4, 0, 0, Math.PI * 2);
       c.fill();
-      drawCharacter({ s: c, g: this.gctx }, p.character, x + bw / 2, y + 116, {
+      drawCharacter({ s: c, g: this.gctx }, p.character, cx, feet, {
         facing: Math.sin(t * 0.8 + i) > 0 ? 1 : -1,
         vx: 0,
         vy: 0,
         grounded: true,
         t,
-        scale: 3.6,
+        scale: bh > 100 ? 3.4 : 2.7,
         celebrate: p.ready,
       });
-      this.text(p.character.name, x + bw / 2, y + 134, 15, '#fff', 'center', DISPLAY, 400, 3);
-      this.text(deviceLabel(p.device), x + bw / 2, y + 150, 7.5, '#aaa', 'center', UI, 500);
-      const h = deviceHints(p.device);
-      const pillC = p.ready ? css({ h: 120, s: 70, l: 45 }) : 'rgba(255,255,255,0.1)';
-      c.fillStyle = pillC;
-      rrect(c, x + 22, y + 159, bw - 44, 15, 7.5);
-      c.fill();
-      this.text(p.ready ? 'READY!' : `${h.confirm} — ready up`, x + bw / 2, y + 166.5, 8.5, '#fff', 'center', UI, 700);
-      this.text(`${h.alt}: new look`, x + bw / 2, y + 181, 7, '#888', 'center', UI, 500);
+      const tx = x + 88;
+      const ty = y + bh / 2;
+      const mine = p.device === this.mouseDevice;
+      const nameHover = mine && this.button({ x: tx - 2, y: ty - 31, w: bw - 88, h: 17, action: 'name', device: p.device });
+      this.text(p.character.name + (nameHover ? ' ✎' : ''), tx, ty - 22, 12, nameHover ? '#ffd9a8' : '#fff', 'left', DISPLAY, 400, 3);
+      this.text(`P${p.slot + 1} · ${this.devices.deviceLabel(p.device)}`, tx, ty - 7, 7.5, '#aaa', 'left', UI, 500);
+      const h = this.devices.hints(p.device);
+      const readyB: HudButton = { x: tx, y: ty + 3, w: bw - 96, h: 14, action: 'ready', device: p.device };
+      if (mine) this.pill(readyB, p.ready ? 'READY!' : 'Ready up', 7.5, p.ready ? css({ h: 120, s: 70, l: 45 }) : undefined);
+      else {
+        c.fillStyle = p.ready ? css({ h: 120, s: 70, l: 45 }) : 'rgba(255,255,255,0.1)';
+        rrect(c, tx, ty + 3, bw - 96, 14, 7);
+        c.fill();
+        this.text(p.ready ? 'READY!' : `${h.confirm}: ready`, tx + (bw - 96) / 2, ty + 10, 7.5, '#fff', 'center', UI, 700);
+      }
+      if (mine) this.pill({ x: tx, y: ty + 21, w: 54, h: 11, action: 'look', device: p.device }, '🎲 new look', 6);
+      else this.text(`${h.alt}: new look`, tx, ty + 26, 6.5, '#888', 'left', UI, 500);
     }
-    this.text(`S / ↓ new level   ·   first to ${TARGET_SCORE} wins`, VIEW_W / 2, 356, 9, '#ddd', 'center', UI, 600);
-    this.text(
-      `finish +${POINTS.finish} · first +${POINTS.first} · trap kill +${POINTS.trap} · if everyone finishes, nobody scores`,
-      VIEW_W / 2,
-      372,
-      8,
-      '#999',
-      'center',
-      UI,
-      500,
-    );
+    // Top-right menu buttons.
+    this.pill({ x: VIEW_W - 92, y: 10, w: 82, h: 16, action: 'settings' }, '⚙ Settings  (Esc)', 7);
+    this.pill({ x: VIEW_W - 92, y: 30, w: 82, h: 16, action: 'rules' }, '⚑ Level settings', 7);
+    if (m.players.length) this.pill({ x: VIEW_W / 2 - 40, y: 358, w: 80, h: 16, action: 'level', device: m.players[0].device }, '↻ new level', 7.5);
+    if (!m.players.length) this.text('press Space / Enter or click a slot to join  ·  gamepads: Ⓐ', VIEW_W / 2, 366, 8.5, '#bbb', 'center', UI, 600);
   }
 
   private cursor(x: number, y: number, col: HSL, label: string, t: number) {
@@ -273,6 +339,7 @@ export class Hud {
     c.fillRect(0, 0, VIEW_W, VIEW_H);
     this.text(`ROUND ${m.round}`, VIEW_W / 2, 52, 30, '#fff', 'center', DISPLAY, 400, 5);
     this.text('pick your poison', VIEW_W / 2, 80, 10, '#f3c9a0', 'center', UI, 500);
+    this.phaseTimer(m, t, VIEW_W / 2 + 110, 52);
     const rc = this.rc();
     rc.t = t;
     rc.frame = m.frame;
@@ -326,7 +393,8 @@ export class Hud {
     c.fillStyle = g;
     c.fillRect(0, 0, VIEW_W, 50);
     this.text(`ROUND ${m.round} — PLACE IT`, VIEW_W / 2, 16, 16, '#fff', 'center', DISPLAY, 400, 3);
-    this.text('alt rotates · confirm places · spawn & flag zones are off-limits', VIEW_W / 2, 32, 7.5, '#ddd', 'center', UI, 500);
+    this.text('alt / right-click / wheel rotates · confirm / click places · spawn & flag zones are off-limits', VIEW_W / 2, 32, 7.5, '#ddd', 'center', UI, 500);
+    this.phaseTimer(m, m.frame / 60, VIEW_W - 40, 18);
     for (const p of m.players) {
       if (p.placed) continue;
       const def = p.claim >= 0 ? m.crate[p.claim].def : null;
@@ -334,6 +402,26 @@ export class Hud {
     }
     const done = m.players.filter((p) => p.placed).length;
     if (done) this.text(`${done}/${m.players.length} placed`, VIEW_W - 10, VIEW_H - 12, 8, '#ddd', 'right', UI, 600);
+  }
+
+  /** Countdown ring for timed pick/place phases. */
+  private phaseTimer(m: Match, t: number, x: number, y: number) {
+    const left = m.phaseTimeLeft;
+    if (!Number.isFinite(left)) return;
+    const total = (m.phase === 'pick' ? m.rules.pickSeconds : m.rules.placeSeconds) * 60;
+    const c = this.ctx;
+    const urgent = left < 5 * 60;
+    c.fillStyle = 'rgba(12,10,20,0.8)';
+    c.beginPath();
+    c.arc(x, y, 14, 0, Math.PI * 2);
+    c.fill();
+    c.strokeStyle = urgent ? css({ h: 0, s: 100, l: 60 + Math.sin(t * 12) * 10 }) : '#ffb02e';
+    c.lineWidth = 3;
+    c.lineCap = 'round';
+    c.beginPath();
+    c.arc(x, y, 12, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * left) / total);
+    c.stroke();
+    this.text(String(Math.ceil(left / 60)), x, y + 0.5, 11, urgent ? '#ff8a8a' : '#fff', 'center', DISPLAY, 400);
   }
 
   private run(m: Match, t: number) {
@@ -352,16 +440,22 @@ export class Hud {
       c.restore();
       glowDot(this.gctx, VIEW_W / 2, VIEW_H / 2 - 30, 90, left > 0 ? { h: 30, s: 100, l: 60 } : { h: 90, s: 100, l: 55 }, 0.3);
     }
-    const secs = Math.ceil(run.timeLeft / 60);
-    const urgent = secs <= 10;
-    this.panel(VIEW_W / 2 - 28, 6, 56, 22, 11, urgent ? 'rgba(255,80,80,0.8)' : 'rgba(255,255,255,0.15)');
-    this.text(String(secs), VIEW_W / 2, 17.5, 15, urgent ? css({ h: 0, s: 100, l: 65 + Math.sin(t * 12) * 10 }) : '#fff', 'center', DISPLAY, 400);
+    if (Number.isFinite(run.timeLeft)) {
+      const secs = Math.ceil(run.timeLeft / 60);
+      const urgent = secs <= 10;
+      this.panel(VIEW_W / 2 - 28, 6, 56, 22, 11, urgent ? 'rgba(255,80,80,0.8)' : 'rgba(255,255,255,0.15)');
+      this.text(String(secs), VIEW_W / 2, 17.5, 15, urgent ? css({ h: 0, s: 100, l: 65 + Math.sin(t * 12) * 10 }) : '#fff', 'center', DISPLAY, 400);
+    }
     m.players.forEach((p, i) => {
       const r = run.runners.find((r) => r.slot === p.slot);
-      const x = 8 + i * 96;
+      // Up to 4 chips per row so 8 players fit left of the timer.
+      const x = 8 + (i % 4) * 87;
+      const cy = 6 + Math.floor(i / 4) * 25;
+      c.save();
+      c.translate(0, cy - 6);
       const dead = r && !r.alive;
       const done = r?.finished;
-      this.panel(x, 6, 90, 22, 11, done ? 'rgba(160,240,60,0.8)' : dead ? 'rgba(255,80,80,0.6)' : css(p.character.body, 0, 0.5), 0.6);
+      this.panel(x, 6, 84, 22, 11, done ? 'rgba(160,240,60,0.8)' : dead ? 'rgba(255,80,80,0.6)' : css(p.character.body, 0, 0.5), 0.6);
       c.globalAlpha = dead ? 0.4 : 1;
       drawCharacter({ s: c, g: null }, p.character, x + 12, 25, { facing: 1, vx: 0, vy: 0, grounded: true, t, scale: 1.05, celebrate: done });
       c.globalAlpha = 1;
@@ -374,6 +468,7 @@ export class Hud {
             : 'splat'
           : `${p.score} pts`;
       this.text(status, x + 24, 22, 6.5, done ? '#b7f56a' : dead ? '#ff8a8a' : '#bbb', 'left', UI, 600);
+      c.restore();
     });
     this.text('alt: self-destruct', VIEW_W - 8, VIEW_H - 8, 6.5, 'rgba(255,255,255,0.45)', 'right', UI, 500);
   }
@@ -390,46 +485,52 @@ export class Hud {
     const anim = Math.min(1, Math.max(0, (m.phaseFrame - 20) / 60));
     const barX = 220;
     const barW = 400;
-    const rowH = 50;
-    const y0 = 104;
+    // Compact rows when more than 4 players so 8 fit on screen.
+    const compact = m.players.length > 4;
+    const rowH = compact ? 36 : 50;
+    const L = compact
+      ? { feet: 31, scale: 1.55, name: 7, nameSize: 9, bar: 13, barH: 10, award: 26, awardH: 8 }
+      : { feet: 34, scale: 2.2, name: 10, nameSize: 11, bar: 20, barH: 14, award: 37, awardH: 10 };
+    const y0 = compact ? 100 : 104;
     this.panel(130, y0 - 10, 540, m.players.length * rowH + 20, 14);
     // Finish line marker.
     c.fillStyle = 'rgba(255,210,63,0.5)';
     c.fillRect(barX + barW, y0, 2, m.players.length * rowH);
-    this.text(`${TARGET_SCORE}`, barX + barW, y0 - 4, 7, '#ffd23f', 'center', UI, 700);
+    const TARGET = m.rules.targetScore;
+    this.text(`${TARGET}`, barX + barW, y0 - 4, 7, '#ffd23f', 'center', UI, 700);
     m.players.forEach((p, i) => {
       const y = y0 + i * rowH;
-      drawCharacter({ s: c, g: this.gctx }, p.character, 164, y + 34, {
+      drawCharacter({ s: c, g: this.gctx }, p.character, 164, y + L.feet, {
         facing: 1,
         vx: 0,
         vy: 0,
         grounded: true,
         t,
-        scale: 2.2,
+        scale: L.scale,
         celebrate: res.finishers.includes(p.slot),
       });
-      this.text(p.character.name, barX, y + 10, 11, '#fff', 'left', DISPLAY, 400);
+      this.text(p.character.name, barX, y + L.name, L.nameSize, '#fff', 'left', DISPLAY, 400);
       const prev = m.prevScores.get(p.slot) ?? 0;
       const shown = prev + (p.score - prev) * anim;
       c.fillStyle = 'rgba(255,255,255,0.07)';
-      rrect(c, barX, y + 20, barW, 14, 7);
+      rrect(c, barX, y + L.bar, barW, L.barH, L.barH / 2);
       c.fill();
-      const wPrev = (barW * Math.min(prev, TARGET_SCORE)) / TARGET_SCORE;
-      const wNow = (barW * Math.min(shown, TARGET_SCORE)) / TARGET_SCORE;
+      const wPrev = (barW * Math.min(prev, TARGET)) / TARGET;
+      const wNow = (barW * Math.min(shown, TARGET)) / TARGET;
       if (wNow > 0) {
-        const bg = c.createLinearGradient(0, y + 20, 0, y + 34);
+        const bg = c.createLinearGradient(0, y + L.bar, 0, y + L.bar + L.barH);
         bg.addColorStop(0, css(p.character.body, 15));
         bg.addColorStop(1, css(p.character.body, -15));
         c.fillStyle = bg;
-        rrect(c, barX, y + 20, Math.max(14, wNow), 14, 7);
+        rrect(c, barX, y + L.bar, Math.max(L.barH, wNow), L.barH, L.barH / 2);
         c.fill();
         if (wNow > wPrev + 1) {
-          glowDot(this.gctx, barX + wNow, y + 27, 16, p.character.body, 0.6);
+          glowDot(this.gctx, barX + wNow, y + L.bar + L.barH / 2, 16, p.character.body, 0.6);
           c.fillStyle = 'rgba(255,255,255,0.35)';
-          c.fillRect(barX + wPrev, y + 21, wNow - wPrev, 3);
+          c.fillRect(barX + wPrev, y + L.bar + 1, wNow - wPrev, 3);
         }
       }
-      this.text(String(Math.round(shown)), barX + barW + 22, y + 27, 13, '#fff', 'center', DISPLAY, 400);
+      this.text(String(Math.round(shown)), barX + barW + 22, y + L.bar + L.barH / 2, compact ? 11 : 13, '#fff', 'center', DISPLAY, 400);
       const awards = res.awards.filter((a) => a.slot === p.slot);
       let ax = barX;
       for (const a of awards) {
@@ -438,9 +539,9 @@ export class Hud {
         const w = c.measureText(label).width + 10;
         const col: HSL = a.reason === 'trap' ? { h: 355, s: 80, l: 55 } : a.reason === 'first' ? { h: 45, s: 100, l: 50 } : { h: 130, s: 65, l: 45 };
         c.fillStyle = css(col, 0, Math.min(1, anim * 2));
-        rrect(c, ax, y + 37, w, 10, 5);
+        rrect(c, ax, y + L.award, w, L.awardH, L.awardH / 2);
         c.fill();
-        this.text(label, ax + w / 2, y + 42.3, 7, '#fff', 'center', UI, 700);
+        this.text(label, ax + w / 2, y + L.award + L.awardH / 2 + 0.3, compact ? 6 : 7, '#fff', 'center', UI, 700);
         ax += w + 4;
       }
     });

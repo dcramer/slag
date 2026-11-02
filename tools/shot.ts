@@ -80,7 +80,7 @@ try {
       await open(`seed=${seed}`);
       await page.evaluate((n) => {
         const d = (window as any).slagDebug;
-        for (const dev of ['kb1', 'kb2', 'pad0', 'pad1'].slice(0, n)) d.match.join(dev);
+        for (const dev of ['kb1', 'kb2', 'pad0', 'pad1', 'pad2', 'pad3', 'pad4', 'pad5'].slice(0, n)) d.match.join(dev);
       }, players);
       await step(30);
       await snap(`lobby-${seed}`);

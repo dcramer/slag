@@ -8,6 +8,7 @@ const press = (k: Partial<InputFrame>): InputFrame => ({ ...NO_INPUT, ...k });
 /** Drive a match with a simple scripted bot: picks the first free card, places anywhere legal, holds right + jumps. */
 function playMatch(seed: number, devices: string[], maxFrames = 60 * 60 * 6) {
   const m = new Match(seed);
+  m.rules = { ...m.rules, raceSeconds: 20 }; // the dumb bot may never finish; races must end
   const tick = (fn: (d: string) => InputFrame) => m.step(Object.fromEntries(devices.map((d) => [d, fn(d)])));
   tick(() => press({ confirmPressed: true })); // join
   tick(() => press({ confirmPressed: true })); // ready
@@ -92,4 +93,24 @@ describe('match flow', () => {
     expect(a.players.map((p) => p.score)).toEqual(b.players.map((p) => p.score));
     expect(a.frame).toBe(b.frame);
   }, 60_000);
+});
+
+describe('big lobbies', () => {
+  it('supports 8 players: join cap, 10-card crate on screen, everyone spawns', () => {
+    const m = new Match(9);
+    const devs = ['kb1', 'kb2', 'pad0', 'pad1', 'pad2', 'pad3', 'pad4', 'pad5', 'pad6'];
+    for (const d of devs) m.join(d);
+    expect(m.players.length).toBe(8);
+    m.startMatch();
+    expect(m.crate.length).toBe(10);
+    for (const c of m.crate) {
+      expect(c.rect.x).toBeGreaterThanOrEqual(0);
+      expect(c.rect.x + c.rect.w).toBeLessThanOrEqual(768);
+      expect(c.rect.y + c.rect.h).toBeLessThanOrEqual(432);
+    }
+    m.startRun();
+    expect(m.run!.runners.length).toBe(8);
+    for (let i = 0; i < 70; i++) m.step({});
+    expect(m.run!.runners.every((r) => r.alive)).toBe(true);
+  });
 });

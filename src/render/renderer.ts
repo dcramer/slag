@@ -29,7 +29,7 @@ export class Renderer {
   private gctx = this.glow.getContext('2d')!;
   private lctx = this.lightC.getContext('2d')!;
   private comp: Compositor;
-  private hud: Hud;
+  readonly hud: Hud;
   private cam = new Camera();
   private backdrop = new Backdrop();
   private terrain = new TerrainPainter();
@@ -79,7 +79,8 @@ export class Renderer {
     this.hud.resize(this.pw, this.ph);
   }
 
-  render(m: Match, now: number) {
+  /** Paint one frame. `events` are this frame's drained sim events (shared with audio). */
+  render(m: Match, now: number, events: readonly GameEvent[] = []) {
     const t = now / 1000;
     const dt = Math.min(0.05, this.last ? t - this.last : 1 / 60);
     this.last = t;
@@ -97,7 +98,7 @@ export class Renderer {
         kind === 'spark' ? 1 : kind === 'smoke' ? 2 : 1.2,
         kind === 'smoke' ? 1.2 : kind === 'spark' ? 0.35 : 0.8,
       );
-    this.consume(m, m.drainEvents());
+    this.consume(m, events);
     this.fx.update(dt, level);
     this.updateCamera(m, dt);
 
@@ -399,7 +400,7 @@ export class Renderer {
     light(rc, x, y - 8, 38, c.body, 0.3);
   }
 
-  private consume(m: Match, events: GameEvent[]) {
+  private consume(m: Match, events: readonly GameEvent[]) {
     const th = m.level.theme;
     for (const e of events) {
       switch (e.type) {

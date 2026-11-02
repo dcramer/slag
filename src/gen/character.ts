@@ -60,7 +60,7 @@ export function generateCharacter(seed: number): CharacterDef {
   ]);
   return {
     seed,
-    name: word(rng, 2, 3),
+    name: shortName(rng),
     hue,
     body: hsl3(hue, sat, rng.range(52, 62)),
     belly: hsl3(hue + rng.range(-30, 30), sat * 0.5, 84),
@@ -116,4 +116,13 @@ export function generateCharacter(seed: number): CharacterDef {
     accessoryColor: hsl3(hue + rng.pick([150, 180, 200, 30, -30]), 85, 55),
     accessoryLength: rng.int(5, 9),
   };
+}
+
+/** Names that fit HUD chips: retry (deterministically) until ≤ 10 chars. */
+function shortName(rng: Rng): string {
+  for (let i = 0; i < 20; i++) {
+    const n = word(rng, 2, 3);
+    if (n.length <= 10) return n;
+  }
+  return word(rng, 1, 1);
 }

@@ -10,7 +10,7 @@ slag is a browser-based competitive party platformer in the genre of party trap-
 2. **Place**: they place the props in the level.
 3. **Run**: everyone races to the flag.
 
-Scoring rewards levels that are hard but not impossible. If everyone finishes, nobody scores. If nobody finishes, nobody scores.
+Matches have 1–8 players (`MAX_PLAYERS`). Scoring rewards levels that are hard but not impossible. If everyone finishes, nobody scores. If nobody finishes, nobody scores.
 
 The differentiator is **procedural generation everywhere**:
 
@@ -47,7 +47,7 @@ Build original content. Use the genre's mechanics, but never copy another game's
 | `npm run level -- <seed>` | ASCII dump of a generated level, plus stats: `#` solid, `=` one-way, `S`/`G` spawn/goal, `·` reachable stand cell, `P` set piece. |
 | `npm run level -- --stats 200` | Generation stats across many seeds: time, styles, how often a level is solvable without props. |
 | `npm run shot -- <scenario> [opts]` | Headless screenshots into `shots/` (gitignored). Boots Vite itself. |
-| `npm run build` | Production bundle in `dist/`. |
+| `npm run build` | Production bundle in `dist/`, which Vercel serves. |
 
 Screenshot scenarios (`tools/shot.ts`):
 
@@ -144,7 +144,7 @@ tests/           vitest
 
 - **The world** is `LEVEL_W × LEVEL_H` tiles = 48×27 tiles of 16 px (768×432 logical px). Tile kinds:
   - `T_SOLID`
-  - `T_ONEWAY` (jump-through from below; drop through with down)
+  - `T_ONEWAY` (jump-through from below; drop through with down + jump)
   - `T_EMPTY`
 - **Fairness**: characters are cosmetic only. Every player shares one hitbox and one physics model.
 - **Levels**:
@@ -156,6 +156,11 @@ tests/           vitest
   - Aim for roughly half of levels requiring props, as in the genre.
   - Always verify with `sim/reach.ts`, which uses the real controller. Never use hand-waved jump distances.
 - **Themes**: each map has a coherent theme. The theme affects terrain shapes, palette, skyline, decor, liquid, and set pieces. A farm should read as a farm at a glance.
+- **Placement rules**:
+  - Most props occupy free cells.
+  - **Attachments** (spikes, ice coat, slime coat, and similar surface modifiers) must sit flush against a solid face, either terrain or a placed block. The player's rotation picks which face they attach to.
+  - Spikes add a hazard strip on that face. Coats change the surface: on floors, ice is slippery and slime is slow and sticky; on walls, ice means no wall slide or wall jump and slime means a sticky wall cling.
+  - Placement validity lives in `sim/props/transform.ts` (`canPlace`) and must stay deterministic.
 - **Scoring**: see `game/scoring.ts`.
 - **Movement feel targets**:
   - fast ground speed with quick acceleration
@@ -166,6 +171,17 @@ tests/           vitest
   - forgiving corner correction
 
   Tune numbers in `sim/constants.ts` (`PHYS`). Worldgen must not hardcode jump distances. It must ask `reach.ts`.
+
+## Deployment and online play
+
+- **Hosting is Vercel.**
+  - `vercel.json` configures a static Vite build (`dist/`) and rewrites `/r/:room` to `index.html` for shareable room links.
+  - Keep `vite.config.ts` `base: '/'`.
+  - Any server-side code must be small Vercel functions in `api/`. No long-lived servers, and nothing that costs money at our scale.
+- **Online play** is peer-to-peer over WebRTC with a host-authoritative star, input-only netcode (lockstep plus rollback in races), and serverless signaling. The full plan is in **docs/NETCODE.md**. Consequences for all code today:
+  - Keep sim state snapshot-friendly: plain data, no closures or class instances holding hidden state, no `Map` iteration-order dependence that isn't deterministic.
+  - Don't add new uses of `Math.sin`, `cos`, `atan2`, `exp`, `pow`, or `hypot` in `src/sim` or `src/gen` without a note. They will be replaced by deterministic `core/dmath.ts` versions, because those functions aren't bit-identical across browsers.
+  - Inputs are the only per-frame data that crosses the network. Never let render-side state influence the sim.
 
 ## Code conventions
 
