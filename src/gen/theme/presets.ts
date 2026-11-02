@@ -189,7 +189,6 @@ function farm(rng: Rng): Look {
       veins: false,
       outline: hsl3(20, 45, 10),
       sub: rng.chance(0.7) ? { kind: 'strata', ...mat(jit(rng, hsl3(28, 22, 30))), depth: 4 } : null,
-      detail: 0.85,
       platform: { kind: 'wood', color: jit(rng, hsl3(32, 45, 42)) },
     },
     liquid: { kind: 'water', color: hsl3(196, 60, 36), glow: hsl3(185, 70, 78), emissive: false },
@@ -284,7 +283,6 @@ function factory(rng: Rng): Look {
       veins: false,
       outline: hsl3(220, 25, 6),
       sub: { kind: 'brick', ...mat(brick, 0.55, 1.4), depth: 2 },
-      detail: 0.9,
       platform: { kind: 'grate', color: hsl3(210, 10, 50) },
     },
     liquid: { kind: 'slag', color: hsl3(18, 95, 45), glow: hsl3(32, 100, 60), emissive: true },
@@ -380,7 +378,6 @@ function castle(rng: Rng): Look {
       veins: false,
       outline: hsl3(230, 25, 7),
       sub: null,
-      detail: 0.9,
       platform: { kind: 'wood', color: hsl3(25, 40, 32) },
     },
     liquid: rng.chance(0.65)
@@ -468,7 +465,6 @@ function jungle(rng: Rng): Look {
       veins: night && rng.chance(0.6),
       outline: hsl3(150, 40, 6),
       sub: { kind: 'loam', ...mat(jit(rng, hsl3(40, 30, 22))), depth: 3 },
-      detail: 0.85,
       platform: { kind: 'bamboo', color: hsl3(55, 45, 50) },
     },
     liquid: { kind: 'swamp', color: hsl3(85, 38, 22), glow: hsl3(80, 60, 55), emissive: false },
@@ -539,7 +535,6 @@ function volcano(rng: Rng): Look {
       veins: true,
       outline: hsl3(0, 30, 4),
       sub: null,
-      detail: 0.95,
       platform: { kind: 'stone', color: hsl3(15, 12, 26) },
     },
     liquid: { kind: 'lava', color: hsl3(lavaHue, 100, 48), glow: hsl3(lavaHue + 14, 100, 60), emissive: true },
@@ -632,7 +627,6 @@ function harbor(rng: Rng): Look {
       veins: false,
       outline: hsl3(25, 40, 8),
       sub: { kind: 'cobble', ...mat(jit(rng, hsl3(35, 10, 42))), depth: 2 },
-      detail: 0.9,
       platform: { kind: 'wood', color: hsl3(30, 35, 40) },
     },
     liquid: { kind: 'sea', color: sea, glow: golden ? hsl3(40, 90, 80) : hsl3(190, 60, 85), emissive: false },
@@ -697,7 +691,6 @@ function mine(rng: Rng): Look {
       veins: true,
       outline: hsl3(25, 30, 4),
       sub: rng.chance(0.5) ? { kind: 'strata', ...mat(jit(rng, hsl3(25, 16, 24))), depth: 3 } : null,
-      detail: 0.95,
       platform: { kind: 'wood', color: hsl3(30, 40, 36) },
     },
     liquid: acid
@@ -786,7 +779,6 @@ function rooftops(rng: Rng): Look {
       veins: false,
       outline: hsl3(250, 30, 5),
       sub: brickish ? null : { kind: 'brick', ...mat(jit(rng, hsl3(14, 30, 28))), depth: 2 },
-      detail: 0.9,
       platform: { kind: 'grate', color: hsl3(220, 10, 46) },
     },
     liquid: { kind: 'street', color: hsl3(250, 25, 8), glow: neonA, emissive: true },
@@ -901,7 +893,6 @@ function glacier(rng: Rng): Look {
       veins: false,
       outline: hsl3(224, 40, 8),
       sub: rng.chance(0.5) ? { kind: 'strata', ...mat(jit(rng, hsl3(220, 14, 24))), depth: 4 } : null,
-      detail: 0.9,
       platform: { kind: 'wood', color: jit(rng, hsl3(28, 38, 40)) },
       ice: {
         base: hsl3(iceHue, night ? 48 : 62, night ? 52 : 72),
@@ -998,7 +989,6 @@ function space(rng: Rng): Look {
           veins: false,
           outline: hsl3(230, 30, 6),
           sub: { kind: 'metal', ...mat(jit(rng, hsl3(220, 10, 34)), 0.5, 1.4), depth: 2 },
-          detail: 0.9,
           platform: { kind: 'grate', color: hsl3(215, 10, 56) },
         }
       : {
@@ -1010,7 +1000,6 @@ function space(rng: Rng): Look {
           veins: rng.chance(0.4),
           outline: hsl3(250, 30, 5),
           sub: null,
-          detail: 0.95,
           platform: { kind: 'grate', color: hsl3(215, 10, 50) },
         },
     // The pit is the top of the planet's air: fall in and you burn up, so it glows faintly where it starts.

@@ -20,11 +20,11 @@ import { degreeToMidi } from './theory';
  * (round start, victory fanfare) in the song's key and instruments.
  */
 
-export const LOOKAHEAD = 0.2;
-export const LAYERS: readonly Layer[] = ['pad', 'bass', 'harmony', 'lead', 'drums', 'perc'];
+const LOOKAHEAD = 0.2;
+const LAYERS: readonly Layer[] = ['pad', 'bass', 'harmony', 'lead', 'drums', 'perc'];
 export type Mix = Record<Layer, number>;
 
-export const MIXES = {
+const MIXES = {
   silent: { pad: 0, bass: 0, harmony: 0, lead: 0, drums: 0, perc: 0 },
   countdown: { pad: 1, bass: 0.6, harmony: 0.35, lead: 0, drums: 0, perc: 0.25 },
   calm: { pad: 1, bass: 0.7, harmony: 0.8, lead: 0.5, drums: 0, perc: 0.45 },
@@ -37,7 +37,7 @@ export type MixName = keyof typeof MIXES;
 const LAYER_PRIO: Record<Layer, number> = { drums: 2, bass: 2, lead: 2, harmony: 1, pad: 1, perc: 0 };
 const LAYER_REVERB: Record<Layer, number> = { pad: 0.5, lead: 0.35, harmony: 0.3, drums: 0.12, perc: 0.35, bass: 0.04 };
 
-export class SongPlayer {
+class SongPlayer {
   readonly bus: GainNode;
   private layers = {} as Record<Layer, GainNode>;
   private trackIn: GainNode[] = [];

@@ -91,8 +91,8 @@ const ROUTE_WEIGHTS: Record<SizeClass, Weights<RouteShape>> = {
   ],
 };
 
-export const TALL_SIZES = { w: [32, 40], h: [40, 60] } as const;
-export const WIDE_SIZES = { w: [64, 96], h: [24, 30] } as const;
+const TALL_SIZES = { w: [32, 40], h: [40, 60] } as const;
+const WIDE_SIZES = { w: [64, 96], h: [24, 30] } as const;
 
 /** Debug/tools: force some knobs (the rest still roll from the seed). A size the theme can't do falls back to its widest. */
 export type ProfileOverride = Partial<Pick<LevelProfile, 'size' | 'route' | 'density' | 'hazards' | 'danger' | 'gravity'>> & { weather?: WeatherKind };

@@ -12,6 +12,7 @@ import {
   INK_CAPS,
   inkCap,
   inkContours,
+  type InkBake,
   inkEdges,
   inkHatch,
   inkMaterial,
@@ -183,7 +184,8 @@ export class TerrainPainter {
   private bakeInk(g: CanvasRenderingContext2D, level: Level, kb: number, solid: (x: number, y: number) => boolean, tiles?: TileRect) {
     const th = level.theme;
     const seed = th.seed ^ 0x1a4c;
-    const { mask, loops } = inkContours(level, seed, solid, tiles);
+    const shape = inkContours(level, seed, solid, tiles);
+    const { mask, loops } = shape;
     const W = g.canvas.width;
     const H = g.canvas.height;
     const px0 = tiles ? Math.floor(tiles.x * TILE * kb) : 0;
@@ -192,40 +194,20 @@ export class TerrainPainter {
     const py1 = tiles ? Math.min(H, Math.ceil((tiles.y + tiles.h) * TILE * kb)) : H;
     const area: Area = { x0: px0 / kb, y0: py0 / kb, x1: px1 / kb, y1: py1 / kb };
     // Paint on a layer and cut it once: thousands of small fills under a clip this complex take seconds.
-    // Two layers, taken in turn and only ever grown: resizing or clearing a canvas the GPU still has a
-    // draw queued from stalls the page until that draw is done, and chunk after chunk that's seconds.
     const lw = px1 - px0;
     const lh = py1 - py0;
-    this.flip = 1 - this.flip;
-    const layer = (this.inkLayers[this.flip] ??= document.createElement('canvas'));
-    if (layer.width < lw || layer.height < lh) {
-      layer.width = Math.max(layer.width, lw);
-      layer.height = Math.max(layer.height, lh);
-    }
-    const lg = layer.getContext('2d')!;
-    // A reused canvas keeps whatever state the painters left it in: they get a fresh one every time.
-    lg.save();
-    lg.setTransform(1, 0, 0, 1, 0, 0);
-    lg.globalCompositeOperation = 'source-over';
-    lg.clearRect(0, 0, lw, lh);
-    lg.setTransform(kb, 0, 0, kb, -px0, -py0);
-    inkMaterial(lg, level, th, seed, solid, area);
-    inkIce(lg, level, th, seed, solid, area);
-    inkHatch(lg, loops, th, seed, area);
-    // An empty path cuts nothing at all, so a stretch of open air (a chunk of sky) would keep its fill.
-    if (loops.length) cutOutside(lg, mask, area);
-    else {
-      lg.setTransform(1, 0, 0, 1, 0, 0);
-      lg.clearRect(0, 0, lw, lh);
-    }
-    lg.restore();
+    // Open air (a chunk of sky) has no ground to paint, so it never touches a layer. It used to paint
+    // one and clear it again, and Chrome's raster could then hand the paste below the layer as an
+    // earlier chunk left it, before its cut: whole unlined bodies of ground (the surroundings' bulkhead)
+    // in the sky, at that chunk's offset. Nothing painted, nothing to go stale.
+    const layer = loops.length ? this.paintLayer(level, kb, solid, shape, area, px0, py0, lw, lh) : null;
     g.save();
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.beginPath();
     g.rect(px0, py0, px1 - px0, py1 - py0);
     g.clip();
     g.clearRect(px0, py0, px1 - px0, py1 - py0);
-    g.drawImage(layer, 0, 0, lw, lh, px0, py0, lw, lh);
+    if (layer) g.drawImage(layer, 0, 0, lw, lh, px0, py0, lw, lh);
     g.setTransform(kb, 0, 0, kb, 0, 0);
     inkEdges(g, loops, th, seed, area);
     inkCap(g, capLoops(level, loops), th.terrain, seed, area);
@@ -251,6 +233,46 @@ export class TerrainPainter {
     coatTerrain(g, level, area);
     g.restore();
     this.bakeVeins(level, kb, solid, mask, area, px0, py0, px1 - px0, py1 - py0);
+  }
+
+  /**
+   * The fills of an ink bake on a layer (material, ice, hatching), cut to the terrain's shape, for
+   * `bakeInk` to paste in one go. Two layers, taken in turn and only ever grown: resizing or clearing
+   * a canvas the GPU still has a draw queued from stalls the page until that draw is done, and chunk
+   * after chunk that's seconds.
+   */
+  private paintLayer(
+    level: Level,
+    kb: number,
+    solid: (x: number, y: number) => boolean,
+    { mask, loops }: InkBake,
+    area: Area,
+    px0: number,
+    py0: number,
+    lw: number,
+    lh: number,
+  ): HTMLCanvasElement {
+    const th = level.theme;
+    const seed = th.seed ^ 0x1a4c;
+    this.flip = 1 - this.flip;
+    const layer = (this.inkLayers[this.flip] ??= document.createElement('canvas'));
+    if (layer.width < lw || layer.height < lh) {
+      layer.width = Math.max(layer.width, lw);
+      layer.height = Math.max(layer.height, lh);
+    }
+    const lg = layer.getContext('2d')!;
+    // A reused canvas keeps whatever state the painters left it in: they get a fresh one every time.
+    lg.save();
+    lg.setTransform(1, 0, 0, 1, 0, 0);
+    lg.globalCompositeOperation = 'source-over';
+    lg.clearRect(0, 0, lw, lh);
+    lg.setTransform(kb, 0, 0, kb, -px0, -py0);
+    inkMaterial(lg, level, th, seed, solid, area);
+    inkIce(lg, level, th, seed, solid, area);
+    inkHatch(lg, loops, th, seed, area);
+    cutOutside(lg, mask, area);
+    lg.restore();
+    return layer;
   }
 
   /** The emissive half of an ink bake: veins, cut to the same shape as the terrain. */

@@ -234,7 +234,7 @@ export class WebAudioSystem implements AudioSystem {
       }
       for (const c of this.tracker.update(run, GROUND_TONE[match.level.theme.id], slotPitch)) play(c);
       this.transients.length = 0;
-      for (let f = Math.max(f0 + 1, f1 - 4); f <= f1 && f0 >= 0; f++) propTransients(run, f, this.transients);
+      if (f0 >= 0) for (let f = Math.max(f0 + 1, f1 - 4); f <= f1; f++) propTransients(run, f, this.transients);
       for (const c of this.transients) play({ name: c.name, x: c.x, y: c.y, pitch: c.pitch });
       this.emitters.length = 0;
       collectEmitters(run, f1, this.emitters);

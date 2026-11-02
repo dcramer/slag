@@ -156,7 +156,7 @@ function oval(cx: number, cy: number, rx: number, ry: number, n = 12, rot = 0): 
 const bodyCache = new WeakMap<CharacterDef, P[]>();
 
 /** The body's outline as points, standing on y = 0, so it can be inked, shaded and boiled. */
-export function bodyPoints(c: CharacterDef): P[] {
+function bodyPoints(c: CharacterDef): P[] {
   const cached = bodyCache.get(c);
   if (cached) return cached;
   const W = 14 * c.sw;

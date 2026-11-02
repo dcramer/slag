@@ -84,7 +84,7 @@ export function moduleArt(type: string): readonly ModuleArt[] {
   return ART.get(type) ?? [];
 }
 
-export function cornerRadii(set: Set<string>, x: number, y: number, R: number): number[] {
+function cornerRadii(set: Set<string>, x: number, y: number, R: number): number[] {
   const has = (dx: number, dy: number) => set.has(`${x + dx},${y + dy}`);
   const u = !has(0, -1);
   const d = !has(0, 1);

@@ -68,15 +68,15 @@ export interface TouchLayout {
 /** Fraction of stick deflection where walking becomes running. */
 export const RUN_AT = 0.7;
 /** Horizontal dead zone as a fraction of stick radius. */
-export const DEAD_AT = 0.22;
+const DEAD_AT = 0.22;
 /** Vertical deflection (fraction of radius) that counts as down/up. */
-export const DOWN_AT = 0.5;
+const DOWN_AT = 0.5;
 /** Frames ALT must be held in a race before it self-destructs (~0.35 s). */
 export const ALT_HOLD_FRAMES = 21;
 /** How far above the finger the place ghost sits, in CSS px (about a fingertip). */
 export const DRAG_OFFSET_CSS = 56;
 /** Movement (CSS px) under which a touch still counts as a tap. */
-export const TAP_SLOP = 18;
+const TAP_SLOP = 18;
 
 const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v);
 

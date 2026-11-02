@@ -20,7 +20,7 @@ export interface VehiclePose {
 }
 
 /** Frames needed to cover the route once. */
-export function vehicleTravel(m: Vehicle): number {
+function vehicleTravel(m: Vehicle): number {
   return Math.max(8, Math.round(m.span / Math.max(1e-6, m.speed / 60)));
 }
 

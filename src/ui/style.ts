@@ -1,6 +1,6 @@
 /**
  * The UI design tokens: one palette and one type system shared by the
- * Canvas2D HUD (src/render/hud.ts), the DOM overlays (src/ui/menus.ts) and
+ * Canvas2D HUD (src/render/hud.ts), the DOM overlays (src/ui/menus/) and
  * the DOM screens (src/ui/screens/css.ts mirrors these as CSS variables).
  * Pure constants, safe to import anywhere. See docs/ART.md for the rules.
  */

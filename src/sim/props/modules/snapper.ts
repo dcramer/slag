@@ -7,13 +7,13 @@ import { faceRect } from './coat';
 type Snapper = ModuleOf<'snapper'>;
 
 /** Snapper segments. */
-export const SNAP_IDLE = 0;
+const SNAP_IDLE = 0;
 export const SNAP_ARM = 1;
 export const SNAP_UP = 2;
 export const SNAP_COOL = 3;
 
 /** How far in front of its face (px) a snapper notices you. */
-export const SNAP_SENSE = TILE * 1.25;
+const SNAP_SENSE = TILE * 1.25;
 /** Height (px) of the popped spikes' lethal strip. */
 export const SNAP_SPIKE = 9;
 
@@ -31,7 +31,7 @@ export function snapperPhase(m: Snapper, st: PropState | undefined, mi: number, 
 }
 
 /** The box around the zones in front of the plate: where it sounds from when one is tripped. */
-export function snapperSense(m: Snapper): Rect {
+function snapperSense(m: Snapper): Rect {
   let x0 = Infinity;
   let y0 = Infinity;
   let x1 = -Infinity;

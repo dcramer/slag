@@ -54,7 +54,7 @@ export interface Song {
   level: number;
 }
 
-export const SONG_BARS = 8;
+const SONG_BARS = 8;
 
 export function composeSong(seed: number, theme: ThemeId): Song {
   const st = STYLES[theme];

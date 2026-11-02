@@ -42,7 +42,7 @@ export function geyserColumn(
 type Column = NonNullable<ReturnType<typeof geyserColumn>>;
 
 /** Rect the erupting column covers (the lava hazard). */
-export function geyserRect(m: Geyser, col: Column): Rect {
+function geyserRect(m: Geyser, col: Column): Rect {
   const hw = m.width / 2;
   const x = Math.min(col.x, col.x + col.dx * col.len) - (col.dx === 0 ? hw : 0);
   const y = Math.min(col.y, col.y + col.dy * col.len) - (col.dy === 0 ? hw : 0);

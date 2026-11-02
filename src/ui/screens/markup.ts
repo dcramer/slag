@@ -79,7 +79,7 @@ export function homeHTML(): string {
 }
 
 /** The two screens that only say something went wrong and lead back to the menu. */
-export const PLAIN_SCREENS = {
+const PLAIN_SCREENS = {
   missing: { title: 'Lost in the Slag', body: 'That lobby code doesn’t look right. Codes are 3–12 letters and numbers.' },
   error: { title: 'Something Melted', body: 'The game hit an error it couldn’t recover from.' },
 } as const;

@@ -1,6 +1,6 @@
 import { cellsBounds, type Vec } from '../../core/geom';
 import { TILE } from '../../sim/constants';
-import { dirOf, type Module, motionOffset, type PartSize, type PlacedProp, type PropDef, type Resolved, resolveProp } from '../../sim/props';
+import { dirOf, type Module, motionOffset, type PartSize, type PropDef, type Resolved, resolveProp } from '../../sim/props';
 import { circle, METALS, type RC } from '../kit';
 import { BACKDROP, moduleArt, type PropDrawOpts } from './common';
 import './modules';
@@ -41,10 +41,6 @@ export function drawForeground(rc: RC, r: Resolved, o: PropDrawOpts): void {
 export function drawResolved(rc: RC, r: Resolved, o: PropDrawOpts): void {
   drawBackdrop(rc, r, o);
   drawForeground(rc, r, o);
-}
-
-export function drawPlaced(rc: RC, pp: PlacedProp, o: PropDrawOpts) {
-  drawResolved(rc, resolveProp(pp), o);
 }
 
 const BLAST_SCALE: Record<PartSize, number> = { small: 0.7, medium: 0.85, large: 1 };

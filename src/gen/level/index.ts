@@ -42,7 +42,7 @@ export interface GenInfo {
 
 export let lastGenInfo: GenInfo = { attempts: 0, bridges: [], fallback: false, shared: 1, sculpted: 1, rejects: { unsolvable: 0, tooEasy: 0, closed: 0 } };
 /** Attempts used by the last generateLevel call (kept for older callers). */
-export let lastGenAttempts = 0;
+let lastGenAttempts = 0;
 
 /**
  * Level pipeline: pick theme → roll the variety profile (size, density,
@@ -168,8 +168,4 @@ function fallbackShape(w: number, h: number): Shape {
     ],
     style: 'fallback',
   };
-}
-
-export function cloneLevel(l: Level): Level {
-  return { ...l, tiles: new Uint8Array(l.tiles), protectedRects: l.protectedRects.map((r) => ({ ...r })), setPieces: l.setPieces.slice() };
 }

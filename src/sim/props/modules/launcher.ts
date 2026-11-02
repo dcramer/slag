@@ -15,7 +15,7 @@ export function launcherAngle(m: Launcher, f: number, phase: number): number {
   return m.aim === 'sweep' ? m.angle + m.sweep * dsin(Math.PI * 2 * (f / m.sweepPeriod + phase)) : m.angle;
 }
 
-export function angleDiff(a: number, b: number): number {
+function angleDiff(a: number, b: number): number {
   let d = (a - b) % (Math.PI * 2);
   if (d > Math.PI) d -= Math.PI * 2;
   if (d < -Math.PI) d += Math.PI * 2;
@@ -23,7 +23,7 @@ export function angleDiff(a: number, b: number): number {
 }
 
 /** Launch angle (screen space) to hit offset (dx, dy) at `speed` under `gravity`; low arc, direct if unreachable. */
-export function ballisticAngle(dx: number, dy: number, speed: number, gravity: number): number {
+function ballisticAngle(dx: number, dy: number, speed: number, gravity: number): number {
   if (gravity <= 0) return datan2(dy, dx);
   const X = Math.abs(dx);
   const Y = -dy;

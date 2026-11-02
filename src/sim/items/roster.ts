@@ -45,7 +45,7 @@ export const BONK_DAZE = 28;
 export const BONK_CREDIT = 150;
 
 export const PUCK = { speed: 230, maxFall: 420, bounces: 5 } as const;
-export const BOOMERANG = { speed: 340 } as const;
+const BOOMERANG = { speed: 340 } as const;
 export const SHIELD = { jumpCap: 300, guard: 18, pop: 280 } as const;
 export const ROCKET = { thrust: 7, vy: 470, vx: 120, daze: 50 } as const;
 export const SMOKE = { vx: 190, vy: 230, radius: 46, life: 60 * 5, cooldown: 30 } as const;

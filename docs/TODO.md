@@ -18,7 +18,6 @@ Online play is on `main`, verified by 139 real-browser checks in `pnpm online-te
 - A double host failure (the new host dies at once) takes 11–18 s to recover, and that varies a lot.
 
 ## 3. Level follow-ups
-- **Ink bake stall:** the first render after a level change bakes ink terrain on the main thread: 27–176 ms on most levels, about 550–600 ms on a large factory, and once 2.5 s. Generation itself is now off the main thread.
 - The winnability proof assumes timed hazards can be passed in their 30-frame openings, and only uses 2-bridge plans.
 
 ## 6. Real phones
@@ -30,7 +29,7 @@ Phone support (follow camera, pinch, scaled HUD, settings sheet) is on `main` bu
 
 ## 10. Housekeeping
 - Enable GitHub Actions and make `ci.yml` a required check. This must be done on GitHub by the repo owner.
-- Delete the old remote branch `claude/scaffold-procgen-platformer`, and the `wip/*` branches once they're merged.
+- Delete merged and superseded branches: remote `claude/scaffold-procgen-platformer` and all `wip/*` (each superseded by work on `main`), plus local `worktree-agent-*` and merge branches. Waiting on the owner's OK.
 - Consider stricter TS flags: `noUncheckedIndexedAccess` gives about 600 errors, so it's a project of its own.
 
 ## 11. Screen follow-ups
@@ -43,13 +42,7 @@ Size tiers for parts are a mapping of the old rolled ranges, so check them too; 
 
 **Undecided: character height.** Characters fit a one-block gap today. The owner wondered about a 1.5- or 2-block gap, since one block feels less interesting, then leaned back toward one. Decide in playtest. Changing it means redoing level design and `reach.ts` tuning.
 
-**Fast crushers** can pass through a lone runner standing on the floor and pop them on top instead of crushing them. The same happens with one runner, before collision.
-
-## 14. Clear the lint warnings
-`pnpm check` prints 7 warnings, in `src/ui/touch/overlay.ts`, `src/ui/touch/device.ts`, `src/input/input.ts`, `src/render/props/modules/vehicle.ts` and `src/audio/system.ts`. AGENTS.md treats warnings as real findings. Do it with or after item 6, which also touches the touch code.
-
 ## 21. Ink art leftovers
-- On wide space levels a few tall rock pillars from the surroundings show inside the play area without outlines (seed `sheet4`). It's a `surround.ts` question.
 - Small cog lifts and small spin bars stay small on crate cards, because small parts draw at 0.6 scale.
 
 ## 15. Parody names: decide on sound-alikes
@@ -69,16 +62,7 @@ Some steps need the owner. Run after setting the Vercel env vars.
 - Set `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and `SENTRY_PROJECT` in Vercel (Production and Preview). An organization auth token is best.
 - On the first deploy, confirm source maps upload and client frames resolve to source. Only the failure path has been tested.
 - Install the Sentry GitHub integration for suspect commits.
-- Move `app/global-error.tsx` into `src/` with item 11.
 
 ## 22. Glacier and space follow-ups
-Both themes are on `main`. Their set pieces reuse existing module art, so they need their own looks. Space has no weather. Ice skids and 0.55 space gravity are measured, not played by hand.
-
-## 20. Cleanup pass
-Run this once the current agents have landed, so it doesn't fight them. A lot arrived fast.
-
-- **Code:** dead exports, leftovers from merged branches, duplicated helpers, oversized files (`src/render/hud.ts`, `src/ui/menus.ts`, `tools/shot.ts`).
-- **Docs:** AGENTS.md files, `docs/DESIGN.md`, `docs/ART.md`, `docs/NETCODE.md`, `docs/MOBILE.md`, `README.md`, so each says what's true now and nothing else.
-- **Tooling:** `pnpm format`'s `oxlint --fix` broke `tests/roster.test.ts` by turning an array into a `Set`. Find the rule and fix it.
-- **Repo:** merged `wip/*` branches and worktree branches, the 7 lint warnings (item 14), and `netcode-merge-wip`.
+Both themes are on `main`. Space has no weather. Ice skids and 0.55 space gravity are measured, not played by hand.
 

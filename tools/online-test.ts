@@ -37,7 +37,7 @@ import { overview, type ViewXform, worldToView } from '../src/game/view';
 import { generateLevel } from '../src/gen/level';
 import { TILE } from '../src/sim/constants';
 import { spawnZone, T_EMPTY, T_SOLID, tileAt } from '../src/sim/level';
-import { launchChromium, startNext } from './next-server';
+import { launchBrowser, startServer } from './lib/server';
 
 const argv = process.argv.slice(2);
 /** Named groups, each short enough to run alone on a loaded machine. */
@@ -1391,12 +1391,14 @@ async function bcScenario(browser: Browser, base: string) {
 }
 
 async function unsetScenario(browser: Browser) {
-  const server = await startNext({
-    SLAG_SIGNAL_STORE: '',
-    KV_REST_API_URL: '',
-    KV_REST_API_TOKEN: '',
-    UPSTASH_REDIS_REST_URL: '',
-    UPSTASH_REDIS_REST_TOKEN: '',
+  const server = await startServer({
+    env: {
+      SLAG_SIGNAL_STORE: '',
+      KV_REST_API_URL: '',
+      KV_REST_API_TOKEN: '',
+      UPSTASH_REDIS_REST_URL: '',
+      UPSTASH_REDIS_REST_TOKEN: '',
+    },
   });
   try {
     const r = await newRoom(browser, server.base, 'unset', '', { visual: true });
@@ -1415,8 +1417,9 @@ async function unsetScenario(browser: Browser) {
   }
 }
 
-const browser = await launchChromium();
-const server = await startNext(storeEnv);
+// Real host candidates: mDNS names don't resolve between isolated headless contexts.
+const browser = await launchBrowser(['--disable-features=WebRtcHideLocalIpsWithMdns']);
+const server = await startServer({ env: storeEnv });
 console.log(`signaling store: ${srh ? 'Upstash REST (SRH)' : 'in memory'}`);
 try {
   if (wanted('flow')) {

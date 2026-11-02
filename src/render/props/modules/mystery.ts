@@ -24,7 +24,7 @@ const SHOTS = new Set<ItemKind>(['sword', 'puck', 'boomerang']);
 const GADGETS = new Set<ItemKind>(['shield', 'rocket', 'smoke']);
 
 /** Spark color telegraphs the pool: warm red for shots, cyan for gadgets, gold for a mixed bag. */
-export function poolHue(pool: readonly ItemKind[]): HSL {
+function poolHue(pool: readonly ItemKind[]): HSL {
   if (pool.every((k) => SHOTS.has(k))) return { h: 8, s: 95, l: 60 };
   if (pool.every((k) => GADGETS.has(k))) return { h: 186, s: 95, l: 60 };
   return { h: 46, s: 100, l: 60 };

@@ -1,4 +1,5 @@
 import { newRoomCode, roomFromPath } from '../../game/room';
+import { connectedPads } from '../../input/input';
 import type { Nav, Unmount } from '../../router';
 import { CODEX, lobby } from '../../routes';
 import { MenuPadReader, readMenuPad } from '../settings-nav';
@@ -164,8 +165,4 @@ export function mountHome(root: HTMLElement, nav: Nav): Unmount {
     settingsOpen = false;
     closeSettings?.();
   };
-}
-
-function connectedPads(): Gamepad[] {
-  return navigator.getGamepads ? [...navigator.getGamepads()].filter((p): p is Gamepad => !!p?.connected) : [];
 }

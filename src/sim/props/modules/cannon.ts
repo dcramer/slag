@@ -6,7 +6,7 @@ import type { ModuleOf } from '../types';
 type Cannon = ModuleOf<'cannon'>;
 
 /** Frames between shots inside a burst. */
-export const CANNON_BURST_GAP = 12;
+const CANNON_BURST_GAP = 12;
 
 /**
  * Firing schedule: `k` counts frames since the start of the current

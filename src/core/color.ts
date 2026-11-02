@@ -36,8 +36,3 @@ export function toRgb(c: HSL): [number, number, number] {
   const [r, g, b] = h < 1 ? [C, X, 0] : h < 2 ? [X, C, 0] : h < 3 ? [0, C, X] : h < 4 ? [0, X, C] : h < 5 ? [X, 0, C] : [C, 0, X];
   return [r + m, g + m, b + m];
 }
-
-export function rgbCss(r: number, g: number, b: number, a = 1): string {
-  const f = (v: number) => Math.round(Math.max(0, Math.min(1, v)) * 255);
-  return `rgb(${f(r)} ${f(g)} ${f(b)} / ${a})`;
-}

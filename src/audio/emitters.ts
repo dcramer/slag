@@ -22,20 +22,6 @@ import type { SfxName } from './sfx';
  */
 
 export type LoopKind = 'saw' | 'flame' | 'laserCharge' | 'laserFire' | 'tesla' | 'fan' | 'conveyor' | 'slide' | 'gust' | 'rain' | 'snow' | 'mist';
-export const LOOP_KINDS: readonly LoopKind[] = [
-  'saw',
-  'flame',
-  'laserCharge',
-  'laserFire',
-  'tesla',
-  'fan',
-  'conveyor',
-  'slide',
-  'gust',
-  'rain',
-  'snow',
-  'mist',
-];
 
 export interface Emitter {
   kind: LoopKind;

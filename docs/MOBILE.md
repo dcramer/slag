@@ -9,7 +9,7 @@ slag is fully playable on phones and tablets. Touch is one more input device (`'
 | `src/ui/touch/device.ts` | Render quality tiers, adaptive resolution (`FrameBudget`), safe-area insets, and touch-first detection. |
 | `src/input/input.ts` | Owns `input.touch`. Touch pointers skip the mouse path. `pointerDevice` is `'touch'` while touch is the latest input. |
 | `src/game-client.ts` | Sets the touch mode every sim step, updates the overlay every frame, routes HUD buttons to `pointerDevice`, and buzzes when the touch player dies. |
-| `src/render/renderer.ts` | Applies the quality tier (internal width and DPR cap), downgrades adaptively, and fits the canvas inside the safe area. |
+| `src/render/renderer.ts` | Applies the quality tier (internal width and DPR cap), downgrades adaptively, and keeps the play view inside the safe area. |
 | `src/routes.ts`, `src/main.ts` | Viewport (no zoom, `viewport-fit=cover`, theme colour) on the lobby only (`GAME_CHROME`), applied on every screen change; `app/r/[room]/page.tsx` sends the same on a fresh load. iOS home-screen web-app meta is in `app/layout.tsx`. |
 
 ## When controls show
@@ -52,13 +52,15 @@ A dedicated RUN button would need a third simultaneous touch (stick + run + jump
 
 **Right thumb: JUMP.**
 
-- The *whole right half* is JUMP, apart from the ALT and menu buttons. You can't miss it.
+- The *whole right half* is JUMP, apart from the ALT, USE and menu buttons. You can't miss it.
 - Hold duration = jump hold, so you get variable height. Each new touch is a fresh `jumpPressed`, so wall jumps are just re-taps.
 - A tap shorter than one sim frame still registers. Presses are latched like key presses.
 
 **Drop-through** = pull the stick down, then tap JUMP (down + jump, exactly like the keyboard). There's deliberately no one-tap DROP button. Down + jump on solid ground is a normal jump, and a button that guessed the ground under you would need sim state.
 
 **ALT (💥) = self-destruct, hold ~0.35 s.** A ring fills while you hold. An accidental brush must never kill you. Releasing early cancels.
+
+**USE** shows above JUMP only while you hold an item, labelled with the item's verb. Touching it uses the item.
 
 **Each touch keeps its role** from the moment it lands. A jump thumb sliding left never steers. Only one stick thumb counts.
 
@@ -82,10 +84,11 @@ A dedicated RUN button would need a third simultaneous touch (stick + run + jump
 | Rotate | 6 ms |
 | Place | 15 ms |
 | HUD tap | 8 ms |
+| Use | 10 ms |
 | Self-destruct | 40 ms |
 | Death | 30 ms |
 
-`input.touch.haptics = false` turns them off. There's no settings UI for it yet.
+Settings → Touch → Vibration turns them off (`localStorage['slag.haptics']`).
 
 ## Phone camera (`src/render/camera-follow.ts`)
 
@@ -98,7 +101,7 @@ A phone squeezes the play view into ~570–720 CSS px, so a tile is ~12 px. The 
   - The runner never drifts past 80% of the half-window, and the view stops at the level's edges.
 - **Race, more than one player, local or remote:** `Camera.frameAll`, with no exceptions. Every live runner stays on screen, however small that makes the tiles. Only its zoom cap rises, so a tight pack can still get close. A second player makes it framing for the whole race, even once one runner is left.
 - **Pick and place:** start on the overview and reset on each phase. Zoom runs from the overview to the larger of 2× and 1.25× the race zoom.
-- **Cursors:** the match reads pointers as overview coords, a pure function of the level. `PhoneCam.toBoard` maps a finger through this device's pose to the world and back into overview coords, so `Player.cursor` stays in world px and other players' cursors and ghosts land correctly at any zoom.
+- **Cursors:** in place, the match reads pointers as overview coords, a pure function of the level. `PhoneCam.toBoard` maps a finger through this device's pose to the world and back into overview coords, so `Player.cursor` stays in world px and other players' cursors and ghosts land correctly at any zoom.
 - **Crisp terrain:** the bake resolution follows the race zoom, within the same pixel budget.
 
 ## HUD on phones
@@ -107,7 +110,7 @@ A phone squeezes the play view into ~570–720 CSS px, so a tile is ~12 px. The 
 
 - **Lobby:** the top bar's ends hug the window and its buttons are icons. Fewer, bigger bays; the footer keeps only its context, since the cards carry the buttons.
 - **Pick:** the crate draws up to 2× between the heading and the footer. Only the drawing grows: the sim's card rects and cursors stay logical, and `hud.pickToLogical` maps taps back, so peers agree on which card a cursor is over.
-- **Place:** the header grows, and the Rotate and Place prompts go, because the on-screen buttons say the same.
+- **Place:** the header grows, and the footer's prompts go, because the on-screen buttons say the same.
 - **Race:** the timer grows. Chips wrap to whichever layout lets them grow most without reaching the timer.
 - **Score:** the panel grows to the window.
 
@@ -115,19 +118,19 @@ A phone squeezes the play view into ~570–720 CSS px, so a tile is ~12 px. The 
 
 ## Settings on phones
 
-At 760 CSS px wide or 520 tall, Settings and Match Rules become a full-screen sheet (`.slag-sheet` in `src/ui/menus.ts`): safe-area padding, rows of at least 60 px, buttons of at least 48 px, bigger slider thumbs and switches, and a panel that scrolls. In landscape, Done and Leave Lobby share the tab row, so the rows keep the height.
+At 760 CSS px wide or 520 tall, Settings and Match Rules become a full-screen sheet (`.slag-sheet` in `src/ui/menus/overlay.ts`): safe-area padding, rows of at least 60 px, buttons of at least 48 px, bigger slider thumbs and switches, and a panel that scrolls. In landscape, Done and Leave Lobby share the tab row, so the rows keep the height.
 
 ## Layout
 
 - **Landscape first.** Controls scale with the short side. On an iPhone 13 the JUMP button is about 117 px across and ALT is at least 56 px; both clamp on tablets.
 - **Safe areas.**
   - The game route uses `viewport-fit=cover`.
-  - The renderer fits the canvas inside the left/right/top insets (notch, status bar).
+  - The canvases fill the window; the renderer keeps the play view inside the left/right/top insets (notch, status bar).
   - The bottom home-indicator strip may overlap the picture, but the controls keep clear of it.
   - Insets are read with an `env(safe-area-inset-*)` probe element.
 - **Portrait.**
-  - On phones (short side < 600 px) a "Turn it sideways" card shows, with a "play in portrait anyway" escape. The controls still work in portrait; the game is just small.
-  - Tablets in portrait play directly. The canvas spans the width and the controls sit in the space below it.
+  - On phones (short side < 600 px) a *Turn It Sideways* card shows, with a *Play in Portrait* escape. The controls still work in portrait; the game is just small.
+  - Tablets in portrait play directly. The play view spans the width, centred, and the controls sit below it.
 - **Gestures blocked over the game:**
   - `touch-action:none` and `overscroll-behavior:none`
   - non-passive `touchstart`/`touchmove` `preventDefault` on the game container, for older iOS double-tap zoom and the loupe
@@ -142,18 +145,18 @@ All of these are presentation-only and live in `src/ui/touch/device.ts`.
 
 | Knob | Effect |
 |---|---|
-| `QUALITY[tier].maxW` | Caps the internal render width. This is the old `MAX_W`. The tiers are high 1920, mid 1280 and low 896. The Canvas2D layers, the WebGL target and the HUD all scale with it. Bloom buffers are ¼ and ⅛ of it and the light map is ½, so this one knob also scales bloom cost. |
+| `QUALITY[tier].maxW` | Caps the internal render width. The tiers are high 1920, mid 1280 and low 896. The Canvas2D layers, the WebGL target and the HUD all scale with it. Bloom buffers are ¼ and ⅛ of it and the light map is ½, so this one knob also scales bloom cost. |
 | `QUALITY[tier].dprCap` | Caps devicePixelRatio before `maxW`. The tiers are 4, 2 and 1.5. |
-| Auto tier (`pickTier`) | Desktop stays high (unchanged). A touch-first device or short side < 500 px gets mid. If it also has ≤ 4 cores or ≤ 3 GB `deviceMemory`, it gets low. |
+| Auto tier (`pickTier`) | Desktop stays high. A touch-first device or short side < 500 px gets mid. If it also has ≤ 4 cores or ≤ 3 GB `deviceMemory`, it gets low. |
 | Adaptive (`FrameBudget`) | Mobile tiers only. An average frame time above 22 ms (< ~45 fps) sustained for 2 s drops one tier, with a 3 s cooldown. It never goes back up. Gaps over 250 ms (tab hidden, paused) are ignored. It's disabled under `navigator.webdriver` so screenshots stay deterministic. |
-| `?q=low\|mid\|high` or `localStorage['slag.quality']` | Pins a tier and disables adaptive. |
-| `renderer.setQuality(tier)` | Runtime switch, for a future settings entry. |
+| Settings → Video, `?q=low\|mid\|high`, or `localStorage['slag.quality']` | Pins a tier and disables adaptive. |
+| `renderer.setQuality(tier)` | Runtime switch; Settings → Video calls it. |
 
 The sim is unaffected: it stays a fixed 60 Hz accumulator, and slow frames run several steps.
 
 ## Testing
 
-- `npx vitest run tests/touch.test.ts` covers:
+- `pnpm vitest run tests/touch.test.ts` covers:
   - layout and safe areas
   - multi-touch run + jump
   - hold-to-jump and sub-frame taps
@@ -162,13 +165,14 @@ The sim is unaffected: it stays a fixed 60 Hz accumulator, and slow frames run s
   - role stickiness
   - pick tap
   - place drag offset, bottom fade, and slide-off cancel
+  - two fingers moving the camera: no claim in pick, no ghost move in place
   - lobby HUD taps
   - mode-switch reset
   - a determinism check driving a real `Match`
   - quality tiers and `FrameBudget`
 - `pnpm vitest run tests/camera-follow.test.ts` covers tile size per phone, look-ahead, the dead zone, keeping a falling runner, level clamps, the countdown overview, the all-players rule beating the tile target on each phone, pinch anchoring, pan, edge auto-pan, one finger landing the same world cursor on every peer, and that watching a race leaves its hash alone.
-- `pnpm shot mobile [--device "Pixel 7 landscape"]` emulates a phone in Chromium (touch, mobile, DPR) and drives the real game with CDP multi-touch. It fails if a HUD tap target is under 44 CSS px or a live runner leaves the screen. It covers:
-  1. the settings sheet
+- `pnpm shot mobile [--device "Pixel 7 landscape"]` emulates a phone in Chromium (touch, mobile, DPR) and drives the real game with CDP multi-touch. It fails if a lobby tap target is under 44 CSS px or a live runner leaves the screen. It covers:
+  1. the lobby and the settings sheet (Audio and Video tabs)
   2. joining via the HUD slot
   3. the name prompt
   4. ready, solo
@@ -180,6 +184,6 @@ The sim is unaffected: it stays a fixed 60 Hz accumulator, and slow frames run s
   10. the score screen and portrait
   11. a two-player race with the runners at opposite ends
 
-  Verify on `"iPhone SE landscape"` (568×320, the smallest), `"iPhone 13 landscape"` and `"Pixel 7 landscape"`.
+  The default is `"iPhone 13 landscape"`. Verify on `"iPhone SE landscape"` (568×320, the smallest) and `"Pixel 7 landscape"` too.
 
   It writes `shots/mobile-<device>-*.png` and logs the touch runner's position before and after input.

@@ -1,5 +1,5 @@
 /**
- * Shared harness plumbing for tools/shot.ts and tools/perf.ts: build the production bundle when its
+ * Shared harness plumbing for the browser tools (shot, perf, brand, online-test): build the production bundle when its
  * inputs changed, boot `next start` (or `next dev` with SHOT_DEV=1) on a free port, launch headless
  * Chromium with software GL, and guarantee the harness exits when it's done.
  */
@@ -81,7 +81,7 @@ export function needsBuild(root = '.'): boolean {
 }
 
 /** `next build` if needed (or if `force`). Returns build wall time in ms, or 0 when skipped. */
-export function ensureBuild(force = false): number {
+function ensureBuild(force = false): number {
   if (!force && !needsBuild()) return 0;
   console.log('building (sources changed since last build)…');
   const t0 = performance.now();
@@ -175,15 +175,16 @@ const STARTUP_MS = 120_000;
 /**
  * Production server by default (`next dev` compiles on demand and is far too slow for software GL).
  * Builds first when sources changed. Resolves once /r/WARMUP answers, which also warms the route.
+ * `env` is added to the server's environment (online-test picks its signaling store this way).
  */
-export async function startServer(opts: { dev?: boolean; port?: number } = {}): Promise<Server> {
+export async function startServer(opts: { dev?: boolean; port?: number; env?: Record<string, string> } = {}): Promise<Server> {
   const dev = opts.dev ?? process.env.SHOT_DEV === '1';
   const port = opts.port ?? Number(process.env.SHOT_PORT ?? (await freePort()));
   const base = `http://127.0.0.1:${port}/`;
   if (!dev) ensureBuild();
   const next = spawn(process.execPath, [NEXT_BIN, dev ? 'dev' : 'start', '--port', String(port), '--hostname', '127.0.0.1'], {
     stdio: ['ignore', 'pipe', 'pipe'],
-    env: NEXT_ENV,
+    env: { ...NEXT_ENV, ...opts.env },
   });
   const close = supervise(next);
   let log = '';

@@ -175,9 +175,9 @@ export function steer(p: { vx: number; vy: number }, tx: number, ty: number, C: 
 export const SEEK_C = 0.9989875928;
 export const SEEK_S = 0.0449848149;
 /** Seekers only lock on within this range (px). */
-export const SEEK_RANGE = 15 * TILE;
+const SEEK_RANGE = 15 * TILE;
 /** Frames a seeker flies straight before it starts steering (clears its pod). */
-export const SEEK_ARM = 12;
+const SEEK_ARM = 12;
 /** Cluster shells split after this many frames, or at the top of their arc. */
 export const CLUSTER_FUSE = 50;
 /** Shrapnel fan (px/s offsets added to a share of the shell's velocity). */
@@ -192,28 +192,28 @@ export const CLUSTER_FAN: readonly (readonly [number, number])[] = [
 export const PATCH_FRAMES = 330;
 export const PATCH_PX = COAT_PX;
 /** Patches are short-lived coats: same surfaces as the placed slime and ice. */
-export const PATCH_SURFACES: Partial<Record<Ammo, Surface>> = { goo: COAT_SURFACES.slime, frost: COAT_SURFACES.ice };
+const PATCH_SURFACES: Partial<Record<Ammo, Surface>> = { goo: COAT_SURFACES.slime, frost: COAT_SURFACES.ice };
 /** How strongly a boomerang is pulled back, relative to its launch speed (1/s). */
-export const BOOMERANG_PULL = 1.8;
+const BOOMERANG_PULL = 1.8;
 /** Thrown boomerangs curve back at the thrower: turn rate 0.2 rad/frame (cos, sin precomputed), and speed gained per frame on the way (px/s). */
-export const RETURN_C = 0.9800665778;
-export const RETURN_S = 0.1986693308;
-export const RETURN_GAIN = 12;
+const RETURN_C = 0.9800665778;
+const RETURN_S = 0.1986693308;
+const RETURN_GAIN = 12;
 
 /** Gliders: a flying plank you can ride. Size (px), level-flight time (frames), sink speeds (px/s): idle, under one rider, per extra rider. */
 export const GLIDER_W = 30;
 export const GLIDER_H = 5;
 export const GLIDER_CRUISE = 130;
-export const GLIDER_SINK = 40;
-export const GLIDER_LOADED_SINK = 70;
-export const GLIDER_EXTRA_SINK = 30;
+const GLIDER_SINK = 40;
+const GLIDER_LOADED_SINK = 70;
+const GLIDER_EXTRA_SINK = 30;
 /** Glider solid ids live far above prop solid ids (positive so riders are carried). */
-export const GLIDER_ID_BASE = 1 << 30;
+const GLIDER_ID_BASE = 1 << 30;
 export const gliderSolidId = (p: Projectile) => GLIDER_ID_BASE + p.id;
-export const gliderRect = (p: Projectile) => ({ x: p.x - GLIDER_W / 2, y: p.y - GLIDER_H / 2, w: GLIDER_W, h: GLIDER_H });
+const gliderRect = (p: Projectile) => ({ x: p.x - GLIDER_W / 2, y: p.y - GLIDER_H / 2, w: GLIDER_W, h: GLIDER_H });
 /** Rubber balls shove instead of kill: this share of the ball's velocity, plus a hop (px/s). */
-export const KNOCK_SHARE = 0.9;
-export const KNOCK_LIFT = 220;
+const KNOCK_SHARE = 0.9;
+const KNOCK_LIFT = 220;
 
 /**
  * Glue a goo/frost shot onto the exposed terrain face it hit. False if there's
@@ -415,7 +415,7 @@ function defaultMove(p: Projectile, f: number, gravity: number): void {
 }
 
 /** Is a stuck patch still there? (Its host terrain can't change mid-race, so only time matters.) */
-export const patchAlive = (p: Projectile, f: number) => f < p.until;
+const patchAlive = (p: Projectile, f: number) => f < p.until;
 
 /** What each ammo effect does to the runner `i` it hit. */
 const HIT: Record<HitEffect, (p: Projectile, w: ProjWorld, i: number) => void> = {

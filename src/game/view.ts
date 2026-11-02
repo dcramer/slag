@@ -24,7 +24,7 @@ export interface ViewXform {
 }
 
 /** Smallest overview zoom we allow (a 60-row level fits at 0.45); profile sizes stay above it. */
-export const MIN_OVERVIEW_ZOOM = 0.4;
+const MIN_OVERVIEW_ZOOM = 0.4;
 
 /** Whole level, centred both ways; never magnified above 1. */
 export function overview(level: Level): ViewXform {

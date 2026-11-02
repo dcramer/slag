@@ -37,7 +37,7 @@ src/net/
   signal-client.ts      browser side of the API; the one place that knows where the API lives
   signal-protocol.ts    wire types and limits, shared with the routes; pure
   session.ts            NetSession: lockstep, prediction, sync, migration, desync detection
-  actions.ts            host-sequenced match actions (join/leave/away/name/rules) + replicated NetState
+  actions.ts            host-sequenced match actions (join/leave/away/name/look/salt/rules/kick) + replicated NetState
   codec.ts              compact InputFrame encoding
   snapshot.ts           Match snapshot/restore/hash (exact through JSON: -0, NaN, ∞, Maps, typed arrays)
   predict.ts            cheap race-state copy for prediction
@@ -66,12 +66,12 @@ A build served from another origin (a packaged app pointing at the hosted API) n
 
 | Op | Does | Redis commands |
 |---|---|---|
-| `join` | Assign the next join order; returns the live members and ICE servers. | 6–7 |
+| `join` | Assign the next join order; returns the live members and ICE servers. | 6–8 |
 | `beat` | Renew liveness. Hosts also renew the room and learn the room's lowest order. | guest 1, host 4 |
 | `poll` | Drain this peer's mailbox. | 1 |
 | `signal` | Put a handshake in another peer's mailbox. | 5 |
 | `members` | Live members in order. | 2–3 |
-| `gone` | Report a peer that failed to answer an offer. | 3–7 |
+| `gone` | Report a peer that failed to answer an offer. | 4–8 |
 | `leave` | Remove self, sent by `sendBeacon` on pagehide. | 1–4 |
 
 Keys, all with a TTL: `slag:<ROOM>:n` the join counter (`INCR`) and `slag:<ROOM>:m` the member sorted set (300 s, renewed by the host), `slag:<ROOM>:p:<peer>` liveness (50 s, renewed by `beat`), `slag:<ROOM>:b:<peer>` the mailbox (30 s).
@@ -201,20 +201,20 @@ IEEE-754 `+ - * /` and `Math.sqrt` are exact everywhere, but `Math.sin/cos/atan2
 
 ## Monitoring
 
-`src/net` reports through `src/telemetry.ts`, never the SDK: `desync` (error, from the host), `host-migration` (warning, from the new host, so one per migration), `net-unavailable` (warning), and breadcrumbs for peers joining and leaving and for link changes. Names are fixed and variables go in `data`; they carry frames, hashes and peer ids, never player names, which players type themselves. The routes run on the Node runtime. A store failure is answered as a 503, so the route reports it itself, at most once a minute per instance, because an exhausted free tier would otherwise report every poll.
+`src/net` reports through `src/telemetry.ts`, never the SDK: `desync` (error, from the host), `host-migration` (warning, from the new host, so one per migration), `net-unavailable` (warning), `snapshot-refused` (warning, once a page, from a guest on another build), and breadcrumbs for peers joining and leaving and for link changes. Names are fixed and variables go in `data`; they carry frames, hashes and peer ids, never player names, which players type themselves. The routes run on the Node runtime. A store failure is answered as a 503, so the route reports it itself, at most once a minute per instance, because an exhausted free tier would otherwise report every poll.
 
 ## Testing
 
 - `tests/signal-handlers.test.ts`: the store (reply shapes, Upstash request format, either env pair), handlers (join order, TTLs, caps, validation, command costs) and the HTTP edge.
 - `tests/webrtc-transport.test.ts`: the real transport, handlers and store over a fake RTC network and clock: linking, polling stopping, the measured budget, crash and goodbye migrations, double failure (including a candidate still settling its own stalled handshake, and a dead peer's handshake hanging as it does in a browser), flaky guests, rival hosts stepping down within seconds, resuming from the furthest frame. Seeded runs over API latency, handshake behaviour and crash timing check that a double failure always lands on the third peer with never two hosts, and that a split caused by flaky guests is over within 5 s.
-- `tests/net.test.ts`, `tests/net-pick.test.ts`: lockstep under latency and loss, rough play (four peers, three rounds through weather, deaths, grabs and contact, the host's link cut mid-race), desync recovery, refresh, late join, a guest on another build; claim races, pending cards, remote cursors and ghosts, the input codec.
+- `tests/net.test.ts`, `tests/net-pick.test.ts`: lockstep under latency and loss, rough play (four peers, three rounds through weather, deaths, grabs and contact, the host's link cut mid-race), desync recovery, seats, kicks, refresh, late join, a guest on another build; claim races, pending cards, remote cursors and ghosts, the input codec.
 - `tests/snapshot.test.ts`: round trips with items in play, prediction isolation, and a guard that fails until any new `Match` or `RunWorld` field is snapshotted or declared derived. `tests/dmath.test.ts`.
 - `pnpm test:store`: the real Upstash REST code against real Redis behind [Serverless Redis HTTP](https://upstash.com/docs/redis/sdks/ts/developing) (`compose.store.yml`, Redis 6.2.21 and SRH 0.0.10, on port 8079). Every command the handlers use, reply parity with the in-memory store, TTL expiry, the join counter under a stampede, the handlers end to end. `-- --browser pick,run,leave` adds real browsers on the same store, with the app configured through the production env vars. Needs Docker, so it's a CI job rather than part of `pnpm check`. SRH needs `Content-Type: application/json` and differs from Upstash in edge cases, so handlers stick to plain commands.
 - `pnpm online-test`: real WebRTC between headless Chromium pages, one context per peer, against the real routes with the in-memory store. Hosts are killed with a renderer crash (no pagehide, no goodbye) in pick, place and run, and in a race with no third peer (`duo`); also a graceful leave, and a new host dying straight after taking over (`twice`: about 8 s from the first crash, 4 s from the second). Each prints seconds to recovery and compares state hashes. With a third peer a crash recovers in about 4 s, since its offer proves the host is gone; alone, the guest waits out the old host's whole answer window, about 7.5 s (2.5 s of silence, the offer landing, then `PROBE_MS`).
 - `pnpm online-test -- --only view`: real mouse events at four window shapes on classic, wide and tall levels. The card under the pointer is the one taken, and the cursor and ghost sit under it on both peers. Cursors are view px in `pick` and world px in `place`, mapped through `overview`, so a test or HUD that treats them alike is wrong on anything but a 1:1 level.
-- Groups, each runnable alone on a loaded machine: `--only lobby`, `migration`, `feel`, `misc`. Pages without a screenshot stub their drawing, since software GL otherwise measures the machine.
+- Groups, each runnable alone on a loaded machine: `--only lobby`, `migration`, `feel`, `misc`. The other scenarios (`flow`, `kick`, `refused`, `play`, `bc`, `unset`) are listed at the top of `tools/online-test.ts`. Scenarios that don't check pixels stub their drawing, since software GL otherwise measures the machine.
 - `pnpm online-test -- --only contact`: two runners out of the spawn zone, one shoving the other and then one riding the other, at 40 ms each way: the guest must draw no teleport, no pusher inside who it pushes, and no rider sliding on its base.
-- `pnpm online-test -- --only latency,hidden`: input-to-screen delay between pages, bundle cadence, stalls and teleports, at 0 and 40 ms each way, and with the host's tab hidden. Drawing is stubbed, because software GL would measure this machine. The delay and the hidden tab are simulated in the page (a delayed `RTCDataChannel.send`; `document.hidden`, no rAF, timers clamped to 1 Hz), since headless pages can't truly go hidden. The budget is loose enough for a loaded box: it catches regressions, not jitter.
+- `pnpm online-test -- --only latency,hidden`: input-to-screen delay between pages, bundle cadence, stalls and teleports, at 0 and 40 ms each way, and with the host's tab hidden. The delay and the hidden tab are simulated in the page (a delayed `RTCDataChannel.send`; `document.hidden`, no rAF, timers clamped to 1 Hz), since headless pages can't truly go hidden. The budget is loose enough for a loaded box: it catches regressions, not jitter.
 
 **Not exercised by any of this:** the real Upstash service (SRH stands in for it), real NAT traversal (all pages share a machine and connect over host candidates), TURN, browsers other than Chromium, and real phones.
 

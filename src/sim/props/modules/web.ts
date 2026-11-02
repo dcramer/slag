@@ -2,10 +2,10 @@ import { TILE } from '../../constants';
 import { addTrigger, defineModule, solidId } from '../registry';
 
 /** Inside a web you sink at most this fast (px/s) and can't rise faster than this. */
-export const WEB_FALL = 30;
-export const WEB_RISE = 230;
+const WEB_FALL = 30;
+const WEB_RISE = 230;
 /** Slow status refreshed while inside (frames): you stay sluggish a moment after breaking free. */
-export const WEB_SLOW = 14;
+const WEB_SLOW = 14;
 
 /**
  * Sticky web: heavy drag while you're in it. Falls are caught (you sink

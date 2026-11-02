@@ -1,4 +1,3 @@
-import { dexp } from '../../core/dmath';
 import type { Rng } from '../../core/rng';
 import { T_EMPTY, T_ONEWAY, T_SOLID } from '../../sim/level';
 import { jumpProfile } from './probe';
@@ -19,7 +18,7 @@ import { BRIDGE_W, type BridgeHint, type Shape } from './types';
 export { T_EMPTY, T_ONEWAY, T_SOLID };
 
 /** Spawn stands in column 2, the goal in column w-3; their pockets are 5 wide. */
-export const SPAWN_X = 2;
+const SPAWN_X = 2;
 export const POCKET = 5;
 
 export class Grid {
@@ -152,21 +151,6 @@ export function groundFromHeights(g: Grid, surf: readonly number[], v: number = 
   for (let x = 0; x < g.w; x++) if (surf[x] < g.h) g.column(x, surf[x], v);
 }
 
-/** Limit neighbor height differences so the walk stays climbable (values ≥ H are pits). */
-export function limitSlope(surf: number[], maxStep: number, H: number): number[] {
-  for (let pass = 0; pass < 3; pass++) {
-    for (let x = 1; x < surf.length; x++) {
-      if (surf[x] >= H || surf[x - 1] >= H) continue;
-      if (surf[x] < surf[x - 1] - maxStep) surf[x] = surf[x - 1] - maxStep;
-    }
-    for (let x = surf.length - 2; x >= 0; x--) {
-      if (surf[x] >= H || surf[x + 1] >= H) continue;
-      if (surf[x] < surf[x + 1] - maxStep) surf[x] = surf[x + 1] - maxStep;
-    }
-  }
-  return surf;
-}
-
 export interface Pocket {
   /** Row players stand in (the floor is row + 1). */
   row: number;
@@ -227,24 +211,6 @@ export function hintGap(g: Grid, x0: number, x1: number, row: number): void {
     g.hint(x1 - Math.floor(w / 3) - 1, row);
   }
   g.hint(x0 + Math.floor((w - 3) / 2), row);
-}
-
-/**
- * Organic terrain: a solid-probability field that rises below a noisy
- * surface line, roughened with random speckle and smoothed by a cellular
- * automaton. Yields overhangs, undercuts and pockets instead of a heightmap.
- * `surf[x]` is the nominal ground row; `soft` is how many rows the
- * transition blurs over.
- */
-export function organicMask(rng: Rng, W: number, H: number, surf: readonly number[], soft = 3, iters = 4): Uint8Array {
-  const m = new Uint8Array(W * H);
-  for (let y = 0; y < H; y++)
-    for (let x = 0; x < W; x++) {
-      const d = (y - surf[x]) / soft; // >0 below the surface
-      const p = 1 / (1 + dexp(-d * 2.2));
-      m[y * W + x] = rng.next() < p ? 1 : 0;
-    }
-  return smoothCA(W, H, m, iters, 5, 4, 0);
 }
 
 /**

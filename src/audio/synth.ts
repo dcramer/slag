@@ -81,7 +81,7 @@ export function sweep(p: AudioParam, from: number, to: number, t: number, dur: n
 }
 
 /** Attack/decay envelope on a gain param: 0 → peak (linear) → floor (exponential) → 0. Returns end time. */
-export function envAD(p: AudioParam, t: number, peak: number, attack: number, decay: number): number {
+function envAD(p: AudioParam, t: number, peak: number, attack: number, decay: number): number {
   const pk = Math.max(FLOOR * 2, peak);
   const a = Math.max(0.002, attack);
   p.setValueAtTime(0, t);
@@ -270,4 +270,3 @@ export function pluck(v: Voice, t: number, f: number, d: number, peak: number, b
 }
 
 export const mtof = (m: number) => 440 * 2 ** ((m - 69) / 12);
-export const semis = (n: number) => 2 ** (n / 12);

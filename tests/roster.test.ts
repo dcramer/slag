@@ -22,7 +22,7 @@ const cardsFor = (players: number) => Math.max(3, players + 2);
 const PLAYERS = Array.from({ length: MAX_PLAYERS }, (_, i) => i + 1);
 const HAZARDS = new Set<Archetype>(['spikestrip', 'spikeblock', 'saw', 'flail', 'launcher', 'flamer', 'laser', 'tesla', 'crusher', 'dropper', 'snapper']);
 /** Parts with nothing to scale: one tile, or a beam that already reaches across the level. */
-const ONE_SIZE: Archetype[] = ['launcher', 'laser', 'spring', 'hangar', 'mystery', 'keg'];
+const ONE_SIZE = new Set<Archetype>(['launcher', 'laser', 'spring', 'hangar', 'mystery', 'keg']);
 
 /** Module fields that size may change, by module type. Anything else differing between sizes is a bug. */
 const SIZE_FIELDS: Partial<Record<Module['type'], string[]>> = {
@@ -241,7 +241,7 @@ describe('a part across its sizes', () => {
     for (const k of kinds) {
       for (let i = 0; i < 40; i++) {
         const { variants } = generatePart(new Rng(i * 53 + 7), k, k);
-        if (ONE_SIZE.includes(k)) {
+        if (ONE_SIZE.has(k)) {
           expect(
             variants.map((v) => v.size),
             k,

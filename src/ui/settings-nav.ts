@@ -144,7 +144,7 @@ export function readMenuPad(pads: readonly PadLike[]): MenuPadState {
   for (const p of pads) {
     const ax = p.axes[0] ?? 0;
     const ay = p.axes[1] ?? 0;
-    const btn = (i: number) => !!p.buttons[i]?.pressed;
+    const btn = (i: number) => p.buttons.at(i)?.pressed ?? false;
     s.up ||= ay < -0.5 || btn(12);
     s.down ||= ay > 0.5 || btn(13);
     s.left ||= ax < -0.5 || btn(14);

@@ -176,6 +176,6 @@ const ITEM_USE_CUE: Record<string, SfxName> = {
   rocket: 'fire-cannon',
   smoke: 'fire-totem',
 };
-export const itemName = (what: ItemEventKind, kind: string): SfxName | undefined => (what === 'use' ? ITEM_USE_CUE[kind] : ITEM_CUE[what]);
+const itemName = (what: ItemEventKind, kind: string): SfxName | undefined => (what === 'use' ? ITEM_USE_CUE[kind] : ITEM_CUE[what]);
 export const popName = (ammo: string): SfxName => POP[ammo] ?? 'pop-bolt';
 export const fireName = (style: string): SfxName => FIRE[style] ?? 'fire-crossbow';

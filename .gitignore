@@ -10,3 +10,8 @@ CLAUDE.local.md
 
 # `vercel env pull` writes store credentials here
 .env*.local
+
+# `vercel link` writes the project binding here
+.vercel
+# Personal Claude Code settings
+.claude/settings.local.json

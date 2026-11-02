@@ -6,7 +6,7 @@ import { deriveSeed, hashString } from '../core/rng';
  * level so a fresh link always opens the same level.
  */
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no 0/O/1/I/L
-export const ROOM_LEN = 5;
+const ROOM_LEN = 5;
 
 export function newRoomCode(random: () => number = Math.random): string {
   let s = '';

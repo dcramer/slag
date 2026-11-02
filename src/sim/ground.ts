@@ -22,7 +22,7 @@ export const GROUND_ICE = 1;
 export const ICE_SURFACE: Surface = { ...DEFAULT_SURFACE, friction: 0.1, speedMult: 1.15, wall: 'slick' };
 
 /** Surface per ground kind; undefined means "whatever plain terrain is today". */
-export const GROUND_SURFACES: readonly (Surface | undefined)[] = [undefined, ICE_SURFACE];
+const GROUND_SURFACES: readonly (Surface | undefined)[] = [undefined, ICE_SURFACE];
 
 /**
  * Footing per tile for a CollisionWorld (`surfaceAt`), or undefined when the
