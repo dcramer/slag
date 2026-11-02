@@ -4,7 +4,7 @@ import { dirOf, laserAngle, laserCycle, type Module, type ModuleOf, type PropSty
 import { ball, boxPts, dot, glint, INK, part, pen, poly, sprite, stamp, tone } from '../../ink-props';
 import { circle, glowDot, light, type MetalPalette, type RC } from '../../kit';
 import { beamOf, defineArt, type PropDrawOpts } from '../common';
-import { backplate, disc, type Face, faceOf, flange, flat, housed, iron, lbox, ltick, tf, within } from '../machine';
+import { backplate, disc, type Face, faceOf, flange, flat, housed, iron, lbox, ltick, orb, tf, within } from '../machine';
 
 type M<T extends Module['type']> = ModuleOf<T>;
 
@@ -30,25 +30,23 @@ function bunker(k: Face, pal: MetalPalette, hue: number) {
     const body = lbox(k, -7.7, -7.6, 15.4, 12.4, 3, 4, 0.25);
     tone(g, body, iron(pal, 40), { depth: 1.3, shade: -17 });
     within(g, body, () => {
-      flat(g, lbox(k, -9, -9, 18, 3.4, 0, 5), css({ h: hue, s: 58, l: 46 }));
+      flat(g, lbox(k, -9, -9, 18, 3.4, 0, 5), css(iron(pal, 40), -14, 1, 4));
       ltick(g, k, -8, -5.5, 8, -5.5, 0.7, 6, INK, [0, 0]);
       for (const sg of [-1, 1])
-        for (const y of [-3.2, -0.9, 1.4]) {
+        for (const y of [-2.6, 0.4]) {
           flat(g, lbox(k, sg > 0 ? 5.3 : -7.4, y - 0.55, 2.1, 1.1, 0.5, 7 + y + sg), css(pal.dark, -8));
           ltick(g, k, sg * 7.2, y + 0.95, sg * 5.5, y + 0.95, 0.45, 8 + y + sg, css(iron(pal, 40), 20), [0.1, 0.1]);
         }
     });
     pen(g, body, 8, 0.55, 1.5);
-    // The socket: a dark well with a lit rim on its far side.
+    // The turret: a painted dome on a dark race ring, the pointer's swivel on its crown.
     const c = tf(k, 0, RING_Y);
     g.fillStyle = INK;
-    disc(g, c.x, c.y, 4.5, 9);
+    disc(g, c.x + 0.3, c.y + 0.35, 5.6, 9);
     g.fill();
-    g.fillStyle = css(iron(pal, 40), 22);
-    disc(g, c.x + 0.45, c.y + 0.5, 3.7, 10);
-    g.fill();
-    g.fillStyle = '#16141a';
-    disc(g, c.x - 0.15, c.y - 0.1, 3.4, 11);
+    orb(g, c.x, c.y, 4.7, { h: hue, s: 52, l: 50 }, 10);
+    g.fillStyle = css({ h: hue, s: 52, l: 50 }, -26, 1, 6);
+    disc(g, c.x + 0.2, c.y + 0.25, 2.5, 11);
     g.fill();
   });
 }

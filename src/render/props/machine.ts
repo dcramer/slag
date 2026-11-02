@@ -96,6 +96,25 @@ export function disc(g: CanvasRenderingContext2D, x: number, y: number, r: numbe
   path(g, ovalPts(x, y, r, r, seed, 0.03, Math.max(14, Math.round(r * 6))));
 }
 
+/** A smooth ball for a machine's big round parts (a dome, a terminal): `ball` from the kit, without its lumps at size. */
+export function orb(g: CanvasRenderingContext2D, x: number, y: number, r: number, base: HSL, seed: number) {
+  g.fillStyle = INK;
+  disc(g, x + 0.25, y + 0.3, r + Math.min(1.1, r * 0.22), seed);
+  g.fill();
+  g.fillStyle = css(base, -14, 1, 4);
+  disc(g, x, y, r, seed + 1);
+  g.fill();
+  g.save();
+  disc(g, x, y, r, seed + 1);
+  g.clip();
+  g.fillStyle = css(base);
+  disc(g, x - r * 0.2, y - r * 0.24, r * 0.88, seed + 2);
+  g.fill();
+  g.restore();
+  g.fillStyle = 'rgba(255,255,255,0.8)';
+  line(g, x - r * 0.62, y - r * 0.02, x - r * 0.2, y - r * 0.6, { w: Math.max(0.5, r * 0.2), seed, taper: [0.25, 0.4], press: 0.1 });
+}
+
 /** Fill a shape inside a clip: tone without a shadow, for bands and panels that belong to a body. */
 export function flat(g: CanvasRenderingContext2D, pts: readonly P[], col: string) {
   g.fillStyle = col;

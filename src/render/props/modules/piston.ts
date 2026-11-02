@@ -2,18 +2,19 @@ import { css, type HSL } from '../../../core/color';
 import { frac, type Vec } from '../../../core/geom';
 import { TILE } from '../../../sim/constants';
 import { dirOf, type ModuleOf, pistonHead, pistonState, type Resolved } from '../../../sim/props';
-import { line } from '../../ink';
+import { line, stroke } from '../../ink';
 import { boxPts, dot, INK, ovalPts, part, path, pen, sprite, stamp, tick, tone } from '../../ink-props';
 import { glowDot, light, type MetalPalette, type RC } from '../../kit';
 import { beamOf, defineArt, type PropDrawOpts } from '../common';
-import { bolt, type Face, faceOf, flange, flat, housed, iron, lbox, ltick, tf, within } from '../machine';
+import { bolt, type Face, faceOf, flange, flat, housed, iron, lbox, lp, ltick, tf, within } from '../machine';
 
 type Piston = ModuleOf<'piston'>;
 
 /**
- * Crusher, inked as a panini press (docs/PARODY.md, crusher): a heavy head on a rod, hazard bands across
- * it, and a ridged grill plate on the face that strikes, with grill marks burned into it. The head is
- * drawn on exactly the rect the sim crushes with; only the ridges, thin as pen lines, stand off the face.
+ * Crusher, inked as a panini press (docs/PARODY.md, crusher): a hydraulic housing, a heavy head on a rod
+ * with a bolted boss where they meet, and a ridged grill plate on the face that strikes, with grill marks
+ * burned into it. The head is drawn on exactly the rect the sim crushes with; only the ridges, thin as pen
+ * lines, stand off the face. Its tell is the housing's lamp and a shudder through the last of the rest.
  */
 
 /**
@@ -81,6 +82,15 @@ function housing(k: Face, n: number, pal: MetalPalette) {
       ltick(g, k, -W / 2 + 2, -5, -W / 2 + 4.5, -5.2, 0.9, 7, css(pal.spec, -8), [0.2, 0.3]);
     });
     pen(g, body, 8, 0.55, 1.5);
+    // A hydraulic hose looped off each end: thin, so it hangs past the block as decoration.
+    for (const sg of [-1, 1]) {
+      const e = sg * (W / 2);
+      const hose = lp(k, e - sg * 1.4, 5.4, e + sg * 1.6, 4.6, e + sg * 2.5, 1.2, e + sg * 1.9, -2.6, e - sg * 0.6, -4.6);
+      g.fillStyle = INK;
+      stroke(g, hose, { w: 1.7, seed: 12 + sg, taper: [0, 0], press: 0.1 });
+      g.fillStyle = '#3b3633';
+      stroke(g, hose, { w: 0.85, seed: 13 + sg, taper: [0, 0], press: 0.1 });
+    }
     // The collar the rod leaves through.
     part(g, lbox(k, -4.6, -8.3, 9.2, 3, 1, 9), css2(metal), 9, { depth: 0.5, thin: 0.45, thick: 1.2 });
     flat(g, lbox(k, -2.6, -8.4, 5.2, 1.2, 0.4, 10), '#15110f');
