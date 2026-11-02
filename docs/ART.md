@@ -39,7 +39,7 @@ The canonical palette is `PAL` in `src/ui/style.ts`. `src/ui/screens/css.ts` mir
 | `danger` | `#ff4a3d` | urgent timers, deaths |
 | `hazard` | `#f2b705` | hazard tape, theme tags |
 
-Player colors come from the characters and are used for accents only: card top strips, cursors, bars. Role colors (Build, Hazard, Utility, Demolish) live in `hud.ts`.
+Player colors come from the characters and are used for accents only: card top strips, cursors, bars. Role colors (Build, Hazard, Utility, Demolish) live in `src/render/hud/pick-place.ts`.
 
 ## Type
 
