@@ -21,3 +21,8 @@ rendered in both. The OFL governs the font software, not images made with it, so
 The icon mark (`app/icon.svg`, drawn by hand as paths, no font) and every file made from it
 (`app/favicon.ico`, `app/apple-icon.png`, `public/icons/*.png`) are original. `pnpm brand` regenerates
 them and the preview cards.
+
+## Generated art
+
+Images and models made with Tripo (tripo3d.ai) on the owner's paid plan are ours to ship: no attribution or
+license condition applies. Keep each one's prompt beside it, under `art/`.

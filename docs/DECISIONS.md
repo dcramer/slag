@@ -162,6 +162,12 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 17:16Z (answer) · `done` · CHARACTERS.md
 - **Characters and the menu crowd take the art style, but stay as clean as they are.** "i like how they look right now so make sure ou keep it clean like it is and dont break it"
   2026-11-02 15:49Z · `done` · git `a6963c8`, `3eb7c44`; ART.md → World art
+- **Character art comes from a generated-concept pipeline, tested before any rollout: no rollout until the owner picks one.** "Lets test that out. but dont duct tape like we need great results here" / "Not yet"
+  2026-11-02 · `in progress` · CHARACTERS.md
+- **Traced frames (round 2) look out of place beside the hand-drawn cast; wait for the 3D-to-2D test before choosing.** "i agree w/ your asssessment. they look out of place. lets wait on the new test"
+  2026-11-02 · `open` · branch `worktree-agent-ae6810c61c411904c`, behind `?traced=1`
+- **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
+  2026-11-02 · `done` · public/ASSETS.md
 
 ## Parts and the crate
 
