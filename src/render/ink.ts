@@ -82,8 +82,29 @@ const ly: number[] = [];
 const rx: number[] = [];
 const ry: number[] = [];
 
-/** One pen stroke along `pts` as a filled ribbon, into the current fillStyle. */
+/** Fewest points a stroke is drawn through: a taper needs somewhere between its ends to swell. */
+const MIN_POINTS = 9;
+
+/** `pts` cut every 2.5 px or finer, as `line` samples, and into at least MIN_POINTS points. */
+function densify(pts: readonly P[]): P[] {
+  const segs = pts.length - 1;
+  const out: P[] = [];
+  for (let i = 0; i < segs; i++) {
+    const a = pts[i];
+    const b = pts[i + 1];
+    const cuts = Math.max(Math.ceil((MIN_POINTS - 1) / segs), Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 2.5));
+    for (let k = 0; k < cuts; k++) out.push({ x: a.x + ((b.x - a.x) * k) / cuts, y: a.y + ((b.y - a.y) * k) / cuts });
+  }
+  out.push(pts[segs]);
+  return out;
+}
+
+/**
+ * One pen stroke along `pts` as a filled ribbon, into the current fillStyle. A path of only a few points is cut finer first:
+ * width is set per point, so a two-point stroke that tapers at both ends would have no width anywhere and draw nothing.
+ */
 export function stroke(g: CanvasRenderingContext2D, pts: readonly P[], o: StrokeOpts) {
+  if (pts.length >= 2 && pts.length < MIN_POINTS) pts = densify(pts);
   const n = pts.length;
   if (n < 2) return;
   let len = 0;

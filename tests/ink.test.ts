@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EDGE_DRIFT, type EdgeP, FLOOR_DRIFT, line, looseLoop, PEN, traceCorners } from '../src/render/ink';
+import { EDGE_DRIFT, type EdgeP, FLOOR_DRIFT, line, looseLoop, PEN, stroke, traceCorners } from '../src/render/ink';
 import { dirtyTiles } from '../src/render/ink-terrain';
 import { T_ONEWAY } from '../src/sim/level';
 
@@ -155,5 +155,24 @@ describe('the pen', () => {
     expect(width({ w: 3, seed: 3, taper: [0, 0], press: 0 })).toBeCloseTo(3, 1);
     const rim = width({ w: 3.8, seed: 3, taper: [0, 0], press: 0 });
     expect(rim).toBeGreaterThan(width({ w: 3, seed: 4, taper: [0, 0], press: 0 }) + 0.5);
+  });
+
+  it('gives a two-point stroke tapered at both ends a body, so short rods and arms still draw', () => {
+    let lo = Infinity;
+    let hi = -Infinity;
+    const at = (_x: number, y: number) => {
+      lo = Math.min(lo, y);
+      hi = Math.max(hi, y);
+    };
+    const g = { beginPath() {}, closePath() {}, fill() {}, moveTo: at, lineTo: at } as unknown as CanvasRenderingContext2D;
+    stroke(
+      g,
+      [
+        { x: 0, y: 0 },
+        { x: 6, y: 0 },
+      ],
+      { w: 2, seed: 1, taper: [0.3, 0.4], press: 0, wobble: 0 },
+    );
+    expect(hi - lo).toBeGreaterThan(2 * PEN.weight * 0.6);
   });
 });

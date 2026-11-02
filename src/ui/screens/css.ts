@@ -55,7 +55,8 @@ body {
 .home {
   position: relative;
   min-height: 100dvh;
-  overflow-x: clip;
+  /* Both axes: the heat shimmer hangs below the screen and breathes, and would breathe the page's scroll height with it. */
+  overflow: clip;
   display: grid;
   grid-template-rows: 1fr auto;
   isolation: isolate;

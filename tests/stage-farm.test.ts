@@ -59,6 +59,14 @@ describe('the farm concepts', () => {
     }
   });
 
+  it('the Great Windmill stands its sails (and so its tower) over the middle of its own mill', () => {
+    for (const seed of [1, 2, 3, 4, 5, 6]) {
+      const { level, landmark } = build('great-windmill', seed, seed % 2 ? 'classic' : 'wide');
+      const [mx0, mx1] = landmark.anchors.mill;
+      expect(module(level, 'rotor').hub[0] / TILE, `seed ${seed}`).toBeCloseTo((mx0 + mx1 + 1) / 2, 5);
+    }
+  });
+
   it('the Grain Elevator parks its lift flush with the ground and the bin tops, and its ladder climbs to them', () => {
     for (const { level, landmark } of two('grain-elevator')) {
       const lift = ownPieces(level).find((p) => p.def.motion.type === 'rail')!;

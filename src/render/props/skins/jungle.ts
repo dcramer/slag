@@ -3,8 +3,8 @@ import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { type Level, T_SOLID, tileAt } from '../../../sim/level';
 import { flameCycle, geyserCycle, type Module, type ModuleOf, SNAP_ARM, SNAP_COOL, SNAP_SPIKE, SNAP_UP, snapperPhase } from '../../../sim/props';
-import { blob, line, type P, stroke } from '../../ink';
-import { ball, boxPts, dot, INK, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
+import { blob, inkFor, line, type P, stroke } from '../../ink';
+import { ball, bar, barLine, boxPts, dot, glint, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import { bulb, glowDot, light, type RC } from '../../kit';
 import { BACKDROP, beamOf, type DrawCtx } from '../common';
 import { SHELLS } from '../modules/deco-shells';
@@ -40,8 +40,11 @@ function hz(d: DrawCtx) {
 type Hz = ReturnType<typeof hz>;
 
 const STONE: HSL = { h: 40, s: 16, l: 46 };
-const DARK: HSL = { h: 150, s: 18, l: 9 };
 const BARK: HSL = { h: 26, s: 30, l: 26 };
+/** `c` moved `dl` in lightness. */
+const lift = (c: HSL, dl: number): HSL => ({ ...c, l: Math.max(0, Math.min(100, c.l + dl)) });
+/** The dark inside something made of `c` (a doorway, a hollow, a passage): a deep shade of it, never black. */
+const deep = (c: HSL): HSL => ({ h: c.h, s: c.s * 0.8, l: c.l * 0.36 });
 const LEAF: HSL = { h: 112, s: 42, l: 26 };
 const THATCH: HSL = { h: 42, s: 46, l: 46 };
 const ROPE: HSL = { h: 38, s: 36, l: 52 };
@@ -49,12 +52,9 @@ const WATER: HSL = { h: 190, s: 58, l: 52 };
 const SUN: HSL = { h: 46, s: 100, l: 70 };
 const GLASS: HSL = { h: 186, s: 50, l: 74 };
 
-/** A thick stroke inked: an ink ribbon, the colour over it, a lit stripe along its top. */
-function beam(s: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, col: string, ink: string, seed: number) {
-  s.fillStyle = ink;
-  line(s, ax, ay, bx, by, { w: w + 1.2, seed, taper: [0.02, 0.02], press: 0.05 });
-  s.fillStyle = col;
-  line(s, ax, ay, bx, by, { w, seed: seed + 1, taper: [0.02, 0.02], press: 0.05 });
+/** A timber: its colour in a thin rim of `ink` (a dark of it), a lit stripe along its top. */
+function beam(s: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, col: HSL, ink: string, seed: number) {
+  barLine(s, ax, ay, bx, by, w, col, seed, { ink, press: 0.05, lit: 10 });
 }
 
 /** Rows and columns of the shell's box, in tiles. */
@@ -62,13 +62,14 @@ const boxOf = (m: Deco) => ({ x: Math.round(m.at[0] / TILE), y: Math.round(m.at[
 
 /** A dark interior (a passage, a hollow, a grotto): flat shadow, a wall of `wall` toned blocks, a lit sill at the floor. */
 function interior(g: CanvasRenderingContext2D, w: number, h: number, wall: HSL, t: Hz, seed: number, blocks = true) {
-  g.fillStyle = t.c(DARK, 0);
+  // The shadow is a deep shade of the wall, so the blocks read as the same stone in the dark.
+  g.fillStyle = t.c(deep(wall));
   g.fillRect(0, 0, w, h);
   if (blocks)
     for (let y = 0; y < h - 2; y += 8)
       for (let x = (y / 8) % 2 ? -6 : 0; x < w; x += 12) {
         const pts = boxPts(x + 0.8, y + 0.8, 10.4, 6.4, 1.2, x * 7 + y + seed, 0.2);
-        g.fillStyle = t.c(wall, -30 + hash2(x, y, seed) * 6);
+        g.fillStyle = t.c(wall, -wall.l * 0.5 + hash2(x, y, seed) * 5);
         path(g, pts);
         g.fill();
       }
@@ -90,7 +91,7 @@ function templePassage(m: Deco, t: Hz) {
       g.fillStyle = t.ink(STONE);
       blob(g, x + 3.5, m.h * 0.45, 1.5, x, 1, 0.1);
       g.fill();
-      g.fillRect(x + 1.5, m.h * 0.45 + 3, 4, 0.8);
+      tick(g, x + 1.5, m.h * 0.45 + 3.4, x + 5.5, m.h * 0.45 + 3.2, 0.7, x, t.ink(STONE));
     }
   });
 }
@@ -104,9 +105,15 @@ function shrine(m: Deco, t: Hz) {
     const body = poly(x0, m.h, x0, top, x0 + w, top, x0 + w, m.h);
     tone(g, body, t.hsl({ ...STONE, l: STONE.l - 6 }), { depth: 0.8 });
     pen(g, body, m.seed, 0.3, 0.8, 3, t.ink(STONE));
+    // Courses of block: a lifted joint or two a course, not a grid.
+    for (let y = top + 8, i = 0; y < m.h - 3; y += 9, i++)
+      for (let k = 0; k < 2; k++) {
+        const jx = x0 + 3 + hash2(i, k, m.seed) * (w - 14);
+        tick(g, jx, y, jx + 6 + hash2(k, i, m.seed) * 5, y + 0.2, 0.45, i * 3 + k, t.c({ ...STONE, l: STONE.l - 24 }));
+      }
     // The doorway's dark.
     const dw = Math.max(8, w * 0.32);
-    g.fillStyle = t.c(DARK);
+    g.fillStyle = t.c(deep(STONE));
     path(g, poly(m.w / 2 - dw / 2, m.h, m.w / 2 - dw / 2, top + 9, m.w / 2, top + 5, m.w / 2 + dw / 2, top + 9, m.w / 2 + dw / 2, m.h));
     g.fill();
     // The stepped roof: three courses, each narrower, and a crest stone.
@@ -166,10 +173,10 @@ function cliffBack(rc: RC, m: Deco, d: DrawCtx) {
     g.fillStyle = t.c(WATER, -10);
     path(g, poly(-TILE * 2, top - 6, rw - 6, top - 8, rw + 4, top + 2, -TILE * 2, top + 2));
     g.fill();
-    g.fillStyle = t.c(WATER, 8);
     for (let i = 0; i < rw / 14; i++) {
       const rx = i * 14 + hash2(i, 5, m.seed) * 8;
-      g.fillRect(rx, top - 6 + hash2(i, 6, m.seed) * 4, 5, 0.9);
+      const ry = top - 5 + hash2(i, 6, m.seed) * 4;
+      glint(g, poly(rx, ry, rx + 5, ry - 0.3), t.c(WATER, 14), 0.8, i);
     }
   });
   stamp(rc.s, sp, x, y);
@@ -231,36 +238,41 @@ function village(rc: RC, m: Deco, d: DrawCtx) {
       );
       tone(g, up, t.hsl(BARK), { depth: 1 });
       pen(g, up, i, 0.4, 1, 3, t.ink(BARK));
-      g.fillStyle = t.c(BARK, -10);
-      for (let k = 0; k < 4; k++) g.fillRect(cx - 7 + k * 4, deck - TILE * 3 + hash2(k, i, m.seed) * TILE, 0.9, TILE * 1.5);
-      // The crown: big leaf masses round the top of the box.
+      // Bark: a few lifted grain strokes up the trunk.
+      for (let k = 0; k < 3; k++) {
+        const gx = cx - 6 + k * 5 + hash2(k, i, m.seed) * 2;
+        const gy = deck - TILE * 3 + hash2(k, i, m.seed) * TILE;
+        tick(g, gx, gy, gx + 0.6, gy + TILE * (0.8 + hash2(i, k, m.seed) * 0.7), 0.5, k + i * 5, t.ink(BARK));
+      }
+      // The crown: big leaf masses round the top of the box, each toned and penned light like a cloud.
       for (let k = 0; k < 7; k++) {
         const a = (k / 7) * Math.PI * 2;
         const rr = TILE * (1.6 + hash2(k, i, m.seed) * 0.9);
         const bx = cx + Math.cos(a) * TILE * 2.6;
         const by = Y(b.y) + TILE * 1.6 + Math.sin(a) * TILE * 1.2;
-        g.fillStyle = t.ink(LEAF);
-        blob(g, bx, by, rr + 1, k + i * 9, 0.85, 0.3);
-        g.fill();
-        g.fillStyle = t.c(LEAF, (k % 3) * 4 - 2);
-        blob(g, bx, by, rr, k + i * 9, 0.85, 0.3);
-        g.fill();
+        const mass = ovalPts(bx, by, rr, rr * 0.85, k + i * 9, 0.1);
+        tone(g, mass, t.hsl(lift(LEAF, (k % 3) * 4 - 2)), { depth: 1.6, shade: -7 });
+        pen(g, mass, k + i * 9, 0.25, 0.7, 2, t.ink(LEAF));
       }
       // A thatched hut on the deck: board walls, a dark doorway, a cone of thatch.
       const hw = TILE * 2.4;
       const hx = cx - hw / 2;
       const walls = boxPts(hx, deck - TILE * 1.6, hw, TILE * 1.6, 1, i + 3, 0.3);
       tone(g, walls, t.hsl({ ...BARK, l: BARK.l + 10 }), { depth: 0.6 });
+      for (let k = 1; k < 4; k++) tick(g, hx + (k * hw) / 4, deck - TILE * 1.5, hx + (k * hw) / 4 + 0.3, deck - 1.5, 0.45, k + i * 3, t.c(BARK, -2));
       pen(g, walls, i + 3, 0.3, 0.8, 3, t.ink(BARK));
-      g.fillStyle = t.c(DARK);
-      g.fillRect(cx - 3, deck - TILE * 1.1, 6, TILE * 1.1);
+      g.fillStyle = t.c(deep(BARK));
+      path(g, boxPts(cx - 3, deck - TILE * 1.1, 6, TILE * 1.1, 1.2, i + 4, 0.2));
+      g.fill();
       const roof = poly(hx - 5, deck - TILE * 1.5, cx, deck - TILE * 3, hx + hw + 5, deck - TILE * 1.5);
       tone(g, roof, t.hsl(THATCH), { depth: 0.8 });
       pen(g, roof, i + 5, 0.3, 0.8, 3, t.ink(THATCH));
-      g.fillStyle = t.c(THATCH, -14);
-      for (let k = 1; k < 5; k++) g.fillRect(hx - 3 + (k * (hw + 6)) / 5, deck - TILE * 1.55 - k * 0.3, 0.8, 4);
+      for (let k = 1; k < 5; k++) {
+        const tx = hx - 3 + (k * (hw + 6)) / 5;
+        tick(g, tx, deck - TILE * 1.55 - k * 0.3, tx + 0.3, deck - TILE * 1.55 - k * 0.3 + 3.6, 0.5, k + i, t.c(THATCH, -16));
+      }
       // The hollow at its foot.
-      g.fillStyle = t.c(DARK);
+      g.fillStyle = t.c(deep(BARK));
       path(
         g,
         poly(
@@ -287,11 +299,10 @@ function village(rc: RC, m: Deco, d: DrawCtx) {
         if (!plank && run >= 0) {
           if (tx - run >= 3) {
             const y0 = Y(ty) - TILE * 0.85;
-            g.fillStyle = t.c(ROPE, -6);
             const pts: P[] = [];
             for (let k = 0; k <= 12; k++) pts.push({ x: X(run) + (k / 12) * X(tx - run + b.x), y: y0 + Math.sin((k / 12) * Math.PI) * 3 });
-            stroke(g, pts, { w: 0.9, seed: ty, taper: [0, 0], press: 0 });
-            for (const px of [X(run) + 1, X(tx) - 1]) beam(g, px, Y(ty), px, y0 - 1, 1.6, t.c(BARK, 6), t.ink(BARK), px);
+            bar(g, pts, 0.9, t.hsl(lift(ROPE, -6)), ty, { ink: t.ink(ROPE), rim: 0.25, press: 0.1 });
+            for (const px of [X(run) + 1, X(tx) - 1]) beam(g, px, Y(ty), px, y0 - 1, 1.6, t.hsl(lift(BARK, 6)), t.ink(BARK), px);
           }
           run = -1;
         }
@@ -351,7 +362,7 @@ function gorge(rc: RC, m: Deco, d: DrawCtx) {
       const dir = side ? -1 : 1;
       const edge = side ? r : l;
       const px = edge - dir * TILE * 0.45;
-      beam(g, px, lip + 2, px, lip - TILE * 1.3, 2.4, t.c(BARK, 8), t.ink(BARK), side + 1);
+      beam(g, px, lip + 2, px, lip - TILE * 1.3, 2.4, t.hsl(lift(BARK, 8)), t.ink(BARK), side + 1);
       const fall = TILE * (3 + hash2(side, 1, m.seed) * 3);
       const pts: P[] = [];
       for (let k = 0; k <= 12; k++) {
@@ -441,8 +452,9 @@ function hostOf(m: Snapper, d: DrawCtx): Body | undefined {
 /** A snapjaw's root stump: a gnarled bulb of root filling its cell, rootlets gripping the ground either side. */
 function stump(seed: number) {
   return sprite(`jungle|stump|${seed % 4}`, -3, -1, TILE + 6, TILE + 2, (g) => {
+    const root: HSL = { h: 30 + (seed % 4) * 4, s: 30, l: 28 };
     for (const k of [-1, 1]) {
-      g.fillStyle = INK;
+      g.fillStyle = inkFor(root);
       stroke(g, poly(TILE / 2 + k * 5, TILE - 3, TILE / 2 + k * 9, TILE - 0.5, TILE / 2 + k * 10.5, TILE + 0.5), {
         w: 1.8,
         seed: k + seed,
@@ -451,7 +463,7 @@ function stump(seed: number) {
       });
     }
     const pts = poly(1, TILE, 0.4, TILE * 0.55, 2.5, 1.5, TILE / 2, 0.6, TILE - 2.5, 1.5, TILE - 0.4, TILE * 0.55, TILE - 1, TILE);
-    part(g, pts, { h: 30 + (seed % 4) * 4, s: 30, l: 28 }, seed, { depth: 1, thin: 0.5, thick: 1.3 });
+    part(g, pts, root, seed, { depth: 1, thin: 0.5, thick: 1.2 });
     g.fillStyle = css({ h: 30, s: 30, l: 18 });
     for (let i = 0; i < 3; i++) tick(g, 4 + i * 4, 4 + (i % 2) * 2, 3 + i * 4, TILE - 3, 0.5, i + seed, css({ h: 30, s: 30, l: 18 }));
   });
@@ -488,8 +500,8 @@ function snapjawTrap(rc: RC, m: Snapper, d: DrawCtx) {
       const w = 6.5;
       const pts = poly(x, y, x + k * w * Math.cos(a) * 0.9 + k * 0.5, y - w * Math.sin(a) * 0.4 - 1, tipX + k * 1.5 * Math.cos(a), tipY, x + k * 0.6, y - 1.2);
       part(s, pts, k < 0 ? inner : lobe, cx * 3 + k, { depth: 0.4, thin: 0.35, thick: 0.9 });
-      // Bristles along the rim.
-      s.fillStyle = INK;
+      // Bristles along the rim, in a dark of the lobe.
+      s.fillStyle = inkFor(k < 0 ? inner : lobe);
       for (let i = 0; i < 4; i++) {
         const u = 0.35 + i * 0.2;
         const bx = x + (tipX - x) * u + k * 0.8;
@@ -543,9 +555,9 @@ function block(seed: number) {
   });
 }
 
-/** Four slots in a plate. */
+/** Four slots in a plate, in a deep shade of its stone. */
 function g4(s: CanvasRenderingContext2D, x: number, y: number) {
-  s.fillStyle = INK;
+  s.fillStyle = css(deep(STONE));
   for (let i = 0; i < 4; i++) s.fillRect(x + 1.8 + i * 3.7, y + 0.6, 1.4, 1);
 }
 
@@ -556,10 +568,12 @@ function basket(rc: RC, m: Body, d: DrawCtx) {
   const w = (Math.max(...xs) + 1) * TILE - Math.min(...xs) * TILE;
   const y = m.cells[0][1] * TILE + d.off[1];
   const pts = boxPts(x0, y, w, TILE, 1.6, 7, 0.2);
-  part(rc.s, pts, { h: 36, s: 40, l: 42 }, 7, { depth: 1, thin: 0.5, thick: 1.2 });
-  rc.s.fillStyle = css({ h: 36, s: 40, l: 30 });
-  for (let k = 0; k < 3; k++) rc.s.fillRect(x0 + 2, y + 3.5 + k * 4, w - 4, 0.8);
-  for (let k = 1; k < w / 5; k++) rc.s.fillRect(x0 + k * 5, y + 2, 0.7, TILE - 3);
+  const wicker: HSL = { h: 36, s: 40, l: 42 };
+  part(rc.s, pts, wicker, 7, { depth: 1, thin: 0.5, thick: 1.2 });
+  // The weave: two lifted courses and a few uprights, not a ruled grid.
+  for (let k = 0; k < 2; k++)
+    for (let x = x0 + 2 + k * 3; x < x0 + w - 4; x += 9) tick(rc.s, x, y + 5 + k * 5, x + 6, y + 5.2 + k * 5, 0.5, x + k, css(wicker, -14));
+  for (let k = 1; k < w / 8; k++) tick(rc.s, x0 + k * 8, y + 2.5, x0 + k * 8 + 0.2, y + TILE - 2.5, 0.45, k, css(wicker, -12));
 }
 
 /** The lift's ropes up to a pulley on a beam over its top stop, drawn behind. */
@@ -571,11 +585,8 @@ function pulley(rc: RC, m: Body, d: DrawCtx) {
   const y = m.cells[0][1] * TILE + d.off[1];
   const top = m.cells[0][1] * TILE - d.r.motion.range - TILE * 2.4;
   const cx = (x0 + x1) / 2;
-  beam(rc.s, x0 - 4, top, x1 + 4, top, 2.4, css(BARK, 8), INK, 3);
-  for (const px of [x0 + 2, x1 - 2]) {
-    rc.s.fillStyle = css(ROPE);
-    line(rc.s, px, y, cx + (px < cx ? -2 : 2), top + 3, { w: 0.8, seed: px, taper: [0, 0], press: 0 });
-  }
+  beam(rc.s, x0 - 4, top, x1 + 4, top, 2.4, lift(BARK, 8), inkFor(BARK), 3);
+  for (const px of [x0 + 2, x1 - 2]) barLine(rc.s, px, y, cx + (px < cx ? -2 : 2), top + 3, 0.8, ROPE, px, { rim: 0.2, press: 0 });
   ball(rc.s, cx, top + 3, 3, { h: 30, s: 30, l: 34 }, 5);
 }
 
@@ -594,9 +605,9 @@ function logFrame(rc: RC, m: ModuleOf<'swinger'>, d: DrawCtx) {
     const fx = hx + k * reach;
     let gy = ty;
     while (gy < lv.h && tileAt(lv, Math.floor(fx / TILE), gy) === 0) gy++;
-    beam(rc.s, fx, gy * TILE, hx + k * 6, hy - 3, 2.6, t.c(BARK, 10), t.ink(BARK), k + 2);
+    beam(rc.s, fx, gy * TILE, hx + k * 6, hy - 3, 2.6, t.hsl(lift(BARK, 10)), t.ink(BARK), k + 2);
   }
-  beam(rc.s, hx - 12, hy - 3, hx + 12, hy - 3, 3, t.c(BARK, 14), t.ink(BARK), 9);
+  beam(rc.s, hx - 12, hy - 3, hx + 12, hy - 3, 3, t.hsl(lift(BARK, 14)), t.ink(BARK), 9);
 }
 
 /** The falls' spill over the lip: a smooth tongue of water curling off the clifftop where the column starts. */
@@ -648,7 +659,7 @@ function sunDisc(rc: RC, m: ModuleOf<'flame'>, d: DrawCtx) {
     g.fill();
     g.fillStyle = css(STONE, -20);
     const ring = ovalPts(0, 0, r * 0.62, r * 0.62, 6, 0.03, 18);
-    stroke(g, [...ring, ring[0]], { w: 0.8, seed: 6, taper: [0, 0], press: 0.1 });
+    stroke(g, [...ring, ring[0]], { w: 0.8, seed: 6, taper: [0.05, 0.1], press: 0.2 });
     g.fillStyle = css(STONE, -30);
     path(g, ovalPts(0, 0, r * 0.28, r * 0.28, 5, 0.04, 14));
     g.fill();
@@ -665,7 +676,7 @@ function lens(rc: RC, m: ModuleOf<'flame'>, d: DrawCtx) {
   rc.s.fillStyle = css(GLASS, c.seg === 0 ? -6 : 10);
   path(rc.s, ovalPts(x, y, 2.9, 2.9, 4, 0.02, 14));
   rc.s.fill();
-  dot(rc.s, x - 1, y - 1, 0.6, 5, '#ffffff');
+  dot(rc.s, x - 1, y - 1, 0.6, 5, css(GLASS, 22), inkFor(GLASS));
   const heat = c.seg === 1 ? c.t / c.len : c.seg === 2 ? 1 : 0;
   if (heat > 0) bulb(rc.g, x, y, 2.4, SUN, 0.35 + heat * 0.65);
 }
