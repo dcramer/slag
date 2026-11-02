@@ -79,3 +79,4 @@ On pages, body text is 15–18 px and menu items are 30 px display.
 - Selection works like a console menu: one item is always active, shown with a molten fill, a diamond marker, a chevron, and a slight nudge. Mouse hover, keyboard arrows, the d-pad, and the stick all move the same selection.
 - Buttons are stamped: a top face over a darker side that sinks 1.5–3 px on hover or press. Primary buttons are molten with ink text, secondary are iron with bone text, and confirmed buttons are toxic.
 - Overlays (`src/ui/menus.ts`) are a single iron card with a hazard-tape top edge over a dark scrim. They have no blur and no glass.
+- Settings tabs are stamped plates in display type, with the active one molten and pressed in. Rows use the console selection above: the row holding the selected control fills molten, gets the diamond and nudges. Tab prompts flank the strip and Done carries its back prompt.

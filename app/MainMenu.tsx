@@ -15,7 +15,7 @@ const ITEMS: { id: ItemId; title: string; sub: string }[] = [
   { id: 'play', title: 'PLAY', sub: 'Start a New Lobby' },
   { id: 'join', title: 'JOIN A LOBBY', sub: 'Enter a Lobby Code' },
   { id: 'codex', title: 'CODEX', sub: 'Spoilers!' },
-  { id: 'settings', title: 'SETTINGS', sub: 'Controls and Audio' },
+  { id: 'settings', title: 'SETTINGS', sub: 'Audio, Video and Controls' },
 ];
 
 function G({ g, h = 22 }: { g: Glyph; h?: number }) {
@@ -103,15 +103,8 @@ export default function MainMenu({ brand, stage }: { brand: ReactNode; stage: Re
   useEffect(() => {
     let raf = 0;
     let hadPad = false;
-    const prev = { up: false, down: false, a: false, b: false };
-    const poll = () => {
-      raf = requestAnimationFrame(poll);
-      const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter((p) => p?.connected) : [];
-      if (pads.length > 0 !== hadPad) {
-        hadPad = pads.length > 0;
-        setPad(hadPad);
-      }
-      if (settings) return;
+    const connected = () => (navigator.getGamepads ? [...navigator.getGamepads()].filter((p) => p?.connected) : []);
+    const read = (pads: ReturnType<typeof connected>) => {
       const cur = { up: false, down: false, a: false, b: false };
       for (const p of pads) {
         if (!p) continue;
@@ -122,6 +115,19 @@ export default function MainMenu({ brand, stage }: { brand: ReactNode; stage: Re
         cur.a ||= btn(0);
         cur.b ||= btn(1);
       }
+      return cur;
+    };
+    // Whatever is held as this starts isn't a press: the Ⓐ on Settings' Done must not reopen it.
+    const prev = read(connected());
+    const poll = () => {
+      raf = requestAnimationFrame(poll);
+      const pads = connected();
+      if (pads.length > 0 !== hadPad) {
+        hadPad = pads.length > 0;
+        setPad(hadPad);
+      }
+      if (settings) return;
+      const cur = read(pads);
       if (cur.up && !prev.up) move(-1);
       if (cur.down && !prev.down) move(1);
       if (cur.a && !prev.a) {

@@ -64,14 +64,29 @@ export function detectQuality(): { tier: QualityTier; adaptive: boolean } {
   return { tier, adaptive: tier !== 'high' && !nav.webdriver };
 }
 
+const QUALITY_KEY = 'slag.quality';
+const asTier = (v: string | null) => ((TIERS as readonly string[]).includes(v ?? '') ? (v as QualityTier) : null);
+
 function pinnedTier(): QualityTier | null {
-  const ok = (v: string | null) => ((TIERS as readonly string[]).includes(v ?? '') ? (v as QualityTier) : null);
-  const q = ok(new URLSearchParams(location.search).get('q'));
-  if (q) return q;
+  return asTier(new URLSearchParams(location.search).get('q')) ?? savedQuality();
+}
+
+/** The tier picked in Settings, or null for automatic. */
+export function savedQuality(): QualityTier | null {
   try {
-    return ok(localStorage.getItem('slag.quality'));
+    return asTier(localStorage.getItem(QUALITY_KEY));
   } catch {
     return null;
+  }
+}
+
+/** Remember a Settings pick (null = automatic). */
+export function saveQuality(tier: QualityTier | null): void {
+  try {
+    if (tier) localStorage.setItem(QUALITY_KEY, tier);
+    else localStorage.removeItem(QUALITY_KEY);
+  } catch {
+    // Not persisted; still applies this session.
   }
 }
 

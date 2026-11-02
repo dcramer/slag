@@ -28,7 +28,7 @@ describe('button prompts', () => {
       { kind: 'pad', button: 'A' },
     ]);
     expect(glyphsFor('run', { profile, modes: ['gamepad'] })).toEqual([{ kind: 'pad', button: 'X' }]);
-    expect(glyphsFor('menu', { profile, modes: ['gamepad'] })).toEqual([]);
+    expect(glyphsFor('menu', { profile, modes: ['gamepad'] })).toEqual([{ kind: 'pad', button: 'MENU' }]);
     expect(glyphsFor('confirm', { modes: ['touch'] })).toEqual([{ kind: 'touch' }]);
   });
 

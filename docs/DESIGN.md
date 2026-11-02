@@ -98,6 +98,7 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - In the lobby, a stray click does nothing; only buttons act.
 - UI copy is proper title case, with no twee lowercase taglines.
 - Inputs are shown as **button prompts** (keycap, gamepad and mouse glyphs) in a footer, the way console games do it, and are never spelled out in prose.
+- Settings are tabs, one screen each with no scrolling at 720p: Audio, Video, Keyboard, Mouse, Gamepad (Touch replaces the last three under touch). The same menu opens on the home screen and in-game, and works with mouse, touch, keyboard (Q/E tabs, arrows) and gamepad (LB/RB tabs, Start opens, B closes). It reopens on the last tab of that page load. Reset Controls shows on the Keyboard tab only, since nothing else it resets is on screen.
 - Empty lobby slots show **OPEN**.
 
 ## Online
