@@ -213,6 +213,29 @@ const img = (f: string | undefined, label: string, w = '100%') =>
 const h = (t: string) => `<h2 style="margin:6px 0 10px;font:400 30px 'Lilita One',system-ui;color:#ffb02e">${t}</h2>`;
 const row = (...cells: string[]) => `<div style="display:flex;gap:12px;align-items:flex-start">${cells.join('')}</div>`;
 
+/** The blind read: every kind's play-scale silhouette, shuffled and numbered (`castBlind`). */
+async function blind(): Promise<string> {
+  await open(`seed=${seed}&sprites=1`);
+  await settle();
+  const box = await page.evaluate(() => {
+    const d = (window as any).slagDebug;
+    // Twice: the first draw starts the rendered kinds' frames loading.
+    d.cast.blind().remove();
+    return new Promise<{ width: number; height: number; order: string[] }>((done) =>
+      setTimeout(() => {
+        const cv = d.cast.blind();
+        done({ width: cv.width, height: cv.height, order: d.cast.blindOrder() });
+      }, 600),
+    );
+  });
+  const path = `${out}/sprites-blind.png`;
+  await page.screenshot({ path, clip: { x: 0, y: 0, width: box.width, height: box.height } });
+  writeFileSync(`${out}/sprites-blind-answers.txt`, box.order.map((k, i) => `${i + 1}. ${k}`).join('\n') + '\n');
+  console.log(path);
+  pet();
+  return path;
+}
+
 export const shots: Scenarios = {
   async sprites() {
     const art = resolve('art/sprites', KIND);
@@ -224,23 +247,29 @@ export const shots: Scenarios = {
     const mixed = await lineup(`${KIND}-cast`, [KIND, ...others.slice(0, 7)]);
     const film = await filmstrip();
     const lb = await lobby();
+    const bl = await blind();
     const traced = resolve(out, 'art3d/traced-x3.png');
+    const r1 = (f: string) => resolve(out, `art3d/r1-${KIND}-${f}.png`);
     await composePng(
       `${out}/sprites-${KIND}.png`,
-      h(`Rendered from 3D: the ${KIND}`) +
+      h(`Rendered from 3D, round 2: the ${KIND}`) +
         row(
           img(`${art}/concept.png`, 'Concept (generated, the game’s ink style)', '62%'),
-          img(`${art}/tpose.png`, 'Model sheet (T-pose, modelled from)', '24%'),
+          img(`${art}/tpose.png`, 'Model sheet: the figure modelled from', '24%'),
         ) +
-        row(img(same['3d1'], `3D-rendered, play scale (${THEME}, 1280×720 window, crop)`, '50%'), img(same.drawn1, 'Round 5 hand-drawn, same frame', '50%')) +
-        img(same['3d3'], '3D-rendered, 3×: idle, facing back, walk, run, rise, fall, idle, cheer') +
+        img(`${art}/poses.png`, 'Pose sheet: what the keyed poses follow') +
+        row(img(same['3d1'], `Round 2, play scale (${THEME}, 1280×720 window, crop)`, '50%'), img(same.drawn1, 'Round 5 hand-drawn, same frame', '50%')) +
+        img(r1('x1'), 'Round 1 (rendered atlas), play scale', '50%') +
+        img(same['3d3'], 'Round 2, 3×: idle, facing back, walk, run, rise, fall, idle, cheer') +
         img(same.drawn3, 'Round 5 hand-drawn, 3×, same frame') +
+        img(r1('x3'), 'Round 1, 3×') +
         img(traced, 'Traced spike (branch worktree-agent-ae6810c61c411904c), 3×') +
         row(img(mixed['3d1'], 'Among the hand-drawn cast, play scale', '50%'), img(mixed['3d3'], 'Among the cast, 3×', '50%')) +
-        img(film, 'Run cycle into a jump, 3×, every second or fourth sim frame') +
-        img(lb, 'Lobby cards (card-scale sheet)') +
-        img(resolve(out, `art3d/${KIND}-play.png`), 'Play-scale atlas, every clip both facings, 4× nearest') +
-        img(resolve(out, `art3d/${KIND}-card.png`), 'Card-scale atlas'),
+        img(film, 'Round 2: run cycle into a jump, 3×, every second or fourth sim frame') +
+        img(r1('runcycle'), 'Round 1: the same') +
+        img(lb, 'Lobby cards') +
+        img(bl, 'The blind read: every kind as a play-scale silhouette, shuffled and unnamed (answers in sprites-blind-answers.txt)') +
+        img(resolve(out, `art3d/${KIND}-frames.png`), 'Every frame, both facings, 4×, drawn by the game’s drawer'),
     );
   },
 };

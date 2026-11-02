@@ -1,34 +1,778 @@
 {
   "model": "model.glb",
-  "height": 21,
-  "yaw": 30,
+  "height": 22,
+  "yaw": 40,
   "pitch": 6,
-  "light": [-0.55, 0.6, 0.5],
-  "bands": [0.62, 0.12],
-  "tones": [1.1, 1, 0.72],
-  "ink": { "lit": 0.32, "shadow": 0.8, "interior": 0.26, "mix": 0.62 },
-  "smooth": 0.06,
   "step": 0.8,
-  "ss": 4,
-  "scales": { "play": 3, "card": 8 },
+  "trace": {
+    "res": 12,
+    "min": 1.2,
+    "eps": 0.18,
+    "smooth": 2
+  },
+  "scale": {
+    "head": 1.22,
+    "hand_l": 1.25,
+    "hand_r": 1.25,
+    "foot_l": 1.4,
+    "foot_r": 1.4
+  },
   "roles": {
-    "skin": { "color": "#f0c99c", "swatches": ["#dfab87", "#a57a5d"], "over": 0 },
-    "paint": { "color": "#2f5bd0", "swatches": ["#3a64c3", "#2d50a5", "#203e89", "#081a4a", "#142c6b", "#434b77"], "over": 1, "slot": "paint" },
-    "eye": { "color": "#f4f1ea", "swatches": ["#c9c9cc", "#959596"], "over": 2, "flat": true },
-    "iris": { "color": "#3a9a46", "swatches": ["#446148"], "over": 4, "flat": true },
-    "black": { "color": "#2a2624", "swatches": ["#292928", "#1d222f"], "over": 5 },
-    "leather": { "color": "#6b4a35", "swatches": ["#70503b", "#3a2516"], "over": 3 },
-    "sneaker": { "color": "#d8382f", "swatches": ["#b4362b", "#97231b"], "over": 2 },
-    "hazard": { "color": "#e8b73a", "swatches": ["#d8b137", "#ad8723"], "over": 3 },
-    "steel": { "color": "#9a9894", "swatches": ["#6e6d6c"], "over": 3 }
+    "skin": {
+      "color": "#f0c99c",
+      "swatches": [
+        "#dfab87",
+        "#a57a5d"
+      ]
+    },
+    "paint": {
+      "color": "#2f5bd0",
+      "swatches": [
+        "#3a64c3",
+        "#2d50a5",
+        "#203e89",
+        "#081a4a",
+        "#142c6b",
+        "#434b77"
+      ],
+      "slot": "paint"
+    },
+    "eye": {
+      "color": "#f4f1ea",
+      "swatches": [
+        "#c9c9cc",
+        "#959596"
+      ],
+      "min": 0.4
+    },
+    "iris": {
+      "color": "#3a9a46",
+      "swatches": [
+        "#446148"
+      ],
+      "min": 0.3,
+      "glint": true
+    },
+    "black": {
+      "color": "#2a2624",
+      "swatches": [
+        "#292928",
+        "#1d222f"
+      ],
+      "glint": true,
+      "min": 0.3
+    },
+    "leather": {
+      "color": "#6b4a35",
+      "swatches": [
+        "#70503b",
+        "#3a2516"
+      ]
+    },
+    "sneaker": {
+      "color": "#d8382f",
+      "swatches": [
+        "#b4362b",
+        "#97231b"
+      ]
+    },
+    "hazard": {
+      "color": "#e8b73a",
+      "swatches": [
+        "#d8b137",
+        "#ad8723"
+      ]
+    },
+    "steel": {
+      "color": "#9a9894",
+      "swatches": [
+        "#6e6d6c"
+      ]
+    }
+  },
+  "keys": {
+    "crouch": {
+      "from": "idle@0.05",
+      "bones": {
+        "spine_01": [
+          25,
+          0,
+          0
+        ],
+        "thigh_near": [
+          -70,
+          0,
+          0
+        ],
+        "thigh_far": [
+          -60,
+          0,
+          0
+        ],
+        "calf_near": [
+          115,
+          0,
+          0
+        ],
+        "calf_far": [
+          105,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          50,
+          0,
+          0
+        ],
+        "upperarm_far": [
+          45,
+          0,
+          0
+        ]
+      }
+    },
+    "wall": {
+      "from": "idle@0.05",
+      "bones": {
+        "spine_01": [
+          -4,
+          0,
+          0
+        ],
+        "upperarm_far": [
+          -86,
+          0,
+          0
+        ],
+        "lowerarm_far": [
+          -5,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          -35,
+          0,
+          0
+        ],
+        "thigh_near": [
+          -60,
+          0,
+          0
+        ],
+        "calf_near": [
+          65,
+          0,
+          0
+        ],
+        "thigh_far": [
+          -40,
+          0,
+          0
+        ],
+        "calf_far": [
+          45,
+          0,
+          0
+        ]
+      }
+    },
+    "wall2": {
+      "from": "idle@0.05",
+      "bones": {
+        "spine_01": [
+          -4,
+          0,
+          0
+        ],
+        "upperarm_far": [
+          -92,
+          0,
+          0
+        ],
+        "lowerarm_far": [
+          -5,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          -30,
+          0,
+          0
+        ],
+        "thigh_near": [
+          -58,
+          0,
+          0
+        ],
+        "calf_near": [
+          62,
+          0,
+          0
+        ],
+        "thigh_far": [
+          -42,
+          0,
+          0
+        ],
+        "calf_far": [
+          48,
+          0,
+          0
+        ]
+      }
+    },
+    "ball0": {
+      "from": "idle@0.05",
+      "bones": {
+        "spine_01": [
+          50,
+          0,
+          0
+        ],
+        "spine_03": [
+          20,
+          0,
+          0
+        ],
+        "neck_01": [
+          20,
+          0,
+          0
+        ],
+        "thigh_near": [
+          -120,
+          0,
+          0
+        ],
+        "thigh_far": [
+          -115,
+          0,
+          0
+        ],
+        "calf_near": [
+          150,
+          0,
+          0
+        ],
+        "calf_far": [
+          150,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          -70,
+          0,
+          0
+        ],
+        "upperarm_far": [
+          -65,
+          0,
+          0
+        ],
+        "lowerarm_near": [
+          -70,
+          0,
+          0
+        ],
+        "lowerarm_far": [
+          -70,
+          0,
+          0
+        ]
+      },
+      "roll": 0
+    },
+    "ball1": {
+      "from": "idle@0.05",
+      "bones": {
+        "spine_01": [
+          50,
+          0,
+          0
+        ],
+        "spine_03": [
+          20,
+          0,
+          0
+        ],
+        "neck_01": [
+          20,
+          0,
+          0
+        ],
+        "thigh_near": [
+          -120,
+          0,
+          0
+        ],
+        "thigh_far": [
+          -115,
+          0,
+          0
+        ],
+        "calf_near": [
+          150,
+          0,
+          0
+        ],
+        "calf_far": [
+          150,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          -70,
+          0,
+          0
+        ],
+        "upperarm_far": [
+          -65,
+          0,
+          0
+        ],
+        "lowerarm_near": [
+          -70,
+          0,
+          0
+        ],
+        "lowerarm_far": [
+          -70,
+          0,
+          0
+        ]
+      },
+      "roll": 45
+    },
+    "ball2": {
+      "from": "idle@0.05",
+      "bones": {
+        "spine_01": [
+          50,
+          0,
+          0
+        ],
+        "spine_03": [
+          20,
+          0,
+          0
+        ],
+        "neck_01": [
+          20,
+          0,
+          0
+        ],
+        "thigh_near": [
+          -120,
+          0,
+          0
+        ],
+        "thigh_far": [
+          -115,
+          0,
+          0
+        ],
+        "calf_near": [
+          150,
+          0,
+          0
+        ],
+        "calf_far": [
+          150,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          -70,
+          0,
+          0
+        ],
+        "upperarm_far": [
+          -65,
+          0,
+          0
+        ],
+        "lowerarm_near": [
+          -70,
+          0,
+          0
+        ],
+        "lowerarm_far": [
+          -70,
+          0,
+          0
+        ]
+      },
+      "roll": 90
+    },
+    "ball3": {
+      "from": "idle@0.05",
+      "bones": {
+        "spine_01": [
+          50,
+          0,
+          0
+        ],
+        "spine_03": [
+          20,
+          0,
+          0
+        ],
+        "neck_01": [
+          20,
+          0,
+          0
+        ],
+        "thigh_near": [
+          -120,
+          0,
+          0
+        ],
+        "thigh_far": [
+          -115,
+          0,
+          0
+        ],
+        "calf_near": [
+          150,
+          0,
+          0
+        ],
+        "calf_far": [
+          150,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          -70,
+          0,
+          0
+        ],
+        "upperarm_far": [
+          -65,
+          0,
+          0
+        ],
+        "lowerarm_near": [
+          -70,
+          0,
+          0
+        ],
+        "lowerarm_far": [
+          -70,
+          0,
+          0
+        ]
+      },
+      "roll": 135
+    },
+    "ball4": {
+      "from": "idle@0.05",
+      "bones": {
+        "spine_01": [
+          50,
+          0,
+          0
+        ],
+        "spine_03": [
+          20,
+          0,
+          0
+        ],
+        "neck_01": [
+          20,
+          0,
+          0
+        ],
+        "thigh_near": [
+          -120,
+          0,
+          0
+        ],
+        "thigh_far": [
+          -115,
+          0,
+          0
+        ],
+        "calf_near": [
+          150,
+          0,
+          0
+        ],
+        "calf_far": [
+          150,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          -70,
+          0,
+          0
+        ],
+        "upperarm_far": [
+          -65,
+          0,
+          0
+        ],
+        "lowerarm_near": [
+          -70,
+          0,
+          0
+        ],
+        "lowerarm_far": [
+          -70,
+          0,
+          0
+        ]
+      },
+      "roll": 180
+    },
+    "ball5": {
+      "from": "idle@0.05",
+      "bones": {
+        "spine_01": [
+          50,
+          0,
+          0
+        ],
+        "spine_03": [
+          20,
+          0,
+          0
+        ],
+        "neck_01": [
+          20,
+          0,
+          0
+        ],
+        "thigh_near": [
+          -120,
+          0,
+          0
+        ],
+        "thigh_far": [
+          -115,
+          0,
+          0
+        ],
+        "calf_near": [
+          150,
+          0,
+          0
+        ],
+        "calf_far": [
+          150,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          -70,
+          0,
+          0
+        ],
+        "upperarm_far": [
+          -65,
+          0,
+          0
+        ],
+        "lowerarm_near": [
+          -70,
+          0,
+          0
+        ],
+        "lowerarm_far": [
+          -70,
+          0,
+          0
+        ]
+      },
+      "roll": 225
+    },
+    "ball6": {
+      "from": "idle@0.05",
+      "bones": {
+        "spine_01": [
+          50,
+          0,
+          0
+        ],
+        "spine_03": [
+          20,
+          0,
+          0
+        ],
+        "neck_01": [
+          20,
+          0,
+          0
+        ],
+        "thigh_near": [
+          -120,
+          0,
+          0
+        ],
+        "thigh_far": [
+          -115,
+          0,
+          0
+        ],
+        "calf_near": [
+          150,
+          0,
+          0
+        ],
+        "calf_far": [
+          150,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          -70,
+          0,
+          0
+        ],
+        "upperarm_far": [
+          -65,
+          0,
+          0
+        ],
+        "lowerarm_near": [
+          -70,
+          0,
+          0
+        ],
+        "lowerarm_far": [
+          -70,
+          0,
+          0
+        ]
+      },
+      "roll": 270
+    },
+    "ball7": {
+      "from": "idle@0.05",
+      "bones": {
+        "spine_01": [
+          50,
+          0,
+          0
+        ],
+        "spine_03": [
+          20,
+          0,
+          0
+        ],
+        "neck_01": [
+          20,
+          0,
+          0
+        ],
+        "thigh_near": [
+          -120,
+          0,
+          0
+        ],
+        "thigh_far": [
+          -115,
+          0,
+          0
+        ],
+        "calf_near": [
+          150,
+          0,
+          0
+        ],
+        "calf_far": [
+          150,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          -70,
+          0,
+          0
+        ],
+        "upperarm_far": [
+          -65,
+          0,
+          0
+        ],
+        "lowerarm_near": [
+          -70,
+          0,
+          0
+        ],
+        "lowerarm_far": [
+          -70,
+          0,
+          0
+        ]
+      },
+      "roll": 315
+    }
   },
   "clips": {
-    "idle": { "src": "idle", "from": 0, "to": 0.15, "frames": 6, "loop": true, "fps": 3, "card": true },
-    "walk": { "src": "walk", "frames": 8, "loop": true, "stride": 40 },
-    "run": { "src": "run", "frames": 8, "loop": true, "stride": 72 },
-    "air": { "src": "A cartoon platformer jump", "from": 0.4, "to": 0.58, "frames": 5, "loop": false, "vy": [-380, 420], "pin": "hips", "face": true },
-    "wall": { "src": "Sliding down a wall", "from": 0, "to": 0.5, "frames": 4, "loop": true, "fps": 6 },
-    "cheer": { "src": "cheer", "from": 0, "to": 0.42, "frames": 10, "loop": true, "fps": 8, "card": true },
-    "death": { "src": "fall", "from": 0.42, "to": 0.78, "frames": 6, "loop": false, "fps": 14 }
+    "idle": {
+      "src": "idle",
+      "from": 0,
+      "to": 0.15,
+      "frames": 6,
+      "loop": true,
+      "fps": 3
+    },
+    "walk": {
+      "src": "walk",
+      "frames": 8,
+      "loop": true,
+      "stride": 40
+    },
+    "run": {
+      "src": "run",
+      "frames": 8,
+      "loop": true,
+      "stride": 72
+    },
+    "air": {
+      "keys": [
+        "ball0",
+        "ball1",
+        "ball2",
+        "ball3",
+        "ball4",
+        "ball5",
+        "ball6",
+        "ball7"
+      ],
+      "frames": 8,
+      "loop": true,
+      "fps": 18,
+      "pin": "hips",
+      "center": true
+    },
+    "wall": {
+      "keys": [
+        "wall",
+        "wall2"
+      ],
+      "frames": 2,
+      "loop": true,
+      "fps": 5
+    },
+    "cheer": {
+      "src": "cheer",
+      "from": 0,
+      "to": 0.42,
+      "frames": 10,
+      "loop": true,
+      "fps": 8
+    },
+    "death": {
+      "src": "fall",
+      "from": 0.42,
+      "to": 0.78,
+      "frames": 6,
+      "loop": false,
+      "fps": 14,
+      "center": true
+    }
   }
 }

@@ -1,119 +1,76 @@
-import { toRgb } from '../../../core/color';
+import { type HSL, shift } from '../../../core/color';
 import type { CharacterDef, Kind } from '../../../gen/character';
-import type { RunnerPose } from '../../ink-figure';
-import { sprites as hedgehog } from './hedgehog/frames';
-import { sprites as plumber } from './plumber/frames';
-import { pick, tint, type Wears } from './play';
-import type { SpriteSet, SpriteSheet } from './types';
+import { inkOf, lookOf, type RunnerPose, ratio } from '../../ink-figure';
+import { drawFrame, hexHsl, type Paint, paintOf } from './draw';
+import { pick } from './play';
+import type { SpriteSet } from './types';
 
 /**
  * Kinds rendered from 3D models (tools/art3d, docs/CHARACTERS.md → Rendered kinds), drawn in place of
  * their hand-drawn body only when asked: `?sprites=1` (src/debug.ts) or `slagDebug.sprites.use(true)`.
- * Nothing here loads until then, so the game without the flag fetches and draws exactly what it did.
- *
- * A sheet is recoloured once per character and kept: the atlas is linear in each slot's colour (the
- * renderer makes it so), so `c' = c + (B' - B) T` with T from the mask gives the player's colour exactly.
+ * Each kind's frames are a chunk of their own, fetched on first use, so the game without the flag loads
+ * and draws exactly what it did.
  */
-export const SPRITES: Partial<Record<Kind, SpriteSet>> = { plumber, hedgehog };
+const LOADERS: Partial<Record<Kind, () => Promise<{ sprites: SpriteSet }>>> = {
+  plumber: () => import('./plumber/frames'),
+  hedgehog: () => import('./hedgehog/frames'),
+};
 
+const loaded: Partial<Record<Kind, SpriteSet>> = {};
 let on = false;
 
 export function useSprites(v: boolean) {
   on = v;
-  if (v) for (const set of Object.values(SPRITES)) for (const sh of [set.play, set.card]) if (sh) void source(sh);
+  if (v)
+    for (const [kind, load] of Object.entries(LOADERS) as [Kind, () => Promise<{ sprites: SpriteSet }>][])
+      if (!loaded[kind])
+        void load().then((m) => {
+          loaded[kind] = m.sprites;
+        });
 }
 
 export const spritesOn = () => on;
 
-interface Source {
-  img: ImageData | null;
-  mask: ImageData | null;
-}
-const sources = new Map<SpriteSheet, Source>();
+/** The kinds that have rendered frames. */
+export const SPRITE_KINDS = Object.keys(LOADERS) as Kind[];
 
-async function pixels(url: string): Promise<ImageData> {
-  const img = new Image();
-  img.src = url;
-  await img.decode();
-  const c = document.createElement('canvas');
-  c.width = img.width;
-  c.height = img.height;
-  const g = c.getContext('2d', { willReadFrequently: true })!;
-  g.drawImage(img, 0, 0);
-  return g.getImageData(0, 0, c.width, c.height);
-}
-
-/** A sheet's atlas and mask, fetched once (on first use, never at import). */
-function source(sh: SpriteSheet): Source {
-  let s = sources.get(sh);
-  if (!s) {
-    const got: Source = { img: null, mask: null };
-    s = got;
-    sources.set(sh, s);
-    void Promise.all([pixels(sh.png), pixels(sh.mask)]).then(([a, b]) => {
-      got.img = a;
-      got.mask = b;
-    });
-  }
-  return s;
-}
-
-/** The slot colours a character wears, as 0–255 RGB. */
-function wears(c: CharacterDef): Wears {
-  const k = (v: [number, number, number]) => v.map((x) => Math.round(x * 255)) as [number, number, number];
-  return { paint: k(toRgb(c.paint)), player: k(toRgb(c.body)) };
-}
-
-const tinted = new Map<string, HTMLCanvasElement>();
-const lastSheet = new WeakMap<CharacterDef, { sh: SpriteSheet; cv: HTMLCanvasElement }>();
-
-/** The sheet in this character's colours, or null until the sheet has loaded. */
-function sheetFor(set: SpriteSet, sh: SpriteSheet, c: CharacterDef): HTMLCanvasElement | null {
-  // Per character, the sheet it last drew from: the common case costs a lookup and no allocation.
-  const last = lastSheet.get(c);
-  if (last?.sh === sh) return last.cv;
-  const w = wears(c);
-  const key = `${sh.png}|${w.paint.join()}|${w.player.join()}`;
-  const done = tinted.get(key);
-  if (done) {
-    lastSheet.set(c, { sh, cv: done });
-    return done;
-  }
-  const src = source(sh);
-  if (!src.img || !src.mask) return null;
-  const out = new ImageData(new Uint8ClampedArray(src.img.data), src.img.width, src.img.height);
-  tint(out.data, src.mask.data, set.slots, w);
-  const cv = document.createElement('canvas');
-  cv.width = out.width;
-  cv.height = out.height;
-  cv.getContext('2d')!.putImageData(out, 0, 0);
-  tinted.set(key, cv);
-  lastSheet.set(c, { sh, cv });
-  return cv;
-}
-
-/** This character's rendered sprites, when the flag is on and its kind has some. */
+/** This character's rendered frames, when the flag is on and its kind's have loaded. */
 export function spritesOf(c: CharacterDef): SpriteSet | null {
-  return on ? (SPRITES[c.kind] ?? null) : null;
+  return on ? (loaded[c.kind] ?? null) : null;
+}
+
+interface Dressed {
+  paints: Paint[];
+  body: Paint;
+  shadow: string;
+  k: number;
+}
+
+const dressed = new WeakMap<CharacterDef, Dressed>();
+
+/** Each role's paint for this character: its slot's colour, or the roster's. Built once per character. */
+function dress(set: SpriteSet, c: CharacterDef): Dressed {
+  let d = dressed.get(c);
+  if (!d) {
+    const hsl = set.roles.map((r): HSL => (r.slot === 'paint' ? c.paint : r.slot === 'player' ? c.body : hexHsl(r.color)));
+    const paints = set.roles.map((_, i) => paintOf(hsl[i]));
+    // The silhouette is inked in a dark of the kind's own colour, as a hand-drawn homage's is.
+    const main = hsl[set.roles.findIndex((r) => r.slot === 'paint')] ?? hsl[0];
+    d = { paints, body: { ...paintOf(main), ink: inkOf(main) }, shadow: ratio(main, shift(main, -14, 6)), k: lookOf(c, false).weight };
+    dressed.set(c, d);
+  }
+  return d;
 }
 
 /**
  * Draws the body with its feet at the origin of the current transform (the caller has applied the
- * runner's position, scale and squash). False when the sheet isn't loaded yet, so the caller can draw
- * the hand-drawn body for those few frames instead.
+ * runner's position, scale and squash). False when the kind has no frame for the pose.
  */
 export function drawSprite(s: CanvasRenderingContext2D, set: SpriteSet, c: CharacterDef, p: RunnerPose, x: number): boolean {
-  const tf = s.getTransform();
-  const px = Math.hypot(tf.a, tf.b);
-  const got = pick(set, p, x, px);
+  const got = pick(set, p, x);
   if (!got) return false;
-  const img = sheetFor(set, got.sheet, c);
-  if (!img) return false;
-  const [fx, fy, fw, fh, ax, ay] = got.frame;
-  const k = 1 / got.sheet.scale;
-  s.imageSmoothingEnabled = true;
-  s.imageSmoothingQuality = 'high';
-  s.drawImage(img, fx, fy, fw, fh, -ax * k, -ay * k, fw * k, fh * k);
+  const d = dress(set, c);
+  drawFrame(s, got.frame, d.paints, d.body, d.shadow, d.k, c.seed & 0xffff, p.t);
   return true;
 }
 

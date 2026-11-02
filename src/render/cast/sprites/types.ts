@@ -1,10 +1,23 @@
 /**
- * The shape of a kind's rendered sprites (tools/art3d): generated `frames.ts` modules fill it, and
- * `src/render/cast/sprites` plays it.
+ * The shape of a kind rendered from 3D (tools/art3d): generated `frames.ts` modules fill it, and
+ * `src/render/cast/sprites` draws it. A frame is the figure cut into flat parts, traced and simplified,
+ * so the game fills and inks it with the cast's own pen at whatever size it's shown.
  */
 
-/** A frame in its atlas: x, y, w, h, then where the feet are inside that rect (sprite px). */
-export type FrameRect = readonly [number, number, number, number, number, number];
+/**
+ * An outline: x, y pairs in eighths of a world px about the feet (y down), as little-endian int16s in
+ * base64, so a kind's frames are one compact string per shape (`ringPoints` decodes it).
+ */
+export type Ring = string;
+
+export interface VFrame {
+  /** The silhouette's outer outlines. */
+  sil: readonly Ring[];
+  /** Parts back to front: the role, then its outline. */
+  parts: readonly (readonly [number, Ring])[];
+  /** Catch-lights in the eyes: x, y, radius in eighths of a world px. */
+  glints?: readonly number[];
+}
 
 export interface SpriteClip {
   loop: boolean;
@@ -17,31 +30,22 @@ export interface SpriteClip {
   /** Seconds on each frame, instead of an even rate. */
   holds?: readonly number[];
   /** Facing right and facing left: each facing is rendered from the model, so the light stays up-left. */
-  r: readonly FrameRect[];
-  l: readonly FrameRect[];
+  r: readonly VFrame[];
+  l: readonly VFrame[];
 }
 
-/** One atlas at one scale. */
-export interface SpriteSheet {
-  /** Sprite px per world px. */
-  scale: number;
-  w: number;
-  h: number;
-  /** The toned, inked colour atlas. */
-  png: string;
-  /** Same layout, opaque: R is how much of each pixel is the `paint` slot's colour, G the `player` slot's (× 200). */
-  mask: string;
-  clips: Readonly<Record<string, SpriteClip>>;
+/** One material, as the game paints it. */
+export interface SpriteRole {
+  /** The roster's flat colour (hex), unless a slot moves it. */
+  color: string;
+  /** Drawn in the kind's own colour (`paint`) or the player's (`player`). */
+  slot?: 'paint' | 'player';
 }
 
 export interface SpriteSet {
   kind: string;
   /** World px from soles to the top of the head at rest. */
   height: number;
-  /** The colour each recolourable slot was rendered in (hex). */
-  slots: Readonly<Partial<Record<'paint' | 'player', string>>>;
-  /** Every clip, at race scale. */
-  play: SpriteSheet;
-  /** The clips the lobby, score and victory screens show, at card scale. */
-  card: SpriteSheet | null;
+  roles: readonly SpriteRole[];
+  clips: Readonly<Record<string, SpriteClip>>;
 }

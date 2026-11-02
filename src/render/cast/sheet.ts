@@ -244,3 +244,59 @@ export function castBench(n = 200): number {
   time();
   return time();
 }
+
+/**
+ * The blind read: every kind as a solid shape at play scale (2.5 px per world px, as at 1080p), standing,
+ * mid-run and mid-jump, in a shuffled order with numbers and no names. Hand it to someone who hasn't seen
+ * the cast and ask what each one parodies: the answer has to come from the silhouette alone.
+ */
+export function castBlind(t = 0.4): HTMLCanvasElement {
+  // A fixed shuffle, so the sheet is the same every time and the order gives nothing away.
+  const order = CAST.map((k, i) => [k, (i * 5 + 3) % CAST.length] as const)
+    .sort((a, b) => a[1] - b[1])
+    .map(([k]) => k);
+  // Narrow enough for every kind across a 1280 px window.
+  const cell = 88;
+  const W = order.length * cell + 20;
+  const H = 360;
+  const cv = document.createElement('canvas');
+  cv.width = W;
+  cv.height = H;
+  cv.style.cssText = `position:fixed;left:0;top:0;z-index:99;width:${W}px;height:${H}px`;
+  const s = cv.getContext('2d')!;
+  s.fillStyle = '#e9dcc4';
+  s.fillRect(0, 0, W, H);
+  const scratch = document.createElement('canvas');
+  scratch.width = cell;
+  scratch.height = 110;
+  const g = scratch.getContext('2d')!;
+  const poses: [number, Partial<RunnerPose>, number][] = [
+    [100, { grounded: true }, 0],
+    [210, { grounded: true, vx: 260 }, MID_RUN],
+    [320, { grounded: false, vy: -300, vx: 120 }, 0],
+  ];
+  order.forEach((kind, i) => {
+    const x = 10 + cell * (i + 0.5);
+    s.font = '700 16px Barlow, sans-serif';
+    s.fillStyle = '#3d2e26';
+    s.textAlign = 'center';
+    s.fillText(String(i + 1), x, 22);
+    for (const [y, p, stride] of poses) {
+      g.globalCompositeOperation = 'source-over';
+      g.clearRect(0, 0, cell, 110);
+      runner(g, def(i * 3, 'blind', kind), cell / 2, 92, p, 2.5, 1, t, stride);
+      g.globalCompositeOperation = 'source-in';
+      g.fillStyle = '#000';
+      g.fillRect(0, 0, cell, 110);
+      s.drawImage(scratch, x - cell / 2, y - 92);
+    }
+  });
+  document.body.appendChild(cv);
+  return cv;
+}
+
+/** The blind sheet's order, for checking the answers: number → kind. */
+export const blindOrder = (): string[] =>
+  CAST.map((k, i) => [k, (i * 5 + 3) % CAST.length] as const)
+    .sort((a, b) => a[1] - b[1])
+    .map(([k]) => k);

@@ -1,32 +1,29 @@
 import * as THREE from 'three';
-import { BOX, type Clip, type Settings } from '../settings';
-import { compose, frameBox, type Layer, palette } from './ink';
+import { BOX, type Clip, type Key, type Prop, type Settings } from '../settings';
 import { loadModel } from './load';
 import { classify } from './roles';
+import { trace, type Traced } from './trace';
 import { rebind } from './weights';
 
 /**
- * Renders a kind's clips into sprite atlases. A fixed orthographic camera looks at the figure side on;
- * one pass writes, per pixel, the role (from the classified texture), N·L from smoothed normals in view
- * space, and depth; `compose` (ink.ts) turns that into toned, inked pixels and recolour masks.
+ * Renders a kind's clips into traced frames. A fixed orthographic camera looks at the figure side on;
+ * one pass writes each pixel's role (from the classified texture, or a prop's own) and depth, and
+ * `trace` (trace.ts) cuts that into the flat parts the game inks. Poses come from the model's animations
+ * or are keyed here from the pose sheet; the figure is caricatured (bone scales) and carries its
+ * signature prop (built from primitives) before any of it is rendered.
  */
 
 const VERT = /* glsl */ `
 #include <common>
 #include <skinning_pars_vertex>
 out vec2 vUv;
-out vec3 vN;
 out float vDepth;
 void main() {
   vUv = uv;
-  #include <beginnormal_vertex>
   #include <skinbase_vertex>
-  #include <skinnormal_vertex>
-  #include <defaultnormal_vertex>
   #include <begin_vertex>
   #include <skinning_vertex>
   #include <project_vertex>
-  vN = normalize(transformedNormal);
   vDepth = -mvPosition.z;
 }`;
 
@@ -34,122 +31,20 @@ const FRAG = /* glsl */ `
 precision highp float;
 precision highp usampler2D;
 uniform usampler2D roles;
-uniform vec3 light;
+uniform int fixedRole;
 in vec2 vUv;
-in vec3 vN;
 in float vDepth;
 out vec4 color;
 void main() {
-  uint r = texture(roles, vUv).r;
-  vec3 n = normalize(vN);
-  if (!gl_FrontFacing) n = -n;
-  float l = dot(n, normalize(light));
+  uint r = fixedRole >= 0 ? uint(fixedRole) : texture(roles, vUv).r;
   float d = clamp(vDepth / 200.0, 0.0, 1.0) * 65535.0;
   float hi = floor(d / 256.0);
-  color = vec4(float(r + 1u) / 255.0, l * 0.5 + 0.5, hi / 255.0, (d - hi * 256.0) / 255.0);
+  color = vec4(float(r + 1u) / 255.0, hi / 255.0, (d - hi * 256.0) / 255.0, 1.0);
 }`;
 
-/** Shading normals averaged over a radius, so the toon bands follow big forms and not the mesh's lumps. */
-function smoothNormals(geo: THREE.BufferGeometry, radius: number) {
-  const pos = geo.getAttribute('position');
-  const n = pos.count;
-  geo.computeVertexNormals();
-  const nor = geo.getAttribute('normal');
-  const cell = radius;
-  const grid = new Map<string, number[]>();
-  const key = (x: number, y: number, z: number) => `${Math.floor(x / cell)},${Math.floor(y / cell)},${Math.floor(z / cell)}`;
-  for (let i = 0; i < n; i++) {
-    const k = key(pos.getX(i), pos.getY(i), pos.getZ(i));
-    let list = grid.get(k);
-    if (!list) grid.set(k, (list = []));
-    list.push(i);
-  }
-  const out = new Float32Array(n * 3);
-  for (let i = 0; i < n; i++) {
-    const x = pos.getX(i);
-    const y = pos.getY(i);
-    const z = pos.getZ(i);
-    const cx = Math.floor(x / cell);
-    const cy = Math.floor(y / cell);
-    const cz = Math.floor(z / cell);
-    let ax = 0;
-    let ay = 0;
-    let az = 0;
-    const own = [nor.getX(i), nor.getY(i), nor.getZ(i)];
-    for (let dx = -1; dx <= 1; dx++)
-      for (let dy = -1; dy <= 1; dy++)
-        for (let dz = -1; dz <= 1; dz++) {
-          const list = grid.get(`${cx + dx},${cy + dy},${cz + dz}`);
-          if (!list) continue;
-          for (const j of list) {
-            const d = Math.hypot(pos.getX(j) - x, pos.getY(j) - y, pos.getZ(j) - z);
-            if (d > radius) continue;
-            const nx = nor.getX(j);
-            const ny = nor.getY(j);
-            const nz = nor.getZ(j);
-            // Only surfaces facing the same way blend: a thin part's far side, or a hand on a belly, stays out.
-            const dot = nx * own[0] + ny * own[1] + nz * own[2];
-            if (dot < 0.2) continue;
-            const wgt = (1 - d / radius) * dot;
-            ax += nx * wgt;
-            ay += ny * wgt;
-            az += nz * wgt;
-          }
-        }
-    const l = Math.hypot(ax, ay, az) || 1;
-    out[i * 3] = ax / l;
-    out[i * 3 + 1] = ay / l;
-    out[i * 3 + 2] = az / l;
-  }
-  geo.setAttribute('normal', new THREE.BufferAttribute(out, 3));
-}
-
-/**
- * Shelf packing, tallest first, into a width near the square root of the area: frames of one figure are
- * near one size, so shelves waste little. Deterministic for the same frames, so rerenders diff cleanly.
- */
-function shelfPack(boxes: { w: number; h: number; x: number; y: number }[]): { w: number; h: number } {
-  const area = boxes.reduce((a, b) => a + b.w * b.h, 0);
-  const width = Math.max(Math.ceil(Math.sqrt(area) * 1.05), ...boxes.map((b) => b.w));
-  const order = boxes.map((b, i) => ({ b, i })).sort((p, q) => q.b.h - p.b.h || p.i - q.i);
-  let x = 0;
-  let y = 0;
-  let shelf = 0;
-  let w = 0;
-  for (const { b } of order) {
-    if (x + b.w > width) {
-      y += shelf;
-      x = 0;
-      shelf = 0;
-    }
-    b.x = x;
-    b.y = y;
-    x += b.w;
-    w = Math.max(w, x);
-    shelf = Math.max(shelf, b.h);
-  }
-  return { w, h: y + shelf };
-}
-
-export interface FrameRect {
-  /** In the atlas. */
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  /** The feet's position inside this frame's rect. */
-  ax: number;
-  ay: number;
-}
-
-export interface AtlasOut {
-  scale: number;
-  png: string;
-  masks: string;
-  w: number;
-  h: number;
-  /** clip → facing ('r' | 'l') → frames. */
-  clips: Record<string, Record<'r' | 'l', FrameRect[]>>;
+export interface TracedClip {
+  r: Traced[];
+  l: Traced[];
 }
 
 function findClip(clips: THREE.AnimationClip[], name: string): THREE.AnimationClip {
@@ -167,27 +62,33 @@ function findClip(clips: THREE.AnimationClip[], name: string): THREE.AnimationCl
   return c;
 }
 
-/** Every clip's sample times, in seconds of its source. */
-export function sampleTimes(c: Clip, duration: number): number[] {
-  const from = (c.from ?? 0) * duration;
-  const to = (c.to ?? 1) * duration;
+/** Every clip's sample times, as fractions of its source (or of its key sequence). */
+export function sampleTimes(c: Clip): number[] {
+  const from = c.from ?? 0;
+  const to = c.to ?? 1;
   const n = c.frames;
   const div = c.loop ? n : Math.max(1, n - 1);
   return Array.from({ length: n }, (_, i) => from + ((to - from) * i) / div);
 }
 
+const rad = (d: number) => (d * Math.PI) / 180;
+/** How far above the floor a grounded frame's lowest outline point may sit (world px): the pen's mass reaches below it. */
+const FLOOR = 0.6;
+
 export async function renderSprites(url: string, s: Settings, only?: string[]) {
   const model = await loadModel(url);
-  const pal = palette(s);
+  const names = Object.keys(s.roles);
   if (!model.texture) throw new Error('the model has no colour texture to read roles from');
-  const roleTex = classify(model.texture, s.roles, pal.names);
-  const mat = new THREE.ShaderMaterial({
-    vertexShader: VERT,
-    fragmentShader: FRAG,
-    glslVersion: THREE.GLSL3,
-    uniforms: { roles: { value: roleTex }, light: { value: new THREE.Vector3(...s.light).normalize() } },
-    side: THREE.DoubleSide,
-  });
+  const roleTex = classify(model.texture, s.roles, names);
+  const material = (fixed: number) =>
+    new THREE.ShaderMaterial({
+      vertexShader: VERT,
+      fragmentShader: FRAG,
+      glslVersion: THREE.GLSL3,
+      uniforms: { roles: { value: roleTex }, fixedRole: { value: fixed } },
+      side: THREE.DoubleSide,
+    });
+  const body = material(-1);
 
   const bindBox = new THREE.Box3();
   for (const m of model.meshes) {
@@ -195,17 +96,37 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
     bindBox.union(m.geometry.boundingBox!);
   }
   const modelHeight = bindBox.max.y - bindBox.min.y;
-  for (const m of model.meshes)
-    if ((m as THREE.SkinnedMesh).isSkinnedMesh)
-      for (const r of s.rebind ?? []) console.log(`rebind ${r.from} → ${r.to}: ${rebind(m as THREE.SkinnedMesh, r, modelHeight)} vertices`);
-  // Stand the figure on the origin, scaled to its height in world px, centred on its hips.
-  const restBox = new THREE.Box3().setFromObject(model.root, true);
-  const k = s.height / (restBox.max.y - restBox.min.y);
+  const skinned = model.meshes.filter((m) => (m as THREE.SkinnedMesh).isSkinnedMesh) as THREE.SkinnedMesh[];
+  for (const m of skinned) for (const r of s.rebind ?? []) console.log(`rebind ${r.from} → ${r.to}: ${rebind(m, r, modelHeight)} vertices`);
   for (const m of model.meshes) {
-    smoothNormals(m.geometry, (s.smooth * s.height) / k);
-    m.material = mat;
+    m.material = body;
     m.frustumCulled = false;
   }
+
+  // Bones parents first, by name.
+  const bones: THREE.Bone[] = [];
+  model.root.traverse((o) => {
+    if ((o as THREE.Bone).isBone) bones.push(o as THREE.Bone);
+  });
+  const bone = (n: string) => {
+    const b = bones.find((b) => b.name === n);
+    if (!b) throw new Error(`no bone "${n}"; the skeleton has ${bones.map((b) => b.name).join(', ')}`);
+    return b;
+  };
+  const scaled = Object.entries(s.scale ?? {}).map(([n, f]) => [bone(n), f] as const);
+  const caricature = () => {
+    for (const [b, f] of scaled) b.scale.setScalar(f);
+  };
+  const rest = () => {
+    for (const m of skinned) m.skeleton.pose();
+    caricature();
+  };
+  rest();
+
+  // Stand the figure on the origin, scaled to its height in world px, centred on its hips.
+  model.root.updateMatrixWorld(true);
+  const restBox = new THREE.Box3().setFromObject(model.root, true);
+  const k = s.height / (restBox.max.y - restBox.min.y);
   let hips: THREE.Object3D | undefined;
   model.root.traverse((o) => {
     if (!hips && /pelvis|hips/i.test(o.name)) hips = o;
@@ -221,134 +142,240 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
   turn.add(fit);
   const tilt = new THREE.Group();
   tilt.add(turn);
-  tilt.rotation.x = (s.pitch * Math.PI) / 180;
-  // Outermost, in screen axes: holds the hips over the feet's spot (and, for an airborne clip, at rest height).
+  tilt.rotation.x = rad(s.pitch);
+  // Outermost, in screen axes: holds the hips over the feet's spot, at rest height when pinned, and rolls.
   const shift = new THREE.Group();
   shift.add(tilt);
   const scene = new THREE.Scene();
   scene.add(shift);
-  const cam = new THREE.OrthographicCamera(BOX.x0, BOX.x1, BOX.y1, BOX.y0, 0.1, 200);
-  cam.position.set(0, 0, 100);
-  cam.lookAt(0, 0, 0);
+  scene.updateMatrixWorld(true);
+
+  // The figure's own axes, as a quaternion from the model root: bones are turned in these.
+  const rootQ = () => model.root.getWorldQuaternion(new THREE.Quaternion()).invert();
+  const inModel = (o: THREE.Object3D, rq: THREE.Quaternion) => rq.clone().multiply(o.getWorldQuaternion(new THREE.Quaternion()));
+
+  // Props, on their bones, in the rest pose's axes and world px.
+  for (const p of s.props ?? []) addProp(p);
+  function addProp(p: Prop) {
+    const b = bone(p.bone);
+    const rq = rootQ();
+    const holder = new THREE.Group();
+    holder.quaternion.copy(inModel(b, rq).invert());
+    const ws = b.getWorldScale(new THREE.Vector3()).x;
+    holder.scale.setScalar(1 / ws);
+    const rig = new THREE.Group();
+    rig.position.set(...p.at);
+    rig.rotation.set(rad(p.rot[0]), rad(p.rot[1]), rad(p.rot[2]));
+    holder.add(rig);
+    for (const part of p.parts) {
+      const [a, h, c] = part.size;
+      const geo =
+        part.shape === 'cylinder'
+          ? new THREE.CylinderGeometry(a, a, h, 14)
+          : part.shape === 'cup'
+            ? new THREE.SphereGeometry(a, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, h / a, 1)
+            : new THREE.SphereGeometry(1, 16, 12).scale(a, h, c);
+      const mesh = new THREE.Mesh(geo, material(names.indexOf(part.role)));
+      if (part.at) mesh.position.set(...part.at);
+      mesh.frustumCulled = false;
+      rig.add(mesh);
+    }
+    b.add(holder);
+  }
 
   scene.updateMatrixWorld(true);
   const restHip = hips ? hips.getWorldPosition(new THREE.Vector3()).y : 0;
   // The hips' turn in the model's own space at rest, for clips that keep the figure facing its way.
-  const inModel = (q: THREE.Quaternion) => fit.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(hips!.getWorldQuaternion(q));
-  const restTurn = hips ? inModel(new THREE.Quaternion()).invert() : null;
+  const restTurn = hips ? inModel(hips, rootQ()).invert() : null;
   const fwd = new THREE.Vector3();
+  const cam = new THREE.OrthographicCamera(BOX.x0, BOX.x1, BOX.y1, BOX.y0, 0.1, 200);
+  cam.position.set(0, 0, 100);
+  cam.lookAt(0, 0, 0);
   const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true });
   const mixer = new THREE.AnimationMixer(model.root);
   const pin = new THREE.Vector3();
 
-  const renderLayer = (scale: number, rt: THREE.WebGLRenderTarget, buf: Uint8Array): Layer => {
+  /**
+   * Poses the figure as `key` for a facing. `_near` and `_far` name the limbs on the camera's side and the
+   * other, authored as the figure faces right (near is its right); facing left they swap sides and mirror,
+   * so a turn about y or z changes sign.
+   */
+  const poseKey = (key: Key, facing: 'r' | 'l') => {
+    const near = facing === 'r' ? '_r' : '_l';
+    const far = facing === 'r' ? '_l' : '_r';
+    const mirror = (n: string, e: [number, number, number]): [number, number, number] => (facing === 'l' && /_(near|far)$/.test(n) ? [e[0], -e[1], -e[2]] : e);
+    const turns = new Map(Object.entries(key.bones ?? {}).map(([n, e]) => [n.replace(/_near$/, near).replace(/_far$/, far), mirror(n, e)] as const));
+    mixer.stopAllAction();
+    if (key.from === 'rest') rest();
+    else {
+      const [clip, at] = key.from.split('@');
+      const src = findClip(model.clips, clip);
+      mixer.clipAction(src).play();
+      mixer.setTime(Number(at ?? 0) * src.duration);
+      caricature();
+    }
+    scene.updateMatrixWorld(true);
+    const rq = rootQ();
+    for (const b of bones) {
+      const e = turns.get(b.name);
+      if (!e) continue;
+      const turnBy = new THREE.Quaternion().setFromEuler(new THREE.Euler(rad(e[0]), rad(e[1]), rad(e[2]), 'XYZ'));
+      const now = turnBy.multiply(inModel(b, rq));
+      const parent = b.parent ? inModel(b.parent, rq) : new THREE.Quaternion();
+      b.quaternion.copy(parent.invert().multiply(now));
+      b.updateMatrixWorld(true);
+      b.updateMatrixWorld(true);
+    }
+    for (const [n, f] of Object.entries(key.scale ?? {})) {
+      // A stretch, on top of the caricature: a fist punched up past a big head.
+      const b = bone(n.replace(/_near$/, near).replace(/_far$/, far));
+      b.scale.multiplyScalar(f);
+      b.updateMatrixWorld(true);
+    }
+  };
+  /** Every bone's local turn, to blend two keys by. */
+  const snapshot = () => bones.map((b) => ({ q: b.quaternion.clone(), s: b.scale.x }));
+
+  /** Poses the figure for sample `u` of clip `c`; returns the roll to apply about the hips. */
+  const poseAt = (c: Clip, u: number, facing: 'r' | 'l'): { roll: number; yaw: number } => {
+    if (c.keys) {
+      const keys = c.keys.map((n) => {
+        const key = s.keys?.[n];
+        if (!key) throw new Error(`clip keys "${n}", which isn't in keys`);
+        return key;
+      });
+      const span = c.loop ? keys.length : keys.length - 1;
+      const at = Math.max(0, u * span);
+      const i = Math.min(keys.length - 1, Math.floor(at));
+      const j = c.loop ? (i + 1) % keys.length : Math.min(keys.length - 1, i + 1);
+      const f = at - Math.floor(at);
+      poseKey(keys[j], facing);
+      const b = snapshot();
+      poseKey(keys[i], facing);
+      if (f > 0 && i !== j) {
+        bones.forEach((bn, n) => {
+          bn.quaternion.slerp(b[n].q, f);
+          bn.scale.setScalar(bn.scale.x + (b[n].s - bn.scale.x) * f);
+        });
+        scene.updateMatrixWorld(true);
+      }
+      const lerp = (a = 0, b = 0) => rad(a * (1 - f) + b * f);
+      return { roll: lerp(keys[i].roll, keys[j].roll), yaw: lerp(keys[i].yaw, keys[j].yaw) };
+    }
+    const src = findClip(model.clips, c.src!);
+    mixer.stopAllAction();
+    mixer.clipAction(src).play();
+    mixer.setTime(u * src.duration);
+    caricature();
+    return { roll: 0, yaw: 0 };
+  };
+
+  const R = s.trace.res;
+  const W = (BOX.x1 - BOX.x0) * R;
+  const H = (BOX.y1 - BOX.y0) * R;
+  const rt = new THREE.WebGLRenderTarget(W, H, { depthBuffer: true, type: THREE.UnsignedByteType });
+  rt.texture.minFilter = THREE.NearestFilter;
+  rt.texture.magFilter = THREE.NearestFilter;
+  const buf = new Uint8Array(W * H * 4);
+  const role = new Int16Array(W * H);
+  const depth = new Float32Array(W * H);
+
+  const shoot = (): Traced => {
     renderer.setRenderTarget(rt);
     renderer.setClearColor(0x000000, 0);
     renderer.clear();
     renderer.render(scene, cam);
-    renderer.readRenderTargetPixels(rt, 0, 0, rt.width, rt.height, buf);
+    renderer.readRenderTargetPixels(rt, 0, 0, W, H, buf);
     renderer.setRenderTarget(null);
-    return compose(buf, rt.width, rt.height, s, pal, scale);
-  };
-
-  const atlas = (scale: number, card: boolean): AtlasOut => {
-    const fb = frameBox(scale);
-    const rt = new THREE.WebGLRenderTarget(fb.w * s.ss, fb.h * s.ss, { depthBuffer: true, type: THREE.UnsignedByteType });
-    rt.texture.minFilter = THREE.NearestFilter;
-    rt.texture.magFilter = THREE.NearestFilter;
-    const buf = new Uint8Array(rt.width * rt.height * 4);
-    const frames: { clip: string; facing: 'r' | 'l'; layer: Layer; x0: number; y0: number; w: number; h: number; x: number; y: number }[] = [];
-    for (const [name, c] of Object.entries(s.clips)) {
-      if (card && !c.card) continue;
-      if (only && !only.includes(name)) continue;
-      const src = findClip(model.clips, c.src);
-      for (const facing of ['r', 'l'] as const) {
-        // Forward is +z in the model; a right-facing figure turns it to screen right, then a little toward us.
-        const base = ((facing === 'r' ? 1 : -1) * (90 - s.yaw) * Math.PI) / 180;
-        for (const t of sampleTimes(c, src.duration)) {
-          mixer.stopAllAction();
-          mixer.clipAction(src).play();
-          mixer.setTime(t);
-          shift.position.set(0, 0, 0);
-          turn.rotation.y = base;
-          scene.updateMatrixWorld(true);
-          if (c.face && hips && restTurn) {
-            // A motion that turns the whole body round (a spin made from a description) is turned back, so
-            // the figure keeps facing its way: only its turn about the vertical goes, a flip or a tuck stays.
-            fwd.set(0, 0, 1).applyQuaternion(inModel(new THREE.Quaternion()).multiply(restTurn));
-            turn.rotation.y = base - Math.atan2(fwd.x, fwd.z);
-            scene.updateMatrixWorld(true);
-          }
-          if (hips) {
-            // Every clip runs in place: the sim moves the body, so the hips stay over the spot the game draws at.
-            // An airborne clip lifts the body too, and the sim already does that: hold the hips at rest height.
-            hips.getWorldPosition(pin);
-            shift.position.x = -pin.x;
-            if (c.pin === 'hips') shift.position.y = restHip - pin.y;
-            scene.updateMatrixWorld(true);
-          }
-          const layer = renderLayer(scale, rt, buf);
-          // Trim to what's drawn.
-          let x0 = layer.w;
-          let y0 = layer.h;
-          let x1 = -1;
-          let y1 = -1;
-          for (let y = 0; y < layer.h; y++)
-            for (let x = 0; x < layer.w; x++)
-              if (layer.rgba[(y * layer.w + x) * 4 + 3]) {
-                x0 = Math.min(x0, x);
-                x1 = Math.max(x1, x);
-                y0 = Math.min(y0, y);
-                y1 = Math.max(y1, y);
-              }
-          if (x1 < 0) x0 = y0 = x1 = y1 = 0;
-          frames.push({ clip: name, facing, layer, x0, y0, w: x1 - x0 + 1, h: y1 - y0 + 1, x: 0, y: 0 });
-        }
+    for (let y = 0; y < H; y++) {
+      const src = (H - 1 - y) * W;
+      for (let x = 0; x < W; x++) {
+        const j = (src + x) * 4;
+        role[y * W + x] = buf[j] - 1;
+        depth[y * W + x] = ((buf[j + 1] * 256 + buf[j + 2]) / 65535) * 200;
       }
     }
-    rt.dispose();
-    // One pixel of clear gutter round each frame, so filtering never bleeds a neighbour in.
-    const boxes = frames.map((f) => ({ w: f.w + 2, h: f.h + 2, f, x: 0, y: 0 }));
-    const { w, h } = shelfPack(boxes);
-    const cv = document.createElement('canvas');
-    cv.width = w;
-    cv.height = h;
-    const g = cv.getContext('2d')!;
-    const img = g.createImageData(w, h);
-    const mk = document.createElement('canvas');
-    mk.width = w;
-    mk.height = h;
-    const mg = mk.getContext('2d')!;
-    const mimg = mg.createImageData(w, h);
-    for (let i = 0; i < w * h; i++) mimg.data[i * 4 + 3] = 255;
-    const out: AtlasOut['clips'] = {};
-    for (const b of boxes) {
-      const f = b.f;
-      f.x = b.x + 1;
-      f.y = b.y + 1;
-      for (let y = 0; y < f.h; y++)
-        for (let x = 0; x < f.w; x++) {
-          const si = (f.y0 + y) * f.layer.w + f.x0 + x;
-          const di = (f.y + y) * w + f.x + x;
-          for (let c = 0; c < 4; c++) img.data[di * 4 + c] = f.layer.rgba[si * 4 + c];
-          mimg.data[di * 4] = f.layer.masks.paint[si];
-          mimg.data[di * 4 + 1] = f.layer.masks.player[si];
-        }
-    }
-    for (const f of frames) {
-      // A grounded clip stands on the floor: a sole the clip rolls under it (a heel-toe walk, the camera's
-      // tilt) lifts the frame instead of sinking the runner, leaving at most half a world px of antialiasing.
-      const ay = s.clips[f.clip].pin === 'hips' ? fb.ay - f.y0 : Math.max(fb.ay - f.y0, f.h - scale * 0.5);
-      const rect: FrameRect = { x: f.x, y: f.y, w: f.w, h: f.h, ax: fb.ax - f.x0, ay };
-      ((out[f.clip] ??= { r: [], l: [] })[f.facing] as FrameRect[]).push(rect);
-    }
-    g.putImageData(img, 0, 0);
-    mg.putImageData(mimg, 0, 0);
-    return { scale, png: cv.toDataURL('image/png'), masks: mk.toDataURL('image/png'), w, h, clips: out };
+    return trace(role, depth, W, H, R, s, names);
   };
 
-  const play = atlas(s.scales.play, false);
-  const card = Object.values(s.clips).some((c) => c.card) ? atlas(s.scales.card, true) : null;
+  const out: Record<string, TracedClip> = {};
+  for (const [name, c] of Object.entries(s.clips)) {
+    if (only && !only.includes(name)) continue;
+    const tc: TracedClip = { r: [], l: [] };
+    for (const facing of ['r', 'l'] as const) {
+      // Forward is +z in the model; a right-facing figure turns it to screen right, then a little toward us.
+      const base = rad((facing === 'r' ? 1 : -1) * (90 - s.yaw));
+      for (const u of sampleTimes(c)) {
+        shift.position.set(0, 0, 0);
+        shift.rotation.set(0, 0, 0);
+        turn.rotation.y = base;
+        const { roll, yaw } = poseAt(c, u, facing);
+        // A keyed pose may turn further toward us, as a 2D artist cheats a pose round to show it.
+        turn.rotation.y = base - (facing === 'r' ? yaw : -yaw);
+        scene.updateMatrixWorld(true);
+        if (c.face && hips && restTurn) {
+          // A motion that turns the whole body round (a spin made from a description) is turned back, so
+          // the figure keeps facing its way: only its turn about the vertical goes, a flip or a tuck stays.
+          fwd.set(0, 0, 1).applyQuaternion(inModel(hips, rootQ()).multiply(restTurn));
+          turn.rotation.y = base - Math.atan2(fwd.x, fwd.z);
+          scene.updateMatrixWorld(true);
+        }
+        if (hips) {
+          // Every clip runs in place: the sim moves the body, so the hips stay over the spot the game draws at.
+          // An airborne clip lifts the body too, and the sim already does that: hold the hips at rest height.
+          hips.getWorldPosition(pin);
+          shift.position.x = -pin.x;
+          if (c.pin === 'hips') shift.position.y = restHip - pin.y;
+          scene.updateMatrixWorld(true);
+          if (roll) {
+            // A spin about the hips, in the screen's plane, facing the way the figure faces.
+            hips.getWorldPosition(pin);
+            const a = facing === 'r' ? -roll : roll;
+            const sp = shift.position
+              .clone()
+              .sub(pin)
+              .applyAxisAngle(new THREE.Vector3(0, 0, 1), a);
+            shift.position.copy(pin).add(sp);
+            shift.rotation.z = a;
+            scene.updateMatrixWorld(true);
+          }
+        }
+        const tr = shoot();
+        if (c.center) {
+          // A figure lying down is as long as it was tall: centred on the spot, it stays inside the runner's box.
+          let x0 = Infinity;
+          let x1 = -Infinity;
+          for (const ring of tr.sil)
+            for (let i = 0; i < ring.length; i += 2) {
+              x0 = Math.min(x0, ring[i]);
+              x1 = Math.max(x1, ring[i]);
+            }
+          const dx = (x0 + x1) / 2;
+          const by = (r: number[]) => r.forEach((v, i) => i % 2 === 0 && (r[i] = v - dx));
+          tr.sil.forEach(by);
+          tr.parts.forEach((p) => by(p.ring));
+          for (let i = 0; i < tr.glints.length; i += 3) tr.glints[i] -= dx;
+        }
+        if (c.pin !== 'hips') {
+          // A grounded clip stands on the floor: a sole it rolls under (a heel-toe walk, the camera's tilt)
+          // lifts the figure instead of sinking the runner.
+          let low = -Infinity;
+          for (const ring of tr.sil) for (let i = 1; i < ring.length; i += 2) low = Math.max(low, ring[i]);
+          // The soles sit just above the floor line, where the pen's ink round them lands on it.
+          const lift = low > -FLOOR ? low + FLOOR : 0;
+          if (lift) {
+            const up = (r: number[]) => r.forEach((v, i) => i % 2 && (r[i] = v - lift));
+            tr.sil.forEach(up);
+            tr.parts.forEach((p) => up(p.ring));
+            for (let i = 1; i < tr.glints.length; i += 3) tr.glints[i] -= lift;
+          }
+        }
+        tc[facing].push(tr);
+      }
+    }
+    out[name] = tc;
+  }
+  rt.dispose();
   renderer.dispose();
-  return { play, card, roles: pal.names };
+  return { clips: out, roles: names };
 }

@@ -4,7 +4,7 @@ import { CAST, generateCharacter, type Kind } from './gen/character';
 import { ARCHETYPE_WEIGHTS, type Archetype, DEMOLISH, generateProp } from './gen/props';
 import type { NetSession } from './net/session';
 import { hashMatch } from './net/snapshot';
-import { castBench, castCatalog, castRecognise, castSilhouettes } from './render/cast/sheet';
+import { blindOrder, castBench, castBlind, castCatalog, castRecognise, castSilhouettes } from './render/cast/sheet';
 import { useSprites } from './render/cast/sprites';
 import type { Renderer } from './render/renderer';
 import { giveItem, ITEM_KINDS, type ItemKind } from './sim/items';
@@ -68,7 +68,14 @@ export interface SlagDebug {
   /** Deterministic state hash of the confirmed match (peers in sync ⇔ equal hashes at equal frames). */
   hash(): number;
   /** The cast (docs/CHARACTERS.md): a catalog canvas of every kind, the silhouette test, and a draw-cost bench. */
-  cast: { catalog: typeof castCatalog; silhouettes: typeof castSilhouettes; recognise: typeof castRecognise; bench: typeof castBench };
+  cast: {
+    catalog: typeof castCatalog;
+    silhouettes: typeof castSilhouettes;
+    recognise: typeof castRecognise;
+    bench: typeof castBench;
+    blind: typeof castBlind;
+    blindOrder: typeof blindOrder;
+  };
   /** Kinds rendered from 3D models (tools/art3d): turn them on or off. */
   sprites: { use: typeof useSprites; dress(slot: number, kind: string): void };
 }
@@ -88,7 +95,7 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
     match,
     renderer,
     net,
-    cast: { catalog: castCatalog, silhouettes: castSilhouettes, recognise: castRecognise, bench: castBench },
+    cast: { catalog: castCatalog, silhouettes: castSilhouettes, recognise: castRecognise, bench: castBench, blind: castBlind, blindOrder },
     sprites: {
       use: useSprites,
       // For shots: put a seated player in a given kind (a look is cosmetic, and only this match sees it).
