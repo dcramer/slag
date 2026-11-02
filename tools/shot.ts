@@ -804,9 +804,9 @@ try {
       break;
     }
     case 'cards': {
-      // Crate cards for `--arch a,b,c`, each at small, medium and large, ten to a crate.
+      // Crate cards for `--arch a,b,c`, each at small, medium and large, as many crates as that takes (`--players` sets the crate's size).
       const arch = opt('arch', 'flamer,rope,saw,launcher')!.split(',');
-      await open(`seed=${seed}&players=8`);
+      await open(`seed=${seed}&players=${opt('players', '8')}`);
       await step(30);
       const defs = await page.evaluate((as) => {
         const d = (window as any).slagDebug;
@@ -825,7 +825,8 @@ try {
         return out;
       }, arch);
       const files: string[] = [];
-      for (let k = 0; k * 10 < defs.length; k++) {
+      const per = await page.evaluate(() => (window as any).slagDebug.match.crate.length);
+      for (let k = 0; k * per < defs.length; k++) {
         await page.evaluate(
           ([ds, from]) => {
             const m = (window as any).slagDebug.match;
@@ -834,10 +835,10 @@ try {
               c.claimedBy = -1;
             });
           },
-          [defs, k * 10] as const,
+          [defs, k * per] as const,
         );
         await step(2);
-        files.push(await snap(`cards-${k}`));
+        files.push(await snap(`cards-${opt('players', '8')}p-${k}`));
       }
       await sheet('cards', files, 1);
       break;

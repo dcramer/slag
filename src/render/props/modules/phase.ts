@@ -25,9 +25,10 @@ defineArt<'phase'>({
     m.cells.forEach(([cx, cy], ci) => {
       const x = cx * TILE + ox;
       const y = cy * TILE + oy;
-      if (phaseSolid(m, rc.frame, d.r.phase, d.o.state, d.mi, ci)) {
+      // A card shows every block there: what you buy is the bricks, not the moment between them.
+      if (!d.o.level || phaseSolid(m, rc.frame, d.r.phase, d.o.state, d.mi, ci)) {
         const warn = left <= PHASE_WARN;
-        const blink = warn && Math.floor(rc.frame / (left < 12 ? 2 : 4)) % 2 === 0;
+        const blink = !!d.o.level && warn && Math.floor(rc.frame / (left < 12 ? 2 : 4)) % 2 === 0;
         const a0 = s.globalAlpha;
         s.globalAlpha = a0 * (blink ? 0.45 : 1);
         stampPhaseTile(s, x, y, hue, ci + cx * 7);
