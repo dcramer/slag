@@ -8,6 +8,7 @@ import { type Beam, canPlace, footprint, type Resolved, resolveProp, traceBeams 
 import type { RunWorld } from '../sim/run';
 import type { GameEvent } from '../sim/types';
 import { Backdrop } from './background';
+import { drawBlood } from './blood';
 import { Camera } from './camera';
 import { PhoneCam, phoneView } from './camera-follow';
 import { drawAccessory, drawAfterimage, drawCharacter, Rig } from './character';
@@ -242,6 +243,7 @@ export class Renderer {
     const pushers = m.run ? m.run.runners.filter((r) => r.alive).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h })) : [];
     this.terrain.drawLive(rc, level, pushers);
     this.drawMarkers(rc, level);
+    drawBlood(rc, m, frame);
 
     const grips = run?.runners.flatMap((r) => r.attach.grip ?? []);
     // A race's beams are the ones the sim hurts with. Before one, ghosts join in: a block you're holding cuts the flame it would stop.

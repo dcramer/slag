@@ -2,6 +2,7 @@ import { generateLevel, type ProfileOverride } from '../gen/level';
 import type { CrateItem, Match, Phase, Player } from '../game/match';
 import type { MatchRules } from '../game/rules';
 import type { RoundResult } from '../game/scoring';
+import type { BloodCell } from '../sim/blood';
 import { isProtected, type Level, T_EMPTY } from '../sim/level';
 import type { PlacedProp } from '../sim/props';
 import { RunWorld } from '../sim/run';
@@ -26,7 +27,7 @@ import type { ThemeId } from '../themes';
  * A new field on Match or RunWorld must be added here or listed as derived:
  * tests/snapshot.test.ts fails until it is.
  */
-export const SNAP_VERSION = 6;
+export const SNAP_VERSION = 7;
 
 export interface RunSnap {
   slots: number[];
@@ -61,6 +62,8 @@ export interface MatchSnap {
   force: ProfileOverride;
   players: unknown;
   placed: unknown;
+  /** Blood on the level (sim/blood.ts): small integers only, and it moves footing. */
+  blood: BloodCell[];
   crate: unknown;
   rules: MatchRules;
   result: unknown;
@@ -201,6 +204,7 @@ export function snapshotMatch(m: Match): MatchSnap {
     force: { ...m.forceProfile },
     players: toWire(m.players),
     placed: toWire(m.placed),
+    blood: m.blood.map((c) => ({ ...c })),
     crate: toWire(m.crate),
     rules: { ...m.rules },
     result: toWire(m.result),
@@ -271,6 +275,7 @@ export function restoreMatch(m: Match, s: MatchSnap): void {
   m.forceProfile = { ...s.force };
   m.players = fromWire(s.players) as Player[];
   m.placed = fromWire(s.placed) as PlacedProp[];
+  m.blood = s.blood.map((c) => ({ ...c }));
   m.crate = fromWire(s.crate) as CrateItem[];
   m.rules = { ...s.rules };
   m.result = fromWire(s.result) as RoundResult | null;
@@ -293,6 +298,7 @@ export function restoreMatch(m: Match, s: MatchSnap): void {
     prev.placed === m.placed.map((p) => p.uid).join() &&
     sameSlots(prev.run, s.run.slots);
   m.run = s.run ? restoreRun(sameRace ? prev.run! : new RunWorld(m.level, m.placed, s.run.slots, s.run.timeLimit, s.run.itemSeed), s.run) : null;
+  if (m.run) m.run.blood = m.blood;
 }
 
 function restoreRun(run: RunWorld, s: RunSnap): RunWorld {

@@ -36,7 +36,9 @@ export class Predictor {
     this.display.players = src.players.map((p) => ({ ...p, cursor: { ...p.cursor } }));
     this.display.prevScores = new Map(src.prevScores);
     this.display.winners = [...src.winners];
+    this.display.blood = src.blood.map((c) => ({ ...c }));
     this.display.run = src.run ? this.copyRun(src.run) : null;
+    if (this.display.run) this.display.run.blood = this.display.blood;
     return this.display;
   }
 

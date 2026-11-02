@@ -12,8 +12,8 @@ import type { Resolved } from './types';
  *
  * The rule: terrain and every blocking solid on the current frame stop them.
  * One-way tiles and gliders don't, because a plank you can jump through is no
- * wall. A part's own prop doesn't, or an emitter would be stopped by the block
- * it's mounted on. Runners don't: a beam goes through whoever it hits. Solids
+ * wall. Blood doesn't, or a puddle would plug a floor vent. A part's own prop
+ * doesn't, or an emitter would be stopped by the block it's mounted on. Runners don't: a beam goes through whoever it hits. Solids
  * are rebuilt every frame, so a blink block that's off or a platform that has
  * moved on simply isn't in the list.
  *
@@ -58,7 +58,7 @@ export function rayToWall(level: Level, x: number, y: number, dx: number, dy: nu
 }
 
 /** Does this solid stop something that came from prop `uid`? See the rule above. */
-const blocks = (s: Solid, uid: number) => !s.oneWay && s.propUid !== uid;
+const blocks = (s: Solid, uid: number) => !s.oneWay && !s.film && s.propUid !== uid;
 
 /** Distance (px) along a unit ray before it hits terrain or a blocking solid. Only the first `n` solids count (see `settle`). */
 export function castRay(
