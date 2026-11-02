@@ -11,7 +11,7 @@
  *
  * Steps: a clean tree; catch up with origin/main; merge the branches in order (a conflict stops
  * here with the merge in progress); `pnpm install` if the lockfile changed; one SNAP_VERSION bump
- * when the batch touched src/net/snapshot.ts or tests/snapshot.test.ts and didn't bump it itself;
+ * when the batch changed code in src/net/snapshot.ts or the field lists in tests/snapshot.test.ts;
  * `pnpm check`, plus `pnpm build` when the host changed; push HEAD to origin main.
  */
 
@@ -85,8 +85,16 @@ if (changed.some((f) => f === 'package.json' || f === 'pnpm-lock.yaml') && !run(
 
 // Branches never bump SNAP_VERSION (two bumps always conflict); the batch that lands them bumps it once.
 const snapAt = (rev: string) => git('show', `${rev}:${SNAP_FILE}`)?.match(SNAP_RE)?.[1];
-const touchedSnap = changed.includes(SNAP_FILE) || changed.includes('tests/snapshot.test.ts');
-if ((touchedSnap || flags.has('--snap')) && snapAt('origin/main') === snapAt('HEAD')) {
+const code = (s: string) =>
+  s
+    .replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+/** What decides the wire format: snapshot.ts minus its comments, and the test's saved/derived field lists. A doc edit bumps nothing. */
+const wireAt = (rev: string) =>
+  code(git('show', `${rev}:${SNAP_FILE}`) ?? '') +
+  (git('show', `${rev}:tests/snapshot.test.ts`)?.match(/const (MATCH|RUN)_FIELDS = \{[\s\S]*?\n\};/g) ?? []).map(code).join('');
+if ((flags.has('--snap') || wireAt('origin/main') !== wireAt('HEAD')) && snapAt('origin/main') === snapAt('HEAD')) {
   const next = Number(snapAt('HEAD')) + 1;
   writeFileSync(SNAP_FILE, readFileSync(SNAP_FILE, 'utf8').replace(SNAP_RE, `export const SNAP_VERSION = ${next};`));
   const why = landed.length ? `${landed.join(', ')} changed the snapshot` : 'the snapshot changed';
