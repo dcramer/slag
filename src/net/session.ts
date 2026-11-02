@@ -37,6 +37,7 @@ const MAX_UNACKED = 90;
  */
 const QUEUE_MAX = 2;
 const MAX_APPLY_PER_TICK = 900;
+const WANT_RETRY_MS = 1000;
 const MAX_PREDICT = 24;
 /** How long a new host waits for the room to report in, and for the furthest peer's snapshot. */
 const COLLECT_MS = 7000;
@@ -168,6 +169,7 @@ export class NetSession {
   private lastHello = -1e9;
   private pendingHash: [number, number] | undefined;
   private wantSentTo = '';
+  private wantAt = 0;
   private stash: { from: string; msg: Msg; at: number }[] = [];
   /** True once this peer has followed the room's timeline, so its frame number means something to a new host. */
   private onTimeline = false;
@@ -680,6 +682,7 @@ export class NetSession {
       }
     }
     if (m.phase === 'lobby' || m.phase === 'score' || m.phase === 'victory') {
+      if (!m.players.some((p) => peerOf(p.device) === this.self)) this.wants.add(this.globalDevice(this.primary));
       for (const dev of this.wants) {
         if (!present.has(peerOf(dev)) || seated.has(dev) || seats >= MAX_PLAYERS) continue;
         out.push({ t: 'join', dev });
@@ -703,7 +706,7 @@ export class NetSession {
     }
     this.unacked.push({ seq: ++this.seq, f: own });
     if (this.unacked.length > MAX_UNACKED) this.unacked.shift();
-    this.maybeWant(own);
+    this.maybeWant(own, t);
     this.applyInbox(t);
     const pressed = Object.values(own).some((e) => (typeof e === 'number' ? e : e[0]) & PRESSED);
     if (this.ticks % this.sendEvery === 0 || pressed || this.pendingActs.length) {
@@ -715,20 +718,25 @@ export class NetSession {
     }
   }
 
-  /** Spectators (joined mid-match) ask for a seat; the host grants it between rounds. */
-  private maybeWant(own: PeerFrame) {
+  /**
+   * Being connected is being in the room, so every peer asks for a seat without
+   * anyone pressing a thing: the host seats it in the lobby, or between rounds
+   * if the match is running. Asked again until seated: a seat can go to someone
+   * else, and a new host starts with a clean slate.
+   */
+  private maybeWant(own: PeerFrame, t: number) {
     const m = this.match;
-    if (m.phase === 'lobby') return;
-    const mine = m.players.some((p) => peerOf(p.device) === this.self);
-    if (mine || this.wantSentTo === this.hostId) return;
+    if (m.players.some((p) => peerOf(p.device) === this.self)) return;
+    const lobby = m.phase === 'lobby';
+    if (this.wantSentTo === this.hostId && (!lobby || t - this.wantAt < WANT_RETRY_MS)) return;
     const dev = Object.keys(own).find((d) => {
       const e = own[d];
       return ((typeof e === 'number' ? e : e[0]) & CONFIRM_BIT) !== 0;
     });
-    const auto = this.wantSentTo === '' ? this.primary : undefined;
-    const pick = dev ?? auto;
+    const pick = dev ?? (lobby || this.wantSentTo === '' ? this.primary : undefined);
     if (!pick) return;
     this.wantSentTo = this.hostId;
+    this.wantAt = t;
     this.pendingActs.push([++this.actN, { t: 'join', dev: this.globalDevice(pick) }]);
   }
 

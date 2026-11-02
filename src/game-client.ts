@@ -188,6 +188,7 @@ export function bootGame(container: HTMLElement, room: string): void {
   /** Keep the local keyboard/mouse player's chosen name; ask once on first join. */
   // Online, look and name changes are host-sequenced actions: send each once, not every frame.
   let appliedLook: number | null = null;
+  let restoring = false;
   let nameSent = '';
   function syncProfile() {
     const p = match.players.find((q) => q.device === myDevice());
@@ -198,7 +199,8 @@ export function bootGame(container: HTMLElement, room: string): void {
     // Look: restore the saved one on join; afterwards a new look (reroll) becomes the saved one.
     if (appliedLook === null) {
       if (profile.look != null) {
-        if (p.character.seed !== profile.look) net.act({ t: 'look', dev: p.device, seed: profile.look });
+        restoring = p.character.seed !== profile.look;
+        if (restoring) net.act({ t: 'look', dev: p.device, seed: profile.look });
         appliedLook = profile.look;
       } else {
         appliedLook = p.character.seed;
@@ -207,9 +209,13 @@ export function bootGame(container: HTMLElement, room: string): void {
       }
     } else if (p.character.seed !== appliedLook && !net.pending) {
       appliedLook = p.character.seed;
-      profile.look = appliedLook;
-      saveProfile(profile);
-    }
+      // Refused because someone here has that look already (say, our other tab): not a choice to save.
+      if (!restoring) {
+        profile.look = appliedLook;
+        saveProfile(profile);
+      }
+      restoring = false;
+    } else if (p.character.seed === appliedLook) restoring = false;
     // Name: a reroll also rolls a random name, so re-apply the saved one.
     // Name: a reroll also rolls a random name, so re-apply the saved one (unless another local player already has it).
     const taken = match.players.some((q) => q !== p && q.character.name === profile.name);

@@ -173,6 +173,101 @@ describe('lockstep', () => {
   });
 });
 
+describe('lobby seats', () => {
+  const seats = (s: NetSession) => s.match.players.map((p) => `${p.device}/${p.character.name}/${p.character.seed}`);
+
+  it('seats every connected peer with nobody pressing anything, identically on every peer, within a second', () => {
+    const r = new Room({ latency: 40, jitter: 10 });
+    const a = r.join('aaaa');
+    r.run(20);
+    expect(a.match.players.map((p) => p.device)).toEqual(['aaaa:kb1']);
+    const b = r.join('bbbb');
+    r.run(5);
+    const c = r.join('cccc');
+    r.run(60);
+    for (const s of [a, b, c]) expect(s.match.players).toHaveLength(3);
+    expect(seats(b)).toEqual(seats(a));
+    expect(seats(c)).toEqual(seats(a));
+  });
+
+  it('gives every player a distinct name and color, however many seats fill', () => {
+    const r = new Room({ latency: 10 });
+    const ids = ['aaaa', 'bbbb', 'cccc', 'dddd', 'eeee', 'ffff', 'gggg', 'hhhh'];
+    for (const id of ids) {
+      r.join(id);
+      r.run(10);
+    }
+    r.run(60);
+    const a = r.peers.get('aaaa')!;
+    expect(a.match.players).toHaveLength(8);
+    expect(new Set(a.match.players.map((p) => p.character.name)).size).toBe(8);
+    expect(new Set(a.match.players.map((p) => p.character.seed)).size).toBe(8);
+    const hues = a.match.players.map((p) => p.character.hue);
+    for (const h of hues) for (const o of hues) if (o !== h) expect(Math.min(Math.abs(h - o), 360 - Math.abs(h - o))).toBeGreaterThanOrEqual(22);
+  });
+
+  it('refuses a look someone here already has, so two tabs sharing a saved look still differ', () => {
+    const r = new Room({ latency: 20 });
+    const a = r.join('aaaa');
+    r.run(5);
+    const b = r.join('bbbb');
+    r.run(40);
+    const look = 123456;
+    a.act({ t: 'look', dev: 'aaaa:kb1', seed: look });
+    r.run(30);
+    b.act({ t: 'look', dev: 'bbbb:kb1', seed: look });
+    r.run(30);
+    expect(a.match.players.find((p) => p.device === 'aaaa:kb1')!.character.seed).toBe(look);
+    expect(a.match.players.find((p) => p.device === 'bbbb:kb1')!.character.seed).not.toBe(look);
+    expect(seats(b)).toEqual(seats(a));
+    b.act({ t: 'name', dev: 'bbbb:kb1', name: a.match.players[0].character.name });
+    r.run(30);
+    expect(new Set(a.match.players.map((p) => p.character.name)).size).toBe(2);
+  });
+
+  it('syncs a new look to every peer', () => {
+    const r = new Room({ latency: 20 });
+    const a = r.join('aaaa');
+    r.run(5);
+    const b = r.join('bbbb', (_s, f) => (f === 70 ? { kb1: press({ altPressed: true }) } : {}));
+    r.run(60);
+    const before = seats(a);
+    r.run(40);
+    expect(seats(a)).not.toEqual(before);
+    expect(seats(b)).toEqual(seats(a));
+  });
+
+  it('keeps every bay through a refresh, a late join and a host migration', () => {
+    const r = new Room({ latency: 30 });
+    const a = r.join('aaaa');
+    r.run(5);
+    r.join('bbbb');
+    r.run(5);
+    const c = r.join('cccc');
+    r.run(60);
+    const name = (s: NetSession, dev: string) => s.match.players.find((p) => p.device === dev)?.character.name;
+    const cName = name(a, 'cccc:kb1');
+    r.leave('cccc');
+    r.run(30);
+    expect(a.match.players).toHaveLength(2);
+    const c2 = r.join('cccc');
+    r.run(60);
+    expect(name(c2, 'cccc:kb1')).toBe(cName);
+    expect(seats(c2)).toEqual(seats(a));
+    const d = r.join('dddd');
+    r.run(60);
+    expect(seats(d)).toEqual(seats(a));
+    expect(a.match.players).toHaveLength(4);
+    r.leave('aaaa');
+    r.run(90);
+    const b = r.peers.get('bbbb')!;
+    expect(b.isHost).toBe(true);
+    expect(b.match.players.map((p) => p.device).sort()).toEqual(['bbbb:kb1', 'cccc:kb1', 'dddd:kb1']);
+    expect(seats(d)).toEqual(seats(b));
+    expect(c).toBeDefined();
+  });
+});
+
 describe('reconnect and late join', () => {
   it('a refresh mid-match gets the same slot, character and score back', () => {
     const r = new Room({ latency: 30 });

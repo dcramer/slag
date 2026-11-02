@@ -11,6 +11,7 @@
  *   SHOT_DEV=1 pnpm online-test          # against `next dev`
  *
  * Scenarios:
+ *   flow        as a person does it: Play on the menu, open the invite, press nothing; both peers see both bays
  *   play        join, live cursors, claim race, a remote ghost, a race, refresh keeps the slot, next round
  *   pick place run   the host's renderer is killed (no goodbye) in that phase
  *   leave       the host navigates away (goodbye path) mid-race
@@ -52,7 +53,18 @@ type NetView = {
   phase: string;
   round: number;
   hash: number;
-  players: { device: string; slot: number; name: string; score: number; away: boolean; claim: number; placed: boolean; cursor: { x: number; y: number } }[];
+  players: {
+    device: string;
+    slot: number;
+    name: string;
+    seed: number;
+    ready: boolean;
+    score: number;
+    away: boolean;
+    claim: number;
+    placed: boolean;
+    cursor: { x: number; y: number };
+  }[];
   crate: { claimedBy: number; x: number; y: number }[];
   stats: Record<string, number>;
 };
@@ -86,6 +98,8 @@ async function view(p: Page): Promise<NetView> {
         device: q.device,
         slot: q.slot,
         name: q.character.name,
+        seed: q.character.seed,
+        ready: q.ready,
         score: q.score,
         away: !!q.away,
         claim: q.claim,
@@ -475,7 +489,6 @@ async function startMatch(r: Room, n: number, rules: Record<string, number> = FA
   }
   check(new Set(ids).size === n, `${n} peers joined with distinct ids`);
   await pages[0].evaluate((x) => (window as any).slagDebug.net.act({ t: 'rules', rules: x }), rules);
-  for (const p of pages) await p.keyboard.press('Enter');
   await waitFor(pages[0], 'everyone seated', (v) => v.players.length === n);
   for (const p of pages) await p.keyboard.press('Enter');
   for (const p of pages) await waitFor(p, 'match start', (v) => v.phase === 'pick');
@@ -704,6 +717,66 @@ async function playScenario(browser: Browser, base: string) {
   await r.dispose();
 }
 
+/**
+ * The way a person does it: one browser presses Play on the menu, another opens the
+ * invite link. Nobody presses anything else, and there are no debug params.
+ */
+async function realFlowScenario(browser: Browser, base: string, label: string, sameBrowser: boolean, savedProfile: boolean) {
+  console.log(`\n== ${label}`);
+  const size = { viewport: { width: 960, height: 540 } };
+  const ca = await browser.newContext(size);
+  const cb = sameBrowser ? ca : await browser.newContext(size);
+  const contexts = sameBrowser ? [ca] : [ca, cb];
+  const errors: string[] = [];
+  for (const c of contexts) {
+    await c.addInitScript('window.__name = (f) => f');
+    // Past the first-visit name prompt. A saved look is what makes two tabs of one browser collide.
+    const profile = JSON.stringify({ version: 1, name: savedProfile ? 'Dave' : null, look: savedProfile ? 123456 : undefined, prompted: true });
+    await c.addInitScript((v) => localStorage.setItem('slag.profile.v1', v), profile);
+  }
+  const watch = (p: Page, tag: string) => {
+    p.on('pageerror', (e) => errors.push(`${tag}: ${String(e)}`));
+    p.on('console', (m) => m.type() === 'error' && errors.push(`${tag}: ${m.text()}`));
+  };
+  const A = await ca.newPage();
+  watch(A, 'A');
+  await A.goto(base);
+  await A.getByRole('button', { name: /^PLAY/i }).click();
+  await A.waitForFunction(() => 'slagDebug' in window, null, { timeout: 60_000 });
+  await waitFor(A, 'the host seated', (v) => v.players.length === 1, 10_000);
+  const invite = A.url().split('?')[0];
+  const B = await cb.newPage();
+  watch(B, 'B');
+  const t0 = Date.now();
+  await B.goto(invite);
+  await B.waitForFunction(() => 'slagDebug' in window, null, { timeout: 60_000 });
+  const b = await waitFor(B, 'the guest seated', (v) => v.players.length === 2, 20_000);
+  console.log(`     guest sees both bays ${((Date.now() - t0) / 1000).toFixed(1)} s after opening the link`);
+  const a = await waitFor(A, 'the host seeing the guest', (v) => v.players.length === 2, 5000);
+  check(a.players.length === 2 && b.players.length === 2, 'both peers see both bays, with nobody pressing anything');
+  const looks = (v: NetView) => v.players.map((p) => `${p.slot}:${p.name}:${p.seed}:${p.ready}`).join();
+  check(looks(a) === looks(b), `both peers agree on each player (${looks(a)})`);
+  check(new Set(a.players.map((p) => p.seed)).size === 2 && new Set(a.players.map((p) => p.name)).size === 2, 'the two players are different characters');
+  await sleep(600);
+  await r2(A, B, label);
+  await ca.close();
+  if (cb !== ca) await cb.close();
+  const real = errors.filter((e) => !/favicon/.test(e));
+  check(real.length === 0, `no page errors${real.length ? `:\n${real.join('\n')}` : ''}`);
+}
+
+async function r2(A: Page, B: Page, label: string) {
+  const file = label.replaceAll(' ', '-');
+  for (const [p, who] of [
+    [A, 'host'],
+    [B, 'guest'],
+  ] as const) {
+    const path = `${out}/online-${file}-${who}.png`;
+    await p.screenshot({ path, timeout: 60_000 });
+    console.log(`     ${path}`);
+  }
+}
+
 async function bcScenario(browser: Browser, base: string) {
   const r = await newRoom(browser, base, 'bc', 'net=bc', { shared: true });
   const { pages } = await startMatch(r, 2);
@@ -725,7 +798,6 @@ async function unsetScenario(browser: Browser) {
     const p = await r.open('A');
     const v = await waitFor(p, 'online to give up cleanly', (x) => x.status === 'unavailable', 20_000);
     check(v.detail === 'Online Not Set Up', `missing store credentials: "${v.detail}"`);
-    await p.keyboard.press('Enter');
     const seated = await waitFor(p, 'local play still works', (x) => x.players.length === 1, 10_000);
     check(seated.players.length === 1 && seated.frame > 0, 'the game runs locally');
     await sleep(500);
@@ -742,6 +814,10 @@ const browser = await launchChromium();
 const server = await startNext(storeEnv);
 console.log(`signaling store: ${srh ? 'Upstash REST (SRH)' : 'in memory'}`);
 try {
+  if (wanted('flow')) {
+    await realFlowScenario(browser, server.base, 'flow two browsers', false, false);
+    await realFlowScenario(browser, server.base, 'flow two tabs saved look', true, true);
+  }
   if (wanted('play')) await playScenario(browser, server.base);
   if (wanted('pick')) await killScenario(browser, server.base, 'pick');
   if (wanted('place')) await killScenario(browser, server.base, 'place');

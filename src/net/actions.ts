@@ -1,4 +1,4 @@
-import type { CharacterDef } from '../gen/character';
+import { type CharacterDef, generateCharacter } from '../gen/character';
 import type { Match } from '../game/match';
 import { DEFAULT_RULES, type MatchRules, nearestLength, RULE_CHOICES, type TimerRule } from '../game/rules';
 import { MAX_PLAYERS } from '../sim/constants';
@@ -71,12 +71,13 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
     case 'name': {
       const p = m.players.find((q) => q.device === a.dev);
       const name = typeof a.name === 'string' ? a.name.slice(0, 12).trim() : ''; // wire data: don't trust the type
-      if (p && name) m.setName(p.slot, name);
+      if (p && name && !m.players.some((q) => q !== p && q.character.name === name)) m.setName(p.slot, name);
       return;
     }
     case 'look': {
       const p = m.players.find((q) => q.device === a.dev);
-      if (p && Number.isInteger(a.seed)) m.setLook(p.slot, a.seed >>> 0);
+      // Two tabs of one browser share a saved look; the second one keeps the character it rolled.
+      if (p && Number.isInteger(a.seed) && m.looksFree({ ...generateCharacter(a.seed >>> 0), name: p.character.name }, p)) m.setLook(p.slot, a.seed >>> 0);
       return;
     }
     case 'salt':

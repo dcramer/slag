@@ -47,9 +47,8 @@ function inPick() {
   const c = r.join('cccc');
   r.run(30);
   a.act({ t: 'rules', rules: { targetScore: 80, maxRounds: 25, pickSeconds: 10, placeSeconds: 15, raceSeconds: 30 } });
-  const ready = press({ confirmPressed: true });
-  r.tick({ aaaa: { kb1: ready }, bbbb: { kb1: ready }, cccc: { kb1: ready } });
   r.run(30);
+  const ready = press({ confirmPressed: true });
   r.tick({ aaaa: { kb1: ready }, bbbb: { kb1: ready }, cccc: { kb1: ready } });
   for (let i = 0; i < 90 && a.match.phase !== 'pick'; i++) r.tick();
   r.run(40);
@@ -204,9 +203,8 @@ function inRace(latency: number) {
   const b = r.join('bbbb');
   r.run(Math.ceil(latency / 8) + 30);
   a.act({ t: 'rules', rules: { targetScore: 80, maxRounds: 25, pickSeconds: 10, placeSeconds: 15, raceSeconds: 0 } });
-  const ready = press({ confirmPressed: true });
-  r.tick({ aaaa: { kb1: ready }, bbbb: { kb1: ready } });
   r.run(30);
+  const ready = press({ confirmPressed: true });
   r.tick({ aaaa: { kb1: ready }, bbbb: { kb1: ready } });
   for (let i = 0; i < 3000 && (a.match.phase as string) !== 'run'; i++) r.tick();
   for (let i = 0; i < 80; i++) r.tick({ aaaa: { kb1: press({}) } });

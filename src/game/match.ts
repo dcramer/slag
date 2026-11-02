@@ -35,6 +35,9 @@ export interface Player {
   away?: boolean;
 }
 
+/** Degrees of hue between any two players' characters: eight players still fit twice over. */
+const MIN_HUE_APART = 22;
+
 /** What an away player's runner does: self-destruct at GO so the race can end. */
 const AWAY_RUN_INPUT: InputFrame = Object.freeze({ ...NO_INPUT, altPressed: true });
 
@@ -135,8 +138,20 @@ export class Match {
 
   // ---------------------------------------------------------------- lobby
 
-  private rollCharacter(): CharacterDef {
-    return generateCharacter(deriveSeed(this.seed, `char:${this.charRolls++}`));
+  /** A character nobody seated could be mistaken for. Rolls are counted, so every peer lands on the same one. */
+  private rollCharacter(owner?: Player): CharacterDef {
+    let c = generateCharacter(deriveSeed(this.seed, `char:${this.charRolls++}`));
+    for (let i = 0; i < 16 && !this.looksFree(c, owner); i++) c = generateCharacter(deriveSeed(this.seed, `char:${this.charRolls++}`));
+    return c;
+  }
+
+  /** True if no other player already has this look: colors must read apart at a glance, and names must differ. */
+  looksFree(c: CharacterDef, owner?: Player): boolean {
+    return this.players.every((q) => {
+      if (q === owner) return true;
+      const apart = Math.abs(q.character.hue - c.hue) % 360;
+      return Math.min(apart, 360 - apart) >= MIN_HUE_APART && q.character.name !== c.name;
+    });
   }
 
   newLevel(seed: number, theme: ThemeId | undefined = this.themeOverride) {
@@ -154,7 +169,7 @@ export class Match {
         continue;
       }
       if (inp.altPressed) {
-        p.character = this.rollCharacter();
+        p.character = this.rollCharacter(p);
         p.ready = false;
       }
       if (inp.confirmPressed) p.ready = !p.ready;
