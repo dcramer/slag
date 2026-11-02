@@ -1,45 +1,56 @@
 import { deriveSeed, Rng } from '../../core/rng';
 import { LEVEL_H, LEVEL_W } from '../../sim/constants';
 import type { Level } from '../../sim/level';
-import { analyzeReach } from '../../sim/reach';
 import { pickThemeId, type ThemeId } from '../../themes';
 import { SET_PIECES } from '../setpieces';
 import { generateTheme, type Theme } from '../theme';
-import { SCULPTORS } from './sculptors';
+import { FALLBACK_SCULPTOR, SCULPTORS } from './sculptors';
 import type { Shape } from './types';
+import { type Bridge, judge } from './validate';
 
-export type { SculptCtx, Sculptor, Shape } from './types';
+export type { BridgeHint, SculptCtx, Sculptor, Shape } from './types';
+export { BRIDGE_W, type Bridge, canPlaceBridge, isAcceptable, judge, MAX_BRIDGES, withBridges } from './validate';
 
-const MAX_ATTEMPTS = 60;
+const MAX_ATTEMPTS = 30;
+const LEGACY_ATTEMPTS = 20;
 
-/** Attempts used by the last generateLevel call (for tools/tests). */
+/** Diagnostics about the last generateLevel call (for tools/tests). */
+export interface GenInfo {
+  attempts: number;
+  /** A bridge solution (left cells) when the level needs props; [] if solvable bare. */
+  bridges: Bridge[];
+  fallback: boolean;
+}
+
+export let lastGenInfo: GenInfo = { attempts: 0, bridges: [], fallback: false };
+/** Attempts used by the last generateLevel call (kept for older callers). */
 export let lastGenAttempts = 0;
 
 /**
  * Level pipeline: pick theme → generate look → sculpt terrain (retrying
- * until it passes validation) → place theme set pieces.
- *
- * Validation today: the goal must be reachable without props, using the
- * real controller (src/sim/reach.ts). The worldgen owner may relax this to
- * "reachable after placing a couple of bridge props" — see AGENTS.md.
+ * until it passes the solvability policy in ./validate.ts) → place theme
+ * set pieces. If the theme sculptor keeps failing, the legacy sculptor gets
+ * a few tries before the flat floor; both count as `fallback` in
+ * lastGenInfo (tests assert neither happens).
  */
 export function generateLevel(seed: number, themeOverride?: ThemeId): Level {
   const themeId = themeOverride ?? pickThemeId(seed);
   const theme = generateTheme(seed, themeId);
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    lastGenAttempts = attempt + 1;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS + LEGACY_ATTEMPTS; attempt++) {
     const rng = new Rng(deriveSeed(seed, `level:${attempt}`));
-    const shape = SCULPTORS[themeId]({ rng, themeId, theme, attempt });
+    const sculptor = attempt < MAX_ATTEMPTS ? SCULPTORS[themeId] : FALLBACK_SCULPTOR;
+    const shape = sculptor({ rng, themeId, theme, attempt });
     const level = toLevel(seed, shape, theme);
-    if (!isAcceptable(level)) continue;
+    const v = judge(level, shape.bridgeHints);
+    if (!v.ok) continue;
+    lastGenAttempts = attempt + 1;
+    lastGenInfo = { attempts: attempt + 1, bridges: v.bridges, fallback: attempt >= MAX_ATTEMPTS };
     level.setPieces = SET_PIECES[themeId](new Rng(deriveSeed(seed, `setpieces:${attempt}`)), level);
     return level;
   }
+  lastGenAttempts = MAX_ATTEMPTS + LEGACY_ATTEMPTS;
+  lastGenInfo = { attempts: lastGenAttempts, bridges: [], fallback: true };
   return toLevel(seed, fallbackShape(), theme);
-}
-
-export function isAcceptable(level: Level): boolean {
-  return analyzeReach(level).goalReached;
 }
 
 function toLevel(seed: number, s: Shape, theme: Theme): Level {

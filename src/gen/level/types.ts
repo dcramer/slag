@@ -12,6 +12,18 @@ export interface Shape {
   protectedRects: TileRect[];
   /** Free-form label for debugging/tools ("farm:fields", "legacy:caverns", ...). */
   style: string;
+  /**
+   * Optional bridge spots the sculptor built in on purpose (left cell of a
+   * 3-wide platform). The validator tries these first; it still searches
+   * generically, so hints are an optimization, never a requirement.
+   */
+  bridgeHints?: BridgeHint[];
+}
+
+/** Left cell of a BRIDGE_W×1 solid platform a player could place. */
+export interface BridgeHint {
+  x: number;
+  y: number;
 }
 
 export interface SculptCtx {
