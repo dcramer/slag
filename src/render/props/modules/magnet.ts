@@ -1,7 +1,56 @@
 import { css, type HSL } from '../../../core/color';
 import { magnetCycle } from '../../../sim/props';
-import { circle, glowDot, light, sphereFill } from '../../kit';
+import { type P, stroke } from '../../ink';
+import { ball, INK, sprite, stamp, tick } from '../../ink-props';
+import { circle, glowDot, light } from '../../kit';
 import { defineArt } from '../common';
+
+/**
+ * The core: a black hole in a jar (pull) or a hot pushy orb (push), inked. Black Hole Lite wears a diet
+ * soda's silver band.
+ */
+function orb(pull: boolean, lite: boolean) {
+  return sprite(`mg|${pull}|${lite}`, -7, -7, 14, 14, (g) => {
+    const base: HSL = pull ? { h: 268, s: 45, l: 26 } : { h: 22, s: 70, l: 46 };
+    ball(g, 0, 0, 5, base, 3);
+    if (pull) {
+      // The event horizon swirl.
+      g.fillStyle = css(base, 26, 0.9);
+      const sw: P[] = [];
+      for (let i = 0; i <= 18; i++) {
+        const a = (i / 18) * Math.PI * 3;
+        const r = 3.8 - (i / 18) * 3;
+        sw.push({ x: Math.cos(a) * r, y: Math.sin(a) * r * 0.7 });
+      }
+      stroke(g, sw, { w: 0.6, seed: 4, taper: [0.1, 0.6], press: 0.1 });
+      g.fillStyle = INK;
+      g.beginPath();
+      g.arc(0, 0, 1.3, 0, Math.PI * 2);
+      g.fill();
+    } else {
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * Math.PI * 2 + 0.4;
+        tick(g, Math.cos(a) * 1.6, Math.sin(a) * 1.6, Math.cos(a) * 3.6, Math.sin(a) * 3.6, 0.6, i, css(base, 30));
+      }
+    }
+    if (lite) {
+      g.save();
+      g.beginPath();
+      g.arc(0, 0, 5, 0, Math.PI * 2);
+      g.clip();
+      g.fillStyle = '#dfe4ec';
+      g.fillRect(-6, -1.4, 12, 2.8);
+      g.fillStyle = '#c6202a';
+      g.font = 'bold 2.3px sans-serif';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText('LITE', 0, 0.1);
+      g.restore();
+      tick(g, -4.8, -1.5, 4.8, -1.5, 0.35, 5);
+      tick(g, -4.8, 1.5, 4.8, 1.5, 0.35, 6);
+    }
+  });
+}
 
 /**
  * Gravity well / repulsor. The field edge is drawn as a ring at the exact
@@ -22,20 +71,27 @@ defineArt<'magnet'>({
     const col: HSL = pull ? { h: 275, s: 90, l: 62 } : { h: 28, s: 100, l: 60 };
     const on = c.seg === 2;
     const charge = c.seg === 1 ? c.t / c.len : on ? 1 : 0;
-    // Core orb on the block.
-    s.fillStyle = sphereFill(s, x, y, 5, pull ? { h: 270, s: 40, l: 30 } : { h: 20, s: 50, l: 34 }, 35, 20);
-    circle(s, x, y, 5);
+    // Core orb on the block, inked; the glow sits behind it so the pen stays on top.
     glowDot(g, x, y, 6 + charge * 6 + (on ? Math.sin(rc.t * 9) * 1.5 : 0), col, 0.4 + charge * 0.5);
-    g.fillStyle = css(col, 30, 0.5 + charge * 0.5);
-    circle(g, x, y, 1.8 + charge);
-    // Field edge.
+    stamp(s, orb(pull, d.r.pp.def.name.includes('Lite')), x, y);
+    g.fillStyle = css(col, 30, 0.35 + charge * 0.5);
+    circle(g, x, y, 1.2 + charge);
+    // Field edge, at the radius the sim uses. A repulsor's is floor tape with its distance on it.
     g.save();
     g.strokeStyle = css(col, 5, on ? 0.45 : 0.12 + charge * 0.4);
     g.lineWidth = on ? 1.2 : 0.8;
-    if (!on) g.setLineDash([2, 4]);
+    if (!pull) g.setLineDash([5, 3]);
+    else if (!on) g.setLineDash([2, 4]);
     g.beginPath();
     g.arc(x, y, m.radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (c.seg === 1 ? charge : 1));
     g.stroke();
+    if (!pull) {
+      g.fillStyle = css(col, 15, on ? 0.75 : 0.3 + charge * 0.4);
+      g.font = 'bold 5px sans-serif';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText('6 FT', x, y - m.radius - 4);
+    }
     g.restore();
     if (!on) return;
     // Streaming motes: 14 spokes, each mote travels in (pull) or out (push) once a second.

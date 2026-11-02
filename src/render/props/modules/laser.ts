@@ -1,10 +1,35 @@
 import { css, type HSL } from '../../../core/color';
 import type { Vec } from '../../../core/geom';
 import { laserAngle, laserCycle, type Module, type ModuleOf, type PropStyle, type Resolved } from '../../../sim/props';
-import { glowDot, light, type MetalPalette, metalFill, type RC, rrect } from '../../kit';
+import { boxPts, dot, glint, INK, ovalPts, part, poly, sprite, stamp } from '../../ink-props';
+import { glowDot, light, type MetalPalette, type RC } from '../../kit';
 import { beamOf, defineArt, type PropDrawOpts } from '../common';
 
 type M<T extends Module['type']> = ModuleOf<T>;
+
+/** The swivel the pointer sits in: a small bolted cup on the block. */
+function swivel(pal: MetalPalette) {
+  return sprite(`lz|swivel|${pal.base.h},${pal.base.l}`, -5, -5, 10, 10, (g) => {
+    part(g, ovalPts(0, 0.6, 3.6, 3.2, 3, 0.04), pal.base, 3, { depth: 0.7, thin: 0.45, thick: 1.1 });
+    dot(g, 0, 0.6, 1.4, 4);
+  });
+}
+
+/** A laser pointer along +x: a pen body, a clip, a button and a brass tip at x = 9. */
+function pointer(hue: number) {
+  return sprite(`lz|pen|${hue | 0}`, -6, -3, 16.5, 6, (g) => {
+    const body: HSL = { h: hue, s: 30, l: 30 };
+    part(g, boxPts(-5, -1.3, 11.2, 2.6, 1.2, 5), body, 5, { depth: 0.4, thin: 0.4, thick: 0.9 });
+    part(g, poly(6, -1.3, 8.4, -0.8, 9.2, -0.5, 9.2, 0.5, 8.4, 0.8, 6, 1.3), { h: 44, s: 60, l: 58 }, 6, { depth: 0.3, thin: 0.35, thick: 0.7 });
+    // The clip and the button.
+    g.fillStyle = '#c9ced8';
+    g.fillRect(-4.2, -2, 4.6, 0.7);
+    g.fillStyle = INK;
+    g.fillRect(0.2, -2.1, 0.5, 1);
+    dot(g, 2.4, -1.3, 0.6, 7, '#ff6b6b');
+    glint(g, poly(-4, -0.6, -1, -0.75, 3, -0.7), css(body, 34), 0.45);
+  });
+}
 
 function drawLaser(rc: RC, m: M<'laser'>, r: Resolved, mi: number, off: Vec, pal: MetalPalette, st: PropStyle, o: PropDrawOpts) {
   const f = rc.frame;
@@ -16,21 +41,16 @@ function drawLaser(rc: RC, m: M<'laser'>, r: Resolved, mi: number, off: Vec, pal
   const col: HSL = { h: st.glowHue, s: 100, l: 58 };
   const s = rc.s;
   const g = rc.g;
-  // Emitter: rotating lens housing.
+  // Emitter: a pen-sized pointer on a swivel, far too small for what comes out of it.
+  stamp(s, swivel(pal), x, y);
   s.save();
   s.translate(x, y);
   s.rotate(a);
-  s.fillStyle = metalFill(s, pal, -3, -4.5, 12, 9);
-  rrect(s, -3, -4.5, 12, 9, 2.5);
-  s.fill();
-  s.strokeStyle = css(pal.dark, -10);
-  s.lineWidth = 0.8;
-  s.stroke();
-  s.fillStyle = css(pal.dark);
-  s.fillRect(7.5, -3.5, 2.5, 7);
+  if (Math.cos(a) < 0) s.scale(1, -1);
+  stamp(s, pointer(st.hue));
   s.restore();
-  const lx = x + Math.cos(a) * 9;
-  const ly = y + Math.sin(a) * 9;
+  const lx = x + Math.cos(a) * 9.2;
+  const ly = y + Math.sin(a) * 9.2;
   const charge = c.seg === 1 ? c.t / c.len : c.seg === 2 ? 1 : 0.1;
   glowDot(g, lx, ly, 3 + charge * 6, col, 0.6 + charge * 0.4);
   const len = beam?.len ?? 40;

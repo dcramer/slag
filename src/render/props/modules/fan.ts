@@ -1,8 +1,10 @@
-import { css } from '../../../core/color';
+import { css, type HSL } from '../../../core/color';
 import type { Vec } from '../../../core/geom';
 import { dirOf, fanColumn, type Module, type ModuleOf, type PropStyle, type Resolved } from '../../../sim/props';
 import { windProfile, windSpeed } from '../../../sim/wind';
-import { circle, type MetalPalette, type RC, sphereFill } from '../../kit';
+import { stroke } from '../../ink';
+import { ball, boxPts, INK, ovalPts, part, path, poly, sprite, stamp, tick } from '../../ink-props';
+import type { MetalPalette, RC } from '../../kit';
 import { beamOf, defineArt, type PropDrawOpts } from '../common';
 
 type M<T extends Module['type']> = ModuleOf<T>;
@@ -53,33 +55,63 @@ function drawFan(rc: RC, m: M<'fan'>, r: Resolved, mi: number, off: Vec, pal: Me
       g.stroke();
     }
   }
+  // The grip goes on the side away from where it blows, as a hair dryer's does.
+  stamp(s, grip(st.hue), x, y);
+  stamp(s, housing(pal), x, y);
   s.save();
   s.translate(x, y);
-  s.fillStyle = 'rgba(10,10,14,0.85)';
-  circle(s, 0, 0, 6.4);
-  // Motion-blur disc: stronger fans read as a faster blur.
+  // Blades: a blur that gets stronger with the air. <= 0.35 rad/frame so a 4-blade rotor never strobes backwards.
   s.fillStyle = css({ h: st.hue, s: 40, l: 70 }, 0, Math.min(0.35, speed / 900));
-  circle(s, 0, 0, 5.8);
-  // <= 0.35 rad/frame so the 4-blade rotor never strobes backwards.
+  s.beginPath();
+  s.arc(0, 0, 5, 0, Math.PI * 2);
+  s.fill();
   s.rotate(t * (speed / 12));
+  s.fillStyle = css({ h: st.hue, s: 50, l: 72 }, 0, 0.9);
   for (let i = 0; i < 4; i++) {
     s.rotate(Math.PI / 2);
-    s.fillStyle = css({ h: st.hue, s: 50, l: 70 }, 0, 0.85);
     s.beginPath();
-    s.ellipse(3.2, 0, 3.2, 1.5, 0.35, 0, Math.PI * 2);
+    s.ellipse(2.8, 0, 2.7, 1.3, 0.35, 0, Math.PI * 2);
     s.fill();
   }
   s.restore();
-  s.strokeStyle = css(pal.light, 0, 0.6);
-  s.lineWidth = 0.6;
-  for (let i = -2; i <= 2; i++) {
-    s.beginPath();
-    s.moveTo(x - 6.2, y + i * 2.5);
-    s.lineTo(x + 6.2, y + i * 2.5);
-    s.stroke();
-  }
-  s.fillStyle = sphereFill(s, x, y, 1.6, pal.base);
-  circle(s, x, y, 1.6);
+  stamp(s, grill(pal), x, y);
+}
+
+/** The housing: a dark round mouth in a bezel. */
+function housing(pal: MetalPalette) {
+  return sprite(`fan|h|${pal.base.h},${pal.base.l}`, -8, -8, 16, 16, (g) => {
+    part(g, ovalPts(0, 0, 6.9, 6.9, 3, 0.02), pal.base, 3, { depth: 0.9, thin: 0.5, thick: 1.2 });
+    g.fillStyle = '#121218';
+    path(g, ovalPts(0, 0, 5.4, 5.4, 4, 0.02));
+    g.fill();
+  });
+}
+
+/** Grill bars and a hub cap over the blades. */
+function grill(pal: MetalPalette) {
+  return sprite(`fan|g|${pal.base.h},${pal.base.l}`, -7, -7, 14, 14, (g) => {
+    g.save();
+    path(g, ovalPts(0, 0, 5.4, 5.4, 4, 0.02));
+    g.clip();
+    for (let i = -2; i <= 2; i++) tick(g, -6, i * 2.2, 6, i * 2.2 + 0.1, 0.45, i + 9, css(pal.light, -6, 0.85));
+    g.restore();
+    ball(g, 0, 0, 1.5, pal.base, 5);
+  });
+}
+
+/** A household hair-dryer grip off the bottom-left, with a sliding switch and a bit of cord. */
+function grip(hue: number) {
+  return sprite(`fan|grip|${hue | 0}`, -12, -2, 12, 14, (g) => {
+    const plastic: HSL = { h: hue, s: 55, l: 58 };
+    g.save();
+    g.translate(-4.4, 4);
+    g.rotate(0.55);
+    part(g, boxPts(-1.8, 0, 3.6, 6, 1.5, 6), plastic, 6, { depth: 0.6, thin: 0.45, thick: 1 });
+    part(g, boxPts(-0.9, 1.6, 1.8, 2.4, 0.6, 7), { h: 0, s: 0, l: 92 }, 7, { depth: 0.2, thin: 0.3, thick: 0.5 });
+    g.fillStyle = INK;
+    stroke(g, poly(0, 5.8, 0.4, 7.2, -0.6, 8.2), { w: 1, seed: 8, taper: [0, 0.4], press: 0 });
+    g.restore();
+  });
 }
 
 defineArt<'fan'>({ type: 'fan', layer: 2, draw: (rc, m, d) => drawFan(rc, m, d.r, d.mi, d.off, d.pal, d.style, d.o) });

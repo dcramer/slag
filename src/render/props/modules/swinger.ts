@@ -1,73 +1,235 @@
-import { css } from '../../../core/color';
+import { css, type HSL } from '../../../core/color';
 import type { Vec } from '../../../core/geom';
 import { TILE } from '../../../sim/constants';
 import { tileAt } from '../../../sim/level';
-import { type Module, type ModuleOf, type PropStyle, type Resolved, swingHeads } from '../../../sim/props';
+import { type ModuleOf, type PropStyle, type Resolved, swingHeads } from '../../../sim/props';
+import { line, type P, stroke } from '../../ink';
 import { inkSaw } from '../../ink-parts';
-import { circle, ellipse, light, type MetalPalette, type RC, rrect, sphereFill } from '../../kit';
+import { ball, boxPts, dot, glint, INK, ovalPts, part, path, poly, sprite, stamp } from '../../ink-props';
+import { light, type MetalPalette, type RC } from '../../kit';
 import { defineArt, type PropDrawOpts } from '../common';
 
-type M<T extends Module['type']> = ModuleOf<T>;
+type Swinger = ModuleOf<'swinger'>;
 
-function drawSwinger(rc: RC, m: M<'swinger'>, r: Resolved, off: Vec, pal: MetalPalette, st: PropStyle, o: PropDrawOpts) {
+/**
+ * Saws, maces and axes on a hub (docs/PARODY.md, saw and flail). The arm is a rod drawn with the pen or
+ * a chain of baked links; the hub is a bolted boss, or for the Chain Chump a stake with a dog collar.
+ * The Pizza Cutter keeps its handle and the Hypnotist has a spiral painted on its blade.
+ */
+
+const IRON = (pal: MetalPalette): HSL => (pal.dark.l < 15 ? pal.base : { ...pal.dark, l: pal.dark.l + 10 });
+const palKey = (pal: MetalPalette) => `${pal.base.h},${pal.base.l},${pal.dark.l}`;
+
+/** One chain link, along +x: a ring seen face on, or a bar seen edge on. */
+function link(pal: MetalPalette, edge: boolean) {
+  return sprite(`sw|link|${edge}|${palKey(pal)}`, -3.6, -2.6, 7.2, 5.2, (g) => {
+    if (edge) {
+      part(g, boxPts(-3, -0.9, 6, 1.8, 0.9, 3), pal.base, 3, { depth: 0.3, thin: 0.35, thick: 0.7 });
+      return;
+    }
+    const outer = ovalPts(0, 0, 3, 2, 5, 0.03, 16);
+    const inner = ovalPts(0, 0, 1.6, 0.75, 6, 0.03, 12);
+    g.fillStyle = INK;
+    path(g, ovalPts(0.15, 0.2, 3.5, 2.5, 5, 0.03, 16));
+    g.fill();
+    g.fillStyle = css(pal.base, -8);
+    path(g, outer);
+    g.fill();
+    g.fillStyle = css(pal.light, -6);
+    g.beginPath();
+    g.arc(-0.2, -0.2, 2.4, Math.PI * 1.05, Math.PI * 1.7);
+    g.lineTo(-0.2, -0.2);
+    g.fill();
+    // Punch the hole.
+    g.globalCompositeOperation = 'destination-out';
+    path(g, inner);
+    g.fill();
+    g.globalCompositeOperation = 'source-over';
+    g.fillStyle = INK;
+    stroke(g, [...inner, inner[0]], { w: 0.5, seed: 7, taper: [0, 0], press: 0.2 });
+  });
+}
+
+/** The hub boss: a bolted ball. */
+function hub(pal: MetalPalette) {
+  return sprite(`sw|hub|${palKey(pal)}`, -6, -6, 12, 12, (g) => {
+    ball(g, 0, 0, 4.3, pal.base, 11);
+    dot(g, 0, 0, 1.3, 12, css(pal.light));
+  });
+}
+
+/** Chain Chump's hub: a stake driven in, a red collar round it with studs and a tag. */
+function stake(pal: MetalPalette) {
+  return sprite(`sw|stake|${palKey(pal)}`, -7, -7, 14, 15, (g) => {
+    const wood: HSL = { h: 30, s: 42, l: 44 };
+    part(g, ovalPts(0, 0, 3.6, 3.4, 21, 0.08), wood, 21, { depth: 0.8, thin: 0.45, thick: 1.1 });
+    g.fillStyle = css(wood, -18);
+    for (const r of [1.2, 2.3]) {
+      const ring = ovalPts(0.2, 0.1, r, r * 0.92, 22 + r, 0.1, 10);
+      stroke(g, [...ring, ring[0]], { w: 0.35, seed: 23, taper: [0.2, 0.2], press: 0.2 });
+    }
+    // The collar: a red band round the stake.
+    const col: HSL = { h: 356, s: 72, l: 46 };
+    const outer = ovalPts(0, 0.4, 5.3, 4.9, 24, 0.02, 20);
+    g.fillStyle = INK;
+    path(g, ovalPts(0.2, 0.6, 5.9, 5.5, 24, 0.02, 20));
+    g.fill();
+    g.fillStyle = css(col);
+    path(g, outer);
+    g.fill();
+    g.fillStyle = css(wood, -4);
+    path(g, ovalPts(0, 0.4, 3.9, 3.6, 25, 0.03, 16));
+    g.fill();
+    part(g, ovalPts(0, 0, 3.6, 3.4, 21, 0.08), wood, 21, { depth: 0.8, thin: 0.45, thick: 1.1 });
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 + 0.3;
+      g.fillStyle = '#e8ecf2';
+      g.beginPath();
+      g.arc(Math.cos(a) * 4.6, 0.4 + Math.sin(a) * 4.25, 0.5, 0, Math.PI * 2);
+      g.fill();
+    }
+    // A name tag hanging off the bottom.
+    part(g, ovalPts(0, 6.4, 1.4, 1.4, 26, 0.04, 10), { h: 46, s: 80, l: 58 }, 26, { depth: 0.3, thin: 0.3, thick: 0.6 });
+    void pal;
+  });
+}
+
+/** Spikes round a mace head, turning with it; the ball sits still over them so its light stays put. */
+function maceSpikes(R: number) {
+  return sprite(`sw|spikes|${R.toFixed(2)}`, -R * 1.45, -R * 1.45, R * 2.9, R * 2.9, (g) => {
+    const n = 10;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const tip = { x: Math.cos(a) * R * 1.32, y: Math.sin(a) * R * 1.32 };
+      const l = { x: Math.cos(a - 0.24) * R * 0.72, y: Math.sin(a - 0.24) * R * 0.72 };
+      const r = { x: Math.cos(a + 0.24) * R * 0.72, y: Math.sin(a + 0.24) * R * 0.72 };
+      const m = { x: Math.cos(a) * R * 0.72, y: Math.sin(a) * R * 0.72 };
+      g.fillStyle = INK;
+      path(g, [
+        { x: l.x * 1.06, y: l.y * 1.06 },
+        { x: tip.x * 1.07, y: tip.y * 1.07 },
+        { x: r.x * 1.06, y: r.y * 1.06 },
+      ]);
+      g.fill();
+      g.fillStyle = '#e6e9ef';
+      path(g, [l, tip, m]);
+      g.fill();
+      g.fillStyle = '#8f96a3';
+      path(g, [m, tip, r]);
+      g.fill();
+    }
+  });
+}
+
+function maceBall(R: number, pal: MetalPalette) {
+  return sprite(`sw|mace|${R.toFixed(2)}|${palKey(pal)}`, -R - 2, -R - 2, R * 2 + 4, R * 2 + 4, (g) => ball(g, 0, 0, R * 0.86, IRON(pal), 31));
+}
+
+/** An axe head along +x from the end of its arm: a crescent blade, an edge that catches the light. */
+function axe(R: number, pal: MetalPalette, spiral: boolean) {
+  return sprite(`sw|axe|${R.toFixed(2)}|${spiral}|${palKey(pal)}`, -R * 0.6, -R * 1.45, R * 2.1, R * 2.9, (g) => {
+    const blade: P[] = [];
+    const q = (ax: number, ay: number, cx: number, cy: number, bx: number, by: number) => {
+      for (let i = 1; i <= 8; i++) {
+        const t = i / 8;
+        const u = 1 - t;
+        blade.push({ x: u * u * ax + 2 * u * t * cx + t * t * bx, y: u * u * ay + 2 * u * t * cy + t * t * by });
+      }
+    };
+    blade.push({ x: -R * 0.2, y: -R * 0.35 });
+    q(-R * 0.2, -R * 0.35, R * 0.4, -R * 1.3, R * 0.95, -R * 1.05);
+    q(R * 0.95, -R * 1.05, R * 1.38, 0, R * 0.95, R * 1.05);
+    q(R * 0.95, R * 1.05, R * 0.4, R * 1.3, -R * 0.2, R * 0.35);
+    part(g, blade, { h: 214, s: 8, l: 68 }, 41, { depth: R * 0.12, thin: 0.5, thick: 1.3 });
+    // The edge: a bright bevel along the curve.
+    const edge: P[] = [];
+    for (let i = 0; i <= 10; i++) {
+      const a = -1 + (i / 10) * 2;
+      edge.push({ x: R * (0.95 + 0.3 * Math.cos(a * 1.2)) - R * 0.08, y: a * R * 0.98 });
+    }
+    g.fillStyle = '#f4f6fa';
+    stroke(g, edge, { w: R * 0.16, seed: 42, taper: [0.2, 0.2], press: 0.1 });
+    if (spiral) {
+      // You are getting very sleepy.
+      const sp: P[] = [];
+      for (let i = 0; i <= 40; i++) {
+        const a = (i / 40) * Math.PI * 5;
+        const r = (i / 40) * R * 0.62;
+        sp.push({ x: R * 0.42 + Math.cos(a) * r, y: Math.sin(a) * r });
+      }
+      g.fillStyle = '#7a2bb0';
+      stroke(g, sp, { w: R * 0.12, seed: 43, taper: [0.05, 0.1], press: 0.1 });
+    }
+    part(g, boxPts(-R * 0.4, -R * 0.42, R * 0.55, R * 0.84, 1, 44), IRON(pal), 44, { depth: 0.4, thin: 0.4, thick: 0.9 });
+  });
+}
+
+/** Pizza Cutter: the handle it came with, still on the hub. */
+function handle() {
+  return sprite('sw|handle', -2, -2, 18, 6, (g) => {
+    part(g, boxPts(4, -1.6, 10, 3.2, 1.4, 51), { h: 6, s: 62, l: 46 }, 51, { depth: 0.5, thin: 0.4, thick: 0.9 });
+    part(g, boxPts(0, -1.1, 4.6, 2.2, 0.5, 52), { h: 212, s: 8, l: 74 }, 52, { depth: 0.3, thin: 0.35, thick: 0.7 });
+    glint(g, poly(6, -0.9, 9, -1, 12, -0.8), 'rgba(255,220,210,0.85)', 0.5);
+  });
+}
+
+function drawSwinger(rc: RC, m: Swinger, r: Resolved, off: Vec, pal: MetalPalette, st: PropStyle, o: PropDrawOpts) {
   const s = rc.s;
   const f = rc.frame;
   const heads = swingHeads(m, f, r.phase, off);
   const hx = m.hub[0] + off[0];
   const hy = m.hub[1] + off[1];
+  const name = r.pp.def.name;
   for (const h of heads) {
     if (m.arm <= 0) continue;
     if (m.link === 'chain') {
       const n = Math.max(3, Math.floor(m.arm / 4));
       for (let i = 0; i < n; i++) {
         const t0 = (i + 0.5) / n;
-        const x = hx + (h.x - hx) * t0;
-        const y = hy + (h.y - hy) * t0;
         s.save();
-        s.translate(x, y);
-        s.rotate(h.a + (i % 2 ? Math.PI / 2 : 0));
-        s.strokeStyle = css(pal.dark);
-        s.lineWidth = 1.6;
-        s.beginPath();
-        s.ellipse(0, 0, 2.6, i % 2 ? 1.2 : 1.6, 0, 0, Math.PI * 2);
-        s.stroke();
-        s.strokeStyle = css(pal.light);
-        s.lineWidth = 0.7;
-        s.stroke();
+        s.translate(hx + (h.x - hx) * t0, hy + (h.y - hy) * t0);
+        s.rotate(h.a);
+        stamp(s, link(pal, i % 2 === 1));
         s.restore();
       }
     } else {
-      s.lineCap = 'round';
-      s.strokeStyle = css(pal.dark, -10);
-      s.lineWidth = 4.2;
-      s.beginPath();
-      s.moveTo(hx, hy);
-      s.lineTo(h.x, h.y);
-      s.stroke();
-      s.strokeStyle = css(pal.base);
-      s.lineWidth = 2.4;
-      s.stroke();
-      s.strokeStyle = css(pal.spec, 0, 0.7);
-      s.lineWidth = 0.8;
-      s.beginPath();
-      s.moveTo(hx, hy - 0.6);
-      s.lineTo(h.x, h.y - 0.6);
-      s.stroke();
+      s.fillStyle = INK;
+      line(s, hx, hy, h.x, h.y, { w: 4.4, seed: 3, taper: [0, 0], press: 0.1 });
+      s.fillStyle = css(pal.base);
+      line(s, hx, hy, h.x, h.y, { w: 2.3, seed: 4, taper: [0, 0], press: 0.1 });
+      s.fillStyle = css(pal.spec, 0, 0.75);
+      line(s, hx, hy - 0.6, h.x, h.y - 0.6, { w: 0.6, seed: 5, taper: [0.1, 0.1], press: 0.1 });
     }
   }
-  // Hub.
-  s.fillStyle = sphereFill(s, hx, hy, 4.5, pal.base);
-  circle(s, hx, hy, 4.5);
-  s.strokeStyle = css(pal.dark, -10);
-  s.lineWidth = 1;
-  s.stroke();
-  s.fillStyle = css(pal.dark);
-  circle(s, hx, hy, 1.4);
+  if (m.head === 'mace' && name.includes('Chump')) stamp(s, stake(pal), hx, hy);
+  else if (m.arm > 0 || m.head !== 'saw') stamp(s, hub(pal), hx, hy);
 
   for (const h of heads) {
-    if (m.head === 'saw') drawSaw(rc, h.x, h.y, m.radius, f * 0.45 * m.dir + r.pp.uid, pal, st, o);
-    else if (m.head === 'mace') drawMace(rc, h.x, h.y, m.radius, f * 0.03 * m.dir, pal);
-    else drawAxe(rc, h.x, h.y, m.radius, h.a, pal);
+    if (m.head === 'saw') {
+      drawSaw(rc, h.x, h.y, m.radius, f * 0.45 * m.dir + r.pp.uid, pal, st, o);
+      if (m.arm <= 0 && name.includes('Pizza')) {
+        s.save();
+        s.translate(h.x, h.y);
+        s.rotate(2.35);
+        stamp(s, handle());
+        s.restore();
+      }
+    } else if (m.head === 'mace') {
+      s.save();
+      s.translate(h.x, h.y);
+      s.rotate(f * 0.03 * m.dir);
+      stamp(s, maceSpikes(m.radius));
+      s.restore();
+      stamp(s, maceBall(m.radius, pal), h.x, h.y);
+    } else {
+      s.save();
+      s.translate(h.x, h.y);
+      s.rotate(h.a);
+      // Keep the blade's lit side up whichever way it swings.
+      if (Math.cos(h.a) < 0) s.scale(1, -1);
+      stamp(s, axe(m.radius, pal, name.includes('Hypno')));
+      s.restore();
+    }
   }
 }
 
@@ -86,65 +248,6 @@ function drawSaw(rc: RC, x: number, y: number, R: number, rot: number, pal: Meta
       }
     }
   }
-}
-
-function drawMace(rc: RC, x: number, y: number, R: number, rot: number, pal: MetalPalette) {
-  const s = rc.s;
-  s.save();
-  s.translate(x, y);
-  s.rotate(rot);
-  const n = 10;
-  for (let i = 0; i < n; i++) {
-    const a = (i / n) * Math.PI * 2;
-    s.fillStyle = i % 2 ? '#c9ced8' : '#9aa1ad';
-    s.beginPath();
-    s.moveTo(Math.cos(a - 0.22) * R * 0.75, Math.sin(a - 0.22) * R * 0.75);
-    s.lineTo(Math.cos(a) * R * 1.32, Math.sin(a) * R * 1.32);
-    s.lineTo(Math.cos(a + 0.22) * R * 0.75, Math.sin(a + 0.22) * R * 0.75);
-    s.fill();
-  }
-  s.restore();
-  s.fillStyle = sphereFill(s, x, y, R * 0.85, pal.dark.l < 15 ? pal.base : { ...pal.dark, l: pal.dark.l + 10 }, 35, 15);
-  circle(s, x, y, R * 0.85);
-  s.strokeStyle = 'rgba(0,0,0,0.5)';
-  s.lineWidth = 0.8;
-  s.stroke();
-  s.fillStyle = 'rgba(255,255,255,0.55)';
-  ellipse(s, x - R * 0.3, y - R * 0.35, R * 0.22, R * 0.14, -0.6);
-}
-
-function drawAxe(rc: RC, x: number, y: number, R: number, a: number, pal: MetalPalette) {
-  const s = rc.s;
-  s.save();
-  s.translate(x, y);
-  s.rotate(a);
-  // Local: arm points +x; blade is a crescent across the arm end.
-  const gr = s.createLinearGradient(-R * 0.3, 0, R * 0.9, 0);
-  gr.addColorStop(0, css(pal.dark));
-  gr.addColorStop(0.5, '#b8bec9');
-  gr.addColorStop(0.85, '#eef1f6');
-  gr.addColorStop(1, '#ffffff');
-  s.fillStyle = gr;
-  s.beginPath();
-  s.moveTo(-R * 0.2, -R * 0.35);
-  s.quadraticCurveTo(R * 0.4, -R * 1.3, R * 0.95, -R * 1.05);
-  s.quadraticCurveTo(R * 1.35, 0, R * 0.95, R * 1.05);
-  s.quadraticCurveTo(R * 0.4, R * 1.3, -R * 0.2, R * 0.35);
-  s.closePath();
-  s.fill();
-  s.strokeStyle = '#3b3f49';
-  s.lineWidth = 0.9;
-  s.stroke();
-  s.strokeStyle = 'rgba(255,255,255,0.9)';
-  s.lineWidth = 0.7;
-  s.beginPath();
-  s.moveTo(R * 0.95, -R * 1.0);
-  s.quadraticCurveTo(R * 1.3, 0, R * 0.95, R * 1.0);
-  s.stroke();
-  s.fillStyle = css(pal.dark);
-  rrect(s, -R * 0.35, -R * 0.4, R * 0.5, R * 0.8, 1.5);
-  s.fill();
-  s.restore();
 }
 
 defineArt<'swinger'>({ type: 'swinger', layer: 2, draw: (rc, m, d) => drawSwinger(rc, m, d.r, d.off, d.pal, d.style, d.o) });
