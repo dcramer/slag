@@ -51,6 +51,15 @@ const K = {
   gain: 1.0,
   sat: 1.08,
   vignette: 0.28,
+  /** ART SPIKE, hand ink. Warp: world px of drift and world px per noise cell. */
+  warp: 0.55,
+  warpCell: 17,
+  /** Base silhouette width, how much it leans onto the shadow side (0..1), and how far pressure wanders. */
+  handInk: 0.62,
+  handLean: 0.8,
+  handPress: 0.62,
+  /** How much a line takes the color of what it outlines, like the home screen's bodies. */
+  handTint: 0.62,
 };
 
 /** Offset of the hard shadow, in world px (same direction as the classic terrain shadow). */
@@ -64,6 +73,7 @@ uniform sampler2D uScene; uniform sampler2D uFg; uniform sampler2D uLight; unifo
 uniform sampler2D uBloomA; uniform sampler2D uBloomB;
 uniform float uExposure; uniform float uFlash; uniform float uAmbient;
 uniform vec3 uTint; uniform vec3 uLift; uniform vec2 uRes; uniform vec2 uShadow;
+uniform float uHand; uniform vec3 uView; uniform float uBoil; uniform float uBypass;
 // PAL.ink and PAL.bone (src/ui/style.ts): the game draws with the UI's own inks.
 const vec3 INK = vec3(0.0706, 0.0431, 0.0314);
 const vec3 BONE = vec3(0.9647, 0.9176, 0.8471);
@@ -76,9 +86,21 @@ float hard(float v, float n){
   float w = min(fwidth(q) * 0.75 + 0.01, 0.5);
   return (floor(q) + smoothstep(0.5 - w, 0.5 + w, fract(q))) / n;
 }
+float hash21(vec2 p){ p = fract(p * vec2(233.34, 851.73)); p += dot(p, p + 23.45); return fract(p.x * p.y); }
+float vnoise(vec2 p){
+  vec2 i = floor(p), f = fract(p), u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash21(i), hash21(i + vec2(1, 0)), u.x), mix(hash21(i + vec2(0, 1)), hash21(i + vec2(1, 1)), u.x), u.y);
+}
 void main(){
   vec2 d = uv - 0.5;
   float k = uRes.y / 720.0;
+  // World position of this pixel. Line noise is pinned here, so it stays put while the camera moves.
+  vec2 wpos = (vec2(uv.x, 1.0 - uv.y) * uRes - uView.yz) / max(uView.x, 0.001);
+  vec2 boil = vec2(uBoil * 7.31, uBoil * 3.17);
+  vec2 wq = wpos / ${f(K.warpCell)} + boil;
+  vec2 warp = (vec2(vnoise(wq), vnoise(wq + vec2(41.3, 17.9))) - 0.5) * 2.0;
+  warp += (vec2(vnoise(wq * 2.7), vnoise(wq * 2.7 + vec2(9.1, 5.3))) - 0.5);
+  vec2 fuv = uv + uHand * warp * ${f(K.warp)} * uView.x / uRes;
 
   // Light bands, from the real light map.
   vec3 L = texture(uLight, uv).rgb * 2.0 * uExposure;
@@ -98,15 +120,15 @@ void main(){
   c = sat(c, ${f(K.bgSat)});
 
   // Hard shadow from every foreground shape.
-  c *= mix(1.0, ${f(K.shadow)}, smoothstep(0.45, 0.6, texture(uFg, uv + uShadow).a));
+  c *= mix(1.0, ${f(K.shadow)}, smoothstep(0.45, 0.6, texture(uFg, fuv + uShadow).a));
 
   // Foreground: premultiplied, so undo it to get the flat color back.
-  vec4 fg = texture(uFg, uv);
+  vec4 fg = texture(uFg, fuv);
   float a = fg.a;
   if (a > 0.003) {
     vec3 alb = fg.rgb / a;
     float y = max(luma(alb), 0.02);
-    alb *= pow(${f(K.tone)}, hard(log(y) / ${f(Math.log(K.tone))}, 1.0)) / y;
+    if (uBypass < 0.5) alb *= pow(${f(K.tone)}, hard(log(y) / ${f(Math.log(K.tone))}, 1.0)) / y;
     c = mix(c, clamp(alb, 0.0, 1.0) * tint * base * band * ${f(K.fgExposure)}, a);
   }
 
@@ -124,24 +146,39 @@ void main(){
   c *= 1.0 - smoothstep(0.16, 0.75, dot(d, d)) * ${f(K.vignette)};
 
   // Ink. Silhouette: alpha dilated over a ring. Interior: a tight cross, so lines stay thin inside small sprites.
-  vec2 px = ${f(K.ink)} * k / uRes;
+  // Hand: pressure wanders along the line, and the pen leans on the side away from the light.
+  float press = mix(1.0, 1.0 + (vnoise(wpos * 0.075 + boil) - 0.5) * 2.0 * ${f(K.handPress)}, uHand);
+  vec2 px = mix(${f(K.ink)}, ${f(K.handInk)} * press, uHand) * k / uRes;
   float ring = 0.0;
-  for (int i = 0; i < 8; i++) ring = max(ring, texture(uFg, uv + px * RING[i]).a);
+  vec3 near = vec3(0.0);
+  float nearA = 0.0;
+  for (int i = 0; i < 8; i++) {
+    vec2 dir = RING[i];
+    float lean = 1.0 + uHand * ${f(K.handLean)} * dot(normalize(dir), vec2(-0.55, 0.83)) * 1.4;
+    vec4 t = texture(uFg, fuv + px * dir * lean);
+    ring = max(ring, t.a);
+    near += t.rgb;
+    nearA += t.a;
+  }
   float line = smoothstep(0.4, 0.62, ring) * (1.0 - smoothstep(0.25, 0.7, a));
   vec2 fp = ${f(K.fine)} * k / uRes;
-  vec3 ga = sqrt(texture(uFg, uv + fp).rgb) - sqrt(texture(uFg, uv - fp).rgb);
-  vec3 gb = sqrt(texture(uFg, uv + vec2(fp.x, -fp.y)).rgb) - sqrt(texture(uFg, uv + vec2(-fp.x, fp.y)).rgb);
+  vec3 ga = sqrt(texture(uFg, fuv + fp).rgb) - sqrt(texture(uFg, fuv - fp).rgb);
+  vec3 gb = sqrt(texture(uFg, fuv + vec2(fp.x, -fp.y)).rgb) - sqrt(texture(uFg, fuv + vec2(-fp.x, fp.y)).rgb);
   float e = sqrt(dot(ga * ga + gb * gb, vec3(0.3, 0.5, 0.2)));
-  line = max(line, smoothstep(${f(K.edge[0])}, ${f(K.edge[1])}, e) * smoothstep(0.6, 0.95, a) * ${f(K.fineInk)});
+  line = max(line, smoothstep(${f(K.edge[0])}, ${f(K.edge[1])}, e) * smoothstep(0.6, 0.95, a) * ${f(K.fineInk)} * mix(1.0, 0.45 + 0.55 * press, uHand));
+  // Tinted line: a dark version of what it outlines, not one black.
+  vec3 tinted = sqrt(near / max(nearA, 0.01)) * 0.28 + INK * 0.45;
+  vec3 lineCol = mix(INK, min(tinted, vec3(0.32)), uHand * ${f(K.handTint)});
 
   // Hot glow casing: ink around the whole shape of a beam or flame.
   float hot = smoothstep(${f(K.hot)}, ${f(K.hot + 0.18)}, rawL);
   vec2 gp = px * 1.15;
-  float near = max(max(luma(texture(uGlow, uv + gp).rgb), luma(texture(uGlow, uv - gp).rgb)),
+  float nearGlow = max(max(luma(texture(uGlow, uv + gp).rgb), luma(texture(uGlow, uv - gp).rgb)),
                    max(luma(texture(uGlow, uv + vec2(gp.x, -gp.y)).rgb), luma(texture(uGlow, uv + vec2(-gp.x, gp.y)).rgb)));
   float big = smoothstep(${f(K.hotSize)}, ${f(K.hotSize + 0.12)}, luma(bloom));
-  float casing = smoothstep(${f(K.hot)}, ${f(K.hot + 0.18)}, near) * big;
-  c = mix(c, INK, max(line, casing) * (1.0 - hot));
+  float casing = smoothstep(${f(K.hot)}, ${f(K.hot + 0.18)}, nearGlow) * big;
+  c = mix(c, lineCol, line * (1.0 - hot));
+  c = mix(c, INK, casing * (1.0 - hot));
 
   o = vec4(mix(clamp(c, 0.0, 1.0), BONE, uFlash), 1.0);
 }`;

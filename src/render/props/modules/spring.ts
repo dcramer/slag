@@ -1,6 +1,8 @@
 import { css, type HSL } from '../../../core/color';
 import type { Vec } from '../../../core/geom';
 import type { Module, ModuleOf, PropStyle } from '../../../sim/props';
+import { hand } from '../../ink';
+import { inkSpring } from '../../ink-parts';
 import { glowDot, METALS, metalFill, type RC, rrect } from '../../kit';
 import { defineArt, type PropDrawOpts } from '../common';
 
@@ -10,6 +12,10 @@ function drawSpring(rc: RC, m: M<'spring'>, off: Vec, st: PropStyle, o: PropDraw
   const s = rc.s;
   const since = o.state ? rc.frame - o.state.lastFire : 99;
   const pop = since < 10 ? Math.sin((since / 10) * Math.PI) : 0;
+  if (hand.on) {
+    inkSpring(rc, [m.at[0] + off[0], m.at[1] + off[1]], m.angle, st.hue, pop, 11);
+    return;
+  }
   s.save();
   s.translate(m.at[0] + off[0], m.at[1] + off[1]);
   s.rotate(m.angle + Math.PI / 2); // local "up" = -y

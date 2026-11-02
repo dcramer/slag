@@ -4,7 +4,11 @@ import type { TerrainKind, TerrainLook, Theme } from '../gen/theme';
 import { TILE } from '../sim/constants';
 import { type Level, T_ONEWAY, tileAt, type TileRect } from '../sim/level';
 import { DECOR, type Decor } from './decor';
+import type { ArtMode } from './ink';
+import { paintedFill } from './ink-paint';
+import { inkFence, inkHay } from './ink-parts';
 import { flattenMaterial } from './cel-terrain';
+import { airDepth, drawTufts, inkContours, inkEdges, inkGrass, inkHatch, inkMaterial, inkPlatforms, makeTufts, type Tuft } from './ink-terrain';
 import { circle, makeNoise, mixRgb, type RC } from './kit';
 
 export { flame } from './kit';
@@ -165,6 +169,14 @@ export class TerrainPainter {
   private wh = 0;
   /** Flat materials, no baked outline (the cel pass inks silhouettes) and no soft shadow (it casts a hard one). */
   cel = false;
+  /** ART SPIKE: draw this theme's terrain in ink. World px of the bake's origin keep noise aligned across the surround's seam. */
+  ink = false;
+  /** Which spike treatment: `a` ink marks, `b` painted fill, `c` painted fill under ink. */
+  art: ArtMode = 'a';
+  originX = 0;
+  originY = 0;
+  private tufts: Tuft[] = [];
+  private inkLayer: HTMLCanvasElement | null = null;
 
   /**
    * Bake `level` if anything changed; true if it did. `skip` leaves decor out
@@ -174,13 +186,14 @@ export class TerrainPainter {
     const th = level.theme;
     const T = th.terrain;
     // Re-bake only when this theme's own textures change state (not when other themes' load).
-    const ready = `${!!getDetail(MATERIALS[T.kind].tex)}${T.sub ? !!getDetail(MATERIALS[T.sub.kind].tex) : ''}`;
-    const tk = `${th.seed}:${th.id}:${th.name}:${kb.toFixed(2)}:${ready}:${this.cel}`;
+    // Ink uses no detail textures, so one landing is no reason to bake again.
+    const ready = this.ink ? '' : `${!!getDetail(MATERIALS[T.kind].tex)}${T.sub ? !!getDetail(MATERIALS[T.sub.kind].tex) : ''}`;
+    const tk = `${th.seed}:${th.id}:${th.name}:${kb.toFixed(2)}:${ready}:${this.cel}:${this.ink}:${this.art}`;
     if (tk !== this.texKey) {
       this.texKey = tk;
-      this.main = makeTexture(T, T.veins, th, kb, 0x1234);
-      this.sub = T.sub ? makeTexture({ ...T.sub, vein: T.vein }, T.veins, th, kb, 0x4321) : null;
-      if (this.cel) {
+      this.main = this.ink ? null : makeTexture(T, T.veins, th, kb, 0x1234);
+      this.sub = !this.ink && T.sub ? makeTexture({ ...T.sub, vein: T.vein }, T.veins, th, kb, 0x4321) : null;
+      if (this.cel && !this.ink && this.main) {
         const built = (k: TerrainKind) => ['brick', 'planks', 'metal'].includes(MATERIALS[k].proc);
         this.main.tex = flattenMaterial(this.main.tex, this.main.w, T, built(T.kind));
         if (this.sub && T.sub) this.sub.tex = flattenMaterial(this.sub.tex, this.sub.w, T.sub, built(T.sub.kind));
@@ -216,6 +229,10 @@ export class TerrainPainter {
     g.setTransform(kb, 0, 0, kb, 0, 0);
     g.clearRect(0, 0, worldW, worldH);
     const solid = (x: number, y: number) => tileAt(level, x, y) !== 0 && tileAt(level, x, y) !== T_ONEWAY && y < level.h;
+    if (this.ink) {
+      this.bakeInk(g, level, kb, solid);
+      return;
+    }
     const mask = new Path2D();
     const R = 5;
     for (let ty = 0; ty < level.h; ty++) {
@@ -385,6 +402,44 @@ export class TerrainPainter {
     sg.fillStyle = 'rgba(0,0,0,0.6)';
     sg.fill(mask);
     sg.filter = 'none';
+  }
+
+  /** ART SPIKE: the same bake, as an ink drawing (`ink-terrain.ts`). */
+  private bakeInk(g: CanvasRenderingContext2D, level: Level, kb: number, solid: (x: number, y: number) => boolean) {
+    const th = level.theme;
+    const seed = th.seed ^ 0x1a4c;
+    const ox = this.originX;
+    const oy = this.originY;
+    const { mask, loops } = inkContours(level, seed, ox, oy, solid);
+    // Paint on a layer and cut it once: thousands of small fills under a clip this complex take seconds.
+    const layer = (this.inkLayer ??= document.createElement('canvas'));
+    layer.width = g.canvas.width;
+    layer.height = g.canvas.height;
+    const lg = layer.getContext('2d')!;
+    lg.setTransform(kb, 0, 0, kb, 0, 0);
+    if (this.art === 'a') inkMaterial(lg, level, th, seed, ox, oy, solid);
+    else paintedFill(lg, level, th, seed, airDepth(level, solid));
+    if (this.art !== 'b') inkHatch(lg, loops, th, seed, ox, oy);
+    lg.globalCompositeOperation = 'destination-in';
+    lg.fillStyle = '#000';
+    lg.fill(mask);
+    g.drawImage(layer, 0, 0, level.w * TILE, level.h * TILE);
+    if (this.art !== 'b') inkEdges(g, loops, th, seed, ox, oy);
+    inkGrass(g, loops, th.terrain.capColor, seed, ox, oy);
+    inkPlatforms(g, level, th, seed, ox, oy, solid);
+    this.tufts = makeTufts(loops, seed, ox, oy, this.decor);
+    for (const d of this.decor) {
+      if (!tileAt(level, d.tx, d.ty)) continue;
+      const def = DECOR[d.kind];
+      if (def.bake) {
+        g.save();
+        if (d.kind === 'haybale') inkHay(g, d);
+        else if (d.kind === 'fence') inkFence(g, d);
+        else def.bake(g, d, th);
+        g.restore();
+      }
+    }
+    this.glowBake = null;
   }
 
   /** Second material for deep tiles, with a noisy soft boundary. */
@@ -560,9 +615,10 @@ export class TerrainPainter {
     // `under` is the un-inked layer in the cel style: an outline per blade turns grass into black scrub.
     const s = under;
     const t = rc.t;
+    if (this.ink) drawTufts(rc.s, this.tufts, level, level.theme.terrain.capColor, t, pushers);
     s.lineCap = 'round';
     s.lineWidth = 1.1;
-    for (const b of this.blades) {
+    for (const b of this.ink ? [] : this.blades) {
       if (!tileAt(level, b.tx, b.ty) || tileAt(level, b.tx, b.ty - 1)) continue;
       let sway = Math.sin(t * 2.1 + b.x * 0.15) * 0.25 + Math.sin(t * 0.7 + b.x * 0.03) * 0.2 + b.lean;
       for (const p of pushers) {

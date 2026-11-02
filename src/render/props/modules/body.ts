@@ -3,6 +3,8 @@ import type { Vec } from '../../../core/geom';
 import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import type { Module, ModuleOf, PropStyle, Resolved } from '../../../sim/props';
+import { hand } from '../../ink';
+import { inkWood } from '../../ink-parts';
 import { circle, ellipse, glowDot, hazardStripes, light, type MetalPalette, metalFill, type RC, rivet, sphereFill } from '../../kit';
 import { bbox, bodyPath, cornerRadii, defineArt, type PropDrawOpts } from '../common';
 
@@ -143,6 +145,11 @@ function drawBody(rc: RC, m: M<'body'>, st: PropStyle, pal: MetalPalette, off: V
       s.fill(path);
       s.save();
       s.clip(path);
+      if (hand.on) {
+        inkWood(s, m.cells, O, st.woodHue, r.pp.uid + 3);
+        s.restore();
+        break;
+      }
       for (let y = bb.y; y < bb.y + bb.h; y += 5.33) {
         const gr = s.createLinearGradient(0, y, 0, y + 5.33);
         gr.addColorStop(0, css(base, 10));

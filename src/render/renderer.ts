@@ -14,6 +14,7 @@ import { CelLayer, Lettering } from './cel';
 import { Fx } from './fx';
 import { VIEW_FRAME, type ViewFrame, viewFrame } from './frame';
 import { Hud } from './hud';
+import { artMode, hand } from './ink';
 import { drawClouds, drawDrops, drawRunnerItems, itemFx } from './items';
 import { circle, glowDot, type Light, light, type RC } from './kit';
 import { type Compositor, createCompositor } from './post';
@@ -23,6 +24,9 @@ import { initialStyle, letteringAllowed, type RenderStyle, saveRenderSettings, S
 import { TerrainPainter } from './terrain';
 // Mobile: quality tiers / adaptive resolution / safe-area insets (owned by the touch module).
 import { detectQuality, FrameBudget, QUALITY, type QualityTier, safeInsets, TIERS } from '../ui/touch/device';
+
+/** ART SPIKE: redraws per second of the line boil (`?boil=1`), on threes like hand-inked cels. */
+const BOIL_HZ = 8;
 
 /** Terrain bake budget (px per baked canvas): a classic level at 1920 px wide is ~4.3 M. */
 const MAX_BAKE_PX = 6_000_000;
@@ -80,6 +84,11 @@ export class Renderer {
   private style: RenderStyle = initialStyle(typeof location !== 'undefined' ? location.search : '');
   private letters = new Lettering();
   private celLayer: CelLayer | null = null;
+  /** ART SPIKE: which treatment this page shows (`?art=`). */
+  private art = artMode(typeof location !== 'undefined' ? location.search : '');
+  private boil = typeof location !== 'undefined' && new URLSearchParams(location.search).get('boil') === '1';
+  /** Let painted color past the cel pass's tone steps (`?feed=0`), to compare feeding it with bypassing it. */
+  private bypass = typeof location !== 'undefined' && new URLSearchParams(location.search).get('feed') === '0';
   /** Impact words for this page, on top of what the style asks for (`?lettering=0`). */
   lettering = letteringAllowed(typeof location !== 'undefined' ? location.search : '');
 
@@ -175,6 +184,14 @@ export class Renderer {
     const kb = Math.min(4, sk * 1.45, Math.sqrt(MAX_BAKE_PX / (ww * wh)));
     this.terrain.cel = this.celPass;
     this.surround.cel = this.celPass;
+    const inked = this.celPass && this.art !== null && level.theme.id === 'farm';
+    this.terrain.ink = inked;
+    this.surround.ink = inked;
+    if (this.art) {
+      this.terrain.art = this.art;
+      this.surround.art = this.art;
+    }
+    hand.on = inked && this.art !== 'b';
     this.terrain.ensure(level, kb);
     // The surroundings reach as far as the most zoomed-out view of this level can see.
     const floor = raceFloor(level);
@@ -317,7 +334,16 @@ export class Renderer {
       flash: this.flash,
       tint: level.theme.grade.tint,
       lift: level.theme.grade.lift,
-      cel: this.celPass ? { fg: this.celLayer!.canvas, scale: world.getTransform().a, ambient: level.theme.ambientLight } : undefined,
+      cel: this.celPass
+        ? {
+            fg: this.celLayer!.canvas,
+            scale: world.getTransform().a,
+            ambient: level.theme.ambientLight,
+            hand: this.art
+              ? { dx: world.getTransform().e, dy: world.getTransform().f, boil: this.boil ? Math.floor(t * BOIL_HZ) : 0, bypass: this.bypass }
+              : undefined,
+          }
+        : undefined,
     });
     if (!this.hud.hidden) this.hud.draw(m, t, this.pw, this.ph);
     else this.hud.clear(this.pw, this.ph);
@@ -602,7 +628,7 @@ export class Renderer {
     const anchorY = c.accessory === 'tail' ? y - 4 : c.accessory === 'cape' ? y - 12 : y - 10;
     rig.step(c, anchorX, anchorY, dt, -vx * 0.6);
     drawAccessory(rc, c, rig);
-    drawCharacter(rc, c, x, y, { facing, vx, vy, grounded, t: rc.t, celebrate });
+    drawCharacter(rc, c, x, y, { facing, vx, vy, grounded, t: rc.t, celebrate, ink: hand.on });
     light(rc, x, y - 8, 38, c.body, 0.3);
     // Cel: a key light so a runner in shade still reads, not so much that it loses its hue.
     if (STYLES[this.style].cel) light(rc, x, y - 8, 20, RUNNER_KEY, 0.28);

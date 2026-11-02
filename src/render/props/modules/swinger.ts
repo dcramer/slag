@@ -3,6 +3,8 @@ import type { Vec } from '../../../core/geom';
 import { TILE } from '../../../sim/constants';
 import { tileAt } from '../../../sim/level';
 import { type Module, type ModuleOf, type PropStyle, type Resolved, swingHeads } from '../../../sim/props';
+import { hand } from '../../ink';
+import { inkSaw } from '../../ink-parts';
 import { circle, ellipse, light, type MetalPalette, metalFill, type RC, rrect, sphereFill } from '../../kit';
 import { defineArt, type PropDrawOpts } from '../common';
 
@@ -71,6 +73,10 @@ function drawSwinger(rc: RC, m: M<'swinger'>, r: Resolved, off: Vec, pal: MetalP
 }
 
 function drawSaw(rc: RC, x: number, y: number, R: number, rot: number, pal: MetalPalette, st: PropStyle, o: PropDrawOpts) {
+  if (hand.on) {
+    inkSaw(rc, x, y, R, rot, pal, Math.round(R * 7));
+    return;
+  }
   const s = rc.s;
   s.save();
   s.translate(x, y);

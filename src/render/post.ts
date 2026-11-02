@@ -95,6 +95,8 @@ export interface CelParams {
   scale: number;
   /** The theme's ambient light, which the light bands sit relative to. */
   ambient: number;
+  /** ART SPIKE: hand-ink treatment. `dx`,`dy` are the world origin in canvas px, so the line noise is pinned to the world. */
+  hand?: { dx: number; dy: number; boil: number; bypass: boolean };
 }
 
 interface Target {
@@ -360,6 +362,10 @@ class GLCompositor implements Compositor {
     gl.uniform2f(this.u(f, 'uRes'), this.w, this.h);
     gl.uniform1f(this.u(f, 'uAmbient'), c.ambient);
     gl.uniform2f(this.u(f, 'uShadow'), (-CEL_SHADOW[0] * c.scale) / this.w, (CEL_SHADOW[1] * c.scale) / this.h);
+    gl.uniform1f(this.u(f, 'uHand'), c.hand ? 1 : 0);
+    gl.uniform3f(this.u(f, 'uView'), c.scale, c.hand?.dx ?? 0, c.hand?.dy ?? 0);
+    gl.uniform1f(this.u(f, 'uBoil'), c.hand?.boil ?? 0);
+    gl.uniform1f(this.u(f, 'uBypass'), c.hand?.bypass ? 1 : 0);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 }

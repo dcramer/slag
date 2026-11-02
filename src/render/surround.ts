@@ -3,6 +3,7 @@ import { Rng } from '../core/rng';
 import { TILE } from '../sim/constants';
 import { type Level, T_SOLID } from '../sim/level';
 import type { ThemeId } from '../themes';
+import type { ArtMode } from './ink';
 import type { RC } from './kit';
 import { TerrainPainter } from './terrain';
 
@@ -196,6 +197,13 @@ export class Surround {
   set cel(on: boolean) {
     this.painter.cel = on;
   }
+  /** ART SPIKE: scenery is inked like the terrain it continues. */
+  set ink(on: boolean) {
+    this.painter.ink = on;
+  }
+  set art(a: ArtMode) {
+    this.painter.art = a;
+  }
 
   /** World px of scenery on each side. */
   get margin(): number {
@@ -214,6 +222,8 @@ export class Surround {
       this.land = surroundLevel(level, mx, top);
     }
     const land = this.land!;
+    this.painter.originX = -mx * TILE;
+    this.painter.originY = -top * TILE;
     const inner = { x: mx + RING, y: top + RING, w: level.w - RING * 2, h: level.h - RING };
     if (this.painter.ensure(land, kb, inner)) this.haze(level, land);
   }

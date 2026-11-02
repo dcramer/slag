@@ -1,6 +1,8 @@
 import { css, type HSL } from '../core/color';
 import { clamp } from '../core/geom';
 import type { CharacterDef } from '../gen/character';
+import { line, type P, sn } from './ink';
+import { inkLoop } from './ink-parts';
 import { circle, ellipse, glowDot, type RC, rrect } from './kit';
 
 export interface CharPose {
@@ -12,6 +14,8 @@ export interface CharPose {
   t: number;
   scale?: number;
   celebrate?: boolean;
+  /** ART SPIKE: draw the body in ink, not gradients. */
+  ink?: boolean;
 }
 
 interface Pt {
@@ -101,6 +105,107 @@ function bodyPath(ctx: CanvasRenderingContext2D, c: CharacterDef, W: number, H: 
       ctx.closePath();
       break;
   }
+}
+
+const bodyCache = new WeakMap<CharacterDef, P[]>();
+
+/** The same silhouettes as `bodyPath`, as points, so a pen can follow them. */
+function bodyPoints(c: CharacterDef, W: number, H: number, by: number): P[] {
+  const cached = bodyCache.get(c);
+  if (cached) return cached;
+  const top = by - H;
+  const pts: P[] = [];
+  const bez = (x0: number, y0: number, x1: number, y1: number, x2: number, y2: number, x3: number, y3: number) => {
+    for (let i = 0; i < 9; i++) {
+      const t = i / 9;
+      const u = 1 - t;
+      pts.push({
+        x: u * u * u * x0 + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t * t * t * x3,
+        y: u * u * u * y0 + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t * y3,
+      });
+    }
+  };
+  const rounded = (r0: number) => {
+    const r = Math.min(r0, W / 2, H / 2);
+    const centers: [number, number, number][] = [
+      [W / 2 - r, top + r, -Math.PI / 2],
+      [W / 2 - r, by - r, 0],
+      [-W / 2 + r, by - r, Math.PI / 2],
+      [-W / 2 + r, top + r, Math.PI],
+    ];
+    for (const [cx, cy, a0] of centers) {
+      for (let i = 0; i <= 6; i++) {
+        const a = a0 + (i / 6) * (Math.PI / 2);
+        pts.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r });
+      }
+    }
+  };
+  switch (c.shape) {
+    case 'round':
+      for (let i = 0; i < 30; i++) {
+        const a = (i / 30) * Math.PI * 2 - Math.PI / 2;
+        pts.push({ x: (Math.cos(a) * W) / 2, y: by - H / 2 + (Math.sin(a) * H) / 2 });
+      }
+      break;
+    case 'box':
+      rounded(3.5);
+      break;
+    case 'capsule':
+      rounded(W / 2);
+      break;
+    case 'wide':
+      rounded(H / 2.2);
+      break;
+    case 'drop':
+      bez(0, top - 2, W * 0.25, top + H * 0.2, W * 0.55, by - H * 0.45, W * 0.5, by - H * 0.25);
+      bez(W * 0.5, by - H * 0.25, W * 0.45, by + 0.5, -W * 0.45, by + 0.5, -W * 0.5, by - H * 0.25);
+      bez(-W * 0.5, by - H * 0.25, -W * 0.55, by - H * 0.45, -W * 0.25, top + H * 0.2, 0, top - 2);
+      break;
+    case 'pear':
+      bez(0, top, W * 0.4, top, W * 0.3, by - H * 0.55, W * 0.55, by - H * 0.25);
+      bez(W * 0.55, by - H * 0.25, W * 0.7, by + 0.5, -W * 0.7, by + 0.5, -W * 0.55, by - H * 0.25);
+      bez(-W * 0.55, by - H * 0.25, -W * 0.3, by - H * 0.55, -W * 0.4, top, 0, top);
+      break;
+  }
+  bodyCache.set(c, pts);
+  return pts;
+}
+
+/** Body in the home screen's manner: flat color, a hard shadow shape, a heavy line in a dark of its own hue. */
+function inkBody(ctx: CanvasRenderingContext2D, c: CharacterDef, W: number, H: number, by: number, t: number) {
+  // A slow boil on threes: the drawing is alive even when the character stands still.
+  const boil = Math.floor(t * 8) % 3;
+  const pts = bodyPoints(c, W, H, by).map((p, i) => ({
+    x: p.x + sn(i * 0.45, boil * 3.1, c.seed & 0xffff) * 0.28,
+    y: p.y + sn(i * 0.45 + 9, boil * 3.1, c.seed & 0xffff) * 0.28,
+  }));
+  const cy = by - H / 2;
+  const shape = (dx: number, dy: number) => {
+    ctx.beginPath();
+    pts.forEach((p, i) => (i ? ctx.lineTo(p.x + dx, p.y + dy) : ctx.moveTo(p.x + dx, p.y + dy)));
+    ctx.closePath();
+  };
+  ctx.fillStyle = css(c.body, -24, 1, 10);
+  shape(0, 0);
+  ctx.fill();
+  ctx.save();
+  ctx.clip();
+  ctx.fillStyle = css(c.body);
+  shape(-W * 0.13, -H * 0.1);
+  ctx.fill();
+  drawPattern(ctx, c, W, H, by);
+  ctx.fillStyle = css(c.body, -30, 1, 10);
+  const sd = c.seed & 0xffff;
+  for (let i = 0; i < 4; i++) {
+    const hx = W * (0.14 + i * 0.1);
+    const hy = by - H * (0.08 + (i % 2) * 0.05);
+    line(ctx, hx, hy, hx + W * 0.11, hy - H * 0.2, { w: 0.65, seed: sd + i + boil, taper: [0.05, 0.8] });
+  }
+  ctx.fillStyle = css(c.body, 30, 1, -6);
+  line(ctx, -W * 0.34, by - H * 0.74, -W * 0.14, by - H * 0.87, { w: 1.5, seed: sd, taper: [0.25, 0.55], press: 0.15 });
+  ctx.restore();
+  ctx.fillStyle = css(c.body, -c.body.l * 0.74, 1, 10);
+  inkLoop(ctx, pts, 0, cy, sd + boil, 1.25, 2.7, 3);
 }
 
 /** Draw the trailing accessory (world space, behind the body). */
@@ -195,27 +300,30 @@ export function drawCharacter(
   drawTopper(ctx, g, c, W, H, by, pose, x, y, sc);
 
   // Body with soft spherical shading and a rim light.
-  bodyPath(ctx, c, W, H, by);
-  const gr = ctx.createRadialGradient(-W * 0.2, by - H * 0.75, H * 0.08, 0, by - H * 0.45, H * 0.85);
-  gr.addColorStop(0, css(body, 20, 1, -5));
-  gr.addColorStop(0.5, css(body));
-  gr.addColorStop(1, css(body, -18, 1, 5));
-  ctx.fillStyle = gr;
-  ctx.fill();
-  ctx.save();
-  ctx.clip();
-  drawPattern(ctx, c, W, H, by);
-  // Rim light (sky) on the top edge.
-  ctx.strokeStyle = 'rgba(255,255,255,0.45)';
-  ctx.lineWidth = 1.4;
-  ctx.beginPath();
-  ctx.ellipse(-0.6, by - H * 0.52, W * 0.42, H * 0.44, 0, Math.PI * 1.1, Math.PI * 1.65);
-  ctx.stroke();
-  ctx.restore();
-  bodyPath(ctx, c, W, H, by);
-  ctx.lineWidth = 1.3;
-  ctx.strokeStyle = css(dark, -6);
-  ctx.stroke();
+  if (pose.ink) inkBody(ctx, c, W, H, by, pose.t);
+  else {
+    bodyPath(ctx, c, W, H, by);
+    const gr = ctx.createRadialGradient(-W * 0.2, by - H * 0.75, H * 0.08, 0, by - H * 0.45, H * 0.85);
+    gr.addColorStop(0, css(body, 20, 1, -5));
+    gr.addColorStop(0.5, css(body));
+    gr.addColorStop(1, css(body, -18, 1, 5));
+    ctx.fillStyle = gr;
+    ctx.fill();
+    ctx.save();
+    ctx.clip();
+    drawPattern(ctx, c, W, H, by);
+    // Rim light (sky) on the top edge.
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.ellipse(-0.6, by - H * 0.52, W * 0.42, H * 0.44, 0, Math.PI * 1.1, Math.PI * 1.65);
+    ctx.stroke();
+    ctx.restore();
+    bodyPath(ctx, c, W, H, by);
+    ctx.lineWidth = 1.3;
+    ctx.strokeStyle = css(dark, -6);
+    ctx.stroke();
+  }
 
   // Face.
   const look = pose.facing * 1.6;

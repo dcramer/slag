@@ -44,13 +44,18 @@ const seed = opt('seed', 'demo');
 const theme = opt('theme');
 const world = opt('world');
 const style = opt('style');
+const art = opt('art');
 const tq =
   (theme ? `&theme=${theme}` : '') +
   (world ? `&size=${world}` : '') +
   (argv.includes('--noui') ? '&ui=0' : '') +
   (style ? `&style=${style}` : '') +
+  (art ? `&art=${art}` : '') +
+  (opt('boil') ? `&boil=${opt('boil')}` : '') +
+  (opt('q') ? `&q=${opt('q')}` : '') +
+  (opt('feed') ? `&feed=${opt('feed')}` : '') +
   (argv.includes('--noletters') ? '&lettering=0' : '');
-const sfx = style ? `-${style}` : '';
+const sfx = (style ? `-${style}` : '') + (art ? `-${art}` : '') + (opt('feed') === '0' ? '-bypass' : '');
 const players = Number(opt('players', '2'));
 const frames = Number(opt('frames', '150'));
 mkdirSync(out, { recursive: true });
@@ -321,9 +326,146 @@ try {
     case 'race': {
       const race = opt('race', '')!;
       await open(`seed=${seed}&players=${players}&race=${race}&propseed=${opt('propseed', '1')}`);
+      const exact = opt('runframe');
+      if (exact) {
+        // Boot time decides how far the race got before the pause, so step to the frame rather than by a count.
+        const now = await page.evaluate(() => (window as any).slagDebug.match.run?.frame ?? 0);
+        await step(Number(exact) - now - 4);
+        // `--spread`: stand the runners on open ground, away from the spawn's glow, to judge the character art.
+        if (argv.includes('--spread')) {
+          await page.evaluate(() => {
+            const d = (window as any).slagDebug;
+            const lv = d.match.level;
+            const T = 16;
+            d.match.run.runners.forEach((r: any, i: number) => {
+              for (let tx = lv.spawn.tx + 3 + i * 2; tx < lv.w; tx++) {
+                for (let ty = 1; ty < lv.h; ty++) {
+                  if (lv.tiles[ty * lv.w + tx] === 1 && lv.tiles[(ty - 1) * lv.w + tx] === 0 && ty > lv.spawn.ty - 6) {
+                    r.body.x = tx * T + 4;
+                    r.body.y = ty * T - r.body.h;
+                    r.body.vx = r.body.vy = 0;
+                    return;
+                  }
+                }
+              }
+            });
+          });
+        }
+        // `--campin x,y,zoom`: the sim frame alone isn't "the same frame": camera smoothing depends on how
+        // many frames rendered before the pause, so sheets pin the view as well.
+        const pin = opt('campin')?.split(',').map(Number);
+        await page.evaluate((v) => {
+          const cam = (window as any).slagDebug.renderer.cam;
+          if (v) {
+            cam.update = () => {};
+            cam.snap({ cx: v[0], cy: v[1], zoom: v[2] });
+            cam.shake = 0;
+          }
+        }, pin ?? null);
+        await step(4);
+        console.log(
+          JSON.stringify(
+            await page.evaluate(() => {
+              const c = (window as any).slagDebug.renderer.cam;
+              return { cx: c.x, cy: c.y, zoom: c.zoom };
+            }),
+          ),
+        );
+        await snap(`race-${seed}-${exact}`);
+        break;
+      }
       for (const f of [frames, 40, 40]) {
         await step(f);
         await snap(`race-${seed}-${await page.evaluate(() => (window as any).slagDebug.match.run?.frame ?? 0)}`);
+      }
+      break;
+    }
+    case 'inkperf': {
+      // ART SPIKE: where a frame's time goes. readPixels forces software GL to finish, or the clock lies.
+      const race = opt('race', '')!;
+      await open(`seed=${seed}&players=${players}&race=${race}&propseed=${opt('propseed', '1')}`);
+      const report = await page.evaluate(async () => {
+        const d = (window as any).slagDebug;
+        const px = new Uint8Array(4);
+        const gl = [...document.querySelectorAll('canvas')].map((c) => c.getContext('webgl2')).find(Boolean) as WebGL2RenderingContext;
+        const times: number[] = [];
+        for (let i = 0; i < 12; i++) {
+          const t0 = performance.now();
+          d.step(1);
+          d.render?.();
+          gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+          times.push(Math.round(performance.now() - t0));
+          await new Promise((r) => setTimeout(r, 0));
+        }
+        const frame = times[times.length - 1];
+        const rebakes: number[] = [];
+        for (let i = 0; i < 4; i++) {
+          d.match.level.version++;
+          const t0 = performance.now();
+          d.render?.();
+          gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+          rebakes.push(Math.round(performance.now() - t0 - frame));
+          await new Promise((r) => setTimeout(r, 0));
+        }
+        return { times, rebakes, level: `${d.match.level.w}x${d.match.level.h}`, bakePx: d.renderer?.terrain?.bake?.width };
+      });
+      console.log(JSON.stringify(report));
+      break;
+    }
+    case 'inkbomb': {
+      // ART SPIKE: carve a crater the way a bomb does, re-bake, and report what the re-bake cost and what moved.
+      await open(`seed=${seed}&players=${players}&race=&propseed=1`);
+      await step(30);
+      const before = await snap(`inkbomb-${seed}-before`);
+      // The bake itself, so clouds and runners can't count as "moved". Compare these with an exact diff.
+      const bakeOut = async (name: string) => {
+        const url: string = await page.evaluate(() => (window as any).slagDebug.renderer.terrain.bake.toDataURL('image/png'));
+        writeFileSync(`${out}/${name}.png`, Buffer.from(url.split(',')[1], 'base64'));
+      };
+      await bakeOut('bake-before');
+      const report = await page.evaluate(() => {
+        const d = (window as any).slagDebug;
+        const lv = d.match.level;
+        let cx = -1;
+        let cy = -1;
+        // A surface tile near the middle of the level, deep enough to bite a real hole.
+        for (let x = Math.floor(lv.w / 3); x < lv.w && cx < 0; x++) {
+          for (let y = 2; y < lv.h - 2; y++) {
+            if (lv.tiles[y * lv.w + x] === 1 && lv.tiles[(y - 1) * lv.w + x] === 0) {
+              cx = x;
+              cy = y;
+              break;
+            }
+          }
+        }
+        for (let y = cy - 3; y <= cy + 3; y++) {
+          for (let x = cx - 3; x <= cx + 3; x++)
+            if ((x - cx) ** 2 + (y - cy) ** 2 <= 10 && y >= 0 && y < lv.h && x >= 0 && x < lv.w) lv.tiles[y * lv.w + x] = 0;
+        }
+        lv.version++;
+        d.step(1);
+        d.render?.();
+        return { cx, cy, tileW: lv.w, tileH: lv.h, bakeW: d.renderer.terrain.bake.width };
+      });
+      console.log(JSON.stringify(report));
+      await bakeOut('bake-after');
+      await snap(`inkbomb-${seed}-after`);
+      console.log(before);
+      break;
+    }
+    case 'inkframes': {
+      // ART SPIKE: consecutive frames, to look for shimmer (static terrain must not change) and judge the boil.
+      await open(`seed=${seed}&players=${players}&race=${opt('race', '')}&propseed=${opt('propseed', '1')}`);
+      await step(Number(opt('frames', '120')));
+      // Hold the camera, or the numbers measure the camera and not the drawing.
+      await page.evaluate(() => {
+        const cam = (window as any).slagDebug.renderer.cam;
+        cam.update = () => {};
+        cam.shake = 0;
+      });
+      for (let i = 0; i < 8; i++) {
+        await step(5);
+        await snap(`frames-${String(i).padStart(2, '0')}`);
       }
       break;
     }
