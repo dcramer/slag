@@ -5,9 +5,10 @@ import { roomSeed } from '../src/game/room';
 import { GRAVITY } from '../src/gen/level';
 import { DEFAULT_RULES } from '../src/game/rules';
 import { sanitizeRules } from '../src/net/actions';
-import { NetSession } from '../src/net/session';
+import { drawnVelocity, NetSession } from '../src/net/session';
 import { hashMatch } from '../src/net/snapshot';
 import { LoopbackHub, type LoopbackOptions } from '../src/net/transport';
+import type { Runner } from '../src/sim/run';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
 
 const TICK = 1000 / 60;
@@ -521,4 +522,26 @@ describe('reconnect and late join', () => {
     expect(new Set(res.map((x) => x.hash)).size).toBe(1);
     expect(c.match.frame).toBe(b.match.frame);
   }, 30_000);
+});
+
+describe('drawn runners', () => {
+  const runner = (slot: number, vx: number, vy: number, ride = -1, press = 0) => ({ slot, ride, press, body: { vx, vy } }) as unknown as Runner;
+
+  it('projects a pusher held up by bodies as standing, and a rider by its own walk plus its base', () => {
+    const base = runner(0, 106, -50);
+    const rider = runner(1, 20, 0, 0);
+    const pusher = runner(2, 106, 0, -1, 3);
+    const onPusher = runner(3, 0, 0, 2);
+    const all = [base, rider, pusher, onPusher];
+    expect(drawnVelocity(all, base)).toEqual({ x: 106, y: -50 });
+    expect(drawnVelocity(all, rider)).toEqual({ x: 126, y: -50 });
+    expect(drawnVelocity(all, pusher)).toEqual({ x: 0, y: 0 });
+    expect(drawnVelocity(all, onPusher)).toEqual({ x: 0, y: 0 });
+  });
+
+  it('survives a riding loop without hanging', () => {
+    const a = runner(0, 10, 0, 1);
+    const b = runner(1, 10, 0, 0);
+    expect(drawnVelocity([a, b], a).x).toBe(20);
+  });
 });

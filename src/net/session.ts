@@ -1,6 +1,7 @@
 import type { Match } from '../game/match';
 import { DT, MAX_PLAYERS } from '../sim/constants';
 import { addBreadcrumb, reportEvent } from '../telemetry';
+import type { Runner } from '../sim/run';
 import type { GameEvent, InputFrame } from '../sim/types';
 import { applyAction, type NetAction, type NetState, newNetState, peerOf, sanitizeRules } from './actions';
 import { CONFIRM_BIT, decode, type Enc, encode, held, heldPeerFrame, mergePeerFrames, type PeerFrame, PRESSED } from './codec';
@@ -928,8 +929,9 @@ export class NetSession {
       const b = r.body;
       const was = this.eased.get(r.slot);
       if (was) {
-        const dx = was.x + b.vx * DT * steps - b.x;
-        const dy = was.y + b.vy * DT * steps - b.y;
+        const v = drawnVelocity(run.runners, r);
+        const dx = was.x + v.x * DT * steps - b.x;
+        const dy = was.y + v.y * DT * steps - b.y;
         if (Math.sqrt(dx * dx + dy * dy) <= CORRECTION_MAX) {
           b.x += dx * CORRECTION_KEEP;
           b.y += dy * CORRECTION_KEEP;
@@ -976,6 +978,26 @@ export class NetSession {
     }
     this.viewMatch = d;
   }
+}
+
+/**
+ * How fast a runner really moves, for projecting where it's drawn. `vx` is what
+ * it's trying to do: one held up by bodies (sim/collide.ts) barely moves however
+ * hard it walks, and a rider goes where its base goes on top of its own walk.
+ * Projecting by `vx` alone draws pushers inside who they push and riders lagging
+ * their base.
+ */
+export function drawnVelocity(runners: readonly Runner[], r: Runner): { x: number; y: number } {
+  let x = 0;
+  let y = 0;
+  let at: Runner | undefined = r;
+  for (let n = 0; at && n < runners.length; n++) {
+    if (at.press <= 0) x += at.body.vx;
+    y += at.body.vy;
+    const under: number = at.ride;
+    at = under >= 0 ? runners.find((o) => o.slot === under) : undefined;
+  }
+  return { x, y };
 }
 
 function structuredCloneJson<T>(v: T): T {

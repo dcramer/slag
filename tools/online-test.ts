@@ -20,6 +20,7 @@
  *   twice       the host dies, and the new host dies straight after taking over
  *   latency     input-to-screen delay between peers, stalls and jumps
  *   hidden      the same with the host's tab in the background
+ *   contact     the same with two runners pushing and riding each other
  *   bc          BroadcastChannel transport (?net=bc)
  *   unset       production with no store credentials: the game degrades, with a clear status
  *
@@ -33,6 +34,7 @@ import { roomSeed } from '../src/game/room';
 import { overview, type ViewXform, worldToView } from '../src/game/view';
 import { generateLevel } from '../src/gen/level';
 import { TILE } from '../src/sim/constants';
+import { spawnZone, T_EMPTY, T_SOLID, tileAt } from '../src/sim/level';
 import { launchChromium, startNext } from './next-server';
 
 const argv = process.argv.slice(2);
@@ -40,7 +42,7 @@ const argv = process.argv.slice(2);
 const GROUPS: Record<string, string[]> = {
   lobby: ['flow', 'kick', 'view'],
   migration: ['pick', 'place', 'run', 'leave', 'twice'],
-  feel: ['latency', 'hidden'],
+  feel: ['latency', 'hidden', 'contact'],
   misc: ['play', 'bc', 'unset'],
 };
 const onlyArg = argv.includes('--only') ? argv[argv.indexOf('--only') + 1].split(',').flatMap((x) => GROUPS[x] ?? [x]) : null;
@@ -467,6 +469,187 @@ async function hiddenScenario(browser: Browser, base: string) {
   budget(hidden, 2 * ONE_WAY_MS);
   check(hidden.bundleGapP95 < 34, `a hidden host keeps bundles coming every frame or two (p95 ${hidden.bundleGapP95} ms)`);
   await A.evaluate(() => (window as any).__setHidden(false));
+  await r.dispose();
+}
+
+type Body = { slot: number; x: number; y: number; ride: number; press: number };
+
+/** Every runner as the page's confirmed match has it: on the host, the truth. */
+const bodies = (p: Page) =>
+  p.evaluate(() =>
+    ((window as any).slagDebug.match.run?.runners ?? []).map((r: any) => ({ slot: r.slot, x: r.body.x, y: r.body.y, ride: r.ride, press: r.press })),
+  ) as Promise<Body[]>;
+
+/**
+ * Records every runner this page draws, every display frame, with the velocity
+ * it's drawn moving at (the rule `drawnVelocity` in session.ts uses) and how
+ * deep it is drawn into the other runner.
+ */
+async function probeContact(p: Page) {
+  await p.evaluate(() => {
+    const w = window as any;
+    w.__contact = [];
+    w.__contactOn = true;
+    if (w.__contactProbed) return;
+    w.__contactProbed = true;
+    const loop = () => {
+      const rs = w.slagDebug.net.view.run?.runners as any[] | undefined;
+      if (w.__contactOn && rs?.length === 2 && rs.every((r) => r.alive)) {
+        const t = Date.now();
+        const [a, b] = rs.map((r) => r.body);
+        const sideBySide = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) > 0.5;
+        const depth = sideBySide ? Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) : 0;
+        for (const r of rs) {
+          let vx = 0;
+          let vy = 0;
+          let at = r;
+          for (let n = 0; at && n < rs.length; n++) {
+            if (at.press <= 0) vx += at.body.vx;
+            vy += at.body.vy;
+            const under = at.ride;
+            at = under >= 0 ? rs.find((o) => o.slot === under) : undefined;
+          }
+          w.__contact.push([t, r.slot, r.body.x, r.body.y, vx, vy, depth, r.ride]);
+        }
+      }
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
+  });
+}
+
+/** The biggest drawn teleport of any runner, the deepest one was drawn inside the other, and how far a rider was drawn sliding on its base. */
+async function contactReport(p: Page, label: string): Promise<{ snap: number; depth: number; slide: number; frames: number }> {
+  const rows = (await p.evaluate(() => {
+    const w = window as any;
+    w.__contactOn = false;
+    return w.__contact;
+  })) as [number, number, number, number, number, number, number, number][];
+  let snap = 0;
+  let depth = 0;
+  let slide = 0;
+  let seat: number | null = null;
+  const last = new Map<number, (typeof rows)[number]>();
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const [t, slot, x, y, vx, vy, d, ride] = row;
+    depth = Math.max(depth, d);
+    // Nobody walks on top during this test, so where a rider sits on its base shouldn't change.
+    const base = ride >= 0 ? rows.slice(Math.max(0, i - 1), i + 2).find((o) => o[0] === t && o[1] === ride) : undefined;
+    if (base) {
+      seat ??= x - base[2];
+      slide = Math.max(slide, Math.abs(x - base[2] - seat));
+    }
+    const was = last.get(slot);
+    last.set(slot, row);
+    if (!was || t <= was[0]) continue;
+    const dt = (t - was[0]) / 1000;
+    snap = Math.max(snap, Math.hypot(x - was[2], y - was[3]) - Math.hypot(vx, vy) * dt);
+  }
+  const frames = rows.length / 2;
+  const sliding = seat === null ? '' : `, a rider slid ${slide.toFixed(1)} px on its base`;
+  console.log(`     ${label}: biggest snap ${snap.toFixed(1)} px, drawn ${depth.toFixed(1)} px inside the other runner${sliding}, over ${frames} frames`);
+  return { snap, depth, slide, frames };
+}
+
+/** Pulses `key` on `p`: held, released, so a remote view mispredicts every edge. */
+async function pulse(p: Page, keys: string[], n: number, held = 260, gap = 560) {
+  for (let i = 0; i < n; i++) {
+    const k = keys[i % keys.length];
+    await p.keyboard.down(k);
+    await sleep(held);
+    await p.keyboard.up(k);
+    await sleep(gap);
+  }
+}
+
+/** Walks `p`'s runner until the host has it past `x` (rightward). */
+async function walkTo(host: Page, p: Page, slot: number, x: number) {
+  await p.keyboard.down('ArrowRight');
+  const t0 = Date.now();
+  while (Date.now() - t0 < 5000 && ((await bodies(host)).find((r) => r.slot === slot)?.x ?? x) < x) await sleep(8);
+  await p.keyboard.up('ArrowRight');
+  await sleep(400);
+}
+
+/** Puts B standing on A's head: B steps away from A, then jumps back over it and lets go of the direction once it's above. */
+async function mount(A: Page, B: Page, a: number, b: number): Promise<boolean> {
+  const both = async () => {
+    const rs = await bodies(A);
+    return [rs.find((r) => r.slot === a)!, rs.find((r) => r.slot === b)!] as const;
+  };
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const [ra, rb] = await both();
+    if (rb.ride === a) return true;
+    const away = rb.x >= ra.x ? 1 : -1;
+    const [out, back] = away > 0 ? ['ArrowRight', 'ArrowLeft'] : ['ArrowLeft', 'ArrowRight'];
+    await B.keyboard.down(out);
+    await sleep(attempt % 2 ? 260 : 180);
+    await B.keyboard.up(out);
+    await sleep(500);
+    await B.keyboard.down('Space');
+    await B.keyboard.down(back);
+    const t0 = Date.now();
+    while (Date.now() - t0 < 900) {
+      const [ra2, rb2] = await both();
+      if ((rb2.x - ra2.x) * away <= 1) break;
+      await sleep(8);
+    }
+    await B.keyboard.up(back);
+    await sleep(150);
+    await B.keyboard.up('Space');
+    await sleep(900);
+  }
+  return (await both())[1].ride === a;
+}
+
+/**
+ * Runners are solid to each other, and a guest draws them predicted and eased.
+ * Pushing and riding are where a projection by `vx` alone goes wrong: a pusher
+ * held up by a body doesn't move at its walk, and a rider moves with its base.
+ */
+async function contactScenario(browser: Browser, base: string) {
+  const r = await newRoom(browser, base, 'contact', '', { room: roomWithRunway(), viewport: { width: 640, height: 360 } });
+  const { A, B, ids } = await pairInRace(r);
+  const players = (await view(A)).players;
+  const [a, b] = ids.map((id) => players.find((q) => q.device.startsWith(`${id}:`))?.slot ?? -1);
+  check((await bodies(A)).length === 2 && a >= 0 && b >= 0, `two runners in the race (slots ${a}, ${b})`);
+  // Out of the spawn zone, where runners pass through each other: A just past it, B a little further, then A walks into B and shoves it along.
+  const zone = (await A.evaluate(() => (window as any).slagDebug.match.run.safeZone)) as { x: number; w: number };
+  const edge = zone.x + zone.w;
+  await walkTo(A, B, b, edge + 40);
+  await walkTo(A, A, a, edge + 4);
+  console.log(`     spawn zone ends at x ${edge}; runners at ${JSON.stringify(await bodies(A))}`);
+  for (const p of [A, B]) await p.evaluate((ms) => ((window as any).__netDelay = ms), ONE_WAY_MS);
+  await sleep(500);
+  await probeContact(B);
+  await probeContact(A);
+  const before = (await bodies(A)).find((x) => x.slot === b)!.x;
+  // Short shoves with long rests: held against a body long enough, a runner slips through it by design (sim/collide.ts).
+  await pulse(A, ['ArrowRight'], 6, 300, 600);
+  const push = await contactReport(B, `${ONE_WAY_MS} ms each way, the host shoves the guest, drawn on the guest`);
+  const truth = await contactReport(A, 'the same on the host, unpredicted');
+  const shoved = (await bodies(A)).find((x) => x.slot === b)!.x - before;
+  check(shoved > 8 && truth.depth < 0.5, `the host shoved the guest ${shoved.toFixed(0)} px, and never into it (${truth.depth.toFixed(1)} px deep)`);
+  check(push.frames > 60 && push.snap < 24, `shoving: no teleport on the guest (${push.snap.toFixed(1)} px)`);
+  check(push.depth < 2, `shoving: the pusher isn't drawn inside who it pushes (${push.depth.toFixed(1)} px)`);
+  // B on A's head; A walks back and forth and B rides.
+  for (const p of [A, B]) await p.evaluate(() => ((window as any).__netDelay = 0));
+  const mounted = await mount(A, B, a, b);
+  check(mounted, 'the guest stands on the host');
+  if (mounted) {
+    for (const p of [A, B]) await p.evaluate((ms) => ((window as any).__netDelay = ms), ONE_WAY_MS);
+    await sleep(500);
+    await probeContact(B);
+    await pulse(A, ['ArrowLeft', 'ArrowRight'], 8);
+    const still = (await bodies(A)).find((x) => x.slot === b)?.ride === a;
+    const ride = await contactReport(B, `${ONE_WAY_MS} ms each way, the guest rides the host, drawn on the guest`);
+    check(ride.frames > 60 && ride.snap < 24, `riding: no teleport on the guest (${ride.snap.toFixed(1)} px)`);
+    check(ride.slide < 2, `riding: the rider doesn't lag its base (${ride.slide.toFixed(1)} px)`);
+    check(still, 'the guest is still riding after the walk');
+  }
+  const real = r.errors.filter((e) => !/favicon/.test(e));
+  check(real.length === 0, `no page errors${real.length ? `:\n${real.join('\n')}` : ''}`);
   await r.dispose();
 }
 
@@ -933,6 +1116,31 @@ async function kickScenario(browser: Browser, base: string) {
   await r.dispose();
 }
 
+/** A room whose level has open, flat floor from the spawn to 7 tiles past the spawn zone, in clear weather: room for a shove and a ride. */
+function roomWithRunway(): string {
+  const fits = (code: string) => {
+    const l = generateLevel(roomSeed(code));
+    const z = spawnZone(l);
+    if (!z || (l.weather && l.weather.kind !== 'clear')) return false;
+    const { tx, ty } = l.spawn;
+    const end = (z.x + z.w) / TILE + 7;
+    // Set pieces can be hazards.
+    let open = !l.setPieces.some((sp) => sp.tx < end + 6 && Math.abs(sp.ty - ty) < 10);
+    for (let x = tx; x < end && open; x++) {
+      open = tileAt(l, x, ty + 1) === T_SOLID;
+      for (let y = ty - 3; y <= ty; y++) open &&= tileAt(l, x, y) === T_EMPTY;
+    }
+    return open;
+  };
+  // The first fit, found by the search below at the time of writing: generating hundreds of levels is slow.
+  if (fits('CONTACT1Y')) return 'CONTACT1Y';
+  for (let i = 0; i < 500; i++) {
+    const code = `CONTACT${i.toString(36).toUpperCase()}`;
+    if (fits(code)) return code;
+  }
+  throw new Error('no level with a runway in 500 rooms');
+}
+
 /** A room code whose level matches, found the way a player's room finds it: from the code alone. */
 function roomWithLevel(tag: string, fits: (w: number, h: number) => boolean): { code: string; w: number; h: number } {
   for (let i = 0; i < 500; i++) {
@@ -1180,6 +1388,7 @@ try {
   if (wanted('twice')) await twiceScenario(browser, server.base);
   if (wanted('latency')) await latencyScenario(browser, server.base);
   if (wanted('hidden')) await hiddenScenario(browser, server.base);
+  if (wanted('contact')) await contactScenario(browser, server.base);
   if (wanted('bc')) await bcScenario(browser, server.base);
 } finally {
   await server.close();
