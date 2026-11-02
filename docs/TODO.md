@@ -16,25 +16,14 @@ Today the same test files run at two sample sizes (`tests/lib/tier.ts`, `SLOW_FI
 - `pnpm perf`: benchmarks. Same deal: run on purpose, never as a routine step.
 - Remove `tests/lib/tier.ts`, `SLOW_FILES`, `--mode slow` and the `SLOW` guards, and update the docs that mention them (AGENTS.md, README.md, `vitest.config.ts`, `ci.yml`).
 
-## 2. Online play on Vercel (decision needed)
-**Branch:** `wip/netcode-cloudflare` (+5 commits). It contains:
-- host-sequenced lockstep, presence-based host election and migration, refresh/rejoin, late join, desync detection and resync, and prediction;
-- `src/net/`, `dmath`, snapshots, a BroadcastChannel transport and `pnpm online-test`;
-- a **Cloudflare Durable Object relay** (`relay/`, wrangler). That relay contradicts our plan, because we host only on Vercel.
+## 2. Online follow-ups
+Online play is on `main`; see `docs/NETCODE.md`.
 
-Vercel functions can't hold a WebSocket open, so something else has to carry the messages. Options:
-
-| Option | What it is | Trade-off |
-|---|---|---|
-| **A (recommended)** | WebRTC data channels in a star around the host. Signaling and presence use small Next route handlers (`app/api/`) that short- or long-poll Redis from the Vercel Marketplace (Upstash free tier, REST via `fetch`). Local dev uses an in-memory store. On host migration, everyone re-signals to the new host. Public STUN, plus optional TURN from an env var. | Everything stays on Vercel and on free tiers. About 10–20% of player pairs can't connect without a TURN server. |
-| B | Keep the Cloudflare relay. | Most robust, with no NAT problems, but needs a second platform and account. |
-| C | A hosted realtime service (Ably or Pusher free tier). | Adds a third-party dependency and its limits. |
-
-Whichever option is chosen, keep the transport abstraction, the election logic, snapshots and dmath, and swap only the transport. Then update `docs/NETCODE.md`, which is stale and still mentions Vite.
-
-**Required for testing:** a local service compatible with remote Upstash and `@upstash/redis`, so the real store path runs outside production. Use [Serverless Redis HTTP](https://upstash.com/docs/redis/sdks/ts/developing) (`hiett/serverless-redis-http` plus Redis 6.2) in `docker-compose`, with `pnpm test:store` in CI. It only supports the body-based REST method, so the store must use that form.
-
-**Required online:** everyone sees each other's cursors and ghost parts live during pick and place. It matters most in pick, because the first player to pick a part gets it. A claim race has one winner on every peer, and nobody sees a claim that then gets revoked.
+- **Host label and kick:** someone is clearly labeled `Host` in the lobby, and the host can kick players there. The label follows host migration.
+- Owner: connect `slag-upstash-kv` to the Vercel project for Production and Preview, then redeploy.
+- Not verified yet: real Upstash, real NAT traversal, TURN, Firefox, Safari, real phones. Cross-engine determinism has never run; dmath has only been exercised on V8.
+- A guest whose link drops for 2.5 s is marked away, which pops their runner mid-race. Decide if that's right.
+- Measure recovery in a 2-peer room, where no third peer confirms the loss (about 7 s expected).
 
 ## 3. Level variety, gravity and the "mostly open" rule
 **Branches:**
@@ -91,7 +80,6 @@ It's always telegraphed, weighted per theme, and must be deterministic from the 
 ## 10. Housekeeping
 - Enable GitHub Actions and make `ci.yml` a required check. This must be done on GitHub by the repo owner.
 - Delete the old remote branch `claude/scaffold-procgen-platformer`, and the `wip/*` branches once they're merged.
-- Swap the sim and gen transcendentals (`Math.sin`, `cos`, `atan2`, …) to `core/dmath.ts`. It lands with the netcode work.
 - Add the run controls to the README.
 - Consider stricter TS flags: `noUncheckedIndexedAccess` gives about 600 errors, so it's a project of its own.
 
