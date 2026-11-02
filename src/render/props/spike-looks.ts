@@ -255,7 +255,7 @@ const STEEL = { lit: 'hsl(205 16% 90%)', dark: 'hsl(212 12% 52%)', yoke: 'hsl(21
 function pitchfork(g: CanvasRenderingContext2D, upLit: boolean, seed: number) {
   // The haft.
   g.fillStyle = '#1d1209';
-  line(g, 8.6, -8.4, 8.6, 8.4, { w: 2.9, seed, taper: [0.01, 0.01], press: 0.15 });
+  line(g, 8.6, -8.4, 8.6, 8.4, { w: 2.42, seed, taper: [0.01, 0.01], press: 0.15 });
   g.fillStyle = css(WOOD);
   line(g, 8.5, -8.2, 8.5, 8.2, { w: 1.7, seed: seed + 1, taper: [0.01, 0.01], press: 0.2 });
   g.fillStyle = css(WOOD, 18);

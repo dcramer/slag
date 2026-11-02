@@ -19,13 +19,13 @@ import { hash2 } from '../core/rng';
 /** Look knobs, baked into the shader source. Widths are in 720p pixels and scale with resolution. */
 const K = {
   /** Silhouette ink width around foreground shapes, before lean and pressure. */
-  ink: 0.62,
+  ink: 0.36,
   /** Interior ink: radius of a tight cross, its edge ramp (higher = fewer lines), and its strength. */
-  fine: 0.7,
-  edge: [0.4, 0.72],
-  fineInk: 0.8,
+  fine: 0.6,
+  edge: [0.5, 0.86],
+  fineInk: 0.5,
   /** Brightness ratio between neighboring flat tones. Relative, not absolute: a fixed step would be a huge jump on dark colors. */
-  tone: 1.34,
+  tone: 1.28,
   /** Light bands: where each starts (light relative to ambient), and how much brighter it prints. */
   lit: [1.28, 1.95],
   litGain: [0.3, 0.62],
@@ -33,15 +33,18 @@ const K = {
   tint: 0.75,
   /** Backdrop brightness and saturation: the sky stays its hue, just below the playfield. */
   bgExposure: 0.72,
-  bgSat: 1.08,
+  bgSat: 0.9,
   /** How much a sun, moon or cloud top escapes that dimming (0..1). */
   bgHigh: 0.55,
   /** How much of the bands fall on the backdrop at zero ambient. They fade out as ambient rises: a prop's light on a day sky is just a stray disc. */
   bgBands: 1.1,
   /** Foreground brightness: the world carries the light. */
   fgExposure: 1.14,
+  /** Chroma (max - min channel) above which a foreground color is calmed, and how much of the excess survives. */
+  chromaKnee: 0.5,
+  chromaSlope: 0.5,
   /** Darkness of the hard shadow on the backdrop (1 = none). */
-  shadow: 0.62,
+  shadow: 0.8,
   /** Soft halo strength around emissives, and how much of each bloom level feeds it (quarter res, eighth res). */
   halo: 0.4,
   bloom: [0.3, 0.3],
@@ -53,22 +56,25 @@ const K = {
   hotSize: 0.2,
   /** Overall exposure, saturation and edge falloff of the final image. */
   gain: 1.0,
-  sat: 1.08,
-  vignette: 0.28,
+  sat: 0.92,
+  vignette: 0.2,
   /** Hand wobble over the whole foreground: world px of drift, and world px per noise cell. */
-  warp: 0.55,
+  warp: 0.7,
   warpCell: 17,
   /** How much the silhouette leans onto the shadow side (0..1), how far pressure wanders, and how far a line takes the color of what it outlines. */
-  lean: 0.8,
-  press: 0.62,
-  lineTint: 0.62,
+  lean: 0.45,
+  press: 0.5,
+  lineTint: 1,
+  /** How dark a line is against what it outlines (0 = the fill itself, 1 = all ink), and its opacity. */
+  lineDark: 0.62,
+  lineAlpha: 0.85,
 };
 
 /** Thickest mist: a touch short of solid, so the deep bands read as air and not as a wall. */
 export const MIST_MAX = 0.94;
 
 /** Offset of the hard shadow, in world px. */
-export const CEL_SHADOW: [number, number] = [2.5, 3.5];
+export const CEL_SHADOW: [number, number] = [2, 2.8];
 
 const f = (n: number) => n.toFixed(4);
 
@@ -175,6 +181,10 @@ void main(){
     vec3 alb = fg.rgb / a;
     float y = max(luma(alb), 0.02);
     alb *= pow(${f(K.tone)}, hard(log(y) / ${f(Math.log(K.tone))}, 1.0)) / y;
+    // Calm loud color: chroma past the knee is compressed, so nothing reads neon and runners still lead.
+    float ch = max(alb.r, max(alb.g, alb.b)) - min(alb.r, min(alb.g, alb.b));
+    float keep = ch > ${f(K.chromaKnee)} ? (${f(K.chromaKnee)} + (ch - ${f(K.chromaKnee)}) * ${f(K.chromaSlope)}) / ch : 1.0;
+    alb = mix(vec3(luma(alb)), alb, keep);
     c = mix(c, clamp(alb, 0.0, 1.0) * tint * base * band * ${f(K.fgExposure)}, a);
   }
 
@@ -213,8 +223,8 @@ void main(){
   float e = sqrt(dot(ga * ga + gb * gb, vec3(0.3, 0.5, 0.2)));
   line = max(line, smoothstep(${f(K.edge[0])}, ${f(K.edge[1])}, e) * smoothstep(0.6, 0.95, a) * ${f(K.fineInk)} * (0.45 + 0.55 * press));
   // Tinted line: a dark version of what it outlines, not one black.
-  vec3 tinted = sqrt(near / max(nearA, 0.01)) * 0.28 + INK * 0.45;
-  vec3 lineCol = mix(INK, min(tinted, vec3(0.32)), ${f(K.lineTint)});
+  vec3 tinted = min(mix(sat(near / max(nearA, 0.01), 0.8), INK, ${f(K.lineDark)}), vec3(0.36));
+  vec3 lineCol = mix(INK, tinted, ${f(K.lineTint)});
 
   // Hot glow casing: ink around the whole shape of a beam or flame.
   float hot = smoothstep(${f(K.hot)}, ${f(K.hot + 0.18)}, rawL);
@@ -223,7 +233,7 @@ void main(){
                    max(luma(texture(uGlow, uv + vec2(gp.x, -gp.y)).rgb), luma(texture(uGlow, uv + vec2(-gp.x, gp.y)).rgb)));
   float big = smoothstep(${f(K.hotSize)}, ${f(K.hotSize + 0.12)}, bloom.a);
   float casing = smoothstep(${f(K.hot)}, ${f(K.hot + 0.18)}, nearGlow) * big;
-  c = mix(c, lineCol, line * (1.0 - hot));
+  c = mix(c, lineCol, line * (1.0 - hot) * ${f(K.lineAlpha)});
   c = mix(c, INK, casing * (1.0 - hot));
 
   // Mist: the small canvas's alpha, cut into flat bands.

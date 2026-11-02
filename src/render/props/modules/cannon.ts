@@ -44,7 +44,7 @@ function carriage(woodHue: number, ship: boolean) {
       for (let r = 1.5; r < 5; r += 1.3) {
         const ring = ovalPts(-19, -2, r + 1, r * 0.5, r * 3, 0.05, 14);
         g.fillStyle = INK;
-        stroke(g, [...ring, ring[0]], { w: 1.6, seed: r, taper: [0, 0], press: 0.1 });
+        stroke(g, [...ring, ring[0]], { w: 1.28, seed: r, taper: [0, 0], press: 0.1 });
         g.fillStyle = css({ h: 38, s: 35, l: 56 });
         stroke(g, [...ring, ring[0]], { w: 0.8, seed: r, taper: [0, 0], press: 0.1 });
       }
@@ -62,7 +62,7 @@ function barrel(L: number, pal: typeof METALS.steel, ship: boolean) {
     g.clip();
     for (const bx of [-6, 2, L - 7]) {
       g.fillStyle = INK;
-      line(g, bx, -6, bx, 6, { w: 2.6, seed: bx, taper: [0, 0], press: 0.1 });
+      line(g, bx, -6, bx, 6, { w: 2.12, seed: bx, taper: [0, 0], press: 0.1 });
       g.fillStyle = css(pal.base, -10);
       line(g, bx + 0.3, -6, bx + 0.3, 6, { w: 1.4, seed: bx + 1, taper: [0, 0], press: 0.1 });
     }

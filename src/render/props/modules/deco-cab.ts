@@ -51,7 +51,7 @@ function back(rc: RC, m: Deco, d: DrawCtx) {
   const cx = x + m.w / 2;
   const top = Math.max(0, ceilingAbovePx(d.o.level, cx, m.at[1] + 1));
   rc.s.fillStyle = '#120c08';
-  line(rc.s, cx, top + 5, cx, y + 1, { w: 1.6, seed: 4, taper: [0, 0], press: 0 });
+  line(rc.s, cx, top + 5, cx, y + 1, { w: 1.24, seed: 4, taper: [0, 0], press: 0 });
   rc.s.fillStyle = css(IRON, 14);
   line(rc.s, cx, top + 5, cx, y + 1, { w: 0.7, seed: 5, taper: [0, 0], press: 0 });
   const wheel = ovalPts(cx, top + 5, 4.5, 4.5, 7, 0.03, 16);
@@ -64,7 +64,7 @@ function cage(w: number, h: number) {
   return sprite(`cab|cage|${w}|${h}`, -3, -9, w + 6, h + 10, (g) => {
     for (const px of [1, w - 1]) {
       g.fillStyle = '#120c08';
-      line(g, px, -1, px, h, { w: 2.2, seed: px, taper: [0, 0], press: 0 });
+      line(g, px, -1, px, h, { w: 1.76, seed: px, taper: [0, 0], press: 0 });
       g.fillStyle = css(IRON, 10);
       line(g, px, -1, px, h, { w: 1.1, seed: px + 1, taper: [0, 0], press: 0 });
     }

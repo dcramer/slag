@@ -50,7 +50,7 @@ export function legs(g: CanvasRenderingContext2D, hx: number, hy: number, feet: 
       { x: feet[i], y: feet[i + 1] },
     ];
     g.fillStyle = INK;
-    stroke(g, pts, { w: 2.2, seed: seed + i, taper: [0, 0], press: 0.1 });
+    stroke(g, pts, { w: 1.76, seed: seed + i, taper: [0, 0], press: 0.1 });
     g.fillStyle = css(col, feet[i] < hx ? 10 : -8);
     stroke(g, pts, { w: 1.1, seed: seed + i + 1, taper: [0, 0], press: 0.1 });
     g.fillStyle = INK;

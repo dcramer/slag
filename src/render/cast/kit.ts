@@ -42,6 +42,10 @@ export interface D {
   gait: Gait;
   /** Boot colors, lit and shade. */
   boot: [string, string];
+  /** Drawn big (a lobby card, the menu): room for the details that would be noise at play scale. */
+  detail: boolean;
+  /** Which outline this frame uses: hooks that sit on a part that moves with the pose (a goose's head) follow it. */
+  pose: 'rest' | 'run' | 'air';
 }
 
 /** What the frame hands a gait: the body's motion this frame. */
@@ -79,7 +83,7 @@ export interface Gait {
   k?: number;
 }
 
-export type Feet = 'peg' | 'web' | 'paw' | 'boot' | 'stilt' | 'none';
+export type Feet = 'peg' | 'web' | 'paw' | 'boot' | 'sneaker' | 'stilt' | 'none';
 export type Arms = 'mitten' | 'flipper' | 'none';
 /** A ribbon the rig trails: a bushy tail, a ringed one. */
 export type Rope = { kind: 'tail' | 'ringtail'; len: number };
@@ -96,6 +100,8 @@ export interface KindArt {
    * the bottom up to -1 at the top. `M x y`, `L x y`, `Q cx cy x y`, `C x1 y1 x2 y2 x y`, `Z`.
    */
   outline: string;
+  /** The outline in other poses, where the line of action changes the shape: a goose's neck thrust out on the run. */
+  poses?: { run?: string; air?: string };
   /** How high the body's bottom sits above the floor: legs, wheels, a spring or a nozzle stand under it. */
   lift: number;
   feet: Feet;
@@ -103,8 +109,12 @@ export interface KindArt {
   gait: (g: GaitIn) => Gait;
   /** The face's shift toward where the character faces, as a fraction of its width (a fox's face is out on its snout). */
   faceX?: number;
-  /** What the body is drawn in: the player's color (most kinds), or the kind's own, for one whose palette is its identity. */
+  /** What the body is drawn in: the player's color, or the kind's own (`paint`), for a homage whose palette is how people know it. */
   fill?: 'player' | 'paint';
+  /** A homage in its own palette carries the player's color on a ring at its feet. */
+  ring?: boolean;
+  /** A translucent body (alpha), drawn as glass: no ink mass under it. */
+  glass?: number;
   /** A tail the rig trails behind it. */
   rope?: Rope;
   /** The kind's own face (a side eye, a visor, goggles, a mask...), in place of the shared cartoon eyes and mouth. */
@@ -114,7 +124,7 @@ export interface KindArt {
   /** Face overrides on the character's rolled one, for kinds that keep the cartoon face. */
   face?: (c: CharacterDef) => { eyes?: Partial<CharacterDef['eyes']>; mouth?: CharacterDef['mouth'] };
   /** Mitten (or flipper) color: white gloves, the body, the kind's own color, steel. */
-  hands?: 'glove' | 'body' | 'paint' | 'iron';
+  hands?: 'glove' | 'body' | 'paint' | 'iron' | 'leather';
   /** Behind the body (keys, handles, legs, fins). */
   back?: (d: D) => void;
   /** Inside the body, before the shadow: a pale chest, overalls, the kind's own marks. */

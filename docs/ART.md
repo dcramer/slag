@@ -12,11 +12,11 @@ These rules cover the menus, the lobby, and the in-game HUD. The world art (leve
 - **One settings menu** (`SettingsMenu` in `src/ui/menus/settings.ts`), the same over the main menu and in a game.
 - Every screen is a game screen with the game's input: keyboard, gamepad and touch, the console-style selection below, and a footer prompt bar.
 
-## Identity: a molten foundry that doubles as a toy box
+## Identity: a molten foundry, sketched by hand
 
-SLAG is junk melted down and recast. The UI looks like **cast-iron plates, hazard tape, and molten metal**. It feels chunky and handled, like a toy: hard outlines, hard drop shadows, buttons that physically press down. It should never read as a generic dark dashboard.
+SLAG is junk melted down and recast, drawn the way a foundry hand sketches in a soot-smudged notebook: a light, sure pen over flat tones, with the heat as the only loud thing on the page. The UI looks like **cast-iron plates, hazard tape, and molten metal**. It feels handled and worn: drawn edges, hard but light drop shadows, buttons that physically press down. It should never read as a generic dark dashboard.
 
-- **Do** use riveted iron plates (`plate()` in `src/render/hud-kit.ts`, `.slag-card` / `.menu-item` in CSS), small corner radii (4–6 px), a 1–2 px ink outline, and a hard drop shadow offset straight down.
+- **Do** use riveted iron plates (`plate()` in `src/render/hud-kit.ts`, `.slag-card` / `.menu-item` in CSS), small corner radii (4–6 px), a light ink rim (pages: 1.5 px of `--rim`, ink at 82%; the HUD: the pen at 0.6–1.45 before `PEN.weight`, about 0.4–0.9 logical px, in `RIM`, ink at 82%), and a hard drop shadow straight down in `--drop` (2 px on the HUD, 3–5 px on pages).
 - **Do** use molten light (amber → orange → ember gradients, additive glow, rising embers) for heat and focus. Glow belongs to *hot* things only: the logo, the pour, the selected item, sparks.
 - **Do** use hazard tape (`hazardTape()`, `--tape`) as an edge accent on bars and dialogs, and to mark empty or dangerous zones.
 - **Do** add texture: the speckle grain on plates and the SVG noise on pages.
@@ -97,17 +97,23 @@ On pages, body text is 15–18 px and menu items are 30 px display.
 
 Everything in the world is drawn the way a person inks a comic: flat tones, hard shadow shapes and a pen. There are no gradients and no textures, and all of it is made in code. It's judged at gameplay scale, where 1 world px is about 2.5 screen px at 1080p.
 
-**The line.** Draw with `stroke()` and `line()` from `src/render/ink.ts`: a filled ribbon that swells, tapers and lifts off the page.
+**The line.** Draw with `stroke()` and `line()` from `src/render/ink.ts`: a filled ribbon that swells, tapers and lifts off the page. The line is light and sure, not loud: the drawing should look made by a fine nib, not a marker.
 
-- Contours run 1 to 3 world px: thin on the side facing the light (upper left), heaviest away from it.
-- A long edge is many strokes, not one. Lift the pen, and leave some joints undrawn: the gaps are what make it look drawn and not stamped.
-- Lines are a dark of what they outline, not one black. The cel pass does this for silhouettes, and adds the same wobble and lean to anything without strokes of its own.
+- **One pen, one knob.** `PEN` in `ink.ts` is the nib for the whole game: `weight` 0.62 scales every pen line, `taperExp` 1.15 runs the ends finer for longer, and `tremor` 0.12 gives any stroke that asks for no wobble a slight one (world px per px of width, at most 0.3). Call sites give relative weights; move the knob, not a hundred call sites. A stroke whose taper sums under `PEN.bar` (0.12) is a **bar** (a rod, rope, pipe, or the ink rim round one), sized to what it depicts, and keeps its width.
+- **Weights, as drawn** (after `weight`, in world px; 1 world px ≈ 2.5 screen px at 1080p): contours 0.4–1.3, thin toward the light (upper left) and heaviest away from it; interior marks (grain, cracks, ticks) 0.3–0.7; hatching about 0.6. Nothing is drawn at 2 or more but a bar. The ink rim round a bar is 0.25–0.5 per side (`w + 0.5` to `w + 1.0` under a bar of `w`).
+- **Lift often.** A long edge is many strokes, not one. Lit edges lift about half the time, shadow edges hold about half the time, and some joints stay undrawn: the gaps are what make it look drawn and not stamped.
+- **Lines are a dark of what they outline**, never one black. On terrain the contour is the theme's `outline` pulled 38% toward its `dark`, and marks inside it 62%; a part outlines in `inkFor(base)` (its own hue, saturation at most 29%, lightness 9 + 15% of the fill's). Near-black `INK` (`#2a1c15`) is for marks with no one colour under them.
+- **The cel pass** (`K` in `cel-shader.ts`) inks every silhouette on `rc.s` and adds the same wobble and lean to anything without strokes of its own: 0.36 px at 720p (`ink`), lean 0.45 onto the shadow side, the line 62% of the way from the outlined colour to ink (`lineDark`) at 85% opacity (`lineAlpha`). Interior edges ink only where a tone jumps hard (`edge` 0.5–0.86, at half strength).
+
+**Colour.** Calm and earthy; the heat is what's loud. The cel pass compresses any foreground chroma (max − min channel) above 0.5 to half its excess (`chromaKnee`, `chromaSlope`), and grades the frame at saturation 0.92 and the backdrop at 0.9. Pick base colours that read at that: a theme or part colour that only works neon is the wrong colour. The exceptions are hot things (glow is never calmed), telegraphs, and the runners' player colours, which stay the loudest note on a runner.
+
+**Shadow.** One hard shape, light: the cel shadow darkens what it falls on to 80% (`shadow`), offset (2, 2.8) world px down and right (`CEL_SHADOW`). On the HUD it's `DROP` (ink at 62%) 2 px straight down; on pages `--drop` (ink at 60%).
 
 **Tone.** Two or three flat tones per surface, cut as shapes with a hand's edge (`blob`, or a block's own bowed sides). Color comes from the theme (`base`, `dark`, `light`, `outline`), so art recolors with the seed.
 
-**Marks.** What a surface is made of is said with marks: chisel ticks, grain, rivets, cracks, pebbles. Add them through a registry: `INK_MATERIALS`, `INK_CAPS`, `INK_PLATFORMS`. Marks are sparse. If it reads as noise at gameplay scale, there are too many.
+**Marks.** What a surface is made of is said with marks: chisel ticks, grain, rivets, cracks, pebbles. Add them through a registry: `INK_MATERIALS`, `INK_CAPS`, `INK_PLATFORMS`. Marks are sparse and lighter than the contour: no more than about three per tile, and a clean shape with two marks beats a busy one with six. If it reads as noise at gameplay scale, there are too many.
 
-**Hatching.** Parallel tapered strokes that hang off edges facing away from the light and fade into the fill. Use them on terrain and anything bigger than about two tiles. Hatching vanishes at character size: small things get silhouette and one hard shadow shape instead.
+**Hatching.** Parallel tapered strokes, 3.6 world px apart with about a third left out, that hang off edges facing away from the light and fade into the fill. Use them on terrain and anything bigger than about two tiles. Hatching vanishes at character size: small things get silhouette and one hard shadow shape instead.
 
 **Objects, not characters.** No part, item, projectile or set piece has a face or a persona: no eyes or pupils, mouths, brows, blush or expressions, no little feet or hands that make it a creature, no cap or hat worn like a character. Only the runners have faces. A lens or a sensor is fine when it reads as optics (a glass disc in a bezel, a lit LED), never an eye with a pupil and lids, and never two side by side. The parody comes through shape, material and mechanism, and a tell that would have been eyes is a mechanism: a sensor light, a creak, grit trickling off. The one exception is decor that depicts people: a portrait on a wall, a statue's painted likeness. It may show a face, eyes and all (the Haunted Wing's portraits watch whoever is nearest), because it's a picture of someone, not an object with a persona. Parts, items, projectiles and machines never do.
 

@@ -1,3 +1,4 @@
+import { css, type HSL } from '../core/color';
 import { hash2 } from '../core/rng';
 
 /**
@@ -12,6 +13,15 @@ import { hash2 } from '../core/rng';
 export interface P {
   x: number;
   y: number;
+}
+
+/**
+ * Ink for a line round `c`: a dark of that colour, never one black. Hue kept, chroma held low so a
+ * bright part doesn't get a neon rim, and lightness a fraction of the fill's, so a pale thing gets a
+ * softer line than a dark one.
+ */
+export function inkFor(c: HSL, a = 1): string {
+  return css({ h: c.h, s: Math.min(c.s, 38) * 0.75, l: 9 + c.l * 0.15 }, 0, a);
 }
 
 /** Smooth value noise in 0..1. */
@@ -33,7 +43,7 @@ export function vn(x: number, y: number, seed: number): number {
 export const sn = (x: number, y: number, seed: number) => vn(x, y, seed) * 2 - 1;
 
 export interface StrokeOpts {
-  /** Widest width in world px. */
+  /** Widest width in world px, before the pen's `weight` (see `PEN`). */
   w: number;
   seed: number;
   /** Sideways hand tremor in world px. */
@@ -43,6 +53,29 @@ export interface StrokeOpts {
   /** How much pressure wanders along the stroke, 0..1. */
   press?: number;
 }
+
+/**
+ * The hand behind every stroke (docs/ART.md, The line). One place moves the whole game's line at once:
+ * terrain, parts, items, the HUD and the menu all draw through `stroke`.
+ *
+ * - `weight` scales every pen line. Call sites keep their old numbers as relative weights; this is the
+ *   pen's nib. A stroke with (almost) no taper is a bar, not a pen line: a rod, a rope, a pipe or the ink
+ *   rim drawn round one, sized to the thing it depicts, and it keeps its width.
+ * - `taperExp` shapes the swell: above 1 the ends run finer for longer, so a line starts and lifts like a
+ *   nib and doesn't stamp down at full width.
+ * - `tremor` is the wobble a stroke gets when it asks for none, in world px per px of width: thin lines
+ *   barely waver, broad ones drift a little, as a real hand does.
+ */
+export const PEN = {
+  weight: 0.62,
+  taperExp: 1.15,
+  tremor: 0.12,
+  /** Summed taper below which a stroke counts as a bar. */
+  bar: 0.12,
+};
+
+/** Fractions of a stroke spent swelling in and tapering out when the call site doesn't say. */
+const DEFAULT_TAPER: [number, number] = [0.28, 0.4];
 
 const lx: number[] = [];
 const ly: number[] = [];
@@ -56,9 +89,12 @@ export function stroke(g: CanvasRenderingContext2D, pts: readonly P[], o: Stroke
   let len = 0;
   for (let i = 1; i < n; i++) len += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
   if (len < 0.05) return;
-  const [ta, tb] = o.taper ?? [0.22, 0.34];
+  const [ta, tb] = o.taper ?? DEFAULT_TAPER;
+  const bar = ta + tb < PEN.bar;
+  const w = bar ? o.w : o.w * PEN.weight;
+  const ex = bar ? 0.75 : PEN.taperExp;
   const press = o.press ?? 0.45;
-  const wob = o.wobble ?? 0;
+  const wob = o.wobble ?? (bar ? 0 : Math.min(0.3, w * PEN.tremor));
   let s = 0;
   for (let i = 0; i < n; i++) {
     const a = pts[Math.max(0, i - 1)];
@@ -71,7 +107,7 @@ export function stroke(g: CanvasRenderingContext2D, pts: readonly P[], o: Stroke
     if (i) s += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
     const t = s / len;
     const ends = Math.min(1, ta > 0 ? t / ta : 1) * Math.min(1, tb > 0 ? (1 - t) / tb : 1);
-    const hw = (o.w / 2) * Math.pow(ends, 0.75) * (1 - press + press * 1.6 * vn(s * 0.11, 3.7, o.seed));
+    const hw = (w / 2) * Math.pow(ends, ex) * (1 - press + press * 1.6 * vn(s * 0.11, 3.7, o.seed));
     const c = wob ? sn(s * 0.07, 9.1, o.seed) * wob : 0;
     const x = pts[i].x - dy * c;
     const y = pts[i].y + dx * c;

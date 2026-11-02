@@ -352,7 +352,8 @@ export function inkMaterial(g: CanvasRenderingContext2D, level: Level, th: Theme
   const dist = airDistance(level, solid);
   const depth = (x: number, y: number) => (x < 0 || y < 0 || x >= level.w || y >= level.h ? 99 : dist[y * level.w + x]);
   const span = tilesIn(area, level);
-  const ink = inkOf(th);
+  // Marks inside the ground sit lighter than its edge: they say what it's made of, the contour says where it stops.
+  const ink = css(mixHsl(T.outline, T.dark, 0.62));
   const paint = (c: CanvasRenderingContext2D, t: Tones, kind: TerrainKind, inside: (x: number, y: number) => boolean) =>
     INK_MATERIALS[kind]!({ g: c, seed: seed + (t === T ? 0 : 1000), T: t, ink, span, area, inside, depth });
   paint(g, T, T.kind, solid);
@@ -419,8 +420,9 @@ function inkOf(th: Theme): string {
   return inkOf2(th.terrain);
 }
 
+/** The ground's line: its outline pulled toward its own dark, so the edge reads as a darker ground and not one black. */
 function inkOf2(T: TerrainLook): string {
-  return css(shift(T.outline, -4, 6));
+  return css(mixHsl(T.outline, T.dark, 0.38));
 }
 
 /** Jagged: straight runs with hard turns, the way rock splits, and a fork partway along. */
@@ -477,7 +479,7 @@ export function inkHatch(g: CanvasRenderingContext2D, loops: readonly EdgeP[][],
   const col = css(shift(th.terrain.dark, -8, 4));
   // A skin hatches in a shade of itself: a pale one (plaster, bone, ice) would drown under the ground's dark.
   const skinCol = skin ? css(mixHsl(skin.T.base, skin.T.dark, 0.55)) : col;
-  const SP = 2.7;
+  const SP = 3.6;
   for (const loop of loops) {
     for (let i = 0; i < loop.length; i++) {
       const p = loop[i];
@@ -490,12 +492,12 @@ export function inkHatch(g: CanvasRenderingContext2D, loops: readonly EdgeP[][],
       if (Math.floor(a) === Math.floor(b)) continue;
       const k = Math.floor(Math.max(a, b));
       const skip = hash2(k, 11, seed);
-      if (skip < 0.14) continue;
+      if (skip < 0.3) continue;
       const len = (5 + 15 * (sh - 0.74) * 3.2) * (0.55 + 0.75 * hash2(k, 12, seed)) * (0.7 + 0.6 * vn(p.x * 0.06, p.y * 0.06, seed + 40));
       g.fillStyle = edgeInSkin(skin, p) ? skinCol : col;
       const sx = p.x - p.nx * 0.5;
       const sy = p.y - p.ny * 0.5;
-      line(g, sx, sy, sx + dx * len, sy + dy * len, { w: 1.05, seed: k, taper: [0.02, 0.85], wobble: 0.25 });
+      line(g, sx, sy, sx + dx * len, sy + dy * len, { w: 0.95, seed: k, taper: [0.06, 0.85], wobble: 0.25 });
     }
   }
 }
@@ -523,14 +525,15 @@ export function inkEdges(g: CanvasRenderingContext2D, loops: readonly EdgeP[][],
       if (run.length >= 3 && !run[0].hidden && run.some((p) => near(area, p.x, p.y, 8))) {
         const m = run[run.length >> 1];
         const sh = shadeOf(m.nx, m.ny);
-        const ww = (1.0 + 2.1 * sh * sh) * weight;
+        const ww = (0.7 + 1.35 * sh * sh) * weight;
         const sd = ((m.x * 3 + m.y * 5) | 0) + seed;
         // Shift off the fill by a hair: registration is never perfect by hand.
         const dx = sn(m.x * 0.03, m.y * 0.03, seed + 51) * 0.55;
         const dy = sn(m.y * 0.03, m.x * 0.03, seed + 52) * 0.45;
         const pts: P[] = run.map((p) => ({ x: p.x + dx, y: p.y + dy }));
-        // Lit edges lift off the page sometimes; shadow edges hold.
-        if (sh > 0.42 || vn(m.x * 0.05, m.y * 0.05, seed + 53) > 0.3) stroke(g, pts, { w: ww, seed: sd, taper: [0.1, 0.3], press: 0.5, wobble: 0.3 });
+        // Lit edges lift off the page often; shadow edges mostly hold.
+        if ((sh > 0.42 && vn(m.x * 0.04, m.y * 0.04, seed + 54) > 0.18) || vn(m.x * 0.05, m.y * 0.05, seed + 53) > 0.52)
+          stroke(g, pts, { w: ww, seed: sd, taper: [0.1, 0.3], press: 0.5, wobble: 0.3 });
       }
       run = [];
     };
@@ -1030,7 +1033,7 @@ const INK_PLATFORMS: Record<PlatformKind, (r: Run) => void> = {
     g.fillStyle = css(c, 6);
     for (let k = Math.ceil(x0 / 2.8); k * 2.8 < x1 - 1; k++) line(g, k * 2.8, y + 1.2, k * 2.8 + 1.6, y + H - 1, { w: 1, seed: k, taper: [0, 0], press: 0.1 });
     g.fillStyle = ink;
-    stroke(g, botE, { w: 1.7, seed: tx + seed, taper: [0.03, 0.05], press: 0.4 });
+    stroke(g, botE, { w: 1.62, seed: tx + seed, taper: [0.03, 0.05], press: 0.4 });
     g.fillStyle = css(c, 12);
     stroke(g, topE, { w: 1.5, seed: tx + seed + 1, taper: [0.02, 0.02], press: 0.15 });
     g.fillStyle = ink;
@@ -1051,7 +1054,7 @@ const INK_PLATFORMS: Record<PlatformKind, (r: Run) => void> = {
       const pts: P[] = [];
       for (let x = x0; x <= x1 + 0.01; x += 3) pts.push({ x, y: y + dy + 1.3 + sn(x * 0.08, dy, seed) * 0.25 });
       g.fillStyle = ink;
-      stroke(g, pts, { w: 3.6, seed: seed + dy, taper: [0, 0], press: 0.05 });
+      stroke(g, pts, { w: 3.04, seed: seed + dy, taper: [0, 0], press: 0.05 });
       g.fillStyle = css(c, dl);
       stroke(g, pts, { w: 2.2, seed: seed + dy, taper: [0, 0], press: 0.05 });
       g.fillStyle = css(c, dl + 18);

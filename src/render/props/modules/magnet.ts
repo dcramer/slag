@@ -87,7 +87,7 @@ function horseshoe(pull: boolean, pal: MetalPalette) {
     g.fillStyle = css({ h: 210, s: 12, l: 60 });
     g.fillRect(-9, -5.1, 18, 0.7);
     g.fillStyle = INK;
-    line(g, -9, -4.4, 9, -4.4, { w: 0.7, seed: 3, taper: [0, 0], press: 0.2 });
+    line(g, -9, -4.4, 9, -4.4, { w: 0.49, seed: 3, taper: [0, 0], press: 0.2 });
     g.fillStyle = css(paint, 26);
     line(g, -6.6, -3.4, -6.4, 2.6, { w: 0.9, seed: 4, taper: [0.2, 0.4], press: 0.1 });
     g.restore();
