@@ -142,18 +142,18 @@ describe('claim races', () => {
 
 describe('live cursors', () => {
   it('a remote cursor needs no click and glides, without touching match state', () => {
-    const { r, a, b } = inPick();
-    const target = { x: 500, y: 300 };
+    const { r, a } = inPick();
+    const start = mine(a, 'bbbb').cursor.x;
+    const target = { x: start > 300 ? 100 : 700, y: 300 };
     r.tick({ bbbb: { kb1: press({ pointer: target }) } });
-    r.run(10);
+    while (mine(a, 'bbbb').cursor.x !== target.x) r.tick();
+    // The sim jumped straight there; what's drawn is on its way.
+    const drawn = () => a.view.players.find((p) => p.device === 'bbbb:kb1')!.cursor.x;
+    expect(Math.abs(drawn() - target.x)).toBeGreaterThan(1);
+    expect(Math.abs(drawn() - start)).toBeGreaterThan(1);
     expect(mine(a, 'bbbb').cursor).toEqual(target);
-    expect(new Set([hashMatch(a.match), hashMatch(b.match)]).size).toBeLessThanOrEqual(2);
-    // Presentation: part way there first, then arrived. The sim's copy jumped straight to it.
-    const v = a.view.players.find((p) => p.device === 'bbbb:kb1')!;
-    expect(v.cursor.x).toBeGreaterThan(0);
     r.run(30);
-    const settled = a.view.players.find((p) => p.device === 'bbbb:kb1')!;
-    expect(Math.abs(settled.cursor.x - target.x)).toBeLessThan(1);
+    expect(Math.abs(drawn() - target.x)).toBeLessThan(1);
   });
 
   it("a guest's own cursor doesn't wait for the host; the sim does", () => {
@@ -168,7 +168,7 @@ describe('live cursors', () => {
   it('keyboard and gamepad cursors move remotely too, and keep moving while held', () => {
     const { r, a } = inPick();
     const start = mine(a, 'bbbb').cursor.x;
-    for (let i = 0; i < 30; i++) r.tick({ bbbb: { pad0: press({}), kb1: press({ right: true }) } });
+    for (let i = 0; i < 30; i++) r.tick({ bbbb: { kb1: press({ right: true }) } });
     r.run(10);
     expect(mine(a, 'bbbb').cursor.x).toBeGreaterThan(start);
   });

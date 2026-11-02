@@ -434,10 +434,11 @@ export class WebRtcTransport implements Transport {
   /** Reach out to whoever is next without giving up on the host we're probing. */
   private reachNext() {
     const next = sortMembers([...this.roster.values()].filter((m) => m.id !== this.probing))[0]?.id ?? this.self;
-    if (next === this.self) {
-      if (this.probing) this.candidate = true;
-      else this.takeOver();
-    } else if (!this.links.has(next)) this.dial(next, CANDIDATE_MS);
+    if (next !== this.self) {
+      if (!this.links.has(next)) this.dial(next, CANDIDATE_MS);
+    } else if (!this.probing) this.takeOver();
+    else if (this.stash.some((x) => x.mail.s.k === 'offer' && this.roster.has(x.mail.from) && Date.now() - x.at < STASH_MS)) this.confirmDead(this.probing);
+    else this.candidate = true;
   }
 
   /** `id` failed to answer an offer (or said goodbye): it's out of the roster and the store, and the walk moves on. */
@@ -848,15 +849,15 @@ export class WebRtcTransport implements Transport {
     if (s.k === 'answer') return this.onAnswer(m.from, s);
     if (s.k === 'redirect') return this.onRedirect(m.from, s);
     if (this.role === 'host') return this.onOffer(m.from, s);
-    // We were waiting on our own probe, and now someone else has lost the same host: that's proof, take over.
-    if (this.candidate && this.roster.has(m.from) && this.probing) {
-      this.stash.push({ mail: m, at: Date.now() });
-      this.confirmDead(this.probing);
-      if (this.role === 'guest') this.takeOver();
+    // Settled under a host, so this peer has the wrong idea of who hosts.
+    if (this.role === 'guest' && !this.probing && this.links.has(this.hostId)) {
+      await this.signal.send(m.from, { k: 'redirect', c: s.c, to: this.hostId }).catch(() => false);
       return;
     }
     this.stash = this.stash.filter((x) => Date.now() - x.at < STASH_MS);
     this.stash.push({ mail: m, at: Date.now() });
+    // We were waiting on our own probe, and now someone else has lost the same host: that's proof, take over.
+    if (this.candidate && this.roster.has(m.from) && this.probing) this.confirmDead(this.probing);
   }
 }
 

@@ -1,132 +1,200 @@
 # Online play
 
-Status: **shipped (v1)**: host-sequenced lockstep with presence-based host election, seamless host migration, refresh/reconnect, late join, desync detection with automatic resync, and client-side prediction in races. Code: `src/net/`, `relay/`.
-
 A room is its URL, `/r/<CODE>`. Everyone who opens the same link is in the same match. There is no matchmaking and no room list.
 
-## Setup (one time, ~5 minutes)
+Peers talk over **WebRTC data channels in a star around the host**. Everything stays on Vercel and on free tiers: small Next route handlers do signaling and presence on Redis from the Vercel Marketplace (Upstash), and local dev uses an in-memory store. Code: `src/net/`, `app/api/net/`.
 
-Online play needs a tiny relay on Cloudflare's free plan. Until it's configured, the game still works: local multiplayer is unaffected, and a shared link only connects tabs of the same browser (the status badge says so).
+## Setup
 
-1. Create a free Cloudflare account (https://dash.cloudflare.com/sign-up). Workers Free includes Durable Objects.
-2. Deploy the relay:
-   ```sh
-   cd relay
-   npx wrangler@4 login
-   npx wrangler@4 deploy
-   ```
-   Wrangler prints the URL, e.g. `https://slag-relay.<you>.workers.dev`.
-3. In Vercel → Project → Settings → Environment Variables, add
-   `NEXT_PUBLIC_SLAG_RELAY_URL = wss://slag-relay.<you>.workers.dev` (Production and Preview), then redeploy (the value is inlined at build time).
-4. Optional hardening: in `relay/wrangler.toml`, set `ALLOWED_ORIGINS = "https://<your-app>.vercel.app"` and deploy again.
+Env vars, set by the Vercel Marketplace integration when the Redis store is connected to the project. Either pair works; if both are present, the first wins.
 
-To smoke-test any relay (local, `wrangler dev`, or deployed): `pnpm tsx tools/relay-probe.ts wss://slag-relay.<you>.workers.dev`.
+| Variable | Purpose |
+|---|---|
+| `KV_REST_API_URL`, `KV_REST_API_TOKEN` | Upstash REST endpoint and read/write token. |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | The same, under the names some integrations use. |
+| `SLAG_ICE_SERVERS` | Optional. JSON array of `RTCIceServer`, added to public STUN, e.g. `[{"urls":"turn:turn.example:3478","username":"u","credential":"c"}]`. This is how to add TURN. It reaches every browser, so use credentials meant for that. |
+| `SLAG_SIGNAL_STORE` | Test only. `memory` forces the in-memory store under `next start`. Never set it on Vercel: instances share no memory, so rooms would silently split. |
 
-Local development: `pnpm relay` starts the same relay logic on `ws://127.0.0.1:8787`; open `http://localhost:3000/r/ABCDE?relay=ws://127.0.0.1:8787` in two browsers. `?net=bc` uses BroadcastChannel (tabs of one browser), `?net=off` is offline. Debug params `?players=` / `?race=` imply offline.
+To connect a store: Vercel → the project → **Storage** → connect the Redis store → enable **Production** and **Preview** → redeploy (functions read env vars at start). Nothing else is needed. Never commit these values.
 
-Cost at hobby scale: $0. Workers Free allows 100k requests/day; incoming WebSocket messages count 1/20 of a request, outgoing are free. A 4-peer room sends ~120 messages/s (each peer 30 Hz), so ~4.5 hours of 4-player play per day before the daily limit. Durable Object duration (13,000 GB-s/day free) covers ~28 room-hours per day. Raise `sendEvery` in `src/net/session.ts` to trade a little latency for headroom.
+Without credentials in production the API answers `503 {"error":"unconfigured"}`. The game keeps running locally and the lobby's online panel says `Playing Locally · Online Not Set Up`.
 
-## Why a Cloudflare Durable Object relay
+In `pnpm dev` the in-memory store is used unless those variables are present (`vercel env pull` would put them in `.env.local`, and dev would then spend the real budget).
 
-What host election needs is **authoritative presence**: every peer must agree on who is in the room and in what order they joined. We evaluated:
-
-| Option | Presence / join order | Works on every network | Cost / setup | Verdict |
-|---|---|---|---|---|
-| Trystero (WebRTC over public Nostr/MQTT/torrent signaling) | None: peers gossip, so views diverge under partial connectivity (split brain) | No: ~10–20% of pairs need TURN | Free, zero setup, but depends on volunteer relays (a Nostr relay timed out from our test container) | Rejected |
-| PeerJS cloud broker | None (only ID registration) | No (WebRTC, no TURN) | Free, zero setup | Rejected |
-| Supabase Realtime | CRDT presence, no join order; client clocks for ordering | Yes (WebSocket) | Free tier pauses projects after 7 idle days; 2M msgs/month counted per delivery | Rejected |
-| Ably / Pusher / Liveblocks | Authoritative presence (Ably) | Yes | Free tiers count every delivery (6M/month Ably, 200k/day Pusher): a few hundred races per month; needs an SDK and a token endpoint | Runner-up |
-| **Cloudflare Worker + Durable Object** | **One single-threaded object per room: one member list, server-assigned join order, one total message order per receiver** | **Yes: WSS on 443** | **Free plan; outgoing messages free; ~150 lines we own; no client SDK** | **Chosen** |
-| PartyKit | Same as DO (it is built on them) | Yes | Adds a framework and its deploy flow | Equivalent; not needed |
-
-WebSockets work through the outbound proxy of our build container (verified: `101 Switching Protocols`), while WebRTC/UDP generally doesn't; the relay also avoids NAT/TURN issues for players. The cost of relaying instead of peer-to-peer is one extra hop of latency, which prediction hides for the local player (see Next steps for a WebRTC upgrade path).
+URL params: `?net=off` is offline (implied by debug `?players=`/`?race=`). `?net=bc` uses BroadcastChannel between tabs of one browser, with no server.
 
 ## Architecture
 
 ```
-browser ──wss──▶ Cloudflare Worker ──▶ Durable Object "SlagRoom" (one per room code)
-                 relay/worker.ts         relay/room.ts: presence (join order) + fan-out
-src/net/
-  transport.ts       Transport interface; LoopbackHub (tests: latency/jitter/loss, manual clock); BroadcastTransport
-  relay-transport.ts RelayTransport: WebSocket client with reconnect/backoff and keepalive
-  relay-protocol.ts  wire format shared with the relay
-  session.ts         NetSession: election, lockstep, prediction, sync, desync detection
-  actions.ts         host-sequenced match actions (join/leave/away/name/rules) + replicated NetState
-  codec.ts           compact InputFrame encoding (9 bits + optional pointer), merge/held helpers
-  snapshot.ts        Match snapshot/restore/hash (exact through JSON: -0, NaN, ∞, Maps, typed arrays)
-  predict.ts         cheap race-state copy for prediction
-  identity.ts        peer id (survives refresh, distinct per tab) and the resume save
-  client.ts          browser entry: transport choice, page lifecycle, NetHudInfo for the HUD
-  badge.ts           interim DOM status badge until the HUD draws NetHudInfo
-tools/relay-dev.ts   the relay logic on a local Node WebSocket server
-tools/online-test.ts headless Chromium end-to-end test (BroadcastChannel and relay)
+browser ── WebRTC data channels ── host browser      inputs, bundles, snapshots
+   └───── POST /api/net/<op> ── Redis                finding peers, handshakes, liveness
 ```
+
+```
+src/net/
+  transport.ts          Transport interface; LoopbackHub (tests); BroadcastTransport
+  webrtc-transport.ts   the star: roster, links, election, re-signaling, polling
+  signal-client.ts      browser side of the API; the one place that knows where the API lives
+  signal-protocol.ts    wire types and limits, shared with the routes; pure
+  session.ts            NetSession: lockstep, prediction, sync, migration, desync detection
+  actions.ts            host-sequenced match actions (join/leave/away/name/rules) + replicated NetState
+  codec.ts              compact InputFrame encoding
+  snapshot.ts           Match snapshot/restore/hash (exact through JSON: -0, NaN, ∞, Maps, typed arrays)
+  predict.ts            cheap race-state copy for prediction
+  identity.ts           peer id (survives refresh, distinct per tab) and the resume save
+  client.ts             browser entry: transport choice, page lifecycle, the HUD's status
+app/api/net/
+  [op]/route.ts         HTTP edge: origin, rate limit, size limits
+  _server/handlers.ts   one function per op
+  _server/store.ts      Store interface; Upstash REST and in-memory implementations
+  _server/guard.ts      request gates and ICE configuration
+```
+
+### Portability
+
+`src/net` assumes nothing about Next. It reaches the API through one base URL (`setSignalBase` in `signal-client.ts`), empty by default, which means same origin. It imports nothing from `app/`; what the routes and the client share is the pure `signal-protocol.ts`.
+
+A build served from another origin (a packaged app pointing at the hosted API) needs:
+
+1. `setSignalBase('https://<hosted-app>')` before `bootGame`.
+2. The API to accept its origin: `originAllowed` in `guard.ts` rejects a browser `Origin` that isn't the request's host, so add an allowlist there, and send `Access-Control-Allow-Origin` on replies. No preflight handling is needed: all requests are `text/plain` POSTs, which are CORS-simple by design. `sendBeacon` works the same way. Packaged origins can be `null` or a custom scheme (`capacitor://localhost`), so the allowlist has to match those literally.
+3. A public origin for `inviteUrl` in `client.ts`, which uses `location.origin`.
+
+## Signaling API
+
+`POST /api/net/<op>`, JSON sent as `text/plain`. All ops take `room` and `peer`.
+
+| Op | Does | Redis commands |
+|---|---|---|
+| `join` | Assign the next join order; returns the live members and ICE servers. | 6–7 |
+| `beat` | Renew liveness. Hosts also renew the room and learn the room's lowest order. | guest 1, host 4 |
+| `poll` | Drain this peer's mailbox. | 1 |
+| `signal` | Put a handshake in another peer's mailbox. | 5 |
+| `members` | Live members in order. | 2–3 |
+| `gone` | Report a peer that failed to answer an offer. | 3–7 |
+| `leave` | Remove self, sent by `sendBeacon` on pagehide. | 1–4 |
+
+Keys, all with a TTL: `slag:<ROOM>:n` the join counter (`INCR`) and `slag:<ROOM>:m` the member sorted set (300 s, renewed by the host), `slag:<ROOM>:p:<peer>` liveness (50 s, renewed by `beat`), `slag:<ROOM>:b:<peer>` the mailbox (30 s).
+
+### Abuse limits
+
+The routes are public and unauthenticated: knowing a room code and a peer id is all a caller needs, so someone in a room can disrupt that room. Limits keep it to that:
+
+- Room codes and peer ids are validated by regex before any Redis command runs.
+- Bodies are capped at 20 KB, SDP at 16 KB, mailboxes at 16 messages, rooms at `MAX_PEERS` (`MAX_PLAYERS` + 4 spectators; the host also refuses offers past it).
+- Handshakes go only between current members. `gone` needs a current member and the target's exact order.
+- Browsers from other origins are refused. A per-client, per-instance limit (600 requests a minute) stops loops without spending Redis commands; it isn't protection against a determined caller, which is the Vercel Firewall's job.
+- The free tier is a hard cap: running out stops online play, it doesn't bill. Already-linked games don't need the API and keep playing.
+
+## Budget
+
+Upstash's free tier is 500K commands a month and 250 MB. Blocking commands aren't available over REST, so everything is short polling. `tests/signal-handlers.test.ts` pins the cost of each op, and `tests/webrtc-transport.test.ts` measures a playing room.
+
+**Commands per minute, steady state with links up:**
+
+| Who | Polls | Heartbeats | Total |
+|---|---|---|---|
+| Guest | 0 (polling stops once linked) | 3 × 1 | **3** |
+| Host | 12 (every 5 s, to admit newcomers) | 3 × 4 | **24** |
+| Host, alone over 10 min | 4 | 12 | 16 |
+| Host, alone and hidden over 10 min | 0 | 0 | **0** (leaves the room, rejoins when shown) |
+
+So a 4-player room costs 33 commands a minute (about **8 per player per minute**) and an 8-player room 45 (about 6). Polling doubles its interval in a hidden tab.
+
+**One-off costs:** a join is about 60 commands (the join, offer and answer, guest polling while waiting, and the host polling every second for the next 30 s, so friends arriving together connect fast). A migration in a 3-peer room is about 100.
+
+**In practice:** 500K commands is about 250 hours of 4-player rooms a month, or 8 hours a day, ignoring joins. Storage is irrelevant: a room is under a kilobyte. Function invocations follow the same curve (24 requests a minute for a 4-player room).
+
+To stretch it, raise `POLL_IDLE_MS` in `webrtc-transport.ts`: it's the main cost, and it only trades how long a late joiner waits.
+
+## The star
+
+Connections are vanilla ICE: gather candidates, then send one offer and one answer with everything in them, so a connection costs two mailbox writes. Each link has two channels: `rel` (ordered, reliable) for control frames, snapshots and actions, and `rt` (unordered, no retransmits) for inputs and bundles, which the session already re-sends. Messages over 16 KB are split on `rel`, the size every browser agrees on.
+
+STUN is public (Google, Cloudflare). Pairs that can't connect directly need TURN (`SLAG_ICE_SERVERS`); about 10–20% of pairs are expected to. Without it, a guest that gets an answer but can't open a channel after two tries drops to `Playing Locally · Cannot Reach Host`. It never evicts the healthy host.
 
 ### Identity and devices
 
-- Each tab has a **peer id** (8 chars). It lives in `sessionStorage` (a refresh keeps it) plus a lease table in `localStorage` (a newly opened tab takes the most recently used free id, so closing and reopening the link also gets your seat back; two live tabs never share an id).
-- Match devices are namespaced `<peer>:<local device>` (`k3j9x2ab:kb1`, `k3j9x2ab:pad0`), so one machine can seat several local players (split keyboard, gamepads, touch). Offline sessions keep raw ids.
+- Each tab has a **peer id** (8 chars). It lives in `sessionStorage` (a refresh keeps it) plus a lease table in `localStorage` (a new tab takes the most recently used free id, so closing and reopening the link gets your seat back; two live tabs never share one).
+- Match devices are namespaced `<peer>:<local device>` (`k3j9x2ab:kb1`), so one machine can seat several local players. Offline sessions keep raw ids.
 
-### Host election
+### Host election and migration
 
-- The relay assigns each connection a join `order` from a per-room counter (reset when the room empties). The **host is the connected member with the lowest order**. Everyone computes it from the same list, so no voting is needed.
-- Host leaves (close, crash, network loss) → the relay broadcasts `leave` → every peer re-elects the next-earliest member. Because the relay delivers everything to a receiver in one ordered stream, the `leave` always arrives before the new host's first bundle.
-- A refresh or reconnect is a new connection, so it joins **later** in order: the old host comes back as a guest (that's what "you leave, somebody else is now the host" means).
-- Empty room → the next arrival is host. If this browser saved the room's state in the last 30 minutes (`identity.ts`, every 2 s and on pagehide), it **resumes** it; otherwise it starts fresh. Players of absent peers are dropped (lobby) or marked away (mid-match).
-- BroadcastChannel has no server, so tabs report their own join time (one clock within a browser) and heartbeat; messages from a peer that claims host before presence agrees are stashed and replayed.
+Join order comes from an atomic per-room `INCR`. The host is the lowest order present. A refresh or reconnect is a new join, so it gets a later order: the old host comes back as a guest.
+
+The host owns the **roster** and pushes it to every guest. When the host dies the guests have no links to each other, so nobody can ask anyone anything. Each peer works it out alone:
+
+1. **Detect.** A data channel closing, the connection failing, or 2.5 s without a heartbeat (sent every 500 ms on `rt`). A goodbye frame skips straight to step 3. If our own timers stalled over 2 s (a background tab, a laptop waking), we don't blame anyone.
+2. **Check.** Polling wakes immediately, to every 400 ms. The peer re-offers to the old host and, at the same time, to the next in line. A live host answers: it noticed the same silence and woke its own polling, so a flaky guest reconnects without moving the room. The next in line holds off as a candidate, until the old host misses its 3 s window or until another peer's offer shows that it lost the host too, which is proof enough to take over at once.
+3. **Agree.** Every peer takes the lowest order in its last roster that it doesn't believe dead. A candidate that doesn't answer inside 3.5 s is presumed dead too, and the walk continues, so a lower peer leaving at the same moment, or the new host dying straight after taking over, ends on the same peer for everyone. A peer that has it wrong answers an offer with a redirect.
+4. **Resume.** The new host pauses and keeps the expected guests in the roster as `linking`, so nobody is marked away while they re-signal. Each guest's `hello` says the furthest frame it holds. The old host's last bundles may have reached only some peers, so the new host pulls a snapshot from the furthest one, then syncs everyone to it. Inputs that were in flight never made a bundle, so they never happened, on every peer alike: that can't desync. After 6 s it stops waiting for anyone missing.
+5. **The old host's player** is treated like any dropped player: `away` mid-match, removed from the lobby.
+
+Only peers that failed an offer get reported to the store, and a report names the exact session (`order`), so a late report can't remove someone who has already refreshed.
+
+If two peers end up hosting anyway (say one lost the API at the wrong moment and the other wrote it off), the store settles it within a heartbeat: `beat` tells a host the room's lowest order, a higher host hands its guests to the lower one, and a host the store forgot rejoins later in the order.
+
+An empty room needs nothing: the next arrival is host. If this browser saved the room's state in the last 30 minutes it resumes it.
+
+If signaling fails while links are up, nothing happens: only a host that has lost its guests too reports `reconnecting`, and it freezes rather than fork the room.
+
+**Measured** on one machine with software GL and a loaded CPU, by `pnpm online-test`: see Testing.
+
+## Netcode
+
+The sim is a pure function of `(seed, per-frame inputs)`, so **inputs and host-sequenced actions are the only per-frame data on the wire**. Snapshots go out only for joins, resyncs and migration.
 
 ### Lockstep (host-sequenced)
 
-- Every tick (60 Hz), each guest samples its local devices, appends the frame to its *unacked* list with a sequence number, and every `sendEvery` ticks (default 2, immediately on button presses) sends **all** unacked frames to the host. Redundancy makes loss harmless.
-- The host consumes one queued frame per guest per tick. If a guest's queue runs dry it repeats the guest's held buttons (no edges); if a burst piles up (more than 6), the oldest frames are folded together (edges OR-ed), bounding latency.
-- The host stamps `{frame, inputs, actions, ack deltas}` into a **bundle**, applies it, and broadcasts bundles every `sendEvery` ticks. Guests apply bundles strictly in frame order; a gap triggers `need` and the host resends from its 10 s history (or sends a snapshot).
-- Discrete changes (seat a rejoiner, drop a leaver, mark away, rename, restore a saved look, the host's rules and per-match crate salt) are **actions** carried in bundles and applied by everyone at the same frame (`actions.ts`).
-- Sequence numbers start at wall-clock ms, so a refreshed page always counts higher than its previous self.
+- Every tick (60 Hz), each guest samples its devices, appends the frame to its *unacked* list, and every 2 ticks (immediately on a button press) sends **all** unacked frames to the host. Redundancy makes loss harmless.
+- The host consumes one queued frame per guest per tick. If a guest's queue runs dry it repeats held buttons, with no edges; if a burst piles up, the oldest frames are folded together (edges OR-ed), which bounds latency.
+- The host stamps `{frame, inputs, actions, ack deltas}` into a **bundle**, applies it, and broadcasts bundles every 2 ticks. Guests apply bundles strictly in frame order. A gap triggers `need`, and the host resends from its 10 s history or sends a snapshot.
+- Discrete changes (seat a rejoiner, drop a leaver, mark away, rename, a saved look, rules, the crate salt) are **actions** in bundles, applied by everyone at the same frame.
+- Sequence numbers start at wall-clock ms, so a refreshed page always counts higher than its old self.
 
 ### Prediction (races)
 
-The host plays with zero input delay. A guest in a race renders a predicted copy (`predict.ts`): the confirmed state stepped forward with its own unacked inputs, other players holding their last known buttons. When new bundles arrive, the copy is rebuilt from the confirmed state (rollback + re-simulate, ≤ 24 frames). Events (sounds/fx) are emitted the first time a frame is simulated, predicted or confirmed, never twice. Lobby, pick and place use confirmed state only (they're latency tolerant).
+The host plays with zero input delay. A guest renders a predicted copy: the confirmed state stepped forward with its unacked inputs, others holding their last known buttons. New bundles rebuild it from the confirmed state (rollback + re-simulate, at most 24 frames). Events are emitted the first time a frame is simulated, never twice.
 
-### Joining, reconnecting, migrating
+### Pick and place
 
-- **Join / reconnect**: a guest says `hello`; the host replies with a **snapshot** (`snapshot.ts`: the whole Match minus the level, which is regenerated from its seed with bomb craters patched on), ack state, last inputs and replicated NetState. Snapshots are ~10–60 KB. Chosen over replaying the input log because they're bounded in size and also serve resync and migration.
-- **Refresh mid-match**: the player stays seated but `away` (auto-picks, forfeits placement, pops at GO, so nobody waits); on return the host clears `away`: same slot, character, name and score.
+`Player.cursor`, `claim` and `rot` are match state, so every peer sees every cursor, card hover and ghost part, with its rotation and valid/invalid colour. Rendering isn't filtered to the local player.
+
+- **Cursors are presentation-corrected, never predicted into the sim.** The view in pick and place is a copy of the confirmed match that is never stepped: a guest's own cursor runs ahead through its unacked inputs, so it doesn't lag a round trip, and remote cursors glide between bundles. Mouse positions cross the wire only when they move, keyboard and gamepad cursors as held buttons, so an idle peer costs nothing and a held direction keeps moving.
+- **Claims are never predicted.** A click marks the card pending (`pendingCard`, a highlight only) until the host's bundle rules on it. The first click the host sequences wins; two in one frame go to the lower slot; everyone gets the same answer at the same frame, so a loser never sees a claim revoked. The timeout hand-out is seeded from the match, at a sequenced frame, so it agrees too.
+
+### Joining and reconnecting
+
+- **Join / reconnect**: a guest says `hello`; the host replies with a **snapshot**: the whole Match minus the level, which is regenerated from its seed with bomb craters patched on, plus ack state and last inputs. Bounded in size, and it also serves resync and migration.
+- **Refresh mid-match**: the player stays seated but `away` (auto-picks, forfeits placement, pops at GO, so nobody waits); on return they get the same slot, character, name and score.
 - **Refresh in the lobby**: the player is removed but parked with their character; on return they're re-seated with the same look.
-- **Join mid-match**: spectate (synced, no slot) until the next round boundary (score/victory/lobby), then the host seats the peer's main device.
-- **Migration**: the new host continues from its last confirmed frame using the ack/last-input state every peer tracks from bundles, and broadcasts a snapshot so anyone who was a frame ahead or behind lines up. No state is lost; at worst a few frames of the old host's last unsent inputs.
-- **Lost link**: a host whose link drops freezes if other machines' players are in the match (resuming alone would fork the room) and shows "reconnecting"; when it's back it follows whoever is host now.
+- **Join mid-match**: spectate until the next round boundary, then the host seats the peer's main device.
 
 ### Desync detection
 
-Every 60 frames each guest hashes its confirmed state (FNV-1a over the canonical snapshot) and reports it; on mismatch the host sends that guest a snapshot. Tests assert zero desyncs in normal play.
+Every 60 frames each guest hashes its confirmed state (FNV-1a over the canonical snapshot) and reports it. On a mismatch the host sends that guest a snapshot.
 
 ### Cross-browser determinism
 
-IEEE-754 `+ - * /` and `Math.sqrt` are exact everywhere, but `Math.sin/cos/atan2/exp/pow/hypot/…` (and `**`) are implementation-approximated. `src/core/dmath.ts` provides fdlibm ports (`dsin`, `dcos`, `datan`, `datan2`, `dhypot`, `dexp`, `dlog`, `dpow`) built from exact operations only; `tests/determinism-ban.test.ts` fails if banned calls (or `Math.random`) appear in `src/sim`, `src/game`, `src/core`, `src/gen/{props,character,names}.ts`, `src/gen/setpieces`, `src/gen/theme`, `src/themes.ts`.
+IEEE-754 `+ - * /` and `Math.sqrt` are exact everywhere, but `Math.sin/cos/atan2/exp/pow/hypot/…` and `**` are implementation-approximated. `src/core/dmath.ts` has fdlibm ports built from exact operations only. `src/sim`, `src/gen` and `src/game` use them, and `.oxlintrc.json` bans the engine versions there.
 
-**Pending**: `src/gen/level/**` (worldgen, being rewritten) still uses `Math.*` (currently `src/gen/level/kit.ts`). Swap and add it to `ROOTS` in the ban test. Until then, levels are generated identically only if every browser's libm agrees for those calls, which is very likely for the few calls involved but not guaranteed.
+## HUD
 
-## HUD interface
-
-`src/net/client.ts` exports `NetHudInfo`, attached as `renderer.hud.net` (declare `net?: NetHudInfo` on the HUD class):
-
-- `status`: `'offline' | 'connecting' | 'online' | 'reconnecting' | 'unavailable'`; `transport`: `'relay' | 'broadcast' | null`
-- `notice`: one-line explanation when limited ("Online play is not set up…", "Reconnecting…", "Joining…"), `''` otherwise
-- `isHost`, `selfId`, `paused` (guest waiting for snapshot / host frozen while reconnecting), `inviteUrl`
-- `peers()`: `PeerInfo[]` (`id, order, isHost, isSelf, ping (ms to host), quality ('good'|'ok'|'bad'|'unknown'), slots, name`)
-- `isLocal(device)`, `peerOf(device)`: which players belong to this machine
-- A HUD button with `action: 'invite'` is already handled by `game-client.ts` (copies the link).
+`RoomConnection.hudInfo()` is `renderer.hud.net`: the status line, peers (crown, ping) and invite link in the lobby's online panel. `toast()` covers the states that freeze a race, because the panel only shows in the lobby. A guest waiting for the host shows `Joining…`, and a host gathering the room shows `Migrating Host…`.
 
 ## Testing
 
-- `tests/net.test.ts`: election and migration (join order, leave, rejoin, empty room), 4 peers with latency/jitter/5% loss playing full rounds to identical hashes, desync detection and resync, refresh restores slot (mid-match and lobby), late join mid-race (identical state, seated next round), host leaving mid-race.
-- `tests/relay.test.ts`: relay room logic. `tests/snapshot.test.ts`: snapshot round trips per phase. `tests/dmath.test.ts`, `tests/determinism-ban.test.ts`.
-- `pnpm online-test`: headless Chromium, three pages on one room over BroadcastChannel and over the WebSocket relay: join, ready, race, close the host (abruptly, for the relay), verify takeover, identical hashes, refresh → same slot, next round.
+- `tests/signal-handlers.test.ts`: the store (reply shapes, Upstash request format, either env pair), handlers (join order, TTLs, caps, validation, command costs) and the HTTP edge.
+- `tests/webrtc-transport.test.ts`: the real transport, handlers and store over a fake RTC network and clock: linking, polling stopping, the measured budget, crash and goodbye migrations, double failure, flaky guests, rival hosts, resuming from the furthest frame.
+- `tests/net.test.ts`, `tests/net-pick.test.ts`: lockstep under latency and loss, desync recovery, refresh, late join; claim races, pending cards, remote cursors and ghosts, the input codec.
+- `tests/snapshot.test.ts`, `tests/dmath.test.ts`.
+- `pnpm online-test`: real WebRTC between headless Chromium pages, one context per peer, against the real routes with the in-memory store. Hosts are killed with a renderer crash (no pagehide, no goodbye) in pick, place and run; also a graceful leave, and a new host dying straight after taking over. Each prints seconds to recovery and compares state hashes.
+
+**Not exercised by any of this:** real Upstash, real NAT traversal (all pages share a machine and connect over host candidates), TURN, browsers other than Chromium, and real phones.
 
 ## Next steps
 
-- **Full rollback for everyone**: prediction already re-simulates races on guests; the host could also run a few frames of input delay so guests' inputs land on time more often (fewer corrections).
-- **WebRTC data channels** for the hot path, keeping the Durable Object for presence and signaling (it already provides an ordered, authoritative channel for SDP exchange). Saves relay messages and a hop of latency for pairs that can connect directly; fall back to the relay otherwise.
-- **Spectator UX**: a "spectating, you'll join next round" banner; let spectators pick which local devices join.
-- **Snapshot compression** (delta against the last snapshot) if rooms with many placed props get large.
-- **Host prefers visible tabs**: a hidden host keeps ticking via a worker timer, but browsers may throttle it; a "hand off host" action could help.
+- **Full rollback for everyone**: the host could run a few frames of input delay so guests' inputs land on time more often.
+- **Spectator UX**: a banner, and a choice of which local devices join.
+- **Hand off host** from a hidden tab: a hidden host keeps ticking via a worker timer, but browsers may throttle it.
+- **Snapshot compression** if rooms with many placed props get large.

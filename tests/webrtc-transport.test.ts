@@ -391,7 +391,6 @@ describe('host migration', () => {
     const w = new World();
     const [, b] = await w.room('aaaa', 'bbbb', 'cccc');
     await w.run(35_000);
-    expect(b.signal.polls).toBeGreaterThanOrEqual(0);
     const before = b.signal.polls;
     w.crash('aaaa');
     await w.run(3500);
