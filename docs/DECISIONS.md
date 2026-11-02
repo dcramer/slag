@@ -178,7 +178,7 @@ Every game design decision, preference and direction the owner has given, groupe
 - **The plumber carries his plunger low, its cup behind his shoulder, so the cap, bill and nose own his silhouette.** (answer: "Carry it lower")
   2026-11-02 · `done` · CHARACTERS.md → Roster
 - **Character source art (models and sheets) lives in Git LFS; builds skip it and use the generated frames.** (answer: "Git LFS")
-  2026-11-02 · `open` (the owner runs `git lfs install`) · `tools/art3d/README.md`
+  2026-11-02 · `done` · `.gitattributes`, `tools/art3d/README.md`
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
   2026-11-02 · `done` · public/ASSETS.md
 

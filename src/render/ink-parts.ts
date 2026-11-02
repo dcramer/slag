@@ -3,7 +3,7 @@ import type { Vec } from '../core/geom';
 import { hash2 } from '../core/rng';
 import { TILE } from '../sim/constants';
 import type { Decor } from './decor';
-import { blob, line, type P, shadeOf, sn, stroke } from './ink';
+import { blob, inkFor, line, type P, shadeOf, sn, stroke } from './ink';
 import type { MetalPalette, RC } from './kit';
 
 /**
@@ -12,8 +12,12 @@ import type { MetalPalette, RC } from './kit';
  * find out what a part costs in this style: each of these is a rewrite of that part's art, not a filter.
  */
 
-/** The pen's own dark, as `INK` in ink-props.ts (which imports this file, so it can't import that). */
-const INK = '#2a1c15';
+/** A saw blade's bright steel; its pen and speed stroke are a dark of it. */
+const BLADE: HSL = { h: 214, s: 17, l: 84 };
+/** A thorn's steel, between its lit and shaded halves. */
+const THORN: HSL = { h: 220, s: 12, l: 72 };
+/** The default rail a thorn row stands on. */
+const RAIL: HSL = { h: 225, s: 12, l: 20 };
 
 /** Stroke round a closed shape in `n` overlapping pieces, heavier where it faces away from the light. */
 export function inkLoop(g: CanvasRenderingContext2D, pts: readonly P[], cx: number, cy: number, seed: number, thin: number, thick: number, pieces = 3) {
@@ -84,14 +88,15 @@ export function inkSaw(rc: RC, x: number, y: number, R: number, rot: number, pal
   s.fill('evenodd');
   s.restore();
   s.rotate(rot);
-  s.fillStyle = INK;
+  s.fillStyle = inkFor(BLADE);
   s.lineJoin = 'round';
   stroke(s, [...pts, pts[0], pts[1]], { w: 0.66, seed, taper: [0.01, 0.01], press: 0.35 });
   // Disc, holes and a bolt.
   s.fillStyle = css(pal.base, 8);
   blob(s, 0, 0, R * 0.5, seed + 1, 1, 0.05);
   s.fill();
-  s.fillStyle = INK;
+  // Holes, the bolt and the ring are cut in the hub, so they ink in a dark of it.
+  s.fillStyle = inkFor(pal.base);
   for (let i = 0; i < 3; i++) {
     const a = (i / 3) * Math.PI * 2;
     blob(s, Math.cos(a) * R * 0.31, Math.sin(a) * R * 0.31, R * 0.1, seed + 2 + i, 1, 0.14);
@@ -123,7 +128,7 @@ export function inkSaw(rc: RC, x: number, y: number, R: number, rot: number, pal
       const a = a0 + (i / 8) * 1.05;
       arc.push({ x: Math.cos(a) * (R + 2.4), y: Math.sin(a) * (R + 2.4) });
     }
-    s.fillStyle = k === 1 ? INK : 'rgba(250,250,255,0.9)';
+    s.fillStyle = k === 1 ? inkFor(BLADE) : 'rgba(250,250,255,0.9)';
     stroke(s, arc, { w: 1.15, seed: seed + k, taper: [0.5, 0.5], press: 0.1 });
   }
   s.restore();
@@ -141,7 +146,7 @@ export function inkWood(s: CanvasRenderingContext2D, cells: readonly (readonly [
       s.fillStyle = css(base, (b === 1 ? -5 : b === 2 ? -11 : 3) + (r(b) - 0.5) * 8);
       s.fillRect(px, py + (b * TILE) / 3, TILE, TILE / 3 + 0.3);
     }
-    s.fillStyle = INK;
+    s.fillStyle = css(base, -30, 1, 6);
     for (let b = 1; b < 3; b++)
       line(s, px + 0.5, py + (b * TILE) / 3, px + TILE - 0.5, py + (b * TILE) / 3 + (r(b + 3) - 0.5) * 1.2, { w: 1, seed: seed + b, taper: [0.1, 0.25] });
     s.fillStyle = css(base, -24, 1, 6);
@@ -151,11 +156,11 @@ export function inkWood(s: CanvasRenderingContext2D, cells: readonly (readonly [
       line(s, gx, gy, gx + 3 + r(k + 17) * 3.5, gy + (r(k + 21) - 0.5), { w: 0.6, seed: seed + k, taper: [0.3, 0.6] });
     }
     // The cross brace is what says "crate" at this size.
-    s.fillStyle = INK;
+    s.fillStyle = inkFor(base);
     line(s, px + 1.2, py + 1.6, px + TILE - 1.4, py + TILE - 1.6, { w: 2.96, seed: seed + 5, taper: [0.03, 0.03], press: 0.15 });
     s.fillStyle = css(base, 14);
     line(s, px + 1.2, py + 1.6, px + TILE - 1.4, py + TILE - 1.6, { w: 2, seed: seed + 6, taper: [0.03, 0.03], press: 0.15 });
-    s.fillStyle = INK;
+    s.fillStyle = inkFor(base);
     for (const [nx, ny] of [
       [2.6, 2.6],
       [13.2, 2.8],
@@ -209,13 +214,13 @@ export function inkHay(g: CanvasRenderingContext2D, d: Decor) {
     const sy = y - h * 0.1 + hash2(i, 6, seed) * h * 0.6;
     line(g, sx, sy, sx + 2 + hash2(i, 7, seed) * 3, sy + (hash2(i, 8, seed) - 0.5) * 1.6, { w: 0.55, seed: seed + i + 20, taper: [0.3, 0.6] });
   }
-  g.fillStyle = INK;
+  g.fillStyle = inkFor(d.color);
   for (const f of [-0.2, 0.22]) {
     const tx = x + f * w;
     line(g, tx, y - h / 2 - 0.3, tx + sn(f * 9, 1, seed) * 0.8, y + h / 2 + 0.3, { w: 0.8, seed: seed + 30, taper: [0.03, 0.03], press: 0.2 });
   }
   g.restore();
-  g.fillStyle = INK;
+  g.fillStyle = inkFor(d.color);
   inkLoop(g, pts, x, y, seed + 40, 0.85, 1.7, 3);
 }
 
@@ -233,7 +238,7 @@ export function inkFence(g: CanvasRenderingContext2D, d: Decor) {
       const t = i / 10;
       pts.push({ x: x0 - 2 + (w + 4) * t, y: d.y + a + (b - a) * t + Math.sin(t * Math.PI) * 0.5 });
     }
-    g.fillStyle = INK;
+    g.fillStyle = inkFor(c);
     stroke(g, pts, { w: 2.48, seed: seed + 1, taper: [0.02, 0.02], press: 0.2 });
     g.fillStyle = css(c, 2);
     stroke(g, pts, { w: 1.7, seed: seed + 2, taper: [0.02, 0.02], press: 0.2 });
@@ -241,7 +246,7 @@ export function inkFence(g: CanvasRenderingContext2D, d: Decor) {
   for (let i = 0; i <= d.span; i++) {
     const px = x0 + i * TILE - (i === d.span ? 2 : 0);
     const lean = (hash2(i, 3, seed) - 0.5) * 1.8;
-    g.fillStyle = INK;
+    g.fillStyle = inkFor(c);
     line(g, px + 1 + lean, d.y - 11.6, px + 1, d.y + 1, { w: 3.34, seed: seed + i, taper: [0.03, 0], press: 0.15 });
     g.fillStyle = css(c, -6);
     line(g, px + 1 + lean, d.y - 11.2, px + 1, d.y + 1, { w: 2.5, seed: seed + i + 9, taper: [0.03, 0], press: 0.15 });
@@ -255,10 +260,10 @@ export function inkFence(g: CanvasRenderingContext2D, d: Decor) {
  * +x (`angle` is that frame's rotation, so the shadow side stays away from the light). Each thorn is two
  * flat tones split down its spine, a pen line heavier on its dark side, and a red tip that says "ow".
  */
-export function inkThorns(s: CanvasRenderingContext2D, angle: number, seed: number, rail = '#2c2f38') {
+export function inkThorns(s: CanvasRenderingContext2D, angle: number, seed: number, rail = css(RAIL)) {
   // Which half of a thorn faces the light: the one on local -y, turned into the world.
   const upLit = shadeOf(Math.sin(angle), -Math.cos(angle)) < 0.5;
-  s.fillStyle = INK;
+  s.fillStyle = inkFor(RAIL);
   line(s, 7.6, -7.8, 7.6, 7.8, { w: 2.52, seed, taper: [0.05, 0.05], press: 0.2 });
   s.fillStyle = rail;
   line(s, 7.3, -7.2, 7.3, 7.2, { w: 1.5, seed: seed + 1, taper: [0.05, 0.05], press: 0.2 });
@@ -282,7 +287,7 @@ export function inkThorns(s: CanvasRenderingContext2D, angle: number, seed: numb
     tri(a, tip, mid, upLit ? '#eef1f6' : '#8a909c');
     tri(mid, tip, b, upLit ? '#8a909c' : '#eef1f6');
     tri({ x: tip.x - 2.6, y: tip.y - 0.75 }, tip, { x: tip.x - 2.6, y: tip.y + 0.75 }, '#c0182a');
-    s.fillStyle = INK;
+    s.fillStyle = inkFor(THORN);
     stroke(s, [a, tip], { w: upLit ? 0.7 : 1.3, seed: seed + i, taper: [0.1, 0.6], press: 0.2 });
     stroke(s, [b, tip], { w: upLit ? 1.3 : 0.7, seed: seed + i + 5, taper: [0.1, 0.6], press: 0.2 });
   }
