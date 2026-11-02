@@ -28,3 +28,35 @@ World art follows the ink rules in `docs/ART.md`. `ink.ts` is the pen and the ou
 - A stage concept's landmark draws its tiles in `Level.landmark.skin` (`skinOf` in `ink-terrain.ts`, looks in `SKIN_LOOKS`): the skin's material, cap and boards inside its box, a footing where it stands on the theme's ground, and none of the theme's grass, hangers, veins or decor on it. Its backdrop shells are deco kinds in `props/modules/deco-shells.ts`. Check skins with `pnpm shot landmarks` and `pnpm shot inkblast --skin K`.
 - Run `pnpm shot inkblast --seed S --theme T` after changing terrain art. It bites craters out of a level and compares each partial redraw against a full bake. A large `wrong` means a mark isn't keyed to the world: a few faint pixels are antialiasing where strokes overlap.
 - `PW_GPU=1` runs `pnpm shot` and `pnpm perf` on the machine's real GPU, still headless. `pnpm shot inkdraw` times the cel pass alone, and `pnpm perf --cpu 4` slows the main thread to stand in for a phone.
+
+## Drawing a landmark, hazard or decor piece
+
+Theme art shares the screen with the terrain, the crate parts and the runners, so it has to look drawn by the same hand: a light pen in a dark of each colour, two flat tones and a few marks. The rules are docs/ART.md → World art; this is how to meet them with the kit (`ink-props.ts`, `ink.ts`, `kit.ts`).
+
+| Do                                                                                                                                                           | Don't                                                                                      |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| A body is `part(g, boxPts(…) / ovalPts(…) / poly(…), base, seed, { depth, thin: 0.4–0.6, thick: 1–1.4 })`: hand-cut shape, two tones, pen in `inkFor(base)`. | `fillRect` or `rect` for a body, `tone` with no pen, or a pen in `INK`.                    |
+| A post, spar, rope, pipe or strut is `barLine(g, ax, ay, bx, by, w, colour, seed, { lit: 14 })` or `bar(g, pts, …)`: rim 0.3 a side in a dark of it.         | `g.fillStyle = INK; line(… w + 1 …)` and the colour over it: a black marker rim.           |
+| Marks are `tick(g, …, 0.3–0.6, seed, css(surface, -30))`, at most three a tile, lifted and uneven.                                                           | A ruled grid: planks, lattice or clapboard every few px at one width with `taper: [0, 0]`. |
+| A rivet or hole is `dot(g, x, y, r, seed, fleck, inkFor(plate))`; a hole's fill is `css(surface, -35)`.                                                      | `'#111'`, `'#120c08'` or any hard-coded near-black.                                        |
+| A lamp, lens or gem is a flat `bulb`; only fire, lava and sparks glow (`glowDot` on `rc.g`); an arc is `zap` on `rc.g`.                                      | Gradients, soft halos on cold things, raw `ctx.stroke()`.                                  |
+| Solid things on `rc.s`; smoke, steam, dust and anything thin or translucent on `rc.bg`.                                                                      | Washes and faint strokes on `rc.s`: the cel pass inks their edges into black scrub.        |
+| Colour from the theme or the piece's style (`d.pal`, `th.terrain`, `d.style`), calm enough to survive the cel pass's chroma knee.                            | Saturated primaries on big areas: a blue cart box next to a brown field.                   |
+| Let the cel pass cast the shadow; `tone` gives the shape its own shade.                                                                                      | A painted drop shadow under the piece: it doubles the cel shadow.                          |
+| A big flat surface (a hull, a wall, a sail) gets a second tone cut as a shape and two or three marks.                                                        | A big flat fill with one colour and nothing on it, or one with a mark every tile.          |
+
+Sizes: the pen's `thin`/`thick` are relative weights (× `PEN.weight`, 0.62), so 0.45/1.1 draws 0.28–0.68 world px. A bar keeps its width: a rope 0.8–1.2, a post 1.6–3. A mark is lighter than the contour round it.
+
+```ts
+/** A milk churn: a hand-cut tin body, a lid, a handle bar and two marks. Baked once, stamped. */
+function churn(g: CanvasRenderingContext2D, x: number, y: number, seed: number) {
+  const tin: HSL = hsl3(205, 8, 66);
+  part(g, poly(x - 3.4, y, x - 3.6, y - 7, x - 2, y - 9, x + 2, y - 9, x + 3.6, y - 7, x + 3.4, y), tin, seed, { depth: 0.8, thin: 0.4, thick: 1 });
+  part(g, boxPts(x - 2.4, y - 10.6, 4.8, 1.8, 0.6, seed + 1), tin, seed + 1, { depth: 0.3, thin: 0.35, thick: 0.8 });
+  barLine(g, x - 2.2, y - 6.4, x + 2.2, y - 6.4, 0.7, hsl3(205, 6, 48), seed + 2);
+  tick(g, x - 3.2, y - 3, x + 3.2, y - 3.1, 0.4, seed + 3, css(tin, -28));
+  dot(g, x + 1.6, y - 4.4, 0.4, seed + 4, undefined, inkFor(tin));
+}
+```
+
+Check it: `pnpm shot artqa --theme T` (`--only landmarks|hazards|decor`) shoots every landmark, hazard and decor piece of a theme mid-race beside its terrain and three parts, at play scale and 2×; open the crops and compare the pen, the tones and the marks with the ground and the parts in the same frame. `tests/ink-rules.test.ts` fails on the mechanical faults (raw strokes, `INK`, a pen helper left on its near-black default, hard-coded near-blacks, gradients) in theme art, and every new `decor-<theme>.ts` or skin file is held to it by name.

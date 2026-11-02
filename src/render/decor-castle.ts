@@ -34,25 +34,12 @@ const at = (d: Decor, ...xy: number[]) => {
 const X = (d: Decor, x: number) => d.x + x * d.size * fx(d);
 const Y = (d: Decor, y: number) => d.y + 0.5 + y * d.size;
 
-/** A polyline cut every couple of px, so a tapered stroke along it keeps its width between its ends. */
-function dense(pts: readonly P[]): P[] {
-  const out: P[] = [pts[0]];
-  for (let i = 1; i < pts.length; i++) {
-    const a = pts[i - 1];
-    const b = pts[i];
-    const n = Math.max(2, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 2.5));
-    for (let k = 1; k <= n; k++) out.push({ x: a.x + ((b.x - a.x) * k) / n, y: a.y + ((b.y - a.y) * k) / n });
-  }
-  return out;
-}
-
 /** A rod, haft or rope: a ribbon in a dark of its colour with the colour over it. */
 function rod(s: CanvasRenderingContext2D, pts: readonly P[], w: number, c: HSL, seed: number) {
-  const d = dense(pts);
   s.fillStyle = inkFor(c);
-  stroke(s, d, { w: w + 0.8, seed, taper: [0.02, 0.15], press: 0.1 });
+  stroke(s, pts, { w: w + 0.8, seed, taper: [0.02, 0.15], press: 0.1 });
   s.fillStyle = css(c);
-  stroke(s, d, { w, seed: seed + 1, taper: [0.02, 0.25], press: 0.1 });
+  stroke(s, pts, { w, seed: seed + 1, taper: [0.02, 0.25], press: 0.1 });
 }
 
 /** Flat shapes in two tones with the light pen round them. */
@@ -186,17 +173,22 @@ export const CASTLE_DECOR = {
   rubble: {
     color: (th) => th.terrain.base,
     bake(s, d) {
-      // Fallen masonry: dressed blocks tumbled off a wall, one cracked, one on its corner.
-      const c = d.color;
-      shape(s, at(d, -6.6, 0, -1.2, 0, -1.4, -3.4, -6.4, -3.6), shift(c, 0, 0, -4), sd(d), 0.6);
-      shape(s, at(d, -0.6, 0, 5.4, 0, 5.6, -3, -0.4, -3.2), c, sd(d) + 1, 0.6);
-      shape(s, at(d, -3.6, -3.4, 0.4, -6.8, 3.8, -3.2), shift(c, 0, 0, 6), sd(d) + 2, 0.5);
-      tick(s, X(d, 1.6), Y(d, -0.4), X(d, 2.6), Y(d, -2.4), 0.35, 3, inkFor(c));
-      for (let i = 0; i < 3; i++) {
-        s.fillStyle = css(c, -6);
-        blob(s, X(d, 6.8 + i * 1.4), Y(d, -0.5), 0.6 * d.size, sd(d) + i, 1, 0.2);
-        s.fill();
-      }
+      // Fallen masonry: dressed blocks tumbled off a wall, one cracked, one on its corner, chips round them.
+      // Dressed stone is paler than the rubble core it fell from, so it reads off the ground it lies on.
+      const c = shift(d.color, 0, -4, 12);
+      shape(s, at(d, -8.4, 0, -1.6, 0, -1.8, -4.6, -8.2, -4.8), shift(c, 0, 0, -6), sd(d), 0.9);
+      shape(s, at(d, -0.8, 0, 7.2, 0, 7.4, -4, -0.6, -4.3), c, sd(d) + 1, 0.9);
+      shape(s, at(d, -4.6, -4.5, 0.6, -9.2, 5.2, -4.4), shift(c, 0, 0, 8), sd(d) + 2, 0.7);
+      tick(s, X(d, 2.2), Y(d, -0.5), X(d, 3.6), Y(d, -3.2), 0.45, 3, inkFor(c));
+      tick(s, X(d, -6.6), Y(d, -2.2), X(d, -3.4), Y(d, -2.4), 0.4, 4, css(c, -16));
+      for (let i = 0; i < 3; i++)
+        shape(
+          s,
+          ovalPts(X(d, 8.8 + i * 1.8), Y(d, -0.7 - (i % 2) * 0.3), (0.9 - i * 0.15) * d.size, 0.7 * d.size, sd(d) + i + 5, 0.2, 8),
+          shift(c, 0, 0, -4),
+          sd(d) + i + 5,
+          0.2,
+        );
     },
   },
   cobweb: {
@@ -207,15 +199,15 @@ export const CASTLE_DECOR = {
       const g = rc.bg;
       const k = d.size;
       const dir = fx(d);
-      const R = 10 * k;
+      const R = 13 * k;
       const spokes = 4;
-      g.fillStyle = css(d.color, 0, 0.55);
+      g.fillStyle = css(d.color, 6, 0.85);
       const ends: P[] = [];
       for (let i = 0; i <= spokes; i++) {
         const a = (i / spokes) * (Math.PI / 2);
         const e = { x: d.x + dir * Math.cos(a) * R, y: d.y + Math.sin(a) * R * 0.9 };
         ends.push(e);
-        line(g, d.x, d.y, e.x, e.y, { w: 0.35, seed: i, taper: [0, 0.4], press: 0 });
+        line(g, d.x, d.y, e.x, e.y, { w: 0.5, seed: i, taper: [0, 0.4], press: 0 });
       }
       for (let r = 0.35; r < 1; r += 0.3)
         for (let i = 0; i < spokes; i++) {
@@ -224,7 +216,7 @@ export const CASTLE_DECOR = {
           const p0 = { x: d.x + (a.x - d.x) * r, y: d.y + (a.y - d.y) * r };
           const p1 = { x: d.x + (b.x - d.x) * r, y: d.y + (b.y - d.y) * r };
           const mid = { x: (p0.x + p1.x) / 2 - dir * 0.8 * r, y: (p0.y + p1.y) / 2 + 0.9 * r };
-          stroke(g, [p0, mid, p1], { w: 0.3, seed: i * 7 + r * 10, taper: [0, 0], press: 0 });
+          stroke(g, [p0, mid, p1], { w: 0.42, seed: i * 7 + r * 10, taper: [0.1, 0.1], press: 0 });
         }
     },
   },

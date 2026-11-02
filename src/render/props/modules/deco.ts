@@ -2,8 +2,8 @@ import { css, type HSL } from '../../../core/color';
 import { frac } from '../../../core/geom';
 import { hash2 } from '../../../core/rng';
 import type { ModuleOf } from '../../../sim/props';
-import { line } from '../../ink';
-import { ball, boxPts, dot, INK, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
+import { inkFor, line } from '../../ink';
+import { ball, bar as inkBar, boxPts, dot, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import { bulb, circle, light, type MetalPalette, METALS, type RC } from '../../kit';
 import { BACKDROP, type DrawCtx, defineArt } from '../common';
 import { lattice } from './setpiece';
@@ -20,11 +20,14 @@ type Deco = ModuleOf<'deco'>;
 
 const palKey = (pal: MetalPalette) => `${pal.base.h},${pal.base.l}`;
 
-/** Hazard bands across a rect, inside a clip the caller has set. */
+const TAPE: HSL = { h: 45, s: 94, l: 48 };
+const RUBBER: HSL = { h: 220, s: 8, l: 24 };
+
+/** Hazard bands across a rect, inside a clip the caller has set: the tape's stripes in a dark of the tape. */
 function bands(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
-  g.fillStyle = '#f2b705';
+  g.fillStyle = css(TAPE);
   g.fillRect(x, y, w, h);
-  g.fillStyle = INK;
+  g.fillStyle = inkFor(TAPE);
   for (let k = x - h; k < x + w + h; k += 4) {
     path(g, poly(k, y + h, k + 2, y + h, k + 2 + h, y, k + h, y));
     g.fill();
@@ -44,9 +47,9 @@ function press(w: number, h: number, pal: MetalPalette) {
       g.fillRect(px + 3.5, 8, 3, h - 8);
       bands(g, px, h - 12, 10, 8);
       g.restore();
-      pen(g, post, px + 1, 0.55, 1.4);
+      pen(g, post, px + 1, 0.5, 1.2, 3, inkFor(pal.base));
       part(g, boxPts(px - 3, h - 3, 16, 3, 0.6, px + 2), METALS.steel.base, px + 2, { depth: 0.5, thin: 0.45, thick: 1 });
-      for (const rx of [px - 1, px + 11]) dot(g, rx, h - 1.5, 0.55, rx, css(METALS.steel.light));
+      for (const rx of [px - 1, px + 11]) dot(g, rx, h - 1.5, 0.5, rx, css(METALS.steel.light), inkFor(METALS.steel.base));
     }
     const cx = w / 2;
     // Hydraulic cylinder housing and its hose.
@@ -60,8 +63,7 @@ function press(w: number, h: number, pal: MetalPalette) {
         y: u * u * u * -6 + 3 * u * u * t * -6 + 3 * u * t * t * -10,
       });
     }
-    g.fillStyle = INK;
-    for (let i = 1; i < hose.length; i++) line(g, hose[i - 1].x, hose[i - 1].y, hose[i].x, hose[i].y, { w: 1.26, seed: i, taper: [0, 0], press: 0 });
+    inkBar(g, hose, 1, RUBBER, 1, { press: 0 });
     const beam = boxPts(0, 0, w, 14, 1.6, 4, 0.15);
     tone(g, beam, pal.base, { depth: 1.6 });
     g.save();
@@ -69,8 +71,8 @@ function press(w: number, h: number, pal: MetalPalette) {
     g.clip();
     bands(g, 1, 10, w - 2, 3.5);
     g.restore();
-    pen(g, beam, 5, 0.55, 1.5);
-    for (let px = 4; px < w - 2; px += 6) dot(g, px, 3, 0.6, px, css(pal.light));
+    pen(g, beam, 5, 0.5, 1.3, 3, inkFor(pal.base));
+    for (let px = 4; px < w - 2; px += 9) dot(g, px, 3, 0.5, px, css(pal.light), inkFor(pal.base));
   });
 }
 
@@ -101,15 +103,16 @@ function pressLamp(rc: RC, m: Deco, d: DrawCtx) {
   if (pc && pc.type === 'piston') {
     const fx = pc.at[0] + d.off[0];
     const fy = m.at[1] + d.off[1] + m.h;
-    stamp(s, pancake(pc.width), fx, fy);
+    stamp(s, pancake(pc.width, d.o.level?.theme.terrain.dark ?? { h: 24, s: 20, l: 24 }), fx, fy);
   }
 }
 
 /** A pancake-shaped dent pressed into the floor, a pat of butter still on it. Flush with the floor. */
-function pancake(w: number) {
-  return sprite(`dc|pancake|${w | 0}`, -w / 2 - 2, -2, w + 4, 5, (g) => {
+function pancake(w: number, floor: HSL) {
+  return sprite(`dc|pancake|${w | 0}|${floor.h | 0},${floor.l | 0}`, -w / 2 - 2, -2, w + 4, 5, (g) => {
     const rx = Math.min(w * 0.42, 14);
-    g.fillStyle = 'rgba(20,10,6,0.55)';
+    // The dent: a dark of the floor, opaque (a wash on the play layer inks into scrub).
+    g.fillStyle = css(floor, -10);
     path(g, ovalPts(0, 0.9, rx, 1.1, 3, 0.05, 18));
     g.fill();
     g.fillStyle = '#c98a3e';
@@ -125,24 +128,14 @@ function acBody(w: number, h: number, hue: number, seed: number) {
   return sprite(`dc|ac|${w}|${h}|${hue | 0}|${seed % 4}`, -3, -3, w + 12, h + 6, (g) => {
     const body: HSL = { h: hue, s: 8, l: 74 };
     // Refrigerant lines into the roof.
-    g.fillStyle = INK;
-    for (const [ax, ay, bx, by] of [
-      [w - 2, h - 5, w + 4, h - 5],
-      [w + 4, h - 5, w + 4, h],
-    ])
-      line(g, ax, ay, bx, by, { w: 2.4, seed: ax, taper: [0, 0], press: 0 });
-    g.fillStyle = css(METALS.copper.base);
-    for (const [ax, ay, bx, by] of [
-      [w - 2, h - 5, w + 4, h - 5],
-      [w + 4, h - 5, w + 4, h],
-    ])
-      line(g, ax, ay, bx, by, { w: 1.2, seed: ax + 1, taper: [0, 0], press: 0 });
+    inkBar(g, poly(w - 2, h - 5, w + 4, h - 5, w + 4, h), 1.2, METALS.copper.base, 1, { press: 0 });
     const shell = boxPts(-0.5, -0.5, w + 1, h + 1, 2.4, 3, 0.12);
     tone(g, shell, body, { depth: 1.6 });
     g.save();
     path(g, shell);
     g.clip();
-    for (let yy = h - 4; yy > Math.max(13, h - 14); yy -= 2.4) tick(g, 2, yy, w - 2, yy, 0.7, yy, css(body, -32));
+    for (let yy = h - 4; yy > Math.max(13, h - 14); yy -= 3)
+      tick(g, 2 + hash2(yy | 0, 1, seed), yy, w - 2 - hash2(yy | 0, 2, seed) * 2, yy, 0.5, yy, css(body, -30));
     g.fillStyle = css(body, 20);
     g.fillRect(0, 0, w, 1.4);
     part(g, boxPts(w - 9, h - 6, 6, 3, 0.4, 4), { h: 210, s: 40, l: 38 }, 4, { depth: 0.2, thin: 0.25, thick: 0.5 });
@@ -151,9 +144,9 @@ function acBody(w: number, h: number, hue: number, seed: number) {
       tick(g, rx, 2, rx + 0.2, 4 + hash2(k, seed, 2) * (h - 6), 0.6, k, 'rgba(120,60,20,0.4)');
     }
     g.restore();
-    pen(g, shell, 5, 0.6, 1.5);
+    pen(g, shell, 5, 0.5, 1.2, 3, inkFor(body));
     for (const fx of [8, 24]) {
-      g.fillStyle = INK;
+      g.fillStyle = inkFor(body);
       path(g, ovalPts(fx, 8, 7.9, 7.9, fx, 0.02, 20));
       g.fill();
       g.fillStyle = css(body, -46);
@@ -172,9 +165,10 @@ function masts(w: number, h: number) {
   return sprite(`dc|masts|${w}|${h}`, -12, 8, w + 24, h - 6, (g) => {
     const top = 13;
     for (const [i, mx] of [8, w - 8].entries()) {
-      g.fillStyle = 'rgba(30,30,36,0.8)';
-      line(g, mx, top + 4, mx - 9, h, { w: 0.5, seed: i, taper: [0, 0], press: 0 });
-      line(g, mx, top + 4, mx + 9, h, { w: 0.5, seed: i + 1, taper: [0, 0], press: 0 });
+      // Guy wires, in a dark of the steel.
+      g.fillStyle = css(METALS.steel.dark);
+      line(g, mx, top + 4, mx - 9, h, { w: 0.5, seed: i, taper: [0.02, 0.04], press: 0.1 });
+      line(g, mx, top + 4, mx + 9, h, { w: 0.5, seed: i + 1, taper: [0.02, 0.04], press: 0.1 });
       lattice(g, mx, top, h, 5, METALS.steel);
       part(g, boxPts(mx - 5, h - 3, 10, 3, 0.6, i + 3), METALS.steel.base, i + 3, { depth: 0.5, thin: 0.45, thick: 1 });
       if (i === 0) part(g, ovalPts(mx - 5, top + 12, 2, 4.5, 7, 0.03, 14), METALS.steel.light, 7, { depth: 0.6, thin: 0.4, thick: 0.9 });
@@ -189,8 +183,8 @@ function antennaMasts(rc: RC, m: Deco, d: DrawCtx) {
   stamp(s, masts(m.w, m.h), x, y);
   for (const [i, mx] of [x + 8, x + m.w - 8].entries()) {
     const on = Math.floor(rc.t * 1.5 + i * 0.5) % 2 === 0;
-    s.fillStyle = INK;
-    circle(s, mx + 3.5, y + 19, 1.8);
+    s.fillStyle = inkFor(METALS.steel.base);
+    circle(s, mx + 3.5, y + 19, 1.7);
     s.fillStyle = on ? '#ff3a30' : '#601818';
     circle(s, mx + 3.5, y + 19, 1.2);
     if (on) bulb(rc.g, mx + 3.5, y + 19, 1.2, { h: 3, s: 100, l: 55 }, 0.9);

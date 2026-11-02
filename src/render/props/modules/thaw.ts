@@ -2,7 +2,7 @@ import { css, type HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { type ModuleOf, THAW_OPEN, THAW_WARN, thawCycle, thawSolid, thawWater, WATERLINE } from '../../../sim/props';
-import { line } from '../../ink';
+import { inkFor, line } from '../../ink';
 import { boxPts, glint, pen, poly, tick, tone } from '../../ink-props';
 import type { RC } from '../../kit';
 import { type DrawCtx, defineArt } from '../common';
@@ -18,7 +18,8 @@ import { type DrawCtx, defineArt } from '../common';
 type Thaw = ModuleOf<'thaw'>;
 
 const ICE: HSL = { h: 196, s: 50, l: 84 };
-const ICE_INK = '#1d4660';
+/** The pen round the ice: a dark of the ice itself. */
+const ICE_INK = inkFor(ICE);
 
 const waterOf = (d: DrawCtx): HSL => {
   const c = d.o.level?.theme.liquid.color;
@@ -63,7 +64,7 @@ function cracks(rc: RC, m: Thaw, x0: number, x1: number, y: number, k: number) {
       const len = (4 + hash2(i, j + 8, m.seed) * 9) * k;
       const ex = Math.max(x0 + 0.5, Math.min(x1 - 0.5, cx + Math.cos(a) * len));
       const ey = Math.max(y + 0.6, Math.min(y + TILE - 0.6, cy + Math.sin(a) * len * 0.45));
-      s.fillStyle = k > 0.6 ? '#0e2a3c' : ICE_INK;
+      s.fillStyle = k > 0.6 ? css(ICE, -68) : ICE_INK;
       line(s, cx, cy, ex, ey, { w: 0.35 + 0.35 * k, seed: i * 7 + j, taper: [0.1, 0.7], press: 0.2 });
     }
   }

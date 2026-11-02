@@ -2,7 +2,7 @@ import { css, type HSL, hsl3, shift } from '../core/color';
 import { hash2 } from '../core/rng';
 import type { Decor, DecorDef } from './decor';
 import { inkFor, line, type P, stroke } from './ink';
-import { boxPts, glint, ovalPts, part, path, pen, poly, tick, tone } from './ink-props';
+import { bar, barLine, boxPts, glint, ovalPts, part, path, pen, poly, tick, tone } from './ink-props';
 import { bulb, circle, flutter, light } from './kit';
 
 /**
@@ -33,19 +33,16 @@ const at = (d: Decor, ...xy: number[]) => {
   return out;
 };
 
-/** A stroke with an ink edge: a post, a rail, a pipe. */
+/** A post, a rail, a pipe: a bar in a thin rim of its own dark. */
 function rod(s: CanvasRenderingContext2D, pts: readonly P[], w: number, base: HSL, seed: number) {
-  s.fillStyle = inkFor(base);
-  stroke(s, pts, { w: w + 0.7, seed, taper: [0.02, 0.1], press: 0.1 });
-  s.fillStyle = css(base);
-  stroke(s, pts, { w, seed, taper: [0.02, 0.2], press: 0.1 });
+  bar(s, pts, w, base, seed, { rim: 0.3, taper: [0.02, 0.06], press: 0.1 });
 }
 
 /** A pigeon at (x, y) facing `dir`, its head down `peck` px: a grey body, a sheen at the neck, a bar on the wing. */
 function pigeon(s: CanvasRenderingContext2D, x: number, y: number, dir: number, k: number, peck: number, seed: number) {
   s.fillStyle = css(hsl3(350, 50, 60));
-  s.fillRect(x - 0.6 * k, y - 1.6 * k, 0.6, 1.6 * k);
-  s.fillRect(x + 0.8 * k, y - 1.6 * k, 0.6, 1.6 * k);
+  s.fillRect(x - 0.6 * k, y - 1.6 * k, 0.7, 1.6 * k);
+  s.fillRect(x + 0.8 * k, y - 1.6 * k, 0.7, 1.6 * k);
   const body = ovalPts(x, y - 3.4 * k, 3.6 * k, 2.2 * k, seed, 0.05, 14);
   part(s, body, PIGEON, seed, { depth: 0.5, thin: 0.3, thick: 0.7 });
   // The tail, out behind.
@@ -64,10 +61,12 @@ function pigeon(s: CanvasRenderingContext2D, x: number, y: number, dir: number, 
   circle(s, hx, hy, 1.45 * k);
   s.fillStyle = css(PIGEON, -6);
   circle(s, hx, hy, 1.1 * k);
-  s.fillStyle = css(hsl3(30, 20, 30));
-  s.fillRect(hx + dir * 1 * k - (dir < 0 ? 1.2 : 0), hy - 0.1, 1.2, 0.5);
-  s.fillStyle = '#ff9a3c';
-  s.fillRect(hx + dir * 0.3 * k, hy - 0.5, 0.45, 0.45);
+  // The beak, and the pale cere over it.
+  s.fillStyle = css(hsl3(30, 20, 34));
+  path(s, poly(hx + dir * 1 * k, hy - 0.4 * k, hx + dir * 2.3 * k, hy + 0.1 * k, hx + dir * 1 * k, hy + 0.35 * k));
+  s.fill();
+  s.fillStyle = css(PIGEON, 30);
+  s.fillRect(hx + dir * 0.9 * k - 0.35, hy - 0.55 * k, 0.7, 0.45);
 }
 
 /** A garment on the line at (x, y): a shirt, a sock pair, a towel or overalls, swinging `sw` with the wind. */
@@ -98,7 +97,7 @@ export const ROOFTOPS_DECOR = {
         const dir = (i + (d.flip ? 1 : 0)) % 2 ? -1 : 1;
         const t = rc.t * 1.1 + i * 1.7 + (d.seed % 13);
         const peck = Math.sin(t) > 0.9 ? 1.6 : 0;
-        pigeon(rc.s, d.x + (i - (n - 1) / 2) * 9, d.y + 0.5, dir, 1.2 * d.size, peck, sd(d) + i);
+        pigeon(rc.s, d.x + (i - (n - 1) / 2) * 10, d.y + 0.5, dir, 1.5 * d.size, peck, sd(d) + i);
       }
     },
   },
@@ -110,9 +109,12 @@ export const ROOFTOPS_DECOR = {
       const h = 13 * d.size;
       const pts = boxPts(d.x - w / 2, d.y - h, w, h + 0.5, 0.6, sd(d), 0.08);
       part(s, pts, shift(BRICK, 0, 0, (k01(d, 1) - 0.5) * 8), sd(d), { depth: 1, thin: 0.4, thick: 1 });
-      for (let y = d.y - 3; y > d.y - h + 2; y -= 3) tick(s, d.x - w / 2 + 0.6, y, d.x + w / 2 - 0.6, y, 0.35, y, css(BRICK, -18));
-      for (let y = d.y - 3, i = 0; y > d.y - h + 2; y -= 3, i++)
-        tick(s, d.x + (i % 2 ? -1 : 1.4), y, d.x + (i % 2 ? -1 : 1.4), y - 3, 0.3, y + 3, css(BRICK, -18));
+      // A few brick courses, lifted where the pen skipped, a header joint here and there.
+      for (let y = d.y - 3.5, i = 0; y > d.y - h + 2; y -= 4, i++) {
+        const cut = k01(d, i + 9) < 0.4;
+        tick(s, d.x - w / 2 + 0.8, y, cut ? d.x - 0.5 : d.x + w / 2 - 0.8, y, 0.35, y, css(BRICK, -18));
+        if (i % 2) tick(s, d.x + 1.2, y, d.x + 1.2, y - 3.6, 0.3, y + 3, css(BRICK, -18));
+      }
       part(s, boxPts(d.x - w / 2 - 1, d.y - h - 1.6, w + 2, 2, 0.4, sd(d) + 1, 0.05), hsl3(30, 6, 62), sd(d) + 1, { depth: 0.4, thin: 0.3, thick: 0.8 });
       const pots = 1 + (d.seed % 2);
       for (let i = 0; i < pots; i++) {
@@ -132,24 +134,27 @@ export const ROOFTOPS_DECOR = {
     color: () => GLASS,
     bake(s, d) {
       // A low pitched light on a curb: two glass slopes in a metal frame, the glazing bars over them.
-      const w = 14 * d.size;
-      const curb = 2.4;
+      const w = 17 * d.size;
+      const curb = 3;
       part(s, boxPts(d.x - w / 2, d.y - curb, w, curb + 0.5, 0.4, sd(d), 0.06), hsl3(30, 6, 54), sd(d), { depth: 0.4, thin: 0.3, thick: 0.8 });
-      const top = d.y - curb - 5 * d.size;
+      const top = d.y - curb - 7.5 * d.size;
       const roof = poly(d.x - w / 2 + 0.6, d.y - curb, d.x - 1.5, top, d.x + 1.5, top, d.x + w / 2 - 0.6, d.y - curb);
-      tone(s, roof, GLASS, { depth: 0.6 });
-      s.fillStyle = css(TIN, -10);
+      tone(s, roof, GLASS, { depth: 0.8 });
+      // The far slope in the glass's shade, the near one catching the sky.
+      s.fillStyle = css(GLASS, -6);
+      path(s, poly(d.x + 1.5, top, d.x + w / 2 - 0.6, d.y - curb, d.x + 1, d.y - curb));
+      s.fill();
       for (let i = 1; i < 4; i++) {
         const u = i / 4;
-        line(s, d.x - w / 2 + 0.6 + (w - 1.2) * u, d.y - curb, d.x - 1.5 + 3 * u, top, { w: 0.45, seed: i, taper: [0, 0], press: 0 });
+        barLine(s, d.x - w / 2 + 0.6 + (w - 1.2) * u, d.y - curb, d.x - 1.5 + 3 * u, top, 0.55, shift(TIN, -6), i, { rim: 0.2 });
       }
-      glint(s, poly(d.x - w / 2 + 2.4, d.y - curb - 0.8, d.x - 3.4, top + 1.6), 'rgba(220,235,255,0.6)', 0.6);
-      pen(s, roof, sd(d) + 1, 0.3, 0.8, 3, inkFor(GLASS));
+      glint(s, poly(d.x - w / 2 + 3, d.y - curb - 1, d.x - 4, top + 2), 'rgba(220,235,255,0.7)', 0.8);
+      pen(s, roof, sd(d) + 1, 0.35, 0.9, 3, inkFor(GLASS));
     },
     live(rc, d) {
       // Someone's home: a warm lamp under the glass at night.
       if ((d.seed >> 4) % 3 === 0) return;
-      light(rc, d.x, d.y - 4, 26, hsl3(40, 90, 66), 0.35);
+      light(rc, d.x, d.y - 5, 32, hsl3(40, 90, 66), 0.4);
     },
   },
   planter: {

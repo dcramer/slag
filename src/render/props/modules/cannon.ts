@@ -1,8 +1,8 @@
 import { css, type HSL } from '../../../core/color';
 import { TILE } from '../../../sim/constants';
 import { cannonMuzzle, cannonTiming, type ModuleOf } from '../../../sim/props';
-import { line, type P, stroke } from '../../ink';
-import { ball, boxPts, glint, INK, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
+import { inkFor, line, type P, stroke } from '../../ink';
+import { ball, bar, barLine, boxPts, glint, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import { glowDot, light, METALS, type RC } from '../../kit';
 import { type DrawCtx, defineArt } from '../common';
 import { wheel } from './setpiece';
@@ -20,6 +20,10 @@ type Cannon = ModuleOf<'cannon'>;
 /** Frames of visible warning before each volley. */
 const FUSE = 48;
 
+const ROPE: HSL = { h: 38, s: 35, l: 56 };
+/** Round shot: cast iron, cold and grey. */
+const SHOT: HSL = { h: 220, s: 8, l: 34 };
+
 /** The carriage, in a frame facing +x with the ground at y = 0. */
 function carriage(woodHue: number, ship: boolean) {
   return sprite(`cn|carr|${woodHue | 0}|${ship}`, -26, -16, 34, 18, (g) => {
@@ -31,22 +35,19 @@ function carriage(woodHue: number, ship: boolean) {
     g.clip();
     for (let k = 1; k < 4; k++) tick(g, -20 + k * 2, -k * 3, 5, -k * 3 + 0.2, 0.5, k, css(wood, -18, 1, 6));
     g.restore();
-    pen(g, body, 3, 0.55, 1.4);
+    pen(g, body, 3, 0.5, 1.2, 3, inkFor(wood));
     if (!ship)
       for (const [bx, by] of [
         [-17, -2.6],
         [-22, -2.6],
         [-19.5, -6.8],
       ])
-        ball(g, bx, by, 2.6, METALS.obsidian.light, bx);
+        ball(g, bx, by, 2.6, SHOT, bx);
     else {
       // A coil of rope beside it.
       for (let r = 1.5; r < 5; r += 1.3) {
         const ring = ovalPts(-19, -2, r + 1, r * 0.5, r * 3, 0.05, 14);
-        g.fillStyle = INK;
-        stroke(g, [...ring, ring[0]], { w: 1.28, seed: r, taper: [0, 0], press: 0.1 });
-        g.fillStyle = css({ h: 38, s: 35, l: 56 });
-        stroke(g, [...ring, ring[0]], { w: 0.8, seed: r, taper: [0, 0], press: 0.1 });
+        bar(g, [...ring, ring[0]], 0.8, ROPE, r, { taper: [0, 0], press: 0.1 });
       }
     }
   });
@@ -60,25 +61,19 @@ function barrel(L: number, pal: typeof METALS.steel, ship: boolean) {
     g.save();
     path(g, body);
     g.clip();
-    for (const bx of [-6, 2, L - 7]) {
-      g.fillStyle = INK;
-      line(g, bx, -6, bx, 6, { w: 2.12, seed: bx, taper: [0, 0], press: 0.1 });
-      g.fillStyle = css(pal.base, -10);
-      line(g, bx + 0.3, -6, bx + 0.3, 6, { w: 1.4, seed: bx + 1, taper: [0, 0], press: 0.1 });
-    }
+    // Reinforcing hoops: bars in the barrel's shade, rimmed in a dark of it.
+    for (const bx of [-6, 2, L - 7]) barLine(g, bx, -6, bx, 6, 1.4, { ...pal.base, l: pal.base.l - 10 }, bx, { taper: [0, 0], press: 0.1 });
     glint(g, poly(-9, -3.4, 0, -3.1, L - 6, -2.6), css(pal.spec, -6), 0.9);
     g.restore();
-    pen(g, body, 5, 0.55, 1.5);
+    pen(g, body, 5, 0.5, 1.3, 3, inkFor(pal.base));
     part(g, boxPts(L - 4, -5.5, 4.5, 11, 1.5, 6), pal.base, 6, { depth: 0.6, thin: 0.45, thick: 1.1 });
-    g.fillStyle = INK;
+    // The bore.
+    g.fillStyle = inkFor(pal.base);
     path(g, ovalPts(L + 0.4, 0, 1.3, 3.6, 7, 0.02, 12));
     g.fill();
     ball(g, -15, 0, 3, pal.base, 8);
     if (ship) {
-      g.fillStyle = INK;
-      line(g, -15, 0, -22, 8, { w: 1.6, seed: 9, taper: [0, 0.3], press: 0 });
-      g.fillStyle = css({ h: 38, s: 35, l: 56 });
-      line(g, -15, 0, -22, 8, { w: 0.8, seed: 9, taper: [0, 0.3], press: 0 });
+      barLine(g, -15, 0, -22, 8, 0.8, ROPE, 9, { taper: [0, 0.1], press: 0 });
     }
   });
 }
@@ -104,9 +99,8 @@ function idol(stoneHue: number, uid: number) {
     path(g, head);
     g.clip();
     // A band of glyphs: squared spirals and bars, cut in.
-    g.fillStyle = css(stone, -18, 1, 6);
-    g.fillRect(-12, -21, 24, 1.6);
-    g.fillRect(-12, -13, 24, 1.6);
+    tick(g, -12, -20.2, 12, -20.4, 1, 23, css(stone, -18, 1, 6));
+    tick(g, -12, -12.2, 12, -12, 1, 24, css(stone, -18, 1, 6));
     for (let k = 0; k < 4; k++) {
       const gx = -9.5 + k * 5.5;
       const pts = (uid + k) % 2 ? poly(gx, -15, gx, -18.6, gx + 3.4, -18.6, gx + 3.4, -16.4, gx + 1.4, -16.4) : poly(gx, -18.6, gx + 1.7, -15, gx + 3.4, -18.6);
@@ -117,17 +111,17 @@ function idol(stoneHue: number, uid: number) {
     const zig: P[] = [];
     for (let k = 0; k <= 8; k++) zig.push({ x: -12 + k * 3, y: k % 2 ? -9.4 : -6.6 });
     g.fillStyle = groove;
-    stroke(g, zig, { w: 0.8, seed: 19, taper: [0, 0], press: 0.2 });
+    stroke(g, zig, { w: 0.8, seed: 19, taper: [0.08, 0.12], press: 0.3 });
     tick(g, -10, -3.5, -5, -2, 0.6, 20, css(stone, -26));
     g.restore();
-    pen(g, head, 15, 0.6, 1.6);
+    pen(g, head, 15, 0.5, 1.3, 3, inkFor(stone));
     // The spout: a square stone tube out the front, its bore dark.
     part(g, boxPts(9.5, -9, 5, 5, 0.8, 18), { ...stone, l: 40 }, 18, { depth: 0.5, thin: 0.4, thick: 1 });
-    g.fillStyle = INK;
+    g.fillStyle = inkFor(stone);
     path(g, ovalPts(14.3, -6.5, 0.9, 1.7, 21, 0.03, 10));
     g.fill();
     // The gem's socket: a sunk ring, and the stone dull until it lights.
-    g.fillStyle = INK;
+    g.fillStyle = css(stone, -30, 1, 6);
     path(g, ovalPts(GEM.x, GEM.y, GEM.r + 1, GEM.r + 0.8, 22, 0.03, 14));
     g.fill();
     g.fillStyle = css({ h: 150, s: 30, l: 24 });
@@ -136,17 +130,19 @@ function idol(stoneHue: number, uid: number) {
   });
 }
 
+const SPITTER_ROCK: HSL = { h: 260, s: 10, l: 19 };
+
 /** The magma spitter's mound, facing +x: lumpy basalt with cracks (they glow live) and a dark maw. */
 function mound() {
   return sprite('cn|mound', -17, -24, 34, 26, (g) => {
-    const rock: HSL = { h: 260, s: 10, l: 19 };
+    const rock = SPITTER_ROCK;
     const pts: P[] = [{ x: -15, y: 0 }];
     for (let i = 0; i <= 14; i++) {
       const a = Math.PI + (i / 14) * Math.PI;
       pts.push({ x: Math.cos(a) * 14.5 - 0.5, y: Math.sin(a) * (17 + Math.sin(i * 1.7) * 2) });
     }
     pts.push({ x: 14, y: 0 });
-    part(g, pts, rock, 21, { depth: 2, thin: 0.6, thick: 1.6 });
+    part(g, pts, rock, 21, { depth: 2, thin: 0.5, thick: 1.3 });
     for (let k = 0; k < 4; k++) tick(g, -10 + k * 5, -6 - (k % 2) * 4, -8 + k * 5, -9 - (k % 2) * 4, 0.6, k, css(rock, 20));
   });
 }
@@ -244,7 +240,7 @@ function drawCannon(rc: RC, m: Cannon, d: DrawCtx) {
     ])
       line(g, hx + dir * ax, gy + ay, hx + dir * bx, gy + by, { w: 0.9, seed: ax, taper: [0.1, 0.1], press: 0 });
     const mwx = mx - Math.cos(m.angle) * 2;
-    s.fillStyle = INK;
+    s.fillStyle = inkFor(SPITTER_ROCK);
     path(s, ovalPts(mwx, my, 4.6, 3.8 + warn, 22, 0.08, 14));
     s.fill();
     g.fillStyle = css(hot, 10, 0.5 + warn * 0.5);
