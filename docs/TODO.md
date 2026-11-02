@@ -9,15 +9,12 @@ Design intent for everything below is in `docs/DESIGN.md`.
 ---
 
 ## 2. Online follow-ups
-Online play is on `main`; see `docs/NETCODE.md`.
+Online play is on `main`, verified by 139 real-browser checks in `pnpm online-test` and the Upstash-compatible `pnpm test:store`. See `docs/NETCODE.md`.
 
-- **Host label and kick:** someone is clearly labeled `Host` in the lobby, and the host can kick players there. The label follows host migration.
-- Weather is drawn on placed parts and set pieces only during the race, so they look dry in pick and place.
-- Owner: connect `slag-upstash-kv` to the Vercel project for Production and Preview, then redeploy.
-- Not verified yet: real Upstash, real NAT traversal, TURN, Firefox, Safari, real phones. Cross-engine determinism has never run; dmath has only been exercised on V8.
-- A guest refused for being on another build waits on `Joining…` forever. It should say to reload.
-- A guest whose link drops for 2.5 s is marked away, which pops their runner mid-race. Decide if that's right.
-- Measure recovery in a 2-peer room, where no third peer confirms the loss (about 7 s expected).
+- **Owner:** connect `slag-upstash-kv` to the Vercel project for Production and Preview, then redeploy.
+- **Not verified:** real Upstash, real NAT traversal, TURN, Firefox, Safari, real phones, and cross-engine determinism. dmath has only run on V8.
+- **Decide:** two-peer host loss takes about 7.7 s, against about 4 s with three or more peers. Lowering `PROBE_MS` to about 3 s for two-peer rooms saves about 1 s but risks two hosts when the store is slow.
+- A double host failure (the new host dies at once) takes 11–18 s to recover, and that varies a lot.
 
 ## 3. Level follow-ups
 - **Ink bake stall:** the first render after a level change bakes ink terrain on the main thread: 27–176 ms on most levels, about 550–600 ms on a large factory, and once 2.5 s. Generation itself is now off the main thread.
