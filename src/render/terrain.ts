@@ -151,7 +151,8 @@ export class TerrainPainter {
   private sub: MatTex | null = null;
   private bakeKey = '';
   bake: HTMLCanvasElement | null = null;
-  private glowBake: HTMLCanvasElement | null = null;
+  /** Emissive veins, when the material has them. */
+  glowBake: HTMLCanvasElement | null = null;
   private shadow: HTMLCanvasElement | null = null;
   private decorKey = '';
   private decor: Decor[] = [];

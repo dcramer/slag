@@ -953,16 +953,16 @@ export class Hud {
       c.fillStyle = PAL.ink;
       c.fillRect(win.x0, y, win.w, 1);
     }
-    if (left) this.text(left, 14, cy, size, PAL.ash, 'left', UI, 700);
+    if (left) this.text(left, win.safeX0 + 14, cy, size, PAL.ash, 'left', UI, 700);
     if (m.phase === 'lobby' && this.room) {
       const code = this.room;
       c.font = `400 ${size + 3}px ${DISPLAY}`;
-      const x = left ? 110 : 14;
+      const x = win.safeX0 + (left ? 110 : 14);
       this.text('LOBBY', x, cy, TYPE.caption, PAL.dim, 'left', UI, 800);
       this.text(code, x + 34, cy + 0.5, size + 3, PAL.amber, 'left', DISPLAY, 400);
     }
     // Right-aligned prompts, laid out right to left.
-    let x = VIEW_W - 14;
+    let x = win.safeX1 - 14;
     for (let i = items.length - 1; i >= 0; i--) {
       const it = items[i];
       if (it.touchOnly && !touch) continue;

@@ -22,6 +22,8 @@ import { TerrainPainter } from './terrain';
 const RING = 2;
 /** World px over which scenery fades into the theme's haze. */
 const HAZE_REACH = 460;
+/** World px over which glowing veins die out past the seam. */
+const GLOW_REACH = 150;
 
 /** Sculpts one side's columns. `d` counts columns outward from the edge, from 1. */
 interface SideCtx {
@@ -30,6 +32,8 @@ interface SideCtx {
   ground: number;
   /** Columns on this side. */
   cols: number;
+  /** World rows of the side, top to bottom (the top one may be above the level). */
+  rows: [number, number];
   /** Solid from `top` (a world row, may be above the level) down to the bottom, in column `d`. */
   fill(d: number, top: number): void;
   /** Cut or set one tile in column `d`. */
@@ -65,8 +69,19 @@ const SIDES: Record<ThemeId, (c: SideCtx) => void> = {
   jungle: (c) => ridge(c, 11, 3),
   volcano: (c) => ridge(c, 13, 3, 2),
   mine: (c) => {
-    // Inside the mountain: rock in every direction.
+    // Inside the mountain: rock in every direction, honeycombed with old workings.
     for (let d = 1; d <= c.cols; d++) c.fill(d, -1e4);
+    const area = c.cols * (c.rows[1] - c.rows[0]);
+    for (let i = Math.round(area / 90); i > 0; i--) {
+      const cx = c.rng.int(4, Math.max(4, c.cols));
+      const cy = c.rng.int(c.rows[0], c.rows[1]);
+      const rx = c.rng.int(3, 8);
+      const ry = c.rng.int(2, 3);
+      for (let y = -ry; y <= ry; y++) {
+        const span = Math.round(rx * Math.sqrt(1 - (y * y) / (ry * ry + 1)));
+        for (let d = cx - span; d <= cx + span; d++) if (d >= 2) c.set(d, cy + y, false);
+      }
+    }
   },
   castle: (c) =>
     blocks(c, [5, 9], [8, 13], (a, b, top) => {
@@ -123,6 +138,7 @@ export function surroundLevel(level: Level, mx: number, top: number): Level {
       rng,
       ground: side.ground,
       cols: mx,
+      rows: [-top, h - 1],
       wave,
       fill: (d, row) => {
         for (let y = Math.max(0, row + top); y < H; y++) put(side.edge(d), y);
@@ -204,7 +220,8 @@ export class Surround {
     const th = level.theme;
     const g = bake.getContext('2d')!;
     const k = bake.width / (land.w * TILE);
-    const tint = th.id === 'mine' ? th.terrain.outline : th.fog;
+    const mine = th.id === 'mine';
+    const tint = mine ? th.terrain.outline : th.fog;
     const left = this.mx * TILE;
     const right = (this.mx + level.w) * TILE;
     g.save();
@@ -217,12 +234,31 @@ export class Surround {
       const gr = g.createLinearGradient(seam, 0, seam + dir * HAZE_REACH, 0);
       gr.addColorStop(0, css(tint, 0, 0.1));
       gr.addColorStop(0.2, css(tint, 0, 0.32));
-      gr.addColorStop(1, css(tint, 0, 0.82));
+      gr.addColorStop(1, css(tint, 0, mine ? 0.62 : 0.82));
       g.fillStyle = gr;
       if (dir < 0) g.fillRect(0, 0, seam, land.h * TILE);
       else g.fillRect(seam, 0, land.w * TILE - seam, land.h * TILE);
     }
     g.restore();
+    // Veins are light, so tinting the rock doesn't touch them: they have to go out on their own,
+    // and quickly, or their texture reads as a pattern across a big expanse.
+    const glow = this.painter.glowBake?.getContext('2d');
+    if (!glow) return;
+    glow.save();
+    glow.setTransform(k, 0, 0, k, 0, 0);
+    glow.globalCompositeOperation = 'destination-out';
+    for (const [seam, dir] of [
+      [left, -1],
+      [right, 1],
+    ] as const) {
+      const gr = glow.createLinearGradient(seam, 0, seam + dir * GLOW_REACH, 0);
+      gr.addColorStop(0, 'rgba(0,0,0,0.2)');
+      gr.addColorStop(1, 'rgba(0,0,0,1)');
+      glow.fillStyle = gr;
+      if (dir < 0) glow.fillRect(0, 0, seam, land.h * TILE);
+      else glow.fillRect(seam, 0, land.w * TILE - seam, land.h * TILE);
+    }
+    glow.restore();
   }
 
   /** In world space, before the level's own terrain. */
