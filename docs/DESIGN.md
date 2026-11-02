@@ -21,7 +21,7 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 
 ## Movement (precision-platformer feel)
 - **Walk vs run.** Walking is slow and precise, about 6.6 tiles/s, with short jumps of about 4 tiles. Holding **Run** gives about 13.4 tiles/s and jumps of about 8 tiles, but run momentum builds over a beat, skids when you let go or turn, and carries you past ledges if you're careless.
-- Variable jump height (hold to go higher), coyote time, jump buffering, a little hang at the apex, and fast-fall (hold down in the air).
+- A full jump is about 3.7 tiles high and a tap about 1.3. Variable jump height (hold to go higher), coyote time, jump buffering, a little hang at the apex, and fast-fall (hold down in the air).
 - **Wall slide and wall jump.** Holding into the wall while mashing jump climbs it; holding away kicks off hard.
 - **One-way platforms**: jump up through them; down + jump drops through.
 - Forgiving corner correction on ceilings and ledge lips.
@@ -32,11 +32,16 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - **Levels vary**: size and aspect (wide, classic, tall), sparse vs dense terrain, few vs many hazards, and route shape (sprawl, climb, descent, zig-zag).
 - **Most levels need props.** Roughly 70–85% can't be finished bare. Every level must be finishable with **at most two small bridges**, verified with the real movement controller and never with hand-waved distances.
 - The spawn and goal zones are protected: nothing can be built or bombed there.
+- The **goal trigger is generous**: a tall column above the flag, so you can't jump over it. On touching it you lose control and drop under normal physics.
 - Set pieces are large, pre-placed theme props: tractor, windmill, foundry press, chandelier, minecart, geysers, crane and so on. They never block the known solution and keep their hazards away from spawn and goal. They are visible in every phase.
 
 ## Props
+- **Not everything is death.** Most parts have an upside *and* a side effect you have to worry about: knockback, slow, freeze, sticky, misdirection, or a platform that sinks. Lethal parts exist, but disruption is the norm.
+- **Some projectiles are platforms.** For example, gliders fired from a launcher can be ridden, but they sag and sink under weight or over time.
+- **Demolition comes in variants:** prop-only charges that leave terrain, terrain drills or tunnelers, and different blast shapes and sizes. All respect spawn and goal protection.
+- **Mystery crate (planned):** a prop that pops out a random *held item* (an original roster, e.g. a sword that bonks, a kickable puck that ricochets, a boomerang, a shield) that players carry and use.
 - Props are assembled from **parts**: blocks of various materials, spikes, swinging heads, launchers, emitters, motion, springs, fans and bombs. Every number is rolled, and names come from the rolled stats.
-- Every crate contains at least one building piece and one hazard.
+- Every crate contains at least one building piece and one hazard. Crate contents are tied to the level seed and round, but the card order is shuffled with a per-match salt the host rolls, so it differs every game.
 - **Attachments** (spike strips, ice coats, slime coats) must mount flush on an exposed face of a solid block, and rotation picks the face.
   - Ice makes floors slippery and walls slick (no wall jump).
   - Slime makes floors slow and walls sticky (you cling).
