@@ -46,7 +46,7 @@ const DARK: HSL = { h: 26, s: 18, l: 11 };
 /** A backdrop beam: a dark ribbon with its hazed tone over it. */
 function beam(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, base: HSL, t: Hz, seed: number) {
   g.fillStyle = t.ink(base);
-  line(g, ax, ay, bx, by, { w: w + 1.2, seed, taper: [0, 0], press: 0.05 });
+  line(g, ax, ay, bx, by, { w: w + 0.9, seed, taper: [0, 0], press: 0.05 });
   g.fillStyle = t.c(base);
   line(g, ax, ay, bx, by, { w, seed: seed + 1, taper: [0, 0], press: 0.05 });
 }
