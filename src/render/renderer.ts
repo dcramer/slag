@@ -21,6 +21,7 @@ import { drawClouds, drawDrops, drawRunnerItems, itemFx } from './items';
 import { circle, glowDot, type Light, light, type RC } from './kit';
 import { type Compositor, createCompositor } from './post';
 import { drawBackdrop, drawBlastPreview, drawForeground, drawProjectile, drawResolved, drawRunnerStatus, drawStuffed, type Emit, propEventFx } from './props';
+import { LightOccluder } from './occlude';
 import { Surround } from './surround';
 import { TerrainPainter } from './terrain';
 import { calmMotes, WeatherLayer } from './weather';
@@ -61,6 +62,7 @@ export class Renderer {
   private scene = document.createElement('canvas');
   private glow = document.createElement('canvas');
   private lightC = document.createElement('canvas');
+  private occluder = new LightOccluder();
   private sctx = this.scene.getContext('2d')!;
   private gctx = this.glow.getContext('2d')!;
   private lctx = this.lightC.getContext('2d')!;
@@ -371,18 +373,13 @@ export class Renderer {
     const th = level.theme;
     const [ar, ag, ab] = toRgb(th.ambientTint);
     const amb = th.ambientLight * 0.5;
+    const ambient = `rgb(${Math.round(255 * amb * (0.65 + ar * 0.35))} ${Math.round(255 * amb * (0.65 + ag * 0.35))} ${Math.round(255 * amb * (0.65 + ab * 0.35))})`;
     l.setTransform(1, 0, 0, 1, 0, 0);
     l.globalCompositeOperation = 'source-over';
-    l.fillStyle = `rgb(${Math.round(255 * amb * (0.65 + ar * 0.35))} ${Math.round(255 * amb * (0.65 + ag * 0.35))} ${Math.round(255 * amb * (0.65 + ab * 0.35))})`;
-    l.fillRect(0, 0, this.lightC.width, this.lightC.height);
-    // Sky light falls from above: brighten the upper part a little.
-    const sky = l.createLinearGradient(0, 0, 0, this.lightC.height);
-    sky.addColorStop(0, `rgba(255,255,255,${0.1 * th.ambientLight})`);
-    sky.addColorStop(1, 'rgba(255,255,255,0)');
-    l.globalCompositeOperation = 'lighter';
-    l.fillStyle = sky;
+    l.fillStyle = ambient;
     l.fillRect(0, 0, this.lightC.width, this.lightC.height);
     this.cam.apply(l, this.lightC.width);
+    l.globalCompositeOperation = 'lighter';
     for (const L of lights) {
       const a = Math.min(1, L.intensity) * 0.55;
       if (a <= 0.01) continue;
@@ -393,6 +390,17 @@ export class Renderer {
       l.fillStyle = gr;
       l.fillRect(L.x - L.r, L.y - L.r, L.r * 2, L.r * 2);
     }
+    l.globalCompositeOperation = 'source-over';
+    this.occluder.draw(l, level, ambient);
+    // Sky light falls from above: brighten the upper part a little, rock and air alike.
+    l.setTransform(1, 0, 0, 1, 0, 0);
+    const sky = l.createLinearGradient(0, 0, 0, this.lightC.height);
+    sky.addColorStop(0, `rgba(255,255,255,${0.1 * th.ambientLight})`);
+    sky.addColorStop(1, 'rgba(255,255,255,0)');
+    l.globalCompositeOperation = 'lighter';
+    l.fillStyle = sky;
+    l.fillRect(0, 0, this.lightC.width, this.lightC.height);
+    l.globalCompositeOperation = 'source-over';
   }
 
   private drawMarkers(rc: RC, level: Level) {
