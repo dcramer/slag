@@ -26,6 +26,7 @@ import type { ThemeId } from './themes';
  *   ?density=0.9        force terrain density (0..1)
  *   ?gravity=0.7        force world gravity scale
  *   ?weather=rain       force the weather (clear|wind|mist|rain|snow), skipping worldgen's solvability gate
+ *   ?concept=id         force a stage concept of the theme's (gen/stage), or `plain`
  *   ?debug=1            open the dev overlay (see installDevtoolsHooks)
  *   ?give=sword,puck    hand race runners these held items, cycled (`all` = one of each)
  *   ?lettering=0        no impact words (read by the Renderer)
@@ -136,6 +137,8 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
   if (q.get('gravity')) force.gravity = Number(q.get('gravity'));
   const weather = WEATHER_KINDS.find((k) => k === q.get('weather'));
   if (weather) force.weather = weather;
+  const concept = q.get('concept');
+  if (concept) force.concept = concept;
   if (Object.keys(force).length) {
     match.forceProfile = force;
     match.newLevel(match.seed);

@@ -15,7 +15,7 @@ import { SPACE } from './space';
 import { VOLCANO } from './volcano';
 
 export type { Piece, Recipe } from './place';
-export { finalize, type PlacerOpts, SAFE_TILES, Site } from './place';
+export { commit, finalize, type PlacerOpts, SAFE_TILES, Site } from './place';
 
 /**
  * Theme set pieces: large, pre-placed props that make a level interesting

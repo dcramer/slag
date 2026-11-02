@@ -6,6 +6,7 @@
  *                                               then per size class / gravity class / route
  *   Force profile knobs on either: --size classic|wide|tall --route ltr|climb|descent|zigzag
  *                                  --density 0..1 --gravity 0.7 --hazards 0..4 --weather rain
+ *                                  --concept <id>|plain (a stage concept of the theme's, gen/stage)
  *
  * Legend: # solid  = one-way  S spawn  G goal  · reachable stand cell  P set-piece footprint
  *         B a bridge from the validator's solution (levels that need props)
@@ -34,6 +35,7 @@ if (opt('density')) force.density = Number(opt('density'));
 if (opt('gravity')) force.gravity = Number(opt('gravity'));
 if (opt('hazards')) force.hazards = Number(opt('hazards'));
 if (opt('weather')) force.weather = opt('weather') as WeatherKind;
+if (opt('concept')) force.concept = opt('concept');
 
 /** Share of levels whose solution takes 0, 1, 2 and 3 parts. */
 function partShares(parts: number[], n: number): Record<string, string> {
@@ -68,7 +70,7 @@ if (args.includes('--stats')) {
   const n = Number(opt('stats') ?? 100);
   const themes = themeOpt ? [themeOpt] : THEME_IDS;
   const rows: Record<string, unknown>[] = [];
-  const total = { n: 0, ms: 0, bridged: 0, fallbacks: 0, attempts: 0, closed: 0, openAsSculpted: 0, parts: [0, 0, 0, 0] };
+  const total = { n: 0, ms: 0, bridged: 0, fallbacks: 0, attempts: 0, closed: 0, openAsSculpted: 0, conceptFallbacks: 0, parts: [0, 0, 0, 0] };
   const weather: Record<string, number> = {};
   const times: number[] = [];
   // CPU time is steadier than wall time on a shared machine; both are reported.
@@ -82,6 +84,8 @@ if (args.includes('--stats')) {
     let attempts = 0;
     let closed = 0;
     let openAsSculpted = 0;
+    const concepts: Record<string, number> = {};
+    let conceptFallbacks = 0;
     for (let i = 0; i < n; i++) {
       const t0 = performance.now();
       const l = generateLevel((i * 2654435761) >>> 0, th, force);
@@ -103,7 +107,11 @@ if (args.includes('--stats')) {
       attempts += lastGenInfo.attempts;
       closed += lastGenInfo.rejects.closed;
       if (lastGenInfo.sculpted <= MAX_SHARED) openAsSculpted++;
+      const c = lastGenInfo.concept ?? 'plain';
+      concepts[c] = (concepts[c] ?? 0) + 1;
+      if (lastGenInfo.conceptFallback) conceptFallbacks++;
     }
+    total.conceptFallbacks += conceptFallbacks;
     total.n += n;
     total.ms += ms;
     total.bridged += n - parts[0];
@@ -125,6 +133,11 @@ if (args.includes('--stats')) {
       styles: Object.entries(styles)
         .map(([k, v]) => `${k}:${v}`)
         .join(' '),
+      // Stage concepts (gen/stage): levels per concept, and how many rolled one but fell back to plain.
+      concepts: Object.entries(concepts)
+        .map(([k, v]) => `${k}:${v}`)
+        .join(' '),
+      conceptFallbacks,
     });
   }
   console.table(rows);
@@ -159,6 +172,7 @@ if (args.includes('--stats')) {
     // Mostly-open rule: levels already open as sculpted, and candidates still too narrow after lanes.
     openAsSculpted: `${((total.openAsSculpted / total.n) * 100).toFixed(0)}%`,
     closedRejects: `${total.closed} of ${total.attempts} candidates (${((total.closed / total.attempts) * 100).toFixed(1)}%)`,
+    conceptFallbacks: total.conceptFallbacks,
   });
 } else {
   const seedArg = args.find((a, i) => !a.startsWith('--') && !args[i - 1]?.startsWith('--')) ?? 'demo';
@@ -211,6 +225,9 @@ if (args.includes('--stats')) {
     profile: describeProfile(l.profile!),
     weather: l.weather?.kind ?? 'clear',
     theme: l.theme.name,
+    concept: info.concept ?? (info.conceptFallback ? 'plain (fell back)' : 'plain'),
+    ...(l.landmark ? { landmark: l.landmark.rect } : {}),
+    ...(l.rides ? { rides: l.rides.length } : {}),
     setPieces: l.setPieces.map((p) => p.def.name),
     goalReachableWithoutProps: reach.goalReached,
     bridgesNeeded: info.bridges.length,

@@ -2,7 +2,7 @@ import { dcos, dhypot, dpow, dsin } from '../../core/dmath';
 import { type Cell, overlaps, type Rect, rectCircle } from '../../core/geom';
 import type { Rng } from '../../core/rng';
 import { DT, PLAYER_H, PLAYER_W, RUN_COUNTDOWN, TILE } from '../../sim/constants';
-import { isProtected, type Level, T_EMPTY, T_SOLID, tileAt } from '../../sim/level';
+import { isProtected, type Level, T_EMPTY, T_SOLID, tileAt, type TileRect } from '../../sim/level';
 import {
   AMMO,
   type Archetype,
@@ -12,6 +12,8 @@ import {
   type Hazard,
   type MetalStyle,
   type Module,
+  type Motion,
+  motionOffset,
   moduleSim,
   newPropState,
   type PlacedProp,
@@ -61,6 +63,8 @@ export interface Piece {
    * reachability re-check, which is the most expensive part of placement.
    */
   pathSafe?: boolean;
+  /** Whole-piece motion (a lift's rail with `dwell`, a track); none when absent. */
+  motion?: Motion;
 }
 
 export interface Recipe {
@@ -234,9 +238,11 @@ function hazardHits(h: Hazard, z: Rect): boolean {
   return false;
 }
 
-/** Frames for one full cycle of every timed module (bounded). */
-function cycleFrames(mods: readonly Module[]): number {
+/** Frames for one full cycle of every timed module and the piece's own motion (bounded). */
+export function cycleFrames(mods: readonly Module[], motion: Motion = { type: 'none' }): number {
   let p = 120;
+  if (motion.type === 'rail') p = Math.max(p, motion.period + 2 * (motion.dwell ?? 0));
+  if (motion.type === 'loop' || motion.type === 'track') p = Math.max(p, motion.period);
   for (const m of mods) {
     if (m.type === 'rotor') p = Math.max(p, m.period);
     if (m.type === 'vehicle') p = Math.max(p, 2 * (Math.round(m.span / (m.speed / 60)) + m.pause) + 4);
@@ -244,6 +250,7 @@ function cycleFrames(mods: readonly Module[]): number {
     if (m.type === 'geyser') p = Math.max(p, m.off + m.warn + m.on);
     if (m.type === 'tesla') p = Math.max(p, m.off + m.warn + m.on);
     if (m.type === 'flame') p = Math.max(p, m.off + m.warn + m.on);
+    if (m.type === 'flood') p = Math.max(p, m.off + m.warn + m.rise + m.hold + m.fall);
   }
   return Math.min(p, 1600);
 }
@@ -261,7 +268,7 @@ export function finalize(s: Site, piece: Piece, uid: number, key: string): Place
     archetype: piece.archetype,
     role: piece.role,
     style: piece.style,
-    motion: { type: 'none' },
+    motion: piece.motion ?? { type: 'none' },
     modules: piece.modules,
     footprint: [[0, 0]],
   };
@@ -299,13 +306,22 @@ export function finalize(s: Site, piece: Piece, uid: number, key: string): Place
   const out: Contrib = { solids: [], hazards: [], springs: [], winds: [] };
   const first = new Map<number, Rect>();
   const moved = new Set<number>();
-  const P = cycleFrames(r.mods);
+  const P = cycleFrames(r.mods, r.motion);
   // Sample every few frames; each sample claims the box swept since the previous one.
   const last = new Map<number, Rect>();
   for (let f = RUN_COUNTDOWN; f <= RUN_COUNTDOWN + P; f += 3) {
     out.solids.length = 0;
     out.hazards.length = 0;
-    const ctx = (rp: Resolved, mi: number): PropCtx => ({ level, frame: f, r: rp, off: [0, 0], prev: [0, 0], state, mi, live: true });
+    const ctx = (rp: Resolved, mi: number): PropCtx => ({
+      level,
+      frame: f,
+      r: rp,
+      off: motionOffset(rp, f),
+      prev: motionOffset(rp, f - 1),
+      state,
+      mi,
+      live: true,
+    });
     buildSolids([r], ctx, out);
     traceRays([r], ctx, out);
     for (const sd of out.solids) {
@@ -404,6 +420,12 @@ export interface PlacerOpts {
   cache?: ReachCache;
   /** Has the last say on each piece, given every piece so far with it last (worldgen: the solution still holds). */
   keep?: (pieces: readonly PlacedProp[]) => boolean;
+  /** Pieces already standing (a landmark's): their cells are taken, and the new pieces' uids follow theirs. */
+  standing?: readonly PlacedProp[];
+  /** Areas to leave empty (a landmark's air). */
+  avoid?: readonly TileRect[];
+  /** Draw only from these recipe names (a stage concept's hazard family). */
+  family?: readonly string[];
 }
 
 /** Recipe weight scaled by the level's danger: hazards up to ×2.4 on nasty levels, ×0.4 on tame ones (and the reverse for helpers). */
@@ -422,6 +444,11 @@ function dangerWeight(r: Recipe, danger: number): number {
 export function makePlacer(themeKey: string, recipes: readonly Recipe[], uidBase: number) {
   return (rng: Rng, level: Level, opts: PlacerOpts = {}): PlacedProp[] => {
     const s = new Site(level, opts.cache);
+    for (const pp of opts.standing ?? []) commit(s, pp);
+    for (const a of opts.avoid ?? [])
+      for (let y = Math.max(0, a.y); y < Math.min(s.h, a.y + a.h); y++)
+        for (let x = Math.max(0, a.x); x < Math.min(s.w, a.x + a.w); x++) s.taken.add(y * s.w + x);
+    const first = opts.standing?.length ?? 0;
     const rolled = rng.weighted([
       [1, 2],
       [2, 4],
@@ -431,7 +458,8 @@ export function makePlacer(themeKey: string, recipes: readonly Recipe[], uidBase
     if (want <= 0) return [];
     const danger = opts.danger ?? 0.5;
     const tryCap = Math.round(16 * Math.max(1, Math.sqrt((level.w * level.h) / (48 * 27))));
-    const pool = recipes
+    const family = opts.family;
+    const pool = (family ? recipes.filter((r) => family.includes(r.name)) : recipes)
       .map((r) => ({ r, k: dpow(rng.next() + 1e-9, 1 / (opts.danger === undefined ? r.weight : dangerWeight(r, danger))) }))
       .sort((a, b) => b.k - a.k);
     const order = [...pool.map((p) => p.r), ...pool.filter((p) => p.r.repeat).map((p) => p.r)];
@@ -441,7 +469,7 @@ export function makePlacer(themeKey: string, recipes: readonly Recipe[], uidBase
       let tries = 0;
       for (const cand of recipe.candidates(rng, s)) {
         if (++tries > tryCap) break;
-        const pp = finalize(s, cand, uidBase + out.length, `setpiece:${themeKey}:${recipe.name}`);
+        const pp = finalize(s, cand, uidBase + first + out.length, `setpiece:${themeKey}:${recipe.name}`);
         if (pp && (!opts.keep || opts.keep([...out, pp]))) {
           out.push(pp);
           commit(s, pp);

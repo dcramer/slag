@@ -1,8 +1,10 @@
 import type { Rng } from '../../../core/rng';
 import { jumpMetrics } from '../../../sim/physics';
-import { type Grid, hintGap } from '../kit';
+import { type Grid, hintGap, POCKET } from '../kit';
 import { BRIDGE_W } from '../types';
-import type { RouteShape } from '../../../sim/level';
+import type { RouteShape, TileRect } from '../../../sim/level';
+import { SAFE_TILES } from '../../setpieces/place';
+import type { Concept, Landmark } from '../../stage/types';
 import { jumpProfile, probeGravity } from '../probe';
 import type { SculptCtx } from '../types';
 import type { ThemeId } from '../../../themes';
@@ -172,6 +174,64 @@ export class Slots {
  */
 export function keepClear(slots: Slots, a: number, w: number): void {
   slots.mark(a - 4, a + w + 6);
+}
+
+/** A landmark's columns, taken before the ground is laid (claimSite); raiseLandmark builds on them once it is. */
+export interface Claim {
+  concept: Concept;
+  /** The structure's box, standing on `ground`. */
+  at: TileRect;
+  /** Top solid row under the box, after levelling. */
+  ground: number;
+}
+
+/** Columns a landmark keeps from either end: the spawn or goal pocket plus the set pieces' safety margin. */
+const SITE_MARGIN = POCKET + SAFE_TILES;
+
+/**
+ * Give the level's stage concept (ctx.concept) its site, before the ground is
+ * laid: take the landmark's columns through the sculptor's own `slots`, off
+ * both pockets, and level the heightmap under them (locking those columns
+ * against `relax`, when given). Returns null for a plain level or when no
+ * span fits; the pipeline then counts the attempt as a landmark reject. A
+ * concept that owns the crossing carves and records it itself, in `build`.
+ * Rolls only with a concept, so plain levels are unchanged.
+ */
+export function claimSite(ctx: SculptCtx, k: Knobs, slots: Slots, surf: number[], locked?: Uint8Array): Claim | null {
+  const concept = ctx.concept;
+  if (!concept) return null;
+  const { rng } = ctx;
+  const { w, h } = concept.box(k, rng);
+  const lo = Math.max(slots.lo, SITE_MARGIN);
+  const hi = Math.min(slots.hi, k.W - 1 - SITE_MARGIN);
+  if (hi - lo + 1 < w) return null;
+  for (let tries = 0; tries < 24; tries++) {
+    const x = rng.int(lo, hi - w + 1);
+    if (!slots.free(x, x + w - 1)) continue;
+    let ground = -1;
+    for (let i = x; i < x + w; i++) if (surf[i] < k.H) ground = Math.max(ground, surf[i]);
+    if (ground < 0 || ground - h < 1) continue;
+    slots.mark(x, x + w - 1);
+    flatten(surf, k.H, x, x + w - 1, ground);
+    if (locked) for (let i = Math.max(0, x - 1); i <= Math.min(k.W - 1, x + w); i++) locked[i] = 1;
+    return { concept, at: { x, y: ground - h, w, h }, ground };
+  }
+  return null;
+}
+
+/**
+ * Build the claimed landmark once the ground is in: the concept writes its
+ * structure as tiles, and its air is reserved so later stamps leave it empty
+ * (lanes and filler set pieces read it from Shape.landmark). `parts` is how
+ * many parts the landmark's own crossing takes, when it owns one.
+ */
+export function raiseLandmark(g: Grid, ctx: SculptCtx, claim: Claim, parts = 0): Landmark {
+  const own = claim.concept.ownsCrossing ? parts : 0;
+  const l = claim.concept.build(g, ctx.rng, claim.at, own);
+  for (const a of l.air) g.reserve(a.x, a.y, a.x + a.w - 1, a.y + a.h - 1);
+  if (own > 0) g.wantsProps = true;
+  g.landmark = l;
+  return l;
 }
 
 /** Flatten a heightmap span to one row (the lower of its extremes by default) so a stamp sits level. */
