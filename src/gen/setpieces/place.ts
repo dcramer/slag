@@ -29,6 +29,7 @@ import {
 } from '../../sim/props';
 import '../../sim/props/modules';
 import { ReachCache } from '../../sim/reach';
+import { noFreeRide } from '../level/winnable';
 
 /**
  * Shared machinery for set-piece placers: a terrain scan (`Site`) that
@@ -439,16 +440,19 @@ function dangerWeight(r: Recipe, danger: number): number {
  * Build a theme placer from recipes: pick `opts.count` pieces (default a 1–3
  * roll), trying recipes in a weighted random order (weights tilted by
  * `opts.danger`) and each recipe's candidates best-first. Bigger levels get
- * more candidate tries per recipe.
+ * more candidate tries per recipe. A candidate goes in once `finalize` and
+ * `opts.keep` accept it and it gives a bare run no free ride
+ * (`noFreeRide`, ../level/winnable.ts).
  */
 export function makePlacer(themeKey: string, recipes: readonly Recipe[], uidBase: number) {
   return (rng: Rng, level: Level, opts: PlacerOpts = {}): PlacedProp[] => {
     const s = new Site(level, opts.cache);
-    for (const pp of opts.standing ?? []) commit(s, pp);
+    const standing = opts.standing ?? [];
+    for (const pp of standing) commit(s, pp);
     for (const a of opts.avoid ?? [])
       for (let y = Math.max(0, a.y); y < Math.min(s.h, a.y + a.h); y++)
         for (let x = Math.max(0, a.x); x < Math.min(s.w, a.x + a.w); x++) s.taken.add(y * s.w + x);
-    const first = opts.standing?.length ?? 0;
+    const first = standing.length;
     const rolled = rng.weighted([
       [1, 2],
       [2, 4],
@@ -470,7 +474,7 @@ export function makePlacer(themeKey: string, recipes: readonly Recipe[], uidBase
       for (const cand of recipe.candidates(rng, s)) {
         if (++tries > tryCap) break;
         const pp = finalize(s, cand, uidBase + first + out.length, `setpiece:${themeKey}:${recipe.name}`);
-        if (pp && (!opts.keep || opts.keep([...out, pp]))) {
+        if (pp && (!opts.keep || opts.keep([...out, pp])) && noFreeRide(level, pp, [...standing, ...out], s.cache)) {
           out.push(pp);
           commit(s, pp);
           break;

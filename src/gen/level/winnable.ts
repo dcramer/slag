@@ -1,8 +1,31 @@
+import { dcos, dsin } from '../../core/dmath';
 import type { Rect } from '../../core/geom';
-import { TILE } from '../../sim/constants';
-import { type Level, spawnZone, T_EMPTY, T_SOLID } from '../../sim/level';
-import { barrierOf, detonateCharges, type PlacedProp } from '../../sim/props';
+import { RUN_COUNTDOWN, TILE } from '../../sim/constants';
+import { type Level, spawnZone, T_EMPTY, T_ONEWAY, T_SOLID } from '../../sim/level';
+import type { Solid } from '../../sim/physics';
+import {
+  AMMO,
+  AMMO_SIM,
+  barrierOf,
+  buildProjectile,
+  buildSolids,
+  cannonMuzzle,
+  type Contrib,
+  detonateCharges,
+  makeProjectile,
+  type ModuleOf,
+  motionOffset,
+  newPropState,
+  type PlacedProp,
+  type PropCtx,
+  type ProjWorld,
+  type Resolved,
+  resolveProp,
+  stepProjectile,
+  traceRays,
+} from '../../sim/props';
 import { ReachCache, T_NOGO } from '../../sim/reach';
+import { cycleFrames } from '../setpieces/place';
 import { type Bridge, canPlaceBridge, MAX_BRIDGES, searchBridges, withBridges } from './validate';
 
 /**
@@ -105,4 +128,110 @@ export function planHolds(level: Level, placed: readonly PlacedProp[], plan: rea
 export function partsNeeded(level: Level, placed: readonly PlacedProp[], prior: readonly Bridge[] = level.solution ?? []): number {
   const s = settled(level, placed);
   return prove(s.level, s.placed, prior)?.length ?? MAX_BRIDGES;
+}
+
+/** Phases of a piece's cycle `noFreeRide` parks it at. */
+export const RIDE_PHASES = 8;
+
+/**
+ * Does `pp` leave the level needing its parts? reach.ts doesn't ride what
+ * moves, so a rotor's platform, a vehicle's roof, a lift's cab or a glider
+ * could carry a bare run over the crossing a part should close, and nothing
+ * else would notice (docs/SETPIECES.md, `noFreeRide`). Each of RIDE_PHASES
+ * snapshots of everything of the piece you could stand on is written into the
+ * level, as the proof sees it with `standing` and the piece in place, as
+ * static ground, one at a time; if any lets the ghost reach the flag with no
+ * parts, the piece is refused. That doesn't model riding while it moves, but
+ * it catches what matters: the cab parked at the top, the platform hanging
+ * over the gap.
+ *
+ * `level.rides` stay in place, so a carrier's own proven crossing is already
+ * in the baseline and needs no exemption. A level the ghost finishes bare
+ * without the piece has nothing for it to give away: any piece passes. Each
+ * piece is checked against what stands when it goes in, alone; two movers
+ * that open a way only together aren't looked for.
+ */
+export function noFreeRide(level: Level, pp: PlacedProp, standing: readonly PlacedProp[] = [], cache?: ReachCache): boolean {
+  const shots = snapshots(level, pp);
+  if (!shots.length) return true;
+  const field = fieldOf(level, [...standing, pp]);
+  const c = cache ?? cacheFor(field);
+  if (c.analyze(field).goalReached) return true;
+  const { w, h } = level;
+  const seen = new Set<string>();
+  for (const shot of shots) {
+    const tiles = field.tiles.slice();
+    const wrote: number[] = [];
+    for (const s of shot) {
+      const x0 = Math.max(0, Math.floor(s.x / TILE + 1e-6));
+      const x1 = Math.min(w - 1, Math.ceil((s.x + s.w) / TILE - 1e-6) - 1);
+      const y0 = Math.max(0, Math.floor(s.y / TILE + 1e-6));
+      const y1 = Math.min(h - 1, Math.ceil((s.y + s.h) / TILE - 1e-6) - 1);
+      const t = s.oneWay ? T_ONEWAY : T_SOLID;
+      for (let y = y0; y <= y1; y++)
+        for (let x = x0; x <= x1; x++) {
+          const k = y * w + x;
+          if (tiles[k] === T_SOLID || tiles[k] === t) continue;
+          tiles[k] = t;
+          wrote.push(k * 2 + (t === T_SOLID ? 1 : 0));
+        }
+    }
+    if (!wrote.length) continue;
+    const key = wrote.sort((a, b) => a - b).join(',');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (c.analyze({ ...field, tiles }).goalReached) return false;
+  }
+  return true;
+}
+
+/**
+ * What of `pp` you could stand on at RIDE_PHASES moments of its cycle: every
+ * solid its modules build (films aside), and the planks its platform shots
+ * (gliders) become along one flight. Empty when it has nothing to stand on.
+ */
+function snapshots(level: Level, pp: PlacedProp): Solid[][] {
+  const r = resolveProp(pp);
+  const shots: Solid[][] = [];
+  const state = newPropState();
+  const out: Contrib = { solids: [], hazards: [], springs: [], winds: [], triggers: [] };
+  const P = cycleFrames(r.mods, r.motion);
+  for (let i = 0; i < RIDE_PHASES; i++) {
+    const f = RUN_COUNTDOWN + Math.floor((i * P) / RIDE_PHASES);
+    out.solids.length = out.hazards.length = out.springs.length = out.winds.length = out.triggers!.length = 0;
+    const ctx = (rp: Resolved, mi: number): PropCtx => ({
+      level,
+      frame: f,
+      r: rp,
+      off: motionOffset(rp, f),
+      prev: motionOffset(rp, f - 1),
+      state,
+      mi,
+      live: true,
+    });
+    buildSolids([r], ctx, out);
+    traceRays([r], ctx, out);
+    const solids = out.solids.filter((s) => !s.film).map((s) => ({ ...s }));
+    if (solids.length) shots.push(solids);
+  }
+  for (const m of r.mods) if (m.type === 'cannon' && AMMO_SIM[m.ammo]?.platform) shots.push(...flight(level, pp, m));
+  return shots;
+}
+
+/** One platform shot's planks at RIDE_PHASES points of its flight, flown by the sim's own projectile step with nobody aboard. */
+function flight(level: Level, pp: PlacedProp, m: ModuleOf<'cannon'>): Solid[][] {
+  const [x, y] = cannonMuzzle(m);
+  const p = makeProjectile({ x, y, vx: dcos(m.angle) * m.speed, vy: dsin(m.angle) * m.speed, owner: pp.owner, ammo: m.ammo, source: pp.uid }, RUN_COUNTDOWN, 0);
+  const none = () => {};
+  const w: ProjWorld = { level, frame: RUN_COUNTDOWN, solids: [], gravity: level.gravity ?? 1, runners: [], spawn: none, emit: none, kill: none };
+  const every = Math.max(1, Math.ceil((AMMO[m.ammo].life ?? 480) / RIDE_PHASES));
+  const out: Solid[][] = [];
+  for (let age = 1; ; age++) {
+    w.frame = RUN_COUNTDOWN + age;
+    if (!stepProjectile(p, w)) return out;
+    if (age % every) continue;
+    const c: Contrib = { solids: [], hazards: [], springs: [], winds: [] };
+    buildProjectile(p, w.frame, c);
+    if (c.solids.length) out.push(c.solids);
+  }
 }
