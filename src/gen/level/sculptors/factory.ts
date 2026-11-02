@@ -24,7 +24,7 @@ export const factory: Sculptor = ({ rng, attempt }) => {
   const ceil = rng.int(0, 2); // last ceiling row
   // Floor in level sections (loading docks), each within a climbable step of the last.
   const floor: number[] = [];
-  for (let row = f; floor.length < W; ) {
+  for (let row = f; floor.length < W;) {
     const len = rng.int(7, 14);
     for (let i = 0; i < len && floor.length < W; i++) floor.push(row);
     if (rng.chance(0.5)) row = Math.max(f - 4, Math.min(f + 1, row + rng.pick([-2, -1, 1, 2])));

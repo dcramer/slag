@@ -27,7 +27,7 @@ export const castle: Sculptor = ({ rng, attempt }) => {
   const slots = new Slots();
   const f = rng.int(19, 22);
   const floor: number[] = [];
-  for (let row = f; floor.length < W; ) {
+  for (let row = f; floor.length < W;) {
     const len = rng.int(6, 12);
     for (let i = 0; i < len && floor.length < W; i++) floor.push(row);
     if (rng.chance(0.6)) row = Math.max(f - 3, Math.min(f + 2, row + rng.pick([-2, -1, 1, 2])));
