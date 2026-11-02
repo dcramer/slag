@@ -85,6 +85,14 @@ The game's goal is to parody other games, especially with items (`docs/DESIGN.md
 - Our own names and art only.
 - No explaining the joke.
 
+## 23. Check link previews on a deploy
+Icons, manifest, Open Graph and Twitter tags, and oEmbed are on `main`, regenerated with `pnpm brand`. These need a deployed URL to check:
+
+- Real unfurls in Slack, Discord, iMessage, X and LinkedIn.
+- Add to Home Screen on iOS and Android.
+- Whether a 16 px tab shows the pixel S.
+- Vercel Deployment Protection blocks unfurl bots on preview URLs.
+
 ## 17. Finish Sentry setup
 Some steps need the owner. Run after setting the Vercel env vars.
 
