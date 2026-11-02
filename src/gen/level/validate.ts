@@ -1,4 +1,4 @@
-import { footprintCells, type PlacedProp, resolveProp } from '../../sim/props';
+import { footprintCells } from '../../sim/props';
 import { isProtected, type Level, T_EMPTY, T_SOLID } from '../../sim/level';
 import { ReachCache } from '../../sim/reach';
 import { analyzeRoutes, MAX_SHARED } from './routes';
@@ -107,31 +107,9 @@ function loneBridge([x0, x1]: readonly [number, number], hints: readonly Bridge[
   return null;
 }
 
-/**
- * How many more bridges `level` needs with `placed` parts standing in it: 0
- * if the goal is already reachable, and MAX_BRIDGES if nothing proves a
- * smaller number (better to over-offer than to strand a match). Static solid
- * parts count as ground; everything placed takes up its cells.
- */
-export function partsNeeded(level: Level, placed: readonly PlacedProp[]): number {
-  const tiles = new Uint8Array(level.tiles);
-  for (const pp of placed) {
-    const r = resolveProp(pp);
-    if (r.motion.type !== 'none') continue;
-    for (const m of r.mods) {
-      if (m.type !== 'body' || m.breakFrames > 0) continue;
-      for (const [x, y] of m.cells) if (x >= 0 && y >= 0 && x < level.w && y < level.h) tiles[y * level.w + x] = T_SOLID;
-    }
-  }
-  const now: Level = { ...level, tiles, setPieces: [...level.setPieces, ...placed] };
-  const cache = new ReachCache(now);
-  if (cache.analyze(now).goalReached) return 0;
-  // What's left of the recorded solution counts as proof, whatever the rougher search finds.
-  const rest = (level.solution ?? []).filter((b) => canPlaceBridge(now, b));
-  const recorded = cache.analyze(withBridges(now, rest)).goalReached ? rest.length : Infinity;
-  const searched = new BridgeSearch(now, cache).solve(level.solution ?? [])?.length ?? Infinity;
-  const best = Math.min(recorded, searched);
-  return best === Infinity ? MAX_BRIDGES : best;
+/** Bridges that finish `level`, found by the search (seeded with `hints`) and proven by `cache`; null if it finds none. */
+export function searchBridges(level: Level, hints: readonly Bridge[], cache: ReachCache): Bridge[] | null {
+  return new BridgeSearch(level, cache).solve(hints);
 }
 
 /**
@@ -140,9 +118,7 @@ export function partsNeeded(level: Level, placed: readonly PlacedProp[]): number
  */
 export function partsInAir(level: Level, air: number): number {
   const cache = new ReachCache(level, [0, air]);
-  const solution = level.solution ?? [];
-  if (solution.length === 2 && solution.some((b) => canPlaceBridge(level, b) && cache.analyze(withBridges(level, [b])).goalReached)) return 1;
-  return new BridgeSearch(level, cache).solve(solution)?.length ?? MAX_BRIDGES;
+  return new BridgeSearch(level, cache).solve(level.solution ?? [])?.length ?? MAX_BRIDGES;
 }
 
 /** Policy check; seeds the search with the level's recorded solution if it has one. */

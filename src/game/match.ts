@@ -1,13 +1,25 @@
 import { clamp, type Rect } from '../core/geom';
 import { deriveSeed, Rng } from '../core/rng';
 import { type CharacterDef, generateCharacter } from '../gen/character';
-import { GRAVITY, type GravityClass, partsNeeded, type ProfileOverride } from '../gen/level';
+import { type Bridge, GRAVITY, type GravityClass, MAX_BRIDGES, type ProfileOverride, prove, settled } from '../gen/level';
 import { buildLevel, type LevelRequest } from '../gen/level/pregen';
 import { generateCrate, type PropDef } from '../gen/props';
 import { ageBlood, type BloodCell, cleanBlood, washBlood } from '../sim/blood';
 import { DT, MAX_PLAYERS, TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import type { Level } from '../sim/level';
-import { type BlastSpec, blastCells, blastEvent, blastSpec, canPlace, detonate, footprint, hangRow, landedDef, type PlacedProp } from '../sim/props';
+import {
+  type BlastSpec,
+  blastCells,
+  blastEvent,
+  blastSpec,
+  canPlace,
+  detonate,
+  detonateCharges,
+  footprint,
+  hangRow,
+  landedDef,
+  type PlacedProp,
+} from '../sim/props';
 import { RunWorld } from '../sim/run';
 import { type GameEvent, type InputFrame, NO_INPUT } from '../sim/types';
 import type { ThemeId } from '../themes';
@@ -100,6 +112,13 @@ export class Match {
   /** When set, every generated level uses this theme (debug / future playlist option). */
   themeOverride: ThemeId | undefined;
 
+  /**
+   * Bridges that would finish the level as it stands, proven with the real
+   * controller (gen/level/winnable.ts). Every placement keeps one, or is
+   * refused, and every crate offers as many bridge cards as it has.
+   */
+  plan: Bridge[] = [];
+
   /** Match rules (time limits, target score…). Change only in the lobby. */
   rules: MatchRules = { ...DEFAULT_RULES };
 
@@ -108,6 +127,7 @@ export class Match {
     this.themeOverride = theme;
     if (rules) this.rules = { ...rules };
     this.level = buildLevel(this.seed, theme, this.profileOverride());
+    this.plan = this.solution();
   }
 
   /** Level-profile knobs forced by the rules (gravity class). */
@@ -198,7 +218,13 @@ export class Match {
     this.themeOverride = theme;
     this.level = buildLevel(this.seed, theme, this.profileOverride());
     this.placed = [];
+    this.plan = this.solution();
     this.blood = [];
+  }
+
+  /** The level's recorded solution, proven when it was generated: the plan a match starts from. */
+  private solution(): Bridge[] {
+    return (this.level.solution ?? []).map((b) => ({ ...b }));
   }
 
   private stepLobby(inputs: Readonly<Record<string, InputFrame>>) {
@@ -270,6 +296,7 @@ export class Match {
     this.round = 0;
     this.dryRounds = 0;
     this.placed = [];
+    this.plan = this.solution();
     this.blood = [];
     this.result = null;
     this.winners = [];
@@ -286,7 +313,11 @@ export class Match {
     this.round++;
     this.run = null;
     const count = Math.max(3, this.players.length + 2);
-    const crate = generateCrate(this.seed, this.round, count, partsNeeded(this.level, this.placed), this.dryRounds);
+    // Re-proven here, so bridges built from the plan shorten it. The crate offers every bridge it still has.
+    const s = settled(this.level, this.placed);
+    const plan = prove(s.level, s.placed, this.plan);
+    if (plan) this.plan = plan;
+    const crate = generateCrate(this.seed, this.round, count, plan?.length ?? MAX_BRIDGES, this.dryRounds);
     const defs = new Rng(deriveSeed(this.seed ^ this.salt, `crate-order:${this.round}`)).shuffle(crate);
     // Cards in rows of up to 5 (8 players → 10 cards → 2 rows).
     const perRow = Math.min(count, 5);
@@ -442,10 +473,16 @@ export class Match {
         const g = this.ghostOrigin(p);
         if (g && canPlace(this.level, this.placed, g.def, p.rot, g.tx, g.ty)) {
           const bomb = g.def.modules.find((m) => m.type === 'bomb');
+          const pp: PlacedProp = { uid: this.nextUid, def: g.def, owner: p.slot, tx: g.tx, ty: g.ty, rot: p.rot };
+          if (!this.keepsWinnable(pp)) {
+            this.events.push({ type: 'refuse', slot: p.slot, x: p.cursor.x, y: p.cursor.y });
+            continue;
+          }
           if (bomb && !bomb.delay) {
             this.blast(this.placed, blastSpec(bomb), g.tx, g.ty, p.rot);
           } else {
-            this.placed.push({ uid: this.nextUid++, def: g.def, owner: p.slot, tx: g.tx, ty: g.ty, rot: p.rot });
+            this.nextUid++;
+            this.placed.push(pp);
             this.events.push({ type: 'place', slot: p.slot, x: p.cursor.x, y: p.cursor.y });
           }
           cleanBlood(this.blood, this.level, this.placed);
@@ -463,6 +500,25 @@ export class Match {
         this.startRun();
       }
     }
+  }
+
+  /**
+   * Would the match stay winnable with `pp` placed (or set off, for a bomb)?
+   * If so the plan moves to one that proves it (gen/level/winnable.ts); if not
+   * the part is refused, so a placement can never strand the match.
+   */
+  private keepsWinnable(pp: PlacedProp): boolean {
+    const bomb = pp.def.modules.find((m) => m.type === 'bomb');
+    let level = this.level;
+    let placed: PlacedProp[];
+    if (bomb && bomb.type === 'bomb' && !bomb.delay) {
+      level = { ...level, tiles: level.tiles.slice(), setPieces: level.setPieces.slice() };
+      placed = detonate(level, [...this.placed], blastSpec(bomb), pp.tx, pp.ty, pp.rot);
+    } else placed = [...this.placed, pp];
+    const s = settled(level, placed);
+    const plan = prove(s.level, s.placed, this.plan, false);
+    if (plan) this.plan = plan;
+    return !!plan;
   }
 
   // ---------------------------------------------------------------- run
@@ -484,18 +540,10 @@ export class Match {
 
   /** Delayed charges (time bombs) go off as the race starts, catching whatever was placed this round. A charge caught in an earlier blast is defused. */
   private detonateCharges() {
-    for (const c of this.placed.filter((p) => p.def.modules.some((m) => m.type === 'bomb' && m.delay))) {
-      if (!this.placed.includes(c)) continue;
-      const m = c.def.modules.find((x) => x.type === 'bomb')!;
-      if (m.type !== 'bomb') continue;
-      this.blast(
-        this.placed.filter((p) => p !== c),
-        blastSpec(m),
-        c.tx,
-        c.ty,
-        c.rot,
-      );
-    }
+    this.placed = detonateCharges(this.level, this.placed, (spec, tx, ty, rot) => {
+      washBlood(this.blood, blastCells(spec, tx, ty, rot));
+      this.events.push(blastEvent(spec, tx, ty, rot));
+    });
   }
 
   /** A blast in either phase: `props` is what's standing when it goes off. */

@@ -1,4 +1,4 @@
-import { footprintCells } from '../../sim/props';
+import { footprintCells, type PlacedProp } from '../../sim/props';
 import { BRIDGE_W } from './validate';
 import { deriveSeed, Rng } from '../../core/rng';
 import type { Level, LevelProfile } from '../../sim/level';
@@ -15,10 +15,12 @@ import { LAST_RESORT } from './sculptors/common';
 import type { Shape } from './types';
 import { type Bridge, judge, oneBridgeEnough } from './validate';
 import { rollWeather } from './weather';
+import { planHolds } from './winnable';
 
 export type { BridgeHint, SculptCtx, Sculptor, Shape } from './types';
 export { describeProfile, GRAVITY, type GravityClass, gravityClass, type ProfileOverride, rollProfile } from './profile';
-export { BRIDGE_W, type Bridge, canPlaceBridge, isAcceptable, judge, MAX_BRIDGES, partsNeeded, withBridges } from './validate';
+export { BRIDGE_W, type Bridge, canPlaceBridge, isAcceptable, judge, MAX_BRIDGES, withBridges } from './validate';
+export { fieldOf, partsNeeded, planHolds, prove, settled } from './winnable';
 export { WEATHER_WEIGHTS } from './weather';
 
 const MAX_ATTEMPTS = 30;
@@ -106,11 +108,19 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
     level.solution = bridges;
     // Before the set pieces: their placer checks the path with the ghost, which walks on this footing.
     level.weather = rollWeather(seed, theme, level, profileOverride?.weather);
-    // Set pieces must never block the known prop solution: drop any that reserve one of its cells.
-    const pieces = SET_PIECES[themeId](new Rng(deriveSeed(seed, `setpieces:${attempt}`)), level, { count: profile.hazards, danger: profile.danger, cache });
+    // Set pieces must never block the known prop solution: a match starts from it, keeping clear of every
+    // piece's barrier (./winnable.ts), so a piece goes in only if the solution still holds that way.
+    const keep = (pieces: readonly PlacedProp[]) => planHolds(level, pieces, bridges, cache);
+    const pieces = SET_PIECES[themeId](new Rng(deriveSeed(seed, `setpieces:${attempt}`)), level, {
+      count: profile.hazards,
+      danger: profile.danger,
+      cache,
+      keep,
+    });
     const needed = new Set(bridges.flatMap((b) => Array.from({ length: BRIDGE_W }, (_, i) => b.y * level.w + b.x + i)));
     // (The placer already avoids these cells; this is a safety net. Keep uids contiguous.)
     level.setPieces = pieces.filter((p) => !footprintCells(p).some(([x, y]) => needed.has(y * level.w + x))).map((p, i) => ({ ...p, uid: SET_PIECE_UID + i }));
+    while (level.setPieces.length && !planHolds(level, [], bridges, cache)) level.setPieces.pop();
     return level;
   }
   lastGenAttempts = MAX_ATTEMPTS + LEGACY_ATTEMPTS;

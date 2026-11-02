@@ -1,5 +1,6 @@
 export * from './ammo';
 export * from './attach';
+export * from './barrier';
 export * from './modules';
 export * from './rays';
 export * from './registry';

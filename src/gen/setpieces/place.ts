@@ -402,6 +402,8 @@ export interface PlacerOpts {
   danger?: number;
   /** The level's reachability cache, if the caller has one. */
   cache?: ReachCache;
+  /** Has the last say on each piece, given every piece so far with it last (worldgen: the solution still holds). */
+  keep?: (pieces: readonly PlacedProp[]) => boolean;
 }
 
 /** Recipe weight scaled by the level's danger: hazards up to ×2.4 on nasty levels, ×0.4 on tame ones (and the reverse for helpers). */
@@ -440,7 +442,7 @@ export function makePlacer(themeKey: string, recipes: readonly Recipe[], uidBase
       for (const cand of recipe.candidates(rng, s)) {
         if (++tries > tryCap) break;
         const pp = finalize(s, cand, uidBase + out.length, `setpiece:${themeKey}:${recipe.name}`);
-        if (pp) {
+        if (pp && (!opts.keep || opts.keep([...out, pp]))) {
           out.push(pp);
           commit(s, pp);
           break;

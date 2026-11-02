@@ -71,6 +71,8 @@ export class Renderer {
   private backdrop = new Backdrop();
   private terrain = new TerrainPainter();
   private surround = new Surround();
+  /** Per slot, the ghost the match last turned down (it would have left no way to the flag): it stays red until it moves. */
+  private refused = new Map<number, string>();
   private fx = new Fx();
   private weather = new WeatherLayer();
   private rigs = new Map<number, Rig>();
@@ -509,7 +511,7 @@ export class Renderer {
       const gh = m.ghostOrigin(p);
       const ghost = ghostProp(m, p);
       if (!gh || !ghost) continue;
-      const ok = canPlace(m.level, m.placed, gh.def, p.rot, gh.tx, gh.ty);
+      const ok = canPlace(m.level, m.placed, gh.def, p.rot, gh.tx, gh.ty) && this.refused.get(p.slot) !== ghostKey(m, p, gh);
       const col = ok ? p.character.body : { h: 0, s: 90, l: 55 };
       s.globalAlpha = 0.85;
       rc.g.globalAlpha = 0.85;
@@ -715,6 +717,13 @@ export class Renderer {
           this.cam.shake = 14;
           this.flash = 0.25;
           break;
+        case 'refuse': {
+          const p = m.player(e.slot);
+          const gh = p && m.ghostOrigin(p);
+          if (p && gh) this.refused.set(p.slot, ghostKey(m, p, gh));
+          this.fx.add('ring', e.x, e.y, 0, 0, { h: 0, s: 90, l: 55 }, 24, 0.35);
+          break;
+        }
         case 'place': {
           const c = m.player(e.slot)?.character.body ?? th.accent;
           this.fx.add('ring', e.x, e.y, 0, 0, c, 30, 0.4);
@@ -733,4 +742,9 @@ export class Renderer {
       }
     }
   }
+}
+
+/** What a ghost is: part, turn and spot, and what else stands (a refusal can lift once something else goes in). */
+function ghostKey(m: Match, p: Match['players'][number], gh: { def: { key: string }; tx: number; ty: number }): string {
+  return `${gh.def.key}:${p.rot}:${gh.tx}:${gh.ty}:${m.placed.length}:${m.level.version}`;
 }

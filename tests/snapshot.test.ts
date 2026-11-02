@@ -33,7 +33,7 @@ function inputsAt(m: Match, f: number): Record<string, InputFrame> {
  */
 const MATCH_FIELDS = {
   saved:
-    'seed level phase phaseFrame frame round players placed crate run result prevScores winners nextUid charRolls pendingAdvance themeOverride rules nextSalt salt dryRounds forceProfile blood',
+    'seed level phase phaseFrame frame round players placed plan crate run result prevScores winners nextUid charRolls pendingAdvance themeOverride rules nextSalt salt dryRounds forceProfile blood',
   derived: 'events', // render/audio only, drained every frame
 };
 const RUN_FIELDS = {

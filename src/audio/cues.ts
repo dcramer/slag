@@ -89,6 +89,8 @@ export function cuesForEvent(e: GameEvent, env: CueEnv): Cue[] {
       return [{ name: e.type, ...env.propPos(e.uid) }];
     case 'place':
       return [{ name: 'place', x: e.x, y: e.y, variant: env.placedVariant(e.slot), notes: [env.note(0), env.note(4)] }];
+    case 'refuse':
+      return [{ name: 'ui-toggle', variant: 'off', x: e.x, y: e.y, pitch: 0.7 }];
     case 'claim':
       return [{ name: 'claim', pitch: 1, notes: [env.note(0, 1), env.note(4, 1)].map((n) => n + Math.round(12 * Math.log2(env.pitchOf(e.slot)))) }];
     case 'phase':

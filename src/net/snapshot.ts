@@ -28,7 +28,7 @@ import type { ThemeId } from '../themes';
  * A new field on Match or RunWorld must be added here or listed as derived:
  * tests/snapshot.test.ts fails until it is.
  */
-export const SNAP_VERSION = 8;
+export const SNAP_VERSION = 9;
 
 export interface RunSnap {
   slots: number[];
@@ -63,6 +63,8 @@ export interface MatchSnap {
   force: ProfileOverride;
   players: unknown;
   placed: unknown;
+  /** The bridges that keep the match winnable (Match.plan): the next proof starts from them. */
+  plan: { x: number; y: number }[];
   /** Blood on the level (sim/blood.ts): small integers only, and it moves footing. */
   blood: BloodCell[];
   crate: unknown;
@@ -205,6 +207,7 @@ export function snapshotMatch(m: Match): MatchSnap {
     force: { ...m.forceProfile },
     players: toWire(m.players),
     placed: toWire(m.placed),
+    plan: m.plan.map((b) => ({ x: b.x, y: b.y })),
     blood: m.blood.map((c) => ({ ...c })),
     crate: toWire(m.crate),
     rules: { ...m.rules },
@@ -276,6 +279,7 @@ export function restoreMatch(m: Match, s: MatchSnap): void {
   m.forceProfile = { ...s.force };
   m.players = fromWire(s.players) as Player[];
   m.placed = fromWire(s.placed) as PlacedProp[];
+  m.plan = s.plan.map((b) => ({ x: b.x, y: b.y }));
   m.blood = s.blood.map((c) => ({ ...c }));
   m.crate = fromWire(s.crate) as CrateItem[];
   m.rules = { ...s.rules };
