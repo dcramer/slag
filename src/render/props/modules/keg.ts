@@ -27,8 +27,19 @@ function shownAngle(m: Keg, grip: Grip | undefined, frame: number, phase: number
   return (from + delta * u) * QUARTER;
 }
 
-const fuse: P[] = [{ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 0 }];
-const chev: P[] = [{ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 0 }];
+const fuse: P[] = [
+  { x: 0, y: 0 },
+  { x: 0, y: 0 },
+  { x: 0, y: 0 },
+];
+const chev: P[] = [
+  { x: 0, y: 0 },
+  { x: 0, y: 0 },
+  { x: 0, y: 0 },
+  { x: 0, y: 0 },
+  { x: 0, y: 0 },
+  { x: 0, y: 0 },
+];
 
 /** Three chevrons marching out of the mouth: the way you'll go, readable at gameplay scale without a word. */
 function aimChevrons(rc: RC, x: number, y: number, a: number, heat: number, alpha: number) {
@@ -74,9 +85,9 @@ function cask(wood: HSL, pal: MetalPalette) {
       const x = -MOUTH + t * MOUTH * 2;
       const bulge = 8.6 + 3.2 * Math.sin(Math.PI * t);
       top.push({ x, y: -bulge });
-      bot.push({ x, y: bulge });
+      bot.unshift({ x, y: bulge });
     }
-    const body = [...top, ...bot.toReversed()];
+    const body = [...top, ...bot];
     tone(g, body, wood, { depth: 2, shade: -18 });
     g.save();
     path(g, body);

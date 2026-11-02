@@ -69,9 +69,9 @@ function hook(sky: boolean) {
       for (const x of [-3.1, 3.1]) dot(g, x, 0.1, 0.55, x, '#e4e7ee');
     }
     // An S: a top curl over the plate, a bottom curl the first link hangs in.
-    const s1 = arcPts(0.9, 2.4, 1.3, Math.PI * 1.1, Math.PI * 2.05, 8);
+    const s1 = arcPts(0.9, 2.4, 1.3, Math.PI * 2.05, Math.PI * 1.1, 8);
     const s2 = arcPts(-0.2, 5.1, 1.5, -Math.PI * 0.55, Math.PI * 0.9, 9);
-    const sPath = [...s1.toReversed(), ...s2];
+    const sPath = [...s1, ...s2];
     g.fillStyle = INK;
     stroke(g, sPath, { w: 1.9, seed: 6, taper: [0.15, 0.25], press: 0.1 });
     g.fillStyle = '#c4c8d2';

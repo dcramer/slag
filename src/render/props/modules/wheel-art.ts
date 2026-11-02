@@ -182,7 +182,8 @@ function deck(w: number, h: number, st: PropStyle, pal: MetalPalette) {
       g.fill();
     }
     g.fillStyle = INK;
-    for (let x = 1; x < w - 1; x += sc) stroke(g, arcPts(x + sc / 2, top, sc / 2, 0.15, Math.PI - 0.15, 6), { w: 0.45, seed: x, taper: [0.3, 0.3], press: 0.2 });
+    for (let x = 1; x < w - 1; x += sc)
+      stroke(g, arcPts(x + sc / 2, top, sc / 2, 0.15, Math.PI - 0.15, 6), { w: 0.45, seed: x, taper: [0.3, 0.3], press: 0.2 });
     g.restore();
     pen(g, tub, seed + 1, 0.5, 1.7, 4);
     // Marquee bulbs along the skirt, clear of the pin.
