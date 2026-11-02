@@ -14,7 +14,7 @@ import type { MetalPalette } from '../kit';
  */
 
 /** Module types whose art draws the block they stand on. */
-const HOUSED = new Set<Module['type']>(['launcher', 'flame', 'laser', 'tesla', 'piston', 'fan', 'magnet']);
+const HOUSED = new Set<Module['type']>(['launcher', 'sentry', 'flame', 'laser', 'tesla', 'piston', 'fan', 'magnet']);
 
 /**
  * Whether this prop's body is drawn by its machine. A set piece brings its own housing (a `deco`: the

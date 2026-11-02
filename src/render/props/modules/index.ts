@@ -3,6 +3,7 @@ import './body';
 import './spikes';
 import './swinger';
 import './launcher';
+import './launcher-sentry';
 import './flame';
 import './laser';
 import './tesla';

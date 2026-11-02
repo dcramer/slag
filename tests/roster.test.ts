@@ -20,7 +20,20 @@ import { restoreMatch, snapshotMatch } from '../src/net/snapshot';
 const seedAt = (i: number) => (i * 2654435761 + 91) >>> 0;
 const cardsFor = (players: number) => Math.max(3, players + 2);
 const PLAYERS = Array.from({ length: MAX_PLAYERS }, (_, i) => i + 1);
-const HAZARDS = new Set<Archetype>(['spikestrip', 'spikeblock', 'saw', 'flail', 'launcher', 'flamer', 'laser', 'tesla', 'crusher', 'dropper', 'snapper']);
+const HAZARDS = new Set<Archetype>([
+  'spikestrip',
+  'spikeblock',
+  'saw',
+  'flail',
+  'launcher',
+  'sentry',
+  'flamer',
+  'laser',
+  'tesla',
+  'crusher',
+  'dropper',
+  'snapper',
+]);
 /** Parts with nothing to scale: one tile, or a beam that already reaches across the level. */
 const ONE_SIZE = new Set<Archetype>(['launcher', 'laser', 'spring', 'hangar', 'mystery', 'keg']);
 
@@ -44,6 +57,7 @@ const SIZE_FIELDS: Partial<Record<Module['type'], string[]>> = {
   snapper: ['cells'],
   rotor: ['arm', 'hub'],
   rope: ['length'],
+  sentry: ['range'],
 };
 
 const baseName = (name: string) => name.replace(/^(Small|Big) /, '');
@@ -74,7 +88,7 @@ function measure(d: PropDef): number {
   for (const m of d.modules) {
     const r: Record<string, unknown> = { ...m };
     if (Array.isArray(r.cells)) sum += r.cells.length;
-    for (const f of ['radius', 'length', 'arm', 'width']) if (typeof r[f] === 'number') sum += r[f];
+    for (const f of ['radius', 'length', 'arm', 'width', 'range']) if (typeof r[f] === 'number') sum += r[f];
     if (m.type === 'tesla') sum += m.b[0];
   }
   return sum;

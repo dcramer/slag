@@ -280,6 +280,11 @@ export const SFX = {
     tone(v, 'square', 1800 * o.pitch, 180 * o.pitch, t, 0.002, 0.13, 0.8, lp);
     tone(v, 'sine', 2400 * o.pitch, 600 * o.pitch, t, 0.002, 0.08, 0.5);
   }),
+  // A sentry's rounds: a dry clack with a short noisy crack, quick enough to chatter through a burst.
+  'fire-sentry': P(1, 0.16, 0.08, 6, 0.08, (v, t, o) => {
+    burst(v, 'white', t, 0.001, 0.035, 1, 'bandpass', 2600 * o.pitch, 1800 * o.pitch, 1.5);
+    tone(v, 'square', 210 * o.pitch, 120 * o.pitch, t, 0.001, 0.05, 0.6);
+  }),
   'fire-thrower': P(1, 0.4, 0.1, 3, 0.08, (v, t) => {
     const am = v.gain(v.out, 0.5);
     const lfo = v.gain(am.gain, 0.5);
@@ -387,6 +392,12 @@ export const SFX = {
   // --- UI / phases
   whoosh: P(2, 0.34, 0.15, 2, 0.2, (v, t) => {
     burst(v, 'pink', t, 0.12, 0.3, 1, 'bandpass', 400, 2000, 1.4);
+  }),
+  // A sentry spotting someone: two quick rising beeps.
+  'sentry-beep': P(2, 0.13, 0.05, 3, 0.2, (v, t, o) => {
+    const lp = v.filter(v.out, 'lowpass', 3200);
+    tone(v, 'square', 1320 * o.pitch, 1320 * o.pitch, t, 0.002, 0.06, 0.8, lp);
+    tone(v, 'square', 1760 * o.pitch, 1760 * o.pitch, t + 0.09, 0.002, 0.08, 0.8, lp);
   }),
   'ui-hover': P(0, 0.06, 0, 4, 0.06, (v, t, o) => {
     tone(v, 'sine', 1250 * o.pitch, 1250 * o.pitch, t, 0.002, 0.03, 1);

@@ -32,6 +32,7 @@ export type Ammo =
   | 'frost'
   | 'ricochet'
   | 'glider'
+  | 'slug'
   // Held-item shots (src/sim/items): never loaded in a launcher.
   | 'puck'
   | 'smokebomb';
@@ -118,6 +119,8 @@ export const AMMO: Record<Ammo, AmmoSpec> = {
   ricochet: { gravity: 0, radius: 2.5, wobble: 0, emissive: true, life: 300 },
   // A rideable flying plank (ammo.ts: platform projectile). Radius is only its art/pop size.
   glider: { gravity: 0, radius: 8, wobble: 0, emissive: false, life: 420, effect: 'none' },
+  // A sentry's round: fast, straight and short-lived, so a burst covers its range and no further.
+  slug: { gravity: 0, radius: 2, wobble: 0, emissive: true, life: 70 },
   // Held-item shots; src/sim/items/ammo.ts registers their behavior.
   puck: { gravity: 1200, radius: 4, wobble: 0, emissive: false, life: 360, effect: 'bonk' },
   smokebomb: { gravity: 700, radius: 3.5, wobble: 0, emissive: false, life: 180, effect: 'none' },
@@ -163,6 +166,27 @@ export type Module =
       spread: number;
       spreadAngle: number;
       speed: number;
+    }
+  | {
+      /**
+       * Sentry gun: a tripod turret that sweeps `cone` (rad) either side of `angle` while it waits. A
+       * runner within `range` tiles, inside that cone and in sight, locks it: it beeps, turns toward
+       * them at no more than `turn` rad/frame, spins up for `spin` frames, fires `burst` rounds of
+       * `ammo` `gap` frames apart along its barrel at `speed` px/s, then cools down for `cool` frames.
+       */
+      type: 'sentry';
+      at: Vec;
+      angle: number;
+      cone: number;
+      sweepPeriod: number;
+      range: number;
+      turn: number;
+      spin: number;
+      burst: number;
+      gap: number;
+      cool: number;
+      speed: number;
+      ammo: Ammo;
     }
   | { type: 'flame'; at: Vec; angle: number; length: number; on: number; off: number; warn: number }
   | { type: 'laser'; at: Vec; angle: number; charge: number; fire: number; off: number; sweep: number; sweepPeriod: number }
@@ -383,6 +407,7 @@ export type Archetype =
   | 'saw'
   | 'flail'
   | 'launcher'
+  | 'sentry'
   | 'flamer'
   | 'laser'
   | 'tesla'

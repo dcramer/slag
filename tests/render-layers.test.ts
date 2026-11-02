@@ -35,6 +35,7 @@ const MAY_PAINT_BACKDROP: Record<Module['type'], boolean> = {
   pipe: false,
   rope: false,
   rotor: true,
+  sentry: false,
   snapper: false,
   spikes: false,
   spring: false,

@@ -7,7 +7,7 @@ import { AMMO, type ModuleOf } from '../types';
 type Launcher = ModuleOf<'launcher'>;
 const TRACK_TURN = 0.045; // rad/frame
 /** Px of its own housing a tracker's eye sees past. */
-const SIGHT_SKIP = 8;
+export const SIGHT_SKIP = 8;
 /** Trackers only notice runners within ±60° of the way they're mounted, so they read as "watching that side". */
 export const TRACK_CONE = Math.PI / 3;
 
@@ -15,7 +15,8 @@ export function launcherAngle(m: Launcher, f: number, phase: number): number {
   return m.aim === 'sweep' ? m.angle + m.sweep * dsin(Math.PI * 2 * (f / m.sweepPeriod + phase)) : m.angle;
 }
 
-function angleDiff(a: number, b: number): number {
+/** Signed difference a - b, wrapped to [-π, π]. */
+export function angleDiff(a: number, b: number): number {
   let d = (a - b) % (Math.PI * 2);
   if (d > Math.PI) d -= Math.PI * 2;
   if (d < -Math.PI) d += Math.PI * 2;
@@ -35,7 +36,7 @@ function ballisticAngle(dx: number, dy: number, speed: number, gravity: number):
 }
 
 /** Can the eye at (x, y) see this point? Terrain and solids hide a runner; other runners don't. */
-function inSight(ctx: TickCtx, x: number, y: number, tx: number, ty: number): boolean {
+export function inSight(ctx: TickCtx, x: number, y: number, tx: number, ty: number): boolean {
   const d = dhypot(tx - x, ty - y);
   return d <= SIGHT_SKIP || castRay(ctx.level, ctx.solids ?? [], x, y, (tx - x) / d, (ty - y) / d, d, SIGHT_SKIP, ctx.r.pp.uid) >= d;
 }

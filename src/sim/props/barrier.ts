@@ -37,8 +37,8 @@ export interface Barrier {
 /** Frames sampled, from the race start: longer than every module's cycle but the slowest. */
 const SPAN = 720;
 const STEP = 6;
-/** A cell clear for this many frames in a row can be slipped through. */
-const MIN_OPENING = 30;
+/** A cell clear for this many frames in a row can be slipped through. Anything that hurts in bursts (a sentry) holds fire at least this long between them. */
+export const MIN_OPENING = 30;
 
 const cache = new WeakMap<PlacedProp, { tiles: Uint8Array; w: number; barrier: Barrier }>();
 
