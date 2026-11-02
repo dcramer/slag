@@ -1,8 +1,10 @@
+import { footprintCells } from '../../sim/props';
+import { BRIDGE_W } from './validate';
 import { deriveSeed, Rng } from '../../core/rng';
 import { LEVEL_H, LEVEL_W } from '../../sim/constants';
 import type { Level } from '../../sim/level';
 import { pickThemeId, type ThemeId } from '../../themes';
-import { SET_PIECES } from '../setpieces';
+import { SET_PIECE_UID, SET_PIECES } from '../setpieces';
 import { generateTheme, type Theme } from '../theme';
 import { FALLBACK_SCULPTOR, SCULPTORS } from './sculptors';
 import type { Shape } from './types';
@@ -47,7 +49,12 @@ export function generateLevel(seed: number, themeOverride?: ThemeId): Level {
     if (shape.wantsProps && v.bridges.length === 0 && attempt < MAX_ATTEMPTS - 10) continue;
     lastGenAttempts = attempt + 1;
     lastGenInfo = { attempts: attempt + 1, bridges: v.bridges, fallback: attempt >= MAX_ATTEMPTS };
-    level.setPieces = SET_PIECES[themeId](new Rng(deriveSeed(seed, `setpieces:${attempt}`)), level);
+    level.solution = v.bridges;
+    // Set pieces must never block the known prop solution: drop any that reserve one of its cells.
+    const pieces = SET_PIECES[themeId](new Rng(deriveSeed(seed, `setpieces:${attempt}`)), level);
+    const needed = new Set(v.bridges.flatMap((b) => Array.from({ length: BRIDGE_W }, (_, i) => b.y * level.w + b.x + i)));
+    // (The placer already avoids these cells; this is a safety net. Keep uids contiguous.)
+    level.setPieces = pieces.filter((p) => !footprintCells(p).some(([x, y]) => needed.has(y * level.w + x))).map((p, i) => ({ ...p, uid: SET_PIECE_UID + i }));
     return level;
   }
   lastGenAttempts = MAX_ATTEMPTS + LEGACY_ATTEMPTS;

@@ -20,6 +20,14 @@ export const PART_INFO: Record<Module['type'], { title: string; blurb: string }>
   piston: { title: 'Crusher', blurb: 'A solid head that slams out (deadly leading edge), holds, then slowly retracts. Can crush you against walls.' },
   spring: { title: 'Spring', blurb: 'Launches whoever touches it in the direction it faces.' },
   fan: { title: 'Fan', blurb: 'Pushes runners along a wind column until it hits a wall. Strong upward fans let you float.' },
+  rotor: { title: 'Rotor', blurb: 'Platforms on arms turning around a hub (windmills, cog lifts) or swinging as a pendulum (chandeliers, hoists). Ride them.' },
+  vehicle: {
+    title: 'Vehicle',
+    blurb: 'A rideable machine that drives back and forth along the ground, pausing at each end. Its leading face is deadly while it moves.',
+  },
+  cannon: { title: 'Fixed cannon', blurb: 'A big emplacement firing on a steady rhythm, with a visible fuse telegraph before each shot.' },
+  geyser: { title: 'Geyser', blurb: 'A vent that rumbles, then erupts. Lava geysers kill; steam geysers launch you upward.' },
+  deco: { title: 'Scenery', blurb: 'Big static set dressing (presses, AC units, antennas) that you can stand on.' },
   bomb: { title: 'Bomb', blurb: 'Not placed — detonated. Clears terrain and props in a radius (spawn and goal zones are protected).' },
 };
 

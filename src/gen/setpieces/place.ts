@@ -91,6 +91,8 @@ export class Site {
       w: (SAFE_TILES * 2 + 1) * TILE,
       h: (SAFE_TILES * 2 + 1) * TILE,
     }));
+    // Keep worldgen's known prop solution buildable: reserve each bridge (3 wide) plus headroom above it.
+    for (const b of level.solution ?? []) for (let dy = -2; dy <= 0; dy++) for (let i = 0; i < 3; i++) this.taken.add((b.y + dy) * this.w + b.x + i);
   }
 
   /** Full reachability (real controller). Expensive: only computed when a static solid needs checking. */

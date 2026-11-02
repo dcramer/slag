@@ -1,3 +1,4 @@
+import { footprintCells } from '../../sim/props';
 import { LEVEL_H, LEVEL_W, TILE } from '../../sim/constants';
 import { isProtected, type Level, T_EMPTY, T_SOLID } from '../../sim/level';
 import { bodyAtCell, type CollisionWorld, stepBody } from '../../sim/physics';
@@ -37,10 +38,24 @@ export interface Verdict {
 /** True if a bridge with left cell (x, y) fits: all cells in-bounds, empty, unprotected. */
 export function canPlaceBridge(level: Level, b: Bridge): boolean {
   if (b.y < 1 || b.y >= level.h || b.x < 0 || b.x + BRIDGE_W > level.w) return false;
+  const reserved = setPieceCells(level);
   for (let i = 0; i < BRIDGE_W; i++) {
-    if (level.tiles[b.y * level.w + b.x + i] !== T_EMPTY || isProtected(level, b.x + i, b.y)) return false;
+    const k = b.y * level.w + b.x + i;
+    if (level.tiles[k] !== T_EMPTY || isProtected(level, b.x + i, b.y) || reserved.has(k)) return false;
   }
   return true;
+}
+
+const reservedCache = new WeakMap<object, Set<number>>();
+/** Cells reserved by set pieces (players can't build there). */
+function setPieceCells(level: Level): Set<number> {
+  const key = level.setPieces;
+  let set = reservedCache.get(key);
+  if (!set) {
+    set = new Set(level.setPieces.flatMap((p) => footprintCells(p).map(([x, y]) => y * level.w + x)));
+    reservedCache.set(key, set);
+  }
+  return set;
 }
 
 /** A copy of `level` with the given bridges written as solid tiles. */
@@ -59,9 +74,9 @@ export function judge(level: Level, hints: readonly Bridge[] = []): Verdict {
   return { ok: !!sol, bridges: sol ?? [], evals: s.evals };
 }
 
-/** Policy check without hints. */
+/** Policy check; seeds the search with the level's recorded solution if it has one. */
 export function isAcceptable(level: Level): boolean {
-  return judge(level).ok;
+  return judge(level, level.solution ?? []).ok;
 }
 
 // ---------------------------------------------------------------------------

@@ -32,6 +32,12 @@ export interface Level {
   style: string;
   /** Pre-placed, theme-driven set pieces (owner -1). Persist for the whole match. */
   setPieces: PlacedProp[];
+  /**
+   * One known way to finish with props: cells (left end, 3 wide) where a
+   * bridge platform makes the goal reachable. Empty when solvable bare.
+   * Set by worldgen; used by validation, tools and tests.
+   */
+  solution?: { x: number; y: number }[];
   /** Bumped whenever tiles change so renderers can invalidate caches. */
   version: number;
 }

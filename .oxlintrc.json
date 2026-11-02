@@ -29,7 +29,10 @@
     "unicorn/consistent-function-scoping": "off",
     "no-underscore-dangle": "off",
     "unicorn/prefer-add-event-listener": "off",
-    "react/react-in-jsx-scope": "off"
+    "react/react-in-jsx-scope": "off",
+    "unicorn/no-array-sort": "off",
+    "unicorn/no-array-fill-with-reference-type": "off",
+    "oxc/no-map-spread": "off"
   },
   "overrides": [
     {
