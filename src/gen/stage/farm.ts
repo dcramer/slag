@@ -337,8 +337,9 @@ function buildElevator(g: Grid, rng: Rng, box: TileRect, parts: number): Landmar
   });
   const last = silos[silos.length - 1];
   ladder(g, lc, G, T);
-  // The leg: the cab parks flush with the ground in a slot in it.
+  // The leg: the cab parks flush with the ground in a slot in it, and its cable runs up to the head pulley's beam.
   g.clear(shaft, G, shaft + 1, G);
+  fill(g, shaft, T - 4, shaft + 1, T - 4);
   const a: Record<string, Vec> = {
     shaft: [shaft, G],
     top: [T, G],
