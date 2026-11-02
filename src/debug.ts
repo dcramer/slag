@@ -3,7 +3,7 @@ import type { Match } from './game/match';
 import { ARCHETYPE_WEIGHTS, type Archetype, DEMOLISH, generateProp } from './gen/props';
 import type { NetSession } from './net/session';
 import { hashMatch } from './net/snapshot';
-import { castBench, castCatalog } from './render/cast/sheet';
+import { toyBench, toyCatalog } from './render/toys/sheet';
 import type { Renderer } from './render/renderer';
 import { giveItem, ITEM_KINDS, type ItemKind } from './sim/items';
 import { canPlace, landedDef, linkPipes } from './sim/props';
@@ -31,7 +31,6 @@ import type { ThemeId } from './themes';
  *   ?debug=1            open the dev overlay (see installDevtoolsHooks)
  *   ?give=sword,puck    hand race runners these held items, cycled (`all` = one of each)
  *   ?lettering=0        no impact words (read by the Renderer)
- *   ?cast=b             character-direction prototype a|b|c (docs/CHARACTERS.md); render only
  *   ?zoom=1             force the phone camera on (`?zoom=0` off, `?zoom=2.4` pins a zoom); see render/camera-follow.ts
  */
 export interface SlagDebug {
@@ -58,8 +57,8 @@ export interface SlagDebug {
   render(ms?: number): void;
   /** Deterministic state hash of the confirmed match (peers in sync ⇔ equal hashes at equal frames). */
   hash(): number;
-  /** Character-direction prototypes (`?cast=a|b|c`, docs/CHARACTERS.md): a catalog canvas, and a draw-cost bench. */
-  cast: { catalog: typeof castCatalog; bench: typeof castBench };
+  /** The toy cast (docs/CHARACTERS.md): a catalog canvas of every kind, and a draw-cost bench. */
+  toys: { catalog: typeof toyCatalog; bench: typeof toyBench };
 }
 
 export interface LoopControl {
@@ -77,7 +76,7 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
     match,
     renderer,
     net,
-    cast: { catalog: castCatalog, bench: castBench },
+    toys: { catalog: toyCatalog, bench: toyBench },
     quickStart(players = 2) {
       for (let i = 0; i < players; i++) match.join(dev(DEVICES[i]));
       if (match.phase === 'lobby') match.startMatch();

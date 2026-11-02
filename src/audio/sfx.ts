@@ -175,6 +175,17 @@ export const SFX = {
     burst(v, 'brown', t, 0.002, 0.22, 0.9, 'lowpass', 800);
     for (const dt of [0, 0.03, 0.058]) burst(v, 'white', t + dt, 0.001, 0.03, 0.6, 'bandpass', 2600, 2600, 2);
   }),
+  // A toy coming apart: tin clattering, a spring's twang. Plays under the death sound itself.
+  clank: P(2, 0.3, 0.2, 3, 0.1, (v, t, o) => {
+    for (const [dt, f] of [
+      [0, 520],
+      [0.045, 760],
+      [0.1, 430],
+    ])
+      metal(v, t + dt, f * o.pitch, 0.09, 0.4, [1, 2.31, 3.9]);
+    burst(v, 'white', t, 0.001, 0.04, 0.5, 'highpass', 3000);
+    tone(v, 'triangle', 180 * o.pitch, 120 * o.pitch, t + 0.06, 0.002, 0.18, 0.25);
+  }),
   'death-pop': P(3, 0.45, 0.2, 4, 0.1, (v, t, o) => {
     burst(v, 'white', t, 0.001, 0.05, 1, 'highpass', 1000);
     tone(v, 'sine', 900 * o.pitch, 1800 * o.pitch, t, 0.002, 0.08, 0.4);
