@@ -184,6 +184,8 @@ Every game design decision, preference and direction the owner has given, groupe
 - **No part, item, projectile or set piece has a face or a persona; only runners have faces.** "for our props, i dont think any should be persona-like ... i dont want them to have faces/etc"
   2026-11-02 16:55Z · `done` · DESIGN.md → Parody, ART.md → Objects, not characters, PARODY.md
   Changed: faced parts were redrawn and renamed (Coil Pup → Bedspring, Angry Brick → Ton of Bricks, and others) (`dc9e6d7`).
+- **Decor that depicts people may show faces: portraits on a wall, a statue's painted likeness.** Paintings on a wall can have faces; the Haunted Wing's portraits keep theirs, eyes following the nearest runner. Parts, items, projectiles and machines still never do.
+  2026-11-02 · `done` · ART.md → Objects, not characters
 - **Add a sentry turret, after the team shooter's.** "we need a 'sentry turret' type thing"
   2026-11-02 16:55Z · `done` · DESIGN.md → Props (Sentry guns)
 - **Conveyors must rotate like any part: a belt on the side drags wall-sliders, and one underneath shoves you when you bonk your head.** "you cant rotate conveyros.. the conveyor always stays on the top"
@@ -201,6 +203,14 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `in progress` · SETPIECES.md → 3, DESIGN.md → Stage concepts
 - **Every theme has at least 12 decor pieces and at least 3 hazards unique to it.** "similarly we probably want no less than a dozen 'decor' pieces that can exist in each theme? and maybe no less than 3 unique hazards per theme?"
   2026-11-02 · `in progress` · DESIGN.md → Stage concepts
+- **The cast is animals plus parody critters, not toys.** Toys (foundry wind-ups) are dropped: "idk how we ended up with toys. that wasnt the original goal, and its not on theme". Critters may parody famous characters with our own design and a sound-alike name: "critters could include other parody things... like a fake metroid, a fake mario, a robot, a goose, etc. a fake engineer from tf2 etc". Changed: replaces direction C (foundry toys).
+  2026-11-02 · `in progress` · CHARACTERS.md, DESIGN.md → Players
+- **Art everywhere is cleaner, lighter and more hand-drawn: thinner, varied lines, less loud colour.** "i want more cleanly designed art that isnt so loud/bold lines etc and more visually hand draw"; applies to characters, parts, terrain, landmarks and UI.
+  2026-11-02 · `in progress` · ART.md → World art
+- **A really short lore guides design: Slag is the runoff of the Great Foundry, a scrap world of melted-down levels and characters who never made the cut, racing for the one mould that casts the winner into a real game.** "we might want in our game design a REALLY short piece of lore that explains the world of slag, who the characters are, why they're trying to get to the goal"
+  2026-11-02 · `done` · DESIGN.md → Lore
+- **AI players are a future TODO.** "another future TODO: AI"
+  2026-11-02 · `planned` · TODO.md → 27
 - **Lobby browser: a list of lobbies, showing only ones that aren't full by default.** Lobbies are public by default with a Private option. "lets make lobbies public by default with a private option"
   2026-11-02 · `planned` · TODO.md → 26
 - **Conveyors rotate: the rotation picks the belt's face.** A side belt grips and carries a clinging runner (an escalator when it runs up), a bottom belt shoves a head that bonks it. "you cant rotate conveyors.. the conveyor always stays on the top"
@@ -278,6 +288,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 16:18Z · `done` (research and plan), waves under way · SETPIECES.md, DESIGN.md → Stage concepts
 - **No set piece floats: the lighthouse stands on rock.** "the lighthouse is sometimes floating which is a problem"
   2026-11-02 16:18Z · `done` · ART.md → The backdrop
+- **A landmark reaches the ground all the way down, its backdrop too: no wall hangs over a doorway's open sky.** "that has the same issue as we had in the past where in the backdrop the thing needs to go all the way down (its floating on one tile...)"
+  2026-11-02 · `done` · SETPIECES.md → 4 (Grounding), tests/landmark-grounding.test.ts
 - **Moving landmarks are optional routes, never the only way through.**
   2026-11-02 16:40Z (answer) · `done` · DESIGN.md → Stage concepts, SETPIECES.md → 6
 - **A giant contraption may carry you over a gap, but then the gap and the contraption are both large.** "A giant contraption could help you get past gaps fwiw so sometimes that's ok but if it's true the gap and contraption should be large"
@@ -399,6 +411,9 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Self-destruct is a deliberate 1.25 s hold on every input, counted by the sim from a fresh press, with a ring around the runner everyone sees; letting go, steering, jumping or using an item cancels it. On touch it moves to its own small button under Settings.** "also the default self destruct behavior should probably be a bit less accidental both for mobile and the hotkey"
   2026-11-02 · `done` · DESIGN.md → Controls and UI, MOBILE.md, ART.md → Input prompts
   Changed: one press of alt popped you on keyboard and pad, and touch popped after a 0.35 s hold on ALT, the button that rotates during place.
+- **The self-destruct hold is 3 s, and your own charge counts down 3, 2, 1 in the middle of the screen.** "self destruct could probably be more like a 3 second hold" / "and show in the center of the screen as like a countdown so you dont miss it?"
+  2026-11-02 · `done` · DESIGN.md → Controls and UI, MOBILE.md
+  Changed: the hold was 1.25 s, with only the ring around the runner.
 - **Phones haven't been tried on real devices.**
   2026-11-02 · `open` · TODO.md → 6
 

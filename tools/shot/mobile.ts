@@ -182,8 +182,8 @@ async function mobile(deviceName: string) {
       const r = m.run.runners.find((q: any) => q.slot === slot);
       return { x: Math.round(r.body.x), y: Math.round(r.body.y), vx: Math.round(r.body.vx), vy: Math.round(r.body.vy), alive: r.alive };
     });
-  // Hold the self-destruct button about half of POP_HOLD (1.25 s), standing still: the rings on it and on the runner
-  // fill. Letting go cancels.
+  // Hold the self-destruct button through the 3, 2, 1 (POP_HOLD is 3 s), standing still, and let go on 1: the rings
+  // and the countdown show, and letting go cancels.
   const charge = () =>
     mp.evaluate(() => {
       const m = (window as any).slagDebug.match;
@@ -191,26 +191,33 @@ async function mobile(deviceName: string) {
       return m.run.runners.find((q: any) => q.slot === slot).pop as number;
     });
   await touch('touchStart', [{ x: L.pop.x, y: L.pop.y, id: 3 }]);
-  // Real time runs slow under software GL: wait on the sim, not the clock.
-  await mp.waitForFunction(
-    () => {
-      const m = (window as any).slagDebug.match;
-      const slot = m.players.find((q: any) => q.device === 'touch').slot;
-      return m.run.runners.find((q: any) => q.slot === slot).pop >= 40;
-    },
-    null,
-    { timeout: 30_000, polling: 'raf' },
-  );
-  // Paused for the shot, which takes longer than the rest of the hold would.
-  await mp.evaluate(() => (window as any).slagDebug.pause(true));
-  const mid = await charge();
-  await shotM('race-alt');
-  await touch('touchEnd', []);
-  await mp.evaluate(() => (window as any).slagDebug.pause(false));
+  let mid = 0;
+  for (const [n, at] of [
+    [3, 20],
+    [2, 80],
+    [1, 140],
+  ]) {
+    // Real time runs slow under software GL: wait on the sim, not the clock.
+    await mp.waitForFunction(
+      (k) => {
+        const m = (window as any).slagDebug.match;
+        const slot = m.players.find((q: any) => q.device === 'touch').slot;
+        return m.run.runners.find((q: any) => q.slot === slot).pop >= k;
+      },
+      at,
+      { timeout: 30_000, polling: 'raf' },
+    );
+    // Paused for the shot, which takes longer than the rest of the hold would.
+    await mp.evaluate(() => (window as any).slagDebug.pause(true));
+    mid = await charge();
+    await shotM(`race-pop-${n}`);
+    if (n === 1) await touch('touchEnd', []);
+    await mp.evaluate(() => (window as any).slagDebug.pause(false));
+  }
   await mp.waitForTimeout(100);
   const after = await runner();
-  console.log('self-destruct charge mid-hold', mid, 'after letting go', await charge(), JSON.stringify(after));
-  if (!mid || !after?.alive) throw new Error('a half hold of the self-destruct button should charge and then cancel');
+  console.log('self-destruct charge on 1', mid, 'after letting go', await charge(), JSON.stringify(after));
+  if (!mid || !after?.alive) throw new Error('a hold of the self-destruct button let go on 1 should charge and then cancel');
   const before = after;
   // Multi-touch: left thumb pushes the stick right (past 70% → run) while the right thumb holds JUMP.
   const st = { x: L.stickHome.x, y: L.stickHome.y };

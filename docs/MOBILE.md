@@ -58,7 +58,7 @@ A dedicated RUN button would need a third simultaneous touch (stick + run + jump
 
 **Drop-through** = pull the stick down, then tap JUMP (down + jump, exactly like the keyboard). There's deliberately no one-tap DROP button. Down + jump on solid ground is a normal jump, and a button that guessed the ground under you would need sim state.
 
-**💥 = self-destruct: a small button under ⚙, held 1.25 s.** It's a reach for the right thumb, away from JUMP and from where ROTATE sat during place (thumbs mash that one). The button only sends a held alt; the sim counts the hold like any other input's (`DESIGN.md` → Controls), so its ring and the one around your runner are the same number. Letting go, steering or jumping cancels it, and a thumb that stays on it after steering never starts a new one: a resting thumb can't pop you. A touch that lands elsewhere and slides onto it doesn't count.
+**💥 = self-destruct: a small button under ⚙, held 3 s.** It's a reach for the right thumb, away from JUMP and from where ROTATE sat during place (thumbs mash that one). The button only sends a held alt; the sim counts the hold like any other input's (`DESIGN.md` → Controls), so its ring, the one around your runner and the 3, 2, 1 in the middle are the same number. Letting go, steering or jumping cancels it, and a thumb that stays on it after steering never starts a new one: a resting thumb can't pop you. A touch that lands elsewhere and slides onto it doesn't count.
 
 **USE** shows above JUMP only while you hold an item, labelled with the item's verb. Touching it uses the item.
 
@@ -180,7 +180,7 @@ The sim is unaffected: it stays a fixed 60 Hz accumulator, and slow frames run s
   6. pinch-zooming the place camera
   7. dragging the ghost to the edge (auto-pan), rotating and placing
   8. the race follow, holding the stick and JUMP at the same time
-  9. holding 💥 until the runner pops (`race-alt` is mid-charge)
+  9. holding 💥 through the countdown (`race-pop-3`, `-2`, `-1`), letting go on 1 to cancel, and later holding it until the runner pops
   10. the score screen and portrait
   11. a two-player race with the runners at opposite ends
 

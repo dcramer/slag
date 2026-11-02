@@ -66,6 +66,8 @@ export interface DeviceInfo {
   hints(device: string): { confirm: string; alt: string; jump: string; down: string };
   /** Live key bindings (InputManager has this), so prompts show remapped keys as keycaps. */
   settings?: InputSettings;
+  /** Does this player device play on this screen? Absent: everyone does (local play). */
+  isLocal?(device: string): boolean;
 }
 
 /** A connected peer in an online lobby (provided by the net layer). */

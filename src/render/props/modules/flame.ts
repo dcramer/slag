@@ -14,7 +14,7 @@ type M<T extends Module['type']> = ModuleOf<T>;
  * A flame as it's inked in a comic: three flat tiers, red, orange and a yellow heart, licking at the
  * edges and splitting into tongues at the tip, with a dark line round the outside. `ramp` grows it.
  */
-function inkTongue(s: CanvasRenderingContext2D, x: number, y: number, dx: number, dy: number, len: number, width: number, t: number, ramp: number) {
+export function inkTongue(s: CanvasRenderingContext2D, x: number, y: number, dx: number, dy: number, len: number, width: number, t: number, ramp: number) {
   const px = -dy;
   const py = dx;
   const N = 14;

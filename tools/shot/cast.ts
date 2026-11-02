@@ -152,6 +152,20 @@ async function catalog(): Promise<string> {
   return path;
 }
 
+async function silhouettes(): Promise<string> {
+  await open(`seed=${seed}`);
+  await page.evaluate(() => document.fonts.ready);
+  const box = await page.evaluate(() => {
+    const cv = (window as any).slagDebug.toys.silhouettes();
+    return { width: cv.width, height: cv.height };
+  });
+  const path = `${out}/cast-silhouettes.png`;
+  await page.screenshot({ path, clip: { x: 0, y: 0, ...box } });
+  console.log(path);
+  pet();
+  return path;
+}
+
 async function compose(name: string, html: string, width = 1900) {
   const hp = `${out}/${name}.html`;
   writeFileSync(
@@ -177,14 +191,16 @@ const row = (...cells: string[]) => `<div style="display:flex;gap:12px;align-ite
 export const shots: Scenarios = {
   async cast() {
     if (opt('only') === 'catalog') {
-      // Fast iteration on the art: the catalog alone.
+      // Fast iteration on the art: the catalog and the silhouette test alone.
       await catalog();
+      await silhouettes();
       return;
     }
     const light = await lineup(LIGHT);
     const dark = await lineup(DARK);
     const lb = await lobby();
     const cat = await catalog();
+    const sil = await silhouettes();
     await compose(
       'cast',
       h('The foundry toys') +
@@ -194,6 +210,7 @@ export const shots: Scenarios = {
         img(light?.x3, `3× close-up, ${LIGHT}: idle, facing back, walk, run, rise, fall, idle, idle`) +
         img(dark?.x3, `3× close-up, ${DARK}`) +
         img(lb, 'Lobby cards, 8 players') +
+        img(sil, 'The silhouette test: every kind solid black, at rest and mid-run, 1× and play scale') +
         img(cat, 'Catalog: every kind on two seeds, poses, the cast at play scale'),
     );
   },

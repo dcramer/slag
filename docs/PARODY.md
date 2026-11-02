@@ -59,7 +59,7 @@ Each row gives what the item or part mocks, its silhouette (what must read at ga
 | snapper | Gotcha Plate, Pressure Plate, Pop-Up Spikes, Surprise Party | Temple pressure-plate traps | A flat plate on a face | Party streamers burst out with the spikes. |
 | wheel | Ferris Wheel, Cog Lift, Hamster Wheel, Lazy Susan | Ferris-wheel lifts | A hub with platforms on arms | Hamster Wheel has a water bottle hanging off the hub. |
 | bomb | Cartoon Bomb, Kaboom, Fuse Ball, *Xxx*-omb | The round black cartoon bomb, and the wind-up walking bomb | A black sphere with a fuse | A wind-up key in its side, turning while the fuse burns. |
-| emp | Balance Patch, Hotfix, EMP, Nerf Pulse | Patches that nerf everything | A disk device | A "v1.0.1" label. The blast shows strikethrough lines over props. |
+| emp | Balance Patch, Hotfix, EMP, Nerf Pulse | Patches that nerf everything | A squat puck with a glass dome, a coil inside, and an antenna | A "v1.0.1" label. The blast shows strikethrough lines over props. |
 | drill | Drill, Digger, Tunnel Vision, Mole | Digger units and tunnelling moles | A drill bit and a body | Blinkers (horse blinders) on the drill body. |
 | charge (cross) | Plus Bomb, Arena Bomb, Cross Charge | The grid-arena bomber's plus-shaped blast | A round bomb | The blast is drawn as a grid of square flames. |
 | charge (ring) | Donut, Ring Charge, Moat Maker | — (pure gag) | A ring-shaped charge | It's a glazed donut with sprinkles. |
@@ -83,7 +83,7 @@ The style picks the body and the ammo. The aim word (Fixed, Sweeps, Tracks) and 
 | crossbow | Arrow Trap, Kneecapper | Dungeon arrow traps | trap bolt, arrow | A slot in a carved block, with a bandaged knee scratched into the stone. |
 | ballista | Ballista, Siege Bow, Tower Defense | Tower-defense towers | trap bolt | It turns on top of a tiny tower (two tiles tall) with a price tag. |
 | cannon | Pirate Cannon, Bombard | Pirate-level cannons, a ship's gun two tiles long on its stepped carriage and trucks | cannonball | A rolled treasure map lashed to the barrel, its red X showing. |
-| totem | Tiki Torch, Heartburn Idol | Fire-spitting statues | heartburn | A carved post two tiles tall with a chili cut into it, a fire cup on top; its grooves glow as it reloads and the fireballs are chilis. |
+| totem | Tiki Torch, Heartburn Idol | Fire-spitting statues | heartburn | A tiki-torch post two tiles tall: stacked carved drums on a flared foot, one with a chili in relief, and a bronze brazier with a fire on top. Its grooves glow and the fire climbs as it reloads, the next chili cooking in the flame; the fireballs are chilis. |
 | turret | Dome Turret, Sorry Turret | The polite security turret | apology | A dented dome on a tripod with one sensor visor, and a sticky note slapped on it. Its shots are tiny speech-bubble shapes. |
 | thrower | Ninja Box, Shuriken Vendor | Ninja star throwers, as a vending machine two tiles tall | throwing star | A coin slot, a window of stars on their spirals, and a tray the stars come out of. |
 | rocket | Seeker Pod, Homing Rack, Grudge Launcher | The homing shell everyone hates, fired from a bullet blaster (a black drum on a pedestal, a crosshair roundel on its pivot) | grudge missile | A chalk tally of hits on the drum. The missile has a red seeker lens on its nose. |

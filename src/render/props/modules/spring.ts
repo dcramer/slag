@@ -4,9 +4,8 @@ import { TILE } from '../../../sim/constants';
 import { type Level, tileAt } from '../../../sim/level';
 import type { Solid } from '../../../sim/physics';
 import { type Module, type ModuleOf, type PlateArc, plateArc, plateStart, type PropStyle } from '../../../sim/props';
-import { line } from '../../ink';
-import { inkSpring } from '../../ink-parts';
-import { boxPts, dot, ovalPts, part, path, poly, sprite, stamp, tick } from '../../ink-props';
+import { line, type P, stroke } from '../../ink';
+import { boxPts, dot, glint, INK, ovalPts, part, path, poly, sprite, stamp, tick } from '../../ink-props';
 import { glowDot, light, type RC } from '../../kit';
 import { type DrawCtx, defineArt, type PropDrawOpts } from '../common';
 
@@ -29,6 +28,117 @@ function ticking(s: CanvasRenderingContext2D, top: number) {
   dot(s, 0, top - 2.5, 0.65, 10, '#e8e2d4');
 }
 
+const WIRE: HSL = { h: 215, s: 12, l: 72 };
+const PLATE: HSL = { h: 215, s: 10, l: 44 };
+/** Spring frame (+y toward the face it's mounted on): the base plate's top, and the top plate's underside at rest. */
+const FOOT = 5;
+const REST = -1;
+const COIL_R = 5.3;
+const TURNS = 2;
+
+/** Points along half a turn of the coil, from x = -R at ya to x = +R at yb (front), or back again (back). */
+function halfTurn(ya: number, yb: number, front: boolean): P[] {
+  const pts: P[] = [];
+  for (let i = 0; i <= 8; i++) {
+    const t = i / 8;
+    const q = Math.cos(t * Math.PI);
+    pts.push({ x: (front ? -q : q) * COIL_R, y: ya + (yb - ya) * t + Math.sin(t * Math.PI) * (front ? 1.8 : -1) });
+  }
+  return pts;
+}
+
+/**
+ * The coil from the base up to the top plate's underside at `top`: the back of each turn thin and in shade,
+ * the front fat on the pen, cut into a lit left half and a shaded right one, with a glint where it turns
+ * toward the light.
+ */
+function coil(s: CanvasRenderingContext2D, top: number, seed: number) {
+  const h = FOOT - top;
+  const step = h / (TURNS * 2);
+  for (let c = 0; c < TURNS; c++) {
+    const pts = halfTurn(FOOT - step * (2 * c + 1), FOOT - step * (2 * c + 2), false);
+    s.fillStyle = INK;
+    stroke(s, pts, { w: 2, seed: seed + c, taper: [0.1, 0.1], press: 0.2 });
+    s.fillStyle = css(WIRE, -30);
+    stroke(s, pts, { w: 0.9, seed: seed + c, taper: [0.15, 0.15], press: 0.2 });
+  }
+  for (let c = 0; c < TURNS; c++) {
+    const pts = halfTurn(FOOT - step * 2 * c, FOOT - step * (2 * c + 1), true);
+    s.fillStyle = INK;
+    stroke(s, pts, { w: 2.3, seed: seed + c + 9, taper: [0.06, 0.06], press: 0.25 });
+    s.fillStyle = css(WIRE, -20);
+    stroke(s, pts, { w: 1.25, seed: seed + c + 9, taper: [0.1, 0.1], press: 0.2 });
+    s.fillStyle = css(WIRE);
+    stroke(s, pts.slice(0, 6), { w: 1.15, seed: seed + c + 9, taper: [0.1, 0.4], press: 0.2 });
+    s.fillStyle = 'rgba(255,255,255,0.9)';
+    stroke(
+      s,
+      pts.slice(1, 4).map((p) => ({ x: p.x, y: p.y - 0.45 })),
+      { w: 0.5, seed: seed + c + 19, taper: [0.3, 0.3], press: 0 },
+    );
+  }
+}
+
+/** The base: a bolted steel plate the coil is seated in. */
+function base(s: CanvasRenderingContext2D) {
+  stamp(
+    s,
+    sprite('spring|base', -9, 3, 18, 7, (g) => {
+      part(g, boxPts(-7.6, FOOT, 15.2, 3, 0.9, 3, 0.12), PLATE, 3, { depth: 0.6, shade: -16, thin: 0.45, thick: 1.4 });
+      g.fillStyle = css(PLATE, 22);
+      line(g, -6.4, FOOT + 0.7, 5, FOOT + 0.65, { w: 0.5, seed: 4, taper: [0.2, 0.4], press: 0.1 });
+      for (const x of [-5.9, 5.9]) dot(g, x, FOOT + 1.6, 0.55, x, '#e6e8ee');
+      // The seat the bottom turn sits in.
+      g.fillStyle = INK;
+      path(g, ovalPts(0, FOOT + 0.2, COIL_R + 0.6, 0.9, 5, 0.03, 14));
+      g.fill();
+    }),
+  );
+}
+
+/** The top plate the runner lands on, in the part's colour: a thick rounded pad over a steel washer. */
+function topPlate(hue: number) {
+  return sprite(`spring|top|${hue | 0}`, -9.5, -7, 19, 8, (g) => {
+    const pad: HSL = { h: hue, s: 78, l: 52 };
+    part(g, boxPts(-4.6, -1.3, 9.2, 1.6, 0.4, 6, 0.1), PLATE, 6, { depth: 0.3, shade: -14, thin: 0.35, thick: 0.9 });
+    const body = boxPts(-8, -5.2, 16, 4, 1.7, 7, 0.22);
+    part(g, body, pad, 7, { depth: 0.9, shade: -20, thin: 0.5, thick: 1.6 });
+    glint(g, poly(-6, -4.2, -1.8, -4.4, 3.5, -4.25), css(pad, 30, 1, -8), 0.7);
+    for (const x of [-4.5, 4.5]) dot(g, x, -3, 0.5, x + 8, css(pad, 26));
+  });
+}
+
+/**
+ * A spring, the genre's yellow one: a bolted base plate, a steel coil, a pad on top in the part's colour.
+ * Still, it's baked whole; only the pop (the pad thrown up, the coil stretched) is drawn live.
+ */
+function inkSpring(rc: RC, at: Vec, angle: number, hue: number, pop: number, seed: number) {
+  const s = rc.s;
+  s.save();
+  s.translate(at[0], at[1]);
+  s.rotate(angle + Math.PI / 2);
+  const top = REST - pop * 6;
+  if (pop > 0) {
+    base(s);
+    coil(s, top, seed);
+    stamp(s, topPlate(hue), 0, top);
+  } else
+    stamp(
+      s,
+      sprite(`spring|still|${hue | 0}`, -10, -8, 20, 18, (g) => {
+        base(g);
+        coil(g, REST, seed);
+        stamp(g, topPlate(hue), 0, REST);
+      }),
+    );
+  s.restore();
+  if (pop > 0) {
+    // A spring that's firing gets action lines, not a glow.
+    s.fillStyle = INK;
+    for (const k of [-1, 0, 1]) line(s, at[0] + k * 7, at[1] - 16 - pop * 2, at[0] + k * 10, at[1] - 22 - pop * 7, { w: 1.2, seed: k + 2, taper: [0.1, 0.8] });
+  }
+}
+
 function drawSpring(rc: RC, m: M<'spring'>, off: Vec, st: PropStyle, o: PropDrawOpts, bed: boolean) {
   const since = o.state ? rc.frame - o.state.lastFire : 99;
   const pop = since < 10 ? Math.sin((since / 10) * Math.PI) : 0;
@@ -38,7 +148,7 @@ function drawSpring(rc: RC, m: M<'spring'>, off: Vec, st: PropStyle, o: PropDraw
     s.save();
     s.translate(m.at[0] + off[0], m.at[1] + off[1]);
     s.rotate(m.angle + Math.PI / 2);
-    ticking(s, -1 - pop * 6);
+    ticking(s, REST - 1 - pop * 6);
     s.restore();
   }
 }

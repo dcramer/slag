@@ -232,6 +232,7 @@ if (args.includes('--stats')) {
     goalReachableWithoutProps: reach.goalReached,
     bridgesNeeded: info.bridges.length,
     attempts: info.attempts,
+    ...(info.landmarkFaults ? { landmarkFaults: info.landmarkFaults } : {}),
     ms: +ms.toFixed(1),
   });
 }

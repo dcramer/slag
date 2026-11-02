@@ -75,6 +75,7 @@ export interface Look {
 }
 
 const STEEL: HSL = { h: 212, s: 9, l: 70 };
+const BRASS: HSL = { h: 42, s: 58, l: 50 };
 
 /** A stone tone from the part's hue: grey with a cast. */
 const stone = (k: Bk, l = 58): HSL => ({ h: k.st.hue, s: 9, l });
@@ -480,11 +481,17 @@ const LOOKS: Record<LauncherStyle, Look> = {
       [-9.5, 1, 19, 8.5],
       (g, k) => {
         legs(g, 0, 2.6, [-6.4, 7.9, 6.4, 7.9, 0.8, 8.1], { h: k.st.hue, s: 12, l: 40 }, k.seed);
-        hub(g, 0, 2.8, 1.6, k.pal, k.seed + 3);
+        // A brass aiming dial on the tripod head, scored in degrees: every shot is a calculated one.
+        part(g, ovalPts(0, 3, 5, 1.7, k.seed + 5, 0.03, 18), BRASS, k.seed + 5, { depth: 0.4, shade: -16, thin: 0.4, thick: 1.1 });
+        for (let i = 0; i < 7; i++) {
+          const x = -3.9 + i * 1.3;
+          tick(g, x, 3.6 - Math.abs(x) * 0.12, x, 4.2 - Math.abs(x) * 0.12, 0.3, i + k.seed, css(BRASS, -34, 1, 4));
+        }
+        hub(g, 0, 2.6, 1.5, k.pal, k.seed + 3);
       },
     ],
     barrel: [
-      [-6.5, -7.5, 15, 15],
+      [-8, -7.5, 16.5, 15],
       (g, k) => {
         const tip = { x: 7, y: 0 };
         const a = { x: -4.6, y: -6 };
@@ -504,10 +511,14 @@ const LOOKS: Record<LauncherStyle, Look> = {
         tick(g, a.x, a.y, c.x, c.y, 0.35, 3, css(k.glow, -40, 0.6));
         tick(g, b.x, b.y, c.x, c.y, 0.35, 4, css(k.glow, -40, 0.6));
         pen(g, [tip, b, a], k.seed + 1, 0.5, 1.2);
+        // The brass clamp that holds it by its back face, screwed tight.
+        part(g, boxPts(-7.2, -3.4, 2.9, 6.8, 0.7, k.seed + 6, 0.1), BRASS, k.seed + 6, { depth: 0.4, shade: -16, thin: 0.4, thick: 1.1 });
+        for (const y of [-1.9, 1.9]) dot(g, -5.75, y, 0.45, y + k.seed, css(BRASS, 30));
       },
     ],
     over(l) {
-      glowDot(l.rc.g, l.x + Math.cos(l.angle) * 2, l.y + Math.sin(l.angle) * 2, 3 + l.reload * 4, l.glow, 0.3 + l.reload * 0.4);
+      // A lens isn't hot: the charge shows as a flat lit core growing in the glass.
+      bulb(l.rc.g, l.x + Math.cos(l.angle) * 0.6, l.y + Math.sin(l.angle) * 0.6, 0.6 + l.reload * 1.3, l.glow, 0.35 + l.reload * 0.6);
       light(l.rc, l.x, l.y, 35, l.glow, 0.35);
     },
   },
@@ -644,7 +655,7 @@ function drawLauncher(rc: RC, m: Launcher, d: DrawCtx) {
   look.over?.(live);
   if (m.aim === 'track') {
     const cam = fr?.cam ? at(fr.cam[0], fr.cam[1]) : { x: x - 4, y: y - 8.4 };
-    drawTrackerCam(rc, cam.x, cam.y, angle);
+    drawTrackerCam(rc, cam.x, cam.y, angle, fr ? rot : 0);
   }
   if (since < 5) {
     const mx = x + Math.cos(angle) * 13;
@@ -657,19 +668,22 @@ function drawLauncher(rc: RC, m: Launcher, d: DrawCtx) {
 
 /**
  * Tracking sensor: a little security camera on a stalk above the mount (at cx, cy), turned live to where the launcher
- * aims, its red lens lit. Every tracker has one, so tracking reads at a glance whatever the style.
+ * aims, its red lens lit. Every tracker has one, so tracking reads at a glance whatever the style. The stalk turns
+ * with a framed look (`rot`), so on a wall it still grows out of the machine and not up into the air.
  */
-function drawTrackerCam(rc: RC, cx: number, cy: number, angle: number): void {
+function drawTrackerCam(rc: RC, cx: number, cy: number, angle: number, rot: number): void {
   const s = rc.s;
+  s.save();
+  s.translate(cx, cy);
+  turnCanvas(s, rot);
   stamp(
     s,
     sprite('L|stalk', -2, -2, 4, 9, (g) => {
       tick(g, 0, 0.8, 0.4, 5.6, 1.6, 1);
       ball(g, 0, 0.4, 1.2, { h: 220, s: 8, l: 34 }, 2);
     }),
-    cx,
-    cy,
   );
+  s.restore();
   s.save();
   s.translate(cx, cy);
   s.rotate(angle);
