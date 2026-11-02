@@ -1,7 +1,7 @@
 import type { AudioSystem } from '../audio';
 import { BLOOD_CHOICES, GRAVITY_CHOICES, gravityLabel, MATCH_LENGTHS, type MatchRules, RULE_CHOICES, type TimerRule } from '../game/rules';
 import { BINDABLE, defaultSettings, type InputSettings, type KeyProfile, keyName, SLOTS } from '../input/bindings';
-import type { InputManager } from '../input/input';
+import { connectedPads, type InputManager } from '../input/input';
 import { glyphSVG, type Glyph } from './glyphs';
 import { capLabel, type InputMode, promptModes } from './prompts';
 import { sanitizeName } from './profile';
@@ -298,10 +298,6 @@ const MENU_ITEMS = '.slag-tab[aria-selected=true],.slag-panel button,.slag-panel
 
 /** Reopening lands on the last tab of this page load. */
 let lastTab: SettingsTab = SETTINGS_TABS[0];
-
-function connectedPads(): Gamepad[] {
-  return navigator.getGamepads ? [...navigator.getGamepads()].filter((p): p is Gamepad => !!p?.connected) : [];
-}
 
 /** Controls (remapping, split keyboard), audio volumes and video options, one tab per page. */
 export class SettingsMenu extends Overlay {

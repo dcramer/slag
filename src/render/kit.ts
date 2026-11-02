@@ -57,6 +57,14 @@ export function glowDot(g: CanvasRenderingContext2D, x: number, y: number, r: nu
   g.fill();
 }
 
+/** Vertical two-stop gradient from `c0` at y0 to `c1` at y1. */
+export function vgrad(g: CanvasRenderingContext2D, y0: number, y1: number, c0: string, c1: string): CanvasGradient {
+  const gr = g.createLinearGradient(0, y0, 0, y1);
+  gr.addColorStop(0, c0);
+  gr.addColorStop(1, c1);
+  return gr;
+}
+
 export function circle(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
   ctx.beginPath();
   ctx.arc(x, y, Math.max(0, r), 0, Math.PI * 2);

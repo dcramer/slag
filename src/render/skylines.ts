@@ -1,7 +1,7 @@
 import { css, type HSL, hsl3, mixHsl, shift } from '../core/color';
 import type { Rng } from '../core/rng';
 import type { SkyLayer, SkylineKind, Theme } from '../gen/theme';
-import { circle, ellipse } from './kit';
+import { circle, ellipse, vgrad } from './kit';
 import { FRONTIER_SKYLINES } from './skylines-frontier';
 
 /**
@@ -48,13 +48,6 @@ export interface SkylineDef {
 
 // ---------------------------------------------------------------------------
 // Helpers
-
-function vgrad(g: CanvasRenderingContext2D, y0: number, y1: number, c0: string, c1: string): CanvasGradient {
-  const gr = g.createLinearGradient(0, y0, 0, y1);
-  gr.addColorStop(0, c0);
-  gr.addColorStop(1, c1);
-  return gr;
-}
 
 /** Fill the area under a polyline ridge down to the bottom. */
 function ground(c: BakeCtx, offset = 0, step = 6, color?: string | CanvasGradient) {

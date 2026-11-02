@@ -300,7 +300,8 @@ export class InputManager {
   }
 }
 
-function connectedPads(): Gamepad[] {
+/** The pads plugged in now (none where the Gamepad API is missing). */
+export function connectedPads(): Gamepad[] {
   const pads = typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : [];
   return [...pads].filter((p): p is Gamepad => !!p?.connected);
 }

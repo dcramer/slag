@@ -1,4 +1,5 @@
 import { css, shift } from '../core/color';
+import { vgrad } from './kit';
 import type { BakeCtx, SkylineDef } from './skylines';
 
 /**
@@ -7,13 +8,6 @@ import type { BakeCtx, SkylineDef } from './skylines';
  * contract as the rest of `SKYLINES`: paint once into the layer (albedo `g`,
  * emissive `e` when `glow`), register the few things that move.
  */
-
-function vgrad(g: CanvasRenderingContext2D, y0: number, y1: number, c0: string, c1: string): CanvasGradient {
-  const gr = g.createLinearGradient(0, y0, 0, y1);
-  gr.addColorStop(0, c0);
-  gr.addColorStop(1, c1);
-  return gr;
-}
 
 function poly(g: CanvasRenderingContext2D, pts: readonly (readonly [number, number])[]) {
   g.beginPath();
