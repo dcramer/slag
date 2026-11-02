@@ -234,7 +234,8 @@ describe('camera pose', () => {
 
 /** A match in the place phase, driven by a real pose. */
 function placing() {
-  const m = new Match(7);
+  // Pinned to the level this was written against: a short, wide level can't keep the point under the fingers, it sits centered.
+  const m = new Match(7, 'mine');
   m.join('touch');
   m.startMatch();
   m.phase = 'place';
@@ -316,7 +317,7 @@ describe('pick and place camera', () => {
     const finger = { x: 500, y: 180 };
     const world = viewToWorld(v, finger.x, finger.y);
     // What crosses the network is the overview pointer; a peer on its own overview reads the same world px.
-    const peer = new Match(7);
+    const peer = new Match(7, 'mine');
     peer.join('touch');
     peer.startMatch();
     peer.phase = 'place';

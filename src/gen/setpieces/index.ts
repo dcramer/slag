@@ -5,11 +5,13 @@ import type { ThemeId } from '../../themes';
 import { CASTLE } from './castle';
 import { FACTORY } from './factory';
 import { FARM } from './farm';
+import { GLACIER } from './glacier';
 import { HARBOR } from './harbor';
 import { JUNGLE } from './jungle';
 import { MINE } from './mine';
 import { makePlacer, type PlacerOpts, type Recipe } from './place';
 import { ROOFTOPS } from './rooftops';
+import { SPACE } from './space';
 import { VOLCANO } from './volcano';
 
 export type { Piece, Recipe } from './place';
@@ -42,6 +44,8 @@ export const SET_PIECE_RECIPES: Record<ThemeId, readonly Recipe[]> = {
   harbor: HARBOR,
   mine: MINE,
   rooftops: ROOFTOPS,
+  glacier: GLACIER,
+  space: SPACE,
 };
 
 export const SET_PIECES: Record<ThemeId, SetPiecePlacer> = Object.fromEntries(

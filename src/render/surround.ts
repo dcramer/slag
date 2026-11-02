@@ -109,6 +109,19 @@ const SIDES: Record<ThemeId, (c: SideCtx) => void> = {
       // A facade of windows, the same 1×1 holes the level's buildings have.
       for (let y = top + 2; y < c.ground + 6; y += 2) for (let d = a + 1; d < b; d += 2) c.set(d, y, false);
     }),
+  // Moraine slopes climbing to a jagged crest.
+  glacier: (c) => ridge(c, 12, 3, 1),
+  // A bulkhead where the sim's wall is, then nothing: a few rocks adrift.
+  space: (c) => {
+    for (let d = 1; d <= Math.min(2, c.cols); d++) c.fill(d, -1e4);
+    for (let i = Math.round(c.cols / 9); i > 0; i--) {
+      const d = c.rng.int(5, Math.max(5, c.cols - 2));
+      const y = c.rng.int(c.rows[0] + 2, c.rows[1] - 6);
+      const w = c.rng.int(1, 3);
+      for (let k = 0; k < w; k++) c.set(d + k, y, true);
+      if (w > 1) c.set(d + 1, y + 1, true);
+    }
+  },
   harbor: (c) => {
     // Quay, a dock shed on it, more quay, then open water.
     const quay = Math.min(c.cols, c.rng.int(2, 3));
@@ -204,6 +217,8 @@ export function surroundLevel(level: Level, mx: number, top: number, bottom = 0)
     goal: { tx: -99, ty: -99 },
     protectedRects: [],
     setPieces: [],
+    // The level's own ground is indexed by its own size; out here it's all plain.
+    ground: undefined,
   };
 }
 

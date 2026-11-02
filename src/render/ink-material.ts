@@ -490,6 +490,156 @@ const boards = masonry({ h: 9.5, w: 46, stray: 0.5, round: 0.6, long: 0.1, mark:
 const plates = masonry({ h: 24, w: 32, stray: 0, round: 1, long: 0, stack: true, mark: plateMarks });
 const rusted = masonry({ h: 24, w: 32, stray: 0, round: 1, long: 0, stack: true, mark: rustMarks });
 
+/**
+ * Ice: big glassy facets, a sheen dragged across them, fracture lines and trapped bubbles. No ink inside
+ * the ice: it's clear, so its marks are tones of itself, and a glance tells it from the rock around it.
+ */
+const glass: InkMaterial = (p) => {
+  const { g, T, seed, area } = p;
+  fillArea(p, css(T.base));
+  const C = 30;
+  const planes = [css(shift(T.base, 4, -3)), css(shift(T.base, -4, 3)), css(shift(T.base, 8, -8)), css(shift(T.base, -8, 6))];
+  const deep = [css(shift(T.base, -4, 2)), css(shift(T.base, -9, 4)), css(shift(T.dark, 10, -4)), css(shift(T.base, -2, -2))];
+  for (let cy = Math.floor(area.y0 / C) - 1; cy * C < area.y1 + C; cy++) {
+    for (let cx = Math.floor(area.x0 / C) - 1; cx * C < area.x1 + C; cx++) {
+      const x = (cx + 0.5 + (hash2(cx, cy, seed + 1) - 0.5) * 0.6) * C;
+      const y = (cy + 0.5 + (hash2(cx, cy, seed + 2) - 0.5) * 0.6) * C;
+      const r = C * (0.5 + 0.3 * hash2(cx, cy, seed + 3));
+      const n = 4 + Math.floor(hash2(cx, cy, seed + 4) * 2);
+      const tone = Math.floor(hash2(cx, cy, seed + 5) * planes.length);
+      g.fillStyle = (p.depth(Math.floor(x / TILE), Math.floor(y / TILE)) >= 3 ? deep : planes)[tone];
+      g.beginPath();
+      const start = hash2(cx, cy, seed + 6) * 6;
+      for (let i = 0; i < n; i++) {
+        const a = start + (i / n) * Math.PI * 2;
+        const k = r * (0.75 + 0.35 * hash2(cx * 31 + cy, i, seed + 7));
+        const px = x + Math.cos(a) * k;
+        const py = y + Math.sin(a) * k * 0.75;
+        if (i) g.lineTo(px, py);
+        else g.moveTo(px, py);
+      }
+      g.closePath();
+      g.fill();
+    }
+  }
+  const fracture = css(shift(T.dark, -6, 6));
+  const sheen = css(shift(T.light, 6, -6));
+  eachTile(p, (_, __, wx, wy) => {
+    const r = hash2(wx, wy, seed + 8);
+    const sd = wx * 7 + wy * 13 + seed;
+    if (r < 0.1) {
+      // A fracture: two straight legs at an angle, the way ice splits.
+      const a = 0.4 + hash2(wx, wy, seed + 9) * 2.2;
+      const len = 6 + hash2(wx, wy, seed + 10) * 10;
+      const mx = wx + 4 + r * 80;
+      const my = wy + 5;
+      g.fillStyle = fracture;
+      line(g, mx, my, mx + Math.cos(a) * len, my + Math.sin(a) * len, { w: 0.8, seed: sd, taper: [0.1, 0.7] });
+      line(g, mx, my, mx + Math.cos(a + 2.4) * len * 0.6, my + Math.sin(a + 2.4) * len * 0.6, { w: 0.65, seed: sd + 1, taper: [0.1, 0.7] });
+    } else if (r < 0.32) {
+      // Sheen: a pair of parallel diagonals, the long one first.
+      const sx = wx + 2 + hash2(wx, wy, seed + 11) * 8;
+      const sy = wy + 12 - hash2(wx, wy, seed + 12) * 4;
+      const len = 6 + hash2(wx, wy, seed + 13) * 7;
+      g.fillStyle = sheen;
+      line(g, sx, sy, sx + len * 0.7, sy - len * 0.7, { w: 1.3, seed: sd, taper: [0.2, 0.5], press: 0.4 });
+      line(g, sx + 3, sy + 0.5, sx + 3 + len * 0.35, sy + 0.5 - len * 0.35, { w: 0.8, seed: sd + 2, taper: [0.2, 0.5] });
+    } else if (r < 0.42) {
+      // Bubbles caught in the ice.
+      g.fillStyle = sheen;
+      for (let i = 0; i < 3; i++) {
+        blob(g, wx + 3 + hash2(wx, i, seed + 14) * 10, wy + 3 + hash2(wy, i, seed + 15) * 10, 0.5 + hash2(i, sd, 3) * 0.6, sd + i, 1, 0.1);
+        g.fill();
+      }
+    }
+  });
+};
+
+/** Regolith: dust over rock, pocked with craters (shadow inside, a lit rim on the far side) and grit. */
+const regolith: InkMaterial = (p) => {
+  const { g, T, seed, ink } = p;
+  fillArea(p, css(T.base));
+  g.fillStyle = css(shift(T.base, -6, 2));
+  tonePatch(p, (d) => d >= 2);
+  g.fillStyle = css(shift(T.dark, 4, 2));
+  tonePatch(p, (d) => d >= 4);
+  const shadow = css(shift(T.dark, -2, 4));
+  const rim = css(shift(T.light, 2, -6));
+  const speck = css(shift(T.dark, -4));
+  eachTile(p, (x, y, wx, wy) => {
+    const roll = hash2(wx, wy, seed + 20);
+    const px = wx + 3 + hash2(wx, wy, seed + 21) * 10;
+    const py = wy + 3 + hash2(wx, wy, seed + 22) * 10;
+    const sd = ((wx * 7 + wy * 11) | 0) + seed;
+    if (roll < 0.16 && p.depth(x, y) >= 1) {
+      const r = 2.2 + hash2(wx, wy, seed + 23) * 3.4;
+      g.fillStyle = shadow;
+      blob(g, px - r * 0.12, py - r * 0.1, r, sd, 0.62, 0.15);
+      g.fill();
+      g.fillStyle = rim;
+      const lit: P[] = [];
+      for (let i = 0; i <= 7; i++) {
+        const a = 0.1 + (i / 7) * 2.6;
+        lit.push({ x: px + Math.cos(a) * r * 1.1, y: py + Math.sin(a) * r * 0.72 });
+      }
+      stroke(g, lit, { w: 1.2, seed: sd, taper: [0.2, 0.4] });
+      g.fillStyle = ink;
+      const dark: P[] = [];
+      for (let i = 0; i <= 7; i++) {
+        const a = 3.3 + (i / 7) * 2.4;
+        dark.push({ x: px + Math.cos(a) * r * 1.05, y: py + Math.sin(a) * r * 0.7 });
+      }
+      stroke(g, dark, { w: 0.9, seed: sd + 1, taper: [0.15, 0.5] });
+    } else if (roll < 0.26) crack(p, px, py, hash2(wx, wy, seed + 24) * 2 + 0.6, 6 + hash2(wx, wy, seed + 25) * 8, sd);
+    else if (roll < 0.6) {
+      g.fillStyle = speck;
+      for (let i = 0; i < 4; i++) {
+        blob(g, px + hash2(i, wx, seed + 29) * 9 - 4, py + hash2(i, wy, seed + 30) * 9 - 4, 0.4 + hash2(i, sd, 1) * 0.4, sd + i, 1, 0.1);
+        g.fill();
+      }
+    }
+  });
+};
+
+/** Station hull: plate with rivets, and now and then a porthole, a vent grille or a band of hazard stripes. */
+function hullMarks(p: Paint, x0: number, y0: number, x1: number, y1: number, sd: number) {
+  plateMarks(p, x0, y0, x1, y1, sd);
+  const { g, ink } = p;
+  const r = hash2(sd, 11, 6);
+  const cx = (x0 + x1) / 2 + (hash2(sd, 12, 6) - 0.5) * (x1 - x0) * 0.4;
+  const cy = (y0 + y1) / 2;
+  if (r < 0.14 && y1 - y0 > 9) {
+    // Porthole: a dark disc, a lit pane, a rim that doesn't quite close.
+    g.fillStyle = ink;
+    blob(g, cx, cy, 3.4, sd, 1, 0.06);
+    g.fill();
+    g.fillStyle = css({ h: 200, s: 60, l: 62 });
+    blob(g, cx + 0.3, cy + 0.3, 2.2, sd + 1, 1, 0.06);
+    g.fill();
+    g.fillStyle = css({ h: 200, s: 40, l: 90 });
+    line(g, cx - 1, cy + 0.4, cx + 0.6, cy - 1.2, { w: 0.8, seed: sd, taper: [0.2, 0.5] });
+  } else if (r < 0.28) {
+    g.fillStyle = ink;
+    for (let i = 0; i < 3; i++) line(g, cx - 4, cy - 2.5 + i * 2.5, cx + 4, cy - 2.5 + i * 2.5, { w: 0.9, seed: sd + i, taper: [0.15, 0.15] });
+  } else if (r < 0.38 && x1 - x0 > 14) {
+    // Hazard stripes along the plate's foot.
+    const yb = y1 - 1;
+    const yt = y1 - 4.5;
+    for (let x = x0 + 1.5, i = 0; x < x1 - 3; x += 3.2, i++) {
+      g.fillStyle = i % 2 ? css({ h: 48, s: 92, l: 52 }) : css({ h: 230, s: 20, l: 14 });
+      g.beginPath();
+      g.moveTo(x, yb);
+      g.lineTo(x + 3.2, yb);
+      g.lineTo(x + 5.2, yt);
+      g.lineTo(x + 2, yt);
+      g.closePath();
+      g.fill();
+    }
+  }
+}
+
+const hullPlates = masonry({ h: 16, w: 32, stray: 0, round: 1.2, long: 0.25, stack: true, mark: hullMarks });
+
 export const INK_MATERIALS: Record<TerrainKind, InkMaterial> = {
   dirt: soil,
   loam: soil,
@@ -507,4 +657,7 @@ export const INK_MATERIALS: Record<TerrainKind, InkMaterial> = {
   metal: plates,
   rustplate: rusted,
   concrete: poured,
+  ice: glass,
+  regolith,
+  hull: hullPlates,
 };

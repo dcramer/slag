@@ -1271,3 +1271,17 @@ export function generateCrate(seed: number, round: number, count: number, bridge
   }
   return rng.shuffle(cards.map((c, i) => ({ ...c, key: `${round}-${i}` })));
 }
+
+/**
+ * Secret Parts: the part behind a role card, rolled when the card is claimed.
+ * It comes from the match roster (the same one the crate drew from), filtered
+ * to the card's role and weighted like the crate (dryLean, and less likely to
+ * repeat a part already rolled this round, `taken`). The roster always holds
+ * every role, so the filter only comes up empty for a role it can't have.
+ */
+export function rollSecret(rng: Rng, roster: readonly Part[], role: Role, dry: number, taken: readonly string[]): PropDef {
+  const fits = roster.filter((p) => p.role === role);
+  const from = fits.length ? fits : roster;
+  const part = rng.weighted(from.map((p) => [p, dryLean(p.archetype, dry) * (taken.includes(p.id) ? REPEAT_WEIGHT : 1)] as const));
+  return rng.pick(part.variants);
+}

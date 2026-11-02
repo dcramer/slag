@@ -140,6 +140,7 @@ function toLevel(seed: number, s: Shape, theme: Theme, profile: LevelProfile): L
     gravity: profile.gravity,
     profile,
     tiles: s.tiles,
+    ...(s.ground ? { ground: s.ground } : {}),
     spawn: s.spawn,
     goal: s.goal,
     protectedRects: s.protectedRects,

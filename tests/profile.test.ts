@@ -47,14 +47,14 @@ describe('level profiles', () => {
     expect(g.get('high')! / n).toBeGreaterThan(0.05);
   });
 
-  it('keep theme shape language: farms and harbors sprawl, never tower', () => {
-    for (const { t, p } of profiles) if (t === 'farm' || t === 'harbor') expect(p.size).not.toBe('tall');
+  it('keep theme shape language: farms, harbors and space sprawl, never tower', () => {
+    for (const { t, p } of profiles) if (t === 'farm' || t === 'harbor' || t === 'space') expect(p.size).not.toBe('tall');
   });
 });
 
 describe('levels of every size class', () => {
   const cases = [
-    ...THEME_IDS.filter((t) => t !== 'farm' && t !== 'harbor').map((t) => ({ t, size: 'tall' as SizeClass })),
+    ...THEME_IDS.filter((t) => t !== 'farm' && t !== 'harbor' && t !== 'space').map((t) => ({ t, size: 'tall' as SizeClass })),
     ...THEME_IDS.map((t) => ({ t, size: 'wide' as SizeClass })),
   ];
   it('generate valid, policy-solvable levels with zero fallbacks (real analyzeReach)', { timeout: 120_000 }, () => {

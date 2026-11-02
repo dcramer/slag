@@ -803,4 +803,229 @@ function rooftops(rng: Rng): Look {
   });
 }
 
-export const RECIPES: Record<ThemeId, (rng: Rng) => Look> = { farm, factory, castle, jungle, volcano, harbor, mine, rooftops };
+function glacier(rng: Rng): Look {
+  const mood = rng.weighted<Mood>([
+    ['day', 3.5],
+    ['night', 3.5],
+    ['overcast', 2],
+  ]);
+  const night = mood === 'night';
+  const overcast = mood === 'overcast';
+  // The aurora's hue: one curtain color per level, green most often.
+  const aur = rng.weighted<number>([
+    [140, 5],
+    [165, 2],
+    [290, 1.5],
+  ]);
+  const rock = jit(rng, night ? hsl3(222, 16, 26) : hsl3(rng.range(205, 225), 12, 34), 4, 4, 3);
+  const iceHue = rng.range(188, 200);
+  return look(rng, {
+    name: rng.pick([
+      `${word(rng, 2, 3)} Glacier`,
+      `Mount ${word(rng, 1, 2)}`,
+      `The ${word(rng, 1, 2)} Icefall`,
+      `Camp ${rng.int(2, 9)}`,
+      `${word(rng, 1, 2)} Pass`,
+    ]),
+    mood,
+    night,
+    sky: night
+      ? [hsl3(232, 55, 7), hsl3(222, 45, 14), hsl3(205, 40, 24)]
+      : overcast
+        ? [hsl3(212, 14, 56), hsl3(208, 14, 70), hsl3(205, 16, 82)]
+        : [hsl3(212, 72, 44), hsl3(202, 62, 66), hsl3(192, 50, 86)],
+    fog: night ? hsl3(215, 35, 22) : overcast ? hsl3(208, 15, 78) : hsl3(198, 40, 84),
+    horizon: night ? { color: hsl3(aur, 70, 50), strength: 0.25, y: 0.62 } : { color: hsl3(195, 50, 94), strength: overcast ? 0.1 : 0.22, y: 0.6 },
+    celestial: night
+      ? celestial(rng, 'moon', hsl3(205, 30, 92), [0.15, 0.85], [0.1, 0.2], [12, 18])
+      : overcast
+        ? NONE
+        : celestial(rng, 'sun', hsl3(52, 60, 96), [0.2, 0.8], [0.1, 0.22], [14, 18]),
+    stars: night ? 170 : 0,
+    layers: layers(rng, [
+      ...(night
+        ? [
+            {
+              kind: 'aurora' as const,
+              base: 0.3,
+              amp: 0.1,
+              color: hsl3(aur, 80, 55),
+              detail: hsl3(aur + 40, 80, 60),
+              glow: hsl3(aur, 90, 62),
+              lit: 1,
+              haze: 0.1,
+              depth: 0.02,
+            },
+          ]
+        : []),
+      {
+        kind: 'peaks',
+        base: 0.48,
+        amp: 0.14,
+        color: night ? hsl3(222, 28, 22) : overcast ? hsl3(210, 10, 66) : hsl3(212, 28, 62),
+        detail: night ? hsl3(215, 30, 58) : hsl3(200, 30, 96),
+        haze: 0.45,
+        depth: 0.06,
+      },
+      {
+        kind: 'icefall',
+        base: 0.6,
+        amp: 0.06,
+        color: night ? hsl3(215, 30, 30) : hsl3(198, 38, 72),
+        detail: night ? hsl3(190, 50, 50) : hsl3(iceHue, 70, 62),
+        glow: hsl3(42, 100, 62),
+        lit: night ? 0.7 : 0.2,
+        haze: 0.22,
+        depth: 0.18,
+      },
+      {
+        kind: 'peaks',
+        base: 0.74,
+        amp: 0.06,
+        color: night ? hsl3(225, 25, 14) : hsl3(212, 18, 40),
+        detail: night ? hsl3(215, 25, 46) : hsl3(205, 25, 92),
+        haze: 0.08,
+        depth: 0.34,
+      },
+    ]),
+    clouds: overcast ? rng.int(7, 11) : night ? rng.int(0, 2) : rng.int(2, 5),
+    cloudStyle: overcast ? 'puffy' : 'wispy',
+    cloudColor: night ? hsl3(220, 25, 24) : overcast ? hsl3(208, 10, 86) : hsl3(205, 30, 97),
+    rays: mood === 'day' && rng.chance(0.6),
+    terrain: {
+      kind: 'rock',
+      ...mat(rock, 0.5, 1.6),
+      cap: 'gravel',
+      capColor: hsl3(212, 10, 66),
+      vein: hsl3(iceHue, 80, 70),
+      veins: false,
+      outline: hsl3(224, 40, 8),
+      sub: rng.chance(0.5) ? { kind: 'strata', ...mat(jit(rng, hsl3(220, 14, 24))), depth: 4 } : null,
+      detail: 0.9,
+      platform: { kind: 'wood', color: jit(rng, hsl3(28, 38, 40)) },
+      ice: {
+        base: hsl3(iceHue, night ? 48 : 62, night ? 52 : 72),
+        dark: hsl3(iceHue + 14, night ? 50 : 58, night ? 34 : 50),
+        light: hsl3(iceHue - 8, 70, night ? 74 : 92),
+      },
+    },
+    liquid: { kind: 'water', color: hsl3(iceHue + 6, 55, night ? 18 : 30), glow: hsl3(iceHue, 70, 82), emissive: false },
+    ambient: 'dust',
+    ambientLight: night ? rng.range(0.44, 0.52) : overcast ? rng.range(0.78, 0.86) : rng.range(0.88, 0.96),
+    ambientTint: night ? hsl3(aur, 35, 70) : hsl3(200, 30, 94),
+    decor: pickDecor(rng, ['cairn', 'icicles'], ['pennant', 'bones', 'lantern'], 4),
+    decorDensity: 0.12,
+    lamp: hsl3(40, 95, 62),
+    accent: hsl3(rng.pick([5, 28, 48]), 92, 56),
+    grade: night
+      ? { tint: [0.92, 1.0, 1.1], lift: [0.006, 0.016, 0.035], exposure: 1.16 }
+      : overcast
+        ? { tint: [0.98, 1.0, 1.04], lift: [0.014, 0.016, 0.02], exposure: 0.98 }
+        : { tint: [0.97, 1.0, 1.05], lift: [0.006, 0.01, 0.018], exposure: 0.96 },
+  });
+}
+
+function space(rng: Rng): Look {
+  // A station or an asteroid field: the sculptor reads the terrain kind, so the shape matches the material.
+  const station = rng.chance(0.5);
+  const mood = rng.weighted<Mood>([
+    ['night', 6],
+    ['dusk', 2],
+  ]);
+  const neb = rng.pick([280, 320, 200, 250]);
+  const planetHue = rng.pick([20, 35, 190, 160, 330]);
+  const hull = jit(rng, hsl3(rng.range(205, 225), 8, 62), 4, 3, 4);
+  const regolith = jit(rng, hsl3(rng.range(20, 40), 10, 36), 6, 4, 4);
+  return look(rng, {
+    name: rng.pick([
+      station ? `${word(rng, 1, 2)} Station` : `${word(rng, 2, 3)} Belt`,
+      station ? `Outpost ${rng.int(3, 99)}` : `Rock ${rng.int(3, 999)}`,
+      `${word(rng, 2, 2)} Orbit`,
+      `Dock ${String.fromCharCode(65 + rng.int(0, 25))}-${rng.int(1, 9)}`,
+      `The ${word(rng, 1, 2)} Drift`,
+    ]),
+    mood,
+    night: true,
+    sky: mood === 'dusk' ? [hsl3(250, 50, 6), hsl3(neb, 40, 13), hsl3(neb + 20, 45, 24)] : [hsl3(240, 45, 3), hsl3(250, 40, 7), hsl3(neb, 35, 13)],
+    fog: hsl3(neb, 30, 12),
+    horizon: { color: hsl3(planetHue, 70, 58), strength: 0.3, y: 0.82 },
+    celestial: celestial(rng, rng.chance(0.6) ? 'sun' : 'moon', hsl3(rng.pick([45, 200]), 40, 96), [0.15, 0.85], [0.1, 0.22], [6, 9], hsl3(45, 80, 80)),
+    stars: 320,
+    layers: layers(rng, [
+      {
+        kind: 'planet',
+        base: 0.62,
+        amp: 0.05,
+        color: hsl3(planetHue, 40, mood === 'dusk' ? 40 : 30),
+        detail: hsl3(planetHue + 25, 45, 52),
+        glow: hsl3(planetHue, 80, 66),
+        lit: 1,
+        haze: 0.1,
+        depth: 0.03,
+      },
+      {
+        kind: 'orbital',
+        base: 0.45,
+        amp: 0.06,
+        color: hsl3(225, 18, 22),
+        detail: hsl3(215, 25, 40),
+        glow: hsl3(rng.pick([0, 190, 48]), 100, 62),
+        lit: 0.7,
+        haze: 0.3,
+        depth: 0.12,
+      },
+      {
+        kind: 'debris',
+        base: 0.7,
+        amp: 0.12,
+        color: hsl3(250, 14, 12),
+        detail: hsl3(250, 14, 24),
+        haze: 0.1,
+        depth: 0.3,
+      },
+    ]),
+    clouds: 0,
+    cloudStyle: 'wispy',
+    cloudColor: hsl3(neb, 30, 24),
+    rays: false,
+    terrain: station
+      ? {
+          kind: 'hull',
+          ...mat(hull, 0.55, 1.3),
+          cap: 'trim',
+          capColor: hsl3(48, 95, 54),
+          vein: hsl3(rng.pick([190, 0, 140]), 100, 60),
+          veins: false,
+          outline: hsl3(230, 30, 6),
+          sub: { kind: 'metal', ...mat(jit(rng, hsl3(220, 10, 34)), 0.5, 1.4), depth: 2 },
+          detail: 0.9,
+          platform: { kind: 'grate', color: hsl3(215, 10, 56) },
+        }
+      : {
+          kind: 'regolith',
+          ...mat(regolith, 0.5, 1.6),
+          cap: rng.chance(0.4) ? 'crystal' : 'gravel',
+          capColor: hsl3(30, 8, 52),
+          vein: hsl3(rng.pick([170, 280, 320]), 95, 62),
+          veins: rng.chance(0.4),
+          outline: hsl3(250, 30, 5),
+          sub: null,
+          detail: 0.95,
+          platform: { kind: 'grate', color: hsl3(215, 10, 50) },
+        },
+    // The pit is the top of the planet's air: fall in and you burn up, so it glows faintly where it starts.
+    liquid: { kind: 'void', color: hsl3(neb, 35, 8), glow: hsl3(neb + 20, 60, 46), emissive: true },
+    ambient: 'dust',
+    ambientLight: rng.range(0.5, 0.6),
+    ambientTint: hsl3(neb, 30, 80),
+    decor: station
+      ? pickDecor(rng, ['beacon', 'dish'], ['antenna', 'cable', 'lander'], 4)
+      : pickDecor(rng, ['crystal', 'lander'], ['pennant', 'beacon', 'bones'], 4),
+    decorDensity: 0.1,
+    lamp: hsl3(195, 80, 70),
+    accent: hsl3(rng.pick([48, 190, 330]), 95, 60),
+    grade: { tint: [0.98, 0.98, 1.06], lift: [0.012, 0.01, 0.03], exposure: 1.12 },
+  });
+}
+
+export const RECIPES: Record<ThemeId, (rng: Rng) => Look> = { farm, factory, castle, jungle, volcano, harbor, mine, rooftops, glacier, space };

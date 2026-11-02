@@ -4,6 +4,7 @@ import { hash2, Rng } from '../core/rng';
 import type { Match } from '../game/match';
 import type { Theme } from '../gen/theme';
 import { RUN_COUNTDOWN, TILE } from '../sim/constants';
+import { GROUND_PLAIN, groundAt } from '../sim/ground';
 import { type Level, levelKey, tileAt } from '../sim/level';
 import type { Solid } from '../sim/physics';
 import { footing, gustPush, gustShown, type WeatherKind } from '../sim/weather';
@@ -248,11 +249,12 @@ export function coatTerrain(g: CanvasRenderingContext2D, level: Level, area?: { 
   }
 }
 
-/** Cells holding ground with open air above: where weather lands. */
+/** Cells holding ground with open air above: where weather lands. A level's own ground (glacier ice) keeps its own footing, so nothing lands on it. */
 function topCells(level: Level): [number, number][] {
   const out: [number, number][] = [];
   for (let ty = 1; ty < level.h; ty++) {
-    for (let tx = 0; tx < level.w; tx++) if (tileAt(level, tx, ty) !== 0 && tileAt(level, tx, ty - 1) === 0) out.push([tx, ty]);
+    for (let tx = 0; tx < level.w; tx++)
+      if (tileAt(level, tx, ty) !== 0 && tileAt(level, tx, ty - 1) === 0 && groundAt(level, tx, ty) === GROUND_PLAIN) out.push([tx, ty]);
   }
   return out;
 }

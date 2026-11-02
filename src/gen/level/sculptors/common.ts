@@ -33,6 +33,8 @@ export const TWO_PART_ASK: Partial<Record<ThemeId, number>> = {
   harbor: 0.16,
   mine: 0.02,
   rooftops: 0.38,
+  // Only a wide space level has room for two crossings (sculptors/space.ts), so its ask is the theme's share over the wide ones.
+  space: 0.65,
 };
 /** First attempt that may give up on needing parts at all (the pipeline stops insisting here too). */
 export const LAST_RESORT = 22;

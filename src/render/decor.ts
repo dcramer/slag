@@ -1,6 +1,7 @@
 import { css, type HSL, hsl3, shift } from '../core/color';
 import type { Rng } from '../core/rng';
 import type { DecorKind, Theme } from '../gen/theme';
+import { FRONTIER_DECOR } from './decor-frontier';
 import { circle, ellipse, flame, flutter, glowDot, light, type RC } from './kit';
 
 /**
@@ -1160,4 +1161,5 @@ export const DECOR: Record<DecorKind, DecorDef> = {
       s.stroke();
     },
   },
+  ...FRONTIER_DECOR,
 };

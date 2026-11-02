@@ -15,9 +15,9 @@ import type { ThemeId } from '../../themes';
  *   wide     64–96 × 24–30 (horizontal sprawl: fields, docks, long rooftop runs)
  *   tall     32–40 × 40–60 (vertical: towers, shafts, fire escapes, canopies)
  *
- * Theme affinity keeps shape language honest: farms and harbors sprawl
- * sideways and never go tall; castles, mines, factories, jungles, rooftops
- * and volcanoes climb.
+ * Theme affinity keeps shape language honest: farms, harbors and space
+ * sprawl sideways and never go tall; castles, mines, factories, jungles,
+ * rooftops, volcanoes and glaciers climb.
  */
 
 type Weights<T> = readonly (readonly [T, number])[];
@@ -61,6 +61,16 @@ const SIZE_WEIGHTS: Record<ThemeId, Weights<SizeClass>> = {
     ['wide', 3],
     ['tall', 2],
   ],
+  glacier: [
+    ['classic', 4],
+    ['wide', 4],
+    ['tall', 2],
+  ],
+  // Space sprawls: at its gravity a void no jump clears eats most of a tower's storey, leaving no room for a second way up.
+  space: [
+    ['classic', 4],
+    ['wide', 6],
+  ],
 };
 
 const ROUTE_WEIGHTS: Record<SizeClass, Weights<RouteShape>> = {
@@ -95,6 +105,20 @@ export type ProfileOverride = Partial<Pick<LevelProfile, 'size' | 'route' | 'den
  */
 export const GRAVITY = { low: 0.7, normal: 1, high: 1.35 } as const;
 export type GravityClass = keyof typeof GRAVITY;
+
+/**
+ * Space's own gravity, used on Auto (a host's Low, Normal or High still
+ * wins: they chose it). Floatier than Low: a full jump is about 6.6 tiles
+ * high and a held jump about a second in the air, the most that still reads
+ * as precise. Measured with reach.ts, the jump profile stays consistent here
+ * (a falling jump reaches at least as far as a level one), where at 0.6 and
+ * below 0.5 it stops being monotone; and a running jump of about 14 tiles
+ * still leaves a classic level room for a crossing no jump clears.
+ */
+export const SPACE_GRAVITY = 0.55;
+
+/** Themes whose world has its own gravity on Auto. */
+const THEME_GRAVITY: Partial<Record<ThemeId, number>> = { space: SPACE_GRAVITY };
 
 export function gravityClass(g: number): GravityClass {
   return g < 0.85 ? 'low' : g > 1.15 ? 'high' : 'normal';
@@ -144,6 +168,7 @@ export function rollProfile(seed: number, themeId: ThemeId, o: ProfileOverride =
     // Rolled last so the other knobs don't depend on it. Mostly normal, sometimes floaty or heavy.
     gravity:
       o.gravity ??
+      THEME_GRAVITY[themeId] ??
       GRAVITY[
         rng.weighted<GravityClass>([
           ['normal', 7],

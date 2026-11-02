@@ -72,6 +72,8 @@ export interface Level {
   gravity?: number;
   /** Variety knobs this level was generated with (absent for hand-built test levels). */
   profile?: LevelProfile;
+  /** Per-tile ground kind (sim/ground.ts: glacier ice), row-major like `tiles`. Absent means all plain. */
+  ground?: Uint8Array;
   /** This level's weather (sim/weather.ts). Absent means clear, as on hand-built test levels. */
   weather?: Weather;
   /** Bumped whenever tiles change so renderers can invalidate caches. */

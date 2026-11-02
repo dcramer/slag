@@ -8,6 +8,7 @@ import {
   stepBody as stepBodyImport,
   TILE_ONEWAY_ID as TILE_ONEWAY_ID_IMPORT,
 } from './physics';
+import { surfaceGrid } from './ground';
 import { footing } from './weather';
 import type { WindForce } from './wind';
 
@@ -333,6 +334,8 @@ export class ReachCache {
   private readonly winds: (WindForce | null)[];
   /** The footing the kept traces walked on (level.weather); another one drops them all. */
   private surface: ReturnType<typeof footing>;
+  /** The level's own ground the kept traces walked on (Level.ground: glacier ice); other ground drops them all. */
+  private ground: Uint8Array | undefined;
 
   /**
    * `airs` are the steady side winds (px/s, + right) to try from every cell:
@@ -347,7 +350,8 @@ export class ReachCache {
     this.tracer = new Tracer(level);
     this.diff = new Int32Array((level.w + 1) * (level.h + 1));
     this.surface = footing(level);
-    this.tracer.setSurface(this.surface);
+    this.ground = level.ground;
+    this.tracer.setSurface(this.surface, this.ground);
   }
 
   /** Make `tiles` the new base, dropping the traces that read a changed tile. */
@@ -398,9 +402,10 @@ export class ReachCache {
   analyze(level: Level, stopAtGoal = true, opts: AnalyzeOptions = {}): Analysis {
     const { w, h, tiles } = level;
     const surface = footing(level);
-    if (surface !== this.surface) {
+    if (surface !== this.surface || !sameGround(level.ground, this.ground)) {
       this.surface = surface;
-      this.tracer.setSurface(surface);
+      this.ground = level.ground;
+      this.tracer.setSurface(surface, level.ground);
       this.trails.fill(undefined);
     }
     const { onEdge, cands, from: extend } = opts;
@@ -470,6 +475,14 @@ export class ReachCache {
   }
 }
 
+/** Same ground, by content: a regenerated level (a snapshot, a proof's copy) brings an equal array, not the same one. */
+function sameGround(a: Uint8Array | undefined, b: Uint8Array | undefined): boolean {
+  if (a === b) return true;
+  if (!a || !b || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
 /**
  * `onEdge`, when given, sees every transition of the stand-cell graph (a walk
  * step, or a jump/fall/climb landing) as it's found, keyed by `y * w + x`.
@@ -532,8 +545,11 @@ class Tracer {
   }
 
   /** How terrain feels underfoot (weather's footing). */
-  setSurface(s: ReturnType<typeof footing>): void {
+  setSurface(s: ReturnType<typeof footing>, ground: Uint8Array | undefined): void {
     this.world.tileSurface = s;
+    // Per-tile ground answers for every tile it covers. Bridges and built blocks a proof writes into the
+    // tiles sit on cells the ground calls plain, so they take the weather's footing like any terrain.
+    this.world.surfaceAt = ground ? surfaceGrid(ground, this.w, this.h, s) : undefined;
   }
 
   use(tiles: Uint8Array): void {
@@ -552,7 +568,9 @@ class Tracer {
     this.cands = [];
     this.stamp++;
     const b = bodyAtCell(tx, ty);
-    if (this.world.tileSurface) b.surface = this.world.tileSurface; // It's already standing here: a jump on frame 0 leaves this ground.
+    // It's already standing here: a jump on frame 0 leaves this ground.
+    const under = this.world.surfaceAt ? this.world.surfaceAt(tx, ty + 1) : this.world.tileSurface;
+    if (under) b.surface = under;
     if (oneWay) b.groundRef = TILE_ONEWAY_ID;
     // The tile underfoot decides which roots apply and how they start.
     this.world.tileAt(tx, ty + 1);
