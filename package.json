@@ -21,7 +21,8 @@
     "brand": "tsx tools/brand.ts",
     "level": "tsx tools/level.ts",
     "online-test": "tsx tools/online-test.ts",
-    "perf": "tsx tools/perf.ts"
+    "perf": "tsx tools/perf.ts",
+    "land": "tsx tools/land.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
