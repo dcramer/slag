@@ -258,7 +258,7 @@ export class Renderer {
           dt,
         );
         if (!r.finished && run.isSafe(r)) this.drawShield(rc, level, r.body.x + r.body.w / 2, r.body.y + r.body.h, r.slot);
-        drawRunnerStatus(rc, r.body, r.status, r.attach.soot);
+        drawRunnerStatus(rc, r.body, r.status, r.attach.soot - run.frame);
         drawRunnerItems(rc, r);
       }
       drawClouds(rc, run);

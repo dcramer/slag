@@ -113,7 +113,7 @@ export const keg = defineModule<'keg'>({
     b.vx = dx * v;
     b.vy = dy * v;
     ctx.state.lastFire = ctx.frame;
-    if (backfire) who.attach.soot = KEG.soot;
+    if (backfire) who.attach.soot = ctx.frame + KEG.soot;
     ctx.emit({ type: 'prop', kind: fire ? 'keg-fire' : 'keg-backfire', x: ax, y: ay, x2: ax + (dx * v) / 16, y2: ay + (dy * v) / 16 });
     return false;
   },

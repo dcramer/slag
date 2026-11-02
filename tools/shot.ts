@@ -263,14 +263,23 @@ try {
       break;
     case 'place':
       await open(`seed=${seed}&players=${players}`);
-      await page.evaluate(() => {
-        const m = (window as any).slagDebug.match;
-        m.players.forEach((p: any, i: number) => {
-          p.claim = i;
-          m.crate[i].claimedBy = p.slot;
-          p.cursor = { x: 300 + i * 150, y: 180 };
-        });
-      });
+      // `--card rope` gives the first player that archetype, if the crate has one.
+      await page.evaluate(
+        (card) => {
+          const m = (window as any).slagDebug.match;
+          const first = Math.max(
+            0,
+            m.crate.findIndex((c: any) => c.def.archetype === card),
+          );
+          m.players.forEach((p: any, i: number) => {
+            const at = (first + i) % m.crate.length;
+            p.claim = at;
+            m.crate[at].claimedBy = p.slot;
+            p.cursor = { x: 300 + i * 150, y: 180 };
+          });
+        },
+        opt('card', ''),
+      );
       await step(60);
       await snap(`place-${seed}`);
       break;
@@ -301,6 +310,9 @@ try {
             b.vy = 0;
             b.onGround = false;
             b.groundRef = -1;
+            // The last sequence may have flung them onto the flag or into something.
+            Object.assign(run.runners[0], { alive: true, finished: false });
+            run.endFrame = -1;
             run.runners[0].items.daze = 0;
             return [m.at[0], m.at[1]];
           },

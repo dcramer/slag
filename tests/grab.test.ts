@@ -324,6 +324,21 @@ describe('rope', () => {
     expect(r.attach.grip).not.toBeNull();
   });
 
+  it("hangs you below a sky rope's hook even if you touch it from above, and you still swing", () => {
+    const level = room();
+    const p = place(ropeDef(5), 42, 9);
+    const { run, r } = race(level, [p]);
+    fly(r, midX(42), 9 * TILE - 2, 215, 60);
+    steps(run, 2);
+    const g = r.attach.grip!;
+    expect(g.y).toBeGreaterThan(0);
+    expect(g.hooked).toBe(false);
+    const x0 = center(r);
+    steps(run, 12);
+    expect(center(r) - x0).toBeGreaterThan(4);
+    expect(Number.isFinite(r.body.x + r.body.y + r.body.vx + r.body.vy)).toBe(true);
+  });
+
   it('bounces off terrain instead of passing through it', () => {
     const level = room();
     for (let y = CEIL + 1; y < FLOOR; y++) level.tiles[y * W + 24] = 1;
@@ -449,7 +464,7 @@ describe('keg', () => {
     steps(run, 3);
     expect(r.attach.grip).toBeNull();
     expect(r.body.vy).toBeGreaterThan(200);
-    expect(r.attach.soot).toBeGreaterThan(KEG.soot - 10);
+    expect(r.attach.soot - run.frame).toBeGreaterThan(KEG.soot - 10);
     expect(r.alive).toBe(true);
   });
 

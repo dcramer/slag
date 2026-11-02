@@ -51,7 +51,7 @@ export interface RunnerAttach {
   cd: number;
   cdUid: number;
   cdMi: number;
-  /** Frames of soot left from a backfire (art). */
+  /** Frame a backfire's soot wears off (art). */
   soot: number;
 }
 
@@ -109,7 +109,6 @@ function shoved(r: Runner, g: Grip): boolean {
 export function stepHold(w: RunWorld, r: Runner, inp: InputFrame, f: number): boolean {
   const a = r.attach;
   if (a.cd > 0) a.cd--;
-  if (a.soot > 0) a.soot--;
   const g = a.grip;
   if (!g) return false;
   const rp = w.resolved.find((x) => x.pp.uid === g.uid);

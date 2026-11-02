@@ -183,7 +183,7 @@ export function summarize(def: PropDef): string[] {
         out.push(`${m.count} platforms on a ${fmt(m.arm, 1)}-tile wheel · ${secs(m.period)} per turn`);
         break;
       case 'rope':
-        out.push(`${fmt(m.length)} links' worth · ${secs(m.strain)} shelf life`);
+        out.push(`${fmt(m.length)} tiles · ${secs(m.strain)} shelf life`);
         break;
       case 'keg':
         out.push(`${fmt(m.power)} proof · ${secs(m.burn)} fuse`);

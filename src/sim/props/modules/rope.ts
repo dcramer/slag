@@ -20,8 +20,9 @@ export const ROPE = {
   ceil: 0.1,
   /** Speed kept when the swing hits something. */
   bounce: 0.3,
-  /** Upward kick on letting go (px/s), so a release at the bottom of the arc still clears the floor. */
-  hop: 90,
+  /** Letting go adds this share of swing speed and an upward kick (px/s): a release has to beat a running jump, or there's no point swinging. */
+  fling: 1.2,
+  hop: 120,
   /** Frames after a grab before jump lets go, so mashing into the rope doesn't drop you straight off. */
   grace: 6,
   /** Frames before snapping that the links start to strain. */
@@ -67,13 +68,13 @@ export const rope = defineModule<'rope'>({
     const ax = m.at[0] + ctx.off[0];
     const ay = m.at[1] + ctx.off[1];
     if (!ctx.live || b.onGround) return;
+    // Feet can touch a rope lowered from the sky with the rest of you above its hook; you always hang below it.
     const x = b.x + b.w / 2 - ax;
-    const y = b.y + b.h / 2 - ay;
+    const y = Math.max(b.y + b.h / 2 - ay, ROPE.minLen / 2);
     const d = Math.sqrt(x * x + y * y);
     const len = clamp(d, ROPE.minLen, m.length + b.h / 2);
-    const k = len / Math.max(d, 1);
-    const px = x * k;
-    const py = y * k;
+    const px = (x * len) / d;
+    const py = (y * len) / d;
     ctx.grab({ x: px, y: py, len, s: (b.vx * py - b.vy * px) / len, hooked: hooked(ctx, ax, ay), kind: 'rope-grab' });
   },
   hold(m, ctx, who, g, inp) {
@@ -110,7 +111,8 @@ export const rope = defineModule<'rope'>({
     b.vx = (g.y / L) * g.s;
     b.vy = -(g.x / L) * g.s;
     if (!inp.jumpPressed || g.t < ROPE.grace) return true;
-    b.vy -= ROPE.hop;
+    b.vx *= ROPE.fling;
+    b.vy = b.vy * ROPE.fling - ROPE.hop;
     ctx.emit({ type: 'prop', kind: 'rope-off', x: ax + g.x, y: ay + g.y });
     return false;
   },
