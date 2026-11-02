@@ -92,6 +92,7 @@ Vercel, Next.js App Router. Server code is limited to small, stateless route han
 
 - TypeScript strict, ES modules. Runtime deps are only `next`, `react`, `react-dom` (for the shell) and `client-only`; the game itself uses none. Don't add runtime dependencies without asking.
 - Doc comments explain *why*, on modules and exported functions. Small functions; data plus registries over sprawling `switch`es.
+- Custom lint and ast-grep rules are welcome where they enforce a rule better than convention. Every rule's error message must steer whoever hits it, usually an agent: say why the rule exists and what to do instead, naming the concrete replacement. Example: `Math.sin differs across browsers and desyncs lockstep. Use sin from src/core/dmath.ts.`
 - Assets: prefer procedural art. Third-party assets only if CC0 or free for commercial use without attribution traps; record each in `public/ASSETS.md` with source URL and license. Keep them small (≤256 px tiles, compressed).
 
 <!-- BEGIN:nextjs-agent-rules -->
