@@ -56,25 +56,13 @@ Whichever option is chosen, keep the transport abstraction, the election logic, 
 - **New rule: levels are mostly open.** There must always be more than one route to the goal: corridors are fine in places, but never a single narrow path. Enforce it in the judge, for example by checking that the reachable stand-cell graph has at least two disjoint-ish routes, or with a minimum openness ratio.
 - Retune the sculptors for walk vs run and the lower jump.
 
-## 4. Content: parts and projectiles
-**Branch:** `wip/content` (~4.2k lines across 46 files, unreviewed).
-
-- 8–12 new parts and 5–8 projectiles. Favor side effects over death: knockback, slow, freeze, sticky, misdirection.
-- Demolition variants: prop-only charges, terrain drills and tunnelers, different blast shapes. All must respect spawn and goal protection.
-- Rideable projectiles: a glider launcher whose gliders sag and sink under weight.
-- **Launcher aim must be readable:**
-  - Today's weights are fixed 5 / sweep 2 / track 2, and track has a ±100° cone (`src/gen/props.ts`, `src/sim/props/modules/launcher.ts`). Trackers feel like the default.
-  - Target roughly fixed 7 / sweep 2 / track 1.5, with the cone narrowed to ±60°.
-  - A tracker shows a visible sensor or eye and always carries its name adjective. Crate cards and the codex say Fixed, Sweeps or Tracks.
-  - Optionally add one rare, slow, clearly signalled homing projectile.
-- Changed contract: `Wind` is now `{dx, dy, speed, k}`, and `stepBody` takes a 4th `wind` argument.
-
 ## 5. Mystery crate and held items
 **Branch:** `wip/held-items` (~2k lines across 27 files, unreviewed).
 
 - A Mystery Crate prop that pops out a random held item, plus a held-item system with a `use` input action.
 - Original items only: a sword that bonks, a kickable puck that ricochets, a boomerang, a shield, …
-- Keep runner state additive. Item 7 also adds "runner attached to a prop" state.
+- Keep runner state additive, beside `RunnerStatus` (`src/sim/props/status.ts`). Item 7 also adds "runner attached to a prop" state.
+- The branch edits the old projectile loop, which has since moved into `stepProjectile` (`src/sim/props/ammo.ts`), so port those edits.
 
 ## 6. Mobile, round 2
 **Branch:** `wip/mobile-2` (~1k lines, unreviewed). Round 1 (touch controls) is merged.
@@ -87,7 +75,7 @@ The user's feedback on a real phone: "almost playable but not quite; resolution 
 - **Verify:** `pnpm shot mobile` on iPhone SE, iPhone 13 and Pixel 7 in landscape. Nothing has been tested on real hardware yet.
 
 ## 7. Grab props: rope and blast barrel
-No branch yet.
+No branch yet. `origin/wip/content` has a dropped launch barrel (module and art) worth reading for the blast barrel, but its name and `status.hold` must not be reused.
 
 - **Rope:** hangs from a ceiling. You grab it automatically when you touch it in the air, with a short re-grab cooldown. Left and right pump the swing; jump lets go and keeps the swing's momentum.
 - **Blast barrel:** it pulls you in on contact and rotates (or holds a fixed aim). Jump fires you out along its direction after a short delay. It must be an original design, not a copy.
@@ -128,3 +116,13 @@ The rest of this item is the home screen, the first and biggest piece of it. The
 - One logo and one settings UI, used everywhere. This replaces the lobby logo's separate treatment, which looks worse than the home-screen logo today (same treatment, scale and crispness).
 - **The home screen is the quality bar for the whole game.** The owner loves how it looks and that it fills the full window height. Keep its look exactly (drips, embers, character stage), and bring the lobby, menus and in-game screens up to it, not the other way round. Record that bar in `docs/ART.md`.
 - Do this after items 2 and 3, which both change `src/game-client.ts`.
+
+## 12. Max rounds
+A match ends at the target score **or** a round limit, so a match that nobody can win still finishes.
+
+- Add `rules.maxRounds` beside `rules.targetScore`, set in the lobby like the other rules. Default it high enough that normal matches end on score.
+- At the limit, the top score wins and ties are joint winners. If nobody has any points, say so on the victory screen instead of naming a winner.
+- The HUD shows `ROUND 7/20`, and the score screen states both win conditions.
+
+## 13. Playtest and tune the new parts
+Nothing from item 4 has been played by hand, so the tuning is test-level only: magnet drift, bumper power, slow and freeze durations. Dropstones and crushers stop only on terrain, so they pass through placed blocks; decide whether that's right.
