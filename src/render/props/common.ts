@@ -29,13 +29,22 @@ export interface DrawCtx {
 }
 
 /**
+ * Layer for the scenery half of a set piece (towers, masts, gantries). It paints
+ * before the terrain, so the level stands in front of it (docs/DESIGN.md, render
+ * layers). Only static parts nobody can touch belong here: platforms, hazards and
+ * their tells stay on the front layers, where terrain can never hide them.
+ */
+export const BACKDROP = -1;
+
+/**
  * Art plugin for one module type. `layer` orders drawing within a prop:
- * 0 behind bodies (shafts, rails), 1 bodies, 2 attachments, 3 effects.
- * A module type may register several arts on different layers.
+ * BACKDROP behind the terrain, 0 behind bodies (shafts, rails), 1 bodies,
+ * 2 attachments, 3 effects. A module type may register several arts on
+ * different layers.
  */
 export interface ModuleArt<M extends Module = Module> {
   type: M['type'];
-  layer: 0 | 1 | 2 | 3;
+  layer: typeof BACKDROP | 0 | 1 | 2 | 3;
   draw(rc: RC, m: M, d: DrawCtx): void;
 }
 

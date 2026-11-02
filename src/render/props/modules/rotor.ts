@@ -3,7 +3,7 @@ import type { Rect } from '../../../core/geom';
 import { hash2 } from '../../../core/rng';
 import { type ModuleOf, type RotorArm, rotorAngles, rotorArms, rotorPlatform } from '../../../sim/props';
 import { circle, ellipse, glowDot, hazardStripes, light, METALS, metalFill, type RC, rivet, rrect, sphereFill } from '../../kit';
-import { type DrawCtx, defineArt } from '../common';
+import { BACKDROP, type DrawCtx, defineArt } from '../common';
 import { bar, ceilingAbovePx, chain, groundBelowPx, lattice, plank, rope } from './setpiece';
 
 /**
@@ -11,6 +11,8 @@ import { bar, ceilingAbovePx, chain, groundBelowPx, lattice, plank, rope } from 
  * bale, vine log, basalt slab, crane crate, ore bucket, window gondola).
  * Every moving part is placed with rotorArms/rotorPlatform — the same pose
  * functions the sim uses — so what you see is exactly what you stand on.
+ * Supports are scenery and stand behind the terrain; sails, links and
+ * platforms stay in front of it.
  */
 
 type Rotor = ModuleOf<'rotor'>;
@@ -30,7 +32,7 @@ function hub(m: Rotor, d: DrawCtx): [number, number] {
 }
 
 // ---------------------------------------------------------------------------
-// Layer 0: supports and arms.
+// Backdrop: supports. Layer 0: arms.
 
 function drawSupport(rc: RC, m: Rotor, d: DrawCtx) {
   const s = rc.s;
@@ -821,14 +823,8 @@ function drawHub(rc: RC, m: Rotor, d: DrawCtx) {
   circle(s, hx, hy, 2.2);
 }
 
-defineArt<'rotor'>({
-  type: 'rotor',
-  layer: 0,
-  draw: (rc, m, d) => {
-    drawSupport(rc, m, d);
-    drawArms(rc, m, d, rotorArms(m, rc.frame, d.r.phase, d.off));
-  },
-});
+defineArt<'rotor'>({ type: 'rotor', layer: BACKDROP, draw: (rc, m, d) => drawSupport(rc, m, d) });
+defineArt<'rotor'>({ type: 'rotor', layer: 0, draw: (rc, m, d) => drawArms(rc, m, d, rotorArms(m, rc.frame, d.r.phase, d.off)) });
 defineArt<'rotor'>({
   type: 'rotor',
   layer: 1,

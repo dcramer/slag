@@ -12,7 +12,7 @@ import { Fx } from './fx';
 import { Hud } from './hud';
 import { circle, glowDot, type Light, light, type RC } from './kit';
 import { type Compositor, createCompositor } from './post';
-import { drawBlastPreview, drawProjectile, drawResolved, drawRunnerStatus, type Emit, propEventFx } from './props';
+import { drawBackdrop, drawBlastPreview, drawForeground, drawProjectile, drawResolved, drawRunnerStatus, type Emit, propEventFx } from './props';
 import { TerrainPainter } from './terrain';
 // Mobile: quality tiers / adaptive resolution / safe-area insets (owned by the touch module).
 import { detectQuality, FrameBudget, QUALITY, type QualityTier, safeInsets, TIERS } from '../ui/touch/device';
@@ -159,11 +159,13 @@ export class Renderer {
     this.terrain.drawLive(rc, level, pushers);
     this.drawMarkers(rc, level);
 
+    for (const r of resolved) {
+      drawForeground(rc, r, {
     const run = m.phase === 'run' ? m.run : null;
     // Set pieces are part of the level: show them in every phase (lobby, pick, place), not just races.
     const resolved = run ? run.resolved : [...level.setPieces, ...m.placed].map(resolveProp);
-    for (const r of resolved) {
-      drawResolved(rc, r, {
+    // Scenery goes down first so the terrain stands in front of it and shadows it.
+    for (const r of resolved) drawBackdrop(rc, r, { level });
         level,
         state: run?.propState.get(r.pp.uid),
         broken: run ? run.isBroken(r.pp.uid) : false,
