@@ -11,7 +11,8 @@ import { Backdrop } from './background';
 import { drawBlood } from './blood';
 import { Camera } from './camera';
 import { PhoneCam, phoneView } from './camera-follow';
-import { drawAccessory, drawAfterimage, drawCharacter, Rig } from './character';
+import { drawAfterimage, Rig } from './character';
+import { drawInkAccessory, drawInkRunner } from './ink-character';
 import { ForegroundLayer, Lettering, letteringAllowed } from './cel';
 import { Fx } from './fx';
 import { frameReach, VIEW_FRAME, type ViewFrame, viewFrame } from './frame';
@@ -292,6 +293,7 @@ export class Renderer {
           r.body.facing,
           r.finished,
           dt,
+          r.body.wallDir,
         );
         if (!r.finished && run.isSafe(r)) this.drawShield(rc, level, r.body.x + r.body.w / 2, r.body.y + r.body.h, r.slot);
         drawRunnerStatus(rc, r.body, r.status, r.attach.soot - run.frame);
@@ -560,6 +562,7 @@ export class Renderer {
     facing: number,
     celebrate: boolean,
     dt: number,
+    wall = 0,
   ) {
     let rig = this.rigs.get(slot);
     if (!rig || rig.rope.length === 0 || Math.hypot(rig.rope[0].x - x, rig.rope[0].y - y) > 60) {
@@ -594,9 +597,10 @@ export class Renderer {
 
     const anchorX = x - facing * 4;
     const anchorY = c.accessory === 'tail' ? y - 4 : c.accessory === 'cape' ? y - 12 : y - 10;
-    rig.step(c, anchorX, anchorY, dt, -vx * 0.6);
-    drawAccessory(rc, c, rig);
-    drawCharacter(rc, c, x, y, { facing, vx, vy, grounded, t: rc.t, celebrate, ink: true });
+    // A little air always pulls the ribbon off behind, so standing still it trails instead of hanging like a pole.
+    rig.step(c, anchorX, anchorY, dt, -vx * 0.6 - facing * 8, gy >= 0 ? gy - 0.8 : Infinity);
+    drawInkAccessory(rc.s, c, rig);
+    drawInkRunner(rc, c, x, y, { facing, vx, vy, grounded, t: rc.t, celebrate, wall });
     light(rc, x, y - 8, 38, c.body, 0.3);
     // A key light so a runner in shade still reads, not so much that it loses its hue.
     light(rc, x, y - 8, 20, RUNNER_KEY, 0.28);
