@@ -40,7 +40,7 @@ Size tiers for parts are a mapping of the old rolled ranges, so check them too; 
 - Small cog lifts and small spin bars stay small on crate cards, because small parts draw at 0.6 scale.
 
 ## 15. Parody names: decide on sound-alikes
-Names now parody genre tropes (`docs/PARODY.md`). A few are deliberate sound-alikes of trademarked names: Chain Chump, Thwunk, the -omb suffix, Master Noodle, Yolo Blocks, Coil Pup. Decide whether to keep them.
+Names now parody genre tropes (`docs/PARODY.md`). A few are deliberate sound-alikes of trademarked names: Chain Chump, Thwunk, the -omb suffix, Master Noodle, Yolo Blocks. Decide whether to keep them.
 
 ## 23. Check link previews on a deploy
 Icons, manifest, Open Graph and Twitter tags, and oEmbed are on `main`, regenerated with `pnpm brand`. These need a deployed URL to check:

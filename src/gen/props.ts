@@ -656,8 +656,8 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
       crossbow: ['Arrow Trap', 'Kneecapper', 'Crossbow'],
       ballista: ['Ballista', 'Siege Bow', 'Tower Defense'],
       cannon: ['Cannon', 'Pirate Cannon', 'Bombard'],
-      totem: ['Tiki Spitter', 'Fire Totem', 'Heartburn Idol'],
-      turret: ['Sentry Gun', 'Sorry Turret', 'Blaster'],
+      totem: ['Tiki Torch', 'Fire Totem', 'Heartburn Idol'],
+      turret: ['Dome Turret', 'Sorry Turret', 'Blaster'],
       thrower: ['Ninja Box', 'Star Thrower', 'Shuriken Vendor'],
       rocket: ['Seeker Pod', 'Homing Rack', 'Grudge Launcher'],
       glaive: ['Boomerang Bruh', 'Glaive Flinger', 'Return Policy'],
@@ -677,7 +677,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
       prism: ['Reflective', 'Angular'],
     };
     const adjs: string[] = [...(STYLE_ADJ[style] ?? [])];
-    // Moving aim always shows in the name (tracking also gets an eye on the art).
+    // Moving aim always shows in the name (tracking also gets a sensor camera on the art).
     const aimAdj =
       aim === 'track' ? rng.pick(['Vigilant', 'Paranoid', 'Watchful', 'Tracking']) : aim === 'sweep' ? rng.pick(['Sweeping', 'Indecisive', 'Swiveling']) : null;
     if (interval < 70) adjs.push('Trigger-happy', 'Twitchy');
@@ -797,7 +797,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
       role: 'utility',
       name: title(rng, power > 720 ? ['Overclocked', 'Ballistic'] : power < 600 ? ['Wimpy', 'Polite'] : ['Bouncy', 'Springy'], [
         'Spring',
-        'Coil Pup',
+        'Bedspring',
         'Boing',
         'Launch Pad',
       ]),
@@ -938,12 +938,12 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     return {
       archetype: 'dropper',
       role: 'hazard',
-      name: title(rng, warn < 17 ? ['Twitchy', 'Jumpy', 'Short-Tempered'] : ['Grumpy', 'Glowering', 'Patient', 'Brooding'], [
+      name: title(rng, warn < 17 ? ['Twitchy', 'Jumpy', 'Short-Tempered'] : ['Grumpy', 'Looming', 'Patient', 'Brooding'], [
         'Thwunk',
         'Grudge Block',
-        'Angry Brick',
+        'Ton of Bricks',
         'Dropstone',
-        'Ceiling Grump',
+        'Pile Driver',
       ]),
       sized(size) {
         const w = by(size, 1, 2, 2);
