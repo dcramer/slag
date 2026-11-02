@@ -12,6 +12,24 @@ export interface Shape {
   protectedRects: TileRect[];
   /** Free-form label for debugging/tools ("farm:fields", "legacy:caverns", ...). */
   style: string;
+  /**
+   * Optional bridge spots the sculptor built in on purpose (left cell of a
+   * 3-wide platform). The validator tries these first; it still searches
+   * generically, so hints are an optimization, never a requirement.
+   */
+  bridgeHints?: BridgeHint[];
+  /**
+   * The sculptor built a crossing meant to need props. The pipeline rejects
+   * the shape (and retries) if the level turns out finishable bare anyway, so
+   * the props-needed share tracks each theme's challenge rate.
+   */
+  wantsProps?: boolean;
+}
+
+/** Left cell of a BRIDGE_W×1 solid platform a player could place. */
+export interface BridgeHint {
+  x: number;
+  y: number;
 }
 
 export interface SculptCtx {
