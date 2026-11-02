@@ -117,7 +117,9 @@ export type DecoKind =
   | 'headhouse'
   | 'barn'
   | 'flume'
-  | 'trestle';
+  | 'trestle'
+  // Factory landmarks (gen/stage/factory-works.ts): a boiler house's smokestack, standing on its roof.
+  | 'smokestack';
 export type MysteryLook = 'crate' | 'chest' | 'gift';
 /** What a match's warp pipes are made of: one per match, since a roster has one pipe part. */
 export type PipeLook = 'green' | 'brass' | 'rust' | 'porcelain' | 'copper';
@@ -657,6 +659,50 @@ export type Module =
       frozen: number;
       warn: number;
       open: number;
+      seed: number;
+    }
+  | {
+      /**
+       * World-only, factory: a ladle of molten slag (./modules/ladle.ts). Upright for `off` frames, it
+       * tips toward `dir` through the `warn` (drawn, never felt: the lip glows and smokes), then pours for
+       * `pour`: a stream from the lip `at` (tiles) straight down, at most `drop` tiles, stopped by whatever
+       * is in its way. Where it lands on the floor it means to (the full `drop`), the spill runs out along
+       * the floor, up to `spill` tiles to the left and right, and stays molten for `set` frames after the
+       * pour while the ladle rights itself; then it crusts over, harmless. `hang`: tiles from the lip up to
+       * the ceiling its chain hangs from, 0 when it hangs in a gantry of its own (art only).
+       */
+      type: 'ladle';
+      at: Vec;
+      dir: 1 | -1;
+      drop: number;
+      spill: Vec;
+      hang: number;
+      off: number;
+      warn: number;
+      pour: number;
+      set: number;
+      seed: number;
+      /** Art only: how big the ladle is drawn (1 when absent); its lip stays on the stream. */
+      size?: number;
+    }
+  | {
+      /**
+       * World-only, factory: an assembly-line robot arm (./modules/arm.ts), its shoulder at `at` (tiles)
+       * on top of its pedestal, reaching toward `dir` with an upper arm and a forearm `reach` tiles each.
+       * It waits raised for `rest` frames, its lamp blinks for `warn` (drawn, never felt), then it strikes:
+       * the welding head chops down in front of the pedestal and sweeps out along the floor in `strike`
+       * frames, welds there for `weld`, and folds back up over `back`, cold. The head kills only while it
+       * strikes and welds.
+       */
+      type: 'arm';
+      at: Vec;
+      dir: 1 | -1;
+      reach: number;
+      rest: number;
+      warn: number;
+      strike: number;
+      weld: number;
+      back: number;
       seed: number;
     };
 

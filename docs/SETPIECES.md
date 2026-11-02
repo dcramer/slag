@@ -713,7 +713,7 @@ The owner: "landmarks should have generators and rules they adhere to, the level
 - **Decor** (`gen/decor`): placement moved out of `render/terrain.ts` into `placeDecor`, behind the rules registry (`defineDecor`: themes, top or under, weight, room); the theme looks draw from the kinds registered for the theme. `render/decor.ts` only draws.
 - **Per theme**: the owner's minimums (5 landmarks, 12 decor pieces, 3 unique hazards) are counted by `themeShortfalls`; `tests/conformance/themes` lists what each theme lacks as todos until it has them.
 
-What it found in existing content when it landed: one Great Wheel (factory, stats seed 22, wide) had a single way past it (73% of the way with no second); the pipeline now retries it. The classic Throne Hall and Stamping Line don't yet vary with their seed (their plans are functions of their box), waived in `tests/conformance/lib.ts` until the owner's "every landmark varies" lands for them. The castle top-up made the Throne Hall vary and took its waiver out.
+What it found in existing content when it landed: one Great Wheel (factory, stats seed 22, wide) had a single way past it (73% of the way with no second); the pipeline now retries it. The classic Throne Hall and Stamping Line didn't vary with their seed (their plans were functions of their box), waived in `tests/conformance/lib.ts` until the owner's "every landmark varies" lands for them. The castle top-up made the Throne Hall vary and the factory top-up the Stamping Line, and both waivers are gone.
 
 ### What Wave 3 harbor landed, and where it differs from section 3
 
@@ -778,6 +778,21 @@ Three more concepts (`gen/stage/castle-keep.ts`, sharing `gen/stage/castle-kit.t
 - **Hazards stay the castle's own**: the new pieces use the castle's dropper and axe, and shared mechanisms (`flame`, `flood:lava`, `swinger:saw`) no other theme flags as its own.
 - **Decor**: eight more kinds (a suit of armour with nobody in it, a brazier on its tripod, a rack of polearms, a cluster of candles, the stocks, fallen masonry; cobwebs and a gibbet cage hanging from a ceiling) in `render/decor-castle.ts`, fourteen in castle's pool; the castle look shows six at a time.
 - **Two parts**: castle's share holds without a `TWO_PART_ASK` change (27% over 200 seeds, against 25% before).
+
+### What the factory top-up landed
+
+Factory reaches the owner's minimums: five landmarks (two grand), fourteen decor kinds, three unique hazards.
+
+- **The Stamping Line varies with its seed** (its conformance waiver is gone): its box reserves the widest vat this gravity rolls and the vat is rolled inside it, so the line's length is the seed's (17 to 19 columns on a classic level, 23 to 28 wide); the girder stands 8 to 10 rows up; where the line has columns to spare, a girder end stands a column in from its ladder; the conveyor bed is on the floor or on a one-row plinth.
+- **Three new landmarks** (`gen/stage/factory-works.ts`, shared helpers in `factory-kit.ts`), each owning the crossing like the first two: a vat on its spawn side, two columns of bank, the structure, and **two columns of open floor at its far end** (`APRON`): the ground past a box can stand a step higher than the floor it levelled, and a passage ending against it was a dead end that failed the mostly-open rule on a third of seeds.
+  - **The Foundry** (grand, rustplate skin): a cupola furnace tower at the far end, its tapping passage through its foot and its charging door at the runway's height; a crane runway girder from a ladder to that door; two to four crane ladles (the slag ladle, drawn 1.4× size) hanging from it, each on its own beat, spilling along the casting floor, which is sunk a row on some. The cupola's lining is a shell behind the whole tower, so through both openings you see its inside, not sky between blocks; its stack goes on up behind it (`smokestack`). Under the ladles and through the tapping passage, or along the runway and through the charging door.
+  - **The Boiler House** (brick skin): a brick building with a fire escape of rungs up its near wall, a boiler room of two or three boilers (tiles; the factory skin draws each one's steel drum on them), whose fireboxes blow flame back along the floor at the door (`flame`), one boiler's safety valve venting steam (non-lethal `geyser`), and a smokestack standing on its roof (the new shell kind `smokestack`). Through the boiler room, or up the fire escape and over the roof.
+  - **The Robot Line**: a raised deck on legs, robot arms (the robot arm) on pedestals along it, end ones striking inward, and a car body (a five-cell body: lower body and cabin) on its jig between each pair, where they weld. Along the deck, over the car and between the strikes, or under the deck, down a service trench on some. Car bodies go by on the overhead hooks behind.
+- **Factory's own hazards** (`setpieces/factory.ts`, both `unique`), each a new world-only module:
+  - **The slag ladle** (`ladle`): tips on a cycle (the warning is the ladle easing over and the lip glowing), pours a stream straight down that the first thing in its way stops (a part held under it catches the slag), and where the stream reaches its own floor the spill runs out along it and stays molten through `set`, then crusts. Hung from a ceiling on a chain, or in a little gantry of its own (BACKDROP) where there's none.
+  - **The robot arm** (`arm`): a pedestal (its piece's block) with an upper arm and forearm; raised and cold, its lamp blinks, then it chops down in front of the pedestal and sweeps its welding head out along the floor, welds, and folds back up cold. Only the head hurts, only while it strikes and welds.
+- **Decor**: gauge, time clock, extinguisher, cones, wrapped pallet and crane hook (`render/decor-factory.ts`).
+- **Sculptor**: factory ducts no longer hang over a landmark's opened sky.
 
 ## 6. Decisions
 

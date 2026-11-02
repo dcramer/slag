@@ -20,10 +20,7 @@ import { safeWindowFaults } from '../lib/set-piece-checks';
  */
 
 /** `<kind>/<theme>/<id>/<rule>` → why it's waived, and what fixes it. */
-export const WAIVERS: Record<string, string> = {
-  'landmark/factory/stamping-line/varies':
-    'a classic Stamping Line rolls the same line on most seeds; pending the owner decision that every landmark varies with its seed',
-};
+export const WAIVERS: Record<string, string> = {};
 
 /** One rule of one entry: fails listing every fault it finds, or a todo while it's waived. */
 export function rule(key: string, name: string, faults: () => string[]): void {

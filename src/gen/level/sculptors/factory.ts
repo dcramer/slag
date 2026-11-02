@@ -121,6 +121,8 @@ export const factory: Sculptor = (ctx) => {
     for (let i = k.count(rng.int(2, 5)); i > 0; i--) {
       const x = rng.int(6, W - 8);
       const len = rng.int(1, 3);
+      // Nothing hangs over a landmark: it opened its own sky, and a duct there would hang from nothing.
+      if (lm && x + 1 >= lm[0] && x <= lm[1]) continue;
       if (g.empty(x, ceil + len + 3)) g.fill(x, ceil + 1, x + rng.int(0, 1), ceil + len);
     }
   }

@@ -1,12 +1,13 @@
 import type { Vec } from '../../core/geom';
-import { type LevelProfile, T_ONEWAY } from '../../sim/level';
+import { T_ONEWAY } from '../../sim/level';
 import type { Module } from '../../sim/props';
-import { BRIDGE_W } from '../level/types';
-import { type Grid, hintGap, POCKET } from '../level/kit';
 import { jumpProfile } from '../level/probe';
-import { easyRise, hardGap, pit, undercut } from '../level/sculptors/common';
+import { easyRise, hardGap } from '../level/sculptors/common';
 import { greatWheel } from '../setpieces/builders';
-import { makeStyle, type Piece, SAFE_TILES } from '../setpieces/place';
+import { makeStyle, type Piece } from '../setpieces/place';
+import { defineConcept } from './contract';
+import { BOILER_HOUSE, FOUNDRY, ROBOT_LINE } from './factory-works';
+import { roomFor, SITE_MARGIN, vat, widestGap } from './factory-kit';
 import type { Concept } from './types';
 
 /**
@@ -25,31 +26,6 @@ import type { Concept } from './types';
  *   a sprint that keeps pace with the wave gets through underneath. The girder's top is the static way over,
  *   up ladders of one-way rungs at both ends.
  */
-
-/** Columns a landmark keeps from either end (sculptors/common.ts claimSite). */
-const SITE_MARGIN = POCKET + SAFE_TILES;
-
-/** The widest hard crossing `hardGap(rng, 1)` rolls at this gravity. */
-function widestGap(gravity?: number): number {
-  const j = jumpProfile(gravity);
-  return Math.max(j.gap + 2, BRIDGE_W + j.walkGap * 2);
-}
-
-/**
- * The hard vat a landmark owns: columns x0..x1 open to the bottom, its bridge hinted, its far bank undercut
- * below the floor row `G` (`undercut` from the ceiling would hollow the whole bank under a roof).
- */
-function vat(g: Grid, x0: number, x1: number, G: number): void {
-  pit(g, x0, x1, G, false);
-  hintGap(g, x0, x1, G);
-  undercut(g, x1 + 1, 2, G);
-}
-
-/** Does a landmark `cols` wide fit beside the widest crossing, inside the margins? A classic level under low gravity doesn't. */
-function roomFor(p: Partial<LevelProfile>, cols: number): boolean {
-  if (p.w === undefined) return true;
-  return widestGap(p.gravity) + cols <= p.w - 2 * SITE_MARGIN;
-}
 
 // ---------------------------------------------------------------------------
 // The Great Wheel.
@@ -163,41 +139,56 @@ export const GREAT_WHEEL: Concept = {
 // ---------------------------------------------------------------------------
 // The Stamping Line.
 
-/** Columns the line takes past its vat: ladder, girder over the presses, ladder. A classic level has room for three presses. */
-function lineCols(W: number): number {
-  return W <= 48 ? 18 : 26;
+/** Columns the line takes past its vat (ladder, girder over the presses, ladder): fewest, and the most its seed rolls. A classic level has room for three presses. */
+function lineRange(W: number): [number, number] {
+  return W <= 48 ? [17, 19] : [23, 28];
 }
+
+/** Fewest columns between the girder's ends that still hang three presses. */
+const PRESS_ROOM = 11;
 
 /** Tiles per second the slams travel down the line: between a walk and a run, so keeping pace takes a jog. */
 const WAVE_SPEED = 9;
 
-export const STAMPING_LINE: Concept = {
+export const STAMPING_LINE: Concept = defineConcept({
   id: 'stamping-line',
   weight: 2,
   sizes: ['classic', 'wide'],
   routes: ['ltr'],
-  fits: (p) => roomFor(p, lineCols(p.w ?? 48) + 1),
+  fits: (p) => roomFor(p, lineRange(p.w ?? 48)[0] + 1),
   ownsCrossing: true,
-  family: ['forklift', 'cog lift'],
+  family: ['forklift', 'cog lift', 'robot arm'],
   names: ['The Stamping Line at {place}', '{place} Press Shop', 'The Pancake Line of {place}', '{place} Panel Works'],
-  varies: ['vat width', 'girder height', 'press width and count'],
-  box: (k, rng) => ({ w: hardGap(rng) + 1 + lineCols(k.W), h: 13 }),
+  varies: ['vat width', 'line length', 'girder height', 'where the girder starts and ends', 'a plinth under the bed', 'press width and count'],
+  // The widest vat this gravity rolls, then the line: the vat the build digs is rolled inside its columns.
+  box: (k, rng) => {
+    const [lo, hi] = lineRange(k.W);
+    const room = k.W - 2 * SITE_MARGIN - widestGap() - 1;
+    return { w: widestGap() + 1 + Math.max(lo, Math.min(room, rng.int(lo, hi))), h: 13 };
+  },
   build(g, rng, at, parts) {
     const G = at.y + at.h;
-    const lineW = lineCols(g.w);
+    const lineW = at.w - widestGap() - 1;
     const x0 = at.x;
     const L0 = x0 + at.w - lineW;
     const R = x0 + at.w - 1;
-    if (parts > 0) vat(g, x0, L0 - 2, G);
-    // The girder: the presses hang under it, and its top is the way over them.
-    const B = G - 9 - rng.int(0, 1);
+    if (parts > 0) vat(g, L0 - 1 - Math.min(widestGap(), hardGap(rng)), L0 - 2, G);
+    // The girder: the presses hang under it, and its top is the way over them. Where the line has columns
+    // to spare, an end stands a column in from its ladder.
+    const B = G - 8 - rng.int(0, 2);
     g.clear(L0, B - 4, R, G - 1);
-    const beamL = L0 + 2;
-    const beamR = R - 2;
+    const spare = lineW - 6 - PRESS_ROOM;
+    const inL = spare > 0 ? rng.int(0, 1) : 0;
+    const inR = spare - inL > 0 ? rng.int(0, 1) : 0;
+    const beamL = L0 + 2 + inL;
+    const beamR = R - 2 - inR;
     g.fill(beamL, B, beamR, B);
-    // Ladders of one-way rungs up to it at both ends, a comfortable hop apart.
+    // The bed: the conveyor on the floor, or up on a plinth a row high on some lines.
+    const plinth = rng.int(0, 1);
+    if (plinth) g.fill(beamL, G - 1, beamR, G - 1);
+    // Ladders of one-way rungs up to it at both ends, a comfortable hop apart, under its ends.
     const r = easyRise();
-    for (const lx of [L0, beamR + 1]) for (let y = G - r; y > B; y -= r) g.plank(lx, lx + 1, y);
+    for (const lx of [beamL - 2, beamR + 1]) for (let y = G - r; y > B; y -= r) g.plank(lx, lx + 1, y);
     return {
       concept: 'stamping-line',
       rect: { x: L0, y: B - 1, w: lineW, h: G - B + 1 },
@@ -205,7 +196,7 @@ export const STAMPING_LINE: Concept = {
         { x: beamL, y: B + 1, w: beamR - beamL + 1, h: G - B - 1 },
         { x: L0, y: B - 4, w: lineW, h: 4 },
       ],
-      anchors: { beam: [beamL, B], end: [beamR, B], floor: [beamL, G] },
+      anchors: { beam: [beamL, B], end: [beamR, B], floor: [beamL, G - plinth] },
       skin: 'metal',
     };
   },
@@ -251,6 +242,6 @@ export const STAMPING_LINE: Concept = {
     };
     yield piece;
   },
-};
+});
 
-export const FACTORY_CONCEPTS: Concept[] = [GREAT_WHEEL, STAMPING_LINE];
+export const FACTORY_CONCEPTS: Concept[] = [GREAT_WHEEL, STAMPING_LINE, FOUNDRY, BOILER_HOUSE, ROBOT_LINE];

@@ -45,6 +45,8 @@ export const PART_INFO: Record<Module['type'], { title: string; blurb: string }>
   neon: { title: 'Neon letters', blurb: 'Open 24 hours. Touch at your own risk.' },
   wire: { title: 'Live wire', blurb: 'Somebody forgot to pay the electric bill. The bill remembers.' },
   thaw: { title: 'Thin ice', blurb: 'Rated for one penguin.' },
+  ladle: { title: 'Slag ladle', blurb: 'Pours on a schedule. The schedule is now.' },
+  arm: { title: 'Robot arm', blurb: 'Programmed to weld. Not programmed to look.' },
 };
 
 const AIM_TAG: Record<string, string> = { fixed: 'FIXED', sweep: 'SWEEPS', track: 'TRACKS' };
