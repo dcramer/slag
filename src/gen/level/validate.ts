@@ -194,10 +194,23 @@ class BridgeSearch {
     return null;
   }
 
-  /** Any one bridge that works, among all the places a run falls past. */
+  /**
+   * Any one bridge that works, among the places a run falls past: the hints,
+   * then one spot in every 2×2 block of them. Where one bridge does the job a
+   * neighbouring spot nearly always does too, and the full sweep was most of
+   * the time a two-part level took to generate.
+   */
   lone(hints: readonly Bridge[]): Bridge | null {
     const root = this.explore();
-    for (const k of this.rank(this.hintKeys(hints), root.cands, [], Infinity, false)) if (this.grow(root, k).goal) return this.bridge(k);
+    const hintKeys = this.hintKeys(hints);
+    const blocks = new Set<number>();
+    for (const k of this.rank(hintKeys, root.cands, [], Infinity, false)) {
+      const x = k % this.W;
+      const block = Math.floor((k - x) / this.W / 2) * this.W + Math.floor(x / 2);
+      if (!hintKeys.includes(k) && blocks.has(block)) continue;
+      blocks.add(block);
+      if (this.grow(root, k).goal) return this.bridge(k);
+    }
     return null;
   }
 

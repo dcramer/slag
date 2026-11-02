@@ -17,7 +17,7 @@ export const TWO_PARTS = 0.22;
 /** First attempt that may give up on needing parts at all (the pipeline stops insisting here too). */
 export const LAST_RESORT = 22;
 /** Attempts at a two-part shape before settling for one: a terrain that keeps refusing a second crossing isn't worth a hitch. */
-const TWO_PART_TRIES = 8;
+export const TWO_PART_TRIES = 5;
 
 /**
  * A gap (empty columns) jumpable between ledges at equal height. Mostly a
