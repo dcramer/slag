@@ -54,9 +54,14 @@ export function race(hud: Hud, m: Match, t: number) {
     const y = hud.frame.safeY0 + 6 + Math.floor(i / chips.cols) * 29;
     const dead = r && !r.alive;
     const done = r?.finished;
-    plate(c, x, y, 84, 25, { rivets: false, drop: 2, stroke: done ? PAL.toxic : dead ? PAL.danger : undefined, alpha: 0.92 });
-    c.fillStyle = css(p.character.body);
-    c.fillRect(x, y, 3, 25);
+    plate(c, x, y, 84, 25, {
+      rivets: false,
+      drop: 2,
+      side: css(p.character.body),
+      stroke: done ? PAL.toxic : dead ? PAL.danger : undefined,
+      alpha: 0.92,
+      seed: p.slot,
+    });
     c.save();
     c.globalAlpha = dead ? 0.4 : 1;
     drawInkRunner({ s: c, g: null }, p.character, x + 14, y + 21, { facing: 1, vx: 0, vy: 0, grounded: true, t, scale: 1.05, celebrate: done });

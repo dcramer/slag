@@ -34,7 +34,7 @@ export const TWO_PART_ASK: Partial<Record<ThemeId, number>> = {
   mine: 0.02,
   rooftops: 0.38,
   // Only a wide space level has room for two crossings (sculptors/space.ts), so its ask is the theme's share over the wide ones.
-  space: 0.65,
+  space: 0.72,
 };
 /** First attempt that may give up on needing parts at all (the pipeline stops insisting here too). */
 export const LAST_RESORT = 22;
@@ -49,14 +49,25 @@ export const TWO_PART_TRIES = 5;
  */
 export function easyGap(rng: Rng, min = 2): number {
   const j = jumpProfile();
-  const walk = Math.max(min, j.walkGap);
+  const lo = reachMin(min);
+  const walk = Math.max(lo, j.walkGap);
   const run = Math.max(walk, j.gap - 1);
-  return rng.chance(0.4) ? rng.int(Math.min(run, walk + 1), run) : rng.int(min, walk);
+  return rng.chance(0.4) ? rng.int(Math.min(run, walk + 1), run) : rng.int(lo, walk);
 }
 
 /** A gap you can clear with a walking jump, from a stone or perch too short to run on. */
 export function hopGap(rng: Rng, min = 1): number {
-  return rng.int(min, Math.max(min, jumpProfile().walkGap));
+  const lo = reachMin(min);
+  return rng.int(lo, Math.max(lo, jumpProfile().walkGap));
+}
+
+/**
+ * A minimum gap written for normal gravity, stretched by how much further a
+ * walking jump carries at this level's: under low gravity a 2-column gap is
+ * a seam, not a crossing. Never below `min`, so heavy gravity keeps it.
+ */
+export function reachMin(min: number): number {
+  return Math.max(min, Math.round((min * jumpProfile().walkGap) / jumpProfile(1).walkGap));
 }
 
 /**

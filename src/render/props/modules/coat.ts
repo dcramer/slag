@@ -3,7 +3,7 @@ import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { COAT_PX, dirOf, type ModuleOf } from '../../../sim/props';
 import { blob, line, type P, sn, stroke } from '../../ink';
-import { inkThorns } from '../../ink-parts';
+import { spikeSprite } from '../../ink-build';
 import { boxPts, glint, pen, sprite, stamp, tick, tone } from '../../ink-props';
 import type { RC } from '../../kit';
 import { defineArt } from '../common';
@@ -24,6 +24,8 @@ const ICE: HSL = { h: 196, s: 70, l: 82 };
 const ICE_INK = '#1d4a63';
 const SLIME: HSL = { h: 102, s: 72, l: 44 };
 const SLIME_INK = '#183509';
+/** A spike strip's rail: gunmetal, since it has no host block of its own to take a metal from. */
+const STRIP_RAIL: HSL = { h: 222, s: 12, l: 20 };
 /** How much thicker a crate card draws a coat. */
 const CARD_THICK = 1.7;
 
@@ -84,7 +86,7 @@ function drawSpikeStrip(rc: RC, m: Coat) {
     s.save();
     s.translate((cx + 0.5) * TILE, (cy + 0.5) * TILE);
     s.rotate(m.angle);
-    inkThorns(s, m.angle, cx * 31 + cy * 17);
+    stamp(s, spikeSprite(m.angle, cx * 31 + cy * 17, STRIP_RAIL));
     s.restore();
   }
 }

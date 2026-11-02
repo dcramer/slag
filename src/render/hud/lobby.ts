@@ -6,7 +6,8 @@ import { drawGlyph, type Glyph } from '../../ui/glyphs';
 import { PAL, TYPE } from '../../ui/style';
 import { drawInkRunner } from '../ink-character';
 import { bay, icon, plate, tag } from '../hud-kit';
-import { glowDot, rrect } from '../kit';
+import { blob } from '../ink';
+import { glowDot } from '../kit';
 import type { Hud, NetInfo } from '../hud';
 import { DISPLAY, UI, FOOT_H, MAX_FOOT_SCALE, MIN_BAY_H, PHONE_BAR_W } from './layout';
 
@@ -107,9 +108,11 @@ function playerCard(hud: Hud, p: Player, i: number, x: number, y: number, w: num
   const big = h > 200;
   const mine = p.device === hud.mouseDevice;
   const picked = hud.net?.kickSlot === p.slot;
-  plate(c, x, y, w, h, { edge: css(col, 5), stroke: picked ? PAL.danger : p.ready ? PAL.toxic : undefined });
-  // Header: player number + device.
+  plate(c, x, y, w, h, { edge: css(col, 5), stroke: picked ? PAL.danger : p.ready ? PAL.toxic : undefined, seed: p.slot });
+  // Header: player number, the host's tag or a remote player's ping, and the device.
+  const peer = hud.net?.peers.find((q) => q.name === p.character.name);
   if (hud.net?.hostSlot === p.slot) tag(c, 'HOST', x + w / 2, y + 17.5, PAL.amber, PAL.ink, TYPE.caption, 'center');
+  else if (peer && !peer.local && !peer.isHost && peer.pingMs !== undefined) ping(hud, peer.pingMs, x + w / 2, y + 17.5);
   hud.text(`P${p.slot + 1}`, x + 10, y + 17, 15, css(col, 22), 'left', DISPLAY, 400, 3);
   const pad = p.device.startsWith('pad');
   const label = hud.devices.deviceLabel(p.device);
@@ -121,18 +124,13 @@ function playerCard(hud: Hud, p: Player, i: number, x: number, y: number, w: num
   // Character on a slag pedestal.
   const cx = x + w / 2;
   const feet = y + (big ? h * 0.6 : h * 0.56);
-  const sg = c.createRadialGradient(cx, feet - 24, 4, cx, feet - 24, big ? 70 : 50);
-  sg.addColorStop(0, css(col, 5, 0.32));
-  sg.addColorStop(1, css(col, 0, 0));
-  c.fillStyle = sg;
-  c.fillRect(x + 2, y + 26, w - 4, feet - y - 20);
+  // A slag pedestal, cut by hand.
+  const pr = big ? 34 : 26;
   c.fillStyle = PAL.ink;
-  c.beginPath();
-  c.ellipse(cx, feet + 3, big ? 34 : 26, big ? 7 : 5, 0, 0, Math.PI * 2);
+  blob(c, cx + 0.5, feet + 3, pr, p.slot + 11, (big ? 7 : 5) / pr, 0.05);
   c.fill();
   c.fillStyle = '#3a2a22';
-  c.beginPath();
-  c.ellipse(cx, feet + 1.5, big ? 32 : 24, big ? 5.5 : 4, 0, 0, Math.PI * 2);
+  blob(c, cx - 0.5, feet + 1.2, pr - 2.5, p.slot + 12, (big ? 5.5 : 4) / (pr - 2.5), 0.05);
   c.fill();
   glowDot(hud.gctx, cx, feet + 3, big ? 34 : 24, { h: 22, s: 100, l: 50 }, 0.35, 0.2);
   drawInkRunner({ s: c, g: hud.gctx }, p.character, cx, feet, {
@@ -178,37 +176,25 @@ function netPanel(hud: Hud, net: NetInfo, x: number, y: number, w: number) {
   const h = 30;
   plate(c, x, y, w, h, { rivets: false });
   const tw = tag(c, net.offline ? 'OFFLINE' : 'ONLINE', x + 8, y + h / 2, net.offline ? PAL.dim : PAL.toxic, PAL.ink, TYPE.caption);
-  let px = x + 16 + tw;
-  hud.text(net.status, px, y + h / 2, TYPE.body, PAL.ash, 'left', UI, 600);
-  c.font = `600 ${TYPE.body}px ${UI}`;
-  px += c.measureText(net.status).width + 14;
-  const right = net.inviteUrl ? x + w - 136 : x + w - 8;
-  for (const peer of net.peers) {
-    const name = peer.local ? `${peer.name} (You)` : peer.name;
-    c.font = `700 ${TYPE.body}px ${UI}`;
-    const nw = c.measureText(name).width;
-    const cw = nw + (peer.isHost ? 14 : 0) + (peer.pingMs !== undefined ? 34 : 0) + 14;
-    if (px + cw > right) break;
-    c.fillStyle = 'rgba(0,0,0,0.35)';
-    rrect(c, px, y + 6, cw, h - 12, 3);
-    c.fill();
-    let cx = px + 7;
-    if (peer.isHost) {
-      icon(c, 'crown', cx + 4, y + h / 2, 9, PAL.amber);
-      cx += 14;
-    }
-    hud.text(name, cx, y + h / 2 + 0.5, TYPE.body, PAL.bone, 'left', UI, 700);
-    cx += nw + 5;
-    if (peer.pingMs !== undefined) {
-      const q = peer.pingMs < 80 ? 3 : peer.pingMs < 160 ? 2 : 1;
-      const colr = q === 3 ? PAL.toxic : q === 2 ? PAL.amber : PAL.danger;
-      for (let b = 0; b < 3; b++) {
-        c.fillStyle = b < q ? colr : 'rgba(255,255,255,0.15)';
-        c.fillRect(cx + b * 3, y + h / 2 + 3 - (b + 1) * 2.4, 2, (b + 1) * 2.4);
-      }
-      hud.text(`${Math.round(peer.pingMs)}`, cx + 11, y + h / 2 + 0.5, TYPE.caption, PAL.ash, 'left', UI, 600);
-    }
-    px += cw + 6;
-  }
+  // Who's here is on the cards (each remote player's ping in its header), so this is only the room itself.
+  hud.text(net.status, x + 16 + tw, y + h / 2, TYPE.body, PAL.ash, 'left', UI, 600);
   if (net.inviteUrl) hud.btn({ x: x + w - 130, y: y + 4, w: 124, h: 23, action: 'invite' }, 'Copy Invite Link', 'primary', 'copy');
+}
+
+/** A remote player's link: three bars colored by quality, and the round trip in ms. */
+function ping(hud: Hud, ms: number, cx: number, cy: number) {
+  const c = hud.ctx;
+  const q = ms < 80 ? 3 : ms < 160 ? 2 : 1;
+  const colr = q === 3 ? PAL.toxic : q === 2 ? PAL.amber : PAL.danger;
+  const label = `${Math.round(ms)}`;
+  c.font = `600 ${TYPE.caption}px ${UI}`;
+  const x = cx - (11 + c.measureText(label).width) / 2;
+  for (let b = 0; b < 3; b++) {
+    const bh = (b + 1) * 2.4;
+    c.fillStyle = PAL.ink;
+    c.fillRect(x + b * 3 - 0.5, cy + 3 - bh - 0.5, 3, bh + 1.5);
+    c.fillStyle = b < q ? colr : 'rgba(255,255,255,0.15)';
+    c.fillRect(x + b * 3, cy + 3 - bh, 2, bh);
+  }
+  hud.text(label, x + 11, cy + 0.5, TYPE.caption, PAL.ash, 'left', UI, 600);
 }

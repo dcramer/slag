@@ -3,7 +3,8 @@ import { drawBackdrop, drawForeground } from '../src/render/props';
 import { BACKDROP, moduleArt } from '../src/render/props/common';
 import type { Light, RC } from '../src/render/kit';
 import type { Module, ModuleOf, PropDef, RotorLook, RotorSupport } from '../src/sim/props';
-import { resolveProp } from '../src/sim/props';
+import { pistonState, resolveProp } from '../src/sim/props';
+import { housed } from '../src/render/props/machine';
 
 /**
  * Set-piece scenery paints behind the terrain, so terrain can hide it. That is only fair for
@@ -155,6 +156,27 @@ describe('set-piece render layers', () => {
       drawBackdrop(a, setPiece(deco(kind)), { level: null });
       expect(a.log.length > 0, kind).toBe(behind);
     }
+  });
+
+  it('a crate machine draws its own cell; a set piece keeps its block under its own housing', () => {
+    const body: ModuleOf<'body'> = { type: 'body', cells: [[0, 0]], material: 'metal', conveyor: 0, breakFrames: 0, respawnFrames: 0 };
+    const jet: ModuleOf<'flame'> = { type: 'flame', at: [0.5, 0.5], angle: -Math.PI / 2, length: 3, on: 60, off: 60, warn: 30 };
+    const fan: ModuleOf<'fan'> = { type: 'fan', at: [0.5, 0.5], angle: -Math.PI / 2, length: 4, strength: 2000 };
+    expect(housed(setPiece(body, jet))).toBe(true);
+    expect(housed(setPiece(body))).toBe(false);
+    expect(housed(setPiece(body, deco('ac'), fan))).toBe(false);
+  });
+
+  it("lights a crate crusher's lamp while the head is still at rest: the wind-up is the tell", () => {
+    const body: ModuleOf<'body'> = { type: 'body', cells: [[0, 0]], material: 'metal', conveyor: 0, breakFrames: 0, respawnFrames: 0 };
+    const piston: ModuleOf<'piston'> = { type: 'piston', at: [0.5, 0.5], angle: Math.PI / 2, reach: 3, width: 1, period: 160 };
+    const r = setPiece(body, piston);
+    const warned = Array.from({ length: 160 }, (_, frame) => frame).some((frame) => {
+      const a = rc(frame);
+      drawForeground(a, r, { level: null });
+      return a.lights.length > 0 && pistonState(r.mods[1] as ModuleOf<'piston'>, frame, r.phase).ext === 0;
+    });
+    expect(warned).toBe(true);
   });
 
   it("keeps the press's warning lamp in front: it is the tell for the slam", () => {

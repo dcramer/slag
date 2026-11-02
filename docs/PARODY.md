@@ -23,35 +23,33 @@ Each row gives what the item or part mocks, its silhouette (what must read at ga
 
 | Look | Names | Mocks | Silhouette | Gag |
 |---|---|---|---|---|
-| crate | Loot Box, Surprise Mechanic, Lucky Block | The floating question block, as a loot box | A floating block with a glowing porthole | A coin slot on top. The pool's spark color shows as a rarity glow. |
-| chest | Fanfare Chest, Treasure Trunk | The chest-opening fanfare | A domed treasure chest | The lid pops open with a burst of light, then it's empty again. |
-| gift | Login Gift, Free Gift, Present | The mobile daily-login reward | A ribboned gift box | A "DAY 1" tag that droops once the gift is spent. |
+| loot box | Loot Box, Surprise Mechanic, Lucky Block | The floating question block, as a loot box | A chunky bevelled cube with our own question glyph, punched from below | It pops and squashes when hit; a coin slot on top; dark and dented once spent. |
 
 ## Parts
 
 | Archetype | Names (nouns) | Mocks | Silhouette | Gag |
 |---|---|---|---|---|
-| bridge | Tutorial Ledge, Load-Bearing Girder, Placeholder Plank | The first floating platform of every game | A plain slab, plank or girder | No supports at all. The Placeholder roll looks like a grid-paper test texture inked by hand. |
-| platform | Floating Brick, Obligatory Crate, Ice Level, Baggage Claim, Bounce House | Floating bricks, crates, moving lifts and conveyors | The material's block | The wooden crate has stencilled "CRATE" slats. The conveyor has a little luggage tag. |
-| crumble | Biscuit, Donut Ledge, Wafer, Rusk | The crumbling donut lift | A pale baked slab | Bite marks on one corner, and crumbs fall as it goes. |
+| bridge | Tutorial Ledge, Load-Bearing Girder, Placeholder Plank | The first floating platform of every game | A capstoned stone ledge, a rope-lashed plank raft, or a truss girder with bolted end plates | No supports at all. The Placeholder roll looks like a grid-paper test texture inked by hand. |
+| platform | Floating Brick, Obligatory Crate, Ice Level, Baggage Claim, Bounce House | Floating bricks, crates, moving lifts and conveyors | The material's block: coursed stone, riveted plate armour, slatted crates, an ice cube with icicles | The wooden crate has stencilled "CRATE" slats. The conveyor has a little luggage tag. |
+| crumble | Biscuit, Donut Ledge, Wafer, Rusk | The crumbling donut lift | A sandwich biscuit: two docked biscuits round a band of cream | Crumbs fall as it goes. |
 | spikestrip | Floor Spikes, Death Carpet | Instant-death spikes | A row of spikes on a face | A welcome-mat edge with fringe. |
 | icecoat | Ice Physics, Black Ice, Glaze | The ice level | A glassy coat | Zamboni tread lines on the shine. |
 | slimecoat | Swamp Level, Slime Trail, Gunk | The poison swamp | A thick green coat | A single bubble swells and pops. |
 | spikeblock | Spike Block, Pincushion, Porcupine | The unstompable spiked enemy | A block bristling on its spiked faces | A "NO STOMPING" boot icon on the plain face. |
 | saw | Buzzsaw, Pizza Cutter, Spin Bar, Pendulum Axe, Hypnotist, Grandfather Saw | Rage-platformer sawblades, rotating bars, castle pendulums | Blade, rod, chain | Pizza Cutter has a handle stub on the hub. The Hypnotist axe has a spiral painted on the blade. |
 | flail | Chain Chump, Ball and Chain, Wrecking Ball | The chained biting ball | A spiked ball on a chain | A stake and a dog-collar ring where the chain meets the hub. |
-| flamer | Burner, Dragon Burp, Flambé Jet | Castle fire jets | A nozzle with a flame column | During the warning it hiccups little smoke rings. |
+| flamer | Burner, Dragon Burp, Flambé Jet | Castle fire jets | A gas bottle with a flared nozzle, and a flame column | During the warning it hiccups little smoke rings. |
 | laser | Death Ray, Laser Pointer, Doomsday Laser | The instant-kill beam | An emitter and a beam | The emitter is a pen-sized pointer clicker, far too small for its beam. |
 | tesla | Bug Zapper, Tesla Coil, Electric Fence | Tesla coils and electric barriers | Two pylons and an arc | A blue zapper grid on each pylon, plus a scorched moth. |
 | crusher | Crusher, Piston, Whack-a-Player, Panini Press | Factory crushers and the whack-a-mole mallet | A head on a rod | Grill marks on the crushing face. |
 | spring | Spring, Coil Pup, Boing, Launch Pad | The robot-dog spring and the yellow spring | A coil with a top plate | The Coil Pup's top plate has ears and a wagging tail. |
 | fan | Updraft Fan, Leaf Blower, Hair Dryer, Turbine | Wind-level updraft fans | A housing and wind lines | A household hair-dryer grip on the housing. |
 | portal | Plot Holes, Wormholes, Warp Pads, Sequence Break | Paired portals that keep your speed | Two linked rings | Each ring has a torn-paper edge, a hole in the page. |
-| bumper | Bumper, Pinball Bumper, Casino Bumper, Jackpot | Casino-level pinball bumpers | A round post | A score pops up on every hit, always 100. |
-| magnet | Gravity Well, Tractor Beam, Black Hole Lite, Social Distancer, Force Push | Gravity puzzles and tractor beams | An orb and a field ring | Black Hole Lite has a diet-soda label. The repulsor wears a "6 ft" ring marking. |
-| web | Cobweb, Spider Level, World Wide Web, Net | The spider level | Strands between cells | One strand ends in a tiny cursor arrow. |
-| blinker | Yolo Blocks, Blink Blocks, On/Off Bricks, Lag Bricks | Infamous appearing and disappearing blocks | Ghosted blocks | Lag Bricks stutter in a frame late, with a tiny loading spinner. |
-| dropper | Thwunk, Grudge Block, Angry Brick, Ceiling Grump | The angry slamming stone face | A heavy block with a face | Its eyes follow the nearest runner, and it has a vein on its brow. |
+| bumper | Bumper, Pinball Bumper, Casino Bumper, Jackpot | Casino-level pinball bumpers | A pop bumper: skirt, rubber ring, and a star on the cap | A score pops up on every hit, always 100. |
+| magnet | Gravity Well, Tractor Beam, Black Hole Lite, Social Distancer, Force Push | Gravity puzzles and tractor beams | A horseshoe magnet cradling an orb, and a field ring | Black Hole Lite has a diet-soda label. The repulsor wears a "6 ft" ring marking. |
+| web | Cobweb, Spider Level, World Wide Web, Net | The spider level | One orb web per patch, a spider hanging under it | One strand ends in a tiny cursor arrow. |
+| blinker | Yolo Blocks, Blink Blocks, On/Off Bricks, Lag Bricks | Infamous appearing and disappearing blocks | Retro bricks; a paired set's other half is exclamation switch blocks. A gone block leaves its corners. | Lag Bricks stutter in a frame late, with a tiny loading spinner. |
+| dropper | Thwunk, Grudge Block, Angry Brick, Ceiling Grump | The angry slamming stone face | A heavy carved block with a face and a rim of stone teeth | Its eyes follow the nearest runner, and it has a vein on its brow. |
 | snapper | Gotcha Plate, Pressure Plate, Pop-Up Spikes, Surprise Party | Temple pressure-plate traps | A flat plate on a face | Party streamers burst out with the spikes. |
 | wheel | Ferris Wheel, Cog Lift, Hamster Wheel, Lazy Susan | Ferris-wheel lifts | A hub with platforms on arms | Hamster Wheel has a water bottle hanging off the hub. |
 | bomb | Cartoon Bomb, Kaboom, Fuse Ball, *Xxx*-omb | The round black cartoon bomb, and the walking bomb | A black sphere with a fuse | Two little feet, and its eyes squeeze shut as the fuse runs down. |
@@ -76,10 +74,10 @@ The style picks the body and the ammo. The aim word (Fixed, Sweeps, Tracks) and 
 | totem | Tiki Spitter, Heartburn Idol | Fire-spitting statues | heartburn | The idol clutches its belly and the fireballs are chili-red. |
 | turret | Sentry Gun, Sorry Turret | The polite sentry turret | apology | A worried face on the turret. Its shots are tiny speech-bubble shapes. |
 | thrower | Ninja Box, Shuriken Vendor | Ninja star throwers | throwing star | A coin slot and a vending window. |
-| rocket | Seeker Pod, Homing Rack, Grudge Launcher | The homing shell everyone hates | grudge missile | The missile has angry eyebrows over its red eye. |
+| rocket | Seeker Pod, Homing Rack, Grudge Launcher | The homing shell everyone hates, fired from a bullet blaster (a black drum on a pedestal, a skull on its pivot) | grudge missile | The missile has angry eyebrows over its red eye. |
 | glaive | Boomerang Bruh, Return Policy | The boomerang-throwing enemy | boomerang | A backwards cap on the launcher. |
 | gumball | Gumball Machine, Dodgeball Coach, Ball Pit | Gym-class dodgeball | dodgeball | A coach's whistle on a lanyard. |
-| mortar | Banana Mortar, Bunch Launcher | The splitting banana bomb from artillery games | banana bunch | The shell is a banana bunch that splits into single bananas. |
+| mortar | Banana Mortar, Bunch Launcher | The splitting banana bomb from artillery games, lobbed from a stubby green pipe on a bipod | banana bunch | The shell is a banana bunch that splits into single bananas. |
 | gooper | Splat Gun, Sneeze Cannon | Paint-splat shooters | sneeze | A big nose on the muzzle. |
 | cryo | Freeze Ray, Brain Freezer, Slushie Gun | Freeze rays | slushie | A slushie cup with a straw as the barrel. |
 | prism | Trick-Shot Lens, Mirror Puzzle | Laser-mirror puzzles and trick shots | trick shot | Shots leave a dotted aim line the way trick-shot replays do. |

@@ -1,6 +1,8 @@
 import 'client-only';
 import { type CharacterDef, generateCharacter } from '../gen/character';
+import { hash2 } from '../core/rng';
 import { drawCharacter } from '../render/character';
+import { blob, line, type P, shadeOf, sn, stroke } from '../render/ink';
 import { PAL } from './style';
 
 /**
@@ -50,6 +52,7 @@ export function mountStage(canvas: HTMLCanvasElement): () => void {
     return H - Math.min(0.62, y) * H * 0.62;
   };
 
+  const heap = document.createElement('canvas');
   const resize = () => {
     const r = canvas.getBoundingClientRect();
     dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -118,25 +121,9 @@ export function mountStage(canvas: HTMLCanvasElement): () => void {
     if (!reduced && Math.random() < dt * 40)
       sparks.push({ x: pourX + rand(-4, 4), y: hitY - 2, vx: rand(-120, 120), vy: rand(-220, -60), life: rand(0.3, 0.9) });
 
-    // Heap with glowing cracks.
-    ctx.beginPath();
-    ctx.moveTo(0, H);
-    for (let i = 0; i <= 60; i++) ctx.lineTo((i / 60) * W, heapY(i / 60));
-    ctx.lineTo(W, H);
-    ctx.closePath();
-    // Fade into the page at the bottom so the canvas has no visible edge.
-    const hg = ctx.createLinearGradient(0, H * 0.55, 0, H);
-    hg.addColorStop(0, 'rgba(58,42,34,1)');
-    hg.addColorStop(0.6, 'rgba(30,20,16,0.95)');
-    hg.addColorStop(1, 'rgba(20,12,9,0)');
-    ctx.fillStyle = hg;
-    ctx.fill();
-    const eg = ctx.createLinearGradient(0, H * 0.55, 0, H);
-    eg.addColorStop(0, PAL.ink);
-    eg.addColorStop(1, 'rgba(18,11,8,0)');
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = eg;
-    ctx.stroke();
+    // The heap, inked once per size, and its glowing cracks.
+    if (heap.width !== canvas.width || heap.height !== canvas.height) paintHeap(heap, W, H, dpr, s, heapY);
+    ctx.drawImage(heap, 0, 0, W, H);
     // Molten pool where the pour lands.
     const pg = ctx.createRadialGradient(pourX, hitY + 4, 2, pourX, hitY + 4, 70 * (s / 4));
     pg.addColorStop(0, 'rgba(255,200,90,0.95)');
@@ -146,20 +133,21 @@ export function mountStage(canvas: HTMLCanvasElement): () => void {
     ctx.beginPath();
     ctx.ellipse(pourX, hitY + 4, 70 * (s / 4), 16 * (s / 4), 0, 0, Math.PI * 2);
     ctx.fill();
+    // Cracks are hot, so they glow: each one a pen stroke that swells in the middle and tapers out.
     ctx.save();
-    ctx.strokeStyle = `rgba(255,${120 + Math.round(Math.sin(t * 2) * 30)},40,0.75)`;
+    ctx.fillStyle = `rgba(255,${120 + Math.round(Math.sin(t * 2) * 30)},40,0.8)`;
     ctx.shadowColor = PAL.molten;
     ctx.shadowBlur = 10;
-    ctx.lineWidth = 1.6;
     for (let i = 0; i < 9; i++) {
       const u = (i + 0.5) / 9;
       const x = u * W;
       const y = heapY(u) + 18 + (i % 3) * 14;
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + 10 * Math.sin(i * 3.1), y + 12);
-      ctx.lineTo(x - 6 + 14 * Math.cos(i * 1.7), y + 26);
-      ctx.stroke();
+      const crack = [
+        { x, y },
+        { x: x + 10 * Math.sin(i * 3.1), y: y + 12 },
+        { x: x - 6 + 14 * Math.cos(i * 1.7), y: y + 26 },
+      ];
+      stroke(ctx, crack, { w: 2.6, seed: 40 + i, taper: [0.3, 0.45], wobble: 0.5 });
     }
     ctx.restore();
 
@@ -213,37 +201,150 @@ export function mountStage(canvas: HTMLCanvasElement): () => void {
   };
 }
 
-/** A tilted foundry ladle on a chain. */
+/** The heap's flat tones: the slag, its lit top, and the hatching. */
+const HEAP = { base: '#2e221c', light: '#3d2e26', hatch: '#231914' };
+
+/**
+ * The slag heap, inked like the world's terrain (docs/ART.md → World art): flat tones cut with a hand's
+ * edge, hatching hanging off the side away from the light, and a contour of separate pen strokes that
+ * lifts in places. It's static, so it's drawn once per size into `layer`, then faded out at the bottom
+ * so the canvas has no visible edge.
+ */
+function paintHeap(layer: HTMLCanvasElement, W: number, H: number, dpr: number, s: number, heapY: (u: number) => number) {
+  layer.width = Math.round(W * dpr);
+  layer.height = Math.round(H * dpr);
+  const g = layer.getContext('2d')!;
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const N = 96;
+  const top: (P & { nx: number; ny: number })[] = [];
+  for (let i = 0; i <= N; i++) {
+    const x = (i / N) * W;
+    const dx = W / N;
+    const dy = heapY((i + 1) / N) - heapY((i - 1) / N);
+    const d = Math.hypot(2 * dx, dy);
+    top.push({ x, y: heapY(i / N), nx: dy / d, ny: (-2 * dx) / d });
+  }
+  // The body, then its lit top: a band cut along the contour, thick where it faces the light, gone where it turns away.
+  g.fillStyle = HEAP.base;
+  g.beginPath();
+  g.moveTo(0, H);
+  for (const p of top) g.lineTo(p.x, p.y);
+  g.lineTo(W, H);
+  g.closePath();
+  g.fill();
+  g.fillStyle = HEAP.light;
+  g.beginPath();
+  top.forEach((p, i) => (i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)));
+  for (let i = N; i >= 0; i--) {
+    const p = top[i];
+    const k = Math.max(0, s * (2.6 + 1.4 * sn(i * 0.21, 1.3, 5)) * (1 - shadeOf(p.nx, p.ny) * 3.2));
+    g.lineTo(p.x - p.nx * k, p.y - p.ny * k);
+  }
+  g.closePath();
+  g.fill();
+
+  // Hatching off the slope that faces away from the light.
+  g.fillStyle = HEAP.hatch;
+  for (let i = 2; i < N - 1; i += 2) {
+    const p = top[i];
+    const sh = shadeOf(p.nx, p.ny);
+    if (sh < 0.12 || hash2(i, 3, 17) < 0.25) continue;
+    const len = s * (4 + 10 * sh) * (0.6 + 0.6 * hash2(i, 4, 17));
+    const sx = p.x - p.nx * s;
+    const sy = p.y - p.ny * s;
+    line(g, sx, sy, sx - 0.45 * len, sy + 0.9 * len, { w: 0.55 * s, seed: i, taper: [0.02, 0.85], wobble: 0.3 });
+  }
+
+  // The contour: overlapping strokes with an occasional lift, thin toward the light, heavy away from it.
+  g.fillStyle = PAL.ink;
+  for (let a = 0, k = 0; a < N; k++) {
+    const b = Math.min(N, a + 9 + Math.floor(hash2(k, 1, 23) * 10));
+    const run = top.slice(a, b + 1);
+    const sh = run.reduce((m, p) => m + shadeOf(p.nx, p.ny), 0) / run.length;
+    stroke(g, run, { w: s * (0.85 + 2.2 * sh), seed: 31 + k, taper: [0.12, 0.18], press: 0.35, wobble: 0.25 * s });
+    if (b >= N) break;
+    a = b - (hash2(k, 2, 23) < 0.3 ? -1 : 1);
+  }
+
+  // Fade into the page at the bottom.
+  g.globalCompositeOperation = 'destination-out';
+  const fade = g.createLinearGradient(0, H * 0.72, 0, H);
+  fade.addColorStop(0, 'rgba(0,0,0,0)');
+  fade.addColorStop(1, 'rgba(0,0,0,1)');
+  g.fillStyle = fade;
+  g.fillRect(0, 0, W, H);
+  g.globalCompositeOperation = 'source-over';
+}
+
+/** The ladle's flat tones: iron, its lit side, its shadow shape. */
+const LADLE = { base: '#4a3a31', light: '#5f4b3f', shade: '#33281f' };
+
+/** A tilted foundry ladle on a chain, inked: flat tones, one hard shadow shape, a pen contour. */
 function ladle(c: CanvasRenderingContext2D, x: number, y: number, k: number) {
   c.save();
   c.translate(x, y);
   c.scale(k, k);
-  c.strokeStyle = PAL.ink;
-  c.lineWidth = 4;
-  c.beginPath();
-  c.moveTo(14, -400);
-  c.lineTo(14, -22);
-  c.stroke();
-  c.rotate(-0.5);
-  c.lineJoin = 'round';
-  c.fillStyle = '#4a3a31';
-  c.beginPath();
-  c.moveTo(-34, -20);
-  c.lineTo(34, -20);
-  c.lineTo(26, 28);
-  c.quadraticCurveTo(0, 38, -26, 28);
-  c.closePath();
-  c.fill();
-  c.lineWidth = 3;
-  c.stroke();
   c.fillStyle = PAL.ink;
-  c.fillRect(-38, -26, 76, 9);
+  line(c, 14, -400, 14, -24, { w: 4.5, seed: 3, taper: [0, 0.05], press: 0.3, wobble: 0.6 });
+  c.rotate(-0.5);
+  const body: P[] = [
+    { x: -34, y: -20 },
+    { x: 34, y: -20 },
+    { x: 26, y: 28 },
+  ];
+  for (let i = 1; i < 8; i++) {
+    const t = i / 8;
+    body.push({ x: 26 - 52 * t, y: 28 + 20 * t * (1 - t) });
+  }
+  body.push({ x: -26, y: 28 });
+  const path = (pts: readonly P[]) => {
+    c.beginPath();
+    pts.forEach((p, i) => (i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y)));
+    c.closePath();
+  };
+  c.fillStyle = LADLE.base;
+  path(body);
+  c.fill();
+  // The side away from the light, cut as one hard shape.
+  c.fillStyle = LADLE.shade;
+  path([
+    { x: 10, y: -20 },
+    { x: 34, y: -20 },
+    { x: 26, y: 28 },
+    { x: 4, y: 33 },
+    { x: 14, y: 6 },
+  ]);
+  c.fill();
+  c.fillStyle = LADLE.light;
+  path([
+    { x: -30, y: -16 },
+    { x: -22, y: -16 },
+    { x: -18, y: 20 },
+    { x: -24, y: 25 },
+  ]);
+  c.fill();
+  c.fillStyle = PAL.ink;
+  stroke(c, [...body.slice(1), body[0]], { w: 4, seed: 5, taper: [0.08, 0.1], press: 0.4, wobble: 0.5 });
+  line(c, -35, -18, -27, 27, { w: 2.2, seed: 6, taper: [0.2, 0.3] });
+  // The rim, with the melt showing over it.
+  path([
+    { x: -38, y: -27 },
+    { x: 38, y: -26 },
+    { x: 38, y: -17 },
+    { x: -38, y: -17 },
+  ]);
+  c.fill();
   c.fillStyle = PAL.molten;
-  c.fillRect(-32, -24, 64, 5);
+  path([
+    { x: -32, y: -24.5 },
+    { x: 32, y: -24 },
+    { x: 31, y: -19.5 },
+    { x: -32, y: -19.5 },
+  ]);
+  c.fill();
   c.fillStyle = PAL.steel;
   for (const rx of [-20, 0, 20]) {
-    c.beginPath();
-    c.arc(rx, 4, 2.4, 0, Math.PI * 2);
+    blob(c, rx, 4, 2.4, rx + 50, 1, 0.2);
     c.fill();
   }
   c.restore();

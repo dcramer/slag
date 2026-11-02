@@ -4,10 +4,11 @@ import { TILE } from '../../../sim/constants';
 import { tileAt } from '../../../sim/level';
 import { type ModuleOf, type PropStyle, type Resolved, swingHeads } from '../../../sim/props';
 import { line, type P, stroke } from '../../ink';
-import { inkSaw } from '../../ink-parts';
 import { ball, boxPts, dot, glint, INK, ovalPts, part, path, poly, sprite, stamp } from '../../ink-props';
 import { light, type MetalPalette, type RC } from '../../kit';
 import { defineArt, type PropDrawOpts } from '../common';
+import { whoosh } from '../ink-motion';
+import { sawBlade } from './saw-art';
 
 type Swinger = ModuleOf<'swinger'>;
 
@@ -50,11 +51,50 @@ function link(pal: MetalPalette, edge: boolean) {
   });
 }
 
-/** The hub boss: a bolted ball. */
+/** The hub: a square bearing plate bolted at its corners, and the boss the arm turns on. */
 function hub(pal: MetalPalette) {
-  return sprite(`sw|hub|${palKey(pal)}`, -6, -6, 12, 12, (g) => {
-    ball(g, 0, 0, 4.3, pal.base, 11);
-    dot(g, 0, 0, 1.3, 12, css(pal.light));
+  return sprite(`sw|hub|${palKey(pal)}`, -7, -7, 14, 14, (g) => {
+    part(g, boxPts(-5.4, -5.4, 10.8, 10.8, 1.8, 10, 0.3), { ...pal.base, l: pal.base.l - 6 }, 10, { depth: 1, shade: -20, thin: 0.45, thick: 1.2 });
+    for (const [x, y] of [
+      [-3.6, -3.6],
+      [3.6, -3.6],
+      [-3.6, 3.6],
+      [3.6, 3.6],
+    ])
+      dot(g, x, y, 0.75, x * 3 + y, css(pal.spec, -6));
+    ball(g, 0, 0, 3.1, pal.base, 11);
+    dot(g, 0, 0, 1, 12, css(pal.light));
+  });
+}
+
+/** A band of rivets round the mace's waist, turning with its spikes. */
+function maceBand(R: number, pal: MetalPalette) {
+  return sprite(`sw|band|${R.toFixed(2)}|${palKey(pal)}`, -R, -R, R * 2, R * 2, (g) => {
+    const r = R * 0.86;
+    const band = poly(
+      -r * 0.98,
+      -r * 0.2,
+      -r * 0.5,
+      -r * 0.27,
+      r * 0.5,
+      -r * 0.27,
+      r * 0.98,
+      -r * 0.2,
+      r * 0.98,
+      r * 0.2,
+      r * 0.5,
+      r * 0.27,
+      -r * 0.5,
+      r * 0.27,
+      -r * 0.98,
+      r * 0.2,
+    );
+    g.fillStyle = css(IRON(pal), -8);
+    path(g, band);
+    g.fill();
+    g.fillStyle = INK;
+    stroke(g, poly(-r * 0.98, r * 0.2, -r * 0.5, r * 0.27, r * 0.5, r * 0.27, r * 0.98, r * 0.2), { w: 0.6, seed: 2, taper: [0.2, 0.2], press: 0.3 });
+    for (let i = -2; i <= 2; i++) dot(g, i * r * 0.36, 0, Math.max(0.45, R * 0.06), i + 3, css(pal.spec, -10));
   });
 }
 
@@ -212,6 +252,18 @@ function drawSwinger(rc: RC, m: Swinger, r: Resolved, off: Vec, pal: MetalPalett
     const back = m.swing > 0 ? 1 : m.dir;
     for (const h of heads) swoosh(s, hx, hy, m.arm, m.radius, h.a, back);
   }
+  // Motion lines trailing a head round its arc, longer the faster it goes.
+  if (!o.card && m.arm > 0 && m.head !== 'saw') {
+    const w = m.swing > 0 ? m.swing * ((Math.PI * 2) / m.period) * Math.cos(Math.PI * 2 * (f / m.period + r.phase)) : (m.dir * Math.PI * 2) / m.period;
+    const sweep = Math.max(-0.9, Math.min(0.9, w * 9));
+    if (Math.abs(w * m.arm) > 0.6) {
+      for (const h of heads) {
+        whoosh(s, hx, hy, m.arm + m.radius * 0.7, h.a, sweep, 1.2, 'rgba(250,250,255,0.85)', 3);
+        whoosh(s, hx, hy, m.arm - m.radius * 0.7, h.a - sweep * 0.15, sweep * 0.7, 0.9, 'rgba(250,250,255,0.7)', 4);
+        whoosh(s, hx, hy, m.arm + m.radius * 1.05, h.a - sweep * 0.2, sweep * 0.55, 0.9, INK, 5);
+      }
+    }
+  }
   for (const h of heads) {
     if (m.arm <= 0) continue;
     if (m.link === 'chain') {
@@ -238,7 +290,7 @@ function drawSwinger(rc: RC, m: Swinger, r: Resolved, off: Vec, pal: MetalPalett
 
   for (const h of heads) {
     if (m.head === 'saw') {
-      drawSaw(rc, h.x, h.y, m.radius, f * 0.45 * m.dir + r.pp.uid, pal, st, o);
+      drawSaw(rc, h.x, h.y, m.radius, f * 0.45 * m.dir + r.pp.uid, pal, st, o, m.dir);
       if (m.arm <= 0 && name.includes('Pizza')) {
         s.save();
         s.translate(h.x, h.y);
@@ -253,6 +305,11 @@ function drawSwinger(rc: RC, m: Swinger, r: Resolved, off: Vec, pal: MetalPalett
       stamp(s, maceSpikes(m.radius));
       s.restore();
       stamp(s, maceBall(m.radius, pal), h.x, h.y);
+      s.save();
+      s.translate(h.x, h.y);
+      s.rotate(f * 0.03 * m.dir);
+      stamp(s, maceBand(m.radius, pal));
+      s.restore();
     } else {
       s.save();
       s.translate(h.x, h.y);
@@ -265,8 +322,8 @@ function drawSwinger(rc: RC, m: Swinger, r: Resolved, off: Vec, pal: MetalPalett
   }
 }
 
-function drawSaw(rc: RC, x: number, y: number, R: number, rot: number, pal: MetalPalette, st: PropStyle, o: PropDrawOpts) {
-  inkSaw(rc, x, y, R, rot, pal, Math.round(R * 7), st.trim === 'stripes');
+function drawSaw(rc: RC, x: number, y: number, R: number, rot: number, pal: MetalPalette, st: PropStyle, o: PropDrawOpts, spin: number) {
+  sawBlade(rc, x, y, R, rot, pal, Math.round(R * 7), st.trim === 'stripes', spin);
   // Sparks when the blade grinds terrain.
   if (o.emit && o.level) {
     for (let i = 0; i < 6; i++) {

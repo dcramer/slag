@@ -19,7 +19,7 @@ import { footing, underfoot } from './weather';
 export const GROUND_PLAIN = 0;
 export const GROUND_ICE = 1;
 
-export const ICE_SURFACE: Surface = { ...DEFAULT_SURFACE, friction: 0.1, speedMult: 1.15, wall: 'slick' };
+export const ICE_SURFACE: Surface = { ...DEFAULT_SURFACE, friction: 0.1, speedMult: 1.15, wall: 'slick', skid: 95 };
 
 /** Surface per ground kind; undefined means "whatever plain terrain is today". */
 const GROUND_SURFACES: readonly (Surface | undefined)[] = [undefined, ICE_SURFACE];

@@ -51,24 +51,40 @@ function isPit(m: Geyser, d: DrawCtx): boolean {
   return !!d.o.level && m.at[1] >= d.o.level.h * TILE - 1;
 }
 
-/** The vent: a hand-cut mound, a dark crater lip, and a crust of sulphur or ice round it. Baked. */
+/**
+ * The vent: a squat cone of broken rock plates round a crater, the far plate leaning in, the near ones
+ * cracked, a lit lip on the crater's back rim, and a crust of sulphur or ice in the cracks. Baked.
+ */
 function ventMound(rock: HSL, lava: boolean, crust: VentLook['crust']) {
-  return sprite(`gy|vent|${rock.h},${rock.l}|${lava}|${crust}`, -15, -10, 30, 12, (g) => {
-    const pts = poly(-13, 0.5, -11, -2.6, -8, -5, -4, -7, 4, -7, 8, -5, 11, -2.6, 13, 0.5);
-    part(g, pts, rock, 3, { depth: 1.4, thin: 0.55, thick: 1.4 });
-    g.fillStyle = INK;
-    path(g, ovalPts(0, -7, 4.6, 1.7, 4, 0.04, 12));
+  return sprite(`gy|vent|${rock.h},${rock.l}|${lava}|${crust}`, -15, -11, 30, 13, (g) => {
+    const back = poly(-7.6, -4.8, -5, -8.2, -1, -9.2, 3.6, -8.8, 7.4, -5.6, 4, -6.2, -4, -6.4);
+    part(g, back, { ...rock, l: rock.l - 6 }, 2, { depth: 0.8, shade: -14, thin: 0.45, thick: 1 });
+    // The crater: dark, with the lit back rim.
+    g.fillStyle = lava ? '#2a0c06' : '#221f1d';
+    path(g, ovalPts(0, -6.6, 4.8, 1.6, 4, 0.06, 14));
     g.fill();
-    g.fillStyle = lava ? '#2a0c06' : '#2c2a28';
-    path(g, ovalPts(0, -6.8, 3.7, 1.1, 5, 0.04, 12));
+    const left = poly(-13.2, 0.6, -11.6, -2.8, -8.8, -5.2, -5, -6.6, -2.4, -5.6, -1.6, -2.4, -3.6, 0.6);
+    const right = poly(-3.8, 0.6, -1.8, -2.6, -0.6, -5.4, 3, -6.6, 7.4, -5.4, 10.6, -3, 13.2, 0.6);
+    part(g, left, rock, 3, { depth: 1.2, shade: -18, thin: 0.5, thick: 1.4 });
+    part(g, right, { ...rock, l: rock.l + 4 }, 4, { depth: 1.2, shade: -20, thin: 0.5, thick: 1.4 });
+    // Cracks and the strata on the plates.
+    const crack = lava ? css({ h: 22, s: 100, l: 55 }) : css(rock, -26);
+    tick(g, -9.4, -2.6, -7.2, -0.4, 0.55, 5, crack);
+    tick(g, -7.2, -0.4, -6.6, 0.4, 0.45, 6, crack);
+    tick(g, 5.4, -4.4, 7, -2, 0.55, 7, crack);
+    tick(g, 7, -2, 6.2, 0.2, 0.45, 8, crack);
+    tick(g, -11, -1, -5.8, -1.8, 0.35, 9, css(rock, 14));
+    tick(g, 2, -3.2, 9.6, -2, 0.35, 10, css(rock, 14));
+    g.fillStyle = css(rock, 22);
+    path(g, poly(-4.6, -6.2, -1.4, -7.4, 2.8, -7.2, 1, -6.8, -2.6, -6.6));
     g.fill();
     if (lava) return;
     if (crust === 'ice') {
       for (const [dx, dy, r] of [
-        [-6, -4, 1.8],
-        [5, -3.4, 1.5],
-        [-2, -6.6, 1.1],
-        [8.5, -1.6, 1.2],
+        [-6.4, -4.2, 1.8],
+        [5, -4.4, 1.5],
+        [-1.8, -7.6, 1.1],
+        [9, -2, 1.2],
       ])
         part(g, poly(dx, dy - r * 1.6, dx + r * 0.7, dy, dx, dy + r * 0.6, dx - r * 0.7, dy), { h: 195, s: 50, l: 94 }, dx, {
           depth: 0.2,
@@ -78,12 +94,16 @@ function ventMound(rock: HSL, lava: boolean, crust: VentLook['crust']) {
         });
     } else
       for (const [dx, dy, r] of [
-        [-6, -4, 1.4],
-        [5, -3, 1.1],
-        [-2, -6.5, 0.9],
+        [-6.4, -4.4, 1.3],
+        [4.6, -5.2, 1],
+        [8.6, -2.6, 0.8],
+        [-2.6, -7.4, 0.8],
       ]) {
         g.fillStyle = '#e6d25a';
-        blob(g, dx, dy, r, dx + 9, 1, 0.2);
+        blob(g, dx, dy, r, dx + 9, 1, 0.25);
+        g.fill();
+        g.fillStyle = '#a8902a';
+        blob(g, dx + r * 0.3, dy + r * 0.35, r * 0.5, dx + 3, 1, 0.2);
         g.fill();
       }
   });
@@ -143,7 +163,7 @@ function drawVent(rc: RC, m: Geyser, d: DrawCtx) {
   const heat = c.seg === 1 ? c.t / c.len : c.seg === 2 ? 1 : 0;
   if (lava) {
     g.fillStyle = css(LAVA, 10, 0.4 + heat * 0.6);
-    ellipse(g, x, y - 7, 3.5, 1.2);
+    ellipse(g, x, y - 6.6, 3.8, 1.2);
     glowDot(g, x, y - 7, 6 + heat * 12, LAVA, 0.35 + heat * 0.5);
     light(rc, x, y - 8, 30 + heat * 50, LAVA, 0.25 + heat * 0.7);
   }

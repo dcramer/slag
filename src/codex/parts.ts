@@ -586,8 +586,6 @@ export function partGroups(): PartGroup[] {
       blurb: 'Odds not disclosed.',
       entries: [
         { title: 'loot box', note: 'Contents may vary.', def: crate('loot box', [...ITEM_KINDS], 0, 'crate') },
-        { title: 'fanfare chest', note: 'Da da da DAAA.', def: crate('fanfare chest', ['sword', 'puck', 'boomerang'], 3, 'chest') },
-        { title: 'login gift', note: 'Come back tomorrow.', def: crate('login gift', ['shield', 'rocket', 'smoke'], 1, 'gift') },
         ...ITEM_KINDS.map((k) => ({ title: ITEMS[k].name.toLowerCase(), note: ITEM_NOTES[k], def: crate(ITEMS[k].name, [k], 0, 'crate'), item: k })),
       ],
     },

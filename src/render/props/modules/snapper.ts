@@ -1,7 +1,7 @@
-import { css } from '../../../core/color';
+import { css, type HSL } from '../../../core/color';
 import { TILE } from '../../../sim/constants';
 import { SNAP_ARM, SNAP_COOL, SNAP_SPIKE, SNAP_UP, snapperPhase } from '../../../sim/props';
-import { type P, stroke } from '../../ink';
+import { line, type P, stroke } from '../../ink';
 import { boxPts, dot, INK, part, path, sprite, stamp } from '../../ink-props';
 import { glowDot, type MetalPalette } from '../../kit';
 import { defineArt } from '../common';
@@ -9,10 +9,21 @@ import { defineArt } from '../common';
 /** The plate, baked in the cell's frame with -y as the face normal: riveted, with a slot per spike. */
 function plate(pal: MetalPalette) {
   return sprite(`sn|${pal.base.h},${pal.base.l}`, -9, -12, 18, 6, (g) => {
-    part(g, boxPts(-8, -11, 16, 3.2, 0.8, 3, 0.1), pal.base, 3, { depth: 0.6, thin: 0.45, thick: 1.1 });
-    g.fillStyle = INK;
-    for (let i = 0; i < 4; i++) g.fillRect(-6.8 + i * 4, -10.6, 1.6, 1);
-    for (const x of [-7, 7]) dot(g, x, -9.4, 0.5, x, css(pal.light));
+    // Dark iron, so it reads apart from whatever it's bolted to, with a lit lip along its top.
+    const iron: HSL = { h: pal.base.h, s: Math.min(pal.base.s, 22), l: 30 };
+    const body = boxPts(-8, -11, 16, 3.2, 0.8, 3, 0.1);
+    part(g, body, iron, 3, { depth: 0.6, thin: 0.5, thick: 1.3, shade: -10 });
+    g.fillStyle = css(iron, 22);
+    line(g, -7.2, -10.7, 7.2, -10.7, { w: 0.5, seed: 4, taper: [0.1, 0.1], press: 0.1 });
+    // A slot per spike, with the tip's glint deep inside it.
+    for (let i = 0; i < 4; i++) {
+      g.fillStyle = INK;
+      path(g, boxPts(-7.2 + i * 4, -10.4, 2.4, 1.3, 0.4, 5 + i, 0));
+      g.fill();
+      g.fillStyle = '#9aa0ac';
+      g.fillRect(-6.3 + i * 4, -9.6, 0.6, 0.4);
+    }
+    for (const x of [-7.3, 7.3]) dot(g, x, -9, 0.5, x, css(pal.light));
   });
 }
 

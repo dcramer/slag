@@ -3,8 +3,8 @@ import type { Match } from '../../game/match';
 import { VIEW_H, VIEW_W } from '../../sim/constants';
 import { PAL, TYPE } from '../../ui/style';
 import { drawInkRunner } from '../ink-character';
-import { hazardTape, plate, standings, tag } from '../hud-kit';
-import { glowDot, rrect } from '../kit';
+import { hazardTape, plate, standings, tag, track } from '../hud-kit';
+import { glowDot } from '../kit';
 import type { Hud } from '../hud';
 import { DISPLAY, UI, roundLabel } from './layout';
 
@@ -78,27 +78,22 @@ export function score(hud: Hud, m: Match, t: number) {
     hud.text(p.character.name, barX, y + L.name, L.nameSize, leader ? PAL.amber : PAL.bone, 'left', DISPLAY, 400);
     const prev = m.prevScores.get(p.slot) ?? 0;
     const shown = prev + (p.score - prev) * anim;
-    c.fillStyle = PAL.ink;
-    rrect(c, barX - 1, y + L.bar - 1, barW + 2, L.barH + 2, 3);
-    c.fill();
-    c.fillStyle = PAL.soot;
-    rrect(c, barX, y + L.bar, barW, L.barH, 2);
-    c.fill();
     const wPrev = (barW * Math.min(prev, TARGET)) / TARGET;
     const wNow = (barW * Math.min(shown, TARGET)) / TARGET;
-    if (wNow > 0) {
-      const bg = c.createLinearGradient(0, y + L.bar, 0, y + L.bar + L.barH);
-      bg.addColorStop(0, css(p.character.body, 15));
-      bg.addColorStop(1, css(p.character.body, -15));
-      c.fillStyle = bg;
-      rrect(c, barX, y + L.bar, Math.max(4, wNow), L.barH, 2);
-      c.fill();
+    // Two flat tones of the player's color, the lit one over the top half; the gain this round in a lighter cut.
+    track(c, barX, y + L.bar, barW, L.barH, (g) => {
+      if (wNow <= 0) return;
+      const bw = Math.max(4, wNow);
+      g.fillStyle = css(p.character.body, -12);
+      g.fillRect(0, 0, bw, L.barH);
+      g.fillStyle = css(p.character.body, 8);
+      g.fillRect(0, 0, bw - 1.5, L.barH * 0.55);
       if (wNow > wPrev + 1) {
-        glowDot(hud.gctx, barX + wNow, y + L.bar + L.barH / 2, 16, p.character.body, 0.6);
-        c.fillStyle = 'rgba(255,255,255,0.35)';
-        c.fillRect(barX + wPrev, y + L.bar + 1, wNow - wPrev, 3);
+        g.fillStyle = 'rgba(255,245,225,0.35)';
+        g.fillRect(wPrev, 1.5, wNow - wPrev, 2.5);
       }
-    }
+    });
+    if (wNow > wPrev + 1) glowDot(hud.gctx, barX + wNow, y + L.bar + L.barH / 2, 16, p.character.body, 0.6);
     hud.text(String(Math.round(shown)), barX + barW + 24, y + L.bar + L.barH / 2, compact ? 13 : 16, leader ? PAL.amber : PAL.bone, 'center', DISPLAY, 400);
     const awards = res.awards.filter((a) => a.slot === p.slot);
     c.font = `400 ${L.nameSize}px ${DISPLAY}`;

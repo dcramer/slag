@@ -8,6 +8,7 @@ import { circle, glowDot, light, type RC } from '../../kit';
 import { BACKDROP, type DrawCtx, defineArt } from '../common';
 import { ceilingAbovePx, chain, groundBelowPx, lattice, plank, rope } from './setpiece';
 import { rotorSkin } from './skins';
+import { cogDeck, cogHub, cogWheel, waterBottle } from './wheel-art';
 
 /**
  * Rotor art, inked: windmills, cog lifts and pendulum platforms (chandelier, hay bale, vine log, basalt
@@ -263,7 +264,11 @@ function drawArms(rc: RC, m: Rotor, d: DrawCtx, arms: RotorArm[]) {
   const skin = rotorSkin(m, d);
   if (m.look === 'cog') {
     if (skin?.wheel) skin.wheel(rc, m, d, arms, hx, hy);
-    else inkCog(rc, m, d, arms, hx, hy);
+    else {
+      const base = rotorAngles(m, rc.frame, d.r.phase)[0];
+      cogWheel(rc, m, d.pal, arms, hx, hy, base);
+      if (d.r.pp.def.name.includes('Hamster')) waterBottle(s, hx, hy, Math.min(m.arm * 0.5, 30));
+    }
     return;
   }
   if (skin?.link) {
@@ -329,121 +334,6 @@ function leavesAlong(s: CanvasRenderingContext2D, hx: number, hy: number, ends: 
   }
 }
 
-/**
- * A cog lift's wheel: a hand-cut gear whose shadow stays where the light puts it while the teeth turn,
- * on inked spokes out to each paddle.
- */
-function inkCog(rc: RC, m: Rotor, d: DrawCtx, arms: RotorArm[], hx: number, hy: number) {
-  const s = rc.s;
-  const pal = d.pal;
-  const ink = css({ h: pal.dark.h, s: pal.dark.s, l: 8 });
-  for (const a of arms) {
-    s.fillStyle = ink;
-    line(s, hx, hy, a.x, a.y, { w: 4.4, seed: 3, taper: [0, 0], press: 0 });
-    s.fillStyle = css(pal.base, -8);
-    line(s, hx, hy, a.x, a.y, { w: 2.2, seed: 3, taper: [0, 0], press: 0 });
-  }
-  const base = rotorAngles(m, rc.frame, d.r.phase)[0];
-  const R = Math.min(m.arm * 0.5, 30);
-  const teeth = Math.max(10, Math.round(R * 0.55));
-  const pts: P[] = [];
-  for (let i = 0; i < teeth; i++) {
-    const a0 = base + (i / teeth) * Math.PI * 2;
-    const da = (Math.PI * 2) / teeth;
-    const wob = 1 + (hash2(i, 1, m.seed) - 0.5) * 0.05;
-    for (const [u, r] of [
-      [0, R],
-      [0.1, R + 3.6 * wob],
-      [0.45, R + 3.6 * wob],
-      [0.57, R],
-    ] as const)
-      pts.push({ x: hx + Math.cos(a0 + da * u) * r, y: hy + Math.sin(a0 + da * u) * r });
-  }
-  const path = () => {
-    s.beginPath();
-    pts.forEach((q, i) => (i ? s.lineTo(q.x, q.y) : s.moveTo(q.x, q.y)));
-    s.closePath();
-  };
-  s.fillStyle = css(pal.dark, 8);
-  path();
-  s.fill();
-  s.save();
-  s.clip();
-  // The lit face: a disc shifted toward the light, fixed while the gear turns.
-  s.fillStyle = css(pal.base);
-  s.beginPath();
-  s.arc(hx - R * 0.12, hy - R * 0.14, R * 1.08, 0, Math.PI * 2);
-  s.fill();
-  s.fillStyle = css(pal.light, -6);
-  s.beginPath();
-  s.arc(hx - R * 0.12, hy - R * 0.14, R * 0.86, Math.PI * 1.05, Math.PI * 1.6);
-  s.arc(hx - R * 0.12, hy - R * 0.14, R * 0.72, Math.PI * 1.6, Math.PI * 1.05, true);
-  s.fill();
-  s.restore();
-  s.fillStyle = ink;
-  stroke(s, [...pts, pts[0], pts[1]], { w: 1.3, seed: m.seed & 0xffff, taper: [0.01, 0.01], press: 0.35 });
-  // Lightening holes, each a dark with a lit far rim, inked.
-  for (let i = 0; i < 5; i++) {
-    const a = base + (i / 5) * Math.PI * 2;
-    const cx = hx + Math.cos(a) * R * 0.58;
-    const cy = hy + Math.sin(a) * R * 0.58;
-    const r = R * 0.19;
-    s.fillStyle = css(pal.base, -6);
-    blob(s, cx, cy, r, i + 3, 1, 0.05);
-    s.fill();
-    s.fillStyle = css(pal.dark, -12);
-    blob(s, cx - r * 0.25, cy - r * 0.25, r * 0.92, i + 3, 1, 0.05);
-    s.fill();
-    s.fillStyle = ink;
-    const ring: P[] = [];
-    for (let k = 0; k <= 10; k++) ring.push({ x: cx + Math.cos((k / 10) * Math.PI * 2) * r, y: cy + Math.sin((k / 10) * Math.PI * 2) * r });
-    stroke(s, ring, { w: 0.8, seed: i, taper: [0.1, 0.4] });
-  }
-}
-
-/** A cog lift's paddle: a steel tread plate with a hazard lip and grip slots, inked. */
-function inkPaddle(s: CanvasRenderingContext2D, p: Rect, d: DrawCtx, a: RotorArm, seed: number) {
-  const pal = d.pal;
-  const ink = css({ h: pal.dark.h, s: pal.dark.s, l: 8 });
-  const r = 2;
-  const box = (x: number, y: number, w: number, h: number) => {
-    s.beginPath();
-    s.roundRect(x, y, w, h, r);
-  };
-  s.fillStyle = css(pal.dark, 10);
-  box(p.x, p.y, p.w, p.h);
-  s.fill();
-  s.save();
-  s.clip();
-  s.fillStyle = css(pal.base);
-  box(p.x - 1.2, p.y - 1.2, p.w, p.h);
-  s.fill();
-  // Hazard lip along the top, flat.
-  s.fillStyle = '#1b1a18';
-  s.fillRect(p.x, p.y, p.w, 2.2);
-  s.fillStyle = 'rgb(246 196 38)';
-  for (let x = p.x - 4; x < p.x + p.w + 4; x += 5) {
-    s.beginPath();
-    s.moveTo(x, p.y + 2.2);
-    s.lineTo(x + 2.5, p.y + 2.2);
-    s.lineTo(x + 4.7, p.y);
-    s.lineTo(x + 2.2, p.y);
-    s.fill();
-  }
-  s.fillStyle = ink;
-  for (let x = p.x + 3.5; x < p.x + p.w - 3; x += 4.2) line(s, x, p.y + 3.8, x, p.y + p.h - 1.4, { w: 1.1, seed: seed + x, taper: [0.15, 0.15], press: 0.1 });
-  s.restore();
-  // The outline, heavy underneath.
-  s.fillStyle = ink;
-  line(s, p.x + 0.5, p.y + p.h, p.x + p.w - 0.5, p.y + p.h, { w: 1.9, seed, taper: [0.1, 0.1], press: 0.3 });
-  line(s, p.x + p.w, p.y + 0.5, p.x + p.w, p.y + p.h - 0.5, { w: 1.6, seed: seed + 1, taper: [0.1, 0.1], press: 0.3 });
-  line(s, p.x + 0.5, p.y, p.x + p.w - 0.5, p.y, { w: 0.9, seed: seed + 2, taper: [0.1, 0.2], press: 0.3 });
-  line(s, p.x, p.y + 0.5, p.x, p.y + p.h - 0.5, { w: 0.9, seed: seed + 3, taper: [0.1, 0.2], press: 0.3 });
-  s.fillStyle = ink;
-  blob(s, a.x, a.y + 1, 1.3, seed, 1, 0.1);
-  s.fill();
-}
-
 // ---------------------------------------------------------------------------
 // Layer 1: the platforms you stand on.
 
@@ -467,7 +357,7 @@ function drawPlatform(rc: RC, m: Rotor, d: DrawCtx, a: RotorArm, i: number) {
       dot(s, a.x, a.y, 1.2, seed);
       break;
     case 'cog':
-      inkPaddle(s, p, d, a, seed);
+      cogDeck(s, p, st, d.pal);
       break;
     case 'chandelier':
       drawChandelier(rc, p, d, seed);
@@ -815,7 +705,8 @@ function drawHub(rc: RC, m: Rotor, d: DrawCtx) {
     }
     return;
   }
-  const r = m.look === 'windmill' ? 5.5 : 6;
+  if (m.look === 'cog') return cogHub(s, m, d.pal, hx, hy, rotorAngles(m, rc.frame, d.r.phase)[0]);
+  const r = 5.5;
   const base = m.look === 'windmill' ? ({ h: d.style.woodHue, s: 40, l: 28 } as HSL) : d.pal.base;
   ball(s, hx, hy, r, base, 131);
   ball(s, hx, hy, 2.1, { h: 44, s: 70, l: 52 }, 132);

@@ -6,37 +6,13 @@ import type { Level } from '../../../sim/level';
 import { blastHits, blastSpec, type BombLook, footprintCells, type ModuleOf, type PlacedProp } from '../../../sim/props';
 import { blob, line, stroke } from '../../ink';
 import { ball, boxPts, dot, glint, ovalPts, part, path, poly, sprite, stamp, tick } from '../../ink-props';
-import { circle, glowDot, light, METALS, type RC } from '../../kit';
+import { glowDot, light, METALS, type RC } from '../../kit';
 import { defineArt } from '../common';
+import { arcPts } from '../ink-motion';
 
 type Bomb = ModuleOf<'bomb'>;
 
 const INK = '#120b08';
-
-/** A ball in two flat tones, its lit side cut toward the light, a pen round it and one hard glint. */
-function inkBall(s: CanvasRenderingContext2D, x: number, y: number, r: number, base: HSL) {
-  s.fillStyle = INK;
-  circle(s, x + 0.35, y + 0.4, r + 1.15);
-  s.fillStyle = css(base, -6, 1, 4);
-  circle(s, x, y, r);
-  s.save();
-  s.beginPath();
-  s.arc(x, y, r, 0, Math.PI * 2);
-  s.clip();
-  s.fillStyle = css(base, 6);
-  circle(s, x - r * 0.24, y - r * 0.26, r * 0.9);
-  s.restore();
-  s.fillStyle = 'rgba(255,255,255,0.9)';
-  stroke(
-    s,
-    [
-      { x: x - r * 0.62, y: y - r * 0.1 },
-      { x: x - r * 0.5, y: y - r * 0.48 },
-      { x: x - r * 0.18, y: y - r * 0.64 },
-    ],
-    { w: 1.3, seed: 2, taper: [0.25, 0.35], press: 0.1 },
-  );
-}
 
 /** A fuse: a twist of cord with an ink edge, and a spark at the end that's actually hot. */
 function fuse(rc: RC, x: number, y: number) {
@@ -60,14 +36,49 @@ function fuse(rc: RC, x: number, y: number) {
   glowDot(rc.g, x + 8.5, y - 8.5, 5 * fl, { h: 40, s: 100, l: 60 }, 1);
 }
 
-function drawBall(rc: RC, x: number, y: number, base: HSL = { h: 230, s: 18, l: 22 }) {
-  const s = rc.s;
-  inkBall(s, x, y + 1, 6.5, base);
-  // The cap the fuse goes into.
-  s.fillStyle = INK;
-  s.fillRect(x + 0.9, y - 7.1, 4.6, 4);
-  s.fillStyle = '#5b6170';
-  s.fillRect(x + 1.6, y - 6.5, 3.2, 2.8);
+/**
+ * The bomb's body, baked: an iron ball in two tones with its hard shadow and one glint, a band of
+ * rivets at the neck, and the brass cap the fuse goes into. `face` adds the walking bomb's feet and
+ * screwed-shut eyes.
+ */
+function bombBody(base: HSL, face: boolean) {
+  return sprite(`bomb|body|${base.h},${base.s},${base.l}|${face}`, -10, -9, 20, 20.5, (g) => {
+    if (face) {
+      // Two stubby shoes, toes out.
+      for (const sg of [-1, 1]) {
+        const shoe = poly(sg * 1.6, 6.6, sg * 5.4, 6.2, sg * 7.6, 7.8, sg * 7.2, 9.6, sg * 1.4, 9.6);
+        part(g, shoe, { h: 36, s: 78, l: 52 }, 20 + sg, { depth: 0.5, shade: -24, thin: 0.4, thick: 1 });
+      }
+    }
+    ball(g, 0, 1, 6.6, base, 4, 'rgba(255,255,255,0.9)');
+    // A second, smaller glint under the first: wet black iron.
+    g.fillStyle = 'rgba(255,255,255,0.55)';
+    blob(g, -2.6, -3.6, 0.6, 3, 1, 0.1);
+    g.fill();
+    // The cap: a riveted brass collar the fuse goes into.
+    const cap = boxPts(0.6, -7.4, 5, 3.6, 0.8, 5, 0.15);
+    part(g, cap, { h: 42, s: 58, l: 50 }, 5, { depth: 0.6, shade: -22, thin: 0.4, thick: 1 });
+    dot(g, 2, -5.6, 0.4, 6, '#fff3c0');
+    dot(g, 4.3, -5.6, 0.4, 7, '#fff3c0');
+    if (face) {
+      // Eyes screwed shut: it knows.
+      g.fillStyle = '#f2ede4';
+      for (const sg of [-1, 1]) {
+        line(g, sg * 3.6, 0.7, sg * 1.3, 1.6, { w: 0.85, seed: 3 + sg, taper: [0.1, 0.1], press: 0 });
+        line(g, sg * 1.3, 1.6, sg * 3.6, 2.5, { w: 0.85, seed: 5 + sg, taper: [0.1, 0.1], press: 0 });
+      }
+      // A gritted little mouth and a bead of sweat.
+      g.fillStyle = '#f2ede4';
+      line(g, -1.5, 4.6, 1.5, 4.4, { w: 0.9, seed: 8, taper: [0.2, 0.2], press: 0 });
+      g.fillStyle = INK;
+      tick(g, 0, 4.1, 0, 5, 0.3, 9, INK);
+      part(g, poly(5.6, -2.2, 6.6, 0.4, 5.6, 1.2, 4.7, 0.4), { h: 195, s: 70, l: 82 }, 10, { depth: 0.2, thin: 0.25, thick: 0.5 });
+    }
+  });
+}
+
+function drawBall(rc: RC, x: number, y: number, base: HSL = { h: 230, s: 18, l: 20 }, face = false) {
+  stamp(rc.s, bombBody(base, face), x, y);
   fuse(rc, x, y);
 }
 
@@ -145,24 +156,7 @@ function alarm() {
 /** Each demolition look says what it hits: fire = everything, blue = props only, drill = terrain in a line. */
 const LOOKS: Record<BombLook, (rc: RC, m: Bomb, x: number, y: number, rot: number) => void> = {
   bomb(rc, _m, x, y) {
-    // Two little feet under it, and its eyes screwed shut: it knows.
-    const s = rc.s;
-    for (const sg of [-1, 1]) {
-      s.fillStyle = INK;
-      s.beginPath();
-      s.ellipse(x + sg * 3.2, y + 7.6, 2.4, 1.4, 0, 0, Math.PI * 2);
-      s.fill();
-      s.fillStyle = '#e8b04a';
-      s.beginPath();
-      s.ellipse(x + sg * 3.2 - 0.2, y + 7.3, 1.7, 0.85, 0, 0, Math.PI * 2);
-      s.fill();
-    }
-    drawBall(rc, x, y);
-    s.fillStyle = '#f2ede4';
-    for (const sg of [-1, 1]) {
-      line(s, x + sg * 3.6, y - 0.4, x + sg * 1.6, y + 0.6, { w: 0.75, seed: 3 + sg, taper: [0.1, 0.1], press: 0 });
-      line(s, x + sg * 1.6, y + 0.6, x + sg * 3.6, y + 1.6, { w: 0.75, seed: 5 + sg, taper: [0.1, 0.1], press: 0 });
-    }
+    drawBall(rc, x, y, undefined, true);
   },
   emp(rc, _m, x, y) {
     const g = rc.g;
@@ -170,11 +164,12 @@ const LOOKS: Record<BombLook, (rc: RC, m: Bomb, x: number, y: number, rot: numbe
     const pulse = 0.5 + 0.5 * Math.sin(rc.t * 8);
     glowDot(g, x, y - 11, 3 + pulse * 3, blue, 0.8);
     stamp(rc.s, patchDisk(), x, y);
-    g.strokeStyle = css(blue, 10, 0.35 * pulse);
-    g.lineWidth = 0.8;
-    g.beginPath();
-    g.ellipse(x, y + 1, 9 + pulse * 3, 4 + pulse * 1.5, 0, 0, Math.PI * 2);
-    g.stroke();
+    g.fillStyle = css(blue, 10, 0.35 * pulse);
+    g.save();
+    g.translate(x, y + 1);
+    g.scale(1, (4 + pulse * 1.5) / (9 + pulse * 3));
+    stroke(g, arcPts(0, 0, 9 + pulse * 3, 0, Math.PI * 2, 24), { w: 1, seed: 1, taper: [0, 0], press: 0 });
+    g.restore();
     light(rc, x, y, 40, blue, 0.5);
   },
   drill(rc, _m, x, y, rot) {
