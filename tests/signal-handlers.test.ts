@@ -135,11 +135,11 @@ describe('presence', () => {
     expect(orders).toEqual(orders.slice().sort((a, b) => a - b));
   });
 
-  it('never lets a rejoin win back the lowest order, even after the counter expired', async () => {
+  it('never lets a rejoin win back the lowest order, even after it was written off', async () => {
     const w = world();
     await w.op('join', { peer: 'aaaa' });
     const b = await w.op('join', { peer: 'bbbb' });
-    await w.store.run([['DEL', 'slag:ROOM1:n']]);
+    await w.store.run([['ZREM', 'slag:ROOM1:m', 'aaaa']]);
     const a2 = await w.op('join', { peer: 'aaaa' });
     expect(a2.order).toBeGreaterThan(b.order);
     expect(a2.members.map((m: any) => m.id)).toEqual(['bbbb', 'aaaa']);
@@ -173,12 +173,7 @@ describe('presence', () => {
     expect(w.store.immortalKeys()).toEqual([]);
     w.tick(3600);
     expect(w.store.immortalKeys()).toEqual([]);
-    expect(
-      await w.store.run([
-        ['EXISTS', 'slag:ROOM1:m'],
-        ['EXISTS', 'slag:ROOM1:n'],
-      ]),
-    ).toEqual([0, 0]);
+    expect(await w.store.run([['EXISTS', 'slag:ROOM1:m']])).toEqual([0]);
   });
 
   it('removes a peer on leave or report only for the session named', async () => {
@@ -214,12 +209,12 @@ describe('presence', () => {
     expect(await ids()).toEqual(['bbbb#1']);
   });
 
-  it("accepts a session's leave when the store holds another order for it, and never a refreshed page's late one", async () => {
+  it("matches a session's leave on its stamp, not its order, and never a refreshed page's late one", async () => {
     const w = world();
     const ids = async () => (await w.op('members', { peer: 'bbbb' })).members.map((m: any) => m.id);
     await w.op('join', { peer: 'bbbb' });
     const live = await w.op('join', { peer: 'aaaa', since: 200 });
-    // Two joins that read the store at the same instant both write; the older one's order can end up held.
+    // An entry holding an older session's stamp under another order (as a join from before the scripts could leave).
     await w.store.run([
       ['ZADD', 'slag:ROOM1:m', live.order + 5, 'aaaa'],
       ['SET', 'slag:ROOM1:p:aaaa', 100, 'EX', PEER_TTL_S],
@@ -301,16 +296,21 @@ describe('command costs', () => {
       await fn();
       return w.store.count - before;
     };
-    expect(await cost(() => w.op('join', { peer: 'aaaa' }))).toBeLessThanOrEqual(6);
-    expect(await cost(() => w.op('join', { peer: 'bbbb' }))).toBeLessThanOrEqual(7);
+    // A script costs one command plus one per call it makes, as Upstash bills it (MemoryStore counts the same way).
+    expect(await cost(() => w.op('join', { peer: 'aaaa', since: 10 }))).toBe(5); // empty room
+    expect(await cost(() => w.op('join', { peer: 'bbbb', since: 10 }))).toBe(6);
+    expect(await cost(() => w.op('join', { peer: 'bbbb', since: 5 }))).toBe(3); // an older session of bbbb: writes nothing
     expect(await cost(() => w.op('poll', { peer: 'aaaa' }))).toBe(1);
     expect(await cost(() => w.op('beat', { peer: 'bbbb' }))).toBe(1);
-    expect(await cost(() => w.op('beat', { peer: 'aaaa', host: true }))).toBe(4);
+    expect(await cost(() => w.op('beat', { peer: 'aaaa', host: true }))).toBe(3);
     expect(await cost(() => w.op('signal', { peer: 'aaaa', to: 'bbbb', signal: offer }))).toBe(5);
     expect(await cost(() => w.op('members', { peer: 'aaaa' }))).toBe(2);
-    expect(await cost(() => w.op('join', { peer: 'aaaa', since: 5 }))).toBeLessThanOrEqual(7);
-    expect(await cost(() => w.op('leave', { peer: 'aaaa', order: 9, since: 5 }))).toBe(4);
-    expect(await cost(() => w.op('leave', { peer: 'bbbb', order: 2 }))).toBe(4);
+    expect(await cost(() => w.op('leave', { peer: 'bbbb', order: 2, since: 5 }))).toBe(2); // refused: a newer session holds it
+    expect(await cost(() => w.op('leave', { peer: 'bbbb', order: 2, since: 10 }))).toBe(4);
+    await w.op('join', { peer: 'cccc' });
+    expect(await cost(() => w.op('gone', { peer: 'aaaa', gone: 'cccc', order: 99 }))).toBe(5); // wrong session: nothing removed
+    expect(await cost(() => w.op('gone', { peer: 'aaaa', gone: 'cccc', order: 3 }))).toBe(7);
+    expect(await cost(() => w.op('leave', { peer: 'aaaa', order: 1 }))).toBe(4); // a client that sends no stamp
   });
 });
 

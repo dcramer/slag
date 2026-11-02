@@ -3,4 +3,7 @@ import './ammo';
 
 export * from './roster';
 export * from './types';
-export { absorbHit, bonk, burstSmoke, catchShot, creditKill, giveItem, itemInput, itemPostStep, spawnItem, stepItems } from './world';
+export { bonk } from './common';
+export { blockCells, blockFits, buildBlocks, POCKET } from './pocket';
+export { goalFieldOf, leaderIndex, routeDistance, TAX } from './tax';
+export { absorbHit, burstSmoke, catchShot, creditKill, giveItem, itemInput, itemPostStep, spawnItem, stepItems } from './world';

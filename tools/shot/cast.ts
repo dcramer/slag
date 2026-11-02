@@ -1,30 +1,28 @@
 /**
- * Character-direction sheets for docs/CHARACTERS.md: `pnpm shot cast [--cast a|b|c|all] [--seed S] [--only catalog]`.
- * Per direction: the eight-runner lineup at play scale on a light theme and a dark one, a 3× close-up,
- * the race pack, the lobby cards, and the catalog of every kind, composed into `cast-<x>.png`. `all`
- * also shoots today's characters and composes the three directions side by side into `cast-all.png`.
+ * The toy cast's sheet for docs/CHARACTERS.md: `pnpm shot cast [--seed S] [--only catalog]`. The
+ * eight-runner lineup at play scale on a light theme and a dark one, a 3× close-up, the race start,
+ * toys coming apart, the lobby cards and the catalog of every kind, composed into `cast.png`.
  */
 import { writeFileSync } from 'node:fs';
 import { browser, open, opt, out, page, pet, seed, type Scenarios, step } from './ctx';
 
 const LIGHT = opt('light', 'farm')!;
 const DARK = opt('dark', 'mine')!;
-const NAMES: Record<string, string> = { base: "Today's blobs", a: 'A. Creature prints', b: 'B. Species cast', c: 'C. Foundry toys' };
 
 /** Eight runners on open floor in a spread of poses (the `lineup` scenario's staging), shot at 1× and 3×, then the pack. */
-async function lineup(mode: string, theme: string): Promise<{ x1: string; x3: string; pack: string } | null> {
+async function lineup(theme: string): Promise<{ x1: string; x3: string; pack: string; deaths: string } | null> {
   // Not every level has a 13-tile run of open floor: try the seed, then a few after it.
   for (let i = 0; i < 12; i++) {
     const sd = i ? `${seed}${i}` : (seed ?? 'demo');
-    const got = await lineupOn(sd, mode, theme);
+    const got = await lineupOn(sd, theme);
     if (got) return got;
   }
-  console.log(`${mode}/${theme}: no open floor for a lineup, skipped`);
+  console.log(`${theme}: no open floor for a lineup, skipped`);
   return null;
 }
 
-async function lineupOn(sd: string, mode: string, theme: string): Promise<{ x1: string; x3: string; pack: string } | null> {
-  await open(`seed=${sd}&players=8&race=,&propseed=1&theme=${theme}${mode === 'base' ? '' : `&cast=${mode}`}`);
+async function lineupOn(sd: string, theme: string): Promise<{ x1: string; x3: string; pack: string; deaths: string } | null> {
+  await open(`seed=${sd}&players=8&race=,&propseed=1&theme=${theme}&lettering=0`);
   await step(150);
   // A string, not a function: the bundler wraps named helpers in a __name the page doesn't have.
   const row: { x: number; y: number; devs: string[] } | null = await page.evaluate(`(() => {
@@ -85,7 +83,7 @@ async function lineupOn(sd: string, mode: string, theme: string): Promise<{ x1: 
       [row.x, row.y, zoom] as const,
     );
     const [w, h] = zoom === 1 ? [300 * k, 90 * k] : [size.width, 160 * k];
-    const path = `${out}/cast-${mode}-${theme}-x${zoom}.png`;
+    const path = `${out}/cast-${theme}-x${zoom}.png`;
     await page.screenshot({ path, clip: { x: (size.width - w) / 2, y: size.height / 2 - h * 0.62, width: w, height: h } });
     console.log(path);
     pet();
@@ -106,41 +104,51 @@ async function lineupOn(sd: string, mode: string, theme: string): Promise<{ x1: 
     cam.shake = 0;
     d.render();
   });
-  const pack = `${out}/cast-${mode}-${theme}-pack.png`;
+  const pack = `${out}/cast-${theme}-pack.png`;
   await page.screenshot({ path: pack, clip: { x: size.width / 2 - 170 * k, y: size.height / 2 - 70 * k, width: 340 * k, height: 110 * k } });
   console.log(pack);
   pet();
-  return { x1: shot.x1, x3: shot.x3, pack };
+  // Then four of them come apart, mid-run: the parts each toy breaks into.
+  await page.evaluate(() => {
+    const run = (window as any).slagDebug.match.run;
+    for (const r of run.runners.slice(0, 8).filter((_: unknown, i: number) => i % 2 === 0)) run.kill(r, -1, 'hazard');
+  });
+  await press(18, {});
+  await page.evaluate(() => (window as any).slagDebug.render());
+  const deaths = `${out}/cast-${theme}-deaths.png`;
+  await page.screenshot({ path: deaths, clip: { x: size.width / 2 - 170 * k, y: size.height / 2 - 70 * k, width: 340 * k, height: 110 * k } });
+  console.log(deaths);
+  pet();
+  return { x1: shot.x1, x3: shot.x3, pack, deaths };
 }
 
-async function lobby(mode: string): Promise<string> {
-  await open(`seed=${seed}${mode === 'base' ? '' : `&cast=${mode}`}`);
+async function lobby(): Promise<string> {
+  await open(`seed=${seed}`);
   await page.evaluate(() => {
     const d = (window as any).slagDebug;
     for (const dev of ['kb1', 'kb2', 'pad0', 'pad1', 'pad2', 'pad3', 'pad4', 'pad5']) d.match.join(dev);
   });
   await step(30);
-  const path = `${out}/cast-${mode}-lobby.png`;
+  const path = `${out}/cast-lobby.png`;
   await page.screenshot({ path });
   console.log(path);
   pet();
   return path;
 }
 
-async function catalog(mode: string): Promise<string> {
-  await open(`seed=${seed}&cast=${mode}`);
+async function catalog(): Promise<string> {
+  await open(`seed=${seed}`);
   await page.evaluate(() => document.fonts.ready);
-  const box = await page.evaluate((m) => {
-    const cv = (window as any).slagDebug.cast.catalog(m);
+  const box = await page.evaluate(() => {
+    const cv = (window as any).slagDebug.toys.catalog();
     return { width: cv.width, height: cv.height };
-  }, mode);
-  const path = `${out}/cast-${mode}-catalog.png`;
+  });
+  const path = `${out}/cast-catalog.png`;
   await page.screenshot({ path, clip: { x: 0, y: 0, ...box } });
   console.log(path);
   pet();
-  const bench = await page.evaluate((m) => (window as any).slagDebug.cast.bench(m, 300), mode);
-  console.log(`bench ${mode}: today ${bench.base.toFixed(3)} ms/runner, prototype ${bench.proto.toFixed(3)} ms/runner`);
-  writeFileSync(`${out}/cast-${mode}-bench.json`, JSON.stringify(bench));
+  const bench = await page.evaluate(() => (window as any).slagDebug.toys.bench(300));
+  console.log(`bench: ${bench.toFixed(3)} ms/runner`);
   return path;
 }
 
@@ -166,49 +174,27 @@ const img = (f: string | undefined, label: string, w = '100%') =>
 const h = (t: string) => `<h2 style="margin:6px 0 10px;font:400 30px 'Lilita One',system-ui;color:#ffb02e">${t}</h2>`;
 const row = (...cells: string[]) => `<div style="display:flex;gap:12px;align-items:flex-start">${cells.join('')}</div>`;
 
-type Shots = { light: Awaited<ReturnType<typeof lineup>>; dark: Awaited<ReturnType<typeof lineup>>; lobby: string; catalog?: string };
-
-async function direction(mode: string): Promise<Shots> {
-  const light = await lineup(mode, LIGHT);
-  const dark = await lineup(mode, DARK);
-  const lb = await lobby(mode);
-  const cat = mode === 'base' ? undefined : await catalog(mode);
-  if (mode !== 'base')
+export const shots: Scenarios = {
+  async cast() {
+    if (opt('only') === 'catalog') {
+      // Fast iteration on the art: the catalog alone.
+      await catalog();
+      return;
+    }
+    const light = await lineup(LIGHT);
+    const dark = await lineup(DARK);
+    const lb = await lobby();
+    const cat = await catalog();
     await compose(
-      `cast-${mode}`,
-      h(NAMES[mode]) +
+      'cast',
+      h('The foundry toys') +
         row(img(light?.x1, `Play scale, ${LIGHT} (1920×1080 crop)`, '50%'), img(dark?.x1, `Play scale, ${DARK}`, '50%')) +
         row(img(light?.pack, `Race start, ${LIGHT}`, '50%'), img(dark?.pack, `Race start, ${DARK}`, '50%')) +
+        row(img(light?.deaths, `Coming apart, ${LIGHT}`, '50%'), img(dark?.deaths, `Coming apart, ${DARK}`, '50%')) +
         img(light?.x3, `3× close-up, ${LIGHT}: idle, facing back, walk, run, rise, fall, idle, idle`) +
         img(dark?.x3, `3× close-up, ${DARK}`) +
         img(lb, 'Lobby cards, 8 players') +
-        img(cat, 'Catalog: every kind on two seeds, poses, the set at play scale'),
-    );
-  return { light, dark, lobby: lb, catalog: cat };
-}
-
-export const shots: Scenarios = {
-  async cast() {
-    const which = opt('cast', 'all')!;
-    const modes = which === 'all' ? ['base', 'a', 'b', 'c'] : which.split(',');
-    if (opt('only') === 'catalog') {
-      // Fast iteration on the art: the catalogs alone.
-      for (const m of modes) if (m !== 'base') await catalog(m);
-      return;
-    }
-    const got: Record<string, Shots> = {};
-    for (const m of modes) got[m] = await direction(m);
-    if (which !== 'all') return;
-    const col = (m: string) =>
-      `<div style="flex:1;min-width:0">${h(NAMES[m])}${img(got[m].light?.x1, `Play scale, ${LIGHT}`)}${img(got[m].dark?.x1, `Play scale, ${DARK}`)}${img(
-        got[m].light?.pack,
-        'Race start',
-      )}${img(got[m].lobby, 'Lobby')}</div>`;
-    await compose(
-      'cast-all',
-      row(col('a'), col('b'), col('c')) +
-        `<div style="margin-top:14px">${h(NAMES.base)}${row(img(got.base.light?.x1, LIGHT, '33%'), img(got.base.dark?.x1, DARK, '33%'), img(got.base.lobby, 'Lobby', '33%'))}</div>`,
-      2400,
+        img(cat, 'Catalog: every kind on two seeds, poses, the cast at play scale'),
     );
   },
 };

@@ -19,6 +19,10 @@ Each row gives what the item or part mocks, its silhouette (what must read at ga
 | **Bubble Wrap** | The one-hit bubble shield | A bubble around the runner | It's a sheet of bubble wrap. Cells pop one by one on the hit. |
 | **Free-Trial Jetpack** | The jetpack upgrade | Twin tanks on the back, one big flame | A "TRIAL" sticker. The flame ends in a puff and a dangling price tag. |
 | **Fog of War** | Strategy fog of war, as a ninja smoke bomb | A round smoke bomb with a short fuse | The cloud has the hard, blocky edge of unexplored map tiles. |
+| **Walk-Off Bat** | The crossover brawler's home-run bat | A long slugger's bat over the shoulder, tape on the grip | Cocked back and shaking as it charges; a full hit pops a distance readout ("412 FT") off the victim. |
+| **Tremor Brick** | The block you punch to shake every enemy off the floor | A chunky brick held overhead | A seismograph strip on its face, its red trace scribbled right off the scale. |
+| **Front-Runner Tax** | The kart racer's shell that hunts whoever is first | A spiked dome on two flapping wings | The wings are folded paper, one marked "1ST" and circled in red; it lands in a blizzard of paperwork. |
+| **Pocket Block** | Building a block where you stand, from the crafting sandbox and the battle-royale builders | A turf cube, carried by a handle like a lunchbox | Every block wears an assembly-instructions sticker (step 1), and cracks from the corners before it crumbles. |
 
 ## Mystery crate
 
@@ -31,7 +35,7 @@ Each row gives what the item or part mocks, its silhouette (what must read at ga
 | Archetype | Names (nouns) | Mocks | Silhouette | Gag |
 |---|---|---|---|---|
 | bridge | Tutorial Ledge, Load-Bearing Girder, Placeholder Plank | The first floating platform of every game | A capstoned stone ledge, a rope-lashed plank raft, or a truss girder with bolted end plates | No supports at all. The Placeholder roll looks like a grid-paper test texture inked by hand. |
-| platform | Floating Brick, Obligatory Crate, Ice Level, Baggage Claim, Bounce House | Floating bricks, crates, moving lifts and conveyors | The material's block: coursed stone, riveted plate armour, slatted crates, an ice cube with icicles | The wooden crate has stencilled "CRATE" slats. The conveyor has a little luggage tag. |
+| platform | Floating Brick, Obligatory Crate, Ice Level, Baggage Claim, Bounce House | Floating bricks, crates, moving lifts and conveyors | The material's block: coursed stone, riveted plate armour, slatted crates, an ice cube with icicles | The wooden crate has stencilled "CRATE" slats. The conveyor is a belt machine (big head drum, small tail drum, painted rail) on whichever face it's turned to, with a little luggage tag. |
 | crumble | Biscuit, Donut Ledge, Wafer, Rusk | The crumbling donut lift | A sandwich biscuit: two docked biscuits round a band of cream | Crumbs fall as it goes. |
 | spikestrip | Floor Spikes, Death Carpet | Instant-death spikes | A row of spikes on a face | A welcome-mat edge with fringe. |
 | icecoat | Ice Physics, Black Ice, Glaze | The ice level | A glassy coat | Zamboni tread lines on the shine. |

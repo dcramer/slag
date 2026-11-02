@@ -31,8 +31,17 @@ export type WallKind = 'normal' | 'slick' | 'sticky';
 export interface Surface {
   /** Multiplier on ground acceleration (ice < 1). */
   friction: number;
-  /** Belt speed in px/s added to ground movement. */
+  /**
+   * Belt speed in px/s along the face `beltFace`, running clockwise round the block for a positive
+   * speed: rightward on a top, down a right face, leftward under a bottom, up a left face.
+   */
   conveyor: number;
+  /**
+   * Which face carries the belt, in quarter turns clockwise from the top (0 top, 1 right, 2 bottom,
+   * 3 left); absent means the top. Only contact with that face feels the belt: a top carries walkers,
+   * a side drags a runner clinging to it up or down, a bottom shoves a head that bonks it sideways.
+   */
+  beltFace?: number;
   speedMult: number;
   jumpMult: number;
   /** Restitution when landing hard (jelly). */
@@ -53,6 +62,29 @@ export interface Surface {
 }
 
 export const DEFAULT_SURFACE: Surface = { friction: 1, conveyor: 0, speedMult: 1, jumpMult: 1, bounce: 0 };
+
+/** A belt's speed under the feet, px/s along +x: only a belt on the top face carries a walker. */
+export function groundBelt(s: Surface): number {
+  return s.conveyor !== 0 && (s.beltFace ?? 0) === 0 ? s.conveyor : 0;
+}
+
+/**
+ * A belt's speed down a wall touched on side `side` of the body (+y is down): a wall on the body's
+ * right is the block's left face (3), whose belt runs up for a positive speed; on its left, the
+ * block's right face (1), which runs down.
+ */
+export function wallBelt(s: Surface, side: number): number {
+  if (s.conveyor === 0) return 0;
+  const f = s.beltFace ?? 0;
+  if (side > 0 && f === 3) return -s.conveyor;
+  if (side < 0 && f === 1) return s.conveyor;
+  return 0;
+}
+
+/** A belt's speed along +x under a block (its bottom face runs leftward for a positive speed). */
+export function ceilingBelt(s: Surface): number {
+  return s.conveyor !== 0 && s.beltFace === 2 ? -s.conveyor : 0;
+}
 
 /** Resolve a surface's wall behavior (explicit field, else derived from its ground params). */
 export function wallKind(s: Surface): WallKind {
@@ -399,7 +431,7 @@ function onOneWayOnly(b: Body, world: CollisionWorld): boolean {
 }
 
 function horizontalAccel(b: Body, dir: number, top: number, surf: Surface): number {
-  const vRel = b.vx - (b.onGround ? surf.conveyor : 0);
+  const vRel = b.vx - (b.onGround ? groundBelt(surf) : 0);
   const reversing = dir !== 0 && vRel * dir < 0;
   // "Momentum" = moving faster than a walk: decel/turns skid instead of snapping.
   // (Unscaled by surface speed so sticky goo still stops you quickly.)
@@ -434,7 +466,8 @@ function wallJump(b: Body, dir: -1 | 1, surf: Surface, held: number): void {
   const k = wallKind(surf) === 'sticky' ? PHYS.stickyWallJumpMult : 1;
   const into = held === dir;
   const vx = into ? PHYS.wallJumpVxInto : held === 0 ? PHYS.wallJumpVxNeutral : PHYS.wallJumpVxAway;
-  b.vy = -PHYS.wallJumpVy * k;
+  // A belt running up the wall adds its lift to the jump; one running down never takes any away.
+  b.vy = -PHYS.wallJumpVy * k + Math.min(0, wallBelt(surf, dir));
   b.vx = -dir * vx * k;
   if (!into) b.facing = dir > 0 ? -1 : 1;
   b.wallLock = into ? PHYS.wallJumpLockFramesInto : PHYS.wallJumpLockFrames;
@@ -488,7 +521,7 @@ export function stepBody(b: Body, c: Controls, world: CollisionWorld, wind: Wind
   b.vx -= airVx;
   const surf = b.onGround ? b.surface : DEFAULT_SURFACE;
   const top = (c.run ? PHYS.runSpeed : PHYS.walkSpeed) * surf.speedMult;
-  const target = dir * top + (b.onGround ? surf.conveyor : 0);
+  const target = dir * top + (b.onGround ? groundBelt(surf) : 0);
   let accel = horizontalAccel(b, dir, top, surf);
   if (b.wallLock > 0) {
     b.wallLock--;
@@ -510,9 +543,16 @@ export function stepBody(b: Body, c: Controls, world: CollisionWorld, wind: Wind
   else if (b.vy > 0) g *= PHYS.fallGravityMult;
   b.vy += g * (wind ? windGravityScale(b.vy, wind) : 1) * DT;
   if (air && b.wallDir !== 0 && dir === b.wallDir && !down) {
-    const kind = wallKind(b.wallSurface);
-    const cap = kind === 'sticky' ? PHYS.wallStickySlideMax : kind === 'normal' ? PHYS.wallSlideMax : maxFall;
-    if (b.vy > cap) b.vy = cap;
+    const belt = wallBelt(b.wallSurface, b.wallDir);
+    if (belt !== 0) {
+      // Clinging to a belt: it grips and carries you at its own speed, up or down. Rising faster than
+      // it on your own jump is left alone, so catching a belt never costs you height.
+      if (b.vy > belt) b.vy = Math.max(belt, b.vy - PHYS.beltGrip * DT);
+    } else {
+      const kind = wallKind(b.wallSurface);
+      const cap = kind === 'sticky' ? PHYS.wallStickySlideMax : kind === 'normal' ? PHYS.wallSlideMax : maxFall;
+      if (b.vy > cap) b.vy = cap;
+    }
   }
   if (b.vy > maxFall) b.vy = maxFall;
 
@@ -563,6 +603,10 @@ export function stepBody(b: Body, c: Controls, world: CollisionWorld, wind: Wind
     if (hitY && b.vy < 0) {
       b.vy = 0;
       b.jumping = false;
+      // A head that bonks a belt from below is flung along it; air control can still fight it.
+      const shove = ceilingBelt(hitY.surface) * PHYS.beltShoveMult;
+      if (shove > 0) b.vx = Math.max(b.vx, shove);
+      else if (shove < 0) b.vx = Math.min(b.vx, shove);
     }
     b.onGround = false;
     b.groundRef = -1;

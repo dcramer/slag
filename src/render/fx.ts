@@ -4,7 +4,11 @@ import { TILE } from '../sim/constants';
 import { type Level, tileAt } from '../sim/level';
 import { light, type RC } from './kit';
 
-export type PKind = 'spark' | 'ember' | 'smoke' | 'dust' | 'gib' | 'confetti' | 'debris' | 'ring' | 'splash' | 'flash';
+export type PKind = 'spark' | 'ember' | 'smoke' | 'dust' | 'gib' | 'confetti' | 'debris' | 'ring' | 'splash' | 'flash' | 'part';
+
+/** What a toy bursts into when it dies: the bits of a broken wind-up. */
+export const PARTS = ['gear', 'spring', 'key', 'shard', 'bolt', 'wheel', 'coin'] as const;
+export type Part = (typeof PARTS)[number];
 
 /**
  * Cosmetic particles, inked like a comic's effects (docs/ART.md, World art): every one is a hard-edged
@@ -17,6 +21,7 @@ export type PKind = 'spark' | 'ember' | 'smoke' | 'dust' | 'gib' | 'confetti' | 
  * - Sparks are tapered pen strokes along their flight; embers are spinning flecks; both are hot, so emissive.
  * - A "ring" is a burst of pen speed lines flying outward; a "flash" is a jagged starburst with a hot core.
  * - Gibs, debris, confetti and splashes are hand-cut chunks, paper bits and drops on the foreground.
+ * - Parts are what a toy breaks into: gears, springs, its key, tin shards, bolts, wheels, coins.
  *
  * Particles live in a pool and are reused: a death or explosion spawns dozens, and eight players spawn them every second.
  */
@@ -62,6 +67,15 @@ function shapes(count: number, verts: number, radius: (i: number, k: number, a: 
 
 /** Rock and flesh chunks: five to seven corners, no two alike. */
 const CHUNKS = Array.from({ length: 8 }, (_, k) => shapes(1, 5 + (k % 3), (i) => 0.62 + 0.45 * hash2(i, k, 72), 0.55)[0]);
+/** A toy's parts, as unit outlines; the spring is drawn as a zigzag instead. */
+const PART_SHAPES: Record<Exclude<Part, 'spring' | 'shard'>, Float64Array> = {
+  gear: shapes(1, 16, (i) => (i % 2 ? 0.72 : 1))[0],
+  key: Float64Array.from([-1, -0.5, -0.4, -0.55, -0.3, -0.15, 1, -0.15, 1, 0.4, 0.72, 0.4, 0.72, 0.15, -0.3, 0.15, -0.4, 0.55, -1, 0.5]),
+  bolt: shapes(1, 6, () => 0.8)[0],
+  wheel: shapes(1, 10, () => 1)[0],
+  coin: shapes(1, 10, () => 0.9)[0],
+};
+
 /** Smoke puffs: a scalloped cloud, its bumps at different sizes. */
 const PUFFS = shapes(6, 24, (i, k, a) => 0.8 + 0.22 * Math.abs(Math.sin(a * 2.5 + k * 1.3)) * (0.75 + 0.5 * hash2(Math.floor(i / 5), k, 73)));
 /** Comic starbursts: long and short points, unevenly spaced. */
@@ -149,7 +163,7 @@ export class Fx {
   private n = 0;
   private evict = 0;
 
-  add(kind: PKind, x: number, y: number, vx: number, vy: number, color: HSL = { h: 0, s: 0, l: 90 }, size = 1, life = 1) {
+  add(kind: PKind, x: number, y: number, vx: number, vy: number, color: HSL = { h: 0, s: 0, l: 90 }, size = 1, life = 1): P {
     let p: P;
     if (this.n < this.pool.length) p = this.pool[this.n++];
     else if (this.n < MAX) {
@@ -175,6 +189,7 @@ export class Fx {
     p.bounced = 0;
     p.shape = Math.floor(Math.random() * 64);
     paint(p);
+    return p;
   }
 
   burst(kind: PKind, x: number, y: number, n: number, speed: number, colors: HSL[], size = 1, life = 0.8, up = 0) {
@@ -235,6 +250,7 @@ export class Fx {
         p.size += dt * 4;
         break;
       case 'gib':
+      case 'part':
       case 'debris':
       case 'confetti':
       case 'splash': {
@@ -245,7 +261,7 @@ export class Fx {
         }
         const nx = p.x + p.vx * dt;
         const ny = p.y + p.vy * dt;
-        if ((p.kind === 'gib' || p.kind === 'debris') && solid(level, nx, ny)) {
+        if ((p.kind === 'gib' || p.kind === 'debris' || p.kind === 'part') && solid(level, nx, ny)) {
           if (solid(level, nx, p.y)) p.vx *= -0.4;
           if (solid(level, p.x, ny)) p.vy *= -0.35;
           p.vx *= 0.7;
@@ -292,6 +308,9 @@ export class Fx {
         }
         case 'gib':
           this.chunk(s, p, p.size * 1.25 * Math.min(1, p.life / 0.3));
+          break;
+        case 'part':
+          this.drawPart(s, p, p.size * Math.min(1, p.life / 0.3));
           break;
         case 'debris':
           this.chunk(s, p, p.size * 1.15 * Math.min(1, p.life / 0.3));
@@ -363,6 +382,59 @@ export class Fx {
   }
 
   /** A chunk in two tones: the whole cut in shade, its lit face pulled up-left whichever way it has turned. */
+  /** One of a toy's broken bits flying: its shape in two flat tones, a dark hub on the round ones. */
+  private drawPart(s: CanvasRenderingContext2D, p: P, r: number) {
+    if (r < 0.2) return;
+    const kind = PARTS[p.shape % PARTS.length];
+    if (kind === 'shard') return this.chunk(s, p, r);
+    if (kind === 'spring') {
+      const c = Math.cos(p.rot) * r;
+      const sn = Math.sin(p.rot) * r;
+      s.fillStyle = p.c1;
+      for (let i = 0; i < 5; i++) {
+        const a = -1 + i * 0.4;
+        const b = a + 0.4;
+        const ya = i % 2 ? 0.5 : -0.5;
+        dash(s, p.x + a * c - ya * sn, p.y + a * sn + ya * c, p.x + b * c + ya * sn, p.y + b * sn - ya * c, r * 0.22, 0.5);
+      }
+      return;
+    }
+    const sh = PART_SHAPES[kind];
+    // A coin flips edge-on as it spins.
+    const squash = kind === 'coin' ? Math.max(0.2, Math.abs(Math.cos(p.life * 12))) : 1;
+    s.save();
+    s.translate(p.x, p.y);
+    s.scale(1, squash);
+    s.fillStyle = p.c1;
+    fillShape(s, sh, 0, 0, r, p.rot);
+    s.fillStyle = p.c0;
+    fillShape(s, sh, -r * 0.14, -r * 0.16, r * 0.8, p.rot);
+    if (kind === 'gear' || kind === 'wheel') {
+      s.fillStyle = p.c1;
+      s.beginPath();
+      s.arc(0, 0, r * 0.3, 0, Math.PI * 2);
+      s.fill();
+    }
+    s.restore();
+  }
+
+  /** A toy's part flung from (x, y): `part` picks the outline, so it doesn't come from the random shape roll. */
+  part(part: Part, x: number, y: number, speed: number, color: HSL, size: number, life: number) {
+    const a = Math.random() * Math.PI * 2;
+    const sp = speed * (0.35 + Math.random() * 0.65);
+    const p = this.add(
+      'part',
+      x,
+      y,
+      Math.cos(a) * sp,
+      Math.sin(a) * sp - 120 * Math.random(),
+      color,
+      size * (0.8 + Math.random() * 0.4),
+      life * (0.7 + Math.random() * 0.6),
+    );
+    p.shape = PARTS.indexOf(part) + PARTS.length * Math.floor(Math.random() * 8);
+  }
+
   private chunk(s: CanvasRenderingContext2D, p: P, r: number) {
     if (r < 0.2) return;
     const sh = CHUNKS[p.shape & 7];
