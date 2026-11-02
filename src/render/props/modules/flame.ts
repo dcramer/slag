@@ -31,7 +31,9 @@ function inkTongue(s: CanvasRenderingContext2D, x: number, y: number, dx: number
   };
   const tier = (k: number, wid: number, L: number, fill: string) => {
     const a = side(k, wid, L, 1);
-    const b = side(k, wid, L, -1).reverse();
+    const back = side(k, wid, L, -1);
+    const b: P[] = [];
+    for (let i = back.length - 1; i >= 0; i--) b.push(back[i]);
     s.fillStyle = fill;
     s.beginPath();
     [...a, ...b].forEach((q, i) => (i ? s.lineTo(q.x, q.y) : s.moveTo(q.x, q.y)));

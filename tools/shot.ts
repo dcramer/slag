@@ -843,6 +843,55 @@ try {
       await sheet('cards', files, 1);
       break;
     }
+    case 'parts': {
+      // Each of `--arch a,b,c` placed for real (`--count` of each), raced for `--frames`, then shot close up
+      // one by one: a contact sheet of parts at a close race zoom.
+      const arch = opt('arch', 'saw,launcher,spikeblock,spikestrip')!.split(',');
+      await open(`seed=${seed}&players=2&race=,&propseed=1`);
+      await page.evaluate(
+        ([as, n]) => {
+          const d = (window as any).slagDebug;
+          d.match.placed.length = 0;
+          for (let k = 0; k < n; k++) for (const a of as) d.addProps([a], 11 + k * 7);
+          d.race([], 1);
+        },
+        [arch, Number(opt('count', '2'))] as const,
+      );
+      await step(Number(opt('frames', '60')));
+      const spots = await page.evaluate(() =>
+        (window as any).slagDebug.match.placed.map((p: any) => {
+          const xs = p.def.footprint.map((c: number[]) => c[0]);
+          const ys = p.def.footprint.map((c: number[]) => c[1]);
+          return {
+            name: p.def.archetype,
+            x: (p.tx + (Math.min(...xs) + Math.max(...xs) + 1) / 2) * 16,
+            y: (p.ty + (Math.min(...ys) + Math.max(...ys) + 1) / 2) * 16,
+          };
+        }),
+      );
+      const files: string[] = [await snap(`parts-${seed}-race`)];
+      const zoom = Number(opt('zoom', '2.6'));
+      for (const [i, sp] of spots.entries()) {
+        await page.evaluate(
+          ([x, y, z]) => {
+            const d = (window as any).slagDebug;
+            const cam = d.renderer.cam;
+            cam.update = () => {};
+            cam.snap({ cx: x, cy: y, zoom: z });
+            cam.shake = 0;
+            d.render();
+          },
+          [sp.x, sp.y, zoom] as const,
+        );
+        const size = page.viewportSize()!;
+        const path = `${out}/parts-${seed}-${String(i).padStart(2, '0')}-${sp.name}.png`;
+        const w = Math.min(size.width, size.height);
+        await page.screenshot({ path, clip: { x: (size.width - w) / 2, y: 0, width: w, height: w } });
+        files.push(path);
+      }
+      await sheet(`parts-${seed}`, files.slice(1), 4);
+      break;
+    }
     case 'buildparts': {
       // Every building part: each block material at every size in a race (whole view and close up), then
       // on crate cards, then as place-phase ghosts. `--theme` picks the backdrop.

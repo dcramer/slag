@@ -109,7 +109,8 @@ export function drawPreview(rc: RC, full: PropDef, cx: number, cy: number, bw: n
   const blast = def.modules[0]?.type === 'bomb' ? BLAST_SCALE[def.size ?? 'large'] : 1;
   const box = cardBox(def);
   const fit = Math.min(bw / (box.w * TILE), bh / (box.h * TILE));
-  const k = Math.min(2.6, fit * 0.86) * (def.size ? CARD_SIZE[def.size] : 0.9) * blast;
+  // A one-tile charge steps by its blast alone, and stays clear of the tags above it.
+  const k = def.modules[0]?.type === 'bomb' ? Math.min(2.1, fit * 0.86) * blast : Math.min(2.6, fit * 0.86) * (def.size ? CARD_SIZE[def.size] : 0.9);
   const s = rc.s;
   const g = rc.g;
   for (const ctx of [s, g]) {
