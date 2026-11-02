@@ -50,9 +50,9 @@ describe('worldgen per theme', () => {
         expect(checkPolicy(l, info.bridges), `${theme} seed ${seed} policy`).toBe(true);
         if (info.bridges.length) themeBridged++;
       }
-      // Every theme mixes prop-free and prop-needing levels.
-      expect(themeBridged).toBeGreaterThan(SEEDS * 0.1);
-      expect(themeBridged).toBeLessThan(SEEDS * 0.9);
+      // Most levels need props (playtest target ~70-85%), but every theme keeps some prop-free ones.
+      expect(themeBridged).toBeGreaterThan(SEEDS * 0.5);
+      expect(themeBridged).toBeLessThan(SEEDS);
       bridged += themeBridged;
       total += SEEDS;
     });
@@ -60,8 +60,8 @@ describe('worldgen per theme', () => {
   it('overall share of levels needing bridges is in a sane band', () => {
     expect(total).toBe(SEEDS * THEME_IDS.length);
     const share = bridged / total;
-    expect(share).toBeGreaterThan(0.3);
-    expect(share).toBeLessThan(0.7);
+    expect(share).toBeGreaterThan(0.65);
+    expect(share).toBeLessThan(0.92);
   });
 
   it('themes have several sub-styles each', { timeout: 60_000 }, () => {
@@ -73,12 +73,17 @@ describe('worldgen per theme', () => {
   });
 });
 
-/** A synthetic level: ledges at both ends with `gap` empty columns between them. */
+/**
+ * A synthetic level: ledges at both ends with `gap` empty columns between
+ * them; the far bank is undercut (as sculptors do) so it can't be wall-climbed.
+ */
 function gapLevel(gap: number): Level {
   const tiles = new Uint8Array(LEVEL_W * LEVEL_H);
   const row = 18;
   const leftEnd = Math.floor((LEVEL_W - gap) / 2) - 1;
-  for (let x = 0; x < LEVEL_W; x++) if (x <= leftEnd || x > leftEnd + gap) for (let y = row + 1; y < LEVEL_H; y++) tiles[y * LEVEL_W + x] = T_SOLID;
+  const far = leftEnd + gap + 1;
+  for (let x = 0; x < LEVEL_W; x++)
+    if (x <= leftEnd || x >= far) for (let y = row + 1; y < LEVEL_H; y++) if (x > far + 1 || y <= row + 2) tiles[y * LEVEL_W + x] = T_SOLID;
   return {
     seed: 0,
     w: LEVEL_W,

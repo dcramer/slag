@@ -1,7 +1,7 @@
 import type { Rng } from '../../../core/rng';
 import { finish, Grid, hintGap } from '../kit';
 import type { Sculptor } from '../types';
-import { easyGap, easyRise, H, hardGap, rollChallenges, W } from './common';
+import { easyGap, easyRise, H, hardGap, rollChallenges, undercut, W } from './common';
 
 type RoofStyle = 'downtown' | 'tenements' | 'skyline';
 
@@ -28,7 +28,8 @@ export const rooftops: Sculptor = ({ rng, attempt }) => {
   ]);
   const g = new Grid();
   const rise = easyRise();
-  const challenges = rollChallenges(rng, 0.55, 0.3, attempt);
+  const challenges = rollChallenges(rng, 0.82, 0.15, attempt);
+  g.wantsProps = challenges > 0;
 
   // Plan buildings left → right until the map is full.
   const bs: Building[] = [];
@@ -73,7 +74,11 @@ export const rooftops: Sculptor = ({ rng, attempt }) => {
     // Windows: a regular grid of 1×1 holes reads as a facade.
     if (b.w >= 5) for (let y = b.roof + 3; y < H - 1; y += 3) for (let x = b.x + 1 + (i % 2); x < b.x + b.w - 1; x += 2) g.set(x, y, 0, true);
   }
-  for (const gp of gaps) if (gp.hard) hintGap(g, gp.a, gp.b, Math.max(roofAt(bs, gp.a - 1), roofAt(bs, gp.b + 1)));
+  for (const gp of gaps) {
+    if (!gp.hard) continue;
+    hintGap(g, gp.a, gp.b, Math.max(roofAt(bs, gp.a - 1), roofAt(bs, gp.b + 1)));
+    undercut(g, gp.b + 1); // cantilevered top floor: the facade below can't be wall-climbed to the roof
+  }
 
   // Fire escapes where the next roof is too high to jump to.
   for (let i = 1; i < bs.length; i++) {

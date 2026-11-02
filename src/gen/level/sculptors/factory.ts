@@ -35,7 +35,8 @@ export const factory: Sculptor = ({ rng, attempt }) => {
   };
 
   // Vats (drop pits) in the floor: hard ones need a bridge.
-  const challenges = rollChallenges(rng, 0.55, 0.3, attempt);
+  const challenges = rollChallenges(rng, 0.82, 0.15, attempt);
+  g.wantsProps = challenges > 0;
   const vats: { a: number; b: number; hard: boolean }[] = [];
   const nEasy = rng.int(style === 'foundry' ? 1 : 0, 2);
   for (let i = 0; i < challenges + nEasy; i++) {
@@ -78,7 +79,7 @@ export const factory: Sculptor = ({ rng, attempt }) => {
     const y = floor[x0] - rise * rng.int(2, 3) - (i % 2 === 0 ? 0 : 1);
     const x1 = x0 + len - 1;
     if (y <= ceil + 3) continue;
-    if (vats.some((v) => v.hard && x0 <= v.a && x1 >= v.b)) continue;
+    if (vats.some((v) => v.hard && x1 >= v.a - 5 && x0 <= v.b + 5)) continue; // no flying over a hard vat
     let clean = true;
     for (let x = x0 - 1; x <= x1 + 1 && clean; x++) for (let yy = y - 3; yy <= y; yy++) if (!g.empty(x, yy)) clean = false;
     if (!clean) continue;

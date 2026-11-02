@@ -38,7 +38,8 @@ export const castle: Sculptor = ({ rng, attempt }) => {
   };
 
   // Moats: hard ones keep a collapsed bridge's stubs, easy ones are a hop.
-  const challenges = rollChallenges(rng, 0.5, 0.25, attempt);
+  const challenges = rollChallenges(rng, 0.82, 0.15, attempt);
+  g.wantsProps = challenges > 0;
   const moats: { a: number; b: number; hard: boolean; stubs: [number, number] }[] = [];
   for (let i = 0; i < Math.max(challenges, rng.int(0, 1)); i++) {
     const hard = i < challenges;

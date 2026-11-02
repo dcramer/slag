@@ -43,6 +43,8 @@ export function generateLevel(seed: number, themeOverride?: ThemeId): Level {
     const level = toLevel(seed, shape, theme);
     const v = judge(level, shape.bridgeHints);
     if (!v.ok) continue;
+    // A crossing meant to need props that turned out jumpable: re-roll (late attempts accept anything valid).
+    if (shape.wantsProps && v.bridges.length === 0 && attempt < MAX_ATTEMPTS - 10) continue;
     lastGenAttempts = attempt + 1;
     lastGenInfo = { attempts: attempt + 1, bridges: v.bridges, fallback: attempt >= MAX_ATTEMPTS };
     level.setPieces = SET_PIECES[themeId](new Rng(deriveSeed(seed, `setpieces:${attempt}`)), level);

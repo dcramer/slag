@@ -1,6 +1,7 @@
 import { carveCorridor, finish, Grid, hintGap, noise2D, smoothCA } from '../kit';
+import { jumpProfile } from '../probe';
 import type { Sculptor } from '../types';
-import { easyGap, easyRise, H, hardGap, rollChallenges, W } from './common';
+import { easyGap, easyRise, H, rollChallenges, W } from './common';
 
 type MineStyle = 'galleries' | 'cavern' | 'shafts';
 
@@ -36,7 +37,10 @@ export const mine: Sculptor = ({ rng, attempt }) => {
   // Tunnel levels: segments alternate between an upper and a lower floor row.
   const upper = rng.int(8, 12);
   const lower = rng.int(upper + 8, Math.min(H - 4, upper + 12));
-  const nSeg = style === 'shafts' ? 3 : style === 'galleries' ? 2 : 1;
+  const challenges = rollChallenges(rng, 0.82, 0.15, attempt);
+  g.wantsProps = challenges > 0;
+  // Three segments leave no room for a chasm, so a challenged 'shafts' map gets two.
+  const nSeg = style === 'shafts' && !challenges ? 3 : style === 'cavern' ? 1 : 2;
   const startUpper = rng.chance(0.5);
   const cuts: number[] = [0];
   for (let i = 1; i < nSeg; i++) cuts.push(Math.round((W * i) / nSeg) + rng.int(-3, 3));
@@ -68,19 +72,30 @@ export const mine: Sculptor = ({ rng, attempt }) => {
   }
 
   // Chasms in the floors (never in a shaft): hard ones need a bridge.
-  const challenges = rollChallenges(rng, 0.55, 0.25, attempt);
-  const taken: [number, number][] = cuts.slice(1, -1).map((c) => [c - 4, c + 4]);
+  const taken: [number, number][] = cuts.slice(1, -1).map((c) => [c - 3, c + 3]);
+  const j = jumpProfile();
   for (let i = 0; i < challenges + rng.int(0, 1); i++) {
     const hard = i < challenges;
-    const w = hard ? hardGap(rng) : easyGap(rng, 2);
-    for (let tries = 0; tries < 40; tries++) {
-      const a = rng.int(7, W - 8 - w);
+    // Hard chasms sit under a low rock ceiling that caps the jump arc, so they
+    // need less width than an open-air chasm to be unjumpable.
+    const w = hard ? rng.int(j.gap + 1, j.gap + 4) : easyGap(rng, 2);
+    for (let tries = 0; tries < 60; tries++) {
+      const a = rng.int(6, W - 7 - w);
       const b = a + w - 1;
-      if (taken.some(([t0, t1]) => b + 3 >= t0 && a - 3 <= t1)) continue;
+      if (taken.some(([t0, t1]) => b + 1 >= t0 && a - 1 <= t1)) continue;
       const row = rows[a - 1];
       if (rows[a - 1] === undefined || Number.isNaN(row) || Number.isNaN(rows[b + 1]) || Math.abs(rows[b + 1] - row) > 2) continue;
       g.clear(a, row - 3, b, H - 1);
-      if (hard) hintGap(g, a, b, row + 1);
+      if (hard) {
+        // Seal the rock above so there is no high route over the chasm.
+        for (let x = a - 3; x <= b + 3; x++) {
+          const top = x >= a && x <= b ? Math.min(rows[a - 1], rows[b + 1]) - 4 : rows[x] - 5;
+          if (!Number.isNaN(top)) g.fill(x, 0, x, top, 1, true);
+        }
+        // Undercut the far lip: a climber coming up the far wall from the depths meets a ceiling.
+        g.clear(b + 1, rows[b + 1] + 3, b + 4, H - 1);
+        hintGap(g, a, b, row + 1);
+      }
       taken.push([a, b]);
       break;
     }

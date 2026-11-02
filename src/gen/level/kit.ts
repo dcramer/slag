@@ -24,6 +24,8 @@ export class Grid {
   /** Cells that non-forced stamps must leave untouched (walk lanes, pockets). */
   readonly keep = new Uint8Array(W * H);
   readonly hints: BridgeHint[] = [];
+  /** Set by sculptors that built a crossing meant to need a bridge prop. */
+  wantsProps = false;
 
   inb(x: number, y: number): boolean {
     return x >= 0 && x < W && y >= 0 && y < H;
@@ -182,6 +184,7 @@ export function finish(g: Grid, spawn: Pocket, goal: Pocket, style: string): Sha
     ],
     style,
     bridgeHints: g.hints.slice(),
+    wantsProps: g.wantsProps,
   };
 }
 

@@ -31,7 +31,8 @@ export const farm: Sculptor = ({ rng, attempt }) => {
   const surf = heights(rng);
 
   // Ponds first: hard ones need a bridge, easy ones are a hop.
-  const challenges = rollChallenges(rng, 0.42, 0.25, attempt);
+  const challenges = rollChallenges(rng, 0.76, 0.15, attempt);
+  g.wantsProps = challenges > 0;
   const pits: { x0: number; x1: number; hard: boolean }[] = [];
   const nEasy = rng.int(0, style === 'fields' ? 2 : 1);
   for (let i = 0; i < challenges + nEasy; i++) {

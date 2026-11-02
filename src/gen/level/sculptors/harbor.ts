@@ -1,5 +1,6 @@
 import type { Rng } from '../../../core/rng';
 import { finish, Grid, hintGap } from '../kit';
+import { jumpProfile } from '../probe';
 import type { Sculptor } from '../types';
 import { easyGap, easyRise, H, hardGap, rollChallenges, W } from './common';
 
@@ -22,7 +23,8 @@ export const harbor: Sculptor = ({ rng, attempt }) => {
   ]);
   const g = new Grid();
   const q = rng.int(17, 20); // quay top row
-  const challenges = rollChallenges(rng, 0.4, 0.25, attempt);
+  const challenges = rollChallenges(rng, 0.82, 0.15, attempt);
+  g.wantsProps = challenges > 0;
   const kinds: Kind[] =
     style === 'galleon'
       ? ['ship']
@@ -31,23 +33,39 @@ export const harbor: Sculptor = ({ rng, attempt }) => {
         : rng.shuffle<Kind>(['boat', 'buoys', 'boat']);
   const widths = kinds.map((k) => (k === 'ship' ? rng.int(20, 24) : k === 'pier' ? rng.int(7, 11) : k === 'boat' ? rng.int(6, 8) : rng.int(5, 8)));
 
-  // Lay out: quay | gap | element | gap | ... | quay, fitting the gaps into the slack.
+  // Lay out: quay | gap | element | gap | ... | quay. A galleon's hard gap is
+  // usually the boarding gap (its masts would give a long falling jump after it).
   const nGaps = kinds.length + 1;
   const hardIdx = new Set<number>();
+  if (challenges && style === 'galleon' && rng.chance(0.75)) hardIdx.add(0);
   while (hardIdx.size < Math.min(challenges, nGaps)) hardIdx.add(rng.int(0, nGaps - 1));
-  const gaps = Array.from({ length: nGaps }, (_, i) => (hardIdx.has(i) ? hardGap(rng) : easyGap(rng, 2)));
-  const inner = widths.reduce((a, b) => a + b, 0) + gaps.reduce((a, b) => a + b, 0);
-  const slack = W - inner;
-  if (slack < 12) {
-    // Shrink easy gaps / drop the last element until it fits.
-    while (kinds.length > 1 && W - (widths.reduce((a, b) => a + b, 0) + gaps.reduce((a, b) => a + b, 0)) < 12) {
+  const hard = Array.from({ length: nGaps }, (_, i) => hardIdx.has(i));
+  const gaps = hard.map((h) => (h ? hardGap(rng) : easyGap(rng, 2)));
+  const total = () => widths.reduce((a, b) => a + b, 0) + gaps.reduce((a, b) => a + b, 0) + 12;
+  const minHard = jumpProfile().gap + 2;
+  while (total() > W) {
+    const si = kinds.indexOf('ship');
+    const easy = gaps.findIndex((gp, i) => !hard[i] && gp > 2);
+    const wide = gaps.findIndex((gp, i) => hard[i] && gp > minHard);
+    if (si >= 0 && widths[si] > 15) widths[si]--;
+    else if (easy >= 0) gaps[easy]--;
+    else if (wide >= 0) gaps[wide]--;
+    else if (kinds.length > 1) {
+      // Drop the last element and the gap before it (keeping any hard flag on the final gap).
+      const k = kinds.length - 1;
+      if (hard[k]) hard[k + 1] = true;
       kinds.pop();
       widths.pop();
-      gaps.pop();
-    }
+      gaps.splice(k, 1);
+      hard.splice(k, 1);
+    } else break;
   }
+  hardIdx.clear();
+  hard.forEach((h, i) => {
+    if (h) hardIdx.add(i);
+  });
   const used = widths.reduce((a, b) => a + b, 0) + gaps.reduce((a, b) => a + b, 0);
-  const quayL = Math.max(6, Math.floor((W - used) * rng.range(0.4, 0.6)));
+  const quayL = Math.max(6, Math.min(W - used - 6, Math.floor((W - used) * rng.range(0.4, 0.6))));
   const quayR = W - used - quayL;
   if (quayR < 6) return finish(g, { row: q - 1 }, { row: q - 1 }, 'harbor:broken'); // validator rejects; next attempt
 
@@ -160,6 +178,8 @@ function ship(g: Grid, rng: Rng, a: number, b: number, d: number): number {
 /** Stone quay from x0..x1 at row q, with harbor clutter. */
 function quay(g: Grid, rng: Rng, x0: number, x1: number, q: number, side: 'left' | 'right'): void {
   g.fill(x0, q, x1, H - 1);
+  // The far quay's coping overhangs the water, so nobody climbs the sea wall out of the drink.
+  if (side === 'right') g.clear(x0, q + 2, x0 + 1, H - 1);
   // Sea wall step down to the water edge.
   const edge = side === 'left' ? x1 : x0;
   g.set(edge, q, 2, true);

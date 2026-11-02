@@ -30,7 +30,8 @@ export const volcano: Sculptor = ({ rng, attempt }) => {
   for (let x = W - 6; x < W; x++) surf[x] = gRow;
   locked.fill(1, 0, 6);
   locked.fill(1, W - 6, W);
-  const challenges = rollChallenges(rng, 0.42, 0.25, attempt);
+  const challenges = rollChallenges(rng, 0.82, 0.15, attempt);
+  g.wantsProps = challenges > 0;
   let hardLeft = challenges;
 
   // Lava lake with floating stepping stones.
@@ -82,7 +83,9 @@ export const volcano: Sculptor = ({ rng, attempt }) => {
         surf[i] = d === 0 ? H : Math.min(surf[i], peak + Math.floor(d * 0.75) + (d > 2 && rng.chance(0.3) ? 1 : 0));
         locked[i] = 1;
       }
-      surf[ca - 1] = surf[cb + 1] = peak;
+      // Flat far rim so its undercut lip has solid rock behind it (no slope to climb out onto).
+      surf[ca - 1] = peak;
+      for (let i = cb + 1; i <= Math.min(x + cw - 1, cb + 4); i++) surf[i] = peak;
       crater = { a: ca, b: cb, rim: peak };
     }
   }

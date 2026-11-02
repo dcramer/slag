@@ -1,4 +1,5 @@
 import type { Rng } from '../../../core/rng';
+import { jumpMetrics } from '../../../sim/physics';
 import { type Grid, H, hintGap, W } from '../kit';
 import { jumpProfile } from '../probe';
 
@@ -8,24 +9,35 @@ import { jumpProfile } from '../probe';
  * crossing that needs a bridge prop.
  */
 
-/** A gap (empty columns) that is always jumpable between ledges at equal height. */
-export function easyGap(rng: Rng, min = 1): number {
+/**
+ * A gap (empty columns) that is jumpable between ledges at equal height. By
+ * default it is demanding: within a few columns of the longest running jump.
+ */
+export function easyGap(rng: Rng, min?: number): number {
   const j = jumpProfile();
-  return rng.int(Math.min(min, j.gap - 1), Math.max(1, j.gap - 1));
+  const hi = Math.max(1, j.gap - 1);
+  return rng.int(Math.min(hi, min ?? Math.max(1, j.gap - 3)), hi);
 }
 
 /**
- * A gap too wide to jump but bridgeable with one 3-wide bridge (the bridge
- * leaves at most `gap - 1` columns on each side).
+ * A gap no running jump clears (pair it with `undercut` on the far bank so it
+ * can't be wall-climbed from below), yet bridgeable with one 3-wide bridge at
+ * ledge height: each remaining side stays within a running jump. The upper
+ * end also beats long falling jumps from nearby perches.
  */
 export function hardGap(rng: Rng): number {
   const j = jumpProfile();
-  return rng.int(j.gap + 2, j.gap * 2 + 1);
+  const lo = j.gap + 2;
+  const hi = Math.max(lo, j.gap * 2 + 2);
+  return rng.chance(0.5) ? rng.int(lo, Math.min(hi, j.gapAt(-6) + 1)) : rng.int(Math.min(hi, j.gapAt(-6) + 1), hi);
 }
 
-/** Tallest step that is always climbable (one less than measured, for slack). */
+/**
+ * Comfortable vertical spacing for steps, rungs and shelves: one less than a
+ * plain full jump (no wall tricks), so structures keep their proportions.
+ */
 export function easyRise(): number {
-  return Math.max(1, jumpProfile().rise - 1);
+  return Math.max(1, Math.floor(jumpMetrics().jumpHeight) - 1);
 }
 
 /**
@@ -39,9 +51,22 @@ export function rollChallenges(rng: Rng, pHard: number, pTwo: number, attempt: n
 }
 
 /** Carve a pit (columns x0..x1 empty to the bottom) and hint a bridge at floor row `row` if it's wide. */
-export function pit(g: Grid, x0: number, x1: number, row: number, hint: boolean): void {
+export function pit(g: Grid, x0: number, x1: number, row: number, hard: boolean): void {
   g.clear(x0, 0, x1, H - 1);
-  if (hint) hintGap(g, x0, x1, row);
+  if (!hard) return;
+  hintGap(g, x0, x1, row);
+  undercut(g, x1 + 1);
+}
+
+/**
+ * Undercut the far bank of a hard gap (bank's first column x): its top two
+ * rows become a lip over a recess two columns deep. Walls are wall-climbable,
+ * so without this a player who drops toward the far wall just climbs out;
+ * the lip's underside stops the climb.
+ */
+export function undercut(g: Grid, x: number, depth = 2): void {
+  const top = g.surface(x);
+  if (top < H - 3) g.clear(x, top + 2, x + depth - 1, H - 1);
 }
 
 /** Pick `n` distinct, spaced x positions in [lo, hi] (sorted). */
