@@ -16,6 +16,8 @@ import type { SculptCtx } from '../types';
 export const TWO_PARTS = 0.22;
 /** First attempt that may give up on needing parts at all (the pipeline stops insisting here too). */
 export const LAST_RESORT = 22;
+/** Attempts at a two-part shape before settling for one: a terrain that keeps refusing a second crossing isn't worth a hitch. */
+const TWO_PART_TRIES = 8;
 
 /**
  * A gap (empty columns) jumpable between ledges at equal height. Mostly a
@@ -41,15 +43,17 @@ export function hopGap(rng: Rng, min = 1): number {
  * A bridge is too short to run on, so a player runs and jumps onto it from
  * the near bank and walks off the far end. One bridge covers a running jump,
  * its own width and most of a walking jump (the last columns only work from
- * a few exact spots, which the solver doesn't count on); no single bridge
- * spans a running jump, its width and a full walking jump. Widths are checked
- * against an exhaustive search in tests/routes.test.ts. The widest gaps also
- * beat long falling jumps from nearby perches, so they're the likelier roll.
+ * a few exact spots, which the solver doesn't count on). A single bridge hung
+ * low in the gap reaches further still: the far bank is then a falling jump
+ * and a climb, as far as a long fall carries plus a full jump's rise, so a
+ * two-part gap starts past that. Widths are checked against an exhaustive
+ * search in tests/routes.test.ts. The widest gaps also beat long falling jumps
+ * from nearby perches, so they're the likelier roll.
  */
 export function hardGap(rng: Rng, parts = 1): number {
   const j = jumpProfile();
-  const lo = parts === 1 ? j.gap + 2 : j.gap + BRIDGE_W + j.walkGap + 2;
-  const hi = Math.max(lo, parts === 1 ? BRIDGE_W + j.walkGap * 2 : j.gap + BRIDGE_W * 2 + j.walkGap);
+  const lo = parts === 1 ? j.gap + 2 : j.gapAt(-6) + j.rise + 1;
+  const hi = Math.max(lo, parts === 1 ? BRIDGE_W + j.walkGap * 2 : j.gap + BRIDGE_W * 2 + j.walkGap + 1);
   const far = Math.min(hi, Math.max(lo, j.gapAt(-6) + 1));
   return rng.chance(0.3) ? rng.int(lo, far) : rng.int(far, hi);
 }
@@ -77,7 +81,7 @@ export function easyRise(): number {
  */
 export function rollChallenges(attempt: number, k: Pick<Knobs, 'challenge'>): number {
   if (attempt >= LAST_RESORT) return 0;
-  return k.challenge < TWO_PARTS && attempt < 16 ? 2 : 1;
+  return k.challenge < TWO_PARTS && attempt < TWO_PART_TRIES ? 2 : 1;
 }
 
 /** Carve a pit (columns x0..x1 empty to the bottom) and hint a bridge at floor row `row` if it's wide. */
