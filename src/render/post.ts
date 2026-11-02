@@ -11,7 +11,7 @@
  */
 
 import { reportError, reportEvent } from '../telemetry';
-import { CEL_FS, CEL_SHADOW } from './cel-shader';
+import { CEL_FS, CEL_SHADOW, celNoise, NOISE_SIZE } from './cel-shader';
 
 const VS = `#version 300 es
 in vec2 p; out vec2 uv;
@@ -98,6 +98,7 @@ class GLCompositor implements Compositor {
   private texFg: WebGLTexture;
   private texLight: WebGLTexture;
   private texGlow: WebGLTexture;
+  private texNoise: WebGLTexture;
   private half!: [Target, Target];
   private quarter!: [Target, Target];
   private w = 1;
@@ -121,6 +122,10 @@ class GLCompositor implements Compositor {
     this.texFg = this.tex();
     this.texLight = this.tex();
     this.texGlow = this.tex();
+    this.texNoise = this.tex();
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, NOISE_SIZE, NOISE_SIZE, 0, gl.RGBA, gl.UNSIGNED_BYTE, celNoise());
     this.resize(2, 2);
   }
 
@@ -273,6 +278,9 @@ class GLCompositor implements Compositor {
     gl.uniform1f(this.u(f, 'uAmbient'), p.ambient);
     gl.uniform2f(this.u(f, 'uShadow'), (-CEL_SHADOW[0] * p.scale) / this.w, (CEL_SHADOW[1] * p.scale) / this.h);
     gl.uniform3f(this.u(f, 'uView'), p.scale, p.originX, p.originY);
+    gl.activeTexture(gl.TEXTURE6);
+    gl.bindTexture(gl.TEXTURE_2D, this.texNoise);
+    gl.uniform1i(this.u(f, 'uNoise'), 6);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 }

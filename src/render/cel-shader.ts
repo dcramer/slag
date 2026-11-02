@@ -1,3 +1,5 @@
+import { hash2 } from '../core/rng';
+
 /**
  * The final pass. Everything here is a hard decision, not a gradient: base colors
  * are flat, and the renderer's real light map is cut into a few bands, so a torch throws a clean
@@ -65,13 +67,54 @@ export const CEL_SHADOW: [number, number] = [2.5, 3.5];
 
 const f = (n: number) => n.toFixed(4);
 
+/** Texels per side of the line's noise, and noise cells across them. */
+export const NOISE_SIZE = 256;
+const NOISE_CELLS = 16;
+
+/**
+ * The line's wobble (rg) and pressure (b), baked into one tiling texture. Five value noises per pixel in
+ * the shader cost a phone real time; one fetch gives the same line on every device, so low quality needs
+ * no cheaper look. Periodic so it can repeat, and its period is far longer than anything you could spot.
+ */
+export function celNoise(): Uint8Array {
+  const S = NOISE_SIZE;
+  const out = new Uint8Array(S * S * 4);
+  const value = (u: number, v: number, cells: number, salt: number) => {
+    const x = u * cells;
+    const y = v * cells;
+    const xi = Math.floor(x);
+    const yi = Math.floor(y);
+    const fx = x - xi;
+    const fy = y - yi;
+    const sx = fx * fx * (3 - 2 * fx);
+    const sy = fy * fy * (3 - 2 * fy);
+    const at = (i: number, j: number) => hash2(i % cells, j % cells, salt);
+    const top = at(xi, yi) + (at(xi + 1, yi) - at(xi, yi)) * sx;
+    const low = at(xi, yi + 1) + (at(xi + 1, yi + 1) - at(xi, yi + 1)) * sx;
+    return top + (low - top) * sy;
+  };
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const u = x / S;
+      const v = y / S;
+      const i = (y * S + x) * 4;
+      // A broad drift plus a finer tremor, as one hand makes both.
+      out[i] = ((value(u, v, NOISE_CELLS, 11) + 0.5 * value(u, v, NOISE_CELLS * 3, 12)) / 1.5) * 255;
+      out[i + 1] = ((value(u, v, NOISE_CELLS, 13) + 0.5 * value(u, v, NOISE_CELLS * 3, 14)) / 1.5) * 255;
+      out[i + 2] = value(u, v, 20, 15) * 255;
+      out[i + 3] = 255;
+    }
+  }
+  return out;
+}
+
 export const CEL_FS = `#version 300 es
 precision highp float; in vec2 uv; out vec4 o;
 uniform sampler2D uScene; uniform sampler2D uFg; uniform sampler2D uLight; uniform sampler2D uGlow;
 uniform sampler2D uBloomA; uniform sampler2D uBloomB;
 uniform float uExposure; uniform float uFlash; uniform float uAmbient;
 uniform vec3 uTint; uniform vec3 uLift; uniform vec2 uRes; uniform vec2 uShadow;
-uniform vec3 uView;
+uniform vec3 uView; uniform sampler2D uNoise;
 // PAL.ink and PAL.bone (src/ui/style.ts): the game draws with the UI's own inks.
 const vec3 INK = vec3(0.0706, 0.0431, 0.0314);
 const vec3 BONE = vec3(0.9647, 0.9176, 0.8471);
@@ -84,19 +127,13 @@ float hard(float v, float n){
   float w = min(fwidth(q) * 0.75 + 0.01, 0.5);
   return (floor(q) + smoothstep(0.5 - w, 0.5 + w, fract(q))) / n;
 }
-float hash21(vec2 p){ p = fract(p * vec2(233.34, 851.73)); p += dot(p, p + 23.45); return fract(p.x * p.y); }
-float vnoise(vec2 p){
-  vec2 i = floor(p), f = fract(p), u = f * f * (3.0 - 2.0 * f);
-  return mix(mix(hash21(i), hash21(i + vec2(1, 0)), u.x), mix(hash21(i + vec2(0, 1)), hash21(i + vec2(1, 1)), u.x), u.y);
-}
 void main(){
   vec2 d = uv - 0.5;
   float k = uRes.y / 720.0;
   // World position of this pixel. Line noise is pinned here, so it stays put while the camera moves.
   vec2 wpos = (vec2(uv.x, 1.0 - uv.y) * uRes - uView.yz) / max(uView.x, 0.001);
-  vec2 wq = wpos / ${f(K.warpCell)};
-  vec2 warp = (vec2(vnoise(wq), vnoise(wq + vec2(41.3, 17.9))) - 0.5) * 2.0;
-  warp += (vec2(vnoise(wq * 2.7), vnoise(wq * 2.7 + vec2(9.1, 5.3))) - 0.5);
+  vec3 hand = texture(uNoise, wpos / ${f(K.warpCell * NOISE_CELLS)}).rgb;
+  vec2 warp = (hand.rg - 0.5) * 3.0;
   vec2 fuv = uv + warp * ${f(K.warp)} * uView.x / uRes;
 
   // Light bands, from the real light map.
@@ -144,7 +181,7 @@ void main(){
 
   // Ink. Silhouette: alpha dilated over a ring. Interior: a tight cross, so lines stay thin inside small sprites.
   // Pressure wanders along the line, and the pen leans on the side away from the light.
-  float press = 1.0 + (vnoise(wpos * 0.075) - 0.5) * 2.0 * ${f(K.press)};
+  float press = 1.0 + (hand.b - 0.5) * 2.0 * ${f(K.press)};
   vec2 px = ${f(K.ink)} * press * k / uRes;
   float ring = 0.0;
   vec3 near = vec3(0.0);

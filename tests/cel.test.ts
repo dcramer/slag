@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Lettering, letteringAllowed, wordFor } from '../src/render/cel';
-import { CEL_FS } from '../src/render/cel-shader';
+import { CEL_FS, celNoise, NOISE_SIZE } from '../src/render/cel-shader';
 import { createCompositor, type PostParams } from '../src/render/post';
 
 /** Just enough WebGL2 to run the compositor, recording which fragment shader each draw used. */
@@ -101,5 +101,29 @@ describe('impact words', () => {
       l.update(1 / 60);
     }
     expect((l as unknown as { words: unknown[] }).words).toHaveLength(1);
+  });
+});
+
+describe('line noise', () => {
+  it('tiles, so the wrap never shows as a seam in the line', () => {
+    const n = celNoise();
+    const S = NOISE_SIZE;
+    const at = (x: number, y: number, c: number) => n[(y * S + x) * 4 + c];
+    let worst = 0;
+    for (let i = 0; i < S; i++) {
+      for (let c = 0; c < 3; c++) {
+        worst = Math.max(worst, Math.abs(at(i, 0, c) - at(i, S - 1, c)), Math.abs(at(0, i, c) - at(S - 1, i, c)));
+      }
+    }
+    // Neighbours across the wrap differ no more than neighbours anywhere: a seam would jump far more.
+    expect(worst).toBeLessThan(24);
+  });
+
+  it('covers a range wide enough to move the line', () => {
+    const n = celNoise();
+    for (const c of [0, 1, 2]) {
+      const vals = Array.from({ length: NOISE_SIZE * NOISE_SIZE }, (_, i) => n[i * 4 + c]);
+      expect(Math.max(...vals) - Math.min(...vals)).toBeGreaterThan(120);
+    }
   });
 });

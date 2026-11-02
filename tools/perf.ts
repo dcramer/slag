@@ -12,6 +12,7 @@
  *   pnpm perf --sync                   read back a pixel after compositing so `post` includes GPU time
  *   pnpm perf --canvas cpu             rasterize Canvas2D on the main thread (fill-rate proxy)
  *   pnpm perf --query "size=large"     extra URL params for every scenario
+ *   pnpm perf --cpu 4                  slow the main thread by this factor, to stand in for a phone's CPU
  *
  * Default mode `step` pauses the real-time loop and runs exactly one sim step
  * and one render per frame on a fixed 60 Hz clock (keyboard player 1 runs
@@ -55,6 +56,7 @@ const sync = flag('sync');
  * also pays for its pixels (a fill-rate / overdraw proxy for weak devices).
  */
 const canvasMode = opt('canvas', 'gpu');
+const cpuSlow = Number(opt('cpu', '1'));
 
 interface Scenario {
   name: string;
@@ -169,6 +171,7 @@ async function newPage(b: Browser): Promise<{ page: Page; errors: string[] }> {
   const errors: string[] = [];
   page.on('pageerror', (e: Error) => errors.push(String(e)));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+  if (cpuSlow > 1) await (await page.context().newCDPSession(page)).send('Emulation.setCPUThrottlingRate', { rate: cpuSlow });
   return { page, errors };
 }
 
