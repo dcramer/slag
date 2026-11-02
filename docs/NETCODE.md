@@ -183,7 +183,7 @@ A guest whose link drops without a goodbye keeps its seat for 5 s, `linking`, wh
 
 ### Seats and kicks
 
-- Connecting is joining: a peer asks for a seat without any input, repeating until seated, and the host seats it through the sequenced `join` action within a few frames, so every peer rolls the same character at the same frame.
+- Connecting is joining: a peer asks for a seat without any input, repeating until seated, and the host seats it through the sequenced `join` action within a few frames, so every peer rolls the same character at the same frame. The seat is for the device in hand when the peer asks (`primaryDevice` is read then): a phone only knows touch is its input once the page is up.
 - Every player's name and color differ. Rolls skip a clash, deterministically, and the host refuses a saved look or name someone here already has. Two tabs of one browser share a saved profile, so this happens in ordinary testing, and a refused look isn't saved over the profile.
 - `kick` is a `NetAction`, so it exists only inside a host's bundle. Guests apply bundles from the host alone, and the host refuses `kick` as a request from a guest. It applies in the lobby only. `NetState.kicked` is replicated and snapshotted, so a new host keeps refusing the same peers. A kicked peer's tab remembers (`sessionStorage`) and goes straight to the main menu on refresh; one that gets past that is refused on `hello`, and never seated.
 

@@ -12,6 +12,7 @@
  *
  * Scenarios:
  *   flow        as a person does it: Play on the menu, open the invite, press nothing; both peers see both bays
+ *   fresh       Play on the menu, on a desktop and on a phone: alone in a new lobby, host, seated with the device in hand
  *   kick        the Host label everywhere and through a migration; kicks by keyboard and mouse, with no way back
  *   refused     a guest whose build can't load the host's snapshots says so
  *   view        real mouse input lands under the pointer, at every window shape, on every level size
@@ -31,7 +32,7 @@
  */
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import type { Browser, BrowserContext, Page } from 'playwright';
+import { type Browser, type BrowserContext, devices, type Page } from 'playwright';
 import { roomSeed } from '../src/game/room';
 import { overview, type ViewXform, worldToView } from '../src/game/view';
 import { generateLevel } from '../src/gen/level';
@@ -42,7 +43,7 @@ import { launchBrowser, startServer } from './lib/server';
 const argv = process.argv.slice(2);
 /** Named groups, each short enough to run alone on a loaded machine. */
 const GROUPS: Record<string, string[]> = {
-  lobby: ['flow', 'kick', 'view', 'refused'],
+  lobby: ['flow', 'fresh', 'kick', 'view', 'refused'],
   migration: ['pick', 'place', 'run', 'duo', 'leave', 'twice'],
   feel: ['latency', 'hidden', 'contact'],
   misc: ['play', 'bc', 'unset'],
@@ -1042,6 +1043,52 @@ async function realFlowScenario(browser: Browser, base: string, label: string, s
   check(real.length === 0, `no page errors${real.length ? `:\n${real.join('\n')}` : ''}`);
 }
 
+/**
+ * Play on the main menu opens a lobby nobody else is in: the only peer is us, we host, and our seat is the device
+ * we're holding. A phone only knows touch is its input once the page is up, and used to seat a keyboard player
+ * there, which then carried the Host label while the person got an empty bay to join.
+ */
+async function freshScenario(browser: Browser, base: string, label: string, phone?: string) {
+  console.log(`\n== ${label}`);
+  const ctx = await browser.newContext(phone ? (({ defaultBrowserType: _, ...d }) => d)(devices[phone]) : { viewport: { width: 960, height: 540 } });
+  await ctx.addInitScript('window.__name = (f) => f');
+  await ctx.addInitScript(() => localStorage.setItem('slag.profile.v1', JSON.stringify({ version: 1, name: 'Dave', look: 123456, prompted: true })));
+  const errors: string[] = [];
+  const p = await ctx.newPage();
+  p.on('pageerror', (e) => errors.push(String(e)));
+  p.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+  await p.goto(base);
+  const play = p.locator('button[data-id="play"]');
+  await (phone ? play.tap() : play.click());
+  await p.waitForFunction(() => 'slagDebug' in window, null, { timeout: 60_000 });
+  const v = await waitFor(p, 'online and seated', (x) => x.status === 'online' && x.players.length > 0, 20_000);
+  await sleep(1500); // long enough for a stray member or a second seat to show up
+  const w = await view(p);
+  const hud = await p.evaluate(
+    () => (window as any).slagDebug.renderer.hud.net as { hostSlot?: number; peers: { name: string; isHost: boolean; local: boolean }[] },
+  );
+  const dev = `${v.self}:${phone ? 'touch' : 'kb1'}`;
+  check(
+    w.members.length === 1 && w.members[0] === w.self && w.hostId === w.self && w.isHost,
+    `alone and hosting (members ${w.members.join()}, host ${w.hostId}, self ${w.self})`,
+  );
+  check(w.players.length === 1 && w.players[0].device === dev, `seated once, with ${dev} (${w.players.map((x) => x.device).join()})`);
+  check(w.players[0]?.name === 'Dave', `the saved name is on the seat (${w.players[0]?.name})`);
+  const mine = w.players.find((x) => x.device === dev);
+  check(
+    mine !== undefined && hud.hostSlot === mine.slot && hud.peers.length === 1 && hud.peers[0].local && hud.peers[0].isHost,
+    `the Host label is on the seat in our hand, and the crown is ours (${JSON.stringify(hud)})`,
+  );
+  const path = `${out}/online-${label.replaceAll(' ', '-')}.png`;
+  await p.screenshot({ path, timeout: 60_000 }).then(
+    () => console.log(`     ${path}`),
+    (e) => console.log(`     (screenshot skipped: ${String(e).split('\n')[0]})`),
+  );
+  await ctx.close();
+  const real = errors.filter((e) => !/favicon/.test(e));
+  check(real.length === 0, `no page errors${real.length ? `:\n${real.join('\n')}` : ''}`);
+}
+
 async function r2(A: Page, B: Page, label: string) {
   const file = label.replaceAll(' ', '-');
   for (const [p, who] of [
@@ -1433,6 +1480,10 @@ try {
   if (wanted('flow')) {
     await realFlowScenario(browser, server.base, 'flow two browsers', false, false);
     await realFlowScenario(browser, server.base, 'flow two tabs saved look', true, true);
+  }
+  if (wanted('fresh')) {
+    await freshScenario(browser, server.base, 'fresh desktop');
+    await freshScenario(browser, server.base, 'fresh phone', 'iPhone 13 landscape');
   }
   if (wanted('kick')) await kickScenario(browser, server.base);
   if (wanted('refused')) await refusedScenario(browser, server.base);

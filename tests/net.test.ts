@@ -32,11 +32,12 @@ class Room {
     this.hub = new LoopbackHub(opts);
   }
 
-  join(id: string, script: Script = idle): NetSession {
+  join(id: string, script: Script = idle, primaryDevice?: () => string): NetSession {
     const s = new NetSession({
       transport: this.hub.transport(id),
       match: new Match(roomSeed(this.code)),
       now: () => this.hub.now,
+      primaryDevice,
       log: (m) => this.logs.push(`${id}: ${m}`),
     });
     this.peers.set(id, s);
@@ -205,6 +206,21 @@ describe('lobby seats', () => {
     for (const s of [a, b, c]) expect(s.match.players).toHaveLength(3);
     expect(seats(b)).toEqual(seats(a));
     expect(seats(c)).toEqual(seats(a));
+  });
+
+  it('seats the device the person is using once the page is up, not the one assumed while it was starting', () => {
+    // A phone: the page only learns touch is its input after the session exists. Seating the keyboard instead left
+    // the person an empty bay to join, under a "Keyboard" host that wasn't them.
+    const r = new Room({ latency: 20 });
+    let hostDev = 'kb1';
+    let guestDev = 'kb1';
+    const a = r.join('aaaa', idle, () => hostDev);
+    hostDev = 'touch';
+    r.run(20);
+    const b = r.join('bbbb', idle, () => guestDev);
+    guestDev = 'touch';
+    r.run(60);
+    for (const s of [a, b]) expect(s.match.players.map((p) => p.device)).toEqual(['aaaa:touch', 'bbbb:touch']);
   });
 
   it('gives every player a distinct name and color, however many seats fill', () => {

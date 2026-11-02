@@ -105,8 +105,11 @@ export interface SessionOptions {
   sendEvery?: number;
   /** Client-side prediction during races (guests). */
   predict?: boolean;
-  /** Local device a spectator asks to be seated with (the keyboard/mouse player). */
-  primaryDevice?: string;
+  /**
+   * Local device an unseated peer asks to be seated with. A function is read at each ask, so the seat goes to
+   * whatever the person is using by then: a page can't know it's on a phone until its touch input is up.
+   */
+  primaryDevice?: string | (() => string);
   /** Called with a resumable snapshot when we become host of an empty room; return one to resume. */
   resume?: () => { snap: MatchSnap; ns: NetState } | null;
   /** The host removed this peer: it's already out of the room. */
@@ -153,7 +156,7 @@ export class NetSession {
   private predictor = new Predictor();
   private viewMatch: Match;
   private viewDirty = true;
-  private primary: string;
+  private primaryFn: () => string;
 
   // host state
   private queues = new Map<string, RemoteQueue>();
@@ -208,7 +211,8 @@ export class NetSession {
     this.predict = opts.predict ?? true;
     this.resumeFn = opts.resume;
     this.onKickedFn = opts.onKicked;
-    this.primary = opts.primaryDevice ?? 'kb1';
+    const primary = opts.primaryDevice ?? 'kb1';
+    this.primaryFn = typeof primary === 'function' ? primary : () => primary;
     this.log = opts.log ?? (() => {});
     // Input/action sequence numbers start at wall-clock ms: a refreshed page always counts higher than its old self.
     this.seq = Math.floor(Date.now());
@@ -734,7 +738,7 @@ export class NetSession {
       }
     }
     if (m.phase === 'lobby' || m.phase === 'score' || m.phase === 'victory') {
-      if (!m.players.some((p) => peerOf(p.device) === this.self)) this.wants.add(this.globalDevice(this.primary));
+      if (!m.players.some((p) => peerOf(p.device) === this.self)) this.wants.add(this.globalDevice(this.primaryFn()));
       for (const dev of this.wants) {
         if (!present.has(peerOf(dev)) || seated.has(dev) || seats >= MAX_PLAYERS || this.ns.kicked[peerOf(dev)]) continue;
         out.push({ t: 'join', dev });
@@ -790,7 +794,7 @@ export class NetSession {
       const e = own[d];
       return ((typeof e === 'number' ? e : e[0]) & CONFIRM_BIT) !== 0;
     });
-    const pick = dev ?? (lobby || this.wantSentTo === '' ? this.primary : undefined);
+    const pick = dev ?? (lobby || this.wantSentTo === '' ? this.primaryFn() : undefined);
     if (!pick) return;
     this.wantSentTo = this.hostId;
     this.wantAt = t;

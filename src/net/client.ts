@@ -48,7 +48,8 @@ export interface RoomConnection {
 }
 
 export interface ConnectOptions {
-  primaryDevice: string;
+  /** The local device to seat, read when the seat is asked for (see `SessionOptions.primaryDevice`). */
+  primaryDevice: () => string;
   params?: URLSearchParams;
   /** This tab was removed from the room; called once there has been time to read why. */
   onKicked(): void;
