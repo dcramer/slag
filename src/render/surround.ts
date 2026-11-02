@@ -362,11 +362,12 @@ export class Surround {
    * Cut the pool out where the scenery past either side stands in it. The pool
    * goes behind terrain, and scenery is terrain too, but it paints on the
    * background, under the pool's layer, so the pool has to make way. Above the
-   * world's bottom only: below it, everything is seen through the pool. Outside
-   * the world only, where the level's own terrain cuts nothing. World space; call
-   * on both the albedo and the glow layer.
+   * surface only (`dry`, from `Backdrop.drawLiquid`): under it, everything is
+   * seen through the pool, so scenery goes under at the same line as the level's
+   * own ground. Outside the world only, where the level's own terrain cuts
+   * nothing. World space; call on both the albedo and the glow layer.
    */
-  cutPool(c: CanvasRenderingContext2D, level: Level, rows: number) {
+  cutPool(c: CanvasRenderingContext2D, level: Level, rows: number, dry: Path2D) {
     const bake = this.painter.bake;
     const land = this.land;
     if (!bake || !land) return;
@@ -376,6 +377,7 @@ export class Surround {
     const sy = (this.top + r0) * TILE * k;
     const sw = this.mx * TILE * k;
     c.save();
+    c.clip(dry);
     c.globalCompositeOperation = 'destination-out';
     c.globalAlpha = 1;
     c.drawImage(bake, 0, sy, sw, n * TILE * k, -this.mx * TILE, r0 * TILE, this.mx * TILE, n * TILE);
