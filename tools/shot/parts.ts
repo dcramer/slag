@@ -1,5 +1,5 @@
 /** Parts close up: crate cards at every size, placed parts in a race, and every building part. */
-import { argv, LAUNCHER_STYLES, open, opt, out, page, seed, sheet, snap, step, type Scenarios } from './ctx';
+import { argv, LAUNCHER_STYLES, open, opt, out, page, seed, sheet, snap, step, type Scenarios, W } from './ctx';
 
 export const shots: Scenarios = {
   async cards() {
@@ -152,6 +152,51 @@ export const shots: Scenarios = {
       files.push(path);
     }
     await sheet(`parts-${seed}`, files.slice(1), 4);
+  },
+  async turns() {
+    // A part at all four rotations, held as place-phase ghosts side by side on a classic-size level: one
+    // shot per `--styles a,b` (launcher styles) and per `--arch a,b`, cropped to the ghosts. Use a big
+    // `--size` (2560x1440) to see them close.
+    const styles = opt('styles') ? (opt('styles') === 'all' ? LAUNCHER_STYLES : opt('styles')!).split(',') : [];
+    const archs = opt('arch')?.split(',') ?? [];
+    await open(`seed=${seed}&players=4&size=classic`);
+    await step(20);
+    const files: string[] = [];
+    for (const want of [...styles.map((s) => `launcher:${s}`), ...archs]) {
+      await page.evaluate((want) => {
+        const d = (window as any).slagDebug;
+        const m = d.match;
+        const [kind, style] = want.split(':');
+        let def: any = null;
+        for (let k = 1; k < 900 && !def; k++) {
+          m.placed.length = 0;
+          d.addProps([kind], k);
+          const got = m.placed[0]?.def;
+          if (got && (!style || got.modules.some((x: any) => x.type === 'launcher' && x.style === style))) def = got;
+        }
+        m.placed.length = 0;
+        m.players.forEach((p: any, i: number) => {
+          m.crate[i].def = def;
+          m.crate[i].claimedBy = p.slot;
+          p.claim = i;
+        });
+      }, want);
+      await step(60);
+      await page.evaluate(() => {
+        const m = (window as any).slagDebug.match;
+        m.players.forEach((p: any, i: number) => {
+          p.rot = i;
+          p.cursor = { x: 250 + i * 80, y: 120 };
+        });
+      });
+      await step(2);
+      const path = `${out}/turns-${want.replace(':', '-')}.png`;
+      const k = W / 768;
+      await page.screenshot({ path, clip: { x: 200 * k, y: 70 * k, width: 370 * k, height: 100 * k } });
+      console.log(path);
+      files.push(path);
+    }
+    await sheet('turns', files, 1);
   },
   async belts() {
     // A conveyor at every rotation: held as place-phase ghosts, then placed in an empty room with a runner

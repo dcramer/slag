@@ -64,7 +64,7 @@ Each row gives what the item or part mocks, its silhouette (what must read at ga
 | charge (cross) | Plus Bomb, Arena Bomb, Cross Charge | The grid-arena bomber's plus-shaped blast | A round bomb | The blast is drawn as a grid of square flames. |
 | charge (ring) | Donut, Ring Charge, Moat Maker | — (pure gag) | A ring-shaped charge | It's a glazed donut with sprinkles. |
 | timebomb | Time Bomb, Alarm Clock, Hurry-Up Timer, Snooze Button | The hurry-up timer | An alarm clock on a charge | The face reads 0:00, flashing red. |
-| hangar | Budget Airline, Air Ferry, Kite Loft, Paper Planery | Rideable flying platforms | A loft that launches planks | Gliders are paper planes, with a seat-row number on the wing. |
+| hangar | Budget Airline, Air Ferry, Kite Loft, Paper Planery | Rideable flying platforms | A quonset hangar and the runway apron out of its door, two tiles long, a windsock at the runway's end | Gliders are paper planes, with a seat-row number on the wing. |
 | rope | Sausage Vine, Banger Rope, Bratwurst Vine, Salami Swing | The jungle vine swing | Links on a hook | Already drawn. |
 | keg | Kegapult, Powder Keg, Cask Cannon, Hooch Howitzer | The barrel cannon | A keg | Already drawn. |
 
@@ -75,14 +75,14 @@ The style picks the body and the ammo. The aim word (Fixed, Sweeps, Tracks) and 
 | Style | Names | Mocks | Ammo | Gag |
 |---|---|---|---|---|
 | crossbow | Arrow Trap, Kneecapper | Dungeon arrow traps | trap bolt, arrow | A slot in a carved block, with a bandaged knee scratched into the stone. |
-| ballista | Ballista, Siege Bow, Tower Defense | Tower-defense towers | trap bolt | It's mounted on a tiny tower with a price tag. |
-| cannon | Pirate Cannon, Bombard | Pirate-level cannons | cannonball | A rolled treasure map lashed to the barrel, its red X showing. |
-| totem | Tiki Torch, Heartburn Idol | Fire-spitting statues | heartburn | A carved post with a chili cut into it, a fire cup on top; its grooves glow as it reloads and the fireballs are chilis. |
+| ballista | Ballista, Siege Bow, Tower Defense | Tower-defense towers | trap bolt | It turns on top of a tiny tower (two tiles tall) with a price tag. |
+| cannon | Pirate Cannon, Bombard | Pirate-level cannons, a ship's gun two tiles long on its stepped carriage and trucks | cannonball | A rolled treasure map lashed to the barrel, its red X showing. |
+| totem | Tiki Torch, Heartburn Idol | Fire-spitting statues | heartburn | A carved post two tiles tall with a chili cut into it, a fire cup on top; its grooves glow as it reloads and the fireballs are chilis. |
 | turret | Dome Turret, Sorry Turret | The polite security turret | apology | A dented dome on a tripod with one sensor visor, and a sticky note slapped on it. Its shots are tiny speech-bubble shapes. |
-| thrower | Ninja Box, Shuriken Vendor | Ninja star throwers | throwing star | A coin slot and a vending window. |
+| thrower | Ninja Box, Shuriken Vendor | Ninja star throwers, as a vending machine two tiles tall | throwing star | A coin slot, a window of stars on their spirals, and a tray the stars come out of. |
 | rocket | Seeker Pod, Homing Rack, Grudge Launcher | The homing shell everyone hates, fired from a bullet blaster (a black drum on a pedestal, a crosshair roundel on its pivot) | grudge missile | A chalk tally of hits on the drum. The missile has a red seeker lens on its nose. |
 | glaive | Boomerang Bruh, Return Policy | The boomerang-throwing enemy, as a clay-pigeon trap: a squat box with a sprung throwing arm | boomerang | A returns-desk receipt curling out of its side. |
-| gumball | Gumball Machine, Dodgeball Coach, Ball Pit | Gym-class dodgeball | dodgeball | A coach's whistle on a lanyard. |
+| gumball | Gumball Machine, Dodgeball Coach, Ball Pit | Gym-class dodgeball, from a gumball machine two tiles tall (globe on its stand) | dodgeball | A coach's whistle on a lanyard. |
 | mortar | Banana Mortar, Bunch Launcher | The splitting banana bomb from artillery games, lobbed from a stubby green pipe on a bipod | banana bunch | The shell is a banana bunch that splits into single bananas. |
 | gooper | Splat Gun, Sneeze Cannon | Paint-splat shooters | sneeze | The muzzle pokes out of a tissue box, one tissue sticking up. |
 | cryo | Freeze Ray, Brain Freezer, Slushie Gun | Freeze rays | slushie | A slushie cup with a straw as the barrel. |

@@ -80,7 +80,7 @@ export function groundOf(level: Level, placed: readonly PlacedProp[]): Ground {
     for (const [x, y] of footprintCells(p)) g.taken.add(y * w + x);
     if (p.def.motion.type !== 'none') continue;
     for (const m of resolveProp(p).mods) {
-      if (m.type === 'body' && PLAIN_MATERIALS.has(m.material)) for (const [x, y] of m.cells) g.blocks.add(y * w + x);
+      if (m.type === 'body' && PLAIN_MATERIALS.has(m.material) && !m.shape) for (const [x, y] of m.cells) g.blocks.add(y * w + x);
     }
   }
   return g;
