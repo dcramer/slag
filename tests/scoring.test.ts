@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { POINTS, scoreRound } from '../src/game/scoring';
+import { POINTS, scoreRound, UNDERDOG_ROUNDS } from '../src/game/scoring';
 import { standings } from '../src/render/hud-kit';
 
 const total = (r: ReturnType<typeof scoreRound>, slot: number) => r.awards.filter((a) => a.slot === slot).reduce((s, a) => s + a.points, 0);
@@ -38,6 +38,23 @@ describe('scoring', () => {
     );
     expect(total(r, 1)).toBe(POINTS.finish + POINTS.first + POINTS.trap * 2);
     expect(total(r, 3)).toBe(0); // a kill without reaching the flag pays nothing
+  });
+  it('a trailing finisher with enough scoreless rounds is an underdog', () => {
+    const stuck = (r: ReturnType<typeof scoreRound>, slot: number) => r.awards.some((a) => a.slot === slot && a.reason === 'underdog');
+    const r = scoreRound([0, 1, 2, 3], [1, 2, 3], [], {
+      0: { score: 40, scoreless: 0 },
+      1: { score: 10, scoreless: UNDERDOG_ROUNDS },
+      2: { score: 10, scoreless: UNDERDOG_ROUNDS - 1 },
+      3: { score: 40, scoreless: UNDERDOG_ROUNDS },
+    });
+    expect(stuck(r, 1)).toBe(true);
+    expect(stuck(r, 2)).toBe(false); // trailing, but only just stopped scoring
+    expect(stuck(r, 3)).toBe(false); // scoreless, but level with the leader
+  });
+  it('no underdog bonus without finishing, or in a scoreless round', () => {
+    const standings = { 0: { score: 40, scoreless: 0 }, 1: { score: 0, scoreless: 5 } };
+    expect(scoreRound([0, 1, 2], [0], [], standings).awards.some((a) => a.reason === 'underdog')).toBe(false);
+    expect(scoreRound([0, 1], [0, 1], [], standings).awards).toEqual([]);
   });
   it('solo play just rewards finishing', () => {
     const r = scoreRound([0], [0], []);

@@ -5,7 +5,7 @@ import type { NetSession } from './net/session';
 import { hashMatch } from './net/snapshot';
 import type { Renderer } from './render/renderer';
 import { giveItem, ITEM_KINDS, type ItemKind } from './sim/items';
-import { canPlace } from './sim/props';
+import { canPlace, landedDef } from './sim/props';
 import type { ProfileOverride } from './gen/level';
 import type { InputFrame } from './sim/types';
 import type { ThemeId } from './themes';
@@ -81,7 +81,7 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
           const tx = 6 + ((i * 7 + n * 13) % (match.level.w - 12));
           const ty = 3 + ((i * 5 + n * 7) % (match.level.h - 6));
           if (canPlace(match.level, match.placed, def, 0, tx, ty)) {
-            match.placed.push({ uid: uid++, def, owner: match.players[1]?.slot ?? 0, tx, ty, rot: 0 });
+            match.placed.push({ uid: uid++, def: landedDef(match.level, match.placed, def, 0, tx, ty), owner: match.players[1]?.slot ?? 0, tx, ty, rot: 0 });
             added++;
             return;
           }

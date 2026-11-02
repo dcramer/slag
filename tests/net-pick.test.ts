@@ -1,12 +1,15 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { Rng } from '../src/core/rng';
 import { Match } from '../src/game/match';
 import { roomSeed } from '../src/game/room';
+import { generateProp } from '../src/gen/props';
 import { decode, encode, held, INPUT_KEYS, merge } from '../src/net/codec';
 import { Predictor } from '../src/net/predict';
 import { NetSession } from '../src/net/session';
 import { hashMatch, snapshotMatch } from '../src/net/snapshot';
 import { LoopbackHub } from '../src/net/transport';
+import { mountCells, type PropDef } from '../src/sim/props';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
 
 const TICK = 1000 / 60;
@@ -193,6 +196,49 @@ describe('remote ghosts', () => {
     expect(c.view.ghostOrigin(pc)).toEqual(a.view.ghostOrigin(pa));
     expect(c.view.canPlaceFor(pc)).toBe(a.view.canPlaceFor(pa));
     expect(b.view.ghostOrigin(b.view.players.find((p) => p.device === 'aaaa:kb1')!)).not.toBeNull();
+  });
+
+  it('every peer sees and places the same trimmed attachment', () => {
+    const { r, a, b, c } = inPick();
+    r.tick({ aaaa: { kb1: press({ pointer: center(a, 0), confirmPressed: true }) } });
+    r.tick({ bbbb: { kb1: press({ pointer: center(a, 1), confirmPressed: true }) } });
+    r.tick({ cccc: { kb1: press({ pointer: center(a, 2), confirmPressed: true }) } });
+    for (let i = 0; i < 90 && c.match.phase !== 'place'; i++) r.tick();
+    r.run(30);
+    expect(c.match.phase).toBe('place');
+    // B's card becomes a strip, on every peer alike, and B aims it where only part of it mounts.
+    let strip: PropDef | null = null;
+    for (let i = 0; i < 200 && !strip; i++) {
+      const d = generateProp(new Rng(i), 'spikestrip', 'x');
+      if (d.footprint.length === 4) strip = d;
+    }
+    const claim = mine(a, 'bbbb').claim;
+    for (const s of [a, b, c]) s.match.crate[claim].def = strip!;
+    let spot: { x: number; y: number; kept: number } | null = null;
+    for (let ty = 2; ty < a.match.level.h - 2 && !spot; ty++) {
+      for (let tx = 6; tx < a.match.level.w - 6 && !spot; tx++) {
+        const kept = mountCells(a.match.level, a.match.placed, strip!, 0, tx, ty).length;
+        if (kept > 0 && kept < 4) spot = { x: (tx + 1.5) * 16 + 8, y: ty * 16 + 8, kept };
+      }
+    }
+    expect(spot).not.toBeNull();
+    const pointer = { x: spot!.x, y: spot!.y };
+    r.tick({ bbbb: { kb1: press({ pointer }) } });
+    r.run(60);
+    const ghost = (s: NetSession) => s.view.ghostOrigin(s.view.players.find((p) => p.device === 'bbbb:kb1')!)!;
+    const landing = ghost(a);
+    expect(landing.def.footprint).toHaveLength(spot!.kept);
+    expect(ghost(c)).toEqual(landing);
+    expect(ghost(b)).toEqual(landing);
+    r.tick({ bbbb: { kb1: press({ pointer, confirmPressed: true }) } });
+    r.run(60);
+    for (const s of [a, b, c]) expect(s.match.placed.map((p) => p.def)).toEqual([landing.def]);
+    a.flush();
+    for (let i = 0; i < 30; i++) {
+      r.hub.advance(TICK);
+      for (const s of [b, c]) s.tick({});
+    }
+    expect(new Set([a, b, c].map((s) => `${s.match.frame}:${hashMatch(s.match)}`)).size).toBe(1);
   });
 });
 

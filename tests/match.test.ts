@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Match } from '../src/game/match';
 import { DEFAULT_RULES, loadRules, MATCH_LENGTHS, type MatchRules, nearestLength, RULE_CHOICES, type TimerRule } from '../src/game/rules';
+import { POINTS } from '../src/game/scoring';
 import { RUN_COUNTDOWN, TILE, VIEW_W } from '../src/sim/constants';
 import { canPlace, footprint } from '../src/sim/props';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
@@ -150,6 +151,16 @@ describe('match end', () => {
     expect(m.phase).toBe('victory');
     expect(m.round).toBe(1);
     expect(m.winners).toEqual([0]);
+  });
+
+  it('a stuck player who finally finishes earns the underdog bonus', () => {
+    const m = started(3, { maxRounds: 10 });
+    playRound(m, [0]);
+    playRound(m, [0]);
+    expect(m.players.map((p) => p.scoreless)).toEqual([0, 2, 2]);
+    playRound(m, [1]);
+    expect(m.players[1].score).toBe(POINTS.finish + POINTS.first + POINTS.underdog);
+    expect(m.players.map((p) => p.scoreless)).toEqual([1, 0, 3]);
   });
 
   it('makes ties at the limit joint winners', () => {

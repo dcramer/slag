@@ -13,7 +13,7 @@ import type { SculptCtx } from '../types';
  */
 
 /** Share of levels that need two parts; every other level needs one. */
-export const TWO_PARTS = 0.3;
+export const TWO_PARTS = 0.22;
 /** First attempt that may give up on needing parts at all (the pipeline stops insisting here too). */
 export const LAST_RESORT = 22;
 

@@ -159,7 +159,7 @@ if (args.includes('--stats')) {
     // Debug a sculptor: show attempt N's raw shape (before validation) instead of the accepted level.
     const themeId = l.theme.id;
     const rng = new Rng(deriveSeed(seedNum, `level:${rawAttempt}`));
-    const challenge = new Rng(deriveSeed(seedNum, 'challenge')).next();
+    const challenge = new Rng(deriveSeed(seedNum, `challenge:${themeId}`)).next();
     const shape = SCULPTORS[themeId]({ rng, themeId, theme: l.theme, attempt: Number(rawAttempt), profile: l.profile!, challenge });
     l = { ...l, tiles: shape.tiles, spawn: shape.spawn, goal: shape.goal, protectedRects: shape.protectedRects, style: shape.style, setPieces: [] };
     console.log('raw attempt', rawAttempt, 'judge:', judge(l, shape.bridgeHints));

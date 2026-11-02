@@ -19,6 +19,7 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 ## Scoring
 - Finishing earns +10 points. The first player to finish gets an extra +4.
 - If you finish, each rival killed by your prop, or by the level right after your bonk, earns you +2. Traps alone don't pay: you have to reach the flag too.
+- If you finish while trailing the leader, after 2 or more rounds in a row without a point, you earn an underdog bonus of +3.
 - If everyone finishes, nobody scores ("too easy"). If nobody finishes, nobody scores either.
 - Solo play just rewards finishing.
 - A match always ends: scoreless rounds can run forever, so the round limit has no "off" setting.
@@ -72,7 +73,8 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - Props are assembled from **parts**: blocks of various materials, spikes, swinging heads, launchers, emitters, motion, springs, fans and bombs. Every number is rolled, and names come from the rolled stats.
 - Every crate contains at least one hazard and enough plain building parts for what the level still needs, counting what's already placed, so a match can always be finished. After rounds where nobody finishes, crates quietly lean toward bombs and building parts, gently after one dry round and more from the second, up to a cap. Crate contents are tied to the level seed and round, but the card order is shuffled with a per-match salt the host rolls, so it differs every game.
 - **Every part can always be placed somewhere**, or a pick could stall the place phase on a level without the right surface.
-- **Attachments** (spike strips, ice coats, slime coats) must mount flush on an exposed face of a solid block, and rotation picks the face.
+- **Attachments** (spike strips, ice coats, slime coats, snap traps) must mount flush on an exposed face of a solid block, and rotation picks the face.
+  - A strip too long for its spot still places: only the cells that can mount land, the rest are gone for good, and the ghost shows exactly what lands.
   - Ice makes floors slippery and walls slick (no wall jump).
   - Slime makes floors slow and walls sticky (you cling).
 - Bombs clear terrain and/or props depending on their kind. Attachments fall off when their host block is destroyed.
@@ -93,7 +95,7 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 ## Controls and UI
 - A picked part's card leaves the crate entirely. The other cards stay where they are.
 - On PC, keyboard and mouse both work. One keyboard player can use WASD *and* the arrows. A "Split keyboard" setting turns the keyboard into two local players. Everything can be remapped.
-- The mouse drives the menu cursor: click to pick or place, right-click or the wheel to rotate.
+- The mouse drives the menu cursor: click to pick or place, right-click or the wheel to rotate. They do nothing else, so a stray click can't self-destruct.
 - **Touch (mobile)**: left half is a floating stick (push past ~70% to run), right half is jump (hold for height), self-destruct needs a short hold, and a Use button appears above jump while you hold an item. Pick by tapping a card; place by dragging a ghost that floats above your finger, with ROTATE and PLACE buttons. Landscape first.
 - In the lobby, a stray click does nothing; only buttons act.
 - UI copy is proper title case, with no twee lowercase taglines.

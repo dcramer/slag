@@ -54,7 +54,7 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
   const profile = rollProfile(seed, themeId, profileOverride);
   // Sculptor helpers size gaps/steps from jumps measured at this level's gravity.
   setProbeGravity(profile.gravity);
-  const challenge = new Rng(deriveSeed(seed, 'challenge')).next();
+  const challenge = new Rng(deriveSeed(seed, `challenge:${themeId}`)).next();
   const rejects = { unsolvable: 0, tooEasy: 0, closed: 0 };
   for (let attempt = 0; attempt < MAX_ATTEMPTS + LEGACY_ATTEMPTS; attempt++) {
     const rng = new Rng(deriveSeed(seed, `level:${attempt}`));

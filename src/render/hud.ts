@@ -86,6 +86,7 @@ const AWARD: Record<string, { label: string; color: HSL }> = {
   finish: { label: 'Finish', color: { h: 95, s: 60, l: 40 } },
   first: { label: 'First', color: { h: 42, s: 95, l: 48 } },
   trap: { label: 'Trap', color: { h: 358, s: 75, l: 50 } },
+  underdog: { label: 'Underdog', color: { h: 200, s: 70, l: 42 } },
 };
 
 const FOOT_H = 22;

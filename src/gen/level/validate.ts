@@ -124,14 +124,20 @@ export function partsNeeded(level: Level, placed: readonly PlacedProp[]): number
   const now: Level = { ...level, tiles, setPieces: [...level.setPieces, ...placed] };
   if (analyzeReach(now).goalReached) return 0;
   const verify = (bs: Bridge[]) => bs.every((b) => canPlaceBridge(now, b)) && analyzeReach(withBridges(now, bs)).goalReached;
-  return new BridgeSearch(now).solve(level.solution ?? [], verify)?.length ?? MAX_BRIDGES;
+  // What's left of the recorded solution counts as proof, whatever the rougher search finds.
+  const rest = (level.solution ?? []).filter((b) => canPlaceBridge(now, b));
+  const recorded = verify(rest) ? rest.length : Infinity;
+  const searched = new BridgeSearch(now).solve(level.solution ?? [], verify)?.length ?? Infinity;
+  const best = Math.min(recorded, searched);
+  return best === Infinity ? MAX_BRIDGES : best;
 }
 
 /** Policy check; seeds the search with the level's recorded solution if it has one. */
 export function isAcceptable(level: Level): boolean {
-  const v = judge(level, level.solution ?? []);
-  // The search may land on another solution; the openness that counts is the recorded one's.
-  return v.ok && (v.open || analyzeRoutes(level, level.solution ?? []).shared <= MAX_SHARED);
+  const solution = level.solution ?? [];
+  // A recorded solution proves itself. The search is rougher and may not rediscover it.
+  const proven = solution.every((b) => canPlaceBridge(level, b)) && analyzeReach(withBridges(level, solution)).goalReached;
+  return (proven || judge(level, solution).ok) && analyzeRoutes(level, solution).shared <= MAX_SHARED;
 }
 
 // ---------------------------------------------------------------------------

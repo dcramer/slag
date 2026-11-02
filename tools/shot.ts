@@ -8,6 +8,7 @@
  *   pnpm shot race --race all
  *   pnpm shot lobby|pick|place --seed abc
  *   pnpm shot pick --claim 2,5             → with those cards already taken
+ *   pnpm shot place --card spikestrip --cursor 296,184 --then-race 90 → aim the first ghost, place it, shoot the race
  *   pnpm shot levels --seeds a,b,c,d      (or --count 12) → contact sheet
  *   pnpm shot props --count 24            → prop gallery (crate cards)
  *   pnpm shot items --seed abc             → held items: in hand, loose, and each one used
@@ -296,8 +297,25 @@ try {
         },
         opt('card', ''),
       );
+      // `--cursor x,y` aims the first player's ghost (view px); `--then-race N` places it and shoots the race N frames in.
+      await page.evaluate(
+        (at) => {
+          if (at) (window as any).slagDebug.match.players[0].cursor = { x: at[0], y: at[1] };
+        },
+        opt('cursor')?.split(',').map(Number) ?? null,
+      );
       await step(60);
       await snap(`place-${seed}`);
+      if (opt('then-race')) {
+        await page.evaluate(() => {
+          const d = (window as any).slagDebug;
+          for (const p of d.match.players.slice(1)) p.placed = true;
+          d.step(1, { [d.match.players[0].device]: { confirmPressed: true } });
+        });
+        await page.waitForFunction(() => (window as any).slagDebug.match.players[0].placed, null, { timeout: 5000 });
+        await step(45 + Number(opt('then-race')));
+        await snap(`place-${seed}-race`);
+      }
       break;
     case 'race': {
       const race = opt('race', '')!;
