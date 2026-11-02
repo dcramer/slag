@@ -210,7 +210,7 @@ export class MusicDirector {
   }
 
   private play(inst: InstId, midi: number, t: number, dur: number, gain: number, prio = 3): void {
-    const v = this.mixer.voice({ bus: 'music', prio, gain, dest: this.stingBus }, t);
+    const v = this.mixer.voice({ bus: 'music', prio, gain: gain * (this.song?.level ?? 1), dest: this.stingBus }, t);
     if (v) INSTRUMENTS[inst](v, t, mtof(midi), dur);
   }
 
@@ -222,7 +222,7 @@ export class MusicDirector {
     const beat = 60 / s.bpm;
     const step = beat / 2;
     const lead = s.lead;
-    const lg = leadGain(s);
+    const lg = Math.max(0.1, leadGain(s)) * 1.6;
     [0, 2, 4].forEach((d, i) => this.play(lead, this.note(d, 0), t + i * step * 0.5, step * 0.45, lg));
     this.play(lead, this.note(7, 0), t + 1.5 * step, beat, lg);
     for (const d of [0, 2, 4]) this.play(s.harmony, this.note(d, -1), t + 1.5 * step, beat * 1.5, harmonyGain(s) * 0.8, 2);
@@ -248,11 +248,11 @@ export class MusicDirector {
     this.play(lead, this.note(0, 0) + 4, t + beat * 3, beat * 3, lg);
     // Major chord (picardy third in minor keys) under the held note.
     const tonic = this.note(0, -1);
-    for (const iv of [0, 4, 7, 12]) this.play(s.harmony, tonic + iv, t + beat * 3, beat * 3, harmonyGain(s) * 0.9, 2);
-    this.play('sub', tonic - 24, t + beat * 3, beat * 3, 0.3, 2);
+    for (const iv of [0, 4, 7, 12]) this.play(s.harmony, tonic + iv, t + beat * 3, beat * 3, harmonyGain(s) * 0.55, 2);
+    this.play('sub', tonic - 24, t + beat * 3, beat * 3, 0.12, 2);
     for (let i = 0; i < 8; i++) this.play('snare', 60, t + beat * 2 + (i * beat) / 8, 0.1, 0.06 + i * 0.012, 2);
-    this.play('kick', 60, t + beat * 3, 0.3, 0.4, 3);
-    this.play('crash', 60, t + beat * 3, 1, 0.12, 3);
+    this.play('kick', 60, t + beat * 3, 0.3, 0.3, 3);
+    this.play('crash', 60, t + beat * 3, 1, 0.08, 3);
   }
 
   /** Bring the song back after a stinger. */

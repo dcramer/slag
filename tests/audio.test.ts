@@ -152,7 +152,7 @@ describe('mixer helpers', () => {
       fillNoise(d, kind, 44100);
       let peak = 0;
       for (const v of d) peak = Math.max(peak, Math.abs(v));
-      expect(peak, kind).toBeLessThan(1.6);
+      expect(peak, kind).toBeLessThanOrEqual(1);
       expect(peak, kind).toBeGreaterThan(0.05);
       if (kind !== 'white' && kind !== 'crackle') expect(Math.abs(d[d.length - 1] - d[0]), kind).toBeLessThan(0.05);
     }

@@ -4,8 +4,9 @@ import { burst, metal, mtof, pluck, sweep, tone, type Voice } from './synth';
  * The SFX palette: every one-shot sound, as data + a tiny synth patch.
  * `gain` is the voice level before spatial attenuation; patches keep their
  * internal envelopes peaking near 1 so `gain` alone sets loudness. Levels
- * were balanced with offline renders (see tests/audio*.test.ts and the
- * report): typical hits peak around −16 dBFS, big booms around −8 dBFS.
+ * were balanced with OfflineAudioContext renders in headless Chromium at
+ * default volumes: frequent actions peak ≈ −17 dBFS, deaths/finish ≈ −6,
+ * explosions ≈ −3, against music at ≈ −23 dBFS short-term loudness.
  */
 
 export interface SfxOpts {
@@ -139,7 +140,7 @@ export const SFX = {
     const lfo = v.gain(osc.frequency, 28);
     v.osc('sine', 14, t, 0.36, lfo);
   }),
-  drop: P(0, 0.18, 0, 3, 0.1, (v, t) => {
+  drop: P(0, 0.28, 0, 3, 0.1, (v, t) => {
     burst(v, 'pink', t, 0.02, 0.12, 1, 'bandpass', 2000, 600, 1.5);
   }),
   spring: P(2, 0.2, 0.1, 4, 0.06, (v, t) => {
@@ -371,12 +372,12 @@ export const SFX = {
     metal(v, t, 380, 0.22, 0.5);
     burst(v, 'white', t, 0.001, 0.02, 0.5, 'bandpass', 2500);
   }),
-  swoosh: P(0, 0.28, 0.05, 4, 0.1, (v, t, o) => {
+  swoosh: P(0, 0.4, 0.05, 4, 0.1, (v, t, o) => {
     burst(v, 'pink', t, 0.06, 0.16, 1, 'bandpass', 500 * o.pitch, 1500 * o.pitch, 2);
   }),
 
   // --- UI / phases
-  whoosh: P(2, 0.24, 0.15, 2, 0.2, (v, t) => {
+  whoosh: P(2, 0.34, 0.15, 2, 0.2, (v, t) => {
     burst(v, 'pink', t, 0.12, 0.3, 1, 'bandpass', 400, 2000, 1.4);
   }),
   'ui-hover': P(0, 0.06, 0, 4, 0.06, (v, t, o) => {
