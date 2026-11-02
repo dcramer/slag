@@ -18,7 +18,7 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 
 ## Scoring
 - Finishing earns +10 points. The first player to finish gets an extra +4.
-- Each rival killed by your prop, or by the level right after your bonk, earns you +3, but only if someone finished that round.
+- If you finish, each rival killed by your prop, or by the level right after your bonk, earns you +2. Traps alone don't pay: you have to reach the flag too.
 - If everyone finishes, nobody scores ("too easy"). If nobody finishes, nobody scores either.
 - Solo play just rewards finishing.
 - A match always ends: scoreless rounds can run forever, so the round limit has no "off" setting.

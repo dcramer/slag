@@ -26,6 +26,19 @@ describe('scoring', () => {
     expect(total(r, 1)).toBe(0); // self-kill earns nothing
     expect(total(r, 0)).toBe(0);
   });
+  it('only finishers earn kill points, once per kill', () => {
+    const r = scoreRound(
+      [0, 1, 2, 3],
+      [1],
+      [
+        { victim: 0, killer: 1 },
+        { victim: 2, killer: 1 },
+        { victim: 1, killer: 3 },
+      ],
+    );
+    expect(total(r, 1)).toBe(POINTS.finish + POINTS.first + POINTS.trap * 2);
+    expect(total(r, 3)).toBe(0); // a kill without reaching the flag pays nothing
+  });
   it('solo play just rewards finishing', () => {
     const r = scoreRound([0], [0], []);
     expect(r.verdict).toBe('normal');
