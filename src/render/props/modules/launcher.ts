@@ -180,8 +180,38 @@ const LOOKS: Record<LauncherStyle, Look> = {
         const st = stone(k, 54);
         // A tiny tower: battered walls, a corbelled ledge, and merlons notched out of its top.
         const pts = poly(
-          -7.9, 8, 7.9, 8, 6.4, -3, 7.4, -3.6, 7.4, -8, 4.6, -8, 4.6, -6.2, 1.5, -6.2, 1.5, -8, -1.5, -8, -1.5, -6.2, -4.6, -6.2, -4.6, -8, -7.4, -8,
-          -7.4, -3.6, -6.4, -3,
+          -7.9,
+          8,
+          7.9,
+          8,
+          6.4,
+          -3,
+          7.4,
+          -3.6,
+          7.4,
+          -8,
+          4.6,
+          -8,
+          4.6,
+          -6.2,
+          1.5,
+          -6.2,
+          1.5,
+          -8,
+          -1.5,
+          -8,
+          -1.5,
+          -6.2,
+          -4.6,
+          -6.2,
+          -4.6,
+          -8,
+          -7.4,
+          -8,
+          -7.4,
+          -3.6,
+          -6.4,
+          -3,
         );
         tone(g, pts, st, { depth: 1.3 });
         g.save();
@@ -273,10 +303,7 @@ const LOOKS: Record<LauncherStyle, Look> = {
       },
     ],
     // The trunnion strap the barrel turns under.
-    front: [
-      [-2.5, -2.5, 5, 5],
-      (g, k) => dot(g, 0, 0, 1.3, k.seed + 9, css(k.pal.spec, -10)),
-    ],
+    front: [[-2.5, -2.5, 5, 5], (g, k) => dot(g, 0, 0, 1.3, k.seed + 9, css(k.pal.spec, -10))],
     barrel: [
       [-9.5, -6, 23, 12],
       (g, k) => {
@@ -311,7 +338,38 @@ const LOOKS: Record<LauncherStyle, Look> = {
       (g, k) => {
         const wd = { ...k.wood, l: 42 };
         // A carved tiki head: a jagged crown of feathers cut into its top, a heavy jaw.
-        const head = poly(-7.6, 7.8, 7.6, 7.8, 7.8, 2, 7.2, -4.4, 7.8, -6.6, 5.4, -5.6, 4, -8.2, 1.6, -6, 0, -8.4, -1.6, -6, -4, -8.2, -5.4, -5.6, -7.8, -6.6, -7.2, -4.4, -7.8, 2);
+        const head = poly(
+          -7.6,
+          7.8,
+          7.6,
+          7.8,
+          7.8,
+          2,
+          7.2,
+          -4.4,
+          7.8,
+          -6.6,
+          5.4,
+          -5.6,
+          4,
+          -8.2,
+          1.6,
+          -6,
+          0,
+          -8.4,
+          -1.6,
+          -6,
+          -4,
+          -8.2,
+          -5.4,
+          -5.6,
+          -7.8,
+          -6.6,
+          -7.2,
+          -4.4,
+          -7.8,
+          2,
+        );
         part(g, head, wd, k.seed, { depth: 1.3, thin: 0.55, thick: 1.6 });
         g.save();
         path(g, head);
@@ -425,7 +483,8 @@ const LOOKS: Record<LauncherStyle, Look> = {
       [-8.5, -9.5, 17, 18],
       (g, k) => {
         const paint: HSL = { h: k.st.hue, s: 60, l: 46 };
-        for (const x of [-5.6, 3.4]) part(g, boxPts(x, 6, 2.2, 1.9, 0.5, k.seed + x), { h: 220, s: 8, l: 24 }, k.seed + x, { depth: 0.3, thin: 0.4, thick: 0.9 });
+        for (const x of [-5.6, 3.4])
+          part(g, boxPts(x, 6, 2.2, 1.9, 0.5, k.seed + x), { h: 220, s: 8, l: 24 }, k.seed + x, { depth: 0.3, thin: 0.4, thick: 0.9 });
         const body = boxPts(-6.6, -6.4, 13.2, 12.9, 1.4, k.seed);
         part(g, body, paint, k.seed, { depth: 1.3, thin: 0.55, thick: 1.6 });
         const sign = boxPts(-7.4, -8.4, 14.8, 2.8, 1.2, k.seed + 7);
