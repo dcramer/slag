@@ -1,7 +1,8 @@
 import { createAudio } from './audio';
-import { parseSeed, randomSeed, seedToString } from './core/rng';
+import { parseSeed } from './core/rng';
 import { installDebug } from './debug';
 import { Match } from './game/match';
+import { newRoomCode, roomFromPath, roomSeed } from './game/room';
 import { loadRules, saveRules } from './game/rules';
 import { InputManager } from './input/input';
 import { Renderer } from './render/renderer';
@@ -14,18 +15,24 @@ const glCanvas = document.getElementById('game') as HTMLCanvasElement;
 const hudCanvas = document.getElementById('hud') as HTMLCanvasElement;
 glCanvas.focus();
 
+// The URL identifies the lobby (/r/<code>), not the level. Opening / mints a room code.
+const room = roomFromPath(location.pathname) ?? newRoomCode();
+if (roomFromPath(location.pathname) !== room) history.replaceState(null, '', `/r/${room}${location.search}${location.hash}`);
 const params = new URLSearchParams(location.search);
-const seedParam = params.get('seed');
+const seedParam = params.get('seed'); // debug override
 const themeParam = params.get('theme');
 const match = new Match(
-  seedParam ? parseSeed(seedParam) : randomSeed(),
+  seedParam ? parseSeed(seedParam) : roomSeed(room),
   THEME_IDS.find((t) => t === themeParam),
 );
 match.rules = loadRules();
 const input = new InputManager(window);
 input.viewEl = glCanvas;
+// In the lobby only real buttons act; a stray click must not join/ready/start.
+input.clickConfirms = () => match.phase !== 'lobby';
 const renderer = new Renderer(glCanvas, hudCanvas);
 renderer.hud.devices = input;
+renderer.hud.room = room;
 const audio = createAudio();
 
 // --- local menus (DOM overlays) and profile ---------------------------------
@@ -94,23 +101,6 @@ function syncProfile() {
   }
 }
 
-/**
- * Keep the address bar pointing at the current match seed (and forced theme)
- * so the URL is always a shareable link to this level. Debug params
- * (players/race/…) are dropped once the seed changes.
- */
-let urlSeed = -1;
-function syncUrl() {
-  if (match.seed === urlSeed) return;
-  const first = urlSeed === -1;
-  urlSeed = match.seed;
-  const q = new URLSearchParams(first ? location.search : '');
-  q.set('seed', seedToString(match.seed));
-  if (match.themeOverride) q.set('theme', match.themeOverride);
-  else q.delete('theme');
-  history.replaceState(null, '', `${location.pathname}?${q}`);
-}
-
 const loop = { paused: false };
 installDebug(match, renderer, loop);
 
@@ -130,7 +120,6 @@ function frame(now: number) {
     acc -= DT;
   }
   syncProfile();
-  syncUrl();
   renderer.hud.pointer = input.pointerPos;
   renderer.hud.mouseDevice = input.mouseDevice;
   const events = match.drainEvents();

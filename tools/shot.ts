@@ -7,6 +7,7 @@
  *   npm run shot -- lobby|pick|place --seed abc
  *   npm run shot -- levels --seeds a,b,c,d      (or --count 12) → contact sheet
  *   npm run shot -- props --count 24            → prop gallery (crate cards)
+ *   npm run shot -- codex --seed abc             → /codex page (full-page screenshot)
  *
  * Options: --out shots  --size 1280x720  --players 2  --frames N (sim frames to advance)
  *          --theme farm (force a theme; `levels --themes all` renders one level per theme)
@@ -136,6 +137,23 @@ try {
         files.push(await snap(`props-${seed}${r}`));
       }
       await sheet('props', files, 2);
+      break;
+    }
+    case 'codex': {
+      await page.goto(`${base}codex?seed=${seed}&variants=${opt('variants', '4')}`);
+      await page.evaluate(() => document.fonts.ready);
+      await page.waitForTimeout(1500);
+      // Scroll through so lazily-animated cards paint, then capture the whole page.
+      const h = await page.evaluate(() => document.body.scrollHeight);
+      for (let y = 0; y < h; y += 600) {
+        await page.evaluate((yy) => window.scrollTo(0, yy), y);
+        await page.waitForTimeout(120);
+      }
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.waitForTimeout(300);
+      const p = `${out}/codex-${seed}.png`;
+      await page.screenshot({ path: p, fullPage: true });
+      console.log(p);
       break;
     }
     default:

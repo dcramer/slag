@@ -73,3 +73,14 @@ describe('rules & pointer', () => {
     expect(m.players[0].character.name).toBe('Dave');
   });
 });
+
+describe('rooms', async () => {
+  const { newRoomCode, roomFromPath, roomSeed } = await import('../src/game/room');
+  it('parses /r/<code> and seeds deterministically', () => {
+    expect(roomFromPath('/r/k7qx2')).toBe('K7QX2');
+    expect(roomFromPath('/')).toBeNull();
+    expect(roomFromPath('/r/')).toBeNull();
+    expect(roomSeed('K7QX2')).toBe(roomSeed('K7QX2'));
+    expect(newRoomCode()).toMatch(/^[A-Z2-9]{5}$/);
+  });
+});

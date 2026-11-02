@@ -47,6 +47,8 @@ export class Hud {
     deviceLabel: (d) => d,
     hints: () => ({ confirm: 'Confirm', alt: 'Alt', jump: 'Jump', down: 'Down' }),
   };
+  /** Lobby/room code shown in the lobby (the URL is /r/<room>). */
+  room = '';
   /** Device the mouse controls (gets name/settings buttons). */
   mouseDevice = 'kb1';
   /** Latest pointer position in view coords, for hover highlights. */
@@ -235,7 +237,7 @@ export class Hud {
     this.text('build it · break it · beat it', VIEW_W / 2, 104, 10, '#f3d9c4', 'center', UI, 500);
     this.panel(VIEW_W / 2 - 170, 116, 340, 22, 11, 'rgba(255,170,90,0.35)');
     this.text(`${THEME_LABELS[m.level.theme.id].toUpperCase()} · ${m.level.theme.name}`, VIEW_W / 2 - 160, 127, 9, '#ffd9a8', 'left', UI, 700);
-    this.text(`seed ${seedToString(m.seed)}`, VIEW_W / 2 + 160, 127, 8, '#bba', 'right', UI, 500);
+    this.text(this.room ? `lobby ${this.room}` : `seed ${seedToString(m.seed)}`, VIEW_W / 2 + 160, 127, 8, '#bba', 'right', UI, 600);
 
     // Up to MAX_PLAYERS (8) slots in a 4-wide grid: joined players + one "join" slot (min 4 shown).
     const shown = Math.min(MAX_PLAYERS, Math.max(4, m.players.length + 1));

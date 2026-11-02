@@ -29,6 +29,8 @@ export class InputManager {
   onEscape: (() => void) | null = null;
   /** HUD hit-test for clicks on menu buttons. Returns a synthetic press, `true` if the click was consumed, or null. */
   hitTest: ((x: number, y: number) => UiPress | true | null) | null = null;
+  /** Whether a plain left click (not on a HUD button) counts as "confirm" right now. Lobby: no. */
+  clickConfirms: () => boolean = () => true;
   /** Element whose box maps to the 768×432 logical view. */
   viewEl: HTMLElement | null = null;
 
@@ -82,7 +84,7 @@ export class InputManager {
       }
       if (this.captured) return;
       if (e.button === 2) this.rclick = true;
-      else if (e.button === 0) this.click = true;
+      else if (e.button === 0 && this.clickConfirms()) this.click = true;
     });
     target.addEventListener('contextmenu', (e) => e.preventDefault());
     target.addEventListener(
