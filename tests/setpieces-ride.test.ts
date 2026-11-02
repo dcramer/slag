@@ -167,4 +167,36 @@ describe('set-piece riding', () => {
     }
     expect(parked).toBeGreaterThan(80);
   });
+
+  it('a lava geyser kills whoever stands in it when it erupts; a steam geyser launches them', () => {
+    for (const lethal of [true, false]) {
+      const level = arena();
+      level.spawn = { tx: 20, ty: FLOOR - 1 };
+      const g: Module = {
+        type: 'geyser',
+        look: lethal ? 'lava' : 'steam',
+        at: [20.5, FLOOR],
+        angle: -Math.PI / 2,
+        width: 0.9,
+        length: 8,
+        off: 100,
+        warn: 40,
+        on: 60,
+        lethal,
+        strength: 2700,
+      };
+      level.setPieces = [piece(g)];
+      const run = new RunWorld(level, [], [0]);
+      let minVy = 0;
+      for (let f = 0; f < 400 && run.runners[0].alive; f++) {
+        run.step([NO_INPUT]);
+        minVy = Math.min(minVy, run.runners[0].body.vy);
+      }
+      if (lethal) expect(run.runners[0].cause).toBe('hazard');
+      else {
+        expect(run.runners[0].alive).toBe(true);
+        expect(minVy).toBeLessThan(-200);
+      }
+    }
+  });
 });

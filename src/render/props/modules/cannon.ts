@@ -61,9 +61,9 @@ function drawCannon(rc: RC, m: Cannon, d: DrawCtx) {
     // Cannonball pyramid behind (castle) / rope coil (ship).
     if (!ship) {
       for (const [bx, by] of [
-        [-25, -2.6],
-        [-30, -2.6],
-        [-27.5, -6.8],
+        [-17, -2.6],
+        [-22, -2.6],
+        [-19.5, -6.8],
       ]) {
         s.fillStyle = sphereFill(s, bx, by, 2.6, METALS.obsidian.light, 30, 20);
         circle(s, bx, by, 2.6);
@@ -73,7 +73,7 @@ function drawCannon(rc: RC, m: Cannon, d: DrawCtx) {
       s.lineWidth = 1.2;
       for (let r = 1.5; r < 5; r += 1.3) {
         s.beginPath();
-        s.ellipse(-27, -2, r + 1, r * 0.5, 0, 0, Math.PI * 2);
+        s.ellipse(-19, -2, r + 1, r * 0.5, 0, 0, Math.PI * 2);
         s.stroke();
       }
     }
