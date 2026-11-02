@@ -44,7 +44,10 @@ export function mountNetBadge(container: HTMLElement, conn: RoomConnection): voi
           `${p.isHost ? '♛' : ' '} ${p.name}${p.isSelf ? ' (you)' : ''}${p.ping !== null && !p.isHost ? ` ${Math.round(p.ping)}ms` : ''}${p.quality === 'bad' ? ' ⚠' : ''}`,
       )
       .join('\n');
-    list.style.display = peers.length > 1 ? '' : 'none';
+    // Out of the lobby, shrink to the status line so it doesn't cover the level.
+    const busy = ['pick', 'place', 'run'].includes(conn.net.match.phase);
+    list.style.display = peers.length > 1 && !busy ? '' : 'none';
+    btn.style.display = busy ? 'none' : '';
   };
   render();
   setInterval(render, 500);

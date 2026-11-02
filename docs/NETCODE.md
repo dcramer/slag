@@ -20,7 +20,9 @@ Online play needs a tiny relay on Cloudflare's free plan. Until it's configured,
    `NEXT_PUBLIC_SLAG_RELAY_URL = wss://slag-relay.<you>.workers.dev` (Production and Preview), then redeploy (the value is inlined at build time).
 4. Optional hardening: in `relay/wrangler.toml`, set `ALLOWED_ORIGINS = "https://<your-app>.vercel.app"` and deploy again.
 
-Local development: `npm run relay` starts the same relay logic on `ws://127.0.0.1:8787`; open `http://localhost:3000/r/ABCDE?relay=ws://127.0.0.1:8787` in two browsers. `?net=bc` uses BroadcastChannel (tabs of one browser), `?net=off` is offline. Debug params `?players=` / `?race=` imply offline.
+To smoke-test any relay (local, `wrangler dev`, or deployed): `pnpm tsx tools/relay-probe.ts wss://slag-relay.<you>.workers.dev`.
+
+Local development: `pnpm relay` starts the same relay logic on `ws://127.0.0.1:8787`; open `http://localhost:3000/r/ABCDE?relay=ws://127.0.0.1:8787` in two browsers. `?net=bc` uses BroadcastChannel (tabs of one browser), `?net=off` is offline. Debug params `?players=` / `?race=` imply offline.
 
 Cost at hobby scale: $0. Workers Free allows 100k requests/day; incoming WebSocket messages count 1/20 of a request, outgoing are free. A 4-peer room sends ~120 messages/s (each peer 30 Hz), so ~4.5 hours of 4-player play per day before the daily limit. Durable Object duration (13,000 GB-s/day free) covers ~28 room-hours per day. Raise `sendEvery` in `src/net/session.ts` to trade a little latency for headroom.
 
@@ -78,7 +80,7 @@ tools/online-test.ts headless Chromium end-to-end test (BroadcastChannel and rel
 - Every tick (60 Hz), each guest samples its local devices, appends the frame to its *unacked* list with a sequence number, and every `sendEvery` ticks (default 2, immediately on button presses) sends **all** unacked frames to the host. Redundancy makes loss harmless.
 - The host consumes one queued frame per guest per tick. If a guest's queue runs dry it repeats the guest's held buttons (no edges); if a burst piles up (more than 6), the oldest frames are folded together (edges OR-ed), bounding latency.
 - The host stamps `{frame, inputs, actions, ack deltas}` into a **bundle**, applies it, and broadcasts bundles every `sendEvery` ticks. Guests apply bundles strictly in frame order; a gap triggers `need` and the host resends from its 10 s history (or sends a snapshot).
-- Discrete changes (seat a rejoiner, drop a leaver, mark away, rename, host's rules) are **actions** carried in bundles and applied by everyone at the same frame (`actions.ts`).
+- Discrete changes (seat a rejoiner, drop a leaver, mark away, rename, restore a saved look, the host's rules and per-match crate salt) are **actions** carried in bundles and applied by everyone at the same frame (`actions.ts`).
 - Sequence numbers start at wall-clock ms, so a refreshed page always counts higher than its previous self.
 
 ### Prediction (races)
@@ -119,7 +121,7 @@ IEEE-754 `+ - * /` and `Math.sqrt` are exact everywhere, but `Math.sin/cos/atan2
 
 - `tests/net.test.ts`: election and migration (join order, leave, rejoin, empty room), 4 peers with latency/jitter/5% loss playing full rounds to identical hashes, desync detection and resync, refresh restores slot (mid-match and lobby), late join mid-race (identical state, seated next round), host leaving mid-race.
 - `tests/relay.test.ts`: relay room logic. `tests/snapshot.test.ts`: snapshot round trips per phase. `tests/dmath.test.ts`, `tests/determinism-ban.test.ts`.
-- `npm run online-test`: headless Chromium, three pages on one room over BroadcastChannel and over the WebSocket relay: join, ready, race, close the host (abruptly, for the relay), verify takeover, identical hashes, refresh → same slot, next round.
+- `pnpm online-test`: headless Chromium, three pages on one room over BroadcastChannel and over the WebSocket relay: join, ready, race, close the host (abruptly, for the relay), verify takeover, identical hashes, refresh → same slot, next round.
 
 ## Next steps
 
