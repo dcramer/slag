@@ -18,7 +18,7 @@ import type { PlacedProp, Resolved } from './types';
  *   crumbling, no belt). The real controller stands on them like terrain.
  * - `noGo`: cells something holds for most of the time: a block of any other
  *   kind (ice, goo, jelly, a conveyor, a crumbling block), a spike strip, a
- *   coat, a spring pad, a fan's column, a trigger zone (portal, bumper, web,
+ *   coat, a spring pad, a fan's column, a trigger zone (pipe mouth, bumper, web,
  *   magnet core, rope), a hazard that never leaves long enough to slip past.
  *   A proven route keeps clear of all of them, so it never relies on a
  *   surface or a push the proof doesn't model.

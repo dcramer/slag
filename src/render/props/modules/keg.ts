@@ -6,7 +6,7 @@ import { drawInkRunner } from '../../ink-character';
 import { blob, line, type P, stroke } from '../../ink';
 import { dot, INK, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import { glowDot, light, type MetalPalette, type RC } from '../../kit';
-import { defineArt, gripOf } from '../common';
+import { defineArt, defineHeld, gripOf } from '../common';
 
 type Keg = ModuleOf<'keg'>;
 
@@ -228,7 +228,7 @@ defineArt<'keg'>({
 const SETTLED = KEG.zone * 0.5;
 
 /** A stuffed runner: the top half of them poking out of the mouth, wherever it points. */
-export function drawStuffed(rc: RC, run: RunWorld, r: Runner, c: CharacterDef): void {
+function drawStuffed(rc: RC, run: RunWorld, r: Runner, c: CharacterDef): void {
   const g = r.attach.grip;
   const rp = g && run.resolved.find((x) => x.pp.uid === g.uid);
   const m = g && rp?.mods[g.mi];
@@ -256,3 +256,5 @@ export function drawStuffed(rc: RC, run: RunWorld, r: Runner, c: CharacterDef): 
   drawInkRunner(rc, c, cx, cy + 8, { facing: dx < 0 ? -1 : 1, vx: 0, vy: 0, grounded: true, t: rc.t, scale: 0.9 });
   s.restore();
 }
+
+defineHeld('keg', drawStuffed);

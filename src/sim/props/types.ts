@@ -60,6 +60,8 @@ export type CannonLook = 'castle' | 'ship' | 'totem' | 'spitter';
 export type GeyserLook = 'lava' | 'steam';
 export type DecoKind = 'press' | 'ac' | 'antenna';
 export type MysteryLook = 'crate' | 'chest' | 'gift';
+/** What a match's warp pipes are made of: one per match, since a roster has one pipe part. */
+export type PipeLook = 'green' | 'brass' | 'rust' | 'porcelain' | 'copper';
 /** Blast footprints: a filled disk, a line (bore) in the rotation direction, a plus, or a hollow ring. */
 export type BlastShape = 'disk' | 'line' | 'cross' | 'ring';
 /** What a blast removes: terrain and props, placed props only (EMP), or terrain only (drill). */
@@ -250,8 +252,12 @@ export type Module =
       /** Updraft strength for non-lethal geysers (air speed = windSpeed(strength), src/sim/wind.ts). */
       strength: number;
     }
-  /** Two linked pads: touching one moves you to the other with your velocity intact (both ways). */
-  | { type: 'portal'; a: Vec; b: Vec }
+  /**
+   * A warp pipe: solid `cells` with its mouth centered at `at` on the face, opening along `angle`.
+   * Pipes work in pairs (PlacedProp.link, `linkPipes` in ./modules/pipe.ts): stand on a linked mouth
+   * and press down (or push into a sideways one) to come out of its partner's.
+   */
+  | { type: 'pipe'; cells: Cell[]; at: Vec; angle: number; look: PipeLook }
   /** Pinball bumper: kicks runners straight away from its center at `power` px/s. */
   | { type: 'bumper'; at: Vec; radius: number; power: number }
   /**
@@ -342,7 +348,7 @@ export type Archetype =
   | 'charge'
   | 'timebomb'
   | 'hangar'
-  | 'portal'
+  | 'pipe'
   | 'bumper'
   | 'magnet'
   | 'web'
@@ -391,6 +397,11 @@ export interface PlacedProp {
   tx: number;
   ty: number;
   rot: number;
+  /**
+   * Warp pipes: uid of the pipe this one is paired with, unset while it waits for a partner. The match
+   * sets it as parts go in and come out (`linkPipes`), so it's sim state and rides in snapshots.
+   */
+  link?: number;
 }
 
 /** A placed prop with every module in world space (points/lengths in px, cells in world tiles, angles rotated). */

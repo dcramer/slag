@@ -673,7 +673,7 @@ describe('when a hold goes wrong', () => {
     m.join('a');
     m.startMatch();
     m.startRun();
-    m.run!.runners[0].attach.grip = { uid: 1, mi: 0, t: 0, x: 0, y: 0, len: 0, s: 0, hooked: false, fuse: -1, aim: 0, sealed: false, vx: 0, vy: 0 };
+    m.run!.runners[0].attach.grip = { uid: 1, mi: 0, t: 0, x: 0, y: 0, len: 0, s: 0, hooked: false, fuse: -1, aim: 0, sealed: false, to: -1, vx: 0, vy: 0 };
     m.startRun();
     expect(m.run!.runners[0].attach.grip).toBeNull();
   });

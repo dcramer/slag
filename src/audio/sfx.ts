@@ -35,6 +35,11 @@ export interface SfxDef {
 
 const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 
+function pipeWarble(v: Voice, t: number, pitch: number, steps: readonly number[]) {
+  const lp = v.filter(v.out, 'lowpass', 1800);
+  steps.forEach((f, i) => tone(v, 'square', f * pitch, f * 0.94 * pitch, t + i * 0.07, 0.003, 0.08, 0.7, lp));
+}
+
 // ---------------------------------------------------------------- variants
 
 const LAND: Record<string, (v: Voice, t: number, k: number) => void> = {
@@ -154,6 +159,9 @@ export const SFX = {
     v.osc('sine', 19, t, 0.42, depth);
     metal(v, t, 900, 0.12, 0.25, [1, 2.4]);
   }),
+  // A pipe trip: a three-step warble falling as you go in, climbing as you come out.
+  'pipe-in': P(2, 0.16, 0.15, 4, 0.1, (v, t, o) => pipeWarble(v, t, o.pitch, [330, 247, 185])),
+  'pipe-out': P(2, 0.16, 0.15, 4, 0.1, (v, t, o) => pipeWarble(v, t, o.pitch, [185, 247, 330])),
 
   // --- deaths
   'death-hazard': P(3, 0.55, 0.25, 4, 0.1, (v, t, o) => {

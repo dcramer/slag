@@ -16,7 +16,7 @@ import './cannon';
 import './geyser';
 import './deco';
 import './coat';
-import './portal';
+import './pipe';
 import './bumper';
 import './keg';
 import './rope';

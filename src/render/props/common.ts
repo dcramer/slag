@@ -1,8 +1,10 @@
 import type { HSL } from '../../core/color';
 import type { Cell, Vec } from '../../core/geom';
+import type { CharacterDef } from '../../gen/character';
 import { TILE } from '../../sim/constants';
 import type { Level } from '../../sim/level';
 import type { Beam, Grip, Module, PlacedProp, PropState, PropStyle, Resolved } from '../../sim/props';
+import type { Runner, RunWorld } from '../../sim/run';
 import type { MetalPalette, RC } from '../kit';
 
 export type Emit = (kind: 'spark' | 'smoke' | 'ember' | 'debris', x: number, y: number, vx: number, vy: number, color?: HSL) => void;
@@ -82,6 +84,21 @@ export function defineArt<T extends Module['type']>(art: ModuleArt<Extract<Modul
 
 export function moduleArt(type: string): readonly ModuleArt[] {
   return ART.get(type) ?? [];
+}
+
+/** How a part draws a runner it holds sealed inside it (`Grip.sealed`): poking out of a keg, sliding through a pipe. */
+export type HeldArt = (rc: RC, run: RunWorld, r: Runner, c: CharacterDef) => void;
+const HELD = new Map<string, HeldArt>();
+
+export function defineHeld(type: Module['type'], art: HeldArt): void {
+  HELD.set(type, art);
+}
+
+/** Draw a runner held sealed by a part, through that part's own art. */
+export function drawHeld(rc: RC, run: RunWorld, r: Runner, c: CharacterDef): void {
+  const g = r.attach.grip;
+  const m = g && run.resolved.find((x) => x.pp.uid === g.uid)?.mods[g.mi];
+  if (m) HELD.get(m.type)?.(rc, run, r, c);
 }
 
 function cornerRadii(set: Set<string>, x: number, y: number, R: number): number[] {

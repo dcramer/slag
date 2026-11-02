@@ -651,7 +651,7 @@ describe('the spawn pile', () => {
     expect(b.x + b.w).toBeCloseTo(a.x, 6);
   });
 
-  it('a pair that overlaps from anywhere else (a portal, a bad spawn) stays put, with no pop', () => {
+  it('a pair that overlaps from anywhere else (a pipe exit, a bad spawn) stays put, with no pop', () => {
     const { run, bs } = lineup(2, { spacing: 3 });
     const [x0, x1] = [bs[0].x, bs[1].x];
     steps(run, 30);
