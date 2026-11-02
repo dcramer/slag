@@ -3,6 +3,7 @@ import type { LevelProfile } from '../../sim/level';
 import type { ThemeId } from '../../themes';
 import { CASTLE_CONCEPTS } from './castle';
 import { FACTORY_CONCEPTS } from './factory';
+import { HARBOR_CONCEPTS } from './harbor';
 import type { Concept } from './types';
 
 export type { Concept, Landmark } from './types';
@@ -17,7 +18,7 @@ export const CONCEPTS: Record<ThemeId, Concept[]> = {
   castle: CASTLE_CONCEPTS,
   jungle: [],
   volcano: [],
-  harbor: [],
+  harbor: HARBOR_CONCEPTS,
   mine: [],
   rooftops: [],
   glacier: [],

@@ -68,14 +68,22 @@ export type RotorLook =
   | 'flywheel';
 export type RotorSupport = 'tower' | 'ceiling' | 'mast' | 'none';
 export type VehicleLook = 'tractor' | 'forklift' | 'ram' | 'boulder' | 'minecart' | 'drill';
-export type CannonLook = 'castle' | 'ship' | 'totem' | 'spitter';
+export type CannonLook =
+  | 'castle'
+  | 'ship'
+  | 'totem'
+  | 'spitter'
+  // Harbor: a whaler's harpoon gun on a swivel post (no face), firing straight bolts.
+  | 'harpoon';
 export type GeyserLook =
   | 'lava'
   | 'steam'
   // Stage concepts (docs/SETPIECES.md): waterfalls and waves, toxic overflow, avalanches.
   | 'water'
   | 'toxic'
-  | 'snow';
+  | 'snow'
+  // Harbor: a sea monster's tentacle rising out of the water (no face), lethal where it stands.
+  | 'tentacle';
 export type DecoKind =
   | 'press'
   | 'ac'
@@ -501,7 +509,7 @@ export type BlockLook = 'tetra';
 /** What a spike strip (or a spike coat) is made of; unset is plain metal spikes. */
 export type SpikeLook = 'glass' | 'thorn' | 'crystal' | 'icicle' | 'pitchfork';
 /** What a dropper's head is (art only); unset is the carved crusher stone. */
-export type DropperLook = 'icicle' | 'chandelier';
+export type DropperLook = 'icicle' | 'chandelier' | 'cargo';
 /** The liquid a flood fills with. */
 export type FloodLook = 'lava' | 'toxic' | 'water';
 

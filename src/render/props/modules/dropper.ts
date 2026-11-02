@@ -427,7 +427,89 @@ function drawChandelier(o: Head) {
   if (warn && d.o.emit && Math.random() < 0.3) d.o.emit('spark', o.cx + (Math.random() - 0.5) * W, o.cy - dy * (H / 2), (Math.random() - 0.5) * 20, 20, FLAME);
 }
 
-const LOOKS: Record<DropperLook, (o: Head) => void> = { icicle: drawIcicle, chandelier: drawChandelier };
+/** Container colours a port paints its boxes in, picked per piece. */
+const BOXES: HSL[] = [
+  { h: 8, s: 62, l: 40 },
+  { h: 206, s: 52, l: 38 },
+  { h: 140, s: 36, l: 32 },
+  { h: 36, s: 78, l: 46 },
+  { h: 268, s: 30, l: 36 },
+];
+
+/**
+ * A shipping container, baked in the slam frame: corrugated sides, the door end's locking bars, corner
+ * castings, and a this-way-up stencil (two arrows) instead of words.
+ */
+function containerHead(W: number, H: number, c: HSL) {
+  return sprite(`dr|box|${W}|${H}|${c.h}`, -W / 2 - 2, -H / 2 - 2, W + 4, H + 4, (g) => {
+    const x0 = -W / 2;
+    const y0 = -H / 2;
+    const body = boxPts(x0, y0, W, H, 1, 7, 0.08);
+    tone(g, body, c, { depth: 1, shade: -14 });
+    g.save();
+    path(g, body);
+    g.clip();
+    for (let x = x0 + 2.2; x < -x0 - 1; x += 2.6) {
+      g.fillStyle = css(c, -12);
+      g.fillRect(x, y0 + 2, 1.1, H - 4);
+      g.fillStyle = css(c, 10);
+      g.fillRect(x + 1.1, y0 + 2, 0.6, H - 4);
+    }
+    // The door end: two locking bars.
+    for (const bx of [-x0 - 4.4, -x0 - 2.4]) {
+      g.fillStyle = INK;
+      g.fillRect(bx - 0.4, y0 + 1.6, 1.2, H - 3.2);
+      g.fillStyle = css({ h: 210, s: 8, l: 70 });
+      g.fillRect(bx - 0.2, y0 + 1.6, 0.5, H - 3.2);
+    }
+    // This way up.
+    g.fillStyle = css({ h: 0, s: 0, l: 92 }, 0, 0.85);
+    for (const ax of [x0 + W * 0.3, x0 + W * 0.42]) {
+      path(g, poly(ax - 1.6, y0 + H * 0.5, ax, y0 + H * 0.26, ax + 1.6, y0 + H * 0.5, ax + 0.5, y0 + H * 0.5, ax + 0.5, y0 + H * 0.72, ax - 0.5, y0 + H * 0.72, ax - 0.5, y0 + H * 0.5));
+      g.fill();
+    }
+    g.restore();
+    pen(g, body, 8, 0.5, 1.3);
+    for (const [cx, cy] of [
+      [x0 + 1.2, y0 + 1.2],
+      [-x0 - 1.2, y0 + 1.2],
+      [x0 + 1.2, -y0 - 1.2],
+      [-x0 - 1.2, -y0 - 1.2],
+    ])
+      dot(g, cx, cy, 1, cx | 0, css({ h: 210, s: 6, l: 30 }));
+  });
+}
+
+/**
+ * Cargo: a container on four cables from the spreader above it (the crane's boom, behind). Waiting to drop,
+ * it sways and the cables twang slack; falling, the cables go with it, cut.
+ */
+function drawCargo(o: Head) {
+  const { rc, d, p, dx, dy, w, h, warn } = o;
+  const s = rc.s;
+  const W = dy !== 0 ? w : h;
+  const H = dy !== 0 ? h : w;
+  const c = BOXES[d.r.pp.uid % BOXES.length];
+  slamFrame(s, o.cx, o.cy, dx, dy);
+  const fall = p.state === DROP_FALL || p.state === DROP_REST;
+  const sway = warn ? Math.sin(rc.frame * 0.9) * 1.6 : 0;
+  // The cables up to the spreader, a tile over its home: slack and cut once it's let go.
+  const top = -H / 2 - TILE - p.d;
+  s.fillStyle = INK;
+  for (const k of [-0.42, -0.14, 0.14, 0.42]) {
+    const bx = k * W;
+    if (fall) line(s, bx, -H / 2, bx + k * 3, -H / 2 - 5, { w: 0.8, seed: bx | 0, taper: [0.1, 0.6], press: 0 });
+    else line(s, bx + sway, -H / 2 + 0.5, k * W * 0.3, top, { w: 0.8, seed: bx | 0, taper: [0, 0], press: 0 });
+  }
+  if (!fall) {
+    part(s, boxPts(-W * 0.36, top - 2.6, W * 0.72, 2.6, 0.4, 3), { h: 46, s: 82, l: 48 }, 3, { depth: 0.4, thin: 0.4, thick: 0.9 });
+  }
+  s.translate(sway, 0);
+  stamp(s, containerHead(W, H, c));
+  s.restore();
+}
+
+const LOOKS: Record<DropperLook, (o: Head) => void> = { icicle: drawIcicle, chandelier: drawChandelier, cargo: drawCargo };
 
 defineArt<'dropper'>({
   type: 'dropper',

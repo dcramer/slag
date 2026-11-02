@@ -1,8 +1,9 @@
 import type { Rng } from '../../../core/rng';
+import { FAR_ROOM, NEAR_QUAY, berthMax } from '../../stage/harbor-kit';
 import { finish, Grid, hintGap } from '../kit';
 import { jumpProfile } from '../probe';
-import type { Sculptor } from '../types';
-import { easyGap, easyRise, hardGap, hopGap, knobs, rollChallenges } from './common';
+import type { SculptCtx, Sculptor, Shape } from '../types';
+import { easyGap, easyRise, hardGap, hopGap, type Knobs, knobs, raiseLandmark, rollChallenges } from './common';
 
 type HarborStyle = 'docks' | 'galleon' | 'marina';
 type Kind = 'pier' | 'ship' | 'boat' | 'buoys';
@@ -18,6 +19,7 @@ type Kind = 'pier' | 'ship' | 'boat' | 'buoys';
 export const harbor: Sculptor = (ctx) => {
   const { rng, attempt } = ctx;
   const kn = knobs(ctx, 5);
+  if (ctx.concept) return harborStage(ctx, kn);
   const { W, H } = kn;
   const style = rng.weighted<HarborStyle>([
     ['docks', 3],
@@ -102,6 +104,75 @@ export const harbor: Sculptor = (ctx) => {
 
   return finish(g, { row: qL - 1 }, { row: gR - 1 }, `harbor:${style}`);
 };
+
+/**
+ * A harbor with a stage concept (gen/stage/harbor.ts): the near quay, the landmark (its berth, the level's
+ * crossing, in front of it), then moorings on to the far quay. A two-part ask puts its second crossing out
+ * among the moorings, never right under the landmark's far end, where a jump off its heights could clear it.
+ */
+function harborStage(ctx: SculptCtx, kn: Knobs): Shape {
+  const { rng, attempt } = ctx;
+  const concept = ctx.concept!;
+  const { W, H } = kn;
+  const g = new Grid(W, H);
+  const challenges = rollChallenges(attempt, kn);
+  g.wantsProps = challenges > 0;
+  const q0 = H - rng.int(7, 10);
+  const G = q0 + kn.ramp(0);
+  const box = concept.box(kn, rng);
+  const h = Math.min(box.h, G - 1);
+  const w = box.w;
+  const extra = challenges > 1;
+  const hardW = extra ? hardGap(rng) : 0;
+  // Room past the landmark for a mooring and the second crossing, when it asks for one and there's room.
+  const wideRoom = W - (2 + 7 + berthMax() + 6) - w;
+  const hi = extra && wideRoom >= NEAR_QUAY ? wideRoom : W - FAR_ROOM - w;
+  if (hi < NEAR_QUAY) return finish(g, { row: G - 1 }, { row: G - 1 }, 'harbor:unclaimed');
+  const x = rng.int(NEAR_QUAY, hi);
+  // The near quay, its clutter kept back from the berth's edge so nothing launches a longer jump over it.
+  g.fill(0, G, x - 1, H - 1);
+  if (x - 5 >= 6 && rng.chance(0.6)) {
+    const cx = rng.int(5, x - 5);
+    if (rng.chance(0.5)) g.set(cx, G - 1, 1);
+    else g.fill(cx, G - 2, cx + 1, G - 1);
+  }
+  const l = raiseLandmark(g, ctx, { concept, at: { x, y: G - h, w, h }, ground: G }, challenges > 0 ? 1 : 0);
+  const [ex, exitRow] = l.anchors.exit;
+  const xs = ex + 1;
+
+  // Moorings out to the far quay: easy gaps, the last one hard when a second crossing is asked and fits.
+  const pool: Kind[] = rng.pick([
+    ['pier', 'boat', 'pier'],
+    ['boat', 'buoys', 'pier'],
+  ]);
+  const widthOf = (k: Kind) => (k === 'pier' ? rng.int(7, 10) : k === 'boat' ? rng.int(6, 8) : rng.int(5, 7));
+  const elems: { kind: Kind; w: number; gap: number }[] = [];
+  let used = 0;
+  for (;;) {
+    const kind = rng.pick(pool);
+    const ew = widthOf(kind);
+    const gap = easyGap(rng, 2);
+    const last = extra ? hardW : 2;
+    if (used + gap + ew + last + 6 > W - xs) break;
+    elems.push({ kind, w: ew, gap });
+    used += gap + ew;
+  }
+  const hardLast = extra && elems.length > 0;
+  const lastGap = hardLast ? hardW : Math.min(easyGap(rng, 2), W - xs - used - 6);
+  const quayR = W - xs - used - lastGap;
+  let at = xs;
+  let prev = exitRow;
+  for (const e of elems) {
+    const x0 = at + e.gap;
+    const deck = Math.max(prev - 3, elementDeck(rng, e.kind, q0, kn.ramp(x0 + (e.w >> 1))));
+    prev = stamp(g, rng, e.kind, x0, e.w, deck);
+    at = x0 + e.w;
+  }
+  const gR = Math.max(prev - 3, Math.max(6, Math.min(H - 5, q0 + kn.ramp(W - 1) + rng.int(-2, 1))));
+  quay(g, rng, W - quayR, W - 1, gR, 'right');
+  if (hardLast) hintGap(g, at, W - quayR - 1, Math.max(prev, gR));
+  return finish(g, { row: G - 1 }, { row: gR - 1 }, `harbor:${concept.id}`);
+}
 
 /** Deck row of a mooring; piers and ships follow the route ramp (stilted jetties, high-sided hulls), boats float. */
 function elementDeck(rng: Rng, kind: Kind, q: number, ramp: number): number {
