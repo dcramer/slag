@@ -13,7 +13,7 @@
     "format": "oxlint --fix && oxfmt src tests tools app next.config.ts instrumentation.ts instrumentation-client.ts vitest.config.ts",
     "format:check": "oxfmt --check src tests tools app next.config.ts instrumentation.ts instrumentation-client.ts vitest.config.ts",
     "test": "vitest run",
-    "test:slow": "vitest run --mode slow",
+    "test:stats": "vitest run --mode stats",
     "test:store": "tsx tools/store-test.ts",
     "check:fast": "tsc --noEmit && oxlint && pnpm format:check",
     "check": "pnpm check:fast && pnpm test",

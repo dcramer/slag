@@ -7,10 +7,10 @@ import { easyGap, hopGap, rollChallenges, TWO_PARTS } from '../src/gen/level/scu
 import { LEVEL_H, LEVEL_W } from '../src/sim/constants';
 import { type Level, T_ONEWAY, T_SOLID } from '../src/sim/level';
 import { THEME_IDS } from '../src/themes';
-import { SLOW, sample } from './lib/tier';
+import { expectOpenLevel } from './lib/level-checks';
 
 const seedAt = (i: number) => (i * 2654435761 + 4242) >>> 0;
-const SEEDS = sample(2, 12);
+const SEEDS = 2;
 
 /** A flat floor from pocket to pocket; `build` adds to it. */
 function floorLevel(build: (tiles: Uint8Array, row: number) => void = () => {}): Level {
@@ -86,24 +86,8 @@ describe('route analysis', () => {
 });
 
 describe('levels are mostly open', () => {
-  it('every theme, size and gravity keeps a second route, re-measured from the final level', { timeout: 240_000 }, () => {
-    let measured = 0;
-    let sculptedClosed = 0;
-    for (const theme of THEME_IDS) {
-      for (let i = 0; i < SEEDS; i++) {
-        const l = generateLevel(seedAt(i), theme);
-        const info = { ...lastGenInfo };
-        expect(info.fallback, `${theme} ${l.seed}`).toBe(false);
-        const r = analyzeRoutes(l, l.solution ?? []);
-        expect(r.fastest.length, `${theme} ${l.seed} solvable`).toBeGreaterThan(0);
-        expect(r.shared, `${theme} ${l.seed} ${l.style}`).toBeLessThanOrEqual(MAX_SHARED);
-        expect(r.shared).toBeCloseTo(info.shared, 5);
-        if (info.sculpted > MAX_SHARED) sculptedClosed++;
-        measured++;
-      }
-    }
-    // A share, so only a full sweep can show it: the rule does work, most sculpts need the lane pass.
-    if (SLOW) expect(sculptedClosed / measured).toBeGreaterThan(0.3);
+  it('every theme, size and gravity keeps a second route, re-measured from the final level', { timeout: 120_000 }, () => {
+    for (const theme of THEME_IDS) for (let i = 0; i < SEEDS; i++) expectOpenLevel(theme, seedAt(i));
   });
 
   it('isAcceptable enforces it on a real level', { timeout: 60_000 }, () => {

@@ -14,7 +14,6 @@ import { canPlace, type PlacedProp } from '../src/sim/props';
 import { analyzeReach } from '../src/sim/reach';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
 import { THEME_IDS } from '../src/themes';
-import { sample } from './lib/tier';
 
 const seedAt = (i: number) => (i * 2654435761 + 91) >>> 0;
 
@@ -40,7 +39,7 @@ describe('bridge parts', () => {
 
   it('stands where a level says one goes, and the real controller then reaches the goal', { timeout: 60_000 }, () => {
     for (const theme of THEME_IDS) {
-      for (let i = 0; i < sample(1, 6); i++) {
+      for (let i = 0; i < 1; i++) {
         const level = generateLevel(seedAt(i), theme);
         const placed: PlacedProp[] = [];
         for (const b of level.solution ?? []) {
@@ -197,11 +196,11 @@ describe('hard gaps', () => {
 describe('every level asks for parts', () => {
   it('needs at least one part and proves its solution, on every level', { timeout: 120_000 }, () => {
     for (const theme of THEME_IDS) {
-      for (let i = 0; i < sample(2, 10); i++) {
+      for (let i = 0; i < 2; i++) {
         const l = generateLevel(seedAt(i + 50), theme);
         const needs = lastGenInfo.bridges.length;
         expect(needs).toBeLessThanOrEqual(MAX_BRIDGES);
-        if (needs === 0) continue; // The rare level no sculpt could make hard: the share is checked in worldgen.
+        if (needs === 0) continue; // The rare level no sculpt could make hard: the share is checked in tests/stats/theme-levels.test.ts.
         expect(analyzeReach(l).goalReached, `${theme} ${l.seed} bare`).toBe(false);
       }
     }
