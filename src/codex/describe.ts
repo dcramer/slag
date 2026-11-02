@@ -41,8 +41,54 @@ export const PART_INFO: Record<Module['type'], { title: string; blurb: string }>
     blurb:
       'Mounted flush on an exposed face of a block (rotation picks the face). Spikes kill; ice coats make floors slippery and walls un-jumpable; slime makes floors slow and walls sticky.',
   },
-  bomb: { title: 'Bomb', blurb: 'Not placed — detonated. Clears terrain and props in a radius (spawn and goal zones are protected).' },
+  bomb: {
+    title: 'Demolition',
+    blurb:
+      'Not placed but detonated. The blast shape (disk, line bore, cross, hollow ring) and target (terrain and props, props only, terrain only) vary; time bombs wait and go off as the race starts, catching whatever was placed that round. Spawn and goal zones are protected.',
+  },
+  portal: {
+    title: 'Warp pads',
+    blurb:
+      'Two linked pads. Step into one and you come out of the other with your speed and direction intact. Handy shortcut, or a misdirection straight into trouble.',
+  },
+  bumper: {
+    title: 'Bumper',
+    blurb: 'Kicks you straight away from its center, hard. The angle you hit it at is the angle you leave at: a launch you can aim, or a shove off a ledge.',
+  },
+  magnet: {
+    title: 'Gravity well',
+    blurb: 'A field that pulls you toward its core (or pushes you away), strongest at the middle. Bends jumps and drags you off course; some pulse on and off.',
+  },
+  web: {
+    title: 'Web',
+    blurb: 'Sticky strands: catches falls and lets you hop up through it slowly, but you crawl while inside and stay sluggish a moment after.',
+  },
+  phase: {
+    title: 'Blink blocks',
+    blurb: 'Solid on a timer. They flicker before vanishing and fill in before returning. Pairs take turns, so you cross in rhythm. Never reappear inside you.',
+  },
+  dropper: {
+    title: 'Dropstone',
+    blurb:
+      'Watches the lane under it. When you enter, it glares and shakes, then slams down until it hits the ground, and slowly rises again. You can ride it back up.',
+  },
+  snapper: {
+    title: 'Snap trap',
+    blurb:
+      'A plate mounted on a block face. Step in front of it and it clicks, then fires spikes for a moment and needs a cooldown. Keep moving and you are fine.',
+  },
 };
+
+const AIM_TAG: Record<string, string> = { fixed: 'FIXED', sweep: 'SWEEPS', track: 'TRACKS' };
+
+/** A short tag for a crate card (aim mode for launchers, etc.), or null. */
+export function propTag(def: PropDef): string | null {
+  for (const m of def.modules) {
+    if (m.type === 'launcher') return m.ammo === 'seeker' ? 'HOMING' : m.ammo === 'glider' ? 'RIDEABLE' : AIM_TAG[m.aim];
+    if (m.type === 'bomb') return m.delay ? 'AT RACE START' : m.target === 'props' ? 'PROPS ONLY' : m.target === 'terrain' ? 'TERRAIN ONLY' : null;
+  }
+  return null;
+}
 
 const fmt = (n: number, d = 0) => (Number.isInteger(n) && d === 0 ? String(n) : n.toFixed(d || 1));
 const secs = (frames: number) => `${(frames / 60).toFixed(1)}s`;
@@ -67,7 +113,7 @@ export function summarize(def: PropDef): string[] {
         break;
       case 'launcher':
         out.push(
-          `${m.style} → ${m.ammo}${AMMO[m.ammo].gravity > 200 ? ' (lobbed)' : ''} · aim ${m.aim} · every ${secs(m.interval)}${m.burst > 1 ? ` ×${m.burst} burst` : ''}${m.spread > 1 ? ` · ${m.spread}-way` : ''} · ${fmt(m.speed)}px/s`,
+          `${m.style} → ${m.ammo}${AMMO[m.ammo].gravity > 200 ? ' (lobbed)' : ''} · ${{ fixed: 'Fixed', sweep: 'Sweeps', track: 'Tracks' }[m.aim]} · every ${secs(m.interval)}${m.burst > 1 ? ` ×${m.burst} burst` : ''}${m.spread > 1 ? ` · ${m.spread}-way` : ''} · ${fmt(m.speed)}px/s`,
         );
         break;
       case 'flame':
@@ -91,8 +137,41 @@ export function summarize(def: PropDef): string[] {
       case 'coat':
         out.push(`${m.kind} on ${m.cells.length} face${m.cells.length > 1 ? 's' : ''} · mounts on blocks`);
         break;
-      case 'bomb':
-        out.push(`blast radius ${fmt(m.radius, 1)} tiles`);
+      case 'bomb': {
+        const shape = m.shape ?? 'disk';
+        const what = { all: 'terrain + props', props: 'props only', terrain: 'terrain only' }[m.target ?? 'all'];
+        out.push(
+          `${shape === 'line' ? `bores ${fmt(m.radius)} tiles${(m.width ?? 1) > 1 ? ` × ${fmt(m.width ?? 1)}` : ''}` : shape === 'cross' ? `cross ${fmt(m.radius)} each way` : `${shape} r${fmt(m.radius, 1)}`} · ${what}${m.delay ? ' · at race start' : ''}`,
+        );
+        break;
+      }
+      case 'portal':
+        out.push(`warp pads ${fmt(Math.abs(m.b[0] - m.a[0]))}×${fmt(Math.abs(m.b[1] - m.a[1]))} tiles apart · keeps your speed`);
+        break;
+      case 'bumper':
+        out.push(`bumper r${fmt(m.radius, 2)} · kick ${fmt(m.power)}px/s`);
+        break;
+      case 'magnet':
+        out.push(
+          `${m.polarity > 0 ? 'pulls' : 'pushes'} · r${fmt(m.radius, 1)} · ${fmt(m.strength)}px/s²${m.off ? ` · on ${secs(m.on)} / off ${secs(m.off)}` : ' · always on'}`,
+        );
+        break;
+      case 'web':
+        out.push(`web ${m.cells.length} cells · drag ${Math.round(m.drag * 100)}%/frame`);
+        break;
+      case 'phase':
+        out.push(
+          `blink ${m.cells.length} cell${m.cells.length > 1 ? 's' : ''} · solid ${secs(m.on)} / gone ${secs(m.off)}${m.offset ? ' · alternate set' : ''}`,
+        );
+        break;
+      case 'dropper':
+        out.push(`dropstone ${m.cells.length} cells · warns ${secs(m.warn)} · falls ≤${fmt(m.reach)} tiles · rests ${secs(m.rest)}`);
+        break;
+      case 'snapper':
+        out.push(`snap trap ${m.cells.length} wide · click ${secs(m.warn)} · spikes ${secs(m.up)} · reset ${secs(m.cool)}`);
+        break;
+      case 'rotor':
+        out.push(`${m.count} platforms on a ${fmt(m.arm, 1)}-tile wheel · ${secs(m.period)} per turn`);
         break;
     }
   }

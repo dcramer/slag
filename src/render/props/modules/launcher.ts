@@ -3,6 +3,7 @@ import type { Vec } from '../../../core/geom';
 import { launcherAngle, type Module, type ModuleOf, type PropStyle, type Resolved, rayToWall } from '../../../sim/props';
 import { circle, ellipse, glowDot, light, type MetalPalette, metalFill, type RC, rrect, sphereFill } from '../../kit';
 import { defineArt, drawBoltShape, drawStar, type PropDrawOpts } from '../common';
+import { drawExtraLauncher, drawTrackerEye } from './launcher-extra';
 
 type M<T extends Module['type']> = ModuleOf<T>;
 
@@ -159,8 +160,11 @@ function drawLauncher(rc: RC, m: M<'launcher'>, r: Resolved, off: Vec, pal: Meta
       }
       break;
     }
+    default:
+      drawExtraLauncher(rc, m.style, x, y, angle, reload, pal, st);
   }
   s.restore();
+  if (m.aim === 'track') drawTrackerEye(rc, x, y, angle, pal);
   if (since < 5) {
     const mx = x + Math.cos(angle) * 13;
     const my = y + Math.sin(angle) * 13;
