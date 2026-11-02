@@ -15,6 +15,8 @@
  *   pick place run   the host's renderer is killed (no goodbye) in that phase
  *   leave       the host navigates away (goodbye path) mid-race
  *   twice       the host dies, and the new host dies straight after taking over
+ *   latency     input-to-screen delay between peers, stalls and jumps
+ *   hidden      the same with the host's tab in the background
  *   bc          BroadcastChannel transport (?net=bc)
  *   unset       production with no store credentials: the game degrades, with a clear status
  *
@@ -129,24 +131,268 @@ async function clickView(p: Page, x: number, y: number) {
 }
 
 /** Any point where this peer's held part can legally go. Mutates and restores its cursor inside one synchronous call. */
-async function validSpot(p: Page, device: string): Promise<{ x: number; y: number } | null> {
-  return p.evaluate((dev) => {
-    const m = (window as any).slagDebug.match;
-    const me = m.players.find((q: any) => q.device === dev);
-    if (!me) return null;
-    const keep = { ...me.cursor };
-    let found: { x: number; y: number } | null = null;
-    for (let y = 90; y < 400 && !found; y += 16) {
-      for (let x = 90; x < 700 && !found; x += 16) {
-        me.cursor.x = x;
-        me.cursor.y = y;
-        if (m.canPlaceFor(me)) found = { x, y };
+async function validSpot(p: Page, device: string, far = false): Promise<{ x: number; y: number } | null> {
+  return p.evaluate(
+    ([dev, fromRight]) => {
+      const m = (window as any).slagDebug.match;
+      const me = m.players.find((q: any) => q.device === dev);
+      if (!me) return null;
+      const keep = { ...me.cursor };
+      let found: { x: number; y: number } | null = null;
+      for (let y = 90; y < 400 && !found; y += 16) {
+        for (let i = 90; i < 700 && !found; i += 16) {
+          const x = fromRight ? 790 - i : i;
+          me.cursor.x = x;
+          me.cursor.y = y;
+          if (m.canPlaceFor(me)) found = { x, y };
+        }
       }
-    }
-    me.cursor.x = keep.x;
-    me.cursor.y = keep.y;
-    return found;
+      me.cursor.x = keep.x;
+      me.cursor.y = keep.y;
+      return found;
+    },
+    [device, far] as const,
+  );
+}
+
+/**
+ * Headless pages never go hidden, so this does what Chrome does to a background tab:
+ * `document.hidden`, no animation frames, page timers clamped to 1 Hz. Workers run on.
+ */
+const HIDDEN_SHIM = `(() => {
+  let hidden = false;
+  const raf = window.requestAnimationFrame.bind(window), st = window.setTimeout.bind(window), si = window.setInterval.bind(window);
+  const waiting = [];
+  Object.defineProperty(document, 'hidden', { get: () => hidden });
+  Object.defineProperty(document, 'visibilityState', { get: () => (hidden ? 'hidden' : 'visible') });
+  window.requestAnimationFrame = (f) => (hidden ? (waiting.push(f), 0) : raf(f));
+  window.setTimeout = (f, ms, ...a) => st(f, hidden ? Math.max(ms || 0, 1000) : ms, ...a);
+  window.setInterval = (f, ms, ...a) => { let last = 0; return si(() => { const t = Date.now(); if (hidden && t - last < 1000) return; last = t; f(...a); }, ms); };
+  window.__setHidden = (h) => { hidden = h; document.dispatchEvent(new Event('visibilitychange')); if (!h) for (const f of waiting.splice(0)) raf(f); };
+})()`;
+
+/** One-way delay and jitter on data channels: localhost has none, and prediction errors only show with distance. */
+const NET_SHIM = `(() => {
+  const st = window.setTimeout.bind(window), send = RTCDataChannel.prototype.send;
+  window.__netDelay = 0;
+  RTCDataChannel.prototype.send = function (d) {
+    const ms = window.__netDelay;
+    if (!ms) return send.call(this, d);
+    if (this.label === 'rt' && Math.random() < 0.01) return;
+    st(() => { try { send.call(this, d); } catch {} }, ms + Math.random() * 6);
+  };
+})()`;
+
+const pct = (xs: number[], q: number) => (xs.length ? [...xs].sort((a, b) => a - b)[Math.min(xs.length - 1, Math.floor(q * xs.length))] : Number.NaN);
+
+/** Wraps the tick so the sender records when each direction change was sampled. */
+async function probeSender(p: Page) {
+  await p.evaluate(() => {
+    const n = (window as any).slagDebug.net;
+    const w = window as any;
+    w.__sent = [];
+    if (w.__senderProbed) return;
+    w.__senderProbed = true;
+    let prev = 0;
+    const tick = n.tick.bind(n);
+    n.tick = (local: Record<string, any>) => {
+      const f = Object.values(local) as any[];
+      const dir = f.some((x) => x.right) ? 1 : f.some((x) => x.left) ? -1 : 0;
+      if (dir !== prev) w.__sent.push({ t: Date.now(), dir });
+      prev = dir;
+      tick(local);
+    };
+  });
+}
+
+/** Records what this page actually drew for a remote runner, every display frame, plus bundle arrivals. */
+async function probeViewer(p: Page, device: string) {
+  await p.evaluate((dev) => {
+    const d = (window as any).slagDebug;
+    const n = d.net;
+    const w = window as any;
+    w.__seen = [];
+    w.__bundles = [];
+    const slot = d.match.players.find((q: any) => q.device === dev).slot;
+    w.__watch = slot;
+    if (w.__viewerProbed) return;
+    w.__viewerProbed = true;
+    const on = n.onMessage;
+    n.onMessage = function (from: string, m: any) {
+      if (m?.t === 'b' || m?.t === 'in') w.__bundles.push(Date.now());
+      return on.call(n, from, m);
+    };
+    const loop = () => {
+      const r = n.view.run?.runners.find((x: any) => x.slot === w.__watch);
+      if (r?.alive) w.__seen.push([Date.now(), r.body.x, r.body.vx]);
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
   }, device);
+}
+
+interface LatencyReport {
+  label: string;
+  delayP50: number;
+  delayP95: number;
+  samples: number;
+  fps: number;
+  bundleGapP50: number;
+  bundleGapP95: number;
+  bundleGapMax: number;
+  stalls: number;
+  jumps: number;
+  maxSnap: number;
+  movingFrames: number;
+  dry: number;
+  queueAvg: number;
+  folded: number;
+}
+
+/** Pulses a key on `src` and reads how long `viewer` takes to show it, and how cleanly it moves. */
+async function measure(label: string, src: Page, viewer: Page, device: string, host: Page, pulses: number): Promise<LatencyReport> {
+  await probeSender(src);
+  await probeViewer(viewer, device);
+  const before = await host.evaluate(() => ({ ...(window as any).slagDebug.net.stats }));
+  for (let i = 0; i < pulses; i++) {
+    const key = i % 2 ? 'ArrowLeft' : 'ArrowRight';
+    await src.keyboard.down(key);
+    await sleep(260);
+    await src.keyboard.up(key);
+    await sleep(560);
+  }
+  const after = await host.evaluate(() => ({ ...(window as any).slagDebug.net.stats }));
+  const sent = (await src.evaluate(() => (window as any).__sent)) as { t: number; dir: number }[];
+  const { seen, bundles } = (await viewer.evaluate(() => ({ seen: (window as any).__seen, bundles: (window as any).__bundles }))) as {
+    seen: [number, number, number][];
+    bundles: number[];
+  };
+  const delays: number[] = [];
+  for (const e of sent) {
+    if (e.dir === 0) continue;
+    const at = seen.findIndex((s) => s[0] >= e.t - 100);
+    if (at < 0) continue;
+    const rest = seen[at][1];
+    const moved = seen.slice(at).find((s) => s[0] >= e.t && Math.abs(s[1] - rest) > 0.05 && Math.sign(s[1] - rest) === e.dir);
+    if (moved && moved[0] - e.t < 1000) delays.push(moved[0] - e.t);
+  }
+  const gaps = bundles.slice(1).map((t, i) => t - bundles[i]);
+  // While the runner is at speed, every drawn frame should advance it about the same distance.
+  let stalls = 0;
+  let jumps = 0;
+  let moving = 0;
+  let maxSnap = 0;
+  for (let i = 2; i < seen.length; i++) {
+    const [t0, x0] = seen[i - 1];
+    const [t1, x1, vx] = seen[i];
+    const dt = (t1 - t0) / 1000;
+    if (dt <= 0) continue;
+    // A teleport shows at any speed, including the correction when a runner stops or turns.
+    maxSnap = Math.max(maxSnap, Math.abs(x1 - x0) - Math.abs(vx) * dt);
+    if (Math.abs(vx) < 40 || Math.abs(seen[i - 2][2]) < 40) continue;
+    moving++;
+    const expected = Math.abs(vx) * dt;
+    const step = Math.abs(x1 - x0);
+    if (step < 0.05) stalls++;
+    else if (step > expected * 2 + 1.5) jumps++;
+  }
+  const span = seen.length > 1 ? (seen.at(-1)![0] - seen[0][0]) / 1000 : 1;
+  const hostTicks = Math.max(1, after.hostTicks - before.hostTicks);
+  const report: LatencyReport = {
+    label,
+    delayP50: pct(delays, 0.5),
+    delayP95: pct(delays, 0.95),
+    samples: delays.length,
+    fps: seen.length / span,
+    bundleGapP50: pct(gaps, 0.5),
+    bundleGapP95: pct(gaps, 0.95),
+    bundleGapMax: gaps.length ? Math.max(...gaps) : Number.NaN,
+    stalls,
+    jumps,
+    maxSnap,
+    movingFrames: moving,
+    dry: (after.dryTicks - before.dryTicks) / hostTicks,
+    queueAvg: (after.queuedFrames - before.queuedFrames) / hostTicks,
+    folded: after.foldedFrames - before.foldedFrames,
+  };
+  console.log(
+    `     ${label}: delay p50 ${report.delayP50.toFixed(0)} ms, p95 ${report.delayP95.toFixed(0)} ms (n=${report.samples}), viewer ${report.fps.toFixed(0)} fps; ` +
+      `arrivals every p50 ${report.bundleGapP50} ms, p95 ${report.bundleGapP95} ms, max ${report.bundleGapMax} ms; ` +
+      `stalls ${report.stalls}, jumps ${report.jumps} of ${report.movingFrames} moving frames, biggest snap ${report.maxSnap.toFixed(1)} px; ` +
+      `host queue avg ${report.queueAvg.toFixed(2)} frames, dry ${(report.dry * 100).toFixed(0)}%, folded ${report.folded}`,
+  );
+  return report;
+}
+
+/** The race with both runners on the spawn pad, reached the way people reach it, with parts placed far away. */
+async function pairInRace(r: Room): Promise<{ A: Page; B: Page; ids: string[] }> {
+  const { pages, ids } = await startMatch(r, 2, { ...FAST_RULES, raceSeconds: 0 });
+  await toPlace(pages);
+  for (let i = 0; i < 2; i++) {
+    const s = await validSpot(pages[i], `${ids[i]}:kb1`, true);
+    if (s) await clickView(pages[i], s.x, s.y);
+  }
+  for (const p of pages) await waitFor(p, 'race', (v) => v.phase === 'run', 120_000);
+  await sleep(4500); // the countdown
+  return { A: pages[0], B: pages[1], ids };
+}
+
+/**
+ * Software GL holds these pages near 16 fps, which would measure this machine rather than
+ * the netcode. With drawing stubbed, rAF runs at display rate like a page on a real GPU.
+ */
+async function fastDisplay(pages: Page[]) {
+  for (const p of pages) await p.evaluate(() => ((window as any).slagDebug.renderer.render = () => {}));
+}
+
+const ONE_WAY_MS = 40;
+/** Display frame, tick and send on top of the network. Generous: this runs on loaded CI boxes, and catches regressions, not jitter. */
+const BUDGET_MS = 90;
+
+function budget(r: LatencyReport, networkMs: number) {
+  check(
+    r.samples >= 4 && r.delayP50 <= networkMs + BUDGET_MS,
+    `${r.label}: p50 within ${networkMs} ms network + ${BUDGET_MS} ms (${r.delayP50.toFixed(0)} ms)`,
+  );
+  check(r.maxSnap < 24, `${r.label}: no teleport (${r.maxSnap.toFixed(1)} px)`);
+}
+
+async function latencyScenario(browser: Browser, base: string) {
+  const r = await newRoom(browser, base, 'latency', '', { room: 'LATENCY1', viewport: { width: 640, height: 360 } });
+  const { A, B, ids } = await pairInRace(r);
+  await fastDisplay([A, B]);
+  budget(await measure('0 ms, guest → host', B, A, `${ids[1]}:kb1`, A, 12), 0);
+  budget(await measure('0 ms, host → guest', A, B, `${ids[0]}:kb1`, A, 12), 0);
+  for (const p of [A, B]) await p.evaluate((ms) => ((window as any).__netDelay = ms), ONE_WAY_MS);
+  await sleep(500);
+  budget(await measure(`${ONE_WAY_MS} ms each way, guest → host`, B, A, `${ids[1]}:kb1`, A, 12), ONE_WAY_MS);
+  budget(await measure(`${ONE_WAY_MS} ms each way, host → guest`, A, B, `${ids[0]}:kb1`, A, 12), ONE_WAY_MS);
+  await r.dispose();
+}
+
+/** A hidden host must not drag the room down: B plays, C watches, A's tab is in the background. */
+async function hiddenScenario(browser: Browser, base: string) {
+  const r = await newRoom(browser, base, 'hidden', '', { room: 'LATENCY2', viewport: { width: 640, height: 360 } });
+  const { pages, ids } = await startMatch(r, 3, { ...FAST_RULES, raceSeconds: 0 });
+  await toPlace(pages);
+  for (let i = 0; i < 3; i++) {
+    const s = await validSpot(pages[i], `${ids[i]}:kb1`, true);
+    if (s) await clickView(pages[i], s.x, s.y);
+  }
+  for (const p of pages) await waitFor(p, 'race', (v) => v.phase === 'run', 120_000);
+  await sleep(4500);
+  const [A, B, C] = pages;
+  await fastDisplay(pages);
+  for (const p of pages) await p.evaluate((ms) => ((window as any).__netDelay = ms), ONE_WAY_MS);
+  await sleep(500);
+  budget(await measure('visible host, guest → guest', B, C, `${ids[1]}:kb1`, A, 8), 2 * ONE_WAY_MS);
+  await A.evaluate(() => (window as any).__setHidden(true));
+  await sleep(500);
+  const hidden = await measure('hidden host, guest → guest', B, C, `${ids[1]}:kb1`, A, 12);
+  budget(hidden, 2 * ONE_WAY_MS);
+  check(hidden.bundleGapP95 < 34, `a hidden host keeps bundles coming every frame or two (p95 ${hidden.bundleGapP95} ms)`);
+  await A.evaluate(() => (window as any).__setHidden(false));
+  await r.dispose();
 }
 
 interface Room {
@@ -157,12 +403,21 @@ interface Room {
   dispose(): Promise<void>;
 }
 
-async function newRoom(browser: Browser, base: string, label: string, query: string, opts: { shared?: boolean } = {}): Promise<Room> {
-  const name = `T${label.slice(0, 2).toUpperCase()}${Math.floor(Math.random() * 1e7)
-    .toString(36)
-    .toUpperCase()}`.slice(0, 10);
+async function newRoom(
+  browser: Browser,
+  base: string,
+  label: string,
+  query: string,
+  opts: { shared?: boolean; room?: string; viewport?: { width: number; height: number } } = {},
+): Promise<Room> {
+  // Fixed where a scenario needs the same level every run: the room code seeds it.
+  const name =
+    opts.room ??
+    `T${label.slice(0, 2).toUpperCase()}${Math.floor(Math.random() * 1e7)
+      .toString(36)
+      .toUpperCase()}`.slice(0, 10);
   console.log(`\n== ${label}: room ${name}`);
-  const size = { viewport: { width: 480, height: 270 } };
+  const size = { viewport: opts.viewport ?? { width: 480, height: 270 } };
   const sharedCtx = opts.shared ? await browser.newContext(size) : null;
   const contexts: BrowserContext[] = [];
   const errors: string[] = [];
@@ -175,6 +430,9 @@ async function newRoom(browser: Browser, base: string, label: string, query: str
         c = await browser.newContext(size);
         contexts.push(c);
       }
+      await c.addInitScript('window.__name = (f) => f'); // tsx wraps named functions in code handed to evaluate
+      await c.addInitScript(NET_SHIM); // first: the network isn't throttled with a hidden tab's timers
+      await c.addInitScript(HIDDEN_SHIM);
       await c.addInitScript(() => localStorage.setItem('slag.profile.v1', JSON.stringify({ version: 1, name: null, prompted: true })));
       const p = await c.newPage();
       p.on('pageerror', (e) => errors.push(`${tag}: ${String(e)}`));
@@ -206,7 +464,7 @@ async function newRoom(browser: Browser, base: string, label: string, query: str
 const FAST_RULES = { targetScore: 80, maxRounds: 25, pickSeconds: 30, placeSeconds: 45, raceSeconds: 30 };
 
 /** n peers joined, seated and ready: the room is in `pick`. The first page is host. */
-async function startMatch(r: Room, n: number): Promise<{ pages: Page[]; ids: string[] }> {
+async function startMatch(r: Room, n: number, rules: Record<string, number> = FAST_RULES): Promise<{ pages: Page[]; ids: string[] }> {
   const pages: Page[] = [];
   const ids: string[] = [];
   const tags = 'ABCDEFGH';
@@ -219,7 +477,7 @@ async function startMatch(r: Room, n: number): Promise<{ pages: Page[]; ids: str
     ids.push(v.self);
   }
   check(new Set(ids).size === n, `${n} peers joined with distinct ids`);
-  await pages[0].evaluate((rules) => (window as any).slagDebug.net.act({ t: 'rules', rules }), FAST_RULES);
+  await pages[0].evaluate((x) => (window as any).slagDebug.net.act({ t: 'rules', rules: x }), rules);
   for (const p of pages) await p.keyboard.press('Enter');
   await waitFor(pages[0], 'everyone seated', (v) => v.players.length === n);
   for (const p of pages) await p.keyboard.press('Enter');
@@ -493,6 +751,8 @@ try {
   if (wanted('run')) await killScenario(browser, server.base, 'run');
   if (wanted('leave')) await leaveScenario(browser, server.base);
   if (wanted('twice')) await twiceScenario(browser, server.base);
+  if (wanted('latency')) await latencyScenario(browser, server.base);
+  if (wanted('hidden')) await hiddenScenario(browser, server.base);
   if (wanted('bc')) await bcScenario(browser, server.base);
 } finally {
   await server.close();

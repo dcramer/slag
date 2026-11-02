@@ -1,5 +1,5 @@
 import type { Match } from '../game/match';
-import { MAX_PLAYERS } from '../sim/constants';
+import { DT, MAX_PLAYERS } from '../sim/constants';
 import { addBreadcrumb, reportEvent } from '../telemetry';
 import type { GameEvent, InputFrame } from '../sim/types';
 import { applyAction, type NetAction, type NetState, newNetState, peerOf, sanitizeRules } from './actions';
@@ -30,8 +30,12 @@ const PING_MS = 1000;
 const HELLO_RETRY_MS = 1000;
 const NEED_AFTER_MS = 150;
 const MAX_UNACKED = 90;
-const QUEUE_HIGH = 6;
-const QUEUE_KEEP = 3;
+/**
+ * Frames a guest may have waiting on the host. Every frame beyond one is 17 ms
+ * of lag for everyone watching, and the host only eats one a tick, so a queue
+ * left alone never drains. Two absorbs ordinary jitter.
+ */
+const QUEUE_MAX = 2;
 const MAX_APPLY_PER_TICK = 900;
 const MAX_PREDICT = 24;
 /** How long a new host waits for the room to report in, and for the furthest peer's snapshot. */
@@ -39,6 +43,11 @@ const COLLECT_MS = 7000;
 const PULL_MS = 1500;
 /** Per-view-update step of a remote cursor toward its confirmed position. Presentation only. */
 const CURSOR_SMOOTH = 0.5;
+/** What's left of a drawn runner's prediction error after one frame. Presentation only. */
+const CORRECTION_KEEP = 0.85;
+/** A correction this large (px) is a respawn or a portal, not an error: show it. A late jump at 100 ms round trip is already about 50. */
+const CORRECTION_MAX = 120;
+const CORRECTION_MAX_STEPS = 4;
 
 export type NetStatus = 'offline' | 'connecting' | 'online' | 'reconnecting' | 'unavailable';
 export type Role = 'host' | 'guest';
@@ -87,7 +96,7 @@ export interface SessionOptions {
   match: Match;
   /** Monotonic ms clock (injectable for tests). */
   now?: () => number;
-  /** Guests send input every N ticks and the host flushes bundles every N ticks (1 = every frame). */
+  /** Guests send input every N ticks and the host flushes bundles every N ticks. Waiting saves little and costs 17 ms each way. */
   sendEvery?: number;
   /** Client-side prediction during races (guests). */
   predict?: boolean;
@@ -121,7 +130,7 @@ export class NetSession {
   /** Crate card this peer has clicked and the host hasn't ruled on yet (-1: none). Never a claim: the host decides those. */
   pendingCard = -1;
   /** Counters for the HUD/debug overlay and tests. */
-  stats = { desyncs: 0, syncs: 0, migrations: 0, bundles: 0, predicted: 0 };
+  stats = { desyncs: 0, syncs: 0, migrations: 0, bundles: 0, predicted: 0, dryTicks: 0, foldedFrames: 0, queuedFrames: 0, hostTicks: 0 };
 
   private now: () => number;
   private sendEvery: number;
@@ -140,6 +149,7 @@ export class NetSession {
   private queues = new Map<string, RemoteQueue>();
   private history: Bundle[] = [];
   private outbox: Bundle[] = [];
+  private resend: Bundle | null = null;
   private hostActions: NetAction[] = [];
   private hashes = new Map<number, number>();
   private wants = new Set<string>();
@@ -164,6 +174,9 @@ export class NetSession {
   /** Set while a freshly promoted host gathers the room (see collectTick). */
   private collecting: { until: number; got: Map<string, number>; pulled: string; pullAt: number } | null = null;
   private smooth = new Map<number, { x: number; y: number }>();
+  /** Where each runner was last drawn in a predicted view. */
+  private eased = new Map<number, { x: number; y: number }>();
+  private easedFrame = 0;
 
   // pings
   private rtt = new Map<string, number>();
@@ -179,7 +192,7 @@ export class NetSession {
     this.self = opts.transport?.self ?? 'local';
     this.hostId = this.self;
     this.now = opts.now ?? (() => performance.now());
-    this.sendEvery = Math.max(1, opts.sendEvery ?? 2);
+    this.sendEvery = Math.max(1, opts.sendEvery ?? 1);
     this.predict = opts.predict ?? true;
     this.resumeFn = opts.resume;
     this.primary = opts.primaryDevice ?? 'kb1';
@@ -278,7 +291,7 @@ export class NetSession {
 
   /** Send any batched bundles now (e.g. before the page hides). */
   flush() {
-    if (this.role === 'host' && this.outbox.length && this.remoteCount) this.send({ t: 'b', b: this.outbox }, undefined, true);
+    if (this.role === 'host' && this.outbox.length && this.remoteCount) this.sendBundles();
     this.outbox = [];
   }
 
@@ -492,7 +505,14 @@ export class NetSession {
       return;
     }
     if (msg.t === 'sync') this.onSync(msg);
-    else for (const b of msg.b) if (b.f >= this.match.frame && !this.inbox.has(b.f)) this.inbox.set(b.f, b);
+    else {
+      for (const b of msg.b) if (b.f >= this.match.frame && !this.inbox.has(b.f)) this.inbox.set(b.f, b);
+      // Now, not on the next tick: that wait would only add to what everyone sees.
+      if (this.synced) {
+        this.applyInbox(this.now());
+        this.viewDirty = true;
+      }
+    }
   }
 
   /** Host-only messages from a peer we don't (yet) consider host: presence may lag behind. Keep briefly. */
@@ -575,15 +595,17 @@ export class NetSession {
     for (const [d, e] of Object.entries(own)) inputs[this.globalDevice(d)] = e;
     const k: Record<string, [number, number]> = {};
     for (const [peer, q] of this.queues) {
-      // Bound latency: if a burst piled up, fold the oldest frames together (edges are kept, see codec.merge).
-      if (q.frames.length > QUEUE_HIGH) {
-        while (q.frames.length > QUEUE_KEEP) {
-          const [a, b] = q.frames;
-          q.frames.splice(0, 2, { seq: b.seq, f: mergePeerFrames(a.f, b.f) });
-        }
+      // Bound latency: fold the oldest frames together (edges are kept, see codec.merge).
+      while (q.frames.length > QUEUE_MAX) {
+        const [a, b] = q.frames;
+        q.frames.splice(0, 2, { seq: b.seq, f: mergePeerFrames(a.f, b.f) });
+        this.stats.foldedFrames++;
       }
+      this.stats.hostTicks++;
+      this.stats.queuedFrames += q.frames.length;
       const next = q.frames.shift();
       let f: PeerFrame;
+      if (!next) this.stats.dryTicks++;
       if (next) {
         q.consumed = next.seq;
         q.last = next.f;
@@ -614,9 +636,16 @@ export class NetSession {
     }
     this.outbox.push(b);
     if (this.ticks % this.sendEvery === 0 || actions.length) {
-      this.send({ t: 'b', b: this.outbox }, undefined, true);
+      this.sendBundles();
       this.outbox = [];
     }
+  }
+
+  /** Each send repeats the last bundle: on an unreliable channel that turns a lost packet into nothing instead of a stall. */
+  private sendBundles() {
+    const b = this.resend ? [this.resend, ...this.outbox] : this.outbox;
+    this.send({ t: 'b', b }, undefined, true);
+    this.resend = this.outbox.at(-1) ?? this.resend;
   }
 
   /**
@@ -798,7 +827,7 @@ export class NetSession {
       return;
     }
     if (m.phase === 'pick' || m.phase === 'place') this.cursorView();
-    else if (this.role === 'guest' && this.synced && m.phase === 'run' && this.unacked.length) this.raceView();
+    else if (this.role === 'guest' && this.synced && m.phase === 'run') this.raceView();
     else this.viewMatch = m;
   }
 
@@ -817,7 +846,35 @@ export class NetSession {
       this.collect(d);
       if (d.phase !== 'run') break;
     }
+    if (d.run) this.easeRunners(d);
     this.viewMatch = d;
+  }
+
+  /**
+   * Prediction guesses others keep holding their buttons, so every jump or
+   * turn is wrong for a round trip and then corrected. Drawn straight, that's
+   * a teleport. Each runner keeps moving from where it was drawn and the error
+   * bleeds away over a few frames. This writes only to the view copy, which
+   * is rebuilt from confirmed state every update and never stepped again.
+   */
+  private easeRunners(d: Match) {
+    const run = d.run!;
+    if (run.frame < this.easedFrame || run.frame - this.easedFrame > CORRECTION_MAX_STEPS) this.eased.clear();
+    const steps = run.frame - this.easedFrame;
+    this.easedFrame = run.frame;
+    for (const r of run.runners) {
+      const b = r.body;
+      const was = this.eased.get(r.slot);
+      if (was) {
+        const dx = was.x + b.vx * DT * steps - b.x;
+        const dy = was.y + b.vy * DT * steps - b.y;
+        if (Math.sqrt(dx * dx + dy * dy) <= CORRECTION_MAX) {
+          b.x += dx * CORRECTION_KEEP;
+          b.y += dy * CORRECTION_KEEP;
+        }
+      }
+      this.eased.set(r.slot, { x: b.x, y: b.y });
+    }
   }
 
   /**

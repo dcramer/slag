@@ -295,27 +295,29 @@ export function bootGame(container: HTMLElement, room: string): void {
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
-  // Background tabs get no animation frames; a hidden host would freeze the whole room.
-  // A worker timer (not throttled like page timers) keeps the sim ticking while hidden.
-  keepTickingWhenHidden((now) => advance(now, 1));
+  // Animation frames stop in a background tab and crawl on a busy page, and a peer's ticks are what
+  // everyone else is waiting on. A worker's timer is free of both.
+  keepTicking(!!net.transport, (now) => advance(now, 1));
 }
 
-/** Calls `step(now)` ~20×/s while the page is hidden. */
-function keepTickingWhenHidden(step: (now: number) => void) {
+/** Calls `step(now)` from a worker: always online, where a stalled tick stalls the room; offline, only while hidden. */
+function keepTicking(online: boolean, step: (now: number) => void) {
   let worker: Worker | null = null;
   const sync = () => {
-    if (document.hidden && !worker) {
+    const wanted = online || document.hidden;
+    if (wanted && !worker) {
       try {
-        const url = URL.createObjectURL(new Blob(['setInterval(() => postMessage(0), 50)'], { type: 'text/javascript' }));
+        const url = URL.createObjectURL(new Blob([`setInterval(() => postMessage(0), ${online ? 8 : 50})`], { type: 'text/javascript' }));
         worker = new Worker(url);
-        worker.onmessage = () => document.hidden && step(performance.now());
+        worker.onmessage = () => step(performance.now());
       } catch {
         worker = null;
       }
-    } else if (!document.hidden && worker) {
+    } else if (!wanted && worker) {
       worker.terminate();
       worker = null;
     }
   };
+  sync();
   document.addEventListener('visibilitychange', sync);
 }
