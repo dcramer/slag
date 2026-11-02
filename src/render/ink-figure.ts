@@ -3,7 +3,6 @@ import { clamp } from '../core/geom';
 import { hash2 } from '../core/rng';
 import type { CharacterDef } from '../gen/character';
 import { line, type P, shadeOf, stroke } from './ink';
-import { glowDot } from './kit';
 
 /**
  * The figure kit every runner is drawn with: the pen (a contour on an ink mass that's thin toward the
@@ -325,20 +324,7 @@ export function arm(s: CanvasRenderingContext2D, lk: Look, sx: number, sy: numbe
   tonedOval(s, hx, hy, 1.95, 1.75, 9, lk.hand, lk.handShade, lk.ink, 0.6 * k, 1 * k, 0.6);
 }
 
-export function eyes(
-  rc: { g: CanvasRenderingContext2D | null },
-  s: CanvasRenderingContext2D,
-  c: CharacterDef,
-  lk: Look,
-  W: number,
-  H: number,
-  by: number,
-  p: RunnerPose,
-  m: Mood,
-  wx: number,
-  wy: number,
-  sc: number,
-) {
+export function eyes(s: CanvasRenderingContext2D, c: CharacterDef, lk: Look, W: number, H: number, by: number, p: RunnerPose, m: Mood) {
   const f = p.facing;
   const look = f * 1.7;
   const lookY = m === 'up' ? -0.7 : m === 'fall' ? 0.5 : 0;
@@ -366,7 +352,6 @@ export function eyes(
     s.fillStyle = lk.accent;
     const scan = Math.sin(p.t * 3) * spread * 0.6;
     line(s, -spread * 0.5 + look + scan, ey + 0.5, spread * 0.5 + look + scan + 1.6, ey - 0.6, { w: 1.6, seed: c.seed, taper: [0.15, 0.3], press: 0.2 });
-    if (rc.g) glowDot(rc.g, wx + (look + scan) * sc, wy + ey * sc, 4 * sc, c.accent, 0.3);
     return;
   }
   for (let i = 0; i < xs.length; i++) {
@@ -430,8 +415,6 @@ export function eyes(
         press: 0.1,
       });
     }
-    // Small, so a glowing eye stays an eye: a big glow prints as an opaque patch over the face.
-    if (c.eyes.glow && rc.g) glowDot(rc.g, wx + cx * sc, wy + ey * sc, r * 1.5 * sc, c.eyes.iris, 0.22);
   }
 }
 

@@ -13,9 +13,10 @@ export interface Profile {
 
 /**
  * Bump when a seed stops meaning the same character, so every saved look is discarded once and the
- * next one is saved from the new cast. 2: the foundry toys (docs/CHARACTERS.md).
+ * next one is saved from the new cast. 2: the foundry toys (docs/CHARACTERS.md). 3: slimmer toys, the
+ * lantern in for the crucible.
  */
-export const LOOK_CAST = 2;
+export const LOOK_CAST = 3;
 
 const KEY = 'slag.profile.v1';
 

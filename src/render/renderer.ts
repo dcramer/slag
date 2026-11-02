@@ -696,8 +696,8 @@ export class Renderer {
       drawInkAccessory(rc.s, c, rig);
     }
     drawInkRunner(rc, c, x, y, { facing, vx, vy, grounded, t: rc.t, celebrate, wall });
-    light(rc, x, y - 8, 38, c.body, 0.3);
-    // A key light so a runner in shade still reads, not so much that it loses its hue.
+    // A key light so a runner in shade still reads, not so much that it loses its hue. No light in the
+    // player's color: a halo round every toy made them all look alike.
     light(rc, x, y - 8, 20, RUNNER_KEY, 0.28);
   }
 
