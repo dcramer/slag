@@ -571,8 +571,12 @@ function watchTelemetry(room: string, match: Match, conn: RoomConnection, render
 /** Calls `step(now)` from a worker: always online, where a stalled tick stalls the room; offline, only while hidden. Ends with `signal`. */
 function keepTicking(online: boolean, step: (now: number) => void, signal: AbortSignal) {
   let worker: Worker | null = null;
+  // A page being unloaded goes hidden after pagehide: no worker for it (WebKit refuses the blob then, and logs an error).
+  let leaving = false;
+  addEventListener('pagehide', () => (leaving = true), { signal });
+  addEventListener('pageshow', () => (leaving = false), { signal });
   const sync = () => {
-    const wanted = online || document.hidden;
+    const wanted = (online || document.hidden) && !leaving;
     if (wanted && !worker) {
       try {
         const url = URL.createObjectURL(new Blob([`setInterval(() => postMessage(0), ${online ? 8 : 50})`], { type: 'text/javascript' }));
