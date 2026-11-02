@@ -27,7 +27,7 @@ export const TOUCH_DEVICE = 'touch';
  * - `lobby`: taps hit-test the HUD buttons (join / ready / new look / name)
  * - `pick`: tap a crate card to claim it (cursor snaps to the finger)
  * - `place`: drag moves the ghost (offset above the finger); ROTATE / PLACE buttons
- * - `race`: left-thumb stick, right-thumb JUMP, hold ALT to self-destruct
+ * - `race`: left-thumb stick, right-thumb JUMP, hold ALT to self-destruct, USE while holding an item
  * - `continue`: tap anywhere = confirm (score / victory screens)
  */
 export type TouchMode = 'off' | 'lobby' | 'pick' | 'place' | 'race' | 'continue';
@@ -59,6 +59,8 @@ export interface TouchLayout {
   primary: Circle;
   /** Small secondary button: ALT (hold) in races, ROTATE in the place phase. */
   secondary: Circle;
+  /** Use-item button above the primary, there only while the touch player holds an item. */
+  use: Circle;
   /** Settings / pause button (a real DOM button; listed so drags avoid it). */
   menu: Circle;
 }
@@ -93,6 +95,7 @@ export function touchLayout(w: number, h: number, ins: Insets = { top: 0, right:
   // Secondary sits left of and a little above the primary: a short thumb roll away.
   const d = pr + sr + clamp(s * 0.03, 8, 18);
   const secondary = { x: primary.x - d * 0.87, y: primary.y - d * 0.5, r: sr };
+  const use = { x: primary.x + pr - sr, y: primary.y - pr - sr - clamp(s * 0.03, 8, 18), r: sr };
   const mr = clamp(s * 0.05, 18, 24);
   const menu = { x: w - ins.right - 10 - mr, y: ins.top + 10 + mr, r: mr };
   return {
@@ -103,13 +106,14 @@ export function touchLayout(w: number, h: number, ins: Insets = { top: 0, right:
     stickHome: { x: ins.left + pad + stickR * 1.2, y: h - ins.bottom - pad - stickR * 1.2 },
     primary,
     secondary,
+    use,
     menu,
   };
 }
 
 const inCircle = (c: Circle, x: number, y: number, slop = 1) => (x - c.x) ** 2 + (y - c.y) ** 2 <= (c.r * slop) ** 2;
 
-type Role = 'stick' | 'jump' | 'alt' | 'drag' | 'tap' | 'rotate' | 'place' | 'none';
+type Role = 'stick' | 'jump' | 'alt' | 'use' | 'drag' | 'tap' | 'rotate' | 'place' | 'none';
 
 interface Track {
   role: Role;
@@ -147,6 +151,8 @@ export class TouchInput {
   active = false;
   /** Haptic feedback (navigator.vibrate) on presses. Persisted by the owner of the settings UI. */
   haptics = true;
+  /** The touch player holds an item, so the USE button is there. Set by the owner each frame. */
+  useReady = false;
 
   /** CSS px → view coords (set by InputManager to its canvas mapping). */
   toView: ToView = () => null;
@@ -163,6 +169,7 @@ export class TouchInput {
   private jumpLatch = false;
   private confirmLatch = false;
   private altLatch = false;
+  private useLatch = false;
   private pointer: { x: number; y: number } | null = null;
 
   /** Switch what touches mean. Live touches are dropped so a held role can't leak across phases. */
@@ -182,7 +189,7 @@ export class TouchInput {
   /** Forget all touches and latched presses (mode change, menu opened, switched to keyboard). */
   reset() {
     this.tracks.clear();
-    this.jumpLatch = this.confirmLatch = this.altLatch = false;
+    this.jumpLatch = this.confirmLatch = this.altLatch = this.useLatch = false;
     this.pointer = null;
   }
 
@@ -200,7 +207,11 @@ export class TouchInput {
     switch (this.mode) {
       case 'race':
         if (inCircle(L.secondary, x, y, 1.2)) role = 'alt';
-        else if (x < L.splitX) {
+        else if (this.useReady && inCircle(L.use, x, y, 1.2)) {
+          role = 'use';
+          this.useLatch = true;
+          this.buzz(10);
+        } else if (x < L.splitX) {
           role = 'stick';
           // Keep the anchor far enough from the screen edge that you can still push toward it.
           t.ax = clamp(x, L.stickR * 0.75, L.w - L.stickR * 0.75);
@@ -325,7 +336,7 @@ export class TouchInput {
   }
 
   /** Is any touch currently holding this role? (overlay pressed states) */
-  holding(role: 'jump' | 'alt' | 'place' | 'rotate'): boolean {
+  holding(role: 'jump' | 'alt' | 'use' | 'place' | 'rotate'): boolean {
     for (const t of this.tracks.values()) if (t.role === role) return true;
     return false;
   }
@@ -363,10 +374,11 @@ export class TouchInput {
       confirmPressed: this.confirmLatch,
       altPressed: alt,
       downPressed: false,
+      usePressed: this.useLatch,
     };
     if (this.pointer && (this.mode === 'pick' || this.mode === 'place')) f.pointer = { x: this.pointer.x, y: this.pointer.y };
     this.pointer = null;
-    this.jumpLatch = this.confirmLatch = this.altLatch = false;
+    this.jumpLatch = this.confirmLatch = this.altLatch = this.useLatch = false;
     return f;
   }
 

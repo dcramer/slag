@@ -52,20 +52,14 @@ Whichever option is chosen, keep the transport abstraction, the election logic, 
 - **New rule: levels are mostly open.** There must always be more than one route to the goal: corridors are fine in places, but never a single narrow path. Enforce it in the judge, for example by checking that the reachable stand-cell graph has at least two disjoint-ish routes, or with a minimum openness ratio.
 - Retune the sculptors for walk vs run and the lower jump.
 
-## 5. Mystery crate and held items
-**Branch:** `wip/held-items` (~2k lines across 27 files, unreviewed).
-
-- A Mystery Crate prop that pops out a random held item, plus a held-item system with a `use` input action.
-- Original items only: a sword that bonks, a kickable puck that ricochets, a boomerang, a shield, …
-- Keep runner state additive, beside `RunnerStatus` (`src/sim/props/status.ts`). Item 7 also adds "runner attached to a prop" state.
-- The branch edits the old projectile loop, which has since moved into `stepProjectile` (`src/sim/props/ammo.ts`), so port those edits.
-
 ## 6. Mobile, round 2
 **Branch:** `wip/mobile-2` (~1k lines, unreviewed). Round 1 (touch controls) is merged.
 
 The user's feedback on a real phone: "almost playable but not quite; resolution is tough; settings is bad; probably needs zoomed in more."
 
 - **Phone follow camera:** render-only, a tile at least ~24 CSS px, look-ahead, a vertical dead zone, clamped to the level. Pick and place start zoomed out, with pinch-zoom, two-finger pan and auto-pan near the edges. Multiple local players fall back to framing everyone. `?zoom=1` forces it on desktop. Keep it in its own module, because item 3 also changes the camera. Cursors must stay in world coordinates, so other players' cursors and ghost parts land in the right place whatever each player's zoom.
+- `pnpm shot mobile` fails on `main`, timing out in the lobby flow. Fix that first.
+- The touch tag `MOVE · push far = RUN` breaks the never-explain-the-obvious rule. Cut it.
 - **HUD readability:** scale HUD text, pills and crate cards up on small screens, with tap targets of at least 44 CSS px.
 - **Settings:** a full-screen sheet on phones with big rows that scrolls.
 - **Verify:** `pnpm shot mobile` on iPhone SE, iPhone 13 and Pixel 7 in landscape. Nothing has been tested on real hardware yet.
@@ -114,7 +108,7 @@ The rest of this item is the home screen, the first and biggest piece of it. The
 - Do this after items 2 and 3, which both change `src/game-client.ts`.
 
 ## 13. Playtest and tune the new parts
-Nothing from item 4 has been played by hand, so the tuning is test-level only: magnet drift, bumper power, slow and freeze durations. Dropstones and crushers stop only on terrain, so they pass through placed blocks; decide whether that's right.
+Nothing from the content or held-items work has been played by hand, so the tuning is test-level only: magnet drift, bumper power, slow and freeze durations, item strength. Gamepad `use` (Y and LT) hasn't been tried on a real pad, and item sounds borrow existing cues and haven't been heard. Dropstones and crushers stop only on terrain, so they pass through placed blocks; decide whether that's right.
 
 Also confirm the Match Length values (Short 30 points / 10 rounds, Normal 50 / 15, Long 80 / 25). They come from a Monte Carlo model of scoring with a fixed finish rate, and real finish rates probably fall as props pile up. The limit decides about 25% of 2-player Normal matches at typical finish rates and about 60% at very low or very high ones.
 

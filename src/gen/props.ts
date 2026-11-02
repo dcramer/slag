@@ -3,7 +3,8 @@ import { moduleSim } from '../sim/props/registry';
 import '../sim/props/modules';
 import type { Aim, Ammo, Archetype, Head, LauncherStyle, Material, MetalStyle, Module, Motion, PropDef, PropStyle, Role, Trim } from '../sim/props/types';
 
-import { AMMO } from '../sim/props/types';
+import { ITEM_KINDS, type ItemKind } from '../sim/items/types';
+import { AMMO, type MysteryLook } from '../sim/props/types';
 
 export type { Aim, Ammo, Archetype, Head, LauncherStyle, Material, MetalStyle, Module, Motion, PropDef, PropStyle, Role, Trim };
 export { AMMO };
@@ -51,6 +52,7 @@ export const ARCHETYPE_WEIGHTS: readonly (readonly [Archetype, number])[] = [
   ['snapper', 1.1],
   ['wheel', 0.9],
   ['hangar', 1],
+  ['mystery', 1.3],
 ];
 
 /** Demolition archetypes: detonated (now or at race start) rather than built. */
@@ -886,6 +888,49 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
         'Spring Spikes',
       ]),
       modules: [{ type: 'snapper', cells: strip(n), angle: -Math.PI / 2, warn, up: rng.int(24, 45), cool: rng.int(40, 80) }],
+    };
+  },
+
+  mystery(rng) {
+    const pools: Record<'shots' | 'gadgets' | 'mixed', ItemKind[]> = {
+      shots: ['sword', 'puck', 'boomerang'],
+      gadgets: ['shield', 'rocket', 'smoke'],
+      mixed: [...ITEM_KINDS],
+    };
+    const poolId = rng.weighted([
+      ['mixed', 3],
+      ['shots', 1.5],
+      ['gadgets', 1.5],
+    ] as const);
+    const uses = rng.weighted([
+      [0, 2.5],
+      [1, 1.5],
+      [3, 1],
+    ] as const);
+    const refill = rng.int(150, 420);
+    const look = rng.weighted<MysteryLook>([
+      ['crate', 3],
+      ['chest', 1.5],
+      ['gift', 1.5],
+    ]);
+    const adjs: string[] = [];
+    if (uses === 1) adjs.push('One-Shot', 'Collectible');
+    else if (uses > 1) adjs.push('Stingy', 'Rationed');
+    else if (refill < 230) adjs.push('Bottomless', 'Generous', 'Overflowing');
+    else if (refill > 350) adjs.push('Sleepy', 'Patient');
+    if (poolId === 'shots') adjs.push('Armed', 'Rowdy');
+    if (poolId === 'gadgets') adjs.push('Gadget', 'Clever', 'Tinkerer’s');
+    if (poolId === 'mixed') adjs.push('Mysterious', 'Chaotic', 'Unlabeled');
+    const nouns: Record<MysteryLook, string[]> = {
+      crate: ['Mystery Crate', 'Surprise Crate', 'Grab Box'],
+      chest: ['Lucky Chest', 'Treasure Trunk'],
+      gift: ['Gift Box', 'Present', 'Surprise Parcel'],
+    };
+    return {
+      archetype: 'mystery',
+      role: 'utility',
+      name: title(rng, adjs, nouns[look]),
+      modules: [{ type: 'mystery', cells: [[0, 0]], pool: pools[poolId], uses, refill, look, seed: rng.int(0, 1 << 20) }],
     };
   },
 

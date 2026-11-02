@@ -6,7 +6,7 @@
  * menus). "Split keyboard" turns the keyboard into two local players.
  */
 
-export const BINDABLE = ['left', 'right', 'up', 'down', 'jump', 'run', 'confirm', 'alt'] as const;
+export const BINDABLE = ['left', 'right', 'up', 'down', 'jump', 'run', 'use', 'confirm', 'alt'] as const;
 export type Action = (typeof BINDABLE)[number];
 
 export const ACTION_LABELS: Record<Action, string> = {
@@ -16,6 +16,7 @@ export const ACTION_LABELS: Record<Action, string> = {
   down: 'Down / drop',
   jump: 'Jump',
   run: 'Run (hold)',
+  use: 'Use item',
   confirm: 'Confirm / pick',
   alt: 'Rotate / alt',
 };
@@ -46,6 +47,7 @@ export function defaultSettings(): InputSettings {
       down: ['KeyS', 'ArrowDown'],
       jump: ['Space', 'KeyK'],
       run: ['ShiftLeft', 'KeyJ'],
+      use: ['KeyE', 'KeyL'],
       confirm: ['Enter', 'Space'],
       alt: ['KeyR', 'KeyQ'],
     },
@@ -56,6 +58,7 @@ export function defaultSettings(): InputSettings {
       down: ['KeyS'],
       jump: ['Space', 'KeyW'],
       run: ['ShiftLeft', 'KeyF'],
+      use: ['KeyG', 'KeyC'],
       confirm: ['Space'],
       alt: ['KeyQ', 'KeyE'],
     },
@@ -66,6 +69,7 @@ export function defaultSettings(): InputSettings {
       down: ['ArrowDown'],
       jump: ['ArrowUp', 'Slash'],
       run: ['ShiftRight', 'Quote'],
+      use: ['Semicolon', 'ControlRight'],
       confirm: ['Enter', 'Slash'],
       alt: ['Period', 'Comma'],
     },
@@ -80,9 +84,8 @@ export function loadSettings(): InputSettings {
     if (raw) {
       const s = JSON.parse(raw) as InputSettings;
       if (s.version === 1 && s.single && s.left && s.right) {
-        // Fill actions added after the settings were saved (e.g. run) from defaults.
         const d = defaultSettings();
-        for (const k of ['single', 'left', 'right'] as const) s[k] = { ...d[k], ...s[k] };
+        for (const k of ['single', 'left', 'right'] as const) s[k] = fillMissing(s[k], d[k]);
         return { ...d, ...s };
       }
     }
@@ -90,6 +93,14 @@ export function loadSettings(): InputSettings {
     // Private mode / blocked storage: fall back to defaults.
   }
   return defaultSettings();
+}
+
+/** Fill actions added after the settings were saved (e.g. run, use) from defaults, minus any default key the player already bound to something else. */
+function fillMissing(saved: Partial<KeyProfile>, d: KeyProfile): KeyProfile {
+  const taken = new Set(BINDABLE.flatMap((a) => saved[a] ?? []));
+  const out = { ...d, ...saved };
+  for (const a of BINDABLE) if (!saved[a]) out[a] = d[a].filter((c) => !taken.has(c));
+  return out;
 }
 
 export function saveSettings(s: InputSettings) {

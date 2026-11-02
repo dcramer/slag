@@ -151,6 +151,7 @@ const BIND_LABELS: Record<(typeof BINDABLE)[number], string> = {
   down: 'Down / Drop',
   jump: 'Jump',
   run: 'Run (Hold)',
+  use: 'Use Item',
   confirm: 'Confirm / Pick',
   alt: 'Rotate / Alt',
 };
@@ -372,6 +373,13 @@ export class SettingsMenu extends Overlay {
             { kind: 'pad', button: 'RB' },
           ],
           label: 'Run',
+        },
+        {
+          glyphs: [
+            { kind: 'pad', button: 'Y' },
+            { kind: 'pad', button: 'LT' },
+          ],
+          label: 'Use Item',
         },
         {
           glyphs: [

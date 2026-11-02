@@ -1,6 +1,21 @@
 import { inset, overlaps, type Rect, rectCircle } from '../core/geom';
 import { KILL_Y, PLAYER_W, RUN_COUNTDOWN } from './constants';
 import { type CrowdMember, nudgeCrowd } from './crowd';
+import {
+  absorbHit,
+  bonk,
+  burstSmoke,
+  catchShot,
+  creditKill,
+  type ItemWorld,
+  itemInput,
+  itemPostStep,
+  newItemWorld,
+  newRunnerItems,
+  type RunnerItems,
+  spawnItem,
+  stepItems,
+} from './items';
 import { goalRect, type Level, spawnZone, tileAt } from './level';
 import { type Body, bodyAtCell, type CollisionWorld, firstOverlap, type Solid, stepBody } from './physics';
 import {
@@ -14,6 +29,8 @@ import {
   newPropState,
   newStatus,
   type Projectile,
+  type ProjectileSpawn,
+  type ProjItems,
   type ProjWorld,
   type PlacedProp,
   type PropCtx,
@@ -51,6 +68,8 @@ export interface Runner {
   springCooldown: number;
   /** Status effects (frozen, slowed) and trigger contact (props/status.ts). */
   status: RunnerStatus;
+  /** Held item and its effects (src/sim/items). */
+  items: RunnerItems;
 }
 
 /**
@@ -70,6 +89,8 @@ export class RunWorld {
   /** Set pieces first, then player props. */
   resolved: Resolved[];
   events: GameEvent[] = [];
+  /** Loose held items and smoke clouds (src/sim/items). */
+  items: ItemWorld = newItemWorld();
   /**
    * Spawn safe zone (world px), or null. A runner whose body overlaps it can't
    * be killed by props: hazards, projectiles (they pop harmlessly) and crushing.
@@ -81,7 +102,7 @@ export class RunWorld {
 
   solids: Solid[] = [];
   private out: Contrib = { solids: this.solids, hazards: [], springs: [], winds: [], triggers: [] };
-  private world: CollisionWorld;
+  readonly world: CollisionWorld;
   private goal: Rect;
 
   constructor(
@@ -90,6 +111,8 @@ export class RunWorld {
     slots: number[],
     /** Race time limit in frames after the countdown; 0 = unlimited. */
     readonly timeLimit = 0,
+    /** Seed of this race's item rolls. Match varies it per round: crates survive rounds and must not replay the same items. */
+    readonly itemSeed = level.seed,
   ) {
     const n = slots.length;
     this.runners = slots.map((slot, i) => ({
@@ -104,6 +127,7 @@ export class RunWorld {
       cause: null,
       springCooldown: 0,
       status: newStatus(),
+      items: newRunnerItems(),
     }));
     this.resolved = [...level.setPieces, ...placed].map(resolveProp);
     for (const r of this.resolved) {
@@ -153,9 +177,16 @@ export class RunWorld {
     return {
       ...this.ctx(r, mi, f),
       runners,
-      spawn: (p) => this.projectiles.push(makeProjectile(p, f, this.seq++)),
+      spawn: (p) => this.spawnProjectile(p),
       emit: (e) => this.events.push(e),
+      spawnItem: (s) => spawnItem(this, s),
+      itemSeed: this.itemSeed,
     };
+  }
+
+  /** Add a projectile to this frame's world (prop ticks, held items). */
+  spawnProjectile(s: ProjectileSpawn) {
+    this.projectiles.push(makeProjectile(s, this.frame, this.seq++));
   }
 
   step(inputs: readonly InputFrame[]): void {
@@ -172,7 +203,7 @@ export class RunWorld {
         if (r.body.y <= KILL_Y) stepBody(r.body, NO_INPUT, this.world, windAt(r.body, this.out.winds));
         return;
       }
-      const inp = statusInput(r.status, live ? (inputs[i] ?? NO_INPUT) : NO_INPUT);
+      const inp = itemInput(r.items, statusInput(r.status, live ? (inputs[i] ?? NO_INPUT) : NO_INPUT));
       const b = r.body;
       if (inp.altPressed) return this.kill(r, -1, 'pop');
       statusPreStep(r.status, b);
@@ -185,6 +216,7 @@ export class RunWorld {
         return this.kill(r, owner, 'crush');
       }
       statusPostStep(r.status, b);
+      itemPostStep(r.items, b);
 
       if (b.onGround && b.groundRef >= 0) {
         const s = this.solids.find((s) => s.id === b.groundRef);
@@ -218,7 +250,10 @@ export class RunWorld {
       const hb = inset(b, 1.5);
       if (!this.isSafe(r)) {
         for (const h of this.out.hazards) {
-          if (hitHazard(hb, h)) return this.kill(r, h.owner, 'hazard');
+          if (!hitHazard(hb, h)) continue;
+          this.kill(r, h.owner, 'hazard');
+          // A shield can cancel the hit; then the rest of this frame still applies.
+          if (!r.alive) return;
         }
       }
       if (b.y > KILL_Y) return this.kill(r, -1, 'fall');
@@ -235,6 +270,7 @@ export class RunWorld {
     this.runners.forEach((r, i) => r.alive && !r.finished && crowd.push({ key: r.slot, body: r.body, x0: x0[i] }));
     nudgeCrowd(crowd, this.world);
 
+    stepItems(this, inputs, live);
     this.stepProjectiles(f);
     for (const rp of this.resolved) rp.mods.forEach((m, mi) => moduleSim(m.type).tick?.(m, this.tickCtx(rp, mi, f)));
 
@@ -245,7 +281,10 @@ export class RunWorld {
     this.frame++;
   }
 
+  /** Kill a runner, unless a shield cancels it. Bonks pass kill credit on. */
   private kill(r: Runner, killer: number, cause: DeathCause) {
+    if (absorbHit(this, r, cause)) return;
+    killer = creditKill(r, killer, cause);
     r.alive = false;
     r.deathFrame = this.frame;
     r.killer = killer;
@@ -290,6 +329,13 @@ export class RunWorld {
     for (const p of this.projectiles) buildProjectile(p, f, this.out);
   }
 
+  private projItems: ProjItems = {
+    caught: (i, kind) => catchShot(this, this.runners[i], kind),
+    loose: (s) => spawnItem(this, s),
+    bonk: (i, owner) => bonk(this.runners[i], owner),
+    burst: (x, y) => burstSmoke(this, x, y),
+  };
+
   /** Projectile behavior lives in props/ammo.ts; this just wires it to the world. */
   private stepProjectiles(f: number) {
     if (this.projectiles.length === 0) return;
@@ -305,8 +351,9 @@ export class RunWorld {
       emit: (e) => this.events.push(e),
       kill: (i, owner) => {
         this.kill(this.runners[i], owner, 'hazard');
-        runners[i].active = false;
+        runners[i].active = this.runners[i].alive;
       },
+      items: this.projItems,
     };
     const keep: Projectile[] = [];
     for (const p of this.projectiles) if (stepProjectile(p, w)) keep.push(p);

@@ -11,6 +11,8 @@ export interface InputFrame {
   confirmPressed: boolean;
   altPressed: boolean;
   downPressed: boolean;
+  /** Edge: use the held item (down + use tosses it). Optional so older callers and recorded inputs stay valid. */
+  usePressed?: boolean;
   /**
    * Mouse pointer in logical view coords (0..768 × 0..432), present only on
    * frames where the pointer moved or clicked. Menus snap the cursor to it.
@@ -44,4 +46,8 @@ export type GameEvent =
   | { type: 'prop'; kind: string; x: number; y: number; x2?: number; y2?: number; r?: number }
   | { type: 'place'; slot: number; x: number; y: number }
   | { type: 'claim'; slot: number }
-  | { type: 'phase'; phase: string };
+  | { type: 'phase'; phase: string }
+  /** Held items (src/sim/items). `kind` is the item, or the ammo for a swatted shot; `slot` is the runner involved, or -1. */
+  | { type: 'item'; what: ItemEventKind; kind: string; slot: number; x: number; y: number };
+
+export type ItemEventKind = 'pop' | 'pickup' | 'use' | 'drop' | 'block' | 'catch' | 'smoke' | 'hit' | 'fizzle';

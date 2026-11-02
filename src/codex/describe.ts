@@ -41,6 +41,7 @@ export const PART_INFO: Record<Module['type'], { title: string; blurb: string }>
     blurb:
       'Mounted flush on an exposed face of a block (rotation picks the face). Spikes kill; ice coats make floors slippery and walls un-jumpable; slime makes floors slow and walls sticky.',
   },
+  mystery: { title: 'Mystery crate', blurb: 'A solid block with a glowing porthole and something inside.' },
   bomb: {
     title: 'Demolition',
     blurb:
@@ -169,6 +170,11 @@ export function summarize(def: PropDef): string[] {
         break;
       case 'snapper':
         out.push(`snap trap ${m.cells.length} wide · click ${secs(m.warn)} · spikes ${secs(m.up)} · reset ${secs(m.cool)}`);
+        break;
+      case 'mystery':
+        out.push(
+          `items: ${m.pool.join(', ')} · ${m.uses ? `${m.uses} pop${m.uses > 1 ? 's' : ''} then spent` : 'refills forever'}${m.uses === 1 ? '' : ` · refill ${secs(m.refill)}`}`,
+        );
         break;
       case 'rotor':
         out.push(`${m.count} platforms on a ${fmt(m.arm, 1)}-tile wheel · ${secs(m.period)} per turn`);

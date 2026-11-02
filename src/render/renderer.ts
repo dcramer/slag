@@ -10,6 +10,7 @@ import { Camera } from './camera';
 import { drawAccessory, drawCharacter, Rig } from './character';
 import { Fx } from './fx';
 import { Hud } from './hud';
+import { drawClouds, drawDrops, drawRunnerItems, itemFx } from './items';
 import { circle, glowDot, type Light, light, type RC } from './kit';
 import { type Compositor, createCompositor } from './post';
 import { drawBlastPreview, drawProjectile, drawResolved, drawRunnerStatus, type Emit, propEventFx } from './props';
@@ -178,6 +179,7 @@ export class Renderer {
     if (run) {
       for (const p of run.projectiles) drawProjectile(rc, p, emit);
       this.drawSafeZone(rc, level, run);
+      drawDrops(rc, run);
       for (const r of run.runners) {
         if (!r.alive) continue;
         const pl = m.player(r.slot);
@@ -198,7 +200,9 @@ export class Renderer {
         );
         if (!r.finished && run.isSafe(r)) this.drawShield(rc, level, r.body.x + r.body.w / 2, r.body.y + r.body.h, r.slot);
         drawRunnerStatus(rc, r.body, r.status);
+        drawRunnerItems(rc, r);
       }
+      drawClouds(rc, run);
     }
     this.fx.draw(rc);
     this.backdrop.drawLiquid(rc, level.theme);
@@ -581,6 +585,9 @@ export class Renderer {
           this.cam.shake = Math.max(this.cam.shake, 2);
           break;
         }
+        case 'item':
+          itemFx(this.fx, e, (k) => (this.cam.shake = Math.max(this.cam.shake, k)));
+          break;
         case 'prop':
           propEventFx(this.fx, e, (k) => (this.cam.shake = Math.max(this.cam.shake, k)));
           break;

@@ -9,6 +9,7 @@
  *   pnpm shot lobby|pick|place --seed abc
  *   pnpm shot levels --seeds a,b,c,d      (or --count 12) → contact sheet
  *   pnpm shot props --count 24            → prop gallery (crate cards)
+ *   pnpm shot items --seed abc             → held items: in hand, loose, and each one used
  *   pnpm shot codex                        → /codex page (full-page screenshot)
  *   pnpm shot home                         → main menu (desktop + 390×844 mobile)
  *   pnpm shot settings                     → lobby with the settings overlay open
@@ -276,6 +277,63 @@ try {
         await step(f);
         await snap(`race-${seed}-${await page.evaluate(() => (window as any).slagDebug.match.run?.frame ?? 0)}`);
       }
+      break;
+    }
+    case 'items': {
+      // Every item in hand, then everyone uses theirs at once: one frame set per moment worth looking at.
+      await open(`seed=${seed}&players=6&race=mystery,mystery,mystery&give=all&propseed=${opt('propseed', '1')}`);
+      await step(190);
+      // Spread the runners along open ground, with one loose item of each kind beside them.
+      await page.evaluate(() => {
+        const run = (window as any).slagDebug.match.run;
+        const L = run.level;
+        const spots: [number, number][] = [];
+        for (let tx = 7; tx < L.w - 6 && spots.length < 12; tx += 2) {
+          for (let ty = 2; ty < L.h - 1; ty++) {
+            if (L.tiles[ty * L.w + tx] === 1 && !L.tiles[(ty - 1) * L.w + tx] && !L.tiles[(ty - 2) * L.w + tx]) {
+              spots.push([tx, ty]);
+              break;
+            }
+          }
+        }
+        run.runners.forEach((r: any, i: number) => {
+          const [tx, ty] = spots[Math.floor((i * spots.length) / 6)];
+          r.body.x = tx * 16 + 2;
+          r.body.y = ty * 16 - r.body.h;
+          r.body.vx = r.body.vy = 0;
+        });
+        ['sword', 'puck', 'boomerang', 'shield', 'rocket', 'smoke'].forEach((kind, i) => {
+          const [tx, ty] = spots[(Math.floor((i * spots.length) / 6) + 1) % spots.length];
+          run.items.drops.push({ id: 90 + i, kind, uses: 1, x: tx * 16 + 8, y: ty * 16 - 6, vx: 0, vy: 0, born: run.frame, grace: 600, onGround: false });
+        });
+      });
+      await step(20);
+      await snap(`items-${seed}-held`);
+      const use = ['kb1', 'kb2', 'pad0', 'pad1', 'pad2', 'pad3'];
+      const press = Object.fromEntries(
+        use.map((d) => [
+          d,
+          {
+            left: false,
+            right: false,
+            up: false,
+            down: false,
+            jump: false,
+            jumpPressed: false,
+            confirmPressed: false,
+            altPressed: false,
+            downPressed: false,
+            usePressed: true,
+          },
+        ]),
+      );
+      await page.evaluate((p) => (window as any).slagDebug.step(1, p), press);
+      await step(3);
+      await snap(`items-${seed}-swing`);
+      await step(4);
+      await snap(`items-${seed}-use`);
+      await step(40);
+      await snap(`items-${seed}-after`);
       break;
     }
     case 'levels': {
