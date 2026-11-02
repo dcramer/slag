@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Match } from '../src/game/match';
-import { DEFAULT_RULES, type MatchRules } from '../src/game/rules';
+import { DEFAULT_RULES, loadRules, type MatchRules, saveRules } from '../src/game/rules';
 import { rollKind } from '../src/gen/level/weather';
 import { applyAction, newNetState, sanitizeRules } from '../src/net/actions';
 import { cloneSnap, hashMatch, restoreMatch, snapshotMatch } from '../src/net/snapshot';
@@ -19,6 +19,7 @@ const CHANGED: MatchRules = {
   weather: false,
   bloodRounds: 3,
   secretParts: true,
+  private: true,
 };
 
 /** A seed whose farm level rolls weather, so turning the rule off changes something. */
@@ -54,6 +55,28 @@ describe('sanitizeRules', () => {
 
   it('never lets rounds drift away from points', () => {
     expect(sanitizeRules({ targetScore: 30, maxRounds: 1e9 }).maxRounds).toBe(10);
+  });
+});
+
+describe('Private', () => {
+  it('starts every lobby public, whatever the host chose last time', () => {
+    const store = new Map<string, string>();
+    vi.stubGlobal('localStorage', { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) });
+    try {
+      saveRules(CHANGED);
+      expect(loadRules()).toEqual({ ...CHANGED, private: false });
+      expect(JSON.parse([...store.values()][0])).not.toHaveProperty('private');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('changes nothing in the match: no rebuild, the same level', () => {
+    const m = new Match(7);
+    const key = levelKey(m.level);
+    rulesAct(m, { ...m.rules, private: true });
+    expect(m.rules.private).toBe(true);
+    expect(levelKey(m.level)).toBe(key);
   });
 });
 

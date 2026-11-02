@@ -1,7 +1,7 @@
 import { newRoomCode, roomFromPath } from '../../game/room';
 import { connectedPads } from '../../input/input';
 import type { Nav, Unmount } from '../../router';
-import { CODEX, lobby } from '../../routes';
+import { CODEX, LOBBIES, lobby } from '../../routes';
 import { MenuPadReader, readMenuPad } from '../settings-nav';
 import { homeHTML, homePromptsHTML, MENU_ITEMS, type MenuItemId } from './markup';
 
@@ -18,7 +18,9 @@ export function mountHome(root: HTMLElement, nav: Nav): Unmount {
   const on = { signal: life.signal };
   const buttons = [...root.querySelectorAll<HTMLButtonElement>('.menu-item')];
   const prompts = root.querySelector<HTMLElement>('.prompts')!;
-  const joinLi = buttons[MENU_ITEMS.findIndex((m) => m.id === 'join')].parentElement!;
+  const item = (id: MenuItemId) => buttons[MENU_ITEMS.findIndex((m) => m.id === id)];
+  const joinBtn = item('join');
+  const joinLi = joinBtn.parentElement!;
   let active = 0;
   let joining: { form: HTMLFormElement; input: HTMLInputElement; err: HTMLParagraphElement } | null = null;
   let settingsOpen = false;
@@ -69,7 +71,7 @@ export function mountHome(root: HTMLElement, nav: Nav): Unmount {
       });
       joinLi.append(form, err);
       joining = { form, input, err };
-      buttons[1].setAttribute('aria-expanded', 'true');
+      joinBtn.setAttribute('aria-expanded', 'true');
       paintPrompts();
     }
     const input = joining.input;
@@ -80,8 +82,8 @@ export function mountHome(root: HTMLElement, nav: Nav): Unmount {
     joining.form.remove();
     joining.err.remove();
     joining = null;
-    buttons[1].setAttribute('aria-expanded', 'false');
-    buttons[1].focus();
+    joinBtn.setAttribute('aria-expanded', 'false');
+    joinBtn.focus();
     paintPrompts();
   };
 
@@ -94,7 +96,7 @@ export function mountHome(root: HTMLElement, nav: Nav): Unmount {
         closeSettings = null;
         // Whatever is held as Settings closes isn't a press: the Ⓐ on Done must not reopen it.
         reader = new MenuPadReader(readMenuPad(connectedPads()));
-        buttons[3].focus();
+        item('settings').focus();
       });
     });
   };
@@ -102,6 +104,7 @@ export function mountHome(root: HTMLElement, nav: Nav): Unmount {
   const activate = (id: MenuItemId) => {
     showError('');
     if (id === 'play') nav.go(lobby(newRoomCode()));
+    else if (id === 'lobbies') nav.go(LOBBIES);
     else if (id === 'codex') nav.go(CODEX);
     else if (id === 'settings') openSettings();
     else openJoin();
