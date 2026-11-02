@@ -9,7 +9,8 @@ export const shots: Scenarios = {
         : opt('themes')?.split(',');
     const seeds = opt('seeds')?.split(',') ?? Array.from({ length: themes ? themes.length : Number(opt('count', '9')) }, (_, i) => `lv${i}`);
     const files: string[] = [];
-    await open(`seed=${seeds[0]}`);
+    // The lobby's cards cover most of the view: a contact sheet is for reading level shapes.
+    await open(`seed=${seeds[0]}&ui=0`);
     for (let i = 0; i < seeds.length; i++) {
       const th = themes?.[i % themes.length] ?? theme;
       await page.evaluate(([x, t]) => (window as any).slagDebug.loadLevel(x, t || undefined), [seeds[i], th ?? ''] as const);
