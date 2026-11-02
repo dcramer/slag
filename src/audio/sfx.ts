@@ -98,6 +98,9 @@ const SPLASH: Record<string, (v: Voice, t: number) => void> = {
   },
 };
 
+/** Per-liquid level trims (measured offline so every splash peaks alike). */
+const SPLASH_TRIM: Record<string, number> = { slag: 0.85, water: 1.4, acid: 1.4, void: 1.6, tar: 1.25 };
+
 // ---------------------------------------------------------------- palette
 
 const P = (prio: number, gain: number, reverb: number, max: number, window: number, play: SfxDef['play'], duck?: number): SfxDef => ({
@@ -112,11 +115,11 @@ const P = (prio: number, gain: number, reverb: number, max: number, window: numb
 
 export const SFX = {
   // --- player actions
-  jump: P(1, 0.1, 0.05, 4, 0.08, (v, t, o) => {
+  jump: P(1, 0.13, 0.05, 4, 0.08, (v, t, o) => {
     tone(v, 'triangle', 260 * o.pitch, 560 * o.pitch, t, 0.004, 0.09, 1);
     burst(v, 'white', t, 0.002, 0.04, 0.3, 'highpass', 2500);
   }),
-  walljump: P(1, 0.12, 0.05, 4, 0.08, (v, t, o) => {
+  walljump: P(1, 0.14, 0.05, 4, 0.08, (v, t, o) => {
     tone(v, 'triangle', 340 * o.pitch, 760 * o.pitch, t, 0.003, 0.08, 1);
     burst(v, 'white', t, 0.001, 0.05, 0.6, 'bandpass', 3200, 1800, 1.5);
   }),
@@ -124,7 +127,7 @@ export const SFX = {
     (LAND[o.variant] ?? LAND.soft)(v, t, o.amount);
     tone(v, 'sine', 140, 55, t, 0.002, 0.07 + o.amount * 0.05, 0.6 + o.amount * 0.4);
   }),
-  step: P(0, 0.05, 0, 6, 0.1, (v, t, o) => {
+  step: P(0, 0.1, 0, 6, 0.1, (v, t, o) => {
     const [type, f, q] = STEP[o.variant] ?? STEP.soft;
     burst(v, 'white', t, 0.001, 0.025, 1, type, f * rnd(0.85, 1.15), f, q);
   }),
@@ -136,7 +139,7 @@ export const SFX = {
     const lfo = v.gain(osc.frequency, 28);
     v.osc('sine', 14, t, 0.36, lfo);
   }),
-  drop: P(0, 0.06, 0, 3, 0.1, (v, t) => {
+  drop: P(0, 0.18, 0, 3, 0.1, (v, t) => {
     burst(v, 'pink', t, 0.02, 0.12, 1, 'bandpass', 2000, 600, 1.5);
   }),
   spring: P(2, 0.2, 0.1, 4, 0.06, (v, t) => {
@@ -152,23 +155,23 @@ export const SFX = {
   }),
 
   // --- deaths
-  'death-hazard': P(3, 0.32, 0.25, 4, 0.1, (v, t, o) => {
+  'death-hazard': P(3, 0.55, 0.25, 4, 0.1, (v, t, o) => {
     burst(v, 'pink', t, 0.002, 0.2, 1, 'lowpass', 2200, 300, 1);
     tone(v, 'sine', 520 * o.pitch, 130 * o.pitch, t, 0.003, 0.2, 0.75);
     burst(v, 'white', t, 0.001, 0.06, 0.5, 'bandpass', 900, 900, 3);
     tone(v, 'square', 233 * o.pitch, 220 * o.pitch, t + 0.02, 0.003, 0.12, 0.12);
   }),
-  'death-crush': P(3, 0.38, 0.2, 4, 0.1, (v, t) => {
+  'death-crush': P(3, 0.6, 0.2, 4, 0.1, (v, t) => {
     tone(v, 'sine', 95, 34, t, 0.002, 0.3, 1);
     burst(v, 'brown', t, 0.002, 0.22, 0.9, 'lowpass', 800);
     for (const dt of [0, 0.03, 0.058]) burst(v, 'white', t + dt, 0.001, 0.03, 0.6, 'bandpass', 2600, 2600, 2);
   }),
-  'death-pop': P(3, 0.28, 0.2, 4, 0.1, (v, t, o) => {
+  'death-pop': P(3, 0.45, 0.2, 4, 0.1, (v, t, o) => {
     burst(v, 'white', t, 0.001, 0.05, 1, 'highpass', 1000);
     tone(v, 'sine', 900 * o.pitch, 1800 * o.pitch, t, 0.002, 0.08, 0.4);
     burst(v, 'pink', t + 0.01, 0.01, 0.25, 0.3, 'bandpass', 3000, 2000, 1.5);
   }),
-  'death-timeout': P(3, 0.15, 0.2, 3, 0.2, (v, t, o) => {
+  'death-timeout': P(3, 0.21, 0.2, 3, 0.2, (v, t, o) => {
     const f = 233 * o.pitch;
     const g = v.gain(v.out);
     g.gain.setValueAtTime(0, t);
@@ -189,10 +192,13 @@ export const SFX = {
     osc.frequency.setValueAtTime(f * 0.944, t + 0.2);
     osc.frequency.linearRampToValueAtTime(f * 0.89, t + 0.75);
   }),
-  splash: P(3, 0.3, 0.25, 4, 0.1, (v, t, o) => (SPLASH[o.variant] ?? SPLASH.slag)(v, t)),
+  splash: P(3, 0.38, 0.25, 4, 0.1, (v, t, o) => {
+    v.out.gain.value *= SPLASH_TRIM[o.variant] ?? 1;
+    (SPLASH[o.variant] ?? SPLASH.slag)(v, t);
+  }),
 
   // --- finish & musical cues
-  finish: P(3, 0.2, 0.35, 4, 0.1, (v, t, o) => {
+  finish: P(3, 0.4, 0.35, 4, 0.1, (v, t, o) => {
     o.notes.forEach((m, i) => {
       const at = t + i * 0.075;
       const last = i === o.notes.length - 1;
@@ -203,13 +209,13 @@ export const SFX = {
     });
     burst(v, 'white', t, 0.02, 0.4, 0.15, 'highpass', 7000);
   }),
-  claim: P(2, 0.17, 0.25, 4, 0.05, (v, t, o) => {
+  claim: P(2, 0.27, 0.25, 4, 0.05, (v, t, o) => {
     o.notes.forEach((m, i) => {
       tone(v, 'sine', mtof(m), mtof(m), t + i * 0.08, 0.004, 0.3, 0.9);
       tone(v, 'triangle', mtof(m + 12), mtof(m + 12), t + i * 0.08, 0.004, 0.12, 0.3);
     });
   }),
-  place: P(2, 0.22, 0.15, 4, 0.05, (v, t, o) => {
+  place: P(2, 0.28, 0.15, 4, 0.05, (v, t, o) => {
     tone(v, 'sine', 170, 75, t, 0.002, 0.11, 1);
     burst(v, 'brown', t, 0.002, 0.07, 0.8, 'lowpass', 900);
     if (o.variant === 'metal') metal(v, t, 420, 0.3, 0.4);
@@ -217,7 +223,7 @@ export const SFX = {
     else tone(v, 'triangle', 260, 220, t, 0.001, 0.08, 0.45);
     o.notes.forEach((m, i) => tone(v, 'sine', mtof(m + 24), mtof(m + 24), t + 0.06 + i * 0.05, 0.003, 0.15, 0.22));
   }),
-  countdown: P(3, 0.15, 0.15, 2, 0.1, (v, t, o) => {
+  countdown: P(3, 0.12, 0.15, 2, 0.1, (v, t, o) => {
     const go = o.variant === 'go';
     const notes = go ? o.notes : o.notes.slice(0, 1);
     for (const m of notes) {
@@ -255,17 +261,17 @@ export const SFX = {
     },
     0.25,
   ),
-  'fire-totem': P(1, 0.16, 0.15, 3, 0.08, (v, t) => {
+  'fire-totem': P(1, 0.28, 0.15, 3, 0.08, (v, t) => {
     burst(v, 'pink', t, 0.05, 0.25, 1, 'bandpass', 400, 2200, 2);
     tone(v, 'sine', 520, 500, t, 0.001, 0.06, 0.6);
     tone(v, 'sine', 1560, 1500, t, 0.001, 0.03, 0.2);
   }),
-  'fire-turret': P(1, 0.12, 0.1, 4, 0.06, (v, t, o) => {
+  'fire-turret': P(1, 0.15, 0.1, 4, 0.06, (v, t, o) => {
     const lp = v.filter(v.out, 'lowpass', 4000);
     tone(v, 'square', 1800 * o.pitch, 180 * o.pitch, t, 0.002, 0.13, 0.8, lp);
     tone(v, 'sine', 2400 * o.pitch, 600 * o.pitch, t, 0.002, 0.08, 0.5);
   }),
-  'fire-thrower': P(1, 0.12, 0.1, 3, 0.08, (v, t) => {
+  'fire-thrower': P(1, 0.4, 0.1, 3, 0.08, (v, t) => {
     const am = v.gain(v.out, 0.5);
     const lfo = v.gain(am.gain, 0.5);
     const l = v.osc('square', 38, t, 0.3, lfo);
@@ -275,11 +281,11 @@ export const SFX = {
   }),
 
   // --- projectile impacts
-  'pop-bolt': P(1, 0.13, 0.08, 4, 0.06, (v, t) => {
+  'pop-bolt': P(1, 0.18, 0.08, 4, 0.06, (v, t) => {
     tone(v, 'sine', 300, 120, t, 0.001, 0.06, 1);
     burst(v, 'white', t, 0.001, 0.04, 0.6, 'bandpass', 900, 900, 2);
   }),
-  'pop-arrow': P(1, 0.13, 0.08, 4, 0.06, (v, t) => {
+  'pop-arrow': P(1, 0.18, 0.08, 4, 0.06, (v, t) => {
     tone(v, 'sine', 280, 120, t, 0.001, 0.06, 1);
     burst(v, 'white', t, 0.001, 0.04, 0.5, 'bandpass', 900, 900, 2);
     const o = tone(v, 'triangle', 230, 220, t + 0.01, 0.002, 0.15, 0.3);
@@ -298,11 +304,11 @@ export const SFX = {
     },
     0.12,
   ),
-  'pop-fireball': P(1, 0.2, 0.12, 4, 0.06, (v, t) => {
+  'pop-fireball': P(1, 0.32, 0.12, 4, 0.06, (v, t) => {
     burst(v, 'brown', t, 0.003, 0.25, 1, 'lowpass', 1300, 200);
     burst(v, 'crackle', t, 0.005, 0.3, 0.6, 'highpass', 3000);
   }),
-  'pop-plasma': P(1, 0.12, 0.15, 4, 0.06, (v, t) => {
+  'pop-plasma': P(1, 0.17, 0.15, 4, 0.06, (v, t) => {
     tone(v, 'sine', 2000, 3500, t, 0.001, 0.05, 0.6);
     tone(v, 'sine', 1700, 1700, t, 0.002, 0.2, 0.4);
     tone(v, 'sine', 2310, 2300, t, 0.002, 0.18, 0.3);
@@ -329,12 +335,12 @@ export const SFX = {
     },
     0.4,
   ),
-  'crumble-start': P(1, 0.14, 0.1, 3, 0.1, (v, t) => {
+  'crumble-start': P(1, 0.2, 0.1, 3, 0.1, (v, t) => {
     const lp = v.filter(v.out, 'lowpass', 420, 8);
     tone(v, 'sawtooth', 62, 92, t, 0.05, 0.4, 0.5, lp);
     burst(v, 'crackle', t, 0.05, 0.5, 1, 'bandpass', 1200);
   }),
-  'crumble-break': P(2, 0.26, 0.2, 3, 0.1, (v, t) => {
+  'crumble-break': P(2, 0.42, 0.2, 3, 0.1, (v, t) => {
     burst(v, 'brown', t, 0.003, 0.4, 1, 'lowpass', 900);
     burst(v, 'white', t, 0.002, 0.1, 0.5, 'bandpass', 2000);
     for (let i = 0; i < 5; i++) {
@@ -344,20 +350,20 @@ export const SFX = {
   }),
 
   // --- prop transients (derived from module cycles)
-  'flame-ignite': P(1, 0.15, 0.1, 3, 0.1, (v, t) => {
+  'flame-ignite': P(1, 0.3, 0.1, 3, 0.1, (v, t) => {
     burst(v, 'brown', t, 0.03, 0.3, 1, 'lowpass', 200, 1500, 1);
     tone(v, 'sine', 90, 70, t, 0.02, 0.25, 0.5);
   }),
-  'laser-fire': P(1, 0.12, 0.12, 3, 0.1, (v, t) => {
+  'laser-fire': P(1, 0.17, 0.12, 3, 0.1, (v, t) => {
     const lp = v.filter(v.out, 'lowpass', 5000);
     tone(v, 'sawtooth', 1300, 280, t, 0.002, 0.16, 0.7, lp);
     tone(v, 'sine', 3000, 2600, t, 0.002, 0.1, 0.4);
   }),
-  'tesla-arc': P(1, 0.14, 0.1, 3, 0.1, (v, t) => {
+  'tesla-arc': P(1, 0.18, 0.1, 3, 0.1, (v, t) => {
     burst(v, 'white', t, 0.001, 0.05, 1, 'highpass', 2000);
     burst(v, 'crackle', t, 0.002, 0.25, 1, 'bandpass', 3000, 3000, 1);
   }),
-  'piston-hiss': P(0, 0.06, 0.05, 3, 0.1, (v, t) => {
+  'piston-hiss': P(0, 0.1, 0.05, 3, 0.1, (v, t) => {
     burst(v, 'white', t, 0.01, 0.12, 1, 'highpass', 3000);
   }),
   'piston-slam': P(1, 0.2, 0.15, 3, 0.1, (v, t) => {
@@ -365,27 +371,27 @@ export const SFX = {
     metal(v, t, 380, 0.22, 0.5);
     burst(v, 'white', t, 0.001, 0.02, 0.5, 'bandpass', 2500);
   }),
-  swoosh: P(0, 0.09, 0.05, 4, 0.1, (v, t, o) => {
+  swoosh: P(0, 0.28, 0.05, 4, 0.1, (v, t, o) => {
     burst(v, 'pink', t, 0.06, 0.16, 1, 'bandpass', 500 * o.pitch, 1500 * o.pitch, 2);
   }),
 
   // --- UI / phases
-  whoosh: P(2, 0.12, 0.15, 2, 0.2, (v, t) => {
+  whoosh: P(2, 0.24, 0.15, 2, 0.2, (v, t) => {
     burst(v, 'pink', t, 0.12, 0.3, 1, 'bandpass', 400, 2000, 1.4);
   }),
-  'ui-hover': P(0, 0.035, 0, 4, 0.06, (v, t, o) => {
+  'ui-hover': P(0, 0.06, 0, 4, 0.06, (v, t, o) => {
     tone(v, 'sine', 1250 * o.pitch, 1250 * o.pitch, t, 0.002, 0.03, 1);
   }),
   'ui-click': P(2, 0.09, 0.05, 4, 0.05, (v, t, o) => {
     tone(v, 'triangle', 720 * o.pitch, 480 * o.pitch, t, 0.001, 0.05, 1);
     burst(v, 'white', t, 0.001, 0.01, 0.4, 'highpass', 3000);
   }),
-  'ui-toggle': P(2, 0.09, 0.05, 4, 0.05, (v, t, o) => {
+  'ui-toggle': P(2, 0.11, 0.05, 4, 0.05, (v, t, o) => {
     const up = o.variant !== 'off';
     tone(v, 'triangle', (up ? 520 : 780) * o.pitch, (up ? 520 : 780) * o.pitch, t, 0.002, 0.05, 0.9);
     tone(v, 'triangle', (up ? 780 : 520) * o.pitch, (up ? 780 : 520) * o.pitch, t + 0.06, 0.002, 0.08, 0.9);
   }),
-  'ui-tick': P(2, 0.06, 0, 6, 0.05, (v, t, o) => {
+  'ui-tick': P(2, 0.1, 0, 6, 0.05, (v, t, o) => {
     if (o.variant === 'urgent') {
       const lp = v.filter(v.out, 'lowpass', 2500);
       tone(v, 'square', 880 * o.pitch, 880 * o.pitch, t, 0.002, 0.07, 0.8, lp);
@@ -395,7 +401,7 @@ export const SFX = {
     tone(v, 'sine', 380 * o.pitch, 900 * o.pitch, t, 0.003, 0.08, 0.8);
     o.notes.forEach((m, i) => tone(v, 'triangle', mtof(m), mtof(m), t + 0.07 + i * 0.07, 0.003, 0.2, 0.7));
   }),
-  reroll: P(1, 0.08, 0.05, 2, 0.1, (v, t, o) => {
+  reroll: P(1, 0.11, 0.05, 2, 0.1, (v, t, o) => {
     for (let i = 0; i < 4; i++) tone(v, 'triangle', 600 * o.pitch * 1.12 ** i, 600 * o.pitch * 1.12 ** i, t + i * 0.035, 0.001, 0.03, 0.8);
   }),
 } satisfies Record<string, SfxDef>;

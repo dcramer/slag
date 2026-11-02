@@ -60,7 +60,7 @@ export class SongPlayer {
     const ctx = mixer.ctx;
     this.bus = ctx.createGain();
     this.bus.gain.setValueAtTime(0, start);
-    this.bus.gain.linearRampToValueAtTime(1, start + Math.max(0.01, fadeIn));
+    this.bus.gain.linearRampToValueAtTime(song.level, start + Math.max(0.01, fadeIn));
     this.bus.connect(mixer.duck);
     for (const l of LAYERS) {
       const g = ctx.createGain();
@@ -228,16 +228,17 @@ export class MusicDirector {
     for (const d of [0, 2, 4]) this.play(s.harmony, this.note(d, -1), t + 1.5 * step, beat * 1.5, harmonyGain(s) * 0.8, 2);
   }
 
-  /** Victory fanfare: triplet pickup, held high tonic over a major chord, drum roll + crash. */
+  /** Victory fanfare: triplet pickup, tonic calls, a held major third over a major chord, snare roll + crash. */
   fanfare(): void {
     const s = this.song;
     const now = this.mixer.ctx.currentTime;
+    this.mixName = 'silent';
     this.current?.setMix(MIXES.silent, 0.15);
     if (!s) return;
     const t = now + 0.15;
     const beat = Math.min(0.5, 60 / s.bpm);
     const lead = s.lead;
-    const lg = leadGain(s) * 1.2;
+    const lg = leadGain(s);
     const trip = beat / 3;
     [4, 4, 4].forEach((d, i) => this.play(lead, this.note(d, -1), t + i * trip, trip * 0.8, lg));
     this.play(lead, this.note(0, 0), t + beat, beat * 0.9, lg);

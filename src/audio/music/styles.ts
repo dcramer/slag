@@ -46,6 +46,8 @@ export interface MusicStyle {
   drums: DrumPart[];
   /** Mixer space: reverb return, echo amount, echo time. */
   space: [number, number, number];
+  /** Song level trim (measured offline so themes sit at similar loudness). */
+  level?: number;
 }
 
 const FOUR = 'X...x...X...x...';
@@ -98,6 +100,7 @@ export const STYLES: Record<ThemeId, MusicStyle> = {
       { inst: 'steam', layer: 'perc', gain: 0.07, patterns: ['x...............', '........x.......'], pan: 0.4 },
     ],
     space: [0.24, 0.08, 0.19],
+    level: 1.26,
   },
   // Harpsichord alberti, organ lead + pad, timpani & march snare. Baroque minor.
   castle: {
@@ -147,6 +150,7 @@ export const STYLES: Record<ThemeId, MusicStyle> = {
       { inst: 'shaker', layer: 'perc', gain: 0.06, patterns: ['xoxoxoxoxoxoxoxo'], pan: 0.15 },
     ],
     space: [0.26, 0, 0.25],
+    level: 1.12,
   },
   // Low fifth drones, brass calls, sub bass, taiko. Phrygian menace.
   volcano: {
@@ -170,6 +174,7 @@ export const STYLES: Record<ThemeId, MusicStyle> = {
       { inst: 'tom', layer: 'perc', gain: 0.14, patterns: ['..............xx', '.........x....x.'], tuned: 4, pan: 0.3 },
     ],
     space: [0.34, 0.05, 0.37],
+    level: 0.8,
   },
   // Accordion oompah in 12/8, tuba bass, stomps + tambourine. Sea-shanty dorian.
   harbor: {
@@ -217,6 +222,7 @@ export const STYLES: Record<ThemeId, MusicStyle> = {
       { inst: 'drip', layer: 'perc', gain: 0.05, patterns: ['.........x......', '...x...........x'], pan: 0.45 },
     ],
     space: [0.42, 0.24, 0.38],
+    level: 1.6,
   },
   // Synthwave: gated snares, 8th-note octave bass, saw lead, square arps, wide pads.
   rooftops: {
@@ -242,5 +248,6 @@ export const STYLES: Record<ThemeId, MusicStyle> = {
       { inst: 'clap', layer: 'perc', gain: 0.07, patterns: ['....x.......x...', '............x...'], pan: 0.2 },
     ],
     space: [0.38, 0.1, 0.375],
+    level: 1.26,
   },
 };

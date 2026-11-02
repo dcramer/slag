@@ -57,6 +57,15 @@ export function fillNoise(d: Float32Array, kind: NoiseKind, sampleRate: number):
       d[i] = w * crackleEnv;
     }
   }
+  // Colored noise drifts: remove the end-to-start step (and DC) so the buffer loops without a click.
+  if (kind === 'pink' || kind === 'brown') {
+    const n = d.length;
+    const step = d[n - 1] - d[0];
+    let mean = 0;
+    for (let i = 0; i < n; i++) mean += d[i] - (step * i) / (n - 1);
+    mean /= n;
+    for (let i = 0; i < n; i++) d[i] -= (step * i) / (n - 1) + mean;
+  }
 }
 
 /** Ramp a param exponentially (both ends clamped above zero). */

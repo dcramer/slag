@@ -7,6 +7,7 @@ import { STYLES } from '../src/audio/music/styles';
 import { degreeToMidi, inScale } from '../src/audio/music/theory';
 import { SFX } from '../src/audio/sfx';
 import { panFor, placeOneShot } from '../src/audio/spatial';
+import { fillNoise } from '../src/audio/synth';
 import { DEFAULT_VOLUMES, loadVolumes, saveVolumes, sliderGain, VOLUME_KEY } from '../src/audio/volumes';
 import type { GameEvent } from '../src/sim/types';
 import { THEME_IDS } from '../src/themes';
@@ -144,6 +145,17 @@ describe('mixer helpers', () => {
     for (const v of c) expect(Math.abs(v)).toBeLessThanOrEqual(0.98);
     expect(c[750]).toBeCloseTo(0.5, 5);
     for (let i = 1; i < c.length; i++) expect(c[i]).toBeGreaterThanOrEqual(c[i - 1]);
+  });
+  it('noise buffers loop without a step and stay in range', () => {
+    for (const kind of ['white', 'pink', 'brown', 'crackle'] as const) {
+      const d = new Float32Array(44100);
+      fillNoise(d, kind, 44100);
+      let peak = 0;
+      for (const v of d) peak = Math.max(peak, Math.abs(v));
+      expect(peak, kind).toBeLessThan(1.6);
+      expect(peak, kind).toBeGreaterThan(0.05);
+      if (kind !== 'white' && kind !== 'crackle') expect(Math.abs(d[d.length - 1] - d[0]), kind).toBeLessThan(0.05);
+    }
   });
   it('throttle caps repeats per window', () => {
     const t = new Throttle();

@@ -72,10 +72,10 @@ const tc = 0.06;
 export const LOOP_SPECS: Record<LoopKind, KindSpec> = {
   saw: {
     max: 2,
-    gain: 0.05,
+    gain: 0.3,
     build(b) {
       const amp = b.gain(b.out, 0.65);
-      const bp = b.filter(amp, 'bandpass', 2600, 2.5);
+      const bp = b.filter(amp, 'bandpass', 2600, 1.2);
       const base = 1100 + Math.random() * 160;
       const o1 = b.osc('sawtooth', base, b.gain(bp, 0.5));
       const o2 = b.osc('sawtooth', base * 1.505, b.gain(bp, 0.3));
@@ -89,7 +89,7 @@ export const LOOP_SPECS: Record<LoopKind, KindSpec> = {
   },
   flame: {
     max: 2,
-    gain: 0.17,
+    gain: 0.6,
     build(b) {
       const amp = b.gain(b.out, 0.75);
       const lp = b.filter(amp, 'lowpass', 750, 0.8);
@@ -106,7 +106,7 @@ export const LOOP_SPECS: Record<LoopKind, KindSpec> = {
   },
   laserCharge: {
     max: 1,
-    gain: 0.06,
+    gain: 0.17,
     build(b) {
       const o1 = b.osc('triangle', 220, b.gain(b.out, 0.6));
       const o2 = b.osc('sine', 442, b.gain(b.out, 0.25));
@@ -122,7 +122,7 @@ export const LOOP_SPECS: Record<LoopKind, KindSpec> = {
   },
   laserFire: {
     max: 1,
-    gain: 0.065,
+    gain: 0.23,
     build(b) {
       const amp = b.gain(b.out, 0.8);
       const lp = b.filter(amp, 'lowpass', 1800, 2);
@@ -135,7 +135,7 @@ export const LOOP_SPECS: Record<LoopKind, KindSpec> = {
   },
   tesla: {
     max: 2,
-    gain: 0.12,
+    gain: 0.6,
     build(b) {
       b.noise('crackle', b.filter(b.gain(b.out, 1), 'bandpass', 3000, 0.7));
       b.noise('crackle', b.filter(b.gain(b.out, 0.5), 'highpass', 6000), 1.3);
@@ -146,7 +146,7 @@ export const LOOP_SPECS: Record<LoopKind, KindSpec> = {
   },
   fan: {
     max: 1,
-    gain: 0.07,
+    gain: 0.28,
     build(b) {
       const amp = b.gain(b.out, 0.8);
       b.noise('pink', b.filter(amp, 'bandpass', 700, 0.6));
@@ -157,7 +157,7 @@ export const LOOP_SPECS: Record<LoopKind, KindSpec> = {
   },
   conveyor: {
     max: 1,
-    gain: 0.09,
+    gain: 0.25,
     build(b) {
       b.noise('brown', b.filter(b.gain(b.out, 1), 'lowpass', 220));
       b.osc('square', 9, b.filter(b.gain(b.out, 0.2), 'highpass', 1500));
@@ -167,7 +167,7 @@ export const LOOP_SPECS: Record<LoopKind, KindSpec> = {
   },
   slide: {
     max: 2,
-    gain: 0.06,
+    gain: 0.24,
     build(b) {
       const bp = b.filter(b.gain(b.out, 1), 'bandpass', 2600, 1.2);
       b.noise('white', bp);
@@ -179,6 +179,10 @@ export const LOOP_SPECS: Record<LoopKind, KindSpec> = {
 interface Slot {
   patch: Patch | null;
   idleSince: number;
+  /** Last targets sent, so we only automate on real changes. */
+  g: number;
+  pan: number;
+  p: number;
 }
 
 export class LoopBank {
@@ -192,7 +196,7 @@ export class LoopBank {
     for (const k of Object.keys(LOOP_SPECS) as LoopKind[]) {
       this.slots.set(
         k,
-        Array.from({ length: LOOP_SPECS[k].max }, () => ({ patch: null, idleSince: 0 })),
+        Array.from({ length: LOOP_SPECS[k].max }, () => ({ patch: null, idleSince: 0, g: -1, pan: 0, p: -1 })),
       );
       this.byKind.set(k, []);
     }
@@ -236,13 +240,20 @@ export class LoopBank {
         const hit = scored[i];
         let g = hit ? hit.g : 0;
         if (hit && i === Math.min(slots.length, scored.length) - 1) g = Math.min(1, Math.sqrt(g * g + rest));
-        if (g > 0.003 && !s.patch) s.patch = this.make(kind);
+        if (g > 0.003 && !s.patch) {
+          s.patch = this.make(kind);
+          s.g = s.p = -1;
+        }
         const p = s.patch;
         if (!p) return;
-        p.out.gain.setTargetAtTime(g * spec.gain, t, fade);
+        if (Math.abs(g - s.g) > 0.002 || (g === 0 && s.g !== 0)) {
+          p.out.gain.setTargetAtTime(g * spec.gain, t, fade);
+          s.g = g;
+        }
         if (hit) {
-          p.pan.pan.setTargetAtTime(panFor(hit.e.x, L), t, 0.08);
-          p.set(hit.e.p, t);
+          const pan = panFor(hit.e.x, L);
+          if (Math.abs(pan - s.pan) > 0.01) p.pan.pan.setTargetAtTime((s.pan = pan), t, 0.08);
+          if (Math.abs(hit.e.p - s.p) > 0.01) p.set((s.p = hit.e.p), t);
         }
         if (g > 0.003) s.idleSince = t;
         else if (t - s.idleSince > 3) {

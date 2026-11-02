@@ -50,6 +50,8 @@ export interface Song {
   lead: InstId;
   harmony: InstId;
   space: [number, number, number];
+  /** Overall song level. */
+  level: number;
 }
 
 export const SONG_BARS = 8;
@@ -119,6 +121,7 @@ export function composeSong(seed: number, theme: ThemeId): Song {
     lead: st.lead.inst,
     harmony: st.harmony.inst,
     space: st.space,
+    level: st.level ?? 1,
   };
 }
 

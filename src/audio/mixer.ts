@@ -8,7 +8,7 @@ import { sliderGain, type Volumes } from './volumes';
  *        └──► send ──► reverb (convolver) ──► echo ──► reverbOut ─┤
  *   music tracks ─► duck ─► musicBus ─────────┤
  *                                             ▼
- *                       master ─► glue comp ─► limiter ─► soft clip ─► destination
+ *              master ─► 28 Hz highpass ─► glue comp ─► limiter ─► soft clip ─► destination
  *
  * The voice limiter keeps the number of live SFX voices bounded (8 players
  * and a level full of hazards must not explode CPU or clip): a new voice
@@ -16,7 +16,7 @@ import { sliderGain, type Volumes } from './volumes';
  */
 
 /** Internal trims so the sliders' "1.0" sits at a sane level. */
-const MUSIC_TRIM = 0.9;
+const MUSIC_TRIM = 1.6;
 const SFX_TRIM = 1;
 /** Max simultaneous SFX / music voices. */
 export const MAX_SFX_VOICES = 36;
@@ -101,7 +101,12 @@ export class Mixer {
     const clip = c.createWaveShaper();
     clip.curve = softClipCurve();
     clip.oversample = '2x';
-    this.master.connect(glue).connect(limiter).connect(clip).connect(dest);
+    // Subsonic cut: pitch-drop booms sweep below 30 Hz, which only eats limiter headroom.
+    const hp = c.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 28;
+    hp.Q.value = 0.6;
+    this.master.connect(hp).connect(glue).connect(limiter).connect(clip).connect(dest);
 
     this.sfxBus = c.createGain();
     this.sfxBus.connect(this.master);
