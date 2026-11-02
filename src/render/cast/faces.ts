@@ -205,3 +205,75 @@ export function tallEyes(d: D, u: number, spread: number) {
 export function sideEye(d: D, u: number, x: number, r = 0.85) {
   eye(d, x, Y(d, u), r);
 }
+
+/** Brows that act: set hard on a run or a wall, raised on a jump, worried on a fall, gone at rest. */
+export function brows(d: D, xs: readonly number[], y: number, r: number) {
+  if (d.m === 'cheer' || d.m === 'idle' || d.m === 'walk') return;
+  const tilt = d.m === 'fall' ? -0.9 : d.m === 'up' ? 0 : 0.9;
+  const lift = d.m === 'up' ? 0.8 : 0;
+  for (const x of xs) {
+    // The brow's inner end is the one toward the other eye.
+    const inner = xs.length > 1 && x === Math.max(...xs) ? -1 : 1;
+    const yi = y - r * 1.3 - lift + tilt * 0.6;
+    const yo = y - r * 1.3 - lift - tilt * 0.6;
+    mark(
+      d.s,
+      d.lk.eye,
+      [
+        { x: x - inner * r, y: yo },
+        { x: x + inner * r * 0.9, y: yi },
+      ],
+      0.9,
+      x,
+      [0.15, 0.3],
+    );
+  }
+}
+
+/**
+ * Cartoon eyes: whites, an iris looking where it's going, a highlight, and brows that act. `joined` runs
+ * the whites together into one shape, the speedster's way.
+ */
+export function toonEyes(d: D, u: number, spread: number, r: number, iris: string, joined = false) {
+  const y = Y(d, u);
+  const xs = [-d.W * spread + d.f * 0.6, d.W * spread + d.f * 0.6];
+  if (d.m === 'cheer') {
+    for (const x of xs) squint(d, x, y, r, 0.9);
+    return;
+  }
+  const wide = d.m === 'fall' ? 1.15 : 1;
+  if (joined) {
+    // One white shape across both eyes, pinched in the middle.
+    const pts: P[] = [];
+    for (let i = 0; i <= 16; i++) {
+      const a = Math.PI + (i / 16) * Math.PI * 2;
+      const x = Math.cos(a) * (xs[1] - xs[0] + r * 2) * 0.5;
+      const pinch = 1 - 0.25 * Math.exp(-((x / r) ** 2));
+      pts.push({ x: (xs[0] + xs[1]) / 2 + x, y: y + Math.sin(a) * r * 1.25 * wide * pinch });
+    }
+    poly(d.s, pts, '#fbf8f2');
+  }
+  for (const x of xs) {
+    if (!joined) poly(d.s, oval(x, y, r * wide, r * 1.2 * wide, 10), '#fbf8f2');
+    if (blinking(d)) {
+      mark(
+        d.s,
+        d.lk.eye,
+        [
+          { x: x - r, y },
+          { x: x + r, y },
+        ],
+        0.8,
+        x,
+        [0.2, 0.2],
+      );
+      continue;
+    }
+    const px = x + d.f * r * 0.35;
+    const py = y + (d.m === 'up' ? -r * 0.3 : d.m === 'fall' ? r * 0.2 : 0);
+    poly(d.s, oval(px, py, r * 0.6, r * 0.75, 9), iris);
+    poly(d.s, oval(px + d.f * 0.1, py, r * 0.32, r * 0.42, 7), d.lk.eye);
+    poly(d.s, oval(px - r * 0.2, py - r * 0.35, r * 0.2, r * 0.2, 6), '#ffffff');
+  }
+  brows(d, xs, y, r);
+}

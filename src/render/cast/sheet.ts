@@ -1,5 +1,5 @@
 import { deriveSeed } from '../../core/rng';
-import { type CharacterDef, generateCharacter, CAST } from '../../gen/character';
+import { CAST, type CharacterDef, generateCharacter, type Kind } from '../../gen/character';
 import { Rig } from '../character';
 import { drawInkAccessory, drawInkRunner, ropeAnchor, ropeOf, type RunnerPose } from '../ink-character';
 import { STRIDE } from '../ink-figure';
@@ -84,7 +84,7 @@ export function castCatalog(t = 0.4): HTMLCanvasElement {
   });
   const py = 60 + rows * 200;
   label('Poses', 70, py + 20, 15, '#f6ead8');
-  const pc = def(0, 'pose', 'robot');
+  const pc = def(0, 'pose', 'plumber');
   POSES.forEach(([name, p], i) => {
     const x = 160 + i * 230;
     runner(s, pc, x, py + 150, p, big, 1, t + (p.vx ? 0.13 : 0));
@@ -112,7 +112,7 @@ export function castCatalog(t = 0.4): HTMLCanvasElement {
  */
 export function castSilhouettes(t = 0.4): HTMLCanvasElement {
   const n = CAST.length;
-  const cell = 150;
+  const cell = Math.min(150, Math.floor(1880 / n));
   const W = n * cell + 40;
   const H = 860;
   const cv = document.createElement('canvas');
@@ -164,6 +164,64 @@ export function castSilhouettes(t = 0.4): HTMLCanvasElement {
     runner(s, def(i * 2, 'cat', kind), x, 820, { grounded: true, vx: 260 }, 2.5, 1, t, MID_RUN);
   });
   CAST.forEach((kind, i) => runner(s, def(i * 2, 'cat', kind), W / 2 + (W / 2 / n) * (i + 0.5), 820, { grounded: true, vx: 260 }, 2.5, 1, t, MID_RUN));
+  document.body.appendChild(cv);
+  return cv;
+}
+
+/** What each kind should be taken for, for the "is it the homage?" sheet: the answer a stranger should give. */
+const READS_AS: Record<Kind, string> = {
+  plumber: 'the mustached plumber',
+  hedgehog: 'the blue speedster',
+  elf: 'the green-tunic elf hero',
+  hunter: 'the armored bounty hunter',
+  zapmouse: 'the yellow electric mouse',
+  impostor: 'the impostor crewmate',
+  puffball: 'the pink puffball',
+  jelly: 'the jellyfish parasite',
+  goose: 'the goose up to no good',
+  engineer: "the team shooter's engineer",
+  fox: 'a fox',
+  frog: 'a frog',
+  penguin: 'a penguin',
+  chicken: 'a chicken',
+};
+
+/**
+ * The "is it the homage?" sheet: every kind close up, mid-run, beside a one-line "this is ___" caption,
+ * with its play-scale read next to it. Judge each against the caption; the puffball is the bar.
+ */
+export function castRecognise(t = 0.4): HTMLCanvasElement {
+  const cols = 4;
+  const rows = Math.ceil(CAST.length / cols);
+  const cw = 470;
+  const ch = 230;
+  const W = cols * cw + 20;
+  const H = rows * ch + 60;
+  const cv = document.createElement('canvas');
+  cv.width = W;
+  cv.height = H;
+  cv.style.cssText = `position:fixed;left:0;top:0;z-index:99;width:${W}px;height:${H}px`;
+  const s = cv.getContext('2d')!;
+  s.fillStyle = '#e9dcc4';
+  s.fillRect(0, 0, W, H);
+  s.font = '700 22px Barlow, sans-serif';
+  s.fillStyle = '#120b08';
+  s.textAlign = 'center';
+  s.fillText('Is it the homage?', W / 2, 34);
+  CAST.forEach((kind, i) => {
+    const x = 10 + (i % cols) * cw;
+    const y = 50 + Math.floor(i / cols) * ch;
+    s.fillStyle = '#d9cbb2';
+    s.fillRect(x + 4, y, cw - 8, ch - 10);
+    const c = def(i * 2, 'cat', kind);
+    runner(s, c, x + 130, y + 170, { grounded: true }, 6, 1, t);
+    runner(s, c, x + 300, y + 170, { grounded: true, vx: 260 }, 6, 1, t, MID_RUN);
+    runner(s, c, x + 420, y + 170, { grounded: true }, 2.5, 1, t);
+    s.font = '700 17px Barlow, sans-serif';
+    s.fillStyle = '#120b08';
+    s.textAlign = 'left';
+    s.fillText(`This is ${READS_AS[kind]}.`, x + 16, y + 26);
+  });
   document.body.appendChild(cv);
   return cv;
 }

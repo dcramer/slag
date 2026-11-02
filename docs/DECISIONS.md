@@ -137,6 +137,11 @@ Every game design decision, preference and direction the owner has given, groupe
 - **The cast is a mix of animals and invented critters, and the critters may parody famous characters (a fake jellyfish-brain floater, a mustached plumber, a robot, a goose, a hard-hat engineer).** "idk how we ended up with toys. that wasnt the original goal, and its not on theme" · "critters could include other parody things... like a fake metroid, a fake mario, a robot, a goose, etc. a fake engineer from tf2 etc"
   2026-11-02 · `in progress` · CHARACTERS.md, DESIGN.md → Players and Parody
   Changed: toys replaced by animals plus parody critters.
+- **The cast is mostly homages: about two thirds parody famous game characters, with a few plain animals for contrast, and the art is raised further.** "its better but you still need more parody and the art needs to be better yet..."
+  2026-11-02 · `in progress` · CHARACTERS.md, DESIGN.md → Players
+- **Recognisability is the top criterion: each homage must read as its original at a glance, so its iconic palette wins and the player's colour moves to a secondary slot (a ring at its feet).** "the only thing that remotely resembles the thing its mimicking is the puff ball (kirby)"
+  2026-11-02 · `in progress` · CHARACTERS.md
+  Changed: the player's colour was always the body or a big worn piece.
 - **Player characters may parody famous characters under our own designs and sound-alike names; parts and machines stay faceless.**
   2026-11-02 · `in progress` · DESIGN.md → Parody, CHARACTERS.md
 - **Characters are drawn cleaner, lighter and more hand-drawn: thinner, varied lines in a dark of the body color, calmer color, fewer bold outlines.** "i want more cleanly designed art that isnt so loud/bold lines etc and more visually hand draw"
