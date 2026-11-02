@@ -177,7 +177,7 @@ export class Profiler {
     }
     if (r.terrain) {
       this.wrap(r.terrain, 'ensure', sec('bake'));
-      for (const m of ['drawShadow', 'draw', 'drawLive']) this.wrap(r.terrain, m, sec('terrain'));
+      for (const m of ['draw', 'drawLive']) this.wrap(r.terrain, m, sec('terrain'));
     }
     if (r.fx) for (const m of ['update', 'draw']) this.wrap(r.fx, m, sec('fx'));
     this.wrap(r, 'paintLights', sec('lights'), (_level: unknown, lights: unknown[]) => {

@@ -310,7 +310,7 @@ export class Hud {
   }
 
   private rc(): RC {
-    return { s: this.ctx, g: this.gctx, lights: null, t: 0, frame: 0 };
+    return { s: this.ctx, bg: this.ctx, g: this.gctx, lights: null, t: 0, frame: 0 };
   }
 
   private logo(x: number, y: number, size: number, t: number) {

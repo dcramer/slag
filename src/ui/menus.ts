@@ -2,7 +2,6 @@ import type { AudioSystem } from '../audio';
 import { GRAVITY_CHOICES, gravityLabel, MATCH_LENGTHS, type MatchRules, RULE_CHOICES, type TimerRule } from '../game/rules';
 import { BINDABLE, defaultSettings, type InputSettings, type KeyProfile, keyName, SLOTS } from '../input/bindings';
 import type { InputManager } from '../input/input';
-import { type RenderStyle, STYLE_IDS, STYLES } from '../render/style';
 import { glyphSVG, type Glyph } from './glyphs';
 import { capLabel, type InputMode, promptModes } from './prompts';
 import { sanitizeName } from './profile';
@@ -32,12 +31,6 @@ export interface QualityControl {
   /** The pinned tier, or null when automatic. */
   pinned(): QualityTier | null;
   set(tier: QualityTier | null): void;
-}
-
-/** Art style hook (game-client wires it to the renderer). */
-export interface StyleControl {
-  get(): RenderStyle;
-  set(style: RenderStyle): void;
 }
 
 const HAPTICS_KEY = 'slag.haptics';
@@ -129,7 +122,8 @@ input[type=range].slag-range:focus-visible{outline:2px solid ${PAL.amber};outlin
 .slag-settings .slag-btn{min-height:44px}
 .slag-settings .slag-btn:focus,.slag-settings .slag-switch:focus{outline:3px solid ${PAL.whiteHot};outline-offset:1px}
 .slag-settings .slag-switch::before{content:"";position:absolute;inset:-10px -6px}
-.slag-settings .slag-chips .slag-btn{min-width:72px}
+.slag-settings .slag-chips{flex:1}
+.slag-settings .slag-chips .slag-btn{flex:1;min-width:72px}
 .slag-settings input[type=range].slag-range:focus{outline:none}
 .slag-binds{display:inline-flex;align-items:center;gap:8px}
 .slag-keys.slag-row{display:grid;gap:8px;min-height:42px;margin:0;padding:1px 14px;font-size:16px}
@@ -299,7 +293,6 @@ export class SettingsMenu extends Overlay {
     audio: (p) => this.audioSection(p),
     touch: (p) => this.touchSection(p),
     quality: (p) => this.displaySection(p),
-    style: (p) => this.styleSection(p),
     keyboard: (p) => this.keyboardSection(p),
     mouse: (p) => this.bindSection(p, MOUSE_ROWS),
     gamepad: (p) => this.bindSection(p, PAD_ROWS),
@@ -309,7 +302,6 @@ export class SettingsMenu extends Overlay {
   /** When set, the menu shows a graphics-quality picker. */
   quality: QualityControl | null = null;
   /** When set, the menu shows an art-style picker. */
-  artStyle: StyleControl | null = null;
 
   constructor(
     input: InputManager,
@@ -366,7 +358,7 @@ export class SettingsMenu extends Overlay {
   }
 
   private tabContext(): TabContext {
-    return { touch: this.input.touch.active, quality: !!this.quality, style: !!this.artStyle };
+    return { touch: this.input.touch.active, quality: !!this.quality };
   }
 
   /** The active tab, the current page's controls and the footer buttons, in reading order. */
@@ -544,10 +536,6 @@ export class SettingsMenu extends Overlay {
     );
   }
 
-  private chipRow(card: HTMLElement, label: string, chips: HTMLElement) {
-    card.append(el('div', { className: 'slag-row' }, el('span', { className: 'lbl', textContent: label }), chips));
-  }
-
   private displaySection(card: HTMLElement) {
     const q = this.quality;
     if (!q) return;
@@ -567,22 +555,7 @@ export class SettingsMenu extends Overlay {
       };
       chips.append(b);
     }
-    this.chipRow(card, 'Graphics Quality', chips);
-  }
-
-  private styleSection(card: HTMLElement) {
-    const c = this.artStyle;
-    if (!c) return;
-    const chips = el('div', { className: 'slag-chips' });
-    for (const style of STYLE_IDS) {
-      const b = el('button', { className: `slag-btn ${c.get() === style ? 'on' : ''}`, type: 'button', textContent: STYLES[style].label });
-      b.onclick = () => {
-        c.set(style);
-        for (const sib of chips.querySelectorAll('button')) sib.classList.toggle('on', sib === b);
-      };
-      chips.append(b);
-    }
-    this.chipRow(card, 'Art Style', chips);
+    card.append(el('div', { className: 'slag-row' }, el('span', { className: 'lbl', textContent: 'Graphics Quality' }), chips));
   }
 
   private keyboardSection(card: HTMLElement) {

@@ -41,7 +41,8 @@ The user's feedback on a real phone: "almost playable but not quite; resolution 
 ## 8. Render polish
 - **Liquid draw order:** `drawLiquid` still paints after players and effects, while `docs/DESIGN.md` lists liquids behind terrain.
 - **`pnpm shot race` without `--race`** never starts a race: it stays in pick at frame 0.
-- **Cel-shaded look (`?style=cel`):** the owner picks whether it becomes the main look. Flipping is `DEFAULT_STYLE` in `src/render/style.ts`. Play it first, and try a real phone. Mine is weakest (band arcs on rock walls). Impact words can hide a hazard for most of a second; `?lettering=0` turns them off. Big plain walls are a taste call. With adoption, note in `src/render/AGENTS.md` that thin or soft things on `rc.s` get ink.
+- **Crate cards:** the Dragon Vent draws as a tiny dot when its flame is off in that frame, and its sizes look alike. Medium and large ropes look the same too, because the preview caps at 4 links.
+- **Impact words** can hide a hazard for most of a second; `?lettering=0` turns them off. Decide whether they stay. Mine is the weakest theme in cel (band arcs on rock walls), and big plain walls are a taste call. Try a real phone.
 
 ## 9. Weather (new)
 A per-level random variable:
@@ -75,12 +76,11 @@ The rest of this item is the home screen, the first and biggest piece of it. The
 ## 13. Playtest and tune the new parts
 Nothing from the content, held-items or grab-props work has been played by hand, so the tuning is test-level only: magnet drift, bumper power, slow and freeze durations, item strength. Gamepad `use` (Y and LT) hasn't been tried on a real pad, and item sounds borrow existing cues and haven't been heard. Trackers can no longer see runners through terrain, which changes how lobbed trackers feel.
 
-Also confirm the Match Length values (Short 30 points / 10 rounds, Normal 50 / 15, Long 80 / 25). They come from a Monte Carlo model of scoring with a fixed finish rate, and real finish rates probably fall as props pile up. The limit decides about 25% of 2-player Normal matches at typical finish rates and about 60% at very low or very high ones.
+Size tiers for parts are a mapping of the old rolled ranges, so check them too; bumper and spike strip changed most. Confirm the Match Length values (Short 30 points / 10 rounds, Normal 50 / 15, Long 80 / 25). They come from a Monte Carlo model of scoring with a fixed finish rate, and real finish rates probably fall as props pile up. The limit decides about 25% of 2-player Normal matches at typical finish rates and about 60% at very low or very high ones.
 
 ## 16. Fix WebGL failure paths
 Both are now visible in Sentry.
 
-- `createCompositor` falls back to `Fallback` after a GL compile failure, but that canvas already has a WebGL context, so `getContext('2d')` returns null. The first render throws and kills the game loop.
 - There's no WebGL context-restore handling, so a lost context stays lost for that session.
 
 ## 14. Clear the lint warnings
@@ -100,15 +100,6 @@ Some steps need the owner. Run after setting the Vercel env vars.
 - On the first deploy, confirm source maps upload and client frames resolve to source. Only the failure path has been tested.
 - Install the Sentry GitHub integration for suspect commits.
 - Move `app/global-error.tsx` into `src/` with item 11.
-
-## 18. Fewer, clearer parts per match
-There's too much variety in the crate, and it's confusing. **Next up once item 3 lands**, because that changes `generateCrate`.
-
-- Each match picks N unique parts, from the seed, and every crate that match draws only from those. Players learn a small set.
-- A part's variants differ in size only. No other rolled differences in a match, so a part always behaves the way you remember.
-- The roster must always include enough building and demolition parts for item 3's crate guarantee and dry-round weighting.
-- Pick N from how it plays, per player count, and consider per-Match-Length if it helps.
-- Names stay stable across a match. Do this before item 15's parody pass.
 
 ## 19. Secret parts mode
 A mode where you don't see what a part is. You choose a type (hazard, utility, build, whatever the roles are) and get one at random from what's allowed. A lobby rule, with the roll deterministic from the seed and the same on every peer. The first time anyone sees the part is when it lands.

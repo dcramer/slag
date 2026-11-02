@@ -4,8 +4,8 @@ import type { GameEvent } from '../sim/types';
 import type { Camera } from './camera';
 
 /**
- * Cel-style parts that live on the Canvas2D side (bands and ink are `cel-shader.ts`): the foreground
- * layer and the impact words on sim events. Purely cosmetic: reads events, never writes sim state.
+ * The parts of the look that live on the Canvas2D side (bands and ink are `cel-shader.ts`): the
+ * foreground layer and the impact words on sim events. Purely cosmetic: reads events, never writes sim state.
  */
 
 const DISPLAY = '"Lilita One", "Arial Rounded MT Bold", Impact, system-ui, sans-serif';
@@ -20,7 +20,7 @@ const TOP = 26;
  * Splitting it from the backdrop is what lets ink follow real silhouettes, leaves the background
  * un-inked, and works whatever the colors underneath. Scenery stays on the background, behind the terrain. Sizes itself from the scene canvas each frame.
  */
-export class CelLayer {
+export class ForegroundLayer {
   readonly canvas = document.createElement('canvas');
   private ctx = this.canvas.getContext('2d')!;
 
@@ -76,6 +76,11 @@ const WHITE: HSL = { h: 45, s: 60, l: 96 };
 const RED: HSL = { h: 4, s: 90, l: 52 };
 const CYAN: HSL = { h: 190, s: 95, l: 55 };
 const ORANGE: HSL = { h: 26, s: 100, l: 55 };
+
+/** `?lettering=0` turns impact words off for this page, to judge the picture without them. */
+export function letteringAllowed(search: string): boolean {
+  return new URLSearchParams(search).get('lettering') !== '0';
+}
 
 const oneOf = <T>(xs: readonly T[]) => xs[Math.floor(Math.random() * xs.length)];
 

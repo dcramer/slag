@@ -1,5 +1,5 @@
 import { dcos, dsin, sq } from '../../core/dmath';
-import { type Cell, frac, pingPong, type Vec } from '../../core/geom';
+import { type Cell, cellsBounds, frac, pingPong, type Vec } from '../../core/geom';
 import { TILE } from '../constants';
 import { isProtected, type Level, T_EMPTY, T_SOLID, tileAt } from '../level';
 import type { GameEvent } from '../types';
@@ -24,6 +24,30 @@ function box(def: PropDef): { w: number; h: number } {
     h = Math.max(h, y + 1);
   }
   return { w, h };
+}
+
+/** Tiles a crate card must fit for this def: its footprint plus whatever reaches past it. A hung part only shows its top links. */
+export function cardExtent(def: PropDef): number {
+  const { w, h } = cellsBounds(def.mount === 'hang' ? def.footprint.slice(0, 4) : def.footprint);
+  let reachX = 0;
+  let reachY = 0;
+  for (const m of def.modules) {
+    if (m.type === 'swinger') {
+      reachX = Math.max(reachX, m.arm + m.radius);
+      reachY = Math.max(reachY, m.arm + m.radius);
+    }
+    if (m.type === 'piston') reachY = Math.max(reachY, m.reach * 0.6 + 1);
+    if (m.type === 'flame') reachY = Math.max(reachY, m.length * 0.7);
+    if (m.type === 'magnet') {
+      reachX = Math.max(reachX, m.radius - 0.5);
+      reachY = Math.max(reachY, m.radius - 0.5);
+    }
+    if (m.type === 'keg') {
+      reachX = Math.max(reachX, 0.8);
+      reachY = Math.max(reachY, 0.8);
+    }
+  }
+  return Math.max(w + reachX * 2, h + reachY * 2, 2);
 }
 
 /** Rotate a point (tile units, in the def's box) by quarter turns clockwise. */

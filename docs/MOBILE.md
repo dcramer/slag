@@ -112,7 +112,7 @@ All of these are presentation-only and live in `src/ui/touch/device.ts`.
 
 | Knob | Effect |
 |---|---|
-| `QUALITY[tier].maxW` | Caps the internal render width. This is the old `MAX_W`. The tiers are high 1920, mid 1280 and low 896. The three Canvas2D layers, the WebGL target and the HUD all scale with it. Bloom buffers are ¼ and ⅛ of it and the light map is ½, so this one knob also scales bloom cost. |
+| `QUALITY[tier].maxW` | Caps the internal render width. This is the old `MAX_W`. The tiers are high 1920, mid 1280 and low 896. The Canvas2D layers, the WebGL target and the HUD all scale with it. Bloom buffers are ¼ and ⅛ of it and the light map is ½, so this one knob also scales bloom cost. |
 | `QUALITY[tier].dprCap` | Caps devicePixelRatio before `maxW`. The tiers are 4, 2 and 1.5. |
 | Auto tier (`pickTier`) | Desktop stays high (unchanged). A touch-first device or short side < 500 px gets mid. If it also has ≤ 4 cores or ≤ 3 GB `deviceMemory`, it gets low. |
 | Adaptive (`FrameBudget`) | Mobile tiers only. An average frame time above 22 ms (< ~45 fps) sustained for 2 s drops one tier, with a 3 s cooldown. It never goes back up. Gaps over 250 ms (tab hidden, paused) are ignored. It's disabled under `navigator.webdriver` so screenshots stay deterministic. |

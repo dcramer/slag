@@ -210,7 +210,7 @@ describe('remote ghosts', () => {
     let strip: PropDef | null = null;
     for (let i = 0; i < 200 && !strip; i++) {
       const d = generateProp(new Rng(i), 'spikestrip', 'x');
-      if (d.footprint.length === 4) strip = d;
+      if (d.footprint.length === 5) strip = d;
     }
     const claim = mine(a, 'bbbb').claim;
     for (const s of [a, b, c]) s.match.crate[claim].def = strip!;
@@ -218,7 +218,7 @@ describe('remote ghosts', () => {
     for (let ty = 2; ty < a.match.level.h - 2 && !spot; ty++) {
       for (let tx = 6; tx < a.match.level.w - 6 && !spot; tx++) {
         const kept = mountCells(a.match.level, a.match.placed, strip!, 0, tx, ty).length;
-        if (kept > 0 && kept < 4) spot = { x: (tx + 1.5) * 16 + 8, y: ty * 16 + 8, kept };
+        if (kept > 0 && kept < 5) spot = { x: (tx + 1.5) * 16 + 8, y: ty * 16 + 8, kept };
       }
     }
     expect(spot).not.toBeNull();

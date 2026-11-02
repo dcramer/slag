@@ -1,6 +1,6 @@
 # SLAG UI art direction
 
-These rules cover the menus, the lobby, and the in-game HUD. The world art (levels, props, characters) has its own procedural rules in `src/render/`.
+These rules cover the menus, the lobby, and the in-game HUD. The world art (levels, props, characters) is cel shaded, with its own procedural rules in `src/render/`.
 
 ## Identity: a molten foundry that doubles as a toy box
 
