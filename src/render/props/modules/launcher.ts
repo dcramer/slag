@@ -6,6 +6,7 @@ import { ball, boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, sprite, 
 import { circle, glowDot, light, type MetalPalette, type RC } from '../../kit';
 import { beamOf, defineArt, type DrawCtx } from '../common';
 import { drawGlider, rang, roundSprite, stampRound } from '../projectiles';
+import { HANGAR_BOX, hangarLoft } from './hangar-art';
 
 /**
  * Launchers, inked: each style is a parody of a genre staple (docs/PARODY.md, Launchers). A style is three
@@ -724,33 +725,14 @@ const LOOKS: Record<LauncherStyle, Look> = {
       light(l.rc, l.x, l.y, 35, l.glow, 0.35);
     },
   },
-  // Budget Airline: a little departures shed with a windsock.
+  // Budget Airline: a quonset hangar with a windsock (hangar-art.ts).
   hangar: {
-    mount: [
-      [-9, -11, 21, 19.5],
-      (g, k) => {
-        const wd = { ...k.wood, l: 44 };
-        part(g, boxPts(-6.8, -2.6, 13.6, 10, 0.8, k.seed), wd, k.seed, { depth: 0.9, thin: 0.5, thick: 1.2 });
-        g.fillStyle = css(k.hue, 0);
-        g.fillRect(-6.6, -1.2, 13.2, 1.4);
-        g.fillStyle = INK;
-        path(g, boxPts(-2.8, 1.4, 5.6, 6, 0.6, k.seed + 1));
-        g.fill();
-        part(g, poly(-7.8, -2.2, 0, -7.6, 7.8, -2.2), { ...k.hue, l: 40 }, k.seed + 2, { depth: 0.7, thin: 0.45, thick: 1.1 });
-        // Windsock on a pole: hung slack, it's a cheap one.
-        tick(g, 5.4, -4, 5.4, -10.2, 0.6, 3);
-        const sock = poly(5.4, -10.4, 5.4, -8.2, 8.6, -6.6, 9.4, -7.6);
-        part(g, sock, { h: 22, s: 90, l: 56 }, k.seed + 4, { depth: 0.2, thin: 0.3, thick: 0.6 });
-        g.fillStyle = '#fbf6ee';
-        path(g, poly(6.6, -9.8, 7.4, -9.3, 7.2, -7.6, 6.4, -8));
-        g.fill();
-      },
-    ],
+    mount: [HANGAR_BOX, (g, k) => hangarLoft(g, k.hue, k.pal, k.seed)],
     over(l) {
       if (!l.ready) return;
       const s = l.rc.s;
       s.save();
-      s.translate(l.x, l.y - 9.4);
+      s.translate(l.x, l.y - 10.6);
       s.scale(0.36, 0.36);
       drawGlider(s, 0, 0, 0, l.st.hue, l.rc.t, false, 0, Math.cos(l.angle) < 0 ? -1 : 1, 7);
       s.restore();

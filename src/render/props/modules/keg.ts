@@ -3,13 +3,14 @@ import type { CharacterDef } from '../../../gen/character';
 import { type Grip, KEG, kegAim, type ModuleOf } from '../../../sim/props';
 import type { Runner, RunWorld } from '../../../sim/run';
 import { drawInkRunner } from '../../ink-character';
-import { glowDot, light, type RC } from '../../kit';
+import { blob, line, type P, stroke } from '../../ink';
+import { dot, INK, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
+import { glowDot, light, type MetalPalette, type RC } from '../../kit';
 import { defineArt, gripOf } from '../common';
 
 type Keg = ModuleOf<'keg'>;
 
 const QUARTER = Math.PI / 4;
-const INK = '#120b08';
 const AMBER: HSL = { h: 36, s: 100, l: 59 };
 const WHITE_HOT: HSL = { h: 48, s: 100, l: 86 };
 /** Half the cask's length (px), hub to mouth. */
@@ -26,6 +27,20 @@ function shownAngle(m: Keg, grip: Grip | undefined, frame: number, phase: number
   return (from + delta * u) * QUARTER;
 }
 
+const fuse: P[] = [
+  { x: 0, y: 0 },
+  { x: 0, y: 0 },
+  { x: 0, y: 0 },
+];
+const chev: P[] = [
+  { x: 0, y: 0 },
+  { x: 0, y: 0 },
+  { x: 0, y: 0 },
+  { x: 0, y: 0 },
+  { x: 0, y: 0 },
+  { x: 0, y: 0 },
+];
+
 /** Three chevrons marching out of the mouth: the way you'll go, readable at gameplay scale without a word. */
 function aimChevrons(rc: RC, x: number, y: number, a: number, heat: number, alpha: number) {
   const s = rc.s;
@@ -38,71 +53,110 @@ function aimChevrons(rc: RC, x: number, y: number, a: number, heat: number, alph
     const px = x + dx * r;
     const py = y + dy * r;
     const fade = alpha * (1 - (i + march) / 4);
-    for (const [style, width] of [
-      [`rgba(18,11,8,${fade})`, 3.4],
-      [css(c, 0, fade), 1.8],
+    // A cut chevron: two arms meeting in a point, as a filled shape.
+    const set = (k: number, u: number, v: number) => {
+      chev[k].x = px + dx * u - dy * v;
+      chev[k].y = py + dy * u + dx * v;
+    };
+    for (const [grow, style] of [
+      [1.1, `rgba(18,11,8,${fade})`],
+      [0, css(c, 0, fade)],
     ] as const) {
-      s.strokeStyle = style;
-      s.lineWidth = width;
-      s.lineCap = 'round';
-      s.beginPath();
-      s.moveTo(px - dx * 3.5 - dy * 4.5, py - dy * 3.5 + dx * 4.5);
-      s.lineTo(px + dx * 1.5, py + dy * 1.5);
-      s.lineTo(px - dx * 3.5 + dy * 4.5, py - dy * 3.5 - dx * 4.5);
-      s.stroke();
+      set(0, -4 - grow, -5 - grow);
+      set(1, 2 + grow * 1.4, 0);
+      set(2, -4 - grow, 5 + grow);
+      set(3, -6.4 + grow * 0.2, 5 + grow);
+      set(4, -0.6 + grow * 0.2, 0);
+      set(5, -6.4 + grow * 0.2, -5 - grow);
+      s.fillStyle = style;
+      path(s, chev);
+      s.fill();
     }
   }
 }
 
-/** The cask, in its own frame with +x out of the mouth. */
-function cask(s: CanvasRenderingContext2D, wood: HSL, hoop: string, hoopDark: string) {
-  s.beginPath();
-  s.moveTo(-MOUTH, -8);
-  s.quadraticCurveTo(0, -13.5, MOUTH, -8);
-  s.lineTo(MOUTH, 8);
-  s.quadraticCurveTo(0, 13.5, -MOUTH, 8);
-  s.closePath();
-  s.fillStyle = css(wood);
-  s.fill();
-  s.strokeStyle = INK;
-  s.lineWidth = 1.3;
-  s.stroke();
-  s.lineWidth = 0.7;
-  s.strokeStyle = css(wood, -14, 0.8);
-  for (const k of [-5.5, -1.8, 1.8, 5.5]) {
-    s.beginPath();
-    s.moveTo(-MOUTH, k * 0.8);
-    s.quadraticCurveTo(0, k * 1.35, MOUTH, k * 0.8);
-    s.stroke();
-  }
-  s.fillStyle = css(wood, 12, 0.35);
-  s.fillRect(-MOUTH + 3, -8.5, MOUTH * 2 - 6, 2);
-  for (const hx of [-8, 8]) {
-    s.fillStyle = hoopDark;
-    s.fillRect(hx - 1.6, -11, 3.2, 22);
-    s.fillStyle = hoop;
-    s.fillRect(hx - 1, -10.6, 1.6, 21.2);
-  }
-  // The moonshine stencil every cartoon jug wears.
-  s.strokeStyle = css(wood, 34);
-  s.lineWidth = 1.2;
-  s.lineCap = 'butt';
-  for (const cx of [-3.6, 0, 3.6]) {
-    s.beginPath();
-    s.moveTo(cx - 1.4, -2.4);
-    s.lineTo(cx + 1.4, 2.4);
-    s.moveTo(cx + 1.4, -2.4);
-    s.lineTo(cx - 1.4, 2.4);
-    s.stroke();
-  }
-  // The mouth.
-  s.fillStyle = INK;
-  s.beginPath();
-  s.ellipse(MOUTH, 0, 2.6, 8, 0, 0, Math.PI * 2);
-  s.fill();
-  s.strokeStyle = hoop;
-  s.lineWidth = 1;
-  s.stroke();
+/** The cask, baked in its own frame with +x out of the mouth and its lit side up. */
+function cask(wood: HSL, pal: MetalPalette) {
+  return sprite(`keg|${wood.h | 0}|${pal.base.h},${pal.base.l}`, -MOUTH - 3, -14, MOUTH * 2 + 7, 28, (g) => {
+    const top: P[] = [];
+    const bot: P[] = [];
+    for (let i = 0; i <= 12; i++) {
+      const t = i / 12;
+      const x = -MOUTH + t * MOUTH * 2;
+      const bulge = 8.6 + 3.2 * Math.sin(Math.PI * t);
+      top.push({ x, y: -bulge });
+      bot.unshift({ x, y: bulge });
+    }
+    const body = [...top, ...bot];
+    tone(g, body, wood, { depth: 2, shade: -18 });
+    g.save();
+    path(g, body);
+    g.clip();
+    // A lit band down the top staves, and the stave seams following the bulge, lifted here and there.
+    g.fillStyle = css(wood, 12, 1, -4);
+    const band: P[] = [];
+    for (let i = 0; i <= 12; i++) {
+      const t = i / 12;
+      band.push({ x: -MOUTH + t * MOUTH * 2, y: -(8.6 + 3.2 * Math.sin(Math.PI * t)) * 0.62 });
+    }
+    for (let i = 12; i >= 0; i--) {
+      const t = i / 12;
+      band.push({ x: -MOUTH + t * MOUTH * 2, y: -(8.6 + 3.2 * Math.sin(Math.PI * t)) * 0.36 });
+    }
+    path(g, band);
+    g.fill();
+    g.fillStyle = css(wood, -26, 1, 6);
+    for (const k of [-0.68, -0.25, 0.2, 0.62]) {
+      for (const [t0, t1] of [
+        [0.02, 0.3],
+        [0.36, 0.62],
+        [0.7, 0.98],
+      ]) {
+        const seg: P[] = [];
+        for (let i = 0; i <= 5; i++) {
+          const t = t0 + ((t1 - t0) * i) / 5;
+          seg.push({ x: -MOUTH + t * MOUTH * 2, y: k * (8.6 + 3.2 * Math.sin(Math.PI * t)) });
+        }
+        stroke(g, seg, { w: 0.6, seed: k * 10 + t0 * 7, taper: [0.25, 0.3], press: 0.3 });
+      }
+    }
+    // Grain ticks and a knot.
+    for (let i = 0; i < 5; i++) tick(g, -9 + i * 4.2, 3 + (i % 2) * 2.4, -7 + i * 4.2, 3.3 + (i % 2) * 2.4, 0.35, i, css(wood, -22));
+    g.fillStyle = css(wood, -24);
+    blob(g, 6, 5.6, 0.9, 3, 0.6, 0.2);
+    g.fill();
+    // The moonshine stencil every cartoon jug wears, in chalky paint.
+    g.fillStyle = 'rgba(250,236,200,0.9)';
+    for (const cx of [-3.8, 0, 3.8]) {
+      line(g, cx - 1.5, -2.4, cx + 1.5, 2.4, { w: 1.1, seed: cx, taper: [0.1, 0.1], press: 0.3 });
+      line(g, cx + 1.5, -2.4, cx - 1.5, 2.4, { w: 1.1, seed: cx + 1, taper: [0.1, 0.1], press: 0.3 });
+    }
+    g.restore();
+    // Iron hoops, bent round the staves, riveted.
+    for (const t of [0.13, 0.87]) {
+      const hx = -MOUTH + t * MOUTH * 2;
+      const hh = 8.6 + 3.2 * Math.sin(Math.PI * t) + 0.9;
+      const hoop = poly(hx - 1.7, -hh, hx + 1.7, -hh, hx + 2.1, 0, hx + 1.7, hh, hx - 1.7, hh, hx - 1.3, 0);
+      part(g, hoop, pal.base, t * 100, { depth: 0.6, shade: -24, thin: 0.4, thick: 1 });
+      g.fillStyle = css(pal.light, 4);
+      line(g, hx - 0.8, -hh + 1, hx - 0.5, -2, { w: 0.6, seed: t, taper: [0.2, 0.4], press: 0 });
+      for (const ry of [-hh + 2.4, hh - 2.4]) dot(g, hx + 0.2, ry, 0.5, ry, css(pal.spec));
+    }
+    pen(g, body, 5, 0.6, 1.9, 4);
+    // The mouth: an iron-rimmed bore, dark, its lower wall catching the light.
+    const rim = ovalPts(MOUTH + 0.2, 0, 3.2, 9, 8, 0.02, 18);
+    part(g, rim, pal.base, 9, { depth: 0.5, shade: -20, thin: 0.5, thick: 1.2 });
+    const bore = ovalPts(MOUTH + 0.5, 0.3, 1.9, 7.2, 10, 0.03, 16);
+    g.fillStyle = '#0d0806';
+    path(g, bore);
+    g.fill();
+    g.fillStyle = css(wood, -10);
+    path(g, ovalPts(MOUTH + 1.1, 3.2, 0.9, 3.4, 11, 0.03, 10));
+    g.fill();
+    // The rear head, just showing.
+    g.fillStyle = css(wood, -20);
+    stroke(g, poly(-MOUTH - 0.6, -7.4, -MOUTH - 1.4, 0, -MOUTH - 0.6, 7.4), { w: 1.3, seed: 12, taper: [0.2, 0.2], press: 0.2 });
+  });
 }
 
 /**
@@ -135,19 +189,24 @@ defineArt<'keg'>({
     s.rotate(a);
     s.translate(-kick, 0);
     s.scale(1 + swell * 0.14, 1 + swell * 0.2);
+    // Keep the lit staves up whichever way it points.
+    if (Math.cos(a) < -1e-6) s.scale(1, -1);
     // The fuse, shortest when it's nearly gone.
     const cord = 9 * (1 - burnt);
-    s.lineCap = 'round';
-    s.strokeStyle = INK;
-    s.lineWidth = 2.2;
-    s.beginPath();
-    s.moveTo(-MOUTH, 0);
-    s.quadraticCurveTo(-MOUTH - cord * 0.5, 3, -MOUTH - cord, 0);
-    s.stroke();
-    s.strokeStyle = '#d9c7a1';
-    s.lineWidth = 1;
-    s.stroke();
-    cask(s, { h: d.style.woodHue, s: 50, l: 36 }, css(d.pal.light), css(d.pal.dark, -8));
+    if (cord > 0.3) {
+      const f = fuse;
+      f[0].x = -MOUTH - 0.5;
+      f[0].y = 0;
+      f[1].x = -MOUTH - cord * 0.5;
+      f[1].y = 2.6;
+      f[2].x = -MOUTH - cord;
+      f[2].y = 0;
+      s.fillStyle = INK;
+      stroke(s, f, { w: 2.3, seed: 2, taper: [0, 0.2], press: 0 });
+      s.fillStyle = '#d9c7a1';
+      stroke(s, f, { w: 1, seed: 2, taper: [0, 0.3], press: 0 });
+    }
+    stamp(s, cask({ h: d.style.woodHue, s: 50, l: 38 }, d.pal));
     s.restore();
 
     if (grip) {
