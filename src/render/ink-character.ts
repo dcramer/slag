@@ -1,4 +1,4 @@
-import { css, type HSL } from '../core/color';
+import { css, type HSL, shift, toRgb } from '../core/color';
 import { clamp } from '../core/geom';
 import { hash2 } from '../core/rng';
 import type { CharacterDef } from '../gen/character';
@@ -54,6 +54,17 @@ interface Look {
   hand: string;
   shoe: string;
   lid: string;
+  /** Multiplied over the lit body it gives `shade`, so the shadow falls across the pattern as well. */
+  shadow: string;
+  /** Shadow tones of the small parts, which get the same light as the body. */
+  handShade: string;
+  shoeShade: string;
+  bellyShade: string;
+  accentShade: string;
+  /** The trailing ribbon: its fill, its shadow tone, and the scarf's knit band. */
+  rib: string;
+  ribShade: string;
+  ribBand: string;
   /** Pen weight: some characters are drawn heavier than others. */
   weight: number;
   /** Arm length in world px. */
@@ -74,6 +85,8 @@ function lookOf(c: CharacterDef): Look {
   const r = (k: number) => hash2(c.seed, k, 0x1a7);
   const gloves = r(1) < 0.3;
   const boots = r(2) < 0.5;
+  const tail = c.accessory === 'tail';
+  const rib = tail ? c.body : c.accessoryColor;
   const look: Look = {
     ink: inkOf(c.body),
     shade: css(c.body, -20, 1, 8),
@@ -86,6 +99,14 @@ function lookOf(c: CharacterDef): Look {
     hand: gloves ? '#f4efe4' : css(c.body),
     shoe: boots ? css(c.accent, -12) : css(c.body, -c.body.l * 0.45, 1, 6),
     lid: css(c.body, -10),
+    shadow: ratio(c.body, shift(c.body, -20, 8)),
+    handShade: gloves ? '#c9bfae' : css(c.body, -20, 1, 8),
+    shoeShade: boots ? css(c.accent, -26, 1, 4) : css(c.body, -c.body.l * 0.45 - 9, 1, 6),
+    bellyShade: css(c.belly, -18, 1, 6),
+    accentShade: css(c.accent, -20, 1, 4),
+    rib: css(rib, tail ? 0 : -4),
+    ribShade: css(rib, tail ? -20 : -22, 1, 8),
+    ribBand: css(rib, 22, 1, -10),
     weight: 0.95 + r(3) * 0.4,
     arm: 3.4 + r(4) * 1.4,
     skew: (r(5) - 0.35) * 2.2,
@@ -98,6 +119,19 @@ function lookOf(c: CharacterDef): Look {
 
 /** Dark of its own hue, never one black: the line belongs to what it outlines. */
 const inkOf = (c: HSL) => css({ h: c.h, s: Math.min(70, c.s), l: 11 });
+
+/**
+ * The color that, multiplied over `lit`, gives about `dark`: one flat shadow that darkens whatever it falls
+ * on. No channel drops far below the mean, or a red stripe on a blue body would go black in the shade.
+ */
+function ratio(lit: HSL, dark: HSL): string {
+  const a = toRgb(lit);
+  const b = toRgb(dark);
+  const r = [0, 1, 2].map((i) => Math.min(1, b[i] / Math.max(a[i], 0.02)));
+  const floor = ((r[0] + r[1] + r[2]) / 3) * 0.8;
+  const ch = (i: number) => Math.round(255 * Math.max(floor, r[i]));
+  return `rgb(${ch(0)} ${ch(1)} ${ch(2)})`;
+}
 
 function path(s: CanvasRenderingContext2D, pts: readonly P[]) {
   s.beginPath();
@@ -116,14 +150,27 @@ function poly(s: CanvasRenderingContext2D, pts: readonly P[], fill: string) {
 
 /** A shape on a solid ink mass that's thin toward the light (upper left) and heavy away from it. */
 function inked(s: CanvasRenderingContext2D, pts: readonly P[], fill: string, ink: string, thin: number, thick: number) {
-  let cx = 0;
-  let cy = 0;
+  const c = centroid(pts);
+  mass(s, pts, ink, thin, thick, c.x, c.y);
+  poly(s, pts, fill);
+}
+
+const mid: P = { x: 0, y: 0 };
+
+function centroid(pts: readonly P[]): P {
+  mid.x = 0;
+  mid.y = 0;
   for (const p of pts) {
-    cx += p.x;
-    cy += p.y;
+    mid.x += p.x;
+    mid.y += p.y;
   }
-  cx /= pts.length;
-  cy /= pts.length;
+  mid.x /= pts.length;
+  mid.y /= pts.length;
+  return mid;
+}
+
+/** The solid ink under a shape: each point pushed out from (cx, cy), further the more it faces away from the light. */
+function mass(s: CanvasRenderingContext2D, pts: readonly P[], ink: string, thin: number, thick: number, cx: number, cy: number) {
   s.fillStyle = ink;
   s.beginPath();
   for (let i = 0; i < pts.length; i++) {
@@ -137,7 +184,96 @@ function inked(s: CanvasRenderingContext2D, pts: readonly P[], fill: string, ink
   }
   s.closePath();
   s.fill();
+}
+
+const penBuf: P[] = [];
+
+/**
+ * The body's line: `inked`'s continuous mass, a little lighter, then the pen over it in three strokes
+ * that swell where they face away from the light and taper where they meet. The joints are lifts: the
+ * line thins there but never breaks, so the silhouette stays as bold and closed as a solid outline.
+ * The first lift sits on the lit side, nearest upper left, where a pen would start.
+ */
+function contour(s: CanvasRenderingContext2D, pts: readonly P[], fill: string, ink: string, k: number, seed: number) {
+  const n = pts.length;
+  const { x: cx, y: cy } = centroid(pts);
+  mass(s, pts, ink, MASS[0] * k, MASS[1] * k, cx, cy);
+  let lead = 0;
+  let best = -2;
+  for (let i = 0; i < n; i++) {
+    const d = Math.hypot(pts[i].x - cx, pts[i].y - cy) || 1;
+    const lit = -((pts[i].x - cx) * 0.55 + (pts[i].y - cy) * 0.83) / d;
+    if (lit > best) {
+      best = lit;
+      lead = i;
+    }
+  }
+  const span = Math.ceil(n / 3);
+  s.fillStyle = ink;
+  for (let j = 0; j < 3; j++) {
+    let mid = 0;
+    let sh = 0;
+    for (let i = 0; i <= span; i++) {
+      const p = pts[(lead + j * span + i) % n];
+      const d = Math.hypot(p.x - cx, p.y - cy) || 1;
+      const nx = (p.x - cx) / d;
+      const ny = (p.y - cy) / d;
+      const m = (MASS[0] + (MASS[1] - MASS[0]) * shadeOf(nx, ny)) * k;
+      // On the mass's outer half: the stroke's inside is hidden under the fill drawn after it.
+      const q = penBuf[i] ?? (penBuf[i] = { x: 0, y: 0 });
+      q.x = p.x + nx * m * 0.4;
+      q.y = p.y + ny * m * 0.4;
+      if (i === span >> 1) {
+        mid = m;
+        sh = shadeOf(nx, ny);
+      }
+    }
+    penBuf.length = span + 1;
+    // At its widest the stroke stands this far past the mass; at its ends it sinks back into it.
+    const over = (PEN[0] + (PEN[1] - PEN[0]) * sh) * k;
+    stroke(s, penBuf, { w: 2 * (mid * 0.6 + over), seed: seed + j, taper: [0.2, 0.26], press: 0.3 });
+  }
   poly(s, pts, fill);
+}
+
+/**
+ * `toned` for a small oval (a hand, a shoe, a bulb), without the clip: the lit tone is the oval shrunk
+ * and pulled up-left inside itself, which cuts the same sliver for a fraction of the cost.
+ */
+function tonedOval(
+  s: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  rx: number,
+  ry: number,
+  n: number,
+  fill: string,
+  shade: string,
+  ink: string,
+  thin: number,
+  thick: number,
+  d: number,
+) {
+  inked(s, oval(x, y, rx, ry, n), shade, ink, thin, thick);
+  poly(s, oval(x - d * 0.5, y - d * 0.43, rx - d * 0.5, ry - d * 0.43, n), fill);
+}
+
+/** The body's ink mass (lit side, shadow side) and how far the pen swells past it, per unit of pen weight. */
+const MASS = [0.85, 1.65];
+const PEN = [0.25, 0.5];
+
+/**
+ * `inked`, with the body's light: the shape in its shadow tone and the lit tone pulled up-left over it,
+ * so a hard sliver of shadow is left along the side away from the light. `d` is that sliver's width.
+ */
+function toned(s: CanvasRenderingContext2D, pts: readonly P[], fill: string, shade: string, ink: string, thin: number, thick: number, d: number) {
+  inked(s, pts, shade, ink, thin, thick);
+  s.save();
+  path(s, pts);
+  s.clip();
+  s.translate(-d, -d * 0.87);
+  poly(s, pts, fill);
+  s.restore();
 }
 
 function oval(cx: number, cy: number, rx: number, ry: number, n = 12, rot = 0): P[] {
@@ -312,8 +448,8 @@ function arm(s: CanvasRenderingContext2D, lk: Look, sx: number, sy: number, h: P
   ];
   // A rubber-hose arm: one ink line, thick at the shoulder, and a mitten that reads as a hand at any size.
   s.fillStyle = lk.ink;
-  stroke(s, pts, { w: 1.75 * k, seed: 1, taper: [0, 0], press: 0 });
-  inked(s, oval(hx, hy, 1.95, 1.75, 9), lk.hand, lk.ink, 0.6 * k, 1 * k);
+  stroke(s, pts, { w: 2 * k, seed: 1, taper: [0, 0.7], press: 0 });
+  tonedOval(s, hx, hy, 1.95, 1.75, 9, lk.hand, lk.handShade, lk.ink, 0.6 * k, 1 * k, 0.6);
 }
 
 function eyes(
@@ -529,14 +665,14 @@ function topper(
       const tip = { x: wob * 1.6, y: top - 7.5 };
       const pts: P[] = [{ x: 0, y: top + 2 }, { x: wob * 0.4, y: top - 3 }, tip];
       s.fillStyle = ink;
-      stroke(s, pts, { w: 2.1 * k, seed: c.seed, taper: [0, 0], press: 0.1 });
-      inked(s, oval(tip.x, tip.y - 0.8, 2.4, 2.4, 8), lk.accent, ink, 0.7, 1.1 * k);
+      stroke(s, pts, { w: 2.3 * k, seed: c.seed, taper: [0, 0.45], press: 0.1 });
+      tonedOval(s, tip.x, tip.y - 0.8, 2.4, 2.4, 8, lk.accent, lk.accentShade, ink, 0.7, 1.1 * k, 0.7);
       if (rc.g) glowDot(rc.g, wx + tip.x * sc, wy + (tip.y - 0.8) * sc, 5 * sc, c.accent, 0.4);
       break;
     }
     case 'horns':
       for (const sg of [-1, 1]) {
-        inked(
+        toned(
           s,
           [
             { x: sg * W * 0.12, y: top + 3.4 },
@@ -546,9 +682,11 @@ function topper(
             { x: sg * W * 0.42, y: top + 3.8 },
           ],
           lk.belly,
+          lk.bellyShade,
           ink,
           0.8,
           1.2 * k,
+          0.9,
         );
       }
       break;
@@ -556,7 +694,7 @@ function topper(
       for (const sg of [-1, 1]) {
         const tilt = sg * 0.3 - wob * 0.04;
         const e = oval(sg * W * 0.3, top - 0.6, 3.2, 6.1, 10, tilt);
-        inked(s, e, lk.base, ink, 0.8, 1.2 * k);
+        toned(s, e, lk.base, lk.shade, ink, 0.8, 1.2 * k, 0.9);
         poly(s, oval(sg * W * 0.3, top + 0.2, 1.5, 3.4, 8, tilt), lk.belly);
       }
       break;
@@ -577,13 +715,13 @@ function topper(
         pts.push({ x: i * 2.1 + 0.8, y: top - 2 + Math.abs(i) * 0.7 });
       }
       pts.push({ x: 5.2, y: top + 2.6 });
-      inked(s, pts, lk.accent, ink, 0.7, 1.1 * k);
+      toned(s, pts, lk.accent, lk.accentShade, ink, 0.7, 1.1 * k, 0.9);
       break;
     }
     case 'cap': {
       const f = p.facing;
       const dome = oval(0, top + 2.8, W * 0.44, 5.2, 14).filter((q) => q.y <= top + 2.9);
-      inked(s, dome, lk.accent, ink, 0.8, 1.15 * k);
+      toned(s, dome, lk.accent, lk.accentShade, ink, 0.8, 1.15 * k, 1);
       s.fillStyle = ink;
       line(s, f * W * 0.02, top + 3.1, f * W * 0.74, top + 3.6, { w: 3.2 * k, seed: 2, taper: [0, 0.1], press: 0 });
       s.fillStyle = lk.accentDark;
@@ -591,7 +729,7 @@ function topper(
       break;
     }
     case 'crown':
-      inked(
+      toned(
         s,
         [
           { x: -W * 0.36, y: top + 2.6 },
@@ -603,9 +741,11 @@ function topper(
           { x: W * 0.36, y: top + 2.6 },
         ],
         '#f2b705',
+        '#c27c00',
         ink,
         0.8,
         1.15 * k,
+        1,
       );
       poly(s, oval(0, top + 0.3, 1.4, 1.4, 7), '#e8304a');
       break;
@@ -613,7 +753,7 @@ function topper(
       const l = oval(wob * 0.8 + 3, top - 3.4, 5.4, 2.6, 10, -0.55 + wob * 0.05);
       s.fillStyle = ink;
       line(s, 0, top + 1.8, wob * 0.8 + 1, top - 2, { w: 2.1 * k, seed: 1, taper: [0, 0], press: 0 });
-      inked(s, l, 'hsl(118 56% 44%)', ink, 0.7, 1.1 * k);
+      toned(s, l, 'hsl(118 56% 44%)', 'hsl(122 60% 31%)', ink, 0.7, 1.1 * k, 0.8);
       s.fillStyle = 'hsl(118 50% 30%)';
       line(s, wob * 0.8 + 0.4, top - 1.8, wob * 0.8 + 6, top - 5, { w: 0.7, seed: 3, taper: [0.1, 0.6], press: 0 });
       break;
@@ -698,7 +838,7 @@ export function drawInkRunner(rc: InkTarget, c: CharacterDef, x: number, y: numb
         fx = side * W * 0.33 + Math.sin(p.t * 25 + side) * 0.6;
         fy = -1.2;
       }
-      inked(s, oval(fx + f * 1, fy, 3.2, 2, 10), lk.shoe, lk.ink, 0.6, Math.min(1.05 * k, 1.2));
+      tonedOval(s, fx + f * 1, fy, 3.2, 2, 10, lk.shoe, lk.shoeShade, lk.ink, 0.6, Math.min(1.05 * k, 1.2), 0.7);
     }
   }
 
@@ -717,21 +857,24 @@ export function drawInkRunner(rc: InkTarget, c: CharacterDef, x: number, y: numb
       y: q.y + by + sn(i * 0.45 + 9, boil * 3.1, sd) * 0.2,
     };
   }
-  inked(s, pts, lk.shade, lk.ink, 1.05 * k, 2.15 * k);
+  contour(s, pts, lk.base, lk.ink, k, sd);
   s.save();
   path(s, pts);
   s.clip();
-  // One hard shadow shape: the lit part of the body, cut clean, leaving a crescent of shade below and right.
-  s.fillStyle = lk.base;
-  s.beginPath();
+  pattern(s, c, lk, W, H, by);
+  // One hard shadow shape: the body less itself pulled up-left, a crescent below and right. It goes on
+  // after the pattern and multiplies, so a belly or stripe sits in the same light as the body.
+  path(s, pts);
   for (let i = 0; i < pts.length; i++) {
     const q = pts[i];
     if (i) s.lineTo(q.x - W * 0.16, q.y - H * 0.13);
     else s.moveTo(q.x - W * 0.16, q.y - H * 0.13);
   }
   s.closePath();
-  s.fill();
-  pattern(s, c, lk, W, H, by);
+  s.globalCompositeOperation = 'multiply';
+  s.fillStyle = lk.shadow;
+  s.fill('evenodd');
+  s.globalCompositeOperation = 'source-over';
   s.fillStyle = lk.hi;
   line(s, -W * 0.36 + f * lk.skew * 0.7, by - H * 0.7, -W * 0.12 + f * lk.skew * 0.85, by - H * 0.87, { w: 2, seed: sd, taper: [0.22, 0.45], press: 0.1 });
   s.restore();
@@ -749,8 +892,8 @@ export function drawInkRunner(rc: InkTarget, c: CharacterDef, x: number, y: numb
 }
 
 /**
- * The trailing accessory, in world space behind the body: a ribbon on an ink ribbon a little wider, so
- * it has the same heavy line as the body and never an even stroked one.
+ * The trailing accessory, in world space behind the body: a ribbon on an ink ribbon that is thin on its
+ * lit edge and heavy on its shadowed one, in the body's two tones, so it is drawn by the same hand.
  */
 export function drawInkAccessory(s: CanvasRenderingContext2D, c: CharacterDef, rig: Rig) {
   if (c.accessory === 'none' || rig.rope.length < 2) return;
@@ -759,39 +902,47 @@ export function drawInkAccessory(s: CanvasRenderingContext2D, c: CharacterDef, r
   const n = pts.length;
   const cape = c.accessory === 'cape';
   const tail = c.accessory === 'tail';
-  const col = tail ? c.body : c.accessoryColor;
   const w0 = cape ? 4.8 : tail ? 2.6 : 2.4;
   const w1 = cape ? 7 : tail ? 0.9 : 2;
-  const ribbon = (grow: number) => {
-    s.beginPath();
-    for (let i = 0; i < n; i++) {
-      const [nx, ny, w] = side(i);
-      const h = w / 2 + grow;
-      if (i) s.lineTo(pts[i].x - ny * h, pts[i].y + nx * h);
-      else s.moveTo(pts[i].x - ny * h, pts[i].y + nx * h);
-    }
-    for (let i = n - 1; i >= 0; i--) {
-      const [nx, ny, w] = side(i);
-      const h = w / 2 + grow;
-      s.lineTo(pts[i].x + ny * h, pts[i].y - nx * h);
-    }
-    s.closePath();
-  };
   const side = (i: number): [number, number, number] => {
     const a = pts[Math.max(0, i - 1)];
     const b = pts[Math.min(n - 1, i + 1)];
     const d = Math.hypot(b.x - a.x, b.y - a.y) || 1;
     return [(b.x - a.x) / d, (b.y - a.y) / d, w0 + (w1 - w0) * (i / (n - 1))];
   };
+  // `ink` widens each edge by how far it faces from the light; 0 is the ribbon itself.
+  const ribbon = (ink: number) => {
+    s.beginPath();
+    for (let i = 0; i < n; i++) {
+      const [nx, ny, w] = side(i);
+      const h = w / 2 + (ink ? ink * (0.45 + 0.9 * shadeOf(-ny, nx)) : 0);
+      if (i) s.lineTo(pts[i].x - ny * h, pts[i].y + nx * h);
+      else s.moveTo(pts[i].x - ny * h, pts[i].y + nx * h);
+    }
+    for (let i = n - 1; i >= 0; i--) {
+      const [nx, ny, w] = side(i);
+      const h = w / 2 + (ink ? ink * (0.45 + 0.9 * shadeOf(ny, -nx)) : 0);
+      s.lineTo(pts[i].x + ny * h, pts[i].y - nx * h);
+    }
+    s.closePath();
+  };
   s.fillStyle = lk.ink;
-  ribbon(0.95);
+  ribbon(1);
   s.fill();
-  s.fillStyle = css(col, tail ? 0 : -4);
+  s.fillStyle = lk.ribShade;
+  ribbon(0);
+  s.fill();
+  // Everything lit is drawn pulled up-left and cut to the ribbon, leaving its shadowed edge in shade.
+  s.save();
+  s.clip();
+  const d = cape ? 1.1 : 0.7;
+  s.translate(-d, -d * 0.87);
+  s.fillStyle = lk.rib;
   ribbon(0);
   s.fill();
   if (c.accessory === 'scarf') {
     // Bands across the knit, flat and hard.
-    s.fillStyle = css(col, 22, 1, -10);
+    s.fillStyle = lk.ribBand;
     for (let i = 1; i + 1 < n; i += 2) {
       const [ax, ay, aw] = side(i);
       const [bx, by, bw] = side(i + 1);
@@ -805,7 +956,8 @@ export function drawInkAccessory(s: CanvasRenderingContext2D, c: CharacterDef, r
     }
   }
   if (cape) {
-    s.fillStyle = css(col, -18, 1, 6);
+    // A fold down the cape's length, in its shadow tone.
+    s.fillStyle = lk.ribShade;
     s.beginPath();
     for (let i = 1; i < n; i++) {
       const [nx, ny, w] = side(i);
@@ -820,13 +972,14 @@ export function drawInkAccessory(s: CanvasRenderingContext2D, c: CharacterDef, r
     s.closePath();
     s.fill();
   }
+  s.restore();
   if (tail) {
     // A spade, not a ball: a round tip on a ribbon reads as a third arm.
     const tip = pts[n - 1];
     const [dx, dy] = side(n - 1);
     const px = -dy;
     const py = dx;
-    inked(
+    toned(
       s,
       [
         { x: tip.x - dx * 0.6 + px * 2.4, y: tip.y - dy * 0.6 + py * 2.4 },
@@ -835,9 +988,11 @@ export function drawInkAccessory(s: CanvasRenderingContext2D, c: CharacterDef, r
         { x: tip.x + dx * 0.8, y: tip.y + dy * 0.8 },
       ],
       lk.accent,
+      lk.accentShade,
       lk.ink,
       0.6,
       1,
+      0.7,
     );
   }
 }
