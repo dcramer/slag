@@ -1,7 +1,7 @@
 import { dhypot, dsin } from '../../core/dmath';
 import { overlaps, pointInRect, rectCircle } from '../../core/geom';
 import { DT, TILE } from '../constants';
-import { isProtected, type Level, T_EMPTY, T_SOLID, tileAt } from '../level';
+import { isProtected, type Level, T_EMPTY, T_ONEWAY, T_SOLID, tileAt } from '../level';
 import { type Body, DEFAULT_SURFACE, type Solid, type Surface } from '../physics';
 import type { GameEvent } from '../types';
 import type { ItemKind, ItemSpawn } from '../items/types';
@@ -373,7 +373,71 @@ export const AMMO_SIM: Partial<Record<Ammo, AmmoSim>> = {
   },
   goo: { wall: stick },
   frost: { wall: stick },
+  snowball: { move: roll },
 };
+
+/** Shots whose own mover worldgen traces exactly (`traceShot`): a roll follows the ground, so no ballistic guess says where it goes. */
+export const TRACED_AMMO: ReadonlySet<Ammo> = new Set<Ammo>(['snowball']);
+
+/** Where one shot goes, frame by frame, through the level's terrain alone, until it ends or `frames` pass. */
+export function traceShot(level: Level, s: ProjectileSpawn, frames = DEFAULT_LIFE): { x: number; y: number }[] {
+  const noop = () => {};
+  const w: ProjWorld = { level, frame: 0, solids: [], gravity: level.gravity ?? 1, runners: [], spawn: noop, emit: noop, kill: noop };
+  const p = makeProjectile(s, 0, 0);
+  const out: { x: number; y: number }[] = [];
+  for (let f = 1; f <= frames; f++) {
+    w.frame = f;
+    if (!stepProjectile(p, w)) break;
+    out.push({ x: p.x, y: p.y });
+  }
+  return out;
+}
+
+/** A rolling snowball's top speed along the ground (px/s), and what it gains a second while rolling. */
+export const SNOW_ROLL_MAX = 230;
+const SNOW_ROLL_GAIN = 70;
+
+/**
+ * Top (px) of the first floor a falling ball's foot crosses going from `y0` to `y1` at x: terrain, a
+ * one-way top it came down onto, or a solid. Null when it falls clear.
+ */
+function floorUnder(w: ProjWorld, x: number, y0: number, y1: number, age: number, source: number): number | null {
+  const tx = Math.floor(x / TILE);
+  for (let ty = Math.floor(y0 / TILE); ty <= Math.floor(y1 / TILE); ty++) {
+    const t = tileAt(w.level, tx, ty);
+    const top = ty * TILE;
+    if ((t === T_SOLID && top >= y0 - TILE) || (t === T_ONEWAY && top >= y0 && top <= y1)) return Math.max(top, y0);
+  }
+  for (const s of w.solids) {
+    if (s.film || x < s.x || x > s.x + s.w || (age <= 2 && source >= 0 && s.propUid === source)) continue;
+    if (s.y >= y0 && s.y <= y1) return s.y;
+  }
+  return null;
+}
+
+/**
+ * An avalanche's snowball (glacier): it falls, lands, and rolls along whatever floor it's on, gathering speed
+ * to SNOW_ROLL_MAX, off ledges and down steps, until it runs into a wall (it bursts: `solidAt` takes its
+ * middle) or the pit. Only + − × ÷, so it rolls the same everywhere.
+ */
+function roll(p: Projectile, w: ProjWorld): boolean {
+  const spec = AMMO.snowball;
+  const age = w.frame - p.born;
+  p.vy = Math.min(p.vy + spec.gravity * w.gravity * DT, 700);
+  p.x += p.vx * DT;
+  const foot = p.y + spec.radius;
+  const next = foot + p.vy * DT;
+  const floor = p.vy >= 0 ? floorUnder(w, p.x, foot, next, age, p.source) : null;
+  if (floor === null) {
+    p.y += p.vy * DT;
+    return true;
+  }
+  p.y = floor - spec.radius;
+  p.vy = 0;
+  const dir = p.vx < 0 ? -1 : 1;
+  p.vx = dir * Math.min(SNOW_ROLL_MAX, Math.abs(p.vx) + SNOW_ROLL_GAIN * DT);
+  return true;
+}
 
 /** Register behavior for an ammo kind (the held-item shots do this from src/sim/items). */
 export function defineAmmo(ammo: Ammo, sim: AmmoSim): void {

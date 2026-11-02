@@ -385,6 +385,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 06:29Z · `done` · PARODY.md → Parts
 - **All of the art should be drawn well, not left as bad geometry.** "The art is still mostly the same as before ... a lot is still bad geometry" / "im just not sure 100% is drawn wlel"
   2026-11-02 15:29Z, 16:02Z · `done` (full ink pass), polish ongoing · ART.md → World art
+- **Theme art (landmarks, hazards, decor) must match the main ink style, and agents get concrete guidance and checks for it.** "the artwork rendering may need some guidance on e.g. black lines and stuff idk. they look just like wack compared to the main stuff right now for a lot of them"
+  2026-11-02 · `in progress` · ART.md → World art, `src/render/AGENTS.md`
 - **A launcher is its own machine, not "an image slapped on a square block."**
   2026-11-02 16:08Z · `done` · `src/render/AGENTS.md`
 - **The conveyor and the warp pipe are redrawn as built things.** "idk if conveyer is stil in the TODO on blocks but it looks dumb" / "that warp pipe also looks visually pretty bad..."

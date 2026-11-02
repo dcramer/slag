@@ -48,6 +48,7 @@ const MAY_PAINT_BACKDROP: Record<Module['type'], boolean> = {
   spring: false,
   swinger: false,
   tesla: false,
+  thaw: false,
   vehicle: false,
   web: false,
 };
