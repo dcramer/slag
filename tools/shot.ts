@@ -283,6 +283,87 @@ try {
       }
       break;
     }
+    case 'grabs': {
+      // Swing, keg shot and backfire as stepped frames: motion can't be judged from a single still.
+      await open(`seed=${seed}&players=1&race=rope,rope,keg,keg&propseed=${opt('propseed', '1')}`);
+      await step(70);
+      const [vw] = [page.viewportSize()!.width];
+      const k = vw / 768;
+      const go = (type: string, vx: number): Promise<[number, number]> =>
+        page.evaluate(
+          ([t, v]) => {
+            const run = (window as any).slagDebug.match.run;
+            const m = run.resolved.find((r: any) => r.mods[0].type === t).mods[0];
+            const b = run.runners[0].body;
+            b.x = m.at[0] - b.w / 2;
+            b.y = (t === 'rope' ? m.at[1] + m.length * 0.75 : m.at[1]) - b.h / 2;
+            b.vx = v;
+            b.vy = 0;
+            b.onGround = false;
+            b.groundRef = -1;
+            run.runners[0].items.daze = 0;
+            return [m.at[0], m.at[1]];
+          },
+          [type, vx] as const,
+        );
+      const press = (n: number, inp: object) => page.evaluate(([c, i]) => (window as any).slagDebug.step(c, { kb1: i }), [n, inp] as const);
+      /** Press along whichever way the rope is swinging. */
+      const pump = () =>
+        page.evaluate(() => {
+          const g = (window as any).slagDebug.match.run.runners[0].attach.grip;
+          (window as any).slagDebug.step(1, { kb1: g && g.s >= 0 ? { right: true } : { left: true } });
+        });
+      const crop = async (name: string, [x, y]: [number, number], files: string[]) => {
+        // The camera drifts and zooms during a race, so ask it where the world point landed.
+        const cam = await page.evaluate(() => {
+          const c = (window as any).slagDebug.renderer.cam;
+          return { x: c.x, y: c.y, zoom: c.zoom };
+        });
+        const w = 260 * k;
+        const h = 180 * k;
+        const px = ((x - cam.x) * cam.zoom + 384) * k;
+        const py = ((y - cam.y) * cam.zoom + 216) * k;
+        const path = `${out}/${name}${sfx}.png`;
+        const size = page.viewportSize()!;
+        await page.screenshot({
+          path,
+          clip: { x: Math.min(size.width - w, Math.max(0, px - w / 2)), y: Math.min(size.height - h, Math.max(0, py - h / 2)), width: w, height: h },
+        });
+        files.push(path);
+      };
+      const swing: string[] = [];
+      const rope = await go('rope', 215);
+      for (let i = 0; i < 12; i++) {
+        for (let n = 0; n < 9; n++) await pump();
+        await crop(`grabs-swing-${String(i).padStart(2, '0')}`, rope, swing);
+      }
+      await press(1, { jump: true, jumpPressed: true });
+      for (let i = 12; i < 15; i++) {
+        await press(8, {});
+        await crop(`grabs-swing-${i}`, rope, swing);
+      }
+      await sheet(`grabs-swing-${seed}`, swing, 5);
+      const shot: string[] = [];
+      const keg = await go('keg', 0);
+      for (const n of [1, 3, 8, 30]) {
+        await press(n, {});
+        await crop(`grabs-shot-${String(shot.length).padStart(2, '0')}`, keg, shot);
+      }
+      await press(1, { jump: true, jumpPressed: true });
+      for (const n of [3, 6, 4, 4, 4, 6, 8, 10, 12, 14, 16]) {
+        await press(n, {});
+        await crop(`grabs-shot-${String(shot.length).padStart(2, '0')}`, keg, shot);
+      }
+      await sheet(`grabs-shot-${seed}`, shot, 5);
+      const back: string[] = [];
+      await go('keg', 0);
+      for (const n of [40, 40, 30, 14, 10, 8, 4, 4, 4, 8, 10, 20, 30, 30, 30]) {
+        await press(n, {});
+        await crop(`grabs-back-${String(back.length).padStart(2, '0')}`, keg, back);
+      }
+      await sheet(`grabs-back-${seed}`, back, 5);
+      break;
+    }
     case 'items': {
       // Every item in hand, then everyone uses theirs at once: one frame set per moment worth looking at.
       await open(`seed=${seed}&players=6&race=mystery,mystery,mystery&give=all&propseed=${opt('propseed', '1')}`);

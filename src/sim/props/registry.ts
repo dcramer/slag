@@ -2,8 +2,9 @@ import { type Cell, overlaps, type Rect, rectCircle, type Vec } from '../../core
 import type { ItemSpawn } from '../items/types';
 import type { Level } from '../level';
 import type { Body, Solid } from '../physics';
-import type { GameEvent } from '../types';
+import type { GameEvent, InputFrame } from '../types';
 import type { Wind } from '../wind';
+import type { GrabInit, Grip, RunnerAttach } from './attach';
 import type { RunnerStatus } from './status';
 import type { Ammo, HitEffect, Module, PropState, Resolved } from './types';
 
@@ -69,6 +70,7 @@ export function touchesTrigger(b: Rect, t: Trigger): boolean {
 export interface RunnerMut {
   body: Body;
   status: RunnerStatus;
+  attach: RunnerAttach;
 }
 
 export interface TouchCtx extends TickCtx {
@@ -76,6 +78,8 @@ export interface TouchCtx extends TickCtx {
   blocked(r: Rect): boolean;
   /** Count trigger `key` as already entered by this runner (e.g. a portal's exit pad), so it won't fire as a fresh entry. */
   mark(key: number): void;
+  /** Ask to hold this runner. A contested part goes to the nearest runner once everyone has moved (props/attach.ts). */
+  grab(g: GrabInit): void;
 }
 
 export interface PropCtx {
@@ -149,6 +153,12 @@ export interface ModuleSim<M extends Module = Module> {
   onStand?(m: M, ctx: TickCtx): void;
   /** A runner overlaps one of this module's triggers. `first` is true on the frame they enter it. */
   touch?(m: M, ctx: TouchCtx, who: RunnerMut, t: Trigger, first: boolean): void;
+  /**
+   * A runner this module grabbed: move their body instead of the controller.
+   * Writes position and velocity, and returns false to let go; the velocity
+   * written is what they leave with. See props/attach.ts.
+   */
+  hold?(m: M, ctx: TouchCtx, who: RunnerMut, g: Grip, inp: InputFrame): boolean;
 }
 
 // Heterogeneous registry: entries are keyed by module type.

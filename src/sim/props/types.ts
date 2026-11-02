@@ -290,6 +290,19 @@ export type Module =
       /** Cosmetic variation seed. */
       seed: number;
     }
+  /**
+   * A swing that hangs `length` tiles from a ceiling (`mount: 'hang'`); `at` is
+   * the hook. It holds one runner for `strain` frames, then snaps and takes
+   * `regrow` frames to come back.
+   */
+  | { type: 'rope'; at: Vec; length: number; strain: number; regrow: number }
+  /**
+   * A cask that stuffs in whoever touches it and ticks through compass
+   * directions `dirs` (0 right, 2 down, 4 left, 6 up), `step` frames on each.
+   * Jump locks the aim and fires `delay` frames later at `power` px/s. Nobody
+   * firing for `burn` frames backfires out of the rear.
+   */
+  | { type: 'keg'; at: Vec; dirs: number[]; step: number; power: number; delay: number; burn: number }
   | {
       /** Pure scenery dressing for a set piece (press gantry, AC housing, antenna masts). No sim behavior. */
       type: 'deco';
@@ -337,7 +350,9 @@ export type Archetype =
   | 'dropper'
   | 'snapper'
   | 'wheel'
-  | 'mystery';
+  | 'mystery'
+  | 'rope'
+  | 'keg';
 export type Role = 'build' | 'hazard' | 'utility' | 'demolish';
 
 export interface PropDef {
@@ -351,8 +366,11 @@ export interface PropDef {
   modules: Module[];
   /** Cells that must be free to place it (rot 0, normalized). For `mount: 'face'` these are the host cells instead. */
   footprint: Cell[];
-  /** 'face': an attachment that must be mounted flush on exposed faces of solids (rotation picks the face). */
-  mount?: 'face';
+  /**
+   * 'face': an attachment that must be mounted flush on exposed faces of solids (rotation picks the face).
+   * 'hang': the footprint hangs under something solid and rotation does nothing, because a rope only points one way.
+   */
+  mount?: 'face' | 'hang';
 }
 
 export interface PlacedProp {

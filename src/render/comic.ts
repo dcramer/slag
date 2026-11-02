@@ -103,6 +103,11 @@ export function wordFor(e: GameEvent): Pick | null {
       return null;
     case 'crumble-break':
       return { text: 'CRUNCH!', fill: ORANGE, burst: WHITE, size: 14 };
+    case 'prop':
+      if (e.kind === 'keg-fire') return { text: 'FOOMP!', fill: YELLOW, burst: ORANGE, size: 16 };
+      if (e.kind === 'keg-backfire') return { text: 'KAFF!', fill: WHITE, burst: RED, size: 18 };
+      if (e.kind === 'rope-snap') return { text: 'SNAP!', fill: YELLOW, burst: RED, size: 14 };
+      return null;
     default:
       return null;
   }

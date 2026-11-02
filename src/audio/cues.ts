@@ -132,6 +132,13 @@ const PROP_CUE: Record<string, SfxName> = {
   'splat-frost': 'pop-plasma',
   emp: 'tesla-arc',
   drill: 'explosion',
+  'rope-grab': 'ui-tick',
+  'rope-off': 'walljump',
+  'rope-snap': 'crumble-break',
+  'keg-in': 'pop-arrow',
+  'keg-lit': 'ui-tick',
+  'keg-fire': 'fire-cannon',
+  'keg-backfire': 'explosion',
 };
 const FIRE: Record<string, SfxName> = {
   crossbow: 'fire-crossbow',

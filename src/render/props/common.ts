@@ -3,7 +3,7 @@ import { css } from '../../core/color';
 import type { Cell, Vec } from '../../core/geom';
 import { TILE } from '../../sim/constants';
 import type { Level } from '../../sim/level';
-import type { Module, PropState, PropStyle, Resolved } from '../../sim/props';
+import type { Grip, Module, PlacedProp, PropState, PropStyle, Resolved } from '../../sim/props';
 import { circle, type MetalPalette, metalFill, type RC, rrect } from '../kit';
 
 export type Emit = (kind: 'spark' | 'smoke' | 'ember' | 'debris', x: number, y: number, vx: number, vy: number, color?: HSL) => void;
@@ -14,6 +14,10 @@ export interface PropDrawOpts {
   broken?: boolean;
   showPath?: boolean;
   emit?: Emit;
+  /** Everyone held by a part this frame (ropes bend to their rider, kegs lock their aim). */
+  grips?: readonly Grip[];
+  /** Placed props, for art that depends on what's around it. */
+  placed?: readonly PlacedProp[];
 }
 
 /** Everything a module's art function gets. */
@@ -26,6 +30,11 @@ export interface DrawCtx {
   style: PropStyle;
   pal: MetalPalette;
   o: PropDrawOpts;
+}
+
+/** The runner held by this very module, if any. */
+export function gripOf(d: DrawCtx): Grip | undefined {
+  return d.o.grips?.find((g) => g.uid === d.r.pp.uid && g.mi === d.mi);
 }
 
 /**

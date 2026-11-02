@@ -42,7 +42,13 @@ function rotCell(c: Cell, rot: number, w: number, h: number): Cell {
 /** Cells (relative to the prop origin) the prop occupies for placement purposes. */
 export function footprint(def: PropDef, rot: number): Cell[] {
   const { w, h } = box(def);
-  return def.footprint.map((c) => rotCell(c, rot & 3, w, h));
+  const turn = turnOf(def, rot);
+  return def.footprint.map((c) => rotCell(c, turn, w, h));
+}
+
+/** Quarter turns a def really takes: anything hanging keeps pointing down. */
+function turnOf(def: PropDef, rot: number): number {
+  return def.mount === 'hang' ? 0 : rot & 3;
 }
 
 export function footprintCells(pp: Pick<PlacedProp, 'def' | 'rot' | 'tx' | 'ty'>): Cell[] {
@@ -51,7 +57,7 @@ export function footprintCells(pp: Pick<PlacedProp, 'def' | 'rot' | 'tx' | 'ty'>
 
 export function resolveProp(pp: PlacedProp): Resolved {
   const { w, h } = box(pp.def);
-  const rot = pp.rot & 3;
+  const rot = turnOf(pp.def, pp.rot);
   const x: Xform = {
     P: (p) => {
       const [px, py] = rotPoint(p, rot, w, h);
@@ -141,7 +147,41 @@ export function canPlace(level: Level, placed: readonly PlacedProp[], def: PropD
   for (const [x, y] of cells) {
     if (tileAt(level, x, y) || isProtected(level, x, y) || taken.has(y * level.w + x)) return false;
   }
+  if (def.mount !== 'hang') return true;
+  const top = Math.min(...cells.map((c) => c[1]));
+  return hasHook(level, placed, cells[0][0], top) || openSky(level, placed, cells[0][0], top);
+}
+
+/** A cell something can hang from: solid terrain or a static placed block. */
+function holdsHook(level: Level, placed: readonly PlacedProp[], x: number, y: number): boolean {
+  return tileAt(level, x, y) === T_SOLID || staticBodyCells(placed, level.w).has(y * level.w + x);
+}
+
+/** Is something fixed right above cell (x, y)? */
+function hasHook(level: Level, placed: readonly PlacedProp[], x: number, y: number): boolean {
+  return y > 0 && holdsHook(level, placed, x, y - 1);
+}
+
+/**
+ * Is it clear all the way up from cell (x, y)? Then a hanging prop is lowered
+ * in on a string instead. Open levels (farms, rooftops) can go without a single
+ * ceiling, and a part nobody can place would stall the place phase.
+ */
+export function openSky(level: Level, placed: readonly PlacedProp[], x: number, y: number): boolean {
+  for (let up = y - 1; up >= 0; up--) if (holdsHook(level, placed, x, up)) return false;
   return true;
+}
+
+/** Rows a hanging prop may slide to reach a ceiling. */
+const HANG_SNAP = 4;
+
+/** The row a hanging prop drops into near `ty`: the nearest with a ceiling over it, or `ty` when there's none. Shared by the ghost and placing. */
+export function hangRow(level: Level, placed: readonly PlacedProp[], def: PropDef, tx: number, ty: number): number {
+  for (let d = 0; d <= HANG_SNAP; d++) {
+    if (canPlace(level, placed, def, 0, tx, ty - d)) return ty - d;
+    if (canPlace(level, placed, def, 0, tx, ty + d)) return ty + d;
+  }
+  return ty;
 }
 
 /** Outward face direction of a face-mounted def at a rotation. */
@@ -308,12 +348,16 @@ export function blastEvent(b: BlastSpec, tx: number, ty: number, rot = 0): GameE
 export function detonate(level: Level, placed: PlacedProp[], blast: number | BlastSpec, tx: number, ty: number, rot = 0): PlacedProp[] {
   const b: BlastSpec = typeof blast === 'number' ? { shape: 'disk', target: 'all', radius: blast, width: 1 } : blast;
   const hits = blastHits(level, placed, b, tx, ty, rot);
+  const hooked = new Set(placed.filter((p) => p.def.mount === 'hang' && hasHook(level, placed, p.tx, p.ty)));
   for (const [x, y] of hits.tiles) level.tiles[y * level.w + x] = 0;
   const gone = new Set([...hits.props, ...hits.setPieces]);
   level.setPieces = level.setPieces.filter((p) => !gone.has(p));
   level.version++;
   const survivors = placed.filter((p) => !gone.has(p));
-  // Attachments fall off when their host is gone.
+  // Attachments fall off when their host is gone, and hanging props drop with their ceiling.
   const blocks = staticBodyCells(survivors, level.w);
-  return survivors.filter((p) => p.def.mount !== 'face' || footprintCells(p).every(([x, y]) => tileAt(level, x, y) === T_SOLID || blocks.has(y * level.w + x)));
+  return survivors.filter((p) => {
+    if (hooked.has(p)) return hasHook(level, survivors, p.tx, p.ty);
+    return p.def.mount !== 'face' || footprintCells(p).every(([x, y]) => tileAt(level, x, y) === T_SOLID || blocks.has(y * level.w + x));
+  });
 }

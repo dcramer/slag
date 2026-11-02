@@ -377,6 +377,17 @@ export function partGroups(): PartGroup[] {
         },
         { title: 'bumper', note: 'Kicks you away from its center.', def: def('bumper', [{ type: 'bumper', at: c(), radius: 0.55, power: 420 }]) },
         {
+          title: 'sausage vine',
+          note: 'Fresh from the hook.',
+          def: { ...def('vine', [{ type: 'rope', at: [0.5, 0], length: 5, strain: 330, regrow: 300 }]), mount: 'hang' },
+        },
+        { title: 'kegapult', note: 'XXX.', def: def('keg', [{ type: 'keg', at: [1, 1], dirs: [7], step: 36, power: 540, delay: 12, burn: 170 }]) },
+        {
+          title: 'tipsy kegapult',
+          note: 'XXX.',
+          def: def('tipsy', [{ type: 'keg', at: [1, 1], dirs: [5, 6, 7, 6], step: 36, power: 540, delay: 12, burn: 170 }]),
+        },
+        {
           title: 'gravity well',
           note: 'Pulls you toward its core.',
           def: def('well', [body([[0, 0]]), { type: 'magnet', at: c(), radius: 2.6, strength: 1200, polarity: 1, on: 0, off: 0, warn: 30 }], {

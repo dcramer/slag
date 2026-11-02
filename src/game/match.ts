@@ -5,7 +5,7 @@ import { generateLevel } from '../gen/level';
 import { generateCrate, type PropDef } from '../gen/props';
 import { DT, MAX_PLAYERS, TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import type { Level } from '../sim/level';
-import { blastEvent, blastSpec, canPlace, detonate, footprint, type PlacedProp } from '../sim/props';
+import { blastEvent, blastSpec, canPlace, detonate, footprint, hangRow, type PlacedProp } from '../sim/props';
 import { RunWorld } from '../sim/run';
 import { type GameEvent, type InputFrame, NO_INPUT } from '../sim/types';
 import type { ThemeId } from '../themes';
@@ -293,7 +293,9 @@ export class Match {
       w = Math.max(w, x + 1);
       h = Math.max(h, y + 1);
     }
-    return { def, tx: Math.floor(p.cursor.x / TILE - (w - 1) / 2), ty: Math.floor(p.cursor.y / TILE - (h - 1) / 2) };
+    const tx = Math.floor(p.cursor.x / TILE - (w - 1) / 2);
+    const ty = Math.floor(p.cursor.y / TILE - (h - 1) / 2);
+    return { def, tx, ty: def.mount === 'hang' ? hangRow(this.level, this.placed, def, tx, ty) : ty };
   }
 
   canPlaceFor(p: Player): boolean {

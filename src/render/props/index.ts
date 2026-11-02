@@ -8,6 +8,7 @@ import './modules';
 export type { Emit, PropDrawOpts } from './common';
 export { drawProjectile } from './projectiles';
 export { drawBlastPreview } from './modules/bomb';
+export { drawStuffed } from './modules/keg';
 export { drawRunnerStatus, propEventFx } from './status';
 
 type M<T extends Module['type']> = Extract<Module, { type: T }>;
@@ -65,6 +66,10 @@ export function drawPreview(rc: RC, def: PropDef, cx: number, cy: number, size: 
     if (m.type === 'magnet') {
       reachX = Math.max(reachX, m.radius - 0.5);
       reachY = Math.max(reachY, m.radius - 0.5);
+    }
+    if (m.type === 'keg') {
+      reachX = Math.max(reachX, 1.5);
+      reachY = Math.max(reachY, 1.5);
     }
   }
   const ext = Math.max(w + reachX * 2, h + reachY * 2, 2);
