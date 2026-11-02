@@ -48,6 +48,8 @@ export const TELLS: { [T in Module['type']]?: Tell<ModuleOf<T>> } = {
   cavein: (m) => m.warn,
   cart: (m) => m.warn,
   thaw: (m) => m.warn,
+  ladle: (m) => m.warn,
+  arm: (m) => m.warn,
 };
 
 /** Modules among `mods` whose tell is a warning shorter than MIN_TELL. */

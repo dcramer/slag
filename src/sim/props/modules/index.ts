@@ -1,6 +1,7 @@
 /**
  * Importing this file registers every prop module. Add new modules here.
  */
+export * from './arm';
 export * from './body';
 export * from './bomb';
 export * from './bumper';
@@ -18,6 +19,7 @@ export * from './fuse';
 export * from './geyser';
 export * from './keg';
 export * from './laser';
+export * from './ladle';
 export * from './launcher';
 export * from './magnet';
 export * from './mystery';

@@ -42,6 +42,8 @@ export const PART_INFO: Record<Module['type'], { title: string; blurb: string }>
   cavein: { title: 'Cave-in', blurb: 'The roof was load-bearing. Was.' },
   cart: { title: 'Runaway cart', blurb: 'No brakes. Great bell, though.' },
   thaw: { title: 'Thin ice', blurb: 'Rated for one penguin.' },
+  ladle: { title: 'Slag ladle', blurb: 'Pours on a schedule. The schedule is now.' },
+  arm: { title: 'Robot arm', blurb: 'Programmed to weld. Not programmed to look.' },
 };
 
 const AIM_TAG: Record<string, string> = { fixed: 'FIXED', sweep: 'SWEEPS', track: 'TRACKS' };

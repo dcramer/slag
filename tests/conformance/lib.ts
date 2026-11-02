@@ -23,8 +23,6 @@ import { safeWindowFaults } from '../lib/set-piece-checks';
 export const WAIVERS: Record<string, string> = {
   'landmark/castle/throne-hall/varies':
     'a classic Throne Hall is one building: its plan is a function of its box alone (manorPlan/throneHallPlan); pending the owner decision that every landmark varies with its seed',
-  'landmark/factory/stamping-line/varies':
-    'a classic Stamping Line rolls the same line on most seeds; pending the owner decision that every landmark varies with its seed',
 };
 
 /** One rule of one entry: fails listing every fault it finds, or a todo while it's waived. */
