@@ -102,6 +102,7 @@ async function open(q: string) {
     [mode ?? '', fakeNet] as const,
   );
 }
+const LAUNCHER_STYLES = 'crossbow,ballista,cannon,totem,turret,thrower,rocket,glaive,gumball,mortar,gooper,cryo,prism';
 const step = (n: number) => page.evaluate((k) => (window as any).slagDebug.step(k), n);
 const secret = argv.includes('--secret');
 /** `--secret`: turn the Secret Parts rule on and deal round 1 again, so the crate holds role cards. */
@@ -900,22 +901,38 @@ try {
       const arch = opt('arch', 'flamer,rope,saw,launcher')!.split(',');
       await open(`seed=${seed}&players=${opt('players', '8')}`);
       await step(30);
-      const defs = await page.evaluate((as) => {
-        const d = (window as any).slagDebug;
-        const out: any[] = [];
-        for (const a of as) {
-          const got = new Map<string, any>();
-          for (let k = 1; k < 80 && got.size < 3; k++) {
-            d.match.placed.length = 0;
-            d.addProps([a], k);
-            const def = d.match.placed[0]?.def;
-            if (def && !got.has(def.size)) got.set(def.size, def);
+      const cardStyles = opt('styles') ? (opt('styles') === 'all' ? LAUNCHER_STYLES : opt('styles')!).split(',') : [];
+      const defs = await page.evaluate(
+        ([as, styles]) => {
+          const d = (window as any).slagDebug;
+          const out: any[] = [];
+          // `--styles a,b` (or `all`): one launcher card per style.
+          for (const want of styles) {
+            for (let k = 1; k < 900; k++) {
+              d.match.placed.length = 0;
+              d.addProps(['launcher'], k);
+              const def = d.match.placed[0]?.def;
+              if (def?.modules.some((m: any) => m.type === 'launcher' && m.style === want)) {
+                out.push(def);
+                break;
+              }
+            }
           }
-          for (const sz of ['small', 'medium', 'large']) if (got.has(sz)) out.push(got.get(sz));
-        }
-        d.match.placed.length = 0;
-        return out;
-      }, arch);
+          for (const a of styles.length ? [] : as) {
+            const got = new Map<string, any>();
+            for (let k = 1; k < 80 && got.size < 3; k++) {
+              d.match.placed.length = 0;
+              d.addProps([a], k);
+              const def = d.match.placed[0]?.def;
+              if (def && !got.has(def.size)) got.set(def.size, def);
+            }
+            for (const sz of ['small', 'medium', 'large']) if (got.has(sz)) out.push(got.get(sz));
+          }
+          d.match.placed.length = 0;
+          return out;
+        },
+        [arch, cardStyles] as const,
+      );
       const files: string[] = [];
       const per = await page.evaluate(() => (window as any).slagDebug.match.crate.length);
       for (let k = 0; k * per < defs.length; k++) {
@@ -940,14 +957,27 @@ try {
       // one by one: a contact sheet of parts at a close race zoom.
       const arch = opt('arch', 'saw,launcher,spikeblock,spikestrip')!.split(',');
       await open(`seed=${seed}&players=2&race=,&propseed=1`);
+      // `--styles crossbow,cannon` (or `all`): one launcher of each style instead of `--arch`; `--aim track` keeps only trackers.
+      const styles = opt('styles') ? (opt('styles') === 'all' ? LAUNCHER_STYLES : opt('styles')!).split(',') : [];
       await page.evaluate(
-        ([as, n]) => {
+        ([as, n, styles, aim]) => {
           const d = (window as any).slagDebug;
           d.match.placed.length = 0;
-          for (let k = 0; k < n; k++) for (const a of as) d.addProps([a], 11 + k * 7);
+          if (styles.length) {
+            // One launcher of each style: roll seeds until each turns up.
+            for (const want of styles) {
+              for (let k = 1; k < 900; k++) {
+                const before = d.match.placed.length;
+                d.addProps(['launcher'], k);
+                const got = d.match.placed[before]?.def.modules.find((m: any) => m.type === 'launcher');
+                if (got?.style === want && (!aim || got.aim === aim)) break;
+                d.match.placed.length = before;
+              }
+            }
+          } else for (let k = 0; k < n; k++) for (const a of as) d.addProps([a], 11 + k * 7);
           d.race([], 1);
         },
-        [arch, Number(opt('count', '2'))] as const,
+        [arch, Number(opt('count', '2')), styles, opt('aim') ?? ''] as const,
       );
       await step(Number(opt('frames', '60')));
       const spots = await page.evaluate(() =>
@@ -955,7 +985,7 @@ try {
           const xs = p.def.footprint.map((c: number[]) => c[0]);
           const ys = p.def.footprint.map((c: number[]) => c[1]);
           return {
-            name: p.def.archetype,
+            name: p.def.modules.find((m: any) => m.type === 'launcher')?.style ?? p.def.archetype,
             x: (p.tx + (Math.min(...xs) + Math.max(...xs) + 1) / 2) * 16,
             y: (p.ty + (Math.min(...ys) + Math.max(...ys) + 1) / 2) * 16,
           };

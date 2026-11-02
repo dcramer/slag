@@ -4,7 +4,7 @@ import type { Cell, Vec } from '../../core/geom';
 import { TILE } from '../../sim/constants';
 import type { Level } from '../../sim/level';
 import type { Beam, Grip, Module, PlacedProp, PropState, PropStyle, Resolved } from '../../sim/props';
-import { circle, type MetalPalette, metalFill, type RC, rrect } from '../kit';
+import { type MetalPalette, metalFill, type RC, rrect } from '../kit';
 
 export type Emit = (kind: 'spark' | 'smoke' | 'ember' | 'debris', x: number, y: number, vx: number, vy: number, color?: HSL) => void;
 
@@ -121,45 +121,6 @@ export function nozzle(s: CanvasRenderingContext2D, x: number, y: number, angle:
   s.fillStyle = css(pal.dark);
   s.fillRect(l - 1, -w / 2 - 0.8, 2, w + 1.6);
   s.restore();
-}
-
-export function drawStar(s: CanvasRenderingContext2D, x: number, y: number, R: number, pal: MetalPalette, base: number) {
-  if (R <= 0) return;
-  s.fillStyle = base ? css(pal.dark) : '#d7dbe3';
-  s.beginPath();
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2;
-    const rr = i % 2 ? R * 0.4 : R;
-    s.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
-  }
-  s.closePath();
-  s.fill();
-  s.fillStyle = base ? css(pal.light) : '#7c818c';
-  circle(s, x, y, R * 0.25);
-}
-
-export function drawBoltShape(s: CanvasRenderingContext2D, x: number, y: number, len: number, arrow: boolean) {
-  s.strokeStyle = arrow ? '#8a6a3c' : '#5f646e';
-  s.lineWidth = 1.1;
-  s.beginPath();
-  s.moveTo(x, y);
-  s.lineTo(x + len, y);
-  s.stroke();
-  s.fillStyle = '#d9dde5';
-  s.beginPath();
-  s.moveTo(x + len + 2.5, y);
-  s.lineTo(x + len - 0.5, y - 1.6);
-  s.lineTo(x + len - 0.5, y + 1.6);
-  s.fill();
-  s.fillStyle = arrow ? '#e8e2d0' : '#c8312f';
-  s.beginPath();
-  s.moveTo(x, y);
-  s.lineTo(x + 3, y - 1.8);
-  s.lineTo(x + 3, y);
-  s.moveTo(x, y);
-  s.lineTo(x + 3, y + 1.8);
-  s.lineTo(x + 3, y);
-  s.fill();
 }
 
 /** A spinning V-shaped wooden boomerang. */
