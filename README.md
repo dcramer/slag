@@ -17,13 +17,13 @@ pnpm build         # production build (what Vercel runs)
 
 ## Controls (local multiplayer, up to 4 players)
 
-|                                              | P1 keyboard | P2 keyboard     | Gamepad         |
-| -------------------------------------------- | ----------- | --------------- | --------------- |
-| move / cursor                                | WASD        | arrows          | stick / d-pad   |
-| jump                                         | Space / W   | ↑ / Enter       | A               |
-| confirm (join, ready, pick, place)           | Space       | Enter           | A               |
-| alt (rotate prop, new look, give up mid-run) | Q / E       | . / Right Shift | B / X / LB / RB |
-| new level (lobby)                            | S           | ↓               | down            |
+| | P1 keyboard | P2 keyboard | Gamepad |
+|---|---|---|---|
+| move / cursor | WASD | arrows | stick / d-pad |
+| jump | Space / W | ↑ / Enter | A |
+| confirm (join, ready, pick, place) | Space | Enter | A |
+| alt (rotate prop, new look, give up mid-run) | Q / E | . / Right Shift | B / X / LB / RB |
+| new level (lobby) | S | ↓ | down |
 
 ## Rules
 

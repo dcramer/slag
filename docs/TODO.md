@@ -9,7 +9,6 @@ Design intent for everything below is in `docs/DESIGN.md`.
 ---
 
 ## 1. Iteration speed (do this first)
-
 **Branch:** `wip/devtools-perf` (~1k lines, unreviewed: dev overlay, perf harness and optimizations in progress).
 
 - Split the tests into tiers:
@@ -22,39 +21,33 @@ Design intent for everything below is in `docs/DESIGN.md`.
 - Update the AGENTS.md commands table and the Definition of done to match.
 
 ## 2. Online play on Vercel (decision needed)
-
 **Branch:** `wip/netcode-cloudflare` (+5 commits). It contains:
-
 - host-sequenced lockstep, presence-based host election and migration, refresh/rejoin, late join, desync detection and resync, and prediction;
 - `src/net/`, `dmath`, snapshots, a BroadcastChannel transport and `pnpm online-test`;
 - a **Cloudflare Durable Object relay** (`relay/`, wrangler). That relay contradicts our plan, because we host only on Vercel.
 
 Vercel functions can't hold a WebSocket open, so something else has to carry the messages. Options:
 
-| Option              | What it is                                                                                                                                                                                                                                                                                                                                                      | Trade-off                                                                                                       |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Option | What it is | Trade-off |
+|---|---|---|
 | **A (recommended)** | WebRTC data channels in a star around the host. Signaling and presence use small Next route handlers (`app/api/`) that short- or long-poll Redis from the Vercel Marketplace (Upstash free tier, REST via `fetch`). Local dev uses an in-memory store. On host migration, everyone re-signals to the new host. Public STUN, plus optional TURN from an env var. | Everything stays on Vercel and on free tiers. About 10–20% of player pairs can't connect without a TURN server. |
-| B                   | Keep the Cloudflare relay.                                                                                                                                                                                                                                                                                                                                      | Most robust, with no NAT problems, but needs a second platform and account.                                     |
-| C                   | A hosted realtime service (Ably or Pusher free tier).                                                                                                                                                                                                                                                                                                           | Adds a third-party dependency and its limits.                                                                   |
+| B | Keep the Cloudflare relay. | Most robust, with no NAT problems, but needs a second platform and account. |
+| C | A hosted realtime service (Ably or Pusher free tier). | Adds a third-party dependency and its limits. |
 
 Whichever option is chosen, keep the transport abstraction, the election logic, snapshots and dmath, and swap only the transport. Then update `docs/NETCODE.md`, which is stale and still mentions Vite.
 
 ## 3. Level variety, gravity and the "mostly open" rule
-
 **Branches:**
-
 - `wip/level-variety`: the agent's raw work (+4).
 - `wip/level-variety-merge`: that work merged with `main` around 38abff9, with conflicts resolved. **6 generator tests fail**: levelgen, profile ×2, worldgen castle/volcano/bridge share.
 
 **Contents:**
-
 - level profiles: size and aspect (wide, classic, tall), density, hazard count, route shape (sprawl, climb, descent, zig-zag);
 - variable world size across sim, gen, render and camera;
 - a tall sculptor;
 - the gravity world setting (a rule; `Level.gravity` is used by physics, reach and projectiles).
 
 **Still to do:**
-
 - Fix the failing tests.
 - Run `pnpm level --stats 50` on this branch and on its parent commit, and compare.
 - **Full-window background:** canvases fill the window while the play-area aspect and scale stay the same; background layers fill the extra space instead of black bars. Check at 16:9, 21:9, 4:3 and phone sizes.
@@ -62,7 +55,6 @@ Whichever option is chosen, keep the transport abstraction, the election logic, 
 - Retune the sculptors for walk vs run and the lower jump.
 
 ## 4. Content: parts and projectiles
-
 **Branch:** `wip/content` (~4.2k lines across 46 files, unreviewed).
 
 - 8–12 new parts and 5–8 projectiles. Favor side effects over death: knockback, slow, freeze, sticky, misdirection.
@@ -76,7 +68,6 @@ Whichever option is chosen, keep the transport abstraction, the election logic, 
 - Changed contract: `Wind` is now `{dx, dy, speed, k}`, and `stepBody` takes a 4th `wind` argument.
 
 ## 5. Mystery crate and held items
-
 **Branch:** `wip/held-items` (~2k lines across 27 files, unreviewed).
 
 - A Mystery Crate prop that pops out a random held item, plus a held-item system with a `use` input action.
@@ -84,7 +75,6 @@ Whichever option is chosen, keep the transport abstraction, the election logic, 
 - Keep runner state additive. Item 7 also adds "runner attached to a prop" state.
 
 ## 6. Mobile, round 2
-
 **Branch:** `wip/mobile-2` (~1k lines, unreviewed). Round 1 (touch controls) is merged.
 
 The user's feedback on a real phone: "almost playable but not quite; resolution is tough; settings is bad; probably needs zoomed in more."
@@ -95,7 +85,6 @@ The user's feedback on a real phone: "almost playable but not quite; resolution 
 - **Verify:** `pnpm shot mobile` on iPhone SE, iPhone 13 and Pixel 7 in landscape. Nothing has been tested on real hardware yet.
 
 ## 7. Grab props: rope and blast barrel
-
 No branch yet.
 
 - **Rope:** hangs from a ceiling. You grab it automatically when you touch it in the air, with a short re-grab cooldown. Left and right pump the swing; jump lets go and keeps the swing's momentum.
@@ -104,16 +93,13 @@ No branch yet.
 - Add both to `reach.ts` only if worldgen ever relies on them. For now it shouldn't.
 
 ## 8. Render polish
-
-- **Set-piece layering:** scenery halves draw _behind_ the terrain (the windmill tower, crane mast, press gantry, antenna masts). Moving and solid parts stay in front (the blades, platforms). Layer order is in `docs/DESIGN.md` → Levels. This is probably a `backdrop` art layer drawn before terrain in `src/render/renderer.ts` and the `defineArt` layers.
+- **Set-piece layering:** scenery halves draw *behind* the terrain (the windmill tower, crane mast, press gantry, antenna masts). Moving and solid parts stay in front (the blades, platforms). Layer order is in `docs/DESIGN.md` → Levels. This is probably a `backdrop` art layer drawn before terrain in `src/render/renderer.ts` and the `defineArt` layers.
 - **The player's glowing trail is too strong.** Tone it down.
 - **The lobby SLAG logo** looks worse than the home-screen logo. Make it match (same treatment, scale and crispness).
 - **Comic-book style experiment:** `wip/comic-style` (~560 lines, unreviewed). Add `?style=comic`, `renderer.setStyle`, and a Settings toggle.
 
 ## 9. Weather (new)
-
 A per-level random variable:
-
 - wind gusts that push runners and projectiles (reuse `src/sim/wind.ts`);
 - mist that limits sight distance;
 - rain or snow that changes footing.
@@ -121,7 +107,6 @@ A per-level random variable:
 It's always telegraphed, weighted per theme, and must be deterministic from the level seed.
 
 ## 10. Housekeeping
-
 - Enable GitHub Actions and make `ci.yml` a required check. This must be done on GitHub by the repo owner.
 - Delete the old remote branch `claude/scaffold-procgen-platformer`, and the `wip/*` branches once they're merged.
 - Swap the sim and gen transcendentals (`Math.sin`, `cos`, `atan2`, …) to `core/dmath.ts`. It lands with the netcode work.
