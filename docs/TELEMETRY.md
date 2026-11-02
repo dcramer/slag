@@ -26,7 +26,7 @@ On every event and log. Searchable, so low cardinality only.
 | `room` | game-client | Finding every peer's reports from one room. Never in a user field. |
 | `match.phase`, `match.round` | game-client | Where in the match it broke. |
 | `level.seed`, `level.theme`, `level.size`, `level.concept` | game-client | Reproducing the level: `pnpm level <seed> --theme <theme>`. |
-| `players`, `observers` | game-client | Seated players, and peers in the room without a seat. |
+| `players`, `observers` | game-client | Seated players, and peers in the room without a seat (watching, or owed a seat next round). |
 | `net.role` | game-client | host, guest, or local (offline). |
 | `net.transport` | game-client | webrtc, broadcast, or none. |
 | `net.status` | game-client | `NetStatus`: online, connecting, reconnecting, unavailable, offline, kicked. |
@@ -83,6 +83,8 @@ Server (`app/api/net/[op]/route.ts`): a store failure answered with a 503 is cap
 | `page` | hidden, visible | main.ts, on visibility changes. |
 | `game` | `phase <phase>` (with round), `level` (seed, theme) | game-client, when the phase or the level changes. |
 | `room` | join, leave, away, back, kick | session, when a bundle applies a seat action. Device and peer ids only. |
+| `room` | watch (a seat given up to watch), idle (the host moved an AFK player to the watchers) | session, when a bundle applies `watch`. Peer id and frame only. |
+| `room` | join request, join won, join lost (another peer won the race for the seat), back from idle | session, on the asking peer: when it sends Join, when the host's answer is applied, and when an AFK watcher's input asks for its seat back. |
 | `net` | peer joined, peer left | session, when the member list changes size. |
 | `net` | every session log line: `link <status> (<detail>)`, `<peer> is host`, `host migrated <old> → me at frame <f>`, `resuming from <peer> at frame <f>`, `synced (<why>) at frame <f>`, `desync with <peer> at frame <f>: resync`, `snapshot refused: …`, `resumed saved room state …` | `src/net/client.ts` routes the session's log here. |
 | `signal` | `<op> failed` (code, status) | `src/net/signal-client.ts`, once per run of the same failure. |

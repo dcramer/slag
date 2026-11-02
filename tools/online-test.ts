@@ -26,6 +26,12 @@
  *   hidden      the same with the host's tab in the background
  *   contact     the same with two runners pushing and riding each other
  *   bc          BroadcastChannel transport (?net=bc)
+ *   observe     host, guest, a desktop watcher (?watch) and a phone watcher through a round: never seated, never
+ *               waited on, the same state; then a late joiner mid-race watches, Joins with the card, is seated at the boundary
+ *   seatrace    seven seated and two watchers who Join at the same moment for the last seat: one wins, the other is
+ *               told and sees Match Full; a player leaves and the loser's Join lights up and works
+ *   idle        a guest's tab hidden through an untimed pick and an untimed race: the room keeps going, it is
+ *               handed a card and its runner gives up, and it agrees with the room once shown
  *   unset       production with no store credentials: the game degrades, with a clear status
  *
  * Every migration prints seconds to recovery. Screenshots go to shots/online-*.png.
@@ -34,6 +40,7 @@
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { type Browser, type BrowserContext, devices, type Page } from 'playwright';
+import { MAX_PLAYERS } from '../src/sim/constants';
 import { roomSeed } from '../src/game/room';
 import { overview, type ViewXform, worldToView } from '../src/game/view';
 import { generateLevel } from '../src/gen/level';
@@ -47,6 +54,7 @@ const GROUPS: Record<string, string[]> = {
   lobby: ['flow', 'fresh', 'kick', 'view', 'refused'],
   migration: ['pick', 'place', 'run', 'duo', 'leave', 'twice'],
   feel: ['latency', 'hidden', 'contact'],
+  seats: ['observe', 'seatrace', 'idle'],
   misc: ['play', 'bc', 'unset'],
 };
 const onlyArg = argv.includes('--only') ? argv[argv.indexOf('--only') + 1].split(',').flatMap((x) => GROUPS[x] ?? [x]) : null;
@@ -87,6 +95,14 @@ type NetView = {
   }[];
   crate: { claimedBy: number; x: number; y: number }[];
   stats: Record<string, number>;
+  /** Seats: what this peer wants, whether it holds one, is owed one, watches; how its last Join went; seats free. */
+  intent: string;
+  seated: boolean;
+  queued: boolean;
+  watching: boolean;
+  seatAsk: string;
+  space: number;
+  watchers: string[];
 };
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -129,6 +145,13 @@ async function view(p: Page): Promise<NetView> {
       })),
       crate: m.crate.map((c: any) => ({ claimedBy: c.claimedBy, x: c.rect.x + c.rect.w / 2, y: c.rect.y + c.rect.h / 2 })),
       stats: { ...n.stats },
+      intent: n.intent,
+      seated: n.seated,
+      queued: n.queued,
+      watching: !!n.watching,
+      seatAsk: n.seatAsk,
+      space: n.space,
+      watchers: Object.keys(n.ns.watching),
     };
   });
 }
@@ -677,7 +700,8 @@ async function contactScenario(browser: Browser, base: string) {
 
 interface Room {
   name: string;
-  open(label: string): Promise<Page>;
+  /** A peer. `query` is added to the room's own (`watch` for a watch link); `device` emulates a phone. */
+  open(label: string, o?: { query?: string; device?: string }): Promise<Page>;
   shot(p: Page, name: string): Promise<void>;
   errors: string[];
   dispose(): Promise<void>;
@@ -701,26 +725,32 @@ async function newRoom(
   const sharedCtx = opts.shared ? await browser.newContext(size) : null;
   const contexts: BrowserContext[] = [];
   const errors: string[] = [];
+  /** Contexts that already have the shims: a shared one gets them once, not once per tab. */
+  const shimmed = new Set<BrowserContext>();
   return {
     name,
     errors,
-    async open(tag) {
-      let c = sharedCtx;
+    async open(tag, o = {}) {
+      let c = o.device ? null : sharedCtx;
       if (!c) {
-        c = await browser.newContext(size);
+        const { defaultBrowserType: _ignored, ...phone } = o.device ? devices[o.device] : { defaultBrowserType: '' };
+        c = await browser.newContext(o.device ? phone : size);
         contexts.push(c);
       }
-      await c.addInitScript('window.__name = (f) => f'); // tsx wraps named functions in code handed to evaluate
-      await c.addInitScript(NET_SHIM); // first: the network isn't throttled with a hidden tab's timers
-      await c.addInitScript(HIDDEN_SHIM);
-      await c.addInitScript(() => localStorage.setItem('slag.profile.v1', JSON.stringify({ version: 1, name: null, prompted: true })));
+      if (!shimmed.has(c)) {
+        shimmed.add(c);
+        await c.addInitScript('window.__name = (f) => f'); // tsx wraps named functions in code handed to evaluate
+        await c.addInitScript(NET_SHIM); // first: the network isn't throttled with a hidden tab's timers
+        await c.addInitScript(HIDDEN_SHIM);
+        await c.addInitScript(() => localStorage.setItem('slag.profile.v1', JSON.stringify({ version: 1, name: null, prompted: true })));
+      }
       const p = await c.newPage();
       p.on('pageerror', (e) => errors.push(`${tag}: ${String(e)}`));
       p.on('console', (m) => {
         if (m.type() === 'error') errors.push(`${tag}: ${m.text()}`);
         else if (m.text().startsWith('[net]')) console.log(`     ${tag} ${m.text()}`);
       });
-      await p.goto(`${base}r/${name}?${query}`);
+      await p.goto(`${base}r/${name}?${[query, o.query].filter(Boolean).join('&')}`);
       await p.waitForFunction(() => 'slagDebug' in window, null, { timeout: 60_000 });
       if (!opts.visual) await setDrawing(p, false);
       return p;
@@ -1481,6 +1511,176 @@ async function viewScenario(browser: Browser, base: string, kind: string, fits: 
   await r.dispose();
 }
 
+/** Click a HUD button by its action, where the last drawn frame put it (drawing must be on). */
+async function clickHud(p: Page, action: string) {
+  const handle = await p.waitForFunction((a) => (window as any).slagDebug.renderer.hud.buttons?.find((x: any) => x.action === a) ?? null, action, {
+    timeout: 15_000,
+  });
+  const b = (await handle.jsonValue()) as { x: number; y: number; w: number; h: number };
+  await clickView(p, b.x + b.w / 2, b.y + b.h / 2);
+}
+
+/** A watcher's Join by keys: confirm opens the card, confirm again asks the host. */
+async function joinByKeys(p: Page) {
+  await p.keyboard.press('Enter');
+  await p.waitForFunction(() => (window as any).slagDebug.renderer.hud.joinCard?.stage === 'edit', null, { timeout: 15_000 });
+}
+
+/** Sim frames per second on the host over `ms`: the room isn't waiting on anyone. */
+async function hostRate(host: Page, ms = 3000): Promise<number> {
+  const f0 = (await view(host)).frame;
+  const t0 = Date.now();
+  await sleep(ms);
+  return ((await view(host)).frame - f0) / ((Date.now() - t0) / 1000);
+}
+
+/** Host, guest and two watchers (one on a phone) through a round; then someone arrives mid-race and Joins. */
+async function observeScenario(browser: Browser, base: string) {
+  const r = await newRoom(browser, base, 'observe', '');
+  const A = await r.open('A');
+  const a0 = await waitFor(A, 'host', (v) => v.status === 'online' && v.isHost);
+  const B = await r.open('B');
+  const b0 = await waitFor(B, 'guest linked', (v) => v.synced && v.hostId === a0.self);
+  const O = await r.open('O', { query: 'watch' });
+  const P = await r.open('P', { query: 'watch', device: 'iPhone 13 landscape' });
+  for (const [p, what] of [
+    [O, 'desktop'],
+    [P, 'phone'],
+  ] as const) {
+    const v = await waitFor(p, `${what} watcher in`, (x) => x.synced && x.watching);
+    check(!v.seated && v.intent === 'watch', `a ${what} watch link watches, with no seat`);
+  }
+  const h = await waitFor(A, 'watchers listed', (v) => v.watchers.length === 2);
+  check(h.players.length === 2, `two seats and two watchers (${h.players.length} seated, ${h.watchers.length} watching)`);
+  await r.shot(O, 'lobby');
+  await A.evaluate((x) => (window as any).slagDebug.net.act({ t: 'rules', rules: x }), FAST_RULES);
+  await sleep(300);
+  for (const p of [A, B]) await p.keyboard.press('Enter');
+  for (const p of [A, B, O, P]) await waitFor(p, 'match start', (v) => v.phase === 'pick');
+  // A watcher's page stops dead: the room goes on without it.
+  await O.evaluate(() => (window as any).slagDebug.pause(true));
+  const rate = await hostRate(A);
+  check(rate > 40, `a frozen watcher holds nobody up (${rate.toFixed(0)} frames/s on the host)`);
+  await O.evaluate(() => (window as any).slagDebug.pause(false));
+  await toPlace([A, B]);
+  await toRun([A, B], [a0.self, b0.self]);
+  for (const p of [O, P]) await waitFor(p, 'watching the race', (v) => v.phase === 'run');
+  const vs = await Promise.all([O, P].map(view));
+  check(
+    vs.every((v) => !v.seated && v.players.length === 2),
+    'watchers are never seated',
+  );
+  await sleep(1500);
+  await r.shot(O, 'race-desktop-watcher');
+  await r.shot(P, 'race-phone-watcher');
+  await compareHashes([A, B, O, P], 'two watchers in a race');
+  // Someone arrives mid-race: watching, with Join in the corner; the card, then a seat at the boundary.
+  const L = await r.open('L');
+  const l = await waitFor(L, 'late joiner in', (v) => v.synced && v.watching && v.phase === 'run');
+  check(l.intent === 'watch' && !l.seated && l.space > 0, `arriving mid-race is watching, with ${l.space} seats free`);
+  await setDrawing(L, true);
+  await clickHud(L, 'play');
+  await L.waitForFunction(() => (window as any).slagDebug.renderer.hud.joinCard?.stage === 'edit', null, { timeout: 15_000 });
+  await r.shot(L, 'join-card');
+  await setDrawing(L, true);
+  await clickHud(L, 'seat');
+  const won = await waitFor(L, 'seat answered', (v) => v.seatAsk === 'won' || v.seatAsk === 'taken');
+  check(won.seatAsk === 'won' && won.queued && won.phase === 'run', `Join mid-race wins a seat for the next round (${won.seatAsk}, queued ${won.queued})`);
+  await setDrawing(L, false);
+  const seatedAt = await waitFor(A, 'late joiner seated at the boundary', (v) => v.players.some((p) => p.device.startsWith(`${l.self}:`)), 120_000);
+  check(seatedAt.phase === 'score' || seatedAt.phase === 'pick', `seated at the round boundary (${seatedAt.phase})`);
+  await waitFor(A, 'next round', (v) => v.phase === 'pick' && v.round === 2, 60_000);
+  await compareHashes([A, B, O, P, L], 'five peers in round 2');
+  const real = r.errors.filter((e) => !/favicon/.test(e));
+  check(real.length === 0, `no page errors${real.length ? `:\n${real.join('\n')}` : ''}`);
+  await r.dispose();
+}
+
+/** Seven seated and two watchers: both Join for the last seat at once. */
+async function seatRaceScenario(browser: Browser, base: string) {
+  const r = await newRoom(browser, base, 'seatrace', '', { shared: true });
+  const players: Page[] = [];
+  for (let i = 0; i < MAX_PLAYERS - 1; i++) players.push(await r.open(`P${i}`));
+  const host = players[0];
+  await waitFor(host, 'seven seated', (v) => v.players.length === MAX_PLAYERS - 1, 120_000);
+  const X = await r.open('X', { query: 'watch' });
+  const Y = await r.open('Y', { query: 'watch' });
+  for (const p of [X, Y]) await waitFor(p, 'watcher in', (v) => v.synced && v.watching && v.space === 1, 60_000);
+  for (const p of [X, Y]) await joinByKeys(p);
+  await Promise.all([X.keyboard.press('Enter'), Y.keyboard.press('Enter')]);
+  const [x, y] = await Promise.all([X, Y].map((p) => waitFor(p, 'seat answered', (v) => v.seatAsk === 'won' || v.seatAsk === 'taken')));
+  check([x.seatAsk, y.seatAsk].sort().join() === 'taken,won', `one Join wins the last seat and one is told it's taken (${x.seatAsk}, ${y.seatAsk})`);
+  const [loser, lv] = x.seatAsk === 'taken' ? [X, x] : [Y, y];
+  const h = await waitFor(host, 'full', (v) => v.players.length === MAX_PLAYERS);
+  check(h.players.length === MAX_PLAYERS && !h.players.some((p) => p.device.startsWith(`${lv.self}:`)), 'eight seated, the loser not among them');
+  const l2 = await waitFor(loser, 'loser watching', (v) => v.watching && v.space === 0);
+  check(l2.intent === 'watch', 'the loser is back to watching, with the match full');
+  await r.shot(loser, 'taken');
+  await compareHashes([...players, X, Y], 'everyone agrees who won');
+  // A player leaves: the loser's Join lights up, and works.
+  await players[MAX_PLAYERS - 2].close();
+  await waitFor(loser, 'a seat frees', (v) => v.space === 1, 30_000);
+  await joinByKeys(loser);
+  await loser.keyboard.press('Enter');
+  // The first answer is still 'taken' until this one is asked: wait for the new answer.
+  const again = await waitFor(loser, 'Join on the freed seat won', (v) => v.seatAsk === 'won', 30_000);
+  check(again.seatAsk === 'won', `Join on a freed seat wins it (${again.seatAsk})`);
+  await waitFor(host, 'loser seated', (v) => v.players.some((p) => p.device.startsWith(`${lv.self}:`)));
+  const real = r.errors.filter((e) => !/favicon/.test(e));
+  check(real.length === 0, `no page errors${real.length ? `:\n${real.join('\n')}` : ''}`);
+  await r.dispose();
+}
+
+/** A guest's tab hidden through an untimed pick and an untimed race: nobody waits for it, and it catches up. */
+async function idleScenario(browser: Browser, base: string) {
+  const r = await newRoom(browser, base, 'idle', '');
+  const { pages, ids } = await startMatch(r, 2, { ...FAST_RULES, pickSeconds: 0, placeSeconds: 0, raceSeconds: 0 });
+  const [A, B] = pages;
+  const hide = (h: boolean) => B.evaluate((x) => (window as any).__setHidden(x), h);
+  // Pick: A takes a card; B's tab goes to the background and B is handed one once idle.
+  const v = await waitFor(A, 'crate ready', (x) => x.phase === 'pick' && x.crate.length > 0);
+  await hide(true);
+  await clicksLive(A);
+  await clickPick(A, v.crate[0].x, v.crate[0].y);
+  const t0 = Date.now();
+  const placing = await waitFor(A, 'pick moves on without the hidden guest', (x) => x.phase === 'place', 60_000);
+  const slotB = placing.players.find((p) => p.device.startsWith(`${ids[1]}:`))!.slot;
+  check(
+    placing.players.every((p) => p.claim >= 0),
+    `the hidden guest is handed a card after ${((Date.now() - t0) / 1000).toFixed(0)} s`,
+  );
+  await hide(false);
+  await compareHashes(pages, 'the guest catches up after the pick');
+  // Place: A places, B (idle since the pick) isn't waited for. Race: B's tab hidden again; its runner gives up.
+  const s = await validSpot(A, `${ids[0]}:kb1`);
+  await clicksLive(A);
+  if (s) await clickWorld(A, s.x, s.y);
+  await waitFor(A, 'race', (x) => x.phase === 'run', 60_000);
+  await hide(true);
+  await A.keyboard.down('ArrowDown'); // A is here: a held key is input
+  const gone = await A.evaluate(
+    (slot) =>
+      new Promise<boolean>((done) => {
+        const t = Date.now();
+        const tick = () => {
+          const run = (window as any).slagDebug.match.run;
+          const rb = run?.runners.find((x: any) => x.slot === slot);
+          if (!run || (rb && !rb.alive)) done(true);
+          else if (Date.now() - t > 60_000) done(false);
+          else setTimeout(tick, 250);
+        };
+        tick();
+      }),
+    slotB,
+  );
+  check(gone, "the hidden guest's runner gives up on its own");
+  await A.keyboard.up('ArrowDown');
+  await hide(false);
+  await sleep(1000);
+  await compareHashes(pages, 'the guest catches up after the race');
+  await r.dispose();
+}
+
 async function bcScenario(browser: Browser, base: string) {
   const r = await newRoom(browser, base, 'bc', 'net=bc', { shared: true });
   const { pages } = await startMatch(r, 2);
@@ -1547,6 +1747,9 @@ try {
   if (wanted('hidden')) await hiddenScenario(browser, server.base);
   if (wanted('contact')) await contactScenario(browser, server.base);
   if (wanted('bc')) await bcScenario(browser, server.base);
+  if (wanted('observe')) await observeScenario(browser, server.base);
+  if (wanted('seatrace')) await seatRaceScenario(browser, server.base);
+  if (wanted('idle')) await idleScenario(browser, server.base);
 } finally {
   await server.close();
 }

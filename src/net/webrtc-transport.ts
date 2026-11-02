@@ -213,6 +213,7 @@ export class WebRtcTransport implements Transport {
   private lastWatch = 0;
   private lastBeat = -1e9;
   private beating = false;
+  private reordering = false;
   /** Until when a host checks the store for a rival every RIVAL_CHECK_MS. */
   private checkUntil = 0;
 
@@ -322,6 +323,39 @@ export class WebRtcTransport implements Transport {
     this.inbound.clear();
     this.h?.status('closed');
     this.h = null;
+  }
+
+  /**
+   * Take a new, later join order without dropping any link: an observer ahead of a player (the session decides).
+   * A guest tells the host, which pushes the roster, so every peer's election skips it from then on. A host
+   * that is no longer first hands the room over, as when the store shows it a lower rival.
+   */
+  reorder() {
+    if (this.order < 0 || this.closed || this.reordering) return;
+    this.reordering = true;
+    void this.signal
+      .join(this.since)
+      .then((r) => {
+        if (this.closed) return this.signal.leave(r.order, this.since);
+        this.order = r.order;
+        const self = this.roster.get(this.self);
+        if (self) self.order = r.order;
+        if (this.role === 'guest') {
+          const host = this.links.get(this.hostId);
+          if (host?.open) this.frame(host, `o${r.order}`);
+        }
+        this.emitMembers();
+        if (this.role === 'host') {
+          this.pushRoster();
+          this.rivalFrom(r.members);
+        }
+      })
+      .catch(() => {
+        // The session asks again later.
+      })
+      .finally(() => {
+        this.reordering = false;
+      });
   }
 
   /** Page shown again (or asked to check now): rejoin if we slept, and don't sit out the next poll. */
@@ -732,7 +766,18 @@ export class WebRtcTransport implements Transport {
       link.parts = '';
       this.deliver(link, text);
     } else if (kind === 'x' && this.role === 'host') this.onGuestLost(link, true);
+    else if (kind === 'o' && this.role === 'host') this.onReorder(link, Number(data.slice(1)));
     else if (link.id === this.hostId && this.role === 'guest') this.onHostFrame(link, data);
+  }
+
+  /** A guest rejoined the order at the back (see reorder): everyone's roster says so, so no election picks it first. */
+  private onReorder(link: Link, order: number) {
+    const m = this.roster.get(link.id);
+    if (!m || !Number.isSafeInteger(order) || order <= m.order) return;
+    link.order = order;
+    this.roster.set(link.id, { ...m, order });
+    this.emitMembers();
+    this.pushRoster();
   }
 
   private onHostFrame(link: Link, data: string) {

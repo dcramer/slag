@@ -576,7 +576,7 @@ describe('reconnect and late join', () => {
     expect(b).toBeDefined();
   });
 
-  it('a late joiner mid-race spectates with identical state, then is seated next round', () => {
+  it('a late joiner mid-race watches with identical state, and once it asks is seated next round', () => {
     const r = new Room({ latency: 40, jitter: 10 });
     const a = r.join('aaaa', player);
     fastRules(a);
@@ -587,9 +587,15 @@ describe('reconnect and late join', () => {
     const c = r.join('cccc', player);
     r.run(40);
     expect(c.synced).toBe(true);
+    expect(c.intent).toBe('watch');
+    expect(a.ns.watching.cccc).toBeDefined();
     expect(c.match.players.some((p) => p.device.startsWith('cccc:'))).toBe(false);
     const res = r.settle();
     expect(new Set(res.map((x) => x.hash)).size).toBe(1);
+    c.play();
+    r.run(20);
+    expect(c.seatAsk).toBe('won');
+    expect(c.queued || c.seated).toBe(true);
     while ((a.match.phase as string) !== 'pick' || a.match.round < 2) r.run(1);
     expect(a.match.players.some((p) => p.device === 'cccc:kb1')).toBe(true);
     r.run(30);

@@ -39,6 +39,7 @@
  *   pnpm shot landmarks [--theme T] [--concept id] [--count N] → one level per stage concept at three phases, on a contact sheet
  *                                           (themes with none: a test landmark per skin and shell; --concept filters those by skin or shell)
  *   pnpm shot flood [--look lava|toxic|water] [--low 2] [--high 5] → a tide let into the level, at warn, rise and high water
+ *   pnpm shot join [--only full]           → the join-and-watch storyboard: connecting, Join or Watch, observing, AFK, failures (desktop + phone)
  *   pnpm shot home                         → main menu (desktop + 390×844 mobile)
  *   pnpm shot rules                        → the match rules card (fails if it doesn't fit the window)
  *   pnpm shot settings                     → every settings tab over the lobby, driven by keys and a fake pad,
@@ -63,6 +64,7 @@
 import { shots as cast } from './shot/cast';
 import { browser, errors, scenario, server } from './shot/ctx';
 import { shots as flood } from './shot/flood';
+import { shots as join } from './shot/join';
 import { shots as landmarks } from './shot/landmarks';
 import { shots as motion } from './shot/motion';
 import { shots as mobile } from './shot/mobile';
@@ -72,7 +74,7 @@ import { shots as phases } from './shot/phases';
 import { shots as renderer } from './shot/renderer';
 import { shots as riders } from './shot/riders';
 
-const SCENARIOS = { ...phases, ...renderer, ...motion, ...parts, ...pages, ...mobile, ...landmarks, ...cast, ...flood, ...riders };
+const SCENARIOS = { ...phases, ...renderer, ...motion, ...parts, ...pages, ...mobile, ...landmarks, ...cast, ...flood, ...riders, ...join };
 
 try {
   const run = SCENARIOS[scenario];

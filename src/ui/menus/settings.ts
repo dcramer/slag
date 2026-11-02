@@ -142,6 +142,8 @@ export class SettingsMenu extends Overlay {
   };
   /** When set, the menu shows a "Leave Lobby" button that calls it. */
   leave: (() => void) | null = null;
+  /** Online: Watch for a player, Play for someone watching with a seat free. Read each time the menu draws; null shows nothing. */
+  seat: (() => { label: 'Watch' | 'Play'; run: () => void } | null) | null = null;
   /** When set, the menu shows a graphics-quality picker. */
   quality: QualityControl | null = null;
 
@@ -520,7 +522,17 @@ export class SettingsMenu extends Overlay {
     if (this.leave) {
       const leave = el('button', { className: 'slag-btn danger', type: 'button', textContent: 'Leave Lobby' });
       leave.onclick = () => this.leave?.();
-      actions.append(leave, el('span', { className: 'grow' }));
+      actions.append(leave);
+      const seat = this.seat?.();
+      if (seat) {
+        const b = el('button', { className: 'slag-btn', type: 'button', textContent: seat.label });
+        b.onclick = () => {
+          seat.run();
+          this.close();
+        };
+        actions.append(b);
+      }
+      actions.append(el('span', { className: 'grow' }));
     }
     if (this.tab === 'keyboard') {
       const reset = el('button', { className: 'slag-btn', type: 'button', textContent: 'Reset Controls' });
