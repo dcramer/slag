@@ -46,7 +46,10 @@ export function pickTier(d: DeviceHints): QualityTier {
 /** True on touch-first devices (phones, tablets): show touch controls from the start. */
 export function isTouchFirst(): boolean {
   if (typeof window === 'undefined') return false;
-  return (navigator.maxTouchPoints ?? 0) > 0 && window.matchMedia?.('(pointer: coarse)').matches;
+  // Touch events count as touch hardware too: WebKit builds without a touch screen of their own (simulators, WebKit as
+  // an iOS stand-in in tests) report no touch points while their primary pointer is a finger.
+  const touch = (navigator.maxTouchPoints ?? 0) > 0 || 'ontouchstart' in window;
+  return touch && window.matchMedia?.('(pointer: coarse)').matches;
 }
 
 /** Tier for this device, plus whether runtime downgrades are allowed. */

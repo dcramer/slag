@@ -710,6 +710,13 @@ async function contactScenario(browser: Browser, base: string) {
   await r.dispose();
 }
 
+/**
+ * A console error that is a page's own. WebKit logs a send on a data channel whose peer just closed it, before the
+ * channel says so; the transport catches that send failing by design (the close handler follows), so it's not one.
+ */
+const consoleError = (m: { type(): string; text(): string }) =>
+  m.type() === 'error' && !/^Error sending (string|data) through RTCDataChannel\.$/.test(m.text());
+
 const contextEngine = new WeakMap<BrowserContext, Engine>();
 const engineOf = (p: Page): Engine => contextEngine.get(p.context()) ?? 'chromium';
 const browserMixed = () => new Set(browser.order).size > 1;
@@ -805,7 +812,7 @@ async function newRoom(
       if (browserMixed()) console.log(`     ${tag}: ${engineOf(p)}`);
       p.on('pageerror', (e) => errors.push(`${tag}: ${String(e)}`));
       p.on('console', (m) => {
-        if (m.type() === 'error') errors.push(`${tag}: ${m.text()}`);
+        if (consoleError(m)) errors.push(`${tag}: ${m.text()}`);
         else if (m.text().startsWith('[net]')) console.log(`     ${tag} ${m.text()}`);
       });
       await p.goto(`${base}r/${name}?${[query, o.query].filter(Boolean).join('&')}`);
@@ -1157,7 +1164,7 @@ async function realFlowScenario(browser: Browser, base: string, label: string, s
   }
   const watch = (p: Page, tag: string) => {
     p.on('pageerror', (e) => errors.push(`${tag}: ${String(e)}`));
-    p.on('console', (m) => m.type() === 'error' && errors.push(`${tag}: ${m.text()}`));
+    p.on('console', (m) => consoleError(m) && errors.push(`${tag}: ${m.text()}`));
   };
   const A = await ca.newPage();
   watch(A, 'A');
@@ -1202,7 +1209,7 @@ async function personPage(browser: Browser, phone: string | undefined, name: str
   await ctx.addInitScript((v) => localStorage.setItem('slag.profile.v1', v), profile);
   const p = await ctx.newPage();
   p.on('pageerror', (e) => errors.push(`${tag}: ${String(e)}`));
-  p.on('console', (m) => m.type() === 'error' && errors.push(`${tag}: ${m.text()}`));
+  p.on('console', (m) => consoleError(m) && errors.push(`${tag}: ${m.text()}`));
   return { ctx, p };
 }
 
