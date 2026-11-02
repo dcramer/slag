@@ -52,7 +52,7 @@ So each kind has: a clear head-to-body ratio, a readable expression, a line of a
 
 The cast this is heading to: sixteen kinds, every one a homage, because the lore makes the runners the characters who never made the cut, the knock-off heroes who almost got their own game. The ten homages from round 5 stay. The four plain animals (fox, frog, penguin, chicken) are replaced by six more homages. Reserves, if one of these won't read: the shovel-wielding knight, the spinning bandicoot, the red-haired mountain climber.
 
-This spec feeds the art pipeline: a generated concept image, traced into vector parts and rigged on the gait system. Each entry is written to be used as prompt material, so it describes traits only and never names a real character. Every kind is our own design: it must read as the homage from its silhouette and props, never copy the original's exact design, and never carry its name or logo. Sound-alike names stay in data (`KIND_NAMES`).
+This spec feeds the art pipeline: a generated concept image, traced into vector parts and rigged on the gait system. Each entry is written to be used as prompt material, so it describes traits only and never names a real character. Every kind is our own design: it must read as the homage from its silhouette and props, never copy the original's exact design, and never carry its name or logo. Sound-alike names stay in data (`KIND_NAMES`). Each one carries a visible twist of our own, such as a changed signature prop, a different body detail, or foundry and scrap flavour. The nod is the silhouette; the rest is ours. A concept that looks like the original redrawn is rejected, however good it looks.
 
 These rules apply to every kind:
 

@@ -166,6 +166,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `in progress` · CHARACTERS.md
 - **Traced frames (round 2) look out of place beside the hand-drawn cast; wait for the 3D-to-2D test before choosing.** "i agree w/ your asssessment. they look out of place. lets wait on the new test"
   2026-11-02 · `open` · branch `worktree-agent-ae6810c61c411904c`, behind `?traced=1`
+- **The traced homages look too much like the originals: every kind needs a clear twist of its own on top of the recognisable silhouette.** "they look TOO much like the things were trying to parody... so we'd need to spice it up too"
+  2026-11-02 · `open` · CHARACTERS.md → Roster
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
   2026-11-02 · `done` · public/ASSETS.md
 
