@@ -8,7 +8,7 @@ import type { InputFrame } from '../sim/types';
  *
  * The class is DOM-free on purpose: `down/move/up/cancel` take viewport CSS
  * pixels and `sample()` is called once per fixed step, so the whole mapping
- * (multi-touch, hold-to-jump, drag offsets, hold-to-self-destruct) is unit
+ * (multi-touch, hold-to-jump, drag offsets, the self-destruct button) is unit
  * tested without a browser. `attach()` wires real pointer events.
  *
  * Every touch gets a *role* when it lands (stick, jump, alt, drag, tap…)
@@ -27,7 +27,8 @@ export const TOUCH_DEVICE = 'touch';
  * - `lobby`: taps hit-test the HUD buttons (join / ready / new look / name)
  * - `pick`: tap a crate card to claim it (cursor snaps to the finger); two fingers move the camera
  * - `place`: drag moves the ghost (offset above the finger); ROTATE / PLACE buttons; two fingers move the camera
- * - `race`: left-thumb stick, right-thumb JUMP, hold ALT to self-destruct, USE while holding an item
+ * - `race`: left-thumb stick, right-thumb JUMP, USE while holding an item, and a small self-destruct button
+ *   up by the menu, held as long as the sim asks (POP_HOLD)
  * - `continue`: tap anywhere = confirm (score / victory screens)
  */
 export type TouchMode = 'off' | 'lobby' | 'pick' | 'place' | 'race' | 'continue';
@@ -57,8 +58,13 @@ export interface TouchLayout {
   stickHome: { x: number; y: number };
   /** Big primary button: JUMP in races, PLACE in the place phase. */
   primary: Circle;
-  /** Small secondary button: ALT (hold) in races, ROTATE in the place phase. */
+  /** Small secondary button: ROTATE in the place phase. Nothing in races: thumbs mash it while placing. */
   secondary: Circle;
+  /**
+   * Race self-destruct, under the menu button: out of the way of both thumbs, so it takes a reach. It sends a held
+   * alt; the sim decides when the hold is long enough, and steering or jumping cancels it.
+   */
+  pop: Circle;
   /** Use-item button above the primary, there only while the touch player holds an item. */
   use: Circle;
   /** Settings / pause button (a real DOM button; listed so drags avoid it). */
@@ -71,8 +77,6 @@ export const RUN_AT = 0.7;
 const DEAD_AT = 0.22;
 /** Vertical deflection (fraction of radius) that counts as down/up. */
 const DOWN_AT = 0.5;
-/** Frames ALT must be held in a race before it self-destructs (~0.35 s). */
-export const ALT_HOLD_FRAMES = 21;
 /** How far above the finger the place ghost sits, in CSS px (about a fingertip). */
 export const DRAG_OFFSET_CSS = 56;
 /** Movement (CSS px) under which a touch still counts as a tap. */
@@ -98,6 +102,7 @@ export function touchLayout(w: number, h: number, ins: Insets = { top: 0, right:
   const use = { x: primary.x + pr - sr, y: primary.y - pr - sr - clamp(s * 0.03, 8, 18), r: sr };
   const mr = clamp(s * 0.05, 22, 26); // 44 CSS px across at the least
   const menu = { x: w - ins.right - 10 - mr, y: ins.top + 10 + mr, r: mr };
+  const pop = { x: menu.x, y: menu.y + mr * 2 + clamp(s * 0.04, 10, 20), r: mr };
   return {
     w,
     h,
@@ -108,6 +113,7 @@ export function touchLayout(w: number, h: number, ins: Insets = { top: 0, right:
     secondary,
     use,
     menu,
+    pop,
   };
 }
 
@@ -126,7 +132,6 @@ interface Track {
   ay: number;
   /** Sim frames this touch has been held (counted in sample()). */
   frames: number;
-  fired: boolean;
 }
 
 export interface StickState {
@@ -210,11 +215,14 @@ export class TouchInput {
     this.setActive(true);
     const L = this.layout;
     let role: Role = 'none';
-    const t: Track = { role, x0: x, y0: y, x, y, ax: x, ay: y, frames: 0, fired: false };
+    const t: Track = { role, x0: x, y0: y, x, y, ax: x, ay: y, frames: 0 };
     switch (this.mode) {
       case 'race':
-        if (inCircle(L.secondary, x, y, 1.2)) role = 'alt';
-        else if (this.useReady && inCircle(L.use, x, y, 1.2)) {
+        if (inCircle(L.pop, x, y)) {
+          role = 'alt';
+          this.altLatch = true;
+          this.buzz(6);
+        } else if (this.useReady && inCircle(L.use, x, y, 1.2)) {
           role = 'use';
           this.useLatch = true;
           this.buzz(10);
@@ -398,27 +406,16 @@ export class TouchInput {
     return false;
   }
 
-  /** ALT hold progress 0..1 (race self-destruct ring). */
-  altProgress(): number {
-    let p = 0;
-    for (const t of this.tracks.values()) if (t.role === 'alt') p = Math.max(p, t.fired ? 1 : t.frames / ALT_HOLD_FRAMES);
-    return p;
-  }
-
   /** One sim step of input for the touch player. Clears latched presses. */
   sample(): InputFrame {
     const st = this.mode === 'race' ? this.stick() : null;
     let jump = false;
-    let alt = this.altLatch;
+    let alt = false;
     for (const t of this.tracks.values()) {
       t.frames++;
       if (t.role === 'jump') jump = true;
+      if (t.role === 'alt') alt = true;
       if (t.role === 'drag' && this.drag && t.frames >= this.pinchWait) this.pointer = this.ghostAt(this.drag.x, this.drag.y) ?? this.pointer;
-      if (t.role === 'alt' && !t.fired && t.frames >= ALT_HOLD_FRAMES) {
-        t.fired = true;
-        alt = true;
-        this.buzz(40);
-      }
     }
     const f: InputFrame = {
       left: !!st?.left,
@@ -430,7 +427,9 @@ export class TouchInput {
       jump: jump,
       jumpPressed: this.jumpLatch,
       confirmPressed: this.confirmLatch,
-      altPressed: alt,
+      altPressed: this.altLatch,
+      // Held only on the self-destruct button: ROTATE is an edge, and a race reads the hold.
+      alt,
       downPressed: false,
       usePressed: this.useLatch,
     };

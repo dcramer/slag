@@ -27,8 +27,8 @@ slag is fully playable on phones and tablets. Touch is one more input device (`'
 ```
  ┌──────────────────────────────────────────────────────────┐
  │                                                      (⚙) │
- │                                                          │
- │   any touch on the left half               (💥 HOLD)      │
+ │                                                      (💥) │
+ │   any touch on the left half                             │
  │   = floating stick                                       │
  │     ( ◯ )   ← push 70%+ = RUN                 ( JUMP )    │
  └──────────────────────────────────────────────────────────┘
@@ -52,13 +52,13 @@ A dedicated RUN button would need a third simultaneous touch (stick + run + jump
 
 **Right thumb: JUMP.**
 
-- The *whole right half* is JUMP, apart from the ALT, USE and menu buttons. You can't miss it.
+- The *whole right half* is JUMP, apart from the 💥, USE and menu buttons. You can't miss it.
 - Hold duration = jump hold, so you get variable height. Each new touch is a fresh `jumpPressed`, so wall jumps are just re-taps.
 - A tap shorter than one sim frame still registers. Presses are latched like key presses.
 
 **Drop-through** = pull the stick down, then tap JUMP (down + jump, exactly like the keyboard). There's deliberately no one-tap DROP button. Down + jump on solid ground is a normal jump, and a button that guessed the ground under you would need sim state.
 
-**ALT (💥) = self-destruct, hold ~0.35 s.** A ring fills while you hold. An accidental brush must never kill you. Releasing early cancels.
+**💥 = self-destruct: a small button under ⚙, held 1.25 s.** It's a reach for the right thumb, away from JUMP and from where ROTATE sat during place (thumbs mash that one). The button only sends a held alt; the sim counts the hold like any other input's (`DESIGN.md` → Controls), so its ring and the one around your runner are the same number. Letting go, steering or jumping cancels it, and a thumb that stays on it after steering never starts a new one: a resting thumb can't pop you. A touch that lands elsewhere and slides onto it doesn't count.
 
 **USE** shows above JUMP only while you hold an item, labelled with the item's verb. Touching it uses the item.
 
@@ -70,7 +70,7 @@ A dedicated RUN button would need a third simultaneous touch (stick + run + jump
 |---|---|
 | Lobby | Tap the HUD buttons: a join slot (joins as `touch`), *Ready Up*, *New Look*, your name, *New Level*, Settings, Rules. Taps that just miss a button retry within ±9 view px. A fullscreen button shows bottom right where supported. |
 | Pick | Touch-down snaps your cursor to the finger, so the card lifts. Lifting over a card claims it, either by tapping or by sliding to choose. Two fingers move the camera and never claim. |
-| Place | Starts on the whole level. **Pinch** zooms about your fingers and **two-finger drag** pans; a second finger landing turns a drag into the gesture, and the ghost stays where it was. Drag anywhere. Holding the ghost in the outer 56 view px of the window **auto-pans** that way. The ghost floats a fingertip (56 CSS px) above your finger. The offset fades near the bottom edge so the lowest rows stay reachable. **⟳ ROTATE** taps rotate. **PLACE** places only when the finger lifts *on* it, so sliding off cancels. Lifting a drag never places. PLACE dims red while the spot is illegal. The same two button positions are JUMP and ALT in the race. |
+| Place | Starts on the whole level. **Pinch** zooms about your fingers and **two-finger drag** pans; a second finger landing turns a drag into the gesture, and the ghost stays where it was. Drag anywhere. Holding the ghost in the outer 56 view px of the window **auto-pans** that way. The ghost floats a fingertip (56 CSS px) above your finger. The offset fades near the bottom edge so the lowest rows stay reachable. **⟳ ROTATE** taps rotate. **PLACE** places only when the finger lifts *on* it, so sliding off cancels. Lifting a drag never places. PLACE dims red while the spot is illegal. PLACE's spot is JUMP in the race, and ROTATE's is just more jump. |
 | Score / victory | Tap anywhere to continue. |
 | Any time | ⚙ (top right) opens Settings. This is the Esc equivalent and shows outside the lobby, which has its own settings button. |
 
@@ -85,7 +85,7 @@ A dedicated RUN button would need a third simultaneous touch (stick + run + jump
 | Place | 15 ms |
 | HUD tap | 8 ms |
 | Use | 10 ms |
-| Self-destruct | 40 ms |
+| Self-destruct press | 6 ms |
 | Death | 30 ms |
 
 Settings → Touch → Vibration turns them off (`localStorage['slag.haptics']`).
@@ -122,7 +122,7 @@ At 760 CSS px wide or 520 tall, Settings and Match Rules become a full-screen sh
 
 ## Layout
 
-- **Landscape first.** Controls scale with the short side. On an iPhone 13 the JUMP button is about 117 px across and ALT is at least 56 px; both clamp on tablets.
+- **Landscape first.** Controls scale with the short side. On an iPhone 13 the JUMP button is about 117 px across and ROTATE is at least 56 px; both clamp on tablets. 💥 and ⚙ are 44–52 px.
 - **Safe areas.**
   - The game route uses `viewport-fit=cover`.
   - The canvases fill the window; the renderer keeps the play view inside the left/right/top insets (notch, status bar).
@@ -161,7 +161,7 @@ The sim is unaffected: it stays a fixed 60 Hz accumulator, and slow frames run s
   - multi-touch run + jump
   - hold-to-jump and sub-frame taps
   - the follow-stick and the down threshold
-  - ALT hold
+  - the 💥 button's held alt, out of both thumbs' way
   - role stickiness
   - pick tap
   - place drag offset, bottom fade, and slide-off cancel
@@ -180,7 +180,7 @@ The sim is unaffected: it stays a fixed 60 Hz accumulator, and slow frames run s
   6. pinch-zooming the place camera
   7. dragging the ghost to the edge (auto-pan), rotating and placing
   8. the race follow, holding the stick and JUMP at the same time
-  9. holding ALT
+  9. holding 💥 until the runner pops (`race-alt` is mid-charge)
   10. the score screen and portrait
   11. a two-player race with the runners at opposite ends
 

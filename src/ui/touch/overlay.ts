@@ -26,6 +26,7 @@ const CSS = `
 .slag-touch .primary.place.bad{background:rgba(120,40,40,.4);border-color:rgba(255,120,120,.55);opacity:.75}
 .slag-touch .secondary{font-size:12px}
 .slag-touch .secondary .ico{font-size:18px;line-height:1}
+.slag-touch .pop{font-size:18px;line-height:1}
 .slag-touch .ring{position:absolute;inset:-5px;border-radius:50%;pointer-events:none}
 .slag-touch .base{border:2px solid rgba(255,255,255,.22);background:radial-gradient(circle,rgba(255,255,255,.06) 0,rgba(255,255,255,.06) 69%,rgba(255,190,110,.10) 70%,rgba(255,190,110,.10) 100%)}
 .slag-touch .base.idle{opacity:.45}
@@ -48,6 +49,8 @@ export interface OverlayState {
   canPlace?: boolean;
   /** Race: what the USE button does right now (the held item's verb); omitted when empty-handed. */
   use?: string;
+  /** Race: the touch player's self-destruct charge, 0..1, read from the sim so the button agrees with the ring on the runner. */
+  pop?: number;
 }
 
 export class TouchOverlay {
@@ -57,6 +60,7 @@ export class TouchOverlay {
   private primary = div('c btn primary');
   private secondary = div('c btn secondary');
   private useBtn = div('c btn secondary');
+  private pop = div('c btn pop');
   private ring = div('ring');
   private menu = button('c btn ui', '⚙\uFE0E', 'Settings');
   private full = button('c btn ui', '⛶', 'Fullscreen');
@@ -79,8 +83,8 @@ export class TouchOverlay {
     this.base.append(div('runring'));
     // setProperty: Safari before 15.4 only knows the prefixed name, and the DOM's alias for it is deprecated.
     for (const name of ['mask', '-webkit-mask']) this.ring.style.setProperty(name, 'radial-gradient(circle, transparent 62%, #000 64%)');
-    this.secondary.append(this.ring);
-    this.root.append(this.base, this.knob, this.secondary, this.useBtn, this.primary, this.menu, this.full);
+    this.pop.append('💥', this.ring);
+    this.root.append(this.base, this.knob, this.secondary, this.useBtn, this.pop, this.primary, this.menu, this.full);
     this.menu.addEventListener('click', onMenu);
     this.full.addEventListener('click', () => void goFullscreen());
 
@@ -121,6 +125,7 @@ export class TouchOverlay {
     place(this.primary, L.primary);
     place(this.secondary, L.secondary);
     place(this.useBtn, L.use);
+    place(this.pop, L.pop);
     place(this.menu, L.menu);
     // Bottom right: the phone lobby's top bar runs into the corners, and its footer has this end free.
     place(this.full, { x: L.menu.x, y: h - ins.bottom - 6 - L.menu.r, r: L.menu.r });
@@ -140,7 +145,8 @@ export class TouchOverlay {
     const placeMode = m === 'place';
     show(this.base, race);
     show(this.primary, race || placeMode);
-    show(this.secondary, race || placeMode);
+    show(this.secondary, placeMode);
+    show(this.pop, race);
     show(this.useBtn, race && !!s.use);
     show(this.menu, m !== 'lobby'); // the lobby HUD has its own settings button
     show(this.full, m === 'lobby' && document.fullscreenEnabled && !document.fullscreenElement);
@@ -165,9 +171,8 @@ export class TouchOverlay {
       setLabel(this.primary, 'JUMP');
       this.primary.classList.remove('place', 'bad');
       this.primary.classList.toggle('on', t.holding('jump'));
-      setLabel(this.secondary, '💥', 'HOLD');
-      const p = t.altProgress();
-      this.secondary.classList.toggle('on', p > 0);
+      const p = s.pop ?? 0;
+      this.pop.classList.toggle('on', t.holding('alt'));
       this.ring.style.background = p > 0 ? `conic-gradient(#ff5a1f ${p * 360}deg, transparent 0)` : 'none';
       if (s.use) setLabel(this.useBtn, s.use.toUpperCase());
       this.useBtn.classList.toggle('on', t.holding('use'));
@@ -180,7 +185,6 @@ export class TouchOverlay {
       this.primary.classList.toggle('on', t.holding('place'));
       setLabel(this.secondary, '⟳', 'ROTATE');
       this.secondary.classList.toggle('on', t.holding('rotate'));
-      this.ring.style.background = 'none';
     }
   }
 }
