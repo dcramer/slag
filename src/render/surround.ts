@@ -2,7 +2,7 @@ import { css } from '../core/color';
 import { Rng } from '../core/rng';
 import { TILE } from '../sim/constants';
 import { type Level, type TileRect, T_SOLID, levelKey } from '../sim/level';
-import type { ThemeId } from '../themes';
+import { FLOATS, type ThemeId } from '../themes';
 import type { RC } from './kit';
 import { TerrainPainter } from './terrain';
 
@@ -144,12 +144,6 @@ const SIDES: Record<ThemeId, (c: SideCtx) => void> = {
     }
   },
 };
-
-/**
- * Themes whose ground floats: nothing stands on anything, so a body that touches the top or bottom
- * row ends there like any other instead of running on up or down as a column.
- */
-const FLOATS: ReadonlySet<ThemeId> = new Set(['space']);
 
 /**
  * The surroundings of `level` as a level of their own: `mx` extra columns each

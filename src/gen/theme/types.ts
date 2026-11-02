@@ -81,60 +81,9 @@ export type TerrainKind =
 export type CapKind = 'grass' | 'moss' | 'rust' | 'crystal' | 'none' | 'ledge' | 'trim' | 'ash' | 'beam' | 'gravel';
 export type LiquidKind = 'slag' | 'acid' | 'void' | 'water' | 'tar' | 'sea' | 'swamp' | 'lava' | 'street';
 export type Ambient = 'embers' | 'fireflies' | 'spores' | 'dust' | 'bubbles' | 'pollen';
-export type DecorKind =
-  | 'crystal'
-  | 'mushroom'
-  | 'lantern'
-  | 'vine'
-  | 'bones'
-  | 'torch'
-  | 'flower'
-  | 'pipe'
-  // farm
-  | 'fence'
-  | 'haybale'
-  | 'wheat'
-  | 'pumpkin'
-  | 'sunflower'
-  // factory
-  | 'vent'
-  | 'barrel'
-  | 'crate'
-  | 'beacon'
-  | 'chain'
-  | 'cable'
-  | 'cagelamp'
-  // castle
-  | 'banner'
-  | 'skull'
-  // jungle
-  | 'fern'
-  | 'bigleaf'
-  | 'roots'
-  // volcano
-  | 'fumarole'
-  | 'obsidian'
-  // harbor
-  | 'rope'
-  | 'bollard'
-  | 'lamppost'
-  | 'gull'
-  | 'net'
-  // mine
-  | 'support'
-  | 'minecart'
-  | 'pickaxe'
-  // rooftops
-  | 'antenna'
-  | 'acunit'
-  | 'neon'
-  | 'dish'
-  // glacier
-  | 'cairn'
-  | 'pennant'
-  | 'icicles'
-  // space
-  | 'lander';
+/** Terrain decor kinds: one rule each in the decor registry (src/gen/decor), art in src/render/decor.ts. */
+import type { DecorKind } from '../decor';
+export type { DecorKind };
 export type Celestial = 'sun' | 'moon' | 'planet' | 'eclipse' | 'none';
 export type CloudStyle = 'puffy' | 'wispy' | 'ash';
 export type PlatformKind = 'wood' | 'grate' | 'bamboo' | 'stone';

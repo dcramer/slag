@@ -98,6 +98,8 @@ export const GREAT_WHEEL: Concept = {
   ownsCrossing: true,
   family: ['press', 'forklift'],
   names: ['The Great Wheel of {place}', '{place} Flywheel Works', 'The Big Wheel at {place}', '{place} Wheelhouse'],
+  scale: 'grand',
+  varies: ['vat width', 'wheel size (wide)', 'cars', 'saws'],
   box: (k, rng) => ({ w: hardGap(rng) + wheelCols(wheelArm(k.W, k.H)), h: WHEEL_ROWS }),
   build(g, _rng, at, parts) {
     const { w: W, h: H } = g;
@@ -178,6 +180,7 @@ export const STAMPING_LINE: Concept = {
   ownsCrossing: true,
   family: ['forklift', 'cog lift'],
   names: ['The Stamping Line at {place}', '{place} Press Shop', 'The Pancake Line of {place}', '{place} Panel Works'],
+  varies: ['vat width', 'girder height', 'press width and count'],
   box: (k, rng) => ({ w: hardGap(rng) + 1 + lineCols(k.W), h: 13 }),
   build(g, rng, at, parts) {
     const G = at.y + at.h;
