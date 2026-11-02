@@ -59,12 +59,19 @@ export function bootGame(container: HTMLElement, room: string): void {
   function promptName() {
     const p = match.players.find((q) => q.device === input.mouseDevice);
     if (!p) return;
-    namePrompt.open(p.character.name, profile.name, (name) => {
+    let decided = false;
+    // Whatever you end up with — typed, kept-random, or just closing the prompt — is remembered.
+    const keep = (name: string) => {
+      decided = true;
       profile.name = name;
       profile.prompted = true;
       saveProfile(profile);
-      if (name) match.setName(p.slot, name);
-    });
+      match.setName(p.slot, name);
+    };
+    namePrompt.onClose = () => {
+      if (!decided) keep(p.character.name);
+    };
+    namePrompt.open(p.character.name, profile.name, (name) => keep(name ?? p.character.name));
   }
 
   input.onEscape = () => {
@@ -106,9 +113,27 @@ export function bootGame(container: HTMLElement, room: string): void {
   window.addEventListener('keydown', () => audio.unlock(), { once: true });
 
   /** Keep the local keyboard/mouse player's chosen name; ask once on first join. */
+  let appliedLook: number | null = null;
   function syncProfile() {
     const p = match.players.find((q) => q.device === input.mouseDevice);
-    if (!p) return;
+    if (!p) {
+      appliedLook = null; // re-apply the saved look when they (re)join
+      return;
+    }
+    // Look: restore the saved one on join; afterwards a new look (reroll) becomes the saved one.
+    if (appliedLook === null) {
+      if (profile.look != null) match.setLook(p.slot, profile.look);
+      appliedLook = p.character.seed;
+      if (profile.look == null) {
+        profile.look = appliedLook;
+        saveProfile(profile);
+      }
+    } else if (p.character.seed !== appliedLook) {
+      appliedLook = p.character.seed;
+      profile.look = appliedLook;
+      saveProfile(profile);
+    }
+    // Name: a reroll also rolls a random name, so re-apply the saved one.
     if (profile.name && p.character.name !== profile.name) match.setName(p.slot, profile.name);
     if (!profile.prompted && match.phase === 'lobby' && !menus.some((m) => m.isOpen)) {
       profile.prompted = true;

@@ -26,6 +26,8 @@ Build original content. Use the genre's mechanics, but never copy another game's
 
 ## Ground rules
 
+- **Game design decisions live in [docs/DESIGN.md](docs/DESIGN.md).** Follow it. When a decision changes, update it in the same commit.
+
 - **Commit to `main` and push. Always.**
   - Pull first: `git pull --rebase origin main`.
   - Make small, focused commits.

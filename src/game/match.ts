@@ -265,6 +265,12 @@ export class Match {
     if (p && name) p.character = { ...p.character, name };
   }
 
+  /** Restore a player's saved look (a character seed), keeping their current name. */
+  setLook(slot: number, seed: number) {
+    const p = this.player(slot);
+    if (p && p.character.seed !== seed) p.character = { ...generateCharacter(seed), name: p.character.name };
+  }
+
   // ---------------------------------------------------------------- place
 
   /** Tile origin a player's held prop would be placed at, centering the footprint on the cursor. */
