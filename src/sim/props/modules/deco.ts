@@ -7,7 +7,7 @@ import type { DecoKind } from '../types';
  * its walls and rooms. They claim no cells, so a shell can stand behind tiles; a piece with one in it
  * claims its cells through its other modules.
  */
-const SHELLS: ReadonlySet<DecoKind> = new Set(['facade', 'gantry', 'flywheel', 'headframe', 'hull', 'billboard', 'clockface']);
+export const SHELLS: ReadonlySet<DecoKind> = new Set(['facade', 'gantry', 'flywheel', 'headframe', 'hull', 'billboard', 'clockface']);
 
 /** Scenery dressing for set pieces. Occupies its cells for placement (a backdrop shell none); no runtime behavior. */
 export const deco = defineModule<'deco'>({
