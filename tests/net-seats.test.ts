@@ -247,21 +247,29 @@ describe('observers', () => {
 });
 
 describe('idle peers', () => {
-  it('a player idle in the lobby for a minute goes to the watchers, and any input brings them back', () => {
+  it('an idle lobby player keeps its seat until a watcher could use it, then goes to the watchers, and any input brings them back', () => {
     const r = new Room();
-    const a = r.join('aaaa', fidget);
-    r.run(5);
-    const b = r.join('bbbb', still);
-    r.until(() => seatedPeer(a, 'bbbb'), 300);
-    r.until(() => !!a.ns.watching.bbbb, LOBBY_IDLE_FRAMES + 120);
-    expect(a.ns.watching.bbbb.afk).toBe(true);
-    expect(seatedPeer(a, 'bbbb')).toBe(false);
+    const ids = Array.from({ length: MAX_PLAYERS }, (_, i) => `p${i}xx`);
+    for (const id of ids) {
+      r.join(id, id === 'p7xx' ? still : fidget);
+      r.run(3);
+    }
+    const a = r.peers.get('p0xx')!;
+    const b = r.peers.get('p7xx')!;
+    r.until(() => a.match.players.length === MAX_PLAYERS, 600);
+    r.until(() => !!a.match.players.find((p) => p.device === 'p7xx:kb1')?.afk, LOBBY_IDLE_FRAMES + 120);
+    r.run(30);
+    expect(seatedPeer(a, 'p7xx')).toBe(true); // full, but nobody waiting: an idle lobby holds nobody up
+    r.join('wwww', still, true);
+    r.until(() => !!a.ns.watching.p7xx, 300);
+    expect(a.ns.watching.p7xx.afk).toBe(true);
+    expect(seatedPeer(a, 'p7xx')).toBe(false);
     r.run(10);
     expect(b.intent).toBe('watch');
-    r.scripts.set('bbbb', (_s, f) => (f % 30 === 0 ? { kb1: press({ left: true }) } : {}));
-    r.until(() => seatedPeer(a, 'bbbb'), 300);
-    expect(a.ns.watching.bbbb).toBeUndefined();
-  }, 20_000);
+    r.scripts.set('p7xx', (_s, f) => (f % 30 === 0 ? { kb1: press({ left: true }) } : {}));
+    r.until(() => seatedPeer(a, 'p7xx'), 300);
+    expect(a.ns.watching.p7xx).toBeUndefined();
+  }, 30_000);
 
   it("a guest that stops sending has its buttons let go, gives up the race when idle, and agrees with the room when it's back", () => {
     const r = new Room();

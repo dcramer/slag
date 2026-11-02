@@ -1183,7 +1183,7 @@ async function hostLabel(p: Page): Promise<number | undefined> {
 
 /** The host label on every screen, and following a migration; a kick by keyboard, then by mouse, with no way back. */
 async function kickScenario(browser: Browser, base: string) {
-  const r = await newRoom(browser, base, 'kick', 'ban=4', { viewport: { width: 960, height: 540 }, visual: true });
+  const r = await newRoom(browser, base, 'kick', 'ban=15', { viewport: { width: 960, height: 540 }, visual: true });
   const A = await r.open('A');
   const a0 = await waitFor(A, 'host seated', (v) => v.players.length === 1 && v.isHost);
   const [B, C, D] = [await r.open('B'), await r.open('C'), await r.open('D')];
@@ -1262,7 +1262,8 @@ async function kickScenario(browser: Browser, base: string) {
   check(!!spot, 'each other bay has a Kick button');
   if (spot) {
     await clickView(A, spot.x, spot.y);
-    await waitFor(A, 'mouse kick applied', (v) => v.players.length === 3 && !v.players.some((q) => q.device === spot.device), 15_000);
+    const mk = await waitFor(A, 'mouse kick applied', (v) => v.players.length === 3 && !v.players.some((q) => q.device === spot.device), 15_000);
+    if (mk.players.length !== 3) await dumpNet([A, ...guests.values()], 'mouse kick');
     guests.delete(spot.device.split(':')[0]);
   }
   // The next host is the earliest to join of those left (the rejoined page came back last).
