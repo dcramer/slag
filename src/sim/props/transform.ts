@@ -1,3 +1,4 @@
+import { dcos, dsin, sq } from '../../core/dmath';
 import { type Cell, frac, pingPong, type Vec } from '../../core/geom';
 import { TILE } from '../constants';
 import { isProtected, type Level, T_EMPTY, T_SOLID, tileAt } from '../level';
@@ -78,7 +79,7 @@ export function snap(v: number): number {
 }
 
 export function dirOf(angle: number): Vec {
-  return [snap(Math.cos(angle)), snap(Math.sin(angle))];
+  return [snap(dcos(angle)), snap(dsin(angle))];
 }
 
 /** Whole-prop translation (px) at frame f. */
@@ -86,11 +87,11 @@ export function motionOffset(r: Resolved, f: number): Vec {
   const m = r.motion;
   if (m.type === 'rail') {
     const d = pingPong(f / m.period + r.phase) * m.range;
-    return [snap(Math.cos(m.angle)) * d, snap(Math.sin(m.angle)) * d];
+    return [snap(dcos(m.angle)) * d, snap(dsin(m.angle)) * d];
   }
   if (m.type === 'loop') {
     const a = m.dir * Math.PI * 2 * (f / m.period + r.phase);
-    return [(Math.cos(a) - 1) * m.radius, Math.sin(a) * m.radius];
+    return [(dcos(a) - 1) * m.radius, dsin(a) * m.radius];
   }
   return [0, 0];
 }
@@ -116,8 +117,8 @@ export function cycle(f: number, phase: number, lens: number[]): CycleState {
 
 /** Distance (px) along a ray before it enters a solid tile. */
 export function rayToWall(level: Level, x: number, y: number, angle: number, maxLen: number, skip = 6): number {
-  const dx = Math.cos(angle);
-  const dy = Math.sin(angle);
+  const dx = dcos(angle);
+  const dy = dsin(angle);
   for (let d = skip; d < maxLen; d += 2) {
     const px = x + dx * d;
     const py = y + dy * d;
@@ -224,7 +225,7 @@ function roundBlast(b: BlastSpec, tx: number, ty: number, inner: number): Cell[]
   const outer = b.radius * b.radius;
   for (let y = ty - r; y <= ty + r; y++)
     for (let x = tx - r; x <= tx + r; x++) {
-      const d = (x - tx) ** 2 + (y - ty) ** 2;
+      const d = sq(x - tx) + sq(y - ty);
       if (d <= outer && d > inner) out.push([x, y]);
     }
   return out;
@@ -244,7 +245,7 @@ function armSpan(b: BlastSpec): [number, number] {
  */
 const BLAST_SHAPES: Record<BlastShape, (b: BlastSpec, tx: number, ty: number, rot: number) => Cell[]> = {
   disk: (b, tx, ty) => roundBlast(b, tx, ty, -1),
-  ring: (b, tx, ty) => roundBlast(b, tx, ty, Math.max(0, b.radius - b.width) ** 2),
+  ring: (b, tx, ty) => roundBlast(b, tx, ty, sq(Math.max(0, b.radius - b.width))),
   line(b, tx, ty, rot) {
     const out: Cell[] = [];
     const [dx, dy] = ROT_DIR[rot & 3];

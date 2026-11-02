@@ -1,3 +1,4 @@
+import { dcos, dsin } from '../../core/dmath';
 import type { Cell } from '../../core/geom';
 import type { Rng } from '../../core/rng';
 import type { Ammo, Archetype, CannonLook, GeyserLook, Material, Module, PropStyle, Role, RotorLook, RotorSupport, VehicleLook } from '../../sim/props';
@@ -151,8 +152,8 @@ export function* pendulums(rng: Rng, s: Site, o: PendulumOpts): Generator<Piece>
   const arm = roll(rng, o.arm);
   const width = Math.round(roll(rng, o.width));
   const swing = roll(rng, o.swing);
-  const reachX = arm * Math.sin(swing) + width / 2 + 1;
-  const top = arm * Math.cos(swing) - 1.5;
+  const reachX = arm * dsin(swing) + width / 2 + 1;
+  const top = arm * dcos(swing) - 1.5;
   const spots: { x: number; y: number; mast: number; extra: Cell[] }[] = [];
   for (let y = 0; y < s.h - arm - 2; y++) {
     for (let x = 1; x < s.w - 1; x++) {
@@ -244,8 +245,8 @@ export function* cannons(rng: Rng, s: Site, o: CannonOpts): Generator<Piece> {
         // Count reachable cells the shot passes over: we want it to threaten the route.
         let px = (x + 0.5) * 16;
         let py = (y + 0.45) * 16;
-        const vx = Math.cos(elev) * speed * d;
-        let vy = -Math.sin(elev) * speed;
+        const vx = dcos(elev) * speed * d;
+        let vy = -dsin(elev) * speed;
         let hits = 0;
         const seen = new Set<number>();
         for (let f = 0; f < 240; f++) {

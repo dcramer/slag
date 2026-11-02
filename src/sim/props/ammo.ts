@@ -1,3 +1,4 @@
+import { dhypot, dsin } from '../../core/dmath';
 import { pointInRect, rectCircle } from '../../core/geom';
 import { DT, TILE } from '../constants';
 import { isProtected, type Level, T_EMPTY, T_SOLID, tileAt } from '../level';
@@ -18,7 +19,7 @@ import { AMMO, type Ammo, type HitEffect } from './types';
  * Determinism: the new behaviors use only + − × ÷ and Math.sqrt (correctly
  * rounded everywhere). Homing turns by a fixed angle with precomputed
  * cos/sin constants instead of calling trig. The default mover's wobble
- * still uses Math.hypot/Math.sin (pre-existing; see core/dmath.ts plans).
+ * uses core/dmath.ts.
  */
 
 export interface Projectile extends ProjectileSpawn {
@@ -333,8 +334,8 @@ function defaultMove(p: Projectile, f: number, gravity: number): void {
   p.x += p.vx * DT;
   p.y += p.vy * DT;
   if (spec.wobble) {
-    const sp = Math.hypot(p.vx, p.vy) || 1;
-    const wob = Math.sin((f - p.born) * 0.25) * spec.wobble;
+    const sp = dhypot(p.vx, p.vy) || 1;
+    const wob = dsin((f - p.born) * 0.25) * spec.wobble;
     p.x += (-p.vy / sp) * wob;
     p.y += (p.vx / sp) * wob;
   }

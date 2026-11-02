@@ -1,3 +1,4 @@
+import { dcos, dsin, sq } from '../core/dmath';
 import { type Cell, normalizeCells, type Vec } from '../core/geom';
 import { moduleSim } from '../sim/props/registry';
 import '../sim/props/modules';
@@ -261,7 +262,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     if (spiky) {
       const dir = rng.pick([1, 2]); // down or left/right
       const a = dir === 1 ? AXIS[1] : rng.pick([AXIS[0], AXIS[2]]);
-      const [dx, dy] = [Math.round(Math.cos(a)), Math.round(Math.sin(a))];
+      const [dx, dy] = [Math.round(dcos(a)), Math.round(dsin(a))];
       modules.push({ type: 'spikes', cells: exposed(cells, dx, dy), angle: a });
     }
     let motion: Motion = { type: 'none' };
@@ -324,7 +325,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     );
     for (const d of dirs) {
       const a = AXIS[d];
-      modules.push({ type: 'spikes', cells: exposed(cells, Math.round(Math.cos(a)), Math.round(Math.sin(a))), angle: a });
+      modules.push({ type: 'spikes', cells: exposed(cells, Math.round(dcos(a)), Math.round(dsin(a))), angle: a });
     }
     return {
       archetype: 'spikeblock',
@@ -903,7 +904,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     const reach = arm + width / 2;
     const r = Math.floor(reach);
     const disk: Cell[] = [];
-    for (let y = 0; y <= 2 * r; y++) for (let x = 0; x <= 2 * r; x++) if ((x - r) ** 2 + (y - r) ** 2 <= reach * reach) disk.push([x, y]);
+    for (let y = 0; y <= 2 * r; y++) for (let x = 0; x <= 2 * r; x++) if (sq(x - r) + sq(y - r) <= reach * reach) disk.push([x, y]);
     return {
       archetype: 'wheel',
       role: 'build',

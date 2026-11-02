@@ -1,3 +1,4 @@
+import { dhypot } from '../core/dmath';
 import { inset, overlaps, type Rect, rectCircle } from '../core/geom';
 import { KILL_Y, PLAYER_W, RUN_COUNTDOWN } from './constants';
 import { type CrowdMember, nudgeCrowd } from './crowd';
@@ -327,7 +328,7 @@ function hitHazard(b: Rect, h: Hazard): boolean {
     case 'circle':
       return rectCircle(b, h.x, h.y, h.r);
     case 'seg': {
-      const len = Math.hypot(h.x2 - h.x1, h.y2 - h.y1);
+      const len = dhypot(h.x2 - h.x1, h.y2 - h.y1);
       const n = Math.max(1, Math.ceil(len / 4));
       for (let i = 0; i <= n; i++) {
         const t = i / n;
