@@ -28,7 +28,7 @@ function style(over: Partial<PropStyle> = {}): PropStyle {
   return { metal: 'steel', trim: 'rivets', hue: 20, glowHue: 190, woodHue: 28, ...over };
 }
 
-function def(name: string, modules: Module[], opts: { style?: Partial<PropStyle>; motion?: Motion } = {}): PropDef {
+function def(name: string, modules: Module[], opts: { style?: Partial<PropStyle>; motion?: Motion; footprint?: Cell[] } = {}): PropDef {
   const cells = new Map<string, Cell>();
   for (const m of modules) for (const cell of moduleSim(m.type).anchors(m)) cells.set(`${cell[0]},${cell[1]}`, cell);
   return {
@@ -40,7 +40,7 @@ function def(name: string, modules: Module[], opts: { style?: Partial<PropStyle>
     style: style(opts.style),
     motion: opts.motion ?? { type: 'none' },
     modules,
-    footprint: normalizeCells([...cells.values()]),
+    footprint: opts.footprint ?? normalizeCells([...cells.values()]),
   };
 }
 
@@ -211,11 +211,11 @@ export function partGroups(): PartGroup[] {
     {
       id: 'launchers',
       title: 'Launchers',
-      blurb: 'Fire projectiles on a schedule. Aim can be fixed, sweeping, or tracking the nearest runner.',
+      blurb: 'Fire projectiles on a schedule. Each one states how it aims: Fixed, Sweeps or Tracks.',
       entries: [
         ...Object.entries(LAUNCHER_NOTES).map(([styleName, [ammo, note]]) => ({
           title: styleName,
-          note,
+          note: `Fixed. ${note}`,
           def: def(styleName, [
             body([[0, 0]], styleName === 'crossbow' || styleName === 'totem' ? 'wood' : 'metal'),
             {
@@ -237,7 +237,7 @@ export function partGroups(): PartGroup[] {
         })),
         {
           title: 'tracking aim',
-          note: 'Red sensor eye: turns toward runners in front of it.',
+          note: 'Tracks. Red sensor eye: turns toward runners within 60° of its facing.',
           def: def('track', [
             body([[0, 0]], 'wood'),
             {
@@ -259,7 +259,7 @@ export function partGroups(): PartGroup[] {
         },
         {
           title: 'sweeping aim',
-          note: 'Aim oscillates back and forth.',
+          note: 'Sweeps. Aim swings back and forth on a timer.',
           def: def('sweep', [
             body([[0, 0]]),
             {
@@ -386,25 +386,34 @@ export function partGroups(): PartGroup[] {
         {
           title: 'wheel',
           note: 'Platforms you ride around a hub.',
-          def: def('wheel', [
+          def: def(
+            'wheel',
+            [
+              {
+                type: 'rotor',
+                look: 'cog',
+                support: 'none',
+                mastX: 0,
+                hub: c(2, 2),
+                arm: 2,
+                count: 3,
+                angle0: 0,
+                period: 300,
+                swing: 0,
+                dir: 1,
+                width: 1.6,
+                thick: 0.5,
+                material: 'metal',
+                seed: 1,
+              },
+            ],
             {
-              type: 'rotor',
-              look: 'cog',
-              support: 'none',
-              mastX: 0,
-              hub: c(2, 2),
-              arm: 2,
-              count: 3,
-              angle0: 0,
-              period: 300,
-              swing: 0,
-              dir: 1,
-              width: 1.6,
-              thick: 0.5,
-              material: 'metal',
-              seed: 1,
+              footprint: [
+                [0, 0],
+                [4, 4],
+              ],
             },
-          ]),
+          ),
         },
       ],
     },

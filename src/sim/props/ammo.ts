@@ -25,7 +25,7 @@ export interface Projectile extends ProjectileSpawn {
   born: number;
   /** Spawn sequence number in this race (stable id for patch solids). */
   id: number;
-  /** Bounces left (rubber, ricochet). */
+  /** Bounces left (rubber, ricochet), or riders on board (glider). */
   n: number;
   /** Constant acceleration (px/s², boomerang return pull). */
   ax: number;
@@ -295,8 +295,8 @@ export const AMMO_SIM: Partial<Record<Ammo, AmmoSim>> = {
       let riders = 0;
       for (const r of w.runners) if (r.active && r.body.onGround && r.body.groundRef === id) riders++;
       const ridden = riders > 0;
-      // `n` counts ridden frames: how far the plank has been bent (art).
-      if (ridden) p.n++;
+      // `n` is the current load (the art bends the plank by it).
+      p.n = riders;
       const target = ridden ? GLIDER_LOADED_SINK + (riders - 1) * GLIDER_EXTRA_SINK : w.frame - p.born > GLIDER_CRUISE ? GLIDER_SINK : 0;
       const step = ridden ? 4 : 1.5;
       p.vy = p.vy < target ? Math.min(target, p.vy + step) : Math.max(target, p.vy - step);

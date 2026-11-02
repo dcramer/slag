@@ -587,7 +587,7 @@ export class Hud {
       this.gctx.globalAlpha = 1;
       tag(c, role.label, r.x + 7, y + 15, css(role.color), PAL.ink, TYPE.caption);
       const stamp = propTag(item.def);
-      if (stamp) tag(c, stamp, r.x + r.w - 7, y + 15, PAL.bone, PAL.ink, TYPE.caption, 'right');
+      if (stamp) tag(c, stamp, r.x + 7, y + 30, PAL.bone, PAL.ink, TYPE.caption);
       wrap(this, item.def.name, r.x + r.w / 2, y + r.h - 28, r.w - 12, TYPE.body);
       this.text(item.def.maker, r.x + r.w / 2, y + r.h - 11, TYPE.caption, PAL.dim, 'center', UI, 600);
       if (owner) {

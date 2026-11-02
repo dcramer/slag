@@ -47,6 +47,10 @@ export function drawPreview(rc: RC, def: PropDef, cx: number, cy: number, size: 
     }
     if (m.type === 'piston') reachY = Math.max(reachY, m.reach * 0.6 + 1);
     if (m.type === 'flame') reachY = Math.max(reachY, m.length * 0.7);
+    if (m.type === 'magnet') {
+      reachX = Math.max(reachX, m.radius - 0.5);
+      reachY = Math.max(reachY, m.radius - 0.5);
+    }
   }
   const ext = Math.max(w + reachX * 2, h + reachY * 2, 2);
   const k = Math.min(2.4, size / (ext * TILE));

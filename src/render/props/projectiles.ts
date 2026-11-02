@@ -198,10 +198,9 @@ export function drawProjectile(rc: RC, p: Projectile, emit?: Emit) {
     }
     case 'glider': {
       const age = rc.frame - p.born;
-      // Tilt nose-down as it sinks; streamers flutter when it's about to go.
+      // Tilt nose-down as it sinks; streamers flutter when it's about to go; riders bend the plank.
       const tilt = Math.max(-0.05, Math.min(0.3, p.vy / 250)) * Math.sign(p.vx || 1);
-      drawGlider(s, p.x, p.y, tilt, (p.owner * 70 + 30) % 360, rc.t, age > GLIDER_CRUISE);
-      void GLIDER_H;
+      drawGlider(s, p.x, p.y, tilt, (p.owner * 70 + 30) % 360, rc.t, age > GLIDER_CRUISE, Math.min(4, p.n * 2.2));
       break;
     }
   }
@@ -234,8 +233,9 @@ export function drawBoomerang(s: CanvasRenderingContext2D, x: number, y: number,
 /**
  * Rideable glider: a plank deck (exactly the GLIDER_W × GLIDER_H solid,
  * centered on x, y) under a striped canvas wing, with a tail streamer.
+ * `sag` px lifts the plank's tips: the middle stays where the rider stands.
  */
-export function drawGlider(s: CanvasRenderingContext2D, x: number, y: number, tilt: number, hue: number, t: number, tired = false) {
+export function drawGlider(s: CanvasRenderingContext2D, x: number, y: number, tilt: number, hue: number, t: number, tired = false, sag = 0) {
   s.save();
   s.translate(x, y);
   s.rotate(tilt);
@@ -244,9 +244,9 @@ export function drawGlider(s: CanvasRenderingContext2D, x: number, y: number, ti
   // Wing (behind and above the deck).
   s.fillStyle = `hsla(${hue},70%,${tired ? 45 : 58}%,0.95)`;
   s.beginPath();
-  s.moveTo(-w / 2 - 2, -h / 2);
-  s.quadraticCurveTo(0, -h / 2 - 10, w / 2 + 3, -h / 2 - 1);
-  s.lineTo(w / 2 - 4, -h / 2);
+  s.moveTo(-w / 2 - 2, -h / 2 - sag);
+  s.quadraticCurveTo(0, -h / 2 - 10 + sag, w / 2 + 3, -h / 2 - 1 - sag);
+  s.lineTo(w / 2 - 4, -h / 2 - sag * 0.6);
   s.closePath();
   s.fill();
   s.strokeStyle = 'rgba(255,255,255,0.6)';
@@ -259,19 +259,22 @@ export function drawGlider(s: CanvasRenderingContext2D, x: number, y: number, ti
   }
   // Deck.
   s.fillStyle = '#7a5130';
-  rrect(s, -w / 2, -h / 2, w, h, 1.5);
+  s.beginPath();
+  s.moveTo(-w / 2, -h / 2 - sag);
+  s.quadraticCurveTo(0, -h / 2 + sag, w / 2, -h / 2 - sag);
+  s.lineTo(w / 2, h / 2 - sag);
+  s.quadraticCurveTo(0, h / 2 + sag, -w / 2, h / 2 - sag);
+  s.closePath();
   s.fill();
-  s.fillStyle = 'rgba(255,230,190,0.35)';
-  s.fillRect(-w / 2 + 1, -h / 2 + 0.6, w - 2, 1);
   s.strokeStyle = '#3e2714';
   s.lineWidth = 0.8;
-  s.strokeRect(-w / 2, -h / 2, w, h);
+  s.stroke();
   // Tail streamer.
   s.strokeStyle = `hsla(${(hue + 40) % 360},90%,60%,0.9)`;
   s.lineWidth = 1.2;
   s.beginPath();
-  s.moveTo(-w / 2, 0);
-  for (let i = 1; i <= 4; i++) s.lineTo(-w / 2 - i * 3, Math.sin(t * (tired ? 20 : 10) + i) * (tired ? 2.4 : 1.2));
+  s.moveTo(-w / 2, -sag);
+  for (let i = 1; i <= 4; i++) s.lineTo(-w / 2 - i * 3, Math.sin(t * (tired ? 20 : 10) + i) * (tired ? 2.4 : 1.2) - sag);
   s.stroke();
   s.restore();
 }
