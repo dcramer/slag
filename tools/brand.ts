@@ -333,6 +333,7 @@ async function raceArt(browser: Browser, base: string, pet: () => void): Promise
  * opengraph-image.alt.txt, so there's none; app/site.ts carries alt text where it's set by hand.)
  */
 const CARDS = [
+  // The site card is the title alone; app/site.ts's description travels in the tags beside it.
   { dir: 'app', kicker: null },
   { dir: 'app/r/[room]', kicker: 'Lobby Invite · 1–8 Players' },
 ];
@@ -369,7 +370,7 @@ async function og(browser: Browser) {
       styles: [...document.querySelectorAll('style')].map((s) => s.textContent ?? '').join('\n'),
     }));
     for (const card of CARDS) {
-      const kicker = card.kicker ? brand.replace(/(<div class="kicker">)[^<]*(<\/div>)/, `$1${card.kicker}$2`) : brand;
+      const kicker = card.kicker ? brand.replace(/<\/div>$/, `<div class="kicker">${card.kicker}</div></div>`) : brand;
       await page.setContent(
         `<html><head>${css.map((h) => `<link rel="stylesheet" href="${h}">`).join('')}<style>${styles}</style><style>
           body { margin: 0; width: ${OG_W}px; height: ${OG_H}px; overflow: hidden; background: #0e0806; }
@@ -379,8 +380,11 @@ async function og(browser: Browser) {
               linear-gradient(rgba(14, 8, 6, 0.25), rgba(14, 8, 6, 0) 30%, rgba(14, 8, 6, 0) 70%, rgba(14, 8, 6, 0.35)); }
           .og .brand { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; zoom: 1.3; }
           .og .logo { font-size: 150px; }
-          .og .drips span { animation: none; }
-          .og .kicker { margin: 30px 0 0; color: var(--bone); text-shadow: 0 2px 0 var(--ink); }
+          .og .logo-drip { animation: none; }
+          .og .brand { margin: 0; }
+          .og .kicker { margin: 30px 0 0; display: inline-flex; align-items: center; gap: 10px; font: 800 13px/1 var(--ui);
+            letter-spacing: 0.18em; text-transform: uppercase; color: var(--bone); text-shadow: 0 2px 0 var(--ink); }
+          .og .kicker::before { content: ''; width: 34px; height: 8px; background: var(--tape); border: 2px solid var(--ink); }
         </style></head><body><div class="og">${kicker}</div></body></html>`,
       );
       await page.evaluate(() => document.fonts.ready);

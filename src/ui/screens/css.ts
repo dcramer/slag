@@ -138,65 +138,32 @@ body {
   font: 400 clamp(88px, 12vw, 150px) / 0.9 var(--display);
   letter-spacing: 0.01em;
   display: inline-block;
+  vertical-align: top;
   filter: drop-shadow(0 0 28px rgba(255, 106, 31, 0.3));
 }
 
-.logo-o,
-.logo-f {
+/* The inked letters (logo-art.ts), in the box the text took: 2.282em × 0.9em. Ink, shadow and drips hang outside it. */
+.logo-art {
   display: block;
+  width: 2.282em;
+  height: 0.9em;
+  overflow: visible;
 }
 
-/* Ink outline + hard drop, behind the molten fill. */
-.logo-o {
+/* The word, for screen readers. */
+.logo-t {
   position: absolute;
-  inset: 0;
-  color: var(--ink);
-  -webkit-text-stroke: 0.15em var(--ink);
-  text-shadow: 0 0.07em 0 var(--ink);
-  filter: url(#slag-pen);
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
-/* Holds the pen filters; takes no room. */
-.logo-pen {
-  position: absolute;
-}
-
-/* The menu's logo shrinks with the window below 1100 px (12vw); its pen shrinks with it. */
-@media (max-width: 1100px) {
-  .home .logo-o {
-    filter: url(#slag-pen-s);
-  }
-}
-
-.logo-f {
-  position: relative;
-  color: transparent;
-  background: linear-gradient(var(--white-hot) 12%, var(--amber) 40%, var(--molten) 68%, var(--ember) 94%);
-  -webkit-background-clip: text;
-  background-clip: text;
-}
-
-.drips {
-  position: absolute;
-  left: 4%;
-  right: 6%;
-  top: 76%;
-  height: 0;
-  display: flex;
-  justify-content: space-between;
-}
-
-.drips span {
-  width: 0.06em;
-  min-width: 6px;
-  height: var(--len, 22px);
-  border-radius: 0 0 99px 99px;
-  background: linear-gradient(var(--molten), var(--ember));
-  border: 2px solid var(--ink);
-  border-top: 0;
-  transform-origin: top;
+/* Each drip swings from where it leaves its letter (set per drip, in the logo's own px). */
+.logo-drip {
+  transform-box: view-box;
   animation: drip 3.2s ease-in-out infinite alternate;
-  animation-delay: var(--d, 0s);
 }
 
 @keyframes drip {
@@ -208,27 +175,10 @@ body {
   }
 }
 
-.kicker {
-  margin: 28px 0 20px;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font: 800 13px/1 var(--ui);
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--ash);
-}
-
-.kicker::before {
-  content: '';
-  width: 34px;
-  height: 8px;
-  background: var(--tape);
-  border: 2px solid var(--ink);
-}
-
+/* Room under the logo for its drips; the menu sits where it always has. */
 .brand {
   grid-area: brand;
+  margin-bottom: 55px;
 }
 
 .menu-wrap {
@@ -336,10 +286,11 @@ body {
 }
 
 /* Join-a-lobby code entry, revealed under its menu item. */
+/* Clear of the plate's drop above, with room for the focus ring all round. */
 .join {
   display: flex;
   gap: 10px;
-  margin: 2px 0 4px 8px;
+  margin: 12px 0 4px 8px;
   align-items: stretch;
 }
 
@@ -354,7 +305,7 @@ body {
   border: 2px solid var(--ink);
   box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.45);
   border-radius: 6px;
-  padding: 10px 14px;
+  padding: 8px 14px;
   outline: none;
 }
 
@@ -364,6 +315,11 @@ body {
 
 .join input:focus {
   border-color: var(--molten);
+}
+
+.join input:focus-visible {
+  outline: 3px solid var(--amber);
+  outline-offset: 2px;
 }
 
 .join button {
@@ -433,7 +389,9 @@ body {
   opacity: 0.85;
 }
 
+/* Context on the left of the footer, prompts on the right. */
 .footbar .meta {
+  margin-right: auto;
   font: 700 13px var(--ui);
   color: var(--dim);
   letter-spacing: 0.08em;
@@ -472,8 +430,8 @@ body {
   .brand {
     text-align: center;
   }
-  .kicker {
-    margin: 26px 0 0;
+  .brand {
+    margin-bottom: 44px;
   }
   .stage {
     min-height: 180px;
@@ -493,13 +451,20 @@ body {
   }
 }
 
+/* A narrow window keeps the footer for its prompts. */
+@media (max-width: 520px) {
+  .home .footbar .meta {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .embers,
   .home::before,
   .forge-bg::before {
     display: none;
   }
-  .drips span {
+  .logo-drip {
     animation: none;
   }
 }
