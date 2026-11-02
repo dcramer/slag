@@ -88,7 +88,7 @@ The routes are public and unauthenticated: knowing a room code and a peer id is 
 
 ## Budget
 
-Upstash's free tier is 500K commands a month and 250 MB. Blocking commands aren't available over REST, so everything is short polling. `tests/signal-handlers.test.ts` pins the cost of each op, and `tests/webrtc-transport.test.ts` measures a playing room.
+Upstash's free tier is 500K commands a month and 250 MB. Blocking commands aren't available over REST, so everything is short polling. The store always POSTs command arrays to `/pipeline` with a bearer token, the form `@upstash/redis` uses, so the same code runs against Upstash and SRH. `tests/signal-handlers.test.ts` pins the cost of each op, and `tests/webrtc-transport.test.ts` measures a playing room.
 
 **Commands per minute, steady state with links up:**
 
@@ -184,15 +184,20 @@ IEEE-754 `+ - * /` and `Math.sqrt` are exact everywhere, but `Math.sin/cos/atan2
 
 `RoomConnection.hudInfo()` is `renderer.hud.net`: the status line, peers (crown, ping) and invite link in the lobby's online panel. `toast()` covers the states that freeze a race, because the panel only shows in the lobby. A guest waiting for the host shows `Joining…`, and a host gathering the room shows `Migrating Host…`. This text stays short: state what happened, and don't explain what's clear from the screen.
 
+## Monitoring
+
+`src/net` reports through `src/telemetry.ts`, never the SDK: `desync` (error, from the host), `host-migration` (warning, from the new host, so one per migration), `net-unavailable` (warning), and breadcrumbs for peers joining and leaving and for link changes. Names are fixed and variables go in `data`; they carry frames, hashes and peer ids, never player names, which players type themselves. The routes run on the Node runtime. A store failure is answered as a 503, so the route reports it itself, at most once a minute per instance, because an exhausted free tier would otherwise report every poll.
+
 ## Testing
 
 - `tests/signal-handlers.test.ts`: the store (reply shapes, Upstash request format, either env pair), handlers (join order, TTLs, caps, validation, command costs) and the HTTP edge.
 - `tests/webrtc-transport.test.ts`: the real transport, handlers and store over a fake RTC network and clock: linking, polling stopping, the measured budget, crash and goodbye migrations, double failure, flaky guests, rival hosts, resuming from the furthest frame.
 - `tests/net.test.ts`, `tests/net-pick.test.ts`: lockstep under latency and loss, desync recovery, refresh, late join; claim races, pending cards, remote cursors and ghosts, the input codec.
-- `tests/snapshot.test.ts`, `tests/dmath.test.ts`.
+- `tests/snapshot.test.ts`: round trips with items in play, prediction isolation, and a guard that fails until any new `Match` or `RunWorld` field is snapshotted or declared derived. `tests/dmath.test.ts`.
+- `pnpm test:store`: the real Upstash REST code against real Redis behind [Serverless Redis HTTP](https://upstash.com/docs/redis/sdks/ts/developing) (`compose.store.yml`, Redis 6.2.21 and SRH 0.0.10, on port 8079). Every command the handlers use, reply parity with the in-memory store, TTL expiry, the join counter under a stampede, the handlers end to end. `-- --browser pick,run,leave` adds real browsers on the same store, with the app configured through the production env vars. Needs Docker, so it's a CI job rather than part of `pnpm check`. SRH needs `Content-Type: application/json` and differs from Upstash in edge cases, so handlers stick to plain commands.
 - `pnpm online-test`: real WebRTC between headless Chromium pages, one context per peer, against the real routes with the in-memory store. Hosts are killed with a renderer crash (no pagehide, no goodbye) in pick, place and run; also a graceful leave, and a new host dying straight after taking over. Each prints seconds to recovery and compares state hashes.
 
-**Not exercised by any of this:** real Upstash, real NAT traversal (all pages share a machine and connect over host candidates), TURN, browsers other than Chromium, and real phones.
+**Not exercised by any of this:** the real Upstash service (SRH stands in for it), real NAT traversal (all pages share a machine and connect over host candidates), TURN, browsers other than Chromium, and real phones.
 
 ## Next steps
 

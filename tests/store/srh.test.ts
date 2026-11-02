@@ -111,7 +111,7 @@ describe('expiry', () => {
     await handleOp('signal', { room: r, peer: 'aaaa', to: 'bbbb', signal: { k: 'answer', c: 'a', sdp: 'x' } }, ctx);
     await handleOp('beat', { room: r, peer: 'aaaa', host: true }, ctx);
     const all = await keys(r);
-    expect(all.toSorted()).toEqual([`slag:${r}:b:bbbb`, `slag:${r}:m`, `slag:${r}:n`, `slag:${r}:p:aaaa`, `slag:${r}:p:bbbb`].toSorted());
+    expect(all.slice().sort()).toEqual([`slag:${r}:b:bbbb`, `slag:${r}:m`, `slag:${r}:n`, `slag:${r}:p:aaaa`, `slag:${r}:p:bbbb`].sort());
     const ttls = await store.run(all.map((k) => ['TTL', k]));
     const ttl = (k: string) => ttls[all.indexOf(k)] as number;
     expect(ttl(`slag:${r}:m`)).toBeGreaterThan(ROOM_TTL_S - 10);
@@ -132,7 +132,7 @@ describe('join order', () => {
     const { members } = (await handleOp('members', { room: r, peer: 'peer0' }, ctx)) as { members: { id: string; order: number }[] };
     expect(members).toHaveLength(peers.length);
     const sorted = members.map((m) => m.order);
-    expect(sorted).toEqual(sorted.toSorted((a, b) => a - b));
+    expect(sorted).toEqual(sorted.slice().sort((a, b) => a - b));
   });
 
   it('never lets a rejoin win back the host seat', async () => {

@@ -4,6 +4,7 @@ import { MemoryStore } from '../app/api/net/_server/store';
 import { Match } from '../src/game/match';
 import { roomSeed } from '../src/game/room';
 import { NetSession } from '../src/net/session';
+import { installTelemetry } from '../src/telemetry';
 import { SignalError, type SignalApi } from '../src/net/signal-client';
 import { DEFAULT_ICE, type Mail, type MemberInfo, type Signal } from '../src/net/signal-protocol';
 import { hashMatch } from '../src/net/snapshot';
@@ -527,6 +528,23 @@ describe('host migration', () => {
     await w.runUntil(() => w.settled(), 20_000);
     expect(b.session.isHost).toBe(true);
     expect(d.session.hostId).toBe('bbbb');
+  });
+
+  it('reports one host-migration event per migration, by the new host, without player names', async () => {
+    const events: [string, string, Record<string, unknown> | undefined][] = [];
+    installTelemetry({ error() {}, breadcrumb() {}, event: (name, level, data) => events.push([name, level, data]) });
+    try {
+      const w = new World();
+      const [, b] = await w.room('aaaa', 'bbbb', 'cccc');
+      w.crash('aaaa');
+      await w.runUntil(() => w.settled(), 20_000);
+      const migrations = events.filter(([name]) => name === 'host-migration');
+      expect(migrations).toHaveLength(1);
+      expect(migrations[0][1]).toBe('warning');
+      expect(migrations[0][2]).toMatchObject({ from: 'aaaa', to: 'bbbb', frame: b.session.match.frame > 0 ? expect.any(Number) : 0 });
+    } finally {
+      installTelemetry(null);
+    }
   });
 
   it('resumes from the furthest frame anyone holds, so nothing that happened is undone', async () => {

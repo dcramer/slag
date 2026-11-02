@@ -1,5 +1,6 @@
 import type { Match } from '../game/match';
 import { MAX_PLAYERS } from '../sim/constants';
+import { addBreadcrumb, reportEvent } from '../telemetry';
 import type { GameEvent, InputFrame } from '../sim/types';
 import { applyAction, type NetAction, type NetState, newNetState, peerOf, sanitizeRules } from './actions';
 import { CONFIRM_BIT, decode, type Enc, encode, held, heldPeerFrame, mergePeerFrames, type PeerFrame, PRESSED } from './codec';
@@ -315,12 +316,15 @@ export class NetSession {
     if (s !== 'open') {
       // Presence is unknown while disconnected; keep the last list but forget everyone else's queues.
       this.log(`link ${s}${detail ? ` (${detail})` : ''}`);
+      addBreadcrumb('net', `link ${s}`, { detail });
     }
+    if (s === 'unavailable') reportEvent('net-unavailable', 'warning', { detail });
     if (s === 'closed' || s === 'unavailable') this.onMembers([{ id: this.self, order: 0 }]);
   }
 
   private onMembers(list: Member[]) {
     if (!list.some((m) => m.id === this.self)) list = [...list, { id: this.self, order: Number.MAX_SAFE_INTEGER }];
+    if (list.length !== this.members.length) addBreadcrumb('net', list.length > this.members.length ? 'peer joined' : 'peer left', { peers: list.length });
     this.members = list;
     const host = list[0].id;
     const present = new Set(list.map((m) => m.id));
@@ -347,6 +351,7 @@ export class NetSession {
       if (was === 'guest') {
         this.stats.migrations++;
         this.log(`host migrated ${prev} → me at frame ${this.match.frame}`);
+        reportEvent('host-migration', 'warning', { from: prev, to: host, frame: this.match.frame }); // only the new host reports: one event per migration
         this.promote();
       } else this.tryResume();
     } else {
@@ -528,6 +533,7 @@ export class NetSession {
       if (mine !== undefined && mine !== msg.h[1]) {
         this.stats.desyncs++;
         this.log(`desync with ${from} at frame ${msg.h[0]}: resync`);
+        reportEvent('desync', 'error', { frame: msg.h[0], peer: from, localHash: mine, remoteHash: msg.h[1] });
         this.send(this.syncMsg('desync'), from);
       }
     }

@@ -75,9 +75,9 @@ No branch yet. `origin/wip/content` has a dropped launch barrel (module and art)
 - Add both to `reach.ts` only if worldgen ever relies on them. For now it shouldn't.
 
 ## 8. Render polish
-- **Set-piece layering:** scenery halves draw *behind* the terrain (the windmill tower, crane mast, press gantry, antenna masts). Moving and solid parts stay in front (the blades, platforms). Layer order is in `docs/DESIGN.md` → Levels. This is probably a `backdrop` art layer drawn before terrain in `src/render/renderer.ts` and the `defineArt` layers.
-- **The player's glowing trail is too strong.** Tone it down.
-- **Comic style (`?style=comic`, Settings → Art Style):** decide whether it becomes the default. It looks good in stills on all 8 themes but has never been seen in motion or on a real phone, where its shader does about twice the texture reads of default. Dark themes lose drama (mine and volcano most). Anything thin or soft drawn on `rc.s` gets silhouette ink, so soft effects should draw on the background context.
+- **Liquid draw order:** `drawLiquid` still paints after players and effects, while `docs/DESIGN.md` lists liquids behind terrain.
+- **`pnpm shot race` without `--race`** never starts a race: it stays in pick at frame 0.
+- **Cel-shaded look:** the owner wants cel shading (flat colors, hard light bands, clean thin ink), likely as the game's main look rather than an option. Switching art style may stay as a fun gimmick, so keep styles in a registry. In progress; the owner picks whether it becomes the default once it's seen, ideally in motion and on a real phone. Anything thin or soft drawn on `rc.s` gets silhouette ink, so soft effects should draw on the background context.
 
 ## 9. Weather (new)
 A per-level random variable:
@@ -114,6 +114,12 @@ Nothing from the content or held-items work has been played by hand, so the tuni
 
 Also confirm the Match Length values (Short 30 points / 10 rounds, Normal 50 / 15, Long 80 / 25). They come from a Monte Carlo model of scoring with a fixed finish rate, and real finish rates probably fall as props pile up. The limit decides about 25% of 2-player Normal matches at typical finish rates and about 60% at very low or very high ones.
 
+## 16. Fix WebGL failure paths
+Both are now visible in Sentry.
+
+- `createCompositor` falls back to `Fallback` after a GL compile failure, but that canvas already has a WebGL context, so `getContext('2d')` returns null. The first render throws and kills the game loop.
+- There's no WebGL context-restore handling, so a lost context stays lost for that session.
+
 ## 14. Clear the lint warnings
 `pnpm check` prints 7 warnings, in `src/ui/touch/overlay.ts`, `src/ui/touch/device.ts`, `src/input/input.ts`, `src/render/props/modules/vehicle.ts` and `src/audio/system.ts`. AGENTS.md treats warnings as real findings. Do it with or after item 6, which also touches the touch code.
 
@@ -123,3 +129,11 @@ The game's goal is to parody other games, especially with items (`docs/DESIGN.md
 - Rework names, art and twists so each one mocks something recognizable.
 - Our own names and art only.
 - No explaining the joke.
+
+## 17. Finish Sentry setup
+Some steps need the owner. Run after setting the Vercel env vars.
+
+- Set `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and `SENTRY_PROJECT` in Vercel (Production and Preview). An organization auth token is best.
+- On the first deploy, confirm source maps upload and client frames resolve to source. Only the failure path has been tested.
+- Install the Sentry GitHub integration for suspect commits.
+- Move `app/global-error.tsx` into `src/` with item 11.

@@ -342,6 +342,20 @@ export function drawCharacter(
   ctx.restore();
 }
 
+/**
+ * One speed-trail sample: the body's silhouette in its own flat color. No face, so it can't read
+ * as another runner, and nothing on the emissive layer, so overlapping samples can't stack into a glow.
+ */
+export function drawAfterimage(ctx: CanvasRenderingContext2D, c: CharacterDef, x: number, y: number, alpha: number): void {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.globalAlpha = alpha;
+  bodyPath(ctx, c, 14 * c.sw, 15 * c.sh, c.feet ? -2 : 0);
+  ctx.fillStyle = css(c.body);
+  ctx.fill();
+  ctx.restore();
+}
+
 function drawPattern(ctx: CanvasRenderingContext2D, c: CharacterDef, W: number, H: number, by: number) {
   switch (c.pattern) {
     case 'belly': {
