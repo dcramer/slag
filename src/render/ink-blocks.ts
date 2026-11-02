@@ -248,7 +248,7 @@ const OVER: Partial<Record<Material, (g: CanvasRenderingContext2D, b: Cut) => vo
 /** Materials whose own structure carries the form, so hatching would only muddy it. */
 const NO_HATCH = new Set<Material>(['jelly', 'goo', 'metal', 'wood', 'crumble', 'stone', 'conveyor']);
 
-function bake(cells: readonly Cell[], material: Material, st: PropStyle, pal: MetalPalette, key: string, dir: number): Bake {
+function bake(cells: readonly Cell[], material: Material, st: PropStyle, pal: MetalPalette, key: string, dir: number, turn: number): Bake {
   const seed = hashStr(key);
   const loops = outline(cells, seed);
   const set = new Set(cells.map(([x, y]) => keyOf(x, y)));
@@ -280,7 +280,7 @@ function bake(cells: readonly Cell[], material: Material, st: PropStyle, pal: Me
   trace(g, loops, -1.8, -2);
   g.fill();
   const has = (x: number, y: number) => set.has(keyOf(x, y));
-  const blk: Cut = { cells, has, runs: runsOf(cells, has), seed, T, st, pal, loops, dir };
+  const blk: Cut = { cells, has, runs: runsOf(cells, has), seed, T, st, pal, loops, dir, turn };
   if (material === 'conveyor') b.belts = beltsOf(blk);
   MARKS[material](g, cells, set, T, seed, blk);
   if (cells.length >= 3 && !NO_HATCH.has(material)) hatch(g, loops, T.hatch, seed);
@@ -290,13 +290,13 @@ function bake(cells: readonly Cell[], material: Material, st: PropStyle, pal: Me
   return b;
 }
 
-function bakeOf(cells: readonly Cell[], material: Material, st: PropStyle, pal: MetalPalette, dir = 1): Bake {
+function bakeOf(cells: readonly Cell[], material: Material, st: PropStyle, pal: MetalPalette, dir = 1, turn = 0): Bake {
   const sig = cells.map(([x, y]) => `${x},${y}`).join(';');
-  const key = `${material}|${st.trim}|${st.hue | 0}|${st.woodHue | 0}|${pal.base.h},${pal.base.l}|${material === 'conveyor' ? dir : ''}|${sig}`;
+  const key = `${material}|${st.trim}|${st.hue | 0}|${st.woodHue | 0}|${pal.base.h},${pal.base.l}|${material === 'conveyor' ? `${dir},${turn}` : ''}|${sig}`;
   let b = bakes.get(key);
   if (!b) {
     if (bakes.size >= CACHE_MAX) bakes.clear();
-    b = bake(cells, material, st, pal, key, dir);
+    b = bake(cells, material, st, pal, key, dir, turn);
     bakes.set(key, b);
   }
   return b;
@@ -304,8 +304,8 @@ function bakeOf(cells: readonly Cell[], material: Material, st: PropStyle, pal: 
 
 /**
  * Stamp a baked block at offset `O` (world px of the cells' origin). `squash` presses it down about its
- * base by that many px (negative stretches it), bulging the sides a little less. `dir` is a conveyor's
- * travel, which its painted arrows show.
+ * base by that many px (negative stretches it), bulging the sides a little less. For a conveyor, `dir` is
+ * which way its belt runs round the block (its painted arrows show it) and `turn` the face it's on.
  */
 export function stampBlock(
   s: CanvasRenderingContext2D,
@@ -316,8 +316,9 @@ export function stampBlock(
   pal: MetalPalette,
   squash = 0,
   dir = 1,
+  turn = 0,
 ): Bake {
-  const b = bakeOf(cells, material, st, pal, dir);
+  const b = bakeOf(cells, material, st, pal, dir, turn);
   if (squash) {
     const base = b.y + b.h - PAD;
     const cx = b.x + b.w / 2;

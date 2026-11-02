@@ -106,6 +106,11 @@ A level is a place with one landmark you'd name it after: the Great Wheel, the H
   - A strip too long for its spot still places: only the cells that can mount land, the rest are gone for good, and the ghost shows exactly what lands.
   - Ice makes floors slippery and walls slick (no wall jump).
   - Slime makes floors slow and walls sticky (you cling).
+- **Conveyors have one belt face, and rotation picks it**: top, right, bottom or left, with the belt running the same way round the block, so a belt carrying you right on top runs down the right face, left along the bottom and up the left face. Every other face is a plain block.
+  - A top belt carries walkers.
+  - A side belt grips a runner clinging to it (holding into it in the air) and carries them at its own speed: running up, it's an escalator that lifts you over its top edge; running down, it lowers you. It never slows a jump that's already rising faster than it. Wall jumps work as usual, and a belt running up adds its speed to the jump; one running down takes nothing away.
+  - A bottom belt flings a head that bonks it sideways along it at twice its speed, about a run. That keeps the underside a consequence you see coming, without a new verb like clinging under it.
+  - The winnability plan keeps clear of conveyors at every rotation, like any part that isn't plain footing.
 - Bombs clear terrain and/or props depending on their kind. Attachments fall off when their host block is destroyed.
 - **Movers and traps with a catch.** Warped pipes (below), bumpers (aimable kick), gravity wells / repulsors (bend jumps and drag you along the ground), webs (catch falls, slow you), blink blocks (solid on a timer, pairs alternate, never reappear inside you), cog wheels (ride platforms), dropstones (slam when you pass under, ride them back up) and snap traps (face-mounted spikes that pop when you linger). Every timed or triggered part shows a tell first.
 - **Warped pipes** (the plumber's warp pipe) only work in pairs.
