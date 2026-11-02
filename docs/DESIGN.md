@@ -108,6 +108,7 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - Weather: default on. Off makes every level clear.
 - Blood rounds: how many rounds a puddle lasts, default 2. Off means no blood at all.
 - A rule the level is built from (gravity, weather) rebuilds the lobby's level on the spot, for everyone.
+- The Rules card is one screen with no scrolling at 720p: a label and a row of choices per rule, no explanations.
 
 ## Controls and UI
 - A picked part's card leaves the crate entirely. The other cards stay where they are.

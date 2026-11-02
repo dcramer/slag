@@ -5,7 +5,8 @@ import type { Match } from '../game/match';
 import type { Theme } from '../gen/theme';
 import { RUN_COUNTDOWN, TILE } from '../sim/constants';
 import { type Level, levelKey, tileAt } from '../sim/level';
-import { gustPush, gustShown, type WeatherKind } from '../sim/weather';
+import type { Solid } from '../sim/physics';
+import { footing, gustPush, gustShown, type WeatherKind } from '../sim/weather';
 import type { Camera } from './camera';
 import type { Fx } from './fx';
 import { blob, line, type P, sn, stroke } from './ink';
@@ -292,7 +293,7 @@ export class WeatherLayer {
     }
     art.draw?.({ rc, view, level, frame: skyFrame(m), tops: this.topsOf(level) });
     if (!run) return;
-    if (art.lay) for (const s of run.solids) if (!s.oneWay || s.h > 3) art.lay(rc.s, s);
+    if (art.lay) this.layOn(rc, level, run.solids, art.lay);
     if (!art.kick) return;
     for (const r of run.runners) {
       const b = r.body;
@@ -301,6 +302,25 @@ export class WeatherLayer {
       }
     }
   }
+
+  /**
+   * Weather on the exposed tops of this frame's solids, as on the terrain's. Plain footing only: a
+   * coat, belt or jelly keeps its own look (it's slicker all the same), and blood lies on top. A top
+   * with a cell of the same part or terrain on it is inside a block, not on it.
+   */
+  private layOn(rc: RC, level: Level, solids: readonly Solid[], lay: NonNullable<WeatherArt['lay']>) {
+    const plain = footing(level);
+    const under = this.under;
+    under.clear();
+    for (const s of solids) if (!s.film) under.add(`${s.x}:${s.y + s.h}`);
+    for (const s of solids) {
+      if (s.surface !== plain || s.film || under.has(`${s.x}:${s.y}`)) continue;
+      if (tileAt(level, Math.floor((s.x + s.w / 2) / TILE), Math.floor((s.y - 1) / TILE))) continue;
+      lay(rc.s, s);
+    }
+  }
+
+  private under = new Set<string>();
 
   private topsOf(level: Level): number[] {
     const key = `${levelKey(level)}:${level.version}`;

@@ -22,8 +22,8 @@ import { canPlaceBridge, partsInAir } from './validate';
  *    headwind gives nothing away.
  *    It can't make a level unsolvable, because the calm-air proof still
  *    stands: every move in it fits inside a lull (`GUST`, held by
- *    tests/weather.test.ts) and a runner can hold their ground through a gust,
- *    which is slower than a walk.
+ *    tests/weather.test.ts) and a runner can hold their ground through a gust by running into it:
+ *    it beats a walk and loses to a run.
  *  - mist never touches the sim.
  *
  * A level that fails stays clear.
