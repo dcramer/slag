@@ -1,10 +1,11 @@
 import { css, type HSL } from '../../../core/color';
 import type { Vec } from '../../../core/geom';
 import { type Module, type ModuleOf, type PropStyle, type Resolved, teslaCycle } from '../../../sim/props';
-import { blob, stroke } from '../../ink';
-import { ball, boxPts, INK, part, path, pen, poly, sprite, stamp, tick } from '../../ink-props';
+import { blob, line, type P, stroke } from '../../ink';
+import { ball, boxPts, glint, INK, part, path, pen, poly, sprite, stamp, tick } from '../../ink-props';
 import { glowDot, light, lightning, type MetalPalette, type RC } from '../../kit';
 import { beamOf, defineArt, type PropDrawOpts } from '../common';
+import { flange, housed, iron } from '../machine';
 
 type M<T extends Module['type']> = ModuleOf<T>;
 
@@ -51,6 +52,71 @@ function pylon(pal: MetalPalette, col: HSL, moth: boolean) {
   });
 }
 
+/**
+ * A crate part's pylon is a whole cell: a hanging bug-zapper lantern bolted to its tray, a domed cap with
+ * the terminal the sparks jump from, a copper coil inside and the blue grid caged round it. Each bar is
+ * fat enough to read at play scale; the glow inside is drawn live.
+ */
+function lantern(pal: MetalPalette, col: HSL, moth: boolean) {
+  return sprite(`ts|lantern|${pal.base.h},${pal.base.l}|${col.h | 0}|${moth}`, -10, -14, 20, 24, (g) => {
+    const metal = iron(pal, 40);
+    // The terminal on its post, above the cap.
+    tick(g, 0, -7, 0, -9.6, 1.5, 1);
+    ball(g, 0, -10.2, 1.9, { h: 24, s: 60, l: 52 }, 3);
+    // The cage's dark inside, the coil in it, and the grid over that.
+    const cage = boxPts(-6.8, -5.2, 13.6, 10.4, 0.8, 4);
+    g.fillStyle = '#121424';
+    path(g, cage);
+    g.fill();
+    g.save();
+    path(g, cage);
+    g.clip();
+    g.fillStyle = css(col, -28, 0.5);
+    g.fillRect(-7, -5.4, 14, 10.8);
+    const copper: HSL = { h: 22, s: 62, l: 50 };
+    // The coil: copper turns round a dark core, each with an ink gap under it.
+    tick(g, 0, -4.6, 0, 4.6, 3.4, 5, '#2b1a12');
+    for (let yy = -3.7; yy <= 3.8; yy += 1.5) {
+      g.fillStyle = INK;
+      line(g, -3, yy + 0.9, 3, yy + 0.3, { w: 1.5, seed: yy * 7, taper: [0, 0], press: 0 });
+      g.fillStyle = css(copper, yy < 0 ? 8 : -6);
+      line(g, -3, yy + 0.6, 3, yy, { w: 1, seed: yy * 7 + 1, taper: [0, 0], press: 0 });
+    }
+    for (let bx = -5.1; bx <= 5.2; bx += 2.55) {
+      g.fillStyle = '#21306e';
+      line(g, bx + 0.25, -5.4, bx + 0.25, 5.4, { w: 1.05, seed: bx, taper: [0, 0], press: 0.1 });
+      g.fillStyle = '#7d9cff';
+      line(g, bx, -5.4, bx, 5.4, { w: 0.6, seed: bx + 1, taper: [0, 0], press: 0.1 });
+    }
+    for (const by of [-1.6, 1.8]) tick(g, -7, by, 7, by, 0.7, by * 3, '#a9bcff');
+    g.restore();
+    pen(g, cage, 6, 0.45, 1.1);
+    // A domed cap and a deep tray, bolted.
+    const cap: P[] = [];
+    for (let i = 0; i <= 8; i++) {
+      const a = Math.PI + (i / 8) * Math.PI;
+      cap.push({ x: Math.cos(a) * 7.7, y: -5.3 + Math.sin(a) * 2.9 });
+    }
+    cap.push({ x: 7.9, y: -4.2 }, { x: -7.9, y: -4.2 });
+    part(g, cap, metal, 7, { depth: 0.7, thin: 0.5, thick: 1.3 });
+    glint(g, poly(-5.6, -5.4, -3.4, -7.2, -1, -7.8), css(pal.spec, -8), 0.6);
+    flange(g, 0, -7.2, 7.2, 4.8, pal, 8);
+    if (moth) {
+      // Scorched, on its back on the tray, with a last curl of smoke.
+      g.fillStyle = '#2b2420';
+      path(g, poly(-1.6, 4.8, -0.4, 3.1, 0.4, 4.7));
+      g.fill();
+      path(g, poly(-0.4, 4.8, 1.2, 3.2, 1.6, 4.7));
+      g.fill();
+      g.fillStyle = INK;
+      blob(g, 0, 4.7, 0.75, 8, 0.6, 0.1);
+      g.fill();
+      g.fillStyle = 'rgba(210,205,200,0.8)';
+      stroke(g, poly(0, 2.8, -0.6, 1.4, 0.4, 0.2, -0.2, -1.2), { w: 0.45, seed: 9, taper: [0.2, 0.8], press: 0 });
+    }
+  });
+}
+
 function drawTesla(rc: RC, m: M<'tesla'>, r: Resolved, mi: number, off: Vec, pal: MetalPalette, st: PropStyle, o: PropDrawOpts) {
   const s = rc.s;
   const g = rc.g;
@@ -58,12 +124,13 @@ function drawTesla(rc: RC, m: M<'tesla'>, r: Resolved, mi: number, off: Vec, pal
   const col: HSL = { h: st.glowHue, s: 100, l: 65 };
   const tops: [number, number][] = [];
   const idle = c.seg === 1 ? c.t / c.len : c.seg === 2 ? 1 : 0.15;
+  const home = housed(r);
   [m.a, m.b].forEach((p, i) => {
     const x = p[0] + off[0];
     const y = p[1] + off[1];
     // The light inside the cage, behind its bars.
     glowDot(g, x, y - 0.5, 6 + idle * 3, col, 0.25 + idle * 0.45);
-    stamp(s, pylon(pal, col, i === 0), x, y);
+    stamp(s, home ? lantern(pal, col, i === 0) : pylon(pal, col, i === 0), x, y);
     tops.push([x, y - 10]);
     glowDot(g, x, y - 10, 4 + idle * 6, col, 0.3 + idle * 0.6);
     if (Math.random() < 0.1 + idle * 0.5) {

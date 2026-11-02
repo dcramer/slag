@@ -7,6 +7,7 @@ import { line, type P, stroke } from '../../ink';
 import { blockLoops, stampBlock } from '../../ink-blocks';
 import { glowDot, light, type MetalPalette, type RC } from '../../kit';
 import { bbox, defineArt, type PropDrawOpts } from '../common';
+import { housed } from '../machine';
 
 type M<T extends Module['type']> = ModuleOf<T>;
 
@@ -18,6 +19,8 @@ const has = (set: Set<string>, x: number, y: number) => set.has(`${x},${y}`);
  * glow in a gem.
  */
 function drawBody(rc: RC, m: M<'body'>, st: PropStyle, pal: MetalPalette, off: Vec, r: Resolved, o: PropDrawOpts) {
+  // A launcher, jet or emitter draws its whole cell as the machine (props/machine.ts).
+  if (housed(r)) return;
   const s = rc.s;
   const g = rc.g;
   const t = rc.t;

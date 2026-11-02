@@ -2,10 +2,11 @@ import { css, type HSL } from '../../../core/color';
 import type { Vec } from '../../../core/geom';
 import { TILE } from '../../../sim/constants';
 import { dirOf, flameCycle, type Module, type ModuleOf, type PropStyle, type Resolved } from '../../../sim/props';
-import { type P, stroke } from '../../ink';
-import { glowDot, light, type MetalPalette, type RC } from '../../kit';
+import { line, type P, stroke } from '../../ink';
+import { INK, part, pen, sprite, stamp, tone } from '../../ink-props';
+import { circle, glowDot, light, type MetalPalette, type RC } from '../../kit';
 import { beamOf, defineArt, type PropDrawOpts } from '../common';
-import { boxPts, dot, glint, INK, part, path, poly, sprite, stamp } from '../../ink-props';
+import { disc, type Face, faceOf, flange, flat, housed, iron, lbox, lp, ltick, tf, within } from '../machine';
 
 type M<T extends Module['type']> = ModuleOf<T>;
 
@@ -50,17 +51,69 @@ function inkTongue(s: CanvasRenderingContext2D, x: number, y: number, dx: number
   stroke(s, b, { w: 1.1, seed: 4, taper: [0.6, 0.1], press: 0.3 });
 }
 
-/** The burner along +x: a flanged collar and a tapered nozzle with a sooty mouth. */
-function burner(pal: MetalPalette) {
-  return sprite(`fl|${pal.base.h},${pal.base.l}`, -2, -5.5, 14, 11, (g) => {
-    part(g, boxPts(0, -4.2, 3, 8.4, 0.8, 3), pal.base, 3, { depth: 0.5, thin: 0.45, thick: 1 });
-    part(g, poly(2.6, -3, 9.6, -2.1, 10.2, -2.6, 10.2, 2.6, 9.6, 2.1, 2.6, 3), pal.base, 4, { depth: 0.6, thin: 0.45, thick: 1.1 });
-    glint(g, poly(3.4, -2.2, 6.4, -1.9, 9, -1.6), css(pal.spec, -8), 0.5);
+const TANK: HSL = { h: 4, s: 68, l: 47 };
+
+/** The bottle's outline in the local frame: domed shoulders up top, a flat foot. */
+function bottle(): P[] {
+  const pts: P[] = [];
+  for (let i = 0; i <= 10; i++) {
+    const a = Math.PI + (i / 10) * Math.PI;
+    pts.push({ x: Math.cos(a) * 7.2, y: -2.2 + Math.sin(a) * 4.6 });
+  }
+  pts.push({ x: 7.3, y: 3.6 }, { x: 6.6, y: 5.2 }, { x: -6.6, y: 5.2 }, { x: -7.3, y: 3.6 });
+  return pts;
+}
+
+/**
+ * The burner, a whole cell: a squat red gas bottle on a bolted foot ring, a pressure gauge and a
+ * flammable diamond on its belly, and a steel collar round the valve with the nozzle flaring out of it:
+ * the end the fire comes out of. Baked per face and metal.
+ */
+function burner(k: Face, pal: MetalPalette) {
+  return sprite(`fl|${k}|${pal.base.h},${pal.base.l}`, -13, -13, 26, 26, (g) => {
+    flange(g, k, -6.8, 6.8, 5, pal, 2);
+    const tank = bottle().map((p) => tf(k, p.x, p.y));
+    tone(g, tank, TANK, { depth: 1.4, shade: -19 });
+    within(g, tank, () => {
+      // The weld seam round its middle, and the hard shine on the shoulder.
+      ltick(g, k, -8, 0.4, 8, 0.4, 0.8, 3, css(TANK, -30, 1, 6), [0, 0]);
+      ltick(g, k, -8, -0.4, 8, -0.4, 0.5, 4, css(TANK, 18), [0, 0]);
+      ltick(g, k, -5.8, -2.4, -3.2, -5.4, 1.2, 5, 'rgba(255,226,210,0.95)', [0.2, 0.35]);
+    });
+    pen(g, tank, 6, 0.55, 1.6);
+    // The gauge: what its needle says is drawn live.
+    const c = tf(k, -3, 2.3);
     g.fillStyle = INK;
-    path(g, poly(9.6, -1.6, 10.2, -1.6, 10.2, 1.6, 9.6, 1.6));
+    disc(g, c.x + 0.15, c.y + 0.2, 2.35, 7);
     g.fill();
-    for (const ry of [-2.8, 2.8]) dot(g, 1.5, ry, 0.45, ry * 3, css(pal.light));
+    g.fillStyle = '#f3ead6';
+    disc(g, c.x, c.y, 1.75, 8);
+    g.fill();
+    // A flammable diamond.
+    const dm = lp(k, 3.3, 0.3, 5.3, 2.3, 3.3, 4.3, 1.3, 2.3);
+    flat(g, dm, '#f6c632');
+    pen(g, dm, 9, 0.35, 0.7);
+    ltick(g, k, 3.3, 3.4, 3.4, 1.5, 0.75, 10, '#c0181e', [0.1, 0.6]);
+    // The valve collar: a steel ring with two hand holes, the nozzle flaring up out of it.
+    const collar = lbox(k, -4.8, -8.3, 9.6, 3.6, 1.2, 11);
+    part(g, collar, iron(pal, 48), 11, { depth: 0.6, thin: 0.45, thick: 1.2 });
+    for (const x of [-2.9, 2.9]) flat(g, lbox(k, x - 0.9, -7.5, 1.8, 1.6, 0.6, 12 + x), '#1a1210');
+    const cone = lp(k, -1.3, -7.8, -1.3, -9.2, -3.3, -11.3, 3.3, -11.3, 1.3, -9.2, 1.3, -7.8);
+    part(g, cone, { h: 40, s: 50, l: 56 }, 13, { depth: 0.6, thin: 0.45, thick: 1.2 });
+    ltick(g, k, -2.4, -10.6, -1, -9, 0.55, 14, 'rgba(255,240,200,0.9)', [0.2, 0.3]);
+    flat(g, lp(k, -2.8, -11.4, 2.8, -11.4, 2.3, -10.6, -2.3, -10.6), '#1b120d');
   });
+}
+
+/** The gauge needle: resting low while it's off, climbing through the warning, pinned in the red while it burns. */
+function needle(s: CanvasRenderingContext2D, k: Face, x: number, y: number, u: number) {
+  const a = -Math.PI * 0.95 + u * Math.PI * 0.8;
+  const c = tf(k, -3, 2.3);
+  const tip = tf(k, -3 + Math.cos(a) * 1.6, 2.3 + Math.sin(a) * 1.6);
+  s.fillStyle = '#b3160f';
+  line(s, x + c.x, y + c.y, x + tip.x, y + tip.y, { w: 0.6, seed: 1, taper: [0, 0.6], press: 0 });
+  s.fillStyle = INK;
+  circle(s, x + c.x, y + c.y, 0.4);
 }
 
 /** Dragon Burp: through the warning it hiccups little smoke rings, one every few beats, drifting out and fading. */
@@ -84,19 +137,14 @@ function hiccups(rc: RC, x: number, y: number, dx: number, dy: number, t: number
   }
 }
 
-function drawFlame(rc: RC, m: M<'flame'>, r: Resolved, mi: number, off: Vec, pal: MetalPalette, _st: PropStyle, o: PropDrawOpts) {
+function drawFlame(rc: RC, m: M<'flame'>, r: Resolved, mi: number, off: Vec, _pal: MetalPalette, _st: PropStyle, o: PropDrawOpts) {
   const f = rc.frame;
   const x = m.at[0] + off[0];
   const y = m.at[1] + off[1];
   const [dx, dy] = dirOf(m.angle);
-  rc.s.save();
-  rc.s.translate(x, y);
-  rc.s.rotate(m.angle);
-  if (dx < -0.5) rc.s.scale(1, -1);
-  stamp(rc.s, burner(pal));
-  rc.s.restore();
   const c = flameCycle(m, f, r.phase);
-  if (c.seg === 1 && o.level) hiccups(rc, x + dx * 10, y + dy * 10, dx, dy, c.t);
+  if (housed(r)) needle(rc.s, faceOf(dx, dy), x, y, !o.level || c.seg === 2 ? 1 : c.seg === 1 ? 0.15 + (c.t / c.len) * 0.75 : 0.05);
+  if (c.seg === 1 && o.level) hiccups(rc, x + dx * 11, y + dy * 11, dx, dy, c.t);
   const fire: HSL = { h: 28, s: 100, l: 55 };
   const nx = x + dx * 10;
   const ny = y + dy * 10;
@@ -106,8 +154,9 @@ function drawFlame(rc: RC, m: M<'flame'>, r: Resolved, mi: number, off: Vec, pal
     return;
   }
   if (c.seg === 1) {
-    // Pilot light + sputter.
+    // Pilot light + sputter: a blue tongue at the mouth that grows as it comes.
     const p = c.t / c.len;
+    pilot(rc.s, nx + dx, ny + dy, dx, dy, p, rc.t);
     glowDot(rc.g, nx, ny, 5 + p * 5, { h: 210, s: 100, l: 60 }, 0.8);
     if (o.emit && Math.random() < 0.35) o.emit('smoke', nx, ny, dx * 20 + (Math.random() - 0.5) * 10, dy * 20 - 10);
     if (o.emit && Math.random() < p) o.emit('ember', nx, ny, dx * 80 + (Math.random() - 0.5) * 40, dy * 80 + (Math.random() - 0.5) * 40, fire);
@@ -156,4 +205,35 @@ function drawFlame(rc: RC, m: M<'flame'>, r: Resolved, mi: number, off: Vec, pal
   }
 }
 
+/** The pilot: a small inked blue flame, steady at first and guttering as the warning runs out. */
+function pilot(s: CanvasRenderingContext2D, x: number, y: number, dx: number, dy: number, p: number, t: number) {
+  const len = 2.2 + p * 2.6 + Math.sin(t * 40) * 0.5 * p;
+  const w = 1.3 + p * 0.5;
+  const px = -dy;
+  const py = dx;
+  s.fillStyle = 'rgb(40 70 170)';
+  s.beginPath();
+  s.moveTo(x + px * w, y + py * w);
+  s.lineTo(x + dx * len * 0.55 + px * w * 0.8, y + dy * len * 0.55 + py * w * 0.8);
+  s.lineTo(x + dx * len, y + dy * len);
+  s.lineTo(x + dx * len * 0.55 - px * w * 0.8, y + dy * len * 0.55 - py * w * 0.8);
+  s.lineTo(x - px * w, y - py * w);
+  s.fill();
+  s.fillStyle = 'rgb(150 205 255)';
+  s.beginPath();
+  s.moveTo(x + px * w * 0.45, y + py * w * 0.45);
+  s.lineTo(x + dx * len * 0.6, y + dy * len * 0.6);
+  s.lineTo(x - px * w * 0.45, y - py * w * 0.45);
+  s.fill();
+}
+
+defineArt<'flame'>({
+  type: 'flame',
+  layer: 1,
+  draw(rc, m, d) {
+    if (!housed(d.r)) return;
+    const [dx, dy] = dirOf(m.angle);
+    stamp(rc.s, burner(faceOf(dx, dy), d.pal), m.at[0] + d.off[0], m.at[1] + d.off[1]);
+  },
+});
 defineArt<'flame'>({ type: 'flame', layer: 3, draw: (rc, m, d) => drawFlame(rc, m, d.r, d.mi, d.off, d.pal, d.style, d.o) });
