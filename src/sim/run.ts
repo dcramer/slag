@@ -1,5 +1,4 @@
-import { dhypot } from '../core/dmath';
-import { inset, overlaps, type Rect, rectCircle } from '../core/geom';
+import { inset, overlaps, type Rect, type Vec } from '../core/geom';
 import { deriveSeed, Rng } from '../core/rng';
 import { type BloodCell, buildBlood, groundOf, spillBlood } from './blood';
 import { PLAYER_W, RUN_COUNTDOWN } from './constants';
@@ -29,7 +28,6 @@ import {
   type Contrib,
   dirOf,
   type GrabRequest,
-  type Hazard,
   letGo,
   makeProjectile,
   moduleSim,
@@ -57,8 +55,10 @@ import {
   stepProjectile,
   type TickCtx,
   type TouchCtx,
+  touchesHazard,
   touchesTrigger,
   traceRays,
+  launchFrom,
 } from './props';
 import type { GameEvent, InputFrame } from './types';
 import { groundSurfaceAt } from './ground';
@@ -122,6 +122,8 @@ export class RunWorld {
   private seq = 0;
   /** Grabs asked for this frame; settled and emptied once everyone has moved. */
   private grabs: GrabRequest[] = [];
+  /** Where shots struck a solid this frame (px): parts a hit sets off read it in `tick`. Emptied every step. */
+  private struck: Vec[] = [];
 
   solids: Solid[] = [];
   private out: Contrib = { solids: this.solids, hazards: [], springs: [], winds: [], triggers: [], beams: [] };
@@ -226,6 +228,8 @@ export class RunWorld {
       spawnItem: (s) => spawnItem(this, s),
       itemSeed: this.itemSeed,
       solids: this.solids,
+      hazards: this.out.hazards,
+      struck: this.struck,
     };
   }
 
@@ -236,6 +240,7 @@ export class RunWorld {
 
   step(inputs: readonly InputFrame[]): void {
     const f = this.frame;
+    this.struck.length = 0;
     this.buildProps(f);
     const live = f >= RUN_COUNTDOWN && this.endFrame < 0;
     const start = contactStart(this.runners);
@@ -275,7 +280,15 @@ export class RunWorld {
       for (const sp of this.out.springs) {
         if (!held && r.springCooldown === 0 && overlaps(b, sp.rect)) {
           const [dx, dy] = dirOf(sp.angle);
-          if (dy !== 0) b.vy = dy * sp.power;
+          if (sp.set) {
+            // A Launch Plate throws from its own center whatever you came in with, so every flight is the same one.
+            const { x, y } = b;
+            launchFrom(b, [sp.set.x, sp.set.y], [sp.set.vx, sp.set.vy]);
+            if (firstOverlap(b, this.world)) {
+              b.x = x;
+              b.y = y;
+            }
+          } else if (dy !== 0) b.vy = dy * sp.power;
           else {
             b.vx = dx * sp.power;
             b.vy = -260;
@@ -297,7 +310,7 @@ export class RunWorld {
       const hb = inset(b, 1.5);
       if (!this.isSafe(r)) {
         for (const h of this.out.hazards) {
-          if (!hitHazard(hb, h)) continue;
+          if (!touchesHazard(hb, h)) continue;
           this.kill(r, h.owner, h.sink ? 'fall' : 'hazard');
           // A shield can cancel the hit; then the rest of this frame still applies.
           if (!r.alive) return;
@@ -430,6 +443,7 @@ export class RunWorld {
         runners[i].active = this.runners[i].alive;
       },
       items: this.projItems(),
+      hit: (x, y) => this.struck.push([x, y]),
     };
     const keep: Projectile[] = [];
     for (const p of this.projectiles) if (stepProjectile(p, w)) keep.push(p);
@@ -440,23 +454,5 @@ export class RunWorld {
     const e = this.events;
     this.events = [];
     return e;
-  }
-}
-
-function hitHazard(b: Rect, h: Hazard): boolean {
-  switch (h.kind) {
-    case 'rect':
-      return overlaps(b, h.r);
-    case 'circle':
-      return rectCircle(b, h.x, h.y, h.r);
-    case 'seg': {
-      const len = dhypot(h.x2 - h.x1, h.y2 - h.y1);
-      const n = Math.max(1, Math.ceil(len / 4));
-      for (let i = 0; i <= n; i++) {
-        const t = i / n;
-        if (rectCircle(b, h.x1 + (h.x2 - h.x1) * t, h.y1 + (h.y2 - h.y1) * t, h.r)) return true;
-      }
-      return false;
-    }
   }
 }

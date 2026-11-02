@@ -1,12 +1,13 @@
 import { css, type HSL } from '../../../core/color';
 import type { CharacterDef } from '../../../gen/character';
-import { type Grip, KEG, kegAim, type ModuleOf } from '../../../sim/props';
+import { TILE } from '../../../sim/constants';
+import { flingBack, type Grip, KEG, kegAim, type ModuleOf } from '../../../sim/props';
 import type { Runner, RunWorld } from '../../../sim/run';
 import { drawInkRunner } from '../../ink-character';
 import { blob, line, type P, stroke } from '../../ink';
 import { dot, INK, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import { glowDot, light, type MetalPalette, type RC } from '../../kit';
-import { defineArt, defineHeld, gripOf } from '../common';
+import { type DrawCtx, defineArt, defineHeld, gripOf } from '../common';
 
 type Keg = ModuleOf<'keg'>;
 
@@ -159,6 +160,91 @@ function cask(wood: HSL, pal: MetalPalette) {
   });
 }
 
+const RUBBER: HSL = { h: 6, s: 62, l: 42 };
+const LEATHER: HSL = { h: 26, s: 45, l: 34 };
+/** How much bigger than its bake the fork is drawn. */
+const FORK = 1.3;
+/** The fork's tips in its bake, from the middle of its 2×2 box. */
+const TIPS: readonly [number, number][] = [
+  [-7, -9],
+  [7, -9],
+];
+
+/** The forked stick, baked: a Y cut from one branch, its stem planted at the bottom of the box. */
+function fork(wood: HSL) {
+  return sprite(`fling|${wood.h | 0}`, -11, -13, 22, 29, (g) => {
+    const stem = poly(-1.9, 15.6, -1.5, 2.4, -7.9, -8.2, -5.9, -9.6, 0, -0.6, 5.9, -9.6, 7.9, -8.2, 1.5, 2.4, 1.9, 15.6);
+    part(g, stem, wood, 4, { depth: 0.8, shade: -18, thin: 0.5, thick: 1.4 });
+    // Bark knots and the grip's tape wrap.
+    for (const y of [6, 8, 10]) tick(g, -1.8, y, 1.8, y + 0.6, 0.5, y, css(wood, 26));
+    g.fillStyle = css(wood, -20);
+    blob(g, -0.6, 12.4, 0.7, 2, 0.7, 0.2);
+    g.fill();
+    // The band's knots round each tip.
+    for (const [x, y] of TIPS) dot(g, x, y + 0.6, 1.1, x, css(RUBBER, 10));
+  });
+}
+
+const band: P[] = [
+  { x: 0, y: 0 },
+  { x: 0, y: 0 },
+  { x: 0, y: 0 },
+];
+
+/**
+ * Y-Fling (docs/PARODY.md, fling): a forked stick and a rubber band with a leather pouch. Whoever
+ * sits in it pulls the pouch back, and the band stretches thinner the further it goes; chevrons out
+ * of the pouch show where it will send them, brighter the harder the pull. Snapped, the band hangs in
+ * two pieces from the tips until it's grown back.
+ */
+function drawFling(rc: RC, m: Keg, d: DrawCtx) {
+  const s = rc.s;
+  const ax = m.at[0] + d.off[0];
+  const ay = m.at[1] + d.off[1];
+  const grip = gripOf(d);
+  const snapped = !!d.o.level && rc.frame < flingBack(d.o.state, d.mi);
+  // Drawn a size up from its bake, grown from the foot of its box so the stem stays planted.
+  s.save();
+  s.translate(ax, ay + TILE);
+  s.scale(FORK, FORK);
+  stamp(s, fork({ h: d.style.woodHue, s: 46, l: 40 }), 0, -TILE);
+  s.restore();
+  const tips = TIPS.map(([x, y]) => [x * FORK, TILE + (y - TILE) * FORK] as const);
+  if (snapped) {
+    for (const [tx, ty] of tips) {
+      const sway = Math.sin(rc.t * 3 + tx) * 0.8;
+      band[0].x = ax + tx;
+      band[0].y = ay + ty;
+      band[1].x = ax + tx * 0.9 + sway;
+      band[1].y = ay + ty + 3;
+      band[2].x = ax + tx * 0.75 + sway * 1.6;
+      band[2].y = ay + ty + 6;
+      s.fillStyle = css(RUBBER);
+      stroke(s, band, { w: 1.2, seed: tx, taper: [0.1, 0.7], press: 0 });
+    }
+    return;
+  }
+  const full = Math.max(1, m.charge ?? 1);
+  const pull = grip ? Math.min(1, grip.s / full) : 0;
+  const px = ax + (grip ? grip.x : 0);
+  const py = grip ? ay + grip.y + 3 : ay - 7;
+  if (grip) aimChevrons(rc, px, py, grip.aim * QUARTER, pull > 0.99 ? 1 : 0, 0.35 + pull * 0.65);
+  for (const [tx, ty] of tips) {
+    band[0].x = ax + tx;
+    band[0].y = ay + ty;
+    band[1].x = (ax + tx + px) / 2;
+    band[1].y = (ay + ty + py) / 2 + (1 - pull) * 1.5;
+    band[2].x = px + Math.sign(tx) * 2.2;
+    band[2].y = py;
+    s.fillStyle = INK;
+    stroke(s, band, { w: 2.2 - pull * 0.8, seed: tx + 1, taper: [0, 0], press: 0 });
+    s.fillStyle = css(RUBBER, 6);
+    stroke(s, band, { w: 1.2 - pull * 0.5, seed: tx + 2, taper: [0, 0], press: 0 });
+  }
+  const pouch = ovalPts(px, py + 0.6, 3.6, 2, 6, 0.06, 12);
+  part(s, pouch, LEATHER, 6, { depth: 0.4, shade: -12, thin: 0.4, thick: 0.9 });
+}
+
 /**
  * A moonshine keg with a fuse out of its rear. The fuse burns down while
  * someone's inside, which is the only warning you get. Lit, the cask stops
@@ -168,6 +254,7 @@ defineArt<'keg'>({
   type: 'keg',
   layer: 2,
   draw(rc, m, d) {
+    if (m.aim === 'player') return drawFling(rc, m, d);
     const s = rc.s;
     const g = rc.g;
     const grip = gripOf(d);

@@ -3,7 +3,6 @@ import type { CharacterDef } from '../../gen/character';
 import { line, type P, shadeOf, stroke } from '../ink';
 import { inked, type Look, type Mood, oval, poly, type RunnerPose, toned, tonedOval } from '../ink-figure';
 import type { Part } from '../fx';
-import { glowDot } from '../kit';
 
 /**
  * What every toy's art is built from: the hooks a kind fills in (`ToyArt`), what a hook is handed (`D`),
@@ -63,7 +62,11 @@ export interface ToyArt {
   waddle?: boolean;
   /** A trailing ribbon from the rig: a pull string, or a long scarf in the player's color. */
   rope?: { kind: 'string' | 'scarf'; len: number };
-  /** Face overrides on the character's rolled one. */
+  /** The toy's own face (painted dots, a visor, a lamp...), in place of the shared cartoon eyes and mouth. */
+  paintFace?: (d: D) => void;
+  /** Shiny metal or enamel: one hard glint on the lit shoulder. Matte paint, wood and slag get none. */
+  shine?: boolean;
+  /** Face overrides on the character's rolled one, for kinds that keep the cartoon face. */
   face?: (c: CharacterDef) => { eyes?: Partial<CharacterDef['eyes']>; mouth?: CharacterDef['mouth'] };
   /** Mitten color. */
   hands?: 'tin' | 'iron' | 'paint';
@@ -328,14 +331,10 @@ export function inkLoop(d: D, pts: readonly P[], fill: string) {
   for (let i = 1; i < ring.length; i++) line(d.s, ring[i - 1].x, ring[i - 1].y, ring[i].x, ring[i].y, { w: 1, seed: i, taper: [0, 0], press: 0 });
 }
 
-/** A molten crack across the body, glowing on the emissive layer: hot things are the only things that glow. */
+/** A molten crack across the body: flat hot color in a dark rim, no glow, so it stays a mark on the toy. */
 export function crack(d: D, pts: readonly P[], seed: number) {
   mark(d.s, '#3a1a0c', pts, 1.9, seed, [0.1, 0.4]);
   mark(d.s, HOT_CSS, pts, 1, seed, [0.1, 0.4]);
-  if (d.g) {
-    const m = pts[pts.length >> 1];
-    glowDot(d.g, d.wx + m.x * d.sc, d.wy + m.y * d.sc, 6 * d.sc, HOT, 0.28 + 0.06 * Math.sin(d.t * 3 + seed));
-  }
 }
 
 /** Where `mouth()` puts the mouth, in face space. */

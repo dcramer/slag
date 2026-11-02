@@ -4,7 +4,7 @@ import { TILE } from '../../../sim/constants';
 import { dirOf, type ModuleOf, pistonHead, pistonState, type Resolved } from '../../../sim/props';
 import { line, stroke } from '../../ink';
 import { boxPts, dot, INK, ovalPts, part, path, pen, sprite, stamp, tick, tone } from '../../ink-props';
-import { glowDot, light, type MetalPalette, type RC } from '../../kit';
+import { bulb, light, type MetalPalette, type RC } from '../../kit';
 import { beamOf, defineArt, type PropDrawOpts } from '../common';
 import { bolt, type Face, faceOf, flange, flat, housed, iron, lbox, lp, ltick, tf, within } from '../machine';
 
@@ -112,7 +112,7 @@ const LAMP_Y = -0.6;
 
 /** 0..1 how near the next slam is, over the last stretch of the rest: what the lamp and the shudder show. */
 function windup(m: Piston, f: number, phase: number): number {
-  const t = frac(f / m.period + phase);
+  const t = frac(f / m.period + phase - (m.lag ?? 0));
   return t > 0.78 ? (t - 0.78) / 0.22 : 0;
 }
 
@@ -194,8 +194,8 @@ function drawPistonHousing(rc: RC, m: Piston, r: Resolved, off: Vec, pal: MetalP
   rc.s.fillRect(x + c.x - 1, y + c.y - 1.05, 0.8, 0.7);
   if (on) {
     const red: HSL = { h: 6, s: 100, l: 58 };
-    glowDot(rc.g, x + c.x, y + c.y, 7, red, 0.9);
-    light(rc, x + c.x, y + c.y, 40, red, 0.7);
+    bulb(rc.g, x + c.x, y + c.y, 1.6, red, 1);
+    light(rc, x + c.x, y + c.y, 32, red, 0.6);
   }
 }
 

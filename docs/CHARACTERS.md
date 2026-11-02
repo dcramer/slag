@@ -13,42 +13,51 @@ The owner picked direction C from the Phase 1 sheet (prints on the blob, a speci
 3. **One re-roll for everyone.** A look is a seed, and this cast made every old seed a different character. `LOOK_CAST` in `src/ui/profile.ts` drops a look saved from an older cast once and keeps the name; the next look is saved from the new cast. Bump it whenever a seed stops meaning the same character.
 4. **Eight players, eight toys.** `Match.looksFree` refuses a taken kind, as it refuses a near-twin color, so a restored look that clashes falls back to a fresh roll. `rollCharacter` prefers a free kind among its rolls and gives the next free kind if none was.
 
+## Round two: slimmer, their own faces, no glow
+
+The owner found the first toys good but too alike and too glowy. So:
+
+- **Proportions pulled apart.** The soldier, rocket, bell and tin can are tall and narrow; the train, duck, beetle and frog are low and long; the rest are trimmed to hug the hitbox's width instead of overfilling it.
+- **A face per object.** One shared sticker of big white eyes made every toy look alike. Now: painted dots on the tin can, the top and the lantern's glass; a visor slit on the robot; a headlamp on the train; eyes stamped into the soldier's tin, with painted cheeks; a porthole on the rocket; lines cut into the bell; slits of slag on the slag blob; beady eyes on the piggy bank, chick and beetle; one eye in profile on the duck. The jack-in-the-box (a clown), the kettle (painted enamel) and the frog (eyes on its bumps) keep smaller cartoon eyes. Every face still blinks, squints on a cheer and goes wide on a fall.
+- **Nothing on a runner glows.** No emissive eyes, cracks, flames or pours, and no light in the player's color round each toy. Molten things are flat hot color in a dark rim. One hard glint sits on shiny metal and enamel (robot, tin can, rocket, top, kettle, bell, train, beetle, piggy bank's glaze, lantern); matte paint, wood and slag get none.
+- **The bottom three.** The crucible is gone, swapped for a lantern: an iron roof, a frame in the player's color, and a lit pane with a flame in it, in flat tones. The beetle got an iron head and feelers out front and a shell all in the player's color. The piggy bank is low and long, with a snout disc that sticks out of its front, tiny eyes and ears folded forward.
+
 ## The cast, ranked by how instantly each reads at play scale
 
 At 1080p a runner is about 16 world px tall, about 40 screen px. The order below comes from the lineups and the catalog's play-scale strip on dark and light ground.
 
 | # | Toy | What reads at 16 px | Player color |
 |---|---|---|---|
-| 1 | rocket | pointed nose, fins, a flame going up | nose cone, fins, a belly stripe |
+| 1 | rocket | tall, pointed nose, fins, a porthole, a flame going up | nose cone, fins, a belly stripe |
 | 2 | soldier | tall and thin under an iron shako | jacket, plume |
 | 3 | top | a diamond on its point, precessing | the cone, with stripes that scroll as it spins |
-| 4 | jackbox | two-tipped jester cap, bouncing on a spring | the cap |
-| 5 | train | long and low, smokestack, two wheels, pull string | the cab, half the engine |
-| 6 | duck | a bill, two wheels, pull string | the painted lower half and a wing |
-| 7 | bell | flared lip, hanging loop, swinging clapper | a sash round the waist |
-| 8 | robot | a box head on a box body, antenna | chest panel, antenna bulb |
-| 9 | frog | flat and wide, eye bumps, hops | waistcoat |
-| 10 | chick | round, beak, tail tuft, hops | both wings |
-| 11 | kettle | dome, spout, handle, hops | an enamel band, the lid knob |
-| 12 | tincan | tall can, pull ring | the label, three quarters of the can |
-| 13 | slagblob | lumpy, glowing cracks, a scarf | knitted beanie and long scarf |
-| 14 | beetle | flat dome on six scuttling legs | the shell |
-| 15 | crucible | tapered pot of glowing metal, long handle | a painted band on the iron |
-| 16 | piggybank | round on pegs, coin in the slot, curly tail | the saddle cloth |
+| 4 | train | long and low, smokestack, headlamp, two wheels, pull string | the cab, half the engine |
+| 5 | duck | long and low, a bill, two wheels, pull string | the painted lower half and a wing |
+| 6 | jackbox | two-tipped jester cap, bouncing on a spring | the cap |
+| 7 | bell | tall flared bell, hanging loop, swinging clapper | a sash round the waist |
+| 8 | lantern | tall frame, roof and ring, a lit pane with a flame | the frame |
+| 9 | robot | a box head with a visor on a box body, antenna | chest panel, antenna bulb |
+| 10 | frog | flat and long, eye bumps, hops | waistcoat |
+| 11 | tincan | tall narrow can, pull ring, painted face | the label, three quarters of the can |
+| 12 | beetle | flat dome, iron head and feelers, six scuttling legs | the whole shell |
+| 13 | chick | egg-round, beak, tail tuft, hops | both wings |
+| 14 | piggybank | low and long, snout disc out front, curly tail, coin | the saddle cloth |
+| 15 | kettle | dome, spout, handle, hops | an enamel band, the lid knob |
+| 16 | slagblob | a dark lump with slag eyes under a beanie, a scarf | knitted beanie and long scarf |
 
-The bottom three still read as eight different players by color and size of shape, but not instantly as *what* they are: the beetle and the crucible are a dome and a pot, and at 16 px the piggy bank's ears and snout read closer to a cat. They are the first to improve or swap.
+Every kind now has an outline of its own, and eight of them in a lobby read as eight different things. The weakest are the kettle and the slag blob: at 16 px the kettle is a dome with a spout, and the slag blob reads as its beanie more than as slag, especially on dark ground. They are the next to improve.
 
-Ideas from the brief that didn't make the roster: a pull-string car (too close to the train), a bulldog bank (the piggy bank's silhouette), a drum (the tin can's), a dancing bear (it needs its ball or hat to read as a toy), a teapot (the kettle). The lantern is the best candidate for a 17th kind or a swap: tall frame, a ring on top, and a flame in a window, which is hot and so may glow.
+Ideas from the brief that didn't make the roster: a pull-string car (too close to the train), a bulldog bank (the piggy bank's silhouette), a drum (the tin can's), a dancing bear (it needs its ball or hat to read as a toy), a teapot (the kettle).
 
 ## What every toy keeps
 
-- **One hitbox, one physics.** Every kind is drawn around the same 14×15 world-px body, scaled 0.84–1.26 wide and 0.78–1.14 tall, the range the old blobs used. Hats, fins, spouts, keys and wheels are thin or behind the body. `tests/ink-character.test.ts` holds every kind inside one box around the hitbox, standing on the floor.
+- **One hitbox, one physics.** Every kind is drawn around the same 14×15 world-px body, scaled 0.72–1.3 wide and 0.68–1.14 tall, inside the range the old blobs used. Hats, fins, spouts, keys and wheels are thin or behind the body. `tests/ink-character.test.ts` holds every kind inside one box around the hitbox, standing on the floor.
 - **The key, quiet.** A small steel wind-up key turns in the back of the robot, soldier, chick, frog and beetle, faster as they run. It's never brass-bright: the player's color stays the loudest note.
 - **Animation.** Squash and stretch, lean, stride, arms, the face's moods, the boil and the one hard shadow are the shared frame in `src/render/ink-character.ts`. Wind-ups waddle on the walk and run, hoppers bounce, wheels turn with the distance travelled, the top precesses, the jack-in-the-box rides its spring.
 - **Death.** A toy comes apart into its own parts, a few per kind (gears, springs, its key, bolts, wheels, coins), plus tin shards in its paint and the player's color, with a clank under the death sound (`clank` in `src/audio/sfx.ts`).
-- **Faces.** The rolled eyes and mouth from before; a kind may move them (the robot's are in its head, the train's on its front) or swap the mouth for a beak, bill or grille.
+- **Faces.** Each kind paints its own (`src/render/toys/faces.ts`), from the character's rolled mouth and eye size where it has a say.
 - **Determinism.** `generateCharacter(seed)` is a pure function of the seed, and the kind is one of its rolls.
-- **Cost.** About 0.04–0.07 ms per runner on a software canvas (the bench swings with machine load), the same as the old blobs, so nothing is baked: everything on a toy moves (squash, boil, waddle, key, wheels). `pnpm perf --only race8` run against the parent commit back to back twice gave a frame p50 of 7.8 → 6.1 ms and 5.3 → 6.2 ms, with every section, the HUD included, moving together under a load average of 15–41: the difference is machine noise.
+- **Cost.** About 0.04–0.07 ms per runner on a software canvas (the bench swings with machine load), the same as the old blobs, so nothing is baked: everything on a toy moves (squash, boil, waddle, key, wheels). `pnpm perf --only race8`, parent and branch back to back under a load average of 15–45, has never shown a difference above the noise; the last pair (round two) gave a frame p50 of 6.0 → 5.0 ms.
 
 ## Adding a toy
 

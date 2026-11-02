@@ -11,7 +11,7 @@ type Piston = ModuleOf<'piston'>;
 
 /** Extension 0..1 and whether it's currently slamming outward. */
 export function pistonState(m: Piston, f: number, phase: number): { ext: number; slamming: boolean } {
-  const t = frac(f / m.period + phase);
+  const t = frac(f / m.period + phase - (m.lag ?? 0));
   if (t < 0.12) return { ext: sq(t / 0.12), slamming: true };
   if (t < 0.45) return { ext: 1, slamming: false };
   if (t < 0.9) {

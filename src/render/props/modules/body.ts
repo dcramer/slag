@@ -6,8 +6,9 @@ import type { Module, ModuleOf, PropStyle, Resolved } from '../../../sim/props';
 import { beltTurn } from '../../../sim/props/modules/body';
 import { blob, line, type P, stroke } from '../../ink';
 import { blockLoops, stampBlock } from '../../ink-blocks';
+import { boxPts, path, pen, poly, sprite, stamp } from '../../ink-props';
 import { drawBelts } from '../../ink-surface';
-import { glowDot, light, type MetalPalette, type RC } from '../../kit';
+import { light, type MetalPalette, type RC } from '../../kit';
 import { bbox, defineArt, type PropDrawOpts } from '../common';
 import { housed } from '../machine';
 
@@ -160,10 +161,9 @@ function drawBody(rc: RC, m: M<'body'>, st: PropStyle, pal: MetalPalette, off: V
             { w: 1, seed: x + y, taper: [0.1, 0.1], press: 0 },
           );
         }
-        glowDot(g, cx, cy, 7, glowC, 0.22 * pulse);
       }
       const c = bbox(m.cells, O);
-      light(rc, c.x + c.w / 2, c.y + c.h / 2, 45, glowC, 0.4 * pulse);
+      light(rc, c.x + c.w / 2, c.y + c.h / 2, 26, glowC, 0.3 * pulse);
       break;
     }
     case 'conveyor':
@@ -221,4 +221,35 @@ function drawBody(rc: RC, m: M<'body'>, st: PropStyle, pal: MetalPalette, off: V
   }
 }
 
-defineArt<'body'>({ type: 'body', layer: 1, draw: (rc, m, d) => drawBody(rc, m, d.style, d.pal, d.off, d.r, d.o) });
+/** One Four-Square cell: a square with a light bevel up-left, a dark one down-right and a hard shine, all in one colour. */
+function tetraCell(hue: number, v: number) {
+  return sprite(`tetra|${hue | 0}|${v}`, -1, -1, TILE + 2, TILE + 2, (g) => {
+    const c: HSL = { h: hue, s: 78, l: 52 };
+    const B = 3;
+    const quad = (pts: number[], col: string) => {
+      g.fillStyle = col;
+      path(g, poly(...pts));
+      g.fill();
+    };
+    quad([0, 0, TILE, 0, TILE - B, B, B, B], css(c, 22));
+    quad([0, 0, B, B, B, TILE - B, 0, TILE], css(c, 12));
+    quad([TILE, 0, TILE, TILE, TILE - B, TILE - B, TILE - B, B], css(c, -16));
+    quad([0, TILE, B, TILE - B, TILE - B, TILE - B, TILE, TILE], css(c, -24));
+    g.fillStyle = css(c);
+    g.fillRect(B, B, TILE - B * 2, TILE - B * 2);
+    g.fillStyle = 'rgba(255,255,255,0.8)';
+    g.fillRect(B + 1, B + 1, 2.2, 1.2);
+    pen(g, boxPts(0.2, 0.2, TILE - 0.4, TILE - 0.4, 0.5, v + 3, 0.04), v + 3, 0.6, 1.2, 4);
+  });
+}
+
+/** Four-Square: the falling-block puzzle's pieces, as separate bevelled squares, never one merged slab. */
+function drawTetra(rc: RC, m: M<'body'>, off: Vec) {
+  for (const [x, y] of m.cells) stamp(rc.s, tetraCell(m.hue ?? 200, (x * 3 + y) % 3), x * TILE + off[0], y * TILE + off[1]);
+}
+
+defineArt<'body'>({
+  type: 'body',
+  layer: 1,
+  draw: (rc, m, d) => (m.look === 'tetra' && !housed(d.r) ? drawTetra(rc, m, d.off) : drawBody(rc, m, d.style, d.pal, d.off, d.r, d.o)),
+});

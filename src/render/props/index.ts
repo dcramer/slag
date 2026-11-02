@@ -118,7 +118,8 @@ function cardBounds(def: PropDef): { x0: number; y0: number; x1: number; y1: num
     }
     if (m.type === 'magnet') grow(m.at[0], m.at[1], m.radius);
     if (m.type === 'rotor') grow(m.hub[0], m.hub[1], m.arm + m.width / 2 + 0.2);
-    if (m.type === 'keg') grow(w / 2, h / 2, w / 2 + 0.8, h / 2 + 0.8);
+    // A keg's aim chevrons reach out of it; a slingshot only shows them while someone's in it.
+    if (m.type === 'keg') grow(w / 2, h / 2, w / 2 + (m.aim === 'player' ? 0 : 0.8), h / 2 + (m.aim === 'player' ? 0.1 : 0.8));
   }
   // An attachment shows its host blocks, with what it adds standing off them.
   if (def.mount === 'face') {

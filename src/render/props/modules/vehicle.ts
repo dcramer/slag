@@ -3,7 +3,7 @@ import { hash2 } from '../../../core/rng';
 import { type ModuleOf, vehicleCols, vehiclePose } from '../../../sim/props';
 import { line, type P, stroke } from '../../ink';
 import { ball, boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, type Sprite, sprite, stamp, tick, tone } from '../../ink-props';
-import { circle, flutter, glowDot, light, METALS, type MetalPalette, type RC } from '../../kit';
+import { bulb, circle, flutter, glowDot, light, type MetalPalette, METALS, type RC } from '../../kit';
 import { type DrawCtx, defineArt } from '../common';
 import { wheel } from './setpiece';
 
@@ -96,9 +96,8 @@ function lamp(F: Frame, lx: number, ly: number, c: HSL, r = 2, reach = 60, k = 0
   const { g } = F.rc;
   const x = F.wx(lx);
   const y = F.gy + ly;
-  g.fillStyle = css(c, 18, 0.95);
-  circle(g, x, y, r * 0.7);
-  glowDot(g, x, y, r * 5, c, 0.8);
+  bulb(g, x, y, r * 0.8, c, 0.95);
+  glowDot(g, x, y, r * 2, c, 0.5);
   light(F.rc, x, y, reach, c, k);
 }
 
@@ -484,7 +483,6 @@ function boulder(F: Frame) {
     }
     stroke(g, spiral, { w: 0.9, seed: 63, taper: [0.1, 0.1], press: 0 });
     g.restore();
-    glowDot(g, cx, cy, R * 0.9, glow, 0.2);
   });
   light(F.rc, F.wx(W / 2), F.gy - R, R * 3, glow, 0.35);
   const e = d.o.emit;
@@ -532,9 +530,7 @@ function minecart(F: Frame) {
     for (let k = 0; k < 3; k++) {
       const gem: HSL = { h: [50, 190, 300][(k + uid) % 3], s: 90, l: 62 };
       const x = 6 + hash2(k, uid, 4) * (W - 12);
-      F.rc.g.fillStyle = css(gem, 10, 0.95);
-      circle(F.rc.g, x, top + 0.5, 1.2);
-      glowDot(F.rc.g, x, top + 0.5, 5, gem, 0.5);
+      bulb(F.rc.g, x, top + 0.5, 1.2, gem, 0.95);
     }
     const wr = 4;
     for (const x of [6, W - 6]) wheel(s, x, -3.4 - wr + 0.5, wr, F.roll / wr, { hub: pal.light, rim: pal.dark, spokes: 4, tyre: 0 });

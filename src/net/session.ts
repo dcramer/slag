@@ -1,6 +1,6 @@
 import { IDLE_ROUNDS, type Match } from '../game/match';
 import { DT, MAX_PLAYERS } from '../sim/constants';
-import { addBreadcrumb, reportEvent } from '../telemetry';
+import { addBreadcrumb, reportEvent, reportLog } from '../telemetry';
 import type { Runner } from '../sim/run';
 import type { GameEvent, InputFrame } from '../sim/types';
 import { applyAction, freeSeats, type NetAction, type NetState, newNetState, peerOf, sanitizeRules, SEAT_PHASES, type Watcher } from './actions';
@@ -44,6 +44,12 @@ const MAX_PREDICT = 24;
 /** How long a new host waits for the room to report in, and for the furthest peer's snapshot. */
 const COLLECT_MS = 7000;
 const PULL_MS = 1500;
+/**
+ * A migration slower than this, from noticing the host gone to the room playing again, is reported. The designed
+ * worst case is under 18 s (the old host's probe window, a candidate's, then COLLECT_MS and PULL_MS); measured ones
+ * take 4–8 s including the 2.5 s of silence before anyone notices.
+ */
+const SLOW_MIGRATION_MS = 20_000;
 /** Per-view-update step of a remote cursor toward its confirmed position. Presentation only. */
 const CURSOR_SMOOTH = 0.5;
 /** What's left of a drawn runner's prediction error after one frame. Presentation only. */
@@ -242,6 +248,10 @@ export class NetSession {
   private resumed = false;
   private closed = false;
   private reportedRefusal = false;
+  /** When this peer lost its host or its link, for timing the recovery; -1 when settled. */
+  private lostAt = -1;
+  /** The host this peer took over from, for the migration's report. */
+  private migratedFrom = '';
 
   constructor(opts: SessionOptions) {
     this.match = opts.match;
@@ -455,9 +465,9 @@ export class NetSession {
   }
 
   /**
-   * Square what this peer wants with what the room says, once the room's state is known: arriving mid-match
-   * means choosing first; a watch link asks to watch; being moved to the watchers (idle) is followed; and any
-   * input from someone moved there for being idle asks for the seat back.
+   * Square what this peer wants with what the room says, once the room's state is known: a watch link, or
+   * arriving mid-match, is watching; being moved to the watchers (idle) is followed; and any input from someone
+   * moved there for being idle asks for the seat back.
    */
   private settleIntent(own: PeerFrame) {
     const w = this.watching;
@@ -517,9 +527,12 @@ export class NetSession {
     if (s !== 'open') {
       // Presence is unknown while disconnected; keep the last list but forget everyone else's queues.
       this.log(`link ${s}${detail ? ` (${detail})` : ''}`);
-      addBreadcrumb('net', `link ${s}`, { detail });
     }
-    if (s === 'unavailable') reportEvent('net-unavailable', 'warning', { detail });
+    if (s === 'reconnecting' && this.lostAt < 0) this.lostAt = this.now();
+    // A host whose API came back without a migration: nothing to time.
+    else if (s === 'open' && this.role === 'host' && !this.collecting) this.lostAt = -1;
+    // Grouped by why: an unconfigured store, a host behind NAT and a browser without WebRTC are different problems.
+    if (s === 'unavailable') reportEvent('net-unavailable', 'warning', { detail }, { group: detail || 'unknown' });
     if (s === 'closed' || s === 'unavailable') this.onMembers([{ id: this.self, order: 0 }]);
   }
 
@@ -554,7 +567,8 @@ export class NetSession {
       if (was === 'guest') {
         this.stats.migrations++;
         this.log(`host migrated ${prev} → me at frame ${this.match.frame}`);
-        reportEvent('host-migration', 'warning', { from: prev, to: host, frame: this.match.frame }); // only the new host reports: one event per migration
+        if (this.lostAt < 0) this.lostAt = this.now(); // a goodbye skips 'reconnecting'
+        this.migratedFrom = prev;
         this.promote();
       } else this.tryResume();
     } else {
@@ -628,6 +642,12 @@ export class NetSession {
 
   private finishCollect() {
     this.collecting = null;
+    // Only the new host reports, so one migration is one report; its clock runs from its own loss of the old host.
+    const ms = this.lostAt >= 0 ? Math.round(this.now() - this.lostAt) : 0;
+    this.lostAt = -1;
+    const timeline = { ms, from: this.migratedFrom, to: this.self, peers: this.members.length, frame: this.match.frame, phase: this.match.phase };
+    reportLog('host migration', 'info', timeline);
+    if (ms > SLOW_MIGRATION_MS) reportEvent('slow-host-migration', 'warning', timeline);
     for (const m of this.members) if (m.id !== this.self) this.send(this.syncMsg('migrate'), m.id);
   }
 
@@ -781,7 +801,7 @@ export class NetSession {
       if (mine !== undefined && mine !== msg.h[1]) {
         this.stats.desyncs++;
         this.log(`desync with ${from} at frame ${msg.h[0]}: resync`);
-        reportEvent('desync', 'error', { frame: msg.h[0], peer: from, localHash: mine, remoteHash: msg.h[1] });
+        reportEvent('desync', 'error', { frame: msg.h[0], peer: from, localHash: mine, remoteHash: msg.h[1], phase: this.match.phase });
         this.send(this.syncMsg('desync'), from);
       }
     }
@@ -1044,7 +1064,10 @@ export class NetSession {
     this.synced = true;
     this.onTimeline = true;
     this.stats.syncs++;
+    this.lostAt = -1;
     this.log(`synced (${msg.why}) at frame ${m.frame}`);
+    // A join's first sync is routine; the others mean this peer had fallen out of step.
+    if (!fresh) reportLog('net resync', 'info', { why: msg.why, frame: m.frame });
   }
 
   private prune([seq, actN]: [number, number]) {
@@ -1060,8 +1083,11 @@ export class NetSession {
     for (const a of b.a ?? []) {
       if (a.t === 'rules') applyAction(m, this.ns, { t: 'rules', rules: sanitizeRules(a.rules) });
       else applyAction(m, this.ns, a);
+      if (a.t === 'join' || a.t === 'leave') addBreadcrumb('room', a.t, { dev: a.dev });
+      else if (a.t === 'away') addBreadcrumb('room', a.on ? 'away' : 'back', { dev: a.dev });
       // By what was applied, not what was asked: outside the lobby this did nothing.
       if (a.t === 'kick' && this.ns.kicked[a.peer]) {
+        addBreadcrumb('room', 'kick', { peer: a.peer });
         if (a.peer === this.self) return this.onKicked();
         if (this.role === 'host') this.send({ t: 'kicked' }, a.peer);
       }

@@ -452,6 +452,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 02:52Z · `done` · DESIGN.md → Platform, AGENTS.md → Hosting
 - **Sentry error monitoring, in the host layer only.** "another agent: add sentry support"
   2026-11-02 03:28Z · `done`; the owner's env vars and GitHub integration are `open` · AGENTS.md → Hosting, TODO.md → 17
+- **Sentry should be useful for this game: logs, errors and context that fit how it fails.** "make sure sentry is configured from a useful point of view for logs/errors/etc in a way that makes sense for our game"
+  2026-11-02 · `done` · docs/TELEMETRY.md, AGENTS.md → Hosting
 - **pnpm is the package manager and Node 24 the runtime; pnpm settings live in `pnpm-workspace.yaml`.** "get this fixed up"
   2026-11-02 02:46Z · `done` · AGENTS.md → Commands
   Changed: npm, then Node 22 (`6ebfbd4`).

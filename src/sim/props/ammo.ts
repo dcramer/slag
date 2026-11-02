@@ -75,6 +75,8 @@ export interface ProjWorld {
   kill(i: number, owner: number): void;
   /** Held-item side of a shot (src/sim/items). Optional so headless callers can omit it. */
   items?: ProjItems;
+  /** A shot struck terrain or a solid at (x, y), for parts a hit sets off (Fuse Crates). Optional so headless callers can omit it. */
+  hit?(x: number, y: number): void;
 }
 
 export interface ProjItems {
@@ -460,6 +462,7 @@ export function stepProjectile(p: Projectile, w: ProjWorld): boolean {
     why = lost ? null : 'life';
   }
   if (alive && !sim?.platform && solidAt(w, p.x, p.y, age, p.source)) {
+    w.hit?.(p.x, p.y);
     if (!sim?.wall?.(p, w, px, py)) {
       alive = false;
       why = 'wall';

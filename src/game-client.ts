@@ -2,13 +2,15 @@ import 'client-only';
 import { createAudio } from './audio';
 import { parseSeed } from './core/rng';
 import { installDebug } from './debug';
-import { Match, rulesProfile } from './game/match';
+import { type GenInfo, lastGenInfo } from './gen/level';
+import { Match, planMisses, rulesProfile } from './game/match';
 import { roomSeed } from './game/room';
 import { loadRules, saveRules } from './game/rules';
 import { InputManager } from './input/input';
 import { TOUCH_DEVICE, touchModeFor } from './input/touch';
-import { connectRoom } from './net/client';
+import { connectRoom, type RoomConnection } from './net/client';
 import { wasKicked } from './net/identity';
+import { SNAP_VERSION } from './net/snapshot';
 import type { Nav, Unmount } from './router';
 import { HOME, lobby } from './routes';
 import { ITEMS } from './sim/items';
@@ -16,11 +18,12 @@ import type { HudAction, JoinCardInfo } from './render/hud';
 import { type CharacterDef, generateCharacter } from './gen/character';
 import type { InputFrame } from './sim/types';
 import { Renderer } from './render/renderer';
+import type { Level } from './sim/level';
 import { DT } from './sim/constants';
-import { addBreadcrumb, setTelemetryContext } from './telemetry';
+import { addBreadcrumb, reportEvent, setContext, setTelemetryContext, type TelemetryContext, type TelemetryData } from './telemetry';
 import { THEME_IDS } from './themes';
 import { InputModeTracker } from './ui/input-mode';
-import { LevelAhead } from './level-ahead';
+import { LevelAhead, reportGenFallback } from './level-ahead';
 import { loadHaptics, NamePrompt, RulesMenu, SettingsMenu } from './ui/menus';
 import { FloatingLogo } from './ui/screens/logo';
 import { detectQuality, isTouchFirst, savedQuality, saveQuality } from './ui/touch/device';
@@ -77,16 +80,6 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
 
   // Host-rolled per-match salt (crate order); re-rolled while in the lobby so every game differs.
   match.nextSalt = (Math.random() * 4294967296) >>> 0;
-  const gameContext = () => ({
-    screen: 'lobby',
-    room,
-    seed: match.seed,
-    theme: match.level.theme.id,
-    phase: match.phase,
-    round: match.round,
-    players: match.players.length,
-  });
-  setTelemetryContext(gameContext);
   const input = new InputManager(window);
   // In the lobby only real buttons act; a stray click must not join/ready/start.
   input.clickConfirms = () => match.phase !== 'lobby';
@@ -119,7 +112,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
   renderer.hud.hidden = params.get('ui') === '0';
   const audio = createAudio();
   const inputMode = new InputModeTracker(window);
-  setTelemetryContext(() => ({ ...gameContext(), renderStyle: renderer.renderStyle, inputDevice: renderer.hud.lastInput }));
+  watchTelemetry(room, match, conn, renderer);
 
   // --- local menus (DOM overlays) and profile ---------------------------------
   const settingsMenu = new SettingsMenu(input, audio);
@@ -382,6 +375,25 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
   let acc = 0;
   let last = performance.now();
   let lastPhase = match.phase;
+  // What the sim and the generator say went wrong, reported by the host alone: every peer computes the same thing.
+  // Null: the first frame checks the first level, which this thread made itself when there was no worker.
+  let lastLevel: Level | null = null;
+  let lastGen: GenInfo | null = null;
+  let misses = planMisses.count;
+  function checkLevel() {
+    lastLevel = match.level;
+    addBreadcrumb('game', 'level', { seed: match.seed, theme: match.level.theme.id });
+    // A new lastGenInfo means it was generated here rather than handed over by the worker, which reports its own.
+    if (lastGen === lastGenInfo) return;
+    lastGen = lastGenInfo;
+    if (net.isHost) reportGenFallback(lastGenInfo, { seed: match.seed, theme: match.themeOverride, profile: match.profileOverride() });
+  }
+  function checkPlan() {
+    if (planMisses.count === misses) return;
+    misses = planMisses.count;
+    const data = { seed: match.seed, theme: match.level.theme.id, round: match.round, placed: match.placed.length };
+    if (net.isHost) reportEvent('plan-lost', 'error', data);
+  }
   let ahead = '';
   /** Keep what the match could ask for next built and waiting. */
   function buildAhead() {
@@ -422,7 +434,9 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     if (match.phase !== lastPhase) {
       lastPhase = match.phase;
       addBreadcrumb('game', `phase ${lastPhase}`, { round: match.round });
+      checkPlan();
     }
+    if (match.level !== lastLevel) checkLevel();
     syncProfile();
     renderer.hud.pointer = input.touch.active ? null : input.pointerPos; // no hover highlights under a finger
     uiHover();
@@ -469,7 +483,79 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     logo.remove();
     container.remove();
     setTelemetryContext(null);
+    for (const name of GAME_CONTEXTS) setContext(name, null);
   };
+}
+
+const GAME_CONTEXTS = ['level', 'rules', 'net', 'match'] as const;
+
+/**
+ * What every report from the lobby carries: tags to search by, contexts to read. All of it is read when a report is
+ * built, never per frame.
+ */
+function watchTelemetry(room: string, match: Match, conn: RoomConnection, renderer: Renderer) {
+  const net = conn.net;
+  const online = () => !!net.transport;
+  setTelemetryContext((): TelemetryContext => ({
+    screen: 'lobby',
+    room,
+    'match.phase': match.phase,
+    'match.round': match.round,
+    'level.seed': match.seed,
+    'level.theme': match.level.theme.id,
+    'level.size': match.level.profile?.size ?? 'classic',
+    'level.concept': match.level.landmark?.concept ?? 'none',
+    players: match.players.length,
+    observers: online() ? net.peers().filter((p) => !p.seated).length : 0, // peers with no seat: watching, or owed a seat next round
+    'net.role': online() ? (net.isHost ? 'host' : 'guest') : 'local',
+    'net.transport': net.transport?.kind ?? 'none',
+    'net.status': net.status,
+    'net.snap': SNAP_VERSION,
+    'input.mode': renderer.hud.lastInput,
+    'render.quality': renderer.quality,
+  }));
+  setContext('level', () => {
+    const l = match.level;
+    const p = l.profile;
+    return {
+      seed: match.seed,
+      theme: l.theme.id,
+      size: `${l.w}x${l.h}`,
+      style: l.style,
+      concept: l.landmark?.concept,
+      weather: l.weather?.kind ?? 'clear',
+      gravity: l.gravity ?? 1,
+      density: p?.density,
+      danger: p?.danger,
+      route: p?.route,
+      setPieces: l.setPieces.length,
+    };
+  });
+  setContext('rules', () => ({ ...match.rules }) as TelemetryData);
+  setContext('match', () => ({
+    frame: match.frame,
+    phaseFrame: match.phaseFrame,
+    placed: match.placed.length,
+    crate: match.crate.length,
+    winners: match.winners.length,
+  }));
+  setContext('net', () =>
+    online()
+      ? {
+          self: net.self,
+          host: net.hostId,
+          detail: net.detail || undefined,
+          peers: net.members.length,
+          synced: net.synced,
+          paused: net.paused,
+          refused: net.refused,
+          desyncs: net.stats.desyncs,
+          syncs: net.stats.syncs,
+          migrations: net.stats.migrations,
+          render: renderer.renderStyle,
+        }
+      : { render: renderer.renderStyle },
+  );
 }
 
 /** Calls `step(now)` from a worker: always online, where a stalled tick stalls the room; offline, only while hidden. Ends with `signal`. */

@@ -48,7 +48,7 @@ Each row gives what the item or part mocks, its silhouette (what must read at ga
 | laser | Death Ray, Laser Pointer, Doomsday Laser | The instant-kill beam | An emitter and a beam | The emitter is a pen-sized pointer clicker, far too small for its beam. |
 | tesla | Bug Zapper, Tesla Coil, Electric Fence | Tesla coils and electric barriers | Two pylons and an arc | A blue zapper grid on each pylon, plus a scorched moth. |
 | crusher | Crusher, Piston, Whack-a-Player, Panini Press | Factory crushers and the whack-a-mole mallet | A head on a rod | Grill marks on the crushing face. |
-| spring | Spring, Bedspring, Boing, Launch Pad | The yellow spring | A coil with a top plate | The Bedspring's top plate is a scrap of striped mattress ticking, button-tufted. |
+| spring | Spring, Bedspring, Boing | The yellow spring | A coil with a top plate | The Bedspring's top plate is a scrap of striped mattress ticking, button-tufted. |
 | fan | Updraft Fan, Leaf Blower, Hair Dryer, Turbine | Wind-level updraft fans | A housing and wind lines | A household hair-dryer grip on the housing. |
 | pipe | Warped Pipe, Pipe Dream, Down Pipe, Shortcut Pipe, Plumbing | The plumber's warp pipe, which here only works in pairs | A round, banded shaft a tile and a half across under a chunky lip two tiles across, with a dark mouth inside a bevelled rim, in the match's material (green, brass, rusty iron, porcelain, verdigris) | A plumber's job tag with the pair's number hangs off the lip. A lone pipe's mouth is a dead black hole; rusty ones are spotted, porcelain has a blue pinstripe. |
 | bumper | Bumper, Pinball Bumper, Casino Bumper, Jackpot | Casino-level pinball bumpers | A pop bumper: skirt, rubber ring, and a star on the cap | A score pops up on every hit, always 100. |
@@ -67,6 +67,12 @@ Each row gives what the item or part mocks, its silhouette (what must read at ga
 | hangar | Budget Airline, Air Ferry, Kite Loft, Paper Planery | Rideable flying platforms | A loft that launches planks | Gliders are paper planes, with a seat-row number on the wing. |
 | rope | Sausage Vine, Banger Rope, Bratwurst Vine, Salami Swing | The jungle vine swing | Links on a hook | Already drawn. |
 | keg | Kegapult, Powder Keg, Cask Cannon, Hooch Howitzer | The barrel cannon | A keg | Already drawn. |
+| launchplate | Launch Plate, Leap of Faith Plate, Express Pad, Launch Pad | The arena shooter's jump pad, the space marine's man cannon | A round plate on a hinge with an arrow across it, on a bolted base; a chalk X where it puts you down | A NO REFUNDS stamp on the base. The X is a chalk bullseye, and the place phase dots in the whole flight. |
+| boost | Boost Strip, Express Lane, Speed Bump, Fast Lane | The kart racer's dash panel, the hedgehog's speed booster | A strip of road with a painted chevron on each tile | Skid marks on the asphalt. The chevrons light in turn the way it throws you. |
+| panic | Panic Button, Pressed for Time, Switcheroo | The plumber's P switch | A dome button on a plate, and a dashed outline of blocks nearby | The button's safety cover is flipped open and taped there. Each block it holds up has the button stencilled on it. |
+| fuse | Fuse Crate, Short Fuse, Three-Second Rule | The bandicoot's TNT crate | A slatted crate with a red stencilled bomb and lit wick | FRAGILE crossed out with VERY written over it. Lit, a big 3-2-1 is painted on it over the stencil. |
+| fling | Y-Fling, Rubber Band Rodeo, Sling Shooter | The angry-bird slingshot | A forked stick, a rubber band and a leather pouch | The band stretches thinner the harder you pull, and when it snaps it hangs in two pieces off the tips. |
+| platform (Four-Square) | Four-Square, Long Piece, Tetra Block | The falling-block puzzle's seven pieces | Four bevelled squares, one colour per piece | The long one turns up half as often as the rest. |
 
 ## Launchers
 

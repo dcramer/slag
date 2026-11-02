@@ -176,13 +176,14 @@ export function partGroups(): PartGroup[] {
       id: 'attachments',
       title: 'Attachments',
       blurb: 'Paint jobs with consequences.',
-      entries: (['spikes', 'ice', 'slime'] as const).flatMap((kind) =>
+      entries: (['spikes', 'ice', 'slime', 'boost'] as const).flatMap((kind) =>
         [-Math.PI / 2, 0].map((angle) => ({
-          title: `${{ spikes: 'death carpet', ice: 'ice physics', slime: 'swamp level' }[kind]} · ${angle === 0 ? 'wall' : 'floor'}`,
+          title: `${{ spikes: 'death carpet', ice: 'ice physics', slime: 'swamp level', boost: 'express lane' }[kind]} · ${angle === 0 ? 'wall' : 'floor'}`,
           note: {
             spikes: angle === 0 ? 'Rude, sideways.' : 'Rude.',
             ice: angle === 0 ? 'No grip. No dignity.' : 'Zamboni-fresh.',
             slime: angle === 0 ? 'Spider-adjacent.' : 'Do not lick.',
+            boost: angle === 0 ? 'Going down.' : 'Speed limit: yes.',
           }[kind],
           def: {
             ...def(`${kind}-${angle}`, [
@@ -403,6 +404,11 @@ export function partGroups(): PartGroup[] {
         },
         { title: 'bedspring', note: 'No jumping on the bed.', def: def('Bedspring', [{ type: 'spring', at: c(), angle: UP, power: 700 }]) },
         {
+          title: 'launch plate',
+          note: 'No refunds.',
+          def: def('plate', [{ type: 'spring', at: c(), angle: UP, power: 640, exact: true, arc: [300, -560] }]),
+        },
+        {
           title: 'hair dryer',
           note: 'Big hair day.',
           def: def('fan', [body([[0, 0]]), { type: 'fan', at: c(), angle: UP, length: 4, strength: 2200 }]),
@@ -441,6 +447,13 @@ export function partGroups(): PartGroup[] {
           def: { ...def('vine', [{ type: 'rope', at: [0.5, 0], length: 5, strain: 330, regrow: 300 }]), mount: 'hang' },
         },
         { title: 'kegapult', note: 'XXX.', def: def('keg', [{ type: 'keg', at: [1, 1], dirs: [7], step: 36, power: 540, delay: 12, burn: 170 }]) },
+        {
+          title: 'y-fling',
+          note: 'Pull. Aim. Regret.',
+          def: def('fling', [{ type: 'keg', at: [1, 1], dirs: [7], step: 40, power: 600, delay: 0, burn: 180, aim: 'player', charge: 45, regrow: 240 }], {
+            style: { woodHue: 30 },
+          }),
+        },
         {
           title: 'tipsy kegapult',
           note: 'XXX.',
@@ -513,6 +526,45 @@ export function partGroups(): PartGroup[] {
       title: 'Timed & triggered',
       blurb: 'Patient, petty, punctual.',
       entries: [
+        {
+          title: 'panic button',
+          note: 'The cover was like that when we got here.',
+          def: def('panic', [
+            {
+              type: 'button',
+              at: c(0, 1),
+              angle: UP,
+              cells: [
+                [2, 0],
+                [3, 0],
+                [4, 0],
+              ] as Cell[],
+              on: 300,
+              warn: 60,
+            },
+          ]),
+        },
+        {
+          title: 'fuse crate',
+          note: 'FRAGILE. Very.',
+          def: def('fuse', [{ type: 'fuse', cells: [[0, 0]], trigger: 'land', count: 180, radius: 1.5, regrow: 360 }]),
+        },
+        {
+          title: 'four-square',
+          note: 'Not the long one. Never the long one.',
+          def: def('tetra', [
+            body(
+              [
+                [0, 0],
+                [1, 0],
+                [2, 0],
+                [1, 1],
+              ] as Cell[],
+              'stone',
+              { look: 'tetra', hue: 285 },
+            ),
+          ]),
+        },
         {
           title: 'yolo blocks',
           note: 'Trust the beat.',

@@ -22,8 +22,9 @@ function enqueue(send: (r: TelemetryReporter) => void): void {
 
 const buffer: TelemetryReporter = {
   error: (error, data) => enqueue((r) => r.error(error, data)),
-  event: (name, level, data) => enqueue((r) => r.event(name, level, data)),
+  event: (name, level, data, opts) => enqueue((r) => r.event(name, level, data, opts)),
   breadcrumb: (category, message, data) => enqueue((r) => r.breadcrumb(category, message, data)),
+  log: (level, message, data) => enqueue((r) => r.log?.(level, message, data)),
 };
 
 const onWindowError = (e: ErrorEvent) => buffer.error(e.error ?? e.message);

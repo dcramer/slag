@@ -122,6 +122,13 @@ export function rulesProfile(rules: MatchRules): ProfileOverride {
  * The full match state machine: lobby → (pick → place → run → score)* → victory.
  * Deterministic given the seed and per-device input stream; owns no DOM.
  */
+/**
+ * Rounds this page has started with no proven way to the flag. Generation and `keepsWinnable` together promise
+ * one, so any count is a broken guarantee, and the host reports it (src/game-client.ts). Diagnostics only, like
+ * `lastGenInfo`: the sim never reads it, and it isn't match state.
+ */
+export const planMisses = { count: 0 };
+
 export class Match {
   seed: number;
   level: Level;
@@ -432,6 +439,7 @@ export class Match {
     const s = settled(this.level, this.placed);
     const plan = prove(s.level, s.placed, this.plan);
     if (plan) this.plan = plan;
+    else planMisses.count++;
     const crate = generateCrate(this.seed, this.round, count, plan?.length ?? MAX_BRIDGES, this.dryRounds, !!lonePipe(this.placed));
     const defs = new Rng(deriveSeed(this.seed ^ this.salt, `crate-order:${this.round}`)).shuffle(crate);
     // Cards in rows of up to 5 (8 players → 10 cards → 2 rows).

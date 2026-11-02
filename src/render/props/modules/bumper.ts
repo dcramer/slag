@@ -2,7 +2,7 @@ import { css, type HSL } from '../../../core/color';
 import { BUMPER_FLASH } from '../../../sim/props';
 import { type P, stroke } from '../../ink';
 import { INK, ovalPts, part, path, sprite, stamp } from '../../ink-props';
-import { circle, glowDot, light, type MetalPalette } from '../../kit';
+import { circle, light, type MetalPalette } from '../../kit';
 import { defineArt } from '../common';
 
 /** Frames the score stays up after a kick. */
@@ -69,8 +69,7 @@ defineArt<'bumper'>({
       g.fillStyle = css(lit, on ? 25 : -10, on ? 0.95 : 0.35);
       circle(g, x + Math.cos(a) * R * 0.9, y + Math.sin(a) * R * 0.9, 0.9);
     }
-    glowDot(g, x, y, R * 1.8 + hit * 10, lit, 0.2 + hit * 0.7);
-    light(rc, x, y, 30 + hit * 40, lit, 0.35 + hit * 0.8);
+    light(rc, x, y, 24 + hit * 36, lit, 0.25 + hit * 0.8);
     if (since < SCORE) {
       const u = since / SCORE;
       const ty = y - R - 3 - u * 10;

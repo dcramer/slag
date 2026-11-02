@@ -3,7 +3,7 @@ import type { Body } from '../../sim/physics';
 import type { RunnerStatus } from '../../sim/props';
 import type { GameEvent } from '../../sim/types';
 import type { Fx } from '../fx';
-import { circle, ellipse, glowDot, type RC } from '../kit';
+import { circle, ellipse, type RC } from '../kit';
 
 /**
  * Status overlays drawn over a runner: an ice block while frozen (it thins
@@ -12,7 +12,6 @@ import { circle, ellipse, glowDot, type RC } from '../kit';
  */
 export function drawRunnerStatus(rc: RC, b: Body, st: RunnerStatus, soot = 0): void {
   const s = rc.s;
-  const g = rc.g;
   if (soot > 0) {
     const a = Math.min(1, soot / 30);
     s.fillStyle = `rgba(18,11,8,${0.85 * a})`;
@@ -35,7 +34,6 @@ export function drawRunnerStatus(rc: RC, b: Body, st: RunnerStatus, soot = 0): v
     s.fillStyle = 'rgba(255,255,255,0.7)';
     s.fillRect(b.x - 0.5, b.y - 0.5, 1.5, 5);
     s.fillRect(b.x - 0.5, b.y - 0.5, 4, 1.2);
-    glowDot(g, b.x + b.w / 2, b.y + b.h / 2, 12, { h: 195, s: 90, l: 70 }, 0.2 * k);
   }
   if (st.slowed > 0) {
     const goo: HSL = { h: 105, s: 75, l: 45 };
@@ -101,6 +99,28 @@ const PROP_FX: Record<string, (fx: Fx, e: PropEvent, shake: (k: number) => void)
     fx.burst('smoke', e.x, e.y, 18, 90, [{ h: 0, s: 0, l: 14 }], 3.2, 1.1);
     fx.burst('debris', e.x, e.y, 8, 140, [{ h: 28, s: 45, l: 30 }], 1.3, 0.7);
     shake(5);
+  },
+  'fling-fire'(fx, e, shake) {
+    fx.add('ring', e.x, e.y, 0, 0, { h: 6, s: 62, l: 55 }, 14, 0.2);
+    fx.burst('dust', e.x, e.y, 6, 80, [{ h: 30, s: 15, l: 75 }], 1, 0.4);
+    shake(1.5);
+  },
+  'fling-snap'(fx, e, shake) {
+    fx.burst('debris', e.x, e.y - 8, 6, 120, [{ h: 6, s: 62, l: 42 }], 1.2, 0.6);
+    shake(1);
+  },
+  'button-press'(fx, e, shake) {
+    fx.add('ring', e.x, e.y, 0, 0, GOLD, 14, 0.22);
+    shake(1);
+  },
+  'fuse-lit'(fx, e) {
+    fx.burst('spark', e.x + 3, e.y, 8, 100, [AMBER, GOLD], 1, 0.3);
+  },
+  boost(fx, e) {
+    const dx = (e.x2 ?? e.x) - e.x;
+    const dy = (e.y2 ?? e.y) - e.y;
+    fx.burst('dust', e.x - dx * 0.3, e.y - dy * 0.3 + 6, 6, 70, [{ h: 30, s: 10, l: 70 }], 1.2, 0.4);
+    fx.burst('spark', e.x, e.y, 5, 140, [{ h: 46, s: 95, l: 62 }], 0.9, 0.25);
   },
   'rope-snap'(fx, e, shake) {
     fx.burst('debris', e.x, e.y, 8, 110, [{ h: 14, s: 58, l: 38 }], 1.5, 0.8);

@@ -143,7 +143,7 @@ export function castBeam(ctx: PropCtx, out: Contrib, x: number, y: number, dx: n
 }
 
 /**
- * The lethal segment of a beam, `from` px out to where it stops. Stopped beams
+ * The lethal segment of a beam (flames, lasers: both set things alight), `from` px out to where it stops. Stopped beams
  * end `r` short, so the round cap touches the face it hit and can't reach
  * through a thin solid to whoever stands behind it. No clear length, no hazard.
  */
@@ -160,7 +160,7 @@ export function beamHazard(
 ): void {
   if (beam.len <= from) return;
   const to = beam.hit ? Math.max(from, beam.len - r) : beam.len;
-  out.hazards.push({ owner: ctx.r.pp.owner, kind: 'seg', x1: x + dx * from, y1: y + dy * from, x2: x + dx * to, y2: y + dy * to, r });
+  out.hazards.push({ owner: ctx.r.pp.owner, ignites: true, kind: 'seg', x1: x + dx * from, y1: y + dy * from, x2: x + dx * to, y2: y + dy * to, r });
 }
 
 type CtxOf = (r: Resolved, mi: number) => PropCtx;

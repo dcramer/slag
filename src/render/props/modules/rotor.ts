@@ -4,7 +4,7 @@ import { hash2 } from '../../../core/rng';
 import { type ModuleOf, type RotorArm, rotorAngles, rotorArms, rotorPlatform } from '../../../sim/props';
 import { blob, line, type P, stroke } from '../../ink';
 import { ball, boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
-import { circle, glowDot, light, type RC } from '../../kit';
+import { bulb, circle, glowDot, light, type RC } from '../../kit';
 import { BACKDROP, type DrawCtx, defineArt } from '../common';
 import { ceilingAbovePx, chain, groundBelowPx, lattice, plank, rope } from './setpiece';
 import { rotorSkin } from '../skins';
@@ -152,7 +152,7 @@ function drawSupport(rc: RC, m: Rotor, d: DrawCtx) {
       s.fillStyle = blink ? '#ff4030' : '#702020';
       circle(s, mx, topY - 8, 1.5);
       if (blink) {
-        glowDot(rc.g, mx, topY - 8, 9, { h: 5, s: 100, l: 55 }, 0.9);
+        bulb(rc.g, mx, topY - 8, 1.5, { h: 5, s: 100, l: 55 }, 1);
         light(rc, mx, topY - 8, 40, { h: 5, s: 100, l: 55 }, 0.5);
       }
     } else if (m.look === 'hay') {
@@ -357,6 +357,7 @@ function drawPlatform(rc: RC, m: Rotor, d: DrawCtx, a: RotorArm, i: number) {
       dot(s, a.x, a.y, 1.2, seed);
       break;
     case 'cog':
+    case 'flywheel':
       cogDeck(s, p, st, d.pal);
       break;
     case 'chandelier':
@@ -433,10 +434,6 @@ function chandelier(w: number, h: number, d: DrawCtx, seed: number) {
 function drawChandelier(rc: RC, p: Rect, d: DrawCtx, seed: number) {
   stamp(rc.s, chandelier(p.w, p.h, d, seed), p.x, p.y);
   const g = rc.g;
-  for (let k = 0; k < 5; k++) {
-    const x = p.x + 5 + ((p.w - 10) * k) / 4;
-    glowDot(g, x, p.y + p.h + 4 + (k % 2) * 3 + 1.4, 3, { h: 200, s: 60, l: 80 }, 0.25);
-  }
   // Flames, live: they flicker.
   const flame: HSL = { h: d.style.glowHue, s: 100, l: 62 };
   const n = Math.max(3, Math.round(p.w / 10));
@@ -635,9 +632,7 @@ function oreTub(w: number, h: number, d: DrawCtx, v: number) {
 function drawBucket(rc: RC, p: Rect, d: DrawCtx, _a: RotorArm, seed: number) {
   stamp(rc.s, oreTub(p.w, p.h, d, seed % 3), p.x, p.y);
   const gem: HSL = { h: [190, 300, 50, 140][seed % 4], s: 90, l: 62 };
-  rc.g.fillStyle = css(gem, 10, 0.9);
-  circle(rc.g, p.x + p.w * 0.6, p.y + 0.2, 1.1);
-  glowDot(rc.g, p.x + p.w * 0.6, p.y + 0.2, 4, gem, 0.5);
+  bulb(rc.g, p.x + p.w * 0.6, p.y + 0.2, 1.1, gem, 0.9);
   // A lantern hung off the side.
   const s = rc.s;
   const lx = p.x + p.w + 1.5;
@@ -651,8 +646,8 @@ function drawBucket(rc: RC, p: Rect, d: DrawCtx, _a: RotorArm, seed: number) {
   const warm: HSL = { h: d.style.glowHue, s: 100, l: 62 };
   rc.g.fillStyle = css(warm, 15, 0.95);
   rc.g.fillRect(lx - 1.2, ly - 0.8, 2.4, 4.3);
-  glowDot(rc.g, lx, ly + 1.5, 12, warm, 0.7);
-  light(rc, lx, ly + 1.5, 70, warm, 0.8);
+  glowDot(rc.g, lx, ly + 1.5, 7, warm, 0.6);
+  light(rc, lx, ly + 1.5, 55, warm, 0.7);
 }
 
 /** The window-washer's gondola: a steel deck in a painted band, a thin railing, a bucket and a squeegee. */
