@@ -905,8 +905,8 @@ export class Hud {
     const compact = m.players.length > 4;
     const rowH = compact ? 35 : 50;
     const L = compact
-      ? { feet: 30, scale: 1.55, name: 8, nameSize: 11, bar: 15, barH: 9, award: 28, awardH: 11, band: -1 }
-      : { feet: 36, scale: 2.2, name: 10, nameSize: 13, bar: 20, barH: 12, award: 38, awardH: 12, band: -6 };
+      ? { feet: 30, scale: 1.38, name: 8, nameSize: 11, bar: 15, barH: 9, award: 28, awardH: 11, band: -1 }
+      : { feet: 37, scale: 1.95, name: 10, nameSize: 13, bar: 20, barH: 12, award: 38, awardH: 12, band: -6 };
     const y0 = compact ? 98 : 104;
     const panelH = m.players.length * rowH + 22;
     const f = this.frame;
