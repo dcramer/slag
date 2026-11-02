@@ -97,9 +97,9 @@ export function line(g: CanvasRenderingContext2D, ax: number, ay: number, bx: nu
 }
 
 /** A wobbly closed blob, for pebbles and dabs: never a perfect circle. */
-export function blob(g: CanvasRenderingContext2D, x: number, y: number, r: number, seed: number, squash = 1, lump = 0.3) {
+export function blob(g: CanvasRenderingContext2D, x: number, y: number, r: number, seed: number, squash = 1, lump = 0.3, add = false) {
   const n = Math.max(7, Math.round(r * 2.4));
-  g.beginPath();
+  if (!add) g.beginPath();
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2;
     const k = r * (1 + lump * sn(Math.cos(a) * 1.3 + seed * 0.37, Math.sin(a) * 1.3, seed));

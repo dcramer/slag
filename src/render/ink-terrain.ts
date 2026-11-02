@@ -1,9 +1,10 @@
 import { css, type HSL, shift } from '../core/color';
 import { hash2 } from '../core/rng';
-import type { Theme } from '../gen/theme';
+import type { CapKind, PlatformKind, TerrainKind, TerrainLook, Theme } from '../gen/theme';
 import { TILE } from '../sim/constants';
 import { type Level, T_ONEWAY, tileAt, type TileRect } from '../sim/level';
-import { blob, type EdgeP, line, looseLoop, type P, shadeOf, sn, stroke, traceCorners, vn } from './ink';
+import { blob, type EdgeP, line, looseLoop, type P, shadeOf, sn, stroke, type StrokeOpts, traceCorners, vn } from './ink';
+import { INK_MATERIALS, type Tones } from './ink-material';
 
 /**
  * Terrain as an ink drawing instead of a textured mask. Each layer is marks a hand would make: flat tones
@@ -52,8 +53,15 @@ export function dirtyTiles(was: Uint8Array, now: Uint8Array, w: number, h: numbe
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       if (was[y * w + x] === now[y * w + x]) continue;
-      if (x < x0) x0 = x;
-      if (x > x1) x1 = x;
+      // A plank is inked end to end, so losing a tile changes all of it.
+      let a = x;
+      let b = x;
+      if (was[y * w + x] === T_ONEWAY) {
+        while (a > 0 && was[y * w + a - 1] === T_ONEWAY) a--;
+        while (b < w - 1 && was[y * w + b + 1] === T_ONEWAY) b++;
+      }
+      if (a < x0) x0 = a;
+      if (b > x1) x1 = b;
       if (y < y0) y0 = y;
       if (y > y1) y1 = y;
     }
@@ -62,16 +70,6 @@ export function dirtyTiles(was: Uint8Array, now: Uint8Array, w: number, h: numbe
   const left = Math.max(0, x0 - margin);
   const top = Math.max(0, y0 - margin);
   return { x: left, y: top, w: Math.min(w, x1 + margin + 1) - left, h: Math.min(h, y1 + margin + 1) - top };
-}
-
-interface Ctx {
-  g: CanvasRenderingContext2D;
-  level: Level;
-  th: Theme;
-  seed: number;
-  solid: (x: number, y: number) => boolean;
-  inkCol: string;
-  span: { tx0: number; ty0: number; tx1: number; ty1: number };
 }
 
 /** Past the window the grid carries on as it was, so a region running out of it still closes. */
@@ -107,122 +105,97 @@ export function inkContours(level: Level, seed: number, solid: (x: number, y: nu
   return { mask, loops };
 }
 
-/** Everything inside the mask that the flat-tones approach would otherwise leave empty. */
-export function inkMaterial(g: CanvasRenderingContext2D, level: Level, th: Theme, seed: number, solid: (x: number, y: number) => boolean, a: Area) {
+/** The terrain's material, and a second one for deep tiles when the look has it. */
+export function inkMaterial(g: CanvasRenderingContext2D, level: Level, th: Theme, seed: number, solid: (x: number, y: number) => boolean, area: Area) {
   const T = th.terrain;
-  const span = tilesIn(a, level);
-  const ctx: Ctx = { g, level, th, seed, solid, inkCol: inkOf(th), span };
   const dist = airDistance(level, solid);
-  const D = (x: number, y: number) => (x < 0 || y < 0 || x >= level.w || y >= level.h ? 99 : dist[y * level.w + x]);
-
-  g.fillStyle = css(T.base);
-  g.fillRect(a.x0, a.y0, a.x1 - a.x0, a.y1 - a.y0);
-
-  // Second tone: lumpy flat shape from a pile of blobs, so its edge is a brush's, not a gradient's.
-  g.fillStyle = css(shift(T.base, -7, 2));
-  tonePatch(ctx, 13, 3, 0.4, (x, y) => D(x, y) >= 2);
-  g.fillStyle = css(shift(T.dark, 3, 2));
-  tonePatch(ctx, 13, 3, 0.4, (x, y) => D(x, y) >= 4);
-
-  // Sunlit soil under the grass, in dragged strokes rather than a band.
-  g.fillStyle = css(shift(T.light, -3), undefined, 0.8);
+  const depth = (x: number, y: number) => (x < 0 || y < 0 || x >= level.w || y >= level.h ? 99 : dist[y * level.w + x]);
+  const span = tilesIn(area, level);
+  const ink = inkOf(th);
+  const paint = (c: CanvasRenderingContext2D, t: Tones, kind: TerrainKind, inside: (x: number, y: number) => boolean) =>
+    INK_MATERIALS[kind]!({ g: c, seed: seed + (t === T ? 0 : 1000), T: t, ink, span, area, inside, depth });
+  paint(g, T, T.kind, solid);
+  if (!T.sub) return;
+  // By distance from air, not depth below the surface: a depth reaches all the way down a column, so one
+  // crater would change tiles a redraw can't see. Distance stays local.
+  const sub = T.sub;
+  const deep = (x: number, y: number) => solid(x, y) && depth(x, y) >= sub.depth;
+  let any = false;
+  for (let y = span.ty0; y <= span.ty1 && !any; y++) for (let x = span.tx0; x <= span.tx1 && !any; x++) any = deep(x, y);
+  // Nothing deep here: and an empty path would cut nothing away, leaving the whole layer to paste over the first material.
+  if (!any) return;
+  const layer = document.createElement('canvas');
+  layer.width = g.canvas.width;
+  layer.height = g.canvas.height;
+  const lg = layer.getContext('2d')!;
+  lg.setTransform(g.getTransform());
+  paint(lg, sub, sub.kind, deep);
+  lg.globalCompositeOperation = 'destination-in';
+  lg.fillStyle = '#000';
+  lg.beginPath();
   for (let y = span.ty0; y <= span.ty1; y++) {
     for (let x = span.tx0; x <= span.tx1; x++) {
-      if (!solid(x, y) || D(x, y) !== 1) continue;
-      const wx = x * TILE;
-      const wy = y * TILE;
-      const n = 2 + Math.floor(hash2(wx, wy, seed + 5) * 2);
-      for (let i = 0; i < n; i++) {
-        const sx = wx + hash2(wx, i, seed + 6) * TILE;
-        const sy = wy + 4 + hash2(wy, i, seed + 7) * 11;
-        const len = 8 + hash2(wx, wy + i, seed + 8) * 14;
-        line(g, sx, sy, sx + len, sy + sn(sx * 0.1, sy * 0.1, seed) * 2, { w: 1.5, seed: (sx * 13) | 0, wobble: 0.5 });
-      }
+      if (!deep(x, y)) continue;
+      const cx = (x + 0.5) * TILE;
+      const cy = (y + 0.5) * TILE;
+      blob(lg, cx, cy, 13, x * 31 + y * 17 + seed, 1, 0.3, true);
     }
   }
-
-  marks(ctx, D);
+  lg.fill();
+  g.save();
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.drawImage(layer, 0, 0);
+  g.restore();
 }
 
 function inkOf(th: Theme): string {
-  return css(shift(th.terrain.outline, -4, 6));
+  return inkOf2(th.terrain);
 }
 
-function tonePatch(c: Ctx, r: number, jitter: number, lump: number, inside: (x: number, y: number) => boolean) {
-  const { g, seed, span } = c;
-  for (let y = span.ty0; y <= span.ty1; y++) {
-    for (let x = span.tx0; x <= span.tx1; x++) {
-      if (!c.solid(x, y) || !inside(x, y)) continue;
-      const wx = (x + 0.5) * TILE;
-      const wy = (y + 0.5) * TILE;
-      blob(g, wx + sn(wx * 0.3, wy * 0.3, seed + 2) * jitter, wy + sn(wy * 0.3, wx * 0.3, seed + 3) * jitter, r, ((wx + wy * 3) | 0) + seed, 1, lump);
-      g.fill();
-    }
+function inkOf2(T: TerrainLook): string {
+  return css(shift(T.outline, -4, 6));
+}
+
+/** Jagged: straight runs with hard turns, the way rock splits, and a fork partway along. */
+function vein(g: CanvasRenderingContext2D, x: number, y: number, a0: number, n: number, seed: number, w: number) {
+  const pts: P[] = [{ x, y }];
+  let a = a0;
+  for (let i = 0; i < n; i++) {
+    a += (hash2(seed, i, 1) - 0.5) * 2.1;
+    const last = pts[pts.length - 1];
+    pts.push({ x: last.x + Math.cos(a) * 3.6, y: last.y + Math.sin(a) * 3.6 });
+  }
+  stroke(g, pts, { w, seed, taper: [0.12, 0.6], press: 0.5 });
+  if (n > 8) {
+    const m = pts[n >> 1];
+    vein(g, m.x, m.y, a0 + (hash2(seed, 9, 2) > 0.5 ? 0.9 : -0.9), n >> 1, seed + 7, w * 0.7);
   }
 }
 
-/** Pebbles, cracks and strata ticks. One roll per tile, keyed on where the tile is. */
-function marks(c: Ctx, D: (x: number, y: number) => number) {
-  const { g, th, seed, span } = c;
+/** Glowing cracks through the material, on the emissive layer. Same lattice as every other mark. */
+export function inkVeins(g: CanvasRenderingContext2D, level: Level, th: Theme, seed: number, solid: (x: number, y: number) => boolean, area: Area) {
   const T = th.terrain;
-  const stone = css(shift(T.light, 6, -8));
-  const stoneShade = css(shift(T.base, -4, -6));
-  const speck = css(shift(T.dark, -4));
-  g.lineCap = 'round';
+  const span = tilesIn(area, level);
+  const rate = T.kind === 'basalt' ? 0.2 : 0.05;
+  g.fillStyle = css(T.vein, 6);
   for (let y = span.ty0; y <= span.ty1; y++) {
     for (let x = span.tx0; x <= span.tx1; x++) {
-      if (!c.solid(x, y)) continue;
+      if (!solid(x, y)) continue;
       const wx = x * TILE;
       const wy = y * TILE;
-      const roll = hash2(wx, wy, seed + 20);
-      const px = wx + 2 + hash2(wx, wy, seed + 21) * 12;
-      const py = wy + 2 + hash2(wx, wy, seed + 22) * 12;
-      const sd = ((wx * 7 + wy * 11) | 0) + seed;
-      if (roll < 0.17 && D(x, y) >= 2) {
-        // A pebble: flat fill, a shaded underside, and a line that doesn't quite close.
-        const r = 1.5 + hash2(wx, wy, seed + 23) * 2.6;
-        g.fillStyle = stone;
-        blob(g, px, py, r, sd, 0.72);
+      if (hash2(wx, wy, seed + 90) > rate) continue;
+      vein(g, wx + 8, wy + 8, hash2(wx, wy, seed + 91) * 6.28, 7 + Math.floor(hash2(wx, wy, seed + 92) * 8), wx * 3 + wy, 1.9);
+    }
+  }
+  if (T.cap !== 'ash') return;
+  // Embers in the ash.
+  g.fillStyle = css(T.vein, 15, 0.8);
+  for (let y = span.ty0; y <= span.ty1; y++) {
+    for (let x = span.tx0; x <= span.tx1; x++) {
+      if (!solid(x, y) || solid(x, y - 1) || y === 0) continue;
+      for (let i = 0; i < 2; i++) {
+        blob(g, x * TILE + hash2(x, y + i, seed + 94) * 15, y * TILE + hash2(y, x + i, seed + 95) * 2, 0.5, i, 1, 0.1);
         g.fill();
-        g.fillStyle = stoneShade;
-        blob(g, px + r * 0.15, py + r * 0.28, r * 0.72, sd + 1, 0.5);
-        g.fill();
-        g.fillStyle = c.inkCol;
-        const arc: P[] = [];
-        for (let i = 0; i <= 9; i++) {
-          const a = 0.2 + (i / 9) * 4.9;
-          arc.push({ x: px + Math.cos(a) * r * 1.08, y: py + Math.sin(a) * r * 0.8 });
-        }
-        stroke(g, arc, { w: 1.05, seed: sd, taper: [0.05, 0.45] });
-      } else if (roll < 0.34) {
-        // A crack: a stroke with a fork, pressed hard at the start.
-        const a = hash2(wx, wy, seed + 24) * 2 + 0.6;
-        const len = 7 + hash2(wx, wy, seed + 25) * 12;
-        const pts: P[] = [];
-        for (let i = 0; i <= 6; i++) {
-          const t = i / 6;
-          pts.push({ x: px + Math.cos(a) * len * t + sn(px + t * 3, py, sd) * 2.2, y: py + Math.sin(a) * len * t + sn(py, px + t * 3, sd) * 2.2 });
-        }
-        g.fillStyle = c.inkCol;
-        stroke(g, pts, { w: 1.25, seed: sd, taper: [0.04, 0.8] });
-        const m = pts[3];
-        line(g, m.x, m.y, m.x + Math.cos(a + 0.8) * len * 0.35, m.y + Math.sin(a + 0.8) * len * 0.35, { w: 0.8, seed: sd + 1, taper: [0.04, 0.8] });
-      } else if (roll < 0.6) {
-        // Strata ticks: short curved dashes, all leaning the same way.
-        g.fillStyle = speck;
-        const n = 2 + Math.floor(hash2(wx, wy, seed + 26) * 3);
-        for (let i = 0; i < n; i++) {
-          const dx = hash2(wx + i, wy, seed + 27) * 12 - 6;
-          const dy = hash2(wx, wy + i, seed + 28) * 12 - 6;
-          line(g, px + dx, py + dy, px + dx + 3 + hash2(i, wx, seed) * 3, py + dy + 0.8, { w: 0.85, seed: sd + i, taper: [0.2, 0.6] });
-        }
-      } else if (roll < 0.74) {
-        // Stipple: three or four dots, the cheapest way to say "grit".
-        g.fillStyle = speck;
-        for (let i = 0; i < 4; i++) {
-          blob(g, px + hash2(i, wx, seed + 29) * 9 - 4, py + hash2(i, wy, seed + 30) * 9 - 4, 0.4 + hash2(i, sd, 1) * 0.4, sd + i, 1, 0.1);
-          g.fill();
-        }
       }
     }
   }
@@ -331,16 +304,181 @@ function topRuns(loops: readonly EdgeP[][]): EdgeP[][] {
   return runs;
 }
 
-/** Grass as one drawn shape along each run: scalloped underside, a highlight stroke, blades and ink. */
-export function inkGrass(g: CanvasRenderingContext2D, loops: readonly EdgeP[][], capColor: HSL, seed: number, area: Area) {
-  const dark = css(capColor, -20, 1, 6);
-  const mid = css(capColor, -5, 1, 4);
-  const top = css(capColor, 9);
-  const hi = css(capColor, 24, 1, -4);
-  const ink = css({ h: capColor.h + 25, s: Math.min(80, capColor.s + 15), l: 9 });
+/** What sits on top of the ground, drawn in its own hand along each run. */
+export interface Cap {
+  /** Live tufts sway on it. */
+  tufts?: boolean;
+  draw(c: CapCtx): void;
+}
+
+interface CapCtx {
+  g: CanvasRenderingContext2D;
+  runs: readonly EdgeP[][];
+  T: TerrainLook;
+  seed: number;
+  area: Area;
+}
+
+/** A soft cap: a band hanging off the top edge with a scalloped underside. */
+interface BandStyle {
+  /** World px the band hangs down the wall, and how deep its drips go on top of that. */
+  band: number;
+  drip: number;
+  /** Height of the fringe along the top, 0 for none. */
+  fringe: number;
+  /** The band's tones, darkest first, and its ink. */
+  tones(c: HSL): [string, string, string, string];
+  ink(c: HSL): string;
+}
+
+const leafy = (c: HSL): [string, string, string, string] => [css(c, -20, 1, 6), css(c, -5, 1, 4), css(c, 9), css(c, 24, 1, -4)];
+const leafInk = (c: HSL) => css({ h: c.h + 25, s: Math.min(80, c.s + 15), l: 9 });
+const dullInk = (c: HSL) => css({ h: c.h, s: Math.min(50, c.s), l: 9 });
+
+const bandCap = (style: BandStyle, tufts = false): Cap => ({ tufts, draw: (c) => inkBand(c, style) });
+
+/** A built cap: a straight member along the top, with seams and fixings. */
+function hardCap(height: number, seam: number, fix: 'rivet' | 'nail' | 'none', over: number, stripe = false): Cap {
+  return {
+    draw: ({ g, runs, T, seed, area }) => {
+      const body = css(T.capColor);
+      const under = css(T.capColor, -16, 1, 4);
+      const lit = css(T.capColor, 16, 1, -4);
+      const ink = inkOf2(T);
+      for (const run of runs) {
+        if (!run.some((p) => near(area, p.x, p.y, 24))) continue;
+        // Follow the run's own points: they sit on the world grid, so a crater at one end moves nothing at the other.
+        const x0 = run[0].x - over;
+        const x1 = run[run.length - 1].x + over;
+        const y = run[run.length >> 1].y - 1.2;
+        const along = [{ x: x0, y: run[0].y }, ...run, { x: x1, y: run[run.length - 1].y }];
+        const topE = along.map((p) => ({ x: p.x, y: p.y - 1.2 + sn(p.x * 0.04, p.y * 0.04, seed) * 0.25 }));
+        const botE = along.map((p) => ({ x: p.x, y: p.y - 1.2 + height + sn(p.x * 0.06, p.y * 0.06, seed + 1) * 0.4 }));
+        const band = (a: readonly P[], b: readonly P[], fill: string) => {
+          g.fillStyle = fill;
+          g.beginPath();
+          a.forEach((q, i) => (i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)));
+          for (let i = b.length - 1; i >= 0; i--) g.lineTo(b[i].x, b[i].y);
+          g.closePath();
+          g.fill();
+        };
+        band(topE, botE, body);
+        band(
+          topE.map((q) => ({ x: q.x, y: q.y + height * 0.62 })),
+          botE,
+          under,
+        );
+        band(
+          topE,
+          topE.map((q) => ({ x: q.x, y: q.y + 1 })),
+          lit,
+        );
+        if (stripe) {
+          g.fillStyle = css(T.vein.s > 40 ? T.vein : { h: 48, s: 90, l: 55 });
+          band(
+            botE.map((q) => ({ x: q.x, y: q.y - 1.1 })),
+            botE.map((q) => ({ x: q.x, y: q.y - 0.2 })),
+            g.fillStyle as string,
+          );
+        }
+        g.fillStyle = ink;
+        for (let k = Math.ceil(x0 / seam); k * seam < x1 - 4; k++) {
+          const sx = k * seam;
+          if (!near(area, sx, y, 12)) continue;
+          if (hash2(k, 5, seed) > 0.3) line(g, sx, y + 0.2, sx + (hash2(k, 6, seed) - 0.5), y + height, { w: 0.95, seed: k, taper: [0.1, 0.25] });
+          if (fix === 'none') continue;
+          blob(g, sx + 3, y + height * 0.45, fix === 'rivet' ? 0.75 : 0.5, k, 1, 0.14);
+          g.fill();
+          if (sx + seam - 3 > x1 - 2) continue;
+          blob(g, sx + seam - 3, y + height * 0.45, fix === 'rivet' ? 0.75 : 0.5, k + 1, 1, 0.14);
+          g.fill();
+        }
+        cellStrokes(g, botE, area, { w: 1.7, seed: seed + 3, taper: [0.06, 0.06], press: 0.5 });
+        cellStrokes(g, topE, area, { w: 0.8, seed: seed + 4, taper: [0.1, 0.12], press: 0.6 });
+        line(g, x0, y, x0, y + height, { w: 1.1, seed: seed + 5, taper: [0.1, 0.1] });
+        line(g, x1, y, x1, y + height, { w: 1.5, seed: seed + 6, taper: [0.1, 0.1] });
+      }
+    },
+  };
+}
+
+/** One long edge as a pen would ink it, lifting at fixed places: a stroke's pressure can't reach past a lift. */
+function cellStrokes(g: CanvasRenderingContext2D, pts: readonly P[], area: Area, o: StrokeOpts) {
+  let piece: P[] = [];
+  for (let i = 0; i < pts.length; i++) {
+    const c = Math.floor(pts[i].x / 34);
+    piece.push(pts[i]);
+    if (i === pts.length - 1 || Math.floor(pts[i + 1].x / 34) !== c) {
+      if (piece.length >= 2 && piece.some((q) => near(area, q.x, q.y, 8))) stroke(g, piece, { ...o, seed: o.seed + c });
+      piece = [pts[i]];
+    }
+  }
+}
+
+/** Loose stuff lying on the ground: gravel, and crystals pushing up through it. */
+function pebbleCap(crystals: boolean): Cap {
+  return {
+    draw: ({ g, runs, T, seed, area }) => {
+      const stone = css(T.light, -4, 1, -6);
+      const shade = css(T.base, -2, 1, 2);
+      const ink = inkOf2(T);
+      for (const run of runs) {
+        for (const p of run) {
+          if (p.ny > -0.8 || !near(area, p.x, p.y, 10)) continue;
+          const r = hash2(p.x | 0, 1, seed);
+          if (crystals && r > 0.86) {
+            const h = 3 + r * 5;
+            const lean = (hash2(p.x | 0, 2, seed) - 0.5) * 2.4;
+            g.fillStyle = ink;
+            line(g, p.x, p.y + 0.8, p.x + lean, p.y - h - 0.7, { w: 4.4, seed: p.x | 0, taper: [0, 0.9], press: 0 });
+            g.fillStyle = css(T.vein, 8);
+            line(g, p.x, p.y + 0.5, p.x + lean, p.y - h, { w: 3, seed: p.x | 0, taper: [0, 0.9], press: 0 });
+            g.fillStyle = css(T.vein, 30, 1, -6);
+            line(g, p.x - 0.5, p.y, p.x + lean - 0.1, p.y - h * 0.8, { w: 0.9, seed: p.x | 0, taper: [0.05, 0.9], press: 0 });
+          } else if (r < 0.62) {
+            const rad = 0.8 + hash2(p.x | 0, 3, seed) * 1.1;
+            g.fillStyle = ink;
+            blob(g, p.x, p.y + 0.2, rad + 0.45, p.x | 0, 0.72, 0.2);
+            g.fill();
+            g.fillStyle = r < 0.3 ? stone : shade;
+            blob(g, p.x, p.y, rad, p.x | 0, 0.7, 0.2);
+            g.fill();
+          }
+        }
+      }
+    },
+  };
+}
+
+export const INK_CAPS: Record<CapKind, Cap> = {
+  grass: bandCap({ band: 4.3, drip: 3.4, fringe: 1, tones: leafy, ink: leafInk }, true),
+  // Moss creeps: thinner on top, longer in the drip, and nothing stands up out of it.
+  moss: bandCap({ band: 2.8, drip: 6.5, fringe: 0.55, tones: leafy, ink: leafInk }),
+  snow: bandCap({
+    band: 3.4,
+    drip: 2.4,
+    fringe: 0,
+    tones: () => [css({ h: 215, s: 34, l: 66 }), css({ h: 212, s: 30, l: 82 }), css({ h: 210, s: 30, l: 95 }), '#fff'],
+    ink: () => css({ h: 218, s: 34, l: 46 }),
+  }),
+  rust: bandCap({ band: 1.5, drip: 8, fringe: 0, tones: leafy, ink: dullInk }),
+  ash: bandCap({ band: 1.8, drip: 2.2, fringe: 0.3, tones: leafy, ink: dullInk }),
+  ledge: hardCap(5.2, 34, 'none', 1),
+  trim: hardCap(4.6, 26, 'rivet', 0, true),
+  beam: hardCap(5.4, 48, 'nail', 0),
+  gravel: pebbleCap(false),
+  crystal: pebbleCap(true),
+  none: { draw: () => {} },
+};
+
+/** A band along every top edge: scalloped underside, a highlight stroke, blades and ink. */
+function inkBand({ g, runs, T, seed, area }: CapCtx, style: BandStyle) {
+  const capColor = T.capColor;
+  const [dark, mid, top, hi] = style.tones(capColor);
+  const ink = style.ink(capColor);
   const under = (x: number, e: number) =>
-    e * (4.3 + 2.4 * vn(x * 0.13, 1.5, seed) + 3.4 * Math.pow(Math.abs(Math.sin(x * 0.29 + 2.5 * sn(x * 0.06, 2, seed))), 2.2));
-  for (const run of topRuns(loops)) {
+    e * (style.band + 2.4 * vn(x * 0.13, 1.5, seed) + style.drip * Math.pow(Math.abs(Math.sin(x * 0.29 + 2.5 * sn(x * 0.06, 2, seed))), 2.2));
+  for (const run of runs) {
     if (!run.some((p) => near(area, p.x, p.y, 24))) continue;
     const N = run.length;
     const L = (i: number) => Math.min(1, i / 2.5, (N - 1 - i) / 2.5);
@@ -398,9 +536,9 @@ export function inkGrass(g: CanvasRenderingContext2D, loops: readonly EdgeP[][],
     for (let i = 1; i < N - 1; i++) {
       const p = edge[i];
       const h0 = hash2(p.x | 0, 7, seed);
-      if (h0 < 0.3 || !near(area, p.x, p.y, 8)) continue;
+      if (h0 < 0.3 || !style.fringe || !near(area, p.x, p.y, 8)) continue;
       const lean = (hash2(p.x | 0, 8, seed) - 0.5) * 1.2;
-      const hh = 1.6 + hash2(p.x | 0, 9, seed) * 2.1;
+      const hh = (1.6 + hash2(p.x | 0, 9, seed) * 2.1) * style.fringe;
       blade(g, p.x, p.y + 1.2, lean, hh + 0.5, 2.4, ink);
       blade(g, p.x, p.y + 1.2, lean, hh, 1.5, h0 > 0.65 ? top : mid);
     }
@@ -413,6 +551,62 @@ export function inkGrass(g: CanvasRenderingContext2D, loops: readonly EdgeP[][],
       line(g, p.x, p.y + 1.6, p.x + 3 + hash2(p.x | 0, 6, seed) * 5, p.y + 1.9, { w: 1, seed: p.x | 0, taper: [0.2, 0.7] });
     }
   }
+}
+
+/** Downward-facing stretches of contour, for what hangs off a ceiling. */
+function underRuns(loops: readonly EdgeP[][]): EdgeP[] {
+  return loops.flat().filter((p) => p.ny > 0.9 && !p.hidden);
+}
+
+/** What grows down from a ceiling. Thin on purpose: this is the only thing allowed past the collision shape below, so it must read as decoration. */
+type Hanger = (g: CanvasRenderingContext2D, x: number, y: number, h: number, T: TerrainLook, ink: string, seed: number) => void;
+
+function spike(g: CanvasRenderingContext2D, x: number, y: number, h: number, w: number, fill: string, ink: string, seed: number) {
+  g.fillStyle = ink;
+  line(g, x, y - 0.5, x, y + h + 0.7, { w: w + 1.1, seed, taper: [0, 0.95], press: 0 });
+  g.fillStyle = fill;
+  line(g, x, y - 0.5, x, y + h, { w, seed, taper: [0, 0.95], press: 0 });
+}
+
+const stalactite: Hanger = (g, x, y, h, T, ink, seed) => spike(g, x, y, Math.min(6, h), 2.6, css(T.base, -2), ink, seed);
+const icicle: Hanger = (g, x, y, h, _, ink, seed) => spike(g, x, y, Math.min(6, h), 1.9, css({ h: 200, s: 60, l: 90 }), ink, seed);
+const shard: Hanger = (g, x, y, h, T, ink, seed) => spike(g, x, y, Math.min(5, h), 2.4, css(T.vein, 6), ink, seed);
+const mossDrip: Hanger = (g, x, y, h, T, ink, seed) => spike(g, x, y, h, 2.1, css(T.capColor, -8), ink, seed);
+const root: Hanger = (g, x, y, h, T, _, seed) => {
+  const pts: P[] = [];
+  for (let i = 0; i <= 5; i++) pts.push({ x: x + sn(x * 0.2, i * 0.6, seed) * 1.6, y: y - 0.5 + (h * 1.2 * i) / 5 });
+  g.fillStyle = css(T.dark, -6);
+  stroke(g, pts, { w: 1.2, seed, taper: [0, 0.8], press: 0.2 });
+};
+
+function hangerOf(T: TerrainLook): Hanger | null {
+  if (T.cap === 'snow') return icicle;
+  if (T.cap === 'crystal') return shard;
+  if (T.cap === 'moss') return mossDrip;
+  if (T.kind === 'cave' || T.kind === 'rock' || T.kind === 'basalt') return stalactite;
+  if (T.kind === 'organic' || T.kind === 'dirt') return root;
+  return null;
+}
+
+/** Ceilings: one roll per stretch of underside, so what hangs there doesn't move when the rock around it does. */
+export function inkUnder(g: CanvasRenderingContext2D, loops: readonly EdgeP[][], T: TerrainLook, seed: number, area: Area) {
+  const hang = hangerOf(T);
+  if (!hang) return;
+  const ink = inkOf2(T);
+  let last = NaN;
+  for (const p of underRuns(loops)) {
+    const cell = Math.floor(p.x / 9);
+    if (cell === last || !near(area, p.x, p.y, 12)) continue;
+    last = cell;
+    const key = cell * 1009 + Math.round(p.y);
+    if (hash2(key, 1, seed) > 0.3) continue;
+    hang(g, cell * 9 + 2 + hash2(key, 2, seed) * 5, p.y, 3 + hash2(key, 3, seed) * 5, T, ink, key);
+  }
+}
+
+/** The cap along every top edge of the terrain. */
+export function inkCap(g: CanvasRenderingContext2D, loops: readonly EdgeP[][], T: TerrainLook, seed: number, area: Area) {
+  INK_CAPS[T.cap].draw({ g, runs: topRuns(loops), T, seed, area });
 }
 
 /** One live tuft: blades as filled, tapered leaves, held so they sway without re-rolling. */
@@ -482,13 +676,161 @@ function blade(s: CanvasRenderingContext2D, x: number, y: number, lean: number, 
   s.fill();
 }
 
-/** Jump-through planks, drawn as whole boards per run rather than a tile stamp. */
+interface Run {
+  g: CanvasRenderingContext2D;
+  x0: number;
+  x1: number;
+  y: number;
+  /** Free-standing ends get a brace; ends set into a wall don't. */
+  freeL: boolean;
+  freeR: boolean;
+  c: HSL;
+  ink: string;
+  seed: number;
+  tx: number;
+}
+
+const H = 5.4;
+
+function shape(g: CanvasRenderingContext2D, a: readonly P[], b: readonly P[], fill: string) {
+  g.fillStyle = fill;
+  g.beginPath();
+  a.forEach((q, i) => (i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)));
+  for (let i = b.length - 1; i >= 0; i--) g.lineTo(b[i].x, b[i].y);
+  g.closePath();
+  g.fill();
+}
+
+/** Top, middle and bottom edges of a run, each a little off true. */
+function runEdges(r: Run, topA: number, botA: number) {
+  const { x0, x1, y, seed } = r;
+  const wob = (x: number, k: number, a: number) => sn(x * 0.09, y * 0.1 + k, seed + 70) * a;
+  const topE: P[] = [];
+  const botE: P[] = [];
+  const midE: P[] = [];
+  for (let x = x0; x <= x1 + 0.01; x += 2.5) {
+    topE.push({ x, y: y + wob(x, 0, topA) });
+    botE.push({ x, y: y + H + wob(x, 1, botA) });
+    midE.push({ x, y: y + H * 0.62 + wob(x, 2, botA) });
+  }
+  return { topE, botE, midE, wob };
+}
+
+const INK_PLATFORMS: Record<PlatformKind, (r: Run) => void> = {
+  wood(r) {
+    const { g, x0, x1, y, c, ink, seed, tx } = r;
+    const { topE, botE, midE, wob } = runEdges(r, 0.2, 0.55);
+    // Braces first: the board overlaps them.
+    if (r.freeL) brace(g, x0 + 4, y + H, 1, css(c, -10), ink, seed + tx);
+    if (r.freeR) brace(g, x1 - 4, y + H, -1, css(c, -10), ink, seed + tx + 1);
+    shape(g, topE, botE, css(c));
+    shape(g, midE, botE, css(c, -15, 1, 4));
+    shape(
+      g,
+      topE,
+      topE.map((q) => ({ x: q.x, y: q.y + 1.15 })),
+      css(c, 14),
+    );
+    g.fillStyle = css(c, -24, 1, 6);
+    for (let x = x0 + 2; x < x1 - 3; x += 3) {
+      const h0 = hash2(x | 0, y | 0, seed + 71);
+      if (h0 < 0.62) continue;
+      const gy = y + 1.8 + hash2(x | 0, 2, seed + 72) * 2.4;
+      line(g, x, gy, x + 5 + h0 * 8, gy + (h0 - 0.8) * 2, { w: 0.65, seed: (x | 0) + seed, taper: [0.3, 0.6] });
+    }
+    g.fillStyle = ink;
+    // Board ends and nails, irregular on purpose.
+    for (let x = x0 + 12 + hash2(tx, y, seed) * 16; x < x1 - 8; x += 22 + hash2(x | 0, y, seed) * 24) {
+      const lean = (hash2(x | 0, 1, seed) - 0.5) * 1.3;
+      line(g, x, y + 0.2, x + lean, y + H - 0.1, { w: 1.1, seed: x | 0, taper: [0.1, 0.25] });
+      blob(g, x - 2, y + 1.6 + hash2(x | 0, 2, seed), 0.5, x | 0, 1, 0.2);
+      g.fill();
+      blob(g, x + 2.2, y + 3 + hash2(x | 0, 3, seed), 0.5, (x | 0) + 1, 1, 0.2);
+      g.fill();
+    }
+    stroke(g, botE, { w: 1.9, seed: tx + seed, taper: [0.03, 0.05], press: 0.55 });
+    stroke(g, topE, { w: 0.85, seed: tx + seed + 1, taper: [0.1, 0.12], press: 0.6 });
+    if (r.freeL) line(g, x0, y - 0.3, x0 + wob(x0, 3, 0.5), y + H + 0.3, { w: 1.5, seed: tx, taper: [0.1, 0.1] });
+    if (r.freeR) line(g, x1, y - 0.3, x1 + wob(x1, 3, 0.5), y + H + 0.3, { w: 1.8, seed: tx + 1, taper: [0.1, 0.1] });
+  },
+  grate(r) {
+    const { g, x0, x1, y, c, ink, seed, tx } = r;
+    const { topE, botE } = runEdges(r, 0.12, 0.2);
+    shape(g, topE, botE, css(c, -24, 1, 4));
+    // Slats leaning one way, with the dark showing through: this one you can see is a grating.
+    g.fillStyle = css(c, 6);
+    for (let k = Math.ceil(x0 / 2.8); k * 2.8 < x1 - 1; k++) line(g, k * 2.8, y + 1.2, k * 2.8 + 1.6, y + H - 1, { w: 1, seed: k, taper: [0, 0], press: 0.1 });
+    g.fillStyle = ink;
+    stroke(g, botE, { w: 1.7, seed: tx + seed, taper: [0.03, 0.05], press: 0.4 });
+    g.fillStyle = css(c, 12);
+    stroke(g, topE, { w: 1.5, seed: tx + seed + 1, taper: [0.02, 0.02], press: 0.15 });
+    g.fillStyle = ink;
+    stroke(
+      g,
+      topE.map((q) => ({ x: q.x, y: q.y - 0.5 })),
+      { w: 0.7, seed: tx + seed + 2, taper: [0.1, 0.1], press: 0.5 },
+    );
+    if (r.freeL) line(g, x0, y - 0.5, x0, y + H + 0.3, { w: 1.6, seed: tx, taper: [0.1, 0.1] });
+    if (r.freeR) line(g, x1, y - 0.5, x1, y + H + 0.3, { w: 1.9, seed: tx + 1, taper: [0.1, 0.1] });
+  },
+  bamboo(r) {
+    const { g, x0, x1, y, c, ink, seed } = r;
+    for (const [dy, dl] of [
+      [0, 6],
+      [2.6, -6],
+    ] as const) {
+      const pts: P[] = [];
+      for (let x = x0; x <= x1 + 0.01; x += 3) pts.push({ x, y: y + dy + 1.3 + sn(x * 0.08, dy, seed) * 0.25 });
+      g.fillStyle = ink;
+      stroke(g, pts, { w: 3.6, seed: seed + dy, taper: [0, 0], press: 0.05 });
+      g.fillStyle = css(c, dl);
+      stroke(g, pts, { w: 2.2, seed: seed + dy, taper: [0, 0], press: 0.05 });
+      g.fillStyle = css(c, dl + 18);
+      stroke(
+        g,
+        pts.map((q) => ({ x: q.x, y: q.y - 0.5 })),
+        { w: 0.6, seed: seed + dy + 1, taper: [0.2, 0.3] },
+      );
+      // Nodes in the cane: never lined up from one pole to the next.
+      g.fillStyle = ink;
+      for (let k = Math.ceil(x0 / 13); k * 13 < x1 - 2; k++) {
+        const nx = k * 13 + hash2(k, dy, seed) * 8;
+        if (nx < x1 - 1) line(g, nx, y + dy, nx + 0.3, y + dy + 2.6, { w: 0.9, seed: k, taper: [0.1, 0.1] });
+      }
+    }
+    // Lashings.
+    g.fillStyle = css({ h: 35, s: 40, l: 42 });
+    for (let k = Math.ceil(x0 / 28); k * 28 < x1 - 2; k++) {
+      const lx = k * 28 + 4;
+      if (lx < x1 - 2) line(g, lx, y - 0.6, lx + 0.8, y + H, { w: 2, seed: k, taper: [0.05, 0.05], press: 0.1 });
+    }
+  },
+  stone(r) {
+    const { g, x0, x1, y, c, ink, seed, tx } = r;
+    const { topE, botE, midE } = runEdges(r, 0.15, 0.7);
+    shape(g, topE, botE, css(c));
+    shape(g, midE, botE, css(c, -8, 1, 2));
+    shape(
+      g,
+      topE,
+      topE.map((q) => ({ x: q.x, y: q.y + 1 })),
+      css(c, 12),
+    );
+    g.fillStyle = ink;
+    for (let k = Math.ceil(x0 / 21); k * 21 < x1 - 5; k++) {
+      if (hash2(k, 1, seed) < 0.3) continue;
+      const sx = k * 21 + hash2(k, 2, seed) * 8;
+      line(g, sx, y + 0.2, sx + 1.5 - hash2(k, 3, seed) * 3, y + H, { w: 1, seed: k, taper: [0.1, 0.4] });
+    }
+    stroke(g, botE, { w: 1.9, seed: tx + seed, taper: [0.03, 0.05], press: 0.55 });
+    stroke(g, topE, { w: 0.85, seed: tx + seed + 1, taper: [0.1, 0.12], press: 0.6 });
+  },
+};
+
+/** Jump-through platforms, drawn as whole runs rather than a tile stamp. */
 export function inkPlatforms(g: CanvasRenderingContext2D, level: Level, th: Theme, seed: number, solid: (x: number, y: number) => boolean, area: Area) {
-  const c = th.terrain.platform.color;
+  const P = th.terrain.platform;
   const ink = inkOf(th);
-  const light = css(c, 14);
-  const shade = css(c, -15, 1, 4);
-  const grain = css(c, -24, 1, 6);
   for (let ty = 0; ty < level.h; ty++) {
     for (let tx = 0; tx < level.w; tx++) {
       if (tileAt(level, tx, ty) !== T_ONEWAY || tileAt(level, tx - 1, ty) === T_ONEWAY) continue;
@@ -498,56 +840,7 @@ export function inkPlatforms(g: CanvasRenderingContext2D, level: Level, th: Them
       const x1 = (end + 1) * TILE + (solid(end + 1, ty) ? 2 : 0.5);
       const y = ty * TILE;
       if (x1 + 8 < area.x0 || x0 - 8 > area.x1 || y + 14 < area.y0 || y - 2 > area.y1) continue;
-      const wy = y;
-      const H = 5.4;
-      const wob = (x: number, k: number, a: number) => sn(x * 0.09, wy * 0.1 + k, seed + 70) * a;
-      const topE: P[] = [];
-      const botE: P[] = [];
-      const midE: P[] = [];
-      for (let x = x0; x <= x1 + 0.01; x += 2.5) {
-        topE.push({ x, y: y + wob(x, 0, 0.2) });
-        botE.push({ x, y: y + H + wob(x, 1, 0.55) });
-        midE.push({ x, y: y + H * 0.62 + wob(x, 2, 0.5) });
-      }
-      const shape = (a: readonly P[], b: readonly P[], fill: string) => {
-        g.fillStyle = fill;
-        g.beginPath();
-        a.forEach((q, i) => (i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)));
-        for (let i = b.length - 1; i >= 0; i--) g.lineTo(b[i].x, b[i].y);
-        g.closePath();
-        g.fill();
-      };
-      // Braces first: the board overlaps them.
-      if (!solid(tx - 1, ty)) brace(g, x0 + 4, y + H, 1, css(c, -10), ink, seed + tx);
-      if (!solid(end + 1, ty)) brace(g, x1 - 4, y + H, -1, css(c, -10), ink, seed + end);
-      shape(topE, botE, css(c));
-      shape(midE, botE, shade);
-      shape(
-        topE,
-        topE.map((q) => ({ x: q.x, y: q.y + 1.15 })),
-        light,
-      );
-      g.fillStyle = grain;
-      for (let x = x0 + 2; x < x1 - 3; x += 3) {
-        const r = hash2(x | 0, wy | 0, seed + 71);
-        if (r < 0.62) continue;
-        const gy = y + 1.8 + hash2(x | 0, 2, seed + 72) * 2.4;
-        line(g, x, gy, x + 5 + r * 8, gy + (r - 0.8) * 2, { w: 0.65, seed: (x | 0) + seed, taper: [0.3, 0.6] });
-      }
-      g.fillStyle = ink;
-      // Board ends and nails, irregular on purpose.
-      for (let x = x0 + 12 + hash2(tx, ty, seed) * 16; x < x1 - 8; x += 22 + hash2(x | 0, ty, seed) * 24) {
-        const lean = (hash2(x | 0, 1, seed) - 0.5) * 1.3;
-        line(g, x, y + 0.2, x + lean, y + H - 0.1, { w: 1.1, seed: x | 0, taper: [0.1, 0.25] });
-        blob(g, x - 2, y + 1.6 + hash2(x | 0, 2, seed), 0.5, x | 0, 1, 0.2);
-        g.fill();
-        blob(g, x + 2.2, y + 3 + hash2(x | 0, 3, seed), 0.5, (x | 0) + 1, 1, 0.2);
-        g.fill();
-      }
-      stroke(g, botE, { w: 1.9, seed: tx + seed, taper: [0.03, 0.05], press: 0.55 });
-      stroke(g, topE, { w: 0.85, seed: tx + seed + 1, taper: [0.1, 0.12], press: 0.6 });
-      if (!solid(tx - 1, ty)) line(g, x0, y - 0.3, x0 + wob(x0, 3, 0.5), y + H + 0.3, { w: 1.5, seed: tx, taper: [0.1, 0.1] });
-      if (!solid(end + 1, ty)) line(g, x1, y - 0.3, x1 + wob(x1, 3, 0.5), y + H + 0.3, { w: 1.8, seed: end, taper: [0.1, 0.1] });
+      INK_PLATFORMS[P.kind]({ g, x0, x1, y, freeL: !solid(tx - 1, ty), freeR: !solid(end + 1, ty), c: P.color, ink, seed, tx });
     }
   }
 }

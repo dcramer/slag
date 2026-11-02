@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EDGE_DRIFT, type EdgeP, FLOOR_DRIFT, looseLoop, traceCorners } from '../src/render/ink';
 import { dirtyTiles } from '../src/render/ink-terrain';
+import { T_ONEWAY } from '../src/sim/level';
 
 /** Build a grid from rows of `#` (solid) and `.` (air). Out of bounds is solid, as at the world's edge. */
 function grid(rows: string[]) {
@@ -10,8 +11,7 @@ function grid(rows: string[]) {
   return { w, h, solid };
 }
 
-const loops = (g: ReturnType<typeof grid>): EdgeP[][] =>
-  traceCorners(g.solid, g.w, g.h).map((c) => looseLoop(c, { tile: 16, w: g.w, h: g.h, seed: 7 }));
+const loops = (g: ReturnType<typeof grid>): EdgeP[][] => traceCorners(g.solid, g.w, g.h).map((c) => looseLoop(c, { tile: 16, w: g.w, h: g.h, seed: 7 }));
 
 describe('ink contours', () => {
   it('closes a loop around every solid region, including one touching the world edge', () => {
@@ -114,6 +114,14 @@ describe('dirtyTiles', () => {
     now[5 * w + 10] = 1;
     now[6 * w + 12] = 1;
     expect(dirtyTiles(blank(), now, w, h, 2)).toEqual({ x: 8, y: 3, w: 7, h: 6 });
+  });
+
+  it('takes a whole plank when one of its tiles goes, because a plank is inked end to end', () => {
+    const was = blank();
+    for (let x = 3; x < 15; x++) was[5 * w + x] = T_ONEWAY;
+    const now = was.slice();
+    now[5 * w + 8] = 0;
+    expect(dirtyTiles(was, now, w, h, 1)).toEqual({ x: 2, y: 4, w: 14, h: 3 });
   });
 
   it('stops at the level, so a change at the edge never leaves it', () => {

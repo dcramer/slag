@@ -549,6 +549,7 @@ try {
           render();
           partial.push(performance.now() - t0 - idle);
           const a = timing ? null : clone();
+          const dumpA = timing ? '' : tp.bake.toDataURL('image/png');
           tp.fullBakes = true;
           tp.inkKey = '';
           tp.texKey = '';
@@ -572,7 +573,7 @@ try {
             const y = (px - x) / tp.bake.width;
             box = [Math.min(box[0], x), Math.min(box[1], y), Math.max(box[2], x), Math.max(box[3], y)];
           }
-          wrong.push({ bytes: bad, worst, box });
+          wrong.push({ bytes: bad, worst, box, crater: [cx, cy], a: bad > 10000 ? dumpA : '', b: bad > 10000 ? tp.bake.toDataURL('image/png') : '' });
           await new Promise((r) => setTimeout(r, 0));
         }
         const med = (v: number[]) => [...v].sort((p, q) => p - q)[v.length >> 1];
@@ -587,6 +588,13 @@ try {
           wrong,
         };
       }, argv.includes('--timing'));
+      (report.wrong as { a: string; b: string }[]).forEach((w, i) => {
+        if (w.a) {
+          writeFileSync(`${out}/partial-${i}.png`, Buffer.from(w.a.split(',')[1], 'base64'));
+          writeFileSync(`${out}/full-${i}.png`, Buffer.from(w.b.split(',')[1], 'base64'));
+        }
+        w.a = w.b = '';
+      });
       console.log(JSON.stringify(report));
       break;
     }

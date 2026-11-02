@@ -81,6 +81,7 @@ Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm
 - **Blast shape**: add to `BlastShape` and `BLAST_SHAPES` (`src/sim/props/transform.ts`).
 - **Theme**: add the id to `THEME_IDS` and `THEME_LABELS` in `src/themes.ts`, then `tsc` lists every `Record<ThemeId, …>` to fill: `SCULPTORS`, `SET_PIECE_RECIPES`, the look `RECIPES` in `src/gen/theme/presets.ts`, music `STYLES`, `GROUND_TONE`. A farm must read as a farm at a glance.
 - **Set pieces**: per-theme recipes in `src/gen/setpieces/<theme>.ts` (see `src/gen/AGENTS.md`).
+- **Terrain look**: a `TerrainKind`, `CapKind` or `PlatformKind` draws through a registry in `src/render/ink-material.ts` and `ink-terrain.ts` (see `src/render/AGENTS.md`).
 
 ## Game rules
 
