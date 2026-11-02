@@ -57,6 +57,7 @@ const BANDS = ['#ffc83f', '#ff7a22', '#e0471a'];
 const HIGHLIGHT = '#fff1b8';
 
 const f = (n: number) => String(Math.round(n * 10) / 10);
+const f4 = (n: number) => String(Math.round(n * 1e4) / 1e4);
 
 /** A canvas stand-in that writes what the pen draws as SVG path data: relative steps in tenths of a px, which keeps it small. */
 function recorder() {
@@ -203,7 +204,7 @@ function penLoop(g: CanvasRenderingContext2D, l: Loop, seed: number, thin: numbe
 }
 
 /** A drip: its shape (a neck and a bulb) and the pen line down one side, round the bulb and up the other. */
-function drip(ch: Letter, x: number, len: number, letter: Loop[], seed: number) {
+function drip(ch: Letter, x: number, len: number, letter: Loop[], seed: number, k = 1) {
   const gx = (GLYPHS[ch].x + x) * K;
   let bottom = 0;
   for (const l of letter) if (!l.hole) for (const p of l.pts) if (Math.abs(p.x - gx) < 3 && p.y > bottom) bottom = p.y;
@@ -222,7 +223,7 @@ function drip(ch: Letter, x: number, len: number, letter: Loop[], seed: number) 
   }
   for (let k = 0; k <= 5; k++) side.push({ x: gx + w / 2, y: neck - ((neck - bottom - 1) * k) / 5 });
   const pen = recorder();
-  stroke(pen.g, side, { w: 2.4, seed, taper: [0.1, 0.1], press: 0.5 });
+  stroke(pen.g, side, { w: 2.4 * k, seed, taper: [0.1, 0.1], press: 0.5 });
   return { d, pen: pen.out(), origin: [gx, top] };
 }
 
@@ -233,12 +234,24 @@ function cut(y0: number, amp: number, ph: number): string {
   return `${d}L360 200L-10 200Z`;
 }
 
-let built = '';
+interface Inking {
+  chars: Letter[];
+  drips: [Letter, number, number][];
+  /** Line weight: 1 for the logo; heavier for the icon, which is seen far smaller. */
+  k: number;
+  /** The opening tags, and what closes them. */
+  open: string;
+  close?: string;
+  /** Prefix for this drawing's ids, so the logo and the icon never share one. */
+  id: string;
+  /** Drips sway (the logo) or hold still (the icon). */
+  sway: boolean;
+}
 
-/** The logo as one SVG, sized in em to the box the text used to take, so it scales with the font size. */
-export function logoSVG(): string {
-  if (built) return built;
-  const glyphs = (Object.keys(GLYPHS) as Letter[]).map((ch) => ({ ch, ...glyph(GLYPHS[ch].d, GLYPHS[ch].x * K, 2.2) }));
+/** Letters inked the world's way, as SVG: shadow shape, ink mass, pen, cel bands, highlights, drips. */
+function inked(o: Inking): string {
+  const { k, id } = o;
+  const glyphs = o.chars.map((ch) => ({ ch, ...glyph(GLYPHS[ch].d, GLYPHS[ch].x * K, 2.2) }));
   const letters = glyphs.map((g) => g.path).join('');
   const loops = glyphs.flatMap((g) => g.loops);
 
@@ -246,8 +259,8 @@ export function logoSVG(): string {
   const inner = recorder();
   loops.forEach((l, i) => {
     // The ink mass's outer edge, swelling and thinning; then the line where ink meets the fill.
-    penLoop(outer.g, l, 11 + i, 0.6, 7, l.hole ? 3 : 6, 0.25, 0.35);
-    penLoop(inner.g, l, 41 + i, 0.4, 3.4, 0, 0.35, 0.2);
+    penLoop(outer.g, l, 11 + i, 0.6 * k, 7 * k, (l.hole ? 3 : 6) * k, 0.25, 0.35);
+    penLoop(inner.g, l, 41 + i, 0.4 * k, 3.4 * k, 0, 0.35, 0.2);
   });
 
   // A highlight just inside each letter's lit top edge, along its longest run facing the light.
@@ -262,40 +275,87 @@ export function logoSVG(): string {
       const p = l.pts[i % n];
       const nn = ns[i % n];
       if (facing(nn) < -0.6 && p.y < BASE - 62 && run.length < n) {
-        run.push({ x: p.x - nn.x * 6, y: p.y - nn.y * 6 });
+        run.push({ x: p.x - nn.x * 6 * k, y: p.y - nn.y * 6 * k });
         if (run.length > best.length) best = run;
       } else run = [];
     }
-    if (best.length > 8) stroke(hi.g, best.slice(2, Math.min(best.length - 2, 26)), { w: 3, seed: 90 + li, taper: [0.3, 0.55], press: 0.3 });
+    if (best.length > 8) stroke(hi.g, best.slice(2, Math.min(best.length - 2, 26)), { w: 3 * k, seed: 90 + li, taper: [0.3, 0.55], press: 0.3 });
   });
 
-  const drips = DRIPS.map(([ch, x, len], i) => ({ ...drip(ch, x, len, glyphs.find((g) => g.ch === ch)!.loops, 70 + i), delay: `${(-i * 0.7).toFixed(1)}s` }));
+  const drips = o.drips.map(([ch, x, len], i) => ({
+    ...drip(ch, x, len, glyphs.find((g) => g.ch === ch)!.loops, 70 + i, k),
+    delay: `${(-i * 0.7).toFixed(1)}s`,
+  }));
   // Every copy of a drip (shadow, ink, fill) swings about the same point on the same clock.
   const dripG = (inner: string, dx = 0, dy = 0) =>
     drips
-      .map(
-        (d) =>
-          `<g class="logo-drip" style="transform-origin:${f(d.origin[0] + dx)}px ${f(d.origin[1] + dy)}px;animation-delay:${d.delay}">${inner.replace(/\$d|\$pen/g, (m) => (m === '$d' ? d.d : d.pen))}</g>`,
-      )
+      .map((d) => {
+        const body = inner.replace(/\$d|\$pen/g, (m) => (m === '$d' ? d.d : d.pen));
+        return o.sway
+          ? `<g class="logo-drip" style="transform-origin:${f(d.origin[0] + dx)}px ${f(d.origin[1] + dy)}px;animation-delay:${d.delay}">${body}</g>`
+          : body;
+      })
       .join('');
+  const [sx, sy] = [5 * k, 9 * k];
+  const shift = `transform="translate(${f(sx)} ${f(sy)})"`;
 
-  built =
-    `<svg class="logo-art" viewBox="0 0 ${BOX_W} ${BOX_H}" aria-hidden="true" focusable="false">` +
-    `<defs><path id="slag-logo-l" d="${letters}"/><clipPath id="slag-logo-clip"><use href="#slag-logo-l"/></clipPath></defs>` +
+  return (
+    o.open +
+    `<defs><path id="${id}-l" d="${letters}"/><clipPath id="${id}-clip"><use href="#${id}-l"/></clipPath></defs>` +
     // The hard shadow shape, down and away from the light.
-    `<g fill="${SHADOW}" stroke="${SHADOW}" stroke-linejoin="round"><use href="#slag-logo-l" transform="translate(5 9)" stroke-width="13"/>` +
-    dripG('<path d="$d" transform="translate(5 9)" stroke-width="5"/>', 5, 9) +
+    `<g fill="${SHADOW}" stroke="${SHADOW}" stroke-linejoin="round"><use href="#${id}-l" ${shift} stroke-width="${f(13 * k)}"/>` +
+    dripG(`<path d="$d" ${shift} stroke-width="${f(5 * k)}"/>`, sx, sy) +
     `</g>` +
     // The ink mass, heavier away from the light, and its pen edge.
-    `<g fill="${INK}" stroke="${INK}" stroke-linejoin="round"><use href="#slag-logo-l" stroke-width="12"/><use href="#slag-logo-l" stroke-width="11" transform="translate(1.6 2.6)"/>` +
-    dripG('<path d="$d" stroke-width="4.5"/>') +
+    `<g fill="${INK}" stroke="${INK}" stroke-linejoin="round"><use href="#${id}-l" stroke-width="${f(12 * k)}"/>` +
+    `<use href="#${id}-l" stroke-width="${f(11 * k)}" transform="translate(${f(1.6 * k)} ${f(2.6 * k)})"/>` +
+    dripG(`<path d="$d" stroke-width="${f(4.5 * k)}"/>`) +
     `</g><path fill="${INK}" d="${outer.out()}"/>` +
     // Molten fill in three cel bands, its pen line, and the highlights.
-    `<g clip-path="url(#slag-logo-clip)"><rect x="-10" y="-10" width="370" height="200" fill="${BANDS[0]}"/>` +
+    `<g clip-path="url(#${id}-clip)"><rect x="-10" y="-10" width="370" height="200" fill="${BANDS[0]}"/>` +
     `<path fill="${BANDS[1]}" d="${cut(52, 2.2, 0.5)}"/><path fill="${BANDS[2]}" d="${cut(86, 2.6, 2.1)}"/></g>` +
     `<path fill="${INK}" d="${inner.out()}"/><path fill="${HIGHLIGHT}" d="${hi.out()}"/>` +
     // Drips over the letters' bottom edge, so they pour out of the letter rather than hang under a line.
     dripG(`<path fill="${BANDS[2]}" d="$d"/><path fill="${INK}" d="$pen"/>`) +
-    `</svg>`;
+    (o.close ?? '</svg>')
+  );
+}
+
+let built = '';
+
+/** The logo as one SVG, sized in em to the box the text used to take, so it scales with the font size. */
+export function logoSVG(): string {
+  built ||= inked({
+    chars: ['S', 'L', 'A', 'G'],
+    drips: DRIPS,
+    k: 1,
+    open: `<svg class="logo-art" viewBox="0 0 ${BOX_W} ${BOX_H}" aria-hidden="true" focusable="false">`,
+    id: 'slag-logo',
+    sway: true,
+  });
   return built;
+}
+
+/**
+ * The icon's mark: the logo's S alone, with two drips, inked heavier so it holds up at app-icon and
+ * tab sizes. A standalone SVG in a square box; `pnpm brand` (tools/brand.ts) renders every icon from it.
+ */
+export function markSVG(): string {
+  const k = 1.8;
+  // The S spans x 4–75 and y 14–122 at the logo's size; ink, shadow and drips hang outside that.
+  const [cx, top, bottom] = [42, 14 - 8 * k, 122 + 14 + 10 * k];
+  const side = bottom - top;
+  return inked({
+    chars: ['S'],
+    drips: [
+      ['S', 175, 14],
+      ['S', 345, 8],
+    ],
+    k,
+    // A 64-unit box, as the icon pipeline's hand-placed 16 px layer expects.
+    open: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><g transform="scale(${f4(64 / side)}) translate(${f(side / 2 - cx)} ${f(-top)})">`,
+    close: '</g></svg>',
+    id: 'm',
+    sway: false,
+  });
 }

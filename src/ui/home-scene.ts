@@ -1,11 +1,11 @@
 import { hash2 } from '../core/rng';
-import { blob, line, type P, stroke } from '../render/ink';
+import { blob, line, type P, sn, stroke } from '../render/ink';
 import { PAL } from './style';
 
 /**
- * The main menu's foundry, inked like the world (docs/ART.md → World art): a slag heap built from
- * chunky broken rocks and cinder, a crucible hung on its bail from a crane jib, the pour, and the
- * pool it lands in. Flat tones cut with hard edges, one shadow shape per rock, and the pen.
+ * The main menu's foundry, inked like the world (docs/ART.md → World art): a slag heap of cinder
+ * and clinker with runs of cooled slag, a crucible hung on its bail from a crane jib, the pour, and the
+ * pool it lands in. Flat tones cut with hard edges, hard shadow shapes, and the pen.
  *
  * `buildScene` lays it out for a canvas size; what holds still is painted once into layers
  * (`paintCrane`, `paintHeap`), and only what moves is drawn each frame (`drawStream`, `drawSplash`).
@@ -31,9 +31,17 @@ export interface Scene {
   s: number;
   /** The heap's drawn top at x: where a runner's feet go. */
   foot: (x: number) => number;
+  /** That top, sampled left to right; and the crest's x, where the lit side turns to the shadow side. */
+  surface: P[];
+  crest: number;
   /** Where the runners stand, left to right. */
   runX: number[];
-  rocks: Rock[];
+  /** Clinker chunks bedded in the heap, back to front. */
+  chunks: Rock[];
+  /** Fine cinder marks near the top. */
+  cinder: { x: number; y: number; r: number; light: boolean }[];
+  /** Tongues of solidified slag down the slope: the outline, ropy ridges across them, and the spine. */
+  runs: { outline: P[]; ropes: P[][]; spine: P[] }[];
   /** Glowing seams in the cooling slag, and how hot each is. */
   cracks: { pts: P[]; heat: number }[];
   /** The crane: jib height and bottom, the trolley, the crucible's pivot and tilt, and its scale. */
@@ -92,14 +100,14 @@ const smooth = (a: number, b: number, x: number) => {
   return t * t * (3 - 2 * t);
 };
 
-/** Lay the foundry out for a W×H canvas, from a per-visit seed so a resize keeps the same rocks. */
+/** Lay the foundry out for a W×H canvas, from a per-visit seed so a resize keeps the same heap. */
 export function buildScene(W: number, H: number, seed: number): Scene {
-  const s = Math.max(2.2, Math.min(4.6, H / 95));
-  const g = Math.min(s, 3.4);
+  const s = Math.max(2.2, Math.min(4, H / 95));
+  const g = Math.min(s, 2.9);
   const r = (i: number, j: number) => hash2(i, j, seed);
 
   // The crucible hangs at the right, clear of the edge, and pours left into a pool on the heap's shoulder.
-  const pin = { x: W - 18 * g, y: 0 };
+  const pin = { x: W - 16 * g, y: 0 };
   const jibY = Math.max(3 * g, H * 0.035);
   const jibH = 4.5 * g;
   pin.y = Math.max(jibY + jibH + 3.5 * g + 4 * g + 29.4 * g, H * 0.3);
@@ -109,105 +117,169 @@ export function buildScene(W: number, H: number, seed: number): Scene {
   const impactX = lip.x - 4 * g;
   const poolX = impactX + rx * 0.2;
 
-  // The heap: a mound with a few lumps, and a terrace on its right shoulder where the pool sits.
-  const bumps = Array.from({ length: 6 }, (_, i) => ({ c: i / 5 + (r(i, 1) - 0.5) * 0.1, w: 0.08 + r(i, 2) * 0.08, h: 0.2 + r(i, 3) * 0.35 }));
-  const mound = (x: number) => {
+  // The mound: low and wide, a long gentle toe on the left and a shorter fall on the right, its crest
+  // softened by a few broad lumps. A terrace on the right shoulder holds the pool.
+  const crest = 0.44 + (r(1, 1) - 0.5) * 0.06;
+  const peak = 0.34 + r(1, 2) * 0.04;
+  const lumps = Array.from({ length: 5 }, (_, i) => ({ c: 0.12 + i * 0.19 + (r(i, 3) - 0.5) * 0.08, w: 0.05 + r(i, 4) * 0.06, a: (r(i, 5) - 0.4) * 0.09 }));
+  const height = (x: number) => {
     const u = Math.min(1, Math.max(0, x / W));
-    const m = Math.sin(Math.PI * Math.pow(u, 0.9));
-    let y = 0.5 * Math.pow(m, 0.42);
-    for (const b of bumps) y += b.h * 0.16 * Math.exp(-(((u - b.c) / b.w) ** 2)) * m;
-    return H - Math.min(0.62, y) * H * 0.62;
+    let h = u < crest ? Math.pow(Math.sin((Math.PI / 2) * (u / crest)), 1.25) : Math.pow(Math.cos((Math.PI / 2) * ((u - crest) / (1 - crest + 0.18))), 1.15);
+    for (const l of lumps) h += l.a * Math.exp(-(((u - l.c) / l.w) ** 2)) * Math.min(1, h * 3);
+    return Math.max(0, h);
   };
+  const mound = (x: number) => H - height(x) * peak * H;
   const terrace = mound(poolX) + ry;
   const profile = (x: number) => {
     const k = 1 - smooth(rx * 1.15, rx * 1.9, Math.abs(x - poolX));
-    return mound(x) * (1 - k) + terrace * k;
+    // Cinder grit: the line is never quite smooth.
+    return mound(x) * (1 - k) + terrace * k + (sn(x / (2.2 * s), 1.7, seed) * 0.35 + sn(x / (7 * s), 4.1, seed) * 0.6) * s;
   };
   const pool = { x: poolX, y: terrace - ry * 0.4, rx, ry };
 
-  // Runners stand left of the pool, spread evenly.
-  const poolLeft = poolX - rx - 3 * g;
-  const runMax = Math.max(W * 0.45, poolLeft - 5 * s);
-  const runX = Array.from({ length: 6 }, (_, i) => W * 0.1 + ((runMax - W * 0.1) * i) / 5);
+  // The surface line, sampled: the pen draws it and the runners stand on it.
+  const surface: P[] = [];
+  for (let x = 0; x <= W + 3; x += 3) surface.push({ x, y: profile(x) });
+  const foot = (fx: number) => {
+    const j = Math.max(0, Math.min(surface.length - 2, fx / 3));
+    const i = Math.floor(j);
+    return surface[i].y + (surface[i + 1].y - surface[i].y) * (j - i);
+  };
 
-  // Rocks: a skin of boulders whose upper halves make the silhouette (one under each runner's feet),
-  // then a jittered pack of smaller ones filling the body. Top first, so lower rocks sit in front.
-  const rocks: Rock[] = [];
+  // Runners: evenly along the crest, from where the toe has risen to clear of the pool.
+  let x0 = 0;
+  while (x0 < W * 0.3 && height(x0) < 0.36) x0 += 2;
+  x0 = Math.max(x0, 8 * s);
+  const runMax = Math.max(x0 + W * 0.3, poolX - rx - 3 * g - 7 * s);
+  const runX = Array.from({ length: 6 }, (_, i) => x0 + ((runMax - x0) * i) / 5);
+
+  // Chunks, big to small: clinker boulders bedded at the base and the toe, a few medium ones in the body.
+  const chunks: Rock[] = [];
   const rock = (cx: number, cy: number, rad: number, k: number) => {
-    const n = 5 + Math.floor(r(k, 1) * 3);
+    const n = 6 + Math.floor(r(k, 1) * 3);
     const turn = r(k, 2) * Math.PI * 2;
-    const squash = 0.6 + r(k, 3) * 0.22;
+    const squash = 0.55 + r(k, 3) * 0.2;
     const pts: P[] = [];
     for (let i = 0; i < n; i++) {
-      const a = turn + ((i + (r(k, 10 + i) - 0.5) * 0.8) / n) * Math.PI * 2;
-      const rr = rad * (0.8 + r(k, 20 + i) * 0.3);
-      pts.push({ x: cx + Math.cos(a) * rr, y: cy + Math.sin(a) * rr * squash });
+      const a = turn + ((i + (r(k, 10 + i) - 0.5) * 0.7) / n) * Math.PI * 2;
+      pts.push({ x: cx + Math.cos(a) * rad * (0.82 + r(k, 20 + i) * 0.26), y: cy + Math.sin(a) * rad * squash * (0.82 + r(k, 30 + i) * 0.26) });
     }
-    const heat = Math.max(0, 1 - Math.hypot(cx - poolX, cy - pool.y) / (W * 0.3));
-    rocks.push({ pts, heat, y: cy });
+    chunks.push({ pts, heat: Math.max(0, 1 - Math.hypot(cx - poolX, cy - pool.y) / (W * 0.3)), y: cy });
   };
-  const skin: { x: number; rad: number }[] = runX.map((x, i) => ({ x, rad: (8 + r(i, 30) * 2) * s }));
-  for (let x = -3 * s, k = 0; x < W + 6 * s; k++) {
-    const rad = (6 + r(k, 31) * 5) * s;
-    if (skin.every((o) => Math.abs(o.x - x) > (o.rad + rad) * 0.72)) skin.push({ x, rad });
-    x += rad * (0.9 + r(k, 32) * 0.5);
-  }
-  skin.forEach((o, i) => rock(o.x, profile(o.x) + o.rad * 0.22, o.rad, 100 + i));
-  for (let row = 0, k = 0; row < 12; row++) {
-    for (let x = -4 * s + (row % 2) * 6 * s; x < W + 6 * s; x += 12 * s, k++) {
-      const cx = x + (r(k, 40) - 0.5) * 6 * s;
-      const cy = profile(cx) + (10 + row * 9) * s + (r(k, 41) - 0.5) * 4 * s;
-      const rad = (5 + r(k, 42) * 4.5) * s;
-      if (cy - rad * 0.5 < H) rock(cx, cy, rad, 500 + k);
-    }
-  }
-  rocks.sort((a, b) => a.y - b.y);
-
-  // The heap's drawn top, sampled every 2px: what a runner stands on.
-  const env = new Float32Array(Math.ceil(W / 2) + 2).fill(Infinity);
-  for (const rk of rocks) {
-    const n = rk.pts.length;
-    for (let i = 0; i < n; i++) {
-      const a = rk.pts[i];
-      const b = rk.pts[(i + 1) % n];
-      const lo = Math.max(0, Math.ceil(Math.min(a.x, b.x) / 2));
-      const hi = Math.min(env.length - 1, Math.floor(Math.max(a.x, b.x) / 2));
-      for (let j = lo; j <= hi; j++) {
-        const u = (j * 2 - a.x) / (b.x - a.x || 1);
-        env[j] = Math.min(env[j], a.y + (b.y - a.y) * u);
-      }
-    }
-  }
-  const foot = (fx: number) => {
-    const j = Math.max(0, Math.min(env.length - 2, fx / 2));
-    const i = Math.floor(j);
-    const y0 = env[i];
-    const y1 = env[i + 1];
-    if (!Number.isFinite(y0) || !Number.isFinite(y1)) return profile(fx);
-    return y0 + (y1 - y0) * (j - i);
-  };
-
-  // Cooling cracks: more of them, and hotter, toward the pour.
-  const cracks: Scene['cracks'] = [];
-  rocks.forEach((rk, i) => {
-    if (r(i, 20) > 0.12 + rk.heat * 0.7) return;
-    const n = rk.pts.length;
-    const e = Math.floor(r(i, 21) * n);
-    const a = rk.pts[e];
-    const b = rk.pts[(e + 1) % n];
-    const t0 = 0.3 + r(i, 22) * 0.4;
-    let p = { x: a.x + (b.x - a.x) * t0, y: a.y + (b.y - a.y) * t0 };
-    const c = rk.pts.reduce((m, q) => ({ x: m.x + q.x / n, y: m.y + q.y / n }), { x: 0, y: 0 });
-    const pts = [p];
-    for (let k = 1; k <= 3; k++) {
-      const f = k / 3.6;
-      p = { x: p.x + (c.x - p.x) * f + (r(i, 23 + k) - 0.5) * 5 * s, y: p.y + (c.y - p.y) * f + (r(i, 27 + k) - 0.5) * 3 * s };
-      pts.push(p);
-    }
-    cracks.push({ pts, heat: 0.4 + rk.heat * 0.6 });
+  [0.03, 0.17, 0.4, 0.66, 0.95].forEach((u, i) => {
+    const x = (u + (r(i, 40) - 0.5) * 0.05) * W;
+    const rad = (9 + r(i, 41) * 5) * s;
+    // The toe's boulder breaks the line; the rest are bedded deep, shown only where the base fades.
+    const cy = u < 0.1 ? profile(x) + rad * 0.25 : Math.max(profile(x) + rad * 1.3, H - rad * 0.2);
+    rock(x, cy, rad, 50 + i);
   });
+  for (let i = 0; i < 9; i++) {
+    const x = (0.08 + 0.84 * ((i + r(i, 42) * 0.8) / 9)) * W;
+    const depth = (11 + r(i, 43) * 16) * s;
+    const y = profile(x) + depth;
+    if (y > H * 0.97 || Math.abs(x - poolX) < rx * 1.2) continue;
+    rock(x, y, (3.2 + r(i, 44) * 3) * s, 80 + i);
+  }
+  chunks.sort((a, b) => a.y - b.y);
 
-  return { W, H, s, foot, runX, rocks, cracks, jibY, jibH, pin, tilt: TILT, g, lip, pool, impact: { x: impactX, y: pool.y } };
+  // Fine cinder near the top, thinning with depth: sparse marks on a continuous body.
+  const cinder: Scene['cinder'] = [];
+  for (let i = 0; i < Math.round(W / (1.7 * s)); i++) {
+    const x = r(i, 50) * W;
+    const d = Math.pow(r(i, 51), 1.8) * 22 * s + 1.6 * s;
+    if (profile(x) + d > H || Math.abs(x - poolX) < rx * 1.25) continue;
+    cinder.push({ x, y: profile(x) + d, r: (0.35 + r(i, 52) * 0.75 * (1 - d / (26 * s))) * s, light: r(i, 53) < 0.4 });
+  }
+
+  // Slag runs: sheets of cooled slag poured over the pool's lip, lying on the slope and running down it,
+  // thickening as they go, with drips hanging off their lower edge and ropy wrinkles across them.
+  const runs: Scene['runs'] = [];
+  const sheet = (from: number, to: number, th0: number, k: number) => {
+    const N = 28;
+    const dir = Math.sign(to - from);
+    const xs = Array.from({ length: N + 1 }, (_, i) => from + ((to - from) * i) / N);
+    const drips = [0.35, 0.62, 0.86].map((t, j) => ({ t: t + (r(k, 80 + j) - 0.5) * 0.08, d: (4 + r(k, 84 + j) * 5) * s, w: (1.8 + r(k, 88 + j)) * s }));
+    const thick = (i: number) => {
+      const t = i / N;
+      const end = Math.sqrt(Math.max(0, 1 - Math.pow(t, 6)));
+      let d = (th0 + 7 * t) * s * (1 + 0.25 * sn(i * 0.5, k + 9, seed)) * end;
+      for (const dr of drips) d += dr.d * Math.exp(-(((xs[i] - (from + (to - from) * dr.t)) / dr.w) ** 2)) * end;
+      return d;
+    };
+    const top = xs.map((x) => ({ x, y: profile(x) - 0.3 * s }));
+    const bottom = xs.map((x, i) => ({ x, y: profile(x) + thick(i) }));
+    const outline = clockwise([...top, ...bottom.map((_, i) => bottom[N - i])]);
+    // Wrinkles: short arcs across the sheet, bowed downslope.
+    const ropes: P[][] = [];
+    for (let i = 3; i < N - 3; i += 3 + Math.floor(r(k * 40 + i, 70) * 3)) {
+      const th = thick(i);
+      const x = xs[i];
+      const y = profile(x);
+      const bow = (0.5 + r(k * 40 + i, 71) * 0.6) * th;
+      ropes.push([
+        { x: x - dir * 0.1 * th, y: y + th * 0.22 },
+        { x: x + dir * bow, y: y + th * 0.5 },
+        { x: x - dir * 0.1 * th, y: y + th * 0.8 },
+      ]);
+    }
+    const spine = xs.map((x, i) => ({ x, y: profile(x) + thick(i) * 0.45 }));
+    runs.push({ outline, ropes, spine });
+  };
+  sheet(poolX - rx * 0.9, Math.max(poolX - rx - W * 0.14, 0), 3.5, 3);
+  sheet(poolX + rx * 0.9, W - 2 * s, 3, 7);
+
+  // Still-glowing seams near the pour: down the hot top of each run, and a few in the crust by the pool.
+  const cracks: Scene['cracks'] = [];
+  runs.forEach((run, k) => {
+    const pts = run.spine.slice(1, 9).map((p, i) => ({ x: p.x + sn(i * 0.9, k + 20, seed) * 1.2 * s, y: p.y }));
+    cracks.push({ pts, heat: 1 - k * 0.3 });
+  });
+  for (let i = 0; i < 4; i++) {
+    const a = Math.PI * (0.15 + (i / 3) * 0.7) + (r(i, 60) - 0.5) * 0.3;
+    const x = poolX + Math.cos(a) * (rx + 2.6 * g);
+    const y = pool.y + Math.sin(a) * (ry + 1.6 * g);
+    cracks.push({
+      pts: [
+        { x, y },
+        { x: x + (r(i, 61) - 0.5) * 4 * s, y: y + (1.5 + r(i, 62) * 2) * s },
+        { x: x + (r(i, 63) - 0.5) * 6 * s, y: y + (3 + r(i, 64) * 3) * s },
+      ],
+      heat: 0.6,
+    });
+  }
+
+  return {
+    W,
+    H,
+    s,
+    foot,
+    surface,
+    crest: crest * W,
+    runX,
+    chunks,
+    cinder,
+    runs,
+    cracks,
+    jibY,
+    jibH,
+    pin,
+    tilt: TILT,
+    g,
+    lip,
+    pool,
+    impact: { x: impactX, y: pool.y },
+  };
+}
+
+/** A loop's points in clockwise order on screen (y down), as the pen and the cel shading expect. */
+function clockwise(pts: P[]): P[] {
+  let area = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i];
+    const b = pts[(i + 1) % pts.length];
+    area += a.x * b.y - b.x * a.y;
+  }
+  return area >= 0 ? pts : pts.map((_, i) => pts[pts.length - 1 - i]);
 }
 
 const facing = (a: P, b: P) => {
@@ -315,35 +387,106 @@ function fadeBottom(c: CanvasRenderingContext2D, W: number, H: number, from: num
   c.restore();
 }
 
-/** The heap: the dark between the rocks, the rocks, cinder in the seams, and the pool's crust and melt. Static. */
+/**
+ * The heap: one continuous body in flat tones (a lit band under the crest, a shadow shape down the far
+ * side), hatching off that side, clinker chunks bedded in it, fine cinder near the top, slag runs from
+ * the pool with ropy ridges, the pen along its top, glowing seams near the pour, and the pool. Static.
+ */
 export function paintHeap(c: CanvasRenderingContext2D, S: Scene) {
-  const { W, H, s, pool } = S;
-  // The dark the rocks sit in, just under their tops, so seams read as notches in the silhouette.
-  c.fillStyle = ROCK.gap;
+  const { W, H, s, pool, surface } = S;
+  const n = surface.length;
+  const body = () => {
+    c.beginPath();
+    c.moveTo(-2, H + 2);
+    for (const p of surface) c.lineTo(p.x, p.y);
+    c.lineTo(W + 2, H + 2);
+    c.closePath();
+  };
+  // How each stretch of the top faces the light: -1 toward it, 1 away.
+  const face = (i: number) => facing(surface[Math.max(0, i - 2)], surface[Math.min(n - 1, i + 2)]);
+
+  body();
+  c.fillStyle = ROCK.base;
+  c.fill();
+  c.save();
+  body();
+  c.clip();
+  // The lit band: thick where the top faces the light, gone where it turns away, its lower edge cut by hand.
+  c.fillStyle = ROCK.light;
   c.beginPath();
-  c.moveTo(0, H);
-  for (let x = 0; x <= W; x += 4) c.lineTo(x, S.foot(x) + 1.4 * s);
-  c.lineTo(W, H);
+  surface.forEach((p, i) => (i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y)));
+  for (let i = n - 1; i >= 0; i--) {
+    const k = Math.max(0, Math.min(1, -face(i) * 1.4 - 0.2)) * (3.2 + 1.6 * sn(i * 0.12, 2.3, 11)) * s;
+    c.lineTo(surface[i].x, surface[i].y + k);
+  }
   c.closePath();
   c.fill();
-  S.rocks.forEach((rk, i) => {
-    const warm = rk.heat > 0.45 ? { col: ROCK.warm, dx: Math.sign(pool.x - rk.pts[0].x) * 1.6 * s, dy: 0.6 * s } : undefined;
+  // The shadow shape: everything past a hand-drawn line from just over the crest down to the base.
+  const cx = S.crest + 5 * s;
+  const cy = S.foot(cx);
+  c.fillStyle = ROCK.shade;
+  c.beginPath();
+  c.moveTo(cx, cy - 4 * s);
+  for (let i = 1; i <= 14; i++) {
+    const t = i / 14;
+    c.lineTo(cx + W * 0.1 * t * t + sn(t * 4, 5, 3) * 2.5 * s, cy + (H - cy) * t);
+  }
+  c.lineTo(W + 2, H + 2);
+  c.lineTo(W + 2, cy - 4 * s);
+  c.closePath();
+  c.fill();
+  // Hatching off the far side's top, fading into the fill.
+  c.fillStyle = ROCK.gap;
+  for (let i = 3; i < n - 3; i += 3) {
+    const p = surface[i];
+    if (p.x < cx || hash2(i, 3, 17) < 0.3) continue;
+    const len = (4 + 7 * hash2(i, 4, 17)) * s;
+    line(c, p.x, p.y + 0.8 * s, p.x - 0.45 * len, p.y + 0.8 * s + 0.9 * len, { w: 0.55 * s, seed: i, taper: [0.02, 0.85], wobble: 0.3 });
+  }
+  // Fine cinder: a mark and a glint, sparse.
+  for (const [i, k] of S.cinder.entries()) {
+    c.fillStyle = ROCK.gap;
+    blob(c, k.x + 0.2 * s, k.y + 0.25 * s, k.r * 1.1, i, 0.75, 0.35);
+    c.fill();
+    if (k.light) {
+      c.fillStyle = ROCK.light;
+      blob(c, k.x - 0.15 * k.r, k.y - 0.2 * k.r, k.r * 0.6, i + 7, 0.75, 0.3);
+      c.fill();
+    }
+  }
+  // Slag runs: glassy dark sheets, lit along their top, with ropy ridges catching the light.
+  const RUN = { base: '#2a1610', light: '#6a4128', shade: '#170c08', ink: ROCK.ink };
+  for (const [i, run] of S.runs.entries()) {
+    celShape(c, run.outline, RUN, s * 0.9, 700 + i);
+    c.fillStyle = RUN.light;
+    for (const [j, rope] of run.ropes.entries()) {
+      const [a, m, b] = rope;
+      const pts: P[] = [];
+      for (let k = 0; k <= 8; k++) {
+        const t = k / 8;
+        pts.push({ x: (1 - t) * (1 - t) * a.x + 2 * t * (1 - t) * m.x + t * t * b.x, y: (1 - t) * (1 - t) * a.y + 2 * t * (1 - t) * m.y + t * t * b.y });
+      }
+      stroke(c, pts, { w: 0.45 * s, seed: 800 + j, taper: [0.3, 0.3], press: 0.4 });
+    }
+  }
+  c.restore();
+
+  // Clinker chunks, bedded; the toe's breaks the line.
+  for (const [i, rk] of S.chunks.entries()) {
+    const warm = rk.heat > 0.5 ? { col: ROCK.warm, dx: Math.sign(pool.x - rk.pts[0].x) * 1.6 * s, dy: 0.6 * s } : undefined;
     celShape(c, rk.pts, ROCK, s, 300 + i, warm);
-  });
-  // Cinder: a few loose clinkers on the rocks and in the seams.
-  for (let i = 0; i < S.rocks.length * 2; i++) {
-    const rk = S.rocks[i % S.rocks.length];
-    const a = rk.pts[1 + (i % 3)];
-    const x = a.x + (hash2(i, 41, 7) - 0.5) * 6 * s;
-    const y = S.foot(x) + (hash2(i, 42, 7) * 1.4 - 0.2) * s;
-    if (i % 2 && y > H * 0.94) continue;
-    const rr = (0.5 + hash2(i, 43, 7) * 0.8) * s;
-    c.fillStyle = ROCK.ink;
-    blob(c, x + 0.25 * s, y + 0.3 * s, rr * 1.15, i, 0.8, 0.35);
-    c.fill();
-    c.fillStyle = hash2(i, 44, 7) < 0.5 ? ROCK.light : ROCK.shade;
-    blob(c, x, y, rr, i + 5, 0.8, 0.35);
-    c.fill();
+  }
+
+  // The pen along the top: overlapping strokes with an occasional lift, thin toward the light, heavy away.
+  c.fillStyle = ROCK.ink;
+  for (let a = 0, k = 0; a < n - 1; k++) {
+    const b = Math.min(n - 1, a + 10 + Math.floor(hash2(k, 1, 23) * 12));
+    let away = 0;
+    for (let i = a; i <= b; i++) away += Math.max(0, Math.min(1, 0.5 + 0.62 * face(i)));
+    away /= b - a + 1;
+    stroke(c, surface.slice(a, b + 1), { w: s * (0.7 + 1.6 * away), seed: 31 + k, taper: [0.12, 0.18], press: 0.35, wobble: 0.2 * s });
+    if (b >= n - 1) break;
+    a = b - (hash2(k, 2, 23) < 0.3 ? -1 : 1);
   }
 
   // Cooling cracks glow: they're hot.
@@ -385,7 +528,7 @@ export function paintHeap(c: CanvasRenderingContext2D, S: Scene) {
   c.restore();
   c.fillStyle = ROCK.ink;
   stroke(c, melt.slice(14).concat(melt[0]), { w: 1.1 * S.g, seed: 77, taper: [0.15, 0.15], press: 0.4 });
-  fadeBottom(c, W, H, H * 0.84);
+  fadeBottom(c, W, H, H * 0.9);
 }
 
 /** The crane: a jib in from the right edge, a trolley, chain, hook and bail, and the crucible on its pivot. Static. */
