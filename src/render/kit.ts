@@ -139,6 +139,22 @@ export function lightning(ctx: CanvasRenderingContext2D, x1: number, y1: number,
   ctx.lineTo(x2, y2);
 }
 
+/**
+ * An electric arc on the glow layer: a fresh jagged line each frame, stroked as a soft sheath (`halo` > 0) and a hot core.
+ * Arcs are light, not ink, so they're the one place a raw canvas stroke belongs in the world; theme art calls this.
+ */
+export function zap(g: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, jag: number, segs: number, color: HSL, w: number, halo = 0) {
+  lightning(g, x1, y1, x2, y2, jag, segs);
+  if (halo) {
+    g.strokeStyle = css(color, 0, halo);
+    g.lineWidth = w * 3.3;
+    g.stroke();
+  }
+  g.strokeStyle = css(color, 30, 0.95);
+  g.lineWidth = w;
+  g.stroke();
+}
+
 /** Layered flame shape on the emissive layer. */
 export function flame(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, color: HSL, t: number) {
   const layers: [number, number, number][] = [

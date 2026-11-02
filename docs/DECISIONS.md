@@ -246,6 +246,12 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `done` · DESIGN.md → Lore
 - **AI players are a future TODO.** "another future TODO: AI"
   2026-11-02 · `planned` · TODO.md → 27
+- **AI is built so players can one day script their own player, and prompt an LLM to improve it: a brain is an input device for a seat, with standard built-in brains first.** "something that'd be cool is letting people actually 'script' the a player... that means they could also prompt an LLM to improve their character controller" · "lets design an AI system that can work with its own standard brains/etc and have the future potentially to allow player scripts"; the owner approved the write-up.
+  2026-11-02 23:13Z · `planned` · DESIGN.md → AI players, TODO.md → 27
+- **Bots can play online, but native AI comes first; player scripts come after.** "bots can be in online play, but the focus is on native AI first"
+  2026-11-02 23:20Z · `planned` · DESIGN.md → AI players, TODO.md → 27
+- **Leaning: scripts sense an idea of values, not the literal values (rounded positions, speed bands, outcomes from the lookahead).** "i think scripts should maybe get an idea for values but not literal values?"
+  2026-11-02 23:22Z · `open` · DESIGN.md → AI players
 - **Each theme has at least 1 and at most 3 grand landmarks among its 5+.** "id like at least one grand landmark, no more than 3 (in the min 5 landmarks)"
   2026-11-02 · `done` (enforced) · `GRAND_LANDMARKS` in src/gen/kinds.ts, tests/conformance/themes.test.ts
 - **The cast needs much more parody, and each parody must be instantly recognisable; the art must improve further.** "its better but you still need more parody and the art needs to be better yet..." / "the only thing that remotely resembles the thing its mimicking is the puff ball (kirby)". Iconic palettes win over the player-colour body rule; the player's colour moves to a visible secondary slot.

@@ -1,8 +1,8 @@
 import { css, type HSL } from '../../../core/color';
 import type { ModuleOf } from '../../../sim/props';
 import { motionOffset } from '../../../sim/props/transform';
-import { line } from '../../ink';
-import { ball, boxPts, ovalPts, part, path, pen, sprite, stamp, tone } from '../../ink-props';
+import { inkFor, line } from '../../ink';
+import { ball, barLine, boxPts, ovalPts, part, path, pen, sprite, stamp, tone } from '../../ink-props';
 import { glowDot, light, type RC } from '../../kit';
 import { BACKDROP, type DrawCtx, defineArt } from '../common';
 import { ceilingAbovePx } from './setpiece';
@@ -35,11 +35,12 @@ function phase(rc: RC, d: DrawCtx): { ring: number; moving: boolean } {
 /** The cage's back screen: a lattice of thin iron, hazed back. Baked per size. */
 function screen(w: number, h: number) {
   return sprite(`cab|screen|${w}|${h}`, 0, 0, w, h, (g) => {
-    g.fillStyle = 'rgba(16,12,20,0.55)';
+    // The shaft behind it, a deep dark of the iron, and a few bars, lifting where the hand did.
+    g.fillStyle = css(IRON, -12);
     g.fillRect(2, 2, w - 4, h - 2);
-    g.fillStyle = css(IRON, 8, 0.8);
-    for (let x = 5; x < w - 2; x += 5) line(g, x, 2, x, h, { w: 0.7, seed: x, taper: [0, 0], press: 0 });
-    line(g, 2, h * 0.45, w - 2, h * 0.45, { w: 0.8, seed: 3, taper: [0, 0], press: 0 });
+    g.fillStyle = css(IRON, 10);
+    for (let x = 6; x < w - 3; x += 7) line(g, x, 3 + (x % 3), x + 0.2, h - (x % 4), { w: 0.6, seed: x, taper: [0.06, 0.12], press: 0.2 });
+    line(g, 2, h * 0.45, w - 2, h * 0.45 + 0.3, { w: 0.7, seed: 3, taper: [0.04, 0.08], press: 0.2 });
   });
 }
 
@@ -50,27 +51,17 @@ function back(rc: RC, m: Deco, d: DrawCtx) {
   // The hoist cable to its sheave under whatever's above the shaft.
   const cx = x + m.w / 2;
   const top = Math.max(0, ceilingAbovePx(d.o.level, cx, m.at[1] + 1));
-  rc.s.fillStyle = '#120c08';
-  line(rc.s, cx, top + 5, cx, y + 1, { w: 1.24, seed: 4, taper: [0, 0], press: 0 });
-  rc.s.fillStyle = css(IRON, 14);
-  line(rc.s, cx, top + 5, cx, y + 1, { w: 0.7, seed: 5, taper: [0, 0], press: 0 });
+  barLine(rc.s, cx, top + 5, cx, y + 1, 0.7, { ...IRON, l: IRON.l + 14 }, 4);
   const wheel = ovalPts(cx, top + 5, 4.5, 4.5, 7, 0.03, 16);
-  tone(rc.s, wheel, IRON, { depth: 0.6 });
-  pen(rc.s, wheel, 7, 0.3, 0.8, 3);
+  part(rc.s, wheel, IRON, 7, { depth: 0.6, thin: 0.3, thick: 0.8 });
 }
 
 /** The cage's front: corner posts, a crown rail, a little gate, all thin. Baked per size. */
 function cage(w: number, h: number) {
   return sprite(`cab|cage|${w}|${h}`, -3, -9, w + 6, h + 10, (g) => {
-    for (const px of [1, w - 1]) {
-      g.fillStyle = '#120c08';
-      line(g, px, -1, px, h, { w: 1.76, seed: px, taper: [0, 0], press: 0 });
-      g.fillStyle = css(IRON, 10);
-      line(g, px, -1, px, h, { w: 1.1, seed: px + 1, taper: [0, 0], press: 0 });
-    }
+    for (const px of [1, w - 1]) barLine(g, px, -1, px, h, 1.1, { ...IRON, l: IRON.l + 10 }, px, { lit: 12 });
     const crown = boxPts(-1.5, -3, w + 3, 3.2, 0.6, 2, 0.1);
-    tone(g, crown, IRON, { depth: 0.5 });
-    pen(g, crown, 2, 0.3, 0.8, 3);
+    part(g, crown, IRON, 2, { depth: 0.5, thin: 0.3, thick: 0.8 });
     // Scrollwork across the crown, and a brass plate.
     g.fillStyle = css(BRASS);
     path(g, ovalPts(w / 2, -1.4, 3.4, 1.1, 3, 0.05, 12));
@@ -96,7 +87,7 @@ function bell(rc: RC, x: number, y: number, ring: number) {
     { x: 3.2, y: 0 },
   ];
   tone(s, dome, BRASS, { depth: 0.5 });
-  pen(s, dome, 11, 0.3, 0.8, 2);
+  pen(s, dome, 11, 0.3, 0.8, 2, inkFor(BRASS));
   ball(s, 0, -5, 0.9, BRASS, 12);
   s.restore();
   if (!ring) return;

@@ -1,6 +1,7 @@
 import { css, type HSL, hsl3 } from '../core/color';
 import type { DecorDef } from './decor';
-import { blob, line, type P, stroke } from './ink';
+import { blob, inkFor, line, type P, stroke } from './ink';
+import { barLine, boxPts, part } from './ink-props';
 import { light } from './kit';
 
 /**
@@ -10,7 +11,6 @@ import { light } from './kit';
  * or dodge.
  */
 
-const INK = 'hsl(225 35% 9%)';
 const k01 = (seed: number, n: number) => ((seed >>> n) % 1000) / 1000;
 
 /** A pennant's cloth, flapping with time `t` (0 when baked still). */
@@ -24,8 +24,9 @@ function pennantCloth(s: CanvasRenderingContext2D, x: number, top: number, len: 
   s.quadraticCurveTo(x + dir * len * 0.5, top + 5.6 + flap(0.5), x, top + 5.6);
   s.closePath();
   s.fill();
-  s.fillStyle = INK;
-  stroke(s, [{ x, y: top + 5.6 }, { x: x + dir * len * 0.5, y: top + 4.6 + flap(0.5) }, tip], { w: 0.9, seed: (x * 3) | 0, taper: [0.2, 0.6] });
+  // The pen along its shadowed lower edge only, in a dark of the cloth.
+  s.fillStyle = inkFor(color);
+  stroke(s, [{ x, y: top + 5.6 }, { x: x + dir * len * 0.5, y: top + 4.6 + flap(0.5) }, tip], { w: 0.8, seed: (x * 3) | 0, taper: [0.2, 0.6] });
 }
 
 export const FRONTIER_DECOR = {
@@ -38,8 +39,8 @@ export const FRONTIER_DECOR = {
       const n = 3 + (d.seed % 2);
       for (let i = 0; i < n; i++) {
         const x = d.x + (k01(d.seed, i * 3) - 0.5) * 2;
-        s.fillStyle = INK;
-        blob(s, x, y - r * 0.7, r + 0.6, d.seed + i, 0.66, 0.2);
+        s.fillStyle = inkFor(d.color);
+        blob(s, x, y - r * 0.7, r + 0.4, d.seed + i, 0.66, 0.2);
         s.fill();
         s.fillStyle = css(d.color, -10 + i * 4);
         blob(s, x, y - r * 0.7, r, d.seed + i, 0.62, 0.2);
@@ -55,10 +56,7 @@ export const FRONTIER_DECOR = {
     color: (th, rng) => (rng.chance(0.6) ? th.accent : hsl3(rng.pick([0, 48, 210]), 85, 52)),
     bake(s, d) {
       const h = 18 + (d.seed % 6);
-      s.fillStyle = INK;
-      line(s, d.x, d.y + 0.5, d.x + 0.4, d.y - h, { w: 1.6, seed: d.seed, taper: [0.05, 0.1], press: 0.3 });
-      s.fillStyle = css(hsl3(30, 20, 70));
-      line(s, d.x - 0.2, d.y, d.x + 0.2, d.y - h + 0.5, { w: 0.6, seed: d.seed + 1, taper: [0.1, 0.1] });
+      barLine(s, d.x, d.y + 0.5, d.x + 0.3, d.y - h, 0.8, hsl3(30, 20, 66), d.seed, { taper: [0.02, 0.06] });
     },
     live(rc, d) {
       const h = 18 + (d.seed % 6);
@@ -72,8 +70,8 @@ export const FRONTIER_DECOR = {
       for (let i = 0; i < n; i++) {
         const x = d.x + (i - (n - 1) / 2) * 3 + (k01(d.seed, i * 2) - 0.5) * 1.5;
         const len = (3 + k01(d.seed, i * 4) * 7) * d.size;
-        s.fillStyle = INK;
-        line(s, x, d.y - 0.6, x, d.y + len + 0.8, { w: 3, seed: d.seed + i, taper: [0, 0.95], press: 0 });
+        s.fillStyle = inkFor(d.color);
+        line(s, x, d.y - 0.6, x, d.y + len + 0.5, { w: 2.6, seed: d.seed + i, taper: [0, 0.95], press: 0 });
         s.fillStyle = css(d.color);
         line(s, x, d.y - 0.6, x, d.y + len, { w: 2, seed: d.seed + i, taper: [0, 0.95], press: 0 });
         s.fillStyle = '#fff';
@@ -88,25 +86,21 @@ export const FRONTIER_DECOR = {
       const y = d.y;
       const dir = d.flip ? -1 : 1;
       // Three splayed legs with pads, a foil-wrapped body, a dish.
-      s.fillStyle = INK;
+      const leg = hsl3(220, 8, 36);
       for (const [fx, tx] of [
         [-5, -2],
         [5, 2],
         [0, 0],
       ]) {
-        line(s, x + fx, y, x + tx, y - 5, { w: 1.1, seed: d.seed + fx, taper: [0.1, 0.1] });
-        line(s, x + fx - 1.4, y - 0.2, x + fx + 1.4, y - 0.2, { w: 1, seed: d.seed + fx + 9, taper: [0.1, 0.1] });
+        barLine(s, x + fx, y, x + tx, y - 5, 0.6, leg, d.seed + fx, { taper: [0.04, 0.04] });
+        barLine(s, x + fx - 1.4, y - 0.2, x + fx + 1.4, y - 0.2, 0.6, leg, d.seed + fx + 9, { taper: [0.04, 0.04] });
       }
-      s.fillStyle = INK;
-      s.fillRect(x - 4.4, y - 10.4, 8.8, 6.2);
-      s.fillStyle = css(d.color);
-      s.fillRect(x - 3.8, y - 9.8, 7.6, 5);
+      part(s, boxPts(x - 4.1, y - 10.1, 8.2, 5.6, 0.5, d.seed, 0.05), d.color, d.seed, { depth: 0.4, thin: 0.4, thick: 0.9 });
       s.fillStyle = css(d.color, -16);
-      s.fillRect(x - 3.8, y - 6.6, 7.6, 1.8);
+      s.fillRect(x - 3.6, y - 6.6, 7.2, 1.6);
       s.fillStyle = css(d.color, 18);
       s.fillRect(x - 3, y - 9.2, 2.2, 1);
-      s.fillStyle = INK;
-      line(s, x + dir * 2, y - 10, x + dir * 4, y - 13.5, { w: 0.8, seed: d.seed, taper: [0.1, 0.2] });
+      barLine(s, x + dir * 2, y - 10, x + dir * 4, y - 13.5, 0.5, leg, d.seed, { rim: 0.2 });
       s.fillStyle = css(hsl3(210, 10, 86));
       blob(s, x + dir * 4.6, y - 14, 2.2, d.seed, 0.5, 0.05);
       s.fill();
