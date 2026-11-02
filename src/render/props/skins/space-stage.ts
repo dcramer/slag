@@ -350,7 +350,7 @@ function planetBack(m: Deco, lv: Level, t: Hz) {
     // The world's body behind its rock, rounding off its stepped edge and showing as the tunnel's back
     // wall: one planet, not two slabs.
     const disk = ovalPts(cx, cy, (Rp + 0.75) * TILE, (Rp + 0.75) * TILE, m.seed + 2, 0.01, 56);
-    tone(g, disk, t.hsl({ ...rock, l: Math.max(16, rock.l - 14) }), { depth: 1.4 });
+    tone(g, disk, t.hsl({ ...rock, l: Math.max(20, rock.l - 9) }), { depth: 1.4 });
     pen(g, disk, m.seed + 2, 0.3, 0.8, 4, t.ink(rock));
     // The tunnel through its equator: deeper rock, magma showing in its cracks.
     const ty0 = (cyT - 2 - b.y) * TILE;
@@ -359,7 +359,7 @@ function planetBack(m: Deco, lv: Level, t: Hz) {
     g.save();
     path(g, disk);
     g.clip();
-    g.fillStyle = t.c({ ...rock, l: Math.max(10, rock.l - 24) });
+    g.fillStyle = t.c({ ...rock, l: Math.max(14, rock.l - 18) });
     cut(g, tx0 - TILE, ty0, tw + 2 * TILE, 3 * TILE, m.seed + 8);
     g.restore();
     for (let k = 0; k < Rp; k++) {
@@ -521,13 +521,13 @@ function rigBack(m: Deco, lv: Level, t: Hz) {
     const bx = (X(p.c0) + X(p.s1 + 1)) / 2;
     const by = (Y(topRow) + Y(p.D + 2)) / 2;
     const body = ovalPts(bx, by, (X(p.s1 + 1) - X(p.c0)) / 2 + 3, (Y(p.D + 2) - Y(topRow)) / 2 + 3, m.seed + 11, 0.05, 40);
-    tone(g, body, t.hsl({ ...rock, l: Math.max(16, rock.l - 14) }), { depth: 1.4 });
+    tone(g, body, t.hsl({ ...rock, l: Math.max(20, rock.l - 9) }), { depth: 1.4 });
     pen(g, body, m.seed + 11, 0.3, 0.8, 4, t.ink(rock));
     // The bore: deeper rock, steel ribs holding its roof up, a lamp now and then.
     g.save();
     path(g, body);
     g.clip();
-    g.fillStyle = t.c({ ...rock, l: Math.max(10, rock.l - 24) });
+    g.fillStyle = t.c({ ...rock, l: Math.max(14, rock.l - 18) });
     cut(g, X(p.c0) - TILE, Y(p.D - 3), X(p.s1 + 1) - X(p.c0) + 2 * TILE, 3 * TILE, m.seed + 10, 1.5);
     g.restore();
     for (let x = p.c0 + 1; x <= p.s1 - 1; x += 3) {
