@@ -108,7 +108,7 @@ export function resolveProp(pp: PlacedProp): Resolved {
   const mo = pp.def.motion;
   const motion: Motion =
     mo.type === 'rail'
-      ? { ...mo, angle: mo.angle + x.da, range: mo.range * TILE }
+      ? { ...mo, angle: mo.angle + x.da, range: mo.range * TILE, ...(mo.stops ? { stops: mo.stops.map((s) => s * TILE) } : {}) }
       : mo.type === 'loop'
         ? { ...mo, radius: mo.radius * TILE }
         : mo.type === 'track'
@@ -130,7 +130,9 @@ export function dirOf(angle: number): Vec {
 export function motionOffset(r: Resolved, f: number): Vec {
   const m = r.motion;
   if (m.type === 'rail') {
-    const d = (m.dwell ? liftAt(f, m.period, m.dwell, r.phase) : pingPong(f / m.period + r.phase)) * m.range;
+    const d = m.stops?.length
+      ? stopsAt(f, m.period, m.dwell ?? 0, m.range, m.stops, r.phase)
+      : (m.dwell ? liftAt(f, m.period, m.dwell, r.phase) : pingPong(f / m.period + r.phase)) * m.range;
     return [snap(dcos(m.angle)) * d, snap(dsin(m.angle)) * d];
   }
   if (m.type === 'loop') {
@@ -159,6 +161,33 @@ function liftAt(f: number, period: number, dwell: number, phase: number): number
   if (t < dwell) return 1;
   t -= dwell;
   return (1 + dcos((Math.PI * t) / half)) / 2;
+}
+
+/**
+ * A rail lift that also parks at `stops` on the way (a manor's floors), in px
+ * along the rail: parked at 0, eased up leg by leg with a `dwell` at every
+ * stop, parked at `range`, and back down the same way. Each leg takes its
+ * share of half the period by its length, so the cab keeps one pace; every
+ * park returns its stop exactly, so the cab's floor lines up with the tiles.
+ */
+function stopsAt(f: number, period: number, dwell: number, range: number, stops: readonly number[], phase: number): number {
+  const legs = stops.length + 1;
+  const total = period + dwell * 2 * legs;
+  let t = (((f + Math.floor(phase * total)) % total) + total) % total;
+  const at = (i: number) => (i <= 0 ? 0 : i > stops.length ? range : stops[i - 1]);
+  for (let pass = 0; pass < 2; pass++) {
+    for (let i = 0; i < legs; i++) {
+      // Up: stop i to stop i + 1; down: the same legs from the top.
+      const a = pass === 0 ? at(i) : at(legs - i);
+      const b = pass === 0 ? at(i + 1) : at(legs - i - 1);
+      if (t < dwell) return a;
+      t -= dwell;
+      const span = (period / 2) * (Math.abs(b - a) / range);
+      if (t < span) return a + ((b - a) * (1 - dcos((Math.PI * t) / span))) / 2;
+      t -= span;
+    }
+  }
+  return 0;
 }
 
 /**

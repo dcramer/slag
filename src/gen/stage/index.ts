@@ -1,6 +1,7 @@
 import { deriveSeed, Rng } from '../../core/rng';
 import type { LevelProfile } from '../../sim/level';
 import type { ThemeId } from '../../themes';
+import { CASTLE_CONCEPTS } from './castle';
 import type { Concept } from './types';
 
 export type { Concept, Landmark } from './types';
@@ -12,7 +13,7 @@ export type { Concept, Landmark } from './types';
 export const CONCEPTS: Record<ThemeId, Concept[]> = {
   farm: [],
   factory: [],
-  castle: [],
+  castle: CASTLE_CONCEPTS,
   jungle: [],
   volcano: [],
   harbor: [],

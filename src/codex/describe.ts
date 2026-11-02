@@ -35,6 +35,7 @@ export const PART_INFO: Record<Module['type'], { title: string; blurb: string }>
   rope: { title: 'Sausage Vine', blurb: 'Fresh from the hook.' },
   keg: { title: 'Kegapult', blurb: 'XXX.' },
   flood: { title: 'Flood', blurb: 'The tide waits for no runner.' },
+  shards: { title: 'Broken window', blurb: 'Seven years of bad luck, delivered all at once.' },
 };
 
 const AIM_TAG: Record<string, string> = { fixed: 'FIXED', sweep: 'SWEEPS', track: 'TRACKS' };
