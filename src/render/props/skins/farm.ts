@@ -3,9 +3,9 @@ import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { type Level, T_ONEWAY, T_SOLID, tileAt } from '../../../sim/level';
 import { geyserColumn, geyserCycle, type Module, type ModuleOf, rotorAngles, type RotorArm, swingHeads, teslaCycle } from '../../../sim/props';
-import { blob, line, type P, stroke } from '../../ink';
-import { ball, boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
-import { bulb, circle, glowDot, light, lightning, type RC } from '../../kit';
+import { inkFor, line, type P } from '../../ink';
+import { ball, bar, barLine, boxPts, dot, glint, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
+import { bulb, circle, glowDot, light, type RC, zap } from '../../kit';
 import { BACKDROP, beamOf, type DrawCtx } from '../common';
 import type { CannonPose, Deco, DecoSkin, PieceSkin, Rotor, RotorSkin, ThemeSkins } from './common';
 
@@ -46,20 +46,35 @@ function flat(g: CanvasRenderingContext2D, pts: readonly P[], base: HSL, t: Hz, 
   pen(g, pts, seed, 0.3, 0.8, 3, t.ink(base));
 }
 
-/** A backdrop beam: a dark ribbon with its hazed tone over it. */
+/** A backdrop beam: its hazed tone inside a thin rim of its own dark. */
 function beam(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, base: HSL, t: Hz, seed: number) {
-  g.fillStyle = t.ink(base);
-  line(g, ax, ay, bx, by, { w: w + 1.2, seed, taper: [0, 0], press: 0.05 });
-  g.fillStyle = t.c(base);
-  line(g, ax, ay, bx, by, { w, seed: seed + 1, taper: [0, 0], press: 0.05 });
+  barLine(g, ax, ay, bx, by, w, t.hsl(base), seed, { ink: t.ink(base), rim: 0.25, press: 0.05 });
 }
 
-/** A front pole: ink under its tone. */
+/** A front pole: its colour inside a rim that's a dark of it, lit along the top. */
 function pole(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, c: HSL, seed: number) {
-  g.fillStyle = INK;
-  line(g, ax, ay, bx, by, { w: w + 1.3, seed, taper: [0, 0], press: 0.1 });
-  g.fillStyle = css(c);
-  line(g, ax, ay, bx, by, { w, seed: seed + 1, taper: [0, 0], press: 0.1 });
+  barLine(g, ax, ay, bx, by, w, c, seed, { press: 0.1, lit: w > 1.5 ? 12 : 0 });
+}
+
+/**
+ * A long seam, board edge or course line as a hand draws it: runs that swell and lift, some left out, keyed to the
+ * seed so it lands the same every bake.
+ */
+function seam(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, col: string, seed: number, w = 0.55) {
+  const L = Math.hypot(bx - ax, by - ay);
+  if (L < 0.5) return;
+  g.fillStyle = col;
+  // Runs of 10-24 px with a short lift between, about one in five left out: drawn, not dashed.
+  let at = hash2(0, 3, seed) * 3;
+  for (let i = 0; at < L - 1; i++) {
+    const run = Math.min(L - at, 10 + hash2(i, 1, seed) * 14);
+    if (hash2(i, 5, seed) > 0.2 || run < 4) {
+      const u0 = at / L;
+      const u1 = (at + run) / L;
+      line(g, ax + (bx - ax) * u0, ay + (by - ay) * u0, ax + (bx - ax) * u1, ay + (by - ay) * u1, { w, seed: seed + i, taper: [0.15, 0.3], press: 0.35 });
+    }
+    at += run + 1.5 + hash2(i, 2, seed) * 2.5;
+  }
 }
 
 const WOOD: HSL = { h: 28, s: 36, l: 34 };
@@ -97,13 +112,11 @@ function windmillShell(m: Deco, t: Hz, hx: number, hy: number, R: number) {
     // The mill house's back wall: boards, a window, flour sacks and a pair of millstones on the floor.
     const wall = boxPts(0, R, m.w, m.h - R, 0.4, seed, 0.1);
     flat(g, wall, { h: 30, s: 30, l: 34 }, t, seed, 0.3);
-    g.fillStyle = t.ink(WOOD);
-    for (let x = 5; x < m.w; x += 6) g.fillRect(x, R + 2, 0.6, m.h - R - 2);
+    for (let x = 8; x < m.w; x += 13) seam(g, x, R + 2, x + 0.3, m.h, t.ink(WOOD), seed + x);
     const wx = m.w * (0.3 + 0.4 * hash2(1, 2, seed));
     flat(g, boxPts(wx - 6, R + 8, 12, 10, 1, seed + 1), { h: 210, s: 30, l: 24 }, t, seed + 2, 0.2);
-    g.fillStyle = t.c(WHITE);
-    g.fillRect(wx - 0.5, R + 8, 1, 10);
-    g.fillRect(wx - 6, R + 12.5, 12, 1);
+    seam(g, wx, R + 8.5, wx, R + 17.5, t.c(WHITE), seed + 3, 0.9);
+    seam(g, wx - 5.5, R + 13, wx + 5.5, R + 13, t.c(WHITE), seed + 4, 0.9);
     for (let i = 0; i < 3; i++) {
       const sx = 10 + i * 7;
       flat(g, ovalPts(sx, m.h - 4, 4, 4.5, seed + i, 0.12, 10), { h: 40, s: 20, l: 80 }, t, seed + 3 + i, 0.4);
@@ -117,8 +130,7 @@ function windmillShell(m: Deco, t: Hz, hx: number, hy: number, R: number) {
     g.save();
     path(g, body);
     g.clip();
-    g.fillStyle = t.ink(tower);
-    for (let y = top + 30; y < R; y += 6) g.fillRect(hx - bw, y, bw * 2, 0.6);
+    for (let y = top + 34; y < R; y += 13) seam(g, hx - bw, y, hx + bw, y + 0.4, t.ink(tower), seed + y);
     g.restore();
     const gy = R - (R - top - 26) * 0.42;
     const gw = tw + (bw - tw) * 0.58 + 10;
@@ -127,7 +139,7 @@ function windmillShell(m: Deco, t: Hz, hx: number, hy: number, R: number) {
     // The gallery round the tower: a plank deck and a railing, scenery only.
     beam(g, hx - gw, gy, hx + gw, gy, 2.4, WOOD, t, seed + 15);
     beam(g, hx - gw, gy - 8, hx + gw, gy - 8, 1, WOOD, t, seed + 16);
-    for (let x = -gw; x <= gw; x += 6) beam(g, hx + x, gy, hx + x, gy - 8, 0.7, WOOD, t, seed + 17 + x);
+    for (let x = -gw; x <= gw; x += 11) beam(g, hx + x, gy, hx + x, gy - 8, 0.8, WOOD, t, seed + 17 + x);
     for (const k of [-1, 1]) beam(g, hx + k * gw, gy, hx + k * (gw - 10), gy + 12, 1.2, WOOD, t, seed + 18 + k);
     // The cap: a boat-shaped hood over the windshaft, a finial on top.
     const capPts: P[] = [];
@@ -136,8 +148,7 @@ function windmillShell(m: Deco, t: Hz, hx: number, hy: number, R: number) {
       capPts.push({ x: hx + Math.cos(a) * (tw + 10), y: top + 28 + Math.sin(a) * 26 });
     }
     flat(g, capPts, cap, t, seed + 20, 1);
-    g.fillStyle = t.ink(cap);
-    for (let i = 1; i < 4; i++) g.fillRect(hx - tw - 10 + i * 2, top + 28 - i * 6, (tw + 10 - i * 2) * 2, 0.6);
+    for (let i = 1; i < 3; i++) seam(g, hx - tw - 8 + i * 3, top + 26 - i * 8, hx + tw + 8 - i * 3, top + 26 - i * 8, t.ink(cap), seed + 24 + i);
     beam(g, hx, top + 2, hx, top - 4, 1.2, IRON, t, seed + 21);
     flat(g, ovalPts(hx, top - 5, 2, 2, seed + 22, 0.02, 8), { h: 44, s: 60, l: 50 }, t, seed + 23, 0.2);
   });
@@ -169,25 +180,22 @@ function headhouseShell(m: Deco, t: Hz) {
     // The leg: a corrugated trunk with guide rails either side of the shaft.
     const leg = boxPts(TILE - 3, top - 4, W - 2 * TILE + 6, m.h - top + 4, 0.5, seed, 0.1);
     flat(g, leg, STEEL, t, seed, 0.3);
-    g.fillStyle = t.ink(STEEL);
-    for (let x = TILE; x < W - TILE; x += 4) g.fillRect(x, top, 0.5, m.h - top);
+    for (let x = TILE + 4; x < W - TILE; x += 9) seam(g, x, top, x, m.h, t.ink(STEEL), seed + x, 0.5);
     for (const x of [TILE - 2, W - TILE + 2]) beam(g, x, top - 4, x, m.h, 1.4, IRON, t, seed + x);
     // The headhouse: a tall shed with a gable roof, a stripe in the co-op's colour and the head pulley in its window.
     const shed = boxPts(-2, 22, W + 4, top - 22, 0.6, seed + 1, 0.15);
     flat(g, shed, { h: 200, s: 6, l: 70 }, t, seed + 1, 0.6);
-    g.fillStyle = t.ink(STEEL);
-    for (let x = 2; x < W; x += 5) g.fillRect(x, 24, 0.5, top - 24);
-    g.fillStyle = t.c(paint);
-    g.fillRect(-2, top - 22, W + 4, 5);
+    for (let x = 6; x < W; x += 11) seam(g, x, 26, x, top - 24, t.ink(STEEL), seed + x, 0.5);
+    tone(g, boxPts(-2, top - 22, W + 4, 5, 0.4, seed + 9, 0.12), t.hsl(paint), { depth: 0.4 });
     flat(g, poly(-6, 23, W / 2, 0, W + 6, 23), paint, t, seed + 2, 0.6);
     flat(g, ovalPts(W / 2, 40, 9, 9, seed + 3, 0.02, 16), { h: 210, s: 30, l: 20 }, t, seed + 4, 0.2);
     g.fillStyle = t.c(STEEL, 10);
     circle(g, W / 2, 40, 6);
     g.fillStyle = t.ink(STEEL);
     circle(g, W / 2, 40, 1.6);
-    for (let i = 0; i < 6; i++) {
-      const a = (i / 6) * Math.PI * 2;
-      g.fillRect(W / 2 + Math.cos(a) * 3.5 - 0.4, 40 + Math.sin(a) * 3.5 - 0.4, 0.8, 0.8);
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI * 2 + 0.4;
+      dot(g, W / 2 + Math.cos(a) * 3.6, 40 + Math.sin(a) * 3.6, 0.5, seed + 30 + i, undefined, t.ink(STEEL));
     }
     // The spout pipe off the head, down to the bins beside it.
     beam(g, W + 1, top - 30, W + 44, top + 4, 4, STEEL, t, seed + 5);
@@ -243,8 +251,7 @@ function barnShell(lv: Level, m: Deco, t: Hz) {
     g.save();
     path(g, pts);
     g.clip();
-    g.fillStyle = t.ink(BARNRED);
-    for (let x = TILE + 4; x < (w - 1) * TILE; x += 6) g.fillRect(x, 0, 0.6, H);
+    for (let x = TILE + 7; x < (w - 1) * TILE; x += 13) seam(g, x, 0, x + 0.3, H, t.ink(BARNRED), seed + x);
     // Rafters under the roof line, a tie beam, and the loft beam.
     for (let i = 1; i < w - 2; i++) beam(g, i * TILE + 8, py(roof[i]) + 3, (i + 1) * TILE + 8, py(roof[i + 1]) + 3, 2.2, WOOD, t, seed + i);
     if (loft > 0) beam(g, TILE, py(loft) + 2, (w - 1) * TILE, py(loft) + 2, 3, WOOD, t, seed + 40);
@@ -323,10 +330,10 @@ function flumeShell(lv: Level, m: Deco, t: Hz, rotor: Rotor) {
     // Coursed stone behind the rooms, a window to each storey.
     const wall = boxPts(0, 0, m.w, H, 0.4, seed, 0.1);
     flat(g, wall, { h: 30, s: 10, l: 36 }, t, seed, 0.3);
-    g.fillStyle = t.ink(STONE);
-    for (let y = 0, row = 0; y < H; y += 7, row++) {
-      g.fillRect(0, y, m.w, 0.6);
-      for (let x = (row & 1) * 6; x < m.w; x += 12) g.fillRect(x, y, 0.6, 7);
+    // Courses every other row, a few joints between: stones, not a grid of them.
+    for (let y = 8, row = 0; y < H; y += 14, row++) {
+      seam(g, 0, y, m.w, y + 0.3, t.ink(STONE), seed + y);
+      for (let x = 6 + (row & 1) * 11; x < m.w; x += 22) seam(g, x, y - 6.5, x + 0.2, y, t.ink(STONE), seed + x + y);
     }
     for (let y = 2 * TILE; y < H - 3 * TILE; y += 4 * TILE)
       flat(g, boxPts(m.w / 2 - 5, y, 10, 12, 4, seed + y), { h: 210, s: 30, l: 22 }, t, seed + y + 1, 0.2);
@@ -408,10 +415,7 @@ const waterwheel: RotorSkin = {
     const t = hz(d);
     for (const r of [m.arm + 3, m.arm - 7]) {
       const ring = ovalPts(hx, hy, r, r, 3, 0, 40);
-      g.fillStyle = t.ink(WOOD);
-      stroke(g, [...ring, ring[0]], { w: 4.6, seed: 4, taper: [0, 0], press: 0 });
-      g.fillStyle = t.c(WOOD);
-      stroke(g, [...ring, ring[0]], { w: 3, seed: 5, taper: [0, 0], press: 0 });
+      bar(g, [...ring, ring[0]], 3, t.hsl(WOOD), 4, { ink: t.ink(WOOD), rim: 0.3, taper: [0, 0], press: 0 });
     }
     const n = m.count;
     for (let i = 0; i < n; i++) {
@@ -430,8 +434,7 @@ const waterwheel: RotorSkin = {
     part(s, boxPts(p.x, p.y, p.w, p.h + 1, 0.6, 31, 0.1), { h: 28, s: 38, l: 40 }, 31, { depth: 0.6, thin: 0.45, thick: 1.1 });
     for (const x of [p.x + 2, p.x + p.w - 4])
       part(s, boxPts(x, p.y - 2.4, 2, p.h + 3.4, 0.3, 32), { h: 26, s: 30, l: 30 }, 32, { depth: 0.3, thin: 0.3, thick: 0.7 });
-    s.fillStyle = css(WATER, 18, 0.9);
-    s.fillRect(p.x + 4, p.y + 0.4, p.w - 8, 0.8);
+    glint(s, poly(p.x + 3, p.y + 0.8, p.x + p.w - 4, p.y + 0.7), css(WATER, 18), 0.8, 33);
     // Water still running off the floats on the way up.
     if (a.y < m.hub[1] + d.off[1]) glint(s, poly(p.x + 6, p.y + 0.6, p.x + 12, p.y + 0.5), 'rgba(235,245,255,0.85)', 0.5);
   },
@@ -441,7 +444,7 @@ const waterwheel: RotorSkin = {
     ball(rc.s, hx, hy, 6, IRON, 41);
     const a0 = rotorAngles(m, rc.frame, d.r.phase)[0];
     for (let i = 0; i < 4; i++)
-      dot(rc.s, hx + Math.cos(a0 + (i * Math.PI) / 2) * 3.6, hy + Math.sin(a0 + (i * Math.PI) / 2) * 3.6, 0.8, 42 + i, css(STEEL, 10));
+      dot(rc.s, hx + Math.cos(a0 + (i * Math.PI) / 2) * 3.6, hy + Math.sin(a0 + (i * Math.PI) / 2) * 3.6, 0.8, 42 + i, css(STEEL, 10), inkFor(IRON));
   },
 };
 
@@ -484,32 +487,18 @@ function fenceWire(rc: RC, m: Tesla, d: DrawCtx) {
       const u = i / 8;
       pts.push({ x: w.ax + (w.bx - w.ax) * u, y: w.ay + off + (w.by - w.ay) * u + Math.sin(u * Math.PI) * 1.2 });
     }
-    s.fillStyle = INK;
-    stroke(s, pts, { w: 1, seed: off + 9, taper: [0, 0], press: 0 });
-    s.fillStyle = c.seg === 2 && !w.hit ? css(live, 0, 0.9) : css(STEEL, 10);
-    stroke(s, pts, { w: 0.45, seed: off + 10, taper: [0, 0], press: 0 });
+    bar(s, pts, 0.45, c.seg === 2 && !w.hit ? live : { ...STEEL, l: STEEL.l + 10 }, off + 9, { rim: 0.25, taper: [0, 0], press: 0, ink: inkFor(STEEL) });
   }
   // A warning sign on the first post, and the ticker's lamp blinking faster as it comes on.
   const p = c.seg === 1 ? c.t / c.len : c.seg === 2 ? 1 : 0;
   const blink = c.seg === 2 || (c.seg === 1 && Math.floor(rc.frame / Math.max(2, 8 - p * 6)) % 2 === 0);
   bulb(s, w.ax, w.ay - 7.5, 1.6, blink ? live : { h: 54, s: 30, l: 30 }, 1);
   if (c.seg === 1 && Math.random() < p * 0.5) {
-    g.strokeStyle = css(live, 20, 0.6);
-    g.lineWidth = 0.6;
     const u = Math.random();
-    lightning(g, w.ax + (w.ex - w.ax) * u, w.ay - 1 + (w.ey - w.ay) * u, w.ax + (w.ex - w.ax) * u + 3, w.ay - 4 + (w.ey - w.ay) * u, 2, 3);
-    g.stroke();
+    zap(g, w.ax + (w.ex - w.ax) * u, w.ay - 1 + (w.ey - w.ay) * u, w.ax + (w.ex - w.ax) * u + 3, w.ay - 4 + (w.ey - w.ay) * u, 2, 3, live, 0.6);
   }
   if (c.seg !== 2 || w.hit) return;
-  for (let k = 0; k < 2; k++) {
-    lightning(g, w.ax, w.ay - 1, w.ex, w.ey - 1, 4, 10);
-    g.strokeStyle = css(live, 0, 0.35);
-    g.lineWidth = 3;
-    g.stroke();
-    g.strokeStyle = css(live, 30, 0.95);
-    g.lineWidth = 0.9;
-    g.stroke();
-  }
+  for (let k = 0; k < 2; k++) zap(g, w.ax, w.ay - 1, w.ex, w.ey - 1, 4, 10, live, 0.9, 0.35);
   glowDot(g, (w.ax + w.ex) / 2, (w.ay + w.ey) / 2, 10, live, 0.5);
   light(rc, (w.ax + w.ex) / 2, (w.ay + w.ey) / 2, Math.hypot(w.ex - w.ax, w.ey - w.ay) * 0.7 + 30, live, 0.8);
   if (d.o.emit && Math.random() < 0.3) d.o.emit('spark', w.ex, w.ey, (Math.random() - 0.5) * 120, -Math.random() * 120, live);
@@ -566,10 +555,11 @@ function hayHook(rc: RC, m: Swinger, d: DrawCtx) {
     part(s, boxPts(-r * 0.75, -r * 0.95, r * 1.5, r * 1.05, r * 0.3, 3), { h: 20, s: 40, l: 34 }, 3, { depth: 0.8, thin: 0.5, thick: 1.2 });
     ball(s, 0, -r * 0.45, r * 0.32, STEEL, 4);
     // The hook: a thick curl of iron with its point turned up.
-    s.fillStyle = INK;
-    stroke(s, poly(0, r * 0.05, 0.4, r * 0.55, -r * 0.1, r * 0.95, -r * 0.6, r * 0.75, -r * 0.62, r * 0.4), { w: 3.4, seed: 5, taper: [0, 0.4], press: 0.1 });
-    s.fillStyle = css(STEEL, -6);
-    stroke(s, poly(0, r * 0.05, 0.4, r * 0.55, -r * 0.1, r * 0.95, -r * 0.6, r * 0.75, -r * 0.62, r * 0.4), { w: 1.8, seed: 6, taper: [0, 0.5], press: 0.1 });
+    bar(s, poly(0, r * 0.05, 0.4, r * 0.55, -r * 0.1, r * 0.95, -r * 0.6, r * 0.75, -r * 0.62, r * 0.4), 1.9, { ...STEEL, l: STEEL.l - 6 }, 5, {
+      taper: [0, 0.1],
+      press: 0.1,
+      rim: 0.35,
+    });
     glint(s, poly(0.6, r * 0.2, 0.9, r * 0.5), 'rgba(255,255,255,0.8)', 0.5);
     s.restore();
   }
@@ -578,11 +568,14 @@ function hayHook(rc: RC, m: Swinger, d: DrawCtx) {
 // ------------------------------------------------------------------------------------------------ combine
 
 const PAINTS: HSL[] = [
-  { h: 4, s: 62, l: 44 },
-  { h: 120, s: 46, l: 32 },
-  { h: 46, s: 82, l: 50 },
-  { h: 205, s: 50, l: 40 },
+  { h: 4, s: 48, l: 42 },
+  { h: 120, s: 34, l: 34 },
+  { h: 44, s: 58, l: 50 },
+  { h: 205, s: 36, l: 42 },
 ];
+/** Tyre rubber: a charcoal with room for a pen darker than it, not a black hole. */
+const RUBBER: HSL = { h: 220, s: 6, l: 30 };
+const HUBCAP: HSL = { h: 44, s: 52, l: 50 };
 
 /** The combine over its body's cells: chassis, cab, grain tank, wheels and the header out front to the reel. */
 function combine(rc: RC, m: Body, d: DrawCtx) {
@@ -612,8 +605,10 @@ function combine(rc: RC, m: Body, d: DrawCtx) {
   // Chassis, the cab at the front, the grain tank behind it, the unloading auger folded along it.
   const body = boxPts(x0, deck, x1 - x0, 2 * TILE - 7, 2, 3, 0.2);
   part(s, body, paint, 3, { depth: 1.2, thin: 0.6, thick: 1.5 });
-  s.fillStyle = css(paint, -18);
-  s.fillRect(x0 + 2, deck + 9, x1 - x0 - 4, 1.4);
+  seam(s, x0 + 3, deck + 9.6, x1 - 3, deck + 9.5, css(paint, -18), 3, 1.4);
+  // Panel seams and a louvred engine grille: the chassis is a machine, not a block of colour.
+  for (const u of [0.42, 0.7]) seam(s, x0 + (x1 - x0) * u, deck + 2, x0 + (x1 - x0) * u + 0.2, deck + 2 * TILE - 9, css(paint, -20), 4 + u * 10, 0.5);
+  for (let i = 0; i < 3; i++) tick(s, x1 - 3 * TILE + 3, deck + 13 + i * 3, x1 - 2 * TILE - 3, deck + 13 + i * 3, 0.6, 9 + i, css(paint, -26));
   const cabX = x0 + TILE;
   part(s, boxPts(cabX - 1, y0, TILE + 2, deck - y0 + 2, 1.2, 4), { h: 200, s: 30, l: 70 }, 4, { depth: 0.6, thin: 0.5, thick: 1.2 });
   s.fillStyle = css({ h: 200, s: 40, l: 82 });
@@ -621,6 +616,7 @@ function combine(rc: RC, m: Body, d: DrawCtx) {
   glint(s, poly(cabX + 3, y0 + 9, cabX + 7, y0 + 4), 'rgba(255,255,255,0.85)', 0.6);
   const tank = boxPts(x1 - 2 * TILE, y0 + 1, 2 * TILE, deck - y0, 2, 5, 0.2);
   part(s, tank, paint, 5, { depth: 0.9, thin: 0.5, thick: 1.3 });
+  seam(s, x1 - 2 * TILE + 2, y0 + 8, x1 - 2, y0 + 8.2, css(paint, -20), 12, 0.5);
   // Grain heaped in the tank.
   s.fillStyle = css(HAY, 6);
   path(
@@ -635,13 +631,11 @@ function combine(rc: RC, m: Body, d: DrawCtx) {
     [x0 + TILE * 1.3, 8.5],
     [x1 - TILE * 0.9, 6],
   ] as const) {
-    s.fillStyle = INK;
-    blob(s, wx, y1 - r + 0.5, r + 1, wx, 1, 0.04);
-    s.fill();
-    ball(s, wx, y1 - r + 0.5, r, { h: 220, s: 8, l: 18 }, wx | 0);
-    ball(s, wx, y1 - r + 0.5, r * 0.45, { h: 46, s: 70, l: 50 }, (wx | 0) + 1);
+    ball(s, wx, y1 - r + 0.5, r, RUBBER, wx | 0);
+    ball(s, wx, y1 - r + 0.5, r * 0.45, HUBCAP, (wx | 0) + 1);
     const a = (d.off[0] / r) % (Math.PI * 2);
-    for (let i = 0; i < 4; i++) dot(s, wx + Math.cos(a + (i * Math.PI) / 2) * r * 0.25, y1 - r + 0.5 + Math.sin(a + (i * Math.PI) / 2) * r * 0.25, 0.6, i);
+    for (let i = 0; i < 4; i++)
+      dot(s, wx + Math.cos(a + (i * Math.PI) / 2) * r * 0.25, y1 - r + 0.5 + Math.sin(a + (i * Math.PI) / 2) * r * 0.25, 0.6, i, undefined, inkFor(HUBCAP));
   }
 }
 
@@ -651,13 +645,13 @@ function combineReel(rc: RC, m: Swinger, d: DrawCtx) {
   const hx = m.hub[0] + d.off[0];
   const hy = m.hub[1] + d.off[1];
   const heads = swingHeads(m, rc.frame, d.r.phase, d.off);
-  for (const h of heads) pole(s, hx, hy, h.x, h.y, 1.2, { h: 46, s: 70, l: 50 }, 3);
+  for (const h of heads) pole(s, hx, hy, h.x, h.y, 1.2, HUBCAP, 3);
   for (const h of heads) {
     const tx = -Math.sin(h.a);
     const ty = Math.cos(h.a);
     const L = m.radius * 1.4;
     pole(s, h.x - tx * L, h.y - ty * L, h.x + tx * L, h.y + ty * L, 2, { h: 210, s: 12, l: 56 }, 4);
-    s.fillStyle = INK;
+    s.fillStyle = inkFor(STEEL);
     for (let k = -1; k <= 1; k++)
       line(s, h.x + tx * k * L * 0.7, h.y + ty * k * L * 0.7, h.x + tx * k * L * 0.7 + Math.cos(h.a) * 4, h.y + ty * k * L * 0.7 + Math.sin(h.a) * 4, {
         w: 0.6,
@@ -665,7 +659,7 @@ function combineReel(rc: RC, m: Swinger, d: DrawCtx) {
         taper: [0, 0.6],
       });
   }
-  ball(s, hx, hy, 3, { h: 46, s: 70, l: 50 }, 5);
+  ball(s, hx, hy, 3, HUBCAP, 5);
 }
 
 // ------------------------------------------------------------------------------------------------ grain chute
@@ -725,6 +719,10 @@ function muckSpreader(rc: RC, m: Cannon, _d: DrawCtx, q: CannonPose) {
   pole(s, bx - dir * 12, gy - 6, bx - dir * 20, gy - 2, 1.4, IRON, 1);
   const cart = poly(bx - 10, gy - 15, bx + 10, gy - 15, bx + 9, gy - 6, bx - 9, gy - 6);
   part(s, cart, paint, 2, { depth: 0.8, thin: 0.5, thick: 1.3 });
+  // Its boards and an iron strap at the corner: a cart, not a crate of paint.
+  seam(s, bx - 9, gy - 10.6, bx + 9, gy - 10.5, css(paint, -22), 21, 0.5);
+  seam(s, bx + 5.5 * dir, gy - 14.6, bx + 5.2 * dir, gy - 6.6, css(paint, -22), 22, 0.5);
+  tick(s, bx - 7.6 * dir, gy - 14.4, bx - 7.2 * dir, gy - 6.8, 1, 23, css(IRON, 6));
   s.fillStyle = css({ h: 28, s: 40, l: 22 });
   path(
     s,
@@ -732,14 +730,14 @@ function muckSpreader(rc: RC, m: Cannon, _d: DrawCtx, q: CannonPose) {
   );
   s.fill();
   for (const wx of [bx - 5, bx + 5]) {
-    ball(s, wx, gy - 4, 4, { h: 220, s: 8, l: 18 }, wx | 0);
-    ball(s, wx, gy - 4, 1.6, { h: 46, s: 60, l: 50 }, (wx | 0) + 1);
+    ball(s, wx, gy - 4, 4, RUBBER, wx | 0);
+    ball(s, wx, gy - 4, 1.6, HUBCAP, (wx | 0) + 1);
   }
   // The beaters at the flinging end, a drum of tines turning faster as it winds up and after it throws.
   const drumX = bx + dir * 11;
   const spin = rc.frame * (0.1 + warn * 0.6 + recoil * 0.05);
   ball(s, drumX, gy - 11, 3.4, IRON, 4);
-  s.fillStyle = INK;
+  s.fillStyle = inkFor(IRON);
   for (let i = 0; i < 4; i++) {
     const a = spin + (i * Math.PI) / 2;
     line(s, drumX, gy - 11, drumX + Math.cos(a) * 5.5, gy - 11 + Math.sin(a) * 5.5, { w: 1, seed: i, taper: [0, 0.6] });

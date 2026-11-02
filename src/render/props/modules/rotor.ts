@@ -2,8 +2,8 @@ import { css, type HSL } from '../../../core/color';
 import type { Rect } from '../../../core/geom';
 import { hash2 } from '../../../core/rng';
 import { type ModuleOf, type RotorArm, rotorAngles, rotorArms, rotorPlatform } from '../../../sim/props';
-import { blob, line, type P, stroke } from '../../ink';
-import { ball, boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
+import { blob, inkFor, line, type P, stroke } from '../../ink';
+import { ball, bar, barLine, boxPts, dot, glint, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import { bulb, circle, glowDot, light, type RC } from '../../kit';
 import { BACKDROP, type DrawCtx, defineArt } from '../common';
 import { ceilingAbovePx, chain, groundBelowPx, lattice, plank, rope } from './setpiece';
@@ -36,6 +36,27 @@ function hub(m: Rotor, d: DrawCtx): [number, number] {
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
 
+/** Steel for hooks, cables and fittings. */
+const STEEL: HSL = { h: 216, s: 8, l: 52 };
+
+/** A long seam or board edge drawn by hand: runs that swell and lift, some left out. */
+function seam(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, col: string, seed: number, w = 0.55) {
+  const L = Math.hypot(bx - ax, by - ay);
+  if (L < 0.5) return;
+  g.fillStyle = col;
+  // Runs of 10-24 px with a short lift between, about one in five left out: drawn, not dashed.
+  let at = hash2(0, 3, seed) * 3;
+  for (let i = 0; at < L - 1; i++) {
+    const run = Math.min(L - at, 10 + hash2(i, 1, seed) * 14);
+    if (hash2(i, 5, seed) > 0.2 || run < 4) {
+      const u0 = at / L;
+      const u1 = (at + run) / L;
+      line(g, ax + (bx - ax) * u0, ay + (by - ay) * u0, ax + (bx - ax) * u1, ay + (by - ay) * u1, { w, seed: seed + i, taper: [0.15, 0.3], press: 0.35 });
+    }
+    at += run + 1.5 + hash2(i, 2, seed) * 2.5;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Backdrop: supports. Layer 0: arms.
 
@@ -55,14 +76,14 @@ function windmillTower(s: CanvasRenderingContext2D, d: DrawCtx, hx: number, hy: 
       g.save();
       path(g, body);
       g.clip();
-      for (let y = top + 4; y < gy; y += 4) tick(g, hx - bw, y, hx + bw, y + 0.2, 0.5, y, css(wall, -24));
+      for (let y = top + 7; y < gy; y += 9) seam(g, hx - bw, y, hx + bw, y + 0.2, css(wall, -22), y | 0);
       g.restore();
-      pen(g, body, 3, 0.6, 1.6);
+      pen(g, body, 3, 0.5, 1.3, 3, inkFor(wall));
       const mid = top + (gy - top) * 0.45;
       if (gy - top > 40) part(g, boxPts(hx - 3, mid - 4, 6, 8, 2.6, 4), { h: 30, s: 25, l: 16 }, 4, { depth: 0.4, thin: 0.4, thick: 0.9 });
       if (door) {
         part(g, boxPts(hx - 5, gy - 13, 10, 13, 4, 5), { h: st.hue, s: 45, l: 32 }, 5, { depth: 0.8, thin: 0.45, thick: 1.1 });
-        dot(g, hx + 2.5, gy - 6, 0.7, 6, '#d8c070');
+        dot(g, hx + 2.5, gy - 6, 0.7, 6, '#d8c070', inkFor({ h: st.hue, s: 45, l: 32 }));
       }
       const roof: P[] = [];
       for (let i = 0; i <= 12; i++) {
@@ -104,7 +125,7 @@ function drawSupport(rc: RC, m: Rotor, d: DrawCtx) {
       chain(s, hx, cy, hx, hy - 3, d.pal, 3.6);
       if (cy > 0) {
         part(s, boxPts(hx - 6, cy - 0.5, 12, 3.5, 1, 12), d.pal.base, 12, { depth: 0.6, thin: 0.45, thick: 1 });
-        for (const ox of [-3.5, 3.5]) dot(s, hx + ox, cy + 1.2, 0.6, ox, css(d.pal.light));
+        for (const ox of [-3.5, 3.5]) dot(s, hx + ox, cy + 1.2, 0.6, ox, css(d.pal.light), inkFor(d.pal.base));
       }
     }
     return;
@@ -115,17 +136,14 @@ function drawSupport(rc: RC, m: Rotor, d: DrawCtx) {
     const side = Math.sign(hx - mx) || 1;
     const topY = hy - 7;
     if (m.look === 'crane') {
-      const paint: HSL = { h: st.hue, s: 80, l: 50 };
+      const paint: HSL = { h: st.hue, s: 58, l: 50 };
       lattice(s, mx, topY - 6, gy, 9, d.pal, paint);
       // Jib out to the trolley and a counter-jib, laced with braces.
       for (const [y0, y1] of [
         [topY - 6, hy - 3],
         [topY, hy - 1],
       ]) {
-        s.fillStyle = INK;
-        line(s, mx - side * 18, y0, hx + side * 8, y1, { w: 2.08, seed: y0, taper: [0, 0], press: 0.1 });
-        s.fillStyle = css(paint);
-        line(s, mx - side * 18, y0, hx + side * 8, y1, { w: 1.3, seed: y0 + 1, taper: [0, 0], press: 0.1 });
+        barLine(s, mx - side * 18, y0, hx + side * 8, y1, 1.3, paint, y0, { taper: [0, 0], press: 0.1 });
       }
       s.fillStyle = css(paint, -18);
       const span = Math.abs(hx - mx) || 1;
@@ -147,8 +165,8 @@ function drawSupport(rc: RC, m: Rotor, d: DrawCtx) {
       part(s, boxPts(hx - 4, hy - 5, 8, 5, 1, 15), { h: 220, s: 8, l: 22 }, 15, { depth: 0.4, thin: 0.4, thick: 0.9 });
       // Red beacon.
       const blink = Math.sin(rc.t * 3 + d.r.pp.uid) > 0.4;
-      s.fillStyle = INK;
-      circle(s, mx, topY - 8, 2.2);
+      s.fillStyle = inkFor({ h: 5, s: 60, l: 40 });
+      circle(s, mx, topY - 8, 1.85);
       s.fillStyle = blink ? '#ff4030' : '#702020';
       circle(s, mx, topY - 8, 1.5);
       if (blink) {
@@ -160,13 +178,10 @@ function drawSupport(rc: RC, m: Rotor, d: DrawCtx) {
       part(s, boxPts(mx - 3.5, topY - 3, 7, gy - topY + 3, 1, 16), wood, 16, { depth: 1, thin: 0.5, thick: 1.3 });
       part(s, boxPts(Math.min(mx, hx) - 6, topY - 4, Math.abs(hx - mx) + 12, 6, 1.4, 17), { ...wood, l: 42 }, 17, { depth: 0.9, thin: 0.5, thick: 1.2 });
       // Diagonal brace.
-      s.fillStyle = INK;
-      line(s, mx, topY + 18, mx + side * 16, topY + 1, { w: 2.96, seed: 18, taper: [0.02, 0.02], press: 0.1 });
-      s.fillStyle = css(wood, 4);
-      line(s, mx, topY + 18, mx + side * 16, topY + 1, { w: 2, seed: 19, taper: [0.02, 0.02], press: 0.1 });
+      barLine(s, mx, topY + 18, mx + side * 16, topY + 1, 2, { ...wood, l: wood.l + 4 }, 18, { taper: [0.02, 0.02], press: 0.1, lit: 12 });
       // Pulley wheel.
       ball(s, hx, hy - 1, 3.5, { ...wood, l: 24 }, 20);
-      dot(s, hx, hy - 1, 1.1, 21, '#c9b58a');
+      dot(s, hx, hy - 1, 1.1, 21, '#c9b58a', inkFor(wood));
     } else {
       // Rooftop davit: a steel pipe curving out over the edge.
       const pipe: P[] = [{ x: mx, y: gy }];
@@ -175,10 +190,7 @@ function drawSupport(rc: RC, m: Rotor, d: DrawCtx) {
         pipe.push({ x: mx + side * (10 + Math.cos(a) * 10), y: topY + 8 + Math.sin(a) * 10 });
       }
       pipe.push({ x: hx + side * 2, y: topY - 2 });
-      s.fillStyle = INK;
-      stroke(s, pipe, { w: 3.96, seed: 22, taper: [0, 0], press: 0.05 });
-      s.fillStyle = css(d.pal.base, 6);
-      stroke(s, pipe, { w: 3, seed: 22, taper: [0, 0], press: 0.05 });
+      bar(s, pipe, 3, { ...d.pal.base, l: d.pal.base.l + 6 }, 22, { taper: [0, 0], press: 0.05 });
       s.fillStyle = css(d.pal.light, 0, 0.8);
       stroke(
         s,
@@ -209,7 +221,7 @@ function leaf(s: CanvasRenderingContext2D, x: number, y: number, a: number, k: n
   const up = { x: x - q * W, y: y + c * W };
   const dn = { x: x + q * W, y: y - c * W };
   const leafC: HSL = { h: 100 + k * 30, s: 50, l: 34 + k * 10 };
-  s.fillStyle = INK;
+  s.fillStyle = inkFor(leafC);
   path(s, [
     { x: tail.x - c * 0.4, y: tail.y - q * 0.4 },
     { x: up.x - q * 0.4, y: up.y + c * 0.4 },
@@ -235,14 +247,11 @@ function sail(L: number, woodHue: number) {
     const cloth: HSL = { h: 40, s: 30, l: 88 };
     const sheet = boxPts(x0, 1.5, x1 - x0, w, 0.6, 31, 0.3);
     tone(g, sheet, cloth, { depth: 1 });
-    g.fillStyle = css(wood, -4);
-    for (let x = x0 + 5; x < x1; x += 5) line(g, x, 1.5, x, 1.5 + w, { w: 0.6, seed: x, taper: [0, 0], press: 0 });
-    for (let k = 1; k < 3; k++) line(g, x0, 1.5 + (w * k) / 3, x1, 1.5 + (w * k) / 3, { w: 0.6, seed: k, taper: [0, 0], press: 0 });
-    pen(g, sheet, 32, 0.5, 1.1, 3, css(wood, -16));
-    g.fillStyle = INK;
-    line(g, 0, 0, L, 0, { w: 3.08, seed: 33, taper: [0, 0.05], press: 0.05 });
-    g.fillStyle = css(wood, 8);
-    line(g, 0, -0.2, L, -0.2, { w: 2, seed: 34, taper: [0, 0.05], press: 0.05 });
+    // The lattice under the cloth: one batten along the middle and a cross bar every 11 px, drawn as a hand lifts them.
+    for (let x = x0 + 8; x < x1 - 2; x += 11) seam(g, x, 2, x + 0.2, 1 + w, css(wood, 6), x | 0, 0.7);
+    seam(g, x0 + 1, 1.5 + w * 0.55, x1 - 1, 1.5 + w * 0.55, css(wood, 6), 7, 0.7);
+    pen(g, sheet, 32, 0.4, 0.9, 3, inkFor(cloth));
+    bar(g, poly(0, 0, L * 0.5, -0.1, L, 0), 2, { ...wood, l: wood.l + 8 }, 33, { taper: [0, 0.05], press: 0.05, lit: 12 });
   });
 }
 
@@ -296,10 +305,8 @@ function drawArms(rc: RC, m: Rotor, d: DrawCtx, arms: RotorArm[]) {
     const draw = (x1: number, y1: number, x2: number, y2: number) => {
       if (link === 'chain') chain(s, x1, y1, x2, y2, d.pal, 3.2);
       else if (link === 'vine') rope(s, x1, y1, x2, y2, { h: 100, s: 45, l: 32 }, 1.5, 1);
-      else if (link === 'cable') {
-        s.fillStyle = INK;
-        line(s, x1, y1, x2, y2, { w: 0.84, seed: x1, taper: [0, 0], press: 0 });
-      } else rope(s, x1, y1, x2, y2, { h: 38, s: 40, l: 55 }, 1.2, 0.5);
+      else if (link === 'cable') barLine(s, x1, y1, x2, y2, 0.5, STEEL, x1, { rim: 0.2, taper: [0, 0], press: 0 });
+      else rope(s, x1, y1, x2, y2, { h: 38, s: 40, l: 55 }, 1.2, 0.5);
     };
     if (direct) for (const [ex, ey] of ends) draw(hx, hy, ex, ey);
     else {
@@ -314,11 +321,8 @@ function drawArms(rc: RC, m: Rotor, d: DrawCtx, arms: RotorArm[]) {
         const t = -Math.PI * 0.1 + (i / 8) * Math.PI * 1.25;
         hook.push({ x: a.x + Math.cos(t) * 2.5, y: crownY + 2.5 + Math.sin(t) * 2.5 });
       }
-      s.fillStyle = INK;
-      stroke(s, hook, { w: 2.4, seed: 41, taper: [0.05, 0.3], press: 0 });
-      s.fillStyle = '#7c838f';
-      stroke(s, hook, { w: 1.1, seed: 41, taper: [0.05, 0.4], press: 0 });
-      part(s, boxPts(a.x - 2.5, crownY - 5, 5, 4, 0.8, 42), { h: d.style.hue, s: 80, l: 50 }, 42, { depth: 0.4, thin: 0.4, thick: 0.8 });
+      bar(s, hook, 1.1, STEEL, 41, { taper: [0.02, 0.08], press: 0, rim: 0.35 });
+      part(s, boxPts(a.x - 2.5, crownY - 5, 5, 4, 0.8, 42), { h: d.style.hue, s: 58, l: 50 }, 42, { depth: 0.4, thin: 0.4, thick: 0.8 });
     }
   }
 }
@@ -354,7 +358,7 @@ function drawPlatform(rc: RC, m: Rotor, d: DrawCtx, a: RotorArm, i: number) {
   switch (m.look) {
     case 'windmill':
       plank(s, p.x, p.y, p.w, p.h, st.woodHue, seed, 42);
-      dot(s, a.x, a.y, 1.2, seed);
+      dot(s, a.x, a.y, 1.2, seed, undefined, inkFor({ h: st.woodHue, s: 40, l: 34 }));
       break;
     case 'cog':
     case 'flywheel':
@@ -395,8 +399,8 @@ function chandelier(w: number, h: number, d: DrawCtx, seed: number) {
       const x = 5 + ((w - 10) * k) / 4;
       const len = 4 + (k % 2) * 3;
       tick(g, x, h, x, h + len, 0.4, k, css(pal.light, 0, 0.8));
-      g.fillStyle = INK;
-      path(g, poly(x, h + len - 0.6, x + 1.5, h + len + 1.4, x, h + len + 3.6, x - 1.5, h + len + 1.4));
+      g.fillStyle = inkFor({ h: 200, s: 30, l: 80 });
+      path(g, poly(x, h + len - 0.4, x + 1.25, h + len + 1.4, x, h + len + 3.3, x - 1.25, h + len + 1.4));
       g.fill();
       g.fillStyle = 'rgba(220,240,255,0.95)';
       path(g, poly(x, h + len, x + 0.9, h + len + 1.4, x, h + len + 2.8, x - 0.9, h + len + 1.4));
@@ -404,7 +408,7 @@ function chandelier(w: number, h: number, d: DrawCtx, seed: number) {
     }
     const ring = boxPts(0, 0, w, h, h / 2, 51, 0.1);
     part(g, ring, pal.base, 51, { depth: Math.min(1.2, h * 0.25), thin: 0.5, thick: 1.2 });
-    for (let x = 4; x < w - 2; x += 5) dot(g, x, h / 2, 0.7, x, css(pal.light));
+    for (let x = 5; x < w - 3; x += 9) dot(g, x, h / 2, 0.6, x, css(pal.light), inkFor(pal.base));
     // Scrolled ends.
     for (const sx of [-1, 1]) {
       const cx = w / 2 + sx * (w / 2 + 1);
@@ -414,10 +418,7 @@ function chandelier(w: number, h: number, d: DrawCtx, seed: number) {
         const r = 3 - (i / 12) * 1.6;
         curl.push({ x: cx + sx * Math.cos(t + Math.PI / 2) * r, y: h / 2 - 2 + Math.sin(t + Math.PI / 2) * r });
       }
-      g.fillStyle = INK;
-      stroke(g, curl, { w: 1.6, seed: 52 + sx, taper: [0.05, 0.4], press: 0 });
-      g.fillStyle = css(pal.base);
-      stroke(g, curl, { w: 0.7, seed: 52 + sx, taper: [0.05, 0.5], press: 0 });
+      bar(g, curl, 0.8, pal.base, 52 + sx, { taper: [0.02, 0.08], press: 0, rim: 0.3 });
     }
     // Candle cups and candles.
     const n = Math.max(3, Math.round(w / 10));
@@ -426,7 +427,7 @@ function chandelier(w: number, h: number, d: DrawCtx, seed: number) {
       const ch = 4 + hash2(k, seed, 9) * 2;
       part(g, boxPts(x - 1.1, -1.5 - ch, 2.2, ch, 0.5, 53 + k), { h: 42, s: 40, l: 90 }, 53 + k, { depth: 0.4, thin: 0.3, thick: 0.6 });
       part(g, boxPts(x - 2.2, -1.6, 4.4, 1.8, 0.8, 60 + k), pal.base, 60 + k, { depth: 0.3, thin: 0.3, thick: 0.6 });
-      tick(g, x, -1.5 - ch, x, -2.4 - ch, 0.35, k);
+      tick(g, x, -1.5 - ch, x, -2.4 - ch, 0.35, k, css({ h: 30, s: 20, l: 30 }));
     }
   });
 }
@@ -454,14 +455,14 @@ function drawChandelier(rc: RC, p: Rect, d: DrawCtx, seed: number) {
 /** A hay bale: a block of straw strokes in two turns of twine, a few straws standing loose. */
 function hayBale(w: number, h: number, v: number) {
   return sprite(`rt|hay|${sizeKey(w, h)}|${v}`, -2, -4, w + 4, h + 6, (g) => {
-    const base: HSL = { h: 46, s: 70, l: 58 };
+    const base: HSL = { h: 46, s: 56, l: 58 };
     const seed = 71 + v;
     const body = boxPts(0, 0, w, h, 2.6, seed, 0.3);
     tone(g, body, base, { depth: Math.min(1.6, h * 0.22) });
     g.save();
     path(g, body);
     g.clip();
-    for (let k = 0; k < w * 1.2; k++) {
+    for (let k = 0; k < w * 0.4; k++) {
       const x = hash2(k, seed, 1) * w;
       const y = hash2(k, seed, 2) * h;
       tick(
@@ -475,12 +476,8 @@ function hayBale(w: number, h: number, v: number) {
         css(base, hash2(k, seed, 3) > 0.5 ? 20 : -22, 1, hash2(k, seed, 3) > 0.5 ? 0 : 6),
       );
     }
-    for (const t of [0.28, 0.72]) {
-      g.fillStyle = INK;
-      line(g, w * t, -0.5, w * t + 0.3, h + 0.5, { w: 1.28, seed: t * 9, taper: [0, 0], press: 0.1 });
-      g.fillStyle = '#9a5530';
-      line(g, w * t - 0.2, -0.5, w * t + 0.1, h + 0.5, { w: 0.8, seed: t * 9 + 1, taper: [0, 0], press: 0.1 });
-    }
+    for (const t of [0.28, 0.72])
+      barLine(g, w * t - 0.1, -0.5, w * t + 0.2, h + 0.5, 0.8, { h: 22, s: 52, l: 40 }, t * 9, { taper: [0, 0], press: 0.1, rim: 0.25 });
     g.restore();
     pen(g, body, seed + 2, 0.5, 1.3, 3, css(base, -44, 1, 6));
     for (let k = 0; k < 4; k++) {
@@ -507,7 +504,7 @@ function vineLog(w: number, h: number, woodHue: number, v: number) {
       tick(g, x, y, x + 4 + hash2(k, seed, 3) * 5, y + 0.3, 0.5, k, css(bark, -16, 1, 6));
     }
     g.restore();
-    pen(g, body, seed + 1, 0.5, 1.3);
+    pen(g, body, seed + 1, 0.5, 1.3, 3, inkFor(bark));
     // Moss on top: soft lumps, thin enough to read as growth.
     g.fillStyle = css({ h: 95, s: 50, l: 38 });
     for (let x = 2; x < w - 2; x += 3) {
@@ -542,7 +539,7 @@ function basalt(w: number, h: number, v: number) {
       tick(g, x, 1, x + 2, 2.4, 0.5, k, css(rock, 22));
     }
     g.restore();
-    pen(g, body, 91 + v, 0.6, 1.5);
+    pen(g, body, 91 + v, 0.5, 1.3, 3, inkFor(rock));
   });
 }
 
@@ -576,30 +573,21 @@ function crate(w: number, h: number, woodHue: number, hue: number, v: number) {
     g.save();
     path(g, body);
     g.clip();
-    for (let y = 4; y < h; y += 4) tick(g, 0, y, w, y + 0.2, 0.5, y, css(wood, -20, 1, 6));
-    g.fillStyle = INK;
-    for (const [ax, ay, bx, by] of [
-      [1.3, 1.3, w - 1.3, 1.3],
-      [1.3, h - 1.3, w - 1.3, h - 1.3],
-      [1.3, 1.3, 1.3, h - 1.3],
-      [w - 1.3, 1.3, w - 1.3, h - 1.3],
-      [2, 2, w - 2, h - 2],
-    ])
-      line(g, ax, ay, bx, by, { w: 2.4, seed: ax + by, taper: [0.02, 0.02], press: 0.15 });
-    g.fillStyle = css(wood, 10);
+    for (let y = 6; y < h - 2; y += 6) seam(g, 2, y, w - 2, y + 0.2, css(wood, -20, 1, 6), y);
+    // The frame: top and bottom battens and the brace, each a bar in a lighter board.
     for (const [ax, ay, bx, by] of [
       [1.3, 1.3, w - 1.3, 1.3],
       [1.3, h - 1.3, w - 1.3, h - 1.3],
       [2, 2, w - 2, h - 2],
     ])
-      line(g, ax, ay, bx, by, { w: 1.1, seed: ax + by + 1, taper: [0.02, 0.02], press: 0.15 });
-    g.fillStyle = css({ h: hue, s: 70, l: 40 }, 0, 0.85);
+      barLine(g, ax, ay, bx, by, 1.4, { ...wood, l: wood.l + 8 }, ax + by, { taper: [0.02, 0.02], press: 0.15, rim: 0.3 });
+    g.fillStyle = css({ h: hue, s: 50, l: 40 }, 0, 0.85);
     g.font = 'bold 6px monospace';
     g.textAlign = 'center';
     g.textBaseline = 'middle';
     g.fillText(['FRAGILE', 'THIS▲UP', 'SLAG CO', 'PORT 7'][v % 4], w / 2, h / 2 + 0.5);
     g.restore();
-    pen(g, body, 102 + v, 0.55, 1.4);
+    pen(g, body, 102 + v, 0.5, 1.3, 3, inkFor(wood));
   });
 }
 
@@ -612,10 +600,7 @@ function oreTub(w: number, h: number, d: DrawCtx, v: number) {
       const a = Math.PI + (i / 12) * Math.PI;
       handle.push({ x: w / 2 + Math.cos(a) * (w / 2 - 1), y: 1 + Math.sin(a) * (w / 2 - 1) });
     }
-    g.fillStyle = INK;
-    stroke(g, handle, { w: 1.56, seed: 111, taper: [0, 0], press: 0 });
-    g.fillStyle = css(pal.base, -6);
-    stroke(g, handle, { w: 0.9, seed: 111, taper: [0, 0], press: 0 });
+    bar(g, handle, 0.9, { ...pal.base, l: pal.base.l - 6 }, 111, { taper: [0, 0], press: 0 });
     for (let k = 0; k < 6; k++) {
       const x = 4 + hash2(k, v, 1) * (w - 8);
       const r = 2 + hash2(k, v, 2) * 1.6;
@@ -623,9 +608,9 @@ function oreTub(w: number, h: number, d: DrawCtx, v: number) {
     }
     const tub = poly(0, 0, w, 0, w - 3, h + 2, 3, h + 2);
     part(g, tub, pal.base, 112 + v, { depth: 1.2, thin: 0.55, thick: 1.4 });
-    g.fillStyle = INK;
-    g.fillRect(0.5, 0, w - 1, 1.4);
-    for (let x = 4; x < w - 3; x += 5) dot(g, x, h - 0.5, 0.55, x, css(pal.light));
+    // The rim's lip, and a rivet each end of the band.
+    seam(g, 1, 0.8, w - 1, 0.8, css(pal.base, -26), 113, 1);
+    for (const x of [4, w / 2, w - 4]) dot(g, x, h - 0.5, 0.5, x, css(pal.light), inkFor(pal.base));
   });
 }
 
@@ -637,12 +622,11 @@ function drawBucket(rc: RC, p: Rect, d: DrawCtx, _a: RotorArm, seed: number) {
   const s = rc.s;
   const lx = p.x + p.w + 1.5;
   const ly = p.y + 2;
-  s.fillStyle = INK;
-  line(s, p.x + p.w - 1, p.y, lx, ly - 2, { w: 0.42, seed: 1, taper: [0, 0], press: 0 });
-  s.fillRect(lx - 2.2, ly - 2.2, 4.4, 1.4);
-  s.fillRect(lx - 2.2, ly + 3.4, 4.4, 1.4);
-  s.fillRect(lx - 1.8, ly - 1, 0.6, 4.5);
-  s.fillRect(lx + 1.2, ly - 1, 0.6, 4.5);
+  const tin: HSL = { h: 30, s: 18, l: 30 };
+  barLine(s, p.x + p.w - 1, p.y, lx, ly - 2, 0.35, STEEL, 1, { rim: 0.15, taper: [0, 0], press: 0 });
+  part(s, boxPts(lx - 2.2, ly - 2.2, 4.4, 1.4, 0.4, 2, 0.05), tin, 2, { depth: 0.3, thin: 0.25, thick: 0.5 });
+  part(s, boxPts(lx - 2.2, ly + 3.4, 4.4, 1.4, 0.4, 3, 0.05), tin, 3, { depth: 0.3, thin: 0.25, thick: 0.5 });
+  for (const x of [lx - 1.5, lx + 1.5]) barLine(s, x, ly - 1, x, ly + 3.5, 0.5, tin, x, { rim: 0.15, taper: [0, 0], press: 0 });
   const warm: HSL = { h: d.style.glowHue, s: 100, l: 62 };
   rc.g.fillStyle = css(warm, 15, 0.95);
   rc.g.fillRect(lx - 1.2, ly - 0.8, 2.4, 4.3);
@@ -653,14 +637,10 @@ function drawBucket(rc: RC, p: Rect, d: DrawCtx, _a: RotorArm, seed: number) {
 /** The window-washer's gondola: a steel deck in a painted band, a thin railing, a bucket and a squeegee. */
 function gondola(w: number, h: number, d: DrawCtx) {
   const pal = d.pal;
-  const paint: HSL = { h: d.style.hue, s: 55, l: 48 };
+  const paint: HSL = { h: d.style.hue, s: 46, l: 48 };
   return sprite(`rt|gond|${sizeKey(w, h)}|${pal.base.h},${pal.base.l}|${paint.h | 0}`, -2, -11, w + 4, h + 13, (g) => {
-    const rail = (ax: number, ay: number, bx: number, by: number) => {
-      g.fillStyle = INK;
-      line(g, ax, ay, bx, by, { w: 1.24, seed: ax + ay, taper: [0, 0], press: 0 });
-      g.fillStyle = css(paint, -6);
-      line(g, ax, ay, bx, by, { w: 0.7, seed: ax + ay, taper: [0, 0], press: 0 });
-    };
+    const rail = (ax: number, ay: number, bx: number, by: number) =>
+      barLine(g, ax, ay, bx, by, 0.7, { ...paint, l: paint.l - 6 }, ax + ay, { taper: [0, 0], press: 0, rim: 0.25 });
     rail(1, 0, 1, -9);
     rail(w - 1, 0, w - 1, -9);
     rail(1, -9, w - 1, -9);
@@ -668,8 +648,7 @@ function gondola(w: number, h: number, d: DrawCtx) {
     for (let x = 8; x < w - 4; x += 8) rail(x, 0, x, -9);
     part(g, boxPts(w - 9, -5, 5, 5, 1, 121), { h: 212, s: 60, l: 50 }, 121, { depth: 0.4, thin: 0.35, thick: 0.8 });
     rail(6, 0, 9, -8);
-    g.fillStyle = INK;
-    line(g, 7.5, -8.5, 11, -7, { w: 1.12, seed: 122, taper: [0, 0], press: 0 });
+    barLine(g, 7.5, -8.5, 11, -7, 0.8, { h: 30, s: 10, l: 30 }, 122, { taper: [0, 0], press: 0, rim: 0.2 });
     const deck = boxPts(0, 0, w, h, 0.8, 123, 0.1);
     tone(g, deck, pal.base, { depth: Math.min(1.2, h * 0.2) });
     g.save();
@@ -678,7 +657,7 @@ function gondola(w: number, h: number, d: DrawCtx) {
     g.fillStyle = css(paint);
     g.fillRect(0, h - 3, w, 3);
     g.restore();
-    pen(g, deck, 124, 0.5, 1.3);
+    pen(g, deck, 124, 0.5, 1.3, 3, inkFor(pal.base));
   });
 }
 
@@ -693,10 +672,7 @@ function drawHub(rc: RC, m: Rotor, d: DrawCtx) {
   if (m.swing > 0) {
     if (m.support === 'ceiling' && m.look !== 'log') {
       const ring = ovalPts(hx, hy, 2.6, 2.6, 7, 0.02, 12);
-      s.fillStyle = INK;
-      stroke(s, [...ring, ring[0]], { w: 1.4, seed: 7, taper: [0, 0], press: 0.1 });
-      s.fillStyle = css(d.pal.base);
-      stroke(s, [...ring, ring[0]], { w: 0.8, seed: 7, taper: [0, 0], press: 0.1 });
+      bar(s, [...ring, ring[0]], 0.8, d.pal.base, 7, { taper: [0, 0], press: 0.1, rim: 0.3 });
     }
     return;
   }

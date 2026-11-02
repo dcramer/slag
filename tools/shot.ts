@@ -39,6 +39,8 @@
  *                                           (`--skin planks [--shell facade]`: into a test landmark in that skin)
  *   pnpm shot landmarks [--theme T] [--concept id] [--count N] → one level per stage concept at three phases, on a contact sheet
  *                                           (themes with none: a test landmark per skin and shell; --concept filters those by skin or shell)
+ *   pnpm shot artqa --theme T | --themes all [--only landmarks,hazards,decor] → every landmark, hazard and decor piece beside
+ *                                           the theme's terrain and three parts, at play scale and 2× (the World art check)
  *   pnpm shot flood [--look lava|toxic|water] [--low 2] [--high 5] → a tide let into the level, at warn, rise and high water
  *   pnpm shot join [--only full]           → the join-and-watch storyboard: connecting, Join or Watch, observing, AFK, failures (desktop + phone)
  *   pnpm shot home                         → main menu (desktop + 390×844 mobile)
@@ -63,6 +65,7 @@
  * Software GL is slow; frames are advanced deterministically via slagDebug.step().
  */
 
+import { shots as artqa } from './shot/artqa';
 import { shots as cast } from './shot/cast';
 import { shots as decor } from './shot/decor';
 import { browser, errors, scenario, server } from './shot/ctx';
@@ -90,6 +93,7 @@ const SCENARIOS = {
   ...cast,
   ...decor,
   ...hazards,
+  ...artqa,
   ...flood,
   ...riders,
   ...sprites,

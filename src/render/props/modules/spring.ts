@@ -219,11 +219,9 @@ function landingX(rc: RC, x: number, y: number) {
     [4.6, -3.9, -4.6, -0.3],
   ])
     line(g, x + ax, y + ay, x + bx, y + by, { w: 1.3, seed: ax + 1, taper: [0.25, 0.25], press: 0.3 });
-  g.strokeStyle = CHALK;
-  g.lineWidth = 0.8;
-  g.beginPath();
-  g.ellipse(x, y - 2.1, 7, 2.1, 0, 0, Math.PI * 2);
-  g.stroke();
+  // The bullseye: one chalk stroke round, lifting where it started.
+  const ring = ovalPts(x, y - 2.1, 7, 2.1, 3, 0.03, 24);
+  stroke(g, [...ring, ring[0], ring[1]], { w: 0.8, seed: 5, taper: [0.06, 0.12], press: 0.3 });
   // Grass stands in front of the ground layer: the X glows a little on the emissive one, so it reads through.
   const e = rc.g;
   e.fillStyle = 'rgba(255,250,225,0.55)';

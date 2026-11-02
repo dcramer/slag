@@ -2,8 +2,8 @@ import { css, type HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { type Level, T_SOLID, tileAt } from '../../../sim/level';
-import { line } from '../../ink';
-import { boxPts, path, pen, poly, sprite, stamp, tone } from '../../ink-props';
+import { inkFor, line, type P } from '../../ink';
+import { barLine, boxPts, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import type { RC } from '../../kit';
 import type { DrawCtx } from '../common';
 import { SHELLS } from '../modules/deco-shells';
@@ -37,7 +37,7 @@ function hz(d: DrawCtx) {
   const fog = d.o.level?.theme.fog;
   const k = fog ? `${fog.h | 0},${fog.l | 0}` : '-';
   const hsl = (c: HSL): HSL => (fog ? { h: c.h, s: c.s * (1 - HAZE), l: c.l + (fog.l - c.l) * HAZE } : c);
-  return { k, hsl, c: (b: HSL, dl = 0, a = 1) => css(hsl(b), dl, a), ink: (b: HSL) => css({ h: b.h, s: b.s * 0.5, l: Math.max(4, hsl(b).l * 0.3) }) };
+  return { k, hsl, c: (b: HSL, dl = 0, a = 1) => css(hsl(b), dl, a), ink: (b: HSL) => inkFor(hsl(b)) };
 }
 type Hz = ReturnType<typeof hz>;
 
@@ -57,12 +57,9 @@ function roofOver(lv: Level, x: number, top: number, G: number): number {
   return r;
 }
 
-/** A thick stroke inked: an ink ribbon, the colour over it. */
-function beam(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, col: string, ink: string, seed: number) {
-  g.fillStyle = ink;
-  line(g, ax, ay, bx, by, { w: w + 1.1, seed, taper: [0.02, 0.02], press: 0.05 });
-  g.fillStyle = col;
-  line(g, ax, ay, bx, by, { w, seed: seed + 1, taper: [0.02, 0.02], press: 0.05 });
+/** A spar, post or brace: its hazed tone in a thin rim of its own dark, lit along its top when it's broad. */
+function beam(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, base: HSL, t: Hz, seed: number, dl = 0) {
+  barLine(g, ax, ay, bx, by, w, t.hsl({ ...base, l: base.l + dl }), seed, { lit: w >= 1.6 ? 10 : 0 });
 }
 
 /** An ice cave's inside over `w`×`h` px: deep blue, faceted walls lighter toward the floor, icicles off its roof. */
@@ -97,7 +94,7 @@ function spire(g: CanvasRenderingContext2D, cx: number, y: number, w: number, t:
   pen(g, cone, seed, 0.3, 0.8, 3, t.ink(PALE));
   g.fillStyle = t.c(DEEP, 10);
   for (let k = -1; k <= 1; k++) g.fillRect(cx + k * (w * 0.25) - 1, y - hgt * 0.3, 2, 4);
-  beam(g, cx, y - hgt, cx, y - hgt - 7, 0.6, t.c(STEEL), t.ink(STEEL), seed + 2);
+  beam(g, cx, y - hgt, cx, y - hgt - 7, 0.6, STEEL, t, seed + 2);
   g.fillStyle = t.c({ h: 205, s: 60, l: 50 });
   path(g, poly(cx, y - hgt - 7, cx + 6, y - hgt - 5.6, cx, y - hgt - 4.2));
   g.fill();
@@ -114,29 +111,54 @@ function palace(rc: RC, m: Deco, d: DrawCtx) {
   const sp = sprite(`glacier|palace|${b.x},${b.y},${b.w},${b.h}|${m.seed}|${t.k}|${lv.version}`, -TILE, -TILE * 6, m.w + TILE * 2, m.h + TILE * 6, (g) => {
     const X = (tx: number) => (tx - b.x) * TILE;
     const Y = (ty: number) => (ty - b.y) * TILE;
+    const night = lv.theme.night;
     for (let i = 0; i < b.w; i++) {
       const x = b.x + i;
       if (tileAt(lv, x, G - 1) === T_SOLID) continue;
       const r = roofOver(lv, x, tops[i], G);
+      // The hall's back wall: one tone of ice, its courses said by a few lifted joints, not a block in every cell.
       g.fillStyle = t.c(PALE, -22);
       g.fillRect(X(x), Y(r), TILE, Y(G) - Y(r));
       for (let y = r; y < G; y++) {
-        const pts = boxPts(X(x) + 0.8 + (y & 1 ? -TILE / 2 : 0), Y(y) + 0.8, TILE - 1.6, TILE - 1.6, 1, x * 31 + y, 0.2);
-        g.fillStyle = t.c(PALE, -16 + hash2(x, y, m.seed) * 8);
-        path(g, pts);
-        g.fill();
+        if (hash2(x, y, m.seed + 3) < 0.45) {
+          const jy = Y(y) + 0.5;
+          tick(g, X(x) + 1 + hash2(x, y, 4) * 3, jy, X(x) + TILE - 2 - hash2(x, y, 5) * 4, jy + 0.2, 0.45, x * 31 + y, t.c(PALE, -34));
+        }
+        if (hash2(x, y, m.seed + 6) < 0.25) {
+          const jx = X(x) + (y & 1 ? TILE / 2 : 2);
+          tick(g, jx, Y(y) + 1.5, jx + 0.2, Y(y) + TILE - 1.5, 0.4, x * 17 + y, t.c(PALE, -32));
+        }
       }
-      // A window every third column, where the hall is tall enough.
+      // A tall arched window every third column, where the hall is tall enough: dark glass by day, lit warm at night.
       if (i % 3 === 1 && G - r >= 4) {
-        const wx = X(x) + 3;
+        const wx = X(x) + 1.5;
         const wy = Y(r) + 6;
-        const wh = Y(G) - wy - 10;
-        const arch = poly(wx, wy + wh, wx, wy + 4, wx + 5, wy, wx + 10, wy + 4, wx + 10, wy + wh);
-        tone(g, arch, t.hsl({ h: 196, s: 60, l: 70 }), { depth: 0.4 });
-        g.fillStyle = t.c(PALE, 14);
-        g.fillRect(wx + 4.4, wy + 1, 1.2, wh - 1);
-        g.fillRect(wx, wy + wh * 0.5, 10, 1.1);
-        pen(g, arch, x, 0.25, 0.6, 3, t.ink(PALE));
+        const wh = Y(G) - wy - 8;
+        const arch = poly(wx, wy + wh, wx, wy + 5, wx + 2, wy + 1.4, wx + 6.5, wy - 0.6, wx + 11, wy + 1.4, wx + 13, wy + 5, wx + 13, wy + wh);
+        const frame: HSL = { h: 200, s: 30, l: 62 };
+        const glass: HSL = night ? { h: 42, s: 72, l: 64 } : { h: 210, s: 38, l: 34 };
+        tone(g, arch, t.hsl(frame), { depth: 0.6 });
+        const pane = poly(
+          wx + 1.6,
+          wy + wh,
+          wx + 1.6,
+          wy + 5.4,
+          wx + 3.2,
+          wy + 2.6,
+          wx + 6.5,
+          wy + 1.2,
+          wx + 9.8,
+          wy + 2.6,
+          wx + 11.4,
+          wy + 5.4,
+          wx + 11.4,
+          wy + wh,
+        );
+        tone(g, pane, night ? glass : t.hsl(glass), { depth: 0.8, shade: night ? -10 : -6 });
+        g.fillStyle = t.c(frame, -6);
+        g.fillRect(wx + 5.9, wy + 1.4, 1.2, wh - 1.4);
+        g.fillRect(wx + 1.6, wy + wh * 0.48, 9.8, 1.1);
+        pen(g, arch, x, 0.3, 0.7, 3, t.ink(frame));
       }
     }
     // Spires over the high runs of the roofline: the towers and the keep.
@@ -157,6 +179,61 @@ function summitCave(rc: RC, m: Deco, d: DrawCtx) {
   const t = hz(d);
   const sp = sprite(`glacier|cave|${m.w}|${m.h}|${m.seed}|${t.k}`, 0, 0, m.w, m.h, (g) => iceInside(g, m.w, m.h, t, m.seed));
   stamp(rc.s, sp, m.at[0] + d.off[0], m.at[1] + d.off[1]);
+}
+
+/**
+ * Her curved ends past the landmark's box, where the planked tiles stop square: the bow's stem sweeping up and
+ * out from the ice to under the bowsprit, the stern's counter raking back over a transom. Hazed back like
+ * every shell, sloped all over (nothing on it reads as a floor), its strakes following the curve.
+ */
+function hullEnds(g: CanvasRenderingContext2D, m: Deco, t: Hz, sternLeft: boolean, bowX: number, bowDeck: number, sternX: number, sternDeck: number) {
+  const foot = m.h;
+  const out = sternLeft ? 1 : -1;
+  const curve = (x0: number, y0: number, cx: number, cy: number, x1: number, y1: number, n = 8): P[] => {
+    const pts: P[] = [];
+    for (let i = 0; i <= n; i++) {
+      const u = i / n;
+      pts.push({ x: (1 - u) * (1 - u) * x0 + 2 * u * (1 - u) * cx + u * u * x1, y: (1 - u) * (1 - u) * y0 + 2 * u * (1 - u) * cy + u * u * y1 });
+    }
+    return pts;
+  };
+  // Lit like the planked tiles they finish, not sunk into the haze: they're the same hull.
+  const HULL: HSL = { h: WOOD.h, s: WOOD.s, l: WOOD.l + 18 };
+  const wood = t.hsl(HULL);
+  // The bow: from the ice at the box's edge, its stem curving out and up to the stem head under the bowsprit.
+  const head = { x: bowX + out * TILE * 2.2, y: bowDeck - TILE * 0.9 };
+  const stem = curve(bowX, foot, bowX + out * TILE * 2.1, foot - TILE * 0.2, head.x, head.y);
+  const sheer = curve(head.x, head.y, bowX + out * TILE * 0.8, bowDeck - TILE * 0.2, bowX, bowDeck);
+  const bow = [...stem, ...sheer.slice(1)];
+  tone(g, bow, wood, { depth: 1 });
+  for (const [k, f] of [0.3, 0.55, 0.8].entries()) {
+    const strake = curve(
+      bowX,
+      bowDeck + (foot - bowDeck) * f,
+      bowX + out * TILE * (0.8 + f),
+      bowDeck + (foot - bowDeck) * f * 0.7,
+      bowX + out * TILE * (1.1 + f * 0.7),
+      bowDeck - TILE * 0.5 + (foot - bowDeck) * f * 0.45,
+      5,
+    );
+    g.fillStyle = t.c(HULL, -12);
+    if (hash2(k, 3, m.seed) < 0.8) line(g, strake[0].x, strake[0].y, strake[5].x, strake[5].y, { w: 0.5, seed: k + 60, taper: [0.15, 0.3], press: 0.3 });
+  }
+  pen(g, bow, 61, 0.35, 0.9, 3, t.ink(HULL));
+  // The stern: the counter raking up and back over a flat transom, a window or two in it.
+  const tail = { x: sternX - out * TILE * 1.8, y: sternDeck - TILE * 0.5 };
+  const counter = [
+    { x: sternX, y: foot },
+    ...curve(sternX - out * TILE * 0.5, foot - TILE * 0.4, sternX - out * TILE * 1.7, foot - TILE * 1.4, tail.x, tail.y + TILE * 1.6, 6),
+    tail,
+    { x: sternX, y: sternDeck },
+  ];
+  tone(g, counter, wood, { depth: 0.9 });
+  g.fillStyle = t.c(HULL, -14);
+  line(g, tail.x + out * 1.5, tail.y + 3, sternX - out * 1, sternDeck + 3, { w: 0.5, seed: 64, taper: [0.15, 0.3], press: 0.3 });
+  g.fillStyle = t.c({ h: 40, s: 30, l: 26 });
+  g.fillRect(Math.min(tail.x + out * 4, tail.x + out * 7), tail.y + 4.5, 3, 2.6);
+  pen(g, counter, 65, 0.35, 0.9, 3, t.ink(HULL));
 }
 
 /**
@@ -181,7 +258,7 @@ function wreck(rc: RC, m: Deco, d: DrawCtx) {
       const r = roofOver(lv, x, tops[i], G);
       g.fillStyle = t.c({ h: 24, s: 30, l: 12 });
       g.fillRect(X(x), Y(r), TILE, Y(G) - Y(r));
-      if (i % 2 === 0) beam(g, X(x) + 4, Y(r), X(x) + 6, Y(G), 1.8, t.c(WOOD, -8), t.ink(WOOD), x);
+      if (i % 2 === 0) beam(g, X(x) + 4, Y(r), X(x) + 6, Y(G), 1.8, WOOD, t, x, -8);
     }
     // The stern is her higher end, the bow the other.
     const sternLeft = tops[0] <= tops[b.w - 1];
@@ -193,20 +270,21 @@ function wreck(rc: RC, m: Deco, d: DrawCtx) {
     }
     const bowX = sternLeft ? m.w : 0;
     const bowDeck = Y(tops[sternLeft ? b.w - 1 : 0]);
+    hullEnds(g, m, t, sternLeft, bowX, bowDeck, sternLeft ? 0 : m.w, Y(tops[sternLeft ? 0 : b.w - 1]));
     const sprit = { x: bowX + (sternLeft ? 1 : -1) * TILE * 2.6, y: bowDeck - TILE * 1.4 };
-    beam(g, bowX, bowDeck - 2, sprit.x, sprit.y, 1.8, t.c(WOOD, 4), t.ink(WOOD), 9);
+    beam(g, bowX, bowDeck - 2, sprit.x, sprit.y, 1.8, WOOD, t, 9);
     // Stays from each mast's top to her ends.
     g.fillStyle = t.c(CLOTH, -34);
     for (const ms of masts) {
-      line(g, ms.x, ms.top, sprit.x, sprit.y, { w: 0.35, seed: ms.x, taper: [0, 0], press: 0 });
-      line(g, ms.x, ms.top, sternLeft ? 2 : m.w - 2, Y(tops[sternLeft ? 0 : b.w - 1]) - 1, { w: 0.35, seed: ms.x + 1, taper: [0, 0], press: 0 });
+      line(g, ms.x, ms.top, sprit.x, sprit.y, { w: 0.4, seed: ms.x, taper: [0.03, 0.06], press: 0.2 });
+      line(g, ms.x, ms.top, sternLeft ? 2 : m.w - 2, Y(tops[sternLeft ? 0 : b.w - 1]) - 1, { w: 0.4, seed: ms.x + 1, taper: [0.03, 0.06], press: 0.2 });
     }
     for (const [k, ms] of masts.entries()) {
-      beam(g, ms.x, ms.deck, ms.x, ms.top, 2.2, t.c(WOOD, 2), t.ink(WOOD), k * 5);
+      beam(g, ms.x, ms.deck, ms.x, ms.top, 2.2, WOOD, t, k * 5);
       // Two yards, each with its sail frozen in a sag, torn on some, icicles all along its foot.
       for (const [yi, yy] of [ms.top + TILE * 1.4, ms.top + TILE * 3.4].entries()) {
         const half = TILE * (yi ? 2.6 : 1.9);
-        beam(g, ms.x - half, yy, ms.x + half, yy + 1, 1.3, t.c(WOOD, 6), t.ink(WOOD), k * 9 + yi);
+        beam(g, ms.x - half, yy, ms.x + half, yy + 1, 1.3, WOOD, t, k * 9 + yi);
         const drop = TILE * (yi ? 1.6 : 1.3);
         const torn = hash2(k, yi, m.seed) < 0.4;
         const sail = poly(
@@ -223,8 +301,13 @@ function wreck(rc: RC, m: Deco, d: DrawCtx) {
           ms.x - half + 2,
           yy + drop,
         );
-        tone(g, sail, t.hsl(CLOTH), { depth: 0.6 });
-        pen(g, sail, k * 7 + yi, 0.25, 0.6, 3, t.ink(CLOTH));
+        tone(g, sail, t.hsl(CLOTH), { depth: 0.9 });
+        // A seam or two down the cloth, and the frost-stiff fold across it.
+        for (const u of [0.33, 0.66])
+          if (hash2(k * 3 + yi, u * 10, m.seed) < 0.75)
+            tick(g, ms.x - half + half * 2 * u, yy + 2.5, ms.x - half + half * 2 * u + 0.6, yy + drop - 2, 0.4, k + yi + u, t.c(CLOTH, -18));
+        tick(g, ms.x - half + 3, yy + drop * 0.45, ms.x + half * 0.4, yy + drop * 0.55, 0.45, k * 5 + yi, t.c(CLOTH, -14));
+        pen(g, sail, k * 7 + yi, 0.3, 0.7, 3, t.ink(CLOTH));
         g.fillStyle = t.c(PALE, 6);
         for (let ix = ms.x - half + 3; ix < ms.x + half - 2; ix += 4 + hash2(ix | 0, yi, m.seed) * 3) {
           const len = 2 + hash2(ix | 0, k, m.seed) * 4;
@@ -300,10 +383,10 @@ function skiJump(rc: RC, m: Deco, d: DrawCtx) {
     for (let k = 0; k + 1 < posts.length; k++) {
       const a = posts[k];
       const c = posts[k + 1];
-      beam(g, a.x, a.y + 2, c.x, foot - 2, 0.9, t.c(WOOD, 8), t.ink(WOOD), k * 3);
-      beam(g, c.x, c.y + 2, a.x, foot - 2, 0.9, t.c(WOOD, 8), t.ink(WOOD), k * 3 + 1);
+      beam(g, a.x, a.y + 2, c.x, foot - 2, 0.9, WOOD, t, k * 3);
+      beam(g, c.x, c.y + 2, a.x, foot - 2, 0.9, WOOD, t, k * 3 + 1);
     }
-    for (const [k, p] of posts.entries()) beam(g, p.x, p.y, p.x, foot, 1.6, t.c(WOOD, 2), t.ink(WOOD), k * 7);
+    for (const [k, p] of posts.entries()) beam(g, p.x, p.y, p.x, foot, 1.6, WOOD, t, k * 7);
     // The tower's doorway: its dark inside and a timber frame down to the ground.
     let door = 0;
     while (door < b.w && tileAt(lv, b.x + door, G - 1) !== T_SOLID && tileAt(lv, b.x + door, G - 4) === T_SOLID && tileAt(lv, b.x + door, G - 5) === T_SOLID)
@@ -312,8 +395,8 @@ function skiJump(rc: RC, m: Deco, d: DrawCtx) {
       const dy = Y(G - 3) - 2;
       g.fillStyle = t.c(DEEP, -4);
       g.fillRect(0, dy, door * TILE, foot - dy);
-      for (const px of [1.5, door * TILE - 1.5]) beam(g, px, dy, px, foot, 1.8, t.c(WOOD, 2), t.ink(WOOD), px | 0);
-      beam(g, 0, dy, door * TILE, dy, 1.8, t.c(WOOD, 6), t.ink(WOOD), 40);
+      for (const px of [1.5, door * TILE - 1.5]) beam(g, px, dy, px, foot, 1.8, WOOD, t, px | 0);
+      beam(g, 0, dy, door * TILE, dy, 1.8, WOOD, t, 40);
     }
     // The start hut on the tower: red boards, a dark window, a snowy pitched roof, a flag.
     const hy = Y(tops[0]);
@@ -325,15 +408,15 @@ function skiJump(rc: RC, m: Deco, d: DrawCtx) {
     const roof = poly(-2, hy - TILE * 1.6, TILE, hy - TILE * 2.6, TILE * 2 + 2, hy - TILE * 1.6);
     tone(g, roof, t.hsl(SNOW), { depth: 0.5 });
     pen(g, roof, 5, 0.3, 0.7, 3, t.ink(PALE));
-    beam(g, TILE, hy - TILE * 2.6, TILE, hy - TILE * 3.6, 0.5, t.c(STEEL), t.ink(STEEL), 6);
+    beam(g, TILE, hy - TILE * 2.6, TILE, hy - TILE * 3.6, 0.5, STEEL, t, 6);
     g.fillStyle = t.c({ h: 4, s: 70, l: 52 });
     path(g, poly(TILE, hy - TILE * 3.6, TILE + 7, hy - TILE * 3.3, TILE, hy - TILE * 3));
     g.fill();
     // The judges' box past the take-off, on legs, its scores held up in the window.
     const jx = m.w + TILE * 1.2;
     const jy = foot - TILE * 3.4;
-    beam(g, jx + 4, jy + TILE * 1.4, jx + 4, foot, 1.2, t.c(WOOD), t.ink(WOOD), 11);
-    beam(g, jx + TILE * 3 - 4, jy + TILE * 1.4, jx + TILE * 3 - 4, foot, 1.2, t.c(WOOD), t.ink(WOOD), 12);
+    beam(g, jx + 4, jy + TILE * 1.4, jx + 4, foot, 1.2, WOOD, t, 11);
+    beam(g, jx + TILE * 3 - 4, jy + TILE * 1.4, jx + TILE * 3 - 4, foot, 1.2, WOOD, t, 12);
     const booth = boxPts(jx, jy, TILE * 3, TILE * 1.4, 1, m.seed + 1, 0.2);
     tone(g, booth, t.hsl({ h: 210, s: 20, l: 60 }), { depth: 0.6 });
     pen(g, booth, 13, 0.3, 0.7, 3, t.ink(STEEL));

@@ -2,11 +2,12 @@ import { css, type HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { type Level, T_EMPTY, T_ONEWAY, T_SOLID, tileAt } from '../../../sim/level';
-import { geyserCycle, type Module, type ModuleOf, swingHeads, vehicleCols, vehiclePose } from '../../../sim/props';
+import { geyserColumn, geyserCycle, type Module, type ModuleOf, swingHeads, vehicleCols, vehiclePose } from '../../../sim/props';
 import { blob, inkFor, line, type P, stroke } from '../../ink';
-import { boxPts, glint, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
+import { barLine, boxPts, glint, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import { bulb, glowDot, light, type RC } from '../../kit';
-import type { DrawCtx } from '../common';
+import { beamOf, type DrawCtx } from '../common';
+import { letterPts } from '../modules/neon';
 import { SHELLS } from '../modules/deco-shells';
 import type { Deco, DecoSkin, PieceSkin, ThemeSkins } from './common';
 
@@ -31,15 +32,17 @@ import type { Deco, DecoSkin, PieceSkin, ThemeSkins } from './common';
  */
 
 const HAZE = 0.3;
-function hz(d: DrawCtx) {
+function hz(d: DrawCtx, haze = HAZE) {
   const fog = d.o.level?.theme.fog;
-  const k = fog ? `${fog.h | 0},${fog.l | 0}` : '-';
-  const hsl = (c: HSL): HSL => (fog ? { h: c.h, s: c.s * (1 - HAZE), l: c.l + (fog.l - c.l) * HAZE } : c);
+  const k = fog ? `${fog.h | 0},${fog.l | 0},${haze}` : '-';
+  const hsl = (c: HSL): HSL => (fog ? { h: c.h, s: c.s * (1 - haze), l: c.l + (fog.l - c.l) * haze } : c);
   return { k, hsl, c: (b: HSL, dl = 0, a = 1) => css(hsl(b), dl, a), ink: (b: HSL) => css({ h: b.h, s: b.s * 0.5, l: Math.max(4, hsl(b).l * 0.3) }) };
 }
 type Hz = ReturnType<typeof hz>;
 
 const OXIDE: HSL = { h: 10, s: 44, l: 36 };
+/** The site's red-oxide primer, a shade lighter than the decks so the frame behind them still reads. */
+const PRIMER: HSL = { h: 10, s: 40, l: 42 };
 const STEEL: HSL = { h: 212, s: 10, l: 44 };
 const GREEN: HSL = { h: 150, s: 22, l: 30 };
 const DARK: HSL = { h: 250, s: 18, l: 8 };
@@ -51,12 +54,9 @@ const WATER: HSL = { h: 200, s: 50, l: 60 };
 const LAMP: HSL = { h: 44, s: 90, l: 68 };
 const CONCRETE: HSL = { h: 30, s: 5, l: 50 };
 
-/** A member drawn with the backdrop pen: a dark ribbon and the member's tone over it. */
+/** A member drawn with the backdrop pen: its hazed tone in a thin rim of its own dark, a lit flange on a heavy one. */
 function member(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, base: HSL, t: Hz, seed: number) {
-  g.fillStyle = t.ink(base);
-  line(g, ax, ay, bx, by, { w: w + 0.8, seed, taper: [0, 0], press: 0.05 });
-  g.fillStyle = t.c(base);
-  line(g, ax, ay, bx, by, { w, seed: seed + 1, taper: [0, 0], press: 0.05 });
+  barLine(g, ax, ay, bx, by, w, t.hsl(base), seed, { ink: t.ink(base), rim: 0.3, press: 0.05, lit: w > 1.5 ? 12 : 0 });
 }
 
 /** An open lattice between two points: two chords and a zigzag of web. */
@@ -117,7 +117,8 @@ function decksOf(lv: Level, b: ReturnType<typeof boxOf>): { y: number; x0: numbe
 function girders(rc: RC, m: Deco, d: DrawCtx) {
   const lv = d.o.level;
   if (!lv) return SHELLS.facade?.(rc, m, d);
-  const t = hz(d);
+  // The steel stands nearer than the city behind it: hazed less, so the frame reads at night.
+  const t = hz(d, 0.16);
   const b = boxOf(m);
   const decks = decksOf(lv, b);
   if (!decks.length) return;
@@ -156,39 +157,35 @@ function girders(rc: RC, m: Deco, d: DrawCtx) {
     member(g, mastX, peak, back, jibY - 1.5, 0.5, STEEL, t, 7);
     flat(g, boxPts(back - (left ? 2 : 6), jibY + 3, 8, 6, 0.6, 8), CONCRETE, t, 8, 0.6);
     flat(g, boxPts(mastX - 5, jibY + 3, 10, 6, 0.8, 9), { h: 46, s: 60, l: 50 }, t, 9, 0.6);
-    g.fillStyle = t.c(DARK, 6);
-    g.fillRect(mastX - 3.5, jibY + 4.5, 7, 2.6);
+    flat(g, boxPts(mastX - 3.5, jibY + 4.4, 7, 2.8, 0.4, 12), { h: 200, s: 20, l: 30 }, t, 12, 0.3);
     // The trolley on the jib, over where the chain hangs.
     flat(g, boxPts(hubX - ox - 4, jibY - 0.5, 8, 3.5, 0.5, 10), STEEL, t, 10, 0.4);
     member(g, hubX - ox, jibY + 3, hubX - ox, hubY - oy - 1, 0.5, STEEL, t, 11);
-    // Columns every four tiles and at the ends, roof to top deck, a bolted splice plate at each deck.
+    // Columns every three tiles and at the ends, roof to top deck, a bolted splice plate at each deck.
     const cols: number[] = [];
-    for (let x = x0; x <= x1 + 1; x += 4) cols.push(X(x));
+    for (let x = x0; x <= x1 + 1; x += 3) cols.push(X(x));
     if (cols[cols.length - 1] < X(x1 + 1) - 8) cols.push(X(x1 + 1));
     for (const [i, cx] of cols.entries()) {
-      member(g, cx, floor, cx, deckTop - 3, 2.8, OXIDE, t, 20 + i);
-      for (const k of decks) {
-        g.fillStyle = t.c(OXIDE, 10);
-        g.fillRect(cx - 2, Y(k.y) + 5.5, 4, 2.4);
-      }
+      member(g, cx, floor, cx, deckTop - 3, 3.4, PRIMER, t, 20 + i);
+      for (const k of decks) flat(g, boxPts(cx - 2.6, Y(k.y) + 5, 5.2, 3.2, 0.4, 60 + i * 7 + k.y), PRIMER, t, 60 + i * 7 + k.y, 0.4);
     }
-    // Bracing crossed in some bays of each storey; a red and white barrier tape along the first deck.
+    // Bracing crossed in most bays of each storey, a beam under every deck between the columns.
     const levels = [G, ...decks.map((k) => k.y)];
     for (let s = 0; s + 1 < levels.length; s++)
       for (let i = 0; i + 1 < cols.length; i++) {
-        if (hash2(i, s, m.seed) < 0.45) continue;
         const ya = Y(levels[s]);
         const yb = Y(levels[s + 1]) + 6;
-        member(g, cols[i] + 1, ya, cols[i + 1] - 1, yb, 0.55, OXIDE, t, s * 40 + i);
-        member(g, cols[i] + 1, yb, cols[i + 1] - 1, ya, 0.55, OXIDE, t, s * 40 + i + 20);
+        if (s) member(g, cols[i], ya + 6, cols[i + 1], ya + 6, 1.6, PRIMER, t, s * 40 + i + 30);
+        if (hash2(i, s, m.seed) < 0.2) continue;
+        member(g, cols[i] + 1.5, ya, cols[i + 1] - 1.5, yb, 0.9, PRIMER, t, s * 40 + i);
+        member(g, cols[i] + 1.5, yb, cols[i + 1] - 1.5, ya, 0.9, PRIMER, t, s * 40 + i + 20);
       }
     // The hoist's mast up its shaft, past the top deck.
     if (shaft >= 0) truss(g, X(shaft) + TILE, floor, X(shaft) + TILE, deckTop - TILE * 2, TILE * 1.6, { h: 46, s: 50, l: 42 }, t, 30);
     // A plywood hoarding round the foot of it all, with a lamp or two on it.
     const hoard = boxPts(X(x0) - 2, floor - 7, X(x1 + 1) - X(x0) + 4, 7, 0.4, 40, 0.04);
     flat(g, hoard, { h: 38, s: 30, l: 46 }, t, 40, 0.4);
-    g.fillStyle = t.c({ h: 38, s: 30, l: 46 }, -14);
-    for (let x = X(x0) + 10; x < X(x1 + 1) - 2; x += 12) g.fillRect(x, floor - 7, 0.6, 7);
+    for (let x = X(x0) + 12; x < X(x1 + 1) - 2; x += 24) tick(g, x, floor - 6.4, x + 0.3, floor - 0.6, 0.45, x, t.c({ h: 38, s: 30, l: 46 }, -16));
   });
   stamp(rc.s, sp, ox, oy);
   // Work lights on the crane's mast and the hoist, and the beacon on the jib's tip.
@@ -206,8 +203,7 @@ function wreckingBall(rc: RC, m: ModuleOf<'swinger'>, d: DrawCtx) {
   const [h] = swingHeads(m, rc.frame, d.r.phase, d.off);
   // The chain: links along the arm, alternately face on and edge on.
   const n = Math.max(4, Math.round(m.arm / 3.2));
-  s.fillStyle = inkFor(STEEL);
-  line(s, hx, hy, h.x, h.y, { w: 1.5, seed: 1, taper: [0, 0], press: 0 });
+  barLine(s, hx, hy, h.x, h.y, 0.6, { ...STEEL, l: STEEL.l - 14 }, 1, { rim: 0.4, taper: [0, 0], press: 0 });
   for (let i = 0; i <= n; i++) {
     const u = i / n;
     const x = hx + (h.x - hx) * u;
@@ -290,10 +286,13 @@ const ADS: readonly { ground: HSL; ink: HSL; accent: HSL; kind: number }[] = [
   { ground: { h: 40, s: 26, l: 70 }, ink: { h: 220, s: 30, l: 22 }, accent: { h: 150, s: 40, l: 38 }, kind: 3 },
 ];
 
+/** Each ad's headline, by its product: crate, soda, duck, burger. Generic goods, never a brand. */
+const HEADLINES = ['CRATES', 'SODA', 'DUCKS', 'BURGER'];
+
 /**
  * The ad pasted over the board's face (in front of its tiles, inside them): a ground, a seam or two where
  * the sheets meet, a big product shape (a crate, a cola bottle, a rubber duck, a burger) and a headline
- * of hand-painted glyphs, with a starburst for the price. No real brand: scrap sold back to the scrap.
+ * of one hand-painted word, with a starburst for the price. No real brand: scrap sold back to the scrap.
  */
 function billboardAd(rc: RC, m: Deco, d: DrawCtx) {
   const lv = d.o.level;
@@ -319,8 +318,7 @@ function billboardAd(rc: RC, m: Deco, d: DrawCtx) {
     path(g, face);
     g.clip();
     // Paste seams.
-    g.fillStyle = css(ad.ground, -8);
-    for (let x = 22 + (m.seed % 9); x < w - 6; x += 30) g.fillRect(x, 3, 0.6, h);
+    for (let x = 22 + (m.seed % 9); x < w - 6; x += 30) tick(g, x, 4, x + 0.4, h - 3, 0.45, x, css(ad.ground, -12));
     // The product, at one end.
     const px = ad.kind % 2 ? w - h * 0.62 : h * 0.62;
     const py = h * 0.55;
@@ -379,20 +377,17 @@ function billboardAd(rc: RC, m: Deco, d: DrawCtx) {
       for (const [i, [dy, c]] of layers.entries())
         part(g, ovalPts(px, py + dy * r, r, r * (i === 0 ? 0.45 : 0.22), 10 + i, 0.05, 18), c, 10 + i, { depth: 0.5, thin: 0.35, thick: 0.9 });
     }
-    // The headline: a word or two of hand-painted glyphs, never a wall of them, and a starburst with the price.
+    // The headline: one hand-painted word for what's sold, sized to the space beside the product.
+    const word = HEADLINES[ad.kind];
     const hx0 = ad.kind % 2 ? 6 : h * 1.25;
-    const hx1 = Math.min(ad.kind % 2 ? w - h * 1.3 : w - 6, hx0 + 10 * Math.min(10, h * 0.28) * 0.8);
-    const gh = Math.min(10, h * 0.28);
-    const pitch = gh * 0.8;
-    for (let x = hx0, i = 0; x + pitch * 0.7 < hx1; x += pitch, i++) {
-      const k = hash2(i, 3, m.seed);
-      const y = h * 0.28;
-      const c = css(ad.ink);
-      tick(g, x, y, x, y + gh, 1.4, i, c);
-      if (k < 0.4) tick(g, x, y, x + pitch * 0.6, y, 1.2, i + 1, c);
-      if (k > 0.3) tick(g, x + pitch * 0.6, y, x + pitch * 0.6, y + gh, 1.4, i + 2, c);
-      if (k > 0.6) tick(g, x, y + gh, x + pitch * 0.6, y + gh, 1.2, i + 3, c);
-    }
+    const room = (ad.kind % 2 ? w - h * 1.3 : w - 6) - hx0;
+    const gh = Math.min(10, h * 0.28, room / (word.length * 0.84));
+    const pitch = gh * 0.84;
+    const hx1 = hx0 + word.length * pitch;
+    g.fillStyle = css(ad.ink);
+    for (let i = 0; i < word.length; i++)
+      for (const [k, pts] of letterPts(word[i], hx0 + i * pitch, h * 0.28, gh * 0.62, gh).entries())
+        stroke(g, pts, { w: Math.max(1, gh * 0.2), seed: m.seed + i * 5 + k, taper: [0.1, 0.16], press: 0.3 });
     if (h >= TILE * 3) {
       const sx = (hx0 + hx1) / 2;
       const sy = h * 0.72;
@@ -421,8 +416,7 @@ function spotlights(rc: RC, m: Deco, d: DrawCtx) {
   const n = Math.max(2, Math.round(b.w / 5));
   for (let i = 0; i < n; i++) {
     const x = b.x * TILE + ((i + 0.5) * m.w) / n;
-    rc.s.fillStyle = inkFor(STEEL);
-    line(rc.s, x, y - 2, x, y + 3, { w: 0.8, seed: i, taper: [0, 0], press: 0 });
+    barLine(rc.s, x, y - 2, x, y + 3, 0.6, STEEL, i, { rim: 0.25 });
     part(rc.s, poly(x - 2.4, y + 3.4, x + 2.4, y + 3.4, x + 1.6, y + 0.6, x - 1.6, y + 0.6), { h: 210, s: 8, l: 30 }, i, { depth: 0.3, thin: 0.3, thick: 0.6 });
     bulb(rc.g, x, y + 0.8, 1.1, LAMP, 0.9);
     light(rc, x, y - TILE, 44, LAMP, 0.45);
@@ -510,34 +504,111 @@ function tankBodies(rc: RC, m: Deco, d: DrawCtx) {
     const h = (k.bot - k.top + 1) * TILE;
     const sp = sprite(`roof|tank|${w}|${h}|${i % 3}`, -1, -1, w + 2, h + 2, (g) => {
       // The lid: the top row, a tile in from each side.
+      const LID: HSL = { h: 200, s: 12, l: 38 };
       const lid = boxPts(TILE + 0.4, 0.3, w - 2 * TILE - 0.8, TILE + 1, 1.4, i + 1, 0.2);
-      part(g, lid, { h: 200, s: 12, l: 34 }, i + 1, { depth: 0.7, thin: 0.35, thick: 0.9 });
-      g.fillStyle = css({ h: 200, s: 12, l: 26 });
-      for (let x = TILE + 3; x < w - TILE - 2; x += 3.5) g.fillRect(x, 4, 0.5, TILE - 4);
+      part(g, lid, LID, i + 1, { depth: 0.7, thin: 0.35, thick: 0.9 });
+      // Its shingles: a course line and a few lifted joints, not a ruled field.
+      tick(g, TILE + 2, TILE * 0.45, w - TILE - 2, TILE * 0.5, 0.4, i + 3, css(LID, -16));
+      for (let x = TILE + 5 + (i % 3) * 2; x < w - TILE - 3; x += 9) tick(g, x, 2.5, x + 0.3, TILE * 0.42, 0.35, x + i, css(LID, -16));
       // The barrel: staves under hoops.
       const body = boxPts(0.4, TILE, w - 0.8, h - TILE - 0.4, 1.2, i + 2, 0.15);
       part(g, body, STAVE, i + 2, { depth: 1.2, thin: 0.4, thick: 1.1 });
       g.save();
       path(g, body);
       g.clip();
-      // Shade toward the sides (flat bands, no gradient), stave seams between.
-      g.fillStyle = css(STAVE, -9);
-      g.fillRect(w - 6, TILE, 6, h);
-      g.fillStyle = css(STAVE, -5);
-      g.fillRect(0, TILE, 3, h);
-      for (let x = 4; x < w - 2; x += 4) {
-        g.fillStyle = css(STAVE, -14);
-        g.fillRect(x, TILE, 0.45, h);
+      // It reads round: a shade cut down the far side and a lit band down the near one, two flat tones.
+      g.fillStyle = css(STAVE, -10);
+      path(g, poly(w * 0.78, TILE, w + 1, TILE, w + 1, h, w * 0.8, h));
+      g.fill();
+      g.fillStyle = css(STAVE, 7);
+      path(g, poly(w * 0.14, TILE, w * 0.24, TILE, w * 0.23, h, w * 0.13, h));
+      g.fill();
+      // A few stave seams, lifted between the hoops, closer together toward the sides as a barrel's are.
+      const n = Math.max(3, Math.round(w / 9));
+      for (let j = 1; j < n; j++) {
+        const u = j / n;
+        const x = (0.5 - 0.5 * Math.cos(u * Math.PI)) * w;
+        for (const [ya, yb] of [
+          [TILE + 4.5, TILE + (h - TILE) * 0.5 - 1.5],
+          [TILE + (h - TILE) * 0.5 + 1.5, h - 4.5],
+        ])
+          if (hash2(j, ya, i + 7) > 0.35) tick(g, x, ya, x + 0.2, yb, 0.4, j + ya, css(STAVE, -18));
       }
-      for (const y of [TILE + 3, TILE + (h - TILE) * 0.5, h - 3]) {
-        g.fillStyle = inkFor(HOOP);
-        line(g, 0, y + 0.4, w, y + 0.4, { w: 1.1, seed: y, taper: [0, 0], press: 0 });
-        g.fillStyle = css(HOOP, 14);
-        line(g, 0, y, w, y, { w: 0.5, seed: y + 1, taper: [0, 0], press: 0 });
-      }
+      for (const y of [TILE + 3, TILE + (h - TILE) * 0.5, h - 3]) barLine(g, -1, y, w + 1, y + 0.3, 0.9, HOOP, y, { rim: 0.3, lit: 16 });
       g.restore();
     });
     stamp(rc.s, sp, k.x0 * TILE + d.off[0], k.top * TILE + d.off[1]);
+  }
+}
+
+/**
+ * The burst valve's spray: a jet of water out of the stub, exactly the column the sim pushes with (`beamOf`), broken
+ * into pulses along its length, fraying at its tip, and drops falling off its underside on the backdrop.
+ */
+function spray(rc: RC, m: ModuleOf<'geyser'>, d: DrawCtx) {
+  const col = geyserColumn(m, rc.frame, d.r.phase, beamOf(d.o, d.r, d.mi)?.len ?? m.length, d.off[0], d.off[1]);
+  if (!col || col.len < 1) return;
+  const s = rc.s;
+  const hw = m.width / 2;
+  const nx = -col.dy;
+  const ny = col.dx;
+  // The solid jet runs four fifths of the way; past that it has broken up into flying blobs.
+  const body = col.len * 0.8;
+  const n = Math.max(4, Math.ceil(body / 4));
+  const top: P[] = [];
+  const bot: P[] = [];
+  for (let i = 0; i <= n; i++) {
+    const u = i / n;
+    const along = body * u;
+    // Narrow at the stub, full where it spreads; a pulse running out along it, ragged toward the tip.
+    const pulse = 0.5 * Math.sin(rc.t * 22 - along * 0.45) * Math.min(1, u * 3);
+    // Its end tapers to a ragged lip where it breaks up.
+    const half = hw * col.k * (0.55 + 0.45 * Math.min(1, u * 2.5)) * (u > 0.85 ? 1 - (u - 0.85) * 2.4 : 1) + pulse;
+    const x = col.x + col.dx * along;
+    const y = col.y + col.dy * along;
+    top.push({ x: x + nx * half, y: y + ny * half });
+    bot.push({ x: x - nx * half, y: y - ny * half });
+  }
+  const jet = [...top];
+  for (let i = bot.length - 1; i >= 0; i--) jet.push(bot[i]);
+  tone(s, jet, WATER, { depth: 0.6, shade: -12 });
+  // The jet's core: a lighter streak, broken where the pulses are.
+  for (let k = 0; k < 3; k++) {
+    const u0 = (rc.t * 2.2 + k / 3) % 1;
+    const a = Math.max(0, u0 - 0.18) * col.len;
+    const b = u0 * col.len;
+    glint(
+      s,
+      [
+        { x: col.x + col.dx * a, y: col.y + col.dy * a - 0.4 },
+        { x: col.x + col.dx * b, y: col.y + col.dy * b - 0.4 },
+      ],
+      css(WATER, 26, 0.9),
+      0.8,
+      k,
+    );
+  }
+  pen(s, jet, 7, 0.3, 0.8, 3, inkFor(WATER));
+  // The broken end: blobs of water flung on across the rest of the column, wobbling as they fly.
+  for (let k = 0; k < 5; k++) {
+    const u = 0.78 + 0.22 * ((k * 0.37 + rc.t * 1.9) % 1);
+    const along = col.len * u;
+    const off = hw * col.k * 0.7 * Math.sin(k * 2.3 + rc.t * 9);
+    const r = hw * col.k * (0.45 - (0.25 * (u - 0.78)) / 0.22);
+    if (r < 0.4) continue;
+    const blobPts = ovalPts(col.x + col.dx * along + nx * off, col.y + col.dy * along + ny * off, r * 1.3, r, k + 11, 0.12, 9);
+    tone(s, blobPts, WATER, { depth: 0.3, shade: -12 });
+    pen(s, blobPts, k + 13, 0.25, 0.6, 2, inkFor(WATER));
+  }
+  // Drops off its underside and its tip, falling away on the backdrop where soft things stay soft.
+  for (let k = 0; k < 7; k++) {
+    const u = (rc.t * 1.4 + k / 7) % 1;
+    const at = col.len * (0.25 + 0.75 * hash2(k, Math.floor(rc.t * 1.4 + k / 7), 3));
+    const x = col.x + col.dx * at + col.dx * u * 6;
+    const y = col.y + col.dy * at + hw * 0.6 + u * u * 20;
+    rc.bg.fillStyle = css(WATER, 18, 0.7 * (1 - u));
+    path(rc.bg, ovalPts(x, y, 0.7, 1.1, k, 0.05, 6));
+    rc.bg.fill();
   }
 }
 
@@ -547,10 +618,7 @@ function valve(rc: RC, m: ModuleOf<'geyser'>, d: DrawCtx) {
   const y = m.at[1] + d.off[1];
   const c = geyserCycle(m, rc.frame, d.r.phase);
   const s = rc.s;
-  s.fillStyle = inkFor(STEEL);
-  line(s, x + 3, y + 3, x + 3, y - 1.5, { w: 2.3, seed: 1, taper: [0, 0], press: 0 });
-  s.fillStyle = css(STEEL, 4);
-  line(s, x + 3, y + 3, x + 3, y - 1.5, { w: 1.5, seed: 2, taper: [0, 0], press: 0 });
+  barLine(s, x + 3, y + 3, x + 3, y - 1.5, 1.6, { ...STEEL, l: STEEL.l + 2 }, 1, { rim: 0.35, lit: 14 });
   part(s, boxPts(x - 1, y - 1.8, 5, 2.6, 0.5, 3, 0.1), STEEL, 3, { depth: 0.3, thin: 0.3, thick: 0.7 });
   const spin = c.seg === 2 ? rc.frame * 0.4 : c.seg === 1 ? Math.sin(rc.frame * 0.9) * 0.3 : 0;
   const wx = x + 3;
@@ -595,15 +663,16 @@ function belfry(m: Deco, t: Hz) {
     member(g, p1, h - 6, p1 - 10, beam + 2, 0.6, BRONZE, t, 5);
     const roof = poly(p0 - 8, beam - 1, w / 2, -TILE * 0.8, p1 + 8, beam - 1);
     flat(g, roof, { h: 200, s: 20, l: 30 }, t, 6, 1);
-    g.fillStyle = t.ink({ h: 200, s: 20, l: 30 });
     for (let i = 1; i < 4; i++)
-      line(
+      tick(
         g,
-        w / 2 - (w / 2 - p0 + 8) * (i / 4),
+        w / 2 - (w / 2 - p0 + 8) * (i / 4) + 1,
         -TILE * 0.8 + (beam + TILE * 0.8) * (i / 4),
-        w / 2 + (p1 + 8 - w / 2) * (i / 4),
+        w / 2 + (p1 + 8 - w / 2) * (i / 4) - 1 - (i % 2) * 4,
         -TILE * 0.8 + (beam + TILE * 0.8) * (i / 4),
-        { w: 0.4, seed: i, taper: [0, 0], press: 0 },
+        0.4,
+        i,
+        t.c({ h: 200, s: 20, l: 30 }, -14),
       );
     // The weathervane on its spike.
     member(g, w / 2, -TILE * 0.8, w / 2, -TILE * 1.8, 0.6, BRONZE, t, 7);
@@ -706,10 +775,7 @@ function pendulum(rc: RC, m: ModuleOf<'swinger'>, d: DrawCtx) {
   const hx = m.hub[0] + d.off[0];
   const hy = m.hub[1] + d.off[1];
   const [h] = swingHeads(m, rc.frame, d.r.phase, d.off);
-  s.fillStyle = inkFor(BRASS);
-  line(s, hx, hy, h.x, h.y, { w: 1.8, seed: 1, taper: [0, 0], press: 0 });
-  s.fillStyle = css(BRASS, 8);
-  line(s, hx, hy, h.x, h.y, { w: 1.1, seed: 2, taper: [0, 0], press: 0 });
+  barLine(s, hx, hy, h.x, h.y, 1.2, { ...BRASS, l: BRASS.l + 4 }, 1, { rim: 0.3, taper: [0, 0], press: 0, lit: 16 });
   const R = m.radius * 0.85;
   orb(s, hx, hy, 1.8, BRASS, 3);
   part(s, ovalPts(h.x, h.y, R, R, 4, 0.01, 22), BRASS, 4, { depth: 0.8, thin: 0.4, thick: 1 });
@@ -726,10 +792,7 @@ function bell(rc: RC, m: ModuleOf<'swinger'>, d: DrawCtx) {
   const hy = m.hub[1] + d.off[1];
   const [h] = swingHeads(m, rc.frame, d.r.phase, d.off);
   const R = m.radius * 0.85;
-  s.fillStyle = inkFor(STEEL);
-  line(s, hx, hy, h.x, h.y, { w: 1.5, seed: 1, taper: [0, 0], press: 0 });
-  s.fillStyle = css(STEEL, -6);
-  line(s, hx, hy, h.x, h.y, { w: 0.8, seed: 2, taper: [0, 0], press: 0 });
+  barLine(s, hx, hy, h.x, h.y, 0.9, { ...STEEL, l: STEEL.l - 6 }, 1, { rim: 0.3, taper: [0, 0], press: 0 });
   orb(s, hx, hy, 1.6, STEEL, 3);
   s.save();
   s.translate(h.x, h.y);
@@ -807,7 +870,7 @@ function elBack(rc: RC, m: Deco, d: DrawCtx) {
       member(g, x - 2.6, under + 6, x + 2.6, floor - 4, 0.45, GREEN, t, i * 5 + 3);
       member(g, x + 2.6, under + 6, x - 2.6, floor - 4, 0.45, GREEN, t, i * 5 + 4);
       g.fillStyle = t.c(GREEN, 14);
-      for (let y = under + 4; y < floor - 3; y += 5) for (const k of [-1, 1]) g.fillRect(x + k * 3.4 - 0.4, y, 0.8, 0.8);
+      for (let y = under + 5; y < floor - 3; y += 11) for (const k of [-1, 1]) g.fillRect(x + k * 3.6 - 0.4, y, 0.8, 0.8);
       flat(g, boxPts(x - 7.5, floor - 2, 15, 2.4, 0.4, i), CONCRETE, t, i, 0.3);
     }
     // The signal bridge's posts down to the track, and its signal head, where the track has one.
@@ -826,8 +889,7 @@ function elBack(rc: RC, m: Deco, d: DrawCtx) {
     const roofY = Y(V) - TILE * 4.2;
     for (const x of [c0 + 3, c1 - 3]) member(g, x, Y(V), x, roofY, 1, GREEN, t, x);
     flat(g, poly(c0 - 4, roofY + 2, c0 + 2, roofY - 3, c1 - 2, roofY - 3, c1 + 4, roofY + 2), GREEN, t, 9, 0.6);
-    g.fillStyle = t.c(GREEN, -12);
-    for (let x = c0; x < c1; x += 5) g.fillRect(x, roofY + 2, 1.4, 2);
+    tick(g, c0, roofY + 3, c1 - 1, roofY + 3.2, 0.45, 13, t.c(GREEN, -14));
     flat(g, boxPts((c0 + c1) / 2 - 12, roofY + 5, 24, 6, 0.4, 11), { h: 210, s: 40, l: 30 }, t, 11, 0.3);
     g.fillStyle = t.c(CREAM, -10);
     for (let x = (c0 + c1) / 2 - 9; x < (c0 + c1) / 2 + 9; x += 3.5) g.fillRect(x, roofY + 6.6, 2, 2.8);
@@ -932,10 +994,7 @@ function hoistCable(rc: RC, m: Deco, d: DrawCtx) {
   const x = m.at[0] + d.off[0] + m.w / 2;
   const y = m.at[1] + d.off[1];
   const head = top * TILE - TILE * 2 + 3;
-  rc.s.fillStyle = inkFor(STEEL);
-  line(rc.s, x, head, x, y + 1, { w: 1, seed: 4, taper: [0, 0], press: 0 });
-  rc.s.fillStyle = css(STEEL, 14);
-  line(rc.s, x, head, x, y + 1, { w: 0.45, seed: 5, taper: [0, 0], press: 0 });
+  barLine(rc.s, x, head, x, y + 1, 0.55, { ...STEEL, l: STEEL.l + 12 }, 4, { rim: 0.25, taper: [0, 0], press: 0 });
   orb(rc.s, x, head, 3.6, { h: 46, s: 50, l: 42 }, 6);
 }
 
@@ -969,9 +1028,13 @@ const piece: PieceSkin = (rc, layer, m: Module, d) => {
       if (concept !== 'el-station' || layer !== 1) return false;
       train(rc, m, d);
       return true;
-    case 'geyser':
-      if (m.look === 'water' && Math.abs(m.angle - Math.PI) < 0.1 && layer === 1) valve(rc, m, d);
-      return false;
+    case 'geyser': {
+      // The burst valve: its wheel and stub on the vent's layer, its spray on the column's, both in place of the geyser's own.
+      if (m.look !== 'water' || Math.abs(m.angle - Math.PI) > 0.1) return false;
+      if (layer === 1) valve(rc, m, d);
+      else if (layer === 3) spray(rc, m, d);
+      return layer === 1 || layer === 3;
+    }
     default:
       return false;
   }

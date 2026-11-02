@@ -183,9 +183,9 @@ export function tick(g: CanvasRenderingContext2D, ax: number, ay: number, bx: nu
   line(g, ax, ay, bx, by, { w, seed, taper: [0.15, 0.3], press: 0.2 });
 }
 
-/** A rivet: an ink dot with a light fleck. */
-export function dot(g: CanvasRenderingContext2D, x: number, y: number, r: number, seed: number, fleck?: string) {
-  g.fillStyle = INK;
+/** A rivet, bolt or hole: a dot in `ink` (a dark of the plate it's in, `inkFor(plate)`, in world art) with a light fleck. */
+export function dot(g: CanvasRenderingContext2D, x: number, y: number, r: number, seed: number, fleck?: string, ink = INK) {
+  g.fillStyle = ink;
   blob(g, x, y, r, seed, 1, 0.12);
   g.fill();
   if (fleck) {
@@ -194,10 +194,19 @@ export function dot(g: CanvasRenderingContext2D, x: number, y: number, r: number
   }
 }
 
-/** A ball: two tones cut toward the light, a pen round it and one hard glint. */
-export function ball(g: CanvasRenderingContext2D, x: number, y: number, r: number, base: HSL, seed = 2, glintCol = 'rgba(255,255,255,0.85)', ink = INK) {
+/** A ball: two tones cut toward the light, a pen round it in a dark of its colour and one hard glint. */
+export function ball(
+  g: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  base: HSL,
+  seed = 2,
+  glintCol = 'rgba(255,255,255,0.85)',
+  ink = inkFor(base),
+) {
   g.fillStyle = ink;
-  blob(g, x + 0.25, y + 0.3, r + Math.min(1.1, r * 0.22), seed, 1, 0.04);
+  blob(g, x + 0.25, y + 0.3, r + Math.min(0.9, r * 0.2), seed, 1, 0.04);
   g.fill();
   g.fillStyle = css(base, -12, 1, 4);
   blob(g, x, y, r, seed + 1, 1, 0.03);
@@ -210,4 +219,58 @@ export function ball(g: CanvasRenderingContext2D, x: number, y: number, r: numbe
   g.fill();
   g.restore();
   if (r > 1.6) glint(g, poly(x - r * 0.6, y - r * 0.05, x - r * 0.48, y - r * 0.45, x - r * 0.15, y - r * 0.62), glintCol, Math.max(0.5, r * 0.22), seed);
+}
+
+/** World px of rim each side of a bar: docs/ART.md asks 0.25–0.5. */
+export const BAR_RIM = 0.3;
+
+export interface BarOpts {
+  /** Swell and lift; keep the sum under `PEN.bar` (0.12) so it stays a bar and keeps its width. */
+  taper?: [number, number];
+  press?: number;
+  /** Rim each side, world px. */
+  rim?: number;
+  /** The rim's colour when it isn't a dark of the bar's own (a wire seen against what it's strung over). */
+  ink?: string;
+  /** A highlight along the lit side, as a lightness shift; 0 for none. */
+  lit?: number;
+}
+
+/**
+ * A bar (a post, spar, rope, pipe, strut or rail) in its own colour inside a thin rim that's a dark of that colour
+ * (`inkFor`), never a near-black ribbon under it (docs/ART.md, The line). A bar keeps its width: size `w` to the thing.
+ */
+export function bar(g: CanvasRenderingContext2D, pts: readonly P[], w: number, c: HSL, seed: number, o: BarOpts = {}) {
+  const taper = o.taper ?? [0.02, 0.04];
+  const press = o.press ?? 0.08;
+  g.fillStyle = o.ink ?? inkFor(c);
+  stroke(g, pts, { w: w + 2 * (o.rim ?? BAR_RIM), seed, taper, press });
+  g.fillStyle = css(c);
+  stroke(g, pts, { w, seed: seed + 1, taper, press });
+  if (!o.lit || pts.length < 2) return;
+  // The side toward the light (up-left), from the bar's overall direction.
+  const a = pts[0];
+  const b = pts[pts.length - 1];
+  const d = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+  let nx = (b.y - a.y) / d;
+  let ny = -(b.x - a.x) / d;
+  if (nx + ny > 0) {
+    nx = -nx;
+    ny = -ny;
+  }
+  const k = w * 0.26;
+  g.fillStyle = css(c, o.lit);
+  stroke(
+    g,
+    pts.map((p) => ({ x: p.x + nx * k, y: p.y + ny * k })),
+    { w: w * 0.24, seed: seed + 2, taper: [0.15, 0.25], press: 0.2 },
+  );
+}
+
+/** A straight `bar` from a to b. */
+export function barLine(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, c: HSL, seed: number, o: BarOpts = {}) {
+  const n = Math.max(3, Math.ceil(Math.hypot(bx - ax, by - ay) / 2.5));
+  const pts: P[] = [];
+  for (let i = 0; i <= n; i++) pts.push({ x: ax + ((bx - ax) * i) / n, y: ay + ((by - ay) * i) / n });
+  bar(g, pts, w, c, seed, o);
 }

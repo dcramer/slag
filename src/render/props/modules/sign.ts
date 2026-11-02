@@ -3,9 +3,10 @@ import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { type Level, T_EMPTY, tileAt } from '../../../sim/level';
 import { type ModuleOf, SIGN_FALL, SIGN_LIFT, SIGN_LIVE, SIGN_WARN, signCycle, signRect } from '../../../sim/props';
-import { blob, inkFor, line } from '../../ink';
-import { boxPts, part, sprite, stamp, tick, tone } from '../../ink-props';
-import { glowDot, light, lightning, type RC } from '../../kit';
+import { blob, inkFor, line, stroke } from '../../ink';
+import { barLine, boxPts, part, sprite, stamp, tick, tone } from '../../ink-props';
+import { glowDot, light, type RC, zap } from '../../kit';
+import { letterPts } from './neon';
 import { type DrawCtx, defineArt } from '../common';
 
 /**
@@ -62,7 +63,22 @@ function mountOf(level: Level | undefined, m: Sign, ox: number, oy: number): { u
   return { up: null, wall: 0 };
 }
 
-/** The sign's face, baked: a rim, the painted face, a row of hand-lettered glyphs (lettering, not a word), and bulbs on a tall one. */
+/** What a shop sign says, by how many letters fit: trades, never a name. */
+const SIGN_WORDS: Record<number, readonly string[]> = {
+  3: ['BAR', 'INN', 'FIX', 'TOY'],
+  4: ['DELI', 'EATS', 'PAWN', 'CAFE', 'KEYS', 'FISH'],
+  5: ['HOTEL', 'LOANS', 'SHOES', 'BOOKS', 'DINER', 'RADIO'],
+  6: ['TAILOR', 'BARBER', 'REPAIR', 'BAKERY', 'CIGARS'],
+};
+
+/** The word on sign `m`: the longest list whose words fit its face at a readable size. */
+function signWord(m: Sign): string {
+  const fit = Math.floor((m.w - 7) / (Math.min(m.h - 6, 9) * 0.84));
+  const list = SIGN_WORDS[Math.max(3, Math.min(6, fit))];
+  return list[m.seed % list.length];
+}
+
+/** The sign's face, baked: a rim, the painted face, the shop's word hand-lettered, and bulbs on a tall one. */
 function face(m: Sign) {
   const [bg, rim, ink] = paintOf(m);
   return sprite(`sign|${m.w}|${m.h}|${m.seed}`, -1, -1, m.w + 2, m.h + 2, (g) => {
@@ -70,23 +86,17 @@ function face(m: Sign) {
     part(g, pts, rim, m.seed, { depth: 0.6, thin: 0.4, thick: 0.9 });
     const inner = boxPts(1.6, 1.6, m.w - 3.2, m.h - 3.2, 0.8, m.seed + 1, 0.1);
     tone(g, inner, bg, { depth: 0.8 });
-    // Glyphs: strokes and loops at a letter's pitch, centred, every one its own from the seed.
-    const gh = Math.min(m.h - 6, 9);
-    const pitch = Math.max(5, gh * 0.72);
-    const n = Math.max(2, Math.floor((m.w - 8) / pitch));
-    const x0 = (m.w - n * pitch) / 2 + pitch * 0.2;
+    // The shop's word, hand-lettered: the longest that fits, from the seed.
+    const word = signWord(m);
+    const gh = Math.min(m.h - 6, 9, (m.w - 7) / (word.length * 0.84));
+    const lw = gh * 0.62;
+    const pitch = gh * 0.84;
+    const x0 = (m.w - (word.length * pitch - (pitch - lw))) / 2;
     const y0 = (m.h - gh) / 2;
-    for (let i = 0; i < n; i++) {
-      const x = x0 + i * pitch;
-      const k = hash2(i, 1, m.seed);
-      const w = pitch * 0.62;
-      const c = css(ink);
-      tick(g, x, y0, x, y0 + gh, 1.1, i, c);
-      if (k < 0.3) tick(g, x, y0, x + w, y0, 1, i + 5, c);
-      else if (k < 0.55) tick(g, x + w, y0, x + w, y0 + gh, 1.1, i + 6, c);
-      else if (k < 0.75) tick(g, x, y0 + gh * 0.5, x + w, y0 + gh * 0.5, 1, i + 7, c);
-      if (hash2(i, 2, m.seed) < 0.5) tick(g, x, y0 + gh, x + w, y0 + gh, 1, i + 8, c);
-    }
+    g.fillStyle = css(ink);
+    for (let i = 0; i < word.length; i++)
+      for (const [k, pts] of letterPts(word[i], x0 + i * pitch, y0, lw, gh).entries())
+        stroke(g, pts, { w: Math.max(0.9, gh * 0.17), seed: m.seed + i * 5 + k, taper: [0.12, 0.18], press: 0.3 });
     // A long sign's bulbs, top and bottom.
     if (m.h >= TILE * 1.5) {
       for (let x = 4; x < m.w - 2; x += 5) {
@@ -120,13 +130,11 @@ function chain(s: CanvasRenderingContext2D, ax: number, ay: number, bx: number, 
 /** Sparks spitting off a point: short jagged threads, hot. */
 function sparks(rc: RC, x: number, y: number, k: number) {
   glowDot(rc.g, x, y, 4 + 4 * k, SPARK, 0.35 + 0.5 * k);
-  rc.g.strokeStyle = css(SPARK, 14, 0.8);
-  rc.g.lineWidth = 0.6;
   for (let i = 0; i < 2; i++) {
     if (Math.random() > 0.35 + 0.6 * k) continue;
     const a = Math.random() * Math.PI * 2;
     const r = 3 + Math.random() * 5;
-    lightning(rc.g, x, y, x + Math.cos(a) * r, y + Math.sin(a) * r, 2, 3);
+    zap(rc.g, x, y, x + Math.cos(a) * r, y + Math.sin(a) * r, 2, 3, SPARK, 0.6);
   }
 }
 
@@ -147,13 +155,9 @@ function draw(rc: RC, m: Sign, d: DrawCtx) {
   if (mount.wall) {
     const wx = mount.wall < 0 ? hx - 1 : hx + m.w + 1;
     const ex = mount.wall < 0 ? hx + m.w - 2 : hx + 2;
-    s.fillStyle = inkFor(CHAIN);
-    line(s, wx, top, ex, top, { w: 1.9, seed: m.seed, taper: [0, 0], press: 0 });
-    s.fillStyle = css(CHAIN, -4);
-    line(s, wx, top - 0.2, ex, top - 0.2, { w: 1.1, seed: m.seed + 1, taper: [0, 0], press: 0 });
+    barLine(s, wx, top, ex, top, 1.3, { ...CHAIN, l: CHAIN.l - 4 }, m.seed, { rim: 0.3, lit: 14 });
     // The strut under the arm, back to the wall.
-    s.fillStyle = inkFor(CHAIN);
-    line(s, wx, top + 6, wx + (ex - wx) * 0.45, top + 0.6, { w: 0.8, seed: m.seed + 2, taper: [0, 0], press: 0 });
+    barLine(s, wx, top + 6, wx + (ex - wx) * 0.45, top + 0.6, 0.7, CHAIN, m.seed + 2, { rim: 0.25 });
   } else if (mount.up !== null) {
     for (const [x] of hooks) pip(s, x, top + 0.6, 0.9, inkFor(CHAIN), x);
   }

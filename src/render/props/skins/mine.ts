@@ -3,8 +3,8 @@ import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { T_EMPTY } from '../../../sim/level';
 import { motionOffset, resolveProp } from '../../../sim/props';
-import { line, type P, stroke } from '../../ink';
-import { boxPts, ovalPts, pen, poly, sprite, stamp, tone } from '../../ink-props';
+import { inkFor, type P } from '../../ink';
+import { bar, barLine, boxPts, dot, ovalPts, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import { light } from '../../kit';
 import type { DrawCtx } from '../common';
 import { SHELLS } from '../modules/deco-shells';
@@ -33,22 +33,19 @@ function hz(d: DrawCtx) {
   const fog = d.o.level?.theme.fog;
   const k = fog ? `${fog.h | 0},${fog.l | 0}` : '-';
   const hsl = (c: HSL): HSL => (fog ? { h: c.h, s: c.s * (1 - HAZE), l: c.l + (fog.l - c.l) * HAZE } : c);
-  return { k, hsl, c: (b: HSL, dl = 0, a = 1) => css(hsl(b), dl, a), ink: (b: HSL) => css({ h: b.h, s: b.s * 0.5, l: Math.max(5, hsl(b).l * 0.3) }) };
+  return { k, hsl, c: (b: HSL, dl = 0, a = 1) => css(hsl(b), dl, a), ink: (b: HSL) => inkFor(hsl(b)) };
 }
 type Hz = ReturnType<typeof hz>;
 
-const WOOD: HSL = { h: 28, s: 36, l: 36 };
-const DARKWOOD: HSL = { h: 24, s: 30, l: 24 };
+const WOOD: HSL = { h: 28, s: 36, l: 40 };
+const DARKWOOD: HSL = { h: 24, s: 30, l: 29 };
 const IRON: HSL = { h: 214, s: 9, l: 40 };
 const RUST: HSL = { h: 18, s: 40, l: 34 };
 const DARK: HSL = { h: 26, s: 18, l: 11 };
 
-/** A backdrop beam: a dark ribbon with its hazed tone over it. */
+/** A backdrop timber or rod: its hazed tone in a thin rim of its own dark, lit along its top when it's broad enough to show it. */
 function beam(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, base: HSL, t: Hz, seed: number) {
-  g.fillStyle = t.ink(base);
-  line(g, ax, ay, bx, by, { w: w + 0.9, seed, taper: [0, 0], press: 0.05 });
-  g.fillStyle = t.c(base);
-  line(g, ax, ay, bx, by, { w, seed: seed + 1, taper: [0, 0], press: 0.05 });
+  barLine(g, ax, ay, bx, by, w, t.hsl(base), seed, { lit: w >= 1.8 ? 9 : 0 });
 }
 
 /** A flat backdrop shape: its hazed tone and a thin pen of its own dark. */
@@ -68,12 +65,7 @@ function wheel(key: string, r: number, spokes: number, base: HSL, t: Hz, teeth =
       rim.push({ x: Math.cos(a) * rr, y: Math.sin(a) * rr });
     }
     if (teeth) flat(g, rim, base, t, 3, 0.6);
-    else {
-      g.fillStyle = t.ink(base);
-      stroke(g, rim, { w: 3.2, seed: 4, taper: [0, 0], press: 0 });
-      g.fillStyle = t.c(base, 4);
-      stroke(g, rim, { w: 2, seed: 5, taper: [0, 0], press: 0 });
-    }
+    else bar(g, rim, 2, t.hsl({ ...base, l: base.l + 4 }), 4, { taper: [0, 0] });
     for (let i = 0; i < spokes; i++) {
       const a = (i / spokes) * Math.PI * 2;
       beam(g, 0, 0, Math.cos(a) * (r - 1), Math.sin(a) * (r - 1), teeth ? 1.6 : 0.9, teeth ? DARK : base, t, 9 + i);
@@ -104,17 +96,17 @@ function tower(m: Deco, t: Hz, shaft: number) {
     // Back legs under the deck, splayed a little, and X-bracing between them in panels.
     const L = TILE * 0.5;
     const R = m.w - TILE * 0.5;
-    beam(g, L, deck, L - 4, foot, 2.6, WOOD, t, 1);
-    beam(g, R, deck, R + 4, foot, 2.6, WOOD, t, 2);
+    beam(g, L, deck, L - 4, foot, 3.2, WOOD, t, 1);
+    beam(g, R, deck, R + 4, foot, 3.2, WOOD, t, 2);
     const panels = Math.max(2, Math.round((foot - deck) / (2.5 * TILE)));
     for (let i = 0; i < panels; i++) {
       const y0 = deck + ((foot - deck) * i) / panels;
       const y1 = deck + ((foot - deck) * (i + 1)) / panels;
       const lx = (y: number) => L - (4 * (y - deck)) / (foot - deck);
       const rx = (y: number) => R + (4 * (y - deck)) / (foot - deck);
-      beam(g, lx(y0), y0, rx(y1), y1, 1.1, DARKWOOD, t, 10 + i);
-      beam(g, rx(y0), y0, lx(y1), y1, 1.1, DARKWOOD, t, 20 + i);
-      beam(g, lx(y1), y1, rx(y1), y1, 1.6, WOOD, t, 30 + i);
+      beam(g, lx(y0), y0, rx(y1), y1, 1.6, DARKWOOD, t, 10 + i);
+      beam(g, rx(y0), y0, lx(y1), y1, 1.6, DARKWOOD, t, 20 + i);
+      beam(g, lx(y1), y1, rx(y1), y1, 2.2, WOOD, t, 30 + i);
     }
     // The shaft's guides: two rails down from the deck to the floor either side of the cage.
     for (const x of [shaft - 1, shaft + 2 * TILE + 1]) beam(g, x, deck, x, foot, 1, IRON, t, 40 + x);
@@ -151,8 +143,7 @@ const headframe: DecoSkin = (rc, m, d) => {
   const cx = x + shaft + TILE;
   const cy = y + TILE * 1.2 - r * 0.3;
   const travel = cage ? -motionOffset(resolveProp(cage), rc.frame)[1] : 0;
-  rc.s.fillStyle = t.ink(IRON);
-  line(rc.s, cx + r, cy, cx + r, y + FRAME * TILE + 2, { w: 0.9, seed: 3, taper: [0, 0], press: 0 });
+  barLine(rc.s, cx + r, cy, cx + r, y + FRAME * TILE + 2, 0.7, t.hsl(IRON), 3);
   turn(rc.s, wheel('sheave', r, 6, IRON, t), cx, cy, (travel / r) % (Math.PI * 2));
 };
 
@@ -184,8 +175,16 @@ const trestle: DecoSkin = (rc, m, d) => stamp(rc.s, bents(m, hz(d)), m.at[0] + d
 function works(m: Deco, t: Hz) {
   return sprite(`mine|works|${m.w}|${m.h}|${m.seed}|${t.k}`, -6, -TILE * 3, m.w + 12, m.h + TILE * 3 + 2, (g) => {
     const roof = 4 * TILE;
-    // The tunnel's back wall: riveted plates, dark.
-    for (let x = 0; x < m.w; x += 2 * TILE) flat(g, boxPts(x + 0.5, m.h - 3.6 * TILE, 2 * TILE - 1, 3.6 * TILE - 2, 0.6, x), DARK, t, x, 0.6);
+    // The tunnel's back wall: one dark sheet of riveted plate, its seams lifting where the hand did, a rivet or two at each.
+    const wy = m.h - 3.6 * TILE;
+    flat(g, boxPts(0.5, wy, m.w - 1, 3.6 * TILE - 2, 0.6, 1), DARK, t, 1, 0.8);
+    const seam = t.c(DARK, 9);
+    for (let x = 2 * TILE; x < m.w - TILE; x += 2 * TILE) {
+      const lift = hash2(x, 3, m.seed);
+      tick(g, x, wy + 2 + lift * 8, x + 0.3, m.h - 4 - (1 - lift) * 10, 0.5, x, seam);
+      for (const ry of [wy + 4, m.h - 7]) if (hash2(x, ry, m.seed) < 0.6) dot(g, x + 2.2, ry, 0.5, x + ry, t.c(DARK, 16), t.ink(DARK));
+    }
+    tick(g, 4, wy + 1.6 * TILE, m.w * 0.45, wy + 1.6 * TILE + 0.4, 0.45, 2, seam);
     // The stack over the roof, with a band, and a little headgear beside it.
     const sx = m.w * (0.7 + 0.15 * hash2(1, 2, m.seed));
     flat(g, boxPts(sx - 6, -TILE * 3, 12, roof + TILE * 3, 0.8, 3), RUST, t, 3, 1);
@@ -281,9 +280,8 @@ function timbering(m: Deco, t: Hz) {
       beam(g, x - 6, m.h, x - 5, TILE * 0.6, 2.4, WOOD, t, x);
       beam(g, x + 6, m.h, x + 5, TILE * 0.6, 2.4, WOOD, t, x + 1);
       beam(g, x - 9, TILE * 0.6, x + 9, TILE * 0.6, 2.6, DARKWOOD, t, x + 2);
-      // Where the water reaches: a stain across the posts.
-      g.fillStyle = t.c(DARK, -3, 0.8);
-      g.fillRect(x - 8, m.h - 2.2 * TILE, 16, 1.5);
+      // Where the water reaches: a tide line across the posts.
+      tick(g, x - 8, m.h - 2.2 * TILE, x + 8, m.h - 2.2 * TILE + 0.4, 0.9, x + 3, t.c(DARKWOOD, -8));
     }
     beam(g, 0, TILE * 1.4, m.w, TILE * 1.4, 2, RUST, t, m.seed + 5);
     for (let x = TILE * 2; x < m.w; x += 4 * TILE) flat(g, boxPts(x - 2, TILE * 1.4 - 2.6, 4, 5.2, 0.4, x), IRON, t, x, 0.3);
