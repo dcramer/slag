@@ -1,6 +1,8 @@
 import { css, type HSL, hsl3, shift } from '../core/color';
 import type { Rng } from '../core/rng';
-import type { DecorKind, Theme } from '../gen/theme';
+import type { DecorKind, DecorSpot } from '../gen/decor';
+import type { Theme } from '../gen/theme';
+import { FARM_DECOR } from './decor-farm';
 import { FRONTIER_DECOR } from './decor-frontier';
 import { blob, line, type P, stroke } from './ink';
 import { inkFence, inkHay } from './ink-parts';
@@ -8,34 +10,21 @@ import { ball, boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, tick, to
 import { bulb, circle, flame, flutter, glowDot, light, type RC } from './kit';
 
 /**
- * Terrain decor registry, inked like the terrain it stands on (docs/ART.md, World art). Each kind says where
- * it grows (on top of ground or hanging under ceilings), how wide it is in tiles, and how to draw it:
+ * Terrain decor art, inked like the terrain it stands on (docs/ART.md, World art). Where each kind grows,
+ * how much room it takes and where it goes in a level is decided in gen (src/gen/decor: its rule and
+ * `placeDecor`); this is how it's drawn:
+ *   - `color`: its tint, rolled from the spot's own seed,
  *   - `bake`: static parts, painted once into the terrain bake (cheap),
  *   - `live`: animated / emissive parts, drawn every frame.
  * Decor is purely cosmetic and stays small so it never reads as a hazard or as somewhere to stand.
  */
 
-export interface Decor {
-  kind: DecorKind;
-  x: number;
-  y: number;
-  /** Tile that must stay solid for this decor to exist. */
-  tx: number;
-  ty: number;
-  seed: number;
-  size: number;
-  /** Tiles spanned (fences). */
-  span: number;
+/** A placed piece (`DecorSpot`) with its tint. */
+export interface Decor extends DecorSpot {
   color: HSL;
-  flip: boolean;
 }
 
 export interface DecorDef {
-  place: 'top' | 'under';
-  /** Relative pick weight within a theme's decor list. */
-  weight: number;
-  /** Needs this many empty tiles above (top) / below (under). */
-  clear: number;
   color(th: Theme, rng: Rng): HSL;
   bake?(s: CanvasRenderingContext2D, d: Decor, th: Theme): void;
   live?(rc: RC, d: Decor, th: Theme): void;
@@ -109,9 +98,6 @@ function steam(rc: RC, x: number, y: number, seed: number, scale = 1, a = 0.28) 
 export const DECOR: Record<DecorKind, DecorDef> = {
   // ---- generic -----------------------------------------------------------
   crystal: {
-    place: 'top',
-    weight: 1,
-    clear: 1,
     color: (th, rng) => (rng.chance(0.7) ? th.terrain.vein : hsl3(rng.range(0, 360), 85, 62)),
     live(rc, d) {
       const s = rc.s;
@@ -141,9 +127,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   mushroom: {
-    place: 'top',
-    weight: 1,
-    clear: 1,
     color: (th, rng) => (th.night ? hsl3(rng.pick([190, 280, 320, 100]), 90, 60) : hsl3(rng.pick([0, 10, 30]), 75, 50)),
     bake(s, d, th) {
       const k = d.size;
@@ -175,9 +158,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   flower: {
-    place: 'top',
-    weight: 1.2,
-    clear: 1,
     color: (_th, rng) => hsl3(rng.pick([0, 50, 280, 320, 200, 30]), 80, 64),
     live(rc, d, th) {
       const s = rc.s;
@@ -202,9 +182,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   lantern: {
-    place: 'under',
-    weight: 1,
-    clear: 1,
     color: (th) => th.lamp,
     live(rc, d) {
       const s = rc.s;
@@ -231,9 +208,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   vine: {
-    place: 'under',
-    weight: 1.6,
-    clear: 1,
     color: (th) => shift(th.terrain.capColor, -6),
     live(rc, d) {
       const s = rc.s;
@@ -246,9 +220,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   bones: {
-    place: 'top',
-    weight: 0.6,
-    clear: 1,
     color: () => hsl3(40, 25, 80),
     bake(s, d) {
       const k = d.size;
@@ -267,9 +238,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   torch: {
-    place: 'top',
-    weight: 1,
-    clear: 2,
     color: (th) => th.lamp,
     bake(s, d) {
       const k = d.size;
@@ -286,9 +254,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   pipe: {
-    place: 'top',
-    weight: 1,
-    clear: 2,
     color: () => hsl3(25, 30, 34),
     bake(s, d) {
       const k = d.size;
@@ -304,23 +269,14 @@ export const DECOR: Record<DecorKind, DecorDef> = {
 
   // ---- farm --------------------------------------------------------------
   fence: {
-    place: 'top',
-    weight: 1.4,
-    clear: 1,
     color: () => hsl3(32, 30, 58),
     bake: (s, d) => inkFence(s, d),
   },
   haybale: {
-    place: 'top',
-    weight: 1,
-    clear: 1,
     color: () => hsl3(44, 70, 58),
     bake: (s, d) => inkHay(s, d),
   },
   wheat: {
-    place: 'top',
-    weight: 1.6,
-    clear: 1,
     color: (_th, rng) => hsl3(rng.range(40, 50), 70, 58),
     live(rc, d) {
       const s = rc.s;
@@ -347,9 +303,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   pumpkin: {
-    place: 'top',
-    weight: 0.8,
-    clear: 1,
     color: (_th, rng) => hsl3(rng.range(22, 30), 90, 50),
     bake(s, d) {
       const k = d.size;
@@ -374,9 +327,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   sunflower: {
-    place: 'top',
-    weight: 0.9,
-    clear: 2,
     color: () => hsl3(48, 95, 55),
     live(rc, d, th) {
       const s = rc.s;
@@ -407,9 +357,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
 
   // ---- factory -----------------------------------------------------------
   vent: {
-    place: 'top',
-    weight: 1,
-    clear: 2,
     color: () => hsl3(210, 8, 42),
     bake(s, d) {
       const k = d.size;
@@ -421,9 +368,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   barrel: {
-    place: 'top',
-    weight: 1.2,
-    clear: 1,
     color: (th, rng) => (th.id === 'harbor' ? hsl3(28, 45, 36) : hsl3(rng.pick([5, 210, 120, 45]), 55, 40)),
     bake(s, d, th) {
       const k = d.size;
@@ -453,9 +397,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   crate: {
-    place: 'top',
-    weight: 1,
-    clear: 1,
     color: () => hsl3(32, 45, 44),
     bake(s, d) {
       const k = d.size;
@@ -483,9 +424,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   beacon: {
-    place: 'top',
-    weight: 0.7,
-    clear: 1,
     color: () => hsl3(32, 100, 55),
     bake(s, d) {
       box(s, d.x - 2.5, d.y - 3, 5, 3, shift(IRON, 6), sd(d), 0.4);
@@ -516,9 +454,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   chain: {
-    place: 'under',
-    weight: 1,
-    clear: 2,
     color: () => hsl3(220, 6, 40),
     live(rc, d) {
       const s = rc.s;
@@ -546,9 +481,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   cable: {
-    place: 'under',
-    weight: 0.8,
-    clear: 2,
     color: (_th, rng) => hsl3(rng.pick([0, 210, 50]), 30, 18),
     live(rc, d) {
       const sag = 8 + (d.seed % 8);
@@ -564,9 +496,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   cagelamp: {
-    place: 'under',
-    weight: 0.9,
-    clear: 1,
     color: (th) => th.lamp,
     live(rc, d) {
       const s = rc.s;
@@ -604,9 +533,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
 
   // ---- castle ------------------------------------------------------------
   banner: {
-    place: 'under',
-    weight: 1.2,
-    clear: 2,
     color: (th) => th.layers[th.layers.length - 1]?.detail ?? hsl3(0, 60, 40),
     live(rc, d) {
       const s = rc.s;
@@ -630,9 +556,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   skull: {
-    place: 'top',
-    weight: 0.5,
-    clear: 1,
     color: () => hsl3(42, 22, 80),
     bake(s, d) {
       const k = d.size;
@@ -651,9 +574,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
 
   // ---- jungle ------------------------------------------------------------
   fern: {
-    place: 'top',
-    weight: 1.6,
-    clear: 1,
     color: (th, rng) => shift(th.terrain.capColor, rng.range(-4, 8), 0, rng.range(-10, 10)),
     live(rc, d) {
       const s = rc.s;
@@ -681,9 +601,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   bigleaf: {
-    place: 'top',
-    weight: 1,
-    clear: 2,
     color: (th) => shift(th.terrain.capColor, 4, 5, -8),
     live(rc, d) {
       const s = rc.s;
@@ -699,9 +616,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   roots: {
-    place: 'under',
-    weight: 1,
-    clear: 1,
     color: (th) => shift(th.terrain.dark, 6),
     bake(s, d) {
       for (let i = 0; i < 3; i++) {
@@ -722,9 +636,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
 
   // ---- volcano -----------------------------------------------------------
   fumarole: {
-    place: 'top',
-    weight: 1,
-    clear: 2,
     color: (th) => th.terrain.vein,
     bake(s, d, th) {
       part(s, poly(d.x - 5, d.y + 0.5, d.x - 2, d.y - 4, d.x + 2, d.y - 4, d.x + 5, d.y + 0.5), shift(th.terrain.dark, -2), sd(d), {
@@ -753,9 +664,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   obsidian: {
-    place: 'top',
-    weight: 1,
-    clear: 1,
     color: (th) => th.terrain.vein,
     bake(s, d) {
       const k = d.size;
@@ -776,9 +684,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
 
   // ---- harbor ------------------------------------------------------------
   rope: {
-    place: 'top',
-    weight: 1,
-    clear: 1,
     color: () => hsl3(38, 40, 58),
     bake(s, d) {
       const k = d.size;
@@ -792,9 +697,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   bollard: {
-    place: 'top',
-    weight: 0.8,
-    clear: 1,
     color: () => hsl3(215, 10, 26),
     bake(s, d) {
       const c = d.color;
@@ -805,9 +707,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   lamppost: {
-    place: 'top',
-    weight: 1,
-    clear: 3,
     color: (th) => th.lamp,
     bake(s, d) {
       const h = 26;
@@ -831,9 +730,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   gull: {
-    place: 'top',
-    weight: 0.6,
-    clear: 1,
     color: () => hsl3(210, 10, 94),
     live(rc, d) {
       const s = rc.s;
@@ -865,9 +761,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   net: {
-    place: 'under',
-    weight: 0.7,
-    clear: 2,
     color: () => hsl3(35, 20, 55),
     bake(s, d) {
       const w = 12;
@@ -904,9 +797,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
 
   // ---- mine --------------------------------------------------------------
   support: {
-    place: 'top',
-    weight: 1,
-    clear: 2,
     color: () => WOOD,
     bake(s, d) {
       const h = 20;
@@ -918,9 +808,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   minecart: {
-    place: 'top',
-    weight: 0.8,
-    clear: 1,
     color: () => hsl3(20, 25, 32),
     bake(s, d) {
       const c = d.color;
@@ -943,9 +830,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   pickaxe: {
-    place: 'top',
-    weight: 0.6,
-    clear: 1,
     color: () => hsl3(215, 8, 60),
     bake(s, d) {
       const dir = d.flip ? -1 : 1;
@@ -962,9 +846,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
 
   // ---- rooftops ----------------------------------------------------------
   antenna: {
-    place: 'top',
-    weight: 1,
-    clear: 3,
     color: () => hsl3(0, 100, 55),
     bake(s, d) {
       const h = 20 + (d.seed % 14);
@@ -981,9 +862,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   acunit: {
-    place: 'top',
-    weight: 1,
-    clear: 1,
     color: () => hsl3(210, 6, 58),
     bake(s, d) {
       const w = 12;
@@ -1006,9 +884,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   neon: {
-    place: 'top',
-    weight: 0.9,
-    clear: 2,
     color: (th, rng) => (rng.chance(0.5) ? (th.layers[th.layers.length - 1]?.detail ?? th.accent) : hsl3(rng.pick([190, 320, 50, 140]), 100, 60)),
     bake(s, d) {
       for (const lx of [-4.5, 4.5]) stick(s, poly(d.x + lx, d.y, d.x + lx, d.y - 4), 0.8, css(IRON, 6), sd(d) + lx);
@@ -1054,9 +929,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   dish: {
-    place: 'top',
-    weight: 0.7,
-    clear: 2,
     color: () => hsl3(210, 8, 78),
     bake(s, d) {
       const dir = d.flip ? -1 : 1;
@@ -1071,4 +943,5 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   ...FRONTIER_DECOR,
+  ...FARM_DECOR,
 };

@@ -27,8 +27,10 @@ import type { ThemeId } from '../themes';
  * Snapshot format version; bump on incompatible changes (old saves are dropped).
  * A new field on Match or RunWorld must be added here or listed as derived:
  * tests/snapshot.test.ts fails until it is.
+ * Worktree branches never bump it, since two bumps always conflict: `pnpm land` bumps it once
+ * for a batch that changed this file's code or that test's field lists (`--snap` for a change in what a field means).
  */
-export const SNAP_VERSION = 20;
+export const SNAP_VERSION = 24;
 
 export interface RunSnap {
   slots: number[];

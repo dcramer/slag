@@ -134,10 +134,11 @@ export function score(hud: Hud, m: Match, t: number) {
       celebrate: res.finishers.includes(p.slot),
     });
     hud.text(p.character.name, LANE_X, y + L.nameY, L.name, leader ? PAL.amber : PAL.bone, 'left', DISPLAY, 400);
-    if (leader) {
-      c.font = `400 ${L.name}px ${DISPLAY}`;
-      icon(c, 'crown', LANE_X + c.measureText(p.character.name).width + L.name * 0.6, y + L.nameY - 0.5, L.name * 0.75, PAL.amber);
-    }
+    c.font = `400 ${L.name}px ${DISPLAY}`;
+    const nameEnd = LANE_X + c.measureText(p.character.name).width;
+    if (leader) icon(c, 'crown', nameEnd + L.name * 0.6, y + L.nameY - 0.5, L.name * 0.75, PAL.amber);
+    // Gone: unplugged, after the name (and the crown).
+    if (p.away) icon(c, 'unplugged', nameEnd + L.name * (leader ? 1.7 : 0.7), y + L.nameY - 0.5, L.name * 0.8, PAL.danger);
     const prev = m.prevScores.get(p.slot) ?? 0;
     const landed = lane(hud, p.character.body, prev, res.awards, p.slot, beats, y + L.laneY, L, k, ff);
     const flash = landed.at >= 0 && ff - landed.at < 8;

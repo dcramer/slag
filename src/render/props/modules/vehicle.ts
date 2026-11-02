@@ -131,6 +131,28 @@ function bands(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: 
   g.restore();
 }
 
+/** An empty bucket seat standing on (x, y): a backrest and a cushion, a dark of `col`, stitched. */
+function seat(g: CanvasRenderingContext2D, x: number, y: number, col: HSL, seed: number) {
+  part(g, poly(x, y, x + 0.4, y - 9, x + 2.6, y - 9.6, x + 3.2, y - 2.6, x + 7.4, y - 2.8, x + 7.6, y), col, seed, {
+    depth: 0.6,
+    shade: -10,
+    thin: 0.4,
+    thick: 1.1,
+  });
+  g.fillStyle = css(col, 22);
+  line(g, x + 1.2, y - 8.4, x + 1.5, y - 3, { w: 0.5, seed: seed + 1, taper: [0.2, 0.3], press: 0.1 });
+  tick(g, x + 3.6, y - 1.6, x + 7, y - 1.7, 0.35, seed + 2, css(col, 30));
+}
+
+/** A steering wheel on its column, the column foot at (x, y), leaning back toward the seat. */
+function wheelie(g: CanvasRenderingContext2D, x: number, y: number, seed: number) {
+  g.fillStyle = INK;
+  line(g, x, y, x - 2.6, y - 5.2, { w: 1.3, seed, taper: [0, 0], press: 0.1 });
+  g.fillStyle = '#5c616b';
+  line(g, x, y, x - 2.6, y - 5.2, { w: 0.6, seed, taper: [0, 0], press: 0.1 });
+  part(g, ovalPts(x - 2.9, y - 5.6, 2.6, 0.9, seed + 1, 0.03, 12), { h: 220, s: 8, l: 20 }, seed + 1, { depth: 0.2, thin: 0.35, thick: 0.7 });
+}
+
 // ---------------------------------------------------------------------------
 // Route markings (layer 0): rails, ruts, floor lines. Show the patrol path.
 
@@ -210,20 +232,14 @@ function tractor(F: Frame) {
     part(g, boxPts(hx + 3.7, ht - 8, 2.6, 9, 0.5, 7), METALS.steel.base, 7, { depth: 0.4, thin: 0.35, thick: 0.8 });
     g.fillStyle = INK;
     g.fillRect(hx + 3.4, ht - 9, 3.2, 1.6);
-    // Cab glass, and the farmer in it.
+    // Cab glass, and the empty seat behind it: nobody's driving (docs/ART.md, Objects, not characters).
     g.fillStyle = 'rgba(170,215,238,0.6)';
     g.fillRect(2, top + 4, cabW - 3, roof - hood - 1);
     g.fillStyle = 'rgba(255,255,255,0.45)';
     path(g, poly(4, top + 5, 8, top + 5, 4, top + 11));
     g.fill();
-    const fx = cabW / 2 + 1;
-    const fy = top + roof - hood - 3;
-    part(g, boxPts(fx - 3.5, fy, 7, 6, 2, 8), { h: 210, s: 45, l: 36 }, 8, { depth: 0.6, thin: 0.4, thick: 0.9 });
-    ball(g, fx + 0.5, fy - 2, 2.4, { h: 24, s: 55, l: 72 }, 9);
-    part(g, ovalPts(fx + 0.5, fy - 4, 4.5, 1.1, 10, 0.03, 14), { h: 45, s: 60, l: 64 }, 10, { depth: 0.2, thin: 0.3, thick: 0.6 });
-    part(g, boxPts(fx - 1.5, fy - 7, 4, 3, 1, 11), { h: 45, s: 60, l: 64 }, 11, { depth: 0.3, thin: 0.3, thick: 0.6 });
-    g.fillStyle = INK;
-    line(g, fx + 3, fy + 3, cabW - 2, fy - 1, { w: 1, seed: 12, taper: [0, 0], press: 0 });
+    seat(g, cabW / 2 - 2.5, -hood + 1, { h: 30, s: 30, l: 24 }, 8);
+    wheelie(g, cabW - 4, -hood - 2, 9);
     // Posts, roof, and the body under the cab.
     rod(g, 1.5, top + 3, 1.5, top + roof - 3, 1.6, css(paint, -22), 13);
     rod(g, cabW - 1.5, top + 3, cabW - 1.5, top + roof - hood + 3, 1.6, css(paint, -22), 14);
@@ -293,11 +309,15 @@ function forklift(F: Frame) {
     bands(g, 1, -9, 5, 4);
     g.restore();
     pen(g, cwP, 4, 0.55, 1.4);
+    // The counterweight is cast: a grille of slots and a row of fat bolts.
+    for (let y = -cw + 4; y < -11; y += 2.2) tick(g, 8, y, 14, y, 0.6, y * 3, css(paint, -34, 1, 4));
+    for (const x of [3, 8, 13]) dot(g, x, -cw + 2.2, 0.6, x, css(paint, 30));
     part(g, boxPts(14, -15, W - 19, 11, 2, 5), { ...paint, l: paint.l - 4 }, 5, { depth: 1, thin: 0.5, thick: 1.2 });
-    // Driver: orange vest, hard hat.
-    part(g, boxPts(18, -24, 7, 9, 2, 6), { h: 25, s: 80, l: 50 }, 6, { depth: 0.6, thin: 0.4, thick: 0.9 });
-    ball(g, 22, -26.5, 2.5, { h: 24, s: 50, l: 70 }, 7);
-    part(g, ovalPts(22, -28.6, 3, 1.6, 8, 0.03, 14), { h: 50, s: 90, l: 55 }, 8, { depth: 0.3, thin: 0.3, thick: 0.6 });
+    for (let x = 17; x < W - 7; x += 4.5) dot(g, x, -13.4, 0.5, x + 30, css(paint, 26));
+    glint(g, poly(15.5, -14, 20, -14.3, 26, -14.1), css(paint, 28), 0.6);
+    // The empty seat and the wheel: nobody's driving it (docs/ART.md, Objects, not characters).
+    seat(g, 17.5, -15, { h: 220, s: 10, l: 22 }, 6);
+    wheelie(g, W - 10.5, -18.5, 7);
     // Overhead guard: posts and the slatted roof you can ride.
     rod(g, 15.9, -roof + 2, 15.9, -13, 1.4, '#3a3d45', 9);
     rod(g, W - 7.1, -roof + 2, W - 7.1, -13, 1.4, '#3a3d45', 10);
@@ -511,6 +531,16 @@ function minecart(F: Frame) {
     g.fillStyle = css(pal.light, 0, 0.7);
     g.fillRect(0, top + 0.4, W, 0.6);
     for (let x = 8; x < W - 4; x += 8) tick(g, x, top + 2.4, x - (x < W / 2 ? 1 : -1), -6, 0.7, x, css(pal.dark));
+    // Iron straps riveted round each end, dented where the cart's been knocked about.
+    for (const x of [2.6, W - 5.6]) {
+      g.fillStyle = css(pal.dark, -6);
+      path(g, poly(x, top, x + 3, top, x + 3 - (x < W / 2 ? -0.7 : 0.7), -6, x - (x < W / 2 ? -0.7 : 0.7), -6));
+      g.fill();
+      g.fillStyle = css(pal.light, -6);
+      g.fillRect(x + 0.4, top + 2.6, 0.6, -top - 9);
+      for (let y = top + 3.4; y < -7; y += 3) dot(g, x + 1.5 + (x < W / 2 ? 0.3 : -0.3), y, 0.45, x + y, css(pal.light, 10));
+    }
+    tick(g, W * 0.62, top + 5, W * 0.62 + 2.4, top + 6.4, 0.5, 74, css(pal.dark, -10));
     g.restore();
     pen(g, tub, 71, 0.6, 1.6);
     for (let x = 4; x < W - 2; x += 4) dot(g, x, top + 4.5, 0.55, x, css(pal.light));

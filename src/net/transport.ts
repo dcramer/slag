@@ -44,6 +44,8 @@ export interface Transport {
   /** Send to one member, or to every other member when `to` is omitted. `lossy` trades delivery for latency. */
   send(data: unknown, to?: string, lossy?: boolean): void;
   close(): void;
+  /** Join the order again at the back, keeping links: an observer ahead of a player does this (see NetSession.maybeReorder). */
+  reorder?(): void;
 }
 
 export function sortMembers(list: Member[]): Member[] {
@@ -119,6 +121,13 @@ export class LoopbackHub {
   }
 
   /** @internal */
+  reorder(t: LoopbackTransport) {
+    if (this.peers.get(t.self)?.t !== t) return;
+    this.peers.set(t.self, { t, order: this.order++ });
+    this.broadcastPresence();
+  }
+
+  /** @internal */
   disconnect(t: LoopbackTransport) {
     if (this.peers.get(t.self)?.t !== t) return;
     this.peers.delete(t.self);
@@ -173,6 +182,10 @@ export class LoopbackTransport implements Transport {
 
   send(data: unknown, to?: string) {
     if (this.alive) this.hub.route(this.self, data, to);
+  }
+
+  reorder() {
+    if (this.alive) this.hub.reorder(this);
   }
 
   close() {
@@ -244,6 +257,14 @@ export class BroadcastTransport implements Transport {
 
   send(data: unknown, to?: string) {
     this.post({ k: 'msg', from: this.self, to, d: JSON.stringify(data) });
+  }
+
+  reorder() {
+    if (!this.ch) return;
+    this.joinedAt = Date.now();
+    this.post({ k: 'hello', from: this.self, at: this.joinedAt });
+    this.lastSig = '';
+    this.emitMembers();
   }
 
   close() {

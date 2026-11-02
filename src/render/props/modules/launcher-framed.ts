@@ -3,12 +3,13 @@ import { hash2 } from '../../../core/rng';
 import { BALLISTA_TOWER, CANNON_CARRIAGE, GUMBALL, type LauncherStyle, TOTEM } from '../../../sim/props';
 import { line, type P, stroke } from '../../ink';
 import { ball, boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, stamp, tick, tone } from '../../ink-props';
-import { flame, glowDot, light } from '../../kit';
+import { glowDot, light } from '../../kit';
 import { iron } from '../machine';
 import { drawGlider, roundSprite, stampRound } from '../projectiles';
 import { HANGAR_BOX, hangarLoft } from './hangar-art';
-import type { Live, Look } from './launcher';
+import type { Bk, Live, Look } from './launcher';
 import { cartWheel } from './launcher-house';
+import { inkTongue } from './flame';
 
 /**
  * The launchers that take two tiles (sim/props/launcher-frames.ts): a hangar and its runway, a ship's gun on
@@ -38,6 +39,181 @@ function loaded(s: CanvasRenderingContext2D, l: Live, x: number, k = 1, spin = 0
 }
 
 const wood = (h: HSL, l: number): HSL => ({ ...h, l });
+
+const BRONZE: HSL = { h: 40, s: 48, l: 34 };
+
+/** The Heartburn Idol's drums, top to bottom (art px, 16×32 frame round its middle): each a band of carving. */
+const TIKI_DRUMS = [
+  [-6.6, -2.6],
+  [-2.6, 3.4],
+  [3.4, 7.4],
+  [7.4, 10.6],
+] as const;
+/** The grooves between the drums, which glow as it reloads. */
+const TIKI_GROOVES = [-2.6, 3.4, 7.4];
+
+/**
+ * One carved drum: its sides swell past the groove above and below it (within the post's rect plus the
+ * edge drift), so the stack reads as turned and carved, not a box.
+ */
+function drumPts(y0: number, y1: number, seed: number): P[] {
+  const side: P[] = [];
+  for (let i = 0; i <= 6; i++) {
+    const t = i / 6;
+    side.push({ x: 5.9 + Math.sin(t * Math.PI) * 1.05 + (hash2(i, 3, seed) - 0.5) * 0.12, y: y0 + (y1 - y0) * t });
+  }
+  const pts: P[] = side.map((p) => ({ x: -p.x, y: p.y }));
+  for (let i = side.length - 1; i >= 0; i--) pts.push(side[i]);
+  return pts;
+}
+
+/** A cut in the wood: a dark line with a lit lip just under it, which is what makes it read as relief. */
+function cut(g: CanvasRenderingContext2D, pts: P[], wd: HSL, seed: number, w = 0.65) {
+  g.fillStyle = css(wd, 18);
+  stroke(
+    g,
+    pts.map((p) => ({ x: p.x + 0.35, y: p.y + 0.6 })),
+    { w: w * 0.7, seed: seed + 1, taper: [0.2, 0.2], press: 0.1 },
+  );
+  g.fillStyle = css(wd, -30, 1, 4);
+  stroke(g, pts, { w, seed, taper: [0.2, 0.2], press: 0.3 });
+}
+
+/**
+ * The Heartburn Idol, baked: a flared plinth, four carved drums (chevrons, a chili in relief, painted
+ * diamonds, flutes) under a bronze collar, and a hammered bronze brazier with ring handles and coals in
+ * its mouth. Every edge that looks solid is one of TOTEM's rects, give or take the edge drift. No face.
+ */
+function tikiPost(g: CanvasRenderingContext2D, k: Bk) {
+  const wd = wood(k.wood, 39);
+  const dark = wood(k.wood, 26);
+  // The foot: a plinth, and the post flaring out into it.
+  const base = poly(-7.5, 16, 7.5, 16, 7.5, 13.7, 7, 13, 6.9, 12.3, 6.4, 11.3, 5.9, 10.6, -5.9, 10.6, -6.4, 11.3, -6.9, 12.3, -7, 13, -7.5, 13.7);
+  part(g, base, dark, k.seed + 20, { depth: 0.8, thin: 0.5, thick: 1.6, shade: -12 });
+  g.save();
+  path(g, base);
+  g.clip();
+  cut(g, poly(-7.4, 13.1, 7.4, 13.1), dark, k.seed + 21, 0.6);
+  g.fillStyle = css(dark, -12, 1, 4);
+  path(g, poly(3.6, 10, 8, 10, 8, 16.5, 4.6, 16.5));
+  g.fill();
+  for (let i = 0; i < 3; i++) tick(g, -5.6 + i * 4.4, 14.6, -4.2 + i * 4.4, 14.9, 0.35, i + k.seed, css(dark, -20, 1, 4));
+  g.restore();
+
+  TIKI_DRUMS.forEach(([y0, y1], di) => {
+    const pts = drumPts(y0, y1, k.seed + di);
+    part(g, pts, wd, k.seed + di * 7, { depth: 0.6, thin: 0.5, thick: 1.5, shade: -10 });
+    g.save();
+    path(g, pts);
+    g.clip();
+    // Round it: a hand-cut shade down the far side, a lit stripe on the near one.
+    g.fillStyle = css(wd, -13, 1, 4);
+    path(g, poly(3.3, y0 - 1, 8, y0 - 1, 8, y1 + 1, 2.7, y1 + 1));
+    g.fill();
+    g.fillStyle = css(wd, 12);
+    path(g, poly(-4.8, y0 + 0.5, -3.7, y0 + 0.5, -3.9, y1 - 0.5, -5, y1 - 0.5));
+    g.fill();
+    const my = (y0 + y1) / 2;
+    if (di === 0) {
+      // Chevrons, and the brazier's hard shadow across the top.
+      const zz: P[] = [];
+      for (let i = 0; i <= 8; i++) zz.push({ x: -5.8 + i * 1.45, y: my + (i % 2 ? -1.2 : 0.9) });
+      cut(g, zz, wd, k.seed + 30, 0.7);
+      g.fillStyle = css(wd, -26, 1, 4);
+      path(g, poly(-8, y0 - 1, 8, y0 - 1, 8, y0 + 0.9, -2, y0 + 1.2, -8, y0 + 0.5));
+      g.fill();
+    } else if (di === 1) {
+      // The chili, cut in proud and painted: its shadow sunk into the wood under it.
+      const chili = poly(-4.6, -1.2, -2, -2.2, 1.2, -1.9, 3.8, -0.6, 5.2, 1.2, 5.4, 2.3, 3.9, 1.6, 1.6, 1.2, -1.2, 1.4, -3.6, 1.3, -4.9, 0.3);
+      g.save();
+      g.translate(-0.2, my - 0.1);
+      g.fillStyle = css(wd, -30, 1, 4);
+      path(
+        g,
+        chili.map((p) => ({ x: p.x + 0.7, y: p.y + 0.8 })),
+      );
+      g.fill();
+      part(g, chili, { h: 3, s: 82, l: 47 }, k.seed + 31, { depth: 0.5, thin: 0.35, thick: 0.8 });
+      glint(g, poly(-3, -1.5, -0.4, -1.7, 2, -1), 'rgba(255,225,215,0.85)', 0.5);
+      part(g, poly(-5.6, -1.6, -4.3, -2.3, -3.8, 0.8, -5.2, 0.7), { h: 105, s: 55, l: 38 }, k.seed + 32, { depth: 0.3, thin: 0.3, thick: 0.6 });
+      g.fillStyle = INK;
+      stroke(g, poly(-5.2, -0.6, -6, -1.4, -6.3, -2.6), { w: 0.9, seed: 2, taper: [0, 0.3], press: 0 });
+      g.restore();
+    } else if (di === 2) {
+      // Diamonds, cut in and painted in the part's colour.
+      for (const x of [-3.7, 0, 3.7]) {
+        const dm = poly(x, my - 1.7, x + 1.6, my, x, my + 1.7, x - 1.6, my);
+        g.fillStyle = css(wd, -30, 1, 4);
+        path(g, dm);
+        g.fill();
+        g.fillStyle = css({ h: k.st.hue, s: 55, l: 46 });
+        path(g, poly(x - 0.1, my - 0.9, x + 0.8, my + 0.1, x - 0.1, my + 1, x - 0.9, my));
+        g.fill();
+        tick(g, x + 0.4, my + 1.3, x + 1.5, my + 0.2, 0.35, x + 9, css(wd, 20));
+      }
+    } else {
+      // Flutes.
+      for (const x of [-4.2, -2.1, 0, 2.1, 4.2]) cut(g, poly(x, y0 + 0.9, x + 0.05, y1 - 0.7), wd, k.seed + 40 + x, 0.55);
+    }
+    for (let i = 0; i < 2; i++) {
+      const x = -4 + hash2(i, di, k.seed) * 8;
+      tick(g, x, y0 + 0.8, x + 0.2, y0 + 1.9, 0.3, i + di * 3, css(wd, -18, 1, 6));
+    }
+    g.restore();
+  });
+
+  // The collar the brazier sits in: a bronze band, studded.
+  const collar = boxPts(-6.6, -8.2, 13.2, 1.9, 0.5, k.seed + 50, 0.1);
+  part(g, collar, { ...BRONZE, l: 28 }, k.seed + 50, { depth: 0.4, thin: 0.4, thick: 1.1 });
+  for (const x of [-4.4, 0, 4.4]) dot(g, x, -7.2, 0.45, x + 51, css(BRONZE, 30));
+
+  // The brazier: a hammered bowl under a rolled rim, ring handles, coals in its mouth.
+  const bowl = poly(-7, -10.6, 7, -10.6, 6.7, -9.3, 5.7, -8, -5.7, -8, -6.7, -9.3);
+  part(g, bowl, BRONZE, k.seed + 60, { depth: 0.6, thin: 0.45, thick: 1.4, shade: -14 });
+  g.save();
+  path(g, bowl);
+  g.clip();
+  for (const [x, y] of [
+    [-4.2, -9.4],
+    [-1, -9],
+    [2.4, -9.5],
+    [5, -9.1],
+  ]) {
+    g.fillStyle = css(BRONZE, -16, 1, 4);
+    path(g, ovalPts(x + 0.2, y + 0.2, 0.9, 0.6, x * 3, 0.05, 8));
+    g.fill();
+    g.fillStyle = css(BRONZE, 14);
+    path(g, ovalPts(x - 0.2, y - 0.15, 0.6, 0.35, x * 3 + 1, 0.05, 8));
+    g.fill();
+  }
+  g.restore();
+  for (const sx of [-1, 1]) {
+    const ring = ovalPts(sx * 8.4, -9.2, 1, 1.3, sx + 70, 0.03, 10);
+    g.fillStyle = INK;
+    stroke(g, [...ring, ring[0]], { w: 1, seed: sx + 71, taper: [0, 0], press: 0.1 });
+    g.fillStyle = css(BRONZE, 10);
+    stroke(g, [...ring, ring[0]], { w: 0.4, seed: sx + 72, taper: [0, 0], press: 0 });
+  }
+  const rim = boxPts(-8, -13, 16, 2.5, 1.1, k.seed + 61, 0.12);
+  part(g, rim, { ...BRONZE, l: 44 }, k.seed + 61, { depth: 0.5, thin: 0.45, thick: 1.3, shade: -16 });
+  g.fillStyle = css(BRONZE, 30);
+  line(g, -6.6, -12.3, 5.4, -12.4, { w: 0.55, seed: k.seed + 62, taper: [0.2, 0.4], press: 0.1 });
+  for (const x of [-5.6, 0, 5.6]) dot(g, x, -11.4, 0.4, x + 63, css(BRONZE, 34));
+  // The mouth, dark, coals heaped in it.
+  g.fillStyle = INK;
+  path(g, ovalPts(0, -13, 6.3, 1.1, k.seed + 64, 0.04, 16));
+  g.fill();
+  for (const [x, c] of [
+    [-3.8, '#b8230f'],
+    [-1.4, '#ff6a1f'],
+    [1.2, '#b8230f'],
+    [3.6, '#ff6a1f'],
+  ] as const) {
+    g.fillStyle = c;
+    path(g, ovalPts(x, -13.3, 1.3, 0.75, x * 5, 0.1, 8));
+    g.fill();
+  }
+}
 
 export const FRAMED: Pick<Record<LauncherStyle, Look>, 'hangar' | 'cannon' | 'ballista' | 'thrower' | 'totem' | 'gumball'> = {
   // Budget Airline: a quonset hangar and the runway its paper planes roll out along (hangar-art.ts).
@@ -315,78 +491,48 @@ export const FRAMED: Pick<Record<LauncherStyle, Look>, 'hangar' | 'cannon' | 'ba
       if (l.ready) loaded(s, l, 10.6, 0.7, l.rc.t * 4);
     },
   },
-  // Heartburn Idol: a tiki post with a chili cut into it and a fire cup on top. Its grooves glow as it reloads.
+  // Heartburn Idol: a carved tiki-torch post, stacked drums of relief on a flared foot, a bronze brazier on
+  // top with a fire in it. Its grooves glow and the fire climbs as it reloads; the next chili cooks in the flame.
   totem: {
     frame: { pivot: [TX(8), TY(4)], cam: [TX(-1.6), TY(2)] },
-    mount: [
-      [-9, -14.5, 18, 31],
-      (g, k) => {
-        const wd = wood(k.wood, 42);
-        const [px, py, pw] = tall(TOTEM.post);
-        const [fx, fy, fw, fh] = tall(TOTEM.foot);
-        // The post: carved wood, flared at the foot.
-        const post = poly(fx, fy + fh, fx + fw, fy + fh, fx + fw, fy + 0.8, px + pw, fy - 0.6, px + pw, py, px, py, px, fy - 0.6, fx, fy + 0.8);
-        part(g, post, wd, k.seed, { depth: 1.2, thin: 0.55, thick: 1.6 });
-        g.save();
-        path(g, post);
-        g.clip();
-        // Carved bands: a groove with a lit lip under each.
-        for (const y of [py + 3, py + 15.5]) {
-          g.fillStyle = INK;
-          line(g, px - 1, y, px + pw + 1, y + 0.1, { w: 0.8, seed: k.seed + y, taper: [0.05, 0.05], press: 0.3 });
-          g.fillStyle = css(wd, 14);
-          line(g, px - 1, y + 0.7, px + pw + 1, y + 0.8, { w: 0.45, seed: k.seed + y + 1, taper: [0.05, 0.05], press: 0.1 });
-        }
-        // Flutes carved down the post under the lower band, and the grain.
-        for (const x of [-3.6, 0, 3.6]) tick(g, x, py + 17, x, fy - 0.4, 0.5, x * 5 + 3, css(wd, -22, 1, 6));
-        for (let i = 0; i < 4; i++) {
-          const x = px + 1 + hash2(i, 1, k.seed) * (pw - 2);
-          tick(g, x, py + 4.4 + i * 2.4, x + 0.2, py + 6 + i * 2.4, 0.35, i, css(wd, -16, 1, 6));
-        }
-        g.restore();
-        // The chili, cut in and painted: hanging stem-up on a slant, so it reads as a pepper.
-        g.save();
-        g.translate(0.6, py + 9.2);
-        g.rotate(-1.15);
-        const chili = poly(-3.4, 0.3, -1.6, -0.6, 0.9, -1.2, 3, -1.3, 3.5, 0.1, 2.9, 1, 0.6, 1, -1.9, 0.9);
-        part(g, chili, { h: 3, s: 80, l: 46 }, k.seed + 3, { depth: 0.3, thin: 0.35, thick: 0.8 });
-        part(g, poly(3.1, -1.4, 4.3, -1, 4.3, 0.9, 3.1, 1.1), { h: 105, s: 55, l: 38 }, k.seed + 4, { depth: 0.2, thin: 0.3, thick: 0.6 });
-        g.fillStyle = css({ h: 105, s: 55, l: 32 });
-        line(g, 4.3, 0, 5.6, -0.7, { w: 0.6, seed: 4, taper: [0, 0.4], press: 0 });
-        g.restore();
-        // The fire cup: a bronze bowl with a rolled rim, coals in it.
-        const [rx, ry, rw, rh] = tall(TOTEM.rim);
-        const [bx, by, bw, bh] = tall(TOTEM.bowl);
-        const cup = poly(rx, ry, rx + rw, ry, rx + rw, ry + rh, bx + bw, by + 0.4, bx + bw - 0.6, by + bh, bx + 0.6, by + bh, bx, by + 0.4, rx, ry + rh);
-        part(g, cup, { h: 30, s: 50, l: 40 }, k.seed + 5, { depth: 0.8, thin: 0.5, thick: 1.4 });
-        g.fillStyle = css({ h: 30, s: 50, l: 58 });
-        line(g, rx + 0.8, ry + 0.9, rx + rw - 1.2, ry + 0.9, { w: 0.6, seed: k.seed + 6, taper: [0.2, 0.3], press: 0.1 });
-        g.fillStyle = INK;
-        path(g, ovalPts(0, ry - 0.1, rw / 2 - 1, 0.9, k.seed + 7, 0.04, 16));
-        g.fill();
-        for (const x of [-3.4, -0.6, 2.4]) dot(g, x, ry - 0.3, 0.8, k.seed + x, '#ff6a1f');
-      },
-    ],
+    mount: [[-10, -14.5, 20, 31], (g, k) => tikiPost(g, k)],
     over(l) {
       const g = l.rc.g;
-      const hot: HSL = { h: 4, s: 100, l: 55 };
-      const k = 0.25 + l.reload * 0.75;
-      const [px, py, pw] = tall(TOTEM.post);
-      // Heat building in the carving: the grooves glow, and the cup flares.
-      g.fillStyle = css(hot, 15, k * 0.8);
-      for (const y of [py + 3, py + 15.5]) {
-        const a = l.p(px + 1.2, y);
-        const b = l.p(px + pw - 1.2, y);
-        line(g, a.x, a.y, b.x, b.y, { w: 0.5, seed: y, taper: [0.2, 0.2], press: 0 });
+      const s = l.rc.s;
+      const hot: HSL = { h: 14, s: 100, l: 55 };
+      const k = 0.2 + l.reload * 0.8;
+      // Heat building in the carving: every groove between the drums glows, hotter as it nears a shot.
+      g.fillStyle = css(hot, 12, k * 0.85);
+      for (const y of TIKI_GROOVES) {
+        const a = l.p(-5.2, y);
+        const b = l.p(5.2, y);
+        line(g, a.x, a.y, b.x, b.y, { w: 0.55 + l.reload * 0.35, seed: y, taper: [0.25, 0.25], press: 0 });
       }
-      const top = l.p(0, tall(TOTEM.rim)[1] - 0.4);
-      flame(g, top.x, top.y, 2.6 + l.reload, 2.8 + l.reload * 3.4, { h: 28, s: 100, l: 58 }, l.rc.t);
-      const ox = l.x + Math.cos(l.angle) * 10.5;
-      const oy = l.y + Math.sin(l.angle) * 10.5;
-      const orb = 0.8 + l.reload * 2.2 + Math.sin(l.rc.t * 12) * 0.25;
-      glowDot(g, ox, oy, orb * 4, hot, 0.8 * l.reload);
-      ball(l.rc.s, ox, oy, orb, { h: 6, s: 90, l: 52 }, 3);
-      light(l.rc, ox, oy, 50, hot, 0.3 + l.reload * 0.5);
+      // The fire: an inked flame out of the brazier's mouth, leaning up whichever way the post is turned.
+      const top = l.p(0, tall(TOTEM.rim)[1] + 0.2);
+      const q = l.p(0, tall(TOTEM.rim)[1] - 1);
+      let dx = q.x - top.x;
+      let dy = q.y - top.y - 1;
+      const n = Math.hypot(dx, dy) || 1;
+      dx /= n;
+      dy /= n;
+      glowDot(g, top.x + dx * 5, top.y + dy * 5, 7 + l.reload * 4, hot, 0.3 + l.reload * 0.3);
+      inkTongue(s, top.x, top.y, dx, dy, 6 + l.reload * 6, 4.6 + l.reload * 1.2, l.rc.t, 1);
+      // The next chili, cooking in the flame and pointing where it'll fly.
+      if (l.reload > 0.15) {
+        const sp = roundSprite(l.m.ammo);
+        if (sp) {
+          const kk = 0.35 + l.reload * 0.45;
+          s.save();
+          s.translate(l.x + Math.cos(l.angle) * 3, l.y + Math.sin(l.angle) * 3 - 1);
+          s.rotate(l.angle);
+          if (l.flip < 0) s.scale(1, -1);
+          s.scale(kk, kk);
+          stamp(s, sp);
+          s.restore();
+        }
+      }
+      light(l.rc, top.x + dx * 6, top.y + dy * 6, 46, hot, 0.35 + l.reload * 0.45);
     },
   },
   // Dodgeball Coach: a gumball machine, globe on its stand, a whistle on a lanyard round its neck.

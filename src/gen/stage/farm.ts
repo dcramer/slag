@@ -8,6 +8,7 @@ import { jumpProfile } from '../level/probe';
 import { easyRise, hardGap, hopGap, pit } from '../level/sculptors/common';
 import { BRIDGE_W } from '../level/types';
 import { makeStyle, type Piece, SAFE_TILES } from '../setpieces/place';
+import { defineConcept } from './contract';
 import type { Concept, Landmark } from './types';
 
 /**
@@ -23,7 +24,7 @@ import type { Concept, Landmark } from './types';
  *   the silos, where the grain pours or the dust flares.
  * - **The Big Barn** (grand): a red barn the level runs through. The stalls below, haylofts above either
  *   side of the open mow, reached by an outside stair to the hay door, with a bale swinging across the mow
- *   from the ridge or a hay hook in its place, and a baler or a live fence among the stalls.
+ *   from the ridge or a hay hook in its place, and a live fence among the stalls.
  * - **The Water Mill**: a tall stone mill with a water wheel on its back wall, turning over the tail race
  *   under a flume that runs out from the roof and pours on its paddles. Through the mill and under the
  *   wheel, or up the ladder over the roof and out along the flume.
@@ -124,23 +125,17 @@ const cutRows = () => jumpProfile().rise + 2;
 const wood = (rng: Rng): PropStyle => makeStyle(rng, ['rust', 'steel'], [4, 12, 30, 200], { woodHue: rng.range(20, 32) });
 const iron = (rng: Rng): PropStyle => makeStyle(rng, ['steel', 'rust'], [4, 120, 205, 30], { trim: 'rivets', woodHue: rng.range(20, 30) });
 
-/** A millstone that drops from the ceiling (its cells, row `y`) when someone walks under it. */
-function millstone(rng: Rng, x: number, y: number, reach: number, w = 2): Piece {
+/**
+ * The mill's sack hoist: its hook block on a chain from the beam under the floor above (`hub`), swinging
+ * across the hall at head height, `swing` rad either side.
+ */
+function sackHoist(rng: Rng, hub: Vec, arm: number, swing: number): Piece {
   return {
-    name: rng.pick(['Millstone', 'The Grindstone', 'Loose Millstone', 'Ground Floor']),
-    archetype: 'dropper',
+    name: rng.pick(['Sack Hoist', 'The Hoist Block', 'Mind Your Head', 'Lifting Gear']),
+    archetype: 'flail',
     role: 'hazard',
-    style: makeStyle(rng, ['steel', 'obsidian'], [30], { woodHue: rng.range(20, 30) }),
-    modules: [
-      {
-        type: 'dropper',
-        cells: Array.from({ length: w }, (_, i) => [x + i, y] as Cell),
-        angle: DOWN,
-        reach,
-        warn: rng.int(26, 36),
-        rest: rng.int(50, 80),
-      },
-    ],
+    style: iron(rng),
+    modules: [{ type: 'swinger', head: 'mace', hub, arm, angle0: DOWN, period: rng.int(220, 280), swing, dir: 1, radius: 0.6, count: 1, link: 'chain' }],
   };
 }
 
@@ -155,21 +150,6 @@ export function liveFence(rng: Rng, x0: number, x1: number, y: number, extra: Mo
   };
 }
 
-/** A baler hung under a beam (its top row `y`), chomping `reach` rows down onto the floor. */
-export function baler(rng: Rng, x: number, w: number, y: number, reach: number): Piece {
-  return {
-    name: rng.pick(['Hay Baler', 'The Bale Maker', 'Square Baler', 'Chomper']),
-    archetype: 'crusher',
-    role: 'hazard',
-    style: makeStyle(rng, ['steel', 'rust'], [4, 120, 200], { trim: 'stripes' }),
-    crushOk: true,
-    modules: [
-      { type: 'deco', kind: 'press', at: [x - 1, y], w: w + 2, h: reach, seed: rng.int(0, 1 << 20) },
-      { type: 'piston', at: [x + w / 2, y + 0.5], angle: DOWN, reach: reach - 0.5, width: w, period: rng.int(130, 180) },
-    ],
-  };
-}
-
 /** A hay hook on a chain from `hub`, swinging `swing` rad either side. */
 export function hayHook(rng: Rng, hub: Vec, arm: number, swing: number, extra: Module[] = []): Piece {
   return {
@@ -179,7 +159,7 @@ export function hayHook(rng: Rng, hub: Vec, arm: number, swing: number, extra: M
     style: iron(rng),
     modules: [
       ...extra,
-      { type: 'swinger', head: 'axe', hub, arm, angle0: DOWN, period: rng.int(150, 200), swing, dir: 1, radius: 0.7, count: 1, link: 'chain' },
+      { type: 'swinger', head: 'mace', hub, arm, angle0: DOWN, period: rng.int(150, 200), swing, dir: 1, radius: 0.7, count: 1, link: 'chain' },
     ],
   };
 }
@@ -212,9 +192,8 @@ function buildWindmill(g: Grid, rng: Rng, box: TileRect, parts: number): Landmar
   g.clear(mx1, G - 3, mx1, G - 1);
   // The outside stair: boards climbing to the near wall, the last one against it.
   steps.forEach((y, i) => board(g, mx0 - 2 * (nb - i), mx0 - 2 * (nb - i) + 1, y));
-  // Inside: boards up to a hatch in the roof, from whichever end; the millstone hangs at the other.
+  // Inside: boards up to a hatch in the roof, from whichever end.
   const inLeft = rng.chance(0.5);
-  let stone = -1;
   if (hatch) {
     const rows = stairRows(G, R, true);
     rows.forEach((y, i) => {
@@ -224,10 +203,7 @@ function buildWindmill(g: Grid, rng: Rng, box: TileRect, parts: number): Landmar
     const last = inLeft ? mx0 + 1 + 2 * (rows.length - 1) : mx1 - 2 - 2 * (rows.length - 1);
     const h0 = inLeft ? last + 1 : last - 1;
     g.clear(h0, R, h0 + 1, R);
-    const used = inLeft ? h0 + 2 : h0 - 1;
-    if (inLeft && mx1 - 2 >= used + 1) stone = mx1 - 2;
-    if (!inLeft && mx0 + 2 <= used - 1) stone = mx0 + 1;
-  } else stone = mx0 + 2 + rng.int(0, mw - 6);
+  }
   const arm = Math.max(3.5, Math.min(7.5, (R - 1 - 2.75) / 2, hx - s.x - 2.6, s.x + s.w - hx - 2.6));
   const hy = R - arm - 1.5;
   const top = Math.max(0, Math.floor(hy - arm - 2.5));
@@ -236,7 +212,8 @@ function buildWindmill(g: Grid, rng: Rng, box: TileRect, parts: number): Landmar
     arm: [arm, 0],
     mill: [mx0, mx1],
     roof: [R, G],
-    stone: [stone, R + 1],
+    // The sack hoist's beam under the roof, over the hall's middle.
+    hoist: [(mx0 + mx1 + 1) / 2, R + 1.2],
     layout: [mw, (hatch ? 2 : 0) + (inLeft ? 1 : 0)],
     shell: [mx0, top],
     shellSize: [mx1 - mx0 + 1, G - top],
@@ -246,7 +223,13 @@ function buildWindmill(g: Grid, rng: Rng, box: TileRect, parts: number): Landmar
   way(a, 1, mx0, R - cutRows(), cutRows());
   return {
     concept: 'great-windmill',
-    rect: { x: mx0 - 2 * nb, y: R, w: mx1 - mx0 + 1 + 2 * nb, h: G - R },
+    // The sails' sky and the mill under them.
+    rect: {
+      x: Math.min(mx0 - 2 * nb, Math.floor(hx - arm - 2.6)),
+      y: top,
+      w: Math.max(mx1 + 1, Math.ceil(hx + arm + 2.6)) - Math.min(mx0 - 2 * nb, Math.floor(hx - arm - 2.6)),
+      h: G - top,
+    },
     air: [
       { x: Math.floor(hx - arm - 2.6), y: top, w: Math.ceil(2 * arm + 5.2), h: R - top },
       { x: mx0 + 1, y: R + 1, w: mx1 - mx0 - 1, h: G - R - 1 },
@@ -289,22 +272,23 @@ function* windmillPieces(rng: Rng, l: Landmark): Generator<Piece> {
       },
     ],
   };
-  const [R, G] = a.roof;
-  if (a.stone[0] >= 0 && rng.chance(0.75)) yield millstone(rng, a.stone[0], R + 1, G - R - 2);
+  const [, G] = a.roof;
+  if (rng.chance(0.75)) yield sackHoist(rng, a.hoist, G - 0.9 - a.hoist[1], rng.range(0.45, 0.7));
 }
 
-export const GREAT_WINDMILL: Concept = {
+export const GREAT_WINDMILL = defineConcept({
+  varies: ['mill width', 'hall height', 'a hatch and inner stair or none, from either end', 'sail length, count, speed and turn', 'a sack hoist or none'],
   id: 'great-windmill',
   weight: 3,
   sizes: ['classic', 'wide'],
   ownsCrossing: true,
-  family: ['electric fence', 'tractor', 'hay hoist', 'hay hook'],
+  family: ['electric fence', 'tractor', 'hay hoist', 'hay hook', 'pumpkin catapult'],
   budget: 1,
   names: ['The Great Windmill of {place}', '{place} Mill', 'The Sails of {place}', 'The Windmill at {place}'],
   box: (k, rng) => ({ w: front() + structureCols(k.W, [20, 26], rng), h: 15 }),
   build: buildWindmill,
   pieces: (rng, _s, l) => windmillPieces(rng, l),
-};
+});
 
 // ------------------------------------------------------------------------------------------------ the grain elevator
 
@@ -360,7 +344,7 @@ function buildElevator(g: Grid, rng: Rng, box: TileRect, parts: number): Landmar
     ladder: [lc, G],
     layout: [silos.length * 10 + drops[1], wa * 10 + wb],
     head: [shaft - 1, T - 6],
-    headSize: [4, G - T + 6],
+    headSize: [4, G - T + 6 + (tunnel ? th + 1 : 1)],
   };
   if (tunnel) {
     // Down a hole, along under the silos, up a step past the last one.
@@ -384,7 +368,8 @@ function buildElevator(g: Grid, rng: Rng, box: TileRect, parts: number): Landmar
   way(a, 1, last[1], last[2] - cutRows(), cutRows());
   return {
     concept: 'grain-elevator',
-    rect: { x: lc, y: T - 2, w: last[1] - lc + 1, h: G - T + 2 },
+    // Grand: the bins own the sky, and the pond at their feet is theirs.
+    rect: { x: box.x, y: Math.max(0, T - 6), w: last[1] + 1 - box.x, h: G - Math.max(0, T - 6) },
     air: [
       { x: shaft, y: T - 4, w: 2, h: G - T + 4 },
       { x: lc, y: Math.max(0, T - 6), w: last[1] - lc + 1, h: 4 },
@@ -462,18 +447,27 @@ function* elevatorPieces(rng: Rng, l: Landmark): Generator<Piece> {
     };
 }
 
-export const GRAIN_ELEVATOR: Concept = {
+export const GRAIN_ELEVATOR = defineConcept({
+  scale: 'grand',
+  varies: [
+    'two or three silos',
+    'silo widths and heights',
+    'a conveyor tunnel or a drive-through bay',
+    'a lift stop halfway',
+    'lift speed and dwell',
+    'a grain chute or a dust flare',
+  ],
   id: 'grain-elevator',
   weight: 2,
   sizes: ['classic', 'wide'],
   ownsCrossing: true,
-  family: ['baler', 'electric fence', 'tractor'],
+  family: ['electric fence', 'muck spreader', 'tractor', 'hay hook'],
   budget: 1,
   names: ['The {place} Grain Elevator', '{place} Co-op Elevator', 'The Silos of {place}', 'The Bins at {place}'],
   box: (k, rng) => ({ w: front() + structureCols(k.W, [20, 26], rng), h: 15 }),
   build: buildElevator,
   pieces: (rng, _s, l) => elevatorPieces(rng, l),
-};
+});
 
 // ------------------------------------------------------------------------------------------------ the big barn
 
@@ -535,9 +529,10 @@ function buildBarn(g: Grid, rng: Rng, box: TileRect, parts: number): Landmark {
     const bx = inSide ? bx0 + 1 + 2 * i : m0 - 2 - 2 * i;
     if (bx > bx0 && bx + 1 < m0) board(g, bx, bx + 1, yy);
   });
-  // Among the stalls past the mow: a baler's bay, or stall rails to hop.
-  const balerBay = bx1 - 1 - (m1 + 2) >= 3 && rng.chance(0.6);
-  if (!balerBay) for (let i = 0, x = m1 + 3; i < 2 && x < bx1 - 1; i++, x += 3) set(g, x, G - 1);
+  // Stall rails to hop past the mow, now and then; the live fence goes across the near stalls or the far ones.
+  const rails = rng.chance(0.5);
+  const farFence = !rails && bx1 - 1 - (m1 + 2) >= 3 && rng.chance(0.5);
+  if (rails) for (let i = 0, x = m1 + 3; i < 2 && x < bx1 - 1; i++, x += 3) set(g, x, G - 1);
   const hub: Vec = [Math.floor((a0 + a1 + 1) / 2) + 0.5, ridge + 1.5];
   const a: Record<string, Vec> = {
     walls: [bx0, bx1],
@@ -545,16 +540,17 @@ function buildBarn(g: Grid, rng: Rng, box: TileRect, parts: number): Landmark {
     mow: [m0, m1],
     ridge: [ridge, Wt],
     hub,
-    layout: [bx1 - bx0 + 1, loft * 10 + (balerBay ? 1 : 0) + (inSide ? 2 : 0) + (cupola ? 4 : 0)],
-    baler: [balerBay ? m1 + 2 : -1, 0],
-    shell: [bx0, ridge],
-    shellSize: [bx1 - bx0 + 1, G - ridge],
+    layout: [bx1 - bx0 + 1, loft * 10 + (rails ? 1 : 0) + (inSide ? 2 : 0) + (cupola ? 4 : 0)],
+    fence: farFence ? [m1 + 2, Math.min(bx1 - 1, m1 + 5)] : [bx0 + 1, Math.min(m0 - 1, bx0 + 4)],
+    shell: [bx0 - 1, ridge],
+    shellSize: [bx1 - bx0 + 3, G - ridge],
   };
   way(a, 0, bx0, G - 3, 3);
   way(a, 1, bx0, F1 - 3, 3);
   return {
     concept: 'big-barn',
-    rect: { x: bx0 - 2 * nb, y: ridge - 1, w: bx1 - bx0 + 2 + 2 * nb, h: G - ridge + 1 },
+    // Grand: the barn, its yard and the pond in front of it.
+    rect: { x: box.x, y: ridge - 1, w: bx1 + 2 - box.x, h: G - ridge + 1 },
     air: [
       { x: bx0 + 1, y: ridge + 1, w: bx1 - bx0 - 1, h: G - ridge - 1 },
       { x: bx1 + 1, y: F1 - 3, w: 1, h: G - F1 + 3 },
@@ -568,7 +564,6 @@ function* barnPieces(rng: Rng, l: Landmark): Generator<Piece> {
   const a = l.anchors;
   const [bx0, bx1] = a.walls;
   const [F1, G] = a.floors;
-  const [m0] = a.mow;
   const hub = a.hub;
   const [sw, sh] = a.shellSize;
   // The barn's back wall and rafters ride with what hangs from them.
@@ -609,24 +604,33 @@ function* barnPieces(rng: Rng, l: Landmark): Generator<Piece> {
     const swing = Math.max(0.3, Math.min(0.9, asin(Math.max(0, Math.min(1, (half + 1.5) / hookArm)))));
     yield hayHook(rng, hub, hookArm, swing, [back]);
   }
-  // Among the stalls: a baler under the far loft, or a live fence across the near stalls.
-  const [bay] = a.baler;
-  if (bay >= 0) yield baler(rng, bay, 2, F1 + 1, G - F1 - 1);
-  else yield liveFence(rng, bx0 + 1, Math.min(m0 - 1, bx0 + 4), G - 1);
+  // Among the stalls: a live fence.
+  const [f0, f1] = a.fence;
+  yield liveFence(rng, f0, f1, G - 1);
 }
 
-export const BIG_BARN: Concept = {
+export const BIG_BARN = defineConcept({
+  scale: 'grand',
+  varies: [
+    'barn width',
+    'loft height',
+    'roof pitch and cupola',
+    'mow width',
+    'inner stair side',
+    'a bale swing or a hay hook',
+    'stall rails, and which stalls the live fence crosses',
+  ],
   id: 'big-barn',
   weight: 3,
   sizes: ['classic', 'wide'],
   ownsCrossing: true,
-  family: ['hay hook', 'hay hoist', 'tractor', 'electric fence'],
+  family: ['hay hook', 'hay hoist', 'tractor', 'muck spreader'],
   budget: 2,
   names: ['The Big Barn at {place}', '{place} Barn Raising', 'The Hayloft of {place}', 'The Red Barn of {place}'],
   box: (k, rng) => ({ w: front() + structureCols(k.W, [22, 30], rng), h: 15 }),
   build: buildBarn,
   pieces: (rng, _s, l) => barnPieces(rng, l),
-};
+});
 
 // ------------------------------------------------------------------------------------------------ the water mill
 
@@ -688,16 +692,14 @@ function buildMill(g: Grid, rng: Rng, box: TileRect, parts: number): Landmark {
     flume: [fx, R],
     pour: [hy - arm - 1.2 >= R + 2 ? 1 : 0, 0],
     layout: [floors.length, mw * 2 + (first ? 1 : 0)],
-    // The millstone hangs at the hall's other end from its boards, where it's wide enough.
-    stone: [mw >= 6 ? (first ? mx1 - 1 : mx0 + 1) : -1, floors[0] + 1],
-    shell: [mx1, R],
-    shellSize: [fx - mx1 + 1, G - R],
+    shell: [mx0, R],
+    shellSize: [mw, G - R],
   };
   way(a, 0, mx0, G - 3, 3);
   way(a, 1, mx0, R - cutRows(), cutRows());
   return {
     concept: 'water-mill',
-    rect: { x: mx0 - 1, y: R, w: mw + 1, h: G - R },
+    rect: { x: mx0 - 1, y: R, w: Math.ceil(hx + arm + 1.8) - mx0 + 1, h: G - R },
     air: [
       { x: mx1 + 1, y: R + 1, w: Math.ceil(hx + arm + 2.4) - mx1, h: G - R - 1 },
       { x: mx0 + 1, y: R + 1, w: mw - 2, h: G - R - 1 },
@@ -766,22 +768,25 @@ function* millPieces(rng: Rng, l: Landmark): Generator<Piece> {
         },
       ],
     };
-  const [x, y] = a.stone;
-  if (x >= 0 && rng.chance(0.7)) yield millstone(rng, x, y, G - y - 1, 1);
+  // Between the back door and the race, now and then, a live fence.
+  const [, mx1] = a.mill;
+  const [rx] = a.race;
+  if (rx - 1 - (mx1 + 1) >= 2 && rng.chance(0.6)) yield liveFence(rng, mx1 + 1, rx - 1, G - 1);
 }
 
-export const WATER_MILL: Concept = {
+export const WATER_MILL = defineConcept({
+  varies: ['two to four storeys', 'mill width', 'stair sides', 'wheel size, paddles and turn', 'flume length', 'a pour or none', 'a live fence or none'],
   id: 'water-mill',
   weight: 2,
   sizes: ['classic', 'wide'],
   ownsCrossing: true,
-  family: ['tractor', 'hay hook', 'electric fence'],
+  family: ['tractor', 'hay hook', 'pumpkin catapult', 'electric fence'],
   budget: 1,
   names: ['The Water Mill of {place}', '{place} Mill Pond', 'The Mill Race at {place}', 'The Old Mill, {place}'],
   box: (k, rng) => ({ w: front() + structureCols(k.W, [20, 26], rng), h: 15 }),
   build: buildMill,
   pieces: (rng, _s, l) => millPieces(rng, l),
-};
+});
 
 // ------------------------------------------------------------------------------------------------ the combine run
 
@@ -864,18 +869,19 @@ function* combinePieces(rng: Rng, l: Landmark): Generator<Piece> {
   yield liveFence(rng, fx, fx + rng.int(3, 4), Wk - 1, [{ type: 'deco', kind: 'trestle', at: a.shell, w: sw, h: sh, seed: rng.int(0, 1 << 20) }]);
 }
 
-export const COMBINE_RUN: Concept = {
+export const COMBINE_RUN = defineConcept({
+  varies: ['field length', 'track height and end', 'combine size and speed', 'reel blades and spin', 'where the live fence runs'],
   id: 'combine-run',
   weight: 3,
   sizes: ['wide'],
   routes: ['ltr'],
   ownsCrossing: true,
-  family: ['tractor', 'baler', 'electric fence'],
+  family: ['tractor', 'electric fence', 'muck spreader', 'pumpkin catapult'],
   budget: 1,
   names: ['The Harvest at {place}', '{place} Combine Run', 'Reaping Day at {place}', 'The Back Forty of {place}'],
   box: (k, rng) => ({ w: front() + structureCols(k.W, [26, 40], rng), h: 10 }),
   build: buildCombine,
   pieces: (rng, _s, l) => combinePieces(rng, l),
-};
+});
 
 export const FARM_CONCEPTS: Concept[] = [GREAT_WINDMILL, GRAIN_ELEVATOR, BIG_BARN, WATER_MILL, COMBINE_RUN];

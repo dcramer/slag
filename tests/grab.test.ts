@@ -6,7 +6,7 @@ import { generateProp } from '../src/gen/props';
 import { generateTheme } from '../src/gen/theme';
 import { Match } from '../src/game/match';
 import { THEME_IDS } from '../src/themes';
-import { DT, PHYS, PLAYER_H, PLAYER_W, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
+import { DT, PHYS, PLAYER_H, PLAYER_W, POP_HOLD, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
 import { giveItem } from '../src/sim/items';
 import type { Level } from '../src/sim/level';
 import {
@@ -621,7 +621,8 @@ describe('when a hold goes wrong', () => {
 
   it('self-destruct still works while held', () => {
     const { run, r } = grabbed(0);
-    steps(run, 1, { ...NO_INPUT, altPressed: true });
+    steps(run, 1, { ...NO_INPUT, altPressed: true, alt: true });
+    steps(run, POP_HOLD - 1, { ...NO_INPUT, alt: true });
     expect(r.alive).toBe(false);
     expect(r.cause).toBe('pop');
     expect(r.attach.grip).toBeNull();

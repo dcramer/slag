@@ -2,58 +2,62 @@ import { css, type HSL } from '../../../core/color';
 import { TILE } from '../../../sim/constants';
 import { buttonOn, buttonSolid, buttonUntil, dirOf } from '../../../sim/props';
 import { line } from '../../ink';
-import { boxPts, dot, glint, ovalPts, part, pen, poly, sprite, stamp, tone } from '../../ink-props';
-import { glowDot, light } from '../../kit';
+import { boxPts, dot, glint, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
+import { bulb, light } from '../../kit';
 import { defineArt } from '../common';
 
 const STEEL: HSL = { h: 215, s: 10, l: 50 };
 const COVER = 'rgba(205,232,245,0.55)';
 const TAPE: HSL = { h: 48, s: 30, l: 80 };
 
-/** The plate, the cover flipped up behind the dome and the tape holding it open, in a frame with the face at y = 0 and out toward -y. */
+const HAZARD = '#f2b705';
+
+/**
+ * The still parts, in a frame with the face at y = 0 and out toward -y: a bolted plate with hazard stripes
+ * down its front, the steel collar the dome sits in, and the clear safety cover flipped back on its hinge
+ * and taped open.
+ */
 function mount() {
-  return sprite('btn', -9, -12, 18, 13, (g) => {
-    // The safety cover, flipped open on its hinge and taped there.
-    const cover = poly(-6.4, -1.5, -7.6, -10.6, -2.4, -11.2, -1.4, -2);
+  return sprite('btn2', -10.5, -16, 21, 17, (g) => {
+    // The cover, flipped back: a clear box on its hinge behind the dome, a strip of tape holding it.
+    const cover = poly(-6.6, -4.4, -9, -13.8, -3.4, -15.2, -1.4, -5.6);
     g.fillStyle = COVER;
-    g.beginPath();
-    for (let i = 0; i < cover.length; i++) (i ? g.lineTo : g.moveTo).call(g, cover[i].x, cover[i].y);
-    g.closePath();
+    path(g, cover);
     g.fill();
-    pen(g, cover, 4, 0.3, 0.7, 3, '#1d3a4a');
-    glint(
-      g,
-      [
-        { x: -6.6, y: -4 },
-        { x: -6.9, y: -9 },
-      ],
-      'rgba(255,255,255,0.85)',
-      0.5,
-    );
-    const tape = poly(-8.8, -6.4, -3.8, -5.6, -3.9, -4.1, -8.9, -4.9);
-    part(g, tape, TAPE, 7, { depth: 0.2, shade: -10, thin: 0.25, thick: 0.6 });
-    // The plate it all sits on, bolted down.
-    const plate = boxPts(-7.6, -2.4, 15.2, 2.6, 0.8, 2, 0.15);
-    part(g, plate, STEEL, 2, { depth: 0.5, shade: -18, thin: 0.4, thick: 1 });
-    for (const x of [-5.8, 5.8]) dot(g, x, -1.1, 0.45, x, '#e6e8ee');
+    g.fillStyle = 'rgba(160,200,220,0.5)';
+    path(g, poly(-3.4, -15.2, -1.4, -5.6, -2.4, -5.4, -4.3, -14.6));
+    g.fill();
+    pen(g, cover, 4, 0.35, 0.8, 3, '#1d3a4a');
+    glint(g, poly(-7.2, -6.4, -8.3, -12.4), 'rgba(255,255,255,0.9)', 0.55);
+    part(g, poly(-9.8, -10.6, -2.6, -9, -2.8, -7.3, -10, -8.9), TAPE, 7, { depth: 0.2, shade: -10, thin: 0.25, thick: 0.6 });
+    tick(g, -8.6, -9.6, -4, -8.7, 0.25, 8, 'rgba(120,100,60,0.6)');
+    // The plate, bolted down, hazard stripes down its front edge.
+    const plate = boxPts(-7.8, -2.8, 15.6, 3, 0.8, 2, 0.12);
+    part(g, plate, STEEL, 2, { depth: 0.5, shade: -18, thin: 0.45, thick: 1.2 });
+    g.save();
+    path(g, plate);
+    g.clip();
+    g.fillStyle = HAZARD;
+    for (let x = -9; x < 9; x += 3) {
+      path(g, poly(x, 0.4, x + 1.5, 0.4, x + 2.6, -1.6, x + 1.1, -1.6));
+      g.fill();
+    }
+    g.restore();
+    for (const x of [-6.3, 6.3]) dot(g, x, -1.9, 0.5, x, '#e6e8ee');
+    // The collar the dome sits in.
+    part(g, boxPts(-6.2, -4.8, 12.4, 2.3, 0.7, 5, 0.1), { ...STEEL, l: 34 }, 5, { depth: 0.4, shade: -12, thin: 0.4, thick: 1.1 });
+    g.fillStyle = css(STEEL, 24);
+    line(g, -5.2, -4.2, 4.4, -4.25, { w: 0.45, seed: 6, taper: [0.2, 0.4], press: 0.1 });
   });
 }
 
-/** The dome, sunk by `press` (0 up, 1 down). */
+/** The dome, sunk into its collar by `press` (0 up, 1 down). */
 function dome(s: CanvasRenderingContext2D, hue: number, press: number) {
-  const h = 4.2 - press * 2.4;
-  const pts = ovalPts(0.6, -2.4, 4.6, h, 3, 0.02, 16).filter((p) => p.y <= -2.2);
-  pts.push({ x: 5.2, y: -2.2 }, { x: -4, y: -2.2 });
-  part(s, pts, { h: hue, s: 80, l: 50 }, 3, { depth: 0.6, shade: -18, thin: 0.4, thick: 1.1 });
-  glint(
-    s,
-    [
-      { x: -1.6, y: -2.6 - h * 0.7 },
-      { x: 1.2, y: -2.4 - h * 0.95 },
-    ],
-    'rgba(255,255,255,0.8)',
-    0.55,
-  );
+  const h = 5.2 - press * 3.4;
+  const pts = ovalPts(0, -4.6, 5.3, h, 3, 0.02, 18).filter((p) => p.y <= -4.4);
+  pts.push({ x: 5.3, y: -4.4 }, { x: -5.3, y: -4.4 });
+  part(s, pts, { h: hue, s: 82, l: 50 }, 3, { depth: 0.9, shade: -20, thin: 0.45, thick: 1.4 });
+  glint(s, poly(-3.2, -5.2 - h * 0.45, -1.6, -4.6 - h * 0.85, 0.8, -4.6 - h * 0.95), 'rgba(255,255,255,0.85)', 0.7);
 }
 
 /** A block the button holds up: the button's colour, bevelled, a little dome stencilled on it so you know whose it is. */
@@ -125,11 +129,14 @@ defineArt<'button'>({
     s.save();
     s.translate(bx, by);
     s.rotate(m.angle + Math.PI / 2);
+    // On a card the button shares the frame with the blocks it buys, and at true size it vanishes beside them.
+    if (d.o.card) s.scale(1.8, 1.8);
     stamp(s, mount());
     dome(s, hue, press);
     s.restore();
     if (on) {
-      glowDot(rc.g, bx - fx * 3, by - fy * 3, 8, col, warn ? 0.6 : 0.35);
+      // Pressed, the dome is lit: a flat lamp, not a halo (it isn't hot).
+      bulb(rc.g, bx - fx * 5.4, by - fy * 5.4, 1.9, col, warn ? 0.9 : 0.6);
       light(rc, bx - fx * 4, by - fy * 4, 30, col, 0.4);
     }
   },

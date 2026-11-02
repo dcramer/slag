@@ -4,7 +4,7 @@ import { generateProp } from '../src/gen/props';
 import { generateTheme } from '../src/gen/theme';
 import { defaultSettings, loadSettings } from '../src/input/bindings';
 import { TouchInput, touchLayout } from '../src/input/touch';
-import { KILL_Y, LEVEL_H, LEVEL_W, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
+import { KILL_Y, LEVEL_H, LEVEL_W, POP_HOLD, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
 import {
   BAT,
   blockCells,
@@ -196,7 +196,8 @@ describe('held items: pickup, use, drop', () => {
     r.items.daze = 20;
     use(run);
     expect(run.projectiles).toHaveLength(0);
-    steps(run, 1, () => press({ altPressed: true }));
+    steps(run, 1, () => press({ altPressed: true, alt: true }));
+    steps(run, POP_HOLD - 1, () => press({ alt: true }));
     expect(r.alive).toBe(false);
     expect(r.cause).toBe('pop');
   });

@@ -24,6 +24,7 @@ export const SPACE: Recipe[] = [
   },
   {
     name: 'turret',
+    unique: true,
     weight: 2,
     role: 'hazard',
     repeat: true,

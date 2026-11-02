@@ -7,6 +7,7 @@ import { roomSeed } from '../src/game/room';
 import { GRAVITY } from '../src/gen/level';
 import { newNetState, sanitizeRules } from '../src/net/actions';
 import { loadResume, saveResume } from '../src/net/identity';
+import { ROOM_EMPTY_MS } from '../src/net/signal-protocol';
 import { drawnVelocity, NetSession } from '../src/net/session';
 import { hashMatch, snapshotMatch } from '../src/net/snapshot';
 import { LoopbackHub, type LoopbackOptions } from '../src/net/transport';
@@ -576,7 +577,7 @@ describe('reconnect and late join', () => {
     expect(b).toBeDefined();
   });
 
-  it('a late joiner mid-race spectates with identical state, then is seated next round', () => {
+  it('a late joiner mid-race watches with identical state, and once it asks is seated next round', () => {
     const r = new Room({ latency: 40, jitter: 10 });
     const a = r.join('aaaa', player);
     fastRules(a);
@@ -587,9 +588,15 @@ describe('reconnect and late join', () => {
     const c = r.join('cccc', player);
     r.run(40);
     expect(c.synced).toBe(true);
+    expect(c.intent).toBe('watch');
+    expect(a.ns.watching.cccc).toBeDefined();
     expect(c.match.players.some((p) => p.device.startsWith('cccc:'))).toBe(false);
     const res = r.settle();
     expect(new Set(res.map((x) => x.hash)).size).toBe(1);
+    c.play();
+    r.run(20);
+    expect(c.seatAsk).toBe('won');
+    expect(c.queued || c.seated).toBe(true);
     while ((a.match.phase as string) !== 'pick' || a.match.round < 2) r.run(1);
     expect(a.match.players.some((p) => p.device === 'cccc:kb1')).toBe(true);
     r.run(30);
@@ -644,6 +651,7 @@ describe('drawn runners', () => {
 describe('resume save', () => {
   it("resumes a previous visit's state, never one this session wrote while its join was in flight", () => {
     const mem = new Map<string, string>();
+    vi.useFakeTimers({ toFake: ['Date'] });
     vi.stubGlobal('localStorage', {
       getItem: (k: string) => mem.get(k) ?? null,
       setItem: (k: string, v: string) => void mem.set(k, v),
@@ -655,8 +663,14 @@ describe('resume save', () => {
       expect(loadResume('ROOMA', at + 1)?.at).toBe(at); // saved before this session opened: a previous visit
       expect(loadResume('ROOMA', at)).toBeNull(); // saved since: our own state, moments old
       expect(loadResume('ROOMB', at + 1)).toBeNull();
+      // A room nobody has been in for ROOM_EMPTY_MS is over: its link starts a fresh room.
+      vi.setSystemTime(at + ROOM_EMPTY_MS - 1000);
+      expect(loadResume('ROOMA', at + 1)?.at).toBe(at);
+      vi.setSystemTime(at + ROOM_EMPTY_MS + 1000);
+      expect(loadResume('ROOMA', at + 1)).toBeNull();
     } finally {
       vi.unstubAllGlobals();
+      vi.useRealTimers();
     }
   });
 });

@@ -18,4 +18,51 @@ Every generator is deterministic given its seed: same seed (and theme), same out
 - A theme changes how you move only through shared pieces, never a new physics path: its sculptor lays per-tile ground (`Shape.ground`, kinds in `sim/ground.ts`; glacier ice via `glaze`), and `THEME_GRAVITY` in `level/profile.ts` sets its gravity on Auto (space). reach.ts and every ghost walk on both, and sculptor gaps are measured at the level's gravity, so the solvability policy holds unchanged.
 - Player prop archetypes (`props.ts`): `RECIPES` + `ARCHETYPE_WEIGHTS`. A recipe rolls a part's identity, then returns `sized`, which may only scale: no rolls in it, and no size words in names (`rollPart` adds them). `generateRoster` is the match's short list, from the seed alone and with a longer roster starting with the shorter one; `generateCrate` draws only from it, always with a bridge and a hazard.
 
+- Decor (`decor/`): where the small scenery goes is decided here (`placeDecor`, from the level's seed), and `render/decor.ts` only draws it. Nothing in the sim knows decor exists.
+
 Verify: `pnpm level <seed> --theme <t>` for the ASCII map, `pnpm level --stats 50` for fallbacks, timing and `needBridges`, and `pnpm shot levels --themes all` to look at the result. When you tune a share on purpose (parts needed, styles, set piece variety), run `pnpm test:stats` too; otherwise leave it to CI.
+
+## Generators, contracts and the conformance suite
+
+Every kind of generated thing has one registry, keyed by theme where it applies, and declares its contract as data on each entry. The engine enforces the contract twice: while generating (a violating instance is rejected and retried through the pipeline that already exists), and in `tests/conformance/`, which runs every registered entry of every kind over a fixed small set of seeds, sizes and gravities. Register something and it's under every check at once, with no new test to write. `kinds.ts` has the table and the per-theme minimums (5 landmarks, 12 decor pieces, 3 unique hazards; `tests/conformance/themes` lists what each theme still lacks as todos).
+
+A conformance failure names the rule and the entry (`landmark/castle/haunted-wing/ways: seed 2 classic normal: 72% of the way past it has no second way`). Fix the entry. A known violation that can't be fixed in the change that found it goes in `WAIVERS` (`tests/conformance/lib.ts`) with the reason; never waive a new entry.
+
+### Add a landmark (stage concept)
+
+`stage/<theme>.ts`: `export const MILL = defineConcept({ ... })`, listed in the theme's array in `CONCEPTS` (`stage/index.ts`); the sculptor calls `claimSite`/`raiseLandmark` (see the pipeline above). A plain `Concept` literal still works: absent contract fields take the same defaults.
+
+| Field                                                 | Contract                                                                                                                     | Checked while generating                                        | Checked in conformance                                                                                                         |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `sizes`, `routes`, `fits`, `weight`                   | where it's rolled                                                                                                            | `rollConcept`                                                   | it stands up on most of the levels it says it fits                                                                             |
+| `scale` (`large` default, or `grand`)                 | large: a third of the view along its biggest side; grand: it owns the view (`LANDMARK_RULES`, `measureScale`)                | `landmarkFaults`                                                | every level                                                                                                                    |
+| `footing` (`grounded` default, `hanging`, `floating`) | every structural column stands on terrain, or a backdrop shell that does (`footingFaults`); floating only in `FLOATS` themes | `landmarkFaults`                                                | every level, and the theme                                                                                                     |
+| `ways` (default 2)                                    | at most `MAX_SHARED` of the way past its columns has no second way (`Routes.landmark`)                                       | `landmarkFaults`                                                | every level                                                                                                                    |
+| `carrier`                                             | static proof unless it's a proven carrier                                                                                    | the pipeline (`rideProof`, judge before pieces)                 | `rides` exactly when a carrier; the solution needs no set piece                                                                |
+| (its pieces)                                          | every one goes in, keeps the solution, gives no free ride, warns before it hurts                                             | `placeLandmark`: `finalize`, `keep`, `noFreeRide`, `tellFaults` | the same, plus art for every module and `beamOf` art for what reaches through space                                            |
+| (its box)                                             | out of the spawn and goal pockets                                                                                            | `landmarkFaults`, `claimSite`                                   | every level                                                                                                                    |
+| `varies`                                              | what its seed changes, in words; the engine measures it                                                                      |                                                                 | 2+ structural parameters (`layoutOf`: box, tiles, pieces, footprints, placement) differ between any two seeds at the same size |
+| `names`                                               | templates with `{place}`                                                                                                     |                                                                 | the level is named after it                                                                                                    |
+| `family`                                              | filler recipes of its own theme                                                                                              |                                                                 | each is a recipe of the theme                                                                                                  |
+
+### Add a set piece or hazard
+
+A `Recipe` in `setpieces/<theme>.ts` (`defineSetPiece` types one), in `SET_PIECE_RECIPES`. Build it from `builders.ts`. Flag it `unique: true` if no other theme hurts the same way: that's what the per-theme count of unique hazards reads, and conformance checks the flag against every other theme's set pieces and landmarks by mechanism (`hazardSignature`: what hurts, and the variant that changes how, like a gun's ammo or a swinger's head; looks don't count).
+
+- While generating: `finalize` (swept cells free, nothing that hurts or moves near the spawn or goal, static solids don't cut the path), `keep` (the solution still holds clear of every cell with no `MIN_OPENING` window), `noFreeRide`, and `tellFaults` (everything that switches on from nothing warns for at least `MIN_TELL` frames).
+- Conformance: it can be placed; every module that hurts has a tell in `TELLS` (a new hurting module type needs an entry); its art exists, and reads `beamOf` if it reaches through space; it's never lethal every frame unless it never moves; no free ride; `unique` holds.
+
+### Add a decor piece
+
+An entry in `RULES` in `decor/index.ts` (`defineDecor`): `place` (`top` grows on the ground, `under` hangs from a ceiling), `themes`, `weight`, `clear` (its room, at most `DECOR_MAX_CLEAR`), `span` for a run like a fence. Its kind becomes a `DecorKind`, so tsc asks for its art in `render/decor.ts` (`color`, `bake` and/or `live`). Every theme it lists draws from it from then on (`pickDecor`); a look with variants (space's station and asteroids) narrows its pool with `from`.
+
+- While generating: `placeDecor` only puts a piece on a solid tile with its room open, off the spawn and the flag, and off a landmark that wears its own skin.
+- Conformance: the same on real levels of every theme (`decorFaults`), its art exists, the level reaches exactly the same with decor placed (decor is cosmetic), placement and the look's pick vary with the seed, and a theme shows only decor registered for it, with at least one kind of its own.
+
+### Add a part
+
+A recipe in `RECIPES` (`props.ts`, `definePart`), keyed by a new `Archetype`, with its weight in `ARCHETYPE_WEIGHTS`, module art in `render/props/modules/` and a codex entry. Conformance: the same part from the same seed; `sized` only scales (same modules and motion, the same identity, the name changed only by its size word, never fewer cells as it grows); art and a codex entry for every module; no prop art draws a runner's eyes or mouth.
+
+### Level shapes
+
+`SCULPTORS` (`level/sculptors/`). The pipeline enforces the policy (`judge`, lanes, `LAST_RESORT`, the fallbacks), and conformance checks each theme at classic/normal, wide/low and tall/high: no fallback, proven solvable with at most `MAX_BRIDGES` parts, mostly open, its own style, and the same level from the same seed. The shares (parts needed, two-part levels, open routes, styles, sizes, free rides, concept fallbacks) need many seeds and live in `tests/stats/`.

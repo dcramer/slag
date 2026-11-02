@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ALT_HOLD_FRAMES, DRAG_OFFSET_CSS, RUN_AT, TouchInput, touchLayout, touchModeFor } from '../src/input/touch';
+import { DRAG_OFFSET_CSS, RUN_AT, TouchInput, touchLayout, touchModeFor } from '../src/input/touch';
 import { Match } from '../src/game/match';
 import { FrameBudget, pickTier } from '../src/ui/touch/device';
 
@@ -22,7 +22,7 @@ describe('touch layout', () => {
   it('keeps every control on screen and inside the safe area', () => {
     const ins = { top: 0, right: 47, bottom: 21, left: 47 };
     const L = touchLayout(W, H, ins);
-    for (const c of [L.primary, L.secondary, L.menu]) {
+    for (const c of [L.primary, L.secondary, L.menu, L.pop]) {
       expect(c.x - c.r).toBeGreaterThanOrEqual(ins.left);
       expect(c.x + c.r).toBeLessThanOrEqual(W - ins.right);
       expect(c.y - c.r).toBeGreaterThanOrEqual(ins.top);
@@ -88,19 +88,18 @@ describe('touch → InputFrame (race)', () => {
     expect(t.sample().down).toBe(true); // down + JUMP = drop through one-ways
   });
 
-  it('ALT self-destructs only after a deliberate hold, once', () => {
+  it('the self-destruct button holds alt with one fresh press, out of reach of both thumbs', () => {
     const t = make('race');
-    const s = t.layout.secondary;
-    t.down(3, s.x, s.y);
-    const fired: number[] = [];
-    for (let i = 0; i < ALT_HOLD_FRAMES + 20; i++) if (t.sample().altPressed) fired.push(i);
-    expect(fired).toEqual([ALT_HOLD_FRAMES - 1]);
-    t.up(3, s.x, s.y);
-    // A quick tap does nothing.
-    t.down(4, s.x, s.y);
-    t.sample();
-    t.up(4, s.x, s.y);
-    expect(t.sample().altPressed).toBe(false);
+    const L = t.layout;
+    expect(L.pop.r * 2).toBeGreaterThanOrEqual(44);
+    // Up by the menu: nowhere near the jump thumb's buttons or the stick.
+    for (const c of [L.primary, L.secondary, L.use]) expect(Math.hypot(c.x - L.pop.x, c.y - L.pop.y)).toBeGreaterThan(c.r + L.pop.r * 2);
+    expect(L.pop.y).toBeLessThan(H / 3);
+    t.down(3, L.pop.x, L.pop.y);
+    expect(t.sample()).toMatchObject({ alt: true, altPressed: true });
+    for (let i = 0; i < 100; i++) expect(t.sample()).toMatchObject({ alt: true, altPressed: false });
+    t.up(3, L.pop.x, L.pop.y);
+    expect(t.sample()).toMatchObject({ alt: false, altPressed: false });
   });
 
   it('a touch keeps its role: a jump thumb sliding left never steers, and only one stick thumb counts', () => {

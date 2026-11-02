@@ -30,9 +30,6 @@ function pennantCloth(s: CanvasRenderingContext2D, x: number, top: number, len: 
 
 export const FRONTIER_DECOR = {
   cairn: {
-    place: 'top',
-    weight: 1,
-    clear: 2,
     color: (th) => th.terrain.light,
     bake(s, d) {
       // Stones stacked smaller as they go up, each sat a little off the last.
@@ -55,9 +52,6 @@ export const FRONTIER_DECOR = {
     },
   },
   pennant: {
-    place: 'top',
-    weight: 0.7,
-    clear: 3,
     color: (th, rng) => (rng.chance(0.6) ? th.accent : hsl3(rng.pick([0, 48, 210]), 85, 52)),
     bake(s, d) {
       const h = 18 + (d.seed % 6);
@@ -72,9 +66,6 @@ export const FRONTIER_DECOR = {
     },
   },
   icicles: {
-    place: 'under',
-    weight: 1.2,
-    clear: 1,
     color: () => hsl3(195, 55, 86),
     bake(s, d) {
       const n = 2 + (d.seed % 3);
@@ -91,9 +82,6 @@ export const FRONTIER_DECOR = {
     },
   },
   lander: {
-    place: 'top',
-    weight: 0.8,
-    clear: 2,
     color: () => hsl3(45, 70, 60),
     bake(s, d) {
       const x = d.x;

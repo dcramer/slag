@@ -3,8 +3,8 @@ import { BRIDGE_W } from './validate';
 import { deriveSeed, Rng } from '../../core/rng';
 import type { Level, LevelProfile } from '../../sim/level';
 import { pickThemeId, type ThemeId } from '../../themes';
-import { commit, finalize, SET_PIECE_UID, SET_PIECES, Site } from '../setpieces';
-import { type Concept, conceptName, fits, type Landmark, rollConcept } from '../stage';
+import { commit, finalize, SET_PIECE_UID, SET_PIECES, Site, tellFaults } from '../setpieces';
+import { type Concept, conceptName, fits, type Landmark, landmarkFaults, rollConcept } from '../stage';
 import { generateTheme, type Theme } from '../theme';
 import { ReachCache } from '../../sim/reach';
 import { footing } from '../../sim/weather';
@@ -52,6 +52,8 @@ export interface GenInfo {
   conceptFallback: boolean;
   /** What the landmark's build returned, anchors included (tests and tools read its ways past from them). */
   landmark?: Landmark;
+  /** Why landmark attempts broke the concept's contract (../stage/contract.ts), one line per rejected attempt. */
+  landmarkFaults?: string[];
 }
 
 export let lastGenInfo: GenInfo = {
@@ -101,6 +103,7 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
   setProbeGravity(profile.gravity);
   const challenge = new Rng(deriveSeed(seed, `challenge:${themeId}`)).next();
   const rejects = { unsolvable: 0, tooEasy: 0, closed: 0, landmark: 0 };
+  const faults: string[] = [];
   for (let attempt = 0; attempt < MAX_ATTEMPTS + LEGACY_ATTEMPTS; attempt++) {
     const rng = new Rng(deriveSeed(seed, `level:${attempt}`));
     const sculptor = attempt < MAX_ATTEMPTS ? SCULPTORS[themeId] : FALLBACK_SCULPTOR;
@@ -138,6 +141,7 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
       continue;
     }
     let shared = v.shared;
+    let landmarkShared = v.landmark;
     if (!v.open) {
       // Mostly open: give the level the second route it lacks. Lanes stay away from bridges, so the
       // solution still stands; openUp's own analysis re-proves it (an unreachable goal scores 1).
@@ -151,12 +155,15 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
         continue;
       }
       shared = routes.shared;
+      landmarkShared = routes.landmark;
     }
     // The count sets what crates offer, so it has to be the real one, on the final terrain.
     const one = v.bridges.length === 2 ? oneBridgeEnough(level, shape.bridgeHints, cache) : null;
     const bridges = one ? [one] : v.bridges;
     if (one) {
-      shared = analyzeRoutes(level, bridges, cache).shared;
+      const routes = analyzeRoutes(level, bridges, cache);
+      shared = routes.shared;
+      landmarkShared = routes.landmark;
       if (shared > MAX_SHARED) {
         rejects.closed++;
         continue;
@@ -178,6 +185,13 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
       rejects.landmark++;
       continue;
     }
+    // The concept's contract: scale, footing, the protected pockets, two ways through.
+    const broken = live && landmark ? landmarkFaults(level, live, landmark.rect, fixed, landmarkShared) : [];
+    if (broken.length) {
+      faults.push(`${live!.id} attempt ${attempt}: ${broken.join('; ')}`);
+      rejects.landmark++;
+      continue;
+    }
     // Before the filler: its placer checks the path with the ghost, which walks on this footing.
     level.weather = rollWeather(seed, theme, level, profileOverride?.weather);
     // Rain or snow the landmark's pieces can't keep the solution in stays clear, like any the gate turns down.
@@ -194,6 +208,7 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
       rejects,
       ...(live && landmark ? { concept: live.id, landmark } : {}),
       conceptFallback: !!concept && !landmark,
+      ...(faults.length ? { landmarkFaults: faults } : {}),
     };
     const budget = live ? (live.budget ?? fixed.length) : 0;
     const pieces = SET_PIECES[themeId](new Rng(deriveSeed(seed, `setpieces:${attempt}`)), level, {
@@ -215,7 +230,16 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
     return level;
   }
   lastGenAttempts = MAX_ATTEMPTS + LEGACY_ATTEMPTS;
-  lastGenInfo = { attempts: lastGenAttempts, bridges: [], fallback: true, shared: 1, sculpted: 1, rejects, conceptFallback: !!concept };
+  lastGenInfo = {
+    attempts: lastGenAttempts,
+    bridges: [],
+    fallback: true,
+    shared: 1,
+    sculpted: 1,
+    rejects,
+    conceptFallback: !!concept,
+    ...(faults.length ? { landmarkFaults: faults } : {}),
+  };
   return toLevel(seed, fallbackShape(profile.w, profile.h), theme, profile);
 }
 
@@ -236,6 +260,7 @@ function placeLandmark(
   const s = new Site(level, cache);
   const out: PlacedProp[] = [];
   for (const piece of c.pieces(rng, s, l)) {
+    if (tellFaults(piece.modules).length) return null;
     const pp = finalize(s, piece, SET_PIECE_UID + out.length, `setpiece:${themeId}:${c.id}`);
     if (!pp || !keep([...out, pp]) || (free && !noFreeRide(level, pp, out, cache))) return null;
     out.push(pp);

@@ -135,3 +135,8 @@ export const KILL_Y = LEVEL_H * TILE - 2;
 
 export const MAX_PLAYERS = 8;
 export const RUN_COUNTDOWN = FPS; // frozen frames before GO
+/**
+ * Frames alt must stay held in a race, from a fresh press and with no other action, before the runner self-destructs
+ * (3 s, counted down on screen). Long enough that nobody does it by accident, short enough to still be an escape hatch.
+ */
+export const POP_HOLD = 3 * FPS;

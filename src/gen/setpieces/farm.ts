@@ -1,14 +1,16 @@
 import { dcos, dsin } from '../../core/dmath';
 import type { Rng } from '../../core/rng';
 import { liveFence } from '../stage/farm';
-import { pendulums, presses, vehicles, wheels } from './builders';
+import { cannons, pendulums, vehicles, wheels } from './builders';
+import { defineSetPiece } from './contract';
 import { best, makeStyle, type Piece, type Recipe, SAFE_TILES, type Site } from './place';
 
 /**
- * Farm: a tractor ploughing a field, a windmill with rideable sails, a swinging hay bale on a hoist, and
- * the farm's own hazards, which no other theme has: a live fence across a field path, a baler chomping
- * down onto the ground, and a hay hook swinging from a jib. Big enough to read across the level, and
- * everything that hangs hangs from a post that stands on the ground (docs/SETPIECES.md, Grounding).
+ * Farm: a tractor ploughing a field, a windmill with rideable sails, a swinging hay bale on a hoist and a
+ * live fence across a field path; and the farm's own hazards, which
+ * no other theme has: a hay hook's heavy block swinging from a jib, a muck spreader flinging slow muck,
+ * and a pumpkin catapult lobbing pumpkins that bounce and knock you about. Big enough to read across the
+ * level, and everything that hangs hangs from a post that stands on the ground (docs/SETPIECES.md).
  */
 
 const DOWN = Math.PI / 2;
@@ -61,7 +63,7 @@ function* hooks(rng: Rng, s: Site): Generator<Piece> {
       role: 'hazard',
       style: makeStyle(rng, ['steel', 'rust'], [4, 120, 30], { woodHue: rng.range(20, 30) }),
       modules: [
-        { type: 'swinger', head: 'axe', hub: [c.x + 0.5, c.hy], arm, angle0: DOWN, period: rng.int(150, 200), swing, dir: 1, radius, count: 1, link: 'chain' },
+        { type: 'swinger', head: 'mace', hub: [c.x + 0.5, c.hy], arm, angle0: DOWN, period: rng.int(150, 200), swing, dir: 1, radius, count: 1, link: 'chain' },
       ],
     };
   }
@@ -121,19 +123,42 @@ export const FARM: Recipe[] = [
         material: 'wood',
       }),
   },
-  { name: 'electric fence', weight: 2, role: 'hazard', candidates: fences },
-  {
-    name: 'baler',
+  defineSetPiece({ name: 'electric fence', weight: 2, role: 'hazard', candidates: fences }),
+  defineSetPiece({ name: 'hay hook', weight: 1.6, role: 'hazard', unique: true, candidates: hooks }),
+  defineSetPiece({
+    name: 'muck spreader',
     weight: 1.6,
     role: 'hazard',
+    unique: true,
     candidates: (rng, s) =>
-      presses(rng, s, {
-        name: pick(rng, ['Hay Baler', 'The Bale Maker', 'Square Baler', 'Chomper']),
-        style: makeStyle(rng, ['steel', 'rust'], [4, 120, 200], { trim: 'stripes' }),
-        height: [3, 4],
-        width: [2, 3],
-        period: [130, 180],
+      cannons(rng, s, {
+        name: pick(rng, ['Muck Spreader', 'The Fertilizer', 'Manure Express', 'Organic Matter']),
+        look: 'spitter',
+        style: makeStyle(rng, ['rust', 'steel'], [4, 118, 30], { woodHue: rng.range(20, 30) }),
+        ammo: 'goo',
+        speed: [200, 260],
+        interval: [130, 190],
+        burst: [2, 3],
+        elev: [0.35, 0.7],
+        length: 1.2,
       }),
-  },
-  { name: 'hay hook', weight: 1.6, role: 'hazard', candidates: hooks },
+  }),
+  defineSetPiece({
+    name: 'pumpkin catapult',
+    weight: 1.4,
+    role: 'hazard',
+    unique: true,
+    candidates: (rng, s) =>
+      cannons(rng, s, {
+        name: pick(rng, ['Pumpkin Catapult', 'Gourd Thrower', 'Harvest Festival', 'Squash Court']),
+        look: 'totem',
+        style: makeStyle(rng, ['rust', 'steel'], [24, 30], { woodHue: rng.range(20, 32) }),
+        ammo: 'rubber',
+        speed: [220, 290],
+        interval: [160, 230],
+        burst: [1, 1],
+        elev: [0.6, 0.95],
+        length: 1.3,
+      }),
+  }),
 ];
