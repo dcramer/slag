@@ -45,6 +45,9 @@ export interface Player {
   away?: boolean;
 }
 
+/** Degrees of hue between any two players' characters. Eight players still fit, with room to roll. */
+const MIN_HUE_APART = 30;
+
 /** What an away player's runner does: self-destruct at GO so the race can end. */
 const AWAY_RUN_INPUT: InputFrame = Object.freeze({ ...NO_INPUT, altPressed: true });
 
@@ -168,8 +171,42 @@ export class Match {
 
   // ---------------------------------------------------------------- lobby
 
-  private rollCharacter(): CharacterDef {
+  /**
+   * A character nobody seated could be mistaken for. Rolls are counted, so every
+   * peer lands on the same one. A full lobby can't always keep everyone
+   * MIN_HUE_APART, so it keeps the roll furthest from anyone rather than the last.
+   */
+  private rollCharacter(owner?: Player): CharacterDef {
+    let best = this.rollOnce();
+    for (let i = 0; i < 32 && !this.looksFree(best, owner); i++) {
+      const c = this.rollOnce();
+      if (this.hueGap(c, owner) > this.hueGap(best, owner) && !this.nameTaken(c, owner)) best = c;
+    }
+    return best;
+  }
+
+  private rollOnce(): CharacterDef {
     return generateCharacter(deriveSeed(this.seed, `char:${this.charRolls++}`));
+  }
+
+  /** Degrees to the nearest other player's color. */
+  private hueGap(c: CharacterDef, owner?: Player): number {
+    let gap = 180;
+    for (const q of this.players) {
+      if (q === owner) continue;
+      const apart = Math.abs(q.character.hue - c.hue) % 360;
+      gap = Math.min(gap, apart, 360 - apart);
+    }
+    return gap;
+  }
+
+  private nameTaken(c: CharacterDef, owner?: Player): boolean {
+    return this.players.some((q) => q !== owner && q.character.name === c.name);
+  }
+
+  /** True if no other player already has this look: colors must read apart at a glance, and names must differ. */
+  looksFree(c: CharacterDef, owner?: Player): boolean {
+    return this.hueGap(c, owner) >= MIN_HUE_APART && !this.nameTaken(c, owner);
   }
 
   newLevel(seed: number, theme: ThemeId | undefined = this.themeOverride) {
@@ -188,7 +225,7 @@ export class Match {
         continue;
       }
       if (inp.altPressed) {
-        p.character = this.rollCharacter();
+        p.character = this.rollCharacter(p);
         p.ready = false;
       }
       if (inp.confirmPressed) p.ready = !p.ready;
@@ -412,8 +449,7 @@ export class Match {
 
   private stepPlace(inputs: Readonly<Record<string, InputFrame>>) {
     for (const p of this.players) {
-      if (p.away) p.placed = true; // disconnected: forfeit
-      if (p.placed) continue;
+      if (p.placed || p.away) continue; // away isn't a forfeit: back in time, they can still place
       const inp = this.input(p, inputs);
       this.moveCursor(p, inp);
       if (inp.altPressed) p.rot = (p.rot + 1) % 4;
@@ -435,7 +471,7 @@ export class Match {
     if (this.rules.placeSeconds > 0 && this.phaseFrame >= this.rules.placeSeconds * 60) {
       for (const p of this.players) if (!p.placed) p.placed = true; // forfeited
     }
-    if (this.players.every((p) => p.placed)) {
+    if (this.players.every((p) => p.placed || p.away)) {
       this.pendingAdvance ??= this.phaseFrame + 30;
       if (this.phaseFrame >= this.pendingAdvance) {
         this.pendingAdvance = undefined;

@@ -93,6 +93,12 @@ const UNREACHABLE_TRIES = 2;
 const ICE_GATHER_MS = 1000;
 /** A new host keeps expected guests in the roster this long so they aren't marked away while they re-signal. */
 const LINK_GRACE_MS = 6000;
+/**
+ * A guest whose link drops without a goodbye keeps its seat this long. A stalled
+ * tab or a Wi-Fi blip re-offers within a few seconds, and being marked away costs
+ * a player real things: their placement, their runner.
+ */
+const GUEST_GRACE_MS = 5000;
 /** Polling. Urgent: a peer waiting on an answer. Wake: right after anything happened. Then idle, then solo. */
 const POLL_URGENT_MS = 400;
 const POLL_WAKE_MS = 1000;
@@ -619,16 +625,27 @@ export class WebRtcTransport implements Transport {
     else this.onGuestLost(link);
   }
 
-  private onGuestLost(link: Link) {
+  private onGuestLost(link: Link, goodbye = false) {
     this.links.delete(link.id);
     quiet(link);
-    this.roster.delete(link.id);
+    const m = this.roster.get(link.id);
+    if (m && !goodbye) {
+      this.roster.set(link.id, { ...m, linking: true });
+      setTimeout(() => this.expireGuest(link.id), GUEST_GRACE_MS);
+    } else this.roster.delete(link.id);
     this.emitMembers();
     this.pushRoster();
     if (this.links.size === 0) this.soloSince = Date.now();
     // It might be re-offering right now; and if everyone vanished, we may be the one who dropped off.
     this.wake();
     if (this.links.size === 0 && this.hadGuests) void this.heartbeat();
+  }
+
+  private expireGuest(id: string) {
+    if (this.closed || this.links.has(id) || !this.roster.get(id)?.linking) return;
+    this.roster.delete(id);
+    this.emitMembers();
+    this.pushRoster();
   }
 
   private closeLink(id: string) {
@@ -663,7 +680,8 @@ export class WebRtcTransport implements Transport {
       const text = link.parts + data.slice(1);
       link.parts = '';
       this.deliver(link, text);
-    } else if (link.id === this.hostId && this.role === 'guest') this.onHostFrame(link, data);
+    } else if (kind === 'x' && this.role === 'host') this.onGuestLost(link, true);
+    else if (link.id === this.hostId && this.role === 'guest') this.onHostFrame(link, data);
   }
 
   private onHostFrame(link: Link, data: string) {

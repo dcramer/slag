@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
 import { Match } from '../src/game/match';
 import { roomSeed } from '../src/game/room';
+import { DEFAULT_RULES } from '../src/game/rules';
 import { generateProp } from '../src/gen/props';
 import { decode, encode, held, INPUT_KEYS, merge } from '../src/net/codec';
 import { Predictor } from '../src/net/predict';
@@ -50,9 +51,8 @@ function inPick() {
   const c = r.join('cccc');
   r.run(30);
   a.act({ t: 'rules', rules: { targetScore: 80, maxRounds: 25, pickSeconds: 10, placeSeconds: 15, raceSeconds: 30, gravity: 'auto' } });
-  const ready = press({ confirmPressed: true });
-  r.tick({ aaaa: { kb1: ready }, bbbb: { kb1: ready }, cccc: { kb1: ready } });
   r.run(30);
+  const ready = press({ confirmPressed: true });
   r.tick({ aaaa: { kb1: ready }, bbbb: { kb1: ready }, cccc: { kb1: ready } });
   for (let i = 0; i < 90 && a.match.phase !== 'pick'; i++) r.tick();
   r.run(40);
@@ -239,6 +239,86 @@ describe('remote ghosts', () => {
       for (const s of [b, c]) s.tick({});
     }
     expect(new Set([a, b, c].map((s) => `${s.match.frame}:${hashMatch(s.match)}`)).size).toBe(1);
+  });
+});
+
+/** Two seated peers mid-race, with a round trip long enough for prediction to go wrong. */
+function inRace(latency: number) {
+  const r = new Room(latency);
+  const a = r.join('aaaa');
+  r.run(5);
+  const b = r.join('bbbb');
+  r.run(Math.ceil(latency / 8) + 30);
+  a.act({ t: 'rules', rules: { ...DEFAULT_RULES, targetScore: 80, maxRounds: 25, pickSeconds: 10, placeSeconds: 15, raceSeconds: 0 } });
+  r.run(30);
+  const ready = press({ confirmPressed: true });
+  r.tick({ aaaa: { kb1: ready }, bbbb: { kb1: ready } });
+  for (let i = 0; i < 3000 && (a.match.phase as string) !== 'run'; i++) r.tick();
+  for (let i = 0; i < 80; i++) r.tick({ aaaa: { kb1: press({}) } });
+  expect(a.match.phase).toBe('run');
+  return { r, a, b };
+}
+
+describe('watching a remote runner', () => {
+  /** A jump's take-off is about 6 px a frame. Twice that on screen is a teleport. */
+  const MAX_STEP = 12;
+
+  it('never teleports when a jump lands late, and the sim is untouched', () => {
+    const { r, a, b } = inRace(50);
+    const slot = mine(a, 'aaaa').slot;
+    const drawnY = () => b.view.run!.runners.find((x) => x.slot === slot)!.body.y;
+    // Prediction can't know a jump is coming, so the runner stays grounded for a round trip, then is already in the air.
+    const steps: number[] = [];
+    let last = drawnY();
+    const rest = last;
+    let top = last;
+    for (let i = 0; i < 50; i++) {
+      r.tick({ aaaa: { kb1: press({ jump: i < 20, jumpPressed: i === 0 }) } });
+      const y = drawnY();
+      steps.push(Math.abs(y - last));
+      top = Math.min(top, y);
+      last = y;
+    }
+    expect(rest - top).toBeGreaterThan(30);
+    expect(Math.max(...steps)).toBeLessThan(MAX_STEP);
+    for (let i = 0; i < 40; i++) r.tick();
+    a.flush();
+    for (let i = 0; i < 30; i++) {
+      r.hub.advance(TICK);
+      b.tick({});
+    }
+    expect(hashMatch(b.match)).toBe(hashMatch(a.match));
+  });
+
+  it('keeps the host queue short, so a burst costs one moment and not lasting lag', () => {
+    const { r, a } = inRace(20);
+    const queue = (a as any).queues.get('bbbb');
+    queue.frames = Array.from({ length: 12 }, (_, i) => ({ seq: queue.consumed + i + 1, f: {} }));
+    r.run(1);
+    expect(queue.frames.length).toBeLessThanOrEqual(3);
+  });
+
+  it('survives a lost bundle without waiting on a resend', () => {
+    const { r, a, b } = inRace(20);
+    let needs = 0;
+    const send = (b as any).send.bind(b);
+    (b as any).send = (m: { t: string }, to?: string, lossy?: boolean) => {
+      if (m.t === 'need') needs++;
+      send(m, to, lossy);
+    };
+    const hub = r.hub as any;
+    const route = hub.route.bind(hub);
+    let dropped = 0;
+    hub.route = (from: string, data: { t: string }, to?: string) => {
+      if (from === 'aaaa' && data.t === 'b' && dropped++ % 7 === 3) return;
+      route(from, data, to);
+    };
+    r.run(120);
+    hub.route = route;
+    r.run(30);
+    expect(dropped).toBeGreaterThan(20);
+    expect(needs).toBe(0);
+    expect(a.match.frame - b.match.frame).toBeLessThan(6);
   });
 });
 
