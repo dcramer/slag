@@ -3,7 +3,7 @@ import { DT, MAX_PLAYERS } from '../sim/constants';
 import { addBreadcrumb, reportEvent } from '../telemetry';
 import type { Runner } from '../sim/run';
 import type { GameEvent, InputFrame } from '../sim/types';
-import { applyAction, type NetAction, type NetState, newNetState, peerOf, sanitizeRules } from './actions';
+import { applyAction, type NetAction, type NetState, newNetState, peerOf, sanitizeRules, type Watcher } from './actions';
 import { CONFIRM_BIT, decode, type Enc, encode, held, heldPeerFrame, mergePeerFrames, type PeerFrame, PRESSED } from './codec';
 import { Predictor } from './predict';
 import { hashMatch, hashSnap, type MatchSnap, restoreMatch, snapshotMatch } from './snapshot';
@@ -51,9 +51,23 @@ const CORRECTION_KEEP = 0.85;
 /** A correction this large (px) is a respawn or a pipe, not an error: show it. A late jump at 100 ms round trip is already about 50. */
 const CORRECTION_MAX = 120;
 const CORRECTION_MAX_STEPS = 4;
+/**
+ * Host ticks a seated guest may send no input before the host stops holding its buttons down for it. A frozen
+ * tab or a dead link otherwise keeps running its runner into whatever is ahead until the link times out.
+ * From there the idle rules (game/match.ts) decide when the room stops waiting on it.
+ */
+const SOFT_TICKS = 60;
+/** An observer ahead of a player in join order waits this long, then moves to the back (see maybeReorder). */
+const REORDER_AFTER_MS = 2000;
+const REORDER_EVERY_MS = 10_000;
 
 export type NetStatus = 'offline' | 'connecting' | 'online' | 'reconnecting' | 'unavailable' | 'kicked';
 export type Role = 'host' | 'guest';
+/**
+ * What this peer wants to be. `ask`: arrived while a match was running and hasn't chosen yet, so it watches
+ * and asks for nothing. `play`: seated, or asking for a seat (at the next round boundary mid-match). `watch`: an observer.
+ */
+export type Intent = 'ask' | 'play' | 'watch';
 
 /** Per-peer info for the HUD (lobby list, crown, ping). */
 export interface PeerInfo {
@@ -67,8 +81,12 @@ export interface PeerInfo {
   quality: 'good' | 'ok' | 'bad' | 'unknown';
   /** Match slots this peer's devices occupy. */
   slots: number[];
-  /** Display name: the peer's first player's name, or 'spectator'. */
+  /** Display name: the peer's first player's name, or the name it watches under. */
   name: string;
+  /** Has a seat in the match. A peer without one sends no input. */
+  seated: boolean;
+  /** Watching by choice, or moved there for being idle. */
+  watching?: Watcher;
 }
 
 interface Bundle {
@@ -114,6 +132,10 @@ export interface SessionOptions {
   resume?: () => { snap: MatchSnap; ns: NetState } | null;
   /** The host removed this peer: it's already out of the room. */
   onKicked?: () => void;
+  /** Arrive as an observer (an invite opened with `?watch`). */
+  watch?: boolean;
+  /** The name an observer's chip shows, read when it starts watching. */
+  name?: () => string;
   log?: (msg: string) => void;
 }
 
@@ -122,6 +144,8 @@ interface RemoteQueue {
   consumed: number;
   actN: number;
   last: PeerFrame;
+  /** Host ticks in a row with nothing queued. */
+  dry: number;
 }
 
 export class NetSession {
@@ -141,6 +165,8 @@ export class NetSession {
   refused = false;
   /** Crate card this peer has clicked and the host hasn't ruled on yet (-1: none). Never a claim: the host decides those. */
   pendingCard = -1;
+  /** See Intent. Starts as `play` (or `watch` from a watch link) and becomes `ask` on arriving mid-match. */
+  intent: Intent;
   /** Counters for the HUD/debug overlay and tests. */
   stats = { desyncs: 0, syncs: 0, migrations: 0, bundles: 0, predicted: 0, dryTicks: 0, foldedFrames: 0, queuedFrames: 0, hostTicks: 0 };
 
@@ -157,6 +183,16 @@ export class NetSession {
   private viewMatch: Match;
   private viewDirty = true;
   private primaryFn: () => string;
+  private nameFn: () => string;
+  /** The intent has been squared with the room's state once (see settleIntent). */
+  private arrived = false;
+  private wasWatching = false;
+  /** Back from idle: the seat has been asked for once. */
+  private backAsked = false;
+  private lineSince = -1;
+  private lastReorder = -1e9;
+  /** The transport has told us who's here at least once. */
+  private heardMembers = false;
 
   // host state
   private queues = new Map<string, RemoteQueue>();
@@ -214,6 +250,8 @@ export class NetSession {
     this.onKickedFn = opts.onKicked;
     const primary = opts.primaryDevice ?? 'kb1';
     this.primaryFn = typeof primary === 'function' ? primary : () => primary;
+    this.nameFn = opts.name ?? (() => '');
+    this.intent = opts.watch ? 'watch' : 'play';
     this.log = opts.log ?? (() => {});
     // Input/action sequence numbers start at wall-clock ms: a refreshed page always counts higher than its old self.
     this.seq = Math.floor(Date.now());
@@ -284,6 +322,34 @@ export class NetSession {
     if (this.role === 'host' && this.match.phase === 'lobby' && peer !== this.self) this.hostActions.push({ t: 'kick', peer });
   }
 
+  /** This peer holds a seat in the match. Offline, everyone on this machine does. */
+  get seated(): boolean {
+    return !this.transport || this.match.players.some((p) => peerOf(p.device) === this.self);
+  }
+
+  /** Watching, by choice or for being idle, as the room has it. */
+  get watching(): Watcher | undefined {
+    return this.ns.watching[this.self];
+  }
+
+  /** Seats that will be free at the next round boundary (now, in the lobby). */
+  get space(): number {
+    return MAX_PLAYERS - this.match.players.filter((p) => !p.leaving).length;
+  }
+
+  /** Take a seat: now in the lobby, at the next round boundary mid-match (a watcher's seat back, or a new arrival's). */
+  play() {
+    this.intent = 'play';
+    if (this.watching) this.act({ t: 'watch', dev: this.globalDevice(this.primaryFn()), on: false });
+  }
+
+  /** Watch instead of playing. A seat is given up at once in the lobby, at the round boundary mid-match. */
+  watch() {
+    this.intent = 'watch';
+    if (!this.watching || this.match.players.some((p) => peerOf(p.device) === this.self && !p.leaving))
+      this.act({ t: 'watch', dev: this.globalDevice(this.primaryFn()), on: true, name: this.nameFn() });
+  }
+
   /** True while an action this peer requested hasn't been applied yet. */
   get pending(): boolean {
     return this.pendingActs.length > 0 || this.hostActions.length > 0;
@@ -308,7 +374,9 @@ export class NetSession {
       const stale = !isSelf && this.role === 'host' && t - (this.heard.get(m.id) ?? t) > 3000;
       const quality = stale ? 'bad' : ping === null ? 'unknown' : ping < 90 ? 'good' : ping < 180 ? 'ok' : 'bad';
       const players = this.match.players.filter((p) => peerOf(p.device) === m.id || (isSelf && !p.device.includes(':')));
-      return { id: m.id, order: m.order, isHost, isSelf, ping, quality, slots: players.map((p) => p.slot), name: players[0]?.character.name ?? 'spectator' };
+      const watching = this.ns.watching[m.id];
+      const name = players[0]?.character.name ?? watching?.name ?? '';
+      return { id: m.id, order: m.order, isHost, isSelf, ping, quality, slots: players.map((p) => p.slot), name, seated: players.length > 0, watching };
     });
   }
 
@@ -345,9 +413,64 @@ export class NetSession {
         if (this.ticks % 2 === 0) this.send({ t: 'pings', p: Object.fromEntries(this.rtt) }, undefined, true);
       } else if (this.hostId !== this.self) this.send({ t: 'ping', ts: t }, this.hostId, true);
     }
+    if (this.heardMembers && (this.role === 'host' ? !this.collecting : this.synced)) this.settleIntent(frame);
     if (this.role === 'host') this.hostTick(frame);
     else this.guestTick(frame, t);
+    this.maybeReorder(t);
     this.viewDirty = true;
+  }
+
+  /**
+   * Square what this peer wants with what the room says, once the room's state is known: arriving mid-match
+   * means choosing first; a watch link asks to watch; being moved to the watchers (idle) is followed; and any
+   * input from someone moved there for being idle asks for the seat back.
+   */
+  private settleIntent(own: PeerFrame) {
+    const w = this.watching;
+    if (!!w !== this.wasWatching) {
+      this.wasWatching = !!w;
+      this.backAsked = false;
+      if (w) this.intent = 'watch';
+    }
+    if (!this.arrived) {
+      this.arrived = true;
+      if (this.intent === 'watch') {
+        if (!w) this.watch();
+      } else if (!this.seated && this.match.phase !== 'lobby') this.intent = 'ask';
+    }
+    if (w?.afk && !this.backAsked && Object.keys(own).length) {
+      this.backAsked = true;
+      this.play();
+    }
+  }
+
+  /**
+   * The host is the lowest join order present (the store, every newcomer and every election agree on that
+   * without asking anyone), so an observer must never be ahead of a player in it, or losing the host would
+   * hand the room to someone with no stake in the match. An observer ahead of a seated peer rejoins the order
+   * at the back. A host doing it hands the room to the next in line. With only observers left, the earliest
+   * of them hosts until someone takes a seat.
+   */
+  private maybeReorder(t: number) {
+    const tr = this.transport;
+    const me = this.members.find((m) => m.id === this.self);
+    const behind =
+      !!tr?.reorder &&
+      !!me &&
+      this.status === 'online' &&
+      !this.paused &&
+      !this.seated &&
+      this.members.some((m) => m.order > me.order && !m.linking && this.match.players.some((p) => peerOf(p.device) === m.id));
+    if (!behind) {
+      this.lineSince = -1;
+      return;
+    }
+    if (this.lineSince < 0) this.lineSince = t;
+    if (t - this.lineSince < REORDER_AFTER_MS || t - this.lastReorder < REORDER_EVERY_MS) return;
+    this.lastReorder = t;
+    this.lineSince = -1;
+    this.log('observer ahead of a player: moving to the back of the line');
+    tr!.reorder!();
   }
 
   // ------------------------------------------------------------------ transport events
@@ -369,6 +492,7 @@ export class NetSession {
   private onMembers(list: Member[]) {
     if (this.status === 'kicked' || this.closed) return;
     if (!list.some((m) => m.id === this.self)) list = [...list, { id: this.self, order: Number.MAX_SAFE_INTEGER }];
+    this.heardMembers = true;
     if (list.length !== this.members.length) addBreadcrumb('net', list.length > this.members.length ? 'peer joined' : 'peer left', { peers: list.length });
     this.members = list;
     const host = list[0].id;
@@ -439,7 +563,7 @@ export class NetSession {
       const k = this.acks[m.id] ?? [0, 0];
       const last: PeerFrame = {};
       for (const [dev, e] of Object.entries(this.lastInputs)) if (peerOf(dev) === m.id) last[dev.slice(m.id.length + 1)] = e;
-      this.queues.set(m.id, { frames: [], consumed: k[0], actN: k[1], last: heldPeerFrame(last) });
+      this.queues.set(m.id, { frames: [], consumed: k[0], actN: k[1], last: heldPeerFrame(last), dry: 0 });
     }
   }
 
@@ -503,6 +627,7 @@ export class NetSession {
   private adoptNet(ns: Partial<NetState>) {
     this.ns.parked = ns.parked ?? {};
     this.ns.kicked = ns.kicked ?? {};
+    this.ns.watching = ns.watching ?? {};
   }
 
   private onKicked() {
@@ -592,7 +717,7 @@ export class NetSession {
   private queue(peer: string): RemoteQueue {
     let q = this.queues.get(peer);
     if (!q) {
-      q = { frames: [], consumed: 0, actN: 0, last: {} };
+      q = { frames: [], consumed: 0, actN: 0, last: {}, dry: 0 };
       this.queues.set(peer, q);
     }
     return q;
@@ -602,16 +727,19 @@ export class NetSession {
     if (!this.members.some((m) => m.id === from) || this.ns.kicked[from]) return;
     const q = this.queue(from);
     const tail = q.frames.length ? q.frames[q.frames.length - 1].seq : q.consumed;
-    msg.f.forEach((f, j) => {
-      const seq = msg.s + j;
-      if (seq > tail) q.frames.push({ seq, f });
-    });
+    // Observers send no input, and anything one sends anyway (a seat just given up) plays no part.
+    if (this.match.players.some((p) => peerOf(p.device) === from)) {
+      msg.f.forEach((f, j) => {
+        const seq = msg.s + j;
+        if (seq > tail) q.frames.push({ seq, f });
+      });
+    }
     for (const [n, a] of msg.a ?? []) {
       if (n <= q.actN) continue;
       q.actN = n;
       if (a.t === 'join') {
         if (peerOf(a.dev) === from) this.wants.add(a.dev); // seated by reconcile() between rounds
-      } else if (this.allowed(from, a)) this.hostActions.push(a);
+      } else if (this.allowed(from, a)) this.hostActions.push(a.t === 'watch' ? { t: 'watch', dev: a.dev, on: a.on, name: a.name } : a); // idleness is the host's call
     }
     if (msg.h) {
       const mine = this.hashes.get(msg.h[0]);
@@ -658,9 +786,22 @@ export class NetSession {
     if (this.collecting) this.collectTick(this.now());
     if (this.paused) return;
     const inputs: Record<string, Enc> = {};
-    for (const [d, e] of Object.entries(own)) inputs[this.globalDevice(d)] = e;
+    if (this.seated) for (const [d, e] of Object.entries(own)) inputs[this.globalDevice(d)] = e;
+    const seatedPeers = new Set(this.match.players.map((p) => peerOf(p.device)));
     const k: Record<string, [number, number]> = {};
     for (const [peer, q] of this.queues) {
+      const sig = `${q.consumed},${q.actN}`;
+      if (this.sentK.get(peer) !== sig) {
+        this.sentK.set(peer, sig);
+        k[peer] = [q.consumed, q.actN];
+      }
+      if (!seatedPeers.has(peer)) {
+        // An observer: nothing to wait for and nothing to hold down.
+        q.frames = [];
+        q.last = {};
+        q.dry = 0;
+        continue;
+      }
       // Bound latency: fold the oldest frames together (edges are kept, see codec.merge).
       while (q.frames.length > QUEUE_MAX) {
         const [a, b] = q.frames;
@@ -671,18 +812,17 @@ export class NetSession {
       this.stats.queuedFrames += q.frames.length;
       const next = q.frames.shift();
       let f: PeerFrame;
-      if (!next) this.stats.dryTicks++;
       if (next) {
         q.consumed = next.seq;
         q.last = next.f;
+        q.dry = 0;
         f = next.f;
-      } else f = heldPeerFrame(q.last);
-      for (const [d, e] of Object.entries(f)) if (e !== 0) inputs[`${peer}:${d}`] = e;
-      const sig = `${q.consumed},${q.actN}`;
-      if (this.sentK.get(peer) !== sig) {
-        this.sentK.set(peer, sig);
-        k[peer] = [q.consumed, q.actN];
+      } else {
+        this.stats.dryTicks++;
+        // Never wait: hold its buttons through a hiccup, then let go of them (soft disconnect, see SOFT_TICKS).
+        f = ++q.dry > SOFT_TICKS ? {} : heldPeerFrame(q.last);
       }
+      for (const [d, e] of Object.entries(f)) if (e !== 0) inputs[`${peer}:${d}`] = e;
     }
     const actions = [...this.reconcile(), ...this.hostActions.splice(0)];
     const b: Bundle = { f: this.match.frame };
@@ -732,6 +872,12 @@ export class NetSession {
         else if (!p.away) out.push({ t: 'away', dev: p.device, on: true });
       } else if (p.away) out.push({ t: 'away', dev: p.device, on: false });
     }
+    // Idle (game/match.ts): moved to the watchers, which frees the seat at once in the lobby and at the round boundary mid-match.
+    for (const peer of new Set(m.players.map((p) => peerOf(p.device)))) {
+      const mine = m.players.filter((p) => peerOf(p.device) === peer);
+      if (!peer || this.ns.watching[peer] || !present.has(peer) || !mine.every((p) => p.afk && !p.away)) continue;
+      out.push({ t: 'watch', dev: mine[0].device, on: true, afk: true });
+    }
     let seats = m.players.length;
     const seated = new Set(m.players.map((p) => p.device));
     if (m.phase === 'lobby') {
@@ -746,7 +892,7 @@ export class NetSession {
       }
     }
     if (m.phase === 'lobby' || m.phase === 'score' || m.phase === 'victory') {
-      if (!m.players.some((p) => peerOf(p.device) === this.self)) this.wants.add(this.globalDevice(this.primaryFn()));
+      if (!this.seated && this.intent === 'play' && !this.watching) this.wants.add(this.globalDevice(this.primaryFn()));
       for (const dev of this.wants) {
         if (!present.has(peerOf(dev)) || seated.has(dev) || seats >= MAX_PLAYERS || this.ns.kicked[peerOf(dev)]) continue;
         out.push({ t: 'join', dev });
@@ -769,16 +915,20 @@ export class NetSession {
       }
       return;
     }
-    this.unacked.push({ seq: ++this.seq, f: own });
-    // Fold, not drop: through a long stall the oldest frames can hold a click.
-    if (this.unacked.length > MAX_UNACKED) {
-      const [a, b] = this.unacked;
-      this.unacked.splice(0, 2, { seq: b.seq, f: mergePeerFrames(a.f, b.f) });
-    }
+    // An observer sends no input: only its requests and its state hash.
+    const seated = this.seated;
+    if (seated) {
+      this.unacked.push({ seq: ++this.seq, f: own });
+      // Fold, not drop: through a long stall the oldest frames can hold a click.
+      if (this.unacked.length > MAX_UNACKED) {
+        const [a, b] = this.unacked;
+        this.unacked.splice(0, 2, { seq: b.seq, f: mergePeerFrames(a.f, b.f) });
+      }
+    } else this.unacked = [];
     this.maybeWant(own, t);
     this.applyInbox(t);
-    const pressed = Object.values(own).some((e) => (typeof e === 'number' ? e : e[0]) & PRESSED);
-    if (this.ticks % this.sendEvery === 0 || pressed || this.pendingActs.length) {
+    const pressed = seated && Object.values(own).some((e) => (typeof e === 'number' ? e : e[0]) & PRESSED);
+    if ((seated && this.ticks % this.sendEvery === 0) || pressed || this.pendingActs.length || this.pendingHash) {
       const msg: Msg = { t: 'in', s: this.unacked[0]?.seq ?? this.seq + 1, f: this.unacked.map((u) => u.f), c: this.match.frame };
       if (this.pendingActs.length) msg.a = this.pendingActs;
       if (this.pendingHash) msg.h = this.pendingHash;
@@ -795,15 +945,15 @@ export class NetSession {
    */
   private maybeWant(own: PeerFrame, t: number) {
     const m = this.match;
-    if (m.players.some((p) => peerOf(p.device) === this.self)) return;
-    const lobby = m.phase === 'lobby';
-    if (this.wantSentTo === this.hostId && (!lobby || t - this.wantAt < WANT_RETRY_MS)) return;
+    if (this.seated || this.intent !== 'play' || this.watching) return;
+    // A full lobby makes an arrival an observer, and a seat freeing up lights up Join for it rather than seating it.
+    if (m.phase === 'lobby' && m.players.length >= MAX_PLAYERS) return this.watch();
+    if (this.wantSentTo === this.hostId && t - this.wantAt < WANT_RETRY_MS) return;
     const dev = Object.keys(own).find((d) => {
       const e = own[d];
       return ((typeof e === 'number' ? e : e[0]) & CONFIRM_BIT) !== 0;
     });
-    const pick = dev ?? (lobby || this.wantSentTo === '' ? this.primaryFn() : undefined);
-    if (!pick) return;
+    const pick = dev ?? this.primaryFn();
     this.wantSentTo = this.hostId;
     this.wantAt = t;
     this.pendingActs.push([++this.actN, { t: 'join', dev: this.globalDevice(pick) }]);

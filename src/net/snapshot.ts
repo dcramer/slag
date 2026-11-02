@@ -28,7 +28,7 @@ import type { ThemeId } from '../themes';
  * A new field on Match or RunWorld must be added here or listed as derived:
  * tests/snapshot.test.ts fails until it is.
  */
-export const SNAP_VERSION = 13;
+export const SNAP_VERSION = 14;
 
 export interface RunSnap {
   slots: number[];

@@ -183,7 +183,7 @@ class World {
   peers = new Map<string, Peer>();
   hidden = false;
 
-  join(id: string) {
+  join(id: string, watch = false) {
     const signal = new DirectSignal(this.store, 'ROOM1', id, this);
     const transport = new WebRtcTransport('ROOM1', id, { signal, rtc: () => new FakePc(id, this.net), hidden: () => this.hidden });
     const status: string[] = [];
@@ -196,7 +196,7 @@ class World {
           h.status(s, d);
         },
       });
-    const session = new NetSession({ transport, match: new Match(roomSeed('TEST')), now: () => Date.now() });
+    const session = new NetSession({ transport, match: new Match(roomSeed('TEST')), now: () => Date.now(), watch });
     const p: Peer = { id, transport, session, signal, status, gone: false };
     this.peers.set(id, p);
     return p;
@@ -484,6 +484,33 @@ describe('host migration', () => {
     expect(took).toBeLessThan(2500);
     expect(b.session.isHost).toBe(true);
     expect(c.session.hostId).toBe('bbbb');
+  });
+
+  it('an observer steps behind the players in line: losing the host skips it, and a host who starts watching hands the room on', async () => {
+    const w = new World();
+    for (const [id, watch] of [
+      ['aaaa', false],
+      ['oooo', true],
+      ['bbbb', false],
+      ['cccc', false],
+    ] as const) {
+      w.join(id, watch);
+      await w.run(300);
+    }
+    const [a, o, b, c] = ['aaaa', 'oooo', 'bbbb', 'cccc'].map((id) => w.peers.get(id)!);
+    const order = (p: Peer, id: string) => p.session.members.find((m: Member) => m.id === id)?.order ?? -1;
+    await w.runUntil(() => w.settled() && order(a, 'oooo') > order(a, 'cccc') && order(c, 'oooo') > order(c, 'cccc'), 40_000);
+    expect(order(a, 'oooo')).toBeGreaterThan(order(a, 'cccc'));
+    expect(o.session.seated).toBe(false);
+    w.crash('aaaa');
+    await w.runUntil(() => w.settled(), 20_000);
+    expect(b.session.isHost).toBe(true);
+    expect(w.maxHosts).toBe(1);
+    b.session.watch();
+    await w.runUntil(() => w.settled() && c.session.isHost, 40_000);
+    expect(c.session.isHost).toBe(true);
+    expect([o, b].every((p) => p.session.hostId === 'cccc' && !p.session.seated)).toBe(true);
+    expect(new Set(await w.drained()).size).toBe(1);
   });
 
   it('the new host dying straight after taking over: the walk carries on to the next', async () => {

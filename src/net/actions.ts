@@ -24,7 +24,12 @@ export type NetAction =
   /** Host only, lobby only. */
   | { t: 'rules'; rules: MatchRules }
   /** Host only, lobby only: out of the room, and refused if it comes back. */
-  | { t: 'kick'; peer: string };
+  | { t: 'kick'; peer: string }
+  /**
+   * A peer watches (`on`) or wants to play again. Watching gives up the peer's seats: at once in the lobby,
+   * at the round boundary mid-match. `name` labels its chip. `afk` is the host's: it saw the player idle.
+   */
+  | { t: 'watch'; dev: string; on: boolean; name?: string; afk?: boolean };
 
 /** Replicated session state that isn't part of the Match (kept identical on every peer by the same actions). */
 export interface NetState {
@@ -32,10 +37,26 @@ export interface NetState {
   parked: Record<string, { dev: string; char: CharacterDef }[]>;
   /** Peers the host removed. Replicated, so a new host keeps refusing them. */
   kicked: Record<string, true>;
+  /** Peers watching rather than playing, by choice or for being idle. A refresh keeps it: the peer id survives one. */
+  watching: Record<string, Watcher>;
 }
 
+export interface Watcher {
+  name: string;
+  /** Moved here by the host for being idle, not by choice: any input asks for the seat back. */
+  afk?: true;
+}
+
+/** Remembered watchers, oldest dropped first: entries outlive peers that never come back. */
+const MAX_WATCHERS = 16;
+
 export function newNetState(): NetState {
-  return { parked: {}, kicked: {} };
+  return { parked: {}, kicked: {}, watching: {} };
+}
+
+/** Names come off the wire: the same limits as a player's. */
+export function cleanName(v: unknown): string {
+  return typeof v === 'string' ? v.slice(0, 12).trim() : '';
 }
 
 /** Peer id that owns a global device id (`<peer>:<local device>`), or '' for un-namespaced (offline/debug) devices. */
@@ -49,9 +70,9 @@ const SEAT_PHASES = new Set(['lobby', 'score', 'victory']);
 export function applyAction(m: Match, ns: NetState, a: NetAction): void {
   switch (a.t) {
     case 'join': {
-      if (!SEAT_PHASES.has(m.phase) || m.players.length >= MAX_PLAYERS) return;
-      m.join(a.dev, a.char);
       const peer = peerOf(a.dev);
+      if (!SEAT_PHASES.has(m.phase) || m.players.length >= MAX_PLAYERS || ns.watching[peer]) return;
+      m.join(a.dev, a.char);
       const parked = ns.parked[peer]?.filter((x) => x.dev !== a.dev);
       if (parked?.length) ns.parked[peer] = parked;
       else delete ns.parked[peer];
@@ -74,7 +95,7 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
     }
     case 'name': {
       const p = m.players.find((q) => q.device === a.dev);
-      const name = typeof a.name === 'string' ? a.name.slice(0, 12).trim() : ''; // wire data: don't trust the type
+      const name = cleanName(a.name); // wire data: don't trust the type
       if (p && name && !m.players.some((q) => q !== p && q.character.name === name)) m.setName(p.slot, name);
       return;
     }
@@ -94,8 +115,30 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
       if (m.phase !== 'lobby' || typeof a.peer !== 'string') return;
       for (const p of m.players.filter((q) => peerOf(q.device) === a.peer)) m.leave(p.device);
       delete ns.parked[a.peer];
+      delete ns.watching[a.peer];
       ns.kicked[a.peer] = true;
       return;
+    case 'watch': {
+      const peer = peerOf(a.dev);
+      if (!peer || ns.kicked[peer]) return;
+      const mine = m.players.filter((q) => peerOf(q.device) === peer);
+      if (!a.on) {
+        delete ns.watching[peer];
+        for (const p of mine) delete p.leaving; // changed their mind before the boundary: they stay
+        return;
+      }
+      const name = cleanName(a.name) || mine[0]?.character.name || '';
+      for (const p of mine) {
+        if (m.phase === 'lobby') m.leave(p.device);
+        else p.leaving = true;
+      }
+      delete ns.parked[peer];
+      delete ns.watching[peer]; // re-inserted last: the oldest entries go first
+      ns.watching[peer] = a.afk ? { name, afk: true } : { name };
+      const keys = Object.keys(ns.watching);
+      for (const k of keys.slice(0, Math.max(0, keys.length - MAX_WATCHERS))) delete ns.watching[k];
+      return;
+    }
   }
 }
 
