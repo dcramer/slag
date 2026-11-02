@@ -27,7 +27,16 @@ export interface Player {
   claim: number;
   rot: number;
   placed: boolean;
+  /**
+   * Online: the owning peer is disconnected (host-issued action, see
+   * src/net/actions.ts). Away players auto-pick, forfeit placement and pop at
+   * the start of a race so nobody waits on them; cleared when they reconnect.
+   */
+  away?: boolean;
 }
+
+/** What an away player's runner does: self-destruct at GO so the race can end. */
+const AWAY_RUN_INPUT: InputFrame = Object.freeze({ ...NO_INPUT, altPressed: true });
 
 export interface CrateItem {
   def: PropDef;
@@ -157,8 +166,11 @@ export class Match {
     if (this.players.length > 0 && this.players.every((p) => p.ready)) this.startMatch();
   }
 
-  /** Add a player for `device` (no-op if full or already joined). */
-  join(device: string): Player | undefined {
+  /**
+   * Add a player for `device` (no-op if full or already joined). Online
+   * rejoins pass the player's previous `character` so they keep their look.
+   */
+  join(device: string, character?: CharacterDef): Player | undefined {
     if (this.players.length >= MAX_PLAYERS || this.players.some((p) => p.device === device)) return undefined;
     const used = new Set(this.players.map((p) => p.slot));
     let slot = 0;
@@ -166,7 +178,7 @@ export class Match {
     const p: Player = {
       slot,
       device,
-      character: this.rollCharacter(),
+      character: character ?? this.rollCharacter(),
       score: 0,
       ready: false,
       cursor: { x: 0, y: 0 },
@@ -177,6 +189,14 @@ export class Match {
     };
     this.players.push(p);
     this.players.sort((a, b) => a.slot - b.slot);
+    return p;
+  }
+
+  /** Remove `device`'s player (online: a peer left the lobby). Only valid in the lobby, where nothing references slots. */
+  leave(device: string): Player | undefined {
+    if (this.phase !== 'lobby') return undefined;
+    const p = this.players.find((q) => q.device === device);
+    if (p) this.players = this.players.filter((q) => q !== p);
     return p;
   }
 
@@ -228,7 +248,8 @@ export class Match {
     this.setPhase('pick');
   }
 
-  private moveCursor(p: Player, inp: InputFrame) {
+  /** One frame of cursor movement. Public so the online view can run a guest's own cursor ahead of the host. */
+  moveCursor(p: Player, inp: InputFrame) {
     if (inp.pointer) {
       p.cursorHeld = 0;
       p.cursor.x = clamp(inp.pointer.x, 0, VIEW_W - 1);
@@ -251,6 +272,10 @@ export class Match {
     for (const p of this.players) {
       const inp = this.input(p, inputs);
       this.moveCursor(p, inp);
+      if (p.away && p.claim < 0 && this.phaseFrame > 10) {
+        const i = this.crate.findIndex((c) => c.claimedBy < 0);
+        if (i >= 0) this.claim(p, i);
+      }
       if (p.claim < 0 && inp.confirmPressed && this.phaseFrame > 10) {
         const i = this.crateItemAt(p.cursor.x, p.cursor.y);
         if (i >= 0 && this.crate[i].claimedBy < 0) this.claim(p, i);
@@ -322,6 +347,7 @@ export class Match {
 
   private stepPlace(inputs: Readonly<Record<string, InputFrame>>) {
     for (const p of this.players) {
+      if (p.away) p.placed = true; // disconnected: forfeit
       if (p.placed) continue;
       const inp = this.input(p, inputs);
       this.moveCursor(p, inp);
@@ -389,7 +415,7 @@ export class Match {
 
   private stepRun(inputs: Readonly<Record<string, InputFrame>>) {
     const run = this.run!;
-    run.step(this.players.map((p) => this.input(p, inputs)));
+    run.step(this.players.map((p) => (p.away ? AWAY_RUN_INPUT : this.input(p, inputs))));
     if (run.endFrame >= 0 && run.frame - run.endFrame > 75) this.finishRound();
   }
 

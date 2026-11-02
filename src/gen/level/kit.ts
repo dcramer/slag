@@ -1,3 +1,4 @@
+import { dexp } from '../../core/dmath';
 import type { Rng } from '../../core/rng';
 import { LEVEL_H, LEVEL_W } from '../../sim/constants';
 import { T_EMPTY, T_ONEWAY, T_SOLID } from '../../sim/level';
@@ -214,7 +215,7 @@ export function organicMask(rng: Rng, surf: readonly number[], soft = 3, iters =
   for (let y = 0; y < H; y++)
     for (let x = 0; x < W; x++) {
       const d = (y - surf[x]) / soft; // >0 below the surface
-      const p = 1 / (1 + Math.exp(-d * 2.2));
+      const p = 1 / (1 + dexp(-d * 2.2));
       m[y * W + x] = rng.next() < p ? 1 : 0;
     }
   return smoothCA(m, iters, 5, 4, 0);

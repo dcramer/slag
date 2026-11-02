@@ -78,7 +78,6 @@ The sim is a pure function of `(seed, per-frame inputs)` and has no DOM access. 
 
 ## Roadmap ideas
 
-- Online multiplayer (rollback netcode over WebRTC data channels)
 - Audio
 - More prop archetypes and modifiers (teleporters, gravity flippers, one-way platforms, magnets)
 - Larger, scrolling levels and more level styles

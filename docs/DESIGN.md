@@ -99,6 +99,8 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - The URL `/r/<code>` identifies a lobby; the homepage is a normal main menu. There's no matchmaking, and you join only through a shared link.
 - **Host = the earliest-joined connected player.** When the host leaves, the next player in join order takes over seamlessly. When everyone leaves, the next arrival becomes host. A refresh rejoins the same slot.
 - Netcode sends inputs only over a deterministic simulation that must be bit-identical across browsers.
+- Peers connect over WebRTC in a star around the host, so a pair that can't connect directly drops to local play. Details: `docs/NETCODE.md`.
+- In pick and place everyone sees everyone's cursor and held part live. A card belongs to whoever the host hears first; nobody sees a claim that gets taken back.
 
 ## Platform
-- Built with Next.js on Vercel. All game logic runs client-side, and the server only renders thin route shells.
+- Built with Next.js on Vercel. All game logic runs client-side. The server renders thin route shells and runs small, stateless signaling routes for online play.

@@ -1,3 +1,4 @@
+import { sq } from '../../core/dmath';
 import { overlaps, pointInRect, type Rect } from '../../core/geom';
 import { DT, KILL_Y, TILE } from '../constants';
 import { isProtected } from '../level';
@@ -240,7 +241,7 @@ function stepClouds(w: RunWorld): void {
   if (!clouds.length) return;
   for (const r of w.runners) {
     if (!isActive(r) || w.isSafe(r)) continue;
-    const inside = clouds.some((c) => (cx(r) - c.x) ** 2 + (cy(r) - c.y) ** 2 < c.r * c.r);
+    const inside = clouds.some((c) => sq(cx(r) - c.x) + sq(cy(r) - c.y) < c.r * c.r);
     if (inside && r.status.slowed < SMOKE_SLOW) r.status.slowed = SMOKE_SLOW;
   }
   if (clouds.some((c) => w.frame >= c.until)) w.items.clouds = clouds.filter((c) => w.frame < c.until);

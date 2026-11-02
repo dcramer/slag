@@ -1,6 +1,8 @@
 import { parseSeed, Rng } from './core/rng';
 import type { Match } from './game/match';
 import { ARCHETYPE_WEIGHTS, type Archetype, DEMOLISH, generateProp } from './gen/props';
+import type { NetSession } from './net/session';
+import { hashMatch } from './net/snapshot';
 import type { Renderer } from './render/renderer';
 import { giveItem, ITEM_KINDS, type ItemKind } from './sim/items';
 import { canPlace } from './sim/props';
@@ -24,6 +26,8 @@ import type { ThemeId } from './themes';
 export interface SlagDebug {
   match: Match;
   renderer: Renderer;
+  /** Online session (status, peers, stats); `?net=off` or debug params make it offline. */
+  net: NetSession | null;
   /** Join N players (kb1, kb2, pad0…pad5) and start round 1. */
   quickStart(players?: number): void;
   /** Place one prop of each archetype at deterministic legal spots (owner = player 1). */
@@ -41,6 +45,8 @@ export interface SlagDebug {
   step(n?: number, inputs?: Record<string, InputFrame>): void;
   /** Render one frame at time `ms` (defaults to now). */
   render(ms?: number): void;
+  /** Deterministic state hash of the confirmed match (peers in sync ⇔ equal hashes at equal frames). */
+  hash(): number;
 }
 
 export interface LoopControl {
@@ -49,13 +55,16 @@ export interface LoopControl {
 
 const DEVICES = ['kb1', 'kb2', 'pad0', 'pad1', 'pad2', 'pad3', 'pad4', 'pad5'];
 
-export function installDebug(match: Match, renderer: Renderer, loop: LoopControl): SlagDebug {
+export function installDebug(match: Match, renderer: Renderer, loop: LoopControl, net: NetSession | null = null): SlagDebug {
   let uid = 5000;
+  // Online, match devices are '<peer>:kb1'; offline sessions keep raw ids.
+  const dev = (d: string) => net?.globalDevice(d) ?? d;
   const api: SlagDebug = {
     match,
     renderer,
+    net,
     quickStart(players = 2) {
-      for (let i = 0; i < players; i++) match.join(DEVICES[i]);
+      for (let i = 0; i < players; i++) match.join(dev(DEVICES[i]));
       if (match.phase === 'lobby') match.startMatch();
     },
     addProps(kinds, seed = 1) {
@@ -97,6 +106,7 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
     render(ms) {
       renderer.render(match, ms ?? performance.now(), match.drainEvents());
     },
+    hash: () => hashMatch(match),
   };
   (window as unknown as { slagDebug: SlagDebug }).slagDebug = api;
 

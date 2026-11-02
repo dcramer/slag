@@ -1,3 +1,4 @@
+import { dhypot } from '../core/dmath';
 import { inset, overlaps, type Rect, rectCircle } from '../core/geom';
 import { KILL_Y, PLAYER_W, RUN_COUNTDOWN } from './constants';
 import { type CrowdMember, nudgeCrowd } from './crowd';
@@ -329,12 +330,15 @@ export class RunWorld {
     for (const p of this.projectiles) buildProjectile(p, f, this.out);
   }
 
-  private projItems: ProjItems = {
-    caught: (i, kind) => catchShot(this, this.runners[i], kind),
-    loose: (s) => spawnItem(this, s),
-    bonk: (i, owner) => bonk(this.runners[i], owner),
-    burst: (x, y) => burstSmoke(this, x, y),
-  };
+  /** A method, not a field: prediction copies RunWorld, and a closure field would keep writing to the original. */
+  private projItems(): ProjItems {
+    return {
+      caught: (i, kind) => catchShot(this, this.runners[i], kind),
+      loose: (s) => spawnItem(this, s),
+      bonk: (i, owner) => bonk(this.runners[i], owner),
+      burst: (x, y) => burstSmoke(this, x, y),
+    };
+  }
 
   /** Projectile behavior lives in props/ammo.ts; this just wires it to the world. */
   private stepProjectiles(f: number) {
@@ -353,7 +357,7 @@ export class RunWorld {
         this.kill(this.runners[i], owner, 'hazard');
         runners[i].active = this.runners[i].alive;
       },
-      items: this.projItems,
+      items: this.projItems(),
     };
     const keep: Projectile[] = [];
     for (const p of this.projectiles) if (stepProjectile(p, w)) keep.push(p);
@@ -374,7 +378,7 @@ function hitHazard(b: Rect, h: Hazard): boolean {
     case 'circle':
       return rectCircle(b, h.x, h.y, h.r);
     case 'seg': {
-      const len = Math.hypot(h.x2 - h.x1, h.y2 - h.y1);
+      const len = dhypot(h.x2 - h.x1, h.y2 - h.y1);
       const n = Math.max(1, Math.ceil(len / 4));
       for (let i = 0; i <= n; i++) {
         const t = i / n;

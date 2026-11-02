@@ -66,3 +66,36 @@ jobs:
       - name: Build
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm build
+
+  store:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SRH_TOKEN: slag_local_token
+      SRH_URL: http://127.0.0.1:8079
+    # Same images as compose.store.yml. Keep them in step.
+    services:
+      redis:
+        image: redis:6.2.21-alpine
+      srh:
+        image: hiett/serverless-redis-http:0.0.10
+        env:
+          SRH_MODE: env
+          SRH_TOKEN: slag_local_token
+          SRH_CONNECTION_STRING: redis://redis:6379
+        ports:
+          - 8079:80
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Store and handlers against SRH
+        run: pnpm test:store

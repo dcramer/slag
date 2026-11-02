@@ -1,3 +1,4 @@
+import { dcos, dsin } from '../../../core/dmath';
 import type { Rect, Vec } from '../../../core/geom';
 import { DEFAULT_SURFACE } from '../../physics';
 import { cellOf, defineModule, solidId } from '../registry';
@@ -17,13 +18,13 @@ export interface RotorArm {
 /** Arm angles at frame f: a pendulum swings around angle0, a wheel turns continuously. */
 export function rotorAngles(m: Rotor, f: number, phase: number): number[] {
   const t = Math.PI * 2 * (f / m.period + phase);
-  if (m.swing > 0) return [m.angle0 + m.swing * Math.sin(t)];
+  if (m.swing > 0) return [m.angle0 + m.swing * dsin(t)];
   const base = m.angle0 + m.dir * t;
   return Array.from({ length: m.count }, (_, i) => base + (i * Math.PI * 2) / m.count);
 }
 
 function smoothArms(m: Rotor, f: number, phase: number, off: Vec): RotorArm[] {
-  return rotorAngles(m, f, phase).map((a) => ({ x: m.hub[0] + off[0] + Math.cos(a) * m.arm, y: m.hub[1] + off[1] + Math.sin(a) * m.arm, a }));
+  return rotorAngles(m, f, phase).map((a) => ({ x: m.hub[0] + off[0] + dcos(a) * m.arm, y: m.hub[1] + off[1] + dsin(a) * m.arm, a }));
 }
 
 /**
