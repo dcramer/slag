@@ -78,7 +78,9 @@ src/
   game/     match state machine (lobby → pick → place → run → score → victory), scoring
   input/    keyboard + gamepad → per-device InputFrame
   render/   Canvas2D layers + WebGL2 post (reads sim state; owns only particles, rigs & caches)
-  game-client.ts  bootGame(): fixed 60 Hz timestep loop (mounted by the Next.js route app/r/[room])
+  ui/       menus and the DOM screens (main menu, 404, error)
+  main.ts   mountGame(): every screen, moved between by router.ts without a reload (Next in app/ is one host)
+  game-client.ts  the lobby screen and the fixed 60 Hz timestep loop
 ```
 
 The sim is a pure function of `(seed, per-frame inputs)` and has no DOM access. A test plays two full headless matches and asserts they come out identical. That determinism is the foundation for online play, which can use lockstep or rollback netcode over WebRTC and only needs to send inputs.

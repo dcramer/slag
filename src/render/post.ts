@@ -62,6 +62,8 @@ export interface Compositor {
   readonly webgl: boolean;
   resize(w: number, h: number): void;
   render(scene: HTMLCanvasElement, fg: HTMLCanvasElement, light: HTMLCanvasElement, glow: HTMLCanvasElement, p: PostParams): void;
+  /** Free the GPU context now rather than at garbage collection: a page that plays many lobbies would otherwise pile them up. */
+  dispose?(): void;
 }
 
 export function createCompositor(canvas: HTMLCanvasElement): Compositor {
@@ -115,19 +117,31 @@ class GLCompositor implements Compositor {
   private loc = new Map<WebGLProgram, Map<string, WebGLUniformLocation | null>>();
   /** Draws the frame while the context is lost, on its own canvas laid over this one. */
   private stand: { comp: Fallback; canvas: HTMLCanvasElement } | null = null;
+  private life = new AbortController();
 
   constructor(
     private canvas: HTMLCanvasElement,
     private gl: WebGL2RenderingContext,
   ) {
     this.build();
-    canvas.addEventListener('webglcontextlost', (e) => {
-      // Without this the browser never offers the context back.
-      e.preventDefault();
-      reportEvent('webgl context lost');
-      this.standIn();
-    });
-    canvas.addEventListener('webglcontextrestored', () => this.restore());
+    const on = { signal: this.life.signal };
+    canvas.addEventListener(
+      'webglcontextlost',
+      (e) => {
+        // Without this the browser never offers the context back.
+        e.preventDefault();
+        reportEvent('webgl context lost');
+        this.standIn();
+      },
+      on,
+    );
+    canvas.addEventListener('webglcontextrestored', () => this.restore(), on);
+  }
+
+  dispose() {
+    // Stop listening first: losing the context on purpose is not news.
+    this.life.abort();
+    this.gl.getExtension('WEBGL_lose_context')?.loseContext();
   }
 
   get webgl(): boolean {

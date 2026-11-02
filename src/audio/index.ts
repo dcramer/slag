@@ -34,6 +34,8 @@ export interface AudioSystem {
   unlock(): void;
   /** Optional: UI feedback for menus and HUD buttons. */
   ui?(cue: UiCue): void;
+  /** Optional: stop every sound and release the audio device; the game that owned it is gone. */
+  dispose?(): void;
 }
 
 /** No-op fallback (no WebAudio). Still persists volume settings. */

@@ -129,7 +129,7 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - Empty lobby slots show **OPEN**.
 
 ## Online
-- The URL `/r/<code>` identifies a lobby; the homepage is a normal main menu. There's no matchmaking, and you join only through a shared link.
+- The URL `/r/<code>` identifies a lobby; the homepage is a normal main menu. There's no matchmaking, and you join only through a shared link (or by typing its code under Join a Lobby).
 - Everyone connected has a seat in the lobby without pressing anything, up to 8 players. Past that they spectate.
 - The host wears a `HOST` label in the lobby, and it moves with the host. The host can kick a player from the lobby only, by mouse, or with Use, then Confirm on keyboard or gamepad. A kicked player lands on the main menu and can't refresh back in.
 - **Host = the earliest-joined connected player.** When the host leaves, the next player in join order takes over seamlessly. When everyone leaves, the next arrival becomes host. A refresh rejoins the same slot.
@@ -139,3 +139,4 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 
 ## Platform
 - Built with Next.js on Vercel. All game logic runs client-side. The server renders thin route shells and runs small, stateless signaling routes for online play.
+- **Every screen is part of the game, so it's portable.** Main menu, lobby, settings, codex, 404 and error screens are the game's own, in `src/`, with one look, one logo and one input system. Next is just one host. Screens are reached from the game's menus, so a build with no address bar reaches all of them; `/`, `/r/<code>` and `/codex` are deep links too. Moving between screens never reloads the page: Play opens a new lobby, Join checks the code first, and leaving a lobby (Leave Lobby, or a kick) goes back to the main menu. Debug params such as `?seed` and `?theme` stay on the URL throughout.

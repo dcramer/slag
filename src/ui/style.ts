@@ -1,7 +1,7 @@
 /**
  * The UI design tokens: one palette and one type system shared by the
  * Canvas2D HUD (src/render/hud.ts), the DOM overlays (src/ui/menus.ts) and
- * the Next.js pages (app/globals.css mirrors these as CSS variables).
+ * the DOM screens (src/ui/screens/css.ts mirrors these as CSS variables).
  * Pure constants, safe to import anywhere. See docs/ART.md for the rules.
  */
 
@@ -36,7 +36,7 @@ export const PAL = {
   hazard: '#f2b705',
 } as const;
 
-/** Font stacks: one display face, one UI face. Loaded in app/layout.tsx. */
+/** Font stacks: one display face, one UI face. Loaded from FONTS_HREF (src/ui/screens/css.ts). */
 export const FONT = {
   display: '"Lilita One", "Arial Rounded MT Bold", system-ui, sans-serif',
   ui: 'Barlow, "Segoe UI", system-ui, sans-serif',

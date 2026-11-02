@@ -64,16 +64,17 @@ export class TouchOverlay {
   private portraitOk = false;
   private layout: TouchLayout = touchLayout(1, 1);
   private key = '';
+  private style = document.createElement('style');
+  private life = new AbortController();
 
   constructor(
     private touch: TouchInput,
     container: HTMLElement,
     onMenu: () => void,
   ) {
-    const st = document.createElement('style');
-    st.textContent = CSS;
-    document.head.appendChild(st);
-    hardenGestures(container);
+    this.style.textContent = CSS;
+    document.head.appendChild(this.style);
+    hardenGestures(container, this.life.signal);
 
     this.base.append(div('runring'));
     // setProperty: Safari before 15.4 only knows the prefixed name, and the DOM's alias for it is deprecated.
@@ -95,6 +96,15 @@ export class TouchOverlay {
     this.rotate.dataset.slagUi = '';
     document.body.append(this.root, this.rotate);
     touch.vibrate = (ms) => navigator.vibrate?.(ms);
+  }
+
+  /** Take the controls off the page: the game is leaving it. */
+  dispose() {
+    this.life.abort();
+    this.root.remove();
+    this.rotate.remove();
+    this.style.remove();
+    for (const el of [document.documentElement, document.body]) el.style.overscrollBehavior = '';
   }
 
   /** Re-layout (cheap; only rebuilds geometry when the viewport or insets change). */
@@ -230,7 +240,7 @@ async function goFullscreen() {
 }
 
 /** Stop the browser from treating play as page gestures over the game container. */
-function hardenGestures(container: HTMLElement) {
+function hardenGestures(container: HTMLElement, signal: AbortSignal) {
   const s = container.style as CSSStyleDeclaration & { webkitTouchCallout?: string; webkitTapHighlightColor?: string };
   s.touchAction = 'none';
   s.userSelect = 'none';
@@ -240,9 +250,9 @@ function hardenGestures(container: HTMLElement) {
   for (const el of [document.documentElement, document.body]) el.style.overscrollBehavior = 'none';
   // Older iOS ignores touch-action for double-tap zoom / loupe; cancel the native gesture on the game itself.
   const stop = (e: Event) => e.cancelable && e.preventDefault();
-  container.addEventListener('touchstart', stop, { passive: false });
-  container.addEventListener('touchmove', stop, { passive: false });
-  container.addEventListener('contextmenu', stop);
-  document.addEventListener('gesturestart', stop);
-  document.addEventListener('dblclick', stop);
+  container.addEventListener('touchstart', stop, { passive: false, signal });
+  container.addEventListener('touchmove', stop, { passive: false, signal });
+  container.addEventListener('contextmenu', stop, { signal });
+  document.addEventListener('gesturestart', stop, { signal });
+  document.addEventListener('dblclick', stop, { signal });
 }

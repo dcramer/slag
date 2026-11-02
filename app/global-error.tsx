@@ -1,30 +1,29 @@
 'use client';
 
-import { useEffect } from 'react';
+import { type MouseEvent, useEffect } from 'react';
 import { reportError } from '../src/telemetry';
-import './globals.css';
+import { FONTS_HREF, SCREEN_CSS } from '../src/ui/screens/css';
+import { plainHTML } from '../src/ui/screens/markup';
 
 /**
- * Root error boundary. Next catches render and effect errors (a failed
- * `bootGame` lands here) before they reach `window.onerror`, so without this
- * they would never be reported. The button does a full load, not client
- * routing, because the app is in a bad state.
+ * The host's last line: an error in this React shell itself. The game's screens don't render through
+ * React, and src/main.ts catches and reports their failures with the same error screen, so this only
+ * fires if Next or the mount breaks. It reports, then shows the game's error screen; MAIN MENU is a
+ * full page load, since the app is in a bad state.
  */
 export default function GlobalError({ error }: { error: Error & { digest?: string } }) {
   useEffect(() => reportError(error, { boundary: 'global-error', digest: error.digest }), [error]);
+  const onClick = (e: MouseEvent) => {
+    if ((e.target as Element).closest('button')) location.assign('/');
+  };
   return (
     <html lang="en">
       <head>
-        <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@500;600;700;800&family=Lilita+One&display=swap" rel="stylesheet" />
+        <link href={FONTS_HREF} rel="stylesheet" />
+        <style dangerouslySetInnerHTML={{ __html: SCREEN_CSS }} />
       </head>
       <body>
-        <main className="page-plain">
-          <h1>Something Melted</h1>
-          <p>The game hit an error it couldn&apos;t recover from.</p>
-          <button type="button" className="btn-link" onClick={() => location.assign('/')}>
-            MAIN MENU
-          </button>
-        </main>
+        <div onClick={onClick} dangerouslySetInnerHTML={{ __html: plainHTML('error').replace(' disabled', '') }} />
       </body>
     </html>
   );

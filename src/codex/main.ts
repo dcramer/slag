@@ -1,4 +1,7 @@
 import 'client-only';
+import type { Nav, Unmount } from '../router';
+import { HOME } from '../routes';
+import { MenuPadReader, readMenuPad } from '../ui/settings-nav';
 import { glowDot, type RC } from '../render/kit';
 import { drawItemIcon, ITEM_HUE } from '../render/items';
 import { drawHostCells, drawProjectile, drawResolved } from '../render/props';
@@ -16,43 +19,42 @@ import { PROJECTILE_NOTES, partGroups } from './parts';
  */
 
 const CSS = `
-:root{color-scheme:dark}
-body{margin:0;background:radial-gradient(1200px 600px at 20% -10%,#2a1a18,transparent),#0b0a10;color:#e9e6f2;font:500 14px Barlow,system-ui,sans-serif}
-header{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:14px 22px;background:rgba(11,10,16,.85);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,160,60,.2)}
-header h1{font:400 34px "Lilita One",system-ui;margin:0 12px 0 0;background:linear-gradient(#fff3b0,#ffb02e 40%,#ff5a1f 75%,#a8160f);-webkit-background-clip:text;background-clip:text;color:transparent}
-header a{color:#ffb46a;text-decoration:none;font-weight:700}
-nav{display:flex;flex-wrap:wrap;gap:6px}
-nav a{padding:5px 10px;border-radius:99px;background:#1c1928;border:1px solid rgba(255,255,255,.08);font-size:12px}
-.ctl{display:flex;gap:8px;align-items:center;margin-left:auto}
-.ctl input,.ctl select{background:#14121d;color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:6px 8px;font:600 13px Barlow}
-button{font:700 13px Barlow;color:#fff;background:linear-gradient(#ff9a2e,#e2561c);border:0;border-radius:9px;padding:7px 12px;cursor:pointer}
-button.ghost{background:#2c2840}
-main{padding:10px 22px 60px}
-section{margin:28px 0}
-section>h2{font:400 26px "Lilita One";margin:0 0 4px;color:#ffd9a8}
-section>p{margin:0 0 14px;color:#a39cb8;max-width:900px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
-.card{position:relative;background:linear-gradient(#1e1b2c,#13111c);border:1px solid rgba(255,255,255,.08);border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .12s,border-color .12s}
-.card:hover{transform:translateY(-3px);border-color:rgba(255,170,90,.6)}
-.stage{position:relative;height:150px;background:radial-gradient(circle at 50% 55%,rgba(255,255,255,.06),transparent 70%)}
-.stage canvas{position:absolute;inset:0;width:100%;height:100%}
-.stage canvas.glow{mix-blend-mode:plus-lighter}
-.meta{padding:8px 10px 10px}
-.name{font:700 14px Barlow;color:#fff}
-.maker{font-size:11px;color:#8a8499;margin-bottom:6px}
-.stat{font-size:11px;color:#c9c3d9;line-height:1.45}
-.tag{position:absolute;top:8px;left:8px;font:800 10px Barlow;letter-spacing:1px;padding:2px 7px;border-radius:99px;color:#fff;z-index:2}
-.tag.build{background:#2f9e4f}.tag.hazard{background:#d4334a}.tag.utility{background:#2c86c9}.tag.demolish{background:#e07a1f}
-.arch{margin:18px 0 8px;font:700 13px Barlow;text-transform:uppercase;letter-spacing:1.5px;color:#9a93ad}
-.parts{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
-.part{background:#16141f;border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:12px 14px}
-.part b{font:400 18px "Lilita One";color:#ffb46a}
-.part code{color:#7fd1ff}
-.modal{position:fixed;inset:0;background:rgba(5,4,9,.8);display:flex;align-items:center;justify-content:center;z-index:20}
-.modal .box{background:linear-gradient(#1e1b2c,#100e17);border:1px solid rgba(255,170,90,.35);border-radius:18px;padding:18px;width:min(900px,94vw);max-height:92vh;overflow:auto;display:grid;grid-template-columns:1.2fr 1fr;gap:18px}
-.modal .stage{height:380px;border-radius:12px;background:radial-gradient(circle at 50% 50%,#262236,#0e0c14)}
-.modal pre{font:12px/1.4 ui-monospace,Menlo,monospace;background:#0b0a10;border-radius:10px;padding:10px;max-height:300px;overflow:auto;color:#cfc8e3}
-@media (max-width:700px){.modal .box{grid-template-columns:1fr}}
+.slag-codex{min-height:100vh;margin:0;background:radial-gradient(1200px 600px at 20% -10%,#2a1a18,transparent),#0b0a10;color:#e9e6f2;font:500 14px Barlow,system-ui,sans-serif}
+.slag-codex header{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:14px 22px;background:rgba(11,10,16,.85);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,160,60,.2)}
+.slag-codex header h1{font:400 34px "Lilita One",system-ui;margin:0 12px 0 0;background:linear-gradient(#fff3b0,#ffb02e 40%,#ff5a1f 75%,#a8160f);-webkit-background-clip:text;background-clip:text;color:transparent}
+.slag-codex header a{color:#ffb46a;text-decoration:none;font-weight:700}
+.slag-codex nav{display:flex;flex-wrap:wrap;gap:6px}
+.slag-codex nav a{padding:5px 10px;border-radius:99px;background:#1c1928;border:1px solid rgba(255,255,255,.08);font-size:12px}
+.slag-codex .ctl{display:flex;gap:8px;align-items:center;margin-left:auto}
+.slag-codex .ctl input,.slag-codex .ctl select{background:#14121d;color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:6px 8px;font:600 13px Barlow}
+.slag-codex button{font:700 13px Barlow;color:#fff;background:linear-gradient(#ff9a2e,#e2561c);border:0;border-radius:9px;padding:7px 12px;cursor:pointer}
+.slag-codex button.ghost{background:#2c2840}
+.slag-codex main{padding:10px 22px 60px}
+.slag-codex section{margin:28px 0}
+.slag-codex section>h2{font:400 26px "Lilita One";margin:0 0 4px;color:#ffd9a8}
+.slag-codex section>p{margin:0 0 14px;color:#a39cb8;max-width:900px}
+.slag-codex .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.slag-codex .card{position:relative;background:linear-gradient(#1e1b2c,#13111c);border:1px solid rgba(255,255,255,.08);border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .12s,border-color .12s}
+.slag-codex .card:hover{transform:translateY(-3px);border-color:rgba(255,170,90,.6)}
+.slag-codex .stage{position:relative;height:150px;background:radial-gradient(circle at 50% 55%,rgba(255,255,255,.06),transparent 70%)}
+.slag-codex .stage canvas{position:absolute;inset:0;width:100%;height:100%}
+.slag-codex .stage canvas.glow{mix-blend-mode:plus-lighter}
+.slag-codex .meta{padding:8px 10px 10px}
+.slag-codex .name{font:700 14px Barlow;color:#fff}
+.slag-codex .maker{font-size:11px;color:#8a8499;margin-bottom:6px}
+.slag-codex .stat{font-size:11px;color:#c9c3d9;line-height:1.45}
+.slag-codex .tag{position:absolute;top:8px;left:8px;font:800 10px Barlow;letter-spacing:1px;padding:2px 7px;border-radius:99px;color:#fff;z-index:2}
+.slag-codex .tag.build{background:#2f9e4f}.slag-codex .tag.hazard{background:#d4334a}.slag-codex .tag.utility{background:#2c86c9}.slag-codex .tag.demolish{background:#e07a1f}
+.slag-codex .arch{margin:18px 0 8px;font:700 13px Barlow;text-transform:uppercase;letter-spacing:1.5px;color:#9a93ad}
+.slag-codex .parts{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.slag-codex .part{background:#16141f;border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:12px 14px}
+.slag-codex .part b{font:400 18px "Lilita One";color:#ffb46a}
+.slag-codex .part code{color:#7fd1ff}
+.slag-codex .modal{position:fixed;inset:0;background:rgba(5,4,9,.8);display:flex;align-items:center;justify-content:center;z-index:20}
+.slag-codex .modal .box{background:linear-gradient(#1e1b2c,#100e17);border:1px solid rgba(255,170,90,.35);border-radius:18px;padding:18px;width:min(900px,94vw);max-height:92vh;overflow:auto;display:grid;grid-template-columns:1.2fr 1fr;gap:18px}
+.slag-codex .modal .stage{height:380px;border-radius:12px;background:radial-gradient(circle at 50% 50%,#262236,#0e0c14)}
+.slag-codex .modal pre{font:12px/1.4 ui-monospace,Menlo,monospace;background:#0b0a10;border-radius:10px;padding:10px;max-height:300px;overflow:auto;color:#cfc8e3}
+@media (max-width:700px){.slag-codex .modal .box{grid-template-columns:1fr}}
 `;
 
 interface Live {
@@ -164,16 +166,22 @@ function openModal(def: PropDef) {
   box.append(left, right);
   modal.append(box);
   modal.onclick = (e) => e.target === modal && modal.remove();
-  document.body.append(modal);
+  host?.append(modal);
 }
 
-function render() {
-  const root = document.getElementById('codex')!;
+/** The mounted codex's element: modals open inside it, so they leave with it. */
+let host: HTMLElement | null = null;
+
+function render(root: HTMLElement, nav: Nav) {
   for (const l of lives) lives.delete(l);
   observer.disconnect();
   root.innerHTML = '';
   const header = document.createElement('header');
   header.innerHTML = `<h1>SLAG CODEX</h1><a href="/">← play</a><nav>${['parts', 'items', 'projectiles'].map((s) => `<a href="#${s}">${s}</a>`).join('')}</nav>`;
+  header.querySelector('a[href="/"]')!.addEventListener('click', (e) => {
+    e.preventDefault();
+    nav.go(HOME);
+  });
   root.append(header);
   const main = document.createElement('main');
   root.append(main);
@@ -278,18 +286,42 @@ function frame(now: number) {
     }
     l.draw({ s, bg: s, g, lights: null, t, frame: frameNo }, w, h);
   }
-  requestAnimationFrame(frame);
 }
 
-let mounted = false;
-
-/** Mount the codex into its container (called by the /codex route). */
-export function mountCodex(): void {
-  if (mounted) return;
-  mounted = true;
+/**
+ * The codex screen: mounts into `root` and runs until the returned function is called. Esc or Ⓑ
+ * closes an open part, then goes back to the main menu.
+ */
+export function mountCodex(root: HTMLElement, nav: Nav): Unmount {
   const st = document.createElement('style');
   st.textContent = CSS;
   document.head.append(st);
-  render();
-  requestAnimationFrame(frame);
+  const el = document.createElement('div');
+  el.className = 'slag-codex';
+  root.append(el);
+  host = el;
+  render(el, nav);
+  const back = () => {
+    const modal = el.querySelector('.modal');
+    if (modal) modal.remove();
+    else nav.go(HOME);
+  };
+  const life = new AbortController();
+  window.addEventListener('keydown', (e) => e.key === 'Escape' && back(), { signal: life.signal });
+  const pads = () => (navigator.getGamepads ? [...navigator.getGamepads()].filter((p): p is Gamepad => !!p?.connected) : []);
+  const reader = new MenuPadReader(readMenuPad(pads()));
+  let raf = requestAnimationFrame(function loop(now) {
+    raf = requestAnimationFrame(loop);
+    frame(now);
+    for (const a of reader.step(readMenuPad(pads()), now)) if (a === 'back') back();
+  });
+  return () => {
+    life.abort();
+    cancelAnimationFrame(raf);
+    lives.clear();
+    observer.disconnect();
+    host = null;
+    el.remove();
+    st.remove();
+  };
 }

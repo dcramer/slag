@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
-import './globals.css';
-import { DESCRIPTION, NAME, siteUrl, THEME_COLOR } from './site';
+import { PAGE_CHROME } from '../src/routes';
+import { FONTS_HREF, SCREEN_CSS, SCREEN_STYLE_ID } from '../src/ui/screens/css';
+import { DESCRIPTION, NAME, siteUrl } from './site';
 
 /**
  * Site-wide tags. The icons (favicon.ico, icon.svg, apple-icon.png), the manifest and the
@@ -19,12 +20,12 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: NAME, statusBarStyle: 'black-translucent' },
 };
 
-export const viewport: Viewport = { width: 'device-width', initialScale: 1, themeColor: THEME_COLOR };
+/** Menus scroll and zoom like pages; the lobby route asks for the game's own (src/routes.ts). */
+export const viewport: Viewport = PAGE_CHROME;
 
 /**
- * Type system (docs/ART.md): Lilita One for display (titles, big numbers,
- * menu items), Barlow for UI text. Both are loaded here for the pages and
- * the canvas HUD.
+ * The game's fonts (docs/ART.md → Type) and its screens' styles, inlined so the server-rendered
+ * main menu paints styled before any script. The game adds both itself if a host leaves them out.
  */
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
@@ -32,7 +33,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@500;600;700;800&family=Lilita+One&display=swap" rel="stylesheet" />
+        <link href={FONTS_HREF} rel="stylesheet" />
+        <style id={SCREEN_STYLE_ID} dangerouslySetInnerHTML={{ __html: SCREEN_CSS }} />
       </head>
       <body>{children}</body>
     </html>

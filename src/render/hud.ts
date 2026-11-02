@@ -192,6 +192,8 @@ export class Hud {
   };
   /** Hide all UI (?ui=0): for screenshots / level review. */
   hidden = false;
+  /** Where this frame wants the logo, in view px (null: no logo). See `logo`. */
+  logoAt: { x: number; y: number; size: number } | null = null;
   /** Lobby/room code shown in the lobby (the URL is /r/<room>). */
   room = '';
   /** Device the mouse controls (gets name/settings buttons). */
@@ -374,6 +376,7 @@ export class Hud {
     // Prototype-backed, so the match's methods and every other field read through untouched.
     const m: Match = this.net?.stranded ? Object.assign(Object.create(match) as Match, { players: [] }) : match;
     this.buttons = [];
+    this.logoAt = null;
     const c = this.ctx;
     const f = this.frame;
     const k = pw / f.w;
@@ -444,42 +447,22 @@ export class Hud {
       this.wipe -= (t - this.lastT) * 2.6;
     }
     this.lastT = t;
+    // The logo is DOM over this canvas: it can't be under the door, so it waits until the door has passed.
+    if (this.wipe > 0) this.logoAt = null;
   }
 
   private rc(): RC {
     return { s: this.ctx, bg: this.ctx, g: this.gctx, lights: null, t: 0, frame: 0 };
   }
 
-  private logo(x: number, y: number, size: number, t: number) {
-    const c = this.ctx;
-    c.font = `400 ${size}px ${DISPLAY}`;
-    c.textAlign = 'center';
-    c.textBaseline = 'middle';
-    c.lineJoin = 'round';
-    c.lineWidth = size * 0.18;
-    c.strokeStyle = PAL.ink;
-    c.strokeText('SLAG', x, y);
-    const g = c.createLinearGradient(0, y - size / 2, 0, y + size / 2);
-    g.addColorStop(0, PAL.whiteHot);
-    g.addColorStop(0.35, PAL.amber);
-    g.addColorStop(0.7, PAL.molten);
-    g.addColorStop(1, PAL.ember);
-    c.fillStyle = g;
-    c.fillText('SLAG', x, y);
-    // Molten drips.
-    const w = c.measureText('SLAG').width;
-    const k = size / 64;
-    for (let i = 0; i < 6; i++) {
-      const dx = x - w / 2 + 8 * k + (i / 5) * (w - 16 * k);
-      const len = (6 + ((Math.sin(t * 0.9 + i * 2.3) + 1) / 2) * 10 + (i % 3) * 3) * k;
-      const dy = y + size * 0.3;
-      c.fillStyle = PAL.ember;
-      rrect(c, dx - 2.2 * k, dy - 4 * k, 4.4 * k, len, 2.2 * k);
-      c.fill();
-      c.fillStyle = PAL.molten;
-      circle(c, dx, dy + len - 3 * k, 2.6 * k);
-    }
-    glowDot(this.gctx, x, y, size * 1.2, { h: 25, s: 100, l: 55 }, 0.22 + Math.sin(t * 2) * 0.04, 0.3);
+  /**
+   * Where the logo goes: centered on (x, y) at font size `size`, in the current group's logical px. The
+   * logo itself is the main menu's, laid over this canvas by the game (src/ui/screens/logo.ts), so it
+   * matches it exactly (glow included) and stays crisp at any render quality.
+   */
+  private logo(x: number, y: number, size: number) {
+    const g = this.group;
+    this.logoAt = { x: g.ox + x * g.s, y: g.oy + y * g.s, size: size * g.s };
   }
 
   /** Rising embers from the bottom of the screen (lobby ambience). */
@@ -530,7 +513,7 @@ export class Hud {
     const safeW = win.safeX1 - win.safeX0 - 16;
     const barS = phone ? Math.min(this.uiScale, safeW / PHONE_BAR_W) : 1;
     let done = this.begin(barS, phone ? win.safeX0 + 8 - 14 * barS : 0, 0);
-    this.logo(64, 30, 38, t);
+    this.logo(64, 30, 38);
     const me = m.players.find((p) => p.device === this.mouseDevice);
     const lv = m.level.theme;
     const themeLabel = THEME_LABELS[lv.id].toUpperCase();

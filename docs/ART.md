@@ -2,6 +2,14 @@
 
 These rules cover the menus, the lobby, and the in-game HUD. The world art (levels, props, characters) is hand-inked in code: see [World art](#world-art-ink) at the end. What each item and part mocks, with its silhouette and visual gag, is in [PARODY.md](PARODY.md).
 
+## The bar: the main menu
+
+**The main menu is the quality bar for every screen.** The owner loves it: the molten drip logo, the rising embers and heat shimmer, the crowd on the slag heap under the pour, and that it fills the window's full height. Keep its look exactly, and bring every other screen up to it, never the other way round.
+
+- **One logo.** It's `logoHTML()` in `src/ui/screens/markup.ts` with its CSS: an ink outline and hard drop behind a molten gradient, with drips. The lobby shows that same element over its top bar, scaled as a whole (`FloatingLogo`), so treatment, proportions and crispness can't drift. Don't draw a second logo on a canvas.
+- **One settings menu** (`SettingsMenu` in `src/ui/menus.ts`), the same over the main menu and in a game.
+- Every screen is a game screen with the game's input: keyboard, gamepad and touch, the console-style selection below, and a footer prompt bar.
+
 ## Identity: a molten foundry that doubles as a toy box
 
 SLAG is junk melted down and recast. The UI looks like **cast-iron plates, hazard tape, and molten metal**. It feels chunky and handled, like a toy: hard outlines, hard drop shadows, buttons that physically press down. It should never read as a generic dark dashboard.
@@ -15,7 +23,7 @@ SLAG is junk melted down and recast. The UI looks like **cast-iron plates, hazar
 
 ## Palette
 
-The canonical palette is `PAL` in `src/ui/style.ts`. `app/globals.css` mirrors it as CSS variables.
+The canonical palette is `PAL` in `src/ui/style.ts`. `src/ui/screens/css.ts` mirrors it as CSS variables.
 
 | Token | Hex | Use |
 |---|---|---|
@@ -35,7 +43,7 @@ Player colors come from the characters and are used for accents only: card top s
 
 ## Type
 
-There are two faces, both loaded in `app/layout.tsx`:
+There are two faces, both loaded from `FONTS_HREF` in `src/ui/screens/css.ts`:
 
 - **Display: Lilita One.** Use it for titles, phase headings, menu items, player names, and big numbers (timers, scores). It always gets an ink outline or ink shadow.
 - **UI: Barlow** (500/600/700/800). Use it for everything else: labels, prompts, tags, notes. Use weight 600–700 for most text and 800 for small uppercase tags.

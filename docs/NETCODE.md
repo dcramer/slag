@@ -56,7 +56,7 @@ app/api/net/
 
 A build served from another origin (a packaged app pointing at the hosted API) needs:
 
-1. `setSignalBase('https://<hosted-app>')` before `bootGame`.
+1. `setSignalBase('https://<hosted-app>')` before `mountGame`.
 2. The API to accept its origin: `originAllowed` in `guard.ts` rejects a browser `Origin` that isn't the request's host, so add an allowlist there, and send `Access-Control-Allow-Origin` on replies. No preflight handling is needed: all requests are `text/plain` POSTs, which are CORS-simple by design. `sendBeacon` works the same way. Packaged origins can be `null` or a custom scheme (`capacitor://localhost`), so the allowlist has to match those literally.
 3. A public origin for `inviteUrl` in `client.ts`, which uses `location.origin`.
 

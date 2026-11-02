@@ -22,6 +22,7 @@ export function openStandaloneSettings(onClose: () => void): () => void {
   menu.onClose = () => {
     closed = true;
     window.removeEventListener('keydown', onKey);
+    input.dispose();
     onClose();
   };
   const onKey = (e: KeyboardEvent) => {
@@ -34,6 +35,7 @@ export function openStandaloneSettings(onClose: () => void): () => void {
       menu.onClose = null;
       menu.close();
       window.removeEventListener('keydown', onKey);
+      input.dispose();
     }
   };
 }
