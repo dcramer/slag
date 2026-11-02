@@ -1,7 +1,7 @@
 {
   "model": "model.glb",
   "height": 21.5,
-  "yaw": 56,
+  "yaw": 40,
   "pitch": 6,
   "step": 0.8,
   "trace": {
@@ -12,7 +12,7 @@
   },
   "scale": {
     "spine_01": 1.18,
-    "head": 1.25,
+    "head": 1.35,
     "hand_l": 1.35,
     "hand_r": 1.35,
     "foot_l": 1.45,
@@ -471,5 +471,5 @@
       }
     }
   },
-  "girth": 1.2
+  "girth": 1.25
 }
