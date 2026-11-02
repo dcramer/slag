@@ -288,7 +288,6 @@ export function drawDrops(rc: RC, run: RunWorld): void {
     // A twinkle, so items read as pick-ups and not scenery.
     const tw = (rc.t * 1.3 + d.id * 0.37) % 1;
     if (tw < 0.25) twinkle(rc.s, d.x + 4.5, y - 5.5, 2.8 * Math.sin((tw / 0.25) * Math.PI), css(col, 34, 1, -20));
-    light(rc, d.x, y, 26, col, 0.25);
   }
 }
 

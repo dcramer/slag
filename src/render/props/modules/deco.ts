@@ -4,7 +4,7 @@ import { hash2 } from '../../../core/rng';
 import type { ModuleOf } from '../../../sim/props';
 import { line } from '../../ink';
 import { ball, boxPts, dot, INK, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
-import { circle, glowDot, light, METALS, type MetalPalette, type RC } from '../../kit';
+import { bulb, circle, light, type MetalPalette, METALS, type RC } from '../../kit';
 import { BACKDROP, type DrawCtx, defineArt } from '../common';
 import { lattice } from './setpiece';
 import { decoSkin } from '../skins';
@@ -93,8 +93,8 @@ function pressLamp(rc: RC, m: Deco, d: DrawCtx) {
   ball(s, lx, ly, 2.4, on ? { h: 4, s: 100, l: 58 } : { h: 4, s: 60, l: 24 }, 8);
   if (on) {
     const red: HSL = { h: 4, s: 100, l: 55 };
-    glowDot(rc.g, lx, ly, 12, red, 0.9);
-    light(rc, lx, ly, 60, red, 0.8);
+    bulb(rc.g, lx, ly, 2.2, red, 1);
+    light(rc, lx, ly, 44, red, 0.7);
   }
   // Pancake Press: what it's been pressing, in the floor under it.
   const pc = d.r.mods.find((mm) => mm.type === 'piston');
@@ -193,7 +193,7 @@ function antennaMasts(rc: RC, m: Deco, d: DrawCtx) {
     circle(s, mx + 3.5, y + 19, 1.8);
     s.fillStyle = on ? '#ff3a30' : '#601818';
     circle(s, mx + 3.5, y + 19, 1.2);
-    if (on) glowDot(rc.g, mx + 3.5, y + 19, 6, { h: 3, s: 100, l: 55 }, 0.8);
+    if (on) bulb(rc.g, mx + 3.5, y + 19, 1.2, { h: 3, s: 100, l: 55 }, 0.9);
   }
 }
 
