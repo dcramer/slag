@@ -1,14 +1,15 @@
 import { css, type HSL } from '../../core/color';
 import type { Module, Resolved } from '../../sim/props';
 import { line, type P } from '../ink';
-import { boxPts, dot, INK, ovalPts, part, path, tone } from '../ink-props';
+import { boxPts, dot, INK, ovalPts, part, path } from '../ink-props';
 import type { MetalPalette } from '../kit';
 
 /**
  * The hazard machines' housings (docs/ART.md, World art: ink). A launcher, a jet, an emitter or a fan sits
  * on a one-tile block, and drawn as a block it read as a box with a gadget stuck on. Here the block *is*
- * the machine: its art draws the whole cell, inside the same hitbox, so the body block isn't drawn under
- * it (`housed`). Everything is drawn in a local frame whose business end faces -y and mapped to the way
+ * the machine: its art draws the part in the cell, so the body block isn't drawn under it (`housed`). Its
+ * outline is the machine's own shape (a gas bottle, a dome, a lantern), inside the hitbox but never its
+ * square. Everything is drawn in a local frame whose business end faces -y and mapped to the way
  * the part faces, so a jet turned on its side keeps its flange at the back and its lit side up-left.
  */
 
@@ -134,14 +135,6 @@ export function within(g: CanvasRenderingContext2D, pts: readonly P[], draw: () 
 /** Iron that never sinks into the night: a metal's base, lifted if it's too dark to read against the sky. */
 export function iron(pal: MetalPalette, min = 36): HSL {
   return { ...pal.base, l: Math.max(pal.base.l, min) };
-}
-
-/** The recess behind a housing: the dark iron that fills a cell round its shaped parts, so the block still reads solid. */
-export function backplate(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, pal: MetalPalette, seed: number): P[] {
-  const pts = boxPts(x, y, w, h, 2.6, seed, 0.2);
-  const back: HSL = { h: pal.dark.h, s: Math.min(30, pal.dark.s), l: Math.max(16, Math.min(24, pal.dark.l + 2)) };
-  tone(g, pts, back, { depth: 0.8, shade: -7 });
-  return pts;
 }
 
 /**

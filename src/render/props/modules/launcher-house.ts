@@ -1,94 +1,129 @@
 import { css, type HSL } from '../../../core/color';
-import { line } from '../../ink';
-import { boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, tick, tone } from '../../ink-props';
+import { line, type P, stroke } from '../../ink';
+import { ball, dot, INK, ovalPts, part, path, poly, tick } from '../../ink-props';
 import type { MetalPalette } from '../../kit';
-import { backplate, flange, iron } from '../machine';
+import { disc, iron } from '../machine';
 
 /**
- * What a launcher stands in: the whole cell under its barrel, drawn as the machine and not as a block
- * (props/machine.ts). Upright always, in the launcher's own px round the cell's center; the barrel pivots
- * at (0, 0). A style whose mount already fills the cell (a carved trap, a tower, an idol, a vending
- * machine) needs none of these.
+ * The pieces a launcher's body is built from (props/machine.ts): wheels, legs, a stand. Each style builds
+ * its own body out of them, so its outline is the machine's shape (a cannon on its carriage, a turret on
+ * a tripod, a blaster on its pedestal), never the square of the tile it stands in. Upright always, in the
+ * launcher's own px round the cell's center; the barrel pivots at (0, 0).
  */
 
-/**
- * A gun mount: a bolted turntable and two forked cheeks standing up either side of the pivot, with a pin
- * through each, painted in the part's color. The barrel swings between the cheeks.
- */
-export function yoke(g: CanvasRenderingContext2D, pal: MetalPalette, hue: HSL, seed: number) {
-  backplate(g, -8, -8, 16, 16, pal, seed);
-  flange(g, 0, -8, 8, 4.6, pal, seed + 1);
-  // The turntable ring the cheeks stand on.
+/** A spoked cart wheel: tyre, hub, four spokes. */
+export function cartWheel(g: CanvasRenderingContext2D, x: number, y: number, r: number, wood: HSL, pal: MetalPalette, seed: number) {
   g.fillStyle = INK;
-  path(g, ovalPts(0, 4.4, 5.4, 1.5, seed + 2, 0.03, 16));
+  disc(g, x + 0.2, y + 0.25, r + 0.7, seed);
   g.fill();
-  const metal = iron(pal, 44);
-  for (const sg of [-1, 1]) {
-    const cheek = poly(sg * 7.9, 4.9, sg * 7.9, -4.2, sg * 7.2, -6.6, sg * 5.6, -7.4, sg * 4.2, -6, sg * 4.1, 4.9);
-    tone(g, cheek, metal, { depth: 0.9, shade: -18 });
-    g.save();
-    path(g, cheek);
-    g.clip();
-    g.fillStyle = css(hue, -4);
-    g.fillRect(sg * 8.5 - 4, 1.2, 8, 2.2);
+  g.fillStyle = css(wood, -8);
+  disc(g, x, y, r, seed + 1);
+  g.fill();
+  g.fillStyle = css(wood, -26, 1, 6);
+  disc(g, x + 0.1, y + 0.1, r - 1, seed + 2);
+  g.fill();
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI + 0.4;
+    g.fillStyle = css(wood, 4);
+    line(g, x - Math.cos(a) * (r - 0.8), y - Math.sin(a) * (r - 0.8), x + Math.cos(a) * (r - 0.8), y + Math.sin(a) * (r - 0.8), {
+      w: 0.6,
+      seed: seed + i,
+      taper: [0, 0],
+      press: 0,
+    });
+  }
+  dot(g, x, y, Math.max(0.6, r * 0.28), seed + 5, css(iron(pal, 50), 20));
+}
+
+/** A small solid wheel, for a cart: a dark tyre and a lit hub. */
+export function wheel(g: CanvasRenderingContext2D, x: number, y: number, r: number, pal: MetalPalette, seed: number) {
+  ball(g, x, y, r, { h: 220, s: 8, l: 22 }, seed);
+  dot(g, x, y, r * 0.4, seed + 1, css(iron(pal, 50), 18));
+}
+
+/** Legs splayed from a hub to the ground: a dark ink stroke under a lit one, a foot pad at each end. */
+export function legs(g: CanvasRenderingContext2D, hx: number, hy: number, feet: readonly number[], col: HSL, seed: number) {
+  for (let i = 0; i + 1 < feet.length; i += 2) {
+    const pts: P[] = [
+      { x: hx, y: hy },
+      { x: (hx + feet[i]) / 2, y: (hy + feet[i + 1]) / 2 },
+      { x: feet[i], y: feet[i + 1] },
+    ];
     g.fillStyle = INK;
-    line(g, sg * 3.6, 3.6, sg * 8.4, 3.6, { w: 0.6, seed: seed + sg, taper: [0, 0], press: 0.2 });
-    g.restore();
-    pen(g, cheek, seed + 3 + sg, 0.5, 1.4);
-    // The pin the barrel turns on.
-    dot(g, sg * 6.1, -0.6, 1.25, seed + 5 + sg, css(pal.spec, -10));
+    stroke(g, pts, { w: 2.2, seed: seed + i, taper: [0, 0], press: 0.1 });
+    g.fillStyle = css(col, feet[i] < hx ? 10 : -8);
+    stroke(g, pts, { w: 1.1, seed: seed + i + 1, taper: [0, 0], press: 0.1 });
+    g.fillStyle = INK;
+    path(g, ovalPts(feet[i], feet[i + 1] - 0.2, 1.5, 0.75, seed + i + 2, 0.05, 12));
+    g.fill();
   }
-  glint(g, poly(-7.2, 0.4, -7.1, -3.8, -6, -6.2), css(pal.spec, -12), 0.6);
+}
+
+/** A hub where legs or a barrel meet a body: a dark disc with a lit cap. */
+export function hub(g: CanvasRenderingContext2D, x: number, y: number, r: number, pal: MetalPalette, seed: number) {
+  ball(g, x, y, r, iron(pal, 46), seed);
+}
+
+/** A round character body on two stubby feet, with a hard shine on its shoulder. */
+export function bean(g: CanvasRenderingContext2D, col: HSL, seed: number) {
+  for (const x of [-3.2, 3.2]) {
+    g.fillStyle = INK;
+    path(g, ovalPts(x, 7, 2.3, 1.2, seed + x, 0.04, 14));
+    g.fill();
+    g.fillStyle = css(col, -22, 1, 4);
+    path(g, ovalPts(x - 0.2, 6.8, 1.7, 0.75, seed + x + 1, 0.04, 14));
+    g.fill();
+  }
+  const body = ovalPts(0, 0.6, 7.2, 6.8, seed, 0.03, 30);
+  part(g, body, col, seed, { depth: 1.4, thin: 0.55, thick: 1.6, shade: -18 });
+  g.fillStyle = css(col, 22);
+  line(g, -5.6, -0.4, -4, -3.8, { w: 1, seed: seed + 2, taper: [0.25, 0.4], press: 0.1 });
+}
+
+/** A gumball machine's cast stand: a waist under the globe flaring to a heavy foot, with a coin plate. */
+export function stand(g: CanvasRenderingContext2D, col: HSL, seed: number) {
+  const pts = poly(-4.2, 1, 4.2, 1, 5.2, 5.4, 7.4, 6.2, 7.4, 8, -7.4, 8, -7.4, 6.2, -5.2, 5.4);
+  part(g, pts, col, seed, { depth: 1, thin: 0.55, thick: 1.5, shade: -18 });
+  g.fillStyle = css(col, -28, 1, 6);
+  line(g, -7, 6.3, 7, 6.3, { w: 0.6, seed: seed + 1, taper: [0, 0], press: 0.2 });
+  g.fillStyle = css(col, 20);
+  line(g, -3.6, 1.8, -4.4, 5, { w: 0.7, seed: seed + 2, taper: [0.2, 0.3], press: 0.1 });
+}
+
+/** A mortar's baseplate: a heavy dished disc seen edge-on, with a lip and two bolts. */
+export function baseplate(g: CanvasRenderingContext2D, pal: MetalPalette, seed: number) {
+  const pts = poly(-7.8, 7.9, 7.8, 7.9, 7.2, 5.8, 3, 5, -3, 5, -7.2, 5.8);
+  part(g, pts, iron(pal, 40), seed, { depth: 0.6, thin: 0.5, thick: 1.4, shade: -16 });
+  for (const x of [-5, 5]) dot(g, x, 6.8, 0.6, seed + x, css(pal.light));
 }
 
 /**
- * A section of ship's hull: tarred planks pegged at the joints, an open gun port in the middle with its
- * lid propped up over it (`port`), or plain planks for a shed wall.
+ * A bullet blaster's pedestal: a tapered black column on a stepped foot, bolted round its base.
+ * The drum it fires from is the barrel, turning on top of it, and it wears the skull.
  */
-export function hull(g: CanvasRenderingContext2D, wood: HSL, pal: MetalPalette, seed: number, port: boolean) {
-  const body = boxPts(-8, -8, 16, 16, 2.4, seed, 0.25);
-  tone(g, body, wood, { depth: 1.2, shade: -16 });
-  g.save();
-  path(g, body);
-  g.clip();
-  const seam = css(wood, -26, 1, 6);
-  for (const [i, y] of [-4.6, -1.4, 1.8, 5].entries()) {
-    g.fillStyle = seam;
-    line(g, -9, y, 9, y + 0.15, { w: 0.75, seed: seed + i, taper: [0, 0], press: 0.3 });
-    g.fillStyle = css(wood, 12);
-    line(g, -9, y + 0.65, 9, y + 0.75, { w: 0.4, seed: seed + i + 9, taper: [0, 0], press: 0.3 });
-    const jx = i % 2 ? -3.4 : 3;
-    tick(g, jx, y - 3, jx, y, 0.6, seed + i * 3, seam);
-    dot(g, jx - 1.1, y - 1.6, 0.4, seed + i * 5);
-  }
-  g.restore();
-  pen(g, body, seed + 1, 0.55, 1.5);
-  if (!port) return;
-  // The port: a dark square hole with an iron frame, and the lid hinged open above it.
-  const frame = boxPts(-5.6, -4.2, 11.2, 10, 1.6, seed + 2);
-  part(g, frame, iron(pal, 34), seed + 2, { depth: 0.5, thin: 0.45, thick: 1.1 });
-  g.fillStyle = '#120c09';
-  path(g, boxPts(-4.3, -3, 8.6, 7.6, 1.2, seed + 3));
-  g.fill();
-  const lid = poly(-5.4, -4.5, 5.4, -4.5, 6.4, -7.9, -6.4, -7.9);
-  part(g, lid, { ...wood, l: wood.l - 6 }, seed + 4, { depth: 0.5, thin: 0.45, thick: 1.1 });
-  for (const x of [-3.2, 3.2]) tick(g, x, -4.6, x * 1.12, -7.7, 0.9, seed + x, css(pal.dark, 8));
+export function pedestal(g: CanvasRenderingContext2D, seed: number) {
+  const black: HSL = { h: 220, s: 10, l: 20 };
+  const foot = poly(-7.6, 8, 7.6, 8, 7.6, 6.2, 6.4, 5.4, -6.4, 5.4, -7.6, 6.2);
+  part(g, foot, black, seed, { depth: 0.6, thin: 0.5, thick: 1.4, shade: -8 });
+  const col = poly(-5.6, 5.6, 5.6, 5.6, 4.6, 1, -4.6, 1);
+  part(g, col, black, seed + 1, { depth: 0.8, thin: 0.5, thick: 1.4, shade: -8 });
+  g.fillStyle = css(black, 22);
+  line(g, -4.8, 1.6, -5.3, 5, { w: 0.6, seed: seed + 2, taper: [0.2, 0.3], press: 0 });
+  for (const x of [-3.4, 0, 3.4]) dot(g, x, 6.8, 0.55, seed + 3 + x, css(black, 40));
 }
 
-/** A cast cabinet in one color: rounded, two screws, a seam round its face and a dark plinth along its foot. */
-export function cabinet(g: CanvasRenderingContext2D, col: HSL, pal: MetalPalette, seed: number) {
-  const body = boxPts(-8, -8, 16, 16, 2.8, seed, 0.25);
-  tone(g, body, col, { depth: 1.3, shade: -18 });
-  g.save();
-  path(g, body);
-  g.clip();
-  g.fillStyle = css(col, -32, 1, 4);
-  g.fillRect(-9, 5, 18, 4);
+/** A blaster's badge: a skull on a white disc, its own grin rather than anyone's crossbones. */
+export function skull(g: CanvasRenderingContext2D, x: number, y: number, seed: number) {
   g.fillStyle = INK;
-  line(g, -9, 5, 9, 5, { w: 0.7, seed, taper: [0, 0], press: 0.3 });
-  g.fillStyle = css(col, 16);
-  line(g, -6.6, -6.4, -6.6, 3, { w: 0.8, seed: seed + 1, taper: [0.2, 0.4], press: 0.1 });
-  g.restore();
-  pen(g, body, seed + 2, 0.55, 1.6);
-  for (const x of [-5.8, 5.8]) dot(g, x, 6.6, 0.6, seed + x, css(pal.light));
+  disc(g, x + 0.15, y + 0.15, 2.5, seed);
+  g.fill();
+  g.fillStyle = '#f2ecdf';
+  disc(g, x, y, 2.05, seed + 1);
+  g.fill();
+  g.fillStyle = INK;
+  path(g, ovalPts(x - 0.75, y - 0.35, 0.5, 0.62, seed + 2, 0, 10));
+  g.fill();
+  path(g, ovalPts(x + 0.75, y - 0.35, 0.5, 0.62, seed + 3, 0, 10));
+  g.fill();
+  for (const dx of [-0.65, 0, 0.65]) tick(g, x + dx, y + 0.75, x + dx, y + 1.45, 0.32, seed + 4 + dx);
 }

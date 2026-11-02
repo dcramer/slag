@@ -6,7 +6,7 @@ import { blob, stroke } from '../../ink';
 import { ball, dot, INK, ovalPts, part, path, pen, poly, sprite, stamp, tick } from '../../ink-props';
 import type { MetalPalette, RC } from '../../kit';
 import { beamOf, defineArt, type PropDrawOpts } from '../common';
-import { backplate, bolt, type Face, faceOf, flange, housed, iron, lp, tf } from '../machine';
+import { type Face, faceOf, flange, housed, iron, lp, tf } from '../machine';
 
 type M<T extends Module['type']> = ModuleOf<T>;
 
@@ -82,9 +82,7 @@ function drawFan(rc: RC, m: M<'fan'>, r: Resolved, mi: number, off: Vec, pal: Me
 function housing(k: Face, pal: MetalPalette, plate: boolean) {
   return sprite(`fan|h|${k}|${plate}|${pal.base.h},${pal.base.l}`, -11, -11, 22, 22, (g) => {
     if (plate) {
-      backplate(g, -8, -8, 16, 16, pal, 2);
-      flange(g, k, -8, 8, 5, pal, 3);
-      for (const x of [-6, 6]) bolt(g, k, x, -6, 0.85, pal, 4 + x);
+      flange(g, k, -6, 6, 5.2, pal, 3);
     }
     const c = tf(k, 0, -0.4);
     part(g, ovalPts(c.x, c.y, 7.3, 7.3, 3, 0.02), iron(pal, 42), 3, { depth: 1.2, thin: 0.55, thick: 1.5 });

@@ -51,7 +51,7 @@ Each row gives what the item or part mocks, its silhouette (what must read at ga
 | magnet | Gravity Well, Tractor Beam, Black Hole Lite, Social Distancer, Force Push | Gravity puzzles and tractor beams | A horseshoe magnet cradling an orb, and a field ring | Black Hole Lite has a diet-soda label. The repulsor wears a "6 ft" ring marking. |
 | web | Cobweb, Spider Level, World Wide Web, Net | The spider level | Strands between cells | One strand ends in a tiny cursor arrow. |
 | blinker | Yolo Blocks, Blink Blocks, On/Off Bricks, Lag Bricks | Infamous appearing and disappearing blocks | Ghosted blocks | Lag Bricks stutter in a frame late, with a tiny loading spinner. |
-| dropper | Thwunk, Grudge Block, Angry Brick, Ceiling Grump | The angry slamming stone face | A heavy block with a face | Its eyes follow the nearest runner, and it has a vein on its brow. |
+| dropper | Thwunk, Grudge Block, Angry Brick, Ceiling Grump | The angry slamming stone face | A heavy carved block with a face and a rim of stone teeth | Its eyes follow the nearest runner, and it has a vein on its brow. |
 | snapper | Gotcha Plate, Pressure Plate, Pop-Up Spikes, Surprise Party | Temple pressure-plate traps | A flat plate on a face | Party streamers burst out with the spikes. |
 | wheel | Ferris Wheel, Cog Lift, Hamster Wheel, Lazy Susan | Ferris-wheel lifts | A hub with platforms on arms | Hamster Wheel has a water bottle hanging off the hub. |
 | bomb | Cartoon Bomb, Kaboom, Fuse Ball, *Xxx*-omb | The round black cartoon bomb, and the walking bomb | A black sphere with a fuse | Two little feet, and its eyes squeeze shut as the fuse runs down. |
@@ -76,10 +76,10 @@ The style picks the body and the ammo. The aim word (Fixed, Sweeps, Tracks) and 
 | totem | Tiki Spitter, Heartburn Idol | Fire-spitting statues | heartburn | The idol clutches its belly and the fireballs are chili-red. |
 | turret | Sentry Gun, Sorry Turret | The polite sentry turret | apology | A worried face on the turret. Its shots are tiny speech-bubble shapes. |
 | thrower | Ninja Box, Shuriken Vendor | Ninja star throwers | throwing star | A coin slot and a vending window. |
-| rocket | Seeker Pod, Homing Rack, Grudge Launcher | The homing shell everyone hates | grudge missile | The missile has angry eyebrows over its red eye. |
+| rocket | Seeker Pod, Homing Rack, Grudge Launcher | The homing shell everyone hates, fired from a bullet blaster (a black drum on a pedestal, a skull on its pivot) | grudge missile | The missile has angry eyebrows over its red eye. |
 | glaive | Boomerang Bruh, Return Policy | The boomerang-throwing enemy | boomerang | A backwards cap on the launcher. |
 | gumball | Gumball Machine, Dodgeball Coach, Ball Pit | Gym-class dodgeball | dodgeball | A coach's whistle on a lanyard. |
-| mortar | Banana Mortar, Bunch Launcher | The splitting banana bomb from artillery games | banana bunch | The shell is a banana bunch that splits into single bananas. |
+| mortar | Banana Mortar, Bunch Launcher | The splitting banana bomb from artillery games, lobbed from a stubby green pipe on a bipod | banana bunch | The shell is a banana bunch that splits into single bananas. |
 | gooper | Splat Gun, Sneeze Cannon | Paint-splat shooters | sneeze | A big nose on the muzzle. |
 | cryo | Freeze Ray, Brain Freezer, Slushie Gun | Freeze rays | slushie | A slushie cup with a straw as the barrel. |
 | prism | Trick-Shot Lens, Mirror Puzzle | Laser-mirror puzzles and trick shots | trick shot | Shots leave a dotted aim line the way trick-shot replays do. |

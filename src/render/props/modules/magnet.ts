@@ -1,10 +1,10 @@
 import { css, type HSL } from '../../../core/color';
 import { magnetCycle } from '../../../sim/props';
 import { line, type P, stroke } from '../../ink';
-import { ball, dot, INK, path, pen, sprite, stamp, tick, tone } from '../../ink-props';
+import { ball, INK, path, pen, sprite, stamp, tick, tone } from '../../ink-props';
 import { circle, glowDot, light, type MetalPalette } from '../../kit';
 import { defineArt } from '../common';
-import { backplate, housed } from '../machine';
+import { housed } from '../machine';
 
 /**
  * The core: a black hole in a jar (pull) or a hot pushy orb (push), inked. Black Hole Lite wears a diet
@@ -61,8 +61,6 @@ function orb(pull: boolean, lite: boolean) {
  */
 function horseshoe(pull: boolean, pal: MetalPalette) {
   return sprite(`mg|shoe|${pull}|${pal.base.h},${pal.base.l}`, -10, -10, 20, 20, (g) => {
-    backplate(g, -8, -8, 16, 16, pal, 1);
-    for (const sx of [-6, 6]) dot(g, sx, 6.2, 0.85, 2 + sx, css(pal.light));
     const paint: HSL = pull ? { h: 356, s: 72, l: 48 } : { h: 214, s: 66, l: 48 };
     const R = 7.8;
     const r = 3.3;

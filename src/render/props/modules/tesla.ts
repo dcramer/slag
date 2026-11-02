@@ -5,7 +5,7 @@ import { blob, line, type P, stroke } from '../../ink';
 import { ball, boxPts, glint, INK, part, path, pen, poly, sprite, stamp, tick } from '../../ink-props';
 import { glowDot, light, lightning, type MetalPalette, type RC } from '../../kit';
 import { beamOf, defineArt, type PropDrawOpts } from '../common';
-import { backplate, flange, housed, iron } from '../machine';
+import { flange, housed, iron } from '../machine';
 
 type M<T extends Module['type']> = ModuleOf<T>;
 
@@ -60,7 +60,6 @@ function pylon(pal: MetalPalette, col: HSL, moth: boolean) {
 function lantern(pal: MetalPalette, col: HSL, moth: boolean) {
   return sprite(`ts|lantern|${pal.base.h},${pal.base.l}|${col.h | 0}|${moth}`, -10, -14, 20, 24, (g) => {
     const metal = iron(pal, 40);
-    backplate(g, -8, -8, 16, 16, pal, 1);
     // The terminal on its post, above the cap.
     tick(g, 0, -7, 0, -9.6, 1.5, 1);
     ball(g, 0, -10.2, 1.9, { h: 24, s: 60, l: 52 }, 3);
@@ -101,7 +100,7 @@ function lantern(pal: MetalPalette, col: HSL, moth: boolean) {
     cap.push({ x: 7.9, y: -4.2 }, { x: -7.9, y: -4.2 });
     part(g, cap, metal, 7, { depth: 0.7, thin: 0.5, thick: 1.3 });
     glint(g, poly(-5.6, -5.4, -3.4, -7.2, -1, -7.8), css(pal.spec, -8), 0.6);
-    flange(g, 0, -8, 8, 4.6, pal, 8);
+    flange(g, 0, -7.2, 7.2, 4.8, pal, 8);
     if (moth) {
       // Scorched, on its back on the tray, with a last curl of smoke.
       g.fillStyle = '#2b2420';

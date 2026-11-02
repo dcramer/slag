@@ -1,10 +1,11 @@
 import { css, type HSL } from '../../../core/color';
 import type { Vec } from '../../../core/geom';
 import { dirOf, laserAngle, laserCycle, type Module, type ModuleOf, type PropStyle, type Resolved } from '../../../sim/props';
+import type { P } from '../../ink';
 import { ball, boxPts, dot, glint, INK, part, pen, poly, sprite, stamp, tone } from '../../ink-props';
 import { circle, glowDot, light, type MetalPalette, type RC } from '../../kit';
 import { beamOf, defineArt, type PropDrawOpts } from '../common';
-import { backplate, disc, type Face, faceOf, flange, flat, housed, iron, lbox, ltick, orb, tf, within } from '../machine';
+import { disc, type Face, faceOf, flange, flat, housed, iron, lbox, ltick, orb, tf, within } from '../machine';
 
 type M<T extends Module['type']> = ModuleOf<T>;
 
@@ -17,17 +18,26 @@ const RING_Y = 0;
  * painted lip at the front, three charge lamps on the flange and a deep turret socket in the middle that
  * the pointer swivels in. All that, for a pen.
  */
+function dome(k: Face): P[] {
+  const pts: P[] = [tf(k, 7.6, 5.2), tf(k, -7.6, 5.2)];
+  for (let i = 0; i <= 16; i++) {
+    const a = Math.PI + (i / 16) * Math.PI;
+    pts.push(tf(k, Math.cos(a) * 7.6, 0.6 + Math.sin(a) * 8));
+  }
+  return pts;
+}
+
 function bunker(k: Face, pal: MetalPalette, hue: number) {
   return sprite(`lz|bunker|${k}|${pal.base.h},${pal.base.l}|${hue | 0}`, -11, -11, 22, 22, (g) => {
-    backplate(g, -8, -8, 16, 16, pal, 1);
-    flange(g, k, -8, 8, 4.6, pal, 2);
+    flange(g, k, -6.6, 6.6, 4.8, pal, 2);
     for (const x of LAMPS) {
       const p = tf(k, x, 6.3);
       g.fillStyle = INK;
       disc(g, p.x, p.y, 0.95, 3 + x);
       g.fill();
     }
-    const body = lbox(k, -7.7, -7.6, 15.4, 12.4, 3, 4, 0.25);
+    // A low armored dome, flat at the back where it bolts down.
+    const body = dome(k);
     tone(g, body, iron(pal, 40), { depth: 1.3, shade: -17 });
     within(g, body, () => {
       flat(g, lbox(k, -9, -9, 18, 3.4, 0, 5), css(iron(pal, 40), -14, 1, 4));

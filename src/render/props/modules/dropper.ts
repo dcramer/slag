@@ -29,6 +29,32 @@ function grudge(w: number, h: number, stone: HSL, angry: boolean) {
     path(g, body);
     g.clip();
     bevel(g, 0, 0, w, h, b, stone);
+    // A rim of stone teeth round the face: the angry crushing block's spiked edge, cut inside its own
+    // outline so the hitbox stays the block. Each tooth is lit on the side facing the light.
+    const teeth = (ax: number, ay: number, bx: number, by: number, nx: number, ny: number, lit: number) => {
+      const len = Math.hypot(bx - ax, by - ay);
+      const n = Math.max(2, Math.round(len / (4.2 * k)));
+      const ux = (bx - ax) / n;
+      const uy = (by - ay) / n;
+      for (let i = 0; i < n; i++) {
+        const x0 = ax + ux * i;
+        const y0 = ay + uy * i;
+        const tip = { x: x0 + ux / 2 + nx * b * 0.9, y: y0 + uy / 2 + ny * b * 0.9 };
+        const mid = { x: x0 + ux / 2, y: y0 + uy / 2 };
+        g.fillStyle = css(stone, lit + 8);
+        path(g, [{ x: x0, y: y0 }, tip, mid]);
+        g.fill();
+        g.fillStyle = css(stone, lit - 14, 1, 4);
+        path(g, [mid, tip, { x: x0 + ux, y: y0 + uy }]);
+        g.fill();
+        g.fillStyle = INK;
+        stroke(g, [{ x: x0, y: y0 }, tip, { x: x0 + ux, y: y0 + uy }], { w: 0.4 * k + 0.15, seed: i + nx * 3 + ny * 7, taper: [0.1, 0.1], press: 0.2 });
+      }
+    };
+    teeth(b, b, w - b, b, 0, -1, 10);
+    teeth(w - b, h - b, b, h - b, 0, 1, -14);
+    teeth(b, h - b, b, b, -1, 0, 4);
+    teeth(w - b, b, w - b, h - b, 1, 0, -8);
     // A chipped corner, top right.
     g.fillStyle = css(stone, -26, 1, 6);
     path(g, poly(w - 4.2 * k, -1, w + 1, -1, w + 1, 3.6 * k, w - 1.4 * k, 1.4 * k));

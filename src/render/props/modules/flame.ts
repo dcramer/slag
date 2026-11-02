@@ -6,7 +6,7 @@ import { line, type P, stroke } from '../../ink';
 import { INK, part, pen, sprite, stamp, tone } from '../../ink-props';
 import { circle, glowDot, light, type MetalPalette, type RC } from '../../kit';
 import { beamOf, defineArt, type PropDrawOpts } from '../common';
-import { backplate, disc, type Face, faceOf, flange, flat, housed, iron, lbox, lp, ltick, tf, within } from '../machine';
+import { disc, type Face, faceOf, flange, flat, housed, iron, lbox, lp, ltick, tf, within } from '../machine';
 
 type M<T extends Module['type']> = ModuleOf<T>;
 
@@ -71,8 +71,7 @@ function bottle(): P[] {
  */
 function burner(k: Face, pal: MetalPalette) {
   return sprite(`fl|${k}|${pal.base.h},${pal.base.l}`, -13, -13, 26, 26, (g) => {
-    backplate(g, -8, -8, 16, 16, pal, 1);
-    flange(g, k, -8, 8, 4.6, pal, 2);
+    flange(g, k, -6.8, 6.8, 5, pal, 2);
     const tank = bottle().map((p) => tf(k, p.x, p.y));
     tone(g, tank, TANK, { depth: 1.4, shade: -19 });
     within(g, tank, () => {

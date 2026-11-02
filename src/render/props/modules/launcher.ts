@@ -5,9 +5,9 @@ import { blob, line, type P, stroke } from '../../ink';
 import { ball, boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import { circle, glowDot, light, type MetalPalette, type RC } from '../../kit';
 import { beamOf, defineArt, type DrawCtx } from '../common';
-import { bevel, housed } from '../machine';
+import { iron } from '../machine';
 import { drawGlider, rang, roundSprite, stampRound } from '../projectiles';
-import { cabinet, hull, yoke } from './launcher-house';
+import { baseplate, bean, cartWheel, hub, legs, pedestal, skull, stand, wheel } from './launcher-house';
 
 /**
  * Launchers, inked: each style is a parody of a genre staple (docs/PARODY.md, Launchers). A style is three
@@ -47,7 +47,7 @@ interface Live {
 }
 
 interface Look {
-  /** What it stands in, when the mount doesn't fill the cell itself (launcher-house.ts). */
+  /** What it stands on, under the mount: wheels, legs, a stand (launcher-house.ts). */
   house?: readonly [Box, (g: CanvasRenderingContext2D, k: Bk) => void];
   mount?: readonly [Box, (g: CanvasRenderingContext2D, k: Bk) => void];
   barrel?: readonly [Box, (g: CanvasRenderingContext2D, k: Bk) => void];
@@ -89,44 +89,62 @@ function bowString(s: CanvasRenderingContext2D, tipX: number, tipY: number, nock
 }
 
 const LOOKS: Record<LauncherStyle, Look> = {
-  // Arrow Trap: a slot in a carved block, with a bandaged knee scratched into the stone.
+  // Arrow Trap: a round-headed stone shrine on a plinth, a slot turning in a drum on its face, and a
+  // bandaged knee scratched into the stone.
   crossbow: {
     mount: [
       [-9.5, -9.5, 19, 19],
       (g, k) => {
         const st = stone(k);
-        const block = boxPts(-8, -8, 16, 16, 1.6, k.seed);
-        tone(g, block, st, { depth: 1, shade: -14 });
+        part(g, boxPts(-8, 5, 16, 3, 0.8, k.seed + 1), { ...st, l: st.l - 8 }, k.seed + 1, { depth: 0.6, thin: 0.5, thick: 1.4 });
+        const shrine: P[] = [
+          { x: 6.9, y: 5.2 },
+          { x: -6.9, y: 5.2 },
+        ];
+        for (let i = 0; i <= 14; i++) {
+          const a = Math.PI + (i / 14) * Math.PI;
+          shrine.push({ x: Math.cos(a) * 6.9, y: -1.1 + Math.sin(a) * 6.9 });
+        }
+        tone(g, shrine, st, { depth: 1.2, shade: -15 });
         g.save();
-        path(g, block);
+        path(g, shrine);
         g.clip();
-        bevel(g, -8, -8, 16, 16, 2.4, st);
-        g.restore();
-        pen(g, block, k.seed, 0.55, 1.7);
-        for (let i = 0; i < 6; i++) {
+        // A chiselled rim round the head: lit on its upper left, in shade on its lower right.
+        const rim: P[] = [];
+        for (let i = 0; i <= 14; i++) {
+          const a = Math.PI + (i / 14) * Math.PI;
+          rim.push({ x: Math.cos(a) * 5.4, y: -1.1 + Math.sin(a) * 5.4 });
+        }
+        g.fillStyle = css(st, 14);
+        stroke(g, rim.slice(0, 8), { w: 0.8, seed: k.seed + 2, taper: [0.2, 0.3], press: 0.2 });
+        g.fillStyle = css(st, -24, 1, 4);
+        stroke(g, rim.slice(7), { w: 0.8, seed: k.seed + 3, taper: [0.3, 0.2], press: 0.2 });
+        for (let i = 0; i < 5; i++) {
           const x = -5 + hash2(i, 1, k.seed) * 10;
-          const y = -5 + hash2(i, 2, k.seed) * 10;
-          if (Math.hypot(x, y) < 5.6) continue;
+          const y = -5 + hash2(i, 2, k.seed) * 9;
+          if (Math.hypot(x, y) < 5.4) continue;
           tick(g, x, y, x + 1.3, y + 0.7, 0.45, i, css(st, -22, 1, 4));
         }
+        g.restore();
+        pen(g, shrine, k.seed + 4, 0.55, 1.7);
         // Where the slot turns: a drum cut into the face, sunk into shadow at its top and lit at its lip.
         g.fillStyle = INK;
-        path(g, ovalPts(0, 0, 4.7, 4.7, k.seed + 3, 0.03, 20));
+        path(g, ovalPts(0, 0, 4.3, 4.3, k.seed + 3, 0.03, 20));
         g.fill();
         g.fillStyle = css(st, 10);
-        path(g, ovalPts(0.3, 0.35, 4, 4, k.seed + 4, 0.03, 20));
+        path(g, ovalPts(0.3, 0.35, 3.6, 3.6, k.seed + 4, 0.03, 20));
         g.fill();
         g.fillStyle = css(st, -16, 1, 4);
-        path(g, ovalPts(-0.15, -0.2, 3.7, 3.7, k.seed + 5, 0.03, 20));
+        path(g, ovalPts(-0.15, -0.2, 3.3, 3.3, k.seed + 5, 0.03, 20));
         g.fill();
-        // Scratched in the corner: a leg, bent at a bandaged knee.
+        // Scratched on the plinth's corner: a leg, bent at a bandaged knee.
         const sc = css(st, -34, 1, 6);
-        tick(g, -6.4, 2.6, -4.3, 4.6, 0.5, 7, sc);
-        tick(g, -4.3, 4.6, -5.2, 6.6, 0.5, 8, sc);
-        tick(g, -5.2, 6.6, -6.4, 6.7, 0.45, 9, sc);
+        tick(g, -6.6, 1.6, -5, 3.2, 0.5, 7, sc);
+        tick(g, -5, 3.2, -5.6, 4.8, 0.5, 8, sc);
+        tick(g, -5.6, 4.8, -6.5, 4.9, 0.45, 9, sc);
         g.fillStyle = '#f1e8d2';
-        line(g, -5.1, 4, -3.6, 5.1, { w: 1.1, seed: 10, taper: [0.05, 0.05], press: 0 });
-        tick(g, -4.75, 4.15, -3.95, 4.95, 0.35, 11, '#c0182a');
+        line(g, -5.8, 2.6, -4.4, 3.7, { w: 1.1, seed: 10, taper: [0.05, 0.05], press: 0 });
+        tick(g, -5.45, 2.75, -4.75, 3.55, 0.35, 11, '#c0182a');
       },
     ],
     barrel: [
@@ -160,25 +178,30 @@ const LOOKS: Record<LauncherStyle, Look> = {
       [-9.5, -9.5, 19, 19],
       (g, k) => {
         const st = stone(k, 54);
-        const pts = boxPts(-8, -8, 16, 16, 1.4, k.seed);
+        // A tiny tower: battered walls, a corbelled ledge, and merlons notched out of its top.
+        const pts = poly(
+          -7.9, 8, 7.9, 8, 6.4, -3, 7.4, -3.6, 7.4, -8, 4.6, -8, 4.6, -6.2, 1.5, -6.2, 1.5, -8, -1.5, -8, -1.5, -6.2, -4.6, -6.2, -4.6, -8, -7.4, -8,
+          -7.4, -3.6, -6.4, -3,
+        );
         tone(g, pts, st, { depth: 1.3 });
         g.save();
         path(g, pts);
         g.clip();
-        // Crenels: dark notches between the merlons.
-        g.fillStyle = css(st, -34, 1, 6);
-        for (const x of [-3.6, 1.4]) g.fillRect(x, -8, 2.2, 3.1);
         g.fillStyle = INK;
-        line(g, -8.4, -4.6, 8.4, -4.6, { w: 0.7, seed: 3, taper: [0.05, 0.05], press: 0.3 });
+        line(g, -8.4, -3.3, 8.4, -3.3, { w: 0.7, seed: 3, taper: [0.05, 0.05], press: 0.3 });
         const mortar = css(st, -24, 1, 4);
         for (const [y, off] of [
-          [-1.4, 0],
-          [1.9, 2.4],
-          [5.2, 0],
+          [0, 0],
+          [3.3, 2.4],
+          [6.6, 0],
         ] as const) {
           tick(g, -8, y, 8, y + 0.2, 0.45, y * 9, mortar);
           for (let x = -5.4 + off; x < 8; x += 4.8) tick(g, x, y - 3.1, x, y - 0.2, 0.42, x * 7 + y, mortar);
         }
+        // An arrow loop, dark, under the ledge.
+        g.fillStyle = INK;
+        path(g, boxPts(-0.6, 1, 1.2, 4, 0.5, k.seed + 2));
+        g.fill();
         g.restore();
         pen(g, pts, k.seed + 1, 0.55, 1.6);
         // The price tag, on a string from a merlon.
@@ -228,9 +251,32 @@ const LOOKS: Record<LauncherStyle, Look> = {
       }
     },
   },
-  // Pirate Cannon: an eyepatch on the muzzle.
+  // Pirate Cannon: a ship's gun on its stepped carriage and two cart wheels, an eyepatch on the muzzle.
   cannon: {
-    house: [[-9.5, -9.5, 19, 19], (g, k) => hull(g, { ...k.wood, l: 34 }, k.pal, k.seed, true)],
+    mount: [
+      [-9.5, -4, 19, 13],
+      (g, k) => {
+        const wd = { ...k.wood, l: 36 };
+        const cheek = poly(-7.6, 5.6, -7, 1.8, -4.4, 1.8, -3.8, -1.4, 3.8, -1.4, 4.4, 1.8, 7, 1.8, 7.6, 5.6);
+        part(g, cheek, wd, k.seed, { depth: 0.9, thin: 0.5, thick: 1.4 });
+        tick(g, -6.6, 3.8, 6.6, 3.9, 0.5, 2, css(wd, -18, 1, 6));
+        tick(g, -3.2, 0.4, 3.2, 0.5, 0.45, 3, css(wd, -18, 1, 6));
+        // A coil of rope hung on its cheek, and a ball ready by the wheel.
+        for (const [x, r] of [
+          [5.4, 1.2],
+          [5.4, 0.6],
+        ] as const) {
+          g.fillStyle = css({ h: 38, s: 35, l: 56 });
+          stroke(g, ovalPts(x, 3.6, r, r * 0.6, x * r, 0.05, 12).concat([{ x: x + r, y: 3.6 }]), { w: 0.55, seed: r * 9, taper: [0, 0], press: 0 });
+        }
+        for (const x of [-4.4, 4.4]) cartWheel(g, x, 5.6, 2.4, wd, k.pal, k.seed + x);
+      },
+    ],
+    // The trunnion strap the barrel turns under.
+    front: [
+      [-2.5, -2.5, 5, 5],
+      (g, k) => dot(g, 0, 0, 1.3, k.seed + 9, css(k.pal.spec, -10)),
+    ],
     barrel: [
       [-9.5, -6, 23, 12],
       (g, k) => {
@@ -264,7 +310,8 @@ const LOOKS: Record<LauncherStyle, Look> = {
       [-9.5, -9.5, 19, 19],
       (g, k) => {
         const wd = { ...k.wood, l: 42 };
-        const head = boxPts(-8, -8, 16, 16, 3, k.seed);
+        // A carved tiki head: a jagged crown of feathers cut into its top, a heavy jaw.
+        const head = poly(-7.6, 7.8, 7.6, 7.8, 7.8, 2, 7.2, -4.4, 7.8, -6.6, 5.4, -5.6, 4, -8.2, 1.6, -6, 0, -8.4, -1.6, -6, -4, -8.2, -5.4, -5.6, -7.8, -6.6, -7.2, -4.4, -7.8, 2);
         part(g, head, wd, k.seed, { depth: 1.3, thin: 0.55, thick: 1.6 });
         g.save();
         path(g, head);
@@ -329,7 +376,14 @@ const LOOKS: Record<LauncherStyle, Look> = {
   },
   // Sorry Turret: worried about all of this.
   turret: {
-    house: [[-9.5, -9.5, 19, 19], (g, k) => cabinet(g, { h: k.st.hue, s: 12, l: 86 }, k.pal, k.seed)],
+    // A tripod: the dome is its whole body.
+    mount: [
+      [-9.5, 0, 19, 9.5],
+      (g, k) => {
+        legs(g, 0, 3.6, [-7, 7.9, 7, 7.9, 1.4, 8.1], { h: k.st.hue, s: 10, l: 62 }, k.seed);
+        hub(g, 0, 4.2, 1.8, k.pal, k.seed + 3);
+      },
+    ],
     barrel: [
       [1, -4.5, 12, 9],
       (g, k) => {
@@ -365,28 +419,33 @@ const LOOKS: Record<LauncherStyle, Look> = {
       glowDot(l.rc.g, l.x, l.y - 6.2, 2.5, l.glow, 0.4 + l.reload * 0.5);
     },
   },
-  // Shuriken Vendor: a coin slot and a vending window.
+  // Shuriken Vendor: a vending machine on two feet, a lit header over its window, a coin slot.
   thrower: {
     mount: [
-      [-8.5, -8.5, 17, 17],
+      [-8.5, -9.5, 17, 18],
       (g, k) => {
-        const body = boxPts(-8, -8, 16, 16, 1.6, k.seed);
-        part(g, body, { h: k.st.hue, s: 60, l: 46 }, k.seed, { depth: 1.3, thin: 0.55, thick: 1.6 });
-        const win = boxPts(-5.9, -6, 8.4, 8.2, 0.6, k.seed + 1);
+        const paint: HSL = { h: k.st.hue, s: 60, l: 46 };
+        for (const x of [-5.6, 3.4]) part(g, boxPts(x, 6, 2.2, 1.9, 0.5, k.seed + x), { h: 220, s: 8, l: 24 }, k.seed + x, { depth: 0.3, thin: 0.4, thick: 0.9 });
+        const body = boxPts(-6.6, -6.4, 13.2, 12.9, 1.4, k.seed);
+        part(g, body, paint, k.seed, { depth: 1.3, thin: 0.55, thick: 1.6 });
+        const sign = boxPts(-7.4, -8.4, 14.8, 2.8, 1.2, k.seed + 7);
+        part(g, sign, { h: 48, s: 90, l: 66 }, k.seed + 7, { depth: 0.4, thin: 0.45, thick: 1.1 });
+        for (const x of [-4.6, -1.6, 1.4, 4.4]) tick(g, x, -7.4, x + 1.2, -7.4, 0.55, x, css({ h: 4, s: 70, l: 46 }));
+        const win = boxPts(-5.4, -5, 7.4, 7.4, 0.6, k.seed + 1);
         tone(g, win, { h: 195, s: 35, l: 80 }, { depth: 0.6 });
         g.save();
         path(g, win);
         g.clip();
         for (const [x, y] of [
-          [-3.8, -3.8],
-          [0.4, -3.8],
-          [-3.8, 0.2],
-          [0.4, 0.2],
+          [-3.4, -3],
+          [0.2, -3],
+          [-3.4, 0.6],
+          [0.2, 0.6],
         ]) {
           const pts: P[] = [];
           for (let i = 0; i < 8; i++) {
             const a = (i / 8) * Math.PI * 2 + 0.3;
-            const r = i % 2 ? 0.55 : 1.7;
+            const r = i % 2 ? 0.5 : 1.5;
             pts.push({ x: x + Math.cos(a) * r, y: y + Math.sin(a) * r });
           }
           g.fillStyle = '#5d6370';
@@ -394,15 +453,15 @@ const LOOKS: Record<LauncherStyle, Look> = {
           g.fill();
         }
         g.fillStyle = 'rgba(255,255,255,0.7)';
-        line(g, -5, 1.8, 1.4, -5.6, { w: 0.6, seed: 2, taper: [0.2, 0.2], press: 0 });
+        line(g, -4.6, 2, 1.4, -4.6, { w: 0.6, seed: 2, taper: [0.2, 0.2], press: 0 });
         g.restore();
         pen(g, win, k.seed + 2, 0.4, 0.9);
         // Coin slot and buttons.
-        part(g, boxPts(3.6, -6, 2.8, 4.2, 0.4, k.seed + 3), STEEL, k.seed + 3, { depth: 0.3, thin: 0.3, thick: 0.6 });
-        tick(g, 5, -5.2, 5, -2.8, 0.55, 4);
-        for (const y of [0, 1.9]) dot(g, 5, y, 0.6, k.seed + y, '#ffd84a');
+        part(g, boxPts(3, -5, 2.6, 4, 0.4, k.seed + 3), STEEL, k.seed + 3, { depth: 0.3, thin: 0.3, thick: 0.6 });
+        tick(g, 4.3, -4.2, 4.3, -1.8, 0.55, 4);
+        for (const y of [0.6, 2.4]) dot(g, 4.3, y, 0.6, k.seed + y, '#ffd84a');
         g.fillStyle = INK;
-        path(g, boxPts(-5.9, 3.6, 8.4, 2.4, 0.5, k.seed + 5));
+        path(g, boxPts(-5.4, 3.4, 7.4, 2, 0.5, k.seed + 5));
         g.fill();
       },
     ],
@@ -411,41 +470,50 @@ const LOOKS: Record<LauncherStyle, Look> = {
       if (l.ready) loaded(s, l, 10.6, 0.7, l.rc.t * 4);
     },
   },
-  // Grudge Launcher: it doesn't forget.
+  // Grudge Launcher: a bullet blaster. A black drum turns on a pedestal with a skull on its chest, and
+  // the grudge missile's nose peeks out of its mouth when it's loaded.
   rocket: {
-    house: [[-9.5, -9.5, 19, 19], (g, k) => yoke(g, k.pal, k.hue, k.seed)],
+    mount: [[-8.5, 0, 17, 9], (g, k) => pedestal(g, k.seed)],
+    // The skull sits on the drum's pivot, so it stays upright whichever way the drum turns.
+    front: [[-3, -3, 6, 6], (g, k) => skull(g, 0, 0, k.seed + 7)],
     barrel: [
-      [-7, -7, 14, 14],
+      [-7.5, -7, 18, 14],
       (g, k) => {
-        const pod = boxPts(-5.3, -5.2, 10.6, 10.4, 1.6, k.seed);
-        tone(g, pod, k.pal.base, { depth: 1 });
+        const black: HSL = { h: 220, s: 10, l: 20 };
+        const drum = poly(-3.4, -4.6, 6.2, -4.6, 6.2, 4.6, -3.4, 4.6, -5.4, 3.6, -6.2, 0, -5.4, -3.6);
+        part(g, drum, black, k.seed, { depth: 1, thin: 0.55, thick: 1.5, shade: -8 });
         g.save();
-        path(g, pod);
+        path(g, drum);
         g.clip();
-        g.fillStyle = '#f2c230';
-        g.fillRect(-4, -6, 2.2, 12);
-        g.fillStyle = INK;
-        for (let y = -6; y < 6; y += 2.6) line(g, -4, y, -1.8, y + 1.6, { w: 0.7, seed: y, taper: [0, 0], press: 0 });
+        g.fillStyle = css(black, 26);
+        line(g, -4, -3.2, 5.6, -3.4, { w: 0.9, seed: k.seed + 1, taper: [0.2, 0.3], press: 0.1 });
         g.restore();
-        pen(g, pod, k.seed + 1, 0.5, 1.3);
-        for (const y of [-3, 0, 3]) {
-          g.fillStyle = INK;
-          blob(g, 3.8, y, 1.15, k.seed + y, 0.85, 0.06);
-          g.fill();
-        }
+        // The muzzle: a fat lit rim and a dark mouth.
+        const rim = boxPts(5.4, -5.6, 2.8, 11.2, 1.2, k.seed + 2);
+        part(g, rim, { ...black, l: 30 }, k.seed + 2, { depth: 0.5, thin: 0.5, thick: 1.3, shade: -10 });
+        g.fillStyle = INK;
+        path(g, ovalPts(8, 0, 0.9, 3.8, k.seed + 3, 0.02, 14));
+        g.fill();
+        // Bolts down the back, where the barrel meets its breech.
+        for (const y of [-2.6, 0, 2.6]) dot(g, -3.4, y, 0.55, k.seed + y, css(black, 40));
       },
     ],
+    recoil: 0.5,
     aimed(s, l) {
       if (!l.ready) return;
       s.save();
-      s.translate(0.4, 0);
+      s.beginPath();
+      s.rect(7.6, -6, 6, 12);
+      s.clip();
+      s.translate(2.2 + (l.reload - 0.4) * 2, 0);
       stamp(s, roundSprite('seeker')!);
       s.restore();
     },
   },
   // Return Policy: a launcher in a backwards cap.
   glaive: {
-    house: [[-9.5, -9.5, 19, 19], (g, k) => cabinet(g, { ...k.hue, l: 44 }, k.pal, k.seed)],
+    // A round little body on two stubby feet; the cap sits on its crown.
+    house: [[-9.5, -9.5, 19, 19], (g, k) => bean(g, { ...k.hue, l: 44 }, k.seed)],
     faced: true,
     mount: [
       [-11, -9, 22, 17],
@@ -507,7 +575,8 @@ const LOOKS: Record<LauncherStyle, Look> = {
   },
   // Dodgeball Coach: a gumball machine with a whistle on a lanyard.
   gumball: {
-    house: [[-9.5, -9.5, 19, 19], (g, k) => cabinet(g, { h: k.st.hue, s: 70, l: 46 }, k.pal, k.seed)],
+    // The machine's cast stand: a waist under the globe, flaring to a foot.
+    house: [[-9.5, -1, 19, 10], (g, k) => stand(g, { h: k.st.hue, s: 70, l: 46 }, k.seed)],
     mount: [
       [-3, 0, 6, 6],
       (g, k) => {
@@ -551,24 +620,36 @@ const LOOKS: Record<LauncherStyle, Look> = {
       if (l.ready) loaded(s, l, 9.6, 0.6);
     },
   },
-  // Banana Mortar: the shell is a bunch.
+  // Banana Mortar: a stubby green pipe on a bipod and a baseplate; the shell is a bunch.
   mortar: {
-    house: [[-9.5, -9.5, 19, 19], (g, k) => yoke(g, k.pal, k.hue, k.seed)],
-    barrel: [
-      [-5, -6, 16, 12],
+    house: [
+      [-9.5, -1, 19, 10],
       (g, k) => {
-        const tube = boxPts(-3.6, -4.4, 12, 8.8, 2, k.seed + 1);
-        part(g, tube, k.pal.base, k.seed + 1, { depth: 0.9, thin: 0.5, thick: 1.2 });
+        baseplate(g, k.pal, k.seed);
+        legs(g, 0, 1, [-5.4, 5.4, 5, 5.4], iron(k.pal, 46), k.seed + 2);
+      },
+    ],
+    barrel: [
+      [-5, -6.5, 16, 13],
+      (g, k) => {
+        const green: HSL = { h: 128, s: 58, l: 40 };
+        const tube = boxPts(-3.6, -3.7, 10.4, 7.4, 1.4, k.seed + 1);
+        part(g, tube, green, k.seed + 1, { depth: 0.9, thin: 0.5, thick: 1.3, shade: -16 });
         g.save();
         path(g, tube);
         g.clip();
-        band(g, 1.6, -5, 5, 1.2, css(k.pal.dark, 8), 3);
-        glint(g, poly(-2.6, -3.1, 3, -3, 7, -2.7), css(k.pal.spec, -8), 0.6);
+        g.fillStyle = css(green, 24);
+        line(g, -3, -2.2, 6.4, -2.2, { w: 1, seed: k.seed + 2, taper: [0.1, 0.3], press: 0.1 });
         g.restore();
-        part(g, boxPts(7.6, -5, 2.6, 10, 0.8, k.seed + 2), k.pal.base, k.seed + 2, { depth: 0.4, thin: 0.4, thick: 1 });
+        // The pipe's lip: wider than the tube, lit, its mouth dark.
+        const lip = boxPts(5.8, -5.2, 3.6, 10.4, 1.2, k.seed + 3);
+        part(g, lip, { ...green, l: 46 }, k.seed + 3, { depth: 0.6, thin: 0.5, thick: 1.3, shade: -16 });
+        g.fillStyle = css(green, 28);
+        line(g, 6.6, -4.4, 6.6, 3, { w: 0.8, seed: k.seed + 4, taper: [0.2, 0.3], press: 0.1 });
         g.fillStyle = INK;
-        path(g, poly(9.6, -3.4, 10.4, -3.4, 10.4, 3.4, 9.6, 3.4));
+        path(g, ovalPts(9.4, 0, 0.8, 4, k.seed + 5, 0.02, 14));
         g.fill();
+        dot(g, 0, 0, 1.2, k.seed + 6, css(k.pal.spec, -10));
       },
     ],
     recoil: 0.5,
@@ -576,9 +657,16 @@ const LOOKS: Record<LauncherStyle, Look> = {
       if (l.ready) loaded(s, l, 10.6, 0.65, -0.4);
     },
   },
-  // Sneeze Cannon: a big nose on the muzzle.
+  // Sneeze Cannon: a goo tank on a little cart, a big nose on the muzzle.
   gooper: {
-    house: [[-9.5, -9.5, 19, 19], (g, k) => yoke(g, k.pal, k.hue, k.seed)],
+    house: [
+      [-9.5, 2, 19, 7],
+      (g, k) => {
+        g.fillStyle = INK;
+        line(g, -5, 6, 4, 6, { w: 1.6, seed: k.seed, taper: [0, 0], press: 0 });
+        for (const x of [-5, 3.6]) wheel(g, x, 6.1, 1.9, k.pal, k.seed + x);
+      },
+    ],
     barrel: [
       [2, -4.5, 13.5, 10],
       (g, k) => {
@@ -626,7 +714,6 @@ const LOOKS: Record<LauncherStyle, Look> = {
   },
   // Slushie Gun: a cup, with the straw for a barrel.
   cryo: {
-    house: [[-9.5, -9.5, 19, 19], (g, k) => cabinet(g, { h: 350, s: 60, l: 50 }, k.pal, k.seed)],
     mount: [
       [-7.5, -9, 15, 17.5],
       (g, k) => {
@@ -688,7 +775,14 @@ const LOOKS: Record<LauncherStyle, Look> = {
   },
   // Trick-Shot Lens: a prism on a stand. Its shots drag a replay's dotted line.
   prism: {
-    house: [[-9.5, -9.5, 19, 19], (g, k) => yoke(g, k.pal, k.hue, k.seed)],
+    // A camera tripod under it.
+    mount: [
+      [-9.5, 1, 19, 8.5],
+      (g, k) => {
+        legs(g, 0, 2.6, [-6.4, 7.9, 6.4, 7.9, 0.8, 8.1], { h: k.st.hue, s: 12, l: 40 }, k.seed);
+        hub(g, 0, 2.8, 1.6, k.pal, k.seed + 3);
+      },
+    ],
     barrel: [
       [-6.5, -7.5, 15, 15],
       (g, k) => {
@@ -719,7 +813,6 @@ const LOOKS: Record<LauncherStyle, Look> = {
   },
   // Budget Airline: a little departures shed with a windsock.
   hangar: {
-    house: [[-9.5, -9.5, 19, 19], (g, k) => hull(g, { ...k.wood, l: 40 }, k.pal, k.seed, false)],
     mount: [
       [-9, -11, 21, 19.5],
       (g, k) => {
@@ -796,7 +889,7 @@ function drawLauncher(rc: RC, m: Launcher, d: DrawCtx) {
     glowDot(g, x + Math.cos(a) * sight.len, y + Math.sin(a) * sight.len, 4, { h: 0, s: 100, l: 55 }, 0.8);
   }
 
-  if (look.house && housed(d.r)) stamp(s, piece('h', m, k, false, look.house), x, y);
+  if (look.house) stamp(s, piece('h', m, k, false, look.house), x, y);
   if (look.mount) stamp(s, piece('m', m, k, !!look.faced, look.mount), x, y);
   if (look.barrel || look.aimed) {
     const recoil = since < 8 ? (8 - since) * (look.recoil ?? 0.3) : 0;
