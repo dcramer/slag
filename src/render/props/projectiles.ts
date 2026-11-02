@@ -5,7 +5,7 @@ import type { Projectile } from '../../sim/run';
 import { line, type P, stroke } from '../ink';
 import { ball, boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, type Sprite, sprite, stamp, tick } from '../ink-props';
 import { circle, ellipse, flame, glowDot, light, type RC } from '../kit';
-import { drawItemShot } from '../items';
+import { dazeStars, drawItemShot, stunnerang } from '../items';
 import type { Emit } from './common';
 
 /**
@@ -240,7 +240,10 @@ function drawSeeker(rc: RC, p: Projectile, a: number, emit?: Emit) {
 }
 
 function boomerangShot(rc: RC, p: Projectile) {
-  round(rc, p, rc.t * 22, false);
+  if (p.thrower < 0) return round(rc, p, rc.t * 22, false);
+  // A thrown Stunnerang: the banana one, with stars circling it.
+  stampRound(rc.s, stunnerang(), p.x, p.y, rc.t * 20, false);
+  dazeStars(rc.g, p.x, p.y, rc.t * 1.6, 7, 4);
 }
 
 function drawRubber(rc: RC, p: Projectile) {

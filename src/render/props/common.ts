@@ -108,27 +108,3 @@ export function bbox(cells: Cell[], off: Vec) {
   }
   return { x: x0 * TILE + off[0], y: y0 * TILE + off[1], w: (x1 - x0) * TILE, h: (y1 - y0) * TILE };
 }
-
-/** A spinning V-shaped wooden boomerang. */
-export function drawBoomerang(s: CanvasRenderingContext2D, x: number, y: number, rot: number, R: number) {
-  s.save();
-  s.translate(x, y);
-  s.rotate(rot);
-  s.strokeStyle = '#4a2f18';
-  s.lineWidth = 3.4;
-  s.lineCap = 'round';
-  s.beginPath();
-  s.moveTo(-R, R * 0.55);
-  s.quadraticCurveTo(0, -R * 0.7, R, R * 0.55);
-  s.stroke();
-  s.strokeStyle = '#c89150';
-  s.lineWidth = 2.2;
-  s.stroke();
-  s.strokeStyle = '#e6402f';
-  s.lineWidth = 2.2;
-  s.beginPath();
-  s.moveTo(-R * 0.15, -R * 0.1);
-  s.lineTo(R * 0.15, -R * 0.1);
-  s.stroke();
-  s.restore();
-}

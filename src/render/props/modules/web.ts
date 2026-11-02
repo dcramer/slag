@@ -8,7 +8,7 @@ import { defineArt } from '../common';
 
 type Web = ModuleOf<'web'>;
 
-const SILK = 'rgba(236,236,246,0.85)';
+const SILK = 'rgba(246,246,252,0.95)';
 
 /**
  * Sticky web, spun with the pen: anchor threads between neighbouring cells and a little orb web in each,
@@ -32,7 +32,7 @@ function bake(m: Web, uid: number) {
     g.fillStyle = 'rgba(225,225,235,0.07)';
     for (const [x, y] of m.cells) g.fillRect(x * TILE, y * TILE, TILE, TILE);
     g.fillStyle = SILK;
-    const thread = (pts: P[], seed: number) => stroke(g, pts, { w: 0.55, seed, taper: [0.15, 0.15], press: 0.35 });
+    const thread = (pts: P[], seed: number) => stroke(g, pts, { w: 0.7, seed, taper: [0.15, 0.15], press: 0.35 });
     for (const [x, y] of m.cells) {
       const cx = (x + 0.5) * TILE;
       const cy = (y + 0.5) * TILE;
@@ -40,7 +40,7 @@ function bake(m: Web, uid: number) {
       for (let k = 0; k < 8; k++) {
         const a = (k / 8) * Math.PI * 2 + (hash2(x, y, k) - 0.5) * 0.2;
         const rr = (k % 2 ? TILE * 0.7 : TILE * 0.5) * 0.98;
-        line(g, cx, cy, cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, { w: 0.5, seed: seed + k, taper: [0.1, 0.4], press: 0.3 });
+        line(g, cx, cy, cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, { w: 0.65, seed: seed + k, taper: [0.1, 0.4], press: 0.3 });
       }
       for (const r of [2.5, 4.8, 7]) {
         const ring: P[] = [];
