@@ -46,6 +46,7 @@ Size tiers for parts are a mapping of the old rolled ranges, so check them too; 
 
 ## 21. Ink art leftovers
 - Small cog lifts and small spin bars stay small on crate cards, because small parts draw at 0.6 scale.
+- The parts still under the bar are ranked in `docs/ART-QA.md` ("Next in the queue"). The geyser vent can't stand taller until the sim gives it a solid rim (same file, "Needs a sim change").
 
 ## 15. Parody names: decide on sound-alikes
 Names now parody genre tropes (`docs/PARODY.md`). A few are deliberate sound-alikes of trademarked names: Chain Chump, Thwunk, the -omb suffix, Master Noodle, Yolo Blocks. Decide whether to keep them.
