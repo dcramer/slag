@@ -66,12 +66,7 @@
       "swatches": [
         "#70503b",
         "#3a2516"
-      ],
-      "alts": [
-        "#2f2a28",
-        "#7a3f2a"
-      ],
-      "vary": 4
+      ]
     },
     "sneaker": {
       "color": "#d8382f",
@@ -85,18 +80,37 @@
       "swatches": [
         "#d8b137",
         "#ad8723"
-      ],
-      "alts": [
-        "#c9573a",
-        "#3aa6a0"
-      ],
-      "vary": 3
+      ]
     },
     "steel": {
       "color": "#9a9894",
       "swatches": [
         "#6e6d6c"
       ]
+    },
+    "plaster": {
+      "color": "#e6c7a0",
+      "swatches": [],
+      "free": true,
+      "min": 0.12
+    },
+    "band": {
+      "color": "#e8e4dc",
+      "swatches": [],
+      "free": true,
+      "min": 0.12
+    },
+    "ringpull": {
+      "color": "#b9bcc2",
+      "swatches": [],
+      "free": true,
+      "min": 0.12
+    },
+    "lace": {
+      "color": "#f2efe8",
+      "swatches": [],
+      "free": true,
+      "min": 0.12
     }
   },
   "keys": {
@@ -439,5 +453,208 @@
     "body": "paint",
     "belly": "skin",
     "shoe": "sneaker"
+  },
+  "props": [
+    {
+      "bone": "head",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "plaster",
+      "parts": []
+    },
+    {
+      "bone": "head",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "plaster",
+      "parts": [
+        {
+          "shape": "box",
+          "role": "plaster",
+          "size": [
+            2.6,
+            0.8,
+            0.8
+          ],
+          "at": [
+            0,
+            2.2,
+            5.2
+          ],
+          "rot": [
+            0,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "bone": "lowerarm_r",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "band",
+      "parts": []
+    },
+    {
+      "bone": "lowerarm_r",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "band",
+      "parts": [
+        {
+          "shape": "cylinder",
+          "role": "band",
+          "size": [
+            1.2,
+            1.2,
+            0
+          ],
+          "at": [
+            -2.6,
+            0,
+            0
+          ],
+          "rot": [
+            0,
+            0,
+            90
+          ]
+        }
+      ]
+    },
+    {
+      "bone": "neck_01",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "ringpull",
+      "parts": []
+    },
+    {
+      "bone": "neck_01",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "ringpull",
+      "parts": [
+        {
+          "shape": "sphere",
+          "role": "ringpull",
+          "size": [
+            0.8,
+            1.0,
+            0.35
+          ],
+          "at": [
+            0,
+            -0.6,
+            2.6
+          ]
+        }
+      ]
+    },
+    {
+      "bone": "foot_r",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "lace",
+      "parts": []
+    },
+    {
+      "bone": "foot_r",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "lace",
+      "parts": [
+        {
+          "shape": "cylinder",
+          "role": "lace",
+          "size": [
+            0.26,
+            3.2,
+            0
+          ],
+          "at": [
+            -1.0,
+            0.2,
+            1.6
+          ],
+          "rot": [
+            0,
+            0,
+            25
+          ]
+        }
+      ]
+    }
+  ],
+  "slots": {
+    "plaster": 0,
+    "band": 1,
+    "ringpull": 2,
+    "lace": 3
   }
 }

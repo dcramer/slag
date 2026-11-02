@@ -2,7 +2,7 @@ import { type HSL, shift } from '../../../core/color';
 import type { CharacterDef, Kind } from '../../../gen/character';
 import { inkOf, lookOf, moodOf, type RunnerPose, ratio } from '../../ink-figure';
 import { drawFrame, hexHsl, type Paint, paintOf } from './draw';
-import { pick } from './play';
+import { pick, picks, roll } from './play';
 import type { SpriteSet } from './types';
 
 /**
@@ -54,11 +54,9 @@ const dressed = new WeakMap<CharacterDef, Dressed>();
 function dress(set: SpriteSet, c: CharacterDef): Dressed {
   let d = dressed.get(c);
   if (!d) {
-    // A roll in 0..1 picks one of n, the same for the same seed.
-    const roll = (vary: number, n: number) => Math.min(n - 1, Math.floor((c.vary[vary] ?? 0) * n));
-    const colour = (r: SpriteSet['roles'][number]) => (r.alts ? [r.color, ...r.alts][roll(r.vary ?? 0, r.alts.length + 1)] : r.color);
+    const colour = (r: SpriteSet['roles'][number]) => (r.alts ? [r.color, ...r.alts][roll(c.vary[r.vary ?? 0], r.alts.length + 1)] : r.color);
     const hsl = set.roles.map((r): HSL => (r.slot === 'paint' ? c.paint : r.slot === 'player' ? c.body : hexHsl(colour(r))));
-    const pick = (set.slots ?? []).map((sl) => roll(sl.vary, sl.options));
+    const pick = picks(set, c.vary);
     const paints = set.roles.map((_, i) => paintOf(hsl[i]));
     // The silhouette is inked in a dark of the kind's own colour, as a hand-drawn homage's is.
     const main = hsl[set.roles.findIndex((r) => r.slot === 'paint')] ?? hsl[0];

@@ -5,7 +5,7 @@ import { turnaround } from './inspect';
 import { loadModel } from './load';
 import { renderSprites } from './render';
 import { swatches } from './roles';
-import { contact } from './sheet';
+import { contact, rolls } from './sheet';
 
 /**
  * The page the art3d command drives in headless Chromium (tools/art3d/sprites.ts). Everything it can do
@@ -64,6 +64,7 @@ const api = {
   },
   render,
   contact,
+  rolls,
 };
 
 (window as unknown as { art3d: typeof api }).art3d = api;

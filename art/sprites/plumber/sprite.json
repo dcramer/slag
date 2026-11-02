@@ -55,63 +55,154 @@
             0
           ]
         }
-      ],
-      "slot": "tool"
+      ]
     },
     {
-      "bone": "spine_05",
+      "bone": "head",
       "at": [
         0,
-        0.5,
-        -4
-      ],
-      "rot": [
-        -30,
         0,
         0
       ],
-      "slot": "tool",
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "pencil",
+      "parts": []
+    },
+    {
+      "bone": "head",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "pencil",
       "parts": [
         {
           "shape": "cylinder",
-          "role": "wrench",
+          "role": "pencil",
           "size": [
-            0.6,
-            15,
+            0.45,
+            4.6,
             0
           ],
           "at": [
-            0,
+            -4.3,
+            4.6,
+            -0.6
+          ],
+          "rot": [
+            80,
             0,
             0
           ]
-        },
+        }
+      ]
+    },
+    {
+      "bone": "head",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "plaster",
+      "parts": []
+    },
+    {
+      "bone": "head",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "plaster",
+      "parts": [
         {
           "shape": "box",
-          "role": "wrench",
+          "role": "plaster",
           "size": [
-            3.4,
-            2.0,
-            1.1
-          ],
-          "at": [
             0.6,
-            7.6,
-            0
-          ]
-        },
-        {
-          "shape": "box",
-          "role": "wrench",
-          "size": [
-            1.1,
-            2.6,
-            1.1
+            1.6,
+            2.4
           ],
           "at": [
-            2.0,
-            9.4,
+            -3.9,
+            1.6,
+            1.6
+          ],
+          "rot": [
+            0,
+            -30,
+            30
+          ]
+        }
+      ]
+    },
+    {
+      "bone": "pelvis",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "tape",
+      "parts": []
+    },
+    {
+      "bone": "pelvis",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "tape",
+      "parts": [
+        {
+          "shape": "cylinder",
+          "role": "tape",
+          "size": [
+            1.35,
+            0.9,
             0
+          ],
+          "at": [
+            -3.3,
+            1.2,
+            0.4
+          ],
+          "rot": [
+            0,
+            0,
+            90
           ]
         }
       ]
@@ -120,75 +211,48 @@
       "bone": "spine_05",
       "at": [
         0,
-        0.5,
-        -4
-      ],
-      "rot": [
-        -30,
         0,
         0
       ],
-      "slot": "tool",
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "gauge",
+      "parts": []
+    },
+    {
+      "bone": "spine_05",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "gauge",
       "parts": [
         {
           "shape": "cylinder",
-          "role": "tank",
+          "role": "gauge",
           "size": [
-            1.9,
-            8,
+            1.25,
+            0.6,
             0
           ],
           "at": [
-            0,
-            0,
-            0
-          ]
-        },
-        {
-          "shape": "sphere",
-          "role": "brass",
-          "size": [
-            1.9,
-            0.9,
-            1.9
-          ],
-          "at": [
-            0,
-            4,
-            0
-          ]
-        },
-        {
-          "shape": "cylinder",
-          "role": "brass",
-          "size": [
-            0.45,
-            6,
-            0
-          ],
-          "at": [
-            0,
-            7.5,
-            0
-          ]
-        },
-        {
-          "shape": "cylinder",
-          "role": "brass",
-          "size": [
-            0.35,
-            2.4,
-            0
-          ],
-          "at": [
-            0.9,
-            10.6,
-            0
+            -1.4,
+            -0.6,
+            3.6
           ],
           "rot": [
+            90,
             0,
-            0,
-            -40
+            0
           ]
         }
       ]
@@ -236,15 +300,10 @@
       ]
     },
     "gauntlets": {
-      "color": "#c8964f",
+      "color": "#b08454",
       "swatches": [
         "#af8654"
-      ],
-      "alts": [
-        "#8a8580",
-        "#9c5a3a"
-      ],
-      "vary": 4
+      ]
     },
     "steel": {
       "color": "#8e8a84",
@@ -267,12 +326,12 @@
       ]
     },
     "rubber": {
-      "color": "#3a3436",
+      "color": "#b8433c",
       "swatches": [],
       "free": true
     },
     "copper": {
-      "color": "#b0683a",
+      "color": "#c27a45",
       "swatches": [],
       "free": true
     },
@@ -295,20 +354,29 @@
       ],
       "min": 0.3
     },
-    "wrench": {
-      "color": "#8e8a84",
+    "pencil": {
+      "color": "#e8b73a",
       "swatches": [],
-      "free": true
+      "free": true,
+      "min": 0.12
     },
-    "tank": {
-      "color": "#b5432f",
+    "plaster": {
+      "color": "#e6c7a0",
       "swatches": [],
-      "free": true
+      "free": true,
+      "min": 0.12
     },
-    "brass": {
-      "color": "#c9a24a",
+    "tape": {
+      "color": "#ece7dc",
       "swatches": [],
-      "free": true
+      "free": true,
+      "min": 0.12
+    },
+    "gauge": {
+      "color": "#e4e0d6",
+      "swatches": [],
+      "free": true,
+      "min": 0.12
     }
   },
   "clips": {
@@ -846,6 +914,9 @@
     }
   ],
   "slots": {
-    "tool": 3
+    "pencil": 0,
+    "plaster": 1,
+    "tape": 2,
+    "gauge": 3
   }
 }

@@ -1,5 +1,7 @@
 import { shift } from '../../../src/core/color';
+import { type Kind, generateCharacter } from '../../../src/gen/character';
 import { drawFrame, hexHsl, paintOf } from '../../../src/render/cast/sprites/draw';
+import { picks } from '../../../src/render/cast/sprites/play';
 import type { FaceMood } from '../../../src/render/cast/sprites/face';
 import type { SpriteSet } from '../../../src/render/cast/sprites/types';
 
@@ -11,7 +13,7 @@ import { ratio } from '../../../src/render/ink-figure';
  * in the roster's colours: one row per clip and facing, every frame on a common floor line at `zoom` px
  * per world px, on the game's light paper. With `silhouette`, every frame is solid ink: the read test.
  */
-export function contact(set: SpriteSet, zoom: number, opts: { facings?: ('r' | 'l')[]; silhouette?: boolean; only?: string[] } = {}): string {
+export function contact(set: SpriteSet, zoom: number, opts: { facings?: ('r' | 'l')[]; silhouette?: boolean; only?: string[]; pick?: number[] } = {}): string {
   const facings = opts.facings ?? ['r', 'l'];
   const rows: { label: string; frames: SpriteSet['clips'][string]['r'] }[] = [];
   for (const [name, c] of Object.entries(set.clips)) {
@@ -62,10 +64,42 @@ export function contact(set: SpriteSet, zoom: number, opts: { facings?: ('r' | '
         const face = set.face
           ? { kit: set.face, mood: mood === 'up' && j >= r.frames.length / 2 ? ('fall' as const) : mood, facing: r.label.endsWith(' l') ? -1 : 1 }
           : undefined;
-        drawFrame(g, f, paints, body, ratio(main, shift(main, -14, 6)), 0.6, 7, j / 8, face);
+        drawFrame(g, f, paints, body, ratio(main, shift(main, -14, 6)), 0.6, 7, j / 8, face, opts.pick);
       }
       g.restore();
     });
+  });
+  return c.toDataURL('image/png');
+}
+
+/**
+ * Six rolls of a kind: its standing frame as six characters of that kind wear it (their accessories,
+ * from their own \`vary\` rolls), and one with every accessory on, at \`zoom\` px per world px.
+ */
+export function rolls(set: SpriteSet, zoom: number): string {
+  const idle = set.clips.idle ?? Object.values(set.clips)[0];
+  const looks = [1, 2, 3, 4, 5, 6].map((seed) => picks(set, generateCharacter(seed, set.kind as Kind).vary));
+  looks.push((set.slots ?? []).map((sl) => sl.options - 1));
+  const cell = 30 * zoom;
+  const c = document.createElement('canvas');
+  c.width = looks.length * cell + 20;
+  c.height = 34 * zoom;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#efe6d2';
+  g.fillRect(0, 0, c.width, c.height);
+  const hsl = set.roles.map((r) => hexHsl(r.color));
+  const paints = set.roles.map((_, i) => paintOf(hsl[i]));
+  const main = hsl[set.roles.findIndex((r) => r.slot === 'paint')] ?? hsl[0];
+  looks.forEach((pick, i) => {
+    g.save();
+    g.translate(10 + cell * (i + 0.5), 31 * zoom);
+    g.scale(zoom, zoom);
+    const face = set.face ? { kit: set.face, mood: 'idle' as const, facing: 1 } : undefined;
+    drawFrame(g, idle.r[0], paints, paintOf(main), ratio(main, shift(main, -14, 6)), 0.6, 7, 0, face, pick);
+    g.restore();
+    g.fillStyle = '#3d2e26';
+    g.font = '600 14px sans-serif';
+    g.fillText(i < 6 ? `seed ${i + 1}` : 'all on', 14 + cell * i, 18);
   });
   return c.toDataURL('image/png');
 }
