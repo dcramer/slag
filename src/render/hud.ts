@@ -90,6 +90,24 @@ const AWARD: Record<string, { label: string; color: HSL }> = {
 };
 
 const FOOT_H = 22;
+/** Phones: the footer and page headings grow this much at most, or they eat the level. */
+const MAX_FOOT_SCALE = 1.35;
+const MAX_HEAD_SCALE = 1.3;
+/** Phones: crate cards grow this much at most, room allowing. */
+const MAX_CARD_SCALE = 2;
+/** Phones: lobby bays grow until they're this short, and race chips stop at this share of the height. */
+const MIN_BAY_H = 210;
+const MAX_CHIPS_H = 130;
+/** Width of the lobby's top bar on phones, end to end, at scale 1. */
+const PHONE_BAR_W = 520;
+
+/** A group's transform: view = o + logical × s. */
+interface Group {
+  s: number;
+  ox: number;
+  oy: number;
+}
+const NO_GROUP: Group = { s: 1, ox: 0, oy: 0 };
 
 /** Screen-space UI on its own canvas (logical 768×432, scaled). */
 export class Hud {
@@ -130,6 +148,16 @@ export class Hud {
   /** Clickable regions from the last frame (lobby buttons). */
   private buttons: HudButton[] = [];
   private frame: ViewFrame = VIEW_FRAME;
+  /** Phones: how far HUD groups grow about their anchors (1 elsewhere). */
+  uiScale = 1;
+  /** Phones: the smallest tap target, in view px (0 elsewhere). */
+  tapMin = 0;
+  /** World → view through the live camera: place cursors are in the world, and this screen may be zoomed in on it. */
+  worldToView: (x: number, y: number) => { x: number; y: number } = (x, y) => ({ x, y });
+  /** The group being drawn, so buttons record where they land. */
+  private group = NO_GROUP;
+  /** This screen's crate zoom. Only the drawing grows: the sim's card rects and cursors stay in logical px, so peers agree. */
+  private cards = NO_GROUP;
 
   constructor(private ctx: CanvasRenderingContext2D) {}
 
@@ -159,8 +187,57 @@ export class Hud {
   }
 
   private button(b: HudButton) {
-    this.buttons.push(b);
-    return this.pointer !== null && this.pointer.x >= b.x && this.pointer.x < b.x + b.w && this.pointer.y >= b.y && this.pointer.y < b.y + b.h;
+    const { s, ox, oy } = this.group;
+    const growW = Math.max(0, this.tapMin - b.w * s);
+    const growH = Math.max(0, this.tapMin - b.h * s);
+    const r = { ...b, x: ox + b.x * s - growW / 2, y: oy + b.y * s - growH / 2, w: b.w * s + growW, h: b.h * s + growH };
+    this.buttons.push(r);
+    return this.pointer !== null && this.pointer.x >= r.x && this.pointer.x < r.x + r.w && this.pointer.y >= r.y && this.pointer.y < r.y + r.h;
+  }
+
+  /** Draw at view = o + logical × s on both layers, until the returned function is called. */
+  private begin(s: number, ox: number, oy: number): () => void {
+    if (s === 1 && !ox && !oy) return () => {};
+    const outer = this.group;
+    for (const c of [this.ctx, this.gctx]) {
+      c.save();
+      c.translate(ox, oy);
+      c.scale(s, s);
+    }
+    this.group = { s: outer.s * s, ox: outer.ox + outer.s * ox, oy: outer.oy + outer.s * oy };
+    return () => {
+      this.group = outer;
+      this.ctx.restore();
+      this.gctx.restore();
+    };
+  }
+
+  /** `begin`, growing by `s` about the anchor (ax, ay). */
+  private grow(ax: number, ay: number, s: number): () => void {
+    return this.begin(s, ax - ax * s, ay - ay * s);
+  }
+
+  private get phone() {
+    return this.uiScale > 1;
+  }
+
+  private get footScale() {
+    return this.mode === 'touch' ? Math.min(this.uiScale, MAX_FOOT_SCALE) : 1;
+  }
+
+  private get footH() {
+    return this.mode === 'touch' ? 30 * this.footScale : FOOT_H;
+  }
+
+  /** Space for the Settings button the touch overlay floats in the top-right corner. */
+  private get gearW() {
+    return this.tapMin * 1.35;
+  }
+
+  /** A tap on this screen, in the logical px the crate's rects are in. */
+  pickToLogical(p: { x: number; y: number }): { x: number; y: number } {
+    const { s, ox, oy } = this.cards;
+    return { x: (p.x - ox) / s, y: (p.y - oy) / s };
   }
 
   /** Stamped button with optional icon. */
@@ -380,34 +457,57 @@ export class Hud {
     glowDot(this.gctx, VIEW_W / 2, VIEW_H + 60, 330, { h: 18, s: 100, l: 45 }, 0.22, 0.2);
     this.stepEmbers(dt);
 
-    // Top bar: logo · level plate · menu buttons.
+    // Top bar: logo · level plate · menu buttons. On phones its ends hug the window and the buttons are icons.
+    const win = this.frame;
+    const phone = this.phone;
+    const safeW = win.safeX1 - win.safeX0 - 16;
+    const barS = phone ? Math.min(this.uiScale, safeW / PHONE_BAR_W) : 1;
+    let done = this.begin(barS, phone ? win.safeX0 + 8 - 14 * barS : 0, 0);
     this.logo(64, 30, 38, t);
     const me = m.players.find((p) => p.device === this.mouseDevice);
     const lv = m.level.theme;
     const themeLabel = THEME_LABELS[lv.id].toUpperCase();
     const lx = 140;
-    const lw = 360;
+    const lw = phone ? 300 : 360;
     plate(c, lx, 13, lw, 30, { rivets: false });
     c.font = `800 ${TYPE.caption}px ${UI}`;
     const tw = tag(c, themeLabel, lx + 8, 28, PAL.hazard, PAL.ink, TYPE.caption);
     this.text(lv.name, lx + 16 + tw, 28.5, 14, PAL.bone, 'left', DISPLAY, 400);
-    if (m.players.length)
-      this.btn({ x: lx + lw - 92, y: 17, w: 86, h: 23, action: 'level', device: me?.device ?? m.players[0].device }, 'New Level', 'ghost', 'refresh');
-    this.btn({ x: VIEW_W - 196, y: 15, w: 84, h: 26, action: 'rules' }, 'Rules', 'secondary', 'flag');
-    this.btn({ x: VIEW_W - 104, y: 15, w: 92, h: 26, action: 'settings' }, 'Settings', 'secondary', 'gear');
+    if (m.players.length) {
+      const device = me?.device ?? m.players[0].device;
+      if (phone) this.btn({ x: lx + lw - 38, y: 16, w: 32, h: 25, action: 'level', device }, '', 'ghost', 'refresh');
+      else this.btn({ x: lx + lw - 92, y: 17, w: 86, h: 23, action: 'level', device }, 'New Level', 'ghost', 'refresh');
+    }
+    done();
+    done = this.begin(barS, phone ? win.safeX1 - 8 - (VIEW_W - 12) * barS : 0, 0);
+    if (phone) {
+      this.btn({ x: VIEW_W - 12 - 74, y: 13, w: 34, h: 30, action: 'rules' }, '', 'secondary', 'flag');
+      this.btn({ x: VIEW_W - 12 - 34, y: 13, w: 34, h: 30, action: 'settings' }, '', 'secondary', 'gear');
+    } else {
+      this.btn({ x: VIEW_W - 196, y: 15, w: 84, h: 26, action: 'rules' }, 'Rules', 'secondary', 'flag');
+      this.btn({ x: VIEW_W - 104, y: 15, w: 92, h: 26, action: 'settings' }, 'Settings', 'secondary', 'gear');
+    }
+    done();
 
-    // Player bays: joined players + open slots (min 4 shown, 4 per row).
-    const shown = Math.min(MAX_PLAYERS, Math.max(4, m.players.length + 1));
+    // Player bays: joined players + open slots (min 4 shown, 4 per row). Phones show fewer, so each can be bigger.
+    const shown = Math.min(MAX_PLAYERS, Math.max(phone ? 2 : 4, m.players.length + 1));
     const rows = shown > 4 ? 2 : 1;
-    const cols = 4;
+    const cols = phone ? Math.min(4, shown) : 4;
     const gap = 10;
     const bw = 174;
-    const top = 60;
-    const bottom = VIEW_H - FOOT_H - (this.net ? 46 : 12);
-    const bh = Math.min(rows === 1 ? 250 : 999, (bottom - top - gap * (rows - 1)) / rows);
-    const y0 = top + (bottom - top - (rows * bh + (rows - 1) * gap)) / 2;
-    const x0 = (VIEW_W - (cols * bw + (cols - 1) * gap)) / 2;
+    const netS = phone ? Math.min(this.uiScale, MAX_FOOT_SCALE) : 1;
+    const top = phone ? 46 * barS + 6 : 60;
+    const bottom = phone ? win.y1 - this.footH - (this.net ? 36 * netS + 6 : 8) : VIEW_H - FOOT_H - (this.net ? 46 : 12);
+    const gridW = cols * bw + (cols - 1) * gap;
+    const gs = phone
+      ? Math.max(1, Math.min(this.uiScale, safeW / gridW, (bottom - top - gap * (rows - 1)) / rows / (rows === 1 ? MIN_BAY_H : MIN_BAY_H / 2)))
+      : 1;
+    const bh = Math.min(rows === 1 ? 250 : 999, ((bottom - top) / gs - gap * (rows - 1)) / rows);
+    const gridH = rows * bh + (rows - 1) * gap;
+    const y0 = phone ? 0 : top + (bottom - top - gridH) / 2;
+    const x0 = (VIEW_W - gridW) / 2;
     const joinable = !me;
+    done = this.begin(gs, phone ? (win.safeX0 + win.safeX1) / 2 - (VIEW_W / 2) * gs : 0, phone ? (top + bottom) / 2 - (gridH / 2) * gs : 0);
     for (let i = 0; i < shown; i++) {
       const x = x0 + (i % cols) * (bw + gap);
       const y = y0 + Math.floor(i / cols) * (bh + gap);
@@ -428,7 +528,12 @@ export class Hud {
         }
       }
     }
-    if (this.net) this.netPanel(this.net, x0, VIEW_H - FOOT_H - 40, cols * bw + (cols - 1) * gap);
+    done();
+    if (this.net && phone) {
+      done = this.begin(netS, win.safeX0 + 8, win.y1 - this.footH - 36 * netS);
+      this.netPanel(this.net, 0, 0, safeW / netS);
+      done();
+    } else if (this.net) this.netPanel(this.net, x0, VIEW_H - FOOT_H - 40, gridW);
   }
 
   private playerCard(p: Player, i: number, x: number, y: number, w: number, h: number, t: number) {
@@ -444,7 +549,7 @@ export class Hud {
     c.font = `600 ${TYPE.caption}px ${UI}`;
     const lw = c.measureText(label).width;
     this.text(label, x + w - 10, y + 17.5, TYPE.caption, PAL.ash, 'right', UI, 600);
-    if (p.device === 'touch') drawGlyph(c, { kind: 'touch' }, x + w - 24 - lw, y + 17.5, 11);
+    if (p.device.endsWith('touch')) drawGlyph(c, { kind: 'touch' }, x + w - 24 - lw, y + 17.5, 11);
     else icon(c, pad ? 'gamepad' : 'keyboard', x + w - 18 - lw, y + 17.5, 9, PAL.ash);
     // Character on a slag pedestal.
     const cx = x + w / 2;
@@ -482,8 +587,9 @@ export class Hud {
     this.text(p.character.name, cx, ny, nsize, nameHover ? PAL.amber : PAL.bone, 'center', DISPLAY, 400, 3.5);
     if (mine) icon(c, 'pencil', cx + nw / 2 + 8, ny, 8, nameHover ? PAL.amber : PAL.dim);
     // Status row.
-    const by = y + h - (big ? 34 : 28);
-    const bh = big ? 25 : 22;
+    const tall = this.phone ? 8 : 0;
+    const by = y + h - (big ? 34 : 28) - tall;
+    const bh = (big ? 25 : 22) + tall;
     if (mine) {
       this.btn(
         { x: x + 10, y: by, w: w - 50, h: bh, action: 'ready', device: p.device },
@@ -582,12 +688,17 @@ export class Hud {
     const c = this.ctx;
     c.fillStyle = 'rgba(18,10,7,0.68)';
     this.wash();
-    const twoRows = m.crate.length > 5;
+    const twoRows = m.crate.length > 5 || this.phone;
+    const headS = Math.min(this.uiScale, MAX_HEAD_SCALE);
+    let done = this.grow(VIEW_W / 2, 0, headS);
     this.heading(roundLabel(m), 'Choose a Part', twoRows ? 30 : 52, twoRows ? 24 : TYPE.title);
     this.phaseTimer(m, t, VIEW_W / 2 + 120, twoRows ? 34 : 56);
+    done();
     const rc = this.rc();
     rc.t = t;
     rc.frame = m.frame;
+    this.cards = this.phone ? this.crateZoom(m, 62 * headS) : NO_GROUP;
+    done = this.begin(this.cards.s, this.cards.ox, this.cards.oy);
     m.crate.forEach((item, idx) => {
       if (item.claimedBy >= 0) return;
       const r = item.rect;
@@ -613,25 +724,61 @@ export class Hud {
       wrap(this, item.def.name, r.x + r.w / 2, y + r.h - 28, r.w - 12, TYPE.body);
       this.text(item.def.maker, r.x + r.w / 2, y + r.h - 11, TYPE.caption, PAL.dim, 'center', UI, 600);
     });
-    for (const p of m.players) if (p.claim < 0) this.pending.push(() => this.cursor(p.cursor.x, p.cursor.y, p.character.body, p.character.name, t));
+    done();
+    const { s, ox, oy } = this.cards;
+    for (const p of m.players) {
+      if (p.claim < 0) this.pending.push(() => this.scaledCursor(ox + p.cursor.x * s, oy + p.cursor.y * s, p.character.body, p.character.name, t));
+    }
+  }
+
+  /** How big the crate can draw between the heading and the footer. */
+  private crateZoom(m: Match, top: number): Group {
+    const f = this.frame;
+    const rects = m.crate.map((c) => c.rect);
+    const x0 = Math.min(...rects.map((r) => r.x));
+    const y0 = Math.min(...rects.map((r) => r.y));
+    const x1 = Math.max(...rects.map((r) => r.x + r.w));
+    const y1 = Math.max(...rects.map((r) => r.y + r.h));
+    const left = f.safeX0 + 8;
+    const right = f.safeX1 - 8;
+    const bottom = f.y1 - this.footH - 6;
+    const s = Math.max(1, Math.min(MAX_CARD_SCALE, (right - left) / (x1 - x0), (bottom - top) / (y1 - y0)));
+    return { s, ox: (left + right - s * (x0 + x1)) / 2, oy: (top + bottom - s * (y0 + y1)) / 2 };
+  }
+
+  private scaledCursor(x: number, y: number, col: HSL, label: string, t: number) {
+    const done = this.grow(x, y, this.uiScale);
+    this.cursor(x, y, col, label, t);
+    done();
   }
 
   private place(m: Match) {
     const c = this.ctx;
     // The header runs along the top of the window, whatever its shape.
     const { x0, y0, w, safeX0, safeY0, safeX1 } = this.frame;
-    const g = c.createLinearGradient(0, y0, 0, safeY0 + 54);
+    const headS = Math.min(this.uiScale, MAX_HEAD_SCALE);
+    const g = c.createLinearGradient(0, y0, 0, safeY0 + 54 * headS);
     g.addColorStop(0, 'rgba(18,10,7,0.82)');
     g.addColorStop(1, 'rgba(18,10,7,0)');
     c.fillStyle = g;
-    c.fillRect(x0, y0, w, safeY0 + 54 - y0);
+    c.fillRect(x0, y0, w, safeY0 + 54 * headS - y0);
+    let done = this.grow(safeX0 + 14, safeY0, headS);
     this.text(roundLabel(m), safeX0 + 14, safeY0 + 16, 14, PAL.amber, 'left', DISPLAY, 400, 3);
+    done();
+    done = this.grow(VIEW_W / 2, safeY0, headS);
     this.text('PLACE YOUR PART', VIEW_W / 2, safeY0 + 17, TYPE.head + 2, PAL.bone, 'center', DISPLAY, 400, 4);
-    this.phaseTimer(m, m.frame / 60, safeX1 - 24, safeY0 + 20);
+    done();
+    done = this.grow(safeX1 - this.gearW, safeY0, headS);
+    this.phaseTimer(m, m.frame / 60, safeX1 - this.gearW - 24, safeY0 + 20);
+    done();
     for (const p of m.players) {
       if (p.placed) continue;
       const def = p.claim >= 0 ? m.crate[p.claim].def : null;
-      this.pending.push(() => this.cursor(p.cursor.x, p.cursor.y, p.character.body, def ? def.name : p.character.name, m.frame / 60));
+      // Cursors are in the world: the camera says where that is on this screen, whatever its zoom.
+      this.pending.push(() => {
+        const v = this.worldToView(p.cursor.x, p.cursor.y);
+        this.scaledCursor(v.x, v.y, p.character.body, def ? def.name : p.character.name, m.frame / 60);
+      });
     }
   }
 
@@ -673,6 +820,7 @@ export class Hud {
       c.restore();
       glowDot(this.gctx, VIEW_W / 2, VIEW_H / 2 - 30, 90, left > 0 ? { h: 30, s: 100, l: 60 } : { h: 90, s: 100, l: 55 }, 0.3);
     }
+    let done = this.grow(VIEW_W / 2, this.frame.safeY0, this.uiScale);
     if (Number.isFinite(run.timeLeft)) {
       const secs = Math.ceil(run.timeLeft / 60);
       const urgent = secs <= 10;
@@ -688,12 +836,15 @@ export class Hud {
         400,
       );
     }
+    done();
+    const chips = this.chipGrid(m.players.length);
+    done = this.grow(this.frame.safeX0, this.frame.safeY0, chips.s);
     // Scores can't change during a race, so these chips hold still until the next round.
     standings(m.players, (p) => p.score).forEach((p, i) => {
       const r = run.runners.find((r) => r.slot === p.slot);
       // Up to 4 chips per row so 8 players fit left of the timer.
-      const x = this.frame.safeX0 + 8 + (i % 4) * 87;
-      const y = this.frame.safeY0 + 6 + Math.floor(i / 4) * 29;
+      const x = this.frame.safeX0 + 8 + (i % chips.cols) * 87;
+      const y = this.frame.safeY0 + 6 + Math.floor(i / chips.cols) * 29;
       const dead = r && !r.alive;
       const done = r?.finished;
       plate(c, x, y, 84, 25, { rivets: false, drop: 2, stroke: done ? PAL.toxic : dead ? PAL.danger : undefined, alpha: 0.92 });
@@ -719,6 +870,19 @@ export class Hud {
         if (held.uses > 1) this.text(`×${held.uses}`, x + 67, y + 18, TYPE.caption, PAL.bone, 'right', UI, 800);
       }
     });
+    done();
+  }
+
+  /** How race chips wrap: whichever layout lets them grow most without reaching the timer or taking over the screen. */
+  private chipGrid(n: number): { cols: number; s: number } {
+    if (!this.phone) return { cols: 4, s: 1 };
+    const room = VIEW_W / 2 - 28 * this.uiScale - this.frame.safeX0 - 8;
+    let best = { cols: 4, s: 0 };
+    for (let cols = Math.min(4, n); cols >= 1; cols--) {
+      const s = Math.min(this.uiScale, room / (cols * 87), MAX_CHIPS_H / (Math.ceil(n / cols) * 29));
+      if (s > best.s) best = { cols, s };
+    }
+    return best;
   }
 
   // ------------------------------------------------------------------ score / victory
@@ -744,7 +908,12 @@ export class Hud {
       ? { feet: 30, scale: 1.55, name: 8, nameSize: 11, bar: 15, barH: 9, award: 28, awardH: 11, band: -1 }
       : { feet: 36, scale: 2.2, name: 10, nameSize: 13, bar: 20, barH: 12, award: 38, awardH: 12, band: -6 };
     const y0 = compact ? 98 : 104;
-    plate(c, 140, y0 - 12, 520, m.players.length * rowH + 22);
+    const panelH = m.players.length * rowH + 22;
+    const f = this.frame;
+    const panelS = this.phone ? Math.max(1, Math.min(this.uiScale, (f.safeX1 - f.safeX0 - 16) / 520, (f.y1 - this.footH - 8 - (y0 - 12)) / panelH)) : 1;
+    // The panel's centre is x = 400; the window's is the anchor, or it would grow off one side.
+    const done = this.begin(panelS, this.phone ? (f.safeX0 + f.safeX1) / 2 - 400 * panelS : 0, (y0 - 12) * (1 - panelS));
+    plate(c, 140, y0 - 12, 520, panelH);
     // Finish line marker.
     hazardTape(c, barX + barW, y0 - 2, 4, m.players.length * rowH, 0.9);
     this.text(`${TARGET}`, barX + barW + 2, y0 - 7, TYPE.caption, PAL.hazard, 'center', UI, 800);
@@ -813,6 +982,7 @@ export class Hud {
       }
     }
     c.globalAlpha = 1;
+    done();
   }
 
   private victory(m: Match, t: number) {
@@ -877,6 +1047,9 @@ export class Hud {
       case 'lobby': {
         const primary = this.mode === 'gamepad' ? m.players.find((p) => /(^|:)pad/.test(p.device)) : m.players.find((p) => p.device === this.mouseDevice);
         const items: FooterItem[] = [];
+        // A phone's lobby buttons are all on the cards and the top bar, big enough for a thumb.
+        if (this.phone)
+          return { items, left: m.players.length ? `${m.players.filter((p) => p.ready).length}/${m.players.length} Ready` : '', alpha: 1, bar: true };
         if (!primary) items.push({ action: 'confirm', label: 'Join', hud: 'join', device: this.mouseDevice });
         else {
           items.push({ action: 'confirm', label: primary.ready ? 'Not Ready' : 'Ready Up', hud: 'ready', device: primary.device });
@@ -895,13 +1068,15 @@ export class Hud {
       case 'place': {
         const placed = m.players.filter((p) => p.placed).length;
         // Fade out of the way when a cursor is down near the footer.
-        const near = m.players.some((p) => !p.placed && p.cursor.y > VIEW_H - FOOT_H - 26);
+        const near = m.players.some((p) => !p.placed && this.worldToView(p.cursor.x, p.cursor.y).y > this.frame.y1 - this.footH - 26);
+        // On a phone these would sit under the on-screen buttons that already say the same.
+        const items: FooterItem[] = [
+          { action: 'confirm', label: 'Drag to Aim', touchOnly: true },
+          { action: 'alt', label: 'Rotate', mouse: true, touchButton: '⟳' },
+          { action: 'confirm', label: 'Place', mouse: true, touchButton: 'PLACE' },
+        ];
         return {
-          items: [
-            { action: 'confirm', label: 'Drag to Aim', touchOnly: true },
-            { action: 'alt', label: 'Rotate', mouse: true, touchButton: '⟳' },
-            { action: 'confirm', label: 'Place', mouse: true, touchButton: 'PLACE' },
-          ],
+          items: this.phone && touch ? [] : items,
           left: `${placed}/${m.players.length} Placed`,
           alpha: near ? 0.25 : 1,
           bar: true,
@@ -945,9 +1120,10 @@ export class Hud {
     const { items, left, alpha, bar } = this.footerItems(m);
     const c = this.ctx;
     const touch = this.mode === 'touch';
-    const fh = touch ? 30 : FOOT_H;
-    const gh = touch ? 16 : 12;
-    const size = touch ? TYPE.label + 1 : TYPE.body + 0.5;
+    const fs = this.footScale;
+    const fh = this.footH;
+    const gh = (touch ? 16 : 12) * fs;
+    const size = (touch ? TYPE.label + 1 : TYPE.body + 0.5) * fs;
     const win = this.frame;
     const y = win.y1 - fh;
     const cy = y + fh / 2 + 1;
@@ -970,9 +1146,9 @@ export class Hud {
     if (m.phase === 'lobby' && this.room) {
       const code = this.room;
       c.font = `400 ${size + 3}px ${DISPLAY}`;
-      const x = win.safeX0 + (left ? 110 : 14);
-      this.text('LOBBY', x, cy, TYPE.caption, PAL.dim, 'left', UI, 800);
-      this.text(code, x + 34, cy + 0.5, size + 3, PAL.amber, 'left', DISPLAY, 400);
+      const x = win.safeX0 + (left ? 110 * fs : 14);
+      this.text('LOBBY', x, cy, TYPE.caption * fs, PAL.dim, 'left', UI, 800);
+      this.text(code, x + 34 * fs, cy + 0.5, size + 3, PAL.amber, 'left', DISPLAY, 400);
     }
     // Right-aligned prompts, laid out right to left.
     let x = win.safeX1 - 14;
@@ -1013,6 +1189,7 @@ export class Hud {
       return;
     }
     const c = this.ctx;
+    const done = this.grow(VIEW_W / 2, this.frame.safeY0 + 52, this.uiScale);
     c.save();
     c.globalAlpha = Math.min(1, left / 250);
     c.font = `700 ${TYPE.label}px ${UI}`;
@@ -1022,6 +1199,7 @@ export class Hud {
     icon(c, 'check', x + 13, 64, 9, PAL.toxic);
     this.text(this.toastMsg, x + 23, 64.5, TYPE.label, PAL.bone, 'left', UI, 700);
     c.restore();
+    done();
   }
 
   /** For wrap(). */

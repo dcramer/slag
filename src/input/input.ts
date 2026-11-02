@@ -36,6 +36,8 @@ export class InputManager {
   clickConfirms: () => boolean = () => true;
   /** Whether right click and the wheel count as "alt" right now. Only for rotating: alt also self-destructs in a race. */
   mouseAlts: () => boolean = () => true;
+  /** A view-px pointer as the match reads it: phones show pick and place through their own card zoom and camera. */
+  pointerMap: (p: { x: number; y: number }) => { x: number; y: number } = (p) => p;
   /** Element whose box maps to the 768×432 logical view. */
   viewEl: HTMLElement | null = null;
 
@@ -217,14 +219,18 @@ export class InputManager {
       // Mouse → first keyboard device.
       const f = out[this.mouseDevice];
       if (f) {
-        if (this.pointerDirty && this.pointer) f.pointer = { x: this.pointer.x, y: this.pointer.y };
+        if (this.pointerDirty && this.pointer) f.pointer = this.pointerMap(this.pointer);
         if (this.click) f.confirmPressed = true;
         if (this.rclick) f.altPressed = true;
       }
     }
     // Touch → the 'touch' device (one touch player per screen).
     if (this.captured) this.touch.reset();
-    else out[TOUCH_DEVICE] = this.touch.sample();
+    else {
+      const tf = this.touch.sample();
+      if (tf.pointer) tf.pointer = this.pointerMap(tf.pointer);
+      out[TOUCH_DEVICE] = tf;
+    }
     for (const u of this.ui) {
       const t = out[u.device] ?? (out[u.device] = emptyFrame());
       if (u.confirm) t.confirmPressed = true;

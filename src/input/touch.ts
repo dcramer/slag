@@ -25,8 +25,8 @@ export const TOUCH_DEVICE = 'touch';
  * the touch player's state by game-client):
  * - `off`: nothing joined / nothing to do (only the menu button shows)
  * - `lobby`: taps hit-test the HUD buttons (join / ready / new look / name)
- * - `pick`: tap a crate card to claim it (cursor snaps to the finger)
- * - `place`: drag moves the ghost (offset above the finger); ROTATE / PLACE buttons
+ * - `pick`: tap a crate card to claim it (cursor snaps to the finger); two fingers move the camera
+ * - `place`: drag moves the ghost (offset above the finger); ROTATE / PLACE buttons; two fingers move the camera
  * - `race`: left-thumb stick, right-thumb JUMP, hold ALT to self-destruct, USE while holding an item
  * - `continue`: tap anywhere = confirm (score / victory screens)
  */
@@ -96,7 +96,7 @@ export function touchLayout(w: number, h: number, ins: Insets = { top: 0, right:
   const d = pr + sr + clamp(s * 0.03, 8, 18);
   const secondary = { x: primary.x - d * 0.87, y: primary.y - d * 0.5, r: sr };
   const use = { x: primary.x + pr - sr, y: primary.y - pr - sr - clamp(s * 0.03, 8, 18), r: sr };
-  const mr = clamp(s * 0.05, 18, 24);
+  const mr = clamp(s * 0.05, 22, 26); // 44 CSS px across at the least
   const menu = { x: w - ins.right - 10 - mr, y: ins.top + 10 + mr, r: mr };
   return {
     w,
@@ -113,7 +113,7 @@ export function touchLayout(w: number, h: number, ins: Insets = { top: 0, right:
 
 const inCircle = (c: Circle, x: number, y: number, slop = 1) => (x - c.x) ** 2 + (y - c.y) ** 2 <= (c.r * slop) ** 2;
 
-type Role = 'stick' | 'jump' | 'alt' | 'use' | 'drag' | 'tap' | 'rotate' | 'place' | 'none';
+type Role = 'stick' | 'jump' | 'alt' | 'use' | 'drag' | 'pinch' | 'tap' | 'rotate' | 'place' | 'none';
 
 interface Track {
   role: Role;
@@ -164,6 +164,10 @@ export class TouchInput {
   vibrate: ((ms: number) => void) | null = null;
   /** Called when `active` flips (overlay show/hide). */
   onActive: ((active: boolean) => void) | null = null;
+  /** Pick and place, two fingers: their spread grew by `ratio`, and their midpoint moved by `delta` to `mid` (view px). */
+  onPinch: ((ratio: number, mid: { x: number; y: number }, delta: { x: number; y: number }) => void) | null = null;
+  /** Sim frames a new drag waits before it moves the ghost, so the second finger of a pinch can land first. Set where pinching exists. */
+  pinchWait = 0;
 
   private tracks = new Map<number, Track>();
   private jumpLatch = false;
@@ -171,6 +175,9 @@ export class TouchInput {
   private altLatch = false;
   private useLatch = false;
   private pointer: { x: number; y: number } | null = null;
+  /** Place: the dragging finger (CSS px). Re-read every step, because a panning camera moves the world under a still finger. */
+  private drag: { x: number; y: number } | null = null;
+  private pinchLast: { d: number; mid: { x: number; y: number } } | null = null;
 
   /** Switch what touches mean. Live touches are dropped so a held role can't leak across phases. */
   setMode(m: TouchMode) {
@@ -190,7 +197,7 @@ export class TouchInput {
   reset() {
     this.tracks.clear();
     this.jumpLatch = this.confirmLatch = this.altLatch = this.useLatch = false;
-    this.pointer = null;
+    this.pointer = this.drag = this.pinchLast = null;
   }
 
   /** Haptic tick, honoring the `haptics` preference. */
@@ -229,14 +236,14 @@ export class TouchInput {
           role = 'rotate';
           this.altLatch = true;
           this.buzz(6);
-        } else if (![...this.tracks.values()].some((o) => o.role === 'drag')) {
-          role = 'drag';
-          this.dragTo(x, y);
+        } else {
+          role = this.nextFinger();
+          if (role === 'drag') this.drag = { x, y };
         }
         break;
       case 'pick':
-        role = 'drag';
-        this.pointer = this.toView(x, y) ?? this.pointer;
+        role = this.nextFinger();
+        if (role === 'drag') this.pointer = this.toView(x, y) ?? this.pointer;
         break;
       case 'lobby':
       case 'continue':
@@ -247,6 +254,19 @@ export class TouchInput {
     }
     t.role = role;
     this.tracks.set(id, t);
+    if (role === 'pinch') this.pinchLast = this.pinchState();
+  }
+
+  /** Pick and place: one finger drags, and a second turns the pair into a camera gesture. */
+  private nextFinger(): Role {
+    const fingers = [...this.tracks.values()];
+    if (fingers.some((o) => o.role === 'pinch')) return 'none';
+    // 'none' here is the finger left down when a pinch partner lifted: landing beside it pinches again.
+    const other = fingers.find((o) => o.role === 'drag' || o.role === 'none');
+    if (!other) return 'drag';
+    other.role = 'pinch';
+    this.drag = null;
+    return 'pinch';
   }
 
   move(id: number, x: number, y: number) {
@@ -265,9 +285,37 @@ export class TouchInput {
         t.ay = y - (dy / d) * R;
       }
     } else if (t.role === 'drag') {
-      if (this.mode === 'place') this.dragTo(x, y);
+      if (this.mode === 'place') this.drag = { x, y };
       else this.pointer = this.toView(x, y) ?? this.pointer;
+    } else if (t.role === 'pinch') {
+      const now = this.pinchState();
+      const last = this.pinchLast;
+      if (now && last && last.d > 0) this.onPinch?.(now.d / last.d, now.mid, { x: now.mid.x - last.mid.x, y: now.mid.y - last.mid.y });
+      this.pinchLast = now;
     }
+  }
+
+  /** The two pinching fingers' spread and midpoint, in view px. */
+  private pinchState(): { d: number; mid: { x: number; y: number } } | null {
+    const ps: { x: number; y: number }[] = [];
+    for (const t of this.tracks.values()) {
+      const v = t.role === 'pinch' ? this.toView(t.x, t.y) : null;
+      if (v) ps.push(v);
+    }
+    if (ps.length < 2) return null;
+    const [a, b] = ps;
+    return { d: Math.hypot(a.x - b.x, a.y - b.y), mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } };
+  }
+
+  /** Place: where the ghost being dragged is, in view px. Null when nothing is being dragged. */
+  dragView(): { x: number; y: number } | null {
+    return this.mode === 'place' && this.drag ? this.ghostAt(this.drag.x, this.drag.y) : null;
+  }
+
+  /** A lifted pinch finger leaves its partner idle, not dragging: a pinch never moves the ghost. */
+  private endPinch() {
+    for (const o of this.tracks.values()) if (o.role === 'pinch') o.role = 'none';
+    this.pinchLast = null;
   }
 
   up(id: number, x: number, y: number) {
@@ -279,6 +327,9 @@ export class TouchInput {
     t.y = y;
     const tap = Math.hypot(x - t.x0, y - t.y0) <= TAP_SLOP;
     switch (t.role) {
+      case 'pinch':
+        this.endPinch();
+        break;
       case 'place':
         // Only a finger that lifts *on* PLACE places: sliding off cancels.
         if (inCircle(this.layout.primary, x, y, 1.3)) {
@@ -287,6 +338,9 @@ export class TouchInput {
         }
         break;
       case 'drag':
+        // A tap shorter than the wait still moves the ghost.
+        if (this.drag && t.frames < this.pinchWait) this.pointer = this.ghostAt(x, y) ?? this.pointer;
+        this.drag = null;
         if (this.mode === 'pick') {
           // Lifting over a card claims it (tap or slide-to-choose).
           this.pointer = this.toView(x, y) ?? this.pointer;
@@ -306,19 +360,22 @@ export class TouchInput {
   }
 
   cancel(id: number) {
+    const t = this.tracks.get(id);
     this.tracks.delete(id);
+    if (t?.role === 'drag') this.drag = null;
+    if (t?.role === 'pinch') this.endPinch();
   }
 
   /** Place phase: ghost sits above the finger; the offset fades near the bottom edge so the lowest rows stay reachable. */
-  private dragTo(x: number, y: number) {
+  private ghostAt(x: number, y: number): { x: number; y: number } | null {
     const a = this.toView(x, y);
     const b = this.toView(x, y - 1);
-    if (!a || !b) return;
+    if (!a || !b) return null;
     const k = a.y - b.y; // view px per CSS px
     const off = DRAG_OFFSET_CSS * k;
     const VIEW_H = 432;
     const fade = clamp((VIEW_H - a.y) / (off * 1.5), 0, 1);
-    this.pointer = { x: a.x, y: a.y - off * fade };
+    return { x: a.x, y: a.y - off * fade };
   }
 
   /** The race stick's current state (for drawing and for sample()). */
@@ -356,6 +413,7 @@ export class TouchInput {
     for (const t of this.tracks.values()) {
       t.frames++;
       if (t.role === 'jump') jump = true;
+      if (t.role === 'drag' && this.drag && t.frames >= this.pinchWait) this.pointer = this.ghostAt(this.drag.x, this.drag.y) ?? this.pointer;
       if (t.role === 'alt' && !t.fired && t.frames >= ALT_HOLD_FRAMES) {
         t.fired = true;
         alt = true;

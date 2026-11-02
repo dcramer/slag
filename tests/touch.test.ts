@@ -32,6 +32,7 @@ describe('touch layout', () => {
     // Thumb-sized: big jump ≥ ~1.5 cm, secondary ≥ 44 px Apple minimum.
     expect(L.primary.r * 2).toBeGreaterThanOrEqual(88);
     expect(L.secondary.r * 2).toBeGreaterThanOrEqual(44);
+    expect(touchLayout(568, 320).menu.r * 2).toBeGreaterThanOrEqual(44);
     // Buttons don't overlap.
     expect(Math.hypot(L.primary.x - L.secondary.x, L.primary.y - L.secondary.y)).toBeGreaterThan(L.primary.r + L.secondary.r);
   });
@@ -159,6 +160,68 @@ describe('touch → InputFrame (menus)', () => {
     t.down(5, P.x, P.y);
     t.up(5, P.x + 3, P.y);
     expect(t.sample().confirmPressed).toBe(true);
+  });
+
+  it('place: a second finger makes a camera gesture, and the ghost stays out of it', () => {
+    const t = make('place');
+    const steps: { ratio: number; mid: { x: number; y: number }; delta: { x: number; y: number } }[] = [];
+    t.onPinch = (ratio, mid, delta) => steps.push({ ratio, mid, delta });
+    t.pinchWait = 6;
+    t.down(1, 300, 200);
+    expect(t.sample().pointer).toBeUndefined(); // the wait: this may be the first finger of a pinch
+    t.down(2, 400, 200);
+    t.move(2, 500, 200); // spread doubles
+    expect(steps).toHaveLength(1);
+    expect(steps[0].ratio).toBeCloseTo(2);
+    expect(steps[0].mid.x).toBeCloseTo(toView(400, 200).x);
+    for (let i = 0; i < 10; i++) expect(t.sample().pointer).toBeUndefined();
+    t.move(1, 320, 220);
+    t.move(2, 520, 220); // both fingers down-right: a pan. Each finger is its own step, and together they leave the spread alone.
+    const [first, second] = steps.slice(-2);
+    expect(first.ratio * second.ratio).toBeCloseTo(1);
+    expect(first.delta.y + second.delta.y).toBeGreaterThan(0);
+    // One finger lifting ends it. The one left behind does nothing, and a pinch never places.
+    t.up(1, 320, 220);
+    const n = steps.length;
+    t.move(2, 300, 300);
+    expect(steps).toHaveLength(n);
+    expect(t.sample()).toMatchObject({ confirmPressed: false });
+    expect(t.dragView()).toBeNull();
+    // A finger landing beside it starts the gesture again, and a third is ignored.
+    t.down(3, 200, 200);
+    t.down(4, 600, 200);
+    t.move(3, 100, 200);
+    expect(steps.length).toBeGreaterThan(n);
+    expect(t.sample().pointer).toBeUndefined();
+  });
+
+  it('place: the wait never swallows a tap, and a held ghost keeps reporting as the camera moves under it', () => {
+    const t = make('place');
+    t.pinchWait = 6;
+    t.down(1, 300, 200);
+    t.sample();
+    t.up(1, 300, 200);
+    expect(t.sample().pointer!.x).toBeCloseTo(toView(300, 200).x);
+    t.down(2, 300, 200);
+    for (let i = 0; i < 6; i++) t.sample();
+    const a = t.sample().pointer;
+    const b = t.sample().pointer;
+    expect(a).toEqual(b);
+    expect(b).toBeDefined();
+    expect(t.dragView()).toEqual(b);
+    t.up(2, 300, 200);
+    expect(t.dragView()).toBeNull();
+  });
+
+  it('pick: two fingers never claim a card', () => {
+    const t = make('pick');
+    t.onPinch = () => {};
+    t.down(1, 300, 200);
+    t.sample();
+    t.down(2, 400, 200);
+    t.up(2, 400, 200);
+    t.up(1, 300, 200);
+    expect(t.sample().confirmPressed).toBe(false);
   });
 
   it('lobby taps go to the HUD hit-test (in view coords), continue screens confirm on tap', () => {

@@ -42,12 +42,13 @@ Lint: `oxlint` (type-aware, `.oxlintrc.json`). Errors fail CI; warnings are real
 
 - `race --seed S --race saw,laser,launcher --frames 200` (`--race all` = one of every archetype)
 - `lobby` | `pick` | `place` with `--seed S --players N`
+- `mobile [--device "iPhone SE landscape"]`: emulated phone, real multi-touch, fails on a tap target under 44 CSS px or a runner off screen
 - `levels --count 9`, `--seeds a,b,c` or `--themes all` → contact sheet `shots/levels.png`
 - `props --count 24` (crate cards), `codex` (the `/codex` page)
 - `compare --seed S --players 4 --themes farm,mine` → classic vs cel, same sim frame, `shots/compare-*-S.png`. Any scenario takes `--style cel` (`?style=cel` in the browser).
 - Options: `--theme farm`, `--noui` (hide HUD), `--size 1280x720`, `--out shots`
 
-Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm`, `?players=2` (auto-join and start), `?race=saw,laser` or `?race=all`, `?propseed=3`, `?ui=0`, `?debug=1` (dev overlay: frame-time breakdown, counts, level info; ` toggles it in `pnpm dev` or with any `?debug`). In the console, `slagDebug` has `quickStart`, `race`, `addProps`, `loadLevel`, `phase`, `pause`, `step`, `render`.
+Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm`, `?players=2` (auto-join and start), `?race=saw,laser` or `?race=all`, `?propseed=3`, `?ui=0`, `?zoom=1` (phone camera on desktop; `?zoom=0` off, `?zoom=2.4` a fixed zoom), `?debug=1` (dev overlay: frame-time breakdown, counts, level info; ` toggles it in `pnpm dev` or with any `?debug`). In the console, `slagDebug` has `quickStart`, `race`, `addProps`, `loadLevel`, `phase`, `pause`, `step`, `render`.
 
 ## Git workflow
 
