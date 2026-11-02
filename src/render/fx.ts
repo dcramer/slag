@@ -1,5 +1,5 @@
 import { css, type HSL } from '../core/color';
-import { TILE, VIEW_H } from '../sim/constants';
+import { TILE } from '../sim/constants';
 import { type Level, tileAt } from '../sim/level';
 import { circle, glowDot, light, type RC } from './kit';
 
@@ -97,7 +97,7 @@ export class Fx {
             }
           }
           p.rot += p.vr * dt;
-          if (p.y > VIEW_H + 20) return false;
+          if (p.y > level.h * TILE + 20) return false;
           break;
         }
         default:

@@ -1,7 +1,7 @@
 import { inset, overlaps, pointInRect, type Rect, rectCircle } from '../core/geom';
-import { DT, KILL_Y, PLAYER_W, RUN_COUNTDOWN, TILE } from './constants';
+import { DT, PLAYER_W, RUN_COUNTDOWN, TILE } from './constants';
 import { type CrowdMember, nudgeCrowd } from './crowd';
-import { goalRect, type Level, spawnZone, T_SOLID, tileAt } from './level';
+import { goalRect, killY, type Level, spawnZone, T_SOLID, tileAt } from './level';
 import { type Body, bodyAtCell, type CollisionWorld, type Solid, stepBody } from './physics';
 import {
   AMMO,
@@ -79,6 +79,7 @@ export class RunWorld {
   private out: Contrib = { solids: this.solids, hazards: [], springs: [], winds: [] };
   private world: CollisionWorld;
   private goal: Rect;
+  private killY: number;
 
   constructor(
     readonly level: Level,
@@ -106,9 +107,10 @@ export class RunWorld {
       r.mods.forEach((m, i) => m.type === 'launcher' && st.aim.set(i, m.angle));
       this.propState.set(r.pp.uid, st);
     }
-    this.world = { tileAt: (x, y) => tileAt(level, x, y), solids: this.solids };
+    this.world = { tileAt: (x, y) => tileAt(level, x, y), solids: this.solids, gravity: level.gravity ?? 1 };
     this.goal = goalRect(level);
     this.safeZone = spawnZone(level);
+    this.killY = killY(level);
   }
 
   /** Is this runner inside the spawn safe zone (immune to props) right now? */
@@ -164,7 +166,7 @@ export class RunWorld {
       // Finished runners lose control but keep falling, landing and riding
       // platforms naturally. Nothing can hurt them and they don't push anyone.
       if (r.finished) {
-        if (r.body.y <= KILL_Y) stepBody(r.body, NO_INPUT, this.world, windAt(r.body, this.out.winds));
+        if (r.body.y <= this.killY) stepBody(r.body, NO_INPUT, this.world, windAt(r.body, this.out.winds));
         return;
       }
       const inp = live ? (inputs[i] ?? NO_INPUT) : NO_INPUT;
@@ -210,7 +212,7 @@ export class RunWorld {
           if (hitHazard(hb, h)) return this.kill(r, h.owner, 'hazard');
         }
       }
-      if (b.y > KILL_Y) return this.kill(r, -1, 'fall');
+      if (b.y > this.killY) return this.kill(r, -1, 'fall');
       if (overlaps(b, this.goal)) {
         r.finished = true;
         r.finishFrame = f;
@@ -256,7 +258,7 @@ export class RunWorld {
     const keep: Projectile[] = [];
     for (const p of this.projectiles) {
       const spec = AMMO[p.ammo];
-      p.vy += spec.gravity * DT;
+      p.vy += spec.gravity * (this.level.gravity ?? 1) * DT;
       p.x += p.vx * DT;
       p.y += p.vy * DT;
       if (spec.wobble) {

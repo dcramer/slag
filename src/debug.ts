@@ -3,6 +3,7 @@ import type { Match } from './game/match';
 import { ARCHETYPE_WEIGHTS, type Archetype, generateProp } from './gen/props';
 import type { Renderer } from './render/renderer';
 import { canPlace } from './sim/props';
+import type { ProfileOverride } from './gen/level';
 import type { ThemeId } from './themes';
 
 /**
@@ -15,6 +16,10 @@ import type { ThemeId } from './themes';
  *   ?race=saw,laser     drop those archetypes in and jump straight to a race
  *   ?race=all           one of every archetype
  *   ?propseed=7         seed for debug-generated props
+ *   ?size=tall          force the level profile's size class (classic|wide|tall)
+ *   ?route=zigzag       force the route shape (ltr|climb|descent|zigzag)
+ *   ?density=0.9        force terrain density (0..1)
+ *   ?gravity=0.7        force world gravity scale
  */
 export interface SlagDebug {
   match: Match;
@@ -91,6 +96,17 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
   (window as unknown as { slagDebug: SlagDebug }).slagDebug = api;
 
   const q = new URLSearchParams(location.search);
+  const force: ProfileOverride = {};
+  const size = q.get('size');
+  if (size === 'classic' || size === 'wide' || size === 'tall') force.size = size;
+  const route = q.get('route');
+  if (route === 'ltr' || route === 'climb' || route === 'descent' || route === 'zigzag') force.route = route;
+  if (q.get('density')) force.density = Number(q.get('density'));
+  if (q.get('gravity')) force.gravity = Number(q.get('gravity'));
+  if (Object.keys(force).length) {
+    match.forceProfile = force;
+    match.newLevel(match.seed);
+  }
   const players = Number(q.get('players') ?? 0);
   const race = q.get('race');
   if (race) {

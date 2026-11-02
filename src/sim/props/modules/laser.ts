@@ -1,3 +1,4 @@
+import { TILE } from '../../constants';
 import { cellOf, defineModule } from '../registry';
 import { cycle, rayToWall } from '../transform';
 import type { ModuleOf } from '../types';
@@ -20,7 +21,7 @@ export const laser = defineModule<'laser'>({
     const a = laserAngle(m, ctx.frame, ctx.r.phase);
     const x = m.at[0] + ctx.off[0];
     const y = m.at[1] + ctx.off[1];
-    const len = rayToWall(ctx.level, x, y, a, 1200, 9);
+    const len = rayToWall(ctx.level, x, y, a, Math.max(1200, (ctx.level.w + ctx.level.h) * TILE), 9);
     out.hazards.push({
       owner: ctx.r.pp.owner,
       kind: 'seg',

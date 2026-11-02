@@ -8,12 +8,12 @@ import { FARM } from './farm';
 import { HARBOR } from './harbor';
 import { JUNGLE } from './jungle';
 import { MINE } from './mine';
-import { makePlacer, type Recipe } from './place';
+import { makePlacer, type PlacerOpts, type Recipe } from './place';
 import { ROOFTOPS } from './rooftops';
 import { VOLCANO } from './volcano';
 
 export type { Piece, Recipe } from './place';
-export { finalize, SAFE_TILES, Site } from './place';
+export { finalize, type PlacerOpts, SAFE_TILES, Site } from './place';
 
 /**
  * Theme set pieces: large, pre-placed props that make a level interesting
@@ -29,7 +29,7 @@ export { finalize, SAFE_TILES, Site } from './place';
  * builders in ./builders.ts; ./place.ts validates every candidate by
  * simulating it (footprint, spawn/goal safety, path not cut).
  */
-export type SetPiecePlacer = (rng: Rng, level: Level) => PlacedProp[];
+export type SetPiecePlacer = (rng: Rng, level: Level, opts?: PlacerOpts) => PlacedProp[];
 
 export const SET_PIECE_UID = 100_000;
 

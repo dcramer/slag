@@ -13,17 +13,33 @@ export interface MatchRules {
   placeSeconds: number;
   /** Race limit; anyone still running is eliminated. */
   raceSeconds: number;
+  /**
+   * World gravity: 'auto' lets each level's profile roll it (mostly normal,
+   * sometimes low or high); otherwise every level uses that class
+   * (gen/level/profile.ts GRAVITY). Changing it in the lobby regenerates the level.
+   */
+  gravity: GravityRule;
 }
 
-export const DEFAULT_RULES: MatchRules = { targetScore: 50, pickSeconds: 15, placeSeconds: 0, raceSeconds: 0 };
+export type GravityRule = 'auto' | 'low' | 'normal' | 'high';
+
+export const DEFAULT_RULES: MatchRules = { targetScore: 50, pickSeconds: 15, placeSeconds: 0, raceSeconds: 0, gravity: 'auto' };
 
 /** Allowed values for each rule (used by the rules menu). */
-export const RULE_CHOICES: { [K in keyof MatchRules]: number[] } = {
+export const RULE_CHOICES: { [K in keyof MatchRules]: MatchRules[K][] } = {
   targetScore: [20, 30, 50, 80, 120],
   pickSeconds: [0, 10, 15, 20, 30],
   placeSeconds: [0, 15, 20, 30, 45],
   raceSeconds: [0, 30, 45, 60, 90],
+  gravity: ['auto', 'low', 'normal', 'high'],
 };
+
+/** Button text for a rule value (menus). */
+export function ruleValueLabel(k: keyof MatchRules, v: MatchRules[keyof MatchRules]): string {
+  if (k === 'gravity') return v === 'auto' ? 'Auto' : v === 'low' ? 'Low' : v === 'high' ? 'High' : 'Normal';
+  if (k === 'targetScore') return String(v);
+  return v === 0 ? 'Off' : `${v}s`;
+}
 
 const KEY = 'slag.rules.v1';
 

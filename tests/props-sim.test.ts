@@ -38,7 +38,8 @@ describe('prop runtime', () => {
   });
 
   it('a tracking crossbow aimed at a runner kills them and credits the owner', () => {
-    const level = generateLevel(5);
+    // A classic-size, normal-gravity level (the profile would otherwise roll size/gravity from the seed).
+    const level = generateLevel(5, undefined, { size: 'classic', gravity: 1 });
     // Find a launcher def that tracks.
     let def = null;
     for (let i = 0; i < 500 && !def; i++) {

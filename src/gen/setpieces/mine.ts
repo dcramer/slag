@@ -6,6 +6,7 @@ export const MINE: Recipe[] = [
   {
     name: 'minecart',
     weight: 3,
+    role: 'hazard',
     repeat: true,
     candidates: (rng, s) =>
       vehicles(rng, s, {
@@ -21,6 +22,7 @@ export const MINE: Recipe[] = [
   {
     name: 'drill',
     weight: 2,
+    role: 'hazard',
     candidates: (rng, s) =>
       vehicles(rng, s, {
         name: 'Tunnel Drill',
@@ -37,6 +39,7 @@ export const MINE: Recipe[] = [
   {
     name: 'ore bucket',
     weight: 2,
+    role: 'build',
     candidates: (rng, s) =>
       pendulums(rng, s, {
         name: 'Ore Bucket',

@@ -6,6 +6,7 @@ export const VOLCANO: Recipe[] = [
   {
     name: 'lava plume',
     weight: 3,
+    role: 'hazard',
     repeat: true,
     candidates: (rng, s) =>
       geysers(rng, s, {
@@ -24,6 +25,7 @@ export const VOLCANO: Recipe[] = [
   {
     name: 'vent',
     weight: 2,
+    role: 'hazard',
     repeat: true,
     candidates: (rng, s) => {
       const lava = rng.chance(0.5);
@@ -45,6 +47,7 @@ export const VOLCANO: Recipe[] = [
   {
     name: 'spitter',
     weight: 2,
+    role: 'hazard',
     candidates: (rng, s) =>
       cannons(rng, s, {
         name: 'Magma Spitter',
@@ -61,6 +64,7 @@ export const VOLCANO: Recipe[] = [
   {
     name: 'slab',
     weight: 1.5,
+    role: 'build',
     candidates: (rng, s) =>
       pendulums(rng, s, {
         name: 'Basalt Slab',

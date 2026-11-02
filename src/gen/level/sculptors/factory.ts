@@ -1,7 +1,8 @@
 import type { Rng } from '../../../core/rng';
 import { finish, Grid } from '../kit';
 import type { Sculptor } from '../types';
-import { easyGap, easyRise, H, hardGap, pit, rollChallenges, Slots, W } from './common';
+import { easyGap, easyRise, hardGap, knobs, pit, rollChallenges, Slots, stepRows } from './common';
+import { factoryTall } from './tall';
 
 type FactoryStyle = 'foundry' | 'warehouse' | 'assembly';
 
@@ -12,33 +13,32 @@ type FactoryStyle = 'foundry' | 'warehouse' | 'assembly';
  * press machines. Above: girder catwalks (one-way) hung from the ceiling on
  * rods, reached by stair stringers.
  */
-export const factory: Sculptor = ({ rng, attempt }) => {
+export const factory: Sculptor = (ctx) => {
+  if (ctx.profile.size === 'tall') return factoryTall(ctx);
+  const { rng, attempt } = ctx;
+  const k = knobs(ctx);
+  const { W, H } = k;
   const style = rng.weighted<FactoryStyle>([
     ['foundry', 3],
     ['warehouse', 3],
     ['assembly', 3],
   ]);
-  const g = new Grid();
-  const slots = new Slots();
-  const f = rng.int(20, 23); // top floor row
-  const ceil = rng.int(0, 2); // last ceiling row
+  const g = new Grid(W, H);
+  const slots = new Slots(6, W - 7);
+  const f = H - rng.int(4, 7); // top floor row
+  const ceil = rng.int(0, 1 + Math.round(k.density * 2)); // last ceiling row
   // Floor in level sections (loading docks), each within a climbable step of the last.
-  const floor: number[] = [];
-  for (let row = f; floor.length < W;) {
-    const len = rng.int(7, 14);
-    for (let i = 0; i < len && floor.length < W; i++) floor.push(row);
-    if (rng.chance(0.5)) row = Math.max(f - 4, Math.min(f + 1, row + rng.pick([-2, -1, 1, 2])));
-  }
+  const floor = stepRows(rng, k, f, [7, 14], 0.5, 2);
   const level = (a: number, b: number, row = floor[Math.max(0, a)]) => {
     for (let x = Math.max(0, a); x <= Math.min(W - 1, b); x++) floor[x] = row;
     return row;
   };
 
   // Vats (drop pits) in the floor: hard ones need a bridge.
-  const challenges = rollChallenges(rng, 0.82, 0.15, attempt);
+  const challenges = rollChallenges(rng, 0.82, 0.15, attempt, k.propNeed);
   g.wantsProps = challenges > 0;
   const vats: { a: number; b: number; hard: boolean }[] = [];
-  const nEasy = rng.int(style === 'foundry' ? 1 : 0, 2);
+  const nEasy = rng.int(style === 'foundry' ? 1 : 0, 2) + Math.floor((k.wide - 1) * rng.range(1, 2.5));
   for (let i = 0; i < challenges + nEasy; i++) {
     const hard = i < challenges;
     const w = hard ? hardGap(rng) : easyGap(rng, 2);
@@ -49,7 +49,9 @@ export const factory: Sculptor = ({ rng, attempt }) => {
   }
   // Floor machinery sits on level ground.
   const placed: { m: Machine; x: number; w: number }[] = [];
-  for (const m of BAGS[style](rng)) {
+  const bag: Machine[] = [];
+  for (let r = 0; r < Math.max(1, Math.round(k.wide * (0.55 + 0.7 * k.density))); r++) bag.push(...BAGS[style](rng));
+  for (const m of bag) {
     const w = m.w(rng);
     const x = slots.take(rng, w, 2);
     if (x === null) continue;
@@ -59,7 +61,7 @@ export const factory: Sculptor = ({ rng, attempt }) => {
   const sRow = level(0, 5);
   const gRow = level(W - 6, W - 1);
   for (let x = 0; x < W; x++) g.fill(x, floor[x], x, H - 1);
-  if (style !== 'assembly' || rng.chance(0.5)) g.fill(0, 0, W - 1, ceil);
+  if ((style !== 'assembly' || rng.chance(0.5)) && rng.chance(0.3 + 0.7 * k.density)) g.fill(0, 0, W - 1, ceil);
   for (const v of vats) {
     pit(g, v.a, v.b, floor[v.a - 1], v.hard);
     g.clear(v.a, 0, v.b, ceil); // the shaft above a vat opens the roof
@@ -71,7 +73,7 @@ export const factory: Sculptor = ({ rng, attempt }) => {
   for (const p of placed) p.m.stamp(g, rng, p.x, p.w, floor[p.x], ceil);
 
   // Catwalks: one-way girders hung from the ceiling, never across hard vats' full width.
-  const nWalks = style === 'assembly' ? rng.int(2, 3) : rng.int(0, 2);
+  const nWalks = k.count(style === 'assembly' ? rng.int(2, 3) : rng.int(0, 2));
   const rise = easyRise();
   for (let i = 0; i < nWalks; i++) {
     const len = rng.int(7, 14);
@@ -101,7 +103,7 @@ export const factory: Sculptor = ({ rng, attempt }) => {
 
   // Hanging ducts.
   if (g.get(10, ceil) === 1) {
-    for (let i = rng.int(2, 5); i > 0; i--) {
+    for (let i = k.count(rng.int(2, 5)); i > 0; i--) {
       const x = rng.int(6, W - 8);
       const len = rng.int(1, 3);
       if (g.empty(x, ceil + len + 3)) g.fill(x, ceil + 1, x + rng.int(0, 1), ceil + len);

@@ -10,6 +10,7 @@ export const FARM: Recipe[] = [
   {
     name: 'tractor',
     weight: 3,
+    role: 'hazard',
     candidates: (rng, s) =>
       vehicles(rng, s, {
         name: `${pick(rng, ['Old', 'Big', 'Grumpy', 'Rusty', 'Trusty', 'Diesel'])} ${pick(rng, ['Tractor', 'Plougher', 'Harvester', 'Bessie'])}`,
@@ -26,6 +27,7 @@ export const FARM: Recipe[] = [
   {
     name: 'windmill',
     weight: 2.5,
+    role: 'build',
     candidates: (rng, s) =>
       wheels(rng, s, {
         name: `${pick(rng, ['Creaky', 'Old', 'Whistling', 'Painted'])} Windmill`,
@@ -42,6 +44,7 @@ export const FARM: Recipe[] = [
   {
     name: 'hay hoist',
     weight: 1.5,
+    role: 'build',
     candidates: (rng, s) =>
       pendulums(rng, s, {
         name: 'Hay Hoist',

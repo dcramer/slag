@@ -76,6 +76,13 @@ export interface CollisionWorld {
   /** Tile kind (T_EMPTY/T_SOLID/T_ONEWAY). Must treat x outside the level as solid walls, y outside as empty. */
   tileAt(tx: number, ty: number): number;
   solids: readonly Solid[];
+  /**
+   * World gravity scale (Level.gravity; default 1). Scales gravity (and so
+   * the apex/fall/fast-fall multipliers built on it); terminal speeds scale
+   * with its square root so falls keep their weight. Jump take-off speeds
+   * are unchanged, so low gravity jumps higher and longer, high lower and shorter.
+   */
+  gravity?: number;
 }
 
 /** Plain data only (snapshot-friendly). */
@@ -416,12 +423,14 @@ export function stepBody(b: Body, c: Controls, world: CollisionWorld, wind: Wind
   b.vx = approach(b.vx, target, accel * DT) + airVx;
 
   // Vertical.
-  let g = PHYS.gravity;
-  let maxFall: number = PHYS.maxFall;
+  const gs = world.gravity ?? 1;
+  const fallK = gs === 1 ? 1 : Math.sqrt(gs);
+  let g = PHYS.gravity * gs;
+  let maxFall: number = PHYS.maxFall * fallK;
   const air = !b.onGround;
   if (air && down && b.vy > -PHYS.apexVelBand) {
     g *= PHYS.fallGravityMult * PHYS.fastFallGravityMult;
-    maxFall = PHYS.fastFallMax;
+    maxFall = PHYS.fastFallMax * fallK;
   } else if (air && b.jumping && c.jump && b.vy > -PHYS.apexVelBand && b.vy < PHYS.apexVelBand) g *= PHYS.apexGravityMult;
   else if (b.vy > 0) g *= PHYS.fallGravityMult;
   b.vy += g * (wind ? windGravityScale(b.vy, wind) : 1) * DT;
@@ -530,17 +539,18 @@ export interface JumpMetrics {
   fastFallSpeed: number;
 }
 
-let metricsCache: JumpMetrics | null = null;
+const metricsCache = new Map<number, JumpMetrics>();
 
 /**
  * Measure the controller by simulating it on an open flat floor. Other
  * subsystems (props, AI, tuning tools) use this instead of re-deriving
  * numbers from PHYS. Level validity must still come from reach.ts.
  */
-export function jumpMetrics(): JumpMetrics {
-  if (metricsCache) return { ...metricsCache };
+export function jumpMetrics(gravity = 1): JumpMetrics {
+  const hit = metricsCache.get(gravity);
+  if (hit) return { ...hit };
   const floorRow = 200;
-  const world: CollisionWorld = { tileAt: (_x, y) => (y >= floorRow ? 1 : 0), solids: [] };
+  const world: CollisionWorld = { tileAt: (_x, y) => (y >= floorRow ? 1 : 0), solids: [], gravity };
   const C = (o: Partial<Controls>): Controls => ({ left: false, right: false, down: false, jump: false, jumpPressed: false, ...o });
   const top = PHYS.runSpeed;
 
@@ -593,11 +603,11 @@ export function jumpMetrics(): JumpMetrics {
 
   const terminal = (down: boolean): number => {
     const t = createBody(0, 0);
-    for (let n = 0; n < 240; n++) stepBody(t, C({ down }), { tileAt: () => 0, solids: [] });
+    for (let n = 0; n < 240; n++) stepBody(t, C({ down }), { tileAt: () => 0, solids: [], gravity });
     return t.vy / TILE;
   };
 
-  metricsCache = {
+  const m: JumpMetrics = {
     runSpeed,
     accelTime,
     stopTime,
@@ -611,5 +621,6 @@ export function jumpMetrics(): JumpMetrics {
     fallSpeed: terminal(false),
     fastFallSpeed: terminal(true),
   };
-  return { ...metricsCache };
+  metricsCache.set(gravity, m);
+  return { ...m };
 }

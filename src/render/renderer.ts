@@ -1,5 +1,6 @@
 import { css, type HSL, shift, toRgb } from '../core/color';
 import type { Match } from '../game/match';
+import { overview } from '../game/view';
 import { TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import { type Level, tileAt } from '../sim/level';
 import { canPlace, footprint, resolveProp } from '../sim/props';
@@ -16,6 +17,11 @@ import { drawProjectile, drawResolved, type Emit } from './props';
 import { TerrainPainter } from './terrain';
 // Mobile: quality tiers / adaptive resolution / safe-area insets (owned by the touch module).
 import { detectQuality, FrameBudget, QUALITY, type QualityTier, safeInsets, TIERS } from '../ui/touch/device';
+
+/** Terrain bake budget (px per baked canvas): a classic level at 1920 px wide is ~4.3 M. */
+const MAX_BAKE_PX = 6_000_000;
+/** Race camera never zooms out further than this (readability), even if runners are spread wider. */
+const MIN_RACE_ZOOM = 0.6;
 
 /**
  * Orchestrates a frame: Canvas2D paints albedo/emissive/light layers in
@@ -111,7 +117,10 @@ export class Renderer {
     const dt = Math.min(0.05, this.last ? t - this.last : 1 / 60);
     this.last = t;
     const level = m.level;
-    const kb = Math.min(4, (this.pw / VIEW_W) * 1.45);
+    const ww = level.w * TILE;
+    const wh = level.h * TILE;
+    // Bake resolution: enough for the race zoom, capped by a pixel budget so huge levels stay cheap.
+    const kb = Math.min(4, (this.pw / VIEW_W) * 1.45, Math.sqrt(MAX_BAKE_PX / (ww * wh)));
     this.terrain.ensure(level, kb);
     const emit: Emit = (kind, x, y, vx, vy, color) =>
       this.fx.add(
@@ -142,7 +151,7 @@ export class Renderer {
     g.globalCompositeOperation = 'lighter';
     g.setTransform(sk, 0, 0, sk, 0, 0);
     // Zoom the backdrop a little with the camera so parallax feels physical.
-    const bz = 1 + (this.cam.zoom - 1) * 0.35;
+    const bz = 1 + Math.max(0, this.cam.zoom - 1) * 0.35;
     for (const c of [s, g]) {
       c.translate(VIEW_W / 2, VIEW_H / 2);
       c.scale(bz, bz);
@@ -153,6 +162,7 @@ export class Renderer {
     // --- world
     this.cam.apply(s, this.pw);
     this.cam.apply(g, this.pw);
+    this.drawBounds(rc, level);
     this.terrain.drawShadow(rc);
     this.terrain.draw(rc);
     const pushers = m.run ? m.run.runners.filter((r) => r.alive).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h })) : [];
@@ -200,8 +210,8 @@ export class Renderer {
       }
     }
     this.fx.draw(rc);
-    this.backdrop.drawLiquid(rc, level.theme);
-    this.backdrop.drawMotes(rc, level.theme, dt);
+    this.backdrop.drawLiquid(rc, level.theme, ww, wh, this.cam.visible());
+    this.backdrop.drawMotes(rc, level.theme, dt, this.cam.visible());
     g.globalCompositeOperation = 'source-over';
 
     // --- light map
@@ -222,18 +232,67 @@ export class Renderer {
     else this.hud.clear(this.pw, this.ph);
   }
 
+  /**
+   * Race: follow the live runners (zooming out to keep them all in, down to
+   * a readability floor). Lobby: slow drift over the level. Pick/place: snap
+   * to the deterministic whole-level overview the match uses for cursors.
+   */
   private updateCamera(m: Match, dt: number) {
+    const lv = m.level;
+    const ww = lv.w * TILE;
+    const wh = lv.h * TILE;
+    const ov = overview(lv);
+    if (m.phase === 'pick' || m.phase === 'place') {
+      this.cam.setBounds(ww, wh, ov.zoom);
+      this.cam.snap(ov);
+      this.cam.update(dt, false);
+      return;
+    }
+    this.cam.setBounds(ww, wh, Math.min(1, Math.max(ov.zoom, MIN_RACE_ZOOM)));
     if (m.phase === 'run' && m.run) {
       const pts = m.run.runners.filter((r) => r.alive && !r.finished).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y }));
       if (pts.length) this.cam.focus(pts, 1.45, 120);
       else this.cam.wide();
     } else if (m.phase === 'lobby') {
-      // Slow cinematic drift over the level preview.
+      // Slow cinematic drift over the level preview (wider sweep on big levels).
       this.lobbyDrift += dt;
       const a = this.lobbyDrift * 0.12;
-      this.cam.focus([{ x: VIEW_W / 2 + Math.cos(a) * 200, y: VIEW_H / 2 + Math.sin(a * 1.3) * 60 }], 1.18, 160);
+      const ax = Math.max(200, ww / 2 - 240);
+      const ay = Math.max(60, wh / 2 - 160);
+      this.cam.focus([{ x: ww / 2 + Math.cos(a) * ax, y: wh / 2 + Math.sin(a * 1.3) * ay }], 1.18, 160);
     } else this.cam.wide();
     this.cam.update(dt);
+  }
+
+  /** World → view coords (0..VIEW_W × 0..VIEW_H) through the current camera; for HUD overlays drawn in screen space. */
+  worldToScreen(x: number, y: number): { x: number; y: number } {
+    return this.cam.worldToView(x, y);
+  }
+
+  /** Outside x the sim treats the world as solid wall: when letterboxed, show it as dark rock rather than open sky. */
+  private drawBounds(rc: RC, level: Level) {
+    const v = this.cam.visible();
+    const ww = level.w * TILE;
+    if (v.x >= 0 && v.x + v.w <= ww) return;
+    const th = level.theme;
+    const s = rc.s;
+    const wall = shift(th.terrain.outline, 0, 0, 0);
+    s.fillStyle = css(wall, 0, 0.92);
+    const y0 = v.y - 50;
+    const h = v.h + 100;
+    if (v.x < 0) s.fillRect(v.x - 50, y0, -v.x + 50, h);
+    if (v.x + v.w > ww) s.fillRect(ww, y0, v.x + v.w - ww + 50, h);
+    // Soft inner edge so the boundary reads as a wall face.
+    for (const [x0, dir] of [
+      [0, -1],
+      [ww, 1],
+    ] as const) {
+      const gr = s.createLinearGradient(x0, 0, x0 + dir * 24, 0);
+      gr.addColorStop(0, css(th.terrain.base, -10, 0.9));
+      gr.addColorStop(1, css(wall, 0, 0));
+      s.fillStyle = gr;
+      s.fillRect(Math.min(x0, x0 + dir * 24), y0, 24, h);
+    }
   }
 
   private paintLights(level: Level, lights: Light[]) {
@@ -483,8 +542,9 @@ export class Renderer {
           const c = m.player(e.slot)?.character;
           const body = c?.body ?? { h: 0, s: 0, l: 80 };
           if (e.cause === 'fall') {
-            this.fx.burst('splash', e.x, Math.min(e.y, VIEW_H - 10), 26, 180, [th.liquid.glow, th.liquid.color], 2, 0.9, 120);
-            this.fx.burst('smoke', e.x, VIEW_H - 12, 8, 30, [{ h: 0, s: 0, l: 50 }], 3, 1.4);
+            const pool = m.level.h * TILE;
+            this.fx.burst('splash', e.x, Math.min(e.y, pool - 10), 26, 180, [th.liquid.glow, th.liquid.color], 2, 0.9, 120);
+            this.fx.burst('smoke', e.x, pool - 12, 8, 30, [{ h: 0, s: 0, l: 50 }], 3, 1.4);
           } else {
             this.fx.burst('gib', e.x, e.y, 14, 220, [body, c?.accent ?? body, shift(body, -15), c?.belly ?? body], 1.8, 2.2, 120);
             this.fx.burst('spark', e.x, e.y, 18, 260, [{ h: 45, s: 100, l: 70 }, body], 1.2, 0.5);

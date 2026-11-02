@@ -6,6 +6,7 @@ export const CASTLE: Recipe[] = [
   {
     name: 'cannon',
     weight: 3,
+    role: 'hazard',
     repeat: true,
     candidates: (rng, s) =>
       cannons(rng, s, {
@@ -23,6 +24,7 @@ export const CASTLE: Recipe[] = [
   {
     name: 'chandelier',
     weight: 2.5,
+    role: 'build',
     candidates: (rng, s) =>
       pendulums(rng, s, {
         name: `${rng.pick(['Grand', 'Dusty', 'Gilded', 'Wobbly'])} Chandelier`,
@@ -39,6 +41,7 @@ export const CASTLE: Recipe[] = [
   {
     name: 'ram',
     weight: 1.5,
+    role: 'hazard',
     candidates: (rng, s) =>
       vehicles(rng, s, {
         name: 'Battering Ram',

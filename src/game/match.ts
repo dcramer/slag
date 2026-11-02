@@ -1,7 +1,7 @@
 import { clamp, type Rect } from '../core/geom';
 import { deriveSeed, Rng } from '../core/rng';
 import { type CharacterDef, generateCharacter } from '../gen/character';
-import { generateLevel } from '../gen/level';
+import { GRAVITY, generateLevel, type ProfileOverride } from '../gen/level';
 import { generateCrate, type PropDef } from '../gen/props';
 import { DT, MAX_PLAYERS, TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import type { Level } from '../sim/level';
@@ -10,6 +10,7 @@ import { RunWorld } from '../sim/run';
 import { type GameEvent, type InputFrame, NO_INPUT } from '../sim/types';
 import type { ThemeId } from '../themes';
 import { DEFAULT_RULES, type MatchRules } from './rules';
+import { overview, viewToWorld, worldToView } from './view';
 import { type RoundResult, scoreRound } from './scoring';
 
 export type Phase = 'lobby' | 'pick' | 'place' | 'run' | 'score' | 'victory';
@@ -20,6 +21,12 @@ export interface Player {
   character: CharacterDef;
   score: number;
   ready: boolean;
+  /**
+   * Cursor position. In the PICK phase it is in view coords (the crate cards
+   * are screen-space UI); in the PLACE phase it is in WORLD px (clamped to
+   * the level), converted through the deterministic overview mapping
+   * (game/view.ts). Use `Match.cursorScreen` to draw it.
+   */
   cursor: { x: number; y: number };
   /** Index into the crate of the claimed prop, -1 if none. */
   claim: number;
@@ -70,7 +77,26 @@ export class Match {
   constructor(seed: number, theme?: ThemeId) {
     this.seed = seed >>> 0;
     this.themeOverride = theme;
-    this.level = generateLevel(this.seed, theme);
+    this.level = generateLevel(this.seed, theme, this.profileOverride());
+  }
+
+  /** Level-profile knobs forced by the rules (gravity class). */
+  private profileOverride(): ProfileOverride {
+    const g = this.rules?.gravity ?? 'auto';
+    return { ...this.forceProfile, ...(g === 'auto' ? {} : { gravity: GRAVITY[g] }) };
+  }
+
+  /** Debug/tools: force level-profile knobs (size, route, density…) for every generated level. */
+  forceProfile: ProfileOverride = {};
+
+  /**
+   * Replace the rules. In the lobby, a gravity change regenerates the level
+   * (same seed) so it's built and validated for the new gravity.
+   */
+  setRules(r: MatchRules) {
+    const regen = this.phase === 'lobby' && r.gravity !== this.rules.gravity;
+    this.rules = { ...r };
+    if (regen) this.newLevel(this.seed);
   }
 
   drainEvents(): GameEvent[] {
@@ -128,7 +154,7 @@ export class Match {
   newLevel(seed: number, theme: ThemeId | undefined = this.themeOverride) {
     this.seed = seed >>> 0;
     this.themeOverride = theme;
-    this.level = generateLevel(this.seed, theme);
+    this.level = generateLevel(this.seed, theme, this.profileOverride());
     this.placed = [];
   }
 
@@ -212,16 +238,39 @@ export class Match {
     this.setPhase('pick');
   }
 
+  /** Pick: move in view coords. Place: move in world px (pointer mapped through the overview), clamped to the level. */
   private moveCursor(p: Player, inp: InputFrame) {
+    const world = this.phase === 'place';
+    const v = overview(this.level);
+    const maxX = world ? this.level.w * TILE - 1 : VIEW_W - 1;
+    const maxY = world ? this.level.h * TILE - 1 : VIEW_H - 1;
     if (inp.pointer) {
-      p.cursor.x = clamp(inp.pointer.x, 0, VIEW_W - 1);
-      p.cursor.y = clamp(inp.pointer.y, 0, VIEW_H - 1);
+      const q = world ? viewToWorld(v, inp.pointer.x, inp.pointer.y) : inp.pointer;
+      p.cursor.x = clamp(q.x, 0, maxX);
+      p.cursor.y = clamp(q.y, 0, maxY);
       return;
     }
     const dx = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
     const dy = (inp.down ? 1 : 0) - (inp.up ? 1 : 0);
-    p.cursor.x = clamp(p.cursor.x + dx * CURSOR_SPEED * DT, 0, VIEW_W - 1);
-    p.cursor.y = clamp(p.cursor.y + dy * CURSOR_SPEED * DT, 0, VIEW_H - 1);
+    // Same on-screen speed whatever the zoom.
+    const sp = (CURSOR_SPEED * DT) / (world ? v.zoom : 1);
+    p.cursor.x = clamp(p.cursor.x + dx * sp, 0, maxX);
+    p.cursor.y = clamp(p.cursor.y + dy * sp, 0, maxY);
+  }
+
+  /** Where a player's cursor is on screen (view coords), whatever phase it's in. For the HUD. */
+  cursorScreen(p: Player): { x: number; y: number } {
+    return this.phase === 'place' ? worldToView(overview(this.level), p.cursor.x, p.cursor.y) : p.cursor;
+  }
+
+  /** Enter the place phase: cursors move from screen space into world space. */
+  private enterPlace() {
+    const v = overview(this.level);
+    for (const p of this.players) {
+      const q = viewToWorld(v, p.cursor.x, p.cursor.y);
+      p.cursor = { x: clamp(q.x, 0, this.level.w * TILE - 1), y: clamp(q.y, 0, this.level.h * TILE - 1) };
+    }
+    this.setPhase('place');
   }
 
   crateItemAt(x: number, y: number): number {
@@ -251,7 +300,7 @@ export class Match {
       this.pendingAdvance ??= this.phaseFrame + 25;
       if (this.phaseFrame >= this.pendingAdvance) {
         this.pendingAdvance = undefined;
-        this.setPhase('place');
+        this.enterPlace();
       }
     }
   }

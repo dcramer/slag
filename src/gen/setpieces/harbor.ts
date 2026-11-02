@@ -6,6 +6,7 @@ export const HARBOR: Recipe[] = [
   {
     name: 'crane',
     weight: 3,
+    role: 'build',
     candidates: (rng, s) =>
       pendulums(rng, s, {
         name: 'Dock Crane',
@@ -23,6 +24,7 @@ export const HARBOR: Recipe[] = [
   {
     name: 'shore battery',
     weight: 2,
+    role: 'hazard',
     repeat: true,
     candidates: (rng, s) =>
       cannons(rng, s, {
@@ -40,6 +42,7 @@ export const HARBOR: Recipe[] = [
   {
     name: 'dock forklift',
     weight: 2,
+    role: 'hazard',
     candidates: (rng, s) =>
       vehicles(rng, s, {
         name: 'Dock Forklift',

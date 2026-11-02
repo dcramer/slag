@@ -38,12 +38,13 @@ describe('set pieces', () => {
     }
   });
 
-  it('every theme places 1–3 pieces, and every recipe shows up', () => {
+  it('every theme places up to its profile hazard count (≤4), and every recipe shows up', () => {
     for (const theme of THEME_IDS) {
       const mine = levels.filter((l) => l.theme === theme);
       const withPieces = mine.filter((l) => l.level.setPieces.length > 0).length;
-      expect(withPieces, theme).toBeGreaterThanOrEqual(mine.length * 0.8);
-      for (const l of mine) expect(l.level.setPieces.length).toBeLessThanOrEqual(3);
+      // Profiles roll 0–4 hazards (0 is rare), so most levels still get some.
+      expect(withPieces, theme).toBeGreaterThanOrEqual(mine.length * 0.6);
+      for (const l of mine) expect(l.level.setPieces.length).toBeLessThanOrEqual(Math.min(4, l.level.profile!.hazards));
       const seen = new Set(mine.flatMap((l) => l.level.setPieces.map((p) => p.def.key.split(':')[2])));
       expect(seen.size, theme).toBeGreaterThanOrEqual(2);
     }

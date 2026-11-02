@@ -1,7 +1,7 @@
 import { css, type HSL, toRgb } from '../core/color';
 import { hash2, Rng } from '../core/rng';
 import type { TerrainKind, TerrainLook, Theme } from '../gen/theme';
-import { TILE, VIEW_H, VIEW_W } from '../sim/constants';
+import { TILE } from '../sim/constants';
 import { type Level, T_ONEWAY, tileAt } from '../sim/level';
 import { DECOR, type Decor } from './decor';
 import { circle, makeNoise, mixRgb, type RC } from './kit';
@@ -158,6 +158,9 @@ export class TerrainPainter {
   private live: Decor[] = [];
   private blades: Blade[] = [];
   private kb = 1;
+  /** World size in px of the baked level. */
+  private ww = 0;
+  private wh = 0;
 
   ensure(level: Level, kb: number) {
     const th = level.theme;
@@ -176,7 +179,7 @@ export class TerrainPainter {
       this.makeDecor(level);
       this.bakeKey = '';
     }
-    const bk = `${tk}:${level.seed}:${level.version}`;
+    const bk = `${tk}:${level.seed}:${level.version}:${level.w}x${level.h}`;
     if (bk !== this.bakeKey) {
       this.bakeKey = bk;
       this.kb = kb;
@@ -187,14 +190,18 @@ export class TerrainPainter {
   private bakeTerrain(level: Level, kb: number) {
     const th = level.theme;
     const T = th.terrain;
-    const W = Math.ceil(VIEW_W * kb);
-    const H = Math.ceil(VIEW_H * kb);
+    this.ww = level.w * TILE;
+    this.wh = level.h * TILE;
+    const worldW = this.ww;
+    const worldH = this.wh;
+    const W = Math.ceil(worldW * kb);
+    const H = Math.ceil(worldH * kb);
     const c = (this.bake ??= document.createElement('canvas'));
     c.width = W;
     c.height = H;
     const g = c.getContext('2d')!;
     g.setTransform(kb, 0, 0, kb, 0, 0);
-    g.clearRect(0, 0, VIEW_W, VIEW_H);
+    g.clearRect(0, 0, worldW, worldH);
     const solid = (x: number, y: number) => tileAt(level, x, y) !== 0 && tileAt(level, x, y) !== T_ONEWAY && y < level.h;
     const mask = new Path2D();
     const R = 5;
@@ -249,7 +256,7 @@ export class TerrainPainter {
     g.imageSmoothingEnabled = true;
     g.imageSmoothingQuality = 'high';
     g.globalAlpha = 0.85;
-    g.drawImage(tiny, 0, 0, VIEW_W, VIEW_H);
+    g.drawImage(tiny, 0, 0, worldW, worldH);
     g.globalAlpha = 1;
 
     // Rim light on top faces, shadow on undersides, side edges.
@@ -331,7 +338,7 @@ export class TerrainPainter {
       gc.height = H;
       const gg = gc.getContext('2d')!;
       gg.setTransform(kb, 0, 0, kb, 0, 0);
-      gg.clearRect(0, 0, VIEW_W, VIEW_H);
+      gg.clearRect(0, 0, worldW, worldH);
       const vp = gg.createPattern(this.main.vein, 'repeat')!;
       vp.setTransform(new DOMMatrix().scale(this.main.w / this.main.vein.width, this.main.h / this.main.vein.height));
       gg.fillStyle = vp;
@@ -352,11 +359,11 @@ export class TerrainPainter {
     // Drop shadow cast onto the background.
     const sc = (this.shadow ??= document.createElement('canvas'));
     const sk = Math.min(kb, 1);
-    sc.width = Math.ceil(VIEW_W * sk);
-    sc.height = Math.ceil(VIEW_H * sk);
+    sc.width = Math.ceil(worldW * sk);
+    sc.height = Math.ceil(worldH * sk);
     const sg = sc.getContext('2d')!;
     sg.setTransform(sk, 0, 0, sk, 0, 0);
-    sg.clearRect(0, 0, VIEW_W, VIEW_H);
+    sg.clearRect(0, 0, worldW, worldH);
     sg.filter = 'blur(5px)';
     sg.fillStyle = 'rgba(0,0,0,0.6)';
     sg.fill(mask);
@@ -372,9 +379,11 @@ export class TerrainPainter {
     fillMat: (ctx: CanvasRenderingContext2D, m: MatTex) => void,
     kb: number,
   ) {
+    const worldW = level.w * TILE;
+    const worldH = level.h * TILE;
     const C = 4; // mask cell size in world px
-    const mw = Math.ceil(VIEW_W / C);
-    const mh = Math.ceil(VIEW_H / C);
+    const mw = Math.ceil(worldW / C);
+    const mh = Math.ceil(worldH / C);
     const m = document.createElement('canvas');
     m.width = mw;
     m.height = mh;
@@ -398,19 +407,19 @@ export class TerrainPainter {
       }
     }
     mg.putImageData(img, 0, 0);
-    const W = Math.ceil(VIEW_W * kb);
-    const H = Math.ceil(VIEW_H * kb);
+    const W = Math.ceil(worldW * kb);
+    const H = Math.ceil(worldH * kb);
     const layer = document.createElement('canvas');
     layer.width = W;
     layer.height = H;
     const lg = layer.getContext('2d')!;
     lg.setTransform(kb, 0, 0, kb, 0, 0);
     fillMat(lg, this.sub!);
-    lg.fillRect(0, 0, VIEW_W, VIEW_H);
+    lg.fillRect(0, 0, worldW, worldH);
     lg.globalCompositeOperation = 'destination-in';
     lg.imageSmoothingEnabled = true;
     lg.drawImage(m, 0, 0, mw * C, mh * C);
-    g.drawImage(layer, 0, 0, VIEW_W, VIEW_H);
+    g.drawImage(layer, 0, 0, worldW, worldH);
   }
 
   private makeDecor(level: Level) {
@@ -510,19 +519,19 @@ export class TerrainPainter {
 
   drawShadow(rc: RC) {
     if (!this.shadow) return;
-    rc.s.drawImage(this.shadow, 3, 5, VIEW_W, VIEW_H);
+    rc.s.drawImage(this.shadow, 3, 5, this.ww, this.wh);
   }
 
   draw(rc: RC) {
     if (!this.bake) return;
-    rc.s.drawImage(this.bake, 0, 0, VIEW_W, VIEW_H);
+    rc.s.drawImage(this.bake, 0, 0, this.ww, this.wh);
     // Terrain occludes background emissives (skyline windows, lava glow) drawn earlier.
     rc.g.globalCompositeOperation = 'destination-out';
-    rc.g.drawImage(this.bake, 0, 0, VIEW_W, VIEW_H);
+    rc.g.drawImage(this.bake, 0, 0, this.ww, this.wh);
     rc.g.globalCompositeOperation = 'lighter';
     if (this.glowBake) {
       rc.g.globalAlpha = 0.5 + Math.sin(rc.t * 1.7) * 0.15;
-      rc.g.drawImage(this.glowBake, 0, 0, VIEW_W, VIEW_H);
+      rc.g.drawImage(this.glowBake, 0, 0, this.ww, this.wh);
       rc.g.globalAlpha = 1;
     }
   }

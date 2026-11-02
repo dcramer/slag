@@ -1,5 +1,5 @@
 import type { AudioSystem } from '../audio';
-import { type MatchRules, RULE_CHOICES } from '../game/rules';
+import { type MatchRules, RULE_CHOICES, ruleValueLabel } from '../game/rules';
 import { BINDABLE, defaultSettings, type InputSettings, type KeyProfile, keyName, SLOTS } from '../input/bindings';
 import type { InputManager } from '../input/input';
 import { glyphSVG, type Glyph } from './glyphs';
@@ -423,6 +423,7 @@ const RULE_LABELS: Record<keyof MatchRules, string> = {
   pickSeconds: 'Pick Timer',
   placeSeconds: 'Place Timer',
   raceSeconds: 'Race Timer',
+  gravity: 'Gravity',
 };
 
 /** Match rules; applied when the next match starts. */
@@ -436,10 +437,10 @@ export class RulesMenu extends Overlay {
         const b = el('button', {
           className: `slag-btn ${draft[k] === v ? 'on' : ''}`,
           type: 'button',
-          textContent: k === 'targetScore' ? String(v) : v === 0 ? 'Off' : `${v}s`,
+          textContent: ruleValueLabel(k, v),
         });
         b.onclick = () => {
-          draft[k] = v;
+          (draft as Record<keyof MatchRules, unknown>)[k] = v;
           onChange({ ...draft });
           for (const sib of chips.querySelectorAll('button')) sib.classList.toggle('on', sib === b);
         };

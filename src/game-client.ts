@@ -42,7 +42,7 @@ export function bootGame(container: HTMLElement, room: string): void {
     seedParam ? parseSeed(seedParam) : roomSeed(room),
     THEME_IDS.find((t) => t === themeParam),
   );
-  match.rules = loadRules();
+  match.setRules(loadRules());
   // Host-rolled per-match salt (crate order); re-rolled while in the lobby so every game differs.
   match.nextSalt = (Math.random() * 4294967296) >>> 0;
   const input = new InputManager(window);
@@ -121,7 +121,7 @@ export function bootGame(container: HTMLElement, room: string): void {
       case 'rules':
         rulesMenu.open(match.rules, (r) => {
           if (match.phase !== 'lobby') return;
-          match.rules = r;
+          match.setRules(r);
           saveRules(r);
         });
         return true;

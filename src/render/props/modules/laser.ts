@@ -1,5 +1,6 @@
 import { css, type HSL } from '../../../core/color';
 import type { Vec } from '../../../core/geom';
+import { TILE } from '../../../sim/constants';
 import { laserAngle, laserCycle, type Module, type ModuleOf, type PropStyle, type Resolved, rayToWall } from '../../../sim/props';
 import { glowDot, light, type MetalPalette, metalFill, type RC, rrect } from '../../kit';
 import { defineArt, type PropDrawOpts } from '../common';
@@ -32,7 +33,7 @@ function drawLaser(rc: RC, m: M<'laser'>, r: Resolved, off: Vec, pal: MetalPalet
   const ly = y + Math.sin(a) * 9;
   const charge = c.seg === 1 ? c.t / c.len : c.seg === 2 ? 1 : 0.1;
   glowDot(g, lx, ly, 3 + charge * 6, col, 0.6 + charge * 0.4);
-  const len = o.level ? rayToWall(o.level, x, y, a, 1200, 9) : 40;
+  const len = o.level ? rayToWall(o.level, x, y, a, Math.max(1200, (o.level.w + o.level.h) * TILE), 9) : 40;
   const ex = x + Math.cos(a) * len;
   const ey = y + Math.sin(a) * len;
   if (c.seg === 1) {

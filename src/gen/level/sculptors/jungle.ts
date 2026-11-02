@@ -1,7 +1,8 @@
 import type { Rng } from '../../../core/rng';
 import { carveCorridor, finish, Grid, noise1D, noise2D, smoothCA } from '../kit';
 import type { Sculptor } from '../types';
-import { easyGap, easyRise, H, hardGap, pit, relax, rollChallenges, Slots, W } from './common';
+import { easyGap, easyRise, hardGap, knobs, pit, relax, rollChallenges, Slots } from './common';
+import { jungleTall } from './tall';
 
 type JungleStyle = 'canopy' | 'temple' | 'grotto';
 
@@ -13,16 +14,20 @@ type JungleStyle = 'canopy' | 'temple' | 'grotto';
  * stepped ziggurat; 'grotto' replaces the heightmap with a CA terrain full
  * of overhangs and undercuts, threaded by a carved walkway.
  */
-export const jungle: Sculptor = ({ rng, attempt }) => {
+export const jungle: Sculptor = (ctx) => {
+  if (ctx.profile.size === 'tall') return jungleTall(ctx);
+  const { rng, attempt } = ctx;
+  const k = knobs(ctx);
+  const { W, H } = k;
   const style = rng.weighted<JungleStyle>([
     ['canopy', 3],
     ['temple', 2],
-    ['grotto', 3],
+    ['grotto', 1 + 3 * k.density],
   ]);
-  const g = new Grid();
-  const slots = new Slots();
-  const base = rng.int(19, 22);
-  const surf = noise1D(rng, W, rng.int(8, 14), 3, 0.5).map((v) => Math.max(13, Math.min(24, Math.round(base + v * 4))));
+  const g = new Grid(W, H);
+  const slots = new Slots(6, W - 7);
+  const base = H - rng.int(5, 8);
+  const surf = noise1D(rng, W, rng.int(8, 14), 3, 0.5).map((v, x) => Math.max(6, Math.min(H - 3, Math.round(base + k.ramp(x) + v * 4))));
   const locked = new Uint8Array(W);
   const sRow = surf[2];
   const gRow = surf[W - 3];
@@ -32,10 +37,10 @@ export const jungle: Sculptor = ({ rng, attempt }) => {
   locked.fill(1, W - 6, W);
 
   // Pools: hard ones get a broken log, easy ones sometimes a whole log.
-  const challenges = rollChallenges(rng, 0.82, 0.15, attempt);
+  const challenges = rollChallenges(rng, 0.82, 0.15, attempt, k.propNeed);
   g.wantsProps = challenges > 0;
   const pools: { a: number; b: number; hard: boolean }[] = [];
-  for (let i = 0; i < challenges + rng.int(0, 2); i++) {
+  for (let i = 0; i < challenges + k.count(rng.int(0, 2)); i++) {
     const hard = i < challenges;
     const w = hard ? hardGap(rng) : easyGap(rng, 2);
     const a = slots.take(rng, w, 3, 8, W - 9);
@@ -47,12 +52,12 @@ export const jungle: Sculptor = ({ rng, attempt }) => {
     }
     pools.push({ a, b: a + w - 1, hard });
   }
-  let temple: { x: number; w: number } | null = null;
-  if (style === 'temple') {
+  const temples: { x: number; w: number }[] = [];
+  for (let n = style === 'temple' ? Math.max(1, Math.round(k.wide * 0.7)) : 0; n > 0; n--) {
     const w = rng.pick([13, 15, 17]);
     const x = slots.take(rng, w, 1);
     if (x !== null) {
-      temple = { x, w };
+      temples.push({ x, w });
       const row = Math.max(...surf.slice(x, x + w));
       for (let i = x - 1; i <= x + w; i++) {
         surf[i] = row;
@@ -60,14 +65,14 @@ export const jungle: Sculptor = ({ rng, attempt }) => {
       }
     }
   }
-  relax(surf, locked, 1);
+  relax(surf, H, locked, 1);
 
   if (style === 'grotto') {
     // Thresholded 2-D noise around a raised surface line: rock lumps with overhangs and undercuts.
-    const n = noise2D(rng, rng.int(5, 7), 2);
+    const n = noise2D(rng, W, H, rng.int(5, 7), 2);
     const m = new Uint8Array(W * H);
-    for (let y = 8; y < H; y++) for (let x = 0; x < W; x++) m[y * W + x] = (y - (surf[x] - 3)) / 4 + n[y * W + x] * 1.6 > 0 ? 1 : 0;
-    const sm = smoothCA(m, 2, 5, 4, 0);
+    for (let y = 4; y < H; y++) for (let x = 0; x < W; x++) m[y * W + x] = (y - (surf[x] - 3)) / 4 + n[y * W + x] * 1.6 > 0 ? 1 : 0;
+    const sm = smoothCA(W, H, m, 2, 5, 4, 0);
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (sm[y * W + x]) g.set(x, y, 1);
     for (let x = 0; x < W; x++) g.fill(x, surf[x] + 2, x, H - 1);
     carveCorridor(g, rng, 0, sRow - 1, W - 1, gRow - 1, 3, 0.3);
@@ -79,10 +84,10 @@ export const jungle: Sculptor = ({ rng, attempt }) => {
     pit(g, p.a, p.b, row, p.hard);
     logBridge(g, rng, p.a, p.b, row, p.hard);
   }
-  if (temple) ziggurat(g, rng, temple.x, temple.w, surf[temple.x]);
+  for (const t of temples) ziggurat(g, rng, t.x, t.w, surf[t.x]);
 
   // Mid-map trees on free ground.
-  const nTrees = style === 'canopy' ? rng.int(2, 3) : rng.int(0, 1);
+  const nTrees = k.count(style === 'canopy' ? rng.int(2, 3) : rng.int(0, 1));
   for (let i = 0; i < nTrees; i++) {
     const w = rng.pick([7, 9]);
     const x = slots.take(rng, w, 1);
@@ -90,13 +95,15 @@ export const jungle: Sculptor = ({ rng, attempt }) => {
     tree(g, rng, x, w, surf);
   }
 
-  canopy(g, rng, style === 'grotto' ? rng.int(4, 5) : rng.int(5, 8));
+  // Canopy band: dense jungles hang it lower; sparse ones open up to the sky.
+  if (k.density > 0.25 || rng.chance(0.5)) canopy(g, rng, Math.round((style === 'grotto' ? rng.int(4, 5) : rng.int(5, 8)) * (0.6 + 0.6 * k.density)));
   edgeTree(g, rng, 0, sRow - 1);
   edgeTree(g, rng, W - 3, gRow - 1);
   // Floating mossy islands.
-  for (let i = rng.int(0, 2); i > 0; i--) {
+  for (let i = k.count(rng.int(0, 2)); i > 0; i--) {
     const x = rng.int(8, W - 14);
-    const y = rng.int(9, 13);
+    const y = surf[x] - rng.int(8, 12);
+    if (y < 5) continue;
     const w = rng.int(3, 6);
     let clean = true;
     for (let yy = y - 4; yy <= y + 4 && clean; yy++) for (let xx = x - 2; xx <= x + w + 1; xx++) if (!g.empty(xx, yy)) clean = false;
@@ -110,13 +117,15 @@ export const jungle: Sculptor = ({ rng, attempt }) => {
 
 /** CA canopy band hanging from the top edge, with vine one-ways dangling from it. */
 function canopy(g: Grid, rng: Rng, depth: number): void {
+  const W = g.w;
+  const H = g.h;
   const m = new Uint8Array(W * H);
   for (let y = 0; y <= depth + 1; y++)
     for (let x = 0; x < W; x++) {
       const p = y < 2 ? 0.95 : 0.72 - (y / depth) * 0.55;
       m[y * W + x] = rng.chance(p) ? 1 : 0;
     }
-  const s = smoothCA(m, 3, 5, 4, 0);
+  const s = smoothCA(W, H, m, 3, 5, 4, 0);
   for (let y = 0; y <= depth + 1; y++) for (let x = 0; x < W; x++) if (s[y * W + x] && g.empty(x, y + 3)) g.set(x, y, 1);
   // Vines: one-way rungs hanging below the canopy's lowest lumps.
   for (let i = rng.int(1, 3); i > 0; i--) {
@@ -192,6 +201,6 @@ function ziggurat(g: Grid, rng: Rng, x: number, w: number, f: number): void {
   for (let i = 0; i < 3; i++) {
     const mx = rng.int(x, x + w - 1);
     const my = g.surface(mx);
-    if (my < H && my > 2 && g.empty(mx, my - 2)) g.set(mx, my - 1, 2);
+    if (my < g.h && my > 2 && g.empty(mx, my - 2)) g.set(mx, my - 1, 2);
   }
 }
