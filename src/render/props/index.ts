@@ -74,17 +74,39 @@ function cardDef(full: PropDef): PropDef {
         return { ...m, reach: Math.min(m.reach, 1) };
       case 'flame':
         return { ...m, length: Math.min(m.length, 2.2) };
+      case 'rotor':
+        return { ...m, arm: Math.min(m.arm * 0.75, 1.2), width: Math.min(m.width, 1.6) };
+      case 'portal': {
+        // Two rings eight tiles apart are two dots: bring them in, still further apart for a bigger pair.
+        const [dx, dy] = [m.b[0] - m.a[0], m.b[1] - m.a[1]];
+        const d = Math.hypot(dx, dy) || 1;
+        const k = Math.min(1, (1.6 + d * 0.15) / d);
+        return { ...m, b: [m.a[0] + dx * k, m.a[1] + dy * k] };
+      }
       default:
         return m;
     }
   };
-  return { ...full, modules: full.modules.map(trim) };
+  const modules = full.modules.map(trim);
+  // A wheel's footprint is the disk it sweeps, and a portal's spans both rings: the card fits what it draws.
+  const hub = modules.find((m) => m.type === 'rotor' || m.type === 'portal');
+  if (!hub) return { ...full, modules };
+  const at = (v: Vec): [number, number] => [Math.floor(v[0]), Math.floor(v[1])];
+  const footprint = hub.type === 'rotor' ? [at(hub.hub)] : hub.type === 'portal' ? [at(hub.a), at(hub.b)] : full.footprint;
+  return { ...full, modules, footprint };
 }
 
 /** What a part's card picture covers, in tiles of its own frame: its cells and whatever reaches out of them. */
 function cardBounds(def: PropDef): { x0: number; y0: number; x1: number; y1: number } {
   const { w, h } = cellsBounds(def.footprint);
-  const b = { x0: 0, y0: 0, x1: w, y1: h };
+  // A trimmed footprint (a wheel's hub) needn't start at the origin.
+  const b = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+  for (const [x, y] of def.footprint) {
+    b.x0 = Math.min(b.x0, x);
+    b.y0 = Math.min(b.y0, y);
+    b.x1 = Math.max(b.x1, x + 1);
+    b.y1 = Math.max(b.y1, y + 1);
+  }
   const grow = (x: number, y: number, rx: number, ry = rx) => {
     b.x0 = Math.min(b.x0, x - rx);
     b.y0 = Math.min(b.y0, y - ry);
@@ -105,6 +127,8 @@ function cardBounds(def: PropDef): { x0: number; y0: number; x1: number; y1: num
       grow(m.at[0] + dx * d, m.at[1] + dy * d, Math.abs(dy) * across, Math.abs(dx) * across);
     }
     if (m.type === 'magnet') grow(m.at[0], m.at[1], m.radius);
+    if (m.type === 'rotor') grow(m.hub[0], m.hub[1], m.arm + m.width / 2 + 0.2);
+    if (m.type === 'portal') for (const p of [m.a, m.b]) grow(p[0], p[1], 0.8);
     if (m.type === 'keg') grow(w / 2, h / 2, w / 2 + 0.8, h / 2 + 0.8);
   }
   // An attachment shows its host blocks, with what it adds standing off them.
