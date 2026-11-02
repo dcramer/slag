@@ -297,7 +297,7 @@ export class RunWorld {
       if (!this.isSafe(r)) {
         for (const h of this.out.hazards) {
           if (!hitHazard(hb, h)) continue;
-          this.kill(r, h.owner, 'hazard');
+          this.kill(r, h.owner, h.sink ? 'fall' : 'hazard');
           // A shield can cancel the hit; then the rest of this frame still applies.
           if (!r.alive) return;
         }

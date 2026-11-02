@@ -17,7 +17,8 @@ import type { Ammo, HitEffect, Module, PropState, Resolved } from './types';
  * state). No Math.random, no wall-clock time, no DOM.
  */
 
-export type Hazard = { owner: number } & (
+/** `sink`: a liquid you drown in rather than burn in, so it takes you as the pit does (a fall). */
+export type Hazard = { owner: number; sink?: boolean } & (
   | { kind: 'rect'; r: Rect }
   | { kind: 'circle'; x: number; y: number; r: number }
   | { kind: 'seg'; x1: number; y1: number; x2: number; y2: number; r: number }
@@ -183,6 +184,11 @@ export interface ModuleSim<M extends Module = Module> {
   settle?(m: M, ctx: PropCtx, out: Contrib, fixed: number): void;
   /** Cast rays and add what they carry (props/rays.ts). Runs last, when every solid of the frame is in `out.solids`. */
   trace?(m: M, ctx: PropCtx, out: Contrib): void;
+  /**
+   * Cells it holds for most of its cycle, worked out from the cycle rather than sampled: the
+   * barrier (props/barrier.ts) samples a fixed span that a long cycle, like a flood's, outlasts.
+   */
+  holds?(m: M): Cell[];
   /** Advance timers, fire projectiles, emit events. Runs after runners move. */
   tick?(m: M, ctx: TickCtx): void;
   /** A runner is standing on one of this module's solids. */

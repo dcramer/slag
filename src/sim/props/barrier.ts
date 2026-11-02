@@ -4,7 +4,7 @@ import type { Level } from '../level';
 import { DEFAULT_SURFACE } from '../physics';
 import { SURFACES } from './modules/body';
 import { buildSolids, traceRays } from './rays';
-import type { Contrib, Hazard } from './registry';
+import { type Contrib, type Hazard, moduleSim } from './registry';
 import { motionOffset, newPropState, resolveProp } from './transform';
 import type { PlacedProp, Resolved } from './types';
 
@@ -19,7 +19,8 @@ import type { PlacedProp, Resolved } from './types';
  * - `noGo`: cells something holds for most of the time: a block of any other
  *   kind (ice, goo, jelly, a conveyor, a crumbling block), a spike strip, a
  *   coat, a spring pad, a fan's column, a trigger zone (pipe mouth, bumper, web,
- *   magnet core, rope), a hazard that never leaves long enough to slip past.
+ *   magnet core, rope), a hazard that never leaves long enough to slip past,
+ *   and the rows a flood holds for most of its cycle (a module's `holds`).
  *   A proven route keeps clear of all of them, so it never relies on a
  *   surface or a push the proof doesn't model.
  *
@@ -112,10 +113,13 @@ function sample(level: Level, r: Resolved): Barrier {
       } else held.set(k, [n, n]);
     }
   }
-  const noGo: number[] = [];
+  const noGo = new Set<number>();
   const need = Math.ceil(MIN_OPENING / STEP);
-  for (const [k, [last, open]] of held) if (Math.max(open, n - last - 1) < need && !ground.has(k)) noGo.push(k);
-  return { ground: [...ground].sort((a, b) => a - b), noGo: noGo.sort((a, b) => a - b) };
+  for (const [k, [last, open]] of held) if (Math.max(open, n - last - 1) < need && !ground.has(k)) noGo.add(k);
+  // What a module knows it holds from its own cycle, which may be longer than the span sampled.
+  for (const m of r.mods)
+    for (const [x, y] of moduleSim(m.type).holds?.(m) ?? []) if (x >= 0 && y >= 0 && x < w && y < h && !ground.has(y * w + x)) noGo.add(y * w + x);
+  return { ground: [...ground].sort((a, b) => a - b), noGo: [...noGo].sort((a, b) => a - b) };
 }
 
 /** Cells a hazard covers: boxes for rects and circles, a chain of boxes along a beam. Generous edges only make the proof stricter. */
