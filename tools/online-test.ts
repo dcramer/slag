@@ -1183,7 +1183,7 @@ async function hostLabel(p: Page): Promise<number | undefined> {
 
 /** The host label on every screen, and following a migration; a kick by keyboard, then by mouse, with no way back. */
 async function kickScenario(browser: Browser, base: string) {
-  const r = await newRoom(browser, base, 'kick', 'ban=4', { viewport: { width: 960, height: 540 }, visual: true });
+  const r = await newRoom(browser, base, 'kick', 'ban=15', { viewport: { width: 960, height: 540 }, visual: true });
   const A = await r.open('A');
   const a0 = await waitFor(A, 'host seated', (v) => v.players.length === 1 && v.isHost);
   const [B, C, D] = [await r.open('B'), await r.open('C'), await r.open('D')];
@@ -1240,7 +1240,9 @@ async function kickScenario(browser: Browser, base: string) {
   // A reload inside the ban: the same screen, and the room never sees it.
   await victim.reload();
   await victim.waitForFunction(() => 'slagDebug' in window, null, { timeout: 60_000 });
+  await victim.bringToFront();
   const reloaded = await waitFor(victim, 'refused after a reload', (v) => v.status === 'kicked', 15_000);
+  await victim.waitForFunction(() => (window as any).slagDebug.renderer.hud.net?.arrival?.rejoinIn > 0, null, { timeout: 10_000 }).catch(() => {});
   check(reloaded.status === 'kicked' && ((await kickedHud())?.rejoinIn ?? 0) > 0, 'a reload during the ban is refused, with the countdown');
   await sleep(1000);
   check(!(await view(A)).players.some((q) => q.device.startsWith(`${victimId}:`)), 'the reloaded page is never seated');
@@ -1253,7 +1255,11 @@ async function kickScenario(browser: Browser, base: string) {
   const backId = (await view(victim)).self;
   guests.set(backId, victim);
 
-  // By mouse: the button on the bay.
+  // By mouse: the button on the bay. The rejoin had focus, so A's frames may be stale: bring it forward and let it
+  // draw the room as it is (three bays with Kick) before reading where the buttons are.
+  await A.bringToFront();
+  await A.waitForFunction(() => (window as any).slagDebug.renderer.hud.net?.kickable?.length === 3, null, { timeout: 15_000 }).catch(() => {});
+  await sleep(500);
   const spot = await A.evaluate(() => {
     const hud = (window as any).slagDebug.renderer.hud;
     const b = hud.buttons.find((x: any) => x.action === 'kick');
@@ -1262,7 +1268,8 @@ async function kickScenario(browser: Browser, base: string) {
   check(!!spot, 'each other bay has a Kick button');
   if (spot) {
     await clickView(A, spot.x, spot.y);
-    await waitFor(A, 'mouse kick applied', (v) => v.players.length === 3 && !v.players.some((q) => q.device === spot.device), 15_000);
+    const mk = await waitFor(A, 'mouse kick applied', (v) => v.players.length === 3 && !v.players.some((q) => q.device === spot.device), 15_000);
+    if (mk.players.length !== 3) await dumpNet([A, ...guests.values()], 'mouse kick');
     guests.delete(spot.device.split(':')[0]);
   }
   // The next host is the earliest to join of those left (the rejoined page came back last).
