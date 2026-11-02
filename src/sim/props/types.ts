@@ -33,6 +33,8 @@ export type Ammo =
   | 'ricochet'
   | 'glider'
   | 'slug'
+  // Space's meteor shower: a big burning rock falling straight out of the sky.
+  | 'meteor'
   // Held-item shots (src/sim/items): never loaded in a launcher.
   | 'puck'
   | 'smokebomb';
@@ -69,7 +71,9 @@ export type RotorLook =
   | 'bucket'
   | 'gondola'
   // Stage concepts (docs/SETPIECES.md): the great wheel's rim cars; a theme skin draws it, cog decks otherwise.
-  | 'flywheel';
+  | 'flywheel'
+  // Space: a moon on its orbit round a planetoid (the space skin draws it).
+  | 'moon';
 export type RotorSupport = 'tower' | 'ceiling' | 'mast' | 'none';
 export type VehicleLook = 'tractor' | 'forklift' | 'ram' | 'boulder' | 'minecart' | 'drill';
 export type CannonLook =
@@ -78,7 +82,9 @@ export type CannonLook =
   | 'totem'
   | 'spitter'
   // Harbor: a whaler's harpoon gun on a swivel post (no face), firing straight bolts.
-  | 'harpoon';
+  | 'harpoon'
+  // Space: no gun at all, a glint in the sky that meteors fall out of (the space skin draws it).
+  | 'meteor';
 export type GeyserLook =
   | 'lava'
   | 'steam'
@@ -153,6 +159,8 @@ export const AMMO: Record<Ammo, AmmoSpec> = {
   glider: { gravity: 0, radius: 8, wobble: 0, emissive: false, life: 420, effect: 'none' },
   // A sentry's round: fast, straight and short-lived, so a burst covers its range and no further.
   slug: { gravity: 0, radius: 2, wobble: 0, emissive: true, life: 70 },
+  // Big, burning and straight, out of the sky: a wide shot that's slow enough to see coming.
+  meteor: { gravity: 0, radius: 5, wobble: 0, emissive: true, life: 300 },
   // Held-item shots; src/sim/items/ammo.ts registers their behavior.
   puck: { gravity: 1200, radius: 4, wobble: 0, emissive: false, life: 360, effect: 'bonk' },
   smokebomb: { gravity: 700, radius: 3.5, wobble: 0, emissive: false, life: 180, effect: 'none' },

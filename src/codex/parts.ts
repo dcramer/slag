@@ -126,6 +126,7 @@ export const PROJECTILE_NOTES: Record<Ammo, [string, string]> = {
   ricochet: ['trick shot', 'Called it.'],
   glider: ['economy seat', 'Delays likely.'],
   slug: ['slug', 'Nothing personal.'],
+  meteor: ['shooting star', 'Make a wish.'],
   puck: ['evicted shell', 'Nobody home.'],
   smokebomb: ['fog of war', 'Unexplored.'],
 };

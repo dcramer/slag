@@ -144,6 +144,16 @@ const RULES = {
   icicles: defineDecor({ place: 'under', themes: ['glacier'], weight: 1.2, clear: 1 }),
   // ---- space --------------------------------------------------------------
   lander: defineDecor({ place: 'top', themes: ['space'], weight: 0.8, clear: 2 }),
+  // A station's: cargo pods, a solar panel, a warning lamp, a wrench someone let go of.
+  cargopod: defineDecor({ place: 'top', themes: ['space'], weight: 1, clear: 2 }),
+  solarpanel: defineDecor({ place: 'top', themes: ['space'], weight: 0.9, clear: 1 }),
+  warnlamp: defineDecor({ place: 'top', themes: ['space'], weight: 0.8, clear: 1 }),
+  wrench: defineDecor({ place: 'top', themes: ['space'], weight: 0.5, clear: 1 }),
+  // Out on the rocks: moon rock, a planted flag, a satellite that came down, a helmet with nobody in it.
+  moonrock: defineDecor({ place: 'top', themes: ['space'], weight: 1.2, clear: 1 }),
+  moonflag: defineDecor({ place: 'top', themes: ['space'], weight: 0.5, clear: 2 }),
+  minisat: defineDecor({ place: 'top', themes: ['space'], weight: 0.6, clear: 1 }),
+  helmet: defineDecor({ place: 'top', themes: ['space'], weight: 0.5, clear: 1 }),
 } satisfies Record<string, DecorRule>;
 
 export type DecorKind = keyof typeof RULES;
