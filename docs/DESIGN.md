@@ -93,7 +93,7 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 ## Rules ("level settings", set by the host)
 - Points to win: default 50.
 - Pick timer: default 15 s. When it runs out, stragglers get a random leftover prop.
-- Place timer: default off. When on, an unplaced prop is forfeited.
+- Place timer: default 15 s. When it runs out, an unplaced prop is forfeited.
 - Race timer: default off.
 - Gravity: default Auto.
 

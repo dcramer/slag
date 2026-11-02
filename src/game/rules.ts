@@ -51,7 +51,7 @@ export const DEFAULT_RULES: MatchRules = {
   targetScore: NORMAL.targetScore,
   maxRounds: NORMAL.maxRounds,
   pickSeconds: 15,
-  placeSeconds: 0,
+  placeSeconds: 15,
   raceSeconds: 0,
   gravity: 'auto',
 };
