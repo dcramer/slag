@@ -5,7 +5,7 @@ import { generateLevel } from '../gen/level';
 import { generateCrate, type PropDef } from '../gen/props';
 import { DT, MAX_PLAYERS, TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import type { Level } from '../sim/level';
-import { canPlace, detonate, footprint, type PlacedProp } from '../sim/props';
+import { blastEvent, blastSpec, canPlace, detonate, footprint, type PlacedProp } from '../sim/props';
 import { RunWorld } from '../sim/run';
 import { type GameEvent, type InputFrame, NO_INPUT } from '../sim/types';
 import type { ThemeId } from '../themes';
@@ -311,9 +311,9 @@ export class Match {
         const g = this.ghostOrigin(p);
         if (g && canPlace(this.level, this.placed, g.def, p.rot, g.tx, g.ty)) {
           const bomb = g.def.modules.find((m) => m.type === 'bomb');
-          if (bomb) {
-            this.placed = detonate(this.level, this.placed, bomb.radius, g.tx, g.ty);
-            this.events.push({ type: 'explosion', x: (g.tx + 0.5) * TILE, y: (g.ty + 0.5) * TILE, r: bomb.radius * TILE });
+          if (bomb && !bomb.delay) {
+            this.placed = detonate(this.level, this.placed, blastSpec(bomb), g.tx, g.ty, p.rot);
+            this.events.push(blastEvent(blastSpec(bomb), g.tx, g.ty, p.rot));
           } else {
             this.placed.push({ uid: this.nextUid++, def: g.def, owner: p.slot, tx: g.tx, ty: g.ty, rot: p.rot });
             this.events.push({ type: 'place', slot: p.slot, x: p.cursor.x, y: p.cursor.y });
@@ -338,6 +338,7 @@ export class Match {
 
   /** Skip straight to the race with whatever is placed (used by pick/place flow and debug tools). */
   startRun() {
+    this.detonateCharges();
     this.run = new RunWorld(
       this.level,
       this.placed,
@@ -345,6 +346,25 @@ export class Match {
       this.rules.raceSeconds * 60,
     );
     this.setPhase('run');
+  }
+
+  /** Delayed charges (time bombs) go off as the race starts, catching whatever was placed this round. A charge caught in an earlier blast is defused. */
+  private detonateCharges() {
+    for (const c of this.placed.filter((p) => p.def.modules.some((m) => m.type === 'bomb' && m.delay))) {
+      if (!this.placed.includes(c)) continue;
+      const m = c.def.modules.find((x) => x.type === 'bomb')!;
+      if (m.type !== 'bomb') continue;
+      const spec = blastSpec(m);
+      this.placed = detonate(
+        this.level,
+        this.placed.filter((p) => p !== c),
+        spec,
+        c.tx,
+        c.ty,
+        c.rot,
+      );
+      this.events.push(blastEvent(spec, c.tx, c.ty, c.rot));
+    }
   }
 
   private stepRun(inputs: Readonly<Record<string, InputFrame>>) {

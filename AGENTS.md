@@ -8,18 +8,18 @@ Game design decisions live in [docs/DESIGN.md](docs/DESIGN.md): follow it, and u
 
 Package manager is **pnpm** (`packageManager` in package.json). Never use npm or commit a `package-lock.json`. Node 22 (`.nvmrc`, `engines`).
 
-| Command | Use |
-| --- | --- |
-| `pnpm install` | First thing in a fresh checkout or worktree (`node_modules` is not shared). |
-| `pnpm check` | The gate: typecheck + lint + format check + all tests (~2 min). Must pass before every commit. |
-| `pnpm check:fast` | Typecheck + lint + format check (~15 s). Use while iterating. |
-| `pnpm vitest run tests/foo.test.ts` | One test file. Add `-t "name"` for one test. |
-| `pnpm format` | `oxlint --fix` then `oxfmt`: fixes formatting and safe lint issues. |
-| `pnpm build` | Production build into `.next/`, exactly what Vercel runs. |
-| `pnpm shot <scenario> [opts]` | Headless screenshots into `shots/` (gitignored). See "Verify visually". |
-| `pnpm level <seed> [--theme farm]` | ASCII level dump: `#` solid, `=` one-way, `S`/`G` spawn/goal, `·` reachable stand cell, `P` set piece. |
-| `pnpm level --stats 50` | Per-theme stats over N seeds: ms/level, styles, `needBridges`, `fallbacks` (~2 min at 50). |
-| `pnpm dev` | Dev server at http://localhost:3000; `/` is the main menu (Play opens a fresh lobby `/r/<code>`, passing `?seed`/`?theme` through). |
+| Command                             | Use                                                                                                                                 |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm install`                      | First thing in a fresh checkout or worktree (`node_modules` is not shared).                                                         |
+| `pnpm check`                        | The gate: typecheck + lint + format check + all tests (~2 min). Must pass before every commit.                                      |
+| `pnpm check:fast`                   | Typecheck + lint + format check (~15 s). Use while iterating.                                                                       |
+| `pnpm vitest run tests/foo.test.ts` | One test file. Add `-t "name"` for one test.                                                                                        |
+| `pnpm format`                       | `oxlint --fix` then `oxfmt`: fixes formatting and safe lint issues.                                                                 |
+| `pnpm build`                        | Production build into `.next/`, exactly what Vercel runs.                                                                           |
+| `pnpm shot <scenario> [opts]`       | Headless screenshots into `shots/` (gitignored). See "Verify visually".                                                             |
+| `pnpm level <seed> [--theme farm]`  | ASCII level dump: `#` solid, `=` one-way, `S`/`G` spawn/goal, `·` reachable stand cell, `P` set piece.                              |
+| `pnpm level --stats 50`             | Per-theme stats over N seeds: ms/level, styles, `needBridges`, `fallbacks` (~2 min at 50).                                          |
+| `pnpm dev`                          | Dev server at http://localhost:3000; `/` is the main menu (Play opens a fresh lobby `/r/<code>`, passing `?seed`/`?theme` through). |
 
 Lint: `oxlint` (type-aware, `.oxlintrc.json`). Errors fail CI; warnings are real findings to fix, not noise. Format: `oxfmt` (`.oxfmtrc.json`: 2 spaces, single quotes, 160 columns). Don't add `oxlint-disable` comments to get green; fix the code or change the rule in `.oxlintrc.json` with a reason.
 
@@ -89,7 +89,7 @@ Vercel, Next.js App Router. Server code is limited to small, stateless route han
 ## Conventions
 
 - TypeScript strict, ES modules. Runtime deps are only `next`, `react`, `react-dom` (for the shell) and `client-only`; the game itself uses none. Don't add runtime dependencies without asking.
-- Doc comments explain *why*, on modules and exported functions. Small functions; data plus registries over sprawling `switch`es.
+- Doc comments explain _why_, on modules and exported functions. Small functions; data plus registries over sprawling `switch`es.
 - Assets: prefer procedural art. Third-party assets only if CC0 or free for commercial use without attribution traps; record each in `public/ASSETS.md` with source URL and license. Keep them small (≤256 px tiles, compressed).
 
 <!-- BEGIN:nextjs-agent-rules -->

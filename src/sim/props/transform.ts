@@ -1,8 +1,9 @@
 import { type Cell, frac, pingPong, type Vec } from '../../core/geom';
 import { TILE } from '../constants';
 import { isProtected, type Level, T_EMPTY, T_SOLID, tileAt } from '../level';
+import type { GameEvent } from '../types';
 import { moduleSim, type Xform } from './registry';
-import type { Motion, PlacedProp, PropDef, PropState, Resolved } from './types';
+import type { BlastShape, BlastTarget, ModuleOf, Motion, PlacedProp, PropDef, PropState, Resolved } from './types';
 
 /** Deterministic per-prop phase offset so identical props don't move in lockstep. */
 export function propPhase(uid: number): number {
@@ -132,7 +133,7 @@ export function canPlace(level: Level, placed: readonly PlacedProp[], def: PropD
   for (const [x, y] of cells) {
     if (x < 0 || y < 0 || x >= level.w || y >= level.h) return false;
   }
-  if (def.archetype === 'bomb') return true;
+  if (def.modules.some((m) => m.type === 'bomb')) return true;
   const taken = new Set<number>();
   const others = [...level.setPieces, ...(def.mount === 'face' ? placed.filter((p) => p.def.mount !== 'face') : placed)];
   for (const p of others) for (const [x, y] of footprintCells(p)) taken.add(y * level.w + x);
@@ -145,8 +146,8 @@ export function canPlace(level: Level, placed: readonly PlacedProp[], def: PropD
 
 /** Outward face direction of a face-mounted def at a rotation. */
 export function mountAngle(def: PropDef, rot: number): number {
-  const m = def.modules.find((x) => x.type === 'coat');
-  return (m && m.type === 'coat' ? m.angle : -Math.PI / 2) + ((rot & 3) * Math.PI) / 2;
+  const m = def.modules.find((x) => x.type === 'coat' || x.type === 'snapper');
+  return (m && (m.type === 'coat' || m.type === 'snapper') ? m.angle : -Math.PI / 2) + ((rot & 3) * Math.PI) / 2;
 }
 
 const bodyCache = new WeakMap<readonly PlacedProp[], { n: number; last: PlacedProp | undefined; cells: Set<number> }>();
@@ -194,21 +195,119 @@ function canMount(level: Level, placed: readonly PlacedProp[], def: PropDef, rot
   return true;
 }
 
-/** Bomb: clear unprotected tiles and placed props within radius. Returns the surviving props. */
-export function detonate(level: Level, placed: PlacedProp[], radius: number, tx: number, ty: number): PlacedProp[] {
-  const cx = tx + 0.5;
-  const cy = ty + 0.5;
-  const within = (x: number, y: number) => (x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2 <= radius * radius;
-  const r = Math.ceil(radius);
-  for (let y = ty - r; y <= ty + r; y++) {
-    for (let x = tx - r; x <= tx + r; x++) {
-      if (x < 0 || y < 0 || x >= level.w || y >= level.h) continue;
-      if (within(x, y) && !isProtected(level, x, y)) level.tiles[y * level.w + x] = 0;
+export interface BlastSpec {
+  shape: BlastShape;
+  target: BlastTarget;
+  /** Disk/ring radius, or line/cross arm length (tiles). */
+  radius: number;
+  /** Line/cross thickness, or ring thickness (tiles). */
+  width: number;
+}
+
+/** The blast a bomb module describes (defaults: a disk that hits everything). */
+export function blastSpec(m: Pick<ModuleOf<'bomb'>, 'radius' | 'shape' | 'target' | 'width'>): BlastSpec {
+  return { shape: m.shape ?? 'disk', target: m.target ?? 'all', radius: m.radius, width: m.width ?? 1 };
+}
+
+/** Quarter-turn directions for line blasts: rot 0 right, 1 down, 2 left, 3 up. */
+const ROT_DIR: readonly Cell[] = [
+  [1, 0],
+  [0, 1],
+  [-1, 0],
+  [0, -1],
+];
+
+/**
+ * Cells (world tiles, unclipped) a blast centered on cell (tx, ty) covers.
+ * Disks and rings are measured cell-center to cell-center; lines start at
+ * the charge and bore `radius` cells in the rotation direction; crosses run
+ * `radius` cells out each way. Pure integer/sqrt-free math: deterministic.
+ */
+export function blastCells(b: BlastSpec, tx: number, ty: number, rot = 0): Cell[] {
+  const out: Cell[] = [];
+  const n = Math.round(b.radius);
+  const half = Math.floor((Math.max(1, Math.round(b.width)) - 1) / 2);
+  const thick = Math.max(1, Math.round(b.width));
+  switch (b.shape) {
+    case 'disk':
+    case 'ring': {
+      const r = Math.ceil(b.radius);
+      const outer = b.radius * b.radius;
+      const inner = b.shape === 'ring' ? Math.max(0, b.radius - b.width) ** 2 : -1;
+      for (let y = ty - r; y <= ty + r; y++)
+        for (let x = tx - r; x <= tx + r; x++) {
+          const d = (x - tx) ** 2 + (y - ty) ** 2;
+          if (d <= outer && d > inner) out.push([x, y]);
+        }
+      break;
+    }
+    case 'line': {
+      const [dx, dy] = ROT_DIR[rot & 3];
+      for (let k = 0; k < n; k++) for (let o = -half; o < thick - half; o++) out.push([tx + dx * k + dy * o, ty + dy * k + dx * o]);
+      break;
+    }
+    case 'cross': {
+      const seen = new Set<string>();
+      for (const [dx, dy] of ROT_DIR)
+        for (let k = 0; k <= n; k++)
+          for (let o = -half; o < thick - half; o++) {
+            const c: Cell = [tx + dx * k + dy * o, ty + dy * k + dx * o];
+            const key = `${c[0]},${c[1]}`;
+            if (!seen.has(key)) {
+              seen.add(key);
+              out.push(c);
+            }
+          }
+      break;
     }
   }
-  level.setPieces = level.setPieces.filter((p) => !footprintCells(p).some(([x, y]) => within(x, y)));
+  return out;
+}
+
+/** What a blast would do here: the terrain tiles it clears and the props/set pieces it removes (also the place-phase preview). */
+export function blastHits(
+  level: Level,
+  placed: readonly PlacedProp[],
+  b: BlastSpec,
+  tx: number,
+  ty: number,
+  rot = 0,
+): { cells: Cell[]; tiles: Cell[]; props: PlacedProp[]; setPieces: PlacedProp[] } {
+  const cells = blastCells(b, tx, ty, rot).filter(([x, y]) => x >= 0 && y >= 0 && x < level.w && y < level.h);
+  const hit = new Set(cells.map(([x, y]) => y * level.w + x));
+  const inBlast = (p: PlacedProp) => footprintCells(p).some(([x, y]) => hit.has(y * level.w + x));
+  const tiles = b.target === 'props' ? [] : cells.filter(([x, y]) => tileAt(level, x, y) !== T_EMPTY && !isProtected(level, x, y));
+  // Attachments go when their host goes (handled in detonate); an EMP also fries them directly.
+  const props = b.target === 'terrain' ? [] : placed.filter((p) => (p.def.mount !== 'face' || b.target === 'props') && inBlast(p));
+  const setPieces = b.target === 'terrain' ? [] : level.setPieces.filter(inBlast);
+  return { cells, tiles, props, setPieces };
+}
+
+/** The fx/audio event for a blast: a fireball for anything that breaks terrain, an EMP pulse for props-only charges. */
+export function blastEvent(b: BlastSpec, tx: number, ty: number, rot = 0): GameEvent {
+  const cells = blastCells(b, tx, ty, rot);
+  const x = (cells.reduce((a, c) => a + c[0], 0) / cells.length + 0.5) * TILE;
+  const y = (cells.reduce((a, c) => a + c[1], 0) / cells.length + 0.5) * TILE;
+  if (b.target === 'props') return { type: 'prop', kind: 'emp', x, y, r: b.radius * TILE };
+  if (b.shape === 'line')
+    return { type: 'prop', kind: 'drill', x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE, x2: x * 2 - (tx + 0.5) * TILE, y2: y * 2 - (ty + 0.5) * TILE };
+  return { type: 'explosion', x, y, r: (b.shape === 'cross' ? b.radius * 0.7 : b.radius) * TILE };
+}
+
+/**
+ * Bomb: apply a blast at cell (tx, ty). Clears unprotected terrain and/or
+ * placed props and set pieces according to the spec (a bare number is the
+ * classic disk of that radius). Attachments whose host block or tile is gone
+ * fall off. Returns the surviving props.
+ */
+export function detonate(level: Level, placed: PlacedProp[], blast: number | BlastSpec, tx: number, ty: number, rot = 0): PlacedProp[] {
+  const b: BlastSpec = typeof blast === 'number' ? { shape: 'disk', target: 'all', radius: blast, width: 1 } : blast;
+  const hits = blastHits(level, placed, b, tx, ty, rot);
+  for (const [x, y] of hits.tiles) level.tiles[y * level.w + x] = 0;
+  const gone = new Set([...hits.props, ...hits.setPieces]);
+  level.setPieces = level.setPieces.filter((p) => !gone.has(p));
   level.version++;
-  const survivors = placed.filter((p) => p.def.mount === 'face' || !footprintCells(p).some(([x, y]) => within(x, y)));
+  const survivors = placed.filter((p) => !gone.has(p));
   // Attachments fall off when their host is gone.
   const blocks = staticBodyCells(survivors, level.w);
   return survivors.filter((p) => p.def.mount !== 'face' || footprintCells(p).every(([x, y]) => tileAt(level, x, y) === T_SOLID || blocks.has(y * level.w + x)));

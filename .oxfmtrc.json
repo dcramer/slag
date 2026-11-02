@@ -11,8 +11,5 @@
   "arrowParens": "always",
   "bracketSameLine": false,
   "bracketSpacing": true,
-  "ignorePatterns": [
-    "package-lock.json",
-    ".next/**"
-  ]
+  "ignorePatterns": ["package-lock.json", ".next/**"]
 }

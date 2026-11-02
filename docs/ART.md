@@ -7,7 +7,7 @@ These rules cover the menus, the lobby, and the in-game HUD. The world art (leve
 SLAG is junk melted down and recast. The UI looks like **cast-iron plates, hazard tape, and molten metal**. It feels chunky and handled, like a toy: hard outlines, hard drop shadows, buttons that physically press down. It should never read as a generic dark dashboard.
 
 - **Do** use riveted iron plates (`plate()` in `src/render/hud-kit.ts`, `.slag-card` / `.menu-item` in CSS), small corner radii (4–6 px), a 1–2 px ink outline, and a hard drop shadow offset straight down.
-- **Do** use molten light (amber → orange → ember gradients, additive glow, rising embers) for heat and focus. Glow belongs to *hot* things only: the logo, the pour, the selected item, sparks.
+- **Do** use molten light (amber → orange → ember gradients, additive glow, rising embers) for heat and focus. Glow belongs to _hot_ things only: the logo, the pour, the selected item, sparks.
 - **Do** use hazard tape (`hazardTape()`, `--tape`) as an edge accent on bars and dialogs, and to mark empty or dangerous zones.
 - **Do** add texture: the speckle grain on plates and the SVG noise on pages.
 - **Don't** use translucent purple/blue glass cards, big blurry glows around boxes, large rounded corners, or soft drop shadows. That's the "AI slop" look we're avoiding.
@@ -17,19 +17,19 @@ SLAG is junk melted down and recast. The UI looks like **cast-iron plates, hazar
 
 The canonical palette is `PAL` in `src/ui/style.ts`. `app/globals.css` mirrors it as CSS variables.
 
-| Token | Hex | Use |
-|---|---|---|
-| `ink` | `#120b08` | outlines, hard shadows, text on bright fills |
-| `soot` | `#1a1210` | recessed surfaces: empty slots, inputs, slider tracks |
-| `iron` / `ironHi` | `#2b201b` / `#3d2e26` | plates, secondary buttons |
-| `steel` | `#6e625a` | rivets, dividers |
-| `bone` | `#f6ead8` | primary text |
-| `ash` | `#c9b8a3` | secondary text (≥ 7:1 on iron) |
-| `dim` | `#9b8a78` | tertiary text and empty states only, never below the caption size |
-| `molten` / `amber` / `whiteHot` / `ember` | `#ff6a1f` / `#ffb02e` / `#fff1b8` / `#b8230f` | primary actions, selection, heat |
-| `toxic` | `#a6e22e` | ready, success, online |
-| `danger` | `#ff4a3d` | urgent timers, deaths |
-| `hazard` | `#f2b705` | hazard tape, theme tags |
+| Token                                     | Hex                                           | Use                                                               |
+| ----------------------------------------- | --------------------------------------------- | ----------------------------------------------------------------- |
+| `ink`                                     | `#120b08`                                     | outlines, hard shadows, text on bright fills                      |
+| `soot`                                    | `#1a1210`                                     | recessed surfaces: empty slots, inputs, slider tracks             |
+| `iron` / `ironHi`                         | `#2b201b` / `#3d2e26`                         | plates, secondary buttons                                         |
+| `steel`                                   | `#6e625a`                                     | rivets, dividers                                                  |
+| `bone`                                    | `#f6ead8`                                     | primary text                                                      |
+| `ash`                                     | `#c9b8a3`                                     | secondary text (≥ 7:1 on iron)                                    |
+| `dim`                                     | `#9b8a78`                                     | tertiary text and empty states only, never below the caption size |
+| `molten` / `amber` / `whiteHot` / `ember` | `#ff6a1f` / `#ffb02e` / `#fff1b8` / `#b8230f` | primary actions, selection, heat                                  |
+| `toxic`                                   | `#a6e22e`                                     | ready, success, online                                            |
+| `danger`                                  | `#ff4a3d`                                     | urgent timers, deaths                                             |
+| `hazard`                                  | `#f2b705`                                     | hazard tape, theme tags                                           |
 
 Player colors come from the characters and are used for accents only: card top strips, cursors, bars. Role colors (Build, Hazard, Utility, Demolish) live in `hud.ts`.
 

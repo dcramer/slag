@@ -2,15 +2,15 @@
 
 slag is fully playable on phones and tablets. Touch is one more input device (`'touch'`) next to the keyboard (`kb1`/`kb2`) and gamepads (`pad0…`). It only ever produces `InputFrame`s (plus a view-space `pointer`, like the mouse does), so determinism and netcode are unaffected.
 
-| File | Role |
-|---|---|
-| `src/input/touch.ts` | `TouchInput`: DOM-free touch → `InputFrame` state machine, the shared `touchLayout()` geometry, and `touchModeFor()` (phase → what touches mean). Unit tested in `tests/touch.test.ts`. |
-| `src/ui/touch/overlay.ts` | `TouchOverlay`: the on-screen controls (DOM, `pointer-events:none`), the portrait prompt, the fullscreen and menu buttons, and the page-gesture hardening. |
-| `src/ui/touch/device.ts` | Render quality tiers, adaptive resolution (`FrameBudget`), safe-area insets, and touch-first detection. |
-| `src/input/input.ts` | Owns `input.touch`. Touch pointers skip the mouse path. `pointerDevice` is `'touch'` while touch is the latest input. |
-| `src/game-client.ts` | Sets the touch mode every sim step, updates the overlay every frame, routes HUD buttons to `pointerDevice`, and buzzes when the touch player dies. |
-| `src/render/renderer.ts` | Applies the quality tier (internal width and DPR cap), downgrades adaptively, and fits the canvas inside the safe area. |
-| `app/r/[room]/page.tsx`, `app/layout.tsx` | Viewport (no zoom, `viewport-fit=cover`, theme colour) on the game route only, and iOS home-screen web-app meta. |
+| File                                      | Role                                                                                                                                                                                    |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/input/touch.ts`                      | `TouchInput`: DOM-free touch → `InputFrame` state machine, the shared `touchLayout()` geometry, and `touchModeFor()` (phase → what touches mean). Unit tested in `tests/touch.test.ts`. |
+| `src/ui/touch/overlay.ts`                 | `TouchOverlay`: the on-screen controls (DOM, `pointer-events:none`), the portrait prompt, the fullscreen and menu buttons, and the page-gesture hardening.                              |
+| `src/ui/touch/device.ts`                  | Render quality tiers, adaptive resolution (`FrameBudget`), safe-area insets, and touch-first detection.                                                                                 |
+| `src/input/input.ts`                      | Owns `input.touch`. Touch pointers skip the mouse path. `pointerDevice` is `'touch'` while touch is the latest input.                                                                   |
+| `src/game-client.ts`                      | Sets the touch mode every sim step, updates the overlay every frame, routes HUD buttons to `pointerDevice`, and buzzes when the touch player dies.                                      |
+| `src/render/renderer.ts`                  | Applies the quality tier (internal width and DPR cap), downgrades adaptively, and fits the canvas inside the safe area.                                                                 |
+| `app/r/[room]/page.tsx`, `app/layout.tsx` | Viewport (no zoom, `viewport-fit=cover`, theme colour) on the game route only, and iOS home-screen web-app meta.                                                                        |
 
 ## When controls show
 
@@ -38,7 +38,7 @@ slag is fully playable on phones and tablets. Touch is one more input device (`'
 
 - The stick's centre is wherever your thumb lands in the left half of the screen.
 - Past the rim, the anchor is dragged along with your thumb. Reversing direction is always about one dead zone of travel, however far you've pushed.
-- The output is digital: left/right past a 22 % dead zone. Down/up count only past 50 % *and* steeper than ~27°, so thumb sag while running doesn't trigger a fast-fall.
+- The output is digital: left/right past a 22 % dead zone. Down/up count only past 50 % _and_ steeper than ~27°, so thumb sag while running doesn't trigger a fast-fall.
 
 **RUN = push past 70 %.** RUN is not a separate button. Walk is the inner ring and run is the outer ring; the knob glows when you're running. This leaves the right thumb only one job, JUMP. That job is timing-critical: variable jump height and wall jumps depend on it.
 
@@ -52,7 +52,7 @@ A dedicated RUN button would need a third simultaneous touch (stick + run + jump
 
 **Right thumb: JUMP.**
 
-- The *whole right half* is JUMP, apart from the ALT and menu buttons. You can't miss it.
+- The _whole right half_ is JUMP, apart from the ALT and menu buttons. You can't miss it.
 - Hold duration = jump hold, so you get variable height. Each new touch is a fresh `jumpPressed`, so wall jumps are just re-taps.
 - A tap shorter than one sim frame still registers. Presses are latched like key presses.
 
@@ -64,26 +64,26 @@ A dedicated RUN button would need a third simultaneous touch (stick + run + jump
 
 ### Other phases
 
-| Phase | Touch |
-|---|---|
-| Lobby | Tap the HUD buttons: a join slot (joins as `touch`), *Ready up*, *new look*, your name, *new level*, Settings, Level settings. Taps that just miss a small pill retry within ±9 view px. A fullscreen button shows top-left where supported. |
-| Pick | Touch-down snaps your cursor to the finger, so the card lifts. Lifting over a card claims it, either by tapping or by sliding to choose. |
-| Place | Drag anywhere. The ghost floats a fingertip (56 CSS px) above your finger. The offset fades near the bottom edge so the lowest rows stay reachable. **⟳ ROTATE** taps rotate. **PLACE** places only when the finger lifts *on* it, so sliding off cancels. Lifting a drag never places. PLACE dims red while the spot is illegal. The same two button positions are JUMP and ALT in the race. |
-| Score / victory | Tap anywhere to continue. |
-| Any time | ⚙ (top right) opens Settings. This is the Esc equivalent and shows outside the lobby, which has its own settings button. |
+| Phase           | Touch                                                                                                                                                                                                                                                                                                                                                                                         |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lobby           | Tap the HUD buttons: a join slot (joins as `touch`), _Ready up_, _new look_, your name, _new level_, Settings, Level settings. Taps that just miss a small pill retry within ±9 view px. A fullscreen button shows top-left where supported.                                                                                                                                                  |
+| Pick            | Touch-down snaps your cursor to the finger, so the card lifts. Lifting over a card claims it, either by tapping or by sliding to choose.                                                                                                                                                                                                                                                      |
+| Place           | Drag anywhere. The ghost floats a fingertip (56 CSS px) above your finger. The offset fades near the bottom edge so the lowest rows stay reachable. **⟳ ROTATE** taps rotate. **PLACE** places only when the finger lifts _on_ it, so sliding off cancels. Lifting a drag never places. PLACE dims red while the spot is illegal. The same two button positions are JUMP and ALT in the race. |
+| Score / victory | Tap anywhere to continue.                                                                                                                                                                                                                                                                                                                                                                     |
+| Any time        | ⚙ (top right) opens Settings. This is the Esc equivalent and shows outside the lobby, which has its own settings button.                                                                                                                                                                                                                                                                      |
 
 ### Haptics
 
 `navigator.vibrate` gives a subtle tick on each event (Android only; iOS has no web vibration API):
 
-| Event | Duration |
-|---|---|
-| Jump | 8 ms |
-| Rotate | 6 ms |
-| Place | 15 ms |
-| HUD tap | 8 ms |
-| Self-destruct | 40 ms |
-| Death | 30 ms |
+| Event         | Duration |
+| ------------- | -------- |
+| Jump          | 8 ms     |
+| Rotate        | 6 ms     |
+| Place         | 15 ms    |
+| HUD tap       | 8 ms     |
+| Self-destruct | 40 ms    |
+| Death         | 30 ms    |
 
 `input.touch.haptics = false` turns them off. There's no settings UI for it yet.
 
@@ -110,14 +110,14 @@ A dedicated RUN button would need a third simultaneous touch (stick + run + jump
 
 All of these are presentation-only and live in `src/ui/touch/device.ts`.
 
-| Knob | Effect |
-|---|---|
-| `QUALITY[tier].maxW` | Caps the internal render width. This is the old `MAX_W`. The tiers are high 1920, mid 1280 and low 896. The three Canvas2D layers, the WebGL target and the HUD all scale with it. Bloom buffers are ¼ and ⅛ of it and the light map is ½, so this one knob also scales bloom cost. |
-| `QUALITY[tier].dprCap` | Caps devicePixelRatio before `maxW`. The tiers are 4, 2 and 1.5. |
-| Auto tier (`pickTier`) | Desktop stays high (unchanged). A touch-first device or short side < 500 px gets mid. If it also has ≤ 4 cores or ≤ 3 GB `deviceMemory`, it gets low. |
-| Adaptive (`FrameBudget`) | Mobile tiers only. An average frame time above 22 ms (< ~45 fps) sustained for 2 s drops one tier, with a 3 s cooldown. It never goes back up. Gaps over 250 ms (tab hidden, paused) are ignored. It's disabled under `navigator.webdriver` so screenshots stay deterministic. |
-| `?q=low\|mid\|high` or `localStorage['slag.quality']` | Pins a tier and disables adaptive. |
-| `renderer.setQuality(tier)` | Runtime switch, for a future settings entry. |
+| Knob                                                  | Effect                                                                                                                                                                                                                                                                              |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `QUALITY[tier].maxW`                                  | Caps the internal render width. This is the old `MAX_W`. The tiers are high 1920, mid 1280 and low 896. The three Canvas2D layers, the WebGL target and the HUD all scale with it. Bloom buffers are ¼ and ⅛ of it and the light map is ½, so this one knob also scales bloom cost. |
+| `QUALITY[tier].dprCap`                                | Caps devicePixelRatio before `maxW`. The tiers are 4, 2 and 1.5.                                                                                                                                                                                                                    |
+| Auto tier (`pickTier`)                                | Desktop stays high (unchanged). A touch-first device or short side < 500 px gets mid. If it also has ≤ 4 cores or ≤ 3 GB `deviceMemory`, it gets low.                                                                                                                               |
+| Adaptive (`FrameBudget`)                              | Mobile tiers only. An average frame time above 22 ms (< ~45 fps) sustained for 2 s drops one tier, with a 3 s cooldown. It never goes back up. Gaps over 250 ms (tab hidden, paused) are ignored. It's disabled under `navigator.webdriver` so screenshots stay deterministic.      |
+| `?q=low\|mid\|high` or `localStorage['slag.quality']` | Pins a tier and disables adaptive.                                                                                                                                                                                                                                                  |
+| `renderer.setQuality(tier)`                           | Runtime switch, for a future settings entry.                                                                                                                                                                                                                                        |
 
 The sim is unaffected: it stays a fixed 60 Hz accumulator, and slow frames run several steps.
 

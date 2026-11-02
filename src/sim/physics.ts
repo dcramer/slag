@@ -66,6 +66,8 @@ export interface Solid extends Rect {
   propUid: number;
   /** Index of the owning module within the prop, or -1. */
   mi: number;
+  /** Lands from above only, like a one-way tile: it never blocks sideways or from below, and can't pin or crush anyone. */
+  oneWay?: boolean;
 }
 
 export const TILE_SOLID_ID = -2;
@@ -172,8 +174,8 @@ const NO_ONEWAY = Number.POSITIVE_INFINITY;
 
 /**
  * First solid overlapping `r`, tiles first. The returned tile object is reused; copy if you keep it.
- * One-way tiles only count when their top is at or below `oneWayFrom` (the feet height before a
- * downward move); by default they never block.
+ * One-way tiles and solids only count when their top is at or below `oneWayFrom` (the feet height
+ * before a downward move); by default they never block.
  */
 export function firstOverlap(r: Rect, world: CollisionWorld, dynamicOnly = false, oneWayFrom = NO_ONEWAY): Solid | null {
   if (!dynamicOnly) {
@@ -193,7 +195,10 @@ export function firstOverlap(r: Rect, world: CollisionWorld, dynamicOnly = false
       }
     }
   }
-  for (const s of world.solids) if (overlaps(r, s)) return s;
+  for (const s of world.solids) {
+    if (s.oneWay && s.y < oneWayFrom - 0.01) continue;
+    if (overlaps(r, s)) return s;
+  }
   return null;
 }
 
@@ -307,9 +312,9 @@ function wallAt(b: Body, side: -1 | 1, world: CollisionWorld): Solid | null {
   return firstOverlap(probe, world);
 }
 
-/** Standing only on one-way tiles (nothing solid under the feet), so a drop-through is possible. */
+/** Standing only on one-ways (nothing solid under the feet), so a drop-through is possible. */
 function onOneWayOnly(b: Body, world: CollisionWorld): boolean {
-  if (b.groundRef !== TILE_ONEWAY_ID) return false;
+  if (b.groundRef !== TILE_ONEWAY_ID && !(b.groundRef >= 0 && findSolid(world, b.groundRef)?.oneWay)) return false;
   probe.x = b.x;
   probe.y = b.y + b.h;
   probe.w = b.w;

@@ -27,7 +27,7 @@ export const ARCHETYPE_WEIGHTS: readonly (readonly [Archetype, number])[] = [
   ['spikeblock', 1.6],
   ['saw', 2.6],
   ['flail', 1.3],
-  ['launcher', 3.2],
+  ['launcher', 3.8],
   ['flamer', 1.2],
   ['laser', 1.2],
   ['tesla', 1],
@@ -35,13 +35,36 @@ export const ARCHETYPE_WEIGHTS: readonly (readonly [Archetype, number])[] = [
   ['spring', 1.5],
   ['fan', 1.1],
   ['bomb', 1],
+  ['emp', 0.6],
+  ['drill', 0.7],
+  ['charge', 0.6],
+  ['timebomb', 0.5],
   ['spikestrip', 1.8],
   ['icecoat', 1.1],
   ['slimecoat', 1.1],
+  ['portal', 1],
+  ['bumper', 0.9],
+  ['magnet', 0.9],
+  ['web', 0.8],
+  ['blinker', 1.1],
+  ['dropper', 1.1],
+  ['snapper', 1.1],
+  ['wheel', 0.9],
+  ['hangar', 1],
+];
+
+/** Demolition archetypes: detonated (now or at race start) rather than built. */
+export const DEMOLISH: ReadonlySet<Archetype> = new Set(['bomb', 'emp', 'drill', 'charge', 'timebomb']);
+
+/** Launcher aim mix: fixed clearly dominates so trackers stay special (cannons/mortars track a third as often). */
+export const LAUNCHER_AIM_WEIGHTS: readonly (readonly [Aim, number])[] = [
+  ['fixed', 7],
+  ['sweep', 2],
+  ['track', 1.5],
 ];
 
 const BUILD: Archetype[] = ['platform', 'crumble', 'spring'];
-const HAZARD: Archetype[] = ['spikestrip', 'spikeblock', 'saw', 'flail', 'launcher', 'flamer', 'laser', 'tesla', 'crusher'];
+const HAZARD: Archetype[] = ['spikestrip', 'spikeblock', 'saw', 'flail', 'launcher', 'flamer', 'laser', 'tesla', 'crusher', 'dropper', 'snapper'];
 
 const R = Math.PI / 2;
 const AXIS = [0, R, 2 * R, 3 * R]; // right, down, left, up
@@ -139,6 +162,8 @@ interface Recipe {
   modules: Module[];
   motion?: Motion;
   mount?: 'face';
+  /** Placement cells when they're more than the modules' anchors (e.g. a wheel's swept disk). */
+  footprint?: Cell[];
 }
 
 /** Generate one prop of the given archetype. */
@@ -154,7 +179,7 @@ export function generateProp(rng: Rng, archetype: Archetype, key: string): PropD
     role: recipe.role,
     name: recipe.name,
     modules: recipe.modules,
-    footprint: footprintOf(recipe.modules),
+    footprint: recipe.footprint ? normalizeCells(recipe.footprint) : footprintOf(recipe.modules),
     ...(recipe.mount ? { mount: recipe.mount } : {}),
   };
 }
@@ -427,13 +452,20 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
   },
 
   launcher(rng) {
-    const style = rng.weighted<LauncherStyle>([
+    const style = rng.weighted<Exclude<LauncherStyle, 'hangar'>>([
       ['crossbow', 3],
       ['ballista', 1.2],
       ['cannon', 2],
       ['totem', 1.5],
       ['turret', 1.5],
       ['thrower', 1.2],
+      ['rocket', 0.45],
+      ['glaive', 1.1],
+      ['gumball', 1.1],
+      ['mortar', 1],
+      ['gooper', 1],
+      ['cryo', 1],
+      ['prism', 1],
     ]);
     const ammo: Ammo = (
       {
@@ -443,15 +475,26 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
         totem: 'fireball',
         turret: 'plasma',
         thrower: 'shuriken',
+        rocket: 'seeker',
+        glaive: 'boomerang',
+        gumball: 'rubber',
+        mortar: 'cluster',
+        gooper: 'goo',
+        cryo: 'frost',
+        prism: 'ricochet',
       } as const
     )[style];
-    const aim = rng.weighted<Aim>([
-      ['fixed', 5],
-      ['sweep', 2],
-      ['track', style === 'cannon' ? 0.5 : 2],
-    ]);
+    // Seekers steer themselves; boomerangs and bank shots read best on a fixed line.
+    const aim =
+      style === 'rocket' || style === 'prism'
+        ? 'fixed'
+        : rng.weighted<Aim>(
+            LAUNCHER_AIM_WEIGHTS.map(
+              ([k, w]) => [k, k === 'track' && (style === 'cannon' || style === 'mortar') ? w / 3 : k === 'track' && style === 'glaive' ? 0 : w] as const,
+            ),
+          );
     const lobbed = AMMO[ammo].gravity > 200;
-    const angle = lobbed ? -rng.range(0.35, 0.8) : 0;
+    const angle = lobbed ? -rng.range(0.35, 0.8) : style === 'prism' ? rng.sign() * rng.range(0.4, 0.85) : style === 'rocket' ? -0.5 : 0;
     const spread =
       style === 'totem' || style === 'thrower'
         ? rng.weighted([
@@ -459,9 +502,24 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
             [3, 1.5],
             [5, 0.4],
           ] as const)
-        : 1;
-    const burst = style === 'turret' ? rng.int(2, 4) : style === 'crossbow' && rng.chance(0.25) ? 2 : 1;
-    const interval = style === 'ballista' ? rng.int(110, 170) : style === 'turret' ? rng.int(80, 140) : rng.int(55, 140);
+        : style === 'prism' && rng.chance(0.35)
+          ? 2
+          : 1;
+    const burst = style === 'turret' ? rng.int(2, 4) : (style === 'crossbow' || style === 'cryo') && rng.chance(0.25) ? 2 : 1;
+    const interval =
+      style === 'ballista'
+        ? rng.int(110, 170)
+        : style === 'turret'
+          ? rng.int(80, 140)
+          : style === 'rocket'
+            ? rng.int(160, 240)
+            : style === 'mortar'
+              ? rng.int(120, 180)
+              : style === 'glaive'
+                ? rng.int(100, 160)
+                : style === 'gooper' || style === 'cryo' || style === 'gumball' || style === 'prism'
+                  ? rng.int(75, 140)
+                  : rng.int(55, 140);
     const speed = (
       {
         crossbow: rng.range(200, 300),
@@ -470,31 +528,55 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
         totem: rng.range(80, 140),
         turret: rng.range(200, 270),
         thrower: rng.range(150, 220),
+        rocket: rng.range(90, 125),
+        glaive: rng.range(230, 300),
+        gumball: rng.range(170, 230),
+        mortar: rng.range(210, 260),
+        gooper: rng.range(160, 220),
+        cryo: rng.range(230, 290),
+        prism: rng.range(230, 300),
       } as const
     )[style];
-    const nouns: Record<LauncherStyle, string[]> = {
+    const nouns: Record<Exclude<LauncherStyle, 'hangar'>, string[]> = {
       crossbow: ['Crossbow', 'Arbalest', 'Bolt Thrower'],
       ballista: ['Ballista', 'Siege Bow', 'Scorpion'],
       cannon: ['Cannon', 'Mortar', 'Bombard'],
       totem: ['Fire Totem', 'Hex Idol', 'Ember Shrine'],
       turret: ['Plasma Turret', 'Zapper', 'Blaster'],
       thrower: ['Star Thrower', 'Shuriken Shrine', 'Ninja Box'],
+      rocket: ['Seeker Pod', 'Homing Rack', 'Missile Nest'],
+      glaive: ['Boomerang Arm', 'Glaive Flinger', 'Returner'],
+      gumball: ['Gumball Machine', 'Ball Pitcher', 'Bouncer'],
+      mortar: ['Cluster Mortar', 'Splitter', 'Scatter Shell'],
+      gooper: ['Goo Gun', 'Slime Spitter', 'Gunk Lobber'],
+      cryo: ['Freeze Ray', 'Cryo Cannon', 'Frost Spitter'],
+      prism: ['Prism', 'Bank-Shot Lens', 'Ricochet Eye'],
     };
-    const adjs: string[] = [];
-    if (aim === 'track') adjs.push('Vigilant', 'Paranoid', 'Heat-Seeking');
-    if (aim === 'sweep') adjs.push('Sweeping', 'Indecisive', 'Restless');
+    const STYLE_ADJ: Partial<Record<LauncherStyle, string[]>> = {
+      rocket: ['Relentless', 'Clingy', 'Persistent'],
+      glaive: ['Loyal', 'Homesick'],
+      gumball: ['Bouncy', 'Rubbery'],
+      mortar: ['Generous', 'Sharing'],
+      gooper: ['Sloppy', 'Messy'],
+      cryo: ['Chilly', 'Frigid'],
+      prism: ['Reflective', 'Angular'],
+    };
+    const adjs: string[] = [...(STYLE_ADJ[style] ?? [])];
+    // Moving aim always shows in the name (tracking also gets an eye on the art).
+    const aimAdj =
+      aim === 'track' ? rng.pick(['Vigilant', 'Paranoid', 'Watchful', 'Tracking']) : aim === 'sweep' ? rng.pick(['Sweeping', 'Indecisive', 'Swiveling']) : null;
     if (interval < 70) adjs.push('Trigger-happy', 'Twitchy');
     if (spread > 1) adjs.push(spread === 5 ? 'Fan-Fire' : 'Triple', 'Scattershot');
     if (burst > 2) adjs.push('Chatty', 'Rapid');
     return {
       archetype: 'launcher',
       role: 'hazard',
-      name: title(rng, adjs, nouns[style]),
+      name: aimAdj ? `${aimAdj} ${rng.pick(nouns[style])}` : title(rng, adjs, nouns[style]),
       modules: [
         {
           type: 'body',
           cells: [[0, 0]],
-          material: style === 'crossbow' || style === 'totem' ? 'wood' : 'metal',
+          material: style === 'crossbow' || style === 'totem' || style === 'glaive' ? 'wood' : 'metal',
           conveyor: 0,
           breakFrames: 0,
           respawnFrames: 0,
@@ -629,18 +711,328 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     };
   },
 
+  portal(rng) {
+    const dx = rng.int(3, 8);
+    const dy = rng.chance(0.4) ? rng.int(-3, 3) : 0;
+    const ay = dy < 0 ? -dy : 0;
+    const far = dx + Math.abs(dy) >= 8;
+    return {
+      archetype: 'portal',
+      role: 'utility',
+      name: title(rng, far ? ['Long-Distance', 'Interstate', 'Overambitious'] : ['Twin', 'Paired', 'Quantum', 'Entangled'], [
+        'Warp Pads',
+        'Portals',
+        'Wormhole',
+        'Blink Gates',
+        'Shortcut',
+      ]),
+      modules: [{ type: 'portal', a: center(0, ay), b: center(dx, ay + dy) }],
+    };
+  },
+
+  bumper(rng) {
+    const twin = rng.chance(0.25);
+    const power = rng.range(330, 520);
+    const radius = rng.range(0.42, 0.6);
+    const modules: Module[] = [{ type: 'bumper', at: center(), radius, power }];
+    if (twin) modules.push({ type: 'bumper', at: center(rng.int(2, 3), rng.pick([0, 1])), radius, power });
+    const motion: Motion =
+      !twin && rng.chance(0.3) ? { type: 'rail', angle: rng.pick([AXIS[0], AXIS[3]]), range: rng.int(2, 4), period: rng.int(120, 220) } : { type: 'none' };
+    return {
+      archetype: 'bumper',
+      role: 'utility',
+      name: title(rng, power > 460 ? ['Violent', 'Overcharged', 'Rowdy'] : twin ? ['Twin', 'Pinball'] : ['Bouncy', 'Jolly', 'Boisterous'], [
+        'Bumper',
+        'Pinball Post',
+        'Boing Ball',
+        'Kicker',
+      ]),
+      modules,
+      motion,
+    };
+  },
+
+  magnet(rng) {
+    const pull = rng.chance(0.6);
+    const pulse = rng.chance(0.4);
+    const radius = rng.range(2.5, 4.2);
+    const strength = pull ? rng.range(900, 1500) : rng.range(1100, 1900);
+    const adjs = pulse
+      ? ['Pulsing', 'Moody', 'Intermittent']
+      : radius > 3.6
+        ? ['Huge', 'Overbearing']
+        : pull
+          ? ['Needy', 'Clingy', 'Magnetic']
+          : ['Aloof', 'Standoffish'];
+    return {
+      archetype: 'magnet',
+      role: 'utility',
+      name: title(rng, adjs, pull ? ['Gravity Well', 'Magnet Core', 'Tractor Orb', 'Attractor'] : ['Repulsor', 'Push Field', 'Anti-Magnet', 'Deflector Orb']),
+      modules: [
+        metalBody([[0, 0]]),
+        {
+          type: 'magnet',
+          at: center(),
+          radius,
+          strength,
+          polarity: pull ? 1 : -1,
+          on: pulse ? rng.int(70, 130) : 0,
+          off: pulse ? rng.int(60, 120) : 0,
+          warn: 30,
+        },
+      ],
+    };
+  },
+
+  web(rng) {
+    const n = rng.int(3, 6);
+    const drag = rng.range(0.18, 0.3);
+    return {
+      archetype: 'web',
+      role: 'utility',
+      name: title(rng, n >= 5 ? ['Sprawling', 'Ambitious'] : drag > 0.25 ? ['Extra-Sticky', 'Clingy'] : ['Sticky', 'Dusty', 'Abandoned'], [
+        'Web',
+        'Cobweb',
+        'Net',
+        'Snare',
+        'Gossamer',
+      ]),
+      modules: [{ type: 'web', cells: polyomino(rng, n, 0.15), drag }],
+    };
+  },
+
+  blinker(rng) {
+    const pair = rng.chance(0.55);
+    if (pair) {
+      const n = rng.int(1, 3);
+      const t = rng.int(70, 130);
+      const dy = rng.pick([-1, 0, 0, 1]);
+      const gap = rng.int(0, 1);
+      const ya = dy < 0 ? 1 : 0;
+      const a = strip(n).map(([x]) => [x, ya] as Cell);
+      const b = strip(n).map(([x]) => [x + n + gap, ya + dy] as Cell);
+      return {
+        archetype: 'blinker',
+        role: 'build',
+        name: title(rng, t < 90 ? ['Hasty', 'Frantic', 'Flip-Flop'] : ['Alternating', 'Ping-Pong', 'Turn-Taking'], [
+          'Blink Blocks',
+          'Phase Bricks',
+          'Strobe Slabs',
+          'Swap Tiles',
+        ]),
+        modules: [
+          { type: 'phase', cells: a, on: t, off: t, offset: 0 },
+          { type: 'phase', cells: b, on: t, off: t, offset: t },
+        ],
+      };
+    }
+    const n = rng.int(2, 4);
+    const on = rng.int(90, 150);
+    const off = rng.int(50, 100);
+    return {
+      archetype: 'blinker',
+      role: 'build',
+      name: title(rng, off > 80 ? ['Unreliable', 'Flaky', 'Shy'] : ['Flickering', 'Blinking', 'Nervous'], [
+        'Blink Blocks',
+        'Phase Bricks',
+        'Ghost Tiles',
+        'Strobe Slabs',
+      ]),
+      modules: [{ type: 'phase', cells: strip(n), on, off, offset: 0 }],
+    };
+  },
+
+  dropper(rng) {
+    const w = rng.weighted([
+      [1, 1],
+      [2, 3],
+    ] as const);
+    const h = rng.weighted([
+      [1, 1.5],
+      [2, 1],
+    ] as const);
+    const cells: Cell[] = [];
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) cells.push([x, y]);
+    const warn = rng.int(14, 24);
+    return {
+      archetype: 'dropper',
+      role: 'hazard',
+      name: title(rng, warn < 17 ? ['Twitchy', 'Jumpy', 'Short-Tempered'] : w * h >= 4 ? ['Massive', 'Brooding'] : ['Grumpy', 'Glowering', 'Patient'], [
+        'Dropstone',
+        'Grudge Block',
+        'Ceiling Smasher',
+        'Skull Slab',
+        'Pounder',
+      ]),
+      modules: [{ type: 'dropper', cells, angle: AXIS[1], reach: rng.int(4, 9), warn, rest: rng.int(40, 80) }],
+    };
+  },
+
+  snapper(rng) {
+    const n = rng.weighted([
+      [1, 2],
+      [2, 3],
+      [3, 1.5],
+    ] as const);
+    const warn = rng.int(14, 24);
+    return {
+      archetype: 'snapper',
+      role: 'hazard',
+      mount: 'face',
+      name: title(rng, warn < 17 ? ['Hair-Trigger', 'Jumpy', 'Snappy'] : ['Lurking', 'Sneaky', 'Patient'], [
+        'Snap Trap',
+        'Pop-Up Spikes',
+        'Gotcha Plate',
+        'Spring Spikes',
+      ]),
+      modules: [{ type: 'snapper', cells: strip(n), angle: -Math.PI / 2, warn, up: rng.int(24, 45), cool: rng.int(40, 80) }],
+    };
+  },
+
+  wheel(rng) {
+    const arm = rng.range(1.6, 2.5);
+    const count = rng.weighted([
+      [2, 2],
+      [3, 3],
+      [4, 1.5],
+    ] as const);
+    const period = rng.int(220, 380);
+    const width = rng.range(1.4, 2.1);
+    // Reserve the disk the platforms sweep, so it isn't placed into terrain. Its center
+    // cell must be `hub - 0.5` after normalizing, so the disk has to touch x = 0 and y = 0.
+    const reach = arm + width / 2;
+    const r = Math.floor(reach);
+    const disk: Cell[] = [];
+    for (let y = 0; y <= 2 * r; y++) for (let x = 0; x <= 2 * r; x++) if ((x - r) ** 2 + (y - r) ** 2 <= reach * reach) disk.push([x, y]);
+    return {
+      archetype: 'wheel',
+      role: 'build',
+      name: title(rng, period < 260 ? ['Speedy', 'Giddy'] : count >= 4 ? ['Crowded', 'Generous'] : ['Lazy', 'Leisurely', 'Creaky'], [
+        'Ferris Wheel',
+        'Cog Lift',
+        'Paddle Wheel',
+        'Carousel',
+      ]),
+      modules: [
+        {
+          type: 'rotor',
+          look: 'cog',
+          support: 'none',
+          mastX: 0,
+          hub: center(r, r),
+          arm,
+          count,
+          angle0: rng.range(0, Math.PI * 2),
+          period,
+          swing: 0,
+          dir: rng.sign(),
+          width,
+          thick: 0.5,
+          material: 'metal',
+          seed: rng.int(0, 1 << 20),
+        },
+      ],
+      footprint: disk,
+    };
+  },
+
   bomb(rng) {
-    const radius = rng.range(1.6, 3.6);
+    const radius = rng.range(1.4, 4.2);
     return {
       archetype: 'bomb',
       role: 'demolish',
-      name: title(rng, radius > 3 ? ['Big', 'Excessive'] : radius < 2.1 ? ['Polite', 'Small'] : ['Volatile', 'Grumpy'], [
+      name: title(rng, radius > 3.2 ? ['Big', 'Excessive', 'Overkill'] : radius < 2.1 ? ['Polite', 'Small', 'Pocket'] : ['Volatile', 'Grumpy'], [
         'Bomb',
         'Charge',
         'Kaboom',
         `${word(rng, 1, 2)}-Bomb`,
       ]),
-      modules: [{ type: 'bomb', radius }],
+      modules: [{ type: 'bomb', radius, look: 'bomb' }],
+    };
+  },
+
+  emp(rng) {
+    const radius = rng.range(2.5, 4.5);
+    return {
+      archetype: 'emp',
+      role: 'demolish',
+      name: title(rng, radius > 3.8 ? ['Wide-Area', 'Total'] : ['Targeted', 'Tidy', 'Surgical'], ['EMP', 'Wrecking Pulse', 'Junk Zapper', 'Scrap Charge']),
+      modules: [{ type: 'bomb', radius, target: 'props', look: 'emp' }],
+    };
+  },
+
+  drill(rng) {
+    const length = rng.int(5, 10);
+    const width = rng.chance(0.3) ? 3 : 1;
+    return {
+      archetype: 'drill',
+      role: 'demolish',
+      name: title(rng, width === 3 ? ['Wide-Bore', 'Industrial'] : length >= 8 ? ['Deep', 'Determined'] : ['Pocket', 'Hand'], [
+        'Drill',
+        'Tunneler',
+        'Bore Charge',
+        'Mole',
+      ]),
+      modules: [{ type: 'bomb', radius: length, shape: 'line', target: 'terrain', width, look: 'drill' }],
+    };
+  },
+
+  charge(rng) {
+    const cross = rng.chance(0.55);
+    const radius = cross ? rng.int(3, 6) : rng.range(2.6, 4);
+    return {
+      archetype: 'charge',
+      role: 'demolish',
+      name: title(
+        rng,
+        cross ? ['Four-Way', 'Plus-Sized', 'Crossroads'] : ['Hollow', 'Donut', 'Halo'],
+        cross ? ['Cross Charge', 'Plus Bomb', 'Star Blast'] : ['Ring Charge', 'Ring Mine', 'Moat Maker'],
+      ),
+      modules: [{ type: 'bomb', radius, shape: cross ? 'cross' : 'ring', width: cross ? 1 : 1.3, look: 'charge' }],
+    };
+  },
+
+  hangar(rng) {
+    const speed = rng.range(60, 110);
+    const interval = rng.int(110, 200);
+    return {
+      archetype: 'hangar',
+      role: 'utility',
+      name: title(rng, speed > 95 ? ['Express', 'Hasty'] : interval < 140 ? ['Busy', 'Generous'] : ['Leisurely', 'Scenic', 'Rickety'], [
+        'Glider Hangar',
+        'Kite Loft',
+        'Plank Catapult',
+        'Air Ferry',
+      ]),
+      modules: [
+        { type: 'body', cells: [[0, 0]], material: 'wood', conveyor: 0, breakFrames: 0, respawnFrames: 0 },
+        {
+          type: 'launcher',
+          style: 'hangar',
+          ammo: 'glider',
+          at: center(),
+          angle: 0,
+          aim: 'fixed',
+          sweep: 0,
+          sweepPeriod: 200,
+          interval,
+          burst: 1,
+          spread: 1,
+          spreadAngle: 0,
+          speed,
+        },
+      ],
+    };
+  },
+
+  timebomb(rng) {
+    const radius = rng.range(2, 3.2);
+    const emp = rng.chance(0.3);
+    return {
+      archetype: 'timebomb',
+      role: 'demolish',
+      name: title(rng, emp ? ['Spiteful', 'Delayed'] : ['Ticking', 'Patient', 'Punctual'], ['Time Bomb', 'Alarm Clock', 'Ticking Parcel', 'Countdown']),
+      modules: [{ type: 'bomb', radius, target: emp ? 'props' : 'all', look: 'clock', delay: true }],
     };
   },
 };

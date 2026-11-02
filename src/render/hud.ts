@@ -1,4 +1,5 @@
 import { css, type HSL } from '../core/color';
+import { propTag } from '../codex/describe';
 import type { Match, Player } from '../game/match';
 import type { Role } from '../gen/props';
 import { type InputSettings, type KeyProfile, keyboardDevices } from '../input/bindings';
@@ -585,6 +586,8 @@ export class Hud {
       c.globalAlpha = 1;
       this.gctx.globalAlpha = 1;
       tag(c, role.label, r.x + 7, y + 15, css(role.color), PAL.ink, TYPE.caption);
+      const stamp = propTag(item.def);
+      if (stamp) tag(c, stamp, r.x + r.w - 7, y + 15, PAL.bone, PAL.ink, TYPE.caption, 'right');
       wrap(this, item.def.name, r.x + r.w / 2, y + r.h - 28, r.w - 12, TYPE.body);
       this.text(item.def.maker, r.x + r.w / 2, y + r.h - 11, TYPE.caption, PAL.dim, 'center', UI, 600);
       if (owner) {
