@@ -99,9 +99,6 @@ Some steps need the owner. Run after setting the Vercel env vars.
 ## 22. Glacier and space follow-ups
 Both themes are on `main`. Their set pieces reuse existing module art, so they need their own looks. Space has no weather. Ice skids and 0.55 space gravity are measured, not played by hand.
 
-## 19. Secret parts mode
-A mode where you don't see what a part is. You choose a type (hazard, utility, build, whatever the roles are) and get one at random from what's allowed. A lobby rule, with the roll deterministic from the seed and the same on every peer. The first time anyone sees the part is when it lands.
-
 ## 20. Cleanup pass
 Run this once the current agents have landed, so it doesn't fight them. A lot arrived fast.
 
