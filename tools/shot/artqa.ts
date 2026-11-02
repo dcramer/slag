@@ -1,5 +1,5 @@
 /**
- * `pnpm shot artqa --theme T` (or `--themes all`, or `--themes farm,mine`): the art consistency sheet. Every landmark, set-piece
+ * `pnpm shot artqa --theme T` (or `--themes all`, or `--theme farm,mine`): the art consistency sheet. Every landmark, set-piece
  * hazard and decor kind a theme has, mid-race beside that theme's terrain and three crate parts (a platform, a saw, a launcher),
  * at play scale (1 world px = 2.5 screen px, as at 1080p) and at 2×. One sheet per theme and kind of piece:
  * `artqa-<theme>-landmarks.png`, `-hazards.png`, `-decor.png`. `--only landmarks,decor` skips the rest.
@@ -178,16 +178,15 @@ async function decor(th: ThemeId) {
 
 export const shots: Scenarios = {
   async artqa() {
-    const list = opt('themes');
-    const themes = (list === 'all' ? THEME_IDS : (list?.split(',') ?? [theme ?? 'farm'])) as ThemeId[];
+    const list = opt('themes') ?? theme ?? 'farm';
+    const themes = (list === 'all' ? THEME_IDS : list.split(',')) as ThemeId[];
     const only = opt('only')?.split(',');
     const want = (k: string) => !only || only.includes(k);
     if (page.viewportSize()!.width !== 1920) await page.setViewportSize({ width: 1920, height: 1080 });
-    // Clear air: mist would veil the very pieces under review.
+    for (const th of themes) if (!THEME_IDS.includes(th)) throw new Error(`artqa: unknown theme ${th}`);
+    // Clear air: mist would veil the very pieces under review. One page for every theme, as play has (themeswap checks it).
+    await open(`seed=${seed}&ui=0&lettering=0${opt('weather') ? '' : '&weather=clear'}`);
     for (const th of themes) {
-      if (!THEME_IDS.includes(th)) throw new Error(`artqa: unknown theme ${th}`);
-      // A fresh page per theme: a backdrop left over from the last theme's levels would veil this one's.
-      await open(`seed=${seed}&ui=0&lettering=0${opt('weather') ? '' : '&weather=clear'}`);
       if (want('landmarks')) await landmarks(th);
       if (want('hazards')) await hazards(th);
       if (want('decor')) await decor(th);
