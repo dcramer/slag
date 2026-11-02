@@ -353,7 +353,10 @@ export type Archetype =
   | 'mystery'
   | 'rope'
   | 'keg';
+
 export type Role = 'build' | 'hazard' | 'utility' | 'demolish';
+/** Crate parts come in up to three sizes; nothing else differs between them. */
+export type PartSize = 'small' | 'medium' | 'large';
 
 export interface PropDef {
   key: string;
@@ -361,6 +364,11 @@ export interface PropDef {
   maker: string;
   archetype: Archetype;
   role: Role;
+  /** Which roster part this is, across its sizes (crate parts only). */
+  part?: string;
+  size?: PartSize;
+  /** Tiles a crate card scales this to fit, when that's set by the part's biggest size so its sizes compare at one scale. */
+  span?: number;
   style: PropStyle;
   motion: Motion;
   modules: Module[];

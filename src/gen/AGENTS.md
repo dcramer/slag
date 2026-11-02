@@ -9,6 +9,6 @@ Every generator is deterministic given its seed: same seed (and theme), same out
 - Decide "does this level get a challenge" with `rollChallenges`, which is fixed per level. A per-attempt roll is silently undone by retries, because harder shapes get rejected more.
 - Set pieces (`setpieces/`): per-theme `Recipe` lists (`<theme>.ts`, in `SET_PIECE_RECIPES`) built from `builders.ts` and validated by simulation in `place.ts`. They are ordinary `PlacedProp`s with `owner = -1` and uids from `SET_PIECE_UID`, stored on `level.setPieces`, avoid protected rects, and must not cut the path.
 - Looks (`theme/presets.ts`, `RECIPES`): palette, sky, skyline, terrain material, liquid, decor, grade per theme. A theme must read as itself at a glance.
-- Player prop archetypes (`props.ts`): `RECIPES` + `ARCHETYPE_WEIGHTS`. Every crate has at least one building piece and one hazard.
+- Player prop archetypes (`props.ts`): `RECIPES` + `ARCHETYPE_WEIGHTS`. A recipe rolls a part's identity, then returns `sized`, which may only scale: no rolls in it, and no size words in names (`rollPart` adds them). `generateRoster` is the match's short list, from the seed alone and with a longer roster starting with the shorter one; `generateCrate` draws only from it, always with a bridge and a hazard.
 
 Verify: `pnpm level <seed> --theme <t>` for the ASCII map, `pnpm level --stats 50` for fallbacks, timing and `needBridges`, and `pnpm shot levels --themes all` to look at the result.

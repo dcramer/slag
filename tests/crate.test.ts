@@ -6,7 +6,7 @@ import { scoreRound } from '../src/game/scoring';
 import { generateLevel, judge, lastGenInfo, MAX_BRIDGES, partsNeeded } from '../src/gen/level';
 import { setProbeGravity } from '../src/gen/level/probe';
 import { hardGap } from '../src/gen/level/sculptors/common';
-import { ARCHETYPE_WEIGHTS, crateWeights, DEMOLISH, generateBridge, generateCrate, generateProp, isBridgePart } from '../src/gen/props';
+import { ARCHETYPE_WEIGHTS, DEMOLISH, dryLean, generateBridge, generateCrate, generateProp, generateRoster, isBridgePart, rosterSize } from '../src/gen/props';
 import { restoreMatch, snapshotMatch } from '../src/net/snapshot';
 import { LEVEL_H, LEVEL_W, TILE } from '../src/sim/constants';
 import type { Level } from '../src/sim/level';
@@ -210,10 +210,15 @@ describe('every level asks for parts', () => {
 
 describe('a stuck match leans on the crate', () => {
   const unstick = (a: string) => DEMOLISH.has(a as never) || ['platform', 'crumble', 'spring'].includes(a);
+  /** Share of a roster's weight on the parts that unstick a match, averaged over matches. */
   const share = (dry: number) => {
-    const w = crateWeights(dry);
-    const total = w.reduce((n, [, v]) => n + v, 0);
-    return w.filter(([a]) => unstick(a)).reduce((n, [, v]) => n + v, 0) / total;
+    let sum = 0;
+    for (let i = 0; i < 40; i++) {
+      const w = generateRoster(seedAt(i), rosterSize(6)).map((p) => [p.archetype, dryLean(p.archetype, dry)] as const);
+      const total = w.reduce((n, [, v]) => n + v, 0);
+      sum += w.filter(([a]) => unstick(a)).reduce((n, [, v]) => n + v, 0) / total;
+    }
+    return sum / 40;
   };
 
   it('a first dry round is a nudge, and the push builds from the second', () => {
@@ -226,8 +231,7 @@ describe('a stuck match leans on the crate', () => {
   it('is capped, so crates stay varied', () => {
     expect(share(50)).toBeCloseTo(share(5), 9);
     expect(share(50)).toBeLessThan(0.75);
-    const zero = crateWeights(50).filter(([, v]) => v <= 0);
-    expect(zero).toEqual([]);
+    for (const [a] of ARCHETYPE_WEIGHTS) expect(dryLean(a, 50)).toBeGreaterThan(0);
   });
 
   it('shows up in real crates and stays deterministic', () => {
