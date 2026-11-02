@@ -5,6 +5,7 @@ import { BRIDGE_W } from '../types';
 import type { RouteShape } from '../../../sim/level';
 import { jumpProfile, probeGravity } from '../probe';
 import type { SculptCtx } from '../types';
+import type { ThemeId } from '../../../themes';
 
 /**
  * Helpers shared by theme sculptors: gap sizing from the measured jump
@@ -12,8 +13,27 @@ import type { SculptCtx } from '../types';
  * crossing that needs a bridge prop.
  */
 
-/** Share of levels that need two parts; every other level needs one. */
-export const TWO_PARTS = 0.22;
+/** Share of levels that need two parts, in every theme; every other level needs one. */
+export const TWO_PARTS = 0.25;
+
+/**
+ * Share of a theme's levels that ask for two parts, where that isn't
+ * TWO_PARTS. The ask and the outcome differ by theme: wide open fields (farm,
+ * mine) sometimes need two parts for a one-part crossing, and tight terrains
+ * (castle, factory) often can't fit a second crossing, so a two-part ask
+ * there ends up needing one. Each is set so the theme's two-part share lands
+ * near TWO_PARTS (measured over 100 seeds, see `pnpm level --stats`).
+ */
+export const TWO_PART_ASK: Partial<Record<ThemeId, number>> = {
+  farm: 0.01,
+  factory: 0.36,
+  castle: 0.5,
+  jungle: 0.33,
+  volcano: 0.13,
+  harbor: 0.16,
+  mine: 0.02,
+  rooftops: 0.38,
+};
 /** First attempt that may give up on needing parts at all (the pipeline stops insisting here too). */
 export const LAST_RESORT = 22;
 /** Attempts at a two-part shape before settling for one: a terrain that keeps refusing a second crossing isn't worth a hitch. */
@@ -79,9 +99,9 @@ export function easyRise(): number {
  * shapes are rejected more often, so a per-attempt roll would quietly select
  * for easy ones.
  */
-export function rollChallenges(attempt: number, k: Pick<Knobs, 'challenge'>): number {
+export function rollChallenges(attempt: number, k: Pick<Knobs, 'challenge'> & Partial<Pick<Knobs, 'twoParts'>>): number {
   if (attempt >= LAST_RESORT) return 0;
-  return k.challenge < TWO_PARTS && attempt < TWO_PART_TRIES ? 2 : 1;
+  return k.challenge < (k.twoParts ?? TWO_PARTS) && attempt < TWO_PART_TRIES ? 2 : 1;
 }
 
 /** Carve a pit (columns x0..x1 empty to the bottom) and hint a bridge at floor row `row` if it's wide. */
@@ -207,6 +227,8 @@ export interface Knobs {
   wide: number;
   /** This level's challenge roll in [0, 1), the same on every attempt. */
   challenge: number;
+  /** Share of this theme's levels that ask for two parts (TWO_PART_ASK). */
+  twoParts: number;
 }
 
 /**
@@ -236,6 +258,7 @@ export function knobs(ctx: SculptCtx, maxClimb?: number, range: [number, number]
     count: (base, min = 0) => Math.max(min, Math.round(base * wide * (0.45 + 1.1 * p.density))),
     wide,
     challenge: ctx.challenge,
+    twoParts: TWO_PART_ASK[ctx.themeId] ?? TWO_PARTS,
   };
 }
 
