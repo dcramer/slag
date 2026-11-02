@@ -616,7 +616,6 @@ export class Hud {
     c.fillRect(0, 0, VIEW_W, 54);
     this.text(roundLabel(m), 14, 16, 14, PAL.amber, 'left', DISPLAY, 400, 3);
     this.text('PLACE YOUR PART', VIEW_W / 2, 17, TYPE.head + 2, PAL.bone, 'center', DISPLAY, 400, 4);
-    this.text('Spawn and goal zones are off-limits', VIEW_W / 2, 35, TYPE.caption + 1, PAL.ash, 'center', UI, 600);
     this.phaseTimer(m, m.frame / 60, VIEW_W - 24, 20);
     for (const p of m.players) {
       if (p.placed) continue;
@@ -705,16 +704,10 @@ export class Hud {
     const res = m.result!;
     const TARGET = m.rules.targetScore;
     const normal = res.verdict === 'normal';
-    const goal = `First to ${TARGET} or Top Score After ${m.rules.maxRounds} Rounds`;
     const title = res.verdict === 'too-easy' ? 'TOO EASY!' : res.verdict === 'too-hard' ? 'NOBODY MADE IT' : roundLabel(m);
-    const sub = res.verdict === 'too-easy' ? 'Everyone made it, so nobody scores.' : res.verdict === 'too-hard' ? 'No finishers, no points.' : goal;
-    this.text(title, VIEW_W / 2, normal ? 46 : 38, TYPE.title, normal ? PAL.bone : PAL.amber, 'center', DISPLAY, 400, 6);
-    this.text(sub, VIEW_W / 2, normal ? 72 : 62, TYPE.label, PAL.ash, 'center', UI, 600);
-    // Scoreless rounds are the ones that run a match into the limit, so they keep the count and the win conditions too.
-    if (!normal) {
-      this.text(roundLabel(m), 14, 16, 14, PAL.amber, 'left', DISPLAY, 400, 3);
-      this.text(goal, VIEW_W / 2, 76, TYPE.caption + 1, PAL.ash, 'center', UI, 600);
-    }
+    this.text(title, VIEW_W / 2, 50, TYPE.title, normal ? PAL.bone : PAL.amber, 'center', DISPLAY, 400, 6);
+    // Scoreless rounds are the ones that run a match into the limit, so they keep the count too.
+    if (!normal) this.text(roundLabel(m), 14, 16, 14, PAL.amber, 'left', DISPLAY, 400, 3);
     const anim = Math.min(1, Math.max(0, (m.phaseFrame - 20) / 60));
     const barX = 236;
     const barW = 380;
@@ -806,8 +799,7 @@ export class Hud {
     const winners = m.winners.map((s) => m.player(s)!).filter(Boolean);
     if (!winners.length) {
       // The round limit hit with nobody on the board: no podium to light.
-      this.text('NO WINNER', VIEW_W / 2, VIEW_H / 2 - 40, 46, PAL.amber, 'center', DISPLAY, 400, 8);
-      this.text('Nobody scored, so nobody wins.', VIEW_W / 2, VIEW_H / 2, TYPE.label, PAL.ash, 'center', UI, 600);
+      this.text('NO WINNER', VIEW_W / 2, VIEW_H / 2 - 20, 46, PAL.amber, 'center', DISPLAY, 400, 8);
       return;
     }
     // God-ray burst behind the winner.

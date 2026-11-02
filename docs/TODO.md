@@ -8,6 +8,14 @@ Design intent for everything below is in `docs/DESIGN.md`.
 
 ---
 
+## 1. Organize tests by function, not by speed
+Today the same test files run at two sample sizes (`tests/lib/tier.ts`, `SLOW_FILES` in `vitest.config.ts`, `pnpm test:slow`). Suites should be named for what they check, and agents shouldn't routinely run anything but the behavior tests. Do this after item 3, which is editing these test files.
+
+- `pnpm test`: behavior and invariants, at fixed small seed counts, with no skips. This is what `pnpm check` runs.
+- `pnpm test:stats`: distribution and balance statistics over many seeds, in their own files under `tests/stats/`. CI runs them. Agents run them only for deliberate generator or balance tuning.
+- `pnpm perf`: benchmarks. Same deal: run on purpose, never as a routine step.
+- Remove `tests/lib/tier.ts`, `SLOW_FILES`, `--mode slow` and the `SLOW` guards, and update the docs that mention them (AGENTS.md, README.md, `vitest.config.ts`, `ci.yml`).
+
 ## 2. Online play on Vercel (decision needed)
 **Branch:** `wip/netcode-cloudflare` (+5 commits). It contains:
 - host-sequenced lockstep, presence-based host election and migration, refresh/rejoin, late join, desync detection and resync, and prediction;

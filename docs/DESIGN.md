@@ -7,6 +7,10 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - Matches have 1–8 players. Players can be local (any mix of keyboard, gamepads and touch) or online.
 - Props persist for the whole match, so levels get more dangerous every round.
 
+## Discovery
+- Part of the joy of the game is the unknown. Players learn parts, rules and tricks by playing and by watching each other.
+- The game never explains the obvious: no sub lines, hints or notes that restate what's on screen or spell out a rule. If the screen can show it, don't say it.
+
 ## Scoring
 - Finishing earns +10 points. The first player to finish gets an extra +4.
 - Each rival killed by your prop earns you +3, but only if someone finished that round.

@@ -442,9 +442,6 @@ export class RulesMenu extends Overlay {
       }
       card.append(el('h3', { textContent: title }), chips);
     };
-    const lengthNote = el('div', { className: 'slag-note' });
-    const describeLength = () => (lengthNote.textContent = `First to ${draft.targetScore} points, or top score after ${draft.maxRounds} rounds.`);
-    describeLength();
     addRow(
       'Match Length',
       MATCH_LENGTHS.map((l) => ({
@@ -453,18 +450,15 @@ export class RulesMenu extends Overlay {
         apply: () => {
           draft.targetScore = l.targetScore;
           draft.maxRounds = l.maxRounds;
-          describeLength();
         },
       })),
     );
-    card.append(lengthNote);
     for (const k of Object.keys(RULE_CHOICES) as TimerRule[]) {
       addRow(
         RULE_LABELS[k],
         RULE_CHOICES[k].map((v) => ({ label: v === 0 ? 'Off' : `${v}s`, on: draft[k] === v, apply: () => (draft[k] = v) })),
       );
     }
-    card.append(el('div', { className: 'slag-note', textContent: 'Saved on this device. Changes apply to the next match.' }));
     const done = el('button', { className: 'slag-btn primary', type: 'button', textContent: 'Done' });
     done.onclick = () => this.close();
     card.append(el('div', { className: 'slag-actions' }, done));
@@ -489,14 +483,7 @@ export class NamePrompt extends Overlay {
       e.stopPropagation();
       if (e.key === 'Enter') ok.click();
     };
-    const card = el(
-      'div',
-      { className: 'slag-card' },
-      el('h2', { textContent: 'Your Name' }),
-      input,
-      el('div', { className: 'slag-note', textContent: 'Up to 12 characters. Click your name in the lobby to change it later.' }),
-      el('div', { className: 'slag-actions' }, keep, ok),
-    );
+    const card = el('div', { className: 'slag-card' }, el('h2', { textContent: 'Your Name' }), input, el('div', { className: 'slag-actions' }, keep, ok));
     this.mount(card);
     setTimeout(() => {
       input.focus();
