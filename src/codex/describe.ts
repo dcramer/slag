@@ -78,6 +78,8 @@ export const PART_INFO: Record<Module['type'], { title: string; blurb: string }>
     blurb:
       'A plate mounted on a block face. Step in front of it and it clicks, then fires spikes for a moment and needs a cooldown. Keep moving and you are fine.',
   },
+  rope: { title: 'Sausage Vine', blurb: 'Fresh from the hook.' },
+  keg: { title: 'Kegapult', blurb: 'XXX.' },
 };
 
 const AIM_TAG: Record<string, string> = { fixed: 'FIXED', sweep: 'SWEEPS', track: 'TRACKS' };
@@ -87,6 +89,7 @@ export function propTag(def: PropDef): string | null {
   for (const m of def.modules) {
     if (m.type === 'launcher') return m.ammo === 'seeker' ? 'HOMING' : m.ammo === 'glider' ? 'RIDEABLE' : AIM_TAG[m.aim];
     if (m.type === 'bomb') return m.delay ? 'AT RACE START' : m.target === 'props' ? 'PROPS ONLY' : m.target === 'terrain' ? 'TERRAIN ONLY' : null;
+    if (m.type === 'keg') return m.dirs.length > 1 ? AIM_TAG.sweep : AIM_TAG.fixed;
   }
   return null;
 }
@@ -178,6 +181,12 @@ export function summarize(def: PropDef): string[] {
         break;
       case 'rotor':
         out.push(`${m.count} platforms on a ${fmt(m.arm, 1)}-tile wheel · ${secs(m.period)} per turn`);
+        break;
+      case 'rope':
+        out.push(`${fmt(m.length)} tiles · ${secs(m.strain)} shelf life`);
+        break;
+      case 'keg':
+        out.push(`${fmt(m.power)} proof · ${secs(m.burn)} fuse`);
         break;
     }
   }

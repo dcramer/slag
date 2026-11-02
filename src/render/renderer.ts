@@ -15,7 +15,7 @@ import { Hud } from './hud';
 import { drawClouds, drawDrops, drawRunnerItems, itemFx } from './items';
 import { circle, glowDot, type Light, light, type RC } from './kit';
 import { type Compositor, createCompositor } from './post';
-import { drawBackdrop, drawBlastPreview, drawForeground, drawProjectile, drawResolved, drawRunnerStatus, type Emit, propEventFx } from './props';
+import { drawBackdrop, drawBlastPreview, drawForeground, drawProjectile, drawResolved, drawRunnerStatus, drawStuffed, type Emit, propEventFx } from './props';
 import { initialStyle, letteringAllowed, type RenderStyle, saveRenderSettings, STYLES } from './style';
 import { TerrainPainter } from './terrain';
 // Mobile: quality tiers / adaptive resolution / safe-area insets (owned by the touch module).
@@ -208,6 +208,7 @@ export class Renderer {
     this.terrain.drawLive(rc, level, pushers, s);
     this.drawMarkers(rc, level);
 
+    const grips = run?.runners.flatMap((r) => r.attach.grip ?? []);
     for (const r of resolved) {
       drawForeground(rc, r, {
         level,
@@ -215,6 +216,8 @@ export class Renderer {
         broken: run ? run.isBroken(r.pp.uid) : false,
         showPath: m.phase !== 'run',
         emit: run ? emit : undefined,
+        grips,
+        placed: m.placed,
       });
     }
 
@@ -234,6 +237,11 @@ export class Renderer {
         if (!r.alive) continue;
         const pl = m.player(r.slot);
         if (!pl) continue;
+        if (r.attach.grip?.sealed) {
+          drawStuffed(rc, run, r, pl.character);
+          drawRunnerStatus(rc, r.body, r.status);
+          continue;
+        }
         this.drawRunner(
           rc,
           level,
@@ -249,7 +257,7 @@ export class Renderer {
           dt,
         );
         if (!r.finished && run.isSafe(r)) this.drawShield(rc, level, r.body.x + r.body.w / 2, r.body.y + r.body.h, r.slot);
-        drawRunnerStatus(rc, r.body, r.status);
+        drawRunnerStatus(rc, r.body, r.status, r.attach.soot - run.frame);
         drawRunnerItems(rc, r);
       }
       drawClouds(rc, run);

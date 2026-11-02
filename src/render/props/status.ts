@@ -7,11 +7,22 @@ import { circle, ellipse, glowDot, type RC } from '../kit';
 
 /**
  * Status overlays drawn over a runner: an ice block while frozen (it thins
- * as it thaws), goo drips while slowed. Read-only view of sim status.
+ * as it thaws), goo drips while slowed, a black face after a backfire.
+ * Read-only view of sim status.
  */
-export function drawRunnerStatus(rc: RC, b: Body, st: RunnerStatus): void {
+export function drawRunnerStatus(rc: RC, b: Body, st: RunnerStatus, soot = 0): void {
   const s = rc.s;
   const g = rc.g;
+  if (soot > 0) {
+    const a = Math.min(1, soot / 30);
+    s.fillStyle = `rgba(18,11,8,${0.85 * a})`;
+    s.beginPath();
+    s.roundRect(b.x - 1.5, b.y - 2, b.w + 3, b.h + 2, 3.5);
+    s.fill();
+    s.fillStyle = `rgba(246,234,216,${a})`;
+    circle(s, b.x + b.w / 2 + b.facing - 2.2, b.y + 4.5, 1.2);
+    circle(s, b.x + b.w / 2 + b.facing + 2.2, b.y + 4.5, 1.2);
+  }
   if (st.frozen > 0) {
     const k = Math.min(1, st.frozen / 20);
     s.fillStyle = `rgba(185,230,255,${0.35 + 0.3 * k})`;
@@ -40,6 +51,7 @@ export function drawRunnerStatus(rc: RC, b: Body, st: RunnerStatus): void {
 
 const PURPLE: HSL = { h: 275, s: 90, l: 65 };
 const GOLD: HSL = { h: 45, s: 100, l: 65 };
+const AMBER: HSL = { h: 36, s: 100, l: 59 };
 
 type PropEvent = Extract<GameEvent, { type: 'prop' }>;
 
@@ -72,6 +84,34 @@ const PROP_FX: Record<string, (fx: Fx, e: PropEvent, shake: (k: number) => void)
   },
   'splat-frost'(fx, e) {
     fx.burst('spark', e.x, e.y, 10, 90, [{ h: 195, s: 90, l: 75 }], 1, 0.4);
+  },
+  'keg-in'(fx, e) {
+    fx.add('ring', e.x, e.y, 0, 0, AMBER, 12, 0.2);
+  },
+  'keg-lit'(fx, e) {
+    fx.burst('spark', e.x, e.y, 6, 90, [AMBER], 1, 0.3);
+  },
+  'keg-fire'(fx, e, shake) {
+    const dx = (e.x2 ?? e.x) - e.x;
+    const dy = (e.y2 ?? e.y) - e.y;
+    const mx = e.x + dx * 0.4;
+    const my = e.y + dy * 0.4;
+    fx.add('ring', mx, my, 0, 0, AMBER, 20, 0.28);
+    fx.add('flash', mx, my, 0, 0, AMBER, 13, 0.12);
+    fx.burst('spark', mx, my, 12, 200, [AMBER, GOLD], 1.1, 0.35);
+    fx.burst('smoke', mx, my, 7, 60, [{ h: 0, s: 0, l: 60 }], 2.4, 0.9);
+    shake(3);
+  },
+  'keg-backfire'(fx, e, shake) {
+    fx.add('flash', e.x, e.y, 0, 0, AMBER, 16, 0.14);
+    fx.burst('smoke', e.x, e.y, 18, 90, [{ h: 0, s: 0, l: 14 }], 3.2, 1.1);
+    fx.burst('debris', e.x, e.y, 8, 140, [{ h: 28, s: 45, l: 30 }], 1.3, 0.7);
+    shake(5);
+  },
+  'rope-snap'(fx, e, shake) {
+    fx.burst('debris', e.x, e.y, 8, 110, [{ h: 14, s: 58, l: 38 }], 1.5, 0.8);
+    fx.burst('spark', e.x, e.y, 5, 80, [{ h: 4, s: 92, l: 60 }], 1, 0.3);
+    shake(1.5);
   },
   web(fx, e) {
     fx.burst('dust', e.x, e.y, 4, 30, [{ h: 0, s: 0, l: 92 }], 0.8, 0.4);

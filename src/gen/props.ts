@@ -54,6 +54,8 @@ export const ARCHETYPE_WEIGHTS: readonly (readonly [Archetype, number])[] = [
   ['wheel', 0.9],
   ['hangar', 1],
   ['mystery', 1.3],
+  ['rope', 1],
+  ['keg', 1],
 ];
 
 /** Demolition archetypes: detonated (now or at race start) rather than built. */
@@ -164,7 +166,7 @@ interface Recipe {
   name: string;
   modules: Module[];
   motion?: Motion;
-  mount?: 'face';
+  mount?: 'face' | 'hang';
   /** Placement cells when they're more than the modules' anchors (e.g. a wheel's swept disk). */
   footprint?: Cell[];
 }
@@ -1068,6 +1070,52 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
           speed,
         },
       ],
+    };
+  },
+
+  rope(rng) {
+    const length = rng.int(3, 7);
+    const strain = rng.int(240, 420);
+    const adjs =
+      length <= 3
+        ? ['Cocktail', 'Stubby', 'Snack-Size']
+        : length >= 6
+          ? ["Butcher's", 'Foot-Long', 'Unending']
+          : strain < 300
+            ? ['Overcooked', 'Day-Old', 'Bargain']
+            : ['Prime', 'Smoked', 'Cured'];
+    return {
+      archetype: 'rope',
+      role: 'utility',
+      mount: 'hang',
+      name: title(rng, adjs, ['Sausage Vine', 'Swinging Links', 'Banger Rope', 'Bratwurst Vine', 'Salami Swing']),
+      modules: [{ type: 'rope', at: [0.5, 0], length, strain, regrow: rng.int(240, 360) }],
+    };
+  },
+
+  keg(rng) {
+    const dirs = rng.chance(0.55)
+      ? rng.pick([
+          [5, 6, 7, 6],
+          [6, 7, 0, 7],
+          [4, 5, 6, 5],
+        ])
+      : [rng.pick([6, 7, 5, 0])];
+    const power = rng.int(460, 640);
+    const delay = rng.int(8, 16);
+    const adjs =
+      dirs.length > 1
+        ? ['Tipsy', 'Wobbly', 'Hiccuping']
+        : delay <= 10
+          ? ['Hair-Trigger', 'Jumpy', 'Twitchy']
+          : power > 570
+            ? ['Cask-Strength', 'High-Proof', 'Overproof']
+            : ['Aged', 'Oak-Barreled', 'Home-Brewed'];
+    return {
+      archetype: 'keg',
+      role: 'utility',
+      name: title(rng, adjs, ['Kegapult', 'Powder Keg', 'Cask Cannon', 'Moonshine Mortar', 'Hooch Howitzer']),
+      modules: [{ type: 'keg', at: center(0.5, 0.5), dirs, step: rng.int(28, 46), power, delay, burn: rng.int(130, 220) }],
     };
   },
 
