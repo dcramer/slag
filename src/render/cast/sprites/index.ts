@@ -1,6 +1,7 @@
 import { toRgb } from '../../../core/color';
 import type { CharacterDef, Kind } from '../../../gen/character';
 import type { RunnerPose } from '../../ink-figure';
+import { sprites as hedgehog } from './hedgehog/frames';
 import { sprites as plumber } from './plumber/frames';
 import { pick, tint, type Wears } from './play';
 import type { SpriteSet, SpriteSheet } from './types';
@@ -13,7 +14,7 @@ import type { SpriteSet, SpriteSheet } from './types';
  * A sheet is recoloured once per character and kept: the atlas is linear in each slot's colour (the
  * renderer makes it so), so `c' = c + (B' - B) T` with T from the mask gives the player's colour exactly.
  */
-export const SPRITES: Partial<Record<Kind, SpriteSet>> = { plumber };
+export const SPRITES: Partial<Record<Kind, SpriteSet>> = { plumber, hedgehog };
 
 let on = false;
 
@@ -64,13 +65,20 @@ function wears(c: CharacterDef): Wears {
 }
 
 const tinted = new Map<string, HTMLCanvasElement>();
+const lastSheet = new WeakMap<CharacterDef, { sh: SpriteSheet; cv: HTMLCanvasElement }>();
 
 /** The sheet in this character's colours, or null until the sheet has loaded. */
 function sheetFor(set: SpriteSet, sh: SpriteSheet, c: CharacterDef): HTMLCanvasElement | null {
+  // Per character, the sheet it last drew from: the common case costs a lookup and no allocation.
+  const last = lastSheet.get(c);
+  if (last?.sh === sh) return last.cv;
   const w = wears(c);
   const key = `${sh.png}|${w.paint.join()}|${w.player.join()}`;
   const done = tinted.get(key);
-  if (done) return done;
+  if (done) {
+    lastSheet.set(c, { sh, cv: done });
+    return done;
+  }
   const src = source(sh);
   if (!src.img || !src.mask) return null;
   const out = new ImageData(new Uint8ClampedArray(src.img.data), src.img.width, src.img.height);
@@ -80,6 +88,7 @@ function sheetFor(set: SpriteSet, sh: SpriteSheet, c: CharacterDef): HTMLCanvasE
   cv.height = out.height;
   cv.getContext('2d')!.putImageData(out, 0, 0);
   tinted.set(key, cv);
+  lastSheet.set(c, { sh, cv });
   return cv;
 }
 

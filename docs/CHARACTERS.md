@@ -69,6 +69,7 @@ These rules apply to every kind:
 - **Palette:** cap and shirt `#c9473f` (shade `#9c3530`); overalls `#3f62b4` (shade `#2e4a8c`); skin `#efc9a4`; mustache and hair `#4d3426`; buttons `#e8c24a`; gloves `#f4efe6`; shoes `#6b4a35`; badge `#fbf6ee`.
 - **Color slot:** ring.
 - **Gait:** a jaunty run with a bounce on every step and arms pumping; one fist high on the jump.
+- **Our twist** (the 3D render, `art/sprites/plumber/`): a foundry hand rather than a castle plumber. Round dark welding goggles strapped round the cap, the badge a riveted brass plate, steel hex bolts for the overall buttons, a patched knee, tan leather gauntlets for the white gloves, steel-toe boots, and a rubber plunger on a copper handle strapped across his back like a sword. The cap, nose, mustache, overalls and stout build are the nod.
 
 ### The blue speedster
 - **A stranger should say:** "the fast blue hedgehog."
@@ -77,6 +78,7 @@ These rules apply to every kind:
 - **Palette:** quills `#2f5bd0` (shade `#2346a6`); muzzle and belly `#f0c99c`; irises `#3a9a46`; sneakers `#d8382f` (shade `#a8281f`); strap and gloves `#fbf6ee`.
 - **Color slot:** ring.
 - **Gait:** runs leaning hard forward, legs a blur; curls into a spinning ball in the air.
+- **Our twist** (the 3D render, `art/sprites/hedgehog/`): a stubby scrapyard speedster. Chunky toy proportions, two separate eyes under heavy brows instead of the joined eye shape, a chipped tooth in the grin, soot-scorched quill tips, a hazard-striped neckerchief, brown fingerless leather gloves for the white ones, and red work high-tops with steel toecaps and a hazard-yellow strap. The swept quills, cobalt, peach muzzle and big red shoes are the nod.
 
 ### The green-tunic elf hero
 - **A stranger should say:** "the elf hero with the green cap."
@@ -198,6 +200,19 @@ These rules apply to every kind:
 
 Every kind must also pass the silhouette sheet and the "is it the homage?" sheet before it ships.
 
+## Rendered kinds (spike)
+
+A second route to the cast, the one Dead Cells took: a 3D model rendered to 2D frames with a toon pipeline. The plumber and the speedster are done this way, behind `?sprites=1` (`slagDebug.sprites.use(true)`); without it the game draws and loads exactly the hand-drawn cast. The pipeline is [tools/art3d](../tools/art3d/README.md): a concept in the game's ink style, a T-posed model sheet, a Tripo model, rig and animations, and a renderer that turns them into atlases.
+
+- **Source art** is `art/sprites/<kind>/`: the prompts, concept, model sheet, the rigged and animated `model.glb`, and `sprite.json`. `pnpm sprites` regenerates everything the game loads (`src/render/cast/sprites/<kind>/`) from those, with no Tripo.
+- **Look.** Each material is one of the roster's flat colours (read from the model's texture by nearest swatch, never its painted colour), cut into a lit, a base and a shade tone by a hard ramp lit from the upper left, with a pen in a dark of each colour, thin toward the light and heavier away from it, finer inside. Lines and tones follow docs/ART.md's numbers in world px.
+- **Both facings are rendered**, not mirrored, so the light stays up-left and gear worn on one side (the plunger) is right on both.
+- **The kind's colour moves exactly.** The atlas is linear in each recolourable slot (`paint`, `player`), and a mask holds how much of each pixel is that slot, so the runtime recolours a sheet once per character with `c' = c + (B' − B)·T`.
+- **Clips** come from the pose the hand-drawn cast reads: idle and cheer by time, walk and run by distance run (the feet keep pace), the air clip by vertical speed, the wall clip facing the wall, and a death clip for half a second where the runner came apart. The ring and the squash and stretch are the shared drawer's, on top.
+- **Size.** Every clip at 3 px per world px for a race (each facing), idle and cheer at 8 for the lobby, score and victory cards: about 950 KB per kind, fetched only with the flag on. Drawing is one `drawImage` per runner.
+- **Fits the hitbox.** Every frame of every clip, squashed or stretched, stays inside the box the hand-drawn kinds keep and stands on the floor (`tests/sprite-cast.test.ts`).
+- `pnpm shot sprites --kind plumber` shoots it in game beside round 5 and the traced spike: lineups at play scale and 3×, the kind among the cast, a run-cycle filmstrip and the lobby cards.
+
 ## What every kind keeps
 
 - **One hitbox, one physics.** Every kind is drawn around the same 14×15 world-px body, inside the range the old blobs used. Hats, ears, tails, shields and wrenches are thin or behind the body. `tests/ink-character.test.ts` holds every kind inside one box around the hitbox, standing on the floor.
@@ -220,3 +235,4 @@ Add the id to `CAST`, its sound-alike name to `KIND_NAMES` and its own colors to
 - **Round 4** swapped the toys for animals and a few parody critters, drawn lighter.
 - **Round 5** made the cast mostly homages, put recognisability first (iconic palettes, the player's color on a ring), and raised the craft: proportions, reacting faces, pose outlines, a card-scale rim tone.
 - **Round 6** wrote the all-homage roster as prompt material for the art pipeline (generated concept, traced into rigged vector parts); hand-drawn art work stopped to wait for it.
+- **Round 7 (spike)** rendered the plumber and the speedster from Tripo 3D models through a toon pipeline (Rendered kinds above), and gave both a clear twist of ours on top of the nod.

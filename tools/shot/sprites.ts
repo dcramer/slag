@@ -220,7 +220,8 @@ export const shots: Scenarios = {
       KIND,
       Array.from({ length: 8 }, () => KIND),
     );
-    const mixed = await lineup(`${KIND}-cast`, [KIND, 'hedgehog', 'elf', 'hunter', 'zapmouse', 'impostor', 'goose', 'engineer']);
+    const others = ['plumber', 'hedgehog', 'elf', 'hunter', 'zapmouse', 'impostor', 'goose', 'engineer', 'puffball'].filter((k) => k !== KIND);
+    const mixed = await lineup(`${KIND}-cast`, [KIND, ...others.slice(0, 7)]);
     const film = await filmstrip();
     const lb = await lobby();
     const traced = resolve(out, 'art3d/traced-x3.png');
