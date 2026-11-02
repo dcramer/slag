@@ -4,7 +4,7 @@ import { hash2 } from '../core/rng';
 import { TILE } from '../sim/constants';
 import type { Material, PropStyle } from '../sim/props';
 import { blob, type EdgeP, line, looseLoop, type P, shadeOf, sn, stroke, traceCorners, vn } from './ink';
-import { inkWood } from './ink-parts';
+import { type Block, markBiscuit, markMetal, markStone, markWood, overIce, overWood, retroTile, runsOf, type Tones } from './ink-build';
 import type { MetalPalette } from './kit';
 
 /**
@@ -20,7 +20,7 @@ import type { MetalPalette } from './kit';
 /** Bake resolution, px per world px: enough for a close race camera, or a crate card, on a big screen. */
 const K = 6;
 /** World px of room around the cells for ink that leans out, and drips. */
-const PAD = 4;
+const PAD = 6;
 const CACHE_MAX = 120;
 
 interface Bake {
@@ -31,14 +31,6 @@ interface Bake {
   w: number;
   h: number;
   loops: EdgeP[][];
-}
-
-interface Tones {
-  shade: string;
-  base: string;
-  light: string;
-  ink: string;
-  hatch: string;
 }
 
 const bakes = new Map<string, Bake>();
@@ -187,159 +179,19 @@ function tonesOf(material: Material, st: PropStyle, pal: MetalPalette): Tones {
   }
 }
 
-/** What a block is made of, said with marks. Drawn inside its own outline. */
-const MARKS: Record<
-  Material,
-  (g: CanvasRenderingContext2D, cells: readonly Cell[], set: Set<number>, T: Tones, seed: number, st: PropStyle, pal: MetalPalette) => void
-> = {
-  stone(g, cells, set, T, seed) {
-    for (const [x, y] of cells) {
-      const px = x * TILE;
-      const py = y * TILE;
-      const r = (k: number) => hash2(x, y + k * 31, seed);
-      // A worn top face where feet go.
-      if (!has(set, x, y - 1)) {
-        g.fillStyle = T.light;
-        g.fillRect(px - 1, py, TILE + 2, 2.6 + r(1) * 0.8);
-      }
-      // Slabs are laid in pieces: a mortar seam at some joints, never all of them.
-      g.fillStyle = T.ink;
-      if (has(set, x + 1, y) && r(2) < 0.6)
-        line(g, px + TILE + (r(3) - 0.5) * 2, py + 2.5, px + TILE + (r(4) - 0.5) * 2, py + TILE - 1.5, { w: 1.1, seed: seed + x, taper: [0.15, 0.3] });
-      if (has(set, x, y + 1) && r(5) < 0.5)
-        line(g, px + 2, py + TILE + (r(6) - 0.5), px + TILE - 2, py + TILE + (r(7) - 0.5), { w: 1, seed: seed + y, taper: [0.15, 0.3] });
-      // Chisel ticks.
-      g.fillStyle = T.hatch;
-      for (let i = 0; i < 2; i++) {
-        const cx = px + 3 + r(8 + i) * 10;
-        const cy = py + 5 + r(10 + i) * 8;
-        line(g, cx, cy, cx + 2.2, cy - 1.6, { w: 0.8, seed: seed + i, taper: [0.2, 0.6] });
-      }
-      if (r(12) < 0.45) {
-        g.fillStyle = T.light;
-        blob(g, px + 4 + r(13) * 8, py + 6 + r(14) * 7, 0.9, seed + x * 3 + y, 1, 0.4);
-        g.fill();
-      }
-    }
-    // One crack per slab, from an edge in.
-    const [cx, cy] = cells[Math.floor(hash2(1, 2, seed) * cells.length)];
-    g.fillStyle = T.ink;
-    const pts: P[] = [];
-    let ax = cx * TILE + 3 + hash2(3, 4, seed) * 10;
-    let ay = cy * TILE + TILE;
-    for (let i = 0; i < 4; i++) {
-      pts.push({ x: ax, y: ay });
-      ax += (hash2(i, 5, seed) - 0.5) * 4;
-      ay -= 2 + hash2(i, 6, seed) * 1.8;
-    }
-    stroke(g, pts, { w: 0.9, seed, taper: [0.05, 0.9] });
+/**
+ * What a block is made of, said with marks, inside its own outline. Stone, metal, wood and biscuit are
+ * built objects (`ink-build.ts`); the rest are surfaces with marks on them.
+ */
+const MARKS: Record<Material, (g: CanvasRenderingContext2D, cells: readonly Cell[], set: Set<number>, T: Tones, seed: number, b: Block) => void> = {
+  stone(g, _cells, _set, _T, _seed, b) {
+    markStone(g, b, { h: b.st.hue, s: 14, l: 52 });
   },
-
-  metal(g, cells, set, T, seed, st, pal) {
-    const girder = cells.every(([x, y]) => !has(set, x, y - 1) && !has(set, x, y + 1));
-    const dark = css(pal.dark, -4);
-    const spec = css(pal.spec, -6);
-    const rivet = (x: number, y: number) => {
-      g.fillStyle = T.ink;
-      blob(g, x, y, 1.05, (x * 7 + y * 3) | 0, 1, 0.15);
-      g.fill();
-      g.fillStyle = spec;
-      g.fillRect(x - 0.6, y - 0.7, 0.7, 0.6);
-    };
-    for (const [x, y] of cells) {
-      const px = x * TILE;
-      const py = y * TILE;
-      if (girder) {
-        // An I-beam: two flanges and a web with a lightening hole, which is what says "girder" at a glance.
-        g.fillStyle = T.light;
-        g.fillRect(px - 1, py, TILE + 2, 3.4);
-        g.fillStyle = T.shade;
-        g.fillRect(px - 1, py + TILE - 3.6, TILE + 2, 3.8);
-        g.fillStyle = T.ink;
-        line(g, px - 0.5, py + 3.6, px + TILE + 0.5, py + 3.5, { w: 0.8, seed: seed + x, taper: [0, 0], press: 0.2 });
-        line(g, px - 0.5, py + TILE - 3.7, px + TILE + 0.5, py + TILE - 3.6, { w: 0.8, seed: seed + x + 9, taper: [0, 0], press: 0.2 });
-        if (st.trim !== 'gems' && st.trim !== 'runes') {
-          // The hole's far rim catches the light, and the rest of it is dark: it has depth.
-          g.fillStyle = T.base;
-          blob(g, px + TILE / 2, py + TILE / 2, 2.9, seed + x, 0.62, 0.08);
-          g.fill();
-          g.save();
-          g.clip();
-          g.fillStyle = dark;
-          blob(g, px + TILE / 2 - 0.9, py + TILE / 2 - 0.7, 2.9, seed + x, 0.62, 0.08);
-          g.fill();
-          g.restore();
-          g.fillStyle = T.ink;
-          const ring: P[] = [];
-          for (let i = 0; i <= 12; i++) {
-            const a = (i / 12) * Math.PI * 2;
-            ring.push({ x: px + TILE / 2 + Math.cos(a) * 3, y: py + TILE / 2 + Math.sin(a) * 1.9 });
-          }
-          stroke(g, ring, { w: 0.8, seed: seed + x, taper: [0.1, 0.3] });
-        }
-        if (st.trim !== 'none') {
-          rivet(px + 3, py + 1.7);
-          rivet(px + TILE - 3, py + 1.7);
-        }
-      } else {
-        // Plate: a seam at each joint, and a rivet in every corner.
-        g.fillStyle = T.ink;
-        if (has(set, x + 1, y)) line(g, px + TILE, py + 1, px + TILE, py + TILE - 1, { w: 0.8, seed: seed + x, taper: [0.1, 0.2] });
-        if (has(set, x, y + 1)) line(g, px + 1, py + TILE, px + TILE - 1, py + TILE, { w: 0.8, seed: seed + y, taper: [0.1, 0.2] });
-        if (!has(set, x, y - 1)) {
-          g.fillStyle = T.light;
-          g.fillRect(px - 1, py, TILE + 2, 2.4);
-        }
-        if (st.trim === 'rivets' || st.trim === 'gems' || st.trim === 'runes')
-          for (const [ax, ay] of [
-            [3, 3.4],
-            [TILE - 3, 3.4],
-            [3, TILE - 3],
-            [TILE - 3, TILE - 3],
-          ])
-            rivet(px + ax, py + ay);
-      }
-      // A glint, cut hard, on the upper left of every other panel.
-      if ((x + y) % 2 === 0) {
-        g.fillStyle = spec;
-        line(g, px + 3, py + TILE - 5, px + 7, py + 5.5, { w: 1.1, seed: seed + x * 5, taper: [0.2, 0.4], press: 0.1 });
-      }
-      if (st.trim === 'stripes' && !has(set, x, y - 1)) {
-        g.save();
-        g.beginPath();
-        g.rect(px - 1, py, TILE + 2, 4.2);
-        g.clip();
-        g.fillStyle = '#1b1a18';
-        g.fillRect(px - 1, py, TILE + 2, 4.2);
-        g.fillStyle = 'rgb(246 196 38)';
-        for (let i = -6; i < TILE + 6; i += 6) {
-          g.beginPath();
-          g.moveTo(px + i, py + 4.2);
-          g.lineTo(px + i + 3, py + 4.2);
-          g.lineTo(px + i + 7.2, py);
-          g.lineTo(px + i + 4.2, py);
-          g.fill();
-        }
-        g.restore();
-      }
-      if (st.trim === 'gems' || st.trim === 'runes') {
-        // The socket; what glows in it is drawn live.
-        const cx = px + TILE / 2;
-        const cy = py + TILE / 2 + (girder ? 0 : 0.5);
-        g.fillStyle = T.ink;
-        g.beginPath();
-        g.moveTo(cx, cy - 4.4);
-        g.lineTo(cx + 3.8, cy);
-        g.lineTo(cx, cy + 4.4);
-        g.lineTo(cx - 3.8, cy);
-        g.closePath();
-        g.fill();
-      }
-    }
+  metal(g, _cells, _set, _T, _seed, b) {
+    markMetal(g, b);
   },
-
-  wood(g, cells, _set, _T, seed, st) {
-    inkWood(g, cells, [0, 0], st.woodHue, seed);
+  wood(g, _cells, _set, _T, _seed, b) {
+    markWood(g, b);
   },
 
   ice(g, cells, set, T, seed) {
@@ -474,38 +326,16 @@ const MARKS: Record<
     }
   },
 
-  crumble(g, cells, set, T, seed) {
-    for (const [x, y] of cells) {
-      const px = x * TILE;
-      const py = y * TILE;
-      const r = (k: number) => hash2(x, y + k * 17, seed);
-      if (!has(set, x, y - 1)) {
-        g.fillStyle = T.light;
-        g.fillRect(px - 1, py, TILE + 2, 2.4);
-      }
-      // A shortbread: docking holes in a grid, each a dark prick with a lit lip.
-      for (const [hx, hy] of [
-        [4.5, 5.5],
-        [11.5, 5.5],
-        [4.5, 11.5],
-        [11.5, 11.5],
-      ]) {
-        g.fillStyle = T.light;
-        blob(g, px + hx + 0.4, py + hy + 0.4, 1.05, seed + hx, 1, 0.1);
-        g.fill();
-        g.fillStyle = T.ink;
-        blob(g, px + hx, py + hy, 0.85, seed + hy, 1, 0.1);
-        g.fill();
-      }
-      // Sugar.
-      g.fillStyle = 'rgb(255 246 222)';
-      for (let i = 0; i < 2; i++) {
-        blob(g, px + 2 + r(i) * 12, py + 2 + r(i + 4) * 12, 0.45, seed + i, 1, 0.1);
-        g.fill();
-      }
-    }
+  crumble(g, _cells, _set, _T, _seed, b) {
+    markBiscuit(g, b);
   },
 };
+
+/** What a block wears past its outline, after the pen: thin things only (ropes, knots). */
+const OVER: Partial<Record<Material, (g: CanvasRenderingContext2D, b: Block) => void>> = { wood: overWood, ice: overIce };
+
+/** Materials whose own structure carries the form, so hatching would only muddy it. */
+const NO_HATCH = new Set<Material>(['jelly', 'goo', 'metal', 'wood', 'crumble', 'stone']);
 
 function bake(cells: readonly Cell[], material: Material, st: PropStyle, pal: MetalPalette, key: string): Bake {
   const seed = hashStr(key);
@@ -538,10 +368,13 @@ function bake(cells: readonly Cell[], material: Material, st: PropStyle, pal: Me
   g.fillStyle = T.base;
   trace(g, loops, -1.8, -2);
   g.fill();
-  MARKS[material](g, cells, set, T, seed, st, pal);
-  if (cells.length >= 3 && material !== 'jelly' && material !== 'goo') hatch(g, loops, T.hatch, seed);
+  const has = (x: number, y: number) => set.has(keyOf(x, y));
+  const blk: Block = { cells, has, runs: runsOf(cells, has), seed, T, st, pal };
+  MARKS[material](g, cells, set, T, seed, blk);
+  if (cells.length >= 3 && !NO_HATCH.has(material)) hatch(g, loops, T.hatch, seed);
   g.restore();
   pen(g, loops, T.ink, seed, material === 'jelly' || material === 'goo' ? 0.9 : 1);
+  OVER[material]?.(g, blk);
   return b;
 }
 
@@ -628,11 +461,12 @@ export function stampTile(
 }
 
 /**
- * One blink-block tile in `hue`: a stamped switch block with an inset panel, so a row of them reads as
- * separate bricks that come and go one at a time. `variant` picks one of a few hands.
+ * One retro blink-block tile in `hue`, stamped: `brick` for the famous brick block's courses, otherwise
+ * the reversed question block (`retroTile`). A row of them reads as separate blocks that come and go one
+ * at a time. `variant` picks one of a few hands.
  */
-export function stampPhaseTile(s: CanvasRenderingContext2D, px: number, py: number, hue: number, variant: number) {
-  const key = `phase|${hue | 0}|${variant % 3}`;
+export function stampPhaseTile(s: CanvasRenderingContext2D, px: number, py: number, hue: number, variant: number, brick: boolean) {
+  const key = `phase|${hue | 0}|${variant % 3}|${brick}`;
   let b = bakes.get(key);
   if (!b) {
     if (bakes.size >= CACHE_MAX) bakes.clear();
@@ -643,25 +477,10 @@ export function stampPhaseTile(s: CanvasRenderingContext2D, px: number, py: numb
     b.canvas.height = Math.ceil(b.h * K);
     const g = b.canvas.getContext('2d')!;
     g.setTransform(K, 0, 0, K, PAD * K, PAD * K);
-    const c: HSL = { h: hue, s: 85, l: 56 };
-    g.fillStyle = css(c, -16, 1, 6);
-    trace(g, loops);
-    g.fill();
     g.save();
+    trace(g, loops);
     g.clip();
-    g.fillStyle = css(c);
-    trace(g, loops, -1.6, -1.8);
-    g.fill();
-    // The inset panel: a darker square cut into the face, its lower right lip catching the light.
-    g.fillStyle = css(c, -12, 1, 4);
-    blob(g, TILE / 2, TILE / 2, 4.2, seed, 1, 0.05);
-    g.fill();
-    g.fillStyle = css(c, 18, 1, -10);
-    line(g, 4.8, 11.7, 11.6, 11.5, { w: 1, seed, taper: [0.1, 0.1], press: 0 });
-    line(g, 11.7, 4.8, 11.6, 11.5, { w: 1, seed: seed + 1, taper: [0.1, 0.1], press: 0 });
-    g.fillStyle = 'rgba(255,255,255,0.85)';
-    line(g, 2.6, 7, 2.8, 3, { w: 1.2, seed: seed + 2, taper: [0.2, 0.2], press: 0.1 });
-    line(g, 2.8, 2.8, 6.5, 2.6, { w: 1.2, seed: seed + 3, taper: [0.2, 0.2], press: 0.1 });
+    retroTile(g, hue, brick, seed);
     g.restore();
     pen(g, loops, css({ h: hue, s: 60, l: 11 }), seed, 1);
     bakes.set(key, b);

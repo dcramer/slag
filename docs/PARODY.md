@@ -31,9 +31,9 @@ Each row gives what the item or part mocks, its silhouette (what must read at ga
 
 | Archetype | Names (nouns) | Mocks | Silhouette | Gag |
 |---|---|---|---|---|
-| bridge | Tutorial Ledge, Load-Bearing Girder, Placeholder Plank | The first floating platform of every game | A plain slab, plank or girder | No supports at all. The Placeholder roll looks like a grid-paper test texture inked by hand. |
-| platform | Floating Brick, Obligatory Crate, Ice Level, Baggage Claim, Bounce House | Floating bricks, crates, moving lifts and conveyors | The material's block | The wooden crate has stencilled "CRATE" slats. The conveyor has a little luggage tag. |
-| crumble | Biscuit, Donut Ledge, Wafer, Rusk | The crumbling donut lift | A pale baked slab | Bite marks on one corner, and crumbs fall as it goes. |
+| bridge | Tutorial Ledge, Load-Bearing Girder, Placeholder Plank | The first floating platform of every game | A capstoned stone ledge, a rope-lashed plank raft, or a truss girder with bolted end plates | No supports at all. The Placeholder roll looks like a grid-paper test texture inked by hand. |
+| platform | Floating Brick, Obligatory Crate, Ice Level, Baggage Claim, Bounce House | Floating bricks, crates, moving lifts and conveyors | The material's block: coursed stone, riveted plate armour, slatted crates, an ice cube with icicles | The wooden crate has stencilled "CRATE" slats. The conveyor has a little luggage tag. |
+| crumble | Biscuit, Donut Ledge, Wafer, Rusk | The crumbling donut lift | A sandwich biscuit: two docked biscuits round a band of cream | Crumbs fall as it goes. |
 | spikestrip | Floor Spikes, Death Carpet | Instant-death spikes | A row of spikes on a face | A welcome-mat edge with fringe. |
 | icecoat | Ice Physics, Black Ice, Glaze | The ice level | A glassy coat | Zamboni tread lines on the shine. |
 | slimecoat | Swamp Level, Slime Trail, Gunk | The poison swamp | A thick green coat | A single bubble swells and pops. |
@@ -47,10 +47,10 @@ Each row gives what the item or part mocks, its silhouette (what must read at ga
 | spring | Spring, Coil Pup, Boing, Launch Pad | The robot-dog spring and the yellow spring | A coil with a top plate | The Coil Pup's top plate has ears and a wagging tail. |
 | fan | Updraft Fan, Leaf Blower, Hair Dryer, Turbine | Wind-level updraft fans | A housing and wind lines | A household hair-dryer grip on the housing. |
 | portal | Plot Holes, Wormholes, Warp Pads, Sequence Break | Paired portals that keep your speed | Two linked rings | Each ring has a torn-paper edge, a hole in the page. |
-| bumper | Bumper, Pinball Bumper, Casino Bumper, Jackpot | Casino-level pinball bumpers | A round post | A score pops up on every hit, always 100. |
+| bumper | Bumper, Pinball Bumper, Casino Bumper, Jackpot | Casino-level pinball bumpers | A pop bumper: skirt, rubber ring, and a star on the cap | A score pops up on every hit, always 100. |
 | magnet | Gravity Well, Tractor Beam, Black Hole Lite, Social Distancer, Force Push | Gravity puzzles and tractor beams | An orb and a field ring | Black Hole Lite has a diet-soda label. The repulsor wears a "6 ft" ring marking. |
 | web | Cobweb, Spider Level, World Wide Web, Net | The spider level | Strands between cells | One strand ends in a tiny cursor arrow. |
-| blinker | Yolo Blocks, Blink Blocks, On/Off Bricks, Lag Bricks | Infamous appearing and disappearing blocks | Ghosted blocks | Lag Bricks stutter in a frame late, with a tiny loading spinner. |
+| blinker | Yolo Blocks, Blink Blocks, On/Off Bricks, Lag Bricks | Infamous appearing and disappearing blocks | Retro bricks; a paired set's other half is question blocks with the mark drawn backwards. A gone block leaves its corners. | Lag Bricks stutter in a frame late, with a tiny loading spinner. |
 | dropper | Thwunk, Grudge Block, Angry Brick, Ceiling Grump | The angry slamming stone face | A heavy block with a face | Its eyes follow the nearest runner, and it has a vein on its brow. |
 | snapper | Gotcha Plate, Pressure Plate, Pop-Up Spikes, Surprise Party | Temple pressure-plate traps | A flat plate on a face | Party streamers burst out with the spikes. |
 | wheel | Ferris Wheel, Cog Lift, Hamster Wheel, Lazy Susan | Ferris-wheel lifts | A hub with platforms on arms | Hamster Wheel has a water bottle hanging off the hub. |
