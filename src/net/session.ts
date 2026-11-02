@@ -1,4 +1,4 @@
-import type { Match } from '../game/match';
+import { IDLE_ROUNDS, type Match } from '../game/match';
 import { DT, MAX_PLAYERS } from '../sim/constants';
 import { addBreadcrumb, reportEvent } from '../telemetry';
 import type { Runner } from '../sim/run';
@@ -907,10 +907,11 @@ export class NetSession {
         else if (!p.away) out.push({ t: 'away', dev: p.device, on: true });
       } else if (p.away) out.push({ t: 'away', dev: p.device, on: false });
     }
-    // Idle (game/match.ts): moved to the watchers, which frees the seat at once in the lobby and at the round boundary mid-match.
+    // Idle (game/match.ts): moved to the watchers, at once in the lobby, and mid-match after IDLE_ROUNDS rounds AFK, freeing the seat at the boundary.
     for (const peer of new Set(m.players.map((p) => peerOf(p.device)))) {
       const mine = m.players.filter((p) => peerOf(p.device) === peer);
-      if (!peer || this.ns.watching[peer] || !present.has(peer) || !mine.every((p) => p.afk && !p.away)) continue;
+      const gone = (p: (typeof mine)[number]) => p.afk && !p.away && (m.phase === 'lobby' || (p.afkRounds ?? 0) >= IDLE_ROUNDS);
+      if (!peer || this.ns.watching[peer] || !present.has(peer) || !mine.every(gone)) continue;
       out.push({ t: 'watch', dev: mine[0].device, on: true, afk: true });
     }
     let seats = m.players.length;
@@ -1064,6 +1065,8 @@ export class NetSession {
         if (a.peer === this.self) return this.onKicked();
         if (this.role === 'host') this.send({ t: 'kicked' }, a.peer);
       }
+      // Seats changing hands, by peer id (never a name). The asker's own join request, won and lost are in play/settleAsk.
+      if (a.t === 'watch' && a.on && this.ns.watching[peerOf(a.dev)]) addBreadcrumb('room', a.afk ? 'idle' : 'watch', { peer: peerOf(a.dev), frame: m.frame });
     }
     const inputs: Record<string, InputFrame> = {};
     for (const [d, e] of Object.entries(b.i ?? {})) inputs[d] = decode(e);

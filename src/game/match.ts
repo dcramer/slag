@@ -65,6 +65,8 @@ export interface Player {
    * and give up a race. Any input clears it.
    */
   afk?: boolean;
+  /** Rounds in a row that ended with this player AFK. Online, two of them move the player to the watchers. */
+  afkRounds?: number;
   /** Online: going to watch. Plays out the round, then leaves the match as the race is scored. */
   leaving?: boolean;
 }
@@ -73,6 +75,8 @@ export interface Player {
 export const IDLE_FRAMES = 30 * 60;
 /** The lobby gives longer: people wait there for friends. */
 export const LOBBY_IDLE_FRAMES = 60 * 60;
+/** Rounds in a row ending with a player AFK before, online, their seat goes to whoever wants it. */
+export const IDLE_ROUNDS = 2;
 
 /** Any button down or a pointer that moved: the player is there. */
 function present(inp: InputFrame | undefined): boolean {
@@ -216,6 +220,7 @@ export class Match {
       if (!present(inputs[p.device])) continue;
       p.lastInput = this.frame;
       delete p.afk; // keep snapshots canonical
+      delete p.afkRounds;
     }
     switch (this.phase) {
       case 'lobby':
@@ -718,6 +723,7 @@ export class Match {
     }
     for (const p of this.players) p.scoreless = result.awards.some((a) => a.slot === p.slot) ? 0 : p.scoreless + 1;
     this.result = result;
+    for (const p of this.players) if (p.afk) p.afkRounds = (p.afkRounds ?? 0) + 1;
     // The round boundary: whoever chose to watch leaves now, having played the round out.
     this.players = this.players.filter((p) => !p.leaving);
     if (!this.players.length) return this.toLobby();

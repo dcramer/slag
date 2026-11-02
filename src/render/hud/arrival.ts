@@ -117,23 +117,26 @@ function promptButton(
  */
 export function joinCta(hud: Hud, m: Match) {
   const f = hud.frame;
-  const open = (hud.net?.space ?? 0) > 0;
   const w = 118;
   const h = 30;
-  // The lobby's bottom corner is the online panel's: Join goes above it.
-  const lift = m.phase === 'lobby' ? (hud.phone ? 36 * hud.footScale + 8 : 46) + hud.footH : hud.footH + 6;
-  const done = hud.grow(f.safeX1 - 10, f.y1 - lift, hud.uiScale);
+  const done = hud.grow(f.safeX1 - 10, f.y1 - hud.footH - 6, hud.uiScale);
+  joinButton(hud, m, { x: f.safeX1 - 10 - w, y: f.y1 - hud.footH - 6 - h, w, h }, TYPE.head - 2);
+  done();
+}
+
+/** The Join button itself, wherever it sits: the corner mid-match, the online panel's end in the lobby. */
+export function joinButton(hud: Hud, m: Match, b: { x: number; y: number; w: number; h: number }, size: number) {
+  const open = (hud.net?.space ?? 0) > 0;
   promptButton(
     hud,
     m,
-    { x: f.safeX1 - 10 - w, y: f.y1 - lift - h, w, h },
+    b,
     open ? 'play' : undefined,
     open ? 'Join' : 'Match Full',
     'confirm',
     'primary',
-    TYPE.head - 2,
+    size,
   );
-  done();
 }
 
 /**
@@ -198,7 +201,10 @@ export function joinCard(hud: Hud, m: Match, card: JoinCardInfo, t: number) {
   hud.text(ch.name, cx, ny, 17, nameHover ? PAL.amber : PAL.bone, 'center', DISPLAY, 400, 3.5);
   if (editing) icon(c, 'pencil', cx + nw / 2 + 8, ny, 8, nameHover ? PAL.amber : PAL.dim);
   const by = y + h - 40;
-  const open = (hud.net?.space ?? 0) > 0;
+  const space = hud.net?.space ?? 0;
+  const open = space > 0;
+  if (card.stage !== 'won')
+    hud.text(open ? `${space} ${space === 1 ? 'Seat' : 'Seats'} Open` : 'Match Full', cx, ny + 30, TYPE.label, open ? PAL.ash : PAL.amber, 'center', UI, 700);
   if (editing) {
     promptButton(hud, m, { x: x + 10, y: by, w: w - 50, h: 30 }, open ? 'seat' : undefined, open ? 'Join' : 'Match Full', 'confirm', 'primary', TYPE.head - 2);
     hud.btn({ x: x + w - 36, y: by, w: 26, h: 30, action: 'look' }, '', 'secondary', 'dice');
@@ -231,7 +237,7 @@ function keyRow(hud: Hud, m: Match, items: [PromptAction, string, HudAction][], 
     for (const g of glyphs) gw += glyphWidth(c, g, gh) + 3;
     return { glyphs, label, action, w: gw + c.measureText(label).width + (gw ? 3 : 0) };
   });
-  const gap = 16;
+  const gap = 24;
   let x = cx - (parts.reduce((s, p) => s + p.w, 0) + gap * (parts.length - 1)) / 2;
   for (const p of parts) {
     const hover = hud.button({ x: x - 4, y: cy - 10, w: p.w + 8, h: 20, action: p.action });

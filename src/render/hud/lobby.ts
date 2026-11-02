@@ -9,6 +9,7 @@ import { bay, icon, plate, tag } from '../hud-kit';
 import { blob } from '../ink';
 import { glowDot } from '../kit';
 import type { Hud, NetInfo, NetWatcher } from '../hud';
+import { joinButton } from './arrival';
 import { DISPLAY, UI, FOOT_H, MAX_FOOT_SCALE, MIN_BAY_H, PHONE_BAR_W } from './layout';
 
 /** The lobby: top bar, player bays and the online panel. */
@@ -97,9 +98,9 @@ export function lobby(hud: Hud, m: Match, t: number, dt: number) {
   done();
   if (hud.net && phone) {
     done = hud.begin(netS, win.safeX0 + 8, win.y1 - hud.footH - 36 * netS);
-    netPanel(hud, hud.net, 0, 0, safeW / netS);
+    netPanel(hud, m, hud.net, 0, 0, safeW / netS);
     done();
-  } else if (hud.net) netPanel(hud, hud.net, x0, VIEW_H - FOOT_H - 40, gridW);
+  } else if (hud.net) netPanel(hud, m, hud.net, x0, VIEW_H - FOOT_H - 40, gridW);
 }
 
 function playerCard(hud: Hud, p: Player, i: number, x: number, y: number, w: number, h: number, t: number) {
@@ -176,7 +177,7 @@ function playerCard(hud: Hud, p: Player, i: number, x: number, y: number, w: num
     hud.btn({ x: x + w - 54, y: by, w: 44, h: bh, action: 'kick', device: p.device }, 'Kick', picked ? 'primary' : 'ghost', undefined, TYPE.label);
 }
 
-function netPanel(hud: Hud, net: NetInfo, x: number, y: number, w: number) {
+function netPanel(hud: Hud, m: Match, net: NetInfo, x: number, y: number, w: number) {
   const c = hud.ctx;
   const h = 30;
   plate(c, x, y, w, h, { rivets: false });
@@ -185,8 +186,12 @@ function netPanel(hud: Hud, net: NetInfo, x: number, y: number, w: number) {
   hud.text(net.status, x + 16 + tw, y + h / 2, TYPE.body, PAL.ash, 'left', UI, 600);
   c.font = `600 ${TYPE.body}px ${UI}`;
   const sx = x + 28 + tw + c.measureText(net.status).width;
-  const ex = x + w - (net.inviteUrl ? 138 : 8);
-  if (net.inviteUrl) hud.btn({ x: x + w - 130, y: y + 4, w: 124, h: 23, action: 'invite' }, 'Copy Invite Link', 'primary', 'copy');
+  // Watching: Join takes the panel's end, the invite moves over.
+  const join = net.seat === 'watching' && !net.arrival;
+  const ix = x + w - 130 - (join ? 104 : 0);
+  const ex = net.inviteUrl ? ix - 8 : x + w - (join ? 112 : 8);
+  if (net.inviteUrl) hud.btn({ x: ix, y: y + 4, w: 124, h: 23, action: 'invite' }, 'Copy Invite Link', join ? 'secondary' : 'primary', 'copy');
+  if (join) joinButton(hud, m, { x: x + w - 102, y: y + 3, w: 96, h: 26 }, TYPE.label + 1);
   watcherChips(hud, net.watchers ?? [], sx, ex, y + h / 2);
 }
 

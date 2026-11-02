@@ -77,6 +77,10 @@ describe('idle players', () => {
         IDLE_FRAMES + 200,
       ),
     ).toBeGreaterThan(0);
+    // Both ended the round AFK: one round counted towards losing the seat online, and any input wipes it.
+    expect(m.players.map((p) => p.afkRounds)).toEqual([1, 1]);
+    m.step({ a: press({ left: true }) });
+    expect(m.player(0)!.afkRounds).toBeUndefined();
   });
 
   it('a finished runner may watch the rest of the race as long as it likes', () => {

@@ -382,8 +382,8 @@ export class Hud {
     // Cursors stay on top of the footer so their labels are never covered.
     for (const f of this.pending) f();
     this.pending = [];
-    // Watching: Join, in the corner, in every phase.
-    if (this.net?.seat === 'watching' && !this.net.arrival && !this.joinCard) joinCta(this, m);
+    // Watching: Join, in the corner, in every phase (in the lobby, at the end of the online panel).
+    if (m.phase !== 'lobby' && this.net?.seat === 'watching' && !this.net.arrival && !this.joinCard) joinCta(this, m);
     // The join card and the joining screen go over everything: nothing under them is the peer's to touch.
     if (this.joinCard && !this.net?.arrival) {
       this.buttons = [];
