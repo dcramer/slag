@@ -30,5 +30,6 @@ import './phase';
 import './dropper';
 import './snapper';
 import './flood';
+import './lob';
 import './shards';
 import './fuse';
