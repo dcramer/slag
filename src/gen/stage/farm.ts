@@ -1,3 +1,4 @@
+import { datan2 } from '../../core/dmath';
 import type { Cell, Vec } from '../../core/geom';
 import type { Rng } from '../../core/rng';
 import { T_ONEWAY, type TileRect } from '../../sim/level';
@@ -37,6 +38,8 @@ import type { Concept, Landmark } from './types';
  */
 
 const UP = -Math.PI / 2;
+/** arcsin over [0, 1] through datan2: Math.asin differs across browsers. */
+const asin = (v: number) => datan2(v, Math.sqrt(Math.max(0, 1 - v * v)));
 const DOWN = Math.PI / 2;
 
 /** Columns a landmark keeps from either end (sculptors/common.ts claimSite). */
@@ -122,7 +125,7 @@ const wood = (rng: Rng): PropStyle => makeStyle(rng, ['rust', 'steel'], [4, 12, 
 const iron = (rng: Rng): PropStyle => makeStyle(rng, ['steel', 'rust'], [4, 120, 205, 30], { trim: 'rivets', woodHue: rng.range(20, 30) });
 
 /** A millstone that drops from the ceiling (its cells, row `y`) when someone walks under it. */
-function millstone(rng: Rng, x: number, y: number, reach: number): Piece {
+function millstone(rng: Rng, x: number, y: number, reach: number, w = 2): Piece {
   return {
     name: rng.pick(['Millstone', 'The Grindstone', 'Loose Millstone', 'Ground Floor']),
     archetype: 'dropper',
@@ -131,10 +134,7 @@ function millstone(rng: Rng, x: number, y: number, reach: number): Piece {
     modules: [
       {
         type: 'dropper',
-        cells: [
-          [x, y],
-          [x + 1, y],
-        ],
+        cells: Array.from({ length: w }, (_, i) => [x + i, y] as Cell),
         angle: DOWN,
         reach,
         warn: rng.int(26, 36),
@@ -341,9 +341,10 @@ function buildElevator(g: Grid, rng: Rng, box: TileRect, parts: number): Landmar
   if (C0 + 2 <= end && rng.chance(0.75)) spans.push([C0, Math.min(end, C0 + rng.pick([3, 4, 5]) - 1)]);
   const hT = Math.max(9, Math.min(G - 4, rng.int(11, 15)));
   const T = G - hT;
+  const drops = [0, rng.int(0, 2), rng.int(1, 3)];
   const silos = spans.map(([x0, x1], i) => {
-    // The two at the leg meet its head; a third stands lower.
-    const top = i < 2 ? T : T + rng.int(1, 3);
+    // The first meets the leg's head; the next stands as tall or a little lower, a third lower still.
+    const top = T + drops[i];
     fill(g, x0, top, x1, G - 1);
     fill(g, x0 + 1, top - 1, x1 - 1, top - 1);
     if (x1 - x0 >= 4) set(g, x0 + 2, top - 2);
@@ -357,7 +358,7 @@ function buildElevator(g: Grid, rng: Rng, box: TileRect, parts: number): Landmar
     shaft: [shaft, G],
     top: [T, G],
     ladder: [lc, G],
-    layout: [silos.length, wa * 10 + wb],
+    layout: [silos.length * 10 + drops[1], wa * 10 + wb],
     head: [shaft - 1, T - 6],
     headSize: [4, G - T + 6],
   };
@@ -576,7 +577,7 @@ function* barnPieces(rng: Rng, l: Landmark): Generator<Piece> {
   const arm = F1 - 1.4 - hub[1];
   const half = Math.min(hub[0] - bx0 - 1, bx1 - hub[0]) - 2.7;
   if (rng.chance(0.65)) {
-    const swing = Math.max(0.2, Math.min(0.75, Math.asin(Math.max(0, Math.min(1, half / arm)))));
+    const swing = Math.max(0.2, Math.min(0.75, asin(Math.max(0, Math.min(1, half / arm)))));
     yield {
       name: rng.pick(['Hay Bale Swing', 'The Mow Swing', 'Rope Swing', 'Bale Out']),
       archetype: 'platform',
@@ -605,7 +606,7 @@ function* barnPieces(rng: Rng, l: Landmark): Generator<Piece> {
     };
   } else {
     const hookArm = arm - 0.3;
-    const swing = Math.max(0.3, Math.min(0.9, Math.asin(Math.max(0, Math.min(1, (half + 1.5) / hookArm)))));
+    const swing = Math.max(0.3, Math.min(0.9, asin(Math.max(0, Math.min(1, (half + 1.5) / hookArm)))));
     yield hayHook(rng, hub, hookArm, swing, [back]);
   }
   // Among the stalls: a baler under the far loft, or a live fence across the near stalls.
@@ -688,7 +689,7 @@ function buildMill(g: Grid, rng: Rng, box: TileRect, parts: number): Landmark {
     pour: [hy - arm - 1.2 >= R + 2 ? 1 : 0, 0],
     layout: [floors.length, mw * 2 + (first ? 1 : 0)],
     // The millstone hangs at the hall's other end from its boards, where it's wide enough.
-    stone: [mw >= 6 ? (first ? mx1 - 2 : mx0 + 1) : -1, floors[0] + 1],
+    stone: [mw >= 6 ? (first ? mx1 - 1 : mx0 + 1) : -1, floors[0] + 1],
     shell: [mx1, R],
     shellSize: [fx - mx1 + 1, G - R],
   };
@@ -766,7 +767,7 @@ function* millPieces(rng: Rng, l: Landmark): Generator<Piece> {
       ],
     };
   const [x, y] = a.stone;
-  if (x >= 0 && rng.chance(0.7)) yield millstone(rng, x, y, G - y - 1);
+  if (x >= 0 && rng.chance(0.7)) yield millstone(rng, x, y, G - y - 1, 1);
 }
 
 export const WATER_MILL: Concept = {
