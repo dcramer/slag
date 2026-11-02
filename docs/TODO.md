@@ -94,3 +94,11 @@ Some steps need the owner. Run after setting the Vercel env vars.
 
 ## 19. Secret parts mode
 A mode where you don't see what a part is. You choose a type (hazard, utility, build, whatever the roles are) and get one at random from what's allowed. A lobby rule, with the roll deterministic from the seed and the same on every peer. The first time anyone sees the part is when it lands.
+
+## 20. Cleanup pass
+Run this once the current agents have landed, so it doesn't fight them. A lot arrived fast.
+
+- **Code:** dead exports, leftovers from merged branches, duplicated helpers, oversized files (`src/render/hud.ts`, `src/ui/menus.ts`, `tools/shot.ts`).
+- **Docs:** AGENTS.md files, `docs/DESIGN.md`, `docs/ART.md`, `docs/NETCODE.md`, `docs/MOBILE.md`, `README.md`, so each says what's true now and nothing else.
+- **Repo:** merged `wip/*` branches and worktree branches, the 7 lint warnings (item 14), and `netcode-merge-wip`.
+
