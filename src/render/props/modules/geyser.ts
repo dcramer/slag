@@ -2,7 +2,9 @@ import { css, type HSL } from '../../../core/color';
 import { TILE } from '../../../sim/constants';
 import { geyserColumn, geyserCycle, geyserWind, type ModuleOf } from '../../../sim/props';
 import { windProfile } from '../../../sim/wind';
-import { circle, ellipse, glowDot, light, type RC, sphereFill } from '../../kit';
+import { blob } from '../../ink';
+import { boxPts, INK, ovalPts, part, path, poly, sprite, stamp, tick } from '../../ink-props';
+import { circle, ellipse, glowDot, light, type RC } from '../../kit';
 import type { ThemeId } from '../../../themes';
 import { beamOf, type DrawCtx, defineArt } from '../common';
 import { themeOf } from './skins';
@@ -49,8 +51,84 @@ function isPit(m: Geyser, d: DrawCtx): boolean {
   return !!d.o.level && m.at[1] >= d.o.level.h * TILE - 1;
 }
 
+/** The vent: a hand-cut mound, a dark crater lip, and a crust of sulphur or ice round it. Baked. */
+function ventMound(rock: HSL, lava: boolean, crust: VentLook['crust']) {
+  return sprite(`gy|vent|${rock.h},${rock.l}|${lava}|${crust}`, -15, -10, 30, 12, (g) => {
+    const pts = poly(-13, 0.5, -11, -2.6, -8, -5, -4, -7, 4, -7, 8, -5, 11, -2.6, 13, 0.5);
+    part(g, pts, rock, 3, { depth: 1.4, thin: 0.55, thick: 1.4 });
+    g.fillStyle = INK;
+    path(g, ovalPts(0, -7, 4.6, 1.7, 4, 0.04, 12));
+    g.fill();
+    g.fillStyle = lava ? '#2a0c06' : '#2c2a28';
+    path(g, ovalPts(0, -6.8, 3.7, 1.1, 5, 0.04, 12));
+    g.fill();
+    if (lava) return;
+    if (crust === 'ice') {
+      for (const [dx, dy, r] of [
+        [-6, -4, 1.8],
+        [5, -3.4, 1.5],
+        [-2, -6.6, 1.1],
+        [8.5, -1.6, 1.2],
+      ])
+        part(g, poly(dx, dy - r * 1.6, dx + r * 0.7, dy, dx, dy + r * 0.6, dx - r * 0.7, dy), { h: 195, s: 50, l: 94 }, dx, {
+          depth: 0.2,
+          thin: 0.25,
+          thick: 0.5,
+          ink: '#16364d',
+        });
+    } else
+      for (const [dx, dy, r] of [
+        [-6, -4, 1.4],
+        [5, -3, 1.1],
+        [-2, -6.5, 0.9],
+      ]) {
+        g.fillStyle = '#e6d25a';
+        blob(g, dx, dy, r, dx + 9, 1, 0.2);
+        g.fill();
+      }
+  });
+}
+
+/**
+ * The Floor Is Lava: a couch cushion beside the plume, half sunk, tilted and smoking. It's a joke, not a
+ * step: it sits low in the lava with the lava lapping over it, so nothing about it reads as footing.
+ */
+function cushion() {
+  return sprite('gy|cushion', -9, -6, 18, 11, (g) => {
+    g.save();
+    g.rotate(-0.32);
+    const c: HSL = { h: 168, s: 40, l: 42 };
+    part(g, boxPts(-7, -3.5, 14, 6, 2.6, 7), c, 7, { depth: 0.9, thin: 0.5, thick: 1.1 });
+    tick(g, -6, -0.6, 6, -0.6, 0.45, 8, css(c, -20));
+    g.fillStyle = INK;
+    blob(g, -1, -1.6, 0.7, 9, 1, 0.1);
+    g.fill();
+    g.restore();
+    // Lava lapping over its lower half.
+    const lap = poly(-9, 1.2, -5, 0.4, -1, 1.4, 3, 0.2, 7, 1.2, 9, 0.6, 9, 5, -9, 5);
+    g.fillStyle = css({ h: 18, s: 100, l: 50 });
+    path(g, lap);
+    g.fill();
+    g.fillStyle = css({ h: 40, s: 100, l: 66 });
+    for (const [lx, ly] of [
+      [-6, 2],
+      [1, 2.4],
+      [6, 2],
+    ])
+      g.fillRect(lx, ly, 2.2, 0.6);
+  });
+}
+
 function drawVent(rc: RC, m: Geyser, d: DrawCtx) {
-  if (isPit(m, d)) return;
+  if (isPit(m, d)) {
+    if (m.look === 'lava' && themeOf(d) === 'volcano') {
+      const cx = m.at[0] + d.off[0] + m.width + 10;
+      const cy = m.at[1] + d.off[1] - 5 + Math.sin(rc.t * 1.3 + d.r.pp.uid) * 0.4;
+      stamp(rc.s, cushion(), cx, cy);
+      if (d.o.emit && Math.random() < 0.04) d.o.emit('smoke', cx + 2, cy - 4, (Math.random() - 0.5) * 6, -16, { h: 0, s: 0, l: 40 });
+    }
+    return;
+  }
   const s = rc.s;
   const g = rc.g;
   const c = geyserCycle(m, rc.frame, d.r.phase);
@@ -61,47 +139,7 @@ function drawVent(rc: RC, m: Geyser, d: DrawCtx) {
   const v = ventOf(d);
   const LAVA = v.lava;
   const rock: HSL = lava ? { h: 260, s: 10, l: 19 } : v.rock;
-  s.fillStyle = sphereFill(s, x - 3, y - 6, 14, rock, 16, 10);
-  s.beginPath();
-  s.moveTo(x - 13, y + 0.5);
-  s.quadraticCurveTo(x - 9, y - 4, x - 4, y - 7);
-  s.lineTo(x + 4, y - 7);
-  s.quadraticCurveTo(x + 9, y - 4, x + 13, y + 0.5);
-  s.closePath();
-  s.fill();
-  s.strokeStyle = css(rock, -12);
-  s.lineWidth = 1;
-  s.stroke();
-  // Crater lip.
-  s.fillStyle = lava ? '#1a0805' : '#2c2a28';
-  ellipse(s, x, y - 7, 4.5, 1.6);
-  if (!lava && v.crust === 'ice') {
-    // Ice crystals frozen round the lip.
-    s.fillStyle = '#f4fbff';
-    for (const [dx, dy, r] of [
-      [-6, -4, 1.8],
-      [5, -3.4, 1.5],
-      [-2, -6.6, 1.1],
-      [8.5, -1.6, 1.2],
-    ]) {
-      s.beginPath();
-      s.moveTo(x + dx, y + dy - r * 1.6);
-      s.lineTo(x + dx + r * 0.7, y + dy);
-      s.lineTo(x + dx, y + dy + r * 0.6);
-      s.lineTo(x + dx - r * 0.7, y + dy);
-      s.closePath();
-      s.fill();
-    }
-  } else if (!lava) {
-    // Sulphur crust.
-    s.fillStyle = 'rgba(230,210,90,0.75)';
-    for (const [dx, dy, r] of [
-      [-6, -4, 1.4],
-      [5, -3, 1.1],
-      [-2, -6.5, 0.9],
-    ])
-      circle(s, x + dx, y + dy, r);
-  }
+  stamp(s, ventMound(rock, lava, v.crust), x, y);
   const heat = c.seg === 1 ? c.t / c.len : c.seg === 2 ? 1 : 0;
   if (lava) {
     g.fillStyle = css(LAVA, 10, 0.4 + heat * 0.6);
@@ -142,8 +180,8 @@ function drawColumn(rc: RC, m: Geyser, d: DrawCtx) {
       const hgt = 5 + p * 20 * (0.6 + 0.4 * pulse);
       for (let i = 0; i < 5; i++) {
         const u = (i + ((f * (1 + p * 2)) % 8) / 8) / 5;
-        s.fillStyle = `rgba(${v.steam},${(0.35 + p * 0.45) * (1 - u)})`;
-        circle(s, x + Math.sin(i * 2.1 + f * 0.3) * 1.5, base - u * hgt, 2 + u * 3 + p * 2);
+        rc.bg.fillStyle = `rgba(${v.steam},${(0.35 + p * 0.45) * (1 - u)})`;
+        circle(rc.bg, x + Math.sin(i * 2.1 + f * 0.3) * 1.5, base - u * hgt, 2 + u * 3 + p * 2);
       }
       if (emit && Math.random() < 0.2 + p * 0.6)
         emit('smoke', x + (Math.random() - 0.5) * 6, base, (Math.random() - 0.5) * 20, -40 - p * 60, { h: 0, s: 0, l: 85 });
@@ -156,26 +194,20 @@ function drawColumn(rc: RC, m: Geyser, d: DrawCtx) {
   const w = m.width;
   const k = col.k;
   if (lava) {
-    // Albedo body so it reads in daylight, emissive core on top.
-    const gr = s.createLinearGradient(x - w, 0, x + w, 0);
-    gr.addColorStop(0, css(LAVA, -25, 0.0));
-    gr.addColorStop(0.25, css(LAVA, -10, 0.9));
-    gr.addColorStop(0.5, css(HOT, 10, 1));
-    gr.addColorStop(0.75, css(LAVA, -10, 0.9));
-    gr.addColorStop(1, css(LAVA, -25, 0));
-    s.fillStyle = gr;
-    s.beginPath();
+    // Albedo body so it reads in daylight: three flat tiers, licking at the edges, and a dark line round it.
     const n = Math.max(4, Math.ceil(col.len / 6));
-    for (let i = 0; i <= n; i++) {
-      const yy = col.y - (col.len * i) / n;
-      s.lineTo(x - w * 0.62 * k - Math.sin(rc.t * 18 + i * 1.3) * 1.4, yy);
-    }
-    for (let i = n; i >= 0; i--) {
-      const yy = col.y - (col.len * i) / n;
-      s.lineTo(x + w * 0.62 * k + Math.sin(rc.t * 16 + i * 1.7) * 1.4, yy);
-    }
-    s.closePath();
-    s.fill();
+    const tier = (wk: number, c: string) => {
+      s.fillStyle = c;
+      s.beginPath();
+      for (let i = 0; i <= n; i++) s.lineTo(x - w * wk * k - Math.sin(rc.t * 18 + i * 1.3) * 1.4 * wk, col.y - (col.len * i) / n);
+      for (let i = n; i >= 0; i--) s.lineTo(x + w * wk * k + Math.sin(rc.t * 16 + i * 1.7) * 1.4 * wk, col.y - (col.len * i) / n);
+      s.closePath();
+      s.fill();
+    };
+    tier(0.7, css(LAVA, -30, 1, 0, -6));
+    tier(0.62, css(LAVA, -6));
+    tier(0.38, css(HOT, 4));
+    tier(0.16, css(HOT, 22));
     for (let yy = col.y; yy > top; yy -= 7) glowDot(g, x + Math.sin(yy * 0.3 + rc.t * 9) * 1.5, yy, w * 0.95, LAVA, 0.55 * k, 0.4);
     g.strokeStyle = css(HOT, 25, 0.9 * k);
     g.lineWidth = w * 0.25;
@@ -219,11 +251,11 @@ function drawColumn(rc: RC, m: Geyser, d: DrawCtx) {
       const yy = col.y - along;
       const push = Math.max(0, windProfile(wind, yy - wind.y));
       const r = (w * 0.45 + u * w * 0.5) * k;
-      s.fillStyle = `rgba(${v.steam},${0.55 * (1 - u * 0.5) * (0.35 + 0.65 * push)})`;
-      circle(s, x + Math.sin(i * 2.3 + f * 0.1) * 2 * u, yy, r);
+      rc.bg.fillStyle = `rgba(${v.steam},${0.55 * (1 - u * 0.5) * (0.35 + 0.65 * push)})`;
+      circle(rc.bg, x + Math.sin(i * 2.3 + f * 0.1) * 2 * u, yy, r);
     }
-    s.fillStyle = 'rgba(255,255,255,0.75)';
-    circle(s, x, col.y - 2, w * 0.4 * k);
+    rc.bg.fillStyle = 'rgba(255,255,255,0.75)';
+    circle(rc.bg, x, col.y - 2, w * 0.4 * k);
     if (v.flakes) {
       // Snow riding the updraft: little six-point flakes, on the sim's own clock.
       g.fillStyle = 'rgba(245,250,255,0.9)';
