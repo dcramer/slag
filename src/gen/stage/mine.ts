@@ -513,7 +513,14 @@ function* crusherPieces(rng: Rng, l: Landmark): Generator<Piece> {
 
 export const ORE_CRUSHER = defineConcept({
   id: 'ore-crusher',
-  varies: ['house width and height', 'where the hopper is', 'a lower feed shed past it or none', 'a motor housing on the roof or none', 'belt speed', 'a cart in the tunnel or none'],
+  varies: [
+    'house width and height',
+    'where the hopper is',
+    'a lower feed shed past it or none',
+    'a motor housing on the roof or none',
+    'belt speed',
+    'a cart in the tunnel or none',
+  ],
   weight: 2,
   sizes: ['classic', 'wide'],
   fits: (p) => roomFor(p, OC_MIN),
@@ -638,7 +645,13 @@ function* geodePieces(rng: Rng, l: Landmark): Generator<Piece> {
 
 export const CRYSTAL_GEODE = defineConcept({
   id: 'crystal-geode',
-  varies: ['geode width and where it stands', 'wall height and dome height', 'how high the far window is', 'the ledges across (where and how high)', 'crystal falling from its crown or none'],
+  varies: [
+    'geode width and where it stands',
+    'wall height and dome height',
+    'how high the far window is',
+    'the ledges across (where and how high)',
+    'crystal falling from its crown or none',
+  ],
   weight: 2,
   sizes: ['classic', 'wide'],
   fits: (p) => roomFor(p, GE_MIN),
