@@ -1,7 +1,23 @@
-import { carveCorridor, finish, Grid, hintGap, noise2D, smoothCA } from '../kit';
+import { mineOwns } from '../../stage/mine';
+import { carveCorridor, finish, Grid, groundFromHeights, hintGap, noise1D, noise2D, smoothCA } from '../kit';
 import { jumpProfile } from '../probe';
-import type { Sculptor } from '../types';
-import { easyGap, easyRise, knobs, rollChallenges } from './common';
+import type { SculptCtx, Sculptor, Shape } from '../types';
+import {
+  type Claim,
+  claimSite,
+  easyGap,
+  easyRise,
+  flatten,
+  hardGap,
+  type Knobs,
+  keepClear,
+  knobs,
+  raiseLandmark,
+  relax,
+  rollChallenges,
+  Slots,
+  undercut,
+} from './common';
 import { mineTall } from './tall';
 
 type MineStyle = 'galleries' | 'cavern' | 'shafts';
@@ -15,6 +31,7 @@ type MineStyle = 'galleries' | 'cavern' | 'shafts';
  */
 export const mine: Sculptor = (ctx) => {
   if (ctx.profile.size === 'tall') return mineTall(ctx);
+  if (ctx.concept) return mineStage(ctx);
   const { rng, attempt } = ctx;
   const k = knobs(ctx);
   const { W, H } = k;
@@ -140,3 +157,105 @@ export const mine: Sculptor = (ctx) => {
   const gRow = rows[W - 3];
   return finish(g, { row: sRow }, { row: gRow }, `mine:${style}`);
 };
+
+/**
+ * A mine level built round a stage concept's landmark (gen/stage/mine.ts): one long cavern floor with a
+ * rock roof over it, the roof lifted high over the landmark so it stands in a hall of its own, and over
+ * any chasm so a jump there is an open-air jump. The landmark owns the level's crossing (or both, where
+ * its box made room for a two-part one); a second chasm, where one is still asked for, is dug in the
+ * floor elsewhere. Plain mine levels never come here, so they're generated exactly as before.
+ */
+function mineStage(ctx: SculptCtx): Shape {
+  const { rng, attempt } = ctx;
+  const k = knobs(ctx, Math.round(ctx.profile.h * 0.22));
+  const { W, H } = k;
+  const g = new Grid(W, H);
+  g.carve = true;
+  const slots = new Slots(6, W - 7);
+  const base = H - rng.int(4, 6);
+  const n = noise1D(rng, W, rng.int(6, 10), 2, 0.5);
+  const surf = n.map((v, x) => Math.max(10, Math.min(H - 3, Math.round(base + k.ramp(x) + v * 2.5))));
+  const locked = new Uint8Array(W);
+  const sRow = surf[2];
+  const gRow = surf[W - 3];
+  for (let x = 0; x < 6; x++) surf[x] = sRow;
+  for (let x = W - 6; x < W; x++) surf[x] = gRow;
+  locked.fill(1, 0, 6);
+  locked.fill(1, W - 6, W);
+  const claim = claimMineSite(ctx, k, slots, surf, locked);
+  if (!claim) return finish(g, { row: sRow - 1 }, { row: gRow - 1 }, 'mine:unclaimed');
+  const challenges = rollChallenges(attempt, k);
+  g.wantsProps = challenges > 0;
+  const own = mineOwns(claim.concept, k, attempt, challenges);
+  const hardLeft = Math.max(0, challenges - own);
+  // A second chasm where one is still asked for, and a hop or two: banks levelled either side.
+  const pits: { a: number; b: number; bank: number; hard: boolean; lip: number }[] = [];
+  for (let i = 0; i < hardLeft + k.count(rng.int(0, 1)); i++) {
+    const hard = i < hardLeft;
+    const w = hard ? hardGap(rng) : easyGap(rng, 2);
+    const a = slots.take(rng, w, 3, 8, W - 9);
+    if (a === null) continue;
+    if (hard) keepClear(slots, a, w);
+    const bank = Math.max(surf[a - 1], surf[a + w]);
+    const lip = hard ? 4 : 1;
+    for (let x = a - lip; x < a + w + lip; x++) {
+      surf[x] = x >= a && x < a + w ? H : bank;
+      locked[x] = 1;
+    }
+    pits.push({ a, b: a + w - 1, bank, hard, lip });
+  }
+  relax(surf, H, locked, 2);
+  groundFromHeights(g, surf);
+  // The roof: a few rows over the floor, wandering; lifted over the landmark's hall and the chasms.
+  const hn = noise1D(rng, W, rng.int(4, 7), 2, 0.6);
+  const roof = surf.map((f, x) => (f >= H ? H : f) - Math.max(6, Math.round(7.5 + hn[x] * 2)));
+  const { x: lx, y: ly, w: lw } = claim.at;
+  for (let x = Math.max(0, lx - 2); x <= Math.min(W - 1, lx + lw + 1); x++) roof[x] = Math.min(roof[x], ly - 2);
+  for (const p of pits) for (let x = p.a - p.lip; x <= p.b + p.lip; x++) roof[x] = Math.min(roof[x], p.bank - 8);
+  // Never a cliff in the roof: neighbours within three rows, by lifting the lower one.
+  for (let pass = 0; pass < 4; pass++)
+    for (const dir of [1, -1])
+      for (let i = 0; i < W; i++) {
+        const x = dir > 0 ? i : W - 1 - i;
+        const nb = x - dir;
+        if (nb >= 0 && nb < W) roof[x] = Math.min(roof[x], roof[nb] + 3);
+      }
+  for (let x = 0; x < W; x++) if (roof[x] >= 0) g.fill(x, 0, x, roof[x]);
+  // Drips of rock off the roof, away from the landmark and the chasms.
+  const busy = (x: number) => (x >= lx - 3 && x <= lx + lw + 2) || pits.some((p) => x >= p.a - p.lip - 1 && x <= p.b + p.lip + 1) || x < 7 || x > W - 8;
+  for (let x = rng.int(6, 10); x < W - 6; x += rng.int(4, 9)) {
+    if (busy(x) || roof[x] < 0 || surf[x] >= H || surf[x] - roof[x] < 8) continue;
+    g.fill(x, roof[x] + 1, x, roof[x] + rng.int(1, 2));
+  }
+  for (const p of pits) {
+    if (!p.hard) continue;
+    hintGap(g, p.a, p.b, p.bank);
+    undercut(g, p.b + 1, 2, p.bank);
+  }
+  raiseLandmark(g, ctx, claim, own);
+  // Timber cap beams under the roof, clear of the landmark.
+  for (let x = rng.int(6, 9); x < W - 6; x += rng.int(5, 8) + Math.round((1 - k.density) * 3)) {
+    if (busy(x) || surf[x] >= H || roof[x] < 0) continue;
+    const cy = roof[x] + 1;
+    if (surf[x] - cy < 6 || !g.empty(x - 1, cy) || !g.empty(x + 1, cy)) continue;
+    g.plank(x - 1, x + 1, cy);
+  }
+  return finish(g, { row: sRow - 1 }, { row: gRow - 1 }, 'mine:stage');
+}
+
+/**
+ * The landmark's site (claimSite) on floor levelled a couple of columns past it either side, never so low
+ * that a slot or a bowl in its floor has no rock under it. Nothing else lands within a running jump of its
+ * far side, where a chasm could be cleared bare off its top.
+ */
+function claimMineSite(ctx: SculptCtx, k: Knobs, slots: Slots, surf: number[], locked: Uint8Array): Claim | null {
+  const claim = claimSite(ctx, k, slots, surf, locked);
+  if (!claim) return null;
+  const { x, w } = claim.at;
+  const ground = Math.min(claim.ground, k.H - 4);
+  if (ground - claim.at.h < 1) return null;
+  slots.mark(x - 3, x + w + 8);
+  flatten(surf, k.H, x - 2, x + w + 1, ground);
+  for (let i = Math.max(0, x - 3); i <= Math.min(k.W - 1, x + w + 2); i++) locked[i] = 1;
+  return { ...claim, ground, at: { ...claim.at, y: ground - claim.at.h } };
+}

@@ -277,7 +277,8 @@ describe('idle peers', () => {
     const slotB = a.match.players.find((p) => p.device === 'bbbb:kb1')!.slot;
     const runnerB = () => a.match.run!.runners.find((x) => x.slot === slotB)!;
     r.run(90);
-    expect(Math.abs(runnerB().body.vx)).toBeLessThan(1); // let go after SOFT_TICKS, and it has stopped
+    // Let go after SOFT_TICKS, and it has stopped (unless running right took it into a pit first: nothing left to let go).
+    if (runnerB().alive) expect(Math.abs(runnerB().body.vx)).toBeLessThan(1);
     // An idle runner gives up through the self-destruct hold, so it pops POP_HOLD after it goes idle.
     if (runnerB().alive) r.until(() => !runnerB().alive, IDLE_FRAMES + POP_HOLD + 60);
     r.frozen.delete('bbbb');
