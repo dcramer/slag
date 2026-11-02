@@ -115,23 +115,28 @@ function* gatehousePieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
   const [f0, s1] = l.anchors.span;
   // The portcullis at the gate's mouth (and on some its twin at the back), hung in its slot in the vault:
   // it slams to the floor on whoever stops under it, and winds back up.
-  const back = g1 - g0 >= 5 && rng.chance(0.4);
-  const front = back && rng.chance(0.5) ? g0 + 1 : g0;
-  const gates = back ? [front, g1] : [front];
+  const back = g1 - g0 >= 6 && rng.chance(0.4);
+  const front = g1 - g0 >= 6 && rng.chance(0.4) ? g0 + 1 : g0;
+  const gates = back ? [front, g1 - 1] : [front];
   const top = Math.min(Ft, Bt) - 3;
+  // The drawbridge, hanging broken from its hinge into the moat on one chain: scenery, never a way over.
+  const moat = l.anchors.moat;
   yield {
     name: rng.pick(['Portcullis', 'The Iron Curtain', 'Mind the Gate', 'Closing Time']),
     archetype: 'dropper',
     role: 'hazard',
     style: IRON(rng),
     modules: [
-      // The gatehouse's inside: the vault of the passage, the slots, the arrow loops and banners behind.
+      // The gatehouse's inside: the passage's vault, the back parapet and the pennants over the towers.
       shell(rng, [f0, top], s1 - f0 + 1, footing(s, f0, s1, G) - top),
+      ...(moat ? [shell(rng, [moat[0], Ft], f0 - moat[0], s.h - Ft)] : []),
       ...gates.map((x): Module => ({
         type: 'dropper',
         cells: [
           [x, G - DOOR],
+          [x + 1, G - DOOR],
           [x, G - DOOR + 1],
+          [x + 1, G - DOOR + 1],
         ],
         angle: DOWN,
         reach: 1,
@@ -143,7 +148,7 @@ function* gatehousePieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
   };
   // Murder holes in the vault between the gates, pouring fire on whoever's under them, in turn.
   const holes: number[] = [];
-  for (let x = g0 + 1; x < g1; x++) if (!gates.includes(x) && !gates.includes(x - 1) && !gates.includes(x + 1)) holes.push(x);
+  for (let x = g0 + 1; x < g1; x++) if (gates.every((p) => x < p - 1 || x > p + 2)) holes.push(x);
   const n = Math.min(holes.length, rng.int(1, 2));
   const pick = rng.shuffle(holes.slice()).slice(0, n);
   const off = rng.int(120, 170);
@@ -163,18 +168,6 @@ function* gatehousePieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
         warn: rng.int(30, 40),
       })),
     };
-  // The drawbridge, hanging broken from its hinge into the moat on one chain: scenery, never a way over.
-  const moat = l.anchors.moat;
-  if (moat) {
-    const [a] = moat;
-    yield {
-      name: rng.pick(['The Drawbridge', 'Out of Order', 'Bridge Closed', 'Down for Repairs']),
-      archetype: 'platform',
-      role: 'build',
-      style: IRON(rng),
-      modules: [shell(rng, [a, Ft], f0 - a, s.h - Ft)],
-    };
-  }
 }
 
 export const GATEHOUSE = defineConcept({
@@ -288,10 +281,10 @@ function* bellTowerPieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
         hub: [t0 + TW / 2, Tb - BELFRY + 0.2],
         arm: BELL_ARM,
         angle0: DOWN,
-        period: rng.int(230, 280),
+        period: rng.int(240, 290),
         swing: rng.range(0.85, 0.95),
         dir: rng.chance(0.5) ? 1 : -1,
-        radius: 0.75,
+        radius: 0.95,
         count: 1,
         link: 'rod',
       },

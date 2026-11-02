@@ -236,7 +236,6 @@ const manor: DecoSkin = (rc, m, d) => {
 
 // -------------------------------------------------------------------------------------------- throne hall
 
-
 function hallWall(m: Deco, t: Hz, level: Level | undefined) {
   return sprite(`castle|hall|${m.w}|${m.h}|${m.seed}|${t.k}`, -2, -2, m.w + 4, m.h + 4, (g) => {
     // The box runs tower to tower and down to the ground: the hall's air sits between the towers.

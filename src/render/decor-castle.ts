@@ -34,12 +34,25 @@ const at = (d: Decor, ...xy: number[]) => {
 const X = (d: Decor, x: number) => d.x + x * d.size * fx(d);
 const Y = (d: Decor, y: number) => d.y + 0.5 + y * d.size;
 
+/** A polyline cut every couple of px, so a tapered stroke along it keeps its width between its ends. */
+function dense(pts: readonly P[]): P[] {
+  const out: P[] = [pts[0]];
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1];
+    const b = pts[i];
+    const n = Math.max(2, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 2.5));
+    for (let k = 1; k <= n; k++) out.push({ x: a.x + ((b.x - a.x) * k) / n, y: a.y + ((b.y - a.y) * k) / n });
+  }
+  return out;
+}
+
 /** A rod, haft or rope: a ribbon in a dark of its colour with the colour over it. */
 function rod(s: CanvasRenderingContext2D, pts: readonly P[], w: number, c: HSL, seed: number) {
+  const d = dense(pts);
   s.fillStyle = inkFor(c);
-  stroke(s, pts, { w: w + 0.8, seed, taper: [0.02, 0.15], press: 0.1 });
+  stroke(s, d, { w: w + 0.8, seed, taper: [0.02, 0.15], press: 0.1 });
   s.fillStyle = css(c);
-  stroke(s, pts, { w, seed: seed + 1, taper: [0.02, 0.25], press: 0.1 });
+  stroke(s, d, { w, seed: seed + 1, taper: [0.02, 0.25], press: 0.1 });
 }
 
 /** Flat shapes in two tones with the light pen round them. */
@@ -243,11 +256,11 @@ export const CASTLE_DECOR = {
         hsl3(40, 22, 78),
         sd(d),
       );
-      // Bars round a dome top and a pointed foot, banded twice.
-      s.fillStyle = inkFor(IRON);
+      // Bars round a dome top and a pointed foot, banded twice, in iron lit enough to read off a dark wall.
+      const bar = shift(d.color, 0, 0, 22);
       for (const t of [-1, -0.33, 0.33, 1]) {
         const bx = cx + (t * w) / 2;
-        stroke(
+        rod(
           s,
           [
             { x: cx + t * 1.2, y: cy + 0.4 },
@@ -255,12 +268,22 @@ export const CASTLE_DECOR = {
             { x: bx, y: cy + h - 2.4 },
             { x: cx + t * 0.6, y: cy + h },
           ],
-          { w: 0.75, seed: (t * 10) | 0, taper: [0.05, 0.05], press: 0 },
+          0.5,
+          bar,
+          (t * 10) | 0,
         );
       }
-      for (const by of [cy + 3, cy + h - 3]) line(s, cx - w / 2, by, cx + w / 2, by, { w: 0.8, seed: by | 0, taper: [0, 0], press: 0 });
-      s.fillStyle = css(d.color, 18);
-      line(s, cx - w / 2 + 0.3, cy + 3.3, cx - w / 2 + 0.3, cy + h - 3.6, { w: 0.35, seed: 3, taper: [0.1, 0.1], press: 0 });
+      for (const by of [cy + 3, cy + h - 3])
+        rod(
+          s,
+          [
+            { x: cx - w / 2, y: by },
+            { x: cx + w / 2, y: by },
+          ],
+          0.55,
+          bar,
+          by | 0,
+        );
     },
   },
 } satisfies Record<string, DecorDef>;

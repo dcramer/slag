@@ -30,6 +30,8 @@ import type { Deco } from './common';
 
 const DARK: HSL = { h: 250, s: 16, l: 8 };
 const IRON: HSL = { h: 222, s: 9, l: 30 };
+/** Iron in front of a dark wall: lit enough to read against it. */
+const BRIGHT_IRON: HSL = { h: 220, s: 8, l: 52 };
 const BRONZE: HSL = { h: 36, s: 52, l: 46 };
 const LAVA: HSL = { h: 20, s: 100, l: 54 };
 const GLASS: HSL[] = [
@@ -117,24 +119,37 @@ function pennant(rc: RC, x: number, y: number, col: HSL, seed: number) {
   const f = flutter(rc, 2.2, seed);
   const lift = Math.min(1, Math.abs(f) * 0.5);
   const dir = f < 0 ? -1 : 1;
-  const L = 11;
-  const tipX = x + dir * L * (0.25 + 0.75 * lift);
-  const tipY = y + 2.5 + (1 - lift) * 8;
+  const L = 15;
+  const tipX = x + dir * L * (0.3 + 0.7 * lift);
+  const tipY = y + 3.5 + (1 - lift) * 10;
   const cloth = [
     { x, y },
     { x: tipX, y: (y + tipY) / 2 - 0.5 + Math.sin(rc.t * 7 + seed) * f * 0.6 },
-    { x: tipX - dir * 2.5, y: tipY },
-    { x, y: y + 4.6 },
+    { x: tipX - dir * 3.5, y: tipY + 1 },
+    { x, y: y + 6.5 },
   ];
   part(s, cloth, col, seed, { depth: 0.4, thin: 0.25, thick: 0.6 });
 }
 
+/** A polyline cut every couple of px, so a tapered stroke along it keeps its width between its ends. */
+function dense(pts: readonly P[]): P[] {
+  const out: P[] = [pts[0]];
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1];
+    const b = pts[i];
+    const n = Math.max(2, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 2.5));
+    for (let k = 1; k <= n; k++) out.push({ x: a.x + ((b.x - a.x) * k) / n, y: a.y + ((b.y - a.y) * k) / n });
+  }
+  return out;
+}
+
 /** An iron rod or a wooden pole: a ribbon in a dark of its colour under the colour. */
 function rodPts(g: CanvasRenderingContext2D, pts: readonly P[], w: number, c: HSL, seed: number, ink = inkFor(c)) {
+  const d = dense(pts);
   g.fillStyle = ink;
-  stroke(g, pts, { w: w + 0.7, seed, taper: [0.02, 0.02], press: 0 });
+  stroke(g, d, { w: w + 0.7, seed, taper: [0.02, 0.02], press: 0 });
   g.fillStyle = css(c);
-  stroke(g, pts, { w, seed: seed + 1, taper: [0.02, 0.02], press: 0 });
+  stroke(g, d, { w, seed: seed + 1, taper: [0.02, 0.02], press: 0 });
 }
 
 // ------------------------------------------------------------------------------------------- gatehouse
@@ -186,10 +201,10 @@ function gateBack(m: Deco, t: Hz, lv: Level) {
         g,
         [
           { x, y },
-          { x, y: y - 30 },
+          { x, y: y - 44 },
         ],
-        1,
-        WOOD,
+        1.3,
+        { h: 26, s: 30, l: 40 },
         x | 0,
         t.ink(WOOD),
       );
@@ -212,9 +227,9 @@ function gatehouse(rc: RC, m: Deco, d: DrawCtx) {
   stamp(rc.s, gateBack(m, t, lv), ox, oy);
   const q = gateOf(m, lv);
   const { X, Y } = frameOf(m);
-  const col = lv.theme.layers[lv.theme.layers.length - 1]?.detail ?? BANNER;
-  pennant(rc, ox + X(q.f0) + 1.5 * TILE + 0.5, oy + Y(q.Ft) - 29, col, m.seed);
-  pennant(rc, ox + X(q.s1 + 1) - 1.5 * TILE + 0.5, oy + Y(q.Bt) - 29, col, m.seed + 5);
+  const col: HSL = { ...BANNER, l: BANNER.l + 6 };
+  pennant(rc, ox + X(q.f0) + 1.5 * TILE + 0.5, oy + Y(q.Ft) - 43, col, m.seed);
+  pennant(rc, ox + X(q.s1 + 1) - 1.5 * TILE + 0.5, oy + Y(q.Bt) - 43, col, m.seed + 5);
   for (const [i, x] of gateTorches(m, q).entries()) torchFlame(rc, ox + x, oy + Y(q.G - 3) + 18, i + m.seed);
 }
 
@@ -236,7 +251,7 @@ function drawbridge(m: Deco, t: Hz, lv: Level) {
     const uy = Math.sin(a);
     const nx = -uy;
     const ny = ux;
-    const T = 6;
+    const T = 10;
     const end = { x: hx + ux * L, y: hy + uy * L };
     const deck = [
       { x: hx, y: hy },
@@ -246,8 +261,9 @@ function drawbridge(m: Deco, t: Hz, lv: Level) {
     ];
     // Its broken end: a few planks shorter on one side.
     deck[1] = { x: hx + ux * (L - 5), y: hy + uy * (L - 5) };
-    flat(g, deck, { h: 26, s: 32, l: 28 }, t, m.seed, 0.6);
-    g.fillStyle = t.ink({ h: 26, s: 32, l: 28 });
+    const DECK: HSL = { h: 26, s: 34, l: 36 };
+    flat(g, deck, DECK, t, m.seed, 0.6);
+    g.fillStyle = t.ink(DECK);
     for (let k = 8; k < L - 6; k += 7)
       line(g, hx + ux * k, hy + uy * k, hx + ux * k + nx * T, hy + uy * k + ny * T, { w: 0.4, seed: k, taper: [0.1, 0.1], press: 0 });
     // Iron straps across it at both ends.
@@ -581,14 +597,14 @@ function bell(rc: RC, m: Swinger, d: DrawCtx) {
       { x: h.x - Math.cos(h.a) * 8, y: h.y - Math.sin(h.a) * 8 },
     ],
     1.4,
-    IRON,
+    BRIGHT_IRON,
     4,
   );
   s.save();
   s.translate(h.x, h.y);
   s.rotate(a);
   // In the swing's frame, crown up (-y), mouth down: inside the circle the sim hurts with.
-  const R = m.radius * 0.8 * TILE;
+  const R = m.radius * 0.8;
   const shapePts = poly(
     -R * 0.42,
     -R * 0.82,
@@ -640,14 +656,14 @@ function firebar(rc: RC, m: Swinger, d: DrawCtx) {
         { x: hx + Math.cos(h.a) * outer, y: hy + Math.sin(h.a) * outer },
       ],
       1.6,
-      IRON,
+      BRIGHT_IRON,
       2,
     );
-    part(s, ovalPts(hx, hy, 3, 3, 3, 0.05, 12), IRON, 3, { depth: 0.6, thin: 0.3, thick: 0.8 });
-    s.fillStyle = css(IRON, 24);
+    part(s, ovalPts(hx, hy, 3, 3, 3, 0.05, 12), BRIGHT_IRON, 3, { depth: 0.6, thin: 0.3, thick: 0.8 });
+    s.fillStyle = css(BRIGHT_IRON, 24);
     circle(s, hx - 0.6, hy - 0.6, 0.9);
   }
-  const r = m.radius * 0.85 * TILE;
+  const r = m.radius * 0.85;
   const flick = 0.85 + Math.sin(rc.t * 19 + m.arm * 5) * 0.15;
   glowDot(rc.g, h.x, h.y, r * 2.6 * flick, LAVA, 0.5);
   s.fillStyle = css(LAVA, -6);
