@@ -5,7 +5,7 @@
  *   npm run level -- --stats 200 [--theme farm] per-theme generation stats over N seeds,
  *                                               then per size class / gravity class / route
  *   Force profile knobs on either: --size classic|wide|tall --route ltr|climb|descent|zigzag
- *                                  --density 0..1 --gravity 0.7 --hazards 0..4
+ *                                  --density 0..1 --gravity 0.7 --hazards 0..4 --weather rain
  *
  * Legend: # solid  = one-way  S spawn  G goal  · reachable stand cell  P set-piece footprint
  *         B a bridge from the validator's solution (levels that need props)
@@ -17,6 +17,7 @@ import { MAX_SHARED } from '../src/gen/level/routes';
 import type { RouteShape, SizeClass } from '../src/sim/level';
 import { T_ONEWAY, T_SOLID } from '../src/sim/level';
 import { footprintCells } from '../src/sim/props';
+import type { WeatherKind } from '../src/sim/weather';
 import { analyzeReach } from '../src/sim/reach';
 import { THEME_IDS, type ThemeId } from '../src/themes';
 
@@ -32,6 +33,7 @@ if (opt('route')) force.route = opt('route') as RouteShape;
 if (opt('density')) force.density = Number(opt('density'));
 if (opt('gravity')) force.gravity = Number(opt('gravity'));
 if (opt('hazards')) force.hazards = Number(opt('hazards'));
+if (opt('weather')) force.weather = opt('weather') as WeatherKind;
 
 /** Share of levels whose solution takes 0, 1, 2 and 3 parts. */
 function partShares(parts: number[], n: number): Record<string, string> {
@@ -67,6 +69,7 @@ if (args.includes('--stats')) {
   const themes = themeOpt ? [themeOpt] : THEME_IDS;
   const rows: Record<string, unknown>[] = [];
   const total = { n: 0, ms: 0, bridged: 0, fallbacks: 0, attempts: 0, closed: 0, openAsSculpted: 0, parts: [0, 0, 0, 0] };
+  const weather: Record<string, number> = {};
   // CPU time is steadier than wall time on a shared machine; both are reported.
   const cpu0 = process.cpuUsage();
   for (const th of themes) {
@@ -83,6 +86,8 @@ if (args.includes('--stats')) {
       const l = generateLevel((i * 2654435761) >>> 0, th, force);
       const dt = performance.now() - t0;
       const p = l.profile!;
+      const sky = l.weather?.kind ?? 'clear';
+      weather[sky] = (weather[sky] ?? 0) + 1;
       const solid = l.tiles.reduce((a, t) => a + (t ? 1 : 0), 0) / l.tiles.length;
       const info = lastGenInfo;
       for (const key of [`size:${p.size}`, `gravity:${gravityClass(p.gravity)}`, `route:${p.route}`, `hazards:${l.setPieces.length}`])
@@ -143,6 +148,9 @@ if (args.includes('--stats')) {
     cpuMsPerLevel: +((cpu.user + cpu.system) / 1000 / total.n).toFixed(1),
     needParts: `${((total.bridged / total.n) * 100).toFixed(1)}%`,
     ...partShares(total.parts, total.n),
+    weather: Object.entries(weather)
+      .map(([k, v]) => `${k} ${((v / total.n) * 100).toFixed(0)}%`)
+      .join(', '),
     fallbacks: total.fallbacks,
     attempts: +(total.attempts / total.n).toFixed(2),
     // Mostly-open rule: levels already open as sculpted, and candidates still too narrow after lanes.
@@ -198,6 +206,7 @@ if (args.includes('--stats')) {
     seed: seedArg,
     style: l.style,
     profile: describeProfile(l.profile!),
+    weather: l.weather?.kind ?? 'clear',
     theme: l.theme.name,
     setPieces: l.setPieces.map((p) => p.def.name),
     goalReachableWithoutProps: reach.goalReached,

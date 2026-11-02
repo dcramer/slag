@@ -3,6 +3,7 @@ import { hash2, Rng } from '../core/rng';
 import type { TerrainKind, TerrainLook, Theme } from '../gen/theme';
 import { TILE } from '../sim/constants';
 import { type Level, T_ONEWAY, tileAt, type TileRect } from '../sim/level';
+import { coatTerrain } from './weather';
 import { DECOR, type Decor } from './decor';
 import { flattenMaterial } from './cel-terrain';
 import { circle, makeNoise, mixRgb, type RC } from './kit';
@@ -188,7 +189,7 @@ export class TerrainPainter {
       this.makeDecor(level, skip);
       this.bakeKey = '';
     }
-    const bk = `${tk}:${level.seed}:${level.version}:${level.w}x${level.h}`;
+    const bk = `${tk}:${level.seed}:${level.version}:${level.w}x${level.h}:${level.weather?.kind}`;
     if (bk === this.bakeKey) return false;
     this.bakeKey = bk;
     this.kb = kb;
@@ -336,6 +337,8 @@ export class TerrainPainter {
         g.restore();
       }
     }
+
+    coatTerrain(g, level);
 
     // Emissive veins (+ glowing ember specks in ash caps).
     if (T.veins && this.main?.vein) {

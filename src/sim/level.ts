@@ -2,6 +2,7 @@ import type { Rect } from '../core/geom';
 import type { Theme } from '../gen/theme';
 import { TILE } from './constants';
 import type { PlacedProp } from './props/types';
+import type { Weather } from './weather';
 
 export interface TileRect {
   x: number;
@@ -71,6 +72,8 @@ export interface Level {
   gravity?: number;
   /** Variety knobs this level was generated with (absent for hand-built test levels). */
   profile?: LevelProfile;
+  /** This level's weather (sim/weather.ts). Absent means clear, as on hand-built test levels. */
+  weather?: Weather;
   /** Bumped whenever tiles change so renderers can invalidate caches. */
   version: number;
 }

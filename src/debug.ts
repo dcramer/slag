@@ -8,6 +8,7 @@ import { giveItem, ITEM_KINDS, type ItemKind } from './sim/items';
 import { canPlace, landedDef } from './sim/props';
 import type { ProfileOverride } from './gen/level';
 import type { InputFrame } from './sim/types';
+import { WEATHER_KINDS } from './sim/weather';
 import type { ThemeId } from './themes';
 
 /**
@@ -24,6 +25,7 @@ import type { ThemeId } from './themes';
  *   ?route=zigzag       force the route shape (ltr|climb|descent|zigzag)
  *   ?density=0.9        force terrain density (0..1)
  *   ?gravity=0.7        force world gravity scale
+ *   ?weather=rain       force the weather (clear|wind|mist|rain|snow), skipping worldgen's solvability gate
  *   ?debug=1            open the dev overlay (see installDevtoolsHooks)
  *   ?give=sword,puck    hand race runners these held items, cycled (`all` = one of each)
  *   ?lettering=0        no impact words (read by the Renderer)
@@ -125,6 +127,8 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
   if (route === 'ltr' || route === 'climb' || route === 'descent' || route === 'zigzag') force.route = route;
   if (q.get('density')) force.density = Number(q.get('density'));
   if (q.get('gravity')) force.gravity = Number(q.get('gravity'));
+  const weather = WEATHER_KINDS.find((k) => k === q.get('weather'));
+  if (weather) force.weather = weather;
   if (Object.keys(force).length) {
     match.forceProfile = force;
     match.newLevel(match.seed);

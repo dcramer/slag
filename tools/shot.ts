@@ -22,6 +22,7 @@
  *
  * Options: --out shots  --size 1280x720 (window)  --world classic|wide|tall (level size)  --players 2  --frames N (sim frames to advance)
  *          --theme farm (force a theme; `levels --themes all` renders one level per theme)
+ *          --weather rain (force the weather: clear|wind|mist|rain|snow)
  *          --noui (hide the HUD, e.g. to review level shapes)
  *          --mode keyboard|gamepad|touch (footer prompt glyphs)  --net (fake online-lobby info)
  *          --noletters (no impact words)
@@ -42,9 +43,11 @@ const [W, H] = opt('size', '1280x720')!.split('x').map(Number);
 const seed = opt('seed', 'demo');
 const theme = opt('theme');
 const world = opt('world');
+const weather = opt('weather');
 const tq =
   (theme ? `&theme=${theme}` : '') +
   (world ? `&size=${world}` : '') +
+  (weather ? `&weather=${weather}` : '') +
   (argv.includes('--noui') ? '&ui=0' : '') +
   (argv.includes('--noletters') ? '&lettering=0' : '');
 const players = Number(opt('players', '2'));

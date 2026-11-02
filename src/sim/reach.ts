@@ -8,6 +8,8 @@ import {
   stepBody as stepBodyImport,
   TILE_ONEWAY_ID as TILE_ONEWAY_ID_IMPORT,
 } from './physics';
+import { footing } from './weather';
+import type { WindForce } from './wind';
 
 // Hot-path imports rebound to module locals (vitest's module transform turns
 // imported bindings into getter calls; this file is worldgen's inner loop).
@@ -76,6 +78,9 @@ interface Policy {
 const MAX_FRAMES = 110;
 const MAX_WALL_FRAMES = 300;
 const MAX_WALL_JUMPS = 10;
+const RUN_FRAMES = 170;
+/** Frames in the longest single move this analysis can prove. Gust lulls are sized by it (sim/weather.ts). */
+export const LONGEST_MOVE = Math.max(MAX_FRAMES, MAX_WALL_FRAMES, RUN_FRAMES);
 /** Frame at which straight-up jumps fork into late-steer variants. */
 const LATE_STEER = 12;
 
@@ -107,7 +112,7 @@ class JumpPolicy implements Policy {
  * keep holding the direction or let go after a few frames to land shorter.
  */
 class RunPolicy implements Policy {
-  readonly maxFrames = 170;
+  readonly maxFrames = RUN_FRAMES;
   readonly runway = true;
   private jumpAt = -1;
   constructor(
@@ -253,13 +258,20 @@ export interface ReachResult {
   reachable: Set<number>;
 }
 
+const CALM: readonly number[] = [0];
+
 /**
  * `onEdge`, when given, sees every transition of the stand-cell graph (a walk
  * step, or a jump/fall/climb landing) as it's found, keyed by `y * w + x`.
  * Worldgen's route analysis (gen/level/routes.ts) builds on it.
+ *
+ * The ghost walks on the level's own footing (`level.weather`). `airs` are the
+ * steady side winds (px/s, + right) to try from every cell: each move runs
+ * once per air, and any landing counts. So `[air]` asks what a permanent gale
+ * leaves open and `[0, air]` what a player gets by picking their moments.
  */
-export function analyzeReach(level: Level, stopAtGoal = true, onEdge?: (from: number, to: number) => void): ReachResult {
-  const world: CollisionWorld = { tileAt: (x, y) => tileAt(level, x, y), solids: [], gravity: level.gravity ?? 1 };
+export function analyzeReach(level: Level, stopAtGoal = true, onEdge?: (from: number, to: number) => void, airs: readonly number[] = CALM): ReachResult {
+  const world: CollisionWorld = { tileAt: (x, y) => tileAt(level, x, y), solids: [], gravity: level.gravity ?? 1, tileSurface: footing(level) };
   const key = (x: number, y: number) => y * level.w + x;
   const goalKey = key(level.goal.tx, level.goal.ty);
   const seen = new Set<number>();
@@ -278,7 +290,7 @@ export function analyzeReach(level: Level, stopAtGoal = true, onEdge?: (from: nu
     onEdge?.(from, k);
     pushKey(k);
   };
-  const tracer = new Tracer(level, world, reached);
+  const tracers = airs.map((air) => new Tracer(level, world, reached, air === 0 ? null : { vx: air, vy: 0, ky: 0, dy: 0 }));
   for (let qi = 0; qi < queue.length; qi++) {
     const k = queue[qi];
     from = k;
@@ -297,10 +309,13 @@ export function analyzeReach(level: Level, stopAtGoal = true, onEdge?: (from: nu
     };
     if (!isStandable(level, tx - 1, ty) && runway(1)) runFrom.push(1);
     if (!isStandable(level, tx + 1, ty) && runway(-1)) runFrom.push(-1);
-    for (const p of policiesFor(oneWay, level, runFrom)) {
-      const b = bodyAtCell(tx, ty);
-      if (oneWay) b.groundRef = TILE_ONEWAY_ID;
-      tracer.trace(b, 0, p, false);
+    for (const tracer of tracers) {
+      for (const p of policiesFor(oneWay, level, runFrom)) {
+        const b = bodyAtCell(tx, ty);
+        if (world.tileSurface) b.surface = world.tileSurface; // It's already standing here: a jump on frame 0 leaves this ground.
+        if (oneWay) b.groundRef = TILE_ONEWAY_ID;
+        tracer.trace(b, 0, p, false);
+      }
     }
   }
   return { goalReached: seen.has(goalKey), reachable: seen };
@@ -316,6 +331,7 @@ class Tracer {
     private level: Level,
     private world: CollisionWorld,
     private land: (k: number) => void,
+    private wind: WindForce | null,
   ) {}
 
   trace(b: Body, f0: number, p: Policy, airborne0: boolean): void {
@@ -338,7 +354,7 @@ class Tracer {
         }
       }
       p.input(f, b, this.c);
-      stepBody(b, this.c, this.world);
+      stepBody(b, this.c, this.world, this.wind);
       const child = p.after?.(b);
       if (child) this.trace({ ...b }, f + 1, child, airborne);
       if (b.y > bottom) return;

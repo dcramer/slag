@@ -14,10 +14,12 @@ import { FALLBACK_SCULPTOR, SCULPTORS } from './sculptors';
 import { LAST_RESORT } from './sculptors/common';
 import type { Shape } from './types';
 import { type Bridge, judge } from './validate';
+import { rollWeather } from './weather';
 
 export type { BridgeHint, SculptCtx, Sculptor, Shape } from './types';
 export { describeProfile, GRAVITY, type GravityClass, gravityClass, type ProfileOverride, rollProfile } from './profile';
 export { BRIDGE_W, type Bridge, canPlaceBridge, isAcceptable, judge, MAX_BRIDGES, partsNeeded, withBridges } from './validate';
+export { WEATHER_WEIGHTS } from './weather';
 
 const MAX_ATTEMPTS = 30;
 const LEGACY_ATTEMPTS = 20;
@@ -46,7 +48,8 @@ export let lastGenAttempts = 0;
  * from ./lanes.ts if it needs them, the mostly-open rule in ./routes.ts) →
  * place theme set pieces. If the theme sculptor keeps failing, the legacy sculptor gets
  * a few tries before the flat floor; both count as `fallback` in
- * lastGenInfo (tests assert neither happens).
+ * lastGenInfo (tests assert neither happens). Weather comes last (./weather.ts)
+ * and can't change the terrain.
  */
 export function generateLevel(seed: number, themeOverride?: ThemeId, profileOverride?: ProfileOverride): Level {
   const themeId = themeOverride ?? pickThemeId(seed);
@@ -90,6 +93,8 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
     lastGenAttempts = attempt + 1;
     lastGenInfo = { attempts: attempt + 1, bridges: v.bridges, fallback: attempt >= MAX_ATTEMPTS, shared, sculpted: v.shared, rejects };
     level.solution = v.bridges;
+    // Before the set pieces: their placer checks the path with the ghost, which walks on this footing.
+    level.weather = rollWeather(seed, theme, level, profileOverride?.weather);
     // Set pieces must never block the known prop solution: drop any that reserve one of its cells.
     const pieces = SET_PIECES[themeId](new Rng(deriveSeed(seed, `setpieces:${attempt}`)), level, { count: profile.hazards, danger: profile.danger });
     const needed = new Set(v.bridges.flatMap((b) => Array.from({ length: BRIDGE_W }, (_, i) => b.y * level.w + b.x + i)));

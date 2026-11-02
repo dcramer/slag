@@ -1,6 +1,7 @@
 import { deriveSeed, Rng } from '../../core/rng';
 import { LEVEL_H, LEVEL_W } from '../../sim/constants';
 import type { LevelProfile, RouteShape, SizeClass } from '../../sim/level';
+import type { WeatherKind } from '../../sim/weather';
 import type { ThemeId } from '../../themes';
 
 /**
@@ -84,7 +85,7 @@ export const TALL_SIZES = { w: [32, 40], h: [40, 60] } as const;
 export const WIDE_SIZES = { w: [64, 96], h: [24, 30] } as const;
 
 /** Debug/tools: force some knobs (the rest still roll from the seed). A size the theme can't do falls back to its widest. */
-export type ProfileOverride = Partial<Pick<LevelProfile, 'size' | 'route' | 'density' | 'hazards' | 'danger' | 'gravity'>>;
+export type ProfileOverride = Partial<Pick<LevelProfile, 'size' | 'route' | 'density' | 'hazards' | 'danger' | 'gravity'>> & { weather?: WeatherKind };
 
 /**
  * World gravity classes. Jump take-off speed is fixed, so jump height scales
