@@ -43,6 +43,17 @@ export interface RoomConnection {
   kick(device: string): void;
   /** Host's keyboard and gamepad route to kicking, in the lobby: `use` picks a player, confirm kicks, alt cancels. Consumes what it uses. */
   lobbyInput(frames: Record<string, InputFrame>): void;
+  /** Leave the room for good: save, say goodbye so it re-elects at once, and stop every timer and listener. */
+  close(): void;
+}
+
+export interface ConnectOptions {
+  primaryDevice: string;
+  params?: URLSearchParams;
+  /** This tab was removed from the room; called once there has been time to read why. */
+  onKicked(): void;
+  /** The page came back from the back/forward cache after the session was closed: start the room over. */
+  onRestored(): void;
 }
 
 export function chooseTransport(room: string, peer: string, params: URLSearchParams): Transport | null {
@@ -74,9 +85,11 @@ const REFUSED = 'Different Version · Reload';
 /** Long enough to read before landing on the main menu. */
 const KICKED_MS = 1500;
 
-export function connectRoom(room: string, match: Match, opts: { primaryDevice: string; params?: URLSearchParams }): RoomConnection {
+export function connectRoom(room: string, match: Match, opts: ConnectOptions): RoomConnection {
   const params = opts.params ?? new URLSearchParams(location.search);
   const ident = acquirePeerId(room);
+  const life = new AbortController();
+  const on = { signal: life.signal };
   const transport = chooseTransport(room, ident.id, params);
   const net = new NetSession({
     transport,
@@ -85,7 +98,7 @@ export function connectRoom(room: string, match: Match, opts: { primaryDevice: s
     resume: () => loadResume(room),
     onKicked: () => {
       markKicked(room);
-      setTimeout(() => location.assign('/'), KICKED_MS);
+      setTimeout(() => !life.signal.aborted && opts.onKicked(), KICKED_MS);
     },
     log: (m) => console.info(`[net] ${m}`),
   });
@@ -102,17 +115,26 @@ export function connectRoom(room: string, match: Match, opts: { primaryDevice: s
       save();
     }
   }, 1000);
-  // Back/forward cache: the session was closed on pagehide; start over cleanly.
-  addEventListener('pageshow', (e) => e.persisted && location.reload());
-  addEventListener('pagehide', () => {
+  const shut = () => {
+    if (life.signal.aborted) return;
+    life.abort();
     clearInterval(timer);
     save();
     net.close(); // say goodbye now so the room re-elects immediately
     ident.release();
-  });
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && transport instanceof WebRtcTransport) transport.resume();
-  });
+  };
+  // Back/forward cache: the session was closed on pagehide; start over cleanly.
+  // It outlives shut(), which pagehide runs: only leaving the room in the app ends it.
+  const page = new AbortController();
+  addEventListener('pageshow', (e) => e.persisted && opts.onRestored(), { signal: page.signal });
+  addEventListener('pagehide', shut, on);
+  document.addEventListener(
+    'visibilitychange',
+    () => {
+      if (!document.hidden && transport instanceof WebRtcTransport) transport.resume();
+    },
+    on,
+  );
 
   const inviteUrl = `${location.origin}/r/${room}`;
   const statusLine = (): string => {
@@ -135,6 +157,10 @@ export function connectRoom(room: string, match: Match, opts: { primaryDevice: s
   return {
     net,
     inviteUrl,
+    close() {
+      shut();
+      page.abort();
+    },
     hudInfo() {
       if (!transport) return undefined;
       return {

@@ -1,13 +1,7 @@
-import Link from 'next/link';
+import { plainHTML } from '../src/ui/screens/markup';
+import Game from './Game';
 
+/** Served with a 404 status; the game's 404 screen is what shows. */
 export default function NotFound() {
-  return (
-    <main className="page-plain">
-      <h1>Lost in the Slag</h1>
-      <p>That lobby code doesn&apos;t look right. Codes are 3–12 letters and numbers.</p>
-      <Link href="/" className="btn-link">
-        MAIN MENU
-      </Link>
-    </main>
-  );
+  return <Game html={plainHTML('missing')} />;
 }

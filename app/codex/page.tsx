@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
+import { CODEX, routeTitle } from '../../src/routes';
+import Game from '../Game';
 import { NAME, oembedAlternate, SITE_CARD } from '../site';
-import CodexClient from './CodexClient';
 
-const title = `${NAME} · Codex`;
+const title = routeTitle(CODEX);
 const description = 'Every part and projectile props are built from.';
 
 export const metadata: Metadata = {
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
   twitter: { card: 'summary_large_image', images: SITE_CARD },
 };
 
+/** The codex screen; the game draws it on the client. */
 export default function CodexPage() {
-  return <CodexClient />;
+  return <Game />;
 }

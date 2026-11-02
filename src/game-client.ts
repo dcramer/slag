@@ -9,6 +9,8 @@ import { InputManager } from './input/input';
 import { TOUCH_DEVICE, touchModeFor } from './input/touch';
 import { connectRoom } from './net/client';
 import { wasKicked } from './net/identity';
+import type { Nav, Unmount } from './router';
+import { HOME, lobby } from './routes';
 import { ITEMS } from './sim/items';
 import { Renderer } from './render/renderer';
 import { DT } from './sim/constants';
@@ -17,38 +19,51 @@ import { THEME_IDS } from './themes';
 import { InputModeTracker } from './ui/input-mode';
 import { LevelAhead } from './level-ahead';
 import { loadHaptics, NamePrompt, RulesMenu, SettingsMenu } from './ui/menus';
+import { FloatingLogo } from './ui/screens/logo';
 import { detectQuality, isTouchFirst, savedQuality, saveQuality } from './ui/touch/device';
 import { TouchOverlay } from './ui/touch/overlay';
 import { loadProfile, saveProfile } from './ui/profile';
 
-let booted = false;
 /** About the gap between a pinch's two fingers landing, in sim frames. */
 const PINCH_WAIT_FRAMES = 6;
 
+/** One level builder for the page: its worker outlives any one lobby, so the next one starts warm. */
+let levelAhead: LevelAhead | null = null;
+
 /**
- * Boot the game into `container` for lobby `room`. All game logic runs
- * client-side; the Next.js route (/r/[room]) only server-renders the shell
- * and calls this once mounted. Debug URL params (?seed, ?theme, ?players,
- * ?race…) are still read from location.search. The first level is built off
- * the main thread, so the page stays alive while it loads.
+ * The lobby screen, and the whole game behind it: mounts the canvases into
+ * `root` and runs lobby `room` until the returned function is called, which
+ * leaves the room and lets go of everything the game took (listeners, the
+ * GPU and audio contexts, workers, the network). Debug URL params (?seed,
+ * ?theme, ?players, ?race…) are still read from location.search. The first
+ * level is built off the main thread, so the page stays alive while it loads.
  */
-export async function bootGame(container: HTMLElement, room: string): Promise<void> {
-  if (booted) return; // React strict mode / remounts: one game per page
-  booted = true;
-  if (wasKicked(room)) return location.replace('/');
-  setTelemetryContext(() => ({ room })); // a failed boot still says which lobby
+export async function mountLobby(root: HTMLElement, room: string, nav: Nav): Promise<Unmount> {
+  if (wasKicked(room)) {
+    nav.go(HOME, { replace: true });
+    return () => {};
+  }
+  setTelemetryContext(() => ({ screen: 'lobby', room })); // a failed boot still says which lobby
+  const container = document.createElement('div');
+  container.style.cssText = 'position:fixed;inset:0;overflow:hidden;background:#07060b';
+  root.append(container);
   const params = new URLSearchParams(location.search);
   const seedParam = params.get('seed'); // debug override
   const themeParam = params.get('theme');
   const seed = seedParam ? parseSeed(seedParam) : roomSeed(room);
   const theme = THEME_IDS.find((t) => t === themeParam);
   const rules = loadRules();
-  const levels = new LevelAhead();
+  levelAhead ??= new LevelAhead();
+  const levels = levelAhead;
   await levels.first({ seed, theme, profile: rulesProfile(rules) });
-  startGame(container, room, params, new Match(seed, theme, rules), levels);
+  // Gone while the level was being built: the router drops what this returns, so there's nothing to stop.
+  if (!container.isConnected) return () => {};
+  return startGame(container, room, params, new Match(seed, theme, rules), levels, nav);
 }
 
-function startGame(container: HTMLElement, room: string, params: URLSearchParams, match: Match, levels: LevelAhead): void {
+function startGame(container: HTMLElement, room: string, params: URLSearchParams, match: Match, levels: LevelAhead, nav: Nav): Unmount {
+  /** Aborts when the game leaves the page; everything it set up hangs off this. */
+  const life = new AbortController();
   const glCanvas = document.createElement('canvas');
   const hudCanvas = document.createElement('canvas');
   glCanvas.tabIndex = 0;
@@ -60,6 +75,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
   // Host-rolled per-match salt (crate order); re-rolled while in the lobby so every game differs.
   match.nextSalt = (Math.random() * 4294967296) >>> 0;
   const gameContext = () => ({
+    screen: 'lobby',
     room,
     seed: match.seed,
     theme: match.level.theme.id,
@@ -78,7 +94,13 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
 
   // --- online (src/net): every browser on /r/<room> runs the same lockstep match -------
   // Match devices are global ids ('<peer>:kb1'); the session maps local devices in and out.
-  const conn = connectRoom(room, match, { primaryDevice: input.pointerDevice, params });
+  const conn = connectRoom(room, match, {
+    primaryDevice: input.pointerDevice,
+    params,
+    onKicked: () => nav.go(HOME),
+    // Back from the back/forward cache with the session closed: join the room again.
+    onRestored: () => nav.hardLoad(lobby(room)),
+  });
   const net = conn.net;
   const myDevice = () => net.globalDevice(input.pointerDevice);
   const localDev = (d: string) => (net.isLocal(d) && d.includes(':') ? d.slice(d.indexOf(':') + 1) : d);
@@ -96,7 +118,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
 
   // --- local menus (DOM overlays) and profile ---------------------------------
   const settingsMenu = new SettingsMenu(input, audio);
-  settingsMenu.leave = () => location.assign('/');
+  settingsMenu.leave = () => nav.go(HOME);
   settingsMenu.quality = {
     pinned: savedQuality,
     set: (tier) => {
@@ -176,7 +198,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
         return { device: b.device ?? input.pointerDevice, down: true };
     }
   };
-  window.addEventListener('keydown', () => audio.unlock(), { once: true });
+  window.addEventListener('keydown', () => audio.unlock(), { once: true, signal: life.signal });
 
   // --- touch controls (mobile; see docs/MOBILE.md) ---------------------------
   // Touch is its own device ('touch'); pointerDevice switches the HUD's "mine"
@@ -246,7 +268,9 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
   }
 
   const loop = { paused: false };
-  installDebug(match, renderer, loop, net);
+  installDebug(match, renderer, loop, net, life.signal);
+  // The main menu's logo, laid over the HUD's top bar wherever the HUD puts it.
+  const logo = new FloatingLogo(container);
 
   // Fixed-timestep simulation, render as fast as the display allows.
   let acc = 0;
@@ -279,6 +303,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     }
   }
   function frame(now: number) {
+    if (life.signal.aborted) return;
     advance(now, 0.25);
     buildAhead();
     if (loop.paused) {
@@ -314,16 +339,32 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     audio.handle(events, view);
     audio.update(view, now);
     renderer.render(view, now, events);
+    logo.place(renderer.logoBox());
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
   // Animation frames stop in a background tab and crawl on a busy page, and a peer's ticks are what
   // everyone else is waiting on. A worker's timer is free of both.
-  keepTicking(!!net.transport, (now) => advance(now, 1));
+  keepTicking(!!net.transport, (now) => !life.signal.aborted && advance(now, 1), life.signal);
+
+  return () => {
+    life.abort();
+    for (const m of menus) if (m.isOpen) m.close();
+    conn.close();
+    levels.want([]);
+    input.dispose();
+    inputMode.dispose();
+    touchOverlay.dispose();
+    renderer.dispose();
+    audio.dispose?.();
+    logo.remove();
+    container.remove();
+    setTelemetryContext(null);
+  };
 }
 
-/** Calls `step(now)` from a worker: always online, where a stalled tick stalls the room; offline, only while hidden. */
-function keepTicking(online: boolean, step: (now: number) => void) {
+/** Calls `step(now)` from a worker: always online, where a stalled tick stalls the room; offline, only while hidden. Ends with `signal`. */
+function keepTicking(online: boolean, step: (now: number) => void, signal: AbortSignal) {
   let worker: Worker | null = null;
   const sync = () => {
     const wanted = online || document.hidden;
@@ -341,5 +382,9 @@ function keepTicking(online: boolean, step: (now: number) => void) {
     }
   };
   sync();
-  document.addEventListener('visibilitychange', sync);
+  document.addEventListener('visibilitychange', sync, { signal });
+  signal.addEventListener('abort', () => {
+    worker?.terminate();
+    worker = null;
+  });
 }

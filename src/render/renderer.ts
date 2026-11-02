@@ -98,6 +98,7 @@ export class Renderer {
   private letters = new Lettering();
   private foreground = new ForegroundLayer();
   private wordsOn = letteringAllowed(typeof location !== 'undefined' ? location.search : '');
+  private life = new AbortController();
 
   constructor(
     private glCanvas: HTMLCanvasElement,
@@ -111,9 +112,17 @@ export class Renderer {
     glCanvas.parentElement?.append(this.viewBox);
     ({ tier: this.quality, adaptive: this.adaptive } = detectQuality());
     this.resize();
-    window.addEventListener('resize', () => this.resize());
+    const on = { signal: this.life.signal };
+    window.addEventListener('resize', () => this.resize(), on);
     // Mobile: rotation can report stale sizes on the first resize; settle once more after it.
-    window.addEventListener('orientationchange', () => setTimeout(() => this.resize(), 250));
+    window.addEventListener('orientationchange', () => setTimeout(() => !this.life.signal.aborted && this.resize(), 250), on);
+  }
+
+  /** Let go of the window and the GPU: the game is leaving this page (the canvases go with its container). */
+  dispose() {
+    this.life.abort();
+    this.comp.dispose?.();
+    this.viewBox.remove();
   }
 
   /** Which compositor and quality tier this device ended up on, for error reports. */
@@ -164,6 +173,15 @@ export class Renderer {
     this.phone.zoom = zoom;
     this.hud.uiScale = enabled ? Math.max(1, Math.min(MAX_HUD_SCALE, HUD_CSS_PER_PX / cssPerView)) : 1;
     this.hud.tapMin = enabled ? TAP_CSS / cssPerView : 0;
+  }
+
+  /** Where the HUD put the logo this frame, in CSS px of the window, or null when it shows none. */
+  logoBox(): { x: number; y: number; size: number } | null {
+    const b = this.hud.logoAt;
+    if (!b || this.hud.hidden) return null;
+    const f = this.frameBox;
+    const k = f.width / VIEW_W;
+    return { x: f.left + b.x * k, y: f.top + b.y * k, size: b.size * k };
   }
 
   /** A view-px pointer as the match reads it this phase: through this device's card zoom in pick and its camera in place. */

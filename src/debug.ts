@@ -64,7 +64,8 @@ export interface LoopControl {
 
 const DEVICES = ['kb1', 'kb2', 'pad0', 'pad1', 'pad2', 'pad3', 'pad4', 'pad5'];
 
-export function installDebug(match: Match, renderer: Renderer, loop: LoopControl, net: NetSession | null = null): SlagDebug {
+/** Installs `window.slagDebug` for this game; it goes away again when `signal` aborts (the game left the page). */
+export function installDebug(match: Match, renderer: Renderer, loop: LoopControl, net: NetSession | null, signal: AbortSignal): SlagDebug {
   let uid = 5000;
   // Online, match devices are '<peer>:kb1'; offline sessions keep raw ids.
   const dev = (d: string) => net?.globalDevice(d) ?? d;
@@ -119,7 +120,11 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
     },
     hash: () => hashMatch(match),
   };
-  (window as unknown as { slagDebug: SlagDebug }).slagDebug = api;
+  const w = window as unknown as { slagDebug?: SlagDebug };
+  w.slagDebug = api;
+  signal.addEventListener('abort', () => {
+    if (w.slagDebug === api) delete w.slagDebug;
+  });
 
   const q = new URLSearchParams(location.search);
   const force: ProfileOverride = {};
@@ -135,7 +140,7 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
     match.forceProfile = force;
     match.newLevel(match.seed);
   }
-  installDevtoolsHooks(api, q.get('debug'));
+  installDevtoolsHooks(api, q.get('debug'), signal);
   const players = Number(q.get('players') ?? 0);
   const race = q.get('race');
   if (race) {
@@ -154,7 +159,7 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
  * showing it, `?debug=load` only marks `slag:first-frame`. `next dev`, or any `?debug`, also toggles
  * the overlay with ` (backquote). The dynamic import keeps it out of what players download.
  */
-function installDevtoolsHooks(api: SlagDebug, mode: string | null) {
+function installDevtoolsHooks(api: SlagDebug, mode: string | null, signal: AbortSignal) {
   if (!mode && process.env.NODE_ENV === 'production') return;
   const { renderer } = api;
   const render = renderer.render;
@@ -168,8 +173,12 @@ function installDevtoolsHooks(api: SlagDebug, mode: string | null) {
   const devtools = () => import('./devtools/overlay').then(({ installDevtools }) => installDevtools(api));
   if (mode === 'perf') void devtools();
   if (mode === '1') void devtools().then((d) => d.show(true));
-  window.addEventListener('keydown', (e) => {
-    if (e.code !== 'Backquote' || e.repeat || e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-    void devtools().then((d) => d.show());
-  });
+  window.addEventListener(
+    'keydown',
+    (e) => {
+      if (e.code !== 'Backquote' || e.repeat || e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      void devtools().then((d) => d.show());
+    },
+    { signal },
+  );
 }

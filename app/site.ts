@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { PAGE_CHROME } from '../src/routes';
 
 /**
  * What a shared link says about SLAG: the base URL that link previews resolve against, and the
@@ -9,7 +10,7 @@ import type { Metadata } from 'next';
 export const NAME = 'SLAG';
 export const DESCRIPTION = 'A party platformer for 1–8 players. Build traps, then race through them.';
 /** The molten-dark of the menu: browser chrome, splash screens and the manifest match it. */
-export const THEME_COLOR = '#0e0806';
+export const THEME_COLOR = PAGE_CHROME.themeColor;
 
 /**
  * Absolute origin for og:image, og:url and the oEmbed link. Crawlers need absolute URLs, and the

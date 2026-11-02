@@ -17,6 +17,8 @@ export type TelemetryData = Record<string, string | number | boolean | undefined
 
 /** What the game is doing right now; attached to every report as searchable tags. */
 export interface TelemetryContext {
+  /** Which screen is up (src/routes.ts). */
+  screen?: string;
   room?: string;
   seed?: number;
   theme?: string;

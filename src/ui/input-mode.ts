@@ -12,12 +12,19 @@ export class InputModeTracker {
   /** Whether the keyboard/mouse has been used at all this session. */
   keyboardSeen = false;
   private padSig = new Map<number, string>();
+  private life = new AbortController();
 
   constructor(target: Window = window) {
-    target.addEventListener('keydown', () => this.set('keyboard'), true);
-    target.addEventListener('pointerdown', (e) => this.set(e.pointerType === 'touch' || e.pointerType === 'pen' ? 'touch' : 'keyboard'), true);
-    target.addEventListener('pointermove', (e) => e.pointerType === 'mouse' && (e.movementX || e.movementY) && this.set('keyboard'), true);
+    const on = { capture: true, signal: this.life.signal };
+    target.addEventListener('keydown', () => this.set('keyboard'), on);
+    target.addEventListener('pointerdown', (e) => this.set(e.pointerType === 'touch' || e.pointerType === 'pen' ? 'touch' : 'keyboard'), on);
+    target.addEventListener('pointermove', (e) => e.pointerType === 'mouse' && (e.movementX || e.movementY) && this.set('keyboard'), on);
     if (typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches && !matchMedia('(pointer: fine)').matches) this.mode = 'touch';
+  }
+
+  /** Stop listening. */
+  dispose() {
+    this.life.abort();
   }
 
   private set(m: InputMode) {

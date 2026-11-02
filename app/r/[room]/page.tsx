@@ -1,22 +1,16 @@
 import type { Metadata, Viewport } from 'next';
 import { notFound } from 'next/navigation';
 import { roomFromPath } from '../../../src/game/room';
+import { GAME_CHROME, lobby, routeTitle } from '../../../src/routes';
+import { lobbyLoadingHTML } from '../../../src/ui/screens/markup';
+import Game from '../../Game';
 import { DESCRIPTION, inviteTitle, NAME, oembedAlternate } from '../../site';
-import GameClient from './GameClient';
 
 /**
- * Game route only (mobile): no pinch/double-tap zoom, and draw edge to edge
- * under the notch (the renderer and touch controls inset themselves with
- * env(safe-area-inset-*)). Scoped here so /codex stays zoomable.
+ * The game's viewport (mobile): no pinch/double-tap zoom, edge to edge under the notch. The game sets
+ * the same on a soft navigation into a lobby (src/main.ts), so a fresh load and a click agree.
  */
-export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-  viewportFit: 'cover',
-  themeColor: '#07060b',
-};
+export const viewport: Viewport = GAME_CHROME;
 
 type Props = { params: Promise<{ room: string }> };
 
@@ -34,7 +28,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   const room = await roomOf(props);
   const path = `/r/${room}`;
   return {
-    title: `${NAME} · Lobby ${room}`,
+    title: routeTitle(lobby(room)),
     description: DESCRIPTION,
     robots: { index: false, follow: false },
     alternates: { types: oembedAlternate(path) },
@@ -42,8 +36,8 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   };
 }
 
-/** Server-rendered lobby route; the game itself runs entirely client-side. */
+/** A lobby: an invalid code is a 404 here; a valid one paints the game's dark until the game is up. */
 export default async function RoomPage(props: Props) {
-  const room = await roomOf(props);
-  return <GameClient room={room} />;
+  await roomOf(props);
+  return <Game html={lobbyLoadingHTML()} />;
 }

@@ -53,67 +53,92 @@ export class InputManager {
   private ui: UiPress[] = [];
   /** Touch screen → the single 'touch' device (src/input/touch.ts). Touch pointers never reach the mouse path below. */
   readonly touch = new TouchInput();
+  /** Ends every listener this attached; see dispose(). */
+  private life = new AbortController();
 
   constructor(target: Window = window) {
+    const on = { signal: this.life.signal };
     this.settings = loadSettings();
     this.rebuildKeySet();
     // --- touch wiring (mobile) ---
     this.touch.toView = (cx, cy) => this.toView(cx, cy);
     this.touch.onUiTap = (x, y) => this.touchUiTap(x, y);
-    this.touch.attach(target, (e) => this.captured || !!(e.target as Element | null)?.closest?.('[data-slag-ui],.slag-ov'));
-    target.addEventListener('keydown', (e) => {
-      if (e.code === 'Escape') {
-        this.onEscape?.();
-        return;
-      }
-      if (this.captured) return;
-      if (this.gameKeys.has(e.code)) {
-        e.preventDefault();
-        this.touch.setActive(false); // keyboard play hides the touch controls
-      }
-      if (e.repeat) return;
-      this.held.add(e.code);
-      this.latched.add(e.code);
-    });
-    target.addEventListener('keyup', (e) => {
-      this.held.delete(e.code);
-    });
-    target.addEventListener('blur', () => this.held.clear());
-    target.addEventListener('pointermove', (e) => {
-      if (e.pointerType === 'touch') return; // handled by this.touch
-      if (e.pointerType === 'mouse' && (e.movementX || e.movementY)) this.touch.setActive(false);
-      const p = this.toView(e.clientX, e.clientY);
-      if (p) {
-        this.pointer = p;
-        this.pointerDirty = true;
-      }
-    });
-    target.addEventListener('pointerdown', (e) => {
-      if (e.pointerType === 'touch') return; // handled by this.touch
-      const p = this.toView(e.clientX, e.clientY);
-      if (!p) return;
-      this.pointer = p;
-      this.pointerDirty = true;
-      if (e.button === 0) {
-        const hit = this.hitTest?.(p.x, p.y);
-        if (hit === true) return;
-        if (hit) {
-          this.ui.push(hit);
+    this.touch.attach(target, (e) => this.captured || !!(e.target as Element | null)?.closest?.('[data-slag-ui],.slag-ov'), this.life.signal);
+    target.addEventListener(
+      'keydown',
+      (e) => {
+        if (e.code === 'Escape') {
+          this.onEscape?.();
           return;
         }
-      }
-      if (this.captured) return;
-      if (e.button === 2) this.rclick = this.mouseAlts();
-      else if (e.button === 0 && this.clickConfirms()) this.click = true;
-    });
-    target.addEventListener('contextmenu', (e) => e.preventDefault());
+        if (this.captured) return;
+        if (this.gameKeys.has(e.code)) {
+          e.preventDefault();
+          this.touch.setActive(false); // keyboard play hides the touch controls
+        }
+        if (e.repeat) return;
+        this.held.add(e.code);
+        this.latched.add(e.code);
+      },
+      on,
+    );
+    target.addEventListener(
+      'keyup',
+      (e) => {
+        this.held.delete(e.code);
+      },
+      on,
+    );
+    target.addEventListener('blur', () => this.held.clear(), on);
+    target.addEventListener(
+      'pointermove',
+      (e) => {
+        if (e.pointerType === 'touch') return; // handled by this.touch
+        if (e.pointerType === 'mouse' && (e.movementX || e.movementY)) this.touch.setActive(false);
+        const p = this.toView(e.clientX, e.clientY);
+        if (p) {
+          this.pointer = p;
+          this.pointerDirty = true;
+        }
+      },
+      on,
+    );
+    target.addEventListener(
+      'pointerdown',
+      (e) => {
+        if (e.pointerType === 'touch') return; // handled by this.touch
+        const p = this.toView(e.clientX, e.clientY);
+        if (!p) return;
+        this.pointer = p;
+        this.pointerDirty = true;
+        if (e.button === 0) {
+          const hit = this.hitTest?.(p.x, p.y);
+          if (hit === true) return;
+          if (hit) {
+            this.ui.push(hit);
+            return;
+          }
+        }
+        if (this.captured) return;
+        if (e.button === 2) this.rclick = this.mouseAlts();
+        else if (e.button === 0 && this.clickConfirms()) this.click = true;
+      },
+      on,
+    );
+    target.addEventListener('contextmenu', (e) => e.preventDefault(), on);
     target.addEventListener(
       'wheel',
       (e) => {
         if (!this.captured && Math.abs(e.deltaY) > 0) this.rclick = this.mouseAlts();
       },
-      { passive: true },
+      { passive: true, signal: this.life.signal },
     );
+  }
+
+  /** Stop listening: the game this belonged to is gone. */
+  dispose() {
+    this.life.abort();
+    this.held.clear();
   }
 
   /** Persist and apply new settings. */

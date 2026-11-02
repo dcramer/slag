@@ -444,25 +444,42 @@ export class TouchInput {
    * Listen for touch pointers on `target`. Mouse and pen pointers are left to
    * InputManager. `skip(e)` filters touches meant for DOM UI (menus, buttons).
    */
-  attach(target: Window, skip: (e: PointerEvent) => boolean) {
+  attach(target: Window, skip: (e: PointerEvent) => boolean, signal?: AbortSignal) {
     const isTouch = (e: PointerEvent) => e.pointerType === 'touch';
-    target.addEventListener('pointerdown', (e) => {
-      if (!isTouch(e)) return;
-      if (skip(e)) {
-        this.setActive(true);
-        return;
-      }
-      this.down(e.pointerId, e.clientX, e.clientY);
-    });
-    target.addEventListener('pointermove', (e) => {
-      if (isTouch(e)) this.move(e.pointerId, e.clientX, e.clientY);
-    });
-    target.addEventListener('pointerup', (e) => {
-      if (isTouch(e)) this.up(e.pointerId, e.clientX, e.clientY);
-    });
-    target.addEventListener('pointercancel', (e) => {
-      if (isTouch(e)) this.cancel(e.pointerId);
-    });
+    const on = { signal };
+    target.addEventListener(
+      'pointerdown',
+      (e) => {
+        if (!isTouch(e)) return;
+        if (skip(e)) {
+          this.setActive(true);
+          return;
+        }
+        this.down(e.pointerId, e.clientX, e.clientY);
+      },
+      on,
+    );
+    target.addEventListener(
+      'pointermove',
+      (e) => {
+        if (isTouch(e)) this.move(e.pointerId, e.clientX, e.clientY);
+      },
+      on,
+    );
+    target.addEventListener(
+      'pointerup',
+      (e) => {
+        if (isTouch(e)) this.up(e.pointerId, e.clientX, e.clientY);
+      },
+      on,
+    );
+    target.addEventListener(
+      'pointercancel',
+      (e) => {
+        if (isTouch(e)) this.cancel(e.pointerId);
+      },
+      on,
+    );
   }
 }
 

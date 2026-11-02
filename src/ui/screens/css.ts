@@ -1,7 +1,18 @@
-/*
- * SLAG page styles. Tokens mirror src/ui/style.ts (PAL / FONT); the rules
- * behind them live in docs/ART.md. Keep the two in sync.
+/**
+ * Styles for the DOM screens (main menu, 404, error) and the logo, as one
+ * string so a host can inline it in its HTML for a styled first paint. The
+ * shell (src/main.ts) adds it to the page if the host didn't. Tokens mirror
+ * PAL and FONT in ../style.ts; the rules behind them are in docs/ART.md.
+ * Pure data: app/ server code imports it.
  */
+
+/** The two faces (docs/ART.md → Type): Lilita One for display, Barlow for UI. Hosts link it; the shell adds it if they didn't. */
+export const FONTS_HREF = 'https://fonts.googleapis.com/css2?family=Barlow:wght@500;600;700;800&family=Lilita+One&display=swap';
+
+/** The id of the `<style>` element that carries SCREEN_CSS. */
+export const SCREEN_STYLE_ID = 'slag-screens';
+
+export const SCREEN_CSS = `
 :root {
   --ink: #120b08;
   --soot: #1a1210;
@@ -509,3 +520,29 @@ body {
   border-radius: 6px;
   box-shadow: 0 4px 0 var(--ink);
 }
+
+.btn-link {
+  cursor: pointer;
+}
+
+.btn-link:focus-visible {
+  outline: 3px solid var(--amber);
+  outline-offset: 3px;
+}
+
+/* ------------------------------------------------------------ the logo over the lobby HUD */
+
+/* The home logo at its full size, scaled into the HUD's slot, so the two can't drift apart. */
+.slag-logo-float {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 1;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+}
+
+.slag-logo-float .logo {
+  font-size: 150px;
+}
+`;

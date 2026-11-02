@@ -67,6 +67,7 @@ export class WebAudioSystem implements AudioSystem {
   private emitters: Emitter[] = [];
   private transients: PropCue[] = [];
   private previewAt = 0;
+  private life = new AbortController();
 
   constructor(opts: AudioOptions = {}) {
     this.storage = opts.storage === undefined ? defaultStorage() : opts.storage;
@@ -104,12 +105,25 @@ export class WebAudioSystem implements AudioSystem {
   /** Suspend while the tab is hidden: rAF stops, so loops would otherwise drone on. */
   private watchVisibility() {
     if (typeof document === 'undefined') return;
-    document.addEventListener('visibilitychange', () => {
-      const c = this.ctx as AudioContext | null;
-      if (!c || typeof c.suspend !== 'function') return;
-      if (this.hidden()) c.suspend().catch(() => {});
-      else c.resume().catch(() => {});
-    });
+    document.addEventListener(
+      'visibilitychange',
+      () => {
+        const c = this.ctx as AudioContext | null;
+        if (!c || typeof c.suspend !== 'function') return;
+        if (this.hidden()) c.suspend().catch(() => {});
+        else c.resume().catch(() => {});
+      },
+      { signal: this.life.signal },
+    );
+  }
+
+  dispose(): void {
+    this.life.abort();
+    const c = this.ctx as AudioContext | null;
+    this.ctx = null;
+    this.engine = null;
+    this.failed = true; // a disposed system stays silent
+    if (c && typeof c.close === 'function') c.close().catch(() => {});
   }
 
   setVolumes(v: Partial<Volumes>): void {
