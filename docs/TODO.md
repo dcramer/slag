@@ -37,14 +37,6 @@ Phone support (follow camera, pinch, scaled HUD, settings sheet) is on `main` bu
 - **Crate cards:** the Dragon Vent draws as a tiny dot when its flame is off in that frame, and its sizes look alike. Medium and large ropes look the same too, because the preview caps at 4 links.
 - **Impact words** can hide a hazard for most of a second; `?lettering=0` turns them off. Decide whether they stay. Mine is the weakest theme in cel (band arcs on rock walls), and big plain walls are a taste call. Try a real phone.
 
-## 9. Weather (new)
-A per-level random variable:
-- wind gusts that push runners and projectiles (reuse `src/sim/wind.ts`);
-- mist that limits sight distance;
-- rain or snow that changes footing.
-
-It's always telegraphed, weighted per theme, and must be deterministic from the level seed.
-
 ## 10. Housekeeping
 - Enable GitHub Actions and make `ci.yml` a required check. This must be done on GitHub by the repo owner.
 - Delete the old remote branch `claude/scaffold-procgen-platformer`, and the `wip/*` branches once they're merged.
