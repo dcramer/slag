@@ -1,6 +1,6 @@
 import { css, type HSL, hsl3, mixHsl, shift } from '../core/color';
 import { hash2, Rng } from '../core/rng';
-import type { SkyLayer, Theme } from '../gen/theme';
+import type { LiquidKind, SkyLayer, Theme } from '../gen/theme';
 import { VIEW_H, VIEW_W } from '../sim/constants';
 import type { Camera } from './camera';
 import type { ViewFrame } from './frame';
@@ -44,6 +44,11 @@ interface Mote {
   life: number;
   seed: number;
 }
+
+/** World px under a glowing liquid's bottom edge that its heat reaches. */
+const HOT_DEPTH = 70;
+/** How much of what's under the surface shows through each liquid. */
+const SEEN_THROUGH: Record<LiquidKind, number> = { water: 0.5, sea: 0.5, swamp: 0.35, tar: 0.35, lava: 0.3, slag: 0.3, acid: 0.4, void: 0.4, street: 0.5 };
 
 export class Backdrop {
   private baked: Baked | null = null;
@@ -234,8 +239,18 @@ export class Backdrop {
    * of terrain). `ww`×`wh` is the world size; only the visible stretch (`view`)
    * is drawn. The pool isn't the world's: it carries on `margin` px past either
    * edge with the surroundings, and deepens below the world to the window's edge.
+   * `sunken` paints what's under the surface: it shows through the liquid, so
+   * the pool stays one surface across the window and all of that is plainly under it.
    */
-  drawLiquid(rc: RC, th: Theme, ww: number, wh: number, view: { x: number; y: number; w: number; h: number }, margin = 0) {
+  drawLiquid(
+    rc: RC,
+    th: Theme,
+    ww: number,
+    wh: number,
+    view: { x: number; y: number; w: number; h: number },
+    margin = 0,
+    sunken?: (c: CanvasRenderingContext2D) => void,
+  ) {
     const L = th.liquid;
     const s = rc.s;
     const g = rc.g;
@@ -274,8 +289,21 @@ export class Backdrop {
     const gr = s.createLinearGradient(0, y0 - 3, 0, wh);
     gr.addColorStop(0, css(L.color, kind === 'tar' ? 8 : 15));
     gr.addColorStop(1, css(L.color, -20));
+    // A liquid's heat stays near its surface: glow prints as opaque color, and a whole window of it hides everything under it.
+    const hotEnd = Math.min(below, wh + HOT_DEPTH);
+    const hot = g.createLinearGradient(0, y0 - 3, 0, hotEnd);
+    hot.addColorStop(0, css(L.color, 15));
+    hot.addColorStop((wh - y0 + 3) / (hotEnd - y0 + 3), css(L.color, -20));
+    hot.addColorStop(1, css(L.color, -20, 0));
     s.fillStyle = gr;
     s.fill(path);
+    if (sunken) {
+      s.save();
+      s.clip(path);
+      s.globalAlpha = SEEN_THROUGH[kind];
+      sunken(s);
+      s.restore();
+    }
     if (below > wh + 20) {
       // Below the world the pool falls away into its own depth, lit from within if it glows.
       const dp = s.createLinearGradient(0, wh, 0, below);
@@ -283,12 +311,13 @@ export class Backdrop {
       dp.addColorStop(1, css(L.color, -52, 0.95));
       s.fillStyle = dp;
       s.fillRect(xa, wh, xb - xa + 6, below - wh);
-      if (L.emissive) {
-        const hg = g.createLinearGradient(0, wh - 10, 0, below);
+      // A street is lit by its cars, not from below.
+      if (L.emissive && kind !== 'street') {
+        const hg = g.createLinearGradient(0, wh - 10, 0, hotEnd);
         hg.addColorStop(0, css(L.glow, 0, 0.5));
-        hg.addColorStop(1, css(L.glow, -15, 0.04));
+        hg.addColorStop(1, css(L.glow, -15, 0));
         g.fillStyle = hg;
-        g.fillRect(xa, wh - 10, xb - xa + 6, below - wh + 10);
+        g.fillRect(xa, wh - 10, xb - xa + 6, hotEnd - wh + 10);
       }
     }
     switch (kind) {
@@ -297,7 +326,7 @@ export class Backdrop {
       case 'acid':
       case 'void': {
         g.globalAlpha = kind === 'lava' ? 0.9 : 0.75;
-        g.fillStyle = gr;
+        g.fillStyle = hot;
         g.fill(path);
         g.globalAlpha = 1;
         // Crust patches drifting on the surface.
@@ -390,6 +419,15 @@ export class Backdrop {
         }
         break;
       }
+    }
+    if (sunken && L.emissive) {
+      // What's under the surface dims the heat in front of it, or the glow prints right over it.
+      g.save();
+      g.clip(path);
+      g.globalCompositeOperation = 'destination-out';
+      g.globalAlpha = Math.min(1, SEEN_THROUGH[kind] * 2);
+      sunken(g);
+      g.restore();
     }
     // Bright surface line.
     if (kind !== 'street') {

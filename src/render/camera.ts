@@ -1,5 +1,5 @@
 import { clamp } from '../core/geom';
-import { restY, type ViewXform } from '../game/view';
+import type { ViewXform } from '../game/view';
 import { VIEW_H, VIEW_W } from '../sim/constants';
 import { VIEW_FRAME, type ViewFrame } from './frame';
 
@@ -16,9 +16,8 @@ const ZOOM_IN_RATE = 1.2;
  * the middle of the VIEW_W×VIEW_H play view, at `zoom` view px per world px.
  * Framing decisions (`focus`, `wide`) are made against the play view, which
  * never changes shape, while what's visible is the whole frame around it.
- * On an axis where the frame is bigger than the world, the world rests in the
- * play view (centred across, standing on the ground) and the renderer shows
- * what lies beyond it.
+ * On an axis where the frame is bigger than the world, the world rests centred
+ * in the play view and the renderer shows what lies beyond it, either way.
  *
  * `frameAll` is the race rule: every live runner is on screen, always. Zoom
  * and position ease toward a nice framing, and after easing a hard step pulls
@@ -92,7 +91,7 @@ export class Camera {
   wide() {
     this.tz = clamp(Math.min(VIEW_W / this.ww, VIEW_H / this.wh), this.minZoom, 1);
     this.tx = this.ww / 2;
-    this.ty = restY(this.wh, this.tz);
+    this.ty = this.wh / 2;
   }
 
   /** Jump straight to a deterministic mapping (pick/place overview): no smoothing, so ghosts sit under cursors. */
@@ -102,17 +101,24 @@ export class Camera {
     this.zoom = this.tz = v.zoom;
   }
 
-  /** Keep the frame's `before`/`after` px either side of the view centre inside `size` world px, or rest at `rest` if they don't fit. */
-  private clampAxis(v: number, before: number, after: number, size: number, rest: number): number {
-    return before + after >= size ? rest : clamp(v, before, size - after);
+  /**
+   * Keep the frame's `before`/`after` px either side of the view centre inside
+   * `size` world px. If they don't fit, the world rests centred, as far as that
+   * leaves neither end of it past the frame: the range closes to a point where
+   * the world starts to fit, so zooming through there can't jump.
+   */
+  private clampAxis(v: number, before: number, after: number, size: number): number {
+    const lo = before;
+    const hi = size - after;
+    return lo <= hi ? clamp(v, lo, hi) : clamp(size / 2, hi, lo);
   }
 
   private clampX(v: number): number {
-    return this.clampAxis(v, (VIEW_W / 2 - this.frame.x0) / this.zoom, (this.frame.x1 - VIEW_W / 2) / this.zoom, this.ww, this.ww / 2);
+    return this.clampAxis(v, (VIEW_W / 2 - this.frame.x0) / this.zoom, (this.frame.x1 - VIEW_W / 2) / this.zoom, this.ww);
   }
 
   private clampY(v: number): number {
-    return this.clampAxis(v, (VIEW_H / 2 - this.frame.y0) / this.zoom, (this.frame.y1 - VIEW_H / 2) / this.zoom, this.wh, restY(this.wh, this.zoom));
+    return this.clampAxis(v, (VIEW_H / 2 - this.frame.y0) / this.zoom, (this.frame.y1 - VIEW_H / 2) / this.zoom, this.wh);
   }
 
   update(dt: number, smooth = true) {
