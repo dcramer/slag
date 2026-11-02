@@ -25,15 +25,11 @@ Phone support (follow camera, pinch, scaled HUD, settings sheet) is on `main` bu
 
 ## 8. Render polish
 - **Impact words** can hide a hazard for most of a second; `?lettering=0` turns them off. Decide whether they stay. Big plain walls are a taste call. Try a real phone.
-- In pits the liquid surface sits 9 px above the kill line, so the waterline steps where a column meets the pool.
 
 ## 10. Housekeeping
 - Enable GitHub Actions and make `ci.yml` a required check. This must be done on GitHub by the repo owner.
 - Delete merged and superseded branches: remote `claude/scaffold-procgen-platformer` and all `wip/*` (each superseded by work on `main`), plus local `worktree-agent-*` and merge branches. Waiting on the owner's OK.
 - Consider stricter TS flags: `noUncheckedIndexedAccess` gives about 600 errors, so it's a project of its own.
-
-## 11. Screen follow-ups
-Every screen now runs from `src/` through one router (`src/main.ts`, `src/router.ts`). The codex, 404 and error screens behave like game screens but haven't been restyled up to the home look yet.
 
 ## 13. Playtest and tune the new parts
 Nothing from the content, held-items or grab-props work has been played by hand, so the tuning is test-level only: magnet drift, bumper power, slow and freeze durations, item strength. Gamepad `use` (Y and LT) hasn't been tried on a real pad, and item sounds borrow existing cues and haven't been heard. Trackers can no longer see runners through terrain, which changes how lobbed trackers feel.
