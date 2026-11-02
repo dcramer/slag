@@ -1,16 +1,23 @@
-import { css, type HSL, hsl3, mixHsl, shift } from '../core/color';
+import { css, type HSL, hsl3, mixHsl, shift, toRgb } from '../core/color';
 import { hash2, Rng } from '../core/rng';
 import type { LiquidKind, SkyLayer, Theme } from '../gen/theme';
 import { VIEW_H, VIEW_W } from '../sim/constants';
 import type { Camera } from './camera';
 import type { ViewFrame } from './frame';
-import { circle, ellipse, flame, flutter, glowDot, light, type RC, scratch } from './kit';
-import { type Feature, SKYLINES } from './skylines';
+import { blob, line, type P, sn } from './ink';
+import { circle, ellipse, flame, flutter, glowDot, light, type RC } from './kit';
+import { along, backward, fillPts, inkOf, penPath } from './skyline-ink';
+import { type Feature, ridgeOf, SKYLINES } from './skylines';
 
 /**
- * Sky, horizon glow, celestial body, god rays, clouds, parallax skylines
+ * Sky, horizon, celestial body, light shafts, clouds, parallax skylines
  * (baked once per theme, with emissive windows/lava and a handful of animated
  * features), the liquid pool at the bottom, and ambient particles.
+ *
+ * The backdrop is inked like the play layer, only quieter (docs/ART.md, World art): the sky is flat
+ * bands cut along a hand's line, the sun a flat disc in hard rings, clouds cut cel shapes with a light
+ * pen along their tops, and every skyline a flat silhouette with its pen getting lighter with distance.
+ * Nothing back here is soft: depth comes from haze, line weight and fewer marks, never blur.
  *
  * Everything fills the window, not just the play view: layers are baked to
  * the window's shape (so they never stretch) and rebaked if it changes.
@@ -72,6 +79,10 @@ interface BakedLayer {
 
 interface Baked {
   key: string;
+  /** Sky bands, horizon and light shafts, covering the window and a margin round it. */
+  sky: { c: Surface; x: number; y: number; w: number; h: number };
+  /** Sun, moon or planet, centred; `e` is what of it glows. */
+  orb: { c: Surface; e: Surface | null; half: number } | null;
   layers: BakedLayer[];
   clouds: { c: Surface; x: number; y: number; speed: number; w: number; h: number; depth: number }[];
   stars: { x: number; y: number; r: number; tw: number }[];
@@ -104,11 +115,13 @@ export class Backdrop {
     // Layers run on down past the play view on a tall window, ground and all.
     const H = Math.max(VIEW_H, f.y1);
     this.pool.reset();
-    const layers = th.layers.map((L, i) => bakeLayer(this.pool, L, th, W, H, kb, i === 0 ? 1.1 : i === th.layers.length - 1 ? 0 : 0.5));
+    const sky = bakeSky(this.pool, th, f, kb);
+    const orb = bakeOrb(this.pool, th, kb);
+    const layers = th.layers.map((L) => bakeLayer(this.pool, L, th, W, H, kb));
     const clouds = Array.from({ length: th.clouds }, () => {
       const wide = th.cloudStyle !== 'puffy';
       const w = wide ? rng.range(160, 320) : rng.range(70, 170);
-      const h = w * (wide ? rng.range(0.12, 0.22) : rng.range(0.32, 0.45));
+      const h = w * (wide ? rng.range(0.12, 0.22) : rng.range(0.42, 0.56));
       return {
         c: bakeCloud(this.pool, rng, w, h, th, kb),
         x: rng.range(f.x0 - 100, f.x1),
@@ -127,7 +140,7 @@ export class Backdrop {
       r: rng.range(0.4, 1.4),
       tw: rng.range(0.5, 3),
     }));
-    this.baked = { key, layers, clouds, stars };
+    this.baked = { key, sky, orb, layers, clouds, stars };
     this.motes = [];
   }
 
@@ -151,23 +164,8 @@ export class Backdrop {
     const px = (depth: number) => -(cam.x - cam.ww / 2) * depth * kx;
     const py = (depth: number) => -(cam.y - refY) * depth * 0.6 * ky;
 
-    const sky = s.createLinearGradient(0, f.y0, 0, f.y1);
-    sky.addColorStop(0, css(th.skyTop));
-    sky.addColorStop(0.55, css(th.skyMid));
-    sky.addColorStop(1, css(th.skyBottom));
-    s.fillStyle = sky;
-    s.fillRect(f.x0 - 40, f.y0 - 40, f.w + 80, f.h + 80);
-
-    // Horizon glow band.
-    if (th.horizon.strength > 0) {
-      const hy = th.horizon.y * VIEW_H + py(0.05);
-      const hz = s.createLinearGradient(0, hy - VIEW_H * 0.35, 0, hy + VIEW_H * 0.2);
-      hz.addColorStop(0, css(th.horizon.color, 0, 0));
-      hz.addColorStop(0.65, css(th.horizon.color, 0, th.horizon.strength * 0.55));
-      hz.addColorStop(1, css(th.horizon.color, 0, th.horizon.strength * 0.25));
-      s.fillStyle = hz;
-      s.fillRect(f.x0 - 40, hy - VIEW_H * 0.35, f.w + 80, VIEW_H * 0.55);
-    }
+    const sk = b.sky;
+    s.drawImage(sk.c.c, 0, 0, sk.c.w, sk.c.h, sk.x, sk.y, sk.w, sk.h);
 
     for (const st of b.stars) {
       const a = 0.4 + 0.6 * Math.abs(Math.sin(t * st.tw + st.x));
@@ -175,8 +173,7 @@ export class Backdrop {
       rc.g.fillRect(st.x + px(0.02), st.y + py(0.02), st.r, st.r);
     }
 
-    this.drawCelestial(rc, th, px(0.04), py(0.04));
-    if (th.rays) this.drawRays(rc, th, px(0.04), py(0.04));
+    this.drawCelestial(rc, th, b.orb, px(0.04), py(0.04));
 
     for (const cl of b.clouds) {
       const span = f.w + cl.w * 2;
@@ -199,82 +196,15 @@ export class Backdrop {
     });
   }
 
-  private drawCelestial(rc: RC, th: Theme, ox: number, oy: number) {
+  private drawCelestial(rc: RC, th: Theme, orb: Baked['orb'], ox: number, oy: number) {
     const c = th.celestial;
-    if (c.kind === 'none') return;
+    if (c.kind === 'none' || !orb) return;
     const x = c.x * VIEW_W + ox;
     const y = c.y * VIEW_H + oy;
-    const s = rc.s;
-    const g = rc.g;
-    switch (c.kind) {
-      case 'sun':
-        glowDot(g, x, y, c.r * (th.mood === 'day' ? 4.5 : 7), c.glow, th.mood === 'day' ? 0.22 : 0.35, 0.08);
-        glowDot(g, x, y, c.r * 2, c.glow, 0.7, 0.4);
-        g.fillStyle = css(c.color, 10);
-        circle(g, x, y, c.r);
-        break;
-      case 'moon': {
-        glowDot(g, x, y, c.r * 5, c.glow, 0.18, 0.1);
-        s.fillStyle = css(c.color);
-        circle(s, x, y, c.r);
-        g.fillStyle = css(c.color, -10, 0.55);
-        circle(g, x, y, c.r);
-        const rng = new Rng(th.seed ^ 0x300);
-        s.fillStyle = css(c.color, -18, 0.6);
-        for (let i = 0; i < 6; i++) {
-          const a = rng.range(0, 6.28);
-          const d = rng.range(0, c.r * 0.7);
-          circle(s, x + Math.cos(a) * d, y + Math.sin(a) * d, rng.range(c.r * 0.08, c.r * 0.22));
-        }
-        s.fillStyle = 'rgba(0,0,10,0.35)';
-        s.beginPath();
-        s.arc(x, y, c.r, -Math.PI / 2, Math.PI / 2);
-        s.ellipse(x, y, c.r * 0.45, c.r, 0, Math.PI / 2, -Math.PI / 2, true);
-        s.fill();
-        break;
-      }
-      case 'planet': {
-        glowDot(g, x, y, c.r * 2.4, c.glow, 0.2, 0.3);
-        s.fillStyle = css(c.color);
-        circle(s, x, y, c.r);
-        break;
-      }
-      case 'eclipse':
-        glowDot(g, x, y, c.r * 6, c.glow, 0.35, 0.15);
-        glowDot(g, x, y, c.r * 1.6, c.glow, 0.95, 0.6);
-        g.fillStyle = '#000';
-        g.globalCompositeOperation = 'destination-out';
-        circle(g, x, y, c.r * 0.97);
-        g.globalCompositeOperation = 'lighter';
-        s.fillStyle = '#050508';
-        circle(s, x, y, c.r);
-        break;
-    }
+    const d = orb.half * 2;
+    rc.s.drawImage(orb.c.c, 0, 0, orb.c.w, orb.c.h, x - orb.half, y - orb.half, d, d);
+    if (orb.e) rc.g.drawImage(orb.e.c, 0, 0, orb.e.w, orb.e.h, x - orb.half, y - orb.half, d, d);
     light(rc, x, y, 260, c.glow, c.kind === 'sun' ? 0.45 : 0.25);
-  }
-
-  private drawRays(rc: RC, th: Theme, ox: number, oy: number) {
-    const c = th.celestial;
-    const none = c.kind === 'none';
-    const x = none ? VIEW_W * (0.3 + (th.seed % 40) / 100) : c.x * VIEW_W + ox;
-    const y = none ? -40 : c.y * VIEW_H + oy;
-    const col = none ? th.lamp : c.glow;
-    const g = rc.g;
-    for (let i = 0; i < 7; i++) {
-      const a = Math.PI / 2 + (i - 3) * (none ? 0.12 : 0.24) + Math.sin(rc.t * 0.13 + i * 1.7) * 0.06 + (x - VIEW_W / 2) * -0.0009;
-      const len = VIEW_H * 1.6;
-      const w = 0.04 + hash2(i, 3, th.seed) * 0.05;
-      const al = (0.04 + 0.03 * Math.sin(rc.t * 0.4 + i * 2.1)) * (th.night ? 0.6 : 0.7);
-      const gr = g.createLinearGradient(x, y, x + Math.cos(a) * len, y + Math.sin(a) * len);
-      gr.addColorStop(0, css(col, 10, al));
-      gr.addColorStop(1, css(col, 0, 0));
-      g.fillStyle = gr;
-      g.beginPath();
-      g.moveTo(x, y);
-      g.lineTo(x + Math.cos(a - w) * len, y + Math.sin(a - w) * len);
-      g.lineTo(x + Math.cos(a + w) * len, y + Math.sin(a + w) * len);
-      g.fill();
-    }
   }
 
   /**
@@ -576,61 +506,77 @@ function drawFeature(rc: RC, f: Feature, ox: number, oy: number, haze: number, t
   switch (f.kind) {
     case 'smoke':
     case 'steam': {
-      const n = f.kind === 'smoke' ? 7 : 4;
+      // Flat puffs in two tones, the lit one cut up-left: smoke has a shape here, not a falloff.
+      const smoke = f.kind === 'smoke';
+      const n = smoke ? 7 : 4;
       for (let i = 0; i < n; i++) {
-        const p = (t * (f.kind === 'smoke' ? 0.12 : 0.3) + i / n) % 1;
-        const r = (2 + p * 10) * f.s * (f.kind === 'smoke' ? 1.6 : 0.8);
-        s.fillStyle = css(f.color, -p * 10, (f.kind === 'smoke' ? 0.42 : 0.28) * (1 - p) * Math.min(1, p * 8));
-        circle(s, x + p * 26 * f.s + Math.sin(p * 4 + f.phase) * 3, y - p * 60 * f.s - 2, r);
+        const p = (t * (smoke ? 0.12 : 0.3) + i / n) % 1;
+        const r = (2 + p * 10) * f.s * (smoke ? 1.6 : 0.8);
+        const a = (smoke ? 0.5 : 0.34) * (1 - p) * Math.min(1, p * 8) * fade;
+        const px = x + p * 26 * f.s + Math.sin(p * 4 + f.phase) * 3;
+        const py = y - p * 60 * f.s - 2;
+        s.fillStyle = css(f.color, -8 - p * 10, a);
+        circle(s, px, py, r);
+        s.fillStyle = css(f.color, 4 - p * 10, a);
+        circle(s, px - r * 0.18, py - r * 0.22, r * 0.72);
       }
       break;
     }
     case 'windmill': {
+      // Four lattice sails on inked spars, quiet as the layer they stand in.
       const a0 = t * 0.9;
-      s.strokeStyle = css(f.color, -20);
-      s.fillStyle = css(f.color, 0, 0.9);
-      s.lineWidth = 0.9;
+      const ink = css(mixHsl(shift(f.color, -52), th.fog, haze * 0.8));
+      const sail = css(mixHsl(f.color, th.fog, haze * 0.5));
+      const bar = css(mixHsl(shift(f.color, -18), th.fog, haze * 0.6));
+      const pen = 0.75 * (1 - haze * 0.4);
       for (let i = 0; i < 4; i++) {
         const a = a0 + (i * Math.PI) / 2;
-        const ex = x + Math.cos(a) * f.s;
-        const ey = y + Math.sin(a) * f.s;
+        const ca = Math.cos(a);
+        const sa = Math.sin(a);
+        const ex = x + ca * f.s;
+        const ey = y + sa * f.s;
+        const ix = x + ca * f.s * 0.24;
+        const iy = y + sa * f.s * 0.24;
+        const nx = -sa * f.s * 0.2;
+        const ny = ca * f.s * 0.2;
+        s.fillStyle = sail;
         s.beginPath();
-        s.moveTo(x, y);
-        s.lineTo(ex, ey);
-        s.stroke();
-        const nx = -Math.sin(a) * 2.6;
-        const ny = Math.cos(a) * 2.6;
-        s.beginPath();
-        s.moveTo(x + Math.cos(a) * f.s * 0.25, y + Math.sin(a) * f.s * 0.25);
+        s.moveTo(ix, iy);
         s.lineTo(ex, ey);
         s.lineTo(ex + nx, ey + ny);
-        s.lineTo(x + Math.cos(a) * f.s * 0.25 + nx, y + Math.sin(a) * f.s * 0.25 + ny);
+        s.lineTo(ix + nx * 0.8, iy + ny * 0.8);
         s.fill();
+        // One crossbar, then the sail's outer edge and the spar in pen.
+        s.fillStyle = bar;
+        line(s, (ix + ex) / 2, (iy + ey) / 2, (ix + ex) / 2 + nx * 0.9, (iy + ey) / 2 + ny * 0.9, { w: pen * 0.6, seed: i + 7, taper: [0.1, 0.3], press: 0.1 });
+        s.fillStyle = ink;
+        line(s, ex + nx, ey + ny, ix + nx * 0.8, iy + ny * 0.8, { w: pen * 0.65, seed: i + 3, taper: [0.2, 0.4], press: 0.3 });
+        line(s, x, y, ex, ey, { w: pen, seed: i + 1, taper: [0.05, 0.35], press: 0.25 });
       }
-      s.fillStyle = css(f.color, -25);
-      circle(s, x, y, 1.6);
+      s.fillStyle = ink;
+      circle(s, x, y, 1.5);
       break;
     }
     case 'beam': {
-      // Lighthouse: a slow sweep; brightest when pointing at the viewer.
+      // Lighthouse: a slow sweep, cut as a flat wedge with a fainter tip; brightest pointing at the viewer.
       const a = t * 0.9;
       const face = Math.cos(a);
       const len = VIEW_W * 0.75;
       const spread = 0.07;
       const dir = Math.sin(a) >= 0 ? 1 : -1;
       const reach = Math.abs(Math.sin(a));
-      const strength = (th.night ? 0.32 : 0.14) * (0.35 + 0.65 * reach) * fade;
-      const ex = x + dir * len * reach;
-      const gr = g.createLinearGradient(x, y, ex, y);
-      gr.addColorStop(0, css(f.color, 15, strength));
-      gr.addColorStop(1, css(f.color, 0, 0));
-      g.fillStyle = gr;
-      g.beginPath();
-      g.moveTo(x, y);
-      g.lineTo(ex, y - len * spread * reach);
-      g.lineTo(ex, y + len * spread * reach * 0.8);
-      g.fill();
-      glowDot(g, x, y, 10 + Math.max(0, face) * 26, f.color, (0.5 + Math.max(0, face) * 0.5) * fade);
+      const strength = (th.night ? 0.22 : 0.1) * (0.35 + 0.65 * reach) * fade;
+      for (let k = 0; k < 2; k++) {
+        const ex = x + dir * len * reach * (k ? 1 : 0.5);
+        const sp = len * spread * reach * (k ? 1 : 0.5);
+        g.fillStyle = css(f.color, 15, strength * (k ? 0.5 : 1));
+        g.beginPath();
+        g.moveTo(x, y);
+        g.lineTo(ex, y - sp);
+        g.lineTo(ex, y + sp * 0.8);
+        g.fill();
+      }
+      glowDot(g, x, y, 8 + Math.max(0, face) * 18, f.color, (0.5 + Math.max(0, face) * 0.5) * fade);
       break;
     }
     case 'blink': {
@@ -660,15 +606,21 @@ function drawFeature(rc: RC, f: Feature, ox: number, oy: number, haze: number, t
       break;
     }
     case 'plume': {
-      // Volcanic ash column + pulsing crater glow.
+      // Volcanic ash column: flat puffs lit from underneath by the crater, over a pulsing vent.
+      const lava = th.liquid.glow;
       for (let i = 0; i < 10; i++) {
         const p = (t * 0.035 + i / 10) % 1;
         const r = (6 + p * 34) * f.s;
-        s.fillStyle = css(f.color, -4 - p * 6, 0.55 * (1 - p) * Math.min(1, p * 6));
-        circle(s, x + p * 70 * f.s + Math.sin(p * 5 + i) * 6, y - p * 150 * f.s - 4, r);
+        const a = 0.7 * (1 - p) * Math.min(1, p * 6);
+        const px = x + p * 70 * f.s + Math.sin(p * 5 + i) * 6;
+        const py = y - p * 150 * f.s - 4;
+        s.fillStyle = css(mixHsl(f.color, lava, Math.max(0, 0.55 - p)), 4 - p * 4, a);
+        circle(s, px, py, r);
+        s.fillStyle = css(f.color, -2 - p * 6, a);
+        circle(s, px - r * 0.08, py - r * 0.24, r * 0.84);
       }
       const pulse = 0.6 + 0.4 * Math.sin(t * 1.3);
-      glowDot(g, x, y + 2, 40 * f.s, th.liquid.glow, 0.45 * pulse * fade);
+      glowDot(g, x, y + 2, 34 * f.s, th.liquid.glow, 0.4 * pulse * fade);
       break;
     }
     case 'flag': {
@@ -697,105 +649,297 @@ function drawFeature(rc: RC, f: Feature, ox: number, oy: number, haze: number, t
   }
 }
 
-function bakeLayer(pool: CanvasPool, L: SkyLayer, th: Theme, W: number, H: number, kb: number, blur: number): BakedLayer {
+function bakeLayer(pool: CanvasPool, L: SkyLayer, th: Theme, W: number, H: number, kb: number): BakedLayer {
   const def = SKYLINES[L.kind];
   const pw = Math.ceil(W * kb);
   const ph = Math.ceil(H * kb);
-  const soft = blur > 0.2;
-  // A layer that gets blurred is drawn on a shared scratch first; only what's kept comes from the pool.
-  const [c, g] = soft ? [{ c: scratch('bg-layer', pw, ph), w: pw, h: ph }, null] : pool.take(pw, ph, kb);
-  const gg = g ?? prepare(c.c, pw, ph, kb);
+  const [c, g] = pool.take(pw, ph, kb);
   let glowC: Surface | null = null;
   let e: CanvasRenderingContext2D | null = null;
-  if (def.glow) {
-    if (soft) {
-      glowC = { c: scratch('bg-glow', pw, ph), w: pw, h: ph };
-      e = prepare(glowC.c, pw, ph, kb);
-    } else [glowC, e] = pool.take(pw, ph, kb);
-  }
+  if (def.glow) [glowC, e] = pool.take(pw, ph, kb);
   // The silhouette keeps its place in the view however tall the layer is; only what's under it runs on.
-  const ridge = (x: number) => {
-    const u = x / VIEW_W;
-    let h = L.base;
-    L.freqs.forEach((f, i) => (h += Math.sin(u * f * Math.PI * 2 + L.phases[i]) * L.amp * (1 / (i + 1))));
-    return h * VIEW_H;
-  };
   const feats: Feature[] = [];
-  def.bake({ g: gg, e, L, th, W, H, rng: new Rng(L.seed), feats, ridge });
-  // Atmospheric perspective: tint toward the fog, more so near the ground.
+  def.bake({ g, e, L, th, W, H, rng: new Rng(L.seed), feats, ridge: ridgeOf(L) });
+  // Atmospheric perspective: one flat veil of fog over all the layer drew, its ink included. Depth reads
+  // from that and the lighter pen, never from blur: a soft backdrop is a different picture from the front.
   if (L.haze > 0) {
-    gg.save();
-    gg.setTransform(1, 0, 0, 1, 0, 0);
-    gg.globalCompositeOperation = 'source-atop';
-    const hz = gg.createLinearGradient(0, 0, 0, ph);
-    hz.addColorStop(0, css(th.fog, 0, Math.min(1, L.haze * 0.8)));
-    hz.addColorStop(1, css(th.fog, 0, Math.min(1, L.haze * 1.15)));
-    gg.fillStyle = hz;
-    gg.fillRect(0, 0, pw, ph);
-    gg.restore();
+    g.save();
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.globalCompositeOperation = 'source-atop';
+    g.fillStyle = css(th.fog, 0, Math.min(1, L.haze * 0.92));
+    g.fillRect(0, 0, pw, ph);
+    g.restore();
   }
-  if (!soft) return { c, glow: glowC, depth: L.depth, haze: L.haze, feats };
-  // Depth of field: soften farther layers.
-  const blurred = (src: Surface, r: number): Surface => {
-    const [b, bg] = pool.take(src.w, src.h, 1);
-    bg.filter = `blur(${(r * kb).toFixed(1)}px)`;
-    bg.drawImage(src.c, 0, 0, src.w, src.h, 0, 0, src.w, src.h);
-    bg.filter = 'none';
-    return b;
-  };
-  return { c: blurred(c, blur), glow: glowC ? blurred(glowC, blur * 0.6) : null, depth: L.depth, haze: L.haze, feats };
+  return { c, glow: glowC, depth: L.depth, haze: L.haze, feats };
 }
 
+/** sRGB mix along the sky's three stops, as the old gradient ran: `u` 0 at the window's top, 1 at its bottom. */
+function skyAt(th: Theme, u: number): string {
+  const k = Math.max(0, Math.min(1, u));
+  const [a, b, t] = k < 0.55 ? [th.skyTop, th.skyMid, k / 0.55] : [th.skyMid, th.skyBottom, (k - 0.55) / 0.45];
+  const ra = toRgb(a);
+  const rb = toRgb(b);
+  const ch = (i: number) => Math.round((ra[i] + (rb[i] - ra[i]) * t) * 255);
+  return `rgb(${ch(0)},${ch(1)},${ch(2)})`;
+}
+
+/** How many flat bands the sky is cut into. */
+const SKY_BANDS = 6;
+
+/**
+ * The sky as cel tones: flat bands with a hand's edge between them, each the color its stretch of the
+ * old gradient had, the horizon's light as two more bands, and light shafts as flat wedges. Baked
+ * once; a frame draws it as one image.
+ */
+function bakeSky(pool: CanvasPool, th: Theme, f: ViewFrame, kb: number): Baked['sky'] {
+  const x = f.x0 - 40;
+  const y = f.y0 - 40;
+  const w = f.w + 80;
+  const h = f.h + 80;
+  // Nothing in here is finer than a band edge: it bakes coarser than the layers.
+  const k = Math.min(kb, 1.5);
+  const [c, g] = pool.take(Math.ceil(w * k), Math.ceil(h * k), k);
+  g.translate(-x, -y);
+  const seed = th.seed & 0xffff;
+  const xa = x - 4;
+  const xb = x + w + 4;
+  const under = (pts: P[], col: string) => fillPts(g, [...pts, { x: xb, y: y + h + 4 }, { x: xa, y: y + h + 4 }], col);
+  g.fillStyle = skyAt(th, 0.5 / SKY_BANDS);
+  g.fillRect(x, y, w, h);
+  for (let b = 1; b < SKY_BANDS; b++) {
+    const yb = f.y0 + (f.h * b) / SKY_BANDS;
+    under(
+      along(xa, xb, 8, (xx) => yb + sn(xx * 0.005, b * 2.3, seed) * 6 + sn(xx * 0.021, b * 5.1, seed) * 1.6),
+      skyAt(th, (b + 0.5) / SKY_BANDS),
+    );
+  }
+  if (th.horizon.strength > 0) {
+    const hy = th.horizon.y * VIEW_H;
+    const str = th.horizon.strength;
+    under(
+      along(xa, xb, 8, (xx) => hy - VIEW_H * 0.2 + sn(xx * 0.004, 7.7, seed) * 7),
+      css(th.horizon.color, 0, str * 0.2),
+    );
+    // The brightest stripe sits on the horizon itself, cut above and below.
+    const top = along(xa, xb, 8, (xx) => hy - VIEW_H * 0.075 + sn(xx * 0.006, 9.1, seed) * 4 + sn(xx * 0.03, 2.2, seed) * 1.2);
+    const bot = backward(along(xa, xb, 8, (xx) => hy + VIEW_H * 0.11 + sn(xx * 0.005, 4.4, seed) * 5));
+    fillPts(g, [...top, ...bot], css(th.horizon.color, 0, str * 0.26));
+  }
+  if (th.rays) {
+    // Light shafts: flat wedges in two steps, fixed in place. Light, so they add.
+    const cel = th.celestial;
+    const none = cel.kind === 'none';
+    const rx = none ? VIEW_W * (0.3 + (th.seed % 40) / 100) : cel.x * VIEW_W;
+    const ry = none ? -40 : cel.y * VIEW_H;
+    const col = none ? th.lamp : cel.glow;
+    const al = th.night ? 0.045 : 0.06;
+    g.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 5; i++) {
+      const a = Math.PI / 2 + (i - 2) * (none ? 0.16 : 0.3) + (hash2(i, 5, th.seed) - 0.5) * 0.14 + (rx - VIEW_W / 2) * -0.0009;
+      const wd = 0.03 + hash2(i, 3, th.seed) * 0.045;
+      for (let s = 0; s < 2; s++) {
+        const len = VIEW_H * (s ? 1.6 : 0.75);
+        g.fillStyle = css(col, 10, al * (s ? 0.6 : 1));
+        g.beginPath();
+        g.moveTo(rx, ry);
+        g.lineTo(rx + Math.cos(a - wd) * len, ry + Math.sin(a - wd) * len);
+        g.lineTo(rx + Math.cos(a + wd) * len, ry + Math.sin(a + wd) * len);
+        g.fill();
+      }
+    }
+    g.globalCompositeOperation = 'source-over';
+  }
+  return { c, x, y, w, h };
+}
+
+/** Points round a circle cut by hand. */
+function orbPts(r: number, seed: number, lump = 0.025): P[] {
+  const n = Math.max(24, Math.round(r * 3));
+  const pts: P[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    const k = r * (1 + lump * sn(Math.cos(a) * 1.3 + seed * 0.37, Math.sin(a) * 1.3, seed));
+    pts.push({ x: Math.cos(a) * k, y: Math.sin(a) * k });
+  }
+  return pts;
+}
+
+/**
+ * The sun, moon or planet: a flat disc with its lit face cut toward the upper left, in hard flat rings
+ * of its own light. Only an eclipse's corona glows, because only it is fire against the dark.
+ */
+function bakeOrb(pool: CanvasPool, th: Theme, kb: number): Baked['orb'] {
+  const c = th.celestial;
+  if (c.kind === 'none') return null;
+  const r = c.r;
+  const half = Math.ceil(r * (c.kind === 'eclipse' ? 3.4 : c.kind === 'sun' ? 2.6 : 1.9)) + 2;
+  const k = Math.min(4, kb * 1.5);
+  const [surf, g] = pool.take(Math.ceil(half * 2 * k), Math.ceil(half * 2 * k), k);
+  g.translate(half, half);
+  const seed = (th.seed & 0xfff) + 1;
+  const disc = orbPts(r, seed);
+  const litFace = (lit: HSL, shade: HSL) => {
+    fillPts(g, disc, css(shade));
+    g.save();
+    g.beginPath();
+    disc.forEach((p, i) => (i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)));
+    g.closePath();
+    g.clip();
+    fillPts(
+      g,
+      disc.map((p) => ({ x: p.x * 0.92 - r * 0.13, y: p.y * 0.92 - r * 0.16 })),
+      css(lit),
+    );
+    g.restore();
+  };
+  let e: Surface | null = null;
+  switch (c.kind) {
+    case 'sun': {
+      const day = th.mood === 'day';
+      fillPts(g, orbPts(r * 2.45, seed + 1, 0.02), css(c.glow, 8, day ? 0.12 : 0.16));
+      fillPts(g, orbPts(r * 1.6, seed + 2, 0.025), css(c.glow, 12, day ? 0.2 : 0.24));
+      litFace(shift(c.color, 14), shift(c.color, 2));
+      // A warm pen round its shaded side only: the lit side has no edge to draw.
+      penPath(g, disc, true, { w: 0.9, col: css(c.glow, -16, 0.55), seed, run: r * 1.1, lift: 0.4, facing: 1, inside: { x: 0, y: 0 } });
+      break;
+    }
+    case 'moon': {
+      fillPts(g, orbPts(r * 1.55, seed + 1, 0.02), css(c.glow, 4, 0.1));
+      litFace(c.color, shift(c.color, -14));
+      const rng = new Rng(th.seed ^ 0x300);
+      for (let i = 0; i < 6; i++) {
+        const a = rng.range(0, 6.28);
+        const d = rng.range(0, r * 0.7);
+        const cr = rng.range(r * 0.08, r * 0.22);
+        g.fillStyle = css(c.color, -16, 0.7);
+        blob(g, Math.cos(a) * d, Math.sin(a) * d, cr, seed + i, 1, 0.12);
+        g.fill();
+      }
+      // The night side, cut hard.
+      g.fillStyle = 'rgba(0,0,10,0.32)';
+      g.beginPath();
+      g.arc(0, 0, r, -Math.PI / 2, Math.PI / 2);
+      g.ellipse(0, 0, r * 0.45, r, 0, Math.PI / 2, -Math.PI / 2, true);
+      g.fill();
+      penPath(g, disc, true, { w: 0.8, col: inkOf(c.color, 0.5), seed, run: r * 1.3, lift: 0.35, facing: 1, inside: { x: 0, y: 0 } });
+      break;
+    }
+    case 'planet': {
+      fillPts(g, orbPts(r * 1.35, seed + 1, 0.02), css(c.glow, 0, 0.12));
+      litFace(c.color, shift(c.color, -14));
+      penPath(g, disc, true, { w: 0.8, col: inkOf(c.color, 0.45), seed, run: r * 1.3, lift: 0.3, facing: 1, inside: { x: 0, y: 0 } });
+      break;
+    }
+    case 'eclipse': {
+      // The corona is fire: flat tongues round the disc on the glow layer, cut, never a falloff.
+      const [es, eg] = pool.take(Math.ceil(half * 2 * k), Math.ceil(half * 2 * k), k);
+      eg.translate(half, half);
+      const rings: [number, number, number, number][] = [
+        [3.1, 11, 0.3, 0],
+        [2.0, 17, 0.55, 8],
+        [1.32, 23, 0.95, 18],
+      ];
+      for (const [reach, n, a, dl] of rings) {
+        const pts: P[] = [];
+        for (let i = 0; i < n * 2; i++) {
+          const ang = (i / (n * 2)) * Math.PI * 2;
+          const tip = i % 2 === 0;
+          const rr = r * (tip ? 1 + (reach - 1) * (0.55 + 0.45 * hash2(i, n, seed)) : 1 + (reach - 1) * 0.28);
+          pts.push({ x: Math.cos(ang) * rr, y: Math.sin(ang) * rr });
+        }
+        fillPts(eg, pts, css(c.glow, dl, a));
+      }
+      eg.globalCompositeOperation = 'destination-out';
+      fillPts(eg, disc, '#000');
+      eg.globalCompositeOperation = 'source-over';
+      e = es;
+      fillPts(g, disc, '#050508');
+      break;
+    }
+  }
+  return { c: surf, e, half };
+}
+
+/**
+ * A cloud as a cel shape: puffy ones are a crest of puffs on a flat base, wispy and ash ones long
+ * lenses stacked. Each is its shadow tone with the lit body cut up-left over it, and a light pen
+ * along the crest that lifts often; the base gets only a few strokes.
+ */
 function bakeCloud(pool: CanvasPool, rng: Rng, w: number, h: number, th: Theme, kb: number): Surface {
   const [c, g] = pool.take(Math.ceil(w * kb), Math.ceil(h * kb), kb);
   const base = th.cloudColor;
-  const under = mixHsl(base, th.horizon.color, 0.35);
-  switch (th.cloudStyle) {
-    case 'puffy': {
-      const puffs = rng.int(5, 9);
-      const dark = false;
-      for (let pass = 0; pass < 2; pass++) {
-        for (let i = 0; i < puffs; i++) {
-          const px = w * (0.15 + 0.7 * (i / (puffs - 1)));
-          const r = h * rng.range(0.25, 0.45) * (1 - Math.abs(i / (puffs - 1) - 0.5));
-          const py = Math.max(r * 1.1 + 1, h * 0.62 - r * 0.6); // Never over the top of the canvas.
-          const gr = g.createRadialGradient(px - r * 0.3, py - r * 0.4, r * 0.1, px, py + r * 0.3, r * 1.1);
-          gr.addColorStop(0, css(base, pass ? (dark ? 6 : 10) : 2, 0.97));
-          gr.addColorStop(1, css(under, pass ? -6 : -14, 0.95));
-          g.fillStyle = gr;
-          circle(g, px, py + (pass ? 0 : 2), r * (pass ? 0.95 : 1.05) + 2);
-        }
-      }
-      // Flat-ish base.
-      g.globalCompositeOperation = 'destination-out';
-      g.fillRect(0, h * 0.86, w, h);
-      g.globalCompositeOperation = 'source-over';
-      break;
+  // The underside takes the sky's own color, warmed by the horizon.
+  const under = mixHsl(base, mixHsl(th.skyMid, th.horizon.color, 0.4), 0.35);
+  const seed = rng.int(1, 1e6);
+  const ink = css(hsl3(under.h, Math.min(60, under.s + 12), under.l * 0.45), 0, 0.85);
+  if (th.cloudStyle === 'puffy') {
+    const n = rng.int(4, 7);
+    const baseY = h * 0.88;
+    const puffs: { x: number; y: number; r: number }[] = [];
+    for (let i = 0; i < n; i++) {
+      const u = i / (n - 1);
+      // Biggest and highest in the middle: a crown, not a loaf.
+      const mid = 1 - Math.abs(u - 0.5) * 1.15;
+      const px = w * (0.15 + 0.7 * u) + rng.range(-3, 3);
+      const r = Math.min(h * (0.16 + 0.3 * mid) * rng.range(0.85, 1.2) + 2, px - 1.5, w - 1.5 - px);
+      puffs.push({ x: px, y: Math.max(r + 1.2, baseY - r * rng.range(0.2, 0.55) - h * 0.2 * mid * rng.range(0.3, 1)), r });
     }
-    case 'wispy':
-    case 'ash': {
-      const n = th.cloudStyle === 'ash' ? 10 : 7;
-      const a = th.cloudStyle === 'ash' ? 0.6 : 0.55;
-      for (let i = 0; i < n; i++) {
-        const cx = rng.range(w * 0.15, w * 0.85);
-        const cy = rng.range(h * 0.3, h * 0.7);
-        // Radii stop at the canvas edge, or the bake would clip the puff to a hard line.
-        const rx = Math.min(rng.range(w * 0.15, w * 0.4), cx, w - cx);
-        const ry = Math.min(rng.range(h * 0.2, h * 0.45), cy * 0.75, (h - cy) * 0.75);
-        const gr = g.createRadialGradient(cx, cy - ry * 0.3, 0, cx, cy, rx);
-        gr.addColorStop(0, css(base, 6, a));
-        gr.addColorStop(0.6, css(under, -2, a * 0.6));
-        gr.addColorStop(1, css(under, -4, 0));
-        g.fillStyle = gr;
-        g.save();
-        g.translate(cx, cy);
-        g.scale(1, ry / rx);
-        g.translate(-cx, -cy);
-        circle(g, cx, cy, rx);
-        g.restore();
+    const top = (x: number) => {
+      let y = baseY;
+      for (const p of puffs) {
+        const dx = x - p.x;
+        if (Math.abs(dx) < p.r) y = Math.min(y, p.y - Math.sqrt(p.r * p.r - dx * dx));
       }
-      break;
+      return y;
+    };
+    const xa = Math.min(...puffs.map((p) => p.x - p.r)) + 0.5;
+    const xb = Math.max(...puffs.map((p) => p.x + p.r)) - 0.5;
+    const crest = along(xa, xb, 1.5, top);
+    const shape = [...crest, { x: xb, y: baseY }, { x: xa, y: baseY }];
+    fillPts(g, shape, css(under, -9));
+    g.save();
+    g.beginPath();
+    shape.forEach((p, i) => (i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)));
+    g.closePath();
+    g.clip();
+    // The lit body: each puff again, smaller and pulled up-left, so the shade under them is scalloped.
+    g.fillStyle = css(base, 4);
+    g.beginPath();
+    for (const p of puffs) {
+      g.moveTo(p.x - p.r * 0.12 + p.r * 0.8, p.y - p.r * 0.22);
+      g.arc(p.x - p.r * 0.12, p.y - p.r * 0.22, p.r * 0.8, 0, Math.PI * 2);
     }
+    g.fill();
+    g.restore();
+    penPath(g, crest, false, { w: 0.8, col: ink, seed, run: 20, lift: 0.3 });
+    penPath(
+      g,
+      along(xa + 5, xb - 5, 3, () => baseY - 0.4),
+      false,
+      { w: 0.55, col: ink, seed: seed + 5, run: 9, lift: 0.8, facing: 0 },
+    );
+    return c;
+  }
+  // Wispy and ash: long lenses, flat-bellied, lumpier when it's ash.
+  const ash = th.cloudStyle === 'ash';
+  const n = ash ? rng.int(3, 5) : rng.int(2, 4);
+  const lump = ash ? 0.3 : 0.1;
+  for (let i = 0; i < n; i++) {
+    const a = w * rng.range(0.02, 0.32);
+    const b = w * rng.range(0.68, 0.98);
+    const cy = h * rng.range(0.45, 0.7);
+    const tk = Math.min(h * rng.range(0.22, 0.42), (cy - 1) / (1 + lump), (h - 1 - cy) / 0.35);
+    const sw = (x: number) => Math.sin((Math.PI * (x - a)) / (b - a));
+    const topF = (x: number) => cy - tk * Math.pow(Math.max(0, sw(x)), 0.7) * (1 + lump * sn(x * 0.08, i * 3.3, seed));
+    const crest = along(a, b, 2, topF);
+    const belly = backward(along(a, b, 2, (x) => cy + tk * 0.35 * sw(x)));
+    fillPts(g, [...crest, ...belly], css(under, ash ? -3 : -2, 0.94));
+    const la = a + (b - a) * 0.05;
+    const lb = b - (b - a) * 0.14;
+    const lit = along(la, lb, 2, (x) => topF(x) - 0.2);
+    const litLow = backward(along(la, lb, 2, (x) => cy - tk * 0.15 * sw(x) + sn(x * 0.05, i, seed) * tk * 0.12));
+    fillPts(g, [...lit, ...litLow], css(base, ash ? 2 : 5, 0.96));
+    penPath(g, crest, false, { w: 0.65, col: ink, seed: seed + i * 13, run: 28, lift: 0.4 });
   }
   return c;
 }
