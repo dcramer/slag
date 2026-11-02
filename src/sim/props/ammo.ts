@@ -55,6 +55,8 @@ export interface ProjRunner {
   status: RunnerStatus;
   active: boolean;
   safe: boolean;
+  /** `groundRef` under the stack it stands in (sim/collide.ts), when that isn't just its own. */
+  ground?: number;
 }
 
 export interface ProjWorld {
@@ -342,7 +344,7 @@ export const AMMO_SIM: Partial<Record<Ammo, AmmoSim>> = {
     move(p, w) {
       const id = gliderSolidId(p);
       let riders = 0;
-      for (const r of w.runners) if (r.active && r.body.onGround && r.body.groundRef === id) riders++;
+      for (const r of w.runners) if (r.active && (r.ground ?? (r.body.onGround ? r.body.groundRef : -1)) === id) riders++;
       const ridden = riders > 0;
       // `n` is the current load (the art bends the plank by it).
       p.n = riders;

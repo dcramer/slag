@@ -1,7 +1,7 @@
 import { dhypot } from '../core/dmath';
 import { inset, overlaps, type Rect, rectCircle } from '../core/geom';
 import { PLAYER_W, RUN_COUNTDOWN } from './constants';
-import { type CrowdMember, nudgeCrowd } from './crowd';
+import { collideRunners, contactStart, footing } from './collide';
 import {
   absorbHit,
   bonk,
@@ -82,6 +82,10 @@ export interface Runner {
   items: RunnerItems;
   /** The rope or keg holding this runner, and its re-grab cooldown (props/attach.ts). */
   attach: RunnerAttach;
+  /** Slot of the runner this one is standing on, or -1 (sim/collide.ts). */
+  ride: number;
+  /** Frames this runner has been held up by other bodies; enough of them and it slips through (sim/collide.ts). */
+  press: number;
 }
 
 /**
@@ -144,6 +148,8 @@ export class RunWorld {
       status: newStatus(),
       items: newRunnerItems(),
       attach: newAttach(),
+      ride: -1,
+      press: 0,
     }));
     this.resolved = [...level.setPieces, ...placed].map(resolveProp);
     for (const r of this.resolved) {
@@ -217,7 +223,7 @@ export class RunWorld {
     const f = this.frame;
     this.buildProps(f);
     const live = f >= RUN_COUNTDOWN && this.endFrame < 0;
-    const x0 = this.runners.map((r) => r.body.x);
+    const start = contactStart(this.runners);
 
     this.runners.forEach((r, i) => {
       if (!r.alive) return;
@@ -294,10 +300,8 @@ export class RunWorld {
 
     settleGrabs(this, this.grabs);
 
-    // Runners softly shove each other (src/sim/crowd.ts). Order-independent.
-    const crowd: CrowdMember[] = [];
-    this.runners.forEach((r, i) => r.alive && !r.finished && !r.attach.grip && crowd.push({ key: r.slot, body: r.body, x0: x0[i] }));
-    nudgeCrowd(crowd, this.world);
+    // Bodies are solid to each other (sim/collide.ts): everyone has moved, so nobody's order matters.
+    collideRunners(this.runners, start, this.world, (r) => this.isSafe(r));
 
     stepItems(this, inputs, live);
     this.stepProjectiles(f);
@@ -381,7 +385,13 @@ export class RunWorld {
   private stepProjectiles(f: number) {
     if (this.projectiles.length === 0) return;
     const spawned: Projectile[] = [];
-    const runners = this.runners.map((r) => ({ body: r.body, status: r.status, active: r.alive && !r.finished, safe: this.isSafe(r) }));
+    const runners = this.runners.map((r) => ({
+      body: r.body,
+      status: r.status,
+      active: r.alive && !r.finished,
+      safe: this.isSafe(r),
+      ground: footing(this.runners, r),
+    }));
     const w: ProjWorld = {
       level: this.level,
       frame: f,

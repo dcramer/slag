@@ -221,7 +221,7 @@ function blockedAt(b: Body, x: number, y: number, world: CollisionWorld): boolea
 }
 
 /** Move along x, stopping at solids (one-ways never block sideways). Pops up small ledge lips. Returns the solid hit. */
-function moveX(b: Body, dx: number, world: CollisionWorld): Solid | null {
+export function moveX(b: Body, dx: number, world: CollisionWorld): Solid | null {
   if (dx === 0) return null;
   const steps = Math.max(1, Math.ceil(Math.abs(dx) / 4));
   const sx = dx / steps;
@@ -249,7 +249,7 @@ function moveX(b: Body, dx: number, world: CollisionWorld): Solid | null {
 }
 
 /** Move along y. Falling lands on one-ways the feet started above; rising nudges around ceiling corners. */
-function moveY(b: Body, dy: number, world: CollisionWorld): Solid | null {
+export function moveY(b: Body, dy: number, world: CollisionWorld): Solid | null {
   if (dy === 0) return null;
   const steps = Math.max(1, Math.ceil(Math.abs(dy) / 4));
   const sy = dy / steps;

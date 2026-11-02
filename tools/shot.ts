@@ -12,6 +12,7 @@
  *   pnpm shot levels --seeds a,b,c,d      (or --count 12) → contact sheet
  *   pnpm shot props --count 24            → prop gallery (crate cards)
  *   pnpm shot items --seed abc             → held items: in hand, loose, and each one used
+ *   pnpm shot stack --seed abc             → stepped frames of runners stacking, walking as a stack, and a head-bounce
  *   pnpm shot codex                        → /codex page (full-page screenshot)
  *   pnpm shot home                         → main menu (desktop + 390×844 mobile)
  *   pnpm shot settings                     → every settings tab over the lobby, driven by keys and a fake pad,
@@ -499,6 +500,95 @@ try {
         await crop(`grabs-back-${String(back.length).padStart(2, '0')}`, keg, back);
       }
       await sheet(`grabs-back-${seed}`, back, 5);
+      break;
+    }
+    case 'stack': {
+      // Body contact as stepped frames: three runners stack, the bottom one walks them along, and a fourth bounces off the top.
+      await open(`seed=${seed}&players=4&race=mystery&propseed=${opt('propseed', '1')}`);
+      await step(190);
+      const spot = await page.evaluate(() => {
+        const run = (window as any).slagDebug.match.run;
+        const L = run.level;
+        for (let ty = 8; ty < L.h - 2; ty++) {
+          for (let tx = 7; tx < L.w - 14; tx++) {
+            const clear = [0, 1, 2, 3, 4, 5, 6].every(
+              (dx) => L.tiles[(ty + 1) * L.w + tx + dx] === 1 && [0, 1, 2, 3, 4, 5, 6, 7].every((dy) => L.tiles[(ty - dy) * L.w + tx + dx] === 0),
+            );
+            if (!clear) continue;
+            const x = (tx + 1) * 16 + 3;
+            const feet = (ty + 1) * 16;
+            run.runners.forEach((r: any, i: number) => {
+              r.body.x = x;
+              r.body.y = feet - r.body.h - i * 26;
+              r.body.vx = r.body.vy = 0;
+              r.body.onGround = false;
+              r.body.groundRef = -1;
+            });
+            return [x, feet - 40];
+          }
+        }
+        throw new Error('no open floor for a stack');
+      });
+      const zk = page.viewportSize()!.width / 768;
+      const crop = async (name: string, files: string[]) => {
+        // The camera drifts and zooms during a race, so ask it where the stack landed on screen.
+        const cam = await page.evaluate(() => {
+          const d = (window as any).slagDebug;
+          return { x: d.renderer.cam.x, y: d.renderer.cam.y, zoom: d.renderer.cam.zoom, stack: d.match.run.runners[0].body.x };
+        });
+        const [w, h] = [300 * zk, 200 * zk];
+        const size = page.viewportSize()!;
+        const px = ((cam.stack - cam.x) * cam.zoom + 384) * zk;
+        const py = ((spot[1] - cam.y) * cam.zoom + 216) * zk;
+        const path = `${out}/${name}.png`;
+        await page.screenshot({
+          path,
+          clip: { x: Math.min(size.width - w, Math.max(0, px - w / 2)), y: Math.min(size.height - h, Math.max(0, py - h / 2)), width: w, height: h },
+        });
+        files.push(path);
+      };
+      const press = (n: number, inputs: object) => page.evaluate(([c, i]) => (window as any).slagDebug.step(c, i), [n, inputs] as const);
+      const rows = () =>
+        page.evaluate(() =>
+          (window as any).slagDebug.match.run.runners
+            .map((r: any) => `#${r.slot} y=${r.body.y.toFixed(1)} ride=${r.ride} ground=${r.body.onGround}`)
+            .join('  '),
+        );
+      const frames: string[] = [];
+      const shoot = async (label: string) => {
+        await crop(`stack-${String(frames.length).padStart(2, '0')}-${label}`, frames);
+        console.log(label, await rows());
+      };
+      // Runners 1..3 fall onto runner 0.
+      await press(4, {});
+      await shoot('falling');
+      await press(40, {});
+      await shoot('stacked');
+      await press(24, { kb1: { right: true } });
+      await shoot('carried');
+      await press(16, { kb1: { right: true, run: true } });
+      await shoot('carried-run');
+      await press(14, {});
+      await shoot('settled');
+      // The top runner jumps straight up, and buffers a jump on the way back down: a head-bounce.
+      await press(1, { pad1: { jump: true, jumpPressed: true } });
+      await press(9, { pad1: { jump: true } });
+      await shoot('jump-off');
+      await press(14, { pad1: { jump: true } });
+      await shoot('apex');
+      const top = await page.evaluate(() => (window as any).slagDebug.match.run.runners[2].body.y - 14);
+      for (let i = 0; i < 60; i++) {
+        const y = await page.evaluate(() => (window as any).slagDebug.match.run.runners[3].body.y);
+        if (y > top - 12) break;
+        await press(1, {});
+      }
+      await shoot('coming-down');
+      await press(1, { pad1: { jump: true, jumpPressed: true } });
+      await press(3, { pad1: { jump: true } });
+      await shoot('head-bounce');
+      await press(10, { pad1: { jump: true } });
+      await shoot('bounced');
+      await sheet(`stack-${seed}`, frames, 4);
       break;
     }
     case 'items': {
