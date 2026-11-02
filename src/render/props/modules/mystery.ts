@@ -1,156 +1,129 @@
 import { css, type HSL } from '../../../core/color';
 import { TILE } from '../../../sim/constants';
-import type { ItemKind } from '../../../sim/items';
-import { type ModuleOf, mysterySpent, mysteryState, type PropStyle } from '../../../sim/props';
-import { drawItemIcon } from '../../items';
-import { hash2 } from '../../../core/rng';
+import { type ModuleOf, mysterySpent, mysteryState } from '../../../sim/props';
 import { blob, line, type P, stroke } from '../../ink';
-import { boxPts, dot, INK, ovalPts, part, path, pen, poly, sprite, stamp, tone } from '../../ink-props';
-import { glowDot, light, type MetalPalette, type RC } from '../../kit';
+import { boxPts, dot, glint, INK, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
+import { glowDot, light, type RC } from '../../kit';
 import { defineArt, type DrawCtx } from '../common';
-import { arcPts } from '../ink-motion';
 
 type Mystery = ModuleOf<'mystery'>;
 
 /**
- * Mystery crate: a banded box (crate, chest or gift look) with a porthole on
- * its face. Ready: a glowing spark that now and then flips to a silhouette
- * from its pool, so you can read what's inside. Refilling: a ring fills up.
- * Spent: dark and cracked. Popping: the box jolts and flashes.
+ * The Lucky Block (docs/PARODY.md, mystery crate): the platformer's floating question block, as a loot box.
+ * A chunky gold cube with a bevelled frame, a bolt in each corner and a coin slot on top, and on its face a
+ * fat, leaning hook of a glyph of our own whose dot is a four-point star. Hit it from below and it jumps
+ * and squashes and spits a sparkle after the item. While it waits on its timer the glyph is hollow and
+ * fills from the bottom; spent, it's a dull dented block with its glyph knocked out.
  */
 
-const SHOTS = new Set<ItemKind>(['sword', 'puck', 'boomerang']);
-const GADGETS = new Set<ItemKind>(['shield', 'rocket', 'smoke']);
+const T = TILE;
+const GOLD: HSL = { h: 40, s: 92, l: 54 };
+const DULL: HSL = { h: 28, s: 30, l: 32 };
+const CREAM = '#fff5d6';
 
-/** Spark color telegraphs the pool: warm red for shots, cyan for gadgets, gold for a mixed bag. */
-function poolHue(pool: readonly ItemKind[]): HSL {
-  if (pool.every((k) => SHOTS.has(k))) return { h: 8, s: 95, l: 60 };
-  if (pool.every((k) => GADGETS.has(k))) return { h: 186, s: 95, l: 60 };
-  return { h: 46, s: 100, l: 60 };
+/** The glyph's hook and star, centered on the face. */
+const HOOK: P[] = (() => {
+  const pts: P[] = [];
+  // The bowl: round over the top from the left, then a swan neck down to the stem.
+  for (let i = 0; i <= 12; i++) {
+    const a = Math.PI * 1.08 + (i / 12) * Math.PI * 1.25;
+    pts.push({ x: Math.cos(a) * 2.9, y: -2.7 + Math.sin(a) * 2.6 });
+  }
+  pts.push({ x: 1.2, y: -0.4 }, { x: 0.45, y: 0.5 }, { x: 0.25, y: 1.9 });
+  return pts;
+})();
+
+function star(g: CanvasRenderingContext2D, x: number, y: number, r: number) {
+  const pts: P[] = [];
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 - Math.PI / 2;
+    const rr = i % 2 ? r * 0.42 : r;
+    pts.push({ x: x + Math.cos(a) * rr, y: y + Math.sin(a) * rr });
+  }
+  path(g, pts);
+  g.fill();
 }
 
-/**
- * The box, baked: a floating loot block with a bevelled frame, corner rivets and a coin slot on top
- * (crate), a banded chest with a domed lid and a lock plate (chest), or a wrapped gift with a ribbon and a
- * bow (gift). Each carries a brass porthole on its face; what's behind the glass is drawn live.
- */
-function boxSprite(look: Mystery['look'], st: PropStyle, pal: MetalPalette, spent: boolean) {
-  const T = TILE;
-  const key = `mystery|${look}|${spent}|${st.hue | 0}|${st.woodHue | 0}|${pal.base.h},${pal.base.l}`;
-  return sprite(key, -3, -4, T + 6, T + 7, (g) => {
-    const seed = (st.hue * 3 + st.woodHue) | 0;
-    const dim = spent ? -14 : 0;
-    const body = boxPts(0, 0, T, T, 2.2, seed, 0.2);
-    if (look === 'gift') {
-      const c: HSL = { h: st.hue, s: spent ? 25 : 70, l: 50 + dim };
-      const rb: HSL = { h: (st.hue + 180) % 360, s: spent ? 20 : 80, l: 66 + dim };
-      tone(g, body, c, { depth: 1.8, shade: -20 });
-      g.save();
-      path(g, body);
-      g.clip();
-      // Wrapping paper with a print: a few flat dots, then the ribbon, lit along its top-left edge.
-      g.fillStyle = css(c, 14, 1, -8);
-      for (let i = 0; i < 7; i++) {
-        blob(g, 1.8 + hash2(i, 1, seed) * 12.4, 1.8 + hash2(i, 2, seed) * 12.4, 0.75, seed + i, 1, 0.25);
-        g.fill();
-      }
-      tone(g, boxPts(T / 2 - 1.8, -1, 3.6, T + 2, 0.2, seed + 1, 0), rb, { depth: 0.6, shade: -22 });
-      tone(g, boxPts(-1, 3, T + 2, 3.2, 0.2, seed + 2, 0), rb, { depth: 0.6, shade: -22 });
-      g.fillStyle = INK;
-      for (const x of [T / 2 - 1.9, T / 2 + 1.9]) line(g, x, 6.4, x, T, { w: 0.6, seed: seed + x, taper: [0.1, 0.2], press: 0.3 });
-      line(g, 0, 6.4, T, 6.4, { w: 0.6, seed: seed + 3, taper: [0.1, 0.1], press: 0.3 });
-      g.restore();
-      pen(g, body, seed, 0.6, 1.7, 4);
-      // The bow: two loops and two tails sat on top. Thin, so it may stand proud of the box.
-      for (const sg of [-1, 1]) {
-        const loop: P[] = [];
-        for (let i = 0; i < 12; i++) {
-          const a = (i / 12) * Math.PI * 2;
-          loop.push({ x: T / 2 + sg * (2.7 + Math.cos(a) * 2.5), y: -0.6 + Math.sin(a) * 1.7 - sg * 0.3 });
-        }
-        part(g, loop, rb, seed + sg, { depth: 0.5, shade: -24, thin: 0.35, thick: 0.8 });
-      }
-      part(g, ovalPts(T / 2, -0.2, 1.4, 1.2, seed, 0.1, 10), rb, seed + 9, { depth: 0.3, thin: 0.3, thick: 0.7 });
-    } else if (look === 'chest') {
-      const wood: HSL = { h: st.woodHue, s: 46, l: 36 + dim };
-      tone(g, body, wood, { depth: 1.8, shade: -18 });
-      g.save();
-      path(g, body);
-      g.clip();
-      // The domed lid, a shade lighter, and the seam under it.
-      tone(g, boxPts(-1, -1, T + 2, 6.6, 1, seed + 3, 0.3), { ...wood, l: wood.l + 8 }, { depth: 0.8, shade: -14 });
-      g.fillStyle = INK;
-      line(g, -1, 5.7, T + 1, 5.9, { w: 1, seed, taper: [0.05, 0.1], press: 0.3 });
-      // Planks and grain.
-      g.fillStyle = css(wood, -16, 1, 6);
-      for (const y of [9.6, 13]) line(g, 1, y, T - 1, y + 0.2, { w: 0.45, seed: seed + y, taper: [0.3, 0.3], press: 0.4 });
-      for (const x of [2.8, T - 4.6]) {
-        tone(g, boxPts(x, -1, 1.8, T + 2, 0.2, seed + x, 0), pal.base, { depth: 0.5, shade: -24 });
-        dot(g, x + 0.9, 3, 0.45, x, css(pal.spec));
-        dot(g, x + 0.9, T - 2.6, 0.45, x + 1, css(pal.spec));
-      }
-      g.restore();
-      pen(g, body, seed, 0.6, 1.7, 4);
-    } else {
-      // The loot block: a bevelled frame round a sunk face, light on the top and left, dark below and right.
-      const c: HSL = { h: st.hue, s: spent ? 18 : 78, l: 52 + dim };
-      tone(g, body, c, { depth: 1.6, shade: -26 });
-      g.save();
-      path(g, body);
-      g.clip();
-      g.fillStyle = css(c, 18, 1, -6);
-      path(g, poly(-1, -1, T + 1, -1, T - 2.6, 2.6, 2.6, 2.6, 2.6, T - 2.6, -1, T + 1));
-      g.fill();
-      g.fillStyle = css(c, -18, 1, 4);
-      path(g, poly(T + 1, -1, T + 1, T + 1, -1, T + 1, 2.6, T - 2.6, T - 2.6, T - 2.6, T - 2.6, 2.6));
-      g.fill();
-      g.fillStyle = css(c, -36, 0.8);
-      line(g, 2.6, 2.6, T - 2.6, 2.6, { w: 0.5, seed: 1, taper: [0.1, 0.2], press: 0.3 });
-      line(g, 2.6, 2.6, 2.6, T - 2.6, { w: 0.5, seed: 2, taper: [0.1, 0.2], press: 0.3 });
-      g.restore();
-      for (const [x, y] of [
-        [1.4, 1.4],
-        [T - 1.4, 1.4],
-        [1.4, T - 1.4],
-        [T - 1.4, T - 1.4],
-      ])
-        dot(g, x, y, 0.6, x * 3 + y, css(c, 40));
-      pen(g, body, seed, 0.6, 1.8, 4);
-      // The coin slot on top.
-      part(g, boxPts(T / 2 - 3, -0.6, 6, 1.6, 0.4, seed + 7, 0), pal.base, seed + 7, { depth: 0.3, thin: 0.3, thick: 0.6 });
-      g.fillStyle = INK;
-      line(g, T / 2 - 2, 0.2, T / 2 + 2, 0.2, { w: 0.7, seed: 4, taper: [0, 0], press: 0 });
-    }
-    // The porthole: a brass ring, bolted, round dark glass.
-    const px = T / 2;
-    const py = T / 2 + (look === 'chest' ? 1.6 : 0.6);
-    part(g, ovalPts(px, py, 5.2, 5.2, seed + 20, 0.02, 18), { h: 44, s: 62, l: spent ? 36 : 50 }, seed + 20, {
-      depth: 0.9,
-      shade: -22,
-      thin: 0.45,
-      thick: 1.2,
-    });
-    for (let i = 0; i < 4; i++) {
-      const a = Math.PI / 4 + (i * Math.PI) / 2;
-      dot(g, px + Math.cos(a) * 4.3, py + Math.sin(a) * 4.3, 0.42, i, '#fff4c8');
-    }
-    g.fillStyle = '#100d18';
-    path(g, ovalPts(px + 0.2, py + 0.2, 3.5, 3.5, seed + 21, 0.02, 14));
-    g.fill();
+/** The glyph in one fill: `lit` cream with its hard drop, or hollow (just the drop and the ink) while it refills. */
+function glyph(lit: boolean) {
+  return sprite(`mystery|glyph|${lit}`, -6, -8, 12, 16, (g) => {
+    g.save();
+    g.translate(0.2, 0.4);
+    g.transform(1, 0, -0.12, 1, 0, 0);
+    // Ink first, fat, then the hard drop shadow down and right, then the face.
+    g.fillStyle = INK;
+    stroke(g, HOOK, { w: 4.4, seed: 3, taper: [0.06, 0.04], press: 0.1 });
+    star(g, 0.25, 4.5, 2.5);
+    g.fillStyle = lit ? css(GOLD, -26, 1, 6) : css(GOLD, -34, 1, -10);
+    g.save();
+    g.translate(0.55, 0.6);
+    stroke(g, HOOK, { w: 2.7, seed: 3, taper: [0.06, 0.04], press: 0.1 });
+    star(g, 0.25, 4.5, 1.6);
+    g.restore();
+    g.fillStyle = lit ? CREAM : css(GOLD, -22, 1, -10);
+    stroke(g, HOOK, { w: 2.7, seed: 3, taper: [0.06, 0.04], press: 0.1 });
+    star(g, 0.25, 4.5, 1.6);
+    g.restore();
   });
 }
 
-/** A four-point spark, centered at (x, y). */
-function spark(c: CanvasRenderingContext2D, x: number, y: number, r: number) {
-  c.beginPath();
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2 - Math.PI / 2;
-    const rr = i % 2 ? r * 0.3 : r;
-    c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
-  }
-  c.closePath();
-  c.fill();
+/** The cube: bevelled frame, sunk face, corner bolts, coin slot. `spent` is dull and dented, its glyph gone. */
+function cube(spent: boolean) {
+  return sprite(`mystery|cube|${spent}`, -3, -3, T + 6, T + 6, (g) => {
+    const c = spent ? DULL : GOLD;
+    const body = boxPts(0, 0, T, T, 2.2, 7, 0.22);
+    tone(g, body, c, { depth: 1.6, shade: -24 });
+    g.save();
+    path(g, body);
+    g.clip();
+    const b = 2.7;
+    // Bevels: the lit top and left, the dark bottom and right, mitred at the corners.
+    g.fillStyle = css(c, spent ? 8 : 20, 1, -8);
+    path(g, poly(-1, -1, T + 1, -1, T - b, b, b, b, b, T - b, -1, T + 1));
+    g.fill();
+    g.fillStyle = css(c, spent ? -10 : -20, 1, 6);
+    path(g, poly(T + 1, -1, T + 1, T + 1, -1, T + 1, b, T - b, T - b, T - b, T - b, b));
+    g.fill();
+    // The face sits a shade back from the frame: a crease along its top and left.
+    g.fillStyle = css(c, -38, 0.8);
+    line(g, b, b, T - b, b, { w: 0.55, seed: 1, taper: [0.1, 0.2], press: 0.3 });
+    line(g, b, b, b, T - b, { w: 0.55, seed: 2, taper: [0.1, 0.2], press: 0.3 });
+    if (spent) {
+      // Dents where it was punched, and a crack off the worst one.
+      for (const [x, y, r] of [
+        [T * 0.55, T - 3.6, 1.8],
+        [T * 0.3, T * 0.42, 1.2],
+      ]) {
+        g.fillStyle = css(c, -14);
+        blob(g, x, y, r, x, 1, 0.25);
+        g.fill();
+        g.fillStyle = css(c, 12);
+        stroke(g, poly(x + r * 0.2, y + r * 0.9, x + r, y + r * 0.1, x + r * 0.6, y - r * 0.7), { w: 0.45, seed: x, taper: [0.2, 0.3], press: 0 });
+      }
+      tick(g, T * 0.55 - 1, T - 4.6, T * 0.4, T * 0.5, 0.45, 9, INK);
+      tick(g, T * 0.4, T * 0.5, T * 0.46, T * 0.36, 0.35, 10, INK);
+    } else {
+      // A sheen across the frame's top edge.
+      glint(g, poly(2.4, 1.1, 6, 0.9, 10, 1.1), 'rgba(255,252,230,0.9)', 0.6);
+    }
+    g.restore();
+    for (const [x, y] of [
+      [1.45, 1.45],
+      [T - 1.45, 1.45],
+      [1.45, T - 1.45],
+      [T - 1.45, T - 1.45],
+    ])
+      dot(g, x, y, 0.72, x * 3 + y, spent ? css(c, 20) : CREAM);
+    pen(g, body, 7, 0.6, 1.9, 4);
+    // The coin slot on top: the loot-box gag.
+    part(g, boxPts(T / 2 - 3, -0.8, 6, 1.7, 0.4, 8, 0), { h: 220, s: 8, l: spent ? 34 : 56 }, 8, { depth: 0.3, thin: 0.3, thick: 0.6 });
+    g.fillStyle = INK;
+    line(g, T / 2 - 2, 0.05, T / 2 + 2, 0.05, { w: 0.75, seed: 4, taper: [0, 0], press: 0 });
+  });
 }
+
+/** Frames a bump lasts: up, a squash on landing, settle. */
+const BUMP = 14;
 
 function drawMystery(rc: RC, m: Mystery, d: DrawCtx) {
   const s = rc.s;
@@ -160,66 +133,73 @@ function drawMystery(rc: RC, m: Mystery, d: DrawCtx) {
   const spent = mysterySpent(m, st.pops);
   const since = f - st.popAt;
   const ready = !spent && f >= st.ready;
-  const hue = poolHue(m.pool);
   for (const [cx, cy] of m.cells) {
-    const jolt = since >= 0 && since < 10 ? Math.sin((since / 10) * Math.PI) * 3 : 0;
     const x = cx * TILE + d.off[0];
-    const y = cy * TILE + d.off[1] - jolt;
-    stamp(s, boxSprite(m.look, d.style, d.pal, spent), x, y);
-    const px = x + TILE / 2;
-    const py = y + TILE / 2 + (m.look === 'chest' ? 1.6 : 0.6);
-    if (since >= 0 && since < 14) glowDot(g, px, y, 22, hue, (1 - since / 14) * 0.8);
-    if (spent) {
-      // Empty: the glass is cracked.
-      s.fillStyle = 'rgba(150,140,160,0.7)';
-      stroke(
-        s,
-        [
-          { x: px - 3, y: py - 2 },
-          { x: px, y: py },
-          { x: px + 2.5, y: py - 0.5 },
-        ],
-        { w: 0.6, seed: cx, taper: [0.2, 0.4], press: 0 },
-      );
-      stroke(
-        s,
-        [
-          { x: px, y: py },
-          { x: px - 0.5, y: py + 3 },
-        ],
-        { w: 0.6, seed: cy, taper: [0.1, 0.6], press: 0 },
-      );
-      continue;
+    const y = cy * TILE + d.off[1];
+    // The bump: a jump up, then a squash as it lands, then still.
+    let lift = 0;
+    let sx = 1;
+    let sy = 1;
+    if (since >= 0 && since < BUMP) {
+      const u = since / BUMP;
+      if (u < 0.45) lift = Math.sin((u / 0.45) * Math.PI) * 4;
+      else {
+        const k = Math.sin(((u - 0.45) / 0.55) * Math.PI) * (1 - u);
+        sx = 1 + k * 0.42;
+        sy = 1 - k * 0.36;
+      }
     }
-    if (!ready) {
-      const u = 1 - Math.max(0, st.ready - f) / Math.max(1, m.refill);
-      g.fillStyle = css(hue, 0, 0.8);
-      stroke(g, arcPts(px, py, 2.5, -Math.PI / 2, -Math.PI / 2 + u * Math.PI * 2, 14), { w: 1.2, seed: 2, taper: [0, 0.1], press: 0 });
-      continue;
+    s.save();
+    // Squash from the bottom edge, so it flattens onto where it sits.
+    s.translate(x + T / 2, y + T - lift);
+    s.scale(sx, sy);
+    s.translate(-T / 2, -T);
+    stamp(s, cube(spent));
+    if (!spent) {
+      if (ready) stamp(s, glyph(true), T / 2, T / 2 + 0.3);
+      else {
+        // Refilling: the glyph hollow, filling from the bottom as its timer runs.
+        const u = 1 - Math.max(0, st.ready - f) / Math.max(1, m.refill);
+        stamp(s, glyph(false), T / 2, T / 2 + 0.3);
+        s.save();
+        s.beginPath();
+        s.rect(0, T - 2.5 - u * (T - 5), T, u * (T - 5) + 2.5);
+        s.clip();
+        stamp(s, glyph(true), T / 2, T / 2 + 0.3);
+        s.restore();
+      }
     }
-    // Ready: pulse, and every ~2.5 s flip to show one item from the pool.
-    const cyc = (f + m.seed) % 150;
-    const pulse = 0.75 + Math.sin(rc.t * 5) * 0.25;
-    glowDot(g, px, py, 11, hue, 0.55 * pulse);
-    light(rc, px, py, 40, hue, 0.6 * pulse);
-    if (cyc >= 120) {
-      const k = m.pool[Math.floor((f + m.seed) / 150) % m.pool.length];
-      const flip = Math.abs(Math.cos(((cyc - 120) / 30) * Math.PI));
-      s.save();
-      blob(s, px + 0.2, py + 0.2, 3.5, 3, 1, 0.02);
-      s.clip();
-      s.fillStyle = css(hue, -30);
-      s.fillRect(px - 5, py - 5, 10, 10);
-      s.translate(px, py);
-      s.scale(Math.max(0.1, 1 - flip), 1);
-      drawItemIcon(s, k, 0, 0, 0.55, rc.t);
-      s.restore();
-    } else {
-      const r = 3.4 + Math.sin(rc.t * 3 + m.seed) * 0.5;
-      g.fillStyle = css(hue, 25, 0.95);
-      spark(g, px, py, r);
-      s.fillStyle = css(hue, 30);
-      spark(s, px, py, r);
+    s.restore();
+    const px = x + T / 2;
+    const py = y + T / 2 - lift;
+    if (since >= 0 && since < 22) {
+      // The pop: a flash off the top and sparkles flung up after the item.
+      const u = since / 22;
+      glowDot(g, px, y - 2, 18 * (1 - u * 0.5), GOLD, (1 - u) * 0.8);
+      g.fillStyle = css(GOLD, 30, 1 - u);
+      for (let i = 0; i < 5; i++) {
+        const a = -Math.PI / 2 + (i - 2) * 0.5;
+        const r = 4 + u * 16;
+        star(g, px + Math.cos(a) * r, y - 2 + Math.sin(a) * r - u * 4, 1.6 * (1 - u) + 0.4);
+      }
+    }
+    if (ready) {
+      const pulse = 0.75 + Math.sin(rc.t * 4 + m.seed) * 0.25;
+      glowDot(g, px, py, 10, GOLD, 0.28 * pulse);
+      light(rc, px, py, 36, GOLD, 0.5 * pulse);
+      // Now and then a shine sweeps across the face.
+      const cyc = (f + m.seed) % 150;
+      if (cyc < 12) {
+        const u = cyc / 12;
+        const sx0 = x - 4 + u * (T + 8);
+        s.save();
+        path(s, boxPts(x + 1, y - lift + 1, T - 2, T - 2, 1.8, 7, 0));
+        s.clip();
+        s.fillStyle = 'rgba(255,253,236,0.55)';
+        path(s, poly(sx0, y - lift, sx0 + 3, y - lift, sx0 - 2, y - lift + T, sx0 - 5, y - lift + T));
+        s.fill();
+        s.restore();
+      }
     }
   }
 }
