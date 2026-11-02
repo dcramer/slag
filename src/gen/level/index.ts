@@ -76,8 +76,9 @@ let lastGenAttempts = 0;
  *
  * Stage concepts (../stage): the level's concept is rolled once. While it's
  * live, each attempt's sculptor claims a site and raises the landmark's
- * structure as tiles, and the landmark's pieces go in after weather, every
- * one required, before the filler (narrowed to the concept's family). A
+ * structure as tiles, and the landmark's pieces go in before weather (on the
+ * terrain's own footing, so weather never changes the terrain), every one
+ * required, before the filler (narrowed to the concept's family). A
  * carrier's pieces go in before the proof instead, and its proven rides
  * (./ride.ts) join every reachability question about the level. A landmark
  * that can't stand up rejects the attempt; MAX_LANDMARK_REJECTS of those and
@@ -160,16 +161,14 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
       }
     }
     level.solution = bridges;
-    // Before the set pieces: their placer checks the path with the ghost, which walks on this footing.
-    level.weather = rollWeather(seed, theme, level, profileOverride?.weather);
-    // Rain and snow change the footing the routes were measured on (the gate kept them open): record what the level has.
-    if (footing(level)) shared = analyzeRoutes(level, bridges, cache).shared;
     // Set pieces must never block the known prop solution: a match starts from it, keeping clear of every
     // piece's barrier (./winnable.ts), so a piece goes in only if the solution still holds that way.
     const keep = (pieces: readonly PlacedProp[]) => planHolds(level, pieces, bridges, cache);
     const needed = new Set(bridges.flatMap((b) => Array.from({ length: BRIDGE_W }, (_, i) => b.y * level.w + b.x + i)));
     const clearOfBridges = (p: PlacedProp) => !footprintCells(p).some(([x, y]) => needed.has(y * level.w + x));
     // The landmark's pieces, all of them: one that won't go in (or a carrier in the solution's way) rejects the attempt.
+    // They go in on the terrain's own footing, before the weather: a rejected attempt changes the terrain, and
+    // what weather a level gets mustn't (a restored snapshot regenerates the level without it).
     const fixed = landmark ? (carriers ?? placeLandmark(live!, landmark, level, cache, landmarkRng, themeId, keep)) : [];
     // A carrier's free-ride check waits for its rides, so its own crossing is in the baseline.
     const freeRide = (c: PlacedProp, i: number, all: readonly PlacedProp[]) => !noFreeRide(level, c, all.slice(0, i), cache);
@@ -177,6 +176,12 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
       rejects.landmark++;
       continue;
     }
+    // Before the filler: its placer checks the path with the ghost, which walks on this footing.
+    level.weather = rollWeather(seed, theme, level, profileOverride?.weather);
+    // Rain or snow the landmark's pieces can't keep the solution in stays clear, like any the gate turns down.
+    if (fixed.length && !profileOverride?.weather && footing(level) && !keep(fixed)) level.weather = rollWeather(seed, theme, level, 'clear');
+    // Rain and snow change the footing the routes were measured on (the gate kept them open): record what the level has.
+    if (footing(level)) shared = analyzeRoutes(level, bridges, cache).shared;
     lastGenAttempts = attempt + 1;
     lastGenInfo = {
       attempts: attempt + 1,

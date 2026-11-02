@@ -70,7 +70,7 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - **The camera always frames every live runner**, local or remote, with a margin: it zooms out as far as it takes, down to the whole level, and catches up instantly if smoothing would let anyone leave the screen. Finished and dead runners drop out of the framing.
 - **Cel shading is the art direction**: flat tones, hard light bands, ink outlines, hard shadows. It is the one look for everyone, not a setting.
 - **Render layers, back to front:** sky and skyline; background halves of set pieces (a windmill's tower, a crane's mast); liquids (water and lava); terrain, props and the moving parts of set pieces (the windmill's blades); players; effects. Scenery that you can't touch sits behind the terrain.
-- Set pieces are large, pre-placed theme props: tractor, windmill, foundry press, chandelier, minecart, geysers, crane, a frost cannon and a chairlift on the glacier, solar flares licking up out of the void and a centrifuge in space, and so on. They never block the known solution and keep their hazards away from spawn and goal. They are visible in every phase.
+- Set pieces are large, pre-placed theme props: tractor, windmill, foundry press, chandelier, minecart, geysers, crane, a frost cannon and a chairlift on the glacier, a haunted manor's broken windows bristling with glass, solar flares licking up out of the void and a centrifuge in space, and so on. They never block the known solution and keep their hazards away from spawn and goal. They are visible in every phase.
 
 ### Stage concepts
 A level is a place with one landmark you'd name it after: the Great Wheel, the Haunted Wing (docs/SETPIECES.md has the plan and every concept).

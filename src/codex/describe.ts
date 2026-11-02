@@ -37,6 +37,7 @@ export const PART_INFO: Record<Module['type'], { title: string; blurb: string }>
   button: { title: 'Panic Button', blurb: 'The cover was taped open when we got here.' },
   fuse: { title: 'Fuse Crate', blurb: 'FRAGILE. Very.' },
   flood: { title: 'Flood', blurb: 'The tide waits for no runner.' },
+  shards: { title: 'Broken window', blurb: 'Seven years of bad luck, delivered all at once.' },
 };
 
 const AIM_TAG: Record<string, string> = { fixed: 'FIXED', sweep: 'SWEEPS', track: 'TRACKS' };

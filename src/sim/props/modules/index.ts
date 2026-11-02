@@ -25,6 +25,7 @@ export * from './pipe';
 export * from './rope';
 export * from './rotor';
 export * from './sentry';
+export * from './shards';
 export * from './snapper';
 export * from './spikes';
 export * from './spring';

@@ -242,7 +242,7 @@ function hazardHits(h: Hazard, z: Rect): boolean {
 /** Frames for one full cycle of every timed module and the piece's own motion (bounded). */
 export function cycleFrames(mods: readonly Module[], motion: Motion = { type: 'none' }): number {
   let p = 120;
-  if (motion.type === 'rail') p = Math.max(p, motion.period + 2 * (motion.dwell ?? 0));
+  if (motion.type === 'rail') p = Math.max(p, motion.period + 2 * (motion.dwell ?? 0) * (1 + (motion.stops?.length ?? 0)));
   if (motion.type === 'loop' || motion.type === 'track') p = Math.max(p, motion.period);
   for (const m of mods) {
     if (m.type === 'rotor') p = Math.max(p, m.period);
