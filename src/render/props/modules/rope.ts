@@ -109,7 +109,7 @@ defineArt<'rope'>({
     const sky = !!d.o.level && openSky(d.o.level, d.o.placed ?? [], Math.floor(ax / TILE), Math.floor(ay / TILE));
     if (sky) {
       s.fillStyle = INK;
-      line(s, ax, ay + 1, ax, 0, { w: 1.6, seed: 3, taper: [0, 0], press: 0 });
+      line(s, ax, ay + 1, ax, 0, { w: 1.24, seed: 3, taper: [0, 0], press: 0 });
       s.fillStyle = css(TWINE);
       line(s, ax, ay + 1, ax, 0, { w: 0.7, seed: 3, taper: [0, 0], press: 0 });
     }

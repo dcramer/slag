@@ -161,7 +161,7 @@ function slug(g: CanvasRenderingContext2D) {
 
 function bolt(g: CanvasRenderingContext2D, arrow: boolean) {
   g.fillStyle = INK;
-  line(g, -10, 0, 1.6, 0, { w: 1.7, seed: 1, taper: [0.02, 0.02], press: 0 });
+  line(g, -10, 0, 1.6, 0, { w: 1.3, seed: 1, taper: [0.02, 0.02], press: 0 });
   g.fillStyle = arrow ? '#b9884f' : '#8a909b';
   line(g, -9.6, -0.15, 1.2, -0.15, { w: 0.7, seed: 1, taper: [0.02, 0.02], press: 0 });
   for (const sg of [-1, 1])
@@ -410,8 +410,8 @@ export function drawGlider(s: CanvasRenderingContext2D, x: number, y: number, ti
   path(s, poly(-w, -h - sag, 0, -h, w, -h - sag, w - 2.2, -h + 1.6 - sag * 0.6, 0, -h + 2.2, -w, -h + 2.2 - sag));
   s.fill();
   s.fillStyle = INK;
-  stroke(s, poly(-w, -h - sag, 0, -h, w, -h - sag), { w: 0.7, seed: 6, taper: [0.05, 0.05], press: 0.2 });
-  stroke(s, poly(w, -h - sag, w - 4.5, h - sag * 0.5, 0, h, -w, h - sag, -w, -h - sag), { w: 1.3, seed: 7, taper: [0.05, 0.05], press: 0.3 });
+  stroke(s, poly(-w, -h - sag, 0, -h, w, -h - sag), { w: 0.49, seed: 6, taper: [0.05, 0.05], press: 0.2 });
+  stroke(s, poly(w, -h - sag, w - 4.5, h - sag * 0.5, 0, h, -w, h - sag, -w, -h - sag), { w: 0.91, seed: 7, taper: [0.05, 0.05], press: 0.3 });
   s.fillStyle = css(paper, -30);
   line(s, -w + 1, -h + 2.3 - sag, w - 3, -h + 1.7 - sag * 0.6, { w: 0.45, seed: 8, taper: [0.2, 0.2], press: 0 });
   s.restore();

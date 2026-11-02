@@ -190,7 +190,7 @@ function tikiPost(g: CanvasRenderingContext2D, k: Bk) {
   for (const sx of [-1, 1]) {
     const ring = ovalPts(sx * 8.4, -9.2, 1, 1.3, sx + 70, 0.03, 10);
     g.fillStyle = INK;
-    stroke(g, [...ring, ring[0]], { w: 1, seed: sx + 71, taper: [0, 0], press: 0.1 });
+    stroke(g, [...ring, ring[0]], { w: 0.76, seed: sx + 71, taper: [0, 0], press: 0.1 });
     g.fillStyle = css(BRONZE, 10);
     stroke(g, [...ring, ring[0]], { w: 0.4, seed: sx + 72, taper: [0, 0], press: 0 });
   }
@@ -357,7 +357,7 @@ export const FRAMED: Pick<Record<LauncherStyle, Look>, 'hangar' | 'cannon' | 'ba
         path(g, pts);
         g.clip();
         g.fillStyle = INK;
-        line(g, x - 1, y + 3.4, x1 + 1, y + 3.4, { w: 0.7, seed: 3, taper: [0.05, 0.05], press: 0.3 });
+        line(g, x - 1, y + 3.4, x1 + 1, y + 3.4, { w: 0.49, seed: 3, taper: [0.05, 0.05], press: 0.3 });
         const mortar = css(st, -24, 1, 4);
         for (let row = 0; row < 4; row++) {
           const yy = y + 6.8 + row * 3.3;
@@ -591,9 +591,9 @@ export const FRAMED: Pick<Record<LauncherStyle, Look>, 'hangar' | 'cannon' | 'ba
       (g, k) => {
         const cord = poly(-3.4, 0.6, -0.6, 1.8, 2.4, 1.4, 5.4, 2.8, 6, 3.8);
         g.fillStyle = INK;
-        stroke(g, cord, { w: 1.1, seed: 7, taper: [0, 0], press: 0 });
+        stroke(g, cord, { w: 0.88, seed: 7, taper: [0, 0], press: 0 });
         g.fillStyle = '#2f7de0';
-        stroke(g, cord, { w: 0.55, seed: 7, taper: [0, 0], press: 0 });
+        stroke(g, cord, { w: 0.39, seed: 7, taper: [0, 0], press: 0 });
         part(g, boxPts(5, 3.6, 2.5, 1.9, 0.8, k.seed + 8), { h: 210, s: 8, l: 82 }, k.seed + 8, { depth: 0.3, thin: 0.3, thick: 0.7 });
         dot(g, 6.9, 4.5, 0.4, 9);
       },

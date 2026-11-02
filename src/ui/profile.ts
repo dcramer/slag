@@ -14,9 +14,9 @@ export interface Profile {
 /**
  * Bump when a seed stops meaning the same character, so every saved look is discarded once and the
  * next one is saved from the new cast. 2: the foundry toys. 3: slimmer toys, the lantern in for the
- * crucible. 4: twelve hand-designed toys. 5: animals and critters (docs/CHARACTERS.md).
+ * crucible. 4: twelve hand-designed toys. 5: animals and critters. 6: mostly homages (docs/CHARACTERS.md).
  */
-export const LOOK_CAST = 5;
+export const LOOK_CAST = 6;
 
 const KEY = 'slag.profile.v1';
 

@@ -36,7 +36,7 @@ function leg(g: CanvasRenderingContext2D, hx: number, hy: number, fx: number, fy
     { x: fx, y: fy },
   ];
   g.fillStyle = INK;
-  stroke(g, pts, { w: 3.2, seed, taper: [0, 0], press: 0.1 });
+  stroke(g, pts, { w: 2.6, seed, taper: [0, 0], press: 0.1 });
   g.fillStyle = css(col, fx < hx ? 16 : 2);
   stroke(g, pts, { w: 1.7, seed: seed + 1, taper: [0, 0], press: 0.1 });
   part(g, boxPts(fx - 2, fy - 0.9, 4, 1.5, 0.5, seed + 2), { ...col, l: col.l - 10 }, seed + 2, { depth: 0.3, thin: 0.35, thick: 0.7 });

@@ -21,7 +21,7 @@ export const themeOf = (d: DrawCtx): ThemeId | undefined => d.o.level?.theme.id;
 /** A tube drawn with the pen: an ink ribbon under a colored one, and a lit stripe along its top. */
 export function tube(s: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, col: HSL, seed: number) {
   s.fillStyle = INK;
-  line(s, ax, ay, bx, by, { w: w + 1.4, seed, taper: [0, 0], press: 0.05 });
+  line(s, ax, ay, bx, by, { w: w + 0.85, seed, taper: [0, 0], press: 0.05 });
   s.fillStyle = css(col);
   line(s, ax, ay, bx, by, { w, seed: seed + 1, taper: [0, 0], press: 0.05 });
   const d = Math.hypot(bx - ax, by - ay) || 1;
