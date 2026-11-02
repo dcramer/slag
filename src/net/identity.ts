@@ -138,9 +138,13 @@ export function saveResume(room: string, snap: MatchSnap, ns: NetState) {
   write(storage('local'), keyResume(room), { at: Date.now(), snap, ns } satisfies ResumeSave);
 }
 
-/** The last state this browser saw for `room`, if recent and compatible. */
-export function loadResume(room: string): ResumeSave | null {
+/**
+ * The last state this browser saw for `room`, if recent and compatible, and saved before `before` (ms epoch).
+ * A session passes when it opened: it saves while its join is still in flight, and resuming that save once the
+ * join lands would rewind its own lobby, undoing the saved name and look it had just applied.
+ */
+export function loadResume(room: string, before = Infinity): ResumeSave | null {
   const r = read(storage('local'), keyResume(room)) as ResumeSave | null;
-  if (!r || r.snap?.v !== SNAP_VERSION || Date.now() - r.at > RESUME_MS) return null;
+  if (!r || r.snap?.v !== SNAP_VERSION || Date.now() - r.at > RESUME_MS || r.at >= before) return null;
   return r;
 }

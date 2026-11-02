@@ -12,7 +12,8 @@
  *
  * Scenarios:
  *   flow        as a person does it: Play on the menu, open the invite, press nothing; both peers see both bays
- *   fresh       Play on the menu, on a desktop and on a phone: alone in a new lobby, host, seated with the device in hand
+ *   fresh       Play on the menu, on a desktop and on a phone: alone in a new lobby, host, seated with the device in
+ *               hand; then the other kind opens the invite and is seated the same way
  *   kick        the Host label everywhere and through a migration; kicks by keyboard and mouse, with no way back
  *   refused     a guest whose build can't load the host's snapshots says so
  *   view        real mouse input lands under the pointer, at every window shape, on every level size
@@ -1043,20 +1044,36 @@ async function realFlowScenario(browser: Browser, base: string, label: string, s
   check(real.length === 0, `no page errors${real.length ? `:\n${real.join('\n')}` : ''}`);
 }
 
-/**
- * Play on the main menu opens a lobby nobody else is in: the only peer is us, we host, and our seat is the device
- * we're holding. A phone only knows touch is its input once the page is up, and used to seat a keyboard player
- * there, which then carried the Host label while the person got an empty bay to join.
- */
-async function freshScenario(browser: Browser, base: string, label: string, phone?: string) {
-  console.log(`\n== ${label}`);
+type HudNet = { hostSlot?: number; peers: { name: string; isHost: boolean; local: boolean }[] };
+/** The online panel as last drawn, once a frame has been drawn past connecting (software GL can lag a second behind). */
+async function hudNet(p: Page): Promise<HudNet> {
+  const drawn = () => !/Connecting|Joining/.test((window as any).slagDebug.renderer.hud.net?.status ?? 'Connecting');
+  await p.waitForFunction(drawn, null, { timeout: 10_000 }).catch(() => {});
+  return p.evaluate(() => (window as any).slagDebug.renderer.hud.net as HudNet);
+}
+
+/** A browser as a person has it: a desktop window, or a phone with touch. Past the name prompt, with a saved name. */
+async function personPage(browser: Browser, phone: string | undefined, name: string, look: number, errors: string[], tag: string) {
   const ctx = await browser.newContext(phone ? (({ defaultBrowserType: _, ...d }) => d)(devices[phone]) : { viewport: { width: 960, height: 540 } });
   await ctx.addInitScript('window.__name = (f) => f');
-  await ctx.addInitScript(() => localStorage.setItem('slag.profile.v1', JSON.stringify({ version: 1, name: 'Dave', look: 123456, prompted: true })));
-  const errors: string[] = [];
+  const profile = JSON.stringify({ version: 1, name, look, prompted: true });
+  await ctx.addInitScript((v) => localStorage.setItem('slag.profile.v1', v), profile);
   const p = await ctx.newPage();
-  p.on('pageerror', (e) => errors.push(String(e)));
-  p.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+  p.on('pageerror', (e) => errors.push(`${tag}: ${String(e)}`));
+  p.on('console', (m) => m.type() === 'error' && errors.push(`${tag}: ${m.text()}`));
+  return { ctx, p };
+}
+
+/**
+ * Play on the main menu opens a lobby nobody else is in: the only peer is us, we host, and our seat is the device
+ * we're holding, with nobody pressing anything. A phone only knows touch is its input once the page is up, and used
+ * to seat a keyboard player there, which then carried the Host label while the person got an empty bay to join.
+ * With `guest`, someone on the other kind of device opens the invite and is seated the same way.
+ */
+async function freshScenario(browser: Browser, base: string, label: string, phone?: string, guest?: { phone?: string }) {
+  console.log(`\n== ${label}`);
+  const errors: string[] = [];
+  const { ctx, p } = await personPage(browser, phone, 'Dave', 123456, errors, 'host');
   await p.goto(base);
   const play = p.locator('button[data-id="play"]');
   await (phone ? play.tap() : play.click());
@@ -1064,9 +1081,7 @@ async function freshScenario(browser: Browser, base: string, label: string, phon
   const v = await waitFor(p, 'online and seated', (x) => x.status === 'online' && x.players.length > 0, 20_000);
   await sleep(1500); // long enough for a stray member or a second seat to show up
   const w = await view(p);
-  const hud = await p.evaluate(
-    () => (window as any).slagDebug.renderer.hud.net as { hostSlot?: number; peers: { name: string; isHost: boolean; local: boolean }[] },
-  );
+  const hud = await hudNet(p);
   const dev = `${v.self}:${phone ? 'touch' : 'kb1'}`;
   check(
     w.members.length === 1 && w.members[0] === w.self && w.hostId === w.self && w.isHost,
@@ -1079,12 +1094,36 @@ async function freshScenario(browser: Browser, base: string, label: string, phon
     mine !== undefined && hud.hostSlot === mine.slot && hud.peers.length === 1 && hud.peers[0].local && hud.peers[0].isHost,
     `the Host label is on the seat in our hand, and the crown is ours (${JSON.stringify(hud)})`,
   );
-  const path = `${out}/online-${label.replaceAll(' ', '-')}.png`;
-  await p.screenshot({ path, timeout: 60_000 }).then(
-    () => console.log(`     ${path}`),
-    (e) => console.log(`     (screenshot skipped: ${String(e).split('\n')[0]})`),
-  );
+  const shot = async (page: Page, who: string) => {
+    const path = `${out}/online-${label.replaceAll(/\W+/g, '-')}-${who}.png`;
+    await page.screenshot({ path, timeout: 60_000 }).then(
+      () => console.log(`     ${path}`),
+      (e) => console.log(`     (screenshot skipped: ${String(e).split('\n')[0]})`),
+    );
+  };
+  await shot(p, 'host');
+  let guestCtx: BrowserContext | null = null;
+  if (guest) {
+    const g = await personPage(browser, guest.phone, 'Eve', 654321, errors, 'guest');
+    guestCtx = g.ctx;
+    await g.p.goto(p.url().split('?')[0]);
+    await g.p.waitForFunction(() => 'slagDebug' in window, null, { timeout: 60_000 });
+    const gv = await waitFor(g.p, 'the guest seated', (x) => x.synced && x.players.length === 2, 20_000);
+    await waitFor(p, 'the host seeing the guest', (x) => x.players.length === 2, 5000);
+    await sleep(1000);
+    const [a, b] = [await view(p), await view(g.p)];
+    const gdev = `${gv.self}:${guest.phone ? 'touch' : 'kb1'}`;
+    const seats = (x: NetView) => x.players.map((q) => `${q.slot}:${q.device}`).join();
+    check(seats(a) === `0:${dev},1:${gdev}` && seats(b) === seats(a), `the guest is seated with ${gdev}, and both agree (${seats(a)} / ${seats(b)})`);
+    const ghud = await hudNet(g.p);
+    check(
+      b.hostId === a.self && ghud.hostSlot === 0 && ghud.peers.some((x) => x.local && !x.isHost) && ghud.peers.some((x) => !x.local && x.isHost),
+      `the guest sees the host as host and itself as a guest (${JSON.stringify(ghud.peers)})`,
+    );
+    await shot(g.p, 'guest');
+  }
   await ctx.close();
+  await guestCtx?.close();
   const real = errors.filter((e) => !/favicon/.test(e));
   check(real.length === 0, `no page errors${real.length ? `:\n${real.join('\n')}` : ''}`);
 }
@@ -1482,8 +1521,8 @@ try {
     await realFlowScenario(browser, server.base, 'flow two tabs saved look', true, true);
   }
   if (wanted('fresh')) {
-    await freshScenario(browser, server.base, 'fresh desktop');
-    await freshScenario(browser, server.base, 'fresh phone', 'iPhone 13 landscape');
+    await freshScenario(browser, server.base, 'fresh desktop, phone joins', undefined, { phone: 'Pixel 7' });
+    await freshScenario(browser, server.base, 'fresh phone, desktop joins', 'iPhone 13', {});
   }
   if (wanted('kick')) await kickScenario(browser, server.base);
   if (wanted('refused')) await refusedScenario(browser, server.base);

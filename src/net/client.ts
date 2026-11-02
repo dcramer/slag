@@ -89,6 +89,7 @@ const KICKED_MS = 1500;
 export function connectRoom(room: string, match: Match, opts: ConnectOptions): RoomConnection {
   const params = opts.params ?? new URLSearchParams(location.search);
   const ident = acquirePeerId(room);
+  const opened = Date.now();
   const life = new AbortController();
   const on = { signal: life.signal };
   const transport = chooseTransport(room, ident.id, params);
@@ -96,7 +97,7 @@ export function connectRoom(room: string, match: Match, opts: ConnectOptions): R
     transport,
     match,
     primaryDevice: opts.primaryDevice,
-    resume: () => loadResume(room),
+    resume: () => loadResume(room, opened), // a previous visit's state, never this one's
     onKicked: () => {
       markKicked(room);
       setTimeout(() => !life.signal.aborted && opts.onKicked(), KICKED_MS);
