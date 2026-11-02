@@ -284,7 +284,8 @@ export class Match {
         continue;
       }
       if (inp.altPressed) {
-        p.character = this.rollCharacter(p);
+        // A new look keeps the name: it's who you are, and online a reroll that also rolled a name flickered back to the saved one.
+        p.character = { ...this.rollCharacter(p), name: p.character.name };
         p.ready = false;
       }
       if (inp.confirmPressed) p.ready = !p.ready;
