@@ -4,7 +4,8 @@ import type { Match, Player } from '../game/match';
 import { overview, raceFloor } from '../game/view';
 import { TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import { floorY, type Level, tileAt } from '../sim/level';
-import { type Beam, canPlace, footprint, previewProps, type Resolved, resolveProp } from '../sim/props';
+import type { Solid } from '../sim/physics';
+import { type Beam, footprint, motionOffset, previewProps, type Resolved, resolveProp } from '../sim/props';
 import type { RunWorld } from '../sim/run';
 import type { GameEvent } from '../sim/types';
 import { Backdrop } from './background';
@@ -21,7 +22,18 @@ import { drawClouds, drawDrops, drawRunnerItems, itemFx } from './items';
 import { drawPocketBlocks, drawShells, drawShellShadows } from './items-extra';
 import { circle, flutter, glowDot, type Light, light, type RC } from './kit';
 import { type Compositor, createCompositor } from './post';
-import { drawBackdrop, drawBlastPreview, drawForeground, drawProjectile, drawResolved, drawHeld, drawRunnerStatus, type Emit, propEventFx } from './props';
+import {
+  drawBackdrop,
+  drawBlastPreview,
+  drawForeground,
+  drawProjectile,
+  drawResolved,
+  drawHeld,
+  drawRideCue,
+  drawRunnerStatus,
+  type Emit,
+  propEventFx,
+} from './props';
 import { LightOccluder } from './occlude';
 import { Surround } from './surround';
 import { TerrainPainter } from './terrain';
@@ -53,7 +65,7 @@ const RUNNER_KEY: HSL = { h: 40, s: 30, l: 90 };
 /** The prop a player is about to place, as it would stand under their cursor. */
 function ghostProp(m: Match, p: Player): Resolved | null {
   const gh = m.phase === 'place' && !p.placed ? m.ghostOrigin(p) : null;
-  return gh && resolveProp({ uid: 900 + p.slot, def: gh.def, owner: p.slot, tx: gh.tx, ty: gh.ty, rot: p.rot });
+  return gh && resolveProp({ uid: 900 + p.slot, def: gh.def, owner: p.slot, tx: gh.tx, ty: gh.ty, rot: p.rot, ...(gh.ride && { ride: gh.ride }) });
 }
 
 // Speed trail. Vertical speed counts for less: a jump's launch is fast, but a walking hop isn't speed.
@@ -323,7 +335,7 @@ export class Renderer {
       });
     }
 
-    if (m.phase === 'place') this.drawGhosts(rc, m, beams);
+    if (m.phase === 'place') this.drawGhosts(rc, m, beams, still?.solids ?? []);
     if (m.phase === 'lobby' || m.phase === 'pick' || m.phase === 'place') this.drawIdlers(rc, m, dt);
 
     if (run) {
@@ -570,7 +582,7 @@ export class Renderer {
     g.stroke();
   }
 
-  private drawGhosts(rc: RC, m: Match, beams: readonly Beam[]) {
+  private drawGhosts(rc: RC, m: Match, beams: readonly Beam[], solids: readonly Solid[]) {
     const s = rc.s;
     // Off-limits zones.
     s.save();
@@ -588,7 +600,7 @@ export class Renderer {
       const gh = m.ghostOrigin(p);
       const ghost = ghostProp(m, p);
       if (!gh || !ghost) continue;
-      const ok = canPlace(m.level, m.placed, gh.def, p.rot, gh.tx, gh.ty) && this.refused.get(p.slot) !== ghostKey(m, p, gh);
+      const ok = gh.ok && this.refused.get(p.slot) !== ghostKey(m, p, gh);
       const col = ok ? p.character.body : { h: 0, s: 90, l: 55 };
       s.globalAlpha = 0.85;
       rc.g.globalAlpha = 0.85;
@@ -597,15 +609,18 @@ export class Renderer {
       rc.g.globalAlpha = 1;
       const bomb = gh.def.modules.find((x) => x.type === 'bomb');
       if (bomb && bomb.type === 'bomb') drawBlastPreview(rc, m.level, m.placed, bomb, gh.tx, gh.ty, p.rot);
-      // The footprint as one outline round its tiles: exact enough to line up by, and it doesn't rule a grid over the part.
+      // A part that will ride a mover shows the loop it'll travel and the link it hangs on.
+      drawRideCue(rc, ghost, solids, col);
+      // The footprint as one outline round its tiles: exact enough to line up by, and it doesn't rule a grid over the part. A rider's is where it rides.
       const cells = footprint(gh.def, p.rot);
+      const [ox, oy] = motionOffset(ghost, rc.frame);
       const set = new Set(cells.map(([x, y]) => `${x},${y}`));
       rc.g.strokeStyle = css(col, 10, 0.8);
       rc.g.lineWidth = 1.2;
       rc.g.beginPath();
       for (const [x, y] of cells) {
-        const x0 = (gh.tx + x) * TILE + 0.5;
-        const y0 = (gh.ty + y) * TILE + 0.5;
+        const x0 = (gh.tx + x) * TILE + ox + 0.5;
+        const y0 = (gh.ty + y) * TILE + oy + 0.5;
         const x1 = x0 + TILE - 1;
         const y1 = y0 + TILE - 1;
         const side = (open: boolean, ax: number, ay: number, bx: number, by: number) => {

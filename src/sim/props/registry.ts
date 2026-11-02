@@ -173,6 +173,13 @@ export interface ModuleSim<M extends Module = Module> {
   resolve(m: M, x: Xform): M;
   /** Prop-local cells this module occupies (used to build the placement footprint). */
   anchors(m: M): Cell[];
+  /**
+   * A part may ride a mover with this module (./ride.ts): it translates rigidly by `ctx.off` in the
+   * sim and by `DrawCtx.off` in the art, and neither assumes a still mount.
+   */
+  rides?: boolean;
+  /** This module's solids can carry parts stuck to them (./ride.ts). Absent for anything that doesn't move rigidly. */
+  carrier?: CarrierSim<M>;
   /** Add solids/hazards/triggers for this frame. Runs before other props' solids are all in, so anything that travels belongs in `trace`. */
   build?(m: M, ctx: PropCtx, out: Contrib): void;
   /**
@@ -201,6 +208,19 @@ export interface ModuleSim<M extends Module = Module> {
    * written is what they leave with. See props/attach.ts.
    */
   hold?(m: M, ctx: TouchCtx, who: RunnerMut, g: Grip, inp: InputFrame): boolean;
+}
+
+/** How a module's solids carry what's stuck to them. */
+export interface CarrierSim<M extends Module = Module> {
+  /**
+   * Where solid `part` is at frame f relative to the prop's own offset (px), or null if it can't
+   * carry (a block that crumbles). A pure function of the frame, so riders stay deterministic.
+   */
+  at(m: M, f: number, phase: number, part: number): Vec | null;
+  /** The module moves its solids itself (a wheel, a cart); otherwise only the prop's motion moves them. */
+  drives: boolean;
+  /** Frames in one cycle of that movement (0 when it doesn't move by itself). */
+  period(m: M): number;
 }
 
 // Heterogeneous registry: entries are keyed by module type.

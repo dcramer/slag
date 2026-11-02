@@ -476,6 +476,38 @@ export interface PlacedProp {
    * sets it as parts go in and come out (`linkPipes`), so it's sim state and rides in snapshots.
    */
   link?: number;
+  /** Stuck to a mover and carried by it for the rest of the match (./ride.ts). Unset for everything else. */
+  ride?: Ride;
+}
+
+/**
+ * What a part stuck to a moving solid rides (./ride.ts). Translation only: it
+ * follows the carrying solid's offset and never turns. Its offset at frame f
+ * is `carrier(f) - base`, where carrier is the solid's position (the parent's
+ * motion offset plus where its module puts that solid), so `base` is the
+ * carrier's position at the moment the part sat exactly where `tx`, `ty` say.
+ */
+export interface Ride {
+  /** The part it's stuck to. If that part goes, so does this one. */
+  uid: number;
+  /** The parent's module and which of that module's solids (a wheel's platform) carries it. */
+  mi: number;
+  part: number;
+  /** px. */
+  base: Vec;
+  /**
+   * The parent as placed, so a part's motion is a pure function of its own data wherever it's
+   * resolved alone (the barrier, the art). Chains nest: the parent carries its own `ride`.
+   */
+  parent: PlacedProp;
+}
+
+/** A resolved part's carrier (see Ride): the parent resolved, plus the stored base. */
+export interface Carry {
+  by: Resolved;
+  mi: number;
+  part: number;
+  base: Vec;
 }
 
 /** A placed prop with every module in world space (points/lengths in px, cells in world tiles, angles rotated). */
@@ -484,6 +516,8 @@ export interface Resolved {
   mods: Module[];
   motion: Motion;
   phase: number;
+  /** Set for a part riding a mover: `motionOffset` adds the carrier's travel. */
+  carry?: Carry;
 }
 
 /** Mutable per-prop runtime state during a race. */

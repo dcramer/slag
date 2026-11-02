@@ -44,6 +44,7 @@ function touches(r: RunnerView, x: number, y: number): boolean {
 export const mystery = defineModule<'mystery'>({
   type: 'mystery',
   resolve: (m, x) => ({ ...m, cells: x.C(m.cells) }),
+  rides: true,
   anchors: (m) => m.cells.slice(),
   build(m, ctx, out) {
     const { off, prev } = ctx;
