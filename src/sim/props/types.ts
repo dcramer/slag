@@ -51,7 +51,11 @@ export type LauncherStyle =
   | 'cryo'
   | 'prism'
   | 'hangar';
-export type Head = 'saw' | 'mace' | 'axe';
+/**
+ * What a swinger swings. `log` (jungle) is a battering log slung level on two ropes: it hurts along its
+ * whole length (`logBox`, ./modules/swinger.ts), not round a point.
+ */
+export type Head = 'saw' | 'mace' | 'axe' | 'log';
 export type Aim = 'fixed' | 'sweep' | 'track';
 /** Set-piece looks (art only; the sim treats every look the same). */
 export type RotorLook =

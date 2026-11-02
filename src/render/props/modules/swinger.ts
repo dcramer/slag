@@ -2,9 +2,9 @@ import { css, type HSL } from '../../../core/color';
 import type { Vec } from '../../../core/geom';
 import { TILE } from '../../../sim/constants';
 import { tileAt } from '../../../sim/level';
-import { type ModuleOf, type PropStyle, type Resolved, swingHeads } from '../../../sim/props';
+import { LOG_LEN, LOG_THICK, type ModuleOf, type PropStyle, type Resolved, swingHeads } from '../../../sim/props';
 import { line, type P, stroke } from '../../ink';
-import { ball, boxPts, dot, glint, INK, ovalPts, part, path, poly, sprite, stamp } from '../../ink-props';
+import { ball, boxPts, dot, glint, INK, ovalPts, part, path, poly, sprite, stamp, tick } from '../../ink-props';
 import { light, type MetalPalette, type RC } from '../../kit';
 import { defineArt, type PropDrawOpts } from '../common';
 import { whoosh } from '../ink-motion';
@@ -207,6 +207,38 @@ function axe(R: number, pal: MetalPalette, spiral: boolean) {
   });
 }
 
+/**
+ * A battering log, level, centred on its head: a bark-dark trunk with its end grain showing and a crown
+ * of sharpened stakes lashed round each end, all inside `logBox` (the sim's hurt box).
+ */
+function logHead(R: number, woodHue: number) {
+  const L = R * LOG_LEN;
+  const T = R * LOG_THICK;
+  return sprite(`sw|log|${R.toFixed(2)}|${woodHue | 0}`, -L / 2 - 1, -T / 2 - 1, L + 2, T + 2, (g) => {
+    const bark: HSL = { h: woodHue, s: 34, l: 30 };
+    const stake = L * 0.1;
+    const body = boxPts(-L / 2 + stake, -T / 2, L - 2 * stake, T, T * 0.45, 61, 0.3);
+    part(g, body, bark, 61, { depth: T * 0.12, thin: 0.5, thick: 1.2 });
+    // Bark: long splits along the trunk, darker than the wood.
+    for (let i = 0; i < 4; i++) {
+      const y = -T * 0.3 + (i * T * 0.6) / 3;
+      const x0 = -L / 2 + stake + 2 + ((i * 7) % 5);
+      tick(g, x0, y, x0 + L * (0.3 + 0.1 * (i % 2)), y + 0.3, 0.45, 62 + i, css(bark, -14));
+    }
+    // A lashing of vine near each end, and the stakes jutting out past it.
+    for (const s of [-1, 1]) {
+      const ex = s * (L / 2 - stake);
+      g.fillStyle = css({ h: 100, s: 40, l: 30 });
+      for (const k of [0, 1]) line(g, ex - s * (2.2 + k * 1.6), -T / 2, ex - s * (1.4 + k * 1.6), T / 2, { w: 0.9, seed: 63 + k, taper: [0.1, 0.1], press: 0 });
+      for (let i = 0; i < 3; i++) {
+        const y = -T * 0.32 + i * T * 0.32;
+        const pts = poly(ex - s * 0.6, y - T * 0.12, s * (L / 2) - s * 0.2, y, ex - s * 0.6, y + T * 0.12);
+        part(g, pts, { h: woodHue + 8, s: 30, l: 62 }, 64 + i, { depth: 0.2, thin: 0.3, thick: 0.6 });
+      }
+    }
+  });
+}
+
 /** Pizza Cutter: the handle it came with, still on the hub. */
 function handle() {
   return sprite('sw|handle', -2, -2, 18, 6, (g) => {
@@ -267,6 +299,10 @@ function drawSwinger(rc: RC, m: Swinger, r: Resolved, off: Vec, pal: MetalPalett
       }
     }
   }
+  if (m.head === 'log') {
+    drawLog(s, m, heads, hx, hy, st.woodHue);
+    return;
+  }
   for (const h of heads) {
     if (m.arm <= 0) continue;
     if (m.link === 'chain') {
@@ -326,6 +362,27 @@ function drawSwinger(rc: RC, m: Swinger, r: Resolved, off: Vec, pal: MetalPalett
       s.restore();
     }
   }
+}
+
+/**
+ * A log slung on two ropes from a crossbar at the hub: the ropes stay parallel, so the log swings level
+ * (the sim's `logBox`). The crossbar is lashed under whatever holds the hub.
+ */
+function drawLog(s: CanvasRenderingContext2D, m: Swinger, heads: readonly { x: number; y: number; a: number }[], hx: number, hy: number, woodHue: number) {
+  const L = m.radius * LOG_LEN;
+  const rope: HSL = { h: 38, s: 36, l: 52 };
+  const spread = L * 0.3;
+  for (const h of heads) {
+    for (const k of [-1, 1]) {
+      s.fillStyle = INK;
+      line(s, hx + k * spread, hy, h.x + k * spread, h.y, { w: 1.6, seed: 70 + k, taper: [0, 0], press: 0.1 });
+      s.fillStyle = css(rope);
+      line(s, hx + k * spread, hy, h.x + k * spread, h.y, { w: 0.8, seed: 72 + k, taper: [0, 0], press: 0.1 });
+    }
+  }
+  part(s, boxPts(hx - spread - 2.5, hy - 1.6, spread * 2 + 5, 3.2, 1.2, 74), { h: woodHue, s: 30, l: 28 }, 74, { depth: 0.4, thin: 0.4, thick: 0.9 });
+  const sp = logHead(m.radius, woodHue);
+  for (const h of heads) stamp(s, sp, h.x, h.y);
 }
 
 function drawSaw(rc: RC, x: number, y: number, R: number, rot: number, pal: MetalPalette, st: PropStyle, o: PropDrawOpts, spin: number) {
