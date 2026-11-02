@@ -1,3 +1,4 @@
+import { dcos, dhypot, dpow, dsin } from '../../core/dmath';
 import { type Cell, overlaps, type Rect, rectCircle } from '../../core/geom';
 import type { Rng } from '../../core/rng';
 import { DT, LEVEL_H, PLAYER_H, PLAYER_W, RUN_COUNTDOWN, TILE } from '../../sim/constants';
@@ -216,7 +217,7 @@ function hazardRect(h: Hazard): Rect {
 function hazardHits(h: Hazard, z: Rect): boolean {
   if (h.kind === 'circle') return rectCircle(z, h.x, h.y, h.r);
   if (h.kind === 'rect') return overlaps(h.r, z);
-  const n = Math.max(1, Math.ceil(Math.hypot(h.x2 - h.x1, h.y2 - h.y1) / 4));
+  const n = Math.max(1, Math.ceil(dhypot(h.x2 - h.x1, h.y2 - h.y1) / 4));
   for (let i = 0; i <= n; i++) if (rectCircle(z, h.x1 + ((h.x2 - h.x1) * i) / n, h.y1 + ((h.y2 - h.y1) * i) / n, h.r)) return true;
   return false;
 }
@@ -333,8 +334,8 @@ export function finalize(s: Site, piece: Piece, uid: number, key: string): Place
     const spec = AMMO[m.ammo];
     const pad = 6 + spec.radius + spec.wobble * 5;
     let [x, y] = cannonMuzzle(m);
-    const vx = Math.cos(m.angle) * m.speed;
-    let vy = Math.sin(m.angle) * m.speed;
+    const vx = dcos(m.angle) * m.speed;
+    let vy = dsin(m.angle) * m.speed;
     for (let f = 0; f < 60 * 8; f++) {
       vy += spec.gravity * DT;
       x += vx * DT;
@@ -382,7 +383,7 @@ export function makePlacer(themeKey: string, recipes: readonly Recipe[], uidBase
       [2, 4],
       [3, 3],
     ] as const);
-    const pool = recipes.map((r) => ({ r, k: rng.next() ** (1 / r.weight) })).sort((a, b) => b.k - a.k);
+    const pool = recipes.map((r) => ({ r, k: dpow(rng.next(), 1 / r.weight) })).sort((a, b) => b.k - a.k);
     const order = [...pool.map((p) => p.r), ...pool.filter((p) => p.r.repeat).map((p) => p.r)];
     const out: PlacedProp[] = [];
     for (const recipe of order) {

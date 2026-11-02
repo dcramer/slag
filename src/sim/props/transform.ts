@@ -1,3 +1,4 @@
+import { dcos, dsin } from '../../core/dmath';
 import { type Cell, frac, pingPong, type Vec } from '../../core/geom';
 import { TILE } from '../constants';
 import { isProtected, type Level, T_EMPTY, T_SOLID, tileAt } from '../level';
@@ -77,7 +78,7 @@ export function snap(v: number): number {
 }
 
 export function dirOf(angle: number): Vec {
-  return [snap(Math.cos(angle)), snap(Math.sin(angle))];
+  return [snap(dcos(angle)), snap(dsin(angle))];
 }
 
 /** Whole-prop translation (px) at frame f. */
@@ -85,11 +86,11 @@ export function motionOffset(r: Resolved, f: number): Vec {
   const m = r.motion;
   if (m.type === 'rail') {
     const d = pingPong(f / m.period + r.phase) * m.range;
-    return [snap(Math.cos(m.angle)) * d, snap(Math.sin(m.angle)) * d];
+    return [snap(dcos(m.angle)) * d, snap(dsin(m.angle)) * d];
   }
   if (m.type === 'loop') {
     const a = m.dir * Math.PI * 2 * (f / m.period + r.phase);
-    return [(Math.cos(a) - 1) * m.radius, Math.sin(a) * m.radius];
+    return [(dcos(a) - 1) * m.radius, dsin(a) * m.radius];
   }
   return [0, 0];
 }
@@ -115,8 +116,8 @@ export function cycle(f: number, phase: number, lens: number[]): CycleState {
 
 /** Distance (px) along a ray before it enters a solid tile. */
 export function rayToWall(level: Level, x: number, y: number, angle: number, maxLen: number, skip = 6): number {
-  const dx = Math.cos(angle);
-  const dy = Math.sin(angle);
+  const dx = dcos(angle);
+  const dy = dsin(angle);
   for (let d = skip; d < maxLen; d += 2) {
     const px = x + dx * d;
     const py = y + dy * d;
@@ -198,7 +199,7 @@ function canMount(level: Level, placed: readonly PlacedProp[], def: PropDef, rot
 export function detonate(level: Level, placed: PlacedProp[], radius: number, tx: number, ty: number): PlacedProp[] {
   const cx = tx + 0.5;
   const cy = ty + 0.5;
-  const within = (x: number, y: number) => (x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2 <= radius * radius;
+  const within = (x: number, y: number) => (x + 0.5 - cx) * (x + 0.5 - cx) + (y + 0.5 - cy) * (y + 0.5 - cy) <= radius * radius;
   const r = Math.ceil(radius);
   for (let y = ty - r; y <= ty + r; y++) {
     for (let x = tx - r; x <= tx + r; x++) {

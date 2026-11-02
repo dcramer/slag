@@ -1,3 +1,4 @@
+import { datan, datan2, dcos, dsin } from '../../../core/dmath';
 import { RUN_COUNTDOWN } from '../../constants';
 import { cellOf, defineModule, type RunnerView } from '../registry';
 import { AMMO, type ModuleOf } from '../types';
@@ -6,7 +7,7 @@ type Launcher = ModuleOf<'launcher'>;
 const TRACK_TURN = 0.045; // rad/frame
 
 export function launcherAngle(m: Launcher, f: number, phase: number): number {
-  return m.aim === 'sweep' ? m.angle + m.sweep * Math.sin(Math.PI * 2 * (f / m.sweepPeriod + phase)) : m.angle;
+  return m.aim === 'sweep' ? m.angle + m.sweep * dsin(Math.PI * 2 * (f / m.sweepPeriod + phase)) : m.angle;
 }
 
 export function angleDiff(a: number, b: number): number {
@@ -18,13 +19,13 @@ export function angleDiff(a: number, b: number): number {
 
 /** Launch angle (screen space) to hit offset (dx, dy) at `speed` under `gravity`; low arc, direct if unreachable. */
 export function ballisticAngle(dx: number, dy: number, speed: number, gravity: number): number {
-  if (gravity <= 0) return Math.atan2(dy, dx);
+  if (gravity <= 0) return datan2(dy, dx);
   const X = Math.abs(dx);
   const Y = -dy;
   const v2 = speed * speed;
   const disc = v2 * v2 - gravity * (gravity * X * X + 2 * Y * v2);
-  if (disc < 0 || X < 1) return Math.atan2(dy, dx);
-  const th = Math.atan((v2 - Math.sqrt(disc)) / (gravity * X));
+  if (disc < 0 || X < 1) return datan2(dy, dx);
+  const th = datan((v2 - Math.sqrt(disc)) / (gravity * X));
   return dx >= 0 ? -th : Math.PI + th;
 }
 
@@ -36,8 +37,8 @@ function trackAim(cur: number, x: number, y: number, m: Launcher, runners: reado
     if (!r.active) continue;
     const tx = r.x + r.w / 2;
     const ty = r.y + r.h / 2;
-    const d = (tx - x) ** 2 + (ty - y) ** 2;
-    if (Math.abs(angleDiff(Math.atan2(ty - y, tx - x), m.angle)) < 1.75 && d < bestD) {
+    const d = (tx - x) * (tx - x) + (ty - y) * (ty - y);
+    if (Math.abs(angleDiff(datan2(ty - y, tx - x), m.angle)) < 1.75 && d < bestD) {
       bestD = d;
       best = [tx, ty];
     }
@@ -66,16 +67,16 @@ export const launcher = defineModule<'launcher'>({
       for (let s = 0; s < m.spread; s++) {
         const a = angle + (s - (m.spread - 1) / 2) * m.spreadAngle;
         ctx.spawn({
-          x: x + Math.cos(a) * 10,
-          y: y + Math.sin(a) * 10,
-          vx: Math.cos(a) * m.speed,
-          vy: Math.sin(a) * m.speed,
+          x: x + dcos(a) * 10,
+          y: y + dsin(a) * 10,
+          vx: dcos(a) * m.speed,
+          vy: dsin(a) * m.speed,
           owner: ctx.r.pp.owner,
           ammo: m.ammo,
         });
       }
       ctx.state.lastFire = f;
-      ctx.emit({ type: 'fire', x: x + Math.cos(angle) * 10, y: y + Math.sin(angle) * 10, angle, style: m.style });
+      ctx.emit({ type: 'fire', x: x + dcos(angle) * 10, y: y + dsin(angle) * 10, angle, style: m.style });
     }
   },
 });

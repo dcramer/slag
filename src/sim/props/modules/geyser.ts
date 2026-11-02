@@ -1,3 +1,4 @@
+import { dcos, dsin } from '../../../core/dmath';
 import { TILE } from '../../constants';
 import type { Level } from '../../level';
 import { cellOf, defineModule } from '../registry';
@@ -39,7 +40,7 @@ export const geyser = defineModule<'geyser'>({
   type: 'geyser',
   resolve: (m, x) => ({ ...m, at: x.P(m.at), angle: m.angle + x.da, width: m.width * x.T, length: m.length * x.T }),
   // The first cell the column passes through (the vent sits on the ground surface).
-  anchors: (m) => [cellOf([m.at[0] + Math.cos(m.angle) * 0.5, m.at[1] + Math.sin(m.angle) * 0.5])],
+  anchors: (m) => [cellOf([m.at[0] + dcos(m.angle) * 0.5, m.at[1] + dsin(m.angle) * 0.5])],
   build(m, ctx, out) {
     const col = geyserColumn(m, ctx.frame, ctx.r.phase, ctx.level, ctx.off[0], ctx.off[1]);
     if (!col || col.len < 2) return;

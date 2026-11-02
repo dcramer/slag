@@ -1,3 +1,4 @@
+import { dcos } from './dmath';
 export interface Rect {
   x: number;
   y: number;
@@ -45,7 +46,7 @@ export function frac(t: number): number {
 
 /** Smooth 0 → 1 → 0 oscillation over one cycle of t. */
 export function pingPong(t: number): number {
-  return (1 - Math.cos(frac(t) * Math.PI * 2)) / 2;
+  return (1 - dcos(frac(t) * Math.PI * 2)) / 2;
 }
 
 /**

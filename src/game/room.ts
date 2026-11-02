@@ -8,6 +8,7 @@ import { deriveSeed, hashString } from '../core/rng';
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no 0/O/1/I/L
 export const ROOM_LEN = 5;
 
+// det-ok-next-line: room codes are picked by the app shell, never by the sim.
 export function newRoomCode(random: () => number = Math.random): string {
   let s = '';
   for (let i = 0; i < ROOM_LEN; i++) s += ALPHABET[Math.floor(random() * ALPHABET.length)];

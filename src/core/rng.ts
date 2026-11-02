@@ -94,7 +94,7 @@ export class Rng {
 
 /** Non-deterministic seed for the app layer (picking a new match). Never call from sim code. */
 export function randomSeed(): number {
-  return (Math.random() * 4294967296) >>> 0;
+  return (Math.random() * 4294967296) >>> 0; // det-ok: app-layer seed picker
 }
 
 export function seedToString(seed: number): string {

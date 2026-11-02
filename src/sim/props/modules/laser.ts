@@ -1,3 +1,4 @@
+import { dcos, dsin } from '../../../core/dmath';
 import { cellOf, defineModule } from '../registry';
 import { cycle, rayToWall } from '../transform';
 import type { ModuleOf } from '../types';
@@ -8,7 +9,7 @@ type Laser = ModuleOf<'laser'>;
 export const laserCycle = (m: Laser, f: number, phase: number) => cycle(f, phase, [m.off, m.charge, m.fire]);
 
 export function laserAngle(m: Laser, f: number, phase: number): number {
-  return m.sweep ? m.angle + m.sweep * Math.sin(Math.PI * 2 * (f / m.sweepPeriod + phase)) : m.angle;
+  return m.sweep ? m.angle + m.sweep * dsin(Math.PI * 2 * (f / m.sweepPeriod + phase)) : m.angle;
 }
 
 export const laser = defineModule<'laser'>({
@@ -24,10 +25,10 @@ export const laser = defineModule<'laser'>({
     out.hazards.push({
       owner: ctx.r.pp.owner,
       kind: 'seg',
-      x1: x + Math.cos(a) * 9,
-      y1: y + Math.sin(a) * 9,
-      x2: x + Math.cos(a) * len,
-      y2: y + Math.sin(a) * len,
+      x1: x + dcos(a) * 9,
+      y1: y + dsin(a) * 9,
+      x2: x + dcos(a) * len,
+      y2: y + dsin(a) * len,
       r: 3,
     });
   },

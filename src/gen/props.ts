@@ -1,3 +1,4 @@
+import { dcos, dsin } from '../core/dmath';
 import { type Cell, normalizeCells, type Vec } from '../core/geom';
 import { moduleSim } from '../sim/props/registry';
 import '../sim/props/modules';
@@ -236,7 +237,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     if (spiky) {
       const dir = rng.pick([1, 2]); // down or left/right
       const a = dir === 1 ? AXIS[1] : rng.pick([AXIS[0], AXIS[2]]);
-      const [dx, dy] = [Math.round(Math.cos(a)), Math.round(Math.sin(a))];
+      const [dx, dy] = [Math.round(dcos(a)), Math.round(dsin(a))];
       modules.push({ type: 'spikes', cells: exposed(cells, dx, dy), angle: a });
     }
     let motion: Motion = { type: 'none' };
@@ -299,7 +300,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     );
     for (const d of dirs) {
       const a = AXIS[d];
-      modules.push({ type: 'spikes', cells: exposed(cells, Math.round(Math.cos(a)), Math.round(Math.sin(a))), angle: a });
+      modules.push({ type: 'spikes', cells: exposed(cells, Math.round(dcos(a)), Math.round(dsin(a))), angle: a });
     }
     return {
       archetype: 'spikeblock',

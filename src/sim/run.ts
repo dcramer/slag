@@ -1,3 +1,4 @@
+import { dhypot, dsin } from '../core/dmath';
 import { inset, overlaps, pointInRect, type Rect, rectCircle } from '../core/geom';
 import { DT, KILL_Y, PLAYER_W, RUN_COUNTDOWN, TILE } from './constants';
 import { goalRect, type Level, T_SOLID, tileAt } from './level';
@@ -239,8 +240,8 @@ export class RunWorld {
       p.x += p.vx * DT;
       p.y += p.vy * DT;
       if (spec.wobble) {
-        const sp = Math.hypot(p.vx, p.vy) || 1;
-        const w = Math.sin((f - p.born) * 0.25) * spec.wobble;
+        const sp = dhypot(p.vx, p.vy) || 1;
+        const w = dsin((f - p.born) * 0.25) * spec.wobble;
         p.x += (-p.vy / sp) * w;
         p.y += (p.vx / sp) * w;
       }
@@ -276,7 +277,7 @@ function hitHazard(b: Rect, h: Hazard): boolean {
     case 'circle':
       return rectCircle(b, h.x, h.y, h.r);
     case 'seg': {
-      const len = Math.hypot(h.x2 - h.x1, h.y2 - h.y1);
+      const len = dhypot(h.x2 - h.x1, h.y2 - h.y1);
       const n = Math.max(1, Math.ceil(len / 4));
       for (let i = 0; i <= n; i++) {
         const t = i / n;
