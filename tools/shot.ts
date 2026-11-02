@@ -1,19 +1,20 @@
 /**
  * Screenshot harness. Builds (if sources changed) and boots a production Next.js server
  * (`SHOT_DEV=1` uses `next dev` instead), drives the game through
- * window.slagDebug in headless Chromium, and writes PNGs.
+ * window.slagDebug in headless Chromium, writes PNGs and exits. A run with no
+ * progress for SHOT_TIMEOUT seconds (default 180) fails instead of hanging.
  *
- *   npm run shot -- race --seed abc --race saw,laser --frames 200
- *   npm run shot -- race --race all
- *   npm run shot -- lobby|pick|place --seed abc
- *   npm run shot -- levels --seeds a,b,c,d      (or --count 12) → contact sheet
- *   npm run shot -- props --count 24            → prop gallery (crate cards)
- *   npm run shot -- codex                        → /codex page (full-page screenshot)
- *   npm run shot -- home                         → main menu (desktop + 390×844 mobile)
- *   npm run shot -- settings                     → lobby with the settings overlay open
- *   npm run shot -- score --players 4            → round-score screen
- *   npm run shot -- mobile [--device "Pixel 7 landscape"]  → phone emulation driven by real
- *                                                 multi-touch: lobby/join, pick, place, race, portrait
+ *   pnpm shot race --seed abc --race saw,laser --frames 200
+ *   pnpm shot race --race all
+ *   pnpm shot lobby|pick|place --seed abc
+ *   pnpm shot levels --seeds a,b,c,d      (or --count 12) → contact sheet
+ *   pnpm shot props --count 24            → prop gallery (crate cards)
+ *   pnpm shot codex                        → /codex page (full-page screenshot)
+ *   pnpm shot home                         → main menu (desktop + 390×844 mobile)
+ *   pnpm shot settings                     → lobby with the settings overlay open
+ *   pnpm shot score --players 4            → round-score screen
+ *   pnpm shot mobile [--device "Pixel 7 landscape"]  → phone emulation driven by real
+ *                                           multi-touch: lobby/join, pick, place, race, portrait
  *
  * Options: --out shots  --size 1280x720  --players 2  --frames N (sim frames to advance)
  *          --theme farm (force a theme; `levels --themes all` renders one level per theme)
@@ -22,19 +23,15 @@
  * Software GL is slow; frames are advanced deterministically via slagDebug.step().
  */
 
-import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs';
-import { createServer as netServer } from 'node:net';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { chromium, devices } from 'playwright';
+import { devices } from 'playwright';
 import { touchLayout } from '../src/input/touch';
+import { argReader, launchBrowser, startServer, watchdog } from './lib/server';
 
 const argv = process.argv.slice(2);
 const scenario = argv[0] && !argv[0].startsWith('--') ? argv.shift()! : 'race';
-const opt = (k: string, d?: string) => {
-  const i = argv.indexOf(`--${k}`);
-  return i >= 0 ? argv[i + 1] : d;
-};
+const { opt } = argReader(argv);
 const out = resolve(opt('out', 'shots')!);
 const [W, H] = opt('size', '1280x720')!.split('x').map(Number);
 const seed = opt('seed', 'demo');
@@ -44,59 +41,11 @@ const players = Number(opt('players', '2'));
 const frames = Number(opt('frames', '150'));
 mkdirSync(out, { recursive: true });
 
-/** True if any source file is newer than the last production build. */
-function needsBuild(): boolean {
-  const id = '.next/BUILD_ID';
-  if (!existsSync(id)) return true;
-  const built = statSync(id).mtimeMs;
-  const newer = (dir: string): boolean =>
-    readdirSync(dir, { withFileTypes: true }).some((e) => {
-      const p = `${dir}/${e.name}`;
-      return e.isDirectory() ? newer(p) : statSync(p).mtimeMs > built;
-    });
-  return ['src', 'app', 'public'].some((d) => existsSync(d) && newer(d)) || ['next.config.ts', 'package.json'].some((f) => statSync(f).mtimeMs > built);
-}
-
-async function freePort(): Promise<number> {
-  return new Promise((res) => {
-    const srv = netServer();
-    srv.listen(0, '127.0.0.1', () => {
-      const a = srv.address();
-      srv.close(() => res(typeof a === 'object' && a ? a.port : 3100));
-    });
-  });
-}
-const port = Number(process.env.SHOT_PORT ?? (await freePort()));
-const base = `http://127.0.0.1:${port}/`;
-// Production server by default: `next dev` compiles on demand and is far too slow for software-GL screenshots.
-const useDev = process.env.SHOT_DEV === '1';
-if (!useDev && needsBuild()) {
-  console.log('building (sources changed since last build)…');
-  const r = spawnSync('pnpm', ['exec', 'next', 'build'], { stdio: 'inherit', env: { ...process.env, NEXT_TELEMETRY_DISABLED: '1' } });
-  if (r.status !== 0) throw new Error('next build failed');
-}
-const next = spawn('pnpm', ['exec', 'next', useDev ? 'dev' : 'start', '--port', String(port), '--hostname', '127.0.0.1'], {
-  stdio: ['ignore', 'pipe', 'pipe'],
-  env: { ...process.env, NEXT_TELEMETRY_DISABLED: '1' },
-});
-let nextLog = '';
-next.stdout.on('data', (d) => (nextLog += d));
-next.stderr.on('data', (d) => (nextLog += d));
-// Wait for the server, then warm the routes (first compile is slow).
-for (let i = 0; ; i++) {
-  try {
-    const r = await fetch(`${base}r/WARMUP`);
-    if (r.ok) break;
-  } catch {
-    // not up yet
-  }
-  if (i > 240) throw new Error(`next dev did not start:\n${nextLog}`);
-  await new Promise((r) => setTimeout(r, 500));
-}
-const server = { close: async () => void next.kill('SIGTERM') };
-// Prefer a preinstalled Chromium (cloud containers ship one); otherwise use Playwright's (`npx playwright install chromium`).
-const executablePath = process.env.PW_CHROMIUM ?? (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
-const browser = await chromium.launch({ executablePath, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const server = await startServer();
+const base = server.base;
+const pet = watchdog();
+// `pnpm exec playwright install chromium` if this can't find a browser.
+const browser = await launchBrowser();
 const page = await browser.newPage({ viewport: { width: W, height: H } });
 const errors: string[] = [];
 page.on('pageerror', (e: Error) => errors.push(String(e)));
@@ -133,6 +82,7 @@ async function snap(name: string) {
   const p = `${out}/${name}.png`;
   await page.screenshot({ path: p });
   console.log(p);
+  pet();
   return p;
 }
 async function sheet(name: string, files: string[], cols = 3) {
@@ -171,6 +121,7 @@ async function mobile(deviceName: string) {
     const p = `${out}/mobile-${tag}-${name}.png`;
     await mp.screenshot({ path: p });
     console.log(p);
+    pet();
   };
   type Pt = { x: number; y: number; id: number };
   const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', touchPoints: Pt[]) =>

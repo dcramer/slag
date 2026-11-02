@@ -8,8 +8,9 @@ import { isProtected, type Level, tileAt } from '../src/sim/level';
 import { type Contrib, footprintCells, type Hazard, moduleSim, newPropState, resolveProp } from '../src/sim/props';
 import { RunWorld } from '../src/sim/run';
 import { THEME_IDS } from '../src/themes';
+import { sample, SLOW } from './lib/tier';
 
-const SEEDS = Array.from({ length: 8 }, (_, i) => (i * 2654435761 + 12345) >>> 0);
+const SEEDS = Array.from({ length: sample(2, 8) }, (_, i) => (i * 2654435761 + 12345) >>> 0);
 
 function zones(level: Level): Rect[] {
   return [level.spawn, level.goal].map((c) => ({
@@ -41,15 +42,16 @@ describe('set pieces', () => {
   it('every theme places 1–3 pieces, and every recipe shows up', () => {
     for (const theme of THEME_IDS) {
       const mine = levels.filter((l) => l.theme === theme);
+      for (const l of mine) expect(l.level.setPieces.length).toBeLessThanOrEqual(3);
+      if (!SLOW) continue; // The rest are shares across a theme's levels: two levels can't show them.
       const withPieces = mine.filter((l) => l.level.setPieces.length > 0).length;
       expect(withPieces, theme).toBeGreaterThanOrEqual(mine.length * 0.8);
-      for (const l of mine) expect(l.level.setPieces.length).toBeLessThanOrEqual(3);
       const seen = new Set(mine.flatMap((l) => l.level.setPieces.map((p) => p.def.key.split(':')[2])));
       expect(seen.size, theme).toBeGreaterThanOrEqual(2);
     }
   });
 
-  it('every recipe can be placed somewhere', () => {
+  it.runIf(SLOW)('every recipe can be placed somewhere', () => {
     for (const theme of THEME_IDS) {
       const seen = new Set<string>();
       // Re-roll the placer on the same terrains (cheap) rather than generating more levels.

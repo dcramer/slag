@@ -20,6 +20,7 @@
     "typescript/no-explicit-any": "off",
     "typescript/no-unsafe-type-assertion": "off",
     // tsgolint false positives; its --fix removed assertions tsc needs (PropDef | null narrowing).
+    // Still broken in oxlint-tsgolint 7.0.2005: `pnpm format` would break tsc in tests/props-sim.test.ts.
     "typescript/no-unnecessary-type-assertion": "off",
     "typescript/unbound-method": "off",
     "typescript/consistent-return": "off",
