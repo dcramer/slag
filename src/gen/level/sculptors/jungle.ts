@@ -1,7 +1,23 @@
 import type { Rng } from '../../../core/rng';
+import { jungleOwns } from '../../stage/jungle';
 import { carveCorridor, finish, Grid, noise1D, noise2D, smoothCA } from '../kit';
-import type { Sculptor } from '../types';
-import { easyGap, easyRise, hardGap, knobs, pit, relax, keepClear, rollChallenges, Slots } from './common';
+import type { SculptCtx, Sculptor } from '../types';
+import {
+  type Claim,
+  claimSite,
+  easyGap,
+  easyRise,
+  flatten,
+  hardGap,
+  type Knobs,
+  knobs,
+  pit,
+  raiseLandmark,
+  relax,
+  keepClear,
+  rollChallenges,
+  Slots,
+} from './common';
 import { jungleTall } from './tall';
 
 type JungleStyle = 'canopy' | 'temple' | 'grotto';
@@ -12,17 +28,19 @@ type JungleStyle = 'canopy' | 'temple' | 'grotto';
  * trees have round crowns and one-way branch perches; fallen logs bridge
  * pools (a broken log is the bridge challenge); 'temple' raises an overgrown
  * stepped ziggurat; 'grotto' replaces the heightmap with a CA terrain full
- * of overhangs and undercuts, threaded by a carved walkway.
+ * of overhangs and undercuts, threaded by a carved walkway. A stage concept's landmark (stage/jungle.ts)
+ * claims its site first and owns the level's hard crossing; the canopy stays off it.
  */
 export const jungle: Sculptor = (ctx) => {
   if (ctx.profile.size === 'tall') return jungleTall(ctx);
   const { rng, attempt } = ctx;
   const k = knobs(ctx);
   const { W, H } = k;
+  // A landmark brings its own temple, and a grotto's rock would bury it.
   const style = rng.weighted<JungleStyle>([
     ['canopy', 3],
-    ['temple', 2],
-    ['grotto', 1 + 3 * k.density],
+    ['temple', ctx.concept ? 0 : 2],
+    ['grotto', ctx.concept ? 0 : 1 + 3 * k.density],
   ]);
   const g = new Grid(W, H);
   const slots = new Slots(6, W - 7);
@@ -35,13 +53,18 @@ export const jungle: Sculptor = (ctx) => {
   for (let x = W - 6; x < W; x++) surf[x] = gRow;
   locked.fill(1, 0, 6);
   locked.fill(1, W - 6, W);
+  // The stage concept's landmark comes first; it owns one crossing, or both where its box made room for a two-part one.
+  const claim = ctx.concept ? claimJungleSite(ctx, k, slots, surf, locked) : null;
+  if (ctx.concept && !claim) return finish(g, { row: sRow - 1 }, { row: gRow - 1 }, 'jungle:unclaimed');
 
   // Pools: hard ones get a broken log, easy ones sometimes a whole log.
   const challenges = rollChallenges(attempt, k);
   g.wantsProps = challenges > 0;
+  const own = claim ? jungleOwns(claim.concept, k, attempt, challenges) : 0;
+  const hardLeft = Math.max(0, challenges - own);
   const pools: { a: number; b: number; hard: boolean }[] = [];
-  for (let i = 0; i < challenges + k.count(rng.int(0, 2)); i++) {
-    const hard = i < challenges;
+  for (let i = 0; i < hardLeft + k.count(rng.int(0, 2)); i++) {
+    const hard = i < hardLeft;
     const w = hard ? hardGap(rng) : easyGap(rng, 2);
     const a = slots.take(rng, w, 3, 8, W - 9);
     if (a === null) continue;
@@ -96,12 +119,14 @@ export const jungle: Sculptor = (ctx) => {
     tree(g, rng, x, w, surf);
   }
 
-  // Canopy band: dense jungles hang it lower; sparse ones open up to the sky.
-  if (k.density > 0.25 || rng.chance(0.5)) canopy(g, rng, Math.round((style === 'grotto' ? rng.int(4, 5) : rng.int(5, 8)) * (0.6 + 0.6 * k.density)));
+  const lm = claim ? raiseLandmark(g, ctx, claim, own) : null;
+  // Canopy band: dense jungles hang it lower; sparse ones open up to the sky. Never over the landmark.
+  const off: [number, number] = lm ? [lm.rect.x - 2, lm.rect.x + lm.rect.w + 1] : [W, W];
+  if (k.density > 0.25 || rng.chance(0.5)) canopy(g, rng, Math.round((style === 'grotto' ? rng.int(4, 5) : rng.int(5, 8)) * (0.6 + 0.6 * k.density)), off);
   edgeTree(g, rng, 0, sRow - 1);
   edgeTree(g, rng, W - 3, gRow - 1);
   // Floating mossy islands.
-  for (let i = k.count(rng.int(0, 2)); i > 0; i--) {
+  for (let i = claim ? 0 : k.count(rng.int(0, 2)); i > 0; i--) {
     const x = rng.int(8, W - 14);
     const y = surf[x] - rng.int(8, 12);
     if (y < 5) continue;
@@ -116,8 +141,24 @@ export const jungle: Sculptor = (ctx) => {
   return finish(g, { row: sRow - 1 }, { row: gRow - 1 }, `jungle:${style}`);
 };
 
-/** CA canopy band hanging from the top edge, with vine one-ways dangling from it. */
-function canopy(g: Grid, rng: Rng, depth: number): void {
+/**
+ * The landmark's site (claimSite), on ground levelled a couple of columns past it either side and never so
+ * low that its river has no bank under it. Nothing else lands within a running jump of its far side, where
+ * a pool could be cleared bare off its top.
+ */
+function claimJungleSite(ctx: SculptCtx, k: Knobs, slots: Slots, surf: number[], locked: Uint8Array): Claim | null {
+  const claim = claimSite(ctx, k, slots, surf, locked);
+  if (!claim) return null;
+  const { x, w } = claim.at;
+  const ground = Math.min(claim.ground, k.H - 5);
+  slots.mark(x - 3, x + w + 8);
+  flatten(surf, k.H, x - 2, x + w + 1, ground);
+  for (let i = Math.max(0, x - 3); i <= Math.min(k.W - 1, x + w + 2); i++) locked[i] = 1;
+  return { ...claim, ground, at: { ...claim.at, y: ground - claim.at.h } };
+}
+
+/** CA canopy band hanging from the top edge, with vine one-ways dangling from it, none of it in columns `off[0]..off[1]`. */
+function canopy(g: Grid, rng: Rng, depth: number, off: readonly [number, number]): void {
   const W = g.w;
   const H = g.h;
   const m = new Uint8Array(W * H);
@@ -127,12 +168,13 @@ function canopy(g: Grid, rng: Rng, depth: number): void {
       m[y * W + x] = rng.chance(p) ? 1 : 0;
     }
   const s = smoothCA(W, H, m, 3, 5, 4, 0);
-  for (let y = 0; y <= depth + 1; y++) for (let x = 0; x < W; x++) if (s[y * W + x] && g.empty(x, y + 3)) g.set(x, y, 1);
+  const out = (x: number) => x < off[0] || x > off[1];
+  for (let y = 0; y <= depth + 1; y++) for (let x = 0; x < W; x++) if (s[y * W + x] && out(x) && g.empty(x, y + 3)) g.set(x, y, 1);
   // Vines: one-way rungs hanging below the canopy's lowest lumps.
   for (let i = rng.int(1, 3); i > 0; i--) {
     const x = rng.int(6, W - 8);
     const y = g.surface(x) - 0;
-    if (y > depth + 2 || y < 1) continue;
+    if (y > depth + 2 || y < 1 || !out(x - 1) || !out(x + 1)) continue;
     const len = rng.int(2, 4);
     if (!g.empty(x, y + len + 3)) continue;
     g.plank(x - 1, x + 1, y + len);
