@@ -109,7 +109,8 @@ function cheapest(graph: Map<number, Edge[]>, from: number, to: number, cost: (a
   if (!best.has(to)) return [];
   const path = [to];
   while (path[path.length - 1] !== from) path.push(prev.get(path[path.length - 1])!);
-  return path.reverse();
+  path.reverse();
+  return path;
 }
 
 /** Tiles of the straight line a→b, one per tile of length (both ends included). */

@@ -39,9 +39,9 @@ jobs:
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm typecheck
 
-      - name: Lint (errors fail, warnings annotate)
+      - name: Lint (warnings fail too)
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: pnpm oxlint --format=github
+        run: pnpm oxlint --deny-warnings --format=github
 
       - name: Format
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}

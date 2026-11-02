@@ -270,7 +270,7 @@ export class InputManager {
 
     for (const pad of connectedPads()) {
       const id = `pad${pad.index}`;
-      const btn = (i: number) => !!pad.buttons[i]?.pressed;
+      const btn = (i: number) => pad.buttons.at(i)?.pressed ?? false;
       const ax = pad.axes[0] ?? 0;
       const ay = pad.axes[1] ?? 0;
       const now = padButtons(pad);
@@ -307,7 +307,7 @@ function connectedPads(): Gamepad[] {
 
 /** The pad buttons that count as presses, with their standard-mapping alternatives. */
 function padButtons(pad: Gamepad): PadPrev {
-  const btn = (i: number) => !!pad.buttons[i]?.pressed;
+  const btn = (i: number) => pad.buttons.at(i)?.pressed ?? false;
   return {
     jump: btn(0),
     alt: btn(1) || btn(4),

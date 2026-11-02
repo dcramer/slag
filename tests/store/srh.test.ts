@@ -173,7 +173,7 @@ describe('every op, end to end', () => {
   it('caps a room and a mailbox', async () => {
     const r = room();
     for (let i = 0; i < MAX_PEERS; i++) await handleOp('join', { room: r, peer: `peer${i}` }, ctx);
-    await expect(handleOp('join', { room: r, peer: 'late' + '1' }, ctx)).rejects.toMatchObject({ code: 'full' });
+    await expect(handleOp('join', { room: r, peer: 'late1' }, ctx)).rejects.toMatchObject({ code: 'full' });
     for (let i = 0; i < MAX_MAILBOX + 4; i++)
       await handleOp('signal', { room: r, peer: 'peer1', to: 'peer0', signal: { k: 'answer', c: `c${i}`, sdp: 'x' } }, ctx);
     const { mail } = (await handleOp('poll', { room: r, peer: 'peer0' }, ctx)) as { mail: { s: { c: string } }[] };

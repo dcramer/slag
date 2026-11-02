@@ -45,7 +45,9 @@ function frameOf(rc: RC, m: Vehicle, d: DrawCtx): Frame {
   const W = cols.length * m.colW;
   const x0 = cols[0].x;
   const hs = cols.map((c) => c.h);
-  const hc = m.flip ? hs.slice().reverse() : hs;
+  // Copy before reversing: `hs` stays in column order (and the ES2022 lib has no toReversed).
+  const hc = hs.slice();
+  if (m.flip) hc.reverse();
   const sgn = m.flip ? -1 : 1;
   return {
     rc,
