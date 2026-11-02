@@ -207,4 +207,3 @@ defineArt<'lob'>({
     else serpent(rc, m, d);
   },
 });
-

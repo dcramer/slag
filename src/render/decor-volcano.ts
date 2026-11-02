@@ -293,6 +293,7 @@ export const VOLCANO_DECOR = {
       light(rc, d.x, d.y - 9, 34, d.color, 0.4 * a);
     },
   },
-} satisfies Record<'basaltcols' | 'pillow' | 'sulphur' | 'stump' | 'bonepile' | 'emberrock' | 'cauldron' | 'skullrock' | 'ashdrift' | 'idol' | 'bridgepost' | 'spattercone', DecorDef>;
-
-
+} satisfies Record<
+  'basaltcols' | 'pillow' | 'sulphur' | 'stump' | 'bonepile' | 'emberrock' | 'cauldron' | 'skullrock' | 'ashdrift' | 'idol' | 'bridgepost' | 'spattercone',
+  DecorDef
+>;

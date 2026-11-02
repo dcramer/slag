@@ -72,10 +72,12 @@ const caldera: DecoSkin = (rc, m, d) => {
   const lv = d.o.level;
   const tx = Math.round(m.at[0] / TILE);
   let rim = Math.round(m.h / TILE);
-  if (lv) for (let ty = Math.round(m.at[1] / TILE); ty < lv.h; ty++) if (lv.tiles[ty * lv.w + tx] === 1) {
-    rim = ty - Math.round(m.at[1] / TILE);
-    break;
-  }
+  if (lv)
+    for (let ty = Math.round(m.at[1] / TILE); ty < lv.h; ty++)
+      if (lv.tiles[ty * lv.w + tx] === 1) {
+        rim = ty - Math.round(m.at[1] / TILE);
+        break;
+      }
   m = { ...m, h: rim * TILE };
   stamp(rc.s, ashColumn(m, t), x, y);
   // The crater's glow on the ash's underside, breathing with the lava.
@@ -262,4 +264,3 @@ const facade: DecoSkin = (rc, m, d) => {
 };
 
 export const VOLCANO: ThemeSkins = { deco: { facade } };
-
