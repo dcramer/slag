@@ -12,8 +12,9 @@
  * The algorithms are ports of fdlibm (Sun's freely distributable libm, the
  * reference most engines started from), accurate to ~1 ulp.
  *
- * tests/dmath.test.ts checks accuracy against Math.*; tests/determinism-ban
- * keeps the native versions out of src/sim, src/game and the generators.
+ * tests/dmath.test.ts checks accuracy against Math.*. Lint keeps the native
+ * versions out of src/sim, src/gen and src/game, and tests/determinism-ban.test.ts
+ * does the same for the ** operator, which lint can't see.
  */
 
 const F64 = new Float64Array(1);

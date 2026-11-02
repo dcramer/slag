@@ -63,13 +63,54 @@
       }
     },
     {
-      "files": ["src/sim/**/*.ts", "src/gen/**/*.ts", "src/game/**/*.ts", "src/themes.ts"],
+      "files": ["src/sim/**/*.ts", "src/gen/**/*.ts", "src/game/**/*.ts", "src/themes.ts", "src/core/geom.ts"],
       "rules": {
         "no-restricted-properties": [
           "error",
           { "object": "Math", "property": "random", "message": "Deterministic code: use Rng from src/core/rng.ts (deriveSeed for sub-streams)." },
+          { "object": "Math", "property": "sin", "message": "Math.sin differs across browsers and desyncs lockstep. Use dsin from src/core/dmath.ts." },
+          { "object": "Math", "property": "cos", "message": "Math.cos differs across browsers and desyncs lockstep. Use dcos from src/core/dmath.ts." },
+          { "object": "Math", "property": "atan", "message": "Math.atan differs across browsers and desyncs lockstep. Use datan from src/core/dmath.ts." },
+          { "object": "Math", "property": "atan2", "message": "Math.atan2 differs across browsers and desyncs lockstep. Use datan2 from src/core/dmath.ts." },
+          { "object": "Math", "property": "hypot", "message": "Math.hypot differs across browsers and desyncs lockstep. Use dhypot from src/core/dmath.ts." },
+          { "object": "Math", "property": "exp", "message": "Math.exp differs across browsers and desyncs lockstep. Use dexp from src/core/dmath.ts." },
+          { "object": "Math", "property": "log", "message": "Math.log differs across browsers and desyncs lockstep. Use dlog from src/core/dmath.ts." },
+          { "object": "Math", "property": "pow", "message": "Math.pow differs across browsers and desyncs lockstep. Use dpow from src/core/dmath.ts." },
+          { "object": "Math", "property": "tan", "message": "Math.tan differs across browsers and desyncs lockstep. src/core/dmath.ts has no port yet: add one there (fdlibm, exact operations only), or express it with dsin/dcos/datan2/dexp/dlog." },
+          { "object": "Math", "property": "asin", "message": "Math.asin differs across browsers and desyncs lockstep. src/core/dmath.ts has no port yet: add one there (fdlibm, exact operations only), or express it with dsin/dcos/datan2/dexp/dlog." },
+          { "object": "Math", "property": "acos", "message": "Math.acos differs across browsers and desyncs lockstep. src/core/dmath.ts has no port yet: add one there (fdlibm, exact operations only), or express it with dsin/dcos/datan2/dexp/dlog." },
+          { "object": "Math", "property": "sinh", "message": "Math.sinh differs across browsers and desyncs lockstep. src/core/dmath.ts has no port yet: add one there (fdlibm, exact operations only), or express it with dsin/dcos/datan2/dexp/dlog." },
+          { "object": "Math", "property": "cosh", "message": "Math.cosh differs across browsers and desyncs lockstep. src/core/dmath.ts has no port yet: add one there (fdlibm, exact operations only), or express it with dsin/dcos/datan2/dexp/dlog." },
+          { "object": "Math", "property": "tanh", "message": "Math.tanh differs across browsers and desyncs lockstep. src/core/dmath.ts has no port yet: add one there (fdlibm, exact operations only), or express it with dsin/dcos/datan2/dexp/dlog." },
+          { "object": "Math", "property": "asinh", "message": "Math.asinh differs across browsers and desyncs lockstep. src/core/dmath.ts has no port yet: add one there (fdlibm, exact operations only), or express it with dsin/dcos/datan2/dexp/dlog." },
+          { "object": "Math", "property": "acosh", "message": "Math.acosh differs across browsers and desyncs lockstep. src/core/dmath.ts has no port yet: add one there (fdlibm, exact operations only), or express it with dsin/dcos/datan2/dexp/dlog." },
+          { "object": "Math", "property": "atanh", "message": "Math.atanh differs across browsers and desyncs lockstep. src/core/dmath.ts has no port yet: add one there (fdlibm, exact operations only), or express it with dsin/dcos/datan2/dexp/dlog." },
+          { "object": "Math", "property": "expm1", "message": "Math.expm1 differs across browsers and desyncs lockstep. src/core/dmath.ts has no port yet: add one there (fdlibm, exact operations only), or express it with dsin/dcos/datan2/dexp/dlog." },
+          { "object": "Math", "property": "log1p", "message": "Math.log1p differs across browsers and desyncs lockstep. src/core/dmath.ts has no port yet: add one there (fdlibm, exact operations only), or express it with dsin/dcos/datan2/dexp/dlog." },
+          { "object": "Math", "property": "log2", "message": "Math.log2 differs across browsers and desyncs lockstep. src/core/dmath.ts has no port yet: add one there (fdlibm, exact operations only), or express it with dsin/dcos/datan2/dexp/dlog." },
+          { "object": "Math", "property": "log10", "message": "Math.log10 differs across browsers and desyncs lockstep. src/core/dmath.ts has no port yet: add one there (fdlibm, exact operations only), or express it with dsin/dcos/datan2/dexp/dlog." },
+          { "object": "Math", "property": "cbrt", "message": "Math.cbrt differs across browsers and desyncs lockstep. src/core/dmath.ts has no port yet: add one there (fdlibm, exact operations only), or express it with dsin/dcos/datan2/dexp/dlog." },
           { "object": "Date", "property": "now", "message": "Deterministic code: no wall clock. Count sim frames instead." },
           { "object": "performance", "property": "now", "message": "Deterministic code: no wall clock. Count sim frames instead." }
+        ]
+      }
+    },
+    {
+      "files": ["src/net/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              { "name": "react", "message": "src/net must run outside Next (a packaged build, say). Keep React in app/; expose what the UI needs from src/net/client.ts." },
+              { "name": "react-dom", "message": "src/net must run outside Next (a packaged build, say). Keep React in app/; expose what the UI needs from src/net/client.ts." },
+              { "name": "next", "message": "src/net must run outside Next (a packaged build, say). Reach the API over HTTP through src/net/signal-client.ts." }
+            ],
+            "patterns": [
+              { "group": ["next/*"], "message": "src/net must run outside Next (a packaged build, say). Reach the API over HTTP through src/net/signal-client.ts." },
+              { "group": ["**/app", "**/app/**"], "message": "src/net can't depend on the Next app: it has to work against a hosted API from any build. Shared wire types belong in src/net/signal-protocol.ts." }
+            ]
+          }
         ]
       }
     },

@@ -176,7 +176,7 @@ Every 60 frames each guest hashes its confirmed state (FNV-1a over the canonical
 
 ### Cross-browser determinism
 
-IEEE-754 `+ - * /` and `Math.sqrt` are exact everywhere, but `Math.sin/cos/atan2/exp/pow/hypot/…` and `**` are implementation-approximated. `src/core/dmath.ts` has fdlibm ports built from exact operations only. `src/sim`, `src/gen` and `src/game` use them, and `.oxlintrc.json` bans the engine versions there.
+IEEE-754 `+ - * /` and `Math.sqrt` are exact everywhere, but `Math.sin/cos/atan2/exp/pow/hypot/…` and `**` are implementation-approximated. `src/core/dmath.ts` has fdlibm ports built from exact operations only. `src/sim`, `src/gen` and `src/game` use them. `.oxlintrc.json` bans the `Math` functions there, with a message naming the replacement, and `tests/determinism-ban.test.ts` bans `**`, which lint can't see.
 
 ## HUD
 
