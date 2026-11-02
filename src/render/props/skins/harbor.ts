@@ -66,19 +66,20 @@ function boxOf(m: Deco) {
   return { x0, y0, x1: x0 + Math.round(m.w / TILE) - 1, y1: y0 + Math.round(m.h / TILE) - 1 };
 }
 
-/** Cells inside a box that are rooms: empty, walled on both sides along their row and roofed within a few rows. */
-function rooms(at: (x: number, y: number) => number, x0: number, x1: number, y0: number, y1: number, roof = 6): [number, number][] {
+/**
+ * Cells inside a box that are rooms: empty, under a solid roof within a few rows, over a solid floor within a
+ * few rows. A doorway at either end of a room is still room: its posts are drawn at the run's ends.
+ */
+function rooms(at: (x: number, y: number) => number, x0: number, x1: number, y0: number, y1: number, reach = 5): [number, number][] {
   const out: [number, number][] = [];
   for (let y = y0; y <= y1; y++)
     for (let x = x0; x <= x1; x++) {
       if (at(x, y) !== T_EMPTY) continue;
-      let l = false;
-      let r = false;
       let u = false;
-      for (let k = x - 1; k >= x0 && !l; k--) l = at(k, y) === T_SOLID;
-      for (let k = x + 1; k <= x1 && !r; k++) r = at(k, y) === T_SOLID;
-      for (let k = y - 1; k >= Math.max(y0 - 1, y - roof) && !u; k--) u = at(x, k) === T_SOLID;
-      if (l && r && u) out.push([x, y]);
+      let f = false;
+      for (let k = y - 1; k >= Math.max(y0 - 1, y - reach) && !u; k--) u = at(x, k) === T_SOLID;
+      for (let k = y + 1; k <= Math.min(y1 + 1, y + reach) && !f; k++) f = at(x, k) === T_SOLID;
+      if (u && f) out.push([x, y]);
     }
   return out;
 }
@@ -97,7 +98,9 @@ function galleonArt(m: Deco, d: DrawCtx, t: Hz) {
     while (G < y1 && at(x0, G) !== T_SOLID) G++;
     // The rooms: the gun deck under the main deck and the great cabin under the quarterdeck, planked dark,
     // ribs every few columns, gunports with a gun's muzzle in each down the gun deck.
-    for (const [x, y] of rooms(at, x0, x1, y0, y1)) {
+    const inside = rooms(at, x0, x1, y0, y1);
+    const room = new Set(inside.map(([x, y]) => y * 4096 + x));
+    for (const [x, y] of inside) {
       g.fillStyle = t.c(DARK, (y & 1) * 3);
       g.fillRect(X(x) - 0.5, Y(y) - 0.5, TILE + 1, TILE + 1);
       g.fillStyle = t.ink(DARK);
@@ -110,6 +113,14 @@ function galleonArt(m: Deco, d: DrawCtx, t: Hz) {
         g.fillStyle = t.c(IRON, -8);
         circle(g, X(x) + 8, Y(y) + 1.5, 1.4);
       }
+    }
+    for (const [x, y] of inside) {
+      // Door posts where a room opens onto the deck: the cutaway's frame, so its roof stands on something.
+      for (const s of [-1, 1])
+        if (!room.has(y * 4096 + x + s) && at(x + s, y) === T_EMPTY) {
+          const px = s < 0 ? X(x) - 1 : X(x + 1) - 3;
+          flat(g, boxPts(px, Y(y) - 1, 4, TILE + 2, 0.4, x + y), WOOD, t, x + y, 0.3);
+        }
     }
     // Masts where the yards are: one-way runs above the deck, grouped by their middles.
     const masts = new Map<number, number>();
@@ -332,12 +343,32 @@ const facade: DecoSkin = (rc, m, d) => {
 
 // --------------------------------------------------------------------------------------------- the crane
 
-function craneArt(m: Deco, t: Hz) {
+function craneArt(m: Deco, d: DrawCtx, t: Hz) {
+  const level = d.o.level;
+  const at = tiles(level);
+  const { x0, y0, x1, y1 } = boxOf(m);
   const reach = 5 * TILE;
-  return sprite(`harbor|crane|${m.w}|${m.h}|${m.seed % 4}|${t.k}`, -reach - 4, -4, m.w + reach + 8, m.h + 6, (g) => {
+  return sprite(`harbor|crane|${level?.seed}|${x0},${y0},${x1},${y1}|${m.seed % 4}|${t.k}`, -reach - 4, -4, m.w + reach + 8, m.h + 6, (g) => {
     const w = m.w;
     const h = m.h;
     const boom = 1.6 * TILE;
+    // The open containers at the foot of the stacks: their far walls corrugated, a corner post at each end,
+    // so a stack stands on its open box rather than over air.
+    const X = (tx: number) => tx * TILE - m.at[0];
+    const Y = (ty: number) => ty * TILE - m.at[1];
+    const inside = rooms(at, x0, x1, y0, y1, 3);
+    const room = new Set(inside.map(([x, y]) => y * 4096 + x));
+    for (const [x, y] of inside) {
+      const c: HSL = { h: [8, 206, 140, 36][(x0 + Math.floor((x - x0) / 5)) % 4], s: 40, l: 30 };
+      g.fillStyle = t.c(c);
+      g.fillRect(X(x) - 0.5, Y(y) - 0.5, TILE + 1, TILE + 1);
+      g.fillStyle = t.c(c, -10);
+      for (let k = 2; k < TILE; k += 4) g.fillRect(X(x) + k, Y(y), 1.4, TILE);
+    }
+    for (const [x, y] of inside)
+      for (const sgn of [-1, 1])
+        if (!room.has(y * 4096 + x + sgn) && at(x + sgn, y) === T_EMPTY)
+          flat(g, boxPts(sgn < 0 ? X(x) : X(x + 1) - 3, Y(y) - 1, 3, TILE + 2, 0.3, x + y), IRON, t, x + y, 0.3);
     // Legs at both ends: open lattice from the quay to the boom, hazard-striped feet.
     for (const lx of [TILE * 0.5, w - TILE * 0.5]) {
       for (const s of [-1, 1]) spar(g, lx + s * 5, boom, lx + s * 6.5, h, 2.2, CRANE, t, lx + s);
@@ -366,7 +397,7 @@ function craneArt(m: Deco, t: Hz) {
 
 const gantry: DecoSkin = (rc, m, d) => {
   if (d.o.level?.landmark?.concept !== 'container-terminal') return SHELLS.gantry?.(rc, m, d);
-  stamp(rc.s, craneArt(m, hz(d)), m.at[0] + d.off[0], m.at[1] + d.off[1]);
+  stamp(rc.s, craneArt(m, d, hz(d)), m.at[0] + d.off[0], m.at[1] + d.off[1]);
 };
 
 // ------------------------------------------------------------------------------------------- harpoon gun
@@ -406,7 +437,7 @@ function harpoonGun(rc: RC, m: Cannon, d: DrawCtx, q: CannonPose) {
   s.rotate(m.angle);
   if (Math.cos(m.angle) < 0) s.scale(1, -1);
   s.translate(-q.recoil * 0.6, 0);
-  const L = m.length * TILE;
+  const L = m.length;
   // The gun: a short heavy barrel on its yoke, a stock and a grip behind.
   const body = poly(-8, -2.2, L - 6, -2.6, L - 4, -3, L - 4, 3, L - 6, 2.6, -8, 2.2, -11, 3.6, -12, 0, -11, -3.6);
   tone(s, body, d.pal.base, { depth: 1 });
