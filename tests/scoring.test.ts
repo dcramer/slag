@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { POINTS, scoreRound } from '../src/game/scoring';
+import { POINTS, scoreRound, UNDERDOG_MAX } from '../src/game/scoring';
 import { standings } from '../src/render/hud-kit';
 
 const total = (r: ReturnType<typeof scoreRound>, slot: number) => r.awards.filter((a) => a.slot === slot).reduce((s, a) => s + a.points, 0);
@@ -38,6 +38,19 @@ describe('scoring', () => {
     );
     expect(total(r, 1)).toBe(POINTS.finish + POINTS.first + POINTS.trap * 2);
     expect(total(r, 3)).toBe(0); // a kill without reaching the flag pays nothing
+  });
+  it('finishers trailing the leader earn an underdog bonus, capped', () => {
+    const underdog = (r: ReturnType<typeof scoreRound>, slot: number) =>
+      r.awards.filter((a) => a.slot === slot && a.reason === 'underdog').reduce((n, a) => n + a.points, 0);
+    const r = scoreRound([0, 1, 2, 3], [1, 2, 3], [], { 0: 80, 1: 75, 2: 55, 3: 0 });
+    expect(underdog(r, 1)).toBe(0); // under one gap behind
+    expect(underdog(r, 2)).toBe(2);
+    expect(underdog(r, 3)).toBe(UNDERDOG_MAX);
+  });
+  it('the leader and non-finishers earn no underdog bonus, and nor does anyone in a scoreless round', () => {
+    const scores = { 0: 40, 1: 0, 2: 0 };
+    expect(scoreRound([0, 1, 2], [0], [], scores).awards.some((a) => a.reason === 'underdog')).toBe(false);
+    expect(scoreRound([0, 1, 2], [0, 1, 2], [], scores).awards).toEqual([]);
   });
   it('solo play just rewards finishing', () => {
     const r = scoreRound([0], [0], []);

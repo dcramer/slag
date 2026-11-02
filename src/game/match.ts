@@ -427,6 +427,7 @@ export class Match {
       this.players.map((p) => p.slot),
       run.finishOrder,
       run.kills,
+      Object.fromEntries(this.players.map((p) => [p.slot, p.score])),
     );
     this.prevScores = new Map(this.players.map((p) => [p.slot, p.score]));
     for (const a of result.awards) {

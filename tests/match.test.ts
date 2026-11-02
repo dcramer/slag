@@ -155,9 +155,10 @@ describe('match end', () => {
   it('makes ties at the limit joint winners', () => {
     const m = started(3, { maxRounds: 2 });
     playRound(m, [0]);
+    m.players[0].score = 15; // Player 2 trails by 15: +14 for the round, +1 underdog.
     playRound(m, [2]);
     expect(m.phase).toBe('victory');
-    expect(m.players.map((p) => p.score)).toEqual([14, 0, 14]);
+    expect(m.players.map((p) => p.score)).toEqual([15, 0, 15]);
     expect(m.winners).toEqual([0, 2]);
   });
 
