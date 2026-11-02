@@ -70,52 +70,69 @@ const body = (cells: Cell[], material: Material = 'metal', extra: Partial<Extrac
   ...extra,
 });
 
+/*
+ * Labels follow the parody names (docs/PARODY.md) and notes are one-line
+ * jokes, never how-to text (docs/DESIGN.md → Discovery): the numbers in the
+ * modal say what a part does, and playing it says the rest.
+ */
+
 const MATERIAL_NOTES: Record<Material, string> = {
-  stone: 'Plain solid footing.',
-  metal: 'Plain solid; most mounts are metal.',
-  wood: 'Plain solid, warm and planky.',
-  ice: 'Slippery: you keep sliding. On walls: no wall slide or wall jump.',
-  conveyor: 'Carries you along its belt.',
-  goo: 'Slow and sticky; weak jumps. On walls: you cling.',
-  jelly: 'Bounces you back up when you land hard.',
-  crumble: 'Breaks shortly after you stand on it, then respawns.',
+  stone: 'Floats. Nobody asks.',
+  metal: 'Rivets: decorative.',
+  wood: 'Not a crate yet.',
+  ice: 'Every game has one.',
+  conveyor: 'Clock in.',
+  goo: 'Do not lick.',
+  jelly: 'Boing.',
+  crumble: 'Best before now.',
 };
 
-const LAUNCHER_NOTES: Record<string, [Ammo, string]> = {
-  crossbow: ['bolt', 'Fast, straight bolts (or arcing arrows).'],
-  ballista: ['bolt', 'Slow to reload, very fast heavy bolts.'],
-  cannon: ['cannonball', 'Lobs heavy cannonballs in an arc.'],
-  totem: ['fireball', 'Wobbly, glowing fireballs; often fans out.'],
-  turret: ['plasma', 'Rapid bursts of plasma.'],
-  thrower: ['shuriken', 'Spinning stars, sometimes several at once.'],
-  rocket: ['seeker', 'Slow homing missiles. Lure them into walls.'],
-  glaive: ['boomerang', 'Throws a boomerang that comes back along the same line.'],
-  gumball: ['rubber', 'Lobs bouncy balls that shove you (not lethal).'],
-  mortar: ['cluster', 'Shells that burst into a fan of shrapnel at the top of their arc.'],
-  gooper: ['goo', 'Goo globs: slow you on a hit, coat walls and floors in slime.'],
-  cryo: ['frost', 'Frost shards: freeze you briefly, glaze surfaces with ice.'],
-  prism: ['ricochet', 'Bolts that bank off walls up to three times.'],
-  hangar: ['glider', 'Launches gliders you can ride. They sink under you.'],
+/** Launcher style → its ammo, codex label and joke. */
+const LAUNCHER_NOTES: Record<string, [Ammo, string, string]> = {
+  crossbow: ['bolt', 'arrow trap', 'Knees beware.'],
+  ballista: ['bolt', 'ballista', 'Overkill, slowly.'],
+  cannon: ['cannonball', 'pirate cannon', 'Arr.'],
+  totem: ['fireball', 'heartburn idol', 'Spicy.'],
+  turret: ['plasma', 'sorry turret', 'It feels bad about this.'],
+  thrower: ['shuriken', 'ninja box', 'Stars, vended.'],
+  rocket: ['seeker', 'grudge launcher', 'Never forgets a face.'],
+  glaive: ['boomerang', 'boomerang bruh', 'It always comes back.'],
+  gumball: ['rubber', 'dodgeball coach', 'Gym class flashbacks.'],
+  mortar: ['cluster', 'banana mortar', 'Share the bunch.'],
+  gooper: ['goo', 'splat gun', 'Bless you.'],
+  cryo: ['frost', 'brain freezer', 'Slurped too fast.'],
+  prism: ['ricochet', 'trick-shot lens', 'Called it.'],
+  hangar: ['glider', 'budget airline', 'Seats sold separately.'],
 };
 
-export const PROJECTILE_NOTES: Record<Ammo, string> = {
-  bolt: 'Straight and fast.',
-  arrow: 'Arcs under gravity.',
-  cannonball: 'Heavy, big hitbox, lobbed.',
-  fireball: 'Slow, wobbles side to side, glows.',
-  plasma: 'Fast glowing bolt.',
-  shuriken: 'Spins, slight drop.',
-  seeker: 'Homing: slow, turns toward the nearest runner a little each frame. Telegraphed by its red eye.',
-  boomerang: 'Flies out, stops, and comes back through its thrower.',
-  rubber: 'Bounces off walls and floors (five times). A hit shoves you instead of killing.',
-  cluster: 'Lobbed shell that splits into five pieces of shrapnel.',
-  shrapnel: 'Short-lived fragment from a cluster shell.',
-  goo: 'Not lethal: slows you for a couple of seconds, or sticks to terrain as a slime coat.',
-  frost: 'Not lethal: freezes you solid for a moment, or glazes terrain with ice.',
-  ricochet: 'Fast bolt that reflects off walls up to three times.',
-  glider: 'Not a bullet: a flying plank you can ride. Flies level, then sinks, faster with a rider.',
-  puck: 'Kicked, never launched.',
-  smokebomb: 'Lobbed, never launched.',
+/** Projectile label and joke for the codex. */
+export const PROJECTILE_NOTES: Record<Ammo, [string, string]> = {
+  bolt: ['trap bolt', 'Knee-high.'],
+  arrow: ['arrow', 'Still knee-high.'],
+  cannonball: ['cannonball', 'Arr.'],
+  fireball: ['heartburn', 'Spicy.'],
+  plasma: ['apology', 'Sorry!'],
+  shuriken: ['throwing star', 'Ninja-grade.'],
+  seeker: ['grudge missile', 'It remembers.'],
+  boomerang: ['boomerang', 'Comes back.'],
+  rubber: ['dodgeball', 'Dodge.'],
+  cluster: ['banana bunch', 'Sharing is caring.'],
+  shrapnel: ['banana', 'Split.'],
+  goo: ['sneeze', 'Bless you.'],
+  frost: ['slushie', 'Brain freeze.'],
+  ricochet: ['trick shot', 'Called it.'],
+  glider: ['economy seat', 'Delays likely.'],
+  puck: ['evicted shell', 'Nobody home.'],
+  smokebomb: ['fog of war', 'Unexplored.'],
+};
+
+const ITEM_NOTES: Record<ItemKind, string> = {
+  sword: 'Legendary. Squishy.',
+  puck: 'Nobody home.',
+  boomerang: 'Returns, mostly.',
+  shield: 'Pop.',
+  rocket: 'Trial expired.',
+  smoke: 'Unexplored.',
 };
 
 const crate = (name: string, pool: ItemKind[], uses: number, look: MysteryLook): PropDef =>
@@ -129,7 +146,7 @@ export function partGroups(): PartGroup[] {
     {
       id: 'materials',
       title: 'Blocks & materials',
-      blurb: 'Solid cells. The material changes how they feel to stand on (and to wall-jump off).',
+      blurb: 'Floating in midair since the first level of everything.',
       entries: materials.map((m) => ({
         title: m,
         note: MATERIAL_NOTES[m],
@@ -153,14 +170,14 @@ export function partGroups(): PartGroup[] {
     {
       id: 'attachments',
       title: 'Attachments',
-      blurb: 'Mounted flush on an exposed face of a block (shown dashed). Rotate to choose the face: top, sides or underneath.',
+      blurb: 'Paint jobs with consequences.',
       entries: (['spikes', 'ice', 'slime'] as const).flatMap((kind) =>
         [-Math.PI / 2, 0].map((angle) => ({
-          title: `${kind} · ${angle === 0 ? 'wall' : 'floor'}`,
+          title: `${{ spikes: 'death carpet', ice: 'ice physics', slime: 'swamp level' }[kind]} · ${angle === 0 ? 'wall' : 'floor'}`,
           note: {
-            spikes: 'Lethal strip on that face.',
-            ice: angle === 0 ? 'Slick wall: no wall slide, no wall jump.' : 'Slippery floor: you keep sliding.',
-            slime: angle === 0 ? 'Sticky wall: you cling and slide slowly.' : 'Slow, sticky floor; weak jumps.',
+            spikes: angle === 0 ? 'Rude, sideways.' : 'Rude.',
+            ice: angle === 0 ? 'No grip. No dignity.' : 'Zamboni-fresh.',
+            slime: angle === 0 ? 'Spider-adjacent.' : 'Do not lick.',
           }[kind],
           def: {
             ...def(`${kind}-${angle}`, [
@@ -188,40 +205,40 @@ export function partGroups(): PartGroup[] {
     {
       id: 'heads',
       title: 'Swinging heads',
-      blurb: 'Deadly heads that sit on a hub: spin in place, orbit on an arm, or swing like a pendulum on a rod or chain.',
+      blurb: 'Every castle has a guy who installs these.',
       entries: [
         {
-          title: 'saw',
-          note: 'Spinning blade. Throws sparks when it grinds terrain.',
+          title: 'pizza cutter',
+          note: 'Extra sauce.',
           def: def('saw', [{ type: 'swinger', head: 'saw', hub: c(), arm: 0, angle0: 0, period: 30, swing: 0, dir: 1, radius: 1.1, count: 1, link: 'none' }]),
         },
         {
-          title: 'mace',
-          note: 'Spiked ball, usually on a chain.',
+          title: 'chain chump',
+          note: 'Woof.',
           def: def('mace', [
             body([[0, 0]]),
             { type: 'swinger', head: 'mace', hub: c(), arm: 2.2, angle0: 0, period: 150, swing: 0, dir: 1, radius: 0.8, count: 1, link: 'chain' },
           ]),
         },
         {
-          title: 'axe',
-          note: 'Pendulum blade.',
+          title: 'hypnotist',
+          note: 'You are getting very sleepy.',
           def: def('axe', [
             body([[0, 0]]),
             { type: 'swinger', head: 'axe', hub: c(), arm: 2.6, angle0: R, period: 140, swing: 1.1, dir: 1, radius: 0.9, count: 1, link: 'rod' },
           ]),
         },
         {
-          title: 'orbit',
-          note: 'Heads circle the hub (1–3 heads).',
+          title: 'spin bar',
+          note: 'Around and around.',
           def: def('orbit', [
             body([[0, 0]]),
             { type: 'swinger', head: 'saw', hub: c(), arm: 2, angle0: 0, period: 140, swing: 0, dir: 1, radius: 0.6, count: 2, link: 'rod' },
           ]),
         },
         {
-          title: 'pendulum',
-          note: 'Swings back and forth under the hub.',
+          title: 'grandfather saw',
+          note: 'Tick. Tock. Ow.',
           def: def('pendulum', [
             body([[0, 0]]),
             { type: 'swinger', head: 'saw', hub: c(), arm: 2.6, angle0: R, period: 130, swing: 1.2, dir: 1, radius: 0.7, count: 1, link: 'chain' },
@@ -232,10 +249,10 @@ export function partGroups(): PartGroup[] {
     {
       id: 'launchers',
       title: 'Launchers',
-      blurb: 'Fire projectiles on a schedule. Each one states how it aims: Fixed, Sweeps or Tracks.',
+      blurb: 'Fixed, Sweeps or Tracks. Mostly Fixed.',
       entries: [
-        ...Object.entries(LAUNCHER_NOTES).map(([styleName, [ammo, note]]) => ({
-          title: styleName,
+        ...Object.entries(LAUNCHER_NOTES).map(([styleName, [ammo, label, note]]) => ({
+          title: label,
           note: `Fixed. ${note}`,
           def: def(styleName, [
             body([[0, 0]], styleName === 'crossbow' || styleName === 'totem' ? 'wood' : 'metal'),
@@ -257,8 +274,8 @@ export function partGroups(): PartGroup[] {
           ]),
         })),
         {
-          title: 'tracking aim',
-          note: 'Tracks. Red sensor eye: turns toward runners within 60° of its facing.',
+          title: 'paranoid arrow trap',
+          note: 'Tracks. Trust issues.',
           def: def('track', [
             body([[0, 0]], 'wood'),
             {
@@ -279,8 +296,8 @@ export function partGroups(): PartGroup[] {
           ]),
         },
         {
-          title: 'sweeping aim',
-          note: 'Sweeps. Aim swings back and forth on a timer.',
+          title: 'indecisive sentry gun',
+          note: 'Sweeps. Can’t decide.',
           def: def('sweep', [
             body([[0, 0]]),
             {
@@ -305,11 +322,11 @@ export function partGroups(): PartGroup[] {
     {
       id: 'emitters',
       title: 'Emitters & machines',
-      blurb: 'Things that cycle between safe and deadly — learn their rhythm.',
+      blurb: 'Hazards with a sense of rhythm.',
       entries: [
         {
-          title: 'spikes',
-          note: 'Lethal face. Rotation picks the side.',
+          title: 'spike block',
+          note: 'Unstompable.',
           def: def('spikes', [
             body([
               [0, 0],
@@ -326,18 +343,18 @@ export function partGroups(): PartGroup[] {
           ]),
         },
         {
-          title: 'flame jet',
-          note: 'Sputters a warning, then roars.',
+          title: 'dragon burp',
+          note: 'Excuse me.',
           def: def('flame', [body([[0, 0]]), { type: 'flame', at: c(), angle: UP, length: 3, on: 70, off: 60, warn: 30 }]),
         },
         {
-          title: 'laser',
-          note: 'Charges (telegraph), then fires to the first wall.',
+          title: 'laser pointer',
+          note: 'Not for cats.',
           def: def('laser', [body([[0, 0]]), { type: 'laser', at: c(), angle: 0, charge: 50, fire: 50, off: 60, sweep: 0, sweepPeriod: 200 }]),
         },
         {
-          title: 'tesla gate',
-          note: 'Arcs lightning between two pylons.',
+          title: 'bug zapper',
+          note: 'You are the bug.',
           def: def('tesla', [
             body([
               [0, 0],
@@ -347,8 +364,8 @@ export function partGroups(): PartGroup[] {
           ]),
         },
         {
-          title: 'crusher',
-          note: 'Slams out fast, retracts slowly. Squishes against walls.',
+          title: 'panini press',
+          note: 'Runner filling.',
           def: def('crusher', [
             body([
               [0, 0],
@@ -357,10 +374,10 @@ export function partGroups(): PartGroup[] {
             { type: 'piston', at: [1, 0.5], angle: R, reach: 2.5, width: 2, period: 130 },
           ]),
         },
-        { title: 'spring', note: 'Launches you the way it faces.', def: def('spring', [{ type: 'spring', at: c(), angle: UP, power: 700 }]) },
+        { title: 'coil pup', note: 'Good boy.', def: def('spring', [{ type: 'spring', at: c(), angle: UP, power: 700 }]) },
         {
-          title: 'fan',
-          note: 'Steady wind along its column: lifts you and lets you float at the top.',
+          title: 'hair dryer',
+          note: 'Big hair day.',
           def: def('fan', [body([[0, 0]]), { type: 'fan', at: c(), angle: UP, length: 4, strength: 2200 }]),
         },
       ],
@@ -368,14 +385,14 @@ export function partGroups(): PartGroup[] {
     {
       id: 'movers',
       title: 'Movers & fields',
-      blurb: 'Things that move you rather than kill you. Every one has an upside and a catch.',
+      blurb: 'Upside, catch, repeat.',
       entries: [
         {
-          title: 'warp pads',
-          note: 'In one, out the other, speed intact.',
+          title: 'plot holes',
+          note: 'Nobody will notice.',
           def: def('portal', [{ type: 'portal', a: c(0, 0), b: c(4, 0) }]),
         },
-        { title: 'bumper', note: 'Kicks you away from its center.', def: def('bumper', [{ type: 'bumper', at: c(), radius: 0.55, power: 420 }]) },
+        { title: 'pinball bumper', note: 'Tilt.', def: def('bumper', [{ type: 'bumper', at: c(), radius: 0.55, power: 420 }]) },
         {
           title: 'sausage vine',
           note: 'Fresh from the hook.',
@@ -388,20 +405,20 @@ export function partGroups(): PartGroup[] {
           def: def('tipsy', [{ type: 'keg', at: [1, 1], dirs: [5, 6, 7, 6], step: 36, power: 540, delay: 12, burn: 170 }]),
         },
         {
-          title: 'gravity well',
-          note: 'Pulls you toward its core.',
+          title: 'black hole lite',
+          note: 'Zero calories.',
           def: def('well', [body([[0, 0]]), { type: 'magnet', at: c(), radius: 2.6, strength: 1200, polarity: 1, on: 0, off: 0, warn: 30 }], {
             style: { glowHue: 275 },
           }),
         },
         {
-          title: 'repulsor',
-          note: 'Pushes you away; this one pulses.',
+          title: 'social distancer',
+          note: 'Personal space, enforced.',
           def: def('repulsor', [body([[0, 0]]), { type: 'magnet', at: c(), radius: 2.6, strength: 1500, polarity: -1, on: 80, off: 60, warn: 30 }]),
         },
         {
-          title: 'web',
-          note: 'Catches falls; slows everything.',
+          title: 'world wide web',
+          note: 'Spider not included.',
           def: def('web', [
             {
               type: 'web',
@@ -416,8 +433,8 @@ export function partGroups(): PartGroup[] {
           ]),
         },
         {
-          title: 'wheel',
-          note: 'Platforms you ride around a hub.',
+          title: 'hamster wheel',
+          note: 'You are the hamster.',
           def: def(
             'wheel',
             [
@@ -452,11 +469,11 @@ export function partGroups(): PartGroup[] {
     {
       id: 'triggered',
       title: 'Timed & triggered',
-      blurb: 'Blocks on a clock and traps that wait for you. Each has a visible tell before it changes.',
+      blurb: 'Patient, petty, punctual.',
       entries: [
         {
-          title: 'blink blocks',
-          note: 'Solid on a timer; flicker first.',
+          title: 'yolo blocks',
+          note: 'Trust the beat.',
           def: def('blink', [
             {
               type: 'phase',
@@ -472,8 +489,8 @@ export function partGroups(): PartGroup[] {
           ]),
         },
         {
-          title: 'blink pair',
-          note: 'Two sets take turns.',
+          title: 'on/off bricks',
+          note: 'Your turn. My turn.',
           def: def('blinkpair', [
             {
               type: 'phase',
@@ -498,8 +515,8 @@ export function partGroups(): PartGroup[] {
           ]),
         },
         {
-          title: 'dropstone',
-          note: 'Slams when you pass underneath.',
+          title: 'thwunk',
+          note: 'Waiting for you, specifically.',
           def: def('dropper', [
             {
               type: 'dropper',
@@ -517,8 +534,8 @@ export function partGroups(): PartGroup[] {
           ]),
         },
         {
-          title: 'snap trap',
-          note: 'Spikes pop when you step on it.',
+          title: 'surprise party',
+          note: 'Surprise!',
           def: {
             ...def('snapper', [
               {
@@ -541,24 +558,24 @@ export function partGroups(): PartGroup[] {
     {
       id: 'demolition',
       title: 'Demolition',
-      blurb: 'Detonated, not built. Each blast has a shape and a target; the placement preview shows exactly which cells and props it takes.',
+      blurb: 'Renovation, the fast way.',
       entries: [
-        { title: 'bomb', note: 'Disk: terrain and props.', def: def('bomb', [{ type: 'bomb', radius: 2.5, look: 'bomb' }]) },
-        { title: 'EMP', note: 'Disk: props only, terrain untouched.', def: def('emp', [{ type: 'bomb', radius: 3.5, target: 'props', look: 'emp' }]) },
+        { title: 'cartoon bomb', note: 'Lit.', def: def('bomb', [{ type: 'bomb', radius: 2.5, look: 'bomb' }]) },
+        { title: 'balance patch', note: 'Patch notes: yes.', def: def('emp', [{ type: 'bomb', radius: 3.5, target: 'props', look: 'emp' }]) },
         {
-          title: 'drill',
-          note: 'Bores a tunnel the way it faces.',
+          title: 'tunnel vision',
+          note: 'Straight ahead.',
           def: def('drill', [{ type: 'bomb', radius: 7, shape: 'line', target: 'terrain', look: 'drill' }]),
         },
-        { title: 'cross charge', note: 'Blasts a plus shape.', def: def('cross', [{ type: 'bomb', radius: 4, shape: 'cross', look: 'charge' }]) },
+        { title: 'plus bomb', note: 'Plus-sized.', def: def('cross', [{ type: 'bomb', radius: 4, shape: 'cross', look: 'charge' }]) },
         {
-          title: 'ring charge',
-          note: 'Hollow ring: the middle survives.',
+          title: 'glazed donut',
+          note: 'Hole included.',
           def: def('ring', [{ type: 'bomb', radius: 3.2, shape: 'ring', width: 1.3, look: 'charge' }]),
         },
         {
-          title: 'time bomb',
-          note: 'Goes off at race start, after everyone places.',
+          title: 'hurry-up timer',
+          note: 'Snooze.',
           def: def('timebomb', [{ type: 'bomb', radius: 2.5, look: 'clock', delay: true }]),
         },
       ],
@@ -566,22 +583,22 @@ export function partGroups(): PartGroup[] {
     {
       id: 'items',
       title: 'Items',
-      blurb: 'What mystery crates hold.',
+      blurb: 'Odds not disclosed.',
       entries: [
-        { title: 'mystery crate', note: 'Mixed pool. Refills.', def: crate('mystery crate', [...ITEM_KINDS], 0, 'crate') },
-        { title: 'lucky chest', note: 'Rationed.', def: crate('lucky chest', ['sword', 'puck', 'boomerang'], 3, 'chest') },
-        { title: 'gift box', note: 'One-shot.', def: crate('gift box', ['shield', 'rocket', 'smoke'], 1, 'gift') },
-        ...ITEM_KINDS.map((k) => ({ title: ITEMS[k].name.toLowerCase(), note: '', def: crate(ITEMS[k].name, [k], 0, 'crate'), item: k })),
+        { title: 'loot box', note: 'Contents may vary.', def: crate('loot box', [...ITEM_KINDS], 0, 'crate') },
+        { title: 'fanfare chest', note: 'Da da da DAAA.', def: crate('fanfare chest', ['sword', 'puck', 'boomerang'], 3, 'chest') },
+        { title: 'login gift', note: 'Come back tomorrow.', def: crate('login gift', ['shield', 'rocket', 'smoke'], 1, 'gift') },
+        ...ITEM_KINDS.map((k) => ({ title: ITEMS[k].name.toLowerCase(), note: ITEM_NOTES[k], def: crate(ITEMS[k].name, [k], 0, 'crate'), item: k })),
       ],
     },
     {
       id: 'motion',
       title: 'Motion',
-      blurb: 'Any prop can ride a rail or loop around — including hazards.',
+      blurb: 'Anything can commute. Even saws.',
       entries: [
         {
           title: 'rail',
-          note: 'Back and forth along a track.',
+          note: 'Nine to five.',
           def: def(
             'rail',
             [
@@ -599,7 +616,7 @@ export function partGroups(): PartGroup[] {
         },
         {
           title: 'loop',
-          note: 'Circles around a point.',
+          note: 'Around we go.',
           def: def(
             'loop',
             [
@@ -619,7 +636,7 @@ export function partGroups(): PartGroup[] {
     {
       id: 'finishes',
       title: 'Finishes',
-      blurb: 'Cosmetic only: metal styles and trims rolled per prop.',
+      blurb: 'Cosmetic only. No pay-to-win here.',
       entries: [
         ...metals.map((m) => ({
           title: m,

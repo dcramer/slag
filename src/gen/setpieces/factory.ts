@@ -10,7 +10,7 @@ export const FACTORY: Recipe[] = [
     repeat: true,
     candidates: (rng, s) =>
       presses(rng, s, {
-        name: `${rng.pick(['Hydraulic', 'Steam', 'Stamping', 'Thousand-Ton'])} Press`,
+        name: `${rng.pick(['Hydraulic', 'Pancake', 'Stamping', 'Thousand-Ton'])} Press`,
         style: makeStyle(rng, ['steel', 'steel', 'rust'], [48, 200, 0], { trim: 'stripes', glowHue: 0 }),
         height: [5, 6],
         width: [2, 3],

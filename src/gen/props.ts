@@ -155,26 +155,28 @@ export function exposed(cells: readonly Cell[], dx: number, dy: number): Cell[] 
   return cells.filter(([x, y]) => !set.has(`${x + dx},${y + dy}`));
 }
 
+/** Box-art words: every part sounds like something off a bargain-bin shelf. */
 const GENERIC_ADJ = [
-  'Suspicious',
-  'Vintage',
-  'Cursed',
-  'Deluxe',
-  'Discount',
-  'Haunted',
-  'Artisanal',
   'Bootleg',
-  'Certified',
-  'Recalled',
-  'Sentient',
-  'Lukewarm',
-  'Forbidden',
-  'Gilded',
-  'Feral',
-  'Bespoke',
-  'Ominous',
+  'Cursed',
+  'Unpatched',
+  'Glitched',
+  'Beta',
+  'Retro',
+  'Legendary',
+  'Shiny',
+  'Pre-Order',
+  'Early-Access',
+  'Licensed',
+  'Unlicensed',
+  'Haunted',
+  'Discount',
+  'Overpowered',
+  'Nerfed',
+  'Suspicious',
 ];
-const SUFFIX = ['Mk II', 'Mk III', 'Deluxe', 'Pro', '9000', 'of Regret', 'of Doom', 'Classic', 'Ultra'];
+/** Sequel and re-release tags. */
+const SUFFIX = ['II', 'DX', 'HD', 'Turbo', '64', 'EX', 'Zero', 'Remastered', 'Deluxe', 'Classic', 'GOTY'];
 
 function title(rng: Rng, adjs: string[], nouns: string[]): string {
   const adj = adjs.length && rng.chance(0.8) ? rng.pick(adjs) : rng.pick(GENERIC_ADJ);
@@ -285,7 +287,7 @@ export function generateProp(rng: Rng, archetype: Archetype, key: string): PropD
 /** Good footing: it holds still, doesn't crumble and doesn't throw you around. */
 const FOOTING: Partial<Record<Material, string[]>> = {
   stone: ['Slab', 'Ledge'],
-  metal: ['Girder', 'Plate'],
+  metal: ['Girder', 'I-Beam'],
   wood: ['Plank', 'Beam'],
 };
 
@@ -306,7 +308,7 @@ function bridgeRecipe(rng: Rng): Recipe {
   return {
     archetype: 'platform',
     role: 'build',
-    name: title(rng, ['Trusty', 'Sturdy', 'Solid', 'Dependable'], FOOTING[material]!),
+    name: title(rng, ['Tutorial', 'Load-Bearing', 'Floating', 'Placeholder'], FOOTING[material]!),
     sized: (size) => ({
       modules: [{ type: 'body', cells: strip(by(size, BRIDGE_W - 1, BRIDGE_W, BRIDGE_W + 2)), material, conveyor: 0, breakFrames: 0, respawnFrames: 0 }],
     }),
@@ -337,7 +339,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
       archetype: 'spikestrip',
       role: 'hazard',
       mount: 'face',
-      name: title(rng, ['Pointy', 'Rude', 'Prickly', 'Spiteful'], ['Spikes', 'Spike Strip', 'Caltrops', 'Thorns']),
+      name: title(rng, ['One-Hit', 'Unfair', 'Rude', 'Pointy'], ['Spikes', 'Floor Spikes', 'Death Carpet', 'Spike Strip']),
       sized: (size) => ({ modules: [{ type: 'coat', cells: strip(by(size, 1, 3, 5)), angle: -Math.PI / 2, kind: 'spikes' }] }),
     };
   },
@@ -346,7 +348,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
       archetype: 'icecoat',
       role: 'hazard',
       mount: 'face',
-      name: title(rng, ['Slippery', 'Frosty', 'Polished', 'Treacherous', 'Glacial'], ['Ice Patch', 'Frost Coat', 'Black Ice', 'Glaze']),
+      name: title(rng, ['Frictionless', 'Slippery', 'Polished', 'Treacherous', 'Zamboni-Fresh'], ['Ice Physics', 'Ice Patch', 'Black Ice', 'Glaze']),
       sized: (size) => ({ modules: [{ type: 'coat', cells: strip(by(size, 2, 3, 5)), angle: -Math.PI / 2, kind: 'ice' }] }),
     };
   },
@@ -355,7 +357,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
       archetype: 'slimecoat',
       role: 'utility',
       mount: 'face',
-      name: title(rng, ['Sticky', 'Gooey', 'Questionable', 'Gloopy', 'Industrial'], ['Slime', 'Goo Coat', 'Gunk', 'Honey Glaze']),
+      name: title(rng, ['Sticky', 'Questionable', 'Gloopy', 'Toxic-Looking', 'Harmless-ish'], ['Swamp Level', 'Slime Trail', 'Gunk', 'Honey Glaze']),
       sized: (size) => ({ modules: [{ type: 'coat', cells: strip(by(size, 2, 3, 5)), angle: -Math.PI / 2, kind: 'slime' }] }),
     };
   },
@@ -388,17 +390,17 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
         : { type: 'loop', radius: rng.range(1.2, 2.5), period: rng.int(160, 300), dir: rng.sign() };
     }
     const nouns: Record<Material, string[]> = {
-      stone: ['Slab', 'Boulder', 'Chunk', 'Brick'],
-      metal: ['Girder', 'Plate', 'Bulkhead'],
-      wood: ['Plank', 'Crate', 'Raft'],
-      ice: ['Glacier', 'Ice Block', 'Frost Slab'],
-      conveyor: ['Conveyor', 'Belt', 'Treadmill'],
+      stone: ['Floating Brick', 'Slab', 'Sky Rock', 'Brick'],
+      metal: ['Girder', 'Lift', 'Elevator'],
+      wood: ['Plank', 'Obligatory Crate', 'Raft'],
+      ice: ['Ice Block', 'Ice Level', 'Ice Cube'],
+      conveyor: ['Conveyor', 'Baggage Claim', 'Treadmill'],
       goo: ['Goo Block', 'Gum Slab', 'Jam Brick'],
-      jelly: ['Jelly', 'Trampolard', 'Wobbler'],
+      jelly: ['Jelly', 'Jiggle Block', 'Bounce House'],
       crumble: ['Biscuit'],
     };
     const adjs: string[] = [];
-    if (moving) adjs.push(motion.type === 'loop' ? 'Orbiting' : 'Restless', 'Wandering');
+    if (moving) adjs.push(motion.type === 'loop' ? 'Orbiting' : 'Restless', 'Timing-Based');
     if (spiky) adjs.push('Spiky', 'Prickly');
     if (Math.abs(conveyor) > 95) adjs.push('Turbo', 'Express');
     return {
@@ -419,11 +421,11 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     const breakFrames = rng.int(14, 45);
     const growth = growCells(rng, 4, 0.75);
     const respawnFrames = rng.int(150, 300);
-    const adjs = breakFrames < 22 ? ['Flimsy', 'Fragile', 'Anxious'] : breakFrames > 38 ? ['Sturdy-ish', 'Patient'] : ['Crumbly', 'Stale'];
+    const adjs = breakFrames < 22 ? ['Dunked', 'Soggy', 'Anxious'] : breakFrames > 38 ? ['Twice-Baked', 'Stale'] : ['Crumbly', 'Day-Old'];
     return {
       archetype: 'crumble',
       role: 'build',
-      name: title(rng, adjs, ['Biscuit', 'Crumbler', 'Rubble', 'Wafer', 'Shortbread']),
+      name: title(rng, adjs, ['Biscuit', 'Donut Ledge', 'Wafer', 'Shortbread', 'Rusk']),
       sized: (size) => ({
         modules: [{ type: 'body', cells: normalizeCells(growth.slice(0, by(size, 2, 3, 4))), material: 'crumble', conveyor: 0, breakFrames, respawnFrames }],
       }),
@@ -443,11 +445,11 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     return {
       archetype: 'spikeblock',
       role: 'hazard',
-      name: title(rng, dirs.length === 4 ? ['Very Pointy', 'Hostile', 'Urchin'] : ['Pointy', 'Rude', 'Prickly'], [
+      name: title(rng, dirs.length === 4 ? ['Unstompable', 'Very Pointy', 'Hostile'] : ['Unstompable', 'Rude', 'Prickly'], [
         'Spike Block',
-        'Caltrop',
-        'Thornbox',
         'Pincushion',
+        'Hedgehog Crate',
+        'Porcupine',
       ]),
       sized(size) {
         const cells = normalizeCells(growth.slice(0, by(size, 1, 2, 4)));
@@ -476,7 +478,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
         return {
           archetype: 'saw',
           role: 'hazard',
-          name: title(rng, ['Stationary', 'Lazy', 'Loyal', 'Industrial'], ['Buzzsaw', 'Grinder', 'Shredder']),
+          name: title(rng, ['Rage-Inducing', 'Stationary', 'Bloodthirsty', 'Industrial'], ['Buzzsaw', 'Pizza Cutter', 'Meat Grinder']),
           sized: (size) => ({ modules: [{ ...base, arm: 0, angle0: 0, period, swing: 0, radius: by(size, 0.7, 1, 1.35), count: 1 }] }),
         };
       }
@@ -487,10 +489,10 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
         return {
           archetype: 'saw',
           role: 'hazard',
-          name: title(rng, (range * 2) / period > 0.06 ? ['Frantic', 'Unhinged', 'Zippy'] : ['Patrolling', 'Wandering'], [
+          name: title(rng, (range * 2) / period > 0.06 ? ['Frantic', 'Unhinged', 'Zippy'] : ['Patrolling', 'Commuting'], [
             'Rail Saw',
-            'Track Grinder',
-            'Saw Sled',
+            'Pizza Cutter',
+            'Deli Slicer',
           ]),
           sized: (size) => ({ modules: [{ ...base, arm: 0, angle0: 0, period: 30, swing: 0, radius: by(size, 0.5, 0.75, 1), count: 1 }], motion }),
         };
@@ -508,9 +510,9 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
           archetype: 'saw',
           role: 'hazard',
           name: title(rng, count > 1 ? ['Twin', 'Triple', 'Spinny'] : period < 120 ? ['Frantic', 'Dizzy'] : ['Orbiting', 'Lazy'], [
-            'Orbit Saw',
+            'Spin Bar',
             'Saw Carousel',
-            'Blade Wheel',
+            'Merry-Go-Saw',
           ]),
           sized: (size) => ({
             modules: [metalBody([[0, 0]]), { ...base, link: 'rod', arm, angle0, period, swing: 0, radius: by(size, 0.45, 0.6, 0.8), count }],
@@ -528,7 +530,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
           name: title(
             rng,
             ['Swinging', 'Hypnotic', 'Tick-Tock'],
-            head === 'axe' ? ['Pendulum Axe', 'Guillotine', 'Executioner'] : ['Pendulum Saw', 'Swing Blade'],
+            head === 'axe' ? ['Pendulum Axe', 'Guillotine', 'Hypnotist'] : ['Pendulum Saw', 'Grandfather Saw'],
           ),
           sized: (size) => ({
             modules: [metalBody([[0, 0]]), { ...base, link, arm, angle0: Math.PI / 2, period, swing, radius: by(size, 0.6, 0.8, 1), count: 1 }],
@@ -549,12 +551,11 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     return {
       archetype: 'flail',
       role: 'hazard',
-      name: title(rng, pend ? ['Swinging', 'Medieval', 'Hefty'] : ['Whirling', 'Dizzy', 'Hefty'], [
-        'Flail',
+      name: title(rng, pend ? ['Leashed', 'Medieval', 'Hefty'] : ['Off-Leash', 'Whirling', 'Dizzy'], [
+        'Chain Chump',
+        'Ball and Chain',
         'Morning Star',
-        'Mace',
         'Wrecking Ball',
-        'Demolisher',
       ]),
       sized: (size) => ({
         modules: [
@@ -652,22 +653,22 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
       } as const
     )[style];
     const nouns: Record<Exclude<LauncherStyle, 'hangar'>, string[]> = {
-      crossbow: ['Crossbow', 'Arbalest', 'Bolt Thrower'],
-      ballista: ['Ballista', 'Siege Bow', 'Scorpion'],
-      cannon: ['Cannon', 'Mortar', 'Bombard'],
-      totem: ['Fire Totem', 'Hex Idol', 'Ember Shrine'],
-      turret: ['Plasma Turret', 'Zapper', 'Blaster'],
-      thrower: ['Star Thrower', 'Shuriken Shrine', 'Ninja Box'],
-      rocket: ['Seeker Pod', 'Homing Rack', 'Missile Nest'],
-      glaive: ['Boomerang Arm', 'Glaive Flinger', 'Returner'],
-      gumball: ['Gumball Machine', 'Ball Pitcher', 'Bouncer'],
-      mortar: ['Cluster Mortar', 'Splitter', 'Scatter Shell'],
-      gooper: ['Goo Gun', 'Slime Spitter', 'Gunk Lobber'],
-      cryo: ['Freeze Ray', 'Cryo Cannon', 'Frost Spitter'],
-      prism: ['Prism', 'Bank-Shot Lens', 'Ricochet Eye'],
+      crossbow: ['Arrow Trap', 'Kneecapper', 'Crossbow'],
+      ballista: ['Ballista', 'Siege Bow', 'Tower Defense'],
+      cannon: ['Cannon', 'Pirate Cannon', 'Bombard'],
+      totem: ['Tiki Spitter', 'Fire Totem', 'Heartburn Idol'],
+      turret: ['Sentry Gun', 'Sorry Turret', 'Blaster'],
+      thrower: ['Ninja Box', 'Star Thrower', 'Shuriken Vendor'],
+      rocket: ['Seeker Pod', 'Homing Rack', 'Grudge Launcher'],
+      glaive: ['Boomerang Bruh', 'Glaive Flinger', 'Return Policy'],
+      gumball: ['Gumball Machine', 'Dodgeball Coach', 'Ball Pit'],
+      mortar: ['Banana Mortar', 'Bunch Launcher', 'Split Shell'],
+      gooper: ['Splat Gun', 'Goo Gun', 'Sneeze Cannon'],
+      cryo: ['Freeze Ray', 'Brain Freezer', 'Slushie Gun'],
+      prism: ['Trick-Shot Lens', 'Bank-Shot Prism', 'Mirror Puzzle'],
     };
     const STYLE_ADJ: Partial<Record<LauncherStyle, string[]>> = {
-      rocket: ['Relentless', 'Clingy', 'Persistent'],
+      rocket: ['Relentless', 'Clingy', 'Rubber-Band'],
       glaive: ['Loyal', 'Homesick'],
       gumball: ['Bouncy', 'Rubbery'],
       mortar: ['Generous', 'Sharing'],
@@ -680,7 +681,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     const aimAdj =
       aim === 'track' ? rng.pick(['Vigilant', 'Paranoid', 'Watchful', 'Tracking']) : aim === 'sweep' ? rng.pick(['Sweeping', 'Indecisive', 'Swiveling']) : null;
     if (interval < 70) adjs.push('Trigger-happy', 'Twitchy');
-    if (spread > 1) adjs.push(spread === 5 ? 'Fan-Fire' : 'Triple', 'Scattershot');
+    if (spread > 1) adjs.push(spread === 5 ? 'Spread-Shot' : 'Triple', 'Scattershot');
     if (burst > 2) adjs.push('Chatty', 'Rapid');
     return {
       archetype: 'launcher',
@@ -721,7 +722,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     return {
       archetype: 'flamer',
       role: 'hazard',
-      name: title(rng, on > 80 ? ['Relentless', 'Hungry'] : ['Hiccuping', 'Grumpy'], ['Flamethrower', 'Dragon Vent', 'Furnace Jet', 'Fire Spout']),
+      name: title(rng, on > 80 ? ['Relentless', 'Hungry'] : ['Hiccuping', 'Grumpy'], ['Burner', 'Dragon Burp', 'Fire Spout', 'Flambé Jet']),
       sized: (size) => ({ modules: [metalBody([[0, 0]]), { type: 'flame', at: center(), angle: AXIS[3], length: by(size, 2, 3, 5), on, off, warn }] }),
     };
   },
@@ -732,10 +733,10 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
       archetype: 'laser',
       role: 'hazard',
       name: title(rng, sweep ? ['Sweeping', 'Lighthouse', 'Searching'] : ['Focused', 'Unblinking', 'Judgmental'], [
-        'Laser',
         'Death Ray',
-        'Lumen Lance',
-        'Photon Pike',
+        'Laser Pointer',
+        'Doomsday Laser',
+        'Laser Sight',
       ]),
       modules: [
         metalBody([[0, 0]]),
@@ -759,7 +760,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     return {
       archetype: 'tesla',
       role: 'hazard',
-      name: title(rng, ['Crackling', 'Buzzing', 'Static', 'Ambitious'], ['Tesla Gate', 'Arc Pylons', 'Zap Fence', 'Spark Gap']),
+      name: title(rng, ['Crackling', 'Buzzing', 'Static', 'Ambitious'], ['Bug Zapper', 'Tesla Coil', 'Zap Fence', 'Electric Fence']),
       sized(size) {
         const d = by(size, 2, 3, 5);
         return {
@@ -781,7 +782,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     return {
       archetype: 'crusher',
       role: 'hazard',
-      name: title(rng, period < 120 ? ['Eager', 'Hyperactive'] : ['Patient', 'Grumpy', 'Industrial'], ['Crusher', 'Piston', 'Smasher', 'Thwacker', 'Stamper']),
+      name: title(rng, period < 120 ? ['Eager', 'Hyperactive'] : ['Patient', 'Grumpy', 'Industrial'], ['Crusher', 'Piston', 'Whack-a-Player', 'Panini Press']),
       sized(size) {
         const width = by(size, 1, 2, 3);
         return { modules: [metalBody(strip(width)), { type: 'piston', at: [width / 2, 0.5], angle: AXIS[1], reach, width, period }] };
@@ -796,9 +797,9 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
       role: 'utility',
       name: title(rng, power > 720 ? ['Overclocked', 'Ballistic'] : power < 600 ? ['Wimpy', 'Polite'] : ['Bouncy', 'Springy'], [
         'Spring',
-        'Launcher',
+        'Coil Pup',
         'Boing',
-        'Trampoline',
+        'Launch Pad',
       ]),
       modules: [{ type: 'spring', at: center(), angle: AXIS[3], power }],
     };
@@ -810,9 +811,9 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
       archetype: 'fan',
       role: 'utility',
       name: title(rng, strength > 2300 ? ['Hurricane', 'Industrial'] : strength < 1700 ? ['Gentle', 'Asthmatic'] : ['Breezy', 'Gusty'], [
-        'Fan',
-        'Blower',
-        'Gust Box',
+        'Updraft Fan',
+        'Leaf Blower',
+        'Hair Dryer',
         'Turbine',
       ]),
       sized: (size) => ({ modules: [metalBody([[0, 0]]), { type: 'fan', at: center(), angle: AXIS[3], length: by(size, 3, 5, 8), strength }] }),
@@ -825,7 +826,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     return {
       archetype: 'portal',
       role: 'utility',
-      name: title(rng, ['Twin', 'Paired', 'Quantum', 'Entangled', 'Interstate'], ['Warp Pads', 'Warp Rings', 'Wormhole', 'Blink Gates', 'Shortcut']),
+      name: title(rng, ['Twin', 'Quantum', 'Entangled', 'Speedrun', 'Non-Euclidean'], ['Plot Holes', 'Wormholes', 'Warp Pads', 'Sequence Break']),
       sized: (size) => ({ modules: [{ type: 'portal', a: center(0, ay), b: center(by(size, 3, 5, 8), ay + dy) }] }),
     };
   },
@@ -839,11 +840,11 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     return {
       archetype: 'bumper',
       role: 'utility',
-      name: title(rng, power > 460 ? ['Violent', 'Overcharged', 'Rowdy'] : twin ? ['Twin', 'Pinball'] : ['Bouncy', 'Jolly', 'Boisterous'], [
+      name: title(rng, power > 460 ? ['Violent', 'Overcharged', 'Tilt'] : twin ? ['Twin', 'Multiball'] : ['Bouncy', 'High-Score', 'Boisterous'], [
         'Bumper',
-        'Pinball Post',
-        'Boing Ball',
-        'Kicker',
+        'Pinball Bumper',
+        'Casino Bumper',
+        'Jackpot',
       ]),
       sized(size) {
         const radius = by(size, 0.42, 0.55, 0.75);
@@ -864,7 +865,11 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     return {
       archetype: 'magnet',
       role: 'utility',
-      name: title(rng, adjs, pull ? ['Gravity Well', 'Magnet Core', 'Tractor Orb', 'Attractor'] : ['Repulsor', 'Push Field', 'Anti-Magnet', 'Deflector Orb']),
+      name: title(
+        rng,
+        adjs,
+        pull ? ['Gravity Well', 'Tractor Beam', 'Black Hole Lite', 'Attractor'] : ['Repulsor', 'Anti-Magnet', 'Social Distancer', 'Force Push'],
+      ),
       sized: (size) => ({
         modules: [metalBody([[0, 0]]), { type: 'magnet', at: center(), radius: by(size, 2.5, 3.3, 4.2), strength, polarity: pull ? 1 : -1, on, off, warn: 30 }],
       }),
@@ -877,7 +882,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     return {
       archetype: 'web',
       role: 'utility',
-      name: title(rng, drag > 0.25 ? ['Extra-Sticky', 'Clingy'] : ['Sticky', 'Dusty', 'Abandoned'], ['Web', 'Cobweb', 'Net', 'Snare', 'Gossamer']),
+      name: title(rng, drag > 0.25 ? ['Extra-Sticky', 'Clingy'] : ['Sticky', 'Dusty', 'Abandoned'], ['Cobweb', 'Spider Level', 'World Wide Web', 'Net']),
       sized: (size) => ({ modules: [{ type: 'web', cells: normalizeCells(growth.slice(0, by(size, 3, 4, 6))), drag }] }),
     };
   },
@@ -893,9 +898,9 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
         archetype: 'blinker',
         role: 'build',
         name: title(rng, t < 90 ? ['Hasty', 'Frantic', 'Flip-Flop'] : ['Alternating', 'Ping-Pong', 'Turn-Taking'], [
+          'Yolo Blocks',
           'Blink Blocks',
-          'Phase Bricks',
-          'Strobe Slabs',
+          'On/Off Bricks',
           'Swap Tiles',
         ]),
         sized(size) {
@@ -917,10 +922,10 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
       archetype: 'blinker',
       role: 'build',
       name: title(rng, off > 80 ? ['Unreliable', 'Flaky', 'Shy'] : ['Flickering', 'Blinking', 'Nervous'], [
+        'Yolo Blocks',
         'Blink Blocks',
-        'Phase Bricks',
         'Ghost Tiles',
-        'Strobe Slabs',
+        'Lag Bricks',
       ]),
       sized: (size) => ({ modules: [{ type: 'phase', cells: strip(by(size, 2, 3, 4)), on, off, offset: 0 }] }),
     };
@@ -934,11 +939,11 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
       archetype: 'dropper',
       role: 'hazard',
       name: title(rng, warn < 17 ? ['Twitchy', 'Jumpy', 'Short-Tempered'] : ['Grumpy', 'Glowering', 'Patient', 'Brooding'], [
-        'Dropstone',
+        'Thwunk',
         'Grudge Block',
-        'Ceiling Smasher',
-        'Skull Slab',
-        'Pounder',
+        'Angry Brick',
+        'Dropstone',
+        'Ceiling Grump',
       ]),
       sized(size) {
         const w = by(size, 1, 2, 2);
@@ -959,10 +964,10 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
       role: 'hazard',
       mount: 'face',
       name: title(rng, warn < 17 ? ['Hair-Trigger', 'Jumpy', 'Snappy'] : ['Lurking', 'Sneaky', 'Patient'], [
-        'Snap Trap',
-        'Pop-Up Spikes',
         'Gotcha Plate',
-        'Spring Spikes',
+        'Pressure Plate',
+        'Pop-Up Spikes',
+        'Surprise Party',
       ]),
       sized: (size) => ({ modules: [{ type: 'snapper', cells: strip(by(size, 1, 2, 3)), angle: -Math.PI / 2, warn, up, cool }] }),
     };
@@ -991,17 +996,17 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
       ['gift', 1.5],
     ]);
     const adjs: string[] = [];
-    if (uses === 1) adjs.push('One-Shot', 'Collectible');
-    else if (uses > 1) adjs.push('Stingy', 'Rationed');
-    else if (refill < 230) adjs.push('Bottomless', 'Generous', 'Overflowing');
-    else if (refill > 350) adjs.push('Sleepy', 'Patient');
+    if (uses === 1) adjs.push('Limited-Time', 'One-Shot');
+    else if (uses > 1) adjs.push('Battle-Pass', 'Rationed');
+    else if (refill < 230) adjs.push('Bottomless', 'Pay-to-Win', 'Whale-Bait');
+    else if (refill > 350) adjs.push('Daily', 'Sleepy');
     if (poolId === 'shots') adjs.push('Armed', 'Rowdy');
     if (poolId === 'gadgets') adjs.push('Gadget', 'Clever', 'Tinkerer’s');
-    if (poolId === 'mixed') adjs.push('Mysterious', 'Chaotic', 'Unlabeled');
+    if (poolId === 'mixed') adjs.push('Gacha', 'Chaotic', 'Unlabeled');
     const nouns: Record<MysteryLook, string[]> = {
-      crate: ['Mystery Crate', 'Surprise Crate', 'Grab Box'],
-      chest: ['Lucky Chest', 'Treasure Trunk'],
-      gift: ['Gift Box', 'Present', 'Surprise Parcel'],
+      crate: ['Loot Box', 'Surprise Mechanic', 'Lucky Block'],
+      chest: ['Fanfare Chest', 'Treasure Trunk'],
+      gift: ['Login Gift', 'Free Gift', 'Present'],
     };
     return {
       archetype: 'mystery',
@@ -1025,11 +1030,11 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     return {
       archetype: 'wheel',
       role: 'build',
-      name: title(rng, period < 260 ? ['Speedy', 'Giddy'] : count >= 4 ? ['Crowded', 'Generous'] : ['Lazy', 'Leisurely', 'Creaky'], [
+      name: title(rng, period < 260 ? ['Speedy', 'Giddy'] : count >= 4 ? ['Crowded', 'Generous'] : ['Leisurely', 'Creaky', 'Squeaky'], [
         'Ferris Wheel',
         'Cog Lift',
-        'Paddle Wheel',
-        'Carousel',
+        'Hamster Wheel',
+        'Lazy Susan',
       ]),
       sized(size) {
         const arm = by(size, 1.6, 2, 2.5);
@@ -1069,7 +1074,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     return {
       archetype: 'bomb',
       role: 'demolish',
-      name: title(rng, ['Volatile', 'Grumpy', 'Polite', 'Excessive'], ['Bomb', 'Charge', 'Kaboom', `${word(rng, 1, 2)}-Bomb`]),
+      name: title(rng, ['Volatile', 'Grumpy', 'Polite', 'Excessive'], ['Cartoon Bomb', 'Kaboom', 'Fuse Ball', `${word(rng, 1, 2)}-omb`]),
       sized: (size) => ({ modules: [{ type: 'bomb', radius: by(size, 1.6, 2.6, 4), look: 'bomb' }] }),
     };
   },
@@ -1078,7 +1083,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     return {
       archetype: 'emp',
       role: 'demolish',
-      name: title(rng, ['Targeted', 'Tidy', 'Surgical', 'Total'], ['EMP', 'Wrecking Pulse', 'Junk Zapper', 'Scrap Charge']),
+      name: title(rng, ['Day-One', 'Emergency', 'Surgical', 'Unannounced'], ['Balance Patch', 'Hotfix', 'EMP', 'Nerf Pulse']),
       sized: (size) => ({ modules: [{ type: 'bomb', radius: by(size, 2.5, 3.5, 4.5), target: 'props', look: 'emp' }] }),
     };
   },
@@ -1088,7 +1093,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     return {
       archetype: 'drill',
       role: 'demolish',
-      name: title(rng, width === 3 ? ['Wide-Bore', 'Industrial'] : ['Deep', 'Determined', 'Hand'], ['Drill', 'Tunneler', 'Bore Charge', 'Mole']),
+      name: title(rng, width === 3 ? ['Wide-Bore', 'Industrial'] : ['Deep', 'Determined', 'Hand'], ['Drill', 'Digger', 'Tunnel Vision', 'Mole']),
       sized: (size) => ({ modules: [{ type: 'bomb', radius: by(size, 5, 7, 10), shape: 'line', target: 'terrain', width, look: 'drill' }] }),
     };
   },
@@ -1100,8 +1105,8 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
       role: 'demolish',
       name: title(
         rng,
-        cross ? ['Four-Way', 'Plus-Sized', 'Crossroads'] : ['Hollow', 'Donut', 'Halo'],
-        cross ? ['Cross Charge', 'Plus Bomb', 'Star Blast'] : ['Ring Charge', 'Ring Mine', 'Moat Maker'],
+        cross ? ['Four-Way', 'Plus-Sized', 'Grid-Locked'] : ['Hollow', 'Glazed', 'Frosted'],
+        cross ? ['Plus Bomb', 'Arena Bomb', 'Cross Charge'] : ['Donut', 'Ring Charge', 'Moat Maker'],
       ),
       sized: (size) => ({
         modules: [
@@ -1118,10 +1123,10 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
       archetype: 'hangar',
       role: 'utility',
       name: title(rng, speed > 95 ? ['Express', 'Hasty'] : interval < 140 ? ['Busy', 'Generous'] : ['Leisurely', 'Scenic', 'Rickety'], [
-        'Glider Hangar',
-        'Kite Loft',
-        'Plank Catapult',
+        'Budget Airline',
         'Air Ferry',
+        'Kite Loft',
+        'Paper Planery',
       ]),
       modules: [
         { type: 'body', cells: [[0, 0]], material: 'wood', conveyor: 0, breakFrames: 0, respawnFrames: 0 },
@@ -1188,7 +1193,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     return {
       archetype: 'timebomb',
       role: 'demolish',
-      name: title(rng, emp ? ['Spiteful', 'Delayed'] : ['Ticking', 'Patient', 'Punctual'], ['Time Bomb', 'Alarm Clock', 'Ticking Parcel', 'Countdown']),
+      name: title(rng, emp ? ['Spiteful', 'Delayed'] : ['Ticking', 'Patient', 'Punctual'], ['Time Bomb', 'Alarm Clock', 'Hurry-Up Timer', 'Snooze Button']),
       sized: (size) => ({ modules: [{ type: 'bomb', radius: by(size, 2, 2.6, 3.2), target: emp ? 'props' : 'all', look: 'clock', delay: true }] }),
     };
   },
