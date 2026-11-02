@@ -6,6 +6,7 @@ import { BACKDROP, moduleArt, type PropDrawOpts } from './common';
 import './modules';
 import { PISTON_CARD_HEAD } from './modules/piston';
 import { cardAngles } from './modules/swinger';
+import { drawTrack } from './track';
 
 export type { Emit, PropDrawOpts } from './common';
 export { drawProjectile } from './projectiles';
@@ -28,6 +29,7 @@ function drawLayers(rc: RC, r: Resolved, o: PropDrawOpts, first: number, last: n
 
 /** The scenery half of a prop. The renderer paints this before the terrain, which then occludes it (emissives included). */
 export function drawBackdrop(rc: RC, r: Resolved, o: PropDrawOpts): void {
+  drawTrack(rc, r);
   drawLayers(rc, r, o, BACKDROP, BACKDROP);
 }
 
@@ -155,8 +157,8 @@ export function drawPreview(rc: RC, full: PropDef, cx: number, cy: number, bw: n
 
 function drawPath(rc: RC, r: Resolved) {
   const m = r.motion;
-  // A track draws its own line (stage concepts, Wave 1).
-  if (m.type === 'none' || m.type === 'track') return;
+  // A track or a lift draws its own guide, always (track.ts).
+  if (m.type === 'none' || m.type === 'track' || (m.type === 'rail' && m.dwell)) return;
   const s = rc.s;
   const cells = r.mods.flatMap((x) => (x.type === 'body' ? x.cells : []));
   let cx: number;
