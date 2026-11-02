@@ -51,7 +51,7 @@ The owner found round two still too geometric and too alike, and pointed at the 
 - **Death.** A toy comes apart into its own parts, a few per kind (gears, springs, its key, bolts, wheels), plus tin shards in its paint and the player's color, with a clank under the death sound (`clank` in `src/audio/sfx.ts`).
 - **Faces.** Each kind paints its own (`src/render/toys/faces.ts`), from the character's rolled mouth and eye size where it has a say.
 - **Determinism.** `generateCharacter(seed)` is a pure function of the seed, and the kind is one of its rolls.
-- **Cost.** About 0.04–0.07 ms per runner on a software canvas (the bench swings with machine load), the same as the old blobs, so nothing is baked: everything on a toy moves (squash, boil, waddle, key, wheels). `pnpm perf --only race8`, parent and branch back to back under a load average of 15–45, has never shown a difference above the noise; the last pair (round two) gave a frame p50 of 6.0 → 5.0 ms.
+- **Cost.** About 0.04–0.07 ms per runner on a software canvas (the bench swings with machine load), the same as the old blobs, so nothing is baked: everything on a toy moves (squash, boil, waddle, key, wheels). `pnpm perf --only race8`, parent and branch back to back under a load average of 15–45, has never shown a difference above the noise; the round-three pair, run back to back under the same load, gave a frame p50 of 7.5 → 7.7 ms and render p50 7.0 → 7.1 ms. Outlines are sampled once per kind; nothing per pose needed baking.
 
 ## Adding a toy
 
