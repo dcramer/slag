@@ -117,7 +117,7 @@ export const volcano: Sculptor = ({ rng, attempt }) => {
   // Spires and basalt clusters on the remaining ground.
   const nSpires = style === 'spires' ? rng.int(2, 4) : rng.int(0, 2);
   for (let i = 0; i < nSpires; i++) {
-    const w = rng.pick([3, 5, 5, 7]);
+    const w = rng.pick([4, 5, 6, 7]);
     const x = slots.take(rng, w, 1);
     if (x === null) continue;
     spire(g, rng, x, w, surf);
@@ -156,19 +156,19 @@ function spire(g: Grid, rng: Rng, x: number, w: number, surf: number[]): void {
   let b = x + w - 1;
   let y = f - 1;
   const rise = easyRise();
-  while (a <= b && y > 4) {
-    const h = rng.int(1, Math.min(2, rise));
+  const tall = rng.int(7, 13);
+  // Bands of 1..rise rows; each band steps in on one side (ragged, leaning flanks).
+  while (a <= b && y > f - 1 - tall && y > 3) {
+    const h = rng.int(1, rise);
     g.fill(a, y - h + 1, b, y);
     y -= h;
-    // Step in on at least one side every band so the flanks stay climbable.
-    const left = rng.chance(0.5);
-    if (left || b - a >= 2) a++;
-    if (!left || b - a >= 2) b--;
+    if (b - a >= 3 || rng.chance(0.5)) a++;
+    else b--;
+    if (b - a >= 3) b--;
   }
-  if (a > b) {
-    const mid = x + (w >> 1);
-    if (rng.chance(0.6)) g.set(mid, y, 1);
-  }
+  // Needle tip.
+  const tip = x + (w >> 1) + rng.int(-1, 1);
+  g.fill(tip, y - rng.int(0, 2), tip, y);
 }
 
 /** Basalt organ pipes: adjacent 1-wide columns whose heights step by ±1. */

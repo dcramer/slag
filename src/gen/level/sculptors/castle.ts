@@ -148,7 +148,7 @@ const TOWER: Module = {
 };
 
 const WALL: Module = {
-  w: (rng) => rng.int(10, 15),
+  w: (rng) => rng.int(9, 13),
   stamp: (g, rng, x, w, fl) => {
     const h = rng.int(5, 7);
     const ws = x + 4;
