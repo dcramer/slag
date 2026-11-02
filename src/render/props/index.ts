@@ -4,6 +4,8 @@ import { dirOf, type Module, motionOffset, type PartSize, type PlacedProp, type 
 import { circle, METALS, type RC } from '../kit';
 import { BACKDROP, moduleArt, type PropDrawOpts } from './common';
 import './modules';
+import { PISTON_CARD_HEAD } from './modules/piston';
+import { cardAngles } from './modules/swinger';
 
 export type { Emit, PropDrawOpts } from './common';
 export { drawProjectile } from './projectiles';
@@ -50,39 +52,67 @@ const BLAST_SCALE: Record<PartSize, number> = { small: 0.7, medium: 0.85, large:
 /** How much a card shows of each size: big enough to read alone, and still smaller for a smaller part. */
 const CARD_SIZE: Record<PartSize, number> = { small: 0.6, medium: 0.8, large: 0.96 };
 
-/** Tiles a part's card picture spans across and down: its cells and whatever reaches out of them. */
-function cardBox(def: PropDef): { w: number; h: number } {
+/** The picture a card draws of a part: what would leave its body a speck is trimmed to fit. */
+function cardDef(full: PropDef): PropDef {
+  // A long rope would shrink to a thread on a card, so show only its top links: fewer of them, but
+  // still more for a longer rope, or the medium and large cards are the same picture.
+  if (full.mount === 'hang')
+    return {
+      ...full,
+      footprint: full.footprint.slice(0, 4),
+      modules: full.modules.map((m) => (m.type === 'rope' ? { ...m, length: Math.min(4, 1 + m.length * 0.43) } : m)),
+    };
+  // A spin bar's orbit, a magnet's field, a crusher's stroke or a jet's flame would leave the part itself
+  // a speck in the middle of its card: the card draws them shorter, and the size still shows in the scale.
+  const trim = (m: Module): Module => {
+    switch (m.type) {
+      case 'swinger':
+        return { ...m, arm: Math.min(m.arm, m.head === 'mace' ? 1.6 : 1.3) };
+      case 'magnet':
+        return { ...m, radius: Math.min(m.radius, 1.7) };
+      case 'piston':
+        return { ...m, reach: Math.min(m.reach, 1) };
+      case 'flame':
+        return { ...m, length: Math.min(m.length, 2.2) };
+      default:
+        return m;
+    }
+  };
+  return { ...full, modules: full.modules.map(trim) };
+}
+
+/** What a part's card picture covers, in tiles of its own frame: its cells and whatever reaches out of them. */
+function cardBounds(def: PropDef): { x0: number; y0: number; x1: number; y1: number } {
   const { w, h } = cellsBounds(def.footprint);
-  let rx = 0;
-  let ry = 0;
-  let fx = 0;
-  let fy = 0;
+  const b = { x0: 0, y0: 0, x1: w, y1: h };
+  const grow = (x: number, y: number, rx: number, ry = rx) => {
+    b.x0 = Math.min(b.x0, x - rx);
+    b.y0 = Math.min(b.y0, y - ry);
+    b.x1 = Math.max(b.x1, x + rx);
+    b.y1 = Math.max(b.y1, y + ry);
+  };
   for (const m of def.modules) {
     if (m.type === 'swinger') {
-      rx = Math.max(rx, m.arm + m.radius);
-      ry = Math.max(ry, m.arm + m.radius);
+      grow(m.hub[0], m.hub[1], 0.45);
+      // Spikes and blades stand a little proud of the head's radius.
+      for (const a of cardAngles(m)) grow(m.hub[0] + Math.cos(a) * m.arm, m.hub[1] + Math.sin(a) * m.arm, m.radius * 1.4);
     }
-    if (m.type === 'piston') {
-      // A crusher only reaches one way: its card fits the stroke, not a box round it.
+    if (m.type === 'piston' || m.type === 'flame') {
+      // A crusher reaches one way, its head drawn bolder on a card; a jet's flame does too.
       const [dx, dy] = dirOf(m.angle);
-      fx += Math.abs(dx) * (m.reach + 0.5);
-      fy += Math.abs(dy) * (m.reach + 0.5);
+      const d = m.type === 'piston' ? 0.5 + m.reach + PISTON_CARD_HEAD / TILE : 0.5 + m.length;
+      const across = m.type === 'piston' ? m.width / 2 : 0.4;
+      grow(m.at[0] + dx * d, m.at[1] + dy * d, Math.abs(dy) * across, Math.abs(dx) * across);
     }
-    if (m.type === 'magnet') {
-      rx = Math.max(rx, m.radius - 0.5);
-      ry = Math.max(ry, m.radius - 0.5);
-    }
-    if (m.type === 'keg') {
-      rx = Math.max(rx, 0.8);
-      ry = Math.max(ry, 0.8);
-    }
-    if (m.type === 'flame') {
-      const [dx, dy] = dirOf(m.angle);
-      fx += Math.abs(dx) * m.length;
-      fy += Math.abs(dy) * m.length;
-    }
+    if (m.type === 'magnet') grow(m.at[0], m.at[1], m.radius);
+    if (m.type === 'keg') grow(w / 2, h / 2, w / 2 + 0.8, h / 2 + 0.8);
   }
-  return { w: Math.max(1, w + rx * 2 + fx), h: Math.max(1, h + ry * 2 + fy + (def.mount === 'face' ? 0.6 : 0)) };
+  // An attachment shows its host blocks, with what it adds standing off them.
+  if (def.mount === 'face') {
+    b.y0 -= 0.3;
+    b.y1 += 0.3;
+  }
+  return b;
 }
 
 /**
@@ -91,37 +121,11 @@ function cardBox(def: PropDef): { w: number; h: number } {
  * size still shows, a step smaller for each size down.
  */
 export function drawPreview(rc: RC, full: PropDef, cx: number, cy: number, bw: number, bh = bw) {
-  // A long rope would shrink to a thread on a card, so show only its top links: fewer of them, but
-  // still more for a longer rope, or the medium and large cards are the same picture.
-  const def: PropDef =
-    full.mount === 'hang'
-      ? {
-          ...full,
-          footprint: full.footprint.slice(0, 4),
-          modules: full.modules.map((m) => (m.type === 'rope' ? { ...m, length: Math.min(4, 1 + m.length * 0.43) } : m)),
-        }
-      : {
-          ...full,
-          // A spin bar's orbit or a magnet's field would leave its head a speck in the middle of the card:
-          // the card draws a shorter arm and a tighter field, and the size still shows in the scale.
-          modules: full.modules.map((m) =>
-            m.type === 'swinger' ? { ...m, arm: Math.min(m.arm, 1.3) } : m.type === 'magnet' ? { ...m, radius: Math.min(m.radius, 1.9) } : m,
-          ),
-        };
-  const { w, h } = cellsBounds(def.footprint);
-  // A jet shows its flame on the card and a crusher its stroke, so the whole of it is centered and not just the body.
-  let [sx, sy] = [0, 0];
-  for (const m of def.modules) {
-    if (m.type !== 'flame' && m.type !== 'piston') continue;
-    const [dx, dy] = dirOf(m.angle);
-    const reach = m.type === 'flame' ? m.length : m.reach + 0.5;
-    sx -= (dx * reach * TILE) / 2;
-    sy -= (dy * reach * TILE) / 2;
-  }
+  const def = cardDef(full);
+  const b = cardBounds(def);
   // A charge's art stays one tile whatever its blast, so its size shows in the scale.
   const blast = def.modules[0]?.type === 'bomb' ? BLAST_SCALE[def.size ?? 'large'] : 1;
-  const box = cardBox(def);
-  const fit = Math.min(bw / (box.w * TILE), bh / (box.h * TILE));
+  const fit = Math.min(bw / ((b.x1 - b.x0) * TILE), bh / ((b.y1 - b.y0) * TILE));
   // A one-tile charge steps by its blast alone, and stays clear of the tags above it.
   const k = def.modules[0]?.type === 'bomb' ? Math.min(2.1, fit * 0.86) * blast : Math.min(2.6, fit * 0.86) * (def.size ? CARD_SIZE[def.size] : 0.9);
   const s = rc.s;
@@ -130,11 +134,11 @@ export function drawPreview(rc: RC, full: PropDef, cx: number, cy: number, bw: n
     ctx.save();
     ctx.translate(cx, cy);
     ctx.scale(k, k);
-    ctx.translate((-w * TILE) / 2 + sx, (-h * TILE) / 2 + sy);
+    ctx.translate((-(b.x0 + b.x1) / 2) * TILE, (-(b.y0 + b.y1) / 2) * TILE);
   }
   const preview: PropDef = { ...def, motion: { type: 'none' } };
   if (def.mount === 'face') drawHostCells(rc, def.footprint);
-  drawResolved(rc, resolveProp({ uid: 7, def: preview, owner: -1, tx: 0, ty: 0, rot: 0 }), { level: null });
+  drawResolved(rc, resolveProp({ uid: 7, def: preview, owner: -1, tx: 0, ty: 0, rot: 0 }), { level: null, card: true });
   s.restore();
   g.restore();
 }

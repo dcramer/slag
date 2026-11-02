@@ -173,13 +173,45 @@ function handle() {
   });
 }
 
+/**
+ * A crate card's still pose: a pendulum caught mid-swing, a lone head out to the lower right, a pair
+ * near level. An orbit seen at a random frame is a head somewhere in a box mostly empty.
+ */
+export function cardAngles(m: Swinger): number[] {
+  if (m.swing > 0) return [m.angle0 + m.swing * 0.6];
+  if (m.count === 1) return [Math.PI * 0.22];
+  return Array.from({ length: m.count }, (_, i) => -0.3 + (i * Math.PI * 2) / m.count);
+}
+
+/** Motion lines trailing a posed head round its arc: the swing a still card can't show. */
+function swoosh(s: CanvasRenderingContext2D, hx: number, hy: number, arm: number, R: number, a: number, back: number) {
+  s.fillStyle = 'rgba(255,255,255,0.72)';
+  for (const [k, from, to, w] of [
+    [1 + (R * 0.75) / arm, 0.3, 1.25, 1.1],
+    [1, 0.42, 1.05, 0.9],
+    [1 - (R * 0.75) / arm, 0.55, 0.95, 0.7],
+  ] as const) {
+    const pts: P[] = [];
+    for (let i = 0; i <= 8; i++) {
+      const t = a - back * (from + ((to - from) * i) / 8);
+      pts.push({ x: hx + Math.cos(t) * arm * k, y: hy + Math.sin(t) * arm * k });
+    }
+    stroke(s, pts, { w, seed: k * 7, taper: [0.8, 0.1], press: 0 });
+  }
+}
+
 function drawSwinger(rc: RC, m: Swinger, r: Resolved, off: Vec, pal: MetalPalette, st: PropStyle, o: PropDrawOpts) {
   const s = rc.s;
   const f = rc.frame;
-  const heads = swingHeads(m, f, r.phase, off);
   const hx = m.hub[0] + off[0];
   const hy = m.hub[1] + off[1];
+  const heads = o.card ? cardAngles(m).map((a) => ({ x: hx + Math.cos(a) * m.arm, y: hy + Math.sin(a) * m.arm, a })) : swingHeads(m, f, r.phase, off);
   const name = r.pp.def.name;
+  if (o.card && m.arm > 0) {
+    // Lines trail each head back the way it came: a pendulum's toward the bottom of its swing.
+    const back = m.swing > 0 ? 1 : m.dir;
+    for (const h of heads) swoosh(s, hx, hy, m.arm, m.radius, h.a, back);
+  }
   for (const h of heads) {
     if (m.arm <= 0) continue;
     if (m.link === 'chain') {
