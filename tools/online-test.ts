@@ -288,8 +288,17 @@ const NET_SHIM = `(() => {
   const st = window.setTimeout.bind(window), send = RTCDataChannel.prototype.send;
   window.__netDelay = 0;
   window.__netCut = false;
+  const held = [];
+  // An outage, as the network has it: unreliable messages are gone, reliable ones arrive late, in order (SCTP resends them).
+  window.__setCut = (on) => {
+    window.__netCut = on;
+    if (!on) for (const [c, d] of held.splice(0)) try { send.call(c, d); } catch {}
+  };
   RTCDataChannel.prototype.send = function (d) {
-    if (window.__netCut) return;
+    if (window.__netCut) {
+      if (this.label !== 'rt') held.push([this, d]);
+      return;
+    }
     const ms = window.__netDelay;
     if (!ms) return send.call(this, d);
     if (this.label === 'rt' && Math.random() < 0.01) return;
@@ -711,11 +720,12 @@ async function contactScenario(browser: Browser, base: string) {
 }
 
 /**
- * A console error that is a page's own. WebKit logs a send on a data channel whose peer just closed it, before the
- * channel says so; the transport catches that send failing by design (the close handler follows), so it's not one.
+ * WebKit reports a send on a data channel its peer has just closed as an exception at the send, even inside a try and
+ * with nothing thrown to the page: no window error event, so no error monitor ever sees it. The close handler follows.
  */
-const consoleError = (m: { type(): string; text(): string }) =>
-  m.type() === 'error' && !/^Error sending (string|data) through RTCDataChannel\.$/.test(m.text());
+const webkitSendNoise = (text: string) => /^Error sending (string|data) through RTCDataChannel\.$/.test(text);
+/** A console error that is a page's own. */
+const consoleError = (m: { type(): string; text(): string }) => m.type() === 'error' && !webkitSendNoise(m.text());
 
 const contextEngine = new WeakMap<BrowserContext, Engine>();
 const engineOf = (p: Page): Engine => contextEngine.get(p.context()) ?? 'chromium';
@@ -810,7 +820,7 @@ async function newRoom(
       }
       const p = await c.newPage();
       if (browserMixed()) console.log(`     ${tag}: ${engineOf(p)}`);
-      p.on('pageerror', (e) => errors.push(`${tag}: ${String(e)}`));
+      p.on('pageerror', (e) => webkitSendNoise(String(e)) || errors.push(`${tag}: ${String(e)}`));
       p.on('console', (m) => {
         if (consoleError(m)) errors.push(`${tag}: ${m.text()}`);
         else if (m.text().startsWith('[net]')) console.log(`     ${tag} ${m.text()}`);
@@ -1026,7 +1036,7 @@ async function doubleScenario(browser: Browser, base: string) {
   for (const p of pages) await p.keyboard.down('ArrowRight');
   await sleep(1000);
   const before = await view(pages[1]);
-  const cut = (on: boolean) => Promise.all(pages.map((p) => p.evaluate((v) => ((window as any).__netCut = v), on)));
+  const cut = (on: boolean) => Promise.all(pages.map((p) => p.evaluate((v) => (window as any).__setCut(v), on)));
   await cut(true);
   const t0 = Date.now();
   let running = 0;
@@ -1042,6 +1052,7 @@ async function doubleScenario(browser: Browser, base: string) {
   }
   await cut(false);
   const secs = await recovery(pages, t0, before.frame);
+  if (secs < 0) await dumpNet(pages, 'double');
   recoveries.push(`run (both guests lose a live host): ${secs.toFixed(1)}s`);
   console.log(`     settled in ${secs.toFixed(1)}s; at most ${hosts} host(s) at once, ${running} playing`);
   check(frozenFirst !== false, 'the old host was frozen by the time a guest took over');
@@ -1163,7 +1174,7 @@ async function realFlowScenario(browser: Browser, base: string, label: string, s
     await c.addInitScript((v) => localStorage.setItem('slag.profile.v1', v), profile);
   }
   const watch = (p: Page, tag: string) => {
-    p.on('pageerror', (e) => errors.push(`${tag}: ${String(e)}`));
+    p.on('pageerror', (e) => webkitSendNoise(String(e)) || errors.push(`${tag}: ${String(e)}`));
     p.on('console', (m) => consoleError(m) && errors.push(`${tag}: ${m.text()}`));
   };
   const A = await ca.newPage();
@@ -1208,7 +1219,7 @@ async function personPage(browser: Browser, phone: string | undefined, name: str
   const profile = JSON.stringify({ version: 1, name, look, prompted: true });
   await ctx.addInitScript((v) => localStorage.setItem('slag.profile.v1', v), profile);
   const p = await ctx.newPage();
-  p.on('pageerror', (e) => errors.push(`${tag}: ${String(e)}`));
+  p.on('pageerror', (e) => webkitSendNoise(String(e)) || errors.push(`${tag}: ${String(e)}`));
   p.on('console', (m) => consoleError(m) && errors.push(`${tag}: ${m.text()}`));
   return { ctx, p };
 }
@@ -1510,6 +1521,10 @@ async function dumpNet(pages: Page[], label: string) {
           inbound: t.inbound.size,
           dead: [...t.dead.keys()],
           pollFails: t.pollFails,
+          fenced: t.fenced,
+          lost: [...(t.lost?.keys() ?? [])],
+          ticks: n.ticks,
+          paused: n.paused,
           roster: [...t.roster.values()].map((m: any) => [m.id, m.order, !!m.linking]),
         },
       };
@@ -1881,7 +1896,7 @@ async function goneScenario(browser: Browser, base: string) {
   await B.close();
   await sleep(9000);
   const A2 = await ctx.newPage();
-  A2.on('pageerror', (e) => r.errors.push(`A2: ${String(e)}`));
+  A2.on('pageerror', (e) => webkitSendNoise(String(e)) || r.errors.push(`A2: ${String(e)}`));
   await A2.goto(`${base}r/${r.name}?${query}`);
   await A2.waitForFunction(() => 'slagDebug' in window, null, { timeout: 60_000 });
   const fresh = await waitFor(A2, 'hosting the room again', (v) => v.isHost && v.status === 'online', 30_000);
