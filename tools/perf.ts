@@ -319,6 +319,7 @@ async function loadScenario(b: Browser) {
   for (const [name, path, ready] of [
     // `debug=load` marks the first frame without pulling the devtools chunk into the numbers.
     ['room', 'r/LOADTEST?debug=load', 'slag:first-frame'],
+    ['home', '', null],
     ['codex', 'codex', null],
   ] as const) {
     const ctx = await b.newContext({ viewport: { width: W, height: H } });

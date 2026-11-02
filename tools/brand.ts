@@ -362,14 +362,16 @@ async function og(browser: Browser) {
     const page = await browser.newPage({ viewport: { width: OG_W, height: OG_H } });
     await page.goto(server.base);
     await page.evaluate(() => document.fonts.ready);
-    const { brand, css } = await page.evaluate(() => ({
+    // The page's stylesheets (the fonts) and its inline styles (the game's screen CSS).
+    const { brand, css, styles } = await page.evaluate(() => ({
       brand: document.querySelector('.brand')!.outerHTML,
       css: [...document.querySelectorAll<HTMLLinkElement>('link[rel=stylesheet]')].map((l) => l.href),
+      styles: [...document.querySelectorAll('style')].map((s) => s.textContent ?? '').join('\n'),
     }));
     for (const card of CARDS) {
       const kicker = card.kicker ? brand.replace(/(<div class="kicker">)[^<]*(<\/div>)/, `$1${card.kicker}$2`) : brand;
       await page.setContent(
-        `<html><head>${css.map((h) => `<link rel="stylesheet" href="${h}">`).join('')}<style>
+        `<html><head>${css.map((h) => `<link rel="stylesheet" href="${h}">`).join('')}<style>${styles}</style><style>
           body { margin: 0; width: ${OG_W}px; height: ${OG_H}px; overflow: hidden; background: #0e0806; }
           .og { position: relative; width: 100%; height: 100%; background: url(data:image/png;base64,${art.toString('base64')}) center / 100% 100%; }
           .og::before { content: ''; position: absolute; inset: 0;
