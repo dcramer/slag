@@ -1481,6 +1481,8 @@ try {
         });
         if (over > 0) throw new Error(`settings: ${label} overflows by ${over}px`);
       };
+      // A returning player: no first-visit name prompt opening when the loop resumes, where it would take the pad's Start.
+      await page.addInitScript(() => localStorage.setItem('slag.profile.v1', JSON.stringify({ version: 1, name: null, prompted: true })));
       // A pad that exists from the first frame; the page reads window.slagShotPad like hardware.
       await page.addInitScript(() => {
         const pressed = new Set<number>();
@@ -1573,7 +1575,10 @@ try {
       await page.evaluate(() => (window as any).slagShotPad.delete(9));
       await page.waitForTimeout(120);
       await expectTab(page, 'audio');
-      await pad(9);
+      // Closing too: with the loop live, one software-GL frame can outlast a tap, and the menu polls pads once a frame.
+      await page.evaluate(() => (window as any).slagShotPad.add(9));
+      await page.waitForSelector('.slag-panel', { state: 'detached', timeout: 10_000 }).catch(() => {});
+      await page.evaluate(() => (window as any).slagShotPad.delete(9));
       if (await page.$('.slag-panel')) throw new Error('settings: pad Start did not close the menu');
 
       // Saved settings survive a reload. Reopening lands on the tab you left.

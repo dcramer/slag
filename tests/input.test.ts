@@ -69,6 +69,33 @@ describe('pads and menus', () => {
     expect(input.sample().pad0.confirmPressed).toBe(true);
   });
 
+  it('reopens on Start after every B-close', () => {
+    const { pressed, input } = setup();
+    let open = false;
+    let opens = 0;
+    // As in game-client: Start opens the menu, which captures the pads until B closes it.
+    input.onEscape = () => {
+      opens++;
+      open = true;
+      input.capturePads(true);
+    };
+    for (let i = 0; i < 20; i++) {
+      pressed.add(9);
+      input.sample();
+      pressed.delete(9);
+      input.sample();
+      expect(open).toBe(true);
+      pressed.add(1);
+      input.sample();
+      open = false;
+      input.capturePads(false); // B closes it, still held
+      input.sample();
+      pressed.delete(1);
+      input.sample();
+    }
+    expect(opens).toBe(20);
+  });
+
   it('opens the menu on Start, once per press', () => {
     const { pressed, input } = setup();
     let escapes = 0;
