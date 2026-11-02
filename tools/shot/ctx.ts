@@ -49,16 +49,22 @@ export async function open(q: string) {
       const hud = (window as any).slagDebug.renderer.hud;
       if (m) hud.inputMode = m;
       if (m === 'gamepad') hud.padCount = 1;
-      if (net)
+      if (net) {
+        // Peers named after the lobby's players as they join (read live), so the cards show the host tag and pings.
+        // (No named helpers in here: the bundler wraps them in a __name the page doesn't have.)
+        const match = (window as any).slagDebug.match;
+        const pings = [undefined, 42, 135, 230];
         hud.net = {
           status: 'Hosting · 3 Connected',
           inviteUrl: `${location.origin}/r/SHOTS`,
-          peers: [
-            { name: 'Spegil', isHost: true, local: true },
-            { name: 'Klyzheeg', isHost: false, pingMs: 42, local: false },
-            { name: 'Grafaunk', isHost: false, pingMs: 135, local: false },
-          ],
+          get hostSlot() {
+            return match.players.length ? 0 : undefined;
+          },
+          get peers() {
+            return match.players.slice(0, 4).map((p: any, i: number) => ({ name: p.character.name, isHost: i === 0, local: i === 0, pingMs: pings[i] }));
+          },
         };
+      }
     },
     [mode ?? '', fakeNet] as const,
   );

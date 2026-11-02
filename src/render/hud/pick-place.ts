@@ -4,8 +4,8 @@ import type { Match } from '../../game/match';
 import type { Role } from '../../gen/props';
 import { VIEW_W } from '../../sim/constants';
 import { PAL, TYPE } from '../../ui/style';
-import { plate, tag } from '../hud-kit';
-import { circle, glowDot, rrect } from '../kit';
+import { arcStroke, dial, pill, plate, tag } from '../hud-kit';
+import { glowDot, rrect } from '../kit';
 import { blob, line, stroke } from '../ink';
 import { drawPreview } from '../props';
 import type { Hud } from '../hud';
@@ -111,13 +111,8 @@ function cursor(hud: Hud, x: number, y: number, col: HSL, label: string, t: numb
   c.fill();
   c.restore();
   c.font = `700 ${TYPE.caption}px ${UI}`;
-  const w = c.measureText(label).width + 10;
-  c.fillStyle = PAL.ink;
-  rrect(c, x + 11, y + 12, w + 2, 14, 3);
-  c.fill();
-  c.fillStyle = css(col, -12);
-  rrect(c, x + 12, y + 13, w, 12, 2);
-  c.fill();
+  const w = Math.ceil((c.measureText(label).width + 10) * 2) / 2;
+  pill(c, x + 12, y + 13, w, 12, css(col, -12));
   hud.text(label, x + 17, y + 19.3, TYPE.caption, '#fff', 'left', UI, 700);
 }
 
@@ -159,11 +154,6 @@ export function pick(hud: Hud, m: Match, t: number) {
       secretCard(c, r.x, y, r.w, r.h, role, idx);
       return;
     }
-    const sg = c.createRadialGradient(r.x + r.w / 2, y + 44, 2, r.x + r.w / 2, y + 44, 46);
-    sg.addColorStop(0, css(role.color, 0, 0.22));
-    sg.addColorStop(1, css(role.color, 0, 0));
-    c.fillStyle = sg;
-    c.fillRect(r.x + 1, y + 5, r.w - 2, r.h - 6);
     // The picture gets the card between its tags and its name.
     drawPreview(rc, item.def, r.x + r.w / 2, y + 49, r.w - 14, r.h - 62);
     tag(c, role.label, r.x + 7, y + 15, css(role.color), PAL.ink, TYPE.caption);
@@ -203,18 +193,18 @@ function scaledCursor(hud: Hud, x: number, y: number, col: HSL, label: string, t
 export function place(hud: Hud, m: Match) {
   const c = hud.ctx;
   // The header runs along the top of the window, whatever its shape.
-  const { x0, y0, w, safeX0, safeY0, safeX1 } = hud.frame;
+  const { safeX0, safeY0, safeX1 } = hud.frame;
   const headS = Math.min(hud.uiScale, MAX_HEAD_SCALE);
-  const g = c.createLinearGradient(0, y0, 0, safeY0 + 54 * headS);
-  g.addColorStop(0, 'rgba(18,10,7,0.82)');
-  g.addColorStop(1, 'rgba(18,10,7,0)');
-  c.fillStyle = g;
-  c.fillRect(x0, y0, w, safeY0 + 54 * headS - y0);
   let done = hud.grow(safeX0 + 14, safeY0, headS);
   hud.text(roundLabel(m), safeX0 + 14, safeY0 + 16, 14, PAL.amber, 'left', DISPLAY, 400, 3);
   done();
+  // The heading hangs on a banner plate rather than a wash across the whole top: the level stays in view.
   done = hud.grow(VIEW_W / 2, safeY0, headS);
-  hud.text('PLACE YOUR PART', VIEW_W / 2, safeY0 + 17, TYPE.head + 2, PAL.bone, 'center', DISPLAY, 400, 4);
+  const size = TYPE.head + 2;
+  c.font = `400 ${size}px ${DISPLAY}`;
+  const bw = Math.ceil(c.measureText('PLACE YOUR PART').width + 30);
+  plate(c, VIEW_W / 2 - bw / 2, safeY0 + 4, bw, 26, { rivets: false });
+  hud.text('PLACE YOUR PART', VIEW_W / 2, safeY0 + 17.5, size, PAL.bone, 'center', DISPLAY, 400, 4);
   done();
   done = hud.grow(safeX1 - hud.gearW, safeY0, headS);
   phaseTimer(hud, m, m.frame / 60, safeX1 - hud.gearW - 24, safeY0 + 20);
@@ -237,15 +227,8 @@ function phaseTimer(hud: Hud, m: Match, t: number, x: number, y: number) {
   const total = (m.phase === 'pick' ? m.rules.pickSeconds : m.rules.placeSeconds) * 60;
   const c = hud.ctx;
   const urgent = left < 5 * 60;
-  c.fillStyle = PAL.ink;
-  circle(c, x, y, 16);
-  c.fillStyle = PAL.iron;
-  circle(c, x, y, 14.5);
-  c.strokeStyle = urgent ? css({ h: 4, s: 100, l: 58 + Math.sin(t * 12) * 10 }) : PAL.amber;
-  c.lineWidth = 3;
-  c.lineCap = 'round';
-  c.beginPath();
-  c.arc(x, y, 12, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * left) / total);
-  c.stroke();
+  dial(c, x, y, 15.5);
+  c.fillStyle = urgent ? css({ h: 4, s: 100, l: 58 + Math.sin(t * 12) * 10 }) : PAL.amber;
+  arcStroke(c, x, y, 11.5, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * left) / total, 3.4);
   hud.text(String(Math.ceil(left / 60)), x, y + 0.5, 12, urgent ? PAL.danger : PAL.bone, 'center', DISPLAY, 400);
 }
