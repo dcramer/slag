@@ -1,7 +1,9 @@
 import type { Rng } from '../../../core/rng';
-import { finish, Grid, hintGap } from '../kit';
-import type { Sculptor } from '../types';
-import { easyGap, easyRise, hardGap, knobs, rollChallenges, undercut } from './common';
+import { SAFE_TILES } from '../../setpieces/place';
+import { rooftopsOwns } from '../../stage/rooftops';
+import { finish, Grid, hintGap, POCKET } from '../kit';
+import type { SculptCtx, Sculptor, Shape } from '../types';
+import { easyGap, easyRise, hardGap, type Knobs, knobs, raiseLandmark, rollChallenges, undercut } from './common';
 import { rooftopsTall } from './tall';
 
 type RoofStyle = 'downtown' | 'tenements' | 'skyline';
@@ -25,6 +27,7 @@ export const rooftops: Sculptor = (ctx) => {
   if (ctx.profile.size === 'tall') return rooftopsTall(ctx);
   const { rng, attempt } = ctx;
   const k = knobs(ctx);
+  if (ctx.concept) return rooftopsStage(ctx, k);
   const { W, H } = k;
   const style = rng.weighted<RoofStyle>([
     ['downtown', 3],
@@ -118,6 +121,103 @@ export const rooftops: Sculptor = (ctx) => {
 
   return finish(g, { row: sRoof - 1 }, { row: bs[bs.length - 1].roof - 1 }, `rooftops:${style}`);
 };
+
+/** Columns the goal's building keeps past a landmark at least: an alley's hop and a roof for the pocket. */
+const FAR_ROOM = 9;
+
+/**
+ * Rooftops with a stage concept (gen/stage/rooftops.ts): the spawn's roof, then the landmark's box (its alley,
+ * the level's crossing, in front of the building it stands on), then a run of buildings on to the goal's,
+ * easy hops between them, fire escapes up the taller ones. A two-part ask the landmark's alley didn't take
+ * gets a second hard alley out there, never right after the landmark, where a jump off its heights would
+ * clear it.
+ */
+function rooftopsStage(ctx: SculptCtx, k: Knobs): Shape {
+  const { rng, attempt } = ctx;
+  const concept = ctx.concept!;
+  const { W, H } = k;
+  const g = new Grid(W, H);
+  const challenges = rollChallenges(attempt, k);
+  g.wantsProps = challenges > 0;
+  const own = rooftopsOwns(concept, k, attempt, challenges);
+  const box = concept.box(k, rng);
+  const lo = POCKET + SAFE_TILES;
+  const hi = W - FAR_ROOM - box.w;
+  if (hi < lo) return finish(g, { row: H - 8 }, { row: H - 8 }, 'rooftops:unclaimed');
+  const x = rng.int(lo, Math.min(hi, lo + 2));
+  const G = Math.max(box.h + 1, Math.min(H - 5, H - rng.int(6, 9) + k.ramp(x + (box.w >> 1))));
+  const h = Math.min(box.h, G - 1);
+  // The spawn's roof, run on to the alley's edge (its clutter kept back from it), and the landmark's building.
+  g.fill(0, G, x + box.w - 1, H - 1);
+  windows(g, 0, x - 1, G, 0);
+  if (x - 5 >= 8) decorate(g, rng, 6, x - 5, G, 'downtown');
+  const l = raiseLandmark(g, ctx, { concept, at: { x, y: G - h, w: box.w, h }, ground: G }, own);
+  windows(g, l.rect.x, l.rect.x + l.rect.w - 1, G, 1);
+  // Lanes keep off the landmark's columns altogether, and filler off its box: it brings its own ways and pieces.
+  l.air.push({ ...l.rect });
+
+  // On to the goal: easy hops, the last one hard when a second alley is asked for and there's room for it.
+  const extra = challenges > own;
+  const hardW = extra ? hardGap(rng) : 0;
+  const rise = easyRise();
+  let at = x + box.w;
+  let prev = G;
+  const bs: Building[] = [];
+  const gaps: { a: number; b: number }[] = [];
+  for (;;) {
+    const gap = easyGap(rng, 2);
+    const w = rng.int(5, 9);
+    // A second alley needs a building between it and the landmark, and the goal's roof after it.
+    const tail = extra && bs.length > 0 ? hardW + 7 : 7;
+    if (at + gap + w + tail > W) break;
+    let roof = Math.max(6, Math.min(H - 5, prev + rng.int(-4, 3)));
+    const want = G + k.ramp(at + gap + (w >> 1)) - k.ramp(x);
+    if (roof - want > 3) roof -= rng.int(1, 3);
+    else if (want - roof > 3) roof += rng.int(1, 3);
+    bs.push({ x: at + gap, w, roof });
+    gaps.push({ a: at, b: at + gap - 1 });
+    at += gap + w;
+    prev = roof;
+  }
+  const hardLast = extra && bs.length > 0 && at + hardW + 6 <= W;
+  const lastGap = hardLast ? hardW : Math.max(2, Math.min(easyGap(rng, 2), W - at - 6));
+  const gx = at + lastGap;
+  const gR = hardLast ? prev : Math.max(6, Math.min(H - 5, prev + rng.int(-2, 2)));
+  bs.push({ x: gx, w: W - gx, roof: gR });
+  for (const [i, b] of bs.entries()) {
+    g.fill(b.x, b.roof, b.x + b.w - 1, H - 1);
+    windows(g, b.x, b.x + b.w - 1, b.roof, i);
+    if (i < bs.length - 1 && b.w >= 6 && k.density > 0.25) decorate(g, rng, b.x + 1, b.x + b.w - 2, b.roof, 'downtown');
+  }
+  if (hardLast) {
+    hintGap(g, at, gx - 1, Math.max(prev, gR));
+    undercut(g, gx);
+  }
+  // Fire escapes up the wall of a roof too high to jump to.
+  const roofs = [{ x: x, w: box.w, roof: G }, ...bs];
+  for (let i = 1; i < roofs.length; i++) {
+    const a = roofs[i - 1];
+    const b = roofs[i];
+    if (a.roof - b.roof <= rise - 1) continue;
+    let y = a.roof - rise;
+    let left = true;
+    while (y > b.roof) {
+      if (left) g.plank(b.x - 2, b.x - 1, y);
+      else g.plank(b.x - 3, b.x - 2, y);
+      y -= rise;
+      left = !left;
+    }
+  }
+  return finish(g, { row: G - 1 }, { row: gR - 1 }, `rooftops:${concept.id}`);
+}
+
+/** A facade's windows: a regular grid of 1×1 holes below the roof row (cosmetic: nobody gets in). */
+function windows(g: Grid, a: number, b: number, roof: number, odd: number): void {
+  if (b - a < 4) return;
+  // Only where the wall goes on either side: never a notch in a building's edge, over an alley.
+  for (let y = roof + 3; y < g.h - 1; y += 3)
+    for (let x = a + 1 + (odd % 2); x < b; x += 2) if (!g.empty(x, y) && !g.empty(x - 1, y) && !g.empty(x + 1, y)) g.set(x, y, 0, true);
+}
 
 function roofAt(bs: Building[], x: number, H: number): number {
   for (const b of bs) if (x >= b.x && x < b.x + b.w) return b.roof;

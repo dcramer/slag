@@ -38,3 +38,6 @@ import './shards';
 import './fuse';
 import './ladle';
 import './arm';
+import './sign';
+import './neon';
+import './wire';
