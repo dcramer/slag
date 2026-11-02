@@ -3,7 +3,7 @@ import { TILE } from '../../../sim/constants';
 import { type ModuleOf, mysterySpent, mysteryState } from '../../../sim/props';
 import { blob, line, type P, stroke } from '../../ink';
 import { boxPts, dot, glint, INK, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
-import { glowDot, light, type RC } from '../../kit';
+import { bulb, light, type RC } from '../../kit';
 import { defineArt, type DrawCtx } from '../common';
 
 type Mystery = ModuleOf<'mystery'>;
@@ -175,7 +175,7 @@ function drawMystery(rc: RC, m: Mystery, d: DrawCtx) {
     if (since >= 0 && since < 22) {
       // The pop: a flash off the top and sparkles flung up after the item.
       const u = since / 22;
-      glowDot(g, px, y - 2, 18 * (1 - u * 0.5), GOLD, (1 - u) * 0.8);
+      bulb(g, px, y - 2, 3.5 * (1 - u), GOLD, 1 - u);
       g.fillStyle = css(GOLD, 30, 1 - u);
       for (let i = 0; i < 5; i++) {
         const a = -Math.PI / 2 + (i - 2) * 0.5;
@@ -185,8 +185,7 @@ function drawMystery(rc: RC, m: Mystery, d: DrawCtx) {
     }
     if (ready) {
       const pulse = 0.75 + Math.sin(rc.t * 4 + m.seed) * 0.25;
-      glowDot(g, px, py, 10, GOLD, 0.28 * pulse);
-      light(rc, px, py, 36, GOLD, 0.5 * pulse);
+      light(rc, px, py, 24, GOLD, 0.4 * pulse);
       // Now and then a shine sweeps across the face.
       const cyc = (f + m.seed) % 150;
       if (cyc < 12) {

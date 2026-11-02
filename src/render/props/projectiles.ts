@@ -1,5 +1,4 @@
 import { css, type HSL } from '../../core/color';
-import { TILE } from '../../sim/constants';
 import { type Ammo, CLUSTER_FUSE, FACE, GLIDER_CRUISE, GLIDER_H, GLIDER_W, PATCH_FRAMES, PATCH_PX, patchRect } from '../../sim/props';
 import type { Projectile } from '../../sim/run';
 import { line, type P, stroke } from '../ink';
@@ -297,7 +296,6 @@ function drawGoo(rc: RC, p: Projectile, a: number) {
 
 function drawFrost(rc: RC, p: Projectile, a: number, emit?: Emit) {
   const ice: HSL = { h: 195, s: 95, l: 72 };
-  glowDot(rc.g, p.x, p.y, 6, ice, 0.35);
   round(rc, p, a, false);
   if (emit && Math.random() < 0.3) emit('spark', p.x, p.y, -p.vx * 0.1, -p.vy * 0.1, ice);
 }
@@ -422,7 +420,6 @@ export function drawGlider(s: CanvasRenderingContext2D, x: number, y: number, ti
 /** A goo/frost shot stuck to a terrain face: the coat the sim builds, fading out near the end. */
 function drawPatch(rc: RC, p: Projectile) {
   const s = rc.s;
-  const g = rc.g;
   const r = patchRect(p.hx, p.hy, p.stuck, PATCH_PX + 0.5);
   const left = p.until - rc.frame;
   const fade = Math.min(1, left / 40);
@@ -449,6 +446,5 @@ function drawPatch(rc: RC, p: Projectile) {
     s.fillRect(r.x, r.y, r.w, r.h);
     s.fillStyle = `rgba(255,255,255,${0.8 * fade})`;
     line(s, r.x + 1, r.y + r.h / 2, r.x + r.w - 1, r.y + r.h / 2, { w: 0.6, seed: p.id, taper: [0.2, 0.2], press: 0 });
-    glowDot(g, r.x + r.w / 2, r.y + r.h / 2, TILE * 0.6, { h: 195, s: 90, l: 70 }, 0.18 * fade);
   }
 }

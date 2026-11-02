@@ -2,7 +2,7 @@ import { css, type HSL } from '../../../core/color';
 import { magnetCycle } from '../../../sim/props';
 import { line, type P, stroke } from '../../ink';
 import { ball, INK, path, pen, sprite, stamp, tick, tone } from '../../ink-props';
-import { circle, glowDot, light, type MetalPalette } from '../../kit';
+import { bulb, circle, light, type MetalPalette } from '../../kit';
 import { defineArt } from '../common';
 import { housed } from '../machine';
 
@@ -113,8 +113,8 @@ defineArt<'magnet'>({
     const col: HSL = pull ? { h: 275, s: 90, l: 62 } : { h: 28, s: 100, l: 60 };
     const on = c.seg === 2;
     const charge = c.seg === 1 ? c.t / c.len : on ? 1 : 0;
-    // Core orb on the block, inked; the glow sits behind it so the pen stays on top.
-    glowDot(g, x, y, 6 + charge * 6 + (on ? Math.sin(rc.t * 9) * 1.5 : 0), col, 0.4 + charge * 0.5);
+    // Core orb on the block, inked; a flat lit rim sits behind it so the pen stays on top. It grows as it charges.
+    bulb(g, x, y, 4.5 + charge * 2 + (on ? Math.sin(rc.t * 9) * 0.6 : 0), col, 0.3 + charge * 0.6);
     if (housed(d.r)) stamp(s, horseshoe(pull, d.pal), x, y);
     stamp(s, orb(pull, d.r.pp.def.name.includes('Lite')), x, y);
     g.fillStyle = css(col, 30, 0.35 + charge * 0.5);

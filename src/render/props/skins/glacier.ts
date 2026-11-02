@@ -2,7 +2,7 @@ import { css, type HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
 import { line, type P, stroke } from '../../ink';
 import { ball, boxPts, dot, glint, INK, part, path, pen, poly, tick, tone } from '../../ink-props';
-import { circle, glowDot, light, type RC } from '../../kit';
+import { bulb, circle, light, type RC } from '../../kit';
 import type { DrawCtx } from '../common';
 import { ceilingAbovePx, groundBelowPx } from '../modules/setpiece';
 import { type Cannon, type CannonPose, ICE, type RotorSkin, slab, STEEL, type ThemeSkins, tube } from './common';
@@ -181,7 +181,7 @@ function iceCannon(rc: RC, m: Cannon, d: DrawCtx, q: CannonPose) {
     // The tell: frost crystals growing at the mouth.
     const g = rc.g;
     const ice: HSL = { h: 195, s: 100, l: 75 };
-    glowDot(g, q.mx, q.my, 4 + q.warn * 9, ice, 0.4 + q.warn * 0.5);
+    bulb(g, q.mx, q.my, 1.5 + q.warn * 2.5, ice, 0.5 + q.warn * 0.5);
     g.fillStyle = 'rgba(235,250,255,0.95)';
     for (let k = 0; k < 6; k++) {
       const a = (k / 6) * Math.PI * 2 + rc.t * 0.6;

@@ -6,7 +6,7 @@ import type { Module, ModuleOf, PropStyle, Resolved } from '../../../sim/props';
 import { blob, line, type P, stroke } from '../../ink';
 import { blockLoops, stampBlock } from '../../ink-blocks';
 import { drawBelts } from '../../ink-surface';
-import { glowDot, light, type MetalPalette, type RC } from '../../kit';
+import { light, type MetalPalette, type RC } from '../../kit';
 import { bbox, defineArt, type PropDrawOpts } from '../common';
 import { housed } from '../machine';
 
@@ -158,10 +158,9 @@ function drawBody(rc: RC, m: M<'body'>, st: PropStyle, pal: MetalPalette, off: V
             { w: 1, seed: x + y, taper: [0.1, 0.1], press: 0 },
           );
         }
-        glowDot(g, cx, cy, 7, glowC, 0.22 * pulse);
       }
       const c = bbox(m.cells, O);
-      light(rc, c.x + c.w / 2, c.y + c.h / 2, 45, glowC, 0.4 * pulse);
+      light(rc, c.x + c.w / 2, c.y + c.h / 2, 26, glowC, 0.3 * pulse);
       break;
     }
     case 'conveyor':

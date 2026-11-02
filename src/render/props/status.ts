@@ -3,7 +3,7 @@ import type { Body } from '../../sim/physics';
 import type { RunnerStatus } from '../../sim/props';
 import type { GameEvent } from '../../sim/types';
 import type { Fx } from '../fx';
-import { circle, ellipse, glowDot, type RC } from '../kit';
+import { circle, ellipse, type RC } from '../kit';
 
 /**
  * Status overlays drawn over a runner: an ice block while frozen (it thins
@@ -12,7 +12,6 @@ import { circle, ellipse, glowDot, type RC } from '../kit';
  */
 export function drawRunnerStatus(rc: RC, b: Body, st: RunnerStatus, soot = 0): void {
   const s = rc.s;
-  const g = rc.g;
   if (soot > 0) {
     const a = Math.min(1, soot / 30);
     s.fillStyle = `rgba(18,11,8,${0.85 * a})`;
@@ -35,7 +34,6 @@ export function drawRunnerStatus(rc: RC, b: Body, st: RunnerStatus, soot = 0): v
     s.fillStyle = 'rgba(255,255,255,0.7)';
     s.fillRect(b.x - 0.5, b.y - 0.5, 1.5, 5);
     s.fillRect(b.x - 0.5, b.y - 0.5, 4, 1.2);
-    glowDot(g, b.x + b.w / 2, b.y + b.h / 2, 12, { h: 195, s: 90, l: 70 }, 0.2 * k);
   }
   if (st.slowed > 0) {
     const goo: HSL = { h: 105, s: 75, l: 45 };

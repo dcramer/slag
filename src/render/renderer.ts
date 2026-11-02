@@ -19,7 +19,7 @@ import { Fx } from './fx';
 import { frameReach, VIEW_FRAME, type ViewFrame, viewFrame } from './frame';
 import { Hud } from './hud';
 import { drawClouds, drawDrops, drawRunnerItems, itemFx } from './items';
-import { circle, flutter, glowDot, type Light, light, type RC } from './kit';
+import { circle, flutter, type Light, light, type RC } from './kit';
 import { type Compositor, createCompositor } from './post';
 import { drawBackdrop, drawBlastPreview, drawForeground, drawProjectile, drawResolved, drawHeld, drawRunnerStatus, type Emit, propEventFx } from './props';
 import { LightOccluder } from './occlude';
@@ -473,32 +473,26 @@ export class Renderer {
       g.ellipse(sx, sy - 1, 16 - i * 3, 3.5 - i * 0.6, 0, (t * (2 + i)) % (Math.PI * 2), ((t * (2 + i)) % (Math.PI * 2)) + Math.PI * 1.4);
       g.stroke();
     }
-    const beam = g.createLinearGradient(0, sy - 40, 0, sy);
-    beam.addColorStop(0, css(pc, 0, 0));
-    beam.addColorStop(1, css(pc, 10, 0.25));
-    g.fillStyle = beam;
-    g.fillRect(sx - 14, sy - 40, 28, 40);
-    light(rc, sx, sy - 8, 70, pc, 0.6);
+    // The beam: two flat steps, not a fade, so the runners standing in it keep their own colors.
+    g.fillStyle = css(pc, 10, 0.07);
+    g.fillRect(sx - 12, sy - 34, 24, 34);
+    g.fillStyle = css(pc, 10, 0.07);
+    g.fillRect(sx - 12, sy - 14, 24, 14);
 
     // Goal beacon: flag + light column.
     const gx = level.goal.tx * TILE + TILE / 2;
     const gy = floorY(level.goal);
     const ac = th.accent;
-    const col = g.createLinearGradient(0, 0, 0, gy);
-    col.addColorStop(0, css(ac, 10, 0));
-    col.addColorStop(1, css(ac, 10, 0.32 + Math.sin(t * 3) * 0.06));
-    g.fillStyle = col;
-    g.fillRect(gx - 9, 0, 18, gy);
-    g.fillStyle = css(ac, 30, 0.35);
+    // A flat column with a brighter core: it reads across the level without a soft fade.
+    g.fillStyle = css(ac, 10, 0.1 + Math.sin(t * 3) * 0.03);
+    g.fillRect(gx - 8, 0, 16, gy);
+    g.fillStyle = css(ac, 30, 0.3);
     g.fillRect(gx - 2, 0, 4, gy);
     s.fillStyle = '#d8dce4';
     s.fillRect(gx - 1, gy - 28, 2, 28);
     s.fillStyle = '#ffd23f';
     circle(s, gx, gy - 29, 1.8);
-    const fg = s.createLinearGradient(gx, 0, gx + 16, 0);
-    fg.addColorStop(0, css(ac, -5));
-    fg.addColorStop(1, css(ac, 15));
-    s.fillStyle = fg;
+    s.fillStyle = css(ac, 5);
     s.beginPath();
     s.moveTo(gx + 1, gy - 28);
     // It hangs in still air, and only flies in a wind that's really blowing.
@@ -509,8 +503,7 @@ export class Renderer {
     for (let i = 7; i >= 0; i--) s.lineTo(gx + 1 + i * 2.2, gy - 19 + flap(i));
     s.closePath();
     s.fill();
-    glowDot(g, gx + 6, gy - 22, 22, ac, 0.3);
-    light(rc, gx, gy - 20, 120, ac, 0.9);
+    light(rc, gx, gy - 20, 90, ac, 0.7);
   }
 
   /** Faint shimmer over the spawn safe zone during a race (runners touching it are immune to props). */
@@ -524,17 +517,11 @@ export class Renderer {
     const h = bottom - z.y;
     if (h <= 0) return;
     const a = 0.07 + Math.sin(rc.t * 2.2) * 0.02;
-    const gr = g.createLinearGradient(0, z.y, 0, bottom);
-    gr.addColorStop(0, css(pc, 10, 0));
-    gr.addColorStop(1, css(pc, 10, a));
-    g.fillStyle = gr;
+    g.fillStyle = css(pc, 10, a * 0.5);
     g.fillRect(z.x, z.y, z.w, h);
     // Shimmering edge where protection ends.
     const ex = z.x + z.w - 0.5;
-    const eg = g.createLinearGradient(0, z.y, 0, bottom);
-    eg.addColorStop(0, css(pc, 20, 0));
-    eg.addColorStop(1, css(pc, 20, a * 3));
-    g.strokeStyle = eg;
+    g.strokeStyle = css(pc, 20, a * 2);
     g.lineWidth = 1;
     g.setLineDash([2, 4]);
     g.lineDashOffset = -rc.t * 8;
@@ -686,9 +673,9 @@ export class Renderer {
     rig.step(c, anchorX, anchorY, dt, -vx * 0.6 - facing * 8 + (rc.gust ?? 0) * 60, gy >= 0 ? gy - 0.8 : Infinity);
     drawInkAccessory(rc.s, c, rig);
     drawInkRunner(rc, c, x, y, { facing, vx, vy, grounded, t: rc.t, celebrate, wall });
-    light(rc, x, y - 8, 38, c.body, 0.3);
-    // A key light so a runner in shade still reads, not so much that it loses its hue.
-    light(rc, x, y - 8, 20, RUNNER_KEY, 0.28);
+    // A small neutral key light so a runner in shade still reads. Not in its own color, and no bigger than
+    // it needs to cover the body: a colored pool tints the pack into one hue and paints a halo behind it.
+    light(rc, x, y - 9, 26, RUNNER_KEY, 0.4);
   }
 
   private propCenter(m: Match, uid: number): { x: number; y: number } | undefined {
