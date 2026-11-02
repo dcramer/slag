@@ -1,8 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { Lettering, wordFor } from '../src/render/comic';
-import { COMIC_FS } from '../src/render/comic-shader';
+import { Lettering, wordFor } from '../src/render/cel';
+import { CEL_FS } from '../src/render/cel-shader';
 import { type Compositor, createCompositor, type PostParams } from '../src/render/post';
-import { initialStyle, type KV, loadRenderSettings, RENDER_KEY, saveRenderSettings } from '../src/render/style';
+import {
+  DEFAULT_STYLE,
+  initialStyle,
+  isRenderStyle,
+  type KV,
+  letteringAllowed,
+  loadRenderSettings,
+  RENDER_KEY,
+  saveRenderSettings,
+  STYLE_IDS,
+  STYLES,
+} from '../src/render/style';
 
 const mem = (): KV & { m: Map<string, string> } => {
   const m = new Map<string, string>();
@@ -12,29 +23,42 @@ const mem = (): KV & { m: Map<string, string> } => {
 describe('render style setting', () => {
   it('defaults, persists and sanitizes', () => {
     const s = mem();
-    expect(loadRenderSettings(s).style).toBe('default');
-    saveRenderSettings({ style: 'comic' }, s);
-    expect(JSON.parse(s.m.get(RENDER_KEY)!)).toEqual({ style: 'comic' });
-    expect(loadRenderSettings(s).style).toBe('comic');
+    expect(loadRenderSettings(s).style).toBe(DEFAULT_STYLE);
+    saveRenderSettings({ style: 'cel' }, s);
+    expect(JSON.parse(s.m.get(RENDER_KEY)!)).toEqual({ style: 'cel' });
+    expect(loadRenderSettings(s).style).toBe('cel');
     s.setItem(RENDER_KEY, '{"style":"vaporwave"}');
-    expect(loadRenderSettings(s).style).toBe('default');
+    expect(loadRenderSettings(s).style).toBe(DEFAULT_STYLE);
     s.setItem(RENDER_KEY, 'not json');
-    expect(loadRenderSettings(s).style).toBe('default');
-    expect(loadRenderSettings(null).style).toBe('default');
+    expect(loadRenderSettings(s).style).toBe(DEFAULT_STYLE);
+    expect(loadRenderSettings(null).style).toBe(DEFAULT_STYLE);
   });
 
   it('URL ?style= overrides the saved setting', () => {
     const s = mem();
-    saveRenderSettings({ style: 'comic' }, s);
-    expect(initialStyle('?seed=a', s)).toBe('comic');
-    expect(initialStyle('?style=default', s)).toBe('default');
-    expect(initialStyle('?style=bogus', mem())).toBe('default');
-    expect(initialStyle('?style=comic', mem())).toBe('comic');
+    saveRenderSettings({ style: 'classic' }, s);
+    expect(initialStyle('?seed=a', s)).toBe('classic');
+    expect(initialStyle('?style=cel', s)).toBe('cel');
+    expect(initialStyle('?style=bogus', mem())).toBe(DEFAULT_STYLE);
+    expect(initialStyle('?style=classic', mem())).toBe('classic');
+  });
+
+  it('every registered style can be picked', () => {
+    expect(isRenderStyle(DEFAULT_STYLE)).toBe(true);
+    for (const id of STYLE_IDS) {
+      expect(isRenderStyle(id)).toBe(true);
+      expect(STYLES[id].label).not.toBe('');
+    }
+  });
+
+  it('impact words have a page switch', () => {
+    expect(letteringAllowed('?style=cel')).toBe(true);
+    expect(letteringAllowed('?style=cel&lettering=0')).toBe(false);
   });
 });
 
 /** Just enough WebGL2 to run the compositor, recording which fragment shader each draw used. */
-function fakeGL(failComic = false) {
+function fakeGL(failCel = false) {
   const log: { draws: string[]; compiled: string[] } = { draws: [], compiled: [] };
   const sources = new Map<object, string>();
   const attached = new Map<object, string>();
@@ -43,7 +67,7 @@ function fakeGL(failComic = false) {
     createShader: () => ({}),
     shaderSource: (s: object, src: string) => void sources.set(s, src),
     compileShader: (s: object) => void log.compiled.push(sources.get(s)!),
-    getShaderParameter: (s: object) => !(failComic && sources.get(s) === COMIC_FS),
+    getShaderParameter: (s: object) => !(failCel && sources.get(s) === CEL_FS),
     getShaderInfoLog: () => 'nope',
     createProgram: () => ({}),
     attachShader: (p: object, s: object) => {
@@ -65,33 +89,33 @@ function fakeGL(failComic = false) {
 
 const params: PostParams = { time: 1, aberration: 0, exposure: 1, flash: 0, tint: [1, 1, 1], lift: [0, 0, 0] };
 const layer = {} as HTMLCanvasElement;
-const comicParams: PostParams = { ...params, comic: { fg: layer, cam: [0, 0, 1] } };
+const celParams: PostParams = { ...params, cel: { fg: layer, scale: 1, ambient: 0.8 } };
 const final = (c: Compositor, log: { draws: string[] }, p: PostParams) => {
   c.render(layer, layer, layer, p);
   return log.draws.at(-1);
 };
 
 describe('compositor style switch', () => {
-  it('leaves the default path alone until the comic style is asked for', () => {
+  it('leaves the classic path alone until a cel style is asked for', () => {
     const { comp, log } = fakeGL();
     expect(final(comp, log, params)).toContain('aces');
-    expect(log.compiled).not.toContain(COMIC_FS);
+    expect(log.compiled).not.toContain(CEL_FS);
   });
 
-  it('toggles to the print pass and back', () => {
+  it('toggles to the cel pass and back', () => {
     const { comp, log } = fakeGL();
-    expect(final(comp, log, comicParams)).toBe(COMIC_FS);
+    expect(final(comp, log, celParams)).toBe(CEL_FS);
     expect(final(comp, log, params)).toContain('aces');
-    expect(final(comp, log, comicParams)).toBe(COMIC_FS);
+    expect(final(comp, log, celParams)).toBe(CEL_FS);
   });
 
-  it('keeps the default look if the print pass fails to build', () => {
+  it('keeps the classic look if the cel pass fails to build', () => {
     const { comp, log } = fakeGL(true);
-    expect(final(comp, log, comicParams)).toContain('aces');
+    expect(final(comp, log, celParams)).toContain('aces');
   });
 });
 
-describe('comic lettering', () => {
+describe('impact words', () => {
   it('shouts on big moments and stays quiet on bookkeeping events', () => {
     expect(wordFor({ type: 'explosion', x: 0, y: 0, r: 3 })?.text).toBe('KA-BOOM!');
     expect(wordFor({ type: 'death', slot: 0, x: 0, y: 0, cause: 'fall', vx: 0, vy: 0 })?.text).toBe('SPLOOSH!');

@@ -11,7 +11,7 @@
  */
 
 import { reportError, reportEvent } from '../telemetry';
-import { COMIC_FS, COMIC_SHADOW } from './comic-shader';
+import { CEL_FS, CEL_SHADOW } from './cel-shader';
 
 const VS = `#version 300 es
 in vec2 p; out vec2 uv;
@@ -84,15 +84,17 @@ export interface PostParams {
   flash: number;
   tint: [number, number, number];
   lift: [number, number, number];
-  /** Present only in the comic style: swaps the tonemapped composite for the print pass. */
-  comic?: ComicParams;
+  /** Present only in cel styles: swaps the tonemapped composite for the cel pass. */
+  cel?: CelParams;
 }
 
-export interface ComicParams {
+export interface CelParams {
   /** Foreground albedo (transparent); `scene` then holds the background alone. */
   fg: HTMLCanvasElement;
-  /** World-to-pixel transform of `fg`: x and y offset in pixels, and pixels per world unit. */
-  cam: [number, number, number];
+  /** Pixels per world unit of `fg`. */
+  scale: number;
+  /** The theme's ambient light, which the light bands sit relative to. */
+  ambient: number;
 }
 
 interface Target {
@@ -130,7 +132,7 @@ class GLCompositor implements Compositor {
   private progBlur: WebGLProgram;
   private progFinal: WebGLProgram;
   /** Built on first use: default players never compile it, and a failure can't touch the default path. */
-  private progComic: WebGLProgram | null | undefined;
+  private progCel: WebGLProgram | null | undefined;
   private texFg: WebGLTexture | null = null;
   private texScene: WebGLTexture;
   private texLight: WebGLTexture;
@@ -225,7 +227,7 @@ class GLCompositor implements Compositor {
   }
 
   private progName(p: WebGLProgram) {
-    return p === this.progBright ? 'b' : p === this.progBlur ? 'z' : p === this.progComic ? 'c' : 'f';
+    return p === this.progBright ? 'b' : p === this.progBlur ? 'z' : p === this.progCel ? 'c' : 'f';
   }
 
   private upload(t: WebGLTexture, src: HTMLCanvasElement, unit: number) {
@@ -260,21 +262,21 @@ class GLCompositor implements Compositor {
     }
   }
 
-  private comicProgram(): WebGLProgram | null {
-    if (this.progComic === undefined) {
+  private celProgram(): WebGLProgram | null {
+    if (this.progCel === undefined) {
       try {
-        this.progComic = this.program(this.shader(this.gl.VERTEX_SHADER, VS), COMIC_FS);
+        this.progCel = this.program(this.shader(this.gl.VERTEX_SHADER, VS), CEL_FS);
       } catch (e) {
-        console.warn('Comic pass failed to build, keeping the default look', e);
-        this.progComic = null;
+        console.warn('Cel pass failed to build, keeping the classic look', e);
+        this.progCel = null;
       }
     }
-    return this.progComic;
+    return this.progCel;
   }
 
   render(scene: HTMLCanvasElement, light: HTMLCanvasElement, glow: HTMLCanvasElement, p: PostParams) {
     const gl = this.gl;
-    const comic = p.comic && this.comicProgram() ? p.comic : null;
+    const cel = p.cel && this.celProgram() ? p.cel : null;
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     // Canvas pixels are premultiplied internally; ask for that so faint additive glow stays faint.
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
@@ -287,8 +289,8 @@ class GLCompositor implements Compositor {
     gl.uniform1i(this.u(this.progBright, 'uScene'), 0);
     gl.uniform1i(this.u(this.progBright, 'uLight'), 1);
     gl.uniform1i(this.u(this.progBright, 'uGlow'), 2);
-    // Comic: bloom only from what is actually emissive; a white cloud shouldn't halo.
-    gl.uniform1f(this.u(this.progBright, 'uThreshold'), comic ? 99 : 0.92);
+    // Cel: bloom only from what is actually emissive; a white cloud shouldn't halo.
+    gl.uniform1f(this.u(this.progBright, 'uThreshold'), cel ? 99 : 0.92);
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.half[0].fb);
     gl.viewport(0, 0, this.half[0].w, this.half[0].h);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
@@ -304,7 +306,7 @@ class GLCompositor implements Compositor {
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     this.blur(this.quarter[0], this.quarter[1], 3);
 
-    if (comic) return this.renderComic(comic, p);
+    if (cel) return this.renderCel(cel, p);
 
     // Final.
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -331,10 +333,10 @@ class GLCompositor implements Compositor {
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 
-  /** Print pass: same layers as the final pass plus the foreground, see comic-shader.ts. */
-  private renderComic(c: ComicParams, p: PostParams) {
+  /** Cel pass: same layers as the final pass plus the foreground, see cel-shader.ts. */
+  private renderCel(c: CelParams, p: PostParams) {
     const gl = this.gl;
-    const f = this.progComic!;
+    const f = this.progCel!;
     this.texFg ??= this.tex();
     this.upload(this.texFg, c.fg, 5);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -356,13 +358,13 @@ class GLCompositor implements Compositor {
     gl.uniform3f(this.u(f, 'uTint'), ...p.tint);
     gl.uniform3f(this.u(f, 'uLift'), ...p.lift);
     gl.uniform2f(this.u(f, 'uRes'), this.w, this.h);
-    gl.uniform3f(this.u(f, 'uCam'), ...c.cam);
-    gl.uniform2f(this.u(f, 'uShadow'), (-COMIC_SHADOW[0] * c.cam[2]) / this.w, (COMIC_SHADOW[1] * c.cam[2]) / this.h);
+    gl.uniform1f(this.u(f, 'uAmbient'), c.ambient);
+    gl.uniform2f(this.u(f, 'uShadow'), (-CEL_SHADOW[0] * c.scale) / this.w, (CEL_SHADOW[1] * c.scale) / this.h);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 }
 
-/** Plain Canvas2D blending for browsers without WebGL2. No bloom/tonemap, and no comic pass: it needs per-pixel work. */
+/** Plain Canvas2D blending for browsers without WebGL2. No bloom/tonemap, and no cel pass: it needs per-pixel work. */
 class Fallback implements Compositor {
   readonly webgl = false;
   private ctx: CanvasRenderingContext2D;

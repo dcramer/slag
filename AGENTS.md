@@ -44,7 +44,7 @@ Lint: `oxlint` (type-aware, `.oxlintrc.json`). Errors fail CI; warnings are real
 - `lobby` | `pick` | `place` with `--seed S --players N`
 - `levels --count 9`, `--seeds a,b,c` or `--themes all` → contact sheet `shots/levels.png`
 - `props --count 24` (crate cards), `codex` (the `/codex` page)
-- `compare --seed S --players 4 --themes farm,mine` → default vs comic, same sim frame, `shots/compare-*-S.png`. Any scenario takes `--style comic` (`?style=comic` in the browser).
+- `compare --seed S --players 4 --themes farm,mine` → classic vs cel, same sim frame, `shots/compare-*-S.png`. Any scenario takes `--style cel` (`?style=cel` in the browser).
 - Options: `--theme farm`, `--noui` (hide HUD), `--size 1280x720`, `--out shots`
 
 Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm`, `?players=2` (auto-join and start), `?race=saw,laser` or `?race=all`, `?propseed=3`, `?ui=0`, `?debug=1` (dev overlay: frame-time breakdown, counts, level info; ` toggles it in `pnpm dev` or with any `?debug`). In the console, `slagDebug` has `quickStart`, `race`, `addProps`, `loadLevel`, `phase`, `pause`, `step`, `render`.
