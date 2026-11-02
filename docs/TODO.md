@@ -14,6 +14,7 @@ Online play is on `main`, verified by 139 real-browser checks in `pnpm online-te
 - **Owner:** connect `slag-upstash-kv` to the Vercel project for Production and Preview, then redeploy.
 - **Not verified:** real Upstash, real NAT traversal, TURN, Firefox, Safari, real phones, and cross-engine determinism. dmath has only run on V8.
 - **Decide:** two-peer host loss takes about 7.7 s, against about 4 s with three or more peers. Lowering `PROBE_MS` to about 3 s for two-peer rooms saves about 1 s but risks two hosts when the store is slow.
+- **Bug, being fixed:** in a double host failure, three peers each declared themselves host at the same frame, and the room took 31 s to settle on the wrong host.
 - A double host failure (the new host dies at once) takes 11–18 s to recover, and that varies a lot.
 
 ## 3. Level follow-ups
@@ -32,20 +33,8 @@ Phone support (follow camera, pinch, scaled HUD, settings sheet) is on `main` bu
 - Delete the old remote branch `claude/scaffold-procgen-platformer`, and the `wip/*` branches once they're merged.
 - Consider stricter TS flags: `noUncheckedIndexedAccess` gives about 600 errors, so it's a project of its own.
 
-## 11. Make every screen part of the game, so it's portable
-**Goal: the game is portable.** Every screen lives in `src/` and runs without Next or React, so the game could be packaged somewhere else. Next is just one host: thin pages that mount it at different URLs. Different URLs are fine; a different UI stack per screen is not.
-
-- That covers the home screen, lobby, settings and codex, plus the 404 and any error screens. Each one is a game screen, reached in-game and by URL.
-- A small router in `src/` maps paths to screens with the History API. `/`, `/r/<code>` and `/codex` stay deep links, and moving between screens needs no page reload. Don't assume a URL bar exists, so a packaged build still has a way to reach every screen.
-- `app/` shrinks to server metadata plus one shared mount. Add the rule to AGENTS.md and `app/AGENTS.md` when it lands.
-
-The rest of this item is the home screen, the first and biggest piece of it. The home screen and the lobby are two different UIs. `/` is React and CSS (`app/page.tsx`, `app/MainMenu.tsx`, `app/HomeStage.tsx`, `app/HomeSettings.tsx`, `app/globals.css`), and the game only boots at `/r/<code>`. The lobby is drawn on canvas (`src/render/hud.ts`, `src/ui/menus.ts`). So there are two logos, two settings UIs, and a visible jump between them.
-
-- Boot the game on `/` and render the main menu in-game, with the same renderer, menus and input (keyboard, gamepad and touch) as the lobby. The page stays a thin shell, per `app/AGENTS.md`.
-- Play goes to the lobby without a page reload. `/r/<code>` stays a shareable deep link, and `?seed`/`?theme` still pass through.
-- One logo and one settings UI, used everywhere. This replaces the lobby logo's separate treatment, which looks worse than the home-screen logo today (same treatment, scale and crispness).
-- **The home screen is the quality bar for the whole game.** The owner loves how it looks and that it fills the full window height. Keep its look exactly (drips, embers, character stage), and bring the lobby, menus and in-game screens up to it, not the other way round. Record that bar in `docs/ART.md`.
-- Do this after items 2 and 3, which both change `src/game-client.ts`.
+## 11. Screen follow-ups
+Every screen now runs from `src/` through one router (`src/main.ts`, `src/router.ts`). The codex, 404 and error screens behave like game screens but haven't been restyled up to the home look yet.
 
 ## 13. Playtest and tune the new parts
 Nothing from the content, held-items or grab-props work has been played by hand, so the tuning is test-level only: magnet drift, bumper power, slow and freeze durations, item strength. Gamepad `use` (Y and LT) hasn't been tried on a real pad, and item sounds borrow existing cues and haven't been heard. Trackers can no longer see runners through terrain, which changes how lobbed trackers feel.
