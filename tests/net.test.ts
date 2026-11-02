@@ -67,8 +67,9 @@ class Room {
   /** Let guests catch up with a frozen host, then compare state hashes at the same frame. */
   settle() {
     const h = this.host();
-    h.flush();
     for (let i = 0; i < 200; i++) {
+      // A frozen host sends nothing new, so a lost last bundle leaves no gap to ask about: repeat it.
+      if (i % 20 === 0) h.flush();
       this.hub.advance(TICK);
       for (const s of this.peers.values()) if (s !== h) s.tick({});
     }

@@ -302,9 +302,9 @@ export class NetSession {
     });
   }
 
-  /** Send any batched bundles now (e.g. before the page hides). */
+  /** Send any batched bundles now (e.g. before the page hides), repeating the last one in case it was lost. */
   flush() {
-    if (this.role === 'host' && this.outbox.length && this.remoteCount) this.sendBundles();
+    if (this.role === 'host' && (this.outbox.length || this.resend) && this.remoteCount) this.sendBundles();
     this.outbox = [];
   }
 
