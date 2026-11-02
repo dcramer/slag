@@ -76,6 +76,8 @@ A build served from another origin (a packaged app pointing at the hosted API) n
 
 Keys, all with a TTL: `slag:<ROOM>:n` the join counter (`INCR`) and `slag:<ROOM>:m` the member sorted set (300 s, renewed by the host), `slag:<ROOM>:p:<peer>` liveness (50 s, renewed by `beat`), `slag:<ROOM>:b:<peer>` the mailbox (30 s).
 
+The liveness value is the joining session's `since` stamp (ms, increasing per tab). One peer id can have two sessions in flight: a lobby that remounts, or a page reloaded while its join was on the way. Their writes land in any order, so a join older than the stamp held writes nothing, and a `leave` removes the entry only if no newer session wrote it, whatever order the store holds. A session closed before its join reply arrives sends a `leave` when the reply lands.
+
 ### Abuse limits
 
 The routes are public and unauthenticated: knowing a room code and a peer id is all a caller needs, so someone in a room can disrupt that room. Limits keep it to that:

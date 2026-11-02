@@ -136,7 +136,7 @@ class DirectSignal implements SignalApi {
     if (latency) await new Promise((r) => setTimeout(r, latency));
     return handleOp(op, { room: this.room, peer: this.peer, ...extra }, { store: this.store, ice: DEFAULT_ICE });
   }
-  join = () => this.call('join');
+  join = (since: number) => this.call('join', { since });
   beat = (host: boolean) => this.call('beat', { host });
   members = (): Promise<MemberInfo[]> => this.call('members').then((r) => r.members);
   gone = (peer: string, order: number): Promise<MemberInfo[]> => this.call('gone', { gone: peer, order }).then((r) => r.members);
@@ -151,8 +151,8 @@ class DirectSignal implements SignalApi {
     this.polls++;
     return this.call('poll').then((r) => r.mail);
   };
-  leave(order: number) {
-    void this.call('leave', { order }).catch(() => {});
+  leave(order: number, since: number) {
+    void this.call('leave', { order, since }).catch(() => {});
   }
 }
 
@@ -324,6 +324,53 @@ describe('joining', () => {
     s.tick({});
     expect(s.match.frame).toBe(before + 1);
     expect(signal.calls).toBe(0);
+  });
+
+  /** A session whose join takes `ms` to reach the store (a cold function), with its resume calls counted. */
+  function slowJoiner(w: World, id: string, ms: number) {
+    const signal = new DirectSignal(w.store, 'ROOM1', id, w);
+    const join = signal.join;
+    signal.join = async (since) => {
+      await new Promise((r) => setTimeout(r, ms));
+      return join(since);
+    };
+    const t = new WebRtcTransport('ROOM1', id, { signal, rtc: () => new FakePc(id, w.net) });
+    const resumed = { n: 0 };
+    const s = new NetSession({ transport: t, match: new Match(roomSeed('TEST')), now: () => Date.now(), resume: () => (resumed.n++, null) });
+    return { s, resumed };
+  }
+  const inStore = async (w: World) =>
+    ((await handleOp('members', { room: 'ROOM1', peer: 'zzzz' }, { store: w.store, ice: [] })) as { members: MemberInfo[] }).members.map((m) => m.id);
+
+  it('leaves nothing in the store when the session closes while its join is on the way, and takes no host role on the way out', async () => {
+    const w = new World();
+    const { s, resumed } = slowJoiner(w, 'aaaa', 3000);
+    await vi.advanceTimersByTimeAsync(100);
+    s.close();
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(await inStore(w)).toEqual([]);
+    expect(resumed.n).toBe(0);
+    expect(s.status).toBe('offline');
+    // A guest that leaves doesn't promote itself into its own empty room either.
+    const [, b] = await w.room('bbbb', 'cccc');
+    b.session.close();
+    await w.run(500);
+    expect(b.session.stats.migrations).toBe(0);
+    expect(b.session.isHost).toBe(false);
+  });
+
+  it("keeps the newer session's seat when an older session of the same peer joins late and leaves", async () => {
+    const w = new World();
+    const old = slowJoiner(w, 'aaaa', 3000);
+    await vi.advanceTimersByTimeAsync(100);
+    old.s.close(); // the lobby remounted: a new session of this tab's peer starts straight away
+    const [a] = await w.room('aaaa');
+    await w.run(5000); // the old join lands after the new one, then the old session sends its leave
+    expect(await inStore(w)).toEqual(['aaaa']);
+    expect(a.session.isHost && a.session.status === 'online').toBe(true);
+    w.leave('aaaa');
+    await w.run(200);
+    expect(await inStore(w)).toEqual([]);
   });
 
   it('turns a refused seat into a clear state', async () => {

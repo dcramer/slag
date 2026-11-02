@@ -99,6 +99,8 @@ export class MemoryStore implements Store {
         return e ? 1 : 0;
       case 'DEL':
         return this.keys.delete(key) && e ? 1 : 0;
+      case 'GET':
+        return typeof e?.v === 'string' ? e.v : null;
       case 'MGET':
         return [key, ...rest].map((k) => {
           const x = this.live(k);
