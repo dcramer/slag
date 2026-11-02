@@ -165,7 +165,16 @@ export class Match {
   }
 
   /** Leave the lobby and start round 1 (normally triggered by everyone readying up). */
+  /**
+   * Per-match randomness rolled by the host when a match starts (an input, so
+   * online peers share it). Crate CONTENTS stay tied to the level seed; the
+   * ORDER of the cards is shuffled with this so it differs every game.
+   */
+  nextSalt = 0;
+  salt = 0;
+
   startMatch() {
+    this.salt = this.nextSalt;
     this.round = 0;
     this.placed = [];
     this.result = null;
@@ -180,7 +189,7 @@ export class Match {
     this.round++;
     this.run = null;
     const count = Math.max(3, this.players.length + 2);
-    const defs = generateCrate(this.seed, this.round, count);
+    const defs = new Rng(deriveSeed(this.seed ^ this.salt, `crate-order:${this.round}`)).shuffle(generateCrate(this.seed, this.round, count));
     // Cards in rows of up to 5 (8 players → 10 cards → 2 rows).
     const perRow = Math.min(count, 5);
     const rows = Math.ceil(count / perRow);

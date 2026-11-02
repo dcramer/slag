@@ -39,6 +39,8 @@ export function bootGame(container: HTMLElement, room: string): void {
     THEME_IDS.find((t) => t === themeParam),
   );
   match.rules = loadRules();
+  // Host-rolled per-match salt (crate order); re-rolled while in the lobby so every game differs.
+  match.nextSalt = (Math.random() * 4294967296) >>> 0;
   const input = new InputManager(window);
   input.viewEl = glCanvas;
   // In the lobby only real buttons act; a stray click must not join/ready/start.
@@ -167,6 +169,7 @@ export function bootGame(container: HTMLElement, room: string): void {
       return;
     }
     while (acc >= DT) {
+      if (match.phase === 'lobby' && match.phaseFrame === 0) match.nextSalt = (Math.random() * 4294967296) >>> 0;
       match.step(input.sample());
       acc -= DT;
     }

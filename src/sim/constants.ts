@@ -53,12 +53,12 @@ export const PHYS = {
   airOverspeedDecel: 240,
 
   // --- Jump --------------------------------------------------------------
-  /** Rising gravity. With jumpVel this gives a ~4.5-tile full jump with a ~0.3 s rise. */
+  /** Rising gravity. With jumpVel this gives a ~3.7-tile full jump with a ~0.27 s rise. */
   gravity: 1600,
   /** Take-off speed. */
-  jumpVel: 465,
+  jumpVel: 422,
   /** Releasing jump clamps upward speed to this: a tap hops ~1.5 tiles. */
-  jumpCutVel: 215,
+  jumpCutVel: 200,
   /** Gravity multiplier while |vy| < apexVelBand and jump is held: a brief hang to aim the landing. */
   apexGravityMult: 0.5,
   apexVelBand: 55,
@@ -89,7 +89,7 @@ export const PHYS = {
   wallJumpVxNeutral: 170,
   wallJumpVxAway: 250,
   /** Wall jump lift (a bit less than a ground jump: ~3.3 tiles). */
-  wallJumpVy: 410,
+  wallJumpVy: 375,
   /** Sticky walls still let you jump, but weaker (both components scaled). */
   stickyWallJumpMult: 0.78,
   /** Brief reduced air control after a wall jump so the kick reads; short so it never fights the player. Into-wall jumps use 2 frames to re-stick fast. */
