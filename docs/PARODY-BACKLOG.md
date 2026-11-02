@@ -1,6 +1,6 @@
 # Parody backlog
 
-Status: a proposal for the owner to pick from. Nothing here is built.
+Status: the recommended first batch (section 3, all ten) is built: the four items (Walk-Off Bat, Tremor Brick, Front-Runner Tax, Pocket Block) and the six parts (Launch Plate, Four-Square, Boost Strip, Panic Button, Fuse Crate, Y-Fling). Everything else here is still a proposal for the owner to pick from.
 
 The owner's ask: widen the parody well from the build-race game, Nintendo and the crossover brawler to iconic pop-culture games in general. The TF2 sentry turret is the example. This is a ranked list of objects people recognise at a glance that could become a part, a held item or a set piece, mapped onto what the sim already has.
 

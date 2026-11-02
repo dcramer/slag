@@ -10,6 +10,16 @@ import { SCRIPTS } from './scripts';
 
 export type Cmd = (string | number)[];
 
+/** The store answered, but not with results: `status` is its HTTP status, absent when it rejected a command. */
+export class StoreError extends Error {
+  constructor(
+    message: string,
+    readonly status?: number,
+  ) {
+    super(message);
+  }
+}
+
 export interface Store {
   /** Run commands in order (not atomically) and return one result per command. Throws if the store can't be reached. */
   run(cmds: Cmd[]): Promise<unknown[]>;
@@ -31,10 +41,10 @@ export function upstashStore(url: string, token: string, fetcher: typeof fetch =
         cache: 'no-store',
       });
       // The token is in the request, never in this message.
-      if (!res.ok) throw new Error(`store responded ${res.status}`);
+      if (!res.ok) throw new StoreError(`store responded ${res.status}`, res.status);
       const out = (await res.json()) as { result?: unknown; error?: string }[];
       return out.map((r) => {
-        if (r.error) throw new Error('store rejected a command');
+        if (r.error) throw new StoreError('store rejected a command');
         return r.result;
       });
     },

@@ -20,6 +20,7 @@ export const tesla = defineModule<'tesla'>({
     const y2 = m.b[1] + oy;
     const span = dhypot(x2 - x1, y2 - y1);
     const beam = castBeam(ctx, out, x1, y1, (x2 - x1) / span, (y2 - y1) / span, span, 0);
-    if (!beam.hit && teslaCycle(m, ctx.frame, ctx.r.phase).seg === 2) out.hazards.push({ owner: ctx.r.pp.owner, kind: 'seg', x1, y1, x2, y2, r: 4 });
+    if (!beam.hit && teslaCycle(m, ctx.frame, ctx.r.phase).seg === 2)
+      out.hazards.push({ owner: ctx.r.pp.owner, ignites: true, kind: 'seg', x1, y1, x2, y2, r: 4 });
   },
 });

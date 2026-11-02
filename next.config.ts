@@ -5,6 +5,15 @@ import type { NextConfig } from 'next';
 const release = process.env.VERCEL_GIT_COMMIT_SHA;
 /** No token (local builds, CI, forks): skip the upload and generate no source maps at all. */
 const uploadSourceMaps = Boolean(process.env.SENTRY_AUTH_TOKEN);
+/**
+ * Vercel builds have no .git, so the plugin's default `setCommits: { auto: true }` can't read history. Vercel names
+ * the repo and commit instead, which is enough for Sentry's suspect commits once the repo is linked to the project.
+ */
+const repo =
+  process.env.VERCEL_GIT_REPO_OWNER && process.env.VERCEL_GIT_REPO_SLUG ? `${process.env.VERCEL_GIT_REPO_OWNER}/${process.env.VERCEL_GIT_REPO_SLUG}` : '';
+const setCommits = repo && release ? { repo, commit: release, ignoreMissing: true, ignoreEmpty: true } : false;
+/** Marks when a release reached production or a preview, so an issue's first-seen lines up with a deploy. */
+const deploy = process.env.VERCEL_ENV ? { env: process.env.VERCEL_ENV } : false;
 
 const config: NextConfig = {
   // The game mounts imperatively once; strict-mode double effects add nothing here.
@@ -27,12 +36,12 @@ export default withSentryConfig(config, {
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
   authToken: process.env.SENTRY_AUTH_TOKEN,
-  release: { name: release, create: uploadSourceMaps },
+  release: { name: release, create: uploadSourceMaps, setCommits, deploy },
   // Maps go to Sentry, then get deleted so the deployed site never serves them.
   sourcemaps: { disable: !uploadSourceMaps, deleteSourcemapsAfterUpload: true },
   silent: !process.env.CI,
   telemetry: false,
-  // Errors only: these exist to name routes in traces and to auto-instrument libraries.
+  // No browser tracing, and server traces come from Next's own spans: these name client routes in traces and auto-instrument libraries.
   routeManifestInjection: false,
   buildTimeInstrumentation: false,
   suppressOnRouterTransitionStartWarning: true,

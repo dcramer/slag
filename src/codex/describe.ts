@@ -34,6 +34,8 @@ export const PART_INFO: Record<Module['type'], { title: string; blurb: string }>
   snapper: { title: 'Snap trap', blurb: 'Surprise!' },
   rope: { title: 'Sausage Vine', blurb: 'Fresh from the hook.' },
   keg: { title: 'Kegapult', blurb: 'XXX.' },
+  button: { title: 'Panic Button', blurb: 'The cover was taped open when we got here.' },
+  fuse: { title: 'Fuse Crate', blurb: 'FRAGILE. Very.' },
   flood: { title: 'Flood', blurb: 'The tide waits for no runner.' },
   shards: { title: 'Broken window', blurb: 'Seven years of bad luck, delivered all at once.' },
 };
@@ -46,7 +48,7 @@ export function propTag(def: PropDef): string | null {
     if (m.type === 'launcher') return m.ammo === 'seeker' ? 'HOMING' : m.ammo === 'glider' ? 'RIDEABLE' : AIM_TAG[m.aim];
     if (m.type === 'bomb') return m.delay ? 'AT RACE START' : m.target === 'props' ? 'PROPS ONLY' : m.target === 'terrain' ? 'TERRAIN ONLY' : null;
     if (m.type === 'sentry') return AIM_TAG.track;
-    if (m.type === 'keg') return m.dirs.length > 1 ? AIM_TAG.sweep : AIM_TAG.fixed;
+    if (m.type === 'keg') return m.aim === 'player' ? null : m.dirs.length > 1 ? AIM_TAG.sweep : AIM_TAG.fixed;
   }
   return null;
 }
@@ -95,7 +97,7 @@ export function summarize(def: PropDef): string[] {
         out.push(`crusher ${fmt(m.width)} wide · reach ${fmt(m.reach, 1)} · ${secs(m.period)} cycle`);
         break;
       case 'spring':
-        out.push(`spring power ${fmt(m.power)}`);
+        out.push(m.exact && m.arc ? `launch plate ${fmt(m.arc[0])} across, ${fmt(-m.arc[1])} up · lands on its X` : `spring power ${fmt(m.power)}`);
         break;
       case 'fan':
         out.push(`fan ${fmt(m.length)} tiles · strength ${fmt(m.strength)}`);
@@ -148,7 +150,17 @@ export function summarize(def: PropDef): string[] {
         out.push(`${fmt(m.length)} tiles · ${secs(m.strain)} shelf life`);
         break;
       case 'keg':
-        out.push(`${fmt(m.power)} proof · ${secs(m.burn)} fuse`);
+        out.push(
+          m.aim === 'player'
+            ? `slingshot ${fmt(m.power)}px/s · full pull ${secs(m.charge ?? 0)} · snaps after ${secs(m.burn)}, back in ${secs(m.regrow ?? 0)}`
+            : `${fmt(m.power)} proof · ${secs(m.burn)} fuse`,
+        );
+        break;
+      case 'button':
+        out.push(`${m.cells.length} blocks for ${secs(m.on)} a press`);
+        break;
+      case 'fuse':
+        out.push(`${secs(m.count)} fuse · blast r${fmt(m.radius, 1)} · back in ${secs(m.regrow)}`);
         break;
     }
   }

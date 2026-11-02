@@ -89,48 +89,55 @@ export function expectClearOfSpawnAndGoal({ theme, seed, level }: ThemedLevel) {
   }
 }
 
-/** No piece is lethal every frame: a hazard leaves a window to get past it. */
+/**
+ * No piece is lethal every frame: a hazard leaves a window to get past it. A piece whose blades are always
+ * out somewhere (the Great Wheel's saw spokes) has to keep moving them: every cell they cross is clear for
+ * longer than that window between passes.
+ */
 export function expectSafeWindows({ level }: ThemedLevel) {
+  const FRAMES = 900;
+  const WINDOW = 60;
   for (const pp of level.setPieces) {
     const r = resolveProp(pp);
     const state = newPropState();
-    const lethal = new Map<number, number>();
-    let frames = 0;
+    let quiet = 0;
+    let any = false;
     let first: string | null = null;
     let still = true;
-    for (let f = RUN_COUNTDOWN; f < RUN_COUNTDOWN + 900; f++, frames++) {
+    /** Per cell a hazard touched: the frame it was last touched and the longest clear stretch so far. */
+    const cells = new Map<number, [number, number]>();
+    for (let f = RUN_COUNTDOWN; f < RUN_COUNTDOWN + FRAMES; f++) {
       const out: Contrib = { solids: [], hazards: [], springs: [], winds: [] };
       r.mods.forEach((m, mi) => moduleSim(m.type).build?.(m, { level, frame: f, r, off: [0, 0], prev: [0, 0], state, mi, live: true }, out));
+      if (out.hazards.length) any = true;
+      else quiet++;
       const key = JSON.stringify(out.hazards);
       if (first === null) first = key;
       else if (key !== first) still = false;
-      const here = new Set<number>();
-      for (const h of out.hazards) for (const k of hazardCells(level, h)) here.add(k);
-      for (const k of here) lethal.set(k, (lethal.get(k) ?? 0) + 1);
+      for (const h of out.hazards) {
+        const b = hazardBox(h);
+        for (let y = Math.floor(b.y / TILE); y <= Math.floor((b.y + b.h) / TILE); y++)
+          for (let x = Math.floor(b.x / TILE); x <= Math.floor((b.x + b.w) / TILE); x++) {
+            const k = y * level.w + x;
+            const c = cells.get(k);
+            if (!c) cells.set(k, [f, f - RUN_COUNTDOWN]);
+            else if (c[0] !== f) {
+              c[1] = Math.max(c[1], f - c[0] - 1);
+              c[0] = f;
+            }
+          }
+      }
     }
+    if (!any) continue;
+    if (quiet > WINDOW) continue;
     // A hazard that never moves (a spike strip, a broken window's glass) is a wall of its own: the proof keeps clear of it.
     if (still) continue;
-    // Anything else leaves every spot it reaches clear for a while.
-    for (const [k, n] of lethal) expect(frames - n, `${pp.def.name} at ${k % level.w},${Math.floor(k / level.w)}`).toBeGreaterThan(60);
+    for (const [k, [last, open]] of cells) expect(Math.max(open, RUN_COUNTDOWN + FRAMES - 1 - last), `${pp.def.name} cell ${k}`).toBeGreaterThan(WINDOW);
   }
 }
 
-/** Cells a hazard covers (its bounding box, a beam's boxes along it). */
-function hazardCells(level: Level, h: Hazard): number[] {
-  const boxes: Rect[] =
-    h.kind === 'rect'
-      ? [h.r]
-      : h.kind === 'circle'
-        ? [{ x: h.x - h.r, y: h.y - h.r, w: 2 * h.r, h: 2 * h.r }]
-        : Array.from({ length: 21 }, (_, i) => ({
-            x: h.x1 + ((h.x2 - h.x1) * i) / 20 - h.r,
-            y: h.y1 + ((h.y2 - h.y1) * i) / 20 - h.r,
-            w: 2 * h.r,
-            h: 2 * h.r,
-          }));
-  const out: number[] = [];
-  for (const b of boxes)
-    for (let y = Math.floor(b.y / TILE); y <= Math.floor((b.y + b.h - 1e-6) / TILE); y++)
-      for (let x = Math.floor(b.x / TILE); x <= Math.floor((b.x + b.w - 1e-6) / TILE); x++) out.push(y * level.w + x);
-  return out;
+function hazardBox(h: Hazard): Rect {
+  if (h.kind === 'rect') return h.r;
+  if (h.kind === 'circle') return { x: h.x - h.r, y: h.y - h.r, w: 2 * h.r, h: 2 * h.r };
+  return { x: Math.min(h.x1, h.x2) - h.r, y: Math.min(h.y1, h.y2) - h.r, w: Math.abs(h.x2 - h.x1) + 2 * h.r, h: Math.abs(h.y2 - h.y1) + 2 * h.r };
 }

@@ -9,7 +9,7 @@ import type { Runner, RunWorld } from '../../../sim/run';
 import { type P, stroke } from '../../ink';
 import { drawInkRunner } from '../../ink-character';
 import { boxPts, dot, INK, ovalPts, part, path, pen, poly, sprite, stamp, tone } from '../../ink-props';
-import { glowDot, light, type RC } from '../../kit';
+import { bulb, light, type RC } from '../../kit';
 import { defineArt, defineHeld } from '../common';
 
 type Pipe = ModuleOf<'pipe'>;
@@ -300,8 +300,10 @@ defineArt<'pipe'>({
       const since = d.o.state ? rc.frame - d.o.state.lastFire : 999;
       const out = d.o.grips?.find((g) => g.to === d.r.pp.uid && g.uid !== d.r.pp.uid);
       const flare = Math.max(since < 24 ? 1 - since / 24 : 0, out ? Math.max(0, 1 - (out.t - PIPE.in) / PIPE.out) : 0);
-      glowDot(rc.g, x, y, 6 + flare * 10, t.lit, 0.18 + flare * 0.5);
-      if (flare > 0) light(rc, x, y, 30, t.lit, flare * 0.6);
+      if (flare > 0) {
+        bulb(rc.g, x, y, 3 + flare * 2, t.lit, flare * 0.7);
+        light(rc, x, y, 30, t.lit, flare * 0.6);
+      }
       const n = placed && pipePairs(placed).get(d.r.pp.uid);
       if (n) tag(s, x, y, n, f, m.cells.length / PIPE.wide);
     } else if (d.o.showPath && placed && !d.o.card) {

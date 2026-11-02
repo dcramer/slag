@@ -1,7 +1,7 @@
 import { css, type HSL } from '../../../core/color';
 import { blob, line, type P, stroke } from '../../ink';
 import { ball, boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
-import { circle, glowDot, light, METALS, type RC } from '../../kit';
+import { bulb, circle, glowDot, light, METALS, type RC } from '../../kit';
 import type { DrawCtx } from '../common';
 import { groundBelowPx, lattice } from '../modules/setpiece';
 import { type Cannon, type CannonPose, type Deco, type RotorSkin, slab, STEEL, type ThemeSkins, tube, WHITE } from './common';
@@ -87,7 +87,7 @@ const dockArm: RotorSkin = {
     s.fillStyle = blink ? '#ff4030' : '#702020';
     circle(s, mx, top - 4, 1.4);
     if (blink) {
-      glowDot(rc.g, mx, top - 4, 8, { h: 5, s: 100, l: 55 }, 0.9);
+      bulb(rc.g, mx, top - 4, 1.4, { h: 5, s: 100, l: 55 }, 1);
       light(rc, mx, top - 4, 36, { h: 5, s: 100, l: 55 }, 0.5);
     }
   },
@@ -157,7 +157,7 @@ function voidTurret(rc: RC, m: Cannon, d: DrawCtx, q: CannonPose) {
   const on = q.warn > 0 ? Math.sin(rc.t * (8 + q.warn * 30)) > 0 : Math.sin(rc.t * 2) > 0.6;
   s.fillStyle = on ? '#ff3b30' : '#6a1d1a';
   circle(s, q.x - 2.4, q.y - 0.4, 1);
-  if (on) glowDot(g, q.x - 2.4, q.y - 0.4, 5, { h: 2, s: 100, l: 55 }, 0.8);
+  if (on) bulb(g, q.x - 2.4, q.y - 0.4, 1, { h: 2, s: 100, l: 55 }, 1);
   if (q.warn > 0) {
     glowDot(g, q.mx, q.my, 4 + q.warn * 10, glow, 0.4 + q.warn * 0.5);
     light(rc, q.mx, q.my, 30 + q.warn * 40, glow, 0.3 + q.warn * 0.6);
@@ -238,7 +238,7 @@ function commArray(rc: RC, m: Deco, d: DrawCtx) {
     circle(s, lx, y + 19.5, 1.6);
     s.fillStyle = css(col, on ? 8 : -30);
     circle(s, lx, y + 19.5, 1.05);
-    if (on) glowDot(rc.g, lx, y + 19.5, 6, col, 0.8);
+    if (on) bulb(rc.g, lx, y + 19.5, 1.05, col, 1);
   }
 }
 

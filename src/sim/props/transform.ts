@@ -42,7 +42,7 @@ export function cardExtent(def: PropDef): number {
       reachX = Math.max(reachX, m.radius - 0.5);
       reachY = Math.max(reachY, m.radius - 0.5);
     }
-    if (m.type === 'keg') {
+    if (m.type === 'keg' && m.aim !== 'player') {
       reachX = Math.max(reachX, 0.8);
       reachY = Math.max(reachY, 0.8);
     }

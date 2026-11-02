@@ -1,7 +1,7 @@
 import { css, type HSL, hsl3 } from '../core/color';
 import type { DecorDef } from './decor';
 import { blob, line, type P, stroke } from './ink';
-import { glowDot, light } from './kit';
+import { light } from './kit';
 
 /**
  * Decor for the glacier and for space, inked: a cairn, an expedition
@@ -128,7 +128,6 @@ export const FRONTIER_DECOR = {
       const c = hsl3(0, 100, 58);
       rc.g.fillStyle = css(c, 10, on);
       rc.g.fillRect(d.x - (d.flip ? -2 : 2) - 0.6, d.y - 11.4, 1.3, 1.3);
-      glowDot(rc.g, d.x - (d.flip ? -2 : 2), d.y - 11, 6, c, 0.4 * on);
       if (on > 0.5) light(rc, d.x, d.y - 11, 24, c, 0.3);
     },
   },

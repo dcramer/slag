@@ -76,6 +76,11 @@ export const ARCHETYPE_WEIGHTS: readonly (readonly [Archetype, number])[] = [
   ['mystery', 1.3],
   ['rope', 1],
   ['keg', 1],
+  ['launchplate', 1],
+  ['boost', 1],
+  ['panic', 1],
+  ['fuse', 1.1],
+  ['fling', 1],
 ];
 
 /**
@@ -133,7 +138,21 @@ export const LAUNCHER_AIM_WEIGHTS: readonly (readonly [Aim, number])[] = [
   ['track', 1.5],
 ];
 
-const HAZARD: Archetype[] = ['spikestrip', 'spikeblock', 'saw', 'flail', 'launcher', 'sentry', 'flamer', 'laser', 'tesla', 'crusher', 'dropper', 'snapper'];
+const HAZARD: Archetype[] = [
+  'spikestrip',
+  'spikeblock',
+  'saw',
+  'flail',
+  'launcher',
+  'sentry',
+  'flamer',
+  'laser',
+  'tesla',
+  'crusher',
+  'dropper',
+  'snapper',
+  'fuse',
+];
 
 const R = Math.PI / 2;
 const AXIS = [0, R, 2 * R, 3 * R]; // right, down, left, up
@@ -332,7 +351,7 @@ function bridgeRecipe(rng: Rng): Recipe {
 function isPlainFooting(def: PropDef): boolean {
   if (def.role !== 'build' || def.motion.type !== 'none' || def.modules.length !== 1) return false;
   const m = def.modules[0];
-  return m.type === 'body' && m.breakFrames === 0 && m.conveyor === 0 && m.material in FOOTING;
+  return m.type === 'body' && m.breakFrames === 0 && m.conveyor === 0 && m.material in FOOTING && !m.look;
 }
 
 /** True for a part that can stand in for a bridge in a level's solution. */
@@ -345,6 +364,128 @@ export function isBridgePart(def: PropDef): boolean {
 
 /** A straight strip of `n` host cells along x, facing up at rot 0 (rotation picks the face). */
 const strip = (n: number): Cell[] => Array.from({ length: n }, (_, i) => [i, 0] as Cell);
+
+/** Launch Plate throws at rot 0 (px/s): from about 7 to about 12 tiles on the flat (see `plateArc`). */
+const PLATE_ARCS: readonly Vec[] = [
+  [260, -540],
+  [290, -560],
+  [320, -600],
+  [350, -620],
+];
+
+/** Share of platform parts that are a Four-Square. */
+const FOUR_SQUARE = 0.3;
+
+/** The seven four-cell pieces, each with its own colour (hue). The long one turns up half as often. */
+const TETRAS: readonly (readonly [{ cells: Cell[]; hue: number; long?: true }, number])[] = [
+  [
+    {
+      cells: [
+        [0, 0],
+        [1, 0],
+        [2, 0],
+        [3, 0],
+      ],
+      hue: 188,
+      long: true,
+    },
+    0.5,
+  ],
+  [
+    {
+      cells: [
+        [0, 0],
+        [1, 0],
+        [0, 1],
+        [1, 1],
+      ],
+      hue: 50,
+    },
+    1,
+  ],
+  [
+    {
+      cells: [
+        [0, 0],
+        [1, 0],
+        [2, 0],
+        [1, 1],
+      ],
+      hue: 285,
+    },
+    1,
+  ],
+  [
+    {
+      cells: [
+        [1, 0],
+        [2, 0],
+        [0, 1],
+        [1, 1],
+      ],
+      hue: 125,
+    },
+    1,
+  ],
+  [
+    {
+      cells: [
+        [0, 0],
+        [1, 0],
+        [1, 1],
+        [2, 1],
+      ],
+      hue: 355,
+    },
+    1,
+  ],
+  [
+    {
+      cells: [
+        [0, 0],
+        [0, 1],
+        [1, 1],
+        [2, 1],
+      ],
+      hue: 225,
+    },
+    1,
+  ],
+  [
+    {
+      cells: [
+        [2, 0],
+        [0, 1],
+        [1, 1],
+        [2, 1],
+      ],
+      hue: 28,
+    },
+    1,
+  ],
+];
+
+/** Tetris: one of the seven four-cell pieces, in bevelled cells of one colour. It comes in one size. */
+function fourSquare(rng: Rng): Recipe {
+  const piece = rng.weighted(TETRAS);
+  return {
+    archetype: 'platform',
+    role: 'build',
+    name: title(rng, ['Falling', 'Hard-Drop', 'Next-Piece', 'Line-Clearing'], piece.long ? ['Long Piece', 'Four-Square'] : ['Four-Square', 'Tetra Block']),
+    modules: [
+      {
+        type: 'body',
+        cells: piece.cells.map(([x, y]) => [x, y] as Cell),
+        material: 'stone',
+        conveyor: 0,
+        breakFrames: 0,
+        respawnFrames: 0,
+        look: 'tetra',
+        hue: piece.hue,
+      },
+    ],
+  };
+}
 
 const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
   spikestrip(rng) {
@@ -375,6 +516,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     };
   },
   platform(rng) {
+    if (rng.chance(FOUR_SQUARE)) return fourSquare(rng);
     const moving = rng.chance(0.35);
     const material = moving
       ? rng.weighted<Material>([
@@ -844,7 +986,6 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
         'Spring',
         'Bedspring',
         'Boing',
-        'Launch Pad',
       ]),
       modules: [{ type: 'spring', at: center(), angle: AXIS[3], power }],
     };
@@ -1229,6 +1370,86 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     };
   },
 
+  // Quake's jump pad and Halo's man cannon: a plate that throws you along one fixed arc onto a chalk X.
+  launchplate(rng) {
+    const arc = rng.pick(PLATE_ARCS);
+    const far = arc[0] > 300;
+    return {
+      archetype: 'launchplate',
+      role: 'utility',
+      name: title(rng, far ? ['Express', 'Non-Stop', 'Long-Haul'] : ['Short-Hop', 'Commuter', 'Economy'], [
+        'Launch Plate',
+        'Leap of Faith Plate',
+        'Express Pad',
+        'Launch Pad',
+      ]),
+      modules: [{ type: 'spring', at: center(), angle: AXIS[3], power: Math.round(Math.sqrt(arc[0] * arc[0] + arc[1] * arc[1])), exact: true, arc }],
+    };
+  },
+
+  // The kart racer's dash panel and the hedgehog's speed booster: chevrons that kick you along a face.
+  boost(rng) {
+    return {
+      archetype: 'boost',
+      role: 'utility',
+      mount: 'face',
+      name: title(rng, ['Turbo', 'Express', 'Rush-Hour', 'Nitro-Free', 'Unpaved'], ['Boost Strip', 'Express Lane', 'Speed Bump', 'Fast Lane']),
+      sized: (size) => ({ modules: [{ type: 'coat', cells: strip(by(size, 1, 2, 3)), angle: -Math.PI / 2, kind: 'boost' }] }),
+    };
+  },
+
+  // The plumber's P switch: a button that fills in a dotted outline of blocks for a while.
+  panic(rng) {
+    const gap = rng.int(1, 3);
+    const rise = rng.pick([-2, -1, -1, 0, 0, 1]);
+    const on = 300;
+    return {
+      archetype: 'panic',
+      role: 'build',
+      name: title(rng, ['Taped-Open', 'Emergency', 'Do-Not-Press', 'Last-Minute'], ['Panic Button', 'Pressed for Time', 'Switcheroo']),
+      sized(size) {
+        const n = by(size, 3, 4, 6);
+        const by0 = Math.max(0, -rise);
+        const oy = Math.max(0, rise);
+        const cells: Cell[] = Array.from({ length: n }, (_, i) => [1 + gap + i, oy] as Cell);
+        return { modules: [{ type: 'button', at: center(0, by0), angle: AXIS[3], cells, on, warn: 60 }] };
+      },
+    };
+  },
+
+  // The bandicoot's TNT crate: stand on it and it counts 3-2-1.
+  fuse(rng) {
+    const regrow = rng.int(300, 420);
+    const radius = rng.range(1.4, 1.65);
+    return {
+      archetype: 'fuse',
+      role: 'hazard',
+      name: title(rng, radius > 1.55 ? ['Overpacked', 'Very Fragile'] : ['Fragile', 'Volatile', 'Handle-With-Care'], [
+        'Fuse Crate',
+        'Short Fuse',
+        'Three-Second Rule',
+      ]),
+      modules: [{ type: 'fuse', cells: [[0, 0]], trigger: 'land', count: 180, radius, regrow }],
+    };
+  },
+
+  // The angry-bird slingshot: sit in the pouch, pull back, let go.
+  fling(rng) {
+    const power = rng.int(520, 680);
+    const charge = rng.int(36, 54);
+    const burn = rng.int(150, 220);
+    return {
+      archetype: 'fling',
+      role: 'utility',
+      name: title(rng, power > 620 ? ['Overstretched', 'Industrial-Strength'] : burn < 170 ? ['Perished', 'Second-Hand'] : ['Rubber Band', 'Backyard'], [
+        'Y-Fling',
+        'Rubber Band Rodeo',
+        'Sling Shooter',
+      ]),
+      modules: [{ type: 'keg', at: center(0.5, 0.5), dirs: [7], step: 40, power, delay: 0, burn, aim: 'player', charge, regrow: rng.int(180, 300) }],
+    };
+  },
+
   timebomb(rng) {
     const emp = rng.chance(0.3);
     return {
@@ -1261,8 +1482,8 @@ const ROSTER_SLOTS = [
   HAZARDS,
   HAZARDS,
   HAZARDS,
-  pool('spring', 'fan', 'slimecoat', 'pipe', 'bumper', 'magnet', 'web', 'hangar', 'rope', 'keg'),
-  pool('platform', 'crumble', 'blinker', 'wheel'),
+  pool('spring', 'fan', 'slimecoat', 'pipe', 'bumper', 'magnet', 'web', 'hangar', 'rope', 'keg', 'launchplate', 'boost', 'fling'),
+  pool('platform', 'crumble', 'blinker', 'wheel', 'panic'),
 ];
 
 /**

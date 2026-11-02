@@ -2,6 +2,7 @@ import { deriveSeed, Rng } from '../../core/rng';
 import type { LevelProfile } from '../../sim/level';
 import type { ThemeId } from '../../themes';
 import { CASTLE_CONCEPTS } from './castle';
+import { FACTORY_CONCEPTS } from './factory';
 import type { Concept } from './types';
 
 export type { Concept, Landmark } from './types';
@@ -12,7 +13,7 @@ export type { Concept, Landmark } from './types';
  */
 export const CONCEPTS: Record<ThemeId, Concept[]> = {
   farm: [],
-  factory: [],
+  factory: FACTORY_CONCEPTS,
   castle: CASTLE_CONCEPTS,
   jungle: [],
   volcano: [],
@@ -36,7 +37,12 @@ export const PLAIN = 'plain';
  * are drawn. `force` (tools, `?concept=`) picks one by id regardless, or
  * `PLAIN`; an id the theme doesn't have is plain.
  */
-export function rollConcept(seed: number, themeId: ThemeId, profile: Pick<LevelProfile, 'size' | 'route'>, force?: string): Concept | null {
+export function rollConcept(
+  seed: number,
+  themeId: ThemeId,
+  profile: Pick<LevelProfile, 'size' | 'route'> & Partial<LevelProfile>,
+  force?: string,
+): Concept | null {
   const all = CONCEPTS[themeId];
   if (force !== undefined) return all.find((c) => c.id === force) ?? null;
   const pool = all.filter((c) => fits(c, profile));
@@ -46,9 +52,9 @@ export function rollConcept(seed: number, themeId: ThemeId, profile: Pick<LevelP
   return rng.weighted(pool.map((c) => [c, c.weight] as const));
 }
 
-/** Does the concept support this size and route? */
-export function fits(c: Concept, p: Pick<LevelProfile, 'size' | 'route'>): boolean {
-  return c.sizes.includes(p.size) && (!c.routes || c.routes.includes(p.route));
+/** Does the concept support this size and route, and whatever else it asks of the level (`Concept.fits`)? */
+export function fits(c: Concept, p: Pick<LevelProfile, 'size' | 'route'> & Partial<LevelProfile>): boolean {
+  return c.sizes.includes(p.size) && (!c.routes || c.routes.includes(p.route)) && (!c.fits || c.fits(p));
 }
 
 /** The level's name with a concept: one of its `names`, `{place}` filled with the theme's place name. */

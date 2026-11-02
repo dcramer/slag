@@ -10,29 +10,38 @@
  * Falls back to Canvas2D blending if WebGL2 isn't available, and while a lost context is away.
  */
 
-import { reportError, reportEvent } from '../telemetry';
-import { CEL_FS, CEL_SHADOW, celNoise, MIST_MAX, NOISE_SIZE } from './cel-shader';
+import { addBreadcrumb, reportError, setTag } from '../telemetry';
+import { BLOOM_KNEE, CEL_FS, CEL_SHADOW, celNoise, MIST_MAX, NOISE_SIZE } from './cel-shader';
 
 const VS = `#version 300 es
 in vec2 p; out vec2 uv;
 void main(){ uv = p * 0.5 + 0.5; gl_Position = vec4(p, 0.0, 1.0); }`;
 
-/** Bloom only from what is actually emissive: a white cloud shouldn't halo. */
+/**
+ * Bloom only from what is actually emissive (the glow layer, never the foreground: a white cloud,
+ * an eye or a snow cap shouldn't halo), and only from its hot cores: a faint tail of a lamp or a sensor
+ * stays where it's drawn. Alpha carries the untouched brightness, blurred alongside, so the cel pass
+ * can still tell a big hot shape from a spark when it decides on an ink casing.
+ */
 const BRIGHT_FS = `#version 300 es
 precision highp float; in vec2 uv; out vec4 o;
 uniform sampler2D uGlow;
-void main(){ o = vec4(texture(uGlow, uv).rgb * 0.7, 1.0); }`;
+void main(){
+  vec3 c = texture(uGlow, uv).rgb;
+  float m = max(c.r, max(c.g, c.b));
+  o = vec4(c * smoothstep(${BLOOM_KNEE[0]}, ${BLOOM_KNEE[1]}, m) * 0.7, dot(c, vec3(0.299, 0.587, 0.114)) * 0.7);
+}`;
 
 const BLUR_FS = `#version 300 es
 precision highp float; in vec2 uv; out vec4 o;
 uniform sampler2D uTex; uniform vec2 uDir;
 void main(){
-  vec3 c = texture(uTex, uv).rgb * 0.227027;
-  c += texture(uTex, uv + uDir * 1.3846153846).rgb * 0.3162162162;
-  c += texture(uTex, uv - uDir * 1.3846153846).rgb * 0.3162162162;
-  c += texture(uTex, uv + uDir * 3.2307692308).rgb * 0.0702702703;
-  c += texture(uTex, uv - uDir * 3.2307692308).rgb * 0.0702702703;
-  o = vec4(c, 1.0);
+  vec4 c = texture(uTex, uv) * 0.227027;
+  c += texture(uTex, uv + uDir * 1.3846153846) * 0.3162162162;
+  c += texture(uTex, uv - uDir * 1.3846153846) * 0.3162162162;
+  c += texture(uTex, uv + uDir * 3.2307692308) * 0.0702702703;
+  c += texture(uTex, uv - uDir * 3.2307692308) * 0.0702702703;
+  o = c;
 }`;
 
 export interface PostParams {
@@ -68,10 +77,9 @@ export interface Compositor {
 
 export function createCompositor(canvas: HTMLCanvasElement): Compositor {
   const gl = canvas.getContext('webgl2', { antialias: false, alpha: false, premultipliedAlpha: false, preserveDrawingBuffer: false });
-  if (!gl) {
-    reportEvent('webgl2 unavailable');
-    return new Fallback(canvas);
-  }
+  // A device fact, not a failure: it tags every report instead of costing one.
+  setTag('render.webgl2', !!gl);
+  if (!gl) return new Fallback(canvas);
   try {
     return new GLCompositor(canvas, gl);
   } catch (e) {
@@ -130,7 +138,7 @@ class GLCompositor implements Compositor {
       (e) => {
         // Without this the browser never offers the context back.
         e.preventDefault();
-        reportEvent('webgl context lost');
+        addBreadcrumb('render', 'webgl context lost'); // routine on phones: only worth seeing next to a failure
         this.standIn();
       },
       on,
@@ -197,7 +205,7 @@ class GLCompositor implements Compositor {
     }
     this.stand?.canvas.remove();
     this.stand = null;
-    reportEvent('webgl context restored', 'info');
+    addBreadcrumb('render', 'webgl context restored');
   }
 
   /** One clear texel, so a clear level pays for neither an upload nor a branch in the frame loop. */

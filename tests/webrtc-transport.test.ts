@@ -679,18 +679,24 @@ describe('host migration', () => {
     expect(d.session.hostId).toBe('bbbb');
   });
 
-  it('reports one host-migration event per migration, by the new host, without player names', async () => {
-    const events: [string, string, Record<string, unknown> | undefined][] = [];
-    installTelemetry({ error() {}, breadcrumb() {}, event: (name, level, data) => events.push([name, level, data]) });
+  it('logs one host migration per migration, by the new host, timed and without player names', async () => {
+    const logs: [string, string, Record<string, unknown> | undefined][] = [];
+    const events: string[] = [];
+    installTelemetry({ error() {}, breadcrumb() {}, event: (name) => events.push(name), log: (level, message, data) => logs.push([message, level, data]) });
     try {
       const w = new World();
       const [, b] = await w.room('aaaa', 'bbbb', 'cccc');
       w.crash('aaaa');
       await w.runUntil(() => w.settled(), 20_000);
-      const migrations = events.filter(([name]) => name === 'host-migration');
+      const migrations = logs.filter(([message]) => message === 'host migration');
       expect(migrations).toHaveLength(1);
-      expect(migrations[0][1]).toBe('warning');
-      expect(migrations[0][2]).toMatchObject({ from: 'aaaa', to: 'bbbb', frame: b.session.match.frame > 0 ? expect.any(Number) : 0 });
+      expect(migrations[0][2]).toMatchObject({ from: 'aaaa', to: 'bbbb', peers: 2, phase: b.session.match.phase });
+      // Its clock runs from noticing the host gone to the room playing again: not zero, and well under the slow mark.
+      const ms = migrations[0][2]!.ms as number;
+      expect(ms).toBeGreaterThan(0);
+      expect(ms).toBeLessThan(20_000);
+      expect(events).not.toContain('slow-host-migration');
+      for (const [, , data] of logs) for (const v of Object.values(data ?? {})) expect(String(v)).not.toMatch(/[a-z]+ [a-z]+/i);
     } finally {
       installTelemetry(null);
     }

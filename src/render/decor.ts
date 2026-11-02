@@ -5,7 +5,7 @@ import { FRONTIER_DECOR } from './decor-frontier';
 import { blob, line, type P, stroke } from './ink';
 import { inkFence, inkHay } from './ink-parts';
 import { ball, boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, tick, tone } from './ink-props';
-import { circle, flame, flutter, glowDot, light, type RC } from './kit';
+import { bulb, circle, flame, flutter, glowDot, light, type RC } from './kit';
 
 /**
  * Terrain decor registry, inked like the terrain it stands on (docs/ART.md, World art). Each kind says where
@@ -137,8 +137,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
         pen(s, [l, tip, r], sd(d) + i, 0.4, 0.9, 2, css(d.color, -46, 1, 10));
       }
       const pulse = 0.6 + Math.sin(rc.t * 2 + d.seed) * 0.25;
-      glowDot(rc.g, d.x, d.y - 4 * k, 12 * k, d.color, 0.3 * pulse);
-      light(rc, d.x, d.y - 4, 55 * k, d.color, 0.55 * pulse);
+      light(rc, d.x, d.y - 4, 34 * k, d.color, 0.45 * pulse);
     },
   },
   mushroom: {
@@ -172,8 +171,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
       rc.g.beginPath();
       rc.g.ellipse(d.x, d.y - h, 3.6 * k, 2.6 * k, 0, Math.PI, 0);
       rc.g.fill();
-      glowDot(rc.g, d.x, d.y - h, 9 * k, d.color, 0.3 * pulse);
-      light(rc, d.x, d.y - h, 40 * k, d.color, 0.5 * pulse);
+      light(rc, d.x, d.y - h, 28 * k, d.color, 0.45 * pulse);
     },
   },
   flower: {
@@ -228,7 +226,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
       s.fillRect(lx - 0.3, ly + 1.3, 0.6, 4.7);
       rc.g.fillStyle = css(d.color, 10, 0.9 * fl);
       rc.g.fillRect(lx - 1.7, ly + 1.3, 3.4, 4.7);
-      glowDot(rc.g, lx, ly + 3.5, 14 * k, d.color, 0.4 * fl);
+      glowDot(rc.g, lx, ly + 3.5, 8 * k, d.color, 0.4 * fl);
       light(rc, lx, ly + 3.5, 80 * k, d.color, 0.9 * fl);
     },
   },
@@ -504,13 +502,11 @@ export const DECOR: Record<DecorKind, DecorDef> = {
       s.arc(d.x, d.y - 3, 2.2, Math.PI, 0);
       s.fill();
       const on = 0.55 + 0.45 * Math.max(0, Math.cos(a));
-      glowDot(rc.g, d.x, d.y - 4, 10, d.color, 0.55 * on);
+      bulb(rc.g, d.x, d.y - 4, 1.5, d.color, 0.9 * on);
       const g = rc.g;
       const dir = Math.cos(a) > 0 ? 1 : -1;
-      const gr = g.createLinearGradient(d.x, 0, d.x + dir * 30, 0);
-      gr.addColorStop(0, css(d.color, 10, 0.3 * on));
-      gr.addColorStop(1, css(d.color, 0, 0));
-      g.fillStyle = gr;
+      // The sweep: a flat wedge, not a fade.
+      g.fillStyle = css(d.color, 10, 0.12 * on);
       g.beginPath();
       g.moveTo(d.x, d.y - 4);
       g.lineTo(d.x + dir * 30, d.y - 4 - 8 * Math.abs(Math.sin(a)));
@@ -775,7 +771,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
       const pulse = 0.5 + Math.sin(rc.t * 1.7 + d.seed) * 0.3;
       rc.g.fillStyle = css(d.color, 5, 0.8 * pulse);
       line(rc.g, d.x - 3 * k, d.y, d.x + 1.5 * k, d.y - 5 * k, { w: 0.8, seed: sd(d), taper: [0.1, 0.3], press: 0 });
-      glowDot(rc.g, d.x, d.y - 1, 8 * k, d.color, 0.25 * pulse);
     },
   },
 
@@ -831,7 +826,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
       rc.s.fillRect(d.x - 2.2, d.y - h - 4.8, 4.4, 3.8);
       rc.g.fillStyle = css(d.color, 15, fl * on);
       rc.g.fillRect(d.x - 2.2, d.y - h - 4.8, 4.4, 3.8);
-      glowDot(rc.g, d.x, d.y - h - 3, 18, d.color, 0.4 * fl * on);
+      glowDot(rc.g, d.x, d.y - h - 3, 9, d.color, 0.35 * fl * on);
       light(rc, d.x, d.y - h - 2, 95, d.color, 0.95 * fl * on);
     },
   },
@@ -942,7 +937,6 @@ export const DECOR: Record<DecorKind, DecorDef> = {
       for (const wx of [-3.5, 3.5]) ball(s, d.x + wx, d.y - 2.2, 1.6, hsl3(220, 8, 18), wx + 9);
     },
     live(rc, d, th) {
-      glowDot(rc.g, d.x + 1, d.y - 10.5, 4, th.terrain.vein, 0.5);
       rc.g.fillStyle = css(th.terrain.vein, 15, 0.9);
       rc.g.fillRect(d.x + 0.5, d.y - 11, 1.2, 1.2);
       rc.g.fillRect(d.x - 2.5, d.y - 10.2, 1, 1);
@@ -982,9 +976,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     live(rc, d) {
       const h = 20 + (d.seed % 14);
       const on = (rc.t * 0.8 + (d.seed % 10) / 10) % 1 < 0.3 ? 1 : 0.1;
-      rc.g.fillStyle = css(d.color, 10, on);
-      circle(rc.g, d.x, d.y - h - 1, 1.2);
-      glowDot(rc.g, d.x, d.y - h - 1, 8, d.color, 0.5 * on);
+      bulb(rc.g, d.x, d.y - h - 1, 1.2, d.color, on);
       if (on > 0.5) light(rc, d.x, d.y - h, 30, d.color, 0.4);
     },
   },
@@ -1057,7 +1049,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
         g.lineTo(cx + 1, cy + 3);
       }
       g.stroke();
-      glowDot(g, cx, cy, 14, d.color, 0.3 * flick);
+      glowDot(g, cx, cy, 9, d.color, 0.25 * flick);
       light(rc, cx, cy, 60, d.color, 0.7 * flick);
     },
   },

@@ -6,7 +6,7 @@ import type { Level } from '../../../sim/level';
 import { blastHits, blastSpec, type BombLook, cellsAt, type ModuleOf, type PlacedProp } from '../../../sim/props';
 import { blob, line, stroke } from '../../ink';
 import { ball, boxPts, dot, glint, ovalPts, part, path, poly, sprite, stamp, tick } from '../../ink-props';
-import { glowDot, light, METALS, type RC } from '../../kit';
+import { bulb, glowDot, light, METALS, type RC } from '../../kit';
 import { defineArt } from '../common';
 import { arcPts } from '../ink-motion';
 
@@ -167,7 +167,7 @@ const LOOKS: Record<BombLook, (rc: RC, m: Bomb, x: number, y: number, rot: numbe
     const g = rc.g;
     const blue: HSL = { h: 200, s: 100, l: 60 };
     const pulse = 0.5 + 0.5 * Math.sin(rc.t * 8);
-    glowDot(g, x, y - 11, 3 + pulse * 3, blue, 0.8);
+    bulb(g, x, y - 11, 1.2 + pulse * 0.8, blue, 0.6 + pulse * 0.4);
     stamp(rc.s, patchDisk(), x, y);
     g.fillStyle = css(blue, 10, 0.35 * pulse);
     g.save();

@@ -5,10 +5,10 @@ import {
   BRASS,
   BRASS_SH,
   dome,
-  HOT,
   HOT_CSS,
   inkBox,
   IRON,
+  IRON_SH,
   key,
   line,
   livery,
@@ -31,7 +31,7 @@ import {
   WHITE_HOT,
   Y,
 } from './kit';
-import { glowDot } from '../kit';
+import { beady, dots, porthole, slit, stamped } from './faces';
 
 /**
  * The tin line: pressed-tin wind-ups and novelties. Each has its own silhouette at 16 px (a two-tier robot,
@@ -41,7 +41,8 @@ import { glowDot } from '../kit';
  */
 export const TIN_TOYS: Partial<Record<Toy, ToyArt>> = {
   robot: {
-    size: [1, 1.06],
+    size: [0.86, 1.06],
+    shine: true,
     shape: (W, H) =>
       rounded(
         [
@@ -60,7 +61,7 @@ export const TIN_TOYS: Partial<Record<Toy, ToyArt>> = {
     arms: 'mitten',
     waddle: true,
     hands: 'tin',
-    face: () => ({ eyes: { y: 0.8, spread: 0.2, count: 2, size: 2 }, mouth: 'none' }),
+    paintFace: (d) => slit(d, 0.8),
     print: (d) => {
       livery(d, -0.1, 0.5);
       tonedOval(d.s, d.f * 0.8, Y(d, 0.24), 2.2, 2, 10, TIN, TIN_SH, d.lk.ink, 0.4, 0.7 * d.k, 0.4);
@@ -91,7 +92,9 @@ export const TIN_TOYS: Partial<Record<Toy, ToyArt>> = {
     parts: ['gear', 'spring', 'bolt', 'key'],
   },
   tincan: {
-    size: [0.84, 1.12],
+    size: [0.74, 1.12],
+    shine: true,
+    paintFace: (d) => dots(d, 0.6, 0.2, 0.9),
     shape: (W, H) => sup(W, H, 7, 1, 1),
     feet: 'peg',
     arms: 'mitten',
@@ -131,13 +134,13 @@ export const TIN_TOYS: Partial<Record<Toy, ToyArt>> = {
     parts: ['shard', 'shard', 'bolt', 'spring'],
   },
   soldier: {
-    size: [0.84, 1.1],
+    size: [0.74, 1.12],
     shape: (W, H) => sup(W, H, 3.6, 0.94, 1),
     feet: 'peg',
     arms: 'mitten',
     waddle: true,
     hands: 'tin',
-    face: (c) => ({ eyes: { style: 'dot', count: 2, size: Math.min(2, c.eyes.size), y: 0.66 }, mouth: c.mouth === 'none' ? 'flat' : c.mouth }),
+    paintFace: (d) => stamped(d, 0.68, 0.2),
     print: (d) => {
       // The jacket is the player's color, crossed with tin belts.
       livery(d, -0.1, 0.46);
@@ -185,13 +188,13 @@ export const TIN_TOYS: Partial<Record<Toy, ToyArt>> = {
     parts: ['gear', 'spring', 'key', 'shard'],
   },
   chick: {
-    size: [0.98, 0.96],
+    size: [0.86, 0.94],
     shape: (W, H) => sup(W, H, 2.1, 0.9, 1.06, 0.1),
     feet: 'web',
     arms: 'none',
     hop: true,
     waddle: true,
-    face: () => ({ mouth: 'none' }),
+    paintFace: (d) => beady(d, 0.62, 0.17, 0.8),
     print: (d) => {
       // Painted wings down both sides, in the player's color.
       for (const side of [-1, 1]) {
@@ -252,13 +255,13 @@ export const TIN_TOYS: Partial<Record<Toy, ToyArt>> = {
     parts: ['spring', 'key', 'shard', 'gear'],
   },
   frog: {
-    size: [1.24, 0.8],
-    shape: (W, H) => sup(W, H, 2.1, 0.84, 1.08, 0.12),
+    size: [1.3, 0.7],
+    shape: (W, H) => sup(W, H, 2.4, 0.8, 1.06, 0.12),
     feet: 'web',
     arms: 'none',
     hop: true,
     waddle: true,
-    face: (c) => ({ eyes: { count: 2, y: 0.86, spread: 0.27, size: Math.max(2.2, Math.min(2.5, c.eyes.size)) }, mouth: 'none' }),
+    face: (c) => ({ eyes: { count: 2, y: 0.86, spread: 0.27, size: Math.min(1.9, c.eyes.size), style: 'ring' }, mouth: 'none' }),
     print: (d) => {
       // A painted waistcoat in the player's color, two brass buttons.
       livery(d, -0.1, 0.5);
@@ -287,7 +290,8 @@ export const TIN_TOYS: Partial<Record<Toy, ToyArt>> = {
     parts: ['spring', 'key', 'shard', 'gear'],
   },
   rocket: {
-    size: [0.84, 1.14],
+    size: [0.72, 1.14],
+    shine: true,
     shape: (W, H) => {
       const pts: P[] = [];
       for (let i = 0; i <= 8; i++) {
@@ -304,7 +308,7 @@ export const TIN_TOYS: Partial<Record<Toy, ToyArt>> = {
     feet: 'none',
     arms: 'none',
     hop: true,
-    face: () => ({ eyes: { y: 0.42, spread: 0.2 } }),
+    paintFace: (d) => porthole(d, 0.4),
     print: (d) => {
       // Nose cone and a belly stripe in the player's color.
       livery(d, 0.6, 1.1);
@@ -350,13 +354,13 @@ export const TIN_TOYS: Partial<Record<Toy, ToyArt>> = {
           ],
           WHITE_HOT,
         );
-        if (d.g) glowDot(d.g, d.wx, d.wy + (d.by + 2) * d.sc, 9 * d.sc, HOT, 0.45);
       }
     },
     parts: ['shard', 'shard', 'bolt', 'spring'],
   },
   top: {
-    size: [1.22, 1],
+    size: [1.04, 1],
+    shine: true,
     shape: (W, H) =>
       rounded(
         [
@@ -378,7 +382,7 @@ export const TIN_TOYS: Partial<Record<Toy, ToyArt>> = {
     arms: 'none',
     lift: 2.2,
     spin: true,
-    face: () => ({ eyes: { y: 0.68, spread: 0.2 } }),
+    paintFace: (d) => dots(d, 0.68, 0.14, 0.85, 0.12),
     print: (d) => {
       // The cone is the player's color, and painted stripes scroll round it as it spins.
       livery(d, -0.2, 0.5);
@@ -404,13 +408,13 @@ export const TIN_TOYS: Partial<Record<Toy, ToyArt>> = {
     parts: ['shard', 'shard', 'bolt', 'spring'],
   },
   jackbox: {
-    size: [0.98, 0.86],
+    size: [0.86, 0.84],
     shape: (W, H) => sup(W, H, 2.2, 0.98, 1),
     feet: 'spring',
     arms: 'mitten',
     hop: true,
     hands: 'tin',
-    face: () => ({ mouth: 'grin', eyes: { y: 0.46 } }),
+    face: (c) => ({ mouth: 'grin', eyes: { y: 0.46, count: 2, size: Math.min(2, c.eyes.size), style: c.eyes.style === 'visor' ? 'ring' : c.eyes.style } }),
     print: (d) => {
       for (const side of [-1, 1]) poly(d.s, oval(side * d.W * 0.36, Y(d, 0.26), 1.4, 1.1, 8), '#d9707f');
     },
@@ -458,32 +462,32 @@ export const TIN_TOYS: Partial<Record<Toy, ToyArt>> = {
     parts: ['spring', 'spring', 'shard', 'gear'],
   },
   beetle: {
-    size: [1.24, 0.8],
-    shape: (W, H) => dome(W, H, 2, 1.04),
+    size: [1.2, 0.68],
+    shape: (W, H) => dome(W, H, 1.6, 1.02),
     feet: 'none',
     arms: 'none',
     waddle: true,
-    face: () => ({ eyes: { y: 0.3, spread: 0.24 } }),
+    shine: true,
+    faceX: 0.5,
+    paintFace: (d) => beady(d, 0.3, 0.07, 0.6),
     print: (d) => {
-      // The shell is painted in the player's color, split down the middle.
-      livery(d, 0.46, 1.2);
+      // The whole shell is painted in the player's color, split down the middle, over a tin rim.
+      livery(d, 0.2, 1.2);
       mark(
         d.s,
         d.lk.playerDark,
         [
           { x: 0, y: d.top },
-          { x: 0, y: Y(d, 0.46) },
+          { x: 0, y: Y(d, 0.2) },
         ],
         1,
         d.sd,
         [0, 0],
       );
-    },
-    over: (d) => {
-      for (const side of [-1, 1]) rivet(d, side * d.W * 0.24, Y(d, 0.72));
+      for (const side of [-1, 1]) poly(d.s, oval(side * d.W * 0.24, Y(d, 0.62), 1.3, 1.1, 8), d.lk.playerDark);
     },
     back: (d) => {
-      key(d, 0.72);
+      key(d, 0.64);
       // Three legs a side, scuttling.
       for (const side of [-1, 1])
         for (let i = 0; i < 3; i++) {
@@ -491,12 +495,16 @@ export const TIN_TOYS: Partial<Record<Toy, ToyArt>> = {
           const lift = d.m === 'walk' || d.m === 'run' ? Math.max(0, Math.sin(ph)) * 1.3 : 0;
           const x0 = side * d.W * (0.16 + i * 0.12);
           d.s.fillStyle = d.lk.ink;
-          line(d.s, x0, d.by - 1.6, x0 + side * 2.2, d.by - 1.2 - lift, { w: 1.4 * d.k, seed: i, taper: [0, 0], press: 0 });
-          line(d.s, x0 + side * 2.2, d.by - 1.2 - lift, x0 + side * 2.8, -0.3 - lift * 0.4, { w: 1.4 * d.k, seed: i + 1, taper: [0, 0.6], press: 0 });
+          line(d.s, x0, d.by - 1.2, x0 + side * 2.2, d.by - 0.8 - lift, { w: 1.4 * d.k, seed: i, taper: [0, 0], press: 0 });
+          line(d.s, x0 + side * 2.2, d.by - 0.8 - lift, x0 + side * 2.8, -0.3 - lift * 0.4, { w: 1.4 * d.k, seed: i + 1, taper: [0, 0.6], press: 0 });
         }
     },
     front: (d) => {
-      for (const side of [-1, 1]) stalk(d, side * d.W * 0.1 + d.f * 2, Y(d, 0.5), side * 1.6 + d.f * 5 + d.wob * 0.3, Y(d, 0.74), 0.8, BRASS, BRASS_SH);
+      // An iron head poking out the front, with brass feelers.
+      const hx = d.f * d.W * 0.5;
+      const hy = Y(d, 0.3);
+      for (const side of [-1, 1]) stalk(d, hx + d.f * 1, hy - 1.4, hx + d.f * 3.6 + side * 0.8 + d.wob * 0.3, hy - 4.6 + side * 0.6, 0.7, BRASS, BRASS_SH);
+      tonedOval(d.s, hx, hy, 2.8, 2.3, 12, IRON, IRON_SH, d.lk.ink, 0.6, 1 * d.k, 0.6);
     },
     parts: ['gear', 'key', 'shard', 'bolt'],
   },

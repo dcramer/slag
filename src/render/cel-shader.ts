@@ -42,8 +42,9 @@ const K = {
   fgExposure: 1.14,
   /** Darkness of the hard shadow on the backdrop (1 = none). */
   shadow: 0.62,
-  /** Soft halo strength around emissives. */
-  halo: 0.55,
+  /** Soft halo strength around emissives, and how much of each bloom level feeds it (quarter res, eighth res). */
+  halo: 0.4,
+  bloom: [0.3, 0.3],
   /** Above this brightness an emissive prints as opaque flat color. */
   solid: 0.17,
   /** A glow pixel this bright, inside a large enough glow, gets an ink casing. */
@@ -70,6 +71,13 @@ export const MIST_MAX = 0.94;
 export const CEL_SHADOW: [number, number] = [2.5, 3.5];
 
 const f = (n: number) => n.toFixed(4);
+
+/**
+ * Glow brightness (max channel) where bloom starts and where it's full. Below the knee an emissive lights
+ * only its own pixels: a lamp's faint tail or a telegraph wash stays put, and only hot cores (fire, lasers,
+ * sparks, molten slag) spread a halo.
+ */
+export const BLOOM_KNEE: [string, string] = [f(0.35), f(0.75)];
 
 /** Texels per side of the line's noise, and noise cells across them. */
 export const NOISE_SIZE = 256;
@@ -172,8 +180,8 @@ void main(){
 
   // Emissives: a soft halo, then hot shapes as opaque color, white only at the very core.
   vec3 raw = texture(uGlow, uv).rgb;
-  vec3 bloom = texture(uBloomA, uv).rgb;
-  vec3 G = raw + bloom * 0.4 + texture(uBloomB, uv).rgb * 0.5;
+  vec4 bloom = texture(uBloomA, uv);
+  vec3 G = raw + bloom.rgb * ${f(K.bloom[0])} + texture(uBloomB, uv).rgb * ${f(K.bloom[1])};
   float gm = max(G.r, max(G.g, G.b));
   vec3 hue = pow(G / max(gm, 1e-3), vec3(1.5));
   c += hue * gm * ${f(K.halo)};
@@ -213,7 +221,7 @@ void main(){
   vec2 gp = px * 1.15;
   float nearGlow = max(max(luma(texture(uGlow, uv + gp).rgb), luma(texture(uGlow, uv - gp).rgb)),
                    max(luma(texture(uGlow, uv + vec2(gp.x, -gp.y)).rgb), luma(texture(uGlow, uv + vec2(-gp.x, gp.y)).rgb)));
-  float big = smoothstep(${f(K.hotSize)}, ${f(K.hotSize + 0.12)}, luma(bloom));
+  float big = smoothstep(${f(K.hotSize)}, ${f(K.hotSize + 0.12)}, bloom.a);
   float casing = smoothstep(${f(K.hot)}, ${f(K.hot + 0.18)}, nearGlow) * big;
   c = mix(c, lineCol, line * (1.0 - hot));
   c = mix(c, INK, casing * (1.0 - hot));

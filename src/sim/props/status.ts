@@ -14,6 +14,9 @@ export interface RunnerStatus {
   slowed: number;
   /** Trigger keys overlapped last frame (enter detection). */
   inside: number[];
+  /** Frames left on a Boost Strip's kick, and the horizontal speed (px/s) it holds you at until then. */
+  boost: number;
+  boostVx: number;
 }
 
 export const FREEZE_FRAMES = 50;
@@ -24,7 +27,7 @@ const SLOW_VX = 40;
 const SLOW_JUMP = 330;
 
 export function newStatus(): RunnerStatus {
-  return { frozen: 0, slowed: 0, inside: [] };
+  return { frozen: 0, slowed: 0, inside: [], boost: 0, boostVx: 0 };
 }
 
 /** The controls a runner actually gets this frame. Frozen runners can still give up (alt). */
@@ -33,8 +36,9 @@ export function statusInput(st: RunnerStatus, inp: InputFrame): InputFrame {
   return inp;
 }
 
-/** Before `stepBody`: clamp speed while slowed. */
+/** Before `stepBody`: hold a boost's speed (no skid while it lasts, faster ways the same way kept), and clamp speed while slowed. */
 export function statusPreStep(st: RunnerStatus, b: Body): void {
+  if (st.boost > 0 && !(b.vx * st.boostVx > 0 && Math.abs(b.vx) > Math.abs(st.boostVx))) b.vx = st.boostVx;
   if (st.slowed > 0 && Math.abs(b.vx) > SLOW_VX) b.vx = b.vx > 0 ? SLOW_VX : -SLOW_VX;
 }
 
@@ -45,4 +49,5 @@ export function statusPostStep(st: RunnerStatus, b: Body): void {
     st.slowed--;
   }
   if (st.frozen > 0) st.frozen--;
+  if (st.boost > 0) st.boost--;
 }
