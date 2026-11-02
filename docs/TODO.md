@@ -95,7 +95,6 @@ No branch yet.
 ## 8. Render polish
 - **Set-piece layering:** scenery halves draw *behind* the terrain (the windmill tower, crane mast, press gantry, antenna masts). Moving and solid parts stay in front (the blades, platforms). Layer order is in `docs/DESIGN.md` → Levels. This is probably a `backdrop` art layer drawn before terrain in `src/render/renderer.ts` and the `defineArt` layers.
 - **The player's glowing trail is too strong.** Tone it down.
-- **The lobby SLAG logo** looks worse than the home-screen logo. Make it match (same treatment, scale and crispness).
 - **Comic-book style experiment:** `wip/comic-style` (~560 lines, unreviewed). Add `?style=comic`, `renderer.setStyle`, and a Settings toggle.
 
 ## 9. Weather (new)
@@ -112,3 +111,12 @@ It's always telegraphed, weighted per theme, and must be deterministic from the 
 - Swap the sim and gen transcendentals (`Math.sin`, `cos`, `atan2`, …) to `core/dmath.ts`. It lands with the netcode work.
 - Add the run controls to the README.
 - Consider stricter TS flags: `noUncheckedIndexedAccess` gives about 600 errors, so it's a project of its own.
+
+## 11. Make the home screen part of the game
+The home screen and the lobby are two different UIs. `/` is React and CSS (`app/page.tsx`, `app/MainMenu.tsx`, `app/HomeStage.tsx`, `app/HomeSettings.tsx`, `app/globals.css`), and the game only boots at `/r/<code>`. The lobby is drawn on canvas (`src/render/hud.ts`, `src/ui/menus.ts`). So there are two logos, two settings UIs, and a visible jump between them.
+
+- Boot the game on `/` and render the main menu in-game, with the same renderer, menus and input (keyboard, gamepad and touch) as the lobby. The page stays a thin shell, per `app/AGENTS.md`.
+- Play goes to the lobby without a page reload. `/r/<code>` stays a shareable deep link, and `?seed`/`?theme` still pass through.
+- One logo and one settings UI, used everywhere. This replaces the lobby logo's separate treatment, which looks worse than the home-screen logo today (same treatment, scale and crispness).
+- Keep the home screen's look: drips, embers, character stage.
+- Do this after items 2 and 3, which both change `src/game-client.ts`.
