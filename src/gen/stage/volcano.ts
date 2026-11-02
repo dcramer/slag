@@ -1,3 +1,4 @@
+import { dsin } from '../../core/dmath';
 import type { Vec } from '../../core/geom';
 import type { Rng } from '../../core/rng';
 import { type LevelProfile, T_ONEWAY, type TileRect } from '../../sim/level';
@@ -9,6 +10,7 @@ import { easyRise, hardGap, hopGap, type Knobs, pit, TWO_PART_TRIES, undercut } 
 import { BRIDGE_W } from '../level/types';
 import { makeStyle, type Piece, SAFE_TILES, type Site } from '../setpieces/place';
 import { capFlood } from './flood';
+import { defineConcept } from './contract';
 import type { Concept, Landmark } from './types';
 
 /**
@@ -274,9 +276,8 @@ function buildCaldera(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark 
   const b = a + gw - 1;
   x = b + 1;
   for (let c = 0; c < pf; c++) col(g, x++, hR, G);
-  far.reverse().forEach((w, i) => {
-    for (let c = 0; c < w; c++) col(g, x++, (ns - 1 - i) * R, G);
-  });
+  // Down the far flank, its steps in the opposite order to the near one's.
+  for (let i = 0; i < far.length; i++) for (let c = 0; c < far[far.length - 1 - i]; c++) col(g, x++, (ns - 1 - i) * R, G);
   const exit = x;
 
   // The crater: open to the bottom, its far lip overhanging.
@@ -312,13 +313,17 @@ function buildCaldera(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark 
   }
   return {
     concept: 'caldera',
-    rect: { x: at.x, y: rim - 3, w: at.w, h: G - rim + 3 },
+    // The cone and the ash column over it.
+    rect: { x: at.x, y: Math.max(1, G - Math.max(hR + 3, 16)), w: at.w, h: Math.min(G - 1, Math.max(hR + 3, 16)) },
     air: [{ x: a, y: 0, w: gw + 2, h: rim + 2 }],
     anchors: {
       crater: [a, b],
       rim: [rim, H],
       ...Object.fromEntries(stands.map((s, i) => [`stand${i}`, s])),
       ...ways(shut),
+      ...(nearTube ? { tubeN: [entry, p0 + 2 - entry] as Vec } : {}),
+      ...(farTube ? { tubeF: [chute, exit + 2 - chute] as Vec } : {}),
+      ground: [G, 0],
       sig0: [ns, gw],
       sig1: [(nearTube ? 1 : 0) + (farTube ? 2 : 0), p0 - at.x],
       sig2: listSig(near),
@@ -339,7 +344,7 @@ function* calderaPieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
   const [rim, H] = l.anchors.rim;
   const gw = b - a + 1;
   const tide = rollTide(rng);
-  const lava = capFlood(s.level, { type: 'flood', look: 'lava', at: [a, H], w: gw + 2, low: 1, high: Math.max(2, H - rim - 3), ...tide }, [], s.cache);
+  const lava = capFlood(s.level, { type: 'flood', look: 'lava', at: [a, H], w: gw + 2, low: 0, high: Math.max(2, H - rim - 3), ...tide }, [], s.cache);
   if (!lava) return;
   // The serpent leaps out of the crater's lava over the rim's height, and dives back in on the far side.
   const peak = rim - rng.range(0.5, 2.5);
@@ -354,7 +359,19 @@ function* calderaPieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
     role: 'hazard',
     style: OBSIDIAN(rng),
     modules: [
-      { type: 'deco', kind: 'facade', at: [a - 1, 0], w: gw + 4, h: rim, seed: rng.int(0, 1 << 20) },
+      // The ash column out of the crater, its box down to the crater's floor.
+      { type: 'deco', kind: 'facade', at: [a - 1, 0], w: gw + 4, h: H, seed: rng.int(0, 1 << 20) },
+      // The tubes' far walls: what the flanks stand on, seen through the tunnels under them.
+      ...(['tubeN', 'tubeF'] as const)
+        .filter((k) => l.anchors[k])
+        .map((k): Module => ({
+          type: 'deco',
+          kind: 'facade',
+          at: [l.anchors[k][0], l.anchors.ground[0]],
+          w: l.anchors[k][1],
+          h: TUBE,
+          seed: rng.int(0, 1 << 20),
+        })),
       lava,
       {
         type: 'lob',
@@ -375,8 +392,10 @@ function* calderaPieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
   if (spots.length) yield bombPiece(rng, bombs(rng, spots, rng.int(1, 3)));
 }
 
-export const CALDERA: Concept = {
+export const CALDERA = defineConcept({
   id: 'caldera',
+  scale: 'grand',
+  varies: ['crater width', 'cone height (steps)', 'step widths', 'which flanks have a tube', 'serpent arc and side', 'where the bombs fall'],
   weight: 3,
   sizes: ['classic', 'wide'],
   fits: (p) => roomFor(p, CALDERA_MIN),
@@ -391,7 +410,7 @@ export const CALDERA: Concept = {
   },
   build: buildCaldera,
   pieces: (rng, s, l) => calderaPieces(rng, s, l),
-};
+});
 
 // ------------------------------------------------------------------------------------------------ magma tide
 
@@ -446,7 +465,7 @@ function buildTide(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const span = b1 - b0 + 1;
   // Thicker toward its ends, as far as leaves headroom over the refuges, and thin over the drop and the climb out.
   const extra = Math.max(0, Math.min(2, D - tr.refuge - 3));
-  const tAt = (c: number) => (c - b0 < 5 || b1 - c < 5 ? 1 : 1 + Math.round(extra * (1 - Math.sin((Math.PI * (c - b0 + 0.5)) / span))));
+  const tAt = (c: number) => (c - b0 < 5 || b1 - c < 5 ? 1 : 1 + Math.round(extra * (1 - dsin((Math.PI * (c - b0 + 0.5)) / span))));
   for (let c = b0; c <= b1; c++) g.fill(c, deck, c, deck + tAt(c) - 1, 1, true);
   for (const c of [b0, b0 + 1, b1 - 1, b1]) {
     g.clear(c, deck, c, deck + 3);
@@ -481,11 +500,13 @@ function buildTide(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   for (let c = b0 + 2; c <= b1 - 2; c++) if (c < gx || c >= gx + gapW) deckStands.push([c, deck]);
   return {
     concept: 'magma-tide',
-    rect: { x: x0, y: deck - 3, w: at.x + at.w - x0, h: G - deck + 3 },
+    rect: { x: x0, y: deck - 4, w: at.x + at.w - x0, h: G - deck + 4 },
     air: [{ x: b0, y: deck + 1, w: span, h: G - deck - 1 }],
     anchors: {
       floor: [b0, G],
       gap: [gx, deck],
+      facade: [b0, deck],
+      facadeSize: [span, D],
       gapW: [gapW, 0],
       ...Object.fromEntries(runs.map((r, i) => [`run${i}`, r])),
       ...Object.fromEntries(deckStands.map((s, i) => [`stand${i}`, s])),
@@ -515,7 +536,10 @@ function* tidePieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
     archetype: 'flamer',
     role: 'hazard',
     style: OBSIDIAN(rng),
-    modules: mods,
+    modules: [
+      { type: 'deco', kind: 'facade', at: l.anchors.facade, w: l.anchors.facadeSize[0], h: l.anchors.facadeSize[1], seed: rng.int(0, 1 << 20) },
+      ...mods,
+    ],
   };
   // The arch's break, slabbed over with obsidian that gives under you.
   const [gx, deck] = l.anchors.gap;
@@ -541,8 +565,10 @@ function* tidePieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
   yield bombPiece(rng, bombs(rng, standsOf(l), rng.int(1, 3)));
 }
 
-export const MAGMA_TIDE: Concept = {
+export const MAGMA_TIDE = defineConcept({
   id: 'magma-tide',
+  scale: 'grand',
+  varies: ['basin length', 'refuge rocks', 'where the arch is broken', 'abutment steps', 'tide timing'],
   weight: 3,
   sizes: ['wide'],
   fits: (p) => roomFor(p, BANK + 2 * TIDE_ABUT + TIDE_BASIN + 6),
@@ -557,7 +583,7 @@ export const MAGMA_TIDE: Concept = {
   },
   build: buildTide,
   pieces: (rng, s, l) => tidePieces(rng, s, l),
-};
+});
 
 // ------------------------------------------------------------------------------------------------ lavafall organ
 
@@ -615,7 +641,7 @@ function buildOrgan(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const crack = face + 1;
   return {
     concept: 'lavafall-organ',
-    rect: { x: face - 2, y: G - hF - 3, w: x1 - face + 3, h: hF + 3 },
+    rect: { x: hole, y: G - hF - 3, w: x1 - hole + 1, h: hF + 3 },
     air: [{ x: face - 2, y: G - hF - 2, w: 2, h: hF + 2 }],
     anchors: {
       ...Object.fromEntries(falls.map((f, i) => [`fall${i}`, [f.x, f.y] as Vec])),
@@ -623,7 +649,7 @@ function buildOrgan(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
       crack: [crack, G],
       tubeOK: [tubeOK ? 1 : 0, 0],
       facade: [face, G - hF],
-      facadeSize: [x - face, hF],
+      facadeSize: [x - face, hF + (tubeOK ? TUBE : 0)],
       ...ways([
         { x: face - 2, y: 0, w: 2, h: G },
         { x: face, y: G, w: 1, h: TUBE },
@@ -677,12 +703,16 @@ function* organPieces(rng: Rng, l: Landmark): Generator<Piece> {
     archetype: 'flamer',
     role: 'hazard',
     style: OBSIDIAN(rng),
-    modules: [{ type: 'deco', kind: 'facade', at: l.anchors.facade, w: l.anchors.facadeSize[0], h: l.anchors.facadeSize[1], seed: rng.int(0, 1 << 20) }, ...mods],
+    modules: [
+      { type: 'deco', kind: 'facade', at: l.anchors.facade, w: l.anchors.facadeSize[0], h: l.anchors.facadeSize[1], seed: rng.int(0, 1 << 20) },
+      ...mods,
+    ],
   };
 }
 
-export const LAVAFALL_ORGAN: Concept = {
+export const LAVAFALL_ORGAN = defineConcept({
   id: 'lavafall-organ',
+  varies: ['face height', 'terraces (count, widths, drops)', 'which drops pour lava', 'where the shaft comes up', 'pipe heights'],
   weight: 2,
   sizes: ['classic', 'wide'],
   fits: (p) => roomFor(p, ORGAN_MIN + BANK),
@@ -696,7 +726,7 @@ export const LAVAFALL_ORGAN: Concept = {
   },
   build: buildOrgan,
   pieces: (rng, _s, l) => organPieces(rng, l),
-};
+});
 
 // ------------------------------------------------------------------------------------------------ dragon ribs
 
@@ -722,7 +752,7 @@ function buildRibs(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const spineA = skullFirst ? kx1 + 1 : s0 + tailW;
   const spineB = skullFirst ? s1 - tailW : kx0 - 1;
   const len = spineB - spineA + 1;
-  const sh = (c: number) => base + Math.round(bump * Math.sin((Math.PI * (c - spineA + 0.5)) / len));
+  const sh = (c: number) => base + Math.round(bump * dsin((Math.PI * (c - spineA + 0.5)) / len));
   // The skull: a cranium a little above the spine, its mouth a way through at the ground, ledges up its brow.
   const top = G - sh(skullFirst ? spineA : spineB) - 2;
   for (let c = kx0; c <= kx1; c++) {
@@ -760,11 +790,13 @@ function buildRibs(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   for (let c = spineA; c <= spineB; c++) if (g.empty(c, G - sh(c) - 1) && g.empty(c, G - sh(c) - 2)) stands.push([c, G - sh(c)]);
   return {
     concept: 'dragon-ribs',
-    rect: { x: s0, y: top - 2, w: s1 - s0 + 1, h: G - top + 2 },
+    rect: { x: s0, y: top - 3, w: s1 - s0 + 1, h: G - top + 3 },
     air: [{ x: spineA, y: G - base - bump + 1, w: len, h: base + bump - 1 }],
     anchors: {
       skull: [kx0, top],
       skullW: [skullW, dir],
+      facade: [s0, top],
+      facadeSize: [s1 - s0 + 1, G - top],
       ground: [G, end],
       ...Object.fromEntries(vents.map((c, i) => [`vent${i}`, [c, G - sh(c) + 1] as Vec])),
       ...Object.fromEntries(stands.map((s, i) => [`stand${i}`, s])),
@@ -818,14 +850,19 @@ function* ribsPieces(rng: Rng, l: Landmark): Generator<Piece> {
     archetype: 'flamer',
     role: 'hazard',
     style: makeStyle(rng, ['bone', 'obsidian'], [30, 18], { glowHue: rng.range(14, 30) }),
-    modules: [breath, ...vents],
+    modules: [
+      { type: 'deco', kind: 'facade', at: l.anchors.facade, w: l.anchors.facadeSize[0], h: l.anchors.facadeSize[1], seed: rng.int(0, 1 << 20) },
+      breath,
+      ...vents,
+    ],
   };
   const spots = standsOf(l);
   if (spots.length) yield bombPiece(rng, bombs(rng, spots, rng.int(1, 2)));
 }
 
-export const DRAGON_RIBS: Concept = {
+export const DRAGON_RIBS = defineConcept({
   id: 'dragon-ribs',
+  varies: ['head or tail first', 'skull width', 'spine height and hump', 'rib count and pitch', 'which vents'],
   weight: 2,
   sizes: ['classic', 'wide'],
   fits: (p) => roomFor(p, RIBS_MIN + BANK),
@@ -839,7 +876,7 @@ export const DRAGON_RIBS: Concept = {
   },
   build: buildRibs,
   pieces: (rng, _s, l) => ribsPieces(rng, l),
-};
+});
 
 // ------------------------------------------------------------------------------------------------ lava tube
 
@@ -906,7 +943,8 @@ function buildLavaTube(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark
       ...Object.fromEntries(pools.map((c, i) => [`pool${i}`, [c, G + 2] as Vec])),
       ...Object.fromEntries(stands.map((s, i) => [`stand${i}`, s])),
       facade: [a, ceil],
-      facadeSize: [b - a + 1, hi],
+      // Down into the lava pools in its floor, where there are any.
+      facadeSize: [b - a + 1, hi + (pools.length ? 2 : 0)],
       ...ways([
         { x: wc, y: 0, w: 1, h: G - hM },
         { x: wc, y: ceil, w: 1, h: hi },
@@ -920,37 +958,40 @@ function buildLavaTube(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark
 
 function* tubePieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
   const G = l.anchors.ceil[1];
-  const mods: Module[] = [
-    { type: 'deco', kind: 'facade', at: l.anchors.facade, w: l.anchors.facadeSize[0], h: l.anchors.facadeSize[1], seed: rng.int(0, 1 << 20) },
-  ];
+  // Lava standing in its floor's pools (it never moves: a still hazard), drips of cooling rock over the floor.
+  const mods: Module[] = [];
   for (let i = 0; l.anchors[`pool${i}`]; i++) {
     const [x, y] = l.anchors[`pool${i}`];
-    const m = capFlood(s.level, { type: 'flood', look: 'lava', at: [x, y], w: 2, low: 1, high: 1, off: 60, warn: 1, rise: 1, hold: 60, fall: 1 }, [], s.cache);
+    const m = capFlood(s.level, { type: 'flood', look: 'lava', at: [x, y], w: 2, low: 1, high: 1, off: 60, warn: 20, rise: 1, hold: 60, fall: 1 }, [], s.cache);
     if (m) mods.push(m);
   }
-  yield {
-    name: rng.pick(['The Lava Tube', 'Magma Pipeline', 'The Underpass']),
-    archetype: 'flamer',
-    role: 'hazard',
-    style: OBSIDIAN(rng),
-    modules: mods,
-  };
   const drips: Vec[] = [];
   for (let i = 0; l.anchors[`drip${i}`]; i++) drips.push(l.anchors[`drip${i}`]);
   for (const [x, y] of rng.shuffle(drips).slice(0, rng.int(1, 3)))
+    mods.push({ type: 'dropper', cells: [[x, y]], angle: Math.PI / 2, reach: G - 1 - y, warn: rng.int(24, 34), rest: rng.int(50, 80) });
+  if (mods.length)
     yield {
-      name: rng.pick(['Cooling Drip', 'Slag Drop', 'Ceiling Lump']),
+      name: rng.pick(['The Lava Tube', 'Magma Pipeline', 'The Underpass', 'Slag Drops']),
       archetype: 'dropper',
       role: 'hazard',
       style: OBSIDIAN(rng),
-      modules: [{ type: 'dropper', cells: [[x, y]], angle: Math.PI / 2, reach: G - 1 - y, warn: rng.int(24, 34), rest: rng.int(50, 80) }],
+      modules: mods,
     };
-  const spots = standsOf(l);
-  if (spots.length) yield bombPiece(rng, bombs(rng, spots, rng.int(1, 3)));
+  // Bombs on the mesa's top, and the tube's far wall behind them all (a backdrop shell takes no cells, so it rides with them).
+  const back: Module = {
+    type: 'deco',
+    kind: 'facade',
+    at: l.anchors.facade,
+    w: l.anchors.facadeSize[0],
+    h: l.anchors.facadeSize[1],
+    seed: rng.int(0, 1 << 20),
+  };
+  yield bombPiece(rng, [back, ...bombs(rng, standsOf(l), rng.int(1, 3))]);
 }
 
-export const LAVA_TUBE: Concept = {
+export const LAVA_TUBE = defineConcept({
   id: 'lava-tube',
+  varies: ['tube length', 'tube height', 'roof thickness', 'flank steps', 'drips, stalactites and lava pools'],
   weight: 2,
   sizes: ['classic', 'wide'],
   fits: (p) => roomFor(p, TUBE_MIN + BANK),
@@ -964,7 +1005,7 @@ export const LAVA_TUBE: Concept = {
   },
   build: buildLavaTube,
   pieces: (rng, s, l) => tubePieces(rng, s, l),
-};
+});
 
 // ------------------------------------------------------------------------------------------------ registry
 

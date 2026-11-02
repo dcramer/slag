@@ -68,6 +68,15 @@ const caldera: DecoSkin = (rc, m, d) => {
   const t = hz(d);
   const x = m.at[0] + d.off[0];
   const y = m.at[1] + d.off[1];
+  // The box runs down to the crater's floor; the ash leaves from the rim, the first ground in its edge column.
+  const lv = d.o.level;
+  const tx = Math.round(m.at[0] / TILE);
+  let rim = Math.round(m.h / TILE);
+  if (lv) for (let ty = Math.round(m.at[1] / TILE); ty < lv.h; ty++) if (lv.tiles[ty * lv.w + tx] === 1) {
+    rim = ty - Math.round(m.at[1] / TILE);
+    break;
+  }
+  m = { ...m, h: rim * TILE };
   stamp(rc.s, ashColumn(m, t), x, y);
   // The crater's glow on the ash's underside, breathing with the lava.
   const lava = lavaOf(d);
@@ -163,11 +172,90 @@ const tube: DecoSkin = (rc, m, d) => {
   glowDot(rc.g, x + m.w / 2, y + m.h, Math.min(120, m.w * 0.4), lava, 0.18 * pulse);
 };
 
+// ------------------------------------------------------------------------------------------- dragon ribs
+
+const BONE: HSL = { h: 40, s: 22, l: 70 };
+
+/**
+ * The far side of the ribcage and the dragon's horns, behind the bones you can touch: each rib you can
+ * stand on (the one-way bone under the spine) gets its twin curving down the other way, so the cage reads
+ * whole, and two horns sweep back off the skull. Read from the level's own tiles, so it fits any layout.
+ */
+function ribcage(m: Deco, d: DrawCtx, t: Hz) {
+  const lv = d.o.level!;
+  const x0 = Math.round(m.at[0] / TILE);
+  const y0 = Math.round(m.at[1] / TILE);
+  const w = Math.round(m.w / TILE);
+  const h = Math.round(m.h / TILE);
+  const key = `volcano|ribs|${x0},${y0},${w},${h}|${t.k}|${lv.version}`;
+  return sprite(key, -TILE * 2, -TILE * 4, m.w + TILE * 4, m.h + TILE * 4, (g) => {
+    const tile = (x: number, y: number) => lv.tiles[y * lv.w + x];
+    const bone = (pts: P[], wd: number, seed: number) => {
+      g.fillStyle = t.ink(BONE);
+      for (let i = 1; i < pts.length; i++) line(g, pts[i - 1].x, pts[i - 1].y, pts[i].x, pts[i].y, { w: wd + 1.4, seed: seed + i, taper: [0, 0], press: 0 });
+      g.fillStyle = t.c(BONE, -6);
+      for (let i = 1; i < pts.length; i++) line(g, pts[i - 1].x, pts[i - 1].y, pts[i].x, pts[i].y, { w: wd, seed: seed + i + 9, taper: [0, 0], press: 0 });
+    };
+    for (let x = x0; x < x0 + w; x++) {
+      // A rib starts where one-way bone hangs from the spine.
+      let top = -1;
+      for (let y = y0; y < y0 + h - 1; y++) if (tile(x, y) === 1 && tile(x, y + 1) === 2) top = y + 1;
+      if (top < 0) continue;
+      let dir = 0;
+      for (let y = top + 1; y < y0 + h && !dir; y++) dir = tile(x + 1, y) === 2 ? 1 : tile(x - 1, y) === 2 ? -1 : 0;
+      const px = (x - x0 + 0.5) * TILE;
+      const py = (top - y0) * TILE;
+      const bot = h * TILE;
+      const pts: P[] = [];
+      for (let i = 0; i <= 8; i++) {
+        const u = i / 8;
+        pts.push({ x: px - (dir || 1) * u * u * TILE * 1.8 + Math.sin(u * Math.PI) * -(dir || 1) * TILE * 0.9, y: py + u * (bot - py) });
+      }
+      bone(pts, 3.2, x);
+    }
+    // Horns off the skull: the widest solid block in the box, sweeping back.
+    let best = -1;
+    let run = 0;
+    let skullTop = h;
+    for (let x = x0; x < x0 + w; x++) {
+      let tall = 0;
+      for (let y = y0; y < y0 + h; y++) if (tile(x, y) === 1) tall++;
+      run = tall > 3 ? run + 1 : 0;
+      if (run >= 3) best = x;
+    }
+    if (best >= 0) {
+      for (let y = y0; y < y0 + h; y++)
+        if (tile(best, y) === 1) {
+          skullTop = y - y0;
+          break;
+        }
+      const hx = (best - x0 - 1) * TILE;
+      const hy = skullTop * TILE;
+      for (const k of [-1, 1]) {
+        const pts: P[] = [];
+        for (let i = 0; i <= 6; i++) {
+          const u = i / 6;
+          pts.push({ x: hx + k * 6 + k * u * 10 - u * u * 6 * k, y: hy + 2 - u * 24 + u * u * 8 });
+        }
+        bone(pts, 4.5 - pts.length * 0.3, 40 + k);
+      }
+    }
+  });
+}
+
+const ribs: DecoSkin = (rc, m, d) => {
+  if (!d.o.level) return;
+  stamp(rc.s, ribcage(m, d, hz(d)), m.at[0] + d.off[0], m.at[1] + d.off[1]);
+};
+
 // ------------------------------------------------------------------------------------------- registry
 
 const facade: DecoSkin = (rc, m, d) => {
   const concept = d.o.level?.landmark?.concept;
-  if (concept === 'caldera') return caldera(rc, m, d);
+  // The caldera's tubes and the magma tide's basin have the lava tube's far wall.
+  if (concept === 'caldera') return m.h > 4 * TILE ? caldera(rc, m, d) : tube(rc, m, d);
+  if (concept === 'magma-tide') return tube(rc, m, d);
+  if (concept === 'dragon-ribs') return ribs(rc, m, d);
   if (concept === 'lavafall-organ') return organ(rc, m, d);
   if (concept === 'lava-tube') return tube(rc, m, d);
   SHELLS.facade?.(rc, m, d);

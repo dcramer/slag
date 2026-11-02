@@ -39,9 +39,6 @@ function hotLine(g: CanvasRenderingContext2D, pts: readonly P[], col: HSL, a: nu
 
 export const VOLCANO_DECOR = {
   basaltcols: {
-    place: 'top',
-    weight: 1,
-    clear: 1,
     color: (th) => shift(th.terrain.dark, -2),
     bake(s, d) {
       // Hexagonal columns of cooled lava, each a different height, flat-topped.
@@ -60,9 +57,6 @@ export const VOLCANO_DECOR = {
     },
   },
   pillow: {
-    place: 'top',
-    weight: 1,
-    clear: 1,
     color: (th) => th.terrain.vein,
     bake(s, d) {
       // Lava pillows: round lobes of crust, piled where a flow cooled.
@@ -92,9 +86,6 @@ export const VOLCANO_DECOR = {
     },
   },
   sulphur: {
-    place: 'top',
-    weight: 0.9,
-    clear: 2,
     color: () => SULPHUR,
     bake(s, d) {
       const k = d.size;
@@ -123,9 +114,6 @@ export const VOLCANO_DECOR = {
     },
   },
   stump: {
-    place: 'top',
-    weight: 0.8,
-    clear: 2,
     color: (th) => th.terrain.vein,
     bake(s, d) {
       const k = d.size;
@@ -150,9 +138,6 @@ export const VOLCANO_DECOR = {
     },
   },
   bonepile: {
-    place: 'top',
-    weight: 0.8,
-    clear: 1,
     color: () => BONE,
     bake(s, d) {
       const k = d.size;
@@ -197,9 +182,6 @@ export const VOLCANO_DECOR = {
     },
   },
   emberrock: {
-    place: 'top',
-    weight: 0.9,
-    clear: 1,
     color: (th) => th.terrain.vein,
     bake(s, d) {
       const k = d.size;
@@ -216,9 +198,6 @@ export const VOLCANO_DECOR = {
     },
   },
   cauldron: {
-    place: 'top',
-    weight: 0.6,
-    clear: 2,
     color: (th) => shift(th.terrain.dark, -4),
     bake(s, d) {
       const k = d.size;
@@ -238,9 +217,6 @@ export const VOLCANO_DECOR = {
     },
   },
   skullrock: {
-    place: 'top',
-    weight: 0.6,
-    clear: 2,
     color: (th) => shift(th.terrain.base, 4),
     bake(s, d) {
       const k = d.size;
@@ -255,9 +231,6 @@ export const VOLCANO_DECOR = {
     },
   },
   ashdrift: {
-    place: 'top',
-    weight: 1,
-    clear: 1,
     color: () => ASH,
     bake(s, d) {
       const k = d.size;
@@ -270,9 +243,6 @@ export const VOLCANO_DECOR = {
     },
   },
   idol: {
-    place: 'top',
-    weight: 0.5,
-    clear: 1,
     color: (th) => shift(th.terrain.base, 8),
     bake(s, d) {
       const k = d.size;
@@ -286,9 +256,6 @@ export const VOLCANO_DECOR = {
     },
   },
   bridgepost: {
-    place: 'top',
-    weight: 0.5,
-    clear: 2,
     color: () => WOOD,
     bake(s, d) {
       const k = d.size;
@@ -304,9 +271,6 @@ export const VOLCANO_DECOR = {
     },
   },
   spattercone: {
-    place: 'top',
-    weight: 0.7,
-    clear: 2,
     color: (th) => th.terrain.vein,
     bake(s, d) {
       const k = d.size;
@@ -329,9 +293,6 @@ export const VOLCANO_DECOR = {
       light(rc, d.x, d.y - 9, 34, d.color, 0.4 * a);
     },
   },
-} satisfies Partial<Record<string, DecorDef>>;
+} satisfies Record<'basaltcols' | 'pillow' | 'sulphur' | 'stump' | 'bonepile' | 'emberrock' | 'cauldron' | 'skullrock' | 'ashdrift' | 'idol' | 'bridgepost' | 'spattercone', DecorDef>;
 
-/** The volcano's own decor kinds, for its look (gen/theme/presets.ts) and the decor count test. */
-export const VOLCANO_DECOR_KINDS = Object.keys(VOLCANO_DECOR) as (keyof typeof VOLCANO_DECOR)[];
 
-void ROPE;

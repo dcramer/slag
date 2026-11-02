@@ -2,6 +2,7 @@ import type { Vec } from '../../core/geom';
 import type { Rng } from '../../core/rng';
 import type { Module } from '../../sim/props';
 import { cannons, geysers, pendulums } from './builders';
+import { defineSetPiece } from './contract';
 import { best, makeStyle, type Piece, type Recipe, SAFE_TILES, type Site } from './place';
 
 /**
@@ -237,7 +238,7 @@ export const VOLCANO: Recipe[] = [
         material: 'stone',
       }),
   },
-  { name: 'bombs', weight: 2.5, role: 'hazard', repeat: true, candidates: bombs },
-  { name: 'serpent', weight: 2.5, role: 'hazard', candidates: serpents },
-  { name: 'obsidian bridge', weight: 1.5, role: 'build', candidates: obsidianBridges },
+  defineSetPiece({ name: 'bombs', unique: true, weight: 2.5, role: 'hazard', repeat: true, candidates: bombs }),
+  defineSetPiece({ name: 'serpent', unique: true, weight: 2.5, role: 'hazard', candidates: serpents }),
+  defineSetPiece({ name: 'obsidian bridge', weight: 1.5, role: 'build', candidates: obsidianBridges }),
 ];
