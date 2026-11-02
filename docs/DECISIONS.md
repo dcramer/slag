@@ -203,6 +203,10 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `in progress` · SETPIECES.md → 3, DESIGN.md → Stage concepts
 - **Every theme has at least 12 decor pieces and at least 3 hazards unique to it.** "similarly we probably want no less than a dozen 'decor' pieces that can exist in each theme? and maybe no less than 3 unique hazards per theme?"
   2026-11-02 · `in progress` · DESIGN.md → Stage concepts
+- **The cast is animals plus parody critters, not toys.** Toys (foundry wind-ups) are dropped: "idk how we ended up with toys. that wasnt the original goal, and its not on theme". Critters may parody famous characters with our own design and a sound-alike name: "critters could include other parody things... like a fake metroid, a fake mario, a robot, a goose, etc. a fake engineer from tf2 etc". Changed: replaces direction C (foundry toys).
+  2026-11-02 · `in progress` · CHARACTERS.md, DESIGN.md → Players
+- **Art everywhere is cleaner, lighter and more hand-drawn: thinner, varied lines, less loud colour.** "i want more cleanly designed art that isnt so loud/bold lines etc and more visually hand draw"; applies to characters, parts, terrain, landmarks and UI.
+  2026-11-02 · `in progress` · ART.md → World art
 - **Lobby browser: a list of lobbies, showing only ones that aren't full by default.** Lobbies are public by default with a Private option. "lets make lobbies public by default with a private option"
   2026-11-02 · `planned` · TODO.md → 26
 - **Conveyors rotate: the rotation picks the belt's face.** A side belt grips and carries a clinging runner (an escalator when it runs up), a bottom belt shoves a head that bonks it. "you cant rotate conveyors.. the conveyor always stays on the top"
