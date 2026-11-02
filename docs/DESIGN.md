@@ -40,7 +40,12 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - **Attachments** (spike strips, ice coats, slime coats) must mount flush on an exposed face of a solid block, and rotation picks the face.
   - Ice makes floors slippery and walls slick (no wall jump).
   - Slime makes floors slow and walls sticky (you cling).
-- Bombs clear terrain and props. Attachments fall off when their host block is destroyed.
+- Bombs clear terrain and/or props depending on their kind. Attachments fall off when their host block is destroyed.
+- **Movers and traps with a catch.** Warp pads (keep your velocity; misdirection), bumpers (aimable kick), gravity wells / repulsors (bend jumps), webs (catch falls, slow you), launch barrels (grab you, fire you on jump), blink blocks (solid on a timer, pairs alternate, never reappear inside you), cog wheels (ride platforms), dropstones (slam when you pass under, ride them back up) and snap traps (face-mounted spikes that pop when you linger). Every timed or triggered part shows a tell first.
+- **Status effects are plain, short and visible**: frozen (no control, ~0.8 s, ice block) and slowed (capped speed and jumps, ~2 s, goo drips).
+- **Launchers mostly hold their aim.** Aim rolls fixed 7 : sweep 2 : track 1.5. Trackers only watch ±60° of their mount, always carry a tracking word in their name, show a red sensor eye, and crate cards tag the aim (FIXED / SWEEPS / TRACKS).
+- **Projectiles vary**: true homing seekers (slow, red eye, rare), boomerangs, rubber balls (bounce; shove, don't kill), cluster shells (split at the top of the arc), goo and frost (non-lethal; slow or freeze you, coat terrain in slime or ice for a few seconds), ricochets (bank off walls) and **gliders** (a launcher fires rideable planks that fly level, then sink, faster under a rider).
+- **Demolition variants**: bomb (disk, everything), EMP (props only), drill (terrain-only bore in the rotation direction), cross and ring charges, and time bombs (go off as the race starts, so they catch whatever was placed that round; a charge caught in an earlier blast is defused). The placement ghost shows every affected cell and outlines the props that will go.
 - **Updrafts are steady**: inside a fan column you rise or are pushed at a constant speed, standing in a column never stops you from jumping, and the visuals match exactly when it pushes.
 
 ## Rules ("level settings", set by the host)

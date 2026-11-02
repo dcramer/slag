@@ -15,8 +15,37 @@ import type { Cell, Vec } from '../../core/geom';
 export type Material = 'stone' | 'metal' | 'wood' | 'ice' | 'conveyor' | 'goo' | 'jelly' | 'crumble';
 export type MetalStyle = 'steel' | 'brass' | 'copper' | 'rust' | 'obsidian' | 'bone' | 'jade' | 'gold';
 export type Trim = 'none' | 'stripes' | 'rivets' | 'runes' | 'gems';
-export type Ammo = 'bolt' | 'arrow' | 'cannonball' | 'fireball' | 'plasma' | 'shuriken';
-export type LauncherStyle = 'crossbow' | 'ballista' | 'cannon' | 'totem' | 'turret' | 'thrower';
+export type Ammo =
+  | 'bolt'
+  | 'arrow'
+  | 'cannonball'
+  | 'fireball'
+  | 'plasma'
+  | 'shuriken'
+  | 'seeker'
+  | 'boomerang'
+  | 'rubber'
+  | 'cluster'
+  | 'shrapnel'
+  | 'goo'
+  | 'frost'
+  | 'ricochet'
+  | 'glider';
+export type LauncherStyle =
+  | 'crossbow'
+  | 'ballista'
+  | 'cannon'
+  | 'totem'
+  | 'turret'
+  | 'thrower'
+  | 'rocket'
+  | 'glaive'
+  | 'gumball'
+  | 'mortar'
+  | 'gooper'
+  | 'cryo'
+  | 'prism'
+  | 'hangar';
 export type Head = 'saw' | 'mace' | 'axe';
 export type Aim = 'fixed' | 'sweep' | 'track';
 /** Set-piece looks (art only; the sim treats every look the same). */
@@ -26,6 +55,11 @@ export type VehicleLook = 'tractor' | 'forklift' | 'ram' | 'boulder' | 'minecart
 export type CannonLook = 'castle' | 'ship' | 'totem' | 'spitter';
 export type GeyserLook = 'lava' | 'steam';
 export type DecoKind = 'press' | 'ac' | 'antenna';
+/** Blast footprints: a filled disk, a line (bore) in the rotation direction, a plus, or a hollow ring. */
+export type BlastShape = 'disk' | 'line' | 'cross' | 'ring';
+/** What a blast removes: terrain and props, placed props only (EMP), or terrain only (drill). */
+export type BlastTarget = 'all' | 'props' | 'terrain';
+export type BombLook = 'bomb' | 'emp' | 'drill' | 'charge' | 'clock';
 
 export interface AmmoSpec {
   gravity: number;
@@ -33,6 +67,10 @@ export interface AmmoSpec {
   /** Lateral wobble amplitude in px/frame. */
   wobble: number;
   emissive: boolean;
+  /** What touching a runner does (default 'kill'). 'freeze' and 'slow' are non-lethal status hits. */
+  effect?: 'kill' | 'freeze' | 'slow' | 'knock' | 'none';
+  /** Max flight time in frames (default 8 s). */
+  life?: number;
 }
 
 export const AMMO: Record<Ammo, AmmoSpec> = {
@@ -42,6 +80,17 @@ export const AMMO: Record<Ammo, AmmoSpec> = {
   fireball: { gravity: 0, radius: 4, wobble: 0.9, emissive: true },
   plasma: { gravity: 0, radius: 3, wobble: 0, emissive: true },
   shuriken: { gravity: 40, radius: 3.5, wobble: 0, emissive: false },
+  // Behaviors for these live in ./ammo.ts (homing, returning, bouncing, splitting, sticking).
+  seeker: { gravity: 0, radius: 3.5, wobble: 0, emissive: true, life: 300 },
+  boomerang: { gravity: 0, radius: 4, wobble: 0, emissive: false, life: 240 },
+  rubber: { gravity: 480, radius: 4.5, wobble: 0, emissive: false, life: 420, effect: 'knock' },
+  cluster: { gravity: 380, radius: 4.5, wobble: 0, emissive: false },
+  shrapnel: { gravity: 420, radius: 2, wobble: 0, emissive: true, life: 75 },
+  goo: { gravity: 340, radius: 4, wobble: 0, emissive: false, effect: 'slow' },
+  frost: { gravity: 0, radius: 3, wobble: 0, emissive: true, effect: 'freeze' },
+  ricochet: { gravity: 0, radius: 2.5, wobble: 0, emissive: true, life: 300 },
+  // A rideable flying plank (ammo.ts: platform projectile). Radius is only its art/pop size.
+  glider: { gravity: 0, radius: 8, wobble: 0, emissive: false, life: 420, effect: 'none' },
 };
 
 export interface PropStyle {
@@ -91,7 +140,13 @@ export type Module =
   | { type: 'piston'; at: Vec; angle: number; reach: number; width: number; period: number }
   | { type: 'spring'; at: Vec; angle: number; power: number }
   | { type: 'fan'; at: Vec; angle: number; length: number; strength: number }
-  | { type: 'bomb'; radius: number }
+  /**
+   * Demolition charge. Not placed: Match detonates it at placement time (or,
+   * with `delay`, sits ticking and detonates when the race starts, catching
+   * whatever was placed this round). `shape`/`target` pick the blast; see
+   * blastCells/detonate in transform.ts. Defaults: a disk that hits terrain and props.
+   */
+  | { type: 'bomb'; radius: number; shape?: BlastShape; target?: BlastTarget; width?: number; look?: BombLook; delay?: boolean }
   /**
    * Attachment on the faces of existing solids: `cells` are the HOST cells
    * (terrain or a static placed block), `angle` is the outward face normal.
@@ -183,6 +238,35 @@ export type Module =
       /** Updraft acceleration (px/s²) for non-lethal geysers. */
       strength: number;
     }
+  /** Two linked pads: touching one moves you to the other with your velocity intact (both ways). */
+  | { type: 'portal'; a: Vec; b: Vec }
+  /** Pinball bumper: kicks runners straight away from its center at `power` px/s. */
+  | { type: 'bumper'; at: Vec; radius: number; power: number }
+  /**
+   * Radial force field: polarity 1 pulls toward the core, -1 pushes away.
+   * Force falls off linearly to 0 at `radius` (tiles). `off` 0 = always on,
+   * otherwise it cycles off → warn → on like a flame jet.
+   */
+  | { type: 'magnet'; at: Vec; radius: number; strength: number; polarity: 1 | -1; on: number; off: number; warn: number }
+  /** Sticky web over some cells: heavy drag while inside (it can catch a fall), weak jumps just after. */
+  | { type: 'web'; cells: Cell[]; drag: number }
+  /**
+   * Launch barrel: grabs a runner, ticks through compass directions `dirs`
+   * (0 right, 2 down, 4 left, 6 up; odd = diagonals), and fires them at
+   * `power` px/s when they press jump (or by itself after `auto` frames).
+   */
+  | { type: 'barrel'; at: Vec; dirs: number[]; step: number; power: number; auto: number }
+  /** Blink blocks: solid for `on` frames, gone for `off`, shifted by `offset` (pairs alternate). */
+  | { type: 'phase'; cells: Cell[]; on: number; off: number; offset: number }
+  /**
+   * Proximity crusher: a solid head (cells) that watches the lane in
+   * direction `angle`; when a runner enters it shakes for `warn` frames,
+   * slams until it hits terrain (≤ `reach` tiles), rests, then slowly
+   * returns (rideable on the way back).
+   */
+  | { type: 'dropper'; cells: Cell[]; angle: number; reach: number; warn: number; rest: number }
+  /** Face-mounted spike plate that pops when someone comes near: click (warn) → spikes (up) → cooldown. */
+  | { type: 'snapper'; cells: Cell[]; angle: number; warn: number; up: number; cool: number }
   | {
       /** Pure scenery dressing for a set piece (press gantry, AC housing, antenna masts). No sim behavior. */
       type: 'deco';
@@ -216,7 +300,21 @@ export type Archetype =
   | 'crusher'
   | 'spring'
   | 'fan'
-  | 'bomb';
+  | 'bomb'
+  | 'emp'
+  | 'drill'
+  | 'charge'
+  | 'timebomb'
+  | 'hangar'
+  | 'portal'
+  | 'bumper'
+  | 'magnet'
+  | 'web'
+  | 'barrel'
+  | 'blinker'
+  | 'dropper'
+  | 'snapper'
+  | 'wheel';
 export type Role = 'build' | 'hazard' | 'utility' | 'demolish';
 
 export interface PropDef {

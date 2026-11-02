@@ -1,4 +1,5 @@
 import { css, type HSL } from '../core/color';
+import { propTag } from '../codex/describe';
 import { seedToString } from '../core/rng';
 import type { Match } from '../game/match';
 import type { Role } from '../gen/props';
@@ -378,6 +379,8 @@ export class Hud {
       rrect(c, r.x + 6, y + 6, 40, 10, 5);
       c.fill();
       this.text(role.label, r.x + 26, y + 11.2, 6, '#fff', 'center', UI, 800);
+      const tag = propTag(item.def);
+      if (tag) this.text(tag, r.x + r.w - 7, y + 11.2, 5.5, '#ffd9a8', 'right', UI, 800);
       wrap(this, item.def.name, r.x + r.w / 2, y + r.h - 25, r.w - 10, 8.5);
       this.text(item.def.maker, r.x + r.w / 2, y + r.h - 9, 6, '#8a8796', 'center', UI, 500);
       if (owner) {

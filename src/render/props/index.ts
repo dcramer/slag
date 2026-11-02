@@ -7,6 +7,8 @@ import './modules';
 
 export type { Emit, PropDrawOpts } from './common';
 export { drawProjectile } from './projectiles';
+export { drawBlastPreview } from './modules/bomb';
+export { drawRunnerStatus, propEventFx } from './status';
 
 type M<T extends Module['type']> = Extract<Module, { type: T }>;
 

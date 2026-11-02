@@ -2,7 +2,7 @@ import 'client-only';
 import type { RC } from '../render/kit';
 import { drawHostCells, drawProjectile, drawResolved } from '../render/props';
 import { TILE } from '../sim/constants';
-import { AMMO, type Ammo, footprint, type PropDef, resolveProp } from '../sim/props';
+import { AMMO, type Ammo, footprint, makeProjectile, type PropDef, resolveProp } from '../sim/props';
 import { PART_INFO, summarize } from './describe';
 import { PROJECTILE_NOTES, partGroups } from './parts';
 
@@ -98,6 +98,9 @@ function drawProp(rc: RC, def: PropDef, rot: number, w: number, h: number) {
     if (m.type === 'flame') reach = Math.max(reach, m.length * 0.45);
     if (m.type === 'fan') reach = Math.max(reach, Math.min(m.length, 3) * 0.5);
     if (m.type === 'laser') reach = Math.max(reach, 1);
+    if (m.type === 'magnet') reach = Math.max(reach, m.radius - 0.5);
+    if (m.type === 'dropper') reach = Math.max(reach, m.reach * 0.5);
+    if (m.type === 'barrel') reach = Math.max(reach, 1.5);
   }
   const mo = def.motion;
   const travel = mo.type === 'rail' ? mo.range : mo.type === 'loop' ? mo.radius * 2 : 0;
@@ -222,7 +225,7 @@ function render() {
           ctx.save();
           ctx.scale(k, k);
         }
-        drawProjectile(rc, { x, y, vx, vy, owner: 0, born: 0, ammo });
+        drawProjectile(rc, { ...makeProjectile({ x, y, vx, vy, owner: 0, ammo }, rc.frame - Math.floor(u * 60), 0), n: 3 });
         rc.s.restore();
         rc.g.restore();
       }),

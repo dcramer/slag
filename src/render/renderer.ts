@@ -11,7 +11,7 @@ import { Fx } from './fx';
 import { Hud } from './hud';
 import { circle, glowDot, type Light, light, type RC } from './kit';
 import { type Compositor, createCompositor } from './post';
-import { drawProjectile, drawResolved, type Emit } from './props';
+import { drawBlastPreview, drawProjectile, drawResolved, drawRunnerStatus, type Emit, propEventFx } from './props';
 import { TerrainPainter } from './terrain';
 
 const MAX_W = 1920;
@@ -169,6 +169,7 @@ export class Renderer {
           r.finished,
           dt,
         );
+        drawRunnerStatus(rc, r.body, r.status);
       }
     }
     this.fx.draw(rc);
@@ -315,15 +316,7 @@ export class Renderer {
       s.globalAlpha = 1;
       rc.g.globalAlpha = 1;
       const bomb = gh.def.modules.find((x) => x.type === 'bomb');
-      if (bomb && bomb.type === 'bomb') {
-        rc.g.strokeStyle = css({ h: 25, s: 100, l: 60 }, 0, 0.6 + Math.sin(rc.t * 10) * 0.2);
-        rc.g.setLineDash([4, 3]);
-        rc.g.lineWidth = 1.5;
-        rc.g.beginPath();
-        rc.g.arc((gh.tx + 0.5) * TILE, (gh.ty + 0.5) * TILE, bomb.radius * TILE, 0, Math.PI * 2);
-        rc.g.stroke();
-        rc.g.setLineDash([]);
-      }
+      if (bomb && bomb.type === 'bomb') drawBlastPreview(rc, m.level, m.placed, bomb, gh.tx, gh.ty, p.rot);
       rc.g.strokeStyle = css(col, 10, 0.75);
       rc.g.lineWidth = 1;
       for (const [x, y] of footprint(gh.def, p.rot)) rc.g.strokeRect((gh.tx + x) * TILE + 0.5, (gh.ty + y) * TILE + 0.5, TILE - 1, TILE - 1);
@@ -515,6 +508,9 @@ export class Renderer {
           this.cam.shake = Math.max(this.cam.shake, 2);
           break;
         }
+        case 'prop':
+          propEventFx(this.fx, e, (k) => (this.cam.shake = Math.max(this.cam.shake, k)));
+          break;
         default:
           break;
       }

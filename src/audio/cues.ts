@@ -79,6 +79,11 @@ export function cuesForEvent(e: GameEvent, env: CueEnv): Cue[] {
       return [{ name: fireName(e.style), x: e.x, y: e.y }];
     case 'explosion':
       return [{ name: 'explosion', x: e.x, y: e.y, amount: Math.min(1, e.r / 64) }];
+    case 'prop': {
+      const name = PROP_CUE[e.kind];
+      if (!name) return [];
+      return [{ name, x: e.x, y: e.y, ...(e.kind === 'drill' ? { amount: 0.5 } : {}) }];
+    }
     case 'crumble-start':
     case 'crumble-break':
       return [{ name: e.type, ...env.propPos(e.uid) }];
@@ -100,6 +105,28 @@ const POP: Record<string, SfxName> = {
   fireball: 'pop-fireball',
   plasma: 'pop-plasma',
   shuriken: 'pop-shuriken',
+  seeker: 'pop-cannonball',
+  boomerang: 'pop-shuriken',
+  rubber: 'pop-arrow',
+  cluster: 'pop-cannonball',
+  shrapnel: 'pop-bolt',
+  goo: 'pop-arrow',
+  frost: 'pop-plasma',
+  ricochet: 'pop-plasma',
+};
+/** Sounds for generic prop moments (teleports, bumps, thuds...). Unlisted kinds are silent. */
+const PROP_CUE: Record<string, SfxName> = {
+  teleport: 'whoosh',
+  bump: 'spring',
+  thud: 'piston-slam',
+  'dropper-warn': 'piston-hiss',
+  'snap-arm': 'ui-tick',
+  'barrel-in': 'ui-click',
+  bounce: 'pop-bolt',
+  'splat-goo': 'pop-arrow',
+  'splat-frost': 'pop-plasma',
+  emp: 'tesla-arc',
+  drill: 'explosion',
 };
 const FIRE: Record<string, SfxName> = {
   crossbow: 'fire-crossbow',
@@ -108,6 +135,14 @@ const FIRE: Record<string, SfxName> = {
   totem: 'fire-totem',
   turret: 'fire-turret',
   thrower: 'fire-thrower',
+  rocket: 'fire-cannon',
+  glaive: 'fire-thrower',
+  gumball: 'fire-totem',
+  mortar: 'fire-cannon',
+  gooper: 'fire-totem',
+  cryo: 'fire-turret',
+  prism: 'fire-turret',
+  barrel: 'fire-cannon',
 };
 export const popName = (ammo: string): SfxName => POP[ammo] ?? 'pop-bolt';
 export const fireName = (style: string): SfxName => FIRE[style] ?? 'fire-crossbow';
