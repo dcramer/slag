@@ -59,7 +59,7 @@ function fakeGL(failComic = false) {
     createFramebuffer: () => ({}),
   };
   const proxy = new Proxy(gl, { get: (t, k) => (k in t ? t[k as string] : () => undefined) });
-  const canvas = { getContext: () => proxy };
+  const canvas = { getContext: () => proxy, addEventListener: () => {} };
   return { comp: createCompositor(canvas as unknown as HTMLCanvasElement), log };
 }
 
