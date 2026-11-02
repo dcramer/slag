@@ -31,6 +31,14 @@ export const MAILBOX_TTL_S = 30;
 
 export const BEAT_MS = 20_000;
 
+/**
+ * A room with nobody in it, players or watchers, for this long is over: its link then starts a fresh room under
+ * the same code (codes aren't retired: the code is only a name, and seeds the first level). This is what
+ * "active" means everywhere, the resume save and a room list alike. Liveness (PEER_TTL_S) is shorter, so by
+ * then the store has let go of everyone too.
+ */
+export const ROOM_EMPTY_MS = 60_000;
+
 export interface MemberInfo {
   id: string;
   /** Join order from an atomic per-room counter: lower joined earlier. */

@@ -58,6 +58,34 @@ export interface Player {
    * the start of a race so nobody waits on them; cleared when they reconnect.
    */
   away?: boolean;
+  /** The frame `away` was set: gone this long mid-match, the host drops the player (NetSession DROP_FRAMES). */
+  awayAt?: number;
+  /** Frame of this player's last input of any kind (a button down, the pointer moving). Idle rules count from it. */
+  lastInput: number;
+  /**
+   * Idle long enough that nobody waits on them (see IDLE_FRAMES): like `away`, they auto-pick, skip placing
+   * and give up a race. Any input clears it.
+   */
+  afk?: boolean;
+  /** Rounds in a row that ended with this player AFK. Online, two of them move the player to the watchers. */
+  afkRounds?: number;
+  /** Online: going to watch. Plays out the round, then leaves the match as the race is scored. */
+  leaving?: boolean;
+}
+
+/** No input for this long in pick, place or a race (counted from the phase's start): the phase stops waiting on you. */
+export const IDLE_FRAMES = 30 * 60;
+/** The lobby gives longer: people wait there for friends. */
+export const LOBBY_IDLE_FRAMES = 60 * 60;
+/** Rounds in a row ending with a player AFK before, online, their seat goes to whoever wants it. */
+export const IDLE_ROUNDS = 2;
+
+/** Any button down or a pointer that moved: the player is there. */
+function present(inp: InputFrame | undefined): boolean {
+  if (!inp) return false;
+  if (inp.pointer) return true;
+  for (const v of Object.values(inp)) if (v === true) return true;
+  return false;
 }
 
 /** Degrees of hue between any two players' characters. Eight players still fit, with room to roll. */
@@ -197,6 +225,12 @@ export class Match {
   }
 
   step(inputs: Readonly<Record<string, InputFrame>>): void {
+    for (const p of this.players) {
+      if (!present(inputs[p.device])) continue;
+      p.lastInput = this.frame;
+      delete p.afk; // keep snapshots canonical
+      delete p.afkRounds;
+    }
     switch (this.phase) {
       case 'lobby':
         this.stepLobby(inputs);
@@ -225,6 +259,16 @@ export class Match {
     this.phase = p;
     this.phaseFrame = 0;
     this.events.push({ type: 'phase', phase: p });
+  }
+
+  /** Frames without input in this phase: time before the phase began doesn't count against anyone. */
+  idleFrames(p: Player): number {
+    return Math.min(this.frame - p.lastInput, this.phaseFrame);
+  }
+
+  /** Nobody waits on this player: disconnected, or idle. */
+  private gone(p: Player): boolean {
+    return !!p.away || !!p.afk;
   }
 
   private input(p: Player, inputs: Readonly<Record<string, InputFrame>>): InputFrame {
@@ -315,7 +359,9 @@ export class Match {
         for (const q of this.players) q.ready = false;
       }
     }
-    if (this.players.length > 0 && this.players.every((p) => p.ready)) this.startMatch();
+    for (const p of this.players) if (!p.ready && this.idleFrames(p) >= LOBBY_IDLE_FRAMES) p.afk = true;
+    // Someone has to be here and ready; someone who isn't here doesn't hold the rest up.
+    if (this.players.some((p) => p.ready && !p.afk) && this.players.every((p) => p.ready || p.afk)) this.startMatch();
   }
 
   /**
@@ -325,8 +371,11 @@ export class Match {
   join(device: string, character?: CharacterDef): Player | undefined {
     if (this.players.length >= MAX_PLAYERS || this.players.some((p) => p.device === device)) return undefined;
     const used = new Set(this.players.map((p) => p.slot));
+    // Mid-match, a slot someone left still owns parts and blood: a newcomer takes another while there is one.
+    const owned = new Set([...this.placed.map((p) => p.owner), ...this.blood.map((c) => c.slot)]);
     let slot = 0;
-    while (used.has(slot)) slot++;
+    while (used.has(slot) || (owned.has(slot) && slot < MAX_PLAYERS)) slot++;
+    if (slot >= MAX_PLAYERS) for (slot = 0; used.has(slot);) slot++;
     const p: Player = {
       slot,
       device,
@@ -339,6 +388,7 @@ export class Match {
       claim: -1,
       rot: 0,
       placed: false,
+      lastInput: this.frame,
     };
     this.players.push(p);
     this.players.sort((a, b) => a.slot - b.slot);
@@ -381,6 +431,9 @@ export class Match {
   // ---------------------------------------------------------------- pick
 
   private startRound() {
+    // Chose to watch on the score screen: gone before the next crate, which is dealt for who's left.
+    this.players = this.players.filter((p) => !p.leaving);
+    if (!this.players.length) return this.toLobby();
     this.round++;
     this.run = null;
     const count = Math.max(3, this.players.length + 2);
@@ -460,7 +513,8 @@ export class Match {
     for (const p of this.players) {
       const inp = this.input(p, inputs);
       this.moveCursor(p, inp);
-      if (p.away && p.claim < 0 && this.phaseFrame > 10) {
+      if (p.claim < 0 && this.idleFrames(p) >= IDLE_FRAMES) p.afk = true;
+      if (this.gone(p) && p.claim < 0 && this.phaseFrame > 10) {
         const i = this.crate.findIndex((c) => c.claimedBy < 0);
         if (i >= 0) this.claim(p, i);
       }
@@ -559,7 +613,8 @@ export class Match {
 
   private stepPlace(inputs: Readonly<Record<string, InputFrame>>) {
     for (const p of this.players) {
-      if (p.placed || p.away) continue; // away isn't a forfeit: back in time, they can still place
+      if (!p.placed && this.idleFrames(p) >= IDLE_FRAMES) p.afk = true;
+      if (p.placed || this.gone(p)) continue; // not a forfeit: back in time, they can still place
       const inp = this.input(p, inputs);
       this.moveCursor(p, inp);
       if (inp.altPressed) p.rot = (p.rot + 1) % 4;
@@ -588,7 +643,7 @@ export class Match {
     if (this.rules.placeSeconds > 0 && this.phaseFrame >= this.rules.placeSeconds * 60) {
       for (const p of this.players) if (!p.placed) p.placed = true; // forfeited
     }
-    if (this.players.every((p) => p.placed || p.away)) {
+    if (this.players.every((p) => p.placed || this.gone(p))) {
       this.pendingAdvance ??= this.phaseFrame + 30;
       if (this.phaseFrame >= this.pendingAdvance) {
         this.pendingAdvance = undefined;
@@ -652,7 +707,12 @@ export class Match {
 
   private stepRun(inputs: Readonly<Record<string, InputFrame>>) {
     const run = this.run!;
-    run.step(this.players.map((p) => (p.away ? AWAY_RUN_INPUT : this.input(p, inputs))));
+    for (const r of run.runners) {
+      const p = this.player(r.slot);
+      // Only someone still racing holds the round open: a finished or dead runner may watch as long as they like.
+      if (p && r.alive && !r.finished && this.idleFrames(p) >= IDLE_FRAMES) p.afk = true;
+    }
+    run.step(this.players.map((p) => (this.gone(p) ? AWAY_RUN_INPUT : this.input(p, inputs))));
     if (run.endFrame >= 0 && run.frame - run.endFrame > 75) this.finishRound();
   }
 
@@ -673,7 +733,25 @@ export class Match {
     }
     for (const p of this.players) p.scoreless = result.awards.some((a) => a.slot === p.slot) ? 0 : p.scoreless + 1;
     this.result = result;
+    for (const p of this.players) if (p.afk) p.afkRounds = (p.afkRounds ?? 0) + 1;
+    // The round boundary: whoever chose to watch leaves now, having played the round out.
+    this.players = this.players.filter((p) => !p.leaving);
+    if (!this.players.length) return this.toLobby();
     this.setPhase('score');
+  }
+
+  /** Back to the lobby on a fresh level, scores cleared (after a victory, or when nobody is left playing). */
+  private toLobby() {
+    this.players = this.players.filter((p) => !p.leaving);
+    this.newLevel(deriveSeed(this.seed, 'next-match'));
+    this.run = null;
+    this.result = null;
+    for (const p of this.players) {
+      p.ready = false;
+      p.score = 0;
+      p.scoreless = 0;
+    }
+    this.setPhase('lobby');
   }
 
   // ---------------------------------------------------------------- score / victory
@@ -692,16 +770,6 @@ export class Match {
   }
 
   private stepVictory(inputs: Readonly<Record<string, InputFrame>>) {
-    if (this.phaseFrame > 120 && this.players.some((p) => this.input(p, inputs).confirmPressed)) {
-      this.newLevel(deriveSeed(this.seed, 'next-match'));
-      this.run = null;
-      this.result = null;
-      for (const p of this.players) {
-        p.ready = false;
-        p.score = 0;
-        p.scoreless = 0;
-      }
-      this.setPhase('lobby');
-    }
+    if (this.phaseFrame > 120 && this.players.some((p) => this.input(p, inputs).confirmPressed)) this.toLobby();
   }
 }

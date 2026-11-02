@@ -1,7 +1,7 @@
 import type { Match } from '../../game/match';
 import { type KeyProfile, keyboardDevices } from '../../input/bindings';
 import { RUN_COUNTDOWN } from '../../sim/constants';
-import { drawGlyph, glyphWidth } from '../../ui/glyphs';
+import { drawGlyph, type Glyph, glyphWidth } from '../../ui/glyphs';
 import { glyphsFor, type PromptAction, promptModes } from '../../ui/prompts';
 import { PAL, TYPE } from '../../ui/style';
 import { ITEMS } from '../../sim/items';
@@ -47,6 +47,9 @@ function usePrompt(hud: Hud, m: Match): FooterItem[] | null {
 /** Footer prompts and the left-hand context label for this phase. */
 function footerItems(hud: Hud, m: Match): { items: FooterItem[]; left: string; alpha: number; bar: boolean } {
   const touch = hud.mode === 'touch';
+  // Without a seat there's nothing to control mid-match: the way in is the Join button in the corner.
+  const seat = hud.net?.seat;
+  if (m.phase !== 'lobby' && (seat === 'watching' || seat === 'queued')) return { items: [], left: '', alpha: 1, bar: false };
   switch (m.phase) {
     case 'lobby': {
       const primary = hud.mode === 'gamepad' ? m.players.find((p) => /(^|:)pad/.test(p.device)) : m.players.find((p) => p.device === hud.mouseDevice);
@@ -124,6 +127,13 @@ function footerItems(hud: Hud, m: Match): { items: FooterItem[]; left: string; a
         bar: true,
       };
   }
+}
+
+/** The glyphs for one action, for the input in hand: what the footer would draw for it. */
+export function promptGlyphs(hud: Hud, m: Match, action: PromptAction): Glyph[] {
+  const present = { keyboard: true, gamepad: hud.padCount > 0 || m.players.some((p) => p.device.startsWith('pad')) };
+  const modes = promptModes(hud.mode, present);
+  return glyphsFor(action, { profile: profile(hud), modes, mouse: modes[0] === 'keyboard' && (action === 'confirm' || action === 'alt') });
 }
 
 export function footer(hud: Hud, m: Match) {

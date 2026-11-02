@@ -3,7 +3,7 @@ import type { Match } from '../../game/match';
 import { POP_HOLD, RUN_COUNTDOWN, VIEW_H, VIEW_W } from '../../sim/constants';
 import { PAL, TYPE } from '../../ui/style';
 import { drawInkRunner } from '../ink-character';
-import { plate, standings } from '../hud-kit';
+import { icon, plate, standings } from '../hud-kit';
 import { drawItemIcon } from '../items';
 import { glowDot } from '../kit';
 import type { Hud } from '../hud';
@@ -74,8 +74,12 @@ export function race(hud: Hud, m: Match, t: number) {
         ? r.killer >= 0 && r.killer !== p.slot
           ? `Got by ${m.player(r.killer)?.character.name ?? '?'}`
           : 'Splat'
-        : `${p.score} Pts`;
+        : p.afk
+          ? 'AFK'
+          : `${p.score} Pts`;
     hud.text(status, x + 26, y + 18, TYPE.caption, done ? PAL.toxic : dead ? '#ff8a7a' : PAL.ash, 'left', UI, 600);
+    // Gone (no link to its peer): the same on every screen, from the host's sequenced `away`.
+    if (p.away) icon(c, 'unplugged', x + 76, y + 8, 9, PAL.danger);
     const held = r?.items.held;
     if (held) {
       // On the status line: names fill the row above.
