@@ -192,6 +192,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 17:36Z · `done` · DESIGN.md → Props, "Parts ride what they're stuck to"; `src/sim/props/ride.ts`
 - **Arriving mid-match puts you in as an observer; choosing Join opens a small lobby-style card (your toy with the New Look dice, your name) and seats you next round.** "when you join a match you'll default to observer fwiw, and then you can somehow choose to join, and if you do you might get a little screen to select your character/name almost like the lobby does"
   2026-11-02 · `in progress` · observer mode
+- **Landmarks offer several ways through, so blocking one with a part forces rivals another way.** "the nice thing about level design like this: you could block off one exit and forces players to go a diff way (with a beam, as a player)"
+  2026-11-02 · `done` · DESIGN.md → Stage concepts
 - **Lobby browser: a list of lobbies, showing only ones that aren't full by default.** Lobbies are public by default with a Private option. "lets make lobbies public by default with a private option"
   2026-11-02 · `planned` · TODO.md → 26
 - **Conveyors rotate: the rotation picks the belt's face.** A side belt grips and carries a clinging runner (an escalator when it runs up), a bottom belt shoves a head that bonks it. "you cant rotate conveyors.. the conveyor always stays on the top"
