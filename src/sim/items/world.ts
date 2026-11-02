@@ -1,3 +1,4 @@
+import { gustAir } from '../weather';
 import { sq } from '../../core/dmath';
 import { overlaps, pointInRect, type Rect } from '../../core/geom';
 import { DT, TILE } from '../constants';
@@ -213,7 +214,7 @@ function stepDrops(w: RunWorld): void {
   const keep = [];
   for (const d of drops) {
     d.vy = Math.min(d.vy + DROP_GRAVITY * (w.level.gravity ?? 1) * DT, DROP_MAX_FALL);
-    const hit = moveBox(w, d, d.vx * DT, d.vy * DT, DROP_HALF);
+    const hit = moveBox(w, d, (d.vx + (d.onGround ? 0 : gustAir(w.level, w.frame))) * DT, d.vy * DT, DROP_HALF);
     if (hit.hitX) d.vx = -d.vx * 0.3;
     d.onGround = hit.hitY && d.vy > 0;
     if (hit.hitY) d.vy = 0;

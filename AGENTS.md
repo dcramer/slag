@@ -20,6 +20,7 @@ Package manager is **pnpm** (`packageManager` in package.json). Never use npm or
 | `pnpm build` | Production build into `.next/`, exactly what Vercel runs. |
 | `pnpm shot <scenario> [opts]` | Headless screenshots into `shots/` (gitignored). See "Verify visually". |
 | `pnpm perf [--only race8,gen,load]` | Benchmarks: frame-time, level-gen and page-load numbers into `shots/perf/`; `--compare <json>` flags regressions. Options are in `tools/perf.ts`. Run it on purpose, never as a routine step. |
+| `pnpm brand [icons\|og\|preview]` | Regenerate the favicon, app icons and link-preview cards (`tools/brand.ts`); `preview` → `shots/brand-icons.png`. |
 | `pnpm level <seed> [--theme farm]` | ASCII level dump: `#` solid, `=` one-way, `S`/`G` spawn/goal, `·` reachable stand cell, `P` set piece. |
 | `pnpm level --stats 50` | Per-theme stats over N seeds: ms/level, styles, `needBridges`, `fallbacks` (~2 min at 50). |
 | `pnpm dev` | Dev server at http://localhost:3000; `/` is the main menu (Play opens a fresh lobby `/r/<code>`, passing `?seed`/`?theme` through). |

@@ -1,6 +1,13 @@
+import type { Metadata } from 'next';
 import type { CSSProperties } from 'react';
 import HomeStage from './HomeStage';
 import MainMenu from './MainMenu';
+import { DESCRIPTION, NAME, oembedAlternate } from './site';
+
+export const metadata: Metadata = {
+  alternates: { canonical: '/', types: oembedAlternate('/') },
+  openGraph: { type: 'website', siteName: NAME, title: NAME, description: DESCRIPTION, url: '/' },
+};
 
 /**
  * The main menu. Server-rendered markup; the menu logic is a small client

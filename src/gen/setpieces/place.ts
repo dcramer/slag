@@ -26,7 +26,7 @@ import {
   type Xform,
 } from '../../sim/props';
 import '../../sim/props/modules';
-import { analyzeReach } from '../../sim/reach';
+import { ReachCache } from '../../sim/reach';
 
 /**
  * Shared machinery for set-piece placers: a terrain scan (`Site`) that
@@ -89,7 +89,10 @@ export class Site {
   readonly zones: Rect[];
   private reachCache: { reachable: Set<number>; goalReached: boolean } | null = null;
 
-  constructor(readonly level: Level) {
+  constructor(
+    readonly level: Level,
+    readonly cache = new ReachCache(level),
+  ) {
     this.w = level.w;
     this.h = level.h;
     this.zones = [level.spawn, level.goal].map((c) => ({
@@ -104,7 +107,10 @@ export class Site {
 
   /** Full reachability (real controller). Expensive: only computed when a static solid needs checking. */
   get reach(): { reachable: Set<number>; goalReached: boolean } {
-    this.reachCache ??= analyzeReach(this.level, false);
+    if (!this.reachCache) {
+      const { goalReached, cells } = this.cache.analyze(this.level, false);
+      this.reachCache = { goalReached, reachable: new Set(cells) };
+    }
     return this.reachCache;
   }
 
@@ -365,9 +371,12 @@ export function finalize(s: Site, piece: Piece, uid: number, key: string): Place
     const tiles = new Uint8Array(level.tiles);
     for (const rc of statics) for (const [x, y] of rectCells(rc)) tiles[y * s.w + x] = T_SOLID;
     const before = s.reach;
-    const after = analyzeReach({ ...level, tiles }, before.goalReached);
+    const after = s.cache.analyze({ ...level, tiles }, before.goalReached);
     if (before.goalReached && !after.goalReached) return null;
-    if (!before.goalReached) for (const k of before.reachable) if (!after.reachable.has(k) && tiles[k] !== T_SOLID) return null;
+    if (!before.goalReached) {
+      const still = new Set(after.cells);
+      for (const k of before.reachable) if (!still.has(k) && tiles[k] !== T_SOLID) return null;
+    }
   }
 
   // Normalize: origin at the footprint's top-left, modules shifted into prop-local tiles.
@@ -391,6 +400,10 @@ export interface PlacerOpts {
   count?: number;
   /** 0 = favour build/utility recipes (lifts, platforms) … 1 = favour hazard recipes. Default 0.5 (recipe weights as written). */
   danger?: number;
+  /** The level's reachability cache, if the caller has one. */
+  cache?: ReachCache;
+  /** Has the last say on each piece, given every piece so far with it last (worldgen: the solution still holds). */
+  keep?: (pieces: readonly PlacedProp[]) => boolean;
 }
 
 /** Recipe weight scaled by the level's danger: hazards up to ×2.4 on nasty levels, ×0.4 on tame ones (and the reverse for helpers). */
@@ -408,7 +421,7 @@ function dangerWeight(r: Recipe, danger: number): number {
  */
 export function makePlacer(themeKey: string, recipes: readonly Recipe[], uidBase: number) {
   return (rng: Rng, level: Level, opts: PlacerOpts = {}): PlacedProp[] => {
-    const s = new Site(level);
+    const s = new Site(level, opts.cache);
     const rolled = rng.weighted([
       [1, 2],
       [2, 4],
@@ -429,7 +442,7 @@ export function makePlacer(themeKey: string, recipes: readonly Recipe[], uidBase
       for (const cand of recipe.candidates(rng, s)) {
         if (++tries > tryCap) break;
         const pp = finalize(s, cand, uidBase + out.length, `setpiece:${themeKey}:${recipe.name}`);
-        if (pp) {
+        if (pp && (!opts.keep || opts.keep([...out, pp]))) {
           out.push(pp);
           commit(s, pp);
           break;

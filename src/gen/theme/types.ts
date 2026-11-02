@@ -6,7 +6,7 @@ import type { ThemeId } from '../../themes';
  * and consumed by src/render/{background,skylines,terrain,decor}.ts.
  */
 
-export type Mood = 'day' | 'golden' | 'dusk' | 'night' | 'overcast' | 'smog' | 'infernal' | 'underground' | 'rain' | 'mist';
+export type Mood = 'day' | 'golden' | 'dusk' | 'night' | 'overcast' | 'smog' | 'infernal' | 'underground';
 
 /** Parallax silhouette styles. Each has a baker in src/render/skylines.ts. */
 export type SkylineKind =
@@ -73,9 +73,9 @@ export type TerrainKind =
   | 'ice'
   | 'regolith'
   | 'hull';
-export type CapKind = 'grass' | 'moss' | 'snow' | 'rust' | 'crystal' | 'none' | 'ledge' | 'trim' | 'ash' | 'beam' | 'gravel';
+export type CapKind = 'grass' | 'moss' | 'rust' | 'crystal' | 'none' | 'ledge' | 'trim' | 'ash' | 'beam' | 'gravel';
 export type LiquidKind = 'slag' | 'acid' | 'void' | 'water' | 'tar' | 'sea' | 'swamp' | 'lava' | 'street';
-export type Ambient = 'embers' | 'fireflies' | 'snow' | 'spores' | 'dust' | 'bubbles' | 'rain' | 'ash' | 'leaves' | 'pollen';
+export type Ambient = 'embers' | 'fireflies' | 'spores' | 'dust' | 'bubbles' | 'pollen';
 export type DecorKind =
   | 'crystal'
   | 'mushroom'
@@ -131,7 +131,7 @@ export type DecorKind =
   // space
   | 'lander';
 export type Celestial = 'sun' | 'moon' | 'planet' | 'eclipse' | 'none';
-export type CloudStyle = 'puffy' | 'wispy' | 'smog' | 'ash' | 'storm';
+export type CloudStyle = 'puffy' | 'wispy' | 'ash';
 export type PlatformKind = 'wood' | 'grate' | 'bamboo' | 'stone';
 
 export interface SkyLayer {

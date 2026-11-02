@@ -70,6 +70,7 @@ if (args.includes('--stats')) {
   const rows: Record<string, unknown>[] = [];
   const total = { n: 0, ms: 0, bridged: 0, fallbacks: 0, attempts: 0, closed: 0, openAsSculpted: 0, parts: [0, 0, 0, 0] };
   const weather: Record<string, number> = {};
+  const times: number[] = [];
   // CPU time is steadier than wall time on a shared machine; both are reported.
   const cpu0 = process.cpuUsage();
   for (const th of themes) {
@@ -93,6 +94,7 @@ if (args.includes('--stats')) {
       for (const key of [`size:${p.size}`, `gravity:${gravityClass(p.gravity)}`, `route:${p.route}`, `hazards:${l.setPieces.length}`])
         addTo(key, dt, info.bridges.length > 0, info.fallback, info.attempts, l.setPieces.length, solid);
       ms += dt;
+      times.push(dt);
       maxMs = Math.max(maxMs, dt);
       const sub = l.style.split(':')[1] ?? l.style;
       styles[sub] = (styles[sub] ?? 0) + 1;
@@ -146,6 +148,7 @@ if (args.includes('--stats')) {
     levels: total.n,
     msPerLevel: +(total.ms / total.n).toFixed(1),
     cpuMsPerLevel: +((cpu.user + cpu.system) / 1000 / total.n).toFixed(1),
+    p95Ms: +times.sort((a, b) => a - b)[Math.floor(times.length * 0.95)].toFixed(0),
     needParts: `${((total.bridged / total.n) * 100).toFixed(1)}%`,
     ...partShares(total.parts, total.n),
     weather: Object.entries(weather)

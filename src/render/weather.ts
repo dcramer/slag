@@ -1,11 +1,13 @@
 import { css, type HSL, mixHsl, shift } from '../core/color';
+import type { Rect } from '../core/geom';
 import { hash2, Rng } from '../core/rng';
 import type { Match } from '../game/match';
-import type { Ambient, Theme } from '../gen/theme';
+import type { Theme } from '../gen/theme';
 import { RUN_COUNTDOWN, TILE } from '../sim/constants';
 import { GROUND_PLAIN, groundAt } from '../sim/ground';
-import { type Level, tileAt } from '../sim/level';
-import { gustPush, gustWarning, type WeatherKind } from '../sim/weather';
+import { type Level, levelKey, tileAt } from '../sim/level';
+import type { Solid } from '../sim/physics';
+import { footing, gustPush, gustShown, type WeatherKind } from '../sim/weather';
 import type { Camera } from './camera';
 import type { Fx } from './fx';
 import { blob, line, type P, sn, stroke } from './ink';
@@ -33,6 +35,8 @@ interface WeatherArt {
   draw?(a: Air): void;
   /** Bake what lies on one exposed top of terrain, `x`..`x + TILE` wide with its top at `y`. */
   coat?(g: CanvasRenderingContext2D, x: number, y: number, rng: Rng): void;
+  /** The same on a prop's solid this frame: it's as slick as the ground, so it has to look it. */
+  lay?(s: CanvasRenderingContext2D, r: Rect): void;
   /** Colors kicked up by feet running on this footing. */
   kick?: HSL;
   /** Exposure multiplier: the world under this sky. */
@@ -45,7 +49,7 @@ interface Air {
   rc: RC;
   view: { x: number; y: number; w: number; h: number };
   level: Level;
-  /** Race frame, or -1 outside a race. */
+  /** The sky's frame: see skyFrame. */
   frame: number;
   /** Exposed tops of terrain as x, y pairs (world px, tile centers). */
   tops: readonly number[];
@@ -71,15 +75,12 @@ const pt = { x: 0, y: 0 };
 /** Air moving past: dashes on the gust's own heading, more of them as it nears. Every sixth curls over, comic-book wind. */
 const WIND_DASHES = 760;
 const WIND_SPEED = 640;
-const WIND_RESTING = 0.05;
-/** Share of the dashes showing at the end of a warning: a gust that's coming already looks like one. */
-const WIND_WARNED = 0.62;
 
 function drawWind({ rc, view, level, frame }: Air) {
   const w = level.weather!;
+  const share = Math.abs(gustShown(w, frame));
+  if (share === 0) return; // Still air shows nothing: a dash on screen means a gust.
   const push = gustPush(w, frame);
-  const warn = gustWarning(w, frame);
-  const share = Math.max(WIND_RESTING, warn * WIND_WARNED, push);
   const n = Math.floor(WIND_DASHES * share);
   const c = rc.bg;
   c.strokeStyle = 'rgba(244,248,252,0.82)';
@@ -206,18 +207,31 @@ function coatRain(g: CanvasRenderingContext2D, x: number, y: number, rng: Rng) {
   }
 }
 
+function laySnow(s: CanvasRenderingContext2D, r: Rect) {
+  s.fillStyle = '#f2f6fb';
+  s.fillRect(r.x, r.y - 1, r.w, 3.2);
+}
+
+function layRain(s: CanvasRenderingContext2D, r: Rect) {
+  s.fillStyle = 'rgba(206,230,255,0.95)';
+  for (let px = r.x + 2; px < r.x + r.w - 3; px += 6) s.fillRect(px, r.y, 3, 1.4);
+}
+
 export const WEATHER_ART: Record<WeatherKind, WeatherArt> = {
   clear: {},
   wind: { draw: drawWind, exposure: 0.97 },
   mist: { exposure: 0.94 },
-  rain: { draw: drawRain, coat: coatRain, kick: { h: 208, s: 60, l: 84 }, exposure: 0.84, overcast: 'rgba(52,62,84,0.46)' },
-  snow: { draw: drawSnow, coat: coatSnow, kick: { h: 210, s: 30, l: 96 }, exposure: 0.92, overcast: 'rgba(196,206,222,0.34)' },
+  rain: { draw: drawRain, coat: coatRain, lay: layRain, kick: { h: 208, s: 60, l: 84 }, exposure: 0.84, overcast: 'rgba(52,62,84,0.46)' },
+  snow: { draw: drawSnow, coat: coatSnow, lay: laySnow, kick: { h: 210, s: 30, l: 96 }, exposure: 0.92, overcast: 'rgba(196,206,222,0.34)' },
 };
 
 const artOf = (level: Level): WeatherArt => WEATHER_ART[level.weather?.kind ?? 'clear'];
 
-/** A theme's own motes, except rain and snow: those fall only when the footing is real. */
-export const calmMotes = (th: Theme): Ambient => (th.ambient === 'rain' || th.ambient === 'snow' ? 'dust' : th.ambient);
+/** The frame the sky is on: a race's own, or the match's clock before one, so a windy level shows its gusts while you pick and place. */
+const skyFrame = (m: Match) => (m.phase === 'run' && m.run ? m.run.frame : m.frame);
+
+/** How hard the wind shows this frame (`RC.gust`). */
+export const skyGust = (m: Match): number => gustShown(m.level.weather, skyFrame(m));
 
 /**
  * Bake weather onto the terrain's exposed tops, or just those in `area` (world px). Each cell rolls from
@@ -279,8 +293,10 @@ export class WeatherLayer {
       rc.bg.fillStyle = art.overcast;
       rc.bg.fillRect(view.x - 40, view.y - 40, view.w + 80, view.h + 80);
     }
-    art.draw?.({ rc, view, level, frame: run ? run.frame : -1, tops: this.topsOf(level) });
-    if (!art.kick || !run) return;
+    art.draw?.({ rc, view, level, frame: skyFrame(m), tops: this.topsOf(level) });
+    if (!run) return;
+    if (art.lay) this.layOn(rc, level, run.solids, art.lay);
+    if (!art.kick) return;
     for (const r of run.runners) {
       const b = r.body;
       if (r.alive && b.onGround && Math.abs(b.vx) > 70 && Math.random() < 0.4) {
@@ -289,8 +305,27 @@ export class WeatherLayer {
     }
   }
 
+  /**
+   * Weather on the exposed tops of this frame's solids, as on the terrain's. Plain footing only: a
+   * coat, belt or jelly keeps its own look (it's slicker all the same), and blood lies on top. A top
+   * with a cell of the same part or terrain on it is inside a block, not on it.
+   */
+  private layOn(rc: RC, level: Level, solids: readonly Solid[], lay: NonNullable<WeatherArt['lay']>) {
+    const plain = footing(level);
+    const under = this.under;
+    under.clear();
+    for (const s of solids) if (!s.film) under.add(`${s.x}:${s.y + s.h}`);
+    for (const s of solids) {
+      if (s.surface !== plain || s.film || under.has(`${s.x}:${s.y}`)) continue;
+      if (tileAt(level, Math.floor((s.x + s.w / 2) / TILE), Math.floor((s.y - 1) / TILE))) continue;
+      lay(rc.s, s);
+    }
+  }
+
+  private under = new Set<string>();
+
   private topsOf(level: Level): number[] {
-    const key = `${level.seed}:${level.version}:${level.w}:${level.h}`;
+    const key = `${levelKey(level)}:${level.version}`;
     if (key !== this.topsKey) {
       this.topsKey = key;
       this.tops = topCells(level).flatMap(([x, y]) => [(x + 0.5) * TILE, y * TILE]);

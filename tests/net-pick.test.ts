@@ -1,3 +1,4 @@
+import { DEFAULT_RULES } from '../src/game/rules';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
@@ -49,7 +50,7 @@ function inPick() {
   r.run(5);
   const c = r.join('cccc');
   r.run(30);
-  a.act({ t: 'rules', rules: { targetScore: 80, maxRounds: 25, pickSeconds: 10, placeSeconds: 15, raceSeconds: 30, gravity: 'auto' } });
+  a.act({ t: 'rules', rules: { ...DEFAULT_RULES, targetScore: 80, maxRounds: 25, pickSeconds: 10, placeSeconds: 15, raceSeconds: 30 } });
   const ready = press({ confirmPressed: true });
   r.tick({ aaaa: { kb1: ready }, bbbb: { kb1: ready }, cccc: { kb1: ready } });
   r.run(30);

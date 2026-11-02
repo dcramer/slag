@@ -1,6 +1,6 @@
 import type { Level } from './level';
 import { DEFAULT_SURFACE, type Surface } from './physics';
-import { footing } from './weather';
+import { footing, underfoot } from './weather';
 
 /**
  * Ground a theme lays into its own terrain: a per-tile kind on
@@ -12,8 +12,9 @@ import { footing } from './weather';
  * Glacier ice is the only kind so far. It's the same surface an ice coat
  * gives (props/modules/coat.ts), floors and walls alike, so ice means one
  * thing wherever you meet it: long skids, a faster top speed, and a face you
- * can't wall-jump. Plain tiles keep the weather's footing; ice stays ice in
- * any weather.
+ * can't wall-jump. Weather lies on it like on everything else you stand on
+ * (sim/weather.ts `underfoot`): plain tiles take the weather's footing, and
+ * rain or snow makes ice slicker still.
  */
 export const GROUND_PLAIN = 0;
 export const GROUND_ICE = 1;
@@ -28,11 +29,14 @@ export const GROUND_SURFACES: readonly (Surface | undefined)[] = [undefined, ICE
  * level has no ground of its own, so every other level steps exactly as before.
  */
 export function groundSurfaceAt(level: Level): ((tx: number, ty: number) => Surface) | undefined {
-  const ground = level.ground;
-  if (!ground) return undefined;
-  const base = footing(level) ?? DEFAULT_SURFACE;
-  const { w, h } = level;
-  return (tx, ty) => (tx < 0 || ty < 0 || tx >= w || ty >= h ? base : (GROUND_SURFACES[ground[ty * w + tx]] ?? base));
+  return level.ground && surfaceGrid(level.ground, level.w, level.h, footing(level));
+}
+
+/** Footing per tile of a `ground` grid w×h, with weather footing `f` (if any) on every kind. */
+export function surfaceGrid(ground: Uint8Array, w: number, h: number, f: Surface | undefined): (tx: number, ty: number) => Surface {
+  const plain = f ?? DEFAULT_SURFACE;
+  const kinds = GROUND_SURFACES.map((s) => (s ? (f ? underfoot(s, f) : s) : plain));
+  return (tx, ty) => (tx < 0 || ty < 0 || tx >= w || ty >= h ? plain : (kinds[ground[ty * w + tx]] ?? plain));
 }
 
 /** Ground kind at a tile (plain off the map or on levels without any). */

@@ -2,7 +2,7 @@ import { css, type HSL, hsl3, shift } from '../core/color';
 import type { Rng } from '../core/rng';
 import type { DecorKind, Theme } from '../gen/theme';
 import { FRONTIER_DECOR } from './decor-frontier';
-import { circle, ellipse, flame, glowDot, light, type RC } from './kit';
+import { circle, ellipse, flame, flutter, glowDot, light, type RC } from './kit';
 
 /**
  * Terrain decor registry. Each kind says where it grows (on top of ground or
@@ -147,7 +147,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
       const s = rc.s;
       const k = d.size;
       const h = 6 * k;
-      const sw = Math.sin(rc.t * 2 + d.seed) * 1.2;
+      const sw = flutter(rc, 2, d.seed) * 1.5;
       s.strokeStyle = css(th.terrain.capColor, -12);
       s.lineWidth = 0.9;
       s.beginPath();
@@ -172,7 +172,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
       const s = rc.s;
       const k = d.size;
       const len = 5 * k + (d.seed % 6);
-      const sw = Math.sin(rc.t * 1.3 + d.seed) * 0.12;
+      const sw = flutter(rc, 1.3, d.seed) * 0.15;
       const lx = d.x + Math.sin(sw) * len;
       const ly = d.y + Math.cos(sw) * len;
       s.strokeStyle = 'rgba(25,22,20,0.95)';
@@ -204,7 +204,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
       const s = rc.s;
       const k = d.size;
       const segs = 4 + (d.seed % 7);
-      const sx = (i: number) => d.x + Math.sin(rc.t * 1.1 + i * 0.6 + d.seed) * i * 0.32;
+      const sx = (i: number) => d.x + flutter(rc, 1.1, i * 0.6 + d.seed) * i * 0.4;
       s.strokeStyle = css(d.color, -8);
       s.lineWidth = 1.1;
       s.beginPath();
@@ -357,7 +357,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
       for (let i = 0; i < 6; i++) {
         const bx = d.x - 5 + i * 2 + k01(d, i) * 1.2;
         const h = 7 + k01(d, i + 3) * 5;
-        const sw = Math.sin(rc.t * 1.8 + bx * 0.2) * 1.5;
+        const sw = flutter(rc, 1.8, bx * 0.2) * 1.8;
         s.strokeStyle = css(d.color, -15);
         s.beginPath();
         s.moveTo(bx, d.y);
@@ -400,7 +400,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
       const s = rc.s;
       const k = d.size;
       const h = 14 * k;
-      const sw = Math.sin(rc.t * 1.2 + d.seed) * 0.8;
+      const sw = flutter(rc, 1.2, d.seed);
       s.strokeStyle = css(th.terrain.capColor, -14);
       s.lineWidth = 1.2;
       s.beginPath();
@@ -533,7 +533,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     live(rc, d) {
       const s = rc.s;
       const n = 5 + (d.seed % 6);
-      const sw = Math.sin(rc.t * 0.9 + d.seed) * 0.08;
+      const sw = flutter(rc, 0.9, d.seed) * 0.1;
       s.lineWidth = 0.9;
       for (let i = 0; i < n; i++) {
         const x = d.x + Math.sin(sw) * i * 2.4;
@@ -563,7 +563,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     live(rc, d) {
       const s = rc.s;
       const sag = 8 + (d.seed % 8);
-      const sw = Math.sin(rc.t * 0.8 + d.seed) * 1.2;
+      const sw = flutter(rc, 0.8, d.seed) * 1.5;
       s.strokeStyle = css(d.color);
       s.lineWidth = 1.1;
       s.beginPath();
@@ -620,10 +620,9 @@ export const DECOR: Record<DecorKind, DecorDef> = {
       const s = rc.s;
       const w = 7 * d.size;
       const h = 14 * d.size;
-      const t = rc.t;
       s.fillStyle = css(WOOD, -6);
       s.fillRect(d.x - w / 2 - 1.5, d.y + 0.5, w + 3, 1.6);
-      const wave = (i: number) => Math.sin(t * 2 + d.seed + i * 0.7) * 0.8 * (i / 6);
+      const wave = (i: number) => flutter(rc, 2, d.seed + i * 0.7) * 2.4 * (i / 6);
       s.fillStyle = css(d.color);
       s.beginPath();
       s.moveTo(d.x - w / 2, d.y + 2);
@@ -676,7 +675,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
       const k = d.size;
       const n = 5;
       for (let i = 0; i < n; i++) {
-        const a = -Math.PI / 2 + (i - (n - 1) / 2) * 0.42 + Math.sin(rc.t * 1.4 + d.seed + i) * 0.06;
+        const a = -Math.PI / 2 + (i - (n - 1) / 2) * 0.42 + flutter(rc, 1.4, d.seed + i) * 0.08;
         const len = (8 + (i % 2) * 3) * k;
         const ex = d.x + Math.cos(a) * len;
         const ey = d.y + Math.sin(a) * len * 0.9;
@@ -708,7 +707,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
       const s = rc.s;
       const k = d.size;
       for (let i = 0; i < 3; i++) {
-        const a = -Math.PI / 2 + (i - 1) * 0.75 + Math.sin(rc.t * 1.1 + d.seed + i * 2) * 0.05;
+        const a = -Math.PI / 2 + (i - 1) * 0.75 + flutter(rc, 1.1, d.seed + i * 2) * 0.07;
         const len = (10 + i * 2) * k;
         const ex = d.x + Math.cos(a) * len;
         const ey = d.y + Math.sin(a) * len;

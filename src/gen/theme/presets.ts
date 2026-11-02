@@ -193,7 +193,7 @@ function farm(rng: Rng): Look {
       platform: { kind: 'wood', color: jit(rng, hsl3(32, 45, 42)) },
     },
     liquid: { kind: 'water', color: hsl3(196, 60, 36), glow: hsl3(185, 70, 78), emissive: false },
-    ambient: mood === 'dusk' ? 'fireflies' : rng.pick(['pollen', 'leaves'] as const),
+    ambient: mood === 'dusk' ? 'fireflies' : 'pollen',
     ambientLight: mood === 'day' ? rng.range(0.86, 0.94) : mood === 'golden' ? rng.range(0.74, 0.82) : rng.range(0.55, 0.65),
     ambientTint: mood === 'day' ? hsl3(50, 30, 92) : mood === 'golden' ? hsl3(35, 70, 80) : hsl3(320, 40, 70),
     decor: pickDecor(rng, ['fence', 'haybale'], ['wheat', 'flower', 'pumpkin', 'sunflower'], 5),
@@ -272,7 +272,7 @@ function factory(rng: Rng): Look {
       },
     ]),
     clouds: rng.int(4, 7),
-    cloudStyle: 'smog',
+    cloudStyle: 'wispy',
     cloudColor: smog ? hsl3(28, 25, 52) : hsl3(250, 15, 22),
     rays: smog && rng.chance(0.6),
     terrain: {
@@ -288,7 +288,7 @@ function factory(rng: Rng): Look {
       platform: { kind: 'grate', color: hsl3(210, 10, 50) },
     },
     liquid: { kind: 'slag', color: hsl3(18, 95, 45), glow: hsl3(32, 100, 60), emissive: true },
-    ambient: rng.pick(['ash', 'embers'] as const),
+    ambient: 'embers',
     ambientLight: smog ? rng.range(0.62, 0.72) : rng.range(0.4, 0.5),
     ambientTint: smog ? hsl3(32, 50, 72) : hsl3(230, 30, 60),
     decor: pickDecor(rng, ['pipe', 'barrel'], ['vent', 'crate', 'beacon', 'chain', 'cable', 'cagelamp'], 6),
@@ -308,7 +308,6 @@ function castle(rng: Rng): Look {
     ['overcast', 2.5],
   ]);
   const night = mood === 'night';
-  const snowy = mood !== 'dusk' && rng.chance(0.35);
   const stone = jit(rng, hsl3(rng.range(25, 45), 10, 44), 6, 4, 4);
   const fog = mood === 'dusk' ? hsl3(300, 25, 48) : night ? hsl3(225, 35, 22) : hsl3(210, 15, 62);
   return look(rng, {
@@ -369,14 +368,14 @@ function castle(rng: Rng): Look {
       },
     ]),
     clouds: mood === 'overcast' ? rng.int(8, 12) : rng.int(2, 6),
-    cloudStyle: mood === 'overcast' ? 'storm' : 'wispy',
+    cloudStyle: 'wispy',
     cloudColor: mood === 'dusk' ? hsl3(330, 40, 62) : night ? hsl3(225, 25, 26) : hsl3(210, 8, 80),
     rays: mood !== 'night' && rng.chance(0.6),
     terrain: {
       kind: 'stone',
       ...mat(stone, 0.5, 1.45),
-      cap: snowy ? 'snow' : 'moss',
-      capColor: snowy ? hsl3(210, 30, 92) : jit(rng, hsl3(88, 40, 36)),
+      cap: 'moss',
+      capColor: jit(rng, hsl3(88, 40, 36)),
       vein: hsl3(45, 80, 60),
       veins: false,
       outline: hsl3(230, 25, 7),
@@ -387,7 +386,7 @@ function castle(rng: Rng): Look {
     liquid: rng.chance(0.65)
       ? { kind: 'water', color: hsl3(178, 35, 24), glow: hsl3(170, 40, 60), emissive: false }
       : { kind: 'tar', color: hsl3(250, 15, 10), glow: hsl3(30, 70, 50), emissive: false },
-    ambient: snowy ? 'snow' : night ? 'fireflies' : rng.pick(['dust', 'leaves'] as const),
+    ambient: night ? 'fireflies' : 'dust',
     ambientLight: mood === 'overcast' ? rng.range(0.72, 0.82) : mood === 'dusk' ? rng.range(0.58, 0.66) : rng.range(0.38, 0.46),
     ambientTint: mood === 'dusk' ? hsl3(310, 40, 70) : night ? hsl3(220, 45, 62) : hsl3(210, 15, 85),
     decor: pickDecor(rng, ['torch', 'banner'], ['chain', 'skull', 'vine', 'bones'], 5),
@@ -406,7 +405,7 @@ function castle(rng: Rng): Look {
 function jungle(rng: Rng): Look {
   const mood = rng.weighted<Mood>([
     ['day', 4],
-    ['mist', 3],
+    ['golden', 3],
     ['night', 2.5],
   ]);
   const night = mood === 'night';
@@ -424,14 +423,14 @@ function jungle(rng: Rng): Look {
     sky:
       mood === 'day'
         ? [hsl3(192, 55, 48), hsl3(170, 40, 64), hsl3(95, 40, 76)]
-        : mood === 'mist'
-          ? [hsl3(200, 25, 56), hsl3(60, 35, 74), hsl3(80, 35, 84)]
+        : mood === 'golden'
+          ? [hsl3(205, 50, 46), hsl3(50, 60, 66), hsl3(32, 80, 70)]
           : [hsl3(220, 50, 8), hsl3(190, 40, 14), hsl3(160, 40, 22)],
-    fog: mood === 'day' ? hsl3(140, 30, 70) : mood === 'mist' ? hsl3(80, 25, 80) : hsl3(170, 35, 18),
-    horizon: { color: mood === 'mist' ? hsl3(55, 70, 85) : night ? hsl3(160, 50, 30) : hsl3(80, 50, 80), strength: 0.3, y: 0.6 },
+    fog: mood === 'day' ? hsl3(140, 30, 70) : mood === 'golden' ? hsl3(48, 45, 62) : hsl3(170, 35, 18),
+    horizon: { color: mood === 'golden' ? hsl3(40, 90, 70) : night ? hsl3(160, 50, 30) : hsl3(80, 50, 80), strength: 0.3, y: 0.6 },
     celestial: night
       ? celestial(rng, 'moon', hsl3(150, 25, 86), [0.2, 0.8], [0.12, 0.24], [14, 20])
-      : celestial(rng, 'sun', mood === 'mist' ? hsl3(50, 90, 88) : hsl3(55, 100, 92), [0.2, 0.8], [0.12, 0.3], [18, 24]),
+      : celestial(rng, 'sun', mood === 'golden' ? hsl3(40, 100, 80) : hsl3(55, 100, 92), [0.2, 0.8], [0.12, 0.3], [18, 24]),
     stars: night ? 90 : 0,
     layers: layers(rng, [
       { kind: 'karst', base: 0.46, amp: 0.1, color: night ? hsl3(175, 30, 16) : hsl3(150, 22, 52), haze: 0.55, depth: 0.07 },
@@ -473,9 +472,9 @@ function jungle(rng: Rng): Look {
       platform: { kind: 'bamboo', color: hsl3(55, 45, 50) },
     },
     liquid: { kind: 'swamp', color: hsl3(85, 38, 22), glow: hsl3(80, 60, 55), emissive: false },
-    ambient: night ? 'fireflies' : rng.pick(['leaves', 'pollen', 'spores'] as const),
-    ambientLight: mood === 'day' ? rng.range(0.82, 0.92) : mood === 'mist' ? rng.range(0.75, 0.85) : rng.range(0.4, 0.48),
-    ambientTint: mood === 'day' ? hsl3(90, 40, 85) : mood === 'mist' ? hsl3(60, 40, 88) : hsl3(170, 45, 60),
+    ambient: night ? 'fireflies' : rng.pick(['pollen', 'spores'] as const),
+    ambientLight: mood === 'day' ? rng.range(0.82, 0.92) : mood === 'golden' ? rng.range(0.75, 0.85) : rng.range(0.4, 0.48),
+    ambientTint: mood === 'day' ? hsl3(90, 40, 85) : mood === 'golden' ? hsl3(45, 55, 84) : hsl3(170, 45, 60),
     decor: pickDecor(rng, ['fern', 'vine'], ['bigleaf', 'flower', 'mushroom', 'roots'], 5),
     decorDensity: 0.26,
     lamp: hsl3(60, 100, 65),
@@ -483,8 +482,8 @@ function jungle(rng: Rng): Look {
     grade:
       mood === 'day'
         ? { tint: [0.98, 1.04, 0.95], lift: [0.0, 0.012, 0.008], exposure: 1.0 }
-        : mood === 'mist'
-          ? { tint: [1.02, 1.03, 0.94], lift: [0.03, 0.03, 0.02], exposure: 1.02 }
+        : mood === 'golden'
+          ? { tint: [1.03, 1.02, 0.94], lift: [0.03, 0.03, 0.02], exposure: 1.02 }
           : { tint: [0.92, 1.04, 1.04], lift: [0.0, 0.015, 0.025], exposure: 1.15 },
   });
 }
@@ -544,7 +543,7 @@ function volcano(rng: Rng): Look {
       platform: { kind: 'stone', color: hsl3(15, 12, 26) },
     },
     liquid: { kind: 'lava', color: hsl3(lavaHue, 100, 48), glow: hsl3(lavaHue + 14, 100, 60), emissive: true },
-    ambient: rng.pick(['embers', 'ash'] as const),
+    ambient: 'embers',
     ambientLight: inf ? rng.range(0.5, 0.58) : rng.range(0.4, 0.48),
     ambientTint: hsl3(lavaHue, 80, 62),
     decor: pickDecor(rng, ['fumarole', 'obsidian'], ['bones', 'skull', 'crystal'], 4),
@@ -637,7 +636,7 @@ function harbor(rng: Rng): Look {
       platform: { kind: 'wood', color: hsl3(30, 35, 40) },
     },
     liquid: { kind: 'sea', color: sea, glow: golden ? hsl3(40, 90, 80) : hsl3(190, 60, 85), emissive: false },
-    ambient: night ? rng.pick(['rain', 'dust'] as const) : 'dust',
+    ambient: 'dust',
     ambientLight: golden ? rng.range(0.74, 0.82) : night ? rng.range(0.42, 0.5) : rng.range(0.86, 0.94),
     ambientTint: golden ? hsl3(32, 75, 78) : night ? hsl3(220, 45, 62) : hsl3(200, 25, 92),
     decor: pickDecor(rng, ['barrel', 'rope', 'lamppost'], ['crate', 'bollard', 'gull', 'net', 'lantern'], 7),
@@ -719,10 +718,8 @@ function rooftops(rng: Rng): Look {
   const mood = rng.weighted<Mood>([
     ['night', 5],
     ['dusk', 3],
-    ['rain', 2.5],
   ]);
   const dusk = mood === 'dusk';
-  const rain = mood === 'rain';
   const neonA = hsl3(rng.pick([320, 190, 280]), 100, 62);
   const brickish = rng.chance(0.55);
   return look(rng, {
@@ -735,18 +732,12 @@ function rooftops(rng: Rng): Look {
     ]),
     mood,
     night: !dusk,
-    sky: dusk
-      ? [hsl3(250, 40, 22), hsl3(320, 42, 44), hsl3(28, 85, 62)]
-      : rain
-        ? [hsl3(215, 22, 10), hsl3(210, 18, 20), hsl3(200, 22, 32)]
-        : [hsl3(245, 45, 7), hsl3(265, 35, 15), hsl3(295, 38, 27)],
-    fog: dusk ? hsl3(310, 24, 40) : rain ? hsl3(205, 20, 28) : hsl3(280, 30, 22),
+    sky: dusk ? [hsl3(250, 40, 22), hsl3(320, 42, 44), hsl3(28, 85, 62)] : [hsl3(245, 45, 7), hsl3(265, 35, 15), hsl3(295, 38, 27)],
+    fog: dusk ? hsl3(310, 24, 40) : hsl3(280, 30, 22),
     horizon: { color: dusk ? hsl3(28, 100, 62) : neonA, strength: dusk ? 0.5 : 0.35, y: 0.75 },
     celestial: dusk
       ? celestial(rng, 'sun', hsl3(18, 100, 64), [0.25, 0.75], [0.44, 0.52], [24, 30])
-      : rain
-        ? NONE
-        : celestial(rng, 'moon', hsl3(260, 30, 88), [0.15, 0.85], [0.1, 0.2], [14, 20]),
+      : celestial(rng, 'moon', hsl3(260, 30, 88), [0.15, 0.85], [0.1, 0.2], [14, 20]),
     stars: mood === 'night' ? 70 : 0,
     layers: layers(rng, [
       {
@@ -782,9 +773,9 @@ function rooftops(rng: Rng): Look {
         depth: 0.32,
       },
     ]),
-    clouds: rain ? rng.int(6, 10) : rng.int(1, 4),
-    cloudStyle: rain ? 'storm' : 'wispy',
-    cloudColor: dusk ? hsl3(330, 45, 62) : rain ? hsl3(210, 15, 24) : hsl3(270, 25, 24),
+    clouds: rng.int(1, 4),
+    cloudStyle: 'wispy',
+    cloudColor: dusk ? hsl3(330, 45, 62) : hsl3(270, 25, 24),
     rays: false,
     terrain: {
       kind: brickish ? 'brick' : 'concrete',
@@ -799,18 +790,16 @@ function rooftops(rng: Rng): Look {
       platform: { kind: 'grate', color: hsl3(220, 10, 46) },
     },
     liquid: { kind: 'street', color: hsl3(250, 25, 8), glow: neonA, emissive: true },
-    ambient: rain ? 'rain' : mood === 'night' ? rng.pick(['rain', 'dust'] as const) : 'dust',
+    ambient: 'dust',
     ambientLight: dusk ? rng.range(0.6, 0.68) : rng.range(0.42, 0.5),
-    ambientTint: dusk ? hsl3(320, 45, 72) : rain ? hsl3(205, 30, 62) : hsl3(265, 45, 64),
+    ambientTint: dusk ? hsl3(320, 45, 72) : hsl3(265, 45, 64),
     decor: pickDecor(rng, ['antenna', 'acunit', 'neon'], ['vent', 'dish', 'cable', 'pipe'], 6),
     decorDensity: 0.15,
     lamp: hsl3(45, 95, 65),
     accent: hsl3(rng.pick([50, 160, 20]), 95, 58),
     grade: dusk
       ? { tint: [1.04, 0.97, 1.0], lift: [0.015, 0.008, 0.025], exposure: 1.0 }
-      : rain
-        ? { tint: [0.95, 1.0, 1.08], lift: [0.008, 0.014, 0.03], exposure: 1.16 }
-        : { tint: [1.0, 0.95, 1.08], lift: [0.015, 0.006, 0.035], exposure: 1.16 },
+      : { tint: [1.0, 0.95, 1.08], lift: [0.015, 0.006, 0.035], exposure: 1.16 },
   });
 }
 
@@ -900,14 +889,14 @@ function glacier(rng: Rng): Look {
       },
     ]),
     clouds: overcast ? rng.int(7, 11) : night ? rng.int(0, 2) : rng.int(2, 5),
-    cloudStyle: overcast ? 'storm' : 'wispy',
+    cloudStyle: overcast ? 'puffy' : 'wispy',
     cloudColor: night ? hsl3(220, 25, 24) : overcast ? hsl3(208, 10, 86) : hsl3(205, 30, 97),
     rays: mood === 'day' && rng.chance(0.6),
     terrain: {
       kind: 'rock',
       ...mat(rock, 0.5, 1.6),
-      cap: 'snow',
-      capColor: hsl3(205, 30, 94),
+      cap: 'gravel',
+      capColor: hsl3(212, 10, 66),
       vein: hsl3(iceHue, 80, 70),
       veins: false,
       outline: hsl3(224, 40, 8),
@@ -921,7 +910,7 @@ function glacier(rng: Rng): Look {
       },
     },
     liquid: { kind: 'water', color: hsl3(iceHue + 6, 55, night ? 18 : 30), glow: hsl3(iceHue, 70, 82), emissive: false },
-    ambient: overcast ? 'snow' : night ? 'dust' : rng.pick(['snow', 'dust'] as const),
+    ambient: 'dust',
     ambientLight: night ? rng.range(0.44, 0.52) : overcast ? rng.range(0.78, 0.86) : rng.range(0.88, 0.96),
     ambientTint: night ? hsl3(aur, 35, 70) : hsl3(200, 30, 94),
     decor: pickDecor(rng, ['cairn', 'icicles'], ['pennant', 'bones', 'lantern'], 4),

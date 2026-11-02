@@ -91,6 +91,13 @@ export interface CollisionWorld {
    * are unchanged, so low gravity jumps higher and longer, high lower and shorter.
    */
   gravity?: number;
+  /**
+   * Optional: a box in px, on tile edges, that the owner promises has no tiles
+   * in it. Collision fills it with the last all-empty box it read and skips
+   * reads inside it, so reachability tracing doesn't re-read the air around a
+   * falling body. The owner resets it (x0 > x1) whenever the tiles might have changed.
+   */
+  clear?: { x0: number; y0: number; x1: number; y1: number };
 }
 
 /** Plain data only (snapshot-friendly). */
@@ -191,25 +198,38 @@ const NO_ONEWAY = Number.POSITIVE_INFINITY;
  * before a downward move); by default they never block.
  */
 export function firstOverlap(r: Rect, world: CollisionWorld, dynamicOnly = false, oneWayFrom = NO_ONEWAY): Solid | null {
-  if (!dynamicOnly) {
+  const clear = world.clear;
+  if (!dynamicOnly && (!clear || r.x < clear.x0 || r.x + r.w - 1e-3 >= clear.x1 || r.y < clear.y0 || r.y + r.h - 1e-3 >= clear.y1)) {
     const x0 = Math.floor(r.x / TILE);
     const x1 = Math.floor((r.x + r.w - 1e-3) / TILE);
     const y0 = Math.floor(r.y / TILE);
     const y1 = Math.floor((r.y + r.h - 1e-3) / TILE);
-    for (let ty = y0; ty <= y1; ty++) {
-      for (let tx = x0; tx <= x1; tx++) {
-        const k = world.tileAt(tx, ty);
-        if (k === T_EMPTY) continue;
-        if (k === T_ONEWAY && ty * TILE < oneWayFrom - 0.01) continue;
-        tileScratch.x = tx * TILE;
-        tileScratch.y = ty * TILE;
-        tileScratch.id = k === T_ONEWAY ? TILE_ONEWAY_ID : TILE_SOLID_ID;
-        tileScratch.surface = world.surfaceAt ? world.surfaceAt(tx, ty) : (world.tileSurface ?? DEFAULT_SURFACE);
-        if (overlaps(r, tileScratch)) return tileScratch;
+    {
+      let empty = true;
+      for (let ty = y0; ty <= y1; ty++) {
+        for (let tx = x0; tx <= x1; tx++) {
+          const k = world.tileAt(tx, ty);
+          if (k === T_EMPTY) continue;
+          empty = false;
+          if (k === T_ONEWAY && ty * TILE < oneWayFrom - 0.01) continue;
+          tileScratch.x = tx * TILE;
+          tileScratch.y = ty * TILE;
+          tileScratch.id = k === T_ONEWAY ? TILE_ONEWAY_ID : TILE_SOLID_ID;
+          tileScratch.surface = world.surfaceAt ? world.surfaceAt(tx, ty) : (world.tileSurface ?? DEFAULT_SURFACE);
+          if (overlaps(r, tileScratch)) return tileScratch;
+        }
+      }
+      if (empty && clear) {
+        clear.x0 = x0 * TILE;
+        clear.y0 = y0 * TILE;
+        clear.x1 = (x1 + 1) * TILE;
+        clear.y1 = (y1 + 1) * TILE;
       }
     }
   }
-  for (const s of world.solids) {
+  const solids = world.solids;
+  for (let i = 0; i < solids.length; i++) {
+    const s = solids[i];
     if (s.oneWay && s.y < oneWayFrom - 0.01) continue;
     if (overlaps(r, s)) return s;
   }
@@ -294,6 +314,7 @@ function cornerNudge(b: Body, s: Solid, world: CollisionWorld): boolean {
 
 /** Push the body out of any dynamic solid that moved into it. Returns false if it can't escape (crushed). */
 function depenetrate(b: Body, world: CollisionWorld): boolean {
+  if (world.solids.length === 0) return true;
   for (let iter = 0; iter < 3; iter++) {
     const s = firstOverlap(b, world, true);
     if (!s) return true;

@@ -4,7 +4,7 @@ import type { LiquidKind, SkyLayer, Theme } from '../gen/theme';
 import { VIEW_H, VIEW_W } from '../sim/constants';
 import type { Camera } from './camera';
 import type { ViewFrame } from './frame';
-import { circle, ellipse, flame, glowDot, light, type RC } from './kit';
+import { circle, ellipse, flame, flutter, glowDot, light, type RC } from './kit';
 import { type Feature, SKYLINES } from './skylines';
 
 /**
@@ -69,7 +69,7 @@ export class Backdrop {
       return {
         c: bakeCloud(rng, w, h, th, kb),
         x: rng.range(f.x0 - 100, f.x1),
-        y: rng.range(th.cloudStyle === 'smog' ? VIEW_H * 0.15 : Math.min(6, f.y0 + 6), VIEW_H * (th.cloudStyle === 'smog' ? 0.55 : 0.42)),
+        y: rng.range(Math.min(6, f.y0 + 6), VIEW_H * 0.42),
         speed: rng.range(2, 8),
         w,
         h,
@@ -278,14 +278,6 @@ export class Backdrop {
       g.fillStyle = hz;
       g.fillRect(xa, y0 - 70, xb - xa + 6, 72);
     }
-    if (kind === 'swamp' || kind === 'sea') {
-      // Low mist / spray over the surface.
-      const m = s.createLinearGradient(0, y0 - 26, 0, y0);
-      m.addColorStop(0, css(th.fog, 0, 0));
-      m.addColorStop(1, css(th.fog, 0, kind === 'swamp' ? 0.35 : 0.18));
-      s.fillStyle = m;
-      s.fillRect(xa, y0 - 26, xb - xa + 6, 27);
-    }
     const gr = s.createLinearGradient(0, y0 - 3, 0, wh);
     gr.addColorStop(0, css(L.color, kind === 'tar' ? 8 : 15));
     gr.addColorStop(1, css(L.color, -20));
@@ -440,34 +432,22 @@ export class Backdrop {
   }
 
   /** Ambient particles (cosmetic, non-deterministic). On the background layer: with ink they read as stray projectiles. */
-  drawMotes(rc: RC, th: Theme, dt: number, view: { x: number; y: number; w: number; h: number }, kind = th.ambient) {
+  drawMotes(rc: RC, th: Theme, dt: number, view: { x: number; y: number; w: number; h: number }) {
+    const kind = th.ambient;
     // Motes live in world space around the visible rect; zoomed-out views get proportionally more (capped).
+    // Nothing here falls or blows: what comes down the screen is weather (./weather.ts), and that always does something.
     const area = Math.max(1, Math.min(2.5, (view.w * view.h) / (VIEW_W * VIEW_H)));
-    const target = Math.round((kind === 'snow' ? 90 : kind === 'rain' ? 140 : kind === 'dust' ? 50 : kind === 'leaves' ? 26 : 60) * area);
+    const target = Math.round((kind === 'dust' ? 50 : 60) * area);
     const vx0 = view.x;
     const vy0 = view.y;
     while (this.motes.length < target) {
       const fromBottom = kind === 'embers' || kind === 'bubbles';
-      const falls = kind === 'snow' || kind === 'rain' || kind === 'ash' || kind === 'leaves';
       this.motes.push({
         x: vx0 + Math.random() * (view.w + 60) - 30,
-        y: vy0 + (fromBottom ? view.h + Math.random() * 20 : this.motes.length < target / 2 || !falls ? Math.random() * view.h : -5),
-        vx: kind === 'rain' ? -40 : kind === 'leaves' ? 12 + Math.random() * 10 : (Math.random() - 0.5) * 10,
-        vy:
-          kind === 'snow'
-            ? 12 + Math.random() * 14
-            : kind === 'rain'
-              ? 320 + Math.random() * 80
-              : kind === 'ash'
-                ? 6 + Math.random() * 8
-                : kind === 'leaves'
-                  ? 14 + Math.random() * 10
-                  : kind === 'embers'
-                    ? -(15 + Math.random() * 30)
-                    : kind === 'bubbles'
-                      ? -(8 + Math.random() * 10)
-                      : (Math.random() - 0.5) * 6,
-        life: kind === 'rain' ? 2 : 4 + Math.random() * 10,
+        y: vy0 + (fromBottom ? view.h + Math.random() * 20 : Math.random() * view.h),
+        vx: (Math.random() - 0.5) * 10,
+        vy: kind === 'embers' ? -(15 + Math.random() * 30) : kind === 'bubbles' ? -(8 + Math.random() * 10) : (Math.random() - 0.5) * 6,
+        life: 4 + Math.random() * 10,
         seed: Math.random() * 100,
       });
     }
@@ -483,12 +463,10 @@ export class Backdrop {
             ? shift(th.accent, 10)
             : kind === 'pollen'
               ? hsl3(50, 90, 75)
-              : kind === 'leaves'
-                ? mixHsl(th.terrain.capColor, hsl3(35, 80, 50), 0.4)
-                : th.fog;
+              : th.fog;
     this.motes = this.motes.filter((m) => {
       m.life -= dt;
-      m.x += (m.vx + (kind === 'rain' ? 0 : Math.sin(t * 0.8 + m.seed) * 8)) * dt;
+      m.x += (m.vx + Math.sin(t * 0.8 + m.seed) * 8) * dt;
       m.y += m.vy * dt;
       if (m.life <= 0 || m.y < vy0 - 10 || m.y > vy0 + view.h + 25 || m.x < vx0 - 40 || m.x > vx0 + view.w + 40) return false;
       const fade = Math.min(1, m.life);
@@ -503,32 +481,6 @@ export class Backdrop {
           const a = fade * Math.max(0, Math.sin(t * 1.7 + m.seed));
           glowDot(rc.g, m.x, m.y, 4, col, a * 0.8);
           if (a > 0.6) light(rc, m.x, m.y, 26, col, a * 0.4);
-          break;
-        }
-        case 'snow':
-          rc.bg.fillStyle = `rgba(255,255,255,${0.85 * fade})`;
-          circle(rc.bg, m.x, m.y, 0.7 + (m.seed % 1) * 0.8);
-          break;
-        case 'rain':
-          rc.bg.strokeStyle = `rgba(200,215,240,${0.32 * fade})`;
-          rc.bg.lineWidth = 0.6;
-          rc.bg.beginPath();
-          rc.bg.moveTo(m.x, m.y);
-          rc.bg.lineTo(m.x + m.vx * 0.025, m.y + m.vy * 0.025);
-          rc.bg.stroke();
-          break;
-        case 'ash':
-          rc.bg.fillStyle = `rgba(70,64,62,${0.6 * fade})`;
-          rc.bg.fillRect(m.x, m.y, 1.3, 1);
-          if (m.seed % 5 < 1) {
-            rc.g.fillStyle = css(th.lamp, 10, 0.6 * fade * (0.5 + 0.5 * Math.sin(t * 6 + m.seed)));
-            rc.g.fillRect(m.x, m.y, 1, 1);
-          }
-          break;
-        case 'leaves': {
-          const a = t * 2 + m.seed;
-          rc.bg.fillStyle = css(col, (m.seed % 3) * 5, 0.9 * fade);
-          ellipse(rc.bg, m.x, m.y, 2, 0.6 + Math.abs(Math.sin(a)) * 0.9, a * 0.7);
           break;
         }
         case 'pollen':
@@ -667,8 +619,8 @@ function drawFeature(rc: RC, f: Feature, ox: number, oy: number, haze: number, t
       s.fillStyle = css(f.color, 6);
       s.beginPath();
       s.moveTo(x, y);
-      for (let i = 0; i <= 4; i++) s.lineTo(x + i * 2 * f.s, y + Math.sin(t * 5 - i) * 0.8 * (i / 4));
-      for (let i = 4; i >= 0; i--) s.lineTo(x + i * 2 * f.s, y + 3 * f.s + Math.sin(t * 5 - i) * 0.8 * (i / 4));
+      for (let i = 0; i <= 4; i++) s.lineTo(x + i * 2 * f.s, y + flutter(rc, 5, -i) * (i / 4));
+      for (let i = 4; i >= 0; i--) s.lineTo(x + i * 2 * f.s, y + 3 * f.s + flutter(rc, 5, -i) * (i / 4));
       s.fill();
       break;
     }
@@ -773,11 +725,9 @@ function bakeCloud(rng: Rng, w: number, h: number, th: Theme, kb: number): HTMLC
       break;
     }
     case 'wispy':
-    case 'smog':
-    case 'ash':
-    case 'storm': {
-      const n = th.cloudStyle === 'storm' || th.cloudStyle === 'ash' ? 10 : 7;
-      const a = th.cloudStyle === 'smog' ? 0.35 : th.cloudStyle === 'storm' ? 0.85 : th.cloudStyle === 'ash' ? 0.6 : 0.55;
+    case 'ash': {
+      const n = th.cloudStyle === 'ash' ? 10 : 7;
+      const a = th.cloudStyle === 'ash' ? 0.6 : 0.55;
       for (let i = 0; i < n; i++) {
         const cx = rng.range(w * 0.15, w * 0.85);
         const cy = rng.range(h * 0.3, h * 0.7);

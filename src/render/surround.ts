@@ -1,7 +1,7 @@
 import { css } from '../core/color';
 import { Rng } from '../core/rng';
 import { TILE } from '../sim/constants';
-import { type Level, T_SOLID } from '../sim/level';
+import { type Level, T_SOLID, levelKey } from '../sim/level';
 import type { ThemeId } from '../themes';
 import type { RC } from './kit';
 import { TerrainPainter } from './terrain';
@@ -56,9 +56,20 @@ function ridge(c: SideCtx, rise: number, rough: number, jag = 0): void {
   }
 }
 
-/** Blocks: buildings, walls and plant, each a flat-topped run of columns. */
+/**
+ * A low step or two at the seam; returns the first column past it. A block
+ * standing right at the edge drew a straight wall down the whole side of the
+ * map: set back by a step, its face reads as a building in the landscape.
+ */
+function plinth(c: SideCtx): number {
+  const n = Math.min(c.cols, c.rng.int(2, 3));
+  for (let d = 1; d <= n; d++) c.fill(d, c.ground - (d - 1) - c.rng.int(0, 1));
+  return n + 1;
+}
+
+/** Blocks: buildings, walls and plant, each a flat-topped run of columns, set back from the seam by a plinth. */
 function blocks(c: SideCtx, width: [number, number], height: [number, number], then?: (d0: number, d1: number, top: number) => void): void {
-  for (let d = 1; d <= c.cols;) {
+  for (let d = plinth(c); d <= c.cols;) {
     const w = c.rng.int(width[0], width[1]);
     const fade = Math.max(0.35, 1 - d / Math.max(20, c.cols));
     const top = c.ground - Math.round(c.rng.int(height[0], height[1]) * fade);
@@ -98,7 +109,7 @@ const SIDES: Record<ThemeId, (c: SideCtx) => void> = {
       // A facade of windows, the same 1×1 holes the level's buildings have.
       for (let y = top + 2; y < c.ground + 6; y += 2) for (let d = a + 1; d < b; d += 2) c.set(d, y, false);
     }),
-  // Snowfields climbing to a jagged crest.
+  // Moraine slopes climbing to a jagged crest.
   glacier: (c) => ridge(c, 12, 3, 1),
   // A bulkhead where the sim's wall is, then nothing: a few rocks adrift.
   space: (c) => {
@@ -112,10 +123,11 @@ const SIDES: Record<ThemeId, (c: SideCtx) => void> = {
     }
   },
   harbor: (c) => {
-    // A dock shed on the quay, then open water.
-    const shed = Math.min(c.cols, c.rng.int(4, 6));
+    // Quay, a dock shed on it, more quay, then open water.
+    const quay = Math.min(c.cols, c.rng.int(2, 3));
+    const shed = Math.min(c.cols, quay + c.rng.int(4, 6));
     for (let d = 1; d <= c.cols; d++) {
-      if (d <= shed) c.fill(d, c.ground - 7);
+      if (d > quay && d <= shed) c.fill(d, c.ground - 7);
       else if (d <= shed + 2) c.fill(d, c.ground);
     }
   },
@@ -229,7 +241,7 @@ export class Surround {
     const mx = Math.ceil(reach.x / TILE) + 2;
     const top = Math.ceil(reach.up / TILE) + 2;
     const bottom = Math.ceil(reach.down / TILE) + 2;
-    const key = `${level.seed}:${level.theme.seed}:${level.w}x${level.h}:${mx}:${top}:${bottom}`;
+    const key = `${levelKey(level)}:${level.theme.seed}:${mx}:${top}:${bottom}`;
     if (key !== this.key) {
       this.key = key;
       this.mx = mx;

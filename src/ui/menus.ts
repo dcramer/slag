@@ -1,5 +1,5 @@
 import type { AudioSystem } from '../audio';
-import { GRAVITY_CHOICES, gravityLabel, MATCH_LENGTHS, type MatchRules, RULE_CHOICES, type TimerRule } from '../game/rules';
+import { BLOOD_CHOICES, GRAVITY_CHOICES, gravityLabel, MATCH_LENGTHS, type MatchRules, RULE_CHOICES, type TimerRule } from '../game/rules';
 import { BINDABLE, defaultSettings, type InputSettings, type KeyProfile, keyName, SLOTS } from '../input/bindings';
 import type { InputManager } from '../input/input';
 import { glyphSVG, type Glyph } from './glyphs';
@@ -99,6 +99,7 @@ input[type=range].slag-range:focus-visible{outline:2px solid ${PAL.amber};outlin
 .slag-switch[aria-checked=true]::after{left:26px;background:${PAL.bone}}
 .slag-switch:focus-visible{outline:2px solid ${PAL.amber};outline-offset:2px}
 .slag-chips{display:flex;flex-wrap:wrap;gap:8px}
+.slag-pair{display:flex;flex-wrap:wrap;column-gap:28px}.slag-pair>div{flex:0 1 auto}
 .slag-chips .slag-btn{min-width:56px;padding:6px 10px}
 @media (max-height:520px){.slag-ov{align-items:flex-start}.slag-card h2{font-size:26px;margin-top:10px}}
 @media (max-width:520px){.slag-card{padding:6px 16px 16px}.slag-card::before{margin:-6px -16px 0}.slag-row>label,.slag-row>.lbl{flex-basis:84px}.slag-row{flex-wrap:wrap}}
@@ -748,12 +749,12 @@ const RULE_LABELS: Record<TimerRule, string> = {
   raceSeconds: 'Race Timer',
 };
 
-/** Match rules; applied when the next match starts. */
+/** Match rules. Timers and length apply from the next match; gravity and weather rebuild the lobby level at once. */
 export class RulesMenu extends Overlay {
   open(rules: MatchRules, onChange: (r: MatchRules) => void) {
     const draft = { ...rules };
     const card = el('div', { className: 'slag-card slag-sheet' }, el('h2', { textContent: 'Match Rules' }));
-    const addRow = (title: string, choices: { label: string; on: boolean; apply: () => void }[]) => {
+    const addRow = (title: string, choices: { label: string; on: boolean; apply: () => void }[], into: HTMLElement = card) => {
       const chips = el('div', { className: 'slag-chips' });
       for (const c of choices) {
         const b = el('button', { className: `slag-btn ${c.on ? 'on' : ''}`, type: 'button', textContent: c.label });
@@ -764,7 +765,15 @@ export class RulesMenu extends Overlay {
         };
         chips.append(b);
       }
-      card.append(el('h3', { textContent: title }), chips);
+      into.append(el('h3', { textContent: title }), chips);
+    };
+    // Two short rows side by side, so the card fits a 720p window without scrolling.
+    const pair = () => {
+      const row = el('div', { className: 'slag-pair' });
+      const cols = [el('div'), el('div')];
+      row.append(...cols);
+      card.append(row);
+      return cols;
     };
     addRow(
       'Match Length',
@@ -783,9 +792,20 @@ export class RulesMenu extends Overlay {
         RULE_CHOICES[k].map((v) => ({ label: v === 0 ? 'Off' : `${v}s`, on: draft[k] === v, apply: () => (draft[k] = v) })),
       );
     }
+    const [left, right] = pair();
     addRow(
       'Gravity',
       GRAVITY_CHOICES.map((v) => ({ label: gravityLabel(v), on: draft.gravity === v, apply: () => (draft.gravity = v) })),
+      left,
+    );
+    addRow(
+      'Weather',
+      [true, false].map((v) => ({ label: v ? 'On' : 'Off', on: draft.weather === v, apply: () => (draft.weather = v) })),
+      right,
+    );
+    addRow(
+      'Blood Rounds',
+      BLOOD_CHOICES.map((v) => ({ label: v === 0 ? 'Off' : `${v}`, on: draft.bloodRounds === v, apply: () => (draft.bloodRounds = v) })),
     );
     const done = el('button', { className: 'slag-btn primary', type: 'button', textContent: 'Done' });
     done.onclick = () => this.close();

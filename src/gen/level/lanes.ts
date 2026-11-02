@@ -1,5 +1,6 @@
 import type { Rng } from '../../core/rng';
 import { isProtected, type Level, T_EMPTY, T_ONEWAY } from '../../sim/level';
+import type { ReachCache } from '../../sim/reach';
 import { jumpProfile } from './probe';
 import { analyzeRoutes, lineTiles, MAX_SHARED, type Routes } from './routes';
 import { easyRise } from './sculptors/common';
@@ -37,8 +38,8 @@ interface Lane {
 }
 
 /** Lay lanes until the level is open enough or there's nowhere left to try. Writes into `level.tiles` (the shape's array). */
-export function openUp(level: Level, shape: Shape, bridges: readonly BridgeHint[], rng: Rng): Routes {
-  let routes = analyzeRoutes(level, bridges);
+export function openUp(level: Level, shape: Shape, bridges: readonly BridgeHint[], rng: Rng, cache: ReachCache): Routes {
+  let routes = analyzeRoutes(level, bridges, cache);
   for (let pass = 0; pass < MAX_PASSES && routes.shared > MAX_SHARED; pass++) {
     const blocked = forbiddenColumns(level, shape, bridges);
     let built = false;
@@ -50,7 +51,8 @@ export function openUp(level: Level, shape: Shape, bridges: readonly BridgeHint[
       }
     }
     if (!built) break;
-    routes = analyzeRoutes(level, bridges);
+    cache.rebase(level.tiles);
+    routes = analyzeRoutes(level, bridges, cache);
   }
   return routes;
 }

@@ -2,7 +2,7 @@ import { css, type HSL } from '../../../core/color';
 import type { CharacterDef } from '../../../gen/character';
 import { type Grip, KEG, kegAim, type ModuleOf } from '../../../sim/props';
 import type { Runner, RunWorld } from '../../../sim/run';
-import { drawCharacter } from '../../character';
+import { drawInkRunner } from '../../ink-character';
 import { glowDot, light, type RC } from '../../kit';
 import { defineArt, gripOf } from '../common';
 
@@ -194,6 +194,6 @@ export function drawStuffed(rc: RC, run: RunWorld, r: Runner, c: CharacterDef): 
   s.lineTo(nx - dy * 40 + dx * 40, ny + dx * 40 + dy * 40);
   s.closePath();
   s.clip();
-  drawCharacter(rc, c, cx, cy + 8, { facing: dx < 0 ? -1 : 1, vx: 0, vy: 0, grounded: true, t: rc.t, scale: 0.9 });
+  drawInkRunner(rc, c, cx, cy + 8, { facing: dx < 0 ? -1 : 1, vx: 0, vy: 0, grounded: true, t: rc.t, scale: 0.9 });
   s.restore();
 }

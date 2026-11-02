@@ -6,9 +6,6 @@ import { easyRise, hardGap, hopGap, knobs, rollChallenges } from './common';
 
 type SpaceStyle = 'asteroids' | 'station';
 
-/** Share of wide space levels asking for two parts (classic ones ask for one): about TWO_PARTS over the theme. */
-const WIDE_TWO_PARTS = 0.4;
-
 /**
  * Space: nothing underfoot but what floats. There is no ground and no pit
  * floor: fall off and you're gone. Docks hold the spawn and the goal, and in
@@ -24,7 +21,7 @@ const WIDE_TWO_PARTS = 0.4;
  * (gen/level/profile.ts SPACE_GRAVITY) and every gap is sized from jumps
  * measured at it, so the voids are wide: one a jump can't clear takes a
  * third of a classic level. So a classic level asks for one part, and a wide
- * one asks for two more often than other themes do (`WIDE_TWO_PARTS`), which
+ * one asks for two more often than other themes do (TWO_PART_ASK.space), which
  * keeps the theme's share of two-part levels where the rest are. A void two
  * bridges wide doesn't work here: at this gravity a long fall onto one low
  * bridge and a jump back up crosses it.
@@ -37,7 +34,7 @@ export const space: Sculptor = (ctx) => {
   const g = new Grid(W, H);
   const j = jumpProfile();
   const asked = rollChallenges(attempt, k);
-  const challenges = asked && W < 64 ? 1 : asked && k.challenge < WIDE_TWO_PARTS && attempt < 16 ? 2 : asked;
+  const challenges = asked && W < 64 ? 1 : asked;
   g.wantsProps = challenges > 0;
   const base = H - rng.int(7, 10);
 
@@ -102,9 +99,10 @@ export const space: Sculptor = (ctx) => {
     if (c >= W - dockR) return gTop;
     const on = tops.find((t) => c >= t.x - 1 && c <= t.x + t.w);
     if (on) return on.top;
-    const before = tops.filter((t) => t.x + t.w <= c).pop();
-    const after = tops.find((t) => t.x > c);
-    return Math.max(before?.top ?? sTop, after?.top ?? gTop);
+    // Tops run left to right: the body after `c` is the first one past it, and the one before is just ahead of that.
+    const next = tops.findIndex((t) => t.x > c);
+    const before = next < 0 ? tops[tops.length - 1] : tops[next - 1];
+    return Math.max(before?.top ?? sTop, next < 0 ? gTop : tops[next].top);
   };
   upperLane(g, rng, row, dockL - 3, W - dockR + 2, style === 'station');
 

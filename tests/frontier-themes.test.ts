@@ -8,7 +8,7 @@ import { GROUND_ICE, groundSurfaceAt, ICE_SURFACE } from '../src/sim/ground';
 import { isProtected, type Level, T_SOLID } from '../src/sim/level';
 import { bodyAtCell, type CollisionWorld, type Controls, DEFAULT_SURFACE, jumpMetrics, stepBody } from '../src/sim/physics';
 import { COAT_SURFACES } from '../src/sim/props/modules/coat';
-import { analyzeReach } from '../src/sim/reach';
+import { analyzeReach, ReachCache } from '../src/sim/reach';
 import { RunWorld } from '../src/sim/run';
 import { pickThemeId, THEME_IDS } from '../src/themes';
 
@@ -65,7 +65,31 @@ function skid(level: Level, n: number): { top: number; slide: number } {
   return { top, slide: (b.x - at) / TILE };
 }
 
+/** A floor on row 20 and a cliff 8 rows tall at columns 20–23, the goal on top: only a wall climb up its face gets there. */
+function cliff(iceFace: boolean): Level {
+  const l = rink(false);
+  const { w } = l;
+  for (let y = 12; y < 20; y++) for (let x = 20; x < 24; x++) l.tiles[y * w + x] = T_SOLID;
+  l.ground!.fill(0);
+  if (iceFace) for (let y = 12; y < 20; y++) l.ground![y * w + 20] = GROUND_ICE;
+  l.goal = { tx: 22, ty: 11 };
+  return l;
+}
+
 describe('glacier ice', () => {
+  it('reach sees it: an ice face can’t be wall-climbed, and a cache keeps up when the ground changes', () => {
+    const rock = cliff(false);
+    const ice = cliff(true);
+    expect(analyzeReach(rock).goalReached).toBe(true);
+    expect(analyzeReach(ice).goalReached).toBe(false);
+    const cache = new ReachCache(rock);
+    expect(cache.analyze(rock).goalReached).toBe(true);
+    expect(cache.analyze(ice).goalReached).toBe(false);
+    // An equal copy of the ground, as a regenerated level brings, keeps the cache's answers.
+    expect(cache.analyze({ ...ice, ground: ice.ground!.slice() }).goalReached).toBe(false);
+    expect(cache.analyze(rock).goalReached).toBe(true);
+  });
+
   it('is the ice coat surface, floors and walls alike', () => {
     expect(ICE_SURFACE).toEqual(COAT_SURFACES.ice);
     const s = groundSurfaceAt(rink(true))!;

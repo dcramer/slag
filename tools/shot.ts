@@ -688,6 +688,115 @@ try {
       await sheet(`grabs-back-${seed}`, back, 5);
       break;
     }
+    case 'lineup': {
+      // Eight runners in a row on open floor, in a spread of poses: once at gameplay scale (zoom 1 at
+      // 1920x1080 is 2.5 screen px per world px) and once close up. `--size 1920x1080` for the real scale.
+      // `--seeds a,b,c` shoots one row per match seed: each seed rolls its own eight characters.
+      const shots: string[] = [];
+      for (const sd of opt('seeds', seed)!.split(',')) {
+        await open(`seed=${sd}&players=8&race=,&propseed=1`);
+        await step(150);
+        const row = await page.evaluate(() => {
+          const d = (window as any).slagDebug;
+          const L = d.match.run.level;
+          const n = 13;
+          for (let ty = L.h - 3; ty > 6; ty--) {
+            for (let tx = 2; tx < L.w - n - 2; tx++) {
+              const open = Array.from({ length: n }, (_, dx) => dx).every(
+                (dx) => L.tiles[ty * L.w + tx + dx] === 1 && [1, 2, 3, 4, 5].every((dy) => L.tiles[(ty - dy) * L.w + tx + dx] === 0),
+              );
+              if (!open) continue;
+              const feet = ty * 16;
+              d.match.run.runners.forEach((r: any, i: number) => {
+                r.body.x = tx * 16 + 8 + i * 25;
+                r.body.y = feet - r.body.h;
+                r.body.vx = r.body.vy = 0;
+              });
+              return { x: tx * 16 + 8 + 3.5 * 25, y: feet - 10, devs: d.match.players.map((p: any) => p.device) };
+            }
+          }
+          return null;
+        });
+        if (!row) {
+          console.log(`seed ${sd}: no open floor for a lineup, skipped`);
+          continue;
+        }
+        // One frame per render, so ribbons and dust run as they do live and don't jump a stride at a time.
+        const press = (n: number, inputs: object) =>
+          page.evaluate(
+            ([c, i]) => {
+              for (let k = 0; k < c; k++) (window as any).slagDebug.step(1, i);
+            },
+            [n, inputs] as const,
+          );
+        const dv = row.devs as string[];
+        await press(20, {});
+        // Poses: idle, facing back, walking, running, rising, falling, idle, idle.
+        await press(2, { [dv[1]]: { left: true } });
+        await press(14, { [dv[5]]: { jump: true, jumpPressed: true } });
+        await press(1, { [dv[4]]: { jump: true, jumpPressed: true }, [dv[2]]: { right: true }, [dv[3]]: { right: true, run: true } });
+        await press(5, { [dv[4]]: { jump: true }, [dv[2]]: { right: true }, [dv[3]]: { right: true, run: true } });
+        for (const zoom of [1, 3]) {
+          await page.evaluate(
+            ([x, y, z]) => {
+              const cam = (window as any).slagDebug.renderer.cam;
+              cam.update = () => {};
+              cam.snap({ cx: x, cy: y, zoom: z });
+              cam.shake = 0;
+              (window as any).slagDebug.render();
+            },
+            [row.x, row.y, zoom] as const,
+          );
+          const size = page.viewportSize()!;
+          const k = size.width / 768;
+          const [w, h] = zoom === 1 ? [300 * k, 90 * k] : [size.width, 160 * k];
+          const path = `${out}/lineup-${sd}-x${zoom}.png`;
+          await page.screenshot({ path, clip: { x: (size.width - w) / 2, y: size.height / 2 - h * 0.62, width: w, height: h } });
+          console.log(path);
+          shots.push(path);
+        }
+        // Then the pack: everyone runs right and half of them jump, as a race start looks.
+        const go = (j: boolean) =>
+          Object.fromEntries(dv.map((v, i) => [v, { right: true, run: i % 3 !== 2, jump: j && i % 2 === 1, jumpPressed: j && i % 2 === 1 }]));
+        await press(8, go(false));
+        await press(1, go(true));
+        await press(9, Object.fromEntries(dv.map((v, i) => [v, { right: true, run: i % 3 !== 2, jump: i % 2 === 1 }])));
+        await page.evaluate(() => {
+          const d = (window as any).slagDebug;
+          const rs = d.match.run.runners;
+          const cx = rs.reduce((a: number, r: any) => a + r.body.x, 0) / rs.length;
+          const cam = d.renderer.cam;
+          cam.update = () => {};
+          cam.snap({ cx, cy: rs[0].body.y - 10, zoom: 1 });
+          cam.shake = 0;
+          d.render();
+        });
+        {
+          const size = page.viewportSize()!;
+          const k = size.width / 768;
+          const path = `${out}/lineup-${sd}-pack.png`;
+          await page.screenshot({ path, clip: { x: size.width / 2 - 170 * k, y: size.height / 2 - 70 * k, width: 340 * k, height: 110 * k } });
+          console.log(path);
+          shots.push(path);
+        }
+      }
+      await sheet(
+        `lineup-x1`,
+        shots.filter((f) => f.endsWith('x1.png')),
+        2,
+      );
+      await sheet(
+        `lineup-x3`,
+        shots.filter((f) => f.endsWith('x3.png')),
+        1,
+      );
+      await sheet(
+        `lineup-pack`,
+        shots.filter((f) => f.endsWith('pack.png')),
+        2,
+      );
+      break;
+    }
     case 'stack': {
       // Body contact as stepped frames: three runners stack, the bottom one walks them along, and a fourth bounces off the top.
       await open(`seed=${seed}&players=4&race=mystery&propseed=${opt('propseed', '1')}`);
@@ -985,6 +1094,20 @@ try {
       await page.waitForTimeout(300);
       await snap('home-settings');
       await mctx.close();
+      break;
+    }
+    case 'rules': {
+      // Fails the run if the card doesn't fit the window.
+      await open(`seed=${seed}`);
+      await step(5);
+      await page.mouse.click(((768 - 196 + 42) / 768) * W, (28 / 432) * H);
+      await page.waitForSelector('.slag-sheet', { timeout: 5000 });
+      await snap(`rules-${W}x${H}`);
+      const over = await page.evaluate(() => {
+        const c = document.querySelector('.slag-sheet')!;
+        return c.scrollHeight - c.clientHeight;
+      });
+      if (over > 0) throw new Error(`rules card overflows by ${over}px`);
       break;
     }
     case 'settings': {
