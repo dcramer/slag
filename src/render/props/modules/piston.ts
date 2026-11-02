@@ -2,8 +2,8 @@ import { css, type HSL } from '../../../core/color';
 import { frac, type Vec } from '../../../core/geom';
 import { TILE } from '../../../sim/constants';
 import { dirOf, type ModuleOf, pistonHead, pistonState, type Resolved } from '../../../sim/props';
-import { line, stroke } from '../../ink';
-import { boxPts, dot, INK, ovalPts, part, path, pen, sprite, stamp, tick, tone } from '../../ink-props';
+import { inkFor, line } from '../../ink';
+import { bar, barLine, boxPts, dot, ovalPts, part, path, pen, sprite, stamp, tick, tone } from '../../ink-props';
 import { bulb, light, type MetalPalette, type RC } from '../../kit';
 import { beamOf, defineArt, type PropDrawOpts } from '../common';
 import { bolt, type Face, faceOf, flange, flat, housed, iron, lbox, lp, ltick, tf, within } from '../machine';
@@ -42,16 +42,16 @@ function head(w: number, h: number, pal: MetalPalette) {
     line(g, -bw / 2, -h / 2, -bw / 2 + 0.2, h * 0.02, { w: 0.6, seed: 5, taper: [0.1, 0.3], press: 0.1 });
     line(g, bw / 2, -h / 2, bw / 2 - 0.2, h * 0.02, { w: 0.6, seed: 6, taper: [0.1, 0.3], press: 0.1 });
     // The grill plate: dark iron with grill marks burned across it.
-    g.fillStyle = '#2e2a2a';
+    g.fillStyle = css(GRILL);
     g.fillRect(-w / 2 - 1, h / 2 - 2.8, w + 2, 3);
     g.fillStyle = '#6a4a32';
     for (let x = -w / 2 + 1; x < w / 2; x += 2.6) line(g, x, h / 2 - 2.6, x + 1.1, h / 2 - 0.4, { w: 0.6, seed: x, taper: [0.2, 0.2], press: 0 });
     g.restore();
-    pen(g, body, 5, 0.55, 1.5);
-    for (const sx of [-1, 1]) if (w > 9) dot(g, sx * (w / 2 - 2.2), -h / 2 + 2, 0.75, 7 + sx, css(pal.light));
-    tick(g, -w / 2 + 0.6, h / 2 - 2.9, w / 2 - 0.6, h / 2 - 2.9, 0.55, 6);
+    pen(g, body, 5, 0.55, 1.5, 3, inkFor(metal));
+    for (const sx of [-1, 1]) if (w > 9) dot(g, sx * (w / 2 - 2.2), -h / 2 + 2, 0.75, 7 + sx, css(pal.light), inkFor(metal));
+    tick(g, -w / 2 + 0.6, h / 2 - 2.9, w / 2 - 0.6, h / 2 - 2.9, 0.55, 6, inkFor(metal));
     // Ridges standing off the striking face.
-    g.fillStyle = INK;
+    g.fillStyle = inkFor(GRILL);
     for (let x = -w / 2 + 1.3; x < w / 2 - 0.6; x += 2.6) g.fillRect(x - 0.45, h / 2 - 0.2, 0.9, 1);
   });
 }
@@ -67,8 +67,8 @@ function housing(k: Face, n: number, pal: MetalPalette) {
     const metal = iron(pal, 40);
     const back = lbox(k, -W / 2, -8, W, 16, 2.6, 1);
     tone(g, back, { h: pal.dark.h, s: Math.min(30, pal.dark.s), l: 20 }, { depth: 0.8, shade: -7 });
-    flange(g, k, -W / 2, W / 2, 4.4, pal, 2);
-    for (let i = 1; i < n; i++) bolt(g, k, -W / 2 + i * TILE, 6.2, 0.95, pal, 3 + i);
+    flange(g, k, -W / 2, W / 2, 4.4, pal, 2, inkFor(pal.dark));
+    for (let i = 1; i < n; i++) bolt(g, k, -W / 2 + i * TILE, 6.2, 0.95, pal, 3 + i, inkFor(pal.dark));
     const body = lbox(k, -W / 2 + 0.3, -6.2, W - 0.6, 10.8, 2.6, 4, 0.25);
     tone(g, body, metal, { depth: 1.3, shade: -17 });
     within(g, body, () => {
@@ -81,22 +81,19 @@ function housing(k: Face, n: number, pal: MetalPalette) {
       }
       ltick(g, k, -W / 2 + 2, -5, -W / 2 + 4.5, -5.2, 0.9, 7, css(pal.spec, -8), [0.2, 0.3]);
     });
-    pen(g, body, 8, 0.55, 1.5);
+    pen(g, body, 8, 0.55, 1.5, 3, inkFor(metal));
     // A hydraulic hose looped off each end: thin, so it hangs past the block as decoration.
     for (const sg of [-1, 1]) {
       const e = sg * (W / 2);
       const hose = lp(k, e - sg * 1.4, 5.4, e + sg * 1.6, 4.6, e + sg * 2.5, 1.2, e + sg * 1.9, -2.6, e - sg * 0.6, -4.6);
-      g.fillStyle = INK;
-      stroke(g, hose, { w: 1.36, seed: 12 + sg, taper: [0, 0], press: 0.1 });
-      g.fillStyle = '#3b3633';
-      stroke(g, hose, { w: 0.85, seed: 13 + sg, taper: [0, 0], press: 0.1 });
+      bar(g, hose, 0.85, HOSE, 12 + sg, { rim: 0.26, taper: [0, 0], press: 0.1 });
     }
     // The collar the rod leaves through.
     part(g, lbox(k, -4.6, -8.3, 9.2, 3, 1, 9), css2(metal), 9, { depth: 0.5, thin: 0.45, thick: 1.2 });
-    flat(g, lbox(k, -2.6, -8.4, 5.2, 1.2, 0.4, 10), '#15110f');
+    flat(g, lbox(k, -2.6, -8.4, 5.2, 1.2, 0.4, 10), inkFor(css2(metal)));
     // The lamp's cage; the lens in it is drawn live.
     const c = tf(k, 0, LAMP_Y);
-    g.fillStyle = INK;
+    g.fillStyle = inkFor(metal);
     path(g, ovalPts(c.x, c.y, 2.9, 2.9, 11, 0.02, 16));
     g.fill();
     g.fillStyle = css(metal, 18);
@@ -106,6 +103,11 @@ function housing(k: Face, n: number, pal: MetalPalette) {
 }
 
 const css2 = (c: HSL): HSL => ({ ...c, l: Math.max(28, c.l - 10) });
+
+/** The grill plate's burnt iron, the rubber of the hydraulic hoses, and the bright steel of the rod. */
+const GRILL: HSL = { h: 0, s: 5, l: 17 };
+const HOSE: HSL = { h: 24, s: 8, l: 22 };
+const ROD: HSL = { h: 217, s: 13, l: 76 };
 
 /** Where the warning lamp sits in the housing's local frame. */
 const LAMP_Y = -0.6;
@@ -125,17 +127,11 @@ function drawPistonShaft(rc: RC, m: Piston, r: Resolved, mi: number, off: Vec, p
   const fy = m.at[1] + off[1] + dy * TILE * 0.5;
   const hx = hd.x + hd.w / 2 - (dx * hd.w) / 2;
   const hy = hd.y + hd.h / 2 - (dy * hd.h) / 2;
-  s.fillStyle = INK;
-  line(s, fx, fy, hx, hy, { w: 3.88, seed: 1, taper: [0, 0], press: 0 });
-  s.fillStyle = '#b9c0cb';
-  line(s, fx, fy, hx, hy, { w: 2.8, seed: 2, taper: [0, 0], press: 0 });
+  barLine(s, fx, fy, hx, hy, 2.8, ROD, 1, { rim: 0.54, taper: [0, 0], press: 0 });
   s.fillStyle = 'rgba(255,255,255,0.75)';
   line(s, fx - dy * 0.6, fy - dx * 0.6, hx - dy * 0.6, hy - dx * 0.6, { w: 0.6, seed: 3, taper: [0.05, 0.3], press: 0 });
   // A collar where the rod leaves the body.
-  s.fillStyle = INK;
-  line(s, fx - dy * 3.4, fy - dx * 3.4, fx + dy * 3.4, fy + dx * 3.4, { w: 2.4, seed: 4, taper: [0.1, 0.1], press: 0 });
-  s.fillStyle = css(pal.base);
-  line(s, fx - dy * 2.8, fy - dx * 2.8, fx + dy * 2.8, fy + dx * 2.8, { w: 1.2, seed: 5, taper: [0.1, 0.1], press: 0 });
+  barLine(s, fx - dy * 3.1, fy - dx * 3.1, fx + dy * 3.1, fy + dx * 3.1, 1.2, pal.base, 4, { rim: 0.6, taper: [0.1, 0.1], press: 0 });
 }
 
 function drawPistonHead(rc: RC, m: Piston, r: Resolved, mi: number, off: Vec, pal: MetalPalette, o: PropDrawOpts) {

@@ -1,8 +1,8 @@
 import { css, type HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
 import { BALLISTA_TOWER, CANNON_CARRIAGE, GUMBALL, type LauncherStyle, TOTEM } from '../../../sim/props';
-import { line, type P, stroke } from '../../ink';
-import { ball, boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, stamp, tick, tone } from '../../ink-props';
+import { inkFor, line, type P, stroke } from '../../ink';
+import { ball, bar, barLine, boxPts, dot, glint, ovalPts, part, path, pen, poly, stamp, tick, tone } from '../../ink-props';
 import { glowDot, light } from '../../kit';
 import { iron } from '../machine';
 import { drawGlider, roundSprite, stampRound } from '../projectiles';
@@ -41,6 +41,11 @@ function loaded(s: CanvasRenderingContext2D, l: Live, x: number, k = 1, spin = 0
 const wood = (h: HSL, l: number): HSL => ({ ...h, l });
 
 const BRONZE: HSL = { h: 40, s: 48, l: 34 };
+/** Lashing rope. */
+const ROPE: HSL = { h: 38, s: 35, l: 58 };
+/** A vending machine's window glass, and the bright metal of its fittings. */
+const GLASS: HSL = { h: 195, s: 35, l: 80 };
+const CHROME: HSL = { h: 212, s: 9, l: 70 };
 
 /** The Heartburn Idol's drums, top to bottom (art px, 16×32 frame round its middle): each a band of carving. */
 const TIKI_DRUMS = [
@@ -135,8 +140,9 @@ function tikiPost(g: CanvasRenderingContext2D, k: Bk) {
       g.fill();
       part(g, chili, { h: 3, s: 82, l: 47 }, k.seed + 31, { depth: 0.5, thin: 0.35, thick: 0.8 });
       glint(g, poly(-3, -1.5, -0.4, -1.7, 2, -1), 'rgba(255,225,215,0.85)', 0.5);
-      part(g, poly(-5.6, -1.6, -4.3, -2.3, -3.8, 0.8, -5.2, 0.7), { h: 105, s: 55, l: 38 }, k.seed + 32, { depth: 0.3, thin: 0.3, thick: 0.6 });
-      g.fillStyle = INK;
+      const stem: HSL = { h: 105, s: 55, l: 38 };
+      part(g, poly(-5.6, -1.6, -4.3, -2.3, -3.8, 0.8, -5.2, 0.7), stem, k.seed + 32, { depth: 0.3, thin: 0.3, thick: 0.6 });
+      g.fillStyle = inkFor(stem);
       stroke(g, poly(-5.2, -0.6, -6, -1.4, -6.3, -2.6), { w: 0.9, seed: 2, taper: [0, 0.3], press: 0 });
       g.restore();
     } else if (di === 2) {
@@ -164,8 +170,9 @@ function tikiPost(g: CanvasRenderingContext2D, k: Bk) {
 
   // The collar the brazier sits in: a bronze band, studded.
   const collar = boxPts(-6.6, -8.2, 13.2, 1.9, 0.5, k.seed + 50, 0.1);
-  part(g, collar, { ...BRONZE, l: 28 }, k.seed + 50, { depth: 0.4, thin: 0.4, thick: 1.1 });
-  for (const x of [-4.4, 0, 4.4]) dot(g, x, -7.2, 0.45, x + 51, css(BRONZE, 30));
+  const band: HSL = { ...BRONZE, l: 28 };
+  part(g, collar, band, k.seed + 50, { depth: 0.4, thin: 0.4, thick: 1.1 });
+  for (const x of [-4.4, 0, 4.4]) dot(g, x, -7.2, 0.45, x + 51, css(BRONZE, 30), inkFor(band));
 
   // The brazier: a hammered bowl under a rolled rim, ring handles, coals in its mouth.
   const bowl = poly(-7, -10.6, 7, -10.6, 6.7, -9.3, 5.7, -8, -5.7, -8, -6.7, -9.3);
@@ -189,18 +196,16 @@ function tikiPost(g: CanvasRenderingContext2D, k: Bk) {
   g.restore();
   for (const sx of [-1, 1]) {
     const ring = ovalPts(sx * 8.4, -9.2, 1, 1.3, sx + 70, 0.03, 10);
-    g.fillStyle = INK;
-    stroke(g, [...ring, ring[0]], { w: 0.76, seed: sx + 71, taper: [0, 0], press: 0.1 });
-    g.fillStyle = css(BRONZE, 10);
-    stroke(g, [...ring, ring[0]], { w: 0.4, seed: sx + 72, taper: [0, 0], press: 0 });
+    bar(g, [...ring, ring[0]], 0.4, { ...BRONZE, l: 44 }, sx + 71, { rim: 0.18, taper: [0, 0], press: 0 });
   }
   const rim = boxPts(-8, -13, 16, 2.5, 1.1, k.seed + 61, 0.12);
-  part(g, rim, { ...BRONZE, l: 44 }, k.seed + 61, { depth: 0.5, thin: 0.45, thick: 1.3, shade: -16 });
+  const lip: HSL = { ...BRONZE, l: 44 };
+  part(g, rim, lip, k.seed + 61, { depth: 0.5, thin: 0.45, thick: 1.3, shade: -16 });
   g.fillStyle = css(BRONZE, 30);
   line(g, -6.6, -12.3, 5.4, -12.4, { w: 0.55, seed: k.seed + 62, taper: [0.2, 0.4], press: 0.1 });
-  for (const x of [-5.6, 0, 5.6]) dot(g, x, -11.4, 0.4, x + 63, css(BRONZE, 34));
+  for (const x of [-5.6, 0, 5.6]) dot(g, x, -11.4, 0.4, x + 63, css(BRONZE, 34), inkFor(lip));
   // The mouth, dark, coals heaped in it.
-  g.fillStyle = INK;
+  g.fillStyle = css(BRONZE, -24, 1, 4);
   path(g, ovalPts(0, -13, 6.3, 1.1, k.seed + 64, 0.04, 16));
   g.fill();
   for (const [x, c] of [
@@ -254,7 +259,7 @@ export const FRAMED: Pick<Record<LauncherStyle, Look>, 'hangar' | 'cannon' | 'ba
         part(g, boxPts(x, y, w, h + 0.4, 0.8, k.seed + 2, 0.1), wd, k.seed + 2, { depth: 0.6, thin: 0.5, thick: 1.3 });
         tick(g, x + 0.8, y + 1.4, x + w - 0.8, y + 1.5, 0.4, k.seed + 3, css(wd, -18, 1, 6));
         for (const r of [1.3, 0.7]) {
-          g.fillStyle = css({ h: 38, s: 35, l: 58 });
+          g.fillStyle = css(ROPE);
           stroke(g, ovalPts(x + 3.6, y + 1.6, r, r * 0.55, r * 9, 0.05, 12).concat([{ x: x + 3.6 + r, y: y + 1.6 }]), {
             w: 0.55,
             seed: r * 9,
@@ -280,7 +285,7 @@ export const FRAMED: Pick<Record<LauncherStyle, Look>, 'hangar' | 'cannon' | 'ba
         g.restore();
         // The muzzle swell and its bore.
         part(g, boxPts(10.4, -3.9, 2.9, 7.8, 0.8, k.seed + 2), k.pal.base, k.seed + 2, { depth: 0.5, thin: 0.4, thick: 1 });
-        g.fillStyle = INK;
+        g.fillStyle = inkFor(k.pal.base);
         path(g, poly(12.6, -2.3, 13.4, -2.3, 13.4, 2.3, 12.6, 2.3));
         g.fill();
         ball(g, -8.6, 0, 1.5, k.pal.base, k.seed + 3);
@@ -290,10 +295,7 @@ export const FRAMED: Pick<Record<LauncherStyle, Look>, 'hangar' | 'cannon' | 'ba
           part(g, ovalPts(x, -4.35, 0.75, 1.35, k.seed + x, 0.02, 10), { h: 40, s: 40, l: 68 }, k.seed + x + 1, { depth: 0.2, thin: 0.25, thick: 0.5 });
         tick(g, 3.6, -5, 4.8, -3.5, 0.4, 7, '#c0182a');
         tick(g, 4.8, -5, 3.6, -3.5, 0.4, 8, '#c0182a');
-        for (const x of [2.2, 6.2]) {
-          tick(g, x, -5.8, x + 0.4, 4, 0.7, 9 + x);
-          tick(g, x, -5.7, x + 0.4, 3.9, 0.35, 10 + x, css({ h: 38, s: 35, l: 58 }));
-        }
+        for (const x of [2.2, 6.2]) barLine(g, x, -5.75, x + 0.4, 3.95, 0.35, ROPE, 9 + x, { rim: 0.17 });
       },
     ],
     // The cheek the barrel rests between, in front of its lower half, and the iron cap over the trunnion.
@@ -306,10 +308,11 @@ export const FRAMED: Pick<Record<LauncherStyle, Look>, 'hangar' | 'cannon' | 'ba
         part(g, cheek, wd, k.seed + 6, { depth: 0.8, thin: 0.5, thick: 1.4 });
         g.fillStyle = css(wd, -18, 1, 6);
         line(g, x + 1, y + h - 1.6, x + w - 1, y + h - 1.5, { w: 0.45, seed: k.seed + 7, taper: [0.1, 0.1], press: 0.1 });
-        for (const bx of [x + 2, x + w - 2]) dot(g, bx, y + h - 3, 0.5, k.seed + bx, css(iron(k.pal, 50), 18));
+        for (const bx of [x + 2, x + w - 2]) dot(g, bx, y + h - 3, 0.5, k.seed + bx, css(iron(k.pal, 50), 18), inkFor(wd));
         const [px, py] = [WX(17), WY(5)];
-        part(g, ovalPts(px, py, 2, 1.5, k.seed + 8, 0.03, 14), iron(k.pal, 42), k.seed + 8, { depth: 0.3, thin: 0.35, thick: 0.8 });
-        dot(g, px, py, 0.6, k.seed + 9, css(k.pal.spec, -10));
+        const cap = iron(k.pal, 42);
+        part(g, ovalPts(px, py, 2, 1.5, k.seed + 8, 0.03, 14), cap, k.seed + 8, { depth: 0.3, thin: 0.35, thick: 0.8 });
+        dot(g, px, py, 0.6, k.seed + 9, css(k.pal.spec, -10), inkFor(cap));
       },
     ],
     recoil: 0.6,
@@ -356,7 +359,7 @@ export const FRAMED: Pick<Record<LauncherStyle, Look>, 'hangar' | 'cannon' | 'ba
         g.save();
         path(g, pts);
         g.clip();
-        g.fillStyle = INK;
+        g.fillStyle = inkFor(st);
         line(g, x - 1, y + 3.4, x1 + 1, y + 3.4, { w: 0.49, seed: 3, taper: [0.05, 0.05], press: 0.3 });
         const mortar = css(st, -24, 1, 4);
         for (let row = 0; row < 4; row++) {
@@ -365,18 +368,19 @@ export const FRAMED: Pick<Record<LauncherStyle, Look>, 'hangar' | 'cannon' | 'ba
           for (let xx = x + 2.4 + (row % 2) * 2.4; xx < x1; xx += 4.8) tick(g, xx, yy - 3.1, xx, yy - 0.2, 0.42, xx * 7 + yy, mortar);
         }
         // An arrow loop, dark, under the ledge.
-        g.fillStyle = INK;
+        g.fillStyle = css(st, -40, 1, 4);
         path(g, boxPts(-0.6, y + 5.2, 1.2, 4.4, 0.5, k.seed + 2));
         g.fill();
         g.restore();
-        pen(g, pts, k.seed + 1, 0.55, 1.6);
+        pen(g, pts, k.seed + 1, 0.55, 1.6, 3, inkFor(st));
         // The price tag, on a string from a merlon.
         tick(g, x1 - m / 2, y + 0.4, x1 - 2.4, y + 4.6, 0.35, 12, '#e9dfc8');
         g.save();
         g.translate(x1 - 2.6, y + 6.4);
         g.rotate(0.28);
-        part(g, poly(-1.6, -1.8, 1.6, -1.8, 1.6, 1.9, -1.6, 1.9, -2.4, 0), { h: 46, s: 70, l: 84 }, 13, { depth: 0.3, thin: 0.3, thick: 0.6 });
-        dot(g, -1.3, 0, 0.35, 14);
+        const tag: HSL = { h: 46, s: 70, l: 84 };
+        part(g, poly(-1.6, -1.8, 1.6, -1.8, 1.6, 1.9, -1.6, 1.9, -2.4, 0), tag, 13, { depth: 0.3, thin: 0.3, thick: 0.6 });
+        dot(g, -1.3, 0, 0.35, 14, undefined, inkFor(tag));
         g.fillStyle = '#7a1f12';
         g.font = 'bold 2.2px sans-serif';
         g.textAlign = 'center';
@@ -403,13 +407,10 @@ export const FRAMED: Pick<Record<LauncherStyle, Look>, 'hangar' | 'cannon' | 'ba
           const t = i / 12;
           arm.push({ x: 3.4 + Math.sin(t * Math.PI) * 4.4, y: -9.2 + t * 18.4 });
         }
-        g.fillStyle = INK;
-        stroke(g, arm, { w: 2.8, seed: k.seed, taper: [0.15, 0.15], press: 0.1 });
-        g.fillStyle = css(wd, 4);
-        stroke(g, arm, { w: 1.5, seed: k.seed, taper: [0.2, 0.2], press: 0.1 });
+        bar(g, arm, 1.5, { ...wd, l: wd.l + 4 }, k.seed, { rim: 0.5, taper: [0.15, 0.15], press: 0.1 });
         part(g, boxPts(-6.4, -1.5, 15, 3, 0.8, k.seed + 1), wd, k.seed + 1, { depth: 0.5, thin: 0.45, thick: 1 });
         part(g, boxPts(6, -2.2, 2.4, 4.4, 0.5, k.seed + 2), k.pal.base, k.seed + 2, { depth: 0.4, thin: 0.35, thick: 0.8 });
-        dot(g, 0, 0, 1.1, k.seed + 3, css(k.pal.light));
+        dot(g, 0, 0, 1.1, k.seed + 3, css(k.pal.light), inkFor(wd));
       },
     ],
     recoil: 0.5,
@@ -451,7 +452,7 @@ export const FRAMED: Pick<Record<LauncherStyle, Look>, 'hangar' | 'cannon' | 'ba
         for (const x of [-5, -2, 1, 4]) tick(g, x, -14, x + 1.3, -14, 0.6, x, css({ h: 4, s: 70, l: 46 }));
         // The window: rows of stars on their spirals.
         const win = boxPts(-6.1, -10.8, 8.6, 12.2, 0.6, k.seed + 1);
-        tone(g, win, { h: 195, s: 35, l: 80 }, { depth: 0.6 });
+        tone(g, win, GLASS, { depth: 0.6 });
         g.save();
         path(g, win);
         g.clip();
@@ -474,13 +475,13 @@ export const FRAMED: Pick<Record<LauncherStyle, Look>, 'hangar' | 'cannon' | 'ba
         g.fillStyle = 'rgba(255,255,255,0.7)';
         line(g, -5.4, 0.4, 1.4, -9.8, { w: 0.6, seed: 2, taper: [0.2, 0.2], press: 0 });
         g.restore();
-        pen(g, win, k.seed + 2, 0.4, 0.9);
+        pen(g, win, k.seed + 2, 0.4, 0.9, 3, inkFor(GLASS));
         // Coin slot and buttons.
-        part(g, boxPts(3.3, -10.6, 3, 5, 0.4, k.seed + 3), { h: 212, s: 9, l: 70 }, k.seed + 3, { depth: 0.3, thin: 0.3, thick: 0.6 });
-        tick(g, 4.8, -9.8, 4.8, -7, 0.55, 4);
-        for (const y of [-3.4, -1.4, 0.6]) dot(g, 4.8, y, 0.6, k.seed + y, '#ffd84a');
+        part(g, boxPts(3.3, -10.6, 3, 5, 0.4, k.seed + 3), CHROME, k.seed + 3, { depth: 0.3, thin: 0.3, thick: 0.6 });
+        tick(g, 4.8, -9.8, 4.8, -7, 0.55, 4, css(CHROME, -56, 1, 6));
+        for (const y of [-3.4, -1.4, 0.6]) dot(g, 4.8, y, 0.6, k.seed + y, '#ffd84a', inkFor(paint));
         // The tray the stars drop into, dark under its flap.
-        g.fillStyle = INK;
+        g.fillStyle = css(paint, -34, 1, -10);
         path(g, boxPts(-5.8, 2.8, 11.6, 4.6, 0.7, k.seed + 5));
         g.fill();
         part(g, boxPts(-5.4, 2.6, 10.8, 1.3, 0.4, k.seed + 6), { h: 212, s: 9, l: 62 }, k.seed + 6, { depth: 0.2, thin: 0.3, thick: 0.6 });
@@ -551,19 +552,20 @@ export const FRAMED: Pick<Record<LauncherStyle, Look>, 'hangar' | 'cannon' | 'ba
         g.fillStyle = css(paint, 20);
         line(g, bx + 1.2, by + 1.6, bx + 1.2, by + bh - 1.4, { w: 0.7, seed: k.seed + 2, taper: [0.2, 0.3], press: 0.1 });
         // The chute's mouth, where the balls come out.
-        g.fillStyle = INK;
+        g.fillStyle = css(paint, -34, 1, -10);
         path(g, ovalPts(0.6, 5, 2.4, 1.9, k.seed + 3, 0.03, 14));
         g.fill();
-        part(g, poly(-2, 3.2, 3.2, 3.2, 3.2, 4.2, -2, 4.2), { h: 212, s: 9, l: 70 }, k.seed + 4, { depth: 0.2, thin: 0.3, thick: 0.6 });
+        part(g, poly(-2, 3.2, 3.2, 3.2, 3.2, 4.2, -2, 4.2), CHROME, k.seed + 4, { depth: 0.2, thin: 0.3, thick: 0.6 });
         // The coin dial.
-        ball(g, 0, 10, 1.6, { h: 212, s: 9, l: 70 }, k.seed + 5);
-        tick(g, -0.9, 10, 0.9, 10, 0.45, 2);
+        ball(g, 0, 10, 1.6, CHROME, k.seed + 5);
+        tick(g, -0.9, 10, 0.9, 10, 0.45, 2, css(CHROME, -50, 1, 6));
         const [nx, ny, nw, nh] = tall(GUMBALL.neck);
         part(g, boxPts(nx, ny, nw, nh + 0.4, 0.6, k.seed + 6), iron(k.pal, 46), k.seed + 6, { depth: 0.4, thin: 0.4, thick: 1 });
         // The globe: glass full of balls, a hard glint, the cap on top.
         const [cx, cy, r] = GUMBALL.globe;
         const globe = ovalPts(TX(cx), TY(cy), r, r, k.seed + 7, 0.015, 28);
-        tone(g, globe, { h: 200, s: 25, l: 88 }, { depth: 0.7, shade: -10 });
+        const glass: HSL = { h: 200, s: 25, l: 88 };
+        tone(g, globe, glass, { depth: 0.7, shade: -10 });
         g.save();
         path(g, globe);
         g.clip();
@@ -576,7 +578,7 @@ export const FRAMED: Pick<Record<LauncherStyle, Look>, 'hangar' | 'cannon' | 'ba
         }
         g.restore();
         glint(g, poly(TX(cx) - 5, TY(cy) - 1, TX(cx) - 4, TY(cy) - 4.2, TX(cx) - 1.6, TY(cy) - 5.8), 'rgba(255,255,255,0.95)', 0.8);
-        pen(g, globe, k.seed + 8, 0.45, 1.1);
+        pen(g, globe, k.seed + 8, 0.45, 1.1, 3, inkFor(glass));
         const [kx, ky, kw, kh] = tall(GUMBALL.cap);
         part(g, boxPts(kx, ky, kw, kh + 0.4, 0.5, k.seed + 9), paint, k.seed + 9, { depth: 0.3, thin: 0.35, thick: 0.7 });
       },
@@ -590,12 +592,10 @@ export const FRAMED: Pick<Record<LauncherStyle, Look>, 'hangar' | 'cannon' | 'ba
       [-6, -0.5, 14, 8],
       (g, k) => {
         const cord = poly(-3.4, 0.6, -0.6, 1.8, 2.4, 1.4, 5.4, 2.8, 6, 3.8);
-        g.fillStyle = INK;
-        stroke(g, cord, { w: 0.88, seed: 7, taper: [0, 0], press: 0 });
-        g.fillStyle = '#2f7de0';
-        stroke(g, cord, { w: 0.39, seed: 7, taper: [0, 0], press: 0 });
-        part(g, boxPts(5, 3.6, 2.5, 1.9, 0.8, k.seed + 8), { h: 210, s: 8, l: 82 }, k.seed + 8, { depth: 0.3, thin: 0.3, thick: 0.7 });
-        dot(g, 6.9, 4.5, 0.4, 9);
+        bar(g, cord, 0.39, { h: 214, s: 74, l: 53 }, 7, { rim: 0.25, taper: [0, 0], press: 0 });
+        const whistle: HSL = { h: 210, s: 8, l: 82 };
+        part(g, boxPts(5, 3.6, 2.5, 1.9, 0.8, k.seed + 8), whistle, k.seed + 8, { depth: 0.3, thin: 0.3, thick: 0.7 });
+        dot(g, 6.9, 4.5, 0.4, 9, undefined, inkFor(whistle));
       },
     ],
     aimed(s, l) {
