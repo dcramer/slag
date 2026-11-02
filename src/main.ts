@@ -1,5 +1,5 @@
 import { createAudio } from './audio';
-import { parseSeed, randomSeed } from './core/rng';
+import { parseSeed, randomSeed, seedToString } from './core/rng';
 import { installDebug } from './debug';
 import { Match } from './game/match';
 import { loadRules, saveRules } from './game/rules';
@@ -94,6 +94,23 @@ function syncProfile() {
   }
 }
 
+/**
+ * Keep the address bar pointing at the current match seed (and forced theme)
+ * so the URL is always a shareable link to this level. Debug params
+ * (players/race/…) are dropped once the seed changes.
+ */
+let urlSeed = -1;
+function syncUrl() {
+  if (match.seed === urlSeed) return;
+  const first = urlSeed === -1;
+  urlSeed = match.seed;
+  const q = new URLSearchParams(first ? location.search : '');
+  q.set('seed', seedToString(match.seed));
+  if (match.themeOverride) q.set('theme', match.themeOverride);
+  else q.delete('theme');
+  history.replaceState(null, '', `${location.pathname}?${q}`);
+}
+
 const loop = { paused: false };
 installDebug(match, renderer, loop);
 
@@ -113,6 +130,7 @@ function frame(now: number) {
     acc -= DT;
   }
   syncProfile();
+  syncUrl();
   renderer.hud.pointer = input.pointerPos;
   renderer.hud.mouseDevice = input.mouseDevice;
   const events = match.drainEvents();

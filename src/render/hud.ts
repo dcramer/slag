@@ -1,7 +1,6 @@
 import { css, type HSL } from '../core/color';
 import { seedToString } from '../core/rng';
 import type { Match } from '../game/match';
-import { POINTS } from '../game/scoring';
 import type { Role } from '../gen/props';
 import { MAX_PLAYERS, RUN_COUNTDOWN, VIEW_H, VIEW_W } from '../sim/constants';
 import { THEME_LABELS } from '../themes';
@@ -301,29 +300,8 @@ export class Hud {
     // Top-right menu buttons.
     this.pill({ x: VIEW_W - 92, y: 10, w: 82, h: 16, action: 'settings' }, '⚙ Settings  (Esc)', 7);
     this.pill({ x: VIEW_W - 92, y: 30, w: 82, h: 16, action: 'rules' }, '⚑ Level settings', 7);
-    if (m.players.length) this.pill({ x: VIEW_W / 2 + 108, y: 357, w: 70, h: 15, action: 'level', device: m.players[0].device }, '↻ new level', 7);
-    const r = m.rules;
-    const secs = (n: number) => (n > 0 ? `${n}s` : 'off');
-    this.text(
-      `first to ${r.targetScore} · pick ${secs(r.pickSeconds)} · place ${secs(r.placeSeconds)} · race ${secs(r.raceSeconds)}`,
-      VIEW_W / 2 - 40,
-      365,
-      8.5,
-      '#ddd',
-      'center',
-      UI,
-      600,
-    );
-    this.text(
-      `finish +${POINTS.finish} · first +${POINTS.first} · trap kill +${POINTS.trap} · if everyone finishes, nobody scores`,
-      VIEW_W / 2,
-      381,
-      8,
-      '#999',
-      'center',
-      UI,
-      500,
-    );
+    if (m.players.length) this.pill({ x: VIEW_W / 2 - 40, y: 358, w: 80, h: 16, action: 'level', device: m.players[0].device }, '↻ new level', 7.5);
+    if (!m.players.length) this.text('press Space / Enter or click a slot to join  ·  gamepads: Ⓐ', VIEW_W / 2, 366, 8.5, '#bbb', 'center', UI, 600);
   }
 
   private cursor(x: number, y: number, col: HSL, label: string, t: number) {
