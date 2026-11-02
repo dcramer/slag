@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { POST } from '../app/api/net/[op]/route';
 import { clientKey, iceFromEnv, originAllowed, RateLimiter } from '../app/api/net/_server/guard';
 import { ApiError, handleOp } from '../app/api/net/_server/handlers';
+import { LIST_CACHE_MS, ReplyCache } from '../app/api/net/_server/cache';
 import { MemoryStore, storeFromEnv, upstashStore } from '../app/api/net/_server/store';
-import { DEFAULT_ICE, MAX_MAILBOX, MAX_PEERS, MAX_SDP_CHARS, PEER_TTL_S } from '../src/net/signal-protocol';
+import { DEFAULT_ICE, LIST_TTL_S, type LobbiesReply, MAX_LISTED, MAX_MAILBOX, MAX_PEERS, MAX_SDP_CHARS, PEER_TTL_S } from '../src/net/signal-protocol';
 import { MAX_PLAYERS } from '../src/sim/constants';
 
 function world() {
@@ -287,6 +288,125 @@ describe('mailboxes', () => {
   });
 });
 
+describe('lobby list', () => {
+  const farm = { players: 3, max: 8, observers: 1, theme: 'farm', phase: 'run' };
+  function lobbyWorld() {
+    let t = 1_000_000;
+    const store = new MemoryStore(() => t);
+    const ctx = { store, ice: DEFAULT_ICE, now: () => t };
+    const op = (o: Parameters<typeof handleOp>[0], body: Record<string, unknown>) => handleOp(o, body, ctx) as Promise<any>;
+    return {
+      store,
+      op,
+      tick: (s: number) => (t += s * 1000),
+      list: async () => ((await op('lobbies', {})) as LobbiesReply).rooms,
+      host: async (room: string, peer = 'aaaa') => (await op('join', { room, peer, since: 10 })).order as number,
+    };
+  }
+
+  it("lists a room from its host's beat, and nothing else lists it", async () => {
+    const w = lobbyWorld();
+    await w.host('ROOMA');
+    await w.op('join', { room: 'ROOMA', peer: 'bbbb' });
+    expect(await w.list()).toEqual([]);
+    await w.op('beat', { room: 'ROOMA', peer: 'aaaa', host: true });
+    await w.op('beat', { room: 'ROOMA', peer: 'bbbb', list: farm }); // a guest's beat carries no listing
+    expect(await w.list()).toEqual([]);
+    const reply = await w.op('beat', { room: 'ROOMA', peer: 'aaaa', host: true, list: farm });
+    expect(reply).toMatchObject({ alive: true });
+    expect(await w.list()).toEqual([{ room: 'ROOMA', ...farm }]);
+    expect(w.store.immortalKeys()).toEqual([]);
+  });
+
+  it('keeps junk off the list without failing the beat', async () => {
+    const w = lobbyWorld();
+    await w.host('ROOMA');
+    for (const list of [
+      { ...farm, players: 9 },
+      { ...farm, max: 0 },
+      { ...farm, observers: -1 },
+      { ...farm, theme: '<b>farm</b>' },
+      { ...farm, phase: 'party' },
+      { ...farm, players: 1.5 },
+      'farm',
+    ]) {
+      expect((await w.op('beat', { room: 'ROOMA', peer: 'aaaa', host: true, list })).alive).toBe(true);
+    }
+    expect(await w.list()).toEqual([]);
+    // Extra fields never reach anyone's list.
+    await w.op('beat', { room: 'ROOMA', peer: 'aaaa', host: true, list: { ...farm, name: 'spam' } });
+    expect(await w.list()).toEqual([{ room: 'ROOMA', ...farm }]);
+  });
+
+  it('takes a room off when it goes Private, when its listed host leaves, and once its host stops beating', async () => {
+    const w = lobbyWorld();
+    for (const r of ['ROOMA', 'ROOMB', 'ROOMC']) {
+      await w.host(r);
+      await w.op('beat', { room: r, peer: 'aaaa', host: true, list: farm });
+    }
+    expect((await w.list()).map((r) => r.room).sort()).toEqual(['ROOMA', 'ROOMB', 'ROOMC']);
+    await w.op('beat', { room: 'ROOMA', peer: 'aaaa', host: true, list: false });
+    await w.op('leave', { room: 'ROOMB', peer: 'aaaa', order: 1, since: 10, unlist: true });
+    expect((await w.list()).map((r) => r.room)).toEqual(['ROOMC']);
+    w.tick(LIST_TTL_S - 1);
+    expect((await w.list()).map((r) => r.room)).toEqual(['ROOMC']);
+    w.tick(2);
+    expect(await w.list()).toEqual([]);
+    // What a crashed room left in the index goes as soon as another room is listed.
+    await w.host('ROOMD');
+    await w.op('beat', { room: 'ROOMD', peer: 'aaaa', host: true, list: farm });
+    expect(await w.store.run([['ZREVRANGEBYSCORE', 'slag:lobbies', '+inf', '-inf']])).toEqual([['ROOMD']]);
+  });
+
+  it("never lists a room again from a beat that lands after its host's goodbye", async () => {
+    const w = lobbyWorld();
+    await w.host('ROOMA');
+    await w.op('leave', { room: 'ROOMA', peer: 'aaaa', order: 1, since: 10, unlist: true });
+    expect(await w.op('beat', { room: 'ROOMA', peer: 'aaaa', host: true, list: farm })).toEqual({ alive: false });
+    expect(await w.list()).toEqual([]);
+  });
+
+  it('a guest leaving, or a stale goodbye from a refreshed host, leaves the listing alone', async () => {
+    const w = lobbyWorld();
+    await w.host('ROOMA');
+    await w.op('join', { room: 'ROOMA', peer: 'bbbb', since: 10 });
+    await w.op('beat', { room: 'ROOMA', peer: 'aaaa', host: true, list: farm });
+    await w.op('leave', { room: 'ROOMA', peer: 'bbbb', order: 2, since: 10 });
+    await w.op('leave', { room: 'ROOMA', peer: 'aaaa', order: 1, since: 5, unlist: true }); // an older session's goodbye
+    expect((await w.list()).map((r) => r.room)).toEqual(['ROOMA']);
+  });
+
+  it('answers the most recently beaten rooms first, at most MAX_LISTED', async () => {
+    const w = lobbyWorld();
+    for (let i = 0; i < MAX_LISTED + 3; i++) {
+      const room = `ROOM${i}`;
+      await w.host(room);
+      await w.op('beat', { room, peer: 'aaaa', host: true, list: farm });
+      w.tick(0.1);
+    }
+    const rooms = (await w.list()).map((r) => r.room);
+    expect(rooms).toHaveLength(MAX_LISTED);
+    expect(rooms[0]).toBe(`ROOM${MAX_LISTED + 2}`);
+  });
+});
+
+describe('reply cache', () => {
+  it('answers from one read for LIST_CACHE_MS, shares a read in flight, and forgets a failure', async () => {
+    let t = 0;
+    let reads = 0;
+    const c = new ReplyCache<number>(() => t);
+    const load = async () => ++reads;
+    expect(await Promise.all([c.get(load), c.get(load)])).toEqual([1, 1]);
+    t = LIST_CACHE_MS - 1;
+    expect(await c.get(load)).toBe(1);
+    t = LIST_CACHE_MS;
+    expect(await c.get(load)).toBe(2);
+    t *= 3;
+    await expect(c.get(() => Promise.reject(new Error('down')))).rejects.toThrow('down');
+    expect(await c.get(load)).toBe(3);
+  });
+});
+
 /** The budget in docs/NETCODE.md. If this moves, update the doc. */
 describe('command costs', () => {
   it('stays at the documented cost per op', async () => {
@@ -312,6 +432,25 @@ describe('command costs', () => {
     expect(await cost(() => w.op('gone', { peer: 'aaaa', gone: 'cccc', order: 3 }))).toBe(7);
     expect(await cost(() => w.op('leave', { peer: 'aaaa', order: 1 }))).toBe(4); // a client that sends no stamp
   });
+
+  it('stays at the documented cost for the lobby list', async () => {
+    const w = world();
+    const cost = async (fn: () => Promise<unknown>) => {
+      const before = w.store.count;
+      await fn();
+      return w.store.count - before;
+    };
+    const list = { players: 2, max: 8, observers: 0, theme: 'farm', phase: 'lobby' };
+    const read = () => handleOp('lobbies', {}, { store: w.store, ice: DEFAULT_ICE });
+    expect(await cost(read)).toBe(1); // nothing listed: the range alone
+    await w.op('join', { peer: 'aaaa', since: 10 });
+    expect(await cost(() => w.op('beat', { peer: 'aaaa', host: true, list }))).toBe(8); // newly listed: prunes, renews the index
+    expect(await cost(() => w.op('beat', { peer: 'aaaa', host: true, list }))).toBe(6); // every beat after: 3 more than unlisted
+    expect(await cost(read)).toBe(2); // the range, then one fetch of the listings
+    expect(await cost(() => w.op('beat', { peer: 'aaaa', host: true, list: false }))).toBe(5); // made Private
+    expect(await cost(() => w.op('beat', { peer: 'aaaa', host: true }))).toBe(3); // and Private from then on
+    expect(await cost(() => w.op('leave', { peer: 'aaaa', order: 1, since: 10, unlist: true }))).toBe(6);
+  });
 });
 
 describe('http edge', () => {
@@ -322,6 +461,14 @@ describe('http edge', () => {
     const r = await post('join', JSON.stringify({ room: 'HTTPA', peer: 'aaaa' }), { 'content-type': 'text/plain' });
     expect(r.status).toBe(200);
     expect((await r.json()).members[0].id).toBe('aaaa');
+  });
+
+  it('reads the lobby list with no room or peer', async () => {
+    await post('join', JSON.stringify({ room: 'HTTPL', peer: 'aaaa' }));
+    await post('beat', JSON.stringify({ room: 'HTTPL', peer: 'aaaa', host: true, list: { players: 1, max: 8, observers: 0, theme: 'mine', phase: 'lobby' } }));
+    const r = await post('lobbies', '{}');
+    expect(r.status).toBe(200);
+    expect(((await r.json()) as LobbiesReply).rooms.find((x) => x.room === 'HTTPL')).toMatchObject({ theme: 'mine' });
   });
 
   it('answers bad requests without crashing', async () => {

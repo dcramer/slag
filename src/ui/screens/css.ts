@@ -714,6 +714,373 @@ button.prompt:focus-visible {
   }
 }
 
+/* ------------------------------------------------------------ lobbies */
+
+.lobbies {
+  position: relative;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  isolation: isolate;
+}
+
+.lb-main {
+  box-sizing: border-box;
+  width: min(900px, 100%);
+  margin: 0 auto;
+  padding: 28px clamp(16px, 4vw, 40px) 40px;
+}
+
+.lb-head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 26px;
+}
+
+.lb-head .logo-k {
+  --k: 0.42;
+}
+
+.lb-head h1 {
+  margin: 0;
+  font: 400 clamp(36px, 5vw, 52px) / 1 var(--display);
+  letter-spacing: 0.02em;
+  color: var(--bone);
+  text-shadow: 0 3px 0 var(--ink);
+}
+
+/* Back to the menu: an iron plate with an arrow, the size of a thumb. */
+.lb-back {
+  all: unset;
+  box-sizing: border-box;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  cursor: pointer;
+  background: var(--grain), linear-gradient(var(--iron-hi), var(--iron));
+  border: 1.5px solid var(--rim);
+  border-radius: 6px;
+  box-shadow: 0 3px 0 var(--drop);
+  position: relative;
+}
+
+.lb-back::after {
+  content: '';
+  position: absolute;
+  inset: 14px 16px 14px 14px;
+  background: var(--bone);
+  clip-path: polygon(0 50%, 60% 0, 60% 32%, 100% 32%, 100% 68%, 60% 68%, 60% 100%);
+}
+
+.lb-back:hover::after {
+  background: var(--amber);
+}
+
+.lb-back:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--drop);
+}
+
+.lb-back:focus-visible,
+.lb-tab:focus-visible {
+  outline: 3px solid var(--amber);
+  outline-offset: 3px;
+}
+
+/* The filters: stamped plates, the chosen one molten and pressed in. */
+.lb-tabs {
+  display: flex;
+  gap: 12px;
+  margin: 0 0 22px 24px;
+}
+
+.lb-tab {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 6px 18px 8px;
+  cursor: pointer;
+  font: 400 24px/1 var(--display);
+  color: var(--bone);
+  text-shadow: 0 2px 0 var(--drop);
+  background: var(--grain), linear-gradient(var(--iron-hi), var(--iron));
+  border: 1.5px solid var(--rim);
+  border-radius: 6px;
+  box-shadow: 0 4px 0 var(--drop);
+  transition:
+    transform 0.08s,
+    box-shadow 0.08s;
+}
+
+.lb-tab .n {
+  min-width: 26px;
+  padding: 3px 6px;
+  box-sizing: border-box;
+  text-align: center;
+  font: 800 14px/1 var(--ui);
+  color: var(--ash);
+  background: var(--soot);
+  border: 1.5px solid var(--rim);
+  border-radius: 4px;
+  text-shadow: none;
+}
+
+.lb-tab .n:empty {
+  display: none;
+}
+
+.lb-tab[aria-selected='true'] {
+  color: var(--ink);
+  text-shadow: 0 1px 0 rgba(255, 240, 200, 0.45);
+  background: var(--grain), linear-gradient(#ff8a2a, #e8571a);
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--drop);
+}
+
+.lb-tab[aria-selected='true'] .n {
+  color: var(--bone);
+  background: var(--ink);
+}
+
+/* Rooms: menu plates with the room's numbers along the right. Room on the left for the selection's diamond. */
+.lb-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0 8px 0 24px;
+  list-style: none;
+}
+
+.lobbies[data-state='loading'] .lb-list,
+.lobbies:not([data-state='empty']) .lb-empty {
+  display: none;
+}
+
+.lb-row.menu-item {
+  grid-template-columns: minmax(0, 1fr) auto auto auto 14px;
+  column-gap: 22px;
+  min-height: 68px;
+}
+
+.lb-row .t,
+.lb-row .s {
+  grid-column: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lb-row .t {
+  font-size: 28px;
+}
+
+.lb-row .s {
+  letter-spacing: 0.14em;
+  font-weight: 700;
+}
+
+.lb-row .chev {
+  grid-column: 5;
+}
+
+.lb-seats,
+.lb-eyes,
+.lb-phase {
+  grid-row: 1 / span 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lb-seats {
+  grid-column: 2;
+}
+
+.lb-eyes {
+  grid-column: 3;
+  min-width: 46px;
+  font: 800 17px/1 var(--ui);
+  color: var(--ash);
+}
+
+.lb-eyes svg {
+  width: 22px;
+  height: 14px;
+  flex: none;
+}
+
+.lb-eyes[data-none] {
+  opacity: 0.45;
+}
+
+.lb-phase {
+  grid-column: 4;
+  justify-content: flex-end;
+  min-width: 92px;
+}
+
+/* One pip per seat, molten when taken. */
+.lb-pips {
+  display: grid;
+  grid-template-columns: repeat(4, 9px);
+  gap: 3px;
+}
+
+.lb-pips i {
+  height: 9px;
+  border-radius: 2px;
+  background: var(--soot);
+  border: 1.5px solid var(--rim);
+}
+
+.lb-pips i.on {
+  background: var(--amber);
+}
+
+.lb-count {
+  min-width: 42px;
+  font: 400 24px/1 var(--display);
+  color: var(--bone);
+  text-shadow: 0 2px 0 var(--drop);
+}
+
+.lb-tag {
+  padding: 5px 8px 4px;
+  font: 800 12px/1 var(--ui);
+  letter-spacing: 0.1em;
+  color: var(--ash);
+  background: var(--soot);
+  border: 1.5px solid var(--rim);
+  border-radius: 4px;
+}
+
+.lb-tag[data-phase='lobby'] {
+  color: var(--ink);
+  background: var(--toxic);
+}
+
+/* On the molten selection, the numbers go to ink like its text. */
+.lb-row[data-active='true'] .lb-count,
+.lb-row[data-active='true'] .lb-eyes {
+  color: var(--ink);
+  text-shadow: none;
+}
+
+.lb-row[data-active='true'] .lb-pips i:not(.on) {
+  background: rgba(18, 11, 8, 0.35);
+}
+
+.lb-row[data-active='true'] .lb-pips i.on {
+  background: var(--white-hot);
+}
+
+/* Nothing to list: one plate, with a way to start a lobby of your own. */
+.lb-empty {
+  position: relative;
+  box-sizing: border-box;
+  width: min(560px, calc(100% - 24px));
+  margin: 8px 0 0 24px;
+  padding: 30px 30px 26px;
+  background: var(--grain), linear-gradient(var(--iron-hi), var(--iron));
+  border: 1.5px solid var(--rim);
+  border-radius: 6px;
+  box-shadow: 0 5px 0 var(--drop);
+}
+
+.lb-empty::before {
+  content: '';
+  position: absolute;
+  left: -1.5px;
+  right: -1.5px;
+  top: -1.5px;
+  height: 10px;
+  background: var(--tape);
+  border: 1.5px solid var(--rim);
+  border-radius: 6px 6px 0 0;
+}
+
+.lb-empty h2 {
+  margin: 0 0 22px;
+  text-transform: uppercase;
+  font: 400 clamp(30px, 4.4vw, 40px) / 1 var(--display);
+  letter-spacing: 0.02em;
+  color: var(--bone);
+  text-shadow: 0 2px 0 var(--drop);
+}
+
+.lb-empty .menu-item {
+  width: calc(100% - 8px);
+}
+
+@media (max-width: 860px) {
+  .lb-main {
+    padding-top: 18px;
+  }
+  .lb-head {
+    margin-bottom: 18px;
+  }
+  .lb-head .logo-k {
+    --k: 0.3;
+  }
+  .lb-list {
+    padding-left: 0;
+  }
+  .lb-tabs,
+  .lb-empty {
+    margin-left: 0;
+  }
+  .lb-empty {
+    width: 100%;
+  }
+}
+
+/* A phone held upright: the numbers go under the name. */
+@media (max-width: 600px) {
+  .lb-head .logo-k {
+    display: none;
+  }
+  .lb-tabs {
+    gap: 10px;
+  }
+  .lb-tab {
+    flex: 1;
+    justify-content: center;
+  }
+  .lb-row.menu-item {
+    grid-template-columns: auto auto minmax(0, 1fr);
+    column-gap: 16px;
+    row-gap: 8px;
+    padding: 10px 14px 12px 16px;
+  }
+  .lb-row .t,
+  .lb-row .s {
+    grid-column: 1 / span 2;
+  }
+  .lb-row .s {
+    grid-row: 2;
+  }
+  .lb-phase {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .lb-seats {
+    grid-column: 1;
+    grid-row: 3;
+  }
+  .lb-eyes {
+    grid-column: 2;
+    grid-row: 3;
+  }
+  .lb-row .chev {
+    display: none;
+  }
+}
+
 /* ------------------------------------------------------------ the logo over the lobby HUD */
 
 /* The home logo at its full size, scaled into the HUD's slot, so the two can't drift apart. */

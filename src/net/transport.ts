@@ -1,4 +1,5 @@
 import { Rng } from '../core/rng';
+import type { RoomListing } from './signal-protocol';
 
 /**
  * Room transports. A transport connects this browser to everyone else in
@@ -46,6 +47,8 @@ export interface Transport {
   close(): void;
   /** Join the order again at the back, keeping links: an observer ahead of a player does this (see NetSession.maybeReorder). */
   reorder?(): void;
+  /** What the public lobby list shows of the room while this peer hosts it; null keeps it off (Private). Only a transport with a list has it. */
+  list?(listing: () => RoomListing | null): void;
 }
 
 export function sortMembers(list: Member[]): Member[] {

@@ -263,7 +263,12 @@ export function cycleFrames(mods: readonly Module[], motion: Motion = { type: 'n
     if (m.type === 'lob') p = Math.max(p, m.off + m.warn + m.flight + Math.max(0, m.count - 1) * m.lag);
     if (m.type === 'cavein') p = Math.max(p, m.off + m.warn + m.on);
     if (m.type === 'cart') p = Math.max(p, m.off + m.warn + m.run + m.back);
+    if (m.type === 'sign') p = Math.max(p, m.off + m.warn + m.fall + m.live + m.lift);
+    if (m.type === 'wire') p = Math.max(p, m.off + m.warn + m.run);
+    if (m.type === 'neon') p = Math.max(p, m.off + m.warn + m.on);
     if (m.type === 'thaw') p = Math.max(p, m.frozen + m.warn + m.open);
+    if (m.type === 'ladle') p = Math.max(p, m.off + m.warn + m.pour + m.set);
+    if (m.type === 'arm') p = Math.max(p, m.rest + m.warn + m.strike + m.weld + m.back);
   }
   return Math.min(p, 1600);
 }

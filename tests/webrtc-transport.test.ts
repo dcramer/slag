@@ -2,11 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { handleOp } from '../app/api/net/_server/handlers';
 import { MemoryStore } from '../app/api/net/_server/store';
 import { Match } from '../src/game/match';
+import type { MatchRules } from '../src/game/rules';
 import { roomSeed } from '../src/game/room';
 import { NetSession } from '../src/net/session';
 import { installTelemetry } from '../src/telemetry';
 import { SignalError, type SignalApi } from '../src/net/signal-client';
-import { DEFAULT_ICE, type Mail, type MemberInfo, type Signal } from '../src/net/signal-protocol';
+import { DEFAULT_ICE, LIST_TTL_S, type ListedRoom, type Mail, type MemberInfo, type RoomListing, type Signal } from '../src/net/signal-protocol';
 import { hashMatch } from '../src/net/snapshot';
 import type { Member } from '../src/net/transport';
 import { type RtcChannel, type RtcPeer, WebRtcTransport } from '../src/net/webrtc-transport';
@@ -137,7 +138,7 @@ class DirectSignal implements SignalApi {
     return handleOp(op, { room: this.room, peer: this.peer, ...extra }, { store: this.store, ice: DEFAULT_ICE });
   }
   join = (since: number) => this.call('join', { since });
-  beat = (host: boolean) => this.call('beat', { host });
+  beat = (host: boolean, list?: RoomListing | false) => this.call('beat', list === undefined ? { host } : { host, list });
   members = (): Promise<MemberInfo[]> => this.call('members').then((r) => r.members);
   gone = (peer: string, order: number): Promise<MemberInfo[]> => this.call('gone', { gone: peer, order }).then((r) => r.members);
   send = async (to: string, signal: Signal): Promise<boolean> => {
@@ -151,8 +152,8 @@ class DirectSignal implements SignalApi {
     this.polls++;
     return this.call('poll').then((r) => r.mail);
   };
-  leave(order: number, since: number) {
-    void this.call('leave', { order, since }).catch(() => {});
+  leave(order: number, since: number, unlist = false) {
+    void this.call('leave', unlist ? { order, since, unlist } : { order, since }).catch(() => {});
   }
 }
 
@@ -411,15 +412,21 @@ describe('free tier budget', () => {
   });
 
   it('holds the documented commands per player per minute in a playing room', async () => {
-    const w = new World();
-    await w.room('aaaa', 'bbbb', 'cccc', 'dddd');
-    await w.run(35_000);
-    const before = w.store.count;
-    await w.run(60_000);
-    const perMinute = w.store.count - before;
-    // docs/NETCODE.md: host 24/min, each guest 3/min.
-    expect(perMinute).toBeLessThanOrEqual(24 + 3 * 3 + 2);
-    expect(perMinute / 4).toBeLessThan(9);
+    const perMinute = async (rules: Partial<MatchRules>) => {
+      const w = new World();
+      const [a] = await w.room('aaaa', 'bbbb', 'cccc', 'dddd');
+      a.session.act({ t: 'rules', rules: { ...a.session.match.rules, ...rules } });
+      await w.run(35_000);
+      const before = w.store.count;
+      await w.run(60_000);
+      return w.store.count - before;
+    };
+    // docs/NETCODE.md: host 21/min, each guest 3/min; listing the room is 3 more a beat, 9 a minute.
+    const hidden = await perMinute({ private: true });
+    const listed = await perMinute({});
+    expect(hidden).toBeLessThanOrEqual(21 + 3 * 3 + 2);
+    expect(listed - hidden).toBe(9);
+    expect(listed / 4).toBeLessThan(11);
   });
 
   it('backs a lone host off, and a hidden lone host leaves the room until shown', async () => {
@@ -447,6 +454,63 @@ describe('free tier budget', () => {
     expect(b.session.status).toBe('online');
     expect(a.session.paused).toBe(false);
   });
+});
+
+describe('lobby list', () => {
+  const listed = async (w: World): Promise<ListedRoom | undefined> =>
+    ((await handleOp('lobbies', {}, { store: w.store, ice: [] })) as { rooms: ListedRoom[] }).rooms.find((r) => r.room === 'ROOM1');
+
+  it('lists a room as soon as it has a host, with its seats, watchers, theme and phase', async () => {
+    const w = new World();
+    const [a] = await w.room('aaaa');
+    await w.run(600);
+    expect(await listed(w)).toEqual({ room: 'ROOM1', players: 1, max: 8, observers: 0, theme: a.session.match.level.theme.id, phase: 'lobby' });
+    // A player and a watcher arriving show within the nudge, not a beat later; only the host writes the list.
+    w.join('bbbb');
+    w.join('cccc', true);
+    await w.run(7000);
+    expect(await listed(w)).toMatchObject({ players: 2, observers: 1 });
+    expect(w.peers.get('bbbb')!.signal.calls).toBeLessThan(a.signal.calls);
+  });
+
+  it('takes a room off at once when the host makes it Private, and back when it is public again', async () => {
+    const w = new World();
+    const [a] = await w.room('aaaa', 'bbbb');
+    a.session.act({ t: 'rules', rules: { ...a.session.match.rules, private: true } });
+    await w.run(1500);
+    expect(await listed(w)).toBeUndefined();
+    // Private beats never list it, however long the room lives.
+    await w.run(45_000);
+    expect(await listed(w)).toBeUndefined();
+    a.session.act({ t: 'rules', rules: { ...a.session.match.rules, private: false } });
+    await w.run(1500);
+    expect(await listed(w)).toMatchObject({ players: 2 });
+  });
+
+  it('the next host lists the room when one leaves, and the last one out takes it off with its goodbye', async () => {
+    const w = new World();
+    await w.room('aaaa', 'bbbb');
+    await w.run(6000);
+    expect(await listed(w)).toMatchObject({ players: 2 });
+    w.leave('aaaa');
+    await w.runUntil(() => w.settled(), 20_000);
+    await w.run(6000);
+    expect(await listed(w)).toMatchObject({ players: 1 });
+    w.leave('bbbb');
+    await w.run(100);
+    expect(await listed(w)).toBeUndefined();
+  });
+
+  it('a room whose host crashed alone falls off by itself', async () => {
+    const w = new World();
+    await w.room('aaaa');
+    await w.run(600);
+    expect(await listed(w)).toBeDefined();
+    w.crash('aaaa');
+    await w.run((LIST_TTL_S + 1) * 1000);
+    expect(await listed(w)).toBeUndefined();
+    expect(w.store.immortalKeys()).toEqual([]);
+  }, 30_000);
 });
 
 describe('host migration', () => {

@@ -2,12 +2,16 @@ import { css, type HSL, hsl3, shift } from '../core/color';
 import type { Rng } from '../core/rng';
 import type { DecorKind, DecorSpot } from '../gen/decor';
 import type { Theme } from '../gen/theme';
+import { CASTLE_DECOR } from './decor-castle';
 import { FARM_DECOR } from './decor-farm';
 import { FRONTIER_DECOR } from './decor-frontier';
 import { GLACIER_DECOR } from './decor-glacier';
 import { HARBOR_DECOR } from './decor-harbor';
 import { JUNGLE_DECOR } from './decor-jungle';
+import { FACTORY_DECOR } from './decor-factory';
 import { MINE_DECOR } from './decor-mine';
+import { ROOFTOPS_DECOR } from './decor-rooftops';
+import { SPACE_DECOR } from './decor-space';
 import { VOLCANO_DECOR } from './decor-volcano';
 import { blob, line, type P, stroke } from './ink';
 import { inkFence, inkHay } from './ink-parts';
@@ -948,10 +952,14 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   ...FRONTIER_DECOR,
+  ...CASTLE_DECOR,
   ...FARM_DECOR,
   ...VOLCANO_DECOR,
   ...HARBOR_DECOR,
   ...JUNGLE_DECOR,
   ...MINE_DECOR,
+  ...FACTORY_DECOR,
+  ...ROOFTOPS_DECOR,
+  ...SPACE_DECOR,
   ...GLACIER_DECOR,
 };

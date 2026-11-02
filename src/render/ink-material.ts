@@ -1116,4 +1116,5 @@ export const INK_MATERIALS: Record<TerrainKind, InkMaterial> = {
   iceblock: iceBlocks,
   bone: ivory,
   container: containers,
+  girder: plates,
 };

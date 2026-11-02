@@ -1,17 +1,21 @@
-import { css, type HSL } from '../../../core/color';
+import type { HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
-import { CEIL, HALL_AIR, MANOR_H, type Manor, manorWithin, throneHallPlan, TOWER } from '../../../gen/stage/castle';
+import { CEIL, HALL_AIR, MANOR_H, type Manor, manorWithin, throneDais, throneHallPlan, TOWER } from '../../../gen/stage/castle';
 import { TILE } from '../../../sim/constants';
+import { type Level, T_SOLID, tileAt } from '../../../sim/level';
 import { line, type P } from '../../ink';
-import { boxPts, ovalPts, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
+import { boxPts, ovalPts, path, poly, sprite, stamp, tick } from '../../ink-props';
 import { circle, flame, glowDot, light, type RC } from '../../kit';
 import type { DrawCtx } from '../common';
 import { SHELLS } from '../modules/deco-shells';
+import { castleStagePiece, castleStageShell } from './castle-stage';
+import { BANNER, CANDLE, doorway, flat, GILT, type Hz, hz, MOON, STONE, WOOD } from './castle-ink';
 import type { Deco, DecoSkin, ThemeSkins } from './common';
 
 /**
- * Castle skins: the back walls of its two stage concepts (docs/SETPIECES.md, Castle), drawn as the deco
- * `facade` behind the landmark's terrain. Only the rooms show through, so each is the rooms' far wall.
+ * Castle skins: the back walls of the Haunted Wing and the Throne Hall (docs/SETPIECES.md, Castle), drawn
+ * as the deco `facade` behind the landmark's terrain. Only the rooms show through, so each is the rooms'
+ * far wall. The Gatehouse, the Bell Tower and the Boss Bridge are drawn by ./castle-stage.ts.
  *
  * The Haunted Wing's is peeling wallpaper, a room to a paper, with a moonlit window in the hall, a
  * grandfather clock, candles that gutter, and the family portraits, whose eyes follow whoever is nearest.
@@ -24,37 +28,6 @@ import type { Deco, DecoSkin, ThemeSkins } from './common';
  * beyond, the threshold on the ground (docs/SETPIECES.md §4, Grounding).
  */
 
-const HAZE = 0.28;
-/** A hazed tone: toward the level's fog in lightness and saturation, never in hue. */
-function hz(d: DrawCtx) {
-  const fog = d.o.level?.theme.fog;
-  const k = fog ? `${fog.h | 0},${fog.l | 0}` : '-';
-  const hsl = (c: HSL): HSL => (fog ? { h: c.h, s: c.s * (1 - HAZE), l: c.l + (fog.l - c.l) * HAZE } : c);
-  return { k, hsl, c: (b: HSL, dl = 0, a = 1) => css(hsl(b), dl, a), ink: (b: HSL) => css({ h: b.h, s: b.s * 0.5, l: Math.max(5, hsl(b).l * 0.3) }) };
-}
-type Hz = ReturnType<typeof hz>;
-
-function flat(g: CanvasRenderingContext2D, pts: readonly P[], base: HSL, t: Hz, seed: number, depth = 0.6) {
-  tone(g, pts, t.hsl(base), { depth });
-  pen(g, pts, seed, 0.3, 0.8, 3, t.ink(base));
-}
-
-/** A doorway through a wall, seen behind its opening: the wall's reveal down both sides, a dark arch, a threshold. */
-function doorway(g: CanvasRenderingContext2D, t: Hz, x: number, y: number, w: number, h: number, wall: HSL, seed: number) {
-  flat(g, boxPts(x, y, w, h, 0.4, seed, 0.05), wall, t, seed, 0.5);
-  const j = 4;
-  const r = (w - 2 * j) / 2;
-  const arch: P[] = [{ x: x + j, y: y + h }];
-  for (let k = 0; k <= 10; k++) arch.push({ x: x + j + r - Math.cos((k / 10) * Math.PI) * r, y: y + r + 2 - Math.sin((k / 10) * Math.PI) * r });
-  arch.push({ x: x + w - j, y: y + h });
-  flat(g, arch, { h: 250, s: 18, l: 7 }, t, seed + 1, 0.2);
-  flat(g, boxPts(x - 1, y + h - 3, w + 2, 3, 0.3, seed + 2), { h: 30, s: 6, l: 40 }, t, seed + 2, 0.3);
-}
-
-const GILT: HSL = { h: 42, s: 58, l: 46 };
-const WOOD: HSL = { h: 22, s: 38, l: 20 };
-const CANDLE: HSL = { h: 40, s: 100, l: 62 };
-const MOON: HSL = { h: 214, s: 58, l: 76 };
 const PAPERS: HSL[] = [
   { h: 150, s: 22, l: 17 },
   { h: 300, s: 20, l: 18 },
@@ -265,14 +238,14 @@ const manor: DecoSkin = (rc, m, d) => {
 
 // -------------------------------------------------------------------------------------------- throne hall
 
-const STONE: HSL = { h: 30, s: 8, l: 30 };
-const BANNER: HSL = { h: 354, s: 62, l: 32 };
-
-function hallWall(m: Deco, t: Hz) {
+function hallWall(m: Deco, t: Hz, level: Level | undefined) {
   return sprite(`castle|hall|${m.w}|${m.h}|${m.seed}|${t.k}`, -2, -2, m.w + 4, m.h + 4, (g) => {
     // The box runs tower to tower and down to the ground: the hall's air sits between the towers.
     const at = { x: Math.round(m.at[0] / TILE), y: 0, w: Math.round(m.w / TILE), h: 0 };
     const G = Math.round(m.at[1] / TILE) + CEIL + HALL_AIR;
+    // The dais the seed built, read off the tiles as they were when the wall was baked.
+    const p = throneHallPlan({ x: at.x, y: G - 1, w: at.w, h: 1 });
+    const dais = level ? throneDais((x, y) => tileAt(level, x, y) === T_SOLID, p) : { dx0: p.x1 - TOWER - 3, steps: 2, ts: p.x1 - TOWER - 1 };
     const top = CEIL * TILE;
     const bot = G * TILE - m.at[1];
     const ix = TOWER * TILE;
@@ -282,7 +255,7 @@ function hallWall(m: Deco, t: Hz) {
     g.fillRect(0, 0, m.w, m.h);
     // The towers' doors.
     doorway(g, t, 0, bot - 3 * TILE, TOWER * TILE, 3 * TILE, STONE, 51);
-    doorway(g, t, m.w - TOWER * TILE, bot - 5 * TILE, TOWER * TILE, 3 * TILE, STONE, 53);
+    doorway(g, t, m.w - TOWER * TILE, bot - (dais.steps + 3) * TILE, TOWER * TILE, 3 * TILE, STONE, 53);
     g.save();
     g.translate(ix, 0);
     // Coursed ashlar: blocks in two tones cut by hand, and a joint where one block meets the next, lifted often.
@@ -329,10 +302,9 @@ function hallWall(m: Deco, t: Hz) {
       g.fill();
       flat(g, boxPts(bx - 9, top, 18, 2.2, 0.3, i + 3), WOOD, t, i + 4, 0.3);
     }
-    // The throne, on the dais at the far end.
-    const p = throneHallPlan({ x: at.x, y: 0, w: at.w, h: Math.round(m.h / TILE) });
-    const tx = (p.dx0 + 3) * TILE - m.at[0] - ix;
-    const ty = bot - 2 * TILE;
+    // The throne, on the dais's top step.
+    const tx = (dais.ts + 1) * TILE - m.at[0] - ix;
+    const ty = bot - dais.steps * TILE;
     const back = poly(tx - 9, ty, tx - 9, ty - 34, tx - 5, ty - 46, tx, ty - 52, tx + 5, ty - 46, tx + 9, ty - 34, tx + 9, ty);
     flat(g, back, { h: 354, s: 54, l: 28 }, t, 21, 0.8);
     flat(g, boxPts(tx - 11, ty - 14, 22, 4, 0.5, 22), GILT, t, 23, 0.5);
@@ -340,18 +312,19 @@ function hallWall(m: Deco, t: Hz) {
     g.fillStyle = t.c(GILT, 8);
     path(g, poly(tx - 5, ty - 40, tx - 5, ty - 46, tx - 2.5, ty - 43, tx, ty - 48, tx + 2.5, ty - 43, tx + 5, ty - 46, tx + 5, ty - 40));
     g.fill();
-    // A red carpet along the floor to it.
+    // A red carpet along the floor to the dais.
+    const cx = dais.dx0 * TILE - m.at[0] - ix;
     g.fillStyle = t.c(BANNER, 4);
-    g.fillRect(0, bot - 2.6, tx - 6, 2.6);
+    g.fillRect(0, bot - 2.6, cx, 2.6);
     g.fillStyle = t.c(GILT);
-    g.fillRect(0, bot - 2.8, tx - 6, 0.7);
+    g.fillRect(0, bot - 2.8, cx, 0.7);
     g.restore();
   });
 }
 
 const hall: DecoSkin = (rc, m, d) => {
   const t = hz(d);
-  stamp(rc.s, hallWall(m, t), m.at[0] + d.off[0], m.at[1] + d.off[1]);
+  stamp(rc.s, hallWall(m, t, d.o.level ?? undefined), m.at[0] + d.off[0], m.at[1] + d.off[1]);
   // Moonlight through the stained glass.
   const iw = m.w - 2 * TOWER * TILE;
   const n = Math.max(1, Math.floor(iw / 64));
@@ -363,7 +336,8 @@ const facade: DecoSkin = (rc, m, d) => {
   const concept = d.o.level?.landmark?.concept;
   if (concept === 'haunted-wing') return manor(rc, m, d);
   if (concept === 'throne-hall') return hall(rc, m, d);
+  if (castleStageShell(rc, m, d)) return;
   SHELLS.facade?.(rc, m, d);
 };
 
-export const CASTLE: ThemeSkins = { deco: { facade } };
+export const CASTLE: ThemeSkins = { deco: { facade }, piece: castleStagePiece };

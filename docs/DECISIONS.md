@@ -168,6 +168,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `open` · branch `worktree-agent-ae6810c61c411904c`, behind `?traced=1`
 - **The traced homages look too much like the originals: every kind needs a clear twist of its own on top of the recognisable silhouette.** "they look TOO much like the things were trying to parody... so we'd need to spice it up too"
   2026-11-02 · `open` · CHARACTERS.md → Roster
+- **3D-to-2D round 1 misses on art style and on "parody the original"; try a round 2 with a model sheet and a pose sheet, restroked in the game's own ink.** "the main issue with that 3d to 2d pipeline is the art style, and that its not following our 'parody the original'. i also agree that we could do a pose sheet/etc. lets try another round with improvements"
+  2026-11-02 · `in progress` · branch `worktree-agent-aacd068f51e46176c`, behind `?sprites=1`
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
   2026-11-02 · `done` · public/ASSETS.md
 
@@ -246,7 +248,7 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Demolition parts rarely change terrain: the drill digs, plus one rare small bomb; the rest clear placed parts only.** "it should be RARE that they can change terrain.. so the drill is fine.. and maybe one other small one, but i think they commonly change terrain right now". Changed: bombs, charges and time bombs used to blast terrain too, and every roster held a terrain breaker.
   2026-11-02 · `done` · DESIGN.md → Props, `src/gen/props.ts`
 - **Lobby browser: a list of lobbies, showing only ones that aren't full by default.** Lobbies are public by default with a Private option. "lets make lobbies public by default with a private option"
-  2026-11-02 · `planned` · TODO.md → 26
+  2026-11-02 · `done` · DESIGN.md → Online, Rules; NETCODE.md → Lobby list
 - **Conveyors rotate: the rotation picks the belt's face.** A side belt grips and carries a clinging runner (an escalator when it runs up), a bottom belt shoves a head that bonks it. "you cant rotate conveyors.. the conveyor always stays on the top"
   2026-11-02 · `done` · DESIGN.md → Props, Conveyors
 - **The parody first batch: Walk-Off Bat, Tremor Brick, Front-Runner Tax, Pocket Block, Launch Plate, Four-Square, Boost Strip, Panic Button, Fuse Crate, Y-Fling.**

@@ -351,6 +351,9 @@ function drawSwinger(rc: RC, m: Swinger, r: Resolved, off: Vec, pal: MetalPalett
         stamp(s, stud, h.x + Math.cos(a) * m.radius * 0.46, h.y + Math.sin(a) * m.radius * 0.46);
       }
       stamp(s, stud, h.x, h.y);
+    } else if (m.head === 'weight') {
+      // A blunt iron weight: a ball on its chain, nothing on it to cut or stab.
+      stamp(s, maceBall(m.radius * 1.1, pal), h.x, h.y);
     } else {
       s.save();
       s.translate(h.x, h.y);

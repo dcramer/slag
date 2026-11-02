@@ -47,7 +47,12 @@ export const TELLS: { [T in Module['type']]?: Tell<ModuleOf<T>> } = {
   lob: (m) => m.warn,
   cavein: (m) => m.warn,
   cart: (m) => m.warn,
+  sign: (m) => m.warn,
+  neon: (m) => m.warn,
+  wire: (m) => m.warn,
   thaw: (m) => m.warn,
+  ladle: (m) => m.warn,
+  arm: (m) => m.warn,
 };
 
 /** Modules among `mods` whose tell is a warning shorter than MIN_TELL. */
@@ -74,6 +79,8 @@ const VARIANT: { [T in Module['type']]?: (m: ModuleOf<T>) => string } = {
   launcher: (m) => m.ammo,
   swinger: (m) => m.head,
   geyser: (m) => (m.lethal ? 'burns' : 'blows'),
+  // A field that drags you in (a whirlpool) plays nothing like one that throws you out (an airlock).
+  magnet: (m) => (m.polarity > 0 ? 'pulls' : 'pushes'),
   flood: (m) => m.look,
   // One thing falling on a spot, or a chain of segments sweeping an arc.
   lob: (m) => (m.count > 1 ? 'chain' : 'single'),

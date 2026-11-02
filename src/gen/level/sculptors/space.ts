@@ -1,13 +1,14 @@
 import type { Rng } from '../../../core/rng';
+import { deckOf, SPACE_DOCK, SPACE_UNDER, spaceAsksTwo, spaceOwns } from '../../stage/space';
 import { finish, Grid, hintGap } from '../kit';
 import { jumpProfile } from '../probe';
-import type { Sculptor } from '../types';
-import { easyRise, hardGap, knobs, rollChallenges } from './common';
+import type { SculptCtx, Sculptor, Shape } from '../types';
+import { easyRise, hardGap, type Knobs, knobs, raiseLandmark, rollChallenges } from './common';
 
 type SpaceStyle = 'asteroids' | 'station';
 
 /** Narrowest dock: the spawn or goal pocket plus the lipped column at its void end. */
-const DOCK = 6;
+const DOCK = SPACE_DOCK;
 /** Narrowest bank of a hard crossing: enough to run at the bridge from (reach.ts runs from 4). */
 const BANK = 5;
 
@@ -45,6 +46,7 @@ export function spaceHop(density: number): { lo: number; hi: number } {
  * bridge and a jump back up crosses it.
  */
 export const space: Sculptor = (ctx) => {
+  if (ctx.concept) return spaceStage(ctx);
   const { rng, attempt } = ctx;
   const style: SpaceStyle = ctx.theme?.terrain?.kind === 'hull' ? 'station' : 'asteroids';
   const k = knobs(ctx);
@@ -228,4 +230,108 @@ function upperLane(g: Grid, rng: Rng, row: (x: number) => number, from: number, 
     }
     x += w + rng.int(Math.max(2, hop.lo - 1), Math.max(2, hop.hi - 1));
   }
+}
+
+/**
+ * A space level built round a stage concept's landmark (gen/stage/space.ts): the spawn dock, a chain of
+ * bodies where there's room, the landmark (its own void in front, its gangway, the structure), a chain on
+ * to the goal dock. The landmark owns the level's crossing, or both where a wide level made room for a
+ * two-part one; a crossing it doesn't own goes in the longer chain. Plain space levels never come here, so
+ * they're generated exactly as before.
+ */
+function spaceStage(ctx: SculptCtx): Shape {
+  const { rng, attempt } = ctx;
+  const concept = ctx.concept!;
+  const style: SpaceStyle = ctx.theme?.terrain?.kind === 'hull' ? 'station' : 'asteroids';
+  const k = knobs(ctx);
+  const { W, H } = k;
+  const g = new Grid(W, H);
+  const asked = rollChallenges(attempt, k);
+  const challenges = asked > 1 && !spaceAsksTwo(k) ? 1 : asked;
+  g.wantsProps = challenges > 0;
+  const hop = spaceHop(k.density);
+  const { w, h } = concept.box(k, rng);
+  const lo = SPACE_DOCK;
+  const hi = W - SPACE_DOCK - w;
+  const deck = Math.min(H - SPACE_UNDER - 1, Math.max(h - SPACE_UNDER + 1, H - SPACE_UNDER - rng.int(1, 3)));
+  const at = { x: hi >= lo ? rng.int(lo, hi) : lo, y: deck + SPACE_UNDER - h, w, h };
+  if (hi < lo || at.y < 1) return finish(g, { row: deck - 1, depth: 2 }, { row: deck - 1, depth: 2 }, 'space:unclaimed');
+  const own = spaceOwns(concept, k, attempt, challenges);
+  const lm = raiseLandmark(g, ctx, { concept, at, ground: deck }, own);
+  const D = deckOf(at);
+  const [ex, eRow] = lm.anchors.exit;
+  // A crossing the landmark doesn't own goes in the longer of the two chains, where one fits.
+  const left = at.x;
+  const right = W - ex;
+  const spare = challenges - own;
+  const fitsHard = (cols: number) => cols >= 2 * DOCK + hardGap(rng) + 2;
+  const hardL = spare > 0 && left >= right && fitsHard(left) ? spare : 0;
+  const hardR = spare > 0 && !hardL && fitsHard(right) ? spare : 0;
+  const sTop = left >= 2 * DOCK + 3 + 2 * hop.lo ? clampRow(k, D + rng.int(-2, 2)) : D;
+  const gTop = right >= 2 * DOCK + 3 + 2 * hop.lo ? clampRow(k, eRow + rng.int(-2, 2)) : eRow;
+  const ok = stretch(g, rng, k, 0, left - 1, sTop, D, hardL, hop, style) && stretch(g, rng, k, ex, W - 1, eRow, gTop, hardR, hop, style);
+  if (!ok) g.landmark = undefined;
+  return finish(g, { row: sTop - 1, depth: 2 }, { row: gTop - 1, depth: 2 }, `space:${concept.id}`);
+}
+
+const clampRow = (k: Knobs, row: number) => Math.max(8, Math.min(k.H - 7, row));
+
+/**
+ * Bodies from column `xa` (its top on row `rowA`) to `xb` (on `rowB`): one dock where there's no room for
+ * more, else a dock at each end and a chain between them, with `hard` crossings among its voids and a
+ * second lane over it. False when the chain can't be laid out.
+ */
+function stretch(
+  g: Grid,
+  rng: Rng,
+  k: Knobs,
+  xa: number,
+  xb: number,
+  rowA: number,
+  rowB: number,
+  hard: number,
+  hop: { lo: number; hi: number },
+  style: SpaceStyle,
+): boolean {
+  const W2 = xb - xa + 1;
+  if (W2 <= 0) return true;
+  if (W2 < 2 * DOCK + 3 + 2 * hop.lo) {
+    dock(g, xa, xb, rowA);
+    return true;
+  }
+  const { widths, gaps, hard: hs } = chain(rng, W2, hop, hard, style === 'station' ? [4, 8] : [3, 7]);
+  const used = widths.reduce((a, b) => a + b, 0) + gaps.reduce((a, b) => a + b, 0);
+  const dA = Math.max(DOCK, Math.min(W2 - used - DOCK, Math.floor((W2 - used) * rng.range(0.4, 0.6))));
+  const dB = W2 - used - dA;
+  if (dB < DOCK) return false;
+  dock(g, xa, xa + dA - 1, rowA);
+  dock(g, xb - dB + 1, xb, rowB);
+  let x = xa + dA;
+  let prev = rowA;
+  const tops: { x: number; w: number; top: number }[] = [];
+  for (let i = 0; i < widths.length; i++) {
+    const x0 = x + gaps[i];
+    const wi = widths[i];
+    const t = (x0 + wi / 2 - xa) / W2;
+    let top = clampRow(k, Math.round(rowA + (rowB - rowA) * t) + rng.int(-2, 2));
+    top = Math.max(prev - 3, Math.min(prev + 4, top));
+    if (hs[i]) hintGap(g, x, x0 - 1, Math.max(prev, top));
+    if (style === 'station') module(g, rng, x0, wi, top);
+    else asteroid(g, rng, x0, wi, top, hs[i]);
+    tops.push({ x: x0, w: wi, top });
+    prev = top;
+    x = x0 + wi;
+  }
+  if (hs[widths.length]) hintGap(g, x, xb - dB, Math.max(prev, rowB));
+  const row = (c: number) => {
+    if (c < xa + dA) return rowA;
+    if (c > xb - dB) return rowB;
+    const on = tops.find((t) => c >= t.x - 1 && c <= t.x + t.w);
+    if (on) return on.top;
+    const next = tops.findIndex((t) => t.x > c);
+    const before = next < 0 ? tops[tops.length - 1] : tops[next - 1];
+    return Math.max(before?.top ?? rowA, next < 0 ? rowB : tops[next].top);
+  };
+  upperLane(g, rng, row, xa + dA - 3, xb - dB + 2, style === 'station', hop);
+  return true;
 }

@@ -17,6 +17,8 @@
  *   kick        the Host label everywhere and through a migration; kicks by keyboard and mouse; a kicked page reloads into
  *               its countdown, never seated, and Rejoins once the (shortened) ban runs out
  *   refused     a guest whose build can't load the host's snapshots says so
+ *   browse      the lobby list: a host shows on another browser's list, a guest joins from it, Private takes it off,
+ *               and the room drops off once everyone has left
  *   view        real mouse input lands under the pointer, at every window shape, on every level size
  *   play        join, live cursors, claim race, a remote ghost, a race, refresh keeps the slot, next round
  *   pick place run   the host's renderer is killed (no goodbye) in that phase
@@ -54,7 +56,7 @@ import { launchBrowser, startServer } from './lib/server';
 const argv = process.argv.slice(2);
 /** Named groups, each short enough to run alone on a loaded machine. */
 const GROUPS: Record<string, string[]> = {
-  lobby: ['flow', 'fresh', 'kick', 'view', 'refused'],
+  lobby: ['flow', 'fresh', 'kick', 'view', 'refused', 'browse'],
   migration: ['pick', 'place', 'run', 'duo', 'leave', 'twice'],
   feel: ['latency', 'hidden', 'contact'],
   seats: ['observe', 'seatrace', 'idle', 'gone'],
@@ -1538,18 +1540,43 @@ async function viewScenario(browser: Browser, base: string, kind: string, fits: 
 }
 
 /** Click a HUD button by its action, where the last drawn frame put it (drawing must be on). */
-async function clickHud(p: Page, action: string) {
-  const handle = await p.waitForFunction((a) => (window as any).slagDebug.renderer.hud.buttons?.find((x: any) => x.action === a) ?? null, action, {
-    timeout: 15_000,
-  });
-  const b = (await handle.jsonValue()) as { x: number; y: number; w: number; h: number };
-  await clickView(p, b.x + b.w / 2, b.y + b.h / 2);
+async function clickHud(p: Page, action: string): Promise<boolean> {
+  try {
+    const handle = await p.waitForFunction((a) => (window as any).slagDebug.renderer.hud.buttons?.find((x: any) => x.action === a) ?? null, action, {
+      timeout: 15_000,
+    });
+    const b = (await handle.jsonValue()) as { x: number; y: number; w: number; h: number };
+    await clickView(p, b.x + b.w / 2, b.y + b.h / 2);
+    return true;
+  } catch (e) {
+    check(false, `no ${action} button to click (${String(e).split('\n')[0]})`);
+    return false;
+  }
 }
 
-/** A watcher's Join by keys: confirm opens the card, confirm again asks the host. */
-async function joinByKeys(p: Page) {
+/** A watcher's Join by keys: confirm opens the card (true once it's up), and confirm again asks the host. A miss is a FAIL, not a crash. */
+async function joinByKeys(p: Page): Promise<boolean> {
   await p.keyboard.press('Enter');
-  await p.waitForFunction(() => (window as any).slagDebug.renderer.hud.joinCard?.stage === 'edit', null, { timeout: 15_000 });
+  try {
+    await p.waitForFunction(() => (window as any).slagDebug.renderer.hud.joinCard?.stage === 'edit', null, { timeout: 15_000 });
+    return true;
+  } catch (e) {
+    check(false, `the join card opened (${String(e).split('\n')[0]})`);
+    return false;
+  }
+}
+
+/**
+ * Someone at each of these pages, moving the mouse now and then: the pages stand for seated people, and a lobby
+ * left alone benches its idle players once someone is watching (DESIGN.md → Players). Returns the stop.
+ */
+function keepPresent(pages: Page[]): () => void {
+  let i = 0;
+  const timer = setInterval(() => {
+    i++;
+    for (const p of pages) if (!p.isClosed()) void p.mouse.move(40 + (i % 2) * 6, 40).catch(() => {});
+  }, 4000);
+  return () => clearInterval(timer);
 }
 
 /** Sim frames per second on the host over `ms`: the room isn't waiting on anyone. */
@@ -1628,15 +1655,21 @@ async function seatRaceScenario(browser: Browser, base: string) {
   const players: Page[] = [];
   for (let i = 0; i < MAX_PLAYERS - 1; i++) players.push(await r.open(`P${i}`));
   const host = players[0];
+  const stop = keepPresent(players);
   await waitFor(host, 'seven seated', (v) => v.players.length === MAX_PLAYERS - 1, 120_000);
   const X = await r.open('X', { query: 'watch' });
   const Y = await r.open('Y', { query: 'watch' });
   for (const p of [X, Y]) await waitFor(p, 'watcher in', (v) => v.synced && v.watching && v.space === 1, 60_000);
   for (const p of [X, Y]) await joinByKeys(p);
   await Promise.all([X.keyboard.press('Enter'), Y.keyboard.press('Enter')]);
-  const [x, y] = await Promise.all([X, Y].map((p) => waitFor(p, 'seat answered', (v) => v.seatAsk === 'won' || v.seatAsk === 'taken')));
-  check([x.seatAsk, y.seatAsk].sort().join() === 'taken,won', `one Join wins the last seat and one is told it's taken (${x.seatAsk}, ${y.seatAsk})`);
-  const [loser, lv] = x.seatAsk === 'taken' ? [X, x] : [Y, y];
+  // Settled when one has won and the other either lost the host's ruling or saw the seat go before its press counted
+  // (Join is disabled on a full match, so it never asked): either way it's watching a full match.
+  const settled = (v: NetView) => v.seatAsk === 'won' || v.seatAsk === 'taken' || (v.seatAsk === 'none' && v.space === 0);
+  const [x, y] = await Promise.all([X, Y].map((p) => waitFor(p, 'seat answered', settled)));
+  const won = [x, y].filter((v) => v.seatAsk === 'won').length;
+  check(won === 1, `exactly one Join wins the last seat (${x.seatAsk}, ${y.seatAsk})`);
+  const [loser, lv] = x.seatAsk === 'won' ? [Y, y] : [X, x];
+  check(lv.seatAsk === 'taken' || lv.seatAsk === 'none', `the other is told it's taken, or never got to ask (${lv.seatAsk})`);
   const h = await waitFor(host, 'full', (v) => v.players.length === MAX_PLAYERS);
   check(h.players.length === MAX_PLAYERS && !h.players.some((p) => p.device.startsWith(`${lv.self}:`)), 'eight seated, the loser not among them');
   const l2 = await waitFor(loser, 'loser watching', (v) => v.watching && v.space === 0);
@@ -1646,12 +1679,12 @@ async function seatRaceScenario(browser: Browser, base: string) {
   // A player leaves: the loser's Join lights up, and works.
   await players[MAX_PLAYERS - 2].close();
   await waitFor(loser, 'a seat frees', (v) => v.space === 1, 30_000);
-  await joinByKeys(loser);
-  await loser.keyboard.press('Enter');
+  if (await joinByKeys(loser)) await loser.keyboard.press('Enter');
   // The first answer is still 'taken' until this one is asked: wait for the new answer.
   const again = await waitFor(loser, 'Join on the freed seat won', (v) => v.seatAsk === 'won', 30_000);
   check(again.seatAsk === 'won', `Join on a freed seat wins it (${again.seatAsk})`);
   await waitFor(host, 'loser seated', (v) => v.players.some((p) => p.device.startsWith(`${lv.self}:`)));
+  stop();
   const real = r.errors.filter((e) => !/favicon/.test(e));
   check(real.length === 0, `no page errors${real.length ? `:\n${real.join('\n')}` : ''}`);
   await r.dispose();
@@ -1747,6 +1780,84 @@ async function goneScenario(browser: Browser, base: string) {
   await r.dispose();
 }
 
+/**
+ * The lobby list: a hosted room shows on another browser's Lobbies screen, a guest joins it from there through the
+ * joining screen, the count follows, the host's Private takes it off (and public puts it back), and once everyone has
+ * left it's gone.
+ */
+async function browseScenario(browser: Browser, base: string) {
+  const r = await newRoom(browser, base, 'browse', '');
+  const A = await r.open('A');
+  await waitFor(A, 'the host hosting', (v) => v.isHost && v.status === 'online');
+  const lister = async (tag: string) => {
+    const { ctx, p } = await personPage(browser, undefined, tag === 'L' ? 'Lister' : 'Browser', tag === 'L' ? 777 : 888, r.errors, tag);
+    await p.goto(`${base}lobbies`);
+    return { ctx, p };
+  };
+  const count = (p: Page) => p.evaluate((code) => document.querySelector(`.lb-row[data-room="${code}"] .lb-count`)?.textContent ?? null, r.name);
+  const until = async (p: Page, what: string, want: (c: string | null) => boolean, ms = 25_000) => {
+    const t0 = Date.now();
+    let c = await count(p);
+    while (!want(c) && Date.now() - t0 < ms) {
+      await sleep(250);
+      c = await count(p);
+    }
+    console.log(`     ${what}: ${c ?? 'not listed'} after ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+    return c;
+  };
+
+  const L = await lister('L');
+  check((await until(L.p, 'the room on the list', (c) => c !== null)) === '1/8', 'a hosted room shows on another browser’s list, one seat taken');
+  const shot = `${out}/online-browse-list.png`;
+  await L.p.screenshot({ path: shot });
+  console.log(`     ${shot}`);
+
+  // Join from the list, through the joining screen: seated in the lobby, like an invite link.
+  await L.p.click(`.lb-row[data-room="${r.name}"]`);
+  await L.p.waitForFunction(() => 'slagDebug' in window, null, { timeout: 60_000 });
+  await setDrawing(L.p, false);
+  const joined = await waitFor(L.p, 'the guest from the list seated', (v) => v.synced && v.players.length === 2, 30_000);
+  check(new URL(L.p.url()).pathname === `/r/${r.name}` && joined.hostId === (await view(A)).self, 'a guest joins the room from the list');
+  check(
+    (await waitFor(A, 'the host seeing the guest', (v) => v.players.length === 2, 10_000)).players.length === 2,
+    'the host sees the guest who came from the list',
+  );
+
+  const M = await lister('M');
+  check((await until(M.p, 'the count after the join', (c) => c === '2/8')) === '2/8', 'the list follows the room: two seats taken');
+
+  // Private, from the host's own rules card: off the list at once. At 720p, where the card must fit.
+  await A.setViewportSize({ width: 1280, height: 720 });
+  await setDrawing(A, true);
+  await sleep(1000); // drawn at the new size, so the HUD's buttons are where they now are
+  if (await clickHud(A, 'rules')) {
+    await A.click('.slag-sheet button:text-is("Private")');
+    await sleep(300); // past the chips' colour transition
+    const card = `${out}/online-browse-rules.png`;
+    await A.screenshot({ path: card });
+    console.log(`     ${card}`);
+    await A.click('.slag-sheet button:text-is("Done")');
+  }
+  await setDrawing(A, false);
+  await sleep(300);
+  check(await A.evaluate(() => (window as any).slagDebug.match.rules.private === true), 'the host makes the room Private from the rules card');
+  check((await until(M.p, 'after Private', (c) => c === null)) === null, 'a Private room leaves the list');
+  await A.evaluate(() => {
+    const d = (window as any).slagDebug;
+    d.net.act({ t: 'rules', rules: { ...d.match.rules, private: false } });
+  });
+  check((await until(M.p, 'public again', (c) => c !== null)) === '2/8', 'public again, it is back on the list');
+
+  // Everyone leaves: the room comes off the list.
+  await L.ctx.close();
+  await A.close();
+  check((await until(M.p, 'after everyone left', (c) => c === null)) === null, 'a room everyone left drops off the list');
+  await M.ctx.close();
+  const real = r.errors.filter((e) => !/favicon/.test(e));
+  check(real.length === 0, `no page errors${real.length ? `:\n${real.join('\n')}` : ''}`);
+  await r.dispose();
+}
+
 async function bcScenario(browser: Browser, base: string) {
   const r = await newRoom(browser, base, 'bc', 'net=bc', { shared: true });
   const { pages } = await startMatch(r, 2);
@@ -1783,45 +1894,59 @@ async function unsetScenario(browser: Browser) {
 }
 
 // Real host candidates: mDNS names don't resolve between isolated headless contexts.
+/**
+ * Runs one scenario so that a wait that throws (a timeout inside Playwright) is a FAIL, not the end of the run: the
+ * next scenario still runs. Its pages are closed, so a stuck one can't load the rest.
+ */
+async function guarded(run: () => Promise<unknown>) {
+  try {
+    await run();
+  } catch (e) {
+    check(false, `scenario aborted: ${String(e).split('\n')[0]}`);
+    for (const c of browser.contexts()) await c.close().catch(() => {});
+  }
+}
+
 const browser = await launchBrowser(['--disable-features=WebRtcHideLocalIpsWithMdns']);
 const server = await startServer({ env: storeEnv });
 console.log(`signaling store: ${srh ? 'Upstash REST (SRH)' : 'in memory'}`);
 try {
   if (wanted('flow')) {
-    await realFlowScenario(browser, server.base, 'flow two browsers', false, false);
-    await realFlowScenario(browser, server.base, 'flow two tabs saved look', true, true);
+    await guarded(() => realFlowScenario(browser, server.base, 'flow two browsers', false, false));
+    await guarded(() => realFlowScenario(browser, server.base, 'flow two tabs saved look', true, true));
   }
   if (wanted('fresh')) {
-    await freshScenario(browser, server.base, 'fresh desktop, phone joins', undefined, { phone: 'Pixel 7' });
-    await freshScenario(browser, server.base, 'fresh phone, desktop joins', 'iPhone 13', {});
+    await guarded(() => freshScenario(browser, server.base, 'fresh desktop, phone joins', undefined, { phone: 'Pixel 7' }));
+    await guarded(() => freshScenario(browser, server.base, 'fresh phone, desktop joins', 'iPhone 13', {}));
   }
-  if (wanted('kick')) await kickScenario(browser, server.base);
-  if (wanted('refused')) await refusedScenario(browser, server.base);
+  if (wanted('kick')) await guarded(() => kickScenario(browser, server.base));
+  if (wanted('refused')) await guarded(() => refusedScenario(browser, server.base));
+  if (wanted('browse')) await guarded(() => browseScenario(browser, server.base));
   if (wanted('view')) {
-    await viewScenario(browser, server.base, 'classic', (w, h) => w === 48 && h === 27);
-    await viewScenario(browser, server.base, 'wide', (w) => w > 48);
+    await guarded(() => viewScenario(browser, server.base, 'classic', (w, h) => w === 48 && h === 27));
+    await guarded(() => viewScenario(browser, server.base, 'wide', (w) => w > 48));
   }
-  if (wanted('view') || wanted('view-tall')) await viewScenario(browser, server.base, 'tall', (_w, h) => h > 27);
-  if (wanted('play')) await playScenario(browser, server.base);
-  if (wanted('pick')) await killScenario(browser, server.base, 'pick');
-  if (wanted('place')) await killScenario(browser, server.base, 'place');
-  if (wanted('run')) await killScenario(browser, server.base, 'run');
-  if (wanted('duo')) await killScenario(browser, server.base, 'run', 2);
-  if (wanted('leave')) await leaveScenario(browser, server.base);
-  if (wanted('twice')) await twiceScenario(browser, server.base);
-  if (wanted('latency')) await latencyScenario(browser, server.base);
-  if (wanted('hidden')) await hiddenScenario(browser, server.base);
-  if (wanted('contact')) await contactScenario(browser, server.base);
-  if (wanted('bc')) await bcScenario(browser, server.base);
-  if (wanted('observe')) await observeScenario(browser, server.base);
-  if (wanted('seatrace')) await seatRaceScenario(browser, server.base);
-  if (wanted('idle')) await idleScenario(browser, server.base);
-  if (wanted('gone')) await goneScenario(browser, server.base);
+  if (wanted('view') || wanted('view-tall')) await guarded(() => viewScenario(browser, server.base, 'tall', (_w, h) => h > 27));
+  if (wanted('play')) await guarded(() => playScenario(browser, server.base));
+  if (wanted('pick')) await guarded(() => killScenario(browser, server.base, 'pick'));
+  if (wanted('place')) await guarded(() => killScenario(browser, server.base, 'place'));
+  if (wanted('run')) await guarded(() => killScenario(browser, server.base, 'run'));
+  if (wanted('duo')) await guarded(() => killScenario(browser, server.base, 'run', 2));
+  if (wanted('leave')) await guarded(() => leaveScenario(browser, server.base));
+  if (wanted('twice')) await guarded(() => twiceScenario(browser, server.base));
+  if (wanted('latency')) await guarded(() => latencyScenario(browser, server.base));
+  if (wanted('hidden')) await guarded(() => hiddenScenario(browser, server.base));
+  if (wanted('contact')) await guarded(() => contactScenario(browser, server.base));
+  if (wanted('bc')) await guarded(() => bcScenario(browser, server.base));
+  if (wanted('observe')) await guarded(() => observeScenario(browser, server.base));
+  if (wanted('seatrace')) await guarded(() => seatRaceScenario(browser, server.base));
+  if (wanted('idle')) await guarded(() => idleScenario(browser, server.base));
+  if (wanted('gone')) await guarded(() => goneScenario(browser, server.base));
 } finally {
   await server.close();
 }
 try {
-  if (wanted('unset')) await unsetScenario(browser);
+  if (wanted('unset')) await guarded(() => unsetScenario(browser));
 } finally {
   await browser.close();
 }

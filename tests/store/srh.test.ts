@@ -1,9 +1,9 @@
 import { randomBytes } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { handleOp } from '../../app/api/net/_server/handlers';
-import { evalCmd, JOIN, REMOVE } from '../../app/api/net/_server/scripts';
+import { evalCmd, JOIN, LIST_BEAT, REMOVE } from '../../app/api/net/_server/scripts';
 import { type Cmd, MemoryStore, storeFromEnv, upstashStore } from '../../app/api/net/_server/store';
-import { DEFAULT_ICE, MAX_MAILBOX, MAX_PEERS, MAILBOX_TTL_S, PEER_TTL_S, ROOM_TTL_S } from '../../src/net/signal-protocol';
+import { DEFAULT_ICE, LIST_TTL_S, type LobbiesReply, MAX_MAILBOX, MAX_PEERS, MAILBOX_TTL_S, PEER_TTL_S, ROOM_TTL_S } from '../../src/net/signal-protocol';
 
 /**
  * The production store code against a real Redis behind SRH, Upstash's REST
@@ -46,6 +46,16 @@ describe('dev store and production store agree', () => {
     ['ZSCORE', `${k}:z`, 'nope'],
     ['ZREM', `${k}:z`, 'a', 'nope'],
     ['ZREM', `${k}:missing`, 'a'],
+    ['ZADD', `${k}:y`, 1000, 'R1', 2000, 'R2', 2000, 'R0', 3000, 'R3'],
+    ['ZREVRANGEBYSCORE', `${k}:y`, '+inf', 1500, 'LIMIT', 0, 50],
+    ['ZREVRANGEBYSCORE', `${k}:y`, '+inf', '-inf', 'LIMIT', 1, 2],
+    ['ZREVRANGEBYSCORE', `${k}:y`, '+inf', 1500],
+    ['ZREVRANGEBYSCORE', `${k}:missing`, '+inf', 0, 'LIMIT', 0, 50],
+    ['ZREMRANGEBYSCORE', `${k}:y`, '-inf', 2000],
+    ['ZREMRANGEBYSCORE', `${k}:missing`, '-inf', 2000],
+    ['ZRANGE', `${k}:y`, 0, -1, 'WITHSCORES'],
+    ['ZREMRANGEBYSCORE', `${k}:y`, '-inf', '+inf'],
+    ['EXISTS', `${k}:y`],
     ['RPUSH', `${k}:l`, '{"a":1}'],
     ['RPUSH', `${k}:l`, 'two'],
     ['RPUSH', `${k}:l`, 'three'],
@@ -86,6 +96,31 @@ describe('dev store and production store agree', () => {
       ['remove someone absent', remove('zzzz', 'stamp', 1)],
       ['what is left', ['ZRANGE', m, 0, -1, 'WITHSCORES']],
       ['and alive', ['MGET', p + 'aaaa', p + 'bbbb', p + 'dddd']],
+      ...listing(k),
+    ];
+  };
+
+  /** The lobby list's scripts, through every branch: listing, refreshing, pruning, a dead session, unlisting on leave. */
+  const listing = (k: string): [string, Cmd][] => {
+    const m = `${k}:m`;
+    const p = `${k}:p:`;
+    const idx = `${k}:idx`;
+    const beat = (peer: string, room: string, now: number) =>
+      evalCmd(LIST_BEAT, [p + peer, m, idx, `${k}:l:${room}`], [60, 300, now, `{"room":"${room}"}`, 50, 86400, room]);
+    const join = (peer: string, stamp: number) => evalCmd(JOIN, [m], [peer, stamp, 12, 60, 300, p]);
+    const leave = (peer: string, stamp: number, room: string) =>
+      evalCmd(REMOVE, [m, p + peer, `${k}:b:${peer}`, idx, `${k}:l:${room}`], [peer, 'stamp', stamp, room]);
+    return [
+      ['a lister joins', join('llll', 500)],
+      ['an old entry in the index', ['ZADD', idx, 1000, 'OLD']],
+      ['list, newly', beat('llll', 'LA', 100_000)],
+      ['list again', beat('llll', 'LA', 120_000)],
+      ['the index', ['ZRANGE', idx, 0, -1, 'WITHSCORES']],
+      ['the listing', ['GET', `${k}:l:LA`]],
+      ['a dead session lists nothing', beat('nobody', 'LB', 130_000)],
+      ['leave, unlisting', leave('llll', 500, 'LA')],
+      ['the index after', ['ZRANGE', idx, 0, -1, 'WITHSCORES']],
+      ['the listing after', ['EXISTS', `${k}:l:LA`, `${k}:l:LB`]],
     ];
   };
 
@@ -202,6 +237,23 @@ describe('join order', () => {
 });
 
 describe('every op, end to end', () => {
+  it('lists a room from its host, reads it back, and takes it off for Private and on leave', async () => {
+    const r = room();
+    const listed = async () => ((await handleOp('lobbies', {}, ctx)) as LobbiesReply).rooms.find((x) => x.room === r);
+    const list = { players: 2, max: 8, observers: 1, theme: 'glacier', phase: 'place' };
+    await handleOp('join', { room: r, peer: 'aaaa', since: 10 }, ctx);
+    await handleOp('beat', { room: r, peer: 'aaaa', host: true, list }, ctx);
+    expect(await listed()).toEqual({ room: r, ...list });
+    expect(await store.run([['TTL', `slag:${r}:l`]])).toEqual([LIST_TTL_S]);
+    expect(((await store.run([['TTL', 'slag:lobbies']])) as number[])[0]).toBeGreaterThan(0);
+    await handleOp('beat', { room: r, peer: 'aaaa', host: true, list: false }, ctx);
+    expect(await listed()).toBeUndefined();
+    await handleOp('beat', { room: r, peer: 'aaaa', host: true, list }, ctx);
+    await handleOp('leave', { room: r, peer: 'aaaa', order: 1, since: 10, unlist: true }, ctx);
+    expect(await listed()).toBeUndefined();
+    expect(await keys(r)).toEqual([`slag:${r}:m`]); // only the member set, holding the last order until its TTL
+  });
+
   it('walks a handshake, a report and a leave', async () => {
     const r = room();
     const a = (await handleOp('join', { room: r, peer: 'aaaa' }, ctx)) as { order: number };

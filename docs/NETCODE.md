@@ -1,6 +1,6 @@
 # Online play
 
-A room is its URL, `/r/<CODE>`. Everyone who opens the same link is in the same match. There is no matchmaking and no room list.
+A room is its URL, `/r/<CODE>`. Everyone who opens the same link is in the same match. There is no matchmaking; public rooms are on the lobby list (see Lobby list), Private ones only reach people through their link.
 
 Peers talk over **WebRTC data channels in a star around the host**. Everything stays on Vercel and on free tiers: small Next route handlers do signaling and presence on Redis from the Vercel Marketplace (Upstash), and local dev uses an in-memory store. Code: `src/net/`, `app/api/net/`.
 
@@ -68,18 +68,29 @@ A build served from another origin (a packaged app pointing at the hosted API) n
 | Op | Does | Redis commands |
 |---|---|---|
 | `join` | Assign the next join order; returns the live members and ICE servers. One script. | 5–7 (an outdated session: 3) |
-| `beat` | Renew liveness. Hosts also renew the room and learn the room's lowest order. | guest 1, host 3 |
+| `beat` | Renew liveness. Hosts also renew the room and learn the room's lowest order, and list the room (see Lobby list). | guest 1, host 3; listing 6 (8 when newly listed); going Private 5 |
 | `poll` | Drain this peer's mailbox. | 1 |
 | `signal` | Put a handshake in another peer's mailbox. | 5 |
 | `members` | Live members in order. | 2–3 |
 | `gone` | Report a peer that failed to answer an offer. | 5–8 |
-| `leave` | Remove self, sent by `sendBeacon` on pagehide. One script. | 2–4 |
+| `leave` | Remove self, sent by `sendBeacon` on pagehide. One script; a listed host's also takes the room off the list. | 2–4; a listed host 6 |
+| `lobbies` | The lobby list. Takes no room or peer. | 1–2 |
 
-Keys, all with a TTL: `slag:<ROOM>:m` the member sorted set (300 s, renewed by the host), which also holds `#` scored with the last order handed out, `slag:<ROOM>:p:<peer>` liveness (50 s, renewed by `beat`), `slag:<ROOM>:b:<peer>` the mailbox (30 s).
+Keys, all with a TTL: `slag:<ROOM>:m` the member sorted set (300 s, renewed by the host), which also holds `#` scored with the last order handed out, `slag:<ROOM>:p:<peer>` liveness (50 s, renewed by `beat`), `slag:<ROOM>:b:<peer>` the mailbox (30 s), `slag:<ROOM>:l` the room's listing (50 s, renewed by the host's beat), and one key for every room, `slag:lobbies`, the lobby index (a day, renewed whenever a room is newly listed).
 
 The liveness value is the joining session's `since` stamp (ms, increasing per tab). One peer id can have two sessions in flight: a lobby that remounts, or a page reloaded while its join was on the way. A join older than the stamp held writes nothing, and a `leave` removes the entry only if no newer session wrote it, whatever order the store holds. A session closed before its join reply arrives sends a `leave` when the reply lands.
 
 Joining and removing are Lua scripts (`app/api/net/_server/scripts.ts`), so each check and its write are one atomic step: plain commands would let the other session's write land in between. Scripts also serialize joins, so the next order is simply one above everything in the set, `#` included; no counter is needed. Upstash bills a script as one command plus one per call it makes, so the scripts cost no more than the pipelines they replaced. MemoryStore runs a TypeScript mirror of each script, making the same calls, and `pnpm test:store` checks the mirrors against the real Lua.
+
+### Lobby list
+
+The Lobbies screen (main menu → Lobbies, `src/ui/screens/lobbies.ts`) lists public rooms. Lobbies are public by default; the host's **Private** rule (the rules card's Lobby row, a `MatchRules` field synced by the `rules` action like the others, never saved with the host's preferences) keeps a room off it.
+
+- **Written by the host's beat.** A host's `beat` carries the room's listing (`NetSession.listing()`: seats taken of `max`, peers watching, the level's theme, the phase), and the beat becomes one script (`LIST_BEAT` in `scripts.ts`): renew as before, then, only if the session is still alive, score the room in `slag:lobbies` with the time and write its listing to `slag:<ROOM>:l`. The alive check is why it's a script: a beat landing after its own leave, or after the host was written off, must not list a room nobody hosts. The API checks every listing (`cleanListing`); one that fails is ignored, not the beat.
+- **Kept fresh between beats.** The transport lists again within `LIST_NUDGE_MS` (5 s) when what a browser would see changes (seats, watchers, theme, lobby or match), so a seat filling shows in seconds. A new host lists the room at once. Going Private beats at once with `list: false`, which takes the room off; Private beats never list it.
+- **Off the list.** A listed host's `leave` takes the room off in the same script that removes it (`REMOVE` with the index keys); if anyone is left, the next host lists it again at once. A room whose host stops beating falls out by itself: readers take only rooms beaten within `LIST_TTL_S` (50 s, the host's own liveness), well inside `ROOM_EMPTY_MS`, and the listing key expires with it. Index entries such rooms leave are pruned whenever a room is newly listed.
+- **Read.** `lobbies` is one range (`ZREVRANGEBYSCORE`, newest first, at most `MAX_LISTED`) and one `MGET` of the listings. Each function instance answers it from one read for 2 s (`_server/cache.ts`), so the store pays per instance, not per browser. The screen polls every `LIST_POLL_MS` (5 s) while shown and not at all while hidden.
+- **Joining** from the list is the invite link's way in, through the joining screen. Join lists rooms with a seat (seated at once in a lobby, watching with Join mid-match); Watch lists full rooms and arrives watching, as `?watch` does.
 
 ### Abuse limits
 
@@ -95,7 +106,7 @@ The routes are public and unauthenticated: knowing a room code and a peer id is 
 
 Upstash's free tier is 500K commands a month and 250 MB. Blocking commands aren't available over REST, so everything is short polling. The store always POSTs command arrays to `/pipeline` with a bearer token, the form `@upstash/redis` uses, so the same code runs against Upstash and SRH. `tests/signal-handlers.test.ts` pins the cost of each op, and `tests/webrtc-transport.test.ts` measures a playing room.
 
-**Commands per minute, steady state with links up:**
+**Commands per minute, steady state with links up** (a Private room; a public one adds the listing below):
 
 | Who | Polls | Heartbeats | Total |
 |---|---|---|---|
@@ -104,11 +115,13 @@ Upstash's free tier is 500K commands a month and 250 MB. Blocking commands aren'
 | Host, alone over 10 min | 4 | 9 | 13 |
 | Host, alone and hidden over 10 min | 0 | 0 | **0** (leaves the room, rejoins when shown) |
 
-So a 4-player room costs 30 commands a minute (about **8 per player per minute**) and an 8-player room 42 (about 5). Polling doubles its interval in a hidden tab.
+So a Private 4-player room costs 30 commands a minute (about **8 per player per minute**) and an 8-player room 42 (about 5). Polling doubles its interval in a hidden tab.
+
+**The lobby list:** listing a room costs 3 more commands a host beat (6 instead of 3), 9 a minute, so a public 4-player room costs 39 (about 10 per player per minute); a change worth showing between beats costs one more beat (6), at most every 5 s. Reading the list costs 2 commands a poll (1 when nothing is listed), at most once per function instance every 2 s however many people browse, so one person browsing costs at most 24 a minute. The read path never writes.
 
 **One-off costs:** a watcher stepping behind a player in the line (see Host election) is one more `join`, 5–7 commands. A join is about 60 commands (the join, offer and answer, guest polling while waiting, and the host polling every second for the next 30 s, so friends arriving together connect fast). A migration in a 3-peer room is about 125, a quarter of it the new host's rival checks (see Host election).
 
-**In practice:** 500K commands is about 275 hours of 4-player rooms a month, or 9 hours a day, ignoring joins. Storage is irrelevant: a room is under a kilobyte. Function invocations follow the same curve (24 requests a minute for a 4-player room).
+**In practice:** 500K commands is about 275 hours of Private 4-player rooms a month, or 9 hours a day, ignoring joins; listed, about 215 hours, or 7 a day. Storage is irrelevant: a room is under a kilobyte. Function invocations follow the same curve (24 requests a minute for a 4-player room).
 
 To stretch it, raise `POLL_IDLE_MS` in `webrtc-transport.ts`: it's the main cost, and it only trades how long a late joiner waits.
 
@@ -230,15 +243,16 @@ IEEE-754 `+ - * /` and `Math.sqrt` are exact everywhere, but `Math.sin/cos/atan2
 
 ## Testing
 
-- `tests/signal-handlers.test.ts`: the store (reply shapes, Upstash request format, either env pair), handlers (join order, TTLs, caps, validation, command costs) and the HTTP edge.
+- `tests/signal-handlers.test.ts`: the store (reply shapes, Upstash request format, either env pair), handlers (join order, TTLs, caps, validation, command costs), the lobby list (only a live host lists, junk listings, Private, a listed host's leave, falling off, pruning, the cap, its costs), the reply cache and the HTTP edge. `tests/webrtc-transport.test.ts` lists rooms over the real transport: at once for a new host, a seat filling within the nudge, Private off at once and back, the next host relisting, the last goodbye unlisting, a crashed host falling off; and the budget with and without the listing. `tests/lobbies.test.ts`: the screen's filters and order, and a host's listing.
 - `tests/webrtc-transport.test.ts`: the real transport, handlers and store over a fake RTC network and clock: linking, polling stopping, the measured budget, crash and goodbye migrations, double failure (including a candidate still settling its own stalled handshake, and a dead peer's handshake hanging as it does in a browser), flaky guests, rival hosts stepping down within seconds, resuming from the furthest frame. Seeded runs over API latency, handshake behaviour and crash timing check that a double failure always lands on the third peer with never two hosts, and that a split caused by flaky guests is over within 5 s.
 - `tests/net.test.ts`, `tests/net-pick.test.ts`: lockstep under latency and loss, rough play (four peers, three rounds through weather, deaths, grabs and contact, the host's link cut mid-race), desync recovery, seats, kicks, refresh, late join, a guest on another build; claim races, pending cards, remote cursors and ghosts, the input codec.
 - `tests/net-seats.test.ts`: a watch-link observer never seated, sending nothing, frozen without holding the room up, with the same state; Watch in the lobby and mid-match (out at the boundary); a full lobby making watchers, and Join answered `taken` while full; two watchers racing for the last seat; a request in flight across a migration; watchers stepping behind players so a migration skips them, and one hosting when only watchers are left; an idle lobby player moved to the watchers and back by input; a frozen guest's held buttons let go, its runner giving up, and its state agreeing after. `tests/idle.test.ts`: every wait point of the idle rules in the sim. `tests/webrtc-transport.test.ts` adds the reorder over the real transport: a crash skips the watcher, and a host who starts watching hands the room on.
 - `tests/snapshot.test.ts`: round trips with items in play, prediction isolation, and a guard that fails until any new `Match` or `RunWorld` field is snapshotted or declared derived. `tests/dmath.test.ts`.
-- `pnpm test:store`: the real Upstash REST code against real Redis behind [Serverless Redis HTTP](https://upstash.com/docs/redis/sdks/ts/developing) (`compose.store.yml`, Redis 6.2.21 and SRH 0.0.10, on port 8079). Every command the handlers use, reply parity with the in-memory store, the presence scripts as real Lua against their mirrors, TTL expiry, join order under a stampede, two sessions of one peer racing, the handlers end to end. `-- --browser pick,run,leave` adds real browsers on the same store, with the app configured through the production env vars. Needs Docker, so it's a CI job rather than part of `pnpm check`. SRH needs `Content-Type: application/json` and differs from Upstash in edge cases, so handlers stick to plain commands and plain Lua (`EVAL`, no `EVALSHA` or functions).
+- `pnpm test:store`: the real Upstash REST code against real Redis behind [Serverless Redis HTTP](https://upstash.com/docs/redis/sdks/ts/developing) (`compose.store.yml`, Redis 6.2.21 and SRH 0.0.10, on port 8079). Every command the handlers use, reply parity with the in-memory store, the presence and listing scripts as real Lua against their mirrors, the lobby list end to end, TTL expiry, join order under a stampede, two sessions of one peer racing, the handlers end to end. `-- --browser pick,run,leave` adds real browsers on the same store, with the app configured through the production env vars. Needs Docker, so it's a CI job rather than part of `pnpm check`. SRH needs `Content-Type: application/json` and differs from Upstash in edge cases, so handlers stick to plain commands and plain Lua (`EVAL`, no `EVALSHA` or functions).
 - `pnpm online-test`: real WebRTC between headless Chromium pages, one context per peer, against the real routes with the in-memory store. Hosts are killed with a renderer crash (no pagehide, no goodbye) in pick, place and run, and in a race with no third peer (`duo`); also a graceful leave, and a new host dying straight after taking over (`twice`: about 8 s from the first crash, 4 s from the second). Each prints seconds to recovery and compares state hashes. With a third peer a crash recovers in about 4 s, since its offer proves the host is gone; alone, the guest waits out the old host's whole answer window, about 7.5 s (2.5 s of silence, the offer landing, then `PROBE_MS`).
 - `pnpm online-test -- --only view`: real mouse events at four window shapes on classic, wide and tall levels. The card under the pointer is the one taken, and the cursor and ghost sit under it on both peers. Cursors are view px in `pick` and world px in `place`, mapped through `overview`, so a test or HUD that treats them alike is wrong on anything but a 1:1 level.
 - `pnpm online-test -- --only seats`: `observe` (host, guest, a desktop and a phone watcher through a round; a frozen watcher; then a late joiner mid-race clicks Join and the card's Join and is seated at the boundary), `seatrace` (seven seated, two watchers Join for the last seat at once; then a player leaves and the loser's Join works), `idle` (a guest's tab hidden through an untimed pick and race: handed a card, its runner gives up, it agrees once shown).
+- `pnpm online-test -- --only browse` (in the `lobby` group): a host shows on another browser's Lobbies screen, a guest joins it from there and is seated, the count follows, the host's rules card makes it Private and it leaves the list, public again it's back, and once everyone has left it's gone.
 - Groups, each runnable alone on a loaded machine: `--only lobby`, `migration`, `feel`, `misc`, `seats`. The other scenarios (`flow`, `kick`, `refused`, `play`, `bc`, `unset`) are listed at the top of `tools/online-test.ts`. Scenarios that don't check pixels stub their drawing, since software GL otherwise measures the machine.
 - `pnpm online-test -- --only contact`: two runners out of the spawn zone, one shoving the other and then one riding the other, at 40 ms each way: the guest must draw no teleport, no pusher inside who it pushes, and no rider sliding on its base.
 - `pnpm online-test -- --only latency,hidden`: input-to-screen delay between pages, bundle cadence, stalls and teleports, at 0 and 40 ms each way, and with the host's tab hidden. The delay and the hidden tab are simulated in the page (a delayed `RTCDataChannel.send`; `document.hidden`, no rAF, timers clamped to 1 Hz), since headless pages can't truly go hidden. The budget is loose enough for a loaded box: it catches regressions, not jitter.

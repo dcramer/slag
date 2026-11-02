@@ -405,7 +405,7 @@ function castle(rng: Rng): Look {
     ambient: night ? 'fireflies' : 'dust',
     ambientLight: mood === 'overcast' ? rng.range(0.72, 0.82) : mood === 'dusk' ? rng.range(0.58, 0.66) : rng.range(0.38, 0.46),
     ambientTint: mood === 'dusk' ? hsl3(310, 40, 70) : night ? hsl3(220, 45, 62) : hsl3(210, 15, 85),
-    decor: pickDecor(rng, 'castle', ['torch', 'banner'], 5),
+    decor: pickDecor(rng, 'castle', ['torch', 'banner'], 6),
     decorDensity: 0.14,
     lamp: hsl3(34, 100, 60),
     accent: hsl3(rng.pick([48, 0, 200]), 90, 58),
@@ -1034,8 +1034,8 @@ function space(rng: Rng): Look {
     ambientLight: rng.range(0.5, 0.6),
     ambientTint: hsl3(neb, 30, 80),
     decor: station
-      ? pickDecor(rng, 'space', ['beacon', 'dish'], 4, ['antenna', 'cable', 'lander'])
-      : pickDecor(rng, 'space', ['crystal', 'lander'], 4, ['pennant', 'beacon', 'bones']),
+      ? pickDecor(rng, 'space', ['beacon', 'dish'], 5, ['antenna', 'cable', 'lander', 'cargopod', 'solarpanel', 'warnlamp', 'wrench', 'helmet'])
+      : pickDecor(rng, 'space', ['crystal', 'moonrock'], 5, ['lander', 'pennant', 'beacon', 'bones', 'moonflag', 'minisat', 'helmet', 'wrench']),
     decorDensity: 0.1,
     lamp: hsl3(195, 80, 70),
     accent: hsl3(rng.pick([48, 190, 330]), 95, 60),
