@@ -69,7 +69,7 @@ export function cutPts(x: number, y: number, w: number, h: number, r: number, se
 }
 
 /** A disc cut by hand: never a compass circle. */
-function discPts(cx: number, cy: number, r: number, seed: number): P[] {
+export function discPts(cx: number, cy: number, r: number, seed: number): P[] {
   const n = Math.max(16, Math.round(r * 2));
   const pts: P[] = [];
   for (let i = 0; i < n; i++) {
@@ -418,6 +418,41 @@ export function pill(c: Ctx, x: number, y: number, w: number, h: number, fill: s
   });
 }
 
+/**
+ * A brick of points (score lanes): a hand-cut block in two flat tones, `lit` across its top where it
+ * faces the light, a hard shadow under it and the pen round it.
+ */
+export function brick(c: Ctx, x: number, y: number, w: number, h: number, fill: string, lit: string) {
+  baked(c, `bk|${w}|${h}|${fill}|${lit}`, x, y, w, h, 3, (g) => {
+    const seed = sizeSeed(w, h) + 19;
+    const pts = cutPts(0, 0, w, h, Math.min(2.4, h / 3), seed);
+    g.fillStyle = PAL.ink;
+    g.save();
+    g.translate(0.4, 1.4);
+    path(g, pts);
+    g.fill();
+    g.restore();
+    g.fillStyle = fill;
+    path(g, pts);
+    g.fill();
+    g.save();
+    g.clip();
+    g.fillStyle = lit;
+    g.beginPath();
+    g.moveTo(-1, -1);
+    g.lineTo(w + 1, -1);
+    for (let i = 0; i <= 6; i++) {
+      const u = 1 - i / 6;
+      g.lineTo(u * w, h * 0.38 + 0.4 * sn(u * 5, 2.1, seed));
+    }
+    g.closePath();
+    g.fill();
+    g.restore();
+    g.fillStyle = PAL.ink;
+    penLoop(g, pts, seed, 0.7, 1.4);
+  });
+}
+
 /** Small stamped uppercase tag (roles, status). Returns its width. */
 export function tag(
   c: Ctx,
@@ -507,6 +542,48 @@ export function track(c: Ctx, x: number, y: number, w: number, h: number, fill?:
   baked(c, `trp|${w}|${h}`, x, y, w, h, 3, (g) => {
     g.fillStyle = PAL.ink;
     penLoop(g, cutPts(0, 0, w, h, r, seed), seed, 0.8, 1.5);
+  });
+}
+
+/**
+ * A live shape in the plate style, for HUD art that moves (a flag in the wind): a hard ink shadow
+ * `drop` px down, one flat fill and the pen round it. `pts` run clockwise. Drawn every frame, so keep
+ * it to a few small shapes; anything still belongs in a bake.
+ */
+export function inkShape(c: Ctx, pts: readonly P[], fill: string, seed: number, drop = 1.5) {
+  if (drop) {
+    c.save();
+    c.translate(0.4, drop);
+    c.fillStyle = PAL.ink;
+    path(c, pts);
+    c.fill();
+    c.restore();
+  }
+  c.fillStyle = fill;
+  path(c, pts);
+  c.fill();
+  c.fillStyle = PAL.ink;
+  penLoop(c, pts, seed, PEN_THIN * 0.8, PEN_THICK * 0.7);
+}
+
+/**
+ * A chequered finish line, `w` wide and `h` tall: two rows of flat ink and bone checks between a
+ * pen down each side, a hard shadow to the right. Baked: it holds still while rows race up to it.
+ */
+export function finishLine(c: Ctx, x: number, y: number, w: number, h: number) {
+  baked(c, `fl|${w}|${h}`, x, y, w, h, 4, (g) => {
+    const cell = w / 2;
+    g.fillStyle = PAL.ink;
+    g.fillRect(1.5, 1.5, w, h);
+    for (let i = 0; i * cell < h; i++) {
+      for (let j = 0; j < 2; j++) {
+        g.fillStyle = (i + j) % 2 ? PAL.ink : PAL.bone;
+        g.fillRect(j * cell, i * cell, cell, Math.min(cell, h - i * cell));
+      }
+    }
+    g.fillStyle = PAL.ink;
+    line(g, 0, -0.5, 0, h + 0.5, { w: 1, seed: 61, taper: [0.06, 0.1], press: 0.3 });
+    line(g, w, -0.5, w, h + 0.5, { w: 1.8, seed: 67, taper: [0.06, 0.1], press: 0.3 });
   });
 }
 

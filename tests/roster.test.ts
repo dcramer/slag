@@ -33,9 +33,12 @@ const HAZARDS = new Set<Archetype>([
   'crusher',
   'dropper',
   'snapper',
+  'fuse',
 ]);
 /** Parts with nothing to scale: one tile, or a beam that already reaches across the level. */
-const ONE_SIZE = new Set<Archetype>(['launcher', 'laser', 'spring', 'hangar', 'mystery', 'keg']);
+const ONE_SIZE = new Set<Archetype>(['launcher', 'laser', 'spring', 'hangar', 'mystery', 'keg', 'launchplate', 'fuse', 'fling']);
+/** A Four-Square is a platform with nothing to scale: a four-cell piece is four cells. */
+const oneSize = (k: Archetype, d: PropDef) => ONE_SIZE.has(k) || d.modules.some((m) => m.type === 'body' && m.look === 'tetra');
 
 /** Module fields that size may change, by module type. Anything else differing between sizes is a bug. */
 const SIZE_FIELDS: Partial<Record<Module['type'], string[]>> = {
@@ -58,6 +61,7 @@ const SIZE_FIELDS: Partial<Record<Module['type'], string[]>> = {
   rotor: ['arm', 'hub'],
   rope: ['length'],
   sentry: ['range'],
+  button: ['cells'],
 };
 
 const baseName = (name: string) => name.replace(/^(Small|Big) /, '');
@@ -255,7 +259,7 @@ describe('a part across its sizes', () => {
     for (const k of kinds) {
       for (let i = 0; i < 40; i++) {
         const { variants } = generatePart(new Rng(i * 53 + 7), k, k);
-        if (ONE_SIZE.has(k)) {
+        if (oneSize(k, variants[0])) {
           expect(
             variants.map((v) => v.size),
             k,

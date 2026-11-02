@@ -1,9 +1,10 @@
 import 'client-only';
 import { browserHistory, type HistoryLike, type Nav, Router, type Unmount } from './router';
 import { type Route, routeTitle, SCREEN_CHROME, type ScreenName, viewportContent } from './routes';
-import { addBreadcrumb, reportError, setTelemetryContext } from './telemetry';
+import { addBreadcrumb, reportError, setTag, setTelemetryContext } from './telemetry';
 import { mountHome } from './ui/screens/home';
 import { mountPlain } from './ui/screens/plain';
+import { isTouchFirst } from './ui/touch/device';
 
 /**
  * The game's one entry point for every host. `mountGame(root)` takes over an
@@ -45,6 +46,10 @@ export function mountGame(root: HTMLElement, opts: MountOptions = {}): () => voi
   if (mounted) return () => {};
   mounted = root;
   ensureHead();
+  setTag('device.class', isTouchFirst() ? 'phone' : 'desktop');
+  // A hidden tab throttles timers and may lose its GPU context; the trail should say when that happened.
+  const page = new AbortController();
+  document.addEventListener('visibilitychange', () => addBreadcrumb('page', document.hidden ? 'hidden' : 'visible'), { signal: page.signal });
   let current: Unmount | null = null;
   let currentScreen = '';
   let shown = 0;
@@ -96,6 +101,7 @@ export function mountGame(root: HTMLElement, opts: MountOptions = {}): () => voi
   router.start();
   return () => {
     router.stop();
+    page.abort();
     shown++;
     unmount();
     root.replaceChildren();

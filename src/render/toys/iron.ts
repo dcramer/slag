@@ -1,13 +1,12 @@
 import { hash2 } from '../../core/rng';
 import type { Toy } from '../../gen/character';
 import type { P } from '../ink';
-import { glowDot } from '../kit';
+import { beady, dots, ember, engraved, lamp, side } from './faces';
 import {
   BRASS,
   BRASS_SH,
   crack,
   dome,
-  HOT,
   HOT_CSS,
   inkBox,
   inkLoop,
@@ -21,7 +20,7 @@ import {
   ORANGE_SH,
   oval,
   poly,
-  rivet,
+  rounded,
   spot,
   sup,
   TIN,
@@ -33,63 +32,61 @@ import {
 } from './kit';
 
 /**
- * The cast-iron and enamel line, and the two that roll: a piggy bank, a kettle, a bell, a crucible of
- * molten metal, a critter crawled out of the slag, a train engine and a duck on wheels. The player's
- * color is a painted saddle, an enamel band, a sash, a painted band on the iron, a knitted beanie and
- * scarf, a cab, a painted base.
+ * The cast-iron and enamel line, and the two that roll: a piggy bank, a kettle, a bell, a lantern, a
+ * critter crawled out of the slag, a train engine and a duck on wheels. The player's color is a painted
+ * saddle, an enamel band, a sash, a painted lantern frame, a knitted beanie and scarf, a cab, a painted
+ * base.
  */
+/** Lantern glass, lit from inside: a flat warm pane, not a glow. */
+const GLASS = '#f1dd9c';
+
 export const IRON_TOYS: Partial<Record<Toy, ToyArt>> = {
   piggybank: {
-    size: [1.22, 0.84],
-    shape: (W, H) => sup(W, H, 2.2, 0.94, 1.04, 0.08),
+    size: [1.2, 0.76],
+    shape: (W, H) => sup(W, H, 2.3, 0.92, 1.04, 0.08),
     feet: 'peg',
     arms: 'none',
+    faceX: 0.2,
+    shine: true,
+    paintFace: (d) => beady(d, 0.6, 0.1, 0.65),
     print: (d) => {
-      // A painted saddle cloth with a scalloped hem.
+      // A painted saddle cloth with a scalloped hem, over the back half.
+      const x0 = -d.f * d.W * 0.62;
+      const x1 = d.f * d.W * 0.12;
       const pts: P[] = [
-        { x: -d.W * 0.62, y: Y(d, 0.72) },
-        { x: d.W * 0.62, y: Y(d, 0.72) },
+        { x: x0, y: Y(d, 1.1) },
+        { x: x1, y: Y(d, 1.1) },
       ];
-      for (let i = 0; i <= 8; i++) pts.push({ x: d.W * (0.6 - i * 0.15), y: Y(d, 0.3) + (i % 2 ? 1.2 : 0) });
+      for (let i = 0; i <= 6; i++) pts.push({ x: x1 + (x0 - x1) * (i / 6), y: Y(d, 0.22) + (i % 2 ? 1.2 : 0) });
       poly(d.s, pts, d.lk.player);
-      for (let i = 0; i < 3; i++) poly(d.s, oval(-d.f * d.W * (0.3 - i * 0.24), Y(d, 0.5 + (i % 2) * 0.1), 0.9, 0.9, 6), d.lk.playerHi);
+      for (let i = 0; i < 2; i++) poly(d.s, oval(-d.f * d.W * (0.36 - i * 0.24), Y(d, 0.52 + i * 0.12), 0.9, 0.9, 6), d.lk.playerHi);
     },
     back: (d) => {
       // A curly tail.
       const x = -d.f * d.W * 0.5;
-      const pts: P[] = [{ x, y: Y(d, 0.42) }];
+      const pts: P[] = [{ x, y: Y(d, 0.5) }];
       for (let i = 0; i <= 10; i++) {
         const a = (i / 10) * Math.PI * 2.6;
         const r = 1.8 * (1 - i / 14);
-        pts.push({ x: x - d.f * (1.8 + Math.cos(a) * r), y: Y(d, 0.5) + Math.sin(a) * r });
+        pts.push({ x: x - d.f * (1.8 + Math.cos(a) * r), y: Y(d, 0.6) + Math.sin(a) * r });
       }
       mark(d.s, d.lk.ink, pts, 2 * d.k, d.sd, [0, 0.3]);
       mark(d.s, d.lk.paint, pts, 0.9, d.sd, [0, 0.3]);
     },
-    over: (d) =>
-      mark(
-        d.s,
-        d.lk.paintShade,
-        [
-          { x: 0.3, y: d.top - 1 },
-          { x: 0, y: d.by + 1 },
-        ],
-        0.7,
-        d.sd,
-        [0, 0],
-      ),
     front: (d) => {
-      // The coin slot with a coin stuck in it, and the ears.
-      inkBox(d, -2.4, d.top + 0.4, 4.8, 1.3, IRON_SH);
+      // The coin slot with a coin stuck in it, and ears folded forward over the head end.
+      inkBox(d, -d.f * 2.4 - 2.2, d.top + 0.4, 4.4, 1.2, IRON_SH);
       const bob = d.m === 'run' ? Math.abs(Math.sin(d.ph)) * 0.8 : 0;
-      tonedOval(d.s, 0.4, d.top - 1.2 - bob, 2.1, 2.1, 10, BRASS, BRASS_SH, d.lk.ink, 0.5, 0.9 * d.k, 0.5);
-      for (const side of [-1, 1])
+      tonedOval(d.s, -d.f * 2.4, d.top - 1 - bob, 1.9, 1.9, 10, BRASS, BRASS_SH, d.lk.ink, 0.5, 0.9 * d.k, 0.5);
+      // Ears are flaps folded forward over the head end, not points: points read as a cat's.
+      for (const k of [0.1, 0.28])
         toned(
           d.s,
           [
-            { x: side * d.W * 0.2, y: d.top + 2.2 },
-            { x: side * d.W * 0.42, y: d.top - 2.2 },
-            { x: side * d.W * 0.46, y: d.top + 2.6 },
+            { x: d.f * d.W * (k - 0.06), y: d.top + 2.2 },
+            { x: d.f * d.W * (k + 0.04), y: d.top - 1.4 },
+            { x: d.f * d.W * (k + 0.22), y: d.top + 1.4 },
+            { x: d.f * d.W * (k + 0.12), y: d.top + 2.6 },
           ],
           d.lk.paint,
           d.lk.paintShade,
@@ -100,20 +97,22 @@ export const IRON_TOYS: Partial<Record<Toy, ToyArt>> = {
         );
     },
     snout: (d) => {
-      const x = mouthX(d) + d.f * 2.6;
-      const y = mouthY(d) - 2.6;
-      tonedOval(d.s, x, y, 2, 2.3, 10, d.lk.paint, d.lk.paintShade, d.lk.ink, 0.5, 0.9 * d.k, 0.5);
-      for (const dy of [-0.8, 0.8]) poly(d.s, oval(x + d.f * 0.3, y + dy, 0.5, 0.45, 6), d.lk.ink);
+      // A flat snout disc sticking out of the front: the pig's whole read.
+      const x = d.f * d.W * 0.34;
+      const y = Y(d, 0.36);
+      tonedOval(d.s, x, y, 1.7, 2.4, 10, d.lk.paint, d.lk.paintShade, d.lk.ink, 0.5, 0.95 * d.k, 0.5);
+      for (const dy of [-0.8, 0.8]) poly(d.s, oval(x + d.f * 0.3, y + dy, 0.45, 0.55, 6), d.lk.ink);
     },
     parts: ['shard', 'shard', 'coin', 'coin'],
   },
   kettle: {
-    size: [1.14, 0.9],
+    size: [1, 0.88],
+    shine: true,
     shape: (W, H) => dome(W, H, 2.4, 1.08),
     feet: 'none',
     arms: 'none',
     hop: true,
-    face: () => ({ eyes: { y: 0.6 } }),
+    face: (c) => ({ eyes: { y: 0.6, count: 2, size: Math.min(1.7, c.eyes.size), spread: 0.2, style: c.eyes.style === 'visor' ? 'ring' : c.eyes.style } }),
     print: (d) => livery(d, 0.1, 0.48),
     back: (d) => {
       const pts: P[] = Array.from({ length: 8 }, (_, i) => {
@@ -147,7 +146,8 @@ export const IRON_TOYS: Partial<Record<Toy, ToyArt>> = {
     parts: ['shard', 'shard', 'bolt', 'spring'],
   },
   bell: {
-    size: [1.12, 1],
+    size: [0.9, 1.1],
+    shine: true,
     shape: (W, H) => {
       const pts: P[] = [];
       for (let i = 0; i <= 10; i++) {
@@ -161,7 +161,7 @@ export const IRON_TOYS: Partial<Record<Toy, ToyArt>> = {
     feet: 'none',
     arms: 'none',
     hop: true,
-    face: () => ({ eyes: { y: 0.66, spread: 0.2 }, mouth: 'o' }),
+    paintFace: (d) => engraved(d, 0.66, 0.16),
     print: (d) => {
       // A painted sash round the waist, in the player's color.
       livery(d, 0.12, 0.56);
@@ -184,85 +184,73 @@ export const IRON_TOYS: Partial<Record<Toy, ToyArt>> = {
     front: (d) => inkLoop(d, oval(0, d.top - 1.4, 2.2, 2, 12), IRON),
     parts: ['shard', 'bolt', 'gear', 'shard'],
   },
-  crucible: {
-    size: [1.04, 0.98],
-    shape: (W, H) => [
-      { x: -W * 0.56, y: -H },
-      { x: W * 0.56, y: -H },
-      { x: W * 0.52, y: -H * 0.9 },
-      { x: W * 0.42, y: -H * 0.25 },
-      { x: W * 0.32, y: 0 },
-      { x: -W * 0.32, y: 0 },
-      { x: -W * 0.42, y: -H * 0.25 },
-      { x: -W * 0.52, y: -H * 0.9 },
-    ],
-    feet: 'peg',
-    arms: 'mitten',
-    hands: 'iron',
-    face: () => ({ eyes: { y: 0.7 } }),
-    print: (d) => {
-      livery(d, 0.04, 0.48);
-      const x = -d.f * d.W * 0.34;
-      mark(
-        d.s,
-        HOT_CSS,
+  lantern: {
+    size: [0.84, 1.1],
+    shape: (W, H) =>
+      rounded(
         [
-          { x, y: Y(d, 0.9) },
-          { x: x + 0.2, y: Y(d, 0.66) },
-          { x: x - 0.1, y: Y(d, 0.56) },
+          { x: -0.2 * W, y: -H },
+          { x: 0.2 * W, y: -H },
+          { x: 0.5 * W, y: -0.8 * H },
+          { x: 0.4 * W, y: -0.74 * H },
+          { x: 0.4 * W, y: -0.14 * H },
+          { x: 0.5 * W, y: -0.08 * H },
+          { x: 0.5 * W, y: 0 },
+          { x: -0.5 * W, y: 0 },
+          { x: -0.5 * W, y: -0.08 * H },
+          { x: -0.4 * W, y: -0.14 * H },
+          { x: -0.4 * W, y: -0.74 * H },
+          { x: -0.5 * W, y: -0.8 * H },
         ],
-        1.4,
-        d.sd,
-        [0, 0.2],
-      );
-    },
-    over: (d) => {
-      for (const side of [-1, 1]) rivet(d, side * d.W * 0.3, Y(d, 0.3));
-    },
-    front: (d) => {
-      // The pour: molten metal sloshing in the mouth. Hot, so it glows.
-      const slosh = Math.sin(d.t * 5) * 0.6 + (d.m === 'run' ? -d.f * 0.8 : 0);
+        1,
+      ),
+    feet: 'none',
+    arms: 'none',
+    hop: true,
+    shine: true,
+    paintFace: (d) => dots(d, 0.56, 0.13, 0.8, 0.0),
+    print: (d) => {
+      // The frame is painted in the player's color under an iron roof; the glass is lit by a flame, in flat tones.
+      livery(d, -0.2, 0.76);
       poly(
         d.s,
         [
-          { x: -d.W * 0.48, y: d.top + 0.6 - slosh },
-          { x: 0, y: d.top - 0.8 },
-          { x: d.W * 0.48, y: d.top + 0.6 + slosh },
-          { x: d.W * 0.4, y: d.top + 1.8 },
-          { x: -d.W * 0.4, y: d.top + 1.8 },
+          { x: -d.W * 0.28, y: Y(d, 0.7) },
+          { x: d.W * 0.28, y: Y(d, 0.7) },
+          { x: d.W * 0.28, y: Y(d, 0.18) },
+          { x: -d.W * 0.28, y: Y(d, 0.18) },
+        ],
+        GLASS,
+      );
+      const lick = Math.sin(d.t * 9) * 0.4 - d.f * Math.min(1, Math.abs(d.p.vx) / 160);
+      poly(
+        d.s,
+        [
+          { x: -1.3, y: Y(d, 0.2) },
+          { x: lick, y: Y(d, 0.42) },
+          { x: 1.3, y: Y(d, 0.2) },
         ],
         HOT_CSS,
       );
-      poly(d.s, oval(-1.4, d.top + 0.4, 2.2, 0.6, 8), WHITE_HOT);
-      if (d.g) glowDot(d.g, d.wx, d.wy + d.top * d.sc, 9 * d.sc, HOT, 0.4);
-      const x0 = -d.f * d.W * 0.5;
-      mark(
-        d.s,
-        d.lk.ink,
-        [
-          { x: x0, y: Y(d, 0.8) },
-          { x: x0 - d.f * 4.4, y: Y(d, 0.94) },
-        ],
-        2.6 * d.k,
-        d.sd,
-        [0, 0.1],
-      );
-      mark(
-        d.s,
-        IRON,
-        [
-          { x: x0, y: Y(d, 0.8) },
-          { x: x0 - d.f * 4.2, y: Y(d, 0.94) },
-        ],
-        1.2,
-        d.sd,
-        [0, 0.1],
-      );
+      poly(d.s, oval(lick * 0.3, Y(d, 0.25), 0.6, 0.9, 6), WHITE_HOT);
+      for (const side of [-1, 1])
+        mark(
+          d.s,
+          d.lk.playerDark,
+          [
+            { x: side * d.W * 0.28, y: Y(d, 0.7) },
+            { x: side * d.W * 0.28, y: Y(d, 0.18) },
+          ],
+          0.9,
+          side,
+          [0, 0],
+        );
     },
-    parts: ['shard', 'bolt', 'bolt', 'gear'],
+    front: (d) => inkLoop(d, oval(d.wob * 0.2, d.top - 1.6, 2, 1.8, 12), IRON),
+    parts: ['shard', 'shard', 'bolt', 'spring'],
   },
   slagblob: {
-    size: [1.12, 0.9],
+    size: [1, 0.86],
     shape: (W, H, v) => {
       // Lumpy, cooled in a heap.
       const p = sup(W, H, 2.1, 0.86, 1.08, 0.14, 30);
@@ -276,7 +264,7 @@ export const IRON_TOYS: Partial<Record<Toy, ToyArt>> = {
     arms: 'mitten',
     hands: 'paint',
     rope: { kind: 'scarf', len: 7 },
-    face: (c) => ({ eyes: { glow: true, y: Math.min(0.56, c.eyes.y) } }),
+    paintFace: (d) => ember(d, 0.5, 0.2),
     print: (d) => {
       for (let i = 0; i < 3; i++) spot(d.s, (hash2(d.sd, i, 1) - 0.5) * d.W, Y(d, 0.1 + hash2(d.sd, i, 2) * 0.4), 2.2, 1.6, d.sd + i, d.lk.paintShade, 0.35);
     },
@@ -329,13 +317,14 @@ export const IRON_TOYS: Partial<Record<Toy, ToyArt>> = {
     parts: ['shard', 'shard', 'shard', 'bolt'],
   },
   train: {
-    size: [1.26, 0.78],
+    size: [1.3, 0.7],
+    shine: true,
     shape: (W, H) => sup(W, H, 5, 1, 1),
     feet: 'wheels',
     arms: 'none',
     faceX: 0.2,
     rope: { kind: 'string', len: 6 },
-    face: (c) => ({ eyes: { y: 0.6, spread: 0.18, count: c.eyes.count === 3 ? 2 : c.eyes.count } }),
+    paintFace: (d) => lamp(d, 0.56, 0, 2.5),
     print: (d) => {
       // The cab, at the back, is the player's: half the engine.
       const x0 = -d.f * d.W * 0.6;
@@ -386,13 +375,13 @@ export const IRON_TOYS: Partial<Record<Toy, ToyArt>> = {
     parts: ['wheel', 'wheel', 'bolt', 'gear'],
   },
   duck: {
-    size: [1.1, 0.88],
+    size: [1.24, 0.74],
     shape: (W, H) => sup(W, H, 2.2, 0.9, 1.04, 0.08),
     feet: 'wheels',
     arms: 'none',
     faceX: 0.12,
     rope: { kind: 'string', len: 6 },
-    face: () => ({ mouth: 'none' }),
+    paintFace: (d) => side(d, 0.66, d.f * 1.2),
     print: (d) => {
       // A painted lower half and a painted wing, both the player's.
       livery(d, -0.1, 0.36);

@@ -1,5 +1,5 @@
 import type { Instrumentation } from 'next';
-import { sentryOptions } from './app/sentry-options';
+import { sentryOptions, serverTraceRate } from './app/sentry-options';
 
 /**
  * Server side of the Sentry host, for both Node and Edge routes. The SDK loads
@@ -10,7 +10,8 @@ export async function register(): Promise<void> {
   if (!sentryOptions.dsn) return;
   try {
     const { init } = await import('@sentry/nextjs');
-    init({ ...sentryOptions, serverName: 'slag' }); // the default is the machine's hostname
+    // serverName: the default is the machine's hostname. Traces cover the signaling routes only (serverTraceRate).
+    init({ ...sentryOptions, serverName: 'slag', tracesSampler: (ctx) => serverTraceRate(ctx) });
   } catch (e) {
     console.warn('Sentry failed to start', e);
   }

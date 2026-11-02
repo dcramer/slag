@@ -628,6 +628,15 @@ Run `pnpm test:stats`. Update `docs/PARODY.md` (set piece rows), `docs/DESIGN.md
 - **Art** (`render/props/modules/flood.ts`): flat bands baked once and stamped at the crest, on BACKDROP so the basin's walls stand in front of them. In front of the terrain go the pen crest, glints, bubbles and the warning's froth lip, cut to the open liquid in each column. Lava alone glows. Water takes the theme's hue where the theme's liquid is water.
 - **Shot:** `pnpm shot flood [--look lava|toxic|water] [--low 2] [--high 5]` lets a tide into the level. It shoots mid-warning, the two frames either side of the crest taking a runner, and high water.
 
+### What Wave 2 task F (factory) landed
+
+- **Both concepts own the crossing** (`gen/stage/factory.ts`). A classic level's middle is about 30 columns, and a 17-tile wheel beside a separate vat with its banks kept clear doesn't fit, so each landmark carves its vat (a 1-part `hardGap`) on its spawn side and stands on the far bank. Past the crossing, nothing it carries can ride a bare run over it. A two-part level builds its second vat itself where there's room (wide levels); a classic one ends up needing one part, and factory's `TWO_PART_ASK` goes from 0.36 to 0.41 to hold its two-part share (28% over 200 seeds, as before).
+- **Routes `ltr` only, and not on a classic level under low gravity.** Levelling a ramp under a 30-column landmark leaves a wall nothing climbs; low gravity stretches the vat past the room. `Concept.fits(profile)` (additive) says so when the concept is rolled, so those levels stay plain rather than costing 8 attempts.
+- **The Great Wheel**: a `rotor` with the new look `flywheel` (6 or 8 cars, arm 7 on a classic level, up to 9 on a wide one: 17 to 21 tiles across) and a `swinger` of 2 to 4 saws on the same axle, period and direction, riding in the gaps between cars. A rider standing in the middle of a car is never touched; the saws meet whoever jumps between cars. Under it, two static ways: a grated one-way catwalk at floor level over the flywheel pit, or, where the floor is too near the bottom for a pit, a raised catwalk over the floor. Behind it (the `flywheel` deco, drawn by `render/props/skins/factory.ts`): the rotating lattice rim, an A-frame on plinths in the pit (`wheelFeet`), a motor and belt, a beacon, and the board that says 0.
+- **The Stamping Line**: three to five presses under a girder (a solid row you walk along, reached by ladders of one-way rungs), slamming onto a conveyor bed in sequence. `piston.lag` (additive) offsets each press's cycle within one prop; the slams roll down the line at about 9 tiles a second, mostly away from the spawn. The conveyor is a no-go for the plan, so the girder is the proof.
+- **Filler** stays the theme's recipes: the wheel's family is press and forklift, the line's forklift and cog lift. A molten pour from the roof was tried and dropped: it needs a ceiling most factory levels don't have.
+- **Shot**: `pnpm shot landmarks --theme factory --ride` stands three runners on the wheel's cars before the three phases.
+
 ## 6. Decisions
 
 The owner decided these on the proposal's open questions.

@@ -13,16 +13,17 @@
  *   pnpm shot pick|place --secret          → Secret Parts rule on: role cards, and the parts they rolled
  *   pnpm shot pick|place --parts block,saw → with those parts already in the level, as from earlier rounds
  *   pnpm shot place --card spikestrip --cursor 296,184 --then-race 90 → aim the first ghost, place it, shoot the race
- *   pnpm shot score --players 4            → round-score screen
+ *   pnpm shot score --players 4            → round-score screen with every award, mid-fill and settled (`--nobody`: a scoreless round)
  *   pnpm shot levels --seeds a,b,c,d      (or --count 12) → contact sheet
  *   pnpm shot props --count 24            → prop gallery (crate cards)
- *   pnpm shot cards --arch saw,block       → crate cards of those parts at every size
+ *   pnpm shot cards --arch saw,block       → crate cards of those parts at every size (`platform:tetra`: only parts with that body look)
  *   pnpm shot parts --arch saw,flail       → those parts placed and raced, shot close up (`--styles all`: every launcher style; `--material conveyor`: platforms of that block; `--bait`: a runner in front of each)
+ *   pnpm shot parody --seed abc            → Launch Plate, Boost Strip, Panic Button, Fuse Crate, Y-Fling and Four-Square each worked by a runner
  *   pnpm shot looks [--only spikes,geysers,droppers] → set-piece looks: spikes on every face, geysers every way, droppers mid-drop
  *   pnpm shot buildparts                   → every building part in a race, on crate cards, and as place ghosts
  *   pnpm shot riders --seed abc            → a lift and a cog wheel with blocks and coats riding them: the place ghost sticking on, then the race at three moments
  *   pnpm shot pipes [--propseed 3]         → warp pipes facing every way: placing (with the pair tether), close up, and mid-trip
- *   pnpm shot belts [--propseed 116]       → a conveyor at every rotation: as place ghosts, and placed with a runner on each belt face
+ *   pnpm shot belts [--propseed 1]         → a conveyor at every rotation: as place ghosts, and placed with a runner on each belt face
  *   pnpm shot items --seed abc             → held items: in hand, loose, and each one used (`--give bat,tax` picks them)
  *   pnpm shot blood --theme farm --players 4 --noletters → staged deaths over four rounds: ooze, settled, place phase, expiry
  *   pnpm shot stack --seed abc             → stepped frames of runners stacking, walking as a stack, and a head-bounce

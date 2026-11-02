@@ -1,3 +1,4 @@
+import { dhypot } from '../../core/dmath';
 import { type Cell, overlaps, type Rect, rectCircle, type Vec } from '../../core/geom';
 import type { ItemSpawn } from '../items/types';
 import type { Level } from '../level';
@@ -17,8 +18,11 @@ import type { Ammo, HitEffect, Module, PropState, Resolved } from './types';
  * state). No Math.random, no wall-clock time, no DOM.
  */
 
-/** `sink`: a liquid you drown in rather than burn in, so it takes you as the pit does (a fall). */
-export type Hazard = { owner: number; sink?: boolean } & (
+/**
+ * `ignites`: fire, beams, arcs and blasts, which set off anything that burns (Fuse Crates).
+ * `sink`: a liquid you drown in rather than burn in, so it takes you as the pit does (a fall).
+ */
+export type Hazard = { owner: number; ignites?: boolean; sink?: boolean } & (
   | { kind: 'rect'; r: Rect }
   | { kind: 'circle'; x: number; y: number; r: number }
   | { kind: 'seg'; x1: number; y1: number; x2: number; y2: number; r: number }
@@ -29,6 +33,8 @@ export interface SpringTrigger {
   angle: number;
   power: number;
   uid: number;
+  /** Launch Plate: put the runner's feet at (x, y) and set this velocity, instead of the kick (`plateArc`). */
+  set?: { x: number; y: number; vx: number; vy: number };
 }
 
 export type { Wind } from '../wind';
@@ -79,6 +85,25 @@ export interface Contrib {
 
 export function addTrigger(out: Contrib, t: Trigger): void {
   (out.triggers ??= []).push(t);
+}
+
+/** Does a hazard reach into this rect? Beams are checked as a chain of circles every 4 px along them. */
+export function touchesHazard(b: Rect, h: Hazard): boolean {
+  switch (h.kind) {
+    case 'rect':
+      return overlaps(b, h.r);
+    case 'circle':
+      return rectCircle(b, h.x, h.y, h.r);
+    case 'seg': {
+      const len = dhypot(h.x2 - h.x1, h.y2 - h.y1);
+      const n = Math.max(1, Math.ceil(len / 4));
+      for (let i = 0; i <= n; i++) {
+        const t = i / n;
+        if (rectCircle(b, h.x1 + (h.x2 - h.x1) * t, h.y1 + (h.y2 - h.y1) * t, h.r)) return true;
+      }
+      return false;
+    }
+  }
 }
 
 export function touchesTrigger(b: Rect, t: Trigger): boolean {
@@ -153,6 +178,10 @@ export interface TickCtx extends PropCtx {
   itemSeed?: number;
   /** This frame's solids, for anything that looks or moves through the world. Optional so headless callers can omit them. */
   solids?: readonly Solid[];
+  /** This frame's hazards, for parts set off by what touches them (Fuse Crates). Optional so headless callers can omit them. */
+  hazards?: readonly Hazard[];
+  /** Where shots struck a solid this frame (px), for parts set off by a hit. Optional so headless callers can omit them. */
+  struck?: readonly Vec[];
 }
 
 /** Tile→world transform handed to `resolve`. */

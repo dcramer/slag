@@ -3,7 +3,7 @@ import { TILE } from '../../../sim/constants';
 import { SNAP_ARM, SNAP_COOL, SNAP_SPIKE, SNAP_UP, snapperPhase } from '../../../sim/props';
 import { line, type P, stroke } from '../../ink';
 import { boxPts, dot, INK, part, path, sprite, stamp } from '../../ink-props';
-import { glowDot, type MetalPalette } from '../../kit';
+import { bulb, type MetalPalette } from '../../kit';
 import { defineArt } from '../common';
 
 /** The plate, baked in the cell's frame with -y as the face normal: riveted, with a slot per spike. */
@@ -92,7 +92,7 @@ defineArt<'snapper'>({
       s.restore();
       if (ph.seg === SNAP_ARM) {
         const [nx, ny] = [Math.cos(m.angle), Math.sin(m.angle)];
-        glowDot(g, (cx + 0.5 + nx * 0.5) * TILE + d.off[0], (cy + 0.5 + ny * 0.5) * TILE + d.off[1], 7, { h: 10, s: 100, l: 55 }, 0.5 + ph.u * 0.4);
+        bulb(g, (cx + 0.5 + nx * 0.5) * TILE + d.off[0], (cy + 0.5 + ny * 0.5) * TILE + d.off[1], 1.8, { h: 10, s: 100, l: 55 }, 0.5 + ph.u * 0.5);
       }
     }
   },

@@ -63,7 +63,8 @@ Some steps need the owner. Run after setting the Vercel env vars.
 
 - Set `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and `SENTRY_PROJECT` in Vercel (Production and Preview). An organization auth token is best.
 - On the first deploy, confirm source maps upload and client frames resolve to source. Only the failure path has been tested.
-- Install the Sentry GitHub integration for suspect commits.
+- Install the Sentry GitHub integration for suspect commits. The build already associates each release with `VERCEL_GIT_COMMIT_SHA` in `VERCEL_GIT_REPO_OWNER/VERCEL_GIT_REPO_SLUG`; Sentry needs the repo linked under that name.
+- On the first deploy, check one real event has the tags and contexts in `docs/TELEMETRY.md`, and that `host migration` logs and `/api/net/*` traces arrive.
 
 ## 22. Glacier and space follow-ups
 Both themes are on `main`. Space has no weather. Ice skids and 0.55 space gravity are measured, not played by hand.

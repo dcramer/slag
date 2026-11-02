@@ -44,17 +44,32 @@ export function light(rc: RC, x: number, y: number, r: number, color: HSL, inten
   rc.lights?.push({ x, y, r, color, intensity });
 }
 
-/** Soft additive glow blob on the emissive layer. */
+/**
+ * Soft additive glow on the emissive layer: for hot things only (fire, molten metal, lasers, sparks,
+ * muzzle flashes), per docs/ART.md. The tail drops off fast, so `r` is the reach of a faint fringe and
+ * the glow reads as a hot core; anything that isn't hot is a flat `bulb` or no glow at all.
+ */
 export function glowDot(g: CanvasRenderingContext2D, x: number, y: number, r: number, color: HSL, a = 1, core = 0.25) {
   if (r <= 0) return;
   const gr = g.createRadialGradient(x, y, 0, x, y, r);
   gr.addColorStop(0, css(color, 25, a));
   gr.addColorStop(core, css(color, 5, a * 0.6));
+  gr.addColorStop(Math.min(0.95, core + 0.3), css(color, 0, a * 0.12));
   gr.addColorStop(1, css(color, 0, 0));
   g.fillStyle = gr;
   g.beginPath();
   g.arc(x, y, r, 0, Math.PI * 2);
   g.fill();
+}
+
+/**
+ * A lit lens, LED or warning lamp: one flat, hard-edged disc on the emissive layer, no halo. Bright
+ * enough and the cel pass prints it as solid color, so a telegraph reads as a lit shape, not a smudge.
+ */
+export function bulb(g: CanvasRenderingContext2D, x: number, y: number, r: number, color: HSL, a = 1) {
+  if (r <= 0 || a <= 0) return;
+  g.fillStyle = css(color, 18, Math.min(1, a));
+  circle(g, x, y, r);
 }
 
 /** Vertical two-stop gradient from `c0` at y0 to `c1` at y1. */

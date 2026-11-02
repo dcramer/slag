@@ -17,6 +17,7 @@ import { RunWorld } from '../sim/run';
 
 interface RunInternals {
   events: unknown[];
+  struck: unknown[];
   solids: unknown[];
   out: Record<string, unknown[]>;
   world: { solids: unknown[] };
@@ -64,6 +65,7 @@ export class Predictor {
     di.out = Object.fromEntries(Object.keys(si.out).map((k) => [k, k === 'solids' ? solids : []]));
     di.world = { ...si.world, solids }; // Everything but the solids is the level's: gravity and footing have to carry over.
     di.events = [];
+    di.struck = [];
     // Deep: a stepped copy must never reach confirmed state, and race state keeps growing nested fields.
     d.runners = structuredClone(src.runners);
     d.projectiles = structuredClone(src.projectiles);

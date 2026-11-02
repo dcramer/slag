@@ -13,7 +13,6 @@ export const TOYS = [
   'tincan',
   'kettle',
   'bell',
-  'crucible',
   'slagblob',
   'soldier',
   'beetle',
@@ -24,6 +23,7 @@ export const TOYS = [
   'train',
   'duck',
   'frog',
+  'lantern',
 ] as const;
 export type Toy = (typeof TOYS)[number];
 
@@ -47,21 +47,19 @@ export interface CharacterDef {
   paint: HSL;
   /** Rolls in 0..1 that the kind's art reads in its own order: variations inside a kind. */
   vary: number[];
-  eyes: { count: 1 | 2 | 3; size: number; style: EyeStyle; iris: HSL; spread: number; y: number; glow: boolean };
+  eyes: { count: 1 | 2 | 3; size: number; style: EyeStyle; iris: HSL; spread: number; y: number };
   mouth: Mouth;
 }
 
 /** Each kind's own materials, muted: faded tin paints, enamels, iron, bronze. */
 const TIN = [hsl3(40, 30, 84), hsl3(200, 14, 74), hsl3(95, 16, 70), hsl3(20, 24, 76)];
 const ENAMEL = [hsl3(45, 22, 88), hsl3(160, 18, 74), hsl3(205, 20, 72), hsl3(10, 22, 74)];
-const IRON = [hsl3(20, 8, 42), hsl3(210, 8, 44), hsl3(30, 12, 38)];
 const PAINTS: Record<Toy, readonly HSL[]> = {
   robot: [hsl3(200, 8, 70), hsl3(40, 10, 72), hsl3(160, 10, 66)],
   piggybank: [hsl3(350, 26, 80), hsl3(40, 26, 86), hsl3(10, 22, 74)],
   tincan: [hsl3(40, 8, 80), hsl3(200, 6, 76)],
   kettle: ENAMEL,
   bell: [hsl3(28, 26, 46), hsl3(20, 18, 42), hsl3(35, 14, 52)],
-  crucible: IRON,
   slagblob: [hsl3(20, 12, 34), hsl3(30, 16, 38), hsl3(0, 8, 32)],
   soldier: [hsl3(30, 30, 78), hsl3(40, 20, 84)],
   beetle: TIN,
@@ -72,6 +70,7 @@ const PAINTS: Record<Toy, readonly HSL[]> = {
   train: [hsl3(150, 14, 34), hsl3(210, 12, 30), hsl3(10, 12, 32)],
   duck: [hsl3(45, 26, 90), hsl3(40, 20, 84), hsl3(200, 10, 86)],
   frog: [hsl3(95, 24, 60), hsl3(120, 18, 54), hsl3(70, 22, 62)],
+  lantern: [hsl3(20, 8, 30)],
 };
 
 /**
@@ -113,7 +112,6 @@ export function generateCharacter(seed: number, toy?: Toy): CharacterDef {
       iris: hsl3(rng.range(0, 360), 85, 50),
       spread: rng.range(0.22, 0.3),
       y: rng.range(0.56, 0.68),
-      glow: rng.chance(0.15),
     },
     mouth: rng.weighted<Mouth>([
       ['smile', 3],

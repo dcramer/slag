@@ -5,7 +5,7 @@ import { TILE } from '../../../sim/constants';
 import { footprintCells, launcherAngle, type LauncherStyle, type ModuleOf, type PropStyle, type Resolved } from '../../../sim/props';
 import { blob, line, type P, stroke } from '../../ink';
 import { ball, boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, type Sprite, sprite, stamp, tick, tone } from '../../ink-props';
-import { circle, glowDot, light, type MetalPalette, type RC } from '../../kit';
+import { bulb, circle, glowDot, light, type MetalPalette, type RC } from '../../kit';
 import { beamOf, defineArt, type DrawCtx } from '../common';
 import { iron } from '../machine';
 import { rang, roundSprite, stampRound } from '../projectiles';
@@ -691,7 +691,7 @@ function drawTrackerCam(rc: RC, cx: number, cy: number, angle: number): void {
   circle(s, lx, ly, 0.85);
   s.fillStyle = '#ffb0a8';
   s.fillRect(lx - 0.5, ly - 0.55, 0.4, 0.4);
-  glowDot(rc.g, lx, ly, 4.5, red, 0.55 + Math.sin(rc.t * 6) * 0.15);
+  bulb(rc.g, lx, ly, 0.85, red, 0.55 + Math.sin(rc.t * 6) * 0.15);
 }
 
 defineArt<'launcher'>({ type: 'launcher', layer: 2, draw: drawLauncher });

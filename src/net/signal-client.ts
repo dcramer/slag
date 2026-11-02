@@ -1,3 +1,4 @@
+import { addBreadcrumb } from '../telemetry';
 import type { BeatReply, JoinReply, Mail, MemberInfo, MembersReply, PollReply, Signal, SignalErrorCode, SignalOp } from './signal-protocol';
 
 /**
@@ -52,6 +53,17 @@ export class HttpSignal implements SignalApi {
     private peer: string,
   ) {}
 
+  /** The last failure put in the trail, so a poll failing every few seconds adds one breadcrumb, not dozens. */
+  private failing = '';
+
+  /** A failed call, in the trail once per run of the same failure. The 503 `store-failed` is the store, not us. */
+  private note(op: SignalOp, code: string, status = 0) {
+    const key = `${op}:${code}`;
+    if (key === this.failing) return;
+    this.failing = key;
+    addBreadcrumb('signal', `${op} failed`, { code, status });
+  }
+
   private async call<T>(op: SignalOp, extra: Record<string, unknown> = {}): Promise<T> {
     let res: Response;
     try {
@@ -62,10 +74,15 @@ export class HttpSignal implements SignalApi {
         body: JSON.stringify({ room: this.room, peer: this.peer, ...extra }),
       });
     } catch {
+      this.note(op, 'network');
       throw new SignalError('network');
     }
     const body = (await res.json().catch(() => ({}))) as { error?: SignalErrorCode };
-    if (!res.ok) throw new SignalError(body.error ?? 'network');
+    if (!res.ok) {
+      this.note(op, body.error ?? 'network', res.status);
+      throw new SignalError(body.error ?? 'network');
+    }
+    this.failing = '';
     return body as T;
   }
 

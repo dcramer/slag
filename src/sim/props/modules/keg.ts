@@ -1,6 +1,8 @@
 import type { Cell, Vec } from '../../../core/geom';
-import { addTrigger, cellOf, defineModule, solidId } from '../registry';
-import type { ModuleOf } from '../types';
+import type { InputFrame } from '../../types';
+import type { Grip } from '../attach';
+import { addTrigger, cellOf, defineModule, type RunnerMut, solidId, type TouchCtx } from '../registry';
+import type { ModuleOf, PropState } from '../types';
 
 type Keg = ModuleOf<'keg'>;
 
@@ -31,6 +33,92 @@ export const KEG = {
   /** Frames of soot a backfire leaves on you. */
   soot: 100,
 } as const;
+
+/** Y-Fling (a keg with `aim: 'player'`): a slingshot you aim and pull yourself. */
+export const FLING = {
+  /** Share of `power` an unpulled flick still gets. */
+  flick: 0.35,
+  /** How far (px) a full pull draws the pouch back. */
+  draw: 7,
+  /** Pull lost per frame with the stick let go (frames of charge): the band creeps back. */
+  ease: 2,
+} as const;
+
+/** Compass index (0 right, 2 down, 4 left, 6 up) of a direction on the 8-way stick, or -1 for none. */
+export function compassOf(dx: number, dy: number): number {
+  if (dx === 0 && dy === 0) return -1;
+  for (let i = 0; i < 8; i++) if (Math.sign(COMPASS[i][0]) === Math.sign(dx) && Math.sign(COMPASS[i][1]) === Math.sign(dy)) return i;
+  return -1;
+}
+
+/** Where the stick pulls (screen space, one of -1/0/1 each way). */
+const pullOf = (inp: InputFrame): Vec => [(inp.right ? 1 : 0) - (inp.left ? 1 : 0), (inp.down ? 1 : 0) - (inp.up ? 1 : 0)];
+
+const snapKey = (mi: number) => `${mi}:snap`;
+
+/** Frame a snapped band is whole again (0 if it never snapped). */
+export function flingBack(st: PropState | undefined, mi: number): number {
+  return st?.vars.get(snapKey(mi)) ?? 0;
+}
+
+/** How hard a fling would go for this much pull (frames): from a flick to full power. */
+export function flingSpeed(m: Keg, pull: number): number {
+  const full = Math.max(1, m.charge ?? 1);
+  return m.power * (FLING.flick + (1 - FLING.flick) * Math.min(1, pull / full));
+}
+
+/**
+ * One frame in a slingshot's pouch. The stick pulls the pouch back and the
+ * aim is the other way; holding it builds the pull, letting go eases it off.
+ * Jump fires along the aim. Sit there past `burn` and the band snaps: you drop
+ * out and it's gone for `regrow` frames. `g.s` is the pull in frames, `g.aim`
+ * the compass aim; the pouch sits `g.x, g.y` off the fork.
+ */
+function holdFling(m: Keg, ctx: TouchCtx, who: RunnerMut, g: Grip, inp: InputFrame): boolean {
+  const b = who.body;
+  const ax = m.at[0] + ctx.off[0];
+  const ay = m.at[1] + ctx.off[1];
+  if (g.t === 0) g.aim = m.dirs[0];
+  const [px, py] = pullOf(inp);
+  const dir = compassOf(-px, -py);
+  const full = Math.max(1, m.charge ?? 1);
+  if (dir >= 0) {
+    g.aim = dir;
+    g.s = Math.min(full, g.s + 1);
+  } else g.s = Math.max(0, g.s - FLING.ease);
+  // The pouch comes to the fork, then draws back against the aim as far as the pull and the room around it allow.
+  const [cx, cy] = COMPASS[g.aim];
+  const back = (FLING.draw * g.s) / full;
+  const tx = -cx * back;
+  const ty = -cy * back;
+  const nx = Math.abs(g.x - tx) < KEG.snug ? tx : tx + (g.x - tx) * KEG.suck;
+  const ny = Math.abs(g.y - ty) < KEG.snug ? ty : ty + (g.y - ty) * KEG.suck;
+  if (!ctx.blocked({ x: ax + nx - b.w / 2, y: ay + ny - b.h / 2, w: b.w, h: b.h })) {
+    g.x = nx;
+    g.y = ny;
+  }
+  b.x = ax + g.x - b.w / 2;
+  b.y = ay + g.y - b.h / 2;
+  b.vx = 0;
+  b.vy = 0;
+  if (inp.jumpPressed) {
+    const v = flingSpeed(m, g.s);
+    b.vx = cx * v;
+    b.vy = cy * v;
+    ctx.state.lastFire = ctx.frame;
+    ctx.emit({ type: 'prop', kind: 'fling-fire', x: ax, y: ay, x2: ax + (cx * v) / 16, y2: ay + (cy * v) / 16 });
+    return false;
+  }
+  if (g.t < m.burn) return true;
+  ctx.state.vars.set(snapKey(ctx.mi), ctx.frame + (m.regrow ?? 0));
+  ctx.emit({ type: 'prop', kind: 'fling-snap', x: ax, y: ay });
+  return false;
+}
+
+/** Nothing to grab while a slingshot's band is snapped. */
+function canGrab(m: Keg, ctx: TouchCtx): boolean {
+  return m.aim !== 'player' || ctx.frame >= flingBack(ctx.state, ctx.mi);
+}
 
 export interface KegAim {
   dir: number;
@@ -85,11 +173,13 @@ export const keg = defineModule<'keg'>({
     });
   },
   touch(m, ctx, who, _t, first) {
-    if (!ctx.live || !first) return;
+    if (!ctx.live || !first || !canGrab(m, ctx)) return;
     const b = who.body;
-    ctx.grab({ x: b.x + b.w / 2 - m.at[0] - ctx.off[0], y: b.y + b.h / 2 - m.at[1] - ctx.off[1], sealed: true, kind: 'keg-in' });
+    const sling = m.aim === 'player';
+    ctx.grab({ x: b.x + b.w / 2 - m.at[0] - ctx.off[0], y: b.y + b.h / 2 - m.at[1] - ctx.off[1], sealed: !sling, kind: sling ? 'fling-in' : 'keg-in' });
   },
   hold(m, ctx, who, g, inp) {
+    if (m.aim === 'player') return holdFling(m, ctx, who, g, inp);
     const b = who.body;
     const ax = m.at[0] + ctx.off[0];
     const ay = m.at[1] + ctx.off[1];
