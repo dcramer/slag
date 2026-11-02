@@ -110,6 +110,8 @@ export class Hud {
   pointer: { x: number; y: number } | null = null;
   /** Online lobby info (peers, status, invite link); set by the net layer when connected. */
   net?: NetInfo;
+  /** Online pick: the card this peer clicked and the host hasn't ruled on yet. Not a claim. */
+  pendingCard = -1;
   /** Force the prompt glyph family (e.g. the touch layer sets 'touch'). Otherwise `lastInput` is used. */
   inputMode?: InputMode;
   /** Last input family the person used (tracked by game-client). */
@@ -143,7 +145,7 @@ export class Hud {
   }
 
   private get mode(): InputMode {
-    return this.inputMode ?? (this.mouseDevice === 'touch' ? 'touch' : this.lastInput);
+    return this.inputMode ?? (this.mouseDevice.endsWith('touch') ? 'touch' : this.lastInput);
   }
 
   private button(b: HudButton) {
@@ -570,7 +572,7 @@ export class Hud {
       if (hoverer && !owner) glowDot(this.gctx, r.x + r.w / 2, y + r.h / 2, r.w * 0.8, hoverer.character.body, 0.16);
       plate(c, r.x, y, r.w, r.h, {
         edge: css(role.color),
-        stroke: owner ? css(owner.character.body, 5) : hoverer ? css(hoverer.character.body, 15) : undefined,
+        stroke: owner ? css(owner.character.body, 5) : idx === this.pendingCard ? PAL.bone : hoverer ? css(hoverer.character.body, 15) : undefined,
         alpha: owner ? 0.75 : 1,
         drop: lift ? 6 : 3,
       });
@@ -810,7 +812,7 @@ export class Hud {
     const touch = this.mode === 'touch';
     switch (m.phase) {
       case 'lobby': {
-        const primary = this.mode === 'gamepad' ? m.players.find((p) => p.device.startsWith('pad')) : m.players.find((p) => p.device === this.mouseDevice);
+        const primary = this.mode === 'gamepad' ? m.players.find((p) => /(^|:)pad/.test(p.device)) : m.players.find((p) => p.device === this.mouseDevice);
         const items: FooterItem[] = [];
         if (!primary) items.push({ action: 'confirm', label: 'Join', hud: 'join', device: this.mouseDevice });
         else {

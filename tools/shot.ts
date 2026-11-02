@@ -105,7 +105,8 @@ page.on('console', (m: { type(): string; text(): string }) => m.type() === 'erro
 const mode = opt('mode');
 const fakeNet = argv.includes('--net');
 async function open(q: string) {
-  await page.goto(`${base}r/SHOTS?${q}${tq}`);
+  // net=off: screenshots are single-player and must never join a real online room.
+  await page.goto(`${base}r/SHOTS?${q}${tq}&net=off`);
   await page.waitForFunction(() => 'slagDebug' in window, null, { timeout: 30_000 });
   await page.evaluate(() => document.fonts.ready);
   await page.evaluate(() => (window as any).slagDebug.pause(true));

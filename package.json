@@ -16,7 +16,8 @@
     "check:fast": "pnpm typecheck && pnpm lint && pnpm format:check",
     "check": "pnpm check:fast && pnpm test",
     "shot": "tsx tools/shot.ts",
-    "level": "tsx tools/level.ts"
+    "level": "tsx tools/level.ts",
+    "online-test": "tsx tools/online-test.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
