@@ -8,6 +8,7 @@ const press = (k: Partial<InputFrame>): InputFrame => ({ ...NO_INPUT, ...k });
 /** Drive a match with a simple scripted bot: picks the first free card, places anywhere legal, holds right + jumps. */
 function playMatch(seed: number, devices: string[], maxFrames = 60 * 60 * 6) {
   const m = new Match(seed);
+  m.rules = { ...m.rules, raceSeconds: 20 }; // the dumb bot may never finish; races must end
   const tick = (fn: (d: string) => InputFrame) => m.step(Object.fromEntries(devices.map((d) => [d, fn(d)])));
   tick(() => press({ confirmPressed: true })); // join
   tick(() => press({ confirmPressed: true })); // ready

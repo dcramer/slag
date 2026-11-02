@@ -1,10 +1,14 @@
+import { createAudio } from './audio';
 import { parseSeed, randomSeed } from './core/rng';
 import { installDebug } from './debug';
 import { Match } from './game/match';
+import { loadRules, saveRules } from './game/rules';
 import { InputManager } from './input/input';
 import { Renderer } from './render/renderer';
 import { DT } from './sim/constants';
 import { THEME_IDS } from './themes';
+import { NamePrompt, RulesMenu, SettingsMenu } from './ui/menus';
+import { loadProfile, saveProfile } from './ui/profile';
 
 const glCanvas = document.getElementById('game') as HTMLCanvasElement;
 const hudCanvas = document.getElementById('hud') as HTMLCanvasElement;
@@ -17,8 +21,78 @@ const match = new Match(
   seedParam ? parseSeed(seedParam) : randomSeed(),
   THEME_IDS.find((t) => t === themeParam),
 );
+match.rules = loadRules();
 const input = new InputManager(window);
+input.viewEl = glCanvas;
 const renderer = new Renderer(glCanvas, hudCanvas);
+renderer.hud.devices = input;
+const audio = createAudio();
+
+// --- local menus (DOM overlays) and profile ---------------------------------
+const settingsMenu = new SettingsMenu(input, audio);
+const rulesMenu = new RulesMenu(input);
+const namePrompt = new NamePrompt(input);
+const profile = loadProfile();
+const menus = [settingsMenu, rulesMenu, namePrompt];
+
+function promptName() {
+  const p = match.players.find((q) => q.device === input.mouseDevice);
+  if (!p) return;
+  namePrompt.open(p.character.name, profile.name, (name) => {
+    profile.name = name;
+    profile.prompted = true;
+    saveProfile(profile);
+    if (name) match.setName(p.slot, name);
+  });
+}
+
+input.onEscape = () => {
+  const open = menus.find((m) => m.isOpen);
+  if (open) open.close();
+  else settingsMenu.open();
+};
+
+input.hitTest = (x, y) => {
+  audio.unlock();
+  if (menus.some((m) => m.isOpen)) return null;
+  const b = match.phase === 'lobby' ? renderer.hud.hit(x, y) : null;
+  if (!b) return null;
+  switch (b.action) {
+    case 'settings':
+      settingsMenu.open();
+      return true;
+    case 'rules':
+      rulesMenu.open(match.rules, (r) => {
+        if (match.phase !== 'lobby') return;
+        match.rules = r;
+        saveRules(r);
+      });
+      return true;
+    case 'name':
+      promptName();
+      return true;
+    case 'join':
+    case 'ready':
+      return { device: b.device ?? input.mouseDevice, confirm: true };
+    case 'look':
+      return { device: b.device ?? input.mouseDevice, alt: true };
+    case 'level':
+      return { device: b.device ?? input.mouseDevice, down: true };
+  }
+};
+window.addEventListener('keydown', () => audio.unlock(), { once: true });
+
+/** Keep the local keyboard/mouse player's chosen name; ask once on first join. */
+function syncProfile() {
+  const p = match.players.find((q) => q.device === input.mouseDevice);
+  if (!p) return;
+  if (profile.name && p.character.name !== profile.name) match.setName(p.slot, profile.name);
+  if (!profile.prompted && match.phase === 'lobby' && !menus.some((m) => m.isOpen)) {
+    profile.prompted = true;
+    saveProfile(profile);
+    promptName();
+  }
+}
 
 const loop = { paused: false };
 installDebug(match, renderer, loop);
@@ -38,7 +112,13 @@ function frame(now: number) {
     match.step(input.sample());
     acc -= DT;
   }
-  renderer.render(match, now);
+  syncProfile();
+  renderer.hud.pointer = input.pointerPos;
+  renderer.hud.mouseDevice = input.mouseDevice;
+  const events = match.drainEvents();
+  audio.handle(events, match);
+  audio.update(match, now);
+  renderer.render(match, now, events);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

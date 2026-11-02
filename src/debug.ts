@@ -82,10 +82,10 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
     },
     step(n = 1) {
       for (let i = 0; i < n; i++) match.step({});
-      renderer.render(match, performance.now());
+      renderer.render(match, performance.now(), match.drainEvents());
     },
     render(ms) {
-      renderer.render(match, ms ?? performance.now());
+      renderer.render(match, ms ?? performance.now(), match.drainEvents());
     },
   };
   (window as unknown as { slagDebug: SlagDebug }).slagDebug = api;

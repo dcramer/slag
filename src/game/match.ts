@@ -1,14 +1,15 @@
 import { clamp, type Rect } from '../core/geom';
-import { deriveSeed } from '../core/rng';
+import { deriveSeed, Rng } from '../core/rng';
 import { type CharacterDef, generateCharacter } from '../gen/character';
 import { generateLevel } from '../gen/level';
 import { generateCrate, type PropDef } from '../gen/props';
-import { DT, MAX_PLAYERS, TARGET_SCORE, TILE, VIEW_H, VIEW_W } from '../sim/constants';
+import { DT, MAX_PLAYERS, TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import type { Level } from '../sim/level';
 import { canPlace, detonate, footprint, type PlacedProp } from '../sim/props';
 import { RunWorld } from '../sim/run';
 import { type GameEvent, type InputFrame, NO_INPUT } from '../sim/types';
 import type { ThemeId } from '../themes';
+import { DEFAULT_RULES, type MatchRules } from './rules';
 import { type RoundResult, scoreRound } from './scoring';
 
 export type Phase = 'lobby' | 'pick' | 'place' | 'run' | 'score' | 'victory';
@@ -33,6 +34,7 @@ export interface CrateItem {
 }
 
 const CURSOR_SPEED = 250;
+
 const SCORE_FRAMES = 60 * 4;
 
 /**
@@ -61,6 +63,9 @@ export class Match {
 
   /** When set, every generated level uses this theme (debug / future playlist option). */
   themeOverride: ThemeId | undefined;
+
+  /** Match rules (time limits, target score…). Change only in the lobby. */
+  rules: MatchRules = { ...DEFAULT_RULES };
 
   constructor(seed: number, theme?: ThemeId) {
     this.seed = seed >>> 0;
@@ -199,6 +204,11 @@ export class Match {
   }
 
   private moveCursor(p: Player, inp: InputFrame) {
+    if (inp.pointer) {
+      p.cursor.x = clamp(inp.pointer.x, 0, VIEW_W - 1);
+      p.cursor.y = clamp(inp.pointer.y, 0, VIEW_H - 1);
+      return;
+    }
     const dx = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
     const dy = (inp.down ? 1 : 0) - (inp.up ? 1 : 0);
     p.cursor.x = clamp(p.cursor.x + dx * CURSOR_SPEED * DT, 0, VIEW_W - 1);
@@ -215,11 +225,16 @@ export class Match {
       this.moveCursor(p, inp);
       if (p.claim < 0 && inp.confirmPressed && this.phaseFrame > 10) {
         const i = this.crateItemAt(p.cursor.x, p.cursor.y);
-        if (i >= 0 && this.crate[i].claimedBy < 0) {
-          this.crate[i].claimedBy = p.slot;
-          p.claim = i;
-          this.events.push({ type: 'claim', slot: p.slot });
-        }
+        if (i >= 0 && this.crate[i].claimedBy < 0) this.claim(p, i);
+      }
+    }
+    if (this.rules.pickSeconds > 0 && this.phaseFrame >= this.rules.pickSeconds * 60) {
+      // Time's up: hand out leftovers deterministically.
+      const rng = new Rng(deriveSeed(this.seed, `autopick:${this.round}`));
+      for (const p of this.players) {
+        if (p.claim >= 0) continue;
+        const free = this.crate.map((c, i) => (c.claimedBy < 0 ? i : -1)).filter((i) => i >= 0);
+        if (free.length) this.claim(p, rng.pick(free));
       }
     }
     if (this.players.every((p) => p.claim >= 0)) {
@@ -230,6 +245,24 @@ export class Match {
         this.setPhase('place');
       }
     }
+  }
+
+  private claim(p: Player, i: number) {
+    this.crate[i].claimedBy = p.slot;
+    p.claim = i;
+    this.events.push({ type: 'claim', slot: p.slot });
+  }
+
+  /** Frames left in the current pick/place countdown (Infinity when untimed). */
+  get phaseTimeLeft(): number {
+    const secs = this.phase === 'pick' ? this.rules.pickSeconds : this.phase === 'place' ? this.rules.placeSeconds : 0;
+    return secs > 0 ? Math.max(0, secs * 60 - this.phaseFrame) : Infinity;
+  }
+
+  /** Set a player's display name (an input action: deterministic, host-relayed online). */
+  setName(slot: number, name: string) {
+    const p = this.player(slot);
+    if (p && name) p.character = { ...p.character, name };
   }
 
   // ---------------------------------------------------------------- place
@@ -274,6 +307,9 @@ export class Match {
         }
       }
     }
+    if (this.rules.placeSeconds > 0 && this.phaseFrame >= this.rules.placeSeconds * 60) {
+      for (const p of this.players) if (!p.placed) p.placed = true; // forfeited
+    }
     if (this.players.every((p) => p.placed)) {
       this.pendingAdvance ??= this.phaseFrame + 30;
       if (this.phaseFrame >= this.pendingAdvance) {
@@ -291,6 +327,7 @@ export class Match {
       this.level,
       this.placed,
       this.players.map((p) => p.slot),
+      this.rules.raceSeconds * 60,
     );
     this.setPhase('run');
   }
@@ -323,7 +360,7 @@ export class Match {
     const skip = this.phaseFrame > 90 && this.players.some((p) => this.input(p, inputs).confirmPressed);
     if (this.phaseFrame < SCORE_FRAMES && !skip) return;
     const best = Math.max(...this.players.map((p) => p.score));
-    if (best >= TARGET_SCORE) {
+    if (best >= this.rules.targetScore) {
       this.winners = this.players.filter((p) => p.score === best).map((p) => p.slot);
       this.setPhase('victory');
     } else {

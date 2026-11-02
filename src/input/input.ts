@@ -1,41 +1,6 @@
+import { VIEW_H, VIEW_W } from '../sim/constants';
 import type { InputFrame } from '../sim/types';
-
-interface KeyScheme {
-  label: string;
-  left: string[];
-  right: string[];
-  up: string[];
-  down: string[];
-  jump: string[];
-  confirm: string[];
-  alt: string[];
-}
-
-/** Two players can share one keyboard. */
-export const KEY_SCHEMES: Record<string, KeyScheme> = {
-  kb1: {
-    label: 'WASD',
-    left: ['KeyA'],
-    right: ['KeyD'],
-    up: ['KeyW'],
-    down: ['KeyS'],
-    jump: ['Space', 'KeyW'],
-    confirm: ['Space'],
-    alt: ['KeyQ', 'KeyE'],
-  },
-  kb2: {
-    label: 'Arrows',
-    left: ['ArrowLeft'],
-    right: ['ArrowRight'],
-    up: ['ArrowUp'],
-    down: ['ArrowDown'],
-    jump: ['ArrowUp', 'Enter', 'Slash'],
-    confirm: ['Enter', 'Slash'],
-    alt: ['Period', 'ShiftRight'],
-  },
-};
-
-const GAME_KEYS = new Set(Object.values(KEY_SCHEMES).flatMap((s) => [...s.left, ...s.right, ...s.up, ...s.down, ...s.jump, ...s.confirm, ...s.alt]));
+import { type Action, BINDABLE, hint, type InputSettings, type KeyProfile, keyboardDevices, loadSettings, saveSettings } from './bindings';
 
 interface PadPrev {
   jump: boolean;
@@ -43,19 +8,50 @@ interface PadPrev {
   down: boolean;
 }
 
+/** A synthetic press produced by clicking a HUD button. */
+export interface UiPress {
+  device: string;
+  confirm?: boolean;
+  alt?: boolean;
+  down?: boolean;
+}
+
 /**
- * Collects raw keyboard/gamepad state and turns it into one InputFrame per
- * device per sim step. Key presses are latched so taps shorter than a frame
- * still register.
+ * Collects raw keyboard/mouse/gamepad state and turns it into one InputFrame
+ * per device per sim step. Key presses are latched so taps shorter than a
+ * frame still register. The mouse belongs to the first keyboard device.
  */
 export class InputManager {
+  settings: InputSettings;
+  /** When set, keyboard/mouse are captured by a UI overlay (settings, name entry) and not fed to the game. */
+  captured = false;
+  /** Called on Escape. */
+  onEscape: (() => void) | null = null;
+  /** HUD hit-test for clicks on menu buttons. Returns a synthetic press, `true` if the click was consumed, or null. */
+  hitTest: ((x: number, y: number) => UiPress | true | null) | null = null;
+  /** Element whose box maps to the 768×432 logical view. */
+  viewEl: HTMLElement | null = null;
+
   private held = new Set<string>();
   private latched = new Set<string>();
   private padPrev = new Map<string, PadPrev>();
+  private gameKeys = new Set<string>();
+  private pointer: { x: number; y: number } | null = null;
+  private pointerDirty = false;
+  private click = false;
+  private rclick = false;
+  private ui: UiPress[] = [];
 
   constructor(target: Window = window) {
+    this.settings = loadSettings();
+    this.rebuildKeySet();
     target.addEventListener('keydown', (e) => {
-      if (GAME_KEYS.has(e.code)) e.preventDefault();
+      if (e.code === 'Escape') {
+        this.onEscape?.();
+        return;
+      }
+      if (this.captured) return;
+      if (this.gameKeys.has(e.code)) e.preventDefault();
       if (e.repeat) return;
       this.held.add(e.code);
       this.latched.add(e.code);
@@ -64,30 +60,128 @@ export class InputManager {
       this.held.delete(e.code);
     });
     target.addEventListener('blur', () => this.held.clear());
+    target.addEventListener('pointermove', (e) => {
+      const p = this.toView(e.clientX, e.clientY);
+      if (p) {
+        this.pointer = p;
+        this.pointerDirty = true;
+      }
+    });
+    target.addEventListener('pointerdown', (e) => {
+      const p = this.toView(e.clientX, e.clientY);
+      if (!p) return;
+      this.pointer = p;
+      this.pointerDirty = true;
+      if (e.button === 0) {
+        const hit = this.hitTest?.(p.x, p.y);
+        if (hit === true) return;
+        if (hit) {
+          this.ui.push(hit);
+          return;
+        }
+      }
+      if (this.captured) return;
+      if (e.button === 2) this.rclick = true;
+      else if (e.button === 0) this.click = true;
+    });
+    target.addEventListener('contextmenu', (e) => e.preventDefault());
+    target.addEventListener(
+      'wheel',
+      (e) => {
+        if (!this.captured && Math.abs(e.deltaY) > 0) this.rclick = true;
+      },
+      { passive: true },
+    );
+  }
+
+  /** Persist and apply new settings. */
+  apply(s: InputSettings) {
+    this.settings = s;
+    saveSettings(s);
+    this.rebuildKeySet();
+    this.held.clear();
+  }
+
+  private rebuildKeySet() {
+    this.gameKeys = new Set(keyboardDevices(this.settings).flatMap((d) => BINDABLE.flatMap((a) => d.profile[a])));
+  }
+
+  private toView(cx: number, cy: number): { x: number; y: number } | null {
+    const el = this.viewEl;
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    if (r.width <= 0 || r.height <= 0) return null;
+    return { x: ((cx - r.left) / r.width) * VIEW_W, y: ((cy - r.top) / r.height) * VIEW_H };
+  }
+
+  /** Latest pointer position in view coords (for drawing hover states). */
+  get pointerPos() {
+    return this.pointer;
+  }
+
+  /** Device the mouse belongs to. */
+  get mouseDevice(): string {
+    return keyboardDevices(this.settings)[0].device;
+  }
+
+  /** Key hints for a device (for HUD prompts). */
+  hints(device: string): { confirm: string; alt: string; jump: string; down: string } {
+    const kb = keyboardDevices(this.settings).find((d) => d.device === device);
+    if (kb) {
+      const p: KeyProfile = kb.profile;
+      return { confirm: hint(p, 'confirm'), alt: hint(p, 'alt'), jump: hint(p, 'jump'), down: hint(p, 'down') };
+    }
+    return { confirm: 'A', alt: 'B/X', jump: 'A', down: '↓' };
+  }
+
+  deviceLabel(device: string): string {
+    const kb = keyboardDevices(this.settings).find((d) => d.device === device);
+    if (kb) return kb.label;
+    if (device.startsWith('pad')) return `Pad ${Number(device.slice(3)) + 1}`;
+    return device;
   }
 
   sample(): Record<string, InputFrame> {
     const out: Record<string, InputFrame> = {};
-    const anyHeld = (codes: string[]) => codes.some((c) => this.held.has(c));
-    const anyPressed = (codes: string[]) => codes.some((c) => this.latched.has(c));
-    for (const [id, s] of Object.entries(KEY_SCHEMES)) {
-      out[id] = {
-        left: anyHeld(s.left),
-        right: anyHeld(s.right),
-        up: anyHeld(s.up),
-        down: anyHeld(s.down),
-        jump: anyHeld(s.jump),
-        jumpPressed: anyPressed(s.jump),
-        confirmPressed: anyPressed(s.confirm),
-        altPressed: anyPressed(s.alt),
-        downPressed: anyPressed(s.down),
-      };
+    if (!this.captured) {
+      for (const { device, profile } of keyboardDevices(this.settings)) {
+        const held = (a: Action) => profile[a].some((c) => this.held.has(c));
+        const pressed = (a: Action) => profile[a].some((c) => this.latched.has(c));
+        out[device] = {
+          left: held('left'),
+          right: held('right'),
+          up: held('up'),
+          down: held('down'),
+          jump: held('jump'),
+          jumpPressed: pressed('jump'),
+          confirmPressed: pressed('confirm'),
+          altPressed: pressed('alt'),
+          downPressed: pressed('down'),
+        };
+      }
+      // Mouse → first keyboard device.
+      const f = out[this.mouseDevice];
+      if (f) {
+        if (this.pointerDirty && this.pointer) f.pointer = { x: this.pointer.x, y: this.pointer.y };
+        if (this.click) f.confirmPressed = true;
+        if (this.rclick) f.altPressed = true;
+      }
+    }
+    for (const u of this.ui) {
+      const t = out[u.device] ?? (out[u.device] = emptyFrame());
+      if (u.confirm) t.confirmPressed = true;
+      if (u.alt) t.altPressed = true;
+      if (u.down) t.downPressed = true;
     }
     this.latched.clear();
+    this.pointerDirty = false;
+    this.click = false;
+    this.rclick = false;
+    this.ui = [];
 
     const pads = typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : [];
     for (const pad of pads) {
-      if (!pad?.connected) continue;
+      if (!pad || !pad.connected) continue;
       const id = `pad${pad.index}`;
       const btn = (i: number) => !!pad.buttons[i]?.pressed;
       const ax = pad.axes[0] ?? 0;
@@ -113,14 +207,6 @@ export class InputManager {
   }
 }
 
-export function deviceLabel(device: string): string {
-  if (KEY_SCHEMES[device]) return KEY_SCHEMES[device].label;
-  if (device.startsWith('pad')) return `Pad ${Number(device.slice(3)) + 1}`;
-  return device;
-}
-
-export function deviceHints(device: string): { confirm: string; alt: string; jump: string } {
-  if (device === 'kb1') return { confirm: 'SPACE', alt: 'Q/E', jump: 'SPACE/W' };
-  if (device === 'kb2') return { confirm: 'ENTER', alt: '.', jump: '↑/ENTER' };
-  return { confirm: 'A', alt: 'B/X', jump: 'A' };
+function emptyFrame(): InputFrame {
+  return { left: false, right: false, up: false, down: false, jump: false, jumpPressed: false, confirmPressed: false, altPressed: false, downPressed: false };
 }

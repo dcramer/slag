@@ -1,5 +1,5 @@
 import { inset, overlaps, pointInRect, type Rect, rectCircle } from '../core/geom';
-import { DT, KILL_Y, PLAYER_W, RUN_COUNTDOWN, RUN_TIME_LIMIT, TILE } from './constants';
+import { DT, KILL_Y, PLAYER_W, RUN_COUNTDOWN, TILE } from './constants';
 import { goalRect, type Level, T_SOLID, tileAt } from './level';
 import { type Body, bodyAtCell, type CollisionWorld, type Solid, stepBody } from './physics';
 import {
@@ -76,6 +76,8 @@ export class RunWorld {
     readonly level: Level,
     readonly placed: readonly PlacedProp[],
     slots: number[],
+    /** Race time limit in frames after the countdown; 0 = unlimited. */
+    readonly timeLimit = 0,
   ) {
     const n = slots.length;
     this.runners = slots.map((slot, i) => ({
@@ -104,8 +106,9 @@ export class RunWorld {
     return this.runners.filter((r) => r.alive && !r.finished);
   }
 
+  /** Frames left before the race times out (Infinity when unlimited). */
   get timeLeft(): number {
-    return Math.max(0, RUN_TIME_LIMIT - (this.frame - RUN_COUNTDOWN));
+    return this.timeLimit > 0 ? Math.max(0, this.timeLimit - (this.frame - RUN_COUNTDOWN)) : Infinity;
   }
 
   isBroken(uid: number, f = this.frame): boolean {

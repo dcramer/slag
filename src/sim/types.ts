@@ -9,6 +9,11 @@ export interface InputFrame {
   confirmPressed: boolean;
   altPressed: boolean;
   downPressed: boolean;
+  /**
+   * Mouse pointer in logical view coords (0..768 × 0..432), present only on
+   * frames where the pointer moved or clicked. Menus snap the cursor to it.
+   */
+  pointer?: { x: number; y: number };
 }
 
 export const NO_INPUT: InputFrame = Object.freeze({
