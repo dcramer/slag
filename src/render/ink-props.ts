@@ -195,8 +195,8 @@ export function dot(g: CanvasRenderingContext2D, x: number, y: number, r: number
 }
 
 /** A ball: two tones cut toward the light, a pen round it and one hard glint. */
-export function ball(g: CanvasRenderingContext2D, x: number, y: number, r: number, base: HSL, seed = 2, glintCol = 'rgba(255,255,255,0.85)') {
-  g.fillStyle = INK;
+export function ball(g: CanvasRenderingContext2D, x: number, y: number, r: number, base: HSL, seed = 2, glintCol = 'rgba(255,255,255,0.85)', ink = INK) {
+  g.fillStyle = ink;
   blob(g, x + 0.25, y + 0.3, r + Math.min(1.1, r * 0.22), seed, 1, 0.04);
   g.fill();
   g.fillStyle = css(base, -12, 1, 4);

@@ -35,6 +35,8 @@ export type Ammo =
   | 'slug'
   // Space's meteor shower: a big burning rock falling straight out of the sky.
   | 'meteor'
+  // World-only, glacier: an avalanche's snowball, rolling along the ground (./ammo.ts).
+  | 'snowball'
   // Held-item shots (src/sim/items): never loaded in a launcher.
   | 'puck'
   | 'smokebomb';
@@ -161,6 +163,8 @@ export const AMMO: Record<Ammo, AmmoSpec> = {
   slug: { gravity: 0, radius: 2, wobble: 0, emissive: true, life: 70 },
   // Big, burning and straight, out of the sky: a wide shot that's slow enough to see coming.
   meteor: { gravity: 0, radius: 5, wobble: 0, emissive: true, life: 300 },
+  // An avalanche's snowball: falls, then rolls along whatever floor it lands on until a wall or the pit takes it (./ammo.ts).
+  snowball: { gravity: 900, radius: 5.5, wobble: 0, emissive: false, life: 240 },
   // Held-item shots; src/sim/items/ammo.ts registers their behavior.
   puck: { gravity: 1200, radius: 4, wobble: 0, emissive: false, life: 360, effect: 'bonk' },
   smokebomb: { gravity: 700, radius: 3.5, wobble: 0, emissive: false, life: 180, effect: 'none' },
@@ -586,6 +590,22 @@ export type Module =
       warn: number;
       run: number;
       back: number;
+      seed: number;
+    }
+  | {
+      /**
+       * World-only, glacier: thin ice over open water (./modules/thaw.ts). The `cells` are one row of ice,
+       * flush with the floor either side. Frozen for `frozen` frames (an ice floor you can skate), cracking
+       * for `warn` (still solid: the cracks spread and it creaks), then it's open water for `open` frames:
+       * the ice is gone and whoever's in the water under it, down `depth` rows, drowns. Then it skins
+       * over again.
+       */
+      type: 'thaw';
+      cells: Cell[];
+      depth: number;
+      frozen: number;
+      warn: number;
+      open: number;
       seed: number;
     };
 

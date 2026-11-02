@@ -24,6 +24,8 @@ import {
   type Role,
   resolveProp,
   traceRays,
+  TRACED_AMMO,
+  traceShot,
   type Trim,
   type Xform,
 } from '../../sim/props';
@@ -261,6 +263,7 @@ export function cycleFrames(mods: readonly Module[], motion: Motion = { type: 'n
     if (m.type === 'lob') p = Math.max(p, m.off + m.warn + m.flight + Math.max(0, m.count - 1) * m.lag);
     if (m.type === 'cavein') p = Math.max(p, m.off + m.warn + m.on);
     if (m.type === 'cart') p = Math.max(p, m.off + m.warn + m.run + m.back);
+    if (m.type === 'thaw') p = Math.max(p, m.frozen + m.warn + m.open);
   }
   return Math.min(p, 1600);
 }
@@ -372,6 +375,12 @@ export function finalize(s: Site, piece: Piece, uid: number, key: string): Place
     if (m.type !== 'cannon') continue;
     const spec = AMMO[m.ammo];
     const pad = 6 + spec.radius + spec.wobble * 5;
+    if (TRACED_AMMO.has(m.ammo)) {
+      const [mx, my] = cannonMuzzle(m);
+      const path = traceShot(level, { x: mx, y: my, vx: dcos(m.angle) * m.speed, vy: dsin(m.angle) * m.speed, owner: -1, ammo: m.ammo });
+      if (path.some((q) => s.zones.some((z) => rectCircle(z, q.x, q.y, pad)))) return null;
+      continue;
+    }
     let [x, y] = cannonMuzzle(m);
     const vx = dcos(m.angle) * m.speed;
     let vy = dsin(m.angle) * m.speed;
