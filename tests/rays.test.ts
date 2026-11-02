@@ -614,31 +614,57 @@ describe('crushers', () => {
     expect(rs[0].killer).toBe(7);
   });
 
+  /**
+   * Run `slam` under every prop phase (the phase comes from the uid), so where the stroke's frames fall
+   * can't decide the test: the runner must never be pushed out the far side of the head, and must die by
+   * its owner's hand every time. Some phases catch the runner on the head's lethal edge first; the rest
+   * must be crushes.
+   */
+  function slamAllPhases(setup: (uid: number) => { run: RunWorld; r: Runner }, wrongSide: (r: Runner) => boolean) {
+    const causes = new Set<string | null>();
+    for (let uid = 100; uid < 116; uid++) {
+      const { run, r } = setup(uid);
+      for (let i = 0; i < 160 && r.alive; i++) {
+        steps(run, 1);
+        expect(wrongSide(r), `uid ${uid} frame ${run.frame}`).toBe(false);
+      }
+      expect([r.alive, r.killer], `uid ${uid}`).toEqual([false, 7]);
+      causes.add(r.cause);
+    }
+    expect(causes.has('crush')).toBe(true);
+    expect([...causes].every((c) => c === 'crush' || c === 'hazard')).toBe(true);
+  }
+
   it('a fast slam crushes a lone runner on the floor instead of popping them onto its head', () => {
     // Its stroke ends 8 px above the floor, too low for a runner, and the head covers 12 px in its last frame:
     // deeper than half the overlap, so pushing out by the shallowest side would lift the runner on top.
     const top = FLOOR - 8;
-    const p = place(crusher, 20, top);
-    const { run, rs } = race(testLevel(), [p]);
-    standAt(rs[0], 20, FLOOR - 1);
-    const y0 = rs[0].body.y;
-    for (let i = 0; i < 120 && rs[0].alive; i++) {
-      steps(run, 1);
-      expect(rs[0].body.y).toBeGreaterThanOrEqual(y0);
-    }
-    expect([rs[0].alive, rs[0].cause, rs[0].killer]).toEqual([false, 'crush', 7]);
+    const y0 = FLOOR * TILE - 14;
+    slamAllPhases(
+      (uid) => {
+        const { run, rs } = race(testLevel(), [{ ...place(crusher, 20, top), uid }]);
+        standAt(rs[0], 20, FLOOR - 1);
+        return { run, r: rs[0] };
+      },
+      (r) => r.body.y < y0,
+    );
   });
 
   it('a fast slam sideways pins a runner against a wall', () => {
     const lane = FLOOR - 1;
-    const p = place(def([body(), { ...press, angle: RIGHT, reach: 8 }]), 20, lane);
-    const level = testLevel();
-    for (let y = 0; y < FLOOR; y++) level.tiles[y * LEVEL_W + 30] = 1;
-    const { run, rs } = race(level, [p]);
-    standAt(rs[0], 29, lane);
-    rs[0].body.x = 30 * TILE - rs[0].body.w;
-    for (let i = 0; i < 120 && rs[0].alive; i++) steps(run, 1);
-    expect([rs[0].alive, rs[0].cause, rs[0].killer]).toEqual([false, 'crush', 7]);
+    const side = def([body(), { ...press, angle: RIGHT, reach: 8 }]);
+    const x0 = 30 * TILE - 10;
+    slamAllPhases(
+      (uid) => {
+        const level = testLevel();
+        for (let y = 0; y < FLOOR; y++) level.tiles[y * LEVEL_W + 30] = 1;
+        const { run, rs } = race(level, [{ ...place(side, 20, lane), uid }]);
+        standAt(rs[0], 29, lane);
+        rs[0].body.x = x0;
+        return { run, r: rs[0] };
+      },
+      (r) => r.body.x < x0,
+    );
   });
 
   it('a runner beside a slam is left alone', () => {
