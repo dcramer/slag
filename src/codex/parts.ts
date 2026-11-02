@@ -300,7 +300,7 @@ export function partGroups(): PartGroup[] {
         { title: 'spring', note: 'Launches you the way it faces.', def: def('spring', [{ type: 'spring', at: c(), angle: UP, power: 700 }]) },
         {
           title: 'fan',
-          note: 'Pushes you along its wind column.',
+          note: 'Steady wind along its column: lifts you and lets you float at the top.',
           def: def('fan', [body([[0, 0]]), { type: 'fan', at: c(), angle: UP, length: 4, strength: 2200 }]),
         },
         { title: 'bomb', note: 'Detonates where you place it, clearing terrain and props.', def: def('bomb', [{ type: 'bomb', radius: 2.5 }]) },

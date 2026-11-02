@@ -1,12 +1,17 @@
 import { css, type HSL } from '../../../core/color';
 import { TILE } from '../../../sim/constants';
-import { geyserColumn, geyserCycle, type ModuleOf } from '../../../sim/props';
+import { geyserColumn, geyserCycle, geyserWind, type ModuleOf } from '../../../sim/props';
+import { windProfile } from '../../../sim/wind';
 import { circle, ellipse, glowDot, light, type RC, sphereFill } from '../../kit';
 import { type DrawCtx, defineArt } from '../common';
 
 /**
  * Geyser art: a vent mound (ground vents), a rumbling telegraph, and the
- * erupting column — drawn from geyserColumn, the sim's own hazard shape.
+ * erupting column — drawn from geyserCycle / geyserColumn / geyserWind, the
+ * sim's own cycle and shapes. Three readable phases, all on the sim frame:
+ * dormant (still: nothing moves, nothing pushes), rumbling (shake, sputter
+ * and a growing hiss plume: the warning), erupting (the column; steam puffs
+ * travel at the updraft's air speed and thin out where its push tapers).
  */
 
 type Geyser = ModuleOf<'geyser'>;
@@ -23,7 +28,7 @@ function drawVent(rc: RC, m: Geyser, d: DrawCtx) {
   const s = rc.s;
   const g = rc.g;
   const c = geyserCycle(m, rc.frame, d.r.phase);
-  const shake = c.seg === 1 ? Math.sin(rc.frame * 1.9) * (c.t / c.len) * 0.8 : 0;
+  const shake = c.seg === 1 ? Math.sin(rc.frame * 1.9) * (0.4 + (c.t / c.len) * 1.1) : 0;
   const x = m.at[0] + d.off[0] + shake;
   const y = m.at[1] + d.off[1];
   const lava = m.look === 'lava';
@@ -83,8 +88,18 @@ function drawColumn(rc: RC, m: Geyser, d: DrawCtx) {
         g.fillStyle = css(HOT, 0, 0.3 + p * 0.5);
         ellipse(g, x, base + 2, 6 + p * 6, 2 + p);
       }
-    } else if (emit && Math.random() < 0.2 + p * 0.6)
-      emit('smoke', x + (Math.random() - 0.5) * 6, base, (Math.random() - 0.5) * 20, -40 - p * 60, { h: 0, s: 0, l: 85 });
+    } else {
+      // Steam warning: a sputtering hiss plume that grows (and pulses faster) until it erupts.
+      const pulse = 0.5 + 0.5 * Math.sin(f * (0.25 + p * 0.5));
+      const hgt = 5 + p * 20 * (0.6 + 0.4 * pulse);
+      for (let i = 0; i < 5; i++) {
+        const u = (i + ((f * (1 + p * 2)) % 8) / 8) / 5;
+        s.fillStyle = `rgba(240,244,248,${(0.35 + p * 0.45) * (1 - u)})`;
+        circle(s, x + Math.sin(i * 2.1 + f * 0.3) * 1.5, base - u * hgt, 2 + u * 3 + p * 2);
+      }
+      if (emit && Math.random() < 0.2 + p * 0.6)
+        emit('smoke', x + (Math.random() - 0.5) * 6, base, (Math.random() - 0.5) * 20, -40 - p * 60, { h: 0, s: 0, l: 85 });
+    }
     return;
   }
   const col = geyserColumn(m, f, d.r.phase, d.o.level, d.off[0], d.off[1]);
@@ -135,12 +150,17 @@ function drawColumn(rc: RC, m: Geyser, d: DrawCtx) {
     if (emit && Math.random() < 0.8) emit('ember', x + (Math.random() - 0.5) * w, top + 4, (Math.random() - 0.5) * 120, -40 - Math.random() * 90, HOT);
     if (emit && Math.random() < 0.25) emit('smoke', x, top, (Math.random() - 0.5) * 30, -30, { h: 10, s: 10, l: 30 });
   } else {
-    // Steam: billowing puffs scrolling up, widening toward the top.
+    // Steam: billowing puffs rising at the updraft's air speed, widening and
+    // thinning toward the tip where the push tapers off (same profile as the sim).
+    const wind = geyserWind(m, col);
+    const step = wind.speed / 60;
     for (let i = 0; i < col.len / 5; i++) {
-      const u = ((i * 5 + f * 3.2) % col.len) / col.len;
-      const yy = col.y - u * col.len;
+      const along = (i * 5 + f * step) % col.len;
+      const u = along / col.len;
+      const yy = col.y - along;
+      const push = Math.max(0, windProfile(wind, yy - wind.y));
       const r = (w * 0.45 + u * w * 0.5) * k;
-      s.fillStyle = `rgba(240,244,248,${0.55 * (1 - u * 0.5)})`;
+      s.fillStyle = `rgba(240,244,248,${0.55 * (1 - u * 0.5) * (0.35 + 0.65 * push)})`;
       circle(s, x + Math.sin(i * 2.3 + f * 0.1) * 2 * u, yy, r);
     }
     s.fillStyle = 'rgba(255,255,255,0.75)';

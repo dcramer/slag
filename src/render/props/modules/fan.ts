@@ -1,39 +1,53 @@
 import { css } from '../../../core/color';
 import type { Vec } from '../../../core/geom';
 import { dirOf, fanZone, type Module, type ModuleOf, type PropStyle } from '../../../sim/props';
+import { windProfile, windSpeed } from '../../../sim/wind';
 import { circle, type MetalPalette, type RC, sphereFill } from '../../kit';
 import { defineArt, type PropDrawOpts } from '../common';
 
 type M<T extends Module['type']> = ModuleOf<T>;
 
+/**
+ * Fan art, drawn from the sim's own column (fanZone) and air profile
+ * (windProfile): streaks travel at the air speed and fade/shorten exactly
+ * where the push tapers off; the blades spin in proportion to the air speed.
+ * Timing comes from the sim frame, so a paused sim pauses the art.
+ */
 function drawFan(rc: RC, m: M<'fan'>, off: Vec, pal: MetalPalette, st: PropStyle, o: PropDrawOpts) {
   const s = rc.s;
   const x = m.at[0] + off[0];
   const y = m.at[1] + off[1];
+  const speed = windSpeed(m.strength);
+  const t = rc.frame / 60;
   if (o.level) {
     const z = fanZone(o.level, m, off);
     const [dx, dy] = dirOf(m.angle);
     const len = dx !== 0 ? z.w : z.h;
+    const across = dx !== 0 ? z.h : z.w;
     const g = rc.g;
     g.lineCap = 'round';
-    for (let i = 0; i < 7; i++) {
-      const p = (rc.t * (m.strength / 900) + i / 7) % 1;
-      const along = p * len;
-      const across = 3 + ((i * 7) % 11);
-      const fade = Math.sin(p * Math.PI);
-      g.strokeStyle = `rgba(220,240,255,${0.28 * fade})`;
+    const n = Math.max(5, Math.round(len / 9));
+    for (let i = 0; i < n; i++) {
+      // Each streak rides the air from the fan face to the column end at the air speed.
+      const along = (t * speed + (i * len) / n + ((i * 37) % 13)) % len;
+      const k = windProfile(z, len - along);
+      if (k <= 0.02) continue;
+      const a = 0.34 * Math.min(1, along / 10) * k * (0.6 + speed / 600);
+      const lat = 3 + ((i * 7) % Math.max(1, across - 6)) + Math.sin(t * 9 + i * 1.7) * 0.8;
+      const tail = 3 + (speed / 20) * k;
+      g.strokeStyle = `rgba(220,240,255,${a})`;
       g.lineWidth = 1;
       g.beginPath();
       if (dx !== 0) {
         const lx = dx > 0 ? z.x + along : z.x + z.w - along;
-        const ly = z.y + across + Math.sin(p * 9 + i) * 1.5;
+        const ly = z.y + lat;
         g.moveTo(lx, ly);
-        g.lineTo(lx - dx * 7, ly);
+        g.lineTo(lx - dx * tail, ly);
       } else {
         const ly = dy > 0 ? z.y + along : z.y + z.h - along;
-        const lx = z.x + across + Math.sin(p * 9 + i) * 1.5;
+        const lx = z.x + lat;
         g.moveTo(lx, ly);
-        g.lineTo(lx, ly - dy * 7);
+        g.lineTo(lx, ly - dy * tail);
       }
       g.stroke();
     }
@@ -42,7 +56,11 @@ function drawFan(rc: RC, m: M<'fan'>, off: Vec, pal: MetalPalette, st: PropStyle
   s.translate(x, y);
   s.fillStyle = 'rgba(10,10,14,0.85)';
   circle(s, 0, 0, 6.4);
-  s.rotate(rc.t * (m.strength / 80));
+  // Motion-blur disc: stronger fans read as a faster blur.
+  s.fillStyle = css({ h: st.hue, s: 40, l: 70 }, 0, Math.min(0.35, speed / 900));
+  circle(s, 0, 0, 5.8);
+  // <= 0.35 rad/frame so the 4-blade rotor never strobes backwards.
+  s.rotate(t * (speed / 12));
   for (let i = 0; i < 4; i++) {
     s.rotate(Math.PI / 2);
     s.fillStyle = css({ h: st.hue, s: 50, l: 70 }, 0, 0.85);
