@@ -71,7 +71,11 @@ function coil(s: CanvasRenderingContext2D, top: number, seed: number) {
     s.fillStyle = css(WIRE);
     stroke(s, pts.slice(0, 6), { w: 1.15, seed: seed + c + 9, taper: [0.1, 0.4], press: 0.2 });
     s.fillStyle = 'rgba(255,255,255,0.9)';
-    stroke(s, pts.slice(1, 4).map((p) => ({ x: p.x, y: p.y - 0.45 })), { w: 0.5, seed: seed + c + 19, taper: [0.3, 0.3], press: 0 });
+    stroke(
+      s,
+      pts.slice(1, 4).map((p) => ({ x: p.x, y: p.y - 0.45 })),
+      { w: 0.5, seed: seed + c + 19, taper: [0.3, 0.3], press: 0 },
+    );
   }
 }
 
