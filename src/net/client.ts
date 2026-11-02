@@ -20,6 +20,7 @@ import { browserRtc, WebRtcTransport } from './webrtc-transport';
 export interface NetHudInfo {
   status: string;
   inviteUrl?: string;
+  offline?: boolean;
   peers: { name: string; isHost: boolean; pingMs?: number; local: boolean }[];
 }
 
@@ -109,6 +110,7 @@ export function connectRoom(room: string, match: Match, opts: { primaryDevice: s
       return {
         status: statusLine(),
         inviteUrl: net.status === 'unavailable' ? undefined : inviteUrl,
+        offline: net.status === 'unavailable',
         peers: net.peers().map((p) => ({ name: p.name, isHost: p.isHost, pingMs: p.ping === null || p.isHost ? undefined : p.ping, local: p.isSelf })),
       };
     },

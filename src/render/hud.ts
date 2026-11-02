@@ -58,6 +58,8 @@ export interface NetInfo {
   peers: NetPeer[];
   status: string;
   inviteUrl?: string;
+  /** The room is unreachable and play is local. */
+  offline?: boolean;
 }
 
 interface FooterItem {
@@ -481,7 +483,7 @@ export class Hud {
     const c = this.ctx;
     const h = 30;
     plate(c, x, y, w, h, { rivets: false });
-    const tw = tag(c, 'ONLINE', x + 8, y + h / 2, PAL.toxic, PAL.ink, TYPE.caption);
+    const tw = tag(c, net.offline ? 'OFFLINE' : 'ONLINE', x + 8, y + h / 2, net.offline ? PAL.dim : PAL.toxic, PAL.ink, TYPE.caption);
     let px = x + 16 + tw;
     this.text(net.status, px, y + h / 2, TYPE.body, PAL.ash, 'left', UI, 600);
     c.font = `600 ${TYPE.body}px ${UI}`;
