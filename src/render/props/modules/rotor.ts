@@ -357,6 +357,7 @@ function drawPlatform(rc: RC, m: Rotor, d: DrawCtx, a: RotorArm, i: number) {
       dot(s, a.x, a.y, 1.2, seed);
       break;
     case 'cog':
+    case 'flywheel':
       cogDeck(s, p, st, d.pal);
       break;
     case 'chandelier':

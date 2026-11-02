@@ -54,7 +54,18 @@ export type LauncherStyle =
 export type Head = 'saw' | 'mace' | 'axe';
 export type Aim = 'fixed' | 'sweep' | 'track';
 /** Set-piece looks (art only; the sim treats every look the same). */
-export type RotorLook = 'windmill' | 'cog' | 'chandelier' | 'hay' | 'log' | 'slab' | 'crane' | 'bucket' | 'gondola';
+export type RotorLook =
+  | 'windmill'
+  | 'cog'
+  | 'chandelier'
+  | 'hay'
+  | 'log'
+  | 'slab'
+  | 'crane'
+  | 'bucket'
+  | 'gondola'
+  // Stage concepts (docs/SETPIECES.md): the great wheel's rim cars; a theme skin draws it, cog decks otherwise.
+  | 'flywheel';
 export type RotorSupport = 'tower' | 'ceiling' | 'mast' | 'none';
 export type VehicleLook = 'tractor' | 'forklift' | 'ram' | 'boulder' | 'minecart' | 'drill';
 export type CannonLook = 'castle' | 'ship' | 'totem' | 'spitter';
@@ -201,7 +212,16 @@ export type Module =
   | { type: 'flame'; at: Vec; angle: number; length: number; on: number; off: number; warn: number }
   | { type: 'laser'; at: Vec; angle: number; charge: number; fire: number; off: number; sweep: number; sweepPeriod: number }
   | { type: 'tesla'; a: Vec; b: Vec; on: number; off: number; warn: number }
-  | { type: 'piston'; at: Vec; angle: number; reach: number; width: number; period: number }
+  | {
+      type: 'piston';
+      at: Vec;
+      angle: number;
+      reach: number;
+      width: number;
+      period: number;
+      /** Fraction of a period this one runs behind the prop's other pistons: a line of presses slamming in sequence (stage concepts). */
+      lag?: number;
+    }
   | {
       type: 'spring';
       at: Vec;

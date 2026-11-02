@@ -1,7 +1,7 @@
 import type { Rng } from '../../../core/rng';
 import { finish, Grid } from '../kit';
 import type { Sculptor } from '../types';
-import { easyGap, easyRise, hardGap, knobs, pit, keepClear, rollChallenges, Slots, stepRows } from './common';
+import { claimSite, easyGap, easyRise, hardGap, knobs, pit, keepClear, raiseLandmark, rollChallenges, Slots, stepRows } from './common';
 import { factoryTall } from './tall';
 
 type FactoryStyle = 'foundry' | 'warehouse' | 'assembly';
@@ -37,9 +37,19 @@ export const factory: Sculptor = (ctx) => {
   // Vats (drop pits) in the floor: hard ones need a bridge.
   const challenges = rollChallenges(attempt, k);
   g.wantsProps = challenges > 0;
+  // The stage concept's landmark comes first: it owns one of the hard vats (stage/factory.ts), and nothing
+  // stands on its vat's near bank or within a falling jump of its far side, where its movers could carry a
+  // bare run over the next vat.
+  const claim = claimSite(ctx, k, slots, floor);
+  if (ctx.concept && !claim) return finish(g, { row: f - 1 }, { row: f - 1 }, 'factory:unclaimed');
+  const owned = claim?.concept.ownsCrossing ? Math.min(1, challenges) : 0;
+  if (claim) {
+    slots.mark(claim.at.x - 4, claim.at.x - 1);
+    slots.mark(claim.at.x + claim.at.w, claim.at.x + claim.at.w + 8);
+  }
   const vats: { a: number; b: number; hard: boolean }[] = [];
   const nEasy = rng.int(style === 'foundry' ? 1 : 0, 2) + Math.floor((k.wide - 1) * rng.range(1, 2.5));
-  for (let i = 0; i < challenges + nEasy; i++) {
+  for (let i = owned; i < challenges + nEasy; i++) {
     const hard = i < challenges;
     const w = hard ? hardGap(rng) : easyGap(rng, 2);
     const a = slots.take(rng, w, 3, 9, W - 10);
@@ -72,6 +82,8 @@ export const factory: Sculptor = (ctx) => {
     }
   }
   for (const p of placed) p.m.stamp(g, rng, p.x, p.w, floor[p.x], ceil);
+  if (claim) raiseLandmark(g, ctx, claim, owned);
+  const lm = claim ? [claim.at.x - 1, claim.at.x + claim.at.w] : null;
 
   // Catwalks: one-way girders hung from the ceiling, never across hard vats' full width.
   const nWalks = k.count(style === 'assembly' ? rng.int(2, 3) : rng.int(0, 2));
@@ -83,6 +95,8 @@ export const factory: Sculptor = (ctx) => {
     const x1 = x0 + len - 1;
     if (y <= ceil + 3) continue;
     if (vats.some((v) => v.hard && x1 >= v.a - 5 && x0 <= v.b + 5)) continue; // no flying over a hard vat
+    if (g.crossings.some(([a, b]) => x1 >= a - 5 && x0 <= b + 5)) continue;
+    if (lm && x1 >= lm[0] && x0 <= lm[1]) continue; // nor into the landmark
     let clean = true;
     for (let x = x0 - 1; x <= x1 + 1 && clean; x++) for (let yy = y - 3; yy <= y; yy++) if (!g.empty(x, yy)) clean = false;
     if (!clean) continue;

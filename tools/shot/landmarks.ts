@@ -7,7 +7,35 @@ import type { DecoKind } from '../../src/sim/props';
 import type { TerrainKind } from '../../src/gen/theme';
 import { CONCEPTS } from '../../src/gen/stage';
 import { THEME_IDS, type ThemeId } from '../../src/themes';
-import { open, opt, page, seed, sheet, snap, step, theme, type Scenarios } from './ctx';
+import { argv, open, opt, page, seed, sheet, snap, step, theme, type Scenarios } from './ctx';
+
+/**
+ * Start a race on the loaded level and stand its runners on the great wheel's rim cars, spread round the rim: the cars
+ * carry them from there. Car positions follow sim/props/modules/rotor.ts (even frames are the plain circle).
+ */
+async function boardRiders() {
+  await page.evaluate(() => {
+    const d = (window as any).slagDebug;
+    d.quickStart(3);
+    d.race([]);
+  });
+  await step(72);
+  await page.evaluate(() => {
+    const run = (window as any).slagDebug.match.run;
+    if (run.frame & 1) (window as any).slagDebug.step(1);
+    for (const r of run.resolved) {
+      const m = r.mods.find((x: any) => x.type === 'rotor' && x.look === 'flywheel');
+      if (!m) continue;
+      const base = m.angle0 + m.dir * Math.PI * 2 * (run.frame / m.period + r.phase);
+      run.runners.forEach((rn: any, i: number) => {
+        const a = base + ((Math.round((i * m.count) / 3) + 1) * Math.PI * 2) / m.count;
+        rn.body.x = m.hub[0] + Math.cos(a) * m.arm - rn.body.w / 2;
+        rn.body.y = m.hub[1] + Math.sin(a) * m.arm - m.thick / 2 - rn.body.h - 0.5;
+        rn.body.vx = rn.body.vy = 0;
+      });
+    }
+  });
+}
 
 /** Frames between the three phases a landmark is shot at. */
 const PHASES = [30, 120, 120];
@@ -135,10 +163,14 @@ export async function forceLandmark(skin: string, shell?: string) {
 }
 
 export const shots: Scenarios = {
-  /** `pnpm shot landmarks [--theme T] [--concept id|skin|shell] [--count N]`: N seeds of each concept (default 1), three phases each. */
+  /**
+   * `pnpm shot landmarks [--theme T] [--concept id|skin|shell] [--count N] [--ride]`: N seeds of each concept (default 1), three
+   * phases each. `--ride` races three runners and stands them on a great wheel's rim cars, to see what carries them.
+   */
   async landmarks() {
     const only = opt('concept');
     const count = Number(opt('count', '1'));
+    const ride = argv.includes('--ride');
     const themes = theme ? [theme as ThemeId] : THEME_IDS;
     const concepts = themes.flatMap((t) => CONCEPTS[t].filter((c) => !only || c.id === only).map((c) => ({ theme: t, id: c.id })));
     // A theme with no concepts yet gets the test landmarks, so the skins and shells are seen either way.
@@ -166,7 +198,8 @@ export const shots: Scenarios = {
           },
           [s, c.theme, c.id] as const,
         );
-        await page.evaluate(() => (window as any).slagDebug.match.join('kb1'));
+        if (ride) await boardRiders();
+        else await page.evaluate(() => (window as any).slagDebug.match.join('kb1'));
         await shoot(`landmark-${c.theme}-${c.id}-${s}`);
       }
     }

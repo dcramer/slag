@@ -86,19 +86,48 @@ export function expectClearOfSpawnAndGoal({ theme, seed, level }: ThemedLevel) {
   }
 }
 
-/** No piece is lethal every frame: a hazard leaves a window to get past it. */
+/**
+ * No piece is lethal every frame: a hazard leaves a window to get past it. A piece whose blades are always
+ * out somewhere (the Great Wheel's saw spokes) has to keep moving them: every cell they cross is clear for
+ * longer than that window between passes.
+ */
 export function expectSafeWindows({ level }: ThemedLevel) {
+  const FRAMES = 900;
+  const WINDOW = 60;
   for (const pp of level.setPieces) {
     const r = resolveProp(pp);
     const state = newPropState();
     let quiet = 0;
     let any = false;
-    for (let f = RUN_COUNTDOWN; f < RUN_COUNTDOWN + 900; f++) {
+    /** Per cell a hazard touched: the frame it was last touched and the longest clear stretch so far. */
+    const cells = new Map<number, [number, number]>();
+    for (let f = RUN_COUNTDOWN; f < RUN_COUNTDOWN + FRAMES; f++) {
       const out: Contrib = { solids: [], hazards: [], springs: [], winds: [] };
       r.mods.forEach((m, mi) => moduleSim(m.type).build?.(m, { level, frame: f, r, off: [0, 0], prev: [0, 0], state, mi, live: true }, out));
       if (out.hazards.length) any = true;
       else quiet++;
+      for (const h of out.hazards) {
+        const b = hazardBox(h);
+        for (let y = Math.floor(b.y / TILE); y <= Math.floor((b.y + b.h) / TILE); y++)
+          for (let x = Math.floor(b.x / TILE); x <= Math.floor((b.x + b.w) / TILE); x++) {
+            const k = y * level.w + x;
+            const c = cells.get(k);
+            if (!c) cells.set(k, [f, f - RUN_COUNTDOWN]);
+            else if (c[0] !== f) {
+              c[1] = Math.max(c[1], f - c[0] - 1);
+              c[0] = f;
+            }
+          }
+      }
     }
-    if (any) expect(quiet, pp.def.name).toBeGreaterThan(60);
+    if (!any) continue;
+    if (quiet > WINDOW) continue;
+    for (const [k, [last, open]] of cells) expect(Math.max(open, RUN_COUNTDOWN + FRAMES - 1 - last), `${pp.def.name} cell ${k}`).toBeGreaterThan(WINDOW);
   }
+}
+
+function hazardBox(h: Hazard): Rect {
+  if (h.kind === 'rect') return h.r;
+  if (h.kind === 'circle') return { x: h.x - h.r, y: h.y - h.r, w: 2 * h.r, h: 2 * h.r };
+  return { x: Math.min(h.x1, h.x2) - h.r, y: Math.min(h.y1, h.y2) - h.r, w: Math.abs(h.x2 - h.x1) + 2 * h.r, h: Math.abs(h.y2 - h.y1) + 2 * h.r };
 }
