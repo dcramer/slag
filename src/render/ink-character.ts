@@ -70,6 +70,8 @@ function handLook(c: CharacterDef, art: ToyArt, lk: Look): Look {
   return h;
 }
 
+const GLINT = '#fffaf0';
+
 const BY: Record<Feet, number> = { peg: -3.2, web: -2.8, wheels: -4.9, spring: -6, none: -2.3 };
 
 function feet(d: D, kind: Feet, sx: number) {
@@ -240,8 +242,11 @@ export function drawInkRunner(rc: InkTarget, c: CharacterDef, x: number, y: numb
   s.fillStyle = lk.shadow;
   s.fill('evenodd');
   s.globalCompositeOperation = 'source-over';
-  s.fillStyle = lk.paintHi;
-  line(s, -W * 0.36 + f * lk.skew * 0.7, by - H * 0.72, -W * 0.14 + f * lk.skew * 0.85, by - H * 0.88, { w: 1.6, seed: sd, taper: [0.22, 0.45], press: 0.1 });
+  if (art.shine) {
+    // One hard glint where shiny metal or enamel catches the light; matte toys get none.
+    s.fillStyle = GLINT;
+    line(s, -W * 0.34 + f * lk.skew * 0.7, by - H * 0.7, -W * 0.18 + f * lk.skew * 0.85, by - H * 0.84, { w: 1.1, seed: sd, taper: [0.3, 0.4], press: 0.1 });
+  }
   art.over?.(d);
   s.restore();
 
@@ -249,8 +254,11 @@ export function drawInkRunner(rc: InkTarget, c: CharacterDef, x: number, y: numb
   s.save();
   // The face rides the body's lean toward where it's going.
   s.translate(f * (lk.skew * 0.55 + W * (art.faceX ?? 0)), 0);
-  eyes(rc, s, fc, lk, W, H, by, p, m, x, y - hop, sc);
-  mouth(s, fc, lk, W, H, by, p, m);
+  if (art.paintFace) art.paintFace(d);
+  else {
+    eyes(s, fc, lk, W, H, by, p, m);
+    mouth(s, fc, lk, W, H, by, p, m);
+  }
   art.snout?.(d);
   s.restore();
 
