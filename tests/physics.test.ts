@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PHYS, TILE } from '../src/sim/constants';
+import { ICE_SURFACE } from '../src/sim/ground';
 import { T_ONEWAY, T_SOLID } from '../src/sim/level';
 import {
   type Body,
@@ -285,6 +286,24 @@ describe('player controller: walls', () => {
     const b = bodyAtCell(18, 29);
     const minY = wallHop(b, w, 300, 1, true);
     expect((30 * TILE - (minY + b.h)) / TILE).toBeGreaterThan(15);
+  });
+
+  it('ice floors skid from a walk as well as a run', () => {
+    const rink = { ...grid(open(120, 12, 10)), surfaceAt: () => ICE_SURFACE };
+    /** Tiles slid after walking (or running) right at full speed, then letting go. */
+    const slide = (world: CollisionWorld, sprint: boolean) => {
+      const b = bodyAtCell(3, 9);
+      run(b, world, 150, () => ctl({ right: true, run: sprint }));
+      const x0 = b.x;
+      run(b, world, 400, () => idle);
+      expect(b.vx).toBe(0);
+      return (b.x - x0) / TILE;
+    };
+    expect(slide(grid(open(120, 12, 10)), false)).toBeLessThan(0.5);
+    expect(slide(rink, false)).toBeGreaterThan(3);
+    expect(slide(rink, false)).toBeLessThan(6);
+    expect(slide(rink, true)).toBeGreaterThan(14);
+    expect(slide(rink, true)).toBeLessThan(28);
   });
 
   it('slick (ice) walls: no slide cap and no wall jump', () => {

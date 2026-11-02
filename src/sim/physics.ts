@@ -38,6 +38,13 @@ export interface Surface {
   /** Restitution when landing hard (jelly). */
   bounce: number;
   /**
+   * Ground deceleration in px/s² when letting go, slowing to a walk or turning,
+   * in place of the friction-scaled ones (ice). The usual decel is steep below
+   * a walk, so friction alone stopped a walker on ice in a tile and a half;
+   * one even skid slides a walk about 4 tiles and a run about 20.
+   */
+  skid?: number;
+  /**
    * Wall behavior when touched from the side. Optional; when absent it is
    * derived: friction < 0.3 → 'slick' (no slide cap, no wall jump),
    * speedMult < 0.7 → 'sticky' (slow cling slide, weaker wall jump).
@@ -396,6 +403,7 @@ function horizontalAccel(b: Body, dir: number, top: number, surf: Surface): numb
   // (Unscaled by surface speed so sticky goo still stops you quickly.)
   const momentum = Math.abs(vRel) > PHYS.walkSpeed + 1;
   if (b.onGround) {
+    if (surf.skid !== undefined && (dir === 0 || reversing || vRel * dir > top)) return reversing ? surf.skid * 2 : surf.skid;
     let a: number;
     if (dir === 0) a = momentum ? PHYS.runDecel : PHYS.groundDecel;
     else if (reversing) a = momentum ? PHYS.runTurnAccel : PHYS.groundTurnAccel;
