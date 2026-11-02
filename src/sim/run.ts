@@ -3,7 +3,7 @@ import { inset, overlaps, type Rect, rectCircle } from '../core/geom';
 import { deriveSeed, Rng } from '../core/rng';
 import { type BloodCell, buildBlood, groundOf, spillBlood } from './blood';
 import { PLAYER_W, RUN_COUNTDOWN } from './constants';
-import { collideRunners, contactStart, footing } from './collide';
+import { collideRunners, contactStart, footing as stackFooting } from './collide';
 import {
   absorbHit,
   bonk,
@@ -399,7 +399,7 @@ export class RunWorld {
       status: r.status,
       active: r.alive && !r.finished,
       safe: this.isSafe(r),
-      ground: footing(this.runners, r),
+      ground: stackFooting(this.runners, r),
     }));
     const w: ProjWorld = {
       level: this.level,
