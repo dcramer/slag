@@ -66,15 +66,19 @@ A build served from another origin (a packaged app pointing at the hosted API) n
 
 | Op | Does | Redis commands |
 |---|---|---|
-| `join` | Assign the next join order; returns the live members and ICE servers. | 6–8 |
-| `beat` | Renew liveness. Hosts also renew the room and learn the room's lowest order. | guest 1, host 4 |
+| `join` | Assign the next join order; returns the live members and ICE servers. One script. | 5–7 (an outdated session: 3) |
+| `beat` | Renew liveness. Hosts also renew the room and learn the room's lowest order. | guest 1, host 3 |
 | `poll` | Drain this peer's mailbox. | 1 |
 | `signal` | Put a handshake in another peer's mailbox. | 5 |
 | `members` | Live members in order. | 2–3 |
-| `gone` | Report a peer that failed to answer an offer. | 4–8 |
-| `leave` | Remove self, sent by `sendBeacon` on pagehide. | 1–4 |
+| `gone` | Report a peer that failed to answer an offer. | 5–8 |
+| `leave` | Remove self, sent by `sendBeacon` on pagehide. One script. | 2–4 |
 
-Keys, all with a TTL: `slag:<ROOM>:n` the join counter (`INCR`) and `slag:<ROOM>:m` the member sorted set (300 s, renewed by the host), `slag:<ROOM>:p:<peer>` liveness (50 s, renewed by `beat`), `slag:<ROOM>:b:<peer>` the mailbox (30 s).
+Keys, all with a TTL: `slag:<ROOM>:m` the member sorted set (300 s, renewed by the host), which also holds `#` scored with the last order handed out, `slag:<ROOM>:p:<peer>` liveness (50 s, renewed by `beat`), `slag:<ROOM>:b:<peer>` the mailbox (30 s).
+
+The liveness value is the joining session's `since` stamp (ms, increasing per tab). One peer id can have two sessions in flight: a lobby that remounts, or a page reloaded while its join was on the way. A join older than the stamp held writes nothing, and a `leave` removes the entry only if no newer session wrote it, whatever order the store holds. A session closed before its join reply arrives sends a `leave` when the reply lands.
+
+Joining and removing are Lua scripts (`app/api/net/_server/scripts.ts`), so each check and its write are one atomic step: plain commands would let the other session's write land in between. Scripts also serialize joins, so the next order is simply one above everything in the set, `#` included; no counter is needed. Upstash bills a script as one command plus one per call it makes, so the scripts cost no more than the pipelines they replaced. MemoryStore runs a TypeScript mirror of each script, making the same calls, and `pnpm test:store` checks the mirrors against the real Lua.
 
 ### Abuse limits
 
@@ -95,15 +99,15 @@ Upstash's free tier is 500K commands a month and 250 MB. Blocking commands aren'
 | Who | Polls | Heartbeats | Total |
 |---|---|---|---|
 | Guest | 0 (polling stops once linked) | 3 × 1 | **3** |
-| Host | 12 (every 5 s, to admit newcomers) | 3 × 4 | **24** |
-| Host, alone over 10 min | 4 | 12 | 16 |
+| Host | 12 (every 5 s, to admit newcomers) | 3 × 3 | **21** |
+| Host, alone over 10 min | 4 | 9 | 13 |
 | Host, alone and hidden over 10 min | 0 | 0 | **0** (leaves the room, rejoins when shown) |
 
-So a 4-player room costs 33 commands a minute (about **8 per player per minute**) and an 8-player room 45 (about 6). Polling doubles its interval in a hidden tab.
+So a 4-player room costs 30 commands a minute (about **8 per player per minute**) and an 8-player room 42 (about 5). Polling doubles its interval in a hidden tab.
 
 **One-off costs:** a join is about 60 commands (the join, offer and answer, guest polling while waiting, and the host polling every second for the next 30 s, so friends arriving together connect fast). A migration in a 3-peer room is about 125, a quarter of it the new host's rival checks (see Host election).
 
-**In practice:** 500K commands is about 250 hours of 4-player rooms a month, or 8 hours a day, ignoring joins. Storage is irrelevant: a room is under a kilobyte. Function invocations follow the same curve (24 requests a minute for a 4-player room).
+**In practice:** 500K commands is about 275 hours of 4-player rooms a month, or 9 hours a day, ignoring joins. Storage is irrelevant: a room is under a kilobyte. Function invocations follow the same curve (24 requests a minute for a 4-player room).
 
 To stretch it, raise `POLL_IDLE_MS` in `webrtc-transport.ts`: it's the main cost, and it only trades how long a late joiner waits.
 
@@ -120,7 +124,7 @@ STUN is public (Google, Cloudflare). Pairs that can't connect directly need TURN
 
 ### Host election and migration
 
-Join order comes from an atomic per-room `INCR`. The host is the lowest order present. A refresh or reconnect is a new join, so it gets a later order: the old host comes back as a guest.
+Join order comes from the atomic join script: one above every order the room has handed out. The host is the lowest order present. A refresh or reconnect is a new join, so it gets a later order: the old host comes back as a guest.
 
 The host owns the **roster** and pushes it to every guest. When the host dies the guests have no links to each other, so nobody can ask anyone anything. Each peer works it out alone:
 
@@ -136,7 +140,7 @@ Only peers that failed an offer get reported to the store, and a report names th
 
 Both windows run from when the offer lands, not from when we started. A handshake can take several seconds (a poll interval, ICE gathering on both sides, store round trips), and calling a slow peer dead is how a second host appears.
 
-If two peers end up hosting anyway (say one lost the API at the wrong moment and the other wrote it off, or two guests lost a live host at once, which looks exactly like it dying), the store settles it, deterministically and within seconds: the lowest order the store still holds wins. A host that was written off is gone from the store, so `beat` tells it so and it rejoins later in the order; `beat` also tells a host the room's lowest order. Either way the higher host hands its guests to the lower one at once. A host normally beats every 20 s, which is too slow for this, so for 12 s after taking over, after losing a guest without a goodbye, or after its API comes back, it beats every 2 s (about 24 commands each time).
+If two peers end up hosting anyway (say one lost the API at the wrong moment and the other wrote it off, or two guests lost a live host at once, which looks exactly like it dying), the store settles it, deterministically and within seconds: the lowest order the store still holds wins. A host that was written off is gone from the store, so `beat` tells it so and it rejoins later in the order; `beat` also tells a host the room's lowest order. Either way the higher host hands its guests to the lower one at once. A host normally beats every 20 s, which is too slow for this, so for 12 s after taking over, after losing a guest without a goodbye, or after its API comes back, it beats every 2 s (about 18 commands each time).
 
 An empty room needs nothing: the next arrival is host. If this browser saved the room's state in the last 30 minutes, on an earlier visit, it resumes it (never a save from this visit: a page saves while its join is in flight, and resuming that would rewind its own lobby), unless a generator change since then means this build can't rebuild that level, in which case the room starts fresh.
 
@@ -209,7 +213,7 @@ IEEE-754 `+ - * /` and `Math.sqrt` are exact everywhere, but `Math.sin/cos/atan2
 - `tests/webrtc-transport.test.ts`: the real transport, handlers and store over a fake RTC network and clock: linking, polling stopping, the measured budget, crash and goodbye migrations, double failure (including a candidate still settling its own stalled handshake, and a dead peer's handshake hanging as it does in a browser), flaky guests, rival hosts stepping down within seconds, resuming from the furthest frame. Seeded runs over API latency, handshake behaviour and crash timing check that a double failure always lands on the third peer with never two hosts, and that a split caused by flaky guests is over within 5 s.
 - `tests/net.test.ts`, `tests/net-pick.test.ts`: lockstep under latency and loss, rough play (four peers, three rounds through weather, deaths, grabs and contact, the host's link cut mid-race), desync recovery, seats, kicks, refresh, late join, a guest on another build; claim races, pending cards, remote cursors and ghosts, the input codec.
 - `tests/snapshot.test.ts`: round trips with items in play, prediction isolation, and a guard that fails until any new `Match` or `RunWorld` field is snapshotted or declared derived. `tests/dmath.test.ts`.
-- `pnpm test:store`: the real Upstash REST code against real Redis behind [Serverless Redis HTTP](https://upstash.com/docs/redis/sdks/ts/developing) (`compose.store.yml`, Redis 6.2.21 and SRH 0.0.10, on port 8079). Every command the handlers use, reply parity with the in-memory store, TTL expiry, the join counter under a stampede, the handlers end to end. `-- --browser pick,run,leave` adds real browsers on the same store, with the app configured through the production env vars. Needs Docker, so it's a CI job rather than part of `pnpm check`. SRH needs `Content-Type: application/json` and differs from Upstash in edge cases, so handlers stick to plain commands.
+- `pnpm test:store`: the real Upstash REST code against real Redis behind [Serverless Redis HTTP](https://upstash.com/docs/redis/sdks/ts/developing) (`compose.store.yml`, Redis 6.2.21 and SRH 0.0.10, on port 8079). Every command the handlers use, reply parity with the in-memory store, the presence scripts as real Lua against their mirrors, TTL expiry, join order under a stampede, two sessions of one peer racing, the handlers end to end. `-- --browser pick,run,leave` adds real browsers on the same store, with the app configured through the production env vars. Needs Docker, so it's a CI job rather than part of `pnpm check`. SRH needs `Content-Type: application/json` and differs from Upstash in edge cases, so handlers stick to plain commands and plain Lua (`EVAL`, no `EVALSHA` or functions).
 - `pnpm online-test`: real WebRTC between headless Chromium pages, one context per peer, against the real routes with the in-memory store. Hosts are killed with a renderer crash (no pagehide, no goodbye) in pick, place and run, and in a race with no third peer (`duo`); also a graceful leave, and a new host dying straight after taking over (`twice`: about 8 s from the first crash, 4 s from the second). Each prints seconds to recovery and compares state hashes. With a third peer a crash recovers in about 4 s, since its offer proves the host is gone; alone, the guest waits out the old host's whole answer window, about 7.5 s (2.5 s of silence, the offer landing, then `PROBE_MS`).
 - `pnpm online-test -- --only view`: real mouse events at four window shapes on classic, wide and tall levels. The card under the pointer is the one taken, and the cursor and ghost sit under it on both peers. Cursors are view px in `pick` and world px in `place`, mapped through `overview`, so a test or HUD that treats them alike is wrong on anything but a 1:1 level.
 - Groups, each runnable alone on a loaded machine: `--only lobby`, `migration`, `feel`, `misc`. The other scenarios (`flow`, `kick`, `refused`, `play`, `bc`, `unset`) are listed at the top of `tools/online-test.ts`. Scenarios that don't check pixels stub their drawing, since software GL otherwise measures the machine.

@@ -4,25 +4,36 @@ import type { Match, Player } from '../game/match';
 import { overview, raceFloor } from '../game/view';
 import { TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import { floorY, type Level, tileAt } from '../sim/level';
-import { type Beam, canPlace, footprint, previewProps, type Resolved, resolveProp } from '../sim/props';
 import type { Solid } from '../sim/physics';
+import { type Beam, footprint, motionOffset, previewProps, type Resolved, resolveProp } from '../sim/props';
 import type { RunWorld } from '../sim/run';
 import type { GameEvent } from '../sim/types';
 import { Backdrop } from './background';
 import { drawBlood } from './blood';
 import { Camera } from './camera';
 import { PhoneCam, phoneView } from './camera-follow';
-import { drawAfterimage, Rig } from './character';
-import { castDef, castLobby, castMode } from './cast';
-import { drawInkAccessory, drawInkRunner } from './ink-character';
+import { Rig } from './character';
+import { drawInkAccessory, drawInkAfterimage, drawInkRunner, partsOf, ropeOf } from './ink-character';
 import { ForegroundLayer, Lettering, letteringAllowed } from './cel';
-import { Fx } from './fx';
+import { Fx, type Part } from './fx';
 import { frameReach, VIEW_FRAME, type ViewFrame, viewFrame } from './frame';
 import { Hud } from './hud';
 import { drawClouds, drawDrops, drawRunnerItems, itemFx } from './items';
+import { drawPocketBlocks, drawShells, drawShellShadows } from './items-extra';
 import { circle, flutter, glowDot, type Light, light, type RC } from './kit';
 import { type Compositor, createCompositor } from './post';
-import { drawBackdrop, drawBlastPreview, drawForeground, drawProjectile, drawResolved, drawHeld, drawRunnerStatus, type Emit, propEventFx } from './props';
+import {
+  drawBackdrop,
+  drawBlastPreview,
+  drawForeground,
+  drawProjectile,
+  drawResolved,
+  drawHeld,
+  drawRideCue,
+  drawRunnerStatus,
+  type Emit,
+  propEventFx,
+} from './props';
 import { LightOccluder } from './occlude';
 import { Surround } from './surround';
 import { TerrainPainter } from './terrain';
@@ -39,12 +50,22 @@ const HUD_CSS_PER_PX = 1.25;
 const MAX_HUD_SCALE = 1.8;
 /** Smallest touch target, in CSS px. */
 const TAP_CSS = 44;
+/** The metal a toy's parts are made of, when they fly. */
+const PART_COLOR: Record<Exclude<Part, 'shard'>, HSL> = {
+  gear: { h: 40, s: 42, l: 50 },
+  spring: { h: 30, s: 4, l: 64 },
+  key: { h: 30, s: 4, l: 58 },
+  bolt: { h: 20, s: 8, l: 40 },
+  wheel: { h: 20, s: 8, l: 34 },
+  coin: { h: 45, s: 70, l: 55 },
+};
+
 const RUNNER_KEY: HSL = { h: 40, s: 30, l: 90 };
 
 /** The prop a player is about to place, as it would stand under their cursor. */
 function ghostProp(m: Match, p: Player): Resolved | null {
   const gh = m.phase === 'place' && !p.placed ? m.ghostOrigin(p) : null;
-  return gh && resolveProp({ uid: 900 + p.slot, def: gh.def, owner: p.slot, tx: gh.tx, ty: gh.ty, rot: p.rot });
+  return gh && resolveProp({ uid: 900 + p.slot, def: gh.def, owner: p.slot, tx: gh.tx, ty: gh.ty, rot: p.rot, ...(gh.ride && { ride: gh.ride }) });
 }
 
 // Speed trail. Vertical speed counts for less: a jump's launch is fast, but a walking hop isn't speed.
@@ -207,7 +228,6 @@ export class Renderer {
     const dt = Math.min(0.05, this.last ? t - this.last : 1 / 60);
     this.last = t;
     const level = m.level;
-    if (castMode()) castLobby(m.players.map((p) => p.character.seed));
     const ww = level.w * TILE;
     const wh = level.h * TILE;
     // Bake resolution: enough for the race zoom, capped by a pixel budget so huge levels stay cheap.
@@ -289,7 +309,7 @@ export class Renderer {
     this.terrain.draw(rc);
     rc.s.restore();
     g.restore();
-    const pushers = m.run ? m.run.runners.filter((r) => r.alive).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h })) : [];
+    const pushers = m.run ? m.run.runners.filter((r) => r.alive).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h, vy: r.body.vy })) : [];
     this.terrain.drawLive(rc, level, pushers);
     this.drawMarkers(rc, level);
     drawBlood(rc, m, frame);
@@ -316,12 +336,14 @@ export class Renderer {
       });
     }
 
-    if (m.phase === 'place') this.drawGhosts(rc, m, beams, solids);
+    if (m.phase === 'place') this.drawGhosts(rc, m, beams, still?.solids ?? []);
     if (m.phase === 'lobby' || m.phase === 'pick' || m.phase === 'place') this.drawIdlers(rc, m, dt);
 
     if (run) {
       for (const p of run.projectiles) drawProjectile(rc, p, emit);
       this.drawSafeZone(rc, level, run);
+      drawPocketBlocks(rc, run);
+      drawShellShadows(rc, run);
       drawDrops(rc, run);
       // All trails first: in a pack, nobody's trail may paint over another runner.
       for (const r of run.runners) {
@@ -357,6 +379,7 @@ export class Renderer {
         drawRunnerItems(rc, r);
       }
       drawClouds(rc, run);
+      drawShells(rc, run);
     }
     this.fx.draw(rc);
     this.backdrop.drawMotes(rc, level.theme, dt, this.cam.visible());
@@ -578,7 +601,7 @@ export class Renderer {
       const gh = m.ghostOrigin(p);
       const ghost = ghostProp(m, p);
       if (!gh || !ghost) continue;
-      const ok = canPlace(m.level, m.placed, gh.def, p.rot, gh.tx, gh.ty) && this.refused.get(p.slot) !== ghostKey(m, p, gh);
+      const ok = gh.ok && this.refused.get(p.slot) !== ghostKey(m, p, gh);
       const col = ok ? p.character.body : { h: 0, s: 90, l: 55 };
       s.globalAlpha = 0.85;
       rc.g.globalAlpha = 0.85;
@@ -587,15 +610,18 @@ export class Renderer {
       rc.g.globalAlpha = 1;
       const bomb = gh.def.modules.find((x) => x.type === 'bomb');
       if (bomb && bomb.type === 'bomb') drawBlastPreview(rc, m.level, m.placed, bomb, gh.tx, gh.ty, p.rot);
-      // The footprint as one outline round its tiles: exact enough to line up by, and it doesn't rule a grid over the part.
+      // A part that will ride a mover shows the loop it'll travel and the link it hangs on.
+      drawRideCue(rc, ghost, solids, col);
+      // The footprint as one outline round its tiles: exact enough to line up by, and it doesn't rule a grid over the part. A rider's is where it rides.
       const cells = footprint(gh.def, p.rot);
+      const [ox, oy] = motionOffset(ghost, rc.frame);
       const set = new Set(cells.map(([x, y]) => `${x},${y}`));
       rc.g.strokeStyle = css(col, 10, 0.8);
       rc.g.lineWidth = 1.2;
       rc.g.beginPath();
       for (const [x, y] of cells) {
-        const x0 = (gh.tx + x) * TILE + 0.5;
-        const y0 = (gh.ty + y) * TILE + 0.5;
+        const x0 = (gh.tx + x) * TILE + ox + 0.5;
+        const y0 = (gh.ty + y) * TILE + oy + 0.5;
         const x1 = x0 + TILE - 1;
         const y1 = y0 + TILE - 1;
         const side = (open: boolean, ax: number, ay: number, bx: number, by: number) => {
@@ -632,7 +658,7 @@ export class Renderer {
     if (k > 0 && (!tail || Math.hypot(x - tail.x, y - tail.y) >= TRAIL_GAP)) rig.trail.push({ x, y, a: k * TRAIL_ALPHA });
     rig.trail = rig.trail.filter((p) => (p.a -= (dt * TRAIL_ALPHA) / TRAIL_LIFE) > 0);
     // On the background layer: an afterimage is a flat ghost, and shouldn't get ink of its own.
-    for (const p of rig.trail) drawAfterimage(this.sctx, c, p.x, p.y, p.a);
+    for (const p of rig.trail) drawInkAfterimage(this.sctx, c, p.x, p.y, p.a);
   }
 
   private drawRunner(
@@ -650,7 +676,6 @@ export class Renderer {
     dt: number,
     wall = 0,
   ) {
-    c = castDef(c);
     let rig = this.rigs.get(slot);
     if (!rig || rig.rope.length === 0 || Math.hypot(rig.rope[0].x - x, rig.rope[0].y - y) > 60) {
       rig = new Rig();
@@ -682,11 +707,14 @@ export class Renderer {
       rc.s.fill();
     }
 
-    const anchorX = x - facing * 4;
-    const anchorY = c.accessory === 'tail' ? y - 4 : c.accessory === 'cape' ? y - 12 : y - 10;
-    // A little air always pulls the ribbon off behind, so standing still it trails instead of hanging like a pole.
-    rig.step(c, anchorX, anchorY, dt, -vx * 0.6 - facing * 8 + (rc.gust ?? 0) * 60, gy >= 0 ? gy - 0.8 : Infinity);
-    drawInkAccessory(rc.s, c, rig);
+    const rope = ropeOf(c);
+    if (rope) {
+      // A pull string trails from the chassis, a scarf from the neck. A little air always pulls it off
+      // behind, so standing still it trails instead of hanging like a pole.
+      const anchorY = rope.kind === 'string' ? y - 3 : y - 10;
+      rig.step(rope, x - facing * 5, anchorY, dt, -vx * 0.6 - facing * 8 + (rc.gust ?? 0) * 60, gy >= 0 ? gy - 0.8 : Infinity);
+      drawInkAccessory(rc.s, c, rig);
+    }
     drawInkRunner(rc, c, x, y, { facing, vx, vy, grounded, t: rc.t, celebrate, wall });
     light(rc, x, y - 8, 38, c.body, 0.3);
     // A key light so a runner in shade still reads, not so much that it loses its hue.
@@ -712,9 +740,15 @@ export class Renderer {
           if (e.cause === 'fall') {
             const pool = m.level.h * TILE;
             this.fx.burst('splash', e.x, Math.min(e.y, pool - 10), 26, 180, [th.liquid.glow, th.liquid.color], 2, 0.9, 120);
-            this.fx.burst('smoke', e.x, pool - 12, 8, 30, [{ h: 0, s: 0, l: 50 }], 3, 1.4);
+            this.fx.burst('smoke', e.x, Math.min(e.y, pool - 12), 8, 30, [{ h: 0, s: 0, l: 50 }], 3, 1.4);
           } else {
-            this.fx.burst('gib', e.x, e.y, 14, 220, [body, c?.accent ?? body, shift(body, -15), c?.belly ?? body], 1.8, 2.2, 120);
+            // The toy comes apart: its own parts, and shards of its paint and the player's livery.
+            const parts = c ? partsOf(c) : ['shard' as const];
+            for (let i = 0; i < 14; i++) {
+              const part = i < 6 ? parts[i % parts.length] : 'shard';
+              const col = part === 'shard' ? (i % 2 ? body : (c?.paint ?? body)) : PART_COLOR[part];
+              this.fx.part(part, e.x, e.y, 230, col, part === 'shard' ? 2 : 3, 2.2);
+            }
             this.fx.burst('spark', e.x, e.y, 18, 260, [{ h: 45, s: 100, l: 70 }, body], 1.2, 0.5);
             this.fx.add('ring', e.x, e.y, 0, 0, body, 40, 0.45);
             this.fx.add('flash', e.x, e.y, 0, 0, shift(body, 20), 26, 0.25);

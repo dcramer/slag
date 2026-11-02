@@ -3,9 +3,11 @@ import type { Vec } from '../../../core/geom';
 import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import type { Module, ModuleOf, PropStyle, Resolved } from '../../../sim/props';
-import { line, type P, stroke } from '../../ink';
+import { beltTurn } from '../../../sim/props/modules/body';
+import { blob, line, type P, stroke } from '../../ink';
 import { blockLoops, stampBlock } from '../../ink-blocks';
 import { boxPts, path, pen, poly, sprite, stamp } from '../../ink-props';
+import { drawBelts } from '../../ink-surface';
 import { glowDot, light, type MetalPalette, type RC } from '../../kit';
 import { bbox, defineArt, type PropDrawOpts } from '../common';
 import { housed } from '../machine';
@@ -14,10 +16,84 @@ type M<T extends Module['type']> = ModuleOf<T>;
 
 const has = (set: Set<string>, x: number, y: number) => set.has(`${x},${y}`);
 
+/** Each jelly's last hit: the frame and how hard, so the wobble rings down over the frames after it. */
+const hits = new Map<number, { f: number; a: number }>();
+
+/**
+ * How far a jelly is pressed down this frame, px: a runner coming down onto a top (or just bouncing off
+ * it) squashes it in proportion to their speed, and it rings down over the next frames. Read from sim
+ * state and sim frames only, and never past `EDGE_DRIFT`, so it can't lie about the top.
+ */
+function jellySquash(m: M<'body'>, uid: number, O: Vec, f: number, o: PropDrawOpts): number {
+  let hit = 0;
+  for (const p of o.runners ?? []) {
+    const vy = Math.abs(p.vy ?? 0);
+    if (vy < 60) continue;
+    for (const [x, y] of m.cells) {
+      if (m.cells.some(([cx, cy]) => cx === x && cy === y - 1)) continue;
+      const top = y * TILE + O[1];
+      const d = top - p.y;
+      const left = x * TILE + O[0];
+      if (d < -1 || d > 8 || p.x < left - 5 || p.x > left + TILE + 5) continue;
+      hit = Math.max(hit, (1 - Math.max(0, d) / 8) * Math.min(1, vy / 380) * 1.25);
+    }
+  }
+  let h = hits.get(uid);
+  const ring = h ? h.a * Math.exp(-(f - h.f) / 9) : 0;
+  if (hit > ring + 0.05 || (h && f < h.f)) {
+    if (hits.size > 64) hits.clear();
+    h = { f, a: hit };
+    hits.set(uid, h);
+  }
+  const idle = 0.3 * Math.sin(f * 0.08 + uid);
+  if (!h || f - h.f > 60) return idle;
+  const k = f - h.f;
+  return Math.max(-0.5, Math.min(1.25, idle + h.a * Math.exp(-k / 9) * Math.cos(k * 0.6)));
+}
+
+/** Thin strands from a goo top to the feet of a runner a few px above it. On the unlit layer: they're hairs. */
+function gooStrings(bg: CanvasRenderingContext2D, m: M<'body'>, set: Set<string>, O: Vec, runners: NonNullable<PropDrawOpts['runners']>, base: HSL) {
+  for (const p of runners) {
+    for (const [x, y] of m.cells) {
+      if (has(set, x, y - 1)) continue;
+      const top = y * TILE + O[1];
+      const d = top - p.y;
+      const left = x * TILE + O[0];
+      if (d < 0.8 || d > 9 || p.x < left || p.x > left + TILE) continue;
+      const w = 0.9 * (1 - d / 10);
+      for (const side of [-1, 1]) {
+        const ax = p.x + side * 2.6;
+        const bx = p.x + side * 1.4;
+        bg.fillStyle = css(base, -30, 1, 8);
+        stroke(
+          bg,
+          [
+            { x: ax, y: top + 0.4 },
+            { x: (ax + bx) / 2 + side * 0.3, y: top - d * 0.5 },
+            { x: bx, y: p.y - 0.3 },
+          ],
+          { w: w + 0.5, seed: x + side, taper: [0.05, 0.05], press: 0 },
+        );
+        bg.fillStyle = css(base, 6);
+        stroke(
+          bg,
+          [
+            { x: ax, y: top + 0.4 },
+            { x: (ax + bx) / 2 + side * 0.3, y: top - d * 0.5 },
+            { x: bx, y: p.y - 0.3 },
+          ],
+          { w, seed: x + side + 3, taper: [0.1, 0.1], press: 0 },
+        );
+      }
+      break;
+    }
+  }
+}
+
 /**
  * Building blocks. The block itself is inked once and stamped (`ink-blocks.ts`); what's drawn here is
- * only what moves: belt treads and rollers, goo drips, a jelly's jiggle, a biscuit giving way, and the
- * glow in a gem.
+ * only what moves: belt cleats and drum spokes, goo drips and strings, a jelly's squash, a biscuit giving
+ * way, and the glow in a gem. Belts, drips and the squash run on sim frames, never a clock.
  */
 function drawBody(rc: RC, m: M<'body'>, st: PropStyle, pal: MetalPalette, off: Vec, r: Resolved, o: PropDrawOpts) {
   // A launcher, jet or emitter draws its whole cell as the machine (props/machine.ts).
@@ -49,8 +125,11 @@ function drawBody(rc: RC, m: M<'body'>, st: PropStyle, pal: MetalPalette, off: V
     }
   }
   const O: Vec = [off[0] + shake, off[1]];
-  const jiggle = m.material === 'jelly' ? Math.sin(t * 6 + r.pp.uid) * 0.03 : 0;
-  stampBlock(s, m.cells, O, m.material, st, pal, jiggle);
+  // The sim's own belt: its speed clockwise round the block, on the face the part was turned to (sim/props/modules/body.ts).
+  const speed = m.conveyor;
+  const turn = m.material === 'conveyor' ? beltTurn(r.pp) : 0;
+  const squash = m.material === 'jelly' ? jellySquash(m, r.pp.uid, O, f, o) : 0;
+  const bake = stampBlock(s, m.cells, O, m.material, st, pal, squash, speed < 0 ? -1 : 1, turn);
   const set = new Set(m.cells.map(([x, y]) => `${x},${y}`));
 
   switch (m.material) {
@@ -88,50 +167,19 @@ function drawBody(rc: RC, m: M<'body'>, st: PropStyle, pal: MetalPalette, off: V
       light(rc, c.x + c.w / 2, c.y + c.h / 2, 45, glowC, 0.4 * pulse);
       break;
     }
-    case 'conveyor': {
-      const dir = Math.sign(r.pp.rot >= 2 ? -m.conveyor : m.conveyor) || 1;
-      const run = (f * Math.abs(m.conveyor)) / 60;
-      const a = (f * m.conveyor) / 180;
-      for (const [x, y] of m.cells) {
-        const px = x * TILE + O[0];
-        const py = y * TILE + O[1];
-        if (!has(set, x, y - 1)) {
-          // Treads on the belt, sliding the way it carries you.
-          s.fillStyle = 'rgb(92 92 104)';
-          for (let i = -1; i < 4; i++) {
-            const bx = px + ((((i * 5 + dir * run) % 20) + 20) % 20) - 2;
-            if (bx < px - 0.5 || bx > px + TILE - 1) continue;
-            s.fillRect(bx, py + 0.8, 1.3, 3);
-          }
-          // Lit arrows on the skirt, so the way it runs reads from anywhere.
-          g.fillStyle = 'rgba(255,190,60,0.9)';
-          const ax = px + 8 + ((((dir * run * 0.5) % 8) + 8) % 8) - 4;
-          line(g, ax - dir * 1.8, py + 5.9, ax + dir * 0.8, py + 7.4, { w: 1.1, seed: x, taper: [0, 0], press: 0 });
-          line(g, ax + dir * 0.8, py + 7.4, ax - dir * 1.8, py + 8.9, { w: 1.1, seed: x + 1, taper: [0, 0], press: 0 });
-        }
-        // The roller turning in its socket.
-        s.fillStyle = '#16151a';
-        const rx = px + TILE / 2;
-        const ry = py + TILE - 5.2;
-        line(s, rx + Math.cos(a) * 2.4, ry + Math.sin(a) * 2.4, rx - Math.cos(a) * 2.4, ry - Math.sin(a) * 2.4, { w: 0.9, seed: x, taper: [0, 0], press: 0 });
-        line(s, rx - Math.sin(a) * 2.4, ry + Math.cos(a) * 2.4, rx + Math.sin(a) * 2.4, ry - Math.cos(a) * 2.4, {
-          w: 0.9,
-          seed: x + 3,
-          taper: [0, 0],
-          press: 0,
-        });
-      }
+    case 'conveyor':
+      if (bake.belts) drawBelts(s, bake.belts, bake.loops, O[0], O[1], f, speed, pal, st.hue, turn);
       break;
-    }
     case 'goo': {
       // Drips that gather, stretch and let go under every bottom edge: thin, so they're decoration.
       const base: HSL = { h: st.hue, s: 62, l: 42 };
       for (const [x, y] of m.cells) {
         if (has(set, x, y + 1)) continue;
-        const dp = (t * 0.5 + hash2(x, y, 3)) % 1;
-        const dx = (x + 0.25 + hash2(x, y, 9) * 0.5) * TILE + O[0];
+        const dp = (f / 150 + hash2(x, y, 3)) % 1;
+        const dx = (x + 0.25 + hash2(x, y, 9) * 0.3) * TILE + O[0];
         const dy = (y + 1) * TILE + O[1] - 0.6;
-        const len = 1.5 + dp * 4.5;
+        // Swells for most of its life, then a bead lets go and falls.
+        const len = 1.5 + Math.min(dp, 0.8) * 6;
         const pts: P[] = [
           { x: dx, y: dy },
           { x: dx, y: dy + len * 0.6 },
@@ -139,9 +187,20 @@ function drawBody(rc: RC, m: M<'body'>, st: PropStyle, pal: MetalPalette, off: V
         ];
         s.fillStyle = css(base, -34, 1, 8);
         stroke(s, pts, { w: 2.6, seed: x, taper: [0, 0.2], press: 0 });
-        s.fillStyle = css(base, -6);
+        s.fillStyle = css(base, 12, 1, -6);
         stroke(s, pts, { w: 1.5, seed: x, taper: [0, 0.25], press: 0 });
+        if (dp > 0.8) {
+          const by = dy + len + 1 + (dp - 0.8) * (dp - 0.8) * 900;
+          s.fillStyle = css(base, -34, 1, 8);
+          blob(s, dx, by, 1.05, x, 1.2, 0.1);
+          s.fill();
+          s.fillStyle = css(base, 12, 1, -6);
+          blob(s, dx - 0.2, by - 0.2, 0.55, x, 1.2, 0.1);
+          s.fill();
+        }
       }
+      // Strings of it stretch up to the feet of anyone just stepping off: that's what sticky looks like.
+      if (o.runners) gooStrings(rc.bg, m, set, O, o.runners, base);
       break;
     }
     case 'crumble': {

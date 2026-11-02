@@ -13,6 +13,7 @@ export { drawProjectile } from './projectiles';
 export { drawBlastPreview } from './modules/bomb';
 export { drawHeld } from './common';
 export { drawRunnerStatus, propEventFx } from './status';
+export { drawRideCue } from './ride';
 
 type M<T extends Module['type']> = Extract<Module, { type: T }>;
 

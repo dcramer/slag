@@ -6,6 +6,7 @@ import { collideRunners, contactStart, footing as stackFooting } from './collide
 import {
   absorbHit,
   bonk,
+  buildBlocks,
   burstSmoke,
   catchShot,
   creditKill,
@@ -310,7 +311,7 @@ export class RunWorld {
       if (!this.isSafe(r)) {
         for (const h of this.out.hazards) {
           if (!touchesHazard(hb, h)) continue;
-          this.kill(r, h.owner, 'hazard');
+          this.kill(r, h.owner, h.sink ? 'fall' : 'hazard');
           // A shield can cancel the hit; then the rest of this frame still applies.
           if (!r.alive) return;
         }
@@ -400,6 +401,7 @@ export class RunWorld {
     buildSolids(this.resolved, ctx, this.out);
     for (const p of this.projectiles) buildProjectile(p, f, this.out);
     buildBlood(this.blood, f, this.solids);
+    buildBlocks(this.items, f, this.solids); // Pocket Blocks: transient, never part of the proof.
     traceRays(this.resolved, ctx, this.out); // Last, so what travels sees every solid whatever order the props came in.
     wetSolids(this.solids, this.level);
     const gust = gustWind(this.level, f);

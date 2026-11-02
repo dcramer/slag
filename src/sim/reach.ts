@@ -661,3 +661,104 @@ class Tracer {
     return true;
   }
 }
+
+/** Route cost of one tile through open air, by direction: climbing without a proven move is what a part or a long detour buys. */
+const AIR_SIDE = 10;
+const AIR_DOWN = 10;
+const AIR_UP = 30;
+
+/**
+ * Route distance to the flag from every cell, in tenths of a tile (Infinity
+ * where nothing leads there, and in solid tiles). Moves the real controller
+ * can make (the stand-cell graph, traced from every stand cell, not just the
+ * ones spawn reaches) cost their length; open air links everything else, with
+ * climbing dear, so a gap a bridge spans or a runner mid-jump still has a
+ * distance. Depends only on the level, so it's the same on every peer: worth
+ * caching per level version (see `goalFieldOf` in items).
+ */
+export function goalField(level: Level): Float64Array {
+  const { w, h, tiles } = level;
+  const n = w * h;
+  const rev: number[][] = Array.from({ length: n }, () => []);
+  const starts: number[] = [];
+  for (let k = 0; k < n; k++) if (isStandable(level, k % w, (k - (k % w)) / w)) starts.push(k);
+  new ReachCache(level).analyze(level, false, {
+    from: { cells: starts, known: new Uint8Array(n) },
+    onEdge: (from, to) => {
+      if (from >= 0 && from !== to && !rev[to].includes(from)) rev[to].push(from);
+    },
+  });
+  const dist = new Float64Array(n).fill(Number.POSITIVE_INFINITY);
+  const open = (k: number) => tiles[k] !== T_SOLID;
+  const heap = new MinHeap();
+  const goal = level.goal.ty * w + level.goal.tx;
+  dist[goal] = 0;
+  heap.push(0, goal);
+  const relax = (k: number, d: number) => {
+    if (d < dist[k]) {
+      dist[k] = d;
+      heap.push(d, k);
+    }
+  };
+  while (heap.size) {
+    const [d, k] = heap.pop();
+    if (d > dist[k]) continue;
+    const x = k % w;
+    // Predecessors: whoever moves into k. From below means climbing.
+    if (x > 0 && open(k - 1)) relax(k - 1, d + AIR_SIDE);
+    if (x < w - 1 && open(k + 1)) relax(k + 1, d + AIR_SIDE);
+    if (k >= w && open(k - w)) relax(k - w, d + AIR_DOWN);
+    if (k + w < n && open(k + w)) relax(k + w, d + AIR_UP);
+    for (const p of rev[k]) {
+      const dx = (p % w) - x;
+      const dy = (p - (p % w)) / w - (k - x) / w;
+      relax(p, d + Math.max(AIR_SIDE, Math.round(AIR_SIDE * Math.sqrt(dx * dx + dy * dy))));
+    }
+  }
+  return dist;
+}
+
+/** Binary min-heap of (cost, key) pairs, for goalField. */
+class MinHeap {
+  private c: number[] = [];
+  private k: number[] = [];
+  get size(): number {
+    return this.c.length;
+  }
+  push(cost: number, key: number): void {
+    const { c, k } = this;
+    let i = c.length;
+    c.push(cost);
+    k.push(key);
+    while (i > 0) {
+      const p = (i - 1) >> 1;
+      if (c[p] <= cost) break;
+      c[i] = c[p];
+      k[i] = k[p];
+      i = p;
+    }
+    c[i] = cost;
+    k[i] = key;
+  }
+  pop(): [number, number] {
+    const { c, k } = this;
+    const top: [number, number] = [c[0], k[0]];
+    const lc = c.pop()!;
+    const lk = k.pop()!;
+    const n = c.length;
+    if (n === 0) return top;
+    let i = 0;
+    for (;;) {
+      let m = 2 * i + 1;
+      if (m >= n) break;
+      if (m + 1 < n && c[m + 1] < c[m]) m++;
+      if (c[m] >= lc) break;
+      c[i] = c[m];
+      k[i] = k[m];
+      i = m;
+    }
+    c[i] = lc;
+    k[i] = lk;
+    return top;
+  }
+}

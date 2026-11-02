@@ -63,14 +63,17 @@ export function finishNotes(place: number, note: CueEnv['note']): number[] {
   return [note(4, 0)];
 }
 
+/** A death's own sound by cause; every one also clanks, since every runner is a toy coming apart. */
+const DEATH_CUE: Partial<Record<string, SfxName>> = { crush: 'death-crush', pop: 'death-pop', timeout: 'death-timeout' };
+
 export function cuesForEvent(e: GameEvent, env: CueEnv): Cue[] {
   switch (e.type) {
     case 'death':
       if (e.cause === 'fall') return [{ name: 'splash', x: e.x, y: e.y, variant: env.liquid }];
-      if (e.cause === 'crush') return [{ name: 'death-crush', x: e.x, y: e.y, pitch: env.pitchOf(e.slot) }];
-      if (e.cause === 'pop') return [{ name: 'death-pop', x: e.x, y: e.y, pitch: env.pitchOf(e.slot) }];
-      if (e.cause === 'timeout') return [{ name: 'death-timeout', x: e.x, y: e.y, pitch: env.pitchOf(e.slot) }];
-      return [{ name: 'death-hazard', x: e.x, y: e.y, pitch: env.pitchOf(e.slot) }];
+      return [
+        { name: DEATH_CUE[e.cause] ?? 'death-hazard', x: e.x, y: e.y, pitch: env.pitchOf(e.slot) },
+        { name: 'clank', x: e.x, y: e.y, pitch: env.pitchOf(e.slot) },
+      ];
     case 'finish':
       return [{ name: 'finish', x: e.x, y: e.y, notes: finishNotes(e.place, env.note), gain: e.place <= 1 ? 1 : 0.8 }];
     case 'spring':
@@ -180,6 +183,7 @@ const ITEM_CUE: Partial<Record<ItemEventKind, SfxName>> = {
   catch: 'ui-tick',
   smoke: 'pop-cannonball',
   hit: 'land',
+  warn: 'sentry-beep',
 };
 const ITEM_USE_CUE: Record<string, SfxName> = {
   sword: 'walljump',
@@ -187,7 +191,19 @@ const ITEM_USE_CUE: Record<string, SfxName> = {
   boomerang: 'fire-thrower',
   rocket: 'fire-cannon',
   smoke: 'fire-totem',
+  bat: 'swoosh',
+  tremor: 'piston-hiss',
+  tax: 'whoosh',
+  block: 'place',
 };
-const itemName = (what: ItemEventKind, kind: string): SfxName | undefined => (what === 'use' ? ITEM_USE_CUE[kind] : ITEM_CUE[what]);
+/** Moments that sound different from their `what`, keyed `what:kind`. */
+const ITEM_KIND_CUE: Record<string, SfxName> = {
+  'hit:homer': 'piston-slam',
+  'hit:tremor': 'piston-slam',
+  'hit:tax': 'explosion',
+  'fizzle:block': 'crumble-break',
+};
+const itemName = (what: ItemEventKind, kind: string): SfxName | undefined =>
+  ITEM_KIND_CUE[`${what}:${kind}`] ?? (what === 'use' ? ITEM_USE_CUE[kind] : ITEM_CUE[what]);
 export const popName = (ammo: string): SfxName => POP[ammo] ?? 'pop-bolt';
 export const fireName = (style: string): SfxName => FIRE[style] ?? 'fire-crossbow';

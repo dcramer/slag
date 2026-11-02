@@ -25,7 +25,8 @@ export class SignalError extends Error {
 
 /** What the transport needs from the API; tests swap in a direct call to the handlers. */
 export interface SignalApi {
-  join(): Promise<JoinReply>;
+  /** `since` stamps the session (see `sessionStamp`), so the store can tell two sessions of this peer apart. */
+  join(since: number): Promise<JoinReply>;
   beat(host: boolean): Promise<BeatReply>;
   members(): Promise<MemberInfo[]>;
   /** Report `peer` (the session with this `order`) dead, and get the room back. */
@@ -34,7 +35,15 @@ export interface SignalApi {
   send(to: string, s: Signal): Promise<boolean>;
   poll(): Promise<Mail[]>;
   /** Fire and forget; must survive the page unloading. */
-  leave(order: number): void;
+  leave(order: number, since: number): void;
+}
+
+let lastStamp = 0;
+
+/** When a session started, in ms, strictly increasing within the page: two sessions of one peer never share one. */
+export function sessionStamp(): number {
+  lastStamp = Math.max(Date.now(), lastStamp + 1);
+  return lastStamp;
 }
 
 export class HttpSignal implements SignalApi {
@@ -60,15 +69,15 @@ export class HttpSignal implements SignalApi {
     return body as T;
   }
 
-  join = () => this.call<JoinReply>('join');
+  join = (since: number) => this.call<JoinReply>('join', { since });
   beat = (host: boolean) => this.call<BeatReply>('beat', { host });
   members = () => this.call<MembersReply>('members').then((r) => r.members);
   gone = (peer: string, order: number) => this.call<MembersReply>('gone', { gone: peer, order }).then((r) => r.members);
   send = (to: string, signal: Signal) => this.call<{ delivered: boolean }>('signal', { to, signal }).then((r) => r.delivered);
   poll = () => this.call<PollReply>('poll').then((r) => r.mail);
 
-  leave(order: number) {
-    const body = JSON.stringify({ room: this.room, peer: this.peer, order });
+  leave(order: number, since: number) {
+    const body = JSON.stringify({ room: this.room, peer: this.peer, order, since });
     // sendBeacon with a string posts text/plain, and outlives the page.
     if (typeof navigator !== 'undefined' && navigator.sendBeacon?.(signalUrl('leave'), body)) return;
     void fetch(signalUrl('leave'), { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body, keepalive: true }).catch(() => {});

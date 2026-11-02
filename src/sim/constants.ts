@@ -124,6 +124,10 @@ export const PHYS = {
   dropFrames: 6,
   /** Minimum landing speed for bouncy surfaces (jelly) to bounce. */
   bounceMinVy: 140,
+  /** How hard a belt on a wall grabs a runner clinging to it, px/s²: well past gravity, so it catches a fall in a few frames and holds them at belt speed. */
+  beltGrip: 3600,
+  /** A head bonking a belt from below leaves at this many times the belt's speed: up to about a run. */
+  beltShoveMult: 2,
 } as const;
 
 /** Sinking this far into the pool at the bottom of a classic-size level kills (use level.killY() for any size). */

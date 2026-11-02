@@ -4,7 +4,7 @@ import { TILE } from '../constants';
 import { isProtected, type Level, T_EMPTY, T_SOLID, tileAt } from '../level';
 import type { GameEvent } from '../types';
 import { moduleSim, type Xform } from './registry';
-import type { BlastShape, BlastTarget, ModuleOf, Motion, PlacedProp, PropDef, PropState, Resolved } from './types';
+import type { BlastShape, BlastTarget, Carry, ModuleOf, Motion, PlacedProp, PropDef, PropState, Resolved } from './types';
 
 /** Deterministic per-prop phase offset so identical props don't move in lockstep. */
 function propPhase(uid: number): number {
@@ -114,7 +114,14 @@ export function resolveProp(pp: PlacedProp): Resolved {
         : mo.type === 'track'
           ? { ...mo, pts: mo.pts.map((p) => turnOffset(p, rot)) }
           : mo;
-  return { pp, mods, motion, phase: propPhase(pp.uid) };
+  const ride = pp.ride;
+  const carry = ride && { by: resolveProp(ride.parent), mi: ride.mi, part: ride.part, base: ride.base };
+  return carry ? { pp, mods, motion, phase: propPhase(pp.uid), carry } : { pp, mods, motion, phase: propPhase(pp.uid) };
+}
+
+/** Does this placed part move: by its own motion, or riding something that does? */
+export function moves(pp: Pick<PlacedProp, 'def' | 'ride'>): boolean {
+  return pp.def.motion.type !== 'none' || !!pp.ride;
 }
 
 /** Round tiny float noise from cos/sin of axis-aligned angles. */
@@ -126,8 +133,33 @@ export function dirOf(angle: number): Vec {
   return [snap(dcos(angle)), snap(dsin(angle))];
 }
 
-/** Whole-prop translation (px) at frame f. */
+/** Whole-prop translation (px) at frame f: its own motion, plus the travel of whatever it rides (./ride.ts). */
 export function motionOffset(r: Resolved, f: number): Vec {
+  const own = ownOffset(r, f);
+  if (!r.carry) return own;
+  const [cx, cy] = carryAt(r.carry, f);
+  return [own[0] + cx, own[1] + cy];
+}
+
+/**
+ * How far a carrier has moved a rider at frame f (px): the carrying solid's
+ * position less the stored base. One function for the sim, the proof and the
+ * art, so a rider is drawn exactly where it stands.
+ */
+export function carryAt(c: Carry, f: number): Vec {
+  const [px, py] = carrierPos(c.by, c.mi, c.part, f);
+  return [px - c.base[0], py - c.base[1]];
+}
+
+/** Where solid `part` of module `mi` sits at frame f (px), relative to an arbitrary fixed origin of its own: the prop's offset plus what the module adds. */
+export function carrierPos(r: Resolved, mi: number, part: number, f: number): Vec {
+  const [ox, oy] = motionOffset(r, f);
+  const m = r.mods[mi];
+  const at = m && moduleSim(m.type).carrier?.at(m, f, r.phase, part);
+  return at ? [ox + at[0], oy + at[1]] : [ox, oy];
+}
+
+function ownOffset(r: Resolved, f: number): Vec {
   const m = r.motion;
   if (m.type === 'rail') {
     const d = (m.dwell ? liftAt(f, m.period, m.dwell, r.phase) : pingPong(f / m.period + r.phase)) * m.range;
@@ -225,7 +257,8 @@ export function canPlace(level: Level, placed: readonly PlacedProp[], def: PropD
   }
   if (def.modules.some((m) => m.type === 'bomb')) return true;
   const taken = new Set<number>();
-  for (const p of [...level.setPieces, ...placed]) for (const [x, y] of footprintCells(p)) taken.add(y * level.w + x);
+  // A rider's cells are wherever it was when it went in; what it holds is checked where it is (./ride.ts).
+  for (const p of [...level.setPieces, ...placed]) if (!p.ride) for (const [x, y] of footprintCells(p)) taken.add(y * level.w + x);
   for (const [x, y] of cells) {
     if (tileAt(level, x, y) || isProtected(level, x, y) || taken.has(y * level.w + x)) return false;
   }
@@ -281,7 +314,7 @@ function staticBodyCells(placed: readonly PlacedProp[], w: number): Set<number> 
   const out = new Set<number>();
   bodyCache.set(placed, { n: placed.length, last: placed[placed.length - 1], cells: out });
   for (const p of placed) {
-    if (p.def.motion.type !== 'none') continue;
+    if (moves(p)) continue;
     for (const m of resolveProp(p).mods) {
       if (m.type === 'body' && m.material !== 'crumble') for (const [x, y] of m.cells) out.add(y * w + x);
     }
@@ -306,6 +339,7 @@ export function mountCells(level: Level, placed: readonly PlacedProp[], def: Pro
   for (const p of level.setPieces) for (const [x, y] of footprintCells(p)) taken.add(y * level.w + x);
   const coated = new Set<string>();
   for (const p of placed) {
+    if (p.ride) continue;
     if (p.def.mount !== 'face') {
       for (const [x, y] of footprintCells(p)) taken.add(y * level.w + x);
       continue;
@@ -431,14 +465,28 @@ export function blastHits(
   tx: number,
   ty: number,
   rot = 0,
+  /** Frame it goes off on: a rider is hit where its mover has taken it by then. */
+  frame = 0,
 ): { cells: Cell[]; tiles: Cell[]; props: PlacedProp[]; setPieces: PlacedProp[] } {
   const cells = blastCells(b, tx, ty, rot).filter(([x, y]) => x >= 0 && y >= 0 && x < level.w && y < level.h);
   const hit = new Set(cells.map(([x, y]) => y * level.w + x));
-  const inBlast = (p: PlacedProp) => footprintCells(p).some(([x, y]) => hit.has(y * level.w + x));
+  const inBlast = (p: PlacedProp) => cellsAt(p, frame).some(([x, y]) => hit.has(y * level.w + x));
   const tiles = b.target === 'props' ? [] : cells.filter(([x, y]) => tileAt(level, x, y) !== T_EMPTY && !isProtected(level, x, y));
   // Attachments go when their host goes (handled in detonate); an EMP also fries them directly.
-  const props = b.target === 'terrain' ? [] : placed.filter((p) => (p.def.mount !== 'face' || b.target === 'props') && inBlast(p));
+  const direct = b.target === 'terrain' ? [] : placed.filter((p) => (p.def.mount !== 'face' || b.target === 'props') && inBlast(p));
   const setPieces = b.target === 'terrain' ? [] : level.setPieces.filter(inBlast);
+  // Riders go with what they ride, chains included.
+  const gone = new Set([...direct, ...setPieces].map((p) => p.uid));
+  const props = direct.slice();
+  for (let more = true; more;) {
+    more = false;
+    for (const p of placed)
+      if (p.ride && gone.has(p.ride.uid) && !gone.has(p.uid)) {
+        gone.add(p.uid);
+        props.push(p);
+        more = true;
+      }
+  }
   return { cells, tiles, props, setPieces };
 }
 
@@ -459,9 +507,9 @@ export function blastEvent(b: BlastSpec, tx: number, ty: number, rot = 0): GameE
  * classic disk of that radius). Attachments whose host block or tile is gone
  * fall off. Returns the surviving props.
  */
-export function detonate(level: Level, placed: PlacedProp[], blast: number | BlastSpec, tx: number, ty: number, rot = 0): PlacedProp[] {
+export function detonate(level: Level, placed: PlacedProp[], blast: number | BlastSpec, tx: number, ty: number, rot = 0, frame = 0): PlacedProp[] {
   const b: BlastSpec = typeof blast === 'number' ? { shape: 'disk', target: 'all', radius: blast, width: 1 } : blast;
-  const hits = blastHits(level, placed, b, tx, ty, rot);
+  const hits = blastHits(level, placed, b, tx, ty, rot, frame);
   const hooked = new Set(placed.filter((p) => p.def.mount === 'hang' && hasHook(level, placed, p.tx, p.ty)));
   for (const [x, y] of hits.tiles) level.tiles[y * level.w + x] = 0;
   const gone = new Set([...hits.props, ...hits.setPieces]);
@@ -470,10 +518,38 @@ export function detonate(level: Level, placed: PlacedProp[], blast: number | Bla
   const survivors = placed.filter((p) => !gone.has(p));
   // Attachments fall off when their host is gone, and hanging props drop with their ceiling.
   const blocks = staticBodyCells(survivors, level.w);
-  return survivors.filter((p) => {
+  const kept = survivors.filter((p) => {
+    if (p.ride) return true;
     if (hooked.has(p)) return hasHook(level, survivors, p.tx, p.ty);
     return p.def.mount !== 'face' || footprintCells(p).every(([x, y]) => tileAt(level, x, y) === T_SOLID || blocks.has(y * level.w + x));
   });
+  return dropOrphans(level, kept);
+}
+
+/**
+ * Riders go with what they ride: a part whose parent is gone goes too, and so
+ * does anything riding it. Nothing falls and nothing is left floating where it
+ * was, so a blast's result is plain to see and the same on every peer.
+ */
+export function dropOrphans(level: Level, placed: PlacedProp[]): PlacedProp[] {
+  const live = new Set<number>([...level.setPieces, ...placed].map((p) => p.uid));
+  let out = placed;
+  for (;;) {
+    const next = out.filter((p) => !p.ride || live.has(p.ride.uid));
+    if (next.length === out.length) return out;
+    for (const p of out) if (!next.includes(p)) live.delete(p.uid);
+    out = next;
+  }
+}
+
+/** The cells a part covers at frame f: its footprint, moved to the nearest whole tile of where it rides. */
+export function cellsAt(pp: PlacedProp, f: number): Cell[] {
+  const cells = footprintCells(pp);
+  if (!pp.ride) return cells;
+  const [ox, oy] = motionOffset(resolveProp(pp), f);
+  const dx = Math.round(ox / TILE);
+  const dy = Math.round(oy / TILE);
+  return cells.map(([x, y]) => [x + dx, y + dy] as Cell);
 }
 
 /**

@@ -8,6 +8,8 @@ import type { ModuleOf } from '../types';
 
 /** Coat thickness (px): thin enough to step onto, thick enough to be the surface you touch. */
 export const COAT_PX = 3;
+/** How far a spike coat's points stand off its face (px). */
+export const SPIKE_PX = 7;
 
 /**
  * Boost Strip: touching it holds you at `speed` along its arrow for `frames` frames, with no skid. A
@@ -48,15 +50,32 @@ export const coat = defineModule<'coat'>({
   type: 'coat',
   resolve: (m, x) => ({ ...m, cells: x.C(m.cells), angle: m.angle + x.da }),
   anchors: (m) => m.cells.slice(),
+  rides: true,
   build(m: ModuleOf<'coat'>, ctx, out) {
     const uid = ctx.r.pp.uid;
+    // Still unless it rides a mover (../ride.ts); then it's carried like the face it's on.
+    const { off, prev } = ctx;
     m.cells.forEach(([cx, cy], i) => {
       if (m.kind === 'spikes') {
-        out.hazards.push({ owner: ctx.r.pp.owner, kind: 'rect', r: faceRect(cx, cy, m.angle, 7, 2) });
+        const r = faceRect(cx, cy, m.angle, SPIKE_PX, 2);
+        out.hazards.push({ owner: ctx.r.pp.owner, kind: 'rect', r: { ...r, x: r.x + off[0], y: r.y + off[1] } });
       } else {
         const r = faceRect(cx, cy, m.angle, COAT_PX);
-        out.solids.push({ ...r, id: solidId(uid, ctx.mi, i), dx: 0, dy: 0, surface: COAT_SURFACES[m.kind], propUid: uid, mi: ctx.mi });
-        if (m.kind === 'boost') addTrigger(out, { r: faceRect(cx, cy, m.angle, COAT_PX + BOOST.reach), uid, mi: ctx.mi, key: solidId(uid, ctx.mi, i) });
+        out.solids.push({
+          ...r,
+          x: r.x + off[0],
+          y: r.y + off[1],
+          id: solidId(uid, ctx.mi, i),
+          dx: off[0] - prev[0],
+          dy: off[1] - prev[1],
+          surface: COAT_SURFACES[m.kind],
+          propUid: uid,
+          mi: ctx.mi,
+        });
+        if (m.kind === 'boost') {
+          const t = faceRect(cx, cy, m.angle, COAT_PX + BOOST.reach);
+          addTrigger(out, { r: { ...t, x: t.x + off[0], y: t.y + off[1] }, uid, mi: ctx.mi, key: solidId(uid, ctx.mi, i) });
+        }
       }
     });
   },

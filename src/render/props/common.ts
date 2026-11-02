@@ -24,8 +24,8 @@ export interface PropDrawOpts {
   beams?: readonly Beam[];
   /** This frame's solids (the race's, or the still ones outside a race): what a Launch Plate's flight is flown against. */
   solids?: readonly Solid[];
-  /** Where the live runners stand (feet), for art that watches them. */
-  runners?: readonly { x: number; y: number }[];
+  /** Where the live runners stand (feet), and how fast they fall, for art that watches them. */
+  runners?: readonly { x: number; y: number; vy?: number }[];
   /**
    * A crate card: a still picture a few tiles across, judged at a glance. Art may pose itself, draw a
    * thin part bolder and add the motion lines a still can't otherwise show; nothing here is a hitbox.

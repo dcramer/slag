@@ -291,10 +291,12 @@ export function* cannons(rng: Rng, s: Site, o: CannonOpts): Generator<Piece> {
 }
 
 // ---------------------------------------------------------------------------
-// Geysers: from the ground (on the route) or up out of a pit.
+// Geysers: up from the ground (on the route) or out of a pit, along the ground out of a wall, or down off a ceiling.
 
 export interface GeyserOpts extends Common {
   look: GeyserLook;
+  /** Aimed up (`where` picks ground or pit), sideways out of a wall along the ground (a wave, an avalanche), or down from a ceiling (a waterfall, a pour). */
+  aim?: 'up' | 'side' | 'down';
   where: 'ground' | 'pit';
   length: Range;
   width: number;
@@ -305,18 +307,61 @@ export interface GeyserOpts extends Common {
   strength?: number;
 }
 
+/** Where a geyser vents (`at`, in tiles) and which way, with a score for `best`. */
+interface GeyserSpot {
+  x: number;
+  y: number;
+  angle: number;
+  score: number;
+}
+
+/**
+ * Sideways: the foot of a wall, a stand cell with solid beside it, aimed away from the wall. The column
+ * hugs the ground (its lower edge on the floor), so it sweeps whoever walks there. Down: under a ceiling
+ * with room below, scored by how many stand cells the pour crosses.
+ */
+function aimedSpots(s: Site, aim: 'side' | 'down', len: number, width: number): GeyserSpot[] {
+  const out: GeyserSpot[] = [];
+  if (aim === 'side') {
+    for (const r of s.groundRuns(Math.max(1, Math.ceil(width)), 3)) {
+      for (const [x, dir, wall] of [
+        [r.x0, 1, r.x0 - 1],
+        [r.x1, -1, r.x1 + 1],
+      ] as const) {
+        if (wall < 0 || wall >= s.w || !s.solid(wall, r.y)) continue;
+        const run = Math.min(len, r.x1 - r.x0 + 1);
+        let on = 0;
+        for (let i = 0; i < run; i++) if (s.reachable(x + dir * i, r.y)) on++;
+        out.push({ x: dir > 0 ? x : x + 1, y: r.y + 1 - width / 2, angle: dir > 0 ? 0 : Math.PI, score: Math.min(3, on / 2) + Math.min(1, run / len) });
+      }
+    }
+    return out;
+  }
+  for (let y = 1; y < s.h - 3; y++)
+    for (let x = 1; x < s.w - 1; x++) {
+      if (!s.solid(x, y - 1) || !s.free(x, y) || !s.free(x, y + 1)) continue;
+      let on = 0;
+      for (let yy = y; yy < Math.min(s.h, y + len) && !s.solid(x, yy); yy++) if (s.reachable(x, yy)) on++;
+      if (!on) continue;
+      out.push({ x: x + 0.5, y, angle: DOWN, score: Math.min(3, on * 1.5) + (s.zoneDist(x, y) > SAFE_TILES + 1 ? 0.5 : 0) });
+    }
+  return out;
+}
+
 export function* geysers(rng: Rng, s: Site, o: GeyserOpts): Generator<Piece> {
   const len = rollInt(rng, o.length);
-  const spots: { x: number; y: number; score: number }[] = [];
-  if (o.where === 'ground') {
+  const spots: GeyserSpot[] = [];
+  if (o.aim === 'side' || o.aim === 'down') spots.push(...aimedSpots(s, o.aim, len, o.width));
+  else if (o.where === 'ground') {
     for (const r of s.groundRuns(Math.min(len, 4), 1))
-      for (let x = r.x0; x <= r.x1; x++) spots.push({ x, y: r.y + 1, score: (s.reachable(x, r.y) ? 2 : 0) + (x > r.x0 && x < r.x1 ? 0.5 : 0) });
+      for (let x = r.x0; x <= r.x1; x++)
+        spots.push({ x: x + 0.5, y: r.y + 1, angle: UP, score: (s.reachable(x, r.y) ? 2 : 0) + (x > r.x0 && x < r.x1 ? 0.5 : 0) });
   } else {
     for (let x = 1; x < s.w - 1; x++) {
       if (!s.overPit(x, 0) || !s.freeRect(x, s.h - 4, x, s.h - 1)) continue;
       let near = 0;
       for (let dx = -2; dx <= 2; dx++) for (let y = 0; y < s.h; y++) if (s.reachable(x + dx, y)) near++;
-      spots.push({ x, y: s.h, score: Math.min(3, near / 2) });
+      spots.push({ x: x + 0.5, y: s.h, angle: UP, score: Math.min(3, near / 2) });
     }
   }
   for (const c of best(rng, spots, (c) => c.score)) {
@@ -329,8 +374,8 @@ export function* geysers(rng: Rng, s: Site, o: GeyserOpts): Generator<Piece> {
         {
           type: 'geyser',
           look: o.look,
-          at: [c.x + 0.5, c.y],
-          angle: UP,
+          at: [c.x, c.y],
+          angle: c.angle,
           width: o.width,
           length: len,
           off: rollInt(rng, o.off),

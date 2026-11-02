@@ -1,6 +1,7 @@
 /** Renderer checks: WebGL failure paths, the cel pass timing, and partial ink redraws against full bakes. */
 import { writeFileSync } from 'node:fs';
 import { argv, base, browser, errors, frames, H, open, opt, out, page, pet, players, seed, snap, step, tq, W, type Scenarios } from './ctx';
+import { forceLandmark } from './landmarks';
 
 export const shots: Scenarios = {
   async webgl() {
@@ -91,6 +92,9 @@ export const shots: Scenarios = {
     // Bites craters out of a level, times the redraw, and checks each partial bake against a full one.
     await open(`seed=${seed}&players=${players}&race=&propseed=1`);
     await step(30);
+    // `--skin planks [--shell facade]`: bite into a test landmark drawn in that skin (./landmarks.ts).
+    const skin = opt('skin');
+    if (skin) await forceLandmark(skin, opt('shell'));
     // tsx names functions through a helper that the page doesn't have.
     await page.evaluate('globalThis.__name = (f) => f');
     const report = await page.evaluate(async (timing) => {
@@ -122,6 +126,19 @@ export const shots: Scenarios = {
             break;
           }
         }
+      }
+      // A landmark gets craters of its own: across its top, and at its foot where it meets the ground.
+      const lm = lv.landmark?.skin ? lv.landmark.rect : null;
+      if (lm) {
+        for (let x = lm.x; x < lm.x + lm.w; x += 3) {
+          for (let y = lm.y; y < lm.y + lm.h; y++) {
+            if (lv.tiles[y * lv.w + x] === 1) {
+              surface.push([x, y]);
+              break;
+            }
+          }
+        }
+        surface.push([lm.x + lm.w - 1, lm.y + lm.h - 1]);
       }
       // The page inked its first level a chunk per frame before the harness paused it: start from a
       // whole bake, so each crater is compared against the same picture it was cut into.
@@ -182,6 +199,7 @@ export const shots: Scenarios = {
         level: `${lv.w}x${lv.h}`,
         bake: `${tp.bake.width}x${tp.bake.height}`,
         craters: surface.length,
+        landmark: lm,
         idle: Math.round(idle),
         partialMs: Math.round(med(partial)),
         partialMax: Math.round(Math.max(...partial)),

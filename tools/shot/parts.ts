@@ -68,11 +68,23 @@ export const shots: Scenarios = {
     await open(`seed=${seed}&players=2&race=,&propseed=1`);
     // `--styles crossbow,cannon` (or `all`): one launcher of each style instead of `--arch`; `--aim track` keeps only trackers.
     const styles = opt('styles') ? (opt('styles') === 'all' ? LAUNCHER_STYLES : opt('styles')!).split(',') : [];
+    // `--material conveyor,jelly` (instead of `--arch`): `--count` platforms of each block material.
+    const materials = opt('material')?.split(',') ?? [];
     await page.evaluate(
-      ([as, n, styles, aim, bait]) => {
+      ([as, n, styles, aim, bait, mats]) => {
         const d = (window as any).slagDebug;
         d.match.placed.length = 0;
-        if (styles.length) {
+        if (mats.length) {
+          for (const want of mats) {
+            let got = 0;
+            for (let k = 1; k < 900 && got < n; k++) {
+              const before = d.match.placed.length;
+              d.addProps(['platform'], k);
+              if (d.match.placed[before]?.def.modules.some((m: any) => m.type === 'body' && m.material === want)) got++;
+              else d.match.placed.length = before;
+            }
+          }
+        } else if (styles.length) {
           // One launcher of each style: roll seeds until each turns up.
           for (const want of styles) {
             for (let k = 1; k < 900; k++) {
@@ -116,15 +128,19 @@ export const shots: Scenarios = {
           });
         }
       },
-      [arch, Number(opt('count', '2')), styles, opt('aim') ?? '', argv.includes('--bait')] as const,
+      [arch, Number(opt('count', '2')), styles, opt('aim') ?? '', argv.includes('--bait'), materials] as const,
     );
     await step(Number(opt('frames', '60')));
     const spots = await page.evaluate(() =>
       (window as any).slagDebug.match.placed.map((p: any) => {
         const xs = p.def.footprint.map((c: number[]) => c[0]);
         const ys = p.def.footprint.map((c: number[]) => c[1]);
+        const mods = p.def.modules;
         return {
-          name: p.def.modules.find((m: any) => m.type === 'launcher')?.style ?? p.def.archetype,
+          name:
+            mods.find((m: any) => m.type === 'launcher')?.style ??
+            (p.def.archetype === 'platform' ? mods.find((m: any) => m.type === 'body')?.material : undefined) ??
+            p.def.archetype,
           x: (p.tx + (Math.min(...xs) + Math.max(...xs) + 1) / 2) * 16,
           y: (p.ty + (Math.min(...ys) + Math.max(...ys) + 1) / 2) * 16,
         };
@@ -280,6 +296,140 @@ export const shots: Scenarios = {
     }
     await sheet(`parody-${seed}`, files, 4);
   },
+  async belts() {
+    // A conveyor at every rotation: held as place-phase ghosts, then placed in an empty room with a runner
+    // on each belt face (carried on the top, dragged on a side, shoved under the bottom), whole and close up.
+    // The first platform roll from `--propseed` on that's a still three-cell conveyor running forwards, so its
+    // left face climbs (searched, so a new platform shape in the stream can't take it away).
+    const ps = Number(opt('propseed', '1'));
+    await open(`seed=${seed}&players=4`);
+    await step(20);
+    await page.evaluate((ps) => {
+      const d = (window as any).slagDebug;
+      const m = d.match;
+      let def: any = null;
+      for (let k = ps; k < ps + 4000 && !def; k++) {
+        m.placed.length = 0;
+        d.addProps(['platform'], k);
+        const got = m.placed[0]?.def;
+        const b = got?.modules[0];
+        if (got && got.modules.length === 1 && got.motion.type === 'none' && b.material === 'conveyor' && b.cells.length === 3 && b.conveyor > 0) def = got;
+      }
+      // Kept for the race below.
+      (window as any).__belt = def;
+      m.placed.length = 0;
+      m.players.forEach((p: any, i: number) => {
+        m.crate[i].def = def;
+        m.crate[i].claimedBy = p.slot;
+        p.claim = i;
+      });
+    }, ps);
+    await step(60);
+    await page.evaluate(() => {
+      const m = (window as any).slagDebug.match;
+      m.players.forEach((p: any, i: number) => {
+        p.rot = i;
+        p.cursor = { x: 120 + i * 170, y: 250 };
+      });
+    });
+    await step(2);
+    const files = [await snap(`belts-${seed}-ghosts`)];
+    // The race: an empty room on a floor, one conveyor per rotation.
+    const boxes: { x: number; y: number; w: number; h: number; rot: number }[] = await page.evaluate(() => {
+      const d = (window as any).slagDebug;
+      const m = d.match;
+      const def = (window as any).__belt;
+      m.placed.length = 0;
+      [
+        [7, 20, 0],
+        [17, 17, 1],
+        [26, 21, 2],
+        [33, 18, 3],
+      ].forEach(([tx, ty, rot], i) => m.placed.push({ uid: 900 + i, def, owner: m.players[0].slot, tx, ty, rot }));
+      d.race([], 1);
+      d.step(70);
+      // Clear the room once the race has its level, and lay a floor.
+      const L = m.level;
+      for (let y = 2; y < 24; y++) for (let x = 3; x < L.w - 3; x++) L.tiles[y * L.w + x] = 0;
+      for (let x = 1; x < L.w - 1; x++) L.tiles[24 * L.w + x] = 1;
+      L.version++;
+      return m.placed.map((p: any) => {
+        const mine = m.run.solids.filter((s: any) => s.propUid === p.uid);
+        const x = Math.min(...mine.map((s: any) => s.x));
+        const y = Math.min(...mine.map((s: any) => s.y));
+        return { x, y, w: Math.max(...mine.map((s: any) => s.x + s.w)) - x, h: Math.max(...mine.map((s: any) => s.y + s.h)) - y, rot: p.rot };
+      });
+    });
+    // A runner on each belt face, holding into it.
+    const devices: string[] = await page.evaluate((bx) => {
+      const m = (window as any).slagDebug.match;
+      const floor = 24 * 16;
+      return m.run.runners.slice(0, 4).map((r: any, i: number) => {
+        const b = r.body;
+        const k = bx[i];
+        if (k.rot === 0) [b.x, b.y] = [k.x + 6, k.y - b.h];
+        else if (k.rot === 1) [b.x, b.y] = [k.x + k.w + 0.5, k.y + 2];
+        else if (k.rot === 2) [b.x, b.y] = [k.x + k.w / 2 - b.w / 2, floor - b.h];
+        else [b.x, b.y] = [k.x - b.w - 0.5, k.y + 30];
+        b.vx = b.vy = 0;
+        return m.player(r.slot).device;
+      });
+    }, boxes);
+    const none = {
+      left: false,
+      right: false,
+      up: false,
+      down: false,
+      jump: false,
+      jumpPressed: false,
+      confirmPressed: false,
+      altPressed: false,
+      downPressed: false,
+    };
+    for (let f = 0; f < Number(opt('frames', '14')); f++) {
+      const hop = f % 30 === 0;
+      const inputs = {
+        [devices[0]]: none,
+        [devices[1]]: { ...none, left: true },
+        [devices[2]]: { ...none, jump: f % 30 < 12, jumpPressed: hop },
+        [devices[3]]: { ...none, right: true },
+      };
+      await page.evaluate((inp) => (window as any).slagDebug.step(1, inp), inputs);
+    }
+    console.log(
+      'runners',
+      JSON.stringify(
+        await page.evaluate(() =>
+          (window as any).slagDebug.match.run.runners.map((r: any) => ({
+            x: Math.round(r.body.x),
+            y: Math.round(r.body.y),
+            vx: Math.round(r.body.vx),
+            vy: Math.round(r.body.vy),
+            wall: r.body.wallDir,
+            ground: r.body.onGround,
+            alive: r.alive,
+          })),
+        ),
+      ),
+      JSON.stringify(boxes),
+    );
+    files.push(await snap(`belts-${seed}-race`));
+    for (const k of boxes) {
+      await page.evaluate(
+        ([x, y]) => {
+          const d = (window as any).slagDebug;
+          const cam = d.renderer.cam;
+          cam.update = () => {};
+          cam.snap({ cx: x, cy: y, zoom: 3.2 });
+          cam.shake = 0;
+          d.render();
+        },
+        [k.x + k.w / 2, k.y + k.h / 2 + 6] as const,
+      );
+      files.push(await snap(`belts-${seed}-rot${k.rot}`));
+    }
+    await sheet(`belts-${seed}`, files, 2);
+  },
   async pipes() {
     // Warp pipes facing every way: two linked pairs and one waiting, in place with a pipe ghost tethered
     // to the waiting one, each pipe close up, then a race with runners caught going in and coming out.
@@ -389,6 +539,225 @@ export const shots: Scenarios = {
       }
     }
     await sheet(`pipes-${seed}-looks`, looks, 4);
+  },
+  async looks() {
+    // Set-piece looks in a bare room (docs/SETPIECES.md, Wave 1 E): every spike look on a floor, a wall
+    // and a ceiling (the walls as coats, the rest as strips on blocks); every geyser look aimed up,
+    // sideways and down, rumbling and erupting; the icicle and chandelier droppers at rest and mid-drop.
+    // `--only spikes,geysers,droppers` picks sections.
+    const only = (opt('only') ?? 'spikes,geysers,droppers').split(',');
+    await open(`seed=${seed}&players=2`);
+    await step(20);
+    type Rect = [number, number, number, number];
+    /** Rebuild the room (solid rects on bare walls and floor), place these pieces, start the race. */
+    const stage = (solid: Rect[], pieces: unknown[][]) =>
+      page.evaluate(
+        ([rects, mods]) => {
+          const d = (window as any).slagDebug;
+          const m = d.match;
+          d.match.placed.length = 0;
+          d.addProps(['platform'], 3);
+          const base = m.placed[0].def;
+          m.placed.length = 0;
+          const L = m.level;
+          for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) L.tiles[y * L.w + x] = y >= L.h - 3 || x < 2 || x >= L.w - 2 ? 1 : 0;
+          for (const [x0, y0, x1, y1] of rects) for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) L.tiles[y * L.w + x] = 1;
+          L.setPieces = [];
+          L.version++;
+          mods.forEach((ms: any[], i: number) => {
+            const def = structuredClone(base);
+            def.key = `look-${i}`;
+            def.motion = { type: 'none' };
+            def.modules = ms;
+            const cells = ms.flatMap((q: any) => q.cells ?? []);
+            def.footprint = cells.length ? cells : [[Math.floor(ms[0].at?.[0] ?? 0), Math.floor(ms[0].at?.[1] ?? 0)]];
+            m.placed.push({ uid: 700 + i, def, owner: -1, tx: 0, ty: 0, rot: 0 });
+          });
+          d.race([], 1);
+        },
+        [solid, pieces] as const,
+      );
+    const close = async (x: number, y: number, z: number, name: string) => {
+      await page.evaluate(
+        ([cx, cy, zz]) => {
+          const d = (window as any).slagDebug;
+          const cam = d.renderer.cam;
+          cam.update = () => {};
+          cam.snap({ cx, cy, zoom: zz });
+          cam.shake = 0;
+          d.render();
+        },
+        [x, y, z] as const,
+      );
+      const size = page.viewportSize()!;
+      const w = Math.min(size.width, size.height);
+      const path = `${out}/looks-${name}.png`;
+      await page.screenshot({ path, clip: { x: (size.width - w) / 2, y: 0, width: w, height: w } });
+      console.log(path);
+      return path;
+    };
+    const room = async (name: string) => {
+      await page.evaluate(() => {
+        const d = (window as any).slagDebug;
+        delete d.renderer.cam.update;
+        d.render();
+      });
+      return snap(`looks-${name}`);
+    };
+    const T = 16;
+    if (only.includes('spikes')) {
+      const looks = ['glass', 'thorn', 'crystal', 'icicle', 'pitchfork'];
+      const solid: Rect[] = [];
+      const pieces: unknown[][] = [];
+      const shots: [number, number, string][] = [];
+      looks.forEach((look, i) => {
+        const x = 3 + i * 9;
+        const body = (cells: number[][]) => ({ type: 'body', cells, material: 'stone', conveyor: 0, breakFrames: 0, respawnFrames: 0 });
+        // Floor: a strip up out of a block. Wall: a coat on a pillar of terrain. Ceiling: a strip under a block.
+        const floor = [0, 1, 2].map((k) => [x + k, 20]);
+        pieces.push([body(floor), { type: 'spikes', cells: floor, angle: -Math.PI / 2, look }]);
+        solid.push([x + 5, 11, x + 5, 15]);
+        const wall = [12, 13, 14].map((y) => [x + 5, y]);
+        pieces.push([{ type: 'coat', cells: wall, angle: 0, kind: 'spikes', look }]);
+        const roof = [0, 1, 2].map((k) => [x + k, 4]);
+        pieces.push([body(roof), { type: 'spikes', cells: roof, angle: Math.PI / 2, look }]);
+        shots.push(
+          [(x + 1.5) * T, 20 * T, `spikes-${look}-floor`],
+          [(x + 6) * T, 13.5 * T, `spikes-${look}-wall`],
+          [(x + 1.5) * T, 5 * T, `spikes-${look}-ceiling`],
+        );
+      });
+      await stage(solid, pieces);
+      await step(200);
+      const files = [await room('spikes-room')];
+      // Row by row: floors, walls, ceilings.
+      for (const where of ['floor', 'wall', 'ceiling'])
+        for (const [x, y, name] of shots.filter((s) => s[2].endsWith(where))) files.push(await close(x, y, Number(opt('zoom', '6')), name));
+      await sheet('looks-spikes', files.slice(1), 5);
+    }
+    if (only.includes('geysers')) {
+      const files: string[] = [];
+      for (const look of (opt('looks') ?? 'water,toxic,snow,lava,steam').split(',')) {
+        const lethal = look === 'lava' || look === 'toxic';
+        const g = (at: number[], angle: number, length: number, width: number) => ({
+          type: 'geyser',
+          look,
+          at,
+          angle,
+          width,
+          length,
+          off: 1,
+          warn: 90,
+          on: 5000,
+          lethal,
+          strength: 2600,
+        });
+        // Up out of the floor; along the floor out of a wall's foot (a wave); down off a ledge (a waterfall).
+        const solid: Rect[] = [
+          [2, 17, 6, 23],
+          [20, 9, 30, 10],
+        ];
+        await stage(solid, [[g([39.5, 24], -Math.PI / 2, 10, 0.9)], [g([7, 24 - 0.6], 0, 11, 1.2)], [g([25.5, 11], Math.PI / 2, 13, 1.1)]]);
+        // Phase each column so it's where we want it on the frame we shoot: rumbling (70% in), then fully up.
+        const at = async (mode: 'warn' | 'on', k: number) => {
+          await page.evaluate(
+            ([tgt, kk]) => {
+              const d = (window as any).slagDebug;
+              const run = d.match.run;
+              for (const r of run.resolved) {
+                const m = r.mods.find((q: any) => q.type === 'geyser');
+                if (!m) continue;
+                const total = m.off + m.warn + m.on;
+                const want = tgt === 'warn' ? m.off + Math.round(m.warn * 0.7) : m.off + m.warn + 40;
+                r.phase = (((((want - (run.frame + kk)) % total) + total) % total) + 0.5) / total;
+              }
+            },
+            [mode, k] as const,
+          );
+          await step(k);
+        };
+        for (const mode of ['warn', 'on'] as const) {
+          await at(mode, 12);
+          files.push(await close(11 * T, 21.5 * T, 2.2, `geysers-${look}-side-${mode}`));
+          files.push(await close(25.5 * T, 17.5 * T, 1.6, `geysers-${look}-down-${mode}`));
+          files.push(await close(39.5 * T, 19.5 * T, 1.9, `geysers-${look}-up-${mode}`));
+        }
+      }
+      await sheet('looks-geysers', files, 6);
+    }
+    if (only.includes('droppers')) {
+      const drop = (cells: number[][], look: string) => ({ type: 'dropper', cells, angle: Math.PI / 2, reach: 18, warn: 30, rest: 60, look });
+      const solid: Rect[] = [
+        [10, 2, 16, 6],
+        [28, 2, 36, 4],
+      ];
+      await stage(solid, [
+        [
+          drop(
+            [
+              [12, 7],
+              [13, 7],
+              [12, 8],
+              [13, 8],
+            ],
+            'icicle',
+          ),
+        ],
+        [
+          drop(
+            [
+              [31, 8],
+              [32, 8],
+              [33, 8],
+            ],
+            'chandelier',
+          ),
+        ],
+        [
+          drop(
+            [
+              [22, 9],
+              [22, 10],
+            ],
+            'icicle',
+          ),
+        ],
+      ]);
+      await step(260);
+      const files = [
+        await room('droppers-rest'),
+        await close(13 * T, 10 * T, 3, 'droppers-icicle-rest'),
+        await close(32.5 * T, 9 * T, 3, 'droppers-chandelier-rest'),
+      ];
+      // Stand a runner under each big one and wait for the slam to be under way.
+      await page.evaluate(() => {
+        const d = (window as any).slagDebug;
+        const run = d.match.run;
+        const spots = [13, 32.5];
+        run.runners.forEach((r: any, i: number) => {
+          r.body.x = spots[i % 2] * 16 - r.body.w / 2;
+          r.body.y = 24 * 16 - r.body.h;
+          r.body.vx = r.body.vy = 0;
+        });
+      });
+      // Each shot when its head is a third of the way down, so it's caught slamming, not landed.
+      const caught = new Set<number>();
+      for (let f = 0; f < 240 && caught.size < 2; f++) {
+        await step(1);
+        const ds: number[] = await page.evaluate(() => {
+          const run = (window as any).slagDebug.match.run;
+          return [700, 701].map((u) => (run.propState.get(u)?.vars.get('0:st') === 2 ? run.propState.get(u).vars.get('0:d') : 0));
+        });
+        for (const [i, d] of ds.entries()) {
+          if (caught.has(i) || d < 5 * T) continue;
+          caught.add(i);
+          const [x, y, name] = i === 0 ? [13, 8, 'icicle'] : [32.5, 8.5, 'chandelier'];
+          files.push(await close(x * T, y * T + d, 2.6, `droppers-${name}-falling`));
+        }
+      }
+      if (caught.size < 2) throw new Error('the droppers never fell');
+      await sheet('looks-droppers', files, 3);
+    }
   },
   async buildparts() {
     // Every building part: each block material at every size in a race (whole view and close up), then

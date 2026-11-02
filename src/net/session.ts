@@ -198,6 +198,7 @@ export class NetSession {
   private remotePings: Record<string, number> = {};
   private lastPing = -1e9;
   private resumed = false;
+  private closed = false;
   private reportedRefusal = false;
 
   constructor(opts: SessionOptions) {
@@ -317,9 +318,15 @@ export class NetSession {
     this.outbox = [];
   }
 
+  /**
+   * Leave the room. Nothing the transport says afterwards counts: its last word is a member list of just us, which
+   * would otherwise make a guest "take over" its own empty room on the way out, report a migration and resume a save.
+   */
   close() {
     this.flush();
+    this.closed = true;
     this.transport?.close();
+    if (this.transport && this.status !== 'kicked') this.status = 'offline';
   }
 
   /**
@@ -346,7 +353,7 @@ export class NetSession {
   // ------------------------------------------------------------------ transport events
 
   private onStatus(s: LinkStatus, detail?: string) {
-    if (this.status === 'kicked') return;
+    if (this.status === 'kicked' || this.closed) return;
     this.detail = detail ?? '';
     this.status =
       s === 'open' ? 'online' : s === 'connecting' ? 'connecting' : s === 'reconnecting' ? 'reconnecting' : s === 'closed' ? 'offline' : 'unavailable';
@@ -360,7 +367,7 @@ export class NetSession {
   }
 
   private onMembers(list: Member[]) {
-    if (this.status === 'kicked') return;
+    if (this.status === 'kicked' || this.closed) return;
     if (!list.some((m) => m.id === this.self)) list = [...list, { id: this.self, order: Number.MAX_SAFE_INTEGER }];
     if (list.length !== this.members.length) addBreadcrumb('net', list.length > this.members.length ? 'peer joined' : 'peer left', { peers: list.length });
     this.members = list;
@@ -525,6 +532,7 @@ export class NetSession {
   }
 
   private onMessage(from: string, msg: Msg) {
+    if (this.closed) return;
     this.heard.set(from, this.now());
     switch (msg.t) {
       case 'ping':

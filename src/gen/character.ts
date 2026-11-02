@@ -2,119 +2,128 @@ import { type HSL, hsl3 } from '../core/color';
 import { Rng } from '../core/rng';
 import { word } from './names';
 
-export type BodyShape = 'round' | 'box' | 'capsule' | 'pear' | 'wide' | 'drop';
+/**
+ * The cast: toys out of the foundry's moulds (docs/CHARACTERS.md). Each kind has its own silhouette and
+ * its own material colors; the player's color is what the toy wears or has painted on it, big enough
+ * to read at play scale, and it's the color the HUD uses for that player.
+ */
+export const TOYS = [
+  'robot',
+  'piggybank',
+  'tincan',
+  'kettle',
+  'bell',
+  'crucible',
+  'slagblob',
+  'soldier',
+  'beetle',
+  'jackbox',
+  'chick',
+  'top',
+  'rocket',
+  'train',
+  'duck',
+  'frog',
+] as const;
+export type Toy = (typeof TOYS)[number];
+
 export type EyeStyle = 'dot' | 'ring' | 'sleepy' | 'visor' | 'angry';
 export type Mouth = 'smile' | 'fang' | 'o' | 'flat' | 'none' | 'teeth' | 'grin';
-export type Topper = 'none' | 'antenna' | 'horns' | 'ears' | 'tuft' | 'cap' | 'crown' | 'leaf' | 'mohawk' | 'halo';
-export type Pattern = 'none' | 'stripes' | 'spots' | 'belly' | 'gradient';
-export type Accessory = 'none' | 'scarf' | 'tail' | 'cape';
 
 /**
- * A procedurally generated character. Purely cosmetic — every character
- * uses the same hitbox and physics so the competitive game stays fair.
+ * A procedurally generated character. Purely cosmetic: every character uses the same hitbox and
+ * physics so the competitive game stays fair.
  */
 export interface CharacterDef {
   seed: number;
   name: string;
   hue: number;
+  /** The player's color: the toy's painted band, cap, jacket or label, and this player's HUD color. */
   body: HSL;
-  belly: HSL;
+  /** A second note in the player's livery (a plume, a pompom), never louder than `body`. */
   accent: HSL;
-  shape: BodyShape;
-  /** Visual size multipliers around the shared hitbox. */
-  sw: number;
-  sh: number;
+  toy: Toy;
+  /** The toy's own material: tin paint, enamel, cast iron. Muted, so the player's color is the loudest note. */
+  paint: HSL;
+  /** Rolls in 0..1 that the kind's art reads in its own order: variations inside a kind. */
+  vary: number[];
   eyes: { count: 1 | 2 | 3; size: number; style: EyeStyle; iris: HSL; spread: number; y: number; glow: boolean };
   mouth: Mouth;
-  topper: Topper;
-  pattern: Pattern;
-  feet: boolean;
-  accessory: Accessory;
-  accessoryColor: HSL;
-  /** Ribbon length in segments. */
-  accessoryLength: number;
 }
 
-export function generateCharacter(seed: number): CharacterDef {
+/** Each kind's own materials, muted: faded tin paints, enamels, iron, bronze. */
+const TIN = [hsl3(40, 30, 84), hsl3(200, 14, 74), hsl3(95, 16, 70), hsl3(20, 24, 76)];
+const ENAMEL = [hsl3(45, 22, 88), hsl3(160, 18, 74), hsl3(205, 20, 72), hsl3(10, 22, 74)];
+const IRON = [hsl3(20, 8, 42), hsl3(210, 8, 44), hsl3(30, 12, 38)];
+const PAINTS: Record<Toy, readonly HSL[]> = {
+  robot: [hsl3(200, 8, 70), hsl3(40, 10, 72), hsl3(160, 10, 66)],
+  piggybank: [hsl3(350, 26, 80), hsl3(40, 26, 86), hsl3(10, 22, 74)],
+  tincan: [hsl3(40, 8, 80), hsl3(200, 6, 76)],
+  kettle: ENAMEL,
+  bell: [hsl3(28, 26, 46), hsl3(20, 18, 42), hsl3(35, 14, 52)],
+  crucible: IRON,
+  slagblob: [hsl3(20, 12, 34), hsl3(30, 16, 38), hsl3(0, 8, 32)],
+  soldier: [hsl3(30, 30, 78), hsl3(40, 20, 84)],
+  beetle: TIN,
+  jackbox: [hsl3(35, 40, 88), hsl3(20, 30, 86)],
+  chick: [hsl3(48, 42, 80), hsl3(40, 30, 86), hsl3(30, 26, 82)],
+  top: [hsl3(35, 34, 70), hsl3(25, 30, 62), hsl3(40, 20, 82)],
+  rocket: [hsl3(200, 6, 82), hsl3(40, 14, 86), hsl3(210, 12, 72)],
+  train: [hsl3(150, 14, 34), hsl3(210, 12, 30), hsl3(10, 12, 32)],
+  duck: [hsl3(45, 26, 90), hsl3(40, 20, 84), hsl3(200, 10, 86)],
+  frog: [hsl3(95, 24, 60), hsl3(120, 18, 54), hsl3(70, 22, 62)],
+};
+
+/**
+ * A character for a look seed. `toy` forces the kind (a lobby keeps eight different kinds); everything
+ * else rolls the same either way.
+ */
+export function generateCharacter(seed: number, toy?: Toy): CharacterDef {
   const rng = new Rng(seed);
   const hue = rng.range(0, 360);
-  const sat = rng.range(60, 92);
-  const shape = rng.weighted<BodyShape>([
-    ['round', 3],
-    ['box', 2],
-    ['capsule', 2],
-    ['pear', 2],
-    ['wide', 1.5],
-    ['drop', 1.5],
-  ]);
+  const sat = rng.range(68, 92);
+  const rolled = TOYS[Math.floor(rng.next() * TOYS.length)];
+  const kind = toy ?? rolled;
+  const paints = PAINTS[kind];
+  const paint = paints[Math.floor(rng.next() * paints.length)];
+  const vary = Array.from({ length: 6 }, () => rng.next());
   const count = rng.weighted<1 | 2 | 3>([
-    [2, 6],
+    [2, 7],
     [1, 2],
-    [3, 1],
-  ]);
-  const accessory = rng.weighted<Accessory>([
-    ['none', 1.5],
-    ['scarf', 3],
-    ['tail', 2.5],
-    ['cape', 1.5],
+    [3, 0.6],
   ]);
   return {
     seed,
     name: shortName(rng),
     hue,
-    body: hsl3(hue, sat, rng.range(52, 62)),
-    belly: hsl3(hue + rng.range(-30, 30), sat * 0.5, 84),
-    accent: hsl3(hue + rng.pick([120, 180, 210, 150, 60]), 88, 58),
-    shape,
-    sw: shape === 'wide' ? rng.range(1.15, 1.3) : shape === 'capsule' ? rng.range(0.85, 0.95) : rng.range(0.95, 1.1),
-    sh: shape === 'capsule' ? rng.range(1.1, 1.25) : shape === 'wide' ? rng.range(0.8, 0.9) : rng.range(0.92, 1.08),
+    body: hsl3(hue, sat, rng.range(50, 58)),
+    accent: hsl3(hue + rng.pick([120, 180, 210, 150, 60]), 80, 60),
+    toy: kind,
+    paint,
+    vary,
     eyes: {
       count,
-      size: count === 1 ? rng.range(2.8, 3.8) : rng.range(1.8, 2.6),
+      size: count === 1 ? rng.range(2.8, 3.6) : rng.range(1.8, 2.5),
       style: rng.weighted<EyeStyle>([
         ['dot', 4],
-        ['ring', 2.5],
+        ['ring', 3],
         ['sleepy', 1.2],
         ['angry', 1.5],
-        ['visor', count === 2 ? 0.8 : 0],
       ]),
       iris: hsl3(rng.range(0, 360), 85, 50),
-      spread: rng.range(0.22, 0.32),
-      y: rng.range(0.55, 0.7),
-      glow: rng.chance(0.2),
+      spread: rng.range(0.22, 0.3),
+      y: rng.range(0.56, 0.68),
+      glow: rng.chance(0.15),
     },
     mouth: rng.weighted<Mouth>([
       ['smile', 3],
-      ['fang', 2],
+      ['fang', 1.5],
       ['o', 1.2],
       ['flat', 1.2],
-      ['none', 0.8],
+      ['none', 0.6],
       ['teeth', 1],
       ['grin', 1.5],
     ]),
-    topper: rng.weighted<Topper>([
-      ['none', 1.5],
-      ['antenna', 2],
-      ['horns', 2],
-      ['ears', 2],
-      ['tuft', 1.5],
-      ['cap', 1],
-      ['crown', 0.6],
-      ['leaf', 1],
-      ['mohawk', 1],
-      ['halo', 0.5],
-    ]),
-    pattern: rng.weighted<Pattern>([
-      ['none', 1.5],
-      ['belly', 3],
-      ['stripes', 1.5],
-      ['spots', 1.5],
-      ['gradient', 1.5],
-    ]),
-    feet: rng.chance(0.8),
-    accessory,
-    accessoryColor: hsl3(hue + rng.pick([150, 180, 200, 30, -30]), 85, 55),
-    accessoryLength: rng.int(5, 9),
   };
 }
 

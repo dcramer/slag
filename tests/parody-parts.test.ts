@@ -26,6 +26,9 @@ import {
   plateStart,
   type PropDef,
   REGRAB,
+  resolveProp,
+  spotAt,
+  motionOffset,
 } from '../src/sim/props';
 import { type Runner, RunWorld } from '../src/sim/run';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
@@ -385,6 +388,48 @@ describe('boost strip', () => {
       standAt(r, 9);
       return { run, script: (w, f) => w.step([f < 20 ? RIGHT : f === 40 ? JUMP : NO_INPUT]) };
     }, 100);
+  });
+
+  it('stuck on a lift, rides it like any coat, and still kicks whoever stands on it', () => {
+    // A three-wide set-piece lift that rises four tiles and back, parked 40 frames at each end.
+    const cells: Cell[] = [
+      [0, 0],
+      [1, 0],
+      [2, 0],
+    ];
+    const liftDef: PropDef = {
+      ...def([{ type: 'body', cells, material: 'metal', conveyor: 0, breakFrames: 0, respawnFrames: 0 }]),
+      motion: { type: 'rail', angle: -Math.PI / 2, range: 4, period: 120, dwell: 40 },
+    };
+    const lp: PlacedProp = { uid: 100_001, def: liftDef, owner: -1, tx: 14, ty: 16, rot: 0 };
+    const level = { ...testLevel(), setPieces: [lp] };
+    const f0 = 3000;
+    const row = lp.ty + Math.round(motionOffset(resolveProp(lp), f0)[1] / TILE);
+    const s = spotAt(level, [], strip(3), 0, 14, row, f0);
+    expect(s.ok).toBe(true);
+    expect(s.ride?.uid).toBe(lp.uid);
+    const coat: PlacedProp = { uid: 1, def: s.def, owner: 7, tx: 14, ty: row, rot: 0, ride: s.ride };
+    const { run, r } = race([coat], 1, level);
+    run.step([NO_INPUT]); // The solids on hand are this race frame's from here on.
+    const ys: number[] = [];
+    for (let i = 0; i < 240; i++) {
+      // Set down on the strip wherever the lift has it now: it kicks every time.
+      const c = run.solids.find((x) => x.propUid === 1)!;
+      const l = run.solids.find((x) => x.propUid === lp.uid)!;
+      expect(c.y + c.h).toBeCloseTo(l.y, 6);
+      if (i % 30 === 0) {
+        r.body.x = c.x + 2;
+        r.body.y = c.y - r.body.h;
+        r.body.vx = 0;
+        r.body.vy = 0;
+        r.status.boost = 0;
+        run.step([NO_INPUT]);
+        expect(r.status.boost, `frame ${i}`).toBeGreaterThan(0);
+        expect(r.body.vx).toBeGreaterThan(BOOST.speed - 10);
+      } else run.step([NO_INPUT]);
+      ys.push(c.y);
+    }
+    expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThan(3 * TILE);
   });
 });
 

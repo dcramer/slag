@@ -3,10 +3,10 @@ import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { boostDir, COAT_PX, dirOf, type ModuleOf } from '../../../sim/props';
 import { blob, line, type P, sn, stroke } from '../../ink';
-import { spikeSprite } from '../../ink-build';
 import { boxPts, glint, pen, sprite, stamp, tick, tone } from '../../ink-props';
 import { glowDot, light, type RC } from '../../kit';
 import { defineArt } from '../common';
+import { drawSpikeCells } from '../spike-looks';
 
 type Coat = ModuleOf<'coat'>;
 
@@ -79,16 +79,9 @@ function enter(s: CanvasRenderingContext2D, r: Run, card: boolean) {
   if (card) s.scale(1, CARD_THICK);
 }
 
-/** Spikes protruding from each host face (local frame: face at x=8, tips toward +x). */
+/** Spikes protruding from each host face: a gunmetal rail, or what the look says they're made of. */
 function drawSpikeStrip(rc: RC, m: Coat) {
-  const s = rc.s;
-  for (const [cx, cy] of m.cells) {
-    s.save();
-    s.translate((cx + 0.5) * TILE, (cy + 0.5) * TILE);
-    s.rotate(m.angle);
-    stamp(s, spikeSprite(m.angle, cx * 31 + cy * 17, STRIP_RAIL));
-    s.restore();
-  }
+  drawSpikeCells(rc.s, m.cells, m.angle, m.look, STRIP_RAIL);
 }
 
 /** One run of ice: the sheet, its shine, the resurfacer's two tread lines and the turn it made at the end. */
@@ -316,7 +309,7 @@ function chevron(s: CanvasRenderingContext2D, x: number, col: string) {
  * the way it throws you (a quarter turn on from the way out: right on a floor, up a wall's left face).
  * The chevrons light in turn along it, so the way it runs reads from anywhere; a card holds them lit.
  */
-function drawBoost(rc: RC, m: Coat, card: boolean) {
+function drawBoost(rc: RC, m: Coat, card: boolean, off: readonly number[]) {
   const s = rc.s;
   const [ax, ay] = boostDir(m.angle);
   for (const r of runsOf(m)) {
@@ -335,18 +328,30 @@ function drawBoost(rc: RC, m: Coat, card: boolean) {
       chevron(s, x + 2.2, css(ROAD_PAINT, k * 22, 1));
     }
     s.restore();
-    const cx = r.ox + (r.ux * r.len) / 2;
-    const cy = r.oy + (r.uy * r.len) / 2;
+    // The glow isn't on the coat's layer, so it takes the ride's offset itself.
+    const cx = r.ox + (r.ux * r.len) / 2 + off[0];
+    const cy = r.oy + (r.uy * r.len) / 2 + off[1];
     light(rc, cx + r.nx * 3, cy + r.ny * 3, 22 + r.len / 3, ROAD_PAINT, 0.25);
     if (!card) glowDot(rc.g, cx + r.nx * 2, cy + r.ny * 2, 6 + r.len / 4, ROAD_PAINT, 0.18);
   }
 }
 
-const COATS: Record<Coat['kind'], (rc: RC, m: Coat, card: boolean) => void> = {
+const COATS: Record<Coat['kind'], (rc: RC, m: Coat, card: boolean, off: readonly number[]) => void> = {
   spikes: (rc, m) => drawSpikeStrip(rc, m),
   ice: drawIce,
   slime: drawSlime,
   boost: drawBoost,
 };
 
-defineArt<'coat'>({ type: 'coat', layer: 2, draw: (rc, m, d) => COATS[m.kind](rc, m, !!d.o.card) });
+defineArt<'coat'>({
+  type: 'coat',
+  layer: 2,
+  draw(rc, m, d) {
+    // A coat riding a mover is drawn where the sim has carried it: the same offset, so it stays stuck on.
+    const s = rc.s;
+    s.save();
+    s.translate(d.off[0], d.off[1]);
+    COATS[m.kind](rc, m, !!d.o.card, d.off);
+    s.restore();
+  },
+});
