@@ -1365,8 +1365,12 @@ async function kickScenario(browser: Browser, base: string) {
   const c1 = await waitFor(watcher, 'kick applied on a guest', (v) => v.players.length === 3, 15_000);
   check(!c1.players.some((q) => q.device.startsWith(`${victimId}:`)), 'the kicked player is gone for everyone');
   // A reload inside the ban: the same screen, and the room never sees it.
+  const stored = await victim.evaluate(() => Object.entries(sessionStorage).filter(([k]) => k.startsWith('slag.kicked')));
+  const banEnd = await victim.evaluate(() => (window as any).slagDebug.net.kickedUntil as number);
+  console.log(`     reloading ${((banEnd - Date.now()) / 1000).toFixed(1)} s before the ban ends; this tab remembers ${JSON.stringify(stored)}`);
   await victim.reload();
   await victim.waitForFunction(() => 'slagDebug' in window, null, { timeout: 60_000 });
+  console.log(`     reloaded with ${((banEnd - Date.now()) / 1000).toFixed(1)} s of the ban left, status ${(await view(victim)).status}`);
   await victim.bringToFront();
   const reloaded = await waitFor(victim, 'refused after a reload', (v) => v.status === 'kicked', 15_000);
   await victim.waitForFunction(() => (window as any).slagDebug.renderer.hud.net?.arrival?.rejoinIn > 0, null, { timeout: 10_000 }).catch(() => {});
