@@ -1,6 +1,7 @@
 import { VIEW_H, VIEW_W } from '../sim/constants';
 import type { InputFrame } from '../sim/types';
 import { type Action, BINDABLE, hint, type InputSettings, type KeyProfile, keyboardDevices, loadSettings, saveSettings } from './bindings';
+import { TOUCH_DEVICE, TouchInput } from './touch';
 
 interface PadPrev {
   jump: boolean;
@@ -43,17 +44,26 @@ export class InputManager {
   private click = false;
   private rclick = false;
   private ui: UiPress[] = [];
+  /** Touch screen → the single 'touch' device (src/input/touch.ts). Touch pointers never reach the mouse path below. */
+  readonly touch = new TouchInput();
 
   constructor(target: Window = window) {
     this.settings = loadSettings();
     this.rebuildKeySet();
+    // --- touch wiring (mobile) ---
+    this.touch.toView = (cx, cy) => this.toView(cx, cy);
+    this.touch.onUiTap = (x, y) => this.touchUiTap(x, y);
+    this.touch.attach(target, (e) => this.captured || !!(e.target as Element | null)?.closest?.('[data-slag-ui],.slag-ov'));
     target.addEventListener('keydown', (e) => {
       if (e.code === 'Escape') {
         this.onEscape?.();
         return;
       }
       if (this.captured) return;
-      if (this.gameKeys.has(e.code)) e.preventDefault();
+      if (this.gameKeys.has(e.code)) {
+        e.preventDefault();
+        this.touch.setActive(false); // keyboard play hides the touch controls
+      }
       if (e.repeat) return;
       this.held.add(e.code);
       this.latched.add(e.code);
@@ -63,6 +73,8 @@ export class InputManager {
     });
     target.addEventListener('blur', () => this.held.clear());
     target.addEventListener('pointermove', (e) => {
+      if (e.pointerType === 'touch') return; // handled by this.touch
+      if (e.pointerType === 'mouse' && (e.movementX || e.movementY)) this.touch.setActive(false);
       const p = this.toView(e.clientX, e.clientY);
       if (p) {
         this.pointer = p;
@@ -70,6 +82,7 @@ export class InputManager {
       }
     });
     target.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'touch') return; // handled by this.touch
       const p = this.toView(e.clientX, e.clientY);
       if (!p) return;
       this.pointer = p;
@@ -104,6 +117,22 @@ export class InputManager {
     this.held.clear();
   }
 
+  /**
+   * Lobby tap from touch: hit-test the HUD, retrying at small offsets so a
+   * fingertip slightly off a small pill still lands (fat-finger slop, view px).
+   */
+  private touchUiTap(x: number, y: number): boolean {
+    for (const [dx, dy] of TAP_SLOP_OFFSETS) {
+      const hit = this.hitTest?.(x + dx, y + dy);
+      if (hit === true) return true;
+      if (hit) {
+        this.ui.push(hit);
+        return true;
+      }
+    }
+    return false;
+  }
+
   private rebuildKeySet() {
     this.gameKeys = new Set(keyboardDevices(this.settings).flatMap((d) => BINDABLE.flatMap((a) => d.profile[a])));
   }
@@ -126,6 +155,11 @@ export class InputManager {
     return keyboardDevices(this.settings)[0].device;
   }
 
+  /** Device that owns pointer-style UI (HUD join/ready/name buttons): 'touch' while touch is the active input, else the mouse's. */
+  get pointerDevice(): string {
+    return this.touch.active ? TOUCH_DEVICE : this.mouseDevice;
+  }
+
   /** Key hints for a device (for HUD prompts). */
   hints(device: string): { confirm: string; alt: string; jump: string; down: string } {
     const kb = keyboardDevices(this.settings).find((d) => d.device === device);
@@ -133,6 +167,7 @@ export class InputManager {
       const p: KeyProfile = kb.profile;
       return { confirm: hint(p, 'confirm'), alt: hint(p, 'alt'), jump: hint(p, 'jump'), down: hint(p, 'down') };
     }
+    if (device === TOUCH_DEVICE) return { confirm: 'tap', alt: 'ALT', jump: 'JUMP', down: '▼' };
     return { confirm: 'A', alt: 'B/Y', jump: 'A', down: '↓' };
   }
 
@@ -140,6 +175,7 @@ export class InputManager {
     const kb = keyboardDevices(this.settings).find((d) => d.device === device);
     if (kb) return kb.label;
     if (device.startsWith('pad')) return `Pad ${Number(device.slice(3)) + 1}`;
+    if (device === TOUCH_DEVICE) return 'Touch';
     return device;
   }
 
@@ -170,6 +206,9 @@ export class InputManager {
         if (this.rclick) f.altPressed = true;
       }
     }
+    // Touch → the 'touch' device (one touch player per screen).
+    if (this.captured) this.touch.reset();
+    else out[TOUCH_DEVICE] = this.touch.sample();
     for (const u of this.ui) {
       const t = out[u.device] ?? (out[u.device] = emptyFrame());
       if (u.confirm) t.confirmPressed = true;
@@ -195,6 +234,7 @@ export class InputManager {
       const alt = btn(1) || btn(3) || btn(4);
       const down = ay > 0.5 || btn(13);
       const prev = this.padPrev.get(id) ?? { jump: false, alt: false, down: false };
+      if (pad.buttons.some((b) => b.pressed) || Math.abs(ax) > 0.5 || Math.abs(ay) > 0.5) this.touch.setActive(false);
       out[id] = {
         left: ax < -0.4 || btn(14),
         right: ax > 0.4 || btn(15),
@@ -212,6 +252,21 @@ export class InputManager {
     return out;
   }
 }
+
+/** Fat-finger retries for lobby taps: exact point first, then a small ring (view px). */
+const TAP_SLOP_OFFSETS: readonly [number, number][] = [
+  [0, 0],
+  [0, -5],
+  [0, 5],
+  [-6, 0],
+  [6, 0],
+  [-5, -5],
+  [5, -5],
+  [-5, 5],
+  [5, 5],
+  [0, -9],
+  [0, 9],
+];
 
 function emptyFrame(): InputFrame {
   return { left: false, right: false, up: false, down: false, jump: false, jumpPressed: false, confirmPressed: false, altPressed: false, downPressed: false };

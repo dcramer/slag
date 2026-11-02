@@ -9,6 +9,8 @@
  *   npm run shot -- levels --seeds a,b,c,d      (or --count 12) → contact sheet
  *   npm run shot -- props --count 24            → prop gallery (crate cards)
  *   npm run shot -- codex                        → /codex page (full-page screenshot)
+ *   npm run shot -- mobile [--device "Pixel 7 landscape"]  → phone emulation driven by real
+ *                                                 multi-touch: lobby/join, pick, place, race, portrait
  *
  * Options: --out shots  --size 1280x720  --players 2  --frames N (sim frames to advance)
  *          --theme farm (force a theme; `levels --themes all` renders one level per theme)
@@ -20,7 +22,8 @@ import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { createServer as netServer } from 'node:net';
 import { resolve } from 'node:path';
-import { chromium } from 'playwright';
+import { chromium, devices } from 'playwright';
+import { touchLayout } from '../src/input/touch';
 
 const argv = process.argv.slice(2);
 const scenario = argv[0] && !argv[0].startsWith('--') ? argv.shift()! : 'race';
@@ -125,6 +128,143 @@ async function sheet(name: string, files: string[], cols = 3) {
   await sp.close();
 }
 
+/**
+ * Phone emulation (touch + isMobile + DPR) driven through CDP multi-touch, with the
+ * real-time loop running so touches go through the actual input path. Not
+ * frame-deterministic like the other scenarios; it waits on match phases.
+ */
+async function mobile(deviceName: string) {
+  const dev = devices[deviceName];
+  if (!dev) throw new Error(`unknown device ${deviceName}`);
+  const { defaultBrowserType: _ignored, ...desc } = dev;
+  const ctx = await browser.newContext(desc);
+  const mp = await ctx.newPage();
+  mp.on('pageerror', (e: Error) => errors.push(String(e)));
+  mp.on('console', (m: { type(): string; text(): string }) => m.type() === 'error' && errors.push(m.text()));
+  const cdp = await ctx.newCDPSession(mp);
+  const tag = deviceName.toLowerCase().replaceAll(/\W+/g, '-');
+  const shotM = async (name: string) => {
+    const p = `${out}/mobile-${tag}-${name}.png`;
+    await mp.screenshot({ path: p });
+    console.log(p);
+  };
+  type Pt = { x: number; y: number; id: number };
+  const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', touchPoints: Pt[]) =>
+    cdp.send('Input.dispatchTouchEvent', { type, touchPoints: touchPoints.map((t) => ({ ...t, radiusX: 8, radiusY: 8, force: 1 })) });
+  const tap = async (x: number, y: number) => {
+    await touch('touchStart', [{ x, y, id: 1 }]);
+    await mp.waitForTimeout(60);
+    await touch('touchEnd', []);
+    await mp.waitForTimeout(250);
+  };
+  /** View (768×432) → CSS px via the canvas box. */
+  const v2c = (x: number, y: number) =>
+    mp.evaluate(
+      ([vx, vy]) => {
+        const r = document.querySelector('canvas')!.getBoundingClientRect();
+        return { x: r.left + (vx / 768) * r.width, y: r.top + (vy / 432) * r.height };
+      },
+      [x, y] as const,
+    );
+  const phase = (p: string) => mp.waitForFunction((q) => (window as any).slagDebug.match.phase === q, p, { timeout: 60_000 });
+  // Same geometry the game uses (emulation reports no safe-area insets).
+  const layout = async () => touchLayout(...(await mp.evaluate(() => [innerWidth, innerHeight] as [number, number])));
+
+  await mp.goto(`${base}r/SHOTS?seed=${seed}${tq}`);
+  await mp.waitForFunction(() => 'slagDebug' in window, null, { timeout: 30_000 });
+  await mp.evaluate(() => document.fonts.ready);
+  await mp.waitForTimeout(800);
+  await shotM('lobby');
+  // Join by tapping the first slot (HUD hit-test via touch), then dismiss the name prompt.
+  let p = await v2c(111, 221);
+  await tap(p.x, p.y);
+  await mp.waitForTimeout(400);
+  await shotM('name');
+  await mp.tap('.slag-ov .slag-btn:not(.primary)');
+  await mp.waitForTimeout(300);
+  await shotM('lobby-joined');
+  // A ready keyboard bot keeps the round alive if the touch runner dies (it never acts).
+  await mp.evaluate(() => {
+    const m = (window as any).slagDebug.match;
+    m.join('kb2');
+    m.players.find((q: any) => q.device === 'kb2').ready = true;
+  });
+  // Ready pill sits right of the character (bw-96 wide at tx = x+88, ty+3).
+  p = await v2c(25 + 88 + 38, 146 + 75 + 10);
+  await tap(p.x, p.y);
+  await phase('pick');
+  await mp.waitForTimeout(500);
+  await shotM('pick');
+  // Prefer a harmless card so the race shot isn't cut short by our own trap.
+  const card = await mp.evaluate(() => {
+    const crate = (window as any).slagDebug.match.crate;
+    return (crate.find((c: any) => c.def.role === 'build' || c.def.role === 'utility') ?? crate[0]).rect;
+  });
+  p = await v2c(card.x + card.w / 2, card.y + card.h / 2);
+  await tap(p.x, p.y);
+  await phase('place');
+  await mp.waitForTimeout(400);
+  // Drag the ghost with a finger held down (ghost floats above it), rotate, then place.
+  p = await v2c(400, 260);
+  await touch('touchStart', [{ ...p, id: 1 }]);
+  for (let i = 1; i <= 6; i++) {
+    await touch('touchMove', [{ x: p.x + i * 8, y: p.y - i * 4, id: 1 }]);
+    await mp.waitForTimeout(40);
+  }
+  await mp.waitForTimeout(300);
+  await shotM('place-drag');
+  await touch('touchEnd', []);
+  const L = await layout();
+  await tap(L.secondary.x, L.secondary.y);
+  await mp.waitForTimeout(300);
+  await shotM('place-rotated');
+  await mp.evaluate(() => {
+    const m = (window as any).slagDebug.match;
+    m.players.find((q: any) => q.device === 'kb2').placed = true;
+  });
+  // Try placing; if this spot is illegal, sweep the ghost (away from spawn) until PLACE takes.
+  for (let i = 0; i < 24 && (await mp.evaluate(() => (window as any).slagDebug.match.phase)) === 'place'; i++) {
+    const q = await v2c(560 - (i % 6) * 60, 90 + Math.floor(i / 6) * 50);
+    await tap(q.x, q.y);
+    await tap(L.primary.x, L.primary.y);
+  }
+  await phase('run');
+  await mp.waitForFunction(() => (window as any).slagDebug.match.run.frame > 70, null, { timeout: 60_000 });
+  const runner = () =>
+    mp.evaluate(() => {
+      const m = (window as any).slagDebug.match;
+      if (!m.run) return null;
+      const slot = m.players.find((q: any) => q.device === 'touch').slot;
+      const r = m.run.runners.find((q: any) => q.slot === slot);
+      return { x: Math.round(r.body.x), y: Math.round(r.body.y), vx: Math.round(r.body.vx), vy: Math.round(r.body.vy), alive: r.alive };
+    });
+  const before = await runner();
+  // Multi-touch: left thumb pushes the stick right (past 70% → run) while the right thumb holds JUMP.
+  const st = { x: L.stickHome.x, y: L.stickHome.y };
+  await touch('touchStart', [{ ...st, id: 1 }]);
+  await touch('touchMove', [{ x: st.x + L.stickR * 0.9, y: st.y, id: 1 }]);
+  await mp.waitForTimeout(120);
+  await touch('touchStart', [
+    { x: st.x + L.stickR * 0.9, y: st.y, id: 1 },
+    { x: L.primary.x, y: L.primary.y, id: 2 },
+  ]);
+  await mp.waitForTimeout(60);
+  await shotM('race');
+  console.log('touch runner before/after stick+jump', JSON.stringify(before), JSON.stringify(await runner()));
+  // Hold ALT: the self-destruct ring fills, then pops the runner.
+  await touch('touchEnd', []);
+  await touch('touchStart', [{ x: L.secondary.x, y: L.secondary.y, id: 3 }]);
+  await mp.waitForTimeout(120);
+  await shotM('race-alt');
+  await mp.waitForTimeout(600);
+  await touch('touchEnd', []);
+  console.log('after ALT hold', JSON.stringify(await runner()));
+  await mp.setViewportSize({ width: desc.viewport.height, height: desc.viewport.width });
+  await mp.waitForTimeout(500);
+  await shotM('portrait');
+  await ctx.close();
+}
+
 try {
   switch (scenario) {
     case 'lobby':
@@ -206,6 +346,9 @@ try {
       console.log(p);
       break;
     }
+    case 'mobile':
+      await mobile(opt('device', 'iPhone 13 landscape')!);
+      break;
     default:
       throw new Error(`unknown scenario ${scenario}`);
   }
