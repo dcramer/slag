@@ -624,7 +624,14 @@ export class NetSession {
       this.wantSentTo = '';
       this.lastHello = -1e9;
       this.unacked = [];
-      if (was === 'host') this.log(`${host} is host`);
+      if (was === 'host') {
+        this.log(`${host} is host`);
+        // Stepped aside (a watcher at the head of the line) with our own requests not yet in a bundle: they go to the
+        // new host instead, a Join included. Guests' requests it held are resent by their senders, so they go.
+        const mine = this.hostActions.filter((a) => 'dev' in a && peerOf(a.dev) === this.self);
+        this.hostActions = [];
+        for (const a of mine) this.pendingActs.push([++this.actN, a]);
+      }
     }
   }
 

@@ -226,6 +226,35 @@ describe('observers', () => {
     expect(r.hashes().size).toBe(1);
   }, 20_000);
 
+  it('two watchers ask for the last seat as the host goes: the new host settles both, once, and every peer agrees', () => {
+    const r = new Room();
+    const ids = Array.from({ length: MAX_PLAYERS - 1 }, (_, i) => `p${i}xx`);
+    const host = r.join(ids[0], player);
+    r.run(5);
+    host.act({ t: 'rules', rules: FAST });
+    for (const id of ids.slice(1)) {
+      r.join(id, player);
+      r.run(3);
+    }
+    r.until(() => host.match.players.length === MAX_PLAYERS - 1, 600);
+    const x = r.join('xxxx', still, true);
+    const y = r.join('yyyy', still, true);
+    r.until(() => host.match.phase === 'run' && !!host.ns.watching.xxxx && !!host.ns.watching.yyyy, 4000);
+    r.run(20);
+    expect(x.space).toBe(1);
+    // Mid-race the gone host keeps its seat (away), so there's still one to win, and the requests are with nobody yet.
+    x.play();
+    y.play();
+    r.leave(ids[0]);
+    const next = r.peers.get(ids[1])!;
+    r.until(() => next.isHost && !next.paused && x.seatAsk !== 'asking' && y.seatAsk !== 'asking', 1200);
+    expect([x.seatAsk, y.seatAsk].sort()).toEqual(['taken', 'won']);
+    const winner = x.seatAsk === 'won' ? 'xxxx' : 'yyyy';
+    expect(next.ns.queue.map((q) => q.peer)).toEqual([winner]);
+    for (const s of r.peers.values()) expect(s.ns.queue).toEqual(next.ns.queue);
+    expect(r.hashes().size).toBe(1);
+  }, 30_000);
+
   it('an observer moves behind players in the line, so losing the host never picks it; with only observers left, one hosts', () => {
     const r = new Room();
     const a = r.join('aaaa', still);
