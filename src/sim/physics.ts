@@ -97,6 +97,11 @@ export interface Body extends Rect {
   wallCoyoteDir: -1 | 0 | 1;
   wallCoyoteSurface: Surface;
   wallLock: number;
+  /** Same-side wall-jump cooldown and the side it applies to. */
+  wallJumpCd: number;
+  wallJumpSide: -1 | 0 | 1;
+  /** Total wall jumps performed (for fx/analysis; monotonic). */
+  wallJumps: number;
   /** Frames left ignoring one-way tiles (drop-through). */
   dropFrames: number;
   facing: -1 | 1;
@@ -131,6 +136,9 @@ export function createBody(x: number, y: number): Body {
     wallCoyoteDir: 0,
     wallCoyoteSurface: DEFAULT_SURFACE,
     wallLock: 0,
+    wallJumpCd: 0,
+    wallJumpSide: 0,
+    wallJumps: 0,
     dropFrames: 0,
     facing: 1,
   };
@@ -316,16 +324,32 @@ function horizontalAccel(b: Body, dir: number, top: number, surf: Surface): numb
   return PHYS.airAccel;
 }
 
-function wallJump(b: Body, dir: -1 | 1, surf: Surface): void {
+/** Can we wall-jump off side `dir` with surface `surf` right now? */
+function canWallJump(b: Body, dir: number, surf: Surface): boolean {
+  return dir !== 0 && wallKind(surf) !== 'slick' && !(b.wallJumpCd > 0 && b.wallJumpSide === dir);
+}
+
+/**
+ * Wall jump off the wall on side `dir`. The kick depends on the held input
+ * (`held`): into the wall = near-vertical (climb a single wall by tapping
+ * jump); neutral = moderate; away = strong. Into-wall jumps aren't cut by
+ * releasing jump, so mashing still climbs.
+ */
+function wallJump(b: Body, dir: -1 | 1, surf: Surface, held: number): void {
   const k = wallKind(surf) === 'sticky' ? PHYS.stickyWallJumpMult : 1;
+  const into = held === dir;
+  const vx = into ? PHYS.wallJumpVxInto : held === 0 ? PHYS.wallJumpVxNeutral : PHYS.wallJumpVxAway;
   b.vy = -PHYS.wallJumpVy * k;
-  b.vx = -dir * PHYS.wallJumpVx * k;
-  b.facing = dir > 0 ? -1 : 1;
-  b.wallLock = PHYS.wallJumpLockFrames;
+  b.vx = -dir * vx * k;
+  if (!into) b.facing = dir > 0 ? -1 : 1;
+  b.wallLock = into ? PHYS.wallJumpLockFramesInto : PHYS.wallJumpLockFrames;
+  b.wallJumpCd = PHYS.wallJumpCooldownFrames;
+  b.wallJumpSide = dir;
+  b.wallJumps++;
   b.jumpBuffer = 0;
   b.wallCoyote = 0;
   b.wallDir = 0;
-  b.jumping = true;
+  b.jumping = !into;
 }
 
 /**
@@ -348,6 +372,7 @@ export function stepBody(b: Body, c: Controls, world: CollisionWorld): boolean {
   const dir = (c.right ? 1 : 0) - (c.left ? 1 : 0);
   if (dir !== 0) b.facing = dir > 0 ? 1 : -1;
   if (b.dropFrames > 0) b.dropFrames--;
+  if (b.wallJumpCd > 0) b.wallJumpCd--;
 
   if (c.jumpPressed) b.jumpBuffer = PHYS.jumpBufferFrames;
   else if (b.jumpBuffer > 0) b.jumpBuffer--;
@@ -396,10 +421,10 @@ export function stepBody(b: Body, c: Controls, world: CollisionWorld): boolean {
       b.coyote = 0;
       b.jumping = true;
       b.onGround = false;
-    } else if (b.wallDir !== 0 && wallKind(b.wallSurface) !== 'slick') {
-      wallJump(b, b.wallDir, b.wallSurface);
-    } else if (b.wallCoyote > 0 && b.wallCoyoteDir !== 0 && wallKind(b.wallCoyoteSurface) !== 'slick') {
-      wallJump(b, b.wallCoyoteDir, b.wallCoyoteSurface);
+    } else if (b.wallDir !== 0 && canWallJump(b, b.wallDir, b.wallSurface)) {
+      wallJump(b, b.wallDir, b.wallSurface, dir);
+    } else if (b.wallCoyote > 0 && canWallJump(b, b.wallCoyoteDir, b.wallCoyoteSurface)) {
+      wallJump(b, b.wallCoyoteDir as -1 | 1, b.wallCoyoteSurface, dir);
     }
   }
   // Variable height: letting go clamps the rise.
@@ -423,6 +448,7 @@ export function stepBody(b: Body, c: Controls, world: CollisionWorld): boolean {
     b.vy = 0;
     b.jumping = false;
     b.wallCoyote = 0;
+    b.wallJumpCd = 0;
   } else {
     if (hitY && b.vy < 0) {
       b.vy = 0;

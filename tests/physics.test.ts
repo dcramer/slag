@@ -49,35 +49,34 @@ function run(b: Body, world: CollisionWorld, frames: number, input: (f: number) 
 }
 
 /**
- * Wall-hopping policy a human can perform: hold `dir`; whenever pressing into a
- * wall past the apex, release jump for a frame and re-press. zigzag flips
- * direction after every wall jump (shaft climb).
+ * Wall-hopping policy a human can perform: hold toward the wall `dir`; whenever
+ * pressing into it past the apex, release jump for a frame and re-press.
+ * zigzag holds away on each press (strong kick) and then steers into the
+ * opposite wall (shaft climb).
  */
 function wallHop(b: Body, world: CollisionWorld, frames: number, dir: -1 | 1, zigzag: boolean): number {
   let d = dir;
   let press = true;
   let held = false;
   let minY = b.y;
-  let jumps = 0;
+  const jumps0 = b.wallJumps;
   for (let f = 0; f < frames; f++) {
-    const c = ctl({ left: d < 0, right: d > 0, jump: held });
+    let jump = held;
+    let jumpPressed = false;
     if (press) {
-      c.jump = true;
-      c.jumpPressed = true;
+      if (zigzag && f > 0) d = d > 0 ? -1 : 1;
+      jump = true;
+      jumpPressed = true;
       press = false;
       held = true;
     } else if (!b.onGround && b.wallDir === d && b.vy >= 0) {
-      c.jump = false;
+      jump = false;
       press = true;
     }
-    stepBody(b, c, world);
-    if (b.wallLock === PHYS.wallJumpLockFrames) {
-      jumps++;
-      if (zigzag) d = d > 0 ? -1 : 1;
-    }
+    stepBody(b, ctl({ left: d < 0, right: d > 0, jump, jumpPressed }), world);
     minY = Math.min(minY, b.y);
   }
-  expect(jumps).toBeGreaterThan(1);
+  expect(b.wallJumps - jumps0).toBeGreaterThan(1);
   return minY;
 }
 
@@ -204,13 +203,37 @@ describe('player controller: walls', () => {
     expect(free.vy).toBeGreaterThan(PHYS.wallSlideMax * 2);
   });
 
-  it('wall jump kicks away from the wall', () => {
+  it('wall jump kick depends on held input: into = near-vertical, neutral = moderate, away = strong', () => {
     const w = wallWorld(0);
-    const b = createBody(20 * TILE - PLAYER_W_OF(), 10 * TILE);
-    run(b, w, 10, () => ctl({ right: true }));
-    stepBody(b, ctl({ right: true, jump: true, jumpPressed: true }), w);
-    expect(b.vx).toBeLessThan(-PHYS.wallJumpVx * 0.8);
-    expect(b.vy).toBeLessThan(-PHYS.wallJumpVy * 0.8);
+    const kick = (held: -1 | 0 | 1) => {
+      const b = createBody(20 * TILE - PLAYER_W_OF(), 10 * TILE);
+      run(b, w, 10, () => ctl({ right: true }));
+      expect(b.wallDir).toBe(1);
+      stepBody(b, ctl({ left: held < 0, right: held > 0, jump: true, jumpPressed: true }), w);
+      expect(b.vy).toBeLessThan(-PHYS.wallJumpVy * 0.8);
+      return -b.vx;
+    };
+    const into = kick(1);
+    const neutral = kick(0);
+    const away = kick(-1);
+    expect(into).toBeGreaterThanOrEqual(0);
+    expect(into).toBeLessThan(80);
+    expect(neutral).toBeGreaterThan(into + 60);
+    expect(away).toBeGreaterThan(neutral + 40);
+  });
+
+  it('holding into a single tall wall and mashing jump climbs it (>= 8 tiles)', () => {
+    const w = wallWorld(0);
+    const b = bodyAtCell(19, 29);
+    const y0 = b.y;
+    let minY = y0;
+    run(b, w, 240, (f) => {
+      minY = Math.min(minY, b.y);
+      return ctl({ right: true, jump: f % 6 < 3, jumpPressed: f % 6 === 0 });
+    });
+    expect((y0 - minY) / TILE).toBeGreaterThanOrEqual(8);
+    // Same-side cooldown: mashing is not flight. Roughly a hop per cooldown at most.
+    expect(b.wallJumps).toBeLessThanOrEqual(Math.ceil(240 / PHYS.wallJumpCooldownFrames));
   });
 
   it('wall coyote: a wall jump still works a few frames after leaving the wall', () => {

@@ -1,4 +1,4 @@
-import { PHYS as PHYS_IMPORT, TILE as TILE_IMPORT } from './constants';
+import { TILE as TILE_IMPORT } from './constants';
 import { type Level, T_ONEWAY as T_ONEWAY_IMPORT, T_SOLID as T_SOLID_IMPORT } from './level';
 import {
   type Body,
@@ -11,7 +11,6 @@ import {
 
 // Hot-path imports rebound to module locals (vitest's module transform turns
 // imported bindings into getter calls; this file is worldgen's inner loop).
-const PHYS = PHYS_IMPORT;
 const TILE = TILE_IMPORT;
 const T_ONEWAY = T_ONEWAY_IMPORT;
 const T_SOLID = T_SOLID_IMPORT;
@@ -110,26 +109,29 @@ class DropPolicy implements Policy {
 }
 
 /**
- * Reactive wall jumping. Holds toward `d`; whenever pressing into a wall in the
- * air past the apex, releases jump for one frame then re-presses it. climb keeps
- * steering back into the same wall; zigzag turns toward the opposite wall after
- * each kick. The first climb wall jump forks a zigzag twin.
+ * Reactive wall jumping. Holds toward the wall `d`; whenever pressing into it
+ * in the air past the apex, releases jump for one frame then re-presses it.
+ * climb: keeps holding into the same wall (near-vertical into-wall jumps).
+ * zigzag: on each press holds away (strong kick) and then steers into the
+ * opposite wall. A climb's first release forks a zigzag twin.
  */
 class WallPolicy implements Policy {
   readonly maxFrames = MAX_WALL_FRAMES;
   press = false;
   jumps = 0;
+  private count = -1;
+  private twinned = false;
   constructor(
     public d: -1 | 1,
     public held: boolean,
     readonly zigzag: boolean,
   ) {}
   input(_f: number, b: Body, c: Controls) {
-    c.left = this.d < 0;
-    c.right = this.d > 0;
+    if (this.count < 0) this.count = b.wallJumps;
     c.down = false;
     c.jumpPressed = false;
     if (this.press) {
+      if (this.zigzag) this.d = this.d > 0 ? -1 : 1;
       c.jump = true;
       c.jumpPressed = true;
       this.press = false;
@@ -138,6 +140,8 @@ class WallPolicy implements Policy {
       c.jump = false;
       this.press = true;
     } else c.jump = this.held;
+    c.left = this.d < 0;
+    c.right = this.d > 0;
   }
   key(b: Body): number {
     if (this.press || b.onGround || b.wallDir !== this.d || b.vy < 0) return -1;
@@ -145,12 +149,15 @@ class WallPolicy implements Policy {
     return ((Math.round(b.x) * 512 + Math.floor((b.y + 96) / 3)) * 32 + vyBucket) * 4 + (this.d > 0 ? 2 : 0) + (this.zigzag ? 1 : 0);
   }
   after(b: Body): Policy | null {
-    if (b.wallLock !== PHYS.wallJumpLockFrames) return null;
-    this.jumps++;
-    if (this.zigzag) this.d = this.d > 0 ? -1 : 1;
-    else if (this.jumps === 1) {
-      const z = new WallPolicy(this.d > 0 ? -1 : 1, this.held, true);
-      z.jumps = 1;
+    if (b.wallJumps !== this.count) {
+      this.count = b.wallJumps;
+      this.jumps++;
+    }
+    if (!this.zigzag && this.press && !this.twinned) {
+      this.twinned = true;
+      const z = new WallPolicy(this.d, this.held, true);
+      z.press = true;
+      z.jumps = this.jumps;
       return z;
     }
     return null;

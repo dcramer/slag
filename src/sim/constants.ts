@@ -64,19 +64,33 @@ export const PHYS = {
   jumpBufferFrames: 8,
 
   // --- Walls ---------------------------------------------------------------
-  /** Falling speed cap while pressing into a normal wall: a controllable slide. */
-  wallSlideMax: 100,
+  /** Falling speed cap while pressing into a normal wall (~49% of terminal): clearly slowed, but quick enough to stay snappy. */
+  wallSlideMax: 220,
   /** Cap while pressing into a sticky (goo/slime) wall: you nearly cling. */
   wallStickySlideMax: 22,
-  /** Wall jump kick away from the wall; slightly above run speed so it reads as a kick. */
-  wallJumpVx: 210,
-  /** Wall jump lift (a bit less than a ground jump). */
+  /**
+   * Wall jump horizontal kick depends on the held direction:
+   *  - into the wall: a tiny kick, so tapping jump while holding toward a wall climbs straight up it;
+   *  - neutral: a moderate hop off;
+   *  - away from the wall: a strong kick (shaft zig-zags, leaving a wall at speed).
+   */
+  wallJumpVxInto: 55,
+  wallJumpVxNeutral: 170,
+  wallJumpVxAway: 250,
+  /** Wall jump lift (a bit less than a ground jump: ~3.3 tiles). */
   wallJumpVy: 410,
   /** Sticky walls still let you jump, but weaker (both components scaled). */
   stickyWallJumpMult: 0.78,
-  /** After a wall jump horizontal accel is scaled by wallJumpLockAccelMult for this long, so the kick can't be cancelled instantly but holding back toward the wall returns you to it (single-wall climbs). */
-  wallJumpLockFrames: 7,
-  wallJumpLockAccelMult: 0.3,
+  /** Brief reduced air control after a wall jump so the kick reads; short so it never fights the player. Into-wall jumps use 2 frames to re-stick fast. */
+  wallJumpLockFrames: 4,
+  wallJumpLockFramesInto: 2,
+  wallJumpLockAccelMult: 0.35,
+  /**
+   * Frames before you can wall-jump off the *same* side again (just past the apex). Mashing jump
+   * against one wall therefore climbs at a steady ~3 tiles per hop instead of flying; the jump
+   * buffer keeps an early press. The opposite wall (shaft) is never on cooldown.
+   */
+  wallJumpCooldownFrames: 16,
   /** Frames after leaving a wall during which you can still wall-jump off it. */
   wallCoyoteFrames: 6,
   /** How far (px) from the hitbox a wall still counts as touching. */
