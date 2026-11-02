@@ -6,13 +6,14 @@
  * not exercised (see docs/NETCODE.md → Testing).
  *
  *   pnpm online-test                     # everything (slow: ~15 min under load)
- *   pnpm online-test -- --only pick,bc   # named scenarios
+ *   pnpm online-test -- --only pick,bc   # named scenarios, or a group: lobby, migration, feel, misc
  *   pnpm test:store -- --browser pick,run,leave   # the same, through Upstash REST (SRH)
  *   SHOT_DEV=1 pnpm online-test          # against `next dev`
  *
  * Scenarios:
  *   flow        as a person does it: Play on the menu, open the invite, press nothing; both peers see both bays
  *   kick        the Host label everywhere and through a migration; kicks by keyboard and mouse, with no way back
+ *   view        real mouse input lands under the pointer, at every window shape, on every level size
  *   play        join, live cursors, claim race, a remote ghost, a race, refresh keeps the slot, next round
  *   pick place run   the host's renderer is killed (no goodbye) in that phase
  *   leave       the host navigates away (goodbye path) mid-race
@@ -28,10 +29,21 @@
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Browser, BrowserContext, Page } from 'playwright';
+import { roomSeed } from '../src/game/room';
+import { overview, type ViewXform, worldToView } from '../src/game/view';
+import { generateLevel } from '../src/gen/level';
+import { TILE } from '../src/sim/constants';
 import { launchChromium, startNext } from './next-server';
 
 const argv = process.argv.slice(2);
-const onlyArg = argv.includes('--only') ? argv[argv.indexOf('--only') + 1].split(',') : null;
+/** Named groups, each short enough to run alone on a loaded machine. */
+const GROUPS: Record<string, string[]> = {
+  lobby: ['flow', 'kick', 'view'],
+  migration: ['pick', 'place', 'run', 'leave', 'twice'],
+  feel: ['latency', 'hidden'],
+  misc: ['play', 'bc', 'unset'],
+};
+const onlyArg = argv.includes('--only') ? argv[argv.indexOf('--only') + 1].split(',').flatMap((x) => GROUPS[x] ?? [x]) : null;
 const wanted = (name: string) => !onlyArg || onlyArg.includes(name);
 /** `--store srh`: the app talks to SRH through the same env vars as production (see compose.store.yml). */
 const srh = argv.includes('--store') && argv[argv.indexOf('--store') + 1] === 'srh';
@@ -52,6 +64,7 @@ type NetView = {
   members: string[];
   frame: number;
   phase: string;
+  phaseFrame: number;
   round: number;
   hash: number;
   players: {
@@ -93,6 +106,7 @@ async function view(p: Page): Promise<NetView> {
       members: n.members.map((x: any) => x.id),
       frame: m.frame,
       phase: m.phase,
+      phaseFrame: m.phaseFrame,
       round: m.round,
       hash: d.hash(),
       players: m.players.map((q: any) => ({
@@ -146,18 +160,50 @@ async function clickView(p: Page, x: number, y: number) {
   await p.mouse.up();
 }
 
-/** Any point where this peer's held part can legally go. Mutates and restores its cursor inside one synchronous call. */
+/** The same mapping the game uses for pointers in `place`: cursors there are world px, the mouse is in view px. */
+async function viewOf(p: Page): Promise<ViewXform> {
+  const level = await p.evaluate(() => {
+    const l = (window as any).slagDebug.match.level;
+    return { w: l.w as number, h: l.h as number };
+  });
+  return overview(level as Parameters<typeof overview>[0]);
+}
+
+/** Put this page's mouse on a world position. */
+async function hoverWorld(p: Page, x: number, y: number) {
+  const v = worldToView(await viewOf(p), x, y);
+  const [mx, my] = await mouseAt(p, v.x, v.y);
+  await p.mouse.move(mx, my);
+}
+
+async function clickWorld(p: Page, x: number, y: number) {
+  const v = worldToView(await viewOf(p), x, y);
+  await clickView(p, v.x, v.y);
+}
+
+/** Clicks in a phase's first frames are ignored; a fixed sleep guesses at that and loses under load. */
+const clicksLive = (p: Page) => waitFor(p, 'clicks to count', (v) => v.phaseFrame > 14);
+
+/** Any world point where this peer's held part can legally go, clear of the HUD. Mutates and restores its cursor inside one synchronous call. */
 async function validSpot(p: Page, device: string, far = false): Promise<{ x: number; y: number } | null> {
+  const v = await viewOf(p);
   return p.evaluate(
-    ([dev, fromRight]) => {
+    ([dev, fromRight, ov, tile]) => {
       const m = (window as any).slagDebug.match;
       const me = m.players.find((q: any) => q.device === dev);
       if (!me) return null;
       const keep = { ...me.cursor };
+      const W = m.level.w * tile;
+      const H = m.level.h * tile;
       let found: { x: number; y: number } | null = null;
-      for (let y = 90; y < 400 && !found; y += 16) {
-        for (let i = 90; i < 700 && !found; i += 16) {
-          const x = fromRight ? 790 - i : i;
+      // Tile centres: the wire carries whole view px, so below zoom 1 an edge can round into the next tile.
+      for (let y = tile / 2; y < H && !found; y += tile) {
+        const vy = (y - ov.cy) * ov.zoom + 216;
+        if (vy < 64 || vy > 384) continue;
+        for (let i = tile / 2; i < W && !found; i += tile) {
+          const x = fromRight ? W - i : i;
+          const vx = (x - ov.cx) * ov.zoom + 384;
+          if (vx < 24 || vx > 744) continue;
           me.cursor.x = x;
           me.cursor.y = y;
           if (m.canPlaceFor(me)) found = { x, y };
@@ -167,7 +213,7 @@ async function validSpot(p: Page, device: string, far = false): Promise<{ x: num
       me.cursor.y = keep.y;
       return found;
     },
-    [device, far] as const,
+    [device, far, v, TILE] as const,
   );
 }
 
@@ -344,7 +390,8 @@ async function pairInRace(r: Room): Promise<{ A: Page; B: Page; ids: string[] }>
   await toPlace(pages);
   for (let i = 0; i < 2; i++) {
     const s = await validSpot(pages[i], `${ids[i]}:kb1`, true);
-    if (s) await clickView(pages[i], s.x, s.y);
+    await clicksLive(pages[i]);
+    if (s) await clickWorld(pages[i], s.x, s.y);
   }
   for (const p of pages) await waitFor(p, 'race', (v) => v.phase === 'run', 120_000);
   await sleep(4500); // the countdown
@@ -352,11 +399,16 @@ async function pairInRace(r: Room): Promise<{ A: Page; B: Page; ids: string[] }>
 }
 
 /**
- * Software GL holds these pages near 16 fps, which would measure this machine rather than
- * the netcode. With drawing stubbed, rAF runs at display rate like a page on a real GPU.
+ * Software GL holds these pages near 16 fps and pegs the CPU, which would measure this
+ * machine rather than the netcode. With drawing stubbed, rAF runs at display rate like
+ * a page on a real GPU. Scenarios that look at pixels pass `visual`.
  */
-async function fastDisplay(pages: Page[]) {
-  for (const p of pages) await p.evaluate(() => ((window as any).slagDebug.renderer.render = () => {}));
+async function setDrawing(p: Page, on: boolean) {
+  await p.evaluate((draw) => {
+    const r = (window as any).slagDebug.renderer;
+    r.__draw ??= r.render;
+    r.render = draw ? r.__draw : () => {};
+  }, on);
 }
 
 const ONE_WAY_MS = 40;
@@ -373,7 +425,6 @@ function budget(r: LatencyReport, networkMs: number) {
 async function latencyScenario(browser: Browser, base: string) {
   const r = await newRoom(browser, base, 'latency', '', { room: 'LATENCY1', viewport: { width: 640, height: 360 } });
   const { A, B, ids } = await pairInRace(r);
-  await fastDisplay([A, B]);
   budget(await measure('0 ms, guest → host', B, A, `${ids[1]}:kb1`, A, 12), 0);
   budget(await measure('0 ms, host → guest', A, B, `${ids[0]}:kb1`, A, 12), 0);
   for (const p of [A, B]) await p.evaluate((ms) => ((window as any).__netDelay = ms), ONE_WAY_MS);
@@ -390,12 +441,12 @@ async function hiddenScenario(browser: Browser, base: string) {
   await toPlace(pages);
   for (let i = 0; i < 3; i++) {
     const s = await validSpot(pages[i], `${ids[i]}:kb1`, true);
-    if (s) await clickView(pages[i], s.x, s.y);
+    await clicksLive(pages[i]);
+    if (s) await clickWorld(pages[i], s.x, s.y);
   }
   for (const p of pages) await waitFor(p, 'race', (v) => v.phase === 'run', 120_000);
   await sleep(4500);
   const [A, B, C] = pages;
-  await fastDisplay(pages);
   for (const p of pages) await p.evaluate((ms) => ((window as any).__netDelay = ms), ONE_WAY_MS);
   await sleep(500);
   budget(await measure('visible host, guest → guest', B, C, `${ids[1]}:kb1`, A, 8), 2 * ONE_WAY_MS);
@@ -421,7 +472,7 @@ async function newRoom(
   base: string,
   label: string,
   query: string,
-  opts: { shared?: boolean; room?: string; viewport?: { width: number; height: number } } = {},
+  opts: { shared?: boolean; room?: string; viewport?: { width: number; height: number }; visual?: boolean } = {},
 ): Promise<Room> {
   // Fixed where a scenario needs the same level every run: the room code seeds it.
   const name =
@@ -455,17 +506,21 @@ async function newRoom(
       });
       await p.goto(`${base}r/${name}?${query}`);
       await p.waitForFunction(() => 'slagDebug' in window, null, { timeout: 60_000 });
+      if (!opts.visual) await setDrawing(p, false);
       return p;
     },
     // Software GL with several pages is slow; a missed screenshot is reported but isn't a netcode failure.
     async shot(p, shot) {
       const path = `${out}/online-${label}-${shot}.png`;
       try {
+        await setDrawing(p, true);
+        await sleep(500);
         await p.screenshot({ path, timeout: 60_000 });
         console.log(`     ${path}`);
       } catch (e) {
         console.log(`     (screenshot ${shot} skipped: ${String(e).split('\n')[0]})`);
       }
+      if (!opts.visual) await setDrawing(p, false).catch(() => {});
     },
     async dispose() {
       await sharedCtx?.close().catch(() => {});
@@ -501,7 +556,7 @@ async function startMatch(r: Room, n: number, rules: Record<string, number> = FA
 async function toPlace(pages: Page[]) {
   for (let i = 0; i < pages.length; i++) {
     const v = await waitFor(pages[i], 'crate ready', (x) => x.phase === 'pick' && x.crate.length > i);
-    await sleep(300); // past the opening frames where clicks are ignored
+    await clicksLive(pages[i]);
     await clickView(pages[i], v.crate[i].x, v.crate[i].y);
   }
   for (const p of pages) await waitFor(p, 'place phase', (v) => v.phase === 'place');
@@ -511,7 +566,8 @@ async function toPlace(pages: Page[]) {
 async function toRun(pages: Page[], ids: string[]) {
   for (let i = 0; i < pages.length; i++) {
     const s = await validSpot(pages[i], `${ids[i]}:kb1`);
-    if (s) await clickView(pages[i], s.x, s.y);
+    await clicksLive(pages[i]);
+    if (s) await clickWorld(pages[i], s.x, s.y);
   }
   for (const p of pages) await waitFor(p, 'race', (v) => v.phase === 'run', 120_000);
 }
@@ -550,7 +606,7 @@ async function compareHashes(pages: Page[], label: string) {
 }
 
 /** Time from `t0` until every survivor agrees on a host and the sim is advancing again. */
-async function recovery(pages: Page[], t0: number, frameBefore: number, ms = 45_000): Promise<number> {
+async function recovery(pages: Page[], t0: number, frameBefore: number, ms = 60_000): Promise<number> {
   for (;;) {
     const vs = await Promise.all(pages.map(view));
     const hosts = new Set(vs.map((v) => v.hostId));
@@ -640,7 +696,7 @@ async function playScenario(browser: Browser, base: string) {
 
   // --- live cursors: a guest's mouse moves on the host and on the other guest, with no clicks.
   const start = await waitFor(C, 'crate', (v) => v.crate.length >= 3);
-  await sleep(400);
+  for (const p of pages) await clicksLive(p);
   const devB = `${ids[1]}:kb1`;
   const [bx, by] = await mouseAt(B, 300, 300);
   await B.mouse.move(bx, by);
@@ -648,14 +704,14 @@ async function playScenario(browser: Browser, base: string) {
     const q = v.players.find((p) => p.device === devB);
     return !!q && Math.abs(q.cursor.x - 300) < 3 && Math.abs(q.cursor.y - 300) < 3;
   };
-  await waitFor(A, "B's cursor on the host", moved, 5000);
-  const seen = await waitFor(C, "B's cursor on the other guest", moved, 5000);
+  await waitFor(A, "B's cursor on the host", moved, 15_000);
+  const seen = await waitFor(C, "B's cursor on the other guest", moved, 15_000);
   check(moved(seen), 'a remote cursor moves live, with no click');
 
   // --- claim race: two guests click one card at once. Exactly one wins, everywhere, and the loser never saw it as theirs.
   const card = start.crate[0];
   await Promise.all([clickView(B, card.x, card.y), clickView(C, card.x, card.y)]);
-  const claimed = await waitFor(A, 'the card to be claimed', (v) => v.crate[0].claimedBy >= 0, 5000);
+  const claimed = await waitFor(A, 'the card to be claimed', (v) => v.crate[0].claimedBy >= 0, 15_000);
   await sleep(600);
   const views = await Promise.all(pages.map(view));
   const winners = new Set(views.map((v) => v.crate[0].claimedBy));
@@ -676,11 +732,12 @@ async function playScenario(browser: Browser, base: string) {
   // --- a remote ghost: B hovers its part in the level; C's screenshot must show it.
   const spot = await validSpot(B, devB);
   if (spot) {
-    const [gx, gy] = await mouseAt(B, spot.x, spot.y);
-    await B.mouse.move(gx, gy);
+    await clicksLive(B);
+    await hoverWorld(B, spot.x, spot.y);
+    const tolerance = 3 / (await viewOf(B)).zoom; // the wire carries whole view px
     await waitFor(C, "B's ghost on C", (v) => {
       const q = v.players.find((p) => p.device === devB);
-      return !!q && Math.abs(q.cursor.x - spot.x) < 3 && Math.abs(q.cursor.y - spot.y) < 3;
+      return !!q && Math.abs(q.cursor.x - spot.x) < tolerance && Math.abs(q.cursor.y - spot.y) < tolerance;
     });
     await sleep(300);
     await r.shot(C, 'remote-ghost');
@@ -784,7 +841,7 @@ const hostLabel = (p: Page) => p.evaluate(() => (window as any).slagDebug.render
 
 /** The host label on every screen, and following a migration; a kick by keyboard, then by mouse, with no way back. */
 async function kickScenario(browser: Browser, base: string) {
-  const r = await newRoom(browser, base, 'kick', '', { viewport: { width: 960, height: 540 } });
+  const r = await newRoom(browser, base, 'kick', '', { viewport: { width: 960, height: 540 }, visual: true });
   const A = await r.open('A');
   const a0 = await waitFor(A, 'host seated', (v) => v.players.length === 1 && v.isHost);
   const [B, C, D] = [await r.open('B'), await r.open('C'), await r.open('D')];
@@ -821,8 +878,9 @@ async function kickScenario(browser: Browser, base: string) {
   check(!after.players.some((q) => q.device.startsWith(`${victim.self}:`)), 'the kicked player is gone from the host');
   const c1 = await waitFor(C, 'kick applied on a guest', (v) => v.players.length === 3, 5000);
   check(!c1.players.some((q) => q.device.startsWith(`${victim.self}:`)), 'the kicked player is gone for everyone');
-  await B.goBack().catch(() => {});
-  await B.waitForURL((u) => u.pathname === '/', { timeout: 8000 }).catch(() => {});
+  // The history entry is the room; what's being checked is where that page sends you.
+  await B.goBack({ waitUntil: 'commit', timeout: 60_000 }).catch(() => {});
+  await B.waitForURL((u) => u.pathname === '/', { timeout: 60_000 }).catch(() => {});
   check(new URL(B.url()).pathname === '/', 'going back to the room lands on the main menu again');
 
   // By mouse: the button on the bay.
@@ -851,6 +909,134 @@ async function kickScenario(browser: Browser, base: string) {
   await r.dispose();
 }
 
+/** A room code whose level matches, found the way a player's room finds it: from the code alone. */
+function roomWithLevel(tag: string, fits: (w: number, h: number) => boolean): { code: string; w: number; h: number } {
+  for (let i = 0; i < 500; i++) {
+    const code = `V${tag}${i.toString(36).toUpperCase()}`;
+    const l = generateLevel(roomSeed(code));
+    if (fits(l.w, l.h)) return { code, w: l.w, h: l.h };
+  }
+  throw new Error(`no ${tag} level in 500 rooms`);
+}
+
+const WINDOWS = [
+  { name: '16x9', width: 640, height: 360 },
+  { name: '21x9', width: 840, height: 360 },
+  { name: '4x3', width: 640, height: 480 },
+  { name: 'phone', width: 640, height: 296 },
+];
+
+/**
+ * Real mouse events, at every window shape, on one level size. The card under the pointer
+ * is the one taken; the cursor and ghost land under it on both peers; a click places there.
+ */
+async function viewScenario(browser: Browser, base: string, kind: string, fits: (w: number, h: number) => boolean) {
+  const { code, w, h } = roomWithLevel(kind[0].toUpperCase(), fits);
+  const r = await newRoom(browser, base, `view-${kind}`, '', { room: code, viewport: WINDOWS[0], visual: true });
+  const { pages, ids } = await startMatch(r, 2);
+  const [A, B] = pages;
+  const devB = `${ids[1]}:kb1`;
+  console.log(`     ${w}×${h} tiles, zoom ${(await viewOf(A)).zoom.toFixed(2)}`);
+  for (const p of pages) await clicksLive(p);
+
+  // Pick: the card the mouse is on, on the other peer too.
+  const crate = (await view(B)).crate;
+  for (const [i, win] of WINDOWS.entries()) {
+    await B.setViewportSize(win);
+    await sleep(250);
+    const card = crate[i % crate.length];
+    const [mx, my] = await mouseAt(B, card.x, card.y);
+    await B.mouse.move(mx, my);
+    const near = (v: NetView) => {
+      const q = v.players.find((p) => p.device === devB);
+      return !!q && Math.abs(q.cursor.x - card.x) < 3 && Math.abs(q.cursor.y - card.y) < 3;
+    };
+    const seen = await waitFor(A, `the cursor on a card at ${win.name}`, near, 15_000);
+    check(near(seen), `${kind} ${win.name}: the mouse is on the card, for both peers`);
+  }
+  const last = crate[(WINDOWS.length - 1) % crate.length];
+  await clickView(B, last.x, last.y);
+  const taken = await waitFor(A, 'the card taken', (v) => v.players.find((p) => p.device === devB)!.claim >= 0, 15_000);
+  check(taken.crate[taken.players.find((p) => p.device === devB)!.claim].x === last.x, `${kind}: a click takes the card under the pointer`);
+  const other = (await view(A)).crate.findIndex((c) => c.claimedBy < 0);
+  const free = (await view(A)).crate[other];
+  await clickView(A, free.x, free.y);
+  for (const p of pages) await waitFor(p, 'place', (v) => v.phase === 'place', 30_000);
+  await clicksLive(B);
+
+  // Place: the drawn ghost sits under the pointer on this peer, and at the same world spot on the other.
+  const ov = await viewOf(B);
+  const spot = await validSpot(B, devB);
+  if (!spot) {
+    check(false, `${kind}: found no legal spot`);
+    return r.dispose();
+  }
+  const tolerance = 3 / ov.zoom;
+  // Where the HUD actually draws each player's arrow, in view px.
+  const spyArrows = (p: Page) =>
+    p.evaluate(() => {
+      const h = (window as any).slagDebug.renderer.hud;
+      const draw = h.cursor.bind(h);
+      h.__arrows = [];
+      h.cursor = (x: number, y: number, ...rest: unknown[]) => {
+        h.__arrows.push([x, y]);
+        if (h.__arrows.length > 8) h.__arrows.shift();
+        draw(x, y, ...rest);
+      };
+    });
+  /** Waits for a drawn frame: software GL can take a while under load. */
+  const arrowAt = async (p: Page, x: number, y: number) => {
+    for (let i = 0; i < 40; i++) {
+      const hit = await p.evaluate(
+        ([vx, vy]) =>
+          ((window as any).slagDebug.renderer.hud.__arrows as [number, number][]).some(([ax, ay]) => Math.abs(ax - vx) < 4 && Math.abs(ay - vy) < 4),
+        [x, y],
+      );
+      if (hit) return true;
+      await sleep(250);
+    }
+    return false;
+  };
+  await spyArrows(A);
+  await spyArrows(B);
+  const onScreen = (p: Page) => p.evaluate(([x, y]) => (window as any).slagDebug.renderer.worldToScreen(x, y) as { x: number; y: number }, [spot.x, spot.y]);
+  for (const win of WINDOWS) {
+    await B.setViewportSize(win);
+    await sleep(250);
+    await hoverWorld(B, spot.x, spot.y);
+    const near = (v: NetView) => {
+      const q = v.players.find((p) => p.device === devB);
+      return !!q && Math.abs(q.cursor.x - spot.x) < tolerance && Math.abs(q.cursor.y - spot.y) < tolerance;
+    };
+    const seen = await waitFor(A, `the ghost at ${win.name}`, near, 15_000);
+    await sleep(300);
+    const want = worldToView(ov, spot.x, spot.y);
+    const [drawnB, drawnA] = [await onScreen(B), await onScreen(A)];
+    const under = Math.hypot(drawnB.x - want.x, drawnB.y - want.y) < 2 && Math.hypot(drawnA.x - want.x, drawnA.y - want.y) < 2;
+    check(near(seen) && under, `${kind} ${win.name}: the ghost is under the pointer, for both peers`);
+    check((await arrowAt(B, want.x, want.y)) && (await arrowAt(A, want.x, want.y)), `${kind} ${win.name}: the arrow is on the ghost, for both peers`);
+    await r.shot(B, win.name);
+  }
+  const g = await A.evaluate((dev) => {
+    const m = (window as any).slagDebug.match;
+    const q = m.players.find((p: any) => p.device === dev);
+    const o = m.ghostOrigin(q);
+    return { tx: o.tx, ty: o.ty, slot: q.slot, part: o.def.name as string, modules: o.def.modules.map((x: any) => x.type).join() as string };
+  }, devB);
+  await clickWorld(B, spot.x, spot.y);
+  await waitFor(A, 'the part placed', (v) => v.players.find((p) => p.device === devB)!.placed, 15_000);
+  const put = await A.evaluate((slot) => {
+    const p = (window as any).slagDebug.match.placed.find((q: any) => q.owner === slot);
+    return p ? { tx: p.tx, ty: p.ty } : null;
+  }, g.slot);
+  // A bomb goes off and leaves nothing behind; being spent is its proof.
+  const landed = g.modules.includes('bomb') || (put?.tx === g.tx && put?.ty === g.ty);
+  check(landed, `${kind}: a click places the part exactly where the ghost was (${g.tx},${g.ty}, got ${JSON.stringify(put)}, ${g.part}: ${g.modules})`);
+  const real = r.errors.filter((e) => !/favicon/.test(e));
+  check(real.length === 0, `no page errors${real.length ? `:\n${real.join('\n')}` : ''}`);
+  await r.dispose();
+}
+
 async function bcScenario(browser: Browser, base: string) {
   const r = await newRoom(browser, base, 'bc', 'net=bc', { shared: true });
   const { pages } = await startMatch(r, 2);
@@ -868,7 +1054,7 @@ async function unsetScenario(browser: Browser) {
     UPSTASH_REDIS_REST_TOKEN: '',
   });
   try {
-    const r = await newRoom(browser, server.base, 'unset', '');
+    const r = await newRoom(browser, server.base, 'unset', '', { visual: true });
     const p = await r.open('A');
     const v = await waitFor(p, 'online to give up cleanly', (x) => x.status === 'unavailable', 20_000);
     check(v.detail === 'Online Not Set Up', `missing store credentials: "${v.detail}"`);
@@ -893,6 +1079,11 @@ try {
     await realFlowScenario(browser, server.base, 'flow two tabs saved look', true, true);
   }
   if (wanted('kick')) await kickScenario(browser, server.base);
+  if (wanted('view')) {
+    await viewScenario(browser, server.base, 'classic', (w, h) => w === 48 && h === 27);
+    await viewScenario(browser, server.base, 'wide', (w) => w > 48);
+  }
+  if (wanted('view') || wanted('view-tall')) await viewScenario(browser, server.base, 'tall', (_w, h) => h > 27);
   if (wanted('play')) await playScenario(browser, server.base);
   if (wanted('pick')) await killScenario(browser, server.base, 'pick');
   if (wanted('place')) await killScenario(browser, server.base, 'place');
