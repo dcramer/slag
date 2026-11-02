@@ -61,7 +61,7 @@ On pages, body text is 15–18 px and menu items are 30 px display.
 
 ### Casing
 
-- **UPPERCASE**: display headings and short stamped tags (`ROUND 2`, `PLACE YOUR PART`, `OPEN`, `READY`, `BUILD`, `LOBBY`, main-menu items).
+- **UPPERCASE**: display headings and short stamped tags (`ROUND 2/15`, `PLACE YOUR PART`, `OPEN`, `READY`, `BUILD`, `LOBBY`, main-menu items).
 - **Title Case**: buttons, prompt labels, settings labels, subtitles (`Ready Up`, `New Look`, `Self-Destruct`, `Choose a Part`, `Mute All Sound`).
 - **Sentence case**, with a period: the rare note that says something the screen can't (`Select a slot, then press the new key.`).
 - **Never** use lowercase taglines or microcopy (`pick your poison`, `confirm to continue`). There are no slogans in the UI.

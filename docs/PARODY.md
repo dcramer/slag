@@ -1,6 +1,6 @@
 # Parody sheet
 
-Every item and part mocks a staple of the genre: a power-up, an enemy, a gadget, a level cliché. This sheet is the brief for the art. Names roll from the word lists in `src/gen/props.ts`, `src/sim/items/roster.ts` and `src/gen/setpieces/*`; the codex (`src/codex/`) uses the same names.
+Every item and part mocks a staple of the genre: a power-up, an enemy, a gadget, a level cliché. This sheet is the brief for the art. Names come from the word lists in `src/gen/props.ts`, `src/sim/items/roster.ts` and `src/gen/setpieces/*`; the codex (`src/codex/`) uses the same names.
 
 - **Ours only.** Our own names and art. Mock the trope first; a nod at one game gets a sound-alike or spoof name, never the real one, and never its characters, sprites or level layouts.
 - **Never explain the joke.** No captions or labels that say what's being mocked. The silhouette shows the original and the gag gives the twist.
@@ -61,8 +61,8 @@ Each row gives what the item or part mocks, its silhouette (what must read at ga
 | charge (ring) | Donut, Ring Charge, Moat Maker | — (pure gag) | A ring-shaped charge | It's a glazed donut with sprinkles. |
 | timebomb | Time Bomb, Alarm Clock, Hurry-Up Timer, Snooze Button | The hurry-up timer | An alarm clock on a charge | The face reads 0:00, flashing red. |
 | hangar | Budget Airline, Air Ferry, Kite Loft, Paper Planery | Rideable flying platforms | A loft that launches planks | Gliders are paper planes, with a seat-row number on the wing. |
-| rope | Sausage Vine (as before) | The jungle vine swing | Links on a hook | Already drawn. |
-| keg | Kegapult (as before) | The barrel cannon | A keg | Already drawn. |
+| rope | Sausage Vine, Banger Rope, Bratwurst Vine, Salami Swing | The jungle vine swing | Links on a hook | Already drawn. |
+| keg | Kegapult, Powder Keg, Cask Cannon, Hooch Howitzer | The barrel cannon | A keg | Already drawn. |
 
 ## Launchers
 
@@ -70,7 +70,7 @@ The style picks the body and the ammo. The aim word (Fixed, Sweeps, Tracks) and 
 
 | Style | Names | Mocks | Ammo | Gag |
 |---|---|---|---|---|
-| crossbow | Arrow Trap, Kneecapper | Dungeon arrow traps | trap bolt | A slot in a carved block, with a bandaged knee scratched into the stone. |
+| crossbow | Arrow Trap, Kneecapper | Dungeon arrow traps | trap bolt, arrow | A slot in a carved block, with a bandaged knee scratched into the stone. |
 | ballista | Ballista, Siege Bow, Tower Defense | Tower-defense towers | trap bolt | It's mounted on a tiny tower with a price tag. |
 | cannon | Pirate Cannon, Bombard | Pirate-level cannons | cannonball | An eyepatch on the muzzle. |
 | totem | Tiki Spitter, Heartburn Idol | Fire-spitting statues | heartburn | The idol clutches its belly and the fireballs are chili-red. |
@@ -87,7 +87,7 @@ The style picks the body and the ammo. The aim word (Fixed, Sweeps, Tracks) and 
 
 ## Set pieces
 
-Set pieces keep their theme. Where one mocks a cliché, it says so in its look. Glacier and space still reuse other themes' module art (TODO 22), so these are their targets.
+Set pieces keep their theme. Where one mocks a cliché, it says so in its look.
 
 | Theme | Piece | Mocks | Gag |
 |---|---|---|---|

@@ -11,7 +11,7 @@ Package manager is **pnpm** (`packageManager` in package.json). Never use npm or
 | Command | Use |
 | --- | --- |
 | `pnpm install` | First thing in a fresh checkout or worktree (`node_modules` is not shared). |
-| `pnpm check` | The gate: typecheck + lint + format check + tests (~10 s). Must pass before every commit. |
+| `pnpm check` | The gate: typecheck + lint + format check + tests (~30 s). Must pass before every commit. |
 | `pnpm check:fast` | Typecheck + lint + format check (~2 s). Use while iterating. |
 | `pnpm test` | Behavior and invariants at fixed small seed counts, in `tests/`. The test half of `pnpm check`. |
 | `pnpm vitest run tests/foo.test.ts` | One test file. Add `-t "name"` for one test. |
@@ -27,7 +27,7 @@ Package manager is **pnpm** (`packageManager` in package.json). Never use npm or
 | `pnpm online-test` | Real WebRTC between headless Chromium pages against the signaling routes. `-- --only lobby`, `migration`, `feel` or `misc` runs a group (about 15 min for all). |
 | `pnpm test:store` | The Upstash REST store path against real Redis behind SRH (needs Docker, starts `compose.store.yml`). `-- --browser pick,run,leave` adds real browsers. In CI, not in `pnpm check`. |
 
-Lint: `oxlint` (type-aware, `.oxlintrc.json`). Errors fail CI; warnings are real findings to fix, not noise. Format: `oxfmt` (`.oxfmtrc.json`: 2 spaces, single quotes, 160 columns). Don't add `oxlint-disable` comments to get green; fix the code or change the rule in `.oxlintrc.json` with a reason.
+Lint: `oxlint` (type-aware, `.oxlintrc.json`). Warnings are real findings, not noise: `pnpm lint` and CI fail on them like errors. Format: `oxfmt` (`.oxfmtrc.json`: 2 spaces, single quotes, 160 columns). Don't add `oxlint-disable` comments to get green; fix the code or change the rule in `.oxlintrc.json` with a reason.
 
 ## Definition of done
 
@@ -49,7 +49,7 @@ Lint: `oxlint` (type-aware, `.oxlintrc.json`). Errors fail CI; warnings are real
 - `props --count 24` (crate cards), `codex` (the `/codex` page), `stack` (runners stacking, riding and head-bouncing, as stepped frames)
 - Options: `--theme farm`, `--weather rain`, `--noui` (hide HUD), `--noletters` (no impact words), `--size 1280x720`, `--out shots`
 
-Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm`, `?weather=rain` (clear|wind|mist|rain|snow, skips worldgen's gate), `?players=2` (auto-join and start), `?race=saw,laser` or `?race=all`, `?propseed=3`, `?ui=0`, `?zoom=1` (phone camera on desktop; `?zoom=0` off, `?zoom=2.4` a fixed zoom), `?lettering=0` (no impact words), `?debug=1` (dev overlay: frame-time breakdown, counts, level info; ` toggles it in `pnpm dev` or with any `?debug`). In the console, `slagDebug` has `quickStart`, `race`, `addProps`, `loadLevel`, `phase`, `pause`, `step`, `render`.
+Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm`, `?weather=rain` (clear|wind|mist|rain|snow, skips worldgen's gate), `?players=2` (auto-join and start), `?race=saw,laser` or `?race=all`, `?propseed=3`, `?ui=0`, `?zoom=1` (phone camera on desktop; `?zoom=0` off, `?zoom=2.4` a fixed zoom), `?lettering=0` (no impact words), `?debug=1` (dev overlay: frame-time breakdown, counts, level info; ` toggles it in `pnpm dev` or with any `?debug`). In the console, `slagDebug` has `quickStart`, `race`, `addProps`, `give`, `loadLevel`, `phase`, `pause`, `step`, `render`, `hash`.
 
 ## Git workflow
 
@@ -65,7 +65,7 @@ Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm
 - **Layering.** `sim/`, `gen/`, `game/` never import `render/`, `input/`, `audio/`, `ui/`. `render/` reads sim state and never writes it. Lint enforces the imports.
 - **Client-only game.** Everything in `src/` runs in the browser; Next.js pages are thin shells (see `app/AGENTS.md`). No React or Next imports in `src/` (lint enforces).
 - **Every screen is part of the game.** The main menu, lobby, settings, codex, 404 and error screens all live in `src/` and are reached from the game's own menus; a URL is just another way in. Move between screens with the `Nav` a screen is given (`nav.go(HOME)`), never `location.assign` or `history.pushState`: lint allows those only in `src/router.ts`. A new screen is a `Route` in `src/routes.ts` and an entry in `SCREENS` in `src/main.ts`, it must be reachable from a menu, and its mount returns an unmount that lets go of everything it took.
-- **Netcode-ready state** (plan: `docs/NETCODE.md`): sim state is plain, snapshot-friendly data (no closures or class instances holding hidden state, no order-dependent `Map` iteration). Inputs are the only per-frame data that crosses the network.
+- **Netcode state** (`docs/NETCODE.md`): sim state is plain, snapshot-friendly data (no closures or class instances holding hidden state, no order-dependent `Map` iteration). Inputs are the only per-frame data that crosses the network.
 - **Fairness.** Characters are cosmetic. Every player shares one hitbox and one physics model.
 - **Registries over switches.** Extend a subsystem through its registry, not with a new `switch` elsewhere.
 
@@ -73,8 +73,8 @@ Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm
 
 - `src/main.ts`: `mountGame(root)`, the one entry point for every host: shows the screen for the URL and moves between screens without a reload (`src/router.ts`, routes in `src/routes.ts`). Screens: `src/ui/screens/` (main menu, 404, error, the logo), `src/game-client.ts` (lobby and match), `src/codex/main.ts`.
 - `src/game-client.ts`: `mountLobby(root, room, nav)`: canvases, input, menus, fixed 60 Hz loop, and the teardown that leaves the room. Each step: input → `Match.step` → `RunWorld.step` (props `build` solids/hazards, then `trace` rays → `stepBody` → hazards/springs/goal → runner contact in `sim/collide.ts` → props `tick`) → events queue → `Renderer.render`.
-- `src/sim/`: deterministic simulation (physics, level, reachability, run world, prop modules). `src/gen/`: generators (levels, set pieces, props, theme looks, characters, names). `src/game/`: match state machine (lobby → pick → place → run → score → victory) and `scoring.ts`. `src/render/`: Canvas2D layers + WebGL2 post. `src/input/`: keyboard/gamepad → `InputFrame` (bindings in `bindings.ts`). `src/audio/`: procedural SFX and per-theme music. `src/ui/`: menus and the DOM screens. `src/codex/`: the `/codex` parts catalog.
-- `tools/`: `shot.ts`, `level.ts`. `tests/`: vitest, one file per subsystem. `tests/stats/`: distribution and balance suites, one file per measure. `tests/lib/`: the per-seed checks both share.
+- `src/sim/`: deterministic simulation (physics, level, reachability, run world, prop modules). `src/gen/`: generators (levels, set pieces, props, theme looks, characters, names). `src/game/`: match state machine (lobby → pick → place → run → score → victory) and `scoring.ts`. `src/net/`: online play (session, transports, signaling client, snapshots). `src/render/`: Canvas2D layers + WebGL2 post; the HUD is `hud.ts`, with a painter per phase in `hud/`. `src/input/`: keyboard/gamepad/touch → `InputFrame` (bindings in `bindings.ts`). `src/audio/`: procedural SFX and per-theme music. `src/ui/`: the DOM screens (`screens/`), menu overlays (`menus/`) and the touch overlay (`touch/`). `src/codex/`: the `/codex` parts catalog.
+- `tools/`: `shot.ts` (scenarios in `shot/`), `level.ts`, `online-test.ts`, `perf.ts`, `brand.ts`, `store-test.ts`; `lib/server.ts` builds and boots the production server the browser tools share. `tests/`: vitest, one file per subsystem. `tests/stats/`: distribution and balance suites, one file per measure. `tests/lib/`: the per-seed checks both share.
 
 ## Extension points
 
@@ -89,8 +89,8 @@ Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm
 
 ## Game rules
 
-- World: `LEVEL_W × LEVEL_H` = 48×27 tiles of 16 px (768×432). Tiles: `T_SOLID`, `T_ONEWAY` (jump through from below; drop with down + jump), `T_EMPTY`. Spawn left, goal right; protected rects around both can't be built on or bombed; the bottom pit kills.
-- Solvability: about 99% of levels can't be finished bare, and 20–30% need two parts (`rollChallenges`); the rest need one. Every level is proven finishable with at most two small building props (`MAX_BRIDGES`), and the crate always offers what it still needs (`partsNeeded`, `generateCrate`). What stops a bare run is a gap or wall a part solves, never a sealed level. Always check with `src/sim/reach.ts` (the real controller), never hand-waved jump distances.
+- World: tiles of 16 px. A classic level is `LEVEL_W × LEVEL_H` = 48×27 (768×432, the view); wide and tall levels are bigger and the camera follows (`src/gen/level/profile.ts`). Tiles: `T_SOLID`, `T_ONEWAY` (jump through from below; drop with down + jump), `T_EMPTY`. Spawn left, goal right; protected rects around both can't be built on or bombed; the bottom pit kills.
+- Solvability: about 99% of levels can't be finished bare, and about a quarter need two parts (`TWO_PARTS`, `rollChallenges`); the rest need one. Every level is proven finishable with at most two small building props (`MAX_BRIDGES`), and the crate always offers what it still needs (`partsNeeded`, `generateCrate`). What stops a bare run is a gap or wall a part solves, never a sealed level. Always check with `src/sim/reach.ts` (the real controller), never hand-waved jump distances.
 - Placement validity lives in `canPlace` (`src/sim/props/transform.ts`). **Attachments** (spikes, ice coat, slime coat) mount flush on a solid face (terrain or placed block); the player's rotation picks the face. They place if at least one cell can mount and permanently keep only those cells (`mountCells`, `landedDef`); everything else needs every cell free. Spikes add a hazard strip. Coats change the surface: on floors ice is slippery and slime slow and sticky; on walls ice blocks wall slide/jump and slime makes a sticky cling.
 - Scoring: `src/game/scoring.ts`. Everyone finishing or nobody finishing scores nothing.
 - Units: world pixels and sim frames (60/s); tile coordinates in `TILE` units; angles in radians, screen space (+y down).
@@ -99,7 +99,7 @@ Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm
 
 Vercel, Next.js App Router. Server code is limited to small, stateless route handlers and server components in `app/`; no long-lived servers, nothing that costs money at our scale.
 
-Next is one host of the game, not its UI. Another host (a packaged desktop build, a plain static page) mounts it the same way: give `mountGame` an element, and `memoryHistory()` from `src/router.ts` if there's no address bar. `mountGame` adds the screen CSS and fonts if the page lacks them; serving `homeHTML()` and `SCREEN_CSS` in the HTML, as `app/` does, only makes the first paint faster. Online play also needs the signaling API at the origin (`src/net/signal-client.ts`). Online play will be peer-to-peer WebRTC with serverless signaling (`docs/NETCODE.md`).
+Next is one host of the game, not its UI. Another host (a packaged desktop build, a plain static page) mounts it the same way: give `mountGame` an element, and `memoryHistory()` from `src/router.ts` if there's no address bar. `mountGame` adds the screen CSS and fonts if the page lacks them; serving `homeHTML()` and `SCREEN_CSS` in the HTML, as `app/` does, only makes the first paint faster. Online play also needs the signaling API at the origin (`src/net/signal-client.ts`): it is peer-to-peer WebRTC with serverless signaling (`docs/NETCODE.md`).
 
 Error monitoring is Sentry, in the host layer only, so the game stays portable. The game calls `reportError`, `reportEvent` and `addBreadcrumb` from `src/telemetry.ts`, which no-op until a host installs a reporter; lint bans `@sentry/*` in `src/` and telemetry in `sim/`, `gen/` and `game/`. Host files: `instrumentation-client.ts` (lazy-loads `app/sentry-browser.ts`), `instrumentation.ts` (server; covers every route handler), `app/sentry-options.ts` (DSN, privacy settings), `app/global-error.tsx` (errors in the React shell itself). A screen that fails to mount is reported by `src/main.ts` (`boundary: 'screen'`) and replaced by the game's error screen; errors thrown later reach the host's global handlers. It only reports from Vercel deploys, so dev, tests and `pnpm shot` send nothing.
 
@@ -114,7 +114,7 @@ Error monitoring is Sentry, in the host layer only, so the game stays portable. 
 - TypeScript strict, ES modules. Runtime deps are only `next`, `react`, `react-dom` (for the shell), `client-only`, and `@sentry/nextjs` and `@sentry/browser` (host layer only); the game itself uses none. Don't add runtime dependencies without asking.
 - Doc comments explain *why*, on modules and exported functions. Small functions; data plus registries over sprawling `switch`es.
 - **Never explain the obvious**, in the game, the docs or your reports. In the game it's a design rule: part of the joy is the unknown, so no sub lines, hints or notes that restate what's on screen or spell out a rule (`docs/DESIGN.md` → Discovery).
-- Custom lint and ast-grep rules are welcome where they enforce a rule better than convention. Every rule's error message must steer whoever hits it, usually an agent: say why the rule exists and what to do instead, naming the concrete replacement. Example: `Math.sin differs across browsers and desyncs lockstep. Use sin from src/core/dmath.ts.`
+- Custom lint and ast-grep rules are welcome where they enforce a rule better than convention. Every rule's error message must steer whoever hits it, usually an agent: say why the rule exists and what to do instead, naming the concrete replacement. Example: `Math.sin differs across browsers and desyncs lockstep. Use dsin from src/core/dmath.ts.`
 - Assets: prefer procedural art. Third-party assets only if CC0 or free for commercial use without attribution traps; record each in `public/ASSETS.md` with source URL and license. Keep them small (≤256 px tiles, compressed).
 
 <!-- BEGIN:nextjs-agent-rules -->
