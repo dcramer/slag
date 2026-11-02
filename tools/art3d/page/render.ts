@@ -233,6 +233,10 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
 
   scene.updateMatrixWorld(true);
   const restHip = hips ? hips.getWorldPosition(new THREE.Vector3()).y : 0;
+  // The hips' turn in the model's own space at rest, for clips that keep the figure facing its way.
+  const inModel = (q: THREE.Quaternion) => fit.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(hips!.getWorldQuaternion(q));
+  const restTurn = hips ? inModel(new THREE.Quaternion()).invert() : null;
+  const fwd = new THREE.Vector3();
   const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true });
   const mixer = new THREE.AnimationMixer(model.root);
   const pin = new THREE.Vector3();
@@ -260,13 +264,21 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
       const src = findClip(model.clips, c.src);
       for (const facing of ['r', 'l'] as const) {
         // Forward is +z in the model; a right-facing figure turns it to screen right, then a little toward us.
-        turn.rotation.y = ((facing === 'r' ? 1 : -1) * (90 - s.yaw) * Math.PI) / 180;
+        const base = ((facing === 'r' ? 1 : -1) * (90 - s.yaw) * Math.PI) / 180;
         for (const t of sampleTimes(c, src.duration)) {
           mixer.stopAllAction();
           mixer.clipAction(src).play();
           mixer.setTime(t);
           shift.position.set(0, 0, 0);
+          turn.rotation.y = base;
           scene.updateMatrixWorld(true);
+          if (c.face && hips && restTurn) {
+            // A motion that turns the whole body round (a spin made from a description) is turned back, so
+            // the figure keeps facing its way: only its turn about the vertical goes, a flip or a tuck stays.
+            fwd.set(0, 0, 1).applyQuaternion(inModel(new THREE.Quaternion()).multiply(restTurn));
+            turn.rotation.y = base - Math.atan2(fwd.x, fwd.z);
+            scene.updateMatrixWorld(true);
+          }
           if (hips) {
             // Every clip runs in place: the sim moves the body, so the hips stay over the spot the game draws at.
             // An airborne clip lifts the body too, and the sim already does that: hold the hips at rest height.

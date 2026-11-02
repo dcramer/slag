@@ -41,6 +41,8 @@ export interface Clip {
   vy?: [number, number];
   /** Also rendered at card scale (the lobby, score and victory screens). */
   card?: boolean;
+  /** Turn the figure back to its facing when the motion spins it round about the vertical. */
+  face?: boolean;
   /** `hips`: hold the hips at their rest height (a jump's own lift is the sim's job). */
   pin?: 'hips';
   /** Seconds held on each frame instead of an even rate (a hold at an apex, a beat on a landing). */

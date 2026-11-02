@@ -26,7 +26,7 @@
     "idle": { "src": "idle", "from": 0, "to": 0.15, "frames": 6, "loop": true, "fps": 3, "card": true },
     "walk": { "src": "walk", "frames": 8, "loop": true, "stride": 40 },
     "run": { "src": "run", "frames": 8, "loop": true, "stride": 72 },
-    "air": { "src": "A cartoon platformer jump", "from": 0.4, "to": 0.58, "frames": 5, "loop": false, "vy": [-380, 420], "pin": "hips" },
+    "air": { "src": "A cartoon platformer jump", "from": 0.4, "to": 0.58, "frames": 5, "loop": false, "vy": [-380, 420], "pin": "hips", "face": true },
     "wall": { "src": "Sliding down a wall", "from": 0, "to": 0.5, "frames": 4, "loop": true, "fps": 6 },
     "cheer": { "src": "cheer", "from": 0, "to": 0.42, "frames": 10, "loop": true, "fps": 8, "card": true },
     "death": { "src": "fall", "from": 0.42, "to": 0.78, "frames": 6, "loop": false, "fps": 14 }

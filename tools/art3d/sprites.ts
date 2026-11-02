@@ -135,7 +135,9 @@ try {
     const info = await page.evaluate((u) => (window as any).art3d.inspect(u, 64, 2), modelUrl(kind, s));
     const names: string[] = opt('clips')?.split(',') ?? info.clips.map((c: { name: string }) => c.name);
     const n = Number(opt('frames', '16'));
-    s.clips = Object.fromEntries(names.map((c) => [c, { src: c, frames: n, loop: true, from: Number(opt('from', '0')), to: Number(opt('to', '1')) }]));
+    s.clips = Object.fromEntries(
+      names.map((c) => [c, { src: c, frames: n, loop: true, from: Number(opt('from', '0')), to: Number(opt('to', '1')), face: argv.includes('--face') }]),
+    );
     const got = await render(modelUrl(kind, s), s);
     const out = join(shots, `${kind}-study.png`);
     writeFileSync(out, dataPng(await sheetOf(got.play, Number(opt('zoom', '2')), true, ['r'])));
