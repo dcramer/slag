@@ -204,7 +204,8 @@ function buildWindmill(g: Grid, rng: Rng, box: TileRect, parts: number): Landmar
     const h0 = inLeft ? last + 1 : last - 1;
     g.clear(h0, R, h0 + 1, R);
   }
-  const arm = Math.max(3.5, Math.min(7.5, (R - 1 - 2.75) / 2, hx - s.x - 2.6, s.x + s.w - hx - 2.6));
+  // The longest sails the sky and the site leave, less a little now and then: no two mills the same size.
+  const arm = Math.max(3.5, Math.min(7.5, (R - 1 - 2.75) / 2, hx - s.x - 2.6, s.x + s.w - hx - 2.6) - rng.range(0, 1.25));
   const hy = R - arm - 1.5;
   const top = Math.max(0, Math.floor(hy - arm - 2.5));
   const a: Record<string, Vec> = {
