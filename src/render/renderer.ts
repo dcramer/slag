@@ -189,7 +189,8 @@ export class Renderer {
       tint: level.theme.grade.tint,
       lift: level.theme.grade.lift,
     });
-    this.hud.draw(m, t, this.pw, this.ph);
+    if (!this.hud.hidden) this.hud.draw(m, t, this.pw, this.ph);
+    else this.hud.clear(this.pw, this.ph);
   }
 
   private updateCamera(m: Match, dt: number) {

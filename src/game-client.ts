@@ -45,6 +45,7 @@ export function bootGame(container: HTMLElement, room: string): void {
   const renderer = new Renderer(glCanvas, hudCanvas);
   renderer.hud.devices = input;
   renderer.hud.room = room;
+  renderer.hud.hidden = params.get('ui') === '0';
   const audio = createAudio();
 
   // --- local menus (DOM overlays) and profile ---------------------------------

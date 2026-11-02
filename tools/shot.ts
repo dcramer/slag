@@ -11,6 +11,7 @@
  *
  * Options: --out shots  --size 1280x720  --players 2  --frames N (sim frames to advance)
  *          --theme farm (force a theme; `levels --themes all` renders one level per theme)
+ *          --noui (hide the HUD, e.g. to review level shapes)
  * Software GL is slow; frames are advanced deterministically via slagDebug.step().
  */
 
@@ -30,7 +31,7 @@ const out = resolve(opt('out', 'shots')!);
 const [W, H] = opt('size', '1280x720')!.split('x').map(Number);
 const seed = opt('seed', 'demo');
 const theme = opt('theme');
-const tq = theme ? `&theme=${theme}` : '';
+const tq = (theme ? `&theme=${theme}` : '') + (argv.includes('--noui') ? '&ui=0' : '');
 const players = Number(opt('players', '2'));
 const frames = Number(opt('frames', '150'));
 mkdirSync(out, { recursive: true });

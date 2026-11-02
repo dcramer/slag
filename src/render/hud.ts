@@ -47,6 +47,8 @@ export class Hud {
     deviceLabel: (d) => d,
     hints: () => ({ confirm: 'Confirm', alt: 'Alt', jump: 'Jump', down: 'Down' }),
   };
+  /** Hide all UI (?ui=0): for screenshots / level review. */
+  hidden = false;
   /** Lobby/room code shown in the lobby (the URL is /r/<room>). */
   room = '';
   /** Device the mouse controls (gets name/settings buttons). */
@@ -57,6 +59,12 @@ export class Hud {
   private buttons: HudButton[] = [];
 
   constructor(private ctx: CanvasRenderingContext2D) {}
+
+  clear(pw: number, ph: number) {
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    this.ctx.clearRect(0, 0, pw, ph);
+    this.buttons = [];
+  }
 
   /** Topmost clickable region at (x, y) in view coords. */
   hit(x: number, y: number): HudButton | null {
