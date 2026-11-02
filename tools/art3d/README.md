@@ -4,6 +4,8 @@ The production pipeline for the cast: one Roster entry in docs/CHARACTERS.md in,
 
 One agent per kind, in a worktree of its own: [CHECKLIST.md](CHECKLIST.md) is the run sheet and the done list. This README is the how.
 
+The sources under `art/` (models, sheets, views) are in Git LFS (`.gitattributes`); builds and tests never read them, only the generated `frames.ts`. Fetch one kind's with `git lfs pull --include "art/sprites/KIND/**"`, and commit new ones as usual: the filter stores them in LFS.
+
 ```bash
 pnpm sprites KIND [--zoom 6 --only idle,run]   # trace the kind into src/render/cast/sprites/KIND/frames.ts; sheets in shots/art3d/
 pnpm sprites keys KIND [--keys launch,wall0]    # each keyed pose alone, both facings, while setting keys from the pose sheet
