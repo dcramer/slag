@@ -102,6 +102,7 @@ Set pieces keep their theme. Where one mocks a cliché, it says so in its look.
 | Theme | Piece | Mocks | Gag |
 |---|---|---|---|
 | castle | Boss-Room Cannon, Load-Bearing Chandelier, Door Knocker | Castle chandelier rides, the boss door | The ram has a door-knocker ring on its head. |
+| castle | The Gatehouse, the Bell Tower, the Boss Bridge; Portcullis, Murder Holes, Firebars | The castle gate and its drawbridge, the haunted belfry, the plumber's last castle: the bridge over lava, firebars, the axe that drops the bridge | The drawbridge hangs broken on one chain. The lever by the far gate that ought to drop the bridge is rusted solid. A Boss Bridge level may be named "{place}: The Princess Is Elsewhere". |
 | factory | Pancake Press, Forklift, Cog Lift | The factory level | The press leaves a pancake-shaped dent. |
 | jungle | Log Ride, Chase-Scene Boulder, Cursed Idol, Snapjaw, Log Trap | The rolling-boulder chase, the cursed idol, the man-eating plant, the swinging log trap | The boulder has a film-reel scratch line. The idol is a carved stone stela with a gem in its crown that glows when it fires. The snapjaw's lobes twitch before they shut, a plant and nothing more. The log is spiked at both ends and swings level on two ropes. |
 | volcano | Floor Is Lava, Magma Vent, Magma Spitter | The floor is lava | A couch-cushion stepping stone sits beside the plume. |
