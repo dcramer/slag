@@ -325,6 +325,7 @@ export class NetSession {
       } else this.tryResume();
     } else {
       this.role = 'guest';
+      this.resumed = true; // we joined a live room: its state wins over any local save
       this.synced = false;
       this.inbox.clear();
       this.wantSentTo = '';
@@ -336,6 +337,7 @@ export class NetSession {
 
   /** Guest → host: carry on from our confirmed frame; everyone gets our snapshot so stragglers line up. */
   private promote() {
+    this.resumed = true;
     this.queues.clear();
     for (const m of this.members) {
       if (m.id === this.self) continue;

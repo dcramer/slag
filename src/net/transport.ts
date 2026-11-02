@@ -196,6 +196,7 @@ export class LoopbackTransport implements Transport {
 
 const BC_HEARTBEAT_MS = 700;
 const BC_TIMEOUT_MS = 2500;
+const BC_DISCOVERY_MS = 250;
 
 type BcPacket = { k: 'hello' | 'beat' | 'bye'; from: string; at: number; reply?: boolean } | { k: 'msg'; from: string; to?: string; d: string };
 
@@ -214,6 +215,7 @@ export class BroadcastTransport implements Transport {
   private joinedAt = 0;
   private timer: ReturnType<typeof setInterval> | null = null;
   private lastSig = '';
+  private ready = false;
 
   constructor(
     readonly room: string,
@@ -231,8 +233,14 @@ export class BroadcastTransport implements Transport {
     this.ch.onmessage = (e) => this.onPacket(e.data as BcPacket);
     this.post({ k: 'hello', from: this.self, at: this.joinedAt });
     this.timer = setInterval(() => this.beat(), BC_HEARTBEAT_MS);
-    h.status('open');
-    this.emitMembers();
+    // Give existing tabs a moment to answer our hello before reporting presence,
+    // so a newcomer doesn't briefly believe it is alone (and host).
+    setTimeout(() => {
+      if (!this.ch) return;
+      this.ready = true;
+      h.status('open');
+      this.emitMembers();
+    }, BC_DISCOVERY_MS);
   }
 
   send(data: unknown, to?: string) {
@@ -292,6 +300,7 @@ export class BroadcastTransport implements Transport {
   }
 
   private emitMembers() {
+    if (!this.ready) return;
     const list = sortMembers([{ id: this.self, order: this.joinedAt }, ...[...this.seen.entries()].map(([id, s]) => ({ id, order: s.at }))]);
     const sig = list.map((m) => `${m.id}@${m.order}`).join();
     if (sig === this.lastSig) return;

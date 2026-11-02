@@ -48,6 +48,8 @@ Build original content. Use the genre's mechanics, but never copy another game's
 | `npm run level -- --stats 200` | Generation stats across many seeds: time, styles, how often a level is solvable without props. |
 | `npm run shot -- <scenario> [opts]` | Headless screenshots into `shots/` (gitignored). Runs `next build` if sources changed, then `next start` (set `SHOT_DEV=1` to use `next dev`). |
 | `npm run build` | Production bundle in `dist/`, which Vercel serves. |
+| `npm run relay` | Local room relay on `ws://127.0.0.1:8787` (same logic as the Cloudflare relay). Open `/r/<code>?relay=ws://127.0.0.1:8787` in two browsers. |
+| `npm run online-test` | Headless multi-page online test (BroadcastChannel + relay): join, race, host leaves, migration, refresh. |
 
 Screenshot scenarios (`tools/shot.ts`):
 
@@ -64,6 +66,7 @@ Dev URL params (`src/debug.ts`):
 - `?players=2` auto-joins and starts.
 - `?race=saw,laser` or `?race=all` jumps straight into a race with those props.
 - `?propseed=3`
+- `?net=off|bc` offline / BroadcastChannel (same-browser tabs); `?relay=ws://localhost:8787` a local relay. `?players`/`?race` imply offline.
 
 In the console, `slagDebug` exposes `quickStart`, `race`, `addProps`, `loadLevel`, `pause`, `step`, and `render`.
 
@@ -181,10 +184,11 @@ tests/           vitest
   - **Game logic stays client-side.** Next pages are thin: they validate params, render a shell, and load the game/codex through `next/dynamic(..., { ssr: false })` (`GameClient` → `GameMount`, `CodexClient` → `CodexMount`), so nothing in `src/` is compiled into the server bundle. `src/game-client.ts` and `src/codex/main.ts` start with `import 'client-only'`, which fails the build if a server module ever imports them. Server routes may import only tiny pure helpers (e.g. `src/game/room.ts`). Don't import React into `src/`.
   - Server code is limited to route handlers / server components in `app/`; keep it small and free.
   - Any server-side code must be small Vercel functions in `api/`. No long-lived servers, and nothing that costs money at our scale.
-- **Online play** is peer-to-peer over WebRTC with a host-authoritative star, input-only netcode (lockstep plus rollback in races), and serverless signaling. The full plan is in **docs/NETCODE.md**. Consequences for all code today:
-  - Keep sim state snapshot-friendly: plain data, no closures or class instances holding hidden state, no `Map` iteration-order dependence that isn't deterministic.
-  - Don't add new uses of `Math.sin`, `cos`, `atan2`, `exp`, `pow`, or `hypot` in `src/sim` or `src/gen` without a note. They will be replaced by deterministic `core/dmath.ts` versions, because those functions aren't bit-identical across browsers.
-  - Inputs are the only per-frame data that crosses the network. Never let render-side state influence the sim.
+- **Online play** (`src/net/`, `relay/`, **docs/NETCODE.md**): every browser on `/r/<code>` runs the same deterministic Match. A tiny Cloudflare Durable Object relays messages and owns presence; the earliest-joined connected peer is host and sequences everyone's inputs into per-frame bundles (lockstep; guests predict races locally). Hosts migrate automatically. Consequences for all code:
+  - Keep sim state snapshot-friendly (`src/net/snapshot.ts` must capture it): plain data, no closures or hidden state. New Match/RunWorld state needs a snapshot field and a test.
+  - Use `src/core/dmath.ts` (`dsin`, `dcos`, `datan2`, `dhypot`, `dpow`…) instead of `Math.sin/cos/atan2/exp/pow/hypot` and `**` in sim, game, and generator code; `tests/determinism-ban.test.ts` enforces it.
+  - Inputs and host-sequenced actions (`src/net/actions.ts`) are the only things that cross the network. Anything that changes the Match outside per-device input (names, rules, seating) must be a `NetAction`. Never let render-side state influence the sim.
+  - Match devices are global ids `<peer>:<device>` online; compare with `net.globalDevice(local)`.
 
 ## Code conventions
 
