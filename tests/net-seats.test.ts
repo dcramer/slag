@@ -5,7 +5,7 @@ import { roomSeed } from '../src/game/room';
 import { NetSession } from '../src/net/session';
 import { hashMatch } from '../src/net/snapshot';
 import { LoopbackHub } from '../src/net/transport';
-import { MAX_PLAYERS } from '../src/sim/constants';
+import { MAX_PLAYERS, POP_HOLD } from '../src/sim/constants';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
 
 /** Observers, seats and idle peers online (docs/NETCODE.md → Seats and observers). */
@@ -39,8 +39,15 @@ class Room {
   frozen = new Set<string>();
   frame = 0;
 
-  join(id: string, script: Script = still, watch = false): NetSession {
-    const s = new NetSession({ transport: this.hub.transport(id), match: new Match(roomSeed('SEATS')), now: () => this.hub.now, watch, name: () => `W${id}` });
+  join(id: string, script: Script = still, watch = false, more: { client?: string; banFrames?: number; dropFrames?: number } = {}): NetSession {
+    const s = new NetSession({
+      transport: this.hub.transport(id),
+      match: new Match(roomSeed('SEATS')),
+      now: () => this.hub.now,
+      watch,
+      name: () => `W${id}`,
+      ...more,
+    });
     this.peers.set(id, s);
     this.scripts.set(id, script);
     return s;
@@ -271,9 +278,79 @@ describe('idle peers', () => {
     const runnerB = () => a.match.run!.runners.find((x) => x.slot === slotB)!;
     r.run(90);
     expect(Math.abs(runnerB().body.vx)).toBeLessThan(1); // let go after SOFT_TICKS, and it has stopped
-    if (runnerB().alive) r.until(() => !runnerB().alive, IDLE_FRAMES + 60);
+    // An idle runner gives up through the self-destruct hold, so it pops POP_HOLD after it goes idle.
+    if (runnerB().alive) r.until(() => !runnerB().alive, IDLE_FRAMES + POP_HOLD + 60);
     r.frozen.delete('bbbb');
     r.run(30);
     expect(r.hashes().size).toBe(1);
   }, 20_000);
+});
+
+describe('kicks', () => {
+  it('keep the browser out until the ban runs out, whatever peer id it comes back with, across a host migration', () => {
+    const r = new Room();
+    const ban = 240;
+    const a = r.join('aaaa', still, false, { client: 'clientaaaaaa', banFrames: ban });
+    r.run(5);
+    const b = r.join('bbbb', still, false, { client: 'clientbbbbbb', banFrames: ban });
+    r.run(5);
+    const c = r.join('cccc', still, false, { client: 'clientcccccc', banFrames: ban });
+    r.until(() => seatedPeer(a, 'bbbb') && seatedPeer(a, 'cccc'), 300);
+    a.kick('bbbb');
+    r.run(20);
+    expect(b.status).toBe('kicked');
+    expect(b.kickedUntil).toBeGreaterThan(Date.now() + 2000);
+    r.leave('bbbb');
+    // A new tab of the same browser: a new peer id, the same client id.
+    const tab = r.join('b2b2', still, false, { client: 'clientbbbbbb' });
+    r.until(() => tab.status === 'kicked', 120);
+    expect(seatedPeer(a, 'b2b2')).toBe(false);
+    r.leave('b2b2');
+    // The host goes: the new host refuses it just the same.
+    r.leave('aaaa');
+    r.until(() => c.isHost && !c.paused, 600);
+    const again = r.join('b3b3', still, false, { client: 'clientbbbbbb' });
+    r.until(() => again.status === 'kicked', 120);
+    r.leave('b3b3');
+    // Once the ban has run out, it's let back in and seated.
+    r.until(() => c.match.frame > (c.ns.banned.clientbbbbbb ?? 0), ban + 600);
+    const back = r.join('b4b4', still, false, { client: 'clientbbbbbb' });
+    r.until(() => seatedPeer(c, 'b4b4'), 300);
+    expect(back.status).toBe('online');
+    expect(r.hashes().size).toBe(1);
+  }, 20_000);
+});
+
+describe('players gone for good', () => {
+  it('a player gone too long mid-match shows as away, then is dropped: its seat frees, and its look and points come back with it', () => {
+    const r = new Room();
+    const drop = 180;
+    const a = r.join('aaaa', player, false, { dropFrames: drop });
+    r.run(5);
+    a.act({ t: 'rules', rules: FAST });
+    r.join('bbbb', player);
+    r.join('cccc', player);
+    r.until(() => a.match.phase === 'run', 3000);
+    const before = a.match.players.find((p) => p.device === 'bbbb:kb1')!;
+    const look = before.character.seed;
+    r.leave('bbbb'); // the tab closed: no goodbye that keeps a seat
+    r.until(() => !!a.match.players.find((p) => p.device === 'bbbb:kb1')?.away, 120);
+    r.run(10);
+    expect(r.peers.get('cccc')!.match.players.find((p) => p.device === 'bbbb:kb1')!.away).toBe(true);
+    const space = a.space;
+    r.until(() => !!a.match.players.find((p) => p.device === 'bbbb:kb1')?.leaving, drop + 60);
+    expect(a.space).toBe(space + 1);
+    r.until(() => !seatedPeer(a, 'bbbb'), 3000);
+    const score = a.ns.parked.bbbb?.[0]?.score;
+    expect(score).toBeDefined();
+    // Back later: watching, and a Join seats it next round as it was.
+    const back = r.join('bbbb', player);
+    r.until(() => back.synced && !!back.watching, 300);
+    back.play();
+    r.until(() => seatedPeer(a, 'bbbb'), 4000);
+    const again = a.match.players.find((p) => p.device === 'bbbb:kb1')!;
+    expect(again.character.seed).toBe(look);
+    expect(again.score).toBe(score);
+    expect(r.hashes().size).toBe(1);
+  }, 30_000);
 });

@@ -63,7 +63,8 @@ function raceInputs(f: number): Record<string, InputFrame> {
 }
 
 describe('snapshot coverage', () => {
-  const howTo = 'add it to snapshotMatch/restoreMatch in src/net/snapshot.ts and bump SNAP_VERSION, or list it as derived here if a restore rebuilds it';
+  const howTo =
+    'add it to snapshotMatch/restoreMatch in src/net/snapshot.ts, or list it as derived here if a restore rebuilds it. On main, also bump SNAP_VERSION; in a worktree branch leave it, `pnpm land` bumps it once for the batch';
 
   it('accounts for every Match field', () => {
     const known = new Set(`${MATCH_FIELDS.saved} ${MATCH_FIELDS.derived}`.split(' '));

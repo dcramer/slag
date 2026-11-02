@@ -590,7 +590,7 @@ export function finishLine(c: Ctx, x: number, y: number, w: number, h: number) {
 // ---------------------------------------------------------------------------------------------------
 // Icons
 
-export type IconName = 'gear' | 'dice' | 'flag' | 'refresh' | 'copy' | 'pencil' | 'crown' | 'keyboard' | 'gamepad' | 'check' | 'alert' | 'eye';
+export type IconName = 'gear' | 'dice' | 'flag' | 'refresh' | 'copy' | 'pencil' | 'crown' | 'keyboard' | 'gamepad' | 'check' | 'alert' | 'eye' | 'unplugged';
 
 /** Simple line/solid icons, `s` px tall, centered at (cx, cy). */
 export function icon(c: Ctx, name: IconName, cx: number, cy: number, s: number, color: string) {
@@ -737,6 +737,28 @@ export function icon(c: Ctx, name: IconName, cx: number, cy: number, s: number, 
       c.fillStyle = PAL.ink;
       c.fillRect(-0.75, -1.8, 1.5, 3.6);
       c.fillRect(-0.75, 2.6, 1.5, 1.2);
+      break;
+    case 'unplugged':
+      // Disconnected: a plug and its socket pulled apart, a spark of a gap between.
+      c.beginPath();
+      c.roundRect(-5.5, -2.6, 3.6, 5.2, 0.8);
+      c.fill();
+      c.fillRect(-1.9, -1.8, 1.4, 1);
+      c.fillRect(-1.9, 0.8, 1.4, 1);
+      c.beginPath();
+      c.roundRect(1.9, -2.6, 3.6, 5.2, 0.8);
+      c.fill();
+      c.lineWidth = 1.3;
+      c.beginPath();
+      c.moveTo(-5.5, 0);
+      c.lineTo(-6.6, 0);
+      c.moveTo(5.5, 0);
+      c.lineTo(6.6, 0);
+      c.moveTo(-0.4, -4.4);
+      c.lineTo(0.9, -2.8);
+      c.moveTo(0.9, 2.8);
+      c.lineTo(-0.4, 4.4);
+      c.stroke();
       break;
     case 'eye':
       // Watching: an almond with a solid pupil.

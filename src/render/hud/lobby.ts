@@ -113,6 +113,7 @@ function playerCard(hud: Hud, p: Player, i: number, x: number, y: number, w: num
   // Header: player number, the host's tag or a remote player's ping, and the device.
   const peer = hud.net?.peers.find((q) => q.name === p.character.name);
   if (hud.net?.hostSlot === p.slot) tag(c, 'HOST', x + w / 2, y + 17.5, PAL.amber, PAL.ink, TYPE.caption, 'center');
+  else if (p.away) icon(c, 'unplugged', x + w / 2, y + 17.5, 10, PAL.danger);
   else if (peer && !peer.local && !peer.isHost && peer.pingMs !== undefined) ping(hud, peer.pingMs, x + w / 2, y + 17.5);
   hud.text(`P${p.slot + 1}`, x + 10, y + 17, 15, css(col, 22), 'left', DISPLAY, 400, 3);
   const pad = p.device.startsWith('pad');

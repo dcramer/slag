@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { IDLE_FRAMES, LOBBY_IDLE_FRAMES, Match } from '../src/game/match';
+import { POP_HOLD } from '../src/sim/constants';
 import { DEFAULT_RULES } from '../src/game/rules';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
 
@@ -74,7 +75,7 @@ describe('idle players', () => {
         m,
         () => m.phase === 'score',
         () => ({}),
-        IDLE_FRAMES + 200,
+        IDLE_FRAMES + POP_HOLD + 120, // an idle runner gives up through the self-destruct hold
       ),
     ).toBeGreaterThan(0);
     // Both ended the round AFK: one round counted towards losing the seat online, and any input wipes it.
@@ -104,7 +105,8 @@ describe('idle players', () => {
       stepUntil(
         m,
         () => m.phase === 'score',
-        (f) => ({ a: press({ altPressed: f % 50 === 0 }), b: press({ altPressed: f % 50 === 0 }) }),
+        // Self-destruct is a hold that needs a fresh press in the race: hold alt, pressing again now and then.
+        (f) => ({ a: press({ alt: true, altPressed: f % 400 === 0 }), b: press({ alt: true, altPressed: f % 400 === 0 }) }),
         4000,
       ),
     ).toBeGreaterThan(0);

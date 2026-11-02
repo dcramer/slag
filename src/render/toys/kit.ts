@@ -19,7 +19,7 @@ export interface D {
   H: number;
   by: number;
   top: number;
-  /** Facing: -1 or 1. */
+  /** Facing: -1 or 1. Kinds are authored facing right; multiply an x by `f` to put it on the front. */
   f: number;
   m: Mood;
   p: RunnerPose;
@@ -31,11 +31,50 @@ export interface D {
   v: readonly number[];
   /** Stride phase: wheels and legs turn with the distance travelled. */
   ph: number;
-  /** World position and scale of the body's origin, for emissive glows. */
+  /** World position and scale of the body's origin. */
   wx: number;
   wy: number;
   sc: number;
   sd: number;
+  /** How far the body's bend has carried the outline at height `u` (0 bottom, 1 top): hats and heads ride it. */
+  bx: (u: number) => number;
+  /** This frame's gait, for secondary motion (a lid lifting on the hop, a clapper swinging against the rock). */
+  gait: Gait;
+}
+
+/** What the frame hands a gait: the body's motion this frame. */
+export interface GaitIn {
+  m: Mood;
+  /** Stride phase, in radians of travel. */
+  ph: number;
+  t: number;
+  vx: number;
+  vy: number;
+  grounded: boolean;
+  /** Walking or running on the ground. */
+  moving: boolean;
+  /** 0 at a walk, 1 at a run. */
+  run: number;
+  seed: number;
+}
+
+/**
+ * A kind's own way of moving, on top of the shared squash and stretch: animation and pose only, the
+ * physics are everyone's. `pivot` is the height (0 bottom, 1 top, past 1 above) that `rot` turns about:
+ * a bell rocks from its crown, a duck from its wheels.
+ */
+export interface Gait {
+  hop?: number;
+  rot?: number;
+  pivot?: number;
+  sx?: number;
+  sy?: number;
+  /** Extra bend of the body toward where it goes, as a fraction of its height at the top. */
+  bend?: number;
+  /** How much of the shared lean it takes: a marching soldier stays upright. */
+  upright?: number;
+  /** A free 0..1 for the kind's own secondary motion (a spring's stretch, a leap's extension). */
+  k?: number;
 }
 
 export type Feet = 'peg' | 'web' | 'wheels' | 'spring' | 'none';
@@ -46,41 +85,89 @@ export type { Part } from '../fx';
 export interface ToyArt {
   /** Body multipliers around the shared 14×15 envelope, inside the range every kind shares. */
   size: [number, number];
-  /** The body outline, standing on y = 0, top at -H. */
-  shape: (W: number, H: number, v: readonly number[]) => P[];
+  /**
+   * The silhouette, hand-inked facing right, in body units: x across -0.5..0.5 of the width, y from 0 at
+   * the bottom up to -1 at the top. `M x y`, `L x y`, `Q cx cy x y`, `C x1 y1 x2 y2 x y`, `Z`.
+   */
+  outline: string;
+  /** How high the body's bottom sits above the floor: legs, wheels, a spring or a nozzle stand under it. */
+  lift: number;
   feet: Feet;
   arms: Arms;
-  /** Where the body's bottom sits above the floor, when the feet don't decide it (a top stands on its point). */
-  lift?: number;
+  gait: (g: GaitIn) => Gait;
   /** The face's shift toward where the toy faces, as a fraction of its width (a train's face is on its front). */
   faceX?: number;
-  /** Precesses as it goes, like a spinning top. */
-  spin?: boolean;
-  /** Bounces along when it moves (footless and spring toys, and the wind-up hoppers). */
-  hop?: boolean;
-  /** Waddles side to side on the walk and run, the way a wind-up does. */
-  waddle?: boolean;
   /** A trailing ribbon from the rig: a pull string, or a long scarf in the player's color. */
   rope?: { kind: 'string' | 'scarf'; len: number };
   /** The toy's own face (painted dots, a visor, a lamp...), in place of the shared cartoon eyes and mouth. */
   paintFace?: (d: D) => void;
-  /** Shiny metal or enamel: one hard glint on the lit shoulder. Matte paint, wood and slag get none. */
+  /** Shiny metal or enamel: one hard glint on the lit shoulder. Matte paint and wood get none. */
   shine?: boolean;
   /** Face overrides on the character's rolled one, for kinds that keep the cartoon face. */
   face?: (c: CharacterDef) => { eyes?: Partial<CharacterDef['eyes']>; mouth?: CharacterDef['mouth'] };
   /** Mitten color. */
   hands?: 'tin' | 'iron' | 'paint';
-  /** Behind the body (keys, handles, spines, fins). */
+  /** Behind the body (keys, handles, legs, fins). */
   back?: (d: D) => void;
   /** Inside the body, before the shadow: the player's band, label or panel, and the toy's own marks. */
   print?: (d: D) => void;
-  /** Inside the body, after the shadow: seams, rivets, glints, glowing cracks. */
+  /** Inside the body, after the shadow: seams, rivets, glints. */
   over?: (d: D) => void;
-  /** On the body, before the face (hats, caps, ears, spouts). */
+  /** On the body, before the face (hats, caps, spouts, stacks). */
   front?: (d: D) => void;
-  /** Over the face (beaks, snouts, grilles). */
+  /** Over the face (beaks, bills, grilles). */
   snout?: (d: D) => void;
   parts: readonly Part[];
+}
+
+/**
+ * The points of an authored outline at size W×H, facing right, bottom at y = 0. Curves are sampled
+ * evenly enough for the pen to swell along them; the result is cached by the caller.
+ */
+export function outlinePts(spec: string, W: number, H: number): P[] {
+  const tok = spec.trim().split(/[\s,]+/);
+  const pts: P[] = [];
+  let i = 0;
+  let cx = 0;
+  let cy = 0;
+  const num = () => Number(tok[i++]);
+  const at = (x: number, y: number): P => ({ x: x * W, y: y * H });
+  while (i < tok.length) {
+    const c = tok[i++];
+    if (c === 'M' || c === 'L') {
+      cx = num();
+      cy = num();
+      pts.push(at(cx, cy));
+    } else if (c === 'Q') {
+      const [x1, y1, x, y] = [num(), num(), num(), num()];
+      for (let j = 1; j <= 6; j++) {
+        const t = j / 6;
+        const u = 1 - t;
+        pts.push(at(u * u * cx + 2 * u * t * x1 + t * t * x, u * u * cy + 2 * u * t * y1 + t * t * y));
+      }
+      cx = x;
+      cy = y;
+    } else if (c === 'C') {
+      const [x1, y1, x2, y2, x, y] = [num(), num(), num(), num(), num(), num()];
+      for (let j = 1; j <= 8; j++) {
+        const t = j / 8;
+        const u = 1 - t;
+        pts.push(
+          at(
+            u * u * u * cx + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t * t * t * x,
+            u * u * u * cy + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t * y,
+          ),
+        );
+      }
+      cx = x;
+      cy = y;
+    }
+  }
+  // A closing point on top of the first would give the pen a zero-length joint.
+  const a = pts[0];
+  const b = pts[pts.length - 1];
+  if (pts.length > 1 && Math.hypot(a.x - b.x, a.y - b.y) < 0.05) pts.pop();
+  return pts;
 }
 
 // ------------------------------------------------------------------ materials
@@ -197,6 +284,8 @@ export function spot(s: CanvasRenderingContext2D, x: number, y: number, rx: numb
 
 /** A level band across the body from u0 to u1, cut off by the body's own edge (a print hook draws inside the clip). It stops just past the widest body, so nothing drawn reaches beyond it even unclipped. */
 export function band(d: D, u0: number, u1: number, fill: string, tilt = 0) {
+  // Never below the body's own bottom: on a toy standing low (a top on its point) it would reach the floor.
+  u0 = Math.max(u0, -0.4 / d.H);
   poly(
     d.s,
     [
@@ -265,10 +354,10 @@ export function seam(d: D) {
  * The wind-up key in the back: small, in steel, turning as the toy goes, its bow foreshortening edge-on.
  * Quiet on purpose: the player's color is the loudest thing on a toy.
  */
-export function key(d: D, u = 0.52) {
+export function key(d: D, u = 0.52, edge = 0.46) {
   const speed = d.m === 'run' ? 14 : d.m === 'walk' ? 7 : d.m === 'idle' ? 1.2 : 9;
   const a = d.t * speed + d.sd;
-  const x0 = -d.f * d.W * 0.46;
+  const x0 = -d.f * d.W * edge + d.bx(u);
   const y0 = Y(d, u);
   const x1 = x0 - d.f * 2.4;
   d.s.fillStyle = d.lk.ink;

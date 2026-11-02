@@ -87,22 +87,59 @@ function drawBall(rc: RC, x: number, y: number, base: HSL = { h: 230, s: 18, l: 
   fuse(rc, x, y);
 }
 
-/** Balance Patch: a disk device with an antenna and a version sticker. */
+/**
+ * Balance Patch: a squat puck of a device, a glass dome on top with a copper coil wound inside it, an
+ * antenna, vents and indicator lamps round its side, and the version sticker slapped across the front.
+ */
 function patchDisk() {
-  return sprite('bomb|emp', -9, -12.5, 18, 18, (g) => {
-    tick(g, 0, -4, 0, -10.6, 0.8, 1);
-    ball(g, 0, -11, 1.4, { h: 200, s: 80, l: 60 }, 2);
-    const shell = poly(-8, 2.4, -6.6, -1.4, -2.6, -3.6, 2.6, -3.6, 6.6, -1.4, 8, 2.4, 5, 4.4, -5, 4.4);
-    part(g, shell, METALS.steel.base, 3, { depth: 0.9, thin: 0.5, thick: 1.2 });
+  return sprite('bomb|emp2', -10, -13.5, 20, 20, (g) => {
+    const steel = METALS.steel.base;
+    // The antenna, out of the dome's crown.
     g.fillStyle = INK;
-    line(g, -7.6, 2, 7.6, 2, { w: 0.6, seed: 4, taper: [0.1, 0.1], press: 0.2 });
-    for (const lx of [-5, -2.5, 2.5, 5]) dot(g, lx, 3.2, 0.45, lx * 3, '#7fd6ff');
-    part(g, boxPts(-3.6, -2.8, 7.2, 3, 0.4, 5), { h: 50, s: 70, l: 88 }, 5, { depth: 0.2, thin: 0.3, thick: 0.55 });
+    line(g, 0.3, -5.6, 1.2, -11.2, { w: 1.2, seed: 1, taper: [0, 0.2], press: 0.1 });
+    g.fillStyle = '#aab2bf';
+    line(g, 0.3, -5.6, 1.2, -11.2, { w: 0.5, seed: 1, taper: [0, 0.2], press: 0.1 });
+    // The puck: a thick drum, its top face lit.
+    const drum = boxPts(-8.4, -1.4, 16.8, 5.6, 2.4, 3, 0.1);
+    part(g, drum, { ...steel, l: steel.l - 10 }, 3, { depth: 0.8, shade: -14, thin: 0.5, thick: 1.6 });
+    g.fillStyle = css(steel, 10);
+    path(g, ovalPts(-0.3, -0.9, 7.8, 1.8, 4, 0.03, 20));
+    g.fill();
+    g.fillStyle = css(steel, 26);
+    line(g, -6.4, -1.4, -1, -2.3, { w: 0.5, seed: 4, taper: [0.2, 0.4], press: 0 });
+    // Vents and lamps round the side.
+    for (const lx of [-6.4, -5, 5, 6.4]) tick(g, lx, 1.6, lx - 0.2, 3.2, 0.45, lx * 3, css(steel, -40, 1, 4));
+    for (const lx of [-3.6, 3.6]) dot(g, lx, 2.3, 0.6, lx * 5, '#7fd6ff');
+    // The dome: glass, a copper coil inside, a hard glint.
+    const dome = ovalPts(0, -1.4, 5, 4.6, 6, 0.02, 20).filter((p) => p.y <= -1.2);
+    dome.push({ x: 5, y: -1.2 }, { x: -5, y: -1.2 });
+    part(g, dome, { h: 198, s: 40, l: 72 }, 6, { depth: 0.5, shade: -12, thin: 0.4, thick: 1.1, ink: '#14303f' });
+    g.save();
+    path(g, dome);
+    g.clip();
+    for (const y of [-2.2, -3.5, -4.7]) {
+      g.fillStyle = '#5a2a10';
+      path(g, ovalPts(0, y + 0.25, 2.4, 0.75, y * 7, 0.03, 12));
+      g.fill();
+      g.fillStyle = '#e07a2e';
+      path(g, ovalPts(0, y, 2.2, 0.55, y * 7 + 1, 0.03, 12));
+      g.fill();
+    }
+    g.restore();
+    glint(g, poly(-3.6, -2.4, -3, -4.4, -1.4, -5.4), 'rgba(255,255,255,0.9)', 0.6);
+    // The collar the dome screws into.
+    part(g, boxPts(-5.6, -1.9, 11.2, 1.4, 0.4, 7), { ...steel, l: steel.l - 18 }, 7, { depth: 0.2, thin: 0.3, thick: 0.8 });
+    // The version sticker, slapped on crooked across the front.
+    g.save();
+    g.translate(0.4, 2.1);
+    g.rotate(-0.08);
+    part(g, boxPts(-3.4, -1.3, 6.8, 2.6, 0.4, 5), { h: 50, s: 70, l: 90 }, 5, { depth: 0.2, thin: 0.3, thick: 0.55 });
     g.fillStyle = '#1d2a50';
-    g.font = 'bold 2.2px sans-serif';
+    g.font = 'bold 2.1px sans-serif';
     g.textAlign = 'center';
     g.textBaseline = 'middle';
-    g.fillText('v1.0.1', 0, -1.25);
+    g.fillText('v1.0.1', 0, 0.1);
+    g.restore();
   });
 }
 
@@ -167,7 +204,7 @@ const LOOKS: Record<BombLook, (rc: RC, m: Bomb, x: number, y: number, rot: numbe
     const g = rc.g;
     const blue: HSL = { h: 200, s: 100, l: 60 };
     const pulse = 0.5 + 0.5 * Math.sin(rc.t * 8);
-    bulb(g, x, y - 11, 1.2 + pulse * 0.8, blue, 0.6 + pulse * 0.4);
+    bulb(g, x + 1.2, y - 11.4, 0.9 + pulse * 0.6, blue, 0.6 + pulse * 0.4);
     stamp(rc.s, patchDisk(), x, y);
     g.fillStyle = css(blue, 10, 0.35 * pulse);
     g.save();

@@ -14,7 +14,8 @@
  *   flow        as a person does it: Play on the menu, open the invite, press nothing; both peers see both bays
  *   fresh       Play on the menu, on a desktop and on a phone: alone in a new lobby, host, seated with the device in
  *               hand; then the other kind opens the invite and is seated the same way
- *   kick        the Host label everywhere and through a migration; kicks by keyboard and mouse, with no way back
+ *   kick        the Host label everywhere and through a migration; kicks by keyboard and mouse; a kicked page reloads into
+ *               its countdown, never seated, and Rejoins once the (shortened) ban runs out
  *   refused     a guest whose build can't load the host's snapshots says so
  *   view        real mouse input lands under the pointer, at every window shape, on every level size
  *   play        join, live cursors, claim race, a remote ghost, a race, refresh keeps the slot, next round
@@ -30,6 +31,8 @@
  *               waited on, the same state; then a late joiner mid-race watches, Joins with the card, is seated at the boundary
  *   seatrace    seven seated and two watchers who Join at the same moment for the last seat: one wins, the other is
  *               told and sees Match Full; a player leaves and the loser's Join lights up and works
+ *   gone        a guest's page closes mid-race: shown unplugged, the room plays on, its seat frees after the (shortened)
+ *               drop; then everyone leaves, and past the (shortened) room expiry the link starts a fresh room
  *   idle        a guest's tab hidden through an untimed pick and an untimed race: the room keeps going, it is
  *               handed a card and its runner gives up, and it agrees with the room once shown
  *   unset       production with no store credentials: the game degrades, with a clear status
@@ -54,7 +57,7 @@ const GROUPS: Record<string, string[]> = {
   lobby: ['flow', 'fresh', 'kick', 'view', 'refused'],
   migration: ['pick', 'place', 'run', 'duo', 'leave', 'twice'],
   feel: ['latency', 'hidden', 'contact'],
-  seats: ['observe', 'seatrace', 'idle'],
+  seats: ['observe', 'seatrace', 'idle', 'gone'],
   misc: ['play', 'bc', 'unset'],
 };
 const onlyArg = argv.includes('--only') ? argv[argv.indexOf('--only') + 1].split(',').flatMap((x) => GROUPS[x] ?? [x]) : null;
@@ -1180,7 +1183,7 @@ async function hostLabel(p: Page): Promise<number | undefined> {
 
 /** The host label on every screen, and following a migration; a kick by keyboard, then by mouse, with no way back. */
 async function kickScenario(browser: Browser, base: string) {
-  const r = await newRoom(browser, base, 'kick', '', { viewport: { width: 960, height: 540 }, visual: true });
+  const r = await newRoom(browser, base, 'kick', 'ban=4', { viewport: { width: 960, height: 540 }, visual: true });
   const A = await r.open('A');
   const a0 = await waitFor(A, 'host seated', (v) => v.players.length === 1 && v.isHost);
   const [B, C, D] = [await r.open('B'), await r.open('C'), await r.open('D')];
@@ -1224,18 +1227,31 @@ async function kickScenario(browser: Browser, base: string) {
       () => false,
     );
   check(seen, 'the kicked peer sees Kicked');
+  const kickedHud = async () =>
+    (await victim.evaluate(() => (window as any).slagDebug.renderer.hud.net?.arrival)) as { title: string; rejoinIn?: number } | undefined;
+  const k0 = await kickedHud();
+  check(k0?.title === 'Kicked' && (k0.rejoinIn ?? 0) > 0, `the kicked peer is told when it can come back (${k0?.title}, ${k0?.rejoinIn} s)`);
   await victim.screenshot({ path: `${out}/online-kick-kicked.png` }).catch(() => {});
-  await victim.waitForURL((u) => u.pathname === '/', { timeout: 30_000 }).catch(() => {});
-  check(new URL(victim.url()).pathname === '/', `the kicked peer lands on the main menu (${new URL(victim.url()).pathname})`);
   const after = await waitFor(A, 'kick applied', (v) => v.players.length === 3, 15_000);
   check(!after.players.some((q) => q.device.startsWith(`${victimId}:`)), 'the kicked player is gone from the host');
   const [watcher] = guests.values();
   const c1 = await waitFor(watcher, 'kick applied on a guest', (v) => v.players.length === 3, 15_000);
   check(!c1.players.some((q) => q.device.startsWith(`${victimId}:`)), 'the kicked player is gone for everyone');
-  // The history entry is the room; what's being checked is where that page sends you.
-  await victim.goBack({ waitUntil: 'commit', timeout: 60_000 }).catch(() => {});
-  await victim.waitForURL((u) => u.pathname === '/', { timeout: 60_000 }).catch(() => {});
-  check(new URL(victim.url()).pathname === '/', 'going back to the room lands on the main menu again');
+  // A reload inside the ban: the same screen, and the room never sees it.
+  await victim.reload();
+  await victim.waitForFunction(() => 'slagDebug' in window, null, { timeout: 60_000 });
+  const reloaded = await waitFor(victim, 'refused after a reload', (v) => v.status === 'kicked', 15_000);
+  check(reloaded.status === 'kicked' && ((await kickedHud())?.rejoinIn ?? 0) > 0, 'a reload during the ban is refused, with the countdown');
+  await sleep(1000);
+  check(!(await view(A)).players.some((q) => q.device.startsWith(`${victimId}:`)), 'the reloaded page is never seated');
+  // Once it runs out: Rejoin, and it's back in the lobby with a seat.
+  await victim.waitForFunction(() => (window as any).slagDebug.renderer.hud.net?.arrival?.rejoinIn === 0, null, { timeout: 30_000 });
+  await victim.keyboard.press('Enter');
+  await victim.waitForFunction(() => (window as any).slagDebug?.net?.status === 'online', null, { timeout: 60_000 }).catch(() => {});
+  const back = await waitFor(A, 'the kicked player back after the ban', (v) => v.players.length === 4, 30_000);
+  check(back.players.length === 4, 'after the ban, Rejoin seats it again');
+  const backId = (await view(victim)).self;
+  guests.set(backId, victim);
 
   // By mouse: the button on the bay.
   const spot = await A.evaluate(() => {
@@ -1246,10 +1262,13 @@ async function kickScenario(browser: Browser, base: string) {
   check(!!spot, 'each other bay has a Kick button');
   if (spot) {
     await clickView(A, spot.x, spot.y);
-    await waitFor(A, 'mouse kick applied', (v) => v.players.length === 2 && !v.players.some((q) => q.device === spot.device), 15_000);
+    await waitFor(A, 'mouse kick applied', (v) => v.players.length === 3 && !v.players.some((q) => q.device === spot.device), 15_000);
     guests.delete(spot.device.split(':')[0]);
   }
-  const [survivorId, survivor] = [...guests.entries()][0];
+  // The next host is the earliest to join of those left (the rejoined page came back last).
+  const order = (await A.evaluate(() => (window as any).slagDebug.net.members.map((m: any) => m.id))) as string[];
+  const survivorId = order.find((id) => guests.has(id))!;
+  const survivor = guests.get(survivorId)!;
   const left = (await view(A)).players.find((q) => q.device.startsWith(`${survivorId}:`))!;
 
   // The label moves with the host.
@@ -1681,6 +1700,46 @@ async function idleScenario(browser: Browser, base: string) {
   await r.dispose();
 }
 
+/**
+ * A guest's page closes mid-race: the others show it unplugged and play on, and its seat frees once the (shortened)
+ * drop has passed. Then everyone leaves; once the room has been empty past its (shortened) expiry, the link starts afresh.
+ */
+async function goneScenario(browser: Browser, base: string) {
+  const query = 'drop=6&expire=6';
+  const r = await newRoom(browser, base, 'gone', query);
+  const { pages, ids } = await startMatch(r, 3);
+  const [A, B, C] = pages;
+  await toPlace(pages);
+  await toRun(pages, ids);
+  const before = await view(A);
+  await C.close();
+  const away = await waitFor(B, 'the closed page shown gone', (v) => v.players.some((p) => p.device.startsWith(`${ids[2]}:`) && p.away), 30_000);
+  check(away.phase === 'run', 'a closed page shows as gone on the other peers, mid-race');
+  await r.shot(B, 'away-chip');
+  const rate = await hostRate(A);
+  check(rate > 40, `the room plays on without it (${rate.toFixed(0)} frames/s on the host)`);
+  const freed = await waitFor(A, 'its seat frees', (v) => v.space === before.space + 1, 30_000);
+  check(freed.space === before.space + 1, `its seat frees after the drop (${before.space} → ${freed.space} free)`);
+  await compareHashes([A, B], 'the two left agree');
+  // Everyone goes; past the room's expiry the link is a fresh room, not the old match resumed.
+  const ctx = A.context();
+  await A.close();
+  await B.close();
+  await sleep(9000);
+  const A2 = await ctx.newPage();
+  A2.on('pageerror', (e) => r.errors.push(`A2: ${String(e)}`));
+  await A2.goto(`${base}r/${r.name}?${query}`);
+  await A2.waitForFunction(() => 'slagDebug' in window, null, { timeout: 60_000 });
+  const fresh = await waitFor(A2, 'hosting the room again', (v) => v.isHost && v.status === 'online', 30_000);
+  await sleep(1000);
+  const f2 = await view(A2);
+  check(f2.phase === 'lobby' && f2.round === 0 && f2.players.length === 1, `an expired room's link starts a fresh room (${f2.phase}, round ${f2.round})`);
+  void fresh;
+  const real = r.errors.filter((e) => !/favicon/.test(e));
+  check(real.length === 0, `no page errors${real.length ? `:\n${real.join('\n')}` : ''}`);
+  await r.dispose();
+}
+
 async function bcScenario(browser: Browser, base: string) {
   const r = await newRoom(browser, base, 'bc', 'net=bc', { shared: true });
   const { pages } = await startMatch(r, 2);
@@ -1750,6 +1809,7 @@ try {
   if (wanted('observe')) await observeScenario(browser, server.base);
   if (wanted('seatrace')) await seatRaceScenario(browser, server.base);
   if (wanted('idle')) await idleScenario(browser, server.base);
+  if (wanted('gone')) await goneScenario(browser, server.base);
 } finally {
   await server.close();
 }

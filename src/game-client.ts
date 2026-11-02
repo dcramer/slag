@@ -9,7 +9,6 @@ import { loadRules, saveRules } from './game/rules';
 import { InputManager } from './input/input';
 import { TOUCH_DEVICE, touchModeFor } from './input/touch';
 import { connectRoom, type RoomConnection } from './net/client';
-import { wasKicked } from './net/identity';
 import { SNAP_VERSION } from './net/snapshot';
 import type { Nav, Unmount } from './router';
 import { HOME, lobby } from './routes';
@@ -45,10 +44,6 @@ let levelAhead: LevelAhead | null = null;
  * level is built off the main thread, so the page stays alive while it loads.
  */
 export async function mountLobby(root: HTMLElement, room: string, nav: Nav): Promise<Unmount> {
-  if (wasKicked(room)) {
-    nav.go(HOME, { replace: true });
-    return () => {};
-  }
   setTelemetryContext(() => ({ screen: 'lobby', room })); // a failed boot still says which lobby
   const container = document.createElement('div');
   container.style.cssText = 'position:fixed;inset:0;overflow:hidden;background:#07060b';
@@ -94,7 +89,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     // Read at seat time: touch only becomes the pointer device further down, so a phone read here would seat a keyboard.
     primaryDevice: () => input.pointerDevice,
     params,
-    onKicked: () => nav.go(HOME),
+    onRejoin: () => nav.hardLoad(lobby(room)),
     name: () => loadProfile().name ?? '',
     // Back from the back/forward cache with the session closed: join the room again.
     onRestored: () => nav.hardLoad(lobby(room)),
@@ -105,12 +100,14 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
   renderer.hud.devices = {
     deviceLabel: (d) => (net.isLocal(d) ? input.deviceLabel(localDev(d)) : 'online'),
     hints: (d) => input.hints(net.isLocal(d) ? localDev(d) : 'pad0'),
+    isLocal: (d) => net.isLocal(d),
     get settings() {
       return input.settings;
     },
   };
   renderer.hud.hidden = params.get('ui') === '0';
   const audio = createAudio();
+  audio.isLocal = (d) => net.isLocal(d);
   const inputMode = new InputModeTracker(window);
   watchTelemetry(room, match, conn, renderer);
 
@@ -200,6 +197,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
       case 'watch':
       case 'home':
       case 'offline':
+      case 'rejoin':
         runAction(b.action);
         return true;
       case 'join':
@@ -230,6 +228,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     else if (a === 'watch') conn.watch();
     else if (a === 'home') nav.go(HOME);
     else if (a === 'offline') conn.stayOffline();
+    else if (a === 'rejoin') conn.rejoin();
   }
 
   // --- the join card: a watcher's Join, over the live match ------------------------------

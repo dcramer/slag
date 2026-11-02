@@ -141,7 +141,7 @@ describe('a restored match is the level that was saved', () => {
       const seed = seedAt(i);
       const host = new Match(seed);
       host.setRules({ ...DEFAULT_RULES, gravity: 'high' });
-      applyAction(host, { parked: {}, kicked: {}, watching: {}, queue: [] }, { t: 'rules', rules: { ...host.rules, pickSeconds: 20 } });
+      applyAction(host, { parked: {}, kicked: {}, banned: {}, watching: {}, queue: [] }, { t: 'rules', rules: { ...host.rules, pickSeconds: 20 } });
       const guest = new Match(seed); // no saved rule of its own
       if (guest.level.gravity !== host.level.gravity) differed++;
       restoreMatch(guest, cloneSnap(snapshotMatch(host)));
@@ -198,7 +198,7 @@ describe('a snapshot of terrain this build does not generate', () => {
       match,
       now: () => hub.now,
       log: (m) => logs.push(m),
-      resume: () => ({ snap, ns: { parked: {}, kicked: {}, watching: {}, queue: [] } }),
+      resume: () => ({ snap, ns: { parked: {}, kicked: {}, banned: {}, watching: {}, queue: [] } }),
     });
     for (let i = 0; i < 10; i++) {
       hub.advance(TICK);

@@ -48,7 +48,9 @@ export type HudAction =
   /** Back to the main menu (a room that failed). */
   | 'home'
   /** Stay on this page and play here, offline (a room that failed). */
-  | 'offline';
+  | 'offline'
+  /** Kicked, and the ban ran out: try the room again. */
+  | 'rejoin';
 
 export interface HudButton {
   x: number;
@@ -64,6 +66,8 @@ export interface DeviceInfo {
   hints(device: string): { confirm: string; alt: string; jump: string; down: string };
   /** Live key bindings (InputManager has this), so prompts show remapped keys as keycaps. */
   settings?: InputSettings;
+  /** Does this player device play on this screen? Absent: everyone does (local play). */
+  isLocal?(device: string): boolean;
 }
 
 /** A connected peer in an online lobby (provided by the net layer). */
@@ -131,6 +135,8 @@ export interface NetArrival {
   here: number;
   /** Failed: playing here offline is possible. */
   offline?: boolean;
+  /** Kicked: seconds until the room takes us back (0: now, with Rejoin). */
+  rejoinIn?: number;
 }
 
 /** Screen-space UI on its own canvas (logical 768×432, scaled). */

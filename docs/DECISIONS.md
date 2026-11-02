@@ -203,6 +203,10 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `in progress` · SETPIECES.md → 3, DESIGN.md → Stage concepts
 - **Every theme has at least 12 decor pieces and at least 3 hazards unique to it.** "similarly we probably want no less than a dozen 'decor' pieces that can exist in each theme? and maybe no less than 3 unique hazards per theme?"
   2026-11-02 · `in progress` · DESIGN.md → Stage concepts
+- **The cast is animals plus parody critters, not toys.** Toys (foundry wind-ups) are dropped: "idk how we ended up with toys. that wasnt the original goal, and its not on theme". Critters may parody famous characters with our own design and a sound-alike name: "critters could include other parody things... like a fake metroid, a fake mario, a robot, a goose, etc. a fake engineer from tf2 etc". Changed: replaces direction C (foundry toys).
+  2026-11-02 · `in progress` · CHARACTERS.md, DESIGN.md → Players
+- **Art everywhere is cleaner, lighter and more hand-drawn: thinner, varied lines, less loud colour.** "i want more cleanly designed art that isnt so loud/bold lines etc and more visually hand draw"; applies to characters, parts, terrain, landmarks and UI.
+  2026-11-02 · `in progress` · ART.md → World art
 - **Lobby browser: a list of lobbies, showing only ones that aren't full by default.** Lobbies are public by default with a Private option. "lets make lobbies public by default with a private option"
   2026-11-02 · `planned` · TODO.md → 26
 - **Conveyors rotate: the rotation picks the belt's face.** A side belt grips and carries a clinging runner (an escalator when it runs up), a bottom belt shoves a head that bonks it. "you cant rotate conveyors.. the conveyor always stays on the top"
@@ -403,6 +407,9 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Self-destruct is a deliberate 1.25 s hold on every input, counted by the sim from a fresh press, with a ring around the runner everyone sees; letting go, steering, jumping or using an item cancels it. On touch it moves to its own small button under Settings.** "also the default self destruct behavior should probably be a bit less accidental both for mobile and the hotkey"
   2026-11-02 · `done` · DESIGN.md → Controls and UI, MOBILE.md, ART.md → Input prompts
   Changed: one press of alt popped you on keyboard and pad, and touch popped after a 0.35 s hold on ALT, the button that rotates during place.
+- **The self-destruct hold is 3 s, and your own charge counts down 3, 2, 1 in the middle of the screen.** "self destruct could probably be more like a 3 second hold" / "and show in the center of the screen as like a countdown so you dont miss it?"
+  2026-11-02 · `done` · DESIGN.md → Controls and UI, MOBILE.md
+  Changed: the hold was 1.25 s, with only the ring around the runner.
 - **Phones haven't been tried on real devices.**
   2026-11-02 · `open` · TODO.md → 6
 
@@ -445,6 +452,14 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `done` · DESIGN.md → Online (Arriving)
 - **Join is a clear button in the corner for anyone watching, in every phase, clickable at any time; disabled as Match Full with no seat; the host's order decides a race for the last seat and the loser is told (Taken).** "join should be a clear CTA in the corner or something that you can click at any time. it gets disabled if 'Match Full', and it should gracefully handle a race to join where the host decides who won"
   2026-11-02 · `done` · DESIGN.md → Online, NETCODE.md → Seats and observers
+- **A kick keeps the player out for 60 s, whatever tab or link they come back through, with a countdown and Rejoin.** "when you kick someone as host, it should stop them from joining for at least 30 seconds so they cant just insta rejoin"
+  2026-11-02 · `done` · DESIGN.md → Online, NETCODE.md → Seats and kicks
+  Changed: a kick sent you to the main menu for good (per tab).
+- **An empty room is over after 60 s: its link then starts a fresh room under the same code.** "if the host and players leave the game for idk more than 30? 60 seconds? it should probably no longer be an active session"
+  2026-11-02 · `done` · DESIGN.md → Online (Rooms end), NETCODE.md → Host election
+  Changed: a browser resumed a room it had saved up to 30 minutes before.
+- **A player gone without a goodbye for 40 s mid-match is dropped (seat freed, parts kept, look and points back if they rejoin); until then everyone sees an unplugged icon on their chip, score row and card.** "when players close their browser at some point they need to truly timeout or something vs just self destruct? ... their character card at the top should show some kind of disconnect icon"
+  2026-11-02 · `done` · DESIGN.md → Online (Gone players), NETCODE.md → Joining and reconnecting
 - **Idle players are detected (a soft disconnect), so the game doesn't wait on them forever.** "we should also detect idles (soft disconnect) so the game doesnt wait on an idle player forever"
   2026-11-02 17:52Z · `done` · DESIGN.md → Players (Nobody waits), NETCODE.md → Idle players and soft disconnects
 - **The idle timeouts: 30 s without input in a pick, place or race (from the phase's start), 60 s in the lobby; after that a player is AFK until their next input. Online an AFK player moves to the watchers: at once in the lobby, mid-match after two rounds in a row ended AFK. A guest sending nothing for 1 s has its held buttons let go.**
@@ -492,3 +507,5 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 07:22Z, 16:20Z · `done`
 - **Make the GitHub Actions check required (an owner step).**
   2026-11-02 · `open` · TODO.md → 10
+- **Apply the quick wins from the transcript review: guard-safe commands for worktree agents, one `pnpm land` per batch instead of a merge and a gate per branch, and `SNAP_VERSION` bumped once at landing, never in a branch.** "Apply quick wins"
+  2026-11-02 · `done` · AGENTS.md → Git workflow, `tools/land.ts`, `src/net/snapshot.ts`

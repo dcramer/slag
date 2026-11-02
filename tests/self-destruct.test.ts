@@ -6,7 +6,8 @@ import { TouchInput, touchLayout } from '../src/input/touch';
 import { decode, encode, held, merge } from '../src/net/codec';
 import { NetSession } from '../src/net/session';
 import { LoopbackHub } from '../src/net/transport';
-import { POP_HOLD, RUN_COUNTDOWN } from '../src/sim/constants';
+import { FPS, POP_HOLD, RUN_COUNTDOWN } from '../src/sim/constants';
+import { popCountdown } from '../src/sim/run';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
 
 const press = (k: Partial<InputFrame>): InputFrame => ({ ...NO_INPUT, ...k });
@@ -42,6 +43,18 @@ describe('self-destruct', () => {
     expect(r.alive).toBe(false);
     expect(r.cause).toBe('pop');
     expect(r.deathFrame - start).toBe(POP_HOLD - 1);
+  });
+
+  it('takes three seconds, counted down 3, 2, 1, each number coming up fresh', () => {
+    expect(POP_HOLD).toBe(3 * FPS);
+    const shown: number[] = [];
+    for (let pop = 1; pop < POP_HOLD; pop++) {
+      const { secs, since } = popCountdown(pop);
+      if (since === 0 || pop === 1) shown.push(secs);
+      expect(since).toBeGreaterThanOrEqual(0);
+      expect(since).toBeLessThan(FPS);
+    }
+    expect(shown).toEqual([3, 2, 1]);
   });
 
   it('letting go, steering, jumping or using cancels, and the next try needs a fresh press', () => {

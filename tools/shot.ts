@@ -17,7 +17,7 @@
  *   pnpm shot levels --seeds a,b,c,d      (or --count 12) → contact sheet
  *   pnpm shot props --count 24            → prop gallery (crate cards)
  *   pnpm shot cards --arch saw,block       → crate cards of those parts at every size (`platform:tetra`: only parts with that body look)
- *   pnpm shot parts --arch saw,flail       → those parts placed and raced, shot close up (`--styles all`: every launcher style; `--material conveyor`: platforms of that block; `--bait`: a runner in front of each)
+ *   pnpm shot parts --arch saw,flail       → those parts placed and raced, shot close up (`--styles all`: every launcher style; `--material conveyor`: platforms of that block; `--bait`: a runner in front of each; `--rot 1`: every part turned)
  *   pnpm shot parody --seed abc            → Launch Plate, Boost Strip, Panic Button, Fuse Crate, Y-Fling and Four-Square each worked by a runner
  *   pnpm shot looks [--only spikes,geysers,droppers] → set-piece looks: spikes on every face, geysers every way, droppers mid-drop
  *   pnpm shot buildparts                   → every building part in a race, on crate cards, and as place ghosts
@@ -55,7 +55,7 @@
  *          --q high (pin the quality tier: slow software GL otherwise reads as a slow device and drops it)
  *          --runframe N (race: stop on exact sim frame N)  --campin x,y,zoom (race: pin the view, for before/after sheets)
  *          --spread (race: stand the runners on open ground)
- *          --pop N (race: after --frames, the first runner holds self-destruct N frames: its charge ring mid-fill)
+ *          --pop N (race: after --frames, the first runner holds self-destruct N frames: ring and countdown)  --popall (every runner)
  *          --mode keyboard|gamepad|touch (footer prompt glyphs)  --net (fake online-lobby info)
  *          --noletters (no impact words)
  * Software GL is slow; frames are advanced deterministically via slagDebug.step().

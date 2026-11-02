@@ -27,8 +27,9 @@ export function arrival(hud: Hud, m: Match, t: number) {
   hud.wash();
   hud.stepEmbers(1 / 60);
   const failed = a.stage === 'failed';
+  const countdown = a.rejoinIn !== undefined;
   const w = 320;
-  const h = failed ? 96 : 118;
+  const h = failed ? (countdown ? 116 : 96) : 118;
   const cy = (f.safeY0 + f.y1) / 2;
   const done = hud.grow(VIEW_W / 2, cy, Math.min(hud.uiScale, (f.w - 24) / (w + 20), (f.h - 16) / 290));
   hud.logo(VIEW_W / 2, cy - 104, 34);
@@ -42,6 +43,10 @@ export function arrival(hud: Hud, m: Match, t: number) {
     const tw = c.measureText(a.title).width;
     icon(c, 'alert', VIEW_W / 2 - tw / 2 - 4, y + 72, 12, PAL.amber);
     hud.text(a.title, VIEW_W / 2 + 9, y + 72.5, TYPE.head, PAL.bone, 'center', UI, 700);
+    if (countdown && a.rejoinIn! > 0) {
+      const s = a.rejoinIn!;
+      hud.text(`You can rejoin in ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`, VIEW_W / 2, y + 96, TYPE.label, PAL.ash, 'center', UI, 700);
+    }
   } else {
     hud.text(a.title, VIEW_W / 2, y + 68, TYPE.head, PAL.bone, 'center', UI, 700);
     // A molten bead running along a slot: something is happening, with no promise of when.
@@ -56,7 +61,10 @@ export function arrival(hud: Hud, m: Match, t: number) {
     peers(hud, m, a, y + h - 13);
   }
   const by = y + h + 12;
-  if (failed && a.offline) {
+  if (countdown && a.rejoinIn === 0) {
+    hud.btn({ x: VIEW_W / 2 - 128, y: by, w: 124, h: 28, action: 'rejoin' }, 'Rejoin', 'primary', undefined, TYPE.label);
+    hud.btn({ x: VIEW_W / 2 + 4, y: by, w: 124, h: 28, action: 'home' }, 'Main Menu', 'secondary', undefined, TYPE.label);
+  } else if (failed && a.offline) {
     hud.btn({ x: VIEW_W / 2 - 128, y: by, w: 124, h: 28, action: 'offline' }, 'Play Offline', 'primary', undefined, TYPE.label);
     hud.btn({ x: VIEW_W / 2 + 4, y: by, w: 124, h: 28, action: 'home' }, 'Main Menu', 'secondary', undefined, TYPE.label);
   } else hud.btn({ x: VIEW_W / 2 - 62, y: by, w: 124, h: 28, action: 'home' }, 'Main Menu', failed ? 'primary' : 'ghost', undefined, TYPE.label);
