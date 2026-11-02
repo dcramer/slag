@@ -524,7 +524,17 @@ function rocketLivery(rc: RC, m: Deco, d: DrawCtx) {
   const y0 = p.rt * TILE;
   const y1 = (p.D - 3) * TILE;
   const body = boxPts(x0, y0, w, y1 - y0, 1.5, m.seed, 0.05);
-  tone(s, body, WHITE, { depth: 1.2 });
+  const paint: HSL = { ...WHITE, l: WHITE.l - 6 };
+  tone(s, body, paint, { depth: 1.2 });
+  // Round, not a slab: its far third in shade, cut by hand, and one lit stripe down the near side.
+  s.save();
+  path(s, body);
+  s.clip();
+  s.fillStyle = css(paint, -16);
+  path(s, boxPts(x0 + w * 0.7, y0 - 2, w * 0.4, y1 - y0 + 4, 0.5, m.seed + 7, 0.6));
+  s.fill();
+  glint(s, poly(x0 + w * 0.22, y0 + 4, x0 + w * 0.2, (y0 + y1) / 2, x0 + w * 0.23, y1 - 6), css(paint, 10), 1.6, m.seed + 8);
+  s.restore();
   // The roll pattern: black and white quarters in a band near the top.
   const by = y0 + TILE * 1.2;
   s.fillStyle = css({ h: 220, s: 12, l: 30 });
@@ -542,6 +552,7 @@ function rocketLivery(rc: RC, m: Deco, d: DrawCtx) {
   }
   s.fillStyle = css(RED, -2);
   cut(s, x0 + 1, y1 - 7, w - 2, 4, 13);
+  pen(s, body, m.seed + 9, 0.45, 1.1, 3, inkFor(paint));
   // The nose: a red cap on its tile, and the escape tower over it where there is one.
   const nx = (p.rx0 + 1) * TILE;
   part(s, boxPts(nx, y0 - TILE, TILE, TILE, 3, m.seed + 1, 0.05), RED, m.seed + 1, { depth: 0.8, thin: 0.4, thick: 0.9 });

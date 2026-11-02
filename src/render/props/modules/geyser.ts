@@ -75,12 +75,12 @@ interface Flow {
 const FLOWS: Partial<Record<GeyserLook, Flow>> = {
   water: {
     bands: [
-      [0.62, 'hsl(212 62% 34%)'],
-      [0.5, 'hsl(203 70% 48%)'],
-      [0.3, 'hsl(196 76% 66%)'],
-      [0.09, 'hsl(190 80% 90%)'],
+      [0.62, 'hsl(212 48% 34%)'],
+      [0.5, 'hsl(203 52% 48%)'],
+      [0.3, 'hsl(196 54% 66%)'],
+      [0.09, 'hsl(190 50% 88%)'],
     ],
-    ink: inkFor({ h: 212, s: 62, l: 34 }),
+    ink: inkFor({ h: 212, s: 48, l: 34 }),
     ripple: 1.1,
     billow: 0,
     rider: 'foam',
