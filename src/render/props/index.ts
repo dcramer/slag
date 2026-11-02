@@ -62,7 +62,12 @@ function cardBox(def: PropDef): { w: number; h: number } {
       rx = Math.max(rx, m.arm + m.radius);
       ry = Math.max(ry, m.arm + m.radius);
     }
-    if (m.type === 'piston') ry = Math.max(ry, m.reach * 0.6 + 1);
+    if (m.type === 'piston') {
+      // A crusher only reaches one way: its card fits the stroke, not a box round it.
+      const [dx, dy] = dirOf(m.angle);
+      fx += Math.abs(dx) * (m.reach + 0.5);
+      fy += Math.abs(dy) * (m.reach + 0.5);
+    }
     if (m.type === 'magnet') {
       rx = Math.max(rx, m.radius - 0.5);
       ry = Math.max(ry, m.radius - 0.5);
@@ -95,15 +100,23 @@ export function drawPreview(rc: RC, full: PropDef, cx: number, cy: number, bw: n
           footprint: full.footprint.slice(0, 4),
           modules: full.modules.map((m) => (m.type === 'rope' ? { ...m, length: Math.min(4, 1 + m.length * 0.43) } : m)),
         }
-      : full;
+      : {
+          ...full,
+          // A spin bar's orbit or a magnet's field would leave its head a speck in the middle of the card:
+          // the card draws a shorter arm and a tighter field, and the size still shows in the scale.
+          modules: full.modules.map((m) =>
+            m.type === 'swinger' ? { ...m, arm: Math.min(m.arm, 1.3) } : m.type === 'magnet' ? { ...m, radius: Math.min(m.radius, 1.9) } : m,
+          ),
+        };
   const { w, h } = cellsBounds(def.footprint);
-  // A jet shows its flame on the card, so the whole of it is centered and not just the nozzle.
+  // A jet shows its flame on the card and a crusher its stroke, so the whole of it is centered and not just the body.
   let [sx, sy] = [0, 0];
   for (const m of def.modules) {
-    if (m.type !== 'flame') continue;
+    if (m.type !== 'flame' && m.type !== 'piston') continue;
     const [dx, dy] = dirOf(m.angle);
-    sx -= (dx * m.length * TILE) / 2;
-    sy -= (dy * m.length * TILE) / 2;
+    const reach = m.type === 'flame' ? m.length : m.reach + 0.5;
+    sx -= (dx * reach * TILE) / 2;
+    sy -= (dy * reach * TILE) / 2;
   }
   // A charge's art stays one tile whatever its blast, so its size shows in the scale.
   const blast = def.modules[0]?.type === 'bomb' ? BLAST_SCALE[def.size ?? 'large'] : 1;

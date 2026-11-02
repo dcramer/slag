@@ -17,7 +17,8 @@ const K = 6;
 const MAX = 220;
 
 export interface Sprite {
-  c: HTMLCanvasElement;
+  /** Null with no DOM to bake in (tests draw through a mock context): stamping it draws nothing. */
+  c: HTMLCanvasElement | null;
   /** Where the bitmap's corner sits in the art's own px. */
   x: number;
   y: number;
@@ -31,6 +32,7 @@ const sprites = new Map<string, Sprite>();
 export function sprite(key: string, x: number, y: number, w: number, h: number, draw: (g: CanvasRenderingContext2D) => void): Sprite {
   const hit = sprites.get(key);
   if (hit) return hit;
+  if (typeof document === 'undefined') return { c: null, x, y, w, h };
   // Oldest first: a long match with many hues sheds what it drew first, not everything at once.
   if (sprites.size >= MAX) sprites.delete(sprites.keys().next().value!);
   const c = document.createElement('canvas');
@@ -47,7 +49,7 @@ export function sprite(key: string, x: number, y: number, w: number, h: number, 
 
 /** Stamp a sprite with its origin at (dx, dy) in the current transform. */
 export function stamp(s: CanvasRenderingContext2D, sp: Sprite, dx = 0, dy = 0) {
-  s.drawImage(sp.c, sp.x + dx, sp.y + dy, sp.w, sp.h);
+  if (sp.c) s.drawImage(sp.c, sp.x + dx, sp.y + dy, sp.w, sp.h);
 }
 
 export function path(g: CanvasRenderingContext2D, pts: readonly P[]) {
