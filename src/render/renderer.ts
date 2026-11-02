@@ -12,6 +12,7 @@ import { drawBlood } from './blood';
 import { Camera } from './camera';
 import { PhoneCam, phoneView } from './camera-follow';
 import { drawAfterimage, Rig } from './character';
+import { castDef, castLobby, castMode } from './cast';
 import { drawInkAccessory, drawInkRunner } from './ink-character';
 import { ForegroundLayer, Lettering, letteringAllowed } from './cel';
 import { Fx } from './fx';
@@ -205,6 +206,7 @@ export class Renderer {
     const dt = Math.min(0.05, this.last ? t - this.last : 1 / 60);
     this.last = t;
     const level = m.level;
+    if (castMode()) castLobby(m.players.map((p) => p.character.seed));
     const ww = level.w * TILE;
     const wh = level.h * TILE;
     // Bake resolution: enough for the race zoom, capped by a pixel budget so huge levels stay cheap.
@@ -646,6 +648,7 @@ export class Renderer {
     dt: number,
     wall = 0,
   ) {
+    c = castDef(c);
     let rig = this.rigs.get(slot);
     if (!rig || rig.rope.length === 0 || Math.hypot(rig.rope[0].x - x, rig.rope[0].y - y) > 60) {
       rig = new Rig();

@@ -24,6 +24,7 @@
  *   pnpm shot stack --seed abc             → stepped frames of runners stacking, walking as a stack, and a head-bounce
  *   pnpm shot grabs                        → stepped frames of a rope swing, a keg shot and a backfire
  *   pnpm shot lineup [--seeds a,b]         → eight runners in a spread of poses, at play scale and close up
+ *   pnpm shot cast [--cast a|b|c|all]     → character-direction prototypes (docs/CHARACTERS.md): lineups, lobby, catalog, sheets
  *   pnpm shot codex                        → /codex: full page, top, a part up close, and on a phone
  *   pnpm shot screens                      → the 404 and error screens, desktop and phone
  *   pnpm shot webgl                        → a race through a lost and restored WebGL context, then with shaders that won't build and with no WebGL2
@@ -48,6 +49,7 @@
  * Software GL is slow; frames are advanced deterministically via slagDebug.step().
  */
 
+import { shots as cast } from './shot/cast';
 import { browser, errors, scenario, server } from './shot/ctx';
 import { shots as motion } from './shot/motion';
 import { shots as mobile } from './shot/mobile';
@@ -56,7 +58,7 @@ import { shots as parts } from './shot/parts';
 import { shots as phases } from './shot/phases';
 import { shots as renderer } from './shot/renderer';
 
-const SCENARIOS = { ...phases, ...renderer, ...motion, ...parts, ...pages, ...mobile };
+const SCENARIOS = { ...phases, ...renderer, ...motion, ...parts, ...pages, ...mobile, ...cast };
 
 try {
   const run = SCENARIOS[scenario];

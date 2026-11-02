@@ -4,6 +4,7 @@ import { hash2 } from '../core/rng';
 import type { CharacterDef } from '../gen/character';
 import type { Rig } from './character';
 import { line, type P, shadeOf, sn, stroke } from './ink';
+import { castMode, drawCastAccessory, drawCastRunner } from './cast';
 import { glowDot } from './kit';
 
 /**
@@ -37,12 +38,12 @@ export interface InkTarget {
 }
 
 /** Walk and run speeds' midpoint (world px/s): above it the runner pumps its arms and leans in. */
-const RUN_POSE = 160;
+export const RUN_POSE = 160;
 /** World px of travel per radian of stride, so feet plant instead of skating. */
-const STRIDE = 4.2;
+export const STRIDE = 4.2;
 
 /** Colors and a hand of its own, rolled once per character: the per-frame draw builds no strings. */
-interface Look {
+export interface Look {
   ink: string;
   shade: string;
   base: string;
@@ -79,7 +80,7 @@ interface Look {
 
 const looks = new WeakMap<CharacterDef, Look>();
 
-function lookOf(c: CharacterDef): Look {
+export function lookOf(c: CharacterDef): Look {
   const have = looks.get(c);
   if (have) return have;
   const r = (k: number) => hash2(c.seed, k, 0x1a7);
@@ -118,13 +119,13 @@ function lookOf(c: CharacterDef): Look {
 }
 
 /** Dark of its own hue, never one black: the line belongs to what it outlines. */
-const inkOf = (c: HSL) => css({ h: c.h, s: Math.min(70, c.s), l: 11 });
+export const inkOf = (c: HSL) => css({ h: c.h, s: Math.min(70, c.s), l: 11 });
 
 /**
  * The color that, multiplied over `lit`, gives about `dark`: one flat shadow that darkens whatever it falls
  * on. No channel drops far below the mean, or a red stripe on a blue body would go black in the shade.
  */
-function ratio(lit: HSL, dark: HSL): string {
+export function ratio(lit: HSL, dark: HSL): string {
   const a = toRgb(lit);
   const b = toRgb(dark);
   const r = [0, 1, 2].map((i) => Math.min(1, b[i] / Math.max(a[i], 0.02)));
@@ -133,7 +134,7 @@ function ratio(lit: HSL, dark: HSL): string {
   return `rgb(${ch(0)} ${ch(1)} ${ch(2)})`;
 }
 
-function path(s: CanvasRenderingContext2D, pts: readonly P[]) {
+export function path(s: CanvasRenderingContext2D, pts: readonly P[]) {
   s.beginPath();
   for (let i = 0; i < pts.length; i++) {
     if (i) s.lineTo(pts[i].x, pts[i].y);
@@ -142,14 +143,14 @@ function path(s: CanvasRenderingContext2D, pts: readonly P[]) {
   s.closePath();
 }
 
-function poly(s: CanvasRenderingContext2D, pts: readonly P[], fill: string) {
+export function poly(s: CanvasRenderingContext2D, pts: readonly P[], fill: string) {
   s.fillStyle = fill;
   path(s, pts);
   s.fill();
 }
 
 /** A shape on a solid ink mass that's thin toward the light (upper left) and heavy away from it. */
-function inked(s: CanvasRenderingContext2D, pts: readonly P[], fill: string, ink: string, thin: number, thick: number) {
+export function inked(s: CanvasRenderingContext2D, pts: readonly P[], fill: string, ink: string, thin: number, thick: number) {
   const c = centroid(pts);
   mass(s, pts, ink, thin, thick, c.x, c.y);
   poly(s, pts, fill);
@@ -194,7 +195,7 @@ const penBuf: P[] = [];
  * line thins there but never breaks, so the silhouette stays as bold and closed as a solid outline.
  * The first lift sits on the lit side, nearest upper left, where a pen would start.
  */
-function contour(s: CanvasRenderingContext2D, pts: readonly P[], fill: string, ink: string, k: number, seed: number) {
+export function contour(s: CanvasRenderingContext2D, pts: readonly P[], fill: string, ink: string, k: number, seed: number) {
   const n = pts.length;
   const { x: cx, y: cy } = centroid(pts);
   mass(s, pts, ink, MASS[0] * k, MASS[1] * k, cx, cy);
@@ -240,7 +241,7 @@ function contour(s: CanvasRenderingContext2D, pts: readonly P[], fill: string, i
  * `toned` for a small oval (a hand, a shoe, a bulb), without the clip: the lit tone is the oval shrunk
  * and pulled up-left inside itself, which cuts the same sliver for a fraction of the cost.
  */
-function tonedOval(
+export function tonedOval(
   s: CanvasRenderingContext2D,
   x: number,
   y: number,
@@ -266,7 +267,7 @@ const PEN = [0.25, 0.5];
  * `inked`, with the body's light: the shape in its shadow tone and the lit tone pulled up-left over it,
  * so a hard sliver of shadow is left along the side away from the light. `d` is that sliver's width.
  */
-function toned(s: CanvasRenderingContext2D, pts: readonly P[], fill: string, shade: string, ink: string, thin: number, thick: number, d: number) {
+export function toned(s: CanvasRenderingContext2D, pts: readonly P[], fill: string, shade: string, ink: string, thin: number, thick: number, d: number) {
   inked(s, pts, shade, ink, thin, thick);
   s.save();
   path(s, pts);
@@ -276,7 +277,7 @@ function toned(s: CanvasRenderingContext2D, pts: readonly P[], fill: string, sha
   s.restore();
 }
 
-function oval(cx: number, cy: number, rx: number, ry: number, n = 12, rot = 0): P[] {
+export function oval(cx: number, cy: number, rx: number, ry: number, n = 12, rot = 0): P[] {
   const out: P[] = [];
   const c = Math.cos(rot);
   const sn0 = Math.sin(rot);
@@ -397,9 +398,9 @@ function pattern(s: CanvasRenderingContext2D, c: CharacterDef, lk: Look, W: numb
 }
 
 /** What the body is doing, read off its motion: the face and arms both act it out. */
-type Mood = 'idle' | 'walk' | 'run' | 'up' | 'fall' | 'cheer' | 'wall';
+export type Mood = 'idle' | 'walk' | 'run' | 'up' | 'fall' | 'cheer' | 'wall';
 
-function moodOf(p: RunnerPose): Mood {
+export function moodOf(p: RunnerPose): Mood {
   if (p.celebrate) return 'cheer';
   if (!p.grounded) {
     if (p.wall) return 'wall';
@@ -410,7 +411,7 @@ function moodOf(p: RunnerPose): Mood {
 }
 
 /** Where each hand goes, relative to its shoulder, for side -1 (left) and 1 (right). */
-function hand(m: Mood, side: number, f: number, ph: number, t: number, L: number, wall: number): P {
+export function hand(m: Mood, side: number, f: number, ph: number, t: number, L: number, wall: number): P {
   switch (m) {
     case 'idle':
       return { x: side * 2.3, y: L * 0.78 + Math.sin(t * 2.2 + side) * 0.25 };
@@ -435,7 +436,7 @@ function hand(m: Mood, side: number, f: number, ph: number, t: number, L: number
   }
 }
 
-function arm(s: CanvasRenderingContext2D, lk: Look, sx: number, sy: number, h: P, side: number, k: number) {
+export function arm(s: CanvasRenderingContext2D, lk: Look, sx: number, sy: number, h: P, side: number, k: number) {
   const hx = sx + h.x;
   const hy = sy + h.y;
   // A little elbow, bent outward, so the arm is a gesture and not a stick.
@@ -452,7 +453,7 @@ function arm(s: CanvasRenderingContext2D, lk: Look, sx: number, sy: number, h: P
   tonedOval(s, hx, hy, 1.95, 1.75, 9, lk.hand, lk.handShade, lk.ink, 0.6 * k, 1 * k, 0.6);
 }
 
-function eyes(
+export function eyes(
   rc: { g: CanvasRenderingContext2D | null },
   s: CanvasRenderingContext2D,
   c: CharacterDef,
@@ -562,7 +563,7 @@ function eyes(
   }
 }
 
-function mouth(s: CanvasRenderingContext2D, c: CharacterDef, lk: Look, W: number, H: number, by: number, p: RunnerPose, m: Mood) {
+export function mouth(s: CanvasRenderingContext2D, c: CharacterDef, lk: Look, W: number, H: number, by: number, p: RunnerPose, m: Mood) {
   const r = c.eyes.size * 1.24 * (c.eyes.count === 3 ? 1.2 : 1);
   const my = Math.min(by - 2.6, by - H * c.eyes.y + r + 2.9);
   const mx = clamp(p.facing * 1.5, -W / 2 + 4, W / 2 - 4);
@@ -774,6 +775,8 @@ function topper(
 
 /** Draw a runner with feet centered at (x, y). */
 export function drawInkRunner(rc: InkTarget, c: CharacterDef, x: number, y: number, p: RunnerPose) {
+  // Character-direction prototypes (`?cast=a|b|c`, docs/CHARACTERS.md): debug only, players never see them.
+  if (castMode() && drawCastRunner(rc, c, x, y, p)) return;
   const s = rc.s;
   const lk = lookOf(c);
   const W = 14 * c.sw;
@@ -897,6 +900,7 @@ export function drawInkRunner(rc: InkTarget, c: CharacterDef, x: number, y: numb
  */
 export function drawInkAccessory(s: CanvasRenderingContext2D, c: CharacterDef, rig: Rig) {
   if (c.accessory === 'none' || rig.rope.length < 2) return;
+  if (castMode() && drawCastAccessory(s, c, rig)) return;
   const lk = lookOf(c);
   const pts = rig.rope;
   const n = pts.length;
