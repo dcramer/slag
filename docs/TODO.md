@@ -59,10 +59,14 @@ Size tiers for parts are a mapping of the old rolled ranges, so check them too; 
 ## 14. Clear the lint warnings
 `pnpm check` prints 7 warnings, in `src/ui/touch/overlay.ts`, `src/ui/touch/device.ts`, `src/input/input.ts`, `src/render/props/modules/vehicle.ts` and `src/audio/system.ts`. AGENTS.md treats warnings as real findings. Do it with or after item 6, which also touches the touch code.
 
-## 21. Hand-drawn ink art
-Terrain, characters, building parts, spikes, the mystery crate and bombs are inked. Still to do, following `docs/PARODY.md`: drill, ring charge, EMP, launchers, flail and swinger arms, piston, laser, tesla, magnet, fan, portal, vehicles, the flame nozzle, decor, and glacier and space set pieces.
+## 21. Ink art polish
+Everything is inked, from terrain and characters to parts, items, set pieces and decor. What's left:
 
-Rare 165–260 ms stalls remain on level load (likely GC from resizing bake canvases; try grow-only canvases).
+- Sky, cloud and blur canvases are reallocated on every level load, which is the likely cause of farm's ~110 ms first-load spike.
+- Crate cards: the crusher head reads thin, and the Chain Chump ball is small.
+- The space comm array uses the shared antenna art.
+- Rooftops' big grey blocks have outlines but no marks.
+- Ice and slime coat gags from `docs/PARODY.md` aren't drawn.
 
 ## 15. Parody names: decide on sound-alikes
 Names now parody genre tropes (`docs/PARODY.md`). A few are deliberate sound-alikes of trademarked names: Chain Chump, Thwunk, the -omb suffix, Master Noodle, Yolo Blocks, Coil Pup. Decide whether to keep them.
