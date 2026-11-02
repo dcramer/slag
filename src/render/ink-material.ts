@@ -152,6 +152,8 @@ interface Coursing {
   long: number;
   /** Plates and boards line up; bricks stagger. */
   stack?: boolean;
+  /** Cast in one batch: block tones stay close, or a wall of panels reads as a checkerboard. */
+  even?: boolean;
   /** What a block has on it, instead of chisel marks. */
   mark?: (p: Paint, x0: number, y0: number, x1: number, y1: number, seed: number) => void;
 }
@@ -161,8 +163,12 @@ function masonry(c: Coursing): InkMaterial {
   return (p) => {
     const { T, seed, ink, area } = p;
     fillArea(p, css(shift(T.dark, 3, -6)));
-    const tones = [css(shift(T.base, 7, -2)), css(T.base), css(shift(T.base, -5, 2)), css(shift(T.light, -6, -6)), css(shift(T.base, 3, 4, 6))];
-    const deep = [css(shift(T.base, -6, 0)), css(shift(T.base, -9, 2)), css(shift(T.base, -12, 2)), css(shift(T.base, -4, -4)), css(shift(T.base, -8, 4, 6))];
+    const tones = c.even
+      ? [css(shift(T.base, 3, -1)), css(T.base), css(shift(T.base, -3, 1)), css(shift(T.base, 6, -3)), css(shift(T.base, 1, 2, 4))]
+      : [css(shift(T.base, 7, -2)), css(T.base), css(shift(T.base, -5, 2)), css(shift(T.light, -6, -6)), css(shift(T.base, 3, 4, 6))];
+    const deep = c.even
+      ? [css(shift(T.base, -6, 0)), css(shift(T.base, -8, 1)), css(shift(T.base, -10, 2)), css(shift(T.base, -5, -2)), css(shift(T.base, -7, 2, 4))]
+      : [css(shift(T.base, -6, 0)), css(shift(T.base, -9, 2)), css(shift(T.base, -12, 2)), css(shift(T.base, -4, -4)), css(shift(T.base, -8, 4, 6))];
     const shade = css(shift(T.dark, 2, 6));
     const lit = css(shift(T.light, 10, -8));
     const r0 = Math.floor(area.y0 / c.h) - 1;
@@ -430,36 +436,139 @@ const columnar: InkMaterial = (p) => {
   }
 };
 
-/** Poured concrete: board marks from the formwork, tie holes, and a stain under each one. */
-const poured: InkMaterial = (p) => {
-  const { g, T, seed, ink, area } = p;
-  fillArea(p, css(T.base));
-  g.fillStyle = css(shift(T.base, -5, 1));
-  tonePatch(p, (d) => d >= 3);
-  const H = 26;
-  g.fillStyle = css(shift(T.dark, 8, -2));
-  for (let k = Math.floor(area.y0 / H) - 1; k * H < area.y1 + H; k++) {
-    for (let c = Math.floor(area.x0 / 60) - 1; c * 60 < area.x1 + 60; c++) {
-      if (hash2(c, k, seed) > 0.6) continue;
-      line(p.g, c * 60 + hash2(c, k, seed + 1) * 20, k * H, c * 60 + 40 + hash2(c, k, seed + 2) * 20, k * H + (hash2(c, k, seed + 3) - 0.5) * 1.5, {
-        w: 0.9,
-        seed: c + k,
-        taper: [0.2, 0.3],
-      });
+/** Spray paint a city's walls carry: hot pink, cyan, acid yellow. */
+const SPRAY: HSL[] = [
+  { h: 322, s: 85, l: 62 },
+  { h: 188, s: 80, l: 56 },
+  { h: 56, s: 90, l: 58 },
+];
+
+/**
+ * A cast panel of a city block's concrete: the form's tie holes in a grid, each a recess with a lit lip,
+ * rust weeping from one now and then, a cold joint where a pour stopped, a chipped corner, a patch, and
+ * once in a long while a tag sprayed over it or a flyer pasted up.
+ */
+function concreteMarks(p: Paint, x0: number, y0: number, x1: number, y1: number, sd: number) {
+  const { g, T, ink } = p;
+  const w = x1 - x0;
+  const h = y1 - y0;
+  const r = hash2(sd, 1, 9);
+  if (r < 0.07) {
+    // A patch: newer, lighter render troweled over a repair, its edge not quite square.
+    const px = x0 + 4 + hash2(sd, 2, 9) * (w - 18);
+    const py = y0 + 4 + hash2(sd, 3, 9) * (h - 14);
+    const pw = 9 + hash2(sd, 4, 9) * 6;
+    const ph = 6 + hash2(sd, 5, 9) * 3;
+    g.fillStyle = css(shift(T.light, -4, -8));
+    g.beginPath();
+    g.moveTo(px, py + 0.4);
+    g.lineTo(px + pw, py);
+    g.lineTo(px + pw + 0.5, py + ph);
+    g.lineTo(px + 0.3, py + ph - 0.3);
+    g.closePath();
+    g.fill();
+    g.fillStyle = css(shift(T.dark, 4));
+    line(g, px + 0.3, py + ph - 0.2, px + pw + 0.5, py + ph, { w: 0.7, seed: sd, taper: [0.2, 0.4] });
+    line(g, px + pw + 0.2, py + 0.4, px + pw + 0.5, py + ph - 0.6, { w: 0.6, seed: sd + 1, taper: [0.2, 0.5] });
+  }
+  // Tie holes: two across, two down, in the same place on every panel the form cast.
+  const holes: [number, number][] = [];
+  for (const fx of [0.22, 0.78]) for (const fy of [0.28, 0.72]) holes.push([x0 + w * fx, y0 + h * fy]);
+  const lip = css(shift(T.light, 8, -8));
+  for (const [hx, hy] of holes) {
+    g.fillStyle = ink;
+    blob(g, hx, hy, 1.05, sd + hx, 1, 0.1);
+    g.fill();
+    g.fillStyle = lip;
+    line(g, hx - 0.9, hy + 1.3, hx + 1.1, hy + 0.8, { w: 0.55, seed: sd + hy, taper: [0.3, 0.3], press: 0 });
+  }
+  if (r > 0.62) {
+    // Rust weeping from a tie hole, pooling a little at the foot of the streak.
+    const [hx, hy] = holes[Math.floor(hash2(sd, 6, 9) * 4)];
+    const len = 6 + hash2(sd, 7, 9) * Math.min(14, y1 - hy - 1);
+    g.fillStyle = css({ h: 24, s: 38, l: Math.max(18, T.base.l - 8) }, undefined, 0.7);
+    line(g, hx, hy + 1, hx + (hash2(sd, 8, 9) - 0.5) * 1.4, hy + 1 + len, { w: 1.5, seed: sd + 2, taper: [0.05, 0.85], press: 0.5 });
+  }
+  const r2 = hash2(sd, 9, 9);
+  if (r2 < 0.3) {
+    // A cold joint: where one pour stopped and the next began, a broken line across the panel.
+    const cy = y0 + h * (0.45 + hash2(sd, 10, 9) * 0.1);
+    g.fillStyle = css(shift(T.dark, 6, -2));
+    const a = x0 + 2 + hash2(sd, 11, 9) * 6;
+    const b = x1 - 2 - hash2(sd, 12, 9) * 10;
+    line(g, a, cy, b, cy + (hash2(sd, 13, 9) - 0.5) * 1.2, { w: 0.75, seed: sd + 3, taper: [0.2, 0.3], press: 0.3 });
+  } else if (r2 < 0.42)
+    crack(p, x0 + w * (0.3 + hash2(sd, 14, 9) * 0.4), y0 + 3, 1 + hash2(sd, 15, 9) * 1.2, Math.min(h - 4, 10 + hash2(sd, 16, 9) * 8), sd + 4);
+  else if (r2 < 0.52) {
+    // A chipped corner: the aggregate shows where it spalled off.
+    const left = hash2(sd, 17, 9) < 0.5;
+    const cx = left ? x0 + 0.5 : x1 - 0.5;
+    const cy = y1 - 0.5;
+    const s = left ? 1 : -1;
+    g.fillStyle = css(shift(T.dark, 2, 4));
+    g.beginPath();
+    g.moveTo(cx, cy - 4.5);
+    g.lineTo(cx + s * 2.2, cy - 2.6);
+    g.lineTo(cx + s * 4.8, cy - 0.4);
+    g.lineTo(cx, cy);
+    g.closePath();
+    g.fill();
+    g.fillStyle = ink;
+    line(g, cx, cy - 4.5, cx + s * 2.2, cy - 2.6, { w: 0.6, seed: sd + 5, taper: [0.2, 0.2] });
+    line(g, cx + s * 2.2, cy - 2.6, cx + s * 4.8, cy - 0.4, { w: 0.6, seed: sd + 6, taper: [0.2, 0.2] });
+    g.fillStyle = css(shift(T.light, -2, -10));
+    for (let i = 0; i < 3; i++) {
+      blob(g, cx + s * (0.9 + hash2(sd, 18 + i, 9) * 1.6), cy - 0.9 - hash2(sd, 21 + i, 9) * 1.8, 0.35, sd + i, 1, 0.1);
+      g.fill();
     }
   }
-  eachTile(p, (x, y, wx, wy) => {
-    const r = hash2(wx, wy, seed + 4);
-    const sd = wx * 7 + wy * 3;
-    if ((x + y * 3) % 5 === 0 && r < 0.5) {
-      g.fillStyle = ink;
-      blob(g, wx + 8, wy + 8, 1, sd, 1, 0.12);
-      g.fill();
-      g.fillStyle = css(shift(T.dark, 10, -4), undefined, 0.65);
-      line(g, wx + 8, wy + 9, wx + 8.4, wy + 15 + r * 12, { w: 1.5, seed: sd, taper: [0.1, 0.8] });
-    } else if (r > 0.9) crack(p, wx + 4, wy + 3, 1.2, 9 + r * 8, sd);
-  });
-};
+  const r3 = hash2(sd, 24, 9);
+  if (r3 < 0.035 && w > 30) {
+    // A tag: one loop-and-swash in spray paint, never a word.
+    const col = SPRAY[Math.floor(hash2(sd, 25, 9) * SPRAY.length)];
+    const tx = x0 + 6 + hash2(sd, 26, 9) * (w - 26);
+    const ty = y0 + h * 0.5;
+    const pts: P[] = [];
+    for (let i = 0; i <= 22; i++) {
+      const t = i / 22;
+      pts.push({ x: tx + t * 16 + Math.sin(t * 14 + sd) * 2.4, y: ty + Math.cos(t * 9 + sd) * 3.4 - t * 2 });
+    }
+    g.fillStyle = css(col, -28);
+    stroke(
+      g,
+      pts.map((q) => ({ x: q.x + 0.5, y: q.y + 0.6 })),
+      { w: 1.6, seed: sd + 7, taper: [0.1, 0.3], press: 0.4 },
+    );
+    g.fillStyle = css(col);
+    stroke(g, pts, { w: 1.2, seed: sd + 7, taper: [0.1, 0.3], press: 0.4 });
+    line(g, tx - 1, ty + 5, tx + 17, ty + 3.4, { w: 0.9, seed: sd + 8, taper: [0.05, 0.6], press: 0.5 });
+  } else if (r3 < 0.07 && h > 20) {
+    // A flyer pasted up, one corner torn off, a headline and two lines of type.
+    const fx = x0 + 5 + hash2(sd, 27, 9) * (w - 18);
+    const fy = y0 + 4 + hash2(sd, 28, 9) * (h - 18);
+    const paper = { h: 48, s: 30, l: 86 };
+    g.fillStyle = css(paper, -24);
+    g.fillRect(fx + 0.8, fy + 0.8, 8, 10);
+    g.fillStyle = css(paper);
+    g.beginPath();
+    g.moveTo(fx, fy);
+    g.lineTo(fx + 8, fy);
+    g.lineTo(fx + 8, fy + 7.4);
+    g.lineTo(fx + 6.2, fy + 8.2);
+    g.lineTo(fx + 5.4, fy + 10);
+    g.lineTo(fx, fy + 10);
+    g.closePath();
+    g.fill();
+    g.fillStyle = css(SPRAY[Math.floor(hash2(sd, 29, 9) * SPRAY.length)], -12);
+    g.fillRect(fx + 1, fy + 1.2, 6, 2.2);
+    g.fillStyle = ink;
+    line(g, fx + 1.2, fy + 5, fx + 6.6, fy + 5, { w: 0.5, seed: sd + 9, taper: [0.1, 0.1], press: 0 });
+    line(g, fx + 1.2, fy + 6.8, fx + 5, fy + 6.8, { w: 0.5, seed: sd + 10, taper: [0.1, 0.1], press: 0 });
+  }
+}
+
+/** A city block's concrete: cast panels in a stacked grid, each with its own tone and its own wear. */
+const castPanels = masonry({ h: 32, w: 48, stray: 0, round: 1.2, long: 0.08, stack: true, even: true, mark: concreteMarks });
 
 /** Packed sand: ripples, and grit that gathers in them. */
 const sand: InkMaterial = (p) => {
@@ -656,7 +765,7 @@ export const INK_MATERIALS: Record<TerrainKind, InkMaterial> = {
   planks: boards,
   metal: plates,
   rustplate: rusted,
-  concrete: poured,
+  concrete: castPanels,
   ice: glass,
   regolith,
   hull: hullPlates,
