@@ -311,7 +311,7 @@ function drawSnowball(rc: RC, p: Projectile, _a: number, emit?: Emit) {
   const s = rc.s;
   const r = 5.5;
   const spin = p.x / r;
-  ball(s, p.x, p.y, r, SNOW, p.id);
+  ball(s, p.x, p.y, r, SNOW, p.id, undefined, '#56708a');
   s.fillStyle = css(SNOW, -16);
   for (let k = 0; k < 3; k++) {
     const a = spin + k * 2.1;

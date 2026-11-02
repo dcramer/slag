@@ -207,7 +207,7 @@ function cornice(rc: RC, _m: Cannon, _d: DrawCtx, q: CannonPose) {
     [-10.5, -14.5, 3.2],
     [-12.8, -18.6, 2.6],
   ])
-    ball(s, bx, by, r, SNOW, bx);
+    ball(s, bx, by, r, SNOW, bx, undefined, '#56708a');
   const drift = poly(-20, 0, -18, -6, -12, -10.5, -4, -12.5, 4, -12, 10, -10.5, 15, -9, 16.5, -7.4, 13, -6.2, 9, -5.4, 6, -3, 4, 0);
   tone(s, drift, SNOW, { depth: 1.4 });
   for (let k = 0; k < 3; k++) {

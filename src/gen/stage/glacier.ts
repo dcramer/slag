@@ -70,7 +70,7 @@ function twoGap(gravity?: number): number {
  * (wide levels). A level built round a landmark has little room left for the sculptor's own crevasses, so
  * the wide ones ask more often to keep the theme near TWO_PARTS (measured with `pnpm level --stats 200`).
  */
-const LANDMARK_TWO = 0.4;
+const LANDMARK_TWO = 0.3;
 const asksTwo = (k: Knobs) => k.challenge < Math.max(k.twoParts, LANDMARK_TWO);
 
 /** Columns for the crossing a landmark owns: two-part where asked and there's room, else one-part. Never rolls. */

@@ -1,8 +1,8 @@
 import { css, type HSL, hsl3, shift } from '../core/color';
 import { hash2 } from '../core/rng';
 import type { Decor, DecorDef } from './decor';
-import { blob, line, type P, stroke } from './ink';
-import { ball, boxPts, glint, INK, ovalPts, part, path, poly, tick, tone } from './ink-props';
+import { blob, inkFor, line, type P, stroke } from './ink';
+import { ball, boxPts, glint, ovalPts, part, path, poly, tick, tone } from './ink-props';
 
 /**
  * The glacier's decor, inked like the ice it stands on: a snow drift, a snowman (sticks and stones, no
@@ -36,7 +36,7 @@ const Y = (d: Decor, y: number) => d.y + 0.5 + y * d.size;
 
 /** A stick: an ink ribbon with its colour over it. */
 function stick(s: CanvasRenderingContext2D, pts: readonly P[], w: number, c: HSL, seed: number) {
-  s.fillStyle = INK;
+  s.fillStyle = inkFor(c);
   stroke(s, pts, { w: w + 0.9, seed, taper: [0.02, 0.2], press: 0.1 });
   s.fillStyle = css(c);
   stroke(s, pts, { w, seed: seed + 1, taper: [0.02, 0.3], press: 0.1 });
@@ -81,9 +81,9 @@ export const GLACIER_DECOR = {
     bake(s, d) {
       // Three balls of snow, a stick for each arm and a pail for a hat: no face.
       const k = d.size;
-      ball(s, d.x, Y(d, -4.6), 5 * k, SNOW, sd(d));
-      ball(s, d.x + 0.4 * fx(d), Y(d, -12), 3.8 * k, SNOW, sd(d) + 1);
-      ball(s, d.x - 0.2 * fx(d), Y(d, -17.6), 2.9 * k, SNOW, sd(d) + 2);
+      ball(s, d.x, Y(d, -4.6), 5 * k, SNOW, sd(d), undefined, inkFor(SNOW));
+      ball(s, d.x + 0.4 * fx(d), Y(d, -12), 3.8 * k, SNOW, sd(d) + 1, undefined, inkFor(SNOW));
+      ball(s, d.x - 0.2 * fx(d), Y(d, -17.6), 2.9 * k, SNOW, sd(d) + 2, undefined, inkFor(SNOW));
       for (const side of [-1, 1])
         stick(
           s,
@@ -97,7 +97,7 @@ export const GLACIER_DECOR = {
         );
       part(s, at(d, -2.4, -19.6, -1.9, -23, 1.9, -23, 2.4, -19.6), shift(RED, 0, -10, -4), sd(d) + 3, { depth: 0.5, thin: 0.3, thick: 0.7 });
       // Pebble buttons down its front.
-      s.fillStyle = INK;
+      s.fillStyle = css(hsl3(215, 10, 26));
       for (let i = 0; i < 2; i++) {
         blob(s, X(d, 0.4), Y(d, -10.8 - i * 2.4), 0.55, i, 1, 0.1);
         s.fill();
@@ -123,7 +123,7 @@ export const GLACIER_DECOR = {
           STEEL,
           i + 9,
         );
-        s.fillStyle = INK;
+        s.fillStyle = inkFor(STEEL);
         path(s, poly(X(d, 3.4) - 1.6, Y(d, -2), X(d, 3.4) + 1.6, Y(d, -2), X(d, 3.4), Y(d, -1.2)));
         s.fill();
       }
@@ -136,7 +136,7 @@ export const GLACIER_DECOR = {
       // A wooden sled: slats on two runners curling up at the front, a coil of rope on it.
       const k = d.size;
       const runner = at(d, -8, -0.4, 6, -0.4, 8.4, -1.6, 9.2, -4.2);
-      s.fillStyle = INK;
+      s.fillStyle = inkFor(STEEL);
       stroke(s, runner, { w: 1.6, seed: sd(d), taper: [0, 0.2], press: 0 });
       s.fillStyle = css(STEEL, 10);
       stroke(s, runner, { w: 0.7, seed: sd(d), taper: [0, 0.3], press: 0 });
@@ -177,7 +177,7 @@ export const GLACIER_DECOR = {
       s.fill();
       stick(s, at(d, -4, 0, -4, -6), 0.4, WOOD, 3);
       const spring = at(d, -4, -6, -2.6, -9.4, -2, -12.4);
-      s.fillStyle = INK;
+      s.fillStyle = inkFor(STEEL);
       stroke(s, spring, { w: 0.5, seed: 4, taper: [0, 0], press: 0 });
       part(s, at(d, -2, -12.4, 2.4, -11.6, -2, -10), d.color, sd(d) + 2, { depth: 0.3, thin: 0.25, thick: 0.6 });
       s.fillStyle = 'rgba(30,40,50,0.8)';
