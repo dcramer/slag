@@ -1,8 +1,8 @@
 import { css, type HSL, hsl3, shift } from '../core/color';
 import { hash2 } from '../core/rng';
 import type { Decor, DecorDef } from './decor';
-import { blob, line, type P, stroke } from './ink';
-import { boxPts, INK, ovalPts, part, path, poly, tick, tone } from './ink-props';
+import { blob, inkFor, line, type P, stroke } from './ink';
+import { bar, boxPts, ovalPts, part, path, poly, tick, tone } from './ink-props';
 
 /**
  * The jungle's decor, inked like the ground it grows from: a broken ruin pillar, a glyph stone (a carved
@@ -32,10 +32,10 @@ const at = (d: Decor, ...xy: number[]) => {
   return out;
 };
 
-/** A stem or stalk: an ink ribbon with its colour over it. */
+/** A stem or stalk: its colour in a thin rim of its own dark, thinning to the tip. */
 function stem(s: CanvasRenderingContext2D, pts: readonly P[], w: number, c: HSL, seed: number) {
-  s.fillStyle = INK;
-  stroke(s, pts, { w: w + 0.9, seed, taper: [0.02, 0.3], press: 0.1 });
+  s.fillStyle = inkFor(c);
+  stroke(s, pts, { w: w + 0.6, seed, taper: [0.02, 0.3], press: 0.1 });
   s.fillStyle = css(c);
   stroke(s, pts, { w, seed: seed + 1, taper: [0.02, 0.4], press: 0.1 });
 }
@@ -49,12 +49,12 @@ function leaf(s: CanvasRenderingContext2D, x: number, y: number, a: number, L: n
   const my = y + sa * L * 0.45;
   const up = { x: mx - sa * W, y: my + ca * W };
   const dn = { x: mx + sa * W, y: my - ca * W };
-  s.fillStyle = INK;
+  s.fillStyle = inkFor(c);
   path(s, [
-    { x: x - ca * 0.4, y: y - sa * 0.4 },
-    { x: up.x - sa * 0.5, y: up.y + ca * 0.5 },
-    { x: tip.x + ca * 0.6, y: tip.y + sa * 0.6 },
-    { x: dn.x + sa * 0.5, y: dn.y - ca * 0.5 },
+    { x: x - ca * 0.3, y: y - sa * 0.3 },
+    { x: up.x - sa * 0.35, y: up.y + ca * 0.35 },
+    { x: tip.x + ca * 0.45, y: tip.y + sa * 0.45 },
+    { x: dn.x + sa * 0.35, y: dn.y - ca * 0.35 },
   ]);
   s.fill();
   s.fillStyle = css(c, 8);
@@ -122,7 +122,7 @@ export const JUNGLE_DECOR = {
       s.fill();
       s.fillStyle = css(BARK, -6);
       const ring = ovalPts(ex, d.y - h / 2, 1, h / 4, sd(d) + 2, 0.05, 10);
-      stroke(s, [...ring, ring[0]], { w: 0.4, seed: 2, taper: [0, 0], press: 0 });
+      stroke(s, [...ring, ring[0]], { w: 0.6, seed: 2, taper: [0.1, 0.15], press: 0.2 });
       for (let i = 0; i < 3; i++) tick(s, x0 + 4 + i * (w / 3), d.y - h * 0.55, x0 + 4 + i * (w / 3) + w * 0.2, d.y - h * 0.5, 0.4, i, css(BARK, -12));
       moss(s, x0 + 2, x0 + w - 2, d.y - h + 0.6, sd(d));
     },
@@ -201,16 +201,13 @@ export const JUNGLE_DECOR = {
       part(s, at(d, -1.6, 0, -1.2, -20, 0.6, -21, 1.8, -20, 1.6, 0), BARK, sd(d), { depth: 0.6, thin: 0.4, thick: 1 });
       s.fillStyle = css(ROPE);
       for (let i = 0; i < 3; i++)
-        line(s, d.x - 1.8 * k, d.y - (15 + i * 1.3) * k, d.x + 1.8 * k, d.y - (14.4 + i * 1.3) * k, { w: 0.8, seed: i, taper: [0, 0], press: 0 });
+        line(s, d.x - 1.8 * k, d.y - (15 + i * 1.3) * k, d.x + 1.8 * k, d.y - (14.4 + i * 1.3) * k, { w: 0.8, seed: i, taper: [0.03, 0.05], press: 0.1 });
       const end: P[] = [];
       for (let i = 0; i <= 8; i++) {
         const t = i / 8;
         end.push({ x: d.x + (1.6 + t * 9) * k * f, y: d.y - 15 * k + Math.sin(t * Math.PI) * 4 * k + t * 14 * k });
       }
-      s.fillStyle = INK;
-      stroke(s, end, { w: 1.6, seed: 4, taper: [0, 0.3], press: 0.1 });
-      s.fillStyle = css(ROPE);
-      stroke(s, end, { w: 0.9, seed: 5, taper: [0, 0.4], press: 0.1 });
+      bar(s, end, 0.9, ROPE, 4, { taper: [0, 0.06], press: 0.1 });
       const tip = end[end.length - 1];
       for (let i = -1; i <= 1; i++) tick(s, tip.x, tip.y - 0.4, tip.x + (1.4 + i * 0.3) * k * f, tip.y - 1 + i * 0.8, 0.4, i, css(ROPE, -10));
     },
@@ -241,8 +238,8 @@ export const JUNGLE_DECOR = {
         const t = i / 14;
         pts.push({ x: d.x + (t - 0.5) * 18 * k * fx(d), y: d.y - 1.2 * k - Math.sin(t * Math.PI * 2 + k01(d, 1) * 2) * 1.6 * k });
       }
-      s.fillStyle = INK;
-      stroke(s, pts, { w: 3.2 * k, seed: sd(d), taper: [0.15, 0.4], press: 0 });
+      s.fillStyle = inkFor(d.color);
+      stroke(s, pts, { w: 2.8 * k, seed: sd(d), taper: [0.15, 0.4], press: 0 });
       s.fillStyle = css(d.color);
       stroke(s, pts, { w: 2.2 * k, seed: sd(d) + 1, taper: [0.15, 0.45], press: 0 });
       for (let i = 2; i < pts.length - 2; i += 2) tick(s, pts[i].x - 0.6, pts[i].y - 0.8 * k, pts[i].x + 0.6, pts[i].y + 0.8 * k, 0.35, i, css(d.color, -22));

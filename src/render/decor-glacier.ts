@@ -1,8 +1,8 @@
 import { css, type HSL, hsl3, shift } from '../core/color';
 import { hash2 } from '../core/rng';
 import type { Decor, DecorDef } from './decor';
-import { blob, inkFor, line, type P, stroke } from './ink';
-import { ball, boxPts, glint, ovalPts, part, path, poly, tick, tone } from './ink-props';
+import { blob, inkFor, line, type P } from './ink';
+import { ball, bar, boxPts, glint, ovalPts, part, path, poly, tick, tone } from './ink-props';
 
 /**
  * The glacier's decor, inked like the ice it stands on: a snow drift, a snowman (sticks and stones, no
@@ -15,7 +15,8 @@ import { ball, boxPts, glint, ovalPts, part, path, poly, tick, tone } from './in
 const SNOW: HSL = hsl3(205, 22, 94);
 const ICE: HSL = hsl3(196, 52, 80);
 const WOOD: HSL = hsl3(28, 38, 36);
-const PINE: HSL = hsl3(150, 30, 24);
+/** Light enough to hold its shape against a night sky: the boughs are the tree, the snow only loads them. */
+const PINE: HSL = hsl3(150, 26, 34);
 const RED: HSL = hsl3(4, 64, 48);
 const STEEL: HSL = hsl3(212, 8, 62);
 const OLIVE: HSL = hsl3(70, 22, 36);
@@ -34,12 +35,9 @@ const at = (d: Decor, ...xy: number[]) => {
 const X = (d: Decor, x: number) => d.x + x * d.size * fx(d);
 const Y = (d: Decor, y: number) => d.y + 0.5 + y * d.size;
 
-/** A stick: an ink ribbon with its colour over it. */
+/** A stick, pole or post: a bar of its colour in a thin rim of its own dark, lit along its top when it's broad. */
 function stick(s: CanvasRenderingContext2D, pts: readonly P[], w: number, c: HSL, seed: number) {
-  s.fillStyle = inkFor(c);
-  stroke(s, pts, { w: w + 0.9, seed, taper: [0.02, 0.2], press: 0.1 });
-  s.fillStyle = css(c);
-  stroke(s, pts, { w, seed: seed + 1, taper: [0.02, 0.3], press: 0.1 });
+  bar(s, pts, w, c, seed, { taper: [0.02, 0.08], lit: w >= 1.2 ? 14 : 0 });
 }
 
 /** Snow heaped along a top edge from x0 to x1 at y: soft lumps, lit on top. */
@@ -72,7 +70,7 @@ export const GLACIER_DECOR = {
         pts.push({ x: x0 + t * w, y: d.y + 0.5 - h * Math.sqrt(Math.max(0, bump)) });
       }
       pts.push({ x: x0 + w, y: d.y + 0.5 });
-      part(s, pts, SNOW, sd(d), { depth: 0.8, thin: 0.3, thick: 0.8, ink: '#5a7489' });
+      part(s, pts, SNOW, sd(d), { depth: 0.8, thin: 0.3, thick: 0.8 });
       glint(s, pts.slice(2, 6), 'rgba(255,255,255,0.95)', 0.6, sd(d));
     },
   },
@@ -105,7 +103,7 @@ export const GLACIER_DECOR = {
     },
   },
   skis: {
-    color: (_th, rng) => hsl3(rng.pick([4, 46, 205, 300]), 62, 50),
+    color: (_th, rng) => hsl3(rng.pick([4, 46, 205, 300]), 46, 50),
     bake(s, d) {
       // A pair of skis stood tips-up in the snow, two poles crossed beside them.
       for (const [i, x] of [-2.2, 0.4].entries()) {
@@ -136,16 +134,12 @@ export const GLACIER_DECOR = {
       // A wooden sled: slats on two runners curling up at the front, a coil of rope on it.
       const k = d.size;
       const runner = at(d, -8, -0.4, 6, -0.4, 8.4, -1.6, 9.2, -4.2);
-      s.fillStyle = inkFor(STEEL);
-      stroke(s, runner, { w: 1.6, seed: sd(d), taper: [0, 0.2], press: 0 });
-      s.fillStyle = css(STEEL, 10);
-      stroke(s, runner, { w: 0.7, seed: sd(d), taper: [0, 0.3], press: 0 });
+      bar(s, runner, 0.8, shift(STEEL, 10), sd(d), { taper: [0, 0.1] });
       for (const x of [-6, 3]) tick(s, X(d, x), Y(d, -0.6), X(d, x), Y(d, -2.6), 0.7, x, css(WOOD, -12));
       part(s, at(d, -8.6, -2.6, 6.4, -2.6, 6.4, -4.4, -8.6, -4.4), d.color, sd(d) + 2, { depth: 0.5, thin: 0.3, thick: 0.8 });
       for (let i = 1; i < 4; i++) tick(s, X(d, -8.6 + i * 3.8), Y(d, -2.8), X(d, -8.6 + i * 3.8), Y(d, -4.2), 0.35, i, css(d.color, -20));
-      s.fillStyle = css(hsl3(38, 36, 58));
       const coil = ovalPts(X(d, -2), Y(d, -5.4), 2.4 * k, 1 * k, sd(d) + 4, 0.05, 12);
-      stroke(s, [...coil, coil[0]], { w: 0.7, seed: 4, taper: [0, 0], press: 0 });
+      bar(s, [...coil, coil[0]], 0.6, hsl3(38, 36, 58), 4, { taper: [0, 0], rim: 0.2 });
     },
   },
   frozenfish: {
@@ -162,7 +156,7 @@ export const GLACIER_DECOR = {
       s.fillStyle = 'rgba(214,236,248,0.6)';
       path(s, blk);
       s.fill();
-      part(s, blk, ICE, sd(d) + 1, { depth: 0.2, thin: 0.3, thick: 0.7, ink: '#1d4660' });
+      part(s, blk, ICE, sd(d) + 1, { depth: 0.2, thin: 0.3, thick: 0.7 });
       glint(s, at(d, -4, -6.6, -1, -6.9), 'rgba(255,255,255,0.95)', 0.6, sd(d));
     },
   },
@@ -172,20 +166,20 @@ export const GLACIER_DECOR = {
       // A hole augered in the ice, dark water in it, a tip-up's little flag on a spring over it.
       const k = d.size;
       tone(s, ovalPts(d.x, d.y + 0.2, 4.6 * k, 1.5 * k, sd(d), 0.04, 14), SNOW, { depth: 0.3 });
-      s.fillStyle = '#0f2a3d';
+      // Dark water in the hole: a deep of the ice it's cut through.
+      s.fillStyle = css(ICE, -60);
       path(s, ovalPts(d.x, d.y + 0.3, 3 * k, 0.9 * k, sd(d) + 1, 0.04, 12));
       s.fill();
       stick(s, at(d, -4, 0, -4, -6), 0.4, WOOD, 3);
       const spring = at(d, -4, -6, -2.6, -9.4, -2, -12.4);
-      s.fillStyle = inkFor(STEEL);
-      stroke(s, spring, { w: 0.5, seed: 4, taper: [0, 0], press: 0 });
+      bar(s, spring, 0.4, STEEL, 4, { rim: 0.2, taper: [0, 0] });
       part(s, at(d, -2, -12.4, 2.4, -11.6, -2, -10), d.color, sd(d) + 2, { depth: 0.3, thin: 0.25, thick: 0.6 });
-      s.fillStyle = 'rgba(30,40,50,0.8)';
-      line(s, X(d, -3.6), Y(d, -5.6), X(d, 0), Y(d, 0), { w: 0.25, seed: 5, taper: [0, 0], press: 0 });
+      s.fillStyle = inkFor(STEEL);
+      line(s, X(d, -3.6), Y(d, -5.6), X(d, 0), Y(d, 0), { w: 0.3, seed: 5, taper: [0.04, 0.08], press: 0 });
     },
   },
   snowpine: {
-    color: (th) => shift(PINE, 0, 0, th.night ? -6 : 0),
+    color: (th) => shift(PINE, th.night ? 4 : 0),
     bake(s, d) {
       // A small pine: three tiers of boughs, each loaded with snow along its top.
       const k = d.size;
@@ -196,32 +190,57 @@ export const GLACIER_DECOR = {
           { x: d.x, y: d.y + 0.5 },
           { x: d.x, y: d.y - 4 * k },
         ],
-        1.3,
-        WOOD,
+        1.6,
+        shift(WOOD, 8),
         sd(d),
       );
       for (let i = 0; i < 3; i++) {
         const y0 = d.y - 3 * k - (i * h) / 3.6;
         const half = (8 - i * 2.2) * k;
-        const top = y0 - (h / 3) * 0.9;
-        const tier = poly(d.x - half, y0, d.x - half * 0.3, y0 - 1.2, d.x, top, d.x + half * 0.3, y0 - 1.2, d.x + half, y0);
-        part(s, tier, d.color, sd(d) + i, { depth: 0.8, thin: 0.35, thick: 0.9 });
+        const top = y0 - (h / 3) * 0.95;
+        const th = y0 - top;
+        // A tier of boughs: a broad cone, its hem drooping in two scallops.
+        const tier = poly(
+          d.x - half,
+          y0,
+          d.x - half * 0.55,
+          y0 - th * 0.42,
+          d.x,
+          top,
+          d.x + half * 0.55,
+          y0 - th * 0.42,
+          d.x + half,
+          y0,
+          d.x + half * 0.45,
+          y0 - 0.9,
+          d.x,
+          y0 + 0.4,
+          d.x - half * 0.45,
+          y0 - 0.9,
+        );
+        part(s, tier, shift(d.color, i * 3), sd(d) + i, { depth: 0.9, thin: 0.35, thick: 0.9 });
+        tick(s, d.x - half * 0.15, y0 - th * 0.15, d.x - half * 0.7, y0 - 0.4, 0.35, sd(d) + i * 3, css(d.color, -14));
+        // The snow it's loaded with: a crust along its upper slopes, the green showing under it.
         s.fillStyle = css(SNOW);
         path(
           s,
           poly(
-            d.x - half * 0.8,
-            y0 - 0.8,
-            d.x - half * 0.3,
-            y0 - 2.4,
+            d.x - half * 0.85,
+            y0 - th * 0.12,
+            d.x - half * 0.5,
+            y0 - th * 0.46,
             d.x,
-            top + 1.2,
-            d.x + half * 0.2,
-            y0 - 3,
-            d.x + half * 0.9,
-            y0 - 0.6,
-            d.x + half * 0.3,
-            y0 - 1.6,
+            top + 0.2,
+            d.x + half * 0.5,
+            y0 - th * 0.46,
+            d.x + half * 0.8,
+            y0 - th * 0.14,
+            d.x + half * 0.35,
+            y0 - th * 0.36,
+            d.x,
+            y0 - th * 0.62,
+            d.x - half * 0.4,
+            y0 - th * 0.34,
           ),
         );
         s.fill();
@@ -250,7 +269,7 @@ export const GLACIER_DECOR = {
     color: () => WOOD,
     bake(s, d) {
       // A post with boards pointing every which way, the snow piled at its foot and along each board.
-      stick(s, at(d, 0, 0, 0, -22), 1.8, shift(d.color, 0, 0, 10), sd(d));
+      stick(s, at(d, 0, 0, 0, -22), 2, shift(d.color, 14), sd(d));
       for (let i = 0; i < 3; i++) {
         const y = -20 + i * 5;
         const dir = (i + (d.flip ? 1 : 0)) % 2 ? -1 : 1;
@@ -263,7 +282,7 @@ export const GLACIER_DECOR = {
           { x: d.x + dir * L * d.size, y: Y(d, y + 3.2 + tilt) },
           { x: d.x, y: Y(d, y + 3.2) },
         ];
-        part(s, board, shift(d.color, 0, 0, 10 - i * 4), sd(d) + i, { depth: 0.4, thin: 0.3, thick: 0.7 });
+        part(s, board, shift(d.color, 12 - i * 4), sd(d) + i, { depth: 0.4, thin: 0.3, thick: 0.7 });
         snowCap(s, Math.min(d.x, d.x + dir * L * d.size), Math.max(d.x, d.x + dir * L * d.size), Y(d, y - 0.2), sd(d) + i, 0.6);
       }
       snowCap(s, X(d, -3), X(d, 3), Y(d, -0.3), sd(d), 1.3);
@@ -287,7 +306,7 @@ export const GLACIER_DECOR = {
           { x: bx + ca * L * 0.8 + sa * w, y: d.y + sa * L * 0.8 },
           { x: bx + sa * w, y: d.y + 0.5 },
         ];
-        part(s, shard, d.color, sd(d) + i, { depth: 0.6, thin: 0.3, thick: 0.7, ink: '#1d4660' });
+        part(s, shard, d.color, sd(d) + i, { depth: 0.6, thin: 0.3, thick: 0.7 });
         glint(s, [shard[0], shard[1]], 'rgba(255,255,255,0.9)', 0.4, i);
       }
     },

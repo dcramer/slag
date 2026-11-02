@@ -1,6 +1,7 @@
 import { css, type HSL } from '../../../core/color';
+import { hash2 } from '../../../core/rng';
 import { type P } from '../../ink';
-import { boxPts, pen, tone } from '../../ink-props';
+import { boxPts, path, pen, tick, tone } from '../../ink-props';
 import type { DrawCtx } from '../common';
 
 /**
@@ -22,6 +23,33 @@ export type Hz = ReturnType<typeof hz>;
 export function flat(g: CanvasRenderingContext2D, pts: readonly P[], base: HSL, t: Hz, seed: number, depth = 0.6) {
   tone(g, pts, t.hsl(base), { depth });
   pen(g, pts, seed, 0.3, 0.8, 3, t.ink(base));
+}
+
+/**
+ * A coursed stone wall over (x, y, w, h) in a hazed tone: the face flat, about a third of the blocks cut by hand in
+ * a second tone, and a joint where one block meets the next, lifted often. Never a ruled grid of joints.
+ */
+export function ashlar(g: CanvasRenderingContext2D, t: Hz, x: number, y: number, w: number, h: number, stone: HSL, seed: number, course = 9) {
+  tone(g, boxPts(x, y, w, h, 0.4, seed, 0.05), t.hsl(stone), { depth: 0.4 });
+  const len = course * 2.3;
+  g.save();
+  g.beginPath();
+  g.rect(x, y, w, h);
+  g.clip();
+  for (let yy = y + 1, row = 0; yy < y + h - 2; yy += course, row++) {
+    for (let xx = x + (row & 1 ? -len / 2 : 0), j = 0; xx < x + w; xx += len, j++) {
+      const k = hash2(j, row, seed);
+      if (k < 0.36) {
+        g.fillStyle = t.c(stone, k < 0.18 ? 4 : -4);
+        path(g, boxPts(xx + 0.7, yy + 0.7, len - 1.4, course - 1.4, 1.1, (j * 31 + row + seed) | 0, 0.3));
+        g.fill();
+      }
+      const joint = t.c(stone, -11);
+      if (k > 0.3) tick(g, xx, yy + 1, xx + 0.2, yy + course - 1, 0.5, j * 7 + row, joint);
+      if (hash2(row, j, seed + 5) < 0.55) tick(g, xx + 1.5, yy, xx + len - 1.5, yy + 0.3, 0.5, j * 11 + row, joint);
+    }
+  }
+  g.restore();
 }
 
 /** A doorway through a wall, seen behind its opening: the wall's reveal down both sides, a dark arch, a threshold. */

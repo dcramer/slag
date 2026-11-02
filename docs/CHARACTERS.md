@@ -89,7 +89,7 @@ What came out of it:
 ### The mustached plumber
 - **Kind:** `plumber` · **Name:** Plumbo
 - **A stranger should say:** "that's the plumber with the mustache."
-- **Silhouette:** stout and big-headed, about 45% head. A round cap with its bill sticking out front, a big round nose that breaks the profile, and the cup of a huge plunger standing up behind his head.
+- **Silhouette:** stout and big-headed, about 45% head. A round cap with its bill sticking out front, a big round nose that breaks the profile, and a huge plunger slung low across his back, its cup behind his shoulder so the cap, bill and nose own the head's outline.
 - **Traits:** red cap with a riveted brass badge carrying a small wrench (never a letter); a big round nose; a thick dark-brown mustache; blue bib overalls over a red shirt; leather gauntlets; steel-toe boots.
 - **Palette:** cap and shirt `#c9473f` (shade `#9c3530`); overalls `#3f62b4` (shade `#2e4a8c`); skin `#efc9a4`; mustache and hair `#4d3426`; badge `#c99a4a`; bolts `#9aa0a8`; gauntlets `#b08454`; boots `#6b4a35`; plunger cup `#b8433c` on a copper handle `#c27a45`.
 - **Color slot:** ring.
@@ -98,7 +98,7 @@ What came out of it:
 - **Our twist:** a foundry hand, not a castle plumber. The joke is an absurdly big rubber plunger on a copper handle strapped to his back like a greatsword. Welding goggles on the cap, hex-bolt overall buttons, a patched knee, tan gauntlets for the white gloves.
 - **Swaps:** a pencil behind the ear; a sticking plaster on one cheek; a roll of thread-seal tape on a belt loop; a pressure gauge in the bib pocket.
 - **Rig:** humanoid. Rendered (round 2).
-- **Concept prompt:** A stout, big-headed foundry handyman: a red cap with its bill out front, dark welding goggles strapped round it and a riveted brass badge stamped with a small wrench; a big round nose; a thick dark-brown mustache; blue bib overalls with steel hex-bolt buttons over a red shirt, one knee patched; big tan leather gauntlets; steel-toe boots. An absurdly big red rubber plunger on a copper handle is strapped across his back like a greatsword, its cup showing above his head.
+- **Concept prompt:** A stout, big-headed foundry handyman: a red cap with its bill out front, dark welding goggles strapped round it and a riveted brass badge stamped with a small wrench; a big round nose; a thick dark-brown mustache; blue bib overalls with steel hex-bolt buttons over a red shirt, one knee patched; big tan leather gauntlets; steel-toe boots. An absurdly big red rubber plunger on a copper handle is strapped across his back like a greatsword, slung low, its cup behind his shoulder.
 
 ### The blue speedster
 - **Kind:** `hedgehog` · **Name:** Sanic
@@ -411,23 +411,17 @@ Every kind must also pass the silhouette sheet, the blind read and the "is it th
 
 ## Rendered kinds (spike)
 
-A second route to the cast, the one Dead Cells took: a 3D model as the source of poses, drawn in 2D. The plumber and the speedster are done this way, behind `?sprites=1` (`slagDebug.sprites.use(true)`); without it the game draws and loads exactly the hand-drawn cast. The pipeline is [tools/art3d](../tools/art3d/README.md).
+How a Roster entry becomes a kind drawn from 3D. The entry is the one source for the design (nod, twist, swaps, palette); this is the pipeline. The plumber and the speedster are done, behind `?sprites=1` (`slagDebug.sprites.use(true)`); without it the game loads and draws only the hand-drawn cast. Production steps and the done list: [tools/art3d](../tools/art3d/README.md) and its [checklist](../tools/art3d/CHECKLIST.md).
 
-- **Sheets first.** Per kind: a concept in the game's ink style, a model sheet with the proportions pushed for a 20 px read, and a pose sheet (idle, run, jump with its anticipation and fist up, fall, wall slide, cheer, death; the speedster's jump is a curled spin ball). Tripo models, rigs and animates the model sheet; the poses its motions can't make are keyed by hand from the pose sheet.
-- **Drawn by the cast's own hand.** The render is cut into flat parts (one material, no depth step inside), each traced and simplified into a few clean curves; detail too small to read at race size folds into its neighbour. The game fills and inks those shapes at draw time with the same `contour` and `toned` the hand-drawn kinds use: the silhouette on its ink mass with three lifting pen strokes, every part on its own mass, thin toward the light and heavy away from it, with a hard sliver of shade, one hard shadow shape over the figure, a glint in the eyes, and the boil on threes. So it's the same pen at any zoom, with no atlas.
-- **Caricature is a setting.** Bone scales push the head, hands and feet; `girth` draws the figure wider than the model (a 2D cheat for a stout build); the plumber's plunger is a prop built from primitives on his spine, so its size is the joke and not the model's.
-- **Both facings are rendered**, not mirrored, so the light stays up-left and the plunger stays on his back. Keyed poses name limbs `_near` and `_far`, so a fist goes up on the camera's side either way.
-- **Colour.** Each part is a role in the roster's palette; the `paint` role takes the character's own colour, so the speedster's two blues come through.
-- **Clips** come from the pose the hand-drawn cast reads: idle and cheer by time, walk and run by distance run (the feet keep pace), the air clip by vertical speed (the plumber) or as a spin by time (the speedster), the wall clip facing the wall, and a death clip for half a second where the runner came apart. The ring and the squash and stretch are the shared drawer's, on top.
-- **Size.** About 300 KB of frame data per kind, a chunk fetched only with the flag on. Every frame, pen and all, squashed or stretched, stays inside the box the hand-drawn kinds keep and stands on the floor, and no kind stands under 18 world px (`tests/sprite-cast.test.ts`).
-- `pnpm shot sprites --kind plumber` shoots it in game beside round 5, round 1 and the traced spike, in the cast lineup, as a run cycle and on lobby cards, and writes the blind read (`sprites-blind.png`: every kind as a shuffled, unnamed play-scale silhouette, `slagDebug.cast.blind()`).
+- **Sheets first:** a concept, a model sheet pushed for a 20 px read, and a pose sheet. Tripo models, rigs and animates the model sheet; poses its motions can't make are keyed by hand from the pose sheet; a jump that is a shape of its own (the spin ball) is generated as one.
+- **The game's own hand.** The render is cut into flat parts, traced into a few clean curves, and inked at draw time by the cast's `contour` and `toned`, with the boil on threes. Outlines are resampled from a fixed start and held across frames when a part only moved, so lines move only with the boil.
+- **The cast's face** is drawn on the traced eyes (or set by the nose when the model's are too small): whites, iris and glint, brows set into the run, wide on a fall, squinting on a cheer, crossed out on a death.
+- **Caricature is a setting:** bone scales (head, hands, feet), `girth` (drawn wider than the model), region roles that split a trait from its colour so it can be drawn bigger (the plumber's cap and nose), and props built from primitives (the plunger).
+- **Swaps** are the entry's accessories, each an on/off prop rolled from the character's `vary`, rendered in a pass of its own so it can't change the silhouette.
+- **Cost.** About 0.005 ms per runner drawn from the frame-bitmap cache (the hand-drawn cast takes about 0.08–0.1), and about 0.4 ms for a frame the first time it's drawn at a scale. Frame data is about 350–400 KB per kind, a chunk fetched only with the flag on.
+- **Checks:** `tests/sprite-cast.test.ts` (every clip, the shared hitbox box pen and all, at least 18 px tall, rolls), and `pnpm shot sprites --kind K` (the comparison sheets, the six-rolls lobby, the draw cost, and `sprites-blind.png`, every kind as a shuffled, unnamed play-scale silhouette for fresh readers).
 
-**The nod and the twist.** What each one keeps, and why the read needs it, then what's ours:
-
-- **Plumber.** Kept: the red cap with its bill out front (the first shape anyone names), the big round nose that breaks the profile, the thick mustache (the face at 20 px), blue bib overalls over a red shirt (the colour block), and a stout big-headed build. Ours: a foundry hand with an absurdly big rubber plunger on a copper handle strapped to his back like a greatsword, its cup showing behind his head; welding goggles on the cap, a riveted brass badge with a wrench, hex-bolt buttons, big leather gauntlets for the white gloves, and steel-toe boots.
-- **Speedster.** Kept: long cobalt quills swept straight back (the whole silhouette), big red shoes, the peach muzzle and belly, green eyes and a cocky grin, the hard forward-leaning run and the spin-ball jump. Ours: a stubby scrapyard runner, chunky as a toy, with two separate eyes under heavy brows instead of the joined eye shape, a chipped tooth, soot-scorched quill tips, a hazard-striped neckerchief, brown fingerless gloves, and red work high-tops with steel toecaps and a hazard-yellow strap.
-
-**The blind read** (four fresh readers, silhouettes only, all fourteen kinds shuffled): the speedster was named every time with high confidence. The plumber was read as the plumber brothers but at low confidence ("tall and capped, fist up"), as the hand-drawn hunter and engineer are; in colour, at play scale, he reads at once.
+**Blind reads so far** (fresh readers, silhouettes only): the speedster is named every time, medium-high to high. The plumber went from low to split (one reader "the plumber, medium", one unsure) after his cap, nose and girth were pushed and his plunger carried lower; in colour he reads at once. With the cup above his head the cup and the cap merged into one shape, so the plunger is carried low for good (owner, 2026-11-02).
 
 ## What every kind keeps
 

@@ -226,13 +226,13 @@ export function castRecognise(t = 0.4): HTMLCanvasElement {
   return cv;
 }
 
-/** Milliseconds to draw one runner, averaged over `n` frames of 8 different kinds running. */
-export function castBench(n = 200): number {
+/** Draw cost per runner, 8 at play scale, in ms: the cast as drawn, or only `kinds` (rendered ones too, with `?sprites=1`). */
+export function castBench(n = 200, kinds?: Kind[]): number {
   const cv = document.createElement('canvas');
   cv.width = 800;
   cv.height = 200;
   const s = cv.getContext('2d')!;
-  const cs = Array.from({ length: 8 }, (_, i) => def(i * 2, 'bench'));
+  const cs = Array.from({ length: 8 }, (_, i) => def(i * 2, 'bench', kinds ? kinds[i % kinds.length] : undefined));
   const time = () => {
     const t0 = performance.now();
     for (let f = 0; f < n; f++) {

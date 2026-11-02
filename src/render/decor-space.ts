@@ -104,7 +104,7 @@ export const SPACE_DECOR = {
   },
   wrench: {
     color: () => STEEL,
-    live(rc, d) {
+    live(rc, d, th) {
       // Let go of in low gravity: it hangs a little off the ground and turns over, very slowly.
       const y = d.y - 4.5 - Math.sin(rc.t * 0.9 + (d.seed % 11)) * 1.2;
       const a = rc.t * 0.35 + (d.seed % 13);
@@ -112,7 +112,7 @@ export const SPACE_DECOR = {
       part(rc.s, handle, d.color, sd(d.seed), { depth: 0.3, thin: 0.4, thick: 0.75 });
       part(rc.s, jaw, d.color, sd(d.seed) + 1, { depth: 0.3, thin: 0.4, thick: 0.75 });
       // Its shadow on the ground, which is how you can tell it isn't standing on it.
-      rc.bg.fillStyle = 'rgba(10,8,20,0.3)';
+      rc.bg.fillStyle = css(th.terrain.dark, -6, 0.45);
       path(rc.bg, ovalPts(d.x, d.y - 0.3, 5, 0.9, 1, 0.02, 10));
       rc.bg.fill();
     },
@@ -124,8 +124,34 @@ export const SPACE_DECOR = {
       const f = d.flip ? -1 : 1;
       part(s, boxPts(d.x - f * 5 - 1.4, d.y - 3.8, 2.8, 3.8, 0.8, sd(d.seed) + 2, 0.15), DARK, sd(d.seed) + 2, { depth: 0.3, thin: 0.35, thick: 0.7 });
       part(s, ovalPts(d.x, d.y - 5, 5.6, 5, sd(d.seed), 0.02, 18), d.color, sd(d.seed), { depth: 0.9, thin: 0.4, thick: 0.9 });
-      part(s, ovalPts(d.x + f * 1.8, d.y - 5.4, 3, 2.8, sd(d.seed) + 1, 0.02, 14), GOLD, sd(d.seed) + 1, { depth: 0.5, thin: 0.35, thick: 0.75 });
-      glint(s, poly(d.x + f * 0.4, d.y - 7, d.x + f * 1.8, d.y - 7.8), 'rgba(255,250,220,0.9)', 0.5);
+      // The visor: a wide faceplate filling the front of the shell, never a round disc (that reads as an eye), with
+      // the reflection cut across it as a hard band.
+      const vx = d.x + f * 1.4;
+      const visor = poly(
+        vx - f * 3.2,
+        d.y - 8.4,
+        vx + f * 1.2,
+        d.y - 9.2,
+        vx + f * 4.3,
+        d.y - 7,
+        vx + f * 4.6,
+        d.y - 3.6,
+        vx + f * 2.2,
+        d.y - 1.6,
+        vx - f * 2.6,
+        d.y - 2,
+        vx - f * 3.8,
+        d.y - 4.6,
+      );
+      part(s, visor, GOLD, sd(d.seed) + 1, { depth: 0.5, thin: 0.35, thick: 0.75 });
+      s.save();
+      path(s, visor);
+      s.clip();
+      s.fillStyle = css(GOLD, 22);
+      path(s, poly(vx - f * 4, d.y - 6.4, vx + f * 5, d.y - 8.6, vx + f * 5, d.y - 7.4, vx - f * 4, d.y - 5.2));
+      s.fill();
+      s.restore();
+      glint(s, poly(vx - f * 2.4, d.y - 7.6, vx + f * 0.8, d.y - 8.4), 'rgba(255,250,220,0.9)', 0.5);
     },
   },
   moonrock: {

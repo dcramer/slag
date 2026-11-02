@@ -1,6 +1,6 @@
 import { css, type HSL } from '../../../core/color';
-import { blob, line, type P, stroke } from '../../ink';
-import { ball, boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
+import { blob, inkFor, line, type P } from '../../ink';
+import { ball, bar, barLine, boxPts, dot, glint, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import { bulb, circle, glowDot, light, METALS, type RC } from '../../kit';
 import type { DrawCtx } from '../common';
 import { groundBelowPx, lattice } from '../modules/setpiece';
@@ -25,19 +25,18 @@ const spinner: RotorSkin = {
     tone(s, bowl, { h: 195, s: 30, l: 84 }, { depth: R * 0.06 });
     const basket: HSL = { h: 150, s: 30, l: 72 };
     tone(s, ovalPts(hx, hy, R * 0.82, R * 0.82, 57, 0.01, 36), basket, { depth: R * 0.05 });
-    s.fillStyle = css(basket, -34);
-    for (let i = 0; i < 12; i++) {
-      const a = base + (i / 12) * Math.PI * 2;
+    s.fillStyle = css(basket, -26);
+    for (let i = 0; i < 9; i++) {
+      const a = base + (i / 9) * Math.PI * 2;
       line(s, hx + Math.cos(a) * R * 0.34, hy + Math.sin(a) * R * 0.34, hx + Math.cos(a) * R * 0.74, hy + Math.sin(a) * R * 0.74, {
-        w: Math.max(0.9, R * 0.07),
+        w: Math.max(0.9, R * 0.06),
         seed: i,
-        taper: [0.15, 0.15],
-        press: 0,
+        taper: [0.25, 0.3],
+        press: 0.2,
       });
     }
     glint(s, poly(hx - R * 0.8, hy - R * 0.2, hx - R * 0.62, hy - R * 0.62, hx - R * 0.22, hy - R * 0.84), 'rgba(255,255,255,0.9)', Math.max(0.8, R * 0.06));
-    const rim = bowl;
-    pen(s, rim, 53, 0.6, 1.6);
+    pen(s, bowl, 53, 0.5, 1.3, 3, inkFor({ h: 195, s: 30, l: 84 }));
     part(s, ovalPts(hx, hy, R * 0.22, R * 0.22, 55, 0.02, 16), WHITE, 55, { depth: 0.6, thin: 0.45, thick: 1 });
     ball(s, hx, hy, Math.max(2.2, R * 0.12), { h: 0, s: 0, l: 92 }, 56);
   },
@@ -67,10 +66,9 @@ const dockArm: RotorSkin = {
     const side = Math.sign(hx - mx) || 1;
     const top = hy - 12;
     for (const ox of [-4, 4]) tube(s, mx + ox, gy, mx + ox, top, 1.4, WHITE, 71 + ox);
-    s.fillStyle = css(WHITE, -24);
-    for (let y = gy - 2; y > top + 6; y -= 8) {
-      line(s, mx - 4, y, mx + 4, y - 4, { w: 0.7, seed: y, taper: [0, 0], press: 0 });
-      line(s, mx + 4, y - 4, mx - 4, y - 8, { w: 0.7, seed: y + 1, taper: [0, 0], press: 0 });
+    for (let y = gy - 2; y > top + 8; y -= 12) {
+      barLine(s, mx - 4, y, mx + 4, y - 6, 0.7, WHITE, y, { rim: 0.25 });
+      barLine(s, mx + 4, y - 6, mx - 4, y - 12, 0.7, WHITE, y + 1, { rim: 0.25 });
     }
     // The arm: shoulder at the mast top, an elbow raised, the wrist over the hub.
     const ex = (mx + hx) / 2;
@@ -96,30 +94,34 @@ const dockArm: RotorSkin = {
     const s = rc.s;
     const hx = m.hub[0] + d.off[0];
     const hy = m.hub[1] + d.off[1];
-    s.fillStyle = INK;
-    line(s, hx, hy, a.x, p.y - 4, { w: 0.82, seed: 81, taper: [0, 0], press: 0 });
-    for (const ex of [p.x + 3, p.x + p.w - 3]) line(s, a.x, p.y - 4, ex, p.y, { w: 0.49, seed: ex, taper: [0, 0], press: 0 });
+    const cable: HSL = { h: 210, s: 10, l: 48 };
+    barLine(s, hx, hy, a.x, p.y - 4, 0.7, cable, 81, { rim: 0.25 });
+    for (const ex of [p.x + 3, p.x + p.w - 3]) barLine(s, a.x, p.y - 4, ex, p.y, 0.45, cable, ex, { rim: 0.2 });
     ball(s, a.x, p.y - 4.2, 1.6, { h: 210, s: 12, l: 60 }, 82);
   },
   platform(rc, _m, d, _a, p, i) {
     const s = rc.s;
-    const pts = slab(s, p, { ...d.pal.base, l: Math.max(48, d.pal.base.l) }, 91 + i);
+    const plate: HSL = { ...d.pal.base, l: Math.max(48, d.pal.base.l) };
+    const pts = slab(s, p, plate, 91 + i);
     s.save();
     path(s, pts);
     s.clip();
-    s.fillStyle = '#f2b705';
+    // Hazard tape along the lip: yellow, its stripes a dark of the yellow, every other one left off.
+    const tape: HSL = { h: 46, s: 78, l: 54 };
+    s.fillStyle = css(tape);
     s.fillRect(p.x, p.y, p.w, Math.min(2.2, p.h * 0.4));
-    s.fillStyle = INK;
-    for (let x = p.x - 2; x < p.x + p.w; x += 3) {
+    s.fillStyle = css(tape, -30);
+    for (let x = p.x - 2; x < p.x + p.w; x += 4) {
       path(s, poly(x, p.y + 2.2, x + 1.3, p.y + 2.2, x + 2.6, p.y, x + 1.3, p.y));
       s.fill();
     }
+    s.fillStyle = inkFor(plate);
     for (const cx of [p.x + p.w * 0.3, p.x + p.w * 0.7]) {
-      blob(s, cx, p.y + p.h * 0.62, Math.min(1.6, p.h * 0.28), cx, 1, 0.05);
+      blob(s, cx, p.y + p.h * 0.62, Math.min(1.2, p.h * 0.22), cx, 1, 0.05);
       s.fill();
     }
     s.restore();
-    pen(s, pts, 92 + i, 0.5, 1.2);
+    pen(s, pts, 92 + i, 0.5, 1.2, 3, inkFor(plate));
   },
 };
 /** Warranty-Void Turret: a pedestal with the sticker still on, a dome, twin rails, and a red LED that blinks faster before it fires. */
@@ -181,17 +183,14 @@ function commTrusses(w: number, h: number) {
       const t = i / 12;
       cable.push({ x: 8 + (w - 16) * t, y: top + 26 + Math.sin(t * Math.PI) * 5 });
     }
-    g.fillStyle = INK;
-    stroke(g, cable, { w: 1.2, seed: 201, taper: [0, 0], press: 0.1 });
-    g.fillStyle = css({ h: 40, s: 70, l: 52 });
-    stroke(g, cable, { w: 0.6, seed: 202, taper: [0, 0], press: 0 });
+    bar(g, cable, 0.7, { h: 40, s: 60, l: 52 }, 201, { rim: 0.25, taper: [0, 0], press: 0 });
     for (const [i, mx] of [8, w - 8].entries()) {
       const out = i === 0 ? -1 : 1;
       lattice(g, mx, top, h, 5, METALS.steel, paint);
       // An orange band round the truss, the way station hardware is marked.
       part(g, boxPts(mx - 3.6, top + 6, 7.2, 2.6, 0.5, 203 + i), band, 203 + i, { depth: 0.3, thin: 0.35, thick: 0.8 });
       // The solar wing, out on a strut: a dark panel cut into cells.
-      tick(g, mx + out * 2.5, top + 11, mx + out * 7, top + 11, 1.4, 205 + i);
+      barLine(g, mx + out * 2.5, top + 11, mx + out * 7, top + 11, 1, METALS.steel.base, 205 + i, { rim: 0.25 });
       const px = out > 0 ? mx + 6.5 : mx - 15.5;
       const panel = boxPts(px, top + 7.5, 9, 7, 0.5, 206 + i, 0.1);
       part(g, panel, { h: 222, s: 55, l: 30 }, 206 + i, { depth: 0.5, thin: 0.4, thick: 0.9 });
@@ -215,13 +214,13 @@ function commTrusses(w: number, h: number) {
       g.fillStyle = css(paint, -34);
       path(g, ovalPts(dx - out * 0.55, dy + 0.3, 1.8, 6, 211 + i, 0.03, 16));
       g.fill();
-      g.fillStyle = INK;
-      line(g, dx - out * 0.8, dy - 6.4, dx - out * 7.5, dy, { w: 0.39, seed: 211 + i, taper: [0, 0], press: 0 });
-      line(g, dx - out * 0.8, dy + 6.4, dx - out * 7.5, dy, { w: 0.39, seed: 212 + i, taper: [0, 0], press: 0 });
+      // The feed horn's struts: thin bars in a dark of the paint.
+      for (const [k, ey] of [dy - 6.4, dy + 6.4].entries())
+        barLine(g, dx - out * 0.8, ey, dx - out * 7.5, dy, 0.35, { ...paint, l: 62 }, 211 + i + k, { rim: 0.15 });
       ball(g, dx - out * 7.8, dy, 1.25, METALS.steel.base, 213 + i);
       // A deck plate under each truss, bolted to the floor.
       part(g, boxPts(mx - 6.5, deck - 3, 13, 3.2, 0.6, 214 + i), METALS.steel.base, 214 + i, { depth: 0.5, thin: 0.45, thick: 1 });
-      for (const rx of [mx - 5, mx + 5]) dot(g, rx, deck - 1.4, 0.5, rx, css(METALS.steel.light));
+      for (const rx of [mx - 5, mx + 5]) dot(g, rx, deck - 1.4, 0.5, rx, css(METALS.steel.light), inkFor(METALS.steel.base));
     }
   });
 }
@@ -235,8 +234,8 @@ function commArray(rc: RC, m: Deco, d: DrawCtx) {
   for (const [i, lx] of [x - 7.5, x + m.w + 7.5].entries()) {
     const on = Math.floor(rc.t * 1.2 + i * 0.5) % 2 === 0;
     const col: HSL = i === 0 ? { h: 2, s: 100, l: 55 } : { h: 130, s: 90, l: 50 };
-    s.fillStyle = INK;
-    circle(s, lx, y + 19.5, 1.6);
+    s.fillStyle = inkFor(METALS.steel.base);
+    circle(s, lx, y + 19.5, 1.45);
     s.fillStyle = css(col, on ? 8 : -30);
     circle(s, lx, y + 19.5, 1.05);
     if (on) bulb(rc.g, lx, y + 19.5, 1.05, col, 1);

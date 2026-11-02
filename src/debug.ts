@@ -45,8 +45,11 @@ export interface SlagDebug {
   net: NetSession | null;
   /** Join N players (kb1, kb2, pad0…pad5) and start round 1. */
   quickStart(players?: number): void;
-  /** Place one prop of each archetype at deterministic legal spots (owner = player 1), turned `rot` quarter turns. */
-  addProps(kinds: Archetype[], seed?: number, rot?: number): number;
+  /**
+   * Place one prop of each archetype at deterministic legal spots (owner = player 1), turned `rot` quarter turns.
+   * With `near` (a tile), each goes on the free spot closest to it instead.
+   */
+  addProps(kinds: Archetype[], seed?: number, rot?: number, near?: { tx: number; ty: number }): number;
   /** Skip pick/place and start a race now. */
   race(kinds?: Archetype[], seed?: number): void;
   /** A player's lift and cog wheel with parts riding them, stuck on as of this frame (sim/props/ride.ts): uids of the lift, its block and coat, the wheel, its block and coat. */
@@ -111,13 +114,20 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
       for (let i = 0; i < players; i++) match.join(dev(DEVICES[i]));
       if (match.phase === 'lobby') match.startMatch();
     },
-    addProps(kinds, seed = 1, rot = 0) {
+    addProps(kinds, seed = 1, rot = 0, near) {
       let added = 0;
+      // Spots in the order tried: a fixed scatter over the level, or rings out from `near`.
+      const spots = (i: number): [number, number][] => {
+        if (!near) return Array.from({ length: 4000 }, (_, n) => [6 + ((i * 7 + n * 13) % (match.level.w - 12)), 3 + ((i * 5 + n * 7) % (match.level.h - 6))]);
+        const out: [number, number][] = [];
+        for (let r = 0; r < 24; r++)
+          for (let dy = -r; dy <= r; dy++)
+            for (let dx = -r; dx <= r; dx++) if (Math.max(Math.abs(dx), Math.abs(dy)) === r) out.push([near.tx + dx, near.ty + dy]);
+        return out;
+      };
       kinds.forEach((k, i) => {
         const def = generateProp(new Rng(seed * 977 + i * 131), k, `dbg-${i}`);
-        for (let n = 0; n < 4000; n++) {
-          const tx = 6 + ((i * 7 + n * 13) % (match.level.w - 12));
-          const ty = 3 + ((i * 5 + n * 7) % (match.level.h - 6));
+        for (const [tx, ty] of spots(i)) {
           if (canPlace(match.level, match.placed, def, rot, tx, ty)) {
             match.placed.push({ uid: uid++, def: landedDef(match.level, match.placed, def, rot, tx, ty), owner: match.players[1]?.slot ?? 0, tx, ty, rot });
             added++;

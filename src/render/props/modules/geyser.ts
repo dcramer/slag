@@ -2,8 +2,8 @@ import { css, type HSL } from '../../../core/color';
 import { TILE } from '../../../sim/constants';
 import { dirOf, geyserColumn, geyserCycle, geyserWind, type GeyserLook, type ModuleOf } from '../../../sim/props';
 import { windProfile, windSpeed } from '../../../sim/wind';
-import { blob, line, type P, stroke } from '../../ink';
-import { boxPts, INK, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
+import { blob, inkFor, line, type P, stroke } from '../../ink';
+import { boxPts, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import { circle, ellipse, glowDot, light, type RC } from '../../kit';
 import type { ThemeId } from '../../../themes';
 import { beamOf, type DrawCtx, defineArt } from '../common';
@@ -75,12 +75,12 @@ interface Flow {
 const FLOWS: Partial<Record<GeyserLook, Flow>> = {
   water: {
     bands: [
-      [0.62, 'hsl(212 62% 34%)'],
-      [0.5, 'hsl(203 70% 48%)'],
-      [0.3, 'hsl(196 76% 66%)'],
-      [0.09, 'hsl(190 80% 90%)'],
+      [0.62, 'hsl(212 48% 34%)'],
+      [0.5, 'hsl(203 52% 48%)'],
+      [0.3, 'hsl(196 54% 66%)'],
+      [0.09, 'hsl(190 50% 88%)'],
     ],
-    ink: '#0d2740',
+    ink: inkFor({ h: 212, s: 48, l: 34 }),
     ripple: 1.1,
     billow: 0,
     rider: 'foam',
@@ -96,7 +96,7 @@ const FLOWS: Partial<Record<GeyserLook, Flow>> = {
       [0.32, 'hsl(84 82% 52%)'],
       [0.1, 'hsl(72 90% 76%)'],
     ],
-    ink: '#0e2208',
+    ink: inkFor({ h: 110, s: 58, l: 20 }),
     ripple: 1.4,
     billow: 0.12,
     rider: 'bubble',
@@ -111,7 +111,7 @@ const FLOWS: Partial<Record<GeyserLook, Flow>> = {
       [0.58, 'hsl(206 36% 82%)'],
       [0.34, 'hsl(200 40% 94%)'],
     ],
-    ink: '#24384f',
+    ink: inkFor({ h: 214, s: 26, l: 62 }),
     ripple: 0.4,
     billow: 0.3,
     rider: 'chunk',
@@ -169,15 +169,15 @@ function ventMound(w: number, rock: HSL, lava: boolean, crust: Crust) {
       const x0 = sx * (cr + 1);
       const x1 = sx * (hw + 9);
       const run = poly(x0, 0.4, x0 + sx * 4, 1.2, x0 + sx * 8, 0.7, x1, 1.6);
-      g.fillStyle = INK;
-      stroke(g, run, { w: 1.2, seed: sx + 3, taper: [0.1, 0.9], press: 0.3 });
+      g.fillStyle = inkFor(rock);
+      stroke(g, run, { w: 1.1, seed: sx + 3, taper: [0.1, 0.9], press: 0.3 });
       g.fillStyle = crack;
       stroke(g, run, { w: 0.55, seed: sx + 3, taper: [0.1, 0.9], press: 0.3 });
-      g.fillStyle = INK;
-      stroke(g, poly(x0 + sx * 4, 1.2, x0 + sx * 6.5, 2.8, x0 + sx * 7.4, 3.6), { w: 0.8, seed: sx + 5, taper: [0.1, 0.9], press: 0.2 });
+      g.fillStyle = inkFor(rock);
+      stroke(g, poly(x0 + sx * 4, 1.2, x0 + sx * 6.5, 2.8, x0 + sx * 7.4, 3.6), { w: 0.7, seed: sx + 5, taper: [0.1, 0.9], press: 0.2 });
     }
     // The crater, dark, its back wall lit.
-    g.fillStyle = lava ? '#2a0c06' : '#1c1816';
+    g.fillStyle = lava ? css({ h: 12, s: 60, l: 14 }) : inkFor(rock);
     path(g, ovalPts(0, -0.9, cr + 0.6, 1.9, 4, 0.05, 18));
     g.fill();
     g.fillStyle = css(rock, -8);
@@ -255,7 +255,7 @@ function mouth(w: number, rock: HSL, crust: Crust) {
     part(g, rim, rock, 6, { depth: 0.9, shade: -18, thin: 0.45, thick: 1.2 });
     // The hole, with the lit back of the bore inside it.
     const hole = ovalPts(0, 0.9, hw - 2, 2.1, 12, 0.05, 14);
-    g.fillStyle = '#120c0a';
+    g.fillStyle = inkFor(rock);
     path(g, hole);
     g.fill();
     g.fillStyle = css(rock, -22);
@@ -296,7 +296,7 @@ function cushion() {
     const c: HSL = { h: 168, s: 40, l: 42 };
     part(g, boxPts(-7, -3.5, 14, 6, 2.6, 7), c, 7, { depth: 0.9, thin: 0.5, thick: 1.1 });
     tick(g, -6, -0.6, 6, -0.6, 0.45, 8, css(c, -20));
-    g.fillStyle = INK;
+    g.fillStyle = inkFor(c);
     blob(g, -1, -1.6, 0.7, 9, 1, 0.1);
     g.fill();
     g.restore();
@@ -506,23 +506,24 @@ function drawTentacle(rc: RC, m: Geyser, d: DrawCtx, a: Aim, seg: number, p: num
   const belly: HSL = { h: d.style.hue + 12, s: 40, l: 68 };
   if (seg === 1) {
     // The surface rings out from where it'll rise, faster and wider as it comes.
-    enter(s, a);
+    // Rings are thin and fade: the backdrop layer, where the cel pass leaves soft things soft.
+    enter(rc.bg, a);
     for (let i = 0; i < 3; i++) {
       const u = ((rc.frame * (0.02 + p * 0.05) + i / 3) % 1) * (0.6 + p);
-      s.strokeStyle = `rgba(235,248,255,${(1 - u) * (0.4 + p * 0.5)})`;
-      s.lineWidth = 1;
-      s.beginPath();
-      s.ellipse(0, base, w * (0.4 + u * 1.4), 1.2 + u * 1.6, 0, 0, Math.PI * 2);
-      s.stroke();
+      const ring = ovalPts(0, base, w * (0.4 + u * 1.4), 1.2 + u * 1.6, 40 + i, 0.04, 20);
+      rc.bg.fillStyle = `rgba(235,248,255,${(1 - u) * (0.4 + p * 0.5)})`;
+      stroke(rc.bg, [...ring, ring[0]], { w: 0.9, seed: 40 + i, taper: [0, 0], press: 0.2 });
     }
+    rc.bg.restore();
+    enter(s, a);
     // A shadow under the water, and the tip breaking the surface at the end.
     s.fillStyle = css(skin, -14, 0.35 + p * 0.4);
     ellipse(s, 0, base + 2, w * 0.45, 1.6);
     if (p > 0.6) {
       const tip: P[] = [];
       for (let i = 0; i <= 6; i++) tip.push({ x: Math.sin(i * 0.9 + rc.t * 6) * 1.2, y: base - (i / 6) * (p - 0.6) * 18 });
-      s.fillStyle = INK;
-      stroke(s, tip, { w: w * 0.3 + 1, seed: 3, taper: [0, 0.9], press: 0 });
+      s.fillStyle = inkFor(skin);
+      stroke(s, tip, { w: w * 0.3 + 0.6, seed: 3, taper: [0, 0.9], press: 0 });
       s.fillStyle = css(skin);
       stroke(s, tip, { w: w * 0.3, seed: 3, taper: [0, 0.9], press: 0 });
     }
@@ -567,7 +568,7 @@ function drawTentacle(rc: RC, m: Geyser, d: DrawCtx, a: Aim, seg: number, p: num
   s.fillStyle = '#fff3c0';
   s.fillRect(-w, mid[ri].y - 1.2, w * 2, 0.6);
   s.restore();
-  pen(s, body, d.r.pp.uid, 0.5, 1.3);
+  pen(s, body, d.r.pp.uid, 0.5, 1.3, 3, inkFor(skin));
   // Water sheeting off where it leaves the sea.
   s.fillStyle = 'rgba(235,248,255,0.85)';
   for (let i = -1; i <= 1; i++) {
@@ -673,12 +674,12 @@ function drawColumn(rc: RC, m: Geyser, d: DrawCtx) {
     s.restore();
     enter(g, a);
     for (let yy = 0; yy > top; yy -= 7) glowDot(g, Math.sin(yy * 0.3 + rc.t * 9) * 1.5, yy, w * 0.95, LAVA, 0.55 * k, 0.4);
-    g.strokeStyle = css(HOT, 25, 0.9 * k);
-    g.lineWidth = w * 0.25;
-    g.beginPath();
-    g.moveTo(0, 0);
-    g.lineTo(0, top + 4);
-    g.stroke();
+    // The white-hot core: a ribbon swaying with the column's glow, thinning out under the crown.
+    const core: P[] = [];
+    for (let yy = 0; yy > top + 4; yy -= 4) core.push({ x: Math.sin(yy * 0.3 + rc.t * 9) * 0.6, y: yy });
+    core.push({ x: 0, y: top + 4 });
+    g.fillStyle = css(HOT, 25, 0.9 * k);
+    stroke(g, core, { w: w * 0.25, seed: 7, taper: [0, 0.1], press: 0.25 });
     for (let i = 0; i < 5; i++) {
       const an = -Math.PI / 2 + (i - 2) * 0.5 + Math.sin(rc.t * 7 + i) * 0.2;
       const r = 3 + (i % 2) * 2;

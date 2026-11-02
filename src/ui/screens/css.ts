@@ -55,7 +55,8 @@ body {
 .home {
   position: relative;
   min-height: 100dvh;
-  overflow-x: clip;
+  /* Both axes: the heat shimmer hangs below the screen and breathes, and would breathe the page's scroll height with it. */
+  overflow: clip;
   display: grid;
   grid-template-rows: 1fr auto;
   isolation: isolate;
@@ -1039,7 +1040,7 @@ button.prompt:focus-visible {
   }
 }
 
-/* A phone held upright: the numbers go under the name. */
+/* A phone held upright: the name gets the whole width, and the numbers and the tag go under it. */
 @media (max-width: 600px) {
   .lb-head .logo-k {
     display: none;
@@ -1059,14 +1060,18 @@ button.prompt:focus-visible {
   }
   .lb-row .t,
   .lb-row .s {
-    grid-column: 1 / span 2;
+    grid-column: 1 / -1;
   }
   .lb-row .s {
     grid-row: 2;
   }
+  /* The widest twelve-letter name still fits a 390 px phone. */
+  .lb-row .t {
+    font-size: 24px;
+  }
   .lb-phase {
     grid-column: 3;
-    grid-row: 1;
+    grid-row: 3;
   }
   .lb-seats {
     grid-column: 1;

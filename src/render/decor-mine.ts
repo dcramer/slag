@@ -1,7 +1,7 @@
 import { css, type HSL, hsl3, shift } from '../core/color';
 import type { DecorDef } from './decor';
-import { blob, line, type P, stroke } from './ink';
-import { ball, boxPts, dot, glint, INK, part, path, poly, tick } from './ink-props';
+import { blob, inkFor, line, type P, stroke } from './ink';
+import { ball, bar, barLine, boxPts, dot, glint, part, path, poly, tick } from './ink-props';
 import { circle, flutter, glowDot, light } from './kit';
 
 /**
@@ -28,12 +28,11 @@ const at = (x0: number, y0: number, k: number, f: number, ...xy: number[]) => {
   return out;
 };
 
-/** A rope or stick: an ink ribbon with color over it. */
-function cord(s: CanvasRenderingContext2D, pts: readonly P[], w: number, c: string, seed: number) {
-  s.fillStyle = INK;
-  stroke(s, pts, { w: w + 0.9, seed, taper: [0.02, 0.2], press: 0.1 });
-  s.fillStyle = c;
-  stroke(s, pts, { w, seed, taper: [0.02, 0.3], press: 0.1 });
+/** A rope, fuse or rail: a bar of its colour in a thin rim of its own dark. */
+function cord(s: CanvasRenderingContext2D, pts: readonly P[], w: number, c: HSL, seed: number) {
+  // A bare pair of points gives the pen no length to swell over: draw it as a straight bar, sampled.
+  if (pts.length === 2) barLine(s, pts[0].x, pts[0].y, pts[1].x, pts[1].y, w, c, seed);
+  else bar(s, pts, w, c, seed);
 }
 
 /** A pointed rock spike from (x, y) along `dir` (-1 up, 1 down), `h` long and `w` wide at its root. */
@@ -89,7 +88,7 @@ export const MINE_DECOR = {
         const t = i / 8;
         fuse.push({ x: d.x + f * (2 + t * 5) * k, y: d.y - (9 - Math.sin(t * Math.PI) * 4 - t * 8.6) * k });
       }
-      cord(s, fuse, 0.5, css(hsl3(30, 20, 66)), 7);
+      cord(s, fuse, 0.5, hsl3(30, 20, 66), 7);
     },
   },
   canary: {
@@ -102,8 +101,8 @@ export const MINE_DECOR = {
       const len = (5 + (d.seed % 4)) * k;
       const cx = d.x + Math.sin(sw) * len;
       const cy = d.y + Math.cos(sw) * len;
-      s.fillStyle = INK;
-      line(s, d.x, d.y, cx, cy, { w: 0.6, seed: 2, taper: [0, 0], press: 0 });
+      s.fillStyle = inkFor(IRON);
+      line(s, d.x, d.y, cx, cy, { w: 0.5, seed: 2, taper: [0.02, 0.04], press: 0 });
       const w = 5.4 * k;
       const h = 6.4 * k;
       const dome: P[] = [];
@@ -115,8 +114,8 @@ export const MINE_DECOR = {
       const hop = Math.max(0, Math.sin(rc.t * 2.3 + d.seed)) > 0.93 ? 0.8 : 0;
       const by = cy + h * 0.62 - hop;
       const dir = d.flip ? -1 : 1;
-      s.fillStyle = INK;
-      blob(s, cx, by, 1.75 * k, 3, 1.1, 0.06);
+      s.fillStyle = inkFor(d.color);
+      blob(s, cx, by, 1.6 * k, 3, 1.1, 0.06);
       s.fill();
       s.fillStyle = css(d.color);
       blob(s, cx, by, 1.35 * k, 3, 1.1, 0.06);
@@ -133,11 +132,12 @@ export const MINE_DECOR = {
         const x = cx - w / 2 + (i * w) / 4;
         line(s, x, cy + 2.2 * k - (i === 0 || i === 4 ? 0 : 1.6 * k), x, cy + h, { w: 0.45, seed: i, taper: [0, 0], press: 0 });
       }
-      s.fillStyle = INK;
-      stroke(s, dome, { w: 0.7, seed: 5, taper: [0, 0], press: 0 });
-      line(s, cx - w / 2 - 0.4, cy + h, cx + w / 2 + 0.4, cy + h, { w: 1.2, seed: 6, taper: [0, 0], press: 0 });
-      line(s, cx - w / 2, cy + h * 0.78, cx + w / 2, cy + h * 0.78, { w: 0.4, seed: 7, taper: [0, 0], press: 0 });
-      circle(s, cx, cy - 0.6, 0.9);
+      bar(s, dome, 0.5, shift(IRON, 22), 5, { taper: [0, 0], rim: 0.2 });
+      barLine(s, cx - w / 2 - 0.4, cy + h, cx + w / 2 + 0.4, cy + h, 0.9, IRON, 6);
+      s.fillStyle = css(WOOD, 8);
+      line(s, cx - w / 2, cy + h * 0.78, cx + w / 2, cy + h * 0.78, { w: 0.5, seed: 7, taper: [0.02, 0.04], press: 0 });
+      s.fillStyle = inkFor(IRON);
+      circle(s, cx, cy - 0.6, 0.8);
     },
   },
   bucket: {
@@ -158,10 +158,10 @@ export const MINE_DECOR = {
           { x: bx, y: by },
         ],
         0.6,
-        css(ROPE),
+        ROPE,
         3,
       );
-      s.fillStyle = INK;
+      s.fillStyle = inkFor(d.color);
       stroke(
         s,
         [
@@ -169,7 +169,7 @@ export const MINE_DECOR = {
           { x: bx, y: by - 0.2 },
           { x: bx + 2.6 * k, y: by + 2 * k },
         ],
-        { w: 0.6, seed: 4, taper: [0, 0], press: 0 },
+        { w: 0.5, seed: 4, taper: [0.02, 0.04], press: 0 },
       );
       const pail = poly(bx - 3 * k, by + 2 * k, bx + 3 * k, by + 2 * k, bx + 2.3 * k, by + 7 * k, bx - 2.3 * k, by + 7 * k);
       part(s, pail, d.color, sd(d.seed), { depth: 0.5, thin: 0.35, thick: 0.8 });
@@ -183,7 +183,7 @@ export const MINE_DECOR = {
       // The end of the line: a timber buffer stop on a stub of rail, its beam painted.
       const k = d.size;
       const f = d.flip ? -1 : 1;
-      cord(s, poly(d.x - 7 * k * f, d.y - 0.8, d.x + 2 * k * f, d.y - 0.8), 0.8, css(IRON, 14), 2);
+      cord(s, poly(d.x - 7 * k * f, d.y - 0.8, d.x + 2 * k * f, d.y - 0.8), 0.8, shift(IRON, 14), 2);
       for (const dx of [-5, -1.5])
         part(s, boxPts(d.x + dx * k * f - 0.8, d.y - 0.6, 1.6 * k, 1.2, 0.3, dx + 30, 0.1), WOOD, dx + 30, { depth: 0.2, thin: 0.3, thick: 0.5 });
       part(s, at(d.x, d.y, k, f, 0.5, 0, 3.5, 0, 3.5, -7, 2, -7), WOOD, sd(d.seed), { depth: 0.4, thin: 0.35, thick: 0.8 });
@@ -210,8 +210,8 @@ export const MINE_DECOR = {
         thin: 0.3,
         thick: 0.7,
       });
-      cord(s, poly(d.x + f * 1.4 * k, d.y - h + 6 * k, d.x + f * 4.8 * k, d.y - h + 2.4 * k), 0.6, css(WOOD, -4), 3);
-      dot(s, d.x, d.y - h + 2.3 * k, 0.4, 4, css(IRON, 30));
+      cord(s, poly(d.x + f * 1.4 * k, d.y - h + 6 * k, d.x + f * 4.8 * k, d.y - h + 2.4 * k), 0.6, shift(WOOD, -4), 3);
+      dot(s, d.x, d.y - h + 2.3 * k, 0.4, 4, css(IRON, 30), inkFor(WOOD));
     },
     live(rc, d) {
       const k = d.size;
@@ -220,13 +220,12 @@ export const MINE_DECOR = {
       const lx = d.x + f * 4.6 * k;
       const ly = d.y - h + 3.2 * k;
       const s = rc.s;
-      s.fillStyle = INK;
-      line(s, lx, d.y - h + 1.6 * k, lx, ly, { w: 0.5, seed: 2, taper: [0, 0], press: 0 });
+      s.fillStyle = inkFor(IRON);
+      line(s, lx, d.y - h + 1.6 * k, lx, ly, { w: 0.45, seed: 2, taper: [0.02, 0.04], press: 0 });
+      part(s, boxPts(lx - 1.7 * k, ly + 0.8 * k, 3.4 * k, 3.6 * k, 0.4, 6, 0.05), d.color, 6, { depth: 0, thin: 0.3, thick: 0.6, ink: inkFor(IRON) });
       part(s, poly(lx - 2 * k, ly + 1 * k, lx, ly - 0.4 * k, lx + 2 * k, ly + 1 * k), IRON, 5, { depth: 0.2, thin: 0.3, thick: 0.6 });
-      s.fillStyle = css(d.color, 22);
-      s.fillRect(lx - 1.5 * k, ly + 1 * k, 3 * k, 3.2 * k);
-      s.fillStyle = INK;
-      s.fillRect(lx - 1.9 * k, ly + 4.1 * k, 3.8 * k, 1 * k);
+      part(s, boxPts(lx - 1.9 * k, ly + 4.1 * k, 3.8 * k, 1 * k, 0.2, 7, 0.05), IRON, 7, { depth: 0.2, thin: 0.25, thick: 0.5 });
+      s.fillStyle = css(IRON, 6);
       s.fillRect(lx - 0.25 * k, ly + 1 * k, 0.5 * k, 3.2 * k);
       const fl = 0.88 + Math.sin(rc.t * 8 + d.seed) * 0.08;
       rc.g.fillStyle = css(d.color, 12, 0.85 * fl);
@@ -270,7 +269,7 @@ export const MINE_DECOR = {
       // A stub of track nobody finished laying: sleepers, two rails, a spike or two left loose.
       const w = d.span * 16 - 2;
       for (let x = 1; x < w; x += 5) part(s, boxPts(d.x + x, d.y - 1.4, 3.2, 1.6, 0.3, x + 3, 0.1), WOOD, x + 3, { depth: 0.2, thin: 0.3, thick: 0.5 });
-      cord(s, poly(d.x - 0.5, d.y - 1.8, d.x + w + 0.5, d.y - 1.8), 0.7, css(d.color, 16), 4);
+      cord(s, poly(d.x - 0.5, d.y - 1.8, d.x + w + 0.5, d.y - 1.8), 0.7, shift(d.color, 16), 4);
       s.fillStyle = css(d.color, 40);
       line(s, d.x, d.y - 2.1, d.x + w, d.y - 2.1, { w: 0.35, seed: 5, taper: [0, 0], press: 0 });
       if (d.seed % 2) {

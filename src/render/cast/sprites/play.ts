@@ -60,6 +60,14 @@ export function frameAt(clip: SpriteClip, x: number, t: number, vy = 0): number 
   return Math.min(n - 1, Math.max(0, Math.floor((u - Math.floor(u)) * n)));
 }
 
+/** A roll in 0..1 picking one of `n`: the same for the same seed. */
+export const roll = (r: number | undefined, n: number) => Math.min(n - 1, Math.floor((r ?? 0) * n));
+
+/** The option each accessory slot shows for a character's `vary` rolls (src/gen/character.ts). */
+export function picks(set: SpriteSet, vary: readonly number[]): number[] {
+  return (set.slots ?? []).map((sl) => roll(vary[sl.vary], sl.options));
+}
+
 export interface Pick {
   clip: ClipName;
   frame: VFrame;

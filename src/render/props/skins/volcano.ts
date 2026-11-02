@@ -2,7 +2,7 @@ import { css, type HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { blob, line, type P, stroke } from '../../ink';
-import { boxPts, path, pen, poly, sprite, stamp, tone } from '../../ink-props';
+import { boxPts, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import { glowDot, light } from '../../kit';
 import type { DrawCtx } from '../common';
 import { SHELLS } from '../modules/deco-shells';
@@ -27,14 +27,24 @@ const HAZE = 0.3;
 function hz(d: DrawCtx) {
   const fog = d.o.level?.theme.fog;
   const k = fog ? `${fog.h | 0},${fog.l | 0}` : '-';
-  const hsl = (c: HSL): HSL => (fog ? { h: c.h, s: c.s * (1 - HAZE), l: c.l + (fog.l - c.l) * HAZE } : c);
-  return { k, hsl, c: (b: HSL, dl = 0, a = 1) => css(hsl(b), dl, a), ink: (b: HSL) => css({ h: b.h, s: b.s * 0.5, l: Math.max(4, hsl(b).l * 0.3) }) };
+  const sink = (c: HSL, k: number): HSL => (fog ? { h: c.h, s: c.s * (1 - k), l: c.l + (fog.l - c.l) * k } : c);
+  const hsl = (c: HSL): HSL => sink(c, HAZE);
+  return {
+    k,
+    hsl,
+    c: (b: HSL, dl = 0, a = 1) => css(hsl(b), dl, a),
+    // The landmark's own bones stand nearer than the scenery: barely hazed, so they read as bone, not as grey pipe.
+    near: (b: HSL, dl = 0) => css(sink(b, HAZE * 0.35), dl),
+    ink: (b: HSL) => css({ h: b.h, s: b.s * 0.5, l: Math.max(4, hsl(b).l * 0.3) }),
+  };
 }
 type Hz = ReturnType<typeof hz>;
 
 const ASH: HSL = { h: 14, s: 8, l: 22 };
 const ROCK: HSL = { h: 12, s: 12, l: 16 };
 const LAVA: HSL = { h: 20, s: 100, l: 52 };
+/** The organ's pipes: basalt a shade above the terrain's, so the lit facet reads through the haze. */
+const PIPE: HSL = { h: 14, s: 10, l: 24 };
 const lavaOf = (d: DrawCtx): HSL => d.o.level?.theme.liquid.color ?? LAVA;
 
 // ------------------------------------------------------------------------------------------- caldera
@@ -44,6 +54,7 @@ function ashColumn(m: Deco, t: Hz) {
   return sprite(`volcano|ash|${m.w}|${m.h}|${m.seed}|${t.k}`, -m.w, -TILE * 4, m.w * 3, m.h + TILE * 4, (g) => {
     const cx = m.w / 2;
     const n = Math.max(6, Math.round(m.h / 9));
+    const puffs: [number, number, number, number, number][] = [];
     for (let i = n - 1; i >= 0; i--) {
       const u = i / (n - 1);
       const y = m.h - u * (m.h + TILE * 2);
@@ -52,14 +63,20 @@ function ashColumn(m: Deco, t: Hz) {
       for (let k = 0; k < 3; k++) {
         const bx = x + (hash2(i, k, m.seed) - 0.5) * r * 1.2;
         const by = y + (hash2(k, i, m.seed) - 0.5) * r * 0.5;
-        const br = r * (0.5 + hash2(i + k, 3, m.seed) * 0.4);
-        g.fillStyle = t.ink(ASH);
-        blob(g, bx, by, br + 1, i * 5 + k, 0.8, 0.25);
-        g.fill();
-        g.fillStyle = t.c(ASH, 4 - u * 6 + k * 2);
-        blob(g, bx, by, br, i * 5 + k, 0.8, 0.25);
-        g.fill();
+        puffs.push([bx, by, r * (0.5 + hash2(i + k, 3, m.seed) * 0.4), i * 5 + k, u]);
       }
+    }
+    // One pen round the whole column, then the puffs' tones over it: a billow's own edge inside the cloud is a tone
+    // step, not a line, or the column reads as a net of cells.
+    g.fillStyle = t.ink(ASH);
+    for (const [bx, by, br, sd] of puffs) {
+      blob(g, bx, by, br + 0.6, sd, 0.8, 0.25);
+      g.fill();
+    }
+    for (const [bx, by, br, sd, u] of puffs) {
+      g.fillStyle = t.c(ASH, 4 - u * 6 + (sd % 5) * 2);
+      blob(g, bx, by, br, sd, 0.8, 0.25);
+      g.fill();
     }
   });
 }
@@ -103,13 +120,15 @@ function backRank(m: Deco, t: Hz) {
       const w = pw * 0.76;
       const top = m.h - h;
       const pts = poly(x, m.h, x, top + w * 0.3, x + w * 0.5, top, x + w, top + w * 0.3, x + w, m.h);
-      tone(g, pts, t.hsl(ROCK), { depth: 0.6 });
-      pen(g, pts, i + 3, 0.3, 0.8, 3, t.ink(ROCK));
-      // Facets down the column: the hexagonal joints of cooled basalt.
-      g.fillStyle = t.c(ROCK, 6);
-      g.fillRect(x + w * 0.18, top + w * 0.5, w * 0.16, h - w * 0.5);
-      g.fillStyle = t.ink(ROCK);
-      for (let y = top + w + hash2(i, 2, m.seed) * 12; y < m.h - 6; y += 13 + hash2(i, y | 0, m.seed) * 10) g.fillRect(x + 1, y, w - 2, 0.8);
+      tone(g, pts, t.hsl(PIPE), { depth: 0.6 });
+      // The lit facet down the column: a second tone cut as a shape, not a ruled stripe.
+      g.fillStyle = t.c(PIPE, 9);
+      path(g, poly(x + w * 0.16, m.h, x + w * 0.14, top + w * 0.5, x + w * 0.5, top + w * 0.1, x + w * 0.42, top + w * 0.6, x + w * 0.36, m.h));
+      g.fill();
+      pen(g, pts, i + 3, 0.3, 0.8, 3, t.ink(PIPE));
+      // A couple of the joints where the basalt cooled, lifted short of the edges.
+      for (let y = top + w * 1.4 + hash2(i, 2, m.seed) * 14, j = 0; y < m.h - 8 && j < 3; y += 22 + hash2(i, y | 0, m.seed) * 18, j++)
+        tick(g, x + 1.2, y, x + w - 1.2 - hash2(i, j, m.seed) * w * 0.3, y + 0.3, 0.45, i * 7 + j, t.c(PIPE, -9));
     }
   });
 }
@@ -126,8 +145,8 @@ function tubeWall(m: Deco, t: Hz) {
   return sprite(`volcano|tube|${m.w}|${m.h}|${m.seed}|${t.k}`, 0, 0, m.w, m.h, (g) => {
     g.fillStyle = t.c(ROCK, -4);
     g.fillRect(0, 0, m.w, m.h);
-    for (let y = 3; y < m.h; y += 7) {
-      g.fillStyle = t.c(ROCK, (y / 7) % 2 ? 2 : -1);
+    for (let y = 3; y < m.h; y += 11) {
+      g.fillStyle = t.c(ROCK, ((y - 3) / 11) % 2 ? 2 : -1);
       const pts: P[] = [{ x: 0, y }];
       for (let x = 0; x <= m.w; x += 8) pts.push({ x, y: y + Math.sin(x * 0.05 + y + m.seed) * 1.6 });
       pts.push({ x: m.w, y: y + 4 }, { x: 0, y: y + 4 });
@@ -178,13 +197,23 @@ const tube: DecoSkin = (rc, m, d) => {
 
 const BONE: HSL = { h: 40, s: 24, l: 72 };
 
-/** A bone along `pts`: an ink ribbon, the bone over it, a lit stripe along it. */
-function boneStroke(g: CanvasRenderingContext2D, pts: readonly P[], wd: number, t: Hz, seed: number) {
+/** A bone along `pts`: a thin rim in a dark of bone, the bone over it, a lit stripe along it. */
+function boneStroke(g: CanvasRenderingContext2D, pts: readonly P[], wd: number, t: Hz, seed: number, dl = 0, rib = false) {
+  // A rib is a bar (it keeps its width down to the ground, as the bone a perch sits on); a horn tapers to its point.
+  const [rim, body]: [number, number][] = rib
+    ? [
+        [0.02, 0.08],
+        [0.02, 0.08],
+      ]
+    : [
+        [0.02, 0.35],
+        [0.02, 0.4],
+      ];
   g.fillStyle = t.ink(BONE);
-  stroke(g, pts, { w: wd + 1.6, seed, taper: [0.02, 0.35], press: 0 });
-  g.fillStyle = t.c(BONE, -4);
-  stroke(g, pts, { w: wd, seed: seed + 1, taper: [0.02, 0.4], press: 0 });
-  g.fillStyle = t.c(BONE, 10);
+  stroke(g, pts, { w: wd + (rib ? 0.7 : 0.8), seed, taper: rim, press: 0 });
+  g.fillStyle = t.near(BONE, dl - 4);
+  stroke(g, pts, { w: wd, seed: seed + 1, taper: body, press: 0 });
+  g.fillStyle = t.near(BONE, dl + 10);
   stroke(
     g,
     pts.map((p) => ({ x: p.x - wd * 0.2, y: p.y - wd * 0.15 })),
@@ -222,8 +251,8 @@ function ribcage(m: Deco, d: DrawCtx, t: Hz) {
       const lean = Math.sign(perch[perch.length - 1].x - perch[0].x) || 1;
       // Its twin, bowing out the other way.
       const twin = perch.map((p, i) => ({ x: 2 * perch[0].x - p.x - lean * Math.sin((i / (perch.length - 1)) * Math.PI) * 10, y: p.y }));
-      boneStroke(g, twin, 4.2, { ...t, c: (b: HSL, dl?: number) => t.c(b, (dl ?? 0) - 10) }, x * 3 + 1);
-      boneStroke(g, perch, 5, t, x * 3);
+      boneStroke(g, twin, 3.6, t, x * 3 + 1, -12, true);
+      boneStroke(g, perch, 4.4, t, x * 3, 0, true);
     }
   });
 }

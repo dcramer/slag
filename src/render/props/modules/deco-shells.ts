@@ -3,7 +3,7 @@ import { hash2 } from '../../../core/rng';
 import type { DecoKind, ModuleOf } from '../../../sim/props';
 import { rotorAngles } from '../../../sim/props/modules/rotor';
 import { blob, line, type P, stroke } from '../../ink';
-import { boxPts, ovalPts, path, pen, poly, sprite, stamp, tone } from '../../ink-props';
+import { bar, boxPts, ovalPts, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import type { RC } from '../../kit';
 import type { DrawCtx } from '../common';
 
@@ -50,12 +50,17 @@ const SLATE: HSL = { h: 240, s: 10, l: 26 };
 const GLASS: HSL = { h: 228, s: 24, l: 15 };
 const HAZARD: HSL = { h: 46, s: 88, l: 50 };
 
-/** A member drawn with the backdrop pen: a dark ribbon, the member's tone over it, thinner than anything in play. */
+/** A member drawn with the backdrop pen: the member's hazed tone in a thin rim of its own dark, thinner than anything in play. */
 function member(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, base: HSL, t: Tones, seed: number) {
-  g.fillStyle = t.ink(base);
-  line(g, ax, ay, bx, by, { w: w + 0.9, seed, taper: [0, 0], press: 0.05 });
-  g.fillStyle = t.c(base);
-  line(g, ax, ay, bx, by, { w, seed: seed + 1, taper: [0, 0], press: 0.05 });
+  bar(g, along2(ax, ay, bx, by), w, t.hsl(base), seed, { ink: t.ink(base), rim: 0.25, press: 0.05 });
+}
+
+/** A straight run from a to b, sampled every couple of px so the pen's tremor has something to work on. */
+function along2(ax: number, ay: number, bx: number, by: number): P[] {
+  const n = Math.max(2, Math.ceil(Math.hypot(bx - ax, by - ay) / 2.5));
+  const pts: P[] = [];
+  for (let i = 0; i <= n; i++) pts.push({ x: ax + ((bx - ax) * i) / n, y: ay + ((by - ay) * i) / n });
+  return pts;
 }
 
 /** An open truss between two points: two chords and a zigzag of web between them. */
@@ -101,10 +106,13 @@ const facade: Shell = (rc, m, d) => {
     g.save();
     path(g, roof);
     g.clip();
-    for (let y = 3, i = 0; y < rh; y += 3.6, i++) {
-      g.fillStyle = t.ink(SLATE);
-      line(g, -5, y, w + 5, y, { w: 0.55, seed: i, taper: [0, 0], press: 0 });
-      for (let x = (i & 1) * 3; x < w + 5; x += 6) line(g, x, y, x, y + 3.6, { w: 0.4, seed: x + i, taper: [0, 0], press: 0 });
+    // Slate courses: lifted strokes along every other course, a joint here and there, never a ruled grid.
+    for (let y = 4, i = 0; y < rh; y += 4.2, i++) {
+      for (let x = -5 + hash2(i, 1, sd) * 6; x < w + 5; x += 9 + hash2(i, x | 0, sd) * 8) {
+        const len = 5 + hash2(x | 0, i, sd) * 7;
+        tick(g, x, y, x + len, y + 0.2, 0.5, x + i, t.ink(SLATE));
+        if (hash2(i, x | 0, sd + 1) < 0.35) tick(g, x + len * 0.5, y, x + len * 0.5 + 0.2, y + 3, 0.35, x + i + 1, t.ink(SLATE));
+      }
     }
     g.restore();
     const wall = boxPts(1, rh, w - 2, h - rh, 0.8, sd + 3, 0.15);
@@ -112,9 +120,15 @@ const facade: Shell = (rc, m, d) => {
     g.save();
     path(g, wall);
     g.clip();
-    // Wallpaper: faint stripes, the only pattern a back wall gets.
-    g.fillStyle = t.c(PLASTER, -4);
-    for (let x = 4; x < w; x += 6) g.fillRect(x, rh, 1.4, h - rh);
+    // Wallpaper: a second, darker tone cut in panels between the posts; a few cracks in the plaster.
+    for (let x = 1; x < w - 2; x += 24) path(g, boxPts(x + 2, rh + 2, Math.min(20, w - x - 4), h - rh - 4, 0.8, x + sd, 0.4));
+    g.fillStyle = t.c(PLASTER, -5);
+    g.fill();
+    for (let i = 0; i < Math.ceil(w / 30); i++) {
+      const cx = 4 + hash2(i, 7, sd) * (w - 8);
+      const cy = rh + 6 + hash2(i, 8, sd) * (h - rh - 12);
+      tick(g, cx, cy, cx + 2.5, cy + 3.5, 0.4, i, t.ink(PLASTER));
+    }
     // Tall windows, one per bay on every storey, some with a pane gone.
     for (let y = rh + 6; y + 18 < h - 4; y += 32) {
       for (let x = 7; x + 9 < w - 3; x += 24) {
@@ -123,8 +137,8 @@ const facade: Shell = (rc, m, d) => {
         win.push({ x: x + 9, y: y + 18 });
         flat(g, win, GLASS, t, x + y, 0.3);
         g.fillStyle = t.c(WOOD);
-        line(g, x + 4.5, y + 1, x + 4.5, y + 18, { w: 0.8, seed: x, taper: [0, 0], press: 0 });
-        line(g, x, y + 10, x + 9, y + 10, { w: 0.8, seed: y, taper: [0, 0], press: 0 });
+        line(g, x + 4.5, y + 1, x + 4.5, y + 18, { w: 0.8, seed: x, taper: [0.03, 0.03], press: 0.1 });
+        line(g, x, y + 10, x + 9, y + 10, { w: 0.8, seed: y, taper: [0.03, 0.03], press: 0.1 });
         if (hash2(x, y, sd) < 0.3) {
           g.fillStyle = t.c(PLASTER, 6);
           path(g, poly(x + 5.5, y + 11, x + 8.5, y + 11, x + 8.5, y + 17, x + 7, y + 13.5));
@@ -173,10 +187,7 @@ function rim(r: number, n: number, t: Tones) {
     const ring = (rad: number, wd: number, seed: number) => {
       const pts: P[] = [];
       for (let i = 0; i <= 48; i++) pts.push({ x: Math.cos((i / 48) * Math.PI * 2) * rad, y: Math.sin((i / 48) * Math.PI * 2) * rad });
-      g.fillStyle = t.ink(STEEL);
-      stroke(g, pts, { w: wd + 1, seed, taper: [0, 0], press: 0 });
-      g.fillStyle = t.c(STEEL);
-      stroke(g, pts, { w: wd, seed: seed + 1, taper: [0, 0], press: 0 });
+      bar(g, pts, wd, t.hsl(STEEL), seed, { ink: t.ink(STEEL), taper: [0, 0], press: 0 });
       g.fillStyle = t.c(STEEL, 10);
       stroke(
         g,
@@ -187,9 +198,9 @@ function rim(r: number, n: number, t: Tones) {
     ring(r - 2, 3.4, 1);
     ring(r - 6.5, 1.2, 4);
     g.fillStyle = t.ink(STEEL);
-    for (let i = 0; i < 24; i++) {
-      const a = (i / 24) * Math.PI * 2 + 0.13;
-      blob(g, Math.cos(a) * (r - 2), Math.sin(a) * (r - 2), 0.7, i, 1, 0.1);
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2 + 0.13;
+      blob(g, Math.cos(a) * (r - 2), Math.sin(a) * (r - 2), 0.55, i, 1, 0.1);
       g.fill();
     }
     flat(g, ovalPts(0, 0, 6, 6, 3, 0.03, 16), STEEL, t, 5, 0.8);
@@ -221,7 +232,7 @@ const headframe: Shell = (rc, m, d) => {
     const sr = Math.min(10, w * 0.2);
     const cx = w / 2;
     g.fillStyle = t.ink(STEEL);
-    line(g, cx, top - sr + 1, cx, h, { w: 0.8, seed: 2, taper: [0, 0], press: 0 });
+    line(g, cx, top - sr + 1, cx, h, { w: 0.8, seed: 2, taper: [0.02, 0.04], press: 0.1 });
     member(g, w - 2, h - 2, cx + 3, top + 2, 2.6, WOOD, t, 3);
     for (const [ax, bx] of [
       [3, cx - 4],
@@ -243,10 +254,7 @@ const headframe: Shell = (rc, m, d) => {
     // The sheave: a spoked wheel on its bearing.
     const pts: P[] = [];
     for (let i = 0; i <= 32; i++) pts.push({ x: cx + Math.cos((i / 32) * 6.28) * sr, y: top - sr + 1 + Math.sin((i / 32) * 6.28) * sr });
-    g.fillStyle = t.ink(STEEL);
-    stroke(g, pts, { w: 2.6, seed: 6, taper: [0, 0], press: 0 });
-    g.fillStyle = t.c(STEEL);
-    stroke(g, pts, { w: 1.6, seed: 7, taper: [0, 0], press: 0 });
+    bar(g, pts, 1.6, t.hsl(STEEL), 6, { ink: t.ink(STEEL), taper: [0, 0], press: 0 });
     for (let i = 0; i < 6; i++) {
       const a = (i / 6) * Math.PI * 2;
       member(g, cx, top - sr + 1, cx + Math.cos(a) * sr, top - sr + 1 + Math.sin(a) * sr, 0.7, STEEL, t, 8 + i);
@@ -290,24 +298,15 @@ const hullRibs: Shell = (rc, m, d) => {
         pts.push({ x: x + lean * u * u - Math.sin(u * Math.PI) * 1.5, y });
       }
       const rw = Math.max(2.3, Math.min(5, w / 40));
-      g.fillStyle = t.ink(WOOD);
-      stroke(g, pts, { w: rw + 1.1, seed: i, taper: [0, 0.1], press: 0 });
-      g.fillStyle = t.c(WOOD, 4);
-      stroke(g, pts, { w: rw, seed: i + 1, taper: [0, 0.1], press: 0 });
+      bar(g, pts, rw, t.hsl({ ...WOOD, l: WOOD.l + 4 }), i, { ink: t.ink(WOOD), taper: [0, 0.08], press: 0.05, lit: 10 });
     }
     const along = (f: (x: number) => number, dy: number): P[] => {
       const pts: P[] = [];
       for (let x = 0; x <= w; x += 4) pts.push({ x, y: f(x) + dy });
       return pts;
     };
-    g.fillStyle = t.ink(WOOD);
-    stroke(g, along(sheer, 0), { w: 3.4, seed: 30, taper: [0, 0], press: 0 });
-    g.fillStyle = t.c(WOOD, 8);
-    stroke(g, along(sheer, 0), { w: 2.2, seed: 31, taper: [0, 0], press: 0 });
-    g.fillStyle = t.ink(WOOD);
-    stroke(g, along(keel, 1), { w: 4.6, seed: 32, taper: [0, 0], press: 0 });
-    g.fillStyle = t.c(WOOD, -6);
-    stroke(g, along(keel, 1), { w: 3.4, seed: 33, taper: [0, 0], press: 0 });
+    bar(g, along(sheer, 0), 2.2, t.hsl({ ...WOOD, l: WOOD.l + 8 }), 30, { ink: t.ink(WOOD), taper: [0, 0], press: 0.05, lit: 10 });
+    bar(g, along(keel, 1), 3.4, t.hsl({ ...WOOD, l: WOOD.l - 6 }), 32, { ink: t.ink(WOOD), taper: [0, 0], press: 0.05 });
   });
   stamp(rc.s, sp, m.at[0] + d.off[0], m.at[1] + d.off[1]);
 };
@@ -344,8 +343,8 @@ const billboard: Shell = (rc, m, d) => {
     const by = bh * 0.38;
     flat(g, boxPts(bx, by, cs, cs, 0.8, sd + 2), { h: 30, s: 50, l: 48 }, t, sd + 3, 0.6);
     g.fillStyle = ink({ h: 30, s: 50, l: 48 });
-    line(g, bx + 1.5, by + 1.5, bx + cs - 1.5, by + cs - 1.5, { w: 1.04, seed: sd, taper: [0, 0], press: 0 });
-    line(g, bx + 1.5, by + cs * 0.5, bx + cs - 1.5, by + cs * 0.5, { w: 0.56, seed: sd + 1, taper: [0, 0], press: 0 });
+    line(g, bx + 1.5, by + 1.5, bx + cs - 1.5, by + cs - 1.5, { w: 1, seed: sd, taper: [0.1, 0.2], press: 0.2 });
+    line(g, bx + 1.5, by + cs * 0.5, bx + cs - 1.5, by + cs * 0.5, { w: 0.7, seed: sd + 1, taper: [0.1, 0.2], press: 0.2 });
     const sx = bx + cs + w * 0.18;
     const sy = by + cs * 0.45;
     const burst: P[] = [];
@@ -377,7 +376,7 @@ const clockface: Shell = (rc, m, d) => {
       const a = (i / 12) * Math.PI * 2;
       const q = i % 3 === 0;
       const r0 = r - (q ? 8 : 6);
-      line(g, Math.cos(a) * r0, Math.sin(a) * r0, Math.cos(a) * (r - 4), Math.sin(a) * (r - 4), { w: q ? 1.8 : 0.9, seed: i, taper: [0, 0], press: 0 });
+      line(g, Math.cos(a) * r0, Math.sin(a) * r0, Math.cos(a) * (r - 4), Math.sin(a) * (r - 4), { w: q ? 1.8 : 1, seed: i, taper: [0.15, 0.25], press: 0.2 });
     }
     if (!hands) {
       // Stopped, when nothing turns in front of it.

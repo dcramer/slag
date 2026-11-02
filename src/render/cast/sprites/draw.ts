@@ -1,14 +1,15 @@
 import { css, type HSL } from '../../../core/color';
-import { inkFor, type P, sn } from '../../ink';
+import { inkFor, type P, sn, stroke } from '../../ink';
 import { contour, path, toned } from '../../ink-figure';
-import type { Ring, VFrame } from './types';
+import { drawFace, type FaceMood } from './face';
+import type { Ring, SpriteSet, VFrame } from './types';
 
 /**
  * Draws one traced frame with the cast's own hand (docs/ART.md → World art: ink, `ink-figure.ts`): the
  * silhouette on the body's ink mass with three lifting pen strokes, every part a flat shape on its own
  * mass, thin toward the light and heavy away from it, with a hard sliver of its shade left along the
- * side away from the light (`toned`), then one hard shadow shape over the whole figure, and a glint in
- * the eyes. The outlines boil on threes like every hand-drawn runner's.
+ * side away from the light (`toned`), then one hard shadow shape over the whole figure, and the cast's
+ * face (face.ts) on the traced eyes. The outlines boil on threes like every hand-drawn runner's.
  */
 
 /** How one role is painted on one character. */
@@ -25,7 +26,6 @@ const SLIVER = 0.5;
 /** The whole figure's hard shadow: the silhouette less itself pulled up-left (the hand-drawn body's numbers). */
 const SHADOW_DX = 2.1;
 const SHADOW_DY = 1.9;
-const GLINT = '#fffaf0';
 
 export function hexHsl(hex: string): HSL {
   const n = parseInt(hex.slice(1), 16);
@@ -91,10 +91,24 @@ function boiled(r: Ring, boil: number, seed: number): P[] {
  * One frame with its feet at the origin. `paints` per role, `body` the silhouette's fill and ink, `k`
  * the character's pen weight, `t` seconds for the boil.
  */
-export function drawFrame(s: CanvasRenderingContext2D, f: VFrame, paints: readonly Paint[], body: Paint, shadow: string, k: number, seed: number, t: number) {
+export function drawFrame(
+  s: CanvasRenderingContext2D,
+  f: VFrame,
+  paints: readonly Paint[],
+  body: Paint,
+  shadow: string,
+  k: number,
+  seed: number,
+  t: number,
+  face?: { kit: NonNullable<SpriteSet['face']>; mood: FaceMood; facing: number },
+  /** The option each accessory slot shows (the first, if not given). */
+  pick?: readonly number[],
+) {
   const boil = Math.floor(t * 8) % 3;
   for (const r of f.sil) contour(s, boiled(r, boil, seed), body.fill, body.ink, k, seed);
-  for (const [role, r] of f.parts) {
+  for (const part of f.parts) {
+    const [role, r] = part;
+    if (part.length === 4 && (pick?.[part[2]] ?? 0) !== part[3]) continue;
     const p = paints[role];
     toned(s, boiled(r, boil, seed + role), p.fill, p.shade, p.ink, PART_THIN, PART_THICK * k, SLIVER);
   }
@@ -115,14 +129,10 @@ export function drawFrame(s: CanvasRenderingContext2D, f: VFrame, paints: readon
     s.fill('evenodd');
     s.restore();
   }
-  // A catch-light in each eye, up and toward the light, where the tracer found the eyes.
-  const g = f.glints;
-  if (g) {
-    s.fillStyle = GLINT;
-    for (let i = 0; i + 2 < g.length; i += 3) {
-      s.beginPath();
-      s.arc(g[i] / 8, g[i + 1] / 8, g[i + 2] / 8, 0, Math.PI * 2);
-      s.fill();
-    }
+  // Motion marks, in the body's ink, trailing what moves fast.
+  if (f.marks) {
+    s.fillStyle = body.ink;
+    f.marks.forEach((r, i) => stroke(s, pointsOf(r), { w: 0.8 - i * 0.12, seed: seed + i, taper: [0.15, 0.6], press: 0.2 }));
   }
+  if (face && f.eyes) drawFace(s, face.kit, f.eyes, face.mood, face.facing, t, seed);
 }

@@ -1914,7 +1914,7 @@ async function goneScenario(browser: Browser, base: string) {
 }
 
 /**
- * The lobby list: a hosted room shows on another browser's Lobbies screen, a guest joins it from there through the
+ * The lobby list: a hosted room shows on another browser's Lobbies screen under its host's name, a guest joins it from there through the
  * joining screen, the count follows, the host's Private takes it off (and public puts it back), and once everyone has
  * left it's gone.
  */
@@ -1941,6 +1941,10 @@ async function browseScenario(browser: Browser, base: string) {
 
   const L = await lister('L');
   check((await until(L.p, 'the room on the list', (c) => c !== null)) === '1/8', 'a hosted room shows on another browser’s list, one seat taken');
+  const hostName = (await view(A)).players[0]?.name ?? '';
+  const shownName = await L.p.evaluate((code) => document.querySelector(`.lb-row[data-room="${code}"] .t`)?.textContent ?? null, r.name);
+  console.log(`     the row leads with ${JSON.stringify(shownName)}`);
+  check(!!hostName && shownName === hostName, 'the row leads with the host’s name');
   const shot = `${out}/online-browse-list.png`;
   await L.p.screenshot({ path: shot });
   console.log(`     ${shot}`);

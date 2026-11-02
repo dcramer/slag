@@ -1119,15 +1119,21 @@ const INK_PLATFORMS: Record<PlatformKind, (r: Run) => void> = {
       botE,
       css(c, -6),
     );
-    g.fillStyle = ink;
-    for (let k = Math.ceil((x0 + 3) / 8); k * 8 < x1 - 3; k++) {
-      blob(g, k * 8, y + H * 0.52, 1.05, k + seed, 1, 0.12);
+    // One lightening hole a tile, a dark of the web with its lower lip catching the light, not an ink punch.
+    for (let k = Math.ceil((x0 + 3 - 8) / 16); k * 16 + 8 < x1 - 3; k++) {
+      const hx = k * 16 + 8;
+      g.fillStyle = css(c, -30);
+      blob(g, hx, y + H * 0.52, 1.25, k + seed, 1.15, 0.12);
+      g.fill();
+      g.fillStyle = css(c, 4);
+      blob(g, hx + 0.2, y + H * 0.52 + 0.75, 0.6, k + seed + 1, 0.5, 0.1);
       g.fill();
     }
-    g.fillStyle = css(c, -34);
-    for (let k = Math.ceil((x0 + 1) / 4); k * 4 < x1 - 1; k++) {
-      if (hash2(k, 3, seed) < 0.3) continue;
-      blob(g, k * 4 + 2, y + 0.75, 0.42, k, 1, 0.1);
+    // Rivets along the top flange, a couple a tile, some missing.
+    g.fillStyle = css(c, -24);
+    for (let k = Math.ceil((x0 + 1) / 8); k * 8 < x1 - 1; k++) {
+      if (hash2(k, 3, seed) < 0.35) continue;
+      blob(g, k * 8 + 4, y + 0.8, 0.38, k, 1, 0.1);
       g.fill();
     }
     g.fillStyle = ink;

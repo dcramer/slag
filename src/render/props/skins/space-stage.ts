@@ -3,8 +3,8 @@ import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { type Level, T_EMPTY, T_ONEWAY, T_SOLID, tileAt } from '../../../sim/level';
 import { FUSE_BLAST, fuseState, magnetCycle, type Module, type ModuleOf, swingAngles } from '../../../sim/props';
-import { blob, inkFor, line, type P } from '../../ink';
-import { boxPts, glint, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
+import { blob, inkFor, line, type P, stroke } from '../../ink';
+import { barLine, boxPts, glint, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import { bulb, circle, glowDot, light, type RC } from '../../kit';
 import type { DrawCtx } from '../common';
 import { SHELLS } from '../modules/deco-shells';
@@ -42,7 +42,7 @@ type Hz = ReturnType<typeof hz>;
 
 const HULL: HSL = { h: 212, s: 10, l: 70 };
 const PANEL: HSL = { h: 214, s: 12, l: 46 };
-const DARK: HSL = { h: 232, s: 22, l: 10 };
+const DARK: HSL = { h: 232, s: 20, l: 19 };
 const STRIPE: HSL = { h: 46, s: 88, l: 50 };
 const RED: HSL = { h: 4, s: 68, l: 46 };
 const GLASS: HSL = { h: 198, s: 46, l: 66 };
@@ -55,12 +55,41 @@ const WHITE: HSL = { h: 210, s: 8, l: 90 };
 const boxOf = (m: Deco) => ({ x: Math.round(m.at[0] / TILE), y: Math.round(m.at[1] / TILE), w: Math.round(m.w / TILE), h: Math.round(m.h / TILE) });
 const solid = (lv: Level, x: number, y: number) => tileAt(lv, x, y) === T_SOLID;
 
-/** A member drawn with the backdrop pen: a dark ribbon, the member's tone over it. */
+/** A member drawn with the backdrop pen: its hazed tone in a thin rim of its own dark. */
 function member(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, base: HSL, t: Hz, seed: number) {
-  g.fillStyle = t.ink(base);
-  line(g, ax, ay, bx, by, { w: w + 0.9, seed, taper: [0, 0], press: 0.05 });
-  g.fillStyle = t.c(base);
-  line(g, ax, ay, bx, by, { w, seed: seed + 1, taper: [0, 0], press: 0.05 });
+  barLine(g, ax, ay, bx, by, w, t.hsl(base), seed, { ink: t.ink(base), rim: 0.3, press: 0.05 });
+}
+
+/** The convex hull of a set of points (monotone chain), counter-clockwise. */
+function hullOf(pts: P[]): P[] {
+  const q = [...pts].sort((a, b) => a.x - b.x || a.y - b.y);
+  const cross = (o: P, a: P, b: P) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+  const lo: P[] = [];
+  for (const p of q) {
+    while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop();
+    lo.push(p);
+  }
+  const up: P[] = [];
+  for (let i = q.length - 1; i >= 0; i--) {
+    while (up.length >= 2 && cross(up[up.length - 2], up[up.length - 1], q[i]) <= 0) up.pop();
+    up.push(q[i]);
+  }
+  return [...lo.slice(0, -1), ...up.slice(0, -1)];
+}
+
+/** A closed outline with its corners cut round (Chaikin), `n` times. */
+function round(pts: readonly P[], n = 2): P[] {
+  let r = pts.slice();
+  for (let k = 0; k < n; k++) {
+    const o: P[] = [];
+    for (let i = 0; i < r.length; i++) {
+      const a = r[i];
+      const b = r[(i + 1) % r.length];
+      o.push({ x: a.x * 0.75 + b.x * 0.25, y: a.y * 0.75 + b.y * 0.25 }, { x: a.x * 0.25 + b.x * 0.75, y: a.y * 0.25 + b.y * 0.75 });
+    }
+    r = o;
+  }
+  return r;
 }
 
 /** A vertical lattice mast: two chords and a zigzag of web. */
@@ -139,10 +168,25 @@ function shipPlan(lv: Level, b: ReturnType<typeof boxOf>) {
 function shipBack(m: Deco, lv: Level, t: Hz) {
   const b = boxOf(m);
   const p = shipPlan(lv, b);
-  return sprite(`space|ship|${b.x},${b.y},${b.w},${b.h}|${m.seed}|${t.k}|${p.h0},${p.h1},${p.i0},${p.roof}`, 0, 0, m.w, m.h, (g) => {
+  return sprite(`space|ship|${b.x},${b.y},${b.w},${b.h}|${m.seed}|${t.k}|${p.h0},${p.h1},${p.i0},${p.roof}`, -TILE, 0, m.w + TILE * 3, m.h + TILE, (g) => {
     const X = (x: number) => (x - b.x) * TILE;
     const Y = (y: number) => (y - b.y) * TILE;
     if (p.h0 < 0) return;
+    // The hull's belly behind its plating: the stepped tiles from the flight deck down, wrapped in one
+    // rounded sweep a touch outside their corners, so the ship reads as a hull and not a stack of blocks.
+    const corners: P[] = [];
+    for (let y = p.D; y < b.y + b.h; y++)
+      for (let x = b.x; x < b.x + b.w; x++)
+        if (solid(lv, x, y)) corners.push({ x: X(x), y: Y(y) }, { x: X(x + 1), y: Y(y) }, { x: X(x), y: Y(y + 1) }, { x: X(x + 1), y: Y(y + 1) });
+    if (corners.length > 2) {
+      // A raked prow past the flight deck's bow end, under the deck, toward the green nav light.
+      let bow = p.h1 + 1;
+      while (bow < b.x + b.w && solid(lv, bow, p.D)) bow++;
+      corners.push({ x: X(bow) + TILE * 0.9, y: Y(p.D) + TILE * 0.55 });
+      const belly = round(hullOf(corners), 3).map((q) => ({ x: q.x, y: Math.max(q.y, Y(p.D) + 3) }));
+      tone(g, belly, t.hsl({ ...HULL, l: HULL.l + 4 }), { depth: 2.2 });
+      pen(g, belly, m.seed + 30, 0.3, 0.8, 4, t.ink(HULL));
+    }
     // The bridge tower, standing up behind the island: a tall hull block, a band of windows, a mast.
     if (p.i0 >= 0) {
       const tx0 = X(p.i0) - 3;
@@ -271,12 +315,30 @@ function ringBack(m: Deco, t: Hz) {
     // The ring rounded out: a band of hull a touch outside the plating, so its stepped edge reads round.
     const outer = ovalPts(cx, cy, (Ro + 0.62) * TILE, (Ro + 0.62) * TILE, m.seed, 0.004, 72);
     const inner = ovalPts(cx, cy, (Ri + 0.3) * TILE, (Ri + 0.3) * TILE, m.seed + 1, 0.004, 60);
-    g.save();
-    path(g, outer);
-    g.fillStyle = t.c(HULL, -6);
-    g.fill();
-    g.restore();
+    tone(g, outer, t.hsl({ ...HULL, l: HULL.l - 4 }), { depth: 2.4 });
     pen(g, outer, m.seed, 0.3, 0.8, 4, t.ink(HULL));
+    // The ring's own plate seams, running round it: the stepped plating reads as bolted onto a round hull.
+    g.fillStyle = t.c(HULL, -22);
+    for (let i = 0; i < 20; i++) {
+      if (hash2(i, 7, m.seed) < 0.3) continue;
+      const a = (i / 20) * Math.PI * 2 + 0.08;
+      const r0 = (Ri + 0.4) * TILE;
+      const r1 = (Ro + 0.5) * TILE;
+      line(g, cx + Math.cos(a) * r0, cy + Math.sin(a) * r0, cx + Math.cos(a) * r1, cy + Math.sin(a) * r1, {
+        w: 0.6,
+        seed: i + m.seed,
+        taper: [0.2, 0.3],
+        press: 0.3,
+      });
+    }
+    // A lit rim along the crown, toward the light.
+    g.fillStyle = t.c(HULL, 16);
+    const lit: P[] = [];
+    for (let i = 0; i <= 14; i++) {
+      const a = Math.PI * (1.05 + (i / 14) * 0.6);
+      lit.push({ x: cx + Math.cos(a) * (Ro + 0.42) * TILE, y: cy + Math.sin(a) * (Ro + 0.42) * TILE });
+    }
+    stroke(g, lit, { w: 1.1, seed: m.seed + 2, taper: [0.25, 0.35], press: 0.3 });
     // The habitat inside: dark, a band of windows round it, a lettuce patch by the floor.
     g.fillStyle = t.c(DARK, 2);
     path(g, inner);
@@ -359,7 +421,7 @@ function planetBack(m: Deco, lv: Level, t: Hz) {
     g.save();
     path(g, disk);
     g.clip();
-    g.fillStyle = t.c({ ...rock, l: Math.max(14, rock.l - 18) });
+    g.fillStyle = t.c({ ...rock, l: rock.l - 2 });
     cut(g, tx0 - TILE, ty0, tw + 2 * TILE, 3 * TILE, m.seed + 8);
     g.restore();
     for (let k = 0; k < Rp; k++) {
@@ -462,10 +524,20 @@ function rocketLivery(rc: RC, m: Deco, d: DrawCtx) {
   const y0 = p.rt * TILE;
   const y1 = (p.D - 3) * TILE;
   const body = boxPts(x0, y0, w, y1 - y0, 1.5, m.seed, 0.05);
-  tone(s, body, WHITE, { depth: 1.2 });
+  const paint: HSL = { ...WHITE, l: WHITE.l - 6 };
+  tone(s, body, paint, { depth: 1.2 });
+  // Round, not a slab: its far third in shade, cut by hand, and one lit stripe down the near side.
+  s.save();
+  path(s, body);
+  s.clip();
+  s.fillStyle = css(paint, -16);
+  path(s, boxPts(x0 + w * 0.7, y0 - 2, w * 0.4, y1 - y0 + 4, 0.5, m.seed + 7, 0.6));
+  s.fill();
+  glint(s, poly(x0 + w * 0.22, y0 + 4, x0 + w * 0.2, (y0 + y1) / 2, x0 + w * 0.23, y1 - 6), css(paint, 10), 1.6, m.seed + 8);
+  s.restore();
   // The roll pattern: black and white quarters in a band near the top.
   const by = y0 + TILE * 1.2;
-  s.fillStyle = css({ h: 220, s: 12, l: 18 });
+  s.fillStyle = css({ h: 220, s: 12, l: 30 });
   cut(s, x0 + 1, by, w / 2 - 1, TILE * 0.8, 11);
   cut(s, x0 + w / 2, by + TILE * 0.8, w / 2 - 1, TILE * 0.8, 12);
   // The name, down its side.
@@ -480,6 +552,7 @@ function rocketLivery(rc: RC, m: Deco, d: DrawCtx) {
   }
   s.fillStyle = css(RED, -2);
   cut(s, x0 + 1, y1 - 7, w - 2, 4, 13);
+  pen(s, body, m.seed + 9, 0.45, 1.1, 3, inkFor(paint));
   // The nose: a red cap on its tile, and the escape tower over it where there is one.
   const nx = (p.rx0 + 1) * TILE;
   part(s, boxPts(nx, y0 - TILE, TILE, TILE, 3, m.seed + 1, 0.05), RED, m.seed + 1, { depth: 0.8, thin: 0.4, thick: 0.9 });
@@ -518,16 +591,27 @@ function rigBack(m: Deco, lv: Level, t: Hz) {
     // wall, so the rock above the bore and under it read as one lump.
     let topRow = p.D;
     for (let x = p.c0; x <= p.s1; x++) for (let y = p.surf - 2; y < topRow; y++) if (solid(lv, x, y)) topRow = y;
+    // The lump wraps every rock tile of the rig, rounded, a few px proud of their stepped corners.
+    const corners: P[] = [];
+    for (let y = topRow; y <= p.D + 1; y++)
+      for (let x = p.c0 - 2; x <= p.s1 + 1; x++)
+        if (solid(lv, x, y)) corners.push({ x: X(x), y: Y(y) }, { x: X(x + 1), y: Y(y) }, { x: X(x), y: Y(y + 1) }, { x: X(x + 1), y: Y(y + 1) });
     const bx = (X(p.c0) + X(p.s1 + 1)) / 2;
     const by = (Y(topRow) + Y(p.D + 2)) / 2;
-    const body = ovalPts(bx, by, (X(p.s1 + 1) - X(p.c0)) / 2 + 3, (Y(p.D + 2) - Y(topRow)) / 2 + 3, m.seed + 11, 0.05, 40);
-    tone(g, body, t.hsl({ ...rock, l: Math.max(20, rock.l - 9) }), { depth: 1.4 });
+    const wrap =
+      corners.length > 2 ? round(hullOf(corners), 3) : ovalPts(bx, by, (X(p.s1 + 1) - X(p.c0)) / 2, (Y(p.D + 2) - Y(topRow)) / 2, m.seed + 11, 0.05, 40);
+    const body = wrap.map((q, i) => {
+      const d = Math.hypot(q.x - bx, q.y - by) || 1;
+      const k = 3 + 1.5 * hash2(i, 3, m.seed);
+      return { x: q.x + ((q.x - bx) / d) * k, y: Math.max(Y(topRow) + 2, q.y + ((q.y - by) / d) * k) };
+    });
+    tone(g, body, t.hsl({ ...rock, l: rock.l + 8 }), { depth: 2 });
     pen(g, body, m.seed + 11, 0.3, 0.8, 4, t.ink(rock));
     // The bore: deeper rock, steel ribs holding its roof up, a lamp now and then.
     g.save();
     path(g, body);
     g.clip();
-    g.fillStyle = t.c({ ...rock, l: Math.max(14, rock.l - 18) });
+    g.fillStyle = t.c({ ...rock, l: rock.l - 2 });
     cut(g, X(p.c0) - TILE, Y(p.D - 3), X(p.s1 + 1) - X(p.c0) + 2 * TILE, 3 * TILE, m.seed + 10, 1.5);
     g.restore();
     for (let x = p.c0 + 1; x <= p.s1 - 1; x += 3) {
@@ -724,7 +808,8 @@ function fuelCell(rc: RC, m: Fuse, d: DrawCtx): boolean {
     for (const [cx, cy] of m.cells) {
       const x = cx * TILE + ox;
       const y = cy * TILE + oy;
-      rc.bg.fillStyle = 'rgba(20,14,10,0.5)';
+      // Soot where it stood: a dark of the deck under it.
+      rc.bg.fillStyle = css(d.o.level?.theme.terrain.dark ?? { h: 220, s: 12, l: 24 }, -8, 0.55);
       rc.bg.beginPath();
       rc.bg.ellipse(x + TILE / 2, y + TILE, 9, 2, 0, 0, Math.PI * 2);
       rc.bg.fill();

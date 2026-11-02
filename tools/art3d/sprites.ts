@@ -82,7 +82,7 @@ try {
     const out = opt('out', join(shots, file.replace(/.*\//, '').replace(/\.glb$/, '') + '-turnaround.png'))!;
     const got = await page.evaluate(([u, k]) => (window as any).art3d.inspect(u, 512, k), [fsUrl(file), Number(opt('k', '14'))] as const);
     writeFileSync(out, dataPng(got.sheet));
-    console.log(JSON.stringify({ clips: got.clips, swatches: got.swatches }));
+    console.log(JSON.stringify({ clips: got.clips, bones: got.bones, swatches: got.swatches }));
     console.log(out);
   } else if (words[0] === 'study' || words[0] === 'keys') {
     const kind = words[1];
@@ -114,10 +114,11 @@ try {
       writeFileSync(file, framesModule(set));
       spawnSync(join(root, 'node_modules/.bin/oxfmt'), [file], { stdio: 'ignore' });
       writeFileSync(join(shots, `${kind}-frames.png`), dataPng(await sheet(set, Number(opt('zoom', '4')), { only: opt('only')?.split(',') })));
+      writeFileSync(join(shots, `${kind}-rolls.png`), dataPng(await page.evaluate(([st]) => (window as any).art3d.rolls(st, 8), [set] as const)));
       writeFileSync(join(shots, `${kind}-silhouettes.png`), dataPng(await sheet(set, 1.67, { silhouette: true, facings: ['r'] })));
       const frames = Object.values(set.clips).reduce((a, c) => a + c.r.length + c.l.length, 0);
       console.log(
-        `${kind}: ${frames} frames, ${(readFileSync(file).length / 1024).toFixed(0)} KB, ${((Date.now() - t0) / 1000).toFixed(1)} s; sheets: ${shots}/${kind}-{frames,silhouettes}.png`,
+        `${kind}: ${frames} frames, ${(readFileSync(file).length / 1024).toFixed(0)} KB, ${((Date.now() - t0) / 1000).toFixed(1)} s; sheets: ${shots}/${kind}-{frames,silhouettes,rolls}.png`,
       );
     }
   }

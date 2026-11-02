@@ -3,11 +3,11 @@ import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { type Level, T_SOLID, tileAt } from '../../../sim/level';
 import { type Module, type ModuleOf, swingHeads } from '../../../sim/props';
-import { blob, inkFor, line, type P, stroke } from '../../ink';
-import { boxPts, ovalPts, part, path, poly, sprite, stamp } from '../../ink-props';
+import { blob, inkFor, line, type P } from '../../ink';
+import { bar, barLine, boxPts, dot, ovalPts, part, path, poly, sprite, stamp, tick } from '../../ink-props';
 import { circle, flame, flutter, glowDot, light, type RC } from '../../kit';
 import type { DrawCtx } from '../common';
-import { BANNER, doorway, flat, GILT, type Hz, hz, STONE, WOOD } from './castle-ink';
+import { ashlar, BANNER, doorway, flat, GILT, type Hz, hz, STONE, WOOD } from './castle-ink';
 import type { Deco } from './common';
 
 /**
@@ -28,7 +28,8 @@ import type { Deco } from './common';
  * tones with a light pen in its own dark, never a slab to stand on (docs/ART.md, Fair play). Only fire glows.
  */
 
-const DARK: HSL = { h: 250, s: 16, l: 8 };
+/** Stone in the shade of a hall or passage: dark enough to sit back, light enough to show its courses. */
+const SHADE: HSL = { h: 32, s: 8, l: 21 };
 const IRON: HSL = { h: 222, s: 9, l: 30 };
 /** Iron in front of a dark wall: lit enough to read against it. */
 const BRIGHT_IRON: HSL = { h: 220, s: 8, l: 52 };
@@ -62,16 +63,9 @@ const frameOf = (m: Deco) => {
   return { tx0, ty0, tx1: tx0 + Math.round(m.w / TILE) - 1, X: (tx: number) => tx * TILE - m.at[0], Y: (ty: number) => ty * TILE - m.at[1] };
 };
 
-/** A dark interior seen through a passage: shadowed coursed stone, vault ribs every few tiles, a lit sill. */
+/** An interior seen through a passage: coursed stone in shadow, vault ribs every few tiles, a lit sill. */
 function vault(g: CanvasRenderingContext2D, t: Hz, x: number, y: number, w: number, h: number, seed: number) {
-  g.fillStyle = t.c(DARK);
-  g.fillRect(x, y, w, h);
-  for (let r = 0, yy = y + 1; yy < y + h - 3; yy += 7, r++)
-    for (let xx = x + (r % 2 ? -6 : 0); xx < x + w; xx += 13) {
-      g.fillStyle = t.c(STONE, -16 + hash2(xx | 0, yy | 0, seed) * 5);
-      path(g, boxPts(xx + 0.7, yy + 0.7, 11.6, 5.6, 1, (xx * 3 + yy) | 0, 0.2));
-      g.fill();
-    }
+  ashlar(g, t, x, y, w, h, SHADE, seed, 8);
   for (let xx = x + 22 + (seed % 9); xx < x + w - 10; xx += 46) {
     const rib = poly(
       xx,
@@ -95,10 +89,9 @@ function vault(g: CanvasRenderingContext2D, t: Hz, x: number, y: number, w: numb
       xx + 2.5,
       y + h,
     );
-    flat(g, rib, { ...STONE, l: STONE.l - 6 }, t, xx | 0, 0.5);
+    flat(g, rib, { ...STONE, l: STONE.l - 2 }, t, xx | 0, 0.5);
   }
-  g.fillStyle = t.c(STONE, 2);
-  g.fillRect(x, y + h - 2, w, 2);
+  flat(g, boxPts(x, y + h - 2.4, w, 2.4, 0.3, seed + 3, 0.1), { ...STONE, l: STONE.l + 4 }, t, seed + 3, 0.3);
 }
 
 /** A wall torch on its bracket: the iron baked, the flame live. */
@@ -117,39 +110,37 @@ function torchFlame(rc: RC, x: number, y: number, i: number) {
 function pennant(rc: RC, x: number, y: number, col: HSL, seed: number) {
   const s = rc.s;
   const f = flutter(rc, 2.2, seed);
-  const lift = Math.min(1, Math.abs(f) * 0.5);
+  // Stiff cloth: even in still air it stands a little off the pole, so it reads as a flag and not a sliver.
+  const lift = 0.4 + 0.6 * Math.min(1, Math.abs(f) * 0.5);
   const dir = f < 0 ? -1 : 1;
-  const L = 15;
+  const L = 22;
+  const H = 9;
   const tipX = x + dir * L * (0.3 + 0.7 * lift);
-  const tipY = y + 3.5 + (1 - lift) * 10;
+  const tipY = y + 4 + (1 - lift) * 14;
+  const wave = Math.sin(rc.t * 7 + seed) * f * 0.8;
   const cloth = [
     { x, y },
-    { x: tipX, y: (y + tipY) / 2 - 0.5 + Math.sin(rc.t * 7 + seed) * f * 0.6 },
-    { x: tipX - dir * 3.5, y: tipY + 1 },
-    { x, y: y + 6.5 },
+    { x: (x + tipX) / 2, y: y + (tipY - y) * 0.45 + wave },
+    { x: tipX, y: tipY },
+    { x: (x + tipX) / 2 - dir * 1.2, y: y + (tipY - y) * 0.55 + H * 0.55 + wave },
+    { x, y: y + H },
   ];
-  part(s, cloth, col, seed, { depth: 0.4, thin: 0.25, thick: 0.6 });
-}
-
-/** A polyline cut every couple of px, so a tapered stroke along it keeps its width between its ends. */
-function dense(pts: readonly P[]): P[] {
-  const out: P[] = [pts[0]];
-  for (let i = 1; i < pts.length; i++) {
-    const a = pts[i - 1];
-    const b = pts[i];
-    const n = Math.max(2, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 2.5));
-    for (let k = 1; k <= n; k++) out.push({ x: a.x + ((b.x - a.x) * k) / n, y: a.y + ((b.y - a.y) * k) / n });
-  }
-  return out;
+  part(s, cloth, col, seed, { depth: 0.8, thin: 0.35, thick: 0.8 });
+  // A gilt stripe down the hoist, and the finial on the pole.
+  s.fillStyle = css(GILT, 6);
+  path(s, [
+    { x: x + dir * 0.6, y: y + 0.8 },
+    { x: x + dir * 2.6, y: y + 1.2 },
+    { x: x + dir * 2.6, y: y + H - 1.2 },
+    { x: x + dir * 0.6, y: y + H - 0.8 },
+  ]);
+  s.fill();
+  part(s, ovalPts(x, y - 1.4, 1.5, 1.5, seed + 1, 0.04, 10), GILT, seed + 1, { depth: 0.4, thin: 0.25, thick: 0.5 });
 }
 
 /** An iron rod or a wooden pole: a ribbon in a dark of its colour under the colour. */
 function rodPts(g: CanvasRenderingContext2D, pts: readonly P[], w: number, c: HSL, seed: number, ink = inkFor(c)) {
-  const d = dense(pts);
-  g.fillStyle = ink;
-  stroke(g, d, { w: w + 0.7, seed, taper: [0.02, 0.02], press: 0 });
-  g.fillStyle = css(c);
-  stroke(g, d, { w, seed: seed + 1, taper: [0.02, 0.02], press: 0 });
+  bar(g, pts, w, c, seed, { ink, rim: 0.35, taper: [0.02, 0.02], press: 0 });
 }
 
 // ------------------------------------------------------------------------------------------- gatehouse
@@ -190,8 +181,7 @@ function gateBack(m: Deco, t: Hz, lv: Level) {
     for (let x = px0; x < px1; x += 16) back.push({ x, y: top }, { x: x + 8, y: top }, { x: x + 8, y: top + 5 }, { x: x + 16, y: top + 5 });
     back.push({ x: px1, y: top }, { x: px1, y: Y(q.Gt) + 2 });
     flat(g, back, { ...STONE, l: STONE.l + 4 }, t, 3, 0.5);
-    g.fillStyle = t.ink(STONE);
-    for (let x = px0 + 8; x < px1; x += 16) g.fillRect(x - 0.4, top + 7, 0.8, 4.5);
+    for (let x = px0 + 8; x < px1; x += 32) tick(g, x, top + 7, x + 0.2, top + 11.5, 0.5, x | 0, t.c(STONE, -12));
     // Pennant poles on both towers.
     for (const [x, y] of [
       [X(q.f0) + 1.5 * TILE, Y(q.Ft)],
@@ -227,7 +217,7 @@ function gatehouse(rc: RC, m: Deco, d: DrawCtx) {
   stamp(rc.s, gateBack(m, t, lv), ox, oy);
   const q = gateOf(m, lv);
   const { X, Y } = frameOf(m);
-  const col: HSL = { ...BANNER, l: BANNER.l + 6 };
+  const col: HSL = { ...BANNER, s: BANNER.s - 6, l: BANNER.l + 14 };
   pennant(rc, ox + X(q.f0) + 1.5 * TILE + 0.5, oy + Y(q.Ft) - 43, col, m.seed);
   pennant(rc, ox + X(q.s1 + 1) - 1.5 * TILE + 0.5, oy + Y(q.Bt) - 43, col, m.seed + 5);
   for (const [i, x] of gateTorches(m, q).entries()) torchFlame(rc, ox + x, oy + Y(q.G - 3) + 18, i + m.seed);
@@ -252,44 +242,64 @@ function drawbridge(m: Deco, t: Hz, lv: Level) {
     const nx = -uy;
     const ny = ux;
     const T = 10;
-    const end = { x: hx + ux * L, y: hy + uy * L };
-    const deck = [
-      { x: hx, y: hy },
-      { x: end.x, y: end.y },
-      { x: end.x + nx * T, y: end.y + ny * T },
-      { x: hx + nx * T, y: hy + ny * T },
-    ];
-    // Its broken end: a few planks shorter on one side.
-    deck[1] = { x: hx + ux * (L - 5), y: hy + uy * (L - 5) };
-    const DECK: HSL = { h: 26, s: 34, l: 36 };
-    flat(g, deck, DECK, t, m.seed, 0.6);
-    g.fillStyle = t.ink(DECK);
-    for (let k = 8; k < L - 6; k += 7)
-      line(g, hx + ux * k, hy + uy * k, hx + ux * k + nx * T, hy + uy * k + ny * T, { w: 0.4, seed: k, taper: [0.1, 0.1], press: 0 });
-    // Iron straps across it at both ends.
-    for (const k of [4, L - 14]) {
-      const s = [
-        { x: hx + ux * k, y: hy + uy * k },
-        { x: hx + ux * (k + 3), y: hy + uy * (k + 3) },
-        { x: hx + ux * (k + 3) + nx * T, y: hy + uy * (k + 3) + ny * T },
-        { x: hx + ux * k + nx * T, y: hy + uy * k + ny * T },
-      ];
-      flat(g, s, IRON, t, k | 0, 0.3);
+    const DECK: HSL = { h: 26, s: 34, l: 40 };
+    const at = (k: number, n: number) => ({ x: hx + ux * k + nx * n, y: hy + uy * k + ny * n });
+    // Its broken end: the boards snapped off ragged, each at its own length.
+    const boards = 3;
+    const deck: P[] = [at(0, 0)];
+    for (let b = 0; b <= boards; b++) {
+      const n = (T * b) / boards;
+      const cut = L - 2 - hash2(b, 4, m.seed) * 7;
+      if (b > 0) deck.push(at(cut - 2 - hash2(b, 5, m.seed) * 3, n - T / boards / 2));
+      deck.push(at(cut, n));
     }
+    deck.push(at(0, T));
+    // The deck's thickness, the edge of its boards seen under it, then its face.
+    flat(
+      g,
+      deck.map((p) => ({ x: p.x + 1.6, y: p.y + 2.2 })),
+      { ...DECK, l: DECK.l - 14 },
+      t,
+      m.seed + 1,
+      0.3,
+    );
+    flat(g, deck, DECK, t, m.seed, 0.8);
+    // The boards along it, joints lifted, the odd knot.
+    for (let b = 1; b < boards; b++) {
+      const n = (T * b) / boards;
+      tick(g, at(3, n).x, at(3, n).y, at(L - 10, n).x, at(L - 10, n).y, 0.5, b, t.c(DECK, -16));
+    }
+    dot(g, at(L * 0.4, T * 0.5).x, at(L * 0.4, T * 0.5).y, 0.6, 3, undefined, t.c(DECK, -18));
+    // Iron straps across it, bolted, the hinge's knuckles at its foot.
+    for (const k of [6, L * 0.5, L - 16]) {
+      const strap = [at(k, -0.4), at(k + 3.4, -0.4), at(k + 3.4, T + 0.4), at(k, T + 0.4)];
+      flat(g, strap, BRIGHT_IRON, t, k | 0, 0.4);
+      for (const n of [2, T - 2]) dot(g, at(k + 1.7, n).x, at(k + 1.7, n).y, 0.55, (k + n) | 0, t.c(BRIGHT_IRON, 18), t.ink(IRON));
+    }
+    for (const n of [1.5, T - 3.5]) flat(g, ovalPts(at(0, n + 1).x, at(0, n + 1).y, 2.2, 2.2, n | 0, 0.04, 10), BRIGHT_IRON, t, (n * 3) | 0, 0.3);
     // The chains from the tower's face: one still holding the end, the other snapped and hanging.
     const cx = X(f0);
     const cy = Y(G - 5);
     const links = (x0: number, y0: number, x1: number, y1: number, seed: number) => {
-      const n = Math.max(2, Math.round(Math.hypot(x1 - x0, y1 - y0) / 2.8));
+      const len = Math.hypot(x1 - x0, y1 - y0) || 1;
+      const n = Math.max(2, Math.round(len / 3.2));
+      const ex = (x1 - x0) / len;
+      const ey = (y1 - y0) / len;
       for (let i = 0; i < n; i++) {
         const k = (i + 0.5) / n;
-        g.fillStyle = t.ink(IRON);
-        blob(g, x0 + (x1 - x0) * k, y0 + (y1 - y0) * k, i % 2 ? 0.7 : 1.1, seed + i, i % 2 ? 1 : 1.6, 0.05);
-        g.fill();
+        const lx = x0 + (x1 - x0) * k;
+        const ly = y0 + (y1 - y0) * k;
+        // Links alternate face on and edge on.
+        if (i % 2) barLine(g, lx - ex * 1.5, ly - ey * 1.5, lx + ex * 1.5, ly + ey * 1.5, 0.9, t.hsl(BRIGHT_IRON), seed + i, { ink: t.ink(IRON), rim: 0.3 });
+        else {
+          const ring = ovalPts(lx, ly, Math.abs(ex) * 2.1 + Math.abs(ey) * 1.3, Math.abs(ey) * 2.1 + Math.abs(ex) * 1.3, seed + i, 0.03, 10);
+          bar(g, [...ring, ring[0]], 0.8, t.hsl(BRIGHT_IRON), seed + i, { ink: t.ink(IRON), rim: 0.3, taper: [0, 0] });
+        }
       }
     };
-    links(cx, cy, end.x + nx * T * 0.5, end.y + ny * T * 0.5, 5);
-    links(cx, cy + 3, cx - 6, cy + 18, 9);
+    links(cx, cy, at(L - 12, T * 0.5).x, at(L - 12, T * 0.5).y, 5);
+    links(cx, cy + 3, cx - 5, cy + 19, 9);
+    flat(g, boxPts(cx - 2.6, cy - 2.6, 5.2, 5.2, 0.6, 13, 0.1), IRON, t, 13, 0.3);
   });
 }
 
@@ -335,9 +345,12 @@ function chapelBack(m: Deco, t: Hz, lv: Level) {
       for (let k = 0; k <= 8; k++)
         arch.push({ x: ax + aw / 2 - Math.cos((k / 8) * Math.PI) * (aw / 2), y: by + 6 + aw / 2 - Math.sin((k / 8) * Math.PI) * (aw / 2) });
       arch.push({ x: ax + aw, y: by + bh });
-      flat(g, arch, DARK, t, 7 + i, 0.2);
-      g.fillStyle = t.c(STONE, -4);
-      for (let y = by + 9 + aw / 2; y < by + bh - 2; y += 4) g.fillRect(ax + 1, y, aw - 2, 1.4);
+      flat(g, arch, { ...SHADE, l: SHADE.l - 8 }, t, 7 + i, 0.2);
+      // The louvres: slanted boards across the arch, each a lit top edge over its shadow.
+      for (let y = by + 10 + aw / 2, k = 0; y < by + bh - 3; y += 6, k++) {
+        const slat = poly(ax + 0.8, y, ax + aw - 0.8, y - 0.4, ax + aw - 0.8, y + 2.4, ax + 0.8, y + 2.8);
+        flat(g, slat, { ...WOOD, l: WOOD.l + 12 }, t, (y * 3 + i) | 0, 0.5);
+      }
     }
     // A weathervane on the spire's tip: a rod, a ball and an arrow.
     const vx = (X(q.t0) + X(q.t1 + 1)) / 2;
@@ -372,12 +385,7 @@ function chapelBack(m: Deco, t: Hz, lv: Level) {
     const nw = X(q.s1) - nx;
     const ny = Y(q.Nr + 1);
     const nh = Y(q.G) - ny;
-    flat(g, boxPts(nx, ny, nw, nh, 0.3, 9, 0.05), STONE, t, 9, 0.5);
-    g.fillStyle = t.ink(STONE);
-    for (let y = ny + 9, r = 0; y < ny + nh - 3; y += 9, r++) {
-      g.fillRect(nx, y, nw, 0.7);
-      for (let x = nx + (r % 2) * 10; x < nx + nw; x += 20) g.fillRect(x, y, 0.7, 9);
-    }
+    ashlar(g, t, nx, ny, nw, nh, { ...STONE, l: STONE.l - 4 }, 9, 9);
     const n = Math.max(1, Math.floor((nw - 28) / 26));
     for (let i = 0; i < n; i++) {
       const wx = nx + 10 + i * 26;
@@ -391,12 +399,23 @@ function chapelBack(m: Deco, t: Hz, lv: Level) {
         { x: wx + 8, y: wt + 6 },
         { x: wx + 8, y: wb },
       ];
-      flat(g, win, { h: 226, s: 30, l: 18 }, t, 20 + i, 0.2);
-      for (let y = wt + 5, r = 0; y < wb - 1; y += 4.5, r++) {
-        g.fillStyle = t.c(GLASS[(r + i) % GLASS.length], 4);
-        g.fillRect(wx + 1.2, y, 2.6, 3.4);
-        g.fillStyle = t.c(GLASS[(r + i + 2) % GLASS.length], 4);
-        g.fillRect(wx + 4.2, y, 2.6, 3.4);
+      flat(g, win, GILT, t, 20 + i, 0.2);
+      // The glass in three big panes leaded together, each its own colour, lit from inside.
+      const panes = 3;
+      for (let r = 0; r < panes; r++) {
+        const y0 = wt + 6 + ((wb - wt - 7) * r) / panes;
+        const y1 = wt + 6 + ((wb - wt - 7) * (r + 1)) / panes;
+        const c = GLASS[(r + i) % GLASS.length];
+        const pane =
+          r === 0
+            ? poly(wx + 1.1, y1 - 0.6, wx + 1.1, y0, wx + 4, wt + 1.6, wx + 6.9, y0, wx + 6.9, y1 - 0.6)
+            : boxPts(wx + 1.1, y0 + 0.3, 5.8, y1 - y0 - 0.9, 0.3, r + i * 5, 0.05);
+        g.fillStyle = t.c({ ...c, l: c.l + 12 });
+        path(g, pane);
+        g.fill();
+        g.fillStyle = t.c({ ...c, l: c.l + 26 });
+        path(g, poly(wx + 1.6, y1 - 1.2, wx + 1.6, y0 + 1, wx + 3.2, y0 + 0.6, wx + 2.6, y1 - 1.6));
+        g.fill();
       }
     }
     // The altar: a table under its cloth, two candlesticks and a plain gilt cross, against the back wall.
@@ -487,27 +506,27 @@ function keepBack(m: Deco, t: Hz, lv: Level) {
     // The hall's back wall: coursed stone in shadow, the bottom courses warmed by the lava under the bridge.
     const hy = Y(q.U + 1);
     const hh = Y(q.G) - hy;
-    flat(g, boxPts(hx, hy, hw, hh, 0.3, 3, 0.05), { ...STONE, l: STONE.l - 8 }, t, 3, 0.5);
-    g.fillStyle = t.c({ h: 18, s: 40, l: 22 }, 0, 0.5);
-    g.fillRect(hx, hy + hh - 14, hw, 14);
-    g.fillStyle = t.ink(STONE);
-    for (let y = hy + 8, r = 0; y < hy + hh; y += 8, r++) {
-      g.fillRect(hx, y, hw, 0.7);
-      for (let x = hx + (r % 2) * 9; x < hx + hw; x += 18) g.fillRect(x, y, 0.7, 8);
-    }
+    ashlar(g, t, hx, hy, hw, hh, { ...STONE, l: STONE.l - 3 }, 3, 9);
+    // The lowest courses warmed by the lava's light: a flat warm tone with a hand's edge, not a wash.
+    const warm: P[] = [{ x: hx, y: hy + hh }];
+    for (let x = hx; x <= hx + hw; x += 8) warm.push({ x, y: hy + hh - 13 - Math.sin(x * 0.21 + m.seed) * 2.2 });
+    warm.push({ x: hx + hw, y: hy + hh });
+    g.fillStyle = t.c({ h: 18, s: 34, l: 30 });
+    path(g, warm);
+    g.fill();
     // The walkway's soffit: a shallow arch spring to spring.
     const soffit: P[] = [{ x: hx, y: hy }];
     for (let k = 0; k <= 10; k++) soffit.push({ x: hx + (hw * k) / 10, y: hy + 5 - Math.sin((k / 10) * Math.PI) * 4 });
     soffit.push({ x: hx + hw, y: hy });
     flat(g, soffit, { ...STONE, l: STONE.l - 2 }, t, 4, 0.4);
     // Chains hanging off the walkway between the firebars' reach and the wall.
-    for (const x of [hx + 4, hx + hw - 4]) {
-      g.fillStyle = t.ink(IRON);
-      for (let y = hy + 6; y < hy + 6 + 18; y += 2.6) {
-        blob(g, x, y, 0.8, (y * 3) | 0, 1.6, 0.05);
-        g.fill();
-      }
-    }
+    for (const x of [hx + 4, hx + hw - 4])
+      for (let y = hy + 6, i = 0; y < hy + 6 + 18; y += 2.8, i++)
+        if (i % 2) barLine(g, x, y - 1.3, x, y + 1.3, 0.8, t.hsl(BRIGHT_IRON), (y * 3) | 0, { ink: t.ink(IRON), rim: 0.3 });
+        else {
+          const ring = ovalPts(x, y, 1.1, 1.8, (y * 3) | 0, 0.03, 10);
+          bar(g, [...ring, ring[0]], 0.7, t.hsl(BRIGHT_IRON), (y * 5) | 0, { ink: t.ink(IRON), rim: 0.3, taper: [0, 0] });
+        }
     // The lever by the far gate: the one that ought to drop the bridge, rusted solid.
     const lx = hx + hw - 10;
     const ly = hy + hh - 26;
@@ -517,14 +536,26 @@ function keepBack(m: Deco, t: Hz, lv: Level) {
     // The trench: its rock walls, the bridge's piers and arches going down into the lava.
     const ty = Y(q.G + 1);
     const th = m.h - ty;
-    flat(g, boxPts(hx, ty, hw, th, 0.3, 50, 0.05), { h: 14, s: 20, l: 12 }, t, 50, 0.4);
+    // Lit only by what the lava throws up under the bridge, so it's drawn lighter than the hall to read as much.
+    const ROCK: HSL = { h: 16, s: 20, l: 36 };
+    flat(g, boxPts(hx, ty, hw, th, 0.3, 50, 0.05), ROCK, t, 50, 0.4);
+    for (let i = 0; i < hw / 14; i++) {
+      const x = hx + 4 + hash2(i, 9, m.seed) * (hw - 8);
+      const y = ty + 6 + hash2(i, 10, m.seed) * (th - 10);
+      tick(g, x, y, x + 3 + hash2(i, 11, m.seed) * 4, y + 2 + hash2(i, 12, m.seed) * 3, 0.5, i, t.c(ROCK, -9));
+    }
     const piers: number[] = [q.t0];
     for (let x = q.t0 + 3; x < q.t1 - 1; x += 3 + (hash2(x, 3, m.seed) < 0.5 ? 1 : 0)) piers.push(x);
     piers.push(q.t1);
     for (const [i, x] of piers.entries()) {
       const px = X(x) + 4;
       const broken = !sol(x, q.G) || (i > 0 && !sol(piers[i - 1], q.G));
-      flat(g, boxPts(px, ty - 2, 8, th + 2, 0.5, x, 0.1), { ...STONE, l: STONE.l - 4 }, t, x, 0.5);
+      flat(g, boxPts(px, ty - 2, 8, th + 2, 0.5, x, 0.1), { ...STONE, l: STONE.l + 22 }, t, x, 0.9);
+      // Its lit face toward the lava, and the courses down it.
+      g.fillStyle = t.c({ h: 22, s: 34, l: 60 });
+      path(g, poly(px + 0.8, ty + th, px + 0.8, ty + th * 0.45, px + 2.2, ty + th * 0.5, px + 2.2, ty + th));
+      g.fill();
+      for (let y = ty + 7; y < ty + th - 2; y += 9) tick(g, px + 1, y, px + 7, y + 0.2, 0.45, (x * 7 + y) | 0, t.c(STONE, -6));
       if (i === 0 || broken) continue;
       // The arch from the last pier to this one, under the bridge.
       const ax0 = X(piers[i - 1]) + 12;
@@ -532,7 +563,7 @@ function keepBack(m: Deco, t: Hz, lv: Level) {
       const arch: P[] = [{ x: ax0, y: ty - 2 }];
       for (let k = 0; k <= 8; k++) arch.push({ x: ax0 + ((ax1 - ax0) * k) / 8, y: ty + 1 + Math.sin((k / 8) * Math.PI) * 6 });
       arch.push({ x: ax1, y: ty - 2 });
-      flat(g, arch, { ...STONE, l: STONE.l - 4 }, t, x + 7, 0.4);
+      flat(g, arch, { ...STONE, l: STONE.l + 16 }, t, x + 7, 0.6);
     }
     // The keeps' gates: the dark through each.
     for (const [x0, x1] of [
@@ -649,13 +680,22 @@ function firebar(rc: RC, m: Swinger, d: DrawCtx) {
   const inner = mods.every((o) => o.type !== 'swinger' || o.hub[0] !== m.hub[0] || o.hub[1] !== m.hub[1] || o.arm >= m.arm);
   if (inner) {
     const outer = Math.max(...mods.map((o) => (o.type === 'swinger' && o.hub[0] === m.hub[0] && o.hub[1] === m.hub[1] ? o.arm : 0)));
+    // The pin's iron plate bolted to the wall, so the bar reads as fixed to something even on a dark wall.
+    part(s, boxPts(hx - 5, hy - 5, 10, 10, 1.2, 5, 0.15), IRON, 5, { depth: 0.8, thin: 0.35, thick: 0.9 });
+    for (const [bx, by] of [
+      [-3.2, -3.2],
+      [3.2, -3.2],
+      [-3.2, 3.2],
+      [3.2, 3.2],
+    ])
+      dot(s, hx + bx, hy + by, 0.6, bx * 3 + by, css(IRON, 30), inkFor(IRON));
     rodPts(
       s,
       [
         { x: hx, y: hy },
         { x: hx + Math.cos(h.a) * outer, y: hy + Math.sin(h.a) * outer },
       ],
-      1.6,
+      2.2,
       BRIGHT_IRON,
       2,
     );

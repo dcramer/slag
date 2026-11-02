@@ -1,7 +1,7 @@
 import { css, type HSL } from '../../core/color';
 import { type Ammo, CLUSTER_FUSE, FACE, GLIDER_CRUISE, GLIDER_H, GLIDER_W, PATCH_FRAMES, PATCH_PX, patchRect } from '../../sim/props';
 import type { Projectile } from '../../sim/run';
-import { line, type P, stroke } from '../ink';
+import { blob, line, type P, stroke } from '../ink';
 import { ball, boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, type Sprite, sprite, stamp, tick } from '../ink-props';
 import { circle, ellipse, flame, glowDot, light, type RC } from '../kit';
 import { dazeStars, drawItemShot, stunnerang } from '../items';
@@ -69,8 +69,10 @@ const ROUNDS: Partial<Record<Ammo | 'arrowhead', () => Sprite>> = {
         [1.8, 0.6, 0.8],
         [-0.4, 2.2, 0.6],
       ] as const) {
-        g.fillStyle = css({ h: 20, s: 20, l: 18 });
-        circle(g, x, y, r);
+        // A pit: a lumpy dab in a dark of the rock, never a compass circle.
+        g.fillStyle = css({ h: 20, s: 20, l: 21 });
+        blob(g, x, y, r, x * 7 + 3, 0.8, 0.2);
+        g.fill();
       }
     }),
   // Sorry: every shot is a little speech bubble, trailing off.
@@ -347,7 +349,7 @@ function drawSnowball(rc: RC, p: Projectile, _a: number, emit?: Emit) {
   const s = rc.s;
   const r = 5.5;
   const spin = p.x / r;
-  ball(s, p.x, p.y, r, SNOW, p.id, undefined, '#56708a');
+  ball(s, p.x, p.y, r, SNOW, p.id);
   s.fillStyle = css(SNOW, -16);
   for (let k = 0; k < 3; k++) {
     const a = spin + k * 2.1;
