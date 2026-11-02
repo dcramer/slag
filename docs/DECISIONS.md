@@ -441,6 +441,14 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `done` · DESIGN.md → Online (Arriving)
 - **Join is a clear button in the corner for anyone watching, in every phase, clickable at any time; disabled as Match Full with no seat; the host's order decides a race for the last seat and the loser is told (Taken).** "join should be a clear CTA in the corner or something that you can click at any time. it gets disabled if 'Match Full', and it should gracefully handle a race to join where the host decides who won"
   2026-11-02 · `done` · DESIGN.md → Online, NETCODE.md → Seats and observers
+- **A kick keeps the player out for 60 s, whatever tab or link they come back through, with a countdown and Rejoin.** "when you kick someone as host, it should stop them from joining for at least 30 seconds so they cant just insta rejoin"
+  2026-11-02 · `done` · DESIGN.md → Online, NETCODE.md → Seats and kicks
+  Changed: a kick sent you to the main menu for good (per tab).
+- **An empty room is over after 60 s: its link then starts a fresh room under the same code.** "if the host and players leave the game for idk more than 30? 60 seconds? it should probably no longer be an active session"
+  2026-11-02 · `done` · DESIGN.md → Online (Rooms end), NETCODE.md → Host election
+  Changed: a browser resumed a room it had saved up to 30 minutes before.
+- **A player gone without a goodbye for 40 s mid-match is dropped (seat freed, parts kept, look and points back if they rejoin); until then everyone sees an unplugged icon on their chip, score row and card.** "when players close their browser at some point they need to truly timeout or something vs just self destruct? ... their character card at the top should show some kind of disconnect icon"
+  2026-11-02 · `done` · DESIGN.md → Online (Gone players), NETCODE.md → Joining and reconnecting
 - **Idle players are detected (a soft disconnect), so the game doesn't wait on them forever.** "we should also detect idles (soft disconnect) so the game doesnt wait on an idle player forever"
   2026-11-02 17:52Z · `done` · DESIGN.md → Players (Nobody waits), NETCODE.md → Idle players and soft disconnects
 - **The idle timeouts: 30 s without input in a pick, place or race (from the phase's start), 60 s in the lobby; after that a player is AFK until their next input. Online an AFK player moves to the watchers: at once in the lobby, mid-match after two rounds in a row ended AFK. A guest sending nothing for 1 s has its held buttons let go.**

@@ -19,6 +19,8 @@ interface Frame {
   lobby?: number;
   net: Record<string, unknown>;
   afk?: number[];
+  /** Players whose peer is gone (`away`). */
+  away?: number[];
   leaving?: number[];
   /** Sim frames to step first. */
   frames?: number;
@@ -37,8 +39,8 @@ const online = (status: string, seat: Seat, space: number, extra: Record<string,
   watchers: [],
   ...extra,
 });
-const failed = (title: string, offline = true) =>
-  online('Offline', 'seated', 0, { offline: true, inviteUrl: undefined, arrival: { stage: 'failed', title, here: 0, offline } });
+const failed = (title: string, offline = true, rejoinIn?: number) =>
+  online('Offline', 'seated', 0, { offline: true, inviteUrl: undefined, arrival: { stage: 'failed', title, here: 0, offline, rejoinIn } });
 const RACE = 'race=saw';
 
 const FRAMES: Frame[] = [
@@ -95,7 +97,9 @@ const FRAMES: Frame[] = [
   { name: '18-failed-full', q: '', net: failed('Room Is Full') },
   { name: '19-failed-unreachable', q: '', net: failed('Cannot Reach Host') },
   { name: '20-failed-version', q: '', net: failed('Different Version') },
-  { name: '21-failed-kicked', q: '', net: failed('Kicked', false) },
+  { name: '21-failed-kicked', q: '', net: failed('Kicked', false, 47) },
+  { name: '22-kicked-rejoin', q: '', net: failed('Kicked', false, 0) },
+  { name: '23-gone-player', q: `players=4&${RACE}`, frames: 110, away: [2], afk: [3], net: online('4 Connected', 'seated', 4) },
 ];
 
 async function frame(p: Page, f: Frame, tag: string): Promise<string> {
@@ -103,7 +107,7 @@ async function frame(p: Page, f: Frame, tag: string): Promise<string> {
   await p.waitForFunction(() => 'slagDebug' in window, null, { timeout: 30_000 });
   await p.evaluate(() => document.fonts.ready);
   await p.evaluate(
-    ([net, afk, leaving, n, touch, lobby, card]) => {
+    ([net, afk, leaving, n, touch, lobby, card, away]) => {
       const d = (window as any).slagDebug;
       d.pause(true);
       const hud = d.renderer.hud;
@@ -112,6 +116,7 @@ async function frame(p: Page, f: Frame, tag: string): Promise<string> {
       for (const dev of [touch ? 'touch' : 'kb1', 'kb2', 'pad0', 'pad1'].slice(0, lobby)) m.join(dev);
       hud.mouseDevice = (net as any).seat === 'watching' ? 'nobody' : touch ? 'touch' : 'kb1';
       for (const i of afk) if (m.players[i]) m.players[i].afk = true;
+      for (const i of away) if (m.players[i]) m.players[i].away = true;
       for (const i of leaving) if (m.players[i]) m.players[i].leaving = true;
       // Pings on the cards of everyone but us, and a host label, as a live room has them.
       const pings = [undefined, 42, 135, 230, 61, 88, 97, 150];
@@ -138,7 +143,7 @@ async function frame(p: Page, f: Frame, tag: string): Promise<string> {
       }
       d.step(n);
     },
-    [f.net, f.afk ?? [], f.leaving ?? [], f.frames ?? 30, tag === 'phone', f.lobby ?? 0, f.card ?? null] as const,
+    [f.net, f.afk ?? [], f.leaving ?? [], f.frames ?? 30, tag === 'phone', f.lobby ?? 0, f.card ?? null, f.away ?? []] as const,
   );
   const path = `${out}/${f.name}-${tag}.png`;
   await p.screenshot({ path });

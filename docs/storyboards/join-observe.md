@@ -92,6 +92,16 @@ Regenerate with `pnpm shot join --out docs/storyboards/join-observe` (`tools/sho
 
 ![](join-observe/20-failed-version-desktop.jpg) ![](join-observe/20-failed-version-phone.jpg)
 
-**21. Kicked.** Only the way back.
+**21. Kicked.** A minute out, counting down; a reload or a new tab lands here too.
 
 ![](join-observe/21-failed-kicked-desktop.jpg) ![](join-observe/21-failed-kicked-phone.jpg)
+
+**22. The ban is up.** Rejoin.
+
+![](join-observe/22-kicked-rejoin-desktop.jpg) ![](join-observe/22-kicked-rejoin-phone.jpg)
+
+## Gone
+
+**23. A player gone, and one AFK.** Unplugged on the chip for the one whose tab closed (dropped after 40 s); AFK for the one who's there but idle.
+
+![](join-observe/23-gone-player-desktop.jpg) ![](join-observe/23-gone-player-phone.jpg)

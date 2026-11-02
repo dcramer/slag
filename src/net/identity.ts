@@ -150,7 +150,6 @@ export function kickedUntil(room: string): number {
 
 // ---------------------------------------------------------------- resume save
 
-
 export interface ResumeSave {
   at: number;
   snap: MatchSnap;
