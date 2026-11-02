@@ -618,6 +618,16 @@ Run `pnpm test:stats`. Update `docs/PARODY.md` (set piece rows), `docs/DESIGN.md
 - **Carriers** (decision 1a): `Level.rides`, `gen/level/ride.ts` (`rideProof`, `carrierReach`, `rideSpans`, `MIN_DWELL`), reach.ts walking rides, and `routes.ts` exempting a ride's span from the mostly-open measure, like a bridge span. See decision 1a below.
 - **`noFreeRide` (task C)** runs with `level.rides` in place. A carrier's own crossing is then already in the baseline, so it needs no special case: the check still snapshots every mover, the carrier included, and rejects any that lets a bare run reach the flag.
 
+### What Wave 1 task A (Flood) landed
+
+- **Sim** (`sim/props/modules/flood.ts`): the cycle is `floodState(m, frame, phase)`, a pure function of the frame, so snapshots carry nothing new. The surface waits at `low` through off and warn, rises (eased), holds at `high` and falls. The warning is drawn and never felt: the crest moves only after it.
+- **Kills:** lava and toxic kill anything the liquid touches; the hazard's top is the crest. Water is a pit, as the bottom of the level is: you wade it and drown once wholly under. That is a `sink` hazard (additive on `Hazard`), counted as a fall, so it splashes like the pit and a shield doesn't stop it.
+- **One number:** the module reports its crest as its `Beam` (`len` = height above the basin floor), and the art draws the crest from `beamOf`.
+- **Barrier:** a new optional `ModuleSim.holds` gives the cells a module holds for most of its cycle, worked out from the cycle itself, because a flood's cycle can outlast the span `barrier.ts` samples. The flood marks every row the liquid covers for more than half its cycle, so the plan keeps clear of them.
+- **Generator:** `capFlood(level, m, standing, cache)` (`gen/stage/flood.ts`) lowers `high` a tile at a time until the recorded solution still holds with the flood in. That keeps high water under the proven route. A concept runs its flood through it before yielding the piece.
+- **Art** (`render/props/modules/flood.ts`): flat bands baked once and stamped at the crest, on BACKDROP so the basin's walls stand in front of them. In front of the terrain go the pen crest, glints, bubbles and the warning's froth lip, cut to the open liquid in each column. Lava alone glows. Water takes the theme's hue where the theme's liquid is water.
+- **Shot:** `pnpm shot flood [--look lava|toxic|water] [--low 2] [--high 5]` lets a tide into the level. It shoots mid-warning, the two frames either side of the crest taking a runner, and high water.
+
 ## 6. Decisions
 
 The owner decided these on the proposal's open questions.

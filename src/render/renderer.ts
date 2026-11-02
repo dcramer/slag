@@ -707,7 +707,7 @@ export class Renderer {
           if (e.cause === 'fall') {
             const pool = m.level.h * TILE;
             this.fx.burst('splash', e.x, Math.min(e.y, pool - 10), 26, 180, [th.liquid.glow, th.liquid.color], 2, 0.9, 120);
-            this.fx.burst('smoke', e.x, pool - 12, 8, 30, [{ h: 0, s: 0, l: 50 }], 3, 1.4);
+            this.fx.burst('smoke', e.x, Math.min(e.y, pool - 12), 8, 30, [{ h: 0, s: 0, l: 50 }], 3, 1.4);
           } else {
             this.fx.burst('gib', e.x, e.y, 14, 220, [body, c?.accent ?? body, shift(body, -15), c?.belly ?? body], 1.8, 2.2, 120);
             this.fx.burst('spark', e.x, e.y, 18, 260, [{ h: 45, s: 100, l: 70 }, body], 1.2, 0.5);
