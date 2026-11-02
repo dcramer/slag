@@ -1,3 +1,4 @@
+import 'client-only';
 import type { RC } from '../render/kit';
 import { drawHostCells, drawProjectile, drawResolved } from '../render/props';
 import { TILE } from '../sim/constants';

@@ -1,5 +1,6 @@
 /**
- * Screenshot harness. Boots a Next.js dev server, drives the game through
+ * Screenshot harness. Builds (if sources changed) and boots a production Next.js server
+ * (`SHOT_DEV=1` uses `next dev` instead), drives the game through
  * window.slagDebug in headless Chromium, and writes PNGs.
  *
  *   npm run shot -- race --seed abc --race saw,laser --frames 200
@@ -15,8 +16,8 @@
  * Software GL is slow; frames are advanced deterministically via slagDebug.step().
  */
 
-import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { spawn, spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { createServer as netServer } from 'node:net';
 import { resolve } from 'node:path';
 import { chromium } from 'playwright';
@@ -36,6 +37,19 @@ const players = Number(opt('players', '2'));
 const frames = Number(opt('frames', '150'));
 mkdirSync(out, { recursive: true });
 
+/** True if any source file is newer than the last production build. */
+function needsBuild(): boolean {
+  const id = '.next/BUILD_ID';
+  if (!existsSync(id)) return true;
+  const built = statSync(id).mtimeMs;
+  const newer = (dir: string): boolean =>
+    readdirSync(dir, { withFileTypes: true }).some((e) => {
+      const p = `${dir}/${e.name}`;
+      return e.isDirectory() ? newer(p) : statSync(p).mtimeMs > built;
+    });
+  return ['src', 'app', 'public'].some((d) => existsSync(d) && newer(d)) || ['next.config.ts', 'package.json'].some((f) => statSync(f).mtimeMs > built);
+}
+
 async function freePort(): Promise<number> {
   return new Promise((res) => {
     const srv = netServer();
@@ -47,7 +61,14 @@ async function freePort(): Promise<number> {
 }
 const port = Number(process.env.SHOT_PORT ?? (await freePort()));
 const base = `http://127.0.0.1:${port}/`;
-const next = spawn('npx', ['next', 'dev', '--port', String(port), '--hostname', '127.0.0.1'], {
+// Production server by default: `next dev` compiles on demand and is far too slow for software-GL screenshots.
+const useDev = process.env.SHOT_DEV === '1';
+if (!useDev && needsBuild()) {
+  console.log('building (sources changed since last build)…');
+  const r = spawnSync('npx', ['next', 'build'], { stdio: 'inherit', env: { ...process.env, NEXT_TELEMETRY_DISABLED: '1' } });
+  if (r.status !== 0) throw new Error('next build failed');
+}
+const next = spawn('npx', ['next', useDev ? 'dev' : 'start', '--port', String(port), '--hostname', '127.0.0.1'], {
   stdio: ['ignore', 'pipe', 'pipe'],
   env: { ...process.env, NEXT_TELEMETRY_DISABLED: '1' },
 });

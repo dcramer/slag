@@ -46,7 +46,7 @@ Build original content. Use the genre's mechanics, but never copy another game's
 | `npm test` | Vitest only. Run one file with `npx vitest run tests/foo.test.ts`. |
 | `npm run level -- <seed>` | ASCII dump of a generated level, plus stats: `#` solid, `=` one-way, `S`/`G` spawn/goal, `·` reachable stand cell, `P` set piece. |
 | `npm run level -- --stats 200` | Generation stats across many seeds: time, styles, how often a level is solvable without props. |
-| `npm run shot -- <scenario> [opts]` | Headless screenshots into `shots/` (gitignored). Boots `next dev` itself; the first page compile takes a while. |
+| `npm run shot -- <scenario> [opts]` | Headless screenshots into `shots/` (gitignored). Runs `next build` if sources changed, then `next start` (set `SHOT_DEV=1` to use `next dev`). |
 | `npm run build` | Production bundle in `dist/`, which Vercel serves. |
 
 Screenshot scenarios (`tools/shot.ts`):
@@ -178,7 +178,7 @@ tests/           vitest
 
 - **Hosting is Vercel.**
   - The app is **Next.js (App Router)** so routes are server-rendered: `/` redirects to a fresh `/r/<code>`; `/r/[room]` renders the lobby shell (per-lobby metadata) and mounts the game client-side; `/codex` is the parts catalog.
-  - **Game logic stays client-side.** Next pages are thin: they validate params, render a shell, and call `bootGame(container, room)` / `mountCodex()` from `src/` in a `'use client'` component. Don't import React into `src/`.
+  - **Game logic stays client-side.** Next pages are thin: they validate params, render a shell, and load the game/codex through `next/dynamic(..., { ssr: false })` (`GameClient` → `GameMount`, `CodexClient` → `CodexMount`), so nothing in `src/` is compiled into the server bundle. `src/game-client.ts` and `src/codex/main.ts` start with `import 'client-only'`, which fails the build if a server module ever imports them. Server routes may import only tiny pure helpers (e.g. `src/game/room.ts`). Don't import React into `src/`.
   - Server code is limited to route handlers / server components in `app/`; keep it small and free.
   - Any server-side code must be small Vercel functions in `api/`. No long-lived servers, and nothing that costs money at our scale.
 - **Online play** is peer-to-peer over WebRTC with a host-authoritative star, input-only netcode (lockstep plus rollback in races), and serverless signaling. The full plan is in **docs/NETCODE.md**. Consequences for all code today:

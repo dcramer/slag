@@ -1,19 +1,13 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
+
+// The game is 100% client-side: ssr:false keeps it (and all of src/) out of the server bundle.
+const GameMount = dynamic(() => import('./GameMount'), {
+  ssr: false,
+  loading: () => <div style={{ position: 'fixed', inset: 0, background: '#07060b' }} />,
+});
 
 export default function GameClient({ room }: { room: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    // Keep the URL canonical (uppercase code) without a navigation.
-    if (location.pathname !== `/r/${room}`) history.replaceState(null, '', `/r/${room}${location.search}${location.hash}`);
-    let cancelled = false;
-    import('../../../src/game-client').then(({ bootGame }) => {
-      if (!cancelled && ref.current) bootGame(ref.current, room);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [room]);
-  return <div ref={ref} style={{ position: 'fixed', inset: 0, overflow: 'hidden', background: '#07060b' }} />;
+  return <GameMount room={room} />;
 }

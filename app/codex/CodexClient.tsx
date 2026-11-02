@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import dynamic from 'next/dynamic';
+
+// Client-only: keeps the codex (and the game code it draws with) out of the server bundle.
+const CodexMount = dynamic(() => import('./CodexMount'), { ssr: false });
 
 export default function CodexClient() {
-  useEffect(() => {
-    import('../../src/codex/main').then(({ mountCodex }) => mountCodex());
-  }, []);
-  return <div id="codex" />;
+  return <CodexMount />;
 }

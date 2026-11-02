@@ -1,3 +1,4 @@
+import 'client-only';
 import { createAudio } from './audio';
 import { parseSeed } from './core/rng';
 import { installDebug } from './debug';
