@@ -1,7 +1,7 @@
 import { inset, overlaps, type Rect, type Vec } from '../core/geom';
 import { deriveSeed, Rng } from '../core/rng';
 import { type BloodCell, buildBlood, groundOf, spillBlood } from './blood';
-import { PLAYER_W, POP_HOLD, RUN_COUNTDOWN } from './constants';
+import { FPS, PLAYER_W, POP_HOLD, RUN_COUNTDOWN } from './constants';
 import { collideRunners, contactStart, footing as stackFooting } from './collide';
 import {
   absorbHit,
@@ -103,6 +103,12 @@ export interface Runner {
 export function popCharge(n: number, inp: InputFrame): number {
   if (!inp.alt || inp.left || inp.right || inp.jump || inp.jumpPressed || inp.usePressed) return 0;
   return n > 0 || inp.altPressed ? n + 1 : 0;
+}
+
+/** A charge as the on-screen countdown reads it: whole seconds left (3, 2, 1), and frames since that number came up. */
+export function popCountdown(pop: number): { secs: number; since: number } {
+  const secs = Math.ceil((POP_HOLD - pop) / FPS);
+  return { secs, since: pop - (POP_HOLD - secs * FPS) };
 }
 
 /**

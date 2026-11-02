@@ -101,12 +101,14 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
   renderer.hud.devices = {
     deviceLabel: (d) => (net.isLocal(d) ? input.deviceLabel(localDev(d)) : 'online'),
     hints: (d) => input.hints(net.isLocal(d) ? localDev(d) : 'pad0'),
+    isLocal: (d) => net.isLocal(d),
     get settings() {
       return input.settings;
     },
   };
   renderer.hud.hidden = params.get('ui') === '0';
   const audio = createAudio();
+  audio.isLocal = (d) => net.isLocal(d);
   const inputMode = new InputModeTracker(window);
   watchTelemetry(room, match, conn, renderer);
 
