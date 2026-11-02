@@ -64,20 +64,36 @@ export function hub(g: CanvasRenderingContext2D, x: number, y: number, r: number
   ball(g, x, y, r, iron(pal, 46), seed);
 }
 
-/** A round character body on two stubby feet, with a hard shine on its shoulder. */
-export function bean(g: CanvasRenderingContext2D, col: HSL, seed: number) {
-  for (const x of [-3.2, 3.2]) {
-    g.fillStyle = INK;
-    path(g, ovalPts(x, 7, 2.3, 1.2, seed + x, 0.04, 14));
-    g.fill();
-    g.fillStyle = css(col, -22, 1, 4);
-    path(g, ovalPts(x - 0.2, 6.8, 1.7, 0.75, seed + x + 1, 0.04, 14));
+/**
+ * A clay-pigeon trap's housing: a squat riveted box on a skid, a post under the pivot, hazard stripes,
+ * and a returns-desk receipt curling out of a slot in its side. A machine, not a body.
+ */
+export function trapBox(g: CanvasRenderingContext2D, col: HSL, pal: MetalPalette, seed: number) {
+  part(g, poly(-8, 8, 8, 8, 7.4, 6.4, -7.4, 6.4), iron(pal, 34), seed, { depth: 0.4, thin: 0.45, thick: 1.2, shade: -10 });
+  part(g, poly(-1.6, 1.4, 1.6, 1.4, 1.2, -0.4, -1.2, -0.4), iron(pal, 44), seed + 1, { depth: 0.3, thin: 0.35, thick: 0.8 });
+  const body = poly(-7, 6.6, 7, 6.6, 6.6, 1.2, -6.6, 1.2);
+  part(g, body, col, seed + 2, { depth: 1, thin: 0.55, thick: 1.5, shade: -18 });
+  g.save();
+  path(g, body);
+  g.clip();
+  g.fillStyle = '#f2b705';
+  path(g, poly(-7, 6.6, 7, 6.6, 7, 5.2, -7, 5.2));
+  g.fill();
+  g.fillStyle = INK;
+  for (let x = -7; x < 8; x += 2.4) {
+    path(g, poly(x, 6.6, x + 1.1, 6.6, x + 2.1, 5.2, x + 1, 5.2));
     g.fill();
   }
-  const body = ovalPts(0, 0.6, 7.2, 6.8, seed, 0.03, 30);
-  part(g, body, col, seed, { depth: 1.4, thin: 0.55, thick: 1.6, shade: -18 });
-  g.fillStyle = css(col, 22);
-  line(g, -5.6, -0.4, -4, -3.8, { w: 1, seed: seed + 2, taper: [0.25, 0.4], press: 0.1 });
+  g.restore();
+  for (const x of [-5.4, 5.4]) dot(g, x, 2.6, 0.45, seed + x, css(pal.light));
+  // The slot, and the receipt curling out of it and down past the skid.
+  tick(g, -6.2, 2.3, -6.2, 4.4, 0.55, seed + 3);
+  const tape = poly(-6.4, 2.6, -8.2, 3.4, -8.8, 5.4, -8.2, 7.4, -7.2, 8.4);
+  g.fillStyle = INK;
+  stroke(g, tape, { w: 1.9, seed: seed + 4, taper: [0, 0.2], press: 0 });
+  g.fillStyle = '#f6f1e4';
+  stroke(g, tape, { w: 1.1, seed: seed + 4, taper: [0, 0.3], press: 0 });
+  for (const y of [4.2, 5.4, 6.6]) tick(g, -8.9, y, -8.3, y + 0.1, 0.25, seed + y, 'rgba(18,11,8,0.55)');
 }
 
 /** A gumball machine's cast stand: a waist under the globe flaring to a heavy foot, with a coin plate. */
@@ -99,7 +115,7 @@ export function baseplate(g: CanvasRenderingContext2D, pal: MetalPalette, seed: 
 
 /**
  * A bullet blaster's pedestal: a tapered black column on a stepped foot, bolted round its base.
- * The drum it fires from is the barrel, turning on top of it, and it wears the skull.
+ * The drum it fires from is the barrel, turning on top of it, and it wears the roundel.
  */
 export function pedestal(g: CanvasRenderingContext2D, seed: number) {
   const black: HSL = { h: 220, s: 10, l: 20 };
@@ -112,18 +128,25 @@ export function pedestal(g: CanvasRenderingContext2D, seed: number) {
   for (const x of [-3.4, 0, 3.4]) dot(g, x, 6.8, 0.55, seed + 3 + x, css(black, 40));
 }
 
-/** A blaster's badge: a skull on a white disc, its own grin rather than anyone's crossbones. */
-export function skull(g: CanvasRenderingContext2D, x: number, y: number, seed: number) {
+/** A blaster's badge: a crosshair roundel on a white disc. A mark, never a face. */
+export function roundel(g: CanvasRenderingContext2D, x: number, y: number, seed: number) {
   g.fillStyle = INK;
   disc(g, x + 0.15, y + 0.15, 2.5, seed);
   g.fill();
   g.fillStyle = '#f2ecdf';
   disc(g, x, y, 2.05, seed + 1);
   g.fill();
-  g.fillStyle = INK;
-  path(g, ovalPts(x - 0.75, y - 0.35, 0.5, 0.62, seed + 2, 0, 10));
+  g.fillStyle = '#c0182a';
+  disc(g, x, y, 1.15, seed + 2);
   g.fill();
-  path(g, ovalPts(x + 0.75, y - 0.35, 0.5, 0.62, seed + 3, 0, 10));
+  g.fillStyle = '#f2ecdf';
+  disc(g, x, y, 0.62, seed + 3);
   g.fill();
-  for (const dx of [-0.65, 0, 0.65]) tick(g, x + dx, y + 0.75, x + dx, y + 1.45, 0.32, seed + 4 + dx);
+  for (const [ax, ay, bx, by] of [
+    [0, -2, 0, -0.9],
+    [0, 0.9, 0, 2],
+    [-2, 0, -0.9, 0],
+    [0.9, 0, 2, 0],
+  ])
+    tick(g, x + ax, y + ay, x + bx, y + by, 0.32, seed + 4 + ax + ay * 3);
 }

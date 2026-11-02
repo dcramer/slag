@@ -371,7 +371,8 @@ function ram(F: Frame) {
     stroke(s, horn, { w: 2.6, seed: 43, taper: [0, 0.3], press: 0 });
     s.fillStyle = css(d.pal.light);
     stroke(s, horn, { w: 1.3, seed: 43, taper: [0, 0.4], press: 0 });
-    dot(s, hx + 3, ly - 1.6, 0.8, 44, '#ff5a30');
+    // A rivet where the horn bolts on: it's cast iron, not an animal.
+    dot(s, hx + 3, ly - 1.6, 0.8, 44, css(d.pal.light));
     const ring = ovalPts(hx + 5.4, ly + 3, 2.1, 2.5, 45, 0.02, 14);
     s.fillStyle = INK;
     stroke(s, [...ring, ring[0]], { w: 1.6, seed: 45, taper: [0, 0], press: 0.1 });

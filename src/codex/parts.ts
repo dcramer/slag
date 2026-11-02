@@ -95,7 +95,7 @@ const LAUNCHER_NOTES: Record<string, [Ammo, string, string]> = {
   totem: ['fireball', 'heartburn idol', 'Spicy.'],
   turret: ['plasma', 'sorry turret', 'It feels bad about this.'],
   thrower: ['shuriken', 'ninja box', 'Stars, vended.'],
-  rocket: ['seeker', 'grudge launcher', 'Never forgets a face.'],
+  rocket: ['seeker', 'grudge launcher', 'Keeps count.'],
   glaive: ['boomerang', 'boomerang bruh', 'It always comes back.'],
   gumball: ['rubber', 'dodgeball coach', 'Gym class flashbacks.'],
   mortar: ['cluster', 'banana mortar', 'Share the bunch.'],
@@ -297,7 +297,7 @@ export function partGroups(): PartGroup[] {
           ]),
         },
         {
-          title: 'indecisive sentry gun',
+          title: 'indecisive dome turret',
           note: 'Sweeps. Can’t decide.',
           def: def('sweep', [
             body([[0, 0]]),
@@ -397,7 +397,7 @@ export function partGroups(): PartGroup[] {
             { type: 'piston', at: [1, 0.5], angle: R, reach: 2.5, width: 2, period: 130 },
           ]),
         },
-        { title: 'coil pup', note: 'Good boy.', def: def('spring', [{ type: 'spring', at: c(), angle: UP, power: 700 }]) },
+        { title: 'bedspring', note: 'No jumping on the bed.', def: def('Bedspring', [{ type: 'spring', at: c(), angle: UP, power: 700 }]) },
         {
           title: 'hair dryer',
           note: 'Big hair day.',
@@ -554,7 +554,7 @@ export function partGroups(): PartGroup[] {
         },
         {
           title: 'thwunk',
-          note: 'Waiting for you, specifically.',
+          note: 'Gravity, on a hair trigger.',
           def: def('dropper', [
             {
               type: 'dropper',

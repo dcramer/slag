@@ -3,18 +3,19 @@ import { hash2 } from '../../../core/rng';
 import { launcherAngle, type LauncherStyle, type ModuleOf, type PropStyle } from '../../../sim/props';
 import { blob, line, type P, stroke } from '../../ink';
 import { ball, boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
-import { circle, glowDot, light, type MetalPalette, type RC } from '../../kit';
+import { circle, flame, glowDot, light, type MetalPalette, type RC } from '../../kit';
 import { beamOf, defineArt, type DrawCtx } from '../common';
 import { iron } from '../machine';
 import { drawGlider, rang, roundSprite, stampRound } from '../projectiles';
 import { HANGAR_BOX, hangarLoft } from './hangar-art';
-import { baseplate, bean, cartWheel, hub, legs, pedestal, skull, stand, wheel } from './launcher-house';
+import { baseplate, cartWheel, hub, legs, pedestal, roundel, stand, trapBox, wheel } from './launcher-house';
 
 /**
  * Launchers, inked: each style is a parody of a genre staple (docs/PARODY.md, Launchers). A style is three
  * baked pieces: the `mount` (still, round the block's center), the `barrel` (drawn along +x and turned to
  * the aim, mirrored when it aims left so its lit side stays up), and a `front` that sits over the barrel's
- * root. Only the loaded round, the glow and the eyes are drawn live.
+ * root. Only the loaded round, the glow and the tracker's sensor are drawn live. Every look is a machine
+ * or a carving, never a character: no faces, feet or hats (docs/ART.md, Objects, not characters).
  */
 
 type Launcher = ModuleOf<'launcher'>;
@@ -26,7 +27,7 @@ interface Bk {
   wood: HSL;
   hue: HSL;
   glow: HSL;
-  /** Which way it faces, for mounts that care (a cap worn backwards). */
+  /** Which way it faces, for mounts that care. */
   dir: 1 | -1;
   seed: number;
 }
@@ -282,7 +283,7 @@ const LOOKS: Record<LauncherStyle, Look> = {
       }
     },
   },
-  // Pirate Cannon: a ship's gun on its stepped carriage and two cart wheels, an eyepatch on the muzzle.
+  // Pirate Cannon: a ship's gun on its stepped carriage and two cart wheels, a treasure map lashed to the barrel.
   cannon: {
     mount: [
       [-9.5, -4, 19, 13],
@@ -321,110 +322,71 @@ const LOOKS: Record<LauncherStyle, Look> = {
         path(g, poly(11.4, -2.4, 12.2, -2.4, 12.2, 2.4, 11.4, 2.4));
         g.fill();
         ball(g, -8, 0, 1.5, k.pal.base, k.seed + 3);
-        // The eyepatch: a strap round the barrel and a patch where the eye would be.
-        g.fillStyle = INK;
-        stroke(g, poly(5.7, -4.6, 7.1, 0, 8.4, 4.4), { w: 0.75, seed: 4, taper: [0, 0], press: 0.2 });
-        g.fillStyle = '#16100d';
-        blob(g, 7.3, -1.4, 1.7, 5, 1.15, 0.1);
-        g.fill();
-        tick(g, 6.6, -2.4, 7.6, -2.7, 0.35, 6, 'rgba(255,255,255,0.55)');
+        // A rolled treasure map lashed along the top of the barrel, its red X showing.
+        part(g, boxPts(0.4, -5.8, 5.6, 2.6, 0.5, k.seed + 5, 0.1), { h: 42, s: 45, l: 80 }, k.seed + 5, { depth: 0.3, thin: 0.3, thick: 0.7 });
+        for (const x of [0.4, 6])
+          part(g, ovalPts(x, -4.5, 0.75, 1.4, k.seed + x, 0.02, 10), { h: 40, s: 40, l: 68 }, k.seed + x + 1, { depth: 0.2, thin: 0.25, thick: 0.5 });
+        tick(g, 2.5, -5.2, 3.7, -3.6, 0.4, 7, '#c0182a');
+        tick(g, 3.7, -5.2, 2.5, -3.6, 0.4, 8, '#c0182a');
+        for (const x of [1.3, 5]) {
+          tick(g, x, -6, x + 0.5, 4.2, 0.7, 9 + x);
+          tick(g, x, -5.9, x + 0.5, 4.1, 0.35, 10 + x, css({ h: 38, s: 35, l: 58 }));
+        }
       },
     ],
     recoil: 0.6,
   },
-  // Heartburn Idol: it clutches its belly, and what comes up is chili-red.
+  // Heartburn Idol: a carved post with a chili cut into it and a fire cup on top. Its grooves glow as it reloads.
   totem: {
     mount: [
-      [-9.5, -9.5, 19, 19],
+      [-9.5, -10.5, 19, 20],
       (g, k) => {
         const wd = { ...k.wood, l: 42 };
-        // A carved tiki head: a jagged crown of feathers cut into its top, a heavy jaw.
-        const head = poly(
-          -7.6,
-          7.8,
-          7.6,
-          7.8,
-          7.8,
-          2,
-          7.2,
-          -4.4,
-          7.8,
-          -6.6,
-          5.4,
-          -5.6,
-          4,
-          -8.2,
-          1.6,
-          -6,
-          0,
-          -8.4,
-          -1.6,
-          -6,
-          -4,
-          -8.2,
-          -5.4,
-          -5.6,
-          -7.8,
-          -6.6,
-          -7.2,
-          -4.4,
-          -7.8,
-          2,
-        );
-        part(g, head, wd, k.seed, { depth: 1.3, thin: 0.55, thick: 1.6 });
+        // The post: carved wood, flared at the foot.
+        const post = poly(-7.6, 7.8, 7.6, 7.8, 7.2, 6, 5.6, 5.2, 5.4, -3.6, -5.4, -3.6, -5.6, 5.2, -7.2, 6);
+        part(g, post, wd, k.seed, { depth: 1.2, thin: 0.55, thick: 1.6 });
         g.save();
-        path(g, head);
+        path(g, post);
         g.clip();
-        g.fillStyle = css(wd, 10);
-        g.fillRect(-7.2, -6, 14.4, 2.1);
-        g.fillStyle = INK;
-        line(g, -6.8, -3.8, 6.8, -3.7, { w: 0.8, seed: 2, taper: [0.05, 0.05], press: 0.3 });
+        // Carved bands: a groove with a lit lip under each.
+        for (const y of [-1, 4.6]) {
+          g.fillStyle = INK;
+          line(g, -7.6, y, 7.6, y + 0.1, { w: 0.8, seed: k.seed + y, taper: [0.05, 0.05], press: 0.3 });
+          g.fillStyle = css(wd, 14);
+          line(g, -7.6, y + 0.7, 7.6, y + 0.8, { w: 0.45, seed: k.seed + y + 1, taper: [0.05, 0.05], press: 0.1 });
+        }
+        // Flutes carved down the post under the lower band.
+        for (const x of [-3.6, 0, 3.6]) tick(g, x, 5.8, x, 7.6, 0.5, x * 5 + 3, css(wd, -22, 1, 6));
         g.restore();
-        for (const x of [-3, 3]) {
-          g.fillStyle = INK;
-          blob(g, x, -1.6, 1.8, k.seed + x, 0.62, 0.1);
-          g.fill();
-        }
-        // A grimace with teeth.
+        // The chili, cut in and painted: hanging stem-up on a slant, so it reads as a pepper.
+        g.save();
+        g.translate(0.6, 1.8);
+        g.rotate(-1.15);
+        const chili = poly(-2.9, 0.3, -1.4, -0.5, 0.8, -1, 2.6, -1.1, 3, 0.1, 2.5, 0.9, 0.5, 0.9, -1.6, 0.8);
+        part(g, chili, { h: 3, s: 80, l: 46 }, k.seed + 3, { depth: 0.3, thin: 0.35, thick: 0.8 });
+        part(g, poly(2.7, -1.2, 3.8, -0.9, 3.8, 0.8, 2.7, 1), { h: 105, s: 55, l: 38 }, k.seed + 4, { depth: 0.2, thin: 0.3, thick: 0.6 });
+        g.fillStyle = css({ h: 105, s: 55, l: 32 });
+        line(g, 3.8, 0, 5, -0.6, { w: 0.6, seed: 4, taper: [0, 0.4], press: 0 });
+        g.restore();
+        // The fire cup: a bronze bowl on the post, coals in it.
+        const cup = poly(-7.4, -8.2, 7.4, -8.2, 5.4, -3.4, -5.4, -3.4);
+        part(g, cup, { h: 30, s: 50, l: 40 }, k.seed + 5, { depth: 0.8, thin: 0.5, thick: 1.4 });
+        g.fillStyle = css({ h: 30, s: 50, l: 58 });
+        line(g, -6.8, -7.4, 6.4, -7.4, { w: 0.6, seed: k.seed + 6, taper: [0.2, 0.3], press: 0.1 });
         g.fillStyle = INK;
-        path(g, boxPts(-3.8, 0.9, 7.6, 2.5, 0.8, k.seed + 4));
+        path(g, ovalPts(0, -8.4, 6.6, 1.1, k.seed + 7, 0.04, 16));
         g.fill();
-        g.fillStyle = '#efe2c4';
-        for (const x of [-2.6, -0.8, 1, 2.6]) g.fillRect(x - 0.6, 1.25, 1.1, 0.9);
-        // Arms wrapped round the belly.
-        for (const sg of [-1, 1]) {
-          const arm = poly(sg * 7.2, 2.4, sg * 6, 5.4, sg * 3.2, 6.6, sg * 0.8, 6.2);
-          g.fillStyle = INK;
-          stroke(g, arm, { w: 3, seed: 5 + sg, taper: [0.05, 0.1], press: 0.1 });
-          g.fillStyle = css(wd, 16, 1, -8);
-          stroke(g, arm, { w: 1.6, seed: 5 + sg, taper: [0.05, 0.2], press: 0.1 });
-        }
-        for (const sg of [-1, 1]) {
-          g.fillStyle = INK;
-          blob(g, sg * 1.3, 6.1, 1.55, 11 + sg, 0.85, 0.1);
-          g.fill();
-          g.fillStyle = css(wd, 16, 1, -8);
-          blob(g, sg * 1.3 - 0.2, 5.9, 1.05, 13 + sg, 0.85, 0.1);
-          g.fill();
-        }
-        // A bead of sweat.
-        g.fillStyle = '#bfe6ff';
-        blob(g, 5.6, -5.4, 0.8, 9, 1.4, 0.1);
-        g.fill();
-        g.fillStyle = INK;
-        stroke(g, poly(5.6, -6.8, 6.4, -5.4, 5.6, -4.3, 4.8, -5.4, 5.6, -6.8), { w: 0.35, seed: 10, taper: [0, 0], press: 0 });
+        for (const x of [-3.4, -0.6, 2.4]) dot(g, x, -8.6, 0.8, k.seed + x, '#ff6a1f');
       },
     ],
     over(l) {
       const g = l.rc.g;
       const hot: HSL = { h: 4, s: 100, l: 55 };
       const k = 0.25 + l.reload * 0.75;
-      g.fillStyle = css(hot, 15, k);
-      for (const x of [-3, 3]) {
-        g.beginPath();
-        g.ellipse(l.x + x, l.y - 1.6, 1.2, 0.7, 0, 0, Math.PI * 2);
-        g.fill();
-      }
+      // Heat building in the carving: the grooves glow, and the cup flares.
+      g.fillStyle = css(hot, 15, k * 0.8);
+      for (const y of [-1, 4.6]) line(g, l.x - 5.2, l.y + y, l.x + 5.2, l.y + y, { w: 0.5, seed: y, taper: [0.2, 0.2], press: 0 });
+      flame(g, l.x, l.y - 8.6, 2.2 + l.reload, 2.5 + l.reload * 3, { h: 28, s: 100, l: 58 }, l.rc.t);
       const ox = l.x + Math.cos(l.angle) * 10.5;
       const oy = l.y + Math.sin(l.angle) * 10.5;
       const orb = 0.8 + l.reload * 2.2 + Math.sin(l.rc.t * 12) * 0.25;
@@ -433,7 +395,7 @@ const LOOKS: Record<LauncherStyle, Look> = {
       light(l.rc, ox, oy, 50, hot, 0.3 + l.reload * 0.5);
     },
   },
-  // Sorry Turret: worried about all of this.
+  // Sorry Turret: a dented dome with a sensor visor, and a sticky note slapped on it.
   turret: {
     // A tripod: the dome is its whole body.
     mount: [
@@ -453,29 +415,42 @@ const LOOKS: Record<LauncherStyle, Look> = {
     front: [
       [-8, -8, 16, 14],
       (g, k) => {
+        const shell: HSL = { h: k.st.hue, s: 22, l: 78 };
         const dome = ovalPts(0, -0.6, 6.2, 5.8, k.seed + 4, 0.02);
-        part(g, dome, { h: k.st.hue, s: 22, l: 78 }, k.seed + 4, { depth: 1.1, thin: 0.5, thick: 1.3 });
-        // Eyes are drawn live; the brows go up in the middle, the mouth wobbles.
-        for (const sg of [-1, 1]) {
-          g.fillStyle = '#fbf8f0';
-          blob(g, sg * 2.4, -1.3, 1.55, k.seed + sg, 1.05, 0.05);
-          g.fill();
-          g.fillStyle = INK;
-          stroke(g, ovalPts(sg * 2.4, -1.3, 1.6, 1.68, 3, 0, 10).concat([{ x: sg * 2.4 + 1.6, y: -1.3 }]), { w: 0.4, seed: 4, taper: [0, 0], press: 0.2 });
-          line(g, sg * 4.1, -3.4, sg * 1.2, -4.6, { w: 0.75, seed: 5 + sg, taper: [0.2, 0.2], press: 0.1 });
-        }
-        g.fillStyle = INK;
-        stroke(g, poly(-2, 2.5, -1, 1.9, 0, 2.5, 1, 1.9, 2, 2.5), { w: 0.55, seed: 9, taper: [0.2, 0.2], press: 0 });
+        part(g, dome, shell, k.seed + 4, { depth: 1.1, thin: 0.5, thick: 1.3 });
+        g.save();
+        path(g, dome);
+        g.clip();
+        // A seam round the dome, and a dent.
+        g.fillStyle = css(shell, -24, 1, 6);
+        line(g, -6.4, 1.6, 6.4, 1.4, { w: 0.55, seed: k.seed + 5, taper: [0.05, 0.05], press: 0.2 });
+        tick(g, -4.2, -3.2, -3, -2.2, 0.5, k.seed + 6, css(shell, -20, 1, 6));
+        g.restore();
+        // The sensor: one dark visor slot across the dome, a hard glint along its glass, and a small lens
+        // at its far end that lights live. A strip of optics, not an eye.
+        const visor = boxPts(-4.8, -2.9, 9.4, 2.7, 1.2, k.seed + 7, 0.1);
+        part(g, visor, { h: 215, s: 25, l: 16 }, k.seed + 7, { depth: 0.3, thin: 0.4, thick: 0.9, shade: -6 });
+        tick(g, -3.8, -2.3, 0.6, -2.4, 0.4, k.seed + 8, 'rgba(255,255,255,0.55)');
+        g.fillStyle = css(STEEL, -6);
+        path(g, ovalPts(3, -1.55, 1.05, 1.05, k.seed + 9, 0.02, 12));
+        g.fill();
+        // A sticky note, slapped on crooked, scribbled on.
+        g.save();
+        g.translate(-3.6, 2.6);
+        g.rotate(-0.3);
+        part(g, boxPts(-1.6, -1.5, 3.2, 3, 0.3, k.seed + 10, 0.1), { h: 52, s: 90, l: 70 }, k.seed + 10, { depth: 0.2, thin: 0.25, thick: 0.55 });
+        for (const y of [-0.6, 0.3]) tick(g, -1, y, 1, y + 0.1, 0.25, k.seed + y, 'rgba(18,11,8,0.6)');
+        g.restore();
       },
     ],
     recoil: 0.4,
     over(l) {
-      const s = l.rc.s;
-      const lx = Math.cos(l.angle) * 0.55;
-      const ly = Math.sin(l.angle) * 0.55;
-      s.fillStyle = INK;
-      for (const sg of [-1, 1]) circle(s, l.x + sg * 2.4 + lx, l.y - 1.3 + ly, 0.75);
-      glowDot(l.rc.g, l.x, l.y - 6.2, 2.5, l.glow, 0.4 + l.reload * 0.5);
+      // The lens lights as it reloads.
+      const lx = l.x + 3;
+      const ly = l.y - 1.55;
+      l.rc.s.fillStyle = css(l.glow, 0, 0.35 + l.reload * 0.6);
+      circle(l.rc.s, lx, ly, 0.65);
+      glowDot(l.rc.g, lx, ly, 2.5 + l.reload * 2, l.glow, 0.3 + l.reload * 0.5);
     },
   },
   // Shuriken Vendor: a vending machine on two feet, a lit header over its window, a coin slot.
@@ -530,12 +505,13 @@ const LOOKS: Record<LauncherStyle, Look> = {
       if (l.ready) loaded(s, l, 10.6, 0.7, l.rc.t * 4);
     },
   },
-  // Grudge Launcher: a bullet blaster. A black drum turns on a pedestal with a skull on its chest, and
-  // the grudge missile's nose peeks out of its mouth when it's loaded.
+  // Grudge Launcher: a bullet blaster. A black drum turns on a pedestal with a crosshair roundel on its
+  // pivot and a chalk tally of hits on its side; the grudge missile's nose peeks out of its muzzle when
+  // it's loaded.
   rocket: {
     mount: [[-8.5, 0, 17, 9], (g, k) => pedestal(g, k.seed)],
-    // The skull sits on the drum's pivot, so it stays upright whichever way the drum turns.
-    front: [[-3, -3, 6, 6], (g, k) => skull(g, 0, 0, k.seed + 7)],
+    // The roundel sits on the drum's pivot, so it stays upright whichever way the drum turns.
+    front: [[-3, -3, 6, 6], (g, k) => roundel(g, 0, 0, k.seed + 7)],
     barrel: [
       [-7.5, -7, 18, 14],
       (g, k) => {
@@ -547,8 +523,11 @@ const LOOKS: Record<LauncherStyle, Look> = {
         g.clip();
         g.fillStyle = css(black, 26);
         line(g, -4, -3.2, 5.6, -3.4, { w: 0.9, seed: k.seed + 1, taper: [0.2, 0.3], press: 0.1 });
+        // A chalk tally of hits: four strokes and the one across them.
+        for (const x of [2.9, 3.5, 4.1, 4.7]) tick(g, x, -2.6, x - 0.1, -0.5, 0.3, x * 7, 'rgba(240,236,226,0.85)');
+        tick(g, 2.5, -0.9, 5.1, -2.3, 0.3, 9, 'rgba(240,236,226,0.85)');
         g.restore();
-        // The muzzle: a fat lit rim and a dark mouth.
+        // The muzzle: a fat lit rim and a dark bore.
         const rim = boxPts(5.4, -5.6, 2.8, 11.2, 1.2, k.seed + 2);
         part(g, rim, { ...black, l: 30 }, k.seed + 2, { depth: 0.5, thin: 0.5, thick: 1.3, shade: -10 });
         g.fillStyle = INK;
@@ -570,59 +549,33 @@ const LOOKS: Record<LauncherStyle, Look> = {
       s.restore();
     },
   },
-  // Return Policy: a launcher in a backwards cap.
+  // Return Policy: a clay-pigeon trap. A sprung throwing arm on a squat box, a receipt curling out of its side.
   glaive: {
-    // A round little body on two stubby feet; the cap sits on its crown.
-    house: [[-9.5, -9.5, 19, 19], (g, k) => bean(g, { ...k.hue, l: 44 }, k.seed)],
-    faced: true,
-    mount: [
-      [-11, -9, 22, 17],
-      (g, k) => {
-        const d = k.dir;
-        const cap: P[] = [];
-        for (let i = 0; i <= 10; i++) {
-          const a = Math.PI + (i / 10) * Math.PI;
-          cap.push({ x: Math.cos(a) * 5.6, y: -4 + Math.sin(a) * 3.8 });
-        }
-        const brim = poly(-d * 4.4, -4.6, -d * 10.2, -4.6, -d * 10.4, -3.5, -d * 4.4, -3.2);
-        part(g, brim, { ...k.hue, l: 36 }, k.seed, { depth: 0.3, thin: 0.35, thick: 0.8 });
-        part(g, cap, k.hue, k.seed + 1, { depth: 0.9, thin: 0.45, thick: 1.2 });
-        tick(g, 0, -7.7, d * 1.2, -4.2, 0.4, 2, css(k.hue, -18));
-        dot(g, 0, -7.8, 0.55, 3);
-        // The snapback strap faces front, as it would.
-        g.fillStyle = INK;
-        path(g, poly(d * 2.6, -4.1, d * 4.4, -4.1, d * 4, -5.6, d * 2.9, -5.6));
-        g.fill();
-      },
-    ],
-    // Half-lidded eyes and a flat mouth, over the throwing arm: unbothered.
-    front: [
-      [-5, -3, 10, 8],
-      (g, k) => {
-        const d = k.dir;
-        for (const sg of [-1, 1]) {
-          g.fillStyle = INK;
-          blob(g, sg * 2.5, -0.3, 1.95, k.seed + sg + 4, 0.92, 0.05);
-          g.fill();
-          g.fillStyle = '#fbf8f0';
-          blob(g, sg * 2.5, -0.3, 1.5, k.seed + sg, 0.9, 0.05);
-          g.fill();
-          g.fillStyle = css(k.wood, 4);
-          g.fillRect(sg * 2.5 - 1.7, -2.2, 3.4, 1.8);
-          g.fillStyle = INK;
-          line(g, sg * 2.5 - 1.8, -0.45, sg * 2.5 + 1.8, -0.45, { w: 0.7, seed: 5 + sg, taper: [0.1, 0.1], press: 0 });
-          circle(g, sg * 2.5 + d * 0.5, 0.3, 0.6);
-        }
-        tick(g, -1.8, 3.6, 1.8, 3.4, 0.7, 7);
-      },
-    ],
+    house: [[-9.5, -1, 19, 10], (g, k) => trapBox(g, { ...k.hue, l: 44 }, k.pal, k.seed)],
     barrel: [
-      [-1.5, -2.5, 11, 5],
+      [-2.5, -3, 12.5, 6],
       (g, k) => {
-        part(g, boxPts(0, -1.3, 8, 2.6, 1, k.seed + 8), { ...k.wood, l: 50 }, k.seed + 8, { depth: 0.4, thin: 0.35, thick: 0.85 });
-        dot(g, 0.8, 0, 0.7, k.seed + 9, css(k.pal.light));
+        // The arm: a steel bar with a clip at its end that holds the boomerang.
+        part(g, boxPts(-1, -1, 8.4, 2, 0.8, k.seed + 8), k.pal.base, k.seed + 8, { depth: 0.4, thin: 0.35, thick: 0.85 });
+        part(g, poly(6.6, -2.2, 8.6, -2.2, 8.6, 2.2, 6.6, 2.2, 7.4, 0), iron(k.pal, 40), k.seed + 9, { depth: 0.3, thin: 0.3, thick: 0.7 });
       },
     ],
+    // The mainspring the arm whips round on, in its drum over the arm's root.
+    front: [
+      [-3.5, -3.5, 7, 7],
+      (g, k) => {
+        ball(g, 0, 0, 2.6, iron(k.pal, 46), k.seed + 10);
+        const coil: P[] = [];
+        for (let i = 0; i <= 16; i++) {
+          const a = (i / 16) * Math.PI * 3.2;
+          const r = 0.4 + (i / 16) * 1.6;
+          coil.push({ x: Math.cos(a) * r, y: Math.sin(a) * r });
+        }
+        g.fillStyle = INK;
+        stroke(g, coil, { w: 0.35, seed: k.seed + 11, taper: [0.1, 0.1], press: 0 });
+      },
+    ],
+    recoil: 0.3,
     aimed(s, l) {
       if (!l.ready) return;
       s.save();
@@ -717,7 +670,7 @@ const LOOKS: Record<LauncherStyle, Look> = {
       if (l.ready) loaded(s, l, 10.6, 0.65, -0.4);
     },
   },
-  // Sneeze Cannon: a goo tank on a little cart, a big nose on the muzzle.
+  // Sneeze Cannon: a goo tank on a little cart, the muzzle poking out of a tissue box.
   gooper: {
     house: [
       [-9.5, 2, 19, 7],
@@ -728,18 +681,30 @@ const LOOKS: Record<LauncherStyle, Look> = {
       },
     ],
     barrel: [
-      [2, -4.5, 13.5, 10],
+      [2, -8, 13.5, 13],
       (g, k) => {
         part(g, boxPts(2.6, -1.8, 5, 3.6, 0.6, k.seed), k.pal.base, k.seed, { depth: 0.4, thin: 0.35, thick: 0.85 });
-        g.translate(-1.6, 0);
-        const nose = poly(8, -2.4, 9.6, -3.2, 11.2, -1.6, 12.6, 1.2, 13, 2.8, 11.6, 3.6, 9.6, 3.2, 8.2, 2.4);
-        part(g, nose, { h: 10, s: 55, l: 68 }, k.seed + 1, { depth: 0.8, thin: 0.45, thick: 1.1 });
+        // The tissue box, the muzzle through it, and one tissue standing up out of its slot.
+        const tissue = poly(8.4, -2.8, 7.8, -4.6, 8.8, -5.6, 9.4, -7.2, 10.6, -6, 11.4, -6.8, 11.6, -4.8, 10.8, -2.8);
+        part(g, tissue, { h: 200, s: 20, l: 96 }, k.seed + 2, { depth: 0.3, thin: 0.3, thick: 0.65, shade: -10 });
+        const box = boxPts(6.6, -3.2, 5.8, 6.4, 0.6, k.seed + 1, 0.12);
+        part(g, box, { h: 330, s: 45, l: 74 }, k.seed + 1, { depth: 0.6, thin: 0.4, thick: 1 });
+        g.save();
+        path(g, box);
+        g.clip();
+        g.fillStyle = css({ h: 200, s: 50, l: 62 });
+        for (const [x, y] of [
+          [7.8, 1.6],
+          [10.4, -1.4],
+          [11.6, 2.2],
+        ])
+          circle(g, x, y, 0.75);
+        g.restore();
+        tick(g, 8.4, -3.1, 10.8, -3.1, 0.5, k.seed + 3);
+        part(g, boxPts(12, -1.5, 1.6, 3, 0.4, k.seed + 4), k.pal.base, k.seed + 4, { depth: 0.3, thin: 0.3, thick: 0.7 });
         g.fillStyle = INK;
-        blob(g, 11.2, 2.8, 0.85, 4, 0.55, 0.1);
+        path(g, ovalPts(13.5, 0, 0.5, 1.1, k.seed + 5, 0.02, 10));
         g.fill();
-        tick(g, 9.4, 1.2, 9.6, 2.9, 0.5, 5, css({ h: 10, s: 55, l: 40 }));
-        glint(g, poly(9.2, -1.8, 10.8, -1.2, 11.8, 0.6), 'rgba(255,240,235,0.95)', 0.6);
-        g.translate(1.6, 0);
       },
     ],
     front: [
@@ -765,10 +730,10 @@ const LOOKS: Record<LauncherStyle, Look> = {
     ],
     aimed(s, l) {
       if (!l.ready) return;
-      // A drip waiting at the nostril.
+      // A drip waiting at the muzzle.
       const k = l.reload - 0.4;
       s.fillStyle = css({ h: 98, s: 62, l: 50 });
-      blob(s, 9.6, 3.6 + k * 1.6, 0.6 + k * 0.5, 3, 1.3, 0.1);
+      blob(s, 13.6, 1.4 + k * 1.4, 0.55 + k * 0.5, 3, 1.3, 0.1);
       s.fill();
     },
   },
@@ -945,7 +910,7 @@ function drawLauncher(rc: RC, m: Launcher, d: DrawCtx) {
   }
   if (look.front) stamp(s, piece('f', m, k, !!look.faced, look.front), x, y);
   look.over?.(live);
-  if (m.aim === 'track') drawTrackerEye(rc, x, y, angle);
+  if (m.aim === 'track') drawTrackerCam(rc, x, y, angle);
   if (since < 5) {
     const mx = x + Math.cos(angle) * 13;
     const my = y + Math.sin(angle) * 13;
@@ -956,40 +921,44 @@ function drawLauncher(rc: RC, m: Launcher, d: DrawCtx) {
 }
 
 /**
- * Tracking sensor: a swivelling red eye on a stalk above the mount that looks where the launcher aims.
- * Every tracker has one, so tracking reads at a glance whatever the style.
+ * Tracking sensor: a little security camera on a stalk above the mount, turned live to where the launcher
+ * aims, its red lens lit. Every tracker has one, so tracking reads at a glance whatever the style.
  */
-function drawTrackerEye(rc: RC, x: number, y: number, angle: number): void {
+function drawTrackerCam(rc: RC, x: number, y: number, angle: number): void {
   const s = rc.s;
-  const ex = x - 4;
-  const ey = y - 8.4;
+  const cx = x - 4;
+  const cy = y - 8.4;
   stamp(
     s,
-    sprite('L|eye', -5, -5, 10, 11, (g) => {
-      tick(g, 0, 2.4, 0.4, 5.6, 1.6, 1);
-      g.fillStyle = INK;
-      blob(g, 0.15, 0.2, 3.95, 2, 1, 0.03);
-      g.fill();
-      g.fillStyle = '#f4efe2';
-      blob(g, 0, 0, 3.2, 3, 1, 0.03);
-      g.fill();
-      g.fillStyle = '#d9d0bd';
-      path(g, poly(-2.2, 2.2, 2.6, 1.6, 3, -0.4, 1.8, 2.6, -0.6, 3.1));
-      g.fill();
+    sprite('L|stalk', -2, -2, 4, 9, (g) => {
+      tick(g, 0, 0.8, 0.4, 5.6, 1.6, 1);
+      ball(g, 0, 0.4, 1.2, { h: 220, s: 8, l: 34 }, 2);
     }),
-    ex,
-    ey,
+    cx,
+    cy,
   );
-  const px = ex + Math.cos(angle) * 1.4;
-  const py = ey + Math.sin(angle) * 1.4;
+  s.save();
+  s.translate(cx, cy);
+  s.rotate(angle);
+  if (Math.cos(angle) < 0) s.scale(1, -1);
+  stamp(
+    s,
+    sprite('L|cam', -3.8, -3, 8.6, 6, (g) => {
+      part(g, boxPts(-3, -2, 5.6, 3.8, 0.8, 3), { h: 220, s: 8, l: 34 }, 3, { depth: 0.5, thin: 0.4, thick: 0.9 });
+      part(g, boxPts(2.2, -1.5, 1.8, 2.9, 0.4, 4), { h: 220, s: 8, l: 22 }, 4, { depth: 0.3, thin: 0.35, thick: 0.7 });
+      g.fillStyle = 'rgba(255,255,255,0.45)';
+      line(g, -2.4, -1.3, 1.4, -1.4, { w: 0.45, seed: 5, taper: [0.2, 0.3], press: 0 });
+    }),
+  );
+  s.restore();
+  const lx = cx + Math.cos(angle) * 4.1;
+  const ly = cy + Math.sin(angle) * 4.1;
   const red: HSL = { h: 0, s: 100, l: 55 };
   s.fillStyle = '#d0141f';
-  circle(s, px, py, 1.75);
-  s.fillStyle = INK;
-  circle(s, px, py, 0.85);
-  s.fillStyle = '#fff';
-  s.fillRect(px - 1, py - 1.1, 0.6, 0.6);
-  glowDot(rc.g, px, py, 5, red, 0.55 + Math.sin(rc.t * 6) * 0.15);
+  circle(s, lx, ly, 0.85);
+  s.fillStyle = '#ffb0a8';
+  s.fillRect(lx - 0.5, ly - 0.55, 0.4, 0.4);
+  glowDot(rc.g, lx, ly, 4.5, red, 0.55 + Math.sin(rc.t * 6) * 0.15);
 }
 
 defineArt<'launcher'>({ type: 'launcher', layer: 2, draw: drawLauncher });
