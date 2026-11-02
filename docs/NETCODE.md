@@ -175,6 +175,12 @@ Prediction can't know a jump or a turn is coming, so remote runners are wrong fo
 - **Refresh in the lobby**: the player is removed but parked with their character; on return they're re-seated with the same look.
 - **Join mid-match**: spectate until the next round boundary, then the host seats the peer's main device.
 
+### Seats and kicks
+
+- Connecting is joining: a peer asks for a seat without any input, repeating until seated, and the host seats it through the sequenced `join` action within a few frames, so every peer rolls the same character at the same frame.
+- Every player's name and color differ. Rolls skip a clash, deterministically, and the host refuses a saved look or name someone here already has. Two tabs of one browser share a saved profile, so this happens in ordinary testing, and a refused look isn't saved over the profile.
+- `kick` is a `NetAction`, so it exists only inside a host's bundle. Guests apply bundles from the host alone, and the host refuses `kick` as a request from a guest. It applies in the lobby only. `NetState.kicked` is replicated and snapshotted, so a new host keeps refusing the same peers. A kicked peer's tab remembers (`sessionStorage`) and goes straight to the main menu on refresh; one that gets past that is refused on `hello`, and never seated.
+
 ### Desync detection
 
 Every 60 frames each guest hashes its confirmed state (FNV-1a over the canonical snapshot) and reports it. On a mismatch the host sends that guest a snapshot.

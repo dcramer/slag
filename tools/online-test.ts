@@ -12,6 +12,7 @@
  *
  * Scenarios:
  *   flow        as a person does it: Play on the menu, open the invite, press nothing; both peers see both bays
+ *   kick        the Host label everywhere and through a migration; kicks by keyboard and mouse, with no way back
  *   play        join, live cursors, claim race, a remote ghost, a race, refresh keeps the slot, next round
  *   pick place run   the host's renderer is killed (no goodbye) in that phase
  *   leave       the host navigates away (goodbye path) mid-race
@@ -777,6 +778,78 @@ async function r2(A: Page, B: Page, label: string) {
   }
 }
 
+/** Who the lobby labels as host, on this page. */
+const hostLabel = (p: Page) => p.evaluate(() => (window as any).slagDebug.renderer.hud.net?.hostSlot as number | undefined);
+
+/** The host label on every screen, and following a migration; a kick by keyboard, then by mouse, with no way back. */
+async function kickScenario(browser: Browser, base: string) {
+  const r = await newRoom(browser, base, 'kick', '', { viewport: { width: 960, height: 540 } });
+  const A = await r.open('A');
+  const a0 = await waitFor(A, 'host seated', (v) => v.players.length === 1 && v.isHost);
+  const [B, C, D] = [await r.open('B'), await r.open('C'), await r.open('D')];
+  const seated = await waitFor(A, 'everyone seated', (v) => v.players.length === 4, 30_000);
+  for (const p of [B, C, D]) await waitFor(p, 'bays', (v) => v.players.length === 4, 10_000);
+  const hostSlot = seated.players.find((q) => q.device.startsWith(`${a0.self}:`))!.slot;
+  await sleep(300);
+  const labels = await Promise.all([A, B, C, D].map(hostLabel));
+  check(
+    labels.every((l) => l === hostSlot),
+    `every peer labels the same player Host (slot ${labels.join('/')})`,
+  );
+  const kickable = (p: Page) => p.evaluate(() => (window as any).slagDebug.renderer.hud.net?.kickable as number[]);
+  check((await kickable(A)).length === 3 && (await kickable(B)).length === 0, 'only the host has kick controls');
+  await A.screenshot({ path: `${out}/online-kick-host.png` });
+  await B.screenshot({ path: `${out}/online-kick-guest.png` });
+  console.log(`     ${out}/online-kick-host.png\n     ${out}/online-kick-guest.png`);
+
+  // By keyboard: Use picks the first other player, Confirm kicks.
+  const victim = await view(B);
+  await A.keyboard.press('KeyE');
+  await sleep(200);
+  await A.screenshot({ path: `${out}/online-kick-picked.png` });
+  await A.keyboard.press('Enter');
+  const seen = await B.waitForFunction(() => (window as any).slagDebug?.net?.status === 'kicked', null, { timeout: 5000 }).then(
+    () => true,
+    () => false,
+  );
+  check(seen, 'the kicked peer sees Kicked');
+  await B.screenshot({ path: `${out}/online-kick-kicked.png` }).catch(() => {});
+  await B.waitForURL((u) => u.pathname === '/', { timeout: 8000 }).catch(() => {});
+  check(new URL(B.url()).pathname === '/', `the kicked peer lands on the main menu (${new URL(B.url()).pathname})`);
+  const after = await waitFor(A, 'kick applied', (v) => v.players.length === 3, 5000);
+  check(!after.players.some((q) => q.device.startsWith(`${victim.self}:`)), 'the kicked player is gone from the host');
+  const c1 = await waitFor(C, 'kick applied on a guest', (v) => v.players.length === 3, 5000);
+  check(!c1.players.some((q) => q.device.startsWith(`${victim.self}:`)), 'the kicked player is gone for everyone');
+  await B.goBack().catch(() => {});
+  await B.waitForURL((u) => u.pathname === '/', { timeout: 8000 }).catch(() => {});
+  check(new URL(B.url()).pathname === '/', 'going back to the room lands on the main menu again');
+
+  // By mouse: the button on the bay.
+  const spot = await A.evaluate(() => {
+    const hud = (window as any).slagDebug.renderer.hud;
+    const b = hud.buttons.find((x: any) => x.action === 'kick');
+    return b ? { x: b.x + b.w / 2, y: b.y + b.h / 2, device: b.device as string } : null;
+  });
+  check(!!spot, 'each other bay has a Kick button');
+  if (spot) {
+    await clickView(A, spot.x, spot.y);
+    await waitFor(A, 'mouse kick applied', (v) => v.players.length === 2 && !v.players.some((q) => q.device === spot.device), 5000);
+  }
+  const left = (await view(A)).players.find((q) => !q.device.startsWith(`${a0.self}:`))!;
+  const survivor = (await view(C)).players.some((q) => q.device === left.device) && left.device.startsWith((await view(C)).self) ? C : D;
+
+  // The label moves with the host.
+  await crash(A);
+  await waitFor(survivor, 'the survivor hosting', (v) => v.isHost && v.status === 'online' && !v.paused, 20_000);
+  await sleep(600);
+  const moved = await hostLabel(survivor);
+  check(moved === left.slot, `the Host label follows migration (slot ${moved})`);
+  await survivor.screenshot({ path: `${out}/online-kick-migrated.png` });
+  const real = r.errors.filter((e) => !/favicon/.test(e));
+  check(real.length === 0, `no page errors${real.length ? `:\n${real.join('\n')}` : ''}`);
+  await r.dispose();
+}
+
 async function bcScenario(browser: Browser, base: string) {
   const r = await newRoom(browser, base, 'bc', 'net=bc', { shared: true });
   const { pages } = await startMatch(r, 2);
@@ -818,6 +891,7 @@ try {
     await realFlowScenario(browser, server.base, 'flow two browsers', false, false);
     await realFlowScenario(browser, server.base, 'flow two tabs saved look', true, true);
   }
+  if (wanted('kick')) await kickScenario(browser, server.base);
   if (wanted('play')) await playScenario(browser, server.base);
   if (wanted('pick')) await killScenario(browser, server.base, 'pick');
   if (wanted('place')) await killScenario(browser, server.base, 'place');

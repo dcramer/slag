@@ -35,8 +35,8 @@ export interface Player {
   away?: boolean;
 }
 
-/** Degrees of hue between any two players' characters: eight players still fit twice over. */
-const MIN_HUE_APART = 22;
+/** Degrees of hue between any two players' characters. Eight players still fit, with room to roll. */
+const MIN_HUE_APART = 30;
 
 /** What an away player's runner does: self-destruct at GO so the race can end. */
 const AWAY_RUN_INPUT: InputFrame = Object.freeze({ ...NO_INPUT, altPressed: true });

@@ -27,7 +27,7 @@ const UI = FONT.ui;
 
 const roundLabel = (m: Match) => `ROUND ${m.round}/${m.rules.maxRounds}`;
 
-export type HudAction = 'join' | 'ready' | 'look' | 'name' | 'level' | 'settings' | 'rules' | 'invite' | 'continue';
+export type HudAction = 'join' | 'ready' | 'look' | 'name' | 'level' | 'settings' | 'rules' | 'invite' | 'continue' | 'kick';
 
 export interface HudButton {
   x: number;
@@ -60,6 +60,12 @@ export interface NetInfo {
   inviteUrl?: string;
   /** The room is unreachable and play is local. */
   offline?: boolean;
+  /** The player carrying the host label. */
+  hostSlot?: number;
+  /** Players this peer may remove. */
+  kickable?: number[];
+  /** Player picked with the keyboard or gamepad. */
+  kickSlot?: number;
 }
 
 interface FooterItem {
@@ -417,8 +423,10 @@ export class Hud {
     const col = p.character.body;
     const big = h > 200;
     const mine = p.device === this.mouseDevice;
-    plate(c, x, y, w, h, { edge: css(col, 5), stroke: p.ready ? PAL.toxic : undefined });
+    const picked = this.net?.kickSlot === p.slot;
+    plate(c, x, y, w, h, { edge: css(col, 5), stroke: picked ? PAL.danger : p.ready ? PAL.toxic : undefined });
     // Header: player number + device.
+    if (this.net?.hostSlot === p.slot) tag(c, 'HOST', x + w / 2, y + 17.5, PAL.amber, PAL.ink, TYPE.caption, 'center');
     this.text(`P${p.slot + 1}`, x + 10, y + 17, 15, css(col, 22), 'left', DISPLAY, 400, 3);
     const pad = p.device.startsWith('pad');
     const label = this.devices.deviceLabel(p.device);
@@ -477,6 +485,8 @@ export class Hud {
     } else if (p.ready) {
       tag(c, 'READY', cx, by + bh / 2 - 1, PAL.toxic, PAL.ink, TYPE.label, 'center');
     } else this.text('Not Ready', cx, by + bh / 2 - 1, TYPE.body, PAL.dim, 'center', UI, 600);
+    if (this.net?.kickable?.includes(p.slot))
+      this.btn({ x: x + w - 54, y: by, w: 44, h: bh, action: 'kick', device: p.device }, 'Kick', picked ? 'primary' : 'ghost', undefined, TYPE.label);
   }
 
   private netPanel(net: NetInfo, x: number, y: number, w: number) {
@@ -863,12 +873,17 @@ export class Hud {
       case 'lobby': {
         const primary = this.mode === 'gamepad' ? m.players.find((p) => /(^|:)pad/.test(p.device)) : m.players.find((p) => p.device === this.mouseDevice);
         const items: FooterItem[] = [];
+        if ((this.net?.kickSlot ?? -1) >= 0) {
+          items.push({ action: 'confirm', label: 'Kick' }, { action: 'alt', label: 'Cancel' });
+          return { items, left: '', alpha: 1, bar: true };
+        }
         if (!primary) items.push({ action: 'confirm', label: 'Join', hud: 'join', device: this.mouseDevice });
         else {
           items.push({ action: 'confirm', label: primary.ready ? 'Not Ready' : 'Ready Up', hud: 'ready', device: primary.device });
           items.push({ action: 'alt', label: 'New Look', hud: 'look', device: primary.device });
           items.push({ action: 'down', label: 'New Level', hud: 'level', device: primary.device });
         }
+        if (!touch && this.net?.kickable?.length) items.push({ action: 'use', label: 'Kick' });
         if (!touch) items.push({ action: 'menu', label: 'Settings', hud: 'settings' });
         const ready = m.players.filter((p) => p.ready).length;
         const left = m.players.length ? `${ready}/${m.players.length} Ready` : '';

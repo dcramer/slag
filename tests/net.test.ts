@@ -203,7 +203,7 @@ describe('lobby seats', () => {
     expect(new Set(a.match.players.map((p) => p.character.name)).size).toBe(8);
     expect(new Set(a.match.players.map((p) => p.character.seed)).size).toBe(8);
     const hues = a.match.players.map((p) => p.character.hue);
-    for (const h of hues) for (const o of hues) if (o !== h) expect(Math.min(Math.abs(h - o), 360 - Math.abs(h - o))).toBeGreaterThanOrEqual(22);
+    for (const h of hues) for (const o of hues) if (o !== h) expect(Math.min(Math.abs(h - o), 360 - Math.abs(h - o))).toBeGreaterThanOrEqual(30);
   });
 
   it('refuses a look someone here already has, so two tabs sharing a saved look still differ', () => {
@@ -265,6 +265,93 @@ describe('lobby seats', () => {
     expect(b.match.players.map((p) => p.device).sort()).toEqual(['bbbb:kb1', 'cccc:kb1', 'dddd:kb1']);
     expect(seats(d)).toEqual(seats(b));
     expect(c).toBeDefined();
+  });
+});
+
+describe('kick', () => {
+  function lobby() {
+    const r = new Room({ latency: 20 });
+    const a = r.join('aaaa');
+    r.run(5);
+    const b = r.join('bbbb');
+    r.run(5);
+    const c = r.join('cccc');
+    r.run(60);
+    return { r, a, b, c };
+  }
+  const devices = (s: NetSession) => s.match.players.map((p) => p.device);
+
+  it('removes the peer on every peer, by host authority', () => {
+    const { r, a, b, c } = lobby();
+    a.kick('bbbb');
+    r.run(30);
+    expect(b.status).toBe('kicked');
+    expect(devices(a)).toEqual(['aaaa:kb1', 'cccc:kb1']);
+    expect(devices(c)).toEqual(['aaaa:kb1', 'cccc:kb1']);
+    expect(a.members.map((m) => m.id)).toEqual(['aaaa', 'cccc']);
+  });
+
+  it('refuses a kicked peer that comes back, and never seats it', () => {
+    const { r, a } = lobby();
+    a.kick('bbbb');
+    r.run(30);
+    const back = r.join('bbbb');
+    r.run(60);
+    expect(back.status).toBe('kicked');
+    expect(devices(a)).toEqual(['aaaa:kb1', 'cccc:kb1']);
+  });
+
+  it('ignores a kick asked for by a guest', () => {
+    const { r, a, b, c } = lobby();
+    c.act({ t: 'kick', peer: 'bbbb' });
+    c.kick('bbbb');
+    r.run(30);
+    expect(b.status).toBe('online');
+    expect(devices(a)).toHaveLength(3);
+    expect(a.ns.kicked).toEqual({});
+  });
+
+  it('ignores a kick forged by a peer that is not the host, in a bundle or as a notice', () => {
+    const { r, a, b, c } = lobby();
+    const frame = b.match.frame + 2;
+    c.transport!.send({ t: 'b', b: [{ f: frame, a: [{ t: 'kick', peer: 'bbbb' }] }] }, 'bbbb');
+    c.transport!.send({ t: 'kicked' }, 'bbbb');
+    r.run(30);
+    expect(b.status).toBe('online');
+    expect(devices(b)).toHaveLength(3);
+    expect(b.ns.kicked).toEqual({});
+    expect(a.isHost).toBe(true);
+  });
+
+  it('applies in the lobby only', () => {
+    const { r, a, b, c } = lobby();
+    const ready = press({ confirmPressed: true });
+    r.scripts.set('aaaa', (_s, f) => (f % 40 === 0 ? { kb1: ready } : {}));
+    r.scripts.set('bbbb', (_s, f) => (f % 40 === 0 ? { kb1: ready } : {}));
+    r.scripts.set('cccc', (_s, f) => (f % 40 === 0 ? { kb1: ready } : {}));
+    for (let i = 0; i < 200 && a.match.phase === 'lobby'; i++) r.run(1);
+    expect(a.match.phase).toBe('pick');
+    r.scripts.clear();
+    for (const id of ['aaaa', 'bbbb', 'cccc']) r.scripts.set(id, () => ({}));
+    a.kick('bbbb');
+    a.act({ t: 'kick', peer: 'bbbb' });
+    r.run(30);
+    expect(b.status).toBe('online');
+    expect(devices(c)).toHaveLength(3);
+  });
+
+  it('survives a host migration: the new host still refuses the peer', () => {
+    const { r, a, b, c } = lobby();
+    a.kick('bbbb');
+    r.run(30);
+    expect(b.status).toBe('kicked');
+    r.leave('aaaa');
+    r.run(60);
+    expect(c.isHost).toBe(true);
+    const back = r.join('bbbb');
+    r.run(60);
+    expect(back.status).toBe('kicked');
+    expect(devices(c)).toEqual(['cccc:kb1']);
   });
 });
 

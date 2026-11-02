@@ -50,7 +50,7 @@ const CORRECTION_KEEP = 0.85;
 const CORRECTION_MAX = 120;
 const CORRECTION_MAX_STEPS = 4;
 
-export type NetStatus = 'offline' | 'connecting' | 'online' | 'reconnecting' | 'unavailable';
+export type NetStatus = 'offline' | 'connecting' | 'online' | 'reconnecting' | 'unavailable' | 'kicked';
 export type Role = 'host' | 'guest';
 
 /** Per-peer info for the HUD (lobby list, crown, ping). */
@@ -90,7 +90,9 @@ type Msg =
   | { t: 'state'; s: MatchSnap; k: Record<string, [number, number]>; ns: NetState; last: Record<string, Enc> }
   | { t: 'ping'; ts: number }
   | { t: 'pong'; ts: number }
-  | { t: 'pings'; p: Record<string, number> };
+  | { t: 'pings'; p: Record<string, number> }
+  /** Host to a peer it removed. */
+  | { t: 'kicked' };
 
 export interface SessionOptions {
   transport: Transport | null;
@@ -105,6 +107,8 @@ export interface SessionOptions {
   primaryDevice?: string;
   /** Called with a resumable snapshot when we become host of an empty room; return one to resume. */
   resume?: () => { snap: MatchSnap; ns: NetState } | null;
+  /** The host removed this peer: it's already out of the room. */
+  onKicked?: () => void;
   log?: (msg: string) => void;
 }
 
@@ -137,6 +141,7 @@ export class NetSession {
   private sendEvery: number;
   private predict: boolean;
   private resumeFn: SessionOptions['resume'];
+  private onKickedFn: SessionOptions['onKicked'];
   private log: (msg: string) => void;
   private ticks = 0;
   private events: GameEvent[] = [];
@@ -197,6 +202,7 @@ export class NetSession {
     this.sendEvery = Math.max(1, opts.sendEvery ?? 1);
     this.predict = opts.predict ?? true;
     this.resumeFn = opts.resume;
+    this.onKickedFn = opts.onKicked;
     this.primary = opts.primaryDevice ?? 'kb1';
     this.log = opts.log ?? (() => {});
     // Input/action sequence numbers start at wall-clock ms: a refreshed page always counts higher than its old self.
@@ -263,6 +269,11 @@ export class NetSession {
     else this.pendingActs.push([++this.actN, a]);
   }
 
+  /** Host, lobby: remove a peer. Goes out in a bundle like any action, so every peer applies it at the same frame. */
+  kick(peer: string) {
+    if (this.role === 'host' && this.match.phase === 'lobby' && peer !== this.self) this.hostActions.push({ t: 'kick', peer });
+  }
+
   /** True while an action this peer requested hasn't been applied yet. */
   get pending(): boolean {
     return this.pendingActs.length > 0 || this.hostActions.length > 0;
@@ -307,6 +318,7 @@ export class NetSession {
    * local device ('kb1', 'pad0'; HUD presses may already be global ids).
    */
   tick(local: Readonly<Record<string, InputFrame>>): void {
+    if (this.status === 'kicked') return;
     this.ticks++;
     const frame = this.localFrame(local);
     const t = this.now();
@@ -325,6 +337,7 @@ export class NetSession {
   // ------------------------------------------------------------------ transport events
 
   private onStatus(s: LinkStatus, detail?: string) {
+    if (this.status === 'kicked') return;
     this.detail = detail ?? '';
     this.status =
       s === 'open' ? 'online' : s === 'connecting' ? 'connecting' : s === 'reconnecting' ? 'reconnecting' : s === 'closed' ? 'offline' : 'unavailable';
@@ -338,6 +351,7 @@ export class NetSession {
   }
 
   private onMembers(list: Member[]) {
+    if (this.status === 'kicked') return;
     if (!list.some((m) => m.id === this.self)) list = [...list, { id: this.self, order: Number.MAX_SAFE_INTEGER }];
     if (list.length !== this.members.length) addBreadcrumb('net', list.length > this.members.length ? 'peer joined' : 'peer left', { peers: list.length });
     this.members = list;
@@ -446,12 +460,25 @@ export class NetSession {
   private onState(from: string, msg: Extract<Msg, { t: 'state' }>) {
     if (this.collecting?.pulled !== from) return;
     restoreMatch(this.match, msg.s);
-    this.ns.parked = msg.ns.parked;
+    this.adoptNet(msg.ns);
     this.acks = msg.k;
     this.lastInputs = msg.last;
     this.emittedThrough = Math.max(this.emittedThrough, this.match.frame);
     this.rebuildQueues();
     this.finishCollect();
+  }
+
+  /** Tolerates a resume save from before a field existed. */
+  private adoptNet(ns: Partial<NetState>) {
+    this.ns.parked = ns.parked ?? {};
+    this.ns.kicked = ns.kicked ?? {};
+  }
+
+  private onKicked() {
+    if (this.status === 'kicked') return;
+    this.status = 'kicked';
+    this.onKickedFn?.();
+    this.transport?.close();
   }
 
   private tryResume() {
@@ -461,7 +488,7 @@ export class NetSession {
     if (!r) return;
     try {
       restoreMatch(this.match, r.snap);
-      this.ns.parked = r.ns.parked ?? {};
+      this.adoptNet(r.ns);
       this.emittedThrough = this.match.frame;
       this.log(`resumed saved room state at frame ${this.match.frame}`);
     } catch (e) {
@@ -492,6 +519,10 @@ export class NetSession {
       else if (msg.t === 'need') this.onNeed(from, msg.f);
       else if (msg.t === 'state') this.onState(from, msg);
       else if (msg.t === 'b' || msg.t === 'sync') this.stashMsg(from, msg); // someone else thinks they're host: presence lag
+      return;
+    }
+    if (msg.t === 'kicked') {
+      if (from === this.hostId) this.onKicked();
       return;
     }
     if (msg.t === 'pull') {
@@ -536,7 +567,7 @@ export class NetSession {
   }
 
   private onInput(from: string, msg: Extract<Msg, { t: 'in' }>) {
-    if (!this.members.some((m) => m.id === from)) return;
+    if (!this.members.some((m) => m.id === from) || this.ns.kicked[from]) return;
     const q = this.queue(from);
     const tail = q.frames.length ? q.frames[q.frames.length - 1].seq : q.consumed;
     msg.f.forEach((f, j) => {
@@ -563,11 +594,12 @@ export class NetSession {
 
   /** Guests may only act for their own devices; rules and seating belong to the host. */
   private allowed(from: string, a: NetAction): boolean {
-    if (a.t === 'rules' || a.t === 'join' || a.t === 'salt') return false;
+    if (a.t === 'rules' || a.t === 'join' || a.t === 'salt' || a.t === 'kick') return false;
     return peerOf(a.dev) === from;
   }
 
   private onHello(from: string, f: number) {
+    if (this.ns.kicked[from]) return this.send({ t: 'kicked' }, from);
     if (this.collecting) this.collecting.got.set(from, typeof f === 'number' ? f : -1);
     else this.send(this.syncMsg('hello'), from);
   }
@@ -684,7 +716,7 @@ export class NetSession {
     if (m.phase === 'lobby' || m.phase === 'score' || m.phase === 'victory') {
       if (!m.players.some((p) => peerOf(p.device) === this.self)) this.wants.add(this.globalDevice(this.primary));
       for (const dev of this.wants) {
-        if (!present.has(peerOf(dev)) || seated.has(dev) || seats >= MAX_PLAYERS) continue;
+        if (!present.has(peerOf(dev)) || seated.has(dev) || seats >= MAX_PLAYERS || this.ns.kicked[peerOf(dev)]) continue;
         out.push({ t: 'join', dev });
         seats++;
         seated.add(dev);
@@ -765,7 +797,7 @@ export class NetSession {
     const m = this.match;
     const fresh = !this.synced;
     if (fresh || m.frame !== msg.s.frame || hashMatch(m) !== hashSnap(msg.s)) restoreMatch(m, msg.s);
-    this.ns.parked = msg.ns.parked;
+    this.adoptNet(msg.ns);
     this.acks = msg.k;
     this.lastInputs = msg.last;
     for (const f of this.inbox.keys()) if (f < m.frame) this.inbox.delete(f);
@@ -791,6 +823,11 @@ export class NetSession {
     for (const a of b.a ?? []) {
       if (a.t === 'rules') applyAction(m, this.ns, { t: 'rules', rules: sanitizeRules(a.rules) });
       else applyAction(m, this.ns, a);
+      // By what was applied, not what was asked: outside the lobby this did nothing.
+      if (a.t === 'kick' && this.ns.kicked[a.peer]) {
+        if (a.peer === this.self) return this.onKicked();
+        if (this.role === 'host') this.send({ t: 'kicked' }, a.peer);
+      }
     }
     const inputs: Record<string, InputFrame> = {};
     for (const [d, e] of Object.entries(b.i ?? {})) inputs[d] = decode(e);

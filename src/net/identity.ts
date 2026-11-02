@@ -110,6 +110,19 @@ export function acquirePeerId(room: string): PeerIdentity {
   };
 }
 
+// ---------------------------------------------------------------- kicked
+
+const keyKicked = (room: string) => `slag.kicked.${room}`;
+
+/** This tab was removed from `room`. Per tab: a kick mustn't follow the rest of the browser, which may be the host. */
+export function markKicked(room: string) {
+  write(storage('session'), keyKicked(room), true);
+}
+
+export function wasKicked(room: string): boolean {
+  return read(storage('session'), keyKicked(room)) === true;
+}
+
 // ---------------------------------------------------------------- resume save
 
 /** How long a room's last state stays resumable on this browser. */

@@ -22,16 +22,20 @@ export type NetAction =
   /** Host only: the per-match salt (crate order) for the next match start. */
   | { t: 'salt'; salt: number }
   /** Host only, lobby only. */
-  | { t: 'rules'; rules: MatchRules };
+  | { t: 'rules'; rules: MatchRules }
+  /** Host only, lobby only: out of the room, and refused if it comes back. */
+  | { t: 'kick'; peer: string };
 
 /** Replicated session state that isn't part of the Match (kept identical on every peer by the same actions). */
 export interface NetState {
   /** peer id → players removed from the lobby while that peer was away. */
   parked: Record<string, { dev: string; char: CharacterDef }[]>;
+  /** Peers the host removed. Replicated, so a new host keeps refusing them. */
+  kicked: Record<string, true>;
 }
 
 export function newNetState(): NetState {
-  return { parked: {} };
+  return { parked: {}, kicked: {} };
 }
 
 /** Peer id that owns a global device id (`<peer>:<local device>`), or '' for un-namespaced (offline/debug) devices. */
@@ -85,6 +89,12 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
       return;
     case 'rules':
       if (m.phase === 'lobby') m.rules = sanitizeRules(a.rules);
+      return;
+    case 'kick':
+      if (m.phase !== 'lobby' || typeof a.peer !== 'string') return;
+      for (const p of m.players.filter((q) => peerOf(q.device) === a.peer)) m.leave(p.device);
+      delete ns.parked[a.peer];
+      ns.kicked[a.peer] = true;
       return;
   }
 }

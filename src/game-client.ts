@@ -157,6 +157,9 @@ export function bootGame(container: HTMLElement, room: string): void {
       case 'name':
         promptName();
         return true;
+      case 'kick':
+        if (b.device) conn.kick(b.device);
+        return true;
       case 'invite': {
         const url = conn.inviteUrl;
         navigator.clipboard?.writeText(url).then(
@@ -261,7 +264,9 @@ export function bootGame(container: HTMLElement, room: string): void {
       // Host-rolled per-match salt, re-rolled on entering the lobby; a host action so every peer shares it.
       if (net.isHost && !net.paused && match.phase === 'lobby' && match.phaseFrame === 0) net.act({ t: 'salt', salt: (Math.random() * 4294967296) >>> 0 });
       input.touch.setMode(touchModeFor(match, net.globalDevice(TOUCH_DEVICE)));
-      net.tick(input.sample());
+      const frames = input.sample();
+      conn.lobbyInput(frames);
+      net.tick(frames);
       acc -= DT;
     }
   }
