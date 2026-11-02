@@ -8,6 +8,13 @@ Design intent for everything below is in `docs/DESIGN.md`.
 
 ---
 
+## 27. AI players (future)
+Bots that fill seats in local and online matches.
+- Racing can build on `src/sim/reach.ts`: it already runs the real controller through scripted moves and searches a route graph, so a bot can follow the planned route and react to hazards with the same inputs a player sends (deterministic, so lockstep is unchanged).
+- Pick and place need taste: pick by role and the round's state, place to trap rivals without stranding the bot itself (the winnability plan already refuses a placement that leaves no way through).
+- Difficulty levels, and a bot never cheats: it sends inputs like anyone else.
+- Decide with the owner: bots in online rooms, in the lobby browser, and whether they count for scoring.
+
 ## 26. Lobby browser (after observer mode and the join flow land)
 The owner wants a list of lobbies, by default showing only ones that aren't full.
 - Cheap with the store we have: the host's beat also writes the room to one public index (a sorted set scored by last beat, plus a small hash of players/observers/max/theme/phase), about one extra command per beat. The list screen reads it with one range plus one fetch, polling every few seconds only while open. Rooms whose host stops beating fall out on their own.

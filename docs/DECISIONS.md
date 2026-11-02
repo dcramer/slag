@@ -209,6 +209,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `in progress` · ART.md → World art
 - **A really short lore guides design: Slag is the runoff of the Great Foundry, a scrap world of melted-down levels and characters who never made the cut, racing for the one mould that casts the winner into a real game.** "we might want in our game design a REALLY short piece of lore that explains the world of slag, who the characters are, why they're trying to get to the goal"
   2026-11-02 · `done` · DESIGN.md → Lore
+- **AI players are a future TODO.** "another future TODO: AI"
+  2026-11-02 · `planned` · TODO.md → 27
 - **Lobby browser: a list of lobbies, showing only ones that aren't full by default.** Lobbies are public by default with a Private option. "lets make lobbies public by default with a private option"
   2026-11-02 · `planned` · TODO.md → 26
 - **Conveyors rotate: the rotation picks the belt's face.** A side belt grips and carries a clinging runner (an escalator when it runs up), a bottom belt shoves a head that bonks it. "you cant rotate conveyors.. the conveyor always stays on the top"
