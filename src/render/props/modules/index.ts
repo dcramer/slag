@@ -10,3 +10,8 @@ import './piston';
 import './spring';
 import './fan';
 import './bomb';
+import './rotor';
+import './vehicle';
+import './cannon';
+import './geyser';
+import './deco';
