@@ -1,6 +1,7 @@
 import type { Rng } from '../../core/rng';
 import { T_EMPTY, T_ONEWAY, T_SOLID } from '../../sim/level';
-import type { BridgeHint, Shape } from './types';
+import { jumpProfile } from './probe';
+import { BRIDGE_W, type BridgeHint, type Shape } from './types';
 
 /**
  * Sculpting toolkit shared by the per-theme sculptors: a tile grid with a
@@ -216,6 +217,10 @@ export function hintGap(g: Grid, x0: number, x1: number, row: number): void {
     g.hint(x0, row);
     return;
   }
+  // A lone bridge can't sit in the middle of a wide gap: you can run at it but only walk off it,
+  // so it goes a walking jump short of the far bank.
+  const { walkGap } = jumpProfile();
+  g.hint(Math.max(x0, x1 - walkGap - BRIDGE_W + 1), row);
   if (w >= 9) {
     g.hint(x0 + Math.floor(w / 3) - 1, row);
     g.hint(x1 - Math.floor(w / 3) - 1, row);

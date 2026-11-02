@@ -1,7 +1,7 @@
 import { css, type HSL, shift, toRgb } from '../core/color';
 import { clamp } from '../core/geom';
 import type { Match } from '../game/match';
-import { overview } from '../game/view';
+import { overview, raceFloor } from '../game/view';
 import { TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import { type Level, tileAt } from '../sim/level';
 import { canPlace, footprint, resolveProp } from '../sim/props';
@@ -26,8 +26,6 @@ import { detectQuality, FrameBudget, QUALITY, type QualityTier, safeInsets, TIER
 
 /** Terrain bake budget (px per baked canvas): a classic level at 1920 px wide is ~4.3 M. */
 const MAX_BAKE_PX = 6_000_000;
-/** Race camera never zooms out further than this (readability), even if runners are spread wider. */
-const MIN_RACE_ZOOM = 0.6;
 const RUNNER_KEY: HSL = { h: 40, s: 30, l: 90 };
 
 /** Offset and scale of a context's current transform, for the comic pass's world-locked dots. */
@@ -176,9 +174,9 @@ export class Renderer {
     this.surround.comic = this.printed;
     this.terrain.ensure(level, kb);
     // The surroundings reach as far as the most zoomed-out view of this level can see.
-    const ov = overview(level);
-    const reachX = Math.max(0, frameBox.w / ov.zoom - ww) / 2;
-    const reachY = Math.max(0, frameBox.h / ov.zoom - wh);
+    const floor = raceFloor(level);
+    const reachX = Math.max(0, frameBox.w / floor - ww) / 2;
+    const reachY = Math.max(0, frameBox.h / floor - wh);
     this.surround.ensure(level, reachX, reachY, Math.min(kb, Math.sqrt(MAX_BAKE_PX / ((ww + reachX * 2) * (wh + reachY)))));
     const emit: Emit = (kind, x, y, vx, vy, color) =>
       this.fx.add(
@@ -331,10 +329,10 @@ export class Renderer {
       this.cam.update(dt, false);
       return;
     }
-    this.cam.setBounds(ww, wh, Math.min(1, Math.max(ov.zoom, MIN_RACE_ZOOM)));
+    this.cam.setBounds(ww, wh, raceFloor(lv));
     if (m.phase === 'run' && m.run) {
       const pts = m.run.runners.filter((r) => r.alive && !r.finished).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y }));
-      if (pts.length) this.cam.focus(pts, 1.45, 120);
+      if (pts.length) this.cam.frameAll(pts, 1.45, 120);
       else this.cam.wide();
     } else if (m.phase === 'lobby') {
       // Slow cinematic drift over the level preview (wider sweep on big levels).

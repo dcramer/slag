@@ -10,6 +10,7 @@ export type { Aim, Ammo, Archetype, Head, LauncherStyle, Material, MetalStyle, M
 export { AMMO };
 
 import { deriveSeed, Rng } from '../core/rng';
+import { BRIDGE_W } from './level/types';
 import { makerName, word } from './names';
 
 /**
@@ -65,7 +66,6 @@ export const LAUNCHER_AIM_WEIGHTS: readonly (readonly [Aim, number])[] = [
   ['track', 1.5],
 ];
 
-const BUILD: Archetype[] = ['platform', 'crumble', 'spring'];
 const HAZARD: Archetype[] = ['spikestrip', 'spikeblock', 'saw', 'flail', 'launcher', 'flamer', 'laser', 'tesla', 'crusher', 'dropper', 'snapper'];
 
 const R = Math.PI / 2;
@@ -171,7 +171,10 @@ interface Recipe {
 /** Generate one prop of the given archetype. */
 export function generateProp(rng: Rng, archetype: Archetype, key: string): PropDef {
   const style = rollStyle(rng);
-  const recipe = RECIPES[archetype](rng, style);
+  return assemble(rng, RECIPES[archetype](rng, style), style, key);
+}
+
+function assemble(rng: Rng, recipe: Recipe, style: PropStyle, key: string): PropDef {
   return {
     key,
     maker: makerName(rng),
@@ -184,6 +187,35 @@ export function generateProp(rng: Rng, archetype: Archetype, key: string): PropD
     footprint: recipe.footprint ? normalizeCells(recipe.footprint) : footprintOf(recipe.modules),
     ...(recipe.mount ? { mount: recipe.mount } : {}),
   };
+}
+
+/** Good footing: it holds still, doesn't crumble and doesn't throw you around. */
+const FOOTING: Partial<Record<Material, string[]>> = {
+  stone: ['Slab', 'Ledge'],
+  metal: ['Girder', 'Plate'],
+  wood: ['Plank', 'Beam'],
+};
+
+/**
+ * The part worldgen's solvability proof is about: a static, solid strip
+ * BRIDGE_W long that stands wherever a solution needs one. Other building
+ * parts might do the job too (or be a one-tile moving jelly), so the crate's
+ * guarantee is made of these.
+ */
+export function generateBridge(rng: Rng, key: string): PropDef {
+  const material = rng.pick(Object.keys(FOOTING) as Material[]);
+  const name = title(rng, ['Trusty', 'Sturdy', 'Solid', 'Dependable'], FOOTING[material]!);
+  const modules: Module[] = [{ type: 'body', cells: strip(BRIDGE_W), material, conveyor: 0, breakFrames: 0, respawnFrames: 0 }];
+  return assemble(rng, { archetype: 'platform', role: 'build', name, modules }, rollStyle(rng), key);
+}
+
+/** True for a part that can stand in for a bridge in a level's solution. */
+export function isBridgePart(def: PropDef): boolean {
+  if (def.role !== 'build' || def.motion.type !== 'none' || def.modules.length !== 1) return false;
+  const m = def.modules[0];
+  if (m.type !== 'body' || m.breakFrames > 0 || m.conveyor !== 0 || !(m.material in FOOTING)) return false;
+  const rows = new Set(m.cells.map((c) => c[1]));
+  return rows.size === 1 && m.cells.length === BRIDGE_W;
 }
 
 /** A straight strip of `n` host cells along x, facing up at rot 0 (rotation picks the face). */
@@ -1086,10 +1118,18 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
  * The selection offered at the start of a round. Deterministic for
  * (seed, round). Always at least one building piece and one hazard.
  */
-export function generateCrate(seed: number, round: number, count: number): PropDef[] {
+/**
+ * A round's crate. It always holds a hazard and a bridge part, and at least
+ * `bridges` parts that can stand in for a bridge (capped so the hazard keeps
+ * its place): what the level still needs, so a match can't run out of ways
+ * to reach the flag.
+ */
+export function generateCrate(seed: number, round: number, count: number, bridges = 1): PropDef[] {
   const rng = new Rng(deriveSeed(seed, `crate:${round}`));
-  const kinds: Archetype[] = [rng.pick(BUILD), rng.pick(HAZARD)];
-  while (kinds.length < count) kinds.push(rng.weighted(ARCHETYPE_WEIGHTS));
-  rng.shuffle(kinds);
-  return kinds.map((k, i) => generateProp(new Rng(deriveSeed(seed, `prop:${round}:${i}`)), k, `${round}-${i}`));
+  const need = Math.max(1, Math.min(bridges, count - 1));
+  const kinds: Archetype[] = [rng.pick(HAZARD)];
+  while (kinds.length + need < count) kinds.push(rng.weighted(ARCHETYPE_WEIGHTS));
+  const made = kinds.map((k, i) => generateProp(new Rng(deriveSeed(seed, `prop:${round}:${i}`)), k, `${round}-${i}`));
+  for (let i = 0; i < need; i++) made.push(generateBridge(new Rng(deriveSeed(seed, `bridge:${round}:${i}`)), `${round}-b${i}`));
+  return rng.shuffle(made);
 }

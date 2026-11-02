@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
-import { generateLevel, isAcceptable, lastGenInfo, rollProfile } from '../src/gen/level';
+import { generateLevel, isAcceptable, lastGenInfo } from '../src/gen/level';
 import { jumpProfile, setProbeGravity } from '../src/gen/level/probe';
 import { analyzeRoutes, MAX_SHARED } from '../src/gen/level/routes';
-import { easyGap, hopGap, rollChallenges } from '../src/gen/level/sculptors/common';
+import { easyGap, hopGap, rollChallenges, TWO_PARTS } from '../src/gen/level/sculptors/common';
 import { LEVEL_H, LEVEL_W } from '../src/sim/constants';
 import { type Level, T_ONEWAY, T_SOLID } from '../src/sim/level';
 import { THEME_IDS } from '../src/themes';
@@ -155,11 +155,11 @@ describe('sculptor tuning', () => {
   });
 
   it('decides a challenge once per level, so retries cannot select it away', () => {
-    const p = rollProfile(seedAt(9), 'farm');
     for (const challenge of [0.1, 0.5, 0.95]) {
-      const k = { propNeed: p.propNeed, challenge };
-      const first = rollChallenges(new Rng(1), 0.82, 0, 0, k) > 0;
-      for (let attempt = 1; attempt < 8; attempt++) expect(rollChallenges(new Rng(attempt), 0.82, 0, attempt, k) > 0).toBe(first);
+      const first = rollChallenges(0, { challenge });
+      for (let attempt = 1; attempt < 8; attempt++) expect(rollChallenges(attempt, { challenge })).toBe(first);
     }
+    expect(rollChallenges(0, { challenge: TWO_PARTS - 0.01 })).toBe(2);
+    expect(rollChallenges(0, { challenge: TWO_PARTS + 0.01 })).toBe(1);
   });
 });

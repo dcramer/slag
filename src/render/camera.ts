@@ -3,6 +3,11 @@ import { restY, type ViewXform } from '../game/view';
 import { VIEW_H, VIEW_W } from '../sim/constants';
 import { VIEW_FRAME, type ViewFrame } from './frame';
 
+/** View px every framed runner stays inside the window's edge: clear of the corner chips and footer. */
+export const FRAME_MARGIN = 36;
+/** Rate zoom eases back in at (per second), against 3.2 for everything else. */
+const ZOOM_IN_RATE = 1.2;
+
 /**
  * Smoothed 2D camera. Two things are handed to it and nothing else is assumed:
  * the world's size (`setBounds`, from the level) and the window (`setFrame`).
@@ -14,6 +19,11 @@ import { VIEW_FRAME, type ViewFrame } from './frame';
  * On an axis where the frame is bigger than the world, the world rests in the
  * play view (centred across, standing on the ground) and the renderer shows
  * what lies beyond it.
+ *
+ * `frameAll` is the race rule: every live runner is on screen, always. Zoom
+ * and position ease toward a nice framing, and after easing a hard step pulls
+ * the view out just far enough if anyone would otherwise leave it, so nobody
+ * can outrun the smoothing and readability never beats being seen.
  */
 export class Camera {
   x = 0;
@@ -31,6 +41,8 @@ export class Camera {
   /** Lowest zoom `focus` may pick (the fit-whole-level zoom, or a readability floor). */
   minZoom = 1;
   frame: ViewFrame = VIEW_FRAME;
+  /** Points `frameAll` must keep in view; re-supplied every frame. */
+  private held: readonly { x: number; y: number }[] = [];
 
   setBounds(ww: number, wh: number, minZoom: number) {
     if (ww !== this.ww || wh !== this.wh) {
@@ -46,8 +58,15 @@ export class Camera {
     this.frame = frame;
   }
 
+  /** Keep every one of `points` in view, whatever it costs in zoom (down to minZoom). Call every frame. */
+  frameAll(points: readonly { x: number; y: number }[], maxZoom = 1.4, pad = 110) {
+    this.focus(points, maxZoom, pad);
+    this.held = points;
+  }
+
   /** Frame the given points (or the whole world if empty), capping zoom. */
-  focus(points: { x: number; y: number }[], maxZoom = 1.4, pad = 110) {
+  focus(points: readonly { x: number; y: number }[], maxZoom = 1.4, pad = 110) {
+    this.held = [];
     if (points.length === 0) {
       this.wide();
       return;
@@ -98,15 +117,44 @@ export class Camera {
 
   update(dt: number, smooth = true) {
     const k = smooth ? 1 - Math.exp(-dt * 3.2) : 1;
-    this.zoom += (this.tz - this.zoom) * k;
+    // Out at full pace, back in gently: a pack that spreads and regroups shouldn't pump the view.
+    const kz = smooth && this.tz > this.zoom ? 1 - Math.exp(-dt * ZOOM_IN_RATE) : k;
+    this.zoom += (this.tz - this.zoom) * kz;
     this.x += (this.clampX(this.tx) - this.x) * k;
     this.y += (this.clampY(this.ty) - this.y) * k;
+    this.contain();
     this.x = this.clampX(this.x);
     this.y = this.clampY(this.y);
     this.shake *= Math.exp(-dt * 7);
     if (this.shake < 0.05) this.shake = 0;
     this.sx = (Math.random() - 0.5) * this.shake;
     this.sy = (Math.random() - 0.5) * this.shake;
+  }
+
+  /** The hard rule behind `frameAll`: zoom out, then move, by exactly what keeps everyone in view this frame. */
+  private contain() {
+    if (this.held.length === 0) return;
+    let x0 = Infinity;
+    let y0 = Infinity;
+    let x1 = -Infinity;
+    let y1 = -Infinity;
+    for (const p of this.held) {
+      x0 = Math.min(x0, p.x);
+      y0 = Math.min(y0, p.y);
+      x1 = Math.max(x1, p.x);
+      y1 = Math.max(y1, p.y);
+    }
+    // View px from the view's centre out to each edge of the usable window, less the margin.
+    const f = this.frame;
+    const left = VIEW_W / 2 - f.safeX0 - FRAME_MARGIN;
+    const right = f.safeX1 - VIEW_W / 2 - FRAME_MARGIN;
+    const up = VIEW_H / 2 - f.safeY0 - FRAME_MARGIN;
+    const down = f.y1 - VIEW_H / 2 - FRAME_MARGIN;
+    const fit = Math.min((left + right) / Math.max(1, x1 - x0), (up + down) / Math.max(1, y1 - y0));
+    if (this.zoom > fit) this.zoom = Math.max(fit, this.minZoom);
+    const z = this.zoom;
+    this.x = clamp(this.x, x1 - right / z, Math.max(x1 - right / z, x0 + left / z));
+    this.y = clamp(this.y, y1 - down / z, Math.max(y1 - down / z, y0 + up / z));
   }
 
   /** Canvas transform mapping world → buffer pixels for a window-filling buffer `pw` px wide. */

@@ -1,5 +1,5 @@
 import { PHYS } from '../../sim/constants';
-import { footprintCells } from '../../sim/props';
+import { footprintCells, type PlacedProp, resolveProp } from '../../sim/props';
 import { TILE } from '../../sim/constants';
 import { isProtected, type Level, T_EMPTY, T_SOLID } from '../../sim/level';
 import { bodyAtCell, type CollisionWorld, stepBody } from '../../sim/physics';
@@ -77,7 +77,7 @@ export function withBridges(level: Level, bridges: readonly Bridge[]): Level {
 }
 
 /** Policy verdict for a level, using sculptor hints to speed up the search. */
-export function judge(level: Level, hints: readonly Bridge[] = []): Verdict {
+export function judge(level: Level, hints: readonly Bridge[] = [], crossings: readonly [number, number][] = []): Verdict {
   const scored = (bridges: Bridge[], evals: number): Verdict => {
     const { shared } = analyzeRoutes(level, bridges);
     return { ok: true, bridges, evals, shared, open: shared <= MAX_SHARED };
@@ -86,7 +86,45 @@ export function judge(level: Level, hints: readonly Bridge[] = []): Verdict {
   const s = new BridgeSearch(level);
   const verify = (bs: Bridge[]) => bs.every((b) => canPlaceBridge(level, b)) && analyzeReach(withBridges(level, bs)).goalReached;
   const sol = s.solve(hints, verify);
-  return sol ? scored(sol, s.evals) : { ok: false, bridges: [], evals: s.evals, shared: 1, open: false };
+  if (!sol) return { ok: false, bridges: [], evals: s.evals, shared: 1, open: false };
+  // The search's model is rough: on a level with one crossing, two bridges may be one it didn't try.
+  // A level's count sets what the crate must offer, so it has to be the real one.
+  const lone = sol.length === 2 && crossings.length === 1 ? loneBridge(crossings[0], hints, verify) : null;
+  return scored(lone ? [lone] : sol, s.evals);
+}
+
+/** Try one bridge along a crossing, on and just above the ledges, with the real controller. */
+function loneBridge([x0, x1]: readonly [number, number], hints: readonly Bridge[], verify: (bs: Bridge[]) => boolean): Bridge | null {
+  const row = hints.find((h) => h.x >= x0 - BRIDGE_W && h.x <= x1)?.y;
+  if (row === undefined) return null;
+  for (let dy = 0; dy <= 3; dy++) {
+    for (let x = x1 - BRIDGE_W + 1; x >= x0; x -= 2) {
+      if (verify([{ x, y: row - dy }])) return { x, y: row - dy };
+    }
+  }
+  return null;
+}
+
+/**
+ * How many more bridges `level` needs with `placed` parts standing in it: 0
+ * if the goal is already reachable, and MAX_BRIDGES if nothing proves a
+ * smaller number (better to over-offer than to strand a match). Static solid
+ * parts count as ground; everything placed takes up its cells.
+ */
+export function partsNeeded(level: Level, placed: readonly PlacedProp[]): number {
+  const tiles = new Uint8Array(level.tiles);
+  for (const pp of placed) {
+    const r = resolveProp(pp);
+    if (r.motion.type !== 'none') continue;
+    for (const m of r.mods) {
+      if (m.type !== 'body' || m.breakFrames > 0) continue;
+      for (const [x, y] of m.cells) if (x >= 0 && y >= 0 && x < level.w && y < level.h) tiles[y * level.w + x] = T_SOLID;
+    }
+  }
+  const now: Level = { ...level, tiles, setPieces: [...level.setPieces, ...placed] };
+  if (analyzeReach(now).goalReached) return 0;
+  const verify = (bs: Bridge[]) => bs.every((b) => canPlaceBridge(now, b)) && analyzeReach(withBridges(now, bs)).goalReached;
+  return new BridgeSearch(now).solve(level.solution ?? [], verify)?.length ?? MAX_BRIDGES;
 }
 
 /** Policy check; seeds the search with the level's recorded solution if it has one. */

@@ -1,6 +1,7 @@
 import type { Rng } from '../../../core/rng';
 import { jumpMetrics } from '../../../sim/physics';
 import { type Grid, hintGap } from '../kit';
+import { BRIDGE_W } from '../types';
 import type { RouteShape } from '../../../sim/level';
 import { jumpProfile, probeGravity } from '../probe';
 import type { SculptCtx } from '../types';
@@ -10,6 +11,11 @@ import type { SculptCtx } from '../types';
  * profile, and the "challenge" roll that decides whether a level gets a
  * crossing that needs a bridge prop.
  */
+
+/** Share of levels that need two parts; every other level needs one. */
+export const TWO_PARTS = 0.3;
+/** First attempt that may give up on needing parts at all (the pipeline stops insisting here too). */
+export const LAST_RESORT = 22;
 
 /**
  * A gap (empty columns) jumpable between ledges at equal height. Mostly a
@@ -31,15 +37,21 @@ export function hopGap(rng: Rng, min = 1): number {
 
 /**
  * A gap no running jump clears (pair it with `undercut` on the far bank so it
- * can't be wall-climbed from below), yet bridgeable with one 3-wide bridge at
- * ledge height: each remaining side stays within a running jump. The upper
- * end also beats long falling jumps from nearby perches.
+ * can't be wall-climbed from below), but that `parts` bridges close (1 or 2).
+ * A bridge is too short to run on, so a player runs and jumps onto it from
+ * the near bank and walks off the far end. One bridge covers a running jump,
+ * its own width and most of a walking jump (the last columns only work from
+ * a few exact spots, which the solver doesn't count on); no single bridge
+ * spans a running jump, its width and a full walking jump. Widths are checked
+ * against an exhaustive search in tests/routes.test.ts. The widest gaps also
+ * beat long falling jumps from nearby perches, so they're the likelier roll.
  */
-export function hardGap(rng: Rng): number {
+export function hardGap(rng: Rng, parts = 1): number {
   const j = jumpProfile();
-  const lo = j.gap + 2;
-  const hi = Math.max(lo, j.gap * 2 + 2);
-  return rng.chance(0.5) ? rng.int(lo, Math.min(hi, j.gapAt(-6) + 1)) : rng.int(Math.min(hi, j.gapAt(-6) + 1), hi);
+  const lo = parts === 1 ? j.gap + 2 : j.gap + BRIDGE_W + j.walkGap + 2;
+  const hi = Math.max(lo, parts === 1 ? BRIDGE_W + j.walkGap * 2 : j.gap + BRIDGE_W * 2 + j.walkGap);
+  const far = Math.min(hi, Math.max(lo, j.gapAt(-6) + 1));
+  return rng.chance(0.3) ? rng.int(lo, far) : rng.int(far, hi);
 }
 
 /**
@@ -54,20 +66,18 @@ export function easyRise(): number {
 }
 
 /**
- * How many crossings in this level must need a bridge (0, 1 or 2). Later
- * attempts lower the stakes so retries converge.
+ * How many parts this level asks for: every level needs at least one, and
+ * TWO_PARTS of them need two. Later attempts lower the stakes so retries
+ * converge, and the very last ones drop the ask altogether: a level no
+ * sculpt could make hard is rarer than a generator that can't finish.
  *
- * Whether there's a challenge at all is decided once per level (k.challenge),
- * not per attempt: harder shapes are rejected more often, so a per-attempt
- * roll would quietly select for the prop-free ones.
+ * The count is decided once per level (k.challenge), not per attempt: harder
+ * shapes are rejected more often, so a per-attempt roll would quietly select
+ * for easy ones.
  */
-export function rollChallenges(rng: Rng, pHard: number, pTwo: number, attempt: number, k: Pick<Knobs, 'propNeed' | 'challenge'>): number {
-  // The level profile's propNeed tilts the theme's base rate (1 = as tuned, lower = more breathers).
-  let p = Math.min(0.97, pHard * (0.35 + 0.75 * k.propNeed));
-  if (attempt >= 8) p *= 0.5;
-  // A challenge some layouts can't solve mustn't outlast the retries: past this, drop it.
-  if (attempt >= 16 || k.challenge >= p) return 0;
-  return rng.chance(pTwo) && attempt < 4 ? 2 : 1;
+export function rollChallenges(attempt: number, k: Pick<Knobs, 'challenge'>): number {
+  if (attempt >= LAST_RESORT) return 0;
+  return k.challenge < TWO_PARTS && attempt < 16 ? 2 : 1;
 }
 
 /** Carve a pit (columns x0..x1 empty to the bottom) and hint a bridge at floor row `row` if it's wide. */
@@ -84,8 +94,8 @@ export function pit(g: Grid, x0: number, x1: number, row: number, hard: boolean)
  * so without this a player who drops toward the far wall just climbs out;
  * the lip's underside stops the climb.
  */
-export function undercut(g: Grid, x: number, depth = 2): void {
-  const top = g.surface(x);
+export function undercut(g: Grid, x: number, depth = 2, from = 0): void {
+  const top = g.surface(x, from);
   if (top < g.h - 3) g.clear(x, top + 2, x + depth - 1, g.h - 1);
 }
 
@@ -183,7 +193,6 @@ export interface Knobs {
   count(base: number, min?: number): number;
   /** Width relative to a classic level (1 = 48 columns). */
   wide: number;
-  propNeed: number;
   /** This level's challenge roll in [0, 1), the same on every attempt. */
   challenge: number;
 }
@@ -214,7 +223,6 @@ export function knobs(ctx: SculptCtx, maxClimb?: number, range: [number, number]
     },
     count: (base, min = 0) => Math.max(min, Math.round(base * wide * (0.45 + 1.1 * p.density))),
     wide,
-    propNeed: p.propNeed,
     challenge: ctx.challenge,
   };
 }

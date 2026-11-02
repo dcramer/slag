@@ -6,7 +6,7 @@ import type { ThemeId } from '../../themes';
 /**
  * Per-level variety: before sculpting, every level rolls a profile from its
  * seed (and theme) — world size/aspect, terrain density, how many set-piece
- * hazards and how nasty, the route shape, and how likely it is to need props.
+ * hazards and how nasty, and the route shape.
  * Sculptors read the knobs; the set-piece placer reads hazards/danger.
  *
  * Size classes:
@@ -84,7 +84,7 @@ export const TALL_SIZES = { w: [32, 40], h: [40, 60] } as const;
 export const WIDE_SIZES = { w: [64, 96], h: [24, 30] } as const;
 
 /** Debug/tools: force some knobs (the rest still roll from the seed). A size the theme can't do falls back to its widest. */
-export type ProfileOverride = Partial<Pick<LevelProfile, 'size' | 'route' | 'density' | 'hazards' | 'danger' | 'propNeed' | 'gravity'>>;
+export type ProfileOverride = Partial<Pick<LevelProfile, 'size' | 'route' | 'density' | 'hazards' | 'danger' | 'gravity'>>;
 
 /**
  * World gravity classes. Jump take-off speed is fixed, so jump height scales
@@ -132,12 +132,6 @@ export function rollProfile(seed: number, themeId: ThemeId, o: ProfileOverride =
   ]);
   const hazards = Math.min(4, hz + (size !== 'classic' && rng.chance(0.4) ? 1 : 0));
   const danger = clamp01(rng.range(0, 1));
-  // Chance-scale for a props-needed crossing: mostly high (the genre's rhythm), sometimes a breather.
-  const propNeed = rng.weighted<number>([
-    [0.45, 2],
-    [0.85, 5],
-    [1, 3],
-  ]);
   return {
     size,
     w,
@@ -146,7 +140,6 @@ export function rollProfile(seed: number, themeId: ThemeId, o: ProfileOverride =
     hazards: o.hazards ?? hazards,
     danger: round2(o.danger ?? danger),
     route,
-    propNeed: o.propNeed ?? propNeed,
     // Rolled last so the other knobs don't depend on it. Mostly normal, sometimes floaty or heavy.
     gravity:
       o.gravity ??
@@ -166,5 +159,5 @@ const round2 = (v: number) => Math.round(v * 100) / 100;
 /** One-line summary for tools/debug. */
 export function describeProfile(p: LevelProfile): string {
   const dens = p.density < 0.33 ? 'sparse' : p.density > 0.66 ? 'dense' : 'normal';
-  return `${p.size} ${p.w}×${p.h} · ${p.route} · ${dens} (${p.density}) · hazards ${p.hazards} danger ${p.danger} · propNeed ${p.propNeed} · gravity ${gravityClass(p.gravity)} (${p.gravity})`;
+  return `${p.size} ${p.w}×${p.h} · ${p.route} · ${dens} (${p.density}) · hazards ${p.hazards} danger ${p.danger} · gravity ${gravityClass(p.gravity)} (${p.gravity})`;
 }

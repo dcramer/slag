@@ -11,12 +11,13 @@ import { setProbeGravity } from './probe';
 import { type ProfileOverride, rollProfile } from './profile';
 import { MAX_SHARED } from './routes';
 import { FALLBACK_SCULPTOR, SCULPTORS } from './sculptors';
+import { LAST_RESORT } from './sculptors/common';
 import type { Shape } from './types';
 import { type Bridge, judge } from './validate';
 
 export type { BridgeHint, SculptCtx, Sculptor, Shape } from './types';
 export { describeProfile, GRAVITY, type GravityClass, gravityClass, type ProfileOverride, rollProfile } from './profile';
-export { BRIDGE_W, type Bridge, canPlaceBridge, isAcceptable, judge, MAX_BRIDGES, withBridges } from './validate';
+export { BRIDGE_W, type Bridge, canPlaceBridge, isAcceptable, judge, MAX_BRIDGES, partsNeeded, withBridges } from './validate';
 
 const MAX_ATTEMPTS = 30;
 const LEGACY_ATTEMPTS = 20;
@@ -60,15 +61,14 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
     const sculptor = attempt < MAX_ATTEMPTS ? SCULPTORS[themeId] : FALLBACK_SCULPTOR;
     const shape = sculptor({ rng, themeId, theme, attempt, profile, challenge });
     const level = toLevel(seed, shape, theme, profile);
-    const v = judge(level, shape.bridgeHints);
+    const v = judge(level, shape.bridgeHints, shape.crossings);
     if (!v.ok) {
       rejects.unsolvable++;
       continue;
     }
-    // A crossing meant to need props that turned out jumpable: re-roll (late attempts accept anything valid).
-    // Big levels are costly to re-sculpt and judge, so they get fewer of these rerolls.
-    const rerolls = profile.size === 'classic' ? MAX_ATTEMPTS - 10 : 4;
-    if (shape.wantsProps && v.bridges.length === 0 && attempt < rerolls) {
+    // Passable bare: not a level. Only the very last attempts accept it, to keep generation total.
+    const insist = attempt < LAST_RESORT;
+    if (v.bridges.length === 0 && insist) {
       rejects.tooEasy++;
       continue;
     }
@@ -81,7 +81,7 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
         rejects.closed++;
         continue;
       }
-      if (v.bridges.length && attempt < rerolls && analyzeReach(level).goalReached) {
+      if (v.bridges.length && insist && analyzeReach(level).goalReached) {
         rejects.tooEasy++;
         continue;
       }

@@ -35,7 +35,7 @@ export const volcano: Sculptor = (ctx) => {
   for (let x = W - 6; x < W; x++) surf[x] = gRow;
   locked.fill(1, 0, 6);
   locked.fill(1, W - 6, W);
-  const challenges = rollChallenges(rng, 0.82, 0.15, attempt, k);
+  const challenges = rollChallenges(attempt, k);
   g.wantsProps = challenges > 0;
   let hardLeft = challenges;
 

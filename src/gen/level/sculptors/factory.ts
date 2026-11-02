@@ -35,7 +35,7 @@ export const factory: Sculptor = (ctx) => {
   };
 
   // Vats (drop pits) in the floor: hard ones need a bridge.
-  const challenges = rollChallenges(rng, 0.82, 0.15, attempt, k);
+  const challenges = rollChallenges(attempt, k);
   g.wantsProps = challenges > 0;
   const vats: { a: number; b: number; hard: boolean }[] = [];
   const nEasy = rng.int(style === 'foundry' ? 1 : 0, 2) + Math.floor((k.wide - 1) * rng.range(1, 2.5));

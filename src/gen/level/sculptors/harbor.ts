@@ -26,7 +26,7 @@ export const harbor: Sculptor = (ctx) => {
   ]);
   const g = new Grid(W, H);
   const q = H - rng.int(7, 10); // quay top row
-  const challenges = rollChallenges(rng, 0.82, 0.15, attempt, kn);
+  const challenges = rollChallenges(attempt, kn);
   g.wantsProps = challenges > 0;
   const kinds: Kind[] =
     style === 'galleon'

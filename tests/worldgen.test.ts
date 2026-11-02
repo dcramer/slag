@@ -24,6 +24,7 @@ function checkPolicy(l: Level, bridges: { x: number; y: number }[]): boolean {
 
 describe('worldgen per theme', () => {
   let bridged = 0;
+  let twoParts = 0;
   let total = 0;
   const styles = new Map<string, Set<string>>();
   for (const theme of THEME_IDS) {
@@ -56,23 +57,19 @@ describe('worldgen per theme', () => {
         expect(isProtected(l, l.goal.tx, l.goal.ty)).toBe(true);
         expect(checkPolicy(l, info.bridges), `${theme} seed ${seed} policy`).toBe(true);
         if (info.bridges.length) themeBridged++;
+        if (info.bridges.length >= 2) twoParts++;
       }
-      // Many levels need props, but every theme keeps some prop-free ones. The level profile varies
-      // this on purpose (propNeed knob; tall levels lean on climbing instead), so the floor is lower
-      // than the classic-only ~70-85%.
-      if (SLOW) {
-        expect(themeBridged).toBeGreaterThan(SEEDS * 0.3);
-        expect(themeBridged).toBeLessThan(SEEDS);
-      }
+      // Almost nothing is passable bare, in any theme.
+      if (SLOW) expect(themeBridged).toBeGreaterThanOrEqual(SEEDS * 0.9);
       bridged += themeBridged;
       total += SEEDS;
     });
   }
-  it.runIf(SLOW)('overall share of levels needing bridges is in a sane band', () => {
+  it.runIf(SLOW)('about 99% of levels need parts, and 20-30% need more than one', () => {
     expect(total).toBe(SEEDS * THEME_IDS.length);
-    const share = bridged / total;
-    expect(share).toBeGreaterThan(0.5);
-    expect(share).toBeLessThan(0.92);
+    expect(bridged / total).toBeGreaterThanOrEqual(0.97);
+    expect(twoParts / total).toBeGreaterThan(0.18);
+    expect(twoParts / total).toBeLessThan(0.32);
   });
 
   // Reuses the sweep's levels: 192 extra generations proved nothing the 240 above don't.

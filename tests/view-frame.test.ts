@@ -156,3 +156,113 @@ describe('the land around a level', () => {
     }
   });
 });
+
+describe('the race camera keeps every live runner in view', () => {
+  const windows = [
+    [1536, 864],
+    [2520, 1080],
+    [1024, 768],
+    [844, 390],
+  ] as const;
+  const shapes = [
+    ['classic', 48, 27],
+    ['wide', 96, 26],
+    ['tall', 32, 60],
+  ] as const;
+
+  /** Fly a pack of runners and check the window after every frame, not just once it settles. */
+  function flight(c: Camera, ww: number, wh: number, runners: { x: number; y: number; vx: number; vy: number }[], frames: number) {
+    const f = c.frame;
+    for (let i = 0; i < frames; i++) {
+      for (const r of runners) {
+        r.x = Math.max(8, Math.min(ww - 8, r.x + r.vx / 60));
+        r.y = Math.max(8, Math.min(wh - 32, r.y + r.vy / 60));
+      }
+      c.frameAll(runners, 1.45, 120);
+      c.update(1 / 60);
+      for (const r of runners) {
+        const v = c.worldToView(r.x, r.y);
+        expect(v.x, `frame ${i}`).toBeGreaterThanOrEqual(f.x0);
+        expect(v.x, `frame ${i}`).toBeLessThanOrEqual(f.x1);
+        expect(v.y, `frame ${i}`).toBeGreaterThanOrEqual(f.y0);
+        expect(v.y, `frame ${i}`).toBeLessThanOrEqual(f.y1);
+      }
+    }
+  }
+
+  function camera(w: number, h: number, vw: number, vh: number): Camera {
+    const c = new Camera();
+    c.setFrame(viewFrame(vw, vh, NO_INSETS));
+    c.setBounds(w * TILE, h * TILE, Math.min(1, VIEW_W / (w * TILE), VIEW_H / (h * TILE)) * 0.92);
+    return c;
+  }
+
+  for (const [name, w, h] of shapes) {
+    for (const [vw, vh] of windows) {
+      const ww = w * TILE;
+      const wh = h * TILE;
+      it(`${name} at ${vw}x${vh}: a pack that splits to all ends stays framed, down to the whole level`, () => {
+        const c = camera(w, h, vw, vh);
+        const mid = { x: ww / 2, y: wh / 2 };
+        flight(
+          c,
+          ww,
+          wh,
+          [
+            { ...mid, vx: -215, vy: -40 },
+            { ...mid, vx: 215, vy: 60 },
+            { ...mid, vx: 40, vy: -320 },
+            { ...mid, vx: -40, vy: 300 },
+          ],
+          60 * 12,
+        );
+        const v = c.visible();
+        expect(v.x).toBeLessThanOrEqual(8);
+        expect(v.x + v.w).toBeGreaterThanOrEqual(ww - 8);
+        expect(v.y).toBeLessThanOrEqual(8);
+      });
+
+      it(`${name} at ${vw}x${vh}: nobody outruns the camera, and the margin holds once settled`, () => {
+        const c = camera(w, h, vw, vh);
+        const r = [
+          { x: 120, y: wh - 120, vx: 0, vy: 0 },
+          { x: 150, y: wh - 120, vx: 660, vy: -400 },
+        ];
+        // Stop inside the level: at its very edge only the level's own margin is left.
+        flight(c, ww, wh, r, Math.min(60 * 3, Math.floor(((ww - 300) / 660) * 60), Math.floor(((wh - 300) / 400) * 60)));
+        r[1].vx = r[1].vy = 0;
+        flight(c, ww, wh, r, 240);
+        const f = c.frame;
+        for (const p of r) {
+          const q = c.worldToView(p.x, p.y);
+          expect(q.x).toBeGreaterThanOrEqual(f.x0 + 10);
+          expect(q.x).toBeLessThanOrEqual(f.x1 - 10);
+          expect(q.y).toBeGreaterThanOrEqual(f.y0 + 10);
+          expect(q.y).toBeLessThanOrEqual(f.y1 - 10);
+        }
+      });
+    }
+  }
+
+  it('zooms back in slower than it goes out, so regrouping does not pump', () => {
+    const c = new Camera();
+    c.setFrame(viewFrame(1536, 864, NO_INSETS));
+    c.setBounds(96 * TILE, 26 * TILE, 0.45);
+    const apart = [
+      { x: 100, y: 200 },
+      { x: 96 * TILE - 100, y: 200 },
+    ];
+    for (let f = 0; f < 120; f++) {
+      c.frameAll(apart, 1.45, 120);
+      c.update(1 / 60);
+    }
+    const out = c.zoom;
+    const together = [
+      { x: 700, y: 200 },
+      { x: 720, y: 200 },
+    ];
+    c.frameAll(together, 1.45, 120);
+    c.update(1 / 60);
+    expect(c.zoom - out).toBeLessThan(0.03);
+  });
+});

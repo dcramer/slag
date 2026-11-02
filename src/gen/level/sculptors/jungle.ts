@@ -37,7 +37,7 @@ export const jungle: Sculptor = (ctx) => {
   locked.fill(1, W - 6, W);
 
   // Pools: hard ones get a broken log, easy ones sometimes a whole log.
-  const challenges = rollChallenges(rng, 0.82, 0.15, attempt, k);
+  const challenges = rollChallenges(attempt, k);
   g.wantsProps = challenges > 0;
   const pools: { a: number; b: number; hard: boolean }[] = [];
   for (let i = 0; i < challenges + k.count(rng.int(0, 2)); i++) {

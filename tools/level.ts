@@ -33,6 +33,11 @@ if (opt('density')) force.density = Number(opt('density'));
 if (opt('gravity')) force.gravity = Number(opt('gravity'));
 if (opt('hazards')) force.hazards = Number(opt('hazards'));
 
+/** Share of levels whose solution takes 0, 1, 2 and 3 parts. */
+function partShares(parts: number[], n: number): Record<string, string> {
+  return Object.fromEntries(parts.map((c, i) => [`parts${i}`, `${((c / n) * 100).toFixed(0)}%`]));
+}
+
 interface Agg {
   n: number;
   ms: number;
@@ -61,15 +66,14 @@ if (args.includes('--stats')) {
   const n = Number(opt('stats') ?? 100);
   const themes = themeOpt ? [themeOpt] : THEME_IDS;
   const rows: Record<string, unknown>[] = [];
-  const total = { n: 0, ms: 0, bridged: 0, fallbacks: 0, attempts: 0, closed: 0, openAsSculpted: 0 };
+  const total = { n: 0, ms: 0, bridged: 0, fallbacks: 0, attempts: 0, closed: 0, openAsSculpted: 0, parts: [0, 0, 0, 0] };
   // CPU time is steadier than wall time on a shared machine; both are reported.
   const cpu0 = process.cpuUsage();
   for (const th of themes) {
     const styles: Record<string, number> = {};
     let ms = 0;
     let maxMs = 0;
-    let one = 0;
-    let two = 0;
+    const parts = [0, 0, 0, 0];
     let fallbacks = 0;
     let attempts = 0;
     let closed = 0;
@@ -88,15 +92,15 @@ if (args.includes('--stats')) {
       const sub = l.style.split(':')[1] ?? l.style;
       styles[sub] = (styles[sub] ?? 0) + 1;
       if (lastGenInfo.fallback) fallbacks++;
-      if (lastGenInfo.bridges.length === 1) one++;
-      if (lastGenInfo.bridges.length === 2) two++;
+      parts[lastGenInfo.bridges.length]++;
       attempts += lastGenInfo.attempts;
       closed += lastGenInfo.rejects.closed;
       if (lastGenInfo.sculpted <= MAX_SHARED) openAsSculpted++;
     }
     total.n += n;
     total.ms += ms;
-    total.bridged += one + two;
+    total.bridged += n - parts[0];
+    parts.forEach((c, i) => (total.parts[i] += c));
     total.fallbacks += fallbacks;
     total.attempts += attempts;
     total.closed += closed;
@@ -105,9 +109,8 @@ if (args.includes('--stats')) {
       theme: th,
       msPerLevel: +(ms / n).toFixed(1),
       maxMs: +maxMs.toFixed(0),
-      needBridges: `${(((one + two) / n) * 100).toFixed(0)}%`,
-      oneBridge: one,
-      twoBridges: two,
+      needParts: `${(((n - parts[0]) / n) * 100).toFixed(0)}%`,
+      ...partShares(parts, n),
       fallbacks,
       attempts: +(attempts / n).toFixed(2),
       openAsSculpted: `${((openAsSculpted / n) * 100).toFixed(0)}%`,
@@ -138,7 +141,8 @@ if (args.includes('--stats')) {
     levels: total.n,
     msPerLevel: +(total.ms / total.n).toFixed(1),
     cpuMsPerLevel: +((cpu.user + cpu.system) / 1000 / total.n).toFixed(1),
-    needBridges: `${((total.bridged / total.n) * 100).toFixed(0)}%`,
+    needParts: `${((total.bridged / total.n) * 100).toFixed(1)}%`,
+    ...partShares(total.parts, total.n),
     fallbacks: total.fallbacks,
     attempts: +(total.attempts / total.n).toFixed(2),
     // Mostly-open rule: levels already open as sculpted, and candidates still too narrow after lanes.

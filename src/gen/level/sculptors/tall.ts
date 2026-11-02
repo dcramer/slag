@@ -27,8 +27,9 @@ const ALT_W = 4;
  * Spawn is always on the left, goal on the right. Storeys are spaced more
  * than a jump apart (measured: jumpProfile().rise), so connectors matter, and
  * every pair of storeys has two of them, far apart, so the climb is a choice
- * (levels are mostly open). The bridge challenge breaks both connectors of one
- * pair; a descent's is the ground floor's pit in front of the goal.
+ * (levels are mostly open). The bridge challenge is a moat every route has to
+ * cross: on the goal storey, and on the spawn storey when a level asks for two
+ * parts; a descent has one wider pit in front of the goal.
  */
 
 export interface Storey {
@@ -53,14 +54,6 @@ export interface Link {
   dir: 1 | -1;
 }
 
-/** A step or rung inside a connector: solid/one-way tiles over [x0, x1] × [y0, y1]. */
-export interface Hold {
-  x0: number;
-  x1: number;
-  y0: number;
-  y1: number;
-}
-
 export interface TallKit {
   style: string;
   /** Columns at each edge owned by a shell (tower walls, trunks); decks and links stay inside. */
@@ -71,8 +64,8 @@ export interface TallKit {
   base?(g: Grid, rng: Rng, k: Knobs): void;
   /** Build the floor of a storey (stand row s.row) over [x0, x1]. `ground` = the bottom storey (fill to the bottom). */
   deck(g: Grid, rng: Rng, s: Storey, x0: number, x1: number, ground: boolean, k: Knobs): void;
-  /** Build a connector; returns its intermediate holds (steps/rungs) so one can be broken as a bridge challenge. */
-  link(g: Grid, rng: Rng, l: Link, k: Knobs): Hold[];
+  /** Build a connector. */
+  link(g: Grid, rng: Rng, l: Link, k: Knobs): void;
   /** After everything: decor that must not block the route. */
   dress?(g: Grid, rng: Rng, storeys: Storey[], links: Link[], k: Knobs): void;
   /** Shell around everything (edge walls/trunks), applied before the pockets. */
@@ -91,7 +84,8 @@ export function sculptTall(ctx: SculptCtx, kit: TallKit): Shape {
   const descent = route === 'descent';
   const lo = kit.margin;
   const hi = W - 1 - kit.margin;
-  const lw = kit.linkW(rise, j.gap);
+  // A descent's connectors are holes in the floor, however wide the kit's stairs are.
+  const lw = descent ? ALT_W : kit.linkW(rise, j.gap);
 
   // --- storey rows, bottom first.
   const bottom = H - rng.int(4, 6);
@@ -109,24 +103,46 @@ export function sculptTall(ctx: SculptCtx, kit: TallKit): Shape {
   for (let i = 1; i < n; i++) rows[i] = Math.min(rows[i], rows[i - 1] - sMin);
   if (rows[n - 1] < 4) return finish(g, { row: bottom }, { row: bottom }, `${kit.style}:broken`);
 
-  // --- connector columns, in route order (route index 0 = spawn storey).
+  // --- the ask. Every route crosses the goal storey, so a moat in front of the goal can't be walked
+  // around, and a second one guards the spawn storey (a descent's goal storey is the ground, the one
+  // storey you can't drop past, so it just gets a wider pit). Moats, not broken ladders: walls climb
+  // and storeys sit two plain jumps apart, so a missing connector is free or takes two bridges.
+  const challenges = rollChallenges(attempt, k);
+  const goalMoat = challenges ? hardGap(rng, descent ? challenges : 1) : 0;
+  let spawnMoat = challenges === 2 && !descent ? hardGap(rng) : 0;
+  const goalMoatX = W - POCKET - 1 - goalMoat;
+  const goalEnd = challenges ? goalMoatX - 3 : hi;
+  const spawnStart = () => (spawnMoat ? POCKET + 2 + spawnMoat + 2 : lo + 1);
+  if (n === 2 && goalEnd - spawnStart() + 1 < ALT_W) spawnMoat = 0;
+  // Connectors of the first and last pair of storeys stay on the route's side of their moats.
+  const low = (i: number) => (i === 0 ? spawnStart() : lo + 1);
+  const high = (i: number) => (i === n - 2 ? goalEnd : hi);
+  if (high(0) - low(0) + 1 < ALT_W) spawnMoat = 0;
+
+  // --- connector columns, in route order (route index 0 = spawn storey). A pair with no room for
+  // the kit's connector makes do with a ladder.
   const order = descent ? rows.map((_, i) => n - 1 - i) : rows.map((_, i) => i); // route index → row index
   const linkX: number[] = [];
+  const linkW: number[] = [];
   for (let i = 0; i < n - 1; i++) {
+    const a = low(i);
+    const b = high(i);
+    const w = b - a + 1 >= lw ? lw : ALT_W;
+    linkW.push(w);
     if (route === 'climb') {
-      let x = 0;
+      let x = a;
       for (let tries = 0; tries < 30; tries++) {
-        x = rng.int(lo + 4, hi - 4 - lw);
+        x = rng.int(Math.min(a + 3, b - w + 1), Math.max(a, b - w - 3));
         if (i === 0 || Math.abs(x - linkX[i - 1]) >= Math.min(10, (hi - lo) / 3)) break;
       }
       linkX.push(x);
-    } else linkX.push(i % 2 === 0 ? hi - lw - rng.int(0, 1) : lo + 1 + rng.int(0, 1));
+    } else linkX.push(i % 2 === 0 ? b - w + 1 - rng.int(0, 1) : a + rng.int(0, 1));
   }
   const storeys: Storey[] = rows.map((row) => ({ row, arrive: 0, leave: 0, x0: lo, x1: hi }));
   for (let i = 0; i < n; i++) {
     const s = storeys[order[i]];
-    s.arrive = i === 0 ? 2 : linkX[i - 1] + (lw >> 1);
-    s.leave = i === n - 1 ? W - 3 : linkX[i] + (lw >> 1);
+    s.arrive = i === 0 ? 2 : linkX[i - 1] + (linkW[i - 1] >> 1);
+    s.leave = i === n - 1 ? W - 3 : linkX[i] + (linkW[i] >> 1);
     // Storeys run wall to wall: the level's side walls are wall-jumpable, so a storey that stopped
     // short would leave a free climb up the edge. Sparse levels open holes in them instead (easy gaps).
     s.x0 = i === 0 || i === n - 1 ? 0 : lo;
@@ -142,77 +158,74 @@ export function sculptTall(ctx: SculptCtx, kit: TallKit): Shape {
   // --- links (route order). Stairs rise toward where the route goes on the upper storey,
   // so its stairwell (the hole over the lower steps) is behind you.
   const links: Link[] = [];
-  const holds: Hold[][][] = [];
   for (let i = 0; i < n - 1; i++) {
     const a = storeys[order[i]];
     const b = storeys[order[i + 1]];
     const [lower, upper] = a.row > b.row ? [a, b] : [b, a];
-    const mid = linkX[i] + (lw >> 1);
+    const mid = linkX[i] + (linkW[i] >> 1);
     const onward = upper === b ? b.leave : a.arrive;
     const dir: 1 | -1 = onward >= mid ? 1 : -1;
-    const l: Link = { lower, upper, x: linkX[i], w: lw, dir };
+    const l: Link = { lower, upper, x: linkX[i], w: linkW[i], dir };
     links.push(l);
-    const up: Hold[][] = [];
     if (descent) dropHole(g, l);
-    else up.push(kit.link(g, rng, l, k));
+    else if (linkW[i] < lw) rungShaft(g, l, rise);
+    else kit.link(g, rng, l, k);
     // Mostly open: a second way between every pair of storeys, as far from the first as the storey
     // allows. A ladder or a drop hole, whatever the kit's main connector is. The pockets only limit
-    // the storeys they stand on; the last drop of a descent stays left of the pit before the goal.
-    const lastDrop = descent && i === n - 2;
-    const left = (i === 0 ? POCKET + 1 : lo + 1) + rng.int(0, 1);
-    const right = (i === n - 2 ? W - POCKET - 2 : hi - 1) - ALT_W + 1 - rng.int(0, 1);
-    const clear = (x: number) => x + ALT_W + 1 < l.x || x > l.x + l.w;
-    const sides = lastDrop || mid > W / 2 ? [left, right] : [right, left];
-    if (lastDrop) sides[1] = l.x + l.w + 2;
-    const x = sides.find(clear);
+    // the storeys they stand on.
+    const a0 = Math.max(low(i), i === 0 ? POCKET + 1 : lo + 1);
+    const b0 = Math.min(high(i), i === n - 2 ? W - POCKET - 2 : hi - 1);
+    const left = a0 + rng.int(0, 1);
+    const right = b0 - ALT_W + 1 - rng.int(0, 1);
+    const fits = (x: number) => x >= a0 && x + ALT_W - 1 <= b0 && (x + ALT_W + 1 < l.x || x > l.x + l.w);
+    const x = (mid > W / 2 ? [left, right] : [right, left]).find(fits);
     if (x !== undefined) {
       const alt: Link = { ...l, x, w: ALT_W };
       links.push(alt);
       if (descent) dropHole(g, alt);
-      else up.push(rungShaft(g, alt, rise));
+      else rungShaft(g, alt, rise);
     }
-    holds.push(up);
   }
 
-  // --- challenges: gaps in storeys between arrival and departure.
-  // Tall levels lean on climbing for their difficulty; fewer of them hinge on a bridge.
-  const challenges = rollChallenges(rng, 0.62, 0.1, attempt, k);
+  // --- the moats, then easy gaps in other storeys between arrival and departure.
   g.wantsProps = challenges > 0;
-  const nEasy = Math.round(rng.range(0, 1.5) + 2 * (1 - k.density));
+  const cut = (s: Storey, x0: number, w: number) => {
+    const x1 = x0 + w - 1;
+    if (s === storeys[0]) {
+      g.clear(x0, s.row - 3, x1, H - 1);
+      undercut(g, x1 + 1, 2, s.row);
+    } else {
+      // Open right down to the storey below (in rock that means carving it), with the far bank cut
+      // back under a lip: walls climb, so a plain shaft wall would walk you out of any moat.
+      const below = rows[rows.indexOf(s.row) - 1];
+      g.clear(x0, s.row + 1, x1, below);
+      g.clear(x1 + 1, s.row + 3, Math.min(W - 1, x1 + 2), below);
+    }
+    hintGap(g, x0, x1, s.row + 1);
+  };
+  const used = new Set<number>();
+  if (goalMoat) {
+    cut(storeys[order[n - 1]], goalMoatX, goalMoat);
+    used.add(order[n - 1]);
+  }
+  if (spawnMoat) {
+    cut(storeys[order[0]], POCKET + 2, spawnMoat);
+    used.add(order[0]);
+  }
   const cands = order.map((ri) => ({ ri }));
   rng.shuffle(cands);
-  // A descent's bridge challenge is the ground floor's pit (anywhere else you'd just drop past it).
-  if (descent) cands.sort((p, q) => (q.ri === 0 ? 1 : 0) - (p.ri === 0 ? 1 : 0));
-  let hard = challenges;
-  let easy = nEasy;
-  const used = new Set<number>();
-  // Collapsed connectors: every way between two storeys loses its steps or rungs (one good ladder
-  // would need no bridge, and part of a stair still climbs by its sides). That leaves the storey
-  // spacing, measured to beat any jump; a bridge at mid-height fixes either way.
-  const breakable = holds.filter((ways) => ways.length > 0 && ways.every((hs) => hs.length >= 2));
-  rng.shuffle(breakable);
-  if (hard > 0 && breakable.length && rng.chance(0.85)) {
-    for (const hs of breakable[0]) {
-      for (const b of hs) g.clear(b.x0, b.y0, b.x1, b.y1);
-      const m = hs[hs.length >> 1];
-      const cx = (m.x0 + m.x1) >> 1;
-      g.hint(cx - 1, m.y0);
-      g.hint(m.x0, m.y0);
-      g.hint(m.x1 - 2, m.y0);
-    }
-    hard--;
-  }
+  let easy = Math.round(rng.range(0, 1.5) + 2 * (1 - k.density));
   for (const { ri } of cands) {
-    if (hard <= 0 && easy <= 0) break;
+    if (easy <= 0) break;
     if (used.has(ri)) continue;
     const s = storeys[ri];
-    const isHard = hard > 0 && (!descent || ri === 0);
-    const w = isHard ? (ri === 0 ? hardGap(rng) : rng.int(j.gap + 2, j.gap + 4)) : easyGap(rng, 2);
+    const w = easyGap(rng, 2);
     // Between where the route arrives and leaves, clear of this storey's connectors and the pockets.
     const p = Math.min(s.arrive, s.leave);
     const q = Math.max(s.arrive, s.leave);
     let a = Math.max(p + 3, 7);
-    let b = Math.min(q - 3, W - 8);
+    // Dropping through a gap past the goal moat would skip it.
+    let b = Math.min(q - 3, W - 8, descent && goalMoat ? goalMoatX - 3 : W);
     for (const l of links) {
       if (l.lower !== s && l.upper !== s) continue;
       const c = l.x + (l.w >> 1);
@@ -225,16 +238,10 @@ export function sculptTall(ctx: SculptCtx, kit: TallKit): Shape {
     // Keep gaps clear of links (their walls/steps would be a way across).
     if (links.some((l) => (l.lower === s || l.upper === s) && x1 + 3 >= l.x && x0 - 3 <= l.x + l.w - 1)) continue;
     used.add(ri);
-    if (ri === 0) {
-      g.clear(x0, s.row - 3, x1, H - 1);
-      if (isHard) undercut(g, x1 + 1);
-    } else g.clear(x0, s.row + 1, x1, s.row + 3);
-    if (isHard) {
-      hintGap(g, x0, x1, s.row + 1);
-      hard--;
-    } else easy--;
+    if (ri === 0) g.clear(x0, s.row - 3, x1, H - 1);
+    else g.clear(x0, s.row + 1, x1, s.row + 3);
+    easy--;
   }
-  if (hard > 0) g.wantsProps = challenges - hard > 0;
 
   kit.dress?.(g, rng, storeys, links, k);
   kit.shell?.(g, rng, storeys, k);
@@ -265,11 +272,10 @@ function stairW(rise: number): number {
  * storey to the upper one in direction l.dir, with the upper floor cleared
  * above the lower steps (a stairwell).
  */
-export function stairFlight(g: Grid, l: Link, rise: number, v: number = T_SOLID, thick = 1): Hold[] {
+export function stairFlight(g: Grid, l: Link, rise: number, v: number = T_SOLID, thick = 1): void {
   const D = l.lower.row - l.upper.row;
   const m = Math.ceil(D / rise);
   const start = l.dir > 0 ? l.x : l.x + l.w - 2;
-  const out: Hold[] = [];
   for (let s = 1; s <= m; s++) {
     const top = l.lower.row - Math.min(D, s * rise) + 1; // top solid row of this step
     const cx = start + l.dir * 2 * (s - 1);
@@ -282,12 +288,10 @@ export function stairFlight(g: Grid, l: Link, rise: number, v: number = T_SOLID,
       g.clear(cx, top, cx + 1, top);
       g.plank(cx, cx + 1, top);
     }
-    if (s < m) out.push({ x0: cx, x1: cx + 1, y0: top, y1: v === T_SOLID ? bot : top });
   }
   // Landing beyond the flight joins the upper deck.
   const lx = start + l.dir * 2 * m;
   g.fill(Math.min(lx, lx + l.dir), l.upper.row + 1, Math.max(lx, lx + l.dir), l.upper.row + 1, v === T_SOLID ? T_SOLID : T_ONEWAY, true);
-  return out;
 }
 
 /**
@@ -295,21 +299,18 @@ export function stairFlight(g: Grid, l: Link, rise: number, v: number = T_SOLID,
  * upper floor, with staggered one-way rungs every `rise` rows; the upper
  * floor over the shaft becomes one-way (jump up through it).
  */
-export function rungShaft(g: Grid, l: Link, rise: number, rungW = 2): Hold[] {
+export function rungShaft(g: Grid, l: Link, rise: number, rungW = 2): void {
   const x0 = l.x;
   const x1 = l.x + l.w - 1;
   g.clear(x0, l.upper.row + 1, x1, l.lower.row);
   g.clear(x0, l.upper.row - 3, x1, l.upper.row);
   for (let x = x0; x <= x1; x++) g.set(x, l.upper.row + 1, T_ONEWAY, true);
   let left = l.dir > 0;
-  const out: Hold[] = [];
   for (let y = l.lower.row + 1 - rise; y > l.upper.row + 1; y -= rise) {
     const a = left ? x0 : x1 - rungW + 1;
     g.plank(a, a + rungW - 1, y);
-    out.push({ x0: a, x1: a + rungW - 1, y0: y, y1: y });
     left = !left;
   }
-  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -411,9 +412,8 @@ const MINE: TallKit = {
     }
   },
   link(g, _rng, l) {
-    const hs = rungShaft(g, l, easyRise());
+    rungShaft(g, l, easyRise());
     g.plank(l.x - 1, l.x + l.w, l.upper.row - 3); // head frame
-    return hs;
   },
   dress(g, rng, storeys) {
     for (const s of storeys) {

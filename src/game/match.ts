@@ -1,7 +1,7 @@
 import { clamp, type Rect } from '../core/geom';
 import { deriveSeed, Rng } from '../core/rng';
 import { type CharacterDef, generateCharacter } from '../gen/character';
-import { GRAVITY, generateLevel, type ProfileOverride } from '../gen/level';
+import { GRAVITY, generateLevel, partsNeeded, type ProfileOverride } from '../gen/level';
 import { generateCrate, type PropDef } from '../gen/props';
 import { DT, MAX_PLAYERS, TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import type { Level } from '../sim/level';
@@ -231,7 +231,8 @@ export class Match {
     this.round++;
     this.run = null;
     const count = Math.max(3, this.players.length + 2);
-    const defs = new Rng(deriveSeed(this.seed ^ this.salt, `crate-order:${this.round}`)).shuffle(generateCrate(this.seed, this.round, count));
+    const crate = generateCrate(this.seed, this.round, count, partsNeeded(this.level, this.placed));
+    const defs = new Rng(deriveSeed(this.seed ^ this.salt, `crate-order:${this.round}`)).shuffle(crate);
     // Cards in rows of up to 5 (8 players → 10 cards → 2 rows).
     const perRow = Math.min(count, 5);
     const rows = Math.ceil(count / perRow);

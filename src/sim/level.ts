@@ -41,8 +41,6 @@ export interface LevelProfile {
   /** 0 = tame set-piece mix (platforms, lifts) … 1 = nasty (cannons, saws, presses). */
   danger: number;
   route: RouteShape;
-  /** Scales how often the sculptor builds a crossing that needs a bridge prop (≈ chance a level needs props). */
-  propNeed: number;
   /** World gravity scale (copied to Level.gravity). */
   gravity: number;
 }

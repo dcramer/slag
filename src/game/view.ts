@@ -44,6 +44,15 @@ export function overview(level: Level): ViewXform {
   return { cx: ww / 2, cy: restY(wh, zoom), zoom };
 }
 
+/**
+ * Lowest zoom a race may use: the whole level, and a little more, so a runner
+ * at the map's edge still has a margin. Every live runner is always framed, so
+ * this is the only limit on how far out the camera goes.
+ */
+export function raceFloor(level: Level): number {
+  return overview(level).zoom * 0.92;
+}
+
 export function worldToView(v: ViewXform, x: number, y: number): { x: number; y: number } {
   return { x: (x - v.cx) * v.zoom + VIEW_W / 2, y: (y - v.cy) * v.zoom + VIEW_H / 2 };
 }
