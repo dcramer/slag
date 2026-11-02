@@ -138,7 +138,7 @@ function haze(rc: RC, m: Cavein, x: number, y: number, k: number) {
     for (let j = 0; j < 3; j++) {
       const u = (i + 0.5) / n;
       const wob = Math.sin(rc.t * (0.8 + j * 0.3) + i * 1.7 + m.seed) * 3;
-      rc.bg.fillStyle = css(GAS, -6 + j * 4, (0.07 + 0.2 * k) * (1 - j * 0.25));
+      rc.bg.fillStyle = css(GAS, -6 + j * 4, (0.025 + 0.24 * k) * (1 - j * 0.25));
       circle(rc.bg, x + u * m.w + wob, y + depth * (0.25 + j * 0.3), 4 + (m.w / n) * 0.5 + j);
     }
   }
