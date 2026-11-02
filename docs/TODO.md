@@ -15,14 +15,6 @@ Bots that fill seats in local and online matches.
 - Difficulty levels, and a bot never cheats: it sends inputs like anyone else.
 - Decide with the owner: bots in online rooms, in the lobby browser, and whether they count for scoring.
 
-## 26. Lobby browser (after observer mode and the join flow land)
-The owner wants a list of lobbies, by default showing only ones that aren't full.
-- Cheap with the store we have: the host's beat also writes the room to one public index (a sorted set scored by last beat, plus a small hash of players/observers/max/theme/phase), about one extra command per beat. The list screen reads it with one range plus one fetch, polling every few seconds only while open. Rooms whose host stops beating fall out on their own.
-- Default view hides full rooms; full ones show under a Watch filter (observer mode).
-- Reached from the main menu (a screen in `src/routes.ts`), joining through the same interstitial as an invite link.
-- **Decided:** lobbies are public by default; the host can mark one Private, which keeps it off the list (invite link only).
-- Keep the store budget test pinned; add the browser to `pnpm online-test`.
-
 ## 2. Online follow-ups
 Online play is on `main`, verified by real-browser checks in `pnpm online-test` and the Upstash-compatible `pnpm test:store`. See `docs/NETCODE.md`.
 
