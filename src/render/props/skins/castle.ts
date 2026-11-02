@@ -3,7 +3,7 @@ import { hash2 } from '../../../core/rng';
 import { CEIL, HALL_AIR, MANOR_H, type Manor, manorWithin, throneHallPlan, TOWER } from '../../../gen/stage/castle';
 import { TILE } from '../../../sim/constants';
 import { line, type P } from '../../ink';
-import { boxPts, ovalPts, path, pen, poly, sprite, stamp, tone } from '../../ink-props';
+import { boxPts, ovalPts, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import { circle, flame, glowDot, light, type RC } from '../../kit';
 import type { DrawCtx } from '../common';
 import { SHELLS } from '../modules/deco-shells';
@@ -130,12 +130,14 @@ function manorWall(m: Deco, t: Hz) {
         // The curl of the torn strip.
         flat(g, poly(px + 9, py, px + 13, py + 3, px + 11, py + ph * 0.45), paper, t, k + i, 0.3);
       }
-      // A dado rail and wainscot along the bottom.
+      // A dado rail and wainscot along the bottom: the rail a lighter tone over the panels, a panel joint every so often.
       g.fillStyle = t.c(WOOD, 4);
       g.fillRect(r.x0 - 4, r.y1 - 7, r.x1 - r.x0 + 8, 7);
-      g.fillStyle = t.ink(WOOD);
-      g.fillRect(r.x0 - 4, r.y1 - 8, r.x1 - r.x0 + 8, 1.2);
-      for (let x = r.x0 + 6; x < r.x1; x += 12) g.fillRect(x, r.y1 - 6, 0.8, 5);
+      g.fillStyle = t.c(WOOD, 12);
+      path(g, poly(r.x0 - 4, r.y1 - 8.4, r.x1 + 4, r.y1 - 8.2, r.x1 + 4, r.y1 - 7, r.x0 - 4, r.y1 - 7.1));
+      g.fill();
+      for (let x = r.x0 + 6, j = 0; x < r.x1; x += 12, j++)
+        if (hash2(j, i, m.seed) < 0.6) tick(g, x, r.y1 - 6, x + 0.2, r.y1 - 1.5, 0.6, j + i * 13, t.c(WOOD, -8));
     });
     const hall = rs[0];
     // The hall's tall window, moonlit, past the stairwell.
@@ -220,7 +222,7 @@ function sconces(m: Deco): { x: number; y: number }[] {
 }
 
 /** The eyes follow the nearest runner. */
-function eyes(rc: RC, m: Deco, d: DrawCtx) {
+function eyes(rc: RC, m: Deco, d: DrawCtx, t: Hz) {
   const runners = d.o.runners ?? [];
   for (const p of portraits(m)) {
     const ex = m.at[0] + d.off[0] + p.x;
@@ -235,7 +237,7 @@ function eyes(rc: RC, m: Deco, d: DrawCtx) {
       }
     }
     const a = best ? Math.atan2(best.y - 7 - ey, best.x - ex) : Math.PI / 2;
-    rc.s.fillStyle = '#0c0806';
+    rc.s.fillStyle = t.ink({ h: 24, s: 30, l: 40 });
     for (const k of [-1, 1]) circle(rc.s, ex + k * p.r * 0.22 + Math.cos(a) * p.r * 0.06, ey + Math.sin(a) * p.r * 0.06, p.r * 0.075);
   }
 }
@@ -254,7 +256,7 @@ function candles(rc: RC, m: Deco, d: DrawCtx) {
 const manor: DecoSkin = (rc, m, d) => {
   const t = hz(d);
   stamp(rc.s, manorWall(m, t), m.at[0] + d.off[0], m.at[1] + d.off[1]);
-  eyes(rc, m, d);
+  eyes(rc, m, d, t);
   candles(rc, m, d);
   // The hall's window lets the moon in.
   const { rooms: rs } = rooms(m);
@@ -283,10 +285,18 @@ function hallWall(m: Deco, t: Hz) {
     doorway(g, t, m.w - TOWER * TILE, bot - 5 * TILE, TOWER * TILE, 3 * TILE, STONE, 53);
     g.save();
     g.translate(ix, 0);
-    g.fillStyle = t.ink(STONE);
+    // Coursed ashlar: blocks in two tones cut by hand, and a joint where one block meets the next, lifted often.
     for (let y = top, row = 0; y < bot; y += 10, row++) {
-      g.fillRect(0, y, iw, 0.8);
-      for (let x = (row & 1) * 11; x < iw; x += 22) g.fillRect(x, y, 0.8, 10);
+      for (let x = (row & 1) * 11 - 11, j = 0; x < iw; x += 22, j++) {
+        const h = hash2(j, row, m.seed);
+        if (h < 0.4) {
+          g.fillStyle = t.c(STONE, h < 0.2 ? 3 : -3);
+          path(g, boxPts(x + 0.6, y + 0.6, 21, 8.8, 1.2, j * 31 + row, 0.3));
+          g.fill();
+        }
+        if (h > 0.25) tick(g, x, y + 1, x + 0.2, y + 9, 0.55, j * 7 + row, t.c(STONE, -10));
+        if (hash2(row, j, m.seed + 5) < 0.6) tick(g, x + 1, y, x + 20, y + 0.3, 0.55, j * 11 + row, t.c(STONE, -10));
+      }
     }
     // Tall arched stained-glass windows, banners between them.
     const n = Math.max(1, Math.floor(iw / 64));

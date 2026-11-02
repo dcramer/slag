@@ -1,7 +1,6 @@
 import { css, type HSL } from '../../../core/color';
 import { LOB_OFF, LOB_WARN, lobCycle, lobFlight, lobPoint, lobRadius, lobSegs, type ModuleOf } from '../../../sim/props';
-import { blob, line } from '../../ink';
-import { INK } from '../../ink-props';
+import { blob, inkFor, line } from '../../ink';
 import { circle, ellipse, glowDot, light, type RC } from '../../kit';
 import { type DrawCtx, defineArt } from '../common';
 
@@ -34,14 +33,14 @@ function boil(rc: RC, x: number, y: number, k: number, r: number, seed: number) 
     const bx = x + Math.sin(i * 2.3 + seed) * r * (0.6 + 0.5 * k);
     const by = y - p * r * (0.6 + k);
     const br = (1.2 + 1.8 * (1 - p)) * (0.6 + k * 0.6);
-    s.fillStyle = INK;
-    circle(s, bx, by, br + 0.6);
+    s.fillStyle = inkFor(LAVA);
+    circle(s, bx, by, br + 0.35);
     s.fillStyle = css(i % 2 ? HOT : LAVA, 0);
     circle(s, bx, by, br);
   }
   // The swell: a mound of lava pushing up the surface.
-  s.fillStyle = INK;
-  ellipse(s, x, y, r * (0.8 + 0.6 * k) + 0.8, 1.6 + 2.4 * k + 0.8);
+  s.fillStyle = inkFor(LAVA);
+  ellipse(s, x, y, r * (0.8 + 0.6 * k) + 0.45, 1.6 + 2.4 * k + 0.45);
   s.fillStyle = css(LAVA, 6);
   ellipse(s, x, y, r * (0.8 + 0.6 * k), 1.6 + 2.4 * k);
   glowDot(rc.g, x, y - 2, r * 2.4, LAVA, 0.35 + 0.45 * k);
@@ -69,8 +68,8 @@ function ring(rc: RC, x: number, y: number, k: number, r: number) {
 /** One molten segment: ink, crust plates, glowing seams between them. The head is blunt and blank. */
 function segment(rc: RC, x: number, y: number, r: number, i: number, heading: number, head: boolean) {
   const s = rc.s;
-  s.fillStyle = INK;
-  blob(s, x, y, r + 1.1, 17 + i, 1, 0.08);
+  s.fillStyle = inkFor(CRUST);
+  blob(s, x, y, r + 0.6, 17 + i, 1, 0.08);
   s.fill();
   s.fillStyle = css(LAVA, -4);
   blob(s, x, y, r, 17 + i, 1, 0.08);
@@ -127,9 +126,12 @@ function serpent(rc: RC, m: Lob, d: DrawCtx) {
   }
 }
 
-/** The bomb's shadow on the ground it will land on: grows through the warning and the fall. */
-function shadow(rc: RC, x: number, y: number, k: number, r: number) {
-  rc.s.fillStyle = `rgba(20,8,6,${0.25 + 0.4 * k})`;
+/**
+ * The bomb's shadow on the ground it will land on: one hard flat shape in a dark of that ground, growing through the warning
+ * and the fall. Flat, not a translucent wash: the cel pass would ink a wash's edge into scrub.
+ */
+function shadow(rc: RC, d: DrawCtx, x: number, y: number, k: number, r: number) {
+  rc.s.fillStyle = css(groundOf(d), -14 - 10 * k);
   ellipse(rc.s, x, y, r * (0.5 + 1.2 * k), 1.2 + 1.8 * k);
   // A tick of hot light at its middle in the last moments: the telegraph, flat and bright.
   if (k > 0.7) {
@@ -137,6 +139,9 @@ function shadow(rc: RC, x: number, y: number, k: number, r: number) {
     ellipse(rc.s, x, y, r * 0.5 * k, 0.9);
   }
 }
+
+/** The colour of the ground a bomb lands on, for its shadow and scorch. */
+const groundOf = (d: DrawCtx): HSL => d.o.level?.theme.terrain.dark ?? CRUST;
 
 function bomb(rc: RC, m: Lob, d: DrawCtx) {
   const c = lobCycle(m, rc.frame, d.r.phase);
@@ -146,7 +151,7 @@ function bomb(rc: RC, m: Lob, d: DrawCtx) {
   const fl = lobFlight(m);
   if (c.seg === LOB_WARN) {
     const k = c.t / Math.max(1, c.len);
-    shadow(rc, b[0], gy, k * 0.6, r);
+    shadow(rc, d, b[0], gy, k * 0.6, r);
     // The spark high above where it comes from.
     const sx = a[0] + (b[0] - a[0]) * 0.08;
     const sy = Math.max(a[1], 6) + 4;
@@ -159,8 +164,9 @@ function bomb(rc: RC, m: Lob, d: DrawCtx) {
     // Embers and a scorch where it hit, fading.
     if (c.t < 36) {
       const k = 1 - c.t / 36;
-      rc.s.fillStyle = `rgba(20,8,6,${0.5 * k})`;
-      ellipse(rc.s, b[0], gy, r * 2.2, 2.2);
+      // A scorch: flat, shrinking as it cools rather than fading.
+      rc.s.fillStyle = css(groundOf(d), -22);
+      ellipse(rc.s, b[0], gy, r * 2.2 * k, 2.2 * k);
       for (let i = 0; i < 6; i++) {
         const ang = Math.PI + (i / 5) * Math.PI;
         const dd = (1 - k) * r * 3.2;
@@ -172,7 +178,7 @@ function bomb(rc: RC, m: Lob, d: DrawCtx) {
     }
     return;
   }
-  shadow(rc, b[0], gy, 0.6 + 0.4 * (c.t / fl), r);
+  shadow(rc, d, b[0], gy, 0.6 + 0.4 * (c.t / fl), r);
   for (const sg of lobSegs(m, rc.frame, d.r.phase)) {
     const [x, y] = lobPoint(m, sg.u, d.off[0], d.off[1]);
     const [px, py] = lobPoint(m, Math.max(0, sg.u - 0.12), d.off[0], d.off[1]);
@@ -183,8 +189,8 @@ function bomb(rc: RC, m: Lob, d: DrawCtx) {
       circle(rc.bg, x + (px - x) * t, y + (py - y) * t, r * (0.6 + t));
     }
     const rr = lobRadius(m, sg.i);
-    rc.s.fillStyle = INK;
-    blob(rc.s, x, y, rr + 1.1, 7, 1, 0.22);
+    rc.s.fillStyle = inkFor(CRUST);
+    blob(rc.s, x, y, rr + 0.6, 7, 1, 0.22);
     rc.s.fill();
     rc.s.fillStyle = css(CRUST, 4);
     blob(rc.s, x, y, rr, 7, 1, 0.22);

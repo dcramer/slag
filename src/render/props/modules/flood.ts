@@ -3,7 +3,7 @@ import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { T_SOLID, tileAt } from '../../../sim/level';
 import { FLOOD_WARN, type FloodLook, floodState, type ModuleOf } from '../../../sim/props';
-import { blob, line, type P, sn } from '../../ink';
+import { blob, inkFor, line, type P, sn } from '../../ink';
 import { sprite, stamp } from '../../ink-props';
 import { light, type RC } from '../../kit';
 import { BACKDROP, beamOf, type DrawCtx, defineArt } from '../common';
@@ -31,8 +31,6 @@ interface Liquid {
   deep: HSL;
   /** Glints and froth. */
   glint: HSL;
-  /** The crest's pen: a dark of the liquid. */
-  ink: string;
   hot: boolean;
 }
 
@@ -41,7 +39,6 @@ const LAVA: Liquid = {
   body: { h: 20, s: 100, l: 49 },
   deep: { h: 8, s: 92, l: 36 },
   glint: { h: 50, s: 100, l: 82 },
-  ink: 'hsl(8 80% 14%)',
   hot: true,
 };
 const TOXIC: Liquid = {
@@ -49,7 +46,6 @@ const TOXIC: Liquid = {
   body: { h: 96, s: 70, l: 41 },
   deep: { h: 112, s: 55, l: 26 },
   glint: { h: 70, s: 100, l: 82 },
-  ink: 'hsl(120 50% 10%)',
   hot: false,
 };
 const WATER: Liquid = {
@@ -57,7 +53,6 @@ const WATER: Liquid = {
   body: { h: 202, s: 62, l: 42 },
   deep: { h: 214, s: 58, l: 28 },
   glint: { h: 190, s: 80, l: 90 },
-  ink: 'hsl(214 60% 12%)',
   hot: false,
 };
 const LOOKS: Record<FloodLook, Liquid> = { lava: LAVA, toxic: TOXIC, water: WATER };
@@ -180,7 +175,7 @@ function bubbles(rc: RC, d: DrawCtx, L: Liquid, a: number, b: number, crest: num
     const y = crest + 1.5 + (1 - u) * Math.max(0, depth - 3);
     const r = 0.7 + u * 1.1;
     if (y > crest + depth) continue;
-    s.fillStyle = L.ink;
+    s.fillStyle = inkFor(L.deep);
     blob(s, x, y, r + 0.45, cx, 1, 0.15);
     s.fill();
     s.fillStyle = css(L.glint);
@@ -199,7 +194,7 @@ function froth(rc: RC, L: Liquid, a: number, b: number, crest: number, p: number
     const r = (0.9 + k * 1.2) * (0.5 + p * 0.5);
     const bob = Math.sin(rc.frame * (0.2 + k * 0.2) + k * 9) * 0.6 * p;
     const y = crest - Math.min(lip, r) + bob;
-    s.fillStyle = L.ink;
+    s.fillStyle = inkFor(L.deep);
     blob(s, x + k * 2, y, r + 0.45, x, 1, 0.15);
     s.fill();
     s.fillStyle = css(L.top, 6);
@@ -221,7 +216,7 @@ function drawSurface(rc: RC, m: Flood, d: DrawCtx) {
   for (const [a, b] of openRuns(d, x0, m.w, crest + 0.5)) {
     if (h > 0) {
       // The pen crest: one stroke per tile column, lifted at some joints, centred on the kill line.
-      s.fillStyle = L.ink;
+      s.fillStyle = inkFor(L.deep);
       for (let cx = Math.floor(a / TILE); cx * TILE < b; cx++) {
         const lift = hash2(cx, 1, 41);
         const xa = Math.max(a, cx * TILE + (lift < 0.3 ? 1.5 : -0.6));
