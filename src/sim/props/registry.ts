@@ -1,7 +1,7 @@
 import { type Cell, overlaps, type Rect, rectCircle, type Vec } from '../../core/geom';
 import type { Level } from '../level';
 import type { Body, Solid } from '../physics';
-import type { GameEvent, InputFrame } from '../types';
+import type { GameEvent } from '../types';
 import type { Wind } from '../wind';
 import type { RunnerStatus } from './status';
 import type { Ammo, Module, PropState, Resolved } from './types';
@@ -66,11 +66,8 @@ export function touchesTrigger(b: Rect, t: Trigger): boolean {
 
 /** Mutable access to one runner for `touch` handlers. Everything here is plain data. */
 export interface RunnerMut {
-  slot: number;
   body: Body;
   status: RunnerStatus;
-  /** This frame's input (after status effects such as freezing). */
-  input: InputFrame;
 }
 
 export interface TouchCtx extends TickCtx {

@@ -2,7 +2,7 @@ import { css, type HSL } from '../../../core/color';
 import type { Cell } from '../../../core/geom';
 import { TILE } from '../../../sim/constants';
 import type { Level } from '../../../sim/level';
-import { blastHits, blastSpec, footprintCells, type ModuleOf, type PlacedProp } from '../../../sim/props';
+import { blastHits, blastSpec, type BombLook, footprintCells, type ModuleOf, type PlacedProp } from '../../../sim/props';
 import { circle, ellipse, glowDot, light, METALS, metalFill, type RC, rrect, sphereFill } from '../../kit';
 import { defineArt } from '../common';
 
@@ -30,107 +30,110 @@ function drawBall(rc: RC, x: number, y: number) {
 }
 
 /** Each demolition look says what it hits: fire = everything, blue = props only, drill = terrain in a line. */
+const LOOKS: Record<BombLook, (rc: RC, m: Bomb, x: number, y: number, rot: number) => void> = {
+  bomb(rc, _m, x, y) {
+    drawBall(rc, x, y);
+  },
+  emp(rc, _m, x, y) {
+    const s = rc.s;
+    const g = rc.g;
+    const blue: HSL = { h: 200, s: 100, l: 60 };
+    s.fillStyle = metalFill(s, METALS.steel, x - 7, y - 2, 14, 7);
+    rrect(s, x - 7, y - 2, 14, 7, 2);
+    s.fill();
+    for (let i = 0; i < 3; i++) {
+      s.fillStyle = css(METALS.copper.base, i * 6);
+      ellipse(s, x, y - 2 - i * 2.2, 4.5 - i, 1.4);
+    }
+    s.strokeStyle = '#2b2f38';
+    s.lineWidth = 0.8;
+    s.beginPath();
+    s.moveTo(x, y - 8);
+    s.lineTo(x, y - 12);
+    s.stroke();
+    const pulse = 0.5 + 0.5 * Math.sin(rc.t * 8);
+    glowDot(g, x, y - 12, 4 + pulse * 3, blue, 0.9);
+    g.strokeStyle = css(blue, 10, 0.4 * pulse);
+    g.beginPath();
+    g.arc(x, y - 2, 8 + pulse * 3, 0, Math.PI * 2);
+    g.stroke();
+    light(rc, x, y, 40, blue, 0.5);
+  },
+  drill(rc, _m, x, y, rot) {
+    const s = rc.s;
+    s.save();
+    s.translate(x, y);
+    s.rotate((rot & 3) * (Math.PI / 2));
+    s.fillStyle = metalFill(s, METALS.brass, -7, -4, 7, 8);
+    rrect(s, -7, -4, 7, 8, 1.5);
+    s.fill();
+    s.fillStyle = metalFill(s, METALS.steel, 0, -4, 8, 8);
+    s.beginPath();
+    s.moveTo(0, -4);
+    s.lineTo(8, 0);
+    s.lineTo(0, 4);
+    s.closePath();
+    s.fill();
+    s.strokeStyle = '#2b2f38';
+    s.lineWidth = 0.7;
+    const sp = (rc.t * 20) % 2;
+    for (let k = 0; k < 4; k++) {
+      const u = (k + sp / 2) / 4;
+      s.beginPath();
+      s.moveTo(u * 8, -4 * (1 - u));
+      s.lineTo(u * 8 + 1.2, 4 * (1 - u));
+      s.stroke();
+    }
+    s.restore();
+  },
+  charge(rc, m, x, y) {
+    const s = rc.s;
+    const g = rc.g;
+    if (m.shape === 'ring') {
+      s.strokeStyle = '#3a3f35';
+      s.lineWidth = 3.5;
+      s.beginPath();
+      s.ellipse(x, y + 2, 6.5, 3.5, 0, 0, Math.PI * 2);
+      s.stroke();
+      s.strokeStyle = '#6f7a5a';
+      s.lineWidth = 1.5;
+      s.stroke();
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * Math.PI * 2 + 0.4;
+        g.fillStyle = 'rgba(255,80,60,0.9)';
+        circle(g, x + Math.cos(a) * 6.5, y + 2 + Math.sin(a) * 3.5, 0.9);
+      }
+    } else {
+      for (const dx of [-4, 0, 4]) {
+        s.fillStyle = sphereFill(s, x + dx, y, 3, { h: 2, s: 75, l: 44 }, 20, 15);
+        rrect(s, x + dx - 2, y - 6, 4, 12, 1.5);
+        s.fill();
+      }
+      s.fillStyle = '#2a2a2a';
+      s.fillRect(x - 6, y - 1, 12, 2);
+      fuse(rc, x - 2, y);
+    }
+  },
+  clock(rc, _m, x, y) {
+    const s = rc.s;
+    const g = rc.g;
+    drawBall(rc, x, y);
+    s.fillStyle = '#f1ead8';
+    circle(s, x - 1, y + 1.5, 3.6);
+    s.strokeStyle = '#222';
+    s.lineWidth = 0.7;
+    s.beginPath();
+    s.moveTo(x - 1, y + 1.5);
+    s.lineTo(x - 1 + Math.cos(rc.t * 3) * 2.8, y + 1.5 + Math.sin(rc.t * 3) * 2.8);
+    s.moveTo(x - 1, y + 1.5);
+    s.lineTo(x - 1, y - 0.6);
+    s.stroke();
+    if (Math.floor(rc.t * 2) % 2 === 0) glowDot(g, x - 6, y - 4, 4, { h: 0, s: 100, l: 55 }, 0.9);
+  },
+};
+
 function drawBomb(rc: RC, m: Bomb, x: number, y: number, rot: number) {
-  const s = rc.s;
-  const g = rc.g;
-  switch (m.look ?? 'bomb') {
-    case 'bomb':
-      drawBall(rc, x, y);
-      break;
-    case 'emp': {
-      const blue: HSL = { h: 200, s: 100, l: 60 };
-      s.fillStyle = metalFill(s, METALS.steel, x - 7, y - 2, 14, 7);
-      rrect(s, x - 7, y - 2, 14, 7, 2);
-      s.fill();
-      for (let i = 0; i < 3; i++) {
-        s.fillStyle = css(METALS.copper.base, i * 6);
-        ellipse(s, x, y - 2 - i * 2.2, 4.5 - i, 1.4);
-      }
-      s.strokeStyle = '#2b2f38';
-      s.lineWidth = 0.8;
-      s.beginPath();
-      s.moveTo(x, y - 8);
-      s.lineTo(x, y - 12);
-      s.stroke();
-      const pulse = 0.5 + 0.5 * Math.sin(rc.t * 8);
-      glowDot(g, x, y - 12, 4 + pulse * 3, blue, 0.9);
-      g.strokeStyle = css(blue, 10, 0.4 * pulse);
-      g.beginPath();
-      g.arc(x, y - 2, 8 + pulse * 3, 0, Math.PI * 2);
-      g.stroke();
-      light(rc, x, y, 40, blue, 0.5);
-      break;
-    }
-    case 'drill': {
-      s.save();
-      s.translate(x, y);
-      s.rotate((rot & 3) * (Math.PI / 2));
-      s.fillStyle = metalFill(s, METALS.brass, -7, -4, 7, 8);
-      rrect(s, -7, -4, 7, 8, 1.5);
-      s.fill();
-      s.fillStyle = metalFill(s, METALS.steel, 0, -4, 8, 8);
-      s.beginPath();
-      s.moveTo(0, -4);
-      s.lineTo(8, 0);
-      s.lineTo(0, 4);
-      s.closePath();
-      s.fill();
-      s.strokeStyle = '#2b2f38';
-      s.lineWidth = 0.7;
-      const sp = (rc.t * 20) % 2;
-      for (let k = 0; k < 4; k++) {
-        const u = (k + sp / 2) / 4;
-        s.beginPath();
-        s.moveTo(u * 8, -4 * (1 - u));
-        s.lineTo(u * 8 + 1.2, 4 * (1 - u));
-        s.stroke();
-      }
-      s.restore();
-      break;
-    }
-    case 'charge': {
-      if (m.shape === 'ring') {
-        s.strokeStyle = '#3a3f35';
-        s.lineWidth = 3.5;
-        s.beginPath();
-        s.ellipse(x, y + 2, 6.5, 3.5, 0, 0, Math.PI * 2);
-        s.stroke();
-        s.strokeStyle = '#6f7a5a';
-        s.lineWidth = 1.5;
-        s.stroke();
-        for (let i = 0; i < 4; i++) {
-          const a = (i / 4) * Math.PI * 2 + 0.4;
-          g.fillStyle = 'rgba(255,80,60,0.9)';
-          circle(g, x + Math.cos(a) * 6.5, y + 2 + Math.sin(a) * 3.5, 0.9);
-        }
-      } else {
-        for (const dx of [-4, 0, 4]) {
-          s.fillStyle = sphereFill(s, x + dx, y, 3, { h: 2, s: 75, l: 44 }, 20, 15);
-          rrect(s, x + dx - 2, y - 6, 4, 12, 1.5);
-          s.fill();
-        }
-        s.fillStyle = '#2a2a2a';
-        s.fillRect(x - 6, y - 1, 12, 2);
-        fuse(rc, x - 2, y);
-      }
-      break;
-    }
-    case 'clock': {
-      drawBall(rc, x, y);
-      s.fillStyle = '#f1ead8';
-      circle(s, x - 1, y + 1.5, 3.6);
-      s.strokeStyle = '#222';
-      s.lineWidth = 0.7;
-      s.beginPath();
-      s.moveTo(x - 1, y + 1.5);
-      s.lineTo(x - 1 + Math.cos(rc.t * 3) * 2.8, y + 1.5 + Math.sin(rc.t * 3) * 2.8);
-      s.moveTo(x - 1, y + 1.5);
-      s.lineTo(x - 1, y - 0.6);
-      s.stroke();
-      if (Math.floor(rc.t * 2) % 2 === 0) glowDot(g, x - 6, y - 4, 4, { h: 0, s: 100, l: 55 }, 0.9);
-      break;
-    }
-  }
+  LOOKS[m.look ?? 'bomb'](rc, m, x, y, rot);
 }
 
 defineArt<'bomb'>({ type: 'bomb', layer: 2, draw: (rc, m, d) => drawBomb(rc, m, d.r.pp.tx * TILE + TILE / 2, d.r.pp.ty * TILE + TILE / 2, d.r.pp.rot) });

@@ -721,7 +721,7 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
       role: 'utility',
       name: title(rng, far ? ['Long-Distance', 'Interstate', 'Overambitious'] : ['Twin', 'Paired', 'Quantum', 'Entangled'], [
         'Warp Pads',
-        'Portals',
+        'Warp Rings',
         'Wormhole',
         'Blink Gates',
         'Shortcut',

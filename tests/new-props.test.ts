@@ -24,14 +24,12 @@ import {
   gliderSolidId,
   type Module,
   moduleSim,
-  PHASE_WARN,
   phaseSolid,
   type PlacedProp,
   type PropDef,
   type ProjWorld,
   SEEK_C,
   SEEK_S,
-  SNAP_UP,
   snapperPhase,
   stepProjectile,
   steer,
@@ -242,10 +240,14 @@ describe('blink blocks', () => {
     steps(run, 100);
     expect(r.alive).toBe(true);
     expect(phaseSolid(m, run.frame, run.resolved[0].phase, run.propState.get(p.uid), 0, 0)).toBe(false);
+    // Once it's clear, the block comes back on its timer.
     r.body.x += 3 * TILE;
-    steps(run, 2);
-    // Free again: it comes back if its timer says so (warn window is fair to see).
-    expect(PHASE_WARN).toBeGreaterThan(10);
+    let back = false;
+    for (let i = 0; i < 120 && !back; i++) {
+      run.step([NO_INPUT]);
+      back = phaseSolid(m, run.frame, run.resolved[0].phase, run.propState.get(p.uid), 0, 0);
+    }
+    expect(back).toBe(true);
   });
 });
 
@@ -323,7 +325,6 @@ describe('snap trap', () => {
     for (let i = 0; i < 40; i++) run2.step([{ ...NO_INPUT, right: true, run: true }]);
     expect(r2.alive).toBe(true);
     expect(r2.body.x).toBeGreaterThan(14 * TILE);
-    expect(SNAP_UP).toBe(2);
   });
 });
 
@@ -430,6 +431,34 @@ describe('projectiles', () => {
     const x0 = r.body.x;
     steps(run, 10, { ...NO_INPUT, right: true });
     expect(Math.abs(r.body.x - x0)).toBeLessThan(2); // no control while frozen
+  });
+  it('a goo hit makes you slower and your jumps lower until it wears off', () => {
+    const travel = (slowed: number) => {
+      const { run, r } = race(testLevel(), []);
+      standAt(r, 8, FLOOR - 1);
+      r.status.slowed = slowed;
+      const x0 = r.body.x;
+      steps(run, 40, { ...NO_INPUT, right: true, run: true });
+      const dist = r.body.x - x0;
+      r.status.slowed = slowed;
+      const y0 = r.body.y;
+      let top = y0;
+      run.step([{ ...NO_INPUT, jump: true, jumpPressed: true }]);
+      for (let i = 0; i < 40; i++) {
+        run.step([{ ...NO_INPUT, jump: true }]);
+        top = Math.min(top, r.body.y);
+      }
+      return { dist, rise: y0 - top };
+    };
+    const slow = travel(100);
+    const free = travel(0);
+    expect(slow.dist).toBeLessThan(free.dist * 0.5);
+    expect(slow.rise).toBeLessThan(free.rise * 0.75);
+    const { run, r } = race(testLevel(), []);
+    standAt(r, 8, FLOOR - 1);
+    r.status.slowed = 5;
+    steps(run, 6);
+    expect(r.status.slowed).toBe(0);
   });
   it('ricochets reflect off walls', () => {
     const level = testLevel();
@@ -695,7 +724,6 @@ describe('new archetypes', () => {
     }
   });
   it('races with every new part and projectile are deterministic', () => {
-    const level = generateLevel(7);
     const go = () => {
       const lv = generateLevel(7);
       const placed: PlacedProp[] = [];
@@ -716,7 +744,6 @@ describe('new archetypes', () => {
       for (let f = 0; f < 900; f++) run.step(inp);
       return JSON.stringify({ r: run.runners, p: run.projectiles, k: run.kills, n: placed.length });
     };
-    void level;
     const a = go();
     expect(a).toEqual(go());
     expect(JSON.parse(a).n).toBeGreaterThan(12);

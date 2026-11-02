@@ -19,7 +19,6 @@ import {
   type PropCtx,
   type PropState,
   type Resolved,
-  type RunnerMut,
   type RunnerStatus,
   type RunnerView,
   resolveProp,
@@ -214,7 +213,7 @@ export class RunWorld {
 
       // The spawn zone shields you from fields and kickers too (see safeZone).
       if (this.isSafe(r)) r.status.inside.length = 0;
-      else this.touchTriggers(r, inp, f);
+      else this.touchTriggers(r, f);
 
       const hb = inset(b, 1.5);
       if (!this.isSafe(r)) {
@@ -259,10 +258,9 @@ export class RunWorld {
    * Call `touch` on every module whose trigger this runner overlaps (once per
    * trigger key), tracking entries frame to frame.
    */
-  private touchTriggers(r: Runner, input: InputFrame, f: number) {
+  private touchTriggers(r: Runner, f: number) {
     const st = r.status;
     const now: number[] = [];
-    const who: RunnerMut = { slot: r.slot, body: r.body, status: st, input };
     for (const t of this.out.triggers!) {
       if (now.includes(t.key) || !touchesTrigger(r.body, t)) continue;
       now.push(t.key);
@@ -276,7 +274,7 @@ export class RunWorld {
         blocked: (q) => firstOverlap(q, this.world) !== null,
         mark: (key) => now.includes(key) || now.push(key),
       };
-      sim.touch(m, ctx, who, t, !st.inside.includes(t.key));
+      sim.touch(m, ctx, r, t, !st.inside.includes(t.key));
     }
     st.inside = now;
   }

@@ -217,51 +217,56 @@ const ROT_DIR: readonly Cell[] = [
   [0, -1],
 ];
 
-/**
- * Cells (world tiles, unclipped) a blast centered on cell (tx, ty) covers.
- * Disks and rings are measured cell-center to cell-center; lines start at
- * the charge and bore `radius` cells in the rotation direction; crosses run
- * `radius` cells out each way. Pure integer/sqrt-free math: deterministic.
- */
-export function blastCells(b: BlastSpec, tx: number, ty: number, rot = 0): Cell[] {
+/** Filled disk, or hollow ring when `inner` ≥ 0: cells by squared center-to-center distance. */
+function roundBlast(b: BlastSpec, tx: number, ty: number, inner: number): Cell[] {
   const out: Cell[] = [];
-  const n = Math.round(b.radius);
-  const half = Math.floor((Math.max(1, Math.round(b.width)) - 1) / 2);
-  const thick = Math.max(1, Math.round(b.width));
-  switch (b.shape) {
-    case 'disk':
-    case 'ring': {
-      const r = Math.ceil(b.radius);
-      const outer = b.radius * b.radius;
-      const inner = b.shape === 'ring' ? Math.max(0, b.radius - b.width) ** 2 : -1;
-      for (let y = ty - r; y <= ty + r; y++)
-        for (let x = tx - r; x <= tx + r; x++) {
-          const d = (x - tx) ** 2 + (y - ty) ** 2;
-          if (d <= outer && d > inner) out.push([x, y]);
-        }
-      break;
+  const r = Math.ceil(b.radius);
+  const outer = b.radius * b.radius;
+  for (let y = ty - r; y <= ty + r; y++)
+    for (let x = tx - r; x <= tx + r; x++) {
+      const d = (x - tx) ** 2 + (y - ty) ** 2;
+      if (d <= outer && d > inner) out.push([x, y]);
     }
-    case 'line': {
-      const [dx, dy] = ROT_DIR[rot & 3];
-      for (let k = 0; k < n; k++) for (let o = -half; o < thick - half; o++) out.push([tx + dx * k + dy * o, ty + dy * k + dx * o]);
-      break;
-    }
-    case 'cross': {
-      const seen = new Set<string>();
-      for (const [dx, dy] of ROT_DIR)
-        for (let k = 0; k <= n; k++)
-          for (let o = -half; o < thick - half; o++) {
-            const c: Cell = [tx + dx * k + dy * o, ty + dy * k + dx * o];
-            const key = `${c[0]},${c[1]}`;
-            if (!seen.has(key)) {
-              seen.add(key);
-              out.push(c);
-            }
-          }
-      break;
-    }
-  }
   return out;
+}
+
+/** Arm thickness as (first offset, count): even widths lean to the positive side. */
+function armSpan(b: BlastSpec): [number, number] {
+  const thick = Math.max(1, Math.round(b.width));
+  return [-Math.floor((thick - 1) / 2), thick];
+}
+
+/**
+ * Cells (world tiles, unclipped) of a blast centered on cell (tx, ty), per
+ * shape. Disks and rings are measured cell-center to cell-center; lines start
+ * at the charge and bore `radius` cells in the rotation direction; crosses
+ * run `radius` cells out each way. Integer math only: deterministic.
+ */
+const BLAST_SHAPES: Record<BlastShape, (b: BlastSpec, tx: number, ty: number, rot: number) => Cell[]> = {
+  disk: (b, tx, ty) => roundBlast(b, tx, ty, -1),
+  ring: (b, tx, ty) => roundBlast(b, tx, ty, Math.max(0, b.radius - b.width) ** 2),
+  line(b, tx, ty, rot) {
+    const out: Cell[] = [];
+    const [dx, dy] = ROT_DIR[rot & 3];
+    const [o0, thick] = armSpan(b);
+    for (let k = 0; k < Math.round(b.radius); k++) for (let o = o0; o < o0 + thick; o++) out.push([tx + dx * k + dy * o, ty + dy * k + dx * o]);
+    return out;
+  },
+  cross(b, tx, ty) {
+    const seen = new Map<string, Cell>();
+    const [o0, thick] = armSpan(b);
+    for (const [dx, dy] of ROT_DIR)
+      for (let k = 0; k <= Math.round(b.radius); k++)
+        for (let o = o0; o < o0 + thick; o++) {
+          const c: Cell = [tx + dx * k + dy * o, ty + dy * k + dx * o];
+          seen.set(`${c[0]},${c[1]}`, c);
+        }
+    return [...seen.values()];
+  },
+};
+
+export function blastCells(b: BlastSpec, tx: number, ty: number, rot = 0): Cell[] {
+  return BLAST_SHAPES[b.shape](b, tx, ty, rot);
 }
 
 /** What a blast would do here: the terrain tiles it clears and the props/set pieces it removes (also the place-phase preview). */
