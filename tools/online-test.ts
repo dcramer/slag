@@ -9,6 +9,9 @@
  *   pnpm online-test -- --only pick,bc   # named scenarios, or a group: lobby, migration, feel, misc
  *   pnpm test:store -- --browser pick,run,leave   # the same, through Upstash REST (SRH)
  *   SHOT_DEV=1 pnpm online-test          # against `next dev`
+ *   pnpm online-test -- --engines chromium,firefox,webkit --only migration
+ *                                        # mixed engines: each room's peers take them in turn, so the first (the host)
+ *                                        # is the first engine named; the default is Chromium alone
  *
  * Scenarios:
  *   flow        as a person does it: Play on the menu, open the invite, press nothing; both peers see both bays
@@ -25,6 +28,8 @@
  *   duo         the same in a race with no third peer: the guest has nobody to ask
  *   leave       the host navigates away (goodbye path) mid-race
  *   twice       the host dies, and the new host dies straight after taking over
+ *   double      both guests lose a live host at once (every data channel silent, signaling up): the room may move, but
+ *               the old host freezes first, so two hosts never play at once, and everyone ends identical
  *   latency     input-to-screen delay between peers, stalls and jumps
  *   hidden      the same with the host's tab in the background
  *   contact     the same with two runners pushing and riding each other
@@ -51,13 +56,13 @@ import { overview, type ViewXform, worldToView } from '../src/game/view';
 import { generateLevel } from '../src/gen/level';
 import { TILE } from '../src/sim/constants';
 import { spawnZone, T_EMPTY, T_SOLID, tileAt } from '../src/sim/level';
-import { launchBrowser, startServer } from './lib/server';
+import { type Engine, engineList, launchEngine, startServer } from './lib/server';
 
 const argv = process.argv.slice(2);
 /** Named groups, each short enough to run alone on a loaded machine. */
 const GROUPS: Record<string, string[]> = {
   lobby: ['flow', 'fresh', 'kick', 'view', 'refused', 'browse'],
-  migration: ['pick', 'place', 'run', 'duo', 'leave', 'twice'],
+  migration: ['pick', 'place', 'run', 'duo', 'leave', 'twice', 'double'],
   feel: ['latency', 'hidden', 'contact'],
   seats: ['observe', 'seatrace', 'idle', 'gone'],
   misc: ['play', 'bc', 'unset'],
@@ -282,7 +287,9 @@ const HIDDEN_SHIM = `(() => {
 const NET_SHIM = `(() => {
   const st = window.setTimeout.bind(window), send = RTCDataChannel.prototype.send;
   window.__netDelay = 0;
+  window.__netCut = false;
   RTCDataChannel.prototype.send = function (d) {
+    if (window.__netCut) return;
     const ms = window.__netDelay;
     if (!ms) return send.call(this, d);
     if (this.label === 'rt' && Math.random() < 0.01) return;
@@ -703,6 +710,51 @@ async function contactScenario(browser: Browser, base: string) {
   await r.dispose();
 }
 
+const contextEngine = new WeakMap<BrowserContext, Engine>();
+const engineOf = (p: Page): Engine => contextEngine.get(p.context()) ?? 'chromium';
+const browserMixed = () => new Set(browser.order).size > 1;
+
+/**
+ * The browsers a run uses, handed out in turn: each scenario's first context (its host, in every scenario) gets the
+ * first engine, the next the second, and so on round. Scenarios see it as one `Browser`.
+ */
+class EngineRing {
+  private next = 0;
+  private constructor(
+    private readonly browsers: Map<Engine, Browser>,
+    readonly order: Engine[],
+  ) {}
+
+  static async launch(order: Engine[], chromiumArgs: string[]): Promise<Browser & EngineRing> {
+    const browsers = new Map<Engine, Browser>();
+    for (const e of order) if (!browsers.has(e)) browsers.set(e, await launchEngine(e, chromiumArgs));
+    return new EngineRing(browsers, order) as unknown as Browser & EngineRing;
+  }
+
+  /** A new scenario: its first peer is the first engine again. */
+  reset() {
+    this.next = 0;
+  }
+
+  async newContext(o: Parameters<Browser['newContext']>[0] = {}): Promise<BrowserContext> {
+    let engine = this.order[this.next++ % this.order.length];
+    // Playwright can't make Firefox a phone (no isMobile, so no coarse pointer): a phone takes the next engine that can.
+    if (o.isMobile && engine === 'firefox') engine = this.order.find((e) => e !== 'firefox') ?? engine;
+    const { isMobile: _mobile, ...rest } = o;
+    const ctx = await this.browsers.get(engine)!.newContext(engine === 'firefox' ? rest : o);
+    contextEngine.set(ctx, engine);
+    return ctx;
+  }
+
+  contexts(): BrowserContext[] {
+    return [...this.browsers.values()].flatMap((b) => b.contexts());
+  }
+
+  async close() {
+    for (const b of this.browsers.values()) await b.close().catch(() => {});
+  }
+}
+
 interface Room {
   name: string;
   /** A peer. `query` is added to the room's own (`watch` for a watch link); `device` emulates a phone. */
@@ -750,6 +802,7 @@ async function newRoom(
         await c.addInitScript(() => localStorage.setItem('slag.profile.v1', JSON.stringify({ version: 1, name: null, prompted: true })));
       }
       const p = await c.newPage();
+      if (browserMixed()) console.log(`     ${tag}: ${engineOf(p)}`);
       p.on('pageerror', (e) => errors.push(`${tag}: ${String(e)}`));
       p.on('console', (m) => {
         if (m.type() === 'error') errors.push(`${tag}: ${m.text()}`);
@@ -823,10 +876,23 @@ async function toRun(pages: Page[], ids: string[]) {
   for (const p of pages) await waitFor(p, 'race', (v) => v.phase === 'run', 120_000);
 }
 
-/** No pagehide, no goodbye, no beacon: the renderer process just stops. */
+/**
+ * No pagehide, no goodbye, no beacon: the renderer process just stops. Only Chromium can crash a page on demand, so
+ * other engines hang the page's main thread for good instead, which looks the same from every other peer: silence on
+ * every link (the browser's network thread keeps the channels open, as a crashed peer's sockets look until ICE
+ * consent runs out) and no signaling.
+ */
 async function crash(p: Page) {
-  const cdp = await p.context().newCDPSession(p);
-  void cdp.send('Page.crash').catch(() => {}); // never answers: the renderer it would answer from is gone
+  if (engineOf(p) === 'chromium') {
+    const cdp = await p.context().newCDPSession(p);
+    void cdp.send('Page.crash').catch(() => {}); // never answers: the renderer it would answer from is gone
+  } else {
+    void p
+      .evaluate(() => {
+        for (;;);
+      })
+      .catch(() => {});
+  }
   await sleep(50);
 }
 
@@ -937,6 +1003,47 @@ async function twiceScenario(browser: Browser, base: string) {
   console.log(`     recovered in ${secs.toFixed(1)}s`);
   check((await view(pages[2])).isHost, 'the third peer in join order ends up host');
   await compareHashes(survivors, 'double migration');
+  await r.dispose();
+}
+
+/**
+ * TODO 2's case. Every data channel goes silent at once while signaling stays up, so both guests lose a host that is
+ * alive: to them it looks exactly like it dying, and C's offer is B's proof. The host must freeze before either guest
+ * could suspect it, so whatever the room does next, two hosts never advance the sim at the same time.
+ */
+async function doubleScenario(browser: Browser, base: string) {
+  const r = await newRoom(browser, base, 'double', '');
+  const { pages, ids } = await startMatch(r, 3);
+  await toPlace(pages);
+  await toRun(pages, ids);
+  for (const p of pages) await p.keyboard.down('ArrowRight');
+  await sleep(1000);
+  const before = await view(pages[1]);
+  const cut = (on: boolean) => Promise.all(pages.map((p) => p.evaluate((v) => ((window as any).__netCut = v), on)));
+  await cut(true);
+  const t0 = Date.now();
+  let running = 0;
+  let hosts = 0;
+  let frozenFirst: boolean | null = null;
+  // Hold the cut past SILENCE_MS and a takeover, sampling who hosts and who plays.
+  while (Date.now() - t0 < 6000) {
+    const vs = await Promise.all(pages.map(view));
+    running = Math.max(running, vs.filter((v) => v.isHost && !v.paused).length);
+    hosts = Math.max(hosts, vs.filter((v) => v.isHost).length);
+    if (frozenFirst === null && vs.slice(1).some((v) => v.isHost)) frozenFirst = vs[0].paused || !vs[0].isHost;
+    await sleep(100);
+  }
+  await cut(false);
+  const secs = await recovery(pages, t0, before.frame);
+  recoveries.push(`run (both guests lose a live host): ${secs.toFixed(1)}s`);
+  console.log(`     settled in ${secs.toFixed(1)}s; at most ${hosts} host(s) at once, ${running} playing`);
+  check(frozenFirst !== false, 'the old host was frozen by the time a guest took over');
+  check(running <= 1, `never two hosts playing at once (at most ${running})`);
+  const vs = await Promise.all(pages.map(view));
+  check(new Set(vs.map((v) => v.hostId)).size === 1, `every peer agrees on one host (${vs.map((v) => v.hostId).join('/')})`);
+  await compareHashes(pages, 'after a double loss');
+  const real = r.errors.filter((e) => !/favicon|ERR_/.test(e));
+  check(real.length === 0, `no page errors${real.length ? `:\n${real.join('\n')}` : ''}`);
   await r.dispose();
 }
 
@@ -1893,12 +2000,12 @@ async function unsetScenario(browser: Browser) {
   }
 }
 
-// Real host candidates: mDNS names don't resolve between isolated headless contexts.
 /**
  * Runs one scenario so that a wait that throws (a timeout inside Playwright) is a FAIL, not the end of the run: the
  * next scenario still runs. Its pages are closed, so a stuck one can't load the rest.
  */
 async function guarded(run: () => Promise<unknown>) {
+  browser.reset();
   try {
     await run();
   } catch (e) {
@@ -1907,7 +2014,11 @@ async function guarded(run: () => Promise<unknown>) {
   }
 }
 
-const browser = await launchBrowser(['--disable-features=WebRtcHideLocalIpsWithMdns']);
+// Real host candidates: mDNS names don't resolve between isolated headless contexts.
+const browser = await EngineRing.launch(engineList(argv.includes('--engines') ? argv[argv.indexOf('--engines') + 1] : undefined, ['chromium']), [
+  '--disable-features=WebRtcHideLocalIpsWithMdns',
+]);
+console.log(`engines: ${browser.order.join(', ')}`);
 const server = await startServer({ env: storeEnv });
 console.log(`signaling store: ${srh ? 'Upstash REST (SRH)' : 'in memory'}`);
 try {
@@ -1934,6 +2045,7 @@ try {
   if (wanted('duo')) await guarded(() => killScenario(browser, server.base, 'run', 2));
   if (wanted('leave')) await guarded(() => leaveScenario(browser, server.base));
   if (wanted('twice')) await guarded(() => twiceScenario(browser, server.base));
+  if (wanted('double')) await guarded(() => doubleScenario(browser, server.base));
   if (wanted('latency')) await guarded(() => latencyScenario(browser, server.base));
   if (wanted('hidden')) await guarded(() => hiddenScenario(browser, server.base));
   if (wanted('contact')) await guarded(() => contactScenario(browser, server.base));

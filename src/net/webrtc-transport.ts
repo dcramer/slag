@@ -29,6 +29,14 @@ import { type LinkStatus, type Member, sortMembers, type Transport, type Transpo
  * off, and the higher host hands its guests to the lower. Fresh hosts check
  * every few seconds (RIVAL_CHECK_MS), so that takes seconds, not a heartbeat.
  *
+ * Fencing. Two guests that lose a live host at once look exactly like it
+ * dying: one's offer is the other's proof, and they elect a new host. So a
+ * host that hears two or more guests go quiet freezes before either of them
+ * could suspect it (QUIET_MS against SILENCE_MS), and keeps answering offers.
+ * It plays on once each of them is back, or, if one never came back, once the
+ * store says it still holds the room; written off, it steps down as below.
+ * Two hosts may exist for a moment, but only one of them ever runs the sim.
+ *
  * The store is only ever told a peer is gone after that peer failed an offer.
  * Rejoining always gets a later order, so a peer that was wrongly written off
  * comes back as a guest, never as a second host.
@@ -74,6 +82,19 @@ const RT = 'rt'; // unordered, no retransmits: inputs and bundles, which the ses
 /** Link liveness: heartbeat period, and the silence that makes us suspect a peer. */
 const HEARTBEAT_MS = 500;
 const SILENCE_MS = 2500;
+/**
+ * A host that hasn't heard this long from two or more guests at once (or lost them) freezes: those guests may be
+ * about to elect a host between them (see Fencing above), and playing on would fork the room. Every live guest
+ * speaks at least once a second (heartbeats, and the session's pings from its worker-driven tick), and it is well
+ * short of SILENCE_MS plus a watch tick, so the fence is up before any guest can suspect the host.
+ */
+const QUIET_MS = 1800;
+/**
+ * How long a fenced host waits for a guest it lost before asking the store whether it still holds the room. By then
+ * a guest that wrote it off has told the store: by proof that's at once, by an unanswered probe PROBE_MS after the
+ * offer lands, and a fenced host answers offers.
+ */
+const FENCE_HOLD_MS = 7000;
 /** Timers stalled this long mean we froze (background tab, sleep), not that everyone else died. */
 const FROZEN_MS = 2000;
 /**
@@ -204,6 +225,13 @@ export class WebRtcTransport implements Transport {
   private failures = new Map<string, number>();
   private stash: { mail: Mail; at: number }[] = [];
   private graceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** Host: guests lost without a goodbye and when, until they relink or FENCE_HOLD_MS passes. */
+  private lost = new Map<string, number>();
+  /** Host frozen: guests that lost us may be electing a host without us (see Fencing above). */
+  private fenced = false;
+  /** A lost guest never came back while we were fenced: we play on only after a beat begun after this says we still host. */
+  private fenceAsk = 0;
 
   private lastStatus = '';
   private lastMembers = '';
@@ -415,6 +443,7 @@ export class WebRtcTransport implements Transport {
   // ---------------------------------------------------------------- guest: reaching a host
 
   private follow(id: string, timeout: number) {
+    this.clearFence();
     this.role = 'guest';
     this.listed = ''; // the host we follow lists the room now
     this.hostId = id;
@@ -606,6 +635,7 @@ export class WebRtcTransport implements Transport {
     for (const id of this.dials.keys()) this.dropDial(id);
     this.candidate = false;
     this.probing = '';
+    this.clearFence();
     this.role = 'host';
     this.hostId = this.self;
     this.soloSince = Date.now();
@@ -686,10 +716,12 @@ export class WebRtcTransport implements Transport {
     if (old && old !== link) quiet(old);
     this.roster.set(link.id, { id: link.id, order: link.order });
     this.dead.delete(link.id);
+    this.lost.delete(link.id);
     this.hadGuests = true;
     this.soloSince = 0;
     this.emitMembers();
     this.pushRoster();
+    this.checkFence();
   }
 
   /** A dialled peer answered. If it's the host we were probing, nothing changed but the link; if it's the next in line, the host really is gone. */
@@ -736,6 +768,7 @@ export class WebRtcTransport implements Transport {
     quiet(link);
     const m = this.roster.get(link.id);
     if (m && !goodbye) {
+      this.lost.set(link.id, Date.now());
       this.roster.set(link.id, { ...m, linking: true });
       setTimeout(() => this.expireGuest(link.id), GUEST_GRACE_MS);
       // Guests that lost us take over from us if they find each other: the store would know before we do.
@@ -747,6 +780,7 @@ export class WebRtcTransport implements Transport {
     // It might be re-offering right now; and if everyone vanished, we may be the one who dropped off.
     this.wake();
     if (this.links.size === 0 && this.hadGuests) void this.heartbeat();
+    this.checkFence();
   }
 
   private expireGuest(id: string) {
@@ -853,6 +887,49 @@ export class WebRtcTransport implements Transport {
     this.follow(id, JOIN_OFFER_MS);
   }
 
+  // ---------------------------------------------------------------- fencing (host)
+
+  /** Guests the fence waits on: quiet on an open link, or lost and still inside FENCE_HOLD_MS. Drops lost ones past it. */
+  private fenceWaitingOn(t: number): number {
+    for (const [id, at] of this.lost) {
+      if (t - at < FENCE_HOLD_MS) continue;
+      this.lost.delete(id);
+      if (this.fenced) this.fenceAsk = t; // it may be hosting without us: the store knows
+    }
+    let quiet = 0;
+    for (const l of this.links.values()) if (l.open && t - l.heard > QUIET_MS) quiet++;
+    return quiet + this.lost.size;
+  }
+
+  /** Freeze when two or more guests may have lost us; thaw when none may have, asking the store first if one never came back. */
+  private checkFence(t = Date.now()) {
+    if (this.role !== 'host' || this.closed) return;
+    const waiting = this.fenceWaitingOn(t);
+    if (!this.fenced) {
+      if (waiting < 2) return;
+      this.fenced = true;
+      this.fenceAsk = 0;
+      this.setStatus('reconnecting');
+      this.wake(); // they re-offer to us: answer fast
+      return;
+    }
+    if (waiting > 0) return;
+    if (!this.fenceAsk) this.unfence();
+    else if (this.lastBeat < this.fenceAsk) void this.heartbeat();
+  }
+
+  private unfence() {
+    this.fenced = false;
+    this.fenceAsk = 0;
+    this.setStatus('open');
+  }
+
+  private clearFence() {
+    this.fenced = false;
+    this.fenceAsk = 0;
+    this.lost.clear();
+  }
+
   // ---------------------------------------------------------------- polling and heartbeats
 
   private startTimers() {
@@ -890,7 +967,8 @@ export class WebRtcTransport implements Transport {
       if (this.role === 'guest') this.onHostLost(l.id, false);
       else this.onGuestLost(l);
     }
-    if (this.role === 'host' && t < this.checkUntil && t - this.lastBeat >= RIVAL_CHECK_MS) void this.heartbeat();
+    this.checkFence(t);
+    if (this.role === 'host' && (t < this.checkUntil || this.fenced) && t - this.lastBeat >= RIVAL_CHECK_MS) void this.heartbeat();
     else if (this.role === 'host') this.relist(t);
     this.maybeSleep(t);
   }
@@ -918,7 +996,7 @@ export class WebRtcTransport implements Transport {
     // One at a time: two overlapping beats that both find us forgotten would join twice.
     if (this.order < 0 || this.closed || this.beating) return;
     this.beating = true;
-    this.lastBeat = Date.now();
+    const started = (this.lastBeat = Date.now());
     for (const [id, order] of this.dead) void this.reportDead(id, order);
     try {
       const host = this.role === 'host';
@@ -930,6 +1008,8 @@ export class WebRtcTransport implements Transport {
       if (this.closed) return;
       if (!r.alive) await this.rejoin();
       else if (this.role === 'host' && r.head && r.head !== this.self && !this.dead.has(r.head)) await this.checkRival();
+      // Still the room's host after everyone we were waiting on came back or ran out of time: play on.
+      if (this.fenced && this.role === 'host' && started >= this.fenceAsk && this.fenceWaitingOn(Date.now()) === 0) this.unfence();
     } catch {
       this.noteSignalFail();
     } finally {
@@ -961,7 +1041,7 @@ export class WebRtcTransport implements Transport {
     // Back from an outage: someone may have written us off, or hosted, meanwhile.
     if (this.pollFails && this.role === 'host') this.checkUntil = Date.now() + RIVAL_WINDOW_MS;
     this.pollFails = 0;
-    if (this.role === 'host' && this.lastStatus.startsWith('reconnecting')) this.setStatus('open');
+    if (this.role === 'host' && !this.fenced && this.lastStatus.startsWith('reconnecting')) this.setStatus('open');
   }
 
   /** A broken API only matters to a host that has also lost its guests: with links up the game doesn't need it. */
