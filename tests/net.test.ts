@@ -25,14 +25,17 @@ class Room {
   frame = 0;
   logs: string[] = [];
 
-  constructor(opts: LoopbackOptions = {}) {
+  constructor(
+    opts: LoopbackOptions = {},
+    private code = 'TEST',
+  ) {
     this.hub = new LoopbackHub(opts);
   }
 
   join(id: string, script: Script = idle): NetSession {
     const s = new NetSession({
       transport: this.hub.transport(id),
-      match: new Match(roomSeed('TEST')),
+      match: new Match(roomSeed(this.code)),
       now: () => this.hub.now,
       log: (m) => this.logs.push(`${id}: ${m}`),
     });
@@ -92,6 +95,15 @@ const player: Script = (s, f, rng) => {
     return { kb1: press({ pointer: { x: rng.range(40, 720), y: rng.range(40, 400) }, confirmPressed: rng.next() < 0.08, altPressed: rng.next() < 0.02 }) };
   if (m.phase === 'run') return { kb1: press({ right: rng.next() < 0.8, left: rng.next() < 0.1, jump: f % 30 < 15, jumpPressed: f % 30 === 0 }) };
   return f % 30 === 0 ? { kb1: press({ confirmPressed: true }) } : {};
+};
+
+/** `player`, but racing with everything: run, drop through, use items, grab. */
+const rough: Script = (s, f, rng) => {
+  if (s.match.phase !== 'run') return player(s, f, rng);
+  const down = rng.next() < 0.05;
+  const jump = { jump: f % 40 < 18, jumpPressed: f % 40 === 0 || rng.next() < 0.03 };
+  const moves = { right: rng.next() < 0.7, left: rng.next() < 0.15, run: rng.next() < 0.5, up: rng.next() < 0.1, usePressed: rng.next() < 0.04 };
+  return { kb1: press({ ...moves, ...jump, down, downPressed: down && rng.next() < 0.5 }) };
 };
 
 function fastRules(s: NetSession) {
@@ -276,6 +288,42 @@ describe('lobby seats', () => {
     expect(seats(d)).toEqual(seats(b));
     expect(c).toBeDefined();
   });
+});
+
+describe('rough play', () => {
+  // A gusty level and a misty one with a drill: weather, deaths, fire, grabs and runner contact, with the host's link cut mid-race.
+  for (const code of ['FUZZB2', 'FUZZC3']) {
+    it(`${code}: 4 peers through latency, jitter and loss, 3 rounds, the host dropping mid-race, stay bit-identical`, () => {
+      const r = new Room({ latency: 45, jitter: 30, loss: 0.05, seed: code.charCodeAt(4) }, code);
+      const a = r.join('aaaa', rough);
+      fastRules(a);
+      for (const id of ['bbbb', 'cccc', 'dddd']) {
+        r.run(10);
+        r.join(id, rough);
+      }
+      let rounds = 0;
+      let dropped = false;
+      let last = a.match.phase;
+      for (let i = 0; i < 60 * 200 && rounds < 3; i++) {
+        r.run(1);
+        const h = r.host();
+        if (!h) continue; // between hosts
+        if (h.match.phase !== last && last === 'run') rounds++;
+        last = h.match.phase;
+        if (!dropped && rounds === 1 && h.match.run && h.match.run.frame > 200) {
+          dropped = true;
+          h.transport!.close(); // the link drops, with no last flush from the session
+          r.peers.delete([...r.peers].find(([, s]) => s === h)![0]);
+        }
+      }
+      const res = r.settle();
+      if (process.env.NETDBG) console.log(res, r.logs.slice(-40));
+      expect(dropped && rounds >= 3).toBe(true);
+      expect(new Set(res.map((x) => x.frame)).size).toBe(1);
+      expect(new Set(res.map((x) => x.hash)).size).toBe(1);
+      expect([...r.peers.values()].reduce((n, s) => n + s.stats.desyncs, 0)).toBe(0);
+    }, 60_000);
+  }
 });
 
 describe('rules', () => {

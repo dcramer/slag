@@ -17,6 +17,7 @@
  *   view        real mouse input lands under the pointer, at every window shape, on every level size
  *   play        join, live cursors, claim race, a remote ghost, a race, refresh keeps the slot, next round
  *   pick place run   the host's renderer is killed (no goodbye) in that phase
+ *   duo         the same in a race with no third peer: the guest has nobody to ask
  *   leave       the host navigates away (goodbye path) mid-race
  *   twice       the host dies, and the new host dies straight after taking over
  *   latency     input-to-screen delay between peers, stalls and jumps
@@ -42,7 +43,7 @@ const argv = process.argv.slice(2);
 /** Named groups, each short enough to run alone on a loaded machine. */
 const GROUPS: Record<string, string[]> = {
   lobby: ['flow', 'kick', 'view', 'refused'],
-  migration: ['pick', 'place', 'run', 'leave', 'twice'],
+  migration: ['pick', 'place', 'run', 'duo', 'leave', 'twice'],
   feel: ['latency', 'hidden', 'contact'],
   misc: ['play', 'bc', 'unset'],
 };
@@ -818,9 +819,10 @@ async function recovery(pages: Page[], t0: number, frameBefore: number, ms = 60_
 
 const recoveries: string[] = [];
 
-async function killScenario(browser: Browser, base: string, phase: 'pick' | 'place' | 'run') {
-  const r = await newRoom(browser, base, phase, '');
-  const { pages, ids } = await startMatch(r, 3);
+async function killScenario(browser: Browser, base: string, phase: 'pick' | 'place' | 'run', n = 3) {
+  const label = n === 3 ? phase : `${phase} with ${n}`;
+  const r = await newRoom(browser, base, n === 3 ? phase : 'duo', '');
+  const { pages, ids } = await startMatch(r, n);
   if (phase !== 'pick') await toPlace(pages);
   if (phase === 'run') {
     await toRun(pages, ids);
@@ -832,15 +834,15 @@ async function killScenario(browser: Browser, base: string, phase: 'pick' | 'pla
   await crash(pages[0]);
   const survivors = pages.slice(1);
   const secs = await recovery(survivors, t0, before.frame);
-  recoveries.push(`${phase} (crash): ${secs.toFixed(1)}s`);
+  recoveries.push(`${label} (crash): ${secs.toFixed(1)}s`);
   console.log(`     recovered in ${secs.toFixed(1)}s`);
   const after = await view(pages[1]);
   check(after.isHost, `next in join order takes over (${phase})`);
   check(after.phase === before.phase, `phase survives (${before.phase} → ${after.phase})`);
   const a = await waitFor(pages[1], "old host's player marked away", (v) => v.players.find((q) => q.device.startsWith(`${ids[0]}:`))?.away === true, 15_000);
   check(a.players.find((q) => q.device.startsWith(`${ids[0]}:`))?.away === true, 'crashed host handled as a dropped player');
-  await compareHashes(survivors, phase);
-  await r.shot(pages[2], 'after');
+  if (survivors.length > 1) await compareHashes(survivors, phase);
+  await r.shot(pages.at(-1)!, 'after');
   const real = r.errors.filter((e) => !/favicon|ERR_/.test(e));
   check(real.length === 0, `no page errors${real.length ? `:\n${real.join('\n')}` : ''}`);
   await r.dispose();
@@ -1407,6 +1409,7 @@ try {
   if (wanted('pick')) await killScenario(browser, server.base, 'pick');
   if (wanted('place')) await killScenario(browser, server.base, 'place');
   if (wanted('run')) await killScenario(browser, server.base, 'run');
+  if (wanted('duo')) await killScenario(browser, server.base, 'run', 2);
   if (wanted('leave')) await leaveScenario(browser, server.base);
   if (wanted('twice')) await twiceScenario(browser, server.base);
   if (wanted('latency')) await latencyScenario(browser, server.base);
