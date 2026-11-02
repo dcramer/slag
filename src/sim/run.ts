@@ -1,5 +1,7 @@
 import { dhypot } from '../core/dmath';
 import { inset, overlaps, type Rect, rectCircle } from '../core/geom';
+import { deriveSeed, Rng } from '../core/rng';
+import { type BloodCell, buildBlood, groundOf, spillBlood } from './blood';
 import { PLAYER_W, RUN_COUNTDOWN } from './constants';
 import { type CrowdMember, nudgeCrowd } from './crowd';
 import {
@@ -128,6 +130,8 @@ export class RunWorld {
     readonly timeLimit = 0,
     /** Seed of this race's item rolls. Match varies it per round: crates survive rounds and must not replay the same items. */
     readonly itemSeed = level.seed,
+    /** The match's blood, shared with it: deaths add to this list and its floors are solid. */
+    public blood: BloodCell[] = [],
   ) {
     const n = slots.length;
     this.runners = slots.map((slot, i) => ({
@@ -321,6 +325,7 @@ export class RunWorld {
     r.cause = cause;
     if (killer >= 0) this.kills.push({ victim: r.slot, killer });
     this.events.push({ type: 'death', slot: r.slot, x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h / 2, cause, vx: r.body.vx, vy: r.body.vy });
+    spillBlood(this.blood, groundOf(this.level, this.placed), r.body, r.slot, this.frame, new Rng(deriveSeed(this.itemSeed, `blood:${r.slot}`)));
   }
 
   /**
@@ -364,6 +369,7 @@ export class RunWorld {
     const ctx = (r: Resolved, mi: number) => this.ctx(r, mi, f);
     buildSolids(this.resolved, ctx, this.out);
     for (const p of this.projectiles) buildProjectile(p, f, this.out);
+    buildBlood(this.blood, f, this.solids);
     traceRays(this.resolved, ctx, this.out); // Last, so what travels sees every solid whatever order the props came in.
   }
 

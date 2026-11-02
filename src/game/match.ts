@@ -3,9 +3,10 @@ import { deriveSeed, Rng } from '../core/rng';
 import { type CharacterDef, generateCharacter } from '../gen/character';
 import { GRAVITY, generateLevel, partsNeeded, type ProfileOverride } from '../gen/level';
 import { generateCrate, type PropDef } from '../gen/props';
+import { ageBlood, type BloodCell, cleanBlood, washBlood } from '../sim/blood';
 import { DT, MAX_PLAYERS, TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import type { Level } from '../sim/level';
-import { blastEvent, blastSpec, canPlace, detonate, footprint, hangRow, landedDef, type PlacedProp } from '../sim/props';
+import { type BlastSpec, blastCells, blastEvent, blastSpec, canPlace, detonate, footprint, hangRow, landedDef, type PlacedProp } from '../sim/props';
 import { RunWorld } from '../sim/run';
 import { type GameEvent, type InputFrame, NO_INPUT } from '../sim/types';
 import type { ThemeId } from '../themes';
@@ -75,6 +76,8 @@ export class Match {
   dryRounds = 0;
   players: Player[] = [];
   placed: PlacedProp[] = [];
+  /** Blood on the level (sim/blood.ts). Survives rounds, like `placed`. A race adds to this same list. */
+  blood: BloodCell[] = [];
   crate: CrateItem[] = [];
   run: RunWorld | null = null;
   result: RoundResult | null = null;
@@ -174,6 +177,7 @@ export class Match {
     this.themeOverride = theme;
     this.level = generateLevel(this.seed, theme, this.profileOverride());
     this.placed = [];
+    this.blood = [];
   }
 
   private stepLobby(inputs: Readonly<Record<string, InputFrame>>) {
@@ -245,6 +249,7 @@ export class Match {
     this.round = 0;
     this.dryRounds = 0;
     this.placed = [];
+    this.blood = [];
     this.result = null;
     this.winners = [];
     for (const p of this.players) {
@@ -417,12 +422,12 @@ export class Match {
         if (g && canPlace(this.level, this.placed, g.def, p.rot, g.tx, g.ty)) {
           const bomb = g.def.modules.find((m) => m.type === 'bomb');
           if (bomb && !bomb.delay) {
-            this.placed = detonate(this.level, this.placed, blastSpec(bomb), g.tx, g.ty, p.rot);
-            this.events.push(blastEvent(blastSpec(bomb), g.tx, g.ty, p.rot));
+            this.blast(this.placed, blastSpec(bomb), g.tx, g.ty, p.rot);
           } else {
             this.placed.push({ uid: this.nextUid++, def: g.def, owner: p.slot, tx: g.tx, ty: g.ty, rot: p.rot });
             this.events.push({ type: 'place', slot: p.slot, x: p.cursor.x, y: p.cursor.y });
           }
+          cleanBlood(this.blood, this.level, this.placed);
           p.placed = true;
         }
       }
@@ -444,12 +449,14 @@ export class Match {
   /** Skip straight to the race with whatever is placed (used by pick/place flow and debug tools). */
   startRun() {
     this.detonateCharges();
+    cleanBlood(this.blood, this.level, this.placed);
     this.run = new RunWorld(
       this.level,
       this.placed,
       this.players.map((p) => p.slot),
       this.rules.raceSeconds * 60,
       deriveSeed(this.seed ^ this.salt, `items:${this.round}`),
+      this.blood,
     );
     this.setPhase('run');
   }
@@ -460,17 +467,21 @@ export class Match {
       if (!this.placed.includes(c)) continue;
       const m = c.def.modules.find((x) => x.type === 'bomb')!;
       if (m.type !== 'bomb') continue;
-      const spec = blastSpec(m);
-      this.placed = detonate(
-        this.level,
+      this.blast(
         this.placed.filter((p) => p !== c),
-        spec,
+        blastSpec(m),
         c.tx,
         c.ty,
         c.rot,
       );
-      this.events.push(blastEvent(spec, c.tx, c.ty, c.rot));
     }
+  }
+
+  /** A blast in either phase: `props` is what's standing when it goes off. */
+  private blast(props: PlacedProp[], spec: BlastSpec, tx: number, ty: number, rot: number) {
+    this.placed = detonate(this.level, props, spec, tx, ty, rot);
+    washBlood(this.blood, blastCells(spec, tx, ty, rot));
+    this.events.push(blastEvent(spec, tx, ty, rot));
   }
 
   private stepRun(inputs: Readonly<Record<string, InputFrame>>) {
@@ -481,6 +492,7 @@ export class Match {
 
   private finishRound() {
     const run = this.run!;
+    ageBlood(this.blood);
     this.dryRounds = run.finishOrder.length ? 0 : this.dryRounds + 1;
     const result = scoreRound(
       this.players.map((p) => p.slot),

@@ -68,6 +68,8 @@ export interface Solid extends Rect {
   mi: number;
   /** Lands from above only, like a one-way tile: it never blocks sideways or from below, and can't pin or crush anyone. */
   oneWay?: boolean;
+  /** A wet film on a surface (blood): footing for runners only. Rays, crushers and shots pass through to what's under it. */
+  film?: boolean;
 }
 
 export const TILE_SOLID_ID = -2;
