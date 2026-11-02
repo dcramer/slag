@@ -919,6 +919,69 @@ function roomWithLevel(tag: string, fits: (w: number, h: number) => boolean): { 
   throw new Error(`no ${tag} level in 500 rooms`);
 }
 
+/** A new window size, once the game has laid out for it: until then the view box, and so any mouse aim, is stale. */
+async function resize(p: Page, win: { width: number; height: number }) {
+  await p.setViewportSize(win);
+  await p.waitForFunction(
+    ([w, h]) => {
+      const r = document.querySelector('[data-slag-view]')!.getBoundingClientRect();
+      return Math.abs(r.width - 768 * Math.min(w / 768, h / 432)) < 2;
+    },
+    [win.width, win.height],
+    { timeout: 30_000 },
+  );
+}
+
+/** What the links and sessions think, for a failure that only shows up under load. */
+async function dumpNet(pages: Page[], label: string) {
+  for (const [i, p] of pages.entries()) {
+    const d = await p.evaluate(() => {
+      const n = (window as any).slagDebug.net;
+      const t = n.transport;
+      return {
+        status: n.status,
+        role: n.role,
+        host: n.hostId,
+        members: n.members,
+        unacked: n.unacked?.length,
+        queues: [...(n.queues?.entries() ?? [])].map(([k, q]: any) => [k, q.frames.length, q.consumed]),
+        away: n.match.players.map((q: any) => [q.device.slice(-8), !!q.away, q.placed, Math.round(q.cursor.x), Math.round(q.cursor.y)]),
+        phase: n.match.phase,
+        frame: n.match.frame,
+        t: {
+          role: t.role,
+          hostId: t.hostId,
+          probing: t.probing,
+          candidate: t.candidate,
+          lastStatus: t.lastStatus,
+          links: [...t.links.keys()],
+          open: [...t.links.values()].map((l: any) => [l.open, l.rel?.readyState, l.rt?.readyState, Date.now() - l.heard]),
+          dials: [...t.dials.keys()],
+          inbound: t.inbound.size,
+          dead: [...t.dead.keys()],
+          pollFails: t.pollFails,
+          roster: [...t.roster.values()].map((m: any) => [m.id, m.order, !!m.linking]),
+        },
+      };
+    });
+    console.log(`     DUMP ${label} peer ${i}: ${JSON.stringify(d)}`);
+  }
+}
+
+/** Aim until the other peer sees it, as a person's hand would: one mouse event can land on a page mid-layout. */
+async function aimUntil(aim: () => Promise<void>, other: Page, near: (v: NetView) => boolean, ms = 20_000): Promise<NetView> {
+  const t0 = Date.now();
+  let v = await view(other);
+  while (!near(v) && Date.now() - t0 < ms) {
+    await aim();
+    for (let i = 0; i < 12 && !near(v); i++) {
+      await sleep(250);
+      v = await view(other);
+    }
+  }
+  return v;
+}
+
 const WINDOWS = [
   { name: '16x9', width: 640, height: 360 },
   { name: '21x9', width: 840, height: 360 },
@@ -942,16 +1005,17 @@ async function viewScenario(browser: Browser, base: string, kind: string, fits: 
   // Pick: the card the mouse is on, on the other peer too.
   const crate = (await view(B)).crate;
   for (const [i, win] of WINDOWS.entries()) {
-    await B.setViewportSize(win);
-    await sleep(250);
+    await resize(B, win);
     const card = crate[i % crate.length];
-    const [mx, my] = await mouseAt(B, card.x, card.y);
-    await B.mouse.move(mx, my);
     const near = (v: NetView) => {
       const q = v.players.find((p) => p.device === devB);
       return !!q && Math.abs(q.cursor.x - card.x) < 3 && Math.abs(q.cursor.y - card.y) < 3;
     };
-    const seen = await waitFor(A, `the cursor on a card at ${win.name}`, near, 15_000);
+    const aim = async () => {
+      const [mx, my] = await mouseAt(B, card.x, card.y);
+      await B.mouse.move(mx, my);
+    };
+    const seen = await aimUntil(aim, A, near);
     check(near(seen), `${kind} ${win.name}: the mouse is on the card, for both peers`);
   }
   const last = crate[(WINDOWS.length - 1) % crate.length];
@@ -1001,14 +1065,13 @@ async function viewScenario(browser: Browser, base: string, kind: string, fits: 
   await spyArrows(B);
   const onScreen = (p: Page) => p.evaluate(([x, y]) => (window as any).slagDebug.renderer.worldToScreen(x, y) as { x: number; y: number }, [spot.x, spot.y]);
   for (const win of WINDOWS) {
-    await B.setViewportSize(win);
-    await sleep(250);
-    await hoverWorld(B, spot.x, spot.y);
+    await resize(B, win);
     const near = (v: NetView) => {
       const q = v.players.find((p) => p.device === devB);
       return !!q && Math.abs(q.cursor.x - spot.x) < tolerance && Math.abs(q.cursor.y - spot.y) < tolerance;
     };
-    const seen = await waitFor(A, `the ghost at ${win.name}`, near, 15_000);
+    const seen = await aimUntil(() => hoverWorld(B, spot.x, spot.y), A, near);
+    if (!near(seen)) await dumpNet([A, B], `${kind} ${win.name}`);
     await sleep(300);
     const want = worldToView(ov, spot.x, spot.y);
     const [drawnB, drawnA] = [await onScreen(B), await onScreen(A)];

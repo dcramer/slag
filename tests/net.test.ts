@@ -3,6 +3,7 @@ import { Rng } from '../src/core/rng';
 import { Match } from '../src/game/match';
 import { roomSeed } from '../src/game/room';
 import { GRAVITY } from '../src/gen/level';
+import { DEFAULT_RULES } from '../src/game/rules';
 import { sanitizeRules } from '../src/net/actions';
 import { NetSession } from '../src/net/session';
 import { hashMatch } from '../src/net/snapshot';
@@ -382,6 +383,34 @@ describe('kick', () => {
     r.run(60);
     expect(back.status).toBe('kicked');
     expect(devices(c)).toEqual(['cccc:kb1']);
+  });
+});
+
+describe('away', () => {
+  it('holds up nobody, and is no forfeit: back in time, the player can still place', () => {
+    const r = new Room({ latency: 20 });
+    const a = r.join('aaaa', player);
+    a.act({ t: 'rules', rules: { ...DEFAULT_RULES, pickSeconds: 10, placeSeconds: 0, raceSeconds: 30 } });
+    r.run(5);
+    r.join('bbbb', player);
+    while (a.match.phase !== 'place') r.run(1);
+    r.scripts.set('aaaa', idle);
+    r.scripts.set('bbbb', idle);
+    r.run(20);
+    const back = () => a.match.players.find((p) => p.device === 'bbbb:kb1')!;
+    r.leave('bbbb');
+    r.run(20);
+    expect(back().away).toBe(true);
+    expect(back().placed).toBe(false);
+    r.join('bbbb');
+    r.run(40);
+    expect(back().away).toBeUndefined();
+    expect(back().placed).toBe(false);
+    // Gone again, with everyone else done: the phase doesn't wait.
+    a.match.players.find((p) => p.device === 'aaaa:kb1')!.placed = true;
+    r.leave('bbbb');
+    for (let i = 0; i < 90 && a.match.phase === 'place'; i++) r.run(1);
+    expect(a.match.phase).toBe('run');
   });
 });
 

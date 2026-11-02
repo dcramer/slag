@@ -171,9 +171,13 @@ Prediction can't know a jump or a turn is coming, so remote runners are wrong fo
 ### Joining and reconnecting
 
 - **Join / reconnect**: a guest says `hello`; the host replies with a **snapshot**: the whole Match minus the level, which is regenerated from its seed with bomb craters patched on, plus ack state and last inputs. Bounded in size, and it also serves resync and migration.
-- **Refresh mid-match**: the player stays seated but `away` (auto-picks, forfeits placement, pops at GO, so nobody waits); on return they get the same slot, character, name and score.
+- **Refresh mid-match**: the player stays seated but `away` (auto-picks, holds up nobody, pops at GO); on return they get the same slot, character, name and score.
 - **Refresh in the lobby**: the player is removed but parked with their character; on return they're re-seated with the same look.
 - **Join mid-match**: spectate until the next round boundary, then the host seats the peer's main device.
+
+### Brief drops
+
+A guest whose link drops without a goodbye keeps its seat for 5 s, `linking`, while it re-offers: a stalled tab or a Wi-Fi blip shouldn't cost anyone anything. Past that it's `away`. Being away doesn't forfeit a placement, it only stops the phase waiting: a player who returns in time can still place. A goodbye skips the grace.
 
 ### Seats and kicks
 

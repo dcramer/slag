@@ -444,8 +444,7 @@ export class Match {
 
   private stepPlace(inputs: Readonly<Record<string, InputFrame>>) {
     for (const p of this.players) {
-      if (p.away) p.placed = true; // disconnected: forfeit
-      if (p.placed) continue;
+      if (p.placed || p.away) continue; // away isn't a forfeit: back in time, they can still place
       const inp = this.input(p, inputs);
       this.moveCursor(p, inp);
       if (inp.altPressed) p.rot = (p.rot + 1) % 4;
@@ -467,7 +466,7 @@ export class Match {
     if (this.rules.placeSeconds > 0 && this.phaseFrame >= this.rules.placeSeconds * 60) {
       for (const p of this.players) if (!p.placed) p.placed = true; // forfeited
     }
-    if (this.players.every((p) => p.placed)) {
+    if (this.players.every((p) => p.placed || p.away)) {
       this.pendingAdvance ??= this.phaseFrame + 30;
       if (this.phaseFrame >= this.pendingAdvance) {
         this.pendingAdvance = undefined;

@@ -486,6 +486,38 @@ describe('host migration', () => {
     expect(b.session.stats.migrations + c.session.stats.migrations).toBe(0);
   });
 
+  it('a brief drop costs a guest nothing: not its seat, not its turn', async () => {
+    const w = new World();
+    const [a, b] = await w.room('aaaa', 'bbbb');
+    await w.runUntil(() => a.session.match.players.length === 2, 5000);
+    const before = a.session.match.players.map((p) => p.device);
+    let lost = false;
+    w.net.blocked.add('aaaa,bbbb');
+    for (let i = 0; i < 40; i++) {
+      await w.run(100);
+      lost ||= a.session.match.players.length !== 2 || a.session.match.players.some((p) => p.away);
+      if (i === 30) w.net.blocked.delete('aaaa,bbbb');
+    }
+    await w.runUntil(() => w.settled() && a.session.members.length === 2 && !a.session.members.some((m) => m.linking), 10_000);
+    expect(lost).toBe(false);
+    expect(a.session.match.players.map((p) => p.device)).toEqual(before);
+    expect(b.session.hostId).toBe('aaaa');
+  });
+
+  it('a guest gone for good loses its seat once the grace is up, and a goodbye loses it at once', async () => {
+    const w = new World();
+    const [a] = await w.room('aaaa', 'bbbb', 'cccc');
+    await w.runUntil(() => a.session.match.players.length === 3, 5000);
+    w.leave('cccc');
+    await w.run(600);
+    expect(a.session.match.players).toHaveLength(2);
+    w.crash('bbbb');
+    await w.run(4000);
+    expect(a.session.match.players).toHaveLength(2);
+    await w.runUntil(() => a.session.match.players.length === 1, 10_000);
+    expect(a.session.match.players).toHaveLength(1);
+  });
+
   it('a host that was written off comes back as a guest, never a second host', async () => {
     const w = new World();
     const [a, b, c] = await w.room('aaaa', 'bbbb', 'cccc');
