@@ -1318,16 +1318,18 @@ async function viewScenario(browser: Browser, base: string, kind: string, fits: 
     return r.dispose();
   }
   const tolerance = 3 / ov.zoom;
-  // Where the HUD actually draws each player's arrow, in view px.
+  // Where the HUD actually draws each player's arrow, in view px. The arrow painter (render/hud/pick-place.ts) is a
+  // module function now, but every arrow is drawn scaled about its own tip through `hud.grow`, so that's the hook. Other
+  // HUD parts grow too (headers), so keep enough entries for a frame's worth of both.
   const spyArrows = (p: Page) =>
     p.evaluate(() => {
       const h = (window as any).slagDebug.renderer.hud;
-      const draw = h.cursor.bind(h);
+      const grow = h.grow.bind(h);
       h.__arrows = [];
-      h.cursor = (x: number, y: number, ...rest: unknown[]) => {
+      h.grow = (x: number, y: number, s: number) => {
         h.__arrows.push([x, y]);
-        if (h.__arrows.length > 8) h.__arrows.shift();
-        draw(x, y, ...rest);
+        if (h.__arrows.length > 32) h.__arrows.shift();
+        return grow(x, y, s);
       };
     });
   /** Waits for a drawn frame: software GL can take a while under load. */
