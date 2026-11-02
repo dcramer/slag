@@ -190,6 +190,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 17:51Z · `in progress`
 - **Coats and blocks stick to moving parts and ride them, as honey rides a turning conveyor.** "if you had honey on something like a conveyor (that rotated around), the honey would rotate with it, and then you could also stick another block on it"
   2026-11-02 17:36Z · `done` · DESIGN.md → Props, "Parts ride what they're stuck to"; `src/sim/props/ride.ts`
+- **Arriving mid-match puts you in as an observer; choosing Join opens a small lobby-style card (your toy with the New Look dice, your name) and seats you next round.** "when you join a match you'll default to observer fwiw, and then you can somehow choose to join, and if you do you might get a little screen to select your character/name almost like the lobby does"
+  2026-11-02 · `in progress` · observer mode
 - **Lobby browser: a list of lobbies, showing only ones that aren't full by default.** Lobbies are public by default with a Private option. "lets make lobbies public by default with a private option"
   2026-11-02 · `planned` · TODO.md → 26
 - **Conveyors rotate: the rotation picks the belt's face.** A side belt grips and carries a clinging runner (an escalator when it runs up), a bottom belt shoves a head that bonks it. "you cant rotate conveyors.. the conveyor always stays on the top"
