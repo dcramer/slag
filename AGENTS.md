@@ -11,12 +11,14 @@ Package manager is **pnpm** (`packageManager` in package.json). Never use npm or
 | Command | Use |
 | --- | --- |
 | `pnpm install` | First thing in a fresh checkout or worktree (`node_modules` is not shared). |
-| `pnpm check` | The gate: typecheck + lint + format check + all tests (~2 min). Must pass before every commit. |
-| `pnpm check:fast` | Typecheck + lint + format check (~15 s). Use while iterating. |
-| `pnpm vitest run tests/foo.test.ts` | One test file. Add `-t "name"` for one test. |
+| `pnpm check` | The gate: typecheck + lint + format check + fast tests (~10 s). Must pass before every commit. |
+| `pnpm check:fast` | Typecheck + lint + format check (~2 s). Use while iterating. |
+| `pnpm test:slow` | Generator and statistical suites at full sample size (~35 s). See "Definition of done" for when it's required; CI always runs it. |
+| `pnpm vitest run tests/foo.test.ts` | One test file, at its small sample. Add `-t "name"` for one test. `pnpm test:slow tests/foo.test.ts` runs a heavy file at full size. |
 | `pnpm format` | `oxlint --fix` then `oxfmt`: fixes formatting and safe lint issues. |
 | `pnpm build` | Production build into `.next/`, exactly what Vercel runs. |
 | `pnpm shot <scenario> [opts]` | Headless screenshots into `shots/` (gitignored). See "Verify visually". |
+| `pnpm perf [--only race8,gen,load]` | Frame-time, level-gen and page-load numbers into `shots/perf/`; `--compare <json>` flags regressions. Options are in `tools/perf.ts`. |
 | `pnpm level <seed> [--theme farm]` | ASCII level dump: `#` solid, `=` one-way, `S`/`G` spawn/goal, `·` reachable stand cell, `P` set piece. |
 | `pnpm level --stats 50` | Per-theme stats over N seeds: ms/level, styles, `needBridges`, `fallbacks` (~2 min at 50). |
 | `pnpm dev` | Dev server at http://localhost:3000; `/` is the main menu (Play opens a fresh lobby `/r/<code>`, passing `?seed`/`?theme` through). |
@@ -26,15 +28,16 @@ Lint: `oxlint` (type-aware, `.oxlintrc.json`). Errors fail CI; warnings are real
 ## Definition of done
 
 1. `pnpm check` passes, run **once before committing**. While iterating, run only the test files you touch (`pnpm vitest run tests/x.test.ts`) plus `pnpm check:fast`. Never skip, delete or weaken a test to get there.
-2. `pnpm build` passes if you touched `app/`, `next.config.ts`, `package.json`, or what `app/` imports from `src/`.
-3. Visual change: you took a screenshot and looked at it (see below). Typechecking says nothing about pixels.
-4. Generator change: `pnpm level --stats 50` shows `fallbacks: 0` and no unexplained jump in ms/level or `needBridges`; compare against a run on the parent commit.
-5. Behavior change: a test covers it (generator invariants, prop module runtime behavior, physics feel regressions). Test behavior and invariants, not every tunable or weight. Keep tests cheap, because every second is paid on every iteration by every agent; sample a few seeds rather than hundreds unless the invariant needs more.
-6. In your final message, show evidence: the commands you ran with their result, and screenshot paths.
+2. `pnpm test:slow` passes if you touched `src/gen`, `src/sim/reach.ts` or `PHYS` (`reach.ts` uses the real controller, so solvability moves with movement tuning). `pnpm check` only samples a few seeds, so it can't catch a rare failing seed or a drifting distribution.
+3. `pnpm build` passes if you touched `app/`, `next.config.ts`, `package.json`, or what `app/` imports from `src/`.
+4. Visual change: you took a screenshot and looked at it (see below). Typechecking says nothing about pixels.
+5. Generator change: `pnpm level --stats 50` shows `fallbacks: 0` and no unexplained jump in ms/level or `needBridges`; compare against a run on the parent commit.
+6. Behavior change: a test covers it (generator invariants, prop module runtime behavior, physics feel regressions). Test behavior and invariants, not every tunable or weight. Keep tests cheap, because every second is paid on every iteration by every agent; sample a few seeds rather than hundreds unless the invariant needs more. If a suite's full sample is too slow for `pnpm check`, size it with `sample(fast, slow)` from `tests/lib/tier.ts`, guard distribution assertions with `SLOW`, and add the file to `SLOW_FILES` in `vitest.config.ts`.
+7. In your final message, show evidence: the commands you ran with their result, and screenshot paths.
 
 ### Verify visually
 
-`pnpm shot` builds a production server (`next build` if sources changed since `.next/BUILD_ID`, then `next start`; `SHOT_DEV=1` uses `next dev`). It pauses the real-time loop and advances the sim with `slagDebug.step(n)`, so shots are deterministic, and it exits non-zero if the page logged errors. Open the PNG it prints and inspect it.
+`pnpm shot` builds a production server (`next build` only if the content of the sources changed since the last build, then `next start`; `SHOT_DEV=1` uses `next dev`). It pauses the real-time loop and advances the sim with `slagDebug.step(n)`, so shots are deterministic. It exits on its own after writing its PNGs, non-zero if the page logged errors or nothing happened for `SHOT_TIMEOUT` seconds (default 180), and never leaves a server running. Open the PNG it prints and inspect it.
 
 - `race --seed S --race saw,laser,launcher --frames 200` (`--race all` = one of every archetype)
 - `lobby` | `pick` | `place` with `--seed S --players N`
@@ -42,7 +45,7 @@ Lint: `oxlint` (type-aware, `.oxlintrc.json`). Errors fail CI; warnings are real
 - `props --count 24` (crate cards), `codex` (the `/codex` page)
 - Options: `--theme farm`, `--noui` (hide HUD), `--size 1280x720`, `--out shots`
 
-Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm`, `?players=2` (auto-join and start), `?race=saw,laser` or `?race=all`, `?propseed=3`, `?ui=0`. In the console, `slagDebug` has `quickStart`, `race`, `addProps`, `loadLevel`, `phase`, `pause`, `step`, `render`.
+Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm`, `?players=2` (auto-join and start), `?race=saw,laser` or `?race=all`, `?propseed=3`, `?ui=0`, `?debug=1` (dev overlay: frame-time breakdown, counts, level info; ` toggles it in `pnpm dev` or with any `?debug`). In the console, `slagDebug` has `quickStart`, `race`, `addProps`, `loadLevel`, `phase`, `pause`, `step`, `render`.
 
 ## Git workflow
 
