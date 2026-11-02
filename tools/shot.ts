@@ -334,7 +334,9 @@ try {
     case 'compare': {
       // Default vs comic from one paused page, so both columns are literally the same sim frame.
       const themes = (opt('themes') ?? 'farm,factory,castle,volcano').split(',');
-      const shoot = async (name: string, files: string[], ms: number) => {
+      const shoot = async (name: string, files: string[], at?: number) => {
+        // One timestamp for both columns; it must not run behind the renderer's clock (negative dt flings the camera).
+        const ms = at ?? (await page.evaluate(() => performance.now()));
         for (const st of ['default', 'comic']) {
           await page.evaluate(
             ([s, t]) => {
@@ -358,7 +360,8 @@ try {
           d.renderer.setStyle('comic', false);
           let stop = n + 90;
           let was = 0;
-          let now = 1000;
+          const t0 = performance.now();
+          let now = t0;
           for (let f = 0; f < stop; f++) {
             const dead = d.match.run?.runners.filter((r: any) => !r.alive).length ?? 0;
             if (f >= n && stop === n + 90 && dead > was) stop = f + 11;
@@ -371,22 +374,22 @@ try {
               inputs[p.device] = { left: false, right: go, up: false, down: false, jump: go && c % 46 < 16, jumpPressed: go && c % 46 === 0, run: go };
             });
             d.match.step(inputs);
-            now = 1000 + (f * 1000) / 60;
-            if (f > n - 90 || f % 4 === 0) d.render(now);
+            now = t0 + (f * 1000) / 60;
+            if (f > n - 40 || f % 6 === 0) d.render(now);
           }
           return now;
         }, frames);
         await shoot(`race-${th}`, scene, ms);
       }
-      await sheet('compare-race', scene, 2);
+      await sheet(`compare-race-${seed}`, scene, 2);
       const menus: string[] = [];
       await open(`seed=${seed}&theme=${themes[0]}`);
       await page.evaluate(() => (window as any).slagDebug.match.join('kb1'));
       await step(40);
-      await shoot('lobby', menus, 2000);
+      await shoot('lobby', menus);
       await open(`seed=${seed}&theme=${themes[0]}&players=${players}`);
       await step(40);
-      await shoot('pick', menus, 2000);
+      await shoot('pick', menus);
       await page.evaluate(() => {
         const m = (window as any).slagDebug.match;
         m.players.forEach((p: any, i: number) => {
@@ -396,8 +399,8 @@ try {
         });
       });
       await step(60);
-      await shoot('place', menus, 3000);
-      await sheet('compare-menus', menus, 2);
+      await shoot('place', menus);
+      await sheet(`compare-menus-${seed}`, menus, 2);
       break;
     }
     case 'levels': {
