@@ -3,7 +3,7 @@
 This is a concise log of decided rules. It's the source of truth for gameplay intent. When a decision changes, update this file in the same commit. Implementation details live in AGENTS.md and the code.
 
 ## Core loop
-- Lobby → **Pick** (claim one prop from a crate) → **Place** (put it in the level) → **Race** to the flag → **Score**. Repeat until someone reaches the target score, then **Victory**.
+- Lobby → **Pick** (claim one prop from a crate) → **Place** (put it in the level) → **Race** to the flag → **Score**. Repeat until someone reaches the target score or the round limit, whichever comes first, then **Victory**.
 - Matches have 1–8 players. Players can be local (any mix of keyboard, gamepads and touch) or online.
 - Props persist for the whole match, so levels get more dangerous every round.
 
@@ -12,6 +12,8 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - Each rival killed by your prop earns you +3, but only if someone finished that round.
 - If everyone finishes, nobody scores ("too easy"). If nobody finishes, nobody scores either.
 - Solo play just rewards finishing.
+- A match always ends: scoreless rounds can run forever, so the round limit has no "off" setting. It defaults to 40, high enough that normal matches end on score.
+- At the end of a match the top score wins and ties are joint winners. If the round limit hits with nobody on the board, there is no winner.
 
 ## Players
 - Characters are generated per player (body, face, accessory and name) and are **cosmetic only**: every player has the same hitbox and the same physics.

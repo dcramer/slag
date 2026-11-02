@@ -395,8 +395,9 @@ export class Match {
     const skip = this.phaseFrame > 90 && this.players.some((p) => this.input(p, inputs).confirmPressed);
     if (this.phaseFrame < SCORE_FRAMES && !skip) return;
     const best = Math.max(...this.players.map((p) => p.score));
-    if (best >= this.rules.targetScore) {
-      this.winners = this.players.filter((p) => p.score === best).map((p) => p.slot);
+    if (best >= this.rules.targetScore || this.round >= this.rules.maxRounds) {
+      // Top score wins, ties are joint. At the limit with nobody on the board there is no winner, not a tie of everyone.
+      this.winners = best > 0 ? this.players.filter((p) => p.score === best).map((p) => p.slot) : [];
       this.setPhase('victory');
     } else {
       this.startRound();
