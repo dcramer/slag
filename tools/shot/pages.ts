@@ -295,17 +295,18 @@ export const shots: Scenarios = {
     await mctx.close();
   },
   /**
-   * The Lobbies screen with a made-up list (the API is stubbed, so the shot needs no rooms): the Join filter, Watch,
-   * and the empty state on a desktop; then a phone upright and on its side, failing on a tap target under 44 CSS px.
+   * The Lobbies screen with a made-up list (the API is stubbed, so the shot needs no rooms; one host has no name, one the
+   * widest name fits, one a name that is markup and must show as text): the Join filter, Watch, and the empty state
+   * on a desktop; then a phone upright and on its side, failing on a tap target under 44 CSS px.
    */
   async lobbies() {
     const ROOMS = [
-      { room: 'K7QX2', players: 3, max: 8, observers: 1, theme: 'farm', phase: 'lobby' },
-      { room: 'BRRR9', players: 6, max: 8, observers: 0, theme: 'glacier', phase: 'run' },
+      { room: 'K7QX2', players: 3, max: 8, observers: 1, theme: 'farm', phase: 'lobby', host: 'Wobblesnout' },
+      { room: 'BRRR9', players: 6, max: 8, observers: 0, theme: 'glacier', phase: 'run', host: 'MMMMMMMMMMMM' },
       { room: 'ZAPZAP', players: 1, max: 8, observers: 0, theme: 'space', phase: 'lobby' },
-      { room: 'M4GMA', players: 2, max: 8, observers: 3, theme: 'volcano', phase: 'place' },
-      { room: 'PACKED', players: 8, max: 8, observers: 2, theme: 'castle', phase: 'pick' },
-      { room: 'CRAMMD', players: 8, max: 8, observers: 0, theme: 'harbor', phase: 'score' },
+      { room: 'M4GMA', players: 2, max: 8, observers: 3, theme: 'volcano', phase: 'place', host: '<b>Jo</b>' },
+      { room: 'PACKED', players: 8, max: 8, observers: 2, theme: 'castle', phase: 'pick', host: 'Dot' },
+      { room: 'CRAMMD', players: 8, max: 8, observers: 0, theme: 'harbor', phase: 'score', host: 'Grimble' },
     ];
     let rooms = ROOMS;
     const stub = (p: typeof page) =>
