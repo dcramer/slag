@@ -25,7 +25,8 @@ Package manager is **pnpm** (`packageManager` in package.json). Never use npm or
 | `pnpm level <seed> [--theme farm]` | ASCII level dump: `#` solid, `=` one-way, `S`/`G` spawn/goal, `·` reachable stand cell, `P` set piece. |
 | `pnpm level --stats 50` | Per-theme stats over N seeds: ms/level, styles, `needBridges`, `fallbacks` (~2 min at 50). |
 | `pnpm dev` | Dev server at http://localhost:3000; `/` is the main menu (Play opens a fresh lobby `/r/<code>`, passing `?seed`/`?theme` through). |
-| `pnpm online-test` | Real WebRTC between headless Chromium pages against the signaling routes. `-- --only lobby`, `migration`, `feel` or `misc` runs a group (about 15 min for all). |
+| `pnpm online-test` | Real WebRTC between headless Chromium pages against the signaling routes. `-- --only lobby`, `migration`, `feel` or `misc` runs a group (about 15 min for all). `-- --engines chromium,firefox,webkit` mixes engines in each room (the first named hosts). |
+| `pnpm determinism` | The sim in Chromium, Firefox and WebKit on the same seeds and scripted inputs, every frame's hash compared (~2 min). Run it after touching `src/core/dmath.ts`, or anything numeric the sim or generators share. |
 | `pnpm test:store` | The Upstash REST store path against real Redis behind SRH (needs Docker, starts `compose.store.yml`). `-- --browser pick,run,leave` adds real browsers. In CI, not in `pnpm check`. |
 
 Lint: `oxlint` (type-aware, `.oxlintrc.json`). Warnings are real findings, not noise: `pnpm lint` and CI fail on them like errors. Format: `oxfmt` (`.oxfmtrc.json`: 2 spaces, single quotes, 160 columns). Don't add `oxlint-disable` comments to get green; fix the code or change the rule in `.oxlintrc.json` with a reason.
@@ -49,7 +50,7 @@ Lint: `oxlint` (type-aware, `.oxlintrc.json`). Warnings are real findings, not n
 - `levels --count 9`, `--seeds a,b,c` or `--themes all` → contact sheet `shots/levels.png`
 - `cast`: the character cast, lineups at play scale on farm and mine, a close-up, deaths, the lobby, the "is it the homage?" sheet, the silhouette test and a catalog of every kind (`--only catalog`)
 - `props --count 24` (crate cards), `codex` (the `/codex` page), `stack` (runners stacking, riding and head-bouncing, as stepped frames)
-- Options: `--theme farm`, `--weather rain`, `--noui` (hide HUD), `--noletters` (no impact words), `--size 1280x720`, `--out shots`
+- Options: `--theme farm`, `--weather rain`, `--noui` (hide HUD), `--noletters` (no impact words), `--size 1280x720`, `--out shots`, `--engine webkit` (WebKit with an iPhone profile is the stand-in for iOS Safari: `mobile --engine webkit`)
 
 Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm`, `?weather=rain` (clear|wind|mist|rain|snow, skips worldgen's gate), `?players=2` (auto-join and start), `?race=saw,laser` or `?race=all`, `?propseed=3`, `?ui=0`, `?zoom=1` (phone camera on desktop; `?zoom=0` off, `?zoom=2.4` a fixed zoom), `?lettering=0` (no impact words), `?debug=1` (dev overlay: frame-time breakdown, counts, level info; ` toggles it in `pnpm dev` or with any `?debug`). In the console, `slagDebug` has `quickStart`, `race`, `addProps`, `give`, `loadLevel`, `phase`, `pause`, `step`, `render`, `hash`, `toys`.
 
