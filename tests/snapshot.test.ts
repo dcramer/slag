@@ -159,6 +159,34 @@ describe('match snapshots', () => {
     expect(hashMatch(b)).toBe(hashMatch(a));
   });
 
+  it('round-trips a race with a Pocket Block standing, a tax shell in flight and a bat wound up', () => {
+    const a = new Match(4242);
+    for (const d of ['a:kb1', 'b:kb1', 'b:pad0']) a.join(d);
+    a.startMatch();
+    for (let f = 0; f < 6000 && a.phase !== 'run'; f++) a.step(inputsAt(a, f));
+    for (let f = 0; f < 80; f++) a.step(raceInputs(1));
+    const [r0, r1, r2] = a.run!.runners;
+    expect([r0, r1, r2].every((r) => r.alive)).toBe(true);
+    giveItem(r0, 'block');
+    giveItem(r1, 'tax');
+    giveItem(r2, 'bat');
+    a.step({ 'a:kb1': press({ usePressed: true }), 'b:kb1': press({ usePressed: true }), 'b:pad0': press({ usePressed: true }) });
+    expect(a.run!.items.shells).toHaveLength(1);
+    expect(r2.items.windup).toBeGreaterThan(0);
+    // Wherever runner 0 stood, there's a block in the world to carry.
+    if (!a.run!.items.blocks.length) a.run!.items.blocks.push({ tx: 20, ty: 3, born: a.run!.frame, until: a.run!.frame + 240, owner: 0 });
+    const snap = JSON.parse(JSON.stringify(snapshotMatch(a))) as ReturnType<typeof snapshotMatch>;
+    const b = new Match(1);
+    restoreMatch(b, snap);
+    expect(hashMatch(b)).toBe(hashMatch(a));
+    expect(b.run!.items.blocks).toEqual(a.run!.items.blocks);
+    for (let f = 0; f < 120; f++) {
+      a.step(raceInputs(f));
+      b.step(raceInputs(f));
+    }
+    expect(hashMatch(b)).toBe(hashMatch(a));
+  });
+
   it('prediction with items in play leaves the confirmed race alone', () => {
     const a = raceWithItems();
     const before = hashMatch(a);

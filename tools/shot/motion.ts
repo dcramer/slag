@@ -1,5 +1,6 @@
 /** Stepped frames of play, where motion and contact can only be judged frame by frame. */
-import { open, opt, out, page, players, seed, sheet, snap, step, tq, type Scenarios } from './ctx';
+import { ITEM_KINDS } from '../../src/sim/items/types';
+import { argv, open, opt, out, page, players, seed, sheet, snap, step, tq, type Scenarios } from './ctx';
 
 export const shots: Scenarios = {
   async grabs() {
@@ -281,35 +282,74 @@ export const shots: Scenarios = {
   },
   async items() {
     // Every item in hand, then everyone uses theirs at once: one frame set per moment worth looking at.
-    await open(`seed=${seed}&players=6&race=mystery,mystery,mystery&give=all&propseed=${opt('propseed', '1')}`);
+    // `--give bat,tax` picks the items (default all, cycled over the runners); one of each lies loose too.
+    // `--close` stages one item up close instead: its user, one rival beside them, and crops around the action.
+    const give = opt('give', 'all')!;
+    const close = argv.includes('--close');
+    const n = close ? 2 : 6;
+    await open(`seed=${seed}&players=${n}&race=mystery,mystery,mystery&give=${give}&propseed=${opt('propseed', '1')}`);
     await step(190);
     // Spread the runners along open ground, with one loose item of each kind beside them.
-    await page.evaluate(() => {
-      const run = (window as any).slagDebug.match.run;
-      const L = run.level;
-      const spots: [number, number][] = [];
-      for (let tx = 7; tx < L.w - 6 && spots.length < 12; tx += 2) {
-        for (let ty = 2; ty < L.h - 1; ty++) {
-          if (L.tiles[ty * L.w + tx] === 1 && !L.tiles[(ty - 1) * L.w + tx] && !L.tiles[(ty - 2) * L.w + tx]) {
-            spots.push([tx, ty]);
-            break;
+    await page.evaluate(
+      ([list, near]) => {
+        const run = (window as any).slagDebug.match.run;
+        const L = run.level;
+        const spots: [number, number][] = [];
+        for (let tx = 7; tx < L.w - 6 && spots.length < 12; tx += 2) {
+          for (let ty = 2; ty < L.h - 1; ty++) {
+            if (L.tiles[ty * L.w + tx] === 1 && !L.tiles[(ty - 1) * L.w + tx] && !L.tiles[(ty - 2) * L.w + tx]) {
+              spots.push([tx, ty]);
+              break;
+            }
           }
         }
+        run.runners.forEach((r: any, i: number) => {
+          const [tx, ty] = spots[near ? 0 : Math.floor((i * spots.length) / run.runners.length)];
+          // Up close, the rival stands just in front (behind, for a block, so the floor ahead is free).
+          r.body.x = tx * 16 + 2 + (near && i === 1 ? (list === 'block' ? -18 : 14) : 0);
+          r.body.y = ty * 16 - r.body.h;
+          r.body.vx = r.body.vy = 0;
+          r.body.facing = near && i === 1 ? -1 : 1;
+          if (near && i === 1) r.items.held = null;
+        });
+        const kinds = list.split(',');
+        kinds.forEach((kind, i) => {
+          const [tx, ty] = spots[(Math.floor((i * spots.length) / kinds.length) + 1) % spots.length];
+          run.items.drops.push({ id: 90 + i, kind, uses: 1, x: tx * 16 + 8, y: ty * 16 - 6, vx: 0, vy: 0, born: run.frame, grace: 600, onGround: false });
+        });
+      },
+      [(give === 'all' ? ITEM_KINDS : give.split(',')).join(','), close] as const,
+    );
+    const shot = async (name: string) => {
+      if (!close) {
+        await snap(`items-${seed}-${name}`);
+        return;
       }
-      run.runners.forEach((r: any, i: number) => {
-        const [tx, ty] = spots[Math.floor((i * spots.length) / 6)];
-        r.body.x = tx * 16 + 2;
-        r.body.y = ty * 16 - r.body.h;
-        r.body.vx = r.body.vy = 0;
+      // Crop round the action: the shell if one is flying, else the two runners.
+      const r = await page.evaluate(() => {
+        const d = (window as any).slagDebug;
+        const run = d.match.run;
+        const c = d.renderer.cam;
+        const sh = run.items.shells[0];
+        const [a, b] = run.runners;
+        const x = sh ? sh.x : (a.body.x + b.body.x) / 2 + 5;
+        const y = sh ? sh.y + 20 : a.body.y;
+        return { x: (x - c.x) * c.zoom + 384, y: (y - c.y) * c.zoom + 216, zoom: c.zoom };
       });
-      ['sword', 'puck', 'boomerang', 'shield', 'rocket', 'smoke'].forEach((kind, i) => {
-        const [tx, ty] = spots[(Math.floor((i * spots.length) / 6) + 1) % spots.length];
-        run.items.drops.push({ id: 90 + i, kind, uses: 1, x: tx * 16 + 8, y: ty * 16 - 6, vx: 0, vy: 0, born: run.frame, grace: 600, onGround: false });
+      const size = page.viewportSize()!;
+      const k = size.width / 768;
+      const w = 200 * r.zoom * k;
+      const h = 120 * r.zoom * k;
+      const path = `${out}/items-${seed}-${give}-${name}.png`;
+      await page.screenshot({
+        path,
+        clip: { x: Math.min(size.width - w, Math.max(0, r.x * k - w / 2)), y: Math.min(size.height - h, Math.max(0, r.y * k - h / 2)), width: w, height: h },
       });
-    });
+      console.log(path);
+    };
     await step(20);
-    await snap(`items-${seed}-held`);
-    const use = ['kb1', 'kb2', 'pad0', 'pad1', 'pad2', 'pad3'];
+    await shot('held');
+    const use = ['kb1', 'kb2', 'pad0', 'pad1', 'pad2', 'pad3'].slice(0, close ? 1 : n);
     const press = Object.fromEntries(
       use.map((d) => [
         d,
@@ -329,11 +369,25 @@ export const shots: Scenarios = {
     );
     await page.evaluate((p) => (window as any).slagDebug.step(1, p), press);
     await step(3);
-    await snap(`items-${seed}-swing`);
+    await shot('swing');
     await step(4);
-    await snap(`items-${seed}-use`);
-    await step(40);
-    await snap(`items-${seed}-after`);
+    await shot('use');
+    // The brick comes down, a full bat wind-up lets go, and the tax hovers over the leader and dives.
+    await step(7);
+    await shot('slam');
+    await step(22);
+    await shot('wound');
+    await step(11);
+    await shot('after');
+    await step(52);
+    await shot('later');
+    await step(30);
+    await shot('dive');
+    await step(30);
+    await shot('last');
+    // A Pocket Block cracking just before it crumbles.
+    await step(70);
+    await shot('crumble');
   },
   async blood() {
     // Stage deaths on open floors over four rounds: fresh ooze, a settled puddle with someone on it, the place phase, and the first round's blood gone.

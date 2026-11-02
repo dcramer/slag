@@ -5,7 +5,22 @@ import { generateTheme } from '../src/gen/theme';
 import { defaultSettings, loadSettings } from '../src/input/bindings';
 import { TouchInput, touchLayout } from '../src/input/touch';
 import { KILL_Y, LEVEL_H, LEVEL_W, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
-import { DROP_LIFE, giveItem, ITEM_KINDS, ITEMS, type ItemKind, SWORD, spawnItem } from '../src/sim/items';
+import {
+  BAT,
+  blockCells,
+  DROP_LIFE,
+  giveItem,
+  ITEM_KINDS,
+  ITEMS,
+  type ItemKind,
+  leaderIndex,
+  POCKET,
+  routeDistance,
+  SWORD,
+  spawnItem,
+  TAX,
+  TREMOR,
+} from '../src/sim/items';
 import type { Level } from '../src/sim/level';
 import { bodyAtCell } from '../src/sim/physics';
 import { canPlace, type Module, mysteryState, type PlacedProp, type PropDef, rollItem, THROW_GRACE } from '../src/sim/props';
@@ -705,5 +720,337 @@ describe('use input', () => {
       { kind: 'key', label: 'E' },
       { kind: 'pad', button: 'Y' },
     ]);
+  });
+});
+
+/** Step until `done` or `max` frames; returns frames taken. */
+function until(run: RunWorld, done: () => boolean, max: number, inp: (f: number, i: number) => InputFrame = () => NO_INPUT): number {
+  for (let k = 0; k < max; k++) {
+    if (done()) return k;
+    steps(run, 1, inp);
+  }
+  return max;
+}
+
+describe('walk-off bat', () => {
+  /** Swing at a rival standing just in front; `tap` lets go one frame into the wind-up. */
+  function swingAt(tap: boolean) {
+    const run = race([10, 11]);
+    const [a, b] = run.runners;
+    giveItem(a, 'bat');
+    face(a, 1);
+    b.body.x = a.body.x + a.body.w + 4;
+    use(run);
+    if (tap) use(run);
+    until(run, () => b.items.daze > 0, BAT.windup + 30);
+    return { run, a, b };
+  }
+
+  it('a full wind-up knocks about three times as hard as the noodle, and spends the bat', () => {
+    const { a, b } = swingAt(false);
+    expect(b.alive).toBe(true);
+    expect(b.items.daze).toBeGreaterThan(0);
+    expect(b.items.bonkedBy).toBe(0);
+    expect(b.body.vx).toBeGreaterThan(SWORD.knockVx * 2.5);
+    expect(b.body.vy).toBeLessThan(-SWORD.knockVy);
+    expect(a.items.held).toBeNull();
+  });
+
+  it('a tap is a weak swing: less knock than the noodle', () => {
+    const { b } = swingAt(true);
+    expect(b.items.daze).toBeGreaterThan(0);
+    expect(b.body.vx).toBeGreaterThan(0);
+    expect(b.body.vx).toBeLessThan(SWORD.knockVx);
+  });
+
+  it('winding up roots you: no walking, running or jumping until it lets go', () => {
+    const run = race([10]);
+    const a = run.runners[0];
+    giveItem(a, 'bat');
+    const x = a.body.x;
+    use(run);
+    steps(run, 20, (f) => press({ right: true, run: true, jump: true, jumpPressed: f === 3 }));
+    expect(a.items.windup).toBeGreaterThan(0);
+    expect(a.body.x).toBe(x);
+    expect(a.body.onGround).toBe(true);
+    // A full wind-up lets go by itself, and then you can move again.
+    steps(run, BAT.windup);
+    expect(a.items.windup).toBe(0);
+    expect(a.items.held).toBeNull();
+    steps(run, 20, () => press({ right: true }));
+    expect(a.body.x).toBeGreaterThan(x);
+  });
+
+  it('swats a shot back, like the noodle', () => {
+    const run = race([10, 40]);
+    const a = run.runners[0];
+    giveItem(a, 'bat');
+    face(a, 1);
+    use(run);
+    run.spawnProjectile(bolt(a.body.x + a.body.w + 16, a.body.y + 6, -30));
+    use(run);
+    steps(run, 12);
+    expect(a.alive).toBe(true);
+    expect(run.projectiles[0]?.vx).toBeGreaterThan(0);
+    expect(run.projectiles[0]?.owner).toBe(0);
+  });
+
+  it('the catch: a bonk mid wind-up throws the charge away (the bat stays in hand)', () => {
+    const run = race([10, 11]);
+    const [a, b] = run.runners;
+    giveItem(a, 'bat');
+    giveItem(b, 'sword');
+    face(a, 1);
+    face(b, -1);
+    b.body.x = a.body.x + a.body.w + 4;
+    use(run);
+    steps(run, 10);
+    use(run, 1);
+    until(run, () => a.items.daze > 0, 20);
+    expect(a.items.daze).toBeGreaterThan(0);
+    expect(a.items.windup).toBe(0);
+    expect(a.items.held?.kind).toBe('bat');
+  });
+});
+
+describe('tremor brick', () => {
+  it('after its tell, bonks every rival on the ground, credited to the slammer; the air, the slammer and the spawn zone are safe', () => {
+    const run = race([10, 20, 26, 2]);
+    const [a, ground, air, safe] = run.runners;
+    giveItem(a, 'tremor');
+    air.body = bodyAtCell(26, FLOOR - 9);
+    air.body.onGround = false;
+    expect(run.isSafe(safe)).toBe(true);
+    use(run);
+    expect(a.items.held).toBeNull();
+    steps(run, TREMOR.delay - 2);
+    expect(ground.items.daze).toBe(0);
+    steps(run, 2);
+    expect(ground.items.daze).toBeGreaterThan(0);
+    expect(ground.items.bonkedBy).toBe(0);
+    expect(ground.body.vy).toBeLessThan(0);
+    expect(ground.alive).toBe(true);
+    expect(air.items.daze).toBe(0);
+    expect(a.items.daze).toBe(0);
+    expect(safe.items.daze).toBe(0);
+  });
+
+  it('two slams in the same frame hit each other: neither slammer is spared by runner order', () => {
+    const run = race([10, 20]);
+    const [a, b] = run.runners;
+    giveItem(a, 'tremor');
+    giveItem(b, 'tremor');
+    steps(run, 1, () => press({ usePressed: true }));
+    steps(run, TREMOR.delay);
+    expect(a.items.bonkedBy).toBe(1);
+    expect(b.items.bonkedBy).toBe(0);
+  });
+});
+
+/**
+ * The flag is on the floor at the far right. A sealed room sits right above it, open only at its far
+ * left end: someone in it is near the flag as the crow flies, and far from it on foot.
+ */
+function towerLevel(): Level {
+  const level = testLevel();
+  for (let y = 10; y < FLOOR; y++) level.tiles[y * LEVEL_W + 30] = 0;
+  for (let x = 29; x < LEVEL_W; x++) {
+    level.tiles[9 * LEVEL_W + x] = 1;
+    level.tiles[13 * LEVEL_W + x] = 1;
+  }
+  return level;
+}
+
+describe('front-runner tax', () => {
+  it('the leader is who is nearest the flag by route, not in a straight line', () => {
+    const run = race([2, 30, 20], [], towerLevel());
+    const [, floor, room] = run.runners;
+    room.body = bodyAtCell(44, 12);
+    const goal = { x: (run.level.goal.tx + 0.5) * TILE, y: (run.level.goal.ty + 0.5) * TILE };
+    const crow = (r: Runner) => Math.hypot(r.body.x - goal.x, r.body.y - goal.y);
+    expect(crow(room)).toBeLessThan(crow(floor));
+    expect(routeDistance(run.level, floor)).toBeLessThan(routeDistance(run.level, room));
+    expect(leaderIndex(run)).toBe(1);
+  });
+
+  it('flies to the leader, hovers as the tell, then dives: bonks everyone within two tiles, credited to the thrower', () => {
+    const run = race([8, 37, 36, 30]);
+    const [a, lead, near, far] = run.runners;
+    giveItem(a, 'tax');
+    use(run);
+    expect(run.items.shells).toHaveLength(1);
+    const sh = run.items.shells[0];
+    until(run, () => sh.phase === 'hover', 240);
+    expect(sh.target).toBe(1);
+    expect(sh.y).toBeLessThan(lead.body.y);
+    expect(lead.items.daze).toBe(0);
+    until(run, () => run.items.shells.length === 0, TAX.hover + 60);
+    expect(lead.items.daze).toBeGreaterThan(0);
+    expect(lead.items.bonkedBy).toBe(0);
+    expect(near.items.daze).toBeGreaterThan(0);
+    expect(far.items.daze).toBe(0);
+    expect(a.items.daze).toBe(0);
+    expect(lead.alive && near.alive).toBe(true);
+  });
+
+  it('the catch: if you lead, it comes for you', () => {
+    const run = race([40, 10]);
+    const [a, b] = run.runners;
+    giveItem(a, 'tax');
+    use(run);
+    until(run, () => run.items.shells.length === 0, 400);
+    expect(a.items.daze).toBeGreaterThan(0);
+    expect(b.items.daze).toBe(0);
+  });
+
+  it('retargets when the leader finishes', () => {
+    const run = race([8, 40, 30]);
+    const [a, lead, next] = run.runners;
+    giveItem(a, 'tax');
+    use(run);
+    const sh = run.items.shells[0];
+    steps(run, 3);
+    expect(sh.target).toBe(1);
+    lead.body = bodyAtCell(run.level.goal.tx, FLOOR - 1);
+    until(run, () => run.items.shells.length === 0, 400);
+    expect(lead.finished).toBe(true);
+    expect(lead.items.daze).toBe(0);
+    expect(next.items.daze).toBeGreaterThan(0);
+  });
+
+  it('a dive into the spawn zone just pops', () => {
+    const run = race([2, 3]);
+    const [a, b] = run.runners;
+    giveItem(b, 'tax');
+    use(run, 1);
+    until(run, () => run.items.shells.length === 0, 400);
+    expect(run.isSafe(a) && run.isSafe(b)).toBe(true);
+    expect(a.items.daze).toBe(0);
+    expect(b.items.daze).toBe(0);
+  });
+});
+
+/** A level with a gap in the floor at columns 14..16. */
+function gapLevel(): Level {
+  const level = testLevel();
+  for (let y = FLOOR; y < LEVEL_H; y++) for (let x = 14; x <= 16; x++) level.tiles[y * LEVEL_W + x] = 0;
+  return level;
+}
+
+describe('pocket block', () => {
+  it('on the ground it fills the floor ahead, solid to stand on, for its lifetime; then it crumbles', () => {
+    const run = race([13], [], gapLevel());
+    const r = run.runners[0];
+    giveItem(r, 'block');
+    face(r, 1);
+    use(run);
+    expect(run.items.blocks).toEqual([expect.objectContaining({ tx: 14, ty: FLOOR })]);
+    expect(r.items.held?.uses).toBe(ITEMS.block.uses - 1);
+    const born = run.items.blocks[0].born;
+    until(
+      run,
+      () => r.body.x > 14 * TILE + 3,
+      60,
+      () => press({ right: true }),
+    );
+    expect(r.body.onGround).toBe(true);
+    expect(r.body.y + r.body.h).toBeCloseTo(FLOOR * TILE, 3);
+    steps(run, born + POCKET.life - run.frame - 3);
+    expect(run.items.blocks).toHaveLength(1);
+    expect(r.body.onGround).toBe(true);
+    steps(run, 5);
+    expect(run.items.blocks).toHaveLength(0);
+    steps(run, 20);
+    expect(r.body.y).toBeGreaterThan(FLOOR * TILE);
+  });
+
+  it('in the air it goes right under your feet', () => {
+    const run = race([15], [], gapLevel());
+    const r = run.runners[0];
+    giveItem(r, 'block');
+    r.body = bodyAtCell(15, FLOOR - 4);
+    r.body.onGround = false;
+    use(run);
+    const [k] = run.items.blocks;
+    expect(k.tx).toBe(15);
+    expect(k.ty * TILE).toBeGreaterThanOrEqual(r.body.y + r.body.h - 0.01);
+    expect(k.ty * TILE - (r.body.y + r.body.h)).toBeLessThan(TILE);
+    until(run, () => r.body.onGround, 60);
+    expect(r.body.y + r.body.h).toBeCloseTo(k.ty * TILE, 3);
+  });
+
+  it('refuses protected zones, terrain and solids, and spends nothing', () => {
+    const run = race([3, 20]);
+    const [a, b] = run.runners;
+    giveItem(a, 'block');
+    face(a, 1);
+    // Every cell it could take is in the spawn zone.
+    expect(blockCells(a).every(([tx, ty]) => tx <= 4 && ty >= FLOOR - 3)).toBe(true);
+    use(run);
+    expect(run.items.blocks).toHaveLength(0);
+    expect(a.items.held?.uses).toBe(ITEMS.block.uses);
+    // Facing a wall: the floor and the wall are both terrain.
+    giveItem(b, 'block');
+    b.body = bodyAtCell(29, FLOOR - 1);
+    face(b, 1);
+    use(run, 1);
+    expect(run.items.blocks).toHaveLength(0);
+    expect(b.items.held?.uses).toBe(ITEMS.block.uses);
+  });
+
+  it('never traps a runner: a cell with anyone in it is refused, and no block ever holds a body', () => {
+    const run = race([13, 13], [], gapLevel());
+    const [a, b] = run.runners;
+    giveItem(a, 'block');
+    face(a, 1);
+    // b hangs in the gap, right where a's block would go.
+    b.body = bodyAtCell(14, FLOOR);
+    b.body.onGround = false;
+    use(run);
+    expect(run.items.blocks.some((k) => k.tx === 14 && k.ty === FLOOR)).toBe(false);
+    // Everyone dropping blocks on and around each other never leaves a body inside one.
+    const run2 = race([12, 13, 14, 15, 16], [], gapLevel());
+    run2.runners.forEach((r) => giveItem(r, 'block', 99));
+    let placed = 0;
+    for (let f = 0; f < 200; f++) {
+      run2.step(
+        run2.runners.map((_, i) =>
+          press({ usePressed: (f + i) % 7 === 0, jump: (f + i * 3) % 23 < 9, jumpPressed: (f + i * 3) % 23 === 0, right: i % 2 === 0, left: i % 2 === 1 }),
+        ),
+      );
+      placed = Math.max(placed, run2.items.blocks.length);
+      for (const k of run2.items.blocks)
+        for (const r of run2.runners) {
+          if (!r.alive) continue;
+          const c = { x: k.tx * TILE + 0.01, y: k.ty * TILE + 0.01, w: TILE - 0.02, h: TILE - 0.02 };
+          const inside = r.body.x < c.x + c.w && r.body.x + r.body.w > c.x && r.body.y < c.y + c.h && r.body.y + r.body.h > c.y;
+          expect(inside, `runner ${r.slot} inside block ${k.tx},${k.ty} at frame ${f}`).toBe(false);
+        }
+    }
+    expect(placed).toBeGreaterThan(3);
+  });
+});
+
+describe('the catch-up items stay deterministic', () => {
+  function chaos(): string {
+    const run = race([8, 14, 20, 26, 32, 38], [], gapLevel());
+    const kinds: ItemKind[] = ['bat', 'tremor', 'tax', 'block'];
+    const rng = new Rng(77);
+    for (let f = 0; f < 600; f++) {
+      if (f % 120 === 0) run.runners.forEach((r, i) => r.alive && !r.items.held && giveItem(r, kinds[(i + f) % kinds.length]));
+      run.step(
+        run.runners.map(() =>
+          press({ right: rng.chance(0.5), run: rng.chance(0.3), jump: rng.chance(0.3), jumpPressed: rng.chance(0.05), usePressed: rng.chance(0.04) }),
+        ),
+      );
+    }
+    return JSON.stringify({ runners: run.runners, items: run.items, kills: run.kills, f: run.frame });
+  }
+
+  it('two identical runs with every new item end in identical, plain-JSON state', () => {
+    const a = chaos();
+    expect(a).toBe(chaos());
+    const s = JSON.parse(a) as { runners: Runner[] };
+    expect(s.runners.some((r) => r.items.bonkedBy >= 0)).toBe(true);
   });
 });

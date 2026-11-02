@@ -19,6 +19,10 @@ Each row gives what the item or part mocks, its silhouette (what must read at ga
 | **Bubble Wrap** | The one-hit bubble shield | A bubble around the runner | It's a sheet of bubble wrap. Cells pop one by one on the hit. |
 | **Free-Trial Jetpack** | The jetpack upgrade | Twin tanks on the back, one big flame | A "TRIAL" sticker. The flame ends in a puff and a dangling price tag. |
 | **Fog of War** | Strategy fog of war, as a ninja smoke bomb | A round smoke bomb with a short fuse | The cloud has the hard, blocky edge of unexplored map tiles. |
+| **Walk-Off Bat** | The crossover brawler's home-run bat | A long slugger's bat over the shoulder, tape on the grip | Cocked back and shaking as it charges; a full hit pops a distance readout ("412 FT") off the victim. |
+| **Tremor Brick** | The block you punch to shake every enemy off the floor | A chunky brick held overhead | A seismograph strip on its face, its red trace scribbled right off the scale. |
+| **Front-Runner Tax** | The kart racer's shell that hunts whoever is first | A spiked dome on two flapping wings | The wings are folded paper, one marked "1ST" and circled in red; it lands in a blizzard of paperwork. |
+| **Pocket Block** | Building a block where you stand, from the crafting sandbox and the battle-royale builders | A turf cube, carried by a handle like a lunchbox | Every block wears an assembly-instructions sticker (step 1), and cracks from the corners before it crumbles. |
 
 ## Mystery crate
 

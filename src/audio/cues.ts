@@ -172,6 +172,7 @@ const ITEM_CUE: Partial<Record<ItemEventKind, SfxName>> = {
   catch: 'ui-tick',
   smoke: 'pop-cannonball',
   hit: 'land',
+  warn: 'sentry-beep',
 };
 const ITEM_USE_CUE: Record<string, SfxName> = {
   sword: 'walljump',
@@ -179,7 +180,19 @@ const ITEM_USE_CUE: Record<string, SfxName> = {
   boomerang: 'fire-thrower',
   rocket: 'fire-cannon',
   smoke: 'fire-totem',
+  bat: 'swoosh',
+  tremor: 'piston-hiss',
+  tax: 'whoosh',
+  block: 'place',
 };
-const itemName = (what: ItemEventKind, kind: string): SfxName | undefined => (what === 'use' ? ITEM_USE_CUE[kind] : ITEM_CUE[what]);
+/** Moments that sound different from their `what`, keyed `what:kind`. */
+const ITEM_KIND_CUE: Record<string, SfxName> = {
+  'hit:homer': 'piston-slam',
+  'hit:tremor': 'piston-slam',
+  'hit:tax': 'explosion',
+  'fizzle:block': 'crumble-break',
+};
+const itemName = (what: ItemEventKind, kind: string): SfxName | undefined =>
+  ITEM_KIND_CUE[`${what}:${kind}`] ?? (what === 'use' ? ITEM_USE_CUE[kind] : ITEM_CUE[what]);
 export const popName = (ammo: string): SfxName => POP[ammo] ?? 'pop-bolt';
 export const fireName = (style: string): SfxName => FIRE[style] ?? 'fire-crossbow';
