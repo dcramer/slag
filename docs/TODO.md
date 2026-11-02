@@ -118,3 +118,19 @@ Some steps need the owner. Run after setting the Vercel env vars.
 - On the first deploy, confirm source maps upload and client frames resolve to source. Only the failure path has been tested.
 - Install the Sentry GitHub integration for suspect commits.
 - Move `app/global-error.tsx` into `src/` with item 11.
+
+## 18. Fewer, clearer parts per match
+There's too much variety in the crate, and it's confusing. **Next up once item 3 lands**, because that changes `generateCrate`.
+
+- Each match picks N unique parts, from the seed, and every crate that match draws only from those. Players learn a small set.
+- A part's variants differ in size only. No other rolled differences in a match, so a part always behaves the way you remember.
+- The roster must always include enough building and demolition parts for item 3's crate guarantee and dry-round weighting.
+- Pick N from how it plays, per player count, and consider per-Match-Length if it helps.
+- Names stay stable across a match. Do this before item 15's parody pass.
+
+## 19. Secret parts mode
+A mode where you don't see what a part is. You choose a type (hazard, utility, build, whatever the roles are) and get one at random from what's allowed. A lobby rule, with the roll deterministic from the seed and the same on every peer. The first time anyone sees the part is when it lands.
+
+## 20. Settings in tabs
+The settings screen is way too large. Split it into tabs or similar.
+
