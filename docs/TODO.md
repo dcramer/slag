@@ -117,12 +117,7 @@ The rest of this item is the home screen, the first and biggest piece of it. The
 - **The home screen is the quality bar for the whole game.** The owner loves how it looks and that it fills the full window height. Keep its look exactly (drips, embers, character stage), and bring the lobby, menus and in-game screens up to it, not the other way round. Record that bar in `docs/ART.md`.
 - Do this after items 2 and 3, which both change `src/game-client.ts`.
 
-## 12. Max rounds
-A match ends at the target score **or** a round limit, so a match that nobody can win still finishes.
-
-- Add `rules.maxRounds` beside `rules.targetScore`, set in the lobby like the other rules. Default it high enough that normal matches end on score.
-- At the limit, the top score wins and ties are joint winners. If nobody has any points, say so on the victory screen instead of naming a winner.
-- The HUD shows `ROUND 7/20`, and the score screen states both win conditions.
-
 ## 13. Playtest and tune the new parts
 Nothing from item 4 has been played by hand, so the tuning is test-level only: magnet drift, bumper power, slow and freeze durations. Dropstones and crushers stop only on terrain, so they pass through placed blocks; decide whether that's right.
+
+Also confirm the round limit default of 40. It comes from a Monte Carlo model of scoring with a fixed finish rate, and real finish rates probably fall as props pile up. An unwinnable match takes all 40 rounds to end.
