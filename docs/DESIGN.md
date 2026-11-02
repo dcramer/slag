@@ -70,7 +70,8 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - Props are assembled from **parts**: blocks of various materials, spikes, swinging heads, launchers, emitters, motion, springs, fans and bombs. Every number is rolled, and names come from the rolled stats.
 - Every crate contains at least one building piece and one hazard. Crate contents are tied to the level seed and round, but the card order is shuffled with a per-match salt the host rolls, so it differs every game.
 - **Every part can always be placed somewhere**, or a pick could stall the place phase on a level without the right surface.
-- **Attachments** (spike strips, ice coats, slime coats) must mount flush on an exposed face of a solid block, and rotation picks the face.
+- **Attachments** (spike strips, ice coats, slime coats, snap traps) must mount flush on an exposed face of a solid block, and rotation picks the face.
+  - A strip too long for its spot still places: only the cells that can mount land, the rest are gone for good, and the ghost shows exactly what lands.
   - Ice makes floors slippery and walls slick (no wall jump).
   - Slime makes floors slow and walls sticky (you cling).
 - Bombs clear terrain and/or props depending on their kind. Attachments fall off when their host block is destroyed.
