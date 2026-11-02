@@ -12,10 +12,10 @@ Design intent for everything below is in `docs/DESIGN.md`.
 Online play is on `main`; see `docs/NETCODE.md`.
 
 - **Host label and kick:** someone is clearly labeled `Host` in the lobby, and the host can kick players there. The label follows host migration.
+- Weather is drawn on placed parts and set pieces only during the race, so they look dry in pick and place.
 - Owner: connect `slag-upstash-kv` to the Vercel project for Production and Preview, then redeploy.
 - Not verified yet: real Upstash, real NAT traversal, TURN, Firefox, Safari, real phones. Cross-engine determinism has never run; dmath has only been exercised on V8.
 - A guest refused for being on another build waits on `Joining…` forever. It should say to reload.
-- **Gravity rule:** `sanitizeRules` (`src/net/actions.ts`) drops `gravity`, and the `rules` action skips `setRules`, so the Rules menu resets it and the level never regenerates. Fixing it needs the renderer's terrain, decor and surround caches to notice a same-seed regen.
 - A guest whose link drops for 2.5 s is marked away, which pops their runner mid-race. Decide if that's right.
 - Measure recovery in a 2-peer room, where no third peer confirms the loss (about 7 s expected).
 
