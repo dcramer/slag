@@ -611,12 +611,13 @@ const ramparts: SkylineDef = {
   glow: true,
   bake(c) {
     const { g, L, W, H, rng, feats } = c;
-    const top = (x: number) => c.ridge(x) - 6;
+    // Terraced wall segments (walls step, they don't undulate).
+    const top = (x: number) => Math.round(c.ridge(Math.floor(x / 48) * 48) / 6) * 6 - 6;
     // Continuous wall with arches, merlons and towers.
     g.fillStyle = vgrad(g, L.base * H - 20, H, css(L.color, 4), css(L.color, -4));
     g.beginPath();
     g.moveTo(-2, H);
-    for (let x = -2; x <= W + 6; x += 6) g.lineTo(x, top(x));
+    for (let x = -2; x <= W + 6; x += 2) g.lineTo(x, top(x));
     g.lineTo(W + 2, H);
     g.fill();
     for (let x = 0; x < W; x += 10) {
