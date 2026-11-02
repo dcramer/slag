@@ -203,9 +203,11 @@ async function mobile(deviceName: string) {
   await mp.waitForTimeout(600);
   await touch('touchEnd', []);
   console.log('after ALT hold', JSON.stringify(await runner()));
-  await phase('score');
+  // The run may already be over (the jump can find the pit on some levels) and the score screen gone with it.
+  await mp.waitForFunction(() => ['score', 'pick', 'victory'].includes((window as any).slagDebug.match.phase), null, { timeout: 60_000 });
   await mp.waitForTimeout(1800);
-  await shotM('score');
+  if ((await mp.evaluate(() => (window as any).slagDebug.match.phase)) === 'score') await shotM('score');
+  else console.log('score screen already passed: no score shot');
   await mp.setViewportSize({ width: desc.viewport.height, height: desc.viewport.width });
   await mp.waitForTimeout(500);
   await shotM('portrait');
