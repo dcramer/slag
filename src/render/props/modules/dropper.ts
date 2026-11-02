@@ -465,7 +465,25 @@ function containerHead(W: number, H: number, c: HSL) {
     // This way up.
     g.fillStyle = css({ h: 0, s: 0, l: 92 }, 0, 0.85);
     for (const ax of [x0 + W * 0.3, x0 + W * 0.42]) {
-      path(g, poly(ax - 1.6, y0 + H * 0.5, ax, y0 + H * 0.26, ax + 1.6, y0 + H * 0.5, ax + 0.5, y0 + H * 0.5, ax + 0.5, y0 + H * 0.72, ax - 0.5, y0 + H * 0.72, ax - 0.5, y0 + H * 0.5));
+      path(
+        g,
+        poly(
+          ax - 1.6,
+          y0 + H * 0.5,
+          ax,
+          y0 + H * 0.26,
+          ax + 1.6,
+          y0 + H * 0.5,
+          ax + 0.5,
+          y0 + H * 0.5,
+          ax + 0.5,
+          y0 + H * 0.72,
+          ax - 0.5,
+          y0 + H * 0.72,
+          ax - 0.5,
+          y0 + H * 0.5,
+        ),
+      );
       g.fill();
     }
     g.restore();

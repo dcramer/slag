@@ -49,44 +49,51 @@ function buildPier(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   // Landing stages at both ends, level with the quay; the beach between, two or three rows down.
   footing(g, sx, sx + 2, G);
   footing(g, ex - 2, ex, G);
-  const F = Math.min(H - 3, G + rng.int(2, 3));
+  const F = Math.min(H - 3, G + (climb() > 3 ? rng.int(2, 3) : 2));
   const bx0 = sx + 3;
   const bx1 = ex - 3;
   footing(g, bx0, bx1, F);
-  // The boardwalk, in sections at their own heights, a jump up from the landing stages; now and then planks are missing.
-  const span = ex - sx - 1;
+  // The boardwalk, in sections at their own heights a jump up from the landing stages, stepping between them.
+  const span = bx1 - bx0 + 1;
   const n = Math.max(2, Math.min(4, Math.round(span / 9) + rng.int(-1, 0)));
-  const hi = Math.max(3, climb());
-  let B = G - rng.int(3, Math.max(3, hi));
-  let x = sx + 1;
+  const hi = Math.max(2, Math.min(4, climb() - 1));
+  let B = G - rng.int(Math.min(3, hi), hi);
+  let x = bx0;
   let low = B;
-  const sections: number[] = [];
+  let high = B;
+  const ends: number[] = [];
   for (let i = 0; i < n; i++) {
-    const end = i === n - 1 ? ex - 1 : Math.min(ex - 2, sx + 1 + Math.round(((i + 1) * span) / n) + rng.int(-1, 1));
-    const hole = i > 0 && rng.chance(0.35) ? 2 : 0;
-    for (let c = x + hole; c <= end; c++) g.set(c, B, T_ONEWAY, true);
-    sections.push(B);
+    const end = i === n - 1 ? bx1 : Math.min(bx1 - 1, bx0 + Math.round(((i + 1) * span) / n) - 1 + rng.int(-1, 1));
+    for (let c = x; c <= end; c++) g.set(c, B, T_ONEWAY, true);
+    ends.push(B);
     low = Math.min(low, B);
+    high = Math.max(high, B);
     x = end + 1;
-    B = Math.max(G - hi, Math.min(G - 3, B + rng.pick([-2, -1, 0, 1, 2])));
+    const next = Math.max(G - hi, Math.min(G - Math.min(3, hi), B + rng.pick([-2, -1, 0, 1, 2])));
+    // Two rows apart, a step between them (on the higher one's first plank, under it), so the walk is one piece.
+    if (i < n - 1 && Math.abs(next - B) === 2) g.set(next < B ? x : x - 1, Math.min(B, next) + 1, T_ONEWAY, true);
+    B = next;
   }
+  // Ladders down to the sand at both ends of the beach, by the landing stages: the way up out of the tide.
+  for (const [c, top] of [
+    [bx0, ends[0]],
+    [bx1, ends[ends.length - 1]],
+  ])
+    for (let y = top + 1; y < F; y++) g.set(c, y, T_ONEWAY, true);
   digBerth(g, rng, at, parts);
   return {
     concept: 'tidal-pier',
     rect: { x: sx, y: low - 1, w: ex - sx + 1, h: H - low + 1 },
     // The beach and the air over it, and the boardwalk's headroom.
-    air: [
-      { x: bx0, y: low + 1, w: bx1 - bx0 + 1, h: F - low - 1 },
-      { x: sx, y: low - 3, w: ex - sx + 1, h: 2 },
-    ],
-    anchors: { exit: [ex, G], deck: [sx, G], span: [sx, ex], beach: [bx0, bx1], floor: [F, low], walk: [sx + 1, ex - 1] },
+    air: [{ x: bx0 + 1, y: high + 1, w: bx1 - bx0 - 1, h: F - high - 1 }],
+    anchors: { exit: [ex, G], deck: [sx, G], span: [sx, ex], beach: [bx0 + 1, bx1 - 1], floor: [F, high], walk: [bx0, bx1] },
     skin: 'planks',
   };
 }
 
 function* pierPieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
   const [bx0, bx1] = l.anchors.beach;
-  const [F, low] = l.anchors.floor;
+  const [F, high] = l.anchors.floor;
   const [sx, ex] = l.anchors.span;
   const prior: PlacedProp[] = [];
   // The tide over the beach: out most of the time, in for a while, never as high as the boardwalk.
@@ -98,8 +105,8 @@ function* pierPieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
       at: [bx0, F],
       w: bx1 - bx0 + 1,
       low: 0,
-      high: Math.max(1, F - low - 2),
-      off: rng.int(260, 360),
+      high: Math.max(1, F - high - 1),
+      off: rng.int(440, 540),
       warn: rng.int(70, 90),
       rise: rng.int(110, 150),
       hold: rng.int(90, 140),
@@ -324,7 +331,8 @@ function buildLighthouse(g: Grid, rng: Rng, at: TileRect, parts: number): Landma
   const tx = Math.max(sx + 4, Math.min(ex - 3 - tw, mid));
   const t1 = tx + tw - 1;
   // Storeys up the tower, a jump each, as many as the sky leaves room for with the lantern on top.
-  const S = Math.max(3, Math.min(rng.int(4, 5), climb()));
+  // Storeys four or five rows, a step halfway up each where a whole storey is more than a comfortable jump.
+  const S = rng.int(4, 5);
   let n = rng.int(2, 4);
   while (n > 1 && G - S * n - 4 < at.y + 4) n--;
   const floors = Array.from({ length: n + 1 }, (_, i) => G - S * i);
@@ -339,6 +347,11 @@ function buildLighthouse(g: Grid, rng: Rng, at: TileRect, parts: number): Landma
     for (let c = a; c <= b; c++) g.set(c, floors[i], T_ONEWAY, true);
   }
   for (let c = tx + 1; c <= t1 - 1; c++) g.set(c, gallery, T_ONEWAY, true);
+  if (S > climb())
+    for (let i = 1; i <= n; i++) {
+      const sx2 = g.get(tx + 1, floors[i]) === T_ONEWAY && i < n ? t1 - 1 : tx + 1;
+      g.set(sx2, floors[i - 1] - Math.ceil(S / 2), T_ONEWAY, true);
+    }
   // Doors straight through at the bottom, and out onto the gallery round the top.
   g.clear(tx, G - 3, tx, G - 1);
   g.clear(t1, G - 3, t1, G - 1);
@@ -459,7 +472,7 @@ function buildLagoon(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const ix1 = f0 - 2;
   const gaps: [number, number][] = [];
   const hop = Math.max(2, Math.min(3, j.walkGap));
-  for (let last = ix0 - 1; ; ) {
+  for (let last = ix0 - 1; ;) {
     const rem = ix1 - last;
     if (rem <= hop) {
       if (rem > 0) gaps.push([last + 1, ix1]);

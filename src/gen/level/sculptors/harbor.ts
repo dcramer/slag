@@ -137,6 +137,8 @@ function harborStage(ctx: SculptCtx, kn: Knobs): Shape {
     else g.fill(cx, G - 2, cx + 1, G - 1);
   }
   const l = raiseLandmark(g, ctx, { concept, at: { x, y: G - h, w, h }, ground: G }, challenges > 0 ? 1 : 0);
+  // Lanes keep off the landmark's columns altogether: it brings its own ways through, and nothing hangs in its sky.
+  l.air.push({ x: l.rect.x, y: l.rect.y, w: l.rect.w, h: 1 });
   const [ex, exitRow] = l.anchors.exit;
   const xs = ex + 1;
 

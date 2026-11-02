@@ -59,7 +59,7 @@ function buildGalleon(g: Grid, rng: Rng, at: { x: number; y: number; w: number; 
   const L = s.w;
   const H = g.h;
   // Yards a comfortable jump apart.
-  const r = Math.max(3, Math.min(5, climb()));
+  const r = Math.max(3, Math.min(4, climb()));
   const bowNear = rng.chance(0.5);
   g.clear(sx, 0, ex, H - 1);
   // The hull, main deck to sea floor.
@@ -142,7 +142,8 @@ function buildGalleon(g: Grid, rng: Rng, at: { x: number; y: number; w: number; 
     yards.push(top);
     // A ratline step up to the lower yard from the deck, at its end away from the hatches.
     const step = mx + (mx < (wa + wb) / 2 ? -half - 1 : half + 1);
-    if (top < G && step > wa && step < wb && Math.abs(step - ha - 0.5) > 1.5 && Math.abs(step - hb - 0.5) > 1.5) g.set(step, G - 1 - Math.ceil(r / 2), T_ONEWAY, true);
+    if (top < G && step > wa && step < wb && Math.abs(step - ha - 0.5) > 1.5 && Math.abs(step - hb - 0.5) > 1.5)
+      g.set(step, G - 1 - Math.ceil(r / 2), T_ONEWAY, true);
     // The bitts at the mast's foot.
     if (rng.chance(0.6) && mx !== ha && mx !== ha + 1 && mx !== hb && mx !== hb + 1) g.fill(mx, G - BITTS, mx, G - 1, 1, true);
   }
@@ -267,7 +268,7 @@ export const GALLEON: Concept = {
   family: ['harpoon', 'shore battery', 'crane'],
   budget: 2,
   names: ['The Galleon at {place}', 'The Flagship of {place}', '{place}: All Hands', 'The Ship in {place} Harbour'],
-  box: (k, rng) => ({ w: berthMax() + structureCols(k.W, rng, 18, 22), h: 3 * Math.max(3, Math.min(5, climb())) + 4 }),
+  box: (k, rng) => ({ w: berthMax() + structureCols(k.W, rng, 18, 22), h: 3 * Math.max(3, Math.min(4, climb())) + 4 }),
   build: buildGalleon,
   pieces: galleonPieces,
 };
