@@ -63,6 +63,8 @@ export interface ProjWorld {
   solids: readonly Solid[];
   /** Multiplier on every ammo's gravity (the level's gravity setting). */
   gravity: number;
+  /** Side wind of this frame's gust (px/s, + right): whatever's flying moves with the air. */
+  gust?: number;
   /** Index matches RunWorld.runners. */
   runners: readonly ProjRunner[];
   spawn(p: ProjectileSpawn): void;
@@ -349,7 +351,7 @@ export const AMMO_SIM: Partial<Record<Ammo, AmmoSim>> = {
       const target = ridden ? GLIDER_LOADED_SINK + (riders - 1) * GLIDER_EXTRA_SINK : w.frame - p.born > GLIDER_CRUISE ? GLIDER_SINK : 0;
       const step = ridden ? 4 : 1.5;
       p.vy = p.vy < target ? Math.min(target, p.vy + step) : Math.max(target, p.vy - step);
-      p.mx = p.vx * DT;
+      p.mx = (p.vx + (w.gust ?? 0)) * DT;
       p.my = p.vy * DT;
       p.x += p.mx;
       p.y += p.my;
@@ -446,6 +448,7 @@ export function stepProjectile(p: Projectile, w: ProjWorld): boolean {
   let why: EndReason | null = null;
   if (sim?.move) alive = sim.move(p, w);
   else defaultMove(p, f, w.gravity);
+  if (w.gust && !sim?.platform) p.x += w.gust * DT; // Gliders count the gust in their own move, or riders would slide off.
   if (alive && sim?.fuse?.(p, f)) alive = false;
   if (!alive) why = 'fuse';
   const age = f - p.born;

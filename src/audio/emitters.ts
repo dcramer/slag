@@ -1,6 +1,8 @@
 import { TILE } from '../sim/constants';
 import { dirOf, flameCycle, laserCycle, motionOffset, pistonState, swingAngles, swingHeads, teslaCycle } from '../sim/props';
+import type { Level } from '../sim/level';
 import type { RunWorld } from '../sim/run';
+import { gustPush, gustWarning, type WeatherKind } from '../sim/weather';
 import type { SfxName } from './sfx';
 
 /**
@@ -12,12 +14,28 @@ import type { SfxName } from './sfx';
  *  - transients at module cycle edges (flame ignites, laser fires, tesla
  *    arcs, piston slams, mace/axe swings), found by comparing frame f−1 to f.
  *
+ *  - the weather's sound, which is everywhere at once. A gust is heard from
+ *    its warning on, off the same clock the sim pushes with.
+ *
  * Pure functions of (RunWorld, frame) using the sim's own pose/cycle
  * helpers, so what you hear always matches what the sim does.
  */
 
-export type LoopKind = 'saw' | 'flame' | 'laserCharge' | 'laserFire' | 'tesla' | 'fan' | 'conveyor' | 'slide';
-export const LOOP_KINDS: readonly LoopKind[] = ['saw', 'flame', 'laserCharge', 'laserFire', 'tesla', 'fan', 'conveyor', 'slide'];
+export type LoopKind = 'saw' | 'flame' | 'laserCharge' | 'laserFire' | 'tesla' | 'fan' | 'conveyor' | 'slide' | 'gust' | 'rain' | 'snow' | 'mist';
+export const LOOP_KINDS: readonly LoopKind[] = [
+  'saw',
+  'flame',
+  'laserCharge',
+  'laserFire',
+  'tesla',
+  'fan',
+  'conveyor',
+  'slide',
+  'gust',
+  'rain',
+  'snow',
+  'mist',
+];
 
 export interface Emitter {
   kind: LoopKind;
@@ -27,6 +45,8 @@ export interface Emitter {
   level: number;
   /** Kind-specific 0..1 parameter (laser charge progress, flame sputter, slide speed…). */
   p: number;
+  /** Heard the same everywhere: no distance or pan (weather). */
+  ambient?: boolean;
 }
 
 export interface PropCue {
@@ -34,6 +54,26 @@ export interface PropCue {
   x: number;
   y: number;
   pitch?: number;
+}
+
+/** A gust's loudness and pitch through its warning and push; the rest of the time, the air barely moves. */
+const WEATHER_SOUND: Partial<Record<WeatherKind, (level: Level, f: number) => { level: number; p: number }>> = {
+  wind(level, f) {
+    const w = level.weather;
+    const warn = gustWarning(w, f);
+    const push = gustPush(w, f);
+    return { level: Math.max(0.1, warn * 0.75, push), p: Math.max(warn * 0.7, push) };
+  },
+  rain: () => ({ level: 0.7, p: 0 }),
+  snow: () => ({ level: 0.6, p: 0 }),
+  mist: () => ({ level: 0.6, p: 0 }),
+};
+
+/** The level's weather as one sound. `f` is the race frame, or -1 outside a race. */
+export function weatherEmitters(level: Level, f: number, x: number, y: number, out: Emitter[]): void {
+  const kind = level.weather?.kind ?? 'clear';
+  const s = WEATHER_SOUND[kind]?.(level, f);
+  if (s && kind !== 'clear') out.push({ kind: kind === 'wind' ? 'gust' : kind, x, y, level: s.level, p: s.p, ambient: true });
 }
 
 /** Continuous sources for the race state at frame `f`. */

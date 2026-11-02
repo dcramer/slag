@@ -78,6 +78,8 @@ export interface CollisionWorld {
   /** Tile kind (T_EMPTY/T_SOLID/T_ONEWAY). Must treat x outside the level as solid walls, y outside as empty. */
   tileAt(tx: number, ty: number): number;
   solids: readonly Solid[];
+  /** How terrain feels underfoot (weather's footing); default DEFAULT_SURFACE. Props keep their own surfaces. */
+  tileSurface?: Surface;
   /**
    * World gravity scale (Level.gravity; default 1). Scales gravity (and so
    * the apex/fall/fast-fall multipliers built on it); terminal speeds scale
@@ -198,6 +200,7 @@ export function firstOverlap(r: Rect, world: CollisionWorld, dynamicOnly = false
         tileScratch.x = tx * TILE;
         tileScratch.y = ty * TILE;
         tileScratch.id = k === T_ONEWAY ? TILE_ONEWAY_ID : TILE_SOLID_ID;
+        tileScratch.surface = world.tileSurface ?? DEFAULT_SURFACE;
         if (overlaps(r, tileScratch)) return tileScratch;
       }
     }

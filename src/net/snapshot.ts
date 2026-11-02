@@ -5,6 +5,7 @@ import type { RoundResult } from '../game/scoring';
 import { isProtected, type Level, T_EMPTY } from '../sim/level';
 import type { PlacedProp } from '../sim/props';
 import { RunWorld } from '../sim/run';
+import type { Weather } from '../sim/weather';
 import type { ThemeId } from '../themes';
 
 /**
@@ -14,6 +15,8 @@ import type { ThemeId } from '../themes';
  *
  * The level is not shipped: it is regenerated from (seed, theme) and the
  * mutable bits (bomb craters, destroyed set pieces) are patched on top.
+ * Its weather is in the snapshot too, even though the same seed rolls the
+ * same weather, so a peer that somehow disagrees shows up in the hash.
  * Values go through `toWire` so -0, NaN, ±Infinity, Maps and typed arrays
  * survive JSON exactly (the sim must be bit-identical after a restore).
  */
@@ -23,7 +26,7 @@ import type { ThemeId } from '../themes';
  * A new field on Match or RunWorld must be added here or listed as derived:
  * tests/snapshot.test.ts fails until it is.
  */
-export const SNAP_VERSION = 5;
+export const SNAP_VERSION = 6;
 
 export interface RunSnap {
   slots: number[];
@@ -68,7 +71,7 @@ export interface MatchSnap {
   salt: number;
   nextSalt: number;
   pendingAdvance: number | null;
-  level: { tiles: string; setPieces: number[]; version: number };
+  level: { tiles: string; setPieces: number[]; version: number; weather: Weather | null };
   run: RunSnap | null;
 }
 
@@ -208,7 +211,7 @@ export function snapshotMatch(m: Match): MatchSnap {
     salt: m.salt,
     nextSalt: m.nextSalt,
     pendingAdvance: mp.pendingAdvance ?? null,
-    level: { tiles: bytesToB64(m.level.tiles), setPieces: m.level.setPieces.map((p) => p.uid), version: m.level.version },
+    level: { tiles: bytesToB64(m.level.tiles), setPieces: m.level.setPieces.map((p) => p.uid), version: m.level.version, weather: m.level.weather ?? null },
     run: run
       ? {
           slots: run.runners.map((r) => r.slot),
@@ -257,6 +260,7 @@ export function restoreMatch(m: Match, s: MatchSnap): void {
   } else {
     m.level.version = s.level.version;
   }
+  m.level.weather = s.level.weather ?? undefined;
   m.seed = s.seed;
   m.themeOverride = theme;
   m.phase = s.phase;
@@ -327,6 +331,7 @@ export function hashSnap(s: MatchSnap): number {
   h.value(rest);
   h.value(level.tiles);
   h.value(level.setPieces);
+  h.value(level.weather);
   return h.h >>> 0;
 }
 

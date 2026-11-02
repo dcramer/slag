@@ -402,8 +402,7 @@ export class Backdrop {
   }
 
   /** Ambient particles (cosmetic, non-deterministic). On the background layer: with ink they read as stray projectiles. */
-  drawMotes(rc: RC, th: Theme, dt: number, view: { x: number; y: number; w: number; h: number }) {
-    const kind = th.ambient;
+  drawMotes(rc: RC, th: Theme, dt: number, view: { x: number; y: number; w: number; h: number }, kind = th.ambient) {
     // Motes live in world space around the visible rect; zoomed-out views get proportionally more (capped).
     const area = Math.max(1, Math.min(2.5, (view.w * view.h) / (VIEW_W * VIEW_H)));
     const target = Math.round((kind === 'snow' ? 90 : kind === 'rain' ? 140 : kind === 'dust' ? 50 : kind === 'leaves' ? 26 : 60) * area);

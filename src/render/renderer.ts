@@ -21,6 +21,7 @@ import { type Compositor, createCompositor } from './post';
 import { drawBackdrop, drawBlastPreview, drawForeground, drawProjectile, drawResolved, drawRunnerStatus, drawStuffed, type Emit, propEventFx } from './props';
 import { Surround } from './surround';
 import { TerrainPainter } from './terrain';
+import { calmMotes, WeatherLayer } from './weather';
 // Mobile: quality tiers / adaptive resolution / safe-area insets (owned by the touch module).
 import { detectQuality, FrameBudget, isTouchFirst, QUALITY, type QualityTier, safeInsets, TIERS } from '../ui/touch/device';
 
@@ -70,6 +71,7 @@ export class Renderer {
   private terrain = new TerrainPainter();
   private surround = new Surround();
   private fx = new Fx();
+  private weather = new WeatherLayer();
   private rigs = new Map<number, Rig>();
   private pw = 2;
   private ph = 2;
@@ -300,7 +302,8 @@ export class Renderer {
     }
     this.fx.draw(rc);
     this.backdrop.drawLiquid(rc, level.theme, ww, wh, this.cam.visible(), this.surround.margin);
-    this.backdrop.drawMotes(rc, level.theme, dt, this.cam.visible());
+    this.backdrop.drawMotes(rc, level.theme, dt, this.cam.visible(), calmMotes(level.theme));
+    this.weather.draw(rc, m, this.cam.visible(), this.fx);
     g.globalCompositeOperation = 'source-over';
 
     // --- light map
@@ -309,7 +312,8 @@ export class Renderer {
     // --- composite
     this.flash *= Math.exp(-dt * 9);
     this.comp.render(this.scene, this.foreground.canvas, this.lightC, this.glow, {
-      exposure: level.theme.grade.exposure,
+      exposure: level.theme.grade.exposure * this.weather.exposure(level),
+      mist: this.weather.mist(m, this.cam, this.pw, this.ph, t),
       flash: this.flash,
       tint: level.theme.grade.tint,
       lift: level.theme.grade.lift,
