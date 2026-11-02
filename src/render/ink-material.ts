@@ -1099,6 +1099,7 @@ export const INK_MATERIALS: Record<TerrainKind, InkMaterial> = {
   brick: brickwork,
   cobble: cobbles,
   planks: boards,
+  barnboard: boards,
   metal: plates,
   rustplate: rusted,
   concrete: castPanels,
