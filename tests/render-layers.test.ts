@@ -41,6 +41,8 @@ const MAY_PAINT_BACKDROP: Record<Module['type'], boolean> = {
   // The dark window behind the glass and its moonlight; the shards themselves draw in front.
   shards: true,
   lob: false,
+  cavein: false,
+  cart: false,
   snapper: false,
   spikes: false,
   spring: false,
