@@ -25,24 +25,14 @@ Online play is on `main`; see `docs/NETCODE.md`.
 - A guest whose link drops for 2.5 s is marked away, which pops their runner mid-race. Decide if that's right.
 - Measure recovery in a 2-peer room, where no third peer confirms the loss (about 7 s expected).
 
-## 3. Level variety, gravity and the "mostly open" rule
-**Branches:**
-- `wip/level-variety`: the agent's raw work (+4).
-- `wip/level-variety-merge`: that work merged with `main` around 38abff9, with conflicts resolved. **6 generator tests fail**: levelgen, profile ×2, worldgen castle/volcano/bridge share.
+## 3. Level follow-ups
+Level profiles, gravity, variable size, full-window background, the open-levels rule, the parts-needed targets and the crate guarantee are on `main`.
 
-**Contents:**
-- level profiles: size and aspect (wide, classic, tall), density, hazard count, route shape (sprawl, climb, descent, zig-zag);
-- variable world size across sim, gen, render and camera;
-- a tall sculptor;
-- the gravity world setting (a rule; `Level.gravity` is used by physics, reach and projectiles).
-
-**Still to do:**
-- Fix the failing tests.
-- Run `pnpm level --stats 50` on this branch and on its parent commit, and compare.
-- **Full-window background:** canvases fill the window while the play-area aspect and scale stay the same; background layers fill the extra space instead of black bars. Check at 16:9, 21:9, 4:3 and phone sizes.
-- **New rule: levels are mostly open.** There must always be more than one route to the goal: corridors are fine in places, but never a single narrow path. Enforce it in the judge, for example by checking that the reachable stand-cell graph has at least two disjoint-ish routes, or with a minimum openness ratio.
-- Retune the sculptors for walk vs run and the lower jump.
-- **New solvability targets:** about 99% of levels can't be passed without placing parts, and 20–30% need multiple parts. The crate must always offer enough building parts for what the level still needs.
+- **Generation time:** about 237 ms per level, up 4x, and about 2.5 s at worst on one wide level. That's a visible hitch at level load. Move it off the main thread or cut retries.
+- **Placed parts can block a level:** after 5 rounds of random legal placements, the judge couldn't prove 4–5 of 40 levels still solvable. They aren't proven unsolvable, but nothing proves such a match stays winnable.
+- **Shares by theme:** 98.3% of levels need parts and 29% need two. Mine is 48% two-part; jungle and castle are 16–18%. `TWO_PARTS` in gen tunes it.
+- **Visible edge:** block themes (harbor, castle, factory) show a straight wall line where the map meets the scenery.
+- `pnpm online-test --only play,bc` failed once after a clean gate and passed on rerun. Find the flake.
 
 ## 6. Mobile, round 2
 **Branch:** `wip/mobile-2` (~1k lines, unreviewed). Round 1 (touch controls) is merged.
