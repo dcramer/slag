@@ -2,13 +2,13 @@ import { css, type HSL } from '../../../core/color';
 import { TILE } from '../../../sim/constants';
 import { type Level, T_SOLID, tileAt } from '../../../sim/level';
 import type { Module } from '../../../sim/props';
-import { blob, inkFor } from '../../ink';
-import { boxPts, ovalPts, part, path, poly, sprite, stamp, tick } from '../../ink-props';
+import { blob, inkFor, type P, sn, stroke } from '../../ink';
+import { boxPts, dot, ovalPts, part, path, poly, sprite, stamp, tick } from '../../ink-props';
 import { bulb, glowDot, light, type RC } from '../../kit';
 import type { DrawCtx } from '../common';
 import { SHELLS } from '../modules/deco-shells';
 import type { Deco, DecoSkin, PieceSkin } from './common';
-import { bands, flat, FRAME, type Haze, hazer, IRON, member, rivets, STEEL } from './factory-ink';
+import { bands, brickwork, flat, FRAME, type Haze, hazer, IRON, member, rivets, STEEL } from './factory-ink';
 
 /**
  * Factory skins for the Foundry, the Boiler House and the Robot Line (gen/stage/factory-works.ts). Their
@@ -29,8 +29,6 @@ import { bands, flat, FRAME, type Haze, hazer, IRON, member, rivets, STEEL } fro
 const BRICK: HSL = { h: 10, s: 40, l: 38 };
 /** A boiler's steel drum: dark, so it reads as iron in its brick and not as a pale tank. */
 const DRUM: HSL = { h: 205, s: 10, l: 40 };
-/** A car body on the line, in primer. */
-const PRIMER: HSL = { h: 200, s: 8, l: 62 };
 const WINDOW: HSL = { h: 205, s: 22, l: 30 };
 const FIREBRICK: HSL = { h: 16, s: 30, l: 20 };
 const GLASS: HSL = { h: 200, s: 18, l: 70 };
@@ -40,18 +38,20 @@ const SMOKE: HSL = { h: 25, s: 6, l: 40 };
 
 const solid = (lv: Level | null | undefined, x: number, y: number) => !!lv && tileAt(lv, x, y) === T_SOLID;
 
-/** A frame of windows: mullions over a pale veil of glass, in the backdrop's haze. */
+/** A frame of windows: grimy glass in two flat tones, a few glazing bars, in the backdrop's haze. */
 function windows(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, t: Haze, seed: number, arch = false) {
   const pane = poly(x, y + (arch ? w * 0.35 : 0), x + w * 0.5, y, x + w, y + (arch ? w * 0.35 : 0), x + w, y + h, x, y + h);
-  g.fillStyle = t.c(GLASS, 0);
-  g.globalAlpha = 0.55;
+  g.fillStyle = t.c(GLASS, -18);
   path(g, pane);
   g.fill();
-  g.globalAlpha = 1;
-  const cols = Math.max(2, Math.round(w / 6));
-  const rows = Math.max(2, Math.round(h / 7));
-  for (let i = 1; i < cols; i++) member(g, x + (w * i) / cols, y + (arch ? w * 0.18 : 0), x + (w * i) / cols, y + h, 0.7, IRON, t, seed + i);
-  for (let j = 1; j < rows; j++) member(g, x, y + (h * j) / rows, x + w, y + (h * j) / rows, 0.7, IRON, t, seed + 20 + j);
+  // The light on the glass: a long sliver and a short one, hand-cut.
+  g.fillStyle = t.c(GLASS, 4);
+  path(g, poly(x + w * 0.18, y + h * 0.9, x + w * 0.18, y + h * 0.35, x + w * 0.42, y + h * 0.22, x + w * 0.42, y + h * 0.7));
+  g.fill();
+  const cols = Math.max(2, Math.round(w / 9));
+  const rows = Math.max(2, Math.round(h / 12));
+  for (let i = 1; i < cols; i++) member(g, x + (w * i) / cols, y + (arch ? w * 0.18 : 0), x + (w * i) / cols, y + h, 0.6, IRON, t, seed + i);
+  for (let j = 1; j < rows; j++) member(g, x, y + (h * j) / rows, x + w, y + (h * j) / rows, 0.6, IRON, t, seed + 20 + j);
   for (let i = 0; i + 1 < pane.length; i++) member(g, pane[i].x, pane[i].y, pane[i + 1].x, pane[i + 1].y, 1.4, IRON, t, seed + 40 + i);
   member(g, pane[pane.length - 1].x, pane[pane.length - 1].y, pane[0].x, pane[0].y, 1.4, IRON, t, seed + 50);
 }
@@ -136,7 +136,7 @@ function foundryHall(rc: RC, m: Deco, d: DrawCtx) {
 function boilerWall(w: number, h: number, t: Haze, seed: number) {
   return sprite(`fw|boil|${w | 0}|${h | 0}|${seed % 5}|${t.key}`, -2, -2, w + 4, h + 4, (g) => {
     flat(g, boxPts(0, 0, w, h, 0.4, seed, 0.04), BRICK, t, seed + 1, 0.5);
-    for (let y = 6; y < h - 2; y += 7) for (let x = (y / 7) % 2 ? 4 : 10; x < w - 4; x += 15) tick(g, x, y, x + 5, y, 0.4, x * 3 + y, t.ink(BRICK));
+    brickwork(g, 1, 1, w - 2, h - 2, BRICK, t, seed);
     const n = Math.max(2, Math.round(w / (5 * TILE)));
     for (let i = 0; i < n; i++) {
       const cx = (w * (i + 0.5)) / n;
@@ -172,14 +172,22 @@ function stack(w: number, h: number, t: Haze, seed: number, base: HSL) {
       const half = (top + (w - top) * k) / 2;
       member(g, w / 2 - half, y, w / 2 + half, y, 1.4, { ...base, l: base.l - 8 }, t, seed + y);
     }
-    for (let y = 9; y < h - 4; y += 11) tick(g, w * 0.35, y, w * 0.35 + 3, y, 0.4, y + seed, t.ink(base));
+    g.save();
+    path(g, body);
+    g.clip();
+    brickwork(g, 0, 4, w, h - 4, base, t, seed + 2);
+    // The shade down its far side: a stack is round.
+    g.fillStyle = t.c(base, -7);
+    path(g, poly(w * 0.66, 4, w, 4, w, h, w * 0.7, h));
+    g.fill();
+    g.restore();
     // The cap.
     flat(g, boxPts((w - top) / 2 - 2, 0, top + 4, 5, 0.6, seed + 3, 0.05), { ...base, l: base.l - 6 }, t, seed + 4, 0.6);
     // A ladder of thin rungs up the side away from the light.
     const lx = (w + top) / 2 - 3;
     member(g, lx - 2, 6, w - 3, h - 1, 0.5, IRON, t, seed + 5);
     member(g, lx + 1.5, 6, w + 0.5, h - 1, 0.5, IRON, t, seed + 6);
-    for (let y = 9; y < h - 2; y += 4) {
+    for (let y = 9; y < h - 2; y += 6) {
       const k = y / h;
       const xa = lx - 2 + (w - 3 - (lx - 2)) * k;
       member(g, xa, y, xa + 3.5, y, 0.35, IRON, t, seed + y * 2);
@@ -224,36 +232,65 @@ function boiler(s: CanvasRenderingContext2D, g: CanvasRenderingContext2D, bx: nu
   const top = (by - bh + 1) * TILE;
   const W = bw * TILE;
   const H = bh * TILE;
-  // The drum lies along the block over a course or two of its brick setting: a long cylinder side on, its
-  // ends only a little rounded, a lit band along its top.
+  // The drum lies along the block over its brick setting: a long cylinder side on, its silhouette the block's
+  // (that's what you stand on), its roundness all in the tones: a lit band high, the shade low, and seams that
+  // bow round it like the near end's plate.
   const dh = H - 6;
-  const drum = boxPts(px + 1, top + 1, W - 2, dh, Math.min(8, dh / 2.6), seed, 0.05);
-  part(s, drum, DRUM, seed, { depth: 1.2, thin: 0.45, thick: 1.1 });
-  // Round, not boxy: a lit band along its upper side and a shadow band low, both following the drum.
+  const drum = boxPts(px + 1, top + 1, W - 2, dh, 3, seed, 0.05);
+  part(s, drum, DRUM, seed, { depth: 0.6, thin: 0.45, thick: 1.1 });
+  const band = (u0: number, u1: number, dl: number, k: number) => {
+    const pts: P[] = [];
+    for (let i = 0; i <= 8; i++) pts.push({ x: px + (W * i) / 8, y: top + 1 + dh * u0 + sn(i, 1, seed + k) * 0.5 });
+    for (let i = 8; i >= 0; i--) pts.push({ x: px + (W * i) / 8, y: top + 1 + dh * u1 + sn(i, 2, seed + k) * 0.5 });
+    s.fillStyle = css(DRUM, dl);
+    path(s, pts);
+    s.fill();
+  };
   s.save();
   path(s, drum);
   s.clip();
-  s.fillStyle = css(DRUM, 14);
-  s.fillRect(px, top + 1 + dh * 0.18, W, Math.max(1.4, dh * 0.08));
-  s.fillStyle = css(DRUM, -10);
-  s.fillRect(px, top + 1 + dh * 0.7, W, dh * 0.3);
+  band(0.1, 0.34, 12, 1);
+  band(0.16, 0.24, 22, 2);
+  band(0.66, 0.86, -9, 3);
+  band(0.86, 1.05, -17, 4);
   s.restore();
-  // Its seams round it, and a row of rivets along the top.
-  for (let x = px + 12; x < px + W - 6; x += 11) tick(s, x, top + 2.5, x, top + dh - 1.5, 0.45, x, inkFor(DRUM));
-  for (let x = px + 9; x < px + W - 4; x += 4) {
+  // Seams round it, bowed as the end plate is, a few rivets along each, and one along the top.
+  const ry = dh / 2 - 0.5;
+  const cy = top + 1 + dh / 2;
+  for (let x = px + 15; x < px + W - 8; x += 16) {
+    const seam: P[] = [];
+    for (let i = 0; i <= 8; i++) {
+      const a = -Math.PI / 2 + (i / 8) * Math.PI;
+      seam.push({ x: x + Math.cos(a) * 2.6, y: cy + Math.sin(a) * (ry - 0.6) });
+    }
     s.fillStyle = inkFor(DRUM);
-    blob(s, x, top + 3.6, 0.35, x + seed, 1, 0.1);
-    s.fill();
+    stroke(s, seam, { w: 0.6, seed: x, taper: [0.15, 0.25], press: 0.3 });
+    for (const u of [0.25, 0.5, 0.75])
+      dot(s, x + 2.6 * Math.cos(Math.asin(u * 2 - 1)) - 1.2, cy + (u * 2 - 1) * (ry - 1.6), 0.4, x + u * 9, css(DRUM, 26), inkFor(DRUM));
   }
   // The near end, seen a little round the corner: the boiler's end plate, the firebox door low in it.
-  part(s, ovalPts(px + 5, top + 1 + dh / 2, 4, dh / 2 - 0.5, seed + 1, 0.02, 14), { ...DRUM, l: DRUM.l - 6 }, seed + 1, { depth: 0.4, thin: 0.3, thick: 0.8 });
+  part(s, ovalPts(px + 5, cy, 4, ry, seed + 1, 0.02, 14), { ...DRUM, l: DRUM.l - 6 }, seed + 1, { depth: 0.4, thin: 0.3, thick: 0.8 });
   part(s, boxPts(px + 2.5, top + dh - 8.5, 5, 6, 0.8, seed + 3, 0.05), IRON, seed + 3, { depth: 0.4, thin: 0.3, thick: 0.7 });
   s.fillStyle = css(SLAG, -4 + Math.sin(t * 7 + seed) * 4);
   s.fillRect(px + 3.4, top + dh - 5.6, 3.2, 1.1);
   glowDot(g, px + 5, top + dh - 5, 7, SLAG, 0.35);
+  // A safety valve and a pipe stub on its back, inside the block's top row.
+  part(s, boxPts(px + W * 0.6, top + 1.4, 3, 2.4, 0.5, seed + 4, 0.05), { ...DRUM, l: DRUM.l + 14 }, seed + 4, { depth: 0.3, thin: 0.25, thick: 0.6 });
 }
 
-/** A car body on the line, drawn on its own cells (`carCells`): primer-grey shell, a boxy cabin with its glass, wheel arches dark on its jig. */
+/** Paints a car body on the line comes off in: calm, so the runners stay the loudest colour. */
+const CAR_PAINT: HSL[] = [
+  { h: 4, s: 42, l: 44 },
+  { h: 208, s: 36, l: 44 },
+  { h: 152, s: 26, l: 38 },
+  { h: 40, s: 48, l: 50 },
+];
+
+/**
+ * A car body on the line, drawn on its own cells (`carCells`): a painted sedan whose outline is the cells (the
+ * cabin's two over the body's three) and whose shape is all inside them: a glasshouse with raked screens, bumpers,
+ * wheels in their arches on the jig, a headlamp at the bonnet's end and a tail lamp at the boot's.
+ */
 function carBody(s: CanvasRenderingContext2D, cells: readonly (readonly [number, number])[], ox: number, oy: number, seed: number) {
   const by = Math.max(...cells.map(([, y]) => y));
   const xs = cells.filter(([, y]) => y === by).map(([x]) => x);
@@ -262,27 +299,54 @@ function carBody(s: CanvasRenderingContext2D, cells: readonly (readonly [number,
   const y0 = by * TILE + oy;
   const W = xs.length * TILE;
   const c0 = Math.min(...cab) * TILE + ox;
+  const CW = cab.length * TILE;
   const hood = c0 > x0 ? -1 : 1;
-  // The cabin first, so the body's top edge overlaps its foot.
-  part(s, boxPts(c0, y0 - TILE, 2 * TILE, TILE + 2, 2.5, seed, 0.06), PRIMER, seed, { depth: 0.8, thin: 0.4, thick: 1 });
-  s.fillStyle = css(WINDOW);
-  for (const [a, b] of [
-    [3, 14],
-    [18, 29],
-  ]) {
-    path(s, poly(c0 + a, y0 - TILE + 3, c0 + b, y0 - TILE + 3, c0 + b, y0 - 3.5, c0 + a, y0 - 3.5));
+  const paint = CAR_PAINT[seed % CAR_PAINT.length];
+  // The cabin first, so the body's top edge overlaps its foot; its glass raked at both ends.
+  part(s, boxPts(c0, y0 - TILE, CW, TILE + 2, 3, seed, 0.06), paint, seed, { depth: 0.8, thin: 0.4, thick: 1 });
+  const gy0 = y0 - TILE + 3;
+  const gy1 = y0 - 1;
+  const mid = c0 + CW / 2;
+  // One side's glass, from the B-pillar (`inner`) out to its end pillar (`outer`), the end raked by `rake` at the roof.
+  const glass = (inner: number, outer: number, rake: number) => {
+    const k = Math.sign(outer - inner);
+    s.fillStyle = css(WINDOW, 4);
+    path(s, poly(inner, gy0, outer - k * rake, gy0, outer, gy1, inner, gy1));
     s.fill();
-  }
-  part(s, boxPts(x0, y0, W, TILE, 2.5, seed + 1, 0.06), PRIMER, seed + 1, { depth: 0.8, thin: 0.4, thick: 1.1 });
-  // A swage line down its side, the wheel arches dark, a headlamp at the hood's end.
-  tick(s, x0 + 3, y0 + 5, x0 + W - 3, y0 + 5, 0.45, seed + 2, inkFor(PRIMER));
+    const sx = inner + (outer - inner) * 0.35;
+    s.fillStyle = css(WINDOW, 22);
+    path(s, poly(sx, gy1 - 0.8, sx + 1.2, gy0 + 1, sx + 2.4, gy0 + 1, sx + 1.2, gy1 - 0.8));
+    s.fill();
+  };
+  glass(mid + hood * 1, (hood > 0 ? c0 + CW : c0) - hood * 2, 6);
+  glass(mid - hood * 1, (hood > 0 ? c0 : c0 + CW) + hood * 2, 4);
+  // The body: painted, a darker sill under the doors, a lit shoulder line.
+  part(s, boxPts(x0, y0, W, TILE, 2.8, seed + 1, 0.06), paint, seed + 1, { depth: 0.8, thin: 0.4, thick: 1.1 });
+  s.fillStyle = css(paint, -12);
+  path(s, poly(x0 + 1, y0 + TILE - 4.5, x0 + W - 1, y0 + TILE - 4.5, x0 + W - 1, y0 + TILE - 1, x0 + 1, y0 + TILE - 1));
+  s.fill();
+  s.fillStyle = css(paint, 16);
+  path(s, poly(x0 + 3, y0 + 2.2, x0 + W - 3, y0 + 2.2, x0 + W - 3, y0 + 3.2, x0 + 3, y0 + 3.4));
+  s.fill();
+  // Door shuts and a handle, under the cabin.
+  for (const x of [c0 + 1.5, mid, c0 + CW - 1.5]) tick(s, x, y0 + 1.5, x + 0.2, y0 + TILE - 5, 0.4, (x * 3) | 0, inkFor(paint));
+  tick(s, mid + hood * 4, y0 + 5, mid + hood * 6.5, y0 + 5, 0.6, seed + 5, css(paint, -24));
+  // Bumpers at both ends.
+  for (const bx of [x0 - 0.6, x0 + W - 2.6])
+    part(s, boxPts(bx, y0 + TILE - 6.5, 3.2, 3, 0.8, (bx * 3) | 0, 0.05), STEEL, (bx * 3) | 0, { depth: 0.3, thin: 0.25, thick: 0.5 });
+  // Wheels in their arches, sat on the jig.
   for (const ax of [x0 + 9, x0 + W - 9]) {
-    s.fillStyle = css(PRIMER, -30);
-    path(s, poly(ax - 6, y0 + TILE, ax - 5, y0 + 10, ax, y0 + 8, ax + 5, y0 + 10, ax + 6, y0 + TILE));
+    s.fillStyle = css(paint, -30);
+    path(s, poly(ax - 6, y0 + TILE, ax - 5.4, y0 + 9.6, ax, y0 + 7.6, ax + 5.4, y0 + 9.6, ax + 6, y0 + TILE));
     s.fill();
+    part(s, ovalPts(ax, y0 + TILE - 3.6, 4.4, 3.6, (ax * 7) | 0, 0.03, 14), { h: 220, s: 6, l: 20 }, (ax * 7) | 0, { depth: 0.4, thin: 0.3, thick: 0.7 });
+    part(s, ovalPts(ax, y0 + TILE - 3.6, 2, 1.7, (ax * 7 + 1) | 0, 0.03, 10), STEEL, (ax * 7 + 1) | 0, { depth: 0.2, thin: 0.2, thick: 0.4 });
   }
-  const hx = hood > 0 ? x0 + W - 3 : x0 + 3;
-  part(s, ovalPts(hx, y0 + 4, 1.6, 1.3, seed + 3, 0.02, 8), { h: 48, s: 30, l: 80 }, seed + 3, { depth: 0.2, thin: 0.25, thick: 0.5 });
+  // A headlamp at the bonnet's end, a tail lamp at the boot's.
+  const hx = hood > 0 ? x0 + W - 3.4 : x0 + 3.4;
+  const tx = hood > 0 ? x0 + 3 : x0 + W - 3;
+  part(s, ovalPts(hx, y0 + 5, 1.8, 1.4, seed + 3, 0.02, 8), { h: 48, s: 40, l: 82 }, seed + 3, { depth: 0.2, thin: 0.25, thick: 0.5 });
+  part(s, boxPts(tx - 1.2, y0 + 4, 2.4, 2, 0.4, seed + 4, 0.05), { h: 2, s: 60, l: 42 }, seed + 4, { depth: 0.2, thin: 0.25, thick: 0.5 });
 }
 
 /**
@@ -316,12 +380,8 @@ function lineBay(w: number, deck: number, floor: number, t: Haze, seed: number) 
     const fy = deck - TILE * 2.2;
     for (let x = TILE; x < w - 4; x += 2 * TILE) {
       const b = Math.min(w - 4, x + 2 * TILE);
-      g.fillStyle = t.c(MESH, -12);
-      g.globalAlpha = 0.18;
-      g.fillRect(x, fy, b - x, deck - fy);
-      g.globalAlpha = 1;
       for (let k = 1; k < 3; k++) member(g, x, fy + ((deck - fy) * k) / 3, b, fy + ((deck - fy) * k) / 3, 0.35, IRON, t, x + k);
-      for (let xx = x + 8; xx < b; xx += 8) member(g, xx, fy, xx, deck, 0.35, IRON, t, xx + seed);
+      for (let xx = x + 10; xx < b - 2; xx += 10) member(g, xx, fy, xx, deck, 0.35, IRON, t, xx + seed);
       member(g, x, fy - 1, x, deck, 1.4, MESH, t, x * 3);
     }
     // Under the deck: legs about every four tiles, crossed between.

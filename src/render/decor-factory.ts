@@ -23,6 +23,8 @@ const CONE: HSL = hsl3(22, 76, 52);
 const WOOD: HSL = hsl3(32, 34, 50);
 const CARD: HSL = hsl3(46, 30, 80);
 const HAZARD: HSL = hsl3(46, 72, 52);
+/** Shrink wrap where it catches the light. */
+const FILM: HSL = hsl3(205, 30, 90);
 
 /** Points in decor space: (x, y) offsets from the foot, mirrored by `f`. */
 const at = (x0: number, y0: number, f: number, ...xy: number[]) => {
@@ -171,12 +173,19 @@ export const FACTORY_DECOR = {
           });
           mark(s, x + c * (w / 2) + bw * 0.3, by + 1.6, x + c * (w / 2) + bw * 0.7, by + 1.6, d.color, r + c, 0.45);
         }
-      // The wrap: a pale band across the stack, a glint on it.
+      // The wrap: film pulled taut over the stack, read by where it catches the light: hard pale slivers across
+      // the boxes, its gathered edge along the top and a pucker at each corner. Clear film, so no wash over it.
       const top = d.y - 2.8 - rows * 4.4;
-      s.fillStyle = 'rgba(235,240,245,0.35)';
-      path(s, poly(x - 0.3, top + 1, x + w + 0.3, top + 1.4, x + w + 0.3, d.y - 3.4, x - 0.3, d.y - 3.2));
+      const film = css(FILM);
+      s.fillStyle = film;
+      path(s, poly(x + 1.2, d.y - 3.6, x + 2.4, d.y - 3.6, x + w * 0.55, top + 1.4, x + w * 0.55 - 1, top + 1.4));
       s.fill();
-      glint(s, poly(x + 1, top + 2, x + 1.2, d.y - 4.5), 'rgba(255,255,255,0.7)', 0.5);
+      path(s, poly(x + w * 0.62, d.y - 3.6, x + w * 0.62 + 0.8, d.y - 3.6, x + w - 0.8, top + 3.6, x + w - 0.8, top + 2.6));
+      s.fill();
+      s.fillStyle = film;
+      stroke(s, poly(x - 0.2, top + 0.9, x + w * 0.5, top + 0.5, x + w + 0.2, top + 1), { w: 0.9, seed: sd(d.seed) + 9, taper: [0.1, 0.2], press: 0.3 });
+      for (const cx of [x + 0.6, x + w - 0.6]) tick(s, cx, top + 1, cx - Math.sign(cx - d.x) * 1.4, top + 2.6, 0.45, cx | 0, css(FILM, -14));
+      glint(s, poly(x + w * 0.2, top + 2.4, x + w * 0.38, top + 1.6), css(FILM, 6), 0.5);
     },
   },
   hook: {
