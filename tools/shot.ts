@@ -19,6 +19,7 @@
  *   pnpm shot cards --arch saw,block       → crate cards of those parts at every size
  *   pnpm shot parts --arch saw,flail       → those parts placed and raced, shot close up (`--styles all`: every launcher style; `--bait`: a runner in front of each)
  *   pnpm shot buildparts                   → every building part in a race, on crate cards, and as place ghosts
+ *   pnpm shot riders --seed abc            → a lift and a cog wheel with blocks and coats riding them: the place ghost sticking on, then the race at three moments
  *   pnpm shot pipes [--propseed 3]         → warp pipes facing every way: placing (with the pair tether), close up, and mid-trip
  *   pnpm shot items --seed abc             → held items: in hand, loose, and each one used
  *   pnpm shot blood --theme farm --players 4 --noletters → staged deaths over four rounds: ooze, settled, place phase, expiry
@@ -61,8 +62,9 @@ import { shots as pages } from './shot/pages';
 import { shots as parts } from './shot/parts';
 import { shots as phases } from './shot/phases';
 import { shots as renderer } from './shot/renderer';
+import { shots as riders } from './shot/riders';
 
-const SCENARIOS = { ...phases, ...renderer, ...motion, ...parts, ...pages, ...mobile, ...landmarks, ...cast };
+const SCENARIOS = { ...phases, ...renderer, ...motion, ...parts, ...pages, ...mobile, ...landmarks, ...cast, ...riders };
 
 try {
   const run = SCENARIOS[scenario];

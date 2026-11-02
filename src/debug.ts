@@ -6,7 +6,8 @@ import { hashMatch } from './net/snapshot';
 import { castBench, castCatalog } from './render/cast/sheet';
 import type { Renderer } from './render/renderer';
 import { giveItem, ITEM_KINDS, type ItemKind } from './sim/items';
-import { canPlace, landedDef, linkPipes } from './sim/props';
+import { canPlace, landedDef, linkPipes, type PropDef } from './sim/props';
+import { stageRiders, stillPart, topOf } from './debug-riders';
 import type { ProfileOverride } from './gen/level';
 import type { InputFrame } from './sim/types';
 import { WEATHER_KINDS } from './sim/weather';
@@ -45,6 +46,12 @@ export interface SlagDebug {
   addProps(kinds: Archetype[], seed?: number, rot?: number): number;
   /** Skip pick/place and start a race now. */
   race(kinds?: Archetype[], seed?: number): void;
+  /** A player's lift and cog wheel with parts riding them, stuck on as of this frame (sim/props/ride.ts): uids of the lift, its block and coat, the wheel, its block and coat. */
+  riders(): number[];
+  /** Top middle (world px) of part `uid`'s `part`th solid on this frame: where to aim a ghost to stick it on. */
+  topOf(uid: number, part?: number): { x: number; y: number } | null;
+  /** A crate card of `kind` with no motion of its own. */
+  still(kind: Archetype, seed?: number): PropDef;
   /** Hand each race runner a held item, cycling through `kinds`. */
   give(kinds: ItemKind[]): void;
   /** Regenerate the level for a seed (optionally forcing a theme). */
@@ -105,6 +112,9 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
       api.addProps(kinds, seed);
       match.startRun();
     },
+    riders: () => stageRiders(match, (uid += 100) - 100),
+    topOf: (u, part) => topOf(match, u, part),
+    still: stillPart,
     give(kinds) {
       if (kinds.length) match.run?.runners.forEach((r, i) => giveItem(r, kinds[i % kinds.length]));
     },
