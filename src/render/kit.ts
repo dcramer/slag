@@ -223,6 +223,36 @@ export function mixRgb(a: readonly number[], b: readonly number[], t: number): [
   return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 }
 
+const scratches = new Map<string, { n: number; cs: HTMLCanvasElement[] }>();
+
+/**
+ * A scratch canvas at least `w` x `h` px, reused across calls and only ever grown. Each key keeps two and
+ * hands them out in turn: making a big canvas per call is a GC stall waiting to happen, and clearing one
+ * the GPU still has a draw queued from stalls the page until that draw is done. Whatever the last user
+ * left in it is still there: clear the part you use.
+ */
+export function scratch(key: string, w: number, h: number): HTMLCanvasElement {
+  let e = scratches.get(key);
+  if (!e) scratches.set(key, (e = { n: 0, cs: [] }));
+  const i = (e.n = 1 - e.n);
+  const c = (e.cs[i] ??= document.createElement('canvas'));
+  if (c.width < w || c.height < h) {
+    c.width = Math.max(c.width, w);
+    c.height = Math.max(c.height, h);
+  }
+  return c;
+}
+
+/** The px rect of `g` that world rect `a` covers under its current transform, clamped to the canvas. */
+export function pxRect(g: CanvasRenderingContext2D, a: { x0: number; y0: number; x1: number; y1: number }): { x: number; y: number; w: number; h: number } {
+  const m = g.getTransform();
+  const x = Math.max(0, Math.floor(Math.min(a.x0 * m.a + m.e, a.x1 * m.a + m.e)) - 1);
+  const y = Math.max(0, Math.floor(Math.min(a.y0 * m.d + m.f, a.y1 * m.d + m.f)) - 1);
+  const x1 = Math.min(g.canvas.width, Math.ceil(Math.max(a.x0 * m.a + m.e, a.x1 * m.a + m.e)) + 1);
+  const y1 = Math.min(g.canvas.height, Math.ceil(Math.max(a.y0 * m.d + m.f, a.y1 * m.d + m.f)) + 1);
+  return { x, y, w: Math.max(0, x1 - x), h: Math.max(0, y1 - y) };
+}
+
 /** Fresh offscreen canvas with a 2D context pre-scaled by `k`. */
 export function offscreen(w: number, h: number, k = 1): [HTMLCanvasElement, CanvasRenderingContext2D] {
   const c = document.createElement('canvas');
