@@ -3,6 +3,7 @@ import type { Match } from '../game/match';
 import { TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import { type Level, tileAt } from '../sim/level';
 import { canPlace, footprint, resolveProp } from '../sim/props';
+import type { RunWorld } from '../sim/run';
 import type { GameEvent } from '../sim/types';
 import { Backdrop } from './background';
 import { Camera } from './camera';
@@ -151,6 +152,7 @@ export class Renderer {
 
     if (run) {
       for (const p of run.projectiles) drawProjectile(rc, p, emit);
+      this.drawSafeZone(rc, level, run);
       for (const r of run.runners) {
         if (!r.alive) continue;
         const pl = m.player(r.slot);
@@ -169,6 +171,7 @@ export class Renderer {
           r.finished,
           dt,
         );
+        if (!r.finished && run.isSafe(r)) this.drawShield(rc, level, r.body.x + r.body.w / 2, r.body.y + r.body.h, r.slot);
       }
     }
     this.fx.draw(rc);
@@ -288,6 +291,51 @@ export class Renderer {
     s.fill();
     glowDot(g, gx + 6, gy - 22, 22, ac, 0.3);
     light(rc, gx, gy - 20, 120, ac, 0.9);
+  }
+
+  /** Faint shimmer over the spawn safe zone during a race (runners touching it are immune to props). */
+  private drawSafeZone(rc: RC, level: Level, run: RunWorld) {
+    const z = run.safeZone;
+    if (!z) return;
+    const g = rc.g;
+    const pc: HSL = shift(level.theme.accent, 0, 0, 40);
+    // Only the air above the spawn floor; the rect also covers the floor row.
+    const bottom = Math.min(z.y + z.h, (level.spawn.ty + 1) * TILE);
+    const h = bottom - z.y;
+    if (h <= 0) return;
+    const a = 0.07 + Math.sin(rc.t * 2.2) * 0.02;
+    const gr = g.createLinearGradient(0, z.y, 0, bottom);
+    gr.addColorStop(0, css(pc, 10, 0));
+    gr.addColorStop(1, css(pc, 10, a));
+    g.fillStyle = gr;
+    g.fillRect(z.x, z.y, z.w, h);
+    // Shimmering edge where protection ends.
+    const ex = z.x + z.w - 0.5;
+    const eg = g.createLinearGradient(0, z.y, 0, bottom);
+    eg.addColorStop(0, css(pc, 20, 0));
+    eg.addColorStop(1, css(pc, 20, a * 3));
+    g.strokeStyle = eg;
+    g.lineWidth = 1;
+    g.setLineDash([2, 4]);
+    g.lineDashOffset = -rc.t * 8;
+    g.beginPath();
+    g.moveTo(ex, z.y);
+    g.lineTo(ex, bottom);
+    g.stroke();
+    g.setLineDash([]);
+    g.lineDashOffset = 0;
+  }
+
+  /** Faint bubble around a runner protected by the spawn zone. */
+  private drawShield(rc: RC, level: Level, x: number, y: number, slot: number) {
+    const g = rc.g;
+    const pc: HSL = shift(level.theme.accent, 0, 0, 40);
+    const p = rc.t * 3 + slot * 1.7;
+    g.strokeStyle = css(pc, 20, 0.22 + Math.sin(p) * 0.08);
+    g.lineWidth = 1;
+    g.beginPath();
+    g.ellipse(x, y - 8, 10, 11.5, 0, p % (Math.PI * 2), (p % (Math.PI * 2)) + Math.PI * 1.6);
+    g.stroke();
   }
 
   private drawGhosts(rc: RC, m: Match) {

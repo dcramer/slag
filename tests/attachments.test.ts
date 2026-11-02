@@ -72,7 +72,8 @@ describe('attachment placement rule', () => {
 describe('attachment behavior', () => {
   it('spike strips kill whoever stands on them', () => {
     const lv = testLevel();
-    const run = new RunWorld(lv, [{ uid: 1, def: coatDef('spikestrip', 3), owner: 1, tx: 2, ty: FLOOR, rot: 0 }], [0]);
+    lv.spawn = { tx: 10, ty: FLOOR - 1 }; // outside the protected pocket: the spawn zone is safe
+    const run = new RunWorld(lv, [{ uid: 1, def: coatDef('spikestrip', 3), owner: 1, tx: 9, ty: FLOOR, rot: 0 }], [0]);
     for (let f = 0; f < 120 && run.runners[0].alive; f++) run.step([NO_INPUT]);
     expect(run.runners[0].alive).toBe(false);
     expect(run.runners[0].killer).toBe(1);
