@@ -121,6 +121,7 @@ const POP: Record<string, SfxName> = {
   goo: 'pop-arrow',
   frost: 'pop-plasma',
   ricochet: 'pop-plasma',
+  slug: 'pop-bolt',
   puck: 'pop-arrow',
   smokebomb: 'pop-cannonball',
 };
@@ -143,6 +144,7 @@ const PROP_CUE: Record<string, SfxName> = {
   'keg-lit': 'ui-tick',
   'keg-fire': 'fire-cannon',
   'keg-backfire': 'explosion',
+  'sentry-lock': 'sentry-beep',
 };
 const FIRE: Record<string, SfxName> = {
   crossbow: 'fire-crossbow',
@@ -158,6 +160,7 @@ const FIRE: Record<string, SfxName> = {
   gooper: 'fire-totem',
   cryo: 'fire-turret',
   prism: 'fire-turret',
+  sentry: 'fire-sentry',
 };
 /** Held-item moments borrow existing sounds until they get their own. Unlisted moments are silent. */
 const ITEM_CUE: Partial<Record<ItemEventKind, SfxName>> = {

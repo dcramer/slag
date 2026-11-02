@@ -48,6 +48,7 @@ export const ARCHETYPE_WEIGHTS: readonly (readonly [Archetype, number])[] = [
   ['saw', 2.6],
   ['flail', 1.3],
   ['launcher', 3.8],
+  ['sentry', 1.1],
   ['flamer', 1.2],
   ['laser', 1.2],
   ['tesla', 1],
@@ -120,7 +121,7 @@ export const LAUNCHER_AIM_WEIGHTS: readonly (readonly [Aim, number])[] = [
   ['track', 1.5],
 ];
 
-const HAZARD: Archetype[] = ['spikestrip', 'spikeblock', 'saw', 'flail', 'launcher', 'flamer', 'laser', 'tesla', 'crusher', 'dropper', 'snapper'];
+const HAZARD: Archetype[] = ['spikestrip', 'spikeblock', 'saw', 'flail', 'launcher', 'sentry', 'flamer', 'laser', 'tesla', 'crusher', 'dropper', 'snapper'];
 
 const R = Math.PI / 2;
 const AXIS = [0, R, 2 * R, 3 * R]; // right, down, left, up
@@ -712,6 +713,38 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
           speed,
         },
       ],
+    };
+  },
+
+  // The team shooter's engineer sentry, as a squat tripod gun that beeps before it chatters.
+  sentry(rng) {
+    const turn = rng.range(0.028, 0.045);
+    const spin = rng.int(22, 40);
+    const burst = rng.int(3, 5);
+    const gap = rng.int(4, 6);
+    // Never fewer than MIN_OPENING frames between bursts (sim/props/barrier.ts): the lull is the way past.
+    const cool = rng.int(70, 120);
+    const speed = rng.range(380, 460);
+    const cone = rng.range(0.85, 1.2);
+    const sweepPeriod = rng.int(200, 320);
+    const adjs: string[] = [];
+    if (turn > 0.039) adjs.push('Twitchy', 'Hair-Trigger');
+    if (turn < 0.033) adjs.push('Rusty', 'Sluggish');
+    if (spin < 28) adjs.push('Trigger-Happy', 'Jumpy');
+    if (spin > 34) adjs.push('Dramatic', 'Wind-Up');
+    if (burst >= 5) adjs.push('Chatty', 'Spammy');
+    if (cool > 105) adjs.push('Overheating', 'Lazy');
+    if (cone > 1.1) adjs.push('Nosy', 'Wide-Eyed');
+    return {
+      archetype: 'sentry',
+      role: 'hazard',
+      name: title(rng, adjs, ['Auto-Turret', 'Sentry Nest', 'Level 1 Sentry', 'Spy Checker', 'Lawn Defender']),
+      sized: (size) => ({
+        modules: [
+          metalBody([[0, 0]]),
+          { type: 'sentry', at: center(), angle: 0, cone, sweepPeriod, range: by(size, 6, 8, 10), turn, spin, burst, gap, cool, speed, ammo: 'slug' },
+        ],
+      }),
     };
   },
 

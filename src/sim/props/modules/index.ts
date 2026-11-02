@@ -21,6 +21,7 @@ export * from './piston';
 export * from './portal';
 export * from './rope';
 export * from './rotor';
+export * from './sentry';
 export * from './snapper';
 export * from './spikes';
 export * from './spring';

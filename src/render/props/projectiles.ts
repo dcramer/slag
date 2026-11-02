@@ -54,6 +54,7 @@ const ROUNDS: Partial<Record<Ammo | 'arrowhead', () => Sprite>> = {
       g.fillStyle = css({ h: 105, s: 55, l: 42 });
       stroke(g, poly(-5, -0.6, -6.2, -1.2, -7, -2.4), { w: 0.6, seed: 2, taper: [0, 0.3], press: 0 });
     }),
+  slug: () => sprite('ammo|slug', -3.4, -1.8, 7, 3.6, slug),
   // Sorry: every shot is a little speech bubble, trailing off.
   plasma: () =>
     sprite('ammo|bubble', -5.5, -4.5, 11, 9.5, (g) => {
@@ -149,6 +150,12 @@ const ROUNDS: Partial<Record<Ammo | 'arrowhead', () => Sprite>> = {
     }),
 };
 
+/** A sentry's slug: a stubby brass round with a dark nose, drawn along +x. */
+function slug(g: CanvasRenderingContext2D) {
+  part(g, boxPts(-2.2, -0.9, 3.6, 1.8, 0.6, 41), { h: 42, s: 70, l: 58 }, 41, { depth: 0.25, thin: 0.25, thick: 0.5 });
+  part(g, poly(1.2, -0.8, 2.6, 0, 1.2, 0.8), { h: 24, s: 30, l: 34 }, 42, { depth: 0.15, thin: 0.25, thick: 0.4 });
+}
+
 function bolt(g: CanvasRenderingContext2D, arrow: boolean) {
   g.fillStyle = INK;
   line(g, -10, 0, 1.6, 0, { w: 1.7, seed: 1, taper: [0.02, 0.02], press: 0 });
@@ -199,6 +206,14 @@ function streak(g: CanvasRenderingContext2D, p: Projectile, k: number, col: stri
 function drawBolt(rc: RC, p: Projectile, a: number) {
   round(rc, p, a);
   streak(rc.bg, p, 0.06, 'rgba(255,255,255,0.22)', 1);
+}
+
+/** A slug flies too fast to read alone: a hard tracer streak behind it, hot at the round and cut off square. */
+function drawSlug(rc: RC, p: Projectile, a: number) {
+  const hot: HSL = { h: 44, s: 100, l: 66 };
+  streak(rc.bg, p, 0.045, 'rgba(255,214,120,0.55)', 1.6);
+  round(rc, p, a, false);
+  glowDot(rc.g, p.x, p.y, 4, hot, 0.5);
 }
 
 function drawCannonball(rc: RC, p: Projectile, _a: number, emit?: Emit) {
@@ -338,6 +353,7 @@ const AMMO_ART: Record<Ammo, (rc: RC, p: Projectile, angle: number, emit?: Emit)
   frost: drawFrost,
   ricochet: drawRicochet,
   glider: gliderShot,
+  slug: drawSlug,
   puck: drawItemShot,
   smokebomb: drawItemShot,
 };

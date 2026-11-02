@@ -17,7 +17,7 @@
  *   pnpm shot levels --seeds a,b,c,d      (or --count 12) → contact sheet
  *   pnpm shot props --count 24            → prop gallery (crate cards)
  *   pnpm shot cards --arch saw,block       → crate cards of those parts at every size
- *   pnpm shot parts --arch saw,flail       → those parts placed and raced, shot close up (`--styles all`: every launcher style)
+ *   pnpm shot parts --arch saw,flail       → those parts placed and raced, shot close up (`--styles all`: every launcher style; `--bait`: a runner in front of each)
  *   pnpm shot buildparts                   → every building part in a race, on crate cards, and as place ghosts
  *   pnpm shot items --seed abc             → held items: in hand, loose, and each one used
  *   pnpm shot blood --theme farm --players 4 --noletters → staged deaths over four rounds: ooze, settled, place phase, expiry

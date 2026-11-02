@@ -10,6 +10,7 @@ export const PART_INFO: Record<Module['type'], { title: string; blurb: string }>
   spikes: { title: 'Spikes', blurb: 'One hit. Any angle. No refunds.' },
   swinger: { title: 'Swinger', blurb: 'Every castle has a guy who installs these.' },
   launcher: { title: 'Launcher', blurb: 'A mailman with a grudge and a schedule.' },
+  sentry: { title: 'Sentry', blurb: 'Beeps once. That was your warning.' },
   flame: { title: 'Flame jet', blurb: 'Clears its throat first. Polite, for a dragon.' },
   laser: { title: 'Laser', blurb: 'Charges like a phone, rules like a judge.' },
   tesla: { title: 'Tesla gate', blurb: 'Bzzzt. You are the bug.' },
@@ -42,6 +43,7 @@ export function propTag(def: PropDef): string | null {
   for (const m of def.modules) {
     if (m.type === 'launcher') return m.ammo === 'seeker' ? 'HOMING' : m.ammo === 'glider' ? 'RIDEABLE' : AIM_TAG[m.aim];
     if (m.type === 'bomb') return m.delay ? 'AT RACE START' : m.target === 'props' ? 'PROPS ONLY' : m.target === 'terrain' ? 'TERRAIN ONLY' : null;
+    if (m.type === 'sentry') return AIM_TAG.track;
     if (m.type === 'keg') return m.dirs.length > 1 ? AIM_TAG.sweep : AIM_TAG.fixed;
   }
   return null;
@@ -71,6 +73,11 @@ export function summarize(def: PropDef): string[] {
       case 'launcher':
         out.push(
           `${m.style} → ${m.ammo}${AMMO[m.ammo].gravity > 200 ? ' (lobbed)' : ''} · ${{ fixed: 'Fixed', sweep: 'Sweeps', track: 'Tracks' }[m.aim]} · every ${secs(m.interval)}${m.burst > 1 ? ` ×${m.burst} burst` : ''}${m.spread > 1 ? ` · ${m.spread}-way` : ''} · ${fmt(m.speed)}px/s`,
+        );
+        break;
+      case 'sentry':
+        out.push(
+          `sentry · ${fmt(m.range)} tiles · ±${fmt((m.cone * 180) / Math.PI)}° · turns ${fmt((m.turn * 60 * 180) / Math.PI)}°/s · spin-up ${secs(m.spin)} · ×${m.burst} burst · cools ${secs(m.cool)}`,
         );
         break;
       case 'flame':

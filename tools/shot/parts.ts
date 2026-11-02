@@ -1,5 +1,5 @@
 /** Parts close up: crate cards at every size, placed parts in a race, and every building part. */
-import { LAUNCHER_STYLES, open, opt, out, page, seed, sheet, snap, step, type Scenarios } from './ctx';
+import { argv, LAUNCHER_STYLES, open, opt, out, page, seed, sheet, snap, step, type Scenarios } from './ctx';
 
 export const shots: Scenarios = {
   async cards() {
@@ -65,7 +65,7 @@ export const shots: Scenarios = {
     // `--styles crossbow,cannon` (or `all`): one launcher of each style instead of `--arch`; `--aim track` keeps only trackers.
     const styles = opt('styles') ? (opt('styles') === 'all' ? LAUNCHER_STYLES : opt('styles')!).split(',') : [];
     await page.evaluate(
-      ([as, n, styles, aim]) => {
+      ([as, n, styles, aim, bait]) => {
         const d = (window as any).slagDebug;
         d.match.placed.length = 0;
         if (styles.length) {
@@ -81,8 +81,27 @@ export const shots: Scenarios = {
           }
         } else for (let k = 0; k < n; k++) for (const a of as) d.addProps([a], 11 + k * 7);
         d.race([], 1);
+        // `--bait`: each runner stands on the nearest floor a few tiles in front of a part, to set it off (a sentry, a dropstone).
+        if (bait) {
+          // (No named helpers in here: the bundler wraps them in a __name the page doesn't have.)
+          const lv = d.match.level;
+          d.match.run.runners.forEach((r: any, i: number) => {
+            const p = d.match.placed[i % d.match.placed.length];
+            for (const dx of [5, 4, 6, 3, 7]) {
+              const tx = p.tx + dx;
+              for (let ty = Math.max(1, p.ty - 3); ty < Math.min(lv.h - 1, p.ty + 4); ty++) {
+                if (tx < lv.w && !lv.tiles[ty * lv.w + tx] && !lv.tiles[(ty - 1) * lv.w + tx] && lv.tiles[(ty + 1) * lv.w + tx] === 1) {
+                  r.body.x = tx * 16 + (16 - r.body.w) / 2;
+                  r.body.y = (ty + 1) * 16 - r.body.h;
+                  r.body.vx = r.body.vy = 0;
+                  return;
+                }
+              }
+            }
+          });
+        }
       },
-      [arch, Number(opt('count', '2')), styles, opt('aim') ?? ''] as const,
+      [arch, Number(opt('count', '2')), styles, opt('aim') ?? '', argv.includes('--bait')] as const,
     );
     await step(Number(opt('frames', '60')));
     const spots = await page.evaluate(() =>
