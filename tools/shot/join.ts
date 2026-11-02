@@ -49,7 +49,12 @@ const FRAMES: Frame[] = [
     lobby: 3,
     net: online('Hosting · 5 Connected', 'seated', 5, { hostSlot: 0, kickable: [1, 2], watchers: watchers([['Moss'], ['']]) }),
   },
-  { name: '03-lobby-watching', q: '', lobby: 3, net: online('5 Connected', 'watching', 5, { hostSlot: 0, watchers: watchers([['Moss', false, true], ['']], false) }) },
+  {
+    name: '03-lobby-watching',
+    q: '',
+    lobby: 3,
+    net: online('5 Connected', 'watching', 5, { hostSlot: 0, watchers: watchers([['Moss', false, true], ['']], false) }),
+  },
   {
     name: '04-arrive-watching',
     q: `players=3&${RACE}`,

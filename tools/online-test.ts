@@ -1513,7 +1513,9 @@ async function viewScenario(browser: Browser, base: string, kind: string, fits: 
 
 /** Click a HUD button by its action, where the last drawn frame put it (drawing must be on). */
 async function clickHud(p: Page, action: string) {
-  const handle = await p.waitForFunction((a) => (window as any).slagDebug.renderer.hud.buttons?.find((x: any) => x.action === a) ?? null, action, { timeout: 15_000 });
+  const handle = await p.waitForFunction((a) => (window as any).slagDebug.renderer.hud.buttons?.find((x: any) => x.action === a) ?? null, action, {
+    timeout: 15_000,
+  });
   const b = (await handle.jsonValue()) as { x: number; y: number; w: number; h: number };
   await clickView(p, b.x + b.w / 2, b.y + b.h / 2);
 }
@@ -1564,7 +1566,10 @@ async function observeScenario(browser: Browser, base: string) {
   await toRun([A, B], [a0.self, b0.self]);
   for (const p of [O, P]) await waitFor(p, 'watching the race', (v) => v.phase === 'run');
   const vs = await Promise.all([O, P].map(view));
-  check(vs.every((v) => !v.seated && v.players.length === 2), 'watchers are never seated');
+  check(
+    vs.every((v) => !v.seated && v.players.length === 2),
+    'watchers are never seated',
+  );
   await sleep(1500);
   await r.shot(O, 'race-desktop-watcher');
   await r.shot(P, 'race-phone-watcher');
@@ -1640,7 +1645,10 @@ async function idleScenario(browser: Browser, base: string) {
   const t0 = Date.now();
   const placing = await waitFor(A, 'pick moves on without the hidden guest', (x) => x.phase === 'place', 60_000);
   const slotB = placing.players.find((p) => p.device.startsWith(`${ids[1]}:`))!.slot;
-  check(placing.players.every((p) => p.claim >= 0), `the hidden guest is handed a card after ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+  check(
+    placing.players.every((p) => p.claim >= 0),
+    `the hidden guest is handed a card after ${((Date.now() - t0) / 1000).toFixed(0)} s`,
+  );
   await hide(false);
   await compareHashes(pages, 'the guest catches up after the pick');
   // Place: A places, B (idle since the pick) isn't waited for. Race: B's tab hidden again; its runner gives up.

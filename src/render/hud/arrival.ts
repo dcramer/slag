@@ -127,16 +127,7 @@ export function joinCta(hud: Hud, m: Match) {
 /** The Join button itself, wherever it sits: the corner mid-match, the online panel's end in the lobby. */
 export function joinButton(hud: Hud, m: Match, b: { x: number; y: number; w: number; h: number }, size: number) {
   const open = (hud.net?.space ?? 0) > 0;
-  promptButton(
-    hud,
-    m,
-    b,
-    open ? 'play' : undefined,
-    open ? 'Join' : 'Match Full',
-    'confirm',
-    'primary',
-    size,
-  );
+  promptButton(hud, m, b, open ? 'play' : undefined, open ? 'Join' : 'Match Full', 'confirm', 'primary', size);
 }
 
 /**
