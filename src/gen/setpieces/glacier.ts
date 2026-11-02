@@ -84,12 +84,12 @@ function* avalanches(rng: Rng, s: Site): Generator<Piece> {
     };
 }
 
-/** Thin ice over the cells `cells` (one row, flush with the floor), the water under it to the bottom of the level. */
-export function thinIce(rng: Rng, cells: Cell[], h: number): Module {
+/** Thin ice over the cells `cells` (one row, flush with the floor), the water under it `depth` rows deep. */
+export function thinIce(rng: Rng, cells: Cell[], depth: number): Module {
   return {
     type: 'thaw',
     cells,
-    depth: h - cells[0][1],
+    depth,
     frozen: rng.int(150, 230),
     warn: rng.int(40, 56),
     open: rng.int(90, 140),
@@ -102,7 +102,7 @@ export function thinIce(rng: Rng, cells: Cell[], h: number): Module {
  * over flush with them.
  */
 function* thinIces(rng: Rng, s: Site): Generator<Piece> {
-  const spots: { x0: number; x1: number; y: number }[] = [];
+  const spots: { x0: number; x1: number; y: number; depth: number }[] = [];
   for (let y = 4; y < s.h - 1; y++)
     for (let x = 1; x < s.w - 2; x++) {
       if (!s.solid(x - 1, y) || !s.free(x, y) || !s.reachable(x - 1, y - 1)) continue;
@@ -111,9 +111,12 @@ function* thinIces(rng: Rng, s: Site): Generator<Piece> {
       const w = e - x + 1;
       if (w < 2 || w > 5 || !s.solid(e + 1, y) || !s.reachable(e + 1, y - 1)) continue;
       if (s.zoneDist(x, y) <= SAFE_TILES + 1 || s.zoneDist(e, y) <= SAFE_TILES + 1) continue;
-      let open = true;
-      for (let c = x; c <= e && open; c++) if (!s.overPit(c, y)) open = false;
-      if (open) spots.push({ x0: x, x1: e, y });
+      // Over a crevasse (water to the bottom of the level) or a melt pond (a hollow with a floor a few rows down).
+      const floor = s.groundBelow(x, y);
+      const depth = floor < 0 ? s.h - y : floor - y;
+      let open = depth >= 2 && (floor < 0 || depth <= 3);
+      for (let c = x; c <= e && open; c++) if (s.groundBelow(c, y) !== floor || !s.free(c, y + 1)) open = false;
+      if (open) spots.push({ x0: x, x1: e, y, depth });
     }
   for (const c of best(rng, spots, (c) => c.x1 - c.x0))
     yield {
@@ -125,7 +128,7 @@ function* thinIces(rng: Rng, s: Site): Generator<Piece> {
         thinIce(
           rng,
           Array.from({ length: c.x1 - c.x0 + 1 }, (_, i) => [c.x0 + i, c.y] as Cell),
-          s.h,
+          c.depth,
         ),
       ],
     };

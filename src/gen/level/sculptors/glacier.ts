@@ -11,6 +11,7 @@ import {
   easyRise,
   flatten,
   hardGap,
+  hopGap,
   keepClear,
   type Knobs,
   knobs,
@@ -123,6 +124,8 @@ export const glacier: Sculptor = (ctx) => {
   const off = lm ? [{ x0: lm.rect.x - 3, x1: lm.rect.x + lm.rect.w + 2 }] : [];
   if (style !== 'cave') shelves(g, ice, rng, k.count(rng.int(0, 2)), surf, [...pits, ...off]);
   else ceiling(g, ice, rng, surf, pits);
+  // A landmark leaves the field little room for crevasses of its own: a melt pond goes where it can.
+  if (lm) meltPond(g, rng, lm.rect, pits);
 
   return glaze(finish(g, { row: sRow - 1 }, { row: gRow - 1 }, `glacier:${style}`), ice, rng, style === 'icefall' ? 0.75 : 0.85);
 };
@@ -141,6 +144,30 @@ function claimGlacierSite(ctx: SculptCtx, k: Knobs, slots: Slots, surf: number[]
   flatten(surf, k.H, x - 2, x + w + 1, ground);
   for (let i = Math.max(0, x - 3); i <= Math.min(k.W - 1, x + w + 2); i++) locked[i] = 1;
   return { ...claim, ground, at: { ...claim.at, y: ground - claim.at.h } };
+}
+
+/**
+ * A melt pond: a hollow a hop wide and two rows deep in a flat stretch of the field, off the landmark and off
+ * every crevasse's lips, for thin ice to skin over (setpieces/glacier.ts). A hop on the proof, so it never
+ * changes what a level asks for.
+ */
+function meltPond(g: Grid, rng: Rng, lm: { x: number; w: number }, pits: readonly { x0: number; x1: number }[]): void {
+  const w = Math.min(3, hopGap(rng, 2));
+  const spots: number[] = [];
+  for (let x = 8; x + w + 2 < g.w - 8; x++) {
+    if (x + w + 2 >= lm.x - 1 && x - 2 <= lm.x + lm.w) continue;
+    if (pits.some((p) => x + w + 6 >= p.x0 && x - 6 <= p.x1) || g.crossings.some(([a, b]) => x + w + 6 >= a && x - 6 <= b)) continue;
+    const row = g.surface(x - 2);
+    if (row >= g.h - 3) continue;
+    let flat = true;
+    for (let c = x - 2; c < x + w + 2 && flat; c++)
+      if (g.surface(c) !== row || !g.empty(c, row - 1) || !g.empty(c, row - 2) || !g.empty(c, row - 3)) flat = false;
+    if (flat) spots.push(x);
+  }
+  if (!spots.length) return;
+  const x = rng.pick(spots);
+  const row = g.surface(x);
+  g.clear(x, row, x + w - 1, row + 1);
 }
 
 /** A serac: a block of ice with one corner sheared off, standing on row f. */

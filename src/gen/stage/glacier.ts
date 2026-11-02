@@ -8,7 +8,7 @@ import { jumpProfile } from '../level/probe';
 import { easyRise, hardGap, hopGap, type Knobs, pit, TWO_PART_TRIES, undercut } from '../level/sculptors/common';
 import { BRIDGE_W } from '../level/types';
 import { cornice, thinIce } from '../setpieces/glacier';
-import { makeStyle, type Piece, SAFE_TILES, type Site } from '../setpieces/place';
+import { makeStyle, type Piece, SAFE_TILES } from '../setpieces/place';
 import { defineConcept } from './contract';
 import type { Concept, Landmark } from './types';
 
@@ -224,17 +224,6 @@ function frostGun(rng: Rng, x: number, y: number, tx: number, ty: number, name: 
   };
 }
 
-/** Icicles that break off a ceiling over the cells under `cells` and drop to the floor `reach` rows down. */
-function fallingIcicles(rng: Rng, cells: Cell[], reach: number): Piece {
-  return {
-    name: rng.pick(['Falling Icicles', 'Icicle Drop', 'Cold Front', 'Look Up']),
-    archetype: 'dropper',
-    role: 'hazard',
-    style: ICY(rng),
-    modules: cells.map((c) => ({ type: 'dropper', cells: [c], angle: DOWN, reach, warn: rng.int(26, 36), rest: rng.int(60, 90), look: 'icicle' }) as Module),
-  };
-}
-
 // ------------------------------------------------------------------------------------------------ ice palace
 
 const PALACE_MIN = 14;
@@ -252,13 +241,13 @@ function buildPalace(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const tw = rng.int(2, 3);
   const bw = rng.int(2, 3);
   const b0 = s1 - bw + 1;
-  // The hall: a vault four or five rows high under a roof a row or two thick; towers a rise or two over it.
+  // The hall: a vault four to six rows high under a roof a row or two thick; towers well over it.
   const room = at.h - 3;
-  const hall = rng.int(DOOR + 1, DOOR + 2);
+  const hall = Math.min(room - 1 - 2 * R, rng.int(DOOR + 1, DOOR + 3));
   const roof = rng.int(1, 2);
   const hR = hall + roof;
-  const hF = Math.min(room, hR + R * rng.int(1, 2));
-  const hB = Math.min(room, hR + R * rng.int(1, 2));
+  const hF = Math.min(room, hR + R * rng.int(2, 3));
+  const hB = Math.min(room, hR + R * rng.int(1, 3));
   // A keep in the middle of a long hall, a rise over the roof, on some.
   const span = b0 - (t0 + tw);
   const keep = span >= 12 && rng.chance(0.6) ? { x: t0 + tw + Math.floor(span / 2) - 1 + rng.int(-1, 1), w: 3 } : null;
@@ -340,7 +329,7 @@ export const ICE_PALACE = defineConcept({
   names: ['The Ice Palace of {place}', 'The Frozen Court of {place}', 'The Snow Queen’s {place}', 'The Winter Hall at {place}'],
   box: (k, rng) => {
     const cross = crossFor(k, PALACE_MIN + BANK);
-    return { w: cross + BANK + structCols(k, rng, PALACE_MIN, [22, 32], true), h: boxH(k, DOOR + 4 + 2 * easyRise() + 6) };
+    return { w: cross + BANK + structCols(k, rng, PALACE_MIN, [22, 32], true), h: boxH(k, DOOR + 5 + 3 * easyRise() + 6) };
   },
   build: buildPalace,
   pieces: (rng, _s, l) => palacePieces(rng, l),
@@ -363,33 +352,32 @@ function buildSummit(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const P = DOOR + rng.int(2, 3);
   const S = s1 - p0 + 1;
   // Tiers on the near side, a peak, then the slide down the far side to the toe.
-  let n = Math.max(2, Math.min(rng.int(3, 5), Math.floor((at.h - 3 - P) / R)));
+  let n = Math.max(2, Math.min(rng.int(3, 6), Math.floor((at.h - 3 - P) / R)));
   const pw = rng.int(2, 4);
-  // The slide falls a row a column (or two on a steep one) from the peak down to the toe.
+  // The slide falls at most a row a column (two on a steep one) from the peak down to the toe.
   const steep = rng.chance(0.35) ? 2 : 1;
   while (n > 1 && Math.ceil((n * R) / steep) + pw + n > S) n--;
-  const slide = Math.ceil((n * R) / steep);
-  const nearW = Math.max(n, S - pw - slide);
-  const steps = stepWidths(rng, n, Math.min(nearW, 3 * n));
-  // Whatever the tiers don't take widens the toe in front of them.
-  const lead = S - pw - slide - steps.reduce((t, w) => t + w, 0);
+  const hP = P + n * R;
+  // The slide takes about two fifths of the mountain, the tiers the rest.
+  const rest = S - pw;
+  const slide = Math.max(Math.ceil((n * R) / steep), Math.min(rest - n, Math.round(rest * rng.range(0.35, 0.45))));
+  const nearW = rest - slide;
+  const steps = stepWidths(rng, n, nearW, Math.max(3, Math.ceil(nearW / n) + 1));
   const heights: number[] = [];
-  for (let i = 0; i < Math.max(0, lead); i++) heights.push(P);
   // The first tier is the toe itself; each after it a rise higher.
   steps.forEach((w, k) => {
     for (let i = 0; i < w; i++) heights.push(P + k * R);
   });
-  const hP = P + n * R;
   for (let i = 0; i < pw; i++) heights.push(hP);
-  for (let i = 1; heights.length < S; i++) heights.push(Math.max(P, hP - i * steep));
+  for (let i = 1; i <= slide; i++) heights.push(Math.max(P, Math.round(hP - ((hP - P) * i) / slide)));
   heights.length = S;
   heights.forEach((h, i) => col(g, p0 + i, h, G));
   passage(g, p0, s1, G);
   ledges(g, s0, G - P, G);
   const pk = p0 + heights.indexOf(hP);
-  // Icicles hanging in the cave, where its roof is thick enough to hold them.
+  // Icicles hanging from the cave's roof, where it's thick enough to hold them.
   const drops: Cell[] = [];
-  for (let c = p0 + 1; c < s1; c++) if (heights[c - p0] >= DOOR + 3 && rng.chance(0.3) && !drops.some(([x]) => Math.abs(x - c) < 3)) drops.push([c, G - DOOR]);
+  for (let c = p0 + 1; c < s1; c++) if (heights[c - p0] >= DOOR + 3 && rng.chance(0.3)) drops.push([c, G - DOOR - 1]);
   const mid = pk + Math.floor(pw / 2);
   return {
     concept: 'summit',
@@ -413,7 +401,7 @@ function buildSummit(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
       sig0: [n, P],
       sig1: [pw, steep],
       sig2: listSig(steps),
-      sig3: [lead, drops.length],
+      sig3: [slide, drops.length],
     },
   };
 }
@@ -434,7 +422,7 @@ function* summitPieces(rng: Rng, l: Landmark): Generator<Piece> {
     modules: [shell(rng, [p0, G - DOOR], s1 - p0 + 1, DOOR), cornice(rng, pk, G - hP - 1, -1)],
   };
   const drops = listOf(l, 'drop') as Cell[];
-  if (drops.length) yield fallingIcicles(rng, rng.shuffle(drops.slice()).slice(0, rng.int(1, 2)), DOOR - 1);
+  if (drops.length) yield icicles(rng, drops);
 }
 
 export const SUMMIT = defineConcept({
@@ -516,13 +504,16 @@ function buildWreck(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
         { x: mid, y: 0, w: 1, h: G - heights[mid - p0] },
         { x: mid, y: G - DOOR, w: 1, h: DOOR },
       ]),
-      // The deck is glazed over: a skid toward the bow.
-      ...rects('ice', [{ x: p0, y: G - top, w: L, h: top - DOOR - 1 }]),
+      // The deck is glazed over, her planking under it bare: a skid toward the bow.
+      ...rects(
+        'ice',
+        heights.map((h, i) => ({ x: p0 + i, y: G - h, w: 1, h: 1 })),
+      ),
       sig0: [hD, bowNear ? 1 : 0],
       sig1: [castle, fo],
       sig2: [every, drips.length],
     },
-    skin: 'hull',
+    skin: 'planks',
   };
 }
 
@@ -626,7 +617,7 @@ function buildFalls(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   };
 }
 
-function* fallsPieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
+function* fallsPieces(rng: Rng, l: Landmark): Generator<Piece> {
   const [c0, s1] = l.anchors.cave;
   const [G, hc] = l.anchors.ground;
   const [px, pwid] = l.anchors.pool;
@@ -637,12 +628,13 @@ function* fallsPieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
     archetype: 'crumble',
     role: 'hazard',
     style: ICY(rng),
-    modules: [shell(rng, [c0, G - hc - 2], s1 - c0 + 1, hc + 4), { ...thinIce(rng, cells, s.h), depth: 2 } as Module],
+    modules: [shell(rng, [c0, G - hc - 2], s1 - c0 + 1, hc + 4), thinIce(rng, cells, 2)],
   };
-  // Icicles breaking off the cave roof, away from the pool.
+  // Icicles hanging off the cave roof in a few places, over the pool on some.
   const spots: Cell[] = [];
-  for (let c = c0 + 1; c < s1; c++) if (c < px - 1 || c > px + pwid) spots.push([c, G - CAVE]);
-  if (spots.length) yield fallingIcicles(rng, rng.shuffle(spots).slice(0, rng.int(1, 2)), CAVE - 1);
+  for (let c = c0 + 1; c < s1; c++) if (rng.chance(0.35)) spots.push([c, G - CAVE - 1]);
+  if (!spots.length) spots.push([c0 + 1, G - CAVE - 1]);
+  yield icicles(rng, spots);
 }
 
 export const FROZEN_FALLS = defineConcept({
@@ -659,7 +651,7 @@ export const FROZEN_FALLS = defineConcept({
     return { w: cross + BANK + structCols(k, rng, FALLS_MIN, [16, 26]), h: boxH(k, 5 * easyRise() + 7) };
   },
   build: buildFalls,
-  pieces: (rng, s, l) => fallsPieces(rng, s, l),
+  pieces: (rng, _s, l) => fallsPieces(rng, l),
 });
 
 // ------------------------------------------------------------------------------------------------ ski jump
