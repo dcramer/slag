@@ -198,6 +198,43 @@ describe('presence', () => {
     expect((await w.op('members', { peer: 'bbbb' })).members.map((m: any) => m.id)).toEqual(['bbbb', 'cccc']);
   });
 
+  it('lets the newest session of a peer own its entry, whichever join lands last', async () => {
+    const w = world();
+    const ids = async () => (await w.op('members', { peer: 'bbbb' })).members.map((m: any) => `${m.id}#${m.order}`);
+    await w.op('join', { peer: 'bbbb' });
+    // The lobby remounted: the new session's join lands first, the old one's (closed meanwhile) after it.
+    const fresh = await w.op('join', { peer: 'aaaa', since: 200 });
+    const late = await w.op('join', { peer: 'aaaa', since: 100 });
+    expect(late.order).toBe(fresh.order);
+    expect(await ids()).toEqual(['bbbb#1', `aaaa#${fresh.order}`]);
+    // The old session takes back the seat it got: the newer session's entry stays.
+    await w.op('leave', { peer: 'aaaa', order: late.order, since: 100 });
+    expect(await ids()).toEqual(['bbbb#1', `aaaa#${fresh.order}`]);
+    await w.op('leave', { peer: 'aaaa', order: fresh.order, since: 200 });
+    expect(await ids()).toEqual(['bbbb#1']);
+  });
+
+  it("accepts a session's leave when the store holds another order for it, and never a refreshed page's late one", async () => {
+    const w = world();
+    const ids = async () => (await w.op('members', { peer: 'bbbb' })).members.map((m: any) => m.id);
+    await w.op('join', { peer: 'bbbb' });
+    const live = await w.op('join', { peer: 'aaaa', since: 200 });
+    // Two joins that read the store at the same instant both write; the older one's order can end up held.
+    await w.store.run([
+      ['ZADD', 'slag:ROOM1:m', live.order + 5, 'aaaa'],
+      ['SET', 'slag:ROOM1:p:aaaa', 100, 'EX', PEER_TTL_S],
+    ]);
+    await w.op('leave', { peer: 'aaaa', order: live.order, since: 200 });
+    expect(await ids()).toEqual(['bbbb']);
+    // A refresh: the old page's goodbye arrives after the new page joined, and must not remove it.
+    const old = await w.op('join', { peer: 'aaaa', since: 300 });
+    const next = await w.op('join', { peer: 'aaaa', since: 400 });
+    await w.op('leave', { peer: 'aaaa', order: old.order, since: 300 });
+    expect(await ids()).toEqual(['bbbb', 'aaaa']);
+    await w.op('leave', { peer: 'aaaa', order: next.order, since: 400 });
+    expect(await ids()).toEqual(['bbbb']);
+  });
+
   it('tells a host the lowest order, which is how rival hosts find out', async () => {
     const w = world();
     await w.op('join', { peer: 'aaaa' });
@@ -271,6 +308,9 @@ describe('command costs', () => {
     expect(await cost(() => w.op('beat', { peer: 'aaaa', host: true }))).toBe(4);
     expect(await cost(() => w.op('signal', { peer: 'aaaa', to: 'bbbb', signal: offer }))).toBe(5);
     expect(await cost(() => w.op('members', { peer: 'aaaa' }))).toBe(2);
+    expect(await cost(() => w.op('join', { peer: 'aaaa', since: 5 }))).toBeLessThanOrEqual(7);
+    expect(await cost(() => w.op('leave', { peer: 'aaaa', order: 9, since: 5 }))).toBe(4);
+    expect(await cost(() => w.op('leave', { peer: 'bbbb', order: 2 }))).toBe(4);
   });
 });
 

@@ -27,6 +27,10 @@ describe('dev store and production store agree', () => {
     ['EXISTS', `${k}:s`],
     ['EXISTS', `${k}:missing`],
     ['MGET', `${k}:s`, `${k}:missing`],
+    ['SET', `${k}:t`, 1730000000123, 'EX', 60], // a session stamp as the liveness marker
+    ['GET', `${k}:t`],
+    ['GET', `${k}:missing`],
+    ['MGET', `${k}:t`],
     ['INCR', `${k}:n`],
     ['INCR', `${k}:n`],
     ['ZADD', `${k}:z`, 2, 'b'],
@@ -168,6 +172,18 @@ describe('every op, end to end', () => {
 
     await handleOp('leave', { room: r, peer: 'bbbb', order: b.order }, ctx);
     expect((await keys(r)).filter((k) => k.includes(':p:') || k.endsWith(':m'))).toEqual([]);
+  });
+
+  it('keeps the newest session of a peer, and takes it out with its own stamp', async () => {
+    const r = room();
+    const ids = async () => ((await handleOp('members', { room: r, peer: 'aaaa' }, ctx)) as { members: { id: string; order: number }[] }).members;
+    const fresh = (await handleOp('join', { room: r, peer: 'aaaa', since: 1730000000200 }, ctx)) as { order: number };
+    const late = (await handleOp('join', { room: r, peer: 'aaaa', since: 1730000000100 }, ctx)) as { order: number };
+    expect(late.order).toBe(fresh.order);
+    await handleOp('leave', { room: r, peer: 'aaaa', order: late.order, since: 1730000000100 }, ctx);
+    expect(await ids()).toEqual([{ id: 'aaaa', order: fresh.order }]);
+    await handleOp('leave', { room: r, peer: 'aaaa', order: fresh.order, since: 1730000000200 }, ctx);
+    expect(await ids()).toEqual([]);
   });
 
   it('caps a room and a mailbox', async () => {
