@@ -18,7 +18,6 @@ Online play is on `main`, verified by 139 real-browser checks in `pnpm online-te
 - A double host failure (the new host dies at once) takes 11–18 s to recover, and that varies a lot.
 
 ## 3. Level follow-ups
-- **Ink bake stall:** the first render after a level change bakes ink terrain on the main thread: 27–176 ms on most levels, about 550–600 ms on a large factory, and once 2.5 s. Generation itself is now off the main thread.
 - The winnability proof assumes timed hazards can be passed in their 30-frame openings, and only uses 2-bridge plans.
 
 ## 6. Real phones
@@ -43,8 +42,6 @@ Size tiers for parts are a mapping of the old rolled ranges, so check them too; 
 
 **Undecided: character height.** Characters fit a one-block gap today. The owner wondered about a 1.5- or 2-block gap, since one block feels less interesting, then leaned back toward one. Decide in playtest. Changing it means redoing level design and `reach.ts` tuning.
 
-**Fast crushers** can pass through a lone runner standing on the floor and pop them on top instead of crushing them. The same happens with one runner, before collision.
-
 ## 21. Ink art leftovers
 - Small cog lifts and small spin bars stay small on crate cards, because small parts draw at 0.6 scale.
 
@@ -65,7 +62,6 @@ Some steps need the owner. Run after setting the Vercel env vars.
 - Set `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and `SENTRY_PROJECT` in Vercel (Production and Preview). An organization auth token is best.
 - On the first deploy, confirm source maps upload and client frames resolve to source. Only the failure path has been tested.
 - Install the Sentry GitHub integration for suspect commits.
-- Move `app/global-error.tsx` into `src/` with item 11.
 
 ## 22. Glacier and space follow-ups
 Both themes are on `main`. Space has no weather. Ice skids and 0.55 space gravity are measured, not played by hand.
