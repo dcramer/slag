@@ -1,15 +1,17 @@
 import { css, type HSL } from '../../../core/color';
 import { TILE } from '../../../sim/constants';
 import { PHASE_WARN, phaseCycle, phaseSolid } from '../../../sim/props';
-import { line } from '../../ink';
+import { retroGhost } from '../../ink-build';
 import { stampPhaseTile } from '../../ink-blocks';
+import { boxPts, path } from '../../ink-props';
 import { light } from '../../kit';
 import { defineArt } from '../common';
 
 /**
- * Blink blocks. Solid cells are inked switch blocks; in their last PHASE_WARN frames they flicker.
- * Gone cells are a pencilled outline that fills from the bottom in the PHASE_WARN frames before they
- * return. Paired sets get complementary colors so you can see which set is next.
+ * Blink blocks, as retro blocks: the first set is bricks, a paired second set is reversed question
+ * blocks in the complementary color, so you can see which set is next. Solid cells flicker in their last
+ * PHASE_WARN frames. A gone cell is its four corners in pencil, and fills from the bottom in the
+ * PHASE_WARN frames before it returns.
  */
 defineArt<'phase'>({
   type: 'phase',
@@ -18,6 +20,7 @@ defineArt<'phase'>({
     const s = rc.s;
     const c = phaseCycle(m, rc.frame, d.r.phase);
     const left = c.len - c.t;
+    const brick = m.offset === 0;
     const hue = (d.style.glowHue + (m.offset > 0 ? 180 : 0)) % 360;
     const col: HSL = { h: hue, s: 85, l: 58 };
     const ox = d.off[0];
@@ -31,33 +34,16 @@ defineArt<'phase'>({
         const blink = !!d.o.level && warn && Math.floor(rc.frame / (left < 12 ? 2 : 4)) % 2 === 0;
         const a0 = s.globalAlpha;
         s.globalAlpha = a0 * (blink ? 0.45 : 1);
-        stampPhaseTile(s, x, y, hue, ci + cx * 7);
+        stampPhaseTile(s, x, y, hue, ci + cx * 7, brick);
         s.globalAlpha = a0;
       } else {
-        // Where it will be: a dashed pencil square, every dash its own stroke.
-        s.fillStyle = css(col, 12, 0.55);
-        for (let i = 0; i < 4; i++) {
-          const [ax, ay, bx, by] = [
-            [1.5, 1.5, TILE - 1.5, 1.5],
-            [TILE - 1.5, 1.5, TILE - 1.5, TILE - 1.5],
-            [TILE - 1.5, TILE - 1.5, 1.5, TILE - 1.5],
-            [1.5, TILE - 1.5, 1.5, 1.5],
-          ][i];
-          for (let k = 0; k < 3; k++) {
-            const u0 = k / 3 + 0.04;
-            const u1 = k / 3 + 0.22;
-            line(s, x + ax + (bx - ax) * u0, y + ay + (by - ay) * u0, x + ax + (bx - ax) * u1, y + ay + (by - ay) * u1, {
-              w: 1,
-              seed: i * 3 + k,
-              taper: [0.2, 0.2],
-              press: 0,
-            });
-          }
-        }
+        retroGhost(s, x, y, css(col, 12, 0.6), cx * 7 + cy);
         if (c.seg === 1 && left <= PHASE_WARN) {
           const u = 1 - left / PHASE_WARN;
+          const h = (TILE - 4) * u;
           s.fillStyle = css(col, 0, 0.3 + u * 0.4);
-          s.fillRect(x + 2, y + TILE - 2 - (TILE - 4) * u, TILE - 4, (TILE - 4) * u);
+          path(s, boxPts(x + 2, y + TILE - 2 - h, TILE - 4, h, 1, cx * 3 + cy, 0.2));
+          s.fill();
         }
       }
     });
