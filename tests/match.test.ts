@@ -298,6 +298,18 @@ describe('big lobbies', () => {
   });
 });
 
+describe('lobby', () => {
+  it('a new look keeps the name', () => {
+    const m = new Match(4);
+    m.join('kb1');
+    const p = m.players[0];
+    const { name, seed } = p.character;
+    m.step({ kb1: press({ altPressed: true }) });
+    expect(p.character.seed).not.toBe(seed);
+    expect(p.character.name).toBe(name);
+  });
+});
+
 describe('controller cursor', () => {
   const inPick = () => {
     const m = new Match(1);

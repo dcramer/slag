@@ -142,7 +142,11 @@ export function underfoot(base: Surface, f: Surface): Surface {
   let byBase = SLICK.get(f);
   if (!byBase) SLICK.set(f, (byBase = new WeakMap()));
   let s = byBase.get(base);
-  if (!s) byBase.set(base, (s = { ...base, friction: base.friction * f.friction, speedMult: base.speedMult * f.speedMult, wall: wallKind(base) }));
+  if (!s) {
+    s = { ...base, friction: base.friction * f.friction, speedMult: base.speedMult * f.speedMult, wall: wallKind(base) };
+    if (base.skid !== undefined) s.skid = base.skid * f.friction;
+    byBase.set(base, s);
+  }
   return s;
 }
 
