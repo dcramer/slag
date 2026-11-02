@@ -1,11 +1,12 @@
 import { css, type HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
 import { line, type P, stroke } from '../../ink';
-import { ball, boxPts, dot, glint, INK, part, path, pen, poly, tick, tone } from '../../ink-props';
+import { ball, dot, glint, INK, part, path, pen, poly, tick, tone, boxPts } from '../../ink-props';
 import { bulb, circle, light, type RC } from '../../kit';
 import type { DrawCtx } from '../common';
 import { ceilingAbovePx, groundBelowPx } from '../modules/setpiece';
 import { type Cannon, type CannonPose, ICE, type RotorSkin, slab, STEEL, type ThemeSkins, tube } from './common';
+import { GLACIER_SHELLS, SNOW } from './glacier-shells';
 
 /**
  * Glacier skins. The sim gives the glacier its pieces through looks other themes own (a chairlift is a
@@ -191,7 +192,55 @@ function iceCannon(rc: RC, m: Cannon, d: DrawCtx, q: CannonPose) {
   }
 }
 
+/**
+ * The avalanche's cornice: a drift of snow on the ledge, its lip curling out over the edge the snowballs
+ * leave by, a heap of them packed behind. The tell is the lip giving: cracks open along its root and snow
+ * trickles off it, faster as the next one is about to go.
+ */
+function cornice(rc: RC, _m: Cannon, _d: DrawCtx, q: CannonPose) {
+  const s = rc.s;
+  s.save();
+  s.translate(q.x, q.gy);
+  s.scale(q.dir, 1);
+  for (const [bx, by, r] of [
+    [-15, -13.5, 2.8],
+    [-10.5, -14.5, 3.2],
+    [-12.8, -18.6, 2.6],
+  ])
+    ball(s, bx, by, r, SNOW, bx, undefined, '#56708a');
+  const drift = poly(-20, 0, -18, -6, -12, -10.5, -4, -12.5, 4, -12, 10, -10.5, 15, -9, 16.5, -7.4, 13, -6.2, 9, -5.4, 6, -3, 4, 0);
+  tone(s, drift, SNOW, { depth: 1.4 });
+  for (let k = 0; k < 3; k++) {
+    const x = -14 + k * 7;
+    tick(s, x, -3 - k, x + 4, -5 - k, 0.4, k, css(SNOW, -16));
+  }
+  pen(s, drift, 61, 0.35, 0.9, 3, '#24445c');
+  // Icicles off the lip's underside.
+  s.fillStyle = css(ICE, 4);
+  for (const [ix, len] of [
+    [9, 3],
+    [12.5, 2.2],
+  ]) {
+    path(s, poly(ix - 0.9, -5.6, ix + 0.9, -5.8, ix + 0.1, -5.6 + len));
+    s.fill();
+  }
+  if (q.warn > 0) {
+    // The lip lets go: cracks along its root, and snow running off it.
+    s.fillStyle = '#1d3d55';
+    line(s, 2, -12, 6 + q.warn * 3, -6, { w: 0.5 + q.warn * 0.4, seed: 70, taper: [0.1, 0.6], press: 0 });
+    line(s, 5, -11.4, 8, -9 + q.warn * 2, { w: 0.4, seed: 71, taper: [0.1, 0.6], press: 0 });
+  }
+  s.restore();
+  if (q.warn > 0)
+    for (let k = 0; k < 4; k++) {
+      const p = (rc.frame * (0.03 + 0.05 * q.warn) + k / 4) % 1;
+      rc.bg.fillStyle = `rgba(240,246,252,${0.7 * (1 - p)})`;
+      circle(rc.bg, q.x + q.dir * (14 + Math.sin(k * 3) * 1.5), q.gy - 6 + p * 18 * (0.4 + q.warn), 0.8 + p * 1.2);
+    }
+}
+
 export const GLACIER: ThemeSkins = {
   rotor: { gondola: chairlift, slab: damocles },
-  cannon: { castle: iceCannon },
+  cannon: { castle: iceCannon, ship: cornice },
+  deco: GLACIER_SHELLS,
 };

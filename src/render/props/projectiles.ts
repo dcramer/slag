@@ -54,6 +54,25 @@ const ROUNDS: Partial<Record<Ammo | 'arrowhead', () => Sprite>> = {
       stroke(g, poly(-5, -0.6, -6.2, -1.2, -7, -2.4), { w: 0.6, seed: 2, taper: [0, 0.3], press: 0 });
     }),
   slug: () => sprite('ammo|slug', -3.4, -1.8, 7, 3.6, slug),
+  // A shooting star up close: a lumpy dark rock, pitted.
+  meteor: () =>
+    sprite('ammo|meteor', -6.5, -6.5, 13, 13, (g) => {
+      const pts: P[] = [];
+      for (let i = 0; i < 11; i++) {
+        const a = (i / 11) * Math.PI * 2;
+        const r = 5 * (0.82 + 0.18 * Math.sin(i * 2.3 + 1));
+        pts.push({ x: Math.cos(a) * r, y: Math.sin(a) * r });
+      }
+      part(g, pts, { h: 20, s: 22, l: 30 }, 71, { depth: 1, thin: 0.45, thick: 1 });
+      for (const [x, y, r] of [
+        [-1.6, -1.2, 1.1],
+        [1.8, 0.6, 0.8],
+        [-0.4, 2.2, 0.6],
+      ] as const) {
+        g.fillStyle = css({ h: 20, s: 20, l: 18 });
+        circle(g, x, y, r);
+      }
+    }),
   // Sorry: every shot is a little speech bubble, trailing off.
   plasma: () =>
     sprite('ammo|bubble', -5.5, -4.5, 11, 9.5, (g) => {
@@ -242,6 +261,23 @@ function drawPlasma(rc: RC, p: Projectile) {
   light(rc, p.x, p.y, 45, col, 0.6);
 }
 
+/** A meteor: a lumpy rock, its leading face hot, dragging a long burning tail back up the way it came. */
+function drawMeteor(rc: RC, p: Projectile, a: number, emit?: Emit) {
+  const hot: HSL = { h: 24, s: 100, l: 58 };
+  const g = rc.g;
+  const ca = Math.cos(a);
+  const sa = Math.sin(a);
+  g.fillStyle = 'rgba(255,170,90,0.35)';
+  line(g, p.x, p.y, p.x - ca * 34, p.y - sa * 34, { w: 7, seed: 7, taper: [0.1, 1], press: 0 });
+  g.fillStyle = 'rgba(255,230,170,0.6)';
+  line(g, p.x, p.y, p.x - ca * 18, p.y - sa * 18, { w: 3.5, seed: 8, taper: [0.1, 1], press: 0 });
+  glowDot(g, p.x + ca * 1.5, p.y + sa * 1.5, 12, hot, 0.7);
+  stampRound(rc.s, ROUNDS.meteor!(), p.x, p.y, (rc.frame - p.born) * 0.08 + p.id, false);
+  light(rc, p.x, p.y, 70, hot, 0.9);
+  if (emit && Math.random() < 0.7)
+    emit('ember', p.x - ca * 4, p.y - sa * 4, -p.vx * 0.15 + (Math.random() - 0.5) * 40, -p.vy * 0.15 + (Math.random() - 0.5) * 40, hot);
+}
+
 function drawShuriken(rc: RC, p: Projectile) {
   round(rc, p, rc.t * 25, false);
 }
@@ -300,6 +336,34 @@ function drawFrost(rc: RC, p: Projectile, a: number, emit?: Emit) {
   if (emit && Math.random() < 0.3) emit('spark', p.x, p.y, -p.vx * 0.1, -p.vy * 0.1, ice);
 }
 
+const SNOW: HSL = { h: 205, s: 22, l: 94 };
+
+/**
+ * An avalanche's snowball (glacier), on exactly the circle that kills (AMMO.snowball.radius): packed snow,
+ * shaded away from the light, with clumps that turn as far as it has rolled, and powder kicked up behind it
+ * while it's on the ground.
+ */
+function drawSnowball(rc: RC, p: Projectile, _a: number, emit?: Emit) {
+  const s = rc.s;
+  const r = 5.5;
+  const spin = p.x / r;
+  ball(s, p.x, p.y, r, SNOW, p.id, undefined, '#56708a');
+  s.fillStyle = css(SNOW, -16);
+  for (let k = 0; k < 3; k++) {
+    const a = spin + k * 2.1;
+    circle(s, p.x + Math.cos(a) * r * 0.55, p.y + Math.sin(a) * r * 0.55, 0.9 + (k % 2) * 0.4);
+  }
+  if (p.vy === 0) {
+    const back = p.x - Math.sign(p.vx || 1) * r;
+    for (let k = 0; k < 3; k++) {
+      const q = (rc.frame * 0.12 + k / 3 + p.id * 0.37) % 1;
+      rc.bg.fillStyle = `rgba(240,246,252,${0.55 * (1 - q)})`;
+      circle(rc.bg, back - Math.sign(p.vx || 1) * q * 6, p.y + r - 1 - q * 4, 1 + q * 2.4);
+    }
+    if (emit && Math.random() < 0.15) emit('debris', back, p.y + r - 1, -p.vx * 0.1, -30, SNOW);
+  }
+}
+
 /** Where each trick shot has been, newest last: render-side memory, so the line follows its bounces. */
 const trails = new Map<number, { pts: number[]; seen: number }>();
 
@@ -356,6 +420,8 @@ const AMMO_ART: Record<Ammo, (rc: RC, p: Projectile, angle: number, emit?: Emit)
   ricochet: drawRicochet,
   glider: gliderShot,
   slug: drawSlug,
+  meteor: drawMeteor,
+  snowball: drawSnowball,
   puck: drawItemShot,
   smokebomb: drawItemShot,
 };

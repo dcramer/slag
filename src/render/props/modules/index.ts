@@ -33,5 +33,6 @@ import './flood';
 import './lob';
 import './cavein';
 import './cart';
+import './thaw';
 import './shards';
 import './fuse';
