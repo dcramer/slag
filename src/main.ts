@@ -2,7 +2,6 @@ import 'client-only';
 import { browserHistory, type HistoryLike, type Nav, Router, type Unmount } from './router';
 import { type Route, routeTitle, SCREEN_CHROME, type ScreenName, viewportContent } from './routes';
 import { addBreadcrumb, reportError, setTelemetryContext } from './telemetry';
-import { FONTS_HREF, SCREEN_CSS, SCREEN_STYLE_ID } from './ui/screens/css';
 import { mountHome } from './ui/screens/home';
 import { mountPlain } from './ui/screens/plain';
 
@@ -104,20 +103,28 @@ export function mountGame(root: HTMLElement, opts: MountOptions = {}): () => voi
   };
 }
 
-/** The screens' styles and fonts, for hosts that didn't put them in their HTML. */
+/**
+ * The screens' styles and fonts, for hosts that didn't put them in their HTML. Loaded only then, so a
+ * host that inlines them (app/ does) doesn't download the CSS twice.
+ */
 function ensureHead() {
-  if (!document.getElementById(SCREEN_STYLE_ID)) {
-    const st = document.createElement('style');
-    st.id = SCREEN_STYLE_ID;
-    st.textContent = SCREEN_CSS;
-    document.head.append(st);
-  }
-  if (!document.querySelector(`link[href="${FONTS_HREF}"]`)) {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = FONTS_HREF;
-    document.head.append(link);
-  }
+  const style = document.getElementById('slag-screens'); // SCREEN_STYLE_ID, spelled out so the check doesn't pull the CSS in
+  const fonts = document.querySelector('link[href^="https://fonts.googleapis.com/css2"]');
+  if (style && fonts) return;
+  void import('./ui/screens/css').then(({ FONTS_HREF, SCREEN_CSS, SCREEN_STYLE_ID }) => {
+    if (!document.getElementById(SCREEN_STYLE_ID)) {
+      const st = document.createElement('style');
+      st.id = SCREEN_STYLE_ID;
+      st.textContent = SCREEN_CSS;
+      document.head.append(st);
+    }
+    if (!fonts) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = FONTS_HREF;
+      document.head.append(link);
+    }
+  });
 }
 
 /** Title, viewport and browser color for a screen, so a soft navigation looks like a fresh load of that URL. */
