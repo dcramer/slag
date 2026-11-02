@@ -4,6 +4,7 @@ import { cannonMuzzle, cannonTiming, type ModuleOf } from '../../../sim/props';
 import { circle, ellipse, glowDot, light, METALS, metalFill, type RC, rrect, sphereFill } from '../../kit';
 import { type DrawCtx, defineArt } from '../common';
 import { wheel } from './setpiece';
+import { cannonSkin } from './skins';
 
 /**
  * Set-piece guns. The fuse/eye/maw telegraph follows cannonTiming (the
@@ -29,7 +30,9 @@ function drawCannon(rc: RC, m: Cannon, d: DrawCtx) {
   const st = d.style;
   const wood: HSL = { h: st.woodHue, s: 42, l: 34 };
 
-  if (m.look === 'castle' || m.look === 'ship') {
+  const skin = cannonSkin(m, d);
+  if (skin) skin(rc, m, d, { x, y, gy, dir, warn, recoil, mx, my });
+  else if (m.look === 'castle' || m.look === 'ship') {
     const ship = m.look === 'ship';
     // Carriage.
     s.save();
@@ -229,7 +232,7 @@ function drawCannon(rc: RC, m: Cannon, d: DrawCtx) {
   }
   // Muzzle flash.
   if (t.since < 6) {
-    const fc: HSL = m.look === 'totem' ? { h: st.glowHue, s: 95, l: 60 } : { h: 38, s: 100, l: 62 };
+    const fc: HSL = m.look === 'totem' || skin ? { h: st.glowHue, s: 95, l: 60 } : { h: 38, s: 100, l: 62 };
     glowDot(g, mx, my, 16 - t.since * 2, fc, 0.95);
     light(rc, mx, my, 90, fc, 1 - t.since / 6);
   }

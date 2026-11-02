@@ -3,7 +3,9 @@ import { TILE } from '../../../sim/constants';
 import { geyserColumn, geyserCycle, geyserWind, type ModuleOf } from '../../../sim/props';
 import { windProfile } from '../../../sim/wind';
 import { circle, ellipse, glowDot, light, type RC, sphereFill } from '../../kit';
+import type { ThemeId } from '../../../themes';
 import { beamOf, type DrawCtx, defineArt } from '../common';
+import { themeOf } from './skins';
 
 /**
  * Geyser art: a vent mound (ground vents), a rumbling telegraph, and the
@@ -16,8 +18,32 @@ import { beamOf, type DrawCtx, defineArt } from '../common';
 
 type Geyser = ModuleOf<'geyser'>;
 
-const LAVA: HSL = { h: 22, s: 100, l: 52 };
-const HOT: HSL = { h: 42, s: 100, l: 66 };
+/** What a vent erupts, by theme: the volcano's lava, the glacier's frost, a space station's solar flares. */
+interface VentLook {
+  rock: HSL;
+  lava: HSL;
+  hot: HSL;
+  /** Steam puff color as "r,g,b". */
+  steam: string;
+  crust: 'sulphur' | 'ice';
+  /** A flare loop arcs off the top of the column. */
+  loop?: boolean;
+  /** Snowflakes ride the column. */
+  flakes?: boolean;
+}
+
+const VOLCANO: VentLook = {
+  rock: { h: 30, s: 12, l: 40 },
+  lava: { h: 22, s: 100, l: 52 },
+  hot: { h: 42, s: 100, l: 66 },
+  steam: '240,244,248',
+  crust: 'sulphur',
+};
+const VENTS: Partial<Record<ThemeId, VentLook>> = {
+  glacier: { ...VOLCANO, rock: { h: 200, s: 26, l: 70 }, steam: '228,242,255', crust: 'ice', flakes: true },
+  space: { ...VOLCANO, lava: { h: 40, s: 100, l: 56 }, hot: { h: 52, s: 100, l: 84 }, loop: true },
+};
+const ventOf = (d: DrawCtx): VentLook => VENTS[themeOf(d) ?? 'farm'] ?? VOLCANO;
 
 function isPit(m: Geyser, d: DrawCtx): boolean {
   return !!d.o.level && m.at[1] >= d.o.level.h * TILE - 1;
@@ -32,7 +58,9 @@ function drawVent(rc: RC, m: Geyser, d: DrawCtx) {
   const x = m.at[0] + d.off[0] + shake;
   const y = m.at[1] + d.off[1];
   const lava = m.look === 'lava';
-  const rock: HSL = lava ? { h: 260, s: 10, l: 19 } : { h: 30, s: 12, l: 40 };
+  const v = ventOf(d);
+  const LAVA = v.lava;
+  const rock: HSL = lava ? { h: 260, s: 10, l: 19 } : v.rock;
   s.fillStyle = sphereFill(s, x - 3, y - 6, 14, rock, 16, 10);
   s.beginPath();
   s.moveTo(x - 13, y + 0.5);
@@ -47,7 +75,24 @@ function drawVent(rc: RC, m: Geyser, d: DrawCtx) {
   // Crater lip.
   s.fillStyle = lava ? '#1a0805' : '#2c2a28';
   ellipse(s, x, y - 7, 4.5, 1.6);
-  if (!lava) {
+  if (!lava && v.crust === 'ice') {
+    // Ice crystals frozen round the lip.
+    s.fillStyle = '#f4fbff';
+    for (const [dx, dy, r] of [
+      [-6, -4, 1.8],
+      [5, -3.4, 1.5],
+      [-2, -6.6, 1.1],
+      [8.5, -1.6, 1.2],
+    ]) {
+      s.beginPath();
+      s.moveTo(x + dx, y + dy - r * 1.6);
+      s.lineTo(x + dx + r * 0.7, y + dy);
+      s.lineTo(x + dx, y + dy + r * 0.6);
+      s.lineTo(x + dx - r * 0.7, y + dy);
+      s.closePath();
+      s.fill();
+    }
+  } else if (!lava) {
     // Sulphur crust.
     s.fillStyle = 'rgba(230,210,90,0.75)';
     for (const [dx, dy, r] of [
@@ -75,6 +120,9 @@ function drawColumn(rc: RC, m: Geyser, d: DrawCtx) {
   const x = m.at[0] + d.off[0];
   const base = pit ? m.at[1] + d.off[1] - 6 : m.at[1] + d.off[1] - 7;
   const lava = m.look === 'lava';
+  const v = ventOf(d);
+  const LAVA = v.lava;
+  const HOT = v.hot;
   const emit = d.o.emit;
   if (c.seg === 1) {
     // Telegraph: glowing upwell (pit) / sputter and wisps (vent).
@@ -94,7 +142,7 @@ function drawColumn(rc: RC, m: Geyser, d: DrawCtx) {
       const hgt = 5 + p * 20 * (0.6 + 0.4 * pulse);
       for (let i = 0; i < 5; i++) {
         const u = (i + ((f * (1 + p * 2)) % 8) / 8) / 5;
-        s.fillStyle = `rgba(240,244,248,${(0.35 + p * 0.45) * (1 - u)})`;
+        s.fillStyle = `rgba(${v.steam},${(0.35 + p * 0.45) * (1 - u)})`;
         circle(s, x + Math.sin(i * 2.1 + f * 0.3) * 1.5, base - u * hgt, 2 + u * 3 + p * 2);
       }
       if (emit && Math.random() < 0.2 + p * 0.6)
@@ -145,6 +193,17 @@ function drawColumn(rc: RC, m: Geyser, d: DrawCtx) {
       circle(s, px, py, r * 0.6 * k);
       glowDot(g, px, py, r * 2, HOT, 0.6 * k);
     }
+    if (v.loop) {
+      // A prominence: a loop of plasma arcing off the top and back down beside the column.
+      const R = 7 + w * 0.4;
+      const side = Math.sin(rc.t * 0.7 + d.r.pp.uid) > 0 ? 1 : -1;
+      for (let i = 0; i <= 9; i++) {
+        const a = Math.PI + (i / 9) * Math.PI;
+        const px = x + side * (R + Math.cos(a) * R);
+        const py = top + 8 + Math.sin(a) * R * 1.2;
+        glowDot(g, px, py, 4.5, HOT, 0.55 * k);
+      }
+    }
     for (let yy = col.y; yy > top; yy -= 26) light(rc, x, yy, 80, LAVA, 0.9 * k);
     light(rc, x, top, 70, HOT, 0.9 * k);
     if (emit && Math.random() < 0.8) emit('ember', x + (Math.random() - 0.5) * w, top + 4, (Math.random() - 0.5) * 120, -40 - Math.random() * 90, HOT);
@@ -160,11 +219,27 @@ function drawColumn(rc: RC, m: Geyser, d: DrawCtx) {
       const yy = col.y - along;
       const push = Math.max(0, windProfile(wind, yy - wind.y));
       const r = (w * 0.45 + u * w * 0.5) * k;
-      s.fillStyle = `rgba(240,244,248,${0.55 * (1 - u * 0.5) * (0.35 + 0.65 * push)})`;
+      s.fillStyle = `rgba(${v.steam},${0.55 * (1 - u * 0.5) * (0.35 + 0.65 * push)})`;
       circle(s, x + Math.sin(i * 2.3 + f * 0.1) * 2 * u, yy, r);
     }
     s.fillStyle = 'rgba(255,255,255,0.75)';
     circle(s, x, col.y - 2, w * 0.4 * k);
+    if (v.flakes) {
+      // Snow riding the updraft: little six-point flakes, on the sim's own clock.
+      g.fillStyle = 'rgba(245,250,255,0.9)';
+      for (let i = 0; i < 6; i++) {
+        const along = (i * 13 + f * step * 0.8) % col.len;
+        const fx = x + Math.sin(i * 1.9 + f * 0.05) * w * 0.6;
+        const fy = col.y - along;
+        for (let a = 0; a < 3; a++) {
+          const ca = Math.cos((a * Math.PI) / 3) * 1.4;
+          const sa = Math.sin((a * Math.PI) / 3) * 1.4;
+          g.fillRect(fx - ca - 0.2, fy - sa - 0.2, 0.4, 0.4);
+          g.fillRect(fx + ca - 0.2, fy + sa - 0.2, 0.4, 0.4);
+        }
+        g.fillRect(fx - 0.3, fy - 0.3, 0.6, 0.6);
+      }
+    }
     if (emit && Math.random() < 0.6)
       emit('smoke', x + (Math.random() - 0.5) * w, top + 4, (Math.random() - 0.5) * 50, -50 - Math.random() * 40, { h: 0, s: 0, l: 92 });
   }
