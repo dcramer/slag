@@ -1,17 +1,17 @@
 import { css, type HSL } from '../../../core/color';
 import type { Vec } from '../../../core/geom';
-import { TILE } from '../../../sim/constants';
-import { laserAngle, laserCycle, type Module, type ModuleOf, type PropStyle, type Resolved, rayToWall } from '../../../sim/props';
+import { laserAngle, laserCycle, type Module, type ModuleOf, type PropStyle, type Resolved } from '../../../sim/props';
 import { glowDot, light, type MetalPalette, metalFill, type RC, rrect } from '../../kit';
-import { defineArt, type PropDrawOpts } from '../common';
+import { beamOf, defineArt, type PropDrawOpts } from '../common';
 
 type M<T extends Module['type']> = ModuleOf<T>;
 
-function drawLaser(rc: RC, m: M<'laser'>, r: Resolved, off: Vec, pal: MetalPalette, st: PropStyle, o: PropDrawOpts) {
+function drawLaser(rc: RC, m: M<'laser'>, r: Resolved, mi: number, off: Vec, pal: MetalPalette, st: PropStyle, o: PropDrawOpts) {
   const f = rc.frame;
   const x = m.at[0] + off[0];
   const y = m.at[1] + off[1];
-  const a = laserAngle(m, f, r.phase);
+  const beam = beamOf(o, r, mi);
+  const a = beam?.angle ?? laserAngle(m, f, r.phase);
   const c = laserCycle(m, f, r.phase);
   const col: HSL = { h: st.glowHue, s: 100, l: 58 };
   const s = rc.s;
@@ -33,7 +33,7 @@ function drawLaser(rc: RC, m: M<'laser'>, r: Resolved, off: Vec, pal: MetalPalet
   const ly = y + Math.sin(a) * 9;
   const charge = c.seg === 1 ? c.t / c.len : c.seg === 2 ? 1 : 0.1;
   glowDot(g, lx, ly, 3 + charge * 6, col, 0.6 + charge * 0.4);
-  const len = o.level ? rayToWall(o.level, x, y, a, Math.max(1200, (o.level.w + o.level.h) * TILE), 9) : 40;
+  const len = beam?.len ?? 40;
   const ex = x + Math.cos(a) * len;
   const ey = y + Math.sin(a) * len;
   if (c.seg === 1) {
@@ -77,4 +77,4 @@ function drawLaser(rc: RC, m: M<'laser'>, r: Resolved, off: Vec, pal: MetalPalet
   }
 }
 
-defineArt<'laser'>({ type: 'laser', layer: 3, draw: (rc, m, d) => drawLaser(rc, m, d.r, d.off, d.pal, d.style, d.o) });
+defineArt<'laser'>({ type: 'laser', layer: 3, draw: (rc, m, d) => drawLaser(rc, m, d.r, d.mi, d.off, d.pal, d.style, d.o) });

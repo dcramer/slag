@@ -267,8 +267,8 @@ export type Module =
   /**
    * Proximity crusher: a solid head (cells) that watches the lane in
    * direction `angle`; when a runner enters it shakes for `warn` frames,
-   * slams until it hits terrain (≤ `reach` tiles), rests, then slowly
-   * returns (rideable on the way back).
+   * slams until it hits terrain or a solid (≤ `reach` tiles), rests, then
+   * slowly returns (rideable on the way back).
    */
   | { type: 'dropper'; cells: Cell[]; angle: number; reach: number; warn: number; rest: number }
   /** Face-mounted spike plate that pops when someone comes near: click (warn) → spikes (up) → cooldown. */

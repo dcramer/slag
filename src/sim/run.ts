@@ -20,7 +20,9 @@ import {
 import { goalRect, killY, type Level, spawnZone, tileAt } from './level';
 import { type Body, bodyAtCell, type CollisionWorld, firstOverlap, type Solid, stepBody } from './physics';
 import {
+  type Beam,
   buildProjectile,
+  buildSolids,
   type Contrib,
   dirOf,
   type GrabRequest,
@@ -53,6 +55,7 @@ import {
   type TickCtx,
   type TouchCtx,
   touchesTrigger,
+  traceRays,
 } from './props';
 import type { GameEvent, InputFrame } from './types';
 import { windAt } from './wind';
@@ -112,7 +115,7 @@ export class RunWorld {
   private grabs: GrabRequest[] = [];
 
   solids: Solid[] = [];
-  private out: Contrib = { solids: this.solids, hazards: [], springs: [], winds: [], triggers: [] };
+  private out: Contrib = { solids: this.solids, hazards: [], springs: [], winds: [], triggers: [], beams: [] };
   readonly world: CollisionWorld;
   private goal: Rect;
   private killY: number;
@@ -152,6 +155,12 @@ export class RunWorld {
     this.goal = goalRect(level);
     this.safeZone = spawnZone(level);
     this.killY = killY(level);
+    this.buildProps(0); // A race can be drawn before its first step, and the art reads what the build reports.
+  }
+
+  /** Every reach of the last frame built, which is what the art draws: see Beam. */
+  get beams(): readonly Beam[] {
+    return this.out.beams!;
   }
 
   /** Is this runner inside the spawn safe zone (immune to props) right now? */
@@ -195,6 +204,7 @@ export class RunWorld {
       emit: (e) => this.events.push(e),
       spawnItem: (s) => spawnItem(this, s),
       itemSeed: this.itemSeed,
+      solids: this.solids,
     };
   }
 
@@ -350,8 +360,11 @@ export class RunWorld {
     this.out.springs.length = 0;
     this.out.winds.length = 0;
     this.out.triggers!.length = 0;
-    for (const rp of this.resolved) rp.mods.forEach((m, mi) => moduleSim(m.type).build?.(m, this.ctx(rp, mi, f), this.out));
+    this.out.beams!.length = 0;
+    const ctx = (r: Resolved, mi: number) => this.ctx(r, mi, f);
+    buildSolids(this.resolved, ctx, this.out);
     for (const p of this.projectiles) buildProjectile(p, f, this.out);
+    traceRays(this.resolved, ctx, this.out); // Last, so what travels sees every solid whatever order the props came in.
   }
 
   /** A method, not a field: prediction copies RunWorld, and a closure field would keep writing to the original. */

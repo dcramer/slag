@@ -1,6 +1,8 @@
 import type { Rect } from '../../../core/geom';
 import { TILE } from '../../constants';
 import { isProtected, type Level, T_EMPTY, tileAt } from '../../level';
+import type { Solid } from '../../physics';
+import { reportBeam, solidGap } from '../rays';
 import { defineModule, solidId } from '../registry';
 import { dirOf } from '../transform';
 import type { ModuleOf, PropState } from '../types';
@@ -79,10 +81,20 @@ function shifted(r: Rect, angle: number, d: number): Rect {
   return { x: r.x + dx * d, y: r.y + dy * d, w: r.w, h: r.h };
 }
 
+/** Travel (px from home) where a head now at `d` would stop: the terrain limit, or the first solid ahead of it this frame. */
+function dropperStop(level: Level, solids: readonly Solid[], m: Dropper, d: number, off: readonly [number, number], uid: number): number {
+  const travel = dropperTravel(level, m);
+  if (d >= travel) return travel;
+  const [dx, dy] = dirOf(m.angle);
+  return d + solidGap(solids, shifted(dropperRect(m, off[0], off[1]), m.angle, d), dx, dy, travel - d, uid);
+}
+
 /**
  * Proximity crusher. It hangs still, watching the lane in front of its face;
  * when someone enters the lane it shakes (telegraph), then slams until it
- * meets terrain, rests, and crawls back. The head is solid all the time:
+ * meets terrain or a solid, rests, and crawls back. A block in the lane is a
+ * real shield: the head lands on it and can't see past it. Runners stop
+ * nothing. The head is solid all the time:
  * its leading face is deadly while slamming, it squashes anyone it pins,
  * and its back is a slow elevator on the way home.
  */
@@ -119,11 +131,16 @@ export const dropper = defineModule<'dropper'>({
       out.hazards.push({ owner: ctx.r.pp.owner, kind: 'rect', r: lead });
     }
   },
+  trace(m, ctx, out) {
+    const p = dropperPose(ctx.state, ctx.mi, ctx.frame);
+    const stop = dropperStop(ctx.level, out.solids, m, p.d, ctx.off, ctx.r.pp.uid);
+    reportBeam(ctx, out, stop, stop < m.reach * TILE);
+  },
   tick(m, ctx) {
     const f = ctx.frame;
     const st = ctx.state;
     const p = dropperPose(st, ctx.mi, f);
-    const travel = dropperTravel(ctx.level, m);
+    const travel = dropperStop(ctx.level, ctx.solids ?? [], m, p.d, ctx.off, ctx.r.pp.uid);
     const set = (state: number) => {
       st.vars.set(k(ctx.mi, 'st'), state);
       st.vars.set(k(ctx.mi, 't'), f);

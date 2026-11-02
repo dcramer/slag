@@ -3,7 +3,7 @@ import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { DROP_FALL, DROP_REST, DROP_WARN, dirOf, dropperPose, dropperRect, dropperTravel } from '../../../sim/props';
 import { circle, glowDot, light, rrect } from '../../kit';
-import { defineArt } from '../common';
+import { beamOf, defineArt } from '../common';
 
 /**
  * Proximity crusher: a carved stone block with a face. Idle it peers along
@@ -29,7 +29,7 @@ defineArt<'dropper'>({
     const eye: HSL = warn || p.state === DROP_FALL ? { h: 0, s: 100, l: 58 } : { h: 50, s: 90, l: 62 };
     // Lane chevrons (where it will land).
     if (p.state !== DROP_FALL && p.state !== DROP_REST) {
-      const travel = dropperTravel(d.o.level, m);
+      const travel = beamOf(d.o, d.r, d.mi)?.len ?? dropperTravel(d.o.level, m);
       g.strokeStyle = css(eye, 0, warn ? 0.5 : 0.12);
       g.lineWidth = 1;
       for (let k = TILE * 0.8; k < travel; k += TILE) {

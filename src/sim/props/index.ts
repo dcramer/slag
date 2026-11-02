@@ -1,6 +1,7 @@
 export * from './ammo';
 export * from './attach';
 export * from './modules';
+export * from './rays';
 export * from './registry';
 export * from './transform';
 export * from './types';

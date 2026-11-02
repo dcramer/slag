@@ -39,7 +39,7 @@ export const cannon = defineModule<'cannon'>({
     const t = cannonTiming(m, ctx.frame, ctx.r.phase);
     if (!t.firing) return;
     const [x, y] = cannonMuzzle(m, ctx.off[0], ctx.off[1]);
-    ctx.spawn({ x, y, vx: dcos(m.angle) * m.speed, vy: dsin(m.angle) * m.speed, owner: ctx.r.pp.owner, ammo: m.ammo });
+    ctx.spawn({ x, y, vx: dcos(m.angle) * m.speed, vy: dsin(m.angle) * m.speed, owner: ctx.r.pp.owner, ammo: m.ammo, source: ctx.r.pp.uid });
     ctx.state.lastFire = ctx.frame;
     ctx.emit({ type: 'fire', x, y, angle: m.angle, style: m.look === 'totem' ? 'totem' : 'cannon' });
   },

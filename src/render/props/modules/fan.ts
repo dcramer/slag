@@ -1,26 +1,27 @@
 import { css } from '../../../core/color';
 import type { Vec } from '../../../core/geom';
-import { dirOf, fanZone, type Module, type ModuleOf, type PropStyle } from '../../../sim/props';
+import { dirOf, fanColumn, type Module, type ModuleOf, type PropStyle, type Resolved } from '../../../sim/props';
 import { windProfile, windSpeed } from '../../../sim/wind';
 import { circle, type MetalPalette, type RC, sphereFill } from '../../kit';
-import { defineArt, type PropDrawOpts } from '../common';
+import { beamOf, defineArt, type PropDrawOpts } from '../common';
 
 type M<T extends Module['type']> = ModuleOf<T>;
 
 /**
- * Fan art, drawn from the sim's own column (fanZone) and air profile
+ * Fan art, drawn from the sim's own column (fanColumn at its Beam) and air profile
  * (windProfile): streaks travel at the air speed and fade/shorten exactly
  * where the push tapers off; the blades spin in proportion to the air speed.
  * Timing comes from the sim frame, so a paused sim pauses the art.
  */
-function drawFan(rc: RC, m: M<'fan'>, off: Vec, pal: MetalPalette, st: PropStyle, o: PropDrawOpts) {
+function drawFan(rc: RC, m: M<'fan'>, r: Resolved, mi: number, off: Vec, pal: MetalPalette, st: PropStyle, o: PropDrawOpts) {
   const s = rc.s;
   const x = m.at[0] + off[0];
   const y = m.at[1] + off[1];
   const speed = windSpeed(m.strength);
   const t = rc.frame / 60;
-  if (o.level) {
-    const z = fanZone(o.level, m, off);
+  const beam = beamOf(o, r, mi);
+  if (beam) {
+    const z = fanColumn(m, beam.len, off);
     const [dx, dy] = dirOf(m.angle);
     const len = dx !== 0 ? z.w : z.h;
     const across = dx !== 0 ? z.h : z.w;
@@ -81,4 +82,4 @@ function drawFan(rc: RC, m: M<'fan'>, off: Vec, pal: MetalPalette, st: PropStyle
   circle(s, x, y, 1.6);
 }
 
-defineArt<'fan'>({ type: 'fan', layer: 2, draw: (rc, m, d) => drawFan(rc, m, d.off, d.pal, d.style, d.o) });
+defineArt<'fan'>({ type: 'fan', layer: 2, draw: (rc, m, d) => drawFan(rc, m, d.r, d.mi, d.off, d.pal, d.style, d.o) });

@@ -122,19 +122,6 @@ export function cycle(f: number, phase: number, lens: number[]): CycleState {
   return { seg: lens.length - 1, t: 0, len: lens[lens.length - 1] };
 }
 
-/** Distance (px) along a ray before it enters a solid tile. */
-export function rayToWall(level: Level, x: number, y: number, angle: number, maxLen: number, skip = 6): number {
-  const dx = dcos(angle);
-  const dy = dsin(angle);
-  for (let d = skip; d < maxLen; d += 2) {
-    const px = x + dx * d;
-    const py = y + dy * d;
-    if (px < 0 || px >= level.w * TILE || py >= level.h * TILE + 16 || py < -64) return d;
-    if (tileAt(level, Math.floor(px / TILE), Math.floor(py / TILE)) === 1) return d;
-  }
-  return maxLen;
-}
-
 /** Can this prop go here? Bombs can go anywhere in-bounds; everything else needs free, unprotected cells. */
 export function canPlace(level: Level, placed: readonly PlacedProp[], def: PropDef, rot: number, tx: number, ty: number): boolean {
   if (def.mount === 'face') return mountCells(level, placed, def, rot, tx, ty).length > 0;

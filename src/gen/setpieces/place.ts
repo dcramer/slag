@@ -6,6 +6,7 @@ import { isProtected, type Level, T_EMPTY, T_SOLID, tileAt } from '../../sim/lev
 import {
   AMMO,
   type Archetype,
+  buildSolids,
   type Contrib,
   cannonMuzzle,
   type Hazard,
@@ -14,10 +15,13 @@ import {
   moduleSim,
   newPropState,
   type PlacedProp,
+  type PropCtx,
   type PropDef,
   type PropStyle,
+  type Resolved,
   type Role,
   resolveProp,
+  traceRays,
   type Trim,
   type Xform,
 } from '../../sim/props';
@@ -295,8 +299,9 @@ export function finalize(s: Site, piece: Piece, uid: number, key: string): Place
   for (let f = RUN_COUNTDOWN; f <= RUN_COUNTDOWN + P; f += 3) {
     out.solids.length = 0;
     out.hazards.length = 0;
-    for (let mi = 0; mi < r.mods.length; mi++)
-      moduleSim(r.mods[mi].type).build?.(r.mods[mi], { level, frame: f, r, off: [0, 0], prev: [0, 0], state, mi, live: true }, out);
+    const ctx = (rp: Resolved, mi: number): PropCtx => ({ level, frame: f, r: rp, off: [0, 0], prev: [0, 0], state, mi, live: true });
+    buildSolids([r], ctx, out);
+    traceRays([r], ctx, out);
     for (const sd of out.solids) {
       if (s.zones.some((z) => overlaps(sd, z)) && (sd.dx || sd.dy || moved.has(sd.id))) return null;
       const lp = last.get(sd.id);

@@ -1,5 +1,5 @@
 import { dhypot, dsin } from '../../core/dmath';
-import { pointInRect, rectCircle } from '../../core/geom';
+import { overlaps, pointInRect, rectCircle } from '../../core/geom';
 import { DT, TILE } from '../constants';
 import { isProtected, type Level, T_EMPTY, T_SOLID, tileAt } from '../level';
 import { type Body, DEFAULT_SURFACE, type Solid, type Surface } from '../physics';
@@ -45,6 +45,8 @@ export interface Projectile extends ProjectileSpawn {
   my: number;
   /** Runner index that threw it, or -1 for prop shots. */
   thrower: number;
+  /** Prop that fired it, or -1. */
+  source: number;
 }
 
 /** What a projectile sees of a runner. `safe`: in the spawn zone, so shots pop harmlessly. */
@@ -117,15 +119,16 @@ export const FACE: readonly (readonly [number, number])[] = [
   [0, -1],
 ];
 
-export function solidAt(w: ProjWorld, x: number, y: number, age: number): boolean {
+/** Is (x, y) inside terrain or a solid? For a shot's first frames it passes the prop that fired it, or, from a hand (`source` -1), every solid. */
+export function solidAt(w: ProjWorld, x: number, y: number, age: number, source = -1): boolean {
   if (tileAt(w.level, Math.floor(x / TILE), Math.floor(y / TILE)) === T_SOLID) return true;
-  return age > 2 && w.solids.some((s) => pointInRect(x, y, s));
+  return w.solids.some((s) => pointInRect(x, y, s) && (age > 2 || (source >= 0 && s.propUid !== source)));
 }
 
 /** Which axis of the last move ran into something: 'x' (a wall), 'y' (floor/ceiling) or both (a corner). */
 function hitAxis(w: ProjWorld, p: Projectile, px: number, py: number, age: number): 'x' | 'y' | 'xy' {
-  const viaX = solidAt(w, p.x, py, age);
-  const viaY = solidAt(w, px, p.y, age);
+  const viaX = solidAt(w, p.x, py, age, p.source);
+  const viaY = solidAt(w, px, p.y, age, p.source);
   if (viaY && !viaX) return 'y';
   if (viaX && !viaY) return 'x';
   return 'xy';
@@ -350,7 +353,7 @@ export const AMMO_SIM: Partial<Record<Ammo, AmmoSim>> = {
       p.my = p.vy * DT;
       p.x += p.mx;
       p.y += p.my;
-      // Splinters on terrain: test the plank's corners.
+      // Splinters on terrain (test the plank's corners) and on blocks, though not the launcher it just left.
       const r = gliderRect(p);
       for (const [x, y] of [
         [r.x, r.y],
@@ -359,7 +362,7 @@ export const AMMO_SIM: Partial<Record<Ammo, AmmoSim>> = {
         [r.x + r.w, r.y + r.h],
       ])
         if (tileAt(w.level, Math.floor(x / TILE), Math.floor(y / TILE)) === T_SOLID) return false;
-      return true;
+      return !w.solids.some((s) => !s.oneWay && s.propUid !== p.source && overlaps(r, s));
     },
   },
   goo: { wall: stick },
@@ -372,7 +375,23 @@ export function defineAmmo(ammo: Ammo, sim: AmmoSim): void {
 }
 
 export function makeProjectile(s: ProjectileSpawn, born: number, id: number): Projectile {
-  const p: Projectile = { ...s, born, id, n: 0, ax: 0, ay: 0, sp: 0, stuck: -1, hx: 0, hy: 0, until: 0, mx: 0, my: 0, thrower: s.thrower ?? -1 };
+  const p: Projectile = {
+    ...s,
+    born,
+    id,
+    n: 0,
+    ax: 0,
+    ay: 0,
+    sp: 0,
+    stuck: -1,
+    hx: 0,
+    hy: 0,
+    until: 0,
+    mx: 0,
+    my: 0,
+    thrower: s.thrower ?? -1,
+    source: s.source ?? -1,
+  };
   AMMO_SIM[s.ammo]?.init?.(p);
   return p;
 }
@@ -435,7 +454,7 @@ export function stepProjectile(p: Projectile, w: ProjWorld): boolean {
     alive = false;
     why = lost ? null : 'life';
   }
-  if (alive && !sim?.platform && solidAt(w, p.x, p.y, age)) {
+  if (alive && !sim?.platform && solidAt(w, p.x, p.y, age, p.source)) {
     if (!sim?.wall?.(p, w, px, py)) {
       alive = false;
       why = 'wall';

@@ -1,10 +1,10 @@
 import { css, type HSL, shift, toRgb } from '../core/color';
 import { clamp } from '../core/geom';
-import type { Match } from '../game/match';
+import type { Match, Player } from '../game/match';
 import { overview, raceFloor } from '../game/view';
 import { TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import { type Level, tileAt } from '../sim/level';
-import { canPlace, footprint, resolveProp } from '../sim/props';
+import { type Beam, canPlace, footprint, type Resolved, resolveProp, traceBeams } from '../sim/props';
 import type { RunWorld } from '../sim/run';
 import type { GameEvent } from '../sim/types';
 import { Backdrop } from './background';
@@ -27,6 +27,12 @@ import { detectQuality, FrameBudget, QUALITY, type QualityTier, safeInsets, TIER
 /** Terrain bake budget (px per baked canvas): a classic level at 1920 px wide is ~4.3 M. */
 const MAX_BAKE_PX = 6_000_000;
 const RUNNER_KEY: HSL = { h: 40, s: 30, l: 90 };
+
+/** The prop a player is about to place, as it would stand under their cursor. */
+function ghostProp(m: Match, p: Player): Resolved | null {
+  const gh = m.phase === 'place' && !p.placed ? m.ghostOrigin(p) : null;
+  return gh && resolveProp({ uid: 900 + p.slot, def: gh.def, owner: p.slot, tx: gh.tx, ty: gh.ty, rot: p.rot });
+}
 
 // Speed trail. Vertical speed counts for less: a jump's launch is fast, but a walking hop isn't speed.
 const TRAIL_RISE = 0.5;
@@ -235,6 +241,8 @@ export class Renderer {
     this.drawMarkers(rc, level);
 
     const grips = run?.runners.flatMap((r) => r.attach.grip ?? []);
+    // A race's beams are the ones the sim hurts with. Before one, ghosts join in: a block you're holding cuts the flame it would stop.
+    const beams = run ? run.beams : traceBeams(level, [...resolved, ...m.players.flatMap((p) => ghostProp(m, p) ?? [])], frame);
     for (const r of resolved) {
       drawForeground(rc, r, {
         level,
@@ -244,10 +252,11 @@ export class Renderer {
         emit: run ? emit : undefined,
         grips,
         placed: m.placed,
+        beams,
       });
     }
 
-    if (m.phase === 'place') this.drawGhosts(rc, m);
+    if (m.phase === 'place') this.drawGhosts(rc, m, beams);
     if (m.phase === 'lobby' || m.phase === 'pick' || m.phase === 'place') this.drawIdlers(rc, m, dt);
 
     if (run) {
@@ -488,7 +497,7 @@ export class Renderer {
     g.stroke();
   }
 
-  private drawGhosts(rc: RC, m: Match) {
+  private drawGhosts(rc: RC, m: Match, beams: readonly Beam[]) {
     const s = rc.s;
     // Off-limits zones.
     s.save();
@@ -504,12 +513,13 @@ export class Renderer {
     for (const p of m.players) {
       if (p.placed) continue;
       const gh = m.ghostOrigin(p);
-      if (!gh) continue;
+      const ghost = ghostProp(m, p);
+      if (!gh || !ghost) continue;
       const ok = canPlace(m.level, m.placed, gh.def, p.rot, gh.tx, gh.ty);
       const col = ok ? p.character.body : { h: 0, s: 90, l: 55 };
       s.globalAlpha = 0.85;
       rc.g.globalAlpha = 0.85;
-      drawResolved(rc, resolveProp({ uid: 900 + p.slot, def: gh.def, owner: p.slot, tx: gh.tx, ty: gh.ty, rot: p.rot }), { level: m.level, showPath: true });
+      drawResolved(rc, ghost, { level: m.level, showPath: true, beams });
       s.globalAlpha = 1;
       rc.g.globalAlpha = 1;
       const bomb = gh.def.modules.find((x) => x.type === 'bomb');

@@ -8,6 +8,7 @@ interface PadPrev {
   alt: boolean;
   down: boolean;
   use: boolean;
+  start: boolean;
 }
 
 /** A synthetic press produced by clicking a HUD button. */
@@ -27,7 +28,7 @@ export class InputManager {
   settings: InputSettings;
   /** When set, keyboard/mouse are captured by a UI overlay (settings, name entry) and not fed to the game. */
   captured = false;
-  /** Called on Escape. */
+  /** Called on Escape and on a pad's Start. */
   onEscape: (() => void) | null = null;
   /** HUD hit-test for clicks on menu buttons. Returns a synthetic press, `true` if the click was consumed, or null. */
   hitTest: ((x: number, y: number) => UiPress | true | null) | null = null;
@@ -41,6 +42,7 @@ export class InputManager {
   private held = new Set<string>();
   private latched = new Set<string>();
   private padPrev = new Map<string, PadPrev>();
+  private padsCaptured = false;
   private gameKeys = new Set<string>();
   private pointer: { x: number; y: number } | null = null;
   private pointerDirty = false;
@@ -118,6 +120,16 @@ export class InputManager {
     saveSettings(s);
     this.rebuildKeySet();
     this.held.clear();
+  }
+
+  /**
+   * While a menu drives itself with the pads, they stop reaching the game. On release, whatever
+   * is still held stops being a press, so the Ⓐ on Done can't also ready you up.
+   */
+  capturePads(on: boolean) {
+    this.padsCaptured = on;
+    if (on) return;
+    for (const pad of connectedPads()) this.padPrev.set(`pad${pad.index}`, padButtons(pad));
   }
 
   /**
@@ -225,21 +237,20 @@ export class InputManager {
     this.rclick = false;
     this.ui = [];
 
-    const pads = typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : [];
-    for (const pad of pads) {
-      if (!pad || !pad.connected) continue;
+    for (const pad of connectedPads()) {
       const id = `pad${pad.index}`;
       const btn = (i: number) => !!pad.buttons[i]?.pressed;
       const ax = pad.axes[0] ?? 0;
       const ay = pad.axes[1] ?? 0;
-      const jump = btn(0);
+      const now = padButtons(pad);
+      const { jump, alt, down, use } = now;
       // X / RB / RT run; B / LB are alt (rotate, self-destruct); Y / LT use the held item.
       const run = btn(2) || btn(5) || (pad.buttons[7]?.value ?? 0) > 0.3;
-      const alt = btn(1) || btn(4);
-      const use = btn(3) || (pad.buttons[6]?.value ?? 0) > 0.3;
-      const down = ay > 0.5 || btn(13);
-      const prev = this.padPrev.get(id) ?? { jump: false, alt: false, down: false, use: false };
+      const prev = this.padPrev.get(id) ?? { jump: false, alt: false, down: false, use: false, start: false };
+      this.padPrev.set(id, now);
       if (pad.buttons.some((b) => b.pressed) || Math.abs(ax) > 0.5 || Math.abs(ay) > 0.5) this.touch.setActive(false);
+      if (this.padsCaptured) continue;
+      if (now.start && !prev.start) this.onEscape?.();
       out[id] = {
         left: ax < -0.4 || btn(14),
         right: ax > 0.4 || btn(15),
@@ -253,10 +264,26 @@ export class InputManager {
         downPressed: down && !prev.down,
         usePressed: use && !prev.use,
       };
-      this.padPrev.set(id, { jump, alt, down, use });
     }
     return out;
   }
+}
+
+function connectedPads(): Gamepad[] {
+  const pads = typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : [];
+  return [...pads].filter((p): p is Gamepad => !!p?.connected);
+}
+
+/** The pad buttons that count as presses, with their standard-mapping alternatives. */
+function padButtons(pad: Gamepad): PadPrev {
+  const btn = (i: number) => !!pad.buttons[i]?.pressed;
+  return {
+    jump: btn(0),
+    alt: btn(1) || btn(4),
+    down: (pad.axes[1] ?? 0) > 0.5 || btn(13),
+    use: btn(3) || (pad.buttons[6]?.value ?? 0) > 0.3,
+    start: btn(9),
+  };
 }
 
 /** Fat-finger retries for lobby taps: exact point first, then a small ring (view px). */

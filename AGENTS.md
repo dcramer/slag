@@ -68,7 +68,7 @@ Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm
 
 ## Where things live
 
-- `src/game-client.ts`: `bootGame(container, room)`: canvases, input, menus, fixed 60 Hz loop. Each step: input → `Match.step` → `RunWorld.step` (props `build` solids/hazards → `stepBody` → hazards/springs/goal → props `tick`) → events queue → `Renderer.render`.
+- `src/game-client.ts`: `bootGame(container, room)`: canvases, input, menus, fixed 60 Hz loop. Each step: input → `Match.step` → `RunWorld.step` (props `build` solids/hazards, then `trace` rays → `stepBody` → hazards/springs/goal → props `tick`) → events queue → `Renderer.render`.
 - `src/sim/`: deterministic simulation (physics, level, reachability, run world, prop modules). `src/gen/`: generators (levels, set pieces, props, theme looks, characters, names). `src/game/`: match state machine (lobby → pick → place → run → score → victory) and `scoring.ts`. `src/render/`: Canvas2D layers + WebGL2 post. `src/input/`: keyboard/gamepad → `InputFrame` (bindings in `bindings.ts`). `src/audio/`: procedural SFX and per-theme music. `src/ui/`: menus. `src/codex/`: the `/codex` parts catalog.
 - `tools/`: `shot.ts`, `level.ts`. `tests/`: vitest, one file per subsystem.
 

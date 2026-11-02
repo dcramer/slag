@@ -1,7 +1,8 @@
 import { TILE } from '../../constants';
 import { dcos, dsin } from '../../../core/dmath';
+import { beamHazard, castBeam } from '../rays';
 import { cellOf, defineModule } from '../registry';
-import { cycle, rayToWall } from '../transform';
+import { cycle } from '../transform';
 import type { ModuleOf } from '../types';
 
 type Laser = ModuleOf<'laser'>;
@@ -17,20 +18,13 @@ export const laser = defineModule<'laser'>({
   type: 'laser',
   resolve: (m, x) => ({ ...m, at: x.P(m.at), angle: m.angle + x.da }),
   anchors: (m) => [cellOf(m.at)],
-  build(m, ctx, out) {
-    if (laserCycle(m, ctx.frame, ctx.r.phase).seg !== 2) return;
+  trace(m, ctx, out) {
     const a = laserAngle(m, ctx.frame, ctx.r.phase);
     const x = m.at[0] + ctx.off[0];
     const y = m.at[1] + ctx.off[1];
-    const len = rayToWall(ctx.level, x, y, a, Math.max(1200, (ctx.level.w + ctx.level.h) * TILE), 9);
-    out.hazards.push({
-      owner: ctx.r.pp.owner,
-      kind: 'seg',
-      x1: x + dcos(a) * 9,
-      y1: y + dsin(a) * 9,
-      x2: x + dcos(a) * len,
-      y2: y + dsin(a) * len,
-      r: 3,
-    });
+    const dx = dcos(a);
+    const dy = dsin(a);
+    const beam = castBeam(ctx, out, x, y, dx, dy, Math.max(1200, (ctx.level.w + ctx.level.h) * TILE), 9, a);
+    if (laserCycle(m, ctx.frame, ctx.r.phase).seg === 2) beamHazard(ctx, out, x, y, dx, dy, 9, beam, 3);
   },
 });

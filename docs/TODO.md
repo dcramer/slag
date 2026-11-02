@@ -91,7 +91,7 @@ The rest of this item is the home screen, the first and biggest piece of it. The
 - Do this after items 2 and 3, which both change `src/game-client.ts`.
 
 ## 13. Playtest and tune the new parts
-Nothing from the content, held-items or grab-props work has been played by hand, so the tuning is test-level only: magnet drift, bumper power, slow and freeze durations, item strength. Gamepad `use` (Y and LT) hasn't been tried on a real pad, and item sounds borrow existing cues and haven't been heard. Dropstones and crushers stop only on terrain, so they pass through placed blocks; decide whether that's right.
+Nothing from the content, held-items or grab-props work has been played by hand, so the tuning is test-level only: magnet drift, bumper power, slow and freeze durations, item strength. Gamepad `use` (Y and LT) hasn't been tried on a real pad, and item sounds borrow existing cues and haven't been heard. Trackers can no longer see runners through terrain, which changes how lobbed trackers feel.
 
 Also confirm the Match Length values (Short 30 points / 10 rounds, Normal 50 / 15, Long 80 / 25). They come from a Monte Carlo model of scoring with a fixed finish rate, and real finish rates probably fall as props pile up. The limit decides about 25% of 2-player Normal matches at typical finish rates and about 60% at very low or very high ones.
 
@@ -130,7 +130,3 @@ There's too much variety in the crate, and it's confusing. **Next up once item 3
 
 ## 19. Secret parts mode
 A mode where you don't see what a part is. You choose a type (hazard, utility, build, whatever the roles are) and get one at random from what's allowed. A lobby rule, with the roll deterministic from the seed and the same on every peer. The first time anyone sees the part is when it lands.
-
-## 20. Settings in tabs
-The settings screen is way too large. Split it into tabs or similar.
-
