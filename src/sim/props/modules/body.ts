@@ -1,6 +1,7 @@
 import { TILE } from '../../constants';
 import { DEFAULT_SURFACE, type Surface } from '../../physics';
 import { defineModule, solidId } from '../registry';
+import type { PlacedProp } from '../types';
 
 export const SURFACES: Record<string, Surface> = {
   stone: DEFAULT_SURFACE,
@@ -12,8 +13,17 @@ export const SURFACES: Record<string, Surface> = {
   jelly: { friction: 1, conveyor: 0, speedMult: 1, jumpMult: 1.05, bounce: 0.82 },
 };
 
-export function conveyorSurface(speed: number): Surface {
-  return { ...DEFAULT_SURFACE, conveyor: speed };
+/** A belt on face `face` (quarter turns clockwise from the top) running `speed` px/s clockwise round the block. */
+export function conveyorSurface(speed: number, face = 0): Surface {
+  return { ...DEFAULT_SURFACE, conveyor: speed, beltFace: face };
+}
+
+/**
+ * Which face of a placed conveyor carries its belt: the top as generated, turned with the part. The belt
+ * keeps running the same way round the block, so a rightward top becomes a downward right face.
+ */
+export function beltTurn(pp: Pick<PlacedProp, 'def' | 'rot'>): number {
+  return pp.def.mount === 'hang' ? 0 : pp.rot & 3;
 }
 
 /** Solid cells of some material. Crumble bodies break after being stood on and respawn later. */
@@ -26,7 +36,7 @@ export const body = defineModule<'body'>({
   carrier: { at: (m) => (m.material === 'crumble' ? null : [0, 0]), drives: false, period: () => 0 },
   build(m, ctx, out) {
     if (m.material === 'crumble' && ctx.frame < ctx.state.brokenUntil) return;
-    const surface = m.material === 'conveyor' ? conveyorSurface(ctx.r.pp.rot >= 2 ? -m.conveyor : m.conveyor) : SURFACES[m.material];
+    const surface = m.material === 'conveyor' ? conveyorSurface(m.conveyor, beltTurn(ctx.r.pp)) : SURFACES[m.material];
     const { off, prev } = ctx;
     m.cells.forEach(([cx, cy], ci) => {
       out.solids.push({

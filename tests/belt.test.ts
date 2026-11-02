@@ -25,6 +25,7 @@ function cut(cells: Cell[], dir: number): Cut {
     pal: METALS.steel,
     loops: [],
     dir,
+    turn: 0,
   };
 }
 

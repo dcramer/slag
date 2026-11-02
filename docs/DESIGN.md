@@ -112,6 +112,11 @@ A level is a place with one landmark you'd name it after: the Great Wheel, the H
   - A strip too long for its spot still places: only the cells that can mount land, the rest are gone for good, and the ghost shows exactly what lands.
   - Ice makes floors slippery and walls slick (no wall jump).
   - Slime makes floors slow and walls sticky (you cling).
+- **Conveyors have one belt face, and rotation picks it**: top, right, bottom or left, with the belt running the same way round the block, so a belt carrying you right on top runs down the right face, left along the bottom and up the left face. Every other face is a plain block.
+  - A top belt carries walkers.
+  - A side belt grips a runner clinging to it (holding into it in the air) and carries them at its own speed: running up, it's an escalator that lifts you over its top edge; running down, it lowers you. It never slows a jump that's already rising faster than it. Wall jumps work as usual, and a belt running up adds its speed to the jump; one running down takes nothing away.
+  - A bottom belt flings a head that bonks it sideways along it at twice its speed, about a run. That keeps the underside a consequence you see coming, without a new verb like clinging under it.
+  - The winnability plan keeps clear of conveyors at every rotation, like any part that isn't plain footing.
 - Bombs clear terrain and/or props depending on their kind. Attachments fall off when their host block is destroyed.
 - **Parts ride what they're stuck to.** A block (any material, a spike block, a mystery box) placed flush against a moving solid, or a coat or spike strip mounted on a moving face, becomes that mover's rider and follows it for the rest of the match. A coat on a lift is a slime lift; a block on a wheel's car is a step that goes round with it.
   - **Translation only.** Physics is axis-aligned, so a rider follows its mover's travel and never turns: a coat on a wheel's car rides round with the car and keeps its face, as the car itself stays level.
