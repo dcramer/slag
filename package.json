@@ -9,9 +9,9 @@
     "build": "next build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "lint": "oxlint && oxfmt --check src tests tools app",
-    "format": "oxfmt src tests tools app && oxlint --fix",
-    "check": "tsc --noEmit && oxlint && oxfmt --check src tests tools app && vitest run",
+    "lint": "oxlint && oxfmt --check src tests tools app relay",
+    "format": "oxfmt src tests tools app relay && oxlint --fix",
+    "check": "tsc --noEmit && oxlint && oxfmt --check src tests tools app relay && vitest run",
     "shot": "tsx tools/shot.ts",
     "level": "tsx tools/level.ts",
     "start": "next start"
