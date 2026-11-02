@@ -32,6 +32,10 @@ export const SCREEN_CSS = `
   --ui: Barlow, 'Segoe UI', system-ui, sans-serif;
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .32 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
   --tape: repeating-linear-gradient(-45deg, var(--hazard) 0 10px, #17110c 10px 20px);
+  /* The main menu's backdrop: grain, the pour's glow from below, a warm corner and the dark. Every screen stands on it. */
+  --forge:
+    var(--grain), radial-gradient(120% 60% at 70% 115%, rgba(255, 90, 20, 0.55), rgba(184, 35, 15, 0.18) 45%, transparent 70%),
+    radial-gradient(80% 60% at 10% -10%, #3a241a, transparent 70%), linear-gradient(#1a100c, #0e0806 60%);
   color-scheme: dark;
 }
 
@@ -52,13 +56,12 @@ body {
   display: grid;
   grid-template-rows: 1fr auto;
   isolation: isolate;
-  background:
-    var(--grain), radial-gradient(120% 60% at 70% 115%, rgba(255, 90, 20, 0.55), rgba(184, 35, 15, 0.18) 45%, transparent 70%),
-    radial-gradient(80% 60% at 10% -10%, #3a241a, transparent 70%), linear-gradient(#1a100c, #0e0806 60%);
+  background: var(--forge);
 }
 
 /* Slow heat shimmer from the bottom glow. */
-.home::before {
+.home::before,
+.forge-bg::before {
   content: '';
   position: absolute;
   inset: auto -10% -20% -10%;
@@ -479,7 +482,8 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .embers,
-  .home::before {
+  .home::before,
+  .forge-bg::before {
     display: none;
   }
   .drips span {
@@ -487,47 +491,246 @@ body {
   }
 }
 
-/* ------------------------------------------------------------ simple pages */
+/* ------------------------------------------------------------ shared by every other screen */
 
-.page-plain {
-  min-height: 100dvh;
-  padding: 48px clamp(20px, 6vw, 88px);
-  box-sizing: border-box;
-  background: var(--grain), linear-gradient(#1a100c, #0e0806);
+/* The menu's backdrop, pinned to the window. Its screen isolates, so this sits over the page's own dark and under everything else. */
+.forge-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--forge);
 }
 
-.page-plain h1 {
-  margin: 0 0 12px;
-  font: 400 clamp(40px, 7vw, 64px) / 1 var(--display);
+/* The logo built at the menu's full size and scaled as a whole, like the lobby's. */
+.logo-k {
+  --k: 0.6;
+  position: relative;
+  width: calc(352px * var(--k));
+  height: calc(150px * var(--k));
+  flex: none;
+}
+
+.logo-k .logo {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: 150px;
+  transform: scale(var(--k));
+  transform-origin: 0 0;
+}
+
+/* A footer prompt that does what it says when clicked. */
+button.prompt {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  font: 700 15px var(--ui);
+  color: var(--bone);
+}
+
+button.prompt:hover {
   color: var(--amber);
-  text-shadow: 0 4px 0 var(--ink);
 }
 
-.page-plain p {
-  font: 500 18px/1.5 var(--ui);
+button.prompt:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 3px;
+}
+
+/* ------------------------------------------------------------ 404 and error */
+
+.plain {
+  position: relative;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  isolation: isolate;
+  overflow: clip;
+}
+
+.plain-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 34px;
+  padding: 40px 20px clamp(120px, 24vh, 220px);
+}
+
+.plain-main .logo-k {
+  --k: 0.72;
+}
+
+/* A riveted iron plate with hazard tape along its top, like the overlays. */
+.plain-card {
+  position: relative;
+  box-sizing: border-box;
+  width: min(560px, 100%);
+  padding: 34px 34px 30px;
+  background: var(--grain), linear-gradient(var(--iron-hi), var(--iron));
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  box-shadow: 0 6px 0 var(--ink);
+}
+
+.plain-card::before {
+  content: '';
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  top: -2px;
+  height: 10px;
+  background: var(--tape);
+  border: 2px solid var(--ink);
+  border-radius: 6px 6px 0 0;
+}
+
+/* Rivets in the four corners. */
+.plain-card::after {
+  content: '';
+  position: absolute;
+  inset: 16px 10px 10px;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 3px 3px, var(--steel) 1.6px, var(--ink) 2.4px, transparent 3px) 0 0 / 6px 6px no-repeat,
+    radial-gradient(circle at 3px 3px, var(--steel) 1.6px, var(--ink) 2.4px, transparent 3px) 100% 0 / 6px 6px no-repeat,
+    radial-gradient(circle at 3px 3px, var(--steel) 1.6px, var(--ink) 2.4px, transparent 3px) 0 100% / 6px 6px no-repeat,
+    radial-gradient(circle at 3px 3px, var(--steel) 1.6px, var(--ink) 2.4px, transparent 3px) 100% 100% / 6px 6px no-repeat;
+}
+
+.plain-card h1 {
+  margin: 0 0 12px;
+  font: 400 clamp(34px, 5vw, 46px) / 1 var(--display);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--bone);
+  text-shadow: 0 3px 0 var(--ink);
+}
+
+.plain-card p {
+  margin: 0 0 26px;
+  font: 600 17px/1.45 var(--ui);
   color: var(--ash);
 }
 
-.btn-link {
-  display: inline-block;
-  margin-top: 12px;
-  padding: 10px 18px 12px;
-  font: 400 22px/1 var(--display);
-  color: var(--ink);
-  text-decoration: none;
-  background: linear-gradient(#ff8a2a, #e8571a);
-  border: 2px solid var(--ink);
-  border-radius: 6px;
-  box-shadow: 0 4px 0 var(--ink);
+.plain-card .menu-item {
+  width: calc(100% - 8px);
 }
 
-.btn-link {
-  cursor: pointer;
+/* The pool along the bottom, and what's sinking in it. */
+.plain-pool {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: clamp(110px, 19vh, 180px);
+  z-index: -1;
+  pointer-events: none;
 }
 
-.btn-link:focus-visible {
-  outline: 3px solid var(--amber);
-  outline-offset: 3px;
+.pool-surf {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 46px;
+  z-index: 1;
+  overflow: visible;
+}
+
+.pool-body {
+  position: absolute;
+  inset: 40px 0 0;
+  z-index: 1;
+  background:
+    var(--grain), radial-gradient(18% 9px at 22% 30%, rgba(120, 30, 8, 0.45), transparent), radial-gradient(14% 7px at 64% 55%, rgba(120, 30, 8, 0.4), transparent),
+    radial-gradient(10% 6px at 86% 22%, rgba(120, 30, 8, 0.4), transparent), linear-gradient(#f25e1c, var(--ember) 55%, #4a1006);
+  box-shadow: 0 -10px 60px rgba(255, 106, 31, 0.45);
+}
+
+.sinker {
+  position: absolute;
+  bottom: calc(100% - 52px);
+  z-index: 0;
+  transform-origin: 50% 100%;
+  animation: sink 7s ease-in-out infinite alternate;
+}
+
+@keyframes sink {
+  from {
+    translate: 0 6px;
+  }
+  to {
+    translate: 0 -4px;
+  }
+}
+
+/* 404: big cooled-iron numerals, glowing where the pool has them. */
+.sinker-num {
+  right: 5vw;
+  rotate: -9deg;
+  font: 400 clamp(120px, 18vw, 240px) / 0.8 var(--display);
+  color: transparent;
+  background: linear-gradient(var(--iron-hi) 30%, #6b3a22 62%, var(--molten) 88%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-stroke: 0.035em var(--ink);
+  paint-order: stroke fill;
+}
+
+/* Error: a part's crate going under, tape and all. */
+.sinker-crate {
+  left: 9vw;
+  width: clamp(110px, 15vw, 180px);
+  aspect-ratio: 1;
+  rotate: 14deg;
+  box-sizing: border-box;
+  background: var(--grain), linear-gradient(var(--iron-hi), var(--iron) 60%, #7a2c12);
+  border: 5px solid var(--ink);
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 5px rgba(255, 255, 255, 0.04);
+}
+
+.sinker-crate i {
+  position: absolute;
+  left: -5px;
+  right: -5px;
+  top: 30%;
+  height: 22%;
+  background: var(--tape);
+  border-block: 5px solid var(--ink);
+}
+
+@media (max-width: 860px) {
+  .plain-main {
+    gap: 26px;
+    padding-top: 32px;
+  }
+  .plain-main .logo-k {
+    --k: 0.56;
+  }
+  .plain-card {
+    padding: 30px 22px 24px;
+  }
+  .sinker-num {
+    right: auto;
+    left: 50%;
+    margin-left: -0.9em;
+  }
+  .sinker-crate {
+    left: 50%;
+    margin-left: -60px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sinker {
+    animation: none;
+  }
 }
 
 /* ------------------------------------------------------------ the logo over the lobby HUD */

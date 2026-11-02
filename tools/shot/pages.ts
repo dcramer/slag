@@ -259,5 +259,72 @@ export const shots: Scenarios = {
     const p = `${out}/codex.png`;
     await page.screenshot({ path: p, fullPage: true });
     console.log(p);
+    await snap('codex-top');
+    // Open the first part from the keyboard, as a pad or keys would.
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(600);
+    await snap('codex-open');
+    // Esc closes the part, then backs out to the main menu.
+    await page.keyboard.press('Escape');
+    await page.waitForSelector('.cx-modal[hidden]', { state: 'attached', timeout: 5000 });
+    await page.keyboard.press('Escape');
+    await page.waitForSelector('[data-screen=home]', { timeout: 5000 });
+    // A phone: the top of the catalog, scrolled into a section, and a part opened by tap.
+    const mctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+    const mp = await mctx.newPage();
+    mp.on('pageerror', (e: Error) => errors.push(String(e)));
+    await mp.goto(`${base}codex`);
+    await mp.evaluate(() => document.fonts.ready);
+    await mp.waitForTimeout(1200);
+    await mp.screenshot({ path: `${out}/codex-mobile.png` });
+    console.log(`${out}/codex-mobile.png`);
+    await mp.tap('.cx-index [data-sec=launchers]');
+    await mp.waitForTimeout(800);
+    await mp.screenshot({ path: `${out}/codex-mobile-launchers.png` });
+    console.log(`${out}/codex-mobile-launchers.png`);
+    const card = await mp.$('#launchers .cx-card');
+    if (card) {
+      await card.tap();
+      await mp.waitForTimeout(800);
+      await mp.screenshot({ path: `${out}/codex-mobile-open.png` });
+      console.log(`${out}/codex-mobile-open.png`);
+    }
+    await mctx.close();
+  },
+  /** The 404 and error screens, on a desktop and a phone. The error screen is forced by refusing the codex's code. */
+  async screens() {
+    const sizes = [
+      { name: 'desktop', viewport: { width: W, height: H }, deviceScaleFactor: 1, isMobile: false, hasTouch: false },
+      { name: 'mobile', viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+    ];
+    for (const s of sizes) {
+      const { name, ...opts } = s;
+      const ctx = await browser.newContext(opts);
+      const p = await ctx.newPage();
+      p.on('pageerror', (e: Error) => errors.push(String(e)));
+      await p.goto(`${base}no/such/place`);
+      await p.evaluate(() => document.fonts.ready);
+      await p.waitForTimeout(1200);
+      await p.screenshot({ path: `${out}/missing-${name}.png` });
+      console.log(`${out}/missing-${name}.png`);
+      // MAIN MENU is selected from the start: Enter (or a tap) leaves.
+      if (opts.hasTouch) await p.tap('.btn-link');
+      else await p.keyboard.press('Enter');
+      await p.waitForSelector('[data-screen=home]', { timeout: 10_000 });
+      // The error screen: the codex can't load, as on a dropped connection mid-deploy. That logs errors on purpose, so they aren't collected.
+      const ep = await ctx.newPage();
+      await ep.goto(base);
+      await ep.evaluate(() => document.fonts.ready);
+      await ep.waitForSelector('.menu-item:not([disabled])');
+      await ep.route('**/_next/static/chunks/**', (r) => r.abort());
+      await ep.click('[data-id=codex]');
+      await ep.waitForSelector('[data-screen=error]', { timeout: 15_000 });
+      await ep.waitForTimeout(1200);
+      await ep.screenshot({ path: `${out}/error-${name}.png` });
+      console.log(`${out}/error-${name}.png`);
+      pet();
+      await ctx.close();
+    }
   },
 };

@@ -284,6 +284,12 @@ export class Backdrop {
    * edge with the surroundings, and deepens below the world to the window's edge.
    * `sunken` paints what's under the surface: it shows through the liquid, so
    * the pool stays one surface across the window and all of that is plainly under it.
+   *
+   * Returns the dry side of the surface, just above its bright line. The surface
+   * sits above the world's bottom while ground runs on down to it, so ground
+   * drawn after the pool clips to this: a column standing in the pool goes under
+   * at the same line as the open pool around it, and below that it's the sunken
+   * pass, seen through, like everything else in there.
    */
   drawLiquid(
     rc: RC,
@@ -293,7 +299,7 @@ export class Backdrop {
     view: { x: number; y: number; w: number; h: number },
     margin = 0,
     sunken?: (c: CanvasRenderingContext2D) => void,
-  ) {
+  ): Path2D {
     const L = th.liquid;
     const s = rc.s;
     const g = rc.g;
@@ -313,6 +319,12 @@ export class Backdrop {
     for (let x = xa; x <= xb + 6; x += 6) path.lineTo(x, wave(x));
     path.lineTo(xb + 6, below);
     path.closePath();
+    // Half the surface line's width above the wave, so ground stops where the line starts and the line runs on unbroken in front of it.
+    const dry = new Path2D();
+    dry.moveTo(xa, -1e5);
+    for (let x = xa; x <= xb + 6; x += 6) dry.lineTo(x, wave(x) - 0.7);
+    dry.lineTo(xb + 6, -1e5);
+    dry.closePath();
     // Heat haze / glow above emissive liquids.
     if (L.emissive) {
       const hz = g.createLinearGradient(0, y0 - 70, 0, y0);
@@ -472,6 +484,7 @@ export class Backdrop {
       for (let x = xa; x <= xb + 6; x += 6) (x === xa ? g.moveTo : g.lineTo).call(g, x, wave(x));
       g.stroke();
     }
+    return dry;
   }
 
   /** Ambient particles (cosmetic, non-deterministic). On the background layer: with ink they read as stray projectiles. */

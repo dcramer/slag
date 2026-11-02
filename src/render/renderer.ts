@@ -276,9 +276,16 @@ export class Renderer {
     rc.s = this.foreground.begin(this.scene, s, g, level.theme.ambientLight);
     this.cam.apply(rc.s, this.pw);
     // Liquids sit behind the terrain (docs/DESIGN.md, render layers): it stands in the pool, and its bake cuts the pool's glow.
-    this.backdrop.drawLiquid(rc, level.theme, ww, wh, this.cam.visible(), this.surround.margin, (c) => this.surround.drawSunken(c, level));
-    for (const c of [rc.s, g]) this.surround.cutPool(c, level, POOL_ROWS);
+    const dry = this.backdrop.drawLiquid(rc, level.theme, ww, wh, this.cam.visible(), this.surround.margin, (c) => this.surround.drawSunken(c, level));
+    for (const c of [rc.s, g]) this.surround.cutPool(c, level, POOL_ROWS, dry);
+    // Ground stands in the pool down to the world's bottom, but the surface is above that: what's under it is the pool's sunken pass.
+    for (const c of [rc.s, g]) {
+      c.save();
+      c.clip(dry);
+    }
     this.terrain.draw(rc);
+    rc.s.restore();
+    g.restore();
     const pushers = m.run ? m.run.runners.filter((r) => r.alive).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h })) : [];
     this.terrain.drawLive(rc, level, pushers);
     this.drawMarkers(rc, level);
