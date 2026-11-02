@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type Cell, normalizeCells } from '../src/core/geom';
+import { type Cell, normalizeCells, type Rect } from '../src/core/geom';
 import { Match } from '../src/game/match';
 import { restoreMatch, snapshotMatch } from '../src/net/snapshot';
 import { generateTheme } from '../src/gen/theme';
@@ -17,6 +17,8 @@ import {
   mouthPose,
   PIPE,
   pipePairs,
+  pipeBands,
+  pipeHalfWidth,
   pipeRects,
   type PlacedProp,
   type PropDef,
@@ -266,15 +268,36 @@ describe('a pipe you just came out of', () => {
   });
 });
 
+/** The smallest rect round some rects. */
+function hull(rs: readonly Rect[]): Rect {
+  const x = Math.min(...rs.map((r) => r.x));
+  const y = Math.min(...rs.map((r) => r.y));
+  return { x, y, w: Math.max(...rs.map((r) => r.x + r.w)) - x, h: Math.max(...rs.map((r) => r.y + r.h)) - y };
+}
+
 describe('the pipe shape', () => {
-  it('is a lip two tiles across and a shaft a quarter tile in from each side', () => {
-    const [lip, shaft] = pipeRects(mouth(place(10, FLOOR - 3, 0)));
-    expect(lip).toEqual({ x: 160, y: (FLOOR - 3) * TILE, w: 32, h: PIPE.lip });
-    expect(shaft).toEqual({ x: 164, y: (FLOOR - 3) * TILE + PIPE.lip, w: 24, h: 2 * TILE - PIPE.lip });
+  it('is a rolled lip two tiles across over a shaft a quarter tile in from each side', () => {
+    const { lip, shaft } = pipeRects(mouth(place(10, FLOOR - 3, 0)));
+    expect(hull(lip)).toEqual({ x: 160, y: (FLOOR - 3) * TILE, w: 32, h: PIPE.lip });
+    expect(hull(shaft)).toEqual({ x: 164, y: (FLOOR - 3) * TILE + PIPE.lip, w: 24, h: 2 * TILE - PIPE.lip });
     for (let rot = 0; rot < 4; rot++) {
-      const [l, sh] = pipeRects(mouth(place(10, 5, rot)));
-      expect(Math.max(l.w, l.h)).toBe(32);
-      expect(Math.min(sh.w, sh.h)).toBe(24);
+      const r = pipeRects(mouth(place(10, 5, rot)));
+      const all = hull([...r.lip, ...r.shaft]);
+      expect([all.w, all.h]).toEqual([32, 32]);
+      expect(all.x % TILE).toBe(0);
+      expect(all.y % TILE).toBe(0);
+    }
+  });
+
+  it('steps its solids to follow the round corners within about a pixel', () => {
+    for (const len of [2, 3, 4].map((n) => n * TILE)) {
+      for (const b of pipeBands(len)) {
+        for (let v = b.v0; v <= b.v1; v += 0.05) expect(Math.abs(pipeHalfWidth(v, len) - b.hw), `${len} ${v}`).toBeLessThanOrEqual(1.1);
+      }
+      // Really round: the rim's corner comes in a full roll radius, the shaft's foot its own.
+      expect(pipeHalfWidth(0, len)).toBeCloseTo(TILE - PIPE.roll, 6);
+      expect(pipeHalfWidth(PIPE.lip / 2, len)).toBe(TILE);
+      expect(pipeHalfWidth(len, len)).toBeCloseTo(TILE - PIPE.overhang - PIPE.foot, 6);
     }
   });
 
@@ -301,7 +324,30 @@ describe('the pipe shape', () => {
       expect(noGo).toContain(y * level.w + x);
   });
 
-  it('lets you jump up past the lip from beside the shaft and onto it', () => {
+  it('is solid to stand on anywhere along the rolled lip, its round ends included', () => {
+    const a = place(10, FLOOR - 2);
+    const top = mouth(a).at[1];
+    const len = 2 * TILE;
+    /** How far below the mouth the drawn rim's top is at this distance from its center. */
+    const dip = (u: number) => {
+      let v = 0;
+      while (v < PIPE.lip && pipeHalfWidth(v, len) < Math.abs(u)) v += 0.05;
+      return v;
+    };
+    for (const x of [151, 154, 158, 166, 171, 180, 186, 190]) {
+      const { run, r } = race(testLevel(), [a]);
+      Object.assign(r.body, { x, y: top - r.body.h - 6, vx: 0, vy: 0 });
+      for (let i = 0; i < 40; i++) run.step([NO_INPUT]);
+      // The highest point of the drawn rim under the runner is where it stands, within a pixel.
+      let best = Infinity;
+      for (let px = Math.max(160, x); px <= Math.min(192, x + r.body.w); px += 0.25) best = Math.min(best, dip(px - 176));
+      expect(r.body.onGround, `x ${x}`).toBe(true);
+      expect(Math.abs(r.body.y + r.body.h - (top + best)), `x ${x}`).toBeLessThanOrEqual(1.1);
+      expect(r.body.x, `x ${x}`).toBeCloseTo(x, 6);
+    }
+  });
+
+  it('lets you jump up round the lip from beside the shaft and onto it', () => {
     const a = place(10, FLOOR - 2);
     const { run, r } = race(testLevel(), [a]);
     Object.assign(r.body, { x: 164 - r.body.w, y: FLOOR * TILE - r.body.h, vx: 0, vy: 0 });
@@ -310,11 +356,32 @@ describe('the pipe shape', () => {
     expect(r.body.y + r.body.h).toBeCloseTo(mouth(a).at[1], 3);
   });
 
+  it('never snags a runner coming at the round corner low: the steps climb', () => {
+    const a = place(10, FLOOR - 2);
+    const top = mouth(a).at[1];
+    for (let below = 0; below <= PIPE.overhang; below += 0.5) {
+      const { run, r } = race(testLevel(), [a]);
+      Object.assign(r.body, { x: 160 - r.body.w - 1, y: top + below - r.body.h, vx: 100, vy: 0 });
+      r.body.onGround = false;
+      // Coming in at walking pace at the lip's height, held level: the steps lift, none of them stops you.
+      let stuck = 0;
+      for (let i = 0; i < 14; i++) {
+        const x0 = r.body.x;
+        r.body.vy = 0;
+        run.step([{ ...NO_INPUT, right: true }]);
+        if (r.body.x <= x0 && r.body.x + r.body.w <= 160.5) stuck++;
+      }
+      expect(stuck, `${below} px below the top`).toBe(0);
+      expect(r.body.x, `${below} px below the top`).toBeGreaterThan(160);
+      expect(r.body.y + r.body.h, `${below} px below the top`).toBeLessThanOrEqual(top + 0.5);
+    }
+  });
+
   it('walks over a sideways lip without a jump', () => {
     const a = place(10, FLOOR - 2, 1);
     expect(dirOf(mouth(a).angle)).toEqual([1, 0]);
     const { run, r } = race(testLevel(), [a]);
-    const top = pipeRects(mouth(a))[1].y;
+    const top = hull(pipeRects(mouth(a)).shaft).y;
     Object.assign(r.body, { x: 162, y: top - r.body.h, vx: 0, vy: 0 });
     for (let i = 0; i < 40; i++) run.step([{ ...NO_INPUT, right: true }]);
     expect(r.body.x).toBeGreaterThan(mouth(a).at[0]);
@@ -323,19 +390,21 @@ describe('the pipe shape', () => {
   it('can be stood on at the far end and on the lip, and walked off both', () => {
     const a = place(10, FLOOR - 6, 2);
     const { run, r } = race(testLevel(), [a, place(30, FLOOR - 2)], 2);
-    const [lip, shaft] = pipeRects(mouth(a));
+    const { lip, shaft } = pipeRects(mouth(a));
+    const lipTop = hull(lip).y;
+    const shaftTop = hull(shaft).y;
     const r2 = run.runners[1];
-    Object.assign(r.body, { x: 176 - r.body.w / 2, y: shaft.y - r.body.h - 4, vx: 0, vy: 0 });
-    Object.assign(r2.body, { x: 154, y: shaft.y, vx: 0, vy: 0 });
+    Object.assign(r.body, { x: 176 - r.body.w / 2, y: shaftTop - r.body.h - 4, vx: 0, vy: 0 });
+    Object.assign(r2.body, { x: 154, y: shaftTop, vx: 0, vy: 0 });
     for (let i = 0; i < 30; i++) run.step([NO_INPUT, NO_INPUT]);
-    expect(r.body.onGround && r.body.y + r.body.h).toBeCloseTo(shaft.y, 3);
-    expect(r2.body.onGround && r2.body.y + r2.body.h).toBeCloseTo(lip.y, 3);
+    expect(r.body.onGround && r.body.y + r.body.h).toBeCloseTo(shaftTop, 3);
+    expect(r2.body.onGround && r2.body.y + r2.body.h).toBeCloseTo(lipTop, 3);
     for (let i = 0; i < 40; i++)
       run.step([
         { ...NO_INPUT, right: true },
         { ...NO_INPUT, left: true },
       ]);
-    expect(r.body.y).toBeGreaterThan(lip.y);
+    expect(r.body.y).toBeGreaterThan(lipTop);
     expect(r2.body.y + r2.body.h).toBeCloseTo(FLOOR * TILE, 3);
   });
 });

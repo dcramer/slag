@@ -1,9 +1,10 @@
 import { css, type HSL } from '../../../core/color';
+import { sq } from '../../../core/dmath';
 import type { Vec } from '../../../core/geom';
 import { hash2 } from '../../../core/rng';
 import type { CharacterDef } from '../../../gen/character';
 import { TILE } from '../../../sim/constants';
-import { dirOf, isPipe, lonePipe, type ModuleOf, PIPE, pipePairs, type PipeLook, type PlacedProp, resolveProp } from '../../../sim/props';
+import { dirOf, isPipe, lonePipe, type ModuleOf, PIPE, pipeHalfWidth, pipePairs, type PipeLook, type PlacedProp, resolveProp } from '../../../sim/props';
 import type { Runner, RunWorld } from '../../../sim/run';
 import { type P, stroke } from '../../ink';
 import { drawInkRunner } from '../../ink-character';
@@ -130,6 +131,32 @@ function litFlip(f: Frame): boolean {
   return f.a[0] + f.a[1] < 0;
 }
 
+/**
+ * One piece of the pipe's outline in pipe space, from depth v0 to v1: the sim's own curve
+ * (pipeHalfWidth), so the rolled rim and the softened foot are drawn exactly where they're solid.
+ * `dome` bows the mouth's face out a touch, within the floor's drift.
+ */
+function outline(v0: number, v1: number, len: number, dome: number): P[] {
+  const right: P[] = [];
+  const n = Math.max(8, Math.ceil((v1 - v0) / 0.5));
+  for (let i = 0; i <= n; i++) {
+    const v = v0 + ((v1 - v0) * i) / n;
+    // The shaft's top tucks under the lip at full width; only the lip and the foot curve.
+    right.push({ x: v < PIPE.lip && v0 >= PIPE.lip - 1 ? SHAFT : pipeHalfWidth(Math.min(v, len), len), y: v });
+  }
+  const top: P[] = [];
+  if (dome > 0) {
+    const hw = pipeHalfWidth(v0, len);
+    for (let i = 1; i < 8; i++) {
+      const u = -hw + (2 * hw * i) / 8;
+      top.push({ x: u, y: v0 - dome * (1 - sq(u / hw)) });
+    }
+  }
+  const left: P[] = [];
+  for (let i = right.length - 1; i >= 0; i--) left.push({ x: -right[i].x, y: right[i].y });
+  return [...top, ...right, ...left];
+}
+
 /** The pipe's still body, baked once per material, length and facing. Its origin is the mouth's center. */
 function body(look: PipeLook, len: number, f: Frame) {
   const L = len * TILE;
@@ -143,7 +170,7 @@ function body(look: PipeLook, len: number, f: Frame) {
     const flip = litFlip(f);
     const seed = len * 7 + look.length;
     // The shaft, exactly its solid: a cylinder in bands.
-    const shaft = map(f, boxPts(-SHAFT, LIP - 0.5, SHAFT * 2, L - LIP + 0.5, 1.4, seed, 0.12));
+    const shaft = map(f, outline(LIP - 0.5, L, L, 0));
     tone(g, shaft, t.base, { depth: 0.8, shade: -10 });
     g.save();
     path(g, shaft);
@@ -170,7 +197,7 @@ function body(look: PipeLook, len: number, f: Frame) {
     g.restore();
     pen(g, shaft, seed, 0.45, 1.9, 5);
     // The lip: the full two tiles across, chunkier and a step brighter, banded the same way.
-    const lip = map(f, boxPts(-W / 2, 0, W, LIP, 2.2, seed + 1, 0.12));
+    const lip = map(f, outline(0, LIP, L, 0.4));
     tone(g, lip, t.base, { depth: 0.8, shade: -10 });
     g.save();
     path(g, lip);
