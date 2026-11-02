@@ -10,6 +10,7 @@
  *   pnpm shot lobby|pick|place --seed abc
  *   pnpm shot pick --claim 2,5             → with those cards already taken
  *   pnpm shot pick|place --secret          → Secret Parts rule on: role cards, and the parts they rolled
+ *   pnpm shot pick|place --parts block,saw → with those parts already in the level, as from earlier rounds
  *   pnpm shot place --card spikestrip --cursor 296,184 --then-race 90 → aim the first ghost, place it, shoot the race
  *   pnpm shot levels --seeds a,b,c,d      (or --count 12) → contact sheet
  *   pnpm shot props --count 24            → prop gallery (crate cards)
@@ -110,6 +111,11 @@ async function secretRule() {
     m.rules = { ...m.rules, secretParts: true };
     m.startMatch();
   });
+}
+/** `--parts block,saw`: parts already placed, as if from earlier rounds (pick and place). */
+async function parts() {
+  const kinds = opt('parts')?.split(',').filter(Boolean);
+  if (kinds?.length) await page.evaluate(([k, s]) => (window as any).slagDebug.addProps(k, s), [kinds, Number(opt('propseed', '1'))] as const);
 }
 async function snap(name: string) {
   const p = `${out}/${name}.png`;
@@ -381,6 +387,7 @@ try {
     case 'pick':
       await open(`seed=${seed}&players=${players}`);
       await secretRule();
+      await parts();
       await step(40);
       if (opt('claim')) {
         // `--claim 2,5`: those cards are taken, as if players had picked them.
@@ -395,6 +402,7 @@ try {
     case 'place':
       await open(`seed=${seed}&players=${players}`);
       await secretRule();
+      await parts();
       // `--secret`: everyone clicks a role card, so each part is rolled the way a claim rolls it.
       if (secret) {
         await step(12);
