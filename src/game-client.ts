@@ -9,6 +9,7 @@ import { InputManager } from './input/input';
 import { TOUCH_DEVICE, touchModeFor } from './input/touch';
 import { Renderer } from './render/renderer';
 import { DT } from './sim/constants';
+import { addBreadcrumb, setTelemetryContext } from './telemetry';
 import { THEME_IDS } from './themes';
 import { InputModeTracker } from './ui/input-mode';
 import { loadHaptics, NamePrompt, RulesMenu, SettingsMenu } from './ui/menus';
@@ -27,6 +28,7 @@ let booted = false;
 export function bootGame(container: HTMLElement, room: string): void {
   if (booted) return; // React strict mode / remounts: one game per page
   booted = true;
+  setTelemetryContext(() => ({ room })); // a failed boot still says which lobby
   const glCanvas = document.createElement('canvas');
   const hudCanvas = document.createElement('canvas');
   glCanvas.tabIndex = 0;
@@ -45,6 +47,15 @@ export function bootGame(container: HTMLElement, room: string): void {
   match.rules = loadRules();
   // Host-rolled per-match salt (crate order); re-rolled while in the lobby so every game differs.
   match.nextSalt = (Math.random() * 4294967296) >>> 0;
+  const gameContext = () => ({
+    room,
+    seed: match.seed,
+    theme: match.level.theme.id,
+    phase: match.phase,
+    round: match.round,
+    players: match.players.length,
+  });
+  setTelemetryContext(gameContext);
   const input = new InputManager(window);
   input.viewEl = glCanvas;
   // In the lobby only real buttons act; a stray click must not join/ready/start.
@@ -55,6 +66,7 @@ export function bootGame(container: HTMLElement, room: string): void {
   renderer.hud.hidden = params.get('ui') === '0';
   const audio = createAudio();
   const inputMode = new InputModeTracker(window);
+  setTelemetryContext(() => ({ ...gameContext(), renderStyle: renderer.renderStyle, inputDevice: renderer.hud.lastInput }));
 
   // --- local menus (DOM overlays) and profile ---------------------------------
   const settingsMenu = new SettingsMenu(input, audio);
@@ -205,6 +217,7 @@ export function bootGame(container: HTMLElement, room: string): void {
   // Fixed-timestep simulation, render as fast as the display allows.
   let acc = 0;
   let last = performance.now();
+  let lastPhase = match.phase;
   function frame(now: number) {
     acc += Math.min(0.25, (now - last) / 1000);
     last = now;
@@ -218,6 +231,10 @@ export function bootGame(container: HTMLElement, room: string): void {
       input.touch.setMode(touchModeFor(match));
       match.step(input.sample());
       acc -= DT;
+    }
+    if (match.phase !== lastPhase) {
+      lastPhase = match.phase;
+      addBreadcrumb('game', `phase ${lastPhase}`, { round: match.round });
     }
     syncProfile();
     renderer.hud.pointer = input.touch.active ? null : input.pointerPos; // no hover highlights under a finger

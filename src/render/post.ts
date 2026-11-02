@@ -10,6 +10,8 @@
  * WebGL2 isn't available.
  */
 
+import { reportError, reportEvent } from '../telemetry';
+
 const VS = `#version 300 es
 in vec2 p; out vec2 uv;
 void main(){ uv = p * 0.5 + 0.5; gl_Position = vec4(p, 0.0, 1.0); }`;
@@ -98,11 +100,16 @@ export interface Compositor {
 
 export function createCompositor(canvas: HTMLCanvasElement): Compositor {
   const gl = canvas.getContext('webgl2', { antialias: false, alpha: false, premultipliedAlpha: false, preserveDrawingBuffer: false });
-  if (!gl) return new Fallback(canvas);
+  if (!gl) {
+    reportEvent('webgl2 unavailable');
+    return new Fallback(canvas);
+  }
+  canvas.addEventListener('webglcontextlost', () => reportEvent('webgl context lost'));
   try {
     return new GLCompositor(gl);
   } catch (e) {
     console.warn('WebGL compositor failed, falling back', e);
+    reportError(e, { where: 'compositor-init' });
     return new Fallback(canvas);
   }
 }

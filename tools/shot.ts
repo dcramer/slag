@@ -54,7 +54,10 @@ function needsBuild(): boolean {
       const p = `${dir}/${e.name}`;
       return e.isDirectory() ? newer(p) : statSync(p).mtimeMs > built;
     });
-  return ['src', 'app', 'public'].some((d) => existsSync(d) && newer(d)) || ['next.config.ts', 'package.json'].some((f) => statSync(f).mtimeMs > built);
+  return (
+    ['src', 'app', 'public'].some((d) => existsSync(d) && newer(d)) ||
+    ['next.config.ts', 'package.json', 'instrumentation.ts', 'instrumentation-client.ts'].some((f) => statSync(f).mtimeMs > built)
+  );
 }
 
 async function freePort(): Promise<number> {
