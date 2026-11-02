@@ -69,7 +69,7 @@ function fire(w: RunWorld, r: Runner, s: Omit<ProjectileSpawn, 'owner' | 'throwe
 export const ITEMS: Record<ItemKind, ItemSpec> = {
   sword: {
     kind: 'sword',
-    name: 'Foam Sword',
+    name: 'Master Noodle',
     verb: 'Swing',
     uses: 4,
     use(w, r) {
@@ -83,7 +83,7 @@ export const ITEMS: Record<ItemKind, ItemSpec> = {
   },
   puck: {
     kind: 'puck',
-    name: 'Ricochet Puck',
+    name: 'Evicted Shell',
     verb: 'Kick',
     uses: 1,
     use(w, r) {
@@ -95,7 +95,7 @@ export const ITEMS: Record<ItemKind, ItemSpec> = {
   },
   boomerang: {
     kind: 'boomerang',
-    name: 'Boomerang',
+    name: 'Stunnerang',
     verb: 'Throw',
     uses: 1,
     use(w, r, inp) {
@@ -107,7 +107,7 @@ export const ITEMS: Record<ItemKind, ItemSpec> = {
   },
   shield: {
     kind: 'shield',
-    name: 'Pop Shield',
+    name: 'Bubble Wrap',
     verb: 'Drop',
     uses: 1,
     jumpCap: SHIELD.jumpCap,
@@ -118,7 +118,7 @@ export const ITEMS: Record<ItemKind, ItemSpec> = {
   },
   rocket: {
     kind: 'rocket',
-    name: 'Pocket Rocket',
+    name: 'Free-Trial Jetpack',
     verb: 'Blast Off',
     uses: 1,
     use(w, r, inp) {
@@ -137,7 +137,7 @@ export const ITEMS: Record<ItemKind, ItemSpec> = {
   },
   smoke: {
     kind: 'smoke',
-    name: 'Smoke Bomb',
+    name: 'Fog of War',
     verb: 'Lob',
     uses: 2,
     use(w, r) {

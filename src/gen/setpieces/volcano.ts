@@ -10,7 +10,7 @@ export const VOLCANO: Recipe[] = [
     repeat: true,
     candidates: (rng, s) =>
       geysers(rng, s, {
-        name: 'Lava Plume',
+        name: 'Floor Is Lava',
         look: 'lava',
         where: 'pit',
         style: makeStyle(rng, 'obsidian', [18]),

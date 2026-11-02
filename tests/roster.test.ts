@@ -259,11 +259,14 @@ describe('a part across its sizes', () => {
   });
 
   it('keeps its name, with a size word only off medium', () => {
+    // Many seeds, so every word list gets a turn: none of them may lead with a size word.
     for (const k of kinds) {
-      const { variants } = generatePart(new Rng(3), k, k);
-      const plain = variants.find((v) => v.size === 'medium')!.name;
-      expect(plain).not.toMatch(/^(Small|Big) /);
-      for (const v of variants) expect(v.name).toBe({ small: `Small ${plain}`, medium: plain, large: `Big ${plain}` }[v.size!]);
+      for (let i = 0; i < 40; i++) {
+        const { variants } = generatePart(new Rng(i * 31 + 3), k, k);
+        const plain = variants.find((v) => v.size === 'medium')!.name;
+        expect(plain).not.toMatch(/^(Small|Big) /);
+        for (const v of variants) expect(v.name).toBe({ small: `Small ${plain}`, medium: plain, large: `Big ${plain}` }[v.size!]);
+      }
     }
   });
 });

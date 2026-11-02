@@ -1,83 +1,36 @@
 import { AMMO, type Module, type PropDef } from '../sim/props';
 
-/** Human descriptions of every module type ("parts") for the codex. */
+/**
+ * Every module type ("part") in the codex modal: a label and a one-line joke.
+ * No how-to text (docs/DESIGN.md → Discovery): the stat lines beside it
+ * carry the numbers.
+ */
 export const PART_INFO: Record<Module['type'], { title: string; blurb: string }> = {
-  body: {
-    title: 'Body',
-    blurb:
-      'Solid cells of a material. Stone/metal/wood are plain; ice is slippery, goo is slow and sticky, jelly bounces you, conveyors carry you, crumble breaks after you stand on it and respawns later.',
-  },
-  spikes: { title: 'Spikes', blurb: 'A lethal strip along one face of a body. Rotation decides which side is pointy.' },
-  swinger: { title: 'Swinger', blurb: 'A saw, mace or axe on an arm. Static, orbiting a hub (1–3 heads), or swinging like a pendulum on a rod or chain.' },
-  launcher: {
-    title: 'Launcher',
-    blurb:
-      'Fires projectiles on a schedule: fixed aim, sweeping, or tracking the nearest runner it can see (lobbed ammo solves a ballistic arc). Bursts and spreads vary.',
-  },
-  flame: { title: 'Flame jet', blurb: 'Off → sputtering warning → roaring flame for a while. Stops at walls.' },
-  laser: { title: 'Laser', blurb: 'Charges with a flickering telegraph, then fires a beam to the first solid thing in its way. Some sweep back and forth.' },
-  tesla: { title: 'Tesla gate', blurb: 'Two pylons that periodically arc lightning between them.' },
-  piston: { title: 'Crusher', blurb: 'A solid head that slams out (deadly leading edge), holds, then slowly retracts. Can crush you against walls.' },
-  spring: { title: 'Spring', blurb: 'Launches whoever touches it in the direction it faces.' },
-  fan: {
-    title: 'Fan',
-    blurb:
-      'Blows a steady wind column until it hits a wall. Up-fans carry you up at a steady speed and let you float at the top (you can still jump in them); side fans push you along — walk and you drift back, run to beat a weak one.',
-  },
-  rotor: { title: 'Rotor', blurb: 'Platforms on arms turning around a hub (windmills, cog lifts) or swinging as a pendulum (chandeliers, hoists). Ride them.' },
-  vehicle: {
-    title: 'Vehicle',
-    blurb: 'A rideable machine that drives back and forth along the ground, pausing at each end. Its leading face is deadly while it moves.',
-  },
-  cannon: { title: 'Fixed cannon', blurb: 'A big emplacement firing on a steady rhythm, with a visible fuse telegraph before each shot.' },
-  geyser: {
-    title: 'Geyser',
-    blurb:
-      'A vent that sits still, rumbles and hisses as a warning, then erupts. Lava geysers kill; steam geysers carry you up to float at the plume tip until it dies down.',
-  },
-  deco: { title: 'Scenery', blurb: 'Big static set dressing (presses, AC units, antennas) that you can stand on.' },
-  coat: {
-    title: 'Attachment',
-    blurb:
-      'Mounted flush on an exposed face of a block (rotation picks the face). Spikes kill; ice coats make floors slippery and walls un-jumpable; slime makes floors slow and walls sticky.',
-  },
-  mystery: { title: 'Mystery crate', blurb: 'A solid block with a glowing porthole and something inside.' },
-  bomb: {
-    title: 'Demolition',
-    blurb:
-      'Not placed but detonated. The blast shape (disk, line bore, cross, hollow ring) and target (terrain and props, props only, terrain only) vary; time bombs wait and go off as the race starts, catching whatever was placed that round. Spawn and goal zones are protected.',
-  },
-  portal: {
-    title: 'Warp pads',
-    blurb:
-      'Two linked pads. Step into one and you come out of the other with your speed and direction intact. Handy shortcut, or a misdirection straight into trouble.',
-  },
-  bumper: {
-    title: 'Bumper',
-    blurb: 'Kicks you straight away from its center, hard. The angle you hit it at is the angle you leave at: a launch you can aim, or a shove off a ledge.',
-  },
-  magnet: {
-    title: 'Gravity well',
-    blurb: 'A field that pulls you toward its core (or pushes you away), strongest at the middle. Bends jumps and drags you off course; some pulse on and off.',
-  },
-  web: {
-    title: 'Web',
-    blurb: 'Sticky strands: catches falls and lets you hop up through it slowly, but you crawl while inside and stay sluggish a moment after.',
-  },
-  phase: {
-    title: 'Blink blocks',
-    blurb: 'Solid on a timer. They flicker before vanishing and fill in before returning. Pairs take turns, so you cross in rhythm. Never reappear inside you.',
-  },
-  dropper: {
-    title: 'Dropstone',
-    blurb:
-      'Watches the lane under it. When you enter, it glares and shakes, then slams down until it lands on something, and slowly rises again. You can ride it back up.',
-  },
-  snapper: {
-    title: 'Snap trap',
-    blurb:
-      'A plate mounted on a block face. Step in front of it and it clicks, then fires spikes for a moment and needs a cooldown. Keep moving and you are fine.',
-  },
+  body: { title: 'Body', blurb: 'Floats in midair. Nobody has ever asked why.' },
+  spikes: { title: 'Spikes', blurb: 'One hit. Any angle. No refunds.' },
+  swinger: { title: 'Swinger', blurb: 'Every castle has a guy who installs these.' },
+  launcher: { title: 'Launcher', blurb: 'A mailman with a grudge and a schedule.' },
+  flame: { title: 'Flame jet', blurb: 'Clears its throat first. Polite, for a dragon.' },
+  laser: { title: 'Laser', blurb: 'Charges like a phone, rules like a judge.' },
+  tesla: { title: 'Tesla gate', blurb: 'Bzzzt. You are the bug.' },
+  piston: { title: 'Crusher', blurb: 'Panini press, runner filling.' },
+  spring: { title: 'Spring', blurb: 'Boing.' },
+  fan: { title: 'Fan', blurb: 'Hair dryer, industrial setting.' },
+  rotor: { title: 'Rotor', blurb: 'Rides included with admission.' },
+  vehicle: { title: 'Vehicle', blurb: 'Has right of way. Always.' },
+  cannon: { title: 'Fixed cannon', blurb: 'Ye olde boom.' },
+  geyser: { title: 'Geyser', blurb: 'The floor, but erupting.' },
+  deco: { title: 'Scenery', blurb: 'Set dressing. Load-bearing set dressing.' },
+  coat: { title: 'Attachment', blurb: 'Paint jobs with consequences.' },
+  mystery: { title: 'Mystery crate', blurb: 'Contents may vary. Odds not disclosed.' },
+  bomb: { title: 'Demolition', blurb: 'Renovation, the fast way.' },
+  portal: { title: 'Warp pads', blurb: 'Two holes, no plot.' },
+  bumper: { title: 'Bumper', blurb: 'Ding ding ding. Extra ball not included.' },
+  magnet: { title: 'Gravity well', blurb: 'Needy or aloof, never in between.' },
+  web: { title: 'Web', blurb: 'Spider not included. Spider is somewhere.' },
+  phase: { title: 'Blink blocks', blurb: 'Now you see it. Now you’re falling.' },
+  dropper: { title: 'Dropstone', blurb: 'Has been waiting all day for you specifically.' },
+  snapper: { title: 'Snap trap', blurb: 'Surprise!' },
   rope: { title: 'Sausage Vine', blurb: 'Fresh from the hook.' },
   keg: { title: 'Kegapult', blurb: 'XXX.' },
 };

@@ -64,7 +64,7 @@ export const GLACIER: Recipe[] = [
     role: 'build',
     candidates: (rng, s) =>
       pendulums(rng, s, {
-        name: 'Hanging Serac',
+        name: 'Icicle of Damocles',
         look: 'slab',
         support: 'ceiling',
         style: makeStyle(rng, 'bone', [195]),

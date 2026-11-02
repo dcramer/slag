@@ -10,7 +10,7 @@ export const CASTLE: Recipe[] = [
     repeat: true,
     candidates: (rng, s) =>
       cannons(rng, s, {
-        name: `${rng.pick(['Rampart', 'Siege', 'Royal', 'Old Thunder'])} Cannon`,
+        name: `${rng.pick(['Rampart', 'Boss-Room', 'Royal', 'Old Thunder'])} Cannon`,
         look: 'castle',
         style: makeStyle(rng, ['steel', 'obsidian', 'brass'], [0], { woodHue: rng.range(18, 30) }),
         ammo: 'cannonball',
@@ -27,7 +27,7 @@ export const CASTLE: Recipe[] = [
     role: 'build',
     candidates: (rng, s) =>
       pendulums(rng, s, {
-        name: `${rng.pick(['Grand', 'Dusty', 'Gilded', 'Wobbly'])} Chandelier`,
+        name: `${rng.pick(['Grand', 'Dusty', 'Load-Bearing', 'Wobbly'])} Chandelier`,
         look: 'chandelier',
         support: 'ceiling',
         style: makeStyle(rng, ['gold', 'brass', 'steel'], [40], { glowHue: rng.range(30, 45) }),
@@ -44,7 +44,7 @@ export const CASTLE: Recipe[] = [
     role: 'hazard',
     candidates: (rng, s) =>
       vehicles(rng, s, {
-        name: 'Battering Ram',
+        name: 'Door Knocker',
         look: 'ram',
         style: makeStyle(rng, 'steel', [0, 210, 120, 280], { woodHue: rng.range(18, 30) }),
         w: [3, 4],

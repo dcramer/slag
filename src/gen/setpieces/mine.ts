@@ -10,7 +10,7 @@ export const MINE: Recipe[] = [
     repeat: true,
     candidates: (rng, s) =>
       vehicles(rng, s, {
-        name: `${rng.pick(['Runaway', 'Rickety', 'Ore'])} Minecart`,
+        name: `${rng.pick(['Runaway', 'Rickety', 'Mandatory'])} Minecart`,
         look: 'minecart',
         style: makeStyle(rng, ['rust', 'steel', 'copper'], [20], { woodHue: rng.range(18, 30) }),
         w: [2, 3],

@@ -1,6 +1,6 @@
 # SLAG UI art direction
 
-These rules cover the menus, the lobby, and the in-game HUD. The world art (levels, props, characters) is hand-inked in code: see [World art](#world-art-ink) at the end.
+These rules cover the menus, the lobby, and the in-game HUD. The world art (levels, props, characters) is hand-inked in code: see [World art](#world-art-ink) at the end. What each item and part mocks, with its silhouette and visual gag, is in [PARODY.md](PARODY.md).
 
 ## Identity: a molten foundry that doubles as a toy box
 

@@ -181,7 +181,7 @@ function render() {
   // Parts: every building block on its own.
   const parts = document.createElement('section');
   parts.id = 'parts';
-  parts.innerHTML = `<h2>Parts</h2><p>The building blocks. Every prop in the crate is assembled from these, with its numbers (size, timing, speed, reach…) rolled procedurally.</p>`;
+  parts.innerHTML = `<h2>Parts</h2><p>Some assembly required.</p>`;
   for (const g of partGroups()) {
     const h = document.createElement('div');
     h.id = g.id;
@@ -215,7 +215,7 @@ function render() {
   // Projectiles, in flight.
   const proj = document.createElement('section');
   proj.id = 'projectiles';
-  proj.innerHTML = `<h2>Projectiles</h2><p>What launchers shoot.</p>`;
+  proj.innerHTML = `<h2>Projectiles</h2><p>Incoming.</p>`;
   const pgrid = document.createElement('div');
   pgrid.className = 'grid';
   pgrid.style.gridTemplateColumns = 'repeat(auto-fill,minmax(170px,1fr))';
@@ -244,8 +244,10 @@ function render() {
     );
     const meta = document.createElement('div');
     meta.className = 'meta';
-    meta.innerHTML = `<div class="name">${ammo}</div><div class="stat"></div>`;
-    meta.querySelector('.stat')!.textContent = `${PROJECTILE_NOTES[ammo]} radius ${spec.radius}px${spec.gravity ? ` · gravity ${spec.gravity}` : ''}`;
+    meta.innerHTML = `<div class="name"></div><div class="stat"></div>`;
+    const [label, joke] = PROJECTILE_NOTES[ammo];
+    meta.querySelector('.name')!.textContent = label;
+    meta.querySelector('.stat')!.textContent = `${joke} radius ${spec.radius}px${spec.gravity ? ` · gravity ${spec.gravity}` : ''}`;
     card.append(meta);
     pgrid.append(card);
   }

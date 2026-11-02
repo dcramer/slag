@@ -9,7 +9,7 @@ export const JUNGLE: Recipe[] = [
     role: 'build',
     candidates: (rng, s) =>
       pendulums(rng, s, {
-        name: 'Vine Log',
+        name: 'Log Ride',
         look: 'log',
         support: 'ceiling',
         style: makeStyle(rng, 'jade', [110], { woodHue: rng.range(20, 32) }),
@@ -26,7 +26,7 @@ export const JUNGLE: Recipe[] = [
     role: 'hazard',
     candidates: (rng, s) =>
       vehicles(rng, s, {
-        name: 'Temple Boulder',
+        name: 'Chase-Scene Boulder',
         look: 'boulder',
         style: makeStyle(rng, 'jade', [30, 90, 200], { glowHue: rng.range(120, 170) }),
         w: [2, 3],
@@ -42,7 +42,7 @@ export const JUNGLE: Recipe[] = [
     repeat: true,
     candidates: (rng, s) =>
       cannons(rng, s, {
-        name: 'Dart Idol',
+        name: 'Cursed Idol',
         look: 'totem',
         style: makeStyle(rng, 'jade', [100, 30], { glowHue: rng.pick([120, 150, 40]), woodHue: rng.range(18, 30) }),
         ammo: 'bolt',
