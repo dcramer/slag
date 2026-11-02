@@ -22,8 +22,14 @@ function G({ g, h = 22 }: { g: Glyph; h?: number }) {
   return <span className="slag-glyph" dangerouslySetInnerHTML={{ __html: glyphSVG(g, h) }} />;
 }
 
-/** Debug params (?seed, ?theme, …) carry through to the lobby URL. */
-const passthrough = () => (typeof location !== 'undefined' ? location.search : '');
+/**
+ * Go to a lobby. A full page load on purpose: the game boots once per page
+ * (bootGame is a singleton), so a soft navigation back into a second lobby
+ * would find it already running. Debug params (?seed, ?theme, …) carry through.
+ */
+function enterLobby(room: string) {
+  location.assign(`/r/${room}${location.search}`);
+}
 
 /**
  * Main menu: console-style selection (one item is always active) that works
@@ -44,7 +50,7 @@ export default function MainMenu({ brand, stage }: { brand: ReactNode; stage: Re
   const activate = useCallback(
     (id: ItemId) => {
       setErr('');
-      if (id === 'play') router.push(`/r/${newRoomCode()}${passthrough()}`);
+      if (id === 'play') enterLobby(newRoomCode());
       else if (id === 'codex') router.push('/codex');
       else if (id === 'settings') setSettings(true);
       else {
@@ -61,8 +67,8 @@ export default function MainMenu({ brand, stage }: { brand: ReactNode; stage: Re
       setErr('Codes are 3–12 letters and numbers.');
       return;
     }
-    router.push(`/r/${room}${passthrough()}`);
-  }, [code, router]);
+    enterLobby(room);
+  }, [code]);
 
   const move = useCallback((d: number) => {
     setActive((a) => {

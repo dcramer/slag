@@ -91,6 +91,8 @@ export class Hud {
   private lastT = 0;
   private embers: { x: number; y: number; vx: number; vy: number; life: number; max: number; r: number }[] = [];
   private toastMsg = '';
+  /** Draws deferred until after the footer (player cursors). */
+  private pending: (() => void)[] = [];
   private toastUntil = 0;
 
   /** Device labels/hints from the live key bindings (set by main). */
@@ -215,8 +217,9 @@ export class Hud {
     c.setTransform(k, 0, 0, k, 0, 0);
     this.gctx.setTransform(k, 0, 0, k, 0, 0);
     if (m.phase !== this.lastPhase) {
+      // No shutter on the very first frame (page load), only on phase changes.
+      if (this.lastPhase) this.wipe = 1;
       this.lastPhase = m.phase;
-      this.wipe = 1;
     }
     switch (m.phase) {
       case 'lobby':
@@ -239,6 +242,9 @@ export class Hud {
         break;
     }
     this.footer(m);
+    // Cursors stay on top of the footer so their labels are never covered.
+    for (const f of this.pending) f();
+    this.pending = [];
     this.drawToast();
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.globalCompositeOperation = 'lighter';
@@ -263,7 +269,7 @@ export class Hud {
       c.lineTo(x + 46, VIEW_H);
       c.lineTo(x + 40, VIEW_H);
       c.fill();
-      this.wipe -= dt * 2.6;
+      this.wipe -= (t - this.lastT) * 2.6;
     }
     this.lastT = t;
   }
@@ -593,7 +599,7 @@ export class Hud {
         });
       }
     });
-    for (const p of m.players) if (p.claim < 0) this.cursor(p.cursor.x, p.cursor.y, p.character.body, p.character.name, t);
+    for (const p of m.players) if (p.claim < 0) this.pending.push(() => this.cursor(p.cursor.x, p.cursor.y, p.character.body, p.character.name, t));
   }
 
   private place(m: Match) {
@@ -610,7 +616,7 @@ export class Hud {
     for (const p of m.players) {
       if (p.placed) continue;
       const def = p.claim >= 0 ? m.crate[p.claim].def : null;
-      this.cursor(p.cursor.x, p.cursor.y, p.character.body, def ? def.name : p.character.name, m.frame / 60);
+      this.pending.push(() => this.cursor(p.cursor.x, p.cursor.y, p.character.body, def ? def.name : p.character.name, m.frame / 60));
     }
   }
 

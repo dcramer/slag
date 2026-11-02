@@ -38,13 +38,15 @@ export function mountStage(canvas: HTMLCanvasElement): () => void {
   const seed0 = Math.floor(Math.random() * 1e9);
   let rolls = 0;
   const roll = () => generateCharacter((seed0 + rolls++ * 7919) >>> 0);
-  const guys: Guy[] = [0.12, 0.27, 0.43, 0.6, 0.77, 0.9].map((u, i) => ({ def: roll(), u, hop: 0, vy: 0, facing: u < 0.5 ? 1 : -1, next: 0.6 + i * 0.7 }));
+  const guys: Guy[] = [0.14, 0.27, 0.4, 0.53, 0.66, 0.79].map((u, i) => ({ def: roll(), u, hop: 0, vy: 0, facing: u < 0.5 ? 1 : -1, next: 0.6 + i * 0.7 }));
   const sparks: Spark[] = [];
   // Heap silhouette: a few soft bumps, fixed per visit.
   const bumps = Array.from({ length: 7 }, (_, i) => ({ c: i / 6 + rand(-0.04, 0.04), w: rand(0.1, 0.18), h: rand(0.25, 0.55) }));
   const heapY = (u: number) => {
-    let y = 0.18 + 0.32 * Math.sin(Math.PI * Math.min(1, Math.max(0, u * 0.9 + 0.05)));
-    for (const b of bumps) y += b.h * 0.18 * Math.exp(-(((u - b.c) / b.w) ** 2));
+    // A mound that tapers to nothing at both edges, with a few lumps on top.
+    const mound = Math.sin(Math.PI * Math.min(1, Math.max(0, u)));
+    let y = 0.5 * Math.pow(mound, 0.6);
+    for (const b of bumps) y += b.h * 0.18 * Math.exp(-(((u - b.c) / b.w) ** 2)) * mound;
     return H - Math.min(0.62, y) * H * 0.62;
   };
 
@@ -92,7 +94,7 @@ export function mountStage(canvas: HTMLCanvasElement): () => void {
     const s = scale();
 
     // Ladle pouring from the top right.
-    const lx = W * 0.8;
+    const lx = W * 0.93;
     const ly = H * 0.12;
     const pourX = lx - 30 * (s / 4);
     const hitY = heapY(pourX / W);
@@ -122,13 +124,18 @@ export function mountStage(canvas: HTMLCanvasElement): () => void {
     for (let i = 0; i <= 60; i++) ctx.lineTo((i / 60) * W, heapY(i / 60));
     ctx.lineTo(W, H);
     ctx.closePath();
-    const hg = ctx.createLinearGradient(0, H * 0.5, 0, H);
-    hg.addColorStop(0, '#3a2a22');
-    hg.addColorStop(1, '#140c09');
+    // Fade into the page at the bottom so the canvas has no visible edge.
+    const hg = ctx.createLinearGradient(0, H * 0.55, 0, H);
+    hg.addColorStop(0, 'rgba(58,42,34,1)');
+    hg.addColorStop(0.6, 'rgba(30,20,16,0.95)');
+    hg.addColorStop(1, 'rgba(20,12,9,0)');
     ctx.fillStyle = hg;
     ctx.fill();
+    const eg = ctx.createLinearGradient(0, H * 0.55, 0, H);
+    eg.addColorStop(0, PAL.ink);
+    eg.addColorStop(1, 'rgba(18,11,8,0)');
     ctx.lineWidth = 3;
-    ctx.strokeStyle = PAL.ink;
+    ctx.strokeStyle = eg;
     ctx.stroke();
     // Molten pool where the pour lands.
     const pg = ctx.createRadialGradient(pourX, hitY + 4, 2, pourX, hitY + 4, 70 * (s / 4));

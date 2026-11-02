@@ -16,7 +16,7 @@ function grainPattern(c: Ctx): CanvasPattern | null {
   const cv = document.createElement('canvas');
   cv.width = cv.height = 64;
   const g = cv.getContext('2d')!;
-  for (let i = 0; i < 380; i++) {
+  for (let i = 0; i < 260; i++) {
     const light = Math.random() < 0.45;
     g.fillStyle = light ? `rgba(255,220,180,${0.05 + Math.random() * 0.06})` : `rgba(0,0,0,${0.12 + Math.random() * 0.12})`;
     const s = Math.random() < 0.85 ? 1 : 2;
