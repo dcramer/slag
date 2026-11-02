@@ -34,7 +34,7 @@ export const farm: Sculptor = (ctx) => {
   const surf = heights(rng, k);
 
   // Ponds first: hard ones need a bridge, easy ones are a hop. Wide farms get more of them.
-  const challenges = rollChallenges(rng, 0.76, 0.15, attempt, k.propNeed);
+  const challenges = rollChallenges(rng, 0.76, 0.15, attempt, k);
   g.wantsProps = challenges > 0;
   const pits: { x0: number; x1: number; hard: boolean }[] = [];
   const nEasy = rng.int(0, style === 'fields' ? 2 : 1) + Math.floor((k.wide - 1) * rng.range(1, 2.5));

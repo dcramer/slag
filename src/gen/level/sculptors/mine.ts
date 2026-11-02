@@ -24,6 +24,7 @@ export const mine: Sculptor = (ctx) => {
     ['shafts', 1 + 2 * k.density],
   ]);
   const g = new Grid(W, H);
+  g.carve = true;
   g.fill(0, 0, W - 1, H - 1);
   const rise = easyRise();
 
@@ -44,7 +45,7 @@ export const mine: Sculptor = (ctx) => {
   // (ltr), or step monotonically up (climb) / down (descent) through the rock.
   const upper = Math.max(7, H - rng.int(15, 19));
   const lower = rng.int(upper + 8, Math.min(H - 4, upper + 12));
-  const challenges = rollChallenges(rng, 0.82, 0.15, attempt, k.propNeed);
+  const challenges = rollChallenges(rng, 0.82, 0.15, attempt, k);
   g.wantsProps = challenges > 0;
   // Three segments leave no room for a chasm, so a challenged 'shafts' map gets two. Wide mines get more segments.
   const per = style === 'shafts' && !challenges ? 3 : style === 'cavern' ? 1 : 2;

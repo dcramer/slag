@@ -5,8 +5,11 @@ import type { Level, LevelProfile } from '../../sim/level';
 import { pickThemeId, type ThemeId } from '../../themes';
 import { SET_PIECE_UID, SET_PIECES } from '../setpieces';
 import { generateTheme, type Theme } from '../theme';
+import { analyzeReach } from '../../sim/reach';
+import { openUp } from './lanes';
 import { setProbeGravity } from './probe';
 import { type ProfileOverride, rollProfile } from './profile';
+import { MAX_SHARED } from './routes';
 import { FALLBACK_SCULPTOR, SCULPTORS } from './sculptors';
 import type { Shape } from './types';
 import { type Bridge, judge } from './validate';
@@ -24,17 +27,23 @@ export interface GenInfo {
   /** A bridge solution (left cells) when the level needs props; [] if solvable bare. */
   bridges: Bridge[];
   fallback: boolean;
+  /** Route sharing of the accepted level (./routes.ts), and of its sculpt before any lanes were added. */
+  shared: number;
+  sculpted: number;
+  /** Candidates rejected on the way here, by reason (`closed` = still too narrow after lanes). */
+  rejects: { unsolvable: number; tooEasy: number; closed: number };
 }
 
-export let lastGenInfo: GenInfo = { attempts: 0, bridges: [], fallback: false };
+export let lastGenInfo: GenInfo = { attempts: 0, bridges: [], fallback: false, shared: 1, sculpted: 1, rejects: { unsolvable: 0, tooEasy: 0, closed: 0 } };
 /** Attempts used by the last generateLevel call (kept for older callers). */
 export let lastGenAttempts = 0;
 
 /**
  * Level pipeline: pick theme → roll the variety profile (size, density,
  * route, hazards; ./profile.ts) → generate look → sculpt terrain (retrying
- * until it passes the solvability policy in ./validate.ts) → place theme
- * set pieces. If the theme sculptor keeps failing, the legacy sculptor gets
+ * until it passes the solvability policy in ./validate.ts and, with lanes
+ * from ./lanes.ts if it needs them, the mostly-open rule in ./routes.ts) →
+ * place theme set pieces. If the theme sculptor keeps failing, the legacy sculptor gets
  * a few tries before the flat floor; both count as `fallback` in
  * lastGenInfo (tests assert neither happens).
  */
@@ -44,19 +53,42 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
   const profile = rollProfile(seed, themeId, profileOverride);
   // Sculptor helpers size gaps/steps from jumps measured at this level's gravity.
   setProbeGravity(profile.gravity);
+  const challenge = new Rng(deriveSeed(seed, 'challenge')).next();
+  const rejects = { unsolvable: 0, tooEasy: 0, closed: 0 };
   for (let attempt = 0; attempt < MAX_ATTEMPTS + LEGACY_ATTEMPTS; attempt++) {
     const rng = new Rng(deriveSeed(seed, `level:${attempt}`));
     const sculptor = attempt < MAX_ATTEMPTS ? SCULPTORS[themeId] : FALLBACK_SCULPTOR;
-    const shape = sculptor({ rng, themeId, theme, attempt, profile });
+    const shape = sculptor({ rng, themeId, theme, attempt, profile, challenge });
     const level = toLevel(seed, shape, theme, profile);
     const v = judge(level, shape.bridgeHints);
-    if (!v.ok) continue;
+    if (!v.ok) {
+      rejects.unsolvable++;
+      continue;
+    }
     // A crossing meant to need props that turned out jumpable: re-roll (late attempts accept anything valid).
     // Big levels are costly to re-sculpt and judge, so they get fewer of these rerolls.
     const rerolls = profile.size === 'classic' ? MAX_ATTEMPTS - 10 : 4;
-    if (shape.wantsProps && v.bridges.length === 0 && attempt < rerolls) continue;
+    if (shape.wantsProps && v.bridges.length === 0 && attempt < rerolls) {
+      rejects.tooEasy++;
+      continue;
+    }
+    let shared = v.shared;
+    if (!v.open) {
+      // Mostly open: give the level the second route it lacks. Lanes stay away from bridges, so the
+      // solution still stands; openUp's own analysis re-proves it (an unreachable goal scores 1).
+      const routes = openUp(level, shape, v.bridges, new Rng(deriveSeed(seed, `lanes:${attempt}`)));
+      if (routes.shared > MAX_SHARED) {
+        rejects.closed++;
+        continue;
+      }
+      if (v.bridges.length && attempt < rerolls && analyzeReach(level).goalReached) {
+        rejects.tooEasy++;
+        continue;
+      }
+      shared = routes.shared;
+    }
     lastGenAttempts = attempt + 1;
-    lastGenInfo = { attempts: attempt + 1, bridges: v.bridges, fallback: attempt >= MAX_ATTEMPTS };
+    lastGenInfo = { attempts: attempt + 1, bridges: v.bridges, fallback: attempt >= MAX_ATTEMPTS, shared, sculpted: v.shared, rejects };
     level.solution = v.bridges;
     // Set pieces must never block the known prop solution: drop any that reserve one of its cells.
     const pieces = SET_PIECES[themeId](new Rng(deriveSeed(seed, `setpieces:${attempt}`)), level, { count: profile.hazards, danger: profile.danger });
@@ -66,7 +98,7 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
     return level;
   }
   lastGenAttempts = MAX_ATTEMPTS + LEGACY_ATTEMPTS;
-  lastGenInfo = { attempts: lastGenAttempts, bridges: [], fallback: true };
+  lastGenInfo = { attempts: lastGenAttempts, bridges: [], fallback: true, shared: 1, sculpted: 1, rejects };
   return toLevel(seed, fallbackShape(profile.w, profile.h), theme, profile);
 }
 

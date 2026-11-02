@@ -12,13 +12,21 @@ import type { SculptCtx } from '../types';
  */
 
 /**
- * A gap (empty columns) that is jumpable between ledges at equal height. By
- * default it is demanding: within a few columns of the longest running jump.
+ * A gap (empty columns) jumpable between ledges at equal height. Mostly a
+ * walking hop, sometimes one that takes a run-up: a run is a choice you make
+ * for speed, so a level shouldn't keep demanding it. Only use this where the
+ * near ledge is long enough to run on; short ledges want `hopGap`.
  */
-export function easyGap(rng: Rng, min?: number): number {
+export function easyGap(rng: Rng, min = 2): number {
   const j = jumpProfile();
-  const hi = Math.max(1, j.gap - 1);
-  return rng.int(Math.min(hi, min ?? Math.max(1, j.gap - 3)), hi);
+  const walk = Math.max(min, j.walkGap);
+  const run = Math.max(walk, j.gap - 1);
+  return rng.chance(0.4) ? rng.int(Math.min(run, walk + 1), run) : rng.int(min, walk);
+}
+
+/** A gap you can clear with a walking jump, from a stone or perch too short to run on. */
+export function hopGap(rng: Rng, min = 1): number {
+  return rng.int(min, Math.max(min, jumpProfile().walkGap));
 }
 
 /**
@@ -48,12 +56,17 @@ export function easyRise(): number {
 /**
  * How many crossings in this level must need a bridge (0, 1 or 2). Later
  * attempts lower the stakes so retries converge.
+ *
+ * Whether there's a challenge at all is decided once per level (k.challenge),
+ * not per attempt: harder shapes are rejected more often, so a per-attempt
+ * roll would quietly select for the prop-free ones.
  */
-export function rollChallenges(rng: Rng, pHard: number, pTwo: number, attempt: number, propNeed = 1): number {
+export function rollChallenges(rng: Rng, pHard: number, pTwo: number, attempt: number, k: Pick<Knobs, 'propNeed' | 'challenge'>): number {
   // The level profile's propNeed tilts the theme's base rate (1 = as tuned, lower = more breathers).
-  pHard = Math.min(0.97, pHard * (0.35 + 0.75 * propNeed));
-  if (attempt >= 8) pHard *= 0.5;
-  if (!rng.chance(pHard)) return 0;
+  let p = Math.min(0.97, pHard * (0.35 + 0.75 * k.propNeed));
+  if (attempt >= 8) p *= 0.5;
+  // A challenge some layouts can't solve mustn't outlast the retries: past this, drop it.
+  if (attempt >= 16 || k.challenge >= p) return 0;
   return rng.chance(pTwo) && attempt < 4 ? 2 : 1;
 }
 
@@ -171,6 +184,8 @@ export interface Knobs {
   /** Width relative to a classic level (1 = 48 columns). */
   wide: number;
   propNeed: number;
+  /** This level's challenge roll in [0, 1), the same on every attempt. */
+  challenge: number;
 }
 
 /**
@@ -200,6 +215,7 @@ export function knobs(ctx: SculptCtx, maxClimb?: number, range: [number, number]
     count: (base, min = 0) => Math.max(min, Math.round(base * wide * (0.45 + 1.1 * p.density))),
     wide,
     propNeed: p.propNeed,
+    challenge: ctx.challenge,
   };
 }
 

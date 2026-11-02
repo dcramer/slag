@@ -1,8 +1,11 @@
 import type { Rng } from '../../../core/rng';
-import { finish, Grid, hintGap, noise2D, smoothCA, T_EMPTY, T_ONEWAY, T_SOLID } from '../kit';
+import { finish, Grid, hintGap, noise2D, POCKET, smoothCA, T_EMPTY, T_ONEWAY, T_SOLID } from '../kit';
 import { jumpProfile } from '../probe';
 import type { SculptCtx, Shape } from '../types';
 import { easyGap, easyRise, hardGap, type Knobs, knobs, rollChallenges, undercut } from './common';
+
+/** Columns a storey's second connector occupies. */
+const ALT_W = 4;
 
 /**
  * Tall (vertical) levels: a stack of storeys joined by connectors, with each
@@ -22,10 +25,10 @@ import { easyGap, easyRise, hardGap, type Knobs, knobs, rollChallenges, undercut
  *            with a pit in front of the goal
  *
  * Spawn is always on the left, goal on the right. Storeys are spaced more
- * than a jump apart (measured: jumpProfile().rise), so connectors matter;
- * the bridge challenge is a gap in a storey too wide to jump (falling only
- * costs progress — the storey below catches you — except over the ground
- * floor's pit).
+ * than a jump apart (measured: jumpProfile().rise), so connectors matter, and
+ * every pair of storeys has two of them, far apart, so the climb is a choice
+ * (levels are mostly open). The bridge challenge breaks both connectors of one
+ * pair; a descent's is the ground floor's pit in front of the goal.
  */
 
 export interface Storey {
@@ -139,7 +142,7 @@ export function sculptTall(ctx: SculptCtx, kit: TallKit): Shape {
   // --- links (route order). Stairs rise toward where the route goes on the upper storey,
   // so its stairwell (the hole over the lower steps) is behind you.
   const links: Link[] = [];
-  const holds: Hold[][] = [];
+  const holds: Hold[][][] = [];
   for (let i = 0; i < n - 1; i++) {
     const a = storeys[order[i]];
     const b = storeys[order[i + 1]];
@@ -149,15 +152,31 @@ export function sculptTall(ctx: SculptCtx, kit: TallKit): Shape {
     const dir: 1 | -1 = onward >= mid ? 1 : -1;
     const l: Link = { lower, upper, x: linkX[i], w: lw, dir };
     links.push(l);
-    if (descent) {
-      dropHole(g, l);
-      holds.push([]);
-    } else holds.push(kit.link(g, rng, l, k));
+    const up: Hold[][] = [];
+    if (descent) dropHole(g, l);
+    else up.push(kit.link(g, rng, l, k));
+    // Mostly open: a second way between every pair of storeys, as far from the first as the storey
+    // allows. A ladder or a drop hole, whatever the kit's main connector is. The pockets only limit
+    // the storeys they stand on; the last drop of a descent stays left of the pit before the goal.
+    const lastDrop = descent && i === n - 2;
+    const left = (i === 0 ? POCKET + 1 : lo + 1) + rng.int(0, 1);
+    const right = (i === n - 2 ? W - POCKET - 2 : hi - 1) - ALT_W + 1 - rng.int(0, 1);
+    const clear = (x: number) => x + ALT_W + 1 < l.x || x > l.x + l.w;
+    const sides = lastDrop || mid > W / 2 ? [left, right] : [right, left];
+    if (lastDrop) sides[1] = l.x + l.w + 2;
+    const x = sides.find(clear);
+    if (x !== undefined) {
+      const alt: Link = { ...l, x, w: ALT_W };
+      links.push(alt);
+      if (descent) dropHole(g, alt);
+      else up.push(rungShaft(g, alt, rise));
+    }
+    holds.push(up);
   }
 
   // --- challenges: gaps in storeys between arrival and departure.
   // Tall levels lean on climbing for their difficulty; fewer of them hinge on a bridge.
-  const challenges = rollChallenges(rng, 0.62, 0.1, attempt, k.propNeed);
+  const challenges = rollChallenges(rng, 0.62, 0.1, attempt, k);
   g.wantsProps = challenges > 0;
   const nEasy = Math.round(rng.range(0, 1.5) + 2 * (1 - k.density));
   const cands = order.map((ri) => ({ ri }));
@@ -167,22 +186,19 @@ export function sculptTall(ctx: SculptCtx, kit: TallKit): Shape {
   let hard = challenges;
   let easy = nEasy;
   const used = new Set<number>();
-  // Broken connectors: a missing step/rung leaves a climb taller than any jump; one bridge prop fixes it.
-  const breakable = holds.map((hs, i) => ({ hs, i })).filter(({ hs }) => hs.length >= 2);
+  // Collapsed connectors: every way between two storeys loses its steps or rungs (one good ladder
+  // would need no bridge, and part of a stair still climbs by its sides). That leaves the storey
+  // spacing, measured to beat any jump; a bridge at mid-height fixes either way.
+  const breakable = holds.filter((ways) => ways.length > 0 && ways.every((hs) => hs.length >= 2));
   rng.shuffle(breakable);
-  let broken = 0;
-  for (const { hs } of breakable) {
-    if (hard <= 0 || broken >= 1 || !rng.chance(0.85)) break;
-    broken++;
-    // Thick solid steps have climbable side faces, so such a stair loses two in a row; otherwise one step/rung.
-    const solidSteps = hs.some((h) => h.y1 > h.y0);
-    const at = rng.int(0, Math.max(0, hs.length - 2));
-    for (const b of hs.slice(at, at + (solidSteps ? 2 : 1))) {
-      g.clear(b.x0, b.y0, b.x1, b.y1);
-      const cx = (b.x0 + b.x1) >> 1;
-      g.hint(cx - 1, b.y0);
-      g.hint(b.x0, b.y0);
-      g.hint(b.x1 - 2, b.y0);
+  if (hard > 0 && breakable.length && rng.chance(0.85)) {
+    for (const hs of breakable[0]) {
+      for (const b of hs) g.clear(b.x0, b.y0, b.x1, b.y1);
+      const m = hs[hs.length >> 1];
+      const cx = (m.x0 + m.x1) >> 1;
+      g.hint(cx - 1, m.y0);
+      g.hint(m.x0, m.y0);
+      g.hint(m.x1 - 2, m.y0);
     }
     hard--;
   }

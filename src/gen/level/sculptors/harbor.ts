@@ -2,7 +2,7 @@ import type { Rng } from '../../../core/rng';
 import { finish, Grid, hintGap } from '../kit';
 import { jumpProfile } from '../probe';
 import type { Sculptor } from '../types';
-import { easyGap, easyRise, hardGap, knobs, rollChallenges } from './common';
+import { easyGap, easyRise, hardGap, hopGap, knobs, rollChallenges } from './common';
 
 type HarborStyle = 'docks' | 'galleon' | 'marina';
 type Kind = 'pier' | 'ship' | 'boat' | 'buoys';
@@ -26,7 +26,7 @@ export const harbor: Sculptor = (ctx) => {
   ]);
   const g = new Grid(W, H);
   const q = H - rng.int(7, 10); // quay top row
-  const challenges = rollChallenges(rng, 0.82, 0.15, attempt, kn.propNeed);
+  const challenges = rollChallenges(rng, 0.82, 0.15, attempt, kn);
   g.wantsProps = challenges > 0;
   const kinds: Kind[] =
     style === 'galleon'
@@ -144,7 +144,7 @@ function stamp(g: Grid, rng: Rng, kind: Kind, x: number, w: number, d: number): 
       while (bx + 1 <= r) {
         g.plank(bx, bx + 1, by);
         g.set(bx, by + 1, 1);
-        bx += 2 + easyGap(rng, 1);
+        bx += 2 + hopGap(rng);
         by = d + rng.int(-1, 1);
       }
       return by;

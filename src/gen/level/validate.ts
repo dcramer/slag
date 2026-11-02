@@ -4,7 +4,10 @@ import { TILE } from '../../sim/constants';
 import { isProtected, type Level, T_EMPTY, T_SOLID } from '../../sim/level';
 import { bodyAtCell, type CollisionWorld, stepBody } from '../../sim/physics';
 import { analyzeReach } from '../../sim/reach';
-import type { BridgeHint } from './types';
+import { analyzeRoutes, MAX_SHARED } from './routes';
+import { BRIDGE_W, type BridgeHint } from './types';
+
+export { BRIDGE_W };
 
 /**
  * Solvability policy (AGENTS.md): a level is acceptable if the goal is
@@ -21,9 +24,12 @@ import type { BridgeHint } from './types';
  * if reach.ts grows smarter (wall-jumps, one-way physics) the policy only
  * gets more permissive — the search is an under-approximation, never an
  * oracle.
+ *
+ * A solvable level must also be mostly open (./routes.ts): `open` says so,
+ * measured with the solution's bridges in place. The two are separate so a
+ * synthetic one-lane level can still exercise the solvability policy.
  */
 
-export const BRIDGE_W = 3;
 export const MAX_BRIDGES = 2;
 
 export type Bridge = BridgeHint;
@@ -34,6 +40,10 @@ export interface Verdict {
   bridges: Bridge[];
   /** Placements the search tried (for stats). */
   evals: number;
+  /** Share of the route with no alternative lane (./routes.ts); 1 when unsolvable. */
+  shared: number;
+  /** Solvable and within the mostly-open limit. */
+  open: boolean;
 }
 
 /** True if a bridge with left cell (x, y) fits: all cells in-bounds, empty, unprotected. */
@@ -68,16 +78,22 @@ export function withBridges(level: Level, bridges: readonly Bridge[]): Level {
 
 /** Policy verdict for a level, using sculptor hints to speed up the search. */
 export function judge(level: Level, hints: readonly Bridge[] = []): Verdict {
-  if (analyzeReach(level).goalReached) return { ok: true, bridges: [], evals: 0 };
+  const scored = (bridges: Bridge[], evals: number): Verdict => {
+    const { shared } = analyzeRoutes(level, bridges);
+    return { ok: true, bridges, evals, shared, open: shared <= MAX_SHARED };
+  };
+  if (analyzeReach(level).goalReached) return scored([], 0);
   const s = new BridgeSearch(level);
   const verify = (bs: Bridge[]) => bs.every((b) => canPlaceBridge(level, b)) && analyzeReach(withBridges(level, bs)).goalReached;
   const sol = s.solve(hints, verify);
-  return { ok: !!sol, bridges: sol ?? [], evals: s.evals };
+  return sol ? scored(sol, s.evals) : { ok: false, bridges: [], evals: s.evals, shared: 1, open: false };
 }
 
 /** Policy check; seeds the search with the level's recorded solution if it has one. */
 export function isAcceptable(level: Level): boolean {
-  return judge(level, level.solution ?? []).ok;
+  const v = judge(level, level.solution ?? []);
+  // The search may land on another solution; the openness that counts is the recorded one's.
+  return v.ok && (v.open || analyzeRoutes(level, level.solution ?? []).shared <= MAX_SHARED);
 }
 
 // ---------------------------------------------------------------------------

@@ -27,7 +27,17 @@ export interface Shape {
    * the props-needed share tracks each theme's challenge rate.
    */
   wantsProps?: boolean;
+  /**
+   * Column spans (inclusive) of the crossings meant to need a bridge. Route
+   * lanes (./lanes.ts) stay clear of them so a hard gap stays hard.
+   */
+  crossings?: [number, number][];
+  /** The level is cut from solid rock: a second route is a carved gallery, not platforms in the air. */
+  carve?: boolean;
 }
+
+/** Width of a bridge prop in tiles. */
+export const BRIDGE_W = 3;
 
 /** Left cell of a BRIDGE_W×1 solid platform a player could place. */
 export interface BridgeHint {
@@ -43,6 +53,8 @@ export interface SculptCtx {
   attempt: number;
   /** Variety knobs: world size (build a Grid of profile.w×profile.h), density, route shape, prop need. */
   profile: LevelProfile;
+  /** Uniform [0, 1) rolled once per level, for decisions that must not change between attempts. */
+  challenge: number;
 }
 
 /** Builds a level shape for a theme. Must be deterministic in ctx.rng. */

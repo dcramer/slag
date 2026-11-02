@@ -30,7 +30,8 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 ## Levels
 - Every level has a **theme**: farm, factory, castle, jungle, volcano, harbor, mine or rooftops. The theme drives the terrain shapes, look, music and set pieces, so a farm reads as a farm.
 - **Levels vary**: size and aspect (wide, classic, tall), sparse vs dense terrain, few vs many hazards, and route shape (sprawl, climb, descent, zig-zag).
-- **Levels are mostly open.** Corridors are fine in places, but there's never only one narrow way to the goal: there are always route options, with hazards and choices along them.
+- **Levels are mostly open.** Corridors are fine in places, but there's never only one narrow way to the goal: there are always route options, with hazards and choices along them. Measured on the real controller's routes: take the fastest route and widen it by 2 tiles either side; a second route must stay out of that lane for at least 40% of the way. The spawn and goal pockets and the span of a bridge don't count, since nobody has a choice there. A level short of that gets raised lanes of jump-through platforms (carved galleries in a mine), and towers get two connectors between every pair of storeys.
+- **Run is a choice.** Most gaps can be walked across and some take a run-up; platforms too short to run on are always a walking hop apart.
 - **Most levels need props.** Roughly 70–85% can't be finished bare. Every level must be finishable with **at most two small bridges**, verified with the real movement controller and never with hand-waved distances.
 - The spawn and goal zones are protected: nothing can be built or bombed there.
 - **The flag is generous**: its finish trigger is a bit wider than the flag and reaches 4 tiles up, so jumping clear over it still counts. Touching it ends your control: you drop, land and ride platforms with normal physics, and nothing can hurt you anymore.

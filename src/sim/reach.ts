@@ -253,7 +253,12 @@ export interface ReachResult {
   reachable: Set<number>;
 }
 
-export function analyzeReach(level: Level, stopAtGoal = true): ReachResult {
+/**
+ * `onEdge`, when given, sees every transition of the stand-cell graph (a walk
+ * step, or a jump/fall/climb landing) as it's found, keyed by `y * w + x`.
+ * Worldgen's route analysis (gen/level/routes.ts) builds on it.
+ */
+export function analyzeReach(level: Level, stopAtGoal = true, onEdge?: (from: number, to: number) => void): ReachResult {
   const world: CollisionWorld = { tileAt: (x, y) => tileAt(level, x, y), solids: [], gravity: level.gravity ?? 1 };
   const key = (x: number, y: number) => y * level.w + x;
   const goalKey = key(level.goal.tx, level.goal.ty);
@@ -268,13 +273,19 @@ export function analyzeReach(level: Level, stopAtGoal = true): ReachResult {
   if (!isStandable(level, level.spawn.tx, level.spawn.ty)) return { goalReached: false, reachable: seen };
   pushKey(key(level.spawn.tx, level.spawn.ty));
 
-  const tracer = new Tracer(level, world, pushKey);
+  let from = -1;
+  const reached = (k: number) => {
+    onEdge?.(from, k);
+    pushKey(k);
+  };
+  const tracer = new Tracer(level, world, reached);
   for (let qi = 0; qi < queue.length; qi++) {
     const k = queue[qi];
+    from = k;
     if (k === goalKey && stopAtGoal) return { goalReached: true, reachable: seen };
     const tx = k % level.w;
     const ty = (k - tx) / level.w;
-    for (const nx of [tx - 1, tx + 1]) if (isStandable(level, nx, ty)) pushKey(key(nx, ty));
+    for (const nx of [tx - 1, tx + 1]) if (isStandable(level, nx, ty)) reached(key(nx, ty));
     const oneWay = tileAt(level, tx, ty + 1) === T_ONEWAY;
     // Run-ups start where the platform starts (wall or drop behind you): the longest possible run.
     // Short ledges don't build meaningful speed; walking jumps cover them.

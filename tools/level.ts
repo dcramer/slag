@@ -13,6 +13,7 @@
 import { deriveSeed, parseSeed, Rng } from '../src/core/rng';
 import { SCULPTORS } from '../src/gen/level/sculptors';
 import { BRIDGE_W, describeProfile, generateLevel, gravityClass, judge, lastGenInfo, type ProfileOverride } from '../src/gen/level';
+import { MAX_SHARED } from '../src/gen/level/routes';
 import type { RouteShape, SizeClass } from '../src/sim/level';
 import { T_ONEWAY, T_SOLID } from '../src/sim/level';
 import { footprintCells } from '../src/sim/props';
@@ -60,7 +61,7 @@ if (args.includes('--stats')) {
   const n = Number(opt('stats') ?? 100);
   const themes = themeOpt ? [themeOpt] : THEME_IDS;
   const rows: Record<string, unknown>[] = [];
-  const total = { n: 0, ms: 0, bridged: 0, fallbacks: 0, attempts: 0 };
+  const total = { n: 0, ms: 0, bridged: 0, fallbacks: 0, attempts: 0, closed: 0, openAsSculpted: 0 };
   for (const th of themes) {
     const styles: Record<string, number> = {};
     let ms = 0;
@@ -69,6 +70,8 @@ if (args.includes('--stats')) {
     let two = 0;
     let fallbacks = 0;
     let attempts = 0;
+    let closed = 0;
+    let openAsSculpted = 0;
     for (let i = 0; i < n; i++) {
       const t0 = performance.now();
       const l = generateLevel((i * 2654435761) >>> 0, th, force);
@@ -86,12 +89,16 @@ if (args.includes('--stats')) {
       if (lastGenInfo.bridges.length === 1) one++;
       if (lastGenInfo.bridges.length === 2) two++;
       attempts += lastGenInfo.attempts;
+      closed += lastGenInfo.rejects.closed;
+      if (lastGenInfo.sculpted <= MAX_SHARED) openAsSculpted++;
     }
     total.n += n;
     total.ms += ms;
     total.bridged += one + two;
     total.fallbacks += fallbacks;
     total.attempts += attempts;
+    total.closed += closed;
+    total.openAsSculpted += openAsSculpted;
     rows.push({
       theme: th,
       msPerLevel: +(ms / n).toFixed(1),
@@ -101,6 +108,8 @@ if (args.includes('--stats')) {
       twoBridges: two,
       fallbacks,
       attempts: +(attempts / n).toFixed(2),
+      openAsSculpted: `${((openAsSculpted / n) * 100).toFixed(0)}%`,
+      closedRejects: closed,
       styles: Object.entries(styles)
         .map(([k, v]) => `${k}:${v}`)
         .join(' '),
@@ -128,6 +137,9 @@ if (args.includes('--stats')) {
     needBridges: `${((total.bridged / total.n) * 100).toFixed(0)}%`,
     fallbacks: total.fallbacks,
     attempts: +(total.attempts / total.n).toFixed(2),
+    // Mostly-open rule: levels already open as sculpted, and candidates still too narrow after lanes.
+    openAsSculpted: `${((total.openAsSculpted / total.n) * 100).toFixed(0)}%`,
+    closedRejects: `${total.closed} of ${total.attempts} candidates (${((total.closed / total.attempts) * 100).toFixed(1)}%)`,
   });
 } else {
   const seedArg = args.find((a, i) => !a.startsWith('--') && !args[i - 1]?.startsWith('--')) ?? 'demo';
@@ -139,7 +151,8 @@ if (args.includes('--stats')) {
     // Debug a sculptor: show attempt N's raw shape (before validation) instead of the accepted level.
     const themeId = l.theme.id;
     const rng = new Rng(deriveSeed(seedNum, `level:${rawAttempt}`));
-    const shape = SCULPTORS[themeId]({ rng, themeId, theme: l.theme, attempt: Number(rawAttempt), profile: l.profile! });
+    const challenge = new Rng(deriveSeed(seedNum, 'challenge')).next();
+    const shape = SCULPTORS[themeId]({ rng, themeId, theme: l.theme, attempt: Number(rawAttempt), profile: l.profile!, challenge });
     l = { ...l, tiles: shape.tiles, spawn: shape.spawn, goal: shape.goal, protectedRects: shape.protectedRects, style: shape.style, setPieces: [] };
     console.log('raw attempt', rawAttempt, 'judge:', judge(l, shape.bridgeHints));
   }

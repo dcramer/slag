@@ -1,7 +1,7 @@
 import type { Rng } from '../../../core/rng';
 import { finish, Grid, hintGap, noise1D } from '../kit';
 import type { Sculptor } from '../types';
-import { easyGap, easyRise, hardGap, knobs, pit, relax, rollChallenges, Slots } from './common';
+import { easyGap, easyRise, hardGap, hopGap, knobs, pit, relax, rollChallenges, Slots } from './common';
 import { volcanoTall } from './tall';
 
 type VolcanoStyle = 'spires' | 'caldera' | 'flows';
@@ -35,7 +35,7 @@ export const volcano: Sculptor = (ctx) => {
   for (let x = W - 6; x < W; x++) surf[x] = gRow;
   locked.fill(1, 0, 6);
   locked.fill(1, W - 6, W);
-  const challenges = rollChallenges(rng, 0.82, 0.15, attempt, k.propNeed);
+  const challenges = rollChallenges(rng, 0.82, 0.15, attempt, k);
   g.wantsProps = challenges > 0;
   let hardLeft = challenges;
 
@@ -56,7 +56,7 @@ export const volcano: Sculptor = (ctx) => {
       let py = bank - 1;
       const hardAt = hardLeft > 0 ? rng.int(0, 2) : -1;
       for (let i = 0; px < b - 3; i++) {
-        const gap = i === hardAt ? hardGap(rng) : easyGap(rng, 2);
+        const gap = i === hardAt ? hardGap(rng) : hopGap(rng, 2);
         const w = rng.int(2, 4);
         const x = px + gap + 1;
         if (x + w - 1 > b - 2) break;

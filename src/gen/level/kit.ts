@@ -26,8 +26,12 @@ export class Grid {
   /** Cells that non-forced stamps must leave untouched (walk lanes, pockets). */
   readonly keep: Uint8Array;
   readonly hints: BridgeHint[] = [];
+  /** Column spans of hard crossings (recorded by hintGap). */
+  readonly crossings: [number, number][] = [];
   /** Set by sculptors that built a crossing meant to need a bridge prop. */
   wantsProps = false;
+  /** Set by sculptors working in solid rock: second routes are carved, not hung (Shape.carve). */
+  carve = false;
 
   constructor(
     readonly w: number = LEVEL_W,
@@ -200,11 +204,14 @@ export function finish(g: Grid, spawn: Pocket, goal: Pocket, style: string): Sha
     style,
     bridgeHints: g.hints.slice(),
     wantsProps: g.wantsProps,
+    crossings: g.crossings.slice(),
+    carve: g.carve,
   };
 }
 
 /** Hint a bridge in the middle of a gap whose floor row is `row` (bridge top = row - 1 stand cell). */
 export function hintGap(g: Grid, x0: number, x1: number, row: number): void {
+  g.crossings.push([x0, x1]);
   const w = x1 - x0 + 1;
   if (w <= 3) {
     g.hint(x0, row);

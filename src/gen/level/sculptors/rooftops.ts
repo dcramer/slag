@@ -34,7 +34,7 @@ export const rooftops: Sculptor = (ctx) => {
   ]);
   const g = new Grid(W, H);
   const rise = easyRise();
-  const challenges = rollChallenges(rng, 0.82, 0.15, attempt, k.propNeed);
+  const challenges = rollChallenges(rng, 0.82, 0.15, attempt, k);
   g.wantsProps = challenges > 0;
 
   // Plan buildings left → right until the map is full.
