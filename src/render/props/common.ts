@@ -39,7 +39,7 @@ export interface ModuleArt<M extends Module = Module> {
   draw(rc: RC, m: M, d: DrawCtx): void;
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: heterogeneous registry
+// Heterogeneous registry: entries are keyed by module type.
 const ART = new Map<string, ModuleArt<any>[]>();
 
 export function defineArt<T extends Module['type']>(art: ModuleArt<Extract<Module, { type: T }>>) {

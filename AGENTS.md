@@ -40,13 +40,13 @@ Build original content. Use the genre's mechanics, but never copy another game's
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | Vite dev server (http://localhost:5173). URL params are listed below. |
-| `npm run check` | `tsc` + `biome check` + `vitest run`. Must pass before you commit. |
-| `npm run format` | Biome format + organize imports + safe lint fixes. |
+| `npm run dev` | Next.js dev server (http://localhost:3000). `/` redirects to a new lobby `/r/<code>`. URL params are listed below. |
+| `npm run check` | `tsc` + `oxlint` + `oxfmt --check` + `vitest run`. Must pass before you commit. |
+| `npm run format` | `oxfmt` (format) + `oxlint --fix` (safe lint fixes). |
 | `npm test` | Vitest only. Run one file with `npx vitest run tests/foo.test.ts`. |
 | `npm run level -- <seed>` | ASCII dump of a generated level, plus stats: `#` solid, `=` one-way, `S`/`G` spawn/goal, `·` reachable stand cell, `P` set piece. |
 | `npm run level -- --stats 200` | Generation stats across many seeds: time, styles, how often a level is solvable without props. |
-| `npm run shot -- <scenario> [opts]` | Headless screenshots into `shots/` (gitignored). Boots Vite itself. |
+| `npm run shot -- <scenario> [opts]` | Headless screenshots into `shots/` (gitignored). Boots `next dev` itself; the first page compile takes a while. |
 | `npm run build` | Production bundle in `dist/`, which Vercel serves. |
 
 Screenshot scenarios (`tools/shot.ts`):
@@ -70,7 +70,9 @@ In the console, `slagDebug` exposes `quickStart`, `race`, `addProps`, `loadLevel
 ## Architecture
 
 ```
+app/             Next.js routes: / (redirect), r/[room] (game shell), codex, not-found
 src/
+  game-client.ts bootGame(container, room): canvases, input, menus, fixed-step loop
   core/          pure utils: rng (seeded, deterministic), geom, color
   themes.ts      ThemeId list + pickThemeId(seed)  ← theme registry root
   sim/           deterministic simulation. NO DOM, NO Math.random, NO wall clock
@@ -109,7 +111,7 @@ tests/           vitest
 
 ### Data flow per frame
 
-1. `main.ts` samples input once per fixed 60 Hz step and calls `Match.step(inputs)`.
+1. `game-client.ts` (`bootGame`) samples input once per fixed 60 Hz step and calls `Match.step(inputs)`.
 2. During a race, `Match` calls `RunWorld.step`, which:
    - asks every prop module to `build` this frame's solids, hazards, and triggers;
    - steps the runners with `stepBody`;
@@ -175,8 +177,9 @@ tests/           vitest
 ## Deployment and online play
 
 - **Hosting is Vercel.**
-  - `vercel.json` configures a static Vite build (`dist/`) and rewrites `/r/:room` to `index.html` for shareable room links.
-  - Keep `vite.config.ts` `base: '/'`.
+  - The app is **Next.js (App Router)** so routes are server-rendered: `/` redirects to a fresh `/r/<code>`; `/r/[room]` renders the lobby shell (per-lobby metadata) and mounts the game client-side; `/codex` is the parts catalog.
+  - **Game logic stays client-side.** Next pages are thin: they validate params, render a shell, and call `bootGame(container, room)` / `mountCodex()` from `src/` in a `'use client'` component. Don't import React into `src/`.
+  - Server code is limited to route handlers / server components in `app/`; keep it small and free.
   - Any server-side code must be small Vercel functions in `api/`. No long-lived servers, and nothing that costs money at our scale.
 - **Online play** is peer-to-peer over WebRTC with a host-authoritative star, input-only netcode (lockstep plus rollback in races), and serverless signaling. The full plan is in **docs/NETCODE.md**. Consequences for all code today:
   - Keep sim state snapshot-friendly: plain data, no closures or class instances holding hidden state, no `Map` iteration-order dependence that isn't deterministic.
@@ -185,8 +188,8 @@ tests/           vitest
 
 ## Code conventions
 
-- TypeScript strict mode, ES modules, no runtime dependencies. Dev tooling only: vite, vitest, biome, tsx, playwright.
-- Biome formats with 2-space indentation, single quotes, and 160-column lines. Run `npm run format` before committing.
+- TypeScript strict mode, ES modules. Runtime deps are only next/react/react-dom (for routing and the shell); the game itself uses none. Dev tooling: vitest, oxlint, oxfmt, tsx, playwright.
+- oxfmt formats with 2-space indentation, single quotes, and 160-column lines (`.oxfmtrc.json`); oxlint config is `.oxlintrc.json`. Run `npm run format` before committing.
 - Write doc comments on modules and exported functions that explain *why*. Keep functions small. Prefer data plus registries over sprawling `switch` statements.
 - Units: world pixels and sim frames (60 per second). Tile coordinates are in `TILE` units. Angles are radians in screen space, so +y points down and +π/2 points down.
 - Write tests for every generator invariant (determinism, validity), for every prop module's runtime behavior, and for physics feel regressions.
@@ -204,3 +207,13 @@ When work is split across subagents:
 
 - Prefer procedural art. Third-party assets are fine only if they're CC0 or otherwise free for commercial use with no attribution traps. Record every asset in `public/ASSETS.md` with its source URL and license.
 - Keep shipped assets small (downscale textures to ≤256 px tiles and compress them).
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

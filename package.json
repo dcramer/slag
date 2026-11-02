@@ -5,24 +5,32 @@
   "type": "module",
   "description": "Browser-based competitive party platformer with procedurally generated levels, props, and characters.",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview",
+    "dev": "next dev",
+    "build": "next build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "lint": "biome check src tests tools",
-    "format": "biome check --write src tests tools",
-    "check": "tsc --noEmit && biome check src tests tools && vitest run",
+    "lint": "oxlint && oxfmt --check src tests tools app",
+    "format": "oxfmt src tests tools app && oxlint --fix",
+    "check": "tsc --noEmit && oxlint && oxfmt --check src tests tools app && vitest run",
     "shot": "tsx tools/shot.ts",
-    "level": "tsx tools/level.ts"
+    "level": "tsx tools/level.ts",
+    "start": "next start"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.6.4",
     "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "oxfmt": "^0.75.0",
+    "oxlint": "^1.90.0",
     "playwright": "^1.63.0",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
     "vitest": "^5.0.5"
+  },
+  "dependencies": {
+    "next": "^16.4.3",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   }
 }

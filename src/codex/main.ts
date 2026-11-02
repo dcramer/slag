@@ -244,7 +244,12 @@ function frame(now: number) {
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const w = l.base.clientWidth;
     const h = l.base.clientHeight;
-    if (l.base.width !== Math.round(w * dpr)) for (const c of [l.base, l.glow]) (c.width = Math.round(w * dpr)), (c.height = Math.round(h * dpr));
+    if (l.base.width !== Math.round(w * dpr)) {
+      for (const c of [l.base, l.glow]) {
+        c.width = Math.round(w * dpr);
+        c.height = Math.round(h * dpr);
+      }
+    }
     const s = l.base.getContext('2d')!;
     const g = l.glow.getContext('2d')!;
     for (const c of [s, g]) {
@@ -257,8 +262,15 @@ function frame(now: number) {
   requestAnimationFrame(frame);
 }
 
-const st = document.createElement('style');
-st.textContent = CSS;
-document.head.append(st);
-render();
-requestAnimationFrame(frame);
+let mounted = false;
+
+/** Mount the codex into its container (called by the /codex route). */
+export function mountCodex(): void {
+  if (mounted) return;
+  mounted = true;
+  const st = document.createElement('style');
+  st.textContent = CSS;
+  document.head.append(st);
+  render();
+  requestAnimationFrame(frame);
+}

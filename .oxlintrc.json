@@ -1,0 +1,58 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "typescript",
+    "unicorn",
+    "oxc",
+    "import"
+  ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "perf": "warn"
+  },
+  "rules": {
+    "no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ],
+    "typescript/no-explicit-any": "off",
+    "unicorn/no-array-for-each": "off",
+    "unicorn/no-new-array": "off",
+    "no-shadow": "off",
+    "import/no-unassigned-import": "off",
+    "import/no-cycle": "off",
+    "no-await-in-loop": "off",
+    "unicorn/consistent-function-scoping": "off",
+    "no-underscore-dangle": "off",
+    "unicorn/prefer-add-event-listener": "off",
+    "react/react-in-jsx-scope": "off"
+  },
+  "overrides": [
+    {
+      "files": [
+        "app/**/*.tsx",
+        "app/**/*.ts"
+      ],
+      "plugins": [
+        "typescript",
+        "react",
+        "nextjs"
+      ],
+      "rules": {
+        "react/react-in-jsx-scope": "off",
+        "nextjs/no-page-custom-font": "off"
+      }
+    }
+  ],
+  "ignorePatterns": [
+    ".next/**",
+    ".claude/**",
+    "shots/**",
+    "node_modules/**",
+    "next-env.d.ts"
+  ]
+}

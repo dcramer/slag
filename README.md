@@ -8,7 +8,7 @@ The twist: **levels, props, and characters are all procedurally generated** from
 
 ```sh
 npm install
-npm run dev        # http://localhost:5173  (add ?seed=anything for a specific level)
+npm run dev        # http://localhost:3000 → redirects to a new lobby /r/<code>  (?seed=… forces a level)
 npm run check      # typecheck + lint + tests
 npm run shot -- race --race all   # headless screenshots into shots/
 npm run level -- myseed           # ASCII level inspector
@@ -70,7 +70,7 @@ src/
   game/     match state machine (lobby → pick → place → run → score → victory), scoring
   input/    keyboard + gamepad → per-device InputFrame
   render/   Canvas2D layers + WebGL2 post (reads sim state; owns only particles, rigs & caches)
-  main.ts   fixed 60 Hz timestep loop
+  game-client.ts  bootGame(): fixed 60 Hz timestep loop (mounted by the Next.js route app/r/[room])
 ```
 
 The sim is a pure function of `(seed, per-frame inputs)` and has no DOM access. A test plays two full headless matches and asserts they come out identical. That determinism is the foundation for online play, which can use lockstep or rollback netcode over WebRTC and only needs to send inputs.

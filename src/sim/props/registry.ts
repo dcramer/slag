@@ -102,7 +102,7 @@ export interface ModuleSim<M extends Module = Module> {
   onStand?(m: M, ctx: TickCtx): void;
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: heterogeneous registry
+// Heterogeneous registry: entries are keyed by module type.
 const REGISTRY = new Map<string, ModuleSim<any>>();
 
 export function defineModule<T extends Module['type']>(sim: ModuleSim<Extract<Module, { type: T }>>): ModuleSim<Extract<Module, { type: T }>> {

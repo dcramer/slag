@@ -1,5 +1,5 @@
 /**
- * Screenshot harness. Boots a Vite dev server, drives the game through
+ * Screenshot harness. Boots a Next.js dev server, drives the game through
  * window.slagDebug in headless Chromium, and writes PNGs.
  *
  *   npm run shot -- race --seed abc --race saw,laser --frames 200
@@ -13,10 +13,12 @@
  *          --theme farm (force a theme; `levels --themes all` renders one level per theme)
  * Software GL is slow; frames are advanced deterministically via slagDebug.step().
  */
+
+import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { createServer as netServer } from 'node:net';
 import { resolve } from 'node:path';
 import { chromium } from 'playwright';
-import { createServer } from 'vite';
 
 const argv = process.argv.slice(2);
 const scenario = argv[0] && !argv[0].startsWith('--') ? argv.shift()! : 'race';
@@ -33,10 +35,36 @@ const players = Number(opt('players', '2'));
 const frames = Number(opt('frames', '150'));
 mkdirSync(out, { recursive: true });
 
-const server = await createServer({ server: { port: 0, host: '127.0.0.1' }, logLevel: 'error' });
-await server.listen();
-const addr = server.httpServer!.address();
-const base = `http://127.0.0.1:${typeof addr === 'object' && addr ? addr.port : 5173}/`;
+async function freePort(): Promise<number> {
+  return new Promise((res) => {
+    const srv = netServer();
+    srv.listen(0, '127.0.0.1', () => {
+      const a = srv.address();
+      srv.close(() => res(typeof a === 'object' && a ? a.port : 3100));
+    });
+  });
+}
+const port = Number(process.env.SHOT_PORT ?? (await freePort()));
+const base = `http://127.0.0.1:${port}/`;
+const next = spawn('npx', ['next', 'dev', '--port', String(port), '--hostname', '127.0.0.1'], {
+  stdio: ['ignore', 'pipe', 'pipe'],
+  env: { ...process.env, NEXT_TELEMETRY_DISABLED: '1' },
+});
+let nextLog = '';
+next.stdout.on('data', (d) => (nextLog += d));
+next.stderr.on('data', (d) => (nextLog += d));
+// Wait for the server, then warm the routes (first compile is slow).
+for (let i = 0; ; i++) {
+  try {
+    const r = await fetch(`${base}r/WARMUP`);
+    if (r.ok) break;
+  } catch {
+    // not up yet
+  }
+  if (i > 240) throw new Error(`next dev did not start:\n${nextLog}`);
+  await new Promise((r) => setTimeout(r, 500));
+}
+const server = { close: async () => void next.kill('SIGTERM') };
 // Prefer a preinstalled Chromium (cloud containers ship one); otherwise use Playwright's (`npx playwright install chromium`).
 const executablePath = process.env.PW_CHROMIUM ?? (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
 const browser = await chromium.launch({ executablePath, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
@@ -46,7 +74,7 @@ page.on('pageerror', (e: Error) => errors.push(String(e)));
 page.on('console', (m: { type(): string; text(): string }) => m.type() === 'error' && errors.push(m.text()));
 
 async function open(q: string) {
-  await page.goto(`${base}?${q}${tq}`);
+  await page.goto(`${base}r/SHOTS?${q}${tq}`);
   await page.waitForFunction(() => 'slagDebug' in window, null, { timeout: 30_000 });
   await page.evaluate(() => document.fonts.ready);
   await page.evaluate(() => (window as any).slagDebug.pause(true));

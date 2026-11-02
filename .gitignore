@@ -1,6 +1,8 @@
 node_modules
 dist
+.next
 shots
 *.log
 .DS_Store
 .claude/worktrees/
+*.tsbuildinfo
