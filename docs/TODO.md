@@ -130,7 +130,3 @@ There's too much variety in the crate, and it's confusing. **Next up once item 3
 
 ## 19. Secret parts mode
 A mode where you don't see what a part is. You choose a type (hazard, utility, build, whatever the roles are) and get one at random from what's allowed. A lobby rule, with the roll deterministic from the seed and the same on every peer. The first time anyone sees the part is when it lands.
-
-## 20. Settings in tabs
-The settings screen is way too large. Split it into tabs or similar.
-
