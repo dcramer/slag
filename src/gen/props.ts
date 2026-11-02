@@ -1273,7 +1273,11 @@ const RECIPES: Record<Archetype, PartRecipe> = {
         ? title(rng, ['Blasting', 'Quarry', 'Pocket'], ['Mining Charge', 'Rock Popper', 'Pick Bomb'])
         : title(rng, ['Volatile', 'Grumpy', 'Polite', 'Excessive'], ['Cartoon Bomb', 'Kaboom', 'Fuse Ball', `${word(rng, 1, 2)}-omb`]),
       sized: (size) => ({
-        modules: [mining ? { type: 'bomb', radius: by(size, 1.4, 1.8, 2.2), look: 'bomb' } : { type: 'bomb', radius: by(size, 1.6, 2.6, 4), target: 'props', look: 'bomb' }],
+        modules: [
+          mining
+            ? { type: 'bomb', radius: by(size, 1.4, 1.8, 2.2), look: 'bomb' }
+            : { type: 'bomb', radius: by(size, 1.6, 2.6, 4), target: 'props', look: 'bomb' },
+        ],
       }),
     };
   },
@@ -1309,7 +1313,14 @@ const RECIPES: Record<Archetype, PartRecipe> = {
       ),
       sized: (size) => ({
         modules: [
-          { type: 'bomb', radius: cross ? by(size, 3, 4, 6) : by(size, 2.6, 3.2, 4), shape: cross ? 'cross' : 'ring', width: cross ? 1 : 1.3, target: 'props', look: 'charge' },
+          {
+            type: 'bomb',
+            radius: cross ? by(size, 3, 4, 6) : by(size, 2.6, 3.2, 4),
+            shape: cross ? 'cross' : 'ring',
+            width: cross ? 1 : 1.3,
+            target: 'props',
+            look: 'charge',
+          },
         ],
       }),
     };

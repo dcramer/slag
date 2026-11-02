@@ -131,7 +131,10 @@ describe('a match roster', () => {
         const roster = generateRoster(seedAt(i), rosterSize(cardsFor(players)));
         const ctx = `${players}p seed ${seedAt(i)}`;
         expect(roster.flatMap((p) => p.variants).some(isBridgePart), ctx).toBe(true);
-        expect(roster.some((p) => p.role === 'demolish'), ctx).toBe(true);
+        expect(
+          roster.some((p) => p.role === 'demolish'),
+          ctx,
+        ).toBe(true);
         expect(
           roster.some((p) => dryLean(p.archetype, 5) > 3 && p.role === 'demolish'),
           ctx,
