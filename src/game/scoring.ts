@@ -2,11 +2,18 @@ export const POINTS = {
   finish: 10,
   first: 4,
   trap: 2,
+  underdog: 3,
 } as const;
 
-/** A finisher trailing the leader earns +1 per this many points behind, up to UNDERDOG_MAX. */
-export const UNDERDOG_GAP = 10;
-export const UNDERDOG_MAX = 5;
+/** Scoreless rounds in a row before a trailing finisher counts as an underdog. */
+export const UNDERDOG_ROUNDS = 2;
+
+/** Where a player stands going into a round. */
+export interface Standing {
+  score: number;
+  /** Rounds in a row without a point. */
+  scoreless: number;
+}
 
 export type Verdict = 'normal' | 'too-easy' | 'too-hard';
 
@@ -29,14 +36,14 @@ export interface RoundResult {
  * - Otherwise finishers score, the first finisher gets a bonus, and a finisher
  *   earns a small bonus for each *other* player their prop killed. Traps alone
  *   don't pay: you have to reach the flag too.
- * - A finisher trailing the leader going into the round earns an underdog bonus,
- *   so a match stays open without letting anyone leapfrog on one good round.
+ * - A trailing finisher who hasn't scored in a while earns an underdog bonus, so
+ *   a stuck player stays in it without rewarding merely being behind.
  */
 export function scoreRound(
   slots: readonly number[],
   finishers: readonly number[],
   kills: readonly { victim: number; killer: number }[],
-  scores: Readonly<Record<number, number>> = {},
+  standings: Readonly<Record<number, Standing>> = {},
 ): RoundResult {
   const n = slots.length;
   if (finishers.length === 0) return { verdict: 'too-hard', awards: [], finishers: [...finishers] };
@@ -47,10 +54,10 @@ export function scoreRound(
     for (const k of kills) {
       if (k.killer !== k.victim && finishers.includes(k.killer)) awards.push({ slot: k.killer, points: POINTS.trap, reason: 'trap' });
     }
-    const leader = Math.max(0, ...slots.map((s) => scores[s] ?? 0));
+    const leader = Math.max(0, ...slots.map((s) => standings[s]?.score ?? 0));
     for (const slot of finishers) {
-      const points = Math.min(UNDERDOG_MAX, Math.floor((leader - (scores[slot] ?? 0)) / UNDERDOG_GAP));
-      if (points > 0) awards.push({ slot, points, reason: 'underdog' });
+      const s = standings[slot];
+      if (s && s.score < leader && s.scoreless >= UNDERDOG_ROUNDS) awards.push({ slot, points: POINTS.underdog, reason: 'underdog' });
     }
   }
   return { verdict: 'normal', awards, finishers: [...finishers] };

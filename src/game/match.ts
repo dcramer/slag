@@ -19,6 +19,8 @@ export interface Player {
   device: string;
   character: CharacterDef;
   score: number;
+  /** Rounds in a row without a point, for the underdog bonus. */
+  scoreless: number;
   ready: boolean;
   cursor: { x: number; y: number };
   /** Frames a direction has been held, up to the cursor's ramp. */
@@ -180,6 +182,7 @@ export class Match {
       device,
       character: character ?? this.rollCharacter(),
       score: 0,
+      scoreless: 0,
       ready: false,
       cursor: { x: 0, y: 0 },
       cursorHeld: 0,
@@ -215,7 +218,10 @@ export class Match {
     this.placed = [];
     this.result = null;
     this.winners = [];
-    for (const p of this.players) p.score = 0;
+    for (const p of this.players) {
+      p.score = 0;
+      p.scoreless = 0;
+    }
     this.startRound();
   }
 
@@ -427,13 +433,14 @@ export class Match {
       this.players.map((p) => p.slot),
       run.finishOrder,
       run.kills,
-      Object.fromEntries(this.players.map((p) => [p.slot, p.score])),
+      Object.fromEntries(this.players.map((p) => [p.slot, { score: p.score, scoreless: p.scoreless }])),
     );
     this.prevScores = new Map(this.players.map((p) => [p.slot, p.score]));
     for (const a of result.awards) {
       const p = this.player(a.slot);
       if (p) p.score += a.points;
     }
+    for (const p of this.players) p.scoreless = result.awards.some((a) => a.slot === p.slot) ? 0 : p.scoreless + 1;
     this.result = result;
     this.setPhase('score');
   }
@@ -461,6 +468,7 @@ export class Match {
       for (const p of this.players) {
         p.ready = false;
         p.score = 0;
+        p.scoreless = 0;
       }
       this.setPhase('lobby');
     }
