@@ -68,6 +68,9 @@ const STATUS_LABEL: Record<NetStatus, string> = {
   kicked: 'Kicked',
 };
 
+/** The host runs another build: its snapshots don't load here. */
+const REFUSED = 'Different Version · Reload';
+
 /** Long enough to read before landing on the main menu. */
 const KICKED_MS = 1500;
 
@@ -118,10 +121,12 @@ export function connectRoom(room: string, match: Match, opts: { primaryDevice: s
     if (net.status === 'kicked') return STATUS_LABEL.kicked;
     if (net.status === 'reconnecting' || net.status === 'connecting') return STATUS_LABEL[net.status];
     if (net.paused && net.role === 'host') return 'Migrating Host…';
-    if (net.role === 'guest' && !net.synced) return 'Joining…';
+    if (net.role === 'guest' && !net.synced) return net.refused ? REFUSED : 'Joining…';
     if (transport?.kind === 'broadcast') return `Local Tabs · ${peers.length} Connected`;
     return net.isHost ? `Hosting · ${peers.length} Connected` : `${peers.length} Connected`;
   };
+  /** Not in the room, whatever the link says: an invite from here would only bring people to this. */
+  const cutOff = () => net.status === 'unavailable' || net.status === 'kicked' || (net.refused && !net.synced);
   const kickable = () =>
     net.isHost && transport && match.phase === 'lobby' ? match.players.filter((p) => peerOf(p.device) && peerOf(p.device) !== net.self).map((p) => p.slot) : [];
   const peerInSlot = (slot: number) => peerOf(match.player(slot)?.device ?? '');
@@ -134,8 +139,8 @@ export function connectRoom(room: string, match: Match, opts: { primaryDevice: s
       if (!transport) return undefined;
       return {
         status: statusLine(),
-        inviteUrl: net.status === 'unavailable' || net.status === 'kicked' ? undefined : inviteUrl,
-        offline: net.status === 'unavailable' || net.status === 'kicked',
+        inviteUrl: cutOff() ? undefined : inviteUrl,
+        offline: cutOff(),
         hostSlot: match.players.find((p) => peerOf(p.device) === net.hostId)?.slot,
         kickable: kickable(),
         kickSlot,
@@ -166,9 +171,11 @@ export function connectRoom(room: string, match: Match, opts: { primaryDevice: s
             ? 'Connection Lost'
             : net.status === 'unavailable'
               ? statusLine()
-              : net.paused && net.isHost
-                ? 'Host Left'
-                : '';
+              : net.refused && !net.synced
+                ? REFUSED
+                : net.paused && net.isHost
+                  ? 'Host Left'
+                  : '';
       if (msg && msg !== lastToast) show(msg);
       lastToast = msg;
     },

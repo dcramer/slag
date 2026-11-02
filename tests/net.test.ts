@@ -437,6 +437,32 @@ describe('away', () => {
 });
 
 describe('reconnect and late join', () => {
+  it('a guest on another build says so instead of joining forever, asks rarely, and joins once it can', () => {
+    const r = new Room({ latency: 20 });
+    const a = r.join('aaaa');
+    // Another build: every snapshot the host sends is one this guest can't load.
+    const t = a.transport!;
+    const send = t.send.bind(t);
+    let syncs = 0;
+    let otherBuild = true;
+    t.send = (m, to, lossy) => {
+      const msg = m as { t: string; s: { v: number } };
+      if (msg.t === 'sync') syncs++;
+      send(otherBuild && msg.t === 'sync' ? { ...msg, s: { ...msg.s, v: -1 } } : m, to, lossy);
+    };
+    r.run(5);
+    const b = r.join('bbbb');
+    r.run(60 * 15);
+    expect(b.synced).toBe(false);
+    expect(b.refused).toBe(true);
+    expect(syncs).toBeLessThanOrEqual(3); // not a whole snapshot every second
+    // The host reloads onto this build (here: its snapshots load again); the next ask joins.
+    otherBuild = false;
+    r.run(60 * 11);
+    expect(b.synced).toBe(true);
+    expect(b.refused).toBe(false);
+  });
+
   it('a refresh mid-match gets the same slot, character and score back', () => {
     const r = new Room({ latency: 30 });
     const a = r.join('aaaa', player);

@@ -13,6 +13,7 @@
  * Scenarios:
  *   flow        as a person does it: Play on the menu, open the invite, press nothing; both peers see both bays
  *   kick        the Host label everywhere and through a migration; kicks by keyboard and mouse, with no way back
+ *   refused     a guest whose build can't load the host's snapshots says so
  *   view        real mouse input lands under the pointer, at every window shape, on every level size
  *   play        join, live cursors, claim race, a remote ghost, a race, refresh keeps the slot, next round
  *   pick place run   the host's renderer is killed (no goodbye) in that phase
@@ -40,7 +41,7 @@ import { launchChromium, startNext } from './next-server';
 const argv = process.argv.slice(2);
 /** Named groups, each short enough to run alone on a loaded machine. */
 const GROUPS: Record<string, string[]> = {
-  lobby: ['flow', 'kick', 'view'],
+  lobby: ['flow', 'kick', 'view', 'refused'],
   migration: ['pick', 'place', 'run', 'leave', 'twice'],
   feel: ['latency', 'hidden', 'contact'],
   misc: ['play', 'bc', 'unset'],
@@ -1116,6 +1117,27 @@ async function kickScenario(browser: Browser, base: string) {
   await r.dispose();
 }
 
+/** The host on another build, faked by stamping its snapshots with a version no build has: the guest must say so, not join forever. */
+async function refusedScenario(browser: Browser, base: string) {
+  const r = await newRoom(browser, base, 'refused', '', { viewport: { width: 960, height: 540 }, visual: true });
+  const A = await r.open('A');
+  await waitFor(A, 'host', (v) => v.isHost && v.status === 'online');
+  await A.evaluate(() => {
+    const t = (window as any).slagDebug.net.transport;
+    const send = t.send.bind(t);
+    t.send = (m: any, to: string, lossy: boolean) => send(m.t === 'sync' ? { ...m, s: { ...m.s, v: -1 } } : m, to, lossy);
+  });
+  const B = await r.open('B');
+  const refused = await B.waitForFunction(() => (window as any).slagDebug.net.refused, null, { timeout: 30_000 }).then(
+    () => true,
+    () => false,
+  );
+  const status = (await B.evaluate(() => (window as any).slagDebug.renderer.hud.net?.status)) as string;
+  check(refused && status === 'Different Version · Reload', `a guest that can't load the host's state says so (${status})`);
+  await r.shot(B, 'guest');
+  await r.dispose();
+}
+
 /** A room whose level has open, flat floor from the spawn to 7 tiles past the spawn zone, in clear weather: room for a shove and a ride. */
 function roomWithRunway(): string {
   const fits = (code: string) => {
@@ -1375,6 +1397,7 @@ try {
     await realFlowScenario(browser, server.base, 'flow two tabs saved look', true, true);
   }
   if (wanted('kick')) await kickScenario(browser, server.base);
+  if (wanted('refused')) await refusedScenario(browser, server.base);
   if (wanted('view')) {
     await viewScenario(browser, server.base, 'classic', (w, h) => w === 48 && h === 27);
     await viewScenario(browser, server.base, 'wide', (w) => w > 48);

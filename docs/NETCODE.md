@@ -195,7 +195,7 @@ IEEE-754 `+ - * /` and `Math.sqrt` are exact everywhere, but `Math.sin/cos/atan2
 
 ## HUD
 
-`RoomConnection.hudInfo()` is `renderer.hud.net`: the status line, peers (crown, ping) and invite link in the lobby's online panel. `toast()` covers the states that freeze a race, because the panel only shows in the lobby. A guest waiting for the host shows `Joining…`, and a host gathering the room shows `Migrating Host…`. This text stays short: state what happened, and don't explain what's clear from the screen.
+`RoomConnection.hudInfo()` is `renderer.hud.net`: the status line, peers (crown, ping) and invite link in the lobby's online panel. `toast()` covers the states that freeze a race, because the panel only shows in the lobby. A guest waiting for the host shows `Joining…`, and a host gathering the room shows `Migrating Host…`. A guest that can't load the host's snapshot (another build: `SNAP_VERSION`, or terrain its generator doesn't make) shows `Different Version · Reload`, goes `OFFLINE` in the panel, and asks again only every 10 s, since each ask costs the host a whole snapshot. This text stays short: state what happened, and don't explain what's clear from the screen.
 
 ## Monitoring
 

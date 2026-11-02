@@ -29,6 +29,7 @@ export const HASH_EVERY = 60;
 const HISTORY = 600;
 const PING_MS = 1000;
 const HELLO_RETRY_MS = 1000;
+const REFUSED_RETRY_MS = 10_000;
 const NEED_AFTER_MS = 150;
 const MAX_UNACKED = 90;
 /**
@@ -133,6 +134,8 @@ export class NetSession {
   members: Member[] = [];
   /** Guests: true once the host's snapshot arrived (before that we show a frozen lobby). */
   synced = true;
+  /** Guests: the host's snapshot is from another build (see restoreMatch), so this page can't join until one of us reloads. */
+  refused = false;
   /** Crate card this peer has clicked and the host hasn't ruled on yet (-1: none). Never a claim: the host decides those. */
   pendingCard = -1;
   /** Counters for the HUD/debug overlay and tests. */
@@ -192,6 +195,7 @@ export class NetSession {
   private remotePings: Record<string, number> = {};
   private lastPing = -1e9;
   private resumed = false;
+  private reportedRefusal = false;
 
   constructor(opts: SessionOptions) {
     this.match = opts.match;
@@ -477,7 +481,9 @@ export class NetSession {
       return true;
     } catch (e) {
       this.log(`snapshot refused: ${String(e)}`);
-      reportEvent('snapshot-refused', 'warning', { error: String(e), frame: this.match.frame });
+      // Once a page: a refused guest asks again every few seconds.
+      if (!this.reportedRefusal) reportEvent('snapshot-refused', 'warning', { error: String(e), frame: this.match.frame });
+      this.reportedRefusal = true;
       return false;
     }
   }
@@ -744,7 +750,8 @@ export class NetSession {
 
   private guestTick(own: PeerFrame, t: number) {
     if (!this.synced) {
-      if (this.status === 'online' && t - this.lastHello > HELLO_RETRY_MS) {
+      // Refused: every hello costs the host a whole snapshot, and only a reload or a new host can change the answer.
+      if (this.status === 'online' && t - this.lastHello > (this.refused ? REFUSED_RETRY_MS : HELLO_RETRY_MS)) {
         this.lastHello = t;
         this.send({ t: 'hello', f: this.onTimeline ? this.match.frame : -1 }, this.hostId);
       }
@@ -814,7 +821,11 @@ export class NetSession {
   private onSync(msg: Extract<Msg, { t: 'sync' }>) {
     const m = this.match;
     const fresh = !this.synced;
-    if ((fresh || m.frame !== msg.s.frame || hashMatch(m) !== hashSnap(msg.s)) && !this.tryRestore(msg.s)) return;
+    if ((fresh || m.frame !== msg.s.frame || hashMatch(m) !== hashSnap(msg.s)) && !this.tryRestore(msg.s)) {
+      if (fresh) this.refused = true;
+      return;
+    }
+    this.refused = false;
     this.adoptNet(msg.ns);
     this.acks = msg.k;
     this.lastInputs = msg.last;
