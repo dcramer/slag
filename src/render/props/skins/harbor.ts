@@ -2,9 +2,9 @@ import { css, type HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { type Level, T_EMPTY, T_ONEWAY, T_SOLID } from '../../../sim/level';
-import { line, type P, stroke } from '../../ink';
-import { ball, boxPts, dot, INK, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
-import { circle, type RC } from '../../kit';
+import { inkFor, line, type P, stroke } from '../../ink';
+import { ball, barLine, boxPts, dot, glint, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
+import type { RC } from '../../kit';
 import { cannonTiming } from '../../../sim/props';
 import type { DrawCtx } from '../common';
 import { SHELLS } from '../modules/deco-shells';
@@ -35,23 +35,27 @@ function flat(g: CanvasRenderingContext2D, pts: readonly P[], base: HSL, t: Hz, 
   pen(g, pts, seed, 0.3, 0.8, 3, t.ink(base));
 }
 
-/** A member with the backdrop pen: an ink ribbon with its tone over it. */
+/** A member with the backdrop pen: its hazed tone in a thin rim of its own dark. */
 function spar(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, base: HSL, t: Hz, seed: number) {
+  barLine(g, ax, ay, bx, by, w, t.hsl(base), seed, { ink: t.ink(base), rim: 0.25, press: 0.05 });
+}
+
+/** A rope or stay in the backdrop: one tapered pen line in a dark of what it's made of, no rim. */
+function stay(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, base: HSL, t: Hz, seed: number) {
   g.fillStyle = t.ink(base);
-  line(g, ax, ay, bx, by, { w: w + 0.9, seed, taper: [0, 0], press: 0.05 });
-  g.fillStyle = t.c(base);
-  line(g, ax, ay, bx, by, { w, seed: seed + 1, taper: [0, 0], press: 0.05 });
+  line(g, ax, ay, bx, by, { w: 0.9, seed, taper: [0.05, 0.12], press: 0.25 });
 }
 
 const WOOD: HSL = { h: 26, s: 36, l: 30 };
-const DARK: HSL = { h: 24, s: 30, l: 14 };
-const TAR: HSL = { h: 24, s: 22, l: 16 };
+/** The hold's planking in shadow: dark, but a dark of the wood, never black. */
+const HOLD: HSL = { h: 26, s: 32, l: 29 };
+const TAR: HSL = { h: 24, s: 18, l: 30 };
 const CLOTH: HSL = { h: 40, s: 30, l: 78 };
 const WASH: HSL = { h: 36, s: 18, l: 82 };
 const BAND: HSL = { h: 2, s: 62, l: 42 };
 const GLASS: HSL = { h: 196, s: 36, l: 30 };
 const BRASS: HSL = { h: 42, s: 52, l: 46 };
-const ROCK: HSL = { h: 210, s: 8, l: 18 };
+const ROCK: HSL = { h: 210, s: 8, l: 25 };
 const CRANE: HSL = { h: 40, s: 80, l: 50 };
 const IRON: HSL = { h: 215, s: 10, l: 30 };
 
@@ -101,18 +105,29 @@ function galleonArt(m: Deco, d: DrawCtx, t: Hz) {
     // ribs every few columns, gunports with a gun's muzzle in each down the gun deck.
     const inside = rooms(at, x0, x1, y0, y1);
     const room = new Set(inside.map(([x, y]) => y * 4096 + x));
+    // Each row of the hold a plank course in one of two tones; a seam here and there, never ruled.
     for (const [x, y] of inside) {
-      g.fillStyle = t.c(DARK, (y & 1) * 3);
+      g.fillStyle = t.c(HOLD, (y & 1) * 3);
       g.fillRect(X(x) - 0.5, Y(y) - 0.5, TILE + 1, TILE + 1);
-      g.fillStyle = t.ink(DARK);
-      g.fillRect(X(x), Y(y) + TILE - 1, TILE, 0.6);
-      if ((x - x0) % 3 === 0) g.fillRect(X(x) + 2, Y(y), 1.6, TILE);
+    }
+    for (const [x, y] of inside) {
+      if (hash2(x, y, m.seed) < 0.45) {
+        const sx = X(x) + 2 + hash2(y, x, m.seed) * 6;
+        tick(g, sx, Y(y) + TILE - 1, sx + 5 + hash2(x, y, 3) * 4, Y(y) + TILE - 0.8, 0.45, x * 31 + y, t.ink(HOLD));
+      }
+      // Ribs: a lighter frame every third column, its shadow side cut in a darker tone.
+      if ((x - x0) % 3 === 0) {
+        g.fillStyle = t.c(HOLD, 7);
+        g.fillRect(X(x) + 2, Y(y) - 0.5, 2.4, TILE + 1);
+        g.fillStyle = t.c(HOLD, -4);
+        g.fillRect(X(x) + 4.4, Y(y) - 0.5, 0.8, TILE + 1);
+      }
       if (y === G + 2 && (x - x0) % 4 === 2) {
-        flat(g, boxPts(X(x) + 3, Y(y) - 3, 10, 9, 0.6, x), { h: 210, s: 30, l: 40 }, t, x, 0.3);
-        g.fillStyle = t.ink(IRON);
-        circle(g, X(x) + 8, Y(y) + 1.5, 3);
-        g.fillStyle = t.c(IRON, -8);
-        circle(g, X(x) + 8, Y(y) + 1.5, 1.4);
+        flat(g, boxPts(X(x) + 3, Y(y) - 3, 10, 9, 0.6, x), { h: 210, s: 24, l: 40 }, t, x, 0.3);
+        flat(g, ovalPts(X(x) + 8, Y(y) + 1.5, 2.6, 2.6, x, 0.04, 12), IRON, t, x + 1, 0.4);
+        g.fillStyle = t.c(IRON, -12);
+        path(g, ovalPts(X(x) + 8.2, Y(y) + 1.7, 1.3, 1.3, x + 2, 0.04, 10));
+        g.fill();
       }
     }
     for (const [x, y] of inside) {
@@ -141,16 +156,8 @@ function galleonArt(m: Deco, d: DrawCtx, t: Hz) {
       const cx = X(mx) + TILE / 2;
       const tip = Y(top) - 2.4 * TILE;
       // Shrouds to the rails first, so the mast stands over them.
-      for (const s of [-1, 1]) {
-        g.strokeStyle = t.ink(WOOD);
-        g.lineWidth = 0.6;
-        for (let k = 0; k < 3; k++) {
-          g.beginPath();
-          g.moveTo(cx + s * k * 2, tip + 6 + k * 3);
-          g.lineTo(cx + s * (2.5 * TILE + k * 4), Y(G));
-          g.stroke();
-        }
-      }
+      for (const s of [-1, 1])
+        for (let k = 0; k < 3; k++) stay(g, cx + s * k * 2, tip + 6 + k * 3, cx + s * (2.5 * TILE + k * 4), Y(G), WOOD, t, mx * 7 + k * s);
       spar(g, cx, Y(G), cx, tip, 3.2, WOOD, t, mx);
       spar(g, cx, tip, cx, tip - 10, 1.6, WOOD, t, mx + 3);
       // Sails furled on every yard down the mast.
@@ -181,13 +188,9 @@ function galleonArt(m: Deco, d: DrawCtx, t: Hz) {
     const by = Y(bowNear ? nearTop : farTop) + 3;
     const s = bowNear ? -1 : 1;
     spar(g, bx - s * 6, by, bx + s * 3.2 * TILE, by - 1.6 * TILE, 2.6, WOOD, t, 77);
-    g.strokeStyle = t.ink(WOOD);
-    g.lineWidth = 0.6;
-    g.beginPath();
-    g.moveTo(bx + s * 3.2 * TILE, by - 1.6 * TILE);
+    // The forestay, from the bowsprit's tip to the foremast's head.
     const fore = [...masts.keys()].sort((a, b) => (bowNear ? a - b : b - a))[0];
-    if (fore !== undefined) g.lineTo(X(fore) + TILE / 2, Y(masts.get(fore)!) - 2 * TILE);
-    g.stroke();
+    if (fore !== undefined) stay(g, bx + s * 3.2 * TILE, by - 1.6 * TILE, X(fore) + TILE / 2, Y(masts.get(fore)!) - 2 * TILE, WOOD, t, 78);
     // The stern: lanterns at the taffrail's corners and windows down its face.
     const sx = bowNear ? X(x1 + 1) - 4 : X(x0) + 4;
     const sy = Y(bowNear ? farTop : nearTop);
@@ -226,10 +229,11 @@ function pierArt(m: Deco, d: DrawCtx, t: Hz) {
     const tideFlat = Math.max(...sand.values());
     for (const [x, y] of sand) {
       if (y !== tideFlat || at(x, y - 1) !== T_EMPTY) continue;
-      g.fillStyle = t.c({ h: 196, s: 40, l: 54 }, 0, 0.55);
+      // Opaque: a wash on the play layer inks into scrub.
+      g.fillStyle = t.c({ h: 196, s: 30, l: 40 });
       g.fillRect(X(x) - 0.5, Y(y) - 2.2, TILE + 1, 2.2);
-      g.fillStyle = 'rgba(240,250,255,0.8)';
-      for (let k = 1; k < TILE; k += 5) g.fillRect(X(x) + k + ((x * 3) % 4), Y(y) - 2.6, 2.4, 0.9);
+      if (hash2(x, 2, m.seed) < 0.6)
+        glint(g, poly(X(x) + 2 + ((x * 3) % 5), Y(y) - 2.4, X(x) + 7 + ((x * 3) % 5), Y(y) - 2.6), t.c({ h: 196, s: 30, l: 86 }), 0.7, x);
     }
     // Pilings: tarred piles in pairs every few columns, driven into the sand under the boardwalk, braced
     // crosswise, a turn of rope round each a little over the sand.
@@ -241,8 +245,7 @@ function pierArt(m: Deco, d: DrawCtx, t: Hz) {
       for (const dx of [3, 13]) {
         const lx = X(x) + dx;
         spar(g, lx, top, lx, bot, 3.4, TAR, t, x + dx);
-        g.fillStyle = t.c({ h: 38, s: 40, l: 60 });
-        g.fillRect(lx - 2.2, bot - 9, 4.4, 1.6);
+        barLine(g, lx - 2.1, bot - 8.2, lx + 2.1, bot - 7.8, 1.4, t.hsl({ h: 38, s: 36, l: 56 }), x + dx + 5, { ink: t.ink(TAR), rim: 0.2 });
       }
       if (prev !== null && walk.has(prev)) {
         const px = X(prev) + 13;
@@ -255,14 +258,24 @@ function pierArt(m: Deco, d: DrawCtx, t: Hz) {
     }
     // Railings along it, lamp posts every so often, bunting between their heads.
     const lamps: [number, number][] = [];
+    const RAIL: HSL = { h: 40, s: 24, l: 78 };
+    let r0: number | null = null;
+    let rl = 0;
+    const rail = (a: number, b: number, y: number) =>
+      barLine(g, X(a) - 0.5, y, X(b + 1) + 0.5, y, 1.1, t.hsl(RAIL), a, { ink: t.ink(WOOD), rim: 0.25, lit: 8 });
     for (const [x, y] of walk) {
       const ry = Y(y) - 7;
-      g.fillStyle = t.ink(WOOD);
-      g.fillRect(X(x) + 7, ry, 1.4, 7);
-      g.fillStyle = t.c({ h: 40, s: 30, l: 90 });
-      g.fillRect(X(x) - 0.5, ry - 0.6, TILE + 1, 1.4);
+      if (x % 2 === 0) spar(g, X(x) + 7, Y(y), X(x) + 7, ry, 1.2, RAIL, t, x);
       if ((x - x0) % 7 === 3) lamps.push([X(x) + 8, Y(y)]);
+      // One rail per straight run of boardwalk at one height.
+      if (r0 !== null && (walk.get(x - 1) !== y || x - 1 !== rl)) {
+        rail(r0, rl, Y(walk.get(rl)!) - 7.3);
+        r0 = null;
+      }
+      if (r0 === null) r0 = x;
+      rl = x;
     }
+    if (r0 !== null) rail(r0, rl, Y(walk.get(rl)!) - 7.3);
     for (const [lx, ly] of lamps) {
       spar(g, lx, ly, lx, ly - 2.6 * TILE, 1.4, IRON, t, lx | 0);
       flat(g, boxPts(lx - 3, ly - 2.6 * TILE - 6, 6, 6, 1, lx | 0), { h: 44, s: 60, l: 70 }, t, lx | 0, 0.3);
@@ -299,19 +312,40 @@ function lighthouseArt(m: Deco, t: Hz) {
     flat(g, dome, BAND, t, 4, 0.8);
     ball(g, w / 2, roof - 2.6 * TILE - 14, 2.2, t.hsl(BRASS), 5);
     // The tower inside: whitewash with a red band each storey, the plaster flaking at the seams.
-    g.fillStyle = t.c(WASH);
-    g.fillRect(TILE * 0.5, roof + TILE, w - TILE, m.h - roof - TILE);
+    const tower = boxPts(TILE * 0.5, roof + TILE, w - TILE, m.h - roof - TILE, 1, 6, 0.3);
+    tone(g, tower, t.hsl(WASH), { depth: 1.2 });
+    g.save();
+    path(g, tower);
+    g.clip();
     const storey = Math.max(4, Math.round((y1 - y0 - 4) / 3)) * TILE;
     for (let y = roof + TILE + storey * 0.5, i = 0; y < m.h - TILE; y += storey, i++) {
       g.fillStyle = t.c(BAND, i % 2 ? -4 : 0);
-      g.fillRect(TILE * 0.5, y, w - TILE, TILE * 0.9);
+      path(g, boxPts(0, y, w, TILE * 0.9, 0.3, i + 11, 0.5));
+      g.fill();
     }
-    g.fillStyle = t.ink(WASH);
-    for (let i = 0; i < 6; i++) {
+    // The tower's round: its far third in shade, cut with a hand's edge, the bands darker inside it.
+    const sx = w * 0.68;
+    const side: P[] = [{ x: sx, y: roof + TILE }];
+    for (let y = roof + TILE; y <= m.h; y += 12) side.push({ x: sx + Math.sin(y * 0.11 + m.seed) * 0.8, y });
+    side.push({ x: w, y: m.h }, { x: w, y: roof + TILE });
+    g.save();
+    path(g, side);
+    g.clip();
+    g.fillStyle = t.c(WASH, -12);
+    g.fillRect(sx - 2, roof + TILE, w - sx + 2, m.h - roof);
+    for (let y = roof + TILE + storey * 0.5, i = 0; y < m.h - TILE; y += storey, i++) {
+      g.fillStyle = t.c(BAND, (i % 2 ? -4 : 0) - 10);
+      path(g, boxPts(0, y, w, TILE * 0.9, 0.3, i + 11, 0.5));
+      g.fill();
+    }
+    g.restore();
+    for (let i = 0; i < 3; i++) {
       const fx = TILE + hash2(i, 3, m.seed) * (w - 2 * TILE);
       const fy = roof + TILE + hash2(i, 5, m.seed) * (m.h - roof - 2 * TILE);
-      g.fillRect(fx, fy, 3, 0.7);
+      tick(g, fx, fy, fx + 3, fy + 0.4, 0.45, i, t.ink(WASH));
     }
+    g.restore();
+    pen(g, tower, 7, 0.3, 0.8, 3, t.ink(WASH));
   });
 }
 
@@ -325,7 +359,7 @@ function caveArt(m: Deco, t: Hz) {
     for (let i = 0; i <= 8; i++) mouth.push({ x: -1 + ((m.w + 2) * i) / 8, y: top + 2 - Math.sin((i / 8) * Math.PI) * 2 });
     mouth.push({ x: m.w + 1, y: m.h });
     flat(g, mouth, ROCK, t, 2, 0.4);
-    g.fillStyle = t.c({ h: 200, s: 30, l: 50 }, 0, 0.45);
+    g.fillStyle = t.c({ h: 200, s: 18, l: 30 });
     path(g, ovalPts(m.w / 2, m.h - TILE, m.w * 0.32, TILE * 0.9, m.seed, 0.1, 12));
     g.fill();
     for (let i = 0; i < 4; i++) {
@@ -377,8 +411,9 @@ function craneArt(m: Deco, d: DrawCtx, t: Hz) {
       const c: HSL = { h: [8, 206, 140, 36][(x0 + Math.floor((x - x0) / 5)) % 4], s: 40, l: 30 };
       g.fillStyle = t.c(c);
       g.fillRect(X(x) - 0.5, Y(y) - 0.5, TILE + 1, TILE + 1);
-      g.fillStyle = t.c(c, -10);
-      for (let k = 2; k < TILE; k += 4) g.fillRect(X(x) + k, Y(y), 1.4, TILE);
+      // Corrugation as a second tone, not lines: two shadowed flutes a tile.
+      g.fillStyle = t.c(c, -6);
+      for (let k = 3; k < TILE; k += 8) g.fillRect(X(x) + k, Y(y) - 0.5, 3, TILE + 1);
     }
     for (const [x, y] of inside)
       for (const sgn of [-1, 1])
@@ -388,8 +423,7 @@ function craneArt(m: Deco, d: DrawCtx, t: Hz) {
     for (const lx of [TILE * 0.5, w - TILE * 0.5]) {
       for (const s of [-1, 1]) spar(g, lx + s * 5, boom, lx + s * 6.5, h, 2.2, CRANE, t, lx + s);
       for (let y = boom + 6, k = 0; y < h - 8; y += 12, k++) spar(g, lx - 5.5, y, lx + 5.5, y + 12, 0.9, CRANE, t, k + lx);
-      g.fillStyle = t.c({ h: 0, s: 0, l: 12 });
-      g.fillRect(lx - 9, h - 4, 18, 4);
+      flat(g, boxPts(lx - 9, h - 4, 18, 4, 0.5, lx | 0), { h: 30, s: 14, l: 24 }, t, lx | 0, 0.3);
       g.fillStyle = t.c(CRANE, 6);
       for (let k = -8; k < 9; k += 4) {
         path(g, poly(lx + k, h, lx + k + 2, h, lx + k + 4, h - 4, lx + k + 2, h - 4));
@@ -405,8 +439,7 @@ function craneArt(m: Deco, d: DrawCtx, t: Hz) {
     flat(g, boxPts(w - 2.4 * TILE, boom, 1.4 * TILE, TILE * 1.1, 1, 5), { h: 210, s: 10, l: 82 }, t, 5, 0.5);
     flat(g, boxPts(w - 2.2 * TILE, boom + 3, 1 * TILE, TILE * 0.5, 0.6, 6), GLASS, t, 6, 0.2);
     // The trolley's rails under the boom.
-    g.fillStyle = t.ink(IRON);
-    g.fillRect(bx0, boom + 0.5, w - bx0, 1.2);
+    spar(g, bx0, boom + 1.1, w, boom + 1.1, 1.2, IRON, t, 91);
   });
 }
 
@@ -419,10 +452,7 @@ const gantry: DecoSkin = (rc, m, d) => {
 
 /** The harpoon itself, along +x from its butt: a shaft, a barbed iron head. */
 function harpoon(g: CanvasRenderingContext2D, len: number) {
-  g.fillStyle = INK;
-  line(g, 0, 0, len, 0, { w: 2, seed: 3, taper: [0, 0], press: 0 });
-  g.fillStyle = css(WOOD, 18);
-  line(g, 0, 0, len, 0, { w: 1, seed: 3, taper: [0, 0], press: 0 });
+  barLine(g, 0, 0, len, 0, 1.1, { ...WOOD, l: WOOD.l + 18 }, 3, { press: 0 });
   part(g, poly(len - 1, -1.2, len + 5, 0, len - 1, 1.2), { h: 210, s: 8, l: 70 }, 4, { depth: 0.3, thin: 0.35, thick: 0.7 });
   part(g, poly(len - 1, -1, len + 1.4, -3.4, len + 0.6, -0.4), { h: 210, s: 8, l: 60 }, 5, { depth: 0.2, thin: 0.3, thick: 0.6 });
   part(g, poly(len - 1, 1, len + 1.4, 3.4, len + 0.6, 0.4), { h: 210, s: 8, l: 60 }, 6, { depth: 0.2, thin: 0.3, thick: 0.6 });
@@ -456,8 +486,8 @@ function harpoonGun(rc: RC, m: Cannon, d: DrawCtx, q: CannonPose) {
   // The gun: a short heavy barrel on its yoke, a stock and a grip behind.
   const body = poly(-8, -2.2, L - 6, -2.6, L - 4, -3, L - 4, 3, L - 6, 2.6, -8, 2.2, -11, 3.6, -12, 0, -11, -3.6);
   tone(s, body, d.pal.base, { depth: 1 });
-  pen(s, body, 7, 0.5, 1.2);
-  dot(s, -2, 0, 1.4, 8, css(d.pal.light));
+  pen(s, body, 7, 0.45, 1.1, 3, inkFor(d.pal.base));
+  dot(s, -2, 0, 1.2, 8, css(d.pal.light), inkFor(d.pal.base));
   const loaded = cannonTiming(m, rc.frame, d.r.phase).since > 40 || q.warn > 0;
   if (loaded) {
     s.save();

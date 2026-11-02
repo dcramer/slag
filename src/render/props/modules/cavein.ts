@@ -2,8 +2,7 @@ import { css, type HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { CAVE_OFF, CAVE_ON, CAVE_WARN, caveCycle, type ModuleOf, rockCount, rocksAt } from '../../../sim/props';
-import { blob, line } from '../../ink';
-import { INK } from '../../ink-props';
+import { blob, inkFor, line } from '../../ink';
 import { circle, flame, glowDot, light, type RC } from '../../kit';
 import { type DrawCtx, defineArt } from '../common';
 
@@ -25,10 +24,11 @@ const HOT: HSL = { h: 46, s: 100, l: 70 };
 const rockOf = (d: DrawCtx): HSL => d.o.level?.theme.terrain.base ?? { h: 28, s: 14, l: 30 };
 
 /** The cracks in the roof over the box: always there, so you can see which stretch of roof is rotten. */
-function cracks(rc: RC, m: Cavein, x: number, y: number) {
+function cracks(rc: RC, m: Cavein, x: number, y: number, rock: HSL) {
   const s = rc.s;
   const n = rockCount(m);
-  s.fillStyle = INK;
+  // Marks in the roof's own rock: a deep dark of it, not one black.
+  s.fillStyle = css(rock, -Math.min(22, rock.l * 0.62));
   for (let i = 0; i < n; i++) {
     if (hash2(i, 7, m.seed) < 0.35) continue;
     const cx = x + (i + 0.5) * (m.w / n) + (hash2(i, 8, m.seed) - 0.5) * 6;
@@ -55,8 +55,8 @@ function grit(rc: RC, m: Cavein, x: number, y: number, k: number, rock: HSL) {
     if (k > 0.45 && hash2(i, 3, m.seed) < 0.6) {
       const p = (rc.frame * 0.045 + hash2(i, 4, m.seed)) % 1;
       const py = y + p * p * m.h;
-      rc.s.fillStyle = INK;
-      circle(rc.s, cx + 2, py, 1.2);
+      rc.s.fillStyle = inkFor(rock);
+      circle(rc.s, cx + 2, py, 1.1);
       rc.s.fillStyle = css(rock, 6);
       circle(rc.s, cx + 1.8, py - 0.2, 0.7);
     }
@@ -69,8 +69,8 @@ function grit(rc: RC, m: Cavein, x: number, y: number, k: number, rock: HSL) {
 /** A boulder: a lumpy blob of the level's own rock, lit up-left, ink round it. */
 function boulder(rc: RC, x: number, y: number, r: number, rock: HSL, seed: number, spin: number) {
   const s = rc.s;
-  s.fillStyle = INK;
-  blob(s, x, y, r + 1.1, seed, 1, 0.22);
+  s.fillStyle = inkFor(rock);
+  blob(s, x, y, r + Math.min(0.8, r * 0.18), seed, 1, 0.22);
   s.fill();
   s.fillStyle = css(rock, -12);
   blob(s, x, y, r, seed, 1, 0.22);
@@ -78,7 +78,7 @@ function boulder(rc: RC, x: number, y: number, r: number, rock: HSL, seed: numbe
   s.fillStyle = css(rock, 6);
   blob(s, x - r * 0.22, y - r * 0.25, r * 0.66, seed + 1, 1, 0.25);
   s.fill();
-  s.fillStyle = INK;
+  s.fillStyle = css(rock, -22);
   line(s, x + Math.cos(spin) * r * 0.5, y + Math.sin(spin) * r * 0.5, x - Math.cos(spin) * r * 0.1, y - Math.sin(spin) * r * 0.1, {
     w: 0.6,
     seed,
@@ -103,7 +103,7 @@ function rocks(rc: RC, m: Cavein, d: DrawCtx) {
   const y = m.at[1] + d.off[1];
   const floor = y + m.h;
   const rock = rockOf(d);
-  cracks(rc, m, x, y);
+  cracks(rc, m, x, y, rock);
   const c = caveCycle(m, rc.frame, d.r.phase);
   if (c.seg === CAVE_WARN) grit(rc, m, x, y, c.t / Math.max(1, c.len), rock);
   if (c.seg === CAVE_OFF && c.t < 50) {
@@ -149,14 +149,15 @@ function gas(rc: RC, m: Cavein, d: DrawCtx) {
   const y = m.at[1] + d.off[1];
   const c = caveCycle(m, rc.frame, d.r.phase);
   // Where it seeps from: dark fissures in the roof, always there.
-  cracks(rc, m, x, y);
+  cracks(rc, m, x, y, rockOf(d));
   if (c.seg === CAVE_OFF) {
     // A thin seep between burns, and soot falling after one.
     haze(rc, m, x, y, 0.05);
     if (c.t < 40) {
       const k = 1 - c.t / 40;
+      const soot = rockOf(d);
       for (let i = 0; i < 6; i++) {
-        rc.bg.fillStyle = `rgba(40,34,30,${0.35 * k})`;
+        rc.bg.fillStyle = css({ h: soot.h, s: soot.s * 0.5, l: 18 }, 0, 0.35 * k);
         circle(rc.bg, x + ((i + 0.5) / 6) * m.w, y + 4 - (1 - k) * 6, 4 + (1 - k) * 6);
       }
     }

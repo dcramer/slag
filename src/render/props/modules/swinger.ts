@@ -3,8 +3,8 @@ import type { Vec } from '../../../core/geom';
 import { TILE } from '../../../sim/constants';
 import { tileAt } from '../../../sim/level';
 import { LOG_LEN, LOG_THICK, type ModuleOf, type PropStyle, type Resolved, swingHeads } from '../../../sim/props';
-import { line, type P, stroke } from '../../ink';
-import { ball, boxPts, dot, glint, INK, ovalPts, part, path, poly, sprite, stamp, tick } from '../../ink-props';
+import { inkFor, line, type P, stroke } from '../../ink';
+import { ball, barLine, boxPts, dot, glint, ovalPts, part, path, poly, sprite, stamp, tick } from '../../ink-props';
 import { light, type MetalPalette, type RC } from '../../kit';
 import { defineArt, type PropDrawOpts } from '../common';
 import { whoosh } from '../ink-motion';
@@ -30,8 +30,8 @@ function link(pal: MetalPalette, edge: boolean) {
     }
     const outer = ovalPts(0, 0, 3, 2, 5, 0.03, 16);
     const inner = ovalPts(0, 0, 1.6, 0.75, 6, 0.03, 12);
-    g.fillStyle = INK;
-    path(g, ovalPts(0.15, 0.2, 3.5, 2.5, 5, 0.03, 16));
+    g.fillStyle = inkFor(pal.base);
+    path(g, ovalPts(0.1, 0.15, 3.35, 2.35, 5, 0.03, 16));
     g.fill();
     g.fillStyle = css(pal.base, -8);
     path(g, outer);
@@ -46,7 +46,7 @@ function link(pal: MetalPalette, edge: boolean) {
     path(g, inner);
     g.fill();
     g.globalCompositeOperation = 'source-over';
-    g.fillStyle = INK;
+    g.fillStyle = inkFor(pal.base);
     stroke(g, [...inner, inner[0]], { w: 0.35, seed: 7, taper: [0, 0], press: 0.2 });
   });
 }
@@ -61,9 +61,9 @@ function hub(pal: MetalPalette) {
       [-3.6, 3.6],
       [3.6, 3.6],
     ])
-      dot(g, x, y, 0.75, x * 3 + y, css(pal.spec, -6));
+      dot(g, x, y, 0.75, x * 3 + y, css(pal.spec, -6), inkFor(pal.base));
     ball(g, 0, 0, 3.1, pal.base, 11);
-    dot(g, 0, 0, 1, 12, css(pal.light));
+    dot(g, 0, 0, 1, 12, css(pal.light), inkFor(pal.base));
   });
 }
 
@@ -74,8 +74,8 @@ function hub(pal: MetalPalette) {
 function maceStud(R: number, pal: MetalPalette) {
   const r = Math.max(1.3, R * 0.24);
   return sprite(`sw|stud|${R.toFixed(2)}|${palKey(pal)}`, -r - 1.5, -r - 1.5, r * 2 + 3, r * 2 + 3, (g) => {
-    g.fillStyle = INK;
-    path(g, ovalPts(0.25, 0.3, r * 1.08, r * 1.08, 61, 0.05, 12));
+    g.fillStyle = inkFor(IRON(pal));
+    path(g, ovalPts(0.2, 0.25, r * 1.05, r * 1.05, 61, 0.05, 12));
     g.fill();
     g.fillStyle = css(IRON(pal), -10);
     path(g, ovalPts(0, 0, r * 0.95, r * 0.95, 62, 0.05, 12));
@@ -96,7 +96,7 @@ function maceStud(R: number, pal: MetalPalette) {
       path(g, [a, b, tip]);
       g.fill();
     }
-    g.fillStyle = INK;
+    g.fillStyle = inkFor(IRON(pal));
     stroke(g, [n, e, so], { w: 0.45, seed: 63, taper: [0.2, 0.2], press: 0.2 });
   });
 }
@@ -114,8 +114,8 @@ function stake(pal: MetalPalette) {
     // The collar: a red band round the stake.
     const col: HSL = { h: 356, s: 72, l: 46 };
     const outer = ovalPts(0, 0.4, 5.3, 4.9, 24, 0.02, 20);
-    g.fillStyle = INK;
-    path(g, ovalPts(0.2, 0.6, 5.9, 5.5, 24, 0.02, 20));
+    g.fillStyle = inkFor(col);
+    path(g, ovalPts(0.15, 0.5, 5.7, 5.3, 24, 0.02, 20));
     g.fill();
     g.fillStyle = css(col);
     path(g, outer);
@@ -137,6 +137,8 @@ function stake(pal: MetalPalette) {
   });
 }
 
+const SPIKE: HSL = { h: 214, s: 10, l: 62 };
+
 /** Spikes round a mace head, turning with it; the ball sits still over them so its light stays put. */
 function maceSpikes(R: number) {
   return sprite(`sw|spikes|${R.toFixed(2)}`, -R * 1.45, -R * 1.45, R * 2.9, R * 2.9, (g) => {
@@ -147,7 +149,7 @@ function maceSpikes(R: number) {
       const l = { x: Math.cos(a - 0.24) * R * 0.72, y: Math.sin(a - 0.24) * R * 0.72 };
       const r = { x: Math.cos(a + 0.24) * R * 0.72, y: Math.sin(a + 0.24) * R * 0.72 };
       const m = { x: Math.cos(a) * R * 0.72, y: Math.sin(a) * R * 0.72 };
-      g.fillStyle = INK;
+      g.fillStyle = inkFor(SPIKE);
       path(g, [
         { x: l.x * 1.06, y: l.y * 1.06 },
         { x: tip.x * 1.07, y: tip.y * 1.07 },
@@ -295,7 +297,7 @@ function drawSwinger(rc: RC, m: Swinger, r: Resolved, off: Vec, pal: MetalPalett
       for (const h of heads) {
         whoosh(s, hx, hy, m.arm + m.radius * 0.7, h.a, sweep, 1.2, 'rgba(250,250,255,0.85)', 3);
         whoosh(s, hx, hy, m.arm - m.radius * 0.7, h.a - sweep * 0.15, sweep * 0.7, 0.9, 'rgba(250,250,255,0.7)', 4);
-        whoosh(s, hx, hy, m.arm + m.radius * 1.05, h.a - sweep * 0.2, sweep * 0.55, 0.9, INK, 5);
+        whoosh(s, hx, hy, m.arm + m.radius * 1.05, h.a - sweep * 0.2, sweep * 0.55, 0.9, inkFor(pal.base), 5);
       }
     }
   }
@@ -316,10 +318,7 @@ function drawSwinger(rc: RC, m: Swinger, r: Resolved, off: Vec, pal: MetalPalett
         s.restore();
       }
     } else {
-      s.fillStyle = INK;
-      line(s, hx, hy, h.x, h.y, { w: 3.56, seed: 3, taper: [0, 0], press: 0.1 });
-      s.fillStyle = css(pal.base);
-      line(s, hx, hy, h.x, h.y, { w: 2.3, seed: 4, taper: [0, 0], press: 0.1 });
+      barLine(s, hx, hy, h.x, h.y, 2.3, pal.base, 3, { taper: [0, 0], press: 0.1, rim: 0.4 });
       s.fillStyle = css(pal.spec, 0, 0.75);
       line(s, hx, hy - 0.6, h.x, h.y - 0.6, { w: 0.6, seed: 5, taper: [0.1, 0.1], press: 0.1 });
     }
@@ -374,10 +373,7 @@ function drawLog(s: CanvasRenderingContext2D, m: Swinger, heads: readonly { x: n
   const spread = L * 0.3;
   for (const h of heads) {
     for (const k of [-1, 1]) {
-      s.fillStyle = INK;
-      line(s, hx + k * spread, hy, h.x + k * spread, h.y, { w: 1.6, seed: 70 + k, taper: [0, 0], press: 0.1 });
-      s.fillStyle = css(rope);
-      line(s, hx + k * spread, hy, h.x + k * spread, h.y, { w: 0.8, seed: 72 + k, taper: [0, 0], press: 0.1 });
+      barLine(s, hx + k * spread, hy, h.x + k * spread, h.y, 0.9, rope, 70 + k, { taper: [0, 0], press: 0.1 });
     }
   }
   part(s, boxPts(hx - spread - 2.5, hy - 1.6, spread * 2 + 5, 3.2, 1.2, 74), { h: woodHue, s: 30, l: 28 }, 74, { depth: 0.4, thin: 0.4, thick: 0.9 });

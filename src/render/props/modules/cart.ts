@@ -1,8 +1,8 @@
 import { css, type HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
 import { CART_RUN, CART_WARN, cartCycle, cartDist, cartRect, type ModuleOf } from '../../../sim/props';
-import { line } from '../../ink';
-import { ball, boxPts, dot, INK, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
+import { inkFor, line } from '../../ink';
+import { ball, barLine, boxPts, dot, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import { circle, glowDot } from '../../kit';
 import { defineArt } from '../common';
 
@@ -28,10 +28,7 @@ function rail(m: Cart, uid: number) {
   return sprite(`cart|rail|${Math.round(len)}|${m.dir}|${uid % 7}`, -10, -16, len + 20, 20, (g) => {
     // Sleepers, then the rails over them.
     for (let x = 2; x < len; x += 6) part(g, boxPts(x, -1.6, 3.6, 2.2, 0.4, x + uid, 0.1), WOOD, x, { depth: 0.3, thin: 0.3, thick: 0.6 });
-    g.fillStyle = INK;
-    line(g, -2, -1.9, len + 2, -1.9, { w: 1.6, seed: 3, taper: [0, 0], press: 0.1 });
-    g.fillStyle = css(IRON, 14);
-    line(g, -2, -2.2, len + 2, -2.2, { w: 0.7, seed: 4, taper: [0, 0], press: 0 });
+    barLine(g, -2, -2, len + 2, -2, 1, { ...IRON, l: IRON.l + 14 }, 3, { lit: 16 });
     // The buffer at the low end: a stop of two thin posts and a rope-wrapped beam, low.
     const bx = m.dir > 0 ? len + 1 : -4;
     for (const dx of [0, 2.4]) part(g, boxPts(bx + dx, -7, 1.4, 6, 0.3, dx + 9, 0.1), WOOD, dx + 9, { depth: 0.3, thin: 0.3, thick: 0.6 });
@@ -42,7 +39,7 @@ function rail(m: Cart, uid: number) {
     const wx = m.dir > 0 ? -7 : len + 3;
     part(g, poly(wx - 1, -1, wx + 1, -9, wx + 4, -9, wx + 6, -1), WOOD, 21, { depth: 0.4, thin: 0.3, thick: 0.7 });
     ball(g, wx + 2.5, -7, 2.4, IRON, 22);
-    dot(g, wx + 2.5, -7, 0.6, 23, css(IRON, 30));
+    dot(g, wx + 2.5, -7, 0.6, 23, css(IRON, 30), inkFor(IRON));
   });
 }
 
@@ -63,20 +60,27 @@ function tub(g: CanvasRenderingContext2D, w: number, h: number, pal: { base: HSL
     g.fillRect(x, top + 0.5, 2.4, h);
   }
   g.restore();
-  pen(g, body, 71, 0.6, 1.5);
-  for (let x = 3.5; x < w - 2; x += 3.5) dot(g, x, top + 3.6, 0.45, x, css(pal.light));
+  pen(g, body, 71, 0.5, 1.2, 3, inkFor(pal.base));
+  for (let x = 3.5; x < w - 2; x += 3.5) dot(g, x, top + 3.6, 0.4, x, css(pal.light), inkFor(pal.base));
 }
 
 function wheels(s: CanvasRenderingContext2D, x: number, w: number, gy: number, roll: number) {
   for (const wx of [x + 4, x + w - 4]) {
-    s.fillStyle = INK;
-    circle(s, wx, gy - 2.6, 3);
+    s.fillStyle = inkFor(IRON);
+    circle(s, wx, gy - 2.6, 2.75);
     s.fillStyle = css(IRON, 6);
-    circle(s, wx, gy - 2.6, 2.2);
-    s.fillStyle = INK;
+    circle(s, wx, gy - 2.6, 2.3);
+    s.fillStyle = css(IRON, 20);
+    circle(s, wx - 0.5, gy - 3.1, 1.3);
+    s.fillStyle = inkFor(IRON);
     for (let k = 0; k < 2; k++) {
       const a = roll + (k * Math.PI) / 2;
-      line(s, wx - Math.cos(a) * 2, gy - 2.6 - Math.sin(a) * 2, wx + Math.cos(a) * 2, gy - 2.6 + Math.sin(a) * 2, { w: 0.5, seed: k, taper: [0, 0], press: 0 });
+      line(s, wx - Math.cos(a) * 2, gy - 2.6 - Math.sin(a) * 2, wx + Math.cos(a) * 2, gy - 2.6 + Math.sin(a) * 2, {
+        w: 0.5,
+        seed: k,
+        taper: [0.02, 0.04],
+        press: 0,
+      });
     }
   }
 }
@@ -104,10 +108,7 @@ defineArt<'cart'>({
     const rock = c.seg === CART_WARN ? Math.sin(rc.frame * (0.5 + 0.6 * k)) * (0.04 + 0.1 * k) : 0;
     // The cable to the winch, taut while it's hauled up or holding it.
     const wx = (m.dir > 0 ? m.at[0] - 4.5 : m.at[0] + m.w + 4.5) + d.off[0];
-    if (c.seg !== CART_RUN) {
-      s.fillStyle = INK;
-      line(s, wx, gy - 7, m.dir > 0 ? r.x : r.x + r.w, gy - 5, { w: 0.7, seed: 5, taper: [0, 0], press: 0 });
-    }
+    if (c.seg !== CART_RUN) barLine(s, wx, gy - 7, m.dir > 0 ? r.x : r.x + r.w, gy - 5, 0.5, { ...IRON, l: IRON.l + 20 }, 5, { rim: 0.2 });
     s.save();
     s.translate(r.x + r.w / 2, gy);
     s.rotate(rock);
@@ -119,8 +120,7 @@ defineArt<'cart'>({
     const bx = wx;
     const by = gy - 13;
     const swing = c.seg === CART_WARN ? Math.sin(rc.frame * 0.7) * 0.6 : 0;
-    s.fillStyle = INK;
-    line(s, bx, gy - 9, bx, by, { w: 0.9, seed: 8, taper: [0, 0], press: 0 });
+    barLine(s, bx, gy - 9, bx, by, 0.7, WOOD, 8);
     const hx = bx + Math.sin(swing) * 3;
     const hy = by + Math.cos(swing) * 3;
     part(s, poly(hx - 2, hy + 1.6, hx - 1.2, hy - 1.4, hx + 1.2, hy - 1.4, hx + 2, hy + 1.6), BRASS, 30, { depth: 0.3, thin: 0.3, thick: 0.6 });

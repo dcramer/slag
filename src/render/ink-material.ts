@@ -605,11 +605,15 @@ const rusted = masonry({ h: 24, w: 32, stray: 0, round: 1, long: 0, stack: true,
  * the ice: it's clear, so its marks are tones of itself, and a glance tells it from the rock around it.
  */
 const glass: InkMaterial = (p) => {
-  const { g, T, seed, area } = p;
+  const { g, seed, area } = p;
+  // Ice is pale and calm: its palette's chroma halved and lifted a touch, so a slab of it sits with the rock and the
+  // snow and doesn't shout cyan over the rest of the theme. Its facets are near tones of one another, not patches.
+  const calm = (c: HSL): HSL => ({ h: c.h, s: c.s * 0.55, l: Math.min(90, c.l + 6) });
+  const T = { ...p.T, base: calm(p.T.base), dark: calm(p.T.dark), light: calm(p.T.light) };
   fillArea(p, css(T.base));
   const C = 30;
-  const planes = [css(shift(T.base, 4, -3)), css(shift(T.base, -4, 3)), css(shift(T.base, 8, -8)), css(shift(T.base, -8, 6))];
-  const deep = [css(shift(T.base, -4, 2)), css(shift(T.base, -9, 4)), css(shift(T.dark, 10, -4)), css(shift(T.base, -2, -2))];
+  const planes = [css(shift(T.base, 3, -2)), css(shift(T.base, -3, 2)), css(shift(T.base, 5, -4)), css(shift(T.base, -5, 3))];
+  const deep = [css(shift(T.base, -4, 2)), css(shift(T.base, -7, 3)), css(shift(T.base, -9, 3)), css(shift(T.base, -2, -2))];
   for (let cy = Math.floor(area.y0 / C) - 1; cy * C < area.y1 + C; cy++) {
     for (let cx = Math.floor(area.x0 / C) - 1; cx * C < area.x1 + C; cx++) {
       const x = (cx + 0.5 + (hash2(cx, cy, seed + 1) - 0.5) * 0.6) * C;

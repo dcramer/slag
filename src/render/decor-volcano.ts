@@ -1,7 +1,7 @@
 import { css, type HSL, hsl3, shift } from '../core/color';
 import type { DecorDef } from './decor';
-import { blob, line, type P, stroke } from './ink';
-import { ball, boxPts, glint, INK, ovalPts, part, path, poly, tick } from './ink-props';
+import { blob, inkFor, type P, stroke } from './ink';
+import { ball, bar, barLine, boxPts, glint, ovalPts, part, path, poly, tick } from './ink-props';
 import { circle, glowDot, light } from './kit';
 
 /**
@@ -39,7 +39,8 @@ function hotLine(g: CanvasRenderingContext2D, pts: readonly P[], col: HSL, a: nu
 
 export const VOLCANO_DECOR = {
   basaltcols: {
-    color: (th) => shift(th.terrain.dark, -2),
+    // The ground's own rock a shade down: from its dark they print as black stubs with no tone to cut.
+    color: (th) => shift(th.terrain.base, -5),
     bake(s, d) {
       // Hexagonal columns of cooled lava, each a different height, flat-topped.
       const n = 3 + (d.seed % 2);
@@ -52,7 +53,8 @@ export const VOLCANO_DECOR = {
           thin: 0.4,
           thick: 0.9,
         });
-        tick(s, x + 0.6, d.y - h + 3, x + w - 0.6, d.y - h + 3, 0.5, i);
+        // One joint across each column, where it cracked as it cooled.
+        if (i % 2 === 0) tick(s, x + 0.6, d.y - h + 3, x + w - 0.6, d.y - h + 3.2, 0.45, i, css(d.color, -12));
       }
     },
   },
@@ -100,7 +102,7 @@ export const VOLCANO_DECOR = {
         path(s, poly(cx - 0.7, d.y - 3.2 * k, cx, d.y - (4.4 + (i % 2)) * k, cx + 0.7, d.y - 3.2 * k));
         s.fill();
       }
-      s.fillStyle = INK;
+      s.fillStyle = css(BASALT, -12);
       path(s, ovalPts(d.x, d.y - 3.1 * k, 1.4 * k, 0.5 * k, sd(d.seed) + 3, 0.05, 8));
       s.fill();
     },
@@ -123,10 +125,10 @@ export const VOLCANO_DECOR = {
         thin: 0.45,
       });
       // Roots, and the charcoal checks across the trunk.
-      tick(s, d.x - 3.4 * k * f, d.y, d.x - 5.6 * k * f, d.y + 0.4, 0.8, 1);
-      tick(s, d.x + 3.4 * k * f, d.y, d.x + 5 * k * f, d.y + 0.4, 0.8, 2);
-      for (let i = 0; i < 3; i++)
-        tick(s, d.x - 2 * k * f, d.y - (2 + i * 1.8) * k, d.x + 1.8 * k * f, d.y - (2.4 + i * 1.8) * k, 0.45, 3 + i, css(shift(CHAR, -6)));
+      tick(s, d.x - 3.4 * k * f, d.y, d.x - 5.6 * k * f, d.y + 0.4, 0.8, 1, inkFor(CHAR));
+      tick(s, d.x + 3.4 * k * f, d.y, d.x + 5 * k * f, d.y + 0.4, 0.8, 2, inkFor(CHAR));
+      for (let i = 0; i < 2; i++)
+        tick(s, d.x - 2 * k * f, d.y - (2.4 + i * 2.6) * k, d.x + 1.8 * k * f, d.y - (2.8 + i * 2.6) * k, 0.45, 3 + i, css(shift(CHAR, 12)));
     },
     live(rc, d) {
       const k = d.size;
@@ -143,41 +145,31 @@ export const VOLCANO_DECOR = {
       const k = d.size;
       // A long bone across the pile, two crossed under it, a curved rib on top.
       const bone = (ax: number, ay: number, bx: number, by: number, w: number, seed: number) => {
-        s.fillStyle = INK;
-        line(s, ax, ay, bx, by, { w: w + 1.1, seed, taper: [0, 0], press: 0 });
-        s.fillStyle = css(d.color);
-        line(s, ax, ay, bx, by, { w, seed: seed + 1, taper: [0, 0], press: 0 });
+        barLine(s, ax, ay, bx, by, w, d.color, seed, { taper: [0, 0], press: 0 });
         for (const [x, y] of [
           [ax, ay],
           [bx, by],
         ]) {
-          s.fillStyle = INK;
-          circle(s, x, y, w * 0.85 + 0.5);
+          s.fillStyle = inkFor(d.color);
+          circle(s, x, y, w * 0.85 + 0.3);
           s.fillStyle = css(d.color, 4);
           circle(s, x, y, w * 0.85);
         }
       };
       bone(d.x - 4 * k, d.y - 1, d.x + 3 * k, d.y - 2.6 * k, 1.3 * k, 1);
       bone(d.x - 2 * k, d.y - 3.6 * k, d.x + 4.4 * k, d.y - 0.8, 1.1 * k, 4);
-      s.fillStyle = INK;
-      stroke(
+      // A curved rib on top.
+      bar(
         s,
         [
           { x: d.x - 3 * k, y: d.y - 3 * k },
           { x: d.x - 1 * k, y: d.y - 6 * k },
           { x: d.x + 2.4 * k, y: d.y - 5.4 * k },
         ],
-        { w: 1.8, seed: 7, taper: [0.2, 0.4], press: 0 },
-      );
-      s.fillStyle = css(d.color, 6);
-      stroke(
-        s,
-        [
-          { x: d.x - 3 * k, y: d.y - 3 * k },
-          { x: d.x - 1 * k, y: d.y - 6 * k },
-          { x: d.x + 2.4 * k, y: d.y - 5.4 * k },
-        ],
-        { w: 0.9, seed: 8, taper: [0.2, 0.4], press: 0 },
+        0.9,
+        shift(d.color, 6),
+        7,
+        { taper: [0.02, 0.08], press: 0 },
       );
     },
   },
@@ -209,10 +201,10 @@ export const VOLCANO_DECOR = {
       const body = at(d.x, d.y + 0.4, k, f, -5, -0.4, -6, -3.6, -4.6, -7.2, -1, -8.4, 1.6, -7.6, 2.6, -5.2, 0.8, -4.2, 2.6, -2.2, 1.4, 0);
       part(s, body, IRON, sd(d.seed), { depth: 0.9, thin: 0.45 });
       // Its mouth, and a stubby leg in the air.
-      s.fillStyle = INK;
+      s.fillStyle = inkFor(IRON);
       path(s, at(d.x, d.y, k, f, 1.6, -7.4, 2.8, -5, 1.2, -4.4, 0.4, -6.6));
       s.fill();
-      tick(s, d.x - 4.6 * k * f, d.y - 7.2 * k, d.x - 6.2 * k * f, d.y - 8.6 * k, 1.1, 2);
+      barLine(s, d.x - 4.6 * k * f, d.y - 7.2 * k, d.x - 6.2 * k * f, d.y - 8.6 * k, 0.8, IRON, 2);
       glint(s, at(d.x, d.y, k, f, -4.6, -6, -2.2, -7.6), 'rgba(220,226,240,0.6)', 0.6);
     },
   },
@@ -224,7 +216,7 @@ export const VOLCANO_DECOR = {
       // A boulder weathered round on top and notched under the brow: skull-shaped from a distance. Just rock.
       const pts = at(d.x, d.y + 0.5, k, f, -5, 0, -5.6, -4, -4, -8, 0, -9.4, 4, -8, 5.4, -4.4, 4.2, -2.4, 4.8, 0);
       part(s, pts, d.color, sd(d.seed), { depth: 1, thin: 0.45, thick: 1.2 });
-      tick(s, d.x + 4.2 * k * f, d.y - 2.4 * k, d.x + 2.4 * k * f, d.y - 2.2 * k, 0.8, 4);
+      tick(s, d.x + 4.2 * k * f, d.y - 2.4 * k, d.x + 2.4 * k * f, d.y - 2.2 * k, 0.6, 4, inkFor(d.color));
       s.fillStyle = css(shift(d.color, -10));
       path(s, at(d.x, d.y, k, f, -3, -1, -2, -3.2, 1, -2.6, 0.4, -0.6));
       s.fill();
@@ -251,7 +243,8 @@ export const VOLCANO_DECOR = {
       part(s, at(d.x, d.y + 0.5, k, f, 5, 0, 5, -3.4, 7.4, -3, 7.6, 0), d.color, sd(d.seed) + 1, { depth: 0.6, thin: 0.4 });
       const body = boxPts(d.x - 8 * k, d.y - 4.6 * k, 12 * k, 4.6 * k, 1, sd(d.seed), 0.1);
       part(s, body, d.color, sd(d.seed), { depth: 0.8, thin: 0.45 });
-      for (let i = 1; i < 4; i++) tick(s, d.x + (-8 + i * 3) * k, d.y - 4.4 * k, d.x + (-8 + i * 3) * k, d.y - 0.4, 0.5, i);
+      // Two carved bands across it.
+      for (const i of [1, 3]) tick(s, d.x + (-8 + i * 3) * k, d.y - 4.2 * k, d.x + (-8 + i * 3) * k + 0.2, d.y - 0.6, 0.5, i, css(d.color, -22));
       part(s, at(d.x, d.y, k, f, -8, -1, -10.4, -2.2, -10.6, -3.6, -8, -4.4), shift(d.color, -6), sd(d.seed) + 2, { depth: 0.5, thin: 0.35 });
     },
   },
@@ -263,9 +256,10 @@ export const VOLCANO_DECOR = {
       // A rope bridge's anchor post, the bridge long gone: a stake lashed round, the frayed rope trailing off.
       part(s, at(d.x, d.y + 0.5, k, f, -1.4, 0, -1.6, -11, 0, -12.2, 1.4, -11, 1.2, 0), d.color, sd(d.seed), { depth: 0.6, thin: 0.4 });
       for (let i = 0; i < 3; i++) tick(s, d.x - 1.6 * k, d.y - (8.4 + i * 1.1) * k, d.x + 1.4 * k, d.y - (8 + i * 1.1) * k, 0.9, i, css(ROPE));
-      s.fillStyle = INK;
+      // The frayed rope trailing off, thinning to its end.
       const rope = at(d.x, d.y, k, f, 1.4, -9, 4, -6, 5.6, -2.6, 7.6, -1.2);
-      stroke(s, rope, { w: 1.6, seed: 3, taper: [0.05, 0.6], press: 0 });
+      s.fillStyle = inkFor(ROPE);
+      stroke(s, rope, { w: 1.4, seed: 3, taper: [0.05, 0.6], press: 0 });
       s.fillStyle = css(ROPE);
       stroke(s, rope, { w: 0.8, seed: 4, taper: [0.05, 0.7], press: 0 });
     },
