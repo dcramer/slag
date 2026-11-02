@@ -5,7 +5,8 @@ import { type Grid, T_EMPTY, T_ONEWAY } from '../level/kit';
 import { jumpProfile } from '../level/probe';
 import { makeStyle, type Piece, type Site } from '../setpieces/place';
 import { berthMax, climb, digBerth, fitsWith, footing, structureCols, structureOf, trial } from './harbor-kit';
-import type { Concept, Landmark } from './types';
+import { defineConcept } from './contract';
+import type { Landmark } from './types';
 
 /**
  * Galleon at Berth (docs/SETPIECES.md, Harbor): a whole ship moored past the berth, run deck by deck. It is
@@ -229,7 +230,7 @@ function* galleonPieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
     const y = top - 1;
     const cands: Piece[] = [];
     for (const x of d > 0 ? [x1 - 1, x1 - 2, x1] : [x0 + 1, x0 + 2, x0])
-      for (const elev of harpoon ? [0, 0.04] : [0.18, 0.1, 0.28])
+      for (const elev of harpoon ? [0.06, 0.12, 0] : [0.18, 0.1, 0.28])
         cands.push({
           name: harpoon ? rng.pick(['Harpoon Gun', 'Whaler', 'The Long Reach']) : rng.pick(['Stern Chaser', 'Long Nine', 'Deck Gun']),
           archetype: 'launcher',
@@ -242,7 +243,7 @@ function* galleonPieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
               look: harpoon ? 'harpoon' : 'ship',
               at: [x + 0.5, y + 0.45],
               angle: d > 0 ? -elev : Math.PI + elev,
-              ammo: harpoon ? 'bolt' : 'cannonball',
+              ammo: harpoon ? 'arrow' : 'cannonball',
               interval: harpoon ? rng.int(130, 190) : rng.int(160, 230),
               burst: 1,
               speed: harpoon ? rng.int(260, 330) : rng.int(230, 300),
@@ -259,16 +260,27 @@ function* galleonPieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
   }
 }
 
-export const GALLEON: Concept = {
+export const GALLEON = defineConcept({
   id: 'galleon',
   weight: 3,
   sizes: ['classic', 'wide'],
   fits: fitsWith(16),
   ownsCrossing: true,
-  family: ['harpoon', 'shore battery', 'crane'],
+  family: ['harpoon', 'shore battery', 'whirlpool'],
   budget: 2,
   names: ['The Galleon at {place}', 'The Flagship of {place}', '{place}: All Hands', 'The Ship in {place} Harbour'],
   box: (k, rng) => ({ w: berthMax() + structureCols(k.W, rng, 18, 22), h: 3 * Math.max(3, Math.min(4, climb())) + 4 }),
   build: buildGalleon,
   pieces: galleonPieces,
-};
+  scale: 'grand',
+  varies: [
+    'which end is the bow',
+    'length',
+    'masts and their yards',
+    'gun deck height',
+    'where the hatches open',
+    'great cabin or solid quarterdeck',
+    'poop deck',
+    'its guns: stern chaser, harpoon gun or both',
+  ],
+});

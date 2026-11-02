@@ -230,7 +230,18 @@ export type Module =
       ammo: Ammo;
     }
   | { type: 'flame'; at: Vec; angle: number; length: number; on: number; off: number; warn: number }
-  | { type: 'laser'; at: Vec; angle: number; charge: number; fire: number; off: number; sweep: number; sweepPeriod: number }
+  | {
+      type: 'laser';
+      at: Vec;
+      angle: number;
+      charge: number;
+      fire: number;
+      off: number;
+      sweep: number;
+      sweepPeriod: number;
+      /** Art only: 'lamp' is a harbor light's lamp head (a lighthouse's, a channel light's); unset is the laser pointer. */
+      look?: 'lamp';
+    }
   | { type: 'tesla'; a: Vec; b: Vec; on: number; off: number; warn: number }
   | {
       type: 'piston';
@@ -369,7 +380,18 @@ export type Module =
    * Force falls off linearly to 0 at `radius` (tiles). `off` 0 = always on,
    * otherwise it cycles off → warn → on like a flame jet.
    */
-  | { type: 'magnet'; at: Vec; radius: number; strength: number; polarity: 1 | -1; on: number; off: number; warn: number }
+  | {
+      type: 'magnet';
+      at: Vec;
+      radius: number;
+      strength: number;
+      polarity: 1 | -1;
+      on: number;
+      off: number;
+      warn: number;
+      /** Art only: 'whirlpool' is the harbor's maelstrom, a pull drawn as water spiralling down; unset is the magnet. */
+      look?: 'whirlpool';
+    }
   /** Sticky web over some cells: heavy drag while inside (it can catch a fall), weak jumps just after. */
   | { type: 'web'; cells: Cell[]; drag: number }
   /** Blink blocks: solid for `on` frames, gone for `off`, shifted by `offset` (pairs alternate). */
@@ -509,7 +531,7 @@ export type BlockLook = 'tetra';
 /** What a spike strip (or a spike coat) is made of; unset is plain metal spikes. */
 export type SpikeLook = 'glass' | 'thorn' | 'crystal' | 'icicle' | 'pitchfork';
 /** What a dropper's head is (art only); unset is the carved crusher stone. */
-export type DropperLook = 'icicle' | 'chandelier' | 'cargo';
+export type DropperLook = 'icicle' | 'chandelier';
 /** The liquid a flood fills with. */
 export type FloodLook = 'lava' | 'toxic' | 'water';
 

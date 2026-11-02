@@ -7,7 +7,8 @@ import { jumpProfile } from '../level/probe';
 import { makeStyle, type Piece, type Site } from '../setpieces/place';
 import { capFlood } from './flood';
 import { berthMax, climb, digBerth, fitsWith, footing, structureCols, structureOf, trial } from './harbor-kit';
-import type { Concept, Landmark } from './types';
+import { defineConcept } from './contract';
+import type { Landmark } from './types';
 
 /**
  * The harbor's shore landmarks (docs/SETPIECES.md, Harbor), each standing past its berth on the sea floor:
@@ -143,19 +144,20 @@ function* pierPieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
   yield piece;
 }
 
-export const TIDAL_PIER: Concept = {
+export const TIDAL_PIER = defineConcept({
   id: 'tidal-pier',
   weight: 3,
   sizes: ['classic', 'wide'],
   fits: fitsWith(17),
   ownsCrossing: true,
-  family: ['wave', 'crane', 'dock forklift'],
+  family: ['wave', 'channel light', 'crane'],
   budget: 2,
   names: ['The Pier at {place}', '{place} Pleasure Pier', 'The Tidal Pier of {place}', '{place}: Mind the Tide'],
   box: (k, rng) => ({ w: berthMax() + structureCols(k.W, rng, 18, 22), h: climb() + 6 }),
   build: buildPier,
   pieces: pierPieces,
-};
+  varies: ['length', 'boardwalk sections and their heights', 'beach depth', 'which way the wave breaks', 'tide and wave timing'],
+});
 
 // ------------------------------------------------------------------------------------------ container terminal
 
@@ -230,32 +232,44 @@ function* terminalPieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
   };
   trial(s, prior, crane);
   yield crane;
-  // A box hung from the boom over one end's stack, dropped on whoever walks under it; the trolley takes the rest.
-  const dropEnd = rng.chance(0.5) ? stacks.length - 1 : 0;
-  const drop = stacks.length > 2 || rng.chance(0.5) ? stacks[dropEnd] : null;
+  // A container on the crane's hook, swinging over one end's stack; the trolley takes the rest.
+  const swingEnd = rng.chance(0.5) ? stacks.length - 1 : 0;
+  const drop = stacks.length > 2 || rng.chance(0.5) ? stacks[swingEnd] : null;
   if (drop) {
-    const dx = drop.x0 + Math.floor((drop.x1 - drop.x0 - 1) / 2);
-    const cand: Piece = {
-      name: rng.pick(['Falling Freight', 'Fragile', 'Special Delivery', 'Cargo Drop']),
-      archetype: 'dropper',
-      role: 'hazard',
-      style: RAIL(rng),
-      modules: [
-        {
-          type: 'dropper',
-          cells: [
-            [dx, K + 1],
-            [dx + 1, K + 1],
-          ],
-          angle: Math.PI / 2,
-          reach: drop.top - K - 2,
-          warn: rng.int(28, 38),
-          rest: rng.int(60, 90),
-          look: 'cargo',
-        },
-      ],
-    };
-    if (trial(s, prior, cand)) yield cand;
+    const hx = (drop.x0 + drop.x1 + 1) / 2;
+    const period = rng.int(200, 280);
+    const swing = rng.range(0.35, 0.6);
+    for (const arm of [3, 2.5, 2]) {
+      const cand: Piece = {
+        name: rng.pick(['Swinging Box', 'Mind the Load', 'Loose Container', 'Hook Shot']),
+        archetype: 'platform',
+        role: 'build',
+        style: RAIL(rng),
+        modules: [
+          {
+            type: 'rotor',
+            look: 'crane',
+            support: 'none',
+            mastX: hx,
+            hub: [hx, K + 0.5],
+            arm,
+            count: 1,
+            angle0: Math.PI / 2,
+            period,
+            swing,
+            dir: 1,
+            width: 3,
+            thick: 1,
+            material: 'metal',
+            seed: rng.int(0, 1 << 20),
+          },
+        ],
+      };
+      if (trial(s, prior, cand)) {
+        yield cand;
+        break;
+      }
+    }
   }
   // The trolley: a container on the spreader, parked over one stack, run across to another and back.
   const span = stacks.filter((st) => st !== drop);
@@ -290,7 +304,7 @@ function* terminalPieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
   }
 }
 
-export const CONTAINER_TERMINAL: Concept = {
+export const CONTAINER_TERMINAL = defineConcept({
   id: 'container-terminal',
   weight: 2,
   sizes: ['classic', 'wide'],
@@ -302,7 +316,8 @@ export const CONTAINER_TERMINAL: Concept = {
   box: (k, rng) => ({ w: berthMax() + structureCols(k.W, rng, 16, 21), h: 17 }),
   build: buildTerminal,
   pieces: terminalPieces,
-};
+  varies: ['stack count, widths and heights', 'aisles', 'which end the cargo drops at', 'trolley travel and timing'],
+});
 
 // ----------------------------------------------------------------------------------------- lighthouse rock
 
@@ -384,7 +399,9 @@ function* lighthousePieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
   const lx = tx + tw / 2;
   const ly = roof - 2;
   // The lantern room on the roof (its cell is the lamp's), and the lamp: a beam swept over one side on a long dark.
-  const lantern: Module = { type: 'deco', kind: 'facade', at: [tx, roof - 4], w: tw, h: 4, seed: rng.int(0, 1 << 20) };
+  // The tower's whitewashed inside and the lantern room on its roof, behind the stone: one shell from the rock up.
+  const G = l.anchors.deck[1];
+  const lantern: Module = { type: 'deco', kind: 'facade', at: [tx, roof - 4], w: tw, h: G - roof + 4, seed: rng.int(0, 1 << 20) };
   const seaward = rng.chance(0.35);
   const cands: Piece[] = [];
   for (const tilt of [0.22, 0.14, 0.06])
@@ -398,6 +415,7 @@ function* lighthousePieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
           lantern,
           {
             type: 'laser',
+            look: 'lamp',
             at: [lx, ly],
             angle: seaward ? Math.PI - tilt : tilt,
             charge: rng.int(50, 70),
@@ -427,19 +445,27 @@ function* lighthousePieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
   yield dark;
 }
 
-export const LIGHTHOUSE: Concept = {
+export const LIGHTHOUSE = defineConcept({
   id: 'lighthouse',
   weight: 2,
   sizes: ['classic', 'wide'],
   fits: fitsWith(16),
   ownsCrossing: true,
-  family: ['wave', 'tentacle', 'shore battery'],
+  family: ['whirlpool', 'wave', 'tentacle'],
   budget: 1,
   names: ['Lighthouse Rock, {place}', 'The {place} Light', 'The Keeper’s Rock at {place}', '{place} Point Light'],
   box: (k, rng) => ({ w: berthMax() + structureCols(k.W, rng, 16, 20), h: 26 }),
   build: buildLighthouse,
   pieces: lighthousePieces,
-};
+  scale: 'grand',
+  varies: [
+    'storeys and their height',
+    'where the tower stands on the rock',
+    'which side each landing turns',
+    'boulders',
+    'which way the lamp sweeps, its tilt and beat',
+  ],
+});
 
 // --------------------------------------------------------------------------------------------- kraken lagoon
 
@@ -504,6 +530,7 @@ function buildLagoon(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
       deck: [sx, G],
       span: [sx, ex],
       bridge: [B, b1 - b0 + 1],
+      stacks: [n0, f0],
       ...Object.fromEntries(gaps.map((gp, i) => [`gap${i}`, gp])),
     },
     skin: 'stone',
@@ -516,6 +543,19 @@ function* lagoonPieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
   const prior: PlacedProp[] = [];
   const gaps: Vec[] = [];
   for (let i = 0; a[`gap${i}`]; i++) gaps.push(a[`gap${i}`]);
+  // The sea stacks' rock behind their caves, so a cave reads as a tunnel through the stack and not a gap under it.
+  const G = a.deck[1];
+  const stacks: Piece = {
+    name: 'Sea Stacks',
+    archetype: 'platform',
+    role: 'build',
+    style: makeStyle(rng, 'steel', [200]),
+    modules: a.stacks.map((x0): Module => ({ type: 'deco', kind: 'facade', at: [x0, B], w: STACK, h: G - B, seed: rng.int(0, 1 << 20) })),
+    extra: [[a.stacks[0] + 1, B - 3]],
+    pathSafe: true,
+  };
+  trial(s, prior, stacks);
+  yield stacks;
   // Tentacles out of the water gaps, each on its own beat, stopping short of the bridge.
   const want = Math.max(1, Math.min(gaps.length, rng.int(2, 4)));
   let placed = 0;
@@ -551,16 +591,17 @@ function* lagoonPieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
   }
 }
 
-export const KRAKEN_LAGOON: Concept = {
+export const KRAKEN_LAGOON = defineConcept({
   id: 'kraken-lagoon',
   weight: 2,
   sizes: ['classic', 'wide'],
   fits: fitsWith(17),
   ownsCrossing: true,
-  family: ['tentacle', 'harpoon', 'wave'],
+  family: ['tentacle', 'whirlpool', 'harpoon'],
   budget: 2,
   names: ['Kraken Lagoon, {place}', 'The Lagoon at {place}', '{place}: Do Not Feed', 'The Deep End of {place}'],
   box: (k, rng) => ({ w: berthMax() + structureCols(k.W, rng, 17, 21), h: 13 }),
   build: buildLagoon,
   pieces: lagoonPieces,
-};
+  varies: ['islet count, widths and heights', 'gaps', 'stack height', 'which gaps the tentacles rise in, and their beats'],
+});

@@ -3,6 +3,7 @@ import type { Rng } from '../core/rng';
 import type { DecorKind, DecorSpot } from '../gen/decor';
 import type { Theme } from '../gen/theme';
 import { FRONTIER_DECOR } from './decor-frontier';
+import { HARBOR_DECOR } from './decor-harbor';
 import { blob, line, type P, stroke } from './ink';
 import { inkFence, inkHay } from './ink-parts';
 import { ball, boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, tick, tone } from './ink-props';
@@ -942,4 +943,5 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     },
   },
   ...FRONTIER_DECOR,
+  ...HARBOR_DECOR,
 };
