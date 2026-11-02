@@ -72,6 +72,13 @@ const RULES = {
   chain: defineDecor({ place: 'under', themes: ['factory', 'castle'], weight: 1, clear: 2 }),
   cable: defineDecor({ place: 'under', themes: ['factory', 'rooftops', 'space'], weight: 0.8, clear: 2 }),
   cagelamp: defineDecor({ place: 'under', themes: ['factory'], weight: 0.9, clear: 1 }),
+  // The shop floor's: a gauge on its riser, the time clock, an extinguisher, cones, a wrapped pallet, a crane hook.
+  gauge: defineDecor({ place: 'top', themes: ['factory'], weight: 0.8, clear: 1 }),
+  timeclock: defineDecor({ place: 'top', themes: ['factory'], weight: 0.5, clear: 2 }),
+  extinguisher: defineDecor({ place: 'top', themes: ['factory'], weight: 0.6, clear: 1 }),
+  cone: defineDecor({ place: 'top', themes: ['factory'], weight: 0.9, clear: 1 }),
+  pallet: defineDecor({ place: 'top', themes: ['factory'], weight: 0.8, clear: 1 }),
+  hook: defineDecor({ place: 'under', themes: ['factory'], weight: 0.8, clear: 2 }),
   // ---- castle -------------------------------------------------------------
   banner: defineDecor({ place: 'under', themes: ['castle'], weight: 1.2, clear: 2 }),
   skull: defineDecor({ place: 'top', themes: ['castle', 'volcano'], weight: 0.5, clear: 1 }),

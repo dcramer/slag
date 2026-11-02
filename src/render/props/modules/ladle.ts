@@ -150,18 +150,34 @@ function gantry(span: number, rise: number) {
   });
 }
 
-/** Where the bail's hook hangs: over the pivot, a little above the bowl. */
-const hookOf = (p: P) => p.y - 17;
+/** The ladle's art scale (a landmark hangs bigger ones), and its pivot and hook in world px. The lip stays on the stream. */
+function frame(m: Ladle, ox: number, oy: number) {
+  const k = m.size ?? 1;
+  const p0 = pivot(m);
+  const lx = m.at[0] + ox;
+  const ly = m.at[1] + oy;
+  const p = { x: lx + (p0.x - m.at[0]) * k, y: ly + (p0.y - m.at[1]) * k };
+  return { k, lx, ly, p, hy: p.y - 17 * k };
+}
+
+/** Draw on `g` about the pivot `p` at scale `k`. */
+function scaled(g: CanvasRenderingContext2D, p: P, k: number, draw: () => void) {
+  g.save();
+  g.translate(p.x, p.y);
+  g.scale(k, k);
+  g.translate(-p.x, -p.y);
+  draw();
+  g.restore();
+}
 
 defineArt<'ladle'>({
   type: 'ladle',
   layer: BACKDROP,
   draw: (rc, m, d) => {
     if (m.hang > 0) return;
-    const p = pivot(m);
+    const f = frame(m, d.off[0], d.off[1]);
     const floor = m.at[1] + m.drop + d.off[1];
-    const rise = floor - (hookOf(p) + d.off[1]) + 4;
-    stamp(rc.s, gantry(Math.max(m.spill[0] + m.spill[1] + 18, 40), rise), p.x + d.off[0], floor);
+    stamp(rc.s, gantry(Math.max(m.spill[0] + m.spill[1] + 18, 40 * f.k), floor - f.hy + 4), f.p.x, floor);
   },
 });
 
@@ -174,23 +190,24 @@ defineArt<'ladle'>({
 function drawLadle(s: CanvasRenderingContext2D, rc: RC, m: Ladle, d: DrawCtx) {
   const c = ladleCycle(m, rc.frame, d.r.phase);
   const tilt = ladleTilt(m, rc.frame, d.r.phase);
-  const p0 = pivot(m);
-  const p = { x: p0.x + d.off[0], y: p0.y + d.off[1] };
-  const hy = hookOf(p);
+  const { k, p, hy } = frame(m, d.off[0], d.off[1]);
   // Whatever it hangs from: the chain up to the ceiling, or a short one to the gantry's beam.
-  chain(s, p.x, m.hang > 0 ? m.at[1] + d.off[1] - m.hang : hy - 6, hy - 1);
-  bail(s, p, hy);
-  // The bowl, tipped; in the warning it shivers in its bail as it goes over.
+  chain(s, p.x, m.hang > 0 ? m.at[1] + d.off[1] - m.hang : hy - 6, hy - k);
+  // In the warning it shivers in its bail as it goes over.
   const shake = c.seg === LADLE_WARN ? Math.sin(rc.frame * 1.3) * 0.025 : 0;
   const a = (tilt * TIP + shake) * m.dir;
-  s.save();
-  s.translate(p.x, p.y);
-  s.rotate(a);
-  stamp(s, bowl(m.dir));
-  s.restore();
   const heat = c.seg === LADLE_WARN ? c.t / Math.max(1, c.len) : c.seg === LADLE_POUR ? 1 : c.seg === LADLE_SET ? 0.6 : 0.15;
-  surface(s, rc.g, p.x, p.y, a, m.dir, heat);
-  if (c.seg === LADLE_WARN) smoke(rc.bg, p.x + m.dir * 8, p.y - 12, c.t);
+  // The bail, bowl and slag, drawn about the pivot at the ladle's own size.
+  scaled(s, p, k, () => {
+    bail(s, p, p.y - 17);
+    s.save();
+    s.translate(p.x, p.y);
+    s.rotate(a);
+    stamp(s, bowl(m.dir));
+    s.restore();
+    scaled(rc.g, p, k, () => surface(s, rc.g, p.x, p.y, a, m.dir, heat));
+  });
+  if (c.seg === LADLE_WARN) smoke(rc.bg, p.x + m.dir * 8 * k, p.y - 12 * k, c.t);
   const lx = m.at[0] + d.off[0];
   const ly = m.at[1] + d.off[1];
   const beam = beamOf(d.o, d.r, d.mi);

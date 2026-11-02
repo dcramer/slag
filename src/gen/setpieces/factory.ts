@@ -1,6 +1,6 @@
 import type { Vec } from '../../core/geom';
 import type { Rng } from '../../core/rng';
-import type { Module } from '../../sim/props';
+import type { Module, ModuleOf } from '../../sim/props';
 import { presses, vehicles, wheels } from './builders';
 import { defineSetPiece } from './contract';
 import { best, makeStyle, type Piece, type Recipe, SAFE_TILES, type Site } from './place';
@@ -53,7 +53,7 @@ export function ladleSpots(s: Site, drops: readonly [number, number], spillMax: 
 }
 
 /** The ladle module for a spot, its timing rolled. */
-export function ladleAt(rng: Rng, sp: LadleSpot, dir: 1 | -1, spill: number): Module {
+export function ladleAt(rng: Rng, sp: LadleSpot, dir: 1 | -1, spill: number): ModuleOf<'ladle'> {
   return {
     type: 'ladle',
     at: sp.at,

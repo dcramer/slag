@@ -631,6 +631,8 @@ export type Module =
       pour: number;
       set: number;
       seed: number;
+      /** Art only: how big the ladle is drawn (1 when absent); its lip stays on the stream. */
+      size?: number;
     }
   | {
       /**

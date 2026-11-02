@@ -35,6 +35,9 @@ const RUST = (rng: Rng) => makeStyle(rng, ['rust', 'steel'], [20, 30]);
 /** Columns the smallest foundry needs past its bank: ladder, a casting floor two ladles wide, a cupola. */
 const FOUNDRY_MIN = 15 + APRON;
 
+/** How big the foundry's ladles are drawn: crane ladles, a good deal bigger than a filler's. */
+const LADLE_SIZE = 1.4;
+
 /** Rows the box asks for: the cupola's stack, never more than the level has over its ground. */
 const foundryRows = (H: number) => Math.min(H - 9, 18);
 
@@ -44,13 +47,13 @@ function buildFoundry(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark 
   const E = at.x + at.w - 1;
   const R = E - APRON;
   vatBefore(g, rng, s0, G, parts);
-  g.clear(s0, 0, E, G - 1);
+  g.clear(at.x, 0, E, G - 1);
   // The cupola at the far end: a furnace tower with its stack, the tapping passage through its foot and the
   // charging door at the runway's height.
   const cw = rng.int(4, 5);
   const c0 = R - cw + 1;
   const T = G - Math.min(at.h - 1, rng.int(15, 17));
-  const B = G - 9 - rng.int(0, 2);
+  const B = G - 10 - rng.int(0, 1);
   g.fill(c0, T, R, G - 1);
   g.clear(c0, G - DOOR, R, G - 1);
   g.clear(c0, B - DOOR, R, B - 1);
@@ -78,6 +81,8 @@ function buildFoundry(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark 
   const clamp = (v: number) => Math.max(1, Math.min(2.5, v));
   const lips: Vec[] = xs.map((x) => [x + 0.5, (sunk ? G + 1 : G) - rng.int(4, 5)]);
   const spills: Vec[] = xs.map((x, i) => [clamp(i === 0 ? x + 0.25 - fl : (x - xs[i - 1]) / 2), clamp(i === n - 1 ? fr - x - 0.75 : (xs[i + 1] - x) / 2)]);
+  // The cupola's stack goes on up over the tower, behind (a shell), toward the top of the view.
+  const stackTop = Math.max(1, T - rng.int(4, 7));
   const mid = Math.floor((f0 + f1) / 2);
   return {
     concept: 'foundry',
@@ -85,10 +90,12 @@ function buildFoundry(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark 
     air: [
       { x: f0, y: B + 1, w: F, h: G - B - 1 },
       { x: s0, y: B - 4, w: c0 - s0, h: 4 },
+      { x: c0, y: stackTop, w: cw, h: T - stackTop },
     ],
     anchors: {
       hall: [f0, B],
       cupola: [c0, R],
+      stack: [stackTop, T],
       floor: [G, sunk],
       ...record('lip', lips),
       ...record('spill', spills),
@@ -97,7 +104,7 @@ function buildFoundry(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark 
         { x: mid, y: B + 1, w: 1, h: G - B - 1 + sunk },
       ]),
     },
-    skin: 'metal',
+    skin: 'rustplate',
   };
 }
 
@@ -106,16 +113,23 @@ function* foundryPieces(rng: Rng, _s: Site, l: Landmark): Generator<Piece> {
   const [G, sunk] = l.anchors.floor;
   const lips = listOf(l.anchors, 'lip');
   const spills = listOf(l.anchors, 'spill');
-  const [, R] = l.anchors.cupola;
+  const [c0, R] = l.anchors.cupola;
+  const [stackTop, T] = l.anchors.stack;
   for (let i = 0; i < lips.length; i++) {
     const [x, lip] = lips[i];
     // Tip toward the wider side of its floor.
     const dir: 1 | -1 = spills[i][1] > spills[i][0] ? 1 : spills[i][1] < spills[i][0] ? -1 : rng.chance(0.5) ? 1 : -1;
     const drop = G + sunk - lip;
-    const mods: Module[] = [ladleAt(rng, { at: [x, lip], drop, spill: spills[i], hang: lip - (B + 1) }, dir, 3)];
+    const mods: Module[] = [{ ...ladleAt(rng, { at: [x, lip], drop, spill: spills[i], hang: lip - (B + 1) }, dir, 3), size: LADLE_SIZE }];
     // The hall behind it all rides in the first ladle's piece: the casting bay's back wall, the runway's
     // columns down to the floor and the cupola's lining, standing on the ground under its open foot.
-    if (i === 0) mods.unshift(shell(rng, 'facade', [f0, B + 1], R - f0 + 1, G - B - 1 + sunk));
+    if (i === 0)
+      mods.unshift(
+        shell(rng, 'facade', [f0, B + 1], c0 - f0, G - B - 1 + sunk),
+        // The cupola's own shell, behind its tower from its top to the floor: the lining through both its openings.
+        shell(rng, 'facade', [c0, T], R - c0 + 1, G - T),
+        shell(rng, 'smokestack', [c0 + (R - c0 > 3 ? 1 : 0.5), stackTop], R - c0 > 3 ? R - c0 - 1 : R - c0, T - stackTop),
+      );
     yield { name: rng.pick(LADLE_NAMES), archetype: 'flamer', role: 'hazard', style: RUST(rng), modules: mods };
   }
 }
@@ -147,7 +161,7 @@ function buildBoiler(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const E = at.x + at.w - 1;
   const R = E - APRON;
   vatBefore(g, rng, s0, G, parts);
-  g.clear(s0, 0, E, G - 1);
+  g.clear(at.x, 0, E, G - 1);
   // The building: brick walls, a hall tall enough to hop the boilers in, a roof one or two courses thick.
   const b0 = s0 + 2;
   const b1 = R;
@@ -327,7 +341,7 @@ function buildRobotLine(g: Grid, rng: Rng, at: TileRect, parts: number): Landmar
   const E = at.x + at.w - 1;
   const R = E - APRON;
   vatBefore(g, rng, s0, G, parts);
-  g.clear(s0, 0, E, G - 1);
+  g.clear(at.x, 0, E, G - 1);
   // The line's deck, a ladder up to it, the floor under it a service trench a row deep on some.
   const D = G - 4 - rng.int(0, 1);
   const d0 = s0 + 2;
@@ -365,6 +379,21 @@ function* robotPieces(rng: Rng, _s: Site, l: Landmark): Generator<Piece> {
   const [under] = l.anchors.under;
   const [d1] = l.anchors.deckEnd;
   const arms = listOf(l.anchors, 'arm');
+  // A car body on its jig between each pair of robots, where they weld: a step up onto the line's way. The
+  // cars go in first: an arm's sweep claims the deck it swings over.
+  const xs = arms.map(([x]) => x).sort((a, b) => a - b);
+  for (let i = 0; i + 1 < xs.length; i++) {
+    const gap = xs[i + 1] - xs[i] - 1;
+    if (gap < 5) continue;
+    const cx = xs[i] + 1 + Math.floor((gap - 3) / 2) + rng.int(0, gap % 2);
+    yield {
+      name: rng.pick(['Car Body', 'Body in White', "Next Year's Model", 'Unit 0']),
+      archetype: 'platform',
+      role: 'build',
+      style: makeStyle(rng, ['steel'], [205]),
+      modules: [{ type: 'body', cells: carCells(cx, D - 1, rng.chance(0.5) ? 1 : -1), material: 'metal', conveyor: 0, breakFrames: 0, respawnFrames: 0 }],
+    };
+  }
   const reach = rng.range(2.2, 2.6);
   for (let i = 0; i < arms.length; i++) {
     const [x, dir] = arms[i];
@@ -376,6 +405,18 @@ function* robotPieces(rng: Rng, _s: Site, l: Landmark): Generator<Piece> {
   }
 }
 
+/** A car body three tiles long standing on the stand row `y` from column x: its lower body, and its cabin two tiles long over the end away from its hood. */
+export function carCells(x: number, y: number, hood: 1 | -1): [number, number][] {
+  const cab = hood > 0 ? x : x + 1;
+  return [
+    [x, y],
+    [x + 1, y],
+    [x + 2, y],
+    [cab, y - 1],
+    [cab + 1, y - 1],
+  ];
+}
+
 export const ROBOT_LINE = defineConcept({
   id: 'robot-line',
   weight: 2,
@@ -385,7 +426,7 @@ export const ROBOT_LINE = defineConcept({
   ownsCrossing: true,
   family: ['robot arm', 'forklift', 'press'],
   names: ['The Robot Line at {place}', '{place} Assembly Plant', 'The Line at {place}', '{place} Motor Works'],
-  varies: ['vat width', 'line length (wide)', 'deck height', 'a service trench', 'robots: how many, where, which way'],
+  varies: ['vat width', 'line length (wide)', 'deck height', 'a service trench', 'robots: how many, where, which way', 'car bodies: where, which way'],
   box: (k, rng) => ({ w: widestGap() + BANK + structCols(k, rng, LINE_MIN, [22, 32]), h: 4 + ARM_HEAD + 2 }),
   build: buildRobotLine,
   pieces: robotPieces,
