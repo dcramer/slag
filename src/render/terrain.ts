@@ -5,7 +5,6 @@ import { type Level, levelKey, T_ONEWAY, tileAt, type TileRect } from '../sim/le
 import { coatTerrain } from './weather';
 import { DECOR, type Decor } from './decor';
 import { capLoops, inkIce, inkIceTops } from './ink-ground';
-import { inkFence, inkHay } from './ink-parts';
 import {
   type Area,
   dirtyTiles,
@@ -248,9 +247,7 @@ export class TerrainPainter {
       const def = DECOR[d.kind];
       if (!def.bake || d.x + 96 < area.x0 || d.x - 96 > area.x1 || d.y + 96 < area.y0 || d.y - 96 > area.y1) continue;
       g.save();
-      if (d.kind === 'haybale') inkHay(g, d);
-      else if (d.kind === 'fence') inkFence(g, d);
-      else def.bake(g, d, th);
+      def.bake(g, d, th);
       g.restore();
     }
     coatTerrain(g, level, area);
