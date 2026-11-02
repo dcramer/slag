@@ -18,7 +18,7 @@ import type { Shape } from './types';
 import { type Bridge, judge, oneBridgeEnough } from './validate';
 import { rideProof, rideSpans } from './ride';
 import { rollWeather } from './weather';
-import { planHolds } from './winnable';
+import { noFreeRide, planHolds } from './winnable';
 
 export type { BridgeHint, SculptCtx, Sculptor, Shape } from './types';
 export { describeProfile, GRAVITY, type GravityClass, gravityClass, type ProfileOverride, rollProfile } from './profile';
@@ -115,7 +115,7 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
     // A carrier's ride is part of the proof, so it goes in first; the solution it has to keep comes later.
     let carriers: PlacedProp[] | null = null;
     if (live?.carrier && landmark) {
-      carriers = placeLandmark(live, landmark, level, cache, landmarkRng, themeId, () => true);
+      carriers = placeLandmark(live, landmark, level, cache, landmarkRng, themeId, () => true, false);
       const rides = carriers?.flatMap((pp) => rideProof(level, pp)) ?? [];
       if (!rides.some((r) => rideSpans(level.w, r, live.carrier?.minGap ?? 0))) {
         rejects.landmark++;
@@ -171,7 +171,9 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
     const clearOfBridges = (p: PlacedProp) => !footprintCells(p).some(([x, y]) => needed.has(y * level.w + x));
     // The landmark's pieces, all of them: one that won't go in (or a carrier in the solution's way) rejects the attempt.
     const fixed = landmark ? (carriers ?? placeLandmark(live!, landmark, level, cache, landmarkRng, themeId, keep)) : [];
-    if (!fixed || (carriers && (!carriers.every(clearOfBridges) || !keep(carriers)))) {
+    // A carrier's free-ride check waits for its rides, so its own crossing is in the baseline.
+    const freeRide = (c: PlacedProp, i: number, all: readonly PlacedProp[]) => !noFreeRide(level, c, all.slice(0, i), cache);
+    if (!fixed || (carriers && (!carriers.every(clearOfBridges) || !keep(carriers) || carriers.some(freeRide)))) {
       rejects.landmark++;
       continue;
     }
@@ -211,8 +213,8 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
 }
 
 /**
- * A landmark's pieces, every one required: each must pass `finalize` and `keep`, or the
- * landmark doesn't stand (null). Their uids come first among the level's set pieces.
+ * A landmark's pieces, every one required: each must pass `finalize`, `keep` and, when `free`,
+ * `noFreeRide`, or the landmark doesn't stand (null). Their uids come first among the level's set pieces.
  */
 function placeLandmark(
   c: Concept,
@@ -222,12 +224,13 @@ function placeLandmark(
   rng: Rng,
   themeId: ThemeId,
   keep: (pieces: readonly PlacedProp[]) => boolean,
+  free = true,
 ): PlacedProp[] | null {
   const s = new Site(level, cache);
   const out: PlacedProp[] = [];
   for (const piece of c.pieces(rng, s, l)) {
     const pp = finalize(s, piece, SET_PIECE_UID + out.length, `setpiece:${themeId}:${c.id}`);
-    if (!pp || !keep([...out, pp])) return null;
+    if (!pp || !keep([...out, pp]) || (free && !noFreeRide(level, pp, out, cache))) return null;
     out.push(pp);
     commit(s, pp);
   }
