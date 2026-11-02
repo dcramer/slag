@@ -14,6 +14,7 @@
     "format:check": "oxfmt --check src tests tools app next.config.ts vitest.config.ts",
     "test": "vitest run",
     "test:slow": "vitest run --mode slow",
+    "test:store": "tsx tools/store-test.ts",
     "check:fast": "tsc --noEmit && oxlint && pnpm format:check",
     "check": "pnpm check:fast && pnpm test",
     "shot": "tsx tools/shot.ts",

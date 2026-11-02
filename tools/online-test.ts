@@ -7,6 +7,7 @@
  *
  *   pnpm online-test                     # everything (slow: ~15 min under load)
  *   pnpm online-test -- --only pick,bc   # named scenarios
+ *   pnpm test:store -- --browser pick,run,leave   # the same, through Upstash REST (SRH)
  *   SHOT_DEV=1 pnpm online-test          # against `next dev`
  *
  * Scenarios:
@@ -28,6 +29,11 @@ import { launchChromium, startNext } from './next-server';
 const argv = process.argv.slice(2);
 const onlyArg = argv.includes('--only') ? argv[argv.indexOf('--only') + 1].split(',') : null;
 const wanted = (name: string) => !onlyArg || onlyArg.includes(name);
+/** `--store srh`: the app talks to SRH through the same env vars as production (see compose.store.yml). */
+const srh = argv.includes('--store') && argv[argv.indexOf('--store') + 1] === 'srh';
+const storeEnv: Record<string, string> = srh
+  ? { SLAG_SIGNAL_STORE: '', KV_REST_API_URL: process.env.SRH_URL ?? 'http://127.0.0.1:8079', KV_REST_API_TOKEN: process.env.SRH_TOKEN ?? 'slag_local_token' }
+  : { SLAG_SIGNAL_STORE: 'memory' };
 const out = resolve('shots');
 mkdirSync(out, { recursive: true });
 
@@ -478,7 +484,8 @@ async function unsetScenario(browser: Browser) {
 }
 
 const browser = await launchChromium();
-const server = await startNext({ SLAG_SIGNAL_STORE: 'memory' });
+const server = await startNext(storeEnv);
+console.log(`signaling store: ${srh ? 'Upstash REST (SRH)' : 'in memory'}`);
 try {
   if (wanted('play')) await playScenario(browser, server.base);
   if (wanted('pick')) await killScenario(browser, server.base, 'pick');
