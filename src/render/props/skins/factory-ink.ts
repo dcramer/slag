@@ -1,6 +1,7 @@
 import { css, type HSL } from '../../../core/color';
+import { hash2 } from '../../../core/rng';
 import { blob, inkFor, type P } from '../../ink';
-import { barLine, path, pen, poly, tone } from '../../ink-props';
+import { barLine, boxPts, path, pen, poly, tick, tone } from '../../ink-props';
 import type { DrawCtx } from '../common';
 
 /**
@@ -41,6 +42,29 @@ export function member(g: CanvasRenderingContext2D, ax: number, ay: number, bx: 
 export function flat(g: CanvasRenderingContext2D, pts: readonly P[], base: HSL, t: Haze, seed: number, depth = 1) {
   tone(g, pts, t.hsl(base), { depth });
   pen(g, pts, seed, 0.4, 1, 3, t.ink(base));
+}
+
+/**
+ * A brick wall over (x, y, w, h) in a hazed tone: the face flat, one brick in four cut in a second tone, and the
+ * odd course line, lifted. A few bricks say brick; a mark on every one is a ruled grid.
+ */
+export function brickwork(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, base: HSL, t: Haze, seed: number) {
+  const bw = 12;
+  const bh = 5.5;
+  g.save();
+  g.beginPath();
+  g.rect(x, y, w, h);
+  g.clip();
+  for (let yy = y + 2, row = 0; yy < y + h - 2; yy += bh, row++)
+    for (let xx = x + (row & 1 ? -bw / 2 : 0), j = 0; xx < x + w; xx += bw, j++) {
+      const k = hash2(j, row, seed);
+      if (k < 0.24) {
+        g.fillStyle = t.c(base, k < 0.12 ? 5 : -5);
+        path(g, boxPts(xx + 0.6, yy + 0.6, bw - 1.2, bh - 1.2, 0.8, (j * 17 + row + seed) | 0, 0.2));
+        g.fill();
+      } else if (k > 0.86) tick(g, xx + 1, yy + bh, xx + bw * 2.2, yy + bh + 0.2, 0.45, j * 5 + row, t.c(base, -10));
+    }
+  g.restore();
 }
 
 /** Rivets along a segment, every `step` px. */
