@@ -92,6 +92,13 @@ export type Module =
   | { type: 'spring'; at: Vec; angle: number; power: number }
   | { type: 'fan'; at: Vec; angle: number; length: number; strength: number }
   | { type: 'bomb'; radius: number }
+  /**
+   * Attachment on the faces of existing solids: `cells` are the HOST cells
+   * (terrain or a static placed block), `angle` is the outward face normal.
+   * Spikes add a lethal strip; ice/slime add a thin coat that changes the
+   * surface (floors and walls). See canPlace for the mounting rule.
+   */
+  | { type: 'coat'; cells: Cell[]; angle: number; kind: CoatKind }
   | {
       /**
        * Platforms carried around a hub: full rotation (windmill, cog wheel)
@@ -191,8 +198,13 @@ export type Motion =
   | { type: 'rail'; angle: number; range: number; period: number }
   | { type: 'loop'; radius: number; period: number; dir: 1 | -1 };
 
+export type CoatKind = 'spikes' | 'ice' | 'slime';
+
 export type Archetype =
   | 'platform'
+  | 'spikestrip'
+  | 'icecoat'
+  | 'slimecoat'
   | 'crumble'
   | 'spikeblock'
   | 'saw'
@@ -216,8 +228,10 @@ export interface PropDef {
   style: PropStyle;
   motion: Motion;
   modules: Module[];
-  /** Cells that must be free to place it (rot 0, normalized). */
+  /** Cells that must be free to place it (rot 0, normalized). For `mount: 'face'` these are the host cells instead. */
   footprint: Cell[];
+  /** 'face': an attachment that must be mounted flush on exposed faces of solids (rotation picks the face). */
+  mount?: 'face';
 }
 
 export interface PlacedProp {

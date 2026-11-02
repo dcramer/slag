@@ -3,6 +3,7 @@
  */
 export * from './body';
 export * from './bomb';
+export * from './coat';
 export * from './cannon';
 export * from './deco';
 export * from './fan';

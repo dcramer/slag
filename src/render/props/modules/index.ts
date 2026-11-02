@@ -15,3 +15,4 @@ import './vehicle';
 import './cannon';
 import './geyser';
 import './deco';
+import './coat';

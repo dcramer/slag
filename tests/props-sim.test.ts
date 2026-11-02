@@ -8,14 +8,22 @@ import { NO_INPUT } from '../src/sim/types';
 
 describe('prop runtime', () => {
   it('every archetype, every rotation, simulates without blowing up', () => {
-    const level = generateLevel(5);
+    // Attachments need suitable exposed faces (e.g. long ceiling undersides); try a few levels.
+    const levels = [5, 6, 7, 8, 9, 10].map((s) => generateLevel(s));
     for (const [k] of ARCHETYPE_WEIGHTS) {
       if (k === 'bomb') continue;
       for (let rot = 0; rot < 4; rot++) {
         const def = generateProp(new Rng(rot + k.length * 7), k, 'x');
         let placed: PlacedProp | null = null;
-        for (let ty = 2; ty < level.h - 2 && !placed; ty++)
-          for (let tx = 8; tx < level.w - 8 && !placed; tx++) if (canPlace(level, [], def, rot, tx, ty)) placed = { uid: 1, def, owner: 1, tx, ty, rot };
+        let level = levels[0];
+        for (const lv of levels) {
+          for (let ty = 2; ty < lv.h - 2 && !placed; ty++)
+            for (let tx = 6; tx < lv.w - 6 && !placed; tx++) if (canPlace(lv, [], def, rot, tx, ty)) placed = { uid: 1, def, owner: 1, tx, ty, rot };
+          if (placed) {
+            level = lv;
+            break;
+          }
+        }
         expect(placed, `${k} rot ${rot}`).not.toBeNull();
         const r = resolveProp(placed!);
         expect(r.mods.length).toBe(def.modules.length);

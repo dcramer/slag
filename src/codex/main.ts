@@ -1,5 +1,5 @@
 import type { RC } from '../render/kit';
-import { drawProjectile, drawResolved } from '../render/props';
+import { drawHostCells, drawProjectile, drawResolved } from '../render/props';
 import { TILE } from '../sim/constants';
 import { AMMO, type Ammo, footprint, type PropDef, resolveProp } from '../sim/props';
 import { PART_INFO, summarize } from './describe';
@@ -112,6 +112,7 @@ function drawProp(rc: RC, def: PropDef, rot: number, w: number, h: number) {
     ctx.scale(k, k);
     ctx.translate((-fw / 2 + mx) * TILE, (-fh / 2 + my) * TILE);
   }
+  if (def.mount === 'face') drawHostCells(rc, fp);
   drawResolved(rc, resolveProp({ uid: 7, def, owner: -1, tx: 0, ty: 0, rot }), { level: null, showPath: true });
   rc.s.restore();
   rc.g.restore();

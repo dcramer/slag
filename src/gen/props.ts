@@ -35,10 +35,13 @@ export const ARCHETYPE_WEIGHTS: readonly (readonly [Archetype, number])[] = [
   ['spring', 1.5],
   ['fan', 1.1],
   ['bomb', 1],
+  ['spikestrip', 1.8],
+  ['icecoat', 1.1],
+  ['slimecoat', 1.1],
 ];
 
 const BUILD: Archetype[] = ['platform', 'crumble', 'spring'];
-const HAZARD: Archetype[] = ['spikeblock', 'saw', 'flail', 'launcher', 'flamer', 'laser', 'tesla', 'crusher'];
+const HAZARD: Archetype[] = ['spikestrip', 'spikeblock', 'saw', 'flail', 'launcher', 'flamer', 'laser', 'tesla', 'crusher'];
 
 const R = Math.PI / 2;
 const AXIS = [0, R, 2 * R, 3 * R]; // right, down, left, up
@@ -135,6 +138,7 @@ interface Recipe {
   name: string;
   modules: Module[];
   motion?: Motion;
+  mount?: 'face';
 }
 
 /** Generate one prop of the given archetype. */
@@ -151,10 +155,55 @@ export function generateProp(rng: Rng, archetype: Archetype, key: string): PropD
     name: recipe.name,
     modules: recipe.modules,
     footprint: footprintOf(recipe.modules),
+    ...(recipe.mount ? { mount: recipe.mount } : {}),
   };
 }
 
+/** A straight strip of `n` host cells along x, facing up at rot 0 (rotation picks the face). */
+const strip = (n: number): Cell[] => Array.from({ length: n }, (_, i) => [i, 0] as Cell);
+
 const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
+  spikestrip(rng) {
+    const n = rng.weighted([
+      [1, 2],
+      [2, 3],
+      [3, 2.5],
+      [4, 1.2],
+      [5, 0.5],
+    ] as const);
+    return {
+      archetype: 'spikestrip',
+      role: 'hazard',
+      mount: 'face',
+      name: title(rng, n >= 4 ? ['Long', 'Endless', 'Very Pointy'] : n === 1 ? ['Lone', 'Tiny', 'Single'] : ['Pointy', 'Rude', 'Prickly'], [
+        'Spikes',
+        'Spike Strip',
+        'Caltrops',
+        'Thorns',
+      ]),
+      modules: [{ type: 'coat', cells: strip(n), angle: -Math.PI / 2, kind: 'spikes' }],
+    };
+  },
+  icecoat(rng) {
+    const n = rng.int(2, 5);
+    return {
+      archetype: 'icecoat',
+      role: 'hazard',
+      mount: 'face',
+      name: title(rng, n >= 4 ? ['Treacherous', 'Glacial'] : ['Slippery', 'Frosty', 'Polished'], ['Ice Patch', 'Frost Coat', 'Black Ice', 'Glaze']),
+      modules: [{ type: 'coat', cells: strip(n), angle: -Math.PI / 2, kind: 'ice' }],
+    };
+  },
+  slimecoat(rng) {
+    const n = rng.int(2, 5);
+    return {
+      archetype: 'slimecoat',
+      role: 'utility',
+      mount: 'face',
+      name: title(rng, n >= 4 ? ['Gloopy', 'Industrial'] : ['Sticky', 'Gooey', 'Questionable'], ['Slime', 'Goo Coat', 'Gunk', 'Honey Glaze']),
+      modules: [{ type: 'coat', cells: strip(n), angle: -Math.PI / 2, kind: 'slime' }],
+    };
+  },
   platform(rng) {
     const moving = rng.chance(0.35);
     const n = rng.weighted([

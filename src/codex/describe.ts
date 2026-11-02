@@ -28,6 +28,11 @@ export const PART_INFO: Record<Module['type'], { title: string; blurb: string }>
   cannon: { title: 'Fixed cannon', blurb: 'A big emplacement firing on a steady rhythm, with a visible fuse telegraph before each shot.' },
   geyser: { title: 'Geyser', blurb: 'A vent that rumbles, then erupts. Lava geysers kill; steam geysers launch you upward.' },
   deco: { title: 'Scenery', blurb: 'Big static set dressing (presses, AC units, antennas) that you can stand on.' },
+  coat: {
+    title: 'Attachment',
+    blurb:
+      'Mounted flush on an exposed face of a block (rotation picks the face). Spikes kill; ice coats make floors slippery and walls un-jumpable; slime makes floors slow and walls sticky.',
+  },
   bomb: { title: 'Bomb', blurb: 'Not placed — detonated. Clears terrain and props in a radius (spawn and goal zones are protected).' },
 };
 
@@ -74,6 +79,9 @@ export function summarize(def: PropDef): string[] {
         break;
       case 'fan':
         out.push(`fan ${fmt(m.length)} tiles · strength ${fmt(m.strength)}`);
+        break;
+      case 'coat':
+        out.push(`${m.kind} on ${m.cells.length} face${m.cells.length > 1 ? 's' : ''} · mounts on blocks`);
         break;
       case 'bomb':
         out.push(`blast radius ${fmt(m.radius, 1)} tiles`);

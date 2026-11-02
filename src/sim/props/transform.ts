@@ -1,6 +1,6 @@
 import { type Cell, frac, pingPong, type Vec } from '../../core/geom';
 import { TILE } from '../constants';
-import { isProtected, type Level, tileAt } from '../level';
+import { isProtected, type Level, T_EMPTY, T_SOLID, tileAt } from '../level';
 import { moduleSim, type Xform } from './registry';
 import type { Motion, PlacedProp, PropDef, PropState, Resolved } from './types';
 
@@ -134,9 +134,62 @@ export function canPlace(level: Level, placed: readonly PlacedProp[], def: PropD
   }
   if (def.archetype === 'bomb') return true;
   const taken = new Set<number>();
-  for (const p of [...level.setPieces, ...placed]) for (const [x, y] of footprintCells(p)) taken.add(y * level.w + x);
+  const others = [...level.setPieces, ...(def.mount === 'face' ? placed.filter((p) => p.def.mount !== 'face') : placed)];
+  for (const p of others) for (const [x, y] of footprintCells(p)) taken.add(y * level.w + x);
+  if (def.mount === 'face') return canMount(level, placed, def, rot, cells, taken);
   for (const [x, y] of cells) {
     if (tileAt(level, x, y) || isProtected(level, x, y) || taken.has(y * level.w + x)) return false;
+  }
+  return true;
+}
+
+/** Outward face direction of a face-mounted def at a rotation. */
+export function mountAngle(def: PropDef, rot: number): number {
+  const m = def.modules.find((x) => x.type === 'coat');
+  return (m && m.type === 'coat' ? m.angle : -Math.PI / 2) + ((rot & 3) * Math.PI) / 2;
+}
+
+const bodyCache = new WeakMap<readonly PlacedProp[], { n: number; last: PlacedProp | undefined; cells: Set<number> }>();
+
+/** Cells of static placed blocks that attachments may mount on (cached per placed-list contents). */
+function staticBodyCells(placed: readonly PlacedProp[], w: number): Set<number> {
+  const hit = bodyCache.get(placed);
+  if (hit && hit.n === placed.length && hit.last === placed[placed.length - 1]) return hit.cells;
+  const out = new Set<number>();
+  bodyCache.set(placed, { n: placed.length, last: placed[placed.length - 1], cells: out });
+  for (const p of placed) {
+    if (p.def.motion.type !== 'none') continue;
+    for (const m of resolveProp(p).mods) {
+      if (m.type === 'body' && m.material !== 'crumble') for (const [x, y] of m.cells) out.add(y * w + x);
+    }
+  }
+  return out;
+}
+
+/**
+ * Attachment rule: every cell must be a host (solid terrain or a static placed
+ * block), unprotected, with its face (in the mount direction) exposed to an
+ * empty, unclaimed cell that isn't already coated on that face.
+ */
+function canMount(level: Level, placed: readonly PlacedProp[], def: PropDef, rot: number, cells: Cell[], taken: Set<number>): boolean {
+  const [dx, dy] = dirOf(mountAngle(def, rot));
+  const blocks = staticBodyCells(placed, level.w);
+  const coated = new Set<string>();
+  for (const p of placed) {
+    if (p.def.mount !== 'face') continue;
+    const a = mountAngle(p.def, p.rot);
+    for (const [x, y] of footprintCells(p)) coated.add(`${x},${y},${Math.round(a / (Math.PI / 2)) & 3}`);
+  }
+  const face = Math.round(mountAngle(def, rot) / (Math.PI / 2)) & 3;
+  for (const [x, y] of cells) {
+    const k = y * level.w + x;
+    const host = tileAt(level, x, y) === T_SOLID || blocks.has(k);
+    if (!host || isProtected(level, x, y)) return false;
+    const nx = x + dx;
+    const ny = y + dy;
+    if (nx < 0 || ny < 0 || nx >= level.w || ny >= level.h) return false;
+    if (tileAt(level, nx, ny) !== T_EMPTY || blocks.has(ny * level.w + nx) || taken.has(ny * level.w + nx)) return false;
+    if (coated.has(`${x},${y},${face}`)) return false;
   }
   return true;
 }
@@ -155,5 +208,8 @@ export function detonate(level: Level, placed: PlacedProp[], radius: number, tx:
   }
   level.setPieces = level.setPieces.filter((p) => !footprintCells(p).some(([x, y]) => within(x, y)));
   level.version++;
-  return placed.filter((p) => !footprintCells(p).some(([x, y]) => within(x, y)));
+  const survivors = placed.filter((p) => p.def.mount === 'face' || !footprintCells(p).some(([x, y]) => within(x, y)));
+  // Attachments fall off when their host is gone.
+  const blocks = staticBodyCells(survivors, level.w);
+  return survivors.filter((p) => p.def.mount !== 'face' || footprintCells(p).every(([x, y]) => tileAt(level, x, y) === T_SOLID || blocks.has(y * level.w + x)));
 }

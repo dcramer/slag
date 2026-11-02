@@ -57,6 +57,7 @@ export function drawPreview(rc: RC, def: PropDef, cx: number, cy: number, size: 
     ctx.translate((-w * TILE) / 2, (-h * TILE) / 2);
   }
   const preview: PropDef = { ...def, motion: { type: 'none' } };
+  if (def.mount === 'face') drawHostCells(rc, def.footprint);
   drawResolved(rc, resolveProp({ uid: 7, def: preview, owner: -1, tx: 0, ty: 0, rot: 0 }), { level: null });
   s.restore();
   g.restore();
@@ -106,4 +107,17 @@ function drawPath(rc: RC, r: Resolved) {
     s.setLineDash([]);
   }
   s.restore();
+}
+
+/** Ghostly host blocks under an attachment preview (it mounts on existing blocks). */
+export function drawHostCells(rc: RC, cells: readonly (readonly [number, number])[]) {
+  const s = rc.s;
+  for (const [x, y] of cells) {
+    s.fillStyle = 'rgba(120,118,135,0.55)';
+    s.fillRect(x * TILE + 0.5, y * TILE + 0.5, TILE - 1, TILE - 1);
+    s.strokeStyle = 'rgba(200,200,215,0.35)';
+    s.setLineDash([2, 2]);
+    s.strokeRect(x * TILE + 1, y * TILE + 1, TILE - 2, TILE - 2);
+    s.setLineDash([]);
+  }
 }

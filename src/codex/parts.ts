@@ -113,6 +113,41 @@ export function partGroups(): PartGroup[] {
       })),
     },
     {
+      id: 'attachments',
+      title: 'Attachments',
+      blurb: 'Mounted flush on an exposed face of a block (shown dashed). Rotate to choose the face: top, sides or underneath.',
+      entries: (['spikes', 'ice', 'slime'] as const).flatMap((kind) =>
+        [-Math.PI / 2, 0].map((angle) => ({
+          title: `${kind} · ${angle === 0 ? 'wall' : 'floor'}`,
+          note: {
+            spikes: 'Lethal strip on that face.',
+            ice: angle === 0 ? 'Slick wall: no wall slide, no wall jump.' : 'Slippery floor: you keep sliding.',
+            slime: angle === 0 ? 'Sticky wall: you cling and slide slowly.' : 'Slow, sticky floor; weak jumps.',
+          }[kind],
+          def: {
+            ...def(`${kind}-${angle}`, [
+              {
+                type: 'coat',
+                cells: (angle === 0
+                  ? [
+                      [0, 0],
+                      [0, 1],
+                    ]
+                  : [
+                      [0, 0],
+                      [1, 0],
+                      [2, 0],
+                    ]) as Cell[],
+                angle,
+                kind,
+              },
+            ]),
+            mount: 'face' as const,
+          },
+        })),
+      ),
+    },
+    {
       id: 'heads',
       title: 'Swinging heads',
       blurb: 'Deadly heads that sit on a hub: spin in place, orbit on an arm, or swing like a pendulum on a rod or chain.',

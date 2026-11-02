@@ -8,11 +8,13 @@ const press = (k: Partial<InputFrame>): InputFrame => ({ ...NO_INPUT, ...k });
 /** Drive a match with a simple scripted bot: picks the first free card, places anywhere legal, holds right + jumps. */
 function playMatch(seed: number, devices: string[], maxFrames = 60 * 60 * 6) {
   const m = new Match(seed);
-  m.rules = { ...m.rules, raceSeconds: 20 }; // the dumb bot may never finish; races must end
+  // The dumb bot may never finish or find a spot: races and placement must end.
+  m.rules = { ...m.rules, raceSeconds: 20, placeSeconds: 5 };
   const tick = (fn: (d: string) => InputFrame) => m.step(Object.fromEntries(devices.map((d) => [d, fn(d)])));
   tick(() => press({ confirmPressed: true })); // join
   tick(() => press({ confirmPressed: true })); // ready
   let f = 0;
+  const searched = new Set<number>();
   while (m.phase !== 'victory' && f++ < maxFrames) {
     if (m.phase === 'pick' && m.phaseFrame > 12) {
       for (const p of m.players) {
@@ -22,18 +24,23 @@ function playMatch(seed: number, devices: string[], maxFrames = 60 * 60 * 6) {
       }
       tick(() => press({ confirmPressed: true }));
     } else if (m.phase === 'place' && m.phaseFrame > 12) {
-      // Teleport each cursor to the first legal spot to keep the test fast.
+      if (m.phaseFrame === 13) searched.clear();
+      // Teleport each cursor to the first legal spot (any rotation) to keep the test fast; search once per player.
       for (const p of m.players) {
-        if (p.placed) continue;
+        if (p.placed || searched.has(p.slot)) continue;
+        searched.add(p.slot);
         const def = m.crate[p.claim].def;
-        outer: for (let ty = 2; ty < m.level.h - 2; ty++) {
-          for (let tx = 6; tx < m.level.w - 6; tx++) {
-            if (canPlace(m.level, m.placed, def, 0, tx, ty)) {
-              const cells = footprint(def, 0);
-              const w = Math.max(...cells.map((c) => c[0])) + 1;
-              const h = Math.max(...cells.map((c) => c[1])) + 1;
-              p.cursor = { x: (tx + (w - 1) / 2) * 16 + 8, y: (ty + (h - 1) / 2) * 16 + 8 };
-              break outer;
+        outer: for (let rot = 0; rot < 4; rot++) {
+          for (let ty = 2; ty < m.level.h - 2; ty++) {
+            for (let tx = 2; tx < m.level.w - 2; tx++) {
+              if (canPlace(m.level, m.placed, def, rot, tx, ty)) {
+                const cells = footprint(def, rot);
+                const w = Math.max(...cells.map((c) => c[0])) + 1;
+                const h = Math.max(...cells.map((c) => c[1])) + 1;
+                p.rot = rot;
+                p.cursor = { x: (tx + (w - 1) / 2) * 16 + 8, y: (ty + (h - 1) / 2) * 16 + 8 };
+                break outer;
+              }
             }
           }
         }
