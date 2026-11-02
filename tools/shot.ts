@@ -30,6 +30,7 @@
  *   pnpm shot grabs                        → stepped frames of a rope swing, a keg shot and a backfire
  *   pnpm shot lineup [--seeds a,b]         → eight runners in a spread of poses, at play scale and close up
  *   pnpm shot cast [--only catalog]       → the toy cast (docs/CHARACTERS.md): lineups on farm and mine, close-up, deaths, lobby, catalog
+ *   pnpm shot sprites [--kind plumber]   → a kind rendered from 3D (tools/art3d) in game beside the hand-drawn cast: lineups, 3×, run cycle, lobby
  *   pnpm shot codex                        → /codex: full page, top, a part up close, and on a phone
  *   pnpm shot screens                      → the 404 and error screens, desktop and phone
  *   pnpm shot webgl                        → a race through a lost and restored WebGL context, then with shaders that won't build and with no WebGL2
@@ -79,6 +80,7 @@ import { shots as parts } from './shot/parts';
 import { shots as phases } from './shot/phases';
 import { shots as renderer } from './shot/renderer';
 import { shots as riders } from './shot/riders';
+import { shots as sprites } from './shot/sprites';
 
 const SCENARIOS = {
   ...phases,
@@ -94,6 +96,7 @@ const SCENARIOS = {
   ...artqa,
   ...flood,
   ...riders,
+  ...sprites,
   ...join,
 };
 

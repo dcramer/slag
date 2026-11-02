@@ -142,6 +142,9 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Every character is a homage, which fits the lore (the cast is knock-off heroes who almost got their own game).** "tbqh EVERY character can be an homage so it fits our story design"
   2026-11-02 · `planned` · CHARACTERS.md → Roster (all homages)
   Changed: four plain animals (fox, frog, penguin, chicken) were kept for contrast.
+- **The roster is the twenty greatest characters to parody, worth the credits it takes to get them right.** "you can spend the credits you need to get the greatest 20 parodies of all time to exist"
+  2026-11-02 · `in progress` · CHARACTERS.md → Roster
+  Changed: the roster was sixteen kinds; five join (the voxel miner, the spiky-haired mercenary, the sneaking soldier, the blue robot boy, the spiked turtle king) and the horned bug knight goes to the reserves.
 - **Hand-drawn character art pauses until the art pipeline (generated concept, traced into rigged vector parts) is tested.** "its prob worth just waiting for our pipeline test tho because the art is still jank"
   2026-11-02 · `open` · CHARACTERS.md → History
 - **Recognisability is the top criterion: each homage must read as its original at a glance, so its iconic palette wins and the player's colour moves to a secondary slot (a ring at its feet).** "the only thing that remotely resembles the thing its mimicking is the puff ball (kirby)"
@@ -170,6 +173,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `open` · CHARACTERS.md → Roster
 - **3D-to-2D round 1 misses on art style and on "parody the original"; try a round 2 with a model sheet and a pose sheet, restroked in the game's own ink.** "the main issue with that 3d to 2d pipeline is the art style, and that its not following our 'parody the original'. i also agree that we could do a pose sheet/etc. lets try another round with improvements"
   2026-11-02 · `in progress` · branch `worktree-agent-aacd068f51e46176c`, behind `?sprites=1`
+- **3D-to-2D round 2 (a model sheet and a pose sheet, traced into flat parts and inked by the cast's own pen) is the direction: "thats SO MUCH BETTER".** Polish these two kinds before rolling out to the rest.
+  2026-11-02 · `in progress` · `src/render/cast/sprites/`, behind `?sprites=1`; CHARACTERS.md
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
   2026-11-02 · `done` · public/ASSETS.md
 

@@ -1,0 +1,128 @@
+import { css, type HSL } from '../../../core/color';
+import { inkFor, type P, sn } from '../../ink';
+import { contour, path, toned } from '../../ink-figure';
+import type { Ring, VFrame } from './types';
+
+/**
+ * Draws one traced frame with the cast's own hand (docs/ART.md → World art: ink, `ink-figure.ts`): the
+ * silhouette on the body's ink mass with three lifting pen strokes, every part a flat shape on its own
+ * mass, thin toward the light and heavy away from it, with a hard sliver of its shade left along the
+ * side away from the light (`toned`), then one hard shadow shape over the whole figure, and a glint in
+ * the eyes. The outlines boil on threes like every hand-drawn runner's.
+ */
+
+/** How one role is painted on one character. */
+export interface Paint {
+  fill: string;
+  shade: string;
+  ink: string;
+}
+
+/** A part's pen: its mass toward the light and away from it, and the width of its shade sliver, in world px. */
+const PART_THIN = 0.3;
+const PART_THICK = 0.72;
+const SLIVER = 0.5;
+/** The whole figure's hard shadow: the silhouette less itself pulled up-left (the hand-drawn body's numbers). */
+const SHADOW_DX = 2.1;
+const SHADOW_DY = 1.9;
+const GLINT = '#fffaf0';
+
+export function hexHsl(hex: string): HSL {
+  const n = parseInt(hex.slice(1), 16);
+  const r = ((n >> 16) & 255) / 255;
+  const g = ((n >> 8) & 255) / 255;
+  const b = (n & 255) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const d = max - min;
+  const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+  let h = 0;
+  if (d) h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return { h: (h * 60 + 360) % 360, s: s * 100, l: l * 100 };
+}
+
+/** A role's paint from its colour: the flat fill, the same colour in shade, and a dark of it for the pen. */
+export function paintOf(c: HSL): Paint {
+  return { fill: css(c), shade: css(c, -14, 1, 4), ink: inkFor(c) };
+}
+
+/** A ring's points in world px (y down), decoded from its base64 int16 eighths. */
+export function ringPoints(r: Ring): P[] {
+  const bin = atob(r);
+  const out: P[] = [];
+  for (let i = 0; i + 3 < bin.length; i += 4) {
+    const x = ((bin.charCodeAt(i + 1) << 24) | (bin.charCodeAt(i) << 16)) >> 16;
+    const y = ((bin.charCodeAt(i + 3) << 24) | (bin.charCodeAt(i + 2) << 16)) >> 16;
+    out.push({ x: x / 8, y: y / 8 });
+  }
+  return out;
+}
+
+/** Decoded once per ring, and a buffer per ring for the boiled copy: drawing allocates nothing. */
+const decoded = new Map<Ring, P[]>();
+const scratch = new Map<Ring, P[]>();
+
+function pointsOf(r: Ring): P[] {
+  let p = decoded.get(r);
+  if (!p) {
+    p = ringPoints(r);
+    decoded.set(r, p);
+  }
+  return p;
+}
+
+/** The ring as drawn this tick: each point nudged by a slow boil on threes, into a buffer it owns. */
+function boiled(r: Ring, boil: number, seed: number): P[] {
+  const src = pointsOf(r);
+  let out = scratch.get(r);
+  if (!out) {
+    out = src.map((q) => ({ x: q.x, y: q.y }));
+    scratch.set(r, out);
+  }
+  for (let i = 0; i < src.length; i++) {
+    out[i].x = src[i].x + sn(i * 0.45, boil * 3.1, seed) * 0.16;
+    out[i].y = src[i].y + sn(i * 0.45 + 9, boil * 3.1, seed) * 0.16;
+  }
+  return out;
+}
+
+/**
+ * One frame with its feet at the origin. `paints` per role, `body` the silhouette's fill and ink, `k`
+ * the character's pen weight, `t` seconds for the boil.
+ */
+export function drawFrame(s: CanvasRenderingContext2D, f: VFrame, paints: readonly Paint[], body: Paint, shadow: string, k: number, seed: number, t: number) {
+  const boil = Math.floor(t * 8) % 3;
+  for (const r of f.sil) contour(s, boiled(r, boil, seed), body.fill, body.ink, k, seed);
+  for (const [role, r] of f.parts) {
+    const p = paints[role];
+    toned(s, boiled(r, boil, seed + role), p.fill, p.shade, p.ink, PART_THIN, PART_THICK * k, SLIVER);
+  }
+  for (const r of f.sil) {
+    const pts = boiled(r, boil, seed);
+    s.save();
+    path(s, pts);
+    s.clip();
+    path(s, pts);
+    for (let i = 0; i < pts.length; i++) {
+      const q = pts[i];
+      if (i) s.lineTo(q.x - SHADOW_DX, q.y - SHADOW_DY);
+      else s.moveTo(q.x - SHADOW_DX, q.y - SHADOW_DY);
+    }
+    s.closePath();
+    s.globalCompositeOperation = 'multiply';
+    s.fillStyle = shadow;
+    s.fill('evenodd');
+    s.restore();
+  }
+  // A catch-light in each eye, up and toward the light, where the tracer found the eyes.
+  const g = f.glints;
+  if (g) {
+    s.fillStyle = GLINT;
+    for (let i = 0; i + 2 < g.length; i += 3) {
+      s.beginPath();
+      s.arc(g[i] / 8, g[i + 1] / 8, g[i + 2] / 8, 0, Math.PI * 2);
+      s.fill();
+    }
+  }
+}

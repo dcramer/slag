@@ -22,6 +22,8 @@ export interface RunnerPose {
   scale?: number;
   /** A wall touched in the air: -1 left, 1 right. */
   wall?: number;
+  /** Seconds since dying: only a rendered kind (`cast/sprites`) draws a body then, its death clip. */
+  dead?: number;
 }
 
 /** Where to draw: the albedo layer, and the emissive one when there is one. */
