@@ -47,13 +47,19 @@ function buildPier(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const { G, sx, ex } = frame(at);
   const H = g.h;
   g.clear(sx, 0, ex, H - 1);
-  // Landing stages at both ends, level with the quay; the beach between, two or three rows down.
+  // Sand banks at both ends, level with the quay; the beach between shelving down a row a column to a flat
+  // two or three rows down, where the tide comes in.
   footing(g, sx, sx + 2, G);
   footing(g, ex - 2, ex, G);
   const F = Math.min(H - 3, G + (climb() > 3 ? rng.int(2, 3) : 2));
   const bx0 = sx + 3;
   const bx1 = ex - 3;
   footing(g, bx0, bx1, F);
+  const shelf = F - G - 1;
+  for (let k = 1; k <= shelf; k++) {
+    footing(g, bx0 + k - 1, bx0 + k - 1, G + k);
+    footing(g, bx1 - k + 1, bx1 - k + 1, G + k);
+  }
   // The boardwalk, in sections at their own heights a jump up from the landing stages, stepping between them.
   const span = bx1 - bx0 + 1;
   const n = Math.max(2, Math.min(4, Math.round(span / 9) + rng.int(-1, 0)));
@@ -75,20 +81,20 @@ function buildPier(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
     if (i < n - 1 && Math.abs(next - B) === 2) g.set(next < B ? x : x - 1, Math.min(B, next) + 1, T_ONEWAY, true);
     B = next;
   }
-  // Ladders down to the sand at both ends of the beach, by the landing stages: the way up out of the tide.
+  // Ladders down to the sand at both ends of the beach, by the banks: the way up out of the tide.
   for (const [c, top] of [
     [bx0, ends[0]],
     [bx1, ends[ends.length - 1]],
   ])
-    for (let y = top + 1; y < F; y++) g.set(c, y, T_ONEWAY, true);
+    for (let y = top + 1; y < F && g.get(c, y) !== T_SOLID; y++) g.set(c, y, T_ONEWAY, true);
   digBerth(g, rng, at, parts);
   return {
     concept: 'tidal-pier',
     rect: { x: sx, y: low - 1, w: ex - sx + 1, h: H - low + 1 },
     // The beach and the air over it, and the boardwalk's headroom.
     air: [{ x: bx0 + 1, y: high + 1, w: bx1 - bx0 - 1, h: F - high - 1 }],
-    anchors: { exit: [ex, G], deck: [sx, G], span: [sx, ex], beach: [bx0 + 1, bx1 - 1], floor: [F, high], walk: [bx0, bx1] },
-    skin: 'planks',
+    anchors: { exit: [ex, G], deck: [sx, G], span: [sx, ex], beach: [bx0 + Math.max(1, shelf), bx1 - Math.max(1, shelf)], floor: [F, high], walk: [bx0, bx1] },
+    skin: 'sand',
   };
 }
 
@@ -198,7 +204,8 @@ function buildTerminal(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark
   digBerth(g, rng, at, parts);
   return {
     concept: 'container-terminal',
-    rect: { x: sx, y: K - 1, w: ex - sx + 1, h: H - K + 1 },
+    // The stacks and the crane's sky; the quay under them keeps the harbor's own stone.
+    rect: { x: sx, y: K - 1, w: ex - sx + 1, h: G - K + 1 },
     air: [{ x: sx + 1, y: K, w: ex - sx - 1, h: tallest - K }],
     anchors: {
       exit: [ex, G],
@@ -208,7 +215,7 @@ function buildTerminal(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark
       ...Object.fromEntries(stacks.map((st, i) => [`stack${i}`, [st.x0, st.x1] as [number, number]])),
       ...Object.fromEntries(stacks.map((st, i) => [`top${i}`, [st.top, 0] as [number, number]])),
     },
-    skin: 'rustplate',
+    skin: 'container',
   };
 }
 
@@ -556,10 +563,41 @@ function* lagoonPieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
   };
   trial(s, prior, stacks);
   yield stacks;
+  // Half the lagoons turn a whirlpool in their widest gap, under the bridge: it drags a hop short.
+  const order = rng.shuffle(gaps.slice());
+  if (rng.chance(0.5)) {
+    const wide = order.reduce((a, b) => (b[1] - b[0] > a[1] - a[0] ? b : a));
+    const cx = (wide[0] + wide[1] + 1) / 2;
+    const banks = [s.groundBelow(wide[0] - 1, B + 2), s.groundBelow(wide[1] + 1, B + 2)].filter((y) => y >= 0);
+    const deck = Math.min(G + 1, ...banks);
+    const pool: Piece = {
+      name: rng.pick(['Whirlpool', 'The Plughole', 'Maelstrom']),
+      archetype: 'magnet',
+      role: 'hazard',
+      style: makeStyle(rng, 'steel', [196]),
+      modules: [
+        {
+          type: 'magnet',
+          look: 'whirlpool',
+          at: [cx, Math.min(s.h - 1.5, deck + 2.5)],
+          radius: rng.range(3.2, 4.2),
+          strength: rng.range(1300, 1800),
+          polarity: 1,
+          on: rng.int(90, 130),
+          off: rng.int(150, 230),
+          warn: rng.int(45, 60),
+        },
+      ],
+    };
+    if (trial(s, prior, pool)) {
+      yield pool;
+      order.splice(order.indexOf(wide), 1);
+    }
+  }
   // Tentacles out of the water gaps, each on its own beat, stopping short of the bridge.
-  const want = Math.max(1, Math.min(gaps.length, rng.int(2, 4)));
+  const want = Math.max(1, Math.min(order.length, rng.int(2, 4)));
   let placed = 0;
-  for (const [x0, x1] of rng.shuffle(gaps.slice())) {
+  for (const [x0, x1] of order) {
     if (placed >= want) break;
     const w = x1 - x0 + 1;
     const width = w >= 3 && rng.chance(0.5) ? 1.6 : 1.2;

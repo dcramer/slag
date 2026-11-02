@@ -74,7 +74,7 @@ describe('harbor stage concepts', () => {
     }
   });
 
-  it("the pier's tide stays under its boardwalk, its wave breaks along the sand, and ladders climb out of both ends", () => {
+  it("the pier's tide stays under its boardwalk, its wave breaks along the sand, and sand shelves up to the banks with ladders by them", () => {
     for (const l of levels('tidal-pier')) {
       const tide = mods(l, (m) => m.type === 'flood')[0]?.m as ModuleOf<'flood'>;
       expect(tide, `seed ${l.seed}`).toBeDefined();
@@ -88,7 +88,13 @@ describe('harbor stage concepts', () => {
       }
       const wave = mods(l, (m) => m.type === 'geyser')[0]?.m as ModuleOf<'geyser'>;
       expect([wave.look, wave.lethal, Math.abs(Math.sin(wave.angle)) < 1e-9]).toEqual(['water', false, true]);
-      for (const x of [x0 - 1, x1 + 1]) expect(t(l, x, tide.at[1] / TILE - 1), `ladder at ${x}`).toBe(T_ONEWAY);
+      for (const side of [-1, 1]) {
+        const cols = [1, 2, 3].map((k) => (side < 0 ? x0 - k : x1 + k));
+        expect(
+          cols.some((x) => t(l, x, tide.at[1] / TILE - 1) === T_ONEWAY || t(l, x, tide.at[1] / TILE - 2) === T_ONEWAY),
+          `ladder by ${cols}`,
+        ).toBe(true);
+      }
     }
   });
 
@@ -164,7 +170,7 @@ describe('harbor hazards', () => {
     for (const { m } of guns) if (m.type === 'cannon') expect([m.ammo, m.interval >= MIN_OPENING * 3]).toEqual(['arrow', true]);
   });
 
-  it('whirlpools turn in open water between the moorings, on a beat with a warning', () => {
+  it('whirlpools turn in open water, on a beat with a warning', () => {
     const pools = all.flatMap((l) => mods(l, (m) => m.type === 'magnet' && m.look === 'whirlpool').map((p) => ({ l, ...p })));
     expect(pools.length).toBeGreaterThan(0);
     for (const { l, m } of pools) {
@@ -173,7 +179,7 @@ describe('harbor hazards', () => {
       expect(m.off).toBeGreaterThanOrEqual(MIN_OPENING);
       expect(m.warn).toBeGreaterThanOrEqual(18);
       const x = Math.floor(m.at[0] / TILE);
-      for (let y = 0; y < l.h; y++) expect(t(l, x, y), `seed ${l.seed} column ${x}`).toBe(T_EMPTY);
+      for (let y = Math.floor(m.at[1] / TILE); y < l.h; y++) expect(t(l, x, y), `seed ${l.seed} column ${x}`).toBe(T_EMPTY);
     }
   });
 

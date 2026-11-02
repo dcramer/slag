@@ -45,6 +45,7 @@ function spar(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, b
 
 const WOOD: HSL = { h: 26, s: 36, l: 30 };
 const DARK: HSL = { h: 24, s: 30, l: 14 };
+const TAR: HSL = { h: 24, s: 22, l: 16 };
 const CLOTH: HSL = { h: 40, s: 30, l: 78 };
 const WASH: HSL = { h: 36, s: 18, l: 82 };
 const BAND: HSL = { h: 2, s: 62, l: 42 };
@@ -221,20 +222,34 @@ function pierArt(m: Deco, d: DrawCtx, t: Hz) {
           break;
         }
     }
-    // Trestles: a pair of legs every few columns from the boardwalk to the sand, braced crosswise.
+    // The waterline over the flat: wet sand darkening where the tide goes out, a lace of foam along its edge.
+    const tideFlat = Math.max(...sand.values());
+    for (const [x, y] of sand) {
+      if (y !== tideFlat || at(x, y - 1) !== T_EMPTY) continue;
+      g.fillStyle = t.c({ h: 196, s: 40, l: 54 }, 0, 0.55);
+      g.fillRect(X(x) - 0.5, Y(y) - 2.2, TILE + 1, 2.2);
+      g.fillStyle = 'rgba(240,250,255,0.8)';
+      for (let k = 1; k < TILE; k += 5) g.fillRect(X(x) + k + ((x * 3) % 4), Y(y) - 2.6, 2.4, 0.9);
+    }
+    // Pilings: tarred piles in pairs every few columns, driven into the sand under the boardwalk, braced
+    // crosswise, a turn of rope round each a little over the sand.
     let prev: number | null = null;
     for (const [x, y] of walk) {
       if ((x - x0) % 4 !== 1) continue;
-      const lx = X(x) + TILE / 2;
       const top = Y(y + 1);
-      const bot = Y(sand.get(x)!);
-      spar(g, lx, top, lx, bot, 2.4, WOOD, t, x);
+      const bot = Y(sand.get(x)!) + 2;
+      for (const dx of [3, 13]) {
+        const lx = X(x) + dx;
+        spar(g, lx, top, lx, bot, 3.4, TAR, t, x + dx);
+        g.fillStyle = t.c({ h: 38, s: 40, l: 60 });
+        g.fillRect(lx - 2.2, bot - 9, 4.4, 1.6);
+      }
       if (prev !== null && walk.has(prev)) {
-        const px = X(prev) + TILE / 2;
+        const px = X(prev) + 13;
         const pt = Y(walk.get(prev)! + 1);
         const pb = Y(sand.get(prev)!);
-        spar(g, px, pt + 2, lx, bot - 2, 1, WOOD, t, x + 50);
-        spar(g, px, pb - 2, lx, top + 2, 1, WOOD, t, x + 60);
+        spar(g, px, pt + 2, X(x) + 3, bot - 4, 1.2, WOOD, t, x + 50);
+        spar(g, px, pb - 4, X(x) + 3, top + 2, 1.2, WOOD, t, x + 60);
       }
       prev = x;
     }

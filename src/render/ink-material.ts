@@ -3,6 +3,7 @@ import { hash2 } from '../core/rng';
 import type { TerrainKind } from '../gen/theme';
 import { TILE } from '../sim/constants';
 import { blob, line, type P, sn, stroke } from './ink';
+import { containers } from './ink-container';
 
 /**
  * What terrain is made of, drawn. One painter per family of `TerrainKind`, colored by the theme, so a
@@ -1110,4 +1111,5 @@ export const INK_MATERIALS: Record<TerrainKind, InkMaterial> = {
   carved: carvedStone,
   iceblock: iceBlocks,
   bone: ivory,
+  container: containers,
 };

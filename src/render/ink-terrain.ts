@@ -2,6 +2,7 @@ import { css, type HSL, mixHsl, shift } from '../core/color';
 import { hash2 } from '../core/rng';
 import type { CapKind, PlatformKind, TerrainKind, TerrainLook, Theme } from '../gen/theme';
 import { TILE } from '../sim/constants';
+import type { Rect } from '../core/geom';
 import { type Level, T_ONEWAY, tileAt, type TileRect } from '../sim/level';
 import { blob, type EdgeP, line, looseLoop, type P, shadeOf, sn, stroke, type StrokeOpts, traceCorners, vn } from './ink';
 import { INK_MATERIALS, type Tones } from './ink-material';
@@ -146,6 +147,10 @@ const SKIN_LOOKS: Partial<Record<TerrainKind, SkinLook>> = {
   iceblock: look({ h: 198, s: 42, l: 74 }, 'none', { h: 198, s: 40, l: 88 }, undefined, { h: 205, s: 40, l: 46 }, { h: 192, s: 50, l: 90 }),
   crystal: look({ h: 284, s: 44, l: 52 }, 'none', { h: 284, s: 40, l: 70 }, undefined, { h: 270, s: 40, l: 22 }, { h: 296, s: 60, l: 80 }),
   bone: look({ h: 42, s: 30, l: 78 }, 'none', { h: 42, s: 26, l: 84 }, 'stone', { h: 34, s: 22, l: 40 }),
+  // A pier's beach: the boardwalk over it keeps the theme's wood.
+  sand: look({ h: 40, s: 44, l: 66 }, 'none', { h: 40, s: 40, l: 74 }),
+  // Shipping containers: the material paints each box its own colour; these are the frames and the rails.
+  container: look({ h: 14, s: 46, l: 38 }, 'trim', { h: 210, s: 8, l: 44 }, 'grate'),
 };
 
 /** A landmark's skin: the box its tiles are drawn in, and the look they're drawn with. */
@@ -218,6 +223,32 @@ export function skinLoops(s: Skin | null, loops: readonly EdgeP[][], keep: 'skin
 const SKIN_BLEED = 4;
 
 /**
+ * The clip a skin is painted through over tiles x0..x1, y0..y1 (world px): every solid tile, run a little past
+ * a side that faces air, stopping dead on the grid against any solid (the theme's ground, or the skin's own
+ * tile, which is in the clip already). Tiles in a row that bleed alike up and down go in as one rect, so a
+ * landmark solid down to the sea floor is a few rects a row: a clip of hundreds of overlapping per-tile rects
+ * stalls Chrome's GPU rasterizer for good (a harbor lighthouse's rock froze the page's frames).
+ */
+export function skinClip(solid: (x: number, y: number) => boolean, x0: number, x1: number, y0: number, y1: number): Rect[] {
+  const bleed = (x: number, y: number) => (solid(x, y) ? 0 : SKIN_BLEED);
+  const out: Rect[] = [];
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      if (!solid(x, y)) continue;
+      const t = bleed(x, y - 1);
+      const b = bleed(x, y + 1);
+      let e = x;
+      while (e + 1 <= x1 && solid(e + 1, y) && bleed(e + 1, y - 1) === t && bleed(e + 1, y + 1) === b) e++;
+      const l = bleed(x - 1, y);
+      const r = bleed(e + 1, y);
+      out.push({ x: x * TILE - l, y: y * TILE - t, w: (e - x + 1) * TILE + l + r, h: TILE + t + b });
+      x = e;
+    }
+  }
+  return out;
+}
+
+/**
  * The skin over the ground's material on its tiles, cut on the tile grid where it meets the theme's own
  * ground (a seam a builder made) and run a little past its tiles into the air (the contour cuts that).
  */
@@ -236,20 +267,9 @@ function paintSkin(
   const y0 = Math.max(rect.y, span.ty0);
   const y1 = Math.min(rect.y + rect.h - 1, span.ty1);
   if (x0 > x1 || y0 > y1) return;
-  const ground = (x: number, y: number) => solid(x, y) && !inSkin(skin, x, y);
   g.save();
   g.beginPath();
-  for (let y = y0; y <= y1; y++) {
-    for (let x = x0; x <= x1; x++) {
-      if (!solid(x, y)) continue;
-      // A side that faces air reaches past the tile; one against ground stops dead on the grid.
-      const l = ground(x - 1, y) ? 0 : SKIN_BLEED;
-      const r = ground(x + 1, y) ? 0 : SKIN_BLEED;
-      const t = ground(x, y - 1) ? 0 : SKIN_BLEED;
-      const b = ground(x, y + 1) ? 0 : SKIN_BLEED;
-      g.rect(x * TILE - l, y * TILE - t, TILE + l + r, TILE + t + b);
-    }
-  }
+  for (const r of skinClip(solid, x0, x1, y0, y1)) g.rect(r.x, r.y, r.w, r.h);
   g.clip();
   paint(skin.T, skin.T.kind);
   g.restore();
