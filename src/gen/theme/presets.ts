@@ -405,7 +405,7 @@ function castle(rng: Rng): Look {
     ambient: night ? 'fireflies' : 'dust',
     ambientLight: mood === 'overcast' ? rng.range(0.72, 0.82) : mood === 'dusk' ? rng.range(0.58, 0.66) : rng.range(0.38, 0.46),
     ambientTint: mood === 'dusk' ? hsl3(310, 40, 70) : night ? hsl3(220, 45, 62) : hsl3(210, 15, 85),
-    decor: pickDecor(rng, 'castle', ['torch', 'banner'], 5),
+    decor: pickDecor(rng, 'castle', ['torch', 'banner'], 6),
     decorDensity: 0.14,
     lamp: hsl3(34, 100, 60),
     accent: hsl3(rng.pick([48, 0, 200]), 90, 58),

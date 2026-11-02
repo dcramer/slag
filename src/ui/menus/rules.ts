@@ -7,9 +7,12 @@ const RULE_LABELS: Record<TimerRule, string> = {
   raceSeconds: 'Race Timer',
 };
 
-/** Match rules. Timers, length and Secret Parts apply from the next match; gravity and weather rebuild the lobby level at once. */
+/**
+ * Match rules. Timers, length and Secret Parts apply from the next match; gravity and weather rebuild the lobby level
+ * at once. Online (`listed`), the lobby's own row: Public or Private, which takes it off the lobby list at once.
+ */
 export class RulesMenu extends Overlay {
-  open(rules: MatchRules, onChange: (r: MatchRules) => void) {
+  open(rules: MatchRules, onChange: (r: MatchRules) => void, opts: { listed?: boolean } = {}) {
     const draft = { ...rules };
     const card = el('div', { className: 'slag-card slag-sheet' }, el('h2', { textContent: 'Match Rules' }));
     const addRow = (title: string, choices: { label: string; on: boolean; apply: () => void }[], into: HTMLElement = card) => {
@@ -33,6 +36,8 @@ export class RulesMenu extends Overlay {
       card.append(row);
       return cols;
     };
+    // Online the lobby's own setting shares the first row, so the card is no taller.
+    const [length, lobby] = opts.listed ? pair() : [card, null];
     addRow(
       'Match Length',
       MATCH_LENGTHS.map((l) => ({
@@ -43,7 +48,14 @@ export class RulesMenu extends Overlay {
           draft.maxRounds = l.maxRounds;
         },
       })),
+      length,
     );
+    if (lobby)
+      addRow(
+        'Lobby',
+        [false, true].map((v) => ({ label: v ? 'Private' : 'Public', on: draft.private === v, apply: () => (draft.private = v) })),
+        lobby,
+      );
     for (const k of Object.keys(RULE_CHOICES) as TimerRule[]) {
       addRow(
         RULE_LABELS[k],

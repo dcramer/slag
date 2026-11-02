@@ -12,7 +12,7 @@ import { analyzeReach } from '../src/sim/reach';
 import { RunWorld } from '../src/sim/run';
 
 /**
- * The factory's stage concepts (src/gen/stage/factory.ts): the Great Wheel and the Stamping Line. Each
+ * The factory's first stage concepts (src/gen/stage/factory.ts): the Great Wheel and the Stamping Line. Each
  * stands up on its own share of factory levels, on grounded supports, with a static proof that never
  * rides its movers, and no free ride over the crossing it owns.
  */
@@ -60,8 +60,8 @@ describe('factory stage concepts', () => {
       const id = rollConcept(s, 'factory', rollProfile(s, 'factory'))?.id ?? 'plain';
       seen.set(id, (seen.get(id) ?? 0) + 1);
     }
-    expect(seen.get('great-wheel')).toBeGreaterThan(8);
-    expect(seen.get('stamping-line')).toBeGreaterThan(5);
+    expect(seen.get('great-wheel')).toBeGreaterThan(5);
+    for (const id of ['stamping-line', 'foundry', 'boiler-house', 'robot-line']) expect(seen.get(id), id).toBeGreaterThan(3);
     expect(seen.get('plain')).toBeGreaterThan(60);
   });
 

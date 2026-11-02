@@ -9,10 +9,11 @@ import { logoSVG } from './logo-art';
  * in ./css.ts; behavior is in ./home.ts and ./plain.ts.
  */
 
-export type MenuItemId = 'play' | 'join' | 'codex' | 'settings';
+export type MenuItemId = 'play' | 'lobbies' | 'join' | 'codex' | 'settings';
 
 export const MENU_ITEMS: readonly { id: MenuItemId; title: string; sub: string }[] = [
   { id: 'play', title: 'PLAY', sub: 'Start a New Lobby' },
+  { id: 'lobbies', title: 'LOBBIES', sub: 'Find a Game' },
   { id: 'join', title: 'JOIN A LOBBY', sub: 'Enter a Lobby Code' },
   { id: 'codex', title: 'CODEX', sub: 'Spoilers!' },
   { id: 'settings', title: 'SETTINGS', sub: 'Audio, Video and Controls' },
@@ -130,6 +131,31 @@ export function plainHTML(kind: PlainScreen): string {
     `<main class="plain-main">${scaledLogoHTML()}<section class="plain-card"><h1>${s.title}</h1><p>${s.body}</p>` +
     `<button type="button" class="menu-item btn-link" data-active="true" disabled><span class="t">MAIN MENU</span><span class="chev"></span></button></section></main>` +
     `<footer class="footbar"><div class="prompts" aria-hidden="true">${plainPromptsHTML(false)}</div></footer></div>`
+  );
+}
+
+/** The Lobbies screen's footer: the selection, what Enter does (`confirm`: Join, Watch, or Play when there's nothing listed), the filter keys, and Back. */
+export function lobbiesPromptsHTML(pad: boolean, confirm: 'Join' | 'Watch' | 'Play'): string {
+  const p = (keys: string[], buttons: readonly PadButton[], label: string, act?: string) => promptHTML(keys, pad ? buttons : null, label, act);
+  return p(['↑', '↓'], ['DPAD'], 'Select') + p(['Enter'], ['A'], confirm) + p(['Q', 'E'], ['LB', 'RB'], 'Filter') + p(['Esc'], ['B'], 'Back', 'back');
+}
+
+/**
+ * The Lobbies screen's frame: the menu's backdrop and scaled logo, the title, the Join and Watch filters, an empty
+ * list the screen fills (./lobbies.ts), the empty state, and the footer. Pure, so a host may server-render it.
+ */
+export function lobbiesHTML(): string {
+  const tab = (f: 'join' | 'watch', label: string, on: boolean) =>
+    `<button type="button" class="lb-tab" role="tab" data-filter="${f}" aria-selected="${on}">${label}<span class="n"></span></button>`;
+  return (
+    `<div class="lobbies" data-screen="lobbies" data-state="loading">${forgeHTML()}` +
+    `<main class="lb-main"><header class="lb-head"><button type="button" class="lb-back" data-act="back" aria-label="Main Menu"></button>` +
+    `${scaledLogoHTML()}<h1>LOBBIES</h1></header>` +
+    `<div class="lb-tabs" role="tablist" aria-label="Filter">${tab('join', 'Join', true)}${tab('watch', 'Watch', false)}</div>` +
+    `<ul class="lb-list" aria-label="Lobbies"></ul>` +
+    `<section class="lb-empty"><h2></h2>` +
+    `<button type="button" class="menu-item" data-act="play" data-active="false"><span class="t">PLAY</span><span class="s">Start a New Lobby</span><span class="chev"></span></button></section></main>` +
+    `<footer class="footbar"><span class="meta">Lobbies</span><div class="prompts" aria-hidden="true">${lobbiesPromptsHTML(false, 'Join')}</div></footer></div>`
   );
 }
 

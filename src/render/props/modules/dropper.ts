@@ -14,7 +14,7 @@ import {
   dropperTravel,
   type ModuleOf,
 } from '../../../sim/props';
-import { blob, line, type P, shadeOf, stroke } from '../../ink';
+import { blob, inkFor, line, type P, shadeOf, stroke } from '../../ink';
 import { boxPts, dot, INK, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import { glowDot, light, type RC } from '../../kit';
 import { beamOf, type DrawCtx, defineArt } from '../common';
@@ -22,8 +22,8 @@ import { bevel } from '../machine';
 import { horn } from '../spike-looks';
 
 /**
- * Proximity crusher: a heavy carved stone block, or for a set piece a big icicle or the throne hall's
- * chandelier (`look`). Idle it hangs over its lane (faint chevrons show the
+ * Proximity crusher: a heavy carved stone block, or for a set piece a big icicle, the throne hall's
+ * chandelier or a gatehouse's portcullis (`look`). Idle it hangs over its lane (faint chevrons show the
  * lane it watches); spotting someone, the arrow rune cut in its face glows red, grit trickles off it and
  * it shakes for the whole telegraph; then it slams with speed streaks. Drawn from the same pose the sim
  * builds its solid from. It's an object, never a character: no face (docs/ART.md, Objects, not characters).
@@ -427,7 +427,57 @@ function drawChandelier(o: Head) {
   if (warn && d.o.emit && Math.random() < 0.3) d.o.emit('spark', o.cx + (Math.random() - 0.5) * W, o.cy - dy * (H / 2), (Math.random() - 0.5) * 20, 20, FLAME);
 }
 
-const LOOKS: Record<DropperLook, (o: Head) => void> = { icicle: drawIcicle, chandelier: drawChandelier };
+const GRILLE: HSL = { h: 222, s: 9, l: 34 };
+
+/**
+ * A portcullis grille in the head's rect, its spiked foot on the slamming face: bars down, cross-bars
+ * riveted over them, in iron inked a dark of itself. Baked in the slam frame (W across, H along).
+ */
+function grille(W: number, H: number) {
+  return sprite(`dr|grille|${W}|${H}`, -W / 2 - 2, -H / 2 - 2, W + 4, H + 5, (g) => {
+    const ink = inkFor(GRILLE);
+    const n = Math.max(2, Math.round(W / 5.5));
+    const xs = Array.from({ length: n }, (_, i) => -W / 2 + (W * (i + 0.5)) / n);
+    const rows = Math.max(2, Math.round(H / 7));
+    const bar = (ax: number, ay: number, bx: number, by: number, w: number, seed: number, l: number) => {
+      g.fillStyle = ink;
+      line(g, ax, ay, bx, by, { w: w + 0.7, seed, taper: [0.02, 0.02], press: 0 });
+      g.fillStyle = css(GRILLE, l);
+      line(g, ax, ay, bx, by, { w, seed: seed + 1, taper: [0.02, 0.02], press: 0 });
+    };
+    for (const [i, x] of xs.entries()) {
+      bar(x, -H / 2 + 0.4, x, H / 2 - 2.2, 1.5, i, i % 2 ? 0 : 6);
+      // The point at its foot: what comes down on you.
+      part(g, poly(x - 1.4, H / 2 - 2.6, x + 1.4, H / 2 - 2.6, x, H / 2 + 0.2), GRILLE, i + 7, { depth: 0.3, shade: -10, thin: 0.25, thick: 0.6 });
+    }
+    for (let r = 0; r < rows; r++) {
+      const y = -H / 2 + 2.2 + ((H - 6) * r) / Math.max(1, rows - 1);
+      bar(-W / 2 + 0.6, y, W / 2 - 0.6, y, 1.3, 20 + r, r ? -4 : 4);
+      for (const x of xs) dot(g, x, y, 0.55, (x * 7 + r) | 0, css(GRILLE, 22));
+    }
+  });
+}
+
+/**
+ * Portcullis: the iron grille of a gate, hung in a slot in the vault. It rattles in its grooves before
+ * it comes down, slams on its points and winds back up; the rods it hangs by show over it on the way.
+ */
+function drawPortcullis(o: Head) {
+  const { rc, d, p, dx, dy, w, h, warn } = o;
+  const s = rc.s;
+  const W = dy !== 0 ? w : h;
+  const H = dy !== 0 ? h : w;
+  slamFrame(s, o.cx, o.cy, dx, dy);
+  // The rods it hangs by, out of the slot it came down from.
+  if (p.d > 0.5) for (const x of [-W / 2 + 2.2, W / 2 - 2.2]) tick(s, x, -H / 2 + 0.5, x, -H / 2 - p.d, 1.1, x | 0, inkFor(GRILLE));
+  const rattle = warn ? Math.sin(rc.frame * 2.1) * 0.6 : 0;
+  stamp(s, grille(W, H), rattle, 0);
+  s.restore();
+  if (warn && d.o.emit && Math.random() < 0.35)
+    d.o.emit('debris', o.cx + (Math.random() - 0.5) * W, o.cy - dy * (H / 2), (Math.random() - 0.5) * 10, 8, GRILLE);
+}
+
+const LOOKS: Record<DropperLook, (o: Head) => void> = { icicle: drawIcicle, chandelier: drawChandelier, portcullis: drawPortcullis };
 
 defineArt<'dropper'>({
   type: 'dropper',

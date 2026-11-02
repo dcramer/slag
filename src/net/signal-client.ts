@@ -1,5 +1,18 @@
 import { addBreadcrumb } from '../telemetry';
-import type { BeatReply, JoinReply, Mail, MemberInfo, MembersReply, PollReply, Signal, SignalErrorCode, SignalOp } from './signal-protocol';
+import type {
+  BeatReply,
+  JoinReply,
+  ListedRoom,
+  LobbiesReply,
+  Mail,
+  MemberInfo,
+  MembersReply,
+  PollReply,
+  RoomListing,
+  Signal,
+  SignalErrorCode,
+  SignalOp,
+} from './signal-protocol';
 
 /**
  * Browser side of the signaling API. The only place that knows where the API
@@ -28,15 +41,16 @@ export class SignalError extends Error {
 export interface SignalApi {
   /** `since` stamps the session (see `sessionStamp`), so the store can tell two sessions of this peer apart. */
   join(since: number): Promise<JoinReply>;
-  beat(host: boolean): Promise<BeatReply>;
+  /** A host's beat may put the room on the lobby list (`list`), or take it off (`false`). */
+  beat(host: boolean, list?: RoomListing | false): Promise<BeatReply>;
   members(): Promise<MemberInfo[]>;
   /** Report `peer` (the session with this `order`) dead, and get the room back. */
   gone(peer: string, order: number): Promise<MemberInfo[]>;
   /** False if `to` isn't in the room any more. */
   send(to: string, s: Signal): Promise<boolean>;
   poll(): Promise<Mail[]>;
-  /** Fire and forget; must survive the page unloading. */
-  leave(order: number, since: number): void;
+  /** Fire and forget; must survive the page unloading. `unlist`: a host that listed the room takes it off the list. */
+  leave(order: number, since: number, unlist?: boolean): void;
 }
 
 let lastStamp = 0;
@@ -87,16 +101,29 @@ export class HttpSignal implements SignalApi {
   }
 
   join = (since: number) => this.call<JoinReply>('join', { since });
-  beat = (host: boolean) => this.call<BeatReply>('beat', { host });
+  beat = (host: boolean, list?: RoomListing | false) => this.call<BeatReply>('beat', list === undefined ? { host } : { host, list });
   members = () => this.call<MembersReply>('members').then((r) => r.members);
   gone = (peer: string, order: number) => this.call<MembersReply>('gone', { gone: peer, order }).then((r) => r.members);
   send = (to: string, signal: Signal) => this.call<{ delivered: boolean }>('signal', { to, signal }).then((r) => r.delivered);
   poll = () => this.call<PollReply>('poll').then((r) => r.mail);
 
-  leave(order: number, since: number) {
-    const body = JSON.stringify({ room: this.room, peer: this.peer, order, since });
+  leave(order: number, since: number, unlist = false) {
+    const body = JSON.stringify(unlist ? { room: this.room, peer: this.peer, order, since, unlist } : { room: this.room, peer: this.peer, order, since });
     // sendBeacon with a string posts text/plain, and outlives the page.
     if (typeof navigator !== 'undefined' && navigator.sendBeacon?.(signalUrl('leave'), body)) return;
     void fetch(signalUrl('leave'), { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body, keepalive: true }).catch(() => {});
   }
+}
+
+/** The public lobby list, for the Lobbies screen. Throws SignalError, like the room calls. */
+export async function fetchLobbies(signal?: AbortSignal): Promise<ListedRoom[]> {
+  let res: Response;
+  try {
+    res = await fetch(signalUrl('lobbies'), { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: '{}', signal });
+  } catch {
+    throw new SignalError('network');
+  }
+  const body = (await res.json().catch(() => ({}))) as Partial<LobbiesReply> & { error?: SignalErrorCode };
+  if (!res.ok) throw new SignalError(body.error ?? 'network');
+  return body.rooms ?? [];
 }

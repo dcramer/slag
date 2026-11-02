@@ -1,7 +1,7 @@
 import type { Cmd } from './store';
 
 /**
- * The two places where presence must read and write as one step, as Lua scripts, which Redis runs atomically
+ * The places where presence and the lobby list must read and write as one step, as Lua scripts, which Redis runs atomically
  * (Upstash and SRH run the real Lua). Upstash bills a script as one command plus one per `redis.call`, so these
  * issue no more calls than the pipelines they replace.
  *
@@ -118,9 +118,12 @@ function joinMirror(call: Call, [m]: string[], [peer, stampArg, maxOthers, peerT
 }
 
 /**
- * Remove one session of a peer. KEYS: member set, liveness key, mailbox. ARGV: peer, 'stamp' or 'order', value.
+ * Remove one session of a peer. KEYS: member set, liveness key, mailbox, and for a host that listed the room, the
+ * lobby index and the room's listing. ARGV: peer, 'stamp' or 'order', value, and with the index, the room.
  * - 'stamp' (a session leaving): unless a newer session of the peer wrote the entry, whatever order the store holds.
  * - 'order' (a report that a peer failed, or a client that sends no stamp): only that exact session.
+ * A listed host leaving takes the room off the list in the same step, so no reader sees a room nobody hosts; if
+ * anyone is still there, the next host lists it again.
  * Reply: 1 removed, 0 not.
  */
 const REMOVE_LUA = `
@@ -135,10 +138,14 @@ end
 if not ok then return 0 end
 redis.call('ZREM', KEYS[1], ARGV[1])
 redis.call('DEL', KEYS[2], KEYS[3])
+if KEYS[5] then
+  redis.call('ZREM', KEYS[4], ARGV[4])
+  redis.call('DEL', KEYS[5])
+end
 return 1
 `;
 
-function removeMirror(call: Call, [m, alive, box]: string[], [peer, mode, value]: string[]): unknown {
+function removeMirror(call: Call, [m, alive, box, index, listing]: string[], [peer, mode, value, room]: string[]): unknown {
   const ok =
     mode === 'stamp'
       ? ((mark) => mark !== null && Number(mark) <= Number(value))(call(['GET', alive]) as string | null)
@@ -146,14 +153,59 @@ function removeMirror(call: Call, [m, alive, box]: string[], [peer, mode, value]
   if (!ok) return 0;
   call(['ZREM', m, peer]);
   call(['DEL', alive, box]);
+  if (listing !== undefined) {
+    call(['ZREM', index, room]);
+    call(['DEL', listing]);
+  }
   return 1;
+}
+
+/**
+ * A host's beat that lists its room. KEYS: liveness key, member set, lobby index, the room's listing. ARGV: peer TTL,
+ * room TTL, now (ms), the listing (JSON), listing TTL, index TTL, the room.
+ *
+ * Reply: [1 if the host is still alive, the lowest-order member or nil], as the plain beat's commands reply.
+ * - Only a live session lists: a beat that lands after its own leave, or after the host was written off, must not
+ *   put a room nobody hosts back on the list. That check is why this is a script and not pipelined commands.
+ * - The index is scored by the beat's time and a reader takes only recent scores, so a room whose host stops beating
+ *   falls off by itself. What such rooms leave behind is pruned whenever a room is newly listed, which is also when
+ *   the index's TTL is renewed: a beat that only moves its score skips both, two calls cheaper. The index TTL is a
+ *   day, so it lapses only if no room was newly listed for a day, and then every host lists again on its next beat.
+ */
+const LIST_BEAT_LUA = `
+local renewed = redis.call('EXPIRE', KEYS[1], ARGV[1])
+redis.call('EXPIRE', KEYS[2], ARGV[2])
+local head = redis.call('ZRANGE', KEYS[2], 0, 0)[1]
+if renewed == 1 then
+  if redis.call('ZADD', KEYS[3], ARGV[3], ARGV[7]) == 1 then
+    redis.call('ZREMRANGEBYSCORE', KEYS[3], '-inf', tonumber(ARGV[3]) - tonumber(ARGV[5]) * 1000)
+    redis.call('EXPIRE', KEYS[3], ARGV[6])
+  end
+  redis.call('SET', KEYS[4], ARGV[4], 'EX', ARGV[5])
+end
+return {renewed, head or false}
+`;
+
+function listBeatMirror(call: Call, [alive, m, index, listing]: string[], [peerTtl, roomTtl, now, json, listTtl, indexTtl, room]: string[]): unknown {
+  const renewed = call(['EXPIRE', alive, peerTtl]) as number;
+  call(['EXPIRE', m, roomTtl]);
+  const head = (call(['ZRANGE', m, 0, 0]) as string[])[0] ?? null;
+  if (renewed === 1) {
+    if (call(['ZADD', index, now, room]) === 1) {
+      call(['ZREMRANGEBYSCORE', index, '-inf', Number(now) - Number(listTtl) * 1000]);
+      call(['EXPIRE', index, indexTtl]);
+    }
+    call(['SET', listing, json, 'EX', listTtl]);
+  }
+  return [renewed, head];
 }
 
 export const JOIN: Script = { lua: JOIN_LUA, mirror: joinMirror };
 export const REMOVE: Script = { lua: REMOVE_LUA, mirror: removeMirror };
+export const LIST_BEAT: Script = { lua: LIST_BEAT_LUA, mirror: listBeatMirror };
 
 /** Scripts by source, for MemoryStore's EVAL. */
-export const SCRIPTS = new Map([JOIN, REMOVE].map((s) => [s.lua, s]));
+export const SCRIPTS = new Map([JOIN, REMOVE, LIST_BEAT].map((s) => [s.lua, s]));
 
 export function evalCmd(s: Script, keys: string[], args: (string | number)[]): Cmd {
   return ['EVAL', s.lua, keys.length, ...keys, ...args.map(String)];

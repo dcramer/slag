@@ -72,9 +72,26 @@ const RULES = {
   chain: defineDecor({ place: 'under', themes: ['factory', 'castle'], weight: 1, clear: 2 }),
   cable: defineDecor({ place: 'under', themes: ['factory', 'rooftops', 'space'], weight: 0.8, clear: 2 }),
   cagelamp: defineDecor({ place: 'under', themes: ['factory'], weight: 0.9, clear: 1 }),
+  // The shop floor's: a gauge on its riser, the time clock, an extinguisher, cones, a wrapped pallet, a crane hook.
+  gauge: defineDecor({ place: 'top', themes: ['factory'], weight: 0.8, clear: 1 }),
+  timeclock: defineDecor({ place: 'top', themes: ['factory'], weight: 0.5, clear: 2 }),
+  extinguisher: defineDecor({ place: 'top', themes: ['factory'], weight: 0.6, clear: 1 }),
+  cone: defineDecor({ place: 'top', themes: ['factory'], weight: 0.9, clear: 1 }),
+  pallet: defineDecor({ place: 'top', themes: ['factory'], weight: 0.8, clear: 1 }),
+  hook: defineDecor({ place: 'under', themes: ['factory'], weight: 0.8, clear: 2 }),
   // ---- castle -------------------------------------------------------------
   banner: defineDecor({ place: 'under', themes: ['castle'], weight: 1.2, clear: 2 }),
   skull: defineDecor({ place: 'top', themes: ['castle', 'volcano'], weight: 0.5, clear: 1 }),
+  // A suit of armour nobody's in, a brazier, a rack of polearms, a cluster of candles, the stocks; cobwebs
+  // and a gibbet cage hanging from a ceiling.
+  armour: defineDecor({ place: 'top', themes: ['castle'], weight: 0.6, clear: 2 }),
+  brazier: defineDecor({ place: 'top', themes: ['castle'], weight: 0.7, clear: 2 }),
+  weaponrack: defineDecor({ place: 'top', themes: ['castle'], weight: 0.6, clear: 2 }),
+  candles: defineDecor({ place: 'top', themes: ['castle'], weight: 0.8, clear: 1 }),
+  stocks: defineDecor({ place: 'top', themes: ['castle'], weight: 0.4, clear: 2 }),
+  rubble: defineDecor({ place: 'top', themes: ['castle'], weight: 0.9, clear: 1 }),
+  cobweb: defineDecor({ place: 'under', themes: ['castle'], weight: 0.9, clear: 1 }),
+  gibbet: defineDecor({ place: 'under', themes: ['castle'], weight: 0.5, clear: 3 }),
   // ---- jungle -------------------------------------------------------------
   fern: defineDecor({ place: 'top', themes: ['jungle'], weight: 1.6, clear: 1 }),
   bigleaf: defineDecor({ place: 'top', themes: ['jungle'], weight: 1, clear: 2 }),
@@ -138,6 +155,15 @@ const RULES = {
   acunit: defineDecor({ place: 'top', themes: ['rooftops'], weight: 1, clear: 1 }),
   neon: defineDecor({ place: 'top', themes: ['rooftops'], weight: 0.9, clear: 2 }),
   dish: defineDecor({ place: 'top', themes: ['rooftops', 'space'], weight: 0.7, clear: 2 }),
+  pigeons: defineDecor({ place: 'top', themes: ['rooftops'], weight: 0.8, clear: 1 }),
+  chimneypot: defineDecor({ place: 'top', themes: ['rooftops'], weight: 0.9, clear: 2 }),
+  skylight: defineDecor({ place: 'top', themes: ['rooftops'], weight: 0.7, clear: 1 }),
+  planter: defineDecor({ place: 'top', themes: ['rooftops'], weight: 0.8, clear: 1 }),
+  rainbarrel: defineDecor({ place: 'top', themes: ['rooftops'], weight: 0.7, clear: 1 }),
+  roofdoor: defineDecor({ place: 'top', themes: ['rooftops'], weight: 0.5, clear: 2 }),
+  laundry: defineDecor({ place: 'top', themes: ['rooftops'], weight: 0.7, clear: 2, span: [2, 4] }),
+  whirlybird: defineDecor({ place: 'top', themes: ['rooftops'], weight: 0.8, clear: 1 }),
+  dropladder: defineDecor({ place: 'under', themes: ['rooftops'], weight: 0.8, clear: 2 }),
   // ---- glacier ------------------------------------------------------------
   cairn: defineDecor({ place: 'top', themes: ['glacier'], weight: 1, clear: 2 }),
   pennant: defineDecor({ place: 'top', themes: ['glacier', 'space'], weight: 0.7, clear: 3 }),

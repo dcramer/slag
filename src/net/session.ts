@@ -18,6 +18,7 @@ import {
 } from './actions';
 import { CONFIRM_BIT, decode, type Enc, encode, held, heldPeerFrame, mergePeerFrames, type PeerFrame, PRESSED } from './codec';
 import { Predictor } from './predict';
+import type { RoomListing } from './signal-protocol';
 import { hashMatch, hashSnap, type MatchSnap, restoreMatch, snapshotMatch } from './snapshot';
 import type { LinkStatus, Member, Transport } from './transport';
 
@@ -308,6 +309,7 @@ export class NetSession {
     this.actN = this.seq;
     this.status = opts.transport ? 'connecting' : 'offline';
     this.members = [{ id: this.self, order: 0 }];
+    opts.transport?.list?.(() => this.listing());
     opts.transport?.start({
       status: (s, d) => this.onStatus(s, d),
       members: (l) => this.onMembers(l),
@@ -394,6 +396,19 @@ export class NetSession {
   /** Seats a Join could still win: nobody holds them past the round boundary, and nobody is owed them. */
   get space(): number {
     return freeSeats(this.match, this.ns);
+  }
+
+  /** What the public lobby list shows of this room while we host it, or null: a Private room stays off it. */
+  listing(): RoomListing | null {
+    if (this.match.rules.private) return null;
+    const seated = new Set(this.match.players.map((p) => peerOf(p.device)));
+    return {
+      players: Math.min(MAX_PLAYERS, Math.max(0, MAX_PLAYERS - this.space)),
+      max: MAX_PLAYERS,
+      observers: this.members.filter((m) => !seated.has(m.id)).length,
+      theme: this.match.level.theme.id,
+      phase: this.match.phase,
+    };
   }
 
   /** Owed a seat at the next round boundary. */

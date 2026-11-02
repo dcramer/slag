@@ -20,6 +20,7 @@ export const SHELLS: ReadonlySet<DecoKind> = new Set([
   'barn',
   'flume',
   'trestle',
+  'smokestack',
 ]);
 /** Shells that turn with what's in front of them (a wheel's rim): they stand on a stand drawn to the ground, not on their box's bottom. */
 export const TURNING_SHELLS: ReadonlySet<DecoKind> = new Set(['flywheel']);

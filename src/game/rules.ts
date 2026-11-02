@@ -33,6 +33,11 @@ export interface MatchRules {
    * parts, and a claim rolls the part from the match roster (Match.claim).
    */
   secretParts: boolean;
+  /**
+   * Online: kept off the public lobby list, so only an invite link or the code gets anyone in. Lobbies are public
+   * by default, and every new lobby starts public: this is never saved with the host's preferences.
+   */
+  private: boolean;
 }
 
 export type GravityRule = 'auto' | 'low' | 'normal' | 'high';
@@ -66,6 +71,7 @@ export const DEFAULT_RULES: MatchRules = {
   weather: true,
   bloodRounds: 2,
   secretParts: false,
+  private: false,
 };
 
 export type TimerRule = 'pickSeconds' | 'placeSeconds' | 'raceSeconds';
@@ -103,7 +109,7 @@ export function loadRules(): MatchRules {
     if (raw) {
       const saved = JSON.parse(raw) as Partial<MatchRules>;
       const { targetScore, maxRounds } = nearestLength(saved.targetScore ?? NORMAL.targetScore);
-      return { ...DEFAULT_RULES, ...saved, targetScore, maxRounds };
+      return { ...DEFAULT_RULES, ...saved, targetScore, maxRounds, private: false };
     }
   } catch {
     // ignore
@@ -111,9 +117,11 @@ export function loadRules(): MatchRules {
   return { ...DEFAULT_RULES };
 }
 
+/** The host's preferences, for its next lobby: everything but Private, since every lobby starts public. */
 export function saveRules(r: MatchRules) {
   try {
-    localStorage.setItem(KEY, JSON.stringify(r));
+    const { private: _room, ...prefs } = r;
+    localStorage.setItem(KEY, JSON.stringify(prefs));
   } catch {
     // ignore
   }

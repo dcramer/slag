@@ -7,17 +7,28 @@ import { roomFromPath } from './game/room';
  * is src/router.ts; the screens themselves are mounted by src/main.ts.
  */
 
-export type Route = { screen: 'home' } | { screen: 'lobby'; room: string } | { screen: 'codex' } | { screen: 'missing'; path: string };
+/**
+ * A lobby route may carry `watch`: arrive watching, as a watch link does. The lobby list sets it for a full room; the
+ * URL doesn't show it (a refresh keeps watching anyway, see NETCODE.md → Seats and observers).
+ */
+export type Route =
+  | { screen: 'home' }
+  | { screen: 'lobbies' }
+  | { screen: 'lobby'; room: string; watch?: boolean }
+  | { screen: 'codex' }
+  | { screen: 'missing'; path: string };
 export type ScreenName = Route['screen'];
 
 export const HOME: Route = { screen: 'home' };
 export const CODEX: Route = { screen: 'codex' };
-export const lobby = (room: string): Route => ({ screen: 'lobby', room });
+export const LOBBIES: Route = { screen: 'lobbies' };
+export const lobby = (room: string, opts: { watch?: boolean } = {}): Route => (opts.watch ? { screen: 'lobby', room, watch: true } : { screen: 'lobby', room });
 
 /** The screen a path shows. Lobby codes are case-insensitive; anything unknown is the 404 screen. */
 export function parseRoute(path: string): Route {
   if (path === '/' || path === '') return HOME;
   if (path === '/codex' || path === '/codex/') return CODEX;
+  if (path === '/lobbies' || path === '/lobbies/') return LOBBIES;
   const room = roomFromPath(path);
   return room ? lobby(room) : { screen: 'missing', path };
 }
@@ -29,6 +40,8 @@ export function routePath(r: Route): string {
       return '/';
     case 'codex':
       return '/codex';
+    case 'lobbies':
+      return '/lobbies';
     case 'lobby':
       return `/r/${r.room}`;
     case 'missing':
@@ -47,6 +60,7 @@ const NAME = 'SLAG';
 export function routeTitle(r: Route): string {
   if (r.screen === 'lobby') return `${NAME} · Lobby ${r.room}`;
   if (r.screen === 'codex') return `${NAME} · Codex`;
+  if (r.screen === 'lobbies') return `${NAME} · Lobbies`;
   return NAME;
 }
 
@@ -71,7 +85,13 @@ export const GAME_CHROME: Chrome = {
   themeColor: '#07060b',
 };
 
-export const SCREEN_CHROME: Record<ScreenName, Chrome> = { home: PAGE_CHROME, codex: PAGE_CHROME, missing: PAGE_CHROME, lobby: GAME_CHROME };
+export const SCREEN_CHROME: Record<ScreenName, Chrome> = {
+  home: PAGE_CHROME,
+  lobbies: PAGE_CHROME,
+  codex: PAGE_CHROME,
+  missing: PAGE_CHROME,
+  lobby: GAME_CHROME,
+};
 
 /** A Chrome as the content of `<meta name="viewport">`, written the way Next writes it. */
 export function viewportContent(c: Chrome): string {

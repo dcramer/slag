@@ -1,5 +1,5 @@
 import { SignalError, type SignalApi, sessionStamp } from './signal-client';
-import { BEAT_MS, DEFAULT_ICE, type IceServer, isSignal, type Mail, MAX_PEERS, type MemberInfo, type Signal } from './signal-protocol';
+import { BEAT_MS, DEFAULT_ICE, type IceServer, isSignal, type Mail, MAX_PEERS, type MemberInfo, type RoomListing, type Signal } from './signal-protocol';
 import { type LinkStatus, type Member, sortMembers, type Transport, type TransportHandlers } from './transport';
 
 /**
@@ -126,6 +126,13 @@ const BACKOFF_MAX_MS = 30_000;
  */
 const RIVAL_CHECK_MS = 2000;
 const RIVAL_WINDOW_MS = 12_000;
+/**
+ * A host lists its room again before its next beat when what a browser would see changed (seats, watchers, theme,
+ * lobby or match), at most this often: someone browsing sees a seat fill in seconds, not a beat later.
+ * Going Private doesn't wait for this: it is off the list at once (retried no faster than UNLIST_RETRY_MS).
+ */
+const LIST_NUDGE_MS = 5000;
+const UNLIST_RETRY_MS = 1000;
 /** Offers read while we weren't host, kept in case we become it. */
 const STASH_MS = 10_000;
 /** Safe across browsers; bigger messages are split. */
@@ -216,6 +223,11 @@ export class WebRtcTransport implements Transport {
   private reordering = false;
   /** Until when a host checks the store for a rival every RIVAL_CHECK_MS. */
   private checkUntil = 0;
+  /** What the lobby list shows of the room while we host it; null keeps it off (Private). The session supplies it. */
+  private listing: () => RoomListing | null = () => null;
+  /** What our beats last put on the list, as `listedKey`; '' when the room isn't listed by us. */
+  private listed = '';
+  private lastNudge = -1e9;
 
   constructor(
     readonly room: string,
@@ -231,6 +243,16 @@ export class WebRtcTransport implements Transport {
     this.h = h;
     this.setStatus('connecting');
     void this.enter();
+  }
+
+  list(fn: () => RoomListing | null) {
+    this.listing = fn;
+  }
+
+  /** Leave the store, taking the room off the lobby list if we listed it. */
+  private leaveStore(order: number) {
+    this.signal.leave(order, this.since, this.role === 'host' && this.listed !== '');
+    this.listed = '';
   }
 
   /** Join the room over the API, retrying while it can't be reached. Permanent refusals end online play for this page. */
@@ -269,7 +291,7 @@ export class WebRtcTransport implements Transport {
   private giveUp(why: string) {
     this.stopTimers();
     for (const id of [...this.links.keys(), ...this.dials.keys()]) this.dropPeer(id);
-    if (this.order >= 0) this.signal.leave(this.order, this.since);
+    if (this.order >= 0) this.leaveStore(this.order);
     this.order = -1;
     this.role = 'none';
     this.setStatus('unavailable', why);
@@ -311,7 +333,7 @@ export class WebRtcTransport implements Transport {
     this.closed = true;
     this.stopTimers();
     for (const l of this.links.values()) this.frame(l, 'x');
-    if (this.order >= 0) this.signal.leave(this.order, this.since);
+    if (this.order >= 0) this.leaveStore(this.order);
     for (const l of this.links.values()) l.pc.close();
     for (const d of this.dials.values()) {
       clearTimeout(d.timer);
@@ -394,6 +416,7 @@ export class WebRtcTransport implements Transport {
 
   private follow(id: string, timeout: number) {
     this.role = 'guest';
+    this.listed = ''; // the host we follow lists the room now
     this.hostId = id;
     this.candidate = false;
     this.emitMembers();
@@ -868,13 +891,24 @@ export class WebRtcTransport implements Transport {
       else this.onGuestLost(l);
     }
     if (this.role === 'host' && t < this.checkUntil && t - this.lastBeat >= RIVAL_CHECK_MS) void this.heartbeat();
+    else if (this.role === 'host') this.relist(t);
     this.maybeSleep(t);
+  }
+
+  /** A host whose listing changed since its last beat beats now (see LIST_NUDGE_MS), rather than at the next BEAT_MS. */
+  private relist(t: number) {
+    if (this.beating) return;
+    const shown = this.listing();
+    if ((shown ? listedKey(shown) : '') === this.listed) return;
+    if (t - this.lastNudge < (shown ? LIST_NUDGE_MS : UNLIST_RETRY_MS)) return;
+    this.lastNudge = t;
+    void this.heartbeat();
   }
 
   private maybeSleep(t: number) {
     if (this.role !== 'host' || this.links.size > 0 || !this.soloSince || !this.hidden() || t - this.soloSince < SLEEP_AFTER_MS) return;
     this.stopTimers();
-    this.signal.leave(this.order, this.since);
+    this.leaveStore(this.order);
     this.order = -1;
     this.asleep = true;
     this.role = 'none';
@@ -887,8 +921,12 @@ export class WebRtcTransport implements Transport {
     this.lastBeat = Date.now();
     for (const [id, order] of this.dead) void this.reportDead(id, order);
     try {
-      const r = await this.signal.beat(this.role === 'host');
+      const host = this.role === 'host';
+      // A host lists the room (unless it's Private), or takes it off the list once it went Private.
+      const shown = host ? this.listing() : null;
+      const r = await this.signal.beat(host, shown ?? (host && this.listed ? false : undefined));
       this.noteSignalOk();
+      if (host) this.listed = shown && r.alive ? listedKey(shown) : '';
       if (this.closed) return;
       if (!r.alive) await this.rejoin();
       else if (this.role === 'host' && r.head && r.head !== this.self && !this.dead.has(r.head)) await this.checkRival();
@@ -1028,6 +1066,11 @@ function randomId(): string {
 }
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/** What of a listing is worth listing again early: seats, watchers, theme, and lobby or match (not every phase of a round). */
+function listedKey(l: RoomListing): string {
+  return `${l.players}/${l.max}/${l.observers}/${l.theme}/${l.phase === 'lobby' ? 'lobby' : 'match'}`;
+}
 
 /** Wait for all ICE candidates to land in the local description, within reason. */
 function gathered(pc: RtcPeer): Promise<void> {

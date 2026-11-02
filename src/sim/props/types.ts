@@ -57,9 +57,10 @@ export type LauncherStyle =
   | 'hangar';
 /**
  * What a swinger swings. `log` (jungle) is a battering log slung level on two ropes: it hurts along its
- * whole length (`logBox`, ./modules/swinger.ts), not round a point.
+ * whole length (`logBox`, ./modules/swinger.ts), not round a point. `weight` (rooftops) is a plain heavy
+ * weight on its chain or rod (a wrecking ball, a clock's pendulum bob, a bell): blunt, no spikes or edge.
  */
-export type Head = 'saw' | 'mace' | 'axe' | 'log';
+export type Head = 'saw' | 'mace' | 'axe' | 'log' | 'weight';
 export type Aim = 'fixed' | 'sweep' | 'track';
 /** Set-piece looks (art only; the sim treats every look the same). */
 export type RotorLook =
@@ -116,7 +117,9 @@ export type DecoKind =
   | 'headhouse'
   | 'barn'
   | 'flume'
-  | 'trestle';
+  | 'trestle'
+  // Factory landmarks (gen/stage/factory-works.ts): a boiler house's smokestack, standing on its roof.
+  | 'smokestack';
 export type MysteryLook = 'crate' | 'chest' | 'gift';
 /** What a match's warp pipes are made of: one per match, since a roster has one pipe part. */
 export type PipeLook = 'green' | 'brass' | 'rust' | 'porcelain' | 'copper';
@@ -594,6 +597,56 @@ export type Module =
     }
   | {
       /**
+       * World-only, rooftops: a big sign hung over a walkway (./modules/sign.ts), `w`×`h` tiles from its
+       * top-left `at`, its brackets on whatever holds it up. Off (it hangs, harmless) → warn (a bracket
+       * gives: it lurches and sparks, drawn and never felt) → fall (it drops `drop` tiles to the floor,
+       * faster and faster, killing whatever it lands on) → live (it lies smashed on the floor, its wiring
+       * still live, killing whatever touches it) → lift (it's winched back up, harmless). Never solid.
+       */
+      type: 'sign';
+      at: Vec;
+      w: number;
+      h: number;
+      drop: number;
+      off: number;
+      warn: number;
+      fall: number;
+      live: number;
+      lift: number;
+      seed: number;
+    }
+  | {
+      /**
+       * World-only, rooftops: neon letters (./modules/neon.ts). Pair it with a `body` on the same `cells`: the
+       * letters stand there to be stood on, and each one is live while it's lit. Every cell runs off →
+       * warn (the tube flickers) → on (lit and lethal to the touch), the cycle starting `lag` frames later
+       * for each column along, so the light chases along the word like a marquee.
+       */
+      type: 'neon';
+      cells: Cell[];
+      off: number;
+      warn: number;
+      on: number;
+      lag: number;
+      seed: number;
+    }
+  | {
+      /**
+       * World-only, rooftops: a live cable from `a` to `b` (./modules/wire.ts), sagging `sag` tiles at its
+       * middle. Off → warn (the insulator at `a` crackles) → run: a spark races along it from `a` to `b` in
+       * `run` frames and kills whatever it touches. The cable itself is harmless; only the spark hurts.
+       */
+      type: 'wire';
+      a: Vec;
+      b: Vec;
+      sag: number;
+      off: number;
+      warn: number;
+      run: number;
+      seed: number;
+    }
+  | {
+      /**
        * World-only, glacier: thin ice over open water (./modules/thaw.ts). The `cells` are one row of ice,
        * flush with the floor either side. Frozen for `frozen` frames (an ice floor you can skate), cracking
        * for `warn` (still solid: the cracks spread and it creaks), then it's open water for `open` frames:
@@ -606,6 +659,50 @@ export type Module =
       frozen: number;
       warn: number;
       open: number;
+      seed: number;
+    }
+  | {
+      /**
+       * World-only, factory: a ladle of molten slag (./modules/ladle.ts). Upright for `off` frames, it
+       * tips toward `dir` through the `warn` (drawn, never felt: the lip glows and smokes), then pours for
+       * `pour`: a stream from the lip `at` (tiles) straight down, at most `drop` tiles, stopped by whatever
+       * is in its way. Where it lands on the floor it means to (the full `drop`), the spill runs out along
+       * the floor, up to `spill` tiles to the left and right, and stays molten for `set` frames after the
+       * pour while the ladle rights itself; then it crusts over, harmless. `hang`: tiles from the lip up to
+       * the ceiling its chain hangs from, 0 when it hangs in a gantry of its own (art only).
+       */
+      type: 'ladle';
+      at: Vec;
+      dir: 1 | -1;
+      drop: number;
+      spill: Vec;
+      hang: number;
+      off: number;
+      warn: number;
+      pour: number;
+      set: number;
+      seed: number;
+      /** Art only: how big the ladle is drawn (1 when absent); its lip stays on the stream. */
+      size?: number;
+    }
+  | {
+      /**
+       * World-only, factory: an assembly-line robot arm (./modules/arm.ts), its shoulder at `at` (tiles)
+       * on top of its pedestal, reaching toward `dir` with an upper arm and a forearm `reach` tiles each.
+       * It waits raised for `rest` frames, its lamp blinks for `warn` (drawn, never felt), then it strikes:
+       * the welding head chops down in front of the pedestal and sweeps out along the floor in `strike`
+       * frames, welds there for `weld`, and folds back up over `back`, cold. The head kills only while it
+       * strikes and welds.
+       */
+      type: 'arm';
+      at: Vec;
+      dir: 1 | -1;
+      reach: number;
+      rest: number;
+      warn: number;
+      strike: number;
+      weld: number;
+      back: number;
       seed: number;
     };
 
@@ -629,8 +726,8 @@ export type BlockLook = 'tetra' | 'obsidian';
 // --- Stage concepts (docs/SETPIECES.md): looks, art only -----------------------
 /** What a spike strip (or a spike coat) is made of; unset is plain metal spikes. */
 export type SpikeLook = 'glass' | 'thorn' | 'crystal' | 'icicle' | 'pitchfork';
-/** What a dropper's head is (art only); unset is the carved crusher stone. */
-export type DropperLook = 'icicle' | 'chandelier';
+/** What a dropper's head is (art only); unset is the carved crusher stone. A portcullis (castle) is the iron grille of a gate. */
+export type DropperLook = 'icicle' | 'chandelier' | 'portcullis';
 /** The liquid a flood fills with. */
 export type FloodLook = 'lava' | 'toxic' | 'water';
 /** What a `lob` throws: a magma serpent of linked segments, or a volcanic bomb out of the sky. */

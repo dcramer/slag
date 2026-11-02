@@ -43,12 +43,14 @@ let levelAhead: LevelAhead | null = null;
  * ?theme, ?players, ?race…) are still read from location.search. The first
  * level is built off the main thread, so the page stays alive while it loads.
  */
-export async function mountLobby(root: HTMLElement, room: string, nav: Nav): Promise<Unmount> {
+export async function mountLobby(root: HTMLElement, room: string, nav: Nav, opts: { watch?: boolean } = {}): Promise<Unmount> {
   setTelemetryContext(() => ({ screen: 'lobby', room })); // a failed boot still says which lobby
   const container = document.createElement('div');
   container.style.cssText = 'position:fixed;inset:0;overflow:hidden;background:#07060b';
   root.append(container);
   const params = new URLSearchParams(location.search);
+  // Chosen to watch from the lobby list: arrive as a watch link does.
+  if (opts.watch) params.set('watch', '');
   const seedParam = params.get('seed'); // debug override
   const themeParam = params.get('theme');
   const seed = seedParam ? parseSeed(seedParam) : roomSeed(room);
@@ -169,12 +171,17 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
         settingsMenu.open();
         return true;
       case 'rules':
-        rulesMenu.open(match.rules, (r) => {
-          // Online the host's rules are authoritative; guests' edits are ignored (TODO HUD: read-only for guests).
-          if (match.phase !== 'lobby' || !net.isHost) return;
-          net.act({ t: 'rules', rules: r });
-          saveRules(r);
-        });
+        rulesMenu.open(
+          match.rules,
+          (r) => {
+            // Online the host's rules are authoritative; guests' edits are ignored (TODO HUD: read-only for guests).
+            if (match.phase !== 'lobby' || !net.isHost) return;
+            net.act({ t: 'rules', rules: r });
+            saveRules(r);
+          },
+          // Public or Private only means something for a room on the lobby list.
+          { listed: !!net.transport?.list },
+        );
         return true;
       case 'name':
         if (card) cardName();

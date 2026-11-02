@@ -1,10 +1,15 @@
 import {
   type BeatReply,
+  cleanListing,
   type IceServer,
   isSignal,
   type JoinReply,
+  LIST_TTL_S,
+  type ListedRoom,
+  type LobbiesReply,
   type Mail,
   MAILBOX_TTL_S,
+  MAX_LISTED,
   MAX_MAILBOX,
   MAX_PEERS,
   type MemberInfo,
@@ -17,16 +22,18 @@ import {
   type SignalErrorCode,
   type SignalOp,
 } from '../../../../src/net/signal-protocol';
-import { evalCmd, FULL, JOIN, LAST_ORDER, REMOVE } from './scripts';
+import { evalCmd, FULL, JOIN, LAST_ORDER, LIST_BEAT, REMOVE } from './scripts';
 import type { Store } from './store';
 
 /**
- * Room presence and handshake mailboxes, one function per API op. Stateless:
+ * Room presence, handshake mailboxes and the public lobby list, one function per API op. Stateless:
  * everything lives in the store under keys that always carry a TTL.
  *
  *   slag:<ROOM>:m          sorted set of peers, scored by join order, plus LAST_ORDER (the last order handed out)
  *   slag:<ROOM>:p:<peer>   liveness marker, holding the joining session's stamp; a heartbeat renews it
  *   slag:<ROOM>:b:<peer>   list of handshakes waiting for that peer
+ *   slag:<ROOM>:l          the room's listing (players, observers, max, theme, phase as JSON), written by its host's beat
+ *   slag:lobbies           the lobby index: sorted set of listed rooms, scored by their host's last beat (ms)
  *
  * Joining and removing a session read and write as one step, in Lua scripts (scripts.ts): one peer id can have two
  * sessions in flight, and plain commands would let one's write land between the other's check and write.
@@ -50,10 +57,16 @@ const members = (room: string) => `slag:${room}:m`;
 const alivePrefix = (room: string) => `slag:${room}:p:`;
 const alive = (room: string, peer: string) => alivePrefix(room) + peer;
 const box = (room: string, peer: string) => `slag:${room}:b:${peer}`;
+const listing = (room: string) => `slag:${room}:l`;
+const LOBBIES = 'slag:lobbies';
+/** The index's own TTL, renewed whenever a room is newly listed (see LIST_BEAT in scripts.ts). */
+const INDEX_TTL_S = 86_400;
 
 interface Ctx {
   store: Store;
   ice: IceServer[];
+  /** The clock beats are scored by (ms). Default: Date.now. */
+  now?: () => number;
 }
 
 function str(v: unknown, re: RegExp): string {
@@ -111,23 +124,79 @@ async function join(ctx: Ctx, room: string, peer: string, stamp?: number): Promi
  * peer wrote it, whatever order the store holds, so a refreshed page's goodbye arriving after the new page joined
  * changes nothing. A report (or a client that sends no stamp) names the session by its exact order.
  */
-async function remove(store: Store, room: string, peer: string, by: { stamp: number } | { order: number }) {
+async function remove(store: Store, room: string, peer: string, by: { stamp: number } | { order: number }, unlist = false) {
   const [mode, value] = 'stamp' in by ? ['stamp', by.stamp] : ['order', by.order];
-  await store.run([evalCmd(REMOVE, [members(room), alive(room, peer), box(room, peer)], [peer, mode, value])]);
+  const keys = [members(room), alive(room, peer), box(room, peer)];
+  const args: (string | number)[] = [peer, mode, value];
+  if (unlist) {
+    keys.push(LOBBIES, listing(room));
+    args.push(room);
+  }
+  await store.run([evalCmd(REMOVE, keys, args)]);
 }
 
-async function beat(ctx: Ctx, room: string, peer: string, host: boolean): Promise<BeatReply> {
+/**
+ * A heartbeat. A host also renews the room and learns its lowest order, and with `list` puts the room on the lobby
+ * list (in one script, only while its session is alive); `list: false` takes it off, for a room just made Private.
+ * A listing that fails `cleanListing` is ignored rather than failing the beat: liveness matters more than the list.
+ */
+async function beat(ctx: Ctx, room: string, peer: string, host: boolean, list: unknown): Promise<BeatReply> {
   if (!host) {
     const [renewed] = await ctx.store.run([['EXPIRE', alive(room, peer), PEER_TTL_S]]);
     return { alive: renewed === 1 };
   }
-  const [renewed, , first] = (await ctx.store.run([
+  const shown = list === false ? null : cleanListing(list);
+  const base = [
     ['EXPIRE', alive(room, peer), PEER_TTL_S],
     ['EXPIRE', members(room), ROOM_TTL_S],
     ['ZRANGE', members(room), 0, 0],
-  ])) as [number, number, string[] | null];
-  const head = first?.[0];
-  return { alive: renewed === 1, head: head === LAST_ORDER ? undefined : head };
+  ];
+  let renewed: number;
+  let head: string | null | undefined;
+  if (shown) {
+    const now = (ctx.now ?? Date.now)();
+    const script = evalCmd(
+      LIST_BEAT,
+      [alive(room, peer), members(room), LOBBIES, listing(room)],
+      [PEER_TTL_S, ROOM_TTL_S, now, JSON.stringify(shown), LIST_TTL_S, INDEX_TTL_S, room],
+    );
+    [[renewed, head]] = (await ctx.store.run([script])) as [[number, string | null]];
+  } else {
+    const unlist =
+      list === false
+        ? [
+            ['ZREM', LOBBIES, room],
+            ['DEL', listing(room)],
+          ]
+        : [];
+    const [r, , first] = (await ctx.store.run([...base, ...unlist])) as [number, number, string[] | null];
+    renewed = r;
+    head = first?.[0];
+  }
+  return { alive: renewed === 1, head: head === LAST_ORDER || head === null ? undefined : head };
+}
+
+/**
+ * The lobby list: rooms whose host beat within LIST_TTL_S, most recent first. One range, then one fetch of their
+ * listings; a room made Private or ended between the two has no listing and is left out.
+ */
+async function lobbies(ctx: Ctx): Promise<LobbiesReply> {
+  const since = (ctx.now ?? Date.now)() - LIST_TTL_S * 1000;
+  const [codes] = (await ctx.store.run([['ZREVRANGEBYSCORE', LOBBIES, '+inf', since, 'LIMIT', 0, MAX_LISTED]])) as [string[] | null];
+  const rooms = (codes ?? []).filter((c) => ROOM_RE.test(c));
+  if (rooms.length === 0) return { rooms: [] };
+  const [raw] = (await ctx.store.run([['MGET', ...rooms.map(listing)]])) as [(string | null)[]];
+  const out: ListedRoom[] = [];
+  rooms.forEach((room, i) => {
+    let l: ReturnType<typeof cleanListing> = null;
+    try {
+      l = raw[i] === null ? null : cleanListing(JSON.parse(raw[i]!));
+    } catch {
+      // Only beats write here, checked; a bad entry is left out, never fatal.
+    }
+    if (l) out.push({ room, ...l });
+  });
+  return { rooms: out };
 }
 
 async function deliver(ctx: Ctx, room: string, peer: string, to: string, signal: unknown) {
@@ -161,6 +230,8 @@ async function poll(ctx: Ctx, room: string, peer: string): Promise<PollReply> {
 
 /** Run one API op for a parsed JSON body. Throws ApiError for anything the caller got wrong. */
 export async function handleOp(op: SignalOp, body: unknown, ctx: Ctx): Promise<unknown> {
+  // The list belongs to no room: anyone may read it.
+  if (op === 'lobbies') return lobbies(ctx);
   const b = (typeof body === 'object' && body !== null ? body : {}) as Record<string, unknown>;
   const room = str(b.room, ROOM_RE);
   const peer = str(b.peer, PEER_RE);
@@ -168,11 +239,12 @@ export async function handleOp(op: SignalOp, body: unknown, ctx: Ctx): Promise<u
     case 'join':
       return join(ctx, room, peer, since(b.since));
     case 'beat':
-      return beat(ctx, room, peer, b.host === true);
+      return beat(ctx, room, peer, b.host === true, b.list);
     case 'leave': {
       const seen = order(b.order);
       const stamp = since(b.since);
-      await remove(ctx.store, room, peer, stamp === undefined ? { order: seen } : { stamp });
+      // A listed host leaving takes its room off the list (see REMOVE).
+      await remove(ctx.store, room, peer, stamp === undefined ? { order: seen } : { stamp }, b.unlist === true);
       return {};
     }
     case 'gone': {

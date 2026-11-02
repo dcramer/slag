@@ -43,12 +43,18 @@ const MAY_PAINT_BACKDROP: Record<Module['type'], boolean> = {
   lob: false,
   cavein: false,
   cart: false,
+  sign: false,
+  neon: false,
+  wire: false,
   snapper: false,
   spikes: false,
   spring: false,
   swinger: false,
   tesla: false,
   thaw: false,
+  // The gantry a ladle hangs in when there's no ceiling over it; the ladle and its pour draw in front.
+  ladle: true,
+  arm: false,
   vehicle: false,
   web: false,
 };
