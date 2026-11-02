@@ -151,6 +151,8 @@ const SKIN_LOOKS: Partial<Record<TerrainKind, SkinLook>> = {
   sand: look({ h: 40, s: 44, l: 66 }, 'none', { h: 40, s: 40, l: 74 }),
   // Shipping containers: the material paints each box its own colour; these are the frames and the rails.
   container: look({ h: 14, s: 46, l: 38 }, 'trim', { h: 210, s: 8, l: 44 }, 'grate'),
+  // Structural steel in red oxide primer: riveted plate for its solid parts, I-beams for its decks.
+  girder: look({ h: 10, s: 42, l: 36 }, 'trim', { h: 12, s: 46, l: 40 }, 'girder'),
 };
 
 /** A landmark's skin: the box its tiles are drawn in, and the look they're drawn with. */
@@ -1096,6 +1098,41 @@ const INK_PLATFORMS: Record<PlatformKind, (r: Run) => void> = {
     }
     stroke(g, botE, { w: 1.9, seed: tx + seed, taper: [0.03, 0.05], press: 0.55 });
     stroke(g, topE, { w: 0.85, seed: tx + seed + 1, taper: [0.1, 0.12], press: 0.6 });
+  },
+  girder(r) {
+    // An I-beam side on: a lit top flange, a shadowed bottom one, the web between them shot through with
+    // lightening holes, and rivets along the top. Holes and rivets sit on a world lattice, never on the run.
+    const { g, x0, x1, y, c, ink, seed, tx } = r;
+    const { topE, botE } = runEdges(r, 0.06, 0.1);
+    shape(g, topE, botE, css(c, -16));
+    shape(
+      g,
+      topE,
+      topE.map((q) => ({ x: q.x, y: q.y + 1.5 })),
+      css(c, 8),
+    );
+    shape(
+      g,
+      botE.map((q) => ({ x: q.x, y: q.y - 1.3 })),
+      botE,
+      css(c, -6),
+    );
+    g.fillStyle = ink;
+    for (let k = Math.ceil((x0 + 3) / 8); k * 8 < x1 - 3; k++) {
+      blob(g, k * 8, y + H * 0.52, 1.05, k + seed, 1, 0.12);
+      g.fill();
+    }
+    g.fillStyle = css(c, -34);
+    for (let k = Math.ceil((x0 + 1) / 4); k * 4 < x1 - 1; k++) {
+      if (hash2(k, 3, seed) < 0.3) continue;
+      blob(g, k * 4 + 2, y + 0.75, 0.42, k, 1, 0.1);
+      g.fill();
+    }
+    g.fillStyle = ink;
+    stroke(g, botE, { w: 1.5, seed: tx + seed, taper: [0.03, 0.05], press: 0.45 });
+    stroke(g, topE, { w: 0.8, seed: tx + seed + 1, taper: [0.1, 0.12], press: 0.5 });
+    if (r.freeL) line(g, x0, y - 0.3, x0, y + H + 0.3, { w: 1.3, seed: tx, taper: [0.1, 0.1] });
+    if (r.freeR) line(g, x1, y - 0.3, x1, y + H + 0.3, { w: 1.6, seed: tx + 1, taper: [0.1, 0.1] });
   },
 };
 
