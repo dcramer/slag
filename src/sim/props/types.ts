@@ -317,7 +317,7 @@ export type Module =
    * slams until it hits terrain or a solid (≤ `reach` tiles), rests, then
    * slowly returns (rideable on the way back).
    */
-  | { type: 'dropper'; cells: Cell[]; angle: number; reach: number; warn: number; rest: number }
+  | { type: 'dropper'; cells: Cell[]; angle: number; reach: number; warn: number; rest: number; look?: DropperLook }
   /** Face-mounted spike plate that pops when someone comes near: click (warn) → spikes (up) → cooldown. */
   | { type: 'snapper'; cells: Cell[]; angle: number; warn: number; up: number; cool: number }
   | {
@@ -394,6 +394,8 @@ export type CoatKind = 'spikes' | 'ice' | 'slime';
 // --- Stage concepts (docs/SETPIECES.md): looks, art only -----------------------
 /** What a spike strip (or a spike coat) is made of; unset is plain metal spikes. */
 export type SpikeLook = 'glass' | 'thorn' | 'crystal' | 'icicle' | 'pitchfork';
+/** What a dropper's head is (art only); unset is the carved crusher stone. */
+export type DropperLook = 'icicle' | 'chandelier';
 /** The liquid a flood fills with. */
 export type FloodLook = 'lava' | 'toxic' | 'water';
 
