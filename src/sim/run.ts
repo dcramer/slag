@@ -1,6 +1,7 @@
 import { inset, overlaps, pointInRect, type Rect, rectCircle } from '../core/geom';
 import { DT, KILL_Y, PLAYER_W, RUN_COUNTDOWN, TILE } from './constants';
-import { goalRect, type Level, T_SOLID, tileAt } from './level';
+import { type CrowdMember, nudgeCrowd } from './crowd';
+import { goalRect, type Level, spawnZone, T_SOLID, tileAt } from './level';
 import { type Body, bodyAtCell, type CollisionWorld, type Solid, stepBody } from './physics';
 import {
   AMMO,
@@ -66,6 +67,12 @@ export class RunWorld {
   /** Set pieces first, then player props. */
   resolved: Resolved[];
   events: GameEvent[] = [];
+  /**
+   * Spawn safe zone (world px), or null. A runner whose body overlaps it can't
+   * be killed by props: hazards, projectiles (they pop harmlessly) and crushing.
+   * Falling into the pit, giving up and the race timer still apply.
+   */
+  readonly safeZone: Rect | null;
 
   solids: Solid[] = [];
   private out: Contrib = { solids: this.solids, hazards: [], springs: [], winds: [] };
@@ -100,6 +107,12 @@ export class RunWorld {
     }
     this.world = { tileAt: (x, y) => tileAt(level, x, y), solids: this.solids };
     this.goal = goalRect(level);
+    this.safeZone = spawnZone(level);
+  }
+
+  /** Is this runner inside the spawn safe zone (immune to props) right now? */
+  isSafe(r: Runner): boolean {
+    return !!this.safeZone && overlaps(r.body, this.safeZone);
   }
 
   get active(): Runner[] {
@@ -143,9 +156,16 @@ export class RunWorld {
     const f = this.frame;
     this.buildProps(f);
     const live = f >= RUN_COUNTDOWN && this.endFrame < 0;
+    const x0 = this.runners.map((r) => r.body.x);
 
     this.runners.forEach((r, i) => {
-      if (!r.alive || r.finished) return;
+      if (!r.alive) return;
+      // Finished runners lose control but keep falling, landing and riding
+      // platforms naturally. Nothing can hurt them and they don't push anyone.
+      if (r.finished) {
+        if (r.body.y <= KILL_Y) stepBody(r.body, NO_INPUT, this.world);
+        return;
+      }
       const inp = live ? (inputs[i] ?? NO_INPUT) : NO_INPUT;
       const b = r.body;
       if (inp.altPressed) return this.kill(r, -1, 'pop');
@@ -158,7 +178,7 @@ export class RunWorld {
           if (w.ay < 0) b.onGround = false;
         }
       }
-      if (!stepBody(b, inp, this.world)) {
+      if (!stepBody(b, inp, this.world) && !this.isSafe(r)) {
         // Credit whoever's moving solid did the squishing.
         const s = this.solids.find((s) => s.propUid >= 0 && overlaps(b, s));
         const owner = s ? (this.resolved.find((x) => x.pp.uid === s.propUid)?.pp.owner ?? -1) : -1;
@@ -191,8 +211,10 @@ export class RunWorld {
       }
 
       const hb = inset(b, 1.5);
-      for (const h of this.out.hazards) {
-        if (hitHazard(hb, h)) return this.kill(r, h.owner, 'hazard');
+      if (!this.isSafe(r)) {
+        for (const h of this.out.hazards) {
+          if (hitHazard(hb, h)) return this.kill(r, h.owner, 'hazard');
+        }
       }
       if (b.y > KILL_Y) return this.kill(r, -1, 'fall');
       if (overlaps(b, this.goal)) {
@@ -202,6 +224,11 @@ export class RunWorld {
         this.events.push({ type: 'finish', slot: r.slot, place: this.finishOrder.length, x: b.x + b.w / 2, y: b.y });
       }
     });
+
+    // Runners softly shove each other (src/sim/crowd.ts). Order-independent.
+    const crowd: CrowdMember[] = [];
+    this.runners.forEach((r, i) => r.alive && !r.finished && crowd.push({ key: r.slot, body: r.body, x0: x0[i] }));
+    nudgeCrowd(crowd, this.world);
 
     this.stepProjectiles(f);
     for (const rp of this.resolved) rp.mods.forEach((m, mi) => moduleSim(m.type).tick?.(m, this.tickCtx(rp, mi, f)));
@@ -250,7 +277,8 @@ export class RunWorld {
       if (!dead) {
         for (const r of this.runners) {
           if (r.alive && !r.finished && rectCircle(r.body, p.x, p.y, spec.radius)) {
-            this.kill(r, p.owner, 'hazard');
+            // Shots that reach a runner in the spawn zone pop harmlessly.
+            if (!this.isSafe(r)) this.kill(r, p.owner, 'hazard');
             dead = true;
             break;
           }

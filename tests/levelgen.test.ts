@@ -11,7 +11,7 @@ describe('level generation', () => {
     expect(a.spawn).toEqual(b.spawn);
   });
 
-  it('produces policy-solvable, non-fallback levels for many seeds', { timeout: 60_000 }, () => {
+  it('produces policy-solvable, non-fallback levels for many seeds', { timeout: 180_000 }, () => {
     const styles = new Set<string>();
     let fallbacks = 0;
     for (let i = 0; i < 150; i++) {

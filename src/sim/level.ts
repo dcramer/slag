@@ -56,6 +56,28 @@ export function isProtected(level: Level, tx: number, ty: number): boolean {
   return false;
 }
 
+/** Goal trigger reach: px past each side of the flag cell, and tiles above it. */
+export const GOAL_PAD_X = 6;
+export const GOAL_REACH_UP = 4;
+
+/**
+ * The flag's finish trigger: the flag cell widened by GOAL_PAD_X px each side
+ * plus a column GOAL_REACH_UP tiles above it, so jumping clear over the flag
+ * (even at full jump height from the flag's floor) still counts.
+ */
 export function goalRect(level: Level): Rect {
-  return { x: level.goal.tx * TILE - 2, y: level.goal.ty * TILE - TILE, w: TILE + 4, h: TILE * 2 };
+  return { x: level.goal.tx * TILE - GOAL_PAD_X, y: (level.goal.ty - GOAL_REACH_UP) * TILE, w: TILE + 2 * GOAL_PAD_X, h: TILE * (GOAL_REACH_UP + 1) };
+}
+
+/**
+ * The spawn safe zone in world px: the protected rect that holds the spawn
+ * cell (the starting pocket). Runners touching it can't be killed by props
+ * (see RunWorld). Null when the level has no protected rect around spawn.
+ */
+export function spawnZone(level: Level): Rect | null {
+  const { tx, ty } = level.spawn;
+  for (const r of level.protectedRects) {
+    if (tx >= r.x && tx < r.x + r.w && ty >= r.y && ty < r.y + r.h) return { x: r.x * TILE, y: r.y * TILE, w: r.w * TILE, h: r.h * TILE };
+  }
+  return null;
 }

@@ -51,7 +51,8 @@ describe('prop runtime', () => {
     const ty = level.spawn.ty - 1;
     let tx = level.spawn.tx + 6;
     while (!canPlace(level, [], def!, 2, tx, ty) && tx < level.w - 2) tx++;
-    const run = new RunWorld(level, [{ uid: 1, def: def!, owner: 3, tx, ty, rot: 2 }], [0]);
+    // The runner idles on the spawn pad, which is normally a safe zone; drop it for this test (tests/crowd.test.ts covers the zone).
+    const run = new RunWorld({ ...level, protectedRects: [] }, [{ uid: 1, def: def!, owner: 3, tx, ty, rot: 2 }], [0]);
     for (let f = 0; f < 60 * 10 && run.runners[0].alive; f++) run.step([NO_INPUT]);
     expect(run.runners[0].alive).toBe(false);
     expect(run.runners[0].killer).toBe(3);

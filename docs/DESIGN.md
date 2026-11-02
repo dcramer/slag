@@ -16,8 +16,8 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 ## Players
 - Characters are generated per player (body, face, accessory and name) and are **cosmetic only**: every player has the same hitbox and the same physics.
 - The local player's **name and look persist** across sessions (localStorage). On first join the game asks for a name, with the random one offered as the one-click default.
-- **Spawn zone is safe**: while inside the starting zone you can't be killed.
-- **Players nudge each other**: bodies softly push apart. You can shove someone slowly, but if they push back the shove nearly cancels out. There's no hard blocking and no stacking.
+- **Spawn zone is safe**: the starting zone is the protected rect around the spawn (the start pocket), shown during races as a faint shimmer. While your body touches it, props can't hurt you: hazards don't kill, projectiles that reach you pop harmlessly, and moving solids can't crush you. A faint bubble marks protected runners. The pit, giving up and the race timer still apply (the pit can't be reached from inside the zone anyway).
+- **Players nudge each other**: side-by-side bodies resist each other instead of passing through. Walking into someone standing still shoves you both along at about an eighth of walking speed (a run-up shoves a little harder). If they push back, it nearly cancels: only the difference in effort leaks through as a tiny drift. Being rear-ended never slows you down. Nudges never push anyone into terrain; someone pinned against a wall just lets you squeeze into them. There's no hard blocking and no stacking: jumping onto or over someone passes through them (no head bonks). Finished and dead runners don't push.
 
 ## Movement (precision-platformer feel)
 - **Walk vs run.** Walking is slow and precise, about 6.6 tiles/s, with short jumps of about 4 tiles. Holding **Run** gives about 13.4 tiles/s and jumps of about 8 tiles, but run momentum builds over a beat, skids when you let go or turn, and carries you past ledges if you're careless.
@@ -32,7 +32,7 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - **Levels vary**: size and aspect (wide, classic, tall), sparse vs dense terrain, few vs many hazards, and route shape (sprawl, climb, descent, zig-zag).
 - **Most levels need props.** Roughly 70–85% can't be finished bare. Every level must be finishable with **at most two small bridges**, verified with the real movement controller and never with hand-waved distances.
 - The spawn and goal zones are protected: nothing can be built or bombed there.
-- The **goal trigger is generous**: a tall column above the flag, so you can't jump over it. On touching it you lose control and drop under normal physics.
+- **The flag is generous**: its finish trigger is a bit wider than the flag and reaches 4 tiles up, so jumping clear over it still counts. Touching it ends your control: you drop, land and ride platforms with normal physics, and nothing can hurt you anymore.
 - Set pieces are large, pre-placed theme props: tractor, windmill, foundry press, chandelier, minecart, geysers, crane and so on. They never block the known solution and keep their hazards away from spawn and goal. They are visible in every phase.
 
 ## Props
