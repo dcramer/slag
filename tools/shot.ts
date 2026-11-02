@@ -34,6 +34,7 @@
  *   pnpm shot inkblast --seed S --theme T  → craters bitten out of a level, each partial redraw checked against a full bake
  *   pnpm shot landmarks [--theme T] [--concept id] [--count N] → one level per stage concept, on a contact sheet
  *   pnpm shot flood [--look lava|toxic|water] [--low 2] [--high 5] → a tide let into the level, at warn, rise and high water
+ *   pnpm shot join [--only full]           → the join-and-watch storyboard: connecting, Join or Watch, observing, AFK, failures (desktop + phone)
  *   pnpm shot home                         → main menu (desktop + 390×844 mobile)
  *   pnpm shot rules                        → the match rules card (fails if it doesn't fit the window)
  *   pnpm shot settings                     → every settings tab over the lobby, driven by keys and a fake pad,
@@ -57,6 +58,7 @@
 import { shots as cast } from './shot/cast';
 import { browser, errors, scenario, server } from './shot/ctx';
 import { shots as flood } from './shot/flood';
+import { shots as join } from './shot/join';
 import { shots as landmarks } from './shot/landmarks';
 import { shots as motion } from './shot/motion';
 import { shots as mobile } from './shot/mobile';
@@ -65,7 +67,7 @@ import { shots as parts } from './shot/parts';
 import { shots as phases } from './shot/phases';
 import { shots as renderer } from './shot/renderer';
 
-const SCENARIOS = { ...phases, ...renderer, ...motion, ...parts, ...pages, ...mobile, ...landmarks, ...cast, ...flood };
+const SCENARIOS = { ...phases, ...renderer, ...motion, ...parts, ...pages, ...mobile, ...landmarks, ...cast, ...flood, ...join };
 
 try {
   const run = SCENARIOS[scenario];

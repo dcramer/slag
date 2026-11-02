@@ -1,4 +1,6 @@
+import { css } from '../core/color';
 import type { Match } from '../game/match';
+import type { HudAction, NetArrival, NetInfo, NetWatcher } from '../render/hud';
 import type { InputFrame } from '../sim/types';
 import { peerOf } from './actions';
 import { acquirePeerId, loadResume, markKicked, saveResume } from './identity';
@@ -18,19 +20,8 @@ import { browserRtc, WebRtcTransport } from './webrtc-transport';
  *   otherwise   WebRTC, through the signaling API (signal-client.ts says where that is)
  */
 
-/** What the HUD's online panel draws. Structurally `NetInfo` in src/render/hud.ts. */
-export interface NetHudInfo {
-  status: string;
-  inviteUrl?: string;
-  offline?: boolean;
-  peers: { name: string; isHost: boolean; pingMs?: number; local: boolean }[];
-  /** The player carrying the host label. */
-  hostSlot?: number;
-  /** Players this peer may remove (host, lobby). */
-  kickable?: number[];
-  /** Player picked with the keyboard or gamepad, waiting on confirm. */
-  kickSlot?: number;
-}
+/** What the HUD draws for the room: the online panel, the joining screen, and where this peer sits. */
+export type NetHudInfo = NetInfo;
 
 export interface RoomConnection {
   net: NetSession;
@@ -43,6 +34,17 @@ export interface RoomConnection {
   kick(device: string): void;
   /** Host's keyboard and gamepad route to kicking, in the lobby: `use` picks a player, confirm kicks, alt cancels. Consumes what it uses. */
   lobbyInput(frames: Record<string, InputFrame>): void;
+  /**
+   * Keyboard and gamepad on the joining screen and for a peer without a seat: confirm takes a seat (or the failed
+   * room's way out), alt watches. Consumes what it uses, and returns the HUD action to run, if any.
+   */
+  seatInput(frames: Record<string, InputFrame>): HudAction | null;
+  /** Take a seat (now in the lobby, next round mid-match). */
+  play(): void;
+  /** Watch instead of playing. */
+  watch(): void;
+  /** The room failed: play on here, offline, without the joining screen. */
+  stayOffline(): void;
   /** Leave the room for good: save, say goodbye so it re-elects at once, and stop every timer and listener. */
   close(): void;
 }
@@ -55,7 +57,12 @@ export interface ConnectOptions {
   onKicked(): void;
   /** The page came back from the back/forward cache after the session was closed: start the room over. */
   onRestored(): void;
+  /** The name an observer's chip shows. */
+  name?: () => string;
 }
+
+/** Joining screens shorter than this aren't shown: a fresh room of our own is up before anyone could read one. */
+const ARRIVAL_DELAY_MS = 350;
 
 export function chooseTransport(room: string, peer: string, params: URLSearchParams): Transport | null {
   const mode = params.get('net');
@@ -97,6 +104,8 @@ export function connectRoom(room: string, match: Match, opts: ConnectOptions): R
     transport,
     match,
     primaryDevice: opts.primaryDevice,
+    watch: params.has('watch'),
+    name: opts.name,
     resume: () => loadResume(room, opened), // a previous visit's state, never this one's
     onKicked: () => {
       markKicked(room);
@@ -156,6 +165,33 @@ export function connectRoom(room: string, match: Match, opts: ConnectOptions): R
   const peerInSlot = (slot: number) => peerOf(match.player(slot)?.device ?? '');
   let kickSlot = -1;
   let lastToast = '';
+  /** In the room at least once: the joining screen is for getting in, not for every later hiccup (toasts cover those). */
+  let wasIn = false;
+  let offline = false;
+  const seat = (): NetInfo['seat'] => {
+    if (net.seated) return match.players.some((p) => peerOf(p.device) === net.self && p.leaving) ? 'leaving' : 'seated';
+    // Asking in the lobby (an arrival) is a seat a few frames away; owed one mid-round is a seat next round.
+    return net.queued || (net.intent === 'play' && !net.watching) ? 'queued' : 'watching';
+  };
+  const seats = (): string[] => [...match.players.filter((p) => !p.leaving).map((p) => css(p.character.body)), ...net.ns.queue.map(() => 'queued')];
+  const arrival = (): NetArrival | undefined => {
+    if (offline) return undefined;
+    if (cutOff()) {
+      const kicked = net.status === 'kicked';
+      const title = kicked ? STATUS_LABEL.kicked : net.refused ? 'Different Version' : net.detail || STATUS_LABEL.unavailable;
+      return { stage: 'failed', title, here: 0, offline: !kicked };
+    }
+    wasIn ||= net.status === 'online' && (net.role === 'host' ? !net.paused : net.synced);
+    if (wasIn || Date.now() - opened < ARRIVAL_DELAY_MS) return undefined;
+    return { stage: 'connecting', title: statusLine(), here: net.status === 'online' ? net.members.length : 0 };
+  };
+  const watchers = (): NetWatcher[] => {
+    const host = net.isHost && match.phase === 'lobby';
+    return net
+      .peers()
+      .filter((p) => !p.seated)
+      .map((p) => ({ peer: p.id, name: p.name, self: p.isSelf, afk: !!p.watching?.afk, kickable: host && !p.isSelf }));
+  };
   return {
     net,
     inviteUrl,
@@ -174,7 +210,33 @@ export function connectRoom(room: string, match: Match, opts: ConnectOptions): R
         kickable: kickable(),
         kickSlot,
         peers: net.peers().map((p) => ({ name: p.name, isHost: p.isHost, pingMs: p.ping === null || p.isHost ? undefined : p.ping, local: p.isSelf })),
+        seat: cutOff() ? undefined : seat(),
+        space: net.space,
+        seats: seats(),
+        watchers: watchers(),
+        arrival: arrival(),
       };
+    },
+    play: () => net.play(),
+    watch: () => net.watch(),
+    stayOffline: () => {
+      offline = true;
+    },
+    seatInput(frames) {
+      if (!transport) return null;
+      const a = arrival();
+      const s = a || cutOff() ? null : seat();
+      // A watcher sends no input, so its keys are free for Join; a seated peer's are its player's.
+      if (!a && s !== 'watching') return null;
+      let out: HudAction | null = null;
+      for (const f of Object.values(frames)) {
+        if (f.confirmPressed) {
+          if (a) out = a.stage === 'failed' ? (a.offline ? 'offline' : 'home') : null;
+          else if (net.space > 0) out = 'play';
+        }
+        f.confirmPressed = f.altPressed = f.downPressed = f.usePressed = false;
+      }
+      return out;
     },
     kick: (device) => net.kick(peerOf(device)),
     lobbyInput(frames) {

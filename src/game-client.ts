@@ -12,6 +12,9 @@ import { wasKicked } from './net/identity';
 import type { Nav, Unmount } from './router';
 import { HOME, lobby } from './routes';
 import { ITEMS } from './sim/items';
+import type { HudAction, JoinCardInfo } from './render/hud';
+import { type CharacterDef, generateCharacter } from './gen/character';
+import type { InputFrame } from './sim/types';
 import { Renderer } from './render/renderer';
 import { DT } from './sim/constants';
 import { addBreadcrumb, setTelemetryContext } from './telemetry';
@@ -99,6 +102,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     primaryDevice: () => input.pointerDevice,
     params,
     onKicked: () => nav.go(HOME),
+    name: () => loadProfile().name ?? '',
     // Back from the back/forward cache with the session closed: join the room again.
     onRestored: () => nav.hardLoad(lobby(room)),
   });
@@ -120,6 +124,13 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
   // --- local menus (DOM overlays) and profile ---------------------------------
   const settingsMenu = new SettingsMenu(input, audio);
   settingsMenu.leave = () => nav.go(HOME);
+  // Watch is here, a menu away, so it's never pressed by accident mid-race; the lobby card has it too.
+  settingsMenu.seat = () => {
+    if (!net.transport || net.status !== 'online' || (net.role === 'guest' && !net.synced)) return null;
+    if (net.seated && net.intent !== 'watch') return { label: 'Watch', run: () => conn.watch() };
+    if (!net.seated && !net.queued && net.space > 0) return { label: 'Play', run: openCard };
+    return null;
+  };
   settingsMenu.quality = {
     pinned: savedQuality,
     set: (tier) => {
@@ -176,7 +187,8 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
         });
         return true;
       case 'name':
-        promptName();
+        if (card) cardName();
+        else promptName();
         return true;
       case 'kick':
         if (b.device) conn.kick(b.device);
@@ -189,16 +201,108 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
         );
         return true;
       }
+      case 'play':
+      case 'seat':
+      case 'cancel':
+      case 'watch':
+      case 'home':
+      case 'offline':
+        runAction(b.action);
+        return true;
       case 'join':
+        // An open bay: someone watching opens the join card; a fresh arrival is seated as it always was.
+        if (net.transport && !net.seated && net.watching) {
+          openCard();
+          return true;
+        }
+        return { device: b.device ?? input.pointerDevice, confirm: true };
       case 'ready':
       case 'continue':
         return { device: b.device ?? input.pointerDevice, confirm: true };
       case 'look':
+        if (!b.device) {
+          cardLook();
+          return true;
+        }
         return { device: b.device ?? input.pointerDevice, alt: true };
       case 'level':
         return { device: b.device ?? input.pointerDevice, down: true };
     }
   };
+  /** The joining screen's and the observer's actions, from a click, a tap or a key. */
+  function runAction(a: HudAction) {
+    if (a === 'play') openCard();
+    else if (a === 'seat') cardSeat();
+    else if (a === 'cancel') card = null;
+    else if (a === 'watch') conn.watch();
+    else if (a === 'home') nav.go(HOME);
+    else if (a === 'offline') conn.stayOffline();
+  }
+
+  // --- the join card: a watcher's Join, over the live match ------------------------------
+  // The toy is the saved look (rolled now if there's none yet) and the saved name; once seated, syncProfile
+  // applies both like any join. Only the seat request goes to the host.
+  let card: { stage: JoinCardInfo['stage']; until: number; now: boolean } | null = null;
+  const CARD_RESULT_MS = 1600;
+  let cardChar: { key: string; def: CharacterDef } | null = null;
+  function cardCharacter(): CharacterDef {
+    if (profile.look == null) {
+      profile.look = (Math.random() * 4294967296) >>> 0;
+      saveProfile(profile);
+    }
+    const key = `${profile.look}:${profile.name ?? ''}`;
+    if (cardChar?.key !== key) {
+      const def = generateCharacter(profile.look);
+      cardChar = { key, def: profile.name ? { ...def, name: profile.name } : def };
+    }
+    return cardChar.def;
+  }
+  function openCard() {
+    if (net.transport && !net.seated && !net.queued && net.space > 0) card = { stage: 'edit', until: 0, now: false };
+  }
+  function cardSeat() {
+    if (card?.stage !== 'edit' || net.space <= 0) return;
+    card.stage = 'asking';
+    net.play();
+  }
+  function cardLook() {
+    if (card?.stage !== 'edit') return;
+    profile.look = (Math.random() * 4294967296) >>> 0;
+    saveProfile(profile);
+  }
+  function cardName() {
+    if (card?.stage !== 'edit') return;
+    const ch = cardCharacter();
+    namePrompt.onClose = () => {};
+    namePrompt.open(ch.name, profile.name, (name) => {
+      if (!name) return;
+      profile.name = name;
+      profile.prompted = true;
+      saveProfile(profile);
+    });
+  }
+  /** Keyboard and gamepad on the card: confirm joins, alt cancels, use rolls a new look, down renames. */
+  function cardInput(frames: Record<string, InputFrame>) {
+    for (const f of Object.values(frames)) {
+      if (card?.stage === 'edit') {
+        if (f.confirmPressed) cardSeat();
+        else if (f.altPressed) card = null;
+        else if (f.usePressed) cardLook();
+        else if (f.downPressed) cardName();
+      }
+      f.confirmPressed = f.altPressed = f.downPressed = f.usePressed = f.jumpPressed = false;
+    }
+  }
+  /** Per drawn frame: the host's answer, how long it stays up, and the card's picture for the HUD. */
+  function updateCard(now: number) {
+    if (card?.stage === 'asking' && net.seatAsk !== 'asking') {
+      card.stage = net.seatAsk === 'won' ? 'won' : 'taken';
+      card.now = net.seated;
+      card.until = now + CARD_RESULT_MS;
+    }
+    if (card && ((card.until && now > card.until) || (card.stage === 'edit' && (net.seated || net.queued)))) card = null;
+    renderer.hud.joinCard = card ? { character: cardCharacter(), stage: card.stage, now: card.now } : undefined;
+  }
   window.addEventListener('keydown', () => audio.unlock(), { once: true, signal: life.signal });
 
   // --- touch controls (mobile; see docs/MOBILE.md) ---------------------------
@@ -299,6 +403,9 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
       if (net.isHost && !net.paused && match.phase === 'lobby' && match.phaseFrame === 0) net.act({ t: 'salt', salt: (Math.random() * 4294967296) >>> 0 });
       input.touch.setMode(touchModeFor(match, net.globalDevice(TOUCH_DEVICE)));
       const frames = input.sample();
+      if (card) cardInput(frames);
+      const seatAction = conn.seatInput(frames);
+      if (seatAction) runAction(seatAction);
       conn.lobbyInput(frames);
       net.tick(frames);
       acc -= DT;
@@ -336,6 +443,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     touchOverlay.update({ canPlace: tp && match.phase === 'place' ? match.canPlaceFor(tp) : undefined, use: held ? ITEMS[held.kind].verb : undefined });
     const view = net.view; // guests mid-race: the locally predicted match. Pick and place: live cursors.
     renderer.hud.pendingCard = net.pendingCard;
+    updateCard(now);
     const events = net.drainEvents();
     if (tp && input.touch.active && events.some((e) => e.type === 'death' && e.slot === tp.slot)) input.touch.buzz(30);
     audio.handle(events, view);

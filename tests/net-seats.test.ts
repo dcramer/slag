@@ -156,12 +156,65 @@ describe('observers', () => {
     r.until(() => !!host.ns.watching.late, 300);
     expect(late.intent).toBe('watch');
     expect(late.space).toBe(0);
+    // Asking while it's full is answered, not left hanging.
+    late.play();
+    r.until(() => late.seatAsk !== 'asking', 120);
+    expect(late.seatAsk).toBe('taken');
+    expect(late.intent).toBe('watch');
     r.leave(ids[5]);
     r.until(() => late.space === 1, 300);
     r.run(120);
     expect(seatedPeer(host, 'late')).toBe(false);
     late.play();
+    late.play(); // a double click is the same request
     r.until(() => seatedPeer(host, 'late'), 300);
+    r.run(10);
+    expect(late.seatAsk).toBe('won');
+    expect(host.match.players.filter((p) => p.device.startsWith('late:')).length).toBe(1);
+    expect(r.hashes().size).toBe(1);
+  }, 20_000);
+
+  it('two watchers ask for the last seat at once: the host’s order picks one, the other is told, and every peer agrees', () => {
+    const r = new Room();
+    const ids = Array.from({ length: MAX_PLAYERS - 1 }, (_, i) => `p${i}xx`);
+    for (const id of ids) {
+      r.join(id, fidget);
+      r.run(3);
+    }
+    const host = r.peers.get(ids[0])!;
+    const x = r.join('xxxx', still, true);
+    const y = r.join('yyyy', still, true);
+    r.until(() => host.match.players.length === MAX_PLAYERS - 1 && !!host.ns.watching.xxxx && !!host.ns.watching.yyyy, 600);
+    r.run(20);
+    expect(x.space).toBe(1);
+    x.play();
+    y.play();
+    r.until(() => x.seatAsk !== 'asking' && y.seatAsk !== 'asking', 200);
+    expect([x.seatAsk, y.seatAsk].sort()).toEqual(['taken', 'won']);
+    const winner = x.seatAsk === 'won' ? 'xxxx' : 'yyyy';
+    const loser = winner === 'xxxx' ? y : x;
+    expect(host.match.players.length).toBe(MAX_PLAYERS);
+    expect(seatedPeer(host, winner)).toBe(true);
+    expect(loser.watching).toBeDefined();
+    expect(loser.space).toBe(0);
+    for (const s of r.peers.values()) expect(s.match.players.map((p) => p.device)).toEqual(host.match.players.map((p) => p.device));
+    expect(r.hashes().size).toBe(1);
+  }, 20_000);
+
+  it('a seat request in flight when the host goes: the new host decides it, once', () => {
+    const r = new Room();
+    const a = r.join('aaaa', fidget);
+    r.run(5);
+    const b = r.join('bbbb', fidget);
+    r.run(5);
+    const o = r.join('oooo', still, true);
+    r.until(() => seatedPeer(a, 'bbbb') && !!a.ns.watching.oooo, 300);
+    r.run(30);
+    o.play();
+    r.leave('aaaa'); // gone before the request reaches it
+    r.until(() => b.isHost && !b.paused && o.seatAsk !== 'asking', 900);
+    expect(o.seatAsk).toBe('won');
+    expect(b.match.players.filter((p) => p.device.startsWith('oooo:')).length).toBe(1);
     expect(r.hashes().size).toBe(1);
   }, 20_000);
 

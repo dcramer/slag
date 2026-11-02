@@ -8,7 +8,7 @@ import { drawInkRunner } from '../ink-character';
 import { bay, icon, plate, tag } from '../hud-kit';
 import { blob } from '../ink';
 import { glowDot } from '../kit';
-import type { Hud, NetInfo } from '../hud';
+import type { Hud, NetInfo, NetWatcher } from '../hud';
 import { DISPLAY, UI, FOOT_H, MAX_FOOT_SCALE, MIN_BAY_H, PHONE_BAR_W } from './layout';
 
 /** The lobby: top bar, player bays and the online panel. */
@@ -155,15 +155,20 @@ function playerCard(hud: Hud, p: Player, i: number, x: number, y: number, w: num
   const tall = hud.phone ? 8 : 0;
   const by = y + h - (big ? 34 : 28) - tall;
   const bh = (big ? 25 : 22) + tall;
+  // Online, your own card can give up its seat to watch: a small button beside the dice, never in the way of Ready.
+  const watchable = mine && !!hud.net && !hud.net.offline;
   if (mine) {
     hud.btn(
-      { x: x + 10, y: by, w: w - 50, h: bh, action: 'ready', device: p.device },
+      { x: x + 10, y: by, w: w - (watchable ? 80 : 50), h: bh, action: 'ready', device: p.device },
       p.ready ? 'Ready!' : 'Ready Up',
       p.ready ? 'ready' : 'primary',
       p.ready ? 'check' : undefined,
       TYPE.label,
     );
+    if (watchable) hud.btn({ x: x + w - 66, y: by, w: 26, h: bh, action: 'watch', device: p.device }, '', 'secondary', 'eye');
     hud.btn({ x: x + w - 36, y: by, w: 26, h: bh, action: 'look', device: p.device }, '', 'secondary', 'dice');
+  } else if (p.afk) {
+    tag(c, 'AFK', cx, by + bh / 2 - 1, PAL.steel, PAL.bone, TYPE.label, 'center');
   } else if (p.ready) {
     tag(c, 'READY', cx, by + bh / 2 - 1, PAL.toxic, PAL.ink, TYPE.label, 'center');
   } else hud.text('Not Ready', cx, by + bh / 2 - 1, TYPE.body, PAL.dim, 'center', UI, 600);
@@ -176,9 +181,43 @@ function netPanel(hud: Hud, net: NetInfo, x: number, y: number, w: number) {
   const h = 30;
   plate(c, x, y, w, h, { rivets: false });
   const tw = tag(c, net.offline ? 'OFFLINE' : 'ONLINE', x + 8, y + h / 2, net.offline ? PAL.dim : PAL.toxic, PAL.ink, TYPE.caption);
-  // Who's here is on the cards (each remote player's ping in its header), so this is only the room itself.
+  // Who's playing is on the cards (each remote player's ping in its header), so this is the room itself and who's watching.
   hud.text(net.status, x + 16 + tw, y + h / 2, TYPE.body, PAL.ash, 'left', UI, 600);
+  c.font = `600 ${TYPE.body}px ${UI}`;
+  const sx = x + 28 + tw + c.measureText(net.status).width;
+  const ex = x + w - (net.inviteUrl ? 138 : 8);
   if (net.inviteUrl) hud.btn({ x: x + w - 130, y: y + 4, w: 124, h: 23, action: 'invite' }, 'Copy Invite Link', 'primary', 'copy');
+  watcherChips(hud, net.watchers ?? [], sx, ex, y + h / 2);
+}
+
+/** Who's watching: an eye and a name each, left to right in join order, with "+N" for whoever doesn't fit. */
+function watcherChips(hud: Hud, list: NetWatcher[], x0: number, x1: number, cy: number) {
+  const c = hud.ctx;
+  let x = x0;
+  for (let i = 0; i < list.length; i++) {
+    const wv = list[i];
+    const name = wv.name;
+    c.font = `700 ${TYPE.caption}px ${UI}`;
+    const nw = name ? c.measureText(name).width + 4 : 0;
+    const aw = wv.afk ? c.measureText('AFK').width + 8 : 0;
+    const kw = wv.kickable ? 16 : 0;
+    const w = 18 + nw + aw + kw;
+    const rest = list.length - i - 1;
+    if (x + w > x1 - (rest ? 22 : 0)) {
+      hud.text(`+${list.length - i}`, x + 2, cy, TYPE.caption, PAL.ash, 'left', UI, 800);
+      return;
+    }
+    plate(c, x, cy - 9, w, 18, { rivets: false, stroke: wv.self ? PAL.amber : undefined, seed: 30 + i });
+    icon(c, 'eye', x + 9, cy, 8, wv.self ? PAL.amber : PAL.ash);
+    if (name) hud.text(name, x + 16, cy + 0.5, TYPE.caption, PAL.bone, 'left', UI, 700);
+    if (wv.afk) tag(c, 'AFK', x + 16 + nw, cy, PAL.steel, PAL.bone, TYPE.caption);
+    if (wv.kickable) {
+      const kx = x + w - 15;
+      const hot = hud.button({ x: kx, y: cy - 8, w: 14, h: 16, action: 'kick', device: `${wv.peer}:watch` });
+      hud.text('×', kx + 7, cy, TYPE.label, hot ? PAL.danger : PAL.dim, 'center', UI, 800);
+    }
+    x += w + 5;
+  }
 }
 
 /** A remote player's link: three bars colored by quality, and the round trip in ms. */

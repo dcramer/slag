@@ -12,6 +12,8 @@ import { lobby } from './hud/lobby';
 import { pick, place } from './hud/pick-place';
 import { race } from './hud/race';
 import { score, victory } from './hud/score';
+import { arrival, joinCard, joinCta, seatBanner } from './hud/arrival';
+import type { CharacterDef } from '../gen/character';
 
 /**
  * Screen-space UI on its own canvas (logical 768×432, scaled), in the
@@ -24,7 +26,29 @@ import { score, victory } from './hud/score';
  * through the public members here.
  */
 
-export type HudAction = 'join' | 'ready' | 'look' | 'name' | 'level' | 'settings' | 'rules' | 'invite' | 'continue' | 'kick';
+export type HudAction =
+  | 'join'
+  | 'ready'
+  | 'look'
+  | 'name'
+  | 'level'
+  | 'settings'
+  | 'rules'
+  | 'invite'
+  | 'continue'
+  | 'kick'
+  /** The Join call to action: opens the join card. */
+  | 'play'
+  /** The join card's confirm: ask the host for the seat. */
+  | 'seat'
+  /** Close the join card, still watching. */
+  | 'cancel'
+  /** Watch instead of playing. */
+  | 'watch'
+  /** Back to the main menu (a room that failed). */
+  | 'home'
+  /** Stay on this page and play here, offline (a room that failed). */
+  | 'offline';
 
 export interface HudButton {
   x: number;
@@ -65,6 +89,48 @@ export interface NetInfo {
   kickSlot?: number;
   /** In no room's match, and can't join this one (another build): its local seats mean nothing, so none are drawn. */
   stranded?: boolean;
+  /**
+   * Where this peer stands. `seated`; `leaving`: seated, watching from the round boundary; `queued`: owed a
+   * seat at the round boundary; `watching`.
+   */
+  seat?: 'seated' | 'leaving' | 'queued' | 'watching';
+  /** Seats a Join could still win. */
+  space?: number;
+  /** The seats as they stand: a color per player, 'queued' for one owed, '' for a free one. */
+  seats?: string[];
+  /** Peers in the room without a seat, in join order. */
+  watchers?: NetWatcher[];
+  /** The joining screen: still connecting, or the room failed. Absent once in. */
+  arrival?: NetArrival;
+}
+
+/** The join card: the toy you'd play as, and how asking for the seat is going. */
+export interface JoinCardInfo {
+  character: CharacterDef;
+  /** `edit`: looking and naming; `asking`: with the host; `won`: seated or owed a seat; `taken`: someone was quicker. */
+  stage: 'edit' | 'asking' | 'won' | 'taken';
+  /** Won a seat at once (lobby, between rounds) rather than at the round boundary. */
+  now?: boolean;
+}
+
+export interface NetWatcher {
+  peer: string;
+  /** Empty for someone who never had a seat or a name. */
+  name: string;
+  self: boolean;
+  afk: boolean;
+  /** The host may remove it (lobby). */
+  kickable: boolean;
+}
+
+export interface NetArrival {
+  stage: 'connecting' | 'failed';
+  /** What's happening, in a few words. */
+  title: string;
+  /** Peers in the room as far as we know (connecting). */
+  here: number;
+  /** Failed: playing here offline is possible. */
+  offline?: boolean;
 }
 
 /** Screen-space UI on its own canvas (logical 768×432, scaled). */
@@ -100,6 +166,8 @@ export class Hud {
   net?: NetInfo;
   /** Online pick: the card this peer clicked and the host hasn't ruled on yet. Not a claim. */
   pendingCard = -1;
+  /** A watcher choosing Join: the card over the live match (set by game-client). */
+  joinCard?: JoinCardInfo;
   /** Force the prompt glyph family (e.g. the touch layer sets 'touch'). Otherwise `lastInput` is used. */
   inputMode?: InputMode;
   /** Last input family the person used (tracked by game-client). */
@@ -309,10 +377,22 @@ export class Hud {
         victory(this, m, t);
         break;
     }
+    seatBanner(this, m, t);
     footer(this, m);
     // Cursors stay on top of the footer so their labels are never covered.
     for (const f of this.pending) f();
     this.pending = [];
+    // Watching: Join, in the corner, in every phase.
+    if (this.net?.seat === 'watching' && !this.net.arrival && !this.joinCard) joinCta(this, m);
+    // The join card and the joining screen go over everything: nothing under them is the peer's to touch.
+    if (this.joinCard && !this.net?.arrival) {
+      this.buttons = [];
+      joinCard(this, m, this.joinCard, t);
+    }
+    if (this.net?.arrival) {
+      this.buttons = [];
+      arrival(this, m, t);
+    }
     this.drawToast();
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.globalCompositeOperation = 'lighter';

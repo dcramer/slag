@@ -29,7 +29,13 @@ export type NetAction =
    * A peer watches (`on`) or wants to play again. Watching gives up the peer's seats: at once in the lobby,
    * at the round boundary mid-match. `name` labels its chip. `afk` is the host's: it saw the player idle.
    */
-  | { t: 'watch'; dev: string; on: boolean; name?: string; afk?: boolean };
+  | { t: 'watch'; dev: string; on: boolean; name?: string; afk?: boolean }
+  /**
+   * A watcher asks for a seat (`on`), or the host drops a request whose peer left. The host's order decides a
+   * race for the last seat: a request that finds no seat free does nothing, so its sender knows it lost. In
+   * the lobby and between rounds the seat is taken at once; mid-round the request queues for the boundary.
+   */
+  | { t: 'seat'; dev: string; on: boolean };
 
 /** Replicated session state that isn't part of the Match (kept identical on every peer by the same actions). */
 export interface NetState {
@@ -39,6 +45,8 @@ export interface NetState {
   kicked: Record<string, true>;
   /** Peers watching rather than playing, by choice or for being idle. A refresh keeps it: the peer id survives one. */
   watching: Record<string, Watcher>;
+  /** Seats won mid-round, taken at the next round boundary in this order. */
+  queue: { peer: string; dev: string }[];
 }
 
 export interface Watcher {
@@ -51,7 +59,12 @@ export interface Watcher {
 const MAX_WATCHERS = 16;
 
 export function newNetState(): NetState {
-  return { parked: {}, kicked: {}, watching: {} };
+  return { parked: {}, kicked: {}, watching: {}, queue: [] };
+}
+
+/** Seats nobody holds or is owed at the next round boundary: the seats a request can still win. */
+export function freeSeats(m: Match, ns: NetState): number {
+  return MAX_PLAYERS - m.players.filter((p) => !p.leaving).length - ns.queue.length;
 }
 
 /** Names come off the wire: the same limits as a player's. */
@@ -65,17 +78,46 @@ export function peerOf(dev: string): string {
   return i < 0 ? '' : dev.slice(0, i);
 }
 
-const SEAT_PHASES = new Set(['lobby', 'score', 'victory']);
+/** Where seats change hands: the lobby, and the round boundary (the score and victory screens). */
+export const SEAT_PHASES = new Set(['lobby', 'score', 'victory']);
+
+function seat(m: Match, ns: NetState, dev: string, char?: CharacterDef) {
+  const peer = peerOf(dev);
+  m.join(dev, char);
+  ns.queue = ns.queue.filter((q) => q.peer !== peer);
+  const parked = ns.parked[peer]?.filter((x) => x.dev !== dev);
+  if (parked?.length) ns.parked[peer] = parked;
+  else delete ns.parked[peer];
+}
 
 export function applyAction(m: Match, ns: NetState, a: NetAction): void {
   switch (a.t) {
     case 'join': {
       const peer = peerOf(a.dev);
       if (!SEAT_PHASES.has(m.phase) || m.players.length >= MAX_PLAYERS || ns.watching[peer]) return;
-      m.join(a.dev, a.char);
-      const parked = ns.parked[peer]?.filter((x) => x.dev !== a.dev);
-      if (parked?.length) ns.parked[peer] = parked;
-      else delete ns.parked[peer];
+      seat(m, ns, a.dev, a.char);
+      return;
+    }
+    case 'seat': {
+      const peer = peerOf(a.dev);
+      if (!peer || ns.kicked[peer]) return;
+      if (!a.on) {
+        ns.queue = ns.queue.filter((q) => q.peer !== peer);
+        return;
+      }
+      // Already in, or already owed one: a second click is the same request.
+      if (m.players.some((p) => peerOf(p.device) === peer && !p.leaving) || ns.queue.some((q) => q.peer === peer)) return;
+      const mine = m.players.filter((p) => peerOf(p.device) === peer);
+      if (mine.length) {
+        // On the way out and changed their mind: they keep the seat they have.
+        for (const p of mine) delete p.leaving;
+        delete ns.watching[peer];
+        return;
+      }
+      if (freeSeats(m, ns) <= 0) return; // lost the race: still watching
+      delete ns.watching[peer];
+      if (SEAT_PHASES.has(m.phase)) seat(m, ns, a.dev);
+      else ns.queue.push({ peer, dev: a.dev });
       return;
     }
     case 'leave': {
@@ -116,6 +158,7 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
       for (const p of m.players.filter((q) => peerOf(q.device) === a.peer)) m.leave(p.device);
       delete ns.parked[a.peer];
       delete ns.watching[a.peer];
+      ns.queue = ns.queue.filter((q) => q.peer !== a.peer);
       ns.kicked[a.peer] = true;
       return;
     case 'watch': {
@@ -133,6 +176,7 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
         else p.leaving = true;
       }
       delete ns.parked[peer];
+      ns.queue = ns.queue.filter((q) => q.peer !== peer);
       delete ns.watching[peer]; // re-inserted last: the oldest entries go first
       ns.watching[peer] = a.afk ? { name, afk: true } : { name };
       const keys = Object.keys(ns.watching);
