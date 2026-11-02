@@ -344,7 +344,7 @@ function car(w: number, h: number, base: HSL, key: string) {
     // Rails: two posts and a top bar, thin enough to read as fencing, not floor.
     for (const x of [2.5, w - 2.5]) tick(g, x, 0, x, -9, 1.3, x, INK);
     g.fillStyle = INK;
-    line(g, 2, -9, w - 2, -9, { w: 1.4, seed: 4, taper: [0, 0], press: 0.1 });
+    line(g, 2, -9, w - 2, -9, { w: 1.08, seed: 4, taper: [0, 0], press: 0.1 });
     g.fillStyle = css(HAZARD);
     line(g, 2.5, -9, w - 2.5, -9, { w: 0.6, seed: 5, taper: [0, 0], press: 0 });
     const deck = boxPts(0, 0, w, h, 1, 7, 0.08);
@@ -367,7 +367,7 @@ function sawSpoke(s: CanvasRenderingContext2D, hx: number, hy: number, x: number
   const ex = x - ux * R * 0.4;
   const ey = y - uy * R * 0.4;
   s.fillStyle = INK;
-  line(s, hx, hy, ex, ey, { w: 8.5, seed, taper: [0, 0.05], press: 0.1 });
+  line(s, hx, hy, ex, ey, { w: 7.5, seed, taper: [0, 0.05], press: 0.1 });
   s.fillStyle = css(base, -14);
   line(s, hx, hy, ex, ey, { w: 6, seed: seed + 1, taper: [0, 0], press: 0 });
   const k = -uy > 0 || (uy === 0 && ux < 0) ? 1 : -1;

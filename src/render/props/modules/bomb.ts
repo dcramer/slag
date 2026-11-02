@@ -67,7 +67,7 @@ function windKey(rc: RC, x: number, y: number) {
   const bx = x - 9.8;
   const by = y + 0.6;
   s.fillStyle = INK;
-  line(s, x - 6.2, by, bx + 0.6, by, { w: 2.2, seed: 31, taper: [0, 0], press: 0 });
+  line(s, x - 6.2, by, bx + 0.6, by, { w: 1.72, seed: 31, taper: [0, 0], press: 0 });
   s.fillStyle = css(brass, 6);
   line(s, x - 6.2, by - 0.2, bx + 0.6, by - 0.2, { w: 1, seed: 31, taper: [0, 0], press: 0 });
   const k = Math.max(0.4, Math.abs(turn));

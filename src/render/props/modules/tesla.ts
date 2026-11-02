@@ -78,13 +78,13 @@ function lantern(pal: MetalPalette, col: HSL, moth: boolean) {
     tick(g, 0, -4.6, 0, 4.6, 3.4, 5, '#2b1a12');
     for (let yy = -3.7; yy <= 3.8; yy += 1.5) {
       g.fillStyle = INK;
-      line(g, -3, yy + 0.9, 3, yy + 0.3, { w: 1.5, seed: yy * 7, taper: [0, 0], press: 0 });
+      line(g, -3, yy + 0.9, 3, yy + 0.3, { w: 1.3, seed: yy * 7, taper: [0, 0], press: 0 });
       g.fillStyle = css(copper, yy < 0 ? 8 : -6);
       line(g, -3, yy + 0.6, 3, yy, { w: 1, seed: yy * 7 + 1, taper: [0, 0], press: 0 });
     }
     for (let bx = -5.1; bx <= 5.2; bx += 2.55) {
       g.fillStyle = '#21306e';
-      line(g, bx + 0.25, -5.4, bx + 0.25, 5.4, { w: 1.05, seed: bx, taper: [0, 0], press: 0.1 });
+      line(g, bx + 0.25, -5.4, bx + 0.25, 5.4, { w: 0.87, seed: bx, taper: [0, 0], press: 0.1 });
       g.fillStyle = '#7d9cff';
       line(g, bx, -5.4, bx, 5.4, { w: 0.6, seed: bx + 1, taper: [0, 0], press: 0.1 });
     }

@@ -325,7 +325,7 @@ const turfSprite = () =>
 const lunchbox = () =>
   sprite('it|lunch', -7, -8, 14, 15, (g) => {
     g.fillStyle = INK;
-    stroke(g, poly(-2.6, -2.6, -2.2, -5.6, 2.2, -5.6, 2.6, -2.6), { w: 1.3, seed: 56, taper: [0, 0], press: 0 });
+    stroke(g, poly(-2.6, -2.6, -2.2, -5.6, 2.2, -5.6, 2.6, -2.6), { w: 0.98, seed: 56, taper: [0, 0], press: 0 });
     g.fillStyle = '#8a8a8a';
     stroke(g, poly(-2.6, -2.6, -2.2, -5.4, 2.2, -5.4, 2.6, -2.6), { w: 0.5, seed: 56, taper: [0, 0], press: 0 });
     g.save();

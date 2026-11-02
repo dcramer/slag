@@ -1,6 +1,6 @@
 import { css, type HSL } from '../core/color';
 import { hash2 } from '../core/rng';
-import { blob, line, type P, sn, stroke } from './ink';
+import { blob, inkFor, line, type P, sn, stroke } from './ink';
 import { inkLoop } from './ink-parts';
 
 /**
@@ -10,7 +10,8 @@ import { inkLoop } from './ink-parts';
  * or glows is drawn live.
  */
 
-export const INK = '#1a0f0a';
+/** The pen's own dark, for marks with no one colour under them. A shape's outline is a dark of its fill (`inkFor`). */
+export const INK = '#2a1c15';
 
 /** Bake resolution, px per world px: a close race camera or a crate card on a big screen stays crisp. */
 const K = 6;
@@ -158,7 +159,7 @@ export function pen(g: CanvasRenderingContext2D, pts: readonly P[], seed: number
   inkLoop(g, pts, c.x, c.y, seed, thin, thick, pieces);
 }
 
-/** A whole inked shape: toned and penned. */
+/** A whole inked shape: toned, and penned in a dark of its own colour. */
 export function part(
   g: CanvasRenderingContext2D,
   pts: readonly P[],
@@ -167,7 +168,7 @@ export function part(
   o: ToneOpts & { thin?: number; thick?: number; ink?: string } = {},
 ) {
   tone(g, pts, base, o);
-  pen(g, pts, seed, o.thin ?? 0.6, o.thick ?? 1.4, 3, o.ink ?? INK);
+  pen(g, pts, seed, o.thin ?? 0.6, o.thick ?? 1.4, 3, o.ink ?? inkFor(base));
 }
 
 /** One highlight: a short tapered stroke in a lighter tone. */

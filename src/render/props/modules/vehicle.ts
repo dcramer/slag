@@ -110,7 +110,7 @@ function smoke(F: Frame, lx: number, ly: number, rate: number) {
 /** A rod drawn with the pen. */
 function rod(s: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, col: string, seed = 1) {
   s.fillStyle = INK;
-  line(s, ax, ay, bx, by, { w: w + 1.2, seed, taper: [0, 0], press: 0.05 });
+  line(s, ax, ay, bx, by, { w: w + 0.75, seed, taper: [0, 0], press: 0.05 });
   s.fillStyle = col;
   line(s, ax, ay, bx, by, { w, seed: seed + 1, taper: [0, 0], press: 0.05 });
 }
@@ -147,7 +147,7 @@ function seat(g: CanvasRenderingContext2D, x: number, y: number, col: HSL, seed:
 /** A steering wheel on its column, the column foot at (x, y), leaning back toward the seat. */
 function wheelie(g: CanvasRenderingContext2D, x: number, y: number, seed: number) {
   g.fillStyle = INK;
-  line(g, x, y, x - 2.6, y - 5.2, { w: 1.3, seed, taper: [0, 0], press: 0.1 });
+  line(g, x, y, x - 2.6, y - 5.2, { w: 1.02, seed, taper: [0, 0], press: 0.1 });
   g.fillStyle = '#5c616b';
   line(g, x, y, x - 2.6, y - 5.2, { w: 0.6, seed, taper: [0, 0], press: 0.1 });
   part(g, ovalPts(x - 2.9, y - 5.6, 2.6, 0.9, seed + 1, 0.03, 12), { h: 220, s: 8, l: 20 }, seed + 1, { depth: 0.2, thin: 0.35, thick: 0.7 });
@@ -174,7 +174,7 @@ function drawRoute(rc: RC, m: Vehicle, d: DrawCtx) {
           g.fillRect(x, y - 2, 4, 1.6);
         }
         g.fillStyle = INK;
-        line(g, x0, y - 2.6, x1, y - 2.6, { w: 2.4, seed: 3, taper: [0, 0], press: 0.1 });
+        line(g, x0, y - 2.6, x1, y - 2.6, { w: 1.84, seed: 3, taper: [0, 0], press: 0.1 });
         g.fillStyle = css(METALS.steel.base);
         line(g, x0, y - 2.9, x1, y - 2.9, { w: 1, seed: 4, taper: [0, 0], press: 0.1 });
       } else if (m.look === 'tractor') {
@@ -273,7 +273,7 @@ function tractor(F: Frame) {
       fender.push({ x: rx + Math.cos(a) * (R + 1.8), y: -R + Math.sin(a) * (R + 1.8) });
     }
     s.fillStyle = INK;
-    stroke(s, fender, { w: 3.6, seed: 19, taper: [0.05, 0.05], press: 0.1 });
+    stroke(s, fender, { w: 2.96, seed: 19, taper: [0.05, 0.05], press: 0.1 });
     s.fillStyle = css(paint, -6);
     stroke(s, fender, { w: 2, seed: 19, taper: [0.05, 0.05], press: 0.1 });
     // Headlight beam.
@@ -394,7 +394,7 @@ function ram(F: Frame) {
     dot(s, hx + 3, ly - 1.6, 0.8, 44, css(d.pal.light));
     const ring = ovalPts(hx + 5.4, ly + 3, 2.1, 2.5, 45, 0.02, 14);
     s.fillStyle = INK;
-    stroke(s, [...ring, ring[0]], { w: 1.6, seed: 45, taper: [0, 0], press: 0.1 });
+    stroke(s, [...ring, ring[0]], { w: 1.28, seed: 45, taper: [0, 0], press: 0.1 });
     s.fillStyle = css(METALS.brass.base);
     stroke(s, [...ring, ring[0]], { w: 0.8, seed: 45, taper: [0, 0], press: 0.1 });
     stamp(s, front);

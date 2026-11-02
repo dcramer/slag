@@ -54,7 +54,7 @@ export function hangarLoft(g: CanvasRenderingContext2D, hue: HSL, pal: MetalPale
   // The windsock at the runway's end: a thin pole, the sock in hazard orange, filled with a breeze.
   const poleX = X(ax1 - 1.6);
   g.fillStyle = INK;
-  line(g, poleX, Y(aTop), poleX + 0.1, Y(1.4), { w: 0.75, seed: seed + 4, taper: [0, 0.1], press: 0 });
+  line(g, poleX, Y(aTop), poleX + 0.1, Y(1.4), { w: 0.52, seed: seed + 4, taper: [0, 0.1], press: 0 });
   const sock = poly(poleX - 0.2, Y(1.3), poleX - 0.2, Y(3.5), poleX - 4.6, Y(3), poleX - 4.8, Y(1.7));
   part(g, sock, { h: 22, s: 92, l: 56 }, seed + 5, { depth: 0.3, thin: 0.3, thick: 0.7 });
   g.fillStyle = '#fbf6ee';

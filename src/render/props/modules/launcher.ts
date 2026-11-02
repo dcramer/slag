@@ -352,7 +352,7 @@ const LOOKS: Record<LauncherStyle, Look> = {
       [-9.5, 2, 19, 7],
       (g, k) => {
         g.fillStyle = INK;
-        line(g, -5, 6, 4, 6, { w: 1.6, seed: k.seed, taper: [0, 0], press: 0 });
+        line(g, -5, 6, 4, 6, { w: 1.12, seed: k.seed, taper: [0, 0], press: 0 });
         for (const x of [-5, 3.6]) wheel(g, x, 6.1, 1.9, k.pal, k.seed + x);
       },
     ],
