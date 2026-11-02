@@ -1073,7 +1073,13 @@ async function kickScenario(browser: Browser, base: string) {
     `every peer labels the same player Host (slot ${labels.join('/')})`,
   );
   const kickable = (p: Page) => p.evaluate(() => (window as any).slagDebug.renderer.hud.net?.kickable as number[]);
-  check((await kickable(A)).length === 3 && (await kickable(B)).length === 0, 'only the host has kick controls');
+  // hud.net is rebuilt each drawn frame, and a drawn frame can take a while on a loaded box: give it a few.
+  let kicks = { a: -1, b: -1 };
+  for (let i = 0; i < 20 && !(kicks.a === 3 && kicks.b === 0); i++) {
+    if (i) await sleep(250);
+    kicks = { a: (await kickable(A))?.length ?? -1, b: (await kickable(B))?.length ?? -1 };
+  }
+  check(kicks.a === 3 && kicks.b === 0, `only the host has kick controls (host ${kicks.a}, guest ${kicks.b})`);
   await A.screenshot({ path: `${out}/online-kick-host.png` });
   await B.screenshot({ path: `${out}/online-kick-guest.png` });
   console.log(`     ${out}/online-kick-host.png\n     ${out}/online-kick-guest.png`);
