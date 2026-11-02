@@ -14,6 +14,7 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 
 ## Parody
 - Our goal is to parody other games, especially with items. Players should recognize what's being mocked and laugh at the twist.
+- What we parody: the build-then-race party platformer is the core loop's inspiration. Nintendo's platformers are the main well: homages across many franchises, the plumber's blocks, pipes and shells, the ape's barrels and girders, and more. The big crossover brawler is the model for items and stage hazards: lots of them, chaotic and readable.
 - A parody is ours: our own name, our own art and a comic twist on the idea. Never the original's real name, art, characters or level designs.
 - Mock the trope before any one game; a nod at one game gets a sound-alike or spoof name. Each part's target, silhouette and visual gag are in [PARODY.md](PARODY.md).
 
@@ -72,7 +73,7 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - **Not everything is death.** Most parts have an upside *and* a side effect you have to worry about: knockback, slow, freeze, sticky, misdirection, or a platform that sinks. Lethal parts exist, but disruption is the norm.
 - **Some projectiles are platforms.** For example, gliders fired from a launcher can be ridden, but they sag and sink under weight or over time.
 - **Demolition comes in kinds:** prop-only charges that leave terrain, terrain drills or tunnelers, and different blast shapes. All respect spawn and goal protection.
-- **Mystery crates** are solid one-tile blocks. Hit one from below or bump its side and a random *held item* from its pool pops out of the top (out of the bottom under a low roof). Standing on it does nothing. Crates roll their pool (mixed, shots or gadgets, hinted by the spark color), and either refill on a timer or run out and go dark. Which item pops is seeded per race, so a crate that survives a round doesn't repeat itself, and it's the same on every peer.
+- **The loot box** is one part with one look: a solid one-tile question-block cube. Hit it from below or bump its side and a random *held item* pops out of the top (out of the bottom under a low roof); any item can come out. Standing on it does nothing. A box either refills on a timer or runs out and goes dark. Which item pops is seeded per race, so a crate that survives a round doesn't repeat itself, and it's the same on every peer.
 - **Held items** are carried one at a time, grabbed by touching them (contested items go to the nearest runner). The Use button fires them; down + Use tosses them. Loose items fizzle out after 10 s. Runners who die or finish drop theirs, except into the pit. Nothing carries over between rounds. **Items never kill on their own**: they bonk (a shove plus ~0.5 s of seeing stars, with no control), and a death soon after a bonk credits the bonker, like any trap kill. Every item has a catch:
   - **Master Noodle** (4 swings, a foam sword): bonks rivals and swats shots back, which makes them yours (rideable gliders and stuck patches are left alone). You crawl while you swing.
   - **Evicted Shell** (a kicked shell): slides along floors and banks off walls, and can come back to bonk its kicker.

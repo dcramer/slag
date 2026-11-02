@@ -23,9 +23,7 @@ Each row gives what the item or part mocks, its silhouette (what must read at ga
 
 | Look | Names | Mocks | Silhouette | Gag |
 |---|---|---|---|---|
-| crate | Loot Box, Surprise Mechanic, Lucky Block | The floating question block, as a loot box | A floating block with a glowing porthole | A coin slot on top. The pool's spark color shows as a rarity glow. |
-| chest | Fanfare Chest, Treasure Trunk | The chest-opening fanfare | A domed treasure chest | The lid pops open with a burst of light, then it's empty again. |
-| gift | Login Gift, Free Gift, Present | The mobile daily-login reward | A ribboned gift box | A "DAY 1" tag that droops once the gift is spent. |
+| loot box | Loot Box, Surprise Mechanic, Lucky Block | The floating question block, as a loot box | A chunky bevelled cube with our own question glyph, punched from below | It pops and squashes when hit; a coin slot on top; dark and dented once spent. |
 
 ## Parts
 

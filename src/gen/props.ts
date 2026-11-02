@@ -20,8 +20,8 @@ import type {
   Trim,
 } from '../sim/props/types';
 
-import { ITEM_KINDS, type ItemKind } from '../sim/items/types';
-import { AMMO, type MysteryLook } from '../sim/props/types';
+import { ITEM_KINDS } from '../sim/items/types';
+import { AMMO } from '../sim/props/types';
 
 export type { Aim, Ammo, Archetype, Head, LauncherStyle, Material, MetalStyle, Module, Motion, PartSize, PropDef, PropStyle, Role, Trim };
 export { AMMO };
@@ -973,46 +973,24 @@ const RECIPES: Record<Archetype, (rng: Rng, style: PropStyle) => Recipe> = {
     };
   },
 
+  /** One loot box, the question block you punch from below: any item can come out. Only how often it gives varies. */
   mystery(rng) {
-    const pools: Record<'shots' | 'gadgets' | 'mixed', ItemKind[]> = {
-      shots: ['sword', 'puck', 'boomerang'],
-      gadgets: ['shield', 'rocket', 'smoke'],
-      mixed: [...ITEM_KINDS],
-    };
-    const poolId = rng.weighted([
-      ['mixed', 3],
-      ['shots', 1.5],
-      ['gadgets', 1.5],
-    ] as const);
     const uses = rng.weighted([
       [0, 2.5],
       [1, 1.5],
       [3, 1],
     ] as const);
     const refill = rng.int(150, 420);
-    const look = rng.weighted<MysteryLook>([
-      ['crate', 3],
-      ['chest', 1.5],
-      ['gift', 1.5],
-    ]);
-    const adjs: string[] = [];
+    const adjs: string[] = ['Gacha', 'Chaotic', 'Unlabeled'];
     if (uses === 1) adjs.push('Limited-Time', 'One-Shot');
     else if (uses > 1) adjs.push('Battle-Pass', 'Rationed');
     else if (refill < 230) adjs.push('Bottomless', 'Pay-to-Win', 'Whale-Bait');
     else if (refill > 350) adjs.push('Daily', 'Sleepy');
-    if (poolId === 'shots') adjs.push('Armed', 'Rowdy');
-    if (poolId === 'gadgets') adjs.push('Gadget', 'Clever', 'Tinkerer’s');
-    if (poolId === 'mixed') adjs.push('Gacha', 'Chaotic', 'Unlabeled');
-    const nouns: Record<MysteryLook, string[]> = {
-      crate: ['Loot Box', 'Surprise Mechanic', 'Lucky Block'],
-      chest: ['Fanfare Chest', 'Treasure Trunk'],
-      gift: ['Login Gift', 'Free Gift', 'Present'],
-    };
     return {
       archetype: 'mystery',
       role: 'utility',
-      name: title(rng, adjs, nouns[look]),
-      modules: [{ type: 'mystery', cells: [[0, 0]], pool: pools[poolId], uses, refill, look, seed: rng.int(0, 1 << 20) }],
+      name: title(rng, adjs, ['Loot Box', 'Surprise Mechanic', 'Lucky Block']),
+      modules: [{ type: 'mystery', cells: [[0, 0]], pool: [...ITEM_KINDS], uses, refill, look: 'crate', seed: rng.int(0, 1 << 20) }],
     };
   },
 
