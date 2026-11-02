@@ -12,7 +12,8 @@ import type { MetalPalette, RC } from './kit';
  * find out what a part costs in this style: each of these is a rewrite of that part's art, not a filter.
  */
 
-const INK = '#1a0f0a';
+/** The pen's own dark, as `INK` in ink-props.ts (which imports this file, so it can't import that). */
+const INK = '#2a1c15';
 
 /** Stroke round a closed shape in `n` overlapping pieces, heavier where it faces away from the light. */
 export function inkLoop(g: CanvasRenderingContext2D, pts: readonly P[], cx: number, cy: number, seed: number, thin: number, thick: number, pieces = 3) {
@@ -85,7 +86,7 @@ export function inkSaw(rc: RC, x: number, y: number, R: number, rot: number, pal
   s.rotate(rot);
   s.fillStyle = INK;
   s.lineJoin = 'round';
-  stroke(s, [...pts, pts[0], pts[1]], { w: 0.95, seed, taper: [0.01, 0.01], press: 0.35 });
+  stroke(s, [...pts, pts[0], pts[1]], { w: 0.66, seed, taper: [0.01, 0.01], press: 0.35 });
   // Disc, holes and a bolt.
   s.fillStyle = css(pal.base, 8);
   blob(s, 0, 0, R * 0.5, seed + 1, 1, 0.05);
@@ -151,7 +152,7 @@ export function inkWood(s: CanvasRenderingContext2D, cells: readonly (readonly [
     }
     // The cross brace is what says "crate" at this size.
     s.fillStyle = INK;
-    line(s, px + 1.2, py + 1.6, px + TILE - 1.4, py + TILE - 1.6, { w: 3.6, seed: seed + 5, taper: [0.03, 0.03], press: 0.15 });
+    line(s, px + 1.2, py + 1.6, px + TILE - 1.4, py + TILE - 1.6, { w: 2.96, seed: seed + 5, taper: [0.03, 0.03], press: 0.15 });
     s.fillStyle = css(base, 14);
     line(s, px + 1.2, py + 1.6, px + TILE - 1.4, py + TILE - 1.6, { w: 2, seed: seed + 6, taper: [0.03, 0.03], press: 0.15 });
     s.fillStyle = INK;
@@ -211,7 +212,7 @@ export function inkHay(g: CanvasRenderingContext2D, d: Decor) {
   g.fillStyle = INK;
   for (const f of [-0.2, 0.22]) {
     const tx = x + f * w;
-    line(g, tx, y - h / 2 - 0.3, tx + sn(f * 9, 1, seed) * 0.8, y + h / 2 + 0.3, { w: 1.15, seed: seed + 30, taper: [0.03, 0.03], press: 0.2 });
+    line(g, tx, y - h / 2 - 0.3, tx + sn(f * 9, 1, seed) * 0.8, y + h / 2 + 0.3, { w: 0.8, seed: seed + 30, taper: [0.03, 0.03], press: 0.2 });
   }
   g.restore();
   g.fillStyle = INK;
@@ -233,7 +234,7 @@ export function inkFence(g: CanvasRenderingContext2D, d: Decor) {
       pts.push({ x: x0 - 2 + (w + 4) * t, y: d.y + a + (b - a) * t + Math.sin(t * Math.PI) * 0.5 });
     }
     g.fillStyle = INK;
-    stroke(g, pts, { w: 3, seed: seed + 1, taper: [0.02, 0.02], press: 0.2 });
+    stroke(g, pts, { w: 2.48, seed: seed + 1, taper: [0.02, 0.02], press: 0.2 });
     g.fillStyle = css(c, 2);
     stroke(g, pts, { w: 1.7, seed: seed + 2, taper: [0.02, 0.02], press: 0.2 });
   }
@@ -241,7 +242,7 @@ export function inkFence(g: CanvasRenderingContext2D, d: Decor) {
     const px = x0 + i * TILE - (i === d.span ? 2 : 0);
     const lean = (hash2(i, 3, seed) - 0.5) * 1.8;
     g.fillStyle = INK;
-    line(g, px + 1 + lean, d.y - 11.6, px + 1, d.y + 1, { w: 3.9, seed: seed + i, taper: [0.03, 0], press: 0.15 });
+    line(g, px + 1 + lean, d.y - 11.6, px + 1, d.y + 1, { w: 3.34, seed: seed + i, taper: [0.03, 0], press: 0.15 });
     g.fillStyle = css(c, -6);
     line(g, px + 1 + lean, d.y - 11.2, px + 1, d.y + 1, { w: 2.5, seed: seed + i + 9, taper: [0.03, 0], press: 0.15 });
     g.fillStyle = css(c, 18);
@@ -258,7 +259,7 @@ export function inkThorns(s: CanvasRenderingContext2D, angle: number, seed: numb
   // Which half of a thorn faces the light: the one on local -y, turned into the world.
   const upLit = shadeOf(Math.sin(angle), -Math.cos(angle)) < 0.5;
   s.fillStyle = INK;
-  line(s, 7.6, -7.8, 7.6, 7.8, { w: 3.2, seed, taper: [0.05, 0.05], press: 0.2 });
+  line(s, 7.6, -7.8, 7.6, 7.8, { w: 2.52, seed, taper: [0.05, 0.05], press: 0.2 });
   s.fillStyle = rail;
   line(s, 7.3, -7.2, 7.3, 7.2, { w: 1.5, seed: seed + 1, taper: [0.05, 0.05], press: 0.2 });
   for (let i = 0; i < 3; i++) {

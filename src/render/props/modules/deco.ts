@@ -61,7 +61,7 @@ function press(w: number, h: number, pal: MetalPalette) {
       });
     }
     g.fillStyle = INK;
-    for (let i = 1; i < hose.length; i++) line(g, hose[i - 1].x, hose[i - 1].y, hose[i].x, hose[i].y, { w: 1.8, seed: i, taper: [0, 0], press: 0 });
+    for (let i = 1; i < hose.length; i++) line(g, hose[i - 1].x, hose[i - 1].y, hose[i].x, hose[i].y, { w: 1.26, seed: i, taper: [0, 0], press: 0 });
     const beam = boxPts(0, 0, w, 14, 1.6, 4, 0.15);
     tone(g, beam, pal.base, { depth: 1.6 });
     g.save();

@@ -205,7 +205,7 @@ export function lattice(s: CanvasRenderingContext2D, x: number, y0: number, y1: 
   const c = paint ?? pal.base;
   for (const ox of [-w / 2, w / 2]) {
     s.fillStyle = INK;
-    line(s, x + ox, y0, x + ox, y1, { w: 2.8, seed: ox, taper: [0, 0], press: 0.1 });
+    line(s, x + ox, y0, x + ox, y1, { w: 2.28, seed: ox, taper: [0, 0], press: 0.1 });
     s.fillStyle = css(c, ox < 0 ? 6 : -10);
     line(s, x + ox, y0, x + ox, y1, { w: 1.5, seed: ox + 1, taper: [0, 0], press: 0.1 });
   }
@@ -214,8 +214,8 @@ export function lattice(s: CanvasRenderingContext2D, x: number, y0: number, y1: 
   for (let y = y0; y < y1 - 0.5; y += step) {
     const yb = Math.min(y1, y + step);
     s.fillStyle = INK;
-    line(s, x + (flip ? w / 2 : -w / 2), y, x + (flip ? -w / 2 : w / 2), yb, { w: 1.5, seed: y, taper: [0, 0], press: 0 });
-    line(s, x - w / 2, yb, x + w / 2, yb, { w: 1.5, seed: y + 1, taper: [0, 0], press: 0 });
+    line(s, x + (flip ? w / 2 : -w / 2), y, x + (flip ? -w / 2 : w / 2), yb, { w: 1.05, seed: y, taper: [0, 0], press: 0 });
+    line(s, x - w / 2, yb, x + w / 2, yb, { w: 1.18, seed: y + 1, taper: [0, 0], press: 0 });
     s.fillStyle = css(c, -4);
     line(s, x + (flip ? w / 2 : -w / 2), y, x + (flip ? -w / 2 : w / 2), yb, { w: 0.7, seed: y, taper: [0, 0], press: 0 });
     line(s, x - w / 2, yb, x + w / 2, yb, { w: 0.7, seed: y + 1, taper: [0, 0], press: 0 });
@@ -226,7 +226,7 @@ export function lattice(s: CanvasRenderingContext2D, x: number, y0: number, y1: 
 /** A metal bar (rods, spars, booms): an ink ribbon, the metal over it, a lit stripe along the top. */
 export function bar(s: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, w: number, pal: MetalPalette) {
   s.fillStyle = INK;
-  line(s, x1, y1, x2, y2, { w: w + 1.3, seed: 1, taper: [0, 0], press: 0.05 });
+  line(s, x1, y1, x2, y2, { w: w + 0.8, seed: 1, taper: [0, 0], press: 0.05 });
   s.fillStyle = css(pal.base);
   line(s, x1, y1, x2, y2, { w, seed: 2, taper: [0, 0], press: 0.05 });
   const d = Math.hypot(x2 - x1, y2 - y1) || 1;

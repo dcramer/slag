@@ -344,8 +344,8 @@ const billboard: Shell = (rc, m, d) => {
     const by = bh * 0.38;
     flat(g, boxPts(bx, by, cs, cs, 0.8, sd + 2), { h: 30, s: 50, l: 48 }, t, sd + 3, 0.6);
     g.fillStyle = ink({ h: 30, s: 50, l: 48 });
-    line(g, bx + 1.5, by + 1.5, bx + cs - 1.5, by + cs - 1.5, { w: 1.2, seed: sd, taper: [0, 0], press: 0 });
-    line(g, bx + 1.5, by + cs * 0.5, bx + cs - 1.5, by + cs * 0.5, { w: 0.8, seed: sd + 1, taper: [0, 0], press: 0 });
+    line(g, bx + 1.5, by + 1.5, bx + cs - 1.5, by + cs - 1.5, { w: 1.04, seed: sd, taper: [0, 0], press: 0 });
+    line(g, bx + 1.5, by + cs * 0.5, bx + cs - 1.5, by + cs * 0.5, { w: 0.56, seed: sd + 1, taper: [0, 0], press: 0 });
     const sx = bx + cs + w * 0.18;
     const sy = by + cs * 0.45;
     const burst: P[] = [];

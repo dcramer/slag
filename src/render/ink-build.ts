@@ -462,7 +462,7 @@ export function markWood(g: CanvasRenderingContext2D, b: Block) {
     board(g, px + L, py + 2.7, px + 2.8, py + TILE - 2.7, { ...wood, l: wood.l + 3 }, k + 5, false);
     board(g, px + TILE - 2.8, py + 2.7, px + TILE + R, py + TILE - 2.7, { ...wood, l: wood.l }, k + 6, false);
     g.fillStyle = ink;
-    line(g, px + 2.4, py + TILE - 2.6, px + TILE - 2.4, py + 2.6, { w: 3.7, seed: k, taper: [0.02, 0.02], press: 0.15 });
+    line(g, px + 2.4, py + TILE - 2.6, px + TILE - 2.4, py + 2.6, { w: 3.06, seed: k, taper: [0.02, 0.02], press: 0.15 });
     g.fillStyle = css(wood, 4);
     line(g, px + 2.4, py + TILE - 2.6, px + TILE - 2.4, py + 2.6, { w: 2.1, seed: k + 1, taper: [0.02, 0.02], press: 0.15 });
     g.fillStyle = css(wood, 18, 1, -6);
@@ -674,7 +674,7 @@ function spikeRail(g: CanvasRenderingContext2D, upLit: boolean, seed: number, ra
   const dark = '#5d6370';
   // Rail: a dark bar on the face, two bolts through it.
   g.fillStyle = INK;
-  line(g, 7.7, -7.9, 7.7, 7.9, { w: 3.6, seed, taper: [0.04, 0.04], press: 0.15 });
+  line(g, 7.7, -7.9, 7.7, 7.9, { w: 2.92, seed, taper: [0.04, 0.04], press: 0.15 });
   g.fillStyle = css(rail, 6);
   line(g, 7.4, -7.3, 7.4, 7.3, { w: 1.9, seed: seed + 1, taper: [0.05, 0.05], press: 0.15 });
   for (const by of [-5.6, 5.6]) {

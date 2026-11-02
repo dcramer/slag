@@ -40,8 +40,8 @@ const chairlift: RotorSkin = {
     for (let x = p.x + 2; x <= p.x + p.w - 1.9; x += Math.max(6, (p.w - 4) / Math.round((p.w - 4) / 9))) tube(s, x, p.y - 9, x, p.y, 0.6, paint, 13 + x);
     // Footrest, hung off the seat's ends.
     s.fillStyle = INK;
-    line(s, p.x + 3, p.y + p.h, p.x + 5, p.y + p.h + 5, { w: 0.6, seed: 14, taper: [0, 0], press: 0 });
-    line(s, p.x + p.w - 3, p.y + p.h, p.x + p.w - 5, p.y + p.h + 5, { w: 0.6, seed: 15, taper: [0, 0], press: 0 });
+    line(s, p.x + 3, p.y + p.h, p.x + 5, p.y + p.h + 5, { w: 0.42, seed: 14, taper: [0, 0], press: 0 });
+    line(s, p.x + p.w - 3, p.y + p.h, p.x + p.w - 5, p.y + p.h + 5, { w: 0.42, seed: 15, taper: [0, 0], press: 0 });
     tube(s, p.x + 4, p.y + p.h + 5, p.x + p.w - 4, p.y + p.h + 5, 0.8, STEEL, 16);
   },
   platform(rc, _m, d, _a, p) {
