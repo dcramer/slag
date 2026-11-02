@@ -7,24 +7,7 @@ import { word } from './names';
  * its own material colors; the player's color is what the toy wears or has painted on it, big enough
  * to read at play scale, and it's the color the HUD uses for that player.
  */
-export const TOYS = [
-  'robot',
-  'piggybank',
-  'tincan',
-  'kettle',
-  'bell',
-  'slagblob',
-  'soldier',
-  'beetle',
-  'jackbox',
-  'chick',
-  'top',
-  'rocket',
-  'train',
-  'duck',
-  'frog',
-  'lantern',
-] as const;
+export const TOYS = ['soldier', 'robot', 'rocket', 'top', 'train', 'duck', 'bell', 'jackbox', 'frog', 'lantern', 'kettle', 'chick'] as const;
 export type Toy = (typeof TOYS)[number];
 
 export type EyeStyle = 'dot' | 'ring' | 'sleepy' | 'visor' | 'angry';
@@ -52,25 +35,20 @@ export interface CharacterDef {
 }
 
 /** Each kind's own materials, muted: faded tin paints, enamels, iron, bronze. */
-const TIN = [hsl3(40, 30, 84), hsl3(200, 14, 74), hsl3(95, 16, 70), hsl3(20, 24, 76)];
 const ENAMEL = [hsl3(45, 22, 88), hsl3(160, 18, 74), hsl3(205, 20, 72), hsl3(10, 22, 74)];
 const PAINTS: Record<Toy, readonly HSL[]> = {
-  robot: [hsl3(200, 8, 70), hsl3(40, 10, 72), hsl3(160, 10, 66)],
-  piggybank: [hsl3(350, 26, 80), hsl3(40, 26, 86), hsl3(10, 22, 74)],
-  tincan: [hsl3(40, 8, 80), hsl3(200, 6, 76)],
-  kettle: ENAMEL,
-  bell: [hsl3(28, 26, 46), hsl3(20, 18, 42), hsl3(35, 14, 52)],
-  slagblob: [hsl3(20, 12, 34), hsl3(30, 16, 38), hsl3(0, 8, 32)],
   soldier: [hsl3(30, 30, 78), hsl3(40, 20, 84)],
-  beetle: TIN,
-  jackbox: [hsl3(35, 40, 88), hsl3(20, 30, 86)],
-  chick: [hsl3(48, 42, 80), hsl3(40, 30, 86), hsl3(30, 26, 82)],
-  top: [hsl3(35, 34, 70), hsl3(25, 30, 62), hsl3(40, 20, 82)],
+  robot: [hsl3(200, 8, 70), hsl3(40, 10, 72), hsl3(160, 10, 66)],
   rocket: [hsl3(200, 6, 82), hsl3(40, 14, 86), hsl3(210, 12, 72)],
+  top: [hsl3(35, 34, 70), hsl3(25, 30, 62), hsl3(40, 20, 82)],
   train: [hsl3(150, 14, 34), hsl3(210, 12, 30), hsl3(10, 12, 32)],
   duck: [hsl3(45, 26, 90), hsl3(40, 20, 84), hsl3(200, 10, 86)],
-  frog: [hsl3(95, 24, 60), hsl3(120, 18, 54), hsl3(70, 22, 62)],
+  bell: [hsl3(28, 26, 46), hsl3(20, 18, 42), hsl3(35, 14, 52)],
+  jackbox: [hsl3(35, 40, 88), hsl3(20, 30, 86)],
+  frog: [hsl3(95, 24, 56), hsl3(120, 18, 50), hsl3(70, 22, 58)],
   lantern: [hsl3(20, 8, 30)],
+  kettle: ENAMEL,
+  chick: [hsl3(48, 42, 80), hsl3(40, 30, 86), hsl3(30, 26, 82)],
 };
 
 /**

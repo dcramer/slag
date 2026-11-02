@@ -2,6 +2,7 @@ import { deriveSeed } from '../../core/rng';
 import { type CharacterDef, generateCharacter, TOYS } from '../../gen/character';
 import { Rig } from '../character';
 import { drawInkAccessory, drawInkRunner, ropeOf, type RunnerPose } from '../ink-character';
+import { STRIDE } from '../ink-figure';
 
 /**
  * The toy catalog for docs/CHARACTERS.md and `pnpm shot cast`: every kind on two seeds, a row of
@@ -21,18 +22,34 @@ const POSES: [string, Partial<RunnerPose>][] = [
 
 const def = (i: number, salt: string, toy = TOYS[i % TOYS.length]): CharacterDef => generateCharacter(deriveSeed(0x5ca7, `${salt}:${i}`), toy);
 
-function runner(s: CanvasRenderingContext2D, c: CharacterDef, x: number, y: number, p: Partial<RunnerPose>, scale: number, facing: number, t: number) {
+/** Stride phase for a mid-run pose: every gait is well into its stride here, none at rest. */
+const MID_RUN = 2.4 * STRIDE;
+
+function runner(
+  s: CanvasRenderingContext2D,
+  c: CharacterDef,
+  x: number,
+  y: number,
+  p: Partial<RunnerPose>,
+  scale: number,
+  facing: number,
+  t: number,
+  stride = 0,
+) {
   // In world units at the origin, then scaled, so the rig's string or scarf hangs as it does in a race.
+  // The runner's x sets its stride phase, so `stride` shifts it there and back.
   s.save();
   s.translate(x, y);
   s.scale(scale, scale);
+  s.translate(-stride, 0);
   const rope = ropeOf(c);
   if (rope) {
     const rig = new Rig();
     for (let i = 0; i < 90; i++) rig.step(rope, -facing * 5, rope.kind === 'string' ? -3 : -10, 1 / 60, -(p.vx ?? 0) * 0.6 - facing * 8, -0.8);
     drawInkAccessory(s, c, rig);
   }
-  drawInkRunner({ s, g: null }, c, 0, 0, { facing, vy: 0, grounded: true, t, ...p, vx: (p.vx ?? 0) * facing });
+  if (rope) s.translate(stride, 0);
+  drawInkRunner({ s, g: null }, c, rope ? 0 : stride, 0, { facing, vy: 0, grounded: true, t, ...p, vx: (p.vx ?? 0) * facing });
   s.restore();
 }
 
@@ -84,6 +101,69 @@ export function toyCatalog(t = 0.4): HTMLCanvasElement {
     runner(s, c, 60 + step * (i + 0.5), qy + 80, { grounded: true }, 2.5, 1, t);
     runner(s, c, W / 2 + 30 + step * (i + 0.5), qy + 80, { grounded: true }, 2.5, 1, t);
   });
+  document.body.appendChild(cv);
+  return cv;
+}
+
+/**
+ * The silhouette test: every kind as a solid black shape, at rest and mid-run, at 1 px per world px (a
+ * runner about 16 px tall) and at play scale (2.5×, as at 1080p), then mid-run in color on dark and light
+ * ground. Each should be nameable from its shape alone, and no two should share one.
+ */
+export function toySilhouettes(t = 0.4): HTMLCanvasElement {
+  const n = TOYS.length;
+  const cell = 150;
+  const W = n * cell + 40;
+  const H = 860;
+  const cv = document.createElement('canvas');
+  cv.width = W;
+  cv.height = H;
+  cv.style.cssText = `position:fixed;left:0;top:0;z-index:99;width:${W}px;height:${H}px`;
+  const s = cv.getContext('2d')!;
+  s.fillStyle = '#e9dcc4';
+  s.fillRect(0, 0, W, H);
+  s.fillStyle = '#1a1210';
+  s.fillRect(0, 700, W / 2, 160);
+  s.textAlign = 'center';
+  const label = (txt: string, x: number, y: number, size = 14, color = '#3d2e26') => {
+    s.font = `700 ${size}px Barlow, sans-serif`;
+    s.fillStyle = color;
+    s.fillText(txt, x, y);
+  };
+  const scratch = document.createElement('canvas');
+  scratch.width = cell;
+  scratch.height = 130;
+  const g = scratch.getContext('2d')!;
+  /** One kind as a solid shape: drawn, then everything it covered filled black. */
+  const solid = (c: CharacterDef, x: number, y: number, scale: number, p: Partial<RunnerPose>, stride: number) => {
+    g.globalCompositeOperation = 'source-over';
+    g.clearRect(0, 0, cell, 130);
+    runner(g, c, cell / 2, 112, p, scale, 1, t, stride);
+    g.globalCompositeOperation = 'source-in';
+    g.fillStyle = '#000';
+    g.fillRect(0, 0, cell, 130);
+    s.drawImage(scratch, x - cell / 2, y - 112);
+  };
+  const rows: [string, number, Partial<RunnerPose>, number, number][] = [
+    ['At rest, 1 px per world px (about 16 px tall)', 70, { grounded: true }, 1, 0],
+    ['Mid-run, 1 px per world px', 150, { grounded: true, vx: 260 }, 1, MID_RUN],
+    ['At rest, play scale (2.5×, as at 1080p)', 300, { grounded: true }, 2.5, 0],
+    ['Mid-run, play scale', 450, { grounded: true, vx: 260 }, 2.5, MID_RUN],
+  ];
+  label(`The silhouette test: ${n} kinds`, W / 2, 24, 20, '#120b08');
+  for (const [name, y, pose, scale, stride] of rows) {
+    label(name, 110, y - (scale > 1 ? 70 : 34), 13);
+    TOYS.forEach((toy, i) => solid(def(i * 2, 'cat', toy), 20 + cell * (i + 0.5), y, scale, pose, stride));
+  }
+  TOYS.forEach((toy, i) => label(toy, 20 + cell * (i + 0.5), 476));
+  // Mid-run, in color, on light ground and on dark.
+  label('Mid-run, in color, play scale', 110, 520, 13);
+  TOYS.forEach((toy, i) => runner(s, def(i * 2, 'cat', toy), 20 + cell * (i + 0.5), 640, { grounded: true, vx: 260 }, 2.5, 1, t, MID_RUN));
+  TOYS.forEach((toy, i) => {
+    const x = (W / 2 / n) * (i + 0.5);
+    runner(s, def(i * 2, 'cat', toy), x, 820, { grounded: true, vx: 260 }, 2.5, 1, t, MID_RUN);
+  });
+  TOYS.forEach((toy, i) => runner(s, def(i * 2, 'cat', toy), W / 2 + (W / 2 / n) * (i + 0.5), 820, { grounded: true, vx: 260 }, 2.5, 1, t, MID_RUN));
   document.body.appendChild(cv);
   return cv;
 }
