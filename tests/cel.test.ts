@@ -89,6 +89,70 @@ describe('compositor', () => {
       expect(drawn.slice(0, 2)).toEqual([scene, fg]);
     });
   });
+
+  describe('a lost context', () => {
+    afterEach(() => void vi.unstubAllGlobals());
+
+    /** A WebGL canvas whose context can be taken away and given back, and the stand-in canvas the compositor asks for. */
+    function losable() {
+      const { gl, log } = fakeGL();
+      const { ctx, drawn } = fake2D();
+      const on = new Map<string, (e: { preventDefault(): void }) => void>();
+      const remove = vi.fn();
+      const stand = { style: {}, width: 0, height: 0, getContext: () => ctx, remove };
+      vi.stubGlobal('document', { createElement: () => stand });
+      const after = vi.fn();
+      const canvas = {
+        getContext: (k: string) => (k === 'webgl2' ? gl : null),
+        addEventListener: (type: string, fn: (e: { preventDefault(): void }) => void) => void on.set(type, fn),
+        after,
+      };
+      const comp = createCompositor(canvas as unknown as HTMLCanvasElement);
+      comp.resize(640, 360);
+      const fire = (type: string) => {
+        const preventDefault = vi.fn();
+        on.get(type)!({ preventDefault });
+        return preventDefault;
+      };
+      return { comp, log, drawn, stand, after, remove, fire };
+    }
+
+    it('keeps drawing on a stand-in canvas until it comes back, then builds the cel pass again', () => {
+      const { comp, log, drawn, stand, after, remove, fire } = losable();
+      const compiled = log.compiled.length;
+      // Asking for the restore: without preventDefault the browser never gives the context back.
+      expect(fire('webglcontextlost')).toHaveBeenCalled();
+      expect(comp.webgl).toBe(false);
+      expect(after).toHaveBeenCalledWith(stand);
+      expect(stand.width).toBe(640);
+      const draws = log.draws.length;
+      comp.render(scene, fg, light, glow, params);
+      expect(log.draws.length).toBe(draws);
+      expect(drawn.slice(0, 2)).toEqual([scene, fg]);
+      comp.resize(800, 450);
+      expect(stand.width).toBe(800);
+
+      fire('webglcontextrestored');
+      expect(comp.webgl).toBe(true);
+      expect(remove).toHaveBeenCalled();
+      expect(log.compiled.slice(compiled)).toContain(CEL_FS);
+      const standDraws = drawn.length;
+      comp.render(scene, fg, light, glow, params);
+      expect(log.draws.at(-1)).toBe(CEL_FS);
+      expect(drawn).toHaveLength(standDraws);
+    });
+
+    it('a second loss reuses the same path', () => {
+      const { comp, fire, after } = losable();
+      fire('webglcontextlost');
+      fire('webglcontextrestored');
+      fire('webglcontextlost');
+      expect(comp.webgl).toBe(false);
+      expect(after).toHaveBeenCalledTimes(2);
+      fire('webglcontextrestored');
+      expect(comp.webgl).toBe(true);
+    });
+  });
 });
 
 describe('impact words', () => {

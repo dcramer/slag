@@ -312,21 +312,53 @@ function cornerNudge(b: Body, s: Solid, world: CollisionWorld): boolean {
   return false;
 }
 
-/** Push the body out of any dynamic solid that moved into it. Returns false if it can't escape (crushed). */
+/** Slack when asking which side of a solid's last position a body was on: touching counts as outside. */
+const SWEEP_EPS = 1e-6;
+
+/**
+ * Push the body out of any dynamic solid that moved into it. Returns false if it can't escape (crushed).
+ *
+ * Swept: the body leaves by the side it was on before the solid moved this frame, however deep the
+ * solid got. Taking the shallowest side instead lets a fast crusher, which can travel more than half a
+ * body in one frame, pop a runner out on top of its head instead of driving them into the floor.
+ * Only when the body already overlapped the solid's last position (it was riding or wedged) does the
+ * shallowest side decide. A push that ends inside terrain is a pin against the world: crushed, and the
+ * body stays where the solid caught it, so the run can credit whoever owns that solid.
+ */
 function depenetrate(b: Body, world: CollisionWorld): boolean {
   if (world.solids.length === 0) return true;
   for (let iter = 0; iter < 3; iter++) {
     const s = firstOverlap(b, world, true);
     if (!s) return true;
+    const ox = b.x;
+    const oy = b.y;
     const pushL = b.x + b.w - s.x;
     const pushR = s.x + s.w - b.x;
     const pushU = b.y + b.h - s.y;
     const pushD = s.y + s.h - b.y;
-    const m = Math.min(pushL, pushR, pushU, pushD);
-    if (m === pushU) b.y -= pushU;
-    else if (m === pushD) b.y += pushD;
-    else if (m === pushL) b.x -= pushL;
+    // Where the solid was last frame: a side the body was clear of then is a side it can leave by.
+    const px = s.x - s.dx;
+    const py = s.y - s.dy;
+    const wasL = b.x + b.w <= px + SWEEP_EPS;
+    const wasR = b.x >= px + s.w - SWEEP_EPS;
+    const wasU = b.y + b.h <= py + SWEEP_EPS;
+    const wasD = b.y >= py + s.h - SWEEP_EPS;
+    const any = wasL || wasR || wasU || wasD;
+    const u = !any || wasU ? pushU : Infinity;
+    const d = !any || wasD ? pushD : Infinity;
+    const l = !any || wasL ? pushL : Infinity;
+    const r = !any || wasR ? pushR : Infinity;
+    const m = Math.min(l, r, u, d);
+    if (m === u) b.y -= pushU;
+    else if (m === d) b.y += pushD;
+    else if (m === l) b.x -= pushL;
     else b.x += pushR;
+    if (!firstOverlap(b, world, true)) {
+      if (!firstOverlap(b, world)) return true;
+      b.x = ox;
+      b.y = oy;
+      return false;
+    }
   }
   return !firstOverlap(b, world);
 }

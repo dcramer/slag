@@ -4,7 +4,7 @@ import type { Match, Player } from '../game/match';
 import { overview, raceFloor } from '../game/view';
 import { TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import { floorY, type Level, tileAt } from '../sim/level';
-import { type Beam, canPlace, footprint, type Resolved, resolveProp, traceBeams } from '../sim/props';
+import { type Beam, canPlace, footprint, previewProps, type Resolved, resolveProp } from '../sim/props';
 import type { RunWorld } from '../sim/run';
 import type { GameEvent } from '../sim/types';
 import { Backdrop } from './background';
@@ -30,6 +30,8 @@ import { detectQuality, FrameBudget, isTouchFirst, QUALITY, type QualityTier, sa
 
 /** Terrain bake budget (px per baked canvas): a classic level at 1920 px wide is ~4.3 M. */
 const MAX_BAKE_PX = 6_000_000;
+/** Rows above the world's bottom that a pool reaches, its heat haze included: where scenery cuts it (Surround.cutPool). */
+const POOL_ROWS = 6;
 /** Phone HUD: enough scale for 1.25 CSS px per HUD px, within this limit. */
 const HUD_CSS_PER_PX = 1.25;
 const MAX_HUD_SCALE = 1.8;
@@ -252,6 +254,9 @@ export class Renderer {
     // The rest of the world goes on its own transparent layer (see ForegroundLayer); `s` stays the background.
     rc.s = this.foreground.begin(this.scene, s, g, level.theme.ambientLight);
     this.cam.apply(rc.s, this.pw);
+    // Liquids sit behind the terrain (docs/DESIGN.md, render layers): it stands in the pool, and its bake cuts the pool's glow.
+    this.backdrop.drawLiquid(rc, level.theme, ww, wh, this.cam.visible(), this.surround.margin, (c) => this.surround.drawSunken(c, level));
+    for (const c of [rc.s, g]) this.surround.cutPool(c, level, POOL_ROWS);
     this.terrain.draw(rc);
     const pushers = m.run ? m.run.runners.filter((r) => r.alive).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h })) : [];
     this.terrain.drawLive(rc, level, pushers);
@@ -260,7 +265,11 @@ export class Renderer {
 
     const grips = run?.runners.flatMap((r) => r.attach.grip ?? []);
     // A race's beams are the ones the sim hurts with. Before one, ghosts join in: a block you're holding cuts the flame it would stop.
-    const beams = run ? run.beams : traceBeams(level, [...resolved, ...m.players.flatMap((p) => ghostProp(m, p) ?? [])], frame);
+    const ghosts = run ? [] : m.players.flatMap((p) => ghostProp(m, p) ?? []);
+    const still = run ? null : previewProps(level, [...resolved, ...ghosts], frame);
+    const beams = still ? still.beams : run!.beams;
+    // Weather lies on what's built in every phase, but not on a ghost: that's only where a part would go.
+    const solids = still ? still.solids.filter((x) => !ghosts.some((gh) => gh.pp.uid === x.propUid)) : run!.solids;
     for (const r of resolved) {
       drawForeground(rc, r, {
         level,
@@ -317,9 +326,8 @@ export class Renderer {
       drawClouds(rc, run);
     }
     this.fx.draw(rc);
-    this.backdrop.drawLiquid(rc, level.theme, ww, wh, this.cam.visible(), this.surround.margin, (c) => this.surround.drawSunken(c, level));
     this.backdrop.drawMotes(rc, level.theme, dt, this.cam.visible());
-    this.weather.draw(rc, m, this.cam.visible(), this.fx);
+    this.weather.draw(rc, m, this.cam.visible(), this.fx, solids);
     g.globalCompositeOperation = 'source-over';
 
     // --- light map

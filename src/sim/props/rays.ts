@@ -183,11 +183,15 @@ export function traceRays(props: readonly Resolved[], ctx: CtxOf, out: Contrib):
  * every prop at rest, so a preview stops where the real thing will.
  */
 export function traceBeams(level: Level, props: readonly Resolved[], f: number): Beam[] {
-  const beams: Beam[] = [];
-  const out: Contrib = { solids: [], hazards: [], springs: [], winds: [], triggers: [], beams };
+  return previewProps(level, props, f).beams;
+}
+
+/** `traceBeams` with everything else those passes built: the solids too, so art outside a race can show what lies on them. */
+export function previewProps(level: Level, props: readonly Resolved[], f: number): Contrib & { beams: Beam[] } {
+  const out: Contrib & { beams: Beam[] } = { solids: [], hazards: [], springs: [], winds: [], triggers: [], beams: [] };
   const state = newPropState();
   const ctx: CtxOf = (r, mi) => ({ level, frame: f, r, off: motionOffset(r, f), prev: motionOffset(r, f - 1), state, mi, live: false });
   buildSolids(props, ctx, out);
   traceRays(props, ctx, out);
-  return beams;
+  return out;
 }

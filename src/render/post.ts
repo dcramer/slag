@@ -7,7 +7,7 @@
  *   glow   — additive emissive layer (fire, lasers, crystals, sparks)
  *
  * Two levels of bloom over the glow layer feed the pass's halos, and tell a beam from a spark.
- * Falls back to Canvas2D blending if WebGL2 isn't available.
+ * Falls back to Canvas2D blending if WebGL2 isn't available, and while a lost context is away.
  */
 
 import { reportError, reportEvent } from '../telemetry';
@@ -70,9 +70,8 @@ export function createCompositor(canvas: HTMLCanvasElement): Compositor {
     reportEvent('webgl2 unavailable');
     return new Fallback(canvas);
   }
-  canvas.addEventListener('webglcontextlost', () => reportEvent('webgl context lost'));
   try {
-    return new GLCompositor(gl);
+    return new GLCompositor(canvas, gl);
   } catch (e) {
     console.warn('WebGL compositor failed, falling back', e);
     reportError(e, { where: 'compositor-init' });
@@ -91,25 +90,56 @@ function overlay(canvas: HTMLCanvasElement): HTMLCanvasElement {
   return c;
 }
 
+/**
+ * The cel pass. A GPU can take its context away at any time (a driver reset, a phone backgrounding the
+ * tab, too many contexts), and everything made on it goes too. Until the browser gives it back, the game
+ * keeps drawing through a stand-in (`Fallback` on a canvas over this one). When it does, everything is
+ * built again from source: programs, the noise, the mist and the bloom targets. Nothing else on the GPU
+ * lasts from one frame to the next, so nothing else needs to come back.
+ */
 class GLCompositor implements Compositor {
-  readonly webgl = true;
-  private progBright: WebGLProgram;
-  private progBlur: WebGLProgram;
-  private progCel: WebGLProgram;
-  private texScene: WebGLTexture;
-  private texFg: WebGLTexture;
-  private texLight: WebGLTexture;
-  private texGlow: WebGLTexture;
-  private texNoise: WebGLTexture;
-  private texMist: WebGLTexture;
+  private progBright!: WebGLProgram;
+  private progBlur!: WebGLProgram;
+  private progCel!: WebGLProgram;
+  private texScene!: WebGLTexture;
+  private texFg!: WebGLTexture;
+  private texLight!: WebGLTexture;
+  private texGlow!: WebGLTexture;
+  private texNoise!: WebGLTexture;
+  private texMist!: WebGLTexture;
   private hasMist = false;
-  private half!: [Target, Target];
+  private half: [Target, Target] | null = null;
   private quarter!: [Target, Target];
-  private w = 1;
-  private h = 1;
+  private w = 2;
+  private h = 2;
   private loc = new Map<WebGLProgram, Map<string, WebGLUniformLocation | null>>();
+  /** Draws the frame while the context is lost, on its own canvas laid over this one. */
+  private stand: { comp: Fallback; canvas: HTMLCanvasElement } | null = null;
 
-  constructor(private gl: WebGL2RenderingContext) {
+  constructor(
+    private canvas: HTMLCanvasElement,
+    private gl: WebGL2RenderingContext,
+  ) {
+    this.build();
+    canvas.addEventListener('webglcontextlost', (e) => {
+      // Without this the browser never offers the context back.
+      e.preventDefault();
+      reportEvent('webgl context lost');
+      this.standIn();
+    });
+    canvas.addEventListener('webglcontextrestored', () => this.restore());
+  }
+
+  get webgl(): boolean {
+    return !this.stand;
+  }
+
+  /** Everything the pass needs on the GPU, from nothing: at start and after a restore. */
+  private build() {
+    const gl = this.gl;
+    this.loc.clear();
+    this.hasMist = false;
+    this.half = null;
     const vs = this.shader(gl.VERTEX_SHADER, VS);
     this.progBright = this.program(vs, BRIGHT_FS);
     this.progBlur = this.program(vs, BLUR_FS);
@@ -132,7 +162,28 @@ class GLCompositor implements Compositor {
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, NOISE_SIZE, NOISE_SIZE, 0, gl.RGBA, gl.UNSIGNED_BYTE, celNoise());
     this.texMist = this.tex();
     this.clearMist();
-    this.resize(2, 2);
+    this.targets();
+  }
+
+  private standIn() {
+    if (this.stand) return;
+    const canvas = overlay(this.canvas);
+    const comp = new Fallback(canvas);
+    comp.resize(this.w, this.h);
+    this.stand = { comp, canvas };
+  }
+
+  private restore() {
+    try {
+      this.build();
+    } catch (e) {
+      // It came back unable to build the pass: the stand-in keeps drawing for the rest of the session.
+      reportError(e, { where: 'compositor-restore' });
+      return;
+    }
+    this.stand?.canvas.remove();
+    this.stand = null;
+    reportEvent('webgl context restored', 'info');
   }
 
   /** One clear texel, so a clear level pays for neither an upload nor a branch in the frame loop. */
@@ -190,12 +241,18 @@ class GLCompositor implements Compositor {
   }
 
   resize(w: number, h: number) {
+    this.stand?.comp.resize(w, h);
     if (w === this.w && h === this.h && this.half) return;
     this.w = w;
     this.h = h;
+    this.targets();
+  }
+
+  /** Bloom targets at a quarter and an eighth of the picture. */
+  private targets() {
     if (this.half) [...this.half, ...this.quarter].forEach((t) => this.free(t));
-    const hw = Math.max(1, w >> 2);
-    const hh = Math.max(1, h >> 2);
+    const hw = Math.max(1, this.w >> 2);
+    const hh = Math.max(1, this.h >> 2);
     this.half = [this.target(hw, hh), this.target(hw, hh)];
     this.quarter = [this.target(Math.max(1, hw >> 1), Math.max(1, hh >> 1)), this.target(Math.max(1, hw >> 1), Math.max(1, hh >> 1))];
   }
@@ -240,7 +297,9 @@ class GLCompositor implements Compositor {
   }
 
   render(scene: HTMLCanvasElement, fg: HTMLCanvasElement, light: HTMLCanvasElement, glow: HTMLCanvasElement, p: PostParams) {
+    if (this.stand) return this.stand.comp.render(scene, fg, light, glow, p);
     const gl = this.gl;
+    const half = this.half!;
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     // Canvas pixels are premultiplied internally; ask for that so faint additive glow stays faint.
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
@@ -258,18 +317,18 @@ class GLCompositor implements Compositor {
     // Bright pass → half.
     gl.useProgram(this.progBright);
     gl.uniform1i(this.u(this.progBright, 'uGlow'), 2);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.half[0].fb);
-    gl.viewport(0, 0, this.half[0].w, this.half[0].h);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, half[0].fb);
+    gl.viewport(0, 0, half[0].w, half[0].h);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
-    this.blur(this.half[0], this.half[1], 2);
+    this.blur(half[0], half[1], 2);
 
     // Downsample half → quarter by drawing through the blur program once, then blur wider.
     gl.useProgram(this.progBlur);
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.quarter[0].fb);
     gl.viewport(0, 0, this.quarter[0].w, this.quarter[0].h);
-    this.bindTex(this.half[0].tex, 0);
+    this.bindTex(half[0].tex, 0);
     gl.uniform1i(this.u(this.progBlur, 'uTex'), 0);
-    gl.uniform2f(this.u(this.progBlur, 'uDir'), 1 / this.half[0].w, 1 / this.half[0].h);
+    gl.uniform2f(this.u(this.progBlur, 'uDir'), 1 / half[0].w, 1 / half[0].h);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     this.blur(this.quarter[0], this.quarter[1], 3);
 
@@ -281,7 +340,7 @@ class GLCompositor implements Compositor {
     this.bindTex(this.texScene, 0);
     this.bindTex(this.texLight, 1);
     this.bindTex(this.texGlow, 2);
-    this.bindTex(this.half[0].tex, 3);
+    this.bindTex(half[0].tex, 3);
     this.bindTex(this.quarter[0].tex, 4);
     this.bindTex(this.texMist, 6);
     gl.uniform1i(this.u(f, 'uScene'), 0);
