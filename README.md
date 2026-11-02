@@ -16,22 +16,28 @@ pnpm level -- myseed           # ASCII level inspector
 pnpm build         # production build (what Vercel runs)
 ```
 
-## Controls (local multiplayer, up to 4 players)
+## Controls
 
-| | P1 keyboard | P2 keyboard | Gamepad |
-|---|---|---|---|
-| move / cursor | WASD | arrows | stick / d-pad |
-| jump | Space / W | ↑ / Enter | A |
-| confirm (join, ready, pick, place) | Space | Enter | A |
-| alt (rotate prop, new look, give up mid-run) | Q / E | . / Right Shift | B / X / LB / RB |
-| new level (lobby) | S | ↓ | down |
+One keyboard player can use WASD and the arrows together. Settings → Keyboard splits the keyboard for two players and rebinds keys. Gamepads and touch work too, and the mouse drives the menu cursor.
+
+| | Keyboard | Split: left | Split: right | Gamepad |
+|---|---|---|---|---|
+| move / cursor | WASD or arrows | WASD | arrows | stick / d-pad |
+| jump | Space / K | Space / W | ↑ / / | A |
+| run (hold) | Left Shift / J | Left Shift / F | Right Shift / ' | X / RB / RT |
+| use item | E / L | G / C | ; / Right Ctrl | Y / LT |
+| confirm (ready, pick, place) | Enter / Space | Space | Enter / / | A |
+| rotate / self-destruct | R / Q | Q / E | . / , | B / LB |
+| settings | Esc | Esc | Esc | Start |
+
+Down + jump drops through one-way platforms. During place, right-click or the mouse wheel rotates.
 
 ## Rules
 
-- **Pick**: the crate holds `players + 2` generated props. Each player claims one.
-- **Place**: put it anywhere that's free (the spawn and goal zones are off-limits). Bombs dig out terrain and props instead. Props stay in the level for the rest of the match.
-- **Run**: race to the flag. You have 45 seconds.
-- **Score**: finishing earns +10 and the first finisher gets +4. Each rival killed by your prop earns +3, but only if somebody finished. If everyone finishes, the round is "too easy" and nobody scores. First to 50 wins.
+- **Pick**: claim one part from the crate. Each match draws from a short roster of parts.
+- **Place**: put it anywhere free; spawn and goal are off-limits. Bombs dig out terrain and parts instead. Parts stay for the rest of the match.
+- **Run**: race to the flag.
+- **Score**: see `docs/DESIGN.md` → Scoring.
 
 ## Procedural generation
 

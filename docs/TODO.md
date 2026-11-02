@@ -30,7 +30,6 @@ Phone support (follow camera, pinch, scaled HUD, settings sheet) is on `main` bu
 ## 10. Housekeeping
 - Enable GitHub Actions and make `ci.yml` a required check. This must be done on GitHub by the repo owner.
 - Delete the old remote branch `claude/scaffold-procgen-platformer`, and the `wip/*` branches once they're merged.
-- Add the run controls to the README.
 - Consider stricter TS flags: `noUncheckedIndexedAccess` gives about 600 errors, so it's a project of its own.
 
 ## 11. Make every screen part of the game, so it's portable
