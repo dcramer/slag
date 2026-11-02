@@ -1,7 +1,8 @@
 # src/render: presentation only
 
 - Read sim state, never write it. Render-side state (particles, verlet rigs, caches) must never influence the sim. `Math.random` is fine here: it's cosmetic.
-- `Renderer.render` (`renderer.ts`) paints three world-space Canvas2D layers through the camera: **albedo**, **emissive** (additive), **light map** (0.5 = neutral). `post.ts` composites them in WebGL2 (lighting, bloom, tonemap, grade) with a Canvas2D fallback. The HUD (`hud.ts`) is its own canvas.
+- `Renderer.render` (`renderer.ts`) paints world-space Canvas2D layers through the camera: **background**, **foreground** (transparent; the world pass draws to it through `rc.s`), **emissive** (additive), **light map** (0.5 = neutral). `post.ts` composites them through the cel pass (`cel-shader.ts`: light bands, ink, hard shadows) in WebGL2, with a Canvas2D fallback that has none of that. The HUD (`hud.ts`) is its own canvas.
+- Everything on `rc.s` gets ink along its edges. Thin or soft things (grass, smoke, dust, motes, afterimages) turn into black scrub or solid discs there, so draw them on the background layer, `rc.bg`.
 - Everything draws in logical view coordinates, and the window is `ViewFrame` (`frame.ts`): the VIEW_W×VIEW_H play view sits inside it at a fixed aspect, and a layer's job is to fill the frame, not the view. Full-screen fills use the frame (`Hud.wash`). The camera's only inputs are `setBounds` (world size, from the level) and `setFrame`.
 - Past the world's edge is `surround.ts`: scenery built from the level, painted by `TerrainPainter`, one recipe per theme in `SIDES`.
 - Prop art is a registry: one file per module type in `props/modules/<type>.ts` registering `ModuleArt` (`props/common.ts`), imported from `props/modules/index.ts`. A type may register several arts on different layers. Don't add per-type `switch`es elsewhere.

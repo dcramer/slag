@@ -109,9 +109,10 @@ export class Fx {
     });
   }
 
-  /** `soft` takes smoke and dust; the cel style passes its un-inked layer, or stacked puffs ink into solid-looking discs. */
-  draw(rc: RC, soft: CanvasRenderingContext2D = rc.s) {
+  /** Smoke and dust go on the background layer: inked, stacked puffs turn into solid-looking discs. */
+  draw(rc: RC) {
     const s = rc.s;
+    const soft = rc.bg;
     const g = rc.g;
     for (const p of this.ps) {
       const a = Math.min(1, (p.life / p.max) * 1.5);

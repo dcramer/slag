@@ -26,7 +26,7 @@ import type { ThemeId } from './themes';
  *   ?gravity=0.7        force world gravity scale
  *   ?debug=1            open the dev overlay (see installDevtoolsHooks)
  *   ?give=sword,puck    hand race runners these held items, cycled (`all` = one of each)
- *   ?style=cel          art style (read by the Renderer, see render/style.ts)
+ *   ?lettering=0        no impact words (read by the Renderer)
  *   ?lettering=0        no impact words in styles that have them
  */
 export interface SlagDebug {
