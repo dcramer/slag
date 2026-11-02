@@ -5,6 +5,7 @@
 - Everything draws in logical view coordinates, and the window is `ViewFrame` (`frame.ts`): the VIEW_W×VIEW_H play view sits inside it at a fixed aspect, and a layer's job is to fill the frame, not the view. Full-screen fills use the frame (`Hud.wash`). The camera's only inputs are `setBounds` (world size, from the level) and `setFrame`.
 - Past the world's edge is `surround.ts`: scenery built from the level, painted by `TerrainPainter`, one recipe per theme in `SIDES`.
 - Prop art is a registry: one file per module type in `props/modules/<type>.ts` registering `ModuleArt` (`props/common.ts`), imported from `props/modules/index.ts`. A type may register several arts on different layers. Don't add per-type `switch`es elsewhere.
+- Art on the `BACKDROP` layer paints before the terrain, which hides it: use it for the scenery half of a set piece (towers, masts, gantries), never for anything a player can touch or read a warning from. `tests/render-layers.test.ts` holds the list of module types allowed to use it.
 - Shared drawing helpers, materials and lights are in `kit.ts`; reuse them before writing new ones.
 - Keep per-frame allocation low: the game targets 60 fps with up to 8 players and ~100 lights.
 

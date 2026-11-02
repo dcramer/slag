@@ -2,7 +2,7 @@ import type { Vec } from '../../core/geom';
 import { TILE } from '../../sim/constants';
 import { dirOf, type Module, motionOffset, type PlacedProp, type PropDef, type Resolved, resolveProp } from '../../sim/props';
 import { circle, METALS, type RC } from '../kit';
-import { moduleArt, type PropDrawOpts } from './common';
+import { BACKDROP, moduleArt, type PropDrawOpts } from './common';
 import './modules';
 
 export type { Emit, PropDrawOpts } from './common';
@@ -12,17 +12,32 @@ export { drawRunnerStatus, propEventFx } from './status';
 
 type M<T extends Module['type']> = Extract<Module, { type: T }>;
 
-/** Draw a resolved prop at rc.frame. Module arts draw in layer order (0 back … 3 effects). */
-export function drawResolved(rc: RC, r: Resolved, o: PropDrawOpts): void {
+function drawLayers(rc: RC, r: Resolved, o: PropDrawOpts, first: number, last: number) {
   const off: Vec = motionOffset(r, rc.frame);
   const style = r.pp.def.style;
   const pal = METALS[style.metal];
-  if (o.showPath) drawPath(rc, r);
-  for (let layer = 0; layer <= 3; layer++) {
+  for (let layer = first; layer <= last; layer++) {
     r.mods.forEach((m, mi) => {
       for (const art of moduleArt(m.type)) if (art.layer === layer) art.draw(rc, m, { r, off, mi, style, pal, o });
     });
   }
+}
+
+/** The scenery half of a prop. The renderer paints this before the terrain, which then occludes it (emissives included). */
+export function drawBackdrop(rc: RC, r: Resolved, o: PropDrawOpts): void {
+  drawLayers(rc, r, o, BACKDROP, BACKDROP);
+}
+
+/** Everything in front of the terrain, in layer order (0 back … 3 effects). */
+export function drawForeground(rc: RC, r: Resolved, o: PropDrawOpts): void {
+  if (o.showPath) drawPath(rc, r);
+  drawLayers(rc, r, o, 0, 3);
+}
+
+/** A whole prop at rc.frame, for callers with no terrain to slot between its layers (ghosts, cards, the codex). */
+export function drawResolved(rc: RC, r: Resolved, o: PropDrawOpts): void {
+  drawBackdrop(rc, r, o);
+  drawForeground(rc, r, o);
 }
 
 export function drawPlaced(rc: RC, pp: PlacedProp, o: PropDrawOpts) {

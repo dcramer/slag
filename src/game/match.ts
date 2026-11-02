@@ -28,6 +28,8 @@ export interface Player {
    * (game/view.ts). Use `Match.cursorScreen` to draw it.
    */
   cursor: { x: number; y: number };
+  /** Frames a direction has been held, up to the cursor's ramp. */
+  cursorHeld: number;
   /** Index into the crate of the claimed prop, -1 if none. */
   claim: number;
   rot: number;
@@ -40,7 +42,10 @@ export interface CrateItem {
   rect: Rect;
 }
 
-const CURSOR_SPEED = 250;
+/** Directional cursor speed, px/s: slow enough for one-tile taps, ramping while held so crossing the screen doesn't drag. */
+const CURSOR_SPEED_MIN = 200;
+const CURSOR_SPEED_MAX = 640;
+const CURSOR_RAMP_FRAMES = 24;
 
 const SCORE_FRAMES = 60 * 4;
 
@@ -184,7 +189,18 @@ export class Match {
     const used = new Set(this.players.map((p) => p.slot));
     let slot = 0;
     while (used.has(slot)) slot++;
-    const p: Player = { slot, device, character: this.rollCharacter(), score: 0, ready: false, cursor: { x: 0, y: 0 }, claim: -1, rot: 0, placed: false };
+    const p: Player = {
+      slot,
+      device,
+      character: this.rollCharacter(),
+      score: 0,
+      ready: false,
+      cursor: { x: 0, y: 0 },
+      cursorHeld: 0,
+      claim: -1,
+      rot: 0,
+      placed: false,
+    };
     this.players.push(p);
     this.players.sort((a, b) => a.slot - b.slot);
     return p;
@@ -245,6 +261,7 @@ export class Match {
     const maxX = world ? this.level.w * TILE - 1 : VIEW_W - 1;
     const maxY = world ? this.level.h * TILE - 1 : VIEW_H - 1;
     if (inp.pointer) {
+      p.cursorHeld = 0;
       const q = world ? viewToWorld(v, inp.pointer.x, inp.pointer.y) : inp.pointer;
       p.cursor.x = clamp(q.x, 0, maxX);
       p.cursor.y = clamp(q.y, 0, maxY);
@@ -252,10 +269,11 @@ export class Match {
     }
     const dx = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
     const dy = (inp.down ? 1 : 0) - (inp.up ? 1 : 0);
+    p.cursorHeld = dx || dy ? Math.min(p.cursorHeld + 1, CURSOR_RAMP_FRAMES) : 0;
     // Same on-screen speed whatever the zoom.
-    const sp = (CURSOR_SPEED * DT) / (world ? v.zoom : 1);
-    p.cursor.x = clamp(p.cursor.x + dx * sp, 0, maxX);
-    p.cursor.y = clamp(p.cursor.y + dy * sp, 0, maxY);
+    const speed = (CURSOR_SPEED_MIN + ((CURSOR_SPEED_MAX - CURSOR_SPEED_MIN) * p.cursorHeld) / CURSOR_RAMP_FRAMES) / (world ? v.zoom : 1);
+    p.cursor.x = clamp(p.cursor.x + dx * speed * DT, 0, maxX);
+    p.cursor.y = clamp(p.cursor.y + dy * speed * DT, 0, maxY);
   }
 
   /** Where a player's cursor is on screen (view coords), whatever phase it's in. For the HUD. */

@@ -19,7 +19,7 @@ const NEXT_BIN = 'node_modules/next/dist/bin/next';
 const NEXT_ENV = { ...process.env, NEXT_TELEMETRY_DISABLED: '1' };
 
 const INPUT_DIRS = ['src', 'app', 'public'];
-const INPUT_FILES = ['next.config.ts', 'package.json', 'pnpm-lock.yaml', 'tsconfig.json'];
+const INPUT_FILES = ['next.config.ts', 'instrumentation.ts', 'instrumentation-client.ts', 'package.json', 'pnpm-lock.yaml', 'tsconfig.json'];
 const BUILD_ID = '.next/BUILD_ID';
 /** Which sources produced the current build. Lives in .next so it can't outlive the build. */
 const STAMP = '.next/harness-stamp.json';

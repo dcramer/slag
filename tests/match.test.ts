@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Match } from '../src/game/match';
 import { DEFAULT_RULES, loadRules, MATCH_LENGTHS, type MatchRules, nearestLength, RULE_CHOICES, type TimerRule } from '../src/game/rules';
-import { RUN_COUNTDOWN } from '../src/sim/constants';
+import { RUN_COUNTDOWN, TILE, VIEW_W } from '../src/sim/constants';
 import { canPlace, footprint } from '../src/sim/props';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
 import { sample } from './lib/tier';
@@ -269,5 +269,39 @@ describe('big lobbies', () => {
     expect(m.run!.runners.length).toBe(8);
     for (let i = 0; i < 70; i++) m.step({});
     expect(m.run!.runners.every((r) => r.alive)).toBe(true);
+  });
+});
+
+describe('controller cursor', () => {
+  const inPick = () => {
+    const m = new Match(1);
+    m.step({ pad: press({ confirmPressed: true }) });
+    m.step({ pad: press({ confirmPressed: true }) });
+    for (let i = 0; i < 600 && m.phase !== 'pick'; i++) m.step({ pad: NO_INPUT });
+    expect(m.phase).toBe('pick');
+    return m;
+  };
+
+  it('a tap stays under one tile', () => {
+    const m = inPick();
+    const p = m.players[0];
+    const from = p.cursor.x;
+    for (let i = 0; i < 2; i++) m.step({ pad: press({ right: true }) });
+    expect(p.cursor.x - from).toBeGreaterThan(0);
+    expect(p.cursor.x - from).toBeLessThan(TILE);
+  });
+
+  it('a held direction crosses the screen in under two seconds, and letting go resets the ramp', () => {
+    const m = inPick();
+    const p = m.players[0];
+    p.cursor.x = 0;
+    let frames = 0;
+    while (p.cursor.x < VIEW_W - 1 && frames < 600) {
+      m.step({ pad: press({ right: true }) });
+      frames++;
+    }
+    expect(frames).toBeLessThan(120);
+    m.step({ pad: NO_INPUT });
+    expect(p.cursorHeld).toBe(0);
   });
 });

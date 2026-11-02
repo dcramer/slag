@@ -58,7 +58,13 @@
               { "name": "react-dom", "message": "src/ is framework-free so the game stays portable. Put React in app/ and have it call plain functions exported from src/." },
               { "name": "next", "message": "src/ is framework-free so the game stays portable. Put Next.js code in app/ and have it call plain functions exported from src/." }
             ],
-            "patterns": [{ "group": ["next/*"], "message": "src/ is framework-free so the game stays portable. Put Next.js code in app/ and have it call plain functions exported from src/." }]
+            "patterns": [
+              { "group": ["next/*"], "message": "src/ is framework-free so the game stays portable. Put Next.js code in app/ and have it call plain functions exported from src/." },
+              {
+                "group": ["@sentry/*"],
+                "message": "src/ must run under any host, so the game can't depend on Sentry. Call reportError, reportEvent or addBreadcrumb from src/telemetry.ts; the SDK is imported only by the host (instrumentation*.ts)."
+              }
+            ]
           }
         ]
       }
@@ -106,6 +112,14 @@
               {
                 "group": ["**/render", "**/render/*", "**/input", "**/input/*", "**/audio", "**/audio/*", "**/ui/*", "**/debug", "**/game-client"],
                 "message": "sim/, gen/ and game/ run headless and deterministically, so they cannot depend on presentation, input or audio. Push a GameEvent or expose state for render/ and audio/ to read; inputs arrive as InputFrame."
+              },
+              {
+                "group": ["**/telemetry"],
+                "message": "sim/, gen/ and game/ stay pure so runs replay deterministically. Report from outside the sim instead, for example in src/game-client.ts."
+              },
+              {
+                "group": ["@sentry/*"],
+                "message": "src/ must run under any host, so the game can't depend on Sentry. Call reportError, reportEvent or addBreadcrumb from src/telemetry.ts; the SDK is imported only by the host (instrumentation*.ts)."
               }
             ]
           }

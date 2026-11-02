@@ -10,6 +10,7 @@
  * WebGL2 isn't available.
  */
 
+import { reportError, reportEvent } from '../telemetry';
 import { COMIC_FS, COMIC_SHADOW } from './comic-shader';
 
 const VS = `#version 300 es
@@ -109,11 +110,16 @@ export interface Compositor {
 
 export function createCompositor(canvas: HTMLCanvasElement): Compositor {
   const gl = canvas.getContext('webgl2', { antialias: false, alpha: false, premultipliedAlpha: false, preserveDrawingBuffer: false });
-  if (!gl) return new Fallback(canvas);
+  if (!gl) {
+    reportEvent('webgl2 unavailable');
+    return new Fallback(canvas);
+  }
+  canvas.addEventListener('webglcontextlost', () => reportEvent('webgl context lost'));
   try {
     return new GLCompositor(gl);
   } catch (e) {
     console.warn('WebGL compositor failed, falling back', e);
+    reportError(e, { where: 'compositor-init' });
     return new Fallback(canvas);
   }
 }

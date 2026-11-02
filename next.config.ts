@@ -1,4 +1,10 @@
+import { withSentryConfig } from '@sentry/nextjs/config';
 import type { NextConfig } from 'next';
+
+/** The commit is the release, so events line up with the source maps uploaded for that build. */
+const release = process.env.VERCEL_GIT_COMMIT_SHA;
+/** No token (local builds, CI, forks): skip the upload and generate no source maps at all. */
+const uploadSourceMaps = Boolean(process.env.SENTRY_AUTH_TOKEN);
 
 const config: NextConfig = {
   // The game mounts imperatively once; strict-mode double effects add nothing here.
@@ -7,9 +13,27 @@ const config: NextConfig = {
   devIndicators: false,
   // Type-checking is done by `npm run check` (tsc); don't duplicate it in `next build`.
   typescript: { ignoreBuildErrors: true },
+  // Read by app/sentry-options.ts on both client and server.
+  env: {
+    NEXT_PUBLIC_SENTRY_ENVIRONMENT: process.env.VERCEL_ENV ?? 'local',
+    NEXT_PUBLIC_SENTRY_RELEASE: release ?? '',
+  },
   async headers() {
     return [{ source: '/textures/:path*', headers: [{ key: 'Cache-Control', value: 'public, max-age=604800' }] }];
   },
 };
 
-export default config;
+export default withSentryConfig(config, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  release: { name: release, create: uploadSourceMaps },
+  // Maps go to Sentry, then get deleted so the deployed site never serves them.
+  sourcemaps: { disable: !uploadSourceMaps, deleteSourcemapsAfterUpload: true },
+  silent: !process.env.CI,
+  telemetry: false,
+  // Errors only: these exist to name routes in traces and to auto-instrument libraries.
+  routeManifestInjection: false,
+  buildTimeInstrumentation: false,
+  suppressOnRouterTransitionStartWarning: true,
+});
