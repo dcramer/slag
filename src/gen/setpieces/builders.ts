@@ -504,7 +504,7 @@ export function* greatWheel(rng: Rng, _s: Site, o: GreatWheelOpts): Generator<Pi
         { type: 'deco', kind: 'flywheel', at: [o.shell.x, o.shell.y], w: o.shell.w, h: o.shell.h, seed },
         {
           type: 'rotor',
-          look: 'cog',
+          look: 'flywheel',
           support: 'none',
           mastX: o.hub[0],
           hub: o.hub,

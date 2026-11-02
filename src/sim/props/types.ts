@@ -54,7 +54,18 @@ export type LauncherStyle =
 export type Head = 'saw' | 'mace' | 'axe';
 export type Aim = 'fixed' | 'sweep' | 'track';
 /** Set-piece looks (art only; the sim treats every look the same). */
-export type RotorLook = 'windmill' | 'cog' | 'chandelier' | 'hay' | 'log' | 'slab' | 'crane' | 'bucket' | 'gondola';
+export type RotorLook =
+  | 'windmill'
+  | 'cog'
+  | 'chandelier'
+  | 'hay'
+  | 'log'
+  | 'slab'
+  | 'crane'
+  | 'bucket'
+  | 'gondola'
+  // Stage concepts (docs/SETPIECES.md): the great wheel's rim cars; a theme skin draws it, cog decks otherwise.
+  | 'flywheel';
 export type RotorSupport = 'tower' | 'ceiling' | 'mast' | 'none';
 export type VehicleLook = 'tractor' | 'forklift' | 'ram' | 'boulder' | 'minecart' | 'drill';
 export type CannonLook = 'castle' | 'ship' | 'totem' | 'spitter';

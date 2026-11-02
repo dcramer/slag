@@ -79,9 +79,9 @@ function wheelCols(arm: number): number {
   return 2 * arm + 5;
 }
 
-/** Columns (tile centres) where the A-frame under a wheel's axle meets the ground: inside the rim, a stance wide enough to read as holding it up. */
+/** Columns (tile centres) where the A-frame under a wheel's axle meets the ground: a wide stance, inside the pit's walls. */
 export function wheelFeet(hubX: number, arm: number): [number, number] {
-  const spread = Math.round(arm * 0.62);
+  const spread = Math.floor(arm * 0.78);
   return [hubX - spread, hubX + spread];
 }
 
