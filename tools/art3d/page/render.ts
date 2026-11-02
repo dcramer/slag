@@ -341,6 +341,15 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
           }
         }
         const tr = shoot();
+        const girth = c.girth ?? s.girth ?? 1;
+        if (girth !== 1) {
+          // The figure drawn wider than the model, about the feet: a stout build reads at race size.
+          const g = girth;
+          const wide = (r: number[]) => r.forEach((v, i) => i % 2 === 0 && (r[i] = v * g));
+          tr.sil.forEach(wide);
+          tr.parts.forEach((p) => wide(p.ring));
+          for (let i = 0; i < tr.glints.length; i += 3) tr.glints[i] *= g;
+        }
         if (c.center) {
           // A figure lying down is as long as it was tall: centred on the spot, it stays inside the runner's box.
           let x0 = Infinity;

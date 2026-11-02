@@ -45,6 +45,8 @@ export interface Clip {
   face?: boolean;
   /** `hips`: hold the hips at their rest height (a jump's own lift is the sim's job). */
   pin?: 'hips';
+  /** This clip's girth, if not the kind's (a figure lying down is long enough already). */
+  girth?: number;
   /** Centre each frame on the spot (a figure lying down). */
   center?: boolean;
   /** Seconds held on each frame instead of an even rate. */
@@ -97,6 +99,8 @@ export interface Settings {
   step: number;
   /** Tracing: px per world px rendered, the smallest part kept (world px²), simplification (world px), smoothing passes. */
   trace: { res: number; min: number; eps: number; smooth: number };
+  /** Drawn this much wider than the model, about the feet: a 2D caricature of a stout build. */
+  girth?: number;
   /** Caricature: bones scaled about their joints (head, hands, feet), for a read at race size. */
   scale?: Record<string, number>;
   /** Weight fixes for the auto-rig, applied in order. */

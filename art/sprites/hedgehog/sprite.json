@@ -772,7 +772,9 @@
       "frames": 6,
       "loop": false,
       "fps": 14,
-      "center": true
+      "center": true,
+      "girth": 1
     }
-  }
+  },
+  "girth": 1.12
 }
