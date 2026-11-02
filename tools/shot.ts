@@ -1567,8 +1567,11 @@ try {
       if (await page.$('.slag-panel')) throw new Error('settings: pad B did not close the menu');
       // Opening runs through the game loop's input sampling, which screenshots keep paused.
       await page.evaluate(() => (window as any).slagDebug.pause(false));
-      await pad(9);
+      // Hold Start until the menu opens: the live loop under software GL can take longer than a quick tap to sample it.
+      await page.evaluate(() => (window as any).slagShotPad.add(9));
       await page.waitForSelector('.slag-panel');
+      await page.evaluate(() => (window as any).slagShotPad.delete(9));
+      await page.waitForTimeout(120);
       await expectTab(page, 'audio');
       await pad(9);
       if (await page.$('.slag-panel')) throw new Error('settings: pad Start did not close the menu');
