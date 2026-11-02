@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Match } from '../src/game/match';
-import { DEFAULT_RULES, loadRules, type MatchRules, RULE_CHOICES } from '../src/game/rules';
+import { DEFAULT_RULES, loadRules, MATCH_LENGTHS, type MatchRules, nearestLength, RULE_CHOICES, type TimerRule } from '../src/game/rules';
 import { RUN_COUNTDOWN } from '../src/sim/constants';
 import { canPlace, footprint } from '../src/sim/props';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
@@ -186,16 +186,68 @@ describe('match end', () => {
   });
 });
 
-describe('match rules', () => {
-  it('stay plain data, with every default on offer in the lobby', () => {
-    expect(JSON.parse(JSON.stringify(DEFAULT_RULES))).toEqual(DEFAULT_RULES);
-    for (const k of Object.keys(RULE_CHOICES) as (keyof MatchRules)[]) expect(RULE_CHOICES[k]).toContain(DEFAULT_RULES[k]);
+describe('match lengths', () => {
+  it.each(MATCH_LENGTHS)('$label ends on its target score', ({ targetScore, maxRounds }) => {
+    const m = started(2, { targetScore, maxRounds });
+    m.players[0].score = targetScore - 14;
+    playRound(m, [0]);
+    expect(m.phase).toBe('victory');
+    expect(m.round).toBe(1);
+    expect(m.winners).toEqual([0]);
   });
 
-  it('gives saved rules from before the round limit the default', () => {
-    vi.stubGlobal('localStorage', { getItem: () => JSON.stringify({ targetScore: 80, pickSeconds: 10, placeSeconds: 0, raceSeconds: 0 }) });
-    expect(loadRules()).toMatchObject({ targetScore: 80, maxRounds: DEFAULT_RULES.maxRounds });
-    vi.unstubAllGlobals();
+  it.each(MATCH_LENGTHS)('$label ends on its round limit', ({ targetScore, maxRounds }) => {
+    const m = started(2, { targetScore, maxRounds });
+    m.players[1].score = 3;
+    for (let r = 1; r < maxRounds; r++) {
+      playRound(m);
+      expect(m.phase).toBe('pick');
+    }
+    playRound(m);
+    expect(m.phase).toBe('victory');
+    expect(m.round).toBe(maxRounds);
+    expect(m.winners).toEqual([1]);
+  });
+});
+
+describe('match rules', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const load = (saved: unknown) => {
+    vi.stubGlobal('localStorage', { getItem: () => JSON.stringify(saved) });
+    return loadRules();
+  };
+  const timers = { pickSeconds: 10, placeSeconds: 0, raceSeconds: 30 };
+
+  it('stay plain data, defaulting to Normal with every timer default on offer', () => {
+    expect(JSON.parse(JSON.stringify(DEFAULT_RULES))).toEqual(DEFAULT_RULES);
+    expect(DEFAULT_RULES).toMatchObject({ targetScore: 50, maxRounds: 15 });
+    for (const k of Object.keys(RULE_CHOICES) as TimerRule[]) expect(RULE_CHOICES[k]).toContain(DEFAULT_RULES[k]);
+  });
+
+  it.each([
+    [20, 'Short'],
+    [30, 'Short'],
+    [50, 'Normal'],
+    [80, 'Long'],
+    [120, 'Long'],
+  ])('maps an old %i point save to %s and keeps its timers', (targetScore, label) => {
+    const { targetScore: score, maxRounds } = MATCH_LENGTHS.find((l) => l.label === label)!;
+    expect(load({ targetScore, ...timers })).toEqual({ targetScore: score, maxRounds, ...timers });
+  });
+
+  it('ignores an old round limit, which was usually just the default of 40', () => {
+    expect(load({ targetScore: 50, maxRounds: 40, ...timers })).toMatchObject({ targetScore: 50, maxRounds: 15 });
+  });
+
+  it.each(MATCH_LENGTHS)('round-trips a saved $label', ({ targetScore, maxRounds }) => {
+    expect(load({ targetScore, maxRounds, ...timers })).toEqual({ targetScore, maxRounds, ...timers });
+  });
+
+  it('falls back to Normal on ties and junk', () => {
+    expect(nearestLength(40).label).toBe('Normal');
+    expect(nearestLength(65).label).toBe('Normal');
+    expect(load({ ...timers })).toMatchObject({ targetScore: 50, maxRounds: 15, ...timers });
+    expect(load({ targetScore: 'lots' })).toMatchObject({ targetScore: 50, maxRounds: 15 });
   });
 });
 

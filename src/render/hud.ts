@@ -9,7 +9,7 @@ import { drawGlyph, type Glyph, glyphWidth } from '../ui/glyphs';
 import { glyphsFor, type InputMode, type PromptAction, promptModes } from '../ui/prompts';
 import { FONT, PAL, TYPE } from '../ui/style';
 import { drawCharacter } from './character';
-import { bay, buttonText, type ButtonStyle, hazardTape, icon, type IconName, plate, stampButton, tag } from './hud-kit';
+import { bay, buttonText, type ButtonStyle, hazardTape, icon, type IconName, plate, stampButton, standings, tag } from './hud-kit';
 import { circle, glowDot, type RC, rrect } from './kit';
 import { drawPreview } from './props';
 
@@ -669,7 +669,8 @@ export class Hud {
       plate(c, VIEW_W / 2 - 28, 6, 56, 24, { rivets: false, stroke: urgent ? PAL.danger : undefined });
       this.text(String(secs), VIEW_W / 2, 18.5, TYPE.head, urgent ? css({ h: 4, s: 100, l: 62 + Math.sin(t * 12) * 10 }) : PAL.bone, 'center', DISPLAY, 400);
     }
-    m.players.forEach((p, i) => {
+    // Scores can't change during a race, so these chips hold still until the next round.
+    standings(m.players, (p) => p.score).forEach((p, i) => {
       const r = run.runners.find((r) => r.slot === p.slot);
       // Up to 4 chips per row so 8 players fit left of the timer.
       const x = 8 + (i % 4) * 87;
@@ -721,15 +722,32 @@ export class Hud {
     const compact = m.players.length > 4;
     const rowH = compact ? 35 : 50;
     const L = compact
-      ? { feet: 30, scale: 1.55, name: 8, nameSize: 11, bar: 15, barH: 9, award: 28, awardH: 11 }
-      : { feet: 36, scale: 2.2, name: 10, nameSize: 13, bar: 20, barH: 12, award: 38, awardH: 12 };
+      ? { feet: 30, scale: 1.55, name: 8, nameSize: 11, bar: 15, barH: 9, award: 28, awardH: 11, band: -1 }
+      : { feet: 36, scale: 2.2, name: 10, nameSize: 13, bar: 20, barH: 12, award: 38, awardH: 12, band: -6 };
     const y0 = compact ? 98 : 104;
     plate(c, 140, y0 - 12, 520, m.players.length * rowH + 22);
     // Finish line marker.
     hazardTape(c, barX + barW, y0 - 2, 4, m.players.length * rowH, 0.9);
     this.text(`${TARGET}`, barX + barW + 2, y0 - 7, TYPE.caption, PAL.hazard, 'center', UI, 800);
-    m.players.forEach((p, i) => {
-      const y = y0 + i * rowH;
+    // Rows start in the old standings and slide to the new ones as the bars fill.
+    const before = standings(m.players, (p) => m.prevScores.get(p.slot) ?? 0);
+    const after = standings(m.players, (p) => p.score);
+    const slide = anim * anim * (3 - 2 * anim);
+    const top = Math.max(...m.players.map((p) => p.score));
+    // Bottom row first, so a climbing row passes over the ones it overtakes.
+    for (let rank = after.length - 1; rank >= 0; rank--) {
+      const p = after[rank];
+      const from = before.indexOf(p);
+      const y = y0 + (from + (rank - from) * slide) * rowH;
+      const leader = m.players.length > 1 && top > 0 && p.score === top;
+      // A row being overtaken dims mid-slide, or a straight swap is two rows printed on top of each other.
+      c.globalAlpha = rank > from ? 1 - 0.75 * Math.sin(slide * Math.PI) : 1;
+      if (leader) {
+        c.fillStyle = 'rgba(255,176,46,0.13)';
+        c.fillRect(148, y + L.band, 504, rowH - 6);
+        c.fillStyle = PAL.amber;
+        c.fillRect(148, y + L.band, 3, rowH - 6);
+      }
       drawCharacter({ s: c, g: this.gctx }, p.character, 182, y + L.feet, {
         facing: 1,
         vx: 0,
@@ -739,7 +757,7 @@ export class Hud {
         scale: L.scale,
         celebrate: res.finishers.includes(p.slot),
       });
-      this.text(p.character.name, barX, y + L.name, L.nameSize, PAL.bone, 'left', DISPLAY, 400);
+      this.text(p.character.name, barX, y + L.name, L.nameSize, leader ? PAL.amber : PAL.bone, 'left', DISPLAY, 400);
       const prev = m.prevScores.get(p.slot) ?? 0;
       const shown = prev + (p.score - prev) * anim;
       c.fillStyle = PAL.ink;
@@ -763,18 +781,19 @@ export class Hud {
           c.fillRect(barX + wPrev, y + L.bar + 1, wNow - wPrev, 3);
         }
       }
-      this.text(String(Math.round(shown)), barX + barW + 24, y + L.bar + L.barH / 2, compact ? 13 : 16, PAL.bone, 'center', DISPLAY, 400);
+      this.text(String(Math.round(shown)), barX + barW + 24, y + L.bar + L.barH / 2, compact ? 13 : 16, leader ? PAL.amber : PAL.bone, 'center', DISPLAY, 400);
       const awards = res.awards.filter((a) => a.slot === p.slot);
       c.font = `400 ${L.nameSize}px ${DISPLAY}`;
       let ax = barX + c.measureText(p.character.name).width + 8;
       for (const a of awards) {
         const info = AWARD[a.reason] ?? { label: a.reason, color: { h: 0, s: 0, l: 50 } };
         c.save();
-        c.globalAlpha = Math.min(1, anim * 2);
+        c.globalAlpha *= Math.min(1, anim * 2);
         ax += tag(c, `+${a.points} ${info.label}`, ax, y + L.name, css(info.color), '#fff', TYPE.caption) + 4;
         c.restore();
       }
-    });
+    }
+    c.globalAlpha = 1;
   }
 
   private victory(m: Match, t: number) {

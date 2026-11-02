@@ -1,5 +1,5 @@
 import type { AudioSystem } from '../audio';
-import { type MatchRules, RULE_CHOICES } from '../game/rules';
+import { MATCH_LENGTHS, type MatchRules, RULE_CHOICES, type TimerRule } from '../game/rules';
 import { BINDABLE, defaultSettings, type InputSettings, type KeyProfile, keyName, SLOTS } from '../input/bindings';
 import type { InputManager } from '../input/input';
 import { glyphSVG, type Glyph } from './glyphs';
@@ -418,9 +418,7 @@ export class SettingsMenu extends Overlay {
   }
 }
 
-const RULE_LABELS: Record<keyof MatchRules, string> = {
-  targetScore: 'Points to Win',
-  maxRounds: 'Round Limit',
+const RULE_LABELS: Record<TimerRule, string> = {
   pickSeconds: 'Pick Timer',
   placeSeconds: 'Place Timer',
   raceSeconds: 'Race Timer',
@@ -431,22 +429,40 @@ export class RulesMenu extends Overlay {
   open(rules: MatchRules, onChange: (r: MatchRules) => void) {
     const draft = { ...rules };
     const card = el('div', { className: 'slag-card' }, el('h2', { textContent: 'Match Rules' }));
-    for (const k of Object.keys(RULE_CHOICES) as (keyof MatchRules)[]) {
+    const addRow = (title: string, choices: { label: string; on: boolean; apply: () => void }[]) => {
       const chips = el('div', { className: 'slag-chips' });
-      for (const v of RULE_CHOICES[k]) {
-        const b = el('button', {
-          className: `slag-btn ${draft[k] === v ? 'on' : ''}`,
-          type: 'button',
-          textContent: !k.endsWith('Seconds') ? String(v) : v === 0 ? 'Off' : `${v}s`,
-        });
+      for (const c of choices) {
+        const b = el('button', { className: `slag-btn ${c.on ? 'on' : ''}`, type: 'button', textContent: c.label });
         b.onclick = () => {
-          draft[k] = v;
+          c.apply();
           onChange({ ...draft });
           for (const sib of chips.querySelectorAll('button')) sib.classList.toggle('on', sib === b);
         };
         chips.append(b);
       }
-      card.append(el('h3', { textContent: RULE_LABELS[k] }), chips);
+      card.append(el('h3', { textContent: title }), chips);
+    };
+    const lengthNote = el('div', { className: 'slag-note' });
+    const describeLength = () => (lengthNote.textContent = `First to ${draft.targetScore} points, or top score after ${draft.maxRounds} rounds.`);
+    describeLength();
+    addRow(
+      'Match Length',
+      MATCH_LENGTHS.map((l) => ({
+        label: l.label,
+        on: draft.targetScore === l.targetScore && draft.maxRounds === l.maxRounds,
+        apply: () => {
+          draft.targetScore = l.targetScore;
+          draft.maxRounds = l.maxRounds;
+          describeLength();
+        },
+      })),
+    );
+    card.append(lengthNote);
+    for (const k of Object.keys(RULE_CHOICES) as TimerRule[]) {
+      addRow(
+        RULE_LABELS[k],
+        RULE_CHOICES[k].map((v) => ({ label: v === 0 ? 'Off' : `${v}s`, on: draft[k] === v, apply: () => (draft[k] = v) })),
+      );
     }
     card.append(el('div', { className: 'slag-note', textContent: 'Saved on this device. Changes apply to the next match.' }));
     const done = el('button', { className: 'slag-btn primary', type: 'button', textContent: 'Done' });
