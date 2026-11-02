@@ -63,14 +63,17 @@ export function finishNotes(place: number, note: CueEnv['note']): number[] {
   return [note(4, 0)];
 }
 
+/** A death's own sound by cause; every one also clanks, since every runner is a toy coming apart. */
+const DEATH_CUE: Partial<Record<string, SfxName>> = { crush: 'death-crush', pop: 'death-pop', timeout: 'death-timeout' };
+
 export function cuesForEvent(e: GameEvent, env: CueEnv): Cue[] {
   switch (e.type) {
     case 'death':
       if (e.cause === 'fall') return [{ name: 'splash', x: e.x, y: e.y, variant: env.liquid }];
-      if (e.cause === 'crush') return [{ name: 'death-crush', x: e.x, y: e.y, pitch: env.pitchOf(e.slot) }];
-      if (e.cause === 'pop') return [{ name: 'death-pop', x: e.x, y: e.y, pitch: env.pitchOf(e.slot) }];
-      if (e.cause === 'timeout') return [{ name: 'death-timeout', x: e.x, y: e.y, pitch: env.pitchOf(e.slot) }];
-      return [{ name: 'death-hazard', x: e.x, y: e.y, pitch: env.pitchOf(e.slot) }];
+      return [
+        { name: DEATH_CUE[e.cause] ?? 'death-hazard', x: e.x, y: e.y, pitch: env.pitchOf(e.slot) },
+        { name: 'clank', x: e.x, y: e.y, pitch: env.pitchOf(e.slot) },
+      ];
     case 'finish':
       return [{ name: 'finish', x: e.x, y: e.y, notes: finishNotes(e.place, env.note), gain: e.place <= 1 ? 1 : 0.8 }];
     case 'spring':
