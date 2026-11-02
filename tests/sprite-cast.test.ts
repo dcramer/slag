@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { generateCharacter, type Kind } from '../src/gen/character';
-import { SPRITE_KINDS } from '../src/render/cast/sprites';
+import { LOADERS, SPRITE_KINDS } from '../src/render/cast/sprites';
 import { drawFrame, hexHsl, paintOf, ringPoints } from '../src/render/cast/sprites/draw';
 import { clipFor, frameAt, pick, picks } from '../src/render/cast/sprites/play';
-import { sprites as hedgehog } from '../src/render/cast/sprites/hedgehog/frames';
-import { sprites as plumber } from '../src/render/cast/sprites/plumber/frames';
 import type { SpriteClip, SpriteSet, VFrame } from '../src/render/cast/sprites/types';
 import type { RunnerPose } from '../src/render/ink-figure';
 
 /** Kinds rendered from 3D models (tools/art3d, docs/CHARACTERS.md → Rendered kinds): their frames and how they're chosen. */
 
-const SETS: SpriteSet[] = [plumber, hedgehog];
+// Every registered kind, loaded as the game loads it: a new kind needs no change here.
+const SETS: SpriteSet[] = await Promise.all(SPRITE_KINDS.map(async (k) => (await LOADERS[k]!()).sprites));
+const hedgehog = SETS.find((s) => s.kind === 'hedgehog')!;
 
 /** A 2D context that only records where paths go, in the frame's own space (transforms are ignored). */
 function recorder() {

@@ -11,7 +11,7 @@ import type { SpriteSet } from './types';
  * Each kind's frames are a chunk of their own, fetched on first use, so the game without the flag loads
  * and draws exactly what it did.
  */
-const LOADERS: Partial<Record<Kind, () => Promise<{ sprites: SpriteSet }>>> = {
+export const LOADERS: Partial<Record<Kind, () => Promise<{ sprites: SpriteSet }>>> = {
   plumber: () => import('./plumber/frames'),
   hedgehog: () => import('./hedgehog/frames'),
 };

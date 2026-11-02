@@ -57,6 +57,11 @@ const api = {
     return {
       sheet: turnaround(model, size),
       clips: model.clips.map((c) => ({ name: c.name, seconds: c.duration })),
+      bones: (() => {
+        const names: string[] = [];
+        model.root.traverse((o) => (o as THREE.Bone).isBone && names.push(o.name));
+        return names;
+      })(),
       swatches: model.texture
         ? swatches(model.texture, k, model.meshes[0].geometry.getAttribute('uv') as THREE.BufferAttribute, model.meshes[0].geometry.index)
         : [],

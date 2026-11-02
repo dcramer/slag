@@ -82,7 +82,7 @@ try {
     const out = opt('out', join(shots, file.replace(/.*\//, '').replace(/\.glb$/, '') + '-turnaround.png'))!;
     const got = await page.evaluate(([u, k]) => (window as any).art3d.inspect(u, 512, k), [fsUrl(file), Number(opt('k', '14'))] as const);
     writeFileSync(out, dataPng(got.sheet));
-    console.log(JSON.stringify({ clips: got.clips, swatches: got.swatches }));
+    console.log(JSON.stringify({ clips: got.clips, bones: got.bones, swatches: got.swatches }));
     console.log(out);
   } else if (words[0] === 'study' || words[0] === 'keys') {
     const kind = words[1];
