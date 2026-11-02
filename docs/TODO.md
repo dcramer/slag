@@ -108,7 +108,7 @@ The rest of this item is the home screen, the first and biggest piece of it. The
 ## 13. Playtest and tune the new parts
 Nothing from item 4 has been played by hand, so the tuning is test-level only: magnet drift, bumper power, slow and freeze durations. Dropstones and crushers stop only on terrain, so they pass through placed blocks; decide whether that's right.
 
-Also confirm the round limit default of 40. It comes from a Monte Carlo model of scoring with a fixed finish rate, and real finish rates probably fall as props pile up. An unwinnable match takes all 40 rounds to end.
+Also confirm the Match Length values (Short 30 points / 10 rounds, Normal 50 / 15, Long 80 / 25). They come from a Monte Carlo model of scoring with a fixed finish rate, and real finish rates probably fall as props pile up. The limit decides about 25% of 2-player Normal matches at typical finish rates and about 60% at very low or very high ones.
 
 ## 14. Clear the lint warnings
 `pnpm check` prints 7 warnings, in `src/ui/touch/overlay.ts`, `src/ui/touch/device.ts`, `src/input/input.ts`, `src/render/props/modules/vehicle.ts` and `src/audio/system.ts`. AGENTS.md treats warnings as real findings. Do it with or after item 6, which also touches the touch code.
