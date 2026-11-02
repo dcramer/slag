@@ -206,7 +206,8 @@ describe('a match under random and hostile placements', () => {
       m.startMatch();
       for (let round = 1; round <= 5; round++) {
         expect(m.phase).toBe('pick');
-        const bridges = m.crate.filter((c) => c.def.part === m.crate.find((x) => x.def.archetype === 'platform')?.def.part).length;
+        // The bridge part (the roster's first, gen/props.ts generateRoster): another platform part in the crate doesn't count.
+        const bridges = m.crate.filter((c) => c.def.part === 'bridge').length;
         expect(bridges, `${theme} r${round} crate`).toBeGreaterThanOrEqual(Math.min(m.plan.length, m.crate.length - 1));
         m.players.forEach((p, k) => {
           // Some players get a tall wall instead, the most hostile plain part there is.

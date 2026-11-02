@@ -39,6 +39,8 @@ export const PART_INFO: Record<Module['type'], { title: string; blurb: string }>
   flood: { title: 'Flood', blurb: 'The tide waits for no runner.' },
   lob: { title: 'Lava lob', blurb: 'What goes up comes down hotter.' },
   shards: { title: 'Broken window', blurb: 'Seven years of bad luck, delivered all at once.' },
+  cavein: { title: 'Cave-in', blurb: 'The roof was load-bearing. Was.' },
+  cart: { title: 'Runaway cart', blurb: 'No brakes. Great bell, though.' },
 };
 
 const AIM_TAG: Record<string, string> = { fixed: 'FIXED', sweep: 'SWEEPS', track: 'TRACKS' };

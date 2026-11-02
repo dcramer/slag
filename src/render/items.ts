@@ -51,7 +51,7 @@ function noodle(s: CanvasRenderingContext2D, bend: number) {
     pts.push({ x: bend * t * t, y: 2.6 - t * 12.2 });
   }
   s.fillStyle = INK;
-  stroke(s, pts, { w: 5.6, seed: 3, taper: [0, 0], press: 0 });
+  stroke(s, pts, { w: 5.04, seed: 3, taper: [0, 0], press: 0 });
   s.fillStyle = css(NOODLE, -10, 1, 4);
   stroke(s, pts, { w: 4.2, seed: 3, taper: [0, 0], press: 0 });
   s.fillStyle = css(NOODLE);

@@ -4,6 +4,9 @@ import type { DecorKind, DecorSpot } from '../gen/decor';
 import type { Theme } from '../gen/theme';
 import { FARM_DECOR } from './decor-farm';
 import { FRONTIER_DECOR } from './decor-frontier';
+import { HARBOR_DECOR } from './decor-harbor';
+import { JUNGLE_DECOR } from './decor-jungle';
+import { MINE_DECOR } from './decor-mine';
 import { VOLCANO_DECOR } from './decor-volcano';
 import { blob, line, type P, stroke } from './ink';
 import { inkFence, inkHay } from './ink-parts';
@@ -192,7 +195,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
       const lx = d.x + Math.sin(sw) * len;
       const ly = d.y + Math.cos(sw) * len;
       s.fillStyle = INK;
-      line(s, d.x, d.y, lx, ly, { w: 0.7, seed: sd(d), taper: [0, 0], press: 0 });
+      line(s, d.x, d.y, lx, ly, { w: 0.49, seed: sd(d), taper: [0, 0], press: 0 });
       const fl = 0.85 + Math.sin(rc.t * 9 + d.seed) * 0.08;
       s.fillStyle = css(d.color, 20);
       s.fillRect(lx - 2, ly + 1.3, 4, 4.7);
@@ -465,7 +468,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
         const y = d.y + 1.2 + i * 2.4;
         const ring = ovalPts(x, y, i % 2 ? 0.55 : 1.2, 1.45, i, 0.02, 10);
         s.fillStyle = INK;
-        stroke(s, [...ring, ring[0]], { w: 1.3, seed: i, taper: [0, 0], press: 0 });
+        stroke(s, [...ring, ring[0]], { w: 1, seed: i, taper: [0, 0], press: 0 });
         s.fillStyle = css(d.color, i % 2 ? -6 : 10);
         stroke(s, [...ring, ring[0]], { w: 0.55, seed: i, taper: [0, 0], press: 0 });
       }
@@ -691,7 +694,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
       for (let i = 0; i < 3; i++) {
         const ring = ovalPts(d.x, d.y - 1.5 - i * 1.3, (5 - i * 1.2) * k, 1.5 * k, sd(d) + i, 0.04, 16);
         s.fillStyle = INK;
-        stroke(s, [...ring, ring[0]], { w: 2.2, seed: i, taper: [0, 0], press: 0.1 });
+        stroke(s, [...ring, ring[0]], { w: 1.8, seed: i, taper: [0, 0], press: 0.1 });
         s.fillStyle = css(d.color, -14 + i * 8);
         stroke(s, [...ring, ring[0]], { w: 1.2, seed: i, taper: [0, 0], press: 0.1 });
       }
@@ -946,4 +949,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
   ...FRONTIER_DECOR,
   ...FARM_DECOR,
   ...VOLCANO_DECOR,
+  ...HARBOR_DECOR,
+  ...JUNGLE_DECOR,
+  ...MINE_DECOR,
 };

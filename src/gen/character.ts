@@ -3,12 +3,28 @@ import { Rng } from '../core/rng';
 import { word } from './names';
 
 /**
- * The cast (docs/CHARACTERS.md): half animals, half invented critters, some of them homages to famous
- * game characters under our own designs. Each kind is a fixed design; the seed picks the kind, its
- * natural colors and the player's color, which is the body or, for a kind whose palette is its
- * identity, a big worn piece (a cap and overalls, a shirt). That's the HUD color for the player too.
+ * The cast (docs/CHARACTERS.md): mostly homages to famous game characters in our own designs, with a few
+ * plain animals for contrast. Each kind is a fixed design; the seed picks the kind, a variant of its own
+ * colors and the player's color. A homage keeps the palette people recognise it by, and the player's
+ * color goes on a secondary slot (a ring at its feet, a scarf, a band); a plain animal, or a homage that
+ * comes in every color anyway, is drawn in the player's color. Either way it's the player's HUD color.
  */
-export const CAST = ['fox', 'frog', 'hedgehog', 'raccoon', 'penguin', 'chicken', 'jelly', 'plumber', 'robot', 'goose', 'engineer', 'puffball'] as const;
+export const CAST = [
+  'plumber',
+  'hedgehog',
+  'elf',
+  'hunter',
+  'zapmouse',
+  'impostor',
+  'puffball',
+  'jelly',
+  'goose',
+  'engineer',
+  'fox',
+  'frog',
+  'penguin',
+  'chicken',
+] as const;
 export type Kind = (typeof CAST)[number];
 
 export type EyeStyle = 'dot' | 'ring' | 'sleepy' | 'visor' | 'angry';
@@ -22,12 +38,12 @@ export interface CharacterDef {
   seed: number;
   name: string;
   hue: number;
-  /** The player's color: the body, or the big worn piece; and this player's HUD color. */
+  /** The player's color: the body, or a homage's secondary slot (a ring at its feet, a scarf); and this player's HUD color. */
   body: HSL;
   /** A second note in the player's livery, never louder than `body`. */
   accent: HSL;
   kind: Kind;
-  /** The kind's own natural color: a fox's cream chest, a plumber's shirt, a robot's steel. */
+  /** The kind's own color: a homage's iconic body color, a plain animal's pale chest. */
   paint: HSL;
   /** Rolls in 0..1 that the kind's art reads in its own order: small details inside a design. */
   vary: number[];
@@ -35,20 +51,46 @@ export interface CharacterDef {
   mouth: Mouth;
 }
 
-/** Each kind's own natural colors, calm, so the player's color is the loudest note. */
+/**
+ * Sound-alike names for the homages, as data: never the original's real name in code or UI. Plain
+ * animals are just what they are.
+ */
+export const KIND_NAMES: Record<Kind, string> = {
+  plumber: 'Plumbo',
+  hedgehog: 'Sanic',
+  elf: 'Lonk',
+  hunter: 'Sammus',
+  zapmouse: 'Pikachew',
+  impostor: 'Sussy',
+  puffball: 'Kurby',
+  jelly: 'Meltroid',
+  goose: 'Honkers',
+  engineer: 'Engie',
+  fox: 'Fox',
+  frog: 'Frog',
+  penguin: 'Penguin',
+  chicken: 'Chicken',
+};
+
+/**
+ * Each kind's own color, a few close variants of it: a homage's iconic body color (the speedster's
+ * cobalt, the mouse's yellow), or a plain animal's pale chest. Calm, never louder than the player's.
+ */
 const PAINTS: Record<Kind, readonly HSL[]> = {
+  plumber: [hsl3(4, 70, 50)],
+  hedgehog: [hsl3(222, 70, 46), hsl3(218, 64, 50)],
+  elf: [hsl3(110, 46, 40), hsl3(118, 40, 38)],
+  hunter: [hsl3(24, 82, 50), hsl3(18, 78, 48)],
+  zapmouse: [hsl3(50, 90, 58), hsl3(46, 86, 56)],
+  impostor: [hsl3(200, 30, 80)],
+  puffball: [hsl3(352, 62, 52), hsl3(8, 60, 50)],
+  jelly: [hsl3(100, 60, 70), hsl3(110, 56, 66)],
+  goose: [hsl3(40, 20, 95), hsl3(30, 12, 93)],
+  engineer: [hsl3(2, 60, 46), hsl3(214, 52, 46)],
   fox: [hsl3(40, 40, 90), hsl3(30, 30, 86)],
   frog: [hsl3(60, 40, 84), hsl3(45, 36, 86)],
-  hedgehog: [hsl3(32, 40, 82), hsl3(25, 30, 78)],
-  raccoon: [hsl3(30, 10, 86), hsl3(35, 14, 80)],
   penguin: [hsl3(40, 30, 94), hsl3(200, 12, 92)],
   chicken: [hsl3(4, 70, 52), hsl3(354, 64, 50)],
-  jelly: [hsl3(4, 60, 46), hsl3(20, 56, 44)],
-  plumber: [hsl3(30, 30, 92), hsl3(40, 20, 88)],
-  robot: [hsl3(200, 8, 70), hsl3(40, 10, 72), hsl3(160, 10, 66)],
-  goose: [hsl3(30, 80, 56), hsl3(24, 74, 52)],
-  engineer: [hsl3(46, 80, 60), hsl3(40, 70, 56)],
-  puffball: [hsl3(352, 62, 52), hsl3(8, 60, 50)],
 };
 
 /**

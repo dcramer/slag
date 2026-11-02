@@ -166,6 +166,20 @@ async function silhouettes(): Promise<string> {
   return path;
 }
 
+async function recognise(): Promise<string> {
+  await open(`seed=${seed}`);
+  await page.evaluate(() => document.fonts.ready);
+  const box = await page.evaluate(() => {
+    const cv = (window as any).slagDebug.cast.recognise();
+    return { width: cv.width, height: cv.height };
+  });
+  const path = `${out}/cast-recognise.png`;
+  await page.screenshot({ path, clip: { x: 0, y: 0, ...box } });
+  console.log(path);
+  pet();
+  return path;
+}
+
 async function compose(name: string, html: string, width = 1900) {
   const hp = `${out}/${name}.html`;
   writeFileSync(
@@ -194,6 +208,7 @@ export const shots: Scenarios = {
       // Fast iteration on the art: the catalog and the silhouette test alone.
       await catalog();
       await silhouettes();
+      await recognise();
       return;
     }
     const light = await lineup(LIGHT);
@@ -201,6 +216,7 @@ export const shots: Scenarios = {
     const lb = await lobby();
     const cat = await catalog();
     const sil = await silhouettes();
+    const rec = await recognise();
     await compose(
       'cast',
       h('The foundry toys') +
@@ -210,6 +226,7 @@ export const shots: Scenarios = {
         img(light?.x3, `3× close-up, ${LIGHT}: idle, facing back, walk, run, rise, fall, idle, idle`) +
         img(dark?.x3, `3× close-up, ${DARK}`) +
         img(lb, 'Lobby cards, 8 players') +
+        img(rec, 'Is it the homage? Every kind close up beside what it should be taken for') +
         img(sil, 'The silhouette test: every kind solid black, at rest and mid-run, 1× and play scale') +
         img(cat, 'Catalog: every kind on two seeds, poses, the cast at play scale'),
     );

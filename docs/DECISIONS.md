@@ -137,6 +137,16 @@ Every game design decision, preference and direction the owner has given, groupe
 - **The cast is a mix of animals and invented critters, and the critters may parody famous characters (a fake jellyfish-brain floater, a mustached plumber, a robot, a goose, a hard-hat engineer).** "idk how we ended up with toys. that wasnt the original goal, and its not on theme" · "critters could include other parody things... like a fake metroid, a fake mario, a robot, a goose, etc. a fake engineer from tf2 etc"
   2026-11-02 · `in progress` · CHARACTERS.md, DESIGN.md → Players and Parody
   Changed: toys replaced by animals plus parody critters.
+- **The cast is mostly homages: about two thirds parody famous game characters, with a few plain animals for contrast, and the art is raised further.** "its better but you still need more parody and the art needs to be better yet..."
+  2026-11-02 · `in progress` · CHARACTERS.md, DESIGN.md → Players
+- **Every character is a homage, which fits the lore (the cast is knock-off heroes who almost got their own game).** "tbqh EVERY character can be an homage so it fits our story design"
+  2026-11-02 · `planned` · CHARACTERS.md → Roster (all homages)
+  Changed: four plain animals (fox, frog, penguin, chicken) were kept for contrast.
+- **Hand-drawn character art pauses until the art pipeline (generated concept, traced into rigged vector parts) is tested.** "its prob worth just waiting for our pipeline test tho because the art is still jank"
+  2026-11-02 · `open` · CHARACTERS.md → History
+- **Recognisability is the top criterion: each homage must read as its original at a glance, so its iconic palette wins and the player's colour moves to a secondary slot (a ring at its feet).** "the only thing that remotely resembles the thing its mimicking is the puff ball (kirby)"
+  2026-11-02 · `in progress` · CHARACTERS.md
+  Changed: the player's colour was always the body or a big worn piece.
 - **Player characters may parody famous characters under our own designs and sound-alike names; parts and machines stay faceless.**
   2026-11-02 · `in progress` · DESIGN.md → Parody, CHARACTERS.md
 - **Characters are drawn cleaner, lighter and more hand-drawn: thinner, varied lines in a dark of the body color, calmer color, fewer bold outlines.** "i want more cleanly designed art that isnt so loud/bold lines etc and more visually hand draw"
@@ -152,6 +162,14 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 17:16Z (answer) · `done` · CHARACTERS.md
 - **Characters and the menu crowd take the art style, but stay as clean as they are.** "i like how they look right now so make sure ou keep it clean like it is and dont break it"
   2026-11-02 15:49Z · `done` · git `a6963c8`, `3eb7c44`; ART.md → World art
+- **Character art comes from a generated-concept pipeline, tested before any rollout: no rollout until the owner picks one.** "Lets test that out. but dont duct tape like we need great results here" / "Not yet"
+  2026-11-02 · `in progress` · CHARACTERS.md
+- **Traced frames (round 2) look out of place beside the hand-drawn cast; wait for the 3D-to-2D test before choosing.** "i agree w/ your asssessment. they look out of place. lets wait on the new test"
+  2026-11-02 · `open` · branch `worktree-agent-ae6810c61c411904c`, behind `?traced=1`
+- **The traced homages look too much like the originals: every kind needs a clear twist of its own on top of the recognisable silhouette.** "they look TOO much like the things were trying to parody... so we'd need to spice it up too"
+  2026-11-02 · `open` · CHARACTERS.md → Roster
+- **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
+  2026-11-02 · `done` · public/ASSETS.md
 
 ## Parts and the crate
 
@@ -225,6 +243,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `done` (enforced) · `GRAND_LANDMARKS` in src/gen/kinds.ts, tests/conformance/themes.test.ts
 - **The cast needs much more parody, and each parody must be instantly recognisable; the art must improve further.** "its better but you still need more parody and the art needs to be better yet..." / "the only thing that remotely resembles the thing its mimicking is the puff ball (kirby)". Iconic palettes win over the player-colour body rule; the player's colour moves to a visible secondary slot.
   2026-11-02 · `in progress` · CHARACTERS.md
+- **Demolition parts rarely change terrain: the drill digs, plus one rare small bomb; the rest clear placed parts only.** "it should be RARE that they can change terrain.. so the drill is fine.. and maybe one other small one, but i think they commonly change terrain right now". Changed: bombs, charges and time bombs used to blast terrain too, and every roster held a terrain breaker.
+  2026-11-02 · `done` · DESIGN.md → Props, `src/gen/props.ts`
 - **Lobby browser: a list of lobbies, showing only ones that aren't full by default.** Lobbies are public by default with a Private option. "lets make lobbies public by default with a private option"
   2026-11-02 · `planned` · TODO.md → 26
 - **Conveyors rotate: the rotation picks the belt's face.** A side belt grips and carries a clinging runner (an escalator when it runs up), a bottom belt shoves a head that bonks it. "you cant rotate conveyors.. the conveyor always stays on the top"

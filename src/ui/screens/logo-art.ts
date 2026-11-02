@@ -303,12 +303,12 @@ function inked(o: Inking): string {
     o.open +
     `<defs><path id="${id}-l" d="${letters}"/><clipPath id="${id}-clip"><use href="#${id}-l"/></clipPath></defs>` +
     // The hard shadow shape, down and away from the light.
-    `<g fill="${SHADOW}" stroke="${SHADOW}" stroke-linejoin="round"><use href="#${id}-l" ${shift} stroke-width="${f(13 * k)}"/>` +
+    `<g fill="${SHADOW}" stroke="${SHADOW}" stroke-linejoin="round"><use href="#${id}-l" ${shift} stroke-width="${f(11 * k)}"/>` +
     dripG(`<path d="$d" ${shift} stroke-width="${f(5 * k)}"/>`, sx, sy) +
     `</g>` +
     // The ink mass, heavier away from the light, and its pen edge.
-    `<g fill="${INK}" stroke="${INK}" stroke-linejoin="round"><use href="#${id}-l" stroke-width="${f(12 * k)}"/>` +
-    `<use href="#${id}-l" stroke-width="${f(11 * k)}" transform="translate(${f(1.6 * k)} ${f(2.6 * k)})"/>` +
+    `<g fill="${INK}" stroke="${INK}" stroke-linejoin="round"><use href="#${id}-l" stroke-width="${f(9.5 * k)}"/>` +
+    `<use href="#${id}-l" stroke-width="${f(8.5 * k)}" transform="translate(${f(1.4 * k)} ${f(2.2 * k)})"/>` +
     dripG(`<path d="$d" stroke-width="${f(4.5 * k)}"/>`) +
     `</g><path fill="${INK}" d="${outer.out()}"/>` +
     // Molten fill in three cel bands, its pen line, and the highlights.

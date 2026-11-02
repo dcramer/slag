@@ -1,6 +1,6 @@
 /**
  * `pnpm shot hazards --theme T [--only 'hay hook,muck spreader']`: each of a theme's set-piece recipes on the
- * first seed whose level has it, close up during a race, at three phases.
+ * first seed whose level has it, close up during a race, at three phases (or after each of `--steps 40,50,50` frames).
  */
 import { generateLevel } from '../../src/gen/level';
 import { SET_PIECE_RECIPES } from '../../src/gen/setpieces';
@@ -12,6 +12,7 @@ export const shots: Scenarios = {
   async hazards() {
     const th = (theme ?? 'farm') as ThemeId;
     const only = opt('only')?.split(',');
+    const steps = (opt('steps') ?? '40,50,50').split(',').map(Number);
     const names = SET_PIECE_RECIPES[th].map((r) => r.name).filter((n) => !only || only.includes(n));
     const files: string[] = [];
     await open(`seed=${seed}&ui=0&lettering=0`);
@@ -49,7 +50,7 @@ export const shots: Scenarios = {
       const cw = Math.min(size.width, Math.max(box.x1 - box.x0 + 12, 22) * k);
       const ch = Math.min(size.height, cw * 0.56);
       const clip = { x: Math.max(0, Math.min(size.width - cw, cx - cw / 2)), y: Math.max(0, Math.min(size.height - ch, cy - ch / 2)), width: cw, height: ch };
-      for (const [i, n] of [40, 50, 50].entries()) {
+      for (const [i, n] of steps.entries()) {
         await step(n);
         const path = `${out}/hazard-${th}-${name.replace(/ /g, '-')}-${found}-${i}.png`;
         await page.screenshot({ path, clip });

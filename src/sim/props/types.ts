@@ -51,7 +51,11 @@ export type LauncherStyle =
   | 'cryo'
   | 'prism'
   | 'hangar';
-export type Head = 'saw' | 'mace' | 'axe';
+/**
+ * What a swinger swings. `log` (jungle) is a battering log slung level on two ropes: it hurts along its
+ * whole length (`logBox`, ./modules/swinger.ts), not round a point.
+ */
+export type Head = 'saw' | 'mace' | 'axe' | 'log';
 export type Aim = 'fixed' | 'sweep' | 'track';
 /** Set-piece looks (art only; the sim treats every look the same). */
 export type RotorLook =
@@ -68,14 +72,22 @@ export type RotorLook =
   | 'flywheel';
 export type RotorSupport = 'tower' | 'ceiling' | 'mast' | 'none';
 export type VehicleLook = 'tractor' | 'forklift' | 'ram' | 'boulder' | 'minecart' | 'drill';
-export type CannonLook = 'castle' | 'ship' | 'totem' | 'spitter';
+export type CannonLook =
+  | 'castle'
+  | 'ship'
+  | 'totem'
+  | 'spitter'
+  // Harbor: a whaler's harpoon gun on a swivel post (no face), firing straight bolts.
+  | 'harpoon';
 export type GeyserLook =
   | 'lava'
   | 'steam'
   // Stage concepts (docs/SETPIECES.md): waterfalls and waves, toxic overflow, avalanches.
   | 'water'
   | 'toxic'
-  | 'snow';
+  | 'snow'
+  // Harbor: a sea monster's tentacle rising out of the water (no face), lethal where it stands.
+  | 'tentacle';
 export type DecoKind =
   | 'press'
   | 'ac'
@@ -229,7 +241,18 @@ export type Module =
       ammo: Ammo;
     }
   | { type: 'flame'; at: Vec; angle: number; length: number; on: number; off: number; warn: number }
-  | { type: 'laser'; at: Vec; angle: number; charge: number; fire: number; off: number; sweep: number; sweepPeriod: number }
+  | {
+      type: 'laser';
+      at: Vec;
+      angle: number;
+      charge: number;
+      fire: number;
+      off: number;
+      sweep: number;
+      sweepPeriod: number;
+      /** Art only: 'lamp' is a harbor light's lamp head (a lighthouse's, a channel light's); unset is the laser pointer. */
+      look?: 'lamp';
+    }
   | { type: 'tesla'; a: Vec; b: Vec; on: number; off: number; warn: number }
   | {
       type: 'piston';
@@ -368,7 +391,18 @@ export type Module =
    * Force falls off linearly to 0 at `radius` (tiles). `off` 0 = always on,
    * otherwise it cycles off → warn → on like a flame jet.
    */
-  | { type: 'magnet'; at: Vec; radius: number; strength: number; polarity: 1 | -1; on: number; off: number; warn: number }
+  | {
+      type: 'magnet';
+      at: Vec;
+      radius: number;
+      strength: number;
+      polarity: 1 | -1;
+      on: number;
+      off: number;
+      warn: number;
+      /** Art only: 'whirlpool' is the harbor's maelstrom, a pull drawn as water spiralling down; unset is the magnet. */
+      look?: 'whirlpool';
+    }
   /** Sticky web over some cells: heavy drag while inside (it can catch a fall), weak jumps just after. */
   | { type: 'web'; cells: Cell[]; drag: number }
   /** Blink blocks: solid for `on` frames, gone for `off`, shifted by `offset` (pairs alternate). */
@@ -506,6 +540,45 @@ export type Module =
       off: number;
       warn: number;
       flight: number;
+    }
+  | {
+      /**
+       * World-only, mine: a span of cave roof that gives way on a cycle (./modules/cavein.ts). The box is
+       * `w`×`h` tiles from its top-left `at`, hung from the rock over it down to the floor under it. Off →
+       * warn (drawn, never felt: grit trickles and the roof creaks for `rocks`, firedamp seeps and pools
+       * for `gas`) → on, for `on` frames. `rocks`: a curtain of boulders drops from the roof to the floor,
+       * one per column, each a circle that kills where it is. `gas`: the pocket of firedamp ignites, the
+       * whole box a flash of fire.
+       */
+      type: 'cavein';
+      kind: CaveinKind;
+      at: Vec;
+      w: number;
+      h: number;
+      off: number;
+      warn: number;
+      on: number;
+      seed: number;
+    }
+  | {
+      /**
+       * World-only, mine: a runaway minecart on a stretch of flat rail (./modules/cart.ts). Parked at the
+       * top of its run (`at`, the bottom-left of the cart, tiles) for `off` frames, it rocks and its bell
+       * rings for `warn`, then breaks loose: it rolls `span` tiles toward `dir`, gathering speed the whole
+       * way, for `run` frames, and kills whatever it hits. It's winched back up for `back` frames,
+       * harmless. Never solid: nobody rides a runaway.
+       */
+      type: 'cart';
+      at: Vec;
+      w: number;
+      h: number;
+      span: number;
+      dir: 1 | -1;
+      off: number;
+      warn: number;
+      run: number;
+      back: number;
+      seed: number;
     };
 
 export type Motion =
@@ -534,6 +607,8 @@ export type DropperLook = 'icicle' | 'chandelier';
 export type FloodLook = 'lava' | 'toxic' | 'water';
 /** What a `lob` throws: a magma serpent of linked segments, or a volcanic bomb out of the sky. */
 export type LobLook = 'serpent' | 'bomb';
+/** What a cave-in brings down: boulders out of the roof, or a pocket of firedamp catching light. */
+export type CaveinKind = 'rocks' | 'gas';
 
 export type Archetype =
   | 'platform'

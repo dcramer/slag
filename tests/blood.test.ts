@@ -421,7 +421,9 @@ describe('losing its surface', () => {
   });
 
   it('goes when a time bomb goes off at the start of the race', () => {
-    const charge = propDef('timebomb', (d) => d.modules.some((x) => x.type === 'bomb' && x.target !== 'props'));
+    // Rolled time bombs only clear parts now (docs/DESIGN.md → Demolition); the sim still digs with one that targets terrain.
+    const rolled = propDef('timebomb', () => true);
+    const charge: PropDef = { ...rolled, modules: rolled.modules.map((x) => (x.type === 'bomb' ? { ...x, target: undefined } : x)) };
     const { m } = placing(charge, SPOT, FLOOR);
     m.placed.push({ uid: 900, def: charge, owner: 0, tx: SPOT, ty: FLOOR - 1, rot: 0 });
     m.startRun();

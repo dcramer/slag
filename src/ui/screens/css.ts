@@ -28,6 +28,9 @@ export const SCREEN_CSS = `
   --ember: #b8230f;
   --toxic: #a6e22e;
   --hazard: #f2b705;
+  /* A plate's rim and hard shadow: the ink let off a little, so an edge is drawn and not cut out (docs/ART.md → The line). */
+  --rim: rgba(18, 11, 8, 0.82);
+  --drop: rgba(18, 11, 8, 0.6);
   --display: 'Lilita One', 'Arial Rounded MT Bold', system-ui, sans-serif;
   --ui: Barlow, 'Segoe UI', system-ui, sans-serif;
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .32 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
@@ -208,9 +211,9 @@ body {
   padding: 9px 18px 11px 22px;
   cursor: pointer;
   background: var(--grain), linear-gradient(var(--iron-hi), var(--iron));
-  border: 2px solid var(--ink);
+  border: 1.5px solid var(--rim);
   border-radius: 6px;
-  box-shadow: 0 5px 0 var(--ink);
+  box-shadow: 0 4px 0 var(--drop);
   transition:
     transform 0.08s,
     box-shadow 0.08s,
@@ -221,7 +224,7 @@ body {
   font: 400 30px/1 var(--display);
   color: var(--bone);
   letter-spacing: 0.02em;
-  text-shadow: 0 2px 0 var(--ink);
+  text-shadow: 0 2px 0 var(--drop);
 }
 
 .menu-item .s {
@@ -271,13 +274,13 @@ body {
   height: 10px;
   margin-top: -5px;
   background: var(--amber);
-  border: 2px solid var(--ink);
+  border: 1.5px solid var(--rim);
   transform: rotate(45deg);
 }
 
 .menu-item:active {
   transform: translate(8px, 3px);
-  box-shadow: 0 2px 0 var(--ink);
+  box-shadow: 0 1px 0 var(--drop);
 }
 
 .menu-item:focus-visible {
@@ -302,7 +305,7 @@ body {
   text-transform: uppercase;
   color: var(--amber);
   background: var(--soot);
-  border: 2px solid var(--ink);
+  border: 1.5px solid var(--rim);
   box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.45);
   border-radius: 6px;
   padding: 8px 14px;
@@ -329,14 +332,14 @@ body {
   color: var(--ink);
   padding: 0 22px;
   background: linear-gradient(#ff8a2a, #e8571a);
-  border: 2px solid var(--ink);
+  border: 1.5px solid var(--rim);
   border-radius: 6px;
-  box-shadow: 0 4px 0 var(--ink);
+  box-shadow: 0 3px 0 var(--drop);
 }
 
 .join button:active {
-  transform: translateY(3px);
-  box-shadow: 0 1px 0 var(--ink);
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--drop);
 }
 
 .join button:focus-visible {
@@ -550,20 +553,20 @@ button.prompt:focus-visible {
   width: min(560px, 100%);
   padding: 34px 34px 30px;
   background: var(--grain), linear-gradient(var(--iron-hi), var(--iron));
-  border: 2px solid var(--ink);
+  border: 1.5px solid var(--rim);
   border-radius: 6px;
-  box-shadow: 0 6px 0 var(--ink);
+  box-shadow: 0 5px 0 var(--drop);
 }
 
 .plain-card::before {
   content: '';
   position: absolute;
-  left: -2px;
-  right: -2px;
-  top: -2px;
+  left: -1.5px;
+  right: -1.5px;
+  top: -1.5px;
   height: 10px;
   background: var(--tape);
-  border: 2px solid var(--ink);
+  border: 1.5px solid var(--rim);
   border-radius: 6px 6px 0 0;
 }
 
@@ -586,7 +589,7 @@ button.prompt:focus-visible {
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--bone);
-  text-shadow: 0 3px 0 var(--ink);
+  text-shadow: 0 2px 0 var(--drop);
 }
 
 .plain-card p {
@@ -668,7 +671,7 @@ button.prompt:focus-visible {
   rotate: 14deg;
   box-sizing: border-box;
   background: var(--grain), linear-gradient(var(--iron-hi), var(--iron) 60%, #7a2c12);
-  border: 5px solid var(--ink);
+  border: 3.5px solid var(--rim);
   border-radius: 8px;
   box-shadow: inset 0 0 0 5px rgba(255, 255, 255, 0.04);
 }
@@ -680,7 +683,7 @@ button.prompt:focus-visible {
   top: 30%;
   height: 22%;
   background: var(--tape);
-  border-block: 5px solid var(--ink);
+  border-block: 3.5px solid var(--rim);
 }
 
 @media (max-width: 860px) {

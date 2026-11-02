@@ -123,7 +123,7 @@ function drawSupport(rc: RC, m: Rotor, d: DrawCtx) {
         [topY, hy - 1],
       ]) {
         s.fillStyle = INK;
-        line(s, mx - side * 18, y0, hx + side * 8, y1, { w: 2.6, seed: y0, taper: [0, 0], press: 0.1 });
+        line(s, mx - side * 18, y0, hx + side * 8, y1, { w: 2.08, seed: y0, taper: [0, 0], press: 0.1 });
         s.fillStyle = css(paint);
         line(s, mx - side * 18, y0, hx + side * 8, y1, { w: 1.3, seed: y0 + 1, taper: [0, 0], press: 0.1 });
       }
@@ -161,7 +161,7 @@ function drawSupport(rc: RC, m: Rotor, d: DrawCtx) {
       part(s, boxPts(Math.min(mx, hx) - 6, topY - 4, Math.abs(hx - mx) + 12, 6, 1.4, 17), { ...wood, l: 42 }, 17, { depth: 0.9, thin: 0.5, thick: 1.2 });
       // Diagonal brace.
       s.fillStyle = INK;
-      line(s, mx, topY + 18, mx + side * 16, topY + 1, { w: 3.6, seed: 18, taper: [0.02, 0.02], press: 0.1 });
+      line(s, mx, topY + 18, mx + side * 16, topY + 1, { w: 2.96, seed: 18, taper: [0.02, 0.02], press: 0.1 });
       s.fillStyle = css(wood, 4);
       line(s, mx, topY + 18, mx + side * 16, topY + 1, { w: 2, seed: 19, taper: [0.02, 0.02], press: 0.1 });
       // Pulley wheel.
@@ -176,7 +176,7 @@ function drawSupport(rc: RC, m: Rotor, d: DrawCtx) {
       }
       pipe.push({ x: hx + side * 2, y: topY - 2 });
       s.fillStyle = INK;
-      stroke(s, pipe, { w: 4.6, seed: 22, taper: [0, 0], press: 0.05 });
+      stroke(s, pipe, { w: 3.96, seed: 22, taper: [0, 0], press: 0.05 });
       s.fillStyle = css(d.pal.base, 6);
       stroke(s, pipe, { w: 3, seed: 22, taper: [0, 0], press: 0.05 });
       s.fillStyle = css(d.pal.light, 0, 0.8);
@@ -240,7 +240,7 @@ function sail(L: number, woodHue: number) {
     for (let k = 1; k < 3; k++) line(g, x0, 1.5 + (w * k) / 3, x1, 1.5 + (w * k) / 3, { w: 0.6, seed: k, taper: [0, 0], press: 0 });
     pen(g, sheet, 32, 0.5, 1.1, 3, css(wood, -16));
     g.fillStyle = INK;
-    line(g, 0, 0, L, 0, { w: 3.8, seed: 33, taper: [0, 0.05], press: 0.05 });
+    line(g, 0, 0, L, 0, { w: 3.08, seed: 33, taper: [0, 0.05], press: 0.05 });
     g.fillStyle = css(wood, 8);
     line(g, 0, -0.2, L, -0.2, { w: 2, seed: 34, taper: [0, 0.05], press: 0.05 });
   });
@@ -298,7 +298,7 @@ function drawArms(rc: RC, m: Rotor, d: DrawCtx, arms: RotorArm[]) {
       else if (link === 'vine') rope(s, x1, y1, x2, y2, { h: 100, s: 45, l: 32 }, 1.5, 1);
       else if (link === 'cable') {
         s.fillStyle = INK;
-        line(s, x1, y1, x2, y2, { w: 1.2, seed: x1, taper: [0, 0], press: 0 });
+        line(s, x1, y1, x2, y2, { w: 0.84, seed: x1, taper: [0, 0], press: 0 });
       } else rope(s, x1, y1, x2, y2, { h: 38, s: 40, l: 55 }, 1.2, 0.5);
     };
     if (direct) for (const [ex, ey] of ends) draw(hx, hy, ex, ey);
@@ -477,7 +477,7 @@ function hayBale(w: number, h: number, v: number) {
     }
     for (const t of [0.28, 0.72]) {
       g.fillStyle = INK;
-      line(g, w * t, -0.5, w * t + 0.3, h + 0.5, { w: 1.6, seed: t * 9, taper: [0, 0], press: 0.1 });
+      line(g, w * t, -0.5, w * t + 0.3, h + 0.5, { w: 1.28, seed: t * 9, taper: [0, 0], press: 0.1 });
       g.fillStyle = '#9a5530';
       line(g, w * t - 0.2, -0.5, w * t + 0.1, h + 0.5, { w: 0.8, seed: t * 9 + 1, taper: [0, 0], press: 0.1 });
     }
@@ -613,7 +613,7 @@ function oreTub(w: number, h: number, d: DrawCtx, v: number) {
       handle.push({ x: w / 2 + Math.cos(a) * (w / 2 - 1), y: 1 + Math.sin(a) * (w / 2 - 1) });
     }
     g.fillStyle = INK;
-    stroke(g, handle, { w: 2, seed: 111, taper: [0, 0], press: 0 });
+    stroke(g, handle, { w: 1.56, seed: 111, taper: [0, 0], press: 0 });
     g.fillStyle = css(pal.base, -6);
     stroke(g, handle, { w: 0.9, seed: 111, taper: [0, 0], press: 0 });
     for (let k = 0; k < 6; k++) {
@@ -638,7 +638,7 @@ function drawBucket(rc: RC, p: Rect, d: DrawCtx, _a: RotorArm, seed: number) {
   const lx = p.x + p.w + 1.5;
   const ly = p.y + 2;
   s.fillStyle = INK;
-  line(s, p.x + p.w - 1, p.y, lx, ly - 2, { w: 0.6, seed: 1, taper: [0, 0], press: 0 });
+  line(s, p.x + p.w - 1, p.y, lx, ly - 2, { w: 0.42, seed: 1, taper: [0, 0], press: 0 });
   s.fillRect(lx - 2.2, ly - 2.2, 4.4, 1.4);
   s.fillRect(lx - 2.2, ly + 3.4, 4.4, 1.4);
   s.fillRect(lx - 1.8, ly - 1, 0.6, 4.5);
@@ -657,7 +657,7 @@ function gondola(w: number, h: number, d: DrawCtx) {
   return sprite(`rt|gond|${sizeKey(w, h)}|${pal.base.h},${pal.base.l}|${paint.h | 0}`, -2, -11, w + 4, h + 13, (g) => {
     const rail = (ax: number, ay: number, bx: number, by: number) => {
       g.fillStyle = INK;
-      line(g, ax, ay, bx, by, { w: 1.6, seed: ax + ay, taper: [0, 0], press: 0 });
+      line(g, ax, ay, bx, by, { w: 1.24, seed: ax + ay, taper: [0, 0], press: 0 });
       g.fillStyle = css(paint, -6);
       line(g, ax, ay, bx, by, { w: 0.7, seed: ax + ay, taper: [0, 0], press: 0 });
     };
@@ -669,7 +669,7 @@ function gondola(w: number, h: number, d: DrawCtx) {
     part(g, boxPts(w - 9, -5, 5, 5, 1, 121), { h: 212, s: 60, l: 50 }, 121, { depth: 0.4, thin: 0.35, thick: 0.8 });
     rail(6, 0, 9, -8);
     g.fillStyle = INK;
-    line(g, 7.5, -8.5, 11, -7, { w: 1.6, seed: 122, taper: [0, 0], press: 0 });
+    line(g, 7.5, -8.5, 11, -7, { w: 1.12, seed: 122, taper: [0, 0], press: 0 });
     const deck = boxPts(0, 0, w, h, 0.8, 123, 0.1);
     tone(g, deck, pal.base, { depth: Math.min(1.2, h * 0.2) });
     g.save();
@@ -694,7 +694,7 @@ function drawHub(rc: RC, m: Rotor, d: DrawCtx) {
     if (m.support === 'ceiling' && m.look !== 'log') {
       const ring = ovalPts(hx, hy, 2.6, 2.6, 7, 0.02, 12);
       s.fillStyle = INK;
-      stroke(s, [...ring, ring[0]], { w: 1.8, seed: 7, taper: [0, 0], press: 0.1 });
+      stroke(s, [...ring, ring[0]], { w: 1.4, seed: 7, taper: [0, 0], press: 0.1 });
       s.fillStyle = css(d.pal.base);
       stroke(s, [...ring, ring[0]], { w: 0.8, seed: 7, taper: [0, 0], press: 0.1 });
     }
