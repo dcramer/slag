@@ -727,7 +727,7 @@ export class Renderer {
             for (let i = 0; i < 14; i++) {
               const part = i < 6 ? parts[i % parts.length] : 'shard';
               const col = part === 'shard' ? (i % 2 ? body : (c?.paint ?? body)) : PART_COLOR[part];
-              this.fx.part(part, e.x, e.y, 230, col, part === 'shard' ? 1.7 : 2.1, 2.2);
+              this.fx.part(part, e.x, e.y, 230, col, part === 'shard' ? 2 : 3, 2.2);
             }
             this.fx.burst('spark', e.x, e.y, 18, 260, [{ h: 45, s: 100, l: 70 }, body], 1.2, 0.5);
             this.fx.add('ring', e.x, e.y, 0, 0, body, 40, 0.45);
