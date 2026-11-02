@@ -9,7 +9,7 @@ import { defineArt } from '../common';
 type Web = ModuleOf<'web'>;
 
 const SILK = 'rgba(246,246,252,0.92)';
-const SILK_FAINT = 'rgba(236,238,250,0.55)';
+const SILK_FAINT = 'rgba(236,238,250,0.7)';
 
 /**
  * Sticky web, spun with the pen: one orb web strung across the cells it covers, its radials out to where
@@ -34,7 +34,7 @@ function bake(m: Web, uid: number) {
   return sprite(key, x0 * TILE - 12, y0 * TILE - 12, (x1 - x0) * TILE + 24, (y1 - y0) * TILE + 30, (g) => {
     const set = new Set(m.cells.map(([x, y]) => `${x},${y}`));
     const inside = (px: number, py: number) => set.has(`${Math.floor(px / TILE)},${Math.floor(py / TILE)}`);
-    g.fillStyle = 'rgba(225,225,240,0.06)';
+    g.fillStyle = 'rgba(225,225,240,0.1)';
     for (const [x, y] of m.cells) g.fillRect(x * TILE, y * TILE, TILE, TILE);
     // The hub: the cell center nearest the middle of the patch.
     const mx = ((x0 + x1) / 2) * TILE;
@@ -57,7 +57,7 @@ function bake(m: Web, uid: number) {
         if (mark) for (let t = 2; t < r; t += 3) covered.add(`${Math.floor((cx + Math.cos(a) * t) / TILE)},${Math.floor((cy + Math.sin(a) * t) / TILE)}`);
       }
       g.fillStyle = SILK;
-      for (let k = 0; k < n; k++) line(g, cx, cy, ends[k].x, ends[k].y, { w: 0.85, seed: seed + k, taper: [0.05, 0.3], press: 0.25 });
+      for (let k = 0; k < n; k++) line(g, cx, cy, ends[k].x, ends[k].y, { w: 1, seed: seed + k, taper: [0.05, 0.3], press: 0.25 });
       // The frame: threads between neighbouring radial ends.
       g.fillStyle = SILK_FAINT;
       for (let k = 0; k < n; k++) {
@@ -80,7 +80,7 @@ function bake(m: Web, uid: number) {
           const by = cy + (b.y - cy) * f1;
           const sx = (ax + bx) / 2 + (cx - (ax + bx) / 2) * 0.12;
           const sy = (ay + by) / 2 + (cy - (ay + by) / 2) * 0.12 + 0.3;
-          stroke(g, poly(ax, ay, sx, sy, bx, by), { w: 0.62, seed: seed + ring * 13 + k, taper: [0.1, 0.1], press: 0.3 });
+          stroke(g, poly(ax, ay, sx, sy, bx, by), { w: 0.75, seed: seed + ring * 13 + k, taper: [0.1, 0.1], press: 0.3 });
           // Dew, here and there.
           if (hash2(ring, k, seed) > 0.86) {
             g.fillStyle = 'rgba(220,240,255,0.95)';
