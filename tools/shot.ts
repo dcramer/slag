@@ -4,6 +4,7 @@
  * window.slagDebug in headless Chromium, writes PNGs and exits. A run with no
  * progress for SHOT_TIMEOUT seconds (default 180) fails instead of hanging.
  *
+ *   pnpm shot race --seed abc              → a bare race: the level and its set pieces, no parts
  *   pnpm shot race --seed abc --race saw,laser --frames 200
  *   pnpm shot race --race all
  *   pnpm shot lobby|pick|place --seed abc
@@ -447,7 +448,8 @@ try {
       }
       break;
     case 'race': {
-      const race = opt('race', '')!;
+      // `?race=,` races the level as it stands (no parts but its set pieces); `?race=` alone would sit in pick.
+      const race = opt('race') || ',';
       await open(`seed=${seed}&players=${players}&race=${race}&propseed=${opt('propseed', '1')}`);
       const exact = opt('runframe');
       if (exact) {
