@@ -95,7 +95,8 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
   // --- online (src/net): every browser on /r/<room> runs the same lockstep match -------
   // Match devices are global ids ('<peer>:kb1'); the session maps local devices in and out.
   const conn = connectRoom(room, match, {
-    primaryDevice: input.pointerDevice,
+    // Read at seat time: touch only becomes the pointer device further down, so a phone read here would seat a keyboard.
+    primaryDevice: () => input.pointerDevice,
     params,
     onKicked: () => nav.go(HOME),
     // Back from the back/forward cache with the session closed: join the room again.

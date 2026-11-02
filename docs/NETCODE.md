@@ -138,7 +138,7 @@ Both windows run from when the offer lands, not from when we started. A handshak
 
 If two peers end up hosting anyway (say one lost the API at the wrong moment and the other wrote it off, or two guests lost a live host at once, which looks exactly like it dying), the store settles it, deterministically and within seconds: the lowest order the store still holds wins. A host that was written off is gone from the store, so `beat` tells it so and it rejoins later in the order; `beat` also tells a host the room's lowest order. Either way the higher host hands its guests to the lower one at once. A host normally beats every 20 s, which is too slow for this, so for 12 s after taking over, after losing a guest without a goodbye, or after its API comes back, it beats every 2 s (about 24 commands each time).
 
-An empty room needs nothing: the next arrival is host. If this browser saved the room's state in the last 30 minutes it resumes it, unless a generator change since then means this build can't rebuild that level, in which case the room starts fresh.
+An empty room needs nothing: the next arrival is host. If this browser saved the room's state in the last 30 minutes, on an earlier visit, it resumes it (never a save from this visit: a page saves while its join is in flight, and resuming that would rewind its own lobby), unless a generator change since then means this build can't rebuild that level, in which case the room starts fresh.
 
 If signaling fails while links are up, nothing happens: only a host that has lost its guests too reports `reconnecting`, and it freezes rather than fork the room.
 
@@ -183,7 +183,7 @@ A guest whose link drops without a goodbye keeps its seat for 5 s, `linking`, wh
 
 ### Seats and kicks
 
-- Connecting is joining: a peer asks for a seat without any input, repeating until seated, and the host seats it through the sequenced `join` action within a few frames, so every peer rolls the same character at the same frame.
+- Connecting is joining: a peer asks for a seat without any input, repeating until seated, and the host seats it through the sequenced `join` action within a few frames, so every peer rolls the same character at the same frame. The seat is for the device in hand when the peer asks (`primaryDevice` is read then): a phone only knows touch is its input once the page is up.
 - Every player's name and color differ. Rolls skip a clash, deterministically, and the host refuses a saved look or name someone here already has. Two tabs of one browser share a saved profile, so this happens in ordinary testing, and a refused look isn't saved over the profile.
 - `kick` is a `NetAction`, so it exists only inside a host's bundle. Guests apply bundles from the host alone, and the host refuses `kick` as a request from a guest. It applies in the lobby only. `NetState.kicked` is replicated and snapshotted, so a new host keeps refusing the same peers. A kicked peer's tab remembers (`sessionStorage`) and goes straight to the main menu on refresh; one that gets past that is refused on `hello`, and never seated.
 

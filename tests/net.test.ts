@@ -1,12 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Rng } from '../src/core/rng';
 import { Match } from '../src/game/match';
 import { DEFAULT_RULES } from '../src/game/rules';
 import { roomSeed } from '../src/game/room';
 import { GRAVITY } from '../src/gen/level';
-import { sanitizeRules } from '../src/net/actions';
+import { newNetState, sanitizeRules } from '../src/net/actions';
+import { loadResume, saveResume } from '../src/net/identity';
 import { drawnVelocity, NetSession } from '../src/net/session';
-import { hashMatch } from '../src/net/snapshot';
+import { hashMatch, snapshotMatch } from '../src/net/snapshot';
 import { LoopbackHub, type LoopbackOptions } from '../src/net/transport';
 import type { Runner } from '../src/sim/run';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
@@ -32,11 +33,12 @@ class Room {
     this.hub = new LoopbackHub(opts);
   }
 
-  join(id: string, script: Script = idle): NetSession {
+  join(id: string, script: Script = idle, primaryDevice?: () => string): NetSession {
     const s = new NetSession({
       transport: this.hub.transport(id),
       match: new Match(roomSeed(this.code)),
       now: () => this.hub.now,
+      primaryDevice,
       log: (m) => this.logs.push(`${id}: ${m}`),
     });
     this.peers.set(id, s);
@@ -205,6 +207,21 @@ describe('lobby seats', () => {
     for (const s of [a, b, c]) expect(s.match.players).toHaveLength(3);
     expect(seats(b)).toEqual(seats(a));
     expect(seats(c)).toEqual(seats(a));
+  });
+
+  it('seats the device the person is using once the page is up, not the one assumed while it was starting', () => {
+    // A phone: the page only learns touch is its input after the session exists. Seating the keyboard instead left
+    // the person an empty bay to join, under a "Keyboard" host that wasn't them.
+    const r = new Room({ latency: 20 });
+    let hostDev = 'kb1';
+    let guestDev = 'kb1';
+    const a = r.join('aaaa', idle, () => hostDev);
+    hostDev = 'touch';
+    r.run(20);
+    const b = r.join('bbbb', idle, () => guestDev);
+    guestDev = 'touch';
+    r.run(60);
+    for (const s of [a, b]) expect(s.match.players.map((p) => p.device)).toEqual(['aaaa:touch', 'bbbb:touch']);
   });
 
   it('gives every player a distinct name and color, however many seats fill', () => {
@@ -617,5 +634,25 @@ describe('drawn runners', () => {
     const a = runner(0, 10, 0, 1);
     const b = runner(1, 10, 0, 0);
     expect(drawnVelocity([a, b], a).x).toBe(20);
+  });
+});
+
+describe('resume save', () => {
+  it("resumes a previous visit's state, never one this session wrote while its join was in flight", () => {
+    const mem = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => mem.get(k) ?? null,
+      setItem: (k: string, v: string) => void mem.set(k, v),
+      removeItem: (k: string) => void mem.delete(k),
+    });
+    try {
+      saveResume('ROOMA', snapshotMatch(new Match(roomSeed('ROOMA'))), newNetState());
+      const at = loadResume('ROOMA')!.at;
+      expect(loadResume('ROOMA', at + 1)?.at).toBe(at); // saved before this session opened: a previous visit
+      expect(loadResume('ROOMA', at)).toBeNull(); // saved since: our own state, moments old
+      expect(loadResume('ROOMB', at + 1)).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
