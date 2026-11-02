@@ -53,6 +53,7 @@ Whichever option is chosen, keep the transport abstraction, the election logic, 
 - **Full-window background:** canvases fill the window while the play-area aspect and scale stay the same; background layers fill the extra space instead of black bars. Check at 16:9, 21:9, 4:3 and phone sizes.
 - **New rule: levels are mostly open.** There must always be more than one route to the goal: corridors are fine in places, but never a single narrow path. Enforce it in the judge, for example by checking that the reachable stand-cell graph has at least two disjoint-ish routes, or with a minimum openness ratio.
 - Retune the sculptors for walk vs run and the lower jump.
+- **New solvability targets:** about 99% of levels can't be passed without placing parts, and 20–30% need multiple parts. The crate must always offer enough building parts for what the level still needs.
 
 ## 6. Mobile, round 2
 **Branch:** `wip/mobile-2` (~1k lines, unreviewed). Round 1 (touch controls) is merged.
