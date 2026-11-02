@@ -130,6 +130,8 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 
 ## Online
 - The URL `/r/<code>` identifies a lobby; the homepage is a normal main menu. There's no matchmaking, and you join only through a shared link.
+- Everyone connected has a seat in the lobby without pressing anything, up to 8 players. Past that they spectate.
+- The host wears a `HOST` label in the lobby, and it moves with the host. The host can kick a player from the lobby only, by mouse, or with Use, then Confirm on keyboard or gamepad. A kicked player lands on the main menu and can't refresh back in.
 - **Host = the earliest-joined connected player.** When the host leaves, the next player in join order takes over seamlessly. When everyone leaves, the next arrival becomes host. A refresh rejoins the same slot.
 - Netcode sends inputs only over a deterministic simulation that must be bit-identical across browsers.
 - Peers connect over WebRTC in a star around the host, so a pair that can't connect directly drops to local play. Details: `docs/NETCODE.md`.

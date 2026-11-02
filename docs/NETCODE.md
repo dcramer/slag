@@ -148,15 +148,18 @@ The sim is a pure function of `(seed, per-frame inputs)`, so **inputs and host-s
 
 ### Lockstep (host-sequenced)
 
-- Every tick (60 Hz), each guest samples its devices, appends the frame to its *unacked* list, and every 2 ticks (immediately on a button press) sends **all** unacked frames to the host. Redundancy makes loss harmless.
-- The host consumes one queued frame per guest per tick. If a guest's queue runs dry it repeats held buttons, with no edges; if a burst piles up, the oldest frames are folded together (edges OR-ed), which bounds latency.
-- The host stamps `{frame, inputs, actions, ack deltas}` into a **bundle**, applies it, and broadcasts bundles every 2 ticks. Guests apply bundles strictly in frame order. A gap triggers `need`, and the host resends from its 10 s history or sends a snapshot.
+- Ticks don't depend on animation frames. Online, a worker's timer drives them, because a page that's hidden or slow to draw would otherwise hold up everyone waiting on it.
+- Every tick (60 Hz), each guest samples its devices, appends the frame to its *unacked* list, and sends **all** unacked frames to the host. Redundancy makes loss harmless.
+- The host consumes one queued frame per guest per tick. If a guest's queue runs dry it repeats held buttons, with no edges. More than two frames waiting are folded together (edges OR-ed): the host only eats one a tick, so a queue left alone never drains, and each frame in it is 17 ms of lag for everyone.
+- The host stamps `{frame, inputs, actions, ack deltas}` into a **bundle**, applies it, and broadcasts every tick, repeating the previous bundle so a lost packet costs nothing. Guests apply bundles strictly in frame order, the moment they arrive. A gap triggers `need`, and the host resends from its 10 s history or sends a snapshot.
 - Discrete changes (seat a rejoiner, drop a leaver, mark away, rename, a saved look, rules, the crate salt) are **actions** in bundles, applied by everyone at the same frame.
 - Sequence numbers start at wall-clock ms, so a refreshed page always counts higher than its old self.
 
 ### Prediction (races)
 
 The host plays with zero input delay. A guest renders a predicted copy: the confirmed state stepped forward with its unacked inputs, others holding their last known buttons. New bundles rebuild it from the confirmed state (rollback + re-simulate, at most 24 frames). Events are emitted the first time a frame is simulated, never twice.
+
+Prediction can't know a jump or a turn is coming, so remote runners are wrong for a round trip and then corrected. Drawn straight, a late jump teleports about 50 px at 100 ms. Instead each runner carries on from where it was drawn and the error bleeds away over a few frames, unless it's so large it must be a respawn. "Carries on" means at the speed it really moves, not the speed it's trying to: a runner held up by bodies barely moves however hard it walks, and a rider moves with its base (`drawnVelocity`), or pushers would be drawn inside who they push and riders behind their base. This only touches the view copy, which is rebuilt from confirmed state every update and never stepped, so it can't affect determinism.
 
 ### Pick and place
 
@@ -168,9 +171,19 @@ The host plays with zero input delay. A guest renders a predicted copy: the conf
 ### Joining and reconnecting
 
 - **Join / reconnect**: a guest says `hello`; the host replies with a **snapshot**: the whole Match minus the level, which is regenerated from its seed and profile with bomb craters patched on, plus ack state and last inputs. Bounded in size, and it also serves resync and migration. Spawn, goal and set pieces come from that regeneration, so a peer refuses a snapshot whose tiles aren't its own level plus craters: tiles from another build's generator would put the ring and flag on terrain the runners aren't on.
-- **Refresh mid-match**: the player stays seated but `away` (auto-picks, forfeits placement, pops at GO, so nobody waits); on return they get the same slot, character, name and score.
+- **Refresh mid-match**: the player stays seated but `away` (auto-picks, holds up nobody, pops at GO); on return they get the same slot, character, name and score.
 - **Refresh in the lobby**: the player is removed but parked with their character; on return they're re-seated with the same look.
 - **Join mid-match**: spectate until the next round boundary, then the host seats the peer's main device.
+
+### Brief drops
+
+A guest whose link drops without a goodbye keeps its seat for 5 s, `linking`, while it re-offers: a stalled tab or a Wi-Fi blip shouldn't cost anyone anything. Past that it's `away`. Being away doesn't forfeit a placement, it only stops the phase waiting: a player who returns in time can still place. A goodbye skips the grace.
+
+### Seats and kicks
+
+- Connecting is joining: a peer asks for a seat without any input, repeating until seated, and the host seats it through the sequenced `join` action within a few frames, so every peer rolls the same character at the same frame.
+- Every player's name and color differ. Rolls skip a clash, deterministically, and the host refuses a saved look or name someone here already has. Two tabs of one browser share a saved profile, so this happens in ordinary testing, and a refused look isn't saved over the profile.
+- `kick` is a `NetAction`, so it exists only inside a host's bundle. Guests apply bundles from the host alone, and the host refuses `kick` as a request from a guest. It applies in the lobby only. `NetState.kicked` is replicated and snapshotted, so a new host keeps refusing the same peers. A kicked peer's tab remembers (`sessionStorage`) and goes straight to the main menu on refresh; one that gets past that is refused on `hello`, and never seated.
 
 ### Desync detection
 
@@ -182,7 +195,7 @@ IEEE-754 `+ - * /` and `Math.sqrt` are exact everywhere, but `Math.sin/cos/atan2
 
 ## HUD
 
-`RoomConnection.hudInfo()` is `renderer.hud.net`: the status line, peers (crown, ping) and invite link in the lobby's online panel. `toast()` covers the states that freeze a race, because the panel only shows in the lobby. A guest waiting for the host shows `Joining…`, and a host gathering the room shows `Migrating Host…`. This text stays short: state what happened, and don't explain what's clear from the screen.
+`RoomConnection.hudInfo()` is `renderer.hud.net`: the status line, peers (crown, ping) and invite link in the lobby's online panel. `toast()` covers the states that freeze a race, because the panel only shows in the lobby. Every one is bad news, so it's drawn amber with a warning glyph, never the success check. A guest waiting for the host shows `Joining…`, and a host gathering the room shows `Migrating Host…`. A guest that can't load the host's snapshot (another build: `SNAP_VERSION`, or terrain its generator doesn't make) shows `Different Version · Reload`, goes `OFFLINE` in the panel with no seats drawn (its lobby is its own, and nothing pressed there reaches anyone), and asks again only every 10 s, since each ask costs the host a whole snapshot. This text stays short: state what happened, and don't explain what's clear from the screen.
 
 ## Monitoring
 
@@ -192,10 +205,14 @@ IEEE-754 `+ - * /` and `Math.sqrt` are exact everywhere, but `Math.sin/cos/atan2
 
 - `tests/signal-handlers.test.ts`: the store (reply shapes, Upstash request format, either env pair), handlers (join order, TTLs, caps, validation, command costs) and the HTTP edge.
 - `tests/webrtc-transport.test.ts`: the real transport, handlers and store over a fake RTC network and clock: linking, polling stopping, the measured budget, crash and goodbye migrations, double failure, flaky guests, rival hosts, resuming from the furthest frame.
-- `tests/net.test.ts`, `tests/net-pick.test.ts`: lockstep under latency and loss, desync recovery, refresh, late join; claim races, pending cards, remote cursors and ghosts, the input codec.
+- `tests/net.test.ts`, `tests/net-pick.test.ts`: lockstep under latency and loss, rough play (four peers, three rounds through weather, deaths, grabs and contact, the host's link cut mid-race), desync recovery, refresh, late join, a guest on another build; claim races, pending cards, remote cursors and ghosts, the input codec.
 - `tests/snapshot.test.ts`: round trips with items in play, prediction isolation, and a guard that fails until any new `Match` or `RunWorld` field is snapshotted or declared derived. `tests/dmath.test.ts`.
 - `pnpm test:store`: the real Upstash REST code against real Redis behind [Serverless Redis HTTP](https://upstash.com/docs/redis/sdks/ts/developing) (`compose.store.yml`, Redis 6.2.21 and SRH 0.0.10, on port 8079). Every command the handlers use, reply parity with the in-memory store, TTL expiry, the join counter under a stampede, the handlers end to end. `-- --browser pick,run,leave` adds real browsers on the same store, with the app configured through the production env vars. Needs Docker, so it's a CI job rather than part of `pnpm check`. SRH needs `Content-Type: application/json` and differs from Upstash in edge cases, so handlers stick to plain commands.
-- `pnpm online-test`: real WebRTC between headless Chromium pages, one context per peer, against the real routes with the in-memory store. Hosts are killed with a renderer crash (no pagehide, no goodbye) in pick, place and run; also a graceful leave, and a new host dying straight after taking over. Each prints seconds to recovery and compares state hashes.
+- `pnpm online-test`: real WebRTC between headless Chromium pages, one context per peer, against the real routes with the in-memory store. Hosts are killed with a renderer crash (no pagehide, no goodbye) in pick, place and run, and in a race with no third peer (`duo`); also a graceful leave, and a new host dying straight after taking over. Each prints seconds to recovery and compares state hashes. With a third peer a crash recovers in about 4 s, since its offer proves the host is gone; alone, the guest waits out the old host's whole answer window, about 7.5 s (2.5 s of silence, the offer landing, then `PROBE_MS`).
+- `pnpm online-test -- --only view`: real mouse events at four window shapes on classic, wide and tall levels. The card under the pointer is the one taken, and the cursor and ghost sit under it on both peers. Cursors are view px in `pick` and world px in `place`, mapped through `overview`, so a test or HUD that treats them alike is wrong on anything but a 1:1 level.
+- Groups, each runnable alone on a loaded machine: `--only lobby`, `migration`, `feel`, `misc`. Pages without a screenshot stub their drawing, since software GL otherwise measures the machine.
+- `pnpm online-test -- --only contact`: two runners out of the spawn zone, one shoving the other and then one riding the other, at 40 ms each way: the guest must draw no teleport, no pusher inside who it pushes, and no rider sliding on its base.
+- `pnpm online-test -- --only latency,hidden`: input-to-screen delay between pages, bundle cadence, stalls and teleports, at 0 and 40 ms each way, and with the host's tab hidden. Drawing is stubbed, because software GL would measure this machine. The delay and the hidden tab are simulated in the page (a delayed `RTCDataChannel.send`; `document.hidden`, no rAF, timers clamped to 1 Hz), since headless pages can't truly go hidden. The budget is loose enough for a loaded box: it catches regressions, not jitter.
 
 **Not exercised by any of this:** the real Upstash service (SRH stands in for it), real NAT traversal (all pages share a machine and connect over host candidates), TURN, browsers other than Chromium, and real phones.
 

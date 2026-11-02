@@ -29,7 +29,7 @@ const UI = FONT.ui;
 
 const roundLabel = (m: Match) => `ROUND ${m.round}/${m.rules.maxRounds}`;
 
-export type HudAction = 'join' | 'ready' | 'look' | 'name' | 'level' | 'settings' | 'rules' | 'invite' | 'continue';
+export type HudAction = 'join' | 'ready' | 'look' | 'name' | 'level' | 'settings' | 'rules' | 'invite' | 'continue' | 'kick';
 
 export interface HudButton {
   x: number;
@@ -62,6 +62,14 @@ export interface NetInfo {
   inviteUrl?: string;
   /** The room is unreachable and play is local. */
   offline?: boolean;
+  /** The player carrying the host label. */
+  hostSlot?: number;
+  /** Players this peer may remove. */
+  kickable?: number[];
+  /** Player picked with the keyboard or gamepad. */
+  kickSlot?: number;
+  /** In no room's match, and can't join this one (another build): its local seats mean nothing, so none are drawn. */
+  stranded?: boolean;
 }
 
 interface FooterItem {
@@ -175,6 +183,7 @@ export class Hud {
   /** Draws deferred until after the footer (player cursors). */
   private pending: (() => void)[] = [];
   private toastUntil = 0;
+  private toastBad = false;
 
   /** Device labels/hints from the live key bindings (set by main). */
   devices: DeviceInfo = {
@@ -231,8 +240,10 @@ export class Hud {
   }
 
   /** Show a short confirmation message (e.g. "Invite Link Copied"). */
-  toast(msg: string, ms = 1800) {
+  /** A short notice under the top bar. `bad` is news the player didn't want (a lost link, a kick): no success check on it. */
+  toast(msg: string, ms = 1800, bad = false) {
     this.toastMsg = msg;
+    this.toastBad = bad;
     this.toastUntil = performance.now() + ms;
   }
 
@@ -359,7 +370,9 @@ export class Hud {
     this.ctx.fillRect(f.x0, f.y0, f.w, f.h);
   }
 
-  draw(m: Match, t: number, pw: number, ph: number) {
+  draw(match: Match, t: number, pw: number, ph: number) {
+    // Prototype-backed, so the match's methods and every other field read through untouched.
+    const m: Match = this.net?.stranded ? Object.assign(Object.create(match) as Match, { players: [] }) : match;
     this.buttons = [];
     const c = this.ctx;
     const f = this.frame;
@@ -560,7 +573,7 @@ export class Hud {
     const gridH = rows * bh + (rows - 1) * gap;
     const y0 = phone ? 0 : top + (bottom - top - gridH) / 2;
     const x0 = (VIEW_W - gridW) / 2;
-    const joinable = !me;
+    const joinable = !me && !this.net?.stranded;
     done = this.begin(gs, phone ? (win.safeX0 + win.safeX1) / 2 - (VIEW_W / 2) * gs : 0, phone ? (top + bottom) / 2 - (gridH / 2) * gs : 0);
     for (let i = 0; i < shown; i++) {
       const x = x0 + (i % cols) * (bw + gap);
@@ -595,8 +608,10 @@ export class Hud {
     const col = p.character.body;
     const big = h > 200;
     const mine = p.device === this.mouseDevice;
-    plate(c, x, y, w, h, { edge: css(col, 5), stroke: p.ready ? PAL.toxic : undefined });
+    const picked = this.net?.kickSlot === p.slot;
+    plate(c, x, y, w, h, { edge: css(col, 5), stroke: picked ? PAL.danger : p.ready ? PAL.toxic : undefined });
     // Header: player number + device.
+    if (this.net?.hostSlot === p.slot) tag(c, 'HOST', x + w / 2, y + 17.5, PAL.amber, PAL.ink, TYPE.caption, 'center');
     this.text(`P${p.slot + 1}`, x + 10, y + 17, 15, css(col, 22), 'left', DISPLAY, 400, 3);
     const pad = p.device.startsWith('pad');
     const label = this.devices.deviceLabel(p.device);
@@ -656,6 +671,8 @@ export class Hud {
     } else if (p.ready) {
       tag(c, 'READY', cx, by + bh / 2 - 1, PAL.toxic, PAL.ink, TYPE.label, 'center');
     } else this.text('Not Ready', cx, by + bh / 2 - 1, TYPE.body, PAL.dim, 'center', UI, 600);
+    if (this.net?.kickable?.includes(p.slot))
+      this.btn({ x: x + w - 54, y: by, w: 44, h: bh, action: 'kick', device: p.device }, 'Kick', picked ? 'primary' : 'ghost', undefined, TYPE.label);
   }
 
   private netPanel(net: NetInfo, x: number, y: number, w: number) {
@@ -1106,15 +1123,21 @@ export class Hud {
       case 'lobby': {
         const primary = this.mode === 'gamepad' ? m.players.find((p) => /(^|:)pad/.test(p.device)) : m.players.find((p) => p.device === this.mouseDevice);
         const items: FooterItem[] = [];
+        if ((this.net?.kickSlot ?? -1) >= 0) {
+          items.push({ action: 'confirm', label: 'Kick' }, { action: 'alt', label: 'Cancel' });
+          return { items, left: '', alpha: 1, bar: true };
+        }
         // A phone's lobby buttons are all on the cards and the top bar, big enough for a thumb.
         if (this.phone)
           return { items, left: m.players.length ? `${m.players.filter((p) => p.ready).length}/${m.players.length} Ready` : '', alpha: 1, bar: true };
-        if (!primary) items.push({ action: 'confirm', label: 'Join', hud: 'join', device: this.mouseDevice });
-        else {
+        if (!primary) {
+          if (!this.net?.stranded) items.push({ action: 'confirm', label: 'Join', hud: 'join', device: this.mouseDevice });
+        } else {
           items.push({ action: 'confirm', label: primary.ready ? 'Not Ready' : 'Ready Up', hud: 'ready', device: primary.device });
           items.push({ action: 'alt', label: 'New Look', hud: 'look', device: primary.device });
           items.push({ action: 'down', label: 'New Level', hud: 'level', device: primary.device });
         }
+        if (!touch && this.net?.kickable?.length) items.push({ action: 'use', label: 'Kick' });
         if (!touch) items.push({ action: 'menu', label: 'Settings', hud: 'settings' });
         const ready = m.players.filter((p) => p.ready).length;
         const left = m.players.length ? `${ready}/${m.players.length} Ready` : '';
@@ -1254,8 +1277,9 @@ export class Hud {
     c.font = `700 ${TYPE.label}px ${UI}`;
     const w = c.measureText(this.toastMsg).width + 34;
     const x = VIEW_W / 2 - w / 2;
-    plate(c, x, 52, w, 24, { rivets: false, stroke: PAL.toxic });
-    icon(c, 'check', x + 13, 64, 9, PAL.toxic);
+    const tone = this.toastBad ? PAL.amber : PAL.toxic;
+    plate(c, x, 52, w, 24, { rivets: false, stroke: tone });
+    icon(c, this.toastBad ? 'alert' : 'check', x + 13, 64, 9, tone);
     this.text(this.toastMsg, x + 23, 64.5, TYPE.label, PAL.bone, 'left', UI, 700);
     c.restore();
     done();

@@ -8,6 +8,7 @@ import { loadRules, saveRules } from './game/rules';
 import { InputManager } from './input/input';
 import { TOUCH_DEVICE, touchModeFor } from './input/touch';
 import { connectRoom } from './net/client';
+import { wasKicked } from './net/identity';
 import { ITEMS } from './sim/items';
 import { Renderer } from './render/renderer';
 import { DT } from './sim/constants';
@@ -34,6 +35,7 @@ const PINCH_WAIT_FRAMES = 6;
 export async function bootGame(container: HTMLElement, room: string): Promise<void> {
   if (booted) return; // React strict mode / remounts: one game per page
   booted = true;
+  if (wasKicked(room)) return location.replace('/');
   setTelemetryContext(() => ({ room })); // a failed boot still says which lobby
   const params = new URLSearchParams(location.search);
   const seedParam = params.get('seed'); // debug override
@@ -153,6 +155,9 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
       case 'name':
         promptName();
         return true;
+      case 'kick':
+        if (b.device) conn.kick(b.device);
+        return true;
       case 'invite': {
         const url = conn.inviteUrl;
         navigator.clipboard?.writeText(url).then(
@@ -186,6 +191,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
   /** Keep the local keyboard/mouse player's chosen name; ask once on first join. */
   // Online, look and name changes are host-sequenced actions: send each once, not every frame.
   let appliedLook: number | null = null;
+  let restoring = false;
   let nameSent = '';
   function syncProfile() {
     const p = match.players.find((q) => q.device === myDevice());
@@ -196,7 +202,8 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     // Look: restore the saved one on join; afterwards a new look (reroll) becomes the saved one.
     if (appliedLook === null) {
       if (profile.look != null) {
-        if (p.character.seed !== profile.look) net.act({ t: 'look', dev: p.device, seed: profile.look });
+        restoring = p.character.seed !== profile.look;
+        if (restoring) net.act({ t: 'look', dev: p.device, seed: profile.look });
         appliedLook = profile.look;
       } else {
         appliedLook = p.character.seed;
@@ -205,9 +212,13 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
       }
     } else if (p.character.seed !== appliedLook && !net.pending) {
       appliedLook = p.character.seed;
-      profile.look = appliedLook;
-      saveProfile(profile);
-    }
+      // Refused because someone here has that look already (say, our other tab): not a choice to save.
+      if (!restoring) {
+        profile.look = appliedLook;
+        saveProfile(profile);
+      }
+      restoring = false;
+    } else if (p.character.seed === appliedLook) restoring = false;
     // Name: a reroll also rolls a random name, so re-apply the saved one.
     // Name: a reroll also rolls a random name, so re-apply the saved one (unless another local player already has it).
     const taken = match.players.some((q) => q !== p && q.character.name === profile.name);
@@ -261,7 +272,9 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
       // Host-rolled per-match salt, re-rolled on entering the lobby; a host action so every peer shares it.
       if (net.isHost && !net.paused && match.phase === 'lobby' && match.phaseFrame === 0) net.act({ t: 'salt', salt: (Math.random() * 4294967296) >>> 0 });
       input.touch.setMode(touchModeFor(match, net.globalDevice(TOUCH_DEVICE)));
-      net.tick(input.sample());
+      const frames = input.sample();
+      conn.lobbyInput(frames);
+      net.tick(frames);
       acc -= DT;
     }
   }
@@ -281,7 +294,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     uiHover();
     renderer.hud.mouseDevice = myDevice();
     renderer.hud.net = conn.hudInfo();
-    conn.toast((msg) => renderer.hud.toast(msg, 3000));
+    conn.toast((msg) => renderer.hud.toast(msg, 3000, true)); // every net toast is bad news
     inputMode.update();
     // Touch controls are authoritative for "touch"; otherwise the last keyboard/mouse vs pad input wins.
     renderer.hud.lastInput = input.touch.active ? 'touch' : inputMode.mode === 'touch' ? 'keyboard' : inputMode.mode;
@@ -304,27 +317,29 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
-  // Background tabs get no animation frames; a hidden host would freeze the whole room.
-  // A worker timer (not throttled like page timers) keeps the sim ticking while hidden.
-  keepTickingWhenHidden((now) => advance(now, 1));
+  // Animation frames stop in a background tab and crawl on a busy page, and a peer's ticks are what
+  // everyone else is waiting on. A worker's timer is free of both.
+  keepTicking(!!net.transport, (now) => advance(now, 1));
 }
 
-/** Calls `step(now)` ~20×/s while the page is hidden. */
-function keepTickingWhenHidden(step: (now: number) => void) {
+/** Calls `step(now)` from a worker: always online, where a stalled tick stalls the room; offline, only while hidden. */
+function keepTicking(online: boolean, step: (now: number) => void) {
   let worker: Worker | null = null;
   const sync = () => {
-    if (document.hidden && !worker) {
+    const wanted = online || document.hidden;
+    if (wanted && !worker) {
       try {
-        const url = URL.createObjectURL(new Blob(['setInterval(() => postMessage(0), 50)'], { type: 'text/javascript' }));
+        const url = URL.createObjectURL(new Blob([`setInterval(() => postMessage(0), ${online ? 8 : 50})`], { type: 'text/javascript' }));
         worker = new Worker(url);
-        worker.onmessage = () => document.hidden && step(performance.now());
+        worker.onmessage = () => step(performance.now());
       } catch {
         worker = null;
       }
-    } else if (!document.hidden && worker) {
+    } else if (!wanted && worker) {
       worker.terminate();
       worker = null;
     }
   };
+  sync();
   document.addEventListener('visibilitychange', sync);
 }
