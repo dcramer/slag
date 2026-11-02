@@ -65,6 +65,8 @@ Size tiers for parts are a mapping of the old rolled ranges, so check them too; 
 
 **Undecided: character height.** Characters fit a one-block gap today. The owner wondered about a 1.5- or 2-block gap, since one block feels less interesting, then leaned back toward one. Decide in playtest. Changing it means redoing level design and `reach.ts` tuning.
 
+**Fast crushers** can pass through a lone runner standing on the floor and pop them on top instead of crushing them. The same happens with one runner, before collision.
+
 ## 16. Fix WebGL failure paths
 Both are now visible in Sentry.
 

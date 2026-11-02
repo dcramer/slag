@@ -45,7 +45,7 @@ Lint: `oxlint` (type-aware, `.oxlintrc.json`). Errors fail CI; warnings are real
 - `lobby` | `pick` | `place` with `--seed S --players N`
 - `mobile [--device "iPhone SE landscape"]`: emulated phone, real multi-touch, fails on a tap target under 44 CSS px or a runner off screen
 - `levels --count 9`, `--seeds a,b,c` or `--themes all` → contact sheet `shots/levels.png`
-- `props --count 24` (crate cards), `codex` (the `/codex` page)
+- `props --count 24` (crate cards), `codex` (the `/codex` page), `stack` (runners stacking, riding and head-bouncing, as stepped frames)
 - Options: `--theme farm`, `--weather rain`, `--noui` (hide HUD), `--noletters` (no impact words), `--size 1280x720`, `--out shots`
 
 Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm`, `?weather=rain` (clear|wind|mist|rain|snow, skips worldgen's gate), `?players=2` (auto-join and start), `?race=saw,laser` or `?race=all`, `?propseed=3`, `?ui=0`, `?zoom=1` (phone camera on desktop; `?zoom=0` off, `?zoom=2.4` a fixed zoom), `?lettering=0` (no impact words), `?debug=1` (dev overlay: frame-time breakdown, counts, level info; ` toggles it in `pnpm dev` or with any `?debug`). In the console, `slagDebug` has `quickStart`, `race`, `addProps`, `loadLevel`, `phase`, `pause`, `step`, `render`.
@@ -69,7 +69,7 @@ Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm
 
 ## Where things live
 
-- `src/game-client.ts`: `bootGame(container, room)`: canvases, input, menus, fixed 60 Hz loop. Each step: input → `Match.step` → `RunWorld.step` (props `build` solids/hazards, then `trace` rays → `stepBody` → hazards/springs/goal → props `tick`) → events queue → `Renderer.render`.
+- `src/game-client.ts`: `bootGame(container, room)`: canvases, input, menus, fixed 60 Hz loop. Each step: input → `Match.step` → `RunWorld.step` (props `build` solids/hazards, then `trace` rays → `stepBody` → hazards/springs/goal → runner contact in `sim/collide.ts` → props `tick`) → events queue → `Renderer.render`.
 - `src/sim/`: deterministic simulation (physics, level, reachability, run world, prop modules). `src/gen/`: generators (levels, set pieces, props, theme looks, characters, names). `src/game/`: match state machine (lobby → pick → place → run → score → victory) and `scoring.ts`. `src/render/`: Canvas2D layers + WebGL2 post. `src/input/`: keyboard/gamepad → `InputFrame` (bindings in `bindings.ts`). `src/audio/`: procedural SFX and per-theme music. `src/ui/`: menus. `src/codex/`: the `/codex` parts catalog.
 - `tools/`: `shot.ts`, `level.ts`. `tests/`: vitest, one file per subsystem. `tests/stats/`: distribution and balance suites, one file per measure. `tests/lib/`: the per-seed checks both share.
 
