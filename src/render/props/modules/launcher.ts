@@ -1,14 +1,16 @@
 import { css, type HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
-import { launcherAngle, type LauncherStyle, type ModuleOf, type PropStyle } from '../../../sim/props';
+import type { Vec } from '../../../core/geom';
+import { TILE } from '../../../sim/constants';
+import { footprintCells, launcherAngle, type LauncherStyle, type ModuleOf, type PropStyle, type Resolved } from '../../../sim/props';
 import { blob, line, type P, stroke } from '../../ink';
-import { ball, boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
-import { bulb, circle, flame, glowDot, light, type MetalPalette, type RC } from '../../kit';
+import { ball, boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, type Sprite, sprite, stamp, tick, tone } from '../../ink-props';
+import { bulb, circle, glowDot, light, type MetalPalette, type RC } from '../../kit';
 import { beamOf, defineArt, type DrawCtx } from '../common';
 import { iron } from '../machine';
-import { drawGlider, rang, roundSprite, stampRound } from '../projectiles';
-import { HANGAR_BOX, hangarLoft } from './hangar-art';
-import { baseplate, cartWheel, hub, legs, pedestal, roundel, stand, trapBox, wheel } from './launcher-house';
+import { rang, roundSprite, stampRound } from '../projectiles';
+import { FRAMED } from './launcher-framed';
+import { baseplate, hub, legs, pedestal, roundel, trapBox, wheel } from './launcher-house';
 
 /**
  * Launchers, inked: each style is a parody of a genre staple (docs/PARODY.md, Launchers). A style is three
@@ -21,7 +23,7 @@ import { baseplate, cartWheel, hub, legs, pedestal, roundel, stand, trapBox, whe
 type Launcher = ModuleOf<'launcher'>;
 type Box = readonly [number, number, number, number];
 
-interface Bk {
+export interface Bk {
   pal: MetalPalette;
   st: PropStyle;
   wood: HSL;
@@ -32,7 +34,7 @@ interface Bk {
   seed: number;
 }
 
-interface Live {
+export interface Live {
   rc: RC;
   m: Launcher;
   x: number;
@@ -46,9 +48,17 @@ interface Live {
   glow: HSL;
   /** -1 while the barrel is mirrored. */
   flip: number;
+  /** A point of the look's own frame (px round its middle, or round the pivot for a one-tile look) in world px. */
+  p(x: number, y: number): P;
 }
 
-interface Look {
+export interface Look {
+  /**
+   * A look that takes more than one tile (sim/props/launcher-frames.ts): its pieces are drawn round the
+   * middle of its cells, facing right as at rot 0, and turned with the part. `pivot` is where the barrel
+   * turns and shots leave from, and `cam` where a tracker's sensor stands, both in those px.
+   */
+  frame?: { pivot: readonly [number, number]; cam?: readonly [number, number] };
   /** What it stands on, under the mount: wheels, legs, a stand (launcher-house.ts). */
   house?: readonly [Box, (g: CanvasRenderingContext2D, k: Bk) => void];
   mount?: readonly [Box, (g: CanvasRenderingContext2D, k: Bk) => void];
@@ -69,25 +79,10 @@ const STEEL: HSL = { h: 212, s: 9, l: 70 };
 /** A stone tone from the part's hue: grey with a cast. */
 const stone = (k: Bk, l = 58): HSL => ({ h: k.st.hue, s: 9, l });
 
-/** A thin flat band across a shape, inside its clip: hoops, stripes, straps. */
-function band(g: CanvasRenderingContext2D, x: number, y0: number, y1: number, w: number, col: string, seed: number) {
-  g.fillStyle = col;
-  line(g, x, y0, x, y1, { w, seed, taper: [0.02, 0.02], press: 0.1 });
-}
-
 /** A loaded round sitting in the barrel frame at (x, 0). */
 function loaded(s: CanvasRenderingContext2D, l: Live, x: number, k = 1, spin = 0) {
   const sp = roundSprite(l.m.ammo);
   if (sp) stampRound(s, sp, x, 0, spin, false, k);
-}
-
-/** Pull of a bow: 1 drawn back and loaded, 0 just loosed. */
-const pull = (l: Live) => (l.reload < 1 ? l.reload : 1);
-
-function bowString(s: CanvasRenderingContext2D, tipX: number, tipY: number, nock: number) {
-  s.fillStyle = 'rgba(240,232,214,0.95)';
-  line(s, tipX, -tipY, nock, 0, { w: 0.5, seed: 1, taper: [0, 0], press: 0 });
-  line(s, nock, 0, tipX, tipY, { w: 0.5, seed: 2, taper: [0, 0], press: 0 });
 }
 
 const LOOKS: Record<LauncherStyle, Look> = {
@@ -174,227 +169,6 @@ const LOOKS: Record<LauncherStyle, Look> = {
       stroke(s, poly(4.4, -1.3, 7.6, 0, 4.4, 1.3), { w: 0.5, seed: 1, taper: [0.1, 0.1], press: 0 });
     },
   },
-  // Tower Defense: a ballista on a tiny tower, price tag still on.
-  ballista: {
-    mount: [
-      [-9.5, -9.5, 19, 19],
-      (g, k) => {
-        const st = stone(k, 54);
-        // A tiny tower: battered walls, a corbelled ledge, and merlons notched out of its top.
-        const pts = poly(
-          -7.9,
-          8,
-          7.9,
-          8,
-          6.4,
-          -3,
-          7.4,
-          -3.6,
-          7.4,
-          -8,
-          4.6,
-          -8,
-          4.6,
-          -6.2,
-          1.5,
-          -6.2,
-          1.5,
-          -8,
-          -1.5,
-          -8,
-          -1.5,
-          -6.2,
-          -4.6,
-          -6.2,
-          -4.6,
-          -8,
-          -7.4,
-          -8,
-          -7.4,
-          -3.6,
-          -6.4,
-          -3,
-        );
-        tone(g, pts, st, { depth: 1.3 });
-        g.save();
-        path(g, pts);
-        g.clip();
-        g.fillStyle = INK;
-        line(g, -8.4, -3.3, 8.4, -3.3, { w: 0.7, seed: 3, taper: [0.05, 0.05], press: 0.3 });
-        const mortar = css(st, -24, 1, 4);
-        for (const [y, off] of [
-          [0, 0],
-          [3.3, 2.4],
-          [6.6, 0],
-        ] as const) {
-          tick(g, -8, y, 8, y + 0.2, 0.45, y * 9, mortar);
-          for (let x = -5.4 + off; x < 8; x += 4.8) tick(g, x, y - 3.1, x, y - 0.2, 0.42, x * 7 + y, mortar);
-        }
-        // An arrow loop, dark, under the ledge.
-        g.fillStyle = INK;
-        path(g, boxPts(-0.6, 1, 1.2, 4, 0.5, k.seed + 2));
-        g.fill();
-        g.restore();
-        pen(g, pts, k.seed + 1, 0.55, 1.6);
-        // The price tag, on a string from a merlon.
-        tick(g, 6, -6.2, 5.6, -2.2, 0.35, 12, '#e9dfc8');
-        g.save();
-        g.translate(5.6, -0.4);
-        g.rotate(0.28);
-        part(g, poly(-1.6, -1.8, 1.6, -1.8, 1.6, 1.9, -1.6, 1.9, -2.4, 0), { h: 46, s: 70, l: 84 }, 13, { depth: 0.3, thin: 0.3, thick: 0.6 });
-        dot(g, -1.3, 0, 0.35, 14);
-        g.fillStyle = '#7a1f12';
-        g.font = 'bold 2.2px sans-serif';
-        g.textAlign = 'center';
-        g.textBaseline = 'middle';
-        g.fillText('$5', 0.3, 0.1);
-        g.restore();
-      },
-    ],
-    barrel: [
-      [-8, -10.5, 19, 21],
-      (g, k) => {
-        const wd = { ...k.wood, l: 44 };
-        // Bow arms: ink under, wood over.
-        const arm: P[] = [];
-        for (let i = 0; i <= 12; i++) {
-          const t = i / 12;
-          arm.push({ x: 3.4 + Math.sin(t * Math.PI) * 4.4, y: -9.2 + t * 18.4 });
-        }
-        g.fillStyle = INK;
-        stroke(g, arm, { w: 2.8, seed: k.seed, taper: [0.15, 0.15], press: 0.1 });
-        g.fillStyle = css(wd, 4);
-        stroke(g, arm, { w: 1.5, seed: k.seed, taper: [0.2, 0.2], press: 0.1 });
-        part(g, boxPts(-6.4, -1.5, 15, 3, 0.8, k.seed + 1), wd, k.seed + 1, { depth: 0.5, thin: 0.45, thick: 1 });
-        part(g, boxPts(6, -2.2, 2.4, 4.4, 0.5, k.seed + 2), k.pal.base, k.seed + 2, { depth: 0.4, thin: 0.35, thick: 0.8 });
-        dot(g, 0, 0, 1.1, k.seed + 3, css(k.pal.light));
-      },
-    ],
-    recoil: 0.5,
-    aimed(s, l) {
-      const p = pull(l);
-      const nock = -1 - p * 4.5;
-      bowString(s, 3.6, 9.1, nock);
-      if (l.reload > 0.35) {
-        s.save();
-        s.translate(nock + 11.5, 0);
-        stamp(s, roundSprite('bolt')!);
-        s.restore();
-      }
-    },
-  },
-  // Pirate Cannon: a ship's gun on its stepped carriage and two cart wheels, a treasure map lashed to the barrel.
-  cannon: {
-    mount: [
-      [-9.5, -4, 19, 13],
-      (g, k) => {
-        const wd = { ...k.wood, l: 36 };
-        const cheek = poly(-7.6, 5.6, -7, 1.8, -4.4, 1.8, -3.8, -1.4, 3.8, -1.4, 4.4, 1.8, 7, 1.8, 7.6, 5.6);
-        part(g, cheek, wd, k.seed, { depth: 0.9, thin: 0.5, thick: 1.4 });
-        tick(g, -6.6, 3.8, 6.6, 3.9, 0.5, 2, css(wd, -18, 1, 6));
-        tick(g, -3.2, 0.4, 3.2, 0.5, 0.45, 3, css(wd, -18, 1, 6));
-        // A coil of rope hung on its cheek, and a ball ready by the wheel.
-        for (const [x, r] of [
-          [5.4, 1.2],
-          [5.4, 0.6],
-        ] as const) {
-          g.fillStyle = css({ h: 38, s: 35, l: 56 });
-          stroke(g, ovalPts(x, 3.6, r, r * 0.6, x * r, 0.05, 12).concat([{ x: x + r, y: 3.6 }]), { w: 0.55, seed: r * 9, taper: [0, 0], press: 0 });
-        }
-        for (const x of [-4.4, 4.4]) cartWheel(g, x, 5.6, 2.4, wd, k.pal, k.seed + x);
-      },
-    ],
-    // The trunnion strap the barrel turns under.
-    front: [[-2.5, -2.5, 5, 5], (g, k) => dot(g, 0, 0, 1.3, k.seed + 9, css(k.pal.spec, -10))],
-    barrel: [
-      [-9.5, -6, 23, 12],
-      (g, k) => {
-        const body = poly(-4.2, -4.3, 9.6, -3.3, 9.6, 3.3, -4.2, 4.3, -6.3, 3, -7, 0, -6.3, -3);
-        part(g, body, k.pal.base, k.seed, { depth: 1, thin: 0.5, thick: 1.3 });
-        g.save();
-        path(g, body);
-        g.clip();
-        for (const x of [-1, 5]) band(g, x, -5, 5, 1.4, css(k.pal.dark, 6), k.seed + x);
-        glint(g, poly(-4, -3, 2, -2.7, 8, -2.3), css(k.pal.spec, -6), 0.7);
-        g.restore();
-        part(g, boxPts(9, -4.1, 2.8, 8.2, 0.8, k.seed + 2), k.pal.base, k.seed + 2, { depth: 0.5, thin: 0.4, thick: 1 });
-        g.fillStyle = INK;
-        path(g, poly(11.4, -2.4, 12.2, -2.4, 12.2, 2.4, 11.4, 2.4));
-        g.fill();
-        ball(g, -8, 0, 1.5, k.pal.base, k.seed + 3);
-        // A rolled treasure map lashed along the top of the barrel, its red X showing.
-        part(g, boxPts(0.4, -5.8, 5.6, 2.6, 0.5, k.seed + 5, 0.1), { h: 42, s: 45, l: 80 }, k.seed + 5, { depth: 0.3, thin: 0.3, thick: 0.7 });
-        for (const x of [0.4, 6])
-          part(g, ovalPts(x, -4.5, 0.75, 1.4, k.seed + x, 0.02, 10), { h: 40, s: 40, l: 68 }, k.seed + x + 1, { depth: 0.2, thin: 0.25, thick: 0.5 });
-        tick(g, 2.5, -5.2, 3.7, -3.6, 0.4, 7, '#c0182a');
-        tick(g, 3.7, -5.2, 2.5, -3.6, 0.4, 8, '#c0182a');
-        for (const x of [1.3, 5]) {
-          tick(g, x, -6, x + 0.5, 4.2, 0.7, 9 + x);
-          tick(g, x, -5.9, x + 0.5, 4.1, 0.35, 10 + x, css({ h: 38, s: 35, l: 58 }));
-        }
-      },
-    ],
-    recoil: 0.6,
-  },
-  // Heartburn Idol: a carved post with a chili cut into it and a fire cup on top. Its grooves glow as it reloads.
-  totem: {
-    mount: [
-      [-9.5, -10.5, 19, 20],
-      (g, k) => {
-        const wd = { ...k.wood, l: 42 };
-        // The post: carved wood, flared at the foot.
-        const post = poly(-7.6, 7.8, 7.6, 7.8, 7.2, 6, 5.6, 5.2, 5.4, -3.6, -5.4, -3.6, -5.6, 5.2, -7.2, 6);
-        part(g, post, wd, k.seed, { depth: 1.2, thin: 0.55, thick: 1.6 });
-        g.save();
-        path(g, post);
-        g.clip();
-        // Carved bands: a groove with a lit lip under each.
-        for (const y of [-1, 4.6]) {
-          g.fillStyle = INK;
-          line(g, -7.6, y, 7.6, y + 0.1, { w: 0.8, seed: k.seed + y, taper: [0.05, 0.05], press: 0.3 });
-          g.fillStyle = css(wd, 14);
-          line(g, -7.6, y + 0.7, 7.6, y + 0.8, { w: 0.45, seed: k.seed + y + 1, taper: [0.05, 0.05], press: 0.1 });
-        }
-        // Flutes carved down the post under the lower band.
-        for (const x of [-3.6, 0, 3.6]) tick(g, x, 5.8, x, 7.6, 0.5, x * 5 + 3, css(wd, -22, 1, 6));
-        g.restore();
-        // The chili, cut in and painted: hanging stem-up on a slant, so it reads as a pepper.
-        g.save();
-        g.translate(0.6, 1.8);
-        g.rotate(-1.15);
-        const chili = poly(-2.9, 0.3, -1.4, -0.5, 0.8, -1, 2.6, -1.1, 3, 0.1, 2.5, 0.9, 0.5, 0.9, -1.6, 0.8);
-        part(g, chili, { h: 3, s: 80, l: 46 }, k.seed + 3, { depth: 0.3, thin: 0.35, thick: 0.8 });
-        part(g, poly(2.7, -1.2, 3.8, -0.9, 3.8, 0.8, 2.7, 1), { h: 105, s: 55, l: 38 }, k.seed + 4, { depth: 0.2, thin: 0.3, thick: 0.6 });
-        g.fillStyle = css({ h: 105, s: 55, l: 32 });
-        line(g, 3.8, 0, 5, -0.6, { w: 0.6, seed: 4, taper: [0, 0.4], press: 0 });
-        g.restore();
-        // The fire cup: a bronze bowl on the post, coals in it.
-        const cup = poly(-7.4, -8.2, 7.4, -8.2, 5.4, -3.4, -5.4, -3.4);
-        part(g, cup, { h: 30, s: 50, l: 40 }, k.seed + 5, { depth: 0.8, thin: 0.5, thick: 1.4 });
-        g.fillStyle = css({ h: 30, s: 50, l: 58 });
-        line(g, -6.8, -7.4, 6.4, -7.4, { w: 0.6, seed: k.seed + 6, taper: [0.2, 0.3], press: 0.1 });
-        g.fillStyle = INK;
-        path(g, ovalPts(0, -8.4, 6.6, 1.1, k.seed + 7, 0.04, 16));
-        g.fill();
-        for (const x of [-3.4, -0.6, 2.4]) dot(g, x, -8.6, 0.8, k.seed + x, '#ff6a1f');
-      },
-    ],
-    over(l) {
-      const g = l.rc.g;
-      const hot: HSL = { h: 4, s: 100, l: 55 };
-      const k = 0.25 + l.reload * 0.75;
-      // Heat building in the carving: the grooves glow, and the cup flares.
-      g.fillStyle = css(hot, 15, k * 0.8);
-      for (const y of [-1, 4.6]) line(g, l.x - 5.2, l.y + y, l.x + 5.2, l.y + y, { w: 0.5, seed: y, taper: [0.2, 0.2], press: 0 });
-      flame(g, l.x, l.y - 8.6, 2.2 + l.reload, 2.5 + l.reload * 3, { h: 28, s: 100, l: 58 }, l.rc.t);
-      const ox = l.x + Math.cos(l.angle) * 10.5;
-      const oy = l.y + Math.sin(l.angle) * 10.5;
-      const orb = 0.8 + l.reload * 2.2 + Math.sin(l.rc.t * 12) * 0.25;
-      glowDot(g, ox, oy, orb * 4, hot, 0.8 * l.reload);
-      ball(l.rc.s, ox, oy, orb, { h: 6, s: 90, l: 52 }, 3);
-      light(l.rc, ox, oy, 50, hot, 0.3 + l.reload * 0.5);
-    },
-  },
   // Sorry Turret: a dented dome with a sensor visor, and a sticky note slapped on it.
   turret: {
     // A tripod: the dome is its whole body.
@@ -451,58 +225,6 @@ const LOOKS: Record<LauncherStyle, Look> = {
       l.rc.s.fillStyle = css(l.glow, 0, 0.35 + l.reload * 0.6);
       circle(l.rc.s, lx, ly, 0.65);
       glowDot(l.rc.g, lx, ly, 2.5 + l.reload * 2, l.glow, 0.3 + l.reload * 0.5);
-    },
-  },
-  // Shuriken Vendor: a vending machine on two feet, a lit header over its window, a coin slot.
-  thrower: {
-    mount: [
-      [-8.5, -9.5, 17, 18],
-      (g, k) => {
-        const paint: HSL = { h: k.st.hue, s: 60, l: 46 };
-        for (const x of [-5.6, 3.4])
-          part(g, boxPts(x, 6, 2.2, 1.9, 0.5, k.seed + x), { h: 220, s: 8, l: 24 }, k.seed + x, { depth: 0.3, thin: 0.4, thick: 0.9 });
-        const body = boxPts(-6.6, -6.4, 13.2, 12.9, 1.4, k.seed);
-        part(g, body, paint, k.seed, { depth: 1.3, thin: 0.55, thick: 1.6 });
-        const sign = boxPts(-7.4, -8.4, 14.8, 2.8, 1.2, k.seed + 7);
-        part(g, sign, { h: 48, s: 90, l: 66 }, k.seed + 7, { depth: 0.4, thin: 0.45, thick: 1.1 });
-        for (const x of [-4.6, -1.6, 1.4, 4.4]) tick(g, x, -7.4, x + 1.2, -7.4, 0.55, x, css({ h: 4, s: 70, l: 46 }));
-        const win = boxPts(-5.4, -5, 7.4, 7.4, 0.6, k.seed + 1);
-        tone(g, win, { h: 195, s: 35, l: 80 }, { depth: 0.6 });
-        g.save();
-        path(g, win);
-        g.clip();
-        for (const [x, y] of [
-          [-3.4, -3],
-          [0.2, -3],
-          [-3.4, 0.6],
-          [0.2, 0.6],
-        ]) {
-          const pts: P[] = [];
-          for (let i = 0; i < 8; i++) {
-            const a = (i / 8) * Math.PI * 2 + 0.3;
-            const r = i % 2 ? 0.5 : 1.5;
-            pts.push({ x: x + Math.cos(a) * r, y: y + Math.sin(a) * r });
-          }
-          g.fillStyle = '#5d6370';
-          path(g, pts);
-          g.fill();
-        }
-        g.fillStyle = 'rgba(255,255,255,0.7)';
-        line(g, -4.6, 2, 1.4, -4.6, { w: 0.6, seed: 2, taper: [0.2, 0.2], press: 0 });
-        g.restore();
-        pen(g, win, k.seed + 2, 0.4, 0.9);
-        // Coin slot and buttons.
-        part(g, boxPts(3, -5, 2.6, 4, 0.4, k.seed + 3), STEEL, k.seed + 3, { depth: 0.3, thin: 0.3, thick: 0.6 });
-        tick(g, 4.3, -4.2, 4.3, -1.8, 0.55, 4);
-        for (const y of [0.6, 2.4]) dot(g, 4.3, y, 0.6, k.seed + y, '#ffd84a');
-        g.fillStyle = INK;
-        path(g, boxPts(-5.4, 3.4, 7.4, 2, 0.5, k.seed + 5));
-        g.fill();
-      },
-    ],
-    barrel: [[3, -2.5, 8, 5], (g, k) => part(g, boxPts(4.2, -1.6, 5.4, 3.2, 0.6, k.seed + 6), k.pal.dark, k.seed + 6, { depth: 0.4, thin: 0.35, thick: 0.8 })],
-    aimed(s, l) {
-      if (l.ready) loaded(s, l, 10.6, 0.7, l.rc.t * 4);
     },
   },
   // Grudge Launcher: a bullet blaster. A black drum turns on a pedestal with a crosshair roundel on its
@@ -584,53 +306,6 @@ const LOOKS: Record<LauncherStyle, Look> = {
       s.scale(0.85, 0.85);
       stamp(s, sprite('ammo|rang', -6.5, -4, 13, 8.5, rang));
       s.restore();
-    },
-  },
-  // Dodgeball Coach: a gumball machine with a whistle on a lanyard.
-  gumball: {
-    // The machine's cast stand: a waist under the globe, flaring to a foot.
-    house: [[-9.5, -1, 19, 10], (g, k) => stand(g, { h: k.st.hue, s: 70, l: 46 }, k.seed)],
-    mount: [
-      [-3, 0, 6, 6],
-      (g, k) => {
-        ball(g, 0, 2.9, 1.7, STEEL, k.seed + 1);
-        tick(g, -0.9, 2.9, 0.9, 2.9, 0.45, 2);
-      },
-    ],
-    barrel: [
-      [2.5, -2.5, 8, 5],
-      (g, k) => part(g, boxPts(3.6, -1.8, 5.4, 3.6, 0.6, k.seed + 3), k.pal.dark, k.seed + 3, { depth: 0.4, thin: 0.35, thick: 0.8 }),
-    ],
-    front: [
-      [-7, -10, 15, 17],
-      (g, k) => {
-        const globe = ovalPts(0, -3.4, 5.3, 5.1, k.seed + 4, 0.02);
-        tone(g, globe, { h: 200, s: 25, l: 88 }, { depth: 0.7, shade: -10 });
-        g.save();
-        path(g, globe);
-        g.clip();
-        const cols = [3, 3, 45, 3, 200, 3, 120];
-        for (let i = 0; i < 7; i++) {
-          const bx = -3.3 + (i % 4) * 2.2 + (Math.floor(i / 4) % 2) * 1.1;
-          const by = 0.2 - Math.floor(i / 4) * 2.2;
-          ball(g, bx, by, 1.15, { h: cols[i], s: 72, l: 52 }, i + 20);
-        }
-        g.restore();
-        glint(g, poly(-3.8, -4.2, -3, -6.4, -1.2, -7.6), 'rgba(255,255,255,0.95)', 0.8);
-        pen(g, globe, k.seed + 5, 0.45, 1.1);
-        part(g, boxPts(-2, -9.4, 4, 1.6, 0.5, k.seed + 6), { h: k.st.hue, s: 70, l: 46 }, k.seed + 6, { depth: 0.3, thin: 0.35, thick: 0.7 });
-        // Lanyard round the neck, whistle hanging off it.
-        const cord = poly(-4.6, 0.6, -1, 1.6, 2.6, 1.4, 4.4, 3, 4.8, 4.4);
-        g.fillStyle = INK;
-        stroke(g, cord, { w: 1.1, seed: 7, taper: [0, 0], press: 0 });
-        g.fillStyle = '#2f7de0';
-        stroke(g, cord, { w: 0.55, seed: 7, taper: [0, 0], press: 0 });
-        part(g, boxPts(3.4, 4.2, 3.6, 2.1, 0.9, k.seed + 8), { h: 210, s: 8, l: 82 }, k.seed + 8, { depth: 0.3, thin: 0.3, thick: 0.7 });
-        dot(g, 6.4, 5.2, 0.45, 9);
-      },
-    ],
-    aimed(s, l) {
-      if (l.ready) loaded(s, l, 9.6, 0.6);
     },
   },
   // Banana Mortar: a stubby green pipe on a bipod and a baseplate; the shell is a bunch.
@@ -836,19 +511,7 @@ const LOOKS: Record<LauncherStyle, Look> = {
       light(l.rc, l.x, l.y, 35, l.glow, 0.35);
     },
   },
-  // Budget Airline: a quonset hangar with a windsock (hangar-art.ts).
-  hangar: {
-    mount: [HANGAR_BOX, (g, k) => hangarLoft(g, k.hue, k.pal, k.seed)],
-    over(l) {
-      if (!l.ready) return;
-      const s = l.rc.s;
-      s.save();
-      s.translate(l.x, l.y - 10.6);
-      s.scale(0.36, 0.36);
-      drawGlider(s, 0, 0, 0, l.st.hue, l.rc.t, false, 0, Math.cos(l.angle) < 0 ? -1 : 1, 7);
-      s.restore();
-    },
-  },
+  ...FRAMED,
 };
 
 function bk(d: DrawCtx, dir: 1 | -1): Bk {
@@ -870,21 +533,90 @@ function piece(name: string, m: Launcher, k: Bk, faced: boolean, [box, draw]: re
   return sprite(key, box[0], box[1], box[2], box[3], (g) => draw(g, k));
 }
 
+/** A framed look's turn: a quarter turn turns it, a half turn mirrors it (it stands upright, as Xform.U does). */
+function turn(rot: number, x: number, y: number): P {
+  switch (rot & 3) {
+    case 1:
+      return { x: -y, y: x };
+    case 2:
+      return { x: -x, y };
+    case 3:
+      return { x: y, y: -x };
+    default:
+      return { x, y };
+  }
+}
+
+/** The same turn on a canvas, so a baked piece drawn facing right lands the way the part faces. */
+function turnCanvas(s: CanvasRenderingContext2D, rot: number) {
+  if ((rot & 3) === 1) s.rotate(Math.PI / 2);
+  else if ((rot & 3) === 2) s.scale(-1, 1);
+  else if ((rot & 3) === 3) s.rotate(-Math.PI / 2);
+}
+
+/** The middle of a part's cells (world px, before motion). */
+function middleOf(r: Resolved): Vec {
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  for (const [x, y] of footprintCells(r.pp)) {
+    x0 = Math.min(x0, x);
+    y0 = Math.min(y0, y);
+    x1 = Math.max(x1, x + 1);
+    y1 = Math.max(y1, y + 1);
+  }
+  return [((x0 + x1) / 2) * TILE, ((y0 + y1) / 2) * TILE];
+}
+
+/**
+ * Where the art turns a launcher's barrel and draws its muzzle from (world px, before motion): a framed
+ * look's pivot, turned with the part round the middle of its cells, or the launcher's own point. The sim
+ * fires from `at`, and the two have to agree (tests/launcher-frames.test.ts).
+ */
+export function launcherPivot(r: Resolved, m: Launcher): Vec {
+  const fr = LOOKS[m.style].frame;
+  if (!fr) return m.at;
+  const [cx, cy] = middleOf(r);
+  const q = turn(r.pp.rot, fr.pivot[0], fr.pivot[1]);
+  return [cx + q.x, cy + q.y];
+}
+
 function drawLauncher(rc: RC, m: Launcher, d: DrawCtx) {
   const s = rc.s;
   const g = rc.g;
   const o = d.o;
   const r = d.r;
-  const x = m.at[0] + d.off[0];
-  const y = m.at[1] + d.off[1];
+  const look = LOOKS[m.style];
+  const fr = look.frame;
+  const rot = r.pp.rot & 3;
+  const [px, py] = launcherPivot(r, m);
+  const x = px + d.off[0];
+  const y = py + d.off[1];
+  const mid = fr ? middleOf(r) : null;
+  const cx = mid ? mid[0] + d.off[0] : x;
+  const cy = mid ? mid[1] + d.off[1] : y;
+  const at = (lx: number, ly: number): P => {
+    if (!fr) return { x: x + lx, y: y + ly };
+    const q = turn(rot, lx, ly);
+    return { x: cx + q.x, y: cy + q.y };
+  };
+  /** A body piece: round the pivot for a one-tile look, round the middle of its cells and turned with the part for a framed one. */
+  const body = (sp: Sprite) => {
+    if (!fr) return stamp(s, sp, x, y);
+    s.save();
+    s.translate(cx, cy);
+    turnCanvas(s, rot);
+    stamp(s, sp);
+    s.restore();
+  };
   const angle = m.aim === 'track' ? (o.state?.aim.get(d.mi) ?? m.angle) : launcherAngle(m, rc.frame, r.phase);
   const since = o.state ? rc.frame - o.state.lastFire : 999;
   const reload = Math.min(1, since / Math.max(1, m.interval * 0.6));
-  const look = LOOKS[m.style];
   const dir: 1 | -1 = Math.cos(m.angle) < 0 ? -1 : 1;
   const k = bk(d, dir);
   const flip = Math.cos(angle) < 0 ? -1 : 1;
-  const live: Live = { rc, m, x, y, angle, reload, ready: reload > 0.4, pal: d.pal, st: d.style, glow: k.glow, flip };
+  const live: Live = { rc, m, x, y, angle, reload, ready: reload > 0.4, pal: d.pal, st: d.style, glow: k.glow, flip, p: at };
 
   const sight = o.state && beamOf(o, r, d.mi);
   if (sight) {
@@ -895,8 +627,8 @@ function drawLauncher(rc: RC, m: Launcher, d: DrawCtx) {
     glowDot(g, x + Math.cos(a) * sight.len, y + Math.sin(a) * sight.len, 4, { h: 0, s: 100, l: 55 }, 0.8);
   }
 
-  if (look.house) stamp(s, piece('h', m, k, false, look.house), x, y);
-  if (look.mount) stamp(s, piece('m', m, k, !!look.faced, look.mount), x, y);
+  if (look.house) body(piece('h', m, k, false, look.house));
+  if (look.mount) body(piece('m', m, k, !!look.faced, look.mount));
   if (look.barrel || look.aimed) {
     const recoil = since < 8 ? (8 - since) * (look.recoil ?? 0.3) : 0;
     s.save();
@@ -908,9 +640,12 @@ function drawLauncher(rc: RC, m: Launcher, d: DrawCtx) {
     look.aimed?.(s, live);
     s.restore();
   }
-  if (look.front) stamp(s, piece('f', m, k, !!look.faced, look.front), x, y);
+  if (look.front) body(piece('f', m, k, !!look.faced, look.front));
   look.over?.(live);
-  if (m.aim === 'track') drawTrackerCam(rc, x, y, angle);
+  if (m.aim === 'track') {
+    const cam = fr?.cam ? at(fr.cam[0], fr.cam[1]) : { x: x - 4, y: y - 8.4 };
+    drawTrackerCam(rc, cam.x, cam.y, angle);
+  }
   if (since < 5) {
     const mx = x + Math.cos(angle) * 13;
     const my = y + Math.sin(angle) * 13;
@@ -921,13 +656,11 @@ function drawLauncher(rc: RC, m: Launcher, d: DrawCtx) {
 }
 
 /**
- * Tracking sensor: a little security camera on a stalk above the mount, turned live to where the launcher
+ * Tracking sensor: a little security camera on a stalk above the mount (at cx, cy), turned live to where the launcher
  * aims, its red lens lit. Every tracker has one, so tracking reads at a glance whatever the style.
  */
-function drawTrackerCam(rc: RC, x: number, y: number, angle: number): void {
+function drawTrackerCam(rc: RC, cx: number, cy: number, angle: number): void {
   const s = rc.s;
-  const cx = x - 4;
-  const cy = y - 8.4;
   stamp(
     s,
     sprite('L|stalk', -2, -2, 4, 9, (g) => {

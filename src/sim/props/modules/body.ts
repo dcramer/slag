@@ -1,7 +1,7 @@
 import { TILE } from '../../constants';
 import { DEFAULT_SURFACE, type Surface } from '../../physics';
-import { defineModule, solidId } from '../registry';
-import type { PlacedProp } from '../types';
+import { defineModule, solidId, type Xform } from '../registry';
+import type { PlacedProp, TileBox } from '../types';
 
 export const SURFACES: Record<string, Surface> = {
   stone: DEFAULT_SURFACE,
@@ -26,10 +26,22 @@ export function beltTurn(pp: Pick<PlacedProp, 'def' | 'rot'>): number {
   return pp.def.mount === 'hang' ? 0 : pp.rot & 3;
 }
 
-/** Solid cells of some material. Crumble bodies break after being stood on and respawn later. */
+/** World px rects (x, y, w, h) of a body's sub-tile shape: each rect's corners go through U, so a half turn mirrors it. */
+function shapeOf(shape: readonly TileBox[], x: Xform): TileBox[] {
+  return shape.map(([sx, sy, sw, sh]) => {
+    const [ax, ay] = x.U([sx, sy]);
+    const [bx, by] = x.U([sx + sw, sy + sh]);
+    return [Math.min(ax, bx), Math.min(ay, by), Math.abs(bx - ax), Math.abs(by - ay)];
+  });
+}
+
+/**
+ * Solid cells of some material. Crumble bodies break after being stood on and respawn later. A body with a
+ * `shape` collides as those rects instead of its cells (resolved to world px).
+ */
 export const body = defineModule<'body'>({
   type: 'body',
-  resolve: (m, x) => ({ ...m, cells: x.C(m.cells) }),
+  resolve: (m, x) => (m.shape ? { ...m, cells: x.C(m.cells), shape: shapeOf(m.shape, x) } : { ...m, cells: x.C(m.cells) }),
   anchors: (m) => m.cells.slice(),
   rides: true,
   // Its cells move only with the prop. A block that crumbles away would leave its riders hanging.
@@ -38,12 +50,13 @@ export const body = defineModule<'body'>({
     if (m.material === 'crumble' && ctx.frame < ctx.state.brokenUntil) return;
     const surface = m.material === 'conveyor' ? conveyorSurface(m.conveyor, beltTurn(ctx.r.pp)) : SURFACES[m.material];
     const { off, prev } = ctx;
-    m.cells.forEach(([cx, cy], ci) => {
+    const rects = m.shape ?? m.cells.map(([cx, cy]) => [cx * TILE, cy * TILE, TILE, TILE] as const);
+    rects.forEach(([x, y, w, h], ci) => {
       out.solids.push({
-        x: cx * TILE + off[0],
-        y: cy * TILE + off[1],
-        w: TILE,
-        h: TILE,
+        x: x + off[0],
+        y: y + off[1],
+        w,
+        h,
         id: solidId(ctx.r.pp.uid, ctx.mi, ci),
         dx: off[0] - prev[0],
         dy: off[1] - prev[1],

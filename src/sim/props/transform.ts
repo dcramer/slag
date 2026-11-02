@@ -103,6 +103,8 @@ export function resolveProp(pp: PlacedProp): Resolved {
       }),
     da: (rot * Math.PI) / 2,
     T: TILE,
+    U: (p) => (rot === 2 ? [(pp.tx + w - p[0]) * TILE, (pp.ty + p[1]) * TILE] : x.P(p)),
+    UA: (a) => (rot === 2 ? Math.PI - a : a + x.da),
   };
   const mods = pp.def.modules.map((m) => moduleSim(m.type).resolve(m, x));
   const mo = pp.def.motion;
@@ -316,7 +318,8 @@ function staticBodyCells(placed: readonly PlacedProp[], w: number): Set<number> 
   for (const p of placed) {
     if (moves(p)) continue;
     for (const m of resolveProp(p).mods) {
-      if (m.type === 'body' && m.material !== 'crumble') for (const [x, y] of m.cells) out.add(y * w + x);
+      // A sub-tile shape has no flush face to mount on.
+      if (m.type === 'body' && m.material !== 'crumble' && !m.shape) for (const [x, y] of m.cells) out.add(y * w + x);
     }
   }
   return out;

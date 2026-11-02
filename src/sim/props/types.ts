@@ -54,7 +54,18 @@ export type LauncherStyle =
 export type Head = 'saw' | 'mace' | 'axe';
 export type Aim = 'fixed' | 'sweep' | 'track';
 /** Set-piece looks (art only; the sim treats every look the same). */
-export type RotorLook = 'windmill' | 'cog' | 'chandelier' | 'hay' | 'log' | 'slab' | 'crane' | 'bucket' | 'gondola';
+export type RotorLook =
+  | 'windmill'
+  | 'cog'
+  | 'chandelier'
+  | 'hay'
+  | 'log'
+  | 'slab'
+  | 'crane'
+  | 'bucket'
+  | 'gondola'
+  // Stage concepts (docs/SETPIECES.md): the great wheel's rim cars; a theme skin draws it, cog decks otherwise.
+  | 'flywheel';
 export type RotorSupport = 'tower' | 'ceiling' | 'mast' | 'none';
 export type VehicleLook = 'tractor' | 'forklift' | 'ram' | 'boulder' | 'minecart' | 'drill';
 export type CannonLook = 'castle' | 'ship' | 'totem' | 'spitter';
@@ -134,6 +145,9 @@ export interface PropStyle {
   woodHue: number;
 }
 
+/** A rect in tiles (x, y, w, h), in the frame of the def's cells. */
+export type TileBox = readonly [number, number, number, number];
+
 export type Module =
   | {
       type: 'body';
@@ -142,6 +156,13 @@ export type Module =
       conveyor: number;
       breakFrames: number;
       respawnFrames: number;
+      /**
+       * Sub-tile solids, when the thing standing in these cells doesn't fill them (a hangar's arched roof,
+       * a gun carriage's steps): it collides as these rects instead of whole cells, and isn't plain ground.
+       * Drawn upright, so a half turn mirrors them rather than standing them on their heads (Xform.U).
+       * Tiles in a def; world px once resolved.
+       */
+      shape?: TileBox[];
       /** Art only: 'tetra' draws each cell as a bevelled square in one colour, `hue` (Four-Square). The sim treats it as its material. */
       look?: BlockLook;
       hue?: number;
@@ -201,7 +222,16 @@ export type Module =
   | { type: 'flame'; at: Vec; angle: number; length: number; on: number; off: number; warn: number }
   | { type: 'laser'; at: Vec; angle: number; charge: number; fire: number; off: number; sweep: number; sweepPeriod: number }
   | { type: 'tesla'; a: Vec; b: Vec; on: number; off: number; warn: number }
-  | { type: 'piston'; at: Vec; angle: number; reach: number; width: number; period: number }
+  | {
+      type: 'piston';
+      at: Vec;
+      angle: number;
+      reach: number;
+      width: number;
+      period: number;
+      /** Fraction of a period this one runs behind the prop's other pistons: a line of presses slamming in sequence (stage concepts). */
+      lag?: number;
+    }
   | {
       type: 'spring';
       at: Vec;
