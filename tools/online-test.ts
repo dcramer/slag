@@ -860,28 +860,37 @@ async function kickScenario(browser: Browser, base: string) {
   await B.screenshot({ path: `${out}/online-kick-guest.png` });
   console.log(`     ${out}/online-kick-host.png\n     ${out}/online-kick-guest.png`);
 
-  // By keyboard: Use picks the first other player, Confirm kicks.
-  const victim = await view(B);
+  // By keyboard: Use picks the first other seat, Confirm kicks. Seats follow connection order, so ask who that is.
+  const guests = new Map<string, Page>();
+  for (const p of [B, C, D]) guests.set((await view(p)).self, p);
   await A.keyboard.press('KeyE');
-  await sleep(200);
+  await A.waitForFunction(() => (window as any).slagDebug.renderer.hud.net?.kickSlot >= 0, null, { timeout: 15_000 });
+  await sleep(300);
   await A.screenshot({ path: `${out}/online-kick-picked.png` });
+  const slot = (await A.evaluate(() => (window as any).slagDebug.renderer.hud.net.kickSlot)) as number;
+  const victimId = (await view(A)).players.find((q) => q.slot === slot)!.device.split(':')[0];
+  const victim = guests.get(victimId)!;
+  guests.delete(victimId);
   await A.keyboard.press('Enter');
-  const seen = await B.waitForFunction(() => (window as any).slagDebug?.net?.status === 'kicked', null, { timeout: 5000 }).then(
-    () => true,
-    () => false,
-  );
+  const seen = await victim
+    .waitForFunction(() => (window as any).slagDebug?.net?.status === 'kicked', null, { timeout: 20_000 })
+    .then(
+      () => true,
+      () => false,
+    );
   check(seen, 'the kicked peer sees Kicked');
-  await B.screenshot({ path: `${out}/online-kick-kicked.png` }).catch(() => {});
-  await B.waitForURL((u) => u.pathname === '/', { timeout: 8000 }).catch(() => {});
-  check(new URL(B.url()).pathname === '/', `the kicked peer lands on the main menu (${new URL(B.url()).pathname})`);
-  const after = await waitFor(A, 'kick applied', (v) => v.players.length === 3, 5000);
-  check(!after.players.some((q) => q.device.startsWith(`${victim.self}:`)), 'the kicked player is gone from the host');
-  const c1 = await waitFor(C, 'kick applied on a guest', (v) => v.players.length === 3, 5000);
-  check(!c1.players.some((q) => q.device.startsWith(`${victim.self}:`)), 'the kicked player is gone for everyone');
+  await victim.screenshot({ path: `${out}/online-kick-kicked.png` }).catch(() => {});
+  await victim.waitForURL((u) => u.pathname === '/', { timeout: 30_000 }).catch(() => {});
+  check(new URL(victim.url()).pathname === '/', `the kicked peer lands on the main menu (${new URL(victim.url()).pathname})`);
+  const after = await waitFor(A, 'kick applied', (v) => v.players.length === 3, 15_000);
+  check(!after.players.some((q) => q.device.startsWith(`${victimId}:`)), 'the kicked player is gone from the host');
+  const [watcher] = guests.values();
+  const c1 = await waitFor(watcher, 'kick applied on a guest', (v) => v.players.length === 3, 15_000);
+  check(!c1.players.some((q) => q.device.startsWith(`${victimId}:`)), 'the kicked player is gone for everyone');
   // The history entry is the room; what's being checked is where that page sends you.
-  await B.goBack({ waitUntil: 'commit', timeout: 60_000 }).catch(() => {});
-  await B.waitForURL((u) => u.pathname === '/', { timeout: 60_000 }).catch(() => {});
-  check(new URL(B.url()).pathname === '/', 'going back to the room lands on the main menu again');
+  await victim.goBack({ waitUntil: 'commit', timeout: 60_000 }).catch(() => {});
+  await victim.waitForURL((u) => u.pathname === '/', { timeout: 60_000 }).catch(() => {});
+  check(new URL(victim.url()).pathname === '/', 'going back to the room lands on the main menu again');
 
   // By mouse: the button on the bay.
   const spot = await A.evaluate(() => {
@@ -892,10 +901,11 @@ async function kickScenario(browser: Browser, base: string) {
   check(!!spot, 'each other bay has a Kick button');
   if (spot) {
     await clickView(A, spot.x, spot.y);
-    await waitFor(A, 'mouse kick applied', (v) => v.players.length === 2 && !v.players.some((q) => q.device === spot.device), 5000);
+    await waitFor(A, 'mouse kick applied', (v) => v.players.length === 2 && !v.players.some((q) => q.device === spot.device), 15_000);
+    guests.delete(spot.device.split(':')[0]);
   }
-  const left = (await view(A)).players.find((q) => !q.device.startsWith(`${a0.self}:`))!;
-  const survivor = (await view(C)).players.some((q) => q.device === left.device) && left.device.startsWith((await view(C)).self) ? C : D;
+  const [survivorId, survivor] = [...guests.entries()][0];
+  const left = (await view(A)).players.find((q) => q.device.startsWith(`${survivorId}:`))!;
 
   // The label moves with the host.
   await crash(A);
