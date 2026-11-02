@@ -1,25 +1,26 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": [
-    "typescript",
-    "unicorn",
-    "oxc",
-    "import"
-  ],
+  "plugins": ["typescript", "unicorn", "oxc", "import"],
+  "options": {
+    "typeAware": true,
+    "reportUnusedDisableDirectives": "warn"
+  },
   "categories": {
     "correctness": "error",
     "suspicious": "warn",
     "perf": "warn"
   },
   "rules": {
-    "no-unused-vars": [
-      "error",
-      {
-        "argsIgnorePattern": "^_",
-        "varsIgnorePattern": "^_"
-      }
-    ],
+    "no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/await-thenable": "error",
+    "typescript/consistent-type-imports": ["warn", { "fixStyle": "inline-type-imports" }],
+    "typescript/no-deprecated": "warn",
     "typescript/no-explicit-any": "off",
+    "typescript/no-unsafe-type-assertion": "off",
+    "typescript/unbound-method": "off",
+    "typescript/consistent-return": "off",
     "unicorn/no-array-for-each": "off",
     "unicorn/no-new-array": "off",
     "no-shadow": "off",
@@ -36,26 +37,82 @@
   },
   "overrides": [
     {
-      "files": [
-        "app/**/*.tsx",
-        "app/**/*.ts"
-      ],
-      "plugins": [
-        "typescript",
-        "react",
-        "nextjs"
-      ],
+      "files": ["app/**/*.tsx", "app/**/*.ts"],
+      "plugins": ["typescript", "react", "nextjs"],
       "rules": {
         "react/react-in-jsx-scope": "off",
         "nextjs/no-page-custom-font": "off"
       }
+    },
+    {
+      "files": ["src/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              { "name": "react", "message": "src/ is framework-free game code; React lives only in app/." },
+              { "name": "react-dom", "message": "src/ is framework-free game code; React lives only in app/." },
+              { "name": "next", "message": "src/ is framework-free game code; Next.js lives only in app/." }
+            ],
+            "patterns": [{ "group": ["next/*"], "message": "src/ is framework-free game code; Next.js lives only in app/." }]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/sim/**/*.ts", "src/gen/**/*.ts", "src/game/**/*.ts", "src/themes.ts"],
+      "rules": {
+        "no-restricted-properties": [
+          "error",
+          { "object": "Math", "property": "random", "message": "Deterministic code: use Rng from src/core/rng.ts (deriveSeed for sub-streams)." },
+          { "object": "Date", "property": "now", "message": "Deterministic code: no wall clock. Count sim frames instead." },
+          { "object": "performance", "property": "now", "message": "Deterministic code: no wall clock. Count sim frames instead." }
+        ]
+      }
+    },
+    {
+      "files": ["src/sim/**/*.ts", "src/gen/**/*.ts"],
+      "rules": {
+        "no-restricted-globals": [
+          "error",
+          { "name": "window", "message": "sim/ and gen/ have no DOM access." },
+          { "name": "document", "message": "sim/ and gen/ have no DOM access." },
+          { "name": "localStorage", "message": "sim/ and gen/ have no DOM access." },
+          { "name": "navigator", "message": "sim/ and gen/ have no DOM access." },
+          { "name": "performance", "message": "Deterministic code: no wall clock. Count sim frames instead." },
+          { "name": "requestAnimationFrame", "message": "sim/ is stepped by the caller at a fixed 60 Hz." },
+          { "name": "setTimeout", "message": "sim/ is stepped by the caller at a fixed 60 Hz; use frame counters." },
+          { "name": "setInterval", "message": "sim/ is stepped by the caller at a fixed 60 Hz; use frame counters." }
+        ]
+      }
+    },
+    {
+      "files": ["src/sim/**/*.ts", "src/gen/**/*.ts", "src/game/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              { "name": "react", "message": "src/ is framework-free game code; React lives only in app/." },
+              { "name": "react-dom", "message": "src/ is framework-free game code; React lives only in app/." },
+              { "name": "next", "message": "src/ is framework-free game code; Next.js lives only in app/." }
+            ],
+            "patterns": [
+              { "group": ["next/*"], "message": "src/ is framework-free game code; Next.js lives only in app/." },
+              {
+                "group": ["**/render", "**/render/*", "**/input", "**/input/*", "**/audio", "**/audio/*", "**/ui/*", "**/debug", "**/game-client"],
+                "message": "sim/, gen/ and game/ must not depend on presentation, input or audio: they run headless and deterministically."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/game/room.ts"],
+      "rules": { "no-restricted-properties": "off" }
     }
   ],
-  "ignorePatterns": [
-    ".next/**",
-    ".claude/**",
-    "shots/**",
-    "node_modules/**",
-    "next-env.d.ts"
-  ]
+  "ignorePatterns": [".next/**", ".claude/**", "shots/**", "node_modules/**", "next-env.d.ts"]
 }

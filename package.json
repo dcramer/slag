@@ -4,17 +4,22 @@
   "private": true,
   "type": "module",
   "description": "Browser-based competitive party platformer with procedurally generated levels, props, and characters.",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "start": "next start",
     "typecheck": "tsc --noEmit",
+    "lint": "oxlint",
+    "format": "oxlint --fix && oxfmt src tests tools app next.config.ts vitest.config.ts",
+    "format:check": "oxfmt --check src tests tools app next.config.ts vitest.config.ts",
     "test": "vitest run",
-    "lint": "oxlint && oxfmt --check src tests tools app",
-    "format": "oxfmt src tests tools app && oxlint --fix",
-    "check": "tsc --noEmit && oxlint && oxfmt --check src tests tools app && vitest run",
+    "check:fast": "npm run typecheck && npm run lint && npm run format:check",
+    "check": "npm run check:fast && npm test",
     "shot": "tsx tools/shot.ts",
-    "level": "tsx tools/level.ts",
-    "start": "next start"
+    "level": "tsx tools/level.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
@@ -22,6 +27,7 @@
     "@types/react-dom": "^19.3.0",
     "oxfmt": "^0.75.0",
     "oxlint": "^1.90.0",
+    "oxlint-tsgolint": "^7.0.2005",
     "playwright": "^1.63.0",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
