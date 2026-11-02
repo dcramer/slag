@@ -70,10 +70,41 @@
       }
     },
     {
+      "files": ["src/**/*.ts"],
+      "rules": {
+        "no-restricted-properties": [
+          "error",
+          { "object": "location", "property": "assign", "message": "Hard navigation reloads the page and tears the game down, and a packaged build may have no URLs at all. Move between screens with the Nav a screen is given (src/router.ts: nav.go(HOME), nav.go(lobby(code))); the router is the one place that touches location and history." },
+          { "object": "location", "property": "replace", "message": "Hard navigation reloads the page and tears the game down, and a packaged build may have no URLs at all. Move between screens with the Nav a screen is given (src/router.ts: nav.go(HOME), nav.go(lobby(code))); the router is the one place that touches location and history." },
+          { "object": "location", "property": "reload", "message": "Hard navigation reloads the page and tears the game down, and a packaged build may have no URLs at all. Move between screens with the Nav a screen is given (src/router.ts: nav.go(HOME), nav.go(lobby(code))); the router is the one place that touches location and history." },
+          { "object": "location", "property": "href", "message": "Hard navigation reloads the page and tears the game down, and a packaged build may have no URLs at all. Move between screens with the Nav a screen is given (src/router.ts: nav.go(HOME), nav.go(lobby(code))); the router is the one place that touches location and history." },
+          { "object": "window", "property": "location", "message": "Hard navigation reloads the page and tears the game down, and a packaged build may have no URLs at all. Move between screens with the Nav a screen is given (src/router.ts: nav.go(HOME), nav.go(lobby(code))); the router is the one place that touches location and history." },
+          { "object": "document", "property": "location", "message": "Hard navigation reloads the page and tears the game down, and a packaged build may have no URLs at all. Move between screens with the Nav a screen is given (src/router.ts: nav.go(HOME), nav.go(lobby(code))); the router is the one place that touches location and history." },
+          { "object": "history", "property": "pushState", "message": "Hard navigation reloads the page and tears the game down, and a packaged build may have no URLs at all. Move between screens with the Nav a screen is given (src/router.ts: nav.go(HOME), nav.go(lobby(code))); the router is the one place that touches location and history." },
+          { "object": "history", "property": "replaceState", "message": "Hard navigation reloads the page and tears the game down, and a packaged build may have no URLs at all. Move between screens with the Nav a screen is given (src/router.ts: nav.go(HOME), nav.go(lobby(code))); the router is the one place that touches location and history." },
+          { "object": "window", "property": "history", "message": "Hard navigation reloads the page and tears the game down, and a packaged build may have no URLs at all. Move between screens with the Nav a screen is given (src/router.ts: nav.go(HOME), nav.go(lobby(code))); the router is the one place that touches location and history." }
+        ]
+      }
+    },
+    {
+      // The router is the one module that navigates; everything else asks it.
+      "files": ["src/router.ts"],
+      "rules": { "no-restricted-properties": "off" }
+    },
+    {
       "files": ["src/sim/**/*.ts", "src/gen/**/*.ts", "src/game/**/*.ts", "src/themes.ts", "src/core/geom.ts"],
       "rules": {
         "no-restricted-properties": [
           "error",
+          { "object": "location", "property": "assign", "message": "Hard navigation reloads the page and tears the game down, and a packaged build may have no URLs at all. Move between screens with the Nav a screen is given (src/router.ts: nav.go(HOME), nav.go(lobby(code))); the router is the one place that touches location and history." },
+          { "object": "location", "property": "replace", "message": "Hard navigation reloads the page and tears the game down, and a packaged build may have no URLs at all. Move between screens with the Nav a screen is given (src/router.ts: nav.go(HOME), nav.go(lobby(code))); the router is the one place that touches location and history." },
+          { "object": "location", "property": "reload", "message": "Hard navigation reloads the page and tears the game down, and a packaged build may have no URLs at all. Move between screens with the Nav a screen is given (src/router.ts: nav.go(HOME), nav.go(lobby(code))); the router is the one place that touches location and history." },
+          { "object": "location", "property": "href", "message": "Hard navigation reloads the page and tears the game down, and a packaged build may have no URLs at all. Move between screens with the Nav a screen is given (src/router.ts: nav.go(HOME), nav.go(lobby(code))); the router is the one place that touches location and history." },
+          { "object": "window", "property": "location", "message": "Hard navigation reloads the page and tears the game down, and a packaged build may have no URLs at all. Move between screens with the Nav a screen is given (src/router.ts: nav.go(HOME), nav.go(lobby(code))); the router is the one place that touches location and history." },
+          { "object": "document", "property": "location", "message": "Hard navigation reloads the page and tears the game down, and a packaged build may have no URLs at all. Move between screens with the Nav a screen is given (src/router.ts: nav.go(HOME), nav.go(lobby(code))); the router is the one place that touches location and history." },
+          { "object": "history", "property": "pushState", "message": "Hard navigation reloads the page and tears the game down, and a packaged build may have no URLs at all. Move between screens with the Nav a screen is given (src/router.ts: nav.go(HOME), nav.go(lobby(code))); the router is the one place that touches location and history." },
+          { "object": "history", "property": "replaceState", "message": "Hard navigation reloads the page and tears the game down, and a packaged build may have no URLs at all. Move between screens with the Nav a screen is given (src/router.ts: nav.go(HOME), nav.go(lobby(code))); the router is the one place that touches location and history." },
+          { "object": "window", "property": "history", "message": "Hard navigation reloads the page and tears the game down, and a packaged build may have no URLs at all. Move between screens with the Nav a screen is given (src/router.ts: nav.go(HOME), nav.go(lobby(code))); the router is the one place that touches location and history." },
           { "object": "Math", "property": "random", "message": "Deterministic code: use Rng from src/core/rng.ts (deriveSeed for sub-streams)." },
           { "object": "Math", "property": "sin", "message": "Math.sin differs across browsers and desyncs lockstep. Use dsin from src/core/dmath.ts." },
           { "object": "Math", "property": "cos", "message": "Math.cos differs across browsers and desyncs lockstep. Use dcos from src/core/dmath.ts." },
