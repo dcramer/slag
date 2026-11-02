@@ -46,6 +46,8 @@ export interface Brief {
   pose: string;
   /** The poses across the pose sheet, in order. */
   poses: string;
+  /** In place of `CHUNKY`, for a body that has no head, arms or legs to push (a ball, a dome). */
+  proportions?: string;
 }
 
 export const BRIEFS: Record<string, Brief> = {
@@ -86,6 +88,28 @@ export const BRIEFS: Record<string, Brief> = {
     poses:
       'standing idle with one foot tapping; mid-run leaning hard forward with legs a blur; crouched low before a jump; curled into a tight spinning ball in mid-air, quills outward, no limbs showing; falling with arms out and legs reaching down; sliding down a wall on his right with one glove flat against it and both sneakers braced; cheering with one fist up; knocked flat on his back with stars circling',
   },
+  puffball: {
+    // The nod, each part of the read at race size: the ball (the whole body: no head, neck or legs apart
+    // from it), the big red oval feet (they make it a creature and part it from the dot-eater's wedge),
+    // the tall oval eyes with a shine at the top (the face), the blush (the sweetness).
+    // Ours, and the joke: a cheap vinyl squeeze toy off a bargain shelf. A moulding seam runs right round
+    // its middle, a white squeaker valve pokes out of its back (the one bump on the ball's outline that
+    // the original hasn't got), and a mould number is stamped under one foot.
+    proportions:
+      'Proportions for a tiny game sprite: the whole character is one near-perfect ball, about as wide as it is tall, with no separate head, no neck and no legs. Its feet are big, about half as wide as the ball each; its arms are short stubby nubs. A chunky squeezable toy, never a realistic creature.',
+    character:
+      'Character: a small round puffball creature, a near-perfect soft pink ball (#f2a0b8). ' +
+      'Two big oval red feet (#c9473f) under the ball like fat flattened jelly beans, wider than they are tall, the front one poking out ahead of the ball. ' +
+      'Two short stubby round arms, little rounded nubs low on its sides. ' +
+      'On the front of the ball: two tall narrow oval black eyes (#2a1f1a) side by side, each with a white oval shine at its top; two soft rosy blush ovals just under and outside the eyes; a tiny happy mouth between them. ' +
+      'The joke: it is a cheap vinyl squeeze toy. A raised moulding seam ridge runs right round its middle like an equator, plainly visible across its front, sides and back, the two halves a hair out of line. ' +
+      "A white plastic squeaker valve (#f4efe6), a short stubby nozzle with a round cap, sticks straight out of the middle of its back and breaks the ball's round outline in the side view. " +
+      'A mould number is stamped on the sole of one foot. Soft matte vinyl, cheerful and squishy.',
+    views: 'a front view, a side profile facing right, a back view showing the squeaker valve and the seam, and a three-quarter view facing right',
+    pose: 'The arms are short nubs held straight out to the sides, clear of the ball. The squeaker valve sticks straight out of its back.',
+    poses:
+      'standing idle on both feet, arms down; mid-run toddling forward with one big foot stepping out ahead and the arms swinging; squashed low before a jump, the ball flattened over its feet; puffed up perfectly round in mid-air with cheeks full, arms flapping out and feet dangling; falling with arms up and feet reaching down; sliding down a wall on its right, pressed flat against it with one nub arm and both feet braced; cheering with both arms up and eyes squeezed shut in a happy grin; knocked flat on its back with stars circling',
+  },
 };
 
 function brief(kind: string): Brief {
@@ -97,7 +121,7 @@ function brief(kind: string): Brief {
 /** The concept sheet's prompt: the design in the game's own ink style. */
 export function conceptPrompt(kind: string): string {
   const b = brief(kind);
-  return [STYLE, CHUNKY, b.character, `Layout: one row of full-body views of the same character side by side: ${b.views}.`].join(' ');
+  return [STYLE, b.proportions ?? CHUNKY, b.character, `Layout: one row of full-body views of the same character side by side: ${b.views}.`].join(' ');
 }
 
 /** The pose sheet's prompt: the approved concept (the reference) through every pose the game plays. */
@@ -109,7 +133,7 @@ export function posePrompt(kind: string): string {
     `An animation pose sheet for a 2D platformer video game: eight full-body action poses of one cartoon character, in two rows of four, every pose facing right, each with clear space around it: ${b.poses}.`,
     'The character is exactly the one in the reference image, same design, proportions and colours; no turnaround, no separate parts.',
     STYLE.replace('Character model sheet for a 2D platformer video game, an original cartoon character design. ', ''),
-    CHUNKY,
+    b.proportions ?? CHUNKY,
     b.character,
   ].join(' ');
 }
@@ -119,7 +143,7 @@ export function modelPrompt(kind: string): string {
   const b = brief(kind);
   return [
     SCULPT,
-    CHUNKY,
+    b.proportions ?? CHUNKY,
     'The same character as the reference sheet, with exactly its design, proportions and colours.',
     b.character,
     'Front view, standing in a T-pose: both arms straight out to the sides at shoulder height, hands open, fingers together, legs straight and a little apart, feet flat.',
