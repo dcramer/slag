@@ -1,19 +1,23 @@
 import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import type { ModuleOf } from '../../../sim/props';
-import { line, type P, stroke } from '../../ink';
+import { blob, line, type P, stroke } from '../../ink';
 import { INK, path, poly, sprite, stamp } from '../../ink-props';
 import { circle, flutter } from '../../kit';
 import { defineArt } from '../common';
 
 type Web = ModuleOf<'web'>;
 
-const SILK = 'rgba(246,246,252,0.95)';
+const SILK = 'rgba(246,246,252,0.92)';
+const SILK_FAINT = 'rgba(236,238,250,0.55)';
 
 /**
- * Sticky web, spun with the pen: anchor threads between neighbouring cells and a little orb web in each,
- * baked once and laid on the background layer, where thin silk stays silk instead of turning to ink
- * scrub. One loose strand ends in a mouse cursor (docs/PARODY.md, web). It sways only in a real wind.
+ * Sticky web, spun with the pen: one orb web strung across the cells it covers, its radials out to where
+ * the sticky cells end and a sagging spiral round them, with a few drops of dew on the threads. A cell the
+ * big orb can't reach gets a little orb of its own, so silk sits exactly where it slows you. It's baked
+ * once and laid on the background layer, where thin silk stays silk instead of turning to ink scrub. A
+ * strand trails off to a mouse cursor (docs/PARODY.md, web) and the spider that spun it hangs underneath.
+ * It sways only in a real wind.
  */
 function bake(m: Web, uid: number) {
   let x0 = Infinity;
@@ -27,34 +31,78 @@ function bake(m: Web, uid: number) {
     y1 = Math.max(y1, y + 1);
   }
   const key = `web|${uid}|${m.cells.map((c) => c.join(',')).join(';')}`;
-  return sprite(key, x0 * TILE - 10, y0 * TILE - 10, (x1 - x0) * TILE + 20, (y1 - y0) * TILE + 20, (g) => {
+  return sprite(key, x0 * TILE - 12, y0 * TILE - 12, (x1 - x0) * TILE + 24, (y1 - y0) * TILE + 30, (g) => {
     const set = new Set(m.cells.map(([x, y]) => `${x},${y}`));
-    g.fillStyle = 'rgba(225,225,235,0.07)';
+    const inside = (px: number, py: number) => set.has(`${Math.floor(px / TILE)},${Math.floor(py / TILE)}`);
+    g.fillStyle = 'rgba(225,225,240,0.06)';
     for (const [x, y] of m.cells) g.fillRect(x * TILE, y * TILE, TILE, TILE);
-    g.fillStyle = SILK;
-    const thread = (pts: P[], seed: number) => stroke(g, pts, { w: 0.7, seed, taper: [0.15, 0.15], press: 0.35 });
-    for (const [x, y] of m.cells) {
-      const cx = (x + 0.5) * TILE;
-      const cy = (y + 0.5) * TILE;
-      const seed = x * 31 + y * 17;
-      for (let k = 0; k < 8; k++) {
-        const a = (k / 8) * Math.PI * 2 + (hash2(x, y, k) - 0.5) * 0.2;
-        const rr = (k % 2 ? TILE * 0.7 : TILE * 0.5) * 0.98;
-        line(g, cx, cy, cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, { w: 0.65, seed: seed + k, taper: [0.1, 0.4], press: 0.3 });
+    // The hub: the cell center nearest the middle of the patch.
+    const mx = ((x0 + x1) / 2) * TILE;
+    const my = ((y0 + y1) / 2) * TILE;
+    let hub = m.cells[0];
+    for (const c of m.cells)
+      if (Math.hypot((c[0] + 0.5) * TILE - mx, (c[1] + 0.5) * TILE - my) < Math.hypot((hub[0] + 0.5) * TILE - mx, (hub[1] + 0.5) * TILE - my)) hub = c;
+    const hx = (hub[0] + 0.5) * TILE + (hash2(hub[0], hub[1], uid) - 0.5) * 3;
+    const hy = (hub[1] + 0.5) * TILE + (hash2(hub[1], hub[0], uid) - 0.5) * 3;
+    const covered = new Set<string>();
+    const orb = (cx: number, cy: number, n: number, maxR: number, seed: number, mark: boolean) => {
+      // Radials, each out to where the sticky cells end.
+      const ends: P[] = [];
+      for (let k = 0; k < n; k++) {
+        const a = (k / n) * Math.PI * 2 + (hash2(k, seed, 3) - 0.5) * 0.35;
+        let r = 1;
+        while (r < maxR && inside(cx + Math.cos(a) * (r + 1), cy + Math.sin(a) * (r + 1))) r += 1;
+        r = Math.max(3, r - 0.5);
+        ends.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r });
+        if (mark) for (let t = 2; t < r; t += 3) covered.add(`${Math.floor((cx + Math.cos(a) * t) / TILE)},${Math.floor((cy + Math.sin(a) * t) / TILE)}`);
       }
-      for (const r of [2.5, 4.8, 7]) {
-        const ring: P[] = [];
-        for (let k = 0; k <= 8; k++) {
-          const a = (k / 8) * Math.PI * 2;
-          const sag = k % 2 ? 0.86 : 1;
-          ring.push({ x: cx + Math.cos(a) * r * sag, y: cy + Math.sin(a) * r * sag + 0.4 });
+      g.fillStyle = SILK;
+      for (let k = 0; k < n; k++) line(g, cx, cy, ends[k].x, ends[k].y, { w: 0.85, seed: seed + k, taper: [0.05, 0.3], press: 0.25 });
+      // The frame: threads between neighbouring radial ends.
+      g.fillStyle = SILK_FAINT;
+      for (let k = 0; k < n; k++) {
+        const a = ends[k];
+        const b = ends[(k + 1) % n];
+        line(g, a.x, a.y, b.x, b.y, { w: 0.5, seed: seed + 40 + k, taper: [0.1, 0.1], press: 0.3 });
+      }
+      // The spiral: each turn a ring of threads that sag toward the hub between radials.
+      g.fillStyle = SILK;
+      const turns = 4;
+      for (let ring = 1; ring <= turns; ring++) {
+        for (let k = 0; k < n; k++) {
+          const f0 = (ring - 0.5 + k / n) / (turns + 0.4);
+          const f1 = (ring - 0.5 + (k + 1) / n) / (turns + 0.4);
+          const a = ends[k];
+          const b = ends[(k + 1) % n];
+          const ax = cx + (a.x - cx) * f0;
+          const ay = cy + (a.y - cy) * f0;
+          const bx = cx + (b.x - cx) * f1;
+          const by = cy + (b.y - cy) * f1;
+          const sx = (ax + bx) / 2 + (cx - (ax + bx) / 2) * 0.12;
+          const sy = (ay + by) / 2 + (cy - (ay + by) / 2) * 0.12 + 0.3;
+          stroke(g, poly(ax, ay, sx, sy, bx, by), { w: 0.62, seed: seed + ring * 13 + k, taper: [0.1, 0.1], press: 0.3 });
+          // Dew, here and there.
+          if (hash2(ring, k, seed) > 0.86) {
+            g.fillStyle = 'rgba(220,240,255,0.95)';
+            blob(g, sx, sy + 0.3, 0.55, k, 1.2, 0.1);
+            g.fill();
+            g.fillStyle = SILK;
+          }
         }
-        thread(ring, seed + r * 7);
       }
-      if (set.has(`${x + 1},${y}`)) thread(poly(cx, cy, cx + 8, cy + 1.6, cx + 16, cy), seed + 40);
-      if (set.has(`${x},${y + 1}`)) thread(poly(cx, cy, cx + 1.2, cy + 8, cx, cy + 16), seed + 41);
+      // A little matted pad at the hub.
+      g.fillStyle = 'rgba(250,250,255,0.75)';
+      blob(g, cx, cy, 1.1, seed, 1, 0.3);
+      g.fill();
+    };
+    const span = Math.max(x1 - x0, y1 - y0) * TILE;
+    orb(hx, hy, 11, span, uid & 0xffff, true);
+    // Any cell the big orb missed gets a little web of its own.
+    for (const [x, y] of m.cells) {
+      if (covered.has(`${x},${y}`)) continue;
+      orb((x + 0.5) * TILE, (y + 0.5) * TILE, 7, TILE * 0.62, x * 31 + y * 17, false);
     }
-    // The loose strand: off the first cell with open air beside it, ending in a cursor.
+    // The loose strand: off a cell with open air beside it, ending in a cursor.
     const end = m.cells.find(([x, y]) => !set.has(`${x + 1},${y}`)) ?? m.cells[0];
     const sx = (end[0] + 1) * TILE - 2;
     const sy = (end[1] + 0.5) * TILE;
@@ -76,7 +124,36 @@ function bake(m: Web, uid: number) {
     path(g, arrow);
     g.fill();
     g.restore();
+    // The spider, on a thread off the bottom of the hub's column.
+    let by = hy;
+    while (inside(hx, by + 1)) by += 1;
+    spider(g, hx + 0.5, by + 6, uid);
+    g.fillStyle = SILK;
+    line(g, hx, hy, hx + 0.5, by + 4.4, { w: 0.4, seed: 5, taper: [0, 0], press: 0 });
   });
+}
+
+/** A small spider: a round body, a head, eight bent legs and two white eyes, inked by hand. */
+function spider(g: CanvasRenderingContext2D, x: number, y: number, seed: number) {
+  g.fillStyle = INK;
+  for (let i = 0; i < 4; i++) {
+    for (const sg of [-1, 1]) {
+      const a = -0.9 + i * 0.55;
+      const kx = x + sg * Math.cos(a) * 2.6;
+      const ky = y + Math.sin(a) * 2.2 - 0.6;
+      stroke(g, poly(x, y, kx, ky, kx + sg * 0.9, ky + 1.6), { w: 0.55, seed: seed + i * 2 + (sg > 0 ? 1 : 0), taper: [0.05, 0.4], press: 0 });
+    }
+  }
+  blob(g, x, y + 0.6, 2.1, seed, 1.1, 0.06);
+  g.fill();
+  blob(g, x, y - 1.6, 1.25, seed + 1, 1, 0.06);
+  g.fill();
+  g.fillStyle = '#4b3b5c';
+  blob(g, x - 0.6, y, 0.8, seed + 2, 1.1, 0.1);
+  g.fill();
+  g.fillStyle = '#ffffff';
+  circle(g, x - 0.5, y - 1.7, 0.42);
+  circle(g, x + 0.5, y - 1.7, 0.42);
 }
 
 defineArt<'web'>({
@@ -92,17 +169,16 @@ defineArt<'web'>({
     if (sway) bg.transform(1, 0, sway, 1, 0, 0);
     stamp(bg, bake(m, d.r.pp.uid));
     bg.restore();
+    // Dew catching the light, twinkling.
     const g = rc.g;
     for (const [x, y] of m.cells) {
       const cx = (x + 0.5) * TILE + ox;
       const cy = (y + 0.5) * TILE + oy;
-      for (let i = 0; i < 3; i++) {
-        const k = hash2(x * 3 + i, y, d.r.pp.uid);
-        const a = k * Math.PI * 2;
-        const rr = 2.5 + hash2(i, x, y) * 4.5;
-        g.fillStyle = `rgba(210,235,255,${0.35 + 0.3 * Math.sin(rc.t * 2 + k * 9)})`;
-        circle(g, cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, 0.6);
-      }
+      const k = hash2(x, y, d.r.pp.uid);
+      const a = k * Math.PI * 2;
+      const rr = 3 + hash2(y, x, 7) * 4;
+      g.fillStyle = `rgba(210,235,255,${0.3 + 0.3 * Math.sin(rc.t * 2 + k * 9)})`;
+      circle(g, cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, 0.6);
     }
   },
 });
