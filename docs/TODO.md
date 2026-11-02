@@ -26,17 +26,8 @@ Level profiles, gravity, variable size, full-window background, the open-levels 
 - **Visible edge:** block themes (harbor, castle, factory) show a straight wall line where the map meets the scenery.
 - `pnpm online-test --only play,bc` failed once after a clean gate and passed on rerun. Find the flake.
 
-## 6. Mobile, round 2
-**Branch:** `wip/mobile-2` (~1k lines, unreviewed). Round 1 (touch controls) is merged.
-
-The user's feedback on a real phone: "almost playable but not quite; resolution is tough; settings is bad; probably needs zoomed in more."
-
-- **Phone follow camera:** render-only, a tile at least ~24 CSS px, look-ahead, a vertical dead zone, clamped to the level. Pick and place start zoomed out, with pinch-zoom, two-finger pan and auto-pan near the edges. With more than one player in the match, local or remote, it frames everyone: the camera always keeps all live players on screen, which wins over the tile-size target. `?zoom=1` forces it on desktop. Keep it in its own module, because item 3 also changes the camera. Cursors must stay in world coordinates, so other players' cursors and ghost parts land in the right place whatever each player's zoom.
-- `pnpm shot mobile` fails on `main`, timing out in the lobby flow. Fix that first.
-- The touch tag `MOVE · push far = RUN` breaks the never-explain-the-obvious rule. Cut it.
-- **HUD readability:** scale HUD text, pills and crate cards up on small screens, with tap targets of at least 44 CSS px.
-- **Settings:** a full-screen sheet on phones with big rows that scrolls.
-- **Verify:** `pnpm shot mobile` on iPhone SE, iPhone 13 and Pixel 7 in landscape. Nothing has been tested on real hardware yet.
+## 6. Real phones
+Phone support (follow camera, pinch, scaled HUD, settings sheet) is on `main` but has only run in Chromium emulation. Try iOS Safari and a real Android phone: `:has()` in the sheet CSS, safe-area insets, pinch feel, and frame rate.
 
 ## 8. Render polish
 - **Liquid draw order:** `drawLiquid` still paints after players and effects, while `docs/DESIGN.md` lists liquids behind terrain.

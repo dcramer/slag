@@ -9,6 +9,7 @@ import type { RunWorld } from '../sim/run';
 import type { GameEvent } from '../sim/types';
 import { Backdrop } from './background';
 import { Camera } from './camera';
+import { PhoneCam, phoneView } from './camera-follow';
 import { drawAccessory, drawAfterimage, drawCharacter, Rig } from './character';
 import { ForegroundLayer, Lettering, letteringAllowed } from './cel';
 import { Fx } from './fx';
@@ -21,10 +22,15 @@ import { drawBackdrop, drawBlastPreview, drawForeground, drawProjectile, drawRes
 import { Surround } from './surround';
 import { TerrainPainter } from './terrain';
 // Mobile: quality tiers / adaptive resolution / safe-area insets (owned by the touch module).
-import { detectQuality, FrameBudget, QUALITY, type QualityTier, safeInsets, TIERS } from '../ui/touch/device';
+import { detectQuality, FrameBudget, isTouchFirst, QUALITY, type QualityTier, safeInsets, TIERS } from '../ui/touch/device';
 
 /** Terrain bake budget (px per baked canvas): a classic level at 1920 px wide is ~4.3 M. */
 const MAX_BAKE_PX = 6_000_000;
+/** Phone HUD: enough scale for 1.25 CSS px per HUD px, within this limit. */
+const HUD_CSS_PER_PX = 1.25;
+const MAX_HUD_SCALE = 1.8;
+/** Smallest touch target, in CSS px. */
+const TAP_CSS = 44;
 const RUNNER_KEY: HSL = { h: 40, s: 30, l: 90 };
 
 /** The prop a player is about to place, as it would stand under their cursor. */
@@ -58,6 +64,8 @@ export class Renderer {
   private comp: Compositor;
   readonly hud: Hud;
   private cam = new Camera();
+  /** Phones: the close race camera and hand-moved pick/place view (off elsewhere). See camera-follow.ts. */
+  readonly phone = new PhoneCam(this.cam);
   private backdrop = new Backdrop();
   private terrain = new TerrainPainter();
   private surround = new Surround();
@@ -85,6 +93,7 @@ export class Renderer {
   ) {
     this.comp = createCompositor(glCanvas);
     this.hud = new Hud(hudCanvas.getContext('2d')!);
+    this.hud.worldToView = (x, y) => this.cam.worldToView(x, y);
     this.viewBox.dataset.slagView = '';
     this.viewBox.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none';
     glCanvas.parentElement?.append(this.viewBox);
@@ -138,6 +147,18 @@ export class Renderer {
     this.lightC.height = Math.max(2, this.ph >> 1);
     this.comp.resize(this.pw, this.ph);
     this.hud.resize(this.pw, this.ph);
+    const cssPerView = f.width / VIEW_W;
+    const { enabled, zoom } = phoneView(location.search, Math.min(vw, vh), isTouchFirst(), cssPerView);
+    this.phone.enabled = enabled;
+    this.phone.zoom = zoom;
+    this.hud.uiScale = enabled ? Math.max(1, Math.min(MAX_HUD_SCALE, HUD_CSS_PER_PX / cssPerView)) : 1;
+    this.hud.tapMin = enabled ? TAP_CSS / cssPerView : 0;
+  }
+
+  /** A view-px pointer as the match reads it this phase: through this device's card zoom in pick and its camera in place. */
+  pointerToMatch(phase: string, p: { x: number; y: number }): { x: number; y: number } {
+    if (phase === 'pick') return this.hud.pickToLogical(p);
+    return phase === 'place' ? this.phone.toBoard(p) : p;
   }
 
   /** Paint one frame. `events` are this frame's drained sim events (shared with audio). */
@@ -157,7 +178,7 @@ export class Renderer {
     // Bake resolution: enough for the race zoom, capped by a pixel budget so huge levels stay cheap.
     const frameBox = this.frameBox;
     const sk = this.pw / frameBox.w;
-    const kb = Math.min(4, sk * 1.45, Math.sqrt(MAX_BAKE_PX / (ww * wh)));
+    const kb = Math.min(4, sk * Math.max(1.45, this.phone.enabled ? this.phone.zoom : 0), Math.sqrt(MAX_BAKE_PX / (ww * wh)));
     this.terrain.ensure(level, kb);
     // The surroundings reach as far as the most zoomed-out view of this level can see.
     const floor = raceFloor(level);
@@ -303,7 +324,8 @@ export class Renderer {
   /**
    * Race: follow the live runners (zooming out to keep them all in, down to
    * a readability floor). Lobby: slow drift over the level. Pick/place: snap
-   * to the deterministic whole-level overview the match uses for cursors.
+   * to the deterministic whole-level overview the match uses for cursors, or
+   * to where this phone's fingers moved it.
    */
   private updateCamera(m: Match, dt: number) {
     const lv = m.level;
@@ -312,16 +334,16 @@ export class Renderer {
     const ov = overview(lv);
     if (m.phase === 'pick' || m.phase === 'place') {
       this.cam.setBounds(ww, wh, ov.zoom);
-      this.cam.snap(ov);
+      this.cam.snap(this.phone.board(m, dt));
       this.cam.update(dt, false);
       return;
     }
     this.cam.setBounds(ww, wh, raceFloor(lv));
     if (m.phase === 'run' && m.run) {
-      const pts = m.run.runners.filter((r) => r.alive && !r.finished).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y }));
-      if (pts.length) this.cam.frameAll(pts, 1.45, 120);
-      else this.cam.wide();
-    } else if (m.phase === 'lobby') {
+      this.phone.frameRace(m, dt);
+      return;
+    }
+    if (m.phase === 'lobby') {
       // Slow cinematic drift over the level preview (wider sweep on big levels).
       this.lobbyDrift += dt;
       const a = this.lobbyDrift * 0.12;
