@@ -19,7 +19,7 @@ To connect a store: Vercel → the project → **Storage** → connect the Redis
 
 Without credentials in production the API answers `503 {"error":"unconfigured"}`. The game keeps running locally and the lobby's online panel says `Playing Locally · Online Not Set Up`.
 
-In `pnpm dev` the in-memory store is used unless those variables are present (`vercel env pull` would put them in `.env.local`, and dev would then spend the real budget).
+In `pnpm dev` the in-memory store is used unless those variables are present (`vercel env pull` would put them in `.env.local`, which is gitignored, and dev would then spend the real budget).
 
 URL params: `?net=off` is offline (implied by debug `?players=`/`?race=`). `?net=bc` uses BroadcastChannel between tabs of one browser, with no server.
 

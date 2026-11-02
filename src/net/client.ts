@@ -37,7 +37,7 @@ export function chooseTransport(room: string, peer: string, params: URLSearchPar
   if (mode === 'off' || (!mode && (params.has('players') || params.has('race')))) return null;
   if (mode === 'bc') return new BroadcastTransport(room, peer);
   const rtc = browserRtc();
-  // No WebRTC at all: the session stays local, and BroadcastTransport reports nothing wrong, so say so with an unavailable stub.
+  // No WebRTC in this browser: stay local, and say why in the lobby.
   if (!rtc) return unavailableTransport(peer, 'WebRTC Unsupported');
   return new WebRtcTransport(room, peer, { signal: new HttpSignal(room, peer), rtc, hidden: () => document.hidden });
 }

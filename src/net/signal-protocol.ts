@@ -48,7 +48,7 @@ export interface IceServer {
 export type Signal =
   | { k: 'offer'; c: string; o: number; sdp: string }
   | { k: 'answer'; c: string; sdp: string }
-  /** "I'm not the host, `to` is" (empty when the sender doesn't know either). */
+  /** "I'm not the host, `to` is." Empty `to`: the host refused, the room is full. */
   | { k: 'redirect'; c: string; to: string };
 export interface Mail {
   from: string;
@@ -91,5 +91,5 @@ export function isSignal(v: unknown): v is Signal {
   return s.k === 'offer' && Number.isSafeInteger(s.o) && (s.o as number) >= 0;
 }
 
-/** Public STUN only. TURN comes from the server (env), see app/api/net/_server/ice.ts. */
+/** Public STUN only. TURN comes from the server's `SLAG_ICE_SERVERS`. */
 export const DEFAULT_ICE: IceServer[] = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] }];
