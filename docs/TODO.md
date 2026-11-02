@@ -41,7 +41,7 @@ The user's feedback on a real phone: "almost playable but not quite; resolution 
 ## 8. Render polish
 - **Liquid draw order:** `drawLiquid` still paints after players and effects, while `docs/DESIGN.md` lists liquids behind terrain.
 - **`pnpm shot race` without `--race`** never starts a race: it stays in pick at frame 0.
-- **Cel-shaded look (`?style=cel`):** the owner picks whether it becomes the main look. Flipping is `DEFAULT_STYLE` in `src/render/style.ts`. Play it first, and try a real phone. Mine is weakest (band arcs on rock walls). Impact words can hide a hazard for most of a second; `?lettering=0` turns them off. Big plain walls are a taste call. With adoption, note in `src/render/AGENTS.md` that thin or soft things on `rc.s` get ink.
+- **Impact words** can hide a hazard for most of a second; `?lettering=0` turns them off. Decide whether they stay. Mine is the weakest theme in cel (band arcs on rock walls), and big plain walls are a taste call. Try a real phone.
 
 ## 9. Weather (new)
 A per-level random variable:
@@ -80,7 +80,6 @@ Also confirm the Match Length values (Short 30 points / 10 rounds, Normal 50 / 1
 ## 16. Fix WebGL failure paths
 Both are now visible in Sentry.
 
-- `createCompositor` falls back to `Fallback` after a GL compile failure, but that canvas already has a WebGL context, so `getContext('2d')` returns null. The first render throws and kills the game loop.
 - There's no WebGL context-restore handling, so a lost context stays lost for that session.
 
 ## 14. Clear the lint warnings
