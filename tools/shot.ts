@@ -276,11 +276,6 @@ async function mobile(deviceName: string) {
   await mp.waitForTimeout(60);
   await shotM('race');
   console.log('touch runner before/after stick+jump', JSON.stringify(before), JSON.stringify(await runner()));
-  // Holding an item brings up the USE button.
-  await touch('touchEnd', []);
-  await mp.evaluate(() => (window as any).slagDebug.give(['sword']));
-  await mp.waitForTimeout(150);
-  await shotM('race-item');
   // Hold ALT: the self-destruct ring fills, then pops the runner.
   await touch('touchEnd', []);
   await touch('touchStart', [{ x: L.secondary.x, y: L.secondary.y, id: 3 }]);

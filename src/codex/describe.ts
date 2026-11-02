@@ -41,11 +41,7 @@ export const PART_INFO: Record<Module['type'], { title: string; blurb: string }>
     blurb:
       'Mounted flush on an exposed face of a block (rotation picks the face). Spikes kill; ice coats make floors slippery and walls un-jumpable; slime makes floors slow and walls sticky.',
   },
-  mystery: {
-    title: 'Mystery crate',
-    blurb:
-      'A solid block with a glowing porthole. Hit it from below or bump its side and a random held item from its pool pops out of the top. Some refill after a while; some run out and go dark.',
-  },
+  mystery: { title: 'Mystery crate', blurb: 'A solid block with a glowing porthole and something inside.' },
   bomb: {
     title: 'Demolition',
     blurb:
@@ -90,7 +86,6 @@ const AIM_TAG: Record<string, string> = { fixed: 'FIXED', sweep: 'SWEEPS', track
 export function propTag(def: PropDef): string | null {
   for (const m of def.modules) {
     if (m.type === 'launcher') return m.ammo === 'seeker' ? 'HOMING' : m.ammo === 'glider' ? 'RIDEABLE' : AIM_TAG[m.aim];
-    if (m.type === 'mystery') return m.uses === 0 ? 'REFILLS' : m.uses === 1 ? 'ONE ITEM' : `${m.uses} ITEMS`;
     if (m.type === 'bomb') return m.delay ? 'AT RACE START' : m.target === 'props' ? 'PROPS ONLY' : m.target === 'terrain' ? 'TERRAIN ONLY' : null;
   }
   return null;

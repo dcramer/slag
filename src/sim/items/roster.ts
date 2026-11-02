@@ -8,8 +8,7 @@ import type { ItemKind } from './types';
  * The held-item roster. Every item has an upside and a catch, and none of them
  * kills on its own (docs/DESIGN.md: "not everything is death"): they shove,
  * daze and misdirect, and the level does the rest. Adding an item: extend
- * ItemKind, add a spec here and art in src/render/items.ts; the codex note
- * comes from `blurb`.
+ * ItemKind, add a spec here and art in src/render/items.ts.
  */
 export interface ItemSpec {
   kind: ItemKind;
@@ -18,8 +17,6 @@ export interface ItemSpec {
   uses: number;
   /** What `use` does, as a button label (`Swing`, `Throw`). */
   verb: string;
-  /** One-line upside and catch, shown in the codex. */
-  blurb: string;
   /** Carrying it caps jump take-off speed (px/s). */
   jumpCap?: number;
   /** Fire it. Called only when `use` is pressed with uses left and no cooldown. Returns true if a use was spent. */
@@ -75,7 +72,6 @@ export const ITEMS: Record<ItemKind, ItemSpec> = {
     name: 'Foam Sword',
     verb: 'Swing',
     uses: 4,
-    blurb: 'Swing to bonk rivals flying and swat shots back (they become yours). You crawl while you swing. 4 swings.',
     use(w, r) {
       const it = r.items;
       it.swing = SWORD.swing;
@@ -90,7 +86,6 @@ export const ITEMS: Record<ItemKind, ItemSpec> = {
     name: 'Ricochet Puck',
     verb: 'Kick',
     uses: 1,
-    blurb: 'Kick it: it slides along the floor, banks off walls and bonks whoever it reaches. Including you, on the rebound.',
     use(w, r) {
       const b = r.body;
       fire(w, r, { ammo: 'puck', x: cx(r), y: b.y + b.h - 4.5, vx: b.facing * PUCK.speed, vy: 0 });
@@ -103,7 +98,6 @@ export const ITEMS: Record<ItemKind, ItemSpec> = {
     name: 'Boomerang',
     verb: 'Throw',
     uses: 1,
-    blurb: 'Throw it: it bonks the first rival it meets and curves back to your hand. Hit anything else and it clatters down for anyone to grab.',
     use(w, r, inp) {
       const b = r.body;
       fire(w, r, { ammo: 'boomerang', effect: 'bonk', x: cx(r), y: cy(r), vx: b.facing * BOOMERANG.speed, vy: inp.up ? -BOOMERANG.speed * 0.45 : 0 });
@@ -117,7 +111,6 @@ export const ITEMS: Record<ItemKind, ItemSpec> = {
     verb: 'Drop',
     uses: 1,
     jumpCap: SHIELD.jumpCap,
-    blurb: 'Soaks up one lethal hit (not falls or crushes) and pops you upward. Heavy to carry: lower jumps. Use drops it.',
     use(w, r) {
       tossHeld(w, r);
       return false;
@@ -128,7 +121,6 @@ export const ITEMS: Record<ItemKind, ItemSpec> = {
     name: 'Pocket Rocket',
     verb: 'Blast Off',
     uses: 1,
-    blurb: 'One huge burst upward, steered with left and right. Then the fumes leave you seeing stars: no control until you come to.',
     use(w, r, inp) {
       const b = r.body;
       b.vy = -ROCKET.vy;
@@ -148,7 +140,6 @@ export const ITEMS: Record<ItemKind, ItemSpec> = {
     name: 'Smoke Bomb',
     verb: 'Lob',
     uses: 2,
-    blurb: 'Lob it: it bursts into a thick cloud that hides the ground and slows everyone inside, you included. 2 bombs.',
     use(w, r) {
       const b = r.body;
       fire(w, r, { ammo: 'smokebomb', x: cx(r), y: cy(r), vx: b.facing * SMOKE.vx + b.vx * 0.3, vy: -SMOKE.vy });

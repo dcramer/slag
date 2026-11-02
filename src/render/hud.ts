@@ -694,8 +694,9 @@ export class Hud {
       this.text(status, x + 26, y + 18, TYPE.caption, done ? PAL.toxic : dead ? '#ff8a7a' : PAL.ash, 'left', UI, 600);
       const held = r?.items.held;
       if (held) {
-        drawItemIcon(c, held.kind, x + 74, y + 11, 0.8, t);
-        if (held.uses > 1) this.text(`×${held.uses}`, x + 74, y + 20, TYPE.caption, PAL.bone, 'center', UI, 800);
+        // On the status line: names fill the row above.
+        drawItemIcon(c, held.kind, x + 75, y + 17, 0.7, t);
+        if (held.uses > 1) this.text(`×${held.uses}`, x + 67, y + 18, TYPE.caption, PAL.bone, 'right', UI, 800);
       }
     });
   }
@@ -869,12 +870,7 @@ export class Hud {
         if (f < full + 40) {
           const a = f < full ? 1 : 1 - (f - full) / 40;
           return {
-            items: [
-              { action: 'jump', label: 'Jump' },
-              { action: 'run', label: 'Run' },
-              ...(use ?? [{ action: 'use' as const, label: 'Use Item' }]),
-              { action: 'alt', label: 'Self-Destruct' },
-            ],
+            items: [{ action: 'jump', label: 'Jump' }, { action: 'run', label: 'Run' }, ...(use ?? []), { action: 'alt', label: 'Self-Destruct' }],
             left: '',
             alpha: Math.max(0.55, a),
             bar: a > 0.6,

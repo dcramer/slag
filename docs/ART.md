@@ -70,7 +70,7 @@ On pages, body text is 15–18 px and menu items are 30 px display.
 - Which glyph goes with which action is decided in `src/ui/prompts.ts`. Key labels always come from the **live bindings** (`InputManager.settings` → `capLabel`), so remaps show up immediately.
 - Show the active input family first: the one used last (`InputModeTracker`) or the one forced by `hud.inputMode`. Add the other family only if it's present (a pad is connected or joined). Touch shows touch glyphs only.
 - Every phase has a **footer prompt bar** at the bottom: ink bar, a hazard-tape top edge, prompts right-aligned, context on the left (`2/4 Ready`, `LOBBY K7QX2`). In-game screens never put prompts anywhere else. Footer prompts that map to a HUD action can be clicked or tapped.
-- During races the footer shows Jump, Run, Use Item, and Self-Destruct through the countdown, then fades to a quiet Self-Destruct hint. While a local player holds an item the Use prompt stays up, labelled with that item's verb (`Swing`, `Throw`). In touch mode it's hidden, because the on-screen controls carry the labels.
+- During races the footer shows Jump, Run, and Self-Destruct through the countdown, then fades to a quiet Self-Destruct hint. While a local player holds an item a Use prompt joins them, labelled with that item's verb (`Swing`, `Throw`). In touch mode it's hidden, because the on-screen controls carry the labels.
 
 ## Layout and interaction
 
