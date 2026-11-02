@@ -29,6 +29,7 @@
  *   pnpm shot webgl                        → a race through a lost and restored WebGL context, then with shaders that won't build and with no WebGL2
  *   pnpm shot inkdraw                      → times the cel pass alone
  *   pnpm shot inkblast --seed S --theme T  → craters bitten out of a level, each partial redraw checked against a full bake
+ *   pnpm shot landmarks [--theme T] [--concept id] [--count N] → one level per stage concept, on a contact sheet
  *   pnpm shot home                         → main menu (desktop + 390×844 mobile)
  *   pnpm shot rules                        → the match rules card (fails if it doesn't fit the window)
  *   pnpm shot settings                     → every settings tab over the lobby, driven by keys and a fake pad,
@@ -39,6 +40,7 @@
  * Options: --out shots  --size 1280x720 (window)  --world classic|wide|tall (level size)  --players 2  --frames N (sim frames to advance)
  *          --theme farm (force a theme; `levels --themes all` renders one level per theme)
  *          --weather rain (force the weather: clear|wind|mist|rain|snow)
+ *          --concept id (force a stage concept of the theme's, or plain; src/gen/stage)
  *          --noui (hide the HUD, e.g. to review level shapes)
  *          --q high (pin the quality tier: slow software GL otherwise reads as a slow device and drops it)
  *          --runframe N (race: stop on exact sim frame N)  --campin x,y,zoom (race: pin the view, for before/after sheets)
@@ -49,6 +51,7 @@
  */
 
 import { browser, errors, scenario, server } from './shot/ctx';
+import { shots as landmarks } from './shot/landmarks';
 import { shots as motion } from './shot/motion';
 import { shots as mobile } from './shot/mobile';
 import { shots as pages } from './shot/pages';
@@ -56,7 +59,7 @@ import { shots as parts } from './shot/parts';
 import { shots as phases } from './shot/phases';
 import { shots as renderer } from './shot/renderer';
 
-const SCENARIOS = { ...phases, ...renderer, ...motion, ...parts, ...pages, ...mobile };
+const SCENARIOS = { ...phases, ...renderer, ...motion, ...parts, ...pages, ...mobile, ...landmarks };
 
 try {
   const run = SCENARIOS[scenario];

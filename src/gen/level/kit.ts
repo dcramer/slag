@@ -1,5 +1,6 @@
 import type { Rng } from '../../core/rng';
 import { T_EMPTY, T_ONEWAY, T_SOLID } from '../../sim/level';
+import type { Landmark } from '../stage/types';
 import { jumpProfile } from './probe';
 import { BRIDGE_W, type BridgeHint, type Shape } from './types';
 
@@ -32,6 +33,8 @@ export class Grid {
   wantsProps = false;
   /** Set by sculptors working in solid rock: second routes are carved, not hung (Shape.carve). */
   carve = false;
+  /** The landmark raised on this grid (sculptors/common.ts: raiseLandmark); becomes Shape.landmark. */
+  landmark?: Landmark;
 
   constructor(
     readonly w: number,
@@ -191,6 +194,7 @@ export function finish(g: Grid, spawn: Pocket, goal: Pocket, style: string): Sha
     wantsProps: g.wantsProps,
     crossings: g.crossings.slice(),
     carve: g.carve,
+    ...(g.landmark ? { landmark: g.landmark } : {}),
   };
 }
 

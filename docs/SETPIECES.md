@@ -1,6 +1,6 @@
 # Set pieces and stage concepts: proposal
 
-Status: proposal for the owner to decide on. Nothing here is built yet.
+Status: the owner has decided the open questions (section 6). Wave 0, the contracts, has landed; no concept is registered yet.
 
 The ask: much more variety in the large-scale structures each themed level can have, and they have to render well. Today generation reads as minor tweaks. The reference is Ultimate Chicken Horse, where each level is one place (a mansion with an elevator and glass on both sides, a level dominated by one huge moving thing). The answer proposed here is to generate **stage concepts**: pick the place first, build its landmark, then fill in the rest.
 
@@ -605,11 +605,32 @@ Each task:
 
 Run `pnpm test:stats`. Update `docs/PARODY.md` (set piece rows), `docs/DESIGN.md` and `src/gen/AGENTS.md` (the pipeline line).
 
-## 6. Open questions for the owner
+### What Wave 0 landed, and where it differs from section 2
 
-1. **Should movers ever be required?** Recommended: no. The proof stays static, the lift and the wheel are fast or risky alternatives, and a landmark always has a static way past it. Making movers required would mean teaching `reach.ts` to ride moving solids, which is a large change and makes the proof slower.
-2. **What share of levels should be plain?** Recommended: about 20% plain, about 80% with a concept.
-3. **Should parts of a landmark trigger other parts?** UCH's elevator comes when you press a button; Islands' bell summons the kraken. That is deterministic, but it couples modules to each other. Recommended: later, after the slice.
-4. **Should the haunted manor be a castle concept, or a theme of its own?** Recommended: a castle concept now. A new theme moves seeds and needs a full look.
-5. **Should the level's name come from the landmark** ("The Great Wheel of Skookaish Mill")? That is flavour, not explanation, but it is a UI change.
-6. **Should anything change between rounds?** UCH's Crumbling Bridge erodes over a match and The Mainframe remembers paths. Recommended: out of scope here.
+- **`src/gen/stage/`**: `types.ts` (`Concept`, `Landmark`), `index.ts` (`CONCEPTS`, all empty; `rollConcept`, `fits`, `conceptName`, `PLAIN_SHARE`, `PLAIN`). `Concept` gained three optional fields: `names` (decision 5), `budget` (the hazard slots its pieces use; default, how many it placed) and `carrier` (decision 1a).
+- **`claimSite` is two calls.** The heightmap sculptors lay the ground after their stamps are planned, so `claimSite(ctx, k, slots, surf, locked?)` takes the columns and levels the ground, returning a `Claim`, and `raiseLandmark(g, ctx, claim, parts)` builds the tiles after `groundFromHeights`, reserves the air and sets `Shape.landmark` through `Grid.landmark`. A concept that owns the crossing carves and records it in its own `build` (with `pit` or `hintGap`), since only it knows where the gap goes. `claimSite` keeps `POCKET + SAFE_TILES` columns from either end. The sculptor rolls from `ctx.rng` for the site and the build; the pieces get `landmark:${attempt}`.
+- **A live concept with no landmark rejects the attempt.** Until a theme's sculptor calls `claimSite`, registering a concept for it costs 8 attempts and ends plain, and `conceptFallback` shows it.
+- **Pipeline** (`level/index.ts`): as in section 2, plus `ProfileOverride.concept` (`--concept`, `?concept=`), which also picks a size and route the concept fits unless those are forced. `PlacerOpts` gained `standing` (the landmark's pieces), `avoid` (its air) and `family`. `Piece.motion` reaches `finalize`, which now simulates whole-piece motion (`motionOffset`) and counts its period in `cycleFrames`.
+- **Lanes** block the columns of `landmark.air`.
+- **Tools**: `pnpm level --concept <id>|plain`, a `concepts` and `conceptFallbacks` column in `--stats`, `?concept=`, `pnpm shot --concept`, and a minimal `pnpm shot landmarks` (`tools/shot/landmarks.ts`, one level per registered concept) for task D to grow.
+- **Additive sim types** (`sim/props/types.ts`): module `flood` (registered, claims its basin, does nothing yet; no art), Motion `track` (holds still; no path art), rail `dwell` (typed only: `motionOffset` ignores it until task B), `SpikeLook` on `spikes` and `coat`, `GeyserLook` `water | toxic | snow`, `DecoKind` `facade | gantry | flywheel | headframe | hull | billboard | clockface`, and `FloodLook`.
+- **Skins** live in `render/props/skins/<theme>.ts`, one `ThemeSkins` per theme, collected in `skins/index.ts`.
+- **Carriers** (decision 1a): `Level.rides`, `gen/level/ride.ts` (`rideProof`, `carrierReach`, `rideSpans`, `MIN_DWELL`), reach.ts walking rides, and `routes.ts` exempting a ride's span from the mostly-open measure, like a bridge span. See decision 1a below.
+- **`noFreeRide` (task C)** runs with `level.rides` in place. A carrier's own crossing is then already in the baseline, so it needs no special case: the check still snapshots every mover, the carrier included, and rejects any that lets a bare run reach the flag.
+
+## 6. Decisions
+
+The owner decided these on the proposal's open questions.
+
+1. **Movers are never required.** They are optional fast or risky routes. The proof stays static, and every concept keeps a static way past itself.
+
+   **1a. Except carriers, and then they're big.** In the owner's words: "A giant contraption could help you get past gaps fwiw so sometimes that's ok but if it's true the gap and contraption should be large." A concept may declare itself a `carrier`: a lift or ferry with a dwell across a chasm, a cable car, a crane trolley.
+   - The gap it carries you over is beyond what `MAX_BRIDGES` parts close: `carrierReach()` measures it from `jumpProfile()` at the level's gravity (columns across, or rows up), and the contraption's travel is that gap, so it's at least as big.
+   - The carrier's gap is not the level's part-requiring crossing. The parts policy holds elsewhere: about 99% need parts, about a quarter two, at most `MAX_BRIDGES`. `noFreeRide` exempts only the carrier's own crossing (by running with its rides in the baseline) and still rejects any mover, the carrier included, that lets a bare run skip the challenge crossing.
+   - **The ride proof** (`rideProof`, `gen/level/ride.ts`) is conservative. Sampling two of the carrier's cycles, it needs stretches of at least `MIN_DWELL` frames (plus a walk across its deck) with every solid still and on the grid, at one end and then the other, and a rigid move between them. The carrier must never hurt, push, blow or catch. A runner standing still on its deck must stay clear of every non-empty tile and every other solid of it the whole way. The cells you step on from and off to must stand without it and lie outside everything it sweeps. Each crossing proven that way is a `Ride` on the level; reach.ts takes it as one move while both ends stand and every cell of the rider's path is empty, so a part placed in the way during a match closes it. A side wind closes every ride.
+   - What it can't prove keeps a static way past, as before. A wheel rim that only passes level with the banks, without stopping, can't be proven by this check; a concept like that keeps its static route, or a later task adds a passing-window variant with a test.
+2. **About 20% of levels are plain**; about 80% get a concept (`PLAIN_SHARE`), among levels where a concept fits the size and route.
+3. **Triggers between pieces** (buttons, bells) are out of scope for now.
+4. **The haunted manor is a castle concept**, "Haunted Wing", not a new theme.
+5. **A level with a concept is named after its landmark**, "The Great Wheel of Skookaish Mill": `Concept.names` holds templates with `{place}`, the theme's place name. Plain levels keep today's names.
+6. **Changes between rounds** are out of scope for now.

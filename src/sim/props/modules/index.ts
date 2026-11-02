@@ -10,6 +10,7 @@ export * from './deco';
 export * from './dropper';
 export * from './fan';
 export * from './flame';
+export * from './flood';
 export * from './geyser';
 export * from './keg';
 export * from './laser';

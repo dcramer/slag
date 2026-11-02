@@ -7,7 +7,7 @@ import { ball, boxPts, dot, INK, ovalPts, part, path, pen, poly, sprite, stamp, 
 import { circle, glowDot, light, METALS, type MetalPalette, type RC } from '../../kit';
 import { BACKDROP, type DrawCtx, defineArt } from '../common';
 import { lattice } from './setpiece';
-import { decoSkin } from './skins';
+import { decoSkin } from '../skins';
 
 /**
  * Scenery dressing for set pieces, inked: the press gantry and the antenna masts under tesla coils stand

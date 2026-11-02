@@ -165,7 +165,8 @@ export function drawPreview(rc: RC, full: PropDef, cx: number, cy: number, bw: n
 
 function drawPath(rc: RC, r: Resolved) {
   const m = r.motion;
-  if (m.type === 'none') return;
+  // A track draws its own line (stage concepts, Wave 1).
+  if (m.type === 'none' || m.type === 'track') return;
   const s = rc.s;
   const cells = r.mods.flatMap((x) => (x.type === 'body' ? x.cells : []));
   let cx: number;

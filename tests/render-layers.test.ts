@@ -23,6 +23,7 @@ const MAY_PAINT_BACKDROP: Record<Module['type'], boolean> = {
   dropper: false,
   fan: false,
   flame: false,
+  flood: false,
   geyser: false,
   keg: false,
   laser: false,

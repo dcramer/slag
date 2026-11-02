@@ -69,6 +69,15 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - **Render layers, back to front:** sky and skyline; background halves of set pieces (a windmill's tower, a crane's mast); liquids (water and lava); terrain, props and the moving parts of set pieces (the windmill's blades); players; effects. Scenery that you can't touch sits behind the terrain.
 - Set pieces are large, pre-placed theme props: tractor, windmill, foundry press, chandelier, minecart, geysers, crane, a frost cannon and a chairlift on the glacier, solar flares licking up out of the void and a centrifuge in space, and so on. They never block the known solution and keep their hazards away from spawn and goal. They are visible in every phase.
 
+### Stage concepts
+A level is a place with one landmark you'd name it after: the Great Wheel, the Haunted Wing (docs/SETPIECES.md has the plan and every concept).
+- **About 80% of levels get a concept and about 20% stay plain**, where a concept fits the level's size and route. The concept is rolled once per level from its own stream. Plain levels are generated exactly as before concepts existed.
+- **The landmark comes first.** The sculptor takes the landmark's site and builds its structure as tiles, so the real controller proves routes over it like any terrain. Its moving parts and hazards go in after weather, every one of them required; the filler set pieces after them come from the concept's own hazard family. A landmark that won't stand up is retried, and after 8 tries the level goes plain.
+- **A level with a landmark is named after it**, for example "The Great Wheel of Skookaish Mill". Plain levels keep their place name.
+- **Movers are never required.** A lift, a wheel or a cart is a fast or risky way, never the only one: the proof stays static, and every concept keeps a static way past itself.
+- **Except a carrier, and then it's big** (decision 1a). A giant contraption may carry you over a gap no part could close: a lift or ferry parked at each end, across a chasm wider (or a climb taller) than two parts can manage at the level's gravity, and the contraption at least as big as the gap. It's proven conservatively: a runner who steps on while it's parked at one end and stands still is carried to the other, with nothing in the way, and steps off while it's parked there. Anything that check can't prove keeps a static way past. The carrier's gap isn't the level's part-requiring crossing: the level still needs its one or two parts elsewhere, and no mover, the carrier included, may let a bare run skip that crossing.
+- Triggers between pieces (a button that calls the lift) and changes between rounds are out of scope for now.
+
 ## Props
 - **Not everything is death.** Most parts have an upside *and* a side effect you have to worry about: knockback, slow, freeze, sticky, misdirection, or a platform that sinks. Lethal parts exist, but disruption is the norm.
 - **Some projectiles are platforms.** For example, gliders fired from a launcher can be ridden, but they sag and sink under weight or over time.

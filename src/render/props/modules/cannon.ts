@@ -6,7 +6,7 @@ import { ball, boxPts, glint, INK, ovalPts, part, path, pen, poly, sprite, stamp
 import { glowDot, light, METALS, type RC } from '../../kit';
 import { type DrawCtx, defineArt } from '../common';
 import { wheel } from './setpiece';
-import { cannonSkin } from './skins';
+import { cannonSkin } from '../skins';
 
 /**
  * Set-piece guns, inked: the castle's boss-room cannon, the ship's gun, the jungle's cursed idol and the
