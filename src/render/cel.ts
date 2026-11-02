@@ -4,10 +4,8 @@ import type { GameEvent } from '../sim/types';
 import type { Camera } from './camera';
 
 /**
- * Comic-style parts that live on the Canvas2D side (the ink and dot screens are
- * `comic-shader.ts`): the foreground layer, onomatopoeia on sim events, and speed
- * lines behind fast runners. Only used when the render style is 'comic'; purely
- * cosmetic, reads events, never writes sim state.
+ * Cel-style parts that live on the Canvas2D side (bands and ink are `cel-shader.ts`): the foreground
+ * layer and the impact words on sim events. Purely cosmetic: reads events, never writes sim state.
  */
 
 const DISPLAY = '"Lilita One", "Arial Rounded MT Bold", Impact, system-ui, sans-serif';
@@ -20,23 +18,24 @@ const TOP = 26;
 /**
  * Transparent albedo layer for everything the player interacts with (terrain, props, runners).
  * Splitting it from the backdrop is what lets ink follow real silhouettes, leaves the background
- * un-inked, and works whatever the colors underneath. Sizes itself from the scene canvas each frame.
+ * un-inked, and works whatever the colors underneath. Scenery stays on the background, behind the terrain. Sizes itself from the scene canvas each frame.
  */
-export class ComicLayer {
+export class CelLayer {
   readonly canvas = document.createElement('canvas');
   private ctx = this.canvas.getContext('2d')!;
 
   /**
    * Call once the backdrop is painted. Folds its emissives (sun, moon, skyline windows) into the flat
-   * background: "glow belongs to hot things only" (docs/ART.md), and the print pass treats whatever is
+   * background: "glow belongs to hot things only" (docs/ART.md), and the cel pass treats whatever is
    * left on the emissive layer as a hazard-grade shape with bloom and an ink casing.
    */
-  begin(like: HTMLCanvasElement, s: CanvasRenderingContext2D, glow: CanvasRenderingContext2D): CanvasRenderingContext2D {
+  begin(like: HTMLCanvasElement, s: CanvasRenderingContext2D, glow: CanvasRenderingContext2D, ambient: number): CanvasRenderingContext2D {
     s.save();
     s.setTransform(1, 0, 0, 1, 0, 0);
     s.globalCompositeOperation = 'lighter';
-    s.globalAlpha = 0.8;
     s.drawImage(glow.canvas, 0, 0);
+    // The pass dims a dark theme's backdrop, and emissives are the one part of it that shouldn't: that's a volcano's glow.
+    if (ambient < 0.7) s.drawImage(glow.canvas, 0, 0);
     s.restore();
     glow.save();
     glow.setTransform(1, 0, 0, 1, 0, 0);
@@ -206,34 +205,5 @@ export class Lettering {
     ctx.strokeText(w.text, 0, 0);
     ctx.fillStyle = css(w.fill);
     ctx.fillText(w.text, 0, 0);
-  }
-}
-
-/**
- * Ink speed lines streaming behind a fast runner. Takes the background layer's context, in world
- * space: thin strokes on the foreground layer would get an outline of their own and turn to blobs.
- */
-export function speedLines(s: CanvasRenderingContext2D, t: number, x: number, y: number, vx: number, vy: number) {
-  const sp = Math.hypot(vx, vy);
-  if (sp < 200) return;
-  const ux = vx / sp;
-  const uy = vy / sp;
-  const nx = -uy;
-  const ny = ux;
-  const n = 5;
-  const len = Math.min(34, 8 + (sp - 200) * 0.06);
-  s.strokeStyle = INK;
-  s.lineCap = 'round';
-  for (let i = 0; i < n; i++) {
-    const o = (i - (n - 1) / 2) * 3.2;
-    const jitter = Math.sin(t * 37 + i * 2.3) * 3;
-    const l = len * (0.55 + 0.45 * Math.abs(Math.sin(i * 1.9 + 0.7)));
-    const bx = x - ux * (7 + jitter) + nx * o;
-    const by = y - 6 - uy * (7 + jitter) + ny * o;
-    s.lineWidth = i === 0 || i === n - 1 ? 0.8 : 1.2;
-    s.beginPath();
-    s.moveTo(bx, by);
-    s.lineTo(bx - ux * l, by - uy * l);
-    s.stroke();
   }
 }

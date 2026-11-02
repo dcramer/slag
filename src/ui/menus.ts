@@ -2,7 +2,7 @@ import type { AudioSystem } from '../audio';
 import { MATCH_LENGTHS, type MatchRules, RULE_CHOICES, type TimerRule } from '../game/rules';
 import { BINDABLE, defaultSettings, type InputSettings, type KeyProfile, keyName, SLOTS } from '../input/bindings';
 import type { InputManager } from '../input/input';
-import type { RenderStyle } from '../render/style';
+import { type RenderStyle, STYLE_IDS, STYLES } from '../render/style';
 import { glyphSVG, type Glyph } from './glyphs';
 import { capLabel } from './prompts';
 import { sanitizeName } from './profile';
@@ -21,11 +21,6 @@ export interface StyleControl {
   get(): RenderStyle;
   set(style: RenderStyle): void;
 }
-
-const STYLE_CHOICES: [RenderStyle, string][] = [
-  ['default', 'Classic'],
-  ['comic', 'Comic'],
-];
 
 const HAPTICS_KEY = 'slag.haptics';
 
@@ -306,8 +301,8 @@ export class SettingsMenu extends Overlay {
   private styleSection(card: HTMLElement, c: StyleControl) {
     card.append(el('h3', { textContent: 'Art Style' }));
     const chips = el('div', { className: 'slag-chips' });
-    for (const [style, label] of STYLE_CHOICES) {
-      const b = el('button', { className: `slag-btn ${c.get() === style ? 'on' : ''}`, type: 'button', textContent: label });
+    for (const style of STYLE_IDS) {
+      const b = el('button', { className: `slag-btn ${c.get() === style ? 'on' : ''}`, type: 'button', textContent: STYLES[style].label });
       b.onclick = () => {
         c.set(style);
         for (const sib of chips.querySelectorAll('button')) sib.classList.toggle('on', sib === b);
