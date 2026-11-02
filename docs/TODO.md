@@ -8,12 +8,18 @@ Design intent for everything below is in `docs/DESIGN.md`.
 
 ---
 
-## 27. AI players (future)
-Bots that fill seats in local and online matches.
-- Racing can build on `src/sim/reach.ts`: it already runs the real controller through scripted moves and searches a route graph, so a bot can follow the planned route and react to hazards with the same inputs a player sends (deterministic, so lockstep is unchanged).
-- Pick and place need taste: pick by role and the round's state, place to trap rivals without stranding the bot itself (the winnability plan already refuses a placement that leaves no way through).
-- Difficulty levels, and a bot never cheats: it sends inputs like anyone else.
-- Decide with the owner: bots in online rooms, in the lobby browser, and whether they count for scoring.
+## 28. The codex covers maps
+The owner: "the codex needs to talk about maps". The codex (`src/codex/`) catalogs parts and projectiles only. Add the world: each theme with its landmarks, its own hazards and its look, read from the registries (`THEME_IDS`, `CONCEPTS`, `SET_PIECE_RECIPES`, decor `RULES`) so a new entry shows up without codex edits.
+
+## 27. AI players and player scripts (future)
+Brains that fill seats by producing inputs, built in or written by players. Design: `docs/DESIGN.md` → AI players. Native AI first (phases 1–2); scripts after. Each phase is one agent, in order.
+
+1. **Brain and motor, racing only.** The `Brain` interface, `BrainView` v1, a `BRAINS` registry and a motor that replays `src/sim/reach.ts` policies as intents. A built-in brain follows the reach route and replans around hazards. Bots fill local seats. A test runs a headless match and checks a bot finishes a few solvable levels; finish rates over many seeds go in `tests/stats/`.
+2. **Pick, place and personality.** Pick by role and the round's state; place to trap rivals without stranding itself (the winnability plan already refuses a placement that leaves no way through). Personality rolled from a seed (reaction, precision, risk, spite), with a generated name. Host-owned bot seats online, moving with host migration.
+3. **Player scripts.** A Web Worker sandbox with a per-frame deadline, the published `brain-api.d.ts`, the Workshop screen (load, trial over seeds, report, replays) and `pnpm brain trial`.
+4. **Copy for Your AI.** The prompt pack: API, current script, worst failures from the last trial.
+
+- Decide with the owner: player scripts in online rooms and the lobby list, whether bots and scripts score, how far the lookahead sees, and whether senses name prop kinds.
 
 ## 2. Online follow-ups
 Online play is on `main`, verified by real-browser checks in `pnpm online-test` and the Upstash-compatible `pnpm test:store`. See `docs/NETCODE.md`.

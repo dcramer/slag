@@ -13,10 +13,12 @@ export type Ring = string;
 export interface VFrame {
   /** The silhouette's outer outlines. */
   sil: readonly Ring[];
-  /** Parts back to front: the role, then its outline. */
-  parts: readonly (readonly [number, Ring])[];
-  /** Catch-lights in the eyes: x, y, radius in eighths of a world px. */
-  glints?: readonly number[];
+  /** Parts back to front: the role and its outline, then, for an accessory, its slot and option. */
+  parts: readonly (readonly [number, Ring] | readonly [number, Ring, number, number])[];
+  /** The eyes the face is drawn on: x, y, radius in eighths of a world px, the near eye first. */
+  eyes?: readonly number[];
+  /** Open pen strokes drawn over the figure (a spin ball's motion marks). */
+  marks?: readonly Ring[];
 }
 
 export interface SpriteClip {
@@ -40,6 +42,15 @@ export interface SpriteRole {
   color: string;
   /** Drawn in the kind's own colour (`paint`) or the player's (`player`). */
   slot?: 'paint' | 'player';
+  /** Other colours it may take, rolled per character from \`vary[vary]\`: an accessory's colour. */
+  alts?: readonly string[];
+  vary?: number;
+}
+
+/** A swappable accessory: \`options\` props, one rolled per character from \`vary[vary]\`. */
+export interface SpriteSlot {
+  vary: number;
+  options: number;
 }
 
 export interface SpriteSet {
@@ -47,5 +58,8 @@ export interface SpriteSet {
   /** World px from soles to the top of the head at rest. */
   height: number;
   roles: readonly SpriteRole[];
+  slots?: readonly SpriteSlot[];
+  /** The cast's face kit over the traced eyes: eye size (world px), iris, and the mouth's place from the near eye. */
+  face?: { r: number; iris: string; mouth?: readonly [number, number] };
   clips: Readonly<Record<string, SpriteClip>>;
 }

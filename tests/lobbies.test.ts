@@ -5,7 +5,7 @@ import type { ListedRoom } from '../src/net/signal-protocol';
 import { cleanListing } from '../src/net/signal-protocol';
 import { LoopbackHub } from '../src/net/transport';
 import { lobby, routePath, sameRoute } from '../src/routes';
-import { lobbyRows, themeLabel } from '../src/ui/screens/lobby-list';
+import { lobbyRows, rowTitle, themeLabel } from '../src/ui/screens/lobby-list';
 import { lobbiesHTML } from '../src/ui/screens/markup';
 
 const room = (code: string, players: number, phase: ListedRoom['phase'] = 'lobby', observers = 0): ListedRoom => ({
@@ -42,6 +42,11 @@ describe('the lobby list', () => {
     expect(themeLabel('moonbase')).toBe('Moonbase');
   });
 
+  it("leads with the host's name, and with the theme when the host has none", () => {
+    expect(rowTitle({ ...room('K7QX2', 3), host: 'Wobblesnout' })).toEqual({ title: 'Wobblesnout', sub: 'Farm · K7QX2' });
+    expect(rowTitle(room('K7QX2', 3))).toEqual({ title: 'FARM', sub: 'K7QX2' });
+  });
+
   it('opens a room watching from Watch, the same screen at the same URL', () => {
     expect(routePath(lobby('FULL', { watch: true }))).toBe('/r/FULL');
     expect(sameRoute(lobby('FULL', { watch: true }), lobby('FULL'))).toBe(true);
@@ -56,8 +61,41 @@ describe("a host's listing", () => {
     s.match.join('aaaa:kb1');
     const l = s.listing()!;
     expect(cleanListing(l)).toEqual(l);
-    expect(l).toEqual({ players: 1, max: 8, observers: 0, theme: s.match.level.theme.id, phase: 'lobby' });
+    expect(l).toEqual({ players: 1, max: 8, observers: 0, theme: s.match.level.theme.id, phase: 'lobby', host: s.match.players[0].character.name });
+    s.match.setName(s.match.players[0].slot, 'Grimble');
+    expect(s.listing()!.host).toBe('Grimble');
     s.match.setRules({ ...s.match.rules, private: true });
     expect(s.listing()).toBeNull();
+  });
+
+  it('names the host as it watches when it holds no seat, and not at all when it has no name', () => {
+    const hub = new LoopbackHub();
+    const s = new NetSession({ transport: hub.transport('aaaa'), match: new Match(3) });
+    expect(s.listing()!.host).toBeUndefined();
+    s.ns.watching.aaaa = { name: 'Dot' };
+    expect(s.listing()!.host).toBe('Dot');
+  });
+});
+
+describe("a listing's host name, checked by the API", () => {
+  const farm = { players: 3, max: 8, observers: 1, theme: 'farm', phase: 'run' } as const;
+  const host = (v: unknown) => cleanListing({ ...farm, host: v })?.host;
+
+  it('trims it, caps it at the name limit, and takes out control and format characters', () => {
+    expect(host('  Grimble  ')).toBe('Grimble');
+    expect(host('Wobblesnout the Third')).toBe('Wobblesnout');
+    expect(host('Gr\u0000im\u0007ble')).toBe('Grimble');
+    expect(host('Grim\u202Eelb')).toBe('Grimelb'); // a bidi override can't flip the row
+    expect(host('Gr\u200Bim')).toBe('Grim');
+    expect(host('Big\n\tMo')).toBe('Big Mo');
+    expect(host('<b>Jo</b>')).toBe('<b>Jo</b>'); // markup is just text: the screen never parses it
+    expect(host('abc😀😀😀😀😀')).toBe('abc😀😀😀😀'); // no half a character at the cut
+  });
+
+  it('drops a name that is junk, and keeps the room', () => {
+    for (const junk of [42, null, {}, ['Jo'], '', '   ', '\u0000\u0001', '\u200B\u200D']) {
+      const l = cleanListing({ ...farm, host: junk });
+      expect(l).toEqual(farm);
+    }
   });
 });

@@ -402,13 +402,22 @@ export class NetSession {
   listing(): RoomListing | null {
     if (this.match.rules.private) return null;
     const seated = new Set(this.match.players.map((p) => peerOf(p.device)));
-    return {
+    const l: RoomListing = {
       players: Math.min(MAX_PLAYERS, Math.max(0, MAX_PLAYERS - this.space)),
       max: MAX_PLAYERS,
       observers: this.members.filter((m) => !seated.has(m.id)).length,
       theme: this.match.level.theme.id,
       phase: this.match.phase,
     };
+    const host = this.nameOf(this.self);
+    if (host) l.host = host;
+    return l;
+  }
+
+  /** A peer's display name: its first player's, or the one it watches under; '' if it has neither. */
+  private nameOf(id: string): string {
+    const mine = this.match.players.find((p) => peerOf(p.device) === id || (id === this.self && !p.device.includes(':')));
+    return mine?.character.name ?? this.ns.watching[id]?.name ?? '';
   }
 
   /** Owed a seat at the next round boundary. */
@@ -476,8 +485,18 @@ export class NetSession {
       const quality = stale ? 'bad' : ping === null ? 'unknown' : ping < 90 ? 'good' : ping < 180 ? 'ok' : 'bad';
       const players = this.match.players.filter((p) => peerOf(p.device) === m.id || (isSelf && !p.device.includes(':')));
       const watching = this.ns.watching[m.id];
-      const name = players[0]?.character.name ?? watching?.name ?? '';
-      return { id: m.id, order: m.order, isHost, isSelf, ping, quality, slots: players.map((p) => p.slot), name, seated: players.length > 0, watching };
+      return {
+        id: m.id,
+        order: m.order,
+        isHost,
+        isSelf,
+        ping,
+        quality,
+        slots: players.map((p) => p.slot),
+        name: this.nameOf(m.id),
+        seated: players.length > 0,
+        watching,
+      };
     });
   }
 

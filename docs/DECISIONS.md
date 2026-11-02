@@ -175,6 +175,10 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `in progress` · branch `worktree-agent-aacd068f51e46176c`, behind `?sprites=1`
 - **3D-to-2D round 2 (a model sheet and a pose sheet, traced into flat parts and inked by the cast's own pen) is the direction: "thats SO MUCH BETTER".** Polish these two kinds before rolling out to the rest.
   2026-11-02 · `in progress` · `src/render/cast/sprites/`, behind `?sprites=1`; CHARACTERS.md
+- **The plumber carries his plunger low, its cup behind his shoulder, so the cap, bill and nose own his silhouette.** (answer: "Carry it lower")
+  2026-11-02 · `done` · CHARACTERS.md → Roster
+- **Character source art (models and sheets) lives in Git LFS; builds skip it and use the generated frames.** (answer: "Git LFS")
+  2026-11-02 · `open` (the owner runs `git lfs install`) · `tools/art3d/README.md`
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
   2026-11-02 · `done` · public/ASSETS.md
 
@@ -246,6 +250,12 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `done` · DESIGN.md → Lore
 - **AI players are a future TODO.** "another future TODO: AI"
   2026-11-02 · `planned` · TODO.md → 27
+- **AI is built so players can one day script their own player, and prompt an LLM to improve it: a brain is an input device for a seat, with standard built-in brains first.** "something that'd be cool is letting people actually 'script' the a player... that means they could also prompt an LLM to improve their character controller" · "lets design an AI system that can work with its own standard brains/etc and have the future potentially to allow player scripts"; the owner approved the write-up.
+  2026-11-02 23:13Z · `planned` · DESIGN.md → AI players, TODO.md → 27
+- **Bots can play online, but native AI comes first; player scripts come after.** "bots can be in online play, but the focus is on native AI first"
+  2026-11-02 23:20Z · `planned` · DESIGN.md → AI players, TODO.md → 27
+- **Leaning: scripts sense an idea of values, not the literal values (rounded positions, speed bands, outcomes from the lookahead).** "i think scripts should maybe get an idea for values but not literal values?"
+  2026-11-02 23:22Z · `open` · DESIGN.md → AI players
 - **Each theme has at least 1 and at most 3 grand landmarks among its 5+.** "id like at least one grand landmark, no more than 3 (in the min 5 landmarks)"
   2026-11-02 · `done` (enforced) · `GRAND_LANDMARKS` in src/gen/kinds.ts, tests/conformance/themes.test.ts
 - **The cast needs much more parody, and each parody must be instantly recognisable; the art must improve further.** "its better but you still need more parody and the art needs to be better yet..." / "the only thing that remotely resembles the thing its mimicking is the puff ball (kirby)". Iconic palettes win over the player-colour body rule; the player's colour moves to a visible secondary slot.
@@ -254,6 +264,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `done` · DESIGN.md → Props, `src/gen/props.ts`
 - **Lobby browser: a list of lobbies, showing only ones that aren't full by default.** Lobbies are public by default with a Private option. "lets make lobbies public by default with a private option"
   2026-11-02 · `done` · DESIGN.md → Online, Rules; NETCODE.md → Lobby list
+- **Each listed lobby shows its host's name, leading the row; after a host migration it's the new host's.** "i want each lobby to show the host's name"
+  2026-11-02 · `done` · NETCODE.md → Lobby list, `src/ui/screens/lobbies.ts`
 - **Conveyors rotate: the rotation picks the belt's face.** A side belt grips and carries a clinging runner (an escalator when it runs up), a bottom belt shoves a head that bonks it. "you cant rotate conveyors.. the conveyor always stays on the top"
   2026-11-02 · `done` · DESIGN.md → Props, Conveyors
 - **The parody first batch: Walk-Off Bat, Tremor Brick, Front-Runner Tax, Pocket Block, Launch Plate, Four-Square, Boost Strip, Panic Button, Fuse Crate, Y-Fling.**
