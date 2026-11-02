@@ -92,7 +92,7 @@ describe('harbor stage concepts', () => {
         const cols = [1, 2, 3].map((k) => (side < 0 ? x0 - k : x1 + k));
         expect(
           cols.some((x) => t(l, x, tide.at[1] / TILE - 1) === T_ONEWAY || t(l, x, tide.at[1] / TILE - 2) === T_ONEWAY),
-          `ladder by ${cols}`,
+          `ladder by ${cols.join()}`,
         ).toBe(true);
       }
     }
