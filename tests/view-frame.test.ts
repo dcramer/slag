@@ -242,7 +242,8 @@ describe('the land around a level', () => {
       const [mx, top, bottom] = [6, 4, 10];
       const a = surroundLevel(l, mx, top, bottom);
       for (let x = 0; x < l.w; x++) {
-        const solid = l.tiles[(l.h - 1) * l.w + x] === T_SOLID;
+        // Space floats: nothing there stands on anything (checked below).
+        const solid = l.theme.id !== 'space' && l.tiles[(l.h - 1) * l.w + x] === T_SOLID;
         for (let y = l.h; y < l.h + bottom; y++) expect(a.tiles[(y + top) * a.w + x + mx], `${l.theme.id} column ${x} row ${y}`).toBe(solid ? T_SOLID : 0);
       }
     }
@@ -256,6 +257,80 @@ describe('the land around a level', () => {
         if (l.tiles[y * l.w + l.w - 1] === T_SOLID) expect(a.tiles[y * a.w + 6 + l.w], `${l.theme.id} right row ${y}`).toBe(T_SOLID);
       }
     }
+  });
+
+  /** Margins from a window the shape of the view up to an ultrawide's, at the race floor of a wide level. */
+  const MARGINS = [
+    [2, 2, 2],
+    [6, 12, 12],
+    [20, 8, 30],
+    [48, 30, 30],
+  ] as const;
+  const RING = 2;
+
+  it('never puts anything inside the level: only its own edge, under its own tiles', () => {
+    const sizes = ['classic', 'wide', 'tall'] as const;
+    for (const t of THEME_IDS) {
+      for (const size of sizes) {
+        for (const seed of [31, 0x5ee4]) {
+          const l = generateLevel(seed, t, { size });
+          for (const [mx, top, bottom] of MARGINS) {
+            const a = surroundLevel(l, mx, top, bottom);
+            for (let y = 0; y < l.h; y++) {
+              for (let x = 0; x < l.w; x++) {
+                if (a.tiles[(y + top) * a.w + x + mx] !== T_SOLID) continue;
+                const ring = x < RING || x >= l.w - RING || y < RING || y >= l.h - RING;
+                const where = `${t} ${size} seed ${seed} margins ${mx},${top},${bottom}: tile ${x},${y}`;
+                expect(ring, `${where} is inside the ring`).toBe(true);
+                expect(l.tiles[y * l.w + x], `${where} isn't the level's own`).toBe(T_SOLID);
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+
+  describe('space', () => {
+    const spaces = [7, 31, 404, 0x5ee4, 90210].flatMap((seed) => (['classic', 'wide', 'tall'] as const).map((size) => generateLevel(seed, 'space', { size })));
+
+    it('has no ground: nothing runs up or down from the level, and nothing stands a column tall', () => {
+      for (const l of spaces) {
+        for (const [mx, top, bottom] of MARGINS) {
+          const a = surroundLevel(l, mx, top, bottom);
+          const solid = (x: number, y: number) => a.tiles[y * a.w + x] === T_SOLID;
+          const where = `${l.profile?.size} seed ${l.seed} margins ${mx},${top},${bottom}`;
+          for (let x = mx; x < mx + l.w; x++) {
+            for (let y = 0; y < top; y++) expect(solid(x, y), `${where}: above the level at ${x - mx}`).toBe(false);
+            for (let y = top + l.h; y < a.h; y++) expect(solid(x, y), `${where}: below the level at ${x - mx}`).toBe(false);
+          }
+          // Past the sides, the tallest run of solid down any column is a body's, never a wall's or a column's.
+          for (let x = 0; x < a.w; x++) {
+            if (x >= mx && x < mx + l.w) continue;
+            let run = 0;
+            for (let y = 0; y < a.h; y++) {
+              run = solid(x, y) ? run + 1 : 0;
+              expect(run, `${where}: column ${x - mx} solid down to row ${y - top}`).toBeLessThanOrEqual(5);
+            }
+          }
+        }
+      }
+    });
+
+    it('has bodies adrift past both sides, clear of the edge', () => {
+      for (const l of spaces) {
+        const [mx, top, bottom] = [24, 12, 12];
+        const a = surroundLevel(l, mx, top, bottom);
+        const count = (x0: number, x1: number) => {
+          let n = 0;
+          for (let y = 0; y < a.h; y++) for (let x = x0; x < x1; x++) n += a.tiles[y * a.w + x] === T_SOLID ? 1 : 0;
+          return n;
+        };
+        // Beyond where the level's edge carries on (at most 4 columns), there's still something out there.
+        expect(count(0, mx - 4), `seed ${l.seed} left`).toBeGreaterThan(0);
+        expect(count(mx + l.w + 4, a.w), `seed ${l.seed} right`).toBeGreaterThan(0);
+      }
+    });
   });
 });
 
