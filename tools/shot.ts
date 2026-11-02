@@ -32,7 +32,9 @@
  *   pnpm shot webgl                        → a race through a lost and restored WebGL context, then with shaders that won't build and with no WebGL2
  *   pnpm shot inkdraw                      → times the cel pass alone
  *   pnpm shot inkblast --seed S --theme T  → craters bitten out of a level, each partial redraw checked against a full bake
- *   pnpm shot landmarks [--theme T] [--concept id] [--count N] → one level per stage concept, on a contact sheet
+ *                                           (`--skin planks [--shell facade]`: into a test landmark in that skin)
+ *   pnpm shot landmarks [--theme T] [--concept id] [--count N] → one level per stage concept at three phases, on a contact sheet
+ *                                           (themes with none: a test landmark per skin and shell; --concept filters those by skin or shell)
  *   pnpm shot flood [--look lava|toxic|water] [--low 2] [--high 5] → a tide let into the level, at warn, rise and high water
  *   pnpm shot home                         → main menu (desktop + 390×844 mobile)
  *   pnpm shot rules                        → the match rules card (fails if it doesn't fit the window)

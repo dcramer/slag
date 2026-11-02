@@ -8,6 +8,7 @@ import { circle, glowDot, light, METALS, type MetalPalette, type RC } from '../.
 import { BACKDROP, type DrawCtx, defineArt } from '../common';
 import { lattice } from './setpiece';
 import { decoSkin } from '../skins';
+import { SHELLS } from './deco-shells';
 
 /**
  * Scenery dressing for set pieces, inked: the press gantry and the antenna masts under tesla coils stand
@@ -204,6 +205,7 @@ defineArt<'deco'>({
     if (skin) skin(rc, m, d);
     else if (m.kind === 'press') pressBack(rc, m, d);
     else if (m.kind === 'antenna') antennaMasts(rc, m, d);
+    else SHELLS[m.kind]?.(rc, m, d);
   },
 });
 defineArt<'deco'>({ type: 'deco', layer: 1, draw: (rc, m, d) => m.kind === 'ac' && acHousing(rc, m, d) });
