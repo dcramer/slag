@@ -33,6 +33,8 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - **Most levels need props.** Roughly 70–85% can't be finished bare. Every level must be finishable with **at most two small bridges**, verified with the real movement controller and never with hand-waved distances.
 - The spawn and goal zones are protected: nothing can be built or bombed there.
 - **The flag is generous**: its finish trigger is a bit wider than the flag and reaches 4 tiles up, so jumping clear over it still counts. Touching it ends your control: you drop, land and ride platforms with normal physics, and nothing can hurt you anymore.
+- **Weather (planned)** is a per-level random variable: wind gusts that push runners and projectiles, mist that limits sight distance, rain or snow that changes footing. It's always telegraphed and it's tuned per theme.
+- **Render layers, back to front:** sky and skyline; background halves of set pieces (a windmill's tower, a crane's mast); liquids (water and lava); terrain, props and the moving parts of set pieces (the windmill's blades); players; effects. Scenery that you can't touch sits behind the terrain.
 - Set pieces are large, pre-placed theme props: tractor, windmill, foundry press, chandelier, minecart, geysers, crane and so on. They never block the known solution and keep their hazards away from spawn and goal. They are visible in every phase.
 
 ## Props
@@ -40,6 +42,10 @@ This is a concise log of decided rules. It's the source of truth for gameplay in
 - **Some projectiles are platforms.** For example, gliders fired from a launcher can be ridden, but they sag and sink under weight or over time.
 - **Demolition comes in variants:** prop-only charges that leave terrain, terrain drills or tunnelers, and different blast shapes and sizes. All respect spawn and goal protection.
 - **Mystery crate (planned):** a prop that pops out a random *held item* (an original roster, e.g. a sword that bonks, a kickable puck that ricochets, a boomerang, a shield) that players carry and use.
+- **Grab props (planned):**
+  - **Rope:** hangs from the ceiling. You grab it automatically when you touch it in the air (with a short cooldown after letting go, so you don't instantly re-grab). Left and right pump the swing; jump lets go and keeps the swing's momentum.
+  - **Blast barrel:** you're sucked in on contact and it rotates (or aims at a fixed angle). Jump fires you out after a short delay along the barrel's direction. It's an original take on the genre's barrel cannon.
+- **Launcher aim is legible:** most launchers face a fixed direction; some sweep and a few track. Projectiles never home. A tracker shows a visible sensor and says so in its name.
 - Props are assembled from **parts**: blocks of various materials, spikes, swinging heads, launchers, emitters, motion, springs, fans and bombs. Every number is rolled, and names come from the rolled stats.
 - Every crate contains at least one building piece and one hazard. Crate contents are tied to the level seed and round, but the card order is shuffled with a per-match salt the host rolls, so it differs every game.
 - **Attachments** (spike strips, ice coats, slime coats) must mount flush on an exposed face of a solid block, and rotation picks the face.
