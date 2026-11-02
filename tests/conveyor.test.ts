@@ -138,8 +138,23 @@ describe('conveyor faces in the controller', () => {
 });
 
 describe('a placed conveyor', () => {
-  // A straight three-cell conveyor (a platform roll that comes out a belt).
-  const def = generateProp(new Rng(116 * 977), 'platform', 'belt');
+  // A straight three-cell conveyor: the first platform roll that comes out one, so a new platform shape
+  // (or anything else that shifts the platform stream) can't take it away.
+  const def = (() => {
+    for (let k = 1; ; k++) {
+      const d = generateProp(new Rng(k * 977), 'platform', 'belt');
+      const m = d.modules[0];
+      if (
+        d.modules.length === 1 &&
+        d.motion.type === 'none' &&
+        m.type === 'body' &&
+        m.material === 'conveyor' &&
+        m.cells.length === 3 &&
+        new Set(m.cells.map((c) => c[1])).size === 1
+      )
+        return d;
+    }
+  })();
   const belt = def.modules.find((m) => m.type === 'body');
   const base = generateLevel(5, undefined, { size: 'classic', gravity: 1 });
 

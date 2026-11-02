@@ -278,7 +278,7 @@ describe('partial mounting', () => {
   });
 
   it('every generated attachment has module cells that match its footprint', () => {
-    for (const k of ['spikestrip', 'icecoat', 'slimecoat', 'snapper'] as const) {
+    for (const k of ['spikestrip', 'icecoat', 'slimecoat', 'boost', 'snapper'] as const) {
       for (let i = 0; i < 40; i++) {
         const d = generateProp(new Rng(i), k, 'x');
         for (const m of d.modules) expect('cells' in m && m.cells).toEqual(d.footprint);

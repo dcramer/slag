@@ -3,6 +3,7 @@ import type { Cell, Vec } from '../../core/geom';
 import type { CharacterDef } from '../../gen/character';
 import { TILE } from '../../sim/constants';
 import type { Level } from '../../sim/level';
+import type { Solid } from '../../sim/physics';
 import type { Beam, Grip, Module, PlacedProp, PropState, PropStyle, Resolved } from '../../sim/props';
 import type { Runner, RunWorld } from '../../sim/run';
 import type { MetalPalette, RC } from '../kit';
@@ -21,6 +22,8 @@ export interface PropDrawOpts {
   placed?: readonly PlacedProp[];
   /** How far everything that travels reaches. Art draws from these and never casts its own rays. */
   beams?: readonly Beam[];
+  /** This frame's solids (the race's, or the still ones outside a race): what a Launch Plate's flight is flown against. */
+  solids?: readonly Solid[];
   /** Where the live runners stand (feet), and how fast they fall, for art that watches them. */
   runners?: readonly { x: number; y: number; vy?: number }[];
   /**

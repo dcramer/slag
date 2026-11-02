@@ -4,6 +4,7 @@
 export * from './body';
 export * from './bomb';
 export * from './bumper';
+export * from './button';
 export * from './coat';
 export * from './cannon';
 export * from './deco';
@@ -11,6 +12,7 @@ export * from './dropper';
 export * from './fan';
 export * from './flame';
 export * from './flood';
+export * from './fuse';
 export * from './geyser';
 export * from './keg';
 export * from './laser';

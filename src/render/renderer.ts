@@ -331,6 +331,7 @@ export class Renderer {
         grips,
         placed: m.placed,
         beams,
+        solids,
         runners: pushers,
       });
     }
@@ -604,7 +605,7 @@ export class Renderer {
       const col = ok ? p.character.body : { h: 0, s: 90, l: 55 };
       s.globalAlpha = 0.85;
       rc.g.globalAlpha = 0.85;
-      drawResolved(rc, ghost, { level: m.level, showPath: true, beams, placed: m.placed });
+      drawResolved(rc, ghost, { level: m.level, showPath: true, beams, solids, placed: m.placed });
       s.globalAlpha = 1;
       rc.g.globalAlpha = 1;
       const bomb = gh.def.modules.find((x) => x.type === 'bomb');
