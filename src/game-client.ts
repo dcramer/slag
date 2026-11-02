@@ -68,6 +68,7 @@ export function bootGame(container: HTMLElement, room: string): void {
 
   input.onEscape = () => {
     const open = menus.find((m) => m.isOpen);
+    audio.ui?.(open ? 'close' : 'open');
     if (open) open.close();
     else settingsMenu.open();
   };
@@ -77,6 +78,7 @@ export function bootGame(container: HTMLElement, room: string): void {
     if (menus.some((m) => m.isOpen)) return null;
     const b = match.phase === 'lobby' ? renderer.hud.hit(x, y) : null;
     if (!b) return null;
+    audio.ui?.('click');
     switch (b.action) {
       case 'settings':
         settingsMenu.open();
@@ -114,6 +116,16 @@ export function bootGame(container: HTMLElement, room: string): void {
     }
   }
 
+  /** Soft tick when the pointer moves onto a different HUD button. */
+  let hoverKey = '';
+  function uiHover() {
+    const pt = input.pointerPos;
+    const b = pt && match.phase === 'lobby' && !menus.some((m) => m.isOpen) ? renderer.hud.hit(pt.x, pt.y) : null;
+    const key = b ? `${b.action}:${b.device ?? ''}` : '';
+    if (key && key !== hoverKey) audio.ui?.('hover');
+    hoverKey = key;
+  }
+
   const loop = { paused: false };
   installDebug(match, renderer, loop);
 
@@ -134,6 +146,7 @@ export function bootGame(container: HTMLElement, room: string): void {
     }
     syncProfile();
     renderer.hud.pointer = input.pointerPos;
+    uiHover();
     renderer.hud.mouseDevice = input.mouseDevice;
     const events = match.drainEvents();
     audio.handle(events, match);
