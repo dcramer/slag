@@ -19,6 +19,7 @@ import type { ThemeId } from './themes';
  *   ?propseed=7         seed for debug-generated props
  *   ?debug=1            open the dev overlay (see installDevtoolsHooks)
  *   ?give=sword,puck    hand race runners these held items, cycled (`all` = one of each)
+ *   ?style=comic        render style (read by the Renderer, see render/style.ts)
  */
 export interface SlagDebug {
   match: Match;

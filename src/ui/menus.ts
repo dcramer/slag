@@ -2,6 +2,7 @@ import type { AudioSystem } from '../audio';
 import { MATCH_LENGTHS, type MatchRules, RULE_CHOICES, type TimerRule } from '../game/rules';
 import { BINDABLE, defaultSettings, type InputSettings, type KeyProfile, keyName, SLOTS } from '../input/bindings';
 import type { InputManager } from '../input/input';
+import type { RenderStyle } from '../render/style';
 import { glyphSVG, type Glyph } from './glyphs';
 import { capLabel } from './prompts';
 import { sanitizeName } from './profile';
@@ -14,6 +15,17 @@ export interface QualityControl {
   pinned(): QualityTier | null;
   set(tier: QualityTier | null): void;
 }
+
+/** Art style hook (game-client wires it to the renderer). */
+export interface StyleControl {
+  get(): RenderStyle;
+  set(style: RenderStyle): void;
+}
+
+const STYLE_CHOICES: [RenderStyle, string][] = [
+  ['default', 'Classic'],
+  ['comic', 'Comic'],
+];
 
 const HAPTICS_KEY = 'slag.haptics';
 
@@ -165,6 +177,8 @@ export class SettingsMenu extends Overlay {
   leave: (() => void) | null = null;
   /** When set, the menu shows a graphics-quality picker. */
   quality: QualityControl | null = null;
+  /** When set, the menu shows an art-style picker. */
+  artStyle: StyleControl | null = null;
 
   constructor(
     input: InputManager,
@@ -289,6 +303,20 @@ export class SettingsMenu extends Overlay {
     card.append(chips);
   }
 
+  private styleSection(card: HTMLElement, c: StyleControl) {
+    card.append(el('h3', { textContent: 'Art Style' }));
+    const chips = el('div', { className: 'slag-chips' });
+    for (const [style, label] of STYLE_CHOICES) {
+      const b = el('button', { className: `slag-btn ${c.get() === style ? 'on' : ''}`, type: 'button', textContent: label });
+      b.onclick = () => {
+        c.set(style);
+        for (const sib of chips.querySelectorAll('button')) sib.classList.toggle('on', sib === b);
+      };
+      chips.append(b);
+    }
+    card.append(chips);
+  }
+
   private controlsSection(card: HTMLElement) {
     card.append(el('h3', { textContent: 'Keyboard' }));
     const split = el('button', { className: 'slag-switch', type: 'button' });
@@ -400,6 +428,7 @@ export class SettingsMenu extends Overlay {
     // Under touch the key-rebind grid is noise: show the touch options instead.
     if (this.input.touch.active) this.touchSection(card);
     if (this.quality) this.displaySection(card, this.quality);
+    if (this.artStyle) this.styleSection(card, this.artStyle);
     if (!this.input.touch.active) this.controlsSection(card);
     const reset = el('button', { className: 'slag-btn', type: 'button', textContent: 'Reset Controls' });
     reset.hidden = this.input.touch.active;

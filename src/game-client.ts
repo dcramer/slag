@@ -79,6 +79,7 @@ export function bootGame(container: HTMLElement, room: string): void {
       renderer.setQuality(tier ?? detectQuality().tier);
     },
   };
+  settingsMenu.artStyle = { get: () => renderer.getStyle(), set: (style) => renderer.setStyle(style) };
   const rulesMenu = new RulesMenu(input);
   const namePrompt = new NamePrompt(input);
   const profile = loadProfile();

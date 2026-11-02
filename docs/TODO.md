@@ -77,7 +77,7 @@ No branch yet. `origin/wip/content` has a dropped launch barrel (module and art)
 ## 8. Render polish
 - **Set-piece layering:** scenery halves draw *behind* the terrain (the windmill tower, crane mast, press gantry, antenna masts). Moving and solid parts stay in front (the blades, platforms). Layer order is in `docs/DESIGN.md` → Levels. This is probably a `backdrop` art layer drawn before terrain in `src/render/renderer.ts` and the `defineArt` layers.
 - **The player's glowing trail is too strong.** Tone it down.
-- **Comic-book style experiment:** `wip/comic-style` (~560 lines, unreviewed). Add `?style=comic`, `renderer.setStyle`, and a Settings toggle.
+- **Comic style (`?style=comic`, Settings → Art Style):** decide whether it becomes the default. It looks good in stills on all 8 themes but has never been seen in motion or on a real phone, where its shader does about twice the texture reads of default. Dark themes lose drama (mine and volcano most). Anything thin or soft drawn on `rc.s` gets silhouette ink, so soft effects should draw on the background context.
 
 ## 9. Weather (new)
 A per-level random variable:

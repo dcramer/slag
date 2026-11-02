@@ -14,6 +14,7 @@
  *   pnpm shot home                         → main menu (desktop + 390×844 mobile)
  *   pnpm shot settings                     → lobby with the settings overlay open
  *   pnpm shot score --players 4            → round-score screen
+ *   pnpm shot compare --seed abc --players 4 [--themes farm,mine] → default vs comic sheets, same sim frame per row
  *   pnpm shot mobile [--device "Pixel 7 landscape"]  → phone emulation driven by real
  *                                           multi-touch: lobby/join, pick, place, race, portrait
  *
@@ -21,6 +22,7 @@
  *          --theme farm (force a theme; `levels --themes all` renders one level per theme)
  *          --noui (hide the HUD, e.g. to review level shapes)
  *          --mode keyboard|gamepad|touch (footer prompt glyphs)  --net (fake online-lobby info)
+ *          --style comic (render style, see src/render/style.ts; files get a `-comic` suffix)
  * Software GL is slow; frames are advanced deterministically via slagDebug.step().
  */
 
@@ -37,7 +39,9 @@ const out = resolve(opt('out', 'shots')!);
 const [W, H] = opt('size', '1280x720')!.split('x').map(Number);
 const seed = opt('seed', 'demo');
 const theme = opt('theme');
-const tq = (theme ? `&theme=${theme}` : '') + (argv.includes('--noui') ? '&ui=0' : '');
+const style = opt('style');
+const tq = (theme ? `&theme=${theme}` : '') + (argv.includes('--noui') ? '&ui=0' : '') + (style ? `&style=${style}` : '');
+const sfx = style && style !== 'default' ? `-${style}` : '';
 const players = Number(opt('players', '2'));
 const frames = Number(opt('frames', '150'));
 mkdirSync(out, { recursive: true });
@@ -80,7 +84,7 @@ async function open(q: string) {
 }
 const step = (n: number) => page.evaluate((k) => (window as any).slagDebug.step(k), n);
 async function snap(name: string) {
-  const p = `${out}/${name}.png`;
+  const p = `${out}/${name}${sfx}.png`;
   await page.screenshot({ path: p });
   console.log(p);
   pet();
@@ -334,6 +338,78 @@ try {
       await snap(`items-${seed}-use`);
       await step(40);
       await snap(`items-${seed}-after`);
+      break;
+    }
+    case 'compare': {
+      // Default vs comic from one paused page, so both columns are literally the same sim frame.
+      const themes = (opt('themes') ?? 'farm,factory,castle,volcano').split(',');
+      const shoot = async (name: string, files: string[], at?: number) => {
+        // One timestamp for both columns; it must not run behind the renderer's clock (negative dt flings the camera).
+        const ms = at ?? (await page.evaluate(() => performance.now()));
+        for (const st of ['default', 'comic']) {
+          await page.evaluate(
+            ([s, t]) => {
+              const d = (window as any).slagDebug;
+              d.renderer.setStyle(s, false);
+              d.render(t);
+            },
+            [st, ms] as const,
+          );
+          files.push(await snap(`cmp-${name}-${st}`));
+        }
+      };
+      const scene: string[] = [];
+      for (const th of themes) {
+        await open(`seed=${seed}&theme=${th}&players=${players}&race=${opt('race', 'saw,laser,launcher,flamer,spring')}&propseed=${opt('propseed', '1')}`);
+        // Scripted runners so hazards, deaths and lettering are in frame. Past `frames`, stop just after the
+        // next death to catch an impact. Runs in the comic style so its lettering is live; the default
+        // column draws the same state without it.
+        const ms = await page.evaluate((n) => {
+          const d = (window as any).slagDebug;
+          d.renderer.setStyle('comic', false);
+          let stop = n + 90;
+          let was = 0;
+          const t0 = performance.now();
+          let now = t0;
+          for (let f = 0; f < stop; f++) {
+            const dead = d.match.run?.runners.filter((r: any) => !r.alive).length ?? 0;
+            if (f >= n && stop === n + 90 && dead > was) stop = f + 11;
+            if (f < n) was = dead;
+            const inputs: Record<string, object> = {};
+            d.match.players.forEach((p: any, i: number) => {
+              // The last player stays home, so the round survives everyone else dying.
+              const go = i < d.match.players.length - 1;
+              const c = f + i * 13;
+              inputs[p.device] = { left: false, right: go, up: false, down: false, jump: go && c % 46 < 16, jumpPressed: go && c % 46 === 0, run: go };
+            });
+            d.match.step(inputs);
+            now = t0 + (f * 1000) / 60;
+            if (f > n - 40 || f % 6 === 0) d.render(now);
+          }
+          return now;
+        }, frames);
+        await shoot(`race-${th}`, scene, ms);
+      }
+      await sheet(`compare-race-${seed}`, scene, 2);
+      const menus: string[] = [];
+      await open(`seed=${seed}&theme=${themes[0]}`);
+      await page.evaluate(() => (window as any).slagDebug.match.join('kb1'));
+      await step(40);
+      await shoot('lobby', menus);
+      await open(`seed=${seed}&theme=${themes[0]}&players=${players}`);
+      await step(40);
+      await shoot('pick', menus);
+      await page.evaluate(() => {
+        const m = (window as any).slagDebug.match;
+        m.players.forEach((p: any, i: number) => {
+          p.claim = i;
+          m.crate[i].claimedBy = p.slot;
+          p.cursor = { x: 300 + i * 150, y: 180 };
+        });
+      });
+      await step(60);
+      await shoot('place', menus);
+      await sheet(`compare-menus-${seed}`, menus, 2);
       break;
     }
     case 'levels': {
