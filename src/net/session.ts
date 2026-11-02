@@ -430,13 +430,26 @@ export class NetSession {
 
   private onState(from: string, msg: Extract<Msg, { t: 'state' }>) {
     if (this.collecting?.pulled !== from) return;
-    restoreMatch(this.match, msg.s);
-    this.ns.parked = msg.ns.parked;
-    this.acks = msg.k;
-    this.lastInputs = msg.last;
-    this.emittedThrough = Math.max(this.emittedThrough, this.match.frame);
-    this.rebuildQueues();
-    this.finishCollect();
+    if (this.tryRestore(msg.s)) {
+      this.ns.parked = msg.ns.parked;
+      this.acks = msg.k;
+      this.lastInputs = msg.last;
+      this.emittedThrough = Math.max(this.emittedThrough, this.match.frame);
+      this.rebuildQueues();
+    }
+    this.finishCollect(); // refused: the room carries on from our own state
+  }
+
+  /** Load a peer's snapshot; false, with `match` untouched, if this build can't (see restoreMatch). */
+  private tryRestore(s: MatchSnap): boolean {
+    try {
+      restoreMatch(this.match, s);
+      return true;
+    } catch (e) {
+      this.log(`snapshot refused: ${String(e)}`);
+      reportEvent('snapshot-refused', 'warning', { error: String(e), frame: this.match.frame });
+      return false;
+    }
   }
 
   private tryResume() {
@@ -727,7 +740,7 @@ export class NetSession {
   private onSync(msg: Extract<Msg, { t: 'sync' }>) {
     const m = this.match;
     const fresh = !this.synced;
-    if (fresh || m.frame !== msg.s.frame || hashMatch(m) !== hashSnap(msg.s)) restoreMatch(m, msg.s);
+    if ((fresh || m.frame !== msg.s.frame || hashMatch(m) !== hashSnap(msg.s)) && !this.tryRestore(msg.s)) return;
     this.ns.parked = msg.ns.parked;
     this.acks = msg.k;
     this.lastInputs = msg.last;

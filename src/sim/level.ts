@@ -94,6 +94,11 @@ export function worldSize(level: Level): { w: number; h: number } {
   return { w: level.w * TILE, h: level.h * TILE };
 }
 
+/** World y of the floor under a stand cell: where a runner's feet rest, and so where the spawn ring and the flag's base are drawn. */
+export function floorY(cell: { ty: number }): number {
+  return (cell.ty + 1) * TILE;
+}
+
 /** Bodies below this y have sunk into the pit at the bottom of the level. */
 export function killY(level: Level): number {
   return level.h * TILE - 2;
