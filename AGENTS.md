@@ -2,37 +2,39 @@
 
 **slag** is a browser party platformer: each round players **pick** a prop from a crate, **place** it in the level, then **run** to the flag (1–8 players, `MAX_PLAYERS`). Levels, props, characters, names and visuals are all procedurally generated from a seed. Movement is a tight precision platformer: walk by default, hold **run** for speed and long jumps, variable jumps, wall slide/jump, coyote time, jump buffering. Use the genre's mechanics, never another game's names, art, characters or level designs.
 
-Folders with their own rules have a nested `AGENTS.md`: `src/sim/`, `src/gen/`, `src/render/`, `app/`. Read it before editing there.
+Game design decisions live in [docs/DESIGN.md](docs/DESIGN.md): follow it, and update it in the same commit when a decision changes. Folders with their own rules have a nested `AGENTS.md`: `src/sim/`, `src/gen/`, `src/render/`, `app/`. Read it before editing there.
 
 ## Commands
 
-| Command                                  | Use                                                                                                                       |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `npm ci`                                 | First thing in a fresh checkout or worktree (`node_modules` is not shared). Node ≥ 22.12 (`.nvmrc`).                      |
-| `npm run check`                          | The gate: typecheck + lint + format check + all tests (~2 min). Must pass before every commit.                            |
-| `npm run check:fast`                     | Typecheck + lint + format check (~15 s). Use while iterating.                                                             |
-| `npx vitest run tests/foo.test.ts`       | One test file. Add `-t 'name'` for one test.                                                                              |
-| `npm run format`                         | `oxlint --fix` then `oxfmt`. Fixes formatting and safe lint issues.                                                       |
-| `npx next build`                         | Production build (Vercel runs this; output in `.next/`). Required when you touch `app/`, `next.config.ts` or `package.json`. |
-| `npm run shot -- <scenario> [opts]`      | Headless screenshots into `shots/` (gitignored). See "Verify visually" below.                                             |
-| `npm run level -- <seed> [--theme farm]` | ASCII dump of a level: `#` solid, `=` one-way, `S`/`G` spawn/goal, `·` reachable stand cell, `P` set piece.               |
-| `npm run level -- --stats 50`            | Per-theme generation stats over N seeds per theme: ms/level, styles, `needBridges`, `fallbacks` (~2 min at 50).           |
-| `npm run dev`                            | Dev server at http://localhost:3000; `/` redirects to a fresh lobby `/r/<code>`.                                          |
+Package manager is **pnpm** (`packageManager` in package.json). Never use npm or commit a `package-lock.json`. Node 22 (`.nvmrc`, `engines`).
+
+| Command | Use |
+| --- | --- |
+| `pnpm install` | First thing in a fresh checkout or worktree (`node_modules` is not shared). |
+| `pnpm check` | The gate: typecheck + lint + format check + all tests (~2 min). Must pass before every commit. |
+| `pnpm check:fast` | Typecheck + lint + format check (~15 s). Use while iterating. |
+| `pnpm vitest run tests/foo.test.ts` | One test file. Add `-t "name"` for one test. |
+| `pnpm format` | `oxlint --fix` then `oxfmt`: fixes formatting and safe lint issues. |
+| `pnpm build` | Production build into `.next/`, exactly what Vercel runs. |
+| `pnpm shot <scenario> [opts]` | Headless screenshots into `shots/` (gitignored). See "Verify visually". |
+| `pnpm level <seed> [--theme farm]` | ASCII level dump: `#` solid, `=` one-way, `S`/`G` spawn/goal, `·` reachable stand cell, `P` set piece. |
+| `pnpm level --stats 50` | Per-theme stats over N seeds: ms/level, styles, `needBridges`, `fallbacks` (~2 min at 50). |
+| `pnpm dev` | Dev server at http://localhost:3000; `/` redirects to a fresh lobby `/r/<code>`. |
 
 Lint: `oxlint` (type-aware, `.oxlintrc.json`). Errors fail CI; warnings are real findings to fix, not noise. Format: `oxfmt` (`.oxfmtrc.json`: 2 spaces, single quotes, 160 columns). Don't add `oxlint-disable` comments to get green; fix the code or change the rule in `.oxlintrc.json` with a reason.
 
 ## Definition of done
 
-1. `npm run check` passes. Never skip, delete or weaken a test to get there.
-2. `npx next build` passes if you touched `app/`, `next.config.ts`, `package.json`, or what `app/` imports from `src/`.
+1. `pnpm check` passes. Never skip, delete or weaken a test to get there.
+2. `pnpm build` passes if you touched `app/`, `next.config.ts`, `package.json`, or what `app/` imports from `src/`.
 3. Visual change: you took a screenshot and looked at it (see below). Typechecking says nothing about pixels.
-4. Generator change: `npm run level -- --stats 50` shows `fallbacks: 0` and no unexplained jump in ms/level or `needBridges`; compare against a run on the parent commit.
+4. Generator change: `pnpm level --stats 50` shows `fallbacks: 0` and no unexplained jump in ms/level or `needBridges`; compare against a run on the parent commit.
 5. Behavior change: a test covers it (generator invariants, prop module runtime behavior, physics feel regressions).
 6. In your final message, show evidence: the commands you ran with their result, and screenshot paths.
 
 ### Verify visually
 
-`npm run shot` builds a production server (`next build` if sources changed since `.next/BUILD_ID`, then `next start`; `SHOT_DEV=1` uses `next dev`). It pauses the real-time loop and advances the sim with `slagDebug.step(n)`, so shots are deterministic, and it exits non-zero if the page logged errors. Open the PNG it prints and inspect it.
+`pnpm shot` builds a production server (`next build` if sources changed since `.next/BUILD_ID`, then `next start`; `SHOT_DEV=1` uses `next dev`). It pauses the real-time loop and advances the sim with `slagDebug.step(n)`, so shots are deterministic, and it exits non-zero if the page logged errors. Open the PNG it prints and inspect it.
 
 - `race --seed S --race saw,laser,launcher --frames 200` (`--race all` = one of every archetype)
 - `lobby` | `pick` | `place` with `--seed S --players N`
@@ -45,7 +47,7 @@ Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm
 ## Git workflow
 
 - Main session: work on `main`. `git pull --rebase origin main`, make small focused commits, and `git push origin main` after every green change. Dev containers are ephemeral, so unpushed work is lost. No feature branches or PRs unless the user asks.
-- Subagents in worktrees: run `npm ci` first, edit only the files your brief assigns, commit to your worktree branch, and **do not push or touch `main`**; the orchestrator merges, re-runs `npm run check`, and pushes. Never use bare `git stash` (the stash is shared across worktrees).
+- Subagents in worktrees: run `pnpm install` first, edit only the files your brief assigns, commit to your worktree branch, and **do not push or touch `main`**; the orchestrator merges, re-runs `pnpm check`, and pushes. Never use bare `git stash` (the stash is shared across worktrees).
 - If you must change a shared contract (`src/sim/props/types.ts`, `src/sim/props/registry.ts`, `src/themes.ts`, `src/sim/types.ts`), keep it additive and call it out in your report.
 - Orchestrators define contracts (types, registries) and commit them to `main` before fanning out.
 - Commit messages: imperative summary line saying what changed and why it matters.

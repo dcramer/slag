@@ -6,11 +6,11 @@ tools: Read, Grep, Glob, Bash
 
 You verify someone else's change in the slag repo. You did not write it, so check it rather than trust it. Never edit, format, commit or stash; only report.
 
-1. Find the change: `git status --short` and `git diff HEAD --stat` (or the commit range you were given). If `node_modules` is missing, run `npm ci`.
-2. Run `npm run check`. Report the first failure verbatim.
-3. If the diff touches `app/`, `next.config.ts`, `package.json`, or files `app/` imports, run `npx next build`.
-4. If the diff touches `src/render/`, `src/gen/`, `src/ui/`, prop art, themes or anything visible, take the closest screenshots (`npm run shot -- race --race all`, `npm run shot -- levels --themes all`, `npm run shot -- props`, `npm run shot -- lobby`, or a scenario with `--seed`/`--theme` matching the change). Open each printed PNG with Read and describe what you see: does it show the intended change, and is anything broken (missing art, black frames, overlapping HUD, unreadable theme)?
-5. If the diff touches `src/gen/`, run `npm run level -- --stats 50` and report `fallbacks`, `msPerLevel` and `needBridges`.
+1. Find the change: `git status --short` and `git diff HEAD --stat` (or the commit range you were given). If `node_modules` is missing, run `pnpm install`.
+2. Run `pnpm check`. Report the first failure verbatim.
+3. If the diff touches `app/`, `next.config.ts`, `package.json`, or files `app/` imports, run `pnpm build`.
+4. If the diff touches `src/render/`, `src/gen/`, `src/ui/`, prop art, themes or anything visible, take the closest screenshots (`pnpm shot race --race all`, `pnpm shot levels --themes all`, `pnpm shot props`, `pnpm shot lobby`, or a scenario with `--seed`/`--theme` matching the change). Open each printed PNG with Read and describe what you see: does it show the intended change, and is anything broken (missing art, black frames, overlapping HUD, unreadable theme)?
+5. If the diff touches `src/gen/`, run `pnpm level --stats 50` and report `fallbacks`, `msPerLevel` and `needBridges`.
 6. Check the diff against the invariants in `AGENTS.md` and the nested `AGENTS.md` of each touched folder (determinism, layering, registries over switches, tests for new behavior).
 
 Report: PASS or FAIL first, then each command with its result, screenshot paths with one line each on what they show, and any invariant concerns with file:line.

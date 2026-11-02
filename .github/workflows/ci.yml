@@ -23,38 +23,41 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # pnpm version comes from `packageManager` in package.json.
+      - uses: pnpm/action-setup@v6
+
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
-          cache: npm
+          cache: pnpm
 
       - id: install
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       # Each check runs even if an earlier one failed, so one run reports every problem.
       - name: Typecheck
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: npm run typecheck
+        run: pnpm typecheck
 
       - name: Lint (errors fail, warnings annotate)
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: npx oxlint --format=github
+        run: pnpm oxlint --format=github
 
       - name: Format
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: npm run format:check
+        run: pnpm format:check
 
       - name: Test
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: npm test
+        run: pnpm test
 
       - uses: actions/cache@v6
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         with:
           path: .next/cache
-          key: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**', 'app/**', 'public/**', 'next.config.ts') }}
-          restore-keys: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+          key: next-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**', 'app/**', 'public/**', 'next.config.ts') }}
+          restore-keys: next-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
 
       - name: Build
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: npm run build
+        run: pnpm build

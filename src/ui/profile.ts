@@ -5,6 +5,8 @@ export interface Profile {
   name: string | null;
   /** Whether we've asked for a name yet. */
   prompted: boolean;
+  /** Seed of the character look the player last had (persisted across sessions); null = roll one. */
+  look?: number | null;
 }
 
 const KEY = 'slag.profile.v1';

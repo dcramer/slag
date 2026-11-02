@@ -6,4 +6,4 @@
 - Shared drawing helpers, materials and lights are in `kit.ts`; reuse them before writing new ones.
 - Keep per-frame allocation low: the game targets 60 fps with up to 8 players and ~100 lights.
 
-Verify every visual change by looking at it: `npm run shot -- race --race all`, `npm run shot -- levels --themes all`, `npm run shot -- props`, or the scenario closest to your change, then open the printed PNG. The harness fails on page errors.
+Verify every visual change by looking at it: `pnpm shot race --race all`, `pnpm shot levels --themes all`, `pnpm shot props`, or the scenario closest to your change, then open the printed PNG. The harness fails on page errors.
