@@ -60,6 +60,13 @@ function rotPoint(p: Vec, rot: number, w: number, h: number): Vec {
   return [x, y];
 }
 
+/** A tile offset turned the way rotPoint turns the prop, in px (track motion's points). */
+function turnOffset(p: Vec, rot: number): Vec {
+  let [x, y] = p;
+  for (let i = 0; i < rot; i++) [x, y] = [-y, x];
+  return [x * TILE, y * TILE];
+}
+
 function rotCell(c: Cell, rot: number, w: number, h: number): Cell {
   const [x, y] = rotPoint([c[0] + 0.5, c[1] + 0.5], rot, w, h);
   return [Math.floor(x), Math.floor(y)];
@@ -100,7 +107,13 @@ export function resolveProp(pp: PlacedProp): Resolved {
   const mods = pp.def.modules.map((m) => moduleSim(m.type).resolve(m, x));
   const mo = pp.def.motion;
   const motion: Motion =
-    mo.type === 'rail' ? { ...mo, angle: mo.angle + x.da, range: mo.range * TILE } : mo.type === 'loop' ? { ...mo, radius: mo.radius * TILE } : mo;
+    mo.type === 'rail'
+      ? { ...mo, angle: mo.angle + x.da, range: mo.range * TILE }
+      : mo.type === 'loop'
+        ? { ...mo, radius: mo.radius * TILE }
+        : mo.type === 'track'
+          ? { ...mo, pts: mo.pts.map((p) => turnOffset(p, rot)) }
+          : mo;
   return { pp, mods, motion, phase: propPhase(pp.uid) };
 }
 
@@ -124,6 +137,7 @@ export function motionOffset(r: Resolved, f: number): Vec {
     const a = m.dir * Math.PI * 2 * (f / m.period + r.phase);
     return [(dcos(a) - 1) * m.radius, dsin(a) * m.radius];
   }
+  // 'track' holds still until its motion lands (stage concepts, Wave 1).
   return [0, 0];
 }
 

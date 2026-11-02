@@ -388,9 +388,24 @@ export function partGroups(): PartGroup[] {
       blurb: 'Upside, catch, repeat.',
       entries: [
         {
-          title: 'plot holes',
-          note: 'Nobody will notice.',
-          def: def('portal', [{ type: 'portal', a: c(0, 0), b: c(4, 0) }]),
+          title: 'pipe dream',
+          note: 'Some assembly required. Two, actually.',
+          def: def('pipe', [
+            {
+              type: 'pipe',
+              cells: [
+                [0, 0],
+                [1, 0],
+                [0, 1],
+                [1, 1],
+                [0, 2],
+                [1, 2],
+              ],
+              at: [1, 0],
+              angle: UP,
+              look: 'green',
+            },
+          ]),
         },
         { title: 'pinball bumper', note: 'Tilt.', def: def('bumper', [{ type: 'bumper', at: c(), radius: 0.55, power: 420 }]) },
         {

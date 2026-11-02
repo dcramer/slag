@@ -7,7 +7,7 @@ import { ball, boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, sprite, 
 import { circle, glowDot, light, type RC } from '../../kit';
 import { BACKDROP, type DrawCtx, defineArt } from '../common';
 import { ceilingAbovePx, chain, groundBelowPx, lattice, plank, rope } from './setpiece';
-import { rotorSkin } from './skins';
+import { rotorSkin } from '../skins';
 import { cogDeck, cogHub, cogWheel, waterBottle } from './wheel-art';
 
 /**

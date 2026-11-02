@@ -124,9 +124,10 @@ const POP: Record<string, SfxName> = {
   puck: 'pop-arrow',
   smokebomb: 'pop-cannonball',
 };
-/** Sounds for generic prop moments (teleports, bumps, thuds...). Unlisted kinds are silent. */
+/** Sounds for generic prop moments (pipes, bumps, thuds...). Unlisted kinds are silent. */
 const PROP_CUE: Record<string, SfxName> = {
-  teleport: 'whoosh',
+  'pipe-in': 'pipe-in',
+  'pipe-out': 'pipe-out',
   bump: 'spring',
   thud: 'piston-slam',
   'dropper-warn': 'piston-hiss',

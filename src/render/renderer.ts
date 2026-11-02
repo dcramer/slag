@@ -12,6 +12,7 @@ import { drawBlood } from './blood';
 import { Camera } from './camera';
 import { PhoneCam, phoneView } from './camera-follow';
 import { drawAfterimage, Rig } from './character';
+import { castDef, castLobby, castMode } from './cast';
 import { drawInkAccessory, drawInkRunner } from './ink-character';
 import { ForegroundLayer, Lettering, letteringAllowed } from './cel';
 import { Fx } from './fx';
@@ -20,7 +21,7 @@ import { Hud } from './hud';
 import { drawClouds, drawDrops, drawRunnerItems, itemFx } from './items';
 import { circle, flutter, glowDot, type Light, light, type RC } from './kit';
 import { type Compositor, createCompositor } from './post';
-import { drawBackdrop, drawBlastPreview, drawForeground, drawProjectile, drawResolved, drawRunnerStatus, drawStuffed, type Emit, propEventFx } from './props';
+import { drawBackdrop, drawBlastPreview, drawForeground, drawProjectile, drawResolved, drawHeld, drawRunnerStatus, type Emit, propEventFx } from './props';
 import { LightOccluder } from './occlude';
 import { Surround } from './surround';
 import { TerrainPainter } from './terrain';
@@ -205,6 +206,7 @@ export class Renderer {
     const dt = Math.min(0.05, this.last ? t - this.last : 1 / 60);
     this.last = t;
     const level = m.level;
+    if (castMode()) castLobby(m.players.map((p) => p.character.seed));
     const ww = level.w * TILE;
     const wh = level.h * TILE;
     // Bake resolution: enough for the race zoom, capped by a pixel budget so huge levels stay cheap.
@@ -329,7 +331,7 @@ export class Renderer {
         const pl = m.player(r.slot);
         if (!pl) continue;
         if (r.attach.grip?.sealed) {
-          drawStuffed(rc, run, r, pl.character);
+          drawHeld(rc, run, r, pl.character);
           drawRunnerStatus(rc, r.body, r.status);
           continue;
         }
@@ -578,7 +580,7 @@ export class Renderer {
       const col = ok ? p.character.body : { h: 0, s: 90, l: 55 };
       s.globalAlpha = 0.85;
       rc.g.globalAlpha = 0.85;
-      drawResolved(rc, ghost, { level: m.level, showPath: true, beams });
+      drawResolved(rc, ghost, { level: m.level, showPath: true, beams, placed: m.placed });
       s.globalAlpha = 1;
       rc.g.globalAlpha = 1;
       const bomb = gh.def.modules.find((x) => x.type === 'bomb');
@@ -646,6 +648,7 @@ export class Renderer {
     dt: number,
     wall = 0,
   ) {
+    c = castDef(c);
     let rig = this.rigs.get(slot);
     if (!rig || rig.rope.length === 0 || Math.hypot(rig.rope[0].x - x, rig.rope[0].y - y) > 60) {
       rig = new Rig();

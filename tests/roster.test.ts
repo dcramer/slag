@@ -35,7 +35,7 @@ const SIZE_FIELDS: Partial<Record<Module['type'], string[]>> = {
   piston: ['at', 'width'],
   fan: ['length'],
   bomb: ['radius'],
-  portal: ['b'],
+  pipe: ['cells'],
   bumper: ['radius'],
   magnet: ['radius'],
   web: ['cells'],
@@ -75,7 +75,7 @@ function measure(d: PropDef): number {
     const r: Record<string, unknown> = { ...m };
     if (Array.isArray(r.cells)) sum += r.cells.length;
     for (const f of ['radius', 'length', 'arm', 'width']) if (typeof r[f] === 'number') sum += r[f];
-    if (m.type === 'tesla' || m.type === 'portal') sum += m.b[0];
+    if (m.type === 'tesla') sum += m.b[0];
   }
   return sum;
 }

@@ -57,9 +57,28 @@ export type RotorLook = 'windmill' | 'cog' | 'chandelier' | 'hay' | 'log' | 'sla
 export type RotorSupport = 'tower' | 'ceiling' | 'mast' | 'none';
 export type VehicleLook = 'tractor' | 'forklift' | 'ram' | 'boulder' | 'minecart' | 'drill';
 export type CannonLook = 'castle' | 'ship' | 'totem' | 'spitter';
-export type GeyserLook = 'lava' | 'steam';
-export type DecoKind = 'press' | 'ac' | 'antenna';
+export type GeyserLook =
+  | 'lava'
+  | 'steam'
+  // Stage concepts (docs/SETPIECES.md): waterfalls and waves, toxic overflow, avalanches.
+  | 'water'
+  | 'toxic'
+  | 'snow';
+export type DecoKind =
+  | 'press'
+  | 'ac'
+  | 'antenna'
+  // Stage concepts (docs/SETPIECES.md): the backdrop shells behind a landmark.
+  | 'facade'
+  | 'gantry'
+  | 'flywheel'
+  | 'headframe'
+  | 'hull'
+  | 'billboard'
+  | 'clockface';
 export type MysteryLook = 'crate' | 'chest' | 'gift';
+/** What a match's warp pipes are made of: one per match, since a roster has one pipe part. */
+export type PipeLook = 'green' | 'brass' | 'rust' | 'porcelain' | 'copper';
 /** Blast footprints: a filled disk, a line (bore) in the rotation direction, a plus, or a hollow ring. */
 export type BlastShape = 'disk' | 'line' | 'cross' | 'ring';
 /** What a blast removes: terrain and props, placed props only (EMP), or terrain only (drill). */
@@ -114,7 +133,7 @@ export interface PropStyle {
 
 export type Module =
   | { type: 'body'; cells: Cell[]; material: Material; conveyor: number; breakFrames: number; respawnFrames: number }
-  | { type: 'spikes'; cells: Cell[]; angle: number }
+  | { type: 'spikes'; cells: Cell[]; angle: number; look?: SpikeLook }
   | {
       type: 'swinger';
       head: Head;
@@ -165,7 +184,7 @@ export type Module =
    * Spikes add a lethal strip; ice/slime add a thin coat that changes the
    * surface (floors and walls). See mountCells for the mounting rule.
    */
-  | { type: 'coat'; cells: Cell[]; angle: number; kind: CoatKind }
+  | { type: 'coat'; cells: Cell[]; angle: number; kind: CoatKind; look?: SpikeLook }
   | {
       /**
        * Platforms carried around a hub: full rotation (windmill, cog wheel)
@@ -250,8 +269,12 @@ export type Module =
       /** Updraft strength for non-lethal geysers (air speed = windSpeed(strength), src/sim/wind.ts). */
       strength: number;
     }
-  /** Two linked pads: touching one moves you to the other with your velocity intact (both ways). */
-  | { type: 'portal'; a: Vec; b: Vec }
+  /**
+   * A warp pipe: solid `cells` with its mouth centered at `at` on the face, opening along `angle`.
+   * Pipes work in pairs (PlacedProp.link, `linkPipes` in ./modules/pipe.ts): stand on a linked mouth
+   * and press down (or push into a sideways one) to come out of its partner's.
+   */
+  | { type: 'pipe'; cells: Cell[]; at: Vec; angle: number; look: PipeLook }
   /** Pinball bumper: kicks runners straight away from its center at `power` px/s. */
   | { type: 'bumper'; at: Vec; radius: number; power: number }
   /**
@@ -311,14 +334,44 @@ export type Module =
       w: number;
       h: number;
       seed: number;
+    }
+  // --- Stage concepts (docs/SETPIECES.md) -----------------------------------
+  | {
+      /**
+       * A liquid surface over `w` columns that rises from `low` to `high` and
+       * back on a cycle: off (at `low`) → warn → rise → hold (at `high`) → fall.
+       * Everything under the crest kills; water reads as a pit. `at` is the
+       * basin's bottom-left corner, and the surface heights are tiles above it.
+       */
+      type: 'flood';
+      look: FloodLook;
+      at: Vec;
+      w: number;
+      low: number;
+      high: number;
+      off: number;
+      warn: number;
+      rise: number;
+      hold: number;
+      fall: number;
     };
 
 export type Motion =
   | { type: 'none' }
-  | { type: 'rail'; angle: number; range: number; period: number }
-  | { type: 'loop'; radius: number; period: number; dir: 1 | -1 };
+  /** `dwell`: frames parked at each end, so a lift reads as one (stage concepts). */
+  | { type: 'rail'; angle: number; range: number; period: number; dwell?: number }
+  | { type: 'loop'; radius: number; period: number; dir: 1 | -1 }
+  // Stage concepts (docs/SETPIECES.md): follows the polyline `pts` (offsets from where it was placed, tiles)
+  // at constant speed, `period` frames per lap; an open track runs back the way it came.
+  | { type: 'track'; pts: Vec[]; period: number; closed: boolean };
 
 export type CoatKind = 'spikes' | 'ice' | 'slime';
+
+// --- Stage concepts (docs/SETPIECES.md): looks, art only -----------------------
+/** What a spike strip (or a spike coat) is made of; unset is plain metal spikes. */
+export type SpikeLook = 'glass' | 'thorn' | 'crystal' | 'icicle' | 'pitchfork';
+/** The liquid a flood fills with. */
+export type FloodLook = 'lava' | 'toxic' | 'water';
 
 export type Archetype =
   | 'platform'
@@ -342,7 +395,7 @@ export type Archetype =
   | 'charge'
   | 'timebomb'
   | 'hangar'
-  | 'portal'
+  | 'pipe'
   | 'bumper'
   | 'magnet'
   | 'web'
@@ -391,6 +444,11 @@ export interface PlacedProp {
   tx: number;
   ty: number;
   rot: number;
+  /**
+   * Warp pipes: uid of the pipe this one is paired with, unset while it waits for a partner. The match
+   * sets it as parts go in and come out (`linkPipes`), so it's sim state and rides in snapshots.
+   */
+  link?: number;
 }
 
 /** A placed prop with every module in world space (points/lengths in px, cells in world tiles, angles rotated). */

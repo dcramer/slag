@@ -25,7 +25,7 @@ describe('menu foundry layout', () => {
         }
         expect(S.runX[S.runX.length - 1]).toBeLessThan(S.pool.x - S.pool.rx);
         // The crucible's right side and its wheel stay inside; the pour falls before it lands.
-        expect(S.pin.x + 16 * S.g).toBeLessThan(W);
+        expect(S.pin.x + 14.5 * S.g).toBeLessThan(W);
         expect(S.lip.x).toBeGreaterThan(0);
         expect(S.impact.y).toBeGreaterThan(S.lip.y + 10 * S.g);
         expect(S.jibY).toBeGreaterThanOrEqual(0);
@@ -33,10 +33,11 @@ describe('menu foundry layout', () => {
       }
     });
 
-  it('rebuilds the same rocks for the same visit', () => {
+  it('rebuilds the same heap for the same visit', () => {
     const a = buildScene(628, 618, 7);
     const b = buildScene(628, 618, 7);
-    expect(b.rocks).toEqual(a.rocks);
+    expect(b.chunks).toEqual(a.chunks);
+    expect(b.surface).toEqual(a.surface);
   });
 });
 

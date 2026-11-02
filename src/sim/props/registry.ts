@@ -34,7 +34,7 @@ export type { Wind } from '../wind';
 
 /**
  * A zone a runner can touch. While a runner overlaps it, RunWorld calls the
- * owning module's `touch` (portals, bumpers, magnets, webs). `key`
+ * owning module's `touch` (pipes, bumpers, magnets, webs). `key`
  * is stable across frames so modules can tell a fresh entry from staying in.
  */
 export interface Trigger {
@@ -95,10 +95,14 @@ export interface RunnerMut {
 export interface TouchCtx extends TickCtx {
   /** Would a rect here overlap a solid tile or a prop solid? */
   blocked(r: Rect): boolean;
-  /** Count trigger `key` as already entered by this runner (e.g. a portal's exit pad), so it won't fire as a fresh entry. */
+  /** Count trigger `key` as already entered by this runner, so it won't fire as a fresh entry. */
   mark(key: number): void;
   /** Ask to hold this runner. A contested part goes to the nearest runner once everyone has moved (props/attach.ts). */
   grab(g: GrabInit): void;
+  /** This runner's input this frame, for parts you work with the controls (a pipe takes down). Optional so older callers stay valid. */
+  inp?: InputFrame;
+  /** Another part in this race by uid, for parts that work in pairs (warp pipes). Optional so older callers stay valid. */
+  peer?(uid: number): Resolved | undefined;
 }
 
 export interface PropCtx {

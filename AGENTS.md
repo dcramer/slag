@@ -49,7 +49,7 @@ Lint: `oxlint` (type-aware, `.oxlintrc.json`). Warnings are real findings, not n
 - `props --count 24` (crate cards), `codex` (the `/codex` page), `stack` (runners stacking, riding and head-bouncing, as stepped frames)
 - Options: `--theme farm`, `--weather rain`, `--noui` (hide HUD), `--noletters` (no impact words), `--size 1280x720`, `--out shots`
 
-Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm`, `?weather=rain` (clear|wind|mist|rain|snow, skips worldgen's gate), `?players=2` (auto-join and start), `?race=saw,laser` or `?race=all`, `?propseed=3`, `?ui=0`, `?zoom=1` (phone camera on desktop; `?zoom=0` off, `?zoom=2.4` a fixed zoom), `?lettering=0` (no impact words), `?debug=1` (dev overlay: frame-time breakdown, counts, level info; ` toggles it in `pnpm dev` or with any `?debug`). In the console, `slagDebug` has `quickStart`, `race`, `addProps`, `give`, `loadLevel`, `phase`, `pause`, `step`, `render`, `hash`.
+Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm`, `?weather=rain` (clear|wind|mist|rain|snow, skips worldgen's gate), `?players=2` (auto-join and start), `?race=saw,laser` or `?race=all`, `?propseed=3`, `?ui=0`, `?zoom=1` (phone camera on desktop; `?zoom=0` off, `?zoom=2.4` a fixed zoom), `?lettering=0` (no impact words), `?cast=a|b|c` (character-direction prototypes, `docs/CHARACTERS.md`; `pnpm shot cast`), `?debug=1` (dev overlay: frame-time breakdown, counts, level info; ` toggles it in `pnpm dev` or with any `?debug`). In the console, `slagDebug` has `quickStart`, `race`, `addProps`, `give`, `loadLevel`, `phase`, `pause`, `step`, `render`, `hash`.
 
 ## Git workflow
 

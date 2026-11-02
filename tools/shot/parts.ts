@@ -118,6 +118,116 @@ export const shots: Scenarios = {
     }
     await sheet(`parts-${seed}`, files.slice(1), 4);
   },
+  async pipes() {
+    // Warp pipes facing every way: two linked pairs and one waiting, in place with a pipe ghost tethered
+    // to the waiting one, each pipe close up, then a race with runners caught going in and coming out.
+    await open(`seed=${seed}&players=2`);
+    await step(20);
+    const pipes = await page.evaluate(
+      (ps) => {
+        const d = (window as any).slagDebug;
+        const m = d.match;
+        m.placed.length = 0;
+        for (const rot of [0, 1, 2, 3, 0]) d.addProps(['pipe'], ps, rot);
+        const def = m.placed[0].def;
+        m.players.forEach((p: any, i: number) => {
+          m.crate[i].def = def;
+          m.crate[i].claimedBy = p.slot;
+          p.claim = i;
+        });
+        return m.placed.map((p: any) => ({ uid: p.uid, rot: p.rot, link: p.link ?? null }));
+      },
+      Number(opt('propseed', '1')),
+    );
+    console.log(JSON.stringify(pipes));
+    await step(60);
+    await page.evaluate(() => {
+      const m = (window as any).slagDebug.match;
+      m.players[0].cursor = { x: m.level.w * 8, y: 60 };
+      m.players[1].placed = true;
+    });
+    await step(2);
+    const files = [await snap(`pipes-${seed}-place`)];
+    const zoomOn = async (uid: number, name: string) => {
+      await page.evaluate(
+        ([u, z]) => {
+          const d = (window as any).slagDebug;
+          const p = d.match.placed.find((q: any) => q.uid === u);
+          const cam = d.renderer.cam;
+          cam.update = () => {};
+          cam.snap({ cx: (p.tx + 1) * 16, cy: (p.ty + 1) * 16, zoom: z });
+          cam.shake = 0;
+          d.render();
+        },
+        [uid, Number(opt('zoom', '3'))] as const,
+      );
+      files.push(await snap(`pipes-${seed}-${name}`));
+    };
+    // The race: close up on each pipe first (the place view is the whole level), then runner 0 down the
+    // first pipe (mouth up) and runner 1 into the second (a side mouth).
+    await page.evaluate(() => {
+      const d = (window as any).slagDebug;
+      d.match.startRun();
+      d.step(150);
+    });
+    for (const p of pipes) await zoomOn(p.uid, `rot${p.rot}-${p.uid}`);
+    await page.evaluate(() => {
+      const d = (window as any).slagDebug;
+      const run = d.match.run;
+      run.runners.forEach((r: any, i: number) => {
+        const m = run.resolved.find((x: any) => x.pp.uid === d.match.placed[i].uid).mods[0];
+        const dx = Math.round(Math.cos(m.angle));
+        const dy = Math.round(Math.sin(m.angle));
+        Object.assign(r.body, {
+          x: m.at[0] + (dx * r.body.w) / 2 - r.body.w / 2,
+          y: m.at[1] + (dy * r.body.h) / 2 - r.body.h / 2,
+          vx: 0,
+          vy: 0,
+          onGround: dy < 0,
+        });
+      });
+    });
+    const inputs = await page.evaluate(() => {
+      const d = (window as any).slagDebug;
+      const run = d.match.run;
+      return d.match.players.map((p: any, i: number) => {
+        const m = run.resolved.find((r: any) => r.pp.uid === d.match.placed[i].uid).mods[0];
+        const dx = Math.round(Math.cos(m.angle));
+        const dy = Math.round(Math.sin(m.angle));
+        const want = dy < 0 ? { down: true } : dy > 0 ? { up: true } : dx > 0 ? { left: true } : { right: true };
+        return [p.device, want];
+      });
+    });
+    await page.evaluate((inp) => (window as any).slagDebug.step(1, Object.fromEntries(inp)), inputs);
+    const raceAt = async (n: number, name: string) => {
+      await step(n);
+      await page.evaluate(() => {
+        const d = (window as any).slagDebug;
+        const cam = d.renderer.cam;
+        delete cam.update;
+        d.render();
+      });
+      files.push(await snap(`pipes-${seed}-race-${name}`));
+    };
+    await raceAt(10, 'going-in');
+    for (const [i, p] of pipes.slice(0, 2).entries()) await zoomOn(p.uid, `race-in-${i}`);
+    await raceAt(20, 'coming-out');
+    for (const [i, p] of pipes.slice(0, 2).entries()) await zoomOn(p.link, `race-out-${i}`);
+    await sheet(`pipes-${seed}`, files, 3);
+    // Every material, on a pipe facing up and one facing down (a match only ever has one).
+    const looks: string[] = [];
+    for (const look of ['green', 'brass', 'rust', 'porcelain', 'copper']) {
+      await page.evaluate((l) => {
+        const d = (window as any).slagDebug;
+        for (const r of d.match.run.resolved) for (const m of r.mods) if (m.type === 'pipe') m.look = l;
+      }, look);
+      for (const p of [pipes[0], pipes[2]]) {
+        await zoomOn(p.uid, `look-${look}-rot${p.rot}`);
+        looks.push(files.pop()!);
+      }
+    }
+    await sheet(`pipes-${seed}-looks`, looks, 4);
+  },
   async buildparts() {
     // Every building part: each block material at every size in a race (whole view and close up), then
     // on crate cards, then as place-phase ghosts. `--theme` picks the backdrop.
