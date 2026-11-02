@@ -87,7 +87,7 @@ function crossFor(k: Knobs, struct: number): number {
  * lava lakes or spare pits to need a second part by chance, the way a plain volcano level often does, so the
  * wide ones ask more often to keep the theme near TWO_PARTS (measured with `pnpm level --stats 200`).
  */
-const LANDMARK_TWO = 0.4;
+const LANDMARK_TWO = 0.3;
 const asksTwo = (k: Knobs) => k.challenge < Math.max(k.twoParts, LANDMARK_TWO);
 
 /** Does a landmark of `struct` columns fit beside a one-part crossing on this level? */
@@ -755,16 +755,17 @@ function buildRibs(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const sh = (c: number) => base + Math.round(bump * dsin((Math.PI * (c - spineA + 0.5)) / len));
   // The skull: a cranium a little above the spine, its mouth a way through at the ground, ledges up its brow.
   const top = G - sh(skullFirst ? spineA : spineB) - 2;
+  // A cranium rounded at the back, a snout stepping down to the front, over the mouth's passage.
   for (let c = kx0; c <= kx1; c++) {
-    const edge = c === kx0 || c === kx1;
-    g.fill(c, top + (edge ? 1 : 0), c, G - 4, 1, true);
+    const out = dir > 0 ? c - kx0 : kx1 - c;
+    const drop = out === 0 ? 2 : out === 1 ? 1 : c === (dir > 0 ? kx1 : kx0) ? 1 : 0;
+    g.fill(c, top + drop, c, G - 4, 1, true);
   }
   if (skullFirst) ledges(g, kx0 - 2, top + 1, G);
   // The spine: a ridge of bone with a knob every few vertebrae, ribs of one-way bone curving down from it to the ground.
   for (let c = spineA; c <= spineB; c++) {
     const y = G - sh(c);
     g.set(c, y, 1, true);
-    if ((c - spineA) % 4 === 2 && c > spineA + 1 && c < spineB - 1) g.set(c, y - 1, 1, true);
   }
   const ribs: number[] = [];
   const pitch = rng.int(3, 4);
@@ -797,6 +798,8 @@ function buildRibs(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
       skullW: [skullW, dir],
       facade: [s0, top],
       facadeSize: [s1 - s0 + 1, G - top],
+      skullBox: [kx0, top],
+      skullSize: [skullW, G - top],
       ground: [G, end],
       ...Object.fromEntries(vents.map((c, i) => [`vent${i}`, [c, G - sh(c) + 1] as Vec])),
       ...Object.fromEntries(stands.map((s, i) => [`stand${i}`, s])),
@@ -835,7 +838,6 @@ function* ribsPieces(rng: Rng, l: Landmark): Generator<Piece> {
     });
   // Fire out of the skull's mouth, along the passage and out of it.
   const mouth = dir > 0 ? kx0 + skullW - 1 : kx0;
-  void G;
   const breath: Module = {
     type: 'flame',
     at: [mouth + (dir > 0 ? 0.6 : 0.4), G - 1.5],
@@ -852,6 +854,8 @@ function* ribsPieces(rng: Rng, l: Landmark): Generator<Piece> {
     style: makeStyle(rng, ['bone', 'obsidian'], [30, 18], { glowHue: rng.range(14, 30) }),
     modules: [
       { type: 'deco', kind: 'facade', at: l.anchors.facade, w: l.anchors.facadeSize[0], h: l.anchors.facadeSize[1], seed: rng.int(0, 1 << 20) },
+      // The skull's own shell: its horns, swept back behind it (its seed says which way it faces).
+      { type: 'deco', kind: 'facade', at: l.anchors.skullBox, w: l.anchors.skullSize[0], h: l.anchors.skullSize[1], seed: dir > 0 ? 1 : 0 },
       breath,
       ...vents,
     ],
@@ -895,9 +899,16 @@ function buildLavaTube(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark
   // A mesa: flanks of steps, the tube inside it at the ground.
   const n = Math.ceil((hi + roof) / R);
   const hM = n * R;
-  const nearW = stepWidths(rng, n - 1, n - 1 + rng.int(0, 2));
-  const farW = stepWidths(rng, n - 1, n - 1 + rng.int(0, 2));
+  // Up its near face by stairs or by ledges (always ledges where the level is narrow: the tube gets the room).
+  const narrow = m1 - m0 + 1 < 24;
+  const onLedges = narrow || rng.chance(0.4);
+  const nearW = onLedges ? [] : stepWidths(rng, n - 1, n - 1 + rng.int(0, 2));
+  const farW = stepWidths(rng, n - 1, n - 1 + (narrow ? 0 : rng.int(0, 2)));
   let x = m0;
+  if (onLedges) {
+    ledges(g, m0, G - hM, G);
+    x += 2;
+  }
   nearW.forEach((w, i) => {
     for (let c = 0; c < w; c++) col(g, x++, (i + 1) * R, G);
   });
@@ -951,7 +962,7 @@ function buildLavaTube(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark
       ]),
       sig0: [hi, roof],
       sig1: [b - a + 1, drips.length],
-      sig2: [pools.length, nearW.length + nearW.reduce((s, w) => s + w, 0)],
+      sig2: [pools.length, onLedges ? -1 : nearW.reduce((s, w) => s + w, 0)],
     },
   };
 }

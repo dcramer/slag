@@ -1,7 +1,7 @@
 import { css, type HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
-import { blob, line, type P } from '../../ink';
+import { blob, line, type P, stroke } from '../../ink';
 import { boxPts, path, pen, poly, sprite, stamp, tone } from '../../ink-props';
 import { glowDot, light } from '../../kit';
 import type { DrawCtx } from '../common';
@@ -176,12 +176,26 @@ const tube: DecoSkin = (rc, m, d) => {
 
 // ------------------------------------------------------------------------------------------- dragon ribs
 
-const BONE: HSL = { h: 40, s: 22, l: 70 };
+const BONE: HSL = { h: 40, s: 24, l: 72 };
+
+/** A bone along `pts`: an ink ribbon, the bone over it, a lit stripe along it. */
+function boneStroke(g: CanvasRenderingContext2D, pts: readonly P[], wd: number, t: Hz, seed: number) {
+  g.fillStyle = t.ink(BONE);
+  stroke(g, pts, { w: wd + 1.6, seed, taper: [0.02, 0.35], press: 0 });
+  g.fillStyle = t.c(BONE, -4);
+  stroke(g, pts, { w: wd, seed: seed + 1, taper: [0.02, 0.4], press: 0 });
+  g.fillStyle = t.c(BONE, 10);
+  stroke(
+    g,
+    pts.map((p) => ({ x: p.x - wd * 0.2, y: p.y - wd * 0.15 })),
+    { w: wd * 0.3, seed: seed + 2, taper: [0.1, 0.5], press: 0 },
+  );
+}
 
 /**
- * The far side of the ribcage and the dragon's horns, behind the bones you can touch: each rib you can
- * stand on (the one-way bone under the spine) gets its twin curving down the other way, so the cage reads
- * whole, and two horns sweep back off the skull. Read from the level's own tiles, so it fits any layout.
+ * The whole ribcage behind the bones you can touch: each rib you can stand on (the one-way bone under the
+ * spine) is drawn whole behind its perches, curving down to the ground, with its twin on the far side
+ * curving the other way. Read from the level's own tiles, so it fits any layout.
  */
 function ribcage(m: Deco, d: DrawCtx, t: Hz) {
   const lv = d.o.level!;
@@ -189,65 +203,57 @@ function ribcage(m: Deco, d: DrawCtx, t: Hz) {
   const y0 = Math.round(m.at[1] / TILE);
   const w = Math.round(m.w / TILE);
   const h = Math.round(m.h / TILE);
-  const key = `volcano|ribs|${x0},${y0},${w},${h}|${t.k}|${lv.version}`;
-  return sprite(key, -TILE * 2, -TILE * 4, m.w + TILE * 4, m.h + TILE * 4, (g) => {
+  return sprite(`volcano|ribs|${x0},${y0},${w},${h}|${t.k}|${lv.version}`, -TILE * 3, -TILE, m.w + TILE * 6, m.h + TILE * 2, (g) => {
     const tile = (x: number, y: number) => lv.tiles[y * lv.w + x];
-    const bone = (pts: P[], wd: number, seed: number) => {
-      g.fillStyle = t.ink(BONE);
-      for (let i = 1; i < pts.length; i++) line(g, pts[i - 1].x, pts[i - 1].y, pts[i].x, pts[i].y, { w: wd + 1.4, seed: seed + i, taper: [0, 0], press: 0 });
-      g.fillStyle = t.c(BONE, -6);
-      for (let i = 1; i < pts.length; i++) line(g, pts[i - 1].x, pts[i - 1].y, pts[i].x, pts[i].y, { w: wd, seed: seed + i + 9, taper: [0, 0], press: 0 });
-    };
     for (let x = x0; x < x0 + w; x++) {
-      // A rib starts where one-way bone hangs from the spine.
       let top = -1;
       for (let y = y0; y < y0 + h - 1; y++) if (tile(x, y) === 1 && tile(x, y + 1) === 2) top = y + 1;
       if (top < 0) continue;
-      let dir = 0;
-      for (let y = top + 1; y < y0 + h && !dir; y++) dir = tile(x + 1, y) === 2 ? 1 : tile(x - 1, y) === 2 ? -1 : 0;
-      const px = (x - x0 + 0.5) * TILE;
-      const py = (top - y0) * TILE;
-      const bot = h * TILE;
+      // The perches it stands on, in order down the rib.
+      const perch: P[] = [{ x: (x - x0 + 0.5) * TILE, y: (top - y0) * TILE }];
+      let cx = x;
+      for (let y = top; y < y0 + h; y++) {
+        const nx = [cx, cx + 1, cx - 1].find((c) => tile(c, y) === 2);
+        if (nx === undefined) break;
+        cx = nx;
+        perch.push({ x: (cx - x0 + 0.5) * TILE, y: (y - y0 + 0.5) * TILE });
+      }
+      perch.push({ x: perch[perch.length - 1].x, y: h * TILE });
+      const lean = Math.sign(perch[perch.length - 1].x - perch[0].x) || 1;
+      // Its twin, bowing out the other way.
+      const twin = perch.map((p, i) => ({ x: 2 * perch[0].x - p.x - lean * Math.sin((i / (perch.length - 1)) * Math.PI) * 10, y: p.y }));
+      boneStroke(g, twin, 4.2, { ...t, c: (b: HSL, dl?: number) => t.c(b, (dl ?? 0) - 10) }, x * 3 + 1);
+      boneStroke(g, perch, 5, t, x * 3);
+    }
+  });
+}
+
+/** Horns swept back off the skull, behind it. The shell's seed says which way it faces (1: toward the left). */
+function horns(m: Deco, t: Hz) {
+  return sprite(`volcano|horns|${m.w}|${m.h}|${m.seed}|${t.k}`, -TILE * 4, -TILE * 4, m.w + TILE * 8, m.h + TILE * 4, (g) => {
+    const back = m.seed === 1 ? 1 : -1;
+    const bx = m.seed === 1 ? m.w * 0.7 : m.w * 0.3;
+    for (const [k, len, wd] of [
+      [0, 34, 5.2],
+      [1, 26, 4.2],
+    ] as const) {
       const pts: P[] = [];
       for (let i = 0; i <= 8; i++) {
         const u = i / 8;
-        pts.push({ x: px - (dir || 1) * u * u * TILE * 1.8 + Math.sin(u * Math.PI) * -(dir || 1) * TILE * 0.9, y: py + u * (bot - py) });
+        pts.push({ x: bx + back * (u * len - k * 8), y: TILE * 0.4 + k * 3 - u * 34 + u * u * 12 });
       }
-      bone(pts, 3.2, x);
-    }
-    // Horns off the skull: the widest solid block in the box, sweeping back.
-    let best = -1;
-    let run = 0;
-    let skullTop = h;
-    for (let x = x0; x < x0 + w; x++) {
-      let tall = 0;
-      for (let y = y0; y < y0 + h; y++) if (tile(x, y) === 1) tall++;
-      run = tall > 3 ? run + 1 : 0;
-      if (run >= 3) best = x;
-    }
-    if (best >= 0) {
-      for (let y = y0; y < y0 + h; y++)
-        if (tile(best, y) === 1) {
-          skullTop = y - y0;
-          break;
-        }
-      const hx = (best - x0 - 1) * TILE;
-      const hy = skullTop * TILE;
-      for (const k of [-1, 1]) {
-        const pts: P[] = [];
-        for (let i = 0; i <= 6; i++) {
-          const u = i / 6;
-          pts.push({ x: hx + k * 6 + k * u * 10 - u * u * 6 * k, y: hy + 2 - u * 24 + u * u * 8 });
-        }
-        bone(pts, 4.5 - pts.length * 0.3, 40 + k);
-      }
+      boneStroke(g, pts, wd, t, 50 + k);
     }
   });
 }
 
 const ribs: DecoSkin = (rc, m, d) => {
   if (!d.o.level) return;
-  stamp(rc.s, ribcage(m, d, hz(d)), m.at[0] + d.off[0], m.at[1] + d.off[1]);
+  const t = hz(d);
+  const x = m.at[0] + d.off[0];
+  const y = m.at[1] + d.off[1];
+  // The skull's shell is its own, narrow box; the cage's spans the whole skeleton.
+  stamp(rc.s, m.w <= 6 * TILE ? horns(m, t) : ribcage(m, d, t), x, y);
 };
 
 // ------------------------------------------------------------------------------------------- registry
