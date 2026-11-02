@@ -1,6 +1,6 @@
 # TODO agenda
 
-These are the open work items, ordered by priority. Each one is sized for one agent. Several have unfinished work on a `wip/*` branch: those agents were stopped mid-task, and their work was saved as-is, **unreviewed**. Read the branch diff before reusing it. Every `wip/*` branch is behind `main`, so merge `origin/main` first.
+These are the open work items, ordered by priority. Each one is sized for one agent.
 
 Limit agents by file overlap first. On a small machine, also run at most 3–4 at once. While iterating, run only the test files you touch (`pnpm vitest run tests/x.test.ts`) plus `pnpm check:fast`. Run the full `pnpm check` once, before committing. Test behavior and invariants, not every tunable.
 
@@ -27,7 +27,6 @@ Phone support (follow camera, pinch, scaled HUD, settings sheet) is on `main` bu
 
 ## 10. Housekeeping
 - Enable GitHub Actions and make `ci.yml` a required check. This must be done on GitHub by the repo owner.
-- Delete merged and superseded branches: remote `claude/scaffold-procgen-platformer` and all `wip/*` (each superseded by work on `main`), plus local `worktree-agent-*` and merge branches. Waiting on the owner's OK.
 - Consider stricter TS flags: `noUncheckedIndexedAccess` gives about 600 errors, so it's a project of its own.
 
 ## 13. Playtest and tune the new parts
