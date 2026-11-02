@@ -175,6 +175,9 @@ export class Renderer {
     this.hud.tapMin = enabled ? TAP_CSS / cssPerView : 0;
   }
 
+  /** Called after every frame with `logoBox()`: the game lays the DOM logo there (src/ui/screens/logo.ts). */
+  placeLogo: ((box: { x: number; y: number; size: number } | null) => void) | null = null;
+
   /** Where the HUD put the logo this frame, in CSS px of the window, or null when it shows none. */
   logoBox(): { x: number; y: number; size: number } | null {
     const b = this.hud.logoAt;
@@ -368,6 +371,7 @@ export class Renderer {
     if (!this.hud.hidden) this.hud.draw(m, t, this.pw, this.ph);
     else this.hud.clear(this.pw, this.ph);
     if (this.wordsOn) this.letters.draw(this.hudCanvas.getContext('2d')!, this.cam, this.pw);
+    this.placeLogo?.(this.logoBox());
   }
 
   /**

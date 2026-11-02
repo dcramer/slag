@@ -269,8 +269,9 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
 
   const loop = { paused: false };
   installDebug(match, renderer, loop, net, life.signal);
-  // The main menu's logo, laid over the HUD's top bar wherever the HUD puts it.
+  // The main menu's logo, laid over the HUD's top bar wherever the HUD puts it, every rendered frame (stepped ones too).
   const logo = new FloatingLogo(container);
+  renderer.placeLogo = (box) => logo.place(box);
 
   // Fixed-timestep simulation, render as fast as the display allows.
   let acc = 0;
@@ -339,7 +340,6 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     audio.handle(events, view);
     audio.update(view, now);
     renderer.render(view, now, events);
-    logo.place(renderer.logoBox());
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
