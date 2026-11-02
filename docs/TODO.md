@@ -32,6 +32,8 @@ Vercel functions can't hold a WebSocket open, so something else has to carry the
 
 Whichever option is chosen, keep the transport abstraction, the election logic, snapshots and dmath, and swap only the transport. Then update `docs/NETCODE.md`, which is stale and still mentions Vite.
 
+**Required for testing:** a local service compatible with remote Upstash and `@upstash/redis`, so the real store path runs outside production. Use [Serverless Redis HTTP](https://upstash.com/docs/redis/sdks/ts/developing) (`hiett/serverless-redis-http` plus Redis 6.2) in `docker-compose`, with `pnpm test:store` in CI. It only supports the body-based REST method, so the store must use that form.
+
 **Required online:** everyone sees each other's cursors and ghost parts live during pick and place. It matters most in pick, because the first player to pick a part gets it. A claim race has one winner on every peer, and nobody sees a claim that then gets revoked.
 
 ## 3. Level variety, gravity and the "mostly open" rule
