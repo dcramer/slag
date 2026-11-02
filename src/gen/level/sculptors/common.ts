@@ -5,6 +5,7 @@ import { BRIDGE_W } from '../types';
 import type { RouteShape } from '../../../sim/level';
 import { jumpProfile, probeGravity } from '../probe';
 import type { SculptCtx } from '../types';
+import type { ThemeId } from '../../../themes';
 
 /**
  * Helpers shared by theme sculptors: gap sizing from the measured jump
@@ -12,10 +13,31 @@ import type { SculptCtx } from '../types';
  * crossing that needs a bridge prop.
  */
 
-/** Share of levels that need two parts; every other level needs one. */
-export const TWO_PARTS = 0.22;
+/** Share of levels that need two parts, in every theme; every other level needs one. */
+export const TWO_PARTS = 0.25;
+
+/**
+ * Share of a theme's levels that ask for two parts, where that isn't
+ * TWO_PARTS. The ask and the outcome differ by theme: wide open fields (farm,
+ * mine) sometimes need two parts for a one-part crossing, and tight terrains
+ * (castle, factory) often can't fit a second crossing, so a two-part ask
+ * there ends up needing one. Each is set so the theme's two-part share lands
+ * near TWO_PARTS (measured over 100 seeds, see `pnpm level --stats`).
+ */
+export const TWO_PART_ASK: Partial<Record<ThemeId, number>> = {
+  farm: 0.01,
+  factory: 0.36,
+  castle: 0.5,
+  jungle: 0.33,
+  volcano: 0.13,
+  harbor: 0.16,
+  mine: 0.02,
+  rooftops: 0.38,
+};
 /** First attempt that may give up on needing parts at all (the pipeline stops insisting here too). */
 export const LAST_RESORT = 22;
+/** Attempts at a two-part shape before settling for one: a terrain that keeps refusing a second crossing isn't worth a hitch. */
+export const TWO_PART_TRIES = 5;
 
 /**
  * A gap (empty columns) jumpable between ledges at equal height. Mostly a
@@ -41,15 +63,17 @@ export function hopGap(rng: Rng, min = 1): number {
  * A bridge is too short to run on, so a player runs and jumps onto it from
  * the near bank and walks off the far end. One bridge covers a running jump,
  * its own width and most of a walking jump (the last columns only work from
- * a few exact spots, which the solver doesn't count on); no single bridge
- * spans a running jump, its width and a full walking jump. Widths are checked
- * against an exhaustive search in tests/routes.test.ts. The widest gaps also
- * beat long falling jumps from nearby perches, so they're the likelier roll.
+ * a few exact spots, which the solver doesn't count on). A single bridge hung
+ * low in the gap reaches further still: the far bank is then a falling jump
+ * and a climb, as far as a long fall carries plus a full jump's rise, so a
+ * two-part gap starts past that. Widths are checked against an exhaustive
+ * search in tests/routes.test.ts. The widest gaps also beat long falling jumps
+ * from nearby perches, so they're the likelier roll.
  */
 export function hardGap(rng: Rng, parts = 1): number {
   const j = jumpProfile();
-  const lo = parts === 1 ? j.gap + 2 : j.gap + BRIDGE_W + j.walkGap + 2;
-  const hi = Math.max(lo, parts === 1 ? BRIDGE_W + j.walkGap * 2 : j.gap + BRIDGE_W * 2 + j.walkGap);
+  const lo = parts === 1 ? j.gap + 2 : j.gapAt(-6) + j.rise + 1;
+  const hi = Math.max(lo, parts === 1 ? BRIDGE_W + j.walkGap * 2 : j.gap + BRIDGE_W * 2 + j.walkGap + 1);
   const far = Math.min(hi, Math.max(lo, j.gapAt(-6) + 1));
   return rng.chance(0.3) ? rng.int(lo, far) : rng.int(far, hi);
 }
@@ -75,9 +99,9 @@ export function easyRise(): number {
  * shapes are rejected more often, so a per-attempt roll would quietly select
  * for easy ones.
  */
-export function rollChallenges(attempt: number, k: Pick<Knobs, 'challenge'>): number {
+export function rollChallenges(attempt: number, k: Pick<Knobs, 'challenge'> & Partial<Pick<Knobs, 'twoParts'>>): number {
   if (attempt >= LAST_RESORT) return 0;
-  return k.challenge < TWO_PARTS && attempt < 16 ? 2 : 1;
+  return k.challenge < (k.twoParts ?? TWO_PARTS) && attempt < TWO_PART_TRIES ? 2 : 1;
 }
 
 /** Carve a pit (columns x0..x1 empty to the bottom) and hint a bridge at floor row `row` if it's wide. */
@@ -203,6 +227,8 @@ export interface Knobs {
   wide: number;
   /** This level's challenge roll in [0, 1), the same on every attempt. */
   challenge: number;
+  /** Share of this theme's levels that ask for two parts (TWO_PART_ASK). */
+  twoParts: number;
 }
 
 /**
@@ -232,6 +258,7 @@ export function knobs(ctx: SculptCtx, maxClimb?: number, range: [number, number]
     count: (base, min = 0) => Math.max(min, Math.round(base * wide * (0.45 + 1.1 * p.density))),
     wide,
     challenge: ctx.challenge,
+    twoParts: TWO_PART_ASK[ctx.themeId] ?? TWO_PARTS,
   };
 }
 

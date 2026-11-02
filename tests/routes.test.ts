@@ -3,7 +3,7 @@ import { Rng } from '../src/core/rng';
 import { generateLevel, isAcceptable, lastGenInfo } from '../src/gen/level';
 import { jumpProfile, setProbeGravity } from '../src/gen/level/probe';
 import { analyzeRoutes, MAX_SHARED } from '../src/gen/level/routes';
-import { easyGap, hopGap, rollChallenges, TWO_PARTS } from '../src/gen/level/sculptors/common';
+import { easyGap, hopGap, rollChallenges, TWO_PART_TRIES, TWO_PARTS } from '../src/gen/level/sculptors/common';
 import { LEVEL_H, LEVEL_W } from '../src/sim/constants';
 import { type Level, T_ONEWAY, T_SOLID } from '../src/sim/level';
 import { THEME_IDS } from '../src/themes';
@@ -141,7 +141,7 @@ describe('sculptor tuning', () => {
   it('decides a challenge once per level, so retries cannot select it away', () => {
     for (const challenge of [0.1, 0.5, 0.95]) {
       const first = rollChallenges(0, { challenge });
-      for (let attempt = 1; attempt < 8; attempt++) expect(rollChallenges(attempt, { challenge })).toBe(first);
+      for (let attempt = 1; attempt < TWO_PART_TRIES; attempt++) expect(rollChallenges(attempt, { challenge })).toBe(first);
     }
     expect(rollChallenges(0, { challenge: TWO_PARTS - 0.01 })).toBe(2);
     expect(rollChallenges(0, { challenge: TWO_PARTS + 0.01 })).toBe(1);

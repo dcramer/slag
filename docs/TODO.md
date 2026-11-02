@@ -20,13 +20,8 @@ Online play is on `main`; see `docs/NETCODE.md`.
 - Measure recovery in a 2-peer room, where no third peer confirms the loss (about 7 s expected).
 
 ## 3. Level follow-ups
-Level profiles, gravity, variable size, full-window background, the open-levels rule, the parts-needed targets and the crate guarantee are on `main`.
-
-- **Generation time:** about 237 ms per level, up 4x, and about 2.5 s at worst on one wide level. That's a visible hitch at level load. Move it off the main thread or cut retries.
-- **Placed parts can block a level:** after 5 rounds of random legal placements, the judge couldn't prove 4–5 of 40 levels still solvable. They aren't proven unsolvable, but nothing proves such a match stays winnable.
-- **Shares by theme:** 98.3% of levels need parts and 29% need two. Mine is 48% two-part; jungle and castle are 16–18%. `TWO_PARTS` in gen tunes it.
-- **Visible edge:** block themes (harbor, castle, factory) show a straight wall line where the map meets the scenery.
-- `pnpm online-test --only play,bc` failed once after a clean gate and passed on rerun. Find the flake.
+- **Ink bake stall:** the first render after a level change bakes ink terrain on the main thread: 27–176 ms on most levels, about 550–600 ms on a large factory, and once 2.5 s. Generation itself is now off the main thread.
+- The winnability proof assumes timed hazards can be passed in their 30-frame openings, and only uses 2-bridge plans.
 
 ## 6. Real phones
 Phone support (follow camera, pinch, scaled HUD, settings sheet) is on `main` but has only run in Chromium emulation. Try iOS Safari and a real Android phone: `:has()` in the sheet CSS, safe-area insets, pinch feel, and frame rate.

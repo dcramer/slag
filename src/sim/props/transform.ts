@@ -405,3 +405,28 @@ export function detonate(level: Level, placed: PlacedProp[], blast: number | Bla
     return p.def.mount !== 'face' || footprintCells(p).every(([x, y]) => tileAt(level, x, y) === T_SOLID || blocks.has(y * level.w + x));
   });
 }
+
+/**
+ * Delayed charges (time bombs) go off as the race starts, in the order they
+ * were placed, each catching whatever still stands; a charge caught in an
+ * earlier blast is defused. Mutates `level` and returns what's left, so the
+ * match and the winnability proof (on a copy) settle a round the same way.
+ */
+export function detonateCharges(level: Level, placed: PlacedProp[], onBlast?: (spec: BlastSpec, tx: number, ty: number, rot: number) => void): PlacedProp[] {
+  let left = placed;
+  for (const c of placed) {
+    const m = c.def.modules.find((x) => x.type === 'bomb');
+    if (!m || m.type !== 'bomb' || !m.delay || !left.includes(c)) continue;
+    const spec = blastSpec(m);
+    left = detonate(
+      level,
+      left.filter((p) => p !== c),
+      spec,
+      c.tx,
+      c.ty,
+      c.rot,
+    );
+    onBlast?.(spec, c.tx, c.ty, c.rot);
+  }
+  return left;
+}
