@@ -3,7 +3,7 @@ import type { Match } from './game/match';
 import { ARCHETYPE_WEIGHTS, type Archetype, DEMOLISH, generateProp } from './gen/props';
 import type { NetSession } from './net/session';
 import { hashMatch } from './net/snapshot';
-import { toyBench, toyCatalog } from './render/toys/sheet';
+import { toyBench, toyCatalog, toySilhouettes } from './render/toys/sheet';
 import type { Renderer } from './render/renderer';
 import { giveItem, ITEM_KINDS, type ItemKind } from './sim/items';
 import { canPlace, landedDef, linkPipes, type PropDef } from './sim/props';
@@ -65,7 +65,7 @@ export interface SlagDebug {
   /** Deterministic state hash of the confirmed match (peers in sync ⇔ equal hashes at equal frames). */
   hash(): number;
   /** The toy cast (docs/CHARACTERS.md): a catalog canvas of every kind, and a draw-cost bench. */
-  toys: { catalog: typeof toyCatalog; bench: typeof toyBench };
+  toys: { catalog: typeof toyCatalog; silhouettes: typeof toySilhouettes; bench: typeof toyBench };
 }
 
 export interface LoopControl {
@@ -83,7 +83,7 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
     match,
     renderer,
     net,
-    toys: { catalog: toyCatalog, bench: toyBench },
+    toys: { catalog: toyCatalog, silhouettes: toySilhouettes, bench: toyBench },
     quickStart(players = 2) {
       for (let i = 0; i < players; i++) match.join(dev(DEVICES[i]));
       if (match.phase === 'lobby') match.startMatch();
