@@ -14,7 +14,7 @@ type ItemId = 'play' | 'join' | 'codex' | 'settings';
 const ITEMS: { id: ItemId; title: string; sub: string }[] = [
   { id: 'play', title: 'PLAY', sub: 'Start a New Lobby' },
   { id: 'join', title: 'JOIN A LOBBY', sub: 'Enter a Lobby Code' },
-  { id: 'codex', title: 'CODEX', sub: 'Every Part, Explained' },
+  { id: 'codex', title: 'CODEX', sub: 'Spoilers!' },
   { id: 'settings', title: 'SETTINGS', sub: 'Controls and Audio' },
 ];
 

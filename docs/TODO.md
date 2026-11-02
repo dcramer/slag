@@ -1,0 +1,114 @@
+# TODO agenda
+
+These are the open work items, ordered by priority. Each one is sized for one agent. Several have unfinished work on a `wip/*` branch: those agents were stopped mid-task, and their work was saved as-is, **unreviewed**. Read the branch diff before reusing it. Every `wip/*` branch is behind `main`, so merge `origin/main` first.
+
+Run **at most 3–4 agents on one 4-core machine**. At about 8 agents the load hit ~20 and every `pnpm check` took minutes. While iterating, run only the test files you touch (`pnpm vitest run tests/x.test.ts`) plus `pnpm check:fast`. Run the full `pnpm check` once, before committing. Test behavior and invariants, not every tunable.
+
+Design intent for everything below is in `docs/DESIGN.md`.
+
+---
+
+## 1. Iteration speed (do this first)
+**Branch:** `wip/devtools-perf` (~1k lines, unreviewed: dev overlay, perf harness and optimizations in progress).
+
+- Split the tests into tiers:
+  - `pnpm check` runs typecheck, lint, format and **fast** tests only, under ~20 s of tests on an idle machine.
+  - The heavy generator and statistical suites move to `pnpm test:slow`, which runs in CI and whenever you touch `src/gen` or `src/sim/reach.ts`. Today that means levelgen (150 seeds), setpieces (64 levels), the match bot and the worldgen sweeps.
+  - Cut seed counts wherever a smaller sample still proves the invariant.
+- `pnpm shot` must not rebuild Next unnecessarily, and it must **exit** after writing its PNGs. Today it hangs and agents have to kill it.
+- Measure what type-aware lint (tsgolint) costs in `check:fast`. If it dominates, cache it or make it CI-only.
+- `typescript/no-unnecessary-type-assertion` is off because its autofix broke `tsc`. Re-enable it only if that bug is fixed.
+- Update the AGENTS.md commands table and the Definition of done to match.
+
+## 2. Online play on Vercel (decision needed)
+**Branch:** `wip/netcode-cloudflare` (+5 commits). It contains:
+- host-sequenced lockstep, presence-based host election and migration, refresh/rejoin, late join, desync detection and resync, and prediction;
+- `src/net/`, `dmath`, snapshots, a BroadcastChannel transport and `pnpm online-test`;
+- a **Cloudflare Durable Object relay** (`relay/`, wrangler). That relay contradicts our plan, because we host only on Vercel.
+
+Vercel functions can't hold a WebSocket open, so something else has to carry the messages. Options:
+
+| Option | What it is | Trade-off |
+|---|---|---|
+| **A (recommended)** | WebRTC data channels in a star around the host. Signaling and presence use small Next route handlers (`app/api/`) that short- or long-poll Redis from the Vercel Marketplace (Upstash free tier, REST via `fetch`). Local dev uses an in-memory store. On host migration, everyone re-signals to the new host. Public STUN, plus optional TURN from an env var. | Everything stays on Vercel and on free tiers. About 10–20% of player pairs can't connect without a TURN server. |
+| B | Keep the Cloudflare relay. | Most robust, with no NAT problems, but needs a second platform and account. |
+| C | A hosted realtime service (Ably or Pusher free tier). | Adds a third-party dependency and its limits. |
+
+Whichever option is chosen, keep the transport abstraction, the election logic, snapshots and dmath, and swap only the transport. Then update `docs/NETCODE.md`, which is stale and still mentions Vite.
+
+## 3. Level variety, gravity and the "mostly open" rule
+**Branches:**
+- `wip/level-variety`: the agent's raw work (+4).
+- `wip/level-variety-merge`: that work merged with `main` around 38abff9, with conflicts resolved. **6 generator tests fail**: levelgen, profile ×2, worldgen castle/volcano/bridge share.
+
+**Contents:**
+- level profiles: size and aspect (wide, classic, tall), density, hazard count, route shape (sprawl, climb, descent, zig-zag);
+- variable world size across sim, gen, render and camera;
+- a tall sculptor;
+- the gravity world setting (a rule; `Level.gravity` is used by physics, reach and projectiles).
+
+**Still to do:**
+- Fix the failing tests.
+- Run `pnpm level --stats 50` on this branch and on its parent commit, and compare.
+- **Full-window background:** canvases fill the window while the play-area aspect and scale stay the same; background layers fill the extra space instead of black bars. Check at 16:9, 21:9, 4:3 and phone sizes.
+- **New rule: levels are mostly open.** There must always be more than one route to the goal: corridors are fine in places, but never a single narrow path. Enforce it in the judge, for example by checking that the reachable stand-cell graph has at least two disjoint-ish routes, or with a minimum openness ratio.
+- Retune the sculptors for walk vs run and the lower jump.
+
+## 4. Content: parts and projectiles
+**Branch:** `wip/content` (~4.2k lines across 46 files, unreviewed).
+
+- 8–12 new parts and 5–8 projectiles. Favor side effects over death: knockback, slow, freeze, sticky, misdirection.
+- Demolition variants: prop-only charges, terrain drills and tunnelers, different blast shapes. All must respect spawn and goal protection.
+- Rideable projectiles: a glider launcher whose gliders sag and sink under weight.
+- **Launcher aim must be readable:**
+  - Today's weights are fixed 5 / sweep 2 / track 2, and track has a ±100° cone (`src/gen/props.ts`, `src/sim/props/modules/launcher.ts`). Trackers feel like the default.
+  - Target roughly fixed 7 / sweep 2 / track 1.5, with the cone narrowed to ±60°.
+  - A tracker shows a visible sensor or eye and always carries its name adjective. Crate cards and the codex say Fixed, Sweeps or Tracks.
+  - Optionally add one rare, slow, clearly signalled homing projectile.
+- Changed contract: `Wind` is now `{dx, dy, speed, k}`, and `stepBody` takes a 4th `wind` argument.
+
+## 5. Mystery crate and held items
+**Branch:** `wip/held-items` (~2k lines across 27 files, unreviewed).
+
+- A Mystery Crate prop that pops out a random held item, plus a held-item system with a `use` input action.
+- Original items only: a sword that bonks, a kickable puck that ricochets, a boomerang, a shield, …
+- Keep runner state additive. Item 7 also adds "runner attached to a prop" state.
+
+## 6. Mobile, round 2
+**Branch:** `wip/mobile-2` (~1k lines, unreviewed). Round 1 (touch controls) is merged.
+
+The user's feedback on a real phone: "almost playable but not quite; resolution is tough; settings is bad; probably needs zoomed in more."
+
+- **Phone follow camera:** render-only, a tile at least ~24 CSS px, look-ahead, a vertical dead zone, clamped to the level. Pick and place start zoomed out, with pinch-zoom, two-finger pan and auto-pan near the edges. Multiple local players fall back to framing everyone. `?zoom=1` forces it on desktop. Keep it in its own module, because item 3 also changes the camera.
+- **HUD readability:** scale HUD text, pills and crate cards up on small screens, with tap targets of at least 44 CSS px.
+- **Settings:** a full-screen sheet on phones with big rows that scrolls.
+- **Verify:** `pnpm shot mobile` on iPhone SE, iPhone 13 and Pixel 7 in landscape. Nothing has been tested on real hardware yet.
+
+## 7. Grab props: rope and blast barrel
+No branch yet.
+
+- **Rope:** hangs from a ceiling. You grab it automatically when you touch it in the air, with a short re-grab cooldown. Left and right pump the swing; jump lets go and keeps the swing's momentum.
+- **Blast barrel:** it pulls you in on contact and rotates (or holds a fixed aim). Jump fires you out along its direction after a short delay. It must be an original design, not a copy.
+- Both put the runner in an "attached" state inside `RunWorld`. That state must stay snapshot-friendly and deterministic.
+- Add both to `reach.ts` only if worldgen ever relies on them. For now it shouldn't.
+
+## 8. Render polish
+- **Set-piece layering:** scenery halves draw *behind* the terrain (the windmill tower, crane mast, press gantry, antenna masts). Moving and solid parts stay in front (the blades, platforms). Layer order is in `docs/DESIGN.md` → Levels. This is probably a `backdrop` art layer drawn before terrain in `src/render/renderer.ts` and the `defineArt` layers.
+- **The player's glowing trail is too strong.** Tone it down.
+- **The lobby SLAG logo** looks worse than the home-screen logo. Make it match (same treatment, scale and crispness).
+- **Comic-book style experiment:** `wip/comic-style` (~560 lines, unreviewed). Add `?style=comic`, `renderer.setStyle`, and a Settings toggle.
+
+## 9. Weather (new)
+A per-level random variable:
+- wind gusts that push runners and projectiles (reuse `src/sim/wind.ts`);
+- mist that limits sight distance;
+- rain or snow that changes footing.
+
+It's always telegraphed, weighted per theme, and must be deterministic from the level seed.
+
+## 10. Housekeeping
+- Enable GitHub Actions and make `ci.yml` a required check. This must be done on GitHub by the repo owner.
+- Delete the old remote branch `claude/scaffold-procgen-platformer`, and the `wip/*` branches once they're merged.
+- Swap the sim and gen transcendentals (`Math.sin`, `cos`, `atan2`, …) to `core/dmath.ts`. It lands with the netcode work.
+- Add the run controls to the README.
+- Consider stricter TS flags: `noUncheckedIndexedAccess` gives about 600 errors, so it's a project of its own.
