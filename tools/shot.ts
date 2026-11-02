@@ -62,9 +62,10 @@
  */
 
 import { shots as cast } from './shot/cast';
-import { browser, errors, scenario, server } from './shot/ctx';
 import { shots as decor } from './shot/decor';
+import { browser, errors, scenario, server } from './shot/ctx';
 import { shots as flood } from './shot/flood';
+import { shots as hazards } from './shot/hazards';
 import { shots as join } from './shot/join';
 import { shots as landmarks } from './shot/landmarks';
 import { shots as motion } from './shot/motion';
@@ -75,7 +76,21 @@ import { shots as phases } from './shot/phases';
 import { shots as renderer } from './shot/renderer';
 import { shots as riders } from './shot/riders';
 
-const SCENARIOS = { ...phases, ...renderer, ...motion, ...parts, ...pages, ...mobile, ...landmarks, ...cast, ...flood, ...riders, ...join, ...decor };
+const SCENARIOS = {
+  ...phases,
+  ...renderer,
+  ...motion,
+  ...parts,
+  ...pages,
+  ...mobile,
+  ...landmarks,
+  ...cast,
+  ...decor,
+  ...hazards,
+  ...flood,
+  ...riders,
+  ...join,
+};
 
 try {
   const run = SCENARIOS[scenario];

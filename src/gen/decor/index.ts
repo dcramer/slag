@@ -82,6 +82,18 @@ const RULES = {
   // ---- volcano ------------------------------------------------------------
   fumarole: defineDecor({ place: 'top', themes: ['volcano'], weight: 1, clear: 2 }),
   obsidian: defineDecor({ place: 'top', themes: ['volcano'], weight: 1, clear: 1 }),
+  basaltcols: defineDecor({ place: 'top', themes: ['volcano'], weight: 1, clear: 1 }),
+  pillow: defineDecor({ place: 'top', themes: ['volcano'], weight: 1, clear: 1 }),
+  sulphur: defineDecor({ place: 'top', themes: ['volcano'], weight: 0.9, clear: 2 }),
+  stump: defineDecor({ place: 'top', themes: ['volcano'], weight: 0.8, clear: 2 }),
+  bonepile: defineDecor({ place: 'top', themes: ['volcano'], weight: 0.8, clear: 1 }),
+  emberrock: defineDecor({ place: 'top', themes: ['volcano'], weight: 0.9, clear: 1 }),
+  cauldron: defineDecor({ place: 'top', themes: ['volcano'], weight: 0.6, clear: 2 }),
+  skullrock: defineDecor({ place: 'top', themes: ['volcano'], weight: 0.6, clear: 2 }),
+  ashdrift: defineDecor({ place: 'top', themes: ['volcano'], weight: 1, clear: 1 }),
+  idol: defineDecor({ place: 'top', themes: ['volcano'], weight: 0.5, clear: 1 }),
+  bridgepost: defineDecor({ place: 'top', themes: ['volcano'], weight: 0.5, clear: 2 }),
+  spattercone: defineDecor({ place: 'top', themes: ['volcano'], weight: 0.7, clear: 2 }),
   // ---- harbor -------------------------------------------------------------
   rope: defineDecor({ place: 'top', themes: ['harbor'], weight: 1, clear: 1 }),
   bollard: defineDecor({ place: 'top', themes: ['harbor'], weight: 0.8, clear: 1 }),

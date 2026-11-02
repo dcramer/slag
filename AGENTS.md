@@ -47,7 +47,7 @@ Lint: `oxlint` (type-aware, `.oxlintrc.json`). Warnings are real findings, not n
 - `lobby` | `pick` | `place` with `--seed S --players N`
 - `mobile [--device "iPhone SE landscape"]`: emulated phone, real multi-touch, fails on a tap target under 44 CSS px or a runner off screen
 - `levels --count 9`, `--seeds a,b,c` or `--themes all` → contact sheet `shots/levels.png`
-- `cast`: the toy cast, lineups at play scale on farm and mine, a close-up, deaths, the lobby and a catalog of every kind (`--only catalog`)
+- `cast`: the character cast, lineups at play scale on farm and mine, a close-up, deaths, the lobby, the silhouette test and a catalog of every kind (`--only catalog`)
 - `props --count 24` (crate cards), `codex` (the `/codex` page), `stack` (runners stacking, riding and head-bouncing, as stepped frames)
 - Options: `--theme farm`, `--weather rain`, `--noui` (hide HUD), `--noletters` (no impact words), `--size 1280x720`, `--out shots`
 
@@ -97,7 +97,7 @@ Every generated kind (landmark, set piece, decor, part, level shape) is a regist
 - **Landmark (stage concept)**: `defineConcept` in `src/gen/stage/<theme>.ts`, listed in `CONCEPTS`, with its contract (`scale`, `footing`, `ways`, `varies`, `names`, `family`).
 - **Decor**: a rule in `src/gen/decor/index.ts` (`defineDecor`: themes, top or under, weight, room), art in `src/render/decor.ts`.
 - **Terrain look**: a `TerrainKind`, `CapKind` or `PlatformKind` draws through a registry in `src/render/ink-material.ts` and `ink-terrain.ts` (see `src/render/AGENTS.md`).
-- **Character (toy kind)**: add the id to `TOYS` and its muted paints to `PAINTS` in `src/gen/character.ts`, and its `ToyArt` (shape, feet, the player's painted part, the parts it breaks into) to `src/render/toys/`. It needs its own silhouette at 16 px; bump `LOOK_CAST` (`src/ui/profile.ts`), since every seed rolls a different toy. See `docs/CHARACTERS.md`; check it with `pnpm shot cast`.
+- **Character kind**: add the id to `CAST` and its natural colors to `PAINTS` in `src/gen/character.ts`, and its `KindArt` to `KINDS` in `src/render/cast/kinds.ts`: a hand-inked outline, a signature part, a gait, a face, and the player's color on the body or a big worn piece. It needs its own silhouette (`pnpm shot cast` → `cast-silhouettes.png`); bump `LOOK_CAST` (`src/ui/profile.ts`), since every seed rolls a different kind. See `docs/CHARACTERS.md`.
 - **Weather kind**: add the id to `WEATHER_KINDS` in `src/sim/weather.ts`, then `tsc` lists `WEATHER` and `WEATHER_ART` (`src/render/weather.ts`). Give it a share in `WEATHER_WEIGHTS` (`src/gen/level/weather.ts`), a gate there if it touches the sim, and a sound in `WEATHER_SOUND` (`src/audio/emitters.ts`).
 
 ## Game rules

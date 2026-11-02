@@ -1,6 +1,6 @@
 import { clamp, type Rect } from '../core/geom';
 import { deriveSeed, Rng } from '../core/rng';
-import { type CharacterDef, generateCharacter, TOYS, type Toy } from '../gen/character';
+import { type CharacterDef, generateCharacter, CAST, type Kind } from '../gen/character';
 import { type Bridge, GRAVITY, type GravityClass, MAX_BRIDGES, type ProfileOverride, prove, settled } from '../gen/level';
 import { buildLevel, type LevelRequest } from '../gen/level/pregen';
 import { generateCrate, generateRoster, isBridgePart, type PropDef, type Role, rollSecret, rosterSize } from '../gen/props';
@@ -281,7 +281,7 @@ export class Match {
    * A character nobody seated could be mistaken for. Rolls are counted, so every
    * peer lands on the same one. A full lobby can't always keep everyone
    * MIN_HUE_APART, so it keeps the roll furthest from anyone rather than the last,
-   * preferring a toy nobody has; if every roll's toy is taken, it gets the next free one.
+   * preferring a kind nobody has; if every roll's kind is taken, it gets the next free one.
    */
   private rollCharacter(owner?: Player): CharacterDef {
     let best: CharacterDef | undefined;
@@ -291,10 +291,10 @@ export class Match {
       if (this.looksFree(c, owner)) return c;
       if (this.nameTaken(c, owner)) continue;
       if (this.hueGap(c, owner) > this.hueGap(any, owner)) any = c;
-      if (!this.toyTaken(c.toy, owner) && (!best || this.hueGap(c, owner) > this.hueGap(best, owner))) best = c;
+      if (!this.kindTaken(c.kind, owner) && (!best || this.hueGap(c, owner) > this.hueGap(best, owner))) best = c;
     }
     if (best) return best;
-    const free = TOYS.find((t) => !this.toyTaken(t, owner)) ?? any.toy;
+    const free = CAST.find((t) => !this.kindTaken(t, owner)) ?? any.kind;
     return { ...generateCharacter(any.seed, free), name: any.name };
   }
 
@@ -317,14 +317,14 @@ export class Match {
     return this.players.some((q) => q !== owner && q.character.name === c.name);
   }
 
-  /** Eight players, eight different toys: the kind is half of telling them apart. */
-  private toyTaken(toy: Toy, owner?: Player): boolean {
-    return this.players.some((q) => q !== owner && q.character.toy === toy);
+  /** Eight players, eight different kinds: the kind is half of telling them apart. */
+  private kindTaken(kind: Kind, owner?: Player): boolean {
+    return this.players.some((q) => q !== owner && q.character.kind === kind);
   }
 
-  /** True if no other player already has this look: colors must read apart at a glance, toys and names must differ. */
+  /** True if no other player already has this look: colors must read apart at a glance, kinds and names must differ. */
   looksFree(c: CharacterDef, owner?: Player): boolean {
-    return this.hueGap(c, owner) >= MIN_HUE_APART && !this.nameTaken(c, owner) && !this.toyTaken(c.toy, owner);
+    return this.hueGap(c, owner) >= MIN_HUE_APART && !this.nameTaken(c, owner) && !this.kindTaken(c.kind, owner);
   }
 
   newLevel(seed: number, theme: ThemeId | undefined = this.themeOverride) {

@@ -232,7 +232,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
   }
 
   // --- the join card: a watcher's Join, over the live match ------------------------------
-  // The toy is the saved look (rolled now if there's none yet) and the saved name; once seated, syncProfile
+  // The character is the saved look (rolled now if there's none yet) and the saved name; once seated, syncProfile
   // applies both like any join. Only the seat request goes to the host.
   let card: { stage: JoinCardInfo['stage']; until: number; now: boolean } | null = null;
   const CARD_RESULT_MS = 1600;

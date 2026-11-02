@@ -4,6 +4,7 @@ import type { ThemeId } from '../../themes';
 import { CASTLE_CONCEPTS } from './castle';
 import { FACTORY_CONCEPTS } from './factory';
 import { FARM_CONCEPTS } from './farm';
+import { VOLCANO_CONCEPTS } from './volcano';
 import type { Concept } from './types';
 
 export type { Concept, Landmark } from './types';
@@ -32,7 +33,7 @@ export const CONCEPTS: Record<ThemeId, Concept[]> = {
   factory: FACTORY_CONCEPTS,
   castle: CASTLE_CONCEPTS,
   jungle: [],
-  volcano: [],
+  volcano: VOLCANO_CONCEPTS,
   harbor: [],
   mine: [],
   rooftops: [],
