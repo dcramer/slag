@@ -24,7 +24,8 @@
  *   pnpm shot stack --seed abc             → stepped frames of runners stacking, walking as a stack, and a head-bounce
  *   pnpm shot grabs                        → stepped frames of a rope swing, a keg shot and a backfire
  *   pnpm shot lineup [--seeds a,b]         → eight runners in a spread of poses, at play scale and close up
- *   pnpm shot codex                        → /codex page (full-page screenshot)
+ *   pnpm shot codex                        → /codex: full page, top, a part up close, and on a phone
+ *   pnpm shot screens                      → the 404 and error screens, desktop and phone
  *   pnpm shot webgl                        → a race through a lost and restored WebGL context, then with shaders that won't build and with no WebGL2
  *   pnpm shot inkdraw                      → times the cel pass alone
  *   pnpm shot inkblast --seed S --theme T  → craters bitten out of a level, each partial redraw checked against a full bake

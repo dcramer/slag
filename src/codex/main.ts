@@ -1,90 +1,58 @@
 import 'client-only';
+import { connectedPads } from '../input/input';
 import type { Nav, Unmount } from '../router';
 import { HOME } from '../routes';
-import { MenuPadReader, readMenuPad } from '../ui/settings-nav';
+import { glyphSVG } from '../ui/glyphs';
+import { forgeHTML, promptHTML, scaledLogoHTML } from '../ui/screens/markup';
+import { KEY_ACTIONS, type MenuAction, MenuPadReader, navTarget, readMenuPad } from '../ui/settings-nav';
 import { glowDot, type RC } from '../render/kit';
 import { drawItemIcon, ITEM_HUE } from '../render/items';
 import { drawHostCells, drawProjectile, drawResolved } from '../render/props';
 import type { ItemKind } from '../sim/items';
 import { TILE } from '../sim/constants';
 import { AMMO, type Ammo, footprint, makeProjectile, type PropDef, resolveProp } from '../sim/props';
+import { CODEX_CSS } from './css';
 import { PART_INFO, summarize } from './describe';
 import { PROJECTILE_NOTES, partGroups } from './parts';
 
 /**
  * /codex — the catalog of potential components: every part (blocks,
- * heads, launchers, emitters, motion, finishes) and every projectile, drawn
+ * heads, launchers, emitters, motion, finishes), item and projectile, drawn
  * live with the same art as the game. These are global, not per-seed; the
  * crate assembles them into props with procedurally rolled numbers.
+ *
+ * It's a game screen like the main menu: the same backdrop and logo, one
+ * selected card at a time (arrows, d-pad or stick; mouse hover), Enter or Ⓐ
+ * to look closer, Q/E or LB/RB between sections, Esc or Ⓑ to back out.
+ * Labels and one-line jokes only (docs/DESIGN.md → Discovery).
  */
 
-const CSS = `
-.slag-codex{min-height:100vh;margin:0;background:radial-gradient(1200px 600px at 20% -10%,#2a1a18,transparent),#0b0a10;color:#e9e6f2;font:500 14px Barlow,system-ui,sans-serif}
-.slag-codex header{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:14px 22px;background:rgba(11,10,16,.85);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,160,60,.2)}
-.slag-codex header h1{font:400 34px "Lilita One",system-ui;margin:0 12px 0 0;background:linear-gradient(#fff3b0,#ffb02e 40%,#ff5a1f 75%,#a8160f);-webkit-background-clip:text;background-clip:text;color:transparent}
-.slag-codex header a{color:#ffb46a;text-decoration:none;font-weight:700}
-.slag-codex nav{display:flex;flex-wrap:wrap;gap:6px}
-.slag-codex nav a{padding:5px 10px;border-radius:99px;background:#1c1928;border:1px solid rgba(255,255,255,.08);font-size:12px}
-.slag-codex .ctl{display:flex;gap:8px;align-items:center;margin-left:auto}
-.slag-codex .ctl input,.slag-codex .ctl select{background:#14121d;color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:6px 8px;font:600 13px Barlow}
-.slag-codex button{font:700 13px Barlow;color:#fff;background:linear-gradient(#ff9a2e,#e2561c);border:0;border-radius:9px;padding:7px 12px;cursor:pointer}
-.slag-codex button.ghost{background:#2c2840}
-.slag-codex main{padding:10px 22px 60px}
-.slag-codex section{margin:28px 0}
-.slag-codex section>h2{font:400 26px "Lilita One";margin:0 0 4px;color:#ffd9a8}
-.slag-codex section>p{margin:0 0 14px;color:#a39cb8;max-width:900px}
-.slag-codex .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
-.slag-codex .card{position:relative;background:linear-gradient(#1e1b2c,#13111c);border:1px solid rgba(255,255,255,.08);border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .12s,border-color .12s}
-.slag-codex .card:hover{transform:translateY(-3px);border-color:rgba(255,170,90,.6)}
-.slag-codex .stage{position:relative;height:150px;background:radial-gradient(circle at 50% 55%,rgba(255,255,255,.06),transparent 70%)}
-.slag-codex .stage canvas{position:absolute;inset:0;width:100%;height:100%}
-.slag-codex .stage canvas.glow{mix-blend-mode:plus-lighter}
-.slag-codex .meta{padding:8px 10px 10px}
-.slag-codex .name{font:700 14px Barlow;color:#fff}
-.slag-codex .maker{font-size:11px;color:#8a8499;margin-bottom:6px}
-.slag-codex .stat{font-size:11px;color:#c9c3d9;line-height:1.45}
-.slag-codex .tag{position:absolute;top:8px;left:8px;font:800 10px Barlow;letter-spacing:1px;padding:2px 7px;border-radius:99px;color:#fff;z-index:2}
-.slag-codex .tag.build{background:#2f9e4f}.slag-codex .tag.hazard{background:#d4334a}.slag-codex .tag.utility{background:#2c86c9}.slag-codex .tag.demolish{background:#e07a1f}
-.slag-codex .arch{margin:18px 0 8px;font:700 13px Barlow;text-transform:uppercase;letter-spacing:1.5px;color:#9a93ad}
-.slag-codex .parts{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
-.slag-codex .part{background:#16141f;border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:12px 14px}
-.slag-codex .part b{font:400 18px "Lilita One";color:#ffb46a}
-.slag-codex .part code{color:#7fd1ff}
-.slag-codex .modal{position:fixed;inset:0;background:rgba(5,4,9,.8);display:flex;align-items:center;justify-content:center;z-index:20}
-.slag-codex .modal .box{background:linear-gradient(#1e1b2c,#100e17);border:1px solid rgba(255,170,90,.35);border-radius:18px;padding:18px;width:min(900px,94vw);max-height:92vh;overflow:auto;display:grid;grid-template-columns:1.2fr 1fr;gap:18px}
-.slag-codex .modal .stage{height:380px;border-radius:12px;background:radial-gradient(circle at 50% 50%,#262236,#0e0c14)}
-.slag-codex .modal pre{font:12px/1.4 ui-monospace,Menlo,monospace;background:#0b0a10;border-radius:10px;padding:10px;max-height:300px;overflow:auto;color:#cfc8e3}
-@media (max-width:700px){.slag-codex .modal .box{grid-template-columns:1fr}}
-`;
+type Draw = (rc: RC, w: number, h: number, rot: number) => void;
 
-interface Live {
-  base: HTMLCanvasElement;
-  glow: HTMLCanvasElement;
-  draw(rc: RC, w: number, h: number): void;
-  visible: boolean;
+interface Entry {
+  title: string;
+  note: string;
+  /** The section's title, for the close-up's tag. */
+  group: string;
+  draw: Draw;
+  /** The numbers, for the close-up. */
+  spec: string[];
+  /** The part type's own joke, when it isn't already said. */
+  quip: string | null;
+  /** Placeable parts turn; items and shots don't. */
+  turns: boolean;
 }
 
-const lives = new Set<Live>();
-const observer = new IntersectionObserver((entries) => {
-  for (const e of entries) {
-    const live = (e.target as HTMLElement & { _live?: Live })._live;
-    if (live) live.visible = e.isIntersecting;
-  }
-});
-
-function stage(draw: Live['draw'], cls = 'stage'): HTMLDivElement {
-  const div = document.createElement('div');
-  div.className = cls;
-  const base = document.createElement('canvas');
-  const glow = document.createElement('canvas');
-  glow.className = 'glow';
-  div.append(base, glow);
-  const live: Live = { base, glow, draw, visible: false };
-  (div as HTMLDivElement & { _live?: Live })._live = live;
-  lives.add(live);
-  observer.observe(div);
-  return div;
+interface Section {
+  id: string;
+  title: string;
+  blurb: string;
+  entries: Entry[];
 }
+
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+/** Parody names are kept lower-case in the data; cards show them as names. */
+const titleCase = (s: string) => s.replace(/(^|[\s/-])(\p{Ll})/gu, (_m, a: string, b: string) => a + b.toUpperCase());
 
 /** Fit a prop (including arm reach / motion range) into a w×h stage. */
 function drawProp(rc: RC, def: PropDef, rot: number, w: number, h: number) {
@@ -126,7 +94,7 @@ function drawProp(rc: RC, def: PropDef, rot: number, w: number, h: number) {
   rc.g.restore();
 }
 
-/** A held item, big, bobbing over its glow (codex item cards). */
+/** A held item, big, bobbing over its glow. */
 function drawItemCard(rc: RC, kind: ItemKind, w: number, h: number) {
   const k = Math.min(4, Math.min(w, h) / 34);
   const y = h / 2 + Math.sin(rc.t * 2.5) * 3;
@@ -134,158 +102,117 @@ function drawItemCard(rc: RC, kind: ItemKind, w: number, h: number) {
   drawItemIcon(rc.s, kind, w / 2, y, k, rc.t);
 }
 
-function openModal(def: PropDef) {
-  let rot = 0;
-  const modal = document.createElement('div');
-  modal.className = 'modal';
-  const box = document.createElement('div');
-  box.className = 'box';
-  const left = document.createElement('div');
-  left.append(stage((rc, w, h) => drawProp(rc, def, rot, w, h), 'stage'));
-  const rotBtn = document.createElement('button');
-  rotBtn.textContent = '⟳ rotate';
-  rotBtn.onclick = () => {
-    rot = (rot + 1) % 4;
-  };
-  const close = document.createElement('button');
-  close.className = 'ghost';
-  close.textContent = 'close';
-  close.onclick = () => modal.remove();
-  const row = document.createElement('div');
-  row.style.cssText = 'display:flex;gap:8px;margin-top:10px';
-  row.append(rotBtn, close);
-  left.append(row);
-  const right = document.createElement('div');
-  right.innerHTML = `<h2 style="font:400 28px 'Lilita One';margin:0;color:#ffd9a8"></h2><div class="maker"></div>${summarize(def)
-    .map((s) => `<div class="stat">• ${s}</div>`)
-    .join('')}<p class="stat" style="margin-top:10px;color:#a39cb8"></p><pre></pre>`;
-  right.querySelector('h2')!.textContent = def.name;
-  right.querySelector('.maker')!.textContent = `${def.archetype} · ${def.maker} · footprint ${def.footprint.length} cell(s)`;
-  right.querySelector('p')!.textContent = [...new Set(def.modules.map((m) => m.type))].map((t) => `${PART_INFO[t].title}: ${PART_INFO[t].blurb}`).join('\n\n');
-  right.querySelector('pre')!.textContent = JSON.stringify(def, (_k, v) => (typeof v === 'number' ? Math.round(v * 1000) / 1000 : v), 2);
-  box.append(left, right);
-  modal.append(box);
-  modal.onclick = (e) => e.target === modal && modal.remove();
-  host?.append(modal);
+/** A shot looping across the stage, with the real projectile art. */
+function drawShot(rc: RC, ammo: Ammo, w: number, h: number) {
+  const spec = AMMO[ammo];
+  const T = 1.6;
+  const u = (rc.t % T) / T;
+  const k = Math.max(2.2, Math.min(w, h) / 70);
+  const x = -20 + u * (w / k + 40);
+  const lob = spec.gravity > 200;
+  const vy = lob ? -120 + 260 * u : 0;
+  const y = h / k / 2 + (lob ? -40 * Math.sin(u * Math.PI) : 0) + (spec.wobble ? Math.sin(rc.t * 15) * 3 : 0);
+  for (const ctx of [rc.s, rc.g]) {
+    ctx.save();
+    ctx.scale(k, k);
+  }
+  drawProjectile(rc, { ...makeProjectile({ x, y, vx: 180, vy, owner: 0, ammo }, rc.frame - Math.floor(u * 60), 0), n: ammo === 'glider' ? 0 : 3 });
+  rc.s.restore();
+  rc.g.restore();
 }
 
-/** The mounted codex's element: modals open inside it, so they leave with it. */
-let host: HTMLElement | null = null;
-
-function render(root: HTMLElement, nav: Nav) {
-  for (const l of lives) lives.delete(l);
-  observer.disconnect();
-  root.innerHTML = '';
-  const header = document.createElement('header');
-  header.innerHTML = `<h1>SLAG CODEX</h1><a href="/">← play</a><nav>${['parts', 'items', 'projectiles'].map((s) => `<a href="#${s}">${s}</a>`).join('')}</nav>`;
-  header.querySelector('a[href="/"]')!.addEventListener('click', (e) => {
-    e.preventDefault();
-    nav.go(HOME);
-  });
-  root.append(header);
-  const main = document.createElement('main');
-  root.append(main);
-
-  // Parts: every building block on its own.
-  const parts = document.createElement('section');
-  parts.id = 'parts';
-  parts.innerHTML = `<h2>Parts</h2><p>Some assembly required.</p>`;
-  for (const g of partGroups()) {
-    const h = document.createElement('div');
-    h.id = g.id;
-    h.className = 'arch';
-    h.textContent = g.title;
-    const blurb = document.createElement('p');
-    blurb.className = 'stat';
-    blurb.style.cssText = 'margin:-4px 0 10px;color:#a39cb8';
-    blurb.textContent = g.blurb;
-    const grid = document.createElement('div');
-    grid.className = 'grid';
-    grid.style.gridTemplateColumns = 'repeat(auto-fill,minmax(170px,1fr))';
-    for (const e of g.entries) {
-      const card = document.createElement('div');
-      card.className = 'card';
+/** Every section of the catalog, parts first, projectiles last. */
+function catalog(): Section[] {
+  const sections: Section[] = partGroups().map((g) => ({
+    id: g.id,
+    title: titleCase(g.title),
+    blurb: g.blurb,
+    entries: g.entries.map((e): Entry => {
+      const main = e.def.modules.find((m) => m.type !== 'body') ?? e.def.modules[0];
+      const quip = main ? PART_INFO[main.type].blurb : null;
       const item = e.item;
-      card.append(stage((rc, w, h2) => (item ? drawItemCard(rc, item, w, h2) : drawProp(rc, e.def, 0, w, h2))));
-      const meta = document.createElement('div');
-      meta.className = 'meta';
-      meta.innerHTML = `<div class="name"></div><div class="stat"></div>`;
-      meta.querySelector('.name')!.textContent = e.title;
-      meta.querySelector('.stat')!.textContent = e.note;
-      card.append(meta);
-      card.onclick = () => openModal(e.def);
-      grid.append(card);
-    }
-    parts.append(h, blurb, grid);
-  }
-  main.append(parts);
-
-  // Projectiles, in flight.
-  const proj = document.createElement('section');
-  proj.id = 'projectiles';
-  proj.innerHTML = `<h2>Projectiles</h2><p>Incoming.</p>`;
-  const pgrid = document.createElement('div');
-  pgrid.className = 'grid';
-  pgrid.style.gridTemplateColumns = 'repeat(auto-fill,minmax(170px,1fr))';
-  for (const [ammo, spec] of Object.entries(AMMO) as [Ammo, (typeof AMMO)[Ammo]][]) {
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.append(
-      stage((rc, w, h2) => {
-        // Loop a shot across the card using the real projectile art.
-        const T = 1.6;
-        const u = (rc.t % T) / T;
-        const k = 2.2;
-        const vx = 180;
-        const x = -20 + u * (w / k + 40);
-        const lob = spec.gravity > 200;
-        const vy = lob ? -120 + 260 * u : 0;
-        const y = h2 / k / 2 + (lob ? -40 * Math.sin(u * Math.PI) : 0) + (spec.wobble ? Math.sin(rc.t * 15) * 3 : 0);
-        for (const ctx of [rc.s, rc.g]) {
-          ctx.save();
-          ctx.scale(k, k);
-        }
-        drawProjectile(rc, { ...makeProjectile({ x, y, vx, vy, owner: 0, ammo }, rc.frame - Math.floor(u * 60), 0), n: ammo === 'glider' ? 0 : 3 });
-        rc.s.restore();
-        rc.g.restore();
-      }),
-    );
-    const meta = document.createElement('div');
-    meta.className = 'meta';
-    meta.innerHTML = `<div class="name"></div><div class="stat"></div>`;
-    const [label, joke] = PROJECTILE_NOTES[ammo];
-    meta.querySelector('.name')!.textContent = label;
-    meta.querySelector('.stat')!.textContent = `${joke} radius ${spec.radius}px${spec.gravity ? ` · gravity ${spec.gravity}` : ''}`;
-    card.append(meta);
-    pgrid.append(card);
-  }
-  proj.append(pgrid);
-  main.append(proj);
+      return {
+        title: titleCase(e.title),
+        note: e.note,
+        group: titleCase(g.title),
+        draw: item ? (rc, w, h) => drawItemCard(rc, item, w, h) : (rc, w, h, rot) => drawProp(rc, e.def, rot, w, h),
+        spec: summarize(e.def),
+        quip: quip && quip !== g.blurb && !quip.startsWith(e.note) ? quip : null,
+        turns: !item,
+      };
+    }),
+  }));
+  sections.push({
+    id: 'projectiles',
+    title: 'Projectiles',
+    blurb: 'Incoming.',
+    entries: (Object.keys(AMMO) as Ammo[]).map((ammo) => {
+      const [label, joke] = PROJECTILE_NOTES[ammo];
+      const spec = AMMO[ammo];
+      return {
+        title: titleCase(label),
+        note: joke,
+        group: 'Projectiles',
+        draw: (rc, w, h) => drawShot(rc, ammo, w, h),
+        spec: [`radius ${spec.radius}px${spec.gravity ? ` · gravity ${spec.gravity}` : ''}`],
+        quip: null,
+        turns: false,
+      };
+    }),
+  });
+  return sections;
 }
 
-function frame(now: number) {
-  const t = now / 1000;
-  const frameNo = Math.floor(now / (1000 / 60));
-  for (const l of lives) {
-    if (!l.visible || !l.base.isConnected) continue;
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    const w = l.base.clientWidth;
-    const h = l.base.clientHeight;
-    if (l.base.width !== Math.round(w * dpr)) {
-      for (const c of [l.base, l.glow]) {
-        c.width = Math.round(w * dpr);
-        c.height = Math.round(h * dpr);
-      }
-    }
-    const s = l.base.getContext('2d')!;
-    const g = l.glow.getContext('2d')!;
-    for (const c of [s, g]) {
-      c.setTransform(1, 0, 0, 1, 0, 0);
-      c.clearRect(0, 0, l.base.width, l.base.height);
-      c.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
-    l.draw({ s, bg: s, g, lights: null, t, frame: frameNo }, w, h);
-  }
+function codexHTML(sections: readonly Section[]): string {
+  let i = 0;
+  const index = sections
+    .map((s) => `<button type="button" data-sec="${s.id}"><span class="t">${esc(s.title)}</span><span class="n">${s.entries.length}</span></button>`)
+    .join('');
+  const body = sections
+    .map(
+      (s) =>
+        `<section class="cx-sec" id="${s.id}"><header class="cx-head"><h2>${esc(s.title)}</h2><span class="n">${s.entries.length}</span><p>${esc(s.blurb)}</p></header>` +
+        `<div class="cx-grid">${s.entries
+          .map(
+            (e) =>
+              `<button type="button" class="cx-card" data-i="${i++}" data-active="false"><span class="cx-well"></span>` +
+              `<span class="cx-plate"><span class="t">${esc(e.title)}</span><span class="s">${esc(e.note)}</span><span class="chev"></span></span></button>`,
+          )
+          .join('')}</div></section>`,
+    )
+    .join('');
+  const key = (label: string) => `<span class="slag-glyph">${glyphSVG({ kind: 'key', label }, 22)}</span>`;
+  return (
+    `<div class="codex" data-screen="codex">${forgeHTML()}` +
+    `<aside class="cx-side"><div class="cx-brand"><button type="button" class="cx-back" data-act="back" aria-label="Main Menu"></button>${scaledLogoHTML()}<h1 class="cx-title">CODEX</h1></div>` +
+    `<nav class="cx-index" aria-label="Sections">${index}</nav></aside>` +
+    `<main class="cx-main">${body}</main>` +
+    `<div class="cx-modal" role="dialog" aria-modal="true" aria-labelledby="cx-name" hidden><div class="cx-sheet">` +
+    `<div class="cx-stage"><span class="cx-well"></span><button type="button" class="cx-nav prev" data-act="prev" aria-label="Previous"></button><button type="button" class="cx-nav next" data-act="next" aria-label="Next"></button></div>` +
+    `<div class="cx-info"><span class="cx-tag"></span><h2 id="cx-name"></h2><p class="cx-joke"></p><ul class="cx-spec"></ul><p class="cx-quip"></p>` +
+    `<div class="cx-actions"><button type="button" class="cx-btn" data-act="rotate">${key('R')}Rotate</button><button type="button" class="cx-btn primary" data-act="close">${key('Esc')}Close</button></div></div>` +
+    `</div></div>` +
+    `<footer class="footbar cx-foot"><span class="meta">Codex</span><div class="prompts"></div></footer></div>`
+  );
+}
+
+/** The footer: what the arrows, Enter, the section keys and Esc do here, or in the close-up. */
+function footerHTML(open: boolean, turns: boolean, pad: boolean): string {
+  const p = (keys: string[], buttons: Parameters<typeof promptHTML>[1], label: string, act?: string) => promptHTML(keys, pad ? buttons : null, label, act);
+  if (open) return p(['←', '→'], ['DPAD'], 'Browse') + (turns ? p(['R'], ['X'], 'Rotate', 'rotate') : '') + p(['Esc'], ['B'], 'Close', 'close');
+  return (
+    p(['↑', '↓', '←', '→'], ['DPAD'], 'Select') +
+    p(['Enter'], ['A'], 'Look Closer') +
+    p(['Q', 'E'], ['LB', 'RB'], 'Section') +
+    p(['Esc'], ['B'], 'Back', 'back')
+  );
+}
+
+interface Live {
+  base: HTMLCanvasElement;
+  glow: HTMLCanvasElement;
+  draw(rc: RC, w: number, h: number): void;
+  visible: boolean;
 }
 
 /**
@@ -294,33 +221,265 @@ function frame(now: number) {
  */
 export function mountCodex(root: HTMLElement, nav: Nav): Unmount {
   const st = document.createElement('style');
-  st.textContent = CSS;
+  st.textContent = CODEX_CSS;
   document.head.append(st);
-  const el = document.createElement('div');
-  el.className = 'slag-codex';
-  root.append(el);
-  host = el;
-  render(el, nav);
-  const back = () => {
-    const modal = el.querySelector('.modal');
-    if (modal) modal.remove();
-    else nav.go(HOME);
+  const sections = catalog();
+  const entries = sections.flatMap((s) => s.entries);
+  const firstOf = sections.map((_, si) => sections.slice(0, si).reduce((n, s) => n + s.entries.length, 0));
+  const sectionOf = (i: number) => {
+    let si = 0;
+    while (si + 1 < firstOf.length && firstOf[si + 1] <= i) si++;
+    return si;
   };
+
+  const wrap = document.createElement('div');
+  wrap.innerHTML = codexHTML(sections);
+  const el = wrap.firstElementChild as HTMLElement;
+  root.append(el);
+  const $ = (sel: string) => el.querySelector<HTMLElement>(sel)!;
+  const cards = [...el.querySelectorAll<HTMLButtonElement>('.cx-card')];
+  const secEls = [...el.querySelectorAll<HTMLElement>('.cx-sec')];
+  const indexBtns = [...el.querySelectorAll<HTMLButtonElement>('.cx-index button')];
+  const side = $('.cx-side');
+  const index = $('.cx-index');
+  const foot = $('.cx-foot');
+  const prompts = $('.cx-foot .prompts');
+  const modal = $('.cx-modal');
+  const rotBtn = $('[data-act=rotate]');
+  const phone = matchMedia('(max-width: 860px)');
+
+  // Live stages: each card draws its part every frame while it's on screen.
+  const lives: Live[] = [];
+  const observer = new IntersectionObserver((list) => {
+    for (const e of list) {
+      const live = lives[Number((e.target as HTMLElement).dataset.live)];
+      if (live) live.visible = e.isIntersecting;
+    }
+  });
+  const stage = (well: HTMLElement, draw: Live['draw']): Live => {
+    const base = document.createElement('canvas');
+    const glow = document.createElement('canvas');
+    glow.className = 'glow';
+    well.append(base, glow);
+    const live: Live = { base, glow, draw, visible: false };
+    well.dataset.live = String(lives.length);
+    lives.push(live);
+    observer.observe(well);
+    return live;
+  };
+  cards.forEach((c, i) => stage(c.querySelector('.cx-well')!, (rc, w, h) => entries[i].draw(rc, w, h, 0)));
+  let open = -1;
+  let rot = 0;
+  const closeUp = stage($('.cx-stage .cx-well'), (rc, w, h) => {
+    if (open >= 0) entries[open].draw(rc, w, h, rot);
+  });
+
+  let pad = connectedPads().length > 0;
+  const paintFooter = () => (prompts.innerHTML = footerHTML(open >= 0, open >= 0 && entries[open].turns, pad));
+
+  /** How much of the window the sticky header and the footer cover. */
+  const insets = () => ({ top: phone.matches ? side.offsetHeight : 0, bottom: foot.offsetHeight });
+  const reveal = (card: HTMLElement) => {
+    const r = card.getBoundingClientRect();
+    const { top, bottom } = insets();
+    const room = 18;
+    if (r.top < top + room) window.scrollBy({ top: r.top - top - room });
+    else if (r.bottom > innerHeight - bottom - room) window.scrollBy({ top: r.bottom - (innerHeight - bottom - room) });
+  };
+
+  let active = 0;
+  const setActive = (i: number, how: { focus?: boolean; scroll?: boolean } = {}) => {
+    cards[active].dataset.active = 'false';
+    active = i;
+    cards[i].dataset.active = 'true';
+    if (how.focus) cards[i].focus({ preventScroll: true });
+    if (how.scroll) reveal(cards[i]);
+  };
+  setActive(0);
+
+  const move = (dir: 'up' | 'down' | 'left' | 'right') => {
+    let to: number | null;
+    if (dir === 'left' || dir === 'right') to = Math.max(0, Math.min(cards.length - 1, active + (dir === 'left' ? -1 : 1)));
+    else
+      to = navTarget(
+        cards.map((c) => c.getBoundingClientRect()),
+        active,
+        dir,
+      );
+    if (to !== null && to !== active) setActive(to, { focus: true, scroll: true });
+  };
+
+  const toSection = (si: number) => {
+    const s = secEls[si];
+    const { top } = insets();
+    window.scrollTo({ top: s.getBoundingClientRect().top + scrollY - top - 20 });
+    setActive(firstOf[si], { focus: true });
+  };
+
+  // The section on screen lights up in the index.
+  let shownSec = -1;
+  const spy = () => {
+    const { top } = insets();
+    let si = 0;
+    for (let i = 0; i < secEls.length; i++) if (secEls[i].getBoundingClientRect().top <= top + innerHeight * 0.3) si = i;
+    if (si === shownSec) return;
+    shownSec = si;
+    indexBtns.forEach((b, i) => b.setAttribute('aria-current', String(i === si)));
+    // On a phone the index is a strip: keep the lit chip in it.
+    if (phone.matches) {
+      const b = indexBtns[si];
+      if (b.offsetLeft < index.scrollLeft || b.offsetLeft + b.offsetWidth > index.scrollLeft + index.clientWidth)
+        index.scrollTo({ left: b.offsetLeft - 14, behavior: 'smooth' });
+    }
+  };
+
+  const showPart = (i: number) => {
+    open = i;
+    rot = 0;
+    const e = entries[i];
+    $('.cx-tag').textContent = e.group;
+    $('#cx-name').textContent = e.title;
+    $('.cx-joke').textContent = e.note;
+    const spec = $('.cx-spec');
+    spec.replaceChildren(
+      ...e.spec.map((line) => {
+        const li = document.createElement('li');
+        li.textContent = line;
+        return li;
+      }),
+    );
+    spec.hidden = e.spec.length === 0;
+    const quip = $('.cx-quip');
+    quip.textContent = e.quip ?? '';
+    quip.hidden = !e.quip;
+    rotBtn.hidden = !e.turns;
+    if (active !== i) setActive(i, { scroll: true });
+    paintFooter();
+  };
+  const openPart = (i: number) => {
+    showPart(i);
+    modal.hidden = false;
+    closeUp.visible = true;
+    $('[data-act=close]').focus({ preventScroll: true });
+  };
+  const closePart = () => {
+    open = -1;
+    modal.hidden = true;
+    closeUp.visible = false;
+    cards[active].focus({ preventScroll: true });
+    paintFooter();
+  };
+  const browse = (d: number) => showPart((open + d + entries.length) % entries.length);
+  const back = () => (open >= 0 ? closePart() : nav.go(HOME));
+
+  const act = (a: string | undefined) => {
+    if (a === 'back' || a === 'close') back();
+    else if (a === 'rotate' && open >= 0 && entries[open].turns) rot = (rot + 1) % 4;
+    else if (a === 'prev') browse(-1);
+    else if (a === 'next') browse(1);
+  };
+
   const life = new AbortController();
-  window.addEventListener('keydown', (e) => e.key === 'Escape' && back(), { signal: life.signal });
-  const pads = () => (navigator.getGamepads ? [...navigator.getGamepads()].filter((p): p is Gamepad => !!p?.connected) : []);
-  const reader = new MenuPadReader(readMenuPad(pads()));
+  const on = { signal: life.signal };
+  cards.forEach((c, i) => {
+    c.addEventListener('mouseenter', () => setActive(i), on);
+    c.addEventListener('focus', () => i !== active && setActive(i), on);
+    c.addEventListener('click', () => openPart(i), on);
+  });
+  indexBtns.forEach((b, si) => b.addEventListener('click', () => toSection(si), on));
+  el.addEventListener('click', (e) => act((e.target as Element).closest<HTMLElement>('[data-act]')?.dataset.act), on);
+  modal.addEventListener('click', (e) => e.target === modal && closePart(), on);
+
+  const menuAction = (a: MenuAction) => {
+    if (open >= 0) {
+      if (a === 'left' || a === 'prevTab') browse(-1);
+      else if (a === 'right' || a === 'nextTab') browse(1);
+      else if (a === 'back') back();
+      return;
+    }
+    if (a === 'up' || a === 'down' || a === 'left' || a === 'right') move(a);
+    else if (a === 'prevTab' || a === 'nextTab') toSection(Math.max(0, Math.min(sections.length - 1, sectionOf(active) + (a === 'prevTab' ? -1 : 1))));
+    else if (a === 'confirm') openPart(active);
+    else if (a === 'back') back();
+  };
+
+  window.addEventListener(
+    'keydown',
+    (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        back();
+        return;
+      }
+      if (open >= 0 && e.code === 'KeyR') {
+        act('rotate');
+        return;
+      }
+      const a = KEY_ACTIONS[e.code];
+      if (a) {
+        e.preventDefault();
+        menuAction(a);
+        return;
+      }
+      // Enter on a focused button is that button's own click; with nothing focused it opens the selected part.
+      if (e.key === 'Enter' && open < 0 && !(document.activeElement instanceof HTMLButtonElement && el.contains(document.activeElement))) {
+        e.preventDefault();
+        openPart(active);
+      }
+    },
+    on,
+  );
+  window.addEventListener('scroll', () => spy(), { passive: true, signal: life.signal });
+  spy();
+  paintFooter();
+
+  // Gamepads: the menu reader for directions, Ⓐ, Ⓑ and the bumpers; Ⓧ turns the part up close.
+  const reader = new MenuPadReader(readMenuPad(connectedPads()));
+  let xHeld = true;
+  const frame = (now: number) => {
+    const pads = connectedPads();
+    if (pads.length > 0 !== pad) {
+      pad = pads.length > 0;
+      paintFooter();
+    }
+    for (const a of reader.step(readMenuPad(pads), now)) menuAction(a);
+    const x = pads.some((p) => p.buttons.at(2)?.pressed);
+    if (x && !xHeld) act('rotate');
+    xHeld = x;
+    const t = now / 1000;
+    const frameNo = Math.floor(now / (1000 / 60));
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    for (const l of lives) {
+      // Up close, only the close-up draws: the cards are under the scrim.
+      if (!l.visible || open >= 0 !== (l === closeUp)) continue;
+      const w = l.base.clientWidth;
+      const h = l.base.clientHeight;
+      if (!w || !h) continue;
+      if (l.base.width !== Math.round(w * dpr) || l.base.height !== Math.round(h * dpr)) {
+        for (const c of [l.base, l.glow]) {
+          c.width = Math.round(w * dpr);
+          c.height = Math.round(h * dpr);
+        }
+      }
+      const s = l.base.getContext('2d')!;
+      const g = l.glow.getContext('2d')!;
+      for (const c of [s, g]) {
+        c.setTransform(1, 0, 0, 1, 0, 0);
+        c.clearRect(0, 0, l.base.width, l.base.height);
+        c.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+      l.draw({ s, bg: s, g, lights: null, t, frame: frameNo }, w, h);
+    }
+  };
   let raf = requestAnimationFrame(function loop(now) {
     raf = requestAnimationFrame(loop);
     frame(now);
-    for (const a of reader.step(readMenuPad(pads()), now)) if (a === 'back') back();
   });
+
   return () => {
     life.abort();
     cancelAnimationFrame(raf);
-    lives.clear();
     observer.disconnect();
-    host = null;
     el.remove();
     st.remove();
   };
