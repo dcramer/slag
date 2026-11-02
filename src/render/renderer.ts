@@ -1,4 +1,5 @@
 import { css, type HSL, shift, toRgb } from '../core/color';
+import { clamp } from '../core/geom';
 import type { Match } from '../game/match';
 import { TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import { type Level, tileAt } from '../sim/level';
@@ -7,14 +8,14 @@ import type { RunWorld } from '../sim/run';
 import type { GameEvent } from '../sim/types';
 import { Backdrop } from './background';
 import { Camera } from './camera';
-import { drawAccessory, drawCharacter, Rig } from './character';
+import { drawAccessory, drawAfterimage, drawCharacter, Rig } from './character';
 import { ComicLayer, Lettering, speedLines } from './comic';
 import { Fx } from './fx';
 import { Hud } from './hud';
 import { drawClouds, drawDrops, drawRunnerItems, itemFx } from './items';
 import { circle, glowDot, type Light, light, type RC } from './kit';
 import { type Compositor, createCompositor } from './post';
-import { drawBlastPreview, drawProjectile, drawResolved, drawRunnerStatus, type Emit, propEventFx } from './props';
+import { drawBackdrop, drawBlastPreview, drawForeground, drawProjectile, drawResolved, drawRunnerStatus, type Emit, propEventFx } from './props';
 import { initialStyle, type RenderStyle, saveRenderSettings } from './style';
 import { TerrainPainter } from './terrain';
 // Mobile: quality tiers / adaptive resolution / safe-area insets (owned by the touch module).
@@ -27,6 +28,15 @@ function camOf(ctx: CanvasRenderingContext2D): [number, number, number] {
   const m = ctx.getTransform();
   return [m.e, m.f, m.a];
 }
+// Speed trail. Vertical speed counts for less: a jump's launch is fast, but a walking hop isn't speed.
+const TRAIL_RISE = 0.5;
+/** px/s where the trail starts (past a walk, so a flat-out run shows a short echo) and where it peaks. */
+const TRAIL_MIN_SPEED = 140;
+const TRAIL_FULL_SPEED = 300;
+/** Peak opacity of one sample, how far apart samples sit (px), and seconds to fade out. */
+const TRAIL_ALPHA = 0.28;
+const TRAIL_GAP = 7;
+const TRAIL_LIFE = 0.2;
 
 /**
  * Orchestrates a frame: Canvas2D paints albedo/emissive/light layers in
@@ -188,17 +198,19 @@ export class Renderer {
     this.cam.apply(s, this.pw);
     this.cam.apply(rc.s, this.pw);
     this.cam.apply(g, this.pw);
+    const run = m.phase === 'run' ? m.run : null;
+    // Set pieces are part of the level: show them in every phase (lobby, pick, place), not just races.
+    const resolved = run ? run.resolved : [...level.setPieces, ...m.placed].map(resolveProp);
+    // Scenery goes down first so the terrain stands in front of it and shadows it.
+    for (const r of resolved) drawBackdrop(rc, r, { level });
     this.terrain.drawShadow(rc);
     this.terrain.draw(rc);
     const pushers = m.run ? m.run.runners.filter((r) => r.alive).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h })) : [];
     this.terrain.drawLive(rc, level, pushers, s);
     this.drawMarkers(rc, level);
 
-    const run = m.phase === 'run' ? m.run : null;
-    // Set pieces are part of the level: show them in every phase (lobby, pick, place), not just races.
-    const resolved = run ? run.resolved : [...level.setPieces, ...m.placed].map(resolveProp);
     for (const r of resolved) {
-      drawResolved(rc, r, {
+      drawForeground(rc, r, {
         level,
         state: run?.propState.get(r.pp.uid),
         broken: run ? run.isBroken(r.pp.uid) : false,
@@ -214,6 +226,11 @@ export class Renderer {
       for (const p of run.projectiles) drawProjectile(rc, p, emit);
       this.drawSafeZone(rc, level, run);
       drawDrops(rc, run);
+      // All trails first: in a pack, nobody's trail may paint over another runner.
+      for (const r of run.runners) {
+        const pl = m.player(r.slot);
+        if (r.alive && pl) this.drawTrail(rc, pl.character, r.slot, r.body.x + r.body.w / 2, r.body.y + r.body.h, r.body.vx, r.body.vy, dt);
+      }
       for (const r of run.runners) {
         if (!r.alive) continue;
         const pl = m.player(r.slot);
@@ -454,6 +471,18 @@ export class Renderer {
     });
   }
 
+  /** Fades in with speed, so a walk leaves nothing and the trail only shows when a runner is really moving. */
+  private drawTrail(rc: RC, c: Match['players'][number]['character'], slot: number, x: number, y: number, vx: number, vy: number, dt: number) {
+    const rig = this.rigs.get(slot);
+    if (!rig) return;
+    const k = clamp((Math.hypot(vx, vy * TRAIL_RISE) - TRAIL_MIN_SPEED) / (TRAIL_FULL_SPEED - TRAIL_MIN_SPEED), 0, 1);
+    const tail = rig.trail.at(-1);
+    if (k > 0 && (!tail || Math.hypot(x - tail.x, y - tail.y) >= TRAIL_GAP)) rig.trail.push({ x, y, a: k * TRAIL_ALPHA });
+    rig.trail = rig.trail.filter((p) => (p.a -= (dt * TRAIL_ALPHA) / TRAIL_LIFE) > 0);
+    if (this.style === 'comic') speedLines(this.sctx, rc.t, x, y, vx, vy);
+    else for (const p of rig.trail) drawAfterimage(rc.s, c, p.x, p.y, p.a);
+  }
+
   private drawRunner(
     rc: RC,
     level: Level,
@@ -480,17 +509,6 @@ export class Renderer {
       this.fx.add('dust', x - Math.sign(vx) * 4, y - 1, -vx * 0.15, -10, shift(level.theme.terrain.light, 10), 1, 0.4);
     rig.wasGrounded = grounded;
     rig.lastVy = vy;
-    const speed = Math.hypot(vx, vy);
-    if (speed > 240) rig.trail.push({ x, y, a: 0.5 });
-    rig.trail = rig.trail.filter((p) => (p.a -= dt * 2.5) > 0);
-    if (this.style === 'comic') speedLines(this.sctx, rc.t, x, y, vx, vy);
-    else {
-      for (const p of rig.trail) {
-        rc.s.globalAlpha = p.a * 0.5;
-        drawCharacter(rc, c, p.x, p.y, { facing, vx, vy, grounded, t: rc.t });
-      }
-      rc.s.globalAlpha = 1;
-    }
 
     // Contact shadow on whatever is below.
     const tx = Math.floor(x / TILE);

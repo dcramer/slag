@@ -75,8 +75,8 @@ No branch yet. `origin/wip/content` has a dropped launch barrel (module and art)
 - Add both to `reach.ts` only if worldgen ever relies on them. For now it shouldn't.
 
 ## 8. Render polish
-- **Set-piece layering:** scenery halves draw *behind* the terrain (the windmill tower, crane mast, press gantry, antenna masts). Moving and solid parts stay in front (the blades, platforms). Layer order is in `docs/DESIGN.md` → Levels. This is probably a `backdrop` art layer drawn before terrain in `src/render/renderer.ts` and the `defineArt` layers.
-- **The player's glowing trail is too strong.** Tone it down.
+- **Liquid draw order:** `drawLiquid` still paints after players and effects, while `docs/DESIGN.md` lists liquids behind terrain.
+- **`pnpm shot race` without `--race`** never starts a race: it stays in pick at frame 0.
 - **Cel-shaded look:** the owner wants cel shading (flat colors, hard light bands, clean thin ink), likely as the game's main look rather than an option. Switching art style may stay as a fun gimmick, so keep styles in a registry. In progress; the owner picks whether it becomes the default once it's seen, ideally in motion and on a real phone. Anything thin or soft drawn on `rc.s` gets silhouette ink, so soft effects should draw on the background context.
 
 ## 9. Weather (new)

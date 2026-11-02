@@ -3,13 +3,14 @@ import { frac } from '../../../core/geom';
 import { hash2 } from '../../../core/rng';
 import type { ModuleOf } from '../../../sim/props';
 import { circle, glowDot, hazardStripes, light, METALS, metalFill, type RC, rivet, rrect } from '../../kit';
-import { type DrawCtx, defineArt } from '../common';
+import { BACKDROP, type DrawCtx, defineArt } from '../common';
 import { lattice } from './setpiece';
 
 /**
- * Scenery dressing for set pieces: the press gantry (posts behind, beam in
- * front of the piston shaft, a warning lamp synced to the piston), rooftop
- * AC housings, and antenna masts under tesla coils.
+ * Scenery dressing for set pieces: the press gantry and the antenna masts
+ * under tesla coils stand behind the terrain. The press's warning lamp (a
+ * tell, synced to the piston) and rooftop AC housings (they skin a solid
+ * body you stand on) stay in front.
  */
 
 type Deco = ModuleOf<'deco'>;
@@ -66,24 +67,27 @@ function pressBeam(rc: RC, m: Deco, d: DrawCtx) {
   s.stroke();
   hazardStripes(s, x + 1, y + 10, m.w - 2, 3.5, 0.9);
   for (let px = x + 4; px < x + m.w - 2; px += 6) rivet(s, px, y + 3, pal, 0.9);
-  // Warning lamp, synced to the piston: blinks before the slam, solid while slamming.
+}
+
+/** Warning lamp, synced to the piston: blinks before the slam, solid while slamming. */
+function pressLamp(rc: RC, m: Deco, d: DrawCtx) {
   const p = d.r.mods.find((mm) => mm.type === 'piston');
-  if (p && p.type === 'piston') {
-    const t = frac(rc.frame / p.period + d.r.phase);
-    const slam = t < 0.12;
-    const soon = t > 0.8;
-    const on = slam || (soon && Math.floor(rc.frame / 5) % 2 === 0);
-    const lx = x + 7;
-    const ly = y - 3;
-    s.fillStyle = '#2a2a30';
-    s.fillRect(lx - 3, ly + 1, 6, 2.5);
-    s.fillStyle = on ? '#ff5040' : '#5a1a16';
-    circle(s, lx, ly, 2.4);
-    if (on) {
-      const red: HSL = { h: 4, s: 100, l: 55 };
-      glowDot(rc.g, lx, ly, 12, red, 0.9);
-      light(rc, lx, ly, 60, red, 0.8);
-    }
+  if (!p || p.type !== 'piston') return;
+  const s = rc.s;
+  const t = frac(rc.frame / p.period + d.r.phase);
+  const slam = t < 0.12;
+  const soon = t > 0.8;
+  const on = slam || (soon && Math.floor(rc.frame / 5) % 2 === 0);
+  const lx = m.at[0] + d.off[0] + 7;
+  const ly = m.at[1] + d.off[1] - 3;
+  s.fillStyle = '#2a2a30';
+  s.fillRect(lx - 3, ly + 1, 6, 2.5);
+  s.fillStyle = on ? '#ff5040' : '#5a1a16';
+  circle(s, lx, ly, 2.4);
+  if (on) {
+    const red: HSL = { h: 4, s: 100, l: 55 };
+    glowDot(rc.g, lx, ly, 12, red, 0.9);
+    light(rc, lx, ly, 60, red, 0.8);
   }
 }
 
@@ -179,11 +183,13 @@ function antennaMasts(rc: RC, m: Deco, d: DrawCtx) {
 
 defineArt<'deco'>({
   type: 'deco',
-  layer: 0,
+  layer: BACKDROP,
   draw: (rc, m, d) => {
-    if (m.kind === 'press') pressPosts(rc, m, d);
-    else if (m.kind === 'antenna') antennaMasts(rc, m, d);
+    if (m.kind === 'press') {
+      pressPosts(rc, m, d);
+      pressBeam(rc, m, d);
+    } else if (m.kind === 'antenna') antennaMasts(rc, m, d);
   },
 });
 defineArt<'deco'>({ type: 'deco', layer: 1, draw: (rc, m, d) => m.kind === 'ac' && acHousing(rc, m, d) });
-defineArt<'deco'>({ type: 'deco', layer: 2, draw: (rc, m, d) => m.kind === 'press' && pressBeam(rc, m, d) });
+defineArt<'deco'>({ type: 'deco', layer: 2, draw: (rc, m, d) => m.kind === 'press' && pressLamp(rc, m, d) });
