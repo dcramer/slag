@@ -4,7 +4,7 @@ import { TILE } from '../../../sim/constants';
 import { type ModuleOf, NEON_ON, NEON_WARN, neonCycle } from '../../../sim/props';
 import { blob, inkFor, line, type P, stroke } from '../../ink';
 import { boxPts, part, sprite, stamp } from '../../ink-props';
-import { glowDot, light, lightning, type RC } from '../../kit';
+import { glowDot, light, type RC, zap } from '../../kit';
 import { type DrawCtx, defineArt } from '../common';
 
 /**
@@ -16,8 +16,8 @@ import { type DrawCtx, defineArt } from '../common';
 
 type Neon = ModuleOf<'neon'>;
 
-/** A stroke font on a unit box (x right, y down): just the letters the words below use. */
-const FONT: Record<string, number[][]> = {
+/** A stroke font on a unit box (x right, y down): just the letters the city's words use. Signs letter with it too. */
+export const FONT: Record<string, number[][]> = {
   A: [
     [0, 1, 0.5, 0, 1, 1],
     [0.22, 0.6, 0.78, 0.6],
@@ -76,9 +76,14 @@ const FONT: Record<string, number[][]> = {
   ],
   U: [[0, 0, 0, 0.75, 0.3, 1, 0.7, 1, 1, 0.75, 1, 0]],
   V: [[0, 0, 0.5, 1, 1, 0]],
+  W: [[0, 0, 0.22, 1, 0.5, 0.42, 0.78, 1, 1, 0]],
   X: [
     [0, 0, 1, 1],
     [1, 0, 0, 1],
+  ],
+  Y: [
+    [0, 0, 0.5, 0.5, 1, 0],
+    [0.5, 0.5, 0.5, 1],
   ],
   Z: [[0, 0, 1, 0, 0, 1, 1, 1]],
 };
@@ -91,6 +96,15 @@ const WORDS: Record<number, readonly string[]> = {
   6: ['DONUTS', 'CASINO', 'BURGER', 'ARCADE', 'TICKET'],
   7: ['LIQUORS', 'THEATER', 'NOODLES', 'DANCING'],
 };
+
+/** A letter's strokes in the box at (x, y), `w` wide and `h` tall: polylines for the pen to follow. */
+export function letterPts(ch: string, x: number, y: number, w: number, h: number): P[][] {
+  return (FONT[ch] ?? FONT.O).map((s) => {
+    const pts: P[] = [];
+    for (let i = 0; i + 1 < s.length; i += 2) pts.push({ x: x + s[i] * w, y: y + s[i + 1] * h });
+    return pts;
+  });
+}
 
 /** The word a sign of `n` letters says, from its seed; a word too short is padded with stars. */
 export function neonWord(n: number, seed: number): string {
@@ -133,11 +147,7 @@ function strokes(ch: string, x: number, y: number): P[][] {
     }
     return out;
   }
-  return (FONT[ch] ?? FONT.O).map((s) => {
-    const pts: P[] = [];
-    for (let i = 0; i + 1 < s.length; i += 2) pts.push({ x: x + 3.5 + s[i] * 9, y: y + 3 + s[i + 1] * 10 });
-    return pts;
-  });
+  return letterPts(ch, x + 3.5, y + 3, 9, 10);
 }
 
 function draw(rc: RC, m: Neon, d: DrawCtx) {
@@ -170,10 +180,8 @@ function draw(rc: RC, m: Neon, d: DrawCtx) {
     light(rc, x + TILE / 2, y + TILE / 2, 40, col, 0.6);
     // Live: a crackle running over the top of the box.
     if (Math.random() < 0.45) {
-      rc.g.strokeStyle = css(col, 24, 0.85);
-      rc.g.lineWidth = 0.6;
       const a = x + 2 + Math.random() * (TILE - 4);
-      lightning(rc.g, a, y - 0.5, a + (Math.random() - 0.5) * 8, y - 1.5 - Math.random() * 2, 1.6, 3);
+      zap(rc.g, a, y - 0.5, a + (Math.random() - 0.5) * 8, y - 1.5 - Math.random() * 2, 1.6, 3, col, 0.6);
     }
   });
   // A thin feed cable along the backs of the boxes, to the first one.
