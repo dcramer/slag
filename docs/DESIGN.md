@@ -2,6 +2,15 @@
 
 This is a concise log of decided rules. It's the source of truth for gameplay intent. When a decision changes, update this file in the same commit. Implementation details live in AGENTS.md and the code. The full log of the owner's decisions, with dates, status and what each one replaced, is [DECISIONS.md](DECISIONS.md).
 
+## Lore
+Design guidance, never game text (see Discovery). When a choice is unclear, ask what fits this world.
+
+> **Slag** is what's left over. Every game anyone loves is poured from the Great Foundry, and the runoff cools into Slag: a scrap world of melted-down levels (a farm here, a castle there, half a space station) and the characters who never made the cut, from stray animals to knock-off heroes who almost got their own game.
+>
+> Once a night the Foundry opens a single mould. Whoever reaches the flag gets cast into the next real game. Everyone builds the course together from whatever scrap tumbles out of the crate, and everyone sabotages it, because there's only one mould.
+
+What it explains: themes are melted-down levels (game-like places, slightly off); the cast is rejects and knock-offs, so parody belongs; parts are scrap from other games; one mould means one winner, and a course everyone finishes earns nobody the mould.
+
 ## Core loop
 - Lobby → **Pick** (claim one prop from a crate) → **Place** (put it in the level) → **Race** to the flag → **Score**. Repeat until someone reaches the target score or the round limit, whichever comes first, then **Victory**.
 - Matches have 1–8 players. Players can be local (any mix of keyboard, gamepads and touch) or online.
