@@ -6,6 +6,8 @@ export interface InputFrame {
   down: boolean;
   jump: boolean;
   jumpPressed: boolean;
+  /** Held: run instead of walk (faster, longer jumps, more momentum). */
+  run?: boolean;
   confirmPressed: boolean;
   altPressed: boolean;
   downPressed: boolean;

@@ -178,7 +178,7 @@ export class SettingsMenu extends Overlay {
       el('div', {
         className: 'slag-note',
         textContent:
-          'Click a slot, then press a key. Backspace clears, Esc cancels. Mouse: move/left-click to pick & place, right-click or wheel to rotate. Gamepads: stick/d-pad, A = jump/confirm, B/X/bumpers = rotate.',
+          'Click a slot, then press a key. Backspace clears, Esc cancels. Mouse: move/left-click to pick & place, right-click or wheel to rotate. Gamepads: stick/d-pad, A = jump/confirm, X/RB/RT = run, B/Y/LB = rotate.',
       }),
     );
     const reset = el('button', { className: 'slag-btn', textContent: 'Reset controls' });

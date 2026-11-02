@@ -31,7 +31,9 @@ function tileAt(level: Level, tx: number, ty: number): number {
  * the ghost lands. BFS over that graph tells us whether the goal is reachable
  * from spawn.
  *
- * Policies: walk-offs; jumps of two heights with three air-control lengths;
+ * Policies: walk-offs; walking jumps of two heights with three air-control
+ * lengths; running jumps from each platform start (max run-up, jump at the
+ * edge, three air-control lengths) and run-offs;
  * straight-up jumps that steer late (up, then over a lip); drop-throughs on
  * one-way platforms; and reactive wall-jump policies — single-wall climb
  * (keep steering back into the wall after each kick) and shaft climb
@@ -59,6 +61,8 @@ interface Policy {
   readonly forks?: readonly Fork[];
   /** Spawn a wall-climb policy the first time this run presses into a wall (this side) past the apex. */
   readonly wallFork?: -1 | 1;
+  /** Keep tracing while still on the ground (run-ups), instead of giving up after a short walk. */
+  readonly runway?: boolean;
   /** Called after each step (wall policy bookkeeping); may return a policy to fork from the new state. */
   after?(b: Body): Policy | null;
   /**
@@ -88,6 +92,7 @@ class JumpPolicy implements Policy {
   ) {}
   input(f: number, _b: Body, c: Controls) {
     const d = f >= this.dirFrom && f < this.dirTo ? this.dir : 0;
+    c.run = false;
     c.left = d < 0;
     c.right = d > 0;
     c.down = false;
@@ -96,10 +101,51 @@ class JumpPolicy implements Policy {
   }
 }
 
+/**
+ * Running jump: hold RUN + dir from a platform start (maximum run-up), jump at
+ * the last moment before running off the edge (or just run off), then either
+ * keep holding the direction or let go after a few frames to land shorter.
+ */
+class RunPolicy implements Policy {
+  readonly maxFrames = 170;
+  readonly runway = true;
+  private jumpAt = -1;
+  constructor(
+    readonly level: Level,
+    readonly dir: -1 | 1,
+    /** Frames jump is held once pressed (0 = run off without jumping). */
+    readonly jumpFrames: number,
+    /** Release the direction this many frames after take-off (99 = never). */
+    readonly releaseAfter: number,
+  ) {}
+  input(f: number, b: Body, c: Controls) {
+    c.down = false;
+    c.run = true;
+    c.jumpPressed = false;
+    if (this.jumpAt < 0 && b.onGround && this.jumpFrames > 0) {
+      // About to leave the ground? Look one step ahead under the leading foot.
+      const step = Math.max(1, Math.abs(b.vx) / 60);
+      const ax = this.dir > 0 ? b.x + b.w + step : b.x - step;
+      const ty = Math.floor((b.y + b.h + 1) / TILE);
+      const under = tileAt(this.level, Math.floor(ax / TILE), ty);
+      if (under !== T_SOLID && under !== T_ONEWAY) {
+        this.jumpAt = f;
+        c.jumpPressed = true;
+      }
+    }
+    const since = this.jumpAt < 0 ? -1 : f - this.jumpAt;
+    c.jump = since >= 0 && since < this.jumpFrames;
+    const holding = since < 0 || since < this.releaseAfter;
+    c.left = holding && this.dir < 0;
+    c.right = holding && this.dir > 0;
+  }
+}
+
 class DropPolicy implements Policy {
   readonly maxFrames = MAX_FRAMES;
   constructor(readonly dir: -1 | 0 | 1) {}
   input(f: number, _b: Body, c: Controls) {
+    c.run = false;
     c.left = this.dir < 0;
     c.right = this.dir > 0;
     c.down = f < 2;
@@ -129,6 +175,7 @@ class WallPolicy implements Policy {
   input(_f: number, b: Body, c: Controls) {
     if (this.count < 0) this.count = b.wallJumps;
     c.down = false;
+    c.run = false;
     c.jumpPressed = false;
     if (this.press) {
       if (this.zigzag) this.d = this.d > 0 ? -1 : 1;
@@ -164,8 +211,15 @@ class WallPolicy implements Policy {
   }
 }
 
-function policiesFor(onOneWay: boolean): Policy[] {
+function policiesFor(onOneWay: boolean, level?: Level, runFrom?: readonly (-1 | 1)[]): Policy[] {
   const out: Policy[] = [];
+  if (level && runFrom) {
+    for (const d of runFrom) {
+      out.push(new RunPolicy(level, d, 0, 99));
+      out.push(new RunPolicy(level, d, 6, 99));
+      for (const rel of [99, 8, 16]) out.push(new RunPolicy(level, d, 99, rel));
+    }
+  }
   out.push(
     new JumpPolicy(0, 99, 0, 0, [
       { at: LATE_STEER, make: () => new JumpPolicy(-1, 99, LATE_STEER, 99, undefined, -1) },
@@ -222,7 +276,17 @@ export function analyzeReach(level: Level, stopAtGoal = true): ReachResult {
     const ty = (k - tx) / level.w;
     for (const nx of [tx - 1, tx + 1]) if (isStandable(level, nx, ty)) pushKey(key(nx, ty));
     const oneWay = tileAt(level, tx, ty + 1) === T_ONEWAY;
-    for (const p of policiesFor(oneWay)) {
+    // Run-ups start where the platform starts (wall or drop behind you): the longest possible run.
+    // Short ledges don't build meaningful speed; walking jumps cover them.
+    const runFrom: (-1 | 1)[] = [];
+    const runway = (d: -1 | 1) => {
+      let n = 1;
+      while (n < 4 && isStandable(level, tx + d * n, ty)) n++;
+      return n >= 4;
+    };
+    if (!isStandable(level, tx - 1, ty) && runway(1)) runFrom.push(1);
+    if (!isStandable(level, tx + 1, ty) && runway(-1)) runFrom.push(-1);
+    for (const p of policiesFor(oneWay, level, runFrom)) {
       const b = bodyAtCell(tx, ty);
       if (oneWay) b.groundRef = TILE_ONEWAY_ID;
       tracer.trace(b, 0, p, false);
@@ -233,7 +297,7 @@ export function analyzeReach(level: Level, stopAtGoal = true): ReachResult {
 
 /** Runs policies (and their forks) through the real controller with reused scratch input. */
 class Tracer {
-  private c: Controls = { left: false, right: false, down: false, jump: false, jumpPressed: false };
+  private c: Controls = { left: false, right: false, down: false, jump: false, jumpPressed: false, run: false };
   /** Wall-policy decision states already explored (see Policy.key). */
   private explored = new Set<number>();
 
@@ -273,7 +337,7 @@ class Tracer {
         return;
       }
       // Still walking along flat ground: neighbor edges (and the neighbor's own walk-off) cover that.
-      else if (f > 30 || Math.abs(b.x - x0) > 2 * TILE) return;
+      else if (!p.runway && (f > 30 || Math.abs(b.x - x0) > 2 * TILE)) return;
     }
   }
 

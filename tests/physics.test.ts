@@ -91,14 +91,20 @@ describe('player controller: run & jump feel', () => {
     expect(b.onGround).toBe(true);
   });
 
-  it('runs fast with snappy accel, stop and turn', () => {
-    expect(m.runSpeed).toBeGreaterThanOrEqual(11);
-    expect(m.runSpeed).toBeLessThanOrEqual(13);
-    expect(m.accelTime).toBeGreaterThanOrEqual(0.08);
-    expect(m.accelTime).toBeLessThanOrEqual(0.15);
-    expect(m.stopTime).toBeLessThanOrEqual(0.1);
-    // Reversing at full speed is barely slower than starting from rest.
-    expect(m.turnTime).toBeLessThan(m.accelTime + 0.06);
+  it('walk is slow and precise; run is fast with momentum (skids, overshoots)', () => {
+    expect(m.walkSpeed).toBeGreaterThanOrEqual(5.5);
+    expect(m.walkSpeed).toBeLessThanOrEqual(7.5);
+    expect(m.runSpeed).toBeGreaterThanOrEqual(12.5);
+    expect(m.runSpeed).toBeLessThanOrEqual(14.5);
+    // Running takes a beat to build and skids when you let go or turn.
+    expect(m.accelTime).toBeGreaterThanOrEqual(0.18);
+    expect(m.accelTime).toBeLessThanOrEqual(0.35);
+    expect(m.stopTime).toBeGreaterThanOrEqual(0.2);
+    expect(m.stopTime).toBeLessThanOrEqual(0.4);
+    expect(m.turnTime).toBeGreaterThan(m.stopTime);
+    // A walking jump is short; a running jump roughly doubles it.
+    expect(m.walkJumpDistance).toBeLessThan(5);
+    expect(m.jumpDistance).toBeGreaterThan(m.walkJumpDistance * 1.8);
   });
 
   it('full jump ~4.5 tiles, tap ~1.5 tiles, long running jump', () => {

@@ -339,6 +339,13 @@ export function finalize(s: Site, piece: Piece, uid: number, key: string): Place
       vy += spec.gravity * DT;
       x += vx * DT;
       y += vy * DT;
+      if (spec.wobble) {
+        // Same lateral wobble as RunWorld.stepProjectiles (first move happens at age 1).
+        const sp = Math.hypot(vx, vy) || 1;
+        const w = Math.sin((f + 1) * 0.25) * spec.wobble;
+        x += (-vy / sp) * w;
+        y += (vx / sp) * w;
+      }
       if (x < -16 || x > s.w * TILE + 16 || y > s.h * TILE + 16 || y < -200 || s.solid(Math.floor(x / TILE), Math.floor(y / TILE))) break;
       if (s.zones.some((z) => rectCircle(z, x, y, pad))) return null;
     }

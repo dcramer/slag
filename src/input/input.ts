@@ -133,7 +133,7 @@ export class InputManager {
       const p: KeyProfile = kb.profile;
       return { confirm: hint(p, 'confirm'), alt: hint(p, 'alt'), jump: hint(p, 'jump'), down: hint(p, 'down') };
     }
-    return { confirm: 'A', alt: 'B/X', jump: 'A', down: '↓' };
+    return { confirm: 'A', alt: 'B/Y', jump: 'A', down: '↓' };
   }
 
   deviceLabel(device: string): string {
@@ -156,6 +156,7 @@ export class InputManager {
           down: held('down'),
           jump: held('jump'),
           jumpPressed: pressed('jump'),
+          run: held('run'),
           confirmPressed: pressed('confirm'),
           altPressed: pressed('alt'),
           downPressed: pressed('down'),
@@ -189,7 +190,9 @@ export class InputManager {
       const ax = pad.axes[0] ?? 0;
       const ay = pad.axes[1] ?? 0;
       const jump = btn(0);
-      const alt = btn(1) || btn(2) || btn(4) || btn(5);
+      // X / RB / RT run; B / Y / LB are alt (rotate, self-destruct).
+      const run = btn(2) || btn(5) || (pad.buttons[7]?.value ?? 0) > 0.3;
+      const alt = btn(1) || btn(3) || btn(4);
       const down = ay > 0.5 || btn(13);
       const prev = this.padPrev.get(id) ?? { jump: false, alt: false, down: false };
       out[id] = {
@@ -198,6 +201,7 @@ export class InputManager {
         up: ay < -0.5 || btn(12),
         down,
         jump,
+        run,
         jumpPressed: jump && !prev.jump,
         confirmPressed: jump && !prev.jump,
         altPressed: alt && !prev.alt,

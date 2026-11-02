@@ -114,6 +114,8 @@ export interface Controls {
   down?: boolean;
   jump: boolean;
   jumpPressed: boolean;
+  /** Held: run (faster top speed, more momentum) instead of walk. */
+  run?: boolean;
 }
 
 export function createBody(x: number, y: number): Body {
@@ -317,7 +319,17 @@ function onOneWayOnly(b: Body, world: CollisionWorld): boolean {
 function horizontalAccel(b: Body, dir: number, top: number, surf: Surface): number {
   const vRel = b.vx - (b.onGround ? surf.conveyor : 0);
   const reversing = dir !== 0 && vRel * dir < 0;
-  if (b.onGround) return (dir === 0 ? PHYS.groundDecel : reversing ? PHYS.groundTurnAccel : PHYS.groundAccel) * surf.friction;
+  // "Momentum" = moving faster than a walk: decel/turns skid instead of snapping.
+  // (Unscaled by surface speed so sticky goo still stops you quickly.)
+  const momentum = Math.abs(vRel) > PHYS.walkSpeed + 1;
+  if (b.onGround) {
+    let a: number;
+    if (dir === 0) a = momentum ? PHYS.runDecel : PHYS.groundDecel;
+    else if (reversing) a = momentum ? PHYS.runTurnAccel : PHYS.groundTurnAccel;
+    else if (vRel * dir > top) a = PHYS.runDecel; // let go of run: ease back down to a walk
+    else a = momentum ? PHYS.runAccel : PHYS.groundAccel;
+    return a * surf.friction;
+  }
   if (dir === 0) return PHYS.airDecel;
   if (reversing) return PHYS.airTurnAccel;
   if (b.vx * dir > top) return PHYS.airOverspeedDecel;
@@ -389,7 +401,7 @@ export function stepBody(b: Body, c: Controls, world: CollisionWorld): boolean {
 
   // Horizontal.
   const surf = b.onGround ? b.surface : DEFAULT_SURFACE;
-  const top = PHYS.runSpeed * surf.speedMult;
+  const top = (c.run ? PHYS.runSpeed : PHYS.walkSpeed) * surf.speedMult;
   const target = dir * top + (b.onGround ? surf.conveyor : 0);
   let accel = horizontalAccel(b, dir, top, surf);
   if (b.wallLock > 0) {
@@ -501,6 +513,10 @@ export interface JumpMetrics {
   shortHopHeight: number;
   /** Horizontal distance of a held jump from a running start, take-off to landing at the same height, tiles. */
   jumpDistance: number;
+  /** Walk top speed, tiles/s. */
+  walkSpeed: number;
+  /** Held jump from a walking start, tiles. */
+  walkJumpDistance: number;
   /** Frames in the air for a held standing jump. */
   jumpAirFrames: number;
   /** Terminal fall speed, normal and fast-fall, tiles/s. */
@@ -525,16 +541,16 @@ export function jumpMetrics(): JumpMetrics {
   // Acceleration / stop / turn.
   let b = bodyAtCell(10, floorRow - 1);
   let f = 0;
-  for (; b.vx < top && f < 600; f++) stepBody(b, C({ right: true }), world);
+  for (; b.vx < top && f < 600; f++) stepBody(b, C({ right: true, run: true }), world);
   const accelTime = f * DT;
   const runSpeed = b.vx / TILE;
-  for (let i = 0; i < 30; i++) stepBody(b, C({ right: true }), world);
+  for (let i = 0; i < 30; i++) stepBody(b, C({ right: true, run: true }), world);
   f = 0;
   for (; b.vx > 0 && f < 600; f++) stepBody(b, C({}), world);
   const stopTime = f * DT;
   b.vx = top;
   f = 0;
-  for (; b.vx > -top && f < 600; f++) stepBody(b, C({ left: true }), world);
+  for (; b.vx > -top && f < 600; f++) stepBody(b, C({ left: true, run: true }), world);
   const turnTime = f * DT;
 
   const rise = (hold: number): { h: number; frames: number } => {
@@ -552,15 +568,22 @@ export function jumpMetrics(): JumpMetrics {
   const full = rise(10_000);
   const hop = rise(1);
 
-  // Running jump distance.
-  b = bodyAtCell(10, floorRow - 1);
-  b.vx = top;
-  const x0 = b.x;
-  for (let n = 0; n < 600; n++) {
-    stepBody(b, C({ right: true, jump: true, jumpPressed: n === 0 }), world);
-    if (n > 0 && b.onGround) break;
-  }
-  const jumpDistance = (b.x - x0) / TILE;
+  // Jump distances from a running and a walking start.
+  const leap = (run: boolean): number => {
+    const l = bodyAtCell(10, floorRow - 1);
+    l.vx = run ? top : PHYS.walkSpeed;
+    const x0 = l.x;
+    for (let n = 0; n < 600; n++) {
+      stepBody(l, C({ right: true, run, jump: true, jumpPressed: n === 0 }), world);
+      if (n > 0 && l.onGround) break;
+    }
+    return (l.x - x0) / TILE;
+  };
+  const jumpDistance = leap(true);
+  const walkJumpDistance = leap(false);
+  const walkB = bodyAtCell(10, floorRow - 1);
+  for (let n = 0; n < 120; n++) stepBody(walkB, C({ right: true }), world);
+  const walkSpeed = walkB.vx / TILE;
 
   const terminal = (down: boolean): number => {
     const t = createBody(0, 0);
@@ -576,6 +599,8 @@ export function jumpMetrics(): JumpMetrics {
     jumpHeight: full.h,
     shortHopHeight: hop.h,
     jumpDistance,
+    walkSpeed,
+    walkJumpDistance,
     jumpAirFrames: full.frames,
     fallSpeed: terminal(false),
     fastFallSpeed: terminal(true),

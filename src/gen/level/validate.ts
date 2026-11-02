@@ -1,3 +1,4 @@
+import { PHYS } from '../../sim/constants';
 import { footprintCells } from '../../sim/props';
 import { LEVEL_H, LEVEL_W, TILE } from '../../sim/constants';
 import { isProtected, type Level, T_EMPTY, T_SOLID } from '../../sim/level';
@@ -279,6 +280,8 @@ class BridgeSearch {
     for (let s = 0; s < NS; s++) {
       const sc = SCRIPTS[s];
       const b = bodyAtCell(tx, ty);
+      // Guess model only (answers are re-verified with analyzeReach): assume a full run-up.
+      if (sc.dir !== 0) b.vx = sc.dir * PHYS.runSpeed;
       let x0 = tx;
       let x1 = tx;
       let y0 = ty;
@@ -287,7 +290,11 @@ class BridgeSearch {
       for (let f = 0; f < MAX_FRAMES; f++) {
         const prevBottom = b.y + b.h;
         const holdDir = f < sc.dirFrames;
-        stepBody(b, { left: holdDir && sc.dir < 0, right: holdDir && sc.dir > 0, jump: f < sc.jumpFrames, jumpPressed: f === 0 && sc.jumpFrames > 0 }, world);
+        stepBody(
+          b,
+          { left: holdDir && sc.dir < 0, right: holdDir && sc.dir > 0, run: true, jump: f < sc.jumpFrames, jumpPressed: f === 0 && sc.jumpFrames > 0 },
+          world,
+        );
         const bx0 = Math.floor(b.x / TILE);
         const bx1 = Math.floor((b.x + b.w) / TILE);
         const by0 = Math.floor(b.y / TILE);

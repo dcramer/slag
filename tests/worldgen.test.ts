@@ -1,3 +1,4 @@
+import { jumpMetrics } from '../src/sim/physics';
 import { describe, expect, it } from 'vitest';
 import { BRIDGE_W, canPlaceBridge, generateLevel, judge, lastGenInfo, MAX_BRIDGES, withBridges } from '../src/gen/level';
 import { jumpProfile } from '../src/gen/level/probe';
@@ -122,11 +123,21 @@ describe('solvability policy', () => {
     expect(checkPolicy(l, v.bridges)).toBe(true);
   });
   it('finds two bridges for a gap that needs both', () => {
-    const l = gapLevel(2 * j.gap + BRIDGE_W + 2);
-    const v = judge(l);
-    expect(v.ok).toBe(true);
-    expect(v.bridges.length).toBe(2);
-    expect(checkPolicy(l, v.bridges)).toBe(true);
+    // A 3-wide bridge is too short for a run-up, so hops off a bridge are short walking
+    // jumps; two-bridge chains only exist for some widths. Somewhere just past the
+    // single-bridge limit the solver must find a verified two-bridge solution.
+    const walkGap = Math.floor(jumpMetrics().walkJumpDistance) - 1;
+    const from = j.gap + BRIDGE_W + walkGap;
+    let found = false;
+    for (let g = from; g <= from + 6 && !found; g++) {
+      const l = gapLevel(g);
+      const v = judge(l);
+      if (v.ok && v.bridges.length === 2) {
+        expect(checkPolicy(l, v.bridges)).toBe(true);
+        found = true;
+      }
+    }
+    expect(found).toBe(true);
   });
   it('rejects a level no two bridges can save', () => {
     const v = judge(gapLevel(LEVEL_W - 12));
