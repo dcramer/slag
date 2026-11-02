@@ -107,6 +107,7 @@ const RULE_CHECKS: { [K in keyof MatchRules]: (v: unknown, r: Partial<MatchRules
   gravity: choice(GRAVITY_CHOICES),
   weather: (v) => (typeof v === 'boolean' ? v : undefined),
   bloodRounds: choice(BLOOD_CHOICES),
+  secretParts: (v) => (typeof v === 'boolean' ? v : undefined),
 };
 
 /** Clamp to allowed values so a bad packet can't break a match. */

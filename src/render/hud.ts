@@ -14,6 +14,7 @@ import { bay, buttonText, type ButtonStyle, hazardTape, icon, type IconName, pla
 import { VIEW_FRAME, type ViewFrame } from './frame';
 import { drawItemIcon } from './items';
 import { circle, glowDot, type RC, rrect } from './kit';
+import { blob, line, stroke } from './ink';
 import { drawPreview } from './props';
 
 /**
@@ -81,6 +82,59 @@ const ROLE: Record<Role, { label: string; color: HSL }> = {
   utility: { label: 'UTILITY', color: { h: 198, s: 75, l: 52 } },
   demolish: { label: 'DEMOLISH', color: { h: 28, s: 95, l: 52 } },
 };
+
+/**
+ * A Secret Parts role card: an inked panel in the role's color with a pen-drawn
+ * question mark, and the role label. Nothing about the part, because the part
+ * isn't rolled until someone claims the card.
+ */
+function secretCard(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, role: { label: string; color: HSL }, seed: number) {
+  const px = x + 9;
+  const py = y + 13;
+  const pw = w - 18;
+  const ph = h - 42;
+  c.save();
+  c.fillStyle = css(role.color, -32, 1, -20);
+  rrect(c, px, py, pw, ph, 3);
+  c.fill();
+  c.clip();
+  // Hatching, heaviest toward the bottom right (away from the light).
+  c.fillStyle = css(role.color, -40, 1, -25);
+  for (let i = -ph; i < pw; i += 7) {
+    const ax = px + i;
+    line(c, ax + ph * 0.35, py + ph * 0.35, ax + ph, py + ph, { w: 1.6, seed: seed * 31 + i, wobble: 0.4, taper: [0.5, 0.1] });
+  }
+  c.restore();
+  c.fillStyle = PAL.ink;
+  const ink = { w: 1.8, wobble: 0.3, taper: [0.15, 0.2] as [number, number] };
+  line(c, px - 0.5, py, px + pw * 0.7, py, { ...ink, seed: seed + 1, w: 1.2 });
+  line(c, px, py + 2, px, py + ph * 0.8, { ...ink, seed: seed + 2, w: 1.2 });
+  line(c, px + pw, py + ph * 0.15, px + pw, py + ph, { ...ink, seed: seed + 3 });
+  line(c, px + pw * 0.2, py + ph, px + pw + 0.5, py + ph, { ...ink, seed: seed + 4 });
+  // The question mark: a hook over the top, a stem, a dot.
+  const cx = x + w / 2;
+  const cy = py + ph / 2;
+  const hook: { x: number; y: number }[] = [];
+  for (let a = -160; a <= 70; a += 10) {
+    const t = (a * Math.PI) / 180;
+    hook.push({ x: cx + Math.cos(t) * 12, y: cy - 13 + Math.sin(t) * 12 });
+  }
+  hook.push({ x: cx + 1, y: cy + 3 }, { x: cx, y: cy + 7 }, { x: cx, y: cy + 10 });
+  const mark = (dx: number, dy: number, wide: number, fill: string) => {
+    c.fillStyle = fill;
+    stroke(
+      c,
+      hook.map((p) => ({ x: p.x + dx, y: p.y + dy })),
+      { w: wide, seed: seed * 7 + 5, wobble: 0.5, taper: [0.12, 0.08], press: 0.3 },
+    );
+    blob(c, cx + dx, cy + 19 + dy, wide * 0.55, seed + 9);
+    c.fill();
+  };
+  mark(1, 2, 10, PAL.ink);
+  mark(0, 0, 10, PAL.ink);
+  mark(0, 0, 6.5, css(role.color, 14));
+  tag(c, role.label, cx, y + h - 14, css(role.color), PAL.ink, TYPE.label, 'center');
+}
 
 const AWARD: Record<string, { label: string; color: HSL }> = {
   finish: { label: 'Finish', color: { h: 95, s: 60, l: 40 } },
@@ -705,13 +759,17 @@ export class Hud {
       const hoverer = m.players.find((p) => p.claim < 0 && m.crateItemAt(p.cursor.x, p.cursor.y) === idx);
       const lift = hoverer ? -4 : 0;
       const y = r.y + lift;
-      const role = ROLE[item.def.role];
+      const role = ROLE[item.secret ?? item.def.role];
       if (hoverer) glowDot(this.gctx, r.x + r.w / 2, y + r.h / 2, r.w * 0.8, hoverer.character.body, 0.16);
       plate(c, r.x, y, r.w, r.h, {
         edge: css(role.color),
         stroke: idx === this.pendingCard ? PAL.bone : hoverer ? css(hoverer.character.body, 15) : undefined,
         drop: lift ? 6 : 3,
       });
+      if (item.secret) {
+        secretCard(c, r.x, y, r.w, r.h, role, idx);
+        return;
+      }
       const sg = c.createRadialGradient(r.x + r.w / 2, y + 44, 2, r.x + r.w / 2, y + 44, 46);
       sg.addColorStop(0, css(role.color, 0, 0.22));
       sg.addColorStop(1, css(role.color, 0, 0));

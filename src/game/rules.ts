@@ -28,6 +28,11 @@ export interface MatchRules {
   weather: boolean;
   /** Rounds a puddle lasts, counting the one it was spilled in. 0 = no blood at all. */
   bloodRounds: number;
+  /**
+   * Secret Parts: the crate offers role cards (Build, Hazard…) instead of
+   * parts, and a claim rolls the part from the match roster (Match.claim).
+   */
+  secretParts: boolean;
 }
 
 export type GravityRule = 'auto' | 'low' | 'normal' | 'high';
@@ -60,6 +65,7 @@ export const DEFAULT_RULES: MatchRules = {
   gravity: 'auto',
   weather: true,
   bloodRounds: 2,
+  secretParts: false,
 };
 
 export type TimerRule = 'pickSeconds' | 'placeSeconds' | 'raceSeconds';

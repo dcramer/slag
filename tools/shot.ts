@@ -8,6 +8,7 @@
  *   pnpm shot race --race all
  *   pnpm shot lobby|pick|place --seed abc
  *   pnpm shot pick --claim 2,5             → with those cards already taken
+ *   pnpm shot pick|place --secret          → Secret Parts rule on: role cards, and the parts they rolled
  *   pnpm shot place --card spikestrip --cursor 296,184 --then-race 90 → aim the first ghost, place it, shoot the race
  *   pnpm shot levels --seeds a,b,c,d      (or --count 12) → contact sheet
  *   pnpm shot props --count 24            → prop gallery (crate cards)
@@ -99,6 +100,16 @@ async function open(q: string) {
   );
 }
 const step = (n: number) => page.evaluate((k) => (window as any).slagDebug.step(k), n);
+const secret = argv.includes('--secret');
+/** `--secret`: turn the Secret Parts rule on and deal round 1 again, so the crate holds role cards. */
+async function secretRule() {
+  if (!secret) return;
+  await page.evaluate(() => {
+    const m = (window as any).slagDebug.match;
+    m.rules = { ...m.rules, secretParts: true };
+    m.startMatch();
+  });
+}
 async function snap(name: string) {
   const p = `${out}/${name}.png`;
   await page.screenshot({ path: p });
@@ -368,6 +379,7 @@ try {
       break;
     case 'pick':
       await open(`seed=${seed}&players=${players}`);
+      await secretRule();
       await step(40);
       if (opt('claim')) {
         // `--claim 2,5`: those cards are taken, as if players had picked them.
@@ -377,27 +389,43 @@ try {
         }, opt('claim')!.split(',').map(Number));
         await step(1);
       }
-      await snap(`pick-${seed}`);
+      await snap(`pick-${seed}${secret ? '-secret' : ''}`);
       break;
     case 'place':
       await open(`seed=${seed}&players=${players}`);
-      // `--card rope` gives the first player that archetype, if the crate has one.
-      await page.evaluate(
-        (card) => {
-          const m = (window as any).slagDebug.match;
-          const first = Math.max(
-            0,
-            m.crate.findIndex((c: any) => c.def.archetype === card),
-          );
+      await secretRule();
+      // `--secret`: everyone clicks a role card, so each part is rolled the way a claim rolls it.
+      if (secret) {
+        await step(12);
+        await page.evaluate(() => {
+          const d = (window as any).slagDebug;
+          const m = d.match;
+          const inputs: Record<string, unknown> = {};
           m.players.forEach((p: any, i: number) => {
-            const at = (first + i) % m.crate.length;
-            p.claim = at;
-            m.crate[at].claimedBy = p.slot;
-            p.cursor = { x: 300 + i * 150, y: 180 };
+            const r = m.crate[i].rect;
+            p.cursor = { x: r.x + r.w / 2, y: r.y + r.h / 2 };
+            inputs[p.device] = { confirmPressed: true };
           });
-        },
-        opt('card', ''),
-      );
+          d.step(1, inputs);
+          m.players.forEach((p: any, i: number) => (p.cursor = { x: 300 + i * 150, y: 180 }));
+        });
+      } else
+        await page.evaluate(
+          (card) => {
+            const m = (window as any).slagDebug.match;
+            const first = Math.max(
+              0,
+              m.crate.findIndex((c: any) => c.def.archetype === card),
+            );
+            m.players.forEach((p: any, i: number) => {
+              const at = (first + i) % m.crate.length;
+              p.claim = at;
+              m.crate[at].claimedBy = p.slot;
+              p.cursor = { x: 300 + i * 150, y: 180 };
+            });
+          },
+          opt('card', ''),
+        );
       // `--cursor x,y` aims the first player's ghost (view px); `--then-race N` places it and shoots the race N frames in.
       await page.evaluate(
         (at) => {
@@ -406,7 +434,7 @@ try {
         opt('cursor')?.split(',').map(Number) ?? null,
       );
       await step(60);
-      await snap(`place-${seed}`);
+      await snap(`place-${seed}${secret ? '-secret' : ''}`);
       if (opt('then-race')) {
         await page.evaluate(() => {
           const d = (window as any).slagDebug;
