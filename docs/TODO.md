@@ -13,7 +13,7 @@ The owner wants a list of lobbies, by default showing only ones that aren't full
 - Cheap with the store we have: the host's beat also writes the room to one public index (a sorted set scored by last beat, plus a small hash of players/observers/max/theme/phase), about one extra command per beat. The list screen reads it with one range plus one fetch, polling every few seconds only while open. Rooms whose host stops beating fall out on their own.
 - Default view hides full rooms; full ones show under a Watch filter (observer mode).
 - Reached from the main menu (a screen in `src/routes.ts`), joining through the same interstitial as an invite link.
-- **Owner decision needed:** are new lobbies listed by default (host can mark Private), or invite-only by default (host can mark Public)?
+- **Decided:** lobbies are public by default; the host can mark one Private, which keeps it off the list (invite link only).
 - Keep the store budget test pinned; add the browser to `pnpm online-test`.
 
 ## 2. Online follow-ups
