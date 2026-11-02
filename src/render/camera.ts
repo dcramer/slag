@@ -90,6 +90,7 @@ export class Camera {
 
   /** Show the whole world (down to minZoom). */
   wide() {
+    this.held = [];
     this.tz = clamp(Math.min(VIEW_W / this.ww, VIEW_H / this.wh), this.minZoom, 1);
     this.tx = this.ww / 2;
     this.ty = restY(this.wh, this.tz);
@@ -97,6 +98,7 @@ export class Camera {
 
   /** Jump straight to a deterministic mapping (pick/place overview): no smoothing, so ghosts sit under cursors. */
   snap(v: ViewXform) {
+    this.held = [];
     this.x = this.tx = v.cx;
     this.y = this.ty = v.cy;
     this.zoom = this.tz = v.zoom;
@@ -107,12 +109,17 @@ export class Camera {
     return before + after >= size ? rest : clamp(v, before, size - after);
   }
 
-  private clampX(v: number): number {
-    return this.clampAxis(v, (VIEW_W / 2 - this.frame.x0) / this.zoom, (this.frame.x1 - VIEW_W / 2) / this.zoom, this.ww, this.ww / 2);
+  private clampX(v: number, zoom = this.zoom): number {
+    return this.clampAxis(v, (VIEW_W / 2 - this.frame.x0) / zoom, (this.frame.x1 - VIEW_W / 2) / zoom, this.ww, this.ww / 2);
   }
 
-  private clampY(v: number): number {
-    return this.clampAxis(v, (VIEW_H / 2 - this.frame.y0) / this.zoom, (this.frame.y1 - VIEW_H / 2) / this.zoom, this.wh, restY(this.wh, this.zoom));
+  private clampY(v: number, zoom = this.zoom): number {
+    return this.clampAxis(v, (VIEW_H / 2 - this.frame.y0) / zoom, (this.frame.y1 - VIEW_H / 2) / zoom, this.wh, restY(this.wh, zoom));
+  }
+
+  /** Where a camera aimed at (x, y) at `zoom` would really sit: the limits `update` applies, for a pose worked out elsewhere. */
+  fit(x: number, y: number, zoom: number): { x: number; y: number } {
+    return { x: this.clampX(x, zoom), y: this.clampY(y, zoom) };
   }
 
   update(dt: number, smooth = true) {

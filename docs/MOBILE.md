@@ -66,9 +66,9 @@ A dedicated RUN button would need a third simultaneous touch (stick + run + jump
 
 | Phase | Touch |
 |---|---|
-| Lobby | Tap the HUD buttons: a join slot (joins as `touch`), *Ready up*, *new look*, your name, *new level*, Settings, Level settings. Taps that just miss a small pill retry within ±9 view px. A fullscreen button shows top-left where supported. |
-| Pick | Touch-down snaps your cursor to the finger, so the card lifts. Lifting over a card claims it, either by tapping or by sliding to choose. |
-| Place | Drag anywhere. The ghost floats a fingertip (56 CSS px) above your finger. The offset fades near the bottom edge so the lowest rows stay reachable. **⟳ ROTATE** taps rotate. **PLACE** places only when the finger lifts *on* it, so sliding off cancels. Lifting a drag never places. PLACE dims red while the spot is illegal. The same two button positions are JUMP and ALT in the race. |
+| Lobby | Tap the HUD buttons: a join slot (joins as `touch`), *Ready Up*, *New Look*, your name, *New Level*, Settings, Rules. Taps that just miss a button retry within ±9 view px. A fullscreen button shows bottom right where supported. |
+| Pick | Touch-down snaps your cursor to the finger, so the card lifts. Lifting over a card claims it, either by tapping or by sliding to choose. Two fingers move the camera and never claim. |
+| Place | Starts on the whole level. **Pinch** zooms about your fingers and **two-finger drag** pans; a second finger landing turns a drag into the gesture, and the ghost stays where it was. Drag anywhere. Holding the ghost in the outer 56 view px of the window **auto-pans** that way. The ghost floats a fingertip (56 CSS px) above your finger. The offset fades near the bottom edge so the lowest rows stay reachable. **⟳ ROTATE** taps rotate. **PLACE** places only when the finger lifts *on* it, so sliding off cancels. Lifting a drag never places. PLACE dims red while the spot is illegal. The same two button positions are JUMP and ALT in the race. |
 | Score / victory | Tap anywhere to continue. |
 | Any time | ⚙ (top right) opens Settings. This is the Esc equivalent and shows outside the lobby, which has its own settings button. |
 
@@ -86,6 +86,36 @@ A dedicated RUN button would need a third simultaneous touch (stick + run + jump
 | Death | 30 ms |
 
 `input.touch.haptics = false` turns them off. There's no settings UI for it yet.
+
+## Phone camera (`src/render/camera-follow.ts`)
+
+A phone squeezes the play view into ~570–720 CSS px, so a tile is ~12 px. The phone camera is render-only: the sim never sees it.
+
+- **When:** short side under 500 CSS px, or a touch-first device. `?zoom=1` forces it on (at least 2×, so it shows on a desktop), `?zoom=0` forces it off, `?zoom=2.4` pins a zoom.
+- **Race, solo:** zoom until a tile is at least 24 CSS px (2.03× on an iPhone SE, 1.89× on a 13, 1.8× on a Pixel 7; capped at 2.6×). The whole level shows for the first half of the countdown, then the camera closes in.
+  - **Look-ahead** grows with speed, up to 20% of the visible width at run speed.
+  - **Vertical dead zone** of ±14% of the visible height while airborne; it settles back onto the runner on landing.
+  - The runner never drifts past 80% of the half-window, and the view stops at the level's edges.
+- **Race, more than one player, local or remote:** `Camera.frameAll`, with no exceptions. Every live runner stays on screen, however small that makes the tiles. Only its zoom cap rises, so a tight pack can still get close. A second player makes it framing for the whole race, even once one runner is left.
+- **Pick and place:** start on the overview and reset on each phase. Zoom runs from the overview to the larger of 2× and 1.25× the race zoom.
+- **Cursors:** the match reads pointers as overview coords, a pure function of the level. `PhoneCam.toBoard` maps a finger through this device's pose to the world and back into overview coords, so `Player.cursor` stays in world px and other players' cursors and ghosts land correctly at any zoom.
+- **Crisp terrain:** the bake resolution follows the race zoom, within the same pixel budget.
+
+## HUD on phones
+
+`hud.uiScale` gives 1.25 CSS px per HUD px, up to 1.8× (about 1.69 on an iPhone SE, 1.58 on a 13, 1.5 on a Pixel 7). Groups grow about their anchors and stop before they'd overflow.
+
+- **Lobby:** the top bar's ends hug the window and its buttons are icons. Fewer, bigger bays; the footer keeps only its context, since the cards carry the buttons.
+- **Pick:** the crate draws up to 2× between the heading and the footer. Only the drawing grows: the sim's card rects and cursors stay logical, and `hud.pickToLogical` maps taps back, so peers agree on which card a cursor is over.
+- **Place:** the header grows, and the Rotate and Place prompts go, because the on-screen buttons say the same.
+- **Race:** the timer grows. Chips wrap to whichever layout lets them grow most without reaching the timer.
+- **Score:** the panel grows to the window.
+
+`hud.tapMin` is 44 CSS px in view px. `Hud.button` records each button where it lands after scaling, then grows its hit rect to at least that, so a target is never smaller than that whatever the art does.
+
+## Settings on phones
+
+At 760 CSS px wide or 520 tall, Settings and Match Rules become a full-screen sheet (`.slag-sheet` in `src/ui/menus.ts`): safe-area padding, rows of at least 60 px, buttons of at least 48 px, bigger slider thumbs and switches, and a panel that scrolls. In landscape, Done and Leave Lobby share the tab row, so the rows keep the height.
 
 ## Layout
 
@@ -136,14 +166,20 @@ The sim is unaffected: it stays a fixed 60 Hz accumulator, and slow frames run s
   - mode-switch reset
   - a determinism check driving a real `Match`
   - quality tiers and `FrameBudget`
-- `npm run shot -- mobile [--device "Pixel 7 landscape"]` emulates a phone in Chromium (touch, mobile, DPR) and drives the real game with CDP multi-touch. It covers:
-  1. joining via the HUD slot
-  2. the name prompt
-  3. ready
-  4. tapping a crate
-  5. dragging, rotating and placing
-  6. holding the stick and JUMP at the same time
-  7. holding ALT
-  8. portrait
+- `pnpm vitest run tests/camera-follow.test.ts` covers tile size per phone, look-ahead, the dead zone, keeping a falling runner, level clamps, the countdown overview, the all-players rule beating the tile target on each phone, pinch anchoring, pan, edge auto-pan, one finger landing the same world cursor on every peer, and that watching a race leaves its hash alone.
+- `pnpm shot mobile [--device "Pixel 7 landscape"]` emulates a phone in Chromium (touch, mobile, DPR) and drives the real game with CDP multi-touch. It fails if a HUD tap target is under 44 CSS px or a live runner leaves the screen. It covers:
+  1. the settings sheet
+  2. joining via the HUD slot
+  3. the name prompt
+  4. ready, solo
+  5. tapping a zoomed crate card
+  6. pinch-zooming the place camera
+  7. dragging the ghost to the edge (auto-pan), rotating and placing
+  8. the race follow, holding the stick and JUMP at the same time
+  9. holding ALT
+  10. the score screen and portrait
+  11. a two-player race with the runners at opposite ends
+
+  Verify on `"iPhone SE landscape"` (568×320, the smallest), `"iPhone 13 landscape"` and `"Pixel 7 landscape"`.
 
   It writes `shots/mobile-<device>-*.png` and logs the touch runner's position before and after input.
