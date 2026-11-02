@@ -2,6 +2,8 @@ import type { ProjectileSpawn } from '../props/registry';
 import type { Runner, RunWorld } from '../run';
 import type { InputFrame } from '../types';
 import { cx, cy, itemEvent, spawnDrop } from './common';
+import { placeBlock } from './pocket';
+import { launchTax } from './tax';
 import type { ItemKind } from './types';
 
 /**
@@ -39,16 +41,20 @@ export const SWORD = {
   swatSpeed: 160,
 } as const;
 
-/** Frames of stars from a bonk (sword, puck, boomerang). */
-export const BONK_DAZE = 28;
-/** A death this soon after a bonk credits the bonker. */
-export const BONK_CREDIT = 150;
+export { BONK_CREDIT, BONK_DAZE } from './common';
 
 export const PUCK = { speed: 230, maxFall: 420, bounces: 5 } as const;
 const BOOMERANG = { speed: 340 } as const;
 export const SHIELD = { jumpCap: 300, guard: 18, pop: 280 } as const;
 export const ROCKET = { thrust: 7, vy: 470, vx: 120, daze: 50 } as const;
 export const SMOKE = { vx: 190, vy: 230, radius: 46, life: 60 * 5, cooldown: 30 } as const;
+/**
+ * Walk-Off Bat: frames to a full wind-up, knock (× the noodle's) from a tap to full, how much of that goes
+ * into lift at most, and reach (px).
+ */
+export const BAT = { windup: 36, tap: 0.6, full: 3, lift: 1.6, reach: 22 } as const;
+/** Tremor Brick: frames it's held up before it comes down (the tell), and the hop it gives the grounded. */
+export const TREMOR = { delay: 14, pop: 230 } as const;
 
 /** Toss the held item forward as a loose drop (down + use, or use with a shield). */
 export function tossHeld(w: RunWorld, r: Runner): void {
@@ -57,8 +63,28 @@ export function tossHeld(w: RunWorld, r: Runner): void {
   const b = r.body;
   spawnDrop(w, { kind: h.kind, x: cx(r), y: b.y + 4, vx: b.facing * 150 + b.vx * 0.3, vy: -180, grace: 6 }, h.uses);
   r.items.held = null;
+  r.items.windup = 0;
   r.items.noPickup = 30;
   itemEvent(w, 'drop', h.kind, r.slot, cx(r), b.y + 4);
+}
+
+/** Start a swing of the noodle or the bat; the blade connects through SWORD's active window. */
+function startSwing(r: Runner, kind: ItemKind, power: number): void {
+  const it = r.items;
+  it.swing = SWORD.swing;
+  it.swingHits = 0;
+  it.swingKind = kind;
+  it.swingPower = power;
+  it.cooldown = SWORD.cooldown;
+}
+
+/** Let a wound-up bat go: the longer the wind-up, the harder the knock. Spends the bat. */
+export function swingBat(w: RunWorld, r: Runner): void {
+  const it = r.items;
+  const charge = Math.min(1, (it.windup - 1) / BAT.windup);
+  it.windup = 0;
+  startSwing(r, 'bat', BAT.tap + (BAT.full - BAT.tap) * charge);
+  itemEvent(w, 'use', 'bat', r.slot, cx(r), r.body.y);
 }
 
 /** Launch a shot from the runner's center: it clears them on its own (THROW_GRACE), and can't start inside a wall they're hugging. */
@@ -73,10 +99,7 @@ export const ITEMS: Record<ItemKind, ItemSpec> = {
     verb: 'Swing',
     uses: 4,
     use(w, r) {
-      const it = r.items;
-      it.swing = SWORD.swing;
-      it.swingHits = 0;
-      it.cooldown = SWORD.cooldown;
+      startSwing(r, 'sword', 1);
       itemEvent(w, 'use', 'sword', r.slot, cx(r), r.body.y);
       return true;
     },
@@ -145,6 +168,53 @@ export const ITEMS: Record<ItemKind, ItemSpec> = {
       fire(w, r, { ammo: 'smokebomb', x: cx(r), y: cy(r), vx: b.facing * SMOKE.vx + b.vx * 0.3, vy: -SMOKE.vy });
       r.items.cooldown = SMOKE.cooldown;
       itemEvent(w, 'use', 'smoke', r.slot, cx(r), cy(r));
+      return true;
+    },
+  },
+  bat: {
+    kind: 'bat',
+    name: 'Walk-Off Bat',
+    verb: 'Swing',
+    uses: 1,
+    // First press winds up (rooted); a second press, or a full wind-up, lets it go.
+    use(w, r) {
+      if (r.items.windup === 0) {
+        r.items.windup = 1;
+        return false;
+      }
+      swingBat(w, r);
+      return true;
+    },
+  },
+  tremor: {
+    kind: 'tremor',
+    name: 'Tremor Brick',
+    verb: 'Slam',
+    uses: 1,
+    use(w, r) {
+      r.items.slam = TREMOR.delay;
+      itemEvent(w, 'use', 'tremor', r.slot, cx(r), r.body.y);
+      return true;
+    },
+  },
+  tax: {
+    kind: 'tax',
+    name: 'Front-Runner Tax',
+    verb: 'Launch',
+    uses: 1,
+    use(w, r) {
+      launchTax(w, r);
+      return true;
+    },
+  },
+  block: {
+    kind: 'block',
+    name: 'Pocket Block',
+    verb: 'Build',
+    uses: 3,
+    use(w, r) {
+      if (!placeBlock(w, r)) return false;
+      r.items.cooldown = 8;
       return true;
     },
   },

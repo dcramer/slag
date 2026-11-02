@@ -2,7 +2,7 @@
 
 **slag** is a browser party platformer: each round players **pick** a prop from a crate, **place** it in the level, then **run** to the flag (1–8 players, `MAX_PLAYERS`). Levels, props, characters, names and visuals are all procedurally generated from a seed. Movement is a tight precision platformer: walk by default, hold **run** for speed and long jumps, variable jumps, wall slide/jump, coyote time, jump buffering. Use the genre's mechanics. Parody other games, especially with items, but never use their real names, art, characters or level designs (`docs/DESIGN.md` → Parody).
 
-Game design decisions live in [docs/DESIGN.md](docs/DESIGN.md): follow it, and update it in the same commit when a decision changes. Open work is in [docs/TODO.md](docs/TODO.md); remove items when they land. UI art direction (palette, type, casing, input prompts) is in [docs/ART.md](docs/ART.md). Folders with their own rules have a nested `AGENTS.md`: `src/sim/`, `src/gen/`, `src/render/`, `app/`. Read it before editing there.
+Game design decisions live in [docs/DESIGN.md](docs/DESIGN.md): follow it, and update it in the same commit when a decision changes. [docs/DECISIONS.md](docs/DECISIONS.md) logs every owner decision with its date, status and what it replaced; add the owner's new decisions there too. Open work is in [docs/TODO.md](docs/TODO.md); remove items when they land. UI art direction (palette, type, casing, input prompts) is in [docs/ART.md](docs/ART.md). Folders with their own rules have a nested `AGENTS.md`: `src/sim/`, `src/gen/`, `src/render/`, `app/`. Read it before editing there.
 
 ## Commands
 
@@ -46,10 +46,11 @@ Lint: `oxlint` (type-aware, `.oxlintrc.json`). Warnings are real findings, not n
 - `lobby` | `pick` | `place` with `--seed S --players N`
 - `mobile [--device "iPhone SE landscape"]`: emulated phone, real multi-touch, fails on a tap target under 44 CSS px or a runner off screen
 - `levels --count 9`, `--seeds a,b,c` or `--themes all` → contact sheet `shots/levels.png`
+- `cast`: the toy cast, lineups at play scale on farm and mine, a close-up, deaths, the lobby and a catalog of every kind (`--only catalog`)
 - `props --count 24` (crate cards), `codex` (the `/codex` page), `stack` (runners stacking, riding and head-bouncing, as stepped frames)
 - Options: `--theme farm`, `--weather rain`, `--noui` (hide HUD), `--noletters` (no impact words), `--size 1280x720`, `--out shots`
 
-Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm`, `?weather=rain` (clear|wind|mist|rain|snow, skips worldgen's gate), `?players=2` (auto-join and start), `?race=saw,laser` or `?race=all`, `?propseed=3`, `?ui=0`, `?zoom=1` (phone camera on desktop; `?zoom=0` off, `?zoom=2.4` a fixed zoom), `?lettering=0` (no impact words), `?cast=a|b|c` (character-direction prototypes, `docs/CHARACTERS.md`; `pnpm shot cast`), `?debug=1` (dev overlay: frame-time breakdown, counts, level info; ` toggles it in `pnpm dev` or with any `?debug`). In the console, `slagDebug` has `quickStart`, `race`, `addProps`, `give`, `loadLevel`, `phase`, `pause`, `step`, `render`, `hash`.
+Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm`, `?weather=rain` (clear|wind|mist|rain|snow, skips worldgen's gate), `?players=2` (auto-join and start), `?race=saw,laser` or `?race=all`, `?propseed=3`, `?ui=0`, `?zoom=1` (phone camera on desktop; `?zoom=0` off, `?zoom=2.4` a fixed zoom), `?lettering=0` (no impact words), `?debug=1` (dev overlay: frame-time breakdown, counts, level info; ` toggles it in `pnpm dev` or with any `?debug`). In the console, `slagDebug` has `quickStart`, `race`, `addProps`, `give`, `loadLevel`, `phase`, `pause`, `step`, `render`, `hash`, `toys`.
 
 ## Git workflow
 
@@ -85,6 +86,7 @@ Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm
 - **Theme**: add the id to `THEME_IDS` and `THEME_LABELS` in `src/themes.ts`, then `tsc` lists every `Record<ThemeId, …>` to fill: `SCULPTORS`, `SET_PIECE_RECIPES`, the look `RECIPES` in `src/gen/theme/presets.ts`, music `STYLES`, `GROUND_TONE`. A farm must read as a farm at a glance. Add it to `LATE_THEMES` too, so every existing seed keeps its theme.
 - **Set pieces**: per-theme recipes in `src/gen/setpieces/<theme>.ts` (see `src/gen/AGENTS.md`).
 - **Terrain look**: a `TerrainKind`, `CapKind` or `PlatformKind` draws through a registry in `src/render/ink-material.ts` and `ink-terrain.ts` (see `src/render/AGENTS.md`).
+- **Character (toy kind)**: add the id to `TOYS` and its muted paints to `PAINTS` in `src/gen/character.ts`, and its `ToyArt` (shape, feet, the player's painted part, the parts it breaks into) to `src/render/toys/`. It needs its own silhouette at 16 px; bump `LOOK_CAST` (`src/ui/profile.ts`), since every seed rolls a different toy. See `docs/CHARACTERS.md`; check it with `pnpm shot cast`.
 - **Weather kind**: add the id to `WEATHER_KINDS` in `src/sim/weather.ts`, then `tsc` lists `WEATHER` and `WEATHER_ART` (`src/render/weather.ts`). Give it a share in `WEATHER_WEIGHTS` (`src/gen/level/weather.ts`), a gate there if it touches the sim, and a sound in `WEATHER_SOUND` (`src/audio/emitters.ts`).
 
 ## Game rules

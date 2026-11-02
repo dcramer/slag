@@ -70,6 +70,8 @@ export function groundOf(level: Level, placed: readonly PlacedProp[]): Ground {
   const w = level.w;
   const g: Ground = { level, blocks: new Set(), taken: new Set(), coated: new Set() };
   for (const p of [...level.setPieces, ...placed]) {
+    // A rider is never where its cells say for long, and blood only lands on what holds still.
+    if (p.ride) continue;
     if (p.def.mount === 'face') {
       const face = Math.round(mountAngle(p.def, p.rot) / (Math.PI / 2)) & 3;
       for (const [x, y] of footprintCells(p)) g.coated.add(faceKey(w, x, y, face));

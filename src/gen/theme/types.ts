@@ -72,7 +72,12 @@ export type TerrainKind =
   | 'rustplate'
   | 'ice'
   | 'regolith'
-  | 'hull';
+  | 'hull'
+  // Landmark skins (Level.landmark.skin, docs/SETPIECES.md): no theme lays these as its ground.
+  | 'timber'
+  | 'carved'
+  | 'iceblock'
+  | 'bone';
 export type CapKind = 'grass' | 'moss' | 'rust' | 'crystal' | 'none' | 'ledge' | 'trim' | 'ash' | 'beam' | 'gravel';
 export type LiquidKind = 'slag' | 'acid' | 'void' | 'water' | 'tar' | 'sea' | 'swamp' | 'lava' | 'street';
 export type Ambient = 'embers' | 'fireflies' | 'spores' | 'dust' | 'bubbles' | 'pollen';
