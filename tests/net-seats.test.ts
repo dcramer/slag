@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { IDLE_FRAMES, LOBBY_IDLE_FRAMES, Match } from '../src/game/match';
 import { DEFAULT_RULES } from '../src/game/rules';
 import { roomSeed } from '../src/game/room';
+import { decode, type Enc } from '../src/net/codec';
 import { NetSession } from '../src/net/session';
 import { hashMatch } from '../src/net/snapshot';
 import { LoopbackHub } from '../src/net/transport';
@@ -270,6 +271,30 @@ describe('idle peers', () => {
     r.until(() => seatedPeer(a, 'p7xx'), 300);
     expect(a.ns.watching.p7xx).toBeUndefined();
   }, 30_000);
+
+  it('a guest holding one key steady for 5 s keeps it held on every peer, and is neither let go nor idle', () => {
+    const r = new Room();
+    const a = r.join('aaaa', player);
+    r.run(5);
+    a.act({ t: 'rules', rules: { ...FAST, raceSeconds: 0 } });
+    r.join('bbbb', player);
+    const c = r.join('cccc', player);
+    r.until(() => a.match.phase === 'run' && a.match.run!.frame > 70, 3000);
+    r.scripts.set('bbbb', () => ({ kb1: press({ right: true }) }));
+    r.run(10);
+    const slot = a.match.players.find((p) => p.device === 'bbbb:kb1')!.slot;
+    const x0 = a.match.run!.runners.find((x) => x.slot === slot)!.body.x;
+    const held = (s: NetSession) => decode((s as unknown as { lastInputs: Record<string, Enc> }).lastInputs['bbbb:kb1']).right;
+    let always = true;
+    for (let i = 0; i < 300; i++) {
+      r.run(1);
+      if (!held(a) || !held(c)) always = false;
+    }
+    expect(always).toBe(true);
+    expect(a.match.players.find((p) => p.device === 'bbbb:kb1')!.afk).toBeUndefined();
+    expect(a.match.run!.runners.find((x) => x.slot === slot)!.body.x).toBeGreaterThan(x0);
+    expect(r.hashes().size).toBe(1);
+  }, 20_000);
 
   it("a guest that stops sending has its buttons let go, gives up the race when idle, and agrees with the room when it's back", () => {
     const r = new Room();
