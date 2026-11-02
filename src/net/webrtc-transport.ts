@@ -72,10 +72,18 @@ const HEARTBEAT_MS = 500;
 const SILENCE_MS = 2500;
 /** Timers stalled this long mean we froze (background tab, sleep), not that everyone else died. */
 const FROZEN_MS = 2000;
-/** How long the old host gets to answer a re-offer. It wakes polling when it notices the same silence. */
-const PROBE_MS = 3000;
-/** How long the next in line gets to answer. */
-const CANDIDATE_MS = 3500;
+/**
+ * How long a peer gets to answer, counted from when our offer lands, so it's
+ * judged on its own response alone. An answer can take its poll interval, plus
+ * up to ICE_GATHER_MS, plus two store round trips: calling a slow peer dead
+ * makes a second host. The old host wakes polling when it notices the same
+ * silence, and a third peer's offer ends the wait early, so the common path
+ * doesn't sit these out.
+ */
+const PROBE_MS = 4000;
+const CANDIDATE_MS = 5000;
+/** Extra time for our own gathering and for delivering the offer. */
+const OFFER_SEND_MS = 6000;
 /** A first join may land on a host polling at its idle rate (hidden tabs: twice that). */
 const JOIN_OFFER_MS = 12_000;
 /** After an answer, how long the channels get to open before we call the pair unreachable. */
@@ -343,20 +351,24 @@ export class WebRtcTransport implements Transport {
     const rt = link.pc.createDataChannel(RT, { ordered: false, maxRetransmits: 0 });
     this.wire(link, rel);
     this.wire(link, rt);
-    const timer = setTimeout(() => this.dialFailed(id, link), timeout);
+    const timer = setTimeout(() => this.dialFailed(id, link), timeout + OFFER_SEND_MS);
     this.dials.set(id, { link, timer });
     this.wake();
-    void this.sendOffer(id, link);
+    void this.sendOffer(id, link, timeout);
   }
 
-  private async sendOffer(id: string, link: Link) {
+  private async sendOffer(id: string, link: Link, timeout: number) {
     try {
       await link.pc.setLocalDescription(await link.pc.createOffer());
       await gathered(link.pc);
       const sdp = link.pc.localDescription?.sdp;
       if (!sdp || this.dials.get(id)?.link !== link) return;
       const delivered = await this.signal.send(id, { k: 'offer', c: link.c, o: this.order, sdp });
-      if (!delivered) this.dialFailed(id, link); // the store already knows it's gone: no need to wait
+      if (!delivered) return this.dialFailed(id, link); // the store already knows it's gone: no need to wait
+      const d = this.dials.get(id);
+      if (d?.link !== link || link.answered) return;
+      clearTimeout(d.timer);
+      d.timer = setTimeout(() => this.dialFailed(id, link), timeout);
     } catch {
       // Network trouble: the dial times out and the walk carries on from there.
     }

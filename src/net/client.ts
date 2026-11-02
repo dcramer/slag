@@ -51,7 +51,7 @@ const STATUS_LABEL: Record<NetStatus, string> = {
   connecting: 'Connecting…',
   online: 'Online',
   reconnecting: 'Reconnecting…',
-  unavailable: 'Playing Locally',
+  unavailable: 'Offline',
 };
 
 export function connectRoom(room: string, match: Match, opts: { primaryDevice: string; params?: URLSearchParams }): RoomConnection {
@@ -93,7 +93,7 @@ export function connectRoom(room: string, match: Match, opts: { primaryDevice: s
   const inviteUrl = `${location.origin}/r/${room}`;
   const statusLine = (): string => {
     const peers = net.peers();
-    if (net.status === 'unavailable') return `${STATUS_LABEL.unavailable}${net.detail ? ` · ${net.detail}` : ''}`;
+    if (net.status === 'unavailable') return net.detail || STATUS_LABEL.unavailable;
     if (net.status === 'reconnecting' || net.status === 'connecting') return STATUS_LABEL[net.status];
     if (net.paused && net.role === 'host') return 'Migrating Host…';
     if (net.role === 'guest' && !net.synced) return 'Joining…';
@@ -114,14 +114,7 @@ export function connectRoom(room: string, match: Match, opts: { primaryDevice: s
     },
     toast(show) {
       // The panel only shows in the lobby; the states that freeze a race need saying everywhere.
-      const msg =
-        net.status === 'reconnecting'
-          ? 'Connection Lost, Reconnecting'
-          : net.status === 'unavailable'
-            ? statusLine()
-            : net.paused && net.isHost
-              ? 'Taking Over as Host'
-              : '';
+      const msg = net.status === 'reconnecting' ? 'Connection Lost' : net.status === 'unavailable' ? statusLine() : net.paused && net.isHost ? 'Host Left' : '';
       if (msg && msg !== lastToast) show(msg);
       lastToast = msg;
     },

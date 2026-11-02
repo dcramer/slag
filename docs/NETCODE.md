@@ -17,7 +17,7 @@ Env vars, set by the Vercel Marketplace integration when the Redis store is conn
 
 To connect a store: Vercel → the project → **Storage** → connect the Redis store → enable **Production** and **Preview** → redeploy (functions read env vars at start). Nothing else is needed. Never commit these values.
 
-Without credentials in production the API answers `503 {"error":"unconfigured"}`. The game keeps running locally and the lobby's online panel says `Playing Locally · Online Not Set Up`.
+Without credentials in production the API answers `503 {"error":"unconfigured"}`. The game keeps running locally and the lobby's online panel says `Online Not Set Up`.
 
 In `pnpm dev` the in-memory store is used unless those variables are present (`vercel env pull` would put them in `.env.local`, which is gitignored, and dev would then spend the real budget).
 
@@ -111,7 +111,7 @@ To stretch it, raise `POLL_IDLE_MS` in `webrtc-transport.ts`: it's the main cost
 
 Connections are vanilla ICE: gather candidates, then send one offer and one answer with everything in them, so a connection costs two mailbox writes. Each link has two channels: `rel` (ordered, reliable) for control frames, snapshots and actions, and `rt` (unordered, no retransmits) for inputs and bundles, which the session already re-sends. Messages over 16 KB are split on `rel`, the size every browser agrees on.
 
-STUN is public (Google, Cloudflare). Pairs that can't connect directly need TURN (`SLAG_ICE_SERVERS`); about 10–20% of pairs are expected to. Without it, a guest that gets an answer but can't open a channel after two tries drops to `Playing Locally · Cannot Reach Host`. It never evicts the healthy host.
+STUN is public (Google, Cloudflare). Pairs that can't connect directly need TURN (`SLAG_ICE_SERVERS`); about 10–20% of pairs are expected to. Without it, a guest that gets an answer but can't open a channel after two tries drops to local play, showing `Cannot Reach Host`. It never evicts the healthy host.
 
 ### Identity and devices
 
@@ -125,12 +125,14 @@ Join order comes from an atomic per-room `INCR`. The host is the lowest order pr
 The host owns the **roster** and pushes it to every guest. When the host dies the guests have no links to each other, so nobody can ask anyone anything. Each peer works it out alone:
 
 1. **Detect.** A data channel closing, the connection failing, or 2.5 s without a heartbeat (sent every 500 ms on `rt`). A goodbye frame skips straight to step 3. If our own timers stalled over 2 s (a background tab, a laptop waking), we don't blame anyone.
-2. **Check.** Polling wakes immediately, to every 400 ms. The peer re-offers to the old host and, at the same time, to the next in line. A live host answers: it noticed the same silence and woke its own polling, so a flaky guest reconnects without moving the room. The next in line holds off as a candidate, until the old host misses its 3 s window or until another peer's offer shows that it lost the host too, which is proof enough to take over at once.
-3. **Agree.** Every peer takes the lowest order in its last roster that it doesn't believe dead. A candidate that doesn't answer inside 3.5 s is presumed dead too, and the walk continues, so a lower peer leaving at the same moment, or the new host dying straight after taking over, ends on the same peer for everyone. A peer that has it wrong answers an offer with a redirect.
+2. **Check.** Polling wakes immediately, to every 400 ms. The peer re-offers to the old host and, at the same time, to the next in line. A live host answers: it noticed the same silence and woke its own polling, so a flaky guest reconnects without moving the room. The next in line holds off as a candidate, until the old host misses its 4 s window or until another peer's offer shows that it lost the host too, which is proof enough to take over at once.
+3. **Agree.** Every peer takes the lowest order in its last roster that it doesn't believe dead. A candidate that doesn't answer inside 5 s of an offer landing is presumed dead too, and the walk continues, so a lower peer leaving at the same moment, or the new host dying straight after taking over, ends on the same peer for everyone. A peer that has it wrong answers an offer with a redirect.
 4. **Resume.** The new host pauses and keeps the expected guests in the roster as `linking`, so nobody is marked away while they re-signal. Each guest's `hello` says the furthest frame it holds. The old host's last bundles may have reached only some peers, so the new host pulls a snapshot from the furthest one, then syncs everyone to it. Inputs that were in flight never made a bundle, so they never happened, on every peer alike: that can't desync. After 6 s it stops waiting for anyone missing.
 5. **The old host's player** is treated like any dropped player: `away` mid-match, removed from the lobby.
 
 Only peers that failed an offer get reported to the store, and a report names the exact session (`order`), so a late report can't remove someone who has already refreshed.
+
+Both windows run from when the offer lands, not from when we started. A handshake can take several seconds (a poll interval, ICE gathering on both sides, store round trips), and calling a slow peer dead is how a second host appears.
 
 If two peers end up hosting anyway (say one lost the API at the wrong moment and the other wrote it off), the store settles it within a heartbeat: `beat` tells a host the room's lowest order, a higher host hands its guests to the lower one, and a host the store forgot rejoins later in the order.
 
@@ -180,7 +182,7 @@ IEEE-754 `+ - * /` and `Math.sqrt` are exact everywhere, but `Math.sin/cos/atan2
 
 ## HUD
 
-`RoomConnection.hudInfo()` is `renderer.hud.net`: the status line, peers (crown, ping) and invite link in the lobby's online panel. `toast()` covers the states that freeze a race, because the panel only shows in the lobby. A guest waiting for the host shows `Joining…`, and a host gathering the room shows `Migrating Host…`.
+`RoomConnection.hudInfo()` is `renderer.hud.net`: the status line, peers (crown, ping) and invite link in the lobby's online panel. `toast()` covers the states that freeze a race, because the panel only shows in the lobby. A guest waiting for the host shows `Joining…`, and a host gathering the room shows `Migrating Host…`. This text stays short: state what happened, and don't explain what's clear from the screen.
 
 ## Testing
 

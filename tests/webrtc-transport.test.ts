@@ -25,6 +25,7 @@ class FakeNet {
   dead = new Set<string>();
   /** Pairs with no route, like two strict NATs. */
   blocked = new Set<string>();
+  slowIce = false;
   n = 0;
   route(a: string, b: string) {
     return !this.dead.has(a) && !this.dead.has(b) && !this.blocked.has([a, b].sort().join());
@@ -63,7 +64,7 @@ class FakeChannel implements RtcChannel {
 
 class FakePc implements RtcPeer {
   connectionState = 'new';
-  iceGatheringState = 'complete';
+  iceGatheringState: string;
   localDescription: { sdp: string } | null = null;
   onicegatheringstatechange: any = null;
   onconnectionstatechange: any = null;
@@ -76,6 +77,8 @@ class FakePc implements RtcPeer {
   ) {
     this.id = `pc${net.n++}`;
     net.pcs.set(this.id, this);
+    // Slow ICE: gathering never reports complete, so every handshake waits out the gather timeout, as with STUN unreachable.
+    this.iceGatheringState = net.slowIce ? 'gathering' : 'complete';
   }
   createDataChannel(label: string) {
     const c = new FakeChannel(label, this.owner, this.net);
@@ -124,6 +127,7 @@ class DirectSignal implements SignalApi {
   private async call(op: Parameters<typeof handleOp>[0], extra: Record<string, unknown> = {}): Promise<any> {
     if (this.world.net.dead.has(this.peer) || this.world.apiDown || this.world.apiDownFor.has(this.peer)) throw new SignalError('network');
     this.calls++;
+    if (this.world.apiLatency) await new Promise((r) => setTimeout(r, this.world.apiLatency));
     return handleOp(op, { room: this.room, peer: this.peer, ...extra }, { store: this.store, ice: DEFAULT_ICE });
   }
   join = () => this.call('join');
@@ -154,6 +158,7 @@ class World {
   store = new MemoryStore();
   apiDown = false;
   apiDownFor = new Set<string>();
+  apiLatency = 0;
   peers = new Map<string, Peer>();
   hidden = false;
 
@@ -420,6 +425,21 @@ describe('host migration', () => {
     expect(new Set(await w.drained()).size).toBe(1);
   });
 
+  it('a slow handshake is not a dead peer: everyone waits for the next in line', async () => {
+    const w = new World();
+    const [, , c, d] = await w.room('aaaa', 'bbbb', 'cccc', 'dddd');
+    w.net.slowIce = true;
+    w.apiLatency = 600;
+    w.crash('aaaa');
+    await w.run(3500);
+    w.crash('bbbb');
+    await w.runUntil(() => w.settled(), 30_000);
+    expect(w.settled()).toBe(true);
+    expect(c.session.isHost).toBe(true);
+    expect(d.session.hostId).toBe('cccc');
+    expect(c.session.stats.migrations + d.session.stats.migrations).toBe(1);
+  });
+
   it('a lower peer leaving at the same moment: everyone still lands on one host', async () => {
     const w = new World();
     const [, , c, d] = await w.room('aaaa', 'bbbb', 'cccc', 'dddd');
@@ -466,7 +486,7 @@ describe('host migration', () => {
     // B loses the API just as A dies. B hosts by the roster; C, getting no answer from B, writes it off and hosts too.
     w.apiDownFor.add('bbbb');
     w.crash('aaaa');
-    await w.run(12_000);
+    await w.runUntil(() => b.session.isHost && c.session.isHost, 25_000);
     expect(b.session.isHost && c.session.isHost).toBe(true);
     w.apiDownFor.delete('bbbb');
     await w.runUntil(() => w.settled() && !b.session.isHost, 60_000);

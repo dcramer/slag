@@ -228,7 +228,7 @@ async function toPlace(pages: Page[]) {
     await sleep(300); // past the opening frames where clicks are ignored
     await clickView(pages[i], v.crate[i].x, v.crate[i].y);
   }
-  await waitFor(pages[0], 'place phase', (v) => v.phase === 'place');
+  for (const p of pages) await waitFor(p, 'place phase', (v) => v.phase === 'place');
 }
 
 /** From place: everyone puts their part down. */
@@ -237,7 +237,7 @@ async function toRun(pages: Page[], ids: string[]) {
     const s = await validSpot(pages[i], `${ids[i]}:kb1`);
     if (s) await clickView(pages[i], s.x, s.y);
   }
-  await waitFor(pages[0], 'race', (v) => v.phase === 'run', 120_000);
+  for (const p of pages) await waitFor(p, 'race', (v) => v.phase === 'run', 120_000);
 }
 
 /** No pagehide, no goodbye, no beacon: the renderer process just stops. */
@@ -249,7 +249,14 @@ async function crash(p: Page) {
 
 /** Freeze the host, let guests drain, compare state at one frame. */
 async function compareHashes(pages: Page[], label: string) {
-  const host = pages[0];
+  const roles = await Promise.all(pages.map(view));
+  const host =
+    pages[
+      Math.max(
+        0,
+        roles.findIndex((v) => v.isHost),
+      )
+    ];
   await host.evaluate(() => {
     const d = (window as any).slagDebug;
     d.pause(true);
