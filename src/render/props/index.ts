@@ -49,22 +49,37 @@ const BLAST_SCALE: Record<PartSize, number> = { small: 0.7, medium: 0.85, large:
 
 /** Card preview: draw a def centered at (cx, cy) scaled to fit `size`. */
 export function drawPreview(rc: RC, full: PropDef, cx: number, cy: number, size: number) {
-  // A long rope would shrink to a thread on a card, so show only its top links.
+  // A long rope would shrink to a thread on a card, so show only its top links: fewer of them, but
+  // still more for a longer rope, or the medium and large cards are the same picture.
   const def: PropDef =
     full.mount === 'hang'
-      ? { ...full, footprint: full.footprint.slice(0, 4), modules: full.modules.map((m) => (m.type === 'rope' ? { ...m, length: Math.min(m.length, 4) } : m)) }
+      ? {
+          ...full,
+          footprint: full.footprint.slice(0, 4),
+          modules: full.modules.map((m) => (m.type === 'rope' ? { ...m, length: Math.min(4, 1 + m.length * 0.43) } : m)),
+        }
       : full;
   const { w, h } = cellsBounds(def.footprint);
+  // A jet shows its flame on the card, so the whole of it is centered and not just the nozzle.
+  let [sx, sy] = [0, 0];
+  for (const m of def.modules) {
+    if (m.type !== 'flame') continue;
+    const [dx, dy] = dirOf(m.angle);
+    sx -= (dx * m.length * TILE) / 2;
+    sy -= (dy * m.length * TILE) / 2;
+  }
   // Sizes of a part share one scale, so a big one never looks smaller than a small one. A charge's art stays one tile whatever its blast, so it scales here.
   const blast = def.modules[0]?.type === 'bomb' ? BLAST_SCALE[def.size ?? 'large'] : 1;
-  const k = Math.min(2.4, size / ((full.span ?? cardExtent(def)) * TILE)) * blast;
+  // The span leaves room for a flame either way from the nozzle; centered on the card, it needs half that.
+  const span = full.span ?? cardExtent(def);
+  const k = Math.min(2.4, size / ((sx || sy ? 1 + (span - 1) / 1.4 : span) * TILE)) * blast;
   const s = rc.s;
   const g = rc.g;
   for (const ctx of [s, g]) {
     ctx.save();
     ctx.translate(cx, cy);
     ctx.scale(k, k);
-    ctx.translate((-w * TILE) / 2, (-h * TILE) / 2);
+    ctx.translate((-w * TILE) / 2 + sx, (-h * TILE) / 2 + sy);
   }
   const preview: PropDef = { ...def, motion: { type: 'none' } };
   if (def.mount === 'face') drawHostCells(rc, def.footprint);

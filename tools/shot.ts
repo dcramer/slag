@@ -797,6 +797,45 @@ try {
       );
       break;
     }
+    case 'cards': {
+      // Crate cards for `--arch a,b,c`, each at small, medium and large, ten to a crate.
+      const arch = opt('arch', 'flamer,rope,saw,launcher')!.split(',');
+      await open(`seed=${seed}&players=8`);
+      await step(30);
+      const defs = await page.evaluate((as) => {
+        const d = (window as any).slagDebug;
+        const out: any[] = [];
+        for (const a of as) {
+          const got = new Map<string, any>();
+          for (let k = 1; k < 80 && got.size < 3; k++) {
+            d.match.placed.length = 0;
+            d.addProps([a], k);
+            const def = d.match.placed[0]?.def;
+            if (def && !got.has(def.size)) got.set(def.size, def);
+          }
+          for (const sz of ['small', 'medium', 'large']) if (got.has(sz)) out.push(got.get(sz));
+        }
+        d.match.placed.length = 0;
+        return out;
+      }, arch);
+      const files: string[] = [];
+      for (let k = 0; k * 10 < defs.length; k++) {
+        await page.evaluate(
+          ([ds, from]) => {
+            const m = (window as any).slagDebug.match;
+            m.crate.forEach((c: any, i: number) => {
+              c.def = ds[(from + i) % ds.length];
+              c.claimedBy = -1;
+            });
+          },
+          [defs, k * 10] as const,
+        );
+        await step(2);
+        files.push(await snap(`cards-${k}`));
+      }
+      await sheet('cards', files, 1);
+      break;
+    }
     case 'buildparts': {
       // Every building part: each block material at every size in a race (whole view and close up), then
       // on crate cards, then as place-phase ghosts. `--theme` picks the backdrop.
