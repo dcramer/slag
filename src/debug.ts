@@ -3,7 +3,7 @@ import type { Match } from './game/match';
 import { ARCHETYPE_WEIGHTS, type Archetype, DEMOLISH, generateProp } from './gen/props';
 import type { NetSession } from './net/session';
 import { hashMatch } from './net/snapshot';
-import { toyBench, toyCatalog, toySilhouettes } from './render/toys/sheet';
+import { castBench, castCatalog, castSilhouettes } from './render/cast/sheet';
 import type { Renderer } from './render/renderer';
 import { giveItem, ITEM_KINDS, type ItemKind } from './sim/items';
 import { canPlace, landedDef, linkPipes, type PropDef } from './sim/props';
@@ -64,8 +64,8 @@ export interface SlagDebug {
   render(ms?: number): void;
   /** Deterministic state hash of the confirmed match (peers in sync ⇔ equal hashes at equal frames). */
   hash(): number;
-  /** The toy cast (docs/CHARACTERS.md): a catalog canvas of every kind, and a draw-cost bench. */
-  toys: { catalog: typeof toyCatalog; silhouettes: typeof toySilhouettes; bench: typeof toyBench };
+  /** The cast (docs/CHARACTERS.md): a catalog canvas of every kind, the silhouette test, and a draw-cost bench. */
+  cast: { catalog: typeof castCatalog; silhouettes: typeof castSilhouettes; bench: typeof castBench };
 }
 
 export interface LoopControl {
@@ -83,7 +83,7 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
     match,
     renderer,
     net,
-    toys: { catalog: toyCatalog, silhouettes: toySilhouettes, bench: toyBench },
+    cast: { catalog: castCatalog, silhouettes: castSilhouettes, bench: castBench },
     quickStart(players = 2) {
       for (let i = 0; i < players; i++) match.join(dev(DEVICES[i]));
       if (match.phase === 'lobby') match.startMatch();

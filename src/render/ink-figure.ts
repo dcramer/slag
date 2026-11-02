@@ -7,7 +7,7 @@ import { line, type P, shadeOf, stroke } from './ink';
 /**
  * The figure kit every runner is drawn with: the pen (a contour on an ink mass that's thin toward the
  * light), flat two-tone parts, a face that acts out the body's mood, rubber-hose arms, and the colors a
- * character is drawn in. The runner itself, and the frame every toy fills in, are in ink-character.ts.
+ * character is drawn in. The runner itself, and the frame every kind fills in, are in ink-character.ts.
  */
 
 export interface RunnerPose {
@@ -36,11 +36,18 @@ export const RUN_POSE = 160;
 export const STRIDE = 4.2;
 
 /**
- * Colors and a hand of its own, rolled once per character: the per-frame draw builds no strings. `paint`
- * is the toy's own material; `player` is the player's color, the loudest note on it.
+ * Colors and a hand of its own, rolled once per character: the per-frame draw builds no strings. `fill`
+ * is what the body is drawn in (the player's color for most kinds, the kind's own color for one whose
+ * palette is its identity); `paint` is the kind's natural color; `player` is the player's color, the
+ * loudest note on the character either way.
  */
 export interface Look {
+  /** The pen: a dark of the body's own color, never near-black, so the line belongs to what it outlines. */
   ink: string;
+  /** Eyes, nostrils, a mustache: the darkest marks, a warm dark brown rather than black. */
+  eye: string;
+  fill: string;
+  fillShade: string;
   paint: string;
   paintShade: string;
   paintHi: string;
@@ -56,7 +63,7 @@ export interface Look {
   lid: string;
   hand: string;
   handShade: string;
-  /** Pen weight: some characters are drawn heavier than others. */
+  /** Pen weight: light, and a little different per character, the way a hand varies. */
   weight: number;
   /** Arm length in world px. */
   arm: number;
@@ -68,27 +75,32 @@ export interface Look {
 
 const looks = new WeakMap<CharacterDef, Look>();
 
-export function lookOf(c: CharacterDef): Look {
+/** `playerFill`: the body is drawn in the player's color (most kinds), or in the kind's own (`paint`). */
+export function lookOf(c: CharacterDef, playerFill = true): Look {
   const have = looks.get(c);
   if (have) return have;
   const r = (k: number) => hash2(c.seed, k, 0x1a7);
+  const base = playerFill ? c.body : c.paint;
   const look: Look = {
-    ink: inkOf(c.paint.l < 45 ? shift(c.paint, -10) : c.paint),
+    ink: inkOf(base),
+    eye: '#2a1f1a',
+    fill: css(base),
+    fillShade: css(base, -14, 1, 4),
     paint: css(c.paint),
-    paintShade: css(c.paint, -18, 1, 6),
-    paintHi: css(c.paint, 12, 1, -6),
-    shadow: ratio(c.paint, shift(c.paint, -20, 8)),
+    paintShade: css(c.paint, -14, 1, 4),
+    paintHi: css(c.paint, 10, 1, -6),
+    shadow: ratio(base, shift(base, -14, 6)),
     player: css(c.body),
-    playerShade: css(c.body, -16, 1, 4),
-    playerHi: css(c.body, 18, 1, -8),
-    playerDark: css(c.body, -30, 1, -10),
+    playerShade: css(c.body, -14, 1, 4),
+    playerHi: css(c.body, 16, 1, -8),
+    playerDark: css(c.body, -26, 1, -10),
     accent: css(c.accent),
-    accentShade: css(c.accent, -18, 1, 4),
-    lid: css(c.paint, -10),
-    hand: '#e4dccd',
-    handShade: '#aaa091',
-    weight: 0.95 + r(3) * 0.35,
-    arm: 3.4 + r(4) * 1.2,
+    accentShade: css(c.accent, -14, 1, 4),
+    lid: css(base, -8),
+    hand: '#efe8dc',
+    handShade: '#c4baab',
+    weight: 0.55 + r(3) * 0.15,
+    arm: 3.2 + r(4) * 1,
     skew: (r(5) - 0.35) * 1.6,
     fidget: r(7),
   };
@@ -96,8 +108,8 @@ export function lookOf(c: CharacterDef): Look {
   return look;
 }
 
-/** Dark of its own hue, never one black: the line belongs to what it outlines. */
-export const inkOf = (c: HSL) => css({ h: c.h, s: Math.min(70, c.s), l: 11 });
+/** A dark of its own hue: the line belongs to what it outlines, and reads lighter than black. */
+export const inkOf = (c: HSL) => css({ h: c.h, s: Math.min(45, c.s * 0.7), l: Math.min(26, c.l * 0.4) });
 
 /**
  * The color that, multiplied over `lit`, gives about `dark`: one flat shadow that darkens whatever it falls
@@ -334,7 +346,7 @@ export function eyes(s: CanvasRenderingContext2D, c: CharacterDef, lk: Look, W: 
   const xs = n === 1 ? [0] : n === 2 ? [-spread, spread] : [-spread * 1.25, 0, spread * 1.25];
   const wide = m === 'fall' ? 1.18 : 1;
   const blink = m === 'idle' && Math.sin(p.t * 1.3 + c.seed * 7) > 0.985;
-  const ink = lk.ink;
+  const ink = lk.eye;
   if (c.eyes.style === 'visor' && m !== 'cheer') {
     inked(
       s,
@@ -351,7 +363,7 @@ export function eyes(s: CanvasRenderingContext2D, c: CharacterDef, lk: Look, W: 
     );
     s.fillStyle = lk.accent;
     const scan = Math.sin(p.t * 3) * spread * 0.6;
-    line(s, -spread * 0.5 + look + scan, ey + 0.5, spread * 0.5 + look + scan + 1.6, ey - 0.6, { w: 1.6, seed: c.seed, taper: [0.15, 0.3], press: 0.2 });
+    line(s, -spread * 0.5 + look + scan, ey + 0.5, spread * 0.5 + look + scan + 1.6, ey - 0.6, { w: 1.1, seed: c.seed, taper: [0.15, 0.3], press: 0.2 });
     return;
   }
   for (let i = 0; i < xs.length; i++) {
@@ -367,12 +379,12 @@ export function eyes(s: CanvasRenderingContext2D, c: CharacterDef, lk: Look, W: 
         const a = Math.PI * (1.1 + (j / 6) * 0.8);
         arc.push({ x: cx + Math.cos(a) * r * 0.95, y: ey + 0.8 + Math.sin(a) * r * 0.85 });
       }
-      stroke(s, arc, { w: 1.8, seed: i, taper: [0.2, 0.2], press: 0.1 });
+      stroke(s, arc, { w: 1.2, seed: i, taper: [0.2, 0.2], press: 0.1 });
       continue;
     }
     if (blink) {
       s.fillStyle = ink;
-      line(s, cx - r, ey + 0.4, cx + r, ey - 0.2, { w: 1.6, seed: i, taper: [0.15, 0.15], press: 0.1 });
+      line(s, cx - r, ey + 0.4, cx + r, ey - 0.2, { w: 1.1, seed: i, taper: [0.15, 0.15], press: 0.1 });
       continue;
     }
     const px = cx + f * r * 0.32;
@@ -409,7 +421,7 @@ export function eyes(s: CanvasRenderingContext2D, c: CharacterDef, lk: Look, W: 
       const lift = c.eyes.style === 'angry' ? 1 : 0.7;
       s.fillStyle = ink;
       line(s, cx - r * 1.2, ey - r * (inner > 0 ? 1.0 + 0.5 * lift : 1.0) - 0.4, cx + r * 1.2, ey - r * (inner > 0 ? 1.0 : 1.0 + 0.5 * lift) - 0.4, {
-        w: 1.9,
+        w: 1.3,
         seed: i,
         taper: [0.1, 0.25],
         press: 0.1,
@@ -423,13 +435,13 @@ export function mouth(s: CanvasRenderingContext2D, c: CharacterDef, lk: Look, W:
   const my = Math.min(by - 2.6, by - H * c.eyes.y + r + 2.9);
   const mx = clamp(p.facing * 1.5, -W / 2 + 4, W / 2 - 4);
   const kind = m === 'cheer' ? 'grin' : m === 'fall' ? 'yell' : m === 'run' && c.mouth === 'smile' ? 'grit' : c.mouth;
-  const ink = lk.ink;
+  const ink = lk.eye;
   const arc = (rr: number, a0: number, a1: number): P[] =>
     Array.from({ length: 9 }, (_, i) => ({ x: mx + Math.cos(a0 + ((a1 - a0) * i) / 8) * rr, y: my - 1.6 + Math.sin(a0 + ((a1 - a0) * i) / 8) * rr }));
   s.fillStyle = ink;
   switch (kind) {
     case 'smile':
-      stroke(s, arc(3, 0.15 * Math.PI, 0.85 * Math.PI), { w: 1.6, seed: c.seed, taper: [0.22, 0.22], press: 0.15 });
+      stroke(s, arc(3, 0.15 * Math.PI, 0.85 * Math.PI), { w: 1.1, seed: c.seed, taper: [0.22, 0.22], press: 0.15 });
       break;
     case 'grin':
       poly(s, [{ x: mx - 3.7, y: my - 1.5 }, { x: mx + 3.7, y: my - 1.5 }, ...arc(3.7, 0.05 * Math.PI, 0.95 * Math.PI)], ink);
@@ -454,7 +466,7 @@ export function mouth(s: CanvasRenderingContext2D, c: CharacterDef, lk: Look, W:
       s.fillRect(mx - 2.4, my - 0.6, 4.8, 1.1);
       break;
     case 'fang':
-      line(s, mx - 3.2, my, mx + 3.2, my - 0.3, { w: 1.6, seed: c.seed, taper: [0.18, 0.18], press: 0.1 });
+      line(s, mx - 3.2, my, mx + 3.2, my - 0.3, { w: 1.1, seed: c.seed, taper: [0.18, 0.18], press: 0.1 });
       poly(
         s,
         [
@@ -469,7 +481,7 @@ export function mouth(s: CanvasRenderingContext2D, c: CharacterDef, lk: Look, W:
       poly(s, oval(mx, my, 1.9, 2.3, 9), ink);
       break;
     case 'flat':
-      line(s, mx - 2.9, my + 0.2, mx + 2.9, my - 0.2, { w: 1.6, seed: c.seed, taper: [0.15, 0.15], press: 0.1 });
+      line(s, mx - 2.9, my + 0.2, mx + 2.9, my - 0.2, { w: 1.1, seed: c.seed, taper: [0.15, 0.15], press: 0.1 });
       break;
     case 'teeth':
       poly(

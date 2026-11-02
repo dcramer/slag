@@ -6,7 +6,7 @@ import { light, type RC } from './kit';
 
 export type PKind = 'spark' | 'ember' | 'smoke' | 'dust' | 'gib' | 'confetti' | 'debris' | 'ring' | 'splash' | 'flash' | 'part';
 
-/** What a toy bursts into when it dies: the bits of a broken wind-up. */
+/** What a character bursts into when it dies: shards of it, and a robot's or a plumber's own bits. */
 export const PARTS = ['gear', 'spring', 'key', 'shard', 'bolt', 'wheel', 'coin'] as const;
 export type Part = (typeof PARTS)[number];
 
@@ -21,7 +21,7 @@ export type Part = (typeof PARTS)[number];
  * - Sparks are tapered pen strokes along their flight; embers are spinning flecks; both are hot, so emissive.
  * - A "ring" is a burst of pen speed lines flying outward; a "flash" is a jagged starburst with a hot core.
  * - Gibs, debris, confetti and splashes are hand-cut chunks, paper bits and drops on the foreground.
- * - Parts are what a toy breaks into: gears, springs, its key, tin shards, bolts, wheels, coins.
+ * - Parts are what a character breaks into: shards, and a few kinds' own bits (gears, springs, bolts, coins).
  *
  * Particles live in a pool and are reused: a death or explosion spawns dozens, and eight players spawn them every second.
  */

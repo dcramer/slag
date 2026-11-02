@@ -1,11 +1,11 @@
 import 'client-only';
-import { type CharacterDef, generateCharacter, TOYS } from '../gen/character';
+import { type CharacterDef, generateCharacter, CAST } from '../gen/character';
 import { Rig } from '../render/character';
-import { drawInkAccessory, drawInkRunner, ropeOf } from '../render/ink-character';
+import { drawInkAccessory, drawInkRunner, ropeAnchor, ropeOf } from '../render/ink-character';
 import { buildScene, drawSplash, drawStream, paintCrane, paintHeap, type Scene } from './home-scene';
 
 /**
- * Main-menu stage: a crowd of freshly generated toys, no two alike, loitering on a
+ * Main-menu stage: a crowd of freshly generated characters, no two alike, loitering on a
  * slag heap while a crucible on a crane pours molten metal beside them
  * (./home-scene.ts draws the foundry). Purely cosmetic (Math.random is fine
  * here). Tap a character to reroll it. Returns a cleanup function.
@@ -37,9 +37,9 @@ export function mountStage(canvas: HTMLCanvasElement): () => void {
   let dpr = 1;
   const seed0 = Math.floor(Math.random() * 1e9);
   let rolls = 0;
-  // Each one a different toy: a new roll takes a kind nobody on the heap has.
+  // Each one a different kind: a new roll takes one nobody on the heap has.
   const roll = (taken: readonly CharacterDef[] = []) => {
-    const free = TOYS.filter((t) => !taken.some((c) => c.toy === t));
+    const free = CAST.filter((t) => !taken.some((c) => c.kind === t));
     return generateCharacter((seed0 + rolls++ * 7919) >>> 0, free[Math.floor(Math.random() * free.length)]);
   };
   const guys: Guy[] = [];
@@ -136,7 +136,8 @@ export function mountStage(canvas: HTMLCanvasElement): () => void {
       ctx.scale(s, s);
       const rope = ropeOf(g.def);
       if (rope) {
-        g.rig.step(rope, -g.facing * 5, rope.kind === 'string' ? -3 : -10, dt, -g.facing * 8, 0);
+        const at = ropeAnchor(g.def, g.facing);
+        g.rig.step(rope, at.x, at.y, dt, -g.facing * 8, 0);
         drawInkAccessory(ctx, g.def, g.rig);
       }
       drawInkRunner({ s: ctx, g: null }, g.def, 0, 0, {
