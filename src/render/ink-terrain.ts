@@ -153,6 +153,8 @@ const SKIN_LOOKS: Partial<Record<TerrainKind, SkinLook>> = {
   container: look({ h: 14, s: 46, l: 38 }, 'trim', { h: 210, s: 8, l: 44 }, 'grate'),
   // Structural steel in red oxide primer: riveted plate for its solid parts, I-beams for its decks.
   girder: look({ h: 10, s: 42, l: 36 }, 'trim', { h: 12, s: 46, l: 40 }, 'girder'),
+  // Space's planetoids and asteroids, where the level's own ground is a station's hull.
+  regolith: look({ h: 30, s: 10, l: 46 }, 'gravel', { h: 30, s: 8, l: 56 }),
 };
 
 /** A landmark's skin: the box its tiles are drawn in, and the look they're drawn with. */

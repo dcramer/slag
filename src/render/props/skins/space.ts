@@ -5,6 +5,7 @@ import { bulb, circle, glowDot, light, METALS, type RC } from '../../kit';
 import type { DrawCtx } from '../common';
 import { groundBelowPx, lattice } from '../modules/setpiece';
 import { type Cannon, type CannonPose, type Deco, type RotorSkin, slab, STEEL, type ThemeSkins, tube, WHITE } from './common';
+import { meteorRift, moonSkin, spaceFacade, spacePiece } from './space-stage';
 
 /**
  * Space skins. The sim gives space its pieces through looks other themes own (a centrifuge is a `cog`,
@@ -243,7 +244,8 @@ function commArray(rc: RC, m: Deco, d: DrawCtx) {
 }
 
 export const SPACE: ThemeSkins = {
-  rotor: { cog: spinner, crane: dockArm },
-  cannon: { castle: voidTurret },
-  deco: { antenna: commArray },
+  rotor: { cog: spinner, crane: dockArm, moon: moonSkin },
+  cannon: { castle: voidTurret, meteor: meteorRift },
+  deco: { antenna: commArray, facade: spaceFacade },
+  piece: spacePiece,
 };

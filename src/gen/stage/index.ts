@@ -9,6 +9,7 @@ import { HARBOR_CONCEPTS } from './harbor';
 import { JUNGLE_CONCEPTS } from './jungle';
 import { MINE_CONCEPTS } from './mine';
 import { ROOFTOPS_CONCEPTS } from './rooftops';
+import { SPACE_CONCEPTS } from './space';
 import { VOLCANO_CONCEPTS } from './volcano';
 import type { Concept } from './types';
 
@@ -43,7 +44,7 @@ export const CONCEPTS: Record<ThemeId, Concept[]> = {
   mine: MINE_CONCEPTS,
   rooftops: ROOFTOPS_CONCEPTS,
   glacier: GLACIER_CONCEPTS,
-  space: [],
+  space: SPACE_CONCEPTS,
 };
 
 /** Share of levels that stay plain where a concept would fit: the counterpoint that keeps landmarks special. */
