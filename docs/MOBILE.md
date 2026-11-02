@@ -10,7 +10,7 @@ slag is fully playable on phones and tablets. Touch is one more input device (`'
 | `src/input/input.ts` | Owns `input.touch`. Touch pointers skip the mouse path. `pointerDevice` is `'touch'` while touch is the latest input. |
 | `src/game-client.ts` | Sets the touch mode every sim step, updates the overlay every frame, routes HUD buttons to `pointerDevice`, and buzzes when the touch player dies. |
 | `src/render/renderer.ts` | Applies the quality tier (internal width and DPR cap), downgrades adaptively, and fits the canvas inside the safe area. |
-| `app/r/[room]/page.tsx`, `app/layout.tsx` | Viewport (no zoom, `viewport-fit=cover`, theme colour) on the game route only, and iOS home-screen web-app meta. |
+| `src/routes.ts`, `src/main.ts` | Viewport (no zoom, `viewport-fit=cover`, theme colour) on the lobby only (`GAME_CHROME`), applied on every screen change; `app/r/[room]/page.tsx` sends the same on a fresh load. iOS home-screen web-app meta is in `app/layout.tsx`. |
 
 ## When controls show
 
