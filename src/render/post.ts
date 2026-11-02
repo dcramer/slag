@@ -42,6 +42,9 @@ export interface PostParams {
   lift: [number, number, number];
   /** Pixels per world unit of `fg`. */
   scale: number;
+  /** Canvas px of the world's origin: the line's noise is pinned to the world, so it stays put as the camera moves. */
+  originX: number;
+  originY: number;
   /** The theme's ambient light, which the light bands sit relative to. */
   ambient: number;
 }
@@ -269,6 +272,7 @@ class GLCompositor implements Compositor {
     gl.uniform2f(this.u(f, 'uRes'), this.w, this.h);
     gl.uniform1f(this.u(f, 'uAmbient'), p.ambient);
     gl.uniform2f(this.u(f, 'uShadow'), (-CEL_SHADOW[0] * p.scale) / this.w, (CEL_SHADOW[1] * p.scale) / this.h);
+    gl.uniform3f(this.u(f, 'uView'), p.scale, p.originX, p.originY);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 }

@@ -314,6 +314,8 @@ export class Renderer {
       tint: level.theme.grade.tint,
       lift: level.theme.grade.lift,
       scale: rc.s.getTransform().a,
+      originX: rc.s.getTransform().e,
+      originY: rc.s.getTransform().f,
       ambient: level.theme.ambientLight,
     });
     if (!this.hud.hidden) this.hud.draw(m, t, this.pw, this.ph);
@@ -591,7 +593,7 @@ export class Renderer {
     const anchorY = c.accessory === 'tail' ? y - 4 : c.accessory === 'cape' ? y - 12 : y - 10;
     rig.step(c, anchorX, anchorY, dt, -vx * 0.6);
     drawAccessory(rc, c, rig);
-    drawCharacter(rc, c, x, y, { facing, vx, vy, grounded, t: rc.t, celebrate });
+    drawCharacter(rc, c, x, y, { facing, vx, vy, grounded, t: rc.t, celebrate, ink: true });
     light(rc, x, y - 8, 38, c.body, 0.3);
     // A key light so a runner in shade still reads, not so much that it loses its hue.
     light(rc, x, y - 8, 20, RUNNER_KEY, 0.28);

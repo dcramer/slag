@@ -1,24 +1,13 @@
 import { hash2 } from '../core/rng';
 
 /**
- * ART SPIKE (`?art=a`): real ink instead of a uniform vector stroke. A stroke here is a filled ribbon
- * whose width follows a pressure curve, so lines swell, taper and lift off the page.
+ * The game's line: a stroke is a filled ribbon whose width follows a pressure curve, so it swells, tapers
+ * and lifts off the page. Rules for using it are in docs/ART.md.
  *
  * Everything is keyed on world position, never on walk order or arc length from a start point. That is
- * what keeps the page still: a bomb re-bakes the terrain and re-traces its contours, and every stroke
- * the blast didn't touch lands exactly where it was.
+ * what keeps the page still: a bomb re-traces the terrain, and every mark it didn't touch lands exactly
+ * where it was.
  */
-
-export type ArtMode = 'a' | 'b' | 'c';
-
-/** Hidden page switch for the spike: `?art=a`. Not a Settings style, so no user-facing text changes. */
-export function artMode(search: string): ArtMode | null {
-  const v = new URLSearchParams(search).get('art');
-  return v === 'a' || v === 'b' || v === 'c' ? v : null;
-}
-
-/** Set by the renderer each frame: lets art registered per module type pick its ink version without a new parameter. */
-export const hand = { on: false };
 
 export interface P {
   x: number;
@@ -203,9 +192,6 @@ function simplify(loop: P[]): P[] {
 
 export interface LooseOpts {
   tile: number;
-  /** World px of the bake's origin in level space, so a surround's noise lines up with the level's. */
-  ox: number;
-  oy: number;
   w: number;
   h: number;
   seed: number;
@@ -243,8 +229,8 @@ export function looseLoop(corners: readonly P[], o: LooseOpts): EdgeP[] {
     const inn = dir(a, p);
     const out = dir(p, b);
     const r = radii[i];
-    const wx = p.x * T + o.ox;
-    const wy = p.y * T + o.oy;
+    const wx = p.x * T;
+    const wy = p.y * T;
     for (let k = 0; k <= 5; k++) {
       const u = k / 5;
       const iu = 1 - u;
@@ -276,7 +262,7 @@ export function looseLoop(corners: readonly P[], o: LooseOpts): EdgeP[] {
       y: q.y + ny * wander * amp,
       nx,
       ny,
-      hidden: q.x <= 0.5 + o.ox || q.y <= 0.5 + o.oy || q.x >= o.w * T + o.ox - 0.5 || q.y >= o.h * T + o.oy - 0.5,
+      hidden: q.x <= 0.5 || q.y <= 0.5 || q.x >= o.w * T - 0.5 || q.y >= o.h * T - 0.5,
     };
   });
 }

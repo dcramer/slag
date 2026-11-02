@@ -23,6 +23,9 @@
  * Options: --out shots  --size 1280x720 (window)  --world classic|wide|tall (level size)  --players 2  --frames N (sim frames to advance)
  *          --theme farm (force a theme; `levels --themes all` renders one level per theme)
  *          --noui (hide the HUD, e.g. to review level shapes)
+ *          --q high (pin the quality tier: slow software GL otherwise reads as a slow device and drops it)
+ *          --runframe N (race: stop on exact sim frame N)  --campin x,y,zoom (race: pin the view, for before/after sheets)
+ *          --spread (race: stand the runners on open ground)
  *          --mode keyboard|gamepad|touch (footer prompt glyphs)  --net (fake online-lobby info)
  *          --noletters (no impact words)
  * Software GL is slow; frames are advanced deterministically via slagDebug.step().
@@ -46,6 +49,7 @@ const tq =
   (theme ? `&theme=${theme}` : '') +
   (world ? `&size=${world}` : '') +
   (argv.includes('--noui') ? '&ui=0' : '') +
+  (opt('q') ? `&q=${opt('q')}` : '') +
   (argv.includes('--noletters') ? '&lettering=0' : '');
 const players = Number(opt('players', '2'));
 const frames = Number(opt('frames', '150'));
@@ -411,6 +415,44 @@ try {
     case 'race': {
       const race = opt('race', '')!;
       await open(`seed=${seed}&players=${players}&race=${race}&propseed=${opt('propseed', '1')}`);
+      const exact = opt('runframe');
+      if (exact) {
+        // Boot time decides how far the race got before the pause, so step to the frame rather than by a count.
+        const now = await page.evaluate(() => (window as any).slagDebug.match.run?.frame ?? 0);
+        await step(Number(exact) - now - 4);
+        if (argv.includes('--spread')) {
+          await page.evaluate(() => {
+            const d = (window as any).slagDebug;
+            const lv = d.match.level;
+            d.match.run.runners.forEach((r: any, i: number) => {
+              for (let tx = lv.spawn.tx + 3 + i * 2; tx < lv.w; tx++) {
+                for (let ty = 1; ty < lv.h; ty++) {
+                  if (lv.tiles[ty * lv.w + tx] === 1 && lv.tiles[(ty - 1) * lv.w + tx] === 0 && ty > lv.spawn.ty - 6) {
+                    r.body.x = tx * 16 + 4;
+                    r.body.y = ty * 16 - r.body.h;
+                    r.body.vx = r.body.vy = 0;
+                    return;
+                  }
+                }
+              }
+            });
+          });
+        }
+        // The sim frame alone isn't the same picture: camera smoothing depends on frames rendered before the pause.
+        await page.evaluate(
+          (v) => {
+            if (!v) return;
+            const cam = (window as any).slagDebug.renderer.cam;
+            cam.update = () => {};
+            cam.snap({ cx: v[0], cy: v[1], zoom: v[2] });
+            cam.shake = 0;
+          },
+          opt('campin')?.split(',').map(Number) ?? null,
+        );
+        await step(4);
+        await snap(`race-${seed}-${exact}`);
+        break;
+      }
       for (const f of [frames, 40, 40]) {
         await step(f);
         await snap(`race-${seed}-${await page.evaluate(() => (window as any).slagDebug.match.run?.frame ?? 0)}`);

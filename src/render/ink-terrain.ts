@@ -6,13 +6,12 @@ import { type Level, T_ONEWAY, tileAt } from '../sim/level';
 import { blob, type EdgeP, line, looseLoop, type P, shadeOf, sn, stroke, traceCorners, vn } from './ink';
 
 /**
- * ART SPIKE: the farm's terrain as an ink drawing instead of a textured mask. Each layer is marks a hand
- * would make: flat tones cut as lumpy shapes, pebbles and cracks, hatching that hangs off shadow edges,
- * tapered contour strokes, and a grass band with its own drips and blades.
+ * Terrain as an ink drawing instead of a textured mask. Each layer is marks a hand would make: flat tones
+ * cut as lumpy shapes, material marks, hatching that hangs off shadow edges, tapered contour strokes, and
+ * a cap with its own drips and blades.
  *
  * All of it comes from the tile grid plus theme colors, so it fits any level size, recolors with the
- * theme, and survives bombs: a re-bake re-traces the grid, and because every mark is keyed on world
- * position, only what the blast changed moves.
+ * theme, and survives bombs: every mark is keyed on world position, so only what a blast changed moves.
  */
 
 export interface InkBake {
@@ -25,8 +24,6 @@ interface Ctx {
   level: Level;
   th: Theme;
   seed: number;
-  ox: number;
-  oy: number;
   solid: (x: number, y: number) => boolean;
   inkCol: string;
 }
@@ -40,29 +37,21 @@ function worldSolid(level: Level, solid: (x: number, y: number) => boolean) {
 }
 
 /** Shapes of the terrain, in bake space. */
-export function inkContours(level: Level, seed: number, ox: number, oy: number, solid: (x: number, y: number) => boolean, loose = 1): InkBake {
+export function inkContours(level: Level, seed: number, solid: (x: number, y: number) => boolean, loose = 1): InkBake {
   const corners = traceCorners(worldSolid(level, solid), level.w, level.h);
-  const loops = corners.map((c) => looseLoop(c, { tile: TILE, ox, oy, w: level.w, h: level.h, seed, loose }));
+  const loops = corners.map((c) => looseLoop(c, { tile: TILE, w: level.w, h: level.h, seed, loose }));
   const mask = new Path2D();
   for (const l of loops) {
-    l.forEach((p, i) => (i ? mask.lineTo(p.x - ox, p.y - oy) : mask.moveTo(p.x - ox, p.y - oy)));
+    l.forEach((p, i) => (i ? mask.lineTo(p.x, p.y) : mask.moveTo(p.x, p.y)));
     mask.closePath();
   }
   return { mask, loops };
 }
 
 /** Everything inside the mask that the flat-tones approach would otherwise leave empty. */
-export function inkMaterial(
-  g: CanvasRenderingContext2D,
-  level: Level,
-  th: Theme,
-  seed: number,
-  ox: number,
-  oy: number,
-  solid: (x: number, y: number) => boolean,
-) {
+export function inkMaterial(g: CanvasRenderingContext2D, level: Level, th: Theme, seed: number, solid: (x: number, y: number) => boolean) {
   const T = th.terrain;
-  const ctx: Ctx = { g, level, th, seed, ox, oy, solid, inkCol: inkOf(th) };
+  const ctx: Ctx = { g, level, th, seed, solid, inkCol: inkOf(th) };
   const dist = airDistance(level, solid);
   const D = (x: number, y: number) => (x < 0 || y < 0 || x >= level.w || y >= level.h ? 99 : dist[y * level.w + x]);
 
@@ -80,14 +69,14 @@ export function inkMaterial(
   for (let y = 0; y < level.h; y++) {
     for (let x = 0; x < level.w; x++) {
       if (!solid(x, y) || D(x, y) !== 1) continue;
-      const wx = x * TILE + ox;
-      const wy = y * TILE + oy;
+      const wx = x * TILE;
+      const wy = y * TILE;
       const n = 2 + Math.floor(hash2(wx, wy, seed + 5) * 2);
       for (let i = 0; i < n; i++) {
         const sx = wx + hash2(wx, i, seed + 6) * TILE;
         const sy = wy + 4 + hash2(wy, i, seed + 7) * 11;
         const len = 8 + hash2(wx, wy + i, seed + 8) * 14;
-        line(g, sx - ox, sy - oy, sx - ox + len, sy - oy + sn(sx * 0.1, sy * 0.1, seed) * 2, { w: 1.5, seed: (sx * 13) | 0, wobble: 0.5 });
+        line(g, sx, sy, sx + len, sy + sn(sx * 0.1, sy * 0.1, seed) * 2, { w: 1.5, seed: (sx * 13) | 0, wobble: 0.5 });
       }
     }
   }
@@ -100,13 +89,13 @@ function inkOf(th: Theme): string {
 }
 
 function tonePatch(c: Ctx, r: number, jitter: number, lump: number, inside: (x: number, y: number) => boolean) {
-  const { g, level, seed, ox, oy } = c;
+  const { g, level, seed } = c;
   for (let y = 0; y < level.h; y++) {
     for (let x = 0; x < level.w; x++) {
       if (!c.solid(x, y) || !inside(x, y)) continue;
-      const wx = (x + 0.5) * TILE + ox;
-      const wy = (y + 0.5) * TILE + oy;
-      blob(g, wx - ox + sn(wx * 0.3, wy * 0.3, seed + 2) * jitter, wy - oy + sn(wy * 0.3, wx * 0.3, seed + 3) * jitter, r, ((wx + wy * 3) | 0) + seed, 1, lump);
+      const wx = (x + 0.5) * TILE;
+      const wy = (y + 0.5) * TILE;
+      blob(g, wx + sn(wx * 0.3, wy * 0.3, seed + 2) * jitter, wy + sn(wy * 0.3, wx * 0.3, seed + 3) * jitter, r, ((wx + wy * 3) | 0) + seed, 1, lump);
       g.fill();
     }
   }
@@ -114,7 +103,7 @@ function tonePatch(c: Ctx, r: number, jitter: number, lump: number, inside: (x: 
 
 /** Pebbles, cracks and strata ticks. One roll per tile, keyed on where the tile is. */
 function marks(c: Ctx, D: (x: number, y: number) => number) {
-  const { g, level, th, seed, ox, oy } = c;
+  const { g, level, th, seed } = c;
   const T = th.terrain;
   const stone = css(shift(T.light, 6, -8));
   const stoneShade = css(shift(T.base, -4, -6));
@@ -123,11 +112,11 @@ function marks(c: Ctx, D: (x: number, y: number) => number) {
   for (let y = 0; y < level.h; y++) {
     for (let x = 0; x < level.w; x++) {
       if (!c.solid(x, y)) continue;
-      const wx = x * TILE + ox;
-      const wy = y * TILE + oy;
+      const wx = x * TILE;
+      const wy = y * TILE;
       const roll = hash2(wx, wy, seed + 20);
-      const px = wx - ox + 2 + hash2(wx, wy, seed + 21) * 12;
-      const py = wy - oy + 2 + hash2(wx, wy, seed + 22) * 12;
+      const px = wx + 2 + hash2(wx, wy, seed + 21) * 12;
+      const py = wy + 2 + hash2(wx, wy, seed + 22) * 12;
       const sd = ((wx * 7 + wy * 11) | 0) + seed;
       if (roll < 0.17 && D(x, y) >= 2) {
         // A pebble: flat fill, a shaded underside, and a line that doesn't quite close.
@@ -180,7 +169,7 @@ function marks(c: Ctx, D: (x: number, y: number) => number) {
 }
 
 /** Parallel strokes hanging off every edge that faces away from the light; they fade into the fill. */
-export function inkHatch(g: CanvasRenderingContext2D, loops: readonly EdgeP[][], th: Theme, seed: number, ox: number, oy: number) {
+export function inkHatch(g: CanvasRenderingContext2D, loops: readonly EdgeP[][], th: Theme, seed: number) {
   const dx = -0.6;
   const dy = -0.8;
   const col = css(shift(th.terrain.dark, -8, 4));
@@ -200,15 +189,15 @@ export function inkHatch(g: CanvasRenderingContext2D, loops: readonly EdgeP[][],
       const skip = hash2(k, 11, seed);
       if (skip < 0.14) continue;
       const len = (5 + 15 * (sh - 0.74) * 3.2) * (0.55 + 0.75 * hash2(k, 12, seed)) * (0.7 + 0.6 * vn(p.x * 0.06, p.y * 0.06, seed + 40));
-      const sx = p.x - ox - p.nx * 0.5;
-      const sy = p.y - oy - p.ny * 0.5;
+      const sx = p.x - p.nx * 0.5;
+      const sy = p.y - p.ny * 0.5;
       line(g, sx, sy, sx + dx * len, sy + dy * len, { w: 1.05, seed: k, taper: [0.02, 0.85], wobble: 0.25 });
     }
   }
 }
 
 /** The contour itself: one pen, many strokes, lifting between them and leaning on the shadow side. */
-export function inkEdges(g: CanvasRenderingContext2D, loops: readonly EdgeP[][], th: Theme, seed: number, ox: number, oy: number, weight = 1) {
+export function inkEdges(g: CanvasRenderingContext2D, loops: readonly EdgeP[][], th: Theme, seed: number, weight = 1) {
   g.fillStyle = inkOf(th);
   for (const loop of loops) {
     const n = loop.length;
@@ -233,8 +222,8 @@ export function inkEdges(g: CanvasRenderingContext2D, loops: readonly EdgeP[][],
         const ww = (1.0 + 2.1 * sh * sh) * weight;
         const sd = ((m.x * 3 + m.y * 5) | 0) + seed;
         // Shift off the fill by a hair: registration is never perfect by hand.
-        const dx = sn(m.x * 0.03, m.y * 0.03, seed + 51) * 0.55 - ox;
-        const dy = sn(m.y * 0.03, m.x * 0.03, seed + 52) * 0.45 - oy;
+        const dx = sn(m.x * 0.03, m.y * 0.03, seed + 51) * 0.55;
+        const dy = sn(m.y * 0.03, m.x * 0.03, seed + 52) * 0.45;
         const pts: P[] = run.map((p) => ({ x: p.x + dx, y: p.y + dy }));
         // Lit edges lift off the page sometimes; shadow edges hold.
         if (sh > 0.42 || vn(m.x * 0.05, m.y * 0.05, seed + 53) > 0.3) stroke(g, pts, { w: ww, seed: sd, taper: [0.1, 0.3], press: 0.5, wobble: 0.3 });
@@ -283,7 +272,7 @@ function topRuns(loops: readonly EdgeP[][]): EdgeP[][] {
 }
 
 /** Grass as one drawn shape along each run: scalloped underside, a highlight stroke, blades and ink. */
-export function inkGrass(g: CanvasRenderingContext2D, loops: readonly EdgeP[][], capColor: HSL, seed: number, ox: number, oy: number) {
+export function inkGrass(g: CanvasRenderingContext2D, loops: readonly EdgeP[][], capColor: HSL, seed: number) {
   const dark = css(capColor, -20, 1, 6);
   const mid = css(capColor, -5, 1, 4);
   const top = css(capColor, 9);
@@ -299,8 +288,8 @@ export function inkGrass(g: CanvasRenderingContext2D, loops: readonly EdgeP[][],
     for (let i = 0; i < N; i++) {
       const p = run[i];
       const e = 0.35 + 0.65 * L(i);
-      edge.push({ x: p.x - ox, y: p.y - oy - 1.1 });
-      bottom.push({ x: p.x - ox, y: p.y - oy + under(p.x, e) });
+      edge.push({ x: p.x, y: p.y - 1.1 });
+      bottom.push({ x: p.x, y: p.y + under(p.x, e) });
     }
     const band = (from: readonly P[], to: readonly P[], fill: string) => {
       g.fillStyle = fill;
@@ -370,7 +359,7 @@ export interface Tuft {
   ty: number;
 }
 
-export function makeTufts(loops: readonly EdgeP[][], seed: number, ox: number, oy: number, keepClear: readonly P[] = []): Tuft[] {
+export function makeTufts(loops: readonly EdgeP[][], seed: number, keepClear: readonly P[] = []): Tuft[] {
   const tufts: Tuft[] = [];
   for (const run of topRuns(loops)) {
     let last = -1e9;
@@ -380,13 +369,13 @@ export function makeTufts(loops: readonly EdgeP[][], seed: number, ox: number, o
       if (cell === last || p.ny > -0.8) continue;
       last = cell;
       if (hash2(cell, 9, seed) < 0.3) continue;
-      if (keepClear.some((q) => Math.abs(q.x - (p.x - ox)) < 11 && Math.abs(q.y - (p.y - oy)) < 6)) continue;
+      if (keepClear.some((q) => Math.abs(q.x - p.x) < 11 && Math.abs(q.y - p.y) < 6)) continue;
       const n = 2 + Math.floor(hash2(p.x | 0, 10, seed) * 3);
       tufts.push({
-        x: p.x - ox,
-        y: p.y - oy + 0.5,
-        tx: Math.floor((p.x - ox) / TILE),
-        ty: Math.floor((p.y - oy + 2) / TILE),
+        x: p.x,
+        y: p.y + 0.5,
+        tx: Math.floor(p.x / TILE),
+        ty: Math.floor((p.y + 2) / TILE),
         blades: Array.from({ length: n }, (_, i) => ({
           lean: (i - (n - 1) / 2) * 0.32 + (hash2(p.x | 0, i, seed + 1) - 0.5) * 0.3,
           h: 3 + hash2(p.x | 0, i, seed + 2) * 4,
@@ -429,15 +418,7 @@ function blade(s: CanvasRenderingContext2D, x: number, y: number, lean: number, 
 }
 
 /** Jump-through planks, drawn as whole boards per run rather than a tile stamp. */
-export function inkPlatforms(
-  g: CanvasRenderingContext2D,
-  level: Level,
-  th: Theme,
-  seed: number,
-  ox: number,
-  oy: number,
-  solid: (x: number, y: number) => boolean,
-) {
+export function inkPlatforms(g: CanvasRenderingContext2D, level: Level, th: Theme, seed: number, solid: (x: number, y: number) => boolean) {
   const c = th.terrain.platform.color;
   const ink = inkOf(th);
   const light = css(c, 14);
@@ -451,9 +432,9 @@ export function inkPlatforms(
       const x0 = tx * TILE - (solid(tx - 1, ty) ? 2 : 0.5);
       const x1 = (end + 1) * TILE + (solid(end + 1, ty) ? 2 : 0.5);
       const y = ty * TILE;
-      const wy = y + oy;
+      const wy = y;
       const H = 5.4;
-      const wob = (x: number, k: number, a: number) => sn((x + ox) * 0.09, wy * 0.1 + k, seed + 70) * a;
+      const wob = (x: number, k: number, a: number) => sn(x * 0.09, wy * 0.1 + k, seed + 70) * a;
       const topE: P[] = [];
       const botE: P[] = [];
       const midE: P[] = [];
@@ -482,9 +463,9 @@ export function inkPlatforms(
       );
       g.fillStyle = grain;
       for (let x = x0 + 2; x < x1 - 3; x += 3) {
-        const r = hash2((x + ox) | 0, wy | 0, seed + 71);
+        const r = hash2(x | 0, wy | 0, seed + 71);
         if (r < 0.62) continue;
-        const gy = y + 1.8 + hash2((x + ox) | 0, 2, seed + 72) * 2.4;
+        const gy = y + 1.8 + hash2(x | 0, 2, seed + 72) * 2.4;
         line(g, x, gy, x + 5 + r * 8, gy + (r - 0.8) * 2, { w: 0.65, seed: (x | 0) + seed, taper: [0.3, 0.6] });
       }
       g.fillStyle = ink;
@@ -510,12 +491,6 @@ function brace(g: CanvasRenderingContext2D, x: number, y: number, dir: number, f
   line(g, x, y - 1, x + dir * 6, y + 5, { w: 3.5, seed, taper: [0, 0.12], press: 0.15 });
   g.fillStyle = fill;
   line(g, x, y - 1, x + dir * 6, y + 5, { w: 1.9, seed: seed + 1, taper: [0, 0.12], press: 0.15 });
-}
-
-/** Tiles from each solid tile to the nearest air, as a lookup. */
-export function airDepth(level: Level, solid: (x: number, y: number) => boolean) {
-  const d = airDistance(level, solid);
-  return (x: number, y: number) => d[y * level.w + x];
 }
 
 function airDistance(level: Level, solid: (x: number, y: number) => boolean): Int16Array {

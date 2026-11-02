@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { artMode, type EdgeP, looseLoop, traceCorners } from '../src/render/ink';
+import { type EdgeP, looseLoop, traceCorners } from '../src/render/ink';
 
 /** Build a grid from rows of `#` (solid) and `.` (air). Out of bounds is solid, as at the world's edge. */
 function grid(rows: string[]) {
@@ -10,7 +10,7 @@ function grid(rows: string[]) {
 }
 
 const loops = (g: ReturnType<typeof grid>): EdgeP[][] =>
-  traceCorners(g.solid, g.w, g.h).map((c) => looseLoop(c, { tile: 16, ox: 0, oy: 0, w: g.w, h: g.h, seed: 7, loose: 1 }));
+  traceCorners(g.solid, g.w, g.h).map((c) => looseLoop(c, { tile: 16, w: g.w, h: g.h, seed: 7, loose: 1 }));
 
 describe('ink contours', () => {
   it('closes a loop around every solid region, including one touching the world edge', () => {
@@ -60,14 +60,5 @@ describe('ink contours', () => {
       .filter((p) => p.x < 17 * 16);
     expect(far.length).toBeGreaterThan(20);
     for (const p of far) expect(was.has(key(p))).toBe(true);
-  });
-});
-
-describe('artMode', () => {
-  it('only accepts the spike treatments', () => {
-    expect(artMode('?art=a')).toBe('a');
-    expect(artMode('?art=c')).toBe('c');
-    expect(artMode('?art=z')).toBeNull();
-    expect(artMode('')).toBeNull();
   });
 });

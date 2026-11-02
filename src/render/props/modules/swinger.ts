@@ -3,9 +3,8 @@ import type { Vec } from '../../../core/geom';
 import { TILE } from '../../../sim/constants';
 import { tileAt } from '../../../sim/level';
 import { type Module, type ModuleOf, type PropStyle, type Resolved, swingHeads } from '../../../sim/props';
-import { hand } from '../../ink';
 import { inkSaw } from '../../ink-parts';
-import { circle, ellipse, light, type MetalPalette, metalFill, type RC, rrect, sphereFill } from '../../kit';
+import { circle, ellipse, light, type MetalPalette, type RC, rrect, sphereFill } from '../../kit';
 import { defineArt, type PropDrawOpts } from '../common';
 
 type M<T extends Module['type']> = ModuleOf<T>;
@@ -73,55 +72,7 @@ function drawSwinger(rc: RC, m: M<'swinger'>, r: Resolved, off: Vec, pal: MetalP
 }
 
 function drawSaw(rc: RC, x: number, y: number, R: number, rot: number, pal: MetalPalette, st: PropStyle, o: PropDrawOpts) {
-  if (hand.on) {
-    inkSaw(rc, x, y, R, rot, pal, Math.round(R * 7));
-    return;
-  }
-  const s = rc.s;
-  s.save();
-  s.translate(x, y);
-  // Motion blur ring.
-  s.fillStyle = css(pal.light, 0, 0.25);
-  circle(s, 0, 0, R + 0.6);
-  s.rotate(rot);
-  const teeth = Math.max(10, Math.round(R * 1.1));
-  s.beginPath();
-  for (let i = 0; i < teeth; i++) {
-    const a0 = (i / teeth) * Math.PI * 2;
-    const a1 = ((i + 0.55) / teeth) * Math.PI * 2;
-    const a2 = ((i + 1) / teeth) * Math.PI * 2;
-    s.lineTo(Math.cos(a0) * R * 0.8, Math.sin(a0) * R * 0.8);
-    s.lineTo(Math.cos(a1) * R, Math.sin(a1) * R);
-    s.lineTo(Math.cos(a2) * R * 0.8, Math.sin(a2) * R * 0.8);
-  }
-  s.closePath();
-  const gr = s.createRadialGradient(-R * 0.3, -R * 0.3, R * 0.1, 0, 0, R);
-  gr.addColorStop(0, '#f4f6fa');
-  gr.addColorStop(0.6, '#a9afbb');
-  gr.addColorStop(1, '#5b616d');
-  s.fillStyle = gr;
-  s.fill();
-  s.strokeStyle = '#3a3e48';
-  s.lineWidth = 0.8;
-  s.stroke();
-  // Inner disc & lightening holes.
-  s.fillStyle = metalFill(s, pal, -R * 0.55, -R * 0.55, R * 1.1, R * 1.1, rot);
-  circle(s, 0, 0, R * 0.55);
-  s.fillStyle = 'rgba(15,15,20,0.75)';
-  for (let i = 0; i < 3; i++) {
-    const a = (i / 3) * Math.PI * 2;
-    circle(s, Math.cos(a) * R * 0.33, Math.sin(a) * R * 0.33, R * 0.11);
-  }
-  s.fillStyle = css(pal.dark);
-  circle(s, 0, 0, R * 0.14);
-  if (st.trim === 'stripes') {
-    s.strokeStyle = 'rgba(250,200,40,0.9)';
-    s.lineWidth = 1.2;
-    s.beginPath();
-    s.arc(0, 0, R * 0.62, 0, Math.PI * 2);
-    s.stroke();
-  }
-  s.restore();
+  inkSaw(rc, x, y, R, rot, pal, Math.round(R * 7), st.trim === 'stripes');
   // Sparks when the blade grinds terrain.
   if (o.emit && o.level) {
     for (let i = 0; i < 6; i++) {

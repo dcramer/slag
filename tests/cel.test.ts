@@ -37,7 +37,7 @@ function fake2D() {
   return { ctx: { drawImage: (c: unknown) => void drawn.push(c), fillRect: () => {} }, drawn };
 }
 
-const params: PostParams = { exposure: 1, flash: 0, tint: [1, 1, 1], lift: [0, 0, 0], scale: 1, ambient: 0.8 };
+const params: PostParams = { exposure: 1, flash: 0, tint: [1, 1, 1], lift: [0, 0, 0], scale: 1, originX: 0, originY: 0, ambient: 0.8 };
 const [scene, fg, light, glow] = ['scene', 'fg', 'light', 'glow'].map((name) => ({ name }) as unknown as HTMLCanvasElement);
 
 describe('compositor', () => {

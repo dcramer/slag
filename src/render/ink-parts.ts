@@ -52,7 +52,7 @@ function sawTeeth(R: number, teeth: number, seed: number): P[] {
 }
 
 /** A saw blade with a chewed rim, a shadow fixed to the light rather than the spin, and speed strokes. */
-export function inkSaw(rc: RC, x: number, y: number, R: number, rot: number, pal: MetalPalette, seed: number) {
+export function inkSaw(rc: RC, x: number, y: number, R: number, rot: number, pal: MetalPalette, seed: number, stripes = false) {
   const s = rc.s;
   const teeth = Math.max(9, Math.round(R * 1.05));
   const pts = sawTeeth(R, teeth, seed);
@@ -104,6 +104,14 @@ export function inkSaw(rc: RC, x: number, y: number, R: number, rot: number, pal
     ring.push({ x: Math.cos(a) * R * 0.52, y: Math.sin(a) * R * 0.52 });
   }
   stroke(s, ring, { w: 0.85, seed: seed + 7, taper: [0.1, 0.5] });
+  if (stripes) {
+    s.fillStyle = 'rgb(250 200 40)';
+    stroke(
+      s,
+      ring.map((p) => ({ x: p.x * 1.2, y: p.y * 1.2 })),
+      { w: 1.3, seed: seed + 8, taper: [0.1, 0.1], press: 0.2 },
+    );
+  }
   s.rotate(-rot);
   // Speed strokes: they don't turn with the blade, they sit around it.
   const spin = (Math.floor(rc.frame / 3) % 3) * 2.1 + seed;
