@@ -8,6 +8,7 @@ import { type Beam, canPlace, footprint, type Resolved, resolveProp, traceBeams 
 import type { RunWorld } from '../sim/run';
 import type { GameEvent } from '../sim/types';
 import { Backdrop } from './background';
+import { drawBlood } from './blood';
 import { Camera } from './camera';
 import { PhoneCam, phoneView } from './camera-follow';
 import { drawAccessory, drawAfterimage, drawCharacter, Rig } from './character';
@@ -99,7 +100,6 @@ export class Renderer {
     this.viewBox.dataset.slagView = '';
     this.viewBox.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none';
     glCanvas.parentElement?.append(this.viewBox);
-    this.fx.onSplat = (x, y, r, c) => this.terrain.splat(x, y, r, c);
     ({ tier: this.quality, adaptive: this.adaptive } = detectQuality());
     this.resize();
     window.addEventListener('resize', () => this.resize());
@@ -242,6 +242,7 @@ export class Renderer {
     const pushers = m.run ? m.run.runners.filter((r) => r.alive).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h })) : [];
     this.terrain.drawLive(rc, level, pushers);
     this.drawMarkers(rc, level);
+    drawBlood(rc, m, frame);
 
     const grips = run?.runners.flatMap((r) => r.attach.grip ?? []);
     // A race's beams are the ones the sim hurts with. Before one, ghosts join in: a block you're holding cuts the flame it would stop.
@@ -629,7 +630,6 @@ export class Renderer {
             this.fx.burst('spark', e.x, e.y, 18, 260, [{ h: 45, s: 100, l: 70 }, body], 1.2, 0.5);
             this.fx.add('ring', e.x, e.y, 0, 0, body, 40, 0.45);
             this.fx.add('flash', e.x, e.y, 0, 0, shift(body, 20), 26, 0.25);
-            this.terrain.splat(e.x, e.y + 6, 4, body);
           }
           this.cam.shake = Math.max(this.cam.shake, 6);
           this.flash = Math.max(this.flash, 0.08);
