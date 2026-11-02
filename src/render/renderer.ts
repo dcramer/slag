@@ -134,7 +134,8 @@ export class Renderer {
     this.drawMarkers(rc, level);
 
     const run = m.phase === 'run' ? m.run : null;
-    const resolved = run ? run.resolved : m.placed.map(resolveProp);
+    // Set pieces are part of the level: show them in every phase (lobby, pick, place), not just races.
+    const resolved = run ? run.resolved : [...level.setPieces, ...m.placed].map(resolveProp);
     for (const r of resolved) {
       drawResolved(rc, r, {
         level,

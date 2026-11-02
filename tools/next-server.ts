@@ -38,10 +38,10 @@ export async function startNext(): Promise<{ base: string; close: () => Promise<
   const useDev = process.env.SHOT_DEV === '1';
   if (!useDev && needsBuild()) {
     console.log('building (sources changed since last build)…');
-    const r = spawnSync('npx', ['next', 'build'], { stdio: 'inherit', env: { ...process.env, NEXT_TELEMETRY_DISABLED: '1' } });
+    const r = spawnSync('pnpm', ['exec', 'next', 'build'], { stdio: 'inherit', env: { ...process.env, NEXT_TELEMETRY_DISABLED: '1' } });
     if (r.status !== 0) throw new Error('next build failed');
   }
-  const next = spawn('npx', ['next', useDev ? 'dev' : 'start', '--port', String(port), '--hostname', '127.0.0.1'], {
+  const next = spawn('pnpm', ['exec', 'next', useDev ? 'dev' : 'start', '--port', String(port), '--hostname', '127.0.0.1'], {
     stdio: ['ignore', 'pipe', 'pipe'],
     env: { ...process.env, NEXT_TELEMETRY_DISABLED: '1' },
   });

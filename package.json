@@ -7,14 +7,16 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "start": "next start",
     "typecheck": "tsc --noEmit",
+    "lint": "oxlint",
+    "format": "oxlint --fix && oxfmt src tests tools app relay next.config.ts vitest.config.ts",
+    "format:check": "oxfmt --check src tests tools app relay next.config.ts vitest.config.ts",
     "test": "vitest run",
-    "lint": "oxlint && oxfmt --check src tests tools app relay",
-    "format": "oxfmt src tests tools app relay && oxlint --fix",
-    "check": "tsc --noEmit && oxlint && oxfmt --check src tests tools app relay && vitest run",
+    "check:fast": "pnpm typecheck && pnpm lint && pnpm format:check",
+    "check": "pnpm check:fast && pnpm test",
     "shot": "tsx tools/shot.ts",
     "level": "tsx tools/level.ts",
-    "start": "next start",
     "relay": "tsx tools/relay-dev.ts",
     "online-test": "tsx tools/online-test.ts"
   },
@@ -22,18 +24,30 @@
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/ws": "^8.18.2",
     "oxfmt": "^0.75.0",
     "oxlint": "^1.90.0",
+    "oxlint-tsgolint": "^7.0.2005",
     "playwright": "^1.63.0",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "ws": "^8.22.1"
   },
   "dependencies": {
     "client-only": "^0.0.1",
     "next": "^16.4.3",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
+  },
+  "engines": {
+    "node": "22.x"
+  },
+  "packageManager": "pnpm@10.28.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }

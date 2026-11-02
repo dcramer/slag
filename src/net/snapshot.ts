@@ -19,7 +19,7 @@ import type { ThemeId } from '../themes';
  */
 
 /** Snapshot format version; bump on incompatible changes (old saves are dropped). */
-export const SNAP_VERSION = 1;
+export const SNAP_VERSION = 2;
 
 export interface RunSnap {
   slots: number[];
@@ -50,6 +50,8 @@ export interface MatchSnap {
   winners: number[];
   nextUid: number;
   charRolls: number;
+  salt: number;
+  nextSalt: number;
   pendingAdvance: number | null;
   level: { tiles: string; setPieces: number[]; version: number };
   run: RunSnap | null;
@@ -89,16 +91,16 @@ export function toWire(v: unknown): unknown {
 }
 
 /** Inverse of toWire. */
-export function fromWire<T = unknown>(v: unknown): T {
-  if (v === null || typeof v !== 'object') return v as T;
-  if (Array.isArray(v)) return v.map((x) => fromWire(x)) as T;
+export function fromWire(v: unknown): unknown {
+  if (v === null || typeof v !== 'object') return v;
+  if (Array.isArray(v)) return v.map((x) => fromWire(x));
   const o = v as Record<string, unknown>;
-  if ('$n' in o) return ({ nan: NaN, inf: Infinity, '-inf': -Infinity, '-0': -0 } as Record<string, number>)[o.$n as string] as T;
-  if ('$m' in o) return new Map((o.$m as [unknown, unknown][]).map(([k, x]) => [fromWire(k), fromWire(x)])) as T;
-  if ('$u8' in o) return b64ToBytes(o.$u8 as string) as T;
+  if ('$n' in o) return ({ nan: NaN, inf: Infinity, '-inf': -Infinity, '-0': -0 } as Record<string, number>)[o.$n as string];
+  if ('$m' in o) return new Map((o.$m as [unknown, unknown][]).map(([k, x]) => [fromWire(k), fromWire(x)]));
+  if ('$u8' in o) return b64ToBytes(o.$u8 as string);
   const out: Record<string, unknown> = {};
   for (const [k, x] of Object.entries(o)) out[k] = fromWire(x);
-  return out as T;
+  return out;
 }
 
 const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
@@ -167,6 +169,8 @@ export function snapshotMatch(m: Match): MatchSnap {
     winners: [...m.winners],
     nextUid: mp.nextUid,
     charRolls: mp.charRolls,
+    salt: m.salt,
+    nextSalt: m.nextSalt,
     pendingAdvance: mp.pendingAdvance ?? null,
     level: { tiles: bytesToB64(m.level.tiles), setPieces: m.level.setPieces.map((p) => p.uid), version: m.level.version },
     run: run
@@ -212,13 +216,15 @@ export function restoreMatch(m: Match, s: MatchSnap): void {
   m.phaseFrame = s.phaseFrame;
   m.frame = s.frame;
   m.round = s.round;
-  m.players = fromWire<Player[]>(s.players);
-  m.placed = fromWire<PlacedProp[]>(s.placed);
-  m.crate = fromWire<CrateItem[]>(s.crate);
+  m.players = fromWire(s.players) as Player[];
+  m.placed = fromWire(s.placed) as PlacedProp[];
+  m.crate = fromWire(s.crate) as CrateItem[];
   m.rules = { ...s.rules };
-  m.result = fromWire<RoundResult | null>(s.result);
+  m.result = fromWire(s.result) as RoundResult | null;
   m.prevScores = new Map(s.prevScores);
   m.winners = [...s.winners];
+  m.salt = s.salt;
+  m.nextSalt = s.nextSalt;
   mp.nextUid = s.nextUid;
   mp.charRolls = s.charRolls;
   mp.pendingAdvance = s.pendingAdvance ?? undefined;
@@ -238,12 +244,12 @@ export function restoreMatch(m: Match, s: MatchSnap): void {
 
 function restoreRun(run: RunWorld, s: RunSnap): RunWorld {
   run.frame = s.frame;
-  run.runners = fromWire(s.runners);
-  run.projectiles = fromWire(s.projectiles);
+  run.runners = fromWire(s.runners) as RunWorld['runners'];
+  run.projectiles = fromWire(s.projectiles) as RunWorld['projectiles'];
   run.finishOrder = [...s.finishOrder];
   run.kills = s.kills.map((k) => ({ ...k }));
   run.endFrame = s.endFrame;
-  run.propState = fromWire(s.propState);
+  run.propState = fromWire(s.propState) as RunWorld['propState'];
   (run as unknown as RunPrivate).events = [];
   return run;
 }

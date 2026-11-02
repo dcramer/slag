@@ -6,6 +6,7 @@ shots
 .DS_Store
 .claude/worktrees/
 *.tsbuildinfo
+CLAUDE.local.md
 
 # wrangler dev state
 relay/.wrangler/

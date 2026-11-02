@@ -42,6 +42,8 @@ declare class WebSocketPair {
   1: CfWebSocket;
 }
 
-declare class WebSocketRequestResponsePair {
-  constructor(request: string, response: string);
+interface WebSocketRequestResponsePair {
+  readonly request: string;
+  readonly response: string;
 }
+declare const WebSocketRequestResponsePair: new (request: string, response: string) => WebSocketRequestResponsePair;

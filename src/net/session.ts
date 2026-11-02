@@ -227,6 +227,11 @@ export class NetSession {
     else this.pendingActs.push([++this.actN, a]);
   }
 
+  /** True while an action this peer requested hasn't been applied yet. */
+  get pending(): boolean {
+    return this.pendingActs.length > 0 || this.hostActions.length > 0;
+  }
+
   /** Events from frames simulated for the first time since the last drain (confirmed or predicted). */
   drainEvents(): GameEvent[] {
     const e = this.events;
@@ -450,7 +455,7 @@ export class NetSession {
 
   /** Guests may only act for their own devices; rules and seating belong to the host. */
   private allowed(from: string, a: NetAction): boolean {
-    if (a.t === 'rules' || a.t === 'join') return false;
+    if (a.t === 'rules' || a.t === 'join' || a.t === 'salt') return false;
     return peerOf(a.dev) === from;
   }
 

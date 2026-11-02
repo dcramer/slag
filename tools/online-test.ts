@@ -168,7 +168,10 @@ async function scenario(browser: Browser, base: string, mode: 'bc' | 'relay', re
   const c2 = await waitFor(C, 'C rejoined', (v) => v.synced && v.hostId === b1.self, 20_000);
   check(c2.self === c0.self, `refresh keeps the peer id (${c0.self})`);
   const cAfter = c2.players.find((p) => p.device === `${c0.self}:kb1`);
-  check(!!cBefore && !!cAfter && cBefore.slot === cAfter.slot && cBefore.name === cAfter.name, `refresh restores the same slot/character (P${(cAfter?.slot ?? -1) + 1} ${cAfter?.name})`);
+  check(
+    !!cBefore && !!cAfter && cBefore.slot === cAfter.slot && cBefore.name === cAfter.name,
+    `refresh restores the same slot/character (P${(cAfter?.slot ?? -1) + 1} ${cAfter?.name})`,
+  );
   await waitFor(B, "C's player back from away", (v) => v.players.find((p) => p.device === `${c0.self}:kb1`)?.away === false, 10_000);
   await C.keyboard.down('ArrowRight');
   const b3 = await waitFor(B, 'next round', (v) => v.round >= 2 && v.phase === 'pick', 150_000);

@@ -24,7 +24,7 @@ function inputsAt(m: Match, f: number): Record<string, InputFrame> {
 describe('match snapshots', () => {
   it('round-trips exotic numbers and maps through JSON', () => {
     const v = { a: -0, b: NaN, c: Infinity, d: new Map([[1, { e: -Infinity }]]), f: new Uint8Array([1, 2, 3, 250]) };
-    const back = fromWire<typeof v>(JSON.parse(JSON.stringify(toWire(v))));
+    const back = fromWire(JSON.parse(JSON.stringify(toWire(v)))) as typeof v;
     expect(Object.is(back.a, -0)).toBe(true);
     expect(back.b).toBeNaN();
     expect(back.c).toBe(Infinity);

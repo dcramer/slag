@@ -17,6 +17,10 @@ export type NetAction =
   /** Mid-match: the device's peer disconnected (or came back). */
   | { t: 'away'; dev: string; on: boolean }
   | { t: 'name'; dev: string; name: string }
+  /** Restore a saved look (character seed) for one of the sender's players. */
+  | { t: 'look'; dev: string; seed: number }
+  /** Host only: the per-match salt (crate order) for the next match start. */
+  | { t: 'salt'; salt: number }
   /** Host only, lobby only. */
   | { t: 'rules'; rules: MatchRules };
 
@@ -66,10 +70,18 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
     }
     case 'name': {
       const p = m.players.find((q) => q.device === a.dev);
-      const name = String(a.name).slice(0, 12).trim();
+      const name = typeof a.name === 'string' ? a.name.slice(0, 12).trim() : ''; // wire data: don't trust the type
       if (p && name) m.setName(p.slot, name);
       return;
     }
+    case 'look': {
+      const p = m.players.find((q) => q.device === a.dev);
+      if (p && Number.isInteger(a.seed)) m.setLook(p.slot, a.seed >>> 0);
+      return;
+    }
+    case 'salt':
+      if (Number.isInteger(a.salt)) m.nextSalt = a.salt >>> 0;
+      return;
     case 'rules':
       if (m.phase === 'lobby') m.rules = sanitizeRules(a.rules);
       return;

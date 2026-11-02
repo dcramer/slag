@@ -6,7 +6,7 @@
  * menus). "Split keyboard" turns the keyboard into two local players.
  */
 
-export const BINDABLE = ['left', 'right', 'up', 'down', 'jump', 'confirm', 'alt'] as const;
+export const BINDABLE = ['left', 'right', 'up', 'down', 'jump', 'run', 'confirm', 'alt'] as const;
 export type Action = (typeof BINDABLE)[number];
 
 export const ACTION_LABELS: Record<Action, string> = {
@@ -15,6 +15,7 @@ export const ACTION_LABELS: Record<Action, string> = {
   up: 'Up / aim',
   down: 'Down / drop',
   jump: 'Jump',
+  run: 'Run (hold)',
   confirm: 'Confirm / pick',
   alt: 'Rotate / alt',
 };
@@ -44,6 +45,7 @@ export function defaultSettings(): InputSettings {
       up: ['KeyW', 'ArrowUp'],
       down: ['KeyS', 'ArrowDown'],
       jump: ['Space', 'KeyK'],
+      run: ['ShiftLeft', 'KeyJ'],
       confirm: ['Enter', 'Space'],
       alt: ['KeyR', 'KeyQ'],
     },
@@ -53,6 +55,7 @@ export function defaultSettings(): InputSettings {
       up: ['KeyW'],
       down: ['KeyS'],
       jump: ['Space', 'KeyW'],
+      run: ['ShiftLeft', 'KeyF'],
       confirm: ['Space'],
       alt: ['KeyQ', 'KeyE'],
     },
@@ -62,8 +65,9 @@ export function defaultSettings(): InputSettings {
       up: ['ArrowUp'],
       down: ['ArrowDown'],
       jump: ['ArrowUp', 'Slash'],
+      run: ['ShiftRight', 'Quote'],
       confirm: ['Enter', 'Slash'],
-      alt: ['Period', 'ShiftRight'],
+      alt: ['Period', 'Comma'],
     },
   };
 }
@@ -75,7 +79,12 @@ export function loadSettings(): InputSettings {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const s = JSON.parse(raw) as InputSettings;
-      if (s.version === 1 && s.single && s.left && s.right) return { ...defaultSettings(), ...s };
+      if (s.version === 1 && s.single && s.left && s.right) {
+        // Fill actions added after the settings were saved (e.g. run) from defaults.
+        const d = defaultSettings();
+        for (const k of ['single', 'left', 'right'] as const) s[k] = { ...d[k], ...s[k] };
+        return { ...d, ...s };
+      }
     }
   } catch {
     // Private mode / blocked storage: fall back to defaults.

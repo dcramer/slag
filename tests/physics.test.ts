@@ -91,20 +91,26 @@ describe('player controller: run & jump feel', () => {
     expect(b.onGround).toBe(true);
   });
 
-  it('runs fast with snappy accel, stop and turn', () => {
-    expect(m.runSpeed).toBeGreaterThanOrEqual(11);
-    expect(m.runSpeed).toBeLessThanOrEqual(13);
-    expect(m.accelTime).toBeGreaterThanOrEqual(0.08);
-    expect(m.accelTime).toBeLessThanOrEqual(0.15);
-    expect(m.stopTime).toBeLessThanOrEqual(0.1);
-    // Reversing at full speed is barely slower than starting from rest.
-    expect(m.turnTime).toBeLessThan(m.accelTime + 0.06);
+  it('walk is slow and precise; run is fast with momentum (skids, overshoots)', () => {
+    expect(m.walkSpeed).toBeGreaterThanOrEqual(5.5);
+    expect(m.walkSpeed).toBeLessThanOrEqual(7.5);
+    expect(m.runSpeed).toBeGreaterThanOrEqual(12.5);
+    expect(m.runSpeed).toBeLessThanOrEqual(14.5);
+    // Running takes a beat to build and skids when you let go or turn.
+    expect(m.accelTime).toBeGreaterThanOrEqual(0.18);
+    expect(m.accelTime).toBeLessThanOrEqual(0.35);
+    expect(m.stopTime).toBeGreaterThanOrEqual(0.2);
+    expect(m.stopTime).toBeLessThanOrEqual(0.4);
+    expect(m.turnTime).toBeGreaterThan(m.stopTime);
+    // A walking jump is short; a running jump roughly doubles it.
+    expect(m.walkJumpDistance).toBeLessThan(5);
+    expect(m.jumpDistance).toBeGreaterThan(m.walkJumpDistance * 1.8);
   });
 
-  it('full jump ~4.5 tiles, tap ~1.5 tiles, long running jump', () => {
-    expect(m.jumpHeight).toBeGreaterThan(4.2);
-    expect(m.jumpHeight).toBeLessThan(4.8);
-    expect(m.shortHopHeight).toBeGreaterThan(1.2);
+  it('full jump ~3.7 tiles, tap ~1.3 tiles, long running jump', () => {
+    expect(m.jumpHeight).toBeGreaterThan(3.4);
+    expect(m.jumpHeight).toBeLessThan(4.0);
+    expect(m.shortHopHeight).toBeGreaterThan(1.0);
     expect(m.shortHopHeight).toBeLessThan(1.8);
     expect(m.jumpDistance).toBeGreaterThan(6);
     expect(m.jumpDistance).toBeLessThan(9);
@@ -311,7 +317,7 @@ describe('player controller: walls', () => {
 describe('player controller: forgiveness', () => {
   it('corner correction nudges a jump around a ceiling corner (≤4 px overlap)', () => {
     const rows = open(20, 12, 10);
-    put(rows, 5, 5, '#');
+    put(rows, 5, 6, '#'); // ceiling 3 rows above the jumper's head: within a full jump
     const w = grid(rows);
     const jumpWith = (overlap: number) => {
       const b = bodyAtCell(4, 9);
@@ -324,10 +330,10 @@ describe('player controller: forgiveness', () => {
       return { minY, x: b.x };
     };
     const ok = jumpWith(3);
-    expect(ok.minY).toBeLessThan(5 * TILE);
+    expect(ok.minY).toBeLessThan(6 * TILE);
     expect(ok.x + 10).toBeLessThanOrEqual(5 * TILE + 1e-6);
     const bonk = jumpWith(7);
-    expect(bonk.minY).toBeGreaterThanOrEqual(6 * TILE - 1e-6);
+    expect(bonk.minY).toBeGreaterThanOrEqual(7 * TILE - 1e-6);
   });
 
   it('ledge lip: moving sideways into a ledge ≤3 px above the feet pops onto it', () => {

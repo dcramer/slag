@@ -16,7 +16,7 @@ function client(peer: string): Promise<{ ws: WebSocket; msgs: any[]; next: (t: s
     const msgs: any[] = [];
     const waiters: [string, (m: any) => void][] = [];
     ws.on('message', (d) => {
-      const text = d.toString();
+      const text = Buffer.isBuffer(d) ? d.toString('utf8') : '';
       const m = text === 'pong' ? { t: 'keepalive-pong' } : JSON.parse(text);
       const i = waiters.findIndex(([t]) => t === m.t);
       if (i >= 0) waiters.splice(i, 1)[0][1](m);
@@ -52,7 +52,14 @@ const ka = await b.next('keepalive-pong');
 a.ws.close();
 const lb = await b.next('leave');
 b.ws.close();
-const ok = wa.self.order < wb.self.order && wb.members.length === 2 && ja.m.id === 'probe-b' && mb.from === 'probe-a' && mb.d.hello === 'b' && lb.id === 'probe-a' && !!ka;
+const ok =
+  wa.self.order < wb.self.order &&
+  wb.members.length === 2 &&
+  ja.m.id === 'probe-b' &&
+  mb.from === 'probe-a' &&
+  mb.d.hello === 'b' &&
+  lb.id === 'probe-a' &&
+  !!ka;
 console.log(JSON.stringify({ room, a: wa.self, b: wb.self, msg: mb, leave: lb }));
 console.log(ok ? 'relay ok' : 'relay FAILED');
 process.exit(ok ? 0 : 1);

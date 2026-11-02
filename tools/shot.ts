@@ -50,7 +50,7 @@ async function open(q: string) {
   await page.evaluate(() => document.fonts.ready);
   await page.evaluate(() => (window as any).slagDebug.pause(true));
 }
-const step = (n: number) => page.evaluate((k) => (window as any).slagDebug.step(k), n as number);
+const step = (n: number) => page.evaluate((k) => (window as any).slagDebug.step(k), n);
 async function snap(name: string) {
   const p = `${out}/${name}.png`;
   await page.screenshot({ path: p });

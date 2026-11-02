@@ -31,10 +31,10 @@ interface Lease {
   used: number;
 }
 
-function read<T>(store: Storage | undefined, key: string): T | null {
+function read(store: Storage | undefined, key: string): unknown {
   try {
     const raw = store?.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : null;
+    return raw ? (JSON.parse(raw) as unknown) : null;
   } catch {
     return null;
   }
@@ -75,9 +75,9 @@ export function acquirePeerId(room: string): PeerIdentity {
   const ss = storage('session');
   const tab = randomPeerId();
   const now = Date.now();
-  const leases = read<Record<string, Lease>>(ls, keyLeases(room)) ?? {};
+  const leases = (read(ls, keyLeases(room)) as Record<string, Lease> | null) ?? {};
   const free = (id: string) => !leases[id] || leases[id].at === 0 || now - leases[id].at > LEASE_MS;
-  const mine = read<string>(ss, `slag.peer.${room}`);
+  const mine = read(ss, `slag.peer.${room}`) as string | null;
   let id = mine && free(mine) ? mine : '';
   if (!id) {
     const recent = Object.entries(leases)
@@ -95,7 +95,7 @@ export function acquirePeerId(room: string): PeerIdentity {
   write(ss, `slag.peer.${room}`, id);
 
   const renew = (at: number) => {
-    const t = read<Record<string, Lease>>(ls, keyLeases(room)) ?? {};
+    const t = (read(ls, keyLeases(room)) as Record<string, Lease> | null) ?? {};
     if (t[id] && t[id].tab !== tab && t[id].at !== 0 && Date.now() - t[id].at < LEASE_MS) return; // someone else holds it now
     t[id] = { tab, at, used: Date.now() };
     write(ls, keyLeases(room), t);
@@ -127,7 +127,7 @@ export function saveResume(room: string, snap: MatchSnap, ns: NetState) {
 
 /** The last state this browser saw for `room`, if recent and compatible. */
 export function loadResume(room: string): ResumeSave | null {
-  const r = read<ResumeSave>(storage('local'), keyResume(room));
+  const r = read(storage('local'), keyResume(room)) as ResumeSave | null;
   if (!r || r.snap?.v !== SNAP_VERSION || Date.now() - r.at > RESUME_MS) return null;
   return r;
 }

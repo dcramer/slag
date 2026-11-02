@@ -39,7 +39,10 @@ export function mountNetBadge(container: HTMLElement, conn: RoomConnection): voi
     line.append(d, `${state} · ${peers.length} here${h.isHost ? ' · you host' : ''}`);
     if (h.notice) line.append(document.createElement('br'), h.notice);
     list.textContent = peers
-      .map((p) => `${p.isHost ? '♛' : ' '} ${p.name}${p.isSelf ? ' (you)' : ''}${p.ping !== null && !p.isHost ? ` ${Math.round(p.ping)}ms` : ''}${p.quality === 'bad' ? ' ⚠' : ''}`)
+      .map(
+        (p) =>
+          `${p.isHost ? '♛' : ' '} ${p.name}${p.isSelf ? ' (you)' : ''}${p.ping !== null && !p.isHost ? ` ${Math.round(p.ping)}ms` : ''}${p.quality === 'bad' ? ' ⚠' : ''}`,
+      )
       .join('\n');
     list.style.display = peers.length > 1 ? '' : 'none';
   };

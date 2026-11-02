@@ -41,6 +41,8 @@ export function bootGame(container: HTMLElement, room: string): void {
     THEME_IDS.find((t) => t === themeParam),
   );
   match.rules = loadRules();
+  // Host-rolled per-match salt (crate order); re-rolled while in the lobby so every game differs.
+  match.nextSalt = (Math.random() * 4294967296) >>> 0;
   const input = new InputManager(window);
   input.viewEl = glCanvas;
   // In the lobby only real buttons act; a stray click must not join/ready/start.
@@ -74,12 +76,19 @@ export function bootGame(container: HTMLElement, room: string): void {
   function promptName() {
     const p = match.players.find((q) => q.device === myDevice());
     if (!p) return;
-    namePrompt.open(p.character.name, profile.name, (name) => {
+    let decided = false;
+    // Whatever you end up with — typed, kept-random, or just closing the prompt — is remembered.
+    const keep = (name: string) => {
+      decided = true;
       profile.name = name;
       profile.prompted = true;
       saveProfile(profile);
-      if (name) net.act({ t: 'name', dev: p.device, name });
-    });
+      net.act({ t: 'name', dev: p.device, name }); // sequenced by the host online
+    };
+    namePrompt.onClose = () => {
+      if (!decided) keep(p.character.name);
+    };
+    namePrompt.open(p.character.name, profile.name, (name) => keep(name ?? p.character.name));
   }
 
   input.onEscape = () => {
@@ -129,12 +138,32 @@ export function bootGame(container: HTMLElement, room: string): void {
   window.addEventListener('keydown', () => audio.unlock(), { once: true });
 
   /** Keep the local keyboard/mouse player's chosen name; ask once on first join. */
+  // Online, look and name changes are host-sequenced actions: send each once, not every frame.
+  let appliedLook: number | null = null;
   let nameSent = '';
   function syncProfile() {
     const p = match.players.find((q) => q.device === myDevice());
-    if (!p) return;
-    // A name change is a sequenced action online: send it once per (player, name), not every frame.
-    const want = `${p.slot}:${profile.name}`;
+    if (!p) {
+      appliedLook = null; // re-apply the saved look when they (re)join
+      return;
+    }
+    // Look: restore the saved one on join; afterwards a new look (reroll) becomes the saved one.
+    if (appliedLook === null) {
+      if (profile.look != null) {
+        if (p.character.seed !== profile.look) net.act({ t: 'look', dev: p.device, seed: profile.look });
+        appliedLook = profile.look;
+      } else {
+        appliedLook = p.character.seed;
+        profile.look = appliedLook;
+        saveProfile(profile);
+      }
+    } else if (p.character.seed !== appliedLook && !net.pending) {
+      appliedLook = p.character.seed;
+      profile.look = appliedLook;
+      saveProfile(profile);
+    }
+    // Name: a reroll also rolls a random name, so re-apply the saved one.
+    const want = `${p.slot}:${p.character.seed}:${profile.name}`;
     if (profile.name && p.character.name !== profile.name && nameSent !== want) {
       nameSent = want;
       net.act({ t: 'name', dev: p.device, name: profile.name });
@@ -171,6 +200,8 @@ export function bootGame(container: HTMLElement, room: string): void {
       return;
     }
     while (acc >= DT) {
+      // Host-rolled per-match salt, re-rolled on entering the lobby; a host action so every peer shares it.
+      if (net.isHost && match.phase === 'lobby' && match.phaseFrame === 0) net.act({ t: 'salt', salt: (Math.random() * 4294967296) >>> 0 });
       net.tick(input.sample());
       acc -= DT;
     }

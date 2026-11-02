@@ -21,33 +21,44 @@ export const PLAYER_H = 14;
  * pinned by tests/physics.test.ts. Worldgen must ask reach.ts, never these.
  */
 export const PHYS = {
-  // --- Run ---------------------------------------------------------------
-  /** Ground top speed: 12 tiles/s. Fast enough that a 48-tile level crosses in ~4 s. */
-  runSpeed: 192,
-  /** 0 → top speed in ~0.11 s: responsive without being a teleport. */
-  groundAccel: 1750,
-  /** Releasing the stick stops you in ~0.08 s: precise landings on small ledges. */
-  groundDecel: 2400,
-  /** Used instead of accel while input opposes velocity: turn-arounds feel instant. */
-  groundTurnAccel: 4200,
+  // --- Walk vs run ----------------------------------------------------------
+  // Walking is slow, precise and gives short jumps. Holding RUN is fast with
+  // real momentum: it takes a moment to build, skids when you let go or turn,
+  // and carries you past ledges if you're careless. Long gaps need a run-up.
+  /** Walk top speed: ~6.6 tiles/s. A walking jump clears ~3.5 tiles. */
+  walkSpeed: 106,
+  /** Run top speed: ~13.4 tiles/s. A running jump clears ~8 tiles. */
+  runSpeed: 215,
+  /** 0 → walk speed in ~0.06 s: walking is crisp. */
+  groundAccel: 1800,
+  /** Walk → run top speed in ~0.2 s: a run needs a short run-up. */
+  runAccel: 560,
+  /** At/below walk speed, releasing the stick stops you in ~0.05 s. */
+  groundDecel: 2200,
+  /** Above walk speed (run momentum) you skid: run speed → walk speed takes ~0.25 s. */
+  runDecel: 450,
+  /** Reversing at walk speed: instant-feeling turn-arounds. */
+  groundTurnAccel: 3800,
+  /** Reversing with run momentum: a visible skid before you turn. */
+  runTurnAccel: 1100,
 
   // --- Air control ---------------------------------------------------------
-  /** Strong but slightly weaker than the ground so jumps commit a little. */
-  airAccel: 1450,
-  /** No input in the air: drift bleeds off, but momentum carries a jump. */
-  airDecel: 900,
-  /** Reversing mid-air: high so you can correct a jump and steer back to a wall. */
-  airTurnAccel: 2600,
-  /** Faster than run speed (springs, kicks) in the held direction decays gently, keeping launches fun. */
-  airOverspeedDecel: 500,
+  /** Steering toward the target speed in the air. */
+  airAccel: 1000,
+  /** No input in the air: momentum mostly carries (overshoot is on you). */
+  airDecel: 260,
+  /** Reversing mid-air: strong enough to correct a jump and steer back to a wall. */
+  airTurnAccel: 1700,
+  /** Above the current top speed in the held direction (run momentum after letting go of run, springs, kicks): decays slowly. */
+  airOverspeedDecel: 240,
 
   // --- Jump --------------------------------------------------------------
-  /** Rising gravity. With jumpVel this gives a ~4.5-tile full jump with a ~0.3 s rise. */
+  /** Rising gravity. With jumpVel this gives a ~3.7-tile full jump with a ~0.27 s rise. */
   gravity: 1600,
   /** Take-off speed. */
-  jumpVel: 465,
+  jumpVel: 422,
   /** Releasing jump clamps upward speed to this: a tap hops ~1.5 tiles. */
-  jumpCutVel: 215,
+  jumpCutVel: 200,
   /** Gravity multiplier while |vy| < apexVelBand and jump is held: a brief hang to aim the landing. */
   apexGravityMult: 0.5,
   apexVelBand: 55,
@@ -78,7 +89,7 @@ export const PHYS = {
   wallJumpVxNeutral: 170,
   wallJumpVxAway: 250,
   /** Wall jump lift (a bit less than a ground jump: ~3.3 tiles). */
-  wallJumpVy: 410,
+  wallJumpVy: 375,
   /** Sticky walls still let you jump, but weaker (both components scaled). */
   stickyWallJumpMult: 0.78,
   /** Brief reduced air control after a wall jump so the kick reads; short so it never fights the player. Into-wall jumps use 2 frames to re-stick fast. */

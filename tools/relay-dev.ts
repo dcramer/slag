@@ -46,7 +46,7 @@ export async function startRelay(port = 8787, host = '127.0.0.1'): Promise<DevRe
     const peer = url.searchParams.get('peer') ?? '';
     peers.set(ws, peer);
     ws.on('message', (data) => {
-      const text = data.toString();
+      const text = Buffer.isBuffer(data) ? data.toString('utf8') : '';
       if (text === 'ping') ws.send('pong');
       else r.message(ws, text);
     });

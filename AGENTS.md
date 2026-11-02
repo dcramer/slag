@@ -1,216 +1,98 @@
 # AGENTS.md
 
-Guidance for AI agents (and humans) working on **slag**. Read this before you change anything.
+**slag** is a browser party platformer: each round players **pick** a prop from a crate, **place** it in the level, then **run** to the flag (1–8 players, `MAX_PLAYERS`). Levels, props, characters, names and visuals are all procedurally generated from a seed. Movement is a tight precision platformer: walk by default, hold **run** for speed and long jumps, variable jumps, wall slide/jump, coyote time, jump buffering. Use the genre's mechanics, never another game's names, art, characters or level designs.
 
-## What this is
-
-slag is a browser-based competitive party platformer in the genre of party trap-builders. Each round:
-
-1. **Pick**: players pick props from a crate.
-2. **Place**: they place the props in the level.
-3. **Run**: everyone races to the flag.
-
-Matches have 1–8 players (`MAX_PLAYERS`). Scoring rewards levels that are hard but not impossible. If everyone finishes, nobody scores. If nobody finishes, nobody scores.
-
-The differentiator is **procedural generation everywhere**:
-
-- themed levels (farm, factory, castle, …) with set pieces
-- props assembled from modules
-- characters
-- names
-- visuals
-
-The movement should feel **fast and tight**, like a precision platformer: fast run, variable jumps, wall slides and wall jumps, coyote time, and jump buffering.
-
-Build original content. Use the genre's mechanics, but never copy another game's names, characters, art, or level designs.
-
-## Ground rules
-
-- **Commit to `main` and push. Always.**
-  - Pull first: `git pull --rebase origin main`.
-  - Make small, focused commits.
-  - After every meaningful, green change, push: `git push origin main`. Don't leave work uncommitted, because the dev containers are ephemeral.
-  - Never create feature branches or PRs unless the user asks. The one exception is parallel subagents in worktrees (see below).
-- **Keep it green.** Run `npm run check` (typecheck + lint + tests) before every commit. Don't skip, disable, or weaken tests to get green.
-- **Look at what you render.** Any visual change must be verified with `npm run shot` and inspected. Typechecking isn't enough.
-- **Determinism is sacred** (see below).
-- **Stay in your lane.** Each subsystem has an owner module and an extension point. Extend through the registry instead of adding `switch` statements elsewhere.
+Game design decisions live in [docs/DESIGN.md](docs/DESIGN.md): follow it, and update it in the same commit when a decision changes. Folders with their own rules have a nested `AGENTS.md`: `src/sim/`, `src/gen/`, `src/render/`, `app/`. Read it before editing there.
 
 ## Commands
 
-| Command | What it does |
-|---|---|
-| `npm run dev` | Next.js dev server (http://localhost:3000). `/` redirects to a new lobby `/r/<code>`. URL params are listed below. |
-| `npm run check` | `tsc` + `oxlint` + `oxfmt --check` + `vitest run`. Must pass before you commit. |
-| `npm run format` | `oxfmt` (format) + `oxlint --fix` (safe lint fixes). |
-| `npm test` | Vitest only. Run one file with `npx vitest run tests/foo.test.ts`. |
-| `npm run level -- <seed>` | ASCII dump of a generated level, plus stats: `#` solid, `=` one-way, `S`/`G` spawn/goal, `·` reachable stand cell, `P` set piece. |
-| `npm run level -- --stats 200` | Generation stats across many seeds: time, styles, how often a level is solvable without props. |
-| `npm run shot -- <scenario> [opts]` | Headless screenshots into `shots/` (gitignored). Runs `next build` if sources changed, then `next start` (set `SHOT_DEV=1` to use `next dev`). |
-| `npm run build` | Production bundle in `dist/`, which Vercel serves. |
-| `npm run relay` | Local room relay on `ws://127.0.0.1:8787` (same logic as the Cloudflare relay). Open `/r/<code>?relay=ws://127.0.0.1:8787` in two browsers. |
-| `npm run online-test` | Headless multi-page online test (BroadcastChannel + relay): join, race, host leaves, migration, refresh. |
+Package manager is **pnpm** (`packageManager` in package.json). Never use npm or commit a `package-lock.json`. Node 22 (`.nvmrc`, `engines`).
 
-Screenshot scenarios (`tools/shot.ts`):
+| Command                             | Use                                                                                                                                         |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm install`                      | First thing in a fresh checkout or worktree (`node_modules` is not shared).                                                                 |
+| `pnpm check`                        | The gate: typecheck + lint + format check + all tests (~2 min). Must pass before every commit.                                              |
+| `pnpm check:fast`                   | Typecheck + lint + format check (~15 s). Use while iterating.                                                                               |
+| `pnpm vitest run tests/foo.test.ts` | One test file. Add `-t "name"` for one test.                                                                                                |
+| `pnpm format`                       | `oxlint --fix` then `oxfmt`: fixes formatting and safe lint issues.                                                                         |
+| `pnpm build`                        | Production build into `.next/`, exactly what Vercel runs.                                                                                   |
+| `pnpm shot <scenario> [opts]`       | Headless screenshots into `shots/` (gitignored). See "Verify visually".                                                                     |
+| `pnpm level <seed> [--theme farm]`  | ASCII level dump: `#` solid, `=` one-way, `S`/`G` spawn/goal, `·` reachable stand cell, `P` set piece.                                      |
+| `pnpm level --stats 50`             | Per-theme stats over N seeds: ms/level, styles, `needBridges`, `fallbacks` (~2 min at 50).                                                  |
+| `pnpm dev`                          | Dev server at http://localhost:3000; `/` redirects to a fresh lobby `/r/<code>`.                                                            |
+| `pnpm relay`                        | Local room relay on `ws://127.0.0.1:8787` (same logic as the Cloudflare relay). Open `/r/<code>?relay=ws://127.0.0.1:8787` in two browsers. |
+| `pnpm online-test`                  | Headless multi-page online test (BroadcastChannel + relay): join, race, host leaves → migration, refresh → same slot (~5 min).              |
 
-- `race --seed S --race saw,laser,launcher --frames 200` plays a race with those prop archetypes. `--race all` uses one of everything.
-- `lobby`, `pick`, `place` with `--seed S --players N`.
-- `levels --count 9` or `--seeds a,b,c` renders a contact sheet of levels to `shots/levels.png`.
-- `props` produces crate-card galleries.
+Lint: `oxlint` (type-aware, `.oxlintrc.json`). Errors fail CI; warnings are real findings to fix, not noise. Format: `oxfmt` (`.oxfmtrc.json`: 2 spaces, single quotes, 160 columns). Don't add `oxlint-disable` comments to get green; fix the code or change the rule in `.oxlintrc.json` with a reason.
 
-The harness pauses the real-time loop and advances the sim with `slagDebug.step(n)`, so shots are deterministic even on slow software GL. It exits non-zero if the page logged errors.
+## Definition of done
 
-Dev URL params (`src/debug.ts`):
+1. `pnpm check` passes. Never skip, delete or weaken a test to get there.
+2. `pnpm build` passes if you touched `app/`, `next.config.ts`, `package.json`, or what `app/` imports from `src/`.
+3. Visual change: you took a screenshot and looked at it (see below). Typechecking says nothing about pixels.
+4. Generator change: `pnpm level --stats 50` shows `fallbacks: 0` and no unexplained jump in ms/level or `needBridges`; compare against a run on the parent commit.
+5. Behavior change: a test covers it (generator invariants, prop module runtime behavior, physics feel regressions).
+6. In your final message, show evidence: the commands you ran with their result, and screenshot paths.
 
-- `?seed=abc`
-- `?players=2` auto-joins and starts.
-- `?race=saw,laser` or `?race=all` jumps straight into a race with those props.
-- `?propseed=3`
-- `?net=off|bc` offline / BroadcastChannel (same-browser tabs); `?relay=ws://localhost:8787` a local relay. `?players`/`?race` imply offline.
+### Verify visually
 
-In the console, `slagDebug` exposes `quickStart`, `race`, `addProps`, `loadLevel`, `pause`, `step`, and `render`.
+`pnpm shot` builds a production server (`next build` if sources changed since `.next/BUILD_ID`, then `next start`; `SHOT_DEV=1` uses `next dev`). It pauses the real-time loop and advances the sim with `slagDebug.step(n)`, so shots are deterministic, and it exits non-zero if the page logged errors. Open the PNG it prints and inspect it.
 
-## Architecture
+- `race --seed S --race saw,laser,launcher --frames 200` (`--race all` = one of every archetype)
+- `lobby` | `pick` | `place` with `--seed S --players N`
+- `levels --count 9`, `--seeds a,b,c` or `--themes all` → contact sheet `shots/levels.png`
+- `props --count 24` (crate cards), `codex` (the `/codex` page)
+- Options: `--theme farm`, `--noui` (hide HUD), `--size 1280x720`, `--out shots`
 
-```
-app/             Next.js routes: / (redirect), r/[room] (game shell), codex, not-found
-src/
-  game-client.ts bootGame(container, room): canvases, input, menus, fixed-step loop
-  core/          pure utils: rng (seeded, deterministic), geom, color
-  themes.ts      ThemeId list + pickThemeId(seed)  ← theme registry root
-  sim/           deterministic simulation. NO DOM, NO Math.random, NO wall clock
-    constants.ts   world size, tile size, PHYS tuning, match constants
-    physics.ts     player controller + collision (stepBody)
-    level.ts       Level type, tile kinds (T_EMPTY/T_SOLID/T_ONEWAY), tileAt
-    reach.ts       reachability analysis using the real controller (used by worldgen)
-    run.ts         RunWorld: one race. Delegates all prop behavior to modules
-    props/         prop data model + module plugins
-      types.ts       Module union, PropDef, PlacedProp, Resolved, PropState
-      registry.ts    ModuleSim contract (resolve/anchors/build/tick/onStand), Hazard/Contrib types
-      transform.ts   rotation/resolve, footprint, canPlace, detonate, motion, cycles, raycasts
-      modules/*.ts   one file per module type (body, spikes, swinger, launcher, flame, laser, …)
-  gen/           procedural generators (deterministic given seed)
-    level/         level pipeline (index.ts) + per-theme sculptors (sculptors/*.ts)
-    setpieces/     per-theme set-piece placers (pre-placed level props)
-    props.ts       archetype recipes → PropDefs; crate generation
-    theme.ts       look generation (palette, sky, terrain material, liquid, decor, grade)
-    character.ts   cosmetic characters
-    names.ts       word/name generators
-  game/          match state machine (lobby → pick → place → run → score → victory), scoring
-  input/         keyboard + gamepad → per-device InputFrame
-  render/        presentation only (reads sim state, never mutates it)
-    renderer.ts    frame orchestration: layers, camera, events → fx
-    post.ts        WebGL2 compositor (lighting, bloom, tonemap, grade) + Canvas2D fallback
-    kit.ts         drawing helpers, materials, lights
-    background.ts  sky, celestial, skylines, liquid, ambient motes
-    terrain.ts     terrain texture/bake, caps, decor, grass, splats
-    character.ts   character art + cosmetic verlet rig
-    props/         prop art: common.ts (ModuleArt registry), modules/*.ts (one per module type), projectiles.ts
-    fx.ts camera.ts hud.ts
-  debug.ts       window.slagDebug + URL params
-tools/           shot.ts (screenshots), level.ts (ASCII/stats)
-tests/           vitest
-```
+Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm`, `?players=2` (auto-join and start), `?race=saw,laser` or `?race=all`, `?propseed=3`, `?ui=0`, `?net=off|bc` (offline / same-browser tabs), `?relay=ws://localhost:8787` (local relay); `?players`/`?race` imply offline. In the console, `slagDebug` has `quickStart`, `race`, `addProps`, `loadLevel`, `phase`, `pause`, `step`, `render`, `hash`, and `net` (the online session).
 
-### Data flow per frame
+## Git workflow
 
-1. `game-client.ts` (`bootGame`) samples input once per fixed 60 Hz step and calls `Match.step(inputs)`.
-2. During a race, `Match` calls `RunWorld.step`, which:
-   - asks every prop module to `build` this frame's solids, hazards, and triggers;
-   - steps the runners with `stepBody`;
-   - resolves hazards, springs, and the goal;
-   - runs each module's `tick` (timers, projectiles).
-3. Events go into a queue that the renderer drains for effects. The sim never reads them back.
-4. `Renderer.render` paints three Canvas2D layers in world space through a camera:
-   - **albedo**
-   - **emissive** (additive)
-   - **light map** (0.5 means neutral)
+- Main session: work on `main`. `git pull --rebase origin main`, make small focused commits, and `git push origin main` after every green change. Dev containers are ephemeral, so unpushed work is lost. No feature branches or PRs unless the user asks.
+- Subagents in worktrees: run `pnpm install` first, edit only the files your brief assigns, commit to your worktree branch, and **do not push or touch `main`**; the orchestrator merges, re-runs `pnpm check`, and pushes. Never use bare `git stash` (the stash is shared across worktrees).
+- If you must change a shared contract (`src/sim/props/types.ts`, `src/sim/props/registry.ts`, `src/themes.ts`, `src/sim/types.ts`), keep it additive and call it out in your report.
+- Orchestrators define contracts (types, registries) and commit them to `main` before fanning out.
+- Commit messages: imperative summary line saying what changed and why it matters.
 
-   `post.ts` composites them in WebGL2. The HUD is drawn on its own canvas.
+## Invariants
 
-### Determinism (non-negotiable)
+- **Determinism.** The sim is a pure function of `(seed, per-frame inputs)`; tests run two identical headless matches and compare. In `src/sim`, `src/gen`, `src/game`, `src/themes.ts`, all randomness comes from `Rng` (`src/core/rng.ts`) with sub-streams from `deriveSeed(seed, 'label')`: no `Math.random`, no wall clock, no DOM. Lint enforces this.
+- **Layering.** `sim/`, `gen/`, `game/` never import `render/`, `input/`, `audio/`, `ui/`. `render/` reads sim state and never writes it. Lint enforces the imports.
+- **Client-only game.** Everything in `src/` runs in the browser; Next.js pages are thin shells (see `app/AGENTS.md`). No React or Next imports in `src/` (lint enforces).
+- **Lockstep-safe state** (`docs/NETCODE.md`): every browser in a room runs the same Match. Sim state is plain, snapshot-friendly data, and new Match/RunWorld fields must be added to `src/net/snapshot.ts` (tests compare hashes). Use `src/core/dmath.ts` instead of `Math.sin/cos/atan2/exp/pow/hypot` and `**` (`tests/determinism-ban.test.ts`). Inputs and host-sequenced `NetAction`s (`src/net/actions.ts`) are the only things that cross the network: anything that changes the Match outside per-device input (names, looks, rules, salt, seating) must be an action, never a direct mutation from the client. Online, match devices are `<peer>:<device>`; use `net.globalDevice(local)`.
+- **Fairness.** Characters are cosmetic. Every player shares one hitbox and one physics model.
+- **Registries over switches.** Extend a subsystem through its registry, not with a new `switch` elsewhere.
 
-- All randomness in `sim/`, `gen/`, `game/`, and `themes.ts` comes from `Rng` (`src/core/rng.ts`). Derive sub-seeds with `deriveSeed(seed, 'label')`, which keeps streams independent and stable.
-- The sim is a pure function of `(seed, per-frame inputs)`. Tests assert that two identical headless matches produce identical results. This is what makes future lockstep or rollback netcode possible.
-- `render/` and `fx` can use `Math.random`, because it's cosmetic. They must never write to sim state.
+## Where things live
 
-### Extension points
+- `src/game-client.ts`: `bootGame(container, room)`: canvases, input, menus, fixed 60 Hz loop. Each step: input → `Match.step` → `RunWorld.step` (props `build` solids/hazards → `stepBody` → hazards/springs/goal → props `tick`) → events queue → `Renderer.render`.
+- `src/sim/`: deterministic simulation (physics, level, reachability, run world, prop modules). `src/gen/`: generators (levels, set pieces, props, theme looks, characters, names). `src/game/`: match state machine (lobby → pick → place → run → score → victory) and `scoring.ts`. `src/render/`: Canvas2D layers + WebGL2 post. `src/input/`: keyboard/gamepad → `InputFrame` (bindings in `bindings.ts`). `src/audio/`: procedural SFX and per-theme music. `src/ui/`: menus. `src/codex/`: the `/codex` parts catalog.
+- `tools/`: `shot.ts`, `level.ts`. `tests/`: vitest, one file per subsystem.
 
-- **New prop module type** (for example a rotating platform):
-  1. Add the variant to the `Module` union in `sim/props/types.ts`.
-  2. Implement `ModuleSim` in `sim/props/modules/<type>.ts` and export it from `modules/index.ts`.
-  3. Add art in `render/props/modules/<type>.ts` and import it in its `index.ts`.
-  4. Add tests.
-- **New player prop archetype**: add a recipe in `gen/props.ts` (`RECIPES`, `ARCHETYPE_WEIGHTS`). Names come from rolled params.
-- **New theme**: add the id to `THEME_IDS`, then entries in `SCULPTORS`, `SET_PIECES`, and the look generator. `Record<ThemeId, …>` makes the compiler list them for you.
-- **Set pieces**: these are `PlacedProp`s with `owner = -1` and uids starting at `SET_PIECE_UID`, stored on `level.setPieces`. `RunWorld` simulates them like any other prop.
+## Extension points
 
-## Game design rules
+- **Prop module type**: add the variant to `Module` in `src/sim/props/types.ts`; implement `ModuleSim` in `src/sim/props/modules/<type>.ts` and export it from `modules/index.ts`; add art in `src/render/props/modules/<type>.ts` and import it from that `index.ts`; add tests.
+- **Player prop archetype**: a recipe in `src/gen/props.ts` (`RECIPES`, `ARCHETYPE_WEIGHTS`). Names come from rolled params.
+- **Theme**: add the id to `THEME_IDS` and `THEME_LABELS` in `src/themes.ts`, then `tsc` lists every `Record<ThemeId, …>` to fill: `SCULPTORS`, `SET_PIECE_RECIPES`, the look `RECIPES` in `src/gen/theme/presets.ts`, music `STYLES`, `GROUND_TONE`. A farm must read as a farm at a glance.
+- **Set pieces**: per-theme recipes in `src/gen/setpieces/<theme>.ts` (see `src/gen/AGENTS.md`).
 
-- **The world** is `LEVEL_W × LEVEL_H` tiles = 48×27 tiles of 16 px (768×432 logical px). Tile kinds:
-  - `T_SOLID`
-  - `T_ONEWAY` (jump-through from below; drop through with down + jump)
-  - `T_EMPTY`
-- **Fairness**: characters are cosmetic only. Every player shares one hitbox and one physics model.
-- **Levels**:
-  - The spawn is on the left and the goal on the right.
-  - Protected rects around both can't be built on or bombed.
-  - The pit at the bottom kills.
-- **Solvability policy**:
-  - A level must be completable. Either the goal is reachable without props, or it becomes reachable after placing at most two small building props (for example a 3-wide platform) somewhere in the level.
-  - Aim for roughly half of levels requiring props, as in the genre.
-  - Always verify with `sim/reach.ts`, which uses the real controller. Never use hand-waved jump distances.
-- **Themes**: each map has a coherent theme. The theme affects terrain shapes, palette, skyline, decor, liquid, and set pieces. A farm should read as a farm at a glance.
-- **Placement rules**:
-  - Most props occupy free cells.
-  - **Attachments** (spikes, ice coat, slime coat, and similar surface modifiers) must sit flush against a solid face, either terrain or a placed block. The player's rotation picks which face they attach to.
-  - Spikes add a hazard strip on that face. Coats change the surface: on floors, ice is slippery and slime is slow and sticky; on walls, ice means no wall slide or wall jump and slime means a sticky wall cling.
-  - Placement validity lives in `sim/props/transform.ts` (`canPlace`) and must stay deterministic.
-- **Scoring**: see `game/scoring.ts`.
-- **Movement feel targets**:
-  - fast ground speed with quick acceleration
-  - variable jump height
-  - coyote time and jump buffering
-  - wall slide and wall jump with a kick-away
-  - fast-fall on down
-  - forgiving corner correction
+## Game rules
 
-  Tune numbers in `sim/constants.ts` (`PHYS`). Worldgen must not hardcode jump distances. It must ask `reach.ts`.
+- World: `LEVEL_W × LEVEL_H` = 48×27 tiles of 16 px (768×432). Tiles: `T_SOLID`, `T_ONEWAY` (jump through from below; drop with down + jump), `T_EMPTY`. Spawn left, goal right; protected rects around both can't be built on or bombed; the bottom pit kills.
+- Solvability: the goal is reachable bare, or after placing at most two small building props. Aim for about half of levels needing props. Always check with `src/sim/reach.ts` (the real controller), never hand-waved jump distances.
+- Placement validity lives in `canPlace` (`src/sim/props/transform.ts`). **Attachments** (spikes, ice coat, slime coat) mount flush on a solid face (terrain or placed block); the player's rotation picks the face. Spikes add a hazard strip. Coats change the surface: on floors ice is slippery and slime slow and sticky; on walls ice blocks wall slide/jump and slime makes a sticky cling.
+- Scoring: `src/game/scoring.ts`. Everyone finishing or nobody finishing scores nothing.
+- Units: world pixels and sim frames (60/s); tile coordinates in `TILE` units; angles in radians, screen space (+y down).
 
-## Deployment and online play
+## Hosting
 
-- **Hosting is Vercel.**
-  - The app is **Next.js (App Router)** so routes are server-rendered: `/` redirects to a fresh `/r/<code>`; `/r/[room]` renders the lobby shell (per-lobby metadata) and mounts the game client-side; `/codex` is the parts catalog.
-  - **Game logic stays client-side.** Next pages are thin: they validate params, render a shell, and load the game/codex through `next/dynamic(..., { ssr: false })` (`GameClient` → `GameMount`, `CodexClient` → `CodexMount`), so nothing in `src/` is compiled into the server bundle. `src/game-client.ts` and `src/codex/main.ts` start with `import 'client-only'`, which fails the build if a server module ever imports them. Server routes may import only tiny pure helpers (e.g. `src/game/room.ts`). Don't import React into `src/`.
-  - Server code is limited to route handlers / server components in `app/`; keep it small and free.
-  - Any server-side code must be small Vercel functions in `api/`. No long-lived servers, and nothing that costs money at our scale.
-- **Online play** (`src/net/`, `relay/`, **docs/NETCODE.md**): every browser on `/r/<code>` runs the same deterministic Match. A tiny Cloudflare Durable Object relays messages and owns presence; the earliest-joined connected peer is host and sequences everyone's inputs into per-frame bundles (lockstep; guests predict races locally). Hosts migrate automatically. Consequences for all code:
-  - Keep sim state snapshot-friendly (`src/net/snapshot.ts` must capture it): plain data, no closures or hidden state. New Match/RunWorld state needs a snapshot field and a test.
-  - Use `src/core/dmath.ts` (`dsin`, `dcos`, `datan2`, `dhypot`, `dpow`…) instead of `Math.sin/cos/atan2/exp/pow/hypot` and `**` in sim, game, and generator code; `tests/determinism-ban.test.ts` enforces it.
-  - Inputs and host-sequenced actions (`src/net/actions.ts`) are the only things that cross the network. Anything that changes the Match outside per-device input (names, rules, seating) must be a `NetAction`. Never let render-side state influence the sim.
-  - Match devices are global ids `<peer>:<device>` online; compare with `net.globalDevice(local)`.
+Vercel, Next.js App Router. Server code is limited to small, stateless route handlers and server components in `app/`; no long-lived servers, nothing that costs money at our scale. Online play (`src/net/`, `relay/`, `docs/NETCODE.md`): a tiny Cloudflare Worker + Durable Object (free plan) relays messages and owns room presence; the earliest-joined peer hosts and sequences inputs (lockstep, prediction in races, automatic host migration). Configured by `NEXT_PUBLIC_SLAG_RELAY_URL`; without it, links only connect tabs of one browser.
 
-## Code conventions
+## Conventions
 
-- TypeScript strict mode, ES modules. Runtime deps are only next/react/react-dom (for routing and the shell); the game itself uses none. Dev tooling: vitest, oxlint, oxfmt, tsx, playwright.
-- oxfmt formats with 2-space indentation, single quotes, and 160-column lines (`.oxfmtrc.json`); oxlint config is `.oxlintrc.json`. Run `npm run format` before committing.
-- Write doc comments on modules and exported functions that explain *why*. Keep functions small. Prefer data plus registries over sprawling `switch` statements.
-- Units: world pixels and sim frames (60 per second). Tile coordinates are in `TILE` units. Angles are radians in screen space, so +y points down and +π/2 points down.
-- Write tests for every generator invariant (determinism, validity), for every prop module's runtime behavior, and for physics feel regressions.
-
-## Parallel subagents
-
-When work is split across subagents:
-
-- The orchestrator defines the contracts (types and registries) first and commits them to `main`.
-- Each subagent works in its own git worktree or branch, owns a disjoint set of files (listed in its brief), and **commits but does not push**. The orchestrator merges into `main`, runs `npm run check`, and pushes.
-- If a subagent truly needs to change a shared contract (for example `sim/props/types.ts` or `themes.ts`), keep the change additive and minimal, and call it out in its final report.
-- Each subagent must finish with a green `npm run check` in its worktree and attach screenshot paths for any visual work.
-
-## Assets
-
-- Prefer procedural art. Third-party assets are fine only if they're CC0 or otherwise free for commercial use with no attribution traps. Record every asset in `public/ASSETS.md` with its source URL and license.
-- Keep shipped assets small (downscale textures to ≤256 px tiles and compress them).
+- TypeScript strict, ES modules. Runtime deps are only `next`, `react`, `react-dom` (for the shell) and `client-only`; the game itself uses none. Don't add runtime dependencies without asking.
+- Doc comments explain _why_, on modules and exported functions. Small functions; data plus registries over sprawling `switch`es.
+- Assets: prefer procedural art. Third-party assets only if CC0 or free for commercial use without attribution traps; record each in `public/ASSETS.md` with source URL and license. Keep them small (≤256 px tiles, compressed).
 
 <!-- BEGIN:nextjs-agent-rules -->
 
