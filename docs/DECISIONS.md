@@ -212,6 +212,8 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Every character is a little disheveled and grungier, because of the lore, and simpler than the concept sheets, which are too complicated for the game's art style; the art style itself may change to fit.** "all the characters need to be a little disheveled because of slag's lore" / "yeah they're fine but i worry those are just too complicated for our game art style (and we might need to tweak our art style). and i want them grungier as a thematic thing because of the game's lore"
   2026-11-02 · `open` · CHARACTERS.md → Decisions 7, ART.md
   Changed: the cast was clean, light and calm in colour.
+- **The grunge is worn shape: battered, lopsided, bent and taped, with clean bright colours; not grimy colour, not a rough line.** (picked from the zapmouse style test: "Worn, like worn-2")
+  2026-11-02 · `in progress` · CHARACTERS.md → Decisions 9, `tools/art3d/style.ts`
 - **Set-piece machines that look solid are made solid: guns on ledges, wheel and swing hubs, ladles, carts, signs, posts.** "Make them solid" (asked: make them solid, or draw them as not-ground)
   2026-11-02 · `open` · TODO.md → 21, `pnpm shot fairplay` (`PENDING`)
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"

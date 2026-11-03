@@ -43,6 +43,7 @@ Each field of an entry has one place it goes:
 
 From terra (`cd /home/dcramer/src/terra`; the Tripo CLI reads that repo's `.env`). `tripo=tools/tripo/tripo.ts`.
 
+0. **Design, at game size** (docs/CHARACTERS.md → Decisions 9): `node $tripo image "$(node <slag>/tools/art3d/style.ts design KIND)" --aspect 1:1 --count 4`, with no reference: one figure designed to read as a 24 px sprite, its twist as big shapes. Then the wear, as an edit of the picked one: `node $tripo image "$(node <slag>/tools/art3d/style.ts worn KIND)" --ref design.png --aspect 1:1 --count 4`. Asked for in one prompt, the image model drops the damage; as an edit it lands and the design holds. Check both at play scale beside the cast before going on (the zapmouse's run is in `shots/styletest/`).
 1. **Concept:** `node $tripo image "$(node <slag>/tools/art3d/style.ts concept KIND)" --ref <a finished concept> --aspect 16:9 --count 2`. A finished kind's concept as the reference keeps the house look.
 2. **Pose sheet:** `node $tripo image "$(node <slag>/tools/art3d/style.ts pose KIND)" --ref concept.png --aspect 16:9 --count 2`. The prompt opens on the layout: one that opens on "model sheet" gets the model sheet back.
 3. **Model sheet:** `node $tripo image "$(node <slag>/tools/art3d/style.ts model KIND)" --ref concept.png --t-pose --count 3`. One figure, flat matte colour, no ink, gear clear of the arms. Redraw from the best candidate (`--ref` it, say only what changes) until the figure is right; a bad model can't render well.

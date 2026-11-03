@@ -37,6 +37,27 @@ export const SCULPT =
   'Chunky simple sculpted forms with clear separations between parts, every part one flat matte colour, no outlines, no painted shadows, no texture, no gloss. ' +
   'Lit flat and even from the front. One figure only, the whole body in frame from cap to shoes, centred. Plain light grey background, no ground shadow, no text.';
 
+/**
+ * The design stage (docs/CHARACTERS.md → Decisions 9): the character drawn once, designed to read as a 24 px
+ * sprite, before any sheet. Picked on the zapmouse style test (`shots/styletest/`), where a design at game
+ * size read at play scale and every traced model sheet turned to noise.
+ */
+export const DESIGN =
+  'A single original cartoon character for a tiny 2D platformer sprite, drawn once, large, full body, in a three-quarter view facing right, its arms and legs a little clear of its body, ' +
+  'on a plain flat white background, no ground, no text, no labels, no frames, no other figures. ' +
+  'Design it to read as a 24-pixel-tall game sprite: one silhouette idea, about three big shapes, the signature prop, the eyes, and almost nothing else. ' +
+  'At most four flat colours plus the line colour; no shape smaller than a tenth of its height; no fingers, no small accessories, no fine detail, no texture. ' +
+  'Style: a thin hand-inked line in a dark of each colour, flat bright colour with one hard-edged cel shadow shape on the side away from the light (light from the upper left), no gradients, no glow.';
+
+/**
+ * The lore's grunge (Decisions 9) as an edit of the finished design, given as the reference: worn shape,
+ * never dirt, a rough line or dull colour. Asked for in the design prompt itself the damage is dropped
+ * (the image model draws the character or the changes, rarely both); as an edit it lands and the design holds.
+ */
+export const WORN =
+  'The same character exactly as in the reference image: the same pose, design, proportions, colours, line and flat white background. Change only this, and make each change big and obvious:';
+const WORN_END = 'Nothing else changes, no dirt, no texture.';
+
 export interface Brief {
   /** Who it is: shape, face, colours, clothes, the signature part. Traits only. */
   character: string;
@@ -48,6 +69,10 @@ export interface Brief {
   poses: string;
   /** The proportions, when not a figure's (`CHUNKY`): a limbless kind has no head, hands or feet to push. */
   build?: string;
+  /** The design stage's character: the nod and the twist as the few big shapes a 24 px sprite keeps. */
+  design?: string;
+  /** Its two or three worn tells, each a change to the outline or a big flat shape, for the wear edit. */
+  worn?: string;
 }
 
 export const BRIEFS: Record<string, Brief> = {
@@ -125,6 +150,13 @@ export const BRIEFS: Record<string, Brief> = {
       'The mouse itself is small, chubby and round, soft yellow fur (#f2c62a) all over, an animal and not a costume: a pear-shaped body, a big round head almost as wide as the body, short stubby arms with little round paws, short legs with big oval furry feet. ' +
       'Two very long pointed ears standing straight up from the top of the head, each as tall as the head, their top third black (#2a1f1a); the tip of one ear is kinked a little and wrapped in a strip of grey tape. ' +
       'Big round bright-red cheek circles (#e0473b), small round black eyes with a white glint, a tiny dark nose, a small open smile. Two thick brown stripes (#6b4a35) across the upper back only. Cheeky, quick and crackling with mischief.',
+    // Designed at game size: the nod (ears, bolt tail, cheeks, yellow) and the twist kept as big shapes only.
+    design:
+      'The character: a chubby yellow electric mouse (#f2c62a), a cheap bootleg toy: one big round head fused into a pear-shaped body, round red cheeks (#e0473b), two small black dot eyes and a tiny mouth, stubby arms, short legs with big round feet. ' +
+      'Its two long pointed ears are black-tipped (#2a1f1a) and sewn on unevenly, one higher and longer than the other. ' +
+      'Behind it, a big zigzag lightning-bolt tail cut from a sheet of dull grey tin (#c4c8ce), held on at the root by one big hex bolt. ' +
+      'A black power cord (#2a2a30) is knotted round its middle as a belt, a big cream plug (#d9d4c8) dangling from the knot.',
+    worn: 'the shorter ear is bent over halfway along and wrapped in a wide band of grey tape; the top of the head has a clear dent on one side; the tin tail is bent and dented.',
     views: 'a front view, a side profile facing right, a back view showing the brown stripes and the riveted tin tail, and a three-quarter view facing right',
     pose: 'The ears stand straight up, clear of the arms. Leave the tin tail and the plug off this figure: no tail at all, a smooth round rump. The cord belt sits snug round the waist, nowhere near the hands.',
     poses:
@@ -180,6 +212,19 @@ function brief(kind: string): Brief {
   return b;
 }
 
+function designed(kind: string): Required<Pick<Brief, 'design' | 'worn'>> {
+  const b = brief(kind);
+  if (!b.design || !b.worn)
+    throw new Error(`${kind} has no design stage yet: add \`design\` and \`worn\` to its brief in tools/art3d/style.ts (docs/CHARACTERS.md → Decisions 9)`);
+  return { design: b.design, worn: b.worn };
+}
+
+/** The design stage's prompt: the character once, at game size, with no reference image. */
+export const designPrompt = (kind: string): string => [DESIGN, designed(kind).design].join(' ');
+
+/** The wear edit's prompt: the picked design (given as the reference), battered by its worn tells. */
+export const wornPrompt = (kind: string): string => [WORN, designed(kind).worn, WORN_END].join(' ');
+
 /** The concept sheet's prompt: the design in the game's own ink style. */
 export function conceptPrompt(kind: string): string {
   const b = brief(kind);
@@ -215,5 +260,12 @@ export function modelPrompt(kind: string): string {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const [stage, kind] = process.argv.slice(2);
-  console.log(stage === 'model' ? modelPrompt(kind) : stage === 'pose' ? posePrompt(kind) : conceptPrompt(kind));
+  const prompts: Record<string, (k: string) => string> = {
+    design: designPrompt,
+    worn: wornPrompt,
+    concept: conceptPrompt,
+    pose: posePrompt,
+    model: modelPrompt,
+  };
+  console.log((prompts[stage] ?? conceptPrompt)(kind));
 }
