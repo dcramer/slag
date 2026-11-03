@@ -1,0 +1,1900 @@
+{
+  "model": "model.glb",
+  "height": 22,
+  "yaw": 28,
+  "pitch": 6,
+  "step": 0.8,
+  "trace": {
+    "res": 12,
+    "min": 1.2,
+    "eps": 0.18,
+    "smooth": 2
+  },
+  "scale": {
+    "head": 1.3,
+    "hand_l": 1.08,
+    "hand_r": 1.08,
+    "foot_l": 1.35,
+    "foot_r": 1.35
+  },
+  "girth": 1.08,
+  "props": [
+    {
+      "bone": "spine_04",
+      "at": [
+        0,
+        -3.5,
+        -3.4
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "parts": [
+        {
+          "shape": "cylinder",
+          "role": "lid",
+          "size": [
+            3.4,
+            0.6,
+            0
+          ],
+          "rot": [
+            90,
+            0,
+            0
+          ]
+        },
+        {
+          "shape": "box",
+          "role": "lid",
+          "size": [
+            2.0,
+            0.5,
+            0.8
+          ],
+          "at": [
+            0,
+            0,
+            -0.6
+          ]
+        }
+      ]
+    },
+    {
+      "bone": "spine_03",
+      "at": [
+        0.8,
+        0.6,
+        -4.6
+      ],
+      "rot": [
+        -62,
+        0,
+        -12
+      ],
+      "parts": [
+        {
+          "shape": "cylinder",
+          "role": "iron",
+          "size": [
+            0.34,
+            10.5,
+            0
+          ]
+        },
+        {
+          "shape": "cylinder",
+          "role": "iron",
+          "size": [
+            0.95,
+            0.35,
+            0
+          ],
+          "at": [
+            0,
+            5.6,
+            0
+          ],
+          "rot": [
+            0,
+            0,
+            90
+          ]
+        },
+        {
+          "shape": "cylinder",
+          "role": "iron",
+          "size": [
+            0.3,
+            2.0,
+            0
+          ],
+          "at": [
+            0.6,
+            -5.6,
+            0
+          ],
+          "rot": [
+            0,
+            0,
+            50
+          ]
+        }
+      ]
+    },
+    {
+      "bone": "head",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "parts": [
+        {
+          "shape": "sphere",
+          "role": "ear",
+          "size": [
+            0.55,
+            1.2,
+            4.0
+          ],
+          "at": [
+            -4.4,
+            3.8,
+            -3.8
+          ],
+          "rot": [
+            32,
+            55,
+            0
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "ear",
+          "size": [
+            0.55,
+            1.2,
+            4.0
+          ],
+          "at": [
+            4.4,
+            3.8,
+            -3.8
+          ],
+          "rot": [
+            32,
+            -55,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "bone": "head",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "grass",
+      "parts": []
+    },
+    {
+      "bone": "head",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "grass",
+      "parts": [
+        {
+          "shape": "cylinder",
+          "role": "grass",
+          "size": [
+            0.22,
+            3.2,
+            0
+          ],
+          "at": [
+            0,
+            7.0,
+            -1.2
+          ],
+          "rot": [
+            -20,
+            0,
+            0
+          ]
+        },
+        {
+          "shape": "cylinder",
+          "role": "grass",
+          "size": [
+            0.22,
+            2.6,
+            0
+          ],
+          "at": [
+            0,
+            6.8,
+            -0.6
+          ],
+          "rot": [
+            15,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "bone": "head",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "plaster",
+      "parts": []
+    },
+    {
+      "bone": "head",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "plaster",
+      "parts": [
+        {
+          "shape": "box",
+          "role": "plaster",
+          "size": [
+            0.6,
+            1.4,
+            2.2
+          ],
+          "at": [
+            -3.6,
+            2.6,
+            -0.8
+          ],
+          "rot": [
+            30,
+            0,
+            0
+          ]
+        },
+        {
+          "shape": "box",
+          "role": "plaster",
+          "size": [
+            0.6,
+            1.4,
+            2.2
+          ],
+          "at": [
+            3.6,
+            2.6,
+            -0.8
+          ],
+          "rot": [
+            30,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "bone": "pelvis",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "string",
+      "parts": []
+    },
+    {
+      "bone": "pelvis",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "string",
+      "parts": [
+        {
+          "shape": "cylinder",
+          "role": "string",
+          "size": [
+            1.2,
+            0.8,
+            0
+          ],
+          "at": [
+            -1.8,
+            1.4,
+            2.6
+          ],
+          "rot": [
+            90,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "bone": "spine_05",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "cork",
+      "parts": []
+    },
+    {
+      "bone": "spine_05",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "cork",
+      "parts": [
+        {
+          "shape": "cylinder",
+          "role": "cork",
+          "size": [
+            0.65,
+            1.2,
+            0
+          ],
+          "at": [
+            0,
+            -1.4,
+            3.0
+          ]
+        }
+      ]
+    },
+    {
+      "bone": "pelvis",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "wear",
+      "parts": []
+    },
+    {
+      "bone": "pelvis",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "wear",
+      "parts": [
+        {
+          "shape": "sphere",
+          "role": "patch",
+          "size": [
+            0.9,
+            0.8,
+            0.4
+          ],
+          "at": [
+            -0.5,
+            -0.4,
+            0
+          ],
+          "bone": "spine_02",
+          "face": [
+            -0.3,
+            0,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            -10
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "patch",
+          "size": [
+            0.8,
+            0.7,
+            0.4
+          ],
+          "at": [
+            0,
+            -1.2,
+            0
+          ],
+          "bone": "thigh_r",
+          "face": [
+            0,
+            0,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            15
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "scuff",
+          "size": [
+            0.9,
+            0.3,
+            0.4
+          ],
+          "at": [
+            0,
+            0,
+            1
+          ],
+          "bone": "foot_r",
+          "face": [
+            0,
+            0.4,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            10
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "scuff",
+          "size": [
+            0.9,
+            0.3,
+            0.4
+          ],
+          "at": [
+            0,
+            0,
+            1
+          ],
+          "bone": "foot_l",
+          "face": [
+            0,
+            0.4,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            -10
+          ]
+        }
+      ]
+    },
+    {
+      "bone": "pelvis",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "wear",
+      "parts": [
+        {
+          "shape": "sphere",
+          "role": "soot",
+          "size": [
+            1.4,
+            0.4,
+            0.4
+          ],
+          "at": [
+            0.2,
+            -0.4,
+            0
+          ],
+          "bone": "spine_02",
+          "face": [
+            -0.2,
+            0,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            -25
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "soot",
+          "size": [
+            0.9,
+            0.3,
+            0.4
+          ],
+          "at": [
+            0.3,
+            -1.2,
+            0
+          ],
+          "bone": "spine_02",
+          "face": [
+            -0.2,
+            0,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            -15
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "sootcloth",
+          "size": [
+            1.0,
+            0.35,
+            0.4
+          ],
+          "at": [
+            0,
+            -1.0,
+            0
+          ],
+          "bone": "calf_r",
+          "face": [
+            0,
+            0,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            20
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "sootboot",
+          "size": [
+            0.9,
+            0.4,
+            0.4
+          ],
+          "at": [
+            0,
+            0,
+            1
+          ],
+          "bone": "foot_l",
+          "face": [
+            0,
+            0.4,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "soot",
+          "size": [
+            1.0,
+            0.35,
+            0.4
+          ],
+          "at": [
+            0.8,
+            -1.0,
+            0
+          ],
+          "bone": "pelvis",
+          "face": [
+            0.2,
+            0,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            10
+          ]
+        }
+      ]
+    }
+  ],
+  "roles": {
+    "skin": {
+      "color": "#efc9a4",
+      "swatches": [
+        "#c29679"
+      ]
+    },
+    "tunic": {
+      "color": "#3f7a34",
+      "swatches": [
+        "#5a8447",
+        "#3e602c",
+        "#29401b",
+        "#1d1f0e"
+      ],
+      "slot": "player"
+    },
+    "cap": {
+      "color": "#3f7a34",
+      "swatches": [],
+      "slot": "player",
+      "grow": [
+        1.1,
+        1.05
+      ]
+    },
+    "hair": {
+      "color": "#e6c25a",
+      "swatches": [
+        "#87661e",
+        "#c4a148"
+      ]
+    },
+    "cloth": {
+      "color": "#e9dfc2",
+      "swatches": [
+        "#cbc1a8",
+        "#a19b7d",
+        "#666644"
+      ]
+    },
+    "leather": {
+      "color": "#6b4a35",
+      "swatches": [
+        "#3c1e11",
+        "#84593f",
+        "#623b24"
+      ]
+    },
+    "eye": {
+      "color": "#f4f1ea",
+      "swatches": [
+        "#f2f2f0"
+      ],
+      "into": "skin"
+    },
+    "iris": {
+      "color": "#3c78c8",
+      "swatches": [
+        "#3a5a90"
+      ],
+      "min": 0.1,
+      "glint": true
+    },
+    "lid": {
+      "color": "#a8adb4",
+      "swatches": [],
+      "alts": [
+        "#5f80a8",
+        "#5a5e66"
+      ],
+      "vary": 6
+    },
+    "iron": {
+      "color": "#4a4a52",
+      "swatches": [],
+      "min": 0.3
+    },
+    "grass": {
+      "color": "#6fae3a",
+      "swatches": [],
+      "free": true,
+      "min": 0.12
+    },
+    "plaster": {
+      "color": "#e6c7a0",
+      "swatches": [],
+      "free": true,
+      "min": 0.12
+    },
+    "string": {
+      "color": "#d9c79a",
+      "swatches": [],
+      "free": true,
+      "min": 0.12
+    },
+    "cork": {
+      "color": "#b98a55",
+      "swatches": [],
+      "free": true,
+      "min": 0.12
+    },
+    "gloves": {
+      "color": "#9a7048",
+      "swatches": []
+    },
+    "darn": {
+      "color": "#5a9a4a",
+      "swatches": [
+        "#89a374"
+      ]
+    },
+    "ear": {
+      "color": "#efc9a4",
+      "swatches": []
+    },
+    "patch": {
+      "color": "#808080",
+      "swatches": [],
+      "free": true,
+      "min": 0.1,
+      "on": "tunic",
+      "tone": 14
+    },
+    "scuff": {
+      "color": "#808080",
+      "swatches": [],
+      "free": true,
+      "min": 0.1,
+      "on": "leather",
+      "tone": 22
+    },
+    "soot": {
+      "color": "#808080",
+      "swatches": [],
+      "free": true,
+      "min": 0.1,
+      "on": "tunic",
+      "tone": -24
+    },
+    "sootcloth": {
+      "color": "#808080",
+      "swatches": [],
+      "free": true,
+      "min": 0.1,
+      "on": "cloth",
+      "tone": -26
+    },
+    "sootboot": {
+      "color": "#808080",
+      "swatches": [],
+      "free": true,
+      "min": 0.1,
+      "on": "leather",
+      "tone": -14
+    }
+  },
+  "regions": [
+    {
+      "from": "tunic",
+      "to": "cap",
+      "box": [
+        0,
+        0.65,
+        0,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "from": "leather",
+      "to": "gloves",
+      "box": [
+        0,
+        0.45,
+        0,
+        0.3,
+        0.75,
+        1
+      ]
+    },
+    {
+      "from": "leather",
+      "to": "gloves",
+      "box": [
+        0.7,
+        0.45,
+        0,
+        1,
+        0.75,
+        1
+      ]
+    }
+  ],
+  "face": {
+    "r": 1.05,
+    "iris": "#3c78c8",
+    "covers": {
+      "iris": "skin"
+    },
+    "spread": 0.85
+  },
+  "clips": {
+    "idle": {
+      "keys": [
+        "stand0",
+        "stand1"
+      ],
+      "frames": 4,
+      "loop": true,
+      "fps": 3
+    },
+    "walk": {
+      "src": "walk",
+      "frames": 8,
+      "loop": true,
+      "stride": 40
+    },
+    "run": {
+      "src": "run",
+      "frames": 8,
+      "loop": true,
+      "stride": 76
+    },
+    "air": {
+      "keys": [
+        "launch",
+        "launch",
+        "flip1",
+        "flip2",
+        "flip3",
+        "land"
+      ],
+      "frames": 10,
+      "loop": false,
+      "vy": [
+        -420,
+        420
+      ],
+      "pin": "hips",
+      "center": true
+    },
+    "wall": {
+      "keys": [
+        "wall0",
+        "wall1",
+        "wall2",
+        "wall3"
+      ],
+      "frames": 4,
+      "loop": true,
+      "fps": 6
+    },
+    "cheer": {
+      "keys": [
+        "cheer0",
+        "cheer1"
+      ],
+      "frames": 4,
+      "loop": true,
+      "fps": 8
+    },
+    "death": {
+      "src": "fall",
+      "from": 0.42,
+      "to": 0.78,
+      "frames": 6,
+      "loop": false,
+      "fps": 14,
+      "center": true,
+      "girth": 1
+    },
+    "idle2": {
+      "keys": [
+        "belt0",
+        "belt1"
+      ],
+      "frames": 2,
+      "loop": true,
+      "fps": 1.5
+    },
+    "cheer2": {
+      "keys": [
+        "tada0",
+        "tada1"
+      ],
+      "frames": 4,
+      "loop": true,
+      "fps": 6
+    }
+  },
+  "slots": {
+    "grass": 0,
+    "plaster": 1,
+    "string": 2,
+    "cork": 3,
+    "wear": 11
+  },
+  "keys": {
+    "crouch": {
+      "from": "idle@0.05",
+      "bones": {
+        "spine_01": [
+          22,
+          0,
+          0
+        ],
+        "thigh_near": [
+          -70,
+          0,
+          0
+        ],
+        "thigh_far": [
+          -60,
+          0,
+          0
+        ],
+        "calf_near": [
+          115,
+          0,
+          0
+        ],
+        "calf_far": [
+          105,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          55,
+          0,
+          0
+        ],
+        "upperarm_far": [
+          45,
+          0,
+          0
+        ]
+      }
+    },
+    "launch": {
+      "from": "idle@0.05",
+      "bones": {
+        "spine_01": [
+          -4,
+          0,
+          0
+        ],
+        "head": [
+          -6,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          45,
+          0,
+          -10
+        ],
+        "upperarm_far": [
+          35,
+          0,
+          -10
+        ],
+        "lowerarm_near": [
+          -25,
+          0,
+          0
+        ],
+        "lowerarm_far": [
+          -25,
+          0,
+          0
+        ],
+        "thigh_near": [
+          -85,
+          0,
+          0
+        ],
+        "calf_near": [
+          110,
+          0,
+          0
+        ],
+        "thigh_far": [
+          -35,
+          0,
+          0
+        ],
+        "calf_far": [
+          70,
+          0,
+          0
+        ]
+      }
+    },
+    "fall": {
+      "from": "idle@0.05",
+      "bones": {
+        "spine_01": [
+          -10,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          -140,
+          0,
+          -15
+        ],
+        "lowerarm_near": [
+          -25,
+          0,
+          0
+        ],
+        "upperarm_far": [
+          -120,
+          0,
+          15
+        ],
+        "thigh_near": [
+          -25,
+          0,
+          0
+        ],
+        "calf_near": [
+          35,
+          0,
+          0
+        ],
+        "thigh_far": [
+          12,
+          0,
+          0
+        ],
+        "calf_far": [
+          10,
+          0,
+          0
+        ]
+      },
+      "scale": {
+        "upperarm_near": 1.4,
+        "upperarm_far": 1.5
+      }
+    },
+    "wall0": {
+      "from": "rest",
+      "yaw": 12,
+      "bones": {
+        "spine_01": [
+          -10,
+          0,
+          0
+        ],
+        "upperarm_far": [
+          -70,
+          0,
+          -55
+        ],
+        "lowerarm_far": [
+          -10,
+          0,
+          -15
+        ],
+        "upperarm_near": [
+          -30,
+          0,
+          55
+        ],
+        "lowerarm_near": [
+          -25,
+          0,
+          0
+        ],
+        "thigh_near": [
+          -55,
+          0,
+          0
+        ],
+        "calf_near": [
+          80,
+          0,
+          0
+        ],
+        "thigh_far": [
+          -15,
+          0,
+          0
+        ],
+        "calf_far": [
+          25,
+          0,
+          0
+        ]
+      }
+    },
+    "wall1": {
+      "from": "rest",
+      "yaw": 12,
+      "bones": {
+        "spine_01": [
+          -12,
+          0,
+          0
+        ],
+        "upperarm_far": [
+          -70,
+          0,
+          -60
+        ],
+        "lowerarm_far": [
+          -10,
+          0,
+          -15
+        ],
+        "upperarm_near": [
+          -30,
+          0,
+          55
+        ],
+        "lowerarm_near": [
+          -25,
+          0,
+          0
+        ],
+        "thigh_near": [
+          -60,
+          0,
+          0
+        ],
+        "calf_near": [
+          85,
+          0,
+          0
+        ],
+        "thigh_far": [
+          -15,
+          0,
+          0
+        ],
+        "calf_far": [
+          25,
+          0,
+          0
+        ]
+      }
+    },
+    "wall2": {
+      "from": "rest",
+      "yaw": 12,
+      "bones": {
+        "spine_01": [
+          -9,
+          0,
+          0
+        ],
+        "upperarm_far": [
+          -70,
+          0,
+          -52
+        ],
+        "lowerarm_far": [
+          -10,
+          0,
+          -15
+        ],
+        "upperarm_near": [
+          -30,
+          0,
+          55
+        ],
+        "lowerarm_near": [
+          -25,
+          0,
+          0
+        ],
+        "thigh_near": [
+          -52,
+          0,
+          0
+        ],
+        "calf_near": [
+          77,
+          0,
+          0
+        ],
+        "thigh_far": [
+          -15,
+          0,
+          0
+        ],
+        "calf_far": [
+          25,
+          0,
+          0
+        ]
+      }
+    },
+    "wall3": {
+      "from": "rest",
+      "yaw": 12,
+      "bones": {
+        "spine_01": [
+          -11,
+          0,
+          0
+        ],
+        "upperarm_far": [
+          -70,
+          0,
+          -58
+        ],
+        "lowerarm_far": [
+          -10,
+          0,
+          -15
+        ],
+        "upperarm_near": [
+          -30,
+          0,
+          55
+        ],
+        "lowerarm_near": [
+          -25,
+          0,
+          0
+        ],
+        "thigh_near": [
+          -50,
+          0,
+          0
+        ],
+        "calf_near": [
+          75,
+          0,
+          0
+        ],
+        "thigh_far": [
+          -15,
+          0,
+          0
+        ],
+        "calf_far": [
+          25,
+          0,
+          0
+        ]
+      }
+    },
+    "stand0": {
+      "from": "rest",
+      "bones": {
+        "upperarm_near": [
+          10,
+          0,
+          72
+        ],
+        "upperarm_far": [
+          -6,
+          0,
+          70
+        ],
+        "lowerarm_near": [
+          0,
+          0,
+          8
+        ],
+        "lowerarm_far": [
+          0,
+          0,
+          8
+        ]
+      }
+    },
+    "stand1": {
+      "from": "rest",
+      "bones": {
+        "spine_01": [
+          -2,
+          0,
+          0
+        ],
+        "head": [
+          3,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          10,
+          0,
+          70
+        ],
+        "upperarm_far": [
+          -6,
+          0,
+          68
+        ],
+        "lowerarm_near": [
+          0,
+          0,
+          10
+        ],
+        "lowerarm_far": [
+          0,
+          0,
+          10
+        ]
+      }
+    },
+    "flip1": {
+      "from": "idle@0.05",
+      "bones": {
+        "spine_01": [
+          25,
+          0,
+          0
+        ],
+        "spine_03": [
+          15,
+          0,
+          0
+        ],
+        "head": [
+          10,
+          0,
+          0
+        ],
+        "thigh_near": [
+          -115,
+          0,
+          0
+        ],
+        "thigh_far": [
+          -105,
+          0,
+          0
+        ],
+        "calf_near": [
+          130,
+          0,
+          0
+        ],
+        "calf_far": [
+          125,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          -50,
+          0,
+          0
+        ],
+        "upperarm_far": [
+          -40,
+          0,
+          0
+        ],
+        "lowerarm_near": [
+          -40,
+          0,
+          0
+        ],
+        "lowerarm_far": [
+          -40,
+          0,
+          0
+        ]
+      },
+      "roll": 90
+    },
+    "flip2": {
+      "from": "idle@0.05",
+      "bones": {
+        "spine_01": [
+          25,
+          0,
+          0
+        ],
+        "spine_03": [
+          15,
+          0,
+          0
+        ],
+        "head": [
+          10,
+          0,
+          0
+        ],
+        "thigh_near": [
+          -115,
+          0,
+          0
+        ],
+        "thigh_far": [
+          -105,
+          0,
+          0
+        ],
+        "calf_near": [
+          130,
+          0,
+          0
+        ],
+        "calf_far": [
+          125,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          -50,
+          0,
+          0
+        ],
+        "upperarm_far": [
+          -40,
+          0,
+          0
+        ],
+        "lowerarm_near": [
+          -40,
+          0,
+          0
+        ],
+        "lowerarm_far": [
+          -40,
+          0,
+          0
+        ]
+      },
+      "roll": 180
+    },
+    "flip3": {
+      "from": "idle@0.05",
+      "bones": {
+        "spine_01": [
+          25,
+          0,
+          0
+        ],
+        "spine_03": [
+          15,
+          0,
+          0
+        ],
+        "head": [
+          10,
+          0,
+          0
+        ],
+        "thigh_near": [
+          -115,
+          0,
+          0
+        ],
+        "thigh_far": [
+          -105,
+          0,
+          0
+        ],
+        "calf_near": [
+          130,
+          0,
+          0
+        ],
+        "calf_far": [
+          125,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          -50,
+          0,
+          0
+        ],
+        "upperarm_far": [
+          -40,
+          0,
+          0
+        ],
+        "lowerarm_near": [
+          -40,
+          0,
+          0
+        ],
+        "lowerarm_far": [
+          -40,
+          0,
+          0
+        ]
+      },
+      "roll": 270
+    },
+    "land": {
+      "from": "idle@0.05",
+      "bones": {
+        "spine_01": [
+          -10,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          -140,
+          0,
+          -15
+        ],
+        "lowerarm_near": [
+          -25,
+          0,
+          0
+        ],
+        "upperarm_far": [
+          -120,
+          0,
+          15
+        ],
+        "thigh_near": [
+          -25,
+          0,
+          0
+        ],
+        "calf_near": [
+          35,
+          0,
+          0
+        ],
+        "thigh_far": [
+          12,
+          0,
+          0
+        ],
+        "calf_far": [
+          10,
+          0,
+          0
+        ]
+      },
+      "scale": {
+        "upperarm_near": 1.4,
+        "upperarm_far": 1.5
+      },
+      "roll": 360
+    },
+    "cheer0": {
+      "from": "rest",
+      "yaw": 10,
+      "bones": {
+        "spine_01": [
+          -8,
+          0,
+          0
+        ],
+        "head": [
+          -10,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          -70,
+          0,
+          -62
+        ],
+        "lowerarm_near": [
+          -10,
+          0,
+          -10
+        ],
+        "upperarm_far": [
+          30,
+          0,
+          60
+        ],
+        "lowerarm_far": [
+          -20,
+          0,
+          0
+        ],
+        "thigh_near": [
+          -30,
+          0,
+          0
+        ],
+        "calf_near": [
+          45,
+          0,
+          0
+        ]
+      }
+    },
+    "cheer1": {
+      "from": "rest",
+      "yaw": 10,
+      "bones": {
+        "spine_01": [
+          -8,
+          0,
+          0
+        ],
+        "head": [
+          -10,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          -70,
+          0,
+          -68
+        ],
+        "lowerarm_near": [
+          -10,
+          0,
+          -10
+        ],
+        "upperarm_far": [
+          30,
+          0,
+          60
+        ],
+        "lowerarm_far": [
+          -20,
+          0,
+          0
+        ],
+        "thigh_near": [
+          -40,
+          0,
+          0
+        ],
+        "calf_near": [
+          60,
+          0,
+          0
+        ]
+      }
+    },
+    "belt0": {
+      "from": "rest",
+      "bones": {
+        "spine_01": [
+          10,
+          0,
+          0
+        ],
+        "head": [
+          -12,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          -20,
+          0,
+          68
+        ],
+        "upperarm_far": [
+          -25,
+          0,
+          66
+        ],
+        "lowerarm_near": [
+          -30,
+          0,
+          0
+        ],
+        "lowerarm_far": [
+          -30,
+          0,
+          0
+        ],
+        "thigh_near": [
+          -28,
+          0,
+          0
+        ],
+        "calf_near": [
+          40,
+          0,
+          0
+        ],
+        "thigh_far": [
+          -18,
+          0,
+          0
+        ],
+        "calf_far": [
+          32,
+          0,
+          0
+        ]
+      }
+    },
+    "belt1": {
+      "from": "rest",
+      "bones": {
+        "spine_01": [
+          12,
+          0,
+          0
+        ],
+        "head": [
+          -14,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          -20,
+          0,
+          68
+        ],
+        "upperarm_far": [
+          -25,
+          0,
+          66
+        ],
+        "lowerarm_near": [
+          -30,
+          0,
+          0
+        ],
+        "lowerarm_far": [
+          -30,
+          0,
+          0
+        ],
+        "thigh_near": [
+          -32,
+          0,
+          0
+        ],
+        "calf_near": [
+          46,
+          0,
+          0
+        ],
+        "thigh_far": [
+          -22,
+          0,
+          0
+        ],
+        "calf_far": [
+          38,
+          0,
+          0
+        ]
+      }
+    },
+    "tada0": {
+      "from": "rest",
+      "bones": {
+        "spine_01": [
+          -8,
+          0,
+          0
+        ],
+        "head": [
+          -8,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          0,
+          0,
+          15
+        ],
+        "upperarm_far": [
+          0,
+          0,
+          15
+        ],
+        "thigh_near": [
+          -30,
+          0,
+          0
+        ],
+        "calf_near": [
+          45,
+          0,
+          0
+        ]
+      }
+    },
+    "tada1": {
+      "from": "rest",
+      "bones": {
+        "spine_01": [
+          -5,
+          0,
+          0
+        ],
+        "head": [
+          -6,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          0,
+          0,
+          5
+        ],
+        "upperarm_far": [
+          0,
+          0,
+          5
+        ]
+      }
+    }
+  },
+  "gait": {
+    "bounce": [
+      0.2,
+      0.8
+    ],
+    "lean": [
+      0,
+      0.04
+    ]
+  }
+}

@@ -29,7 +29,8 @@ export const TELLS: { [T in Module['type']]?: Tell<ModuleOf<T>> } = {
   spikes: 'still',
   coat: 'still',
   shards: 'still',
-  swinger: 'moves',
+  // You watch a swinger turn; one on a machine's drive (a combine's reel) pulls away after it revs, and the rev is its warning.
+  swinger: (m) => m.drive?.warn ?? Infinity,
   vehicle: 'moves',
   piston: 'moves',
   cannon: 'moves',
@@ -77,7 +78,8 @@ export function tellFaults(mods: readonly Module[]): string[] {
 const VARIANT: { [T in Module['type']]?: (m: ModuleOf<T>) => string } = {
   cannon: (m) => m.ammo,
   launcher: (m) => m.ammo,
-  swinger: (m) => m.head,
+  // A blade on a machine that drives at you, revving first, plays nothing like one turning in place.
+  swinger: (m) => (m.drive ? `${m.head}:driven` : m.head),
   geyser: (m) => (m.lethal ? 'burns' : 'blows'),
   // A field that drags you in (a whirlpool) plays nothing like one that throws you out (an airlock).
   magnet: (m) => (m.polarity > 0 ? 'pulls' : 'pushes'),

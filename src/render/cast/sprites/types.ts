@@ -47,15 +47,36 @@ export interface SpriteRole {
   color: string;
   /** Drawn in the kind's own colour (`paint`) or the player's (`player`). */
   slot?: 'paint' | 'player';
-  /** Other colours it may take, rolled per character from \`vary[vary]\`: an accessory's colour. */
+  /**
+   * Other colours it may take, rolled per character from \`vary[vary]\`: a designed alternate palette
+   * (`VARIETY.palette` in play.ts) or an accessory's colour. Roles that share a roll and have as many
+   * alts move together, so a colourway (a shoe and its sole) is picked whole.
+   */
   alts?: readonly string[];
   vary?: number;
+  /** Painted as role \`on\` is on this character, \`tone\` lighter (or darker, negative): a wear mark on its surface. */
+  on?: number;
+  tone?: number;
 }
 
-/** A swappable accessory: \`options\` props, one rolled per character from \`vary[vary]\`. */
+/**
+ * A swappable accessory: \`options\` props, one rolled per character from \`vary[vary]\`. The slot named
+ * \`wear\` is the kind's wear: clean, scuffed and scorched.
+ */
 export interface SpriteSlot {
   vary: number;
   options: number;
+  name?: string;
+}
+
+/**
+ * How far a character's gait may differ from its kind's, rolled per character: the extra bounce on each
+ * step (world px) and the forward lean (a skew about the feet, x per px of height), each from its low to
+ * its high bound. Held under `GAIT_MAX` in play.ts.
+ */
+export interface SpriteGait {
+  bounce: readonly [number, number];
+  lean: readonly [number, number];
 }
 
 export interface SpriteSet {
@@ -65,6 +86,8 @@ export interface SpriteSet {
   roles: readonly SpriteRole[];
   slots?: readonly SpriteSlot[];
   /** The cast's face kit over the traced eyes: eye size (world px), iris, and the mouth's place from the near eye. */
-  face?: { r: number; iris: string; mouth?: readonly [number, number]; eye?: 'tall' };
+  face?: { r: number; iris: string; mouth?: readonly [number, number]; eye?: 'tall' | 'dot' };
+  gait?: SpriteGait;
+  /** By the name `play.ts` reads (`idle`, `run`, …); `idle2`, `cheer2` are a clip's alternates, one picked per character. */
   clips: Readonly<Record<string, SpriteClip>>;
 }

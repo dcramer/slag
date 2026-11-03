@@ -3,8 +3,8 @@ import { Rng } from '../src/core/rng';
 import { Match } from '../src/game/match';
 import { roomSeed } from '../src/game/room';
 import { DEFAULT_RULES, type MatchRules } from '../src/game/rules';
-import { generateLevel, partsNeeded } from '../src/gen/level';
-import { dryLean, generateRoster, isBridgePart, type Part, type Role, rollSecret, rosterSize } from '../src/gen/props';
+import { generateLevel, partsNeeded, prove, settled } from '../src/gen/level';
+import { clearsParts, dryLean, generateBridge, generateRoster, isBridgePart, type Part, type Role, rollSecret, rosterSize } from '../src/gen/props';
 import { sanitizeRules } from '../src/net/actions';
 import { cloneSnap, hashMatch, restoreMatch, snapshotMatch } from '../src/net/snapshot';
 import { NetSession } from '../src/net/session';
@@ -239,5 +239,37 @@ describe('winnability with secret parts', () => {
     }
     expect(m.placed.length).toBe(2);
     expect(partsNeeded(m.level, m.placed)).toBe(0);
+  });
+});
+
+describe('a sealed level under secret parts', () => {
+  it('deals a demolish card that stays a part-clearer whoever claims it', () => {
+    let sealed = 0;
+    for (let s = 1; sealed < 3; s++) {
+      expect(s, 'seeds a column can seal').toBeLessThan(12);
+      const m = new Match(s * 7919, 'farm', SECRET);
+      for (let i = 0; i < 3; i++) m.join(`kb${i}`);
+      // A wall of plain block down a whole column between spawn and flag: no bridge gets past it.
+      const x = Math.floor((m.level.spawn.tx + m.level.goal.tx) / 2);
+      const cells: [number, number][] = Array.from({ length: m.level.h }, (_, y) => [0, y]);
+      const base = generateBridge(new Rng(1), 'wall');
+      const body = base.modules[0];
+      if (body.type !== 'body') throw new Error('bridge is a body');
+      m.startMatch();
+      m.placed = [{ uid: 99, def: { ...base, modules: [{ ...body, cells }], footprint: cells }, owner: 0, tx: x, ty: 0, rot: 0 }];
+      // Open sky over a wide level is a way round it.
+      const st = settled(m.level, m.placed);
+      if (prove(st.level, st.placed, m.plan)) continue;
+      sealed++;
+      // The next round's crate is dealt for the sealed level.
+      (m as unknown as { startRound(): void }).startRound();
+      const i = m.crate.findIndex((c) => c.clears);
+      expect(i, `seed ${m.seed}`).toBeGreaterThanOrEqual(0);
+      expect(m.crate[i].secret).toBe('demolish');
+      for (let f = 0; f < 12; f++) m.step({});
+      click(m, { [`kb${s % 3}`]: i });
+      expect(m.crate[i].claimedBy).toBe(s % 3);
+      expect(clearsParts(m.crate[i].def), `seed ${m.seed}`).toBe(true);
+    }
   });
 });

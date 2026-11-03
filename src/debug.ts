@@ -4,7 +4,7 @@ import { CAST, generateCharacter, type Kind } from './gen/character';
 import { ARCHETYPE_WEIGHTS, type Archetype, DEMOLISH, generateProp } from './gen/props';
 import type { NetSession } from './net/session';
 import { hashMatch } from './net/snapshot';
-import { blindOrder, castBench, castBlind, castCatalog, castColors, castRecognise, castSilhouettes } from './render/cast/sheet';
+import { blindOrder, castBench, castBlind, castCatalog, castColors, castRecognise, castSilhouettes, castVariety } from './render/cast/sheet';
 import { useSprites } from './render/cast/sprites';
 import type { Renderer } from './render/renderer';
 import { giveItem, ITEM_KINDS, type ItemKind } from './sim/items';
@@ -34,7 +34,6 @@ import type { ThemeId } from './themes';
  *   ?debug=1            open the dev overlay (see installDevtoolsHooks)
  *   ?give=sword,puck    hand race runners these held items, cycled (`all` = one of each)
  *   ?lettering=0        no impact words (read by the Renderer)
- *   ?sprites=1          draw the kinds rendered from 3D models (render/cast/sprites, tools/art3d) in place of their hand-drawn bodies
  *   ?zoom=1             force the phone camera on (`?zoom=0` off, `?zoom=2.4` pins a zoom); see render/camera-follow.ts
  */
 export interface SlagDebug {
@@ -80,6 +79,7 @@ export interface SlagDebug {
     bench: typeof castBench;
     blind: typeof castBlind;
     blindOrder: typeof blindOrder;
+    variety: typeof castVariety;
   };
   /** Kinds rendered from 3D models (tools/art3d): turn them on or off. */
   sprites: { use: typeof useSprites; dress(slot: number, kind: string): void };
@@ -100,7 +100,16 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
     match,
     renderer,
     net,
-    cast: { catalog: castCatalog, colors: castColors, silhouettes: castSilhouettes, recognise: castRecognise, bench: castBench, blind: castBlind, blindOrder },
+    cast: {
+      catalog: castCatalog,
+      colors: castColors,
+      silhouettes: castSilhouettes,
+      recognise: castRecognise,
+      bench: castBench,
+      blind: castBlind,
+      blindOrder,
+      variety: castVariety,
+    },
     sprites: {
       use: useSprites,
       // For shots: put a seated player in a given kind (a look is cosmetic, and only this match sees it).
@@ -174,7 +183,6 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
   });
 
   const q = new URLSearchParams(location.search);
-  if (q.get('sprites') === '1') useSprites(true);
   const force: ProfileOverride = {};
   const size = q.get('size');
   if (size === 'classic' || size === 'wide' || size === 'tall') force.size = size;

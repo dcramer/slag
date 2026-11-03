@@ -36,7 +36,7 @@ async function settle() {
 
 /** Eight runners on open floor, 25 px apart (the cast scenario's staging); `kinds` dresses them. */
 async function stage(sd: string, kinds: string[]): Promise<{ x: number; y: number; devs: string[] } | null> {
-  await open(`seed=${sd}&players=8&race=,&propseed=1&theme=${THEME}&lettering=0&sprites=1`);
+  await open(`seed=${sd}&players=8&race=,&propseed=1&theme=${THEME}&lettering=0`);
   await page.evaluate((ks) => ks.forEach((k, i) => (window as any).slagDebug.sprites.dress(i, k)), kinds);
   await step(150);
   // A string, not a function: the bundler wraps named helpers in a __name the page doesn't have.
@@ -175,7 +175,7 @@ async function filmstrip(): Promise<string> {
 }
 
 async function lobby(): Promise<string> {
-  await open(`seed=${seed}&sprites=1`);
+  await open(`seed=${seed}`);
   await page.evaluate((kind) => {
     const d = (window as any).slagDebug;
     // Six of the kind: six rolls of its accessories on the lobby cards.
@@ -241,7 +241,7 @@ async function bench(): Promise<string> {
 
 /** The blind read: every kind's play-scale silhouette, shuffled and numbered (`castBlind`). */
 async function blind(): Promise<string> {
-  await open(`seed=${seed}&sprites=1`);
+  await open(`seed=${seed}`);
   await settle();
   const box = await page.evaluate(() => {
     const d = (window as any).slagDebug;
@@ -262,7 +262,50 @@ async function blind(): Promise<string> {
   return path;
 }
 
+/**
+ * The curated variety of each rendered kind (`castVariety`): twelve looks in twelve colours with the idle,
+ * cheer and gait each plays, its palette and wear, at 4.4× and at play scale, into `sprites-<kind>-variety.png`.
+ */
+async function varietySheet(kind: string): Promise<string> {
+  await open(`seed=${seed}`);
+  await page.setViewportSize({ width: 1880, height: 860 });
+  await page.evaluate(
+    (k) =>
+      new Promise<void>((done) => {
+        const d = (window as any).slagDebug;
+        // Twice: the first draw starts the kind's frames loading.
+        d.cast.variety(k).remove();
+        setTimeout(() => {
+          d.cast.variety(k);
+          done();
+        }, 800);
+      }),
+    kind,
+  );
+  const path = `${out}/sprites-${kind}-variety.png`;
+  await page.screenshot({ path, clip: { x: 0, y: 0, width: 1880, height: 860 } });
+  await page.setViewportSize({ width: 1280, height: 720 });
+  console.log(path);
+  pet();
+  return path;
+}
+
 export const shots: Scenarios = {
+  /**
+   * `pnpm shot variety [--kinds plumber,hedgehog]`: each kind's variety sheet, eight of the kind at play
+   * scale (eight looks side by side in the game), the cast lineup, and the draw cost.
+   */
+  async variety() {
+    const kinds = opt('kinds', 'plumber,hedgehog')!.split(',');
+    for (const kind of kinds) {
+      await varietySheet(kind);
+      await lineup(
+        `${kind}-eight`,
+        Array.from({ length: 8 }, () => kind),
+      );
+    }
+    await lineup('cast', [...kinds, 'elf', 'hunter', 'zapmouse', 'impostor', 'goose', 'engineer', 'puffball'].slice(0, 8));
+  },
   async sprites() {
     const art = resolve('art/sprites', KIND);
     const same = await lineup(

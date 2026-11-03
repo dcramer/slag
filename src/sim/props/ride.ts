@@ -8,6 +8,7 @@ import { type Contrib, moduleSim, solidId } from './registry';
 import {
   canPlace,
   carrierPos,
+  occupiedCells,
   dirOf,
   footprint,
   footprintCells,
@@ -18,8 +19,9 @@ import {
   moves,
   newPropState,
   resolveProp,
+  rideSpan,
 } from './transform';
-import type { Motion, PlacedProp, PropDef, Resolved, Ride } from './types';
+import type { PlacedProp, PropDef, Resolved, Ride } from './types';
 
 /**
  * Parts ride what they're stuck to (docs/DESIGN.md, Props). Placed flush
@@ -48,8 +50,6 @@ export const RIDE_SNAP = TILE * 0.75;
 const MIN_TOUCH = 4;
 /** Frames between samples of a ride's sweep: no mover gets half a tile in that. */
 const SWEEP_STEP = 2;
-/** Longest sweep looked at (frames): chains of movers with unrelated periods stop here. */
-const MAX_SWEEP = 2400;
 
 /** Can this part ride a mover? Every module must move rigidly with the prop, and it has no motion of its own. */
 export function canRide(def: PropDef): boolean {
@@ -73,8 +73,8 @@ interface World {
   props: Resolved[];
   solids: Solid[];
   movers: Mover[];
-  /** Cell key → uids of parts whose footprint claims it (riders aside: their cells are checked where they are). */
-  claims: Map<number, number[]>;
+  /** Cell key → the placed part in it on this frame (`occupiedCells`); set pieces are in `solids`. */
+  claims: Map<number, PlacedProp>;
 }
 
 let lastWorld: { key: unknown[]; world: World } | null = null;
@@ -101,16 +101,8 @@ function worldAt(level: Level, placed: readonly PlacedProp[], f: number): World 
     const part = s.id - solidId(s.propUid, s.mi, 0);
     if (c.at(m, f, r.phase, part)) movers.push({ s, r, part });
   }
-  const claims = new Map<number, number[]>();
-  for (const p of [...level.setPieces, ...placed]) {
-    if (p.ride) continue;
-    for (const [x, y] of footprintCells(p)) {
-      const k = y * level.w + x;
-      const list = claims.get(k);
-      if (list) list.push(p.uid);
-      else claims.set(k, [p.uid]);
-    }
-  }
+  const claims = new Map<number, PlacedProp>();
+  for (const [k, p] of occupiedCells(level, placed, f)) if (!level.setPieces.includes(p)) claims.set(k, p);
   const world = { props, solids, movers, claims };
   lastWorld = { key, world };
   return world;
@@ -124,7 +116,7 @@ function worldAt(level: Level, placed: readonly PlacedProp[], f: number): World 
 export function spotAt(level: Level, placed: readonly PlacedProp[], def: PropDef, rot: number, tx: number, ty: number, f: number): Spot {
   const key = [level, level.version, level.setPieces, placed, placed.length, placed[placed.length - 1], def, rot, tx, ty, f];
   if (lastSpot && same(lastSpot.key, key)) return lastSpot.spot;
-  const plain = (): Spot => ({ def: landedDef(level, placed, def, rot, tx, ty), ok: canPlace(level, placed, def, rot, tx, ty) });
+  const plain = (): Spot => ({ def: landedDef(level, placed, def, rot, tx, ty, f), ok: canPlace(level, placed, def, rot, tx, ty, f) });
   let spot: Spot;
   if (!canRide(def)) spot = plain();
   else {
@@ -231,7 +223,7 @@ function coatRide(level: Level, placed: readonly PlacedProp[], w: World, def: Pr
   }
   let best = groups[0];
   for (const q of groups) if (q.idx.length > best.idx.length || (q.idx.length === best.idx.length && Math.abs(q.g) < Math.abs(best.g) - 1e-9)) best = q;
-  if (!best || best.idx.length <= mountCells(level, placed, def, rot, tx, ty).length) return null;
+  if (!best || best.idx.length <= mountCells(level, placed, def, rot, tx, ty, f).length) return null;
   const keep = new Set(best.idx.map((i) => `${def.footprint[i][0]},${def.footprint[i][1]}`));
   const landed = trimmed(def, keep);
   const ride = rideFrom(best.mv, best.d, f);
@@ -290,7 +282,10 @@ function clearAt(level: Level, w: World, rects: readonly Rect[], d: Vec, ride: R
   return rects.every((rc) => {
     const at = shrink({ ...rc, x: rc.x + d[0], y: rc.y + d[1] }, 0.5);
     if (w.solids.some((s) => overlaps(s, at))) return false;
-    return !tilesUnder(shrink(at, 0.5), (x, y) => w.claims.get(y * level.w + x)?.some((u) => !chain.has(u)) ?? false);
+    return !tilesUnder(shrink(at, 0.5), (x, y) => {
+      const p = w.claims.get(y * level.w + x);
+      return !!p && !chain.has(p.uid);
+    });
   });
 }
 
@@ -310,28 +305,4 @@ function sweepClear(level: Level, rects: readonly Rect[], ride: Ride): boolean {
     }
   }
   return true;
-}
-
-/** Frames until a rider's whole chain of carriers is back where it started (capped). */
-export function rideSpan(r: Resolved): number {
-  let span = 1;
-  for (let c = r.carry; c; c = c.by.carry) {
-    const m = c.by.mods[c.mi];
-    for (const p of [motionPeriod(c.by.motion), m ? (moduleSim(m.type).carrier?.period(m) ?? 0) : 0])
-      if (p > 0) span = Math.min(MAX_SWEEP, lcm(span, Math.round(p)));
-  }
-  return span;
-}
-
-function motionPeriod(m: Motion): number {
-  if (m.type === 'rail') return m.period + 2 * (m.dwell ?? 0);
-  if (m.type === 'loop' || m.type === 'track') return m.period;
-  return 0;
-}
-
-function lcm(a: number, b: number): number {
-  let x = a;
-  let y = b;
-  while (y) [x, y] = [y, x % y];
-  return (a / x) * b;
 }

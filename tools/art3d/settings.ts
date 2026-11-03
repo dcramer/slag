@@ -30,10 +30,19 @@ export interface Role {
   grow?: [number, number];
   /**
    * Other colours this role may take, one rolled per character from \`vary[vary]\` (src/gen/character.ts),
-   * so the same seed always wears the same: an accessory's colour, never one the read depends on.
+   * so the same seed always wears the same. The kind's alternate palette is 2–3 designed colourways on one
+   * secondary region (never the costume, skin, eyes or face), on \`vary\` 6 (\`VARIETY.palette\`, the
+   * default); roles sharing it with as many alts change together (a shoe and its sole). An accessory's
+   * colour takes its own roll.
    */
   alts?: string[];
   vary?: number;
+  /**
+   * A wear mark's paint: the colour role \`on\` wears on this character (its alternate palette too),
+   * \`tone\` lighter or, negative, darker. A scuff is a pale tone of the cloth it's on; soot a dark one.
+   */
+  on?: string;
+  tone?: number;
   /** Not part of the silhouette: a swappable prop's own role, inked on its own. */
   free?: boolean;
 }
@@ -71,18 +80,41 @@ export interface Clip {
 }
 
 /**
+ * An aim: where a bone points (from its joint to the next), in degrees in the figure's space, the same on
+ * either side of the figure (page/keys.ts), whatever the base pose and the bones above it do: `raise` up
+ * from straight down (90 level, 180 overhead), in the plane `out` round from straight ahead toward its own
+ * side (0 in front, 90 out to its side, 180 behind, negative across the body), then `twist` about its own
+ * length, turning its front out.
+ */
+export interface Limb {
+  raise?: number;
+  out?: number;
+  twist?: number;
+}
+
+/** A bone's entry in a key: a turn, `[x, y, z]` degrees about the figure's own axes, or an aim. */
+export type Turn = [number, number, number] | Limb;
+
+/**
  * A pose keyed by hand from the pose sheet: a base (a moment of a model animation, `clip@fraction`, or
- * `rest`), with bones turned about the figure's own axes (degrees: x to its left, so a turn about x swings
- * a limb forward or back; y up; z forward), and the whole figure rolled about the screen (a spin ball).
+ * `rest`), with bones turned about the figure's own axes (page/keys.ts: x to its left, y up, z forward;
+ * a negative turn about x swings a hanging limb forward), and the whole figure rolled about the screen
+ * (a spin ball).
  */
 export interface Key {
   from: string;
-  bones?: Record<string, [number, number, number]>;
+  bones?: Record<string, Turn>;
   roll?: number;
   /** Degrees turned further toward the camera for this pose. */
   yaw?: number;
   /** Bones stretched for this pose (an arm reaching past the head), on top of the caricature. */
   scale?: Record<string, number>;
+  /**
+   * The key to pose instead facing left, for a rig whose sides differ, where facing left can't be this
+   * pose's mirror image (the plumber's left hand joint sits mid-forearm, so his right arm raises the fist
+   * on both facings).
+   */
+  l?: string;
 }
 
 /**
@@ -108,8 +140,8 @@ export interface Face {
   r: number;
   iris: string;
   mouth?: [number, number];
-  /** `tall`: tall black ovals with a shine at the top and no whites (the puffball's), in place of cartoon eyes. */
-  eye?: 'tall';
+  /** `tall`: tall black ovals with a shine at the top and no whites (the puffball's); `dot`: small round black eyes with a shine (the electric mouse's). Either replaces the cartoon eyes. */
+  eye?: 'tall' | 'dot';
   /**
    * Where the eyes go when the model's own are too small to find: from the biggest part of `role` (the
    * nose), the near eye's offset in world px on the rest pose facing right. The far eye is its mirror
@@ -155,11 +187,27 @@ export interface Prop {
   /** Degrees about the figure's x, y, z. */
   rot: [number, number, number];
   parts: {
-    shape: 'cylinder' | 'cup' | 'sphere' | 'box';
+    shape: 'cylinder' | 'cup' | 'sphere' | 'box' | 'prism';
     role: string;
     size: [number, number, number];
+    /**
+     * A `prism`'s outline in the figure's side plane (z forward, y up, world px), extruded `size[0]` across
+     * x: a flat cut shape whose corners must stay sharp (the electric mouse's tin bolt).
+     */
+    points?: [number, number][];
     at?: [number, number, number];
     rot?: [number, number, number];
+    /**
+     * On this bone instead of the prop's, placed from its joint in the figure's axes (not the prop's
+     * \`at\` and \`rot\`): one wear option's marks on the knee, the boot and the sleeve.
+     */
+    bone?: string;
+    /**
+     * A wear mark stuck on the skin: from \`at\` (a point inside the limb) out along this direction to the
+     * model's surface, flat against it; \`size\` is its width, height and thickness, and \`rot\`'s third
+     * angle spins it. Marks go on the body, the limbs and the shoes, never the head.
+     */
+    face?: [number, number, number];
   }[];
   /**
    * A swappable accessory: props sharing a \`slot\` are its options, one rolled per character from
@@ -198,8 +246,18 @@ export interface Settings {
   /** Weight fixes for the auto-rig, applied in order. */
   rebind?: Rebind[];
   props?: Prop[];
-  /** Each accessory slot's roll: an index into the character's \`vary\`. */
+  /**
+   * Each accessory slot's roll: an index into the character's \`vary\`. The slot \`wear\` (on \`vary\`
+   * 11, \`VARIETY.wear\`) is the kind's wear, three props: clean (empty), scuffed and scorched, small
+   * marks on the body and never on the face.
+   */
   slots?: Record<string, number>;
+  /**
+   * How far one character's gait may differ from another's (\`SpriteGait\` in
+   * src/render/cast/sprites/types.ts): the extra bounce on each step in world px and the forward lean as
+   * a skew, each a [low, high] range rolled per character, under \`GAIT_MAX\`.
+   */
+  gait?: { bounce: [number, number]; lean: [number, number] };
   keys?: Record<string, Key>;
   regions?: Region[];
   ball?: Ball;

@@ -13,6 +13,7 @@
  *   pnpm shot pick|place --secret          → Secret Parts rule on: role cards, and the parts they rolled
  *   pnpm shot pick|place --parts block,saw → with those parts already in the level, as from earlier rounds
  *   pnpm shot place --card spikestrip --cursor 296,184 --then-race 90 → aim the first ghost, place it, shoot the race
+ *   pnpm shot place --card platform --cell 28,4 → the first ghost on that level cell (a refused one shows what's in the way)
  *   pnpm shot score --players 4            → round-score screen with every award, mid-fill and settled (`--nobody`: a scoreless round)
  *   pnpm shot levels --seeds a,b,c,d      (or --count 12) → contact sheet
  *   pnpm shot props --count 24            → prop gallery (crate cards)
@@ -26,11 +27,12 @@
  *   pnpm shot belts [--propseed 1]         → a conveyor at every rotation: as place ghosts, and placed with a runner on each belt face
  *   pnpm shot items --seed abc             → held items: in hand, loose, and each one used (`--give bat,tax` picks them)
  *   pnpm shot blood --theme farm --players 4 --noletters → staged deaths over four rounds: ooze, settled, place phase, expiry
- *   pnpm shot stack --seed abc             → stepped frames of runners stacking, walking as a stack, and a head-bounce
+ *   pnpm shot stack --seed abc             → stepped frames of heads as perches: a stack bucked, a slide, a hard stop, a knock, a tip, a jump off
  *   pnpm shot grabs                        → stepped frames of a rope swing, a keg shot and a backfire
  *   pnpm shot lineup [--seeds a,b]         → eight runners in a spread of poses, at play scale and close up
  *   pnpm shot cast [--only catalog]       → the toy cast (docs/CHARACTERS.md): lineups on farm and mine, close-up, deaths, lobby, catalog
  *   pnpm shot sprites [--kind plumber]   → a kind rendered from 3D (tools/art3d) in game beside the hand-drawn cast: lineups, 3×, run cycle, lobby
+ *   pnpm shot variety [--kinds plumber,hedgehog] → each rendered kind's curated variety: twelve looks, eight at play scale, the cast lineup
  *   pnpm shot codex                        → /codex: full page, top, a part up close, and on a phone
  *   pnpm shot screens                      → the 404 and error screens, desktop and phone
  *   pnpm shot webgl                        → a race through a lost and restored WebGL context, then with shaders that won't build and with no WebGL2

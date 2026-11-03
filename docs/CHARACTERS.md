@@ -81,6 +81,12 @@ What came out of it:
 - **Faces.** Expressive eyes with highlights, and brows that react to running, jumping, falling and cheering. The face is the kind's, never rolled: eye count, style, iris, place and mouth are part of its design (`paintFace` in `KINDS`, `face` in a rendered kind's `sprite.json`), so every character of a kind has the same face and only its expression changes. A rendered kind's eyes ride its head through every pose (`tools/art3d/README.md` → sprite.json).
 - **The nod and the twist.** The nod is the three or four traits a stranger names it by, and each entry says why each one is needed. The twist is ours: a foundry, scrapyard or knock-off flavour, a changed signature prop, and one joke. A twist never moves or hides a trait the nod needs.
 - **Swaps.** Small accessories inside the outline, rolled per look from `vary`: they never change the silhouette.
+- **Variety.** Every look of a kind is the same character by the same hand, so variety is curated, never rolled freely: the face, the proportions and the silhouette are fixed per kind. Besides the costume colour and the swaps, each kind designs three layers, each picked from the look seed (`VARIETY` in `src/render/cast/sprites/play.ts`) and render only:
+  - **Palette alts:** 2–3 designed colourways for one secondary region, never the costume, skin, eyes or face (the plumber's overalls, the speedster's shoes). A region the nod needs keeps its roster colour as one of them. Parts that belong together (a shoe and its sole) change together.
+  - **Idles and cheers:** two of each, the second keyed from the pose sheet or cut from another clip, plus a gait range: how much extra bounce on each step and how far forward it leans, small enough to stay in the shared box.
+  - **Wear:** clean, scuffed and scorched. A few small marks on the body, the limbs or the shoes in a tone of the surface they sit on (a faded patch, a scuff, a soot streak), never on the face, and too few to read as noise at play scale.
+
+  Done when the variety sheet (`pnpm shot variety --kinds K`) shows twelve looks that all read as the same character, and the play-scale row reads as clean as one look does.
 - **No letters or logos** on anything, at any scale: a badge carries a small mark of ours.
 
 **The concept prompt.** Every entry ends with a prompt of traits only. Append the house style to each one:
@@ -98,6 +104,10 @@ What came out of it:
 - **The nod:** the red cap with its bill out front (the first shape anyone names); the big round nose (it breaks the profile at 20 px, where no face detail survives); the thick mustache (the face, at any size); blue bib overalls over red (the colour block people know from across a room); the stout, big-headed build (it separates him from every slim hero).
 - **Our twist:** a foundry hand, not a castle plumber. The joke is an absurdly big rubber plunger on a copper handle strapped to his back like a greatsword. Welding goggles on the cap, hex-bolt overall buttons, a patched knee, tan gauntlets for the white gloves.
 - **Swaps:** a pencil behind the ear; a sticking plaster on one cheek; a roll of thread-seal tape on a belt loop; a pressure gauge in the bib pocket.
+- **Palette alts:** the overalls in denim blue `#3f62b4`, grey work cloth `#7e848a` or brown canvas `#8e6a44`.
+- **Idles and cheers:** the idle from the model; arms folded, chest out, breathing. The fist-pump cheer; leaning back laughing, turned to us.
+- **Gait range:** a jaunty bounce of 0.15–0.85 px on each step, a lean of up to 0.035.
+- **Wear:** scuffed is a faded patch on the bib and one on a thigh, pale scuffs on both boot toes; scorched is two soot streaks down the bib, one on the sleeve, one on the gauntlet and the far boot's toe.
 - **Rig:** humanoid. Rendered (round 2).
 - **Concept prompt:** A stout, big-headed foundry handyman: a red cap with its bill out front, dark welding goggles strapped round it and a riveted brass badge stamped with a small wrench; a big round nose; a thick dark-brown mustache; blue bib overalls with steel hex-bolt buttons over a red shirt, one knee patched; big tan leather gauntlets; steel-toe boots. An absurdly big red rubber plunger on a copper handle is strapped across his back like a greatsword, slung low, its cup behind his shoulder.
 
@@ -112,6 +122,10 @@ What came out of it:
 - **The nod:** the cobalt quills swept straight back (they are the whole silhouette); the big red shoes (the second thing anyone draws); the peach muzzle and belly (they tell a hedgehog from a blue blob); green eyes and the cocky grin (the attitude); the forward-leaning run and the spin-ball jump (the speedster in motion, readable when the shape blurs).
 - **Our twist:** a stubby scrapyard runner, chunky as a toy. Two separate eyes under heavy brows instead of the joined eye shape, a chipped tooth, soot-scorched quill tips, a hazard-striped neckerchief, brown fingerless gloves, red work high-tops with steel toecaps and a hazard-yellow strap.
 - **Swaps:** a sticking plaster across the nose; a sweatband on one wrist; a ring-pull hanging off the neckerchief; one shoelace undone.
+- **Palette alts:** the shoes and their soles and toecaps as one colourway: red on steel `#d8382f`/`#9a9894`, racing green on cream `#2f8a57`/`#ebe4d2`, or cream on red `#ebe5d6`/`#c8402f`. The strap stays hazard yellow.
+- **Idles and cheers:** the idle from the model; arms folded, tapping one toe. The model's cheer, and its later both-fists-up stretch.
+- **Gait range:** a bounce of up to 0.45 px and a lean of 0.01–0.06 on top of the hard forward lean he already runs with.
+- **Wear:** scuffed is grime on both toes and a scuff on the belly; scorched is soot on the back quills, the belly, a thigh and a shoe.
 - **Rig:** humanoid; the spin ball keyed. Rendered (round 2).
 - **Concept prompt:** A stubby, toy-chunky cobalt-blue hedgehog with long quills swept straight back, their tips soot-scorched; two separate green eyes under heavy brows; a peach muzzle and belly; a cocky one-sided grin with a chipped tooth; a hazard-striped neckerchief; brown fingerless leather gloves; big red work high-tops with steel toecaps and a hazard-yellow strap.
 
@@ -126,6 +140,10 @@ What came out of it:
 - **The nod:** the circle with a wedge cut out (the most recognised shape in games, and it needs nothing else); pure yellow (half the read); the chomp (it is a mouth, not a pie chart, only when it moves).
 - **Our twist:** someone got to him first: a neat bite is missing from the back of his circle, the joke being that the eater got eaten. A checked napkin is tucked under the mouth like a bib.
 - **Swaps:** a crumb on the lip; a toothpick in the corner of the mouth; a fork-tine scratch. (A paper party hat would break the outline, so it isn't one.)
+- **Palette alts:** the napkin's check in red `#c9473f`, blue `#3f62b4` or green `#3f8a3a`; the napkin stays white.
+- **Idles and cheers:** the breathing idle with a chomp at nothing; a sit with the mouth shut, eyeing the floor, then two pecks at it. The hop on the spot; rolling back on itself, mouth thrown wide, laughing.
+- **Gait range:** up to 0.7 px of extra bounce on each hop, a lean of up to 0.04.
+- **Wear:** scuffed is two pale scuffs and two crumbs stuck low on the back; scorched is two soot streaks up the back and the napkin's tip singed.
 - **Rig:** none: generated as shapes (`tools/art3d/page/chomper.ts`): the mouth open and shut, squash on landing, a spin, a wall bitten on the slide, and the fold-away death that leaves the napkin. Rendered (round 3).
 - **Concept prompt:** A perfect yellow ball with a wedge-shaped mouth cut into its front, wide open, and one small black eye above it; a neat round bite missing from the back of the circle; a red-and-white checked napkin tucked under the mouth like a bib. No arms, no legs.
 
@@ -135,12 +153,12 @@ What came out of it:
 - **Silhouette:** chubby and round, with two long pointed ears and a zigzag tail that breaks the outline behind.
 - **Traits:** yellow; long ears tipped black; round red cheeks; a lightning-bolt tail; two brown stripes across the back; small black eyes with a white glint.
 - **Palette:** body `#f2c62a` (shade `#c99c14`); ear tips `#2a1f1a`; cheeks `#e0473b`; stripes `#6b4a35`; tail `#c4c8ce` (shade `#8e9298`) with rivets `#6b6f76`; cord `#2a2a30`, plug `#d9d4c8`.
-- **Color slot:** costume.
+- **Color slot:** costume: the yellow fur (body, head, arms, legs; the `fur` role). The ear tips, cheeks, stripes, tin bolt and cord keep the roster's colours.
 - **Gait:** a quick scamper on all fours at a run, ears streaming back.
 - **The nod:** the long black-tipped ears (the outline, at any size); the zigzag tail (the one shape no other mouse has); the red cheeks (the face, at 20 px); the yellow (what everyone remembers first).
 - **Our twist:** a scrapyard knock-off wired up by hand. The bolt tail is a zigzag cut from sheet tin and riveted on at the root; a frayed power cord is knotted round its middle like a belt, the plug dangling; one ear is bent and taped.
 - **Swaps:** a chewed-through bit of cable in its paw; a sticking plaster on one ear; a spark-scorch on the tail tip; a fuse tucked behind an ear.
-- **Rig:** **keyed**, quadruped: the scamper on all fours, the stand on two legs at idle.
+- **Rig:** **keyed**, quadruped: the scamper on all fours, the stand on two legs at idle. Rendered: a Tripo `--type other` biped rig, every clip keyed from the bind pose; the bolt is a flat tin prism prop, the ear tips are drawn longer than the model. Variety: the cord belt in black, an orange extension lead or a white flex; a curious head-tilt idle and a laughing cheer; scuffed and sooty wear.
 - **Concept prompt:** A chubby, round yellow mouse with two long pointed ears tipped black, one ear bent and taped; round red cheeks; small black eyes with a white glint; two brown stripes across its back; a zigzag lightning-bolt tail cut from sheet tin and riveted on at the root; a frayed black power cord knotted round its middle like a belt, the plug dangling.
 
 ### The green-tunic elf hero
@@ -148,13 +166,13 @@ What came out of it:
 - **A stranger should say:** "the elf hero with the green cap."
 - **Silhouette:** slim. A long green cap flopping back like a tail, a pointed ear sticking out, a tunic flared at the hem, and a round shield on the back.
 - **Traits:** a long floppy green cap; blond fringe; a long pointed ear; a green tunic with a brown belt; a shield and a sword hilt on the back; brown boots.
-- **Palette:** cap and tunic `#3f7a34` (shade `#2c5a25`); darn `#5a9a4a`; hair `#e6c25a`; skin `#efc9a4`; belt, boots and gloves `#6b4a35`; lid `#a8adb4` (shade `#7a7f86`); poker `#4a4a52`.
-- **Color slot:** costume.
+- **Palette:** cap and tunic `#3f7a34` (shade `#2c5a25`); darn `#5a9a4a`; hair `#e6c25a`; skin `#efc9a4`; belt, boots and gloves `#6b4a35`; lid `#a8adb4` (shade `#7a7f86`), or a recycling-blue `#5f80a8` or black-plastic `#5a5e66` lid; poker `#4a4a52`.
+- **Color slot:** costume: the sock cap and the tunic.
 - **Gait:** strides out with the cap tip swinging; a forward somersault on the jump.
 - **The nod:** the long green cap flopping back (the silhouette people draw); the pointed ear (it makes him an elf and not a gnome); the flared green tunic with its belt (the colour and the hero's cut); something to fight with on his back (a hero, not a shepherd).
-- **Our twist:** a hero kitted out from the bins. The cap is a long green woolly sock with a darned heel; the shield is a dented dustbin lid with its handle; the sword is a fireplace poker.
+- **Our twist:** a hero kitted out from the bins. The cap is a long green woolly sock with a darned toe; the shield is a dented dustbin lid with its handle; the sword is a fireplace poker.
 - **Swaps:** a sprig of grass in the cap; a sticking plaster on the ear; a coil of string on the belt; a bottle cork on a cord.
-- **Rig:** humanoid.
+- **Rig:** humanoid. Rendered (round 3): the cap's tail bent down from the crown in the model, the ears, lid and poker as props, every clip but walk and run keyed.
 - **Concept prompt:** A slim young elf hero with a long pointed ear and a blond fringe, wearing a long green woolly sock as a floppy cap, its darned heel showing, flopping back behind his head; a green tunic flared at the hem with a brown belt; brown boots and gloves; a dented metal dustbin lid slung on his back as a shield and a fireplace poker in place of a sword.
 
 ### The pink puffball
@@ -168,6 +186,10 @@ What came out of it:
 - **The nod:** the ball (the whole body); the big red feet (they make it a creature, and part it from the dot-eater); the tall oval eyes with a shine (the face); the blush (the sweetness).
 - **Our twist:** a cheap vinyl squeeze toy. A moulding seam runs round its middle between the front and back halves, a squeaker valve pokes out high on its back (the one bump on the ball's outline), a mould number is stamped on the sole of one foot, and it squeaks when it lands.
 - **Swaps:** a price sticker on its side; a scuff of shelf dust; a tiny bow; a bite mark from a dog.
+- **Palette alts:** the feet in red `#c9473f`, orange `#e07b2c` or yellow `#e8b23a`.
+- **Idles and cheers:** the idle's sway of the arms; looking up, arms behind it, tapping one toe. Both arms up, eyes shut; puffed up round, waving one arm.
+- **Gait range:** a toddle's bounce of 0.1–0.8 px on each step, a lean of up to 0.03.
+- **Wear:** scuffed is a shelf-worn toy: two pale scuffs on the ball, grime on the near toe, and a kid's marker X low on its side; scorched is soot on the ball's side and front, the near arm and the near toe.
 - **Rig:** **keyed**: a ball with feet and stubs, the puff in the air. Rendered: the body is generated, not modelled (`tools/art3d/page/puffball.ts`), and the face kit's tall eyes and blush are set by its painted smile; the mould number never shows at play scale and is left off.
 - **Concept prompt:** A near-perfect round ball creature on two big oval red feet, with stubby round arms; tall oval black eyes with a shine at the top, blush marks and a tiny mouth. It is a cheap vinyl squeeze toy: a moulding seam runs round its middle, a little white squeaker valve pokes out of its back, and a mould number is stamped under one foot.
 
@@ -412,17 +434,18 @@ Every kind must also pass the silhouette sheet, the blind read and the "is it th
 
 ## Rendered kinds (spike)
 
-How a Roster entry becomes a kind drawn from 3D. The entry is the one source for the design (nod, twist, swaps, palette); this is the pipeline. The plumber and the speedster are done, behind `?sprites=1` (`slagDebug.sprites.use(true)`); without it the game loads and draws only the hand-drawn cast. Production steps and the done list: [tools/art3d](../tools/art3d/README.md) and its [checklist](../tools/art3d/CHECKLIST.md).
+How a Roster entry becomes a kind drawn from 3D. The entry is the one source for the design (nod, twist, swaps, palette); this is the pipeline. A kind with rendered frames is always drawn from them (no option); a kind without keeps its hand-drawn body until it is produced. Production steps and the done list: [tools/art3d](../tools/art3d/README.md) and its [checklist](../tools/art3d/CHECKLIST.md).
 
 - **Sheets first:** a concept, a model sheet pushed for a 20 px read, and a pose sheet. Tripo models, rigs and animates the model sheet; poses its motions can't make are keyed by hand from the pose sheet; a jump that is a shape of its own (the spin ball) is generated as one.
 - **The game's own hand.** The render is cut into flat parts, traced into a few clean curves, and inked at draw time by the cast's `contour` and `toned`, with the boil on threes. Outlines are resampled from a fixed start and held across frames when a part only moved, so lines move only with the boil.
 - **The cast's face** is drawn on the traced eyes (or set by the nose when the model's are too small): whites, iris and glint, brows set into the run, wide on a fall, squinting on a cheer, crossed out on a death.
 - **Caricature is a setting:** bone scales (head, hands, feet), `girth` (drawn wider than the model), region roles that split a trait from its colour so it can be drawn bigger (the plumber's cap and nose), and props built from primitives (the plunger).
 - **Swaps** are the entry's accessories, each an on/off prop rolled from the character's `vary`, rendered in a pass of its own so it can't change the silhouette.
-- **Cost.** About 0.005 ms per runner drawn from the frame-bitmap cache (the hand-drawn cast takes about 0.08–0.1), and about 0.4 ms for a frame the first time it's drawn at a scale. Frame data is about 350–400 KB per kind, a chunk fetched only with the flag on.
+- **Variety** (Rules for every kind → Variety) is settings too: a palette role's `alts` on `vary` 6, `idle2` and `cheer2` clips, a `gait` range, and a `wear` slot of three props whose marks the tracer sticks onto the skin. `pnpm shot variety` draws twelve looks per kind and the cast lineup.
+- **Cost.** About 0.005 ms per runner drawn from the frame-bitmap cache (the hand-drawn cast takes about 0.08–0.1), and about 0.4 ms for a frame the first time it's drawn at a scale. Frame data is about 400–480 KB per kind with its variety, a chunk fetched only with the flag on.
 - **Checks:** `tests/sprite-cast.test.ts` (every clip, the shared hitbox box pen and all, at least 18 px tall, rolls), and `pnpm shot sprites --kind K` (the comparison sheets, the six-rolls lobby, the draw cost, and `sprites-blind.png`, every kind as a shuffled, unnamed play-scale silhouette for fresh readers).
 
-**Blind reads so far** (fresh readers, silhouettes only): the speedster is named every time, medium-high to high. The plumber went from low to split (one reader "the plumber, medium", one unsure) after his cap, nose and girth were pushed and his plunger carried lower; in colour he reads at once. With the cup above his head the cup and the cap merged into one shape, so the plunger is carried low for good (owner, 2026-11-02). Both readers name the dot-eater at high confidence, from the circle with its wedge mouth and the speed lines of its run.
+**Blind reads so far** (fresh readers, silhouettes only): the speedster is named every time, medium-high to high. The plumber went from low to split (one reader "the plumber, medium", one unsure) after his cap, nose and girth were pushed and his plunger carried lower; in colour he reads at once. With the cup above his head the cup and the cap merged into one shape, so the plunger is carried low for good (owner, 2026-11-02). Both readers name the dot-eater at high confidence, from the circle with its wedge mouth and the speed lines of its run. The electric mouse is named by both, medium and medium-high, from the tall pointed ears and the jagged zigzag tail raised behind; one reader also saw a rabbit holding something. The elf read as the plumber ("a cap with a forward brim") while his cap's tail stuck straight back level with the crown; drooped from the crown, with the ears up behind it and turned nearer profile, he reads as the elf hero to both fresh readers, one at medium.
 
 ## What every kind keeps
 

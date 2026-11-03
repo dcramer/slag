@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { BOX, type Clip, type Key, type Prop, type Settings } from '../settings';
 import { ballFrames } from './ball';
+import { applyTurns, boneOf, checkArms, restOf, turnsOf } from './keys';
 import { loadModel } from './load';
 import { classify } from './roles';
 import { shaped } from './shapes';
@@ -156,6 +157,8 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
     caricature();
   };
   rest();
+  // What aims are measured from (page/keys.ts).
+  const restPose = restOf(model.root, bones);
 
   // Stand the figure on the origin, scaled to its height in world px, centred on its hips.
   model.root.updateMatrixWorld(true);
@@ -191,26 +194,32 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
   // Props, on their bones, in the rest pose's axes and world px.
   // Accessory slots: each slot's options in order, and the roles that are theirs.
   const slotNames = Object.keys(s.slots ?? {});
-  const options: THREE.Group[][] = slotNames.map(() => []);
+  const options: THREE.Group[][][] = slotNames.map(() => []);
   const optionRoles: Set<number>[][] = slotNames.map(() => []);
   for (const p of s.props ?? []) {
-    const holder = addProp(p);
+    const holders = addProp(p);
     if (!p.slot) continue;
     const si = slotNames.indexOf(p.slot);
     if (si < 0) throw new Error(`prop slot "${p.slot}" isn't in slots`);
-    options[si].push(holder);
+    options[si].push(holders);
     optionRoles[si].push(new Set(p.parts.map((q) => names.indexOf(q.role))));
   }
   /** Shows option `k` of slot `si` and hides its others. */
-  const show = (si: number, k: number) => options[si].forEach((h, i) => (h.visible = i === k));
+  const show = (si: number, k: number) => options[si].forEach((hs, i) => hs.forEach((h) => (h.visible = i === k)));
   options.forEach((_, si) => show(si, 0));
-  function addProp(p: Prop): THREE.Group {
-    const b = bone(p.bone);
-    const rq = rootQ();
+  /** A group on bone `name` that undoes its turn and scale: its children are placed in the figure's rest axes, in world px. */
+  function holderOn(name: string): THREE.Group {
+    const b = bone(name);
     const holder = new THREE.Group();
-    holder.quaternion.copy(inModel(b, rq).invert());
-    const ws = b.getWorldScale(new THREE.Vector3()).x;
-    holder.scale.setScalar(1 / ws);
+    holder.quaternion.copy(inModel(b, rootQ()).invert());
+    holder.scale.setScalar(1 / b.getWorldScale(new THREE.Vector3()).x);
+    b.add(holder);
+    return holder;
+  }
+  /** The prop on its bone, and a holder of its own for each part on another bone (a wear option's marks). */
+  function addProp(p: Prop): THREE.Group[] {
+    const holder = holderOn(p.bone);
+    const holders = [holder];
     const rig = new THREE.Group();
     rig.position.set(...p.at);
     rig.rotation.set(rad(p.rot[0]), rad(p.rot[1]), rad(p.rot[2]));
@@ -224,15 +233,45 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
             ? new THREE.SphereGeometry(a, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, h / a, 1)
             : part.shape === 'box'
               ? new THREE.BoxGeometry(a, h, c)
-              : new THREE.SphereGeometry(1, 16, 12).scale(a, h, c);
+              : part.shape === 'prism'
+                ? // Drawn in x, y as z, y, extruded along z, then turned so the extrusion runs across the figure.
+                  new THREE.ExtrudeGeometry(new THREE.Shape((part.points ?? []).map(([z, y]) => new THREE.Vector2(z, y))), { depth: a, bevelEnabled: false })
+                    .translate(0, 0, -a / 2)
+                    .rotateY(-Math.PI / 2)
+                : new THREE.SphereGeometry(1, 16, 12).scale(a, h, c);
       const mesh = new THREE.Mesh(geo, material(names.indexOf(part.role)));
       if (part.at) mesh.position.set(...part.at);
       if (part.rot) mesh.rotation.set(rad(part.rot[0]), rad(part.rot[1]), rad(part.rot[2]));
       mesh.frustumCulled = false;
-      rig.add(mesh);
+      if (part.bone) {
+        const own = holderOn(part.bone);
+        own.add(mesh);
+        holders.push(own);
+        if (part.face) stick(own, mesh, part.at ?? [0, 0, 0], part.face, part.rot?.[2] ?? 0);
+      } else rig.add(mesh);
     }
-    b.add(holder);
-    return holder;
+    return holders;
+  }
+  /**
+   * A wear mark stuck on the skin: from \`at\` (inside the limb, from the joint) out along \`face\` to where
+   * the model's surface is, at rest, and turned flat against it, spun \`spin\` degrees about the way it faces.
+   * Half of it sinks into the body, so what shows is a flat cap the outline of the mark.
+   */
+  function stick(holder: THREE.Group, mesh: THREE.Mesh, at: [number, number, number], face: [number, number, number], spin: number) {
+    holder.updateMatrixWorld(true);
+    const dir = new THREE.Vector3(...face).normalize();
+    const from = holder.localToWorld(new THREE.Vector3(...at));
+    const out = holder
+      .localToWorld(new THREE.Vector3(...at).addScaledVector(dir, 1))
+      .sub(from)
+      .normalize();
+    const ray = new THREE.Raycaster(from.clone().addScaledVector(out, 200), out.clone().negate());
+    const hit = ray.intersectObjects(model.meshes, false)[0];
+    if (!hit) throw new Error(`a wear mark on ${holder.parent?.name} along ${face.join(',')} meets no skin`);
+    mesh.position.copy(holder.worldToLocal(hit.point.clone()));
+    mesh.quaternion
+      .setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir)
+      .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), rad(spin)));
   }
 
   scene.updateMatrixWorld(true);
@@ -247,16 +286,8 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
   const mixer = new THREE.AnimationMixer(model.root);
   const pin = new THREE.Vector3();
 
-  /**
-   * Poses the figure as `key` for a facing. `_near` and `_far` name the limbs on the camera's side and the
-   * other, authored as the figure faces right (near is its right); facing left they swap sides and mirror,
-   * so a turn about y or z changes sign.
-   */
+  /** Poses the figure as `key` for a facing (page/keys.ts: which bones, which way, mirrored facing left). */
   const poseKey = (key: Key, facing: 'r' | 'l') => {
-    const near = facing === 'r' ? '_r' : '_l';
-    const far = facing === 'r' ? '_l' : '_r';
-    const mirror = (n: string, e: [number, number, number]): [number, number, number] => (facing === 'l' && /_(near|far)$/.test(n) ? [e[0], -e[1], -e[2]] : e);
-    const turns = new Map(Object.entries(key.bones ?? {}).map(([n, e]) => [n.replace(/_near$/, near).replace(/_far$/, far), mirror(n, e)] as const));
     mixer.stopAllAction();
     if (key.from === 'rest') rest();
     else {
@@ -267,35 +298,32 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
       caricature();
     }
     scene.updateMatrixWorld(true);
-    const rq = rootQ();
-    for (const b of bones) {
-      const e = turns.get(b.name);
-      if (!e) continue;
-      const turnBy = new THREE.Quaternion().setFromEuler(new THREE.Euler(rad(e[0]), rad(e[1]), rad(e[2]), 'XYZ'));
-      const now = turnBy.multiply(inModel(b, rq));
-      const parent = b.parent ? inModel(b.parent, rq) : new THREE.Quaternion();
-      b.quaternion.copy(parent.invert().multiply(now));
-      b.updateMatrixWorld(true);
-      b.updateMatrixWorld(true);
-    }
+    applyTurns(model.root, bones, turnsOf(key, facing), restPose);
     for (const [n, f] of Object.entries(key.scale ?? {})) {
       // A stretch, on top of the caricature: a fist punched up past a big head.
-      const b = bone(n.replace(/_near$/, near).replace(/_far$/, far));
+      const b = bone(boneOf(n, facing).bone);
       b.scale.multiplyScalar(f);
       b.updateMatrixWorld(true);
     }
   };
+  // The arms hang in an idle (a humanoid rig's rest is a T-pose): key the check from there.
+  const hanging = model.clips.some((c) => c.name === 'idle' || c.name.startsWith('idle')) ? 'idle@0.05' : 'rest';
+  const misfit = checkArms(model.root, bones, restPose, () => poseKey({ from: hanging }, 'r'));
+  if (misfit.length) throw new Error(`keys won't turn this rig as the README says:\n${misfit.join('\n')}`);
+
   /** Every bone's local turn, to blend two keys by. */
   const snapshot = () => bones.map((b) => ({ q: b.quaternion.clone(), s: b.scale.x }));
 
   /** Poses the figure for sample `u` of clip `c`; returns the roll to apply about the hips. */
   const poseAt = (c: Clip, u: number, facing: 'r' | 'l'): { roll: number; yaw: number } => {
     if (c.keys) {
-      const keys = c.keys.map((n) => {
+      const keyNamed = (n: string) => {
         const key = s.keys?.[n];
         if (!key) throw new Error(`clip keys "${n}", which isn't in keys`);
         return key;
-      });
+      };
+      // A rig whose sides differ may pose another key facing left.
+      const keys = c.keys.map((n) => (facing === 'l' && keyNamed(n).l ? keyNamed(keyNamed(n).l!) : keyNamed(n)));
       const span = c.loop ? keys.length : keys.length - 1;
       const at = Math.max(0, u * span);
       const i = Math.min(keys.length - 1, Math.floor(at));

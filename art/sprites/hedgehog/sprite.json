@@ -73,7 +73,12 @@
       "swatches": [
         "#b4362b",
         "#97231b"
-      ]
+      ],
+      "alts": [
+        "#2f8a57",
+        "#ebe5d6"
+      ],
+      "vary": 6
     },
     "hazard": {
       "color": "#e8b73a",
@@ -111,6 +116,55 @@
       "swatches": [],
       "free": true,
       "min": 0.12
+    },
+    "sole": {
+      "color": "#9a9894",
+      "swatches": [],
+      "alts": [
+        "#ebe4d2",
+        "#c8402f"
+      ],
+      "vary": 6
+    },
+    "grime": {
+      "color": "#808080",
+      "swatches": [],
+      "free": true,
+      "min": 0.1,
+      "on": "sneaker",
+      "tone": -18
+    },
+    "scuff": {
+      "color": "#808080",
+      "swatches": [],
+      "free": true,
+      "min": 0.1,
+      "on": "skin",
+      "tone": -12
+    },
+    "soot": {
+      "color": "#808080",
+      "swatches": [],
+      "free": true,
+      "min": 0.1,
+      "on": "paint",
+      "tone": -24
+    },
+    "sootskin": {
+      "color": "#808080",
+      "swatches": [],
+      "free": true,
+      "min": 0.1,
+      "on": "skin",
+      "tone": -26
+    },
+    "sootshoe": {
+      "color": "#808080",
+      "swatches": [],
+      "free": true,
+      "min": 0.1,
+      "on": "sneaker",
+      "tone": -28
     }
   },
   "keys": {
@@ -377,6 +431,130 @@
           0
         ]
       }
+    },
+    "tap0": {
+      "from": "idle@0.05",
+      "bones": {
+        "spine_01": [
+          -4,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          -10,
+          0,
+          0
+        ],
+        "lowerarm_near": [
+          -50,
+          0,
+          0
+        ],
+        "upperarm_far": [
+          -10,
+          0,
+          0
+        ],
+        "lowerarm_far": [
+          -50,
+          0,
+          0
+        ],
+        "foot_near": [
+          0,
+          0,
+          25
+        ]
+      }
+    },
+    "tap1": {
+      "from": "idle@0.05",
+      "bones": {
+        "spine_01": [
+          -4,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          -10,
+          0,
+          0
+        ],
+        "lowerarm_near": [
+          -50,
+          0,
+          0
+        ],
+        "upperarm_far": [
+          -10,
+          0,
+          0
+        ],
+        "lowerarm_far": [
+          -50,
+          0,
+          0
+        ]
+      }
+    },
+    "pump0": {
+      "from": "idle@0.05",
+      "yaw": 15,
+      "bones": {
+        "spine_01": [
+          -4,
+          0,
+          6
+        ],
+        "upperarm_far": {
+          "raise": 70,
+          "out": 50
+        },
+        "lowerarm_far": {
+          "raise": 150,
+          "out": 50
+        },
+        "upperarm_near": {
+          "raise": 15,
+          "out": 30
+        },
+        "lowerarm_near": {
+          "raise": 60,
+          "out": 10
+        }
+      }
+    },
+    "pump1": {
+      "from": "idle@0.05",
+      "yaw": 15,
+      "bones": {
+        "spine_01": [
+          -10,
+          0,
+          8
+        ],
+        "head": [
+          -6,
+          0,
+          0
+        ],
+        "upperarm_far": {
+          "raise": 135,
+          "out": 65
+        },
+        "lowerarm_far": {
+          "raise": 175,
+          "out": 65
+        },
+        "upperarm_near": {
+          "raise": 15,
+          "out": 30
+        },
+        "lowerarm_near": {
+          "raise": 60,
+          "out": 10
+        }
+      }
     }
   },
   "clips": {
@@ -434,6 +612,24 @@
       "fps": 14,
       "center": true,
       "girth": 1
+    },
+    "idle2": {
+      "keys": [
+        "tap0",
+        "tap1"
+      ],
+      "frames": 2,
+      "loop": true,
+      "fps": 3
+    },
+    "cheer2": {
+      "keys": [
+        "pump0",
+        "pump1"
+      ],
+      "frames": 4,
+      "loop": true,
+      "fps": 6
     }
   },
   "girth": 1.12,
@@ -594,7 +790,7 @@
           "role": "ringpull",
           "size": [
             0.8,
-            1.0,
+            1,
             0.35
           ],
           "at": [
@@ -643,7 +839,7 @@
             0
           ],
           "at": [
-            -1.0,
+            -1,
             0.2,
             1.6
           ],
@@ -654,12 +850,271 @@
           ]
         }
       ]
+    },
+    {
+      "bone": "pelvis",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "wear",
+      "parts": []
+    },
+    {
+      "bone": "pelvis",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "wear",
+      "parts": [
+        {
+          "shape": "sphere",
+          "role": "grime",
+          "size": [
+            0.9,
+            0.3,
+            0.4
+          ],
+          "at": [
+            0,
+            0,
+            1
+          ],
+          "bone": "foot_r",
+          "face": [
+            0,
+            0.4,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            10
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "grime",
+          "size": [
+            0.9,
+            0.3,
+            0.4
+          ],
+          "at": [
+            0,
+            0,
+            1
+          ],
+          "bone": "foot_l",
+          "face": [
+            0,
+            0.4,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            -10
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "scuff",
+          "size": [
+            0.8,
+            0.3,
+            0.4
+          ],
+          "at": [
+            -0.4,
+            0,
+            0
+          ],
+          "bone": "spine_02",
+          "face": [
+            0,
+            0,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            20
+          ]
+        }
+      ]
+    },
+    {
+      "bone": "pelvis",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "wear",
+      "parts": [
+        {
+          "shape": "sphere",
+          "role": "soot",
+          "size": [
+            1.6,
+            0.5,
+            0.4
+          ],
+          "at": [
+            0,
+            0.5,
+            0
+          ],
+          "bone": "spine_03",
+          "face": [
+            0,
+            0.2,
+            -1
+          ],
+          "rot": [
+            0,
+            0,
+            15
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "soot",
+          "size": [
+            0.9,
+            0.35,
+            0.4
+          ],
+          "at": [
+            0,
+            -1,
+            0
+          ],
+          "bone": "thigh_r",
+          "face": [
+            0,
+            0,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            20
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "sootskin",
+          "size": [
+            1.2,
+            0.4,
+            0.4
+          ],
+          "at": [
+            0.3,
+            0,
+            0
+          ],
+          "bone": "spine_01",
+          "face": [
+            0,
+            0,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            -20
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "sootshoe",
+          "size": [
+            0.9,
+            0.4,
+            0.4
+          ],
+          "at": [
+            0,
+            0,
+            1
+          ],
+          "bone": "foot_r",
+          "face": [
+            0,
+            0.4,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            0
+          ]
+        }
+      ]
     }
   ],
   "slots": {
     "plaster": 0,
     "band": 1,
     "ringpull": 2,
-    "lace": 3
+    "lace": 3,
+    "wear": 11
+  },
+  "regions": [
+    {
+      "from": "eye",
+      "to": "sole",
+      "box": [
+        0,
+        0,
+        0,
+        1,
+        0.16,
+        1
+      ]
+    },
+    {
+      "from": "steel",
+      "to": "sole",
+      "box": [
+        0,
+        0,
+        0,
+        1,
+        0.16,
+        1
+      ]
+    }
+  ],
+  "gait": {
+    "bounce": [
+      0,
+      0.45
+    ],
+    "lean": [
+      0.01,
+      0.06
+    ]
   }
 }

@@ -88,6 +88,48 @@ export const BRIEFS: Record<string, Brief> = {
     poses:
       'standing idle with one foot tapping; mid-run leaning hard forward with legs a blur; crouched low before a jump; curled into a tight spinning ball in mid-air, quills outward, no limbs showing; falling with arms out and legs reaching down; sliding down a wall on his right with one glove flat against it and both sneakers braced; cheering with one fist up; knocked flat on his back with stars circling',
   },
+  elf: {
+    // The nod, each part of the read at race size: the long green cap flopping back behind the head like a
+    // tail (the silhouette people draw), the long pointed ear sticking out sideways (an elf, not a gnome),
+    // the green tunic flared at the hem with a brown belt (the colour and the hero's cut), a blond fringe,
+    // and something to fight with on his back (a hero, not a shepherd).
+    // Ours, and the joke: a hero kitted out from the bins. The cap is a long green woolly sock with a darned
+    // toe, the round shield a dented dustbin lid with its handle, the sword a sooty fireplace poker.
+    // The twist and the nod lead: the image generator drops what comes late in a long prompt (the lid and
+    // the poker vanished when they came last).
+    character:
+      'Character: a slim young elf hero, never stout. A blond fringe (#e6c25a), long pointed ears, blue eyes. ' +
+      'His cap: a very long floppy green woolly sock (#3f7a34), its long foot flopping straight back behind his head and drooping to his shoulders, a light green darn (#5a9a4a) on its toe. ' +
+      'A green tunic (#3f7a34) flared at the hem, a wide brown belt, cream sleeves and leggings, brown gloves and boots (#6b4a35). ' +
+      'On his back as a shield, a dented round steel dustbin lid (#a8adb4) with its handle; a black iron fireplace poker (#4a4a52) with a hooked tip in place of a sword, its loop handle over his shoulder. No sword, no bow.',
+    views: 'a front view, a side profile facing right, a back view showing the dustbin lid and poker on his back, and a three-quarter view facing right',
+    pose: 'The sock cap flops straight back and down behind his head to the nape, clear of the arms. The dustbin lid sits flat on his back and the poker lies behind it, both clear of the arms and head.',
+    poses:
+      'standing idle, alert, one hand on his belt; mid-run striding out long with arms swinging and the sock cap streaming behind; crouched low before a jump, knees bent, arms swung back; a forward somersault in mid-air, tucked into a ball, the sock cap trailing; falling with arms up and legs reaching down; sliding down a wall on his right with one glove flat against it and both boots braced; cheering with the poker raised high overhead; knocked flat on his back with stars circling',
+  },
+  zapmouse: {
+    // The nod, each part of the read at race size: two long pointed ears tipped black (the outline, at any
+    // size), the zigzag bolt of a tail breaking the outline behind (the one shape no other mouse has), round
+    // red cheeks (the face at 20 px), and the yellow (what everyone remembers first); chubby and round,
+    // standing on two legs at rest and scampering on all fours.
+    // Ours, and the joke: a scrapyard knock-off wired up by hand. The bolt is cut from sheet tin and riveted
+    // on at the root, a frayed power cord is knotted round its middle like a belt with the plug dangling,
+    // and the tip of one ear is kinked and taped.
+    // The image models draw the nod or the twist, rarely both: the concept was the nod drawn first, then
+    // edited to add the tin tail and the cord (art/sprites/zapmouse/concept.prompt.txt). The model leaves
+    // the tail and the plug off; sprite.json builds them as props, so their size is a setting.
+    character:
+      'Character: a hand-made scrapyard toy mouse, wired together from junk. ' +
+      'Behind it, a big flat zigzag tail like a jagged bolt, as tall as its whole body, cut from dull grey sheet tin (#c4c8ce) with sharp corners, bolted to its rump with three dark rivets and sticking up and back: the biggest shape in its outline. ' +
+      'Round its middle, a frayed black electrical power cord (#2a2a30) knotted like a belt, a cream two-pin plug (#d9d4c8) dangling from the knot at its hip. ' +
+      'The mouse itself is small, chubby and round, soft yellow fur (#f2c62a) all over, an animal and not a costume: a pear-shaped body, a big round head almost as wide as the body, short stubby arms with little round paws, short legs with big oval furry feet. ' +
+      'Two very long pointed ears standing straight up from the top of the head, each as tall as the head, their top third black (#2a1f1a); the tip of one ear is kinked a little and wrapped in a strip of grey tape. ' +
+      'Big round bright-red cheek circles (#e0473b), small round black eyes with a white glint, a tiny dark nose, a small open smile. Two thick brown stripes (#6b4a35) across the upper back only. Cheeky, quick and crackling with mischief.',
+    views: 'a front view, a side profile facing right, a back view showing the brown stripes and the riveted tin tail, and a three-quarter view facing right',
+    pose: 'The ears stand straight up, clear of the arms. Leave the tin tail and the plug off this figure: no tail at all, a smooth round rump. The cord belt sits snug round the waist, nowhere near the hands.',
+    poses:
+      'standing idle upright on its hind legs, paws tucked in front of its chest; scampering at full speed on all fours, body low and stretched long, ears streaming straight back, tail out behind; crouched low on all fours before a jump; leaping up with its body stretched long, forepaws reaching high, ears up; falling with all four paws splayed out and ears flung up; clinging to a wall on its right with all four paws, sliding down, ears back; cheering upright on its hind legs with both paws thrown up; knocked flat on its back with its paws in the air and stars circling',
+  },
   puffball: {
     // The nod, each part of the read at race size: the ball (the whole body: no head, neck or legs apart
     // from it), the big red oval feet (they make it a creature and part it from the dot-eater's wedge),
