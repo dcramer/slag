@@ -346,7 +346,8 @@ What came out of it:
 - **The nod:** the domed hard hat with goggles on it (the head shape and the trade); the square jaw (the gruff Texan, at 20 px); the huge wrench over the shoulder (the read in profile); the work shirt and khakis (the colour block).
 - **Our twist:** a backyard engineer. The hard hat is an upturned yellow mixing bowl with a chin strap, the goggles are swimming goggles, and the wrench is a giant adjustable spanner taped to a broom handle; a kid's toy turret is clipped to his belt.
 - **Swaps:** a pencil behind the ear; a tape measure on the belt; a toothpick; a grease smear on the cheek.
-- **Rig:** humanoid.
+- **Palette alts:** the trousers in khaki `#8c7a58`, slate work cloth `#6b7178` or olive drab `#5e5f3c`; the boots are drawn in them (drawn flat, the boots and trousers are one colour in the drawing).
+- **Rig:** drawn flat (2026-11-03): a game-size design, then an edit that gave him one glove, the belt and the toy turret (asked for up front, the design dropped his colours), worn with a dented, chipped bowl, a taped broom handle and a torn knee; the goggles stay pushed up, so the cast's face shows under the bowl; eleven poses.
 - **Concept prompt:** A stocky, square-jawed engineer with a yellow mixing bowl worn upside down as a hard hat with a chin strap, swimming goggles pushed up on it, a red work shirt, khaki trousers with a belt and one leather work glove; a giant adjustable spanner taped to a broom handle rests over his shoulder, and a small kid's toy turret is clipped to his belt.
 
 ### The goose up to no good
