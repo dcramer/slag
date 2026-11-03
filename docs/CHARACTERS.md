@@ -162,13 +162,13 @@ What came out of it:
 - **A stranger should say:** "the elf hero with the green cap."
 - **Silhouette:** slim. A long green cap flopping back like a tail, a pointed ear sticking out, a tunic flared at the hem, and a round shield on the back.
 - **Traits:** a long floppy green cap; blond fringe; a long pointed ear; a green tunic with a brown belt; a shield and a sword hilt on the back; brown boots.
-- **Palette:** cap and tunic `#3f7a34` (shade `#2c5a25`); darn `#5a9a4a`; hair `#e6c25a`; skin `#efc9a4`; belt, boots and gloves `#6b4a35`; lid `#a8adb4` (shade `#7a7f86`); poker `#4a4a52`.
-- **Color slot:** costume.
+- **Palette:** cap and tunic `#3f7a34` (shade `#2c5a25`); darn `#5a9a4a`; hair `#e6c25a`; skin `#efc9a4`; belt, boots and gloves `#6b4a35`; lid `#a8adb4` (shade `#7a7f86`), or a recycling-blue `#5f80a8` or black-plastic `#5a5e66` lid; poker `#4a4a52`.
+- **Color slot:** costume: the sock cap and the tunic.
 - **Gait:** strides out with the cap tip swinging; a forward somersault on the jump.
 - **The nod:** the long green cap flopping back (the silhouette people draw); the pointed ear (it makes him an elf and not a gnome); the flared green tunic with its belt (the colour and the hero's cut); something to fight with on his back (a hero, not a shepherd).
-- **Our twist:** a hero kitted out from the bins. The cap is a long green woolly sock with a darned heel; the shield is a dented dustbin lid with its handle; the sword is a fireplace poker.
+- **Our twist:** a hero kitted out from the bins. The cap is a long green woolly sock with a darned toe; the shield is a dented dustbin lid with its handle; the sword is a fireplace poker.
 - **Swaps:** a sprig of grass in the cap; a sticking plaster on the ear; a coil of string on the belt; a bottle cork on a cord.
-- **Rig:** humanoid.
+- **Rig:** humanoid. Rendered (round 3): the cap's tail bent down from the crown in the model, the ears, lid and poker as props, every clip but walk and run keyed.
 - **Concept prompt:** A slim young elf hero with a long pointed ear and a blond fringe, wearing a long green woolly sock as a floppy cap, its darned heel showing, flopping back behind his head; a green tunic flared at the hem with a brown belt; brown boots and gloves; a dented metal dustbin lid slung on his back as a shield and a fireplace poker in place of a sword.
 
 ### The pink puffball
@@ -437,7 +437,7 @@ How a Roster entry becomes a kind drawn from 3D. The entry is the one source for
 - **Cost.** About 0.005 ms per runner drawn from the frame-bitmap cache (the hand-drawn cast takes about 0.08–0.1), and about 0.4 ms for a frame the first time it's drawn at a scale. Frame data is about 400–480 KB per kind with its variety, a chunk fetched only with the flag on.
 - **Checks:** `tests/sprite-cast.test.ts` (every clip, the shared hitbox box pen and all, at least 18 px tall, rolls), and `pnpm shot sprites --kind K` (the comparison sheets, the six-rolls lobby, the draw cost, and `sprites-blind.png`, every kind as a shuffled, unnamed play-scale silhouette for fresh readers).
 
-**Blind reads so far** (fresh readers, silhouettes only): the speedster is named every time, medium-high to high. The plumber went from low to split (one reader "the plumber, medium", one unsure) after his cap, nose and girth were pushed and his plunger carried lower; in colour he reads at once. With the cup above his head the cup and the cap merged into one shape, so the plunger is carried low for good (owner, 2026-11-02). Both readers name the dot-eater at high confidence, from the circle with its wedge mouth and the speed lines of its run.
+**Blind reads so far** (fresh readers, silhouettes only): the speedster is named every time, medium-high to high. The plumber went from low to split (one reader "the plumber, medium", one unsure) after his cap, nose and girth were pushed and his plunger carried lower; in colour he reads at once. With the cup above his head the cup and the cap merged into one shape, so the plunger is carried low for good (owner, 2026-11-02). Both readers name the dot-eater at high confidence, from the circle with its wedge mouth and the speed lines of its run. The elf read as the plumber ("a cap with a forward brim") while his cap's tail stuck straight back level with the crown; drooped from the crown, with the ears up behind it and turned nearer profile, he reads as the elf hero to both fresh readers, one at medium.
 
 ## What every kind keeps
 
