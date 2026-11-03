@@ -486,7 +486,7 @@ export const KINDS: Record<Kind, KindArt> = {
         poly(d.s, oval(x + sd * 1.6, y + 2.6, 1.5, 1.3, 10), '#e0473b');
       }
       brows(d, [-d.W * 0.16 + d.f * 0.6, d.W * 0.16 + d.f * 0.6], y, 1);
-      mouthMark(d, d.f * 0.6, y + 2.6, 1.6);
+      mouthMark(d, d.f * 0.6, y + 2.6, 1.6, 'smile');
     },
     print: (d) => {
       for (const u of [0.42, 0.58])
@@ -753,7 +753,7 @@ export const KINDS: Record<Kind, KindArt> = {
       const y = Y(d, 0.66);
       for (const sd of [-1, 1]) eye(d, sd * d.W * 0.1 + d.f * 0.8, y, 0.75);
       brows(d, [-d.W * 0.1 + d.f * 0.8, d.W * 0.1 + d.f * 0.8], y, 0.9);
-      mouthMark(d, d.f * 1.4, Y(d, 0.5), 2.6);
+      mouthMark(d, d.f * 1.4, Y(d, 0.5), 2.6, 'flat');
     },
     print: (d) => {
       // The face and square jaw in skin, khaki trousers and a belt under the shirt.
@@ -952,7 +952,7 @@ export const KINDS: Record<Kind, KindArt> = {
     hands: 'body',
     faceX: 0.1,
     gait: (g) => (g.moving ? { rot: S(g.ph) * 0.14, pivot: 0, upright: 0.3 } : { rot: S(g.t * 1.5) * 0.02, pivot: 0 }),
-    paintFace: (d) => pair(d, 0.8, 0.12, 0.7, 0),
+    paintFace: (d) => pair(d, 0.8, 0.12, 0.7),
     print: (d) => {
       const pts: P[] = [];
       for (let i = 0; i <= 14; i++) {

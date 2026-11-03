@@ -127,6 +127,11 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 04:36Z · `done` · DESIGN.md → Players, NETCODE.md → Seats and kicks
 - **The New Look dice rerolls the look and keeps the name, without flicker.** "when i click roill the dice it flickers a bit.. and the player name ... also flickers"
   2026-11-02 15:50Z · `done` · DESIGN.md → Players
+- **The player picks their colour, on the name screen and the join card: swatches from the player palette, shown live on the character, saved with the profile, kept by New Look, and synced like the name.** "make it so the edit name screen also lets you pick a color? or something? somehow we gotta make it so the color is changeable"
+  2026-11-02 · `done` · DESIGN.md → Players
+  Changed: the colour changed only with a New Look roll.
+- **One player per swatch: a swatch someone seated wears shows as taken and can't be picked, and when two reach for the same free one at once the host's order gives it to the first.** The agent's pick for the clash rule the owner left open; deterministic, and the HUD keeps telling players apart by colour. Profiles saved before swatches keep their rolled colour until they pick one.
+  2026-11-02 · `done` · DESIGN.md → Players
 - **Player names are filtered, so nobody puts a slur on everyone's screen or on the public lobby list.** "we also need some kind of word filter for names so people dont put racial slurs/etc"
   2026-11-02 23:11Z · `done` · DESIGN.md → Players, NETCODE.md → Seats and kicks, public/ASSETS.md → Word lists
 
@@ -184,10 +189,14 @@ Every game design decision, preference and direction the owner has given, groupe
 - **The player's colour is the character's main costume colour (an alternate costume), not a foot ring.** "the sprites seem to always be the same color? like they're not re-coloring their primary based on the player color?" / "ok well thats wrong"
   2026-11-02 · `done` for the plumber and speedster · CHARACTERS.md → the rules
   Changed: iconic palettes with the player's colour on a foot ring.
-- **Characters vary only in curated ways that keep the art: costume colour, accessory swaps, designed alternate palettes on one secondary region, pose personality (two idles, two cheers, a little gait), and wear. Faces, proportions and silhouettes are never rolled; random eyes and mouths go.** "idk if theres ways we can make it a little more procedural without losing our art work" / "'random eyeballs' dont work with the art style" / "Yes, add it"
-  2026-11-02 · `in progress` · CHARACTERS.md → the rules, `tools/art3d/`
+- **Characters vary only in curated ways that keep the art: costume colour, accessory swaps, designed alternate palettes on one secondary region, pose personality (two idles, two cheers, a little gait), and wear. Faces, proportions and silhouettes are never rolled; random eyes and mouths go.** "idk if theres ways we can make it a little more procedural without losing our art work" / "'random eyeballs' dont work with the art style as an example of something that likely needs to go away" / "Yes, add it"
+  2026-11-02 · `in progress` (faces `done`: each kind's face is its own, in `KINDS` and a rendered kind's `sprite.json`) · CHARACTERS.md → the rules, `tools/art3d/`
+  Changed: every character rolled an eye count, style, iris, spread and height, and a mouth, under its kind's face.
 - **The costume-colour rule holds even where a colour is the character's identity: the dot-eater's whole ball takes the player's colour, not only his napkin.** (answer: "Keep player colour")
   2026-11-02 · `done` · CHARACTERS.md → the rules
+- **Parts may seal the level: placement is never refused for leaving no way through, and a sealed level needs a bomb.** "the placement restrictions feel buggy in some places?" / "game was refusing letting me place items that clearly had nothing there" / "also parts CAN seal it.. it can be unwinnable and require a bomb"
+  2026-11-02 · `in progress` · DESIGN.md → Props, `src/gen/level/winnable.ts`
+  Changed: a match kept a plan of at most `MAX_BRIDGES` bridges and refused a placement that left none.
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
   2026-11-02 · `done` · public/ASSETS.md
 
@@ -245,6 +254,10 @@ Every game design decision, preference and direction the owner has given, groupe
   Changed: an up-front Join-or-Watch choice on arrival.
 - **Characters on the join card stay random-roll only: the New Look dice, no picker.**
   2026-11-02 · `done` · DESIGN.md → Online (Join)
+  Changed: the colour is picked now (Players, above); the toy itself is still the dice's.
+- **A watcher's Join in the lobby seats them straight in, the way arriving does (their card appears among the players); the join card and its "You're In" are for joining mid-match.** "when you join the game on the lobby screen (like if i click the eyeball to observe, then i click to join) it says 'you're in' but that screen is just weirdly out of place in that scenario"
+  2026-11-02 · `done` · DESIGN.md → Online (Join)
+  Changed: Join opened the join card in every phase.
 - **Landmarks offer several ways through, so blocking one with a part forces rivals another way.** "the nice thing about level design like this: you could block off one exit and forces players to go a diff way (with a beam, as a player)"
   2026-11-02 · `done` · DESIGN.md → Stage concepts
 - **At least 5 landmarks per theme; all large, some grand, every one with randomness in its layout.** "things like the haunted wing are cool. i'd want no less than 5 landmarks per theme, all should be at least large on scale, some _grand_ all should have a little bit of randomness built into them in terms of layout/etc as well"

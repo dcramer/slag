@@ -129,6 +129,57 @@ describe('rendered kinds: frames', () => {
       expect(-top, s.kind).toBeGreaterThanOrEqual(18);
     }
   });
+
+  it('keep every eye on the head it rides and on the figure, at the kit’s size, in every frame, deaths included', () => {
+    const inside = (x: number, y: number, ring: readonly { x: number; y: number }[]) => {
+      let odd = false;
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const a = ring[i];
+        const b = ring[j];
+        if (a.y > y !== b.y > y && x < ((b.x - a.x) * (y - a.y)) / (b.y - a.y) + a.x) odd = !odd;
+      }
+      return odd;
+    };
+    for (const s of SETS) {
+      if (!s.face) continue;
+      // A kind traced from a rig records the head its eyes ride; a generated shape (no head bone) doesn't,
+      // and its whole figure is the face's place.
+      const rigged = Object.values(s.clips).some((c) => [...c.r, ...c.l].some((f) => f.head));
+      for (const [name, c] of Object.entries(s.clips))
+        for (const [facing, fs] of [
+          ['r', c.r],
+          ['l', c.l],
+        ] as const)
+          fs.forEach((f, i) => {
+            const at = `${s.kind} ${name} ${facing}${i}`;
+            if (!f.eyes?.length) return;
+            // The head is what the drawer turns brows, crosses and the mouth with.
+            if (rigged) expect(f.head, `${at}: eyes without a head`).toBeDefined();
+            const sil = f.sil.map(ringPoints);
+            for (let e = 0; e < f.eyes.length; e += 3) {
+              const x = f.eyes[e] / 8;
+              const y = f.eyes[e + 1] / 8;
+              expect(
+                sil.some((r) => inside(x, y, r)),
+                `${at}: eye off the figure`,
+              ).toBe(true);
+              if (!f.head) continue;
+              const [hx, hy, hr] = f.head.map((v) => v / 8);
+              expect(Math.hypot(x - hx, y - hy), `${at}: eye off the head`).toBeLessThanOrEqual(hr);
+              // Drawn at the frame's own size (foreshortened, scaled with the head), close to the kit's.
+              const r = f.eyes[e + 2] / 8;
+              expect(r / s.face!.r, `${at}: eye size`).toBeGreaterThanOrEqual(0.6);
+              expect(r / s.face!.r, `${at}: eye size`).toBeLessThanOrEqual(1.5);
+            }
+          });
+      // At rest the face shows, both ways round.
+      for (const fs of [s.clips.idle.r, s.clips.idle.l])
+        expect(
+          fs.every((f) => (f.eyes?.length ?? 0) >= 3),
+          `${s.kind} idle`,
+        ).toBe(true);
+    }
+  });
 });
 
 describe('rendered kinds: choosing frames', () => {
@@ -291,31 +342,6 @@ describe('rendered kinds: curated variety (docs/CHARACTERS.md → Variety)', () 
     for (const h of [330, 190, 140]) {
       const [r, g, bl] = shadowOf({ h, s: 70, l: 55 }).match(/\d+/g)!.map(Number);
       expect(Math.max(r, g, bl) - Math.min(r, g, bl), `hue ${h}`).toBeLessThanOrEqual(12);
-    }
-  });
-});
-
-describe('characters: vary', () => {
-  it('keeps the first six rolls (and the hue) every seed had, with the variety rolls past them', () => {
-    const before: [number, number, number[]][] = [
-      [1, 225.74661861173809, [0.9683778982143849, 0.281103502959013, 0.6128388606011868, 0.7207431411370635, 0.425796952098608, 0.9948229456786066]],
-      [7, 4.213711135089397, [0.5214452685322613, 0.4055216880515218, 0.4662326325196773, 0.23992518591694534, 0.5533256039489061, 0.729822089895606]],
-      [
-        0x5ca7,
-        59.1072775516659,
-        [0.038265814539045095, 0.13181803026236594, 0.6073709435295314, 0.8663577474653721, 0.023078895173966885, 0.08451413083821535],
-      ],
-      [
-        123456789,
-        92.80466778203845,
-        [0.30307188746519387, 0.7470660470426083, 0.7787336520850658, 0.2845096290111542, 0.016536934999749064, 0.1614646923262626],
-      ],
-    ];
-    for (const [seed, hue, vary] of before) {
-      const c = generateCharacter(seed);
-      expect([c.hue, c.vary.slice(0, 6)]).toEqual([hue, vary]);
-      expect(c.vary.length).toBeGreaterThan(VARIETY.wear);
-      expect(c.vary.every((v) => v >= 0 && v < 1)).toBe(true);
     }
   });
 });

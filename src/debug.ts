@@ -4,7 +4,7 @@ import { CAST, generateCharacter, type Kind } from './gen/character';
 import { ARCHETYPE_WEIGHTS, type Archetype, DEMOLISH, generateProp } from './gen/props';
 import type { NetSession } from './net/session';
 import { hashMatch } from './net/snapshot';
-import { blindOrder, castBench, castBlind, castCatalog, castRecognise, castSilhouettes, castVariety } from './render/cast/sheet';
+import { blindOrder, castBench, castBlind, castCatalog, castColors, castRecognise, castSilhouettes, castVariety } from './render/cast/sheet';
 import { useSprites } from './render/cast/sprites';
 import type { Renderer } from './render/renderer';
 import { giveItem, ITEM_KINDS, type ItemKind } from './sim/items';
@@ -73,6 +73,8 @@ export interface SlagDebug {
   /** The cast (docs/CHARACTERS.md): a catalog canvas of every kind, the silhouette test, and a draw-cost bench. */
   cast: {
     catalog: typeof castCatalog;
+    /** Every kind in every swatch of the player palette. */
+    colors: typeof castColors;
     silhouettes: typeof castSilhouettes;
     recognise: typeof castRecognise;
     bench: typeof castBench;
@@ -101,6 +103,7 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
     net,
     cast: {
       catalog: castCatalog,
+      colors: castColors,
       silhouettes: castSilhouettes,
       recognise: castRecognise,
       bench: castBench,

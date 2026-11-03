@@ -5,7 +5,7 @@ import { THEME_LABELS } from '../../themes';
 import { drawGlyph, type Glyph } from '../../ui/glyphs';
 import { PAL, TYPE } from '../../ui/style';
 import { drawInkRunner } from '../ink-character';
-import { bay, icon, plate, tag } from '../hud-kit';
+import { bay, icon, plate, swatchDot, tag } from '../hud-kit';
 import { blob } from '../ink';
 import { glowDot } from '../kit';
 import type { Hud, NetInfo, NetWatcher } from '../hud';
@@ -150,9 +150,13 @@ function playerCard(hud: Hud, p: Player, i: number, x: number, y: number, w: num
   c.font = `400 ${nsize}px ${DISPLAY}`;
   const nw = c.measureText(p.character.name).width;
   const nh = hud.mode === 'touch' ? 26 : nsize + 4;
-  const nameHover = mine && hud.button({ x: cx - nw / 2 - 14, y: ny - nh / 2, w: nw + 28, h: nh, action: 'name', device: p.device });
+  // Your own: your color beside it, and both open the name screen with its swatches.
+  const nameHover = mine && hud.button({ x: cx - nw / 2 - 20, y: ny - nh / 2, w: nw + 34, h: nh, action: 'name', device: p.device });
   hud.text(p.character.name, cx, ny, nsize, nameHover ? PAL.amber : PAL.bone, 'center', DISPLAY, 400, 3.5);
-  if (mine) icon(c, 'pencil', cx + nw / 2 + 8, ny, 8, nameHover ? PAL.amber : PAL.dim);
+  if (mine) {
+    icon(c, 'pencil', cx + nw / 2 + 8, ny, 8, nameHover ? PAL.amber : PAL.dim);
+    swatchDot(c, cx - nw / 2 - 9, ny, big ? 4.6 : 4, css(col), nameHover);
+  }
   // Status row.
   const tall = hud.phone ? 8 : 0;
   const by = y + h - (big ? 34 : 28) - tall;
