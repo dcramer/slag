@@ -207,6 +207,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `open` · TODO.md → 29
 - **Rendered kinds are the only way they draw: no `?sprites=1` option; a kind without frames stays hand-drawn until produced.** "Make sprites the only way it works now, so no option at all"
   2026-11-02 · `done` · `src/render/cast/sprites/index.ts`
+- **Set-piece machines that look solid are made solid: guns on ledges, wheel and swing hubs, ladles, carts, signs, posts.** "Make them solid" (asked: make them solid, or draw them as not-ground)
+  2026-11-02 · `open` · TODO.md → 21, `pnpm shot fairplay` (`PENDING`)
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
   2026-11-02 · `done` · public/ASSETS.md
 
