@@ -43,6 +43,8 @@
  *                                           (themes with none: a test landmark per skin and shell; --concept filters those by skin or shell)
  *   pnpm shot artqa --theme T | --themes all [--only landmarks,hazards,decor] → every landmark, hazard and decor piece beside
  *                                           the theme's terrain and three parts, at play scale and 2× (the World art check)
+ *   pnpm shot fairplay [--theme T] [--concept id|plain] [--count N] [--decor] → every landmark and set piece raced and read back:
+ *                                           solid-looking art on the play layer past the hitbox by more than EDGE_DRIFT fails (docs/ART.md, Fair play)
  *   pnpm shot themeswap [--themes volcano,jungle] → a level of every theme in turn on one page, each checked against a fresh page
  *                                           (`own` profiles, then one `shared` profile): render state one level leaves the next
  *   pnpm shot flood [--look lava|toxic|water] [--low 2] [--high 5] → a tide let into the level, at warn, rise and high water
@@ -72,6 +74,7 @@
 import { shots as artqa } from './shot/artqa';
 import { shots as cast } from './shot/cast';
 import { shots as decor } from './shot/decor';
+import { shots as fairplay } from './shot/fairplay';
 import { browser, errors, scenario, server } from './shot/ctx';
 import { shots as flood } from './shot/flood';
 import { shots as hazards } from './shot/hazards';
@@ -104,6 +107,7 @@ const SCENARIOS = {
   ...sprites,
   ...join,
   ...themeswap,
+  ...fairplay,
 };
 
 try {
