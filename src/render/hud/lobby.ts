@@ -102,9 +102,12 @@ export function lobby(hud: Hud, m: Match, t: number, dt: number) {
         (joinable && hud.button({ x, y, w: bw, h: bh, action: 'join', device: hud.mouseDevice })) ||
         (joinable && hud.mode === 'touch' && i === m.players.length);
       bay(c, x, y, bw, bh, hover, t);
-      // The first open bay can take a bot instead of a person.
-      if (hud.canAddBots && i === m.players.length)
-        hud.btn({ x: x + bw / 2 - 44, y: y + bh - (bh > 200 ? 40 : 32), w: 88, h: 24, action: 'bot' }, 'Add Bot', 'ghost', undefined, TYPE.label);
+      // The first open bay can take a bot instead of a person. Its hit area, a thumb tall on a phone, stays inside the bay.
+      if (hud.canAddBots && i === m.players.length) {
+        const reach = Math.max(24, hud.tap);
+        const mid = Math.min(y + bh - (bh > 200 ? 28 : 20), y + bh - 2 - reach / 2);
+        hud.btn({ x: x + bw / 2 - 44, y: mid - 12, w: 88, h: 24, action: 'bot' }, 'Add Bot', 'ghost', undefined, TYPE.label);
+      }
       hud.text('OPEN', x + bw / 2, y + bh / 2 - (hover ? 8 : 4), bh > 200 ? 26 : 22, hover ? PAL.amber : PAL.dim, 'center', DISPLAY, 400);
       if (hover) {
         const gx = x + bw / 2 - 18;
