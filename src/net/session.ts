@@ -6,12 +6,15 @@ import type { GameEvent, InputFrame } from '../sim/types';
 import {
   applyAction,
   bannedFor,
+  cleanCharacter,
+  cleanName,
   freeSeats,
   KICK_BAN_FRAMES,
   type NetAction,
   type NetState,
   newNetState,
   peerOf,
+  relayAction,
   sanitizeRules,
   SEAT_PHASES,
   type Watcher,
@@ -765,11 +768,12 @@ export class NetSession {
 
   /** Tolerates a resume save from before a field existed. */
   private adoptNet(ns: Partial<NetState>) {
-    this.ns.parked = ns.parked ?? {};
+    this.ns.parked = Object.fromEntries(Object.entries(ns.parked ?? {}).map(([k, v]) => [k, v.map((x) => ({ ...x, char: cleanCharacter(x.char) }))]));
     // Numbers only: a save from before bans ran out marked a kick `true`.
     this.ns.kicked = Object.fromEntries(Object.entries(ns.kicked ?? {}).filter(([, v]) => typeof v === 'number'));
     this.ns.banned = ns.banned ?? {};
-    this.ns.watching = ns.watching ?? {};
+    // A watcher's label the name filter refuses goes blank, as it would have off the wire.
+    this.ns.watching = Object.fromEntries(Object.entries(ns.watching ?? {}).map(([k, w]) => [k, { ...w, name: cleanName(w.name) }]));
     this.ns.queue = ns.queue ?? [];
   }
 
@@ -888,7 +892,7 @@ export class NetSession {
       q.actN = n;
       if (a.t === 'join') {
         if (peerOf(a.dev) === from) this.wants.add(a.dev); // seated by reconcile() between rounds
-      } else if (this.allowed(from, a)) this.hostActions.push(a.t === 'watch' ? { t: 'watch', dev: a.dev, on: a.on, name: a.name } : a); // idleness is the host's call
+      } else if (this.allowed(from, a)) this.hostActions.push(relayAction(this.match, a));
     }
     if (msg.h) {
       const mine = this.hashes.get(msg.h[0]);

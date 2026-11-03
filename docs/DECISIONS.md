@@ -127,6 +127,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 04:36Z · `done` · DESIGN.md → Players, NETCODE.md → Seats and kicks
 - **The New Look dice rerolls the look and keeps the name, without flicker.** "when i click roill the dice it flickers a bit.. and the player name ... also flickers"
   2026-11-02 15:50Z · `done` · DESIGN.md → Players
+- **Player names are filtered, so nobody puts a slur on everyone's screen or on the public lobby list.** "we also need some kind of word filter for names so people dont put racial slurs/etc"
+  2026-11-02 23:11Z · `done` · DESIGN.md → Players, NETCODE.md → Seats and kicks, public/ASSETS.md → Word lists
 
 ## Characters
 

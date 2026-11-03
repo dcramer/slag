@@ -9,6 +9,7 @@ import type { PlacedProp } from '../sim/props';
 import { RunWorld } from '../sim/run';
 import type { Weather } from '../sim/weather';
 import type { ThemeId } from '../themes';
+import { cleanCharacter } from './actions';
 
 /**
  * Full, JSON-safe snapshots of a Match, used to bring late joiners and
@@ -289,6 +290,8 @@ export function restoreMatch(m: Match, s: MatchSnap): void {
   m.dryRounds = s.dryRounds;
   m.forceProfile = { ...s.force };
   m.players = fromWire(s.players) as Player[];
+  // A name the filter refuses never reaches the screen, whoever sent the snapshot or wrote the save.
+  for (const p of m.players) p.character = cleanCharacter(p.character);
   m.placed = fromWire(s.placed) as PlacedProp[];
   m.plan = s.plan.map((b) => ({ x: b.x, y: b.y }));
   m.blood = s.blood.map((c) => ({ ...c }));
