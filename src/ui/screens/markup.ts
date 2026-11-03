@@ -177,9 +177,9 @@ interface Credit {
   license?: string;
 }
 
-/** Who made it: a person directed, and AI wrote, drew and scored everything. The page says so first. */
+/** Who made it: a person ran it, and AI wrote, drew and scored everything. The page says so first. */
 const ABOUT_MAKERS: readonly Credit[] = [
-  { role: 'DIRECTION', name: 'David Cramer' },
+  { role: 'HEAD OF SLOP', name: 'David Cramer' },
   { role: 'CODE, ART AND SOUND', name: 'Claude', who: 'Anthropic' },
   { role: 'CHARACTER MODELS', name: 'Tripo' },
 ];

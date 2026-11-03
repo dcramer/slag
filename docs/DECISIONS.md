@@ -506,6 +506,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `done` · DESIGN.md → Parody, `src/ui/screens/markup.ts`
 - **About says first that the game is entirely AI-generated: David Cramer directed; Claude (Anthropic) wrote the code, art and sound; Tripo made the character models.** "make sure its clear this was entirely AI generated"
   2026-11-02 · `done` · `src/ui/screens/markup.ts`
+- **On About, David Cramer's role reads "Head of Slop".** "for 'Direction' have it say 'Head of Slop' and be me"
+  2026-11-02 · `done` · `src/ui/screens/markup.ts`
 - **The game has a favicon, app icons, Open Graph and oEmbed previews.** "Also need a favicon, oembed metadata and image, and apple icon etc"
   2026-11-02 07:06Z · `done`; checking them on a deploy is `open` · `pnpm brand`, TODO.md → 23
 
