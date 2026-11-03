@@ -3,6 +3,7 @@ import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { type Level, T_EMPTY, T_ONEWAY, T_SOLID, tileAt } from '../../../sim/level';
 import { FUSE_BLAST, fuseState, magnetCycle, type Module, type ModuleOf, swingAngles } from '../../../sim/props';
+import { finTop, NOSE_ROWS, noseHalf } from '../../../gen/stage/space';
 import { blob, inkFor, line, type P, stroke } from '../../ink';
 import { barLine, boxPts, glint, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import { bulb, circle, glowDot, light, type RC } from '../../kit';
@@ -472,7 +473,7 @@ function gantryPlan(lv: Level, b: ReturnType<typeof boxOf>) {
       break;
     }
   const shaft = tileAt(lv, b.x + 2, rt) === T_EMPTY && tileAt(lv, b.x + 4, rt) === T_ONEWAY;
-  return { rt, D, rx0, rx1: rx0 + 2, s0: b.x, shaft, fins: solid(lv, rx0 - 1, D - 4) };
+  return { rt, D, rx0, rx1: rx0 + 2, s0: b.x, shaft };
 }
 
 function gantryBack(m: Deco, lv: Level, t: Hz) {
@@ -512,7 +513,7 @@ function gantryBack(m: Deco, lv: Level, t: Hz) {
   });
 }
 
-/** The rocket's paint over its own tiles: white, a roll pattern, the name down its side, a red nose and fins. */
+/** The rocket's paint over its own tiles: white, a roll pattern, the name down its side. Its nose and fins are `rocketTrim`. */
 function rocketLivery(rc: RC, m: Deco, d: DrawCtx) {
   const lv = d.o.level;
   if (!lv) return;
@@ -553,17 +554,61 @@ function rocketLivery(rc: RC, m: Deco, d: DrawCtx) {
   s.fillStyle = css(RED, -2);
   cut(s, x0 + 1, y1 - 7, w - 2, 4, 13);
   pen(s, body, m.seed + 9, 0.45, 1.1, 3, inkFor(paint));
-  // The nose: a red cap on its tile, and the escape tower over it where there is one.
-  const nx = (p.rx0 + 1) * TILE;
-  part(s, boxPts(nx, y0 - TILE, TILE, TILE, 3, m.seed + 1, 0.05), RED, m.seed + 1, { depth: 0.8, thin: 0.4, thick: 0.9 });
-  if (solid(lv, p.rx0 + 1, p.rt - 2)) {
-    part(s, boxPts(nx, y0 - 2 * TILE, TILE, TILE, 2.5, m.seed + 2, 0.05), { h: 210, s: 8, l: 60 }, m.seed + 2, { depth: 0.6, thin: 0.4, thick: 0.9 });
-    tick(s, nx + 3, y0 - 2 * TILE + 2, nx + TILE - 3, y0 - TILE - 2, 0.5, 3, inkFor({ h: 210, s: 8, l: 60 }));
-    tick(s, nx + TILE - 3, y0 - 2 * TILE + 2, nx + 3, y0 - TILE - 2, 0.5, 4, inkFor({ h: 210, s: 8, l: 60 }));
+}
+
+const TOWER: HSL = { h: 210, s: 8, l: 60 };
+
+/**
+ * The rocket's nose, fins and escape tower (`rocketTrim` in gen/stage/space.ts): the same curves its sub-tile
+ * solids step along, so what you see is what you land on. The nose an ogive in red with its far side in shade,
+ * the fins swept wedges, the tower a lattice mast.
+ */
+function rocketTrim(rc: RC, m: ModuleOf<'body'>, d: DrawCtx) {
+  const s = rc.s;
+  const rects = m.shape!;
+  const [ox, oy] = d.off;
+  const xs = rects.map((r) => r[0] + ox);
+  const x0 = Math.min(...xs);
+  const x1 = Math.max(...rects.map((r) => r[0] + r[2] + ox));
+  const y0 = Math.min(...rects.map((r) => r[1] + oy));
+  const y1 = Math.max(...rects.map((r) => r[1] + r[3] + oy));
+  const seed = (m.cells[0][0] * 31 + m.cells[0][1] * 7) | 0;
+  if (m.cells.length > 1) {
+    // The nose: its foot the body's width, its tip on the cells' top.
+    const cx = (x0 + x1) / 2;
+    const H = NOSE_ROWS * TILE;
+    const at = (dir: number, v: number) => ({ x: cx + dir * noseHalf(v) * TILE, y: y1 - v * H });
+    // Up the near side to the tip, then down the far one.
+    const outline = Array.from({ length: 33 }, (_, i) => (i <= 16 ? at(-1, i / 16) : at(1, (32 - i) / 16)));
+    part(s, outline, RED, seed, { depth: 0.9, thin: 0.4, thick: 1 });
+    s.save();
+    path(s, outline);
+    s.clip();
+    s.fillStyle = css(RED, -14);
+    path(s, poly(cx + 3, y1 + 1, cx + 2, y1 - H * 0.55, cx + 30, y1 - H, cx + 30, y1 + 1));
+    s.fill();
+    s.restore();
+    glint(s, poly(cx - 7.5, y1 - 3, cx - 5.5, y1 - H * 0.42, cx - 2.6, y1 - H * 0.72), css(RED, 22), 1.1, seed + 1);
+    tick(s, cx - noseHalf(0.3) * TILE + 1.5, y1 - H * 0.3, cx + noseHalf(0.3) * TILE - 1.5, y1 - H * 0.3, 0.45, seed + 2, css(RED, -24));
+    return;
   }
-  if (p.fins)
-    for (const fx of [p.rx0 - 1, p.rx1 + 1])
-      part(s, boxPts(fx * TILE, (p.D - 4) * TILE, TILE, TILE, 2, fx, 0.05), RED, fx, { depth: 0.6, thin: 0.4, thick: 0.9 });
+  if (x1 - x0 < TILE / 2) {
+    // The escape tower: a mast on the tip, cross-braced, a cap.
+    const cx = (x0 + x1) / 2;
+    barLine(s, cx, y1 + 0.5, cx, y0 + 2.5, 1.6, TOWER, seed);
+    tick(s, cx - 2.2, y1 - 2, cx + 2.2, y0 + 6, 0.45, seed + 1, inkFor(TOWER));
+    tick(s, cx + 2.2, y1 - 2, cx - 2.2, y0 + 6, 0.45, seed + 2, inkFor(TOWER));
+    part(s, poly(cx - 2.6, y0 + 3.2, cx, y0, cx + 2.6, y0 + 3.2), TOWER, seed + 3, { depth: 0.4, thin: 0.35, thick: 0.8 });
+    return;
+  }
+  // A fin: against the body on the side its tallest step is, swept down and out.
+  const left = rects[0][0] + ox > x0 + TILE / 2;
+  const bodyX = left ? x1 : x0;
+  const tipX = left ? x0 : x1;
+  const top = y1 - TILE;
+  const fin = poly(bodyX, top + finTop(0) * TILE, tipX, top + finTop(1) * TILE, tipX, y1, bodyX, y1);
+  part(s, fin, RED, seed, { depth: 0.6, thin: 0.4, thick: 0.95 });
+  tick(s, bodyX + (tipX - bodyX) * 0.2, y1 - 2.4, bodyX + (tipX - bodyX) * 0.85, y1 - 2.2, 0.4, seed + 1, css(RED, -24));
 }
 
 // ------------------------------------------------------------------------------------------------ mining rig
@@ -889,6 +934,10 @@ export const spacePiece: PieceSkin = (rc, layer, m: Module, d) => {
     case 'swinger':
       if (concept === 'mining-rig' && m.arm === 0) return layer === 2 ? drillBit(rc, m, d) : layer >= 0 && layer <= 3;
       return false;
+    case 'body':
+      if (concept !== 'launch-gantry' || !m.shape || d.r.pp.def.modules.some((x) => x.type !== 'body')) return false;
+      if (layer === 1) rocketTrim(rc, m, d);
+      return layer === 1;
     case 'deco':
       if (m.kind !== 'facade' || layer !== 0) return false;
       if (concept === 'launch-gantry') rocketLivery(rc, m, d);
