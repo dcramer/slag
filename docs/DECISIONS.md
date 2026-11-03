@@ -189,8 +189,9 @@ Every game design decision, preference and direction the owner has given, groupe
 - **The player's colour is the character's main costume colour (an alternate costume), not a foot ring.** "the sprites seem to always be the same color? like they're not re-coloring their primary based on the player color?" / "ok well thats wrong"
   2026-11-02 · `done` for the plumber and speedster · CHARACTERS.md → the rules
   Changed: iconic palettes with the player's colour on a foot ring.
-- **Characters vary only in curated ways that keep the art: costume colour, accessory swaps, designed alternate palettes on one secondary region, pose personality (two idles, two cheers, a little gait), and wear. Faces, proportions and silhouettes are never rolled; random eyes and mouths go.** "idk if theres ways we can make it a little more procedural without losing our art work" / "'random eyeballs' dont work with the art style" / "Yes, add it"
-  2026-11-02 · `in progress` · CHARACTERS.md → the rules, `tools/art3d/`
+- **Characters vary only in curated ways that keep the art: costume colour, accessory swaps, designed alternate palettes on one secondary region, pose personality (two idles, two cheers, a little gait), and wear. Faces, proportions and silhouettes are never rolled; random eyes and mouths go.** "idk if theres ways we can make it a little more procedural without losing our art work" / "'random eyeballs' dont work with the art style as an example of something that likely needs to go away" / "Yes, add it"
+  2026-11-02 · `in progress` (faces `done`: each kind's face is its own, in `KINDS` and a rendered kind's `sprite.json`) · CHARACTERS.md → the rules, `tools/art3d/`
+  Changed: every character rolled an eye count, style, iris, spread and height, and a mouth, under its kind's face.
 - **The costume-colour rule holds even where a colour is the character's identity: the dot-eater's whole ball takes the player's colour, not only his napkin.** (answer: "Keep player colour")
   2026-11-02 · `done` · CHARACTERS.md → the rules
 - **Parts may seal the level: placement is never refused for leaving no way through, and a sealed level needs a bomb.** "the placement restrictions feel buggy in some places?" / "game was refusing letting me place items that clearly had nothing there" / "also parts CAN seal it.. it can be unwinnable and require a bomb"

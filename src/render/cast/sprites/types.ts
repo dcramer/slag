@@ -17,6 +17,11 @@ export interface VFrame {
   parts: readonly (readonly [number, Ring] | readonly [number, Ring, number, number])[];
   /** The eyes the face is drawn on: x, y, radius in eighths of a world px, the near eye first. */
   eyes?: readonly number[];
+  /**
+   * The head the eyes ride: its middle and radius in eighths of a world px, and its tilt in degrees
+   * (clockwise on screen), so brows, crosses and the mouth turn with it.
+   */
+  head?: readonly number[];
   /** Open pen strokes drawn over the figure (a spin ball's motion marks). */
   marks?: readonly Ring[];
 }

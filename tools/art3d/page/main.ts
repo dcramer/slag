@@ -30,6 +30,7 @@ async function render(url: string, s: Settings, kind: string, only?: string[]): 
         sil: f.sil.map(enc),
         parts: f.parts.map((p) => (p.option ? ([p.role, enc(p.ring), p.option[0], p.option[1]] as const) : ([p.role, enc(p.ring)] as const))),
         ...(f.eyes.length ? { eyes: f.eyes.map((v) => Math.round(v * 8)) } : {}),
+        ...(f.head ? { head: [...f.head.slice(0, 3).map((v) => Math.round(v * 8)), Math.round((f.head[3] * 180) / Math.PI)] } : {}),
         ...(f.marks?.length ? { marks: f.marks.map(enc) } : {}),
       }));
     clips[name] = {

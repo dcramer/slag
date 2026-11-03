@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { generateCharacter, CAST } from '../src/gen/character';
 import { drawInkRunner, type RunnerPose } from '../src/render/ink-character';
 import { CAST_ART } from '../src/render/cast';
+import type { D } from '../src/render/cast/kit';
+import { lookOf, type Mood } from '../src/render/ink-figure';
 
 /** A 2D context that only records where paths go, in the character's own space (transforms are ignored). */
 function recorder() {
@@ -61,5 +63,53 @@ describe('inked runner', () => {
     drawInkRunner({ s: a.ctx, g: null }, c, 0, 0, POSES.run);
     drawInkRunner({ s: b.ctx, g: null }, generateCharacter(77), 0, 0, POSES.run);
     expect(a.pts).toEqual(b.pts);
+  });
+
+  it('gives every character of a kind its kind’s face: two seeds, the same eyes and mouth in every mood', () => {
+    const moods = ['walk', 'run', 'up', 'fall', 'wall', 'cheer'] as const;
+    const faceOf = (seed: number, kind: (typeof CAST)[number], m: Mood) => {
+      const c = generateCharacter(seed, kind);
+      const art = CAST_ART[kind];
+      const W = 14 * art.size[0];
+      const H = 15 * art.size[1];
+      const by = -art.lift;
+      const p: RunnerPose = { facing: 1, vx: 0, vy: 0, grounded: true, t: 1 };
+      const { ctx, pts } = recorder();
+      // Everything but the character is held still, the pen's seed included: only the face's design may show.
+      const d: D = {
+        s: ctx,
+        g: null,
+        c,
+        lk: lookOf(c, art.fill !== 'paint'),
+        W,
+        H,
+        by,
+        top: by - H,
+        f: 1,
+        m,
+        p,
+        t: 1,
+        wob: 0,
+        k: 0.7,
+        v: c.vary,
+        ph: 0,
+        wx: 0,
+        wy: 0,
+        sc: 1,
+        sd: 5,
+        bx: () => 0,
+        gait: {},
+        boot: ['#000', '#000'],
+        detail: false,
+        pose: 'rest',
+      };
+      art.paintFace(d);
+      return pts;
+    };
+    for (const kind of CAST)
+      for (const m of moods) {
+        const a = faceOf(11, kind, m);
+        expect(faceOf(90210, kind, m), `${kind} ${m}`).toEqual(a);
+      }
   });
 });
