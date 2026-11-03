@@ -67,6 +67,8 @@ export interface FlatKind {
     stroke?: number;
     /** Image px: how thick the ink must be to stay a fill and not a line (default 9; a thin iron poker needs less). */
     ink?: number;
+    /** A drawn hole cut out of the figure: each patch of `role` over `area` world px² open to the outside. */
+    cut?: { role: string; area: number };
   };
   /**
    * Where the face kit goes: the eyes are the pair of `role` specks `area` big (world px²) and `gap` apart,
@@ -531,6 +533,8 @@ export const FLAT_KINDS: Record<string, FlatKind> = {
       thin: ['yellow', 'grey', 'napkin', 'check'],
       fringe: 5,
       stroke: 2.4,
+      // Its open mouth is a gap, not a dark fill: the wedge is the read, in the silhouette above all.
+      cut: { role: 'dark', area: 2 },
       feet: ['yellow'],
       min: { dark: 0.1, check: 0.15 },
     },
@@ -556,7 +560,8 @@ export const FLAT_KINDS: Record<string, FlatKind> = {
       chin: 2,
       marks: [[['scuff', 0.25, 0.8, 0.9]], [['scorch', 0.22, 0.72, 1.1]]],
     },
-    accessories: [{ slot: 'plaster', role: 'plaster', at: 'crown', size: [2.4, 0.8] }],
+    // On the crown, a cross reads as a bow and a ball with a bow as another kind: across the cheek.
+    accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [2.2, 0.8] }],
     face: { r: 0.8, iris: '#14121a', eye: 'dot' },
     gait: { bounce: [0, 0.7], lean: [0, 0.04] },
     clips: {

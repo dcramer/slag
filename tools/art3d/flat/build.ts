@@ -124,6 +124,37 @@ function strip(x: number, y: number, len: number, w: number, a: number): number[
   ].flatMap(([u, v]) => [x + u * c - v * s, y + u * s + v * c]);
 }
 
+/**
+ * A drawn hole made a hole: each patch of `cut.role` bigger than `cut.area` world px² that touches the outside
+ * is taken out of the figure, so its silhouette has the gap (the dot-eater's open mouth, a wedge, not a dark
+ * fill: filled, its silhouette is a plain circle and nobody names it).
+ */
+function cutOut(role: Int16Array, m: RoleMap, cut: NonNullable<(typeof spec)['map']['cut']>) {
+  const r = m.roles.indexOf(cut.role);
+  const seen = new Uint8Array(role.length);
+  for (let i = 0; i < role.length; i++) {
+    if (role[i] !== r || seen[i]) continue;
+    const patch: number[] = [];
+    let open = false;
+    const stack = [i];
+    seen[i] = 1;
+    while (stack.length) {
+      const j = stack.pop()!;
+      patch.push(j);
+      const x = j % m.W;
+      for (const k of [x > 0 ? j - 1 : -1, x < m.W - 1 ? j + 1 : -1, j - m.W, j + m.W]) {
+        if (k < 0 || k >= role.length) continue;
+        if (role[k] < 0) open = true;
+        else if (role[k] === r && !seen[k]) {
+          seen[k] = 1;
+          stack.push(k);
+        }
+      }
+    }
+    if (open && patch.length / (m.R * m.R) > cut.area) for (const j of patch) role[j] = -1;
+  }
+}
+
 /** One pose drawing, traced into a facing-right frame with its feet at the origin. */
 function frameOf(name: string, clip: FlatClip): Frame {
   const png = name === 'idle' ? resolve(art, 'design.png') : resolve(art, 'flat', `${name}.png`);
@@ -145,7 +176,9 @@ function frameOf(name: string, clip: FlatClip): Frame {
     // The tracer reads only `min` (and `into`, `glint`, `band`, `free`, none of them here); colours are the kind's.
     roles: Object.fromEntries(m.roles.map((n) => [n, { color: '', swatches: [], min: spec.map.min?.[n] }])),
   };
-  const t = trace(Int16Array.from(m.role), new Float32Array(m.W * m.H), m.W, m.H, m.R, settings as Settings, m.roles);
+  const role = Int16Array.from(m.role);
+  if (spec.map.cut) cutOut(role, m, spec.map.cut);
+  const t = trace(role, new Float32Array(m.W * m.H), m.W, m.H, m.R, settings as Settings, m.roles);
   const roleOf = (n: string) => spec.roles.findIndex((r) => r.name === n);
   // Roles by name from the map's order into the kind's.
   let parts: Shape[] = t.parts.map((p) => ({ role: roleOf(m.roles[p.role]), ring: p.ring }));

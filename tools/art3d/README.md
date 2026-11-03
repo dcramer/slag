@@ -65,13 +65,14 @@ How `rolemap.py` reads the drawings, in the kind's `map` (`kinds.ts`):
 - **`feet`** are what the figure stands on (its lowest pixels and its centre); **`loose`** roles are left out of its size (a tail, a carried poker). `body` sets every pose to one size: `pnpm exec tsx tools/art3d/flat/build.ts body KIND HEIGHT` prints the one that draws the design HEIGHT world px tall (the shipped kind's height, or about 20 to 22).
 - **`min`** per role: the smallest part worth a shape. Raise it to drop slivers (a seam's highlight, the scraps of a tape cross's ink).
 - **`stroke`**: the shortest interior line kept (default 1.4 world px; 2.4 for a detailed drawing, or its gloves and goggles fill with flecks). A long line across a ball (the puffball's seam) reads as a mouth at play size: `stroke: 99`, none.
+- **`cut`**: a drawn hole that is the read becomes a real one. The dot-eater's open mouth is a dark patch in the drawing; filled, its silhouette is a plain circle and the blind read failed. `cut: { role: 'dark', area: 2 }` takes out every dark patch over 2 world px² open to the outside.
 - **A dark under the face** (the zapmouse's black cord belt) reads as a frowning mouth: `recolour` draws it in a role of its own.
 
 ## 5. Face, variety, frames
 
 - **`eyes`**: the face kit replaces the drawing's eyes, specks at play size, and draws the cast's (`face`: size, iris, `eye: 'dot' | 'tall'`, a `mouth` offset if the kit draws one). The eyes are the pair of `role` specks `area` big and `gap` apart, in the figure's top `band`, never on its outline; `count: 1` takes the biggest, for one eye (the dot-eater) or a face turned nearly side on, with `pair` setting the far eye from the near one (the elf's sits on his outline, the hedgehog's is lost in its white). `specks` are what goes from the face box: the drawing's eyes, nose and mouth. Keep `face.r` small enough that two kit eyes don't overlap where the drawing's sit close. `FLAT_DEBUG=<pose>` prints that pose's specks with their area, band and distance to the edge.
 - **`wear`**: scuffs and a scorch, in tones of the surface they're `on`, at spots that keep their place in its box from pose to pose, only on bare surface below the `chin`. "No room for" in the build's output means a mark didn't fit a pose: make it smaller. On a smooth ball one quiet mark each (tones ±8 to ±18): a ring of blobs reads as a rash.
-- **`accessories`**: a strip of tape or a plaster, on the crown or across the cheek, from the near eye.
+- **`accessories`**: a strip of tape or a plaster, on the crown or across the cheek, from the near eye. Not on a ball's crown: a cross there reads as a bow, and a ball with a bow as another character.
 - **Colourways** must not land on another role's colour: drawn flat, the plumber's brown-canvas overalls were his tan gloves, and the colour block went.
 - **Clips**: `frames` and timing (`fps`, `stride`, `vy`, `holds`). `eyes: false` for a pose whose eyes are shut. `centre: 'box'` and `scale` for a pose too wide for the cast's box (the lying death, the hedgehog's and the elf's wall slides, the dot-eater's pancake).
 
