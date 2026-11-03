@@ -1,6 +1,17 @@
 import { clamp, type Rect } from '../core/geom';
 import { deriveSeed, Rng } from '../core/rng';
-import { type CharacterDef, generateCharacter, CAST, type Kind } from '../gen/character';
+import {
+  type CharacterDef,
+  generateCharacter,
+  CAST,
+  hueApart,
+  keepColor,
+  type Kind,
+  MIN_HUE_APART,
+  PLAYER_COLORS,
+  swatchIndex,
+  withColor,
+} from '../gen/character';
 import { type Bridge, GRAVITY, type GravityClass, MAX_BRIDGES, type ProfileOverride, prove, settled } from '../gen/level';
 import { buildLevel, type LevelRequest } from '../gen/level/pregen';
 import { generateCrate, generateRoster, isBridgePart, type PropDef, type Role, rollSecret, rosterSize } from '../gen/props';
@@ -87,9 +98,6 @@ function present(inp: InputFrame | undefined): boolean {
   for (const v of Object.values(inp)) if (v === true) return true;
   return false;
 }
-
-/** Degrees of hue between any two players' characters. Eight players still fit, with room to roll. */
-const MIN_HUE_APART = 30;
 
 /** What an away player's runner does: hold self-destruct from GO so the race can end. */
 const AWAY_RUN_INPUT: InputFrame = Object.freeze({ ...NO_INPUT, altPressed: true, alt: true });
@@ -279,15 +287,22 @@ export class Match {
 
   /**
    * A character nobody seated could be mistaken for. Rolls are counted, so every
-   * peer lands on the same one. A full lobby can't always keep everyone
-   * MIN_HUE_APART, so it keeps the roll furthest from anyone rather than the last,
-   * preferring a kind nobody has; if every roll's kind is taken, it gets the next free one.
+   * peer lands on the same one. A newcomer wears the free swatch nearest its roll's
+   * hue; a reroll (`owner`) keeps the owner's color, chosen or not. If no swatch is
+   * free (old saved looks can sit between two), it keeps the roll furthest from
+   * anyone rather than the last, preferring a kind nobody has; if every roll's kind
+   * is taken, it gets the next free one.
    */
   private rollCharacter(owner?: Player): CharacterDef {
+    const paint = (c: CharacterDef) => {
+      if (owner) return keepColor(c, owner.character);
+      const i = this.freeColorNear(c.hue);
+      return i === undefined ? c : withColor(c, i);
+    };
     let best: CharacterDef | undefined;
-    let any = this.rollOnce();
+    let any = paint(this.rollOnce());
     for (let i = 0; i < 64; i++) {
-      const c = i ? this.rollOnce() : any;
+      const c = i ? paint(this.rollOnce()) : any;
       if (this.looksFree(c, owner)) return c;
       if (this.nameTaken(c, owner)) continue;
       if (this.hueGap(c, owner) > this.hueGap(any, owner)) any = c;
@@ -295,21 +310,37 @@ export class Match {
     }
     if (best) return best;
     const free = CAST.find((t) => !this.kindTaken(t, owner)) ?? any.kind;
-    return { ...generateCharacter(any.seed, free), name: any.name };
+    return { ...keepColor(generateCharacter(any.seed, free), any), name: any.name };
   }
 
   private rollOnce(): CharacterDef {
     return generateCharacter(deriveSeed(this.seed, `char:${this.charRolls++}`));
   }
 
+  /** The free swatch closest in hue to `hue` (the lower index on a tie), or undefined if none is free. */
+  freeColorNear(hue: number, owner?: Player): number | undefined {
+    let best: number | undefined;
+    for (let i = 0; i < PLAYER_COLORS.length; i++) {
+      if (!this.colorFree(i, owner)) continue;
+      if (best === undefined || hueApart(PLAYER_COLORS[i].h, hue) < hueApart(PLAYER_COLORS[best].h, hue)) best = i;
+    }
+    return best;
+  }
+
+  /**
+   * Swatch `i` is free for `owner` unless another seated player's color is within MIN_HUE_APART of it: one
+   * player per swatch, and an old rolled hue takes the swatches it sits too close to. The swatch picker
+   * shows the rest as taken, and the host's order settles two players reaching for the same one.
+   */
+  colorFree(i: number, owner?: Player): boolean {
+    const sw = PLAYER_COLORS[i];
+    return !!sw && this.players.every((q) => q === owner || hueApart(q.character.hue, sw.h) >= MIN_HUE_APART);
+  }
+
   /** Degrees to the nearest other player's color. */
   private hueGap(c: CharacterDef, owner?: Player): number {
     let gap = 180;
-    for (const q of this.players) {
-      if (q === owner) continue;
-      const apart = Math.abs(q.character.hue - c.hue) % 360;
-      gap = Math.min(gap, apart, 360 - apart);
-    }
+    for (const q of this.players) if (q !== owner) gap = Math.min(gap, hueApart(q.character.hue, c.hue));
     return gap;
   }
 
@@ -578,10 +609,31 @@ export class Match {
     if (p && name) p.character = { ...p.character, name };
   }
 
-  /** Restore a player's saved look (a character seed), keeping their current name. */
-  setLook(slot: number, seed: number) {
+  /**
+   * Restore a player's saved look (a character seed), keeping their current name: in swatch `color` if it's
+   * free, else the free swatch nearest it, else the color they wear now; with no `color` (a look saved before
+   * swatches), in the seed's own hue. Refused (false) if no way of wearing it is free: someone here has that
+   * toy or that name, or wears every one of those colors.
+   */
+  setLook(slot: number, seed: number, color?: number): boolean {
     const p = this.player(slot);
-    if (p && p.character.seed !== seed) p.character = { ...generateCharacter(seed), name: p.character.name };
+    if (!p) return false;
+    const base = { ...generateCharacter(seed), name: p.character.name };
+    const i = swatchIndex(color);
+    const near = i === undefined ? undefined : this.freeColorNear(PLAYER_COLORS[i].h, p);
+    const tries = i === undefined ? [base] : [withColor(base, i), ...(near === undefined ? [] : [withColor(base, near)]), keepColor(base, p.character)];
+    const c = tries.find((t) => this.looksFree(t, p));
+    if (!c) return false;
+    if (c.seed !== p.character.seed || c.hue !== p.character.hue || c.color !== p.character.color) p.character = c;
+    return true;
+  }
+
+  /** Put a player in swatch `i`, if it's free (Match.colorFree). The look and name stay. */
+  setColor(slot: number, i: number): boolean {
+    const p = this.player(slot);
+    if (!p || swatchIndex(i) === undefined || !this.colorFree(i, p)) return false;
+    if (p.character.color !== i) p.character = withColor(p.character, i);
+    return true;
   }
 
   // ---------------------------------------------------------------- place

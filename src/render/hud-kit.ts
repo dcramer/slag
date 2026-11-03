@@ -590,6 +590,23 @@ export function finishLine(c: Ctx, x: number, y: number, w: number, h: number) {
   });
 }
 
+/** A player's color as a swatch you can pick up: a disc in an ink rim, lit along its top. Beside a name, it says the color is yours to change. */
+export function swatchDot(c: Ctx, cx: number, cy: number, r: number, fill: string, hover: boolean) {
+  c.fillStyle = PAL.ink;
+  c.beginPath();
+  c.arc(cx, cy + 0.8, r + 1.4, 0, Math.PI * 2);
+  c.fill();
+  c.fillStyle = fill;
+  c.beginPath();
+  c.arc(cx, cy, r, 0, Math.PI * 2);
+  c.fill();
+  c.strokeStyle = hover ? PAL.amber : 'rgba(255,245,225,0.45)';
+  c.lineWidth = hover ? 1.4 : 0.9;
+  c.beginPath();
+  c.arc(cx, cy, r - (hover ? 0 : 1.2), Math.PI * 1.1, Math.PI * 1.9);
+  c.stroke();
+}
+
 // ---------------------------------------------------------------------------------------------------
 // Icons
 
