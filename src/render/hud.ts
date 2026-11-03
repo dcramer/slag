@@ -181,7 +181,7 @@ export class Hud {
   /** Connected gamepads (for showing pad glyphs next to keys). */
   padCount = 0;
   /** Clickable regions from the last frame (lobby buttons). */
-  private buttons: HudButton[] = [];
+  private buttons: (HudButton & { art: { x: number; y: number; w: number; h: number } })[] = [];
   frame: ViewFrame = VIEW_FRAME;
   /** Phones: how far HUD groups grow about their anchors (1 elsewhere). */
   uiScale = 1;
@@ -204,10 +204,11 @@ export class Hud {
 
   /** Topmost clickable region at (x, y) in view coords. */
   hit(x: number, y: number): HudButton | null {
-    for (let i = this.buttons.length - 1; i >= 0; i--) {
-      const b = this.buttons[i];
-      if (x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h) return b;
-    }
+    const inside = (r: { x: number; y: number; w: number; h: number }) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
+    // A phone grows small buttons' hit rects to a thumb, so neighbours overlap: a press on a button's own art is
+    // that button's (the eye beside the dice on a lobby card), and only the space around the art goes to the topmost.
+    for (let i = this.buttons.length - 1; i >= 0; i--) if (inside(this.buttons[i].art)) return this.buttons[i];
+    for (let i = this.buttons.length - 1; i >= 0; i--) if (inside(this.buttons[i])) return this.buttons[i];
     return null;
   }
 
@@ -226,7 +227,8 @@ export class Hud {
     const { s, ox, oy } = this.group;
     const growW = Math.max(0, this.tapMin - b.w * s);
     const growH = Math.max(0, this.tapMin - b.h * s);
-    const r = { ...b, x: ox + b.x * s - growW / 2, y: oy + b.y * s - growH / 2, w: b.w * s + growW, h: b.h * s + growH };
+    const art = { x: ox + b.x * s, y: oy + b.y * s, w: b.w * s, h: b.h * s };
+    const r = { ...b, x: art.x - growW / 2, y: art.y - growH / 2, w: art.w + growW, h: art.h + growH, art };
     this.buttons.push(r);
     return this.pointer !== null && this.pointer.x >= r.x && this.pointer.x < r.x + r.w && this.pointer.y >= r.y && this.pointer.y < r.y + r.h;
   }
