@@ -248,7 +248,7 @@ if xs:
 print('lines', len(lines))
 json.dump({'W': W, 'H': H, 'R': R, 'roles': ROLES, 'role': out, 'height': round((bottom - top + 1) * k, 2), 'lines': lines}, open(OUT, 'w'))
 
-PAL = {-1: (240, 236, 228), **{i: next(c for r, c in FAMILIES if r == n) for i, n in enumerate(ROLES)}}
+PAL = {-1: (240, 236, 228), **{i: next((c for r, c in FAMILIES if r == n), (255, 0, 255)) for i, n in enumerate(ROLES)}}
 dbg = Image.new('RGB', (W, H))
 dbg.putdata([PAL[v] for v in out])
 dbg = dbg.resize((W * 3, H * 3), Image.NEAREST)

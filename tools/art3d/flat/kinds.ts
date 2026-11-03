@@ -25,8 +25,10 @@ export interface FlatClip {
   holds?: readonly number[];
   /** False when the drawing's eyes are shut: no face is drawn. */
   eyes?: false;
-  /** `box`: centred on the figure, for a pose not standing on its feet (lying knocked out). */
+  /** `box`: centred on the figure, for a pose not standing on its feet (lying knocked out), or one too wide about them (a wall slide). */
   centre?: 'box';
+  /** Drawn this much smaller (or bigger) about the feet than the body size gives: a pose too wide for the box. */
+  scale?: number;
 }
 
 /**
@@ -63,12 +65,25 @@ export interface FlatKind {
     fringe?: number;
     /** The shortest interior line kept as a stroke, world px (default 1.4). */
     stroke?: number;
+    /** Image px: how thick the ink must be to stay a fill and not a line (default 9; a thin iron poker needs less). */
+    ink?: number;
   };
   /**
    * Where the face kit goes: the eyes are the pair of `role` specks `area` big (world px²) and `gap` apart,
    * and the specks it draws over (eyes, nose, a drawn mouth) are each role's parts smaller than its number.
+   * `count: 1` for one eye (the dot-eater). An eye is never on the outline, where a speck is a scrap of ink.
    */
-  eyes: { role: string; area: readonly [number, number]; gap: readonly [number, number]; specks: Readonly<Record<string, number>> };
+  eyes: {
+    role: string;
+    area: readonly [number, number];
+    gap: readonly [number, number];
+    specks: Readonly<Record<string, number>>;
+    count?: 1;
+    /** Where on the figure an eye can be, as fractions of its height from the top (default 0 to 0.5). */
+    band?: readonly [number, number];
+    /** With `count: 1`, a far eye set this far (world px) from the near one, for a face turned nearly side on. */
+    pair?: readonly [number, number];
+  };
   /** A dark under the face drawn in another role (`below` the eyes, world px; a lying pose's by size and x). */
   recolour?: { from: string; to: string; below: number; lying: readonly [number, number] };
   /**
@@ -286,6 +301,369 @@ export const FLAT_KINDS: Record<string, FlatKind> = {
         pose: 'he has been knocked out and lies flat on his back on the floor, the whole body horizontal across the picture, head on the left and boots on the right, arms and legs splayed limp, eyes shut, the plunger dropped beside him. Seen from the side.',
         far: true,
       },
+    },
+  },
+  hedgehog: {
+    body: 229,
+    map: {
+      roles: ['blue', 'peach', 'red', 'yellow', 'grey', 'brown', 'white', 'dark'],
+      families: [
+        ['blue', [60, 98, 181]],
+        ['blue', [45, 72, 134]],
+        ['blue', [47, 63, 107]],
+        ['blue', [82, 102, 156]],
+        ['blue', [62, 92, 167]],
+        ['peach', [247, 188, 131]],
+        ['peach', [223, 188, 148]],
+        ['peach', [194, 159, 125]],
+        ['peach', [239, 191, 125]],
+        ['red', [192, 54, 39]],
+        ['red', [101, 39, 29]],
+        ['yellow', [237, 201, 97]],
+        ['grey', [141, 142, 134]],
+        ['grey', [70, 67, 72]],
+        ['brown', [137, 86, 59]],
+        ['brown', [105, 74, 53]],
+        ['white', [255, 255, 252]],
+        ['dark', [42, 16, 10]],
+        ['dark', [59, 31, 23]],
+      ],
+      line: 'dark',
+      thin: ['blue', 'peach', 'red', 'yellow', 'grey', 'brown', 'white'],
+      fringe: 5,
+      stroke: 2.4,
+      feet: ['red', 'grey'],
+      min: { dark: 0.12, white: 0.1 },
+    },
+    roles: [
+      { name: 'blue', color: '#2f5bd0', slot: 'player' },
+      { name: 'peach', color: '#f0c99c' },
+      // A colourway is the sneakers (VARIETY.palette): red, racing green or cream.
+      { name: 'red', color: '#d8382f', alts: ['#2f8a57', '#ebe5d6'], vary: 6 },
+      { name: 'yellow', color: '#e8c24a' },
+      { name: 'grey', color: '#9a9894' },
+      { name: 'brown', color: '#7a5236' },
+      { name: 'white', color: '#fbf8f2' },
+      { name: 'dark', color: '#2a1f1a' },
+      { name: 'scuff', color: '#808080', on: 1, tone: 12 },
+      { name: 'scorch', color: '#808080', on: 1, tone: -26 },
+      { name: 'plaster', color: '#e9d3b0' },
+    ],
+    slots: [
+      { name: 'plaster', vary: 0, options: 2 },
+      { name: 'wear', vary: 11, options: 3 },
+    ],
+    eyes: { role: 'dark', area: [0.08, 1.5], gap: [1, 4.5], specks: { dark: 1.6, white: 4 }, band: [0.1, 0.45], count: 1, pair: [1.8, -0.3] },
+    wear: {
+      on: ['peach'],
+      chin: 3,
+      marks: [
+        [
+          ['scuff', 0.45, 0.55, 0.6],
+          ['scuff', 0.55, 0.8, 0.5],
+        ],
+        [
+          ['scorch', 0.45, 0.6, 0.7],
+          ['scorch', 0.55, 0.82, 0.5],
+        ],
+      ],
+    },
+    accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [2.2, 0.9] }],
+    face: { r: 1, iris: '#3a9a46', mouth: [1.4, 2.7] },
+    gait: { bounce: [0, 0.45], lean: [0.01, 0.06] },
+    clips: {
+      idle: { frames: ['idle'], loop: true, fps: 1 },
+      idle2: { frames: ['idle2', 'idle'], loop: true, holds: [1.8, 2.4] },
+      walk: { frames: ['walk-1', 'walk-2'], loop: true, stride: 30 },
+      run: { frames: ['run-1', 'run-2'], loop: true, stride: 48 },
+      // The jump is the spin ball, all the way up and down.
+      air: { frames: ['air-1', 'air-1b'], loop: true, fps: 12 },
+      wall: { frames: ['wall'], loop: true, fps: 1, centre: 'box' },
+      cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.5, 0.25] },
+      cheer2: { frames: ['cheer2', 'idle'], loop: true, holds: [0.7, 0.3] },
+      death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box' },
+    },
+    poses: {
+      idle2: { pose: 'standing with his arms folded across his chest, tapping one toe, smirking.' },
+      'walk-1': { pose: 'walking to the right, mid-step: the near sneaker forward, the far one back, the arms swinging the other way.' },
+      'walk-2': { pose: 'walking to the right, the legs passing under the body: one sneaker planted, the other lifted a little.' },
+      'run-1': {
+        pose: 'running flat out to the right, leaning hard forward, the legs a long blur of a stride, the arms swept back, the quills streaming behind.',
+      },
+      'run-2': {
+        pose: 'running flat out to the right, leaning hard forward, both sneakers off the ground with the legs gathered under him, the arms swept back.',
+      },
+      'air-1': { pose: 'curled up tight into a spinning ball in mid-air, the quills all round the outside, no face showing.', far: true },
+      wall: {
+        pose: 'seen from his side, he is sliding down a tall wall on the right edge of the picture (do not draw the wall), one glove flat against it and both sneakers braced on it, his head turned to look back at us.',
+        far: true,
+      },
+      cheer: { pose: 'cheering, one fist punched high over his head, a big grin.' },
+      cheer2: { pose: 'stretching with both fists high over his head, up on his toes, eyes shut, grinning.' },
+      death: {
+        pose: 'he has been knocked out and lies flat on his back on the floor, the whole body horizontal across the picture, head on the left and sneakers on the right, arms and legs splayed limp, eyes shut. Seen from the side.',
+        far: true,
+      },
+      'air-1b': { pose: 'curled up tight into a spinning ball in mid-air, the quills all round the outside, no face showing.', far: true },
+    },
+  },
+  elf: {
+    body: 144,
+    map: {
+      roles: ['green', 'darn', 'skin', 'hair', 'brown', 'lid', 'iron', 'dark'],
+      families: [
+        ['green', [71, 124, 56]],
+        ['green', [48, 87, 60]],
+        ['green', [68, 118, 58]],
+        ['green', [95, 131, 85]],
+        ['darn', [169, 193, 119]],
+        ['skin', [246, 199, 160]],
+        ['skin', [238, 205, 179]],
+        ['skin', [181, 130, 99]],
+        ['hair', [228, 187, 82]],
+        ['hair', [237, 193, 117]],
+        ['brown', [107, 70, 52]],
+        ['brown', [69, 45, 36]],
+        ['brown', [125, 92, 73]],
+        ['brown', [77, 57, 50]],
+        ['lid', [157, 162, 168]],
+        ['lid', [170, 169, 166]],
+        ['lid', [121, 110, 109]],
+        ['lid', [167, 153, 135]],
+        ['dark', [255, 255, 255]],
+        ['iron', [40, 44, 46]],
+        ['iron', [60, 62, 66]],
+        ['dark', [12, 13, 17]],
+      ],
+      line: 'dark',
+      thin: ['green', 'darn', 'skin', 'hair', 'brown', 'lid', 'iron'],
+      fringe: 5,
+      stroke: 2.4,
+      feet: ['brown'],
+      loose: ['iron'],
+      ink: 5,
+      min: { dark: 0.1 },
+    },
+    roles: [
+      { name: 'green', color: '#3f7a34', slot: 'player' },
+      { name: 'darn', color: '#5a9a4a' },
+      { name: 'skin', color: '#efc9a4' },
+      { name: 'hair', color: '#e6c25a' },
+      { name: 'brown', color: '#6b4a35' },
+      // A colourway is the dustbin lid (VARIETY.palette): galvanised, recycling blue or black plastic.
+      { name: 'lid', color: '#a8adb4', alts: ['#5f80a8', '#5a5e66'], vary: 6 },
+      { name: 'iron', color: '#4a4a52' },
+      { name: 'dark', color: '#2a1f1a' },
+      { name: 'scuff', color: '#808080', on: 0, tone: 14 },
+      { name: 'scorch', color: '#808080', on: 0, tone: -24 },
+      { name: 'plaster', color: '#e9d3b0' },
+    ],
+    slots: [
+      { name: 'plaster', vary: 1, options: 2 },
+      { name: 'wear', vary: 11, options: 3 },
+    ],
+    eyes: { role: 'dark', area: [0.12, 1.8], gap: [1.2, 4.5], specks: { dark: 2 }, band: [0.1, 0.45], count: 1, pair: [1.7, 0] },
+    wear: {
+      on: ['green'],
+      chin: 3,
+      marks: [
+        [
+          ['scuff', 0.6, 0.6, 0.55],
+          ['scuff', 0.5, 0.85, 0.45],
+        ],
+        [
+          ['scorch', 0.55, 0.65, 0.6],
+          ['scorch', 0.45, 0.88, 0.45],
+        ],
+      ],
+    },
+    accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [1.9, 0.8] }],
+    face: { r: 0.9, iris: '#3c78c8' },
+    gait: { bounce: [0.2, 0.8], lean: [0, 0.04] },
+    clips: {
+      idle: { frames: ['idle'], loop: true, fps: 1 },
+      idle2: { frames: ['idle2', 'idle'], loop: true, holds: [1.8, 2.4] },
+      walk: { frames: ['walk-1', 'walk-2'], loop: true, stride: 30 },
+      run: { frames: ['run-1', 'run-2'], loop: true, stride: 46 },
+      // One jump drawing up and down: his falling ones lost the cap.
+      air: { frames: ['air-1'], loop: true, fps: 1 },
+      wall: { frames: ['wall'], loop: true, fps: 1, centre: 'box' },
+      cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.5, 0.25] },
+      cheer2: { frames: ['cheer2', 'idle'], loop: true, holds: [0.7, 0.3] },
+      death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box' },
+    },
+    poses: {
+      idle2: { pose: 'standing alert with one hand on his belt, looking off to the side.' },
+      'walk-1': { pose: 'walking to the right, mid-step: the near boot forward, the far boot back, the poker in his hand, the arms swinging the other way.' },
+      'walk-2': { pose: 'walking to the right, the legs passing under the body: one boot planted, the other lifted a little, the poker in his hand.' },
+      'run-1': { pose: 'running fast to the right, striding out long, leaning forward, the poker in his hand, the sock cap streaming out behind.' },
+      'run-2': {
+        pose: 'running fast to the right, leaning forward, both boots off the ground with the legs gathered under him, the sock cap streaming out behind.',
+      },
+      'air-1': { pose: 'jumping up with his knees tucked, the poker raised over his head, the sock cap flung up behind.' },
+      wall: {
+        pose: 'seen from his side, he is sliding down a tall wall on the right edge of the picture (do not draw the wall), one glove flat against it and both boots braced on it, the lid on his back, his head turned to look back at us.',
+        far: true,
+      },
+      cheer: { pose: 'cheering with the poker raised high over his head in one fist, a big grin.' },
+      cheer2: { pose: 'holding the dustbin lid up high over his head in both hands like a trophy, grinning.' },
+      death: {
+        pose: 'he has been knocked out and lies flat on his back on the floor, the whole body horizontal across the picture, head on the left and boots on the right, arms and legs splayed limp, eyes shut, the poker and the lid dropped beside him. Seen from the side.',
+        far: true,
+      },
+    },
+  },
+  chomper: {
+    body: 293,
+    map: {
+      roles: ['yellow', 'dark', 'grey', 'napkin', 'check'],
+      families: [
+        ['yellow', [244, 203, 33]],
+        ['yellow', [187, 144, 32]],
+        ['yellow', [245, 208, 57]],
+        ['dark', [41, 28, 20]],
+        ['grey', [154, 154, 153]],
+        ['napkin', [248, 243, 230]],
+        ['check', [166, 61, 39]],
+        ['check', [179, 103, 59]],
+      ],
+      line: 'dark',
+      thin: ['yellow', 'grey', 'napkin', 'check'],
+      fringe: 5,
+      stroke: 2.4,
+      feet: ['yellow'],
+      min: { dark: 0.1, check: 0.15 },
+    },
+    roles: [
+      { name: 'yellow', color: '#f6d02a', slot: 'player' },
+      { name: 'dark', color: '#2a1f1a' },
+      { name: 'grey', color: '#9aa0a8' },
+      { name: 'napkin', color: '#fbf6ee' },
+      // A colourway is the napkin's check (VARIETY.palette): red, blue or green.
+      { name: 'check', color: '#c9473f', alts: ['#3f62b4', '#3f8a3a'], vary: 6 },
+      { name: 'scuff', color: '#808080', on: 0, tone: 8 },
+      // One quiet mark a wear: on a smooth ball, a loud blob reads as a spot.
+      { name: 'scorch', color: '#808080', on: 0, tone: -18 },
+      { name: 'plaster', color: '#e9d3b0' },
+    ],
+    slots: [
+      { name: 'plaster', vary: 1, options: 2 },
+      { name: 'wear', vary: 11, options: 3 },
+    ],
+    eyes: { role: 'dark', area: [0.08, 1.5], gap: [1, 4], specks: { dark: 0.9 }, count: 1 },
+    wear: {
+      on: ['yellow'],
+      chin: 2,
+      marks: [[['scuff', 0.25, 0.8, 0.9]], [['scorch', 0.22, 0.72, 1.1]]],
+    },
+    accessories: [{ slot: 'plaster', role: 'plaster', at: 'crown', size: [2.4, 0.8] }],
+    face: { r: 0.8, iris: '#14121a', eye: 'dot' },
+    gait: { bounce: [0, 0.7], lean: [0, 0.04] },
+    clips: {
+      idle: { frames: ['idle'], loop: true, fps: 1 },
+      idle2: { frames: ['idle2', 'idle'], loop: true, holds: [1.8, 2.4] },
+      walk: { frames: ['walk-1', 'walk-2'], loop: true, stride: 24 },
+      run: { frames: ['run-1', 'run-2'], loop: true, stride: 36 },
+      air: { frames: ['air-1', 'air-2'], loop: false, vy: [-200, 200] },
+      // Its wall drawing grew a slab pressed to the wall, taller than the box: a ball slides in its fall.
+      wall: { frames: ['air-2'], loop: true, fps: 1 },
+      cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.5, 0.25] },
+      cheer2: { frames: ['cheer2', 'idle'], loop: true, holds: [0.7, 0.3] },
+      death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box', scale: 0.9 },
+    },
+    poses: {
+      idle2: { pose: 'mouth shut tight into a full round ball with only a line for the mouth, eyeing the floor.' },
+      'walk-1': { pose: 'moving to the right with the mouth half open.' },
+      'walk-2': { pose: 'moving to the right with the mouth shut to a thin line.' },
+      'run-1': { pose: 'racing to the right, tipped forward, the mouth thrown wide open.' },
+      'run-2': { pose: 'racing to the right, tipped forward, the mouth snapped shut to a thin line.' },
+      'air-1': { pose: 'hopping up into the air, the mouth wide open.' },
+      'air-2': { pose: 'falling, tipped back, the mouth open in alarm and the eye wide.' },
+      cheer: { pose: 'hopping on the spot with joy, the mouth wide open in a grin.' },
+      cheer2: { pose: 'rolling back on itself, tipped over backwards, the mouth thrown wide open, laughing.' },
+      death: {
+        pose: 'knocked out and squashed flat as a pancake on the floor, an oval much wider than it is tall, the mouth a limp line, the eye shut. Seen from the side.',
+        far: true,
+      },
+    },
+  },
+  puffball: {
+    body: 279,
+    // Its seam traced as one long stroke across the ball and its pale highlight as a strip, a mouth at play
+    // size; its tape cross beside the eyes read as a third eye: no interior lines, and tape and highlight are the ball.
+    map: {
+      roles: ['pink', 'red', 'dark'],
+      families: [
+        ['pink', [244, 154, 179]],
+        ['pink', [203, 98, 122]],
+        ['pink', [222, 112, 142]],
+        ['pink', [179, 105, 124]],
+        ['pink', [211, 168, 180]],
+        ['red', [190, 64, 57]],
+        ['red', [149, 43, 47]],
+        ['pink', [184, 176, 178]],
+        ['pink', [234, 200, 203]],
+        ['dark', [71, 20, 40]],
+        ['dark', [33, 4, 15]],
+        ['dark', [255, 255, 255]],
+      ],
+      line: 'dark',
+      thin: ['pink', 'red'],
+      fringe: 5,
+      stroke: 99,
+      feet: ['red'],
+      min: { dark: 0.35 },
+    },
+    roles: [
+      { name: 'pink', color: '#f2a0bc', slot: 'player' },
+      // A colourway is the feet (VARIETY.palette): red, orange or yellow.
+      { name: 'red', color: '#c9473f', alts: ['#e07b2c', '#e8b23a'], vary: 6 },
+      { name: 'white', color: '#f4efe6' },
+      { name: 'dark', color: '#2a1f1a' },
+      { name: 'scuff', color: '#808080', on: 0, tone: 8 },
+      // One quiet mark a wear: on a smooth ball, a loud blob reads as a spot.
+      { name: 'scorch', color: '#808080', on: 0, tone: -18 },
+      { name: 'plaster', color: '#e9d3b0' },
+    ],
+    slots: [
+      { name: 'plaster', vary: 0, options: 2 },
+      { name: 'wear', vary: 11, options: 3 },
+    ],
+    eyes: { role: 'dark', area: [0.2, 6], gap: [1.5, 5.5], specks: { dark: 6 } },
+    wear: {
+      on: ['pink'],
+      chin: 3.5,
+      marks: [[['scuff', 0.68, 0.78, 1.0]], [['scorch', 0.7, 0.75, 1.1]]],
+    },
+    accessories: [{ slot: 'plaster', role: 'plaster', at: 'crown', size: [2.4, 0.85] }],
+    face: { r: 1, iris: '#2a1f1a', mouth: [2, 2.6], eye: 'tall' },
+    gait: { bounce: [0.1, 0.8], lean: [0, 0.03] },
+    clips: {
+      idle: { frames: ['idle'], loop: true, fps: 1 },
+      idle2: { frames: ['idle2', 'idle'], loop: true, holds: [1.8, 2.4] },
+      walk: { frames: ['walk-1', 'walk-2'], loop: true, stride: 26 },
+      run: { frames: ['run-1', 'run-2'], loop: true, stride: 40 },
+      air: { frames: ['air-1', 'air-2'], loop: false, vy: [-200, 200] },
+      wall: { frames: ['wall'], loop: true, fps: 1 },
+      cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.5, 0.25] },
+      cheer2: { frames: ['cheer2', 'idle'], loop: true, holds: [0.7, 0.3] },
+      death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box' },
+    },
+    poses: {
+      idle2: { pose: 'looking up, both stubby arms tucked behind it, tapping one foot.' },
+      'walk-1': { pose: 'waddling to the right, mid-step: the near foot forward, the far foot back.' },
+      'walk-2': { pose: 'waddling to the right, one foot planted, the other lifted a little.' },
+      'run-1': { pose: 'running fast to the right, leaning forward, the feet in a long stride, the arms swept back.' },
+      'run-2': { pose: 'running fast to the right, leaning forward, both feet off the ground tucked under it.' },
+      'air-1': { pose: 'jumping up, both arms raised, the feet tucked under.' },
+      'air-2': { pose: 'falling, both arms flung up, the feet dangling, the mouth open in alarm.' },
+      wall: {
+        pose: 'seen from its side, it is sliding down a tall wall on the right edge of the picture (do not draw the wall), one arm and one foot pressed flat against it, looking back at us.',
+        far: true,
+      },
+      cheer: { pose: 'cheering with both arms thrown up, up on its toes, a big open smile.' },
+      cheer2: { pose: 'puffed up even rounder, waving one arm high, a big open smile.' },
+      death: { pose: 'knocked out and lying flat on its back on the floor, feet in the air, eyes shut. Seen from the side.', far: true },
     },
   },
 };

@@ -1,5 +1,5 @@
 /**
- * The shape of a kind rendered from 3D (tools/art3d): generated `frames.ts` modules fill it, and
+ * The shape of a rendered kind (tools/art3d): generated `frames.ts` modules fill it, and
  * `src/render/cast/sprites` draws it. A frame is the figure cut into flat parts, traced and simplified,
  * so the game fills and inks it with the cast's own pen at whatever size it's shown.
  */

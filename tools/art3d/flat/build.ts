@@ -21,6 +21,31 @@ if (first === 'pose') {
   console.log(posePrompt(p.pose, p.far));
   process.exit(0);
 }
+// `build.ts body KIND HEIGHT`: the body size (`FlatKind.body`) that draws the design HEIGHT world px tall.
+if (first === 'body') {
+  const k = FLAT_KINDS[second];
+  if (!k) throw new Error(`No flat kind "${second}" in tools/art3d/flat/kinds.ts: add its entry (any body) first.`);
+  const dir = resolve('.cache/flat', second);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(resolve(dir, 'map.json'), JSON.stringify(k.map));
+  const said = execFileSync(
+    'python3',
+    [
+      '-I',
+      resolve('tools/art3d/flat/rolemap.py'),
+      resolve('art/sprites', second, 'design.png'),
+      resolve(dir, 'body.json'),
+      resolve(dir, 'body.png'),
+      `h${third}`,
+      String(k.map.ink ?? 9),
+      '12',
+      resolve(dir, 'map.json'),
+    ],
+    { encoding: 'utf8' },
+  );
+  console.log(`body: ${Math.round(Number(/body ([\d.]+)/.exec(said)![1]))}`);
+  process.exit(0);
+}
 const kind = first ?? 'zapmouse';
 const spec = FLAT_KINDS[kind];
 if (!spec) throw new Error(`No flat kind "${kind}". Flat kinds are listed in tools/art3d/flat/kinds.ts: ${Object.keys(FLAT_KINDS).join(', ')}.`);
@@ -105,9 +130,13 @@ function frameOf(name: string, clip: FlatClip): Frame {
   const json = resolve(cache, `${name}.json`);
   const look = resolve(cache, 'map.json');
   writeFileSync(look, JSON.stringify(spec.map));
-  execFileSync('python3', ['-I', resolve('tools/art3d/flat/rolemap.py'), png, json, resolve(cache, `${name}.png`), `a${spec.body}`, '9', '12', look], {
-    stdio: 'pipe',
-  });
+  execFileSync(
+    'python3',
+    ['-I', resolve('tools/art3d/flat/rolemap.py'), png, json, resolve(cache, `${name}.png`), `a${spec.body}`, String(spec.map.ink ?? 9), '12', look],
+    {
+      stdio: 'pipe',
+    },
+  );
   const m = JSON.parse(readFileSync(json, 'utf8')) as RoleMap;
   // Only what the tracer reads: no depth steps (a drawing is flat), and each role's smallest part.
   const settings: Pick<Settings, 'step' | 'trace' | 'roles'> = {
@@ -122,7 +151,26 @@ function frameOf(name: string, clip: FlatClip): Frame {
   let parts: Shape[] = t.parts.map((p) => ({ role: roleOf(m.roles[p.role]), ring: p.ring }));
   const dark = roleOf(spec.eyes.role);
   // The eyes: the two dark specks side by side, nearest level, near (left, facing right) first.
-  const specks = parts.filter((p) => p.role === dark && area(p.ring) >= spec.eyes.area[0] && area(p.ring) < spec.eyes.area[1]);
+  // An eye is in the top of the figure (`band`, fractions of its height) and clear of its outline: a speck on
+  // the edge is a scrap of the ink, a speck low down a stripe or a glove's.
+  const ys = t.sil.flatMap((r) => r.filter((_, i) => i % 2 === 1));
+  const [figTop, figLow] = [Math.min(...ys), Math.max(...ys)];
+  const [b0, b1] = spec.eyes.band ?? [0, 0.5];
+  const edge = (x: number, y: number) =>
+    Math.min(...t.sil.flatMap((r) => r.filter((_, i) => i % 2 === 0).map((rx, i) => Math.hypot(rx - x, r[i * 2 + 1] - y))));
+  // `FLAT_DEBUG=<pose>`: that pose's dark specks, to tune `eyes` (area, place in the band, distance to the edge).
+  if (process.env.FLAT_DEBUG === name)
+    for (const p of parts.filter((q) => q.role === dark)) {
+      const [x, y] = mid(p.ring);
+      console.log(
+        `  speck area ${area(p.ring).toFixed(2)} at ${x.toFixed(1)},${y.toFixed(1)} band ${((y - figTop) / (figLow - figTop)).toFixed(2)} edge ${edge(x, y).toFixed(2)}`,
+      );
+    }
+  const specks = parts.filter((p) => {
+    if (p.role !== dark || area(p.ring) < spec.eyes.area[0] || area(p.ring) >= spec.eyes.area[1]) return false;
+    const [x, y] = mid(p.ring);
+    return y >= figTop + (figLow - figTop) * b0 && y <= figTop + (figLow - figTop) * b1 && edge(x, y) > 0.45;
+  });
   let eyes: Pt[] = [];
   let best = -1;
   for (const a of specks)
@@ -136,11 +184,29 @@ function frameOf(name: string, clip: FlatClip): Frame {
         eyes = [pa, pb];
       }
     }
+  // One eye found (a profile, the dot-eater): the biggest.
+  if (spec.eyes.count === 1) {
+    const one = [...specks].sort((a, b) => area(b.ring) - area(a.ring))[0];
+    eyes = one ? [mid(one.ring)] : [];
+    // The far eye of a face turned nearly side on is on the outline, or lost in its white: set from the near one.
+    const pair = spec.eyes.pair;
+    if (pair && one) {
+      // Pulled back toward the near eye until it's on the face.
+      for (let k = 1; k >= 0.3; k -= 0.1) {
+        const at: Pt = [eyes[0][0] + pair[0] * k, eyes[0][1] + pair[1] * k];
+        // With a margin, so the mirrored facing's rounding can't put it on the line.
+        if ([0, 1, 2, 3, 4, 5].every((j) => t.sil.some((r) => inside(at[0] + Math.cos(j) * 0.4, at[1] + Math.sin(j) * 0.4, r)))) {
+          eyes.push(at);
+          break;
+        }
+      }
+    }
+  }
   if (clip.eyes === false) eyes = [];
   // The face's specks go (eyes, nose, a drawn mouth and its tongue): the kit draws eyes and mouth there.
   if (eyes.length) {
-    const [x0, x1] = [eyes[0][0] - 2.5, eyes[1][0] + 2.5];
-    const [y0, y1] = [Math.min(eyes[0][1], eyes[1][1]) - 1.5, Math.max(eyes[0][1], eyes[1][1]) + 3.6];
+    const [x0, x1] = [eyes[0][0] - 2.5, eyes[eyes.length - 1][0] + 2.5];
+    const [y0, y1] = [Math.min(...eyes.map((e) => e[1])) - 1.5, Math.max(...eyes.map((e) => e[1])) + 3.6];
     parts = parts.filter((p) => {
       const [x, y] = mid(p.ring);
       const face = x > x0 && x < x1 && y > y0 && y < y1;
@@ -152,7 +218,7 @@ function frameOf(name: string, clip: FlatClip): Frame {
   // A dark under the face drawn in a role of its own (the zapmouse's black cord, which reads as a frown).
   const re = spec.recolour;
   if (re) {
-    const below = eyes.length ? Math.max(eyes[0][1], eyes[1][1]) + re.below : -10;
+    const below = eyes.length ? Math.max(...eyes.map((e) => e[1])) + re.below : -10;
     for (const p of parts)
       if (p.role === roleOf(re.from) && (clip.eyes === false ? area(p.ring) > re.lying[0] && mid(p.ring)[0] > re.lying[1] : mid(p.ring)[1] > below))
         p.role = roleOf(re.to);
@@ -166,14 +232,24 @@ function frameOf(name: string, clip: FlatClip): Frame {
   let right = -Infinity;
   for (const r of f.sil)
     for (let i = 0; i < r.length; i += 2) {
-      low = Math.max(low, r[i + 1] + 0.15);
+      low = Math.max(low, r[i + 1] + 0.2);
       left = Math.min(left, r[i]);
       right = Math.max(right, r[i]);
     }
   // A stroke can end at the figure's edge, and its pen reaches past it.
   for (const l of f.lines) for (let i = 1; i < l.pts.length; i += 2) low = Math.max(low, l.pts[i] + 0.3);
   const dx = clip.centre === 'box' ? -(left + right) / 2 : 0;
-  return move(f, dx, -low);
+  const g = move(f, dx, -low);
+  // A pose drawn bigger than the rest, or too wide for the box (a pancake), drawn smaller about its feet.
+  const k = clip.scale ?? 1;
+  if (k === 1) return g;
+  const sc = (r: number[]) => r.map((v) => v * k);
+  return {
+    sil: g.sil.map(sc),
+    parts: g.parts.map((p) => ({ ...p, ring: sc(p.ring) })),
+    lines: g.lines.map((l) => ({ ...l, pts: sc(l.pts) })),
+    eyes: g.eyes.map(([x, y]) => [x * k, y * k]),
+  };
 }
 
 function move(f: Frame, dx: number, dy: number): Frame {
@@ -257,12 +333,12 @@ function vframe(f: Frame, flip: boolean) {
     lines: f.lines.map((l) => [l.role, enc(flip ? flipLine(l.pts) : l.pts)]),
   };
   if (f.eyes.length) {
-    const [a, b] = f.eyes;
     const x = (v: number) => (flip ? -v : v);
-    const [near, far] = [Math.round(spec.face.r * 8), Math.round(spec.face.r * 0.85 * 8)];
-    out.eyes = [Math.round(x(a[0]) * 8), Math.round(a[1] * 8), near, Math.round(x(b[0]) * 8), Math.round(b[1] * 8), far];
-    // The head the eyes ride, turned with the line between them.
-    const tilt = (Math.atan2(b[1] - a[1], b[0] - a[0]) * 180) / Math.PI;
+    const sizes = [Math.round(spec.face.r * 8), Math.round(spec.face.r * 0.85 * 8)];
+    out.eyes = f.eyes.flatMap(([ex, ey], i) => [Math.round(x(ex) * 8), Math.round(ey * 8), sizes[i]]);
+    // The head the eyes ride, turned with the line between them (one eye: upright).
+    const [a, b] = [f.eyes[0], f.eyes[f.eyes.length - 1]];
+    const tilt = f.eyes.length > 1 ? (Math.atan2(b[1] - a[1], b[0] - a[0]) * 180) / Math.PI : 0;
     out.head = [Math.round(x((a[0] + b[0]) / 2) * 8), Math.round(((a[1] + b[1]) / 2 - 1) * 8), 64, Math.round(flip ? -tilt : tilt)];
   }
   return out;

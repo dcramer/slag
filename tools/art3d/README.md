@@ -1,160 +1,99 @@
-# art3d: characters drawn from 3D
+# art3d: the cast's drawn kinds
 
-The production pipeline for the cast: one Roster entry in docs/CHARACTERS.md in, one kind the game draws out. A 3D model supplies the poses, volume and turn; the look is the game's own hand. Every pose is rendered side on, cut into flat parts, traced into a few clean curves, and inked at draw time by the cast's pen (`contour` and `toned` in `src/render/ink-figure.ts`) with the cast's face kit on top. It's a dev tool (Three.js in headless Chromium, served by Vite); the game ships only the generated `src/render/cast/sprites/<kind>/frames.ts`; a kind with frames is always drawn from them.
+The production pipeline for the cast: one Roster entry in docs/CHARACTERS.md in, one kind the game draws out. Every rendered kind is a **flat kind**: designed once at game size, worn in an edit, drawn in a dozen poses by the image model with the design as its reference, and each drawing traced flat into the game's own shapes (docs/CHARACTERS.md → Rendered kinds). The game ships only the generated `src/render/cast/sprites/<kind>/frames.ts`; a kind with frames is always drawn from them. It costs no Tripo credits: images are free within the account's monthly allowance (the CLI prints what's left), and a kind takes about thirty.
+
+The folder's name is history: kinds were rendered from 3D models until 2026-11-03, and that route is retired ([3D.md](3D.md)). Its tracer (`page/trace.ts`) is this route's too.
 
 One agent per kind, in a worktree of its own: [CHECKLIST.md](CHECKLIST.md) is the run sheet and the done list. This README is the how.
 
-The sources under `art/` (models, sheets, views) are in Git LFS (`.gitattributes`); builds and tests never read them, only the generated `frames.ts`. Fetch one kind's with `git lfs pull --include "art/sprites/KIND/**"`, and commit new ones as usual: the filter stores them in LFS.
-
 ```bash
-pnpm sprites KIND [--zoom 6 --only idle,run]   # trace the kind into src/render/cast/sprites/KIND/frames.ts; sheets in shots/art3d/
-pnpm sprites keys KIND [--keys launch,wall0] [--pick 0,0,0,0,2]
-                                                # each keyed pose alone, both facings, while setting keys from the pose sheet;
-                                                # --pick shows those slot options (the wear, say) on this and the frames sheet
-pnpm sprites study KIND [--frames 16] [--clips a,b] [--from 0.3 --to 0.6] [--face]
-                                                # every animation in the model, sampled evenly, to cut clips from
-pnpm sprites inspect FILE.glb                   # a raw model: turnaround (painted and clay), clips, bones, texture colours
-pnpm shot sprites --kind KIND                   # in game: comparison sheets, six-rolls lobby, draw cost, blind silhouette sheet
-pnpm shot variety --kinds KIND[,KIND]           # in game: twelve looks of each kind, eight of it at play scale, the cast lineup
+node $tripo image "$(node tools/art3d/style.ts design KIND)" --aspect 1:1 --count 4 -o design.png
+node $tripo image "$(node tools/art3d/style.ts worn KIND)" --ref design.png --aspect 1:1 --count 3 -o worn.png
+node $tripo image "$(pnpm -s exec tsx tools/art3d/flat/build.ts pose KIND NAME)" --ref art/sprites/KIND/design.png --aspect 1:1 --count 2 -o NAME.png
+python3 -I tools/art3d/flat/swatch.py art/sprites/KIND/design.png shots/KIND-swatch.png   # the design's colours, for map.families
+pnpm exec tsx tools/art3d/flat/build.ts KIND    # trace every pose into src/render/cast/sprites/KIND/frames.ts
+FLAT_DEBUG=idle pnpm exec tsx tools/art3d/flat/build.ts KIND   # that pose's dark specks, to tune the eyes
+pnpm vitest run tests/sprite-cast.test.ts       # every kind held to the cast's box, eyes and variety
+pnpm shot variety --kinds KIND [--theme mine]   # twelve looks, eight of it at play scale and 3×, the cast lineup
+pnpm shot sprites --kind KIND                   # the run cycle, the six-rolls lobby, the draw cost, the blind silhouette sheet
 ```
 
-`pnpm sprites KIND` writes `shots/art3d/KIND-frames.png` (every frame, both facings, drawn by the game's drawer), `-silhouettes.png` (play scale, solid) and `-rolls.png` (twelve characters' variety: the idle and cheer each plays, its palette, swaps and wear, then each colourway and each wear alone).
+`tripo` is `/home/dcramer/src/terra/tools/tripo/tripo.ts` (`node` it from anywhere; it reads terra's `.env`). The build needs python3 with Pillow. Sources under `art/` are in Git LFS (`.gitattributes`); builds and tests never read them, only `frames.ts`. Role maps land in `.cache/flat/KIND/` (a `*.png` beside each, to check a pose's roles).
 
 ## From the Roster entry
 
-Each field of an entry has one place it goes:
+| Entry field                            | Where it goes                                                                                                                                                                                                                       |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Kind, Name                             | The kind id: `art/sprites/<kind>/`, `FLAT_KINDS` in `tools/art3d/flat/kinds.ts`, `LOADERS` in `src/render/cast/sprites/index.ts`. (`CAST`, `KIND_NAMES`, `PAINTS` in `src/gen/character.ts` for a kind that isn't in the game yet.) |
+| Silhouette, Traits, The nod, Our twist | `BRIEFS[kind].design` in `style.ts`: the nod and the twist as big shapes only, traits never a name. The wear: `BRIEFS[kind].worn`.                                                                                                  |
+| Palette, Color slot                    | `roles` in the kind's entry: each role's `color`; the costume is `slot: 'player'`. A shade that carries a shape is a dark of its role (`on`, `tone`).                                                                               |
+| Gait                                   | The clips: which drawings, and their timing.                                                                                                                                                                                        |
+| Swaps                                  | `accessories`: a strip on the crown or across the cheek, an on-off slot each.                                                                                                                                                       |
+| Palette alts                           | `alts` on one secondary role on `vary` 6.                                                                                                                                                                                           |
+| Idles and cheers                       | `idle2` and `cheer2`: a drawing each, alternating with the idle.                                                                                                                                                                    |
+| Gait range                             | `gait: { bounce, lean }`, each `[low, high]` under `GAIT_MAX`.                                                                                                                                                                      |
+| Wear                                   | Two in the drawing (the worn edit), and the `wear` slot: scuffs and a scorch laid on every pose (`wear.marks`).                                                                                                                     |
 
-| Entry field                 | Where it goes                                                                                                                                                                          |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Kind, Name                  | The kind id: `art/sprites/<kind>/`, `LOADERS` in `src/render/cast/sprites/index.ts`. (`CAST`, `KIND_NAMES`, `PAINTS` in `src/gen/character.ts` for a kind that isn't in the game yet.) |
-| Silhouette, Traits, The nod | `BRIEFS[kind].character` in `style.ts` (traits only, never a name); what the model sheet and `sprite.json`'s caricature must keep readable                                             |
-| Our twist                   | The brief, and a `prop` when the image model keeps dropping it (the plumber's plunger)                                                                                                 |
-| Palette, Color slot         | `roles` in `sprite.json`: each role's `color`; the kind's own colour is `slot: "paint"`; a ring is the shared drawer's                                                                 |
-| Gait                        | The clips: which presets, which keyed poses, a generated ball                                                                                                                          |
-| Swaps                       | `props` with a `slot` each (option 0 empty, option 1 the item), `slots` mapping each to a `vary` index (0–5)                                                                           |
-| Palette alts                | `alts` on the region's role (and on every role that changes with it, as many each), on `vary` 6, the default                                                                           |
-| Idles and cheers            | `idle2` and `cheer2` clips: keys from the pose sheet, or a cut of another stretch of a model animation                                                                                 |
-| Gait range                  | `gait: { bounce, lean }`, each a `[low, high]` range under `GAIT_MAX`                                                                                                                  |
-| Wear                        | a `wear` slot on `vary` 11: three props, the first empty, then scuffed and scorched; their marks are parts stuck on the skin (`face`), each in a role `on` the surface with a `tone`   |
-| Rig                         | `rig --type humanoid` or `--type other`; **keyed** means the poses are keyed here                                                                                                      |
-| Concept prompt              | `BRIEFS[kind]`; `style.ts` adds the house style                                                                                                                                        |
+## 1. Design, at game size
 
-## Flat kinds (free)
+`node $tripo image "$(node tools/art3d/style.ts design KIND)" --aspect 1:1 --count 4`, no reference. `DESIGN` asks for one figure that reads as a 24 px sprite: one silhouette idea, about three big shapes, four flat colours plus ink, the prop, the eyes. Pick the one with the clearest silhouette and the twist as shapes, not detail.
 
-A kind drawn from its design and pose drawings instead of a model (docs/CHARACTERS.md → Rendered kinds → Flat kinds; the zapmouse and the plumber). After step 0 below (a design that reads as the original redrawn gets its twist in the wear edit: the plumber's goggles):
+- **The original redrawn.** For a famous design the image model draws the original whatever the brief says (the hedgehog came back with the joined eye shape and long legs twice). Two ways out: the kind's approved concept as the reference, with the brief's twist named again (`--ref art/sprites/KIND/concept.png`; the hedgehog's two eyes and heavy brows came back that way), or the twist pushed in the wear edit (the plumber's welding goggles). Never ship one that reads as the original redrawn (docs/CHARACTERS.md → Roster).
+- **Put the signature prop first** in the brief: the image model ignores most of a prompt past its first ~1,800 characters.
 
-1. **Poses:** for each pose in `FLAT_KINDS[kind].poses` (`tools/art3d/flat/kinds.ts`), `node $tripo image "$(pnpm -s exec tsx <slag>/tools/art3d/flat/build.ts pose KIND NAME)" --ref art/sprites/KIND/design.png --aspect 1:1 --count 2`, and keep the best as `art/sprites/KIND/flat/NAME.png`. Check each keeps the design's wear and size; a pose far from the design's stance needs `far`, or the model draws the design's stance again.
-2. **Map:** sample the design's colours (shades included) into `map.families`; a drawn prop or wall line beside the figure is whitened out of its drawing first. Every colour role with antialiased dots along the ink goes in `thin`.
-3. **Frames:** `pnpm exec tsx tools/art3d/flat/build.ts KIND` (needs python3 with Pillow). It writes `frames.ts` and the role maps in `.cache/flat/KIND/` (`*.png` beside each, to check a pose's roles). `pnpm sprites` refuses a flat kind.
-4. **Check:** `pnpm vitest run tests/sprite-cast.test.ts`, `pnpm shot variety --kinds KIND`, `pnpm shot sprites --kind KIND`.
+## 2. The wear, as an edit
 
-## Sheets (free)
+`node $tripo image "$(node tools/art3d/style.ts worn KIND)" --ref design.png --aspect 1:1 --count 3`. Asked for in the design prompt, the damage is dropped; as an edit of the picked design it lands and the design holds. Two to four big, worn shape changes (bent, cracked, taped, torn, patched, a sole flapping), never dirt or a rough line (Decision 9). Keep it off the face: a tape cross beside an eye reads as a third eye at play size. Save the pick as `art/sprites/KIND/design.png`; it is the `idle` pose.
 
-From terra (`cd /home/dcramer/src/terra`; the Tripo CLI reads that repo's `.env`). `tripo=tools/tripo/tripo.ts`.
+## 3. Poses
 
-0. **Design, at game size** (docs/CHARACTERS.md → Decisions 9): `node $tripo image "$(node <slag>/tools/art3d/style.ts design KIND)" --aspect 1:1 --count 4`, with no reference: one figure designed to read as a 24 px sprite, its twist as big shapes. Then the wear, as an edit of the picked one: `node $tripo image "$(node <slag>/tools/art3d/style.ts worn KIND)" --ref design.png --aspect 1:1 --count 4`. Asked for in one prompt, the image model drops the damage; as an edit it lands and the design holds. Check both at play scale beside the cast before going on (the zapmouse's run is in `shots/styletest/`).
-1. **Concept:** `node $tripo image "$(node <slag>/tools/art3d/style.ts concept KIND)" --ref <a finished concept> --aspect 16:9 --count 2`. A finished kind's concept as the reference keeps the house look.
-2. **Pose sheet:** `node $tripo image "$(node <slag>/tools/art3d/style.ts pose KIND)" --ref concept.png --aspect 16:9 --count 2`. The prompt opens on the layout: one that opens on "model sheet" gets the model sheet back.
-3. **Model sheet:** `node $tripo image "$(node <slag>/tools/art3d/style.ts model KIND)" --ref concept.png --t-pose --count 3`. One figure, flat matte colour, no ink, gear clear of the arms. Redraw from the best candidate (`--ref` it, say only what changes) until the figure is right; a bad model can't render well.
+Each pose's prompt is `posePrompt` (`kinds.ts`) on the kind's `poses`, with the design as the reference: the image model copies a reference closely, which is what holds the character from pose to pose. Two per pose, keep the best as `art/sprites/KIND/flat/NAME.png`. The usual set: `idle2`, `walk-1`, `walk-2`, `run-1`, `run-2`, `air-1` (rising), `air-2` (falling), `wall`, `cheer`, `cheer2`, `death`.
 
-**The twist pass.** Before any credits: put the concept next to the original in your head. If it reads as the original redrawn, push the twist (a changed signature prop, a different body detail, foundry or scrap flavour, one joke). If a nod trait is missing or hidden, put it back. The entry decides both.
+- **`far`** for a pose far from the design's stance (lying knocked out, side on to a wall): it lets go of the view, or the model hands back the design's stance.
+- **Reject** a drawing that lost a prop or the cap (the elf's falls threw his cap off), grew limbs (the dot-eater sprouted legs), changed a colour (a black plunger cup), or reads as a different expression than the clip (shut eyes are fine anywhere but the idle; the face kit has none to ride).
+- **A drawn wall line** beside a wall slide is whitened out of the drawing before tracing: the column dark most of the way down, and only what's darker than the figure's fills (the plumber's and the dot-eater's).
+- **Reuse** a drawing where a pose adds nothing: a ball slides down a wall in its fall, the elf's one jump drawing is his whole air clip, the hedgehog's jump is two spin-ball drawings looping.
 
-## Model, rig, motion (credits)
+## 4. The map
 
-| Step             | Command                                                                                                 | Credits |
-| ---------------- | ------------------------------------------------------------------------------------------------------- | ------- |
-| Views (optional) | `views tpose.png` (use only views that agree with the front)                                            | 0       |
-| Model            | `model tpose.png --texture-quality standard --no-pbr` (or `--views F L B R`)                            | 40      |
-| Check            | `pnpm sprites inspect FILE.glb`: proportions, profile, the nod traits as geometry                       | 0       |
-| Rig              | `rig PROJECT --skeleton unreal` (humanoid) or `--type other`                                            | 20      |
-| Presets          | `animate PROJECT idle walk run jump fall hurt cheer climb --in-place --texture-size 1024`               | 0       |
-| Motions          | `animate PROJECT --prompt "…" --seconds 2 --in-place` (humanoid rigs only; a lottery)                   | 20 each |
-| Export           | `export PROJECT --format glb --animations --in-place --texture-size 1024 -o art/sprites/KIND/model.glb` | 0       |
+How `rolemap.py` reads the drawings, in the kind's `map` (`kinds.ts`):
 
-A humanoid kind costs 60, plus any motions (round 3's two kinds used none: everything presets didn't give was keyed). Record every project id and charge in your report.
+- **`families`**: every colour of the design, shades and highlights included, each named for its role. `swatch.py` prints them and draws a sheet beside the design. A shade folds into its role: the drawing's cel shadow is gone, the figure is flat. A shade that carries a shape (the plumber's cap shadow and plunger cup) is a role of its own drawn as a dark of the costume (`on`, `tone`), so it follows the player's colour.
+- **`line`** is the ink's role. Thin ink is the line and goes; ink thicker than `ink` px (default 9) stays a fill (the ear tips, the mouth). A thin dark prop (the elf's poker) gets a role of its own, or a lower `ink`.
+- **`thin` and `fringe`**: the antialiased dots of a colour along the ink. Every colour role goes in `thin`, with `fringe: 5`, or the outline is speckled.
+- **`white` glints** inside the eyes go to the ink's role, so the eyes trace whole.
+- **`feet`** are what the figure stands on (its lowest pixels and its centre); **`loose`** roles are left out of its size (a tail, a carried poker). `body` sets every pose to one size: `pnpm exec tsx tools/art3d/flat/build.ts body KIND HEIGHT` prints the one that draws the design HEIGHT world px tall (the shipped kind's height, or about 20 to 22).
+- **`min`** per role: the smallest part worth a shape. Raise it to drop slivers (a seam's highlight, the scraps of a tape cross's ink).
+- **`stroke`**: the shortest interior line kept (default 1.4 world px; 2.4 for a detailed drawing, or its gloves and goggles fill with flecks). A long line across a ball (the puffball's seam) reads as a mouth at play size: `stroke: 99`, none.
+- **A dark under the face** (the zapmouse's black cord belt) reads as a frowning mouth: `recolour` draws it in a role of its own.
 
-## sprite.json
+## 5. Face, variety, frames
 
-The settings are `Settings` in `settings.ts`, documented field by field. Start from `art/sprites/plumber/sprite.json`. In order:
+- **`eyes`**: the face kit replaces the drawing's eyes, specks at play size, and draws the cast's (`face`: size, iris, `eye: 'dot' | 'tall'`, a `mouth` offset if the kit draws one). The eyes are the pair of `role` specks `area` big and `gap` apart, in the figure's top `band`, never on its outline; `count: 1` takes the biggest, for one eye (the dot-eater) or a face turned nearly side on, with `pair` setting the far eye from the near one (the elf's sits on his outline, the hedgehog's is lost in its white). `specks` are what goes from the face box: the drawing's eyes, nose and mouth. Keep `face.r` small enough that two kit eyes don't overlap where the drawing's sit close. `FLAT_DEBUG=<pose>` prints that pose's specks with their area, band and distance to the edge.
+- **`wear`**: scuffs and a scorch, in tones of the surface they're `on`, at spots that keep their place in its box from pose to pose, only on bare surface below the `chin`. "No room for" in the build's output means a mark didn't fit a pose: make it smaller. On a smooth ball one quiet mark each (tones ±8 to ±18): a ring of blobs reads as a rash.
+- **`accessories`**: a strip of tape or a plaster, on the crown or across the cheek, from the near eye.
+- **Colourways** must not land on another role's colour: drawn flat, the plumber's brown-canvas overalls were his tan gloves, and the colour block went.
+- **Clips**: `frames` and timing (`fps`, `stride`, `vy`, `holds`). `eyes: false` for a pose whose eyes are shut. `centre: 'box'` and `scale` for a pose too wide for the cast's box (the lying death, the hedgehog's and the elf's wall slides, the dot-eater's pancake).
 
-- **Roles.** `pnpm sprites inspect` lists the texture's colour clusters; give each a role in the entry's palette (`swatches` are the colours as painted; `color` the palette's). Eyes get `glint` (and a `band`, from the top, when goggles or a visor sit above them). Too-fine details fold `into` a neighbour or get a smaller `min`.
-- **The nod, drawn bigger.** A trait that shares a colour with something else (the plumber's nose and cap are the shirt's red) is split off by a `region` (a box of the bind pose) into a role of its own, which can then `grow`. `scale` grows bones (head, hands, feet); `girth` draws the figure wider than the model, per clip if a pose would leave the box.
-- **Props.** The signature prop the generator drops, built from `cylinder`, `cup`, `sphere` and `box` on a bone, in world px and the figure's axes (x its left, y up, z forward). Swaps: two props per `slot`, the first empty; their roles are their own and `free` (off the silhouette); `slots` maps each to a `vary` index.
-- **Face.** `face: { r, iris, mouth? }`; `eye: "tall"` draws tall black eyes with a shine and a blush instead of cartoon eyes. The eyes are found once, on the rest pose facing right (the `glint` role's two biggest parts, or `anchor`: the near eye set from another part, the nose or the puffball's painted smile, when the model's are too small to trace), then ride the head bone (`bone`, default `head`) through every frame: the far eye is the near one's mirror across the head, an eye turned away or behind something nearer isn't drawn, and the head's tilt turns brows, crosses and mouth. `spread` sets them further apart (or closer) than the model's own; `covers` draws the model's own eye roles as the skin under them, inside the head only, so a traced white doesn't show round the drawn one. A rig with no head bone keeps the per-frame anchor, turned with a rolled pose. `tests/sprite-cast.test.ts` holds every eye of every frame on its head and on the figure.
-- **Variety** (docs/CHARACTERS.md → Rules for every kind → Variety). Three layers per kind, each rolled from the look seed:
-  - **Palette alts:** 2–3 colourways on one secondary region: `alts` on its role, and on every role that changes with it (a shoe and its sole), as many on each. They take `vary` 6 unless a role says otherwise; an accessory's colour takes its slot's roll instead. Never the costume, skin, eyes or face.
-  - **Idles and cheers:** `idle2` and `cheer2`, two to four frames each (the frame budget is tight), keyed from the pose sheet or cut from another stretch of an animation (`pnpm sprites study`). Keep hands off the face: arms folded low read, arms folded high cover the face. Plus `gait`: the extra bounce on each step (world px) and the forward lean (a skew), each a `[low, high]` range under `GAIT_MAX` in `play.ts`.
-  - **Wear:** a slot named `wear` on `vary` 11 with three props: an empty one (clean), scuffed and scorched. Each mark is a flattened `sphere` part with its own `bone` and a `face` direction: the tracer casts from `at` (inside the limb) out along `face` to the skin and lays the mark flat on it, half sunk, so what shows is a small cap the body's own shape. `size` is width, height and thickness; `rot`'s third angle spins it; long thin marks (about 1 × 0.35 px) read as scuffs and streaks, round ones as patches. Each mark's role is `free`, `on` the role it sits on, with a `tone` (a faded patch +14, a scuff +20, soot −22 to −26), so it follows that surface's colourway. Three to five marks an option, on the body, limbs and shoes, never the head. Check with `pnpm sprites keys KIND --keys … --pick 0,0,0,0,2`.
-- **Clips.** idle (fps), walk and run (`stride`, world px per loop), air (`vy` from the jump's keys, or `ball: true` with a `ball`), wall (keys), cheer (fps), death (`center`). Sources: a model animation (`src`, `from`, `to`) or `keys`.
-- **Keys.** From the pose sheet: a base (`idle@0.05`), then bones, `yaw` to cheat the pose toward the camera, `scale` to stretch a bone (keep it small: the owner wants poses, not rubber), `roll` to spin the figure. See [Keys](#keys) below.
-- **Weights.** `rebind` moves skin weight from a bone the skin is far from (a strapped prop painted to a finger) to the one it should follow.
+## 6. Check
 
-Set keys with `pnpm sprites keys KIND --keys a,b --zoom 6`; check the whole kind with `pnpm sprites KIND --zoom 6`.
-
-## Keys
-
-Keys work in the figure's own space (`page/keys.ts`): x to its left, y up, z forward. They never use a bone's local axes, because Tripo rolls every bone its own way (a right upper arm's local z points down, the left's up). Bones are named `_near` / `_far` for the camera's side and the other, authored facing right (near is the figure's right). Facing left is the mirror image. A bone named for its side outright (`hand_l`) is that side's on both facings. Each bone takes one of two forms:
-
-- **An aim** for a limb, `{ "raise": 150, "out": 90, "twist": 0 }`: where the bone points, from its joint to the next. `raise` is degrees up from straight down (90 is level, 180 overhead). `out` is the plane, degrees round from straight ahead toward the limb's own side (0 in front, 90 out to its side, 180 behind, negative across the body). `twist` turns it about its own length, front outward. An aim sets the bone's whole turn, roll included, from the rig's rest pose. Whatever the base pose holds and whatever the spine and clavicle do, it lands in the same place, and `_near` and `_far` mean the same. Aim the upper arm and the forearm; a hand has no length to aim.
-- **A turn**, `[x, y, z]` degrees about the figure's axes through the joint, on top of the base pose. A negative x swings a hanging limb forward (the knee up, the forearm folded), a positive x swings it back, and a positive x tips the spine forward. Turns add down the chain: a turn on the clavicle carries the arm, and the arm's own turn adds to it. A clavicle −55 plus an arm −165 swings the arm 220°, over the top and behind the head. Facing left negates y and z, so use turns for the spine, head and legs.
-
-**Clearing the head.** On a chibi rig the caricatured head sits on the shoulders and is wider than them. The plumber's head runs from shoulder height to twice the arm's reach above it. An arm raised in front (`out` 0) goes into the head's volume and disappears. A fist must go out to the side (`out` about 90) to clear it. In the side-on camera the near arm's side is screen-back and the far arm's is screen-forward, so a raised near fist shows beside the back of the head. A raised far fist shows in front of the face only when it clears the head on screen, with a `yaw` cheat. Lean the spine and head away from the raised arm (`[-12, 0, -8]` and `[0, 0, -10]` for a near arm). Every humanoid rig is checked when it renders: on both facings, an arm aimed 150° up and out must end with the hand above the head's joint and out on its own side (`checkArms`, tested in `tests/art3d-keys.test.ts`).
-
-**A rig whose sides differ.** The plumber's left hand joint sits mid-forearm, so his left fist reaches less. A key's `l` names another key to pose facing left, so the long arm can raise the fist on both facings. Worked example, the plumber's jump (legs left out):
-
-```json
-"launch": {
-  "from": "idle@0.05", "yaw": 20,
-  "bones": {
-    "spine_01": [-12, 0, -8], "head": [0, 0, -10],
-    "upperarm_near": { "raise": 135, "out": 95 },
-    "lowerarm_near": { "raise": 165, "out": 80, "twist": -60 },
-    "upperarm_far": [25, 0, 0]
-  },
-  "l": "launch_l"
-},
-"launch_l": {
-  "from": "idle@0.05", "yaw": 30,
-  "bones": {
-    "spine_01": [-12, 0, 8], "head": [0, 0, 10],
-    "upperarm_far": { "raise": 135, "out": 95 },
-    "lowerarm_far": { "raise": 165, "out": 80 },
-    "upperarm_near": [25, 0, 0]
-  }
-}
-```
-
-The upper arm points 135° up and out, and the forearm 165°, so the fist stands above the shoulder. Facing right, that's the near arm, beside the back of the cap. Facing left, `launch_l` raises the same right arm as the far one, in front of the brim. The old key reached for the same pose with a clavicle −55 and an arm −165 about z, plus a 1.35× stretch, and its fist ended inside the head.
-
-## Non-humanoid kinds (keyed)
-
-- **Rigged** (`--type other`): Tripo names the bones its own way; `pnpm sprites inspect` lists them. Key poses with those names. `_near` / `_far` resolve to names ending `_l` / `_r`, and `near_` / `far_` to names starting `R_` / `L_` (Tripo's biped `--type other` rig: `near_Thigh`); a rig with neither names its limbs outright, with a key's `l` naming the key to pose facing left if it's asymmetric. Presets for other rigs are few (`walk` for quadrupeds) and prompt motions aren't available, so every clip but walk is keyed. Key every clip from `rest` when props ride the head or hips: the presets and the bind pose disagree on where the auto-rig's stray weights put things.
-- **Generated** (the puffball): a body simple enough to build from primitives is built in `page/<kind>.ts` with its own bones, flat key colours for its roles and its face painted where the anchor needs it, registered in `GENERATED` (`page/load.ts`), and named `"model": "gen:<kind>"` in `sprite.json`. No credits, no binary, and the rig has exactly the bones the keys turn. Every clip is keyed from `rest`.
-- **Limbless** (the dot-eater, the jelly): no model or rig at all. Generate the frames as `page/ball.ts` does the spin ball: a shape in the roster's colours, its motion (a chomp, a bob) as frames, marks for speed. One generator per kind in `page/` (`page/chomper.ts` is the worked example), registered in `GENERATORS` in `page/shapes.ts`; `sprite.json` names it in `shape` (`{ "by": "chomper", "r": 9.6 }`) in place of `model`, and its clips carry only frames and timing, since the generator draws each clip by name. Its roles need no `swatches`, and a slot's options are counted from the parts it tags.
-
-## Done
-
-[CHECKLIST.md](CHECKLIST.md) has the run sheet and the done list. In short: the nod reads in colour at play scale, the twist on the lobby cards; the variety sheet's twelve looks are one character by one hand; fresh readers name it from the blind silhouette sheet; `tests/sprite-cast.test.ts` passes (it loads every kind registered in `LOADERS` and holds each to the variety layers); the cached draw cost is a few hundredths of a ms per runner; `pnpm check` and `pnpm build` pass.
+`tests/sprite-cast.test.ts` loads every kind in `LOADERS`: each clip in both facings, inside the shared box pen and all (every slot option, the boldest gait), at least 18 px tall, every eye on its head and figure at the kit's size, the variety layers present and spread over the seeds, no wear on the face. Then look, at play scale and 3×, on a light theme and a dark one, beside the cast (`pnpm shot variety`), and the run cycle and lobby (`pnpm shot sprites`). The blind read is in the checklist.
 
 ## How it draws
 
-- **Camera.** Orthographic, side on, the figure turned `yaw` degrees toward the camera and looked down on by `pitch`. Both facings are rendered. Every clip runs in place (the hips over the feet); `pin: "hips"` holds them at rest height for the air; `face` turns back a motion that spins the body; `center` centres a figure lying down; a grounded frame's soles sit just above the floor, where the pen lands.
-- **Roles.** Each texel goes to its nearest swatch's role (Lab), cleaned by a majority filter; regions split a role by place in the bind pose.
-- **Parts.** One pass writes role and depth at `trace.res` px per world px; `trace.ts` cuts parts (one role, no depth step over `step`), folds those under `min` into a neighbour, traces each grown by a pixel, simplifies, rounds and resamples it evenly from a fixed start. A part that only moved since the frame before keeps its line (`steady`), so lines move only with the pen's boil. Accessories render in passes of their own and are tagged with their slot and option.
-- **Drawing** (`src/render/cast/sprites/`): `draw.ts` inks a frame (silhouette mass and strokes, parts `toned`, one hard shadow shape, marks, the face from `face.ts`); `index.ts` dresses it for a character (the costume's colour, the palette, the rolled swaps and wear, the gait's lift and lean) and keeps each drawn frame as a bitmap per character, boil step, mood and scale bucket; `play.ts` picks the clip and frame from the pose, and each character's variety (`varietyOf`) from its rolls.
+- **Tracing** (`flat/build.ts`): each drawing's role map, at 12 px per world px, is cut into parts and traced by `page/trace.ts` with no depth steps (a drawing is flat); interior lines are thinned to their centres and walked into strokes. The frame's feet sit on the floor with the pen just under it; facing left is the mirror.
+- **Drawing** (`src/render/cast/sprites/`): `draw.ts` draws a flat set's silhouette and parts filled flat under a light pen (`flat`), the interior lines in each role's pen, one hard shadow shape and the face from `face.ts`; `index.ts` dresses it for a character (the costume's colour, the palette, the rolled accessories and wear, the gait's lift and lean) and keeps each drawn frame as a bitmap; `play.ts` picks the clip and frame from the pose.
+- **Light**: every rendered figure marks its shape in the light map's alpha (`Renderer.markFigures`), and the cel pass lights it evenly, with no light band across it (`figAmbient` in `cel-shader.ts`).
 
 ## Files
 
-| File                                | What it holds                                                                         |
-| ----------------------------------- | ------------------------------------------------------------------------------------- |
-| `sprites.ts`                        | The command: serves the page, drives it, writes the frame table and the sheets        |
-| `settings.ts`                       | `Settings`, shared by the command and the page                                        |
-| `style.ts`                          | The concept, pose-sheet and model-sheet prompts, and each kind's brief                |
-| `CHECKLIST.md`                      | One kind's run sheet and done list                                                    |
-| `page/render.ts`                    | Loading, caricature, props and swaps, keyed poses, the camera and the role/depth pass |
-| `page/keys.ts`                      | Keys: turns and aims in the figure's space, facings, the humanoid arm check           |
-| `page/trace.ts`                     | Parts, folding, tracing, resampling, steadying, the rest pose's eyes                  |
-| `page/ball.ts`                      | The generated spin ball (the model for limbless kinds)                                |
-| `page/shapes.ts`, `page/chomper.ts` | Limbless kinds: the generator registry, and the dot-eater's generator                 |
-| `page/roles.ts`, `page/weights.ts`  | Texture to roles; weight fixes                                                        |
-| `page/inspect.ts`, `page/sheet.ts`  | The turnaround; the contact, keys and rolls sheets (drawn by the game's drawer)       |
+| File              | What it holds                                                                                                |
+| ----------------- | ------------------------------------------------------------------------------------------------------------ |
+| `flat/kinds.ts`   | `FLAT_KINDS`: each kind's map, roles, face, variety, clips and pose prompts; `posePrompt`                    |
+| `flat/build.ts`   | The build: role maps, tracing, the face, wear and accessories, `frames.ts`; `pose KIND NAME` prints a prompt |
+| `flat/rolemap.py` | A drawing to a role map at the tracer's resolution, with its interior lines                                  |
+| `flat/swatch.py`  | A design's colours, for `map.families`                                                                       |
+| `style.ts`        | `DESIGN` and `WORN`, and each kind's brief (`design`, `worn`; the rest is the 3D route's)                    |
+| `page/trace.ts`   | Parts, folding, tracing, resampling (shared with the 3D route)                                               |
+| `CHECKLIST.md`    | One kind's run sheet and done list                                                                           |
+| `3D.md`           | The retired 3D route                                                                                         |

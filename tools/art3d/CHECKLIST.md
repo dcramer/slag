@@ -4,35 +4,29 @@ For a production agent taking one Roster entry (docs/CHARACTERS.md → Roster) t
 
 ## Run sheet
 
-- [ ] **Worktree.** `pnpm install`. Read AGENTS.md, src/render/AGENTS.md, docs/ART.md → World art, your Roster entry and its "Rules for every kind", and `art/sprites/plumber/` as the worked example.
-- [ ] **Tripo.** `node tools/tripo/tripo.ts balance` from terra. Note the balance; it goes in your report.
-- [ ] **Brief.** `BRIEFS[kind]` in `style.ts` from the entry: `character` (traits, palette hex, the twist, the signature prop), `views`, `pose` (what must stay clear of the arms), `poses` (the gait's poses: idle, run, the jump with its anticipation and its peak, fall, wall slide, cheer, death). Its comment lists the nod with why each one stays, and the twist. Never a real name.
-- [ ] **Concept** (free) → `art/sprites/<kind>/concept.png` and `concept.prompt.txt`.
-- [ ] **Twist pass.** Not the original redrawn; every nod trait present; the joke visible. Redraw until both hold.
-- [ ] **Pose sheet** (free) → `poses.png`, `pose.prompt.txt`.
-- [ ] **Model sheet** (free) → `tpose.png`, `model.prompt.txt`. Proportions pushed (head about half, big hands and feet), flat colour, no ink.
-- [ ] **Model** (40) → `pnpm sprites inspect`: profile, proportions, the nod as shapes. Redo the sheet, not the renderer, if the figure is wrong.
-- [ ] **Rig** (20) and **presets** (0); prompt motions only when keying can't do it. **Export** → `model.glb`.
-- [ ] **sprite.json:** roles and palette, the nod drawn bigger (regions, grow, scale, girth), the signature prop, swaps from the entry (2–4, each `slot` empty or the item, a `vary` index each), the face, the clips, the keys from the pose sheet, weight fixes.
-- [ ] **Variety** (README → sprite.json → Variety): the entry's palette alts (2–3 colourways on one secondary region, every role of a colourway changing together), `idle2` and `cheer2`, the `gait` range, and the `wear` slot (clean, scuffed, scorched: three to five marks each, on the body, limbs and shoes).
-- [ ] **Register:** add the kind to `LOADERS` in `src/render/cast/sprites/index.ts`.
-- [ ] **Iterate** with `pnpm sprites keys` and `pnpm sprites <kind> --zoom 6` until every clip looks drawn by the cast's hand.
-- [ ] **Shoot:** `pnpm shot sprites --kind <kind>` and `pnpm shot variety --kinds <kind>`. Look at all of it: `shots/sprites-<kind>.png`, the cast lineup, the run cycle, the six-rolls lobby, `shots/sprites-<kind>-variety.png`, `shots/art3d/<kind>-{frames,rolls,silhouettes}.png`.
+- [ ] **Worktree.** `pnpm install`. Read AGENTS.md, src/render/AGENTS.md, docs/ART.md → World art, your Roster entry and its "Rules for every kind", docs/CHARACTERS.md → Decisions 9, and the plumber's and zapmouse's entries in `tools/art3d/flat/kinds.ts` as worked examples.
+- [ ] **Brief.** `BRIEFS[kind].design` in `style.ts` from the entry: the nod and the twist as big shapes, the palette hex, the signature prop first; `worn`: two to four big worn changes, off the face. Its comment lists the nod with why each stays, and the twist. Never a real name.
+- [ ] **Design** (free, four) → pick one. **Twist pass:** if it reads as the original redrawn, redo it from the kind's concept as the reference, or push the twist in the wear edit.
+- [ ] **Wear edit** (free, three) → `art/sprites/<kind>/design.png`, and the prompt in your report.
+- [ ] **Entry.** `FLAT_KINDS[kind]` in `kinds.ts`: `poses` (the eleven in the README), then `map.families` from `swatch.py`, `roles` and the costume slot, `face`, `eyes`, `wear`, `accessories`, `gait`, `clips`. `build.ts body KIND HEIGHT` for `body`.
+- [ ] **Poses** (free, two each) → `art/sprites/<kind>/flat/`. Reject a lost prop, a new limb, a changed colour; whiten a drawn wall line out.
+- [ ] **Register:** the kind in `LOADERS` (`src/render/cast/sprites/index.ts`), if it isn't there.
+- [ ] **Build** and iterate: `pnpm exec tsx tools/art3d/flat/build.ts <kind>` until every pose has its eyes (`FLAT_DEBUG`) and its wear ("no room for" gone), and `pnpm vitest run tests/sprite-cast.test.ts` passes.
+- [ ] **Shoot:** `pnpm shot variety --kinds <kind>` on a light theme and `--theme mine`, and `pnpm shot sprites --kind <kind>`. Look at all of it: eight at play scale and 3×, the cast lineup, the run cycle, the six-rolls lobby, `sprites-<kind>-variety.png`.
 - [ ] **Blind read:** give `shots/sprites-blind.png` (copy it out of the repo first) to two fresh agents with the prompt below. Nothing else in their brief.
-- [ ] **Gate:** `git merge origin/main`, `pnpm check`, `pnpm build`. Commit to your branch; don't push.
+- [ ] **Gate:** `git merge origin/main`, `pnpm check`, `pnpm build`. Commit to your branch, the sources in `art/` included (Git LFS); don't push.
 
 ## Done when
 
-- [ ] At play scale, in colour, among the cast: a stranger would name the homage, and every nod trait in the entry is visible.
-- [ ] On the lobby cards, the twist and the swaps are visible, and six rolls look like six characters of one kind.
-- [ ] The variety sheet: twelve looks that all read as the same character by the same hand. Each colourway looks designed beside the others; the second idle and cheer read as that character's own; no hand covers the face; the wear reads as wear at 4× and as nothing louder than a mark at play scale.
+- [ ] At play scale, in colour, among the cast: a stranger would name the homage, every nod trait in the entry is visible, and it doesn't read as the original redrawn.
+- [ ] It reads drawn, not rendered: flat colours, the cast's pen, the cast's face, no speckled outline, no flecks, nothing dark under the face that reads as a mouth.
+- [ ] On the lobby cards, the twist and the accessory are visible, and six rolls look like six characters of one kind.
+- [ ] The variety sheet: twelve looks that read as one character by one hand. Each colourway looks designed beside the others and keeps the colour block; the second idle and cheer are that character's own; the wear reads as wear at 3× and as nothing louder than a mark at play scale.
 - [ ] Blind read: both fresh readers name the homage, at least one at medium confidence or better. Say the readers' exact words in your report.
-- [ ] No frame looks rendered: flat parts, the cast's pen, the cast's face, no stray slivers, lines that don't swim between frames.
-- [ ] Every clip: idle, walk, run, air, wall, cheer, death, both facings. The jump shows its peak pose; the wall slide has life.
-- [ ] `tests/sprite-cast.test.ts` passes: inside the shared box pen and all (every slot option, the boldest gait), at least 18 world px tall, rolls valid, the variety layers present and spread over the seeds, no wear mark on the face. A kind made before variety leaves `BEFORE_VARIETY` when it gets its layers.
+- [ ] Every clip: idle, walk, run, air, wall, cheer, death, both facings.
+- [ ] `tests/sprite-cast.test.ts` passes.
 - [ ] Draw cost from `shots/sprites-<kind>-bench.txt`: cached under 0.02 ms per runner.
-- [ ] Frame data under 500 KB with the variety (`pnpm sprites` prints it).
-- [ ] The report has the credits spent (balance before and after), the Tripo project id, the blind read, and the shot paths.
+- [ ] The report has the image count, the picks and why, the blind read, and the shot paths.
 
 ## The blind-read prompt
 

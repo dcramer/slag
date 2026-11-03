@@ -6,7 +6,7 @@ import { gaitAt, pick, roll, type Variety, varietyOf } from './play';
 import type { SpriteSet } from './types';
 
 /**
- * Kinds rendered from 3D models (tools/art3d, docs/CHARACTERS.md → Rendered kinds): a kind with frames is
+ * Kinds drawn from art (tools/art3d, docs/CHARACTERS.md → Rendered kinds): a kind with frames is
  * always drawn from them, and one without keeps its hand-drawn body. Each kind's frames are a chunk of
  * their own, fetched the first time a character of that kind is drawn, which draws hand-drawn for the
  * few frames until it arrives. `slagDebug.sprites.use(false)` draws the hand-drawn bodies instead, for
