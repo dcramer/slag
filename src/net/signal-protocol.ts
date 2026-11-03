@@ -1,4 +1,5 @@
 import { tidyName } from '../core/name';
+import { nameBlocked } from '../core/name-filter';
 import { MAX_PLAYERS } from '../sim/constants';
 
 /**
@@ -91,9 +92,9 @@ export function cleanListing(v: unknown): RoomListing | null {
     theme: l.theme,
     phase: l.phase as ListedPhase,
   };
-  // Text from a stranger, shown to strangers: a bad name loses the name, not the room.
+  // Text from a stranger, shown to strangers: a bad or blocked name loses the name, not the room.
   const host = tidyName(l.host);
-  if (host) out.host = host;
+  if (host && !nameBlocked(host)) out.host = host;
   return out;
 }
 

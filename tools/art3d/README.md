@@ -74,7 +74,7 @@ Set keys with `pnpm sprites keys KIND --keys a,b --zoom 6`; check the whole kind
 
 - **Rigged** (`--type other`): Tripo names the bones its own way; `pnpm sprites inspect` lists them. Key poses with those names. `_near` / `_far` resolve to names ending `_l` / `_r`; a rig without that suffix names its limbs outright, one key per facing if it's asymmetric. Presets for other rigs are few (`walk` for quadrupeds) and prompt motions aren't available, so every clip but walk is keyed.
 - **Generated** (the puffball): a body simple enough to build from primitives is built in `page/<kind>.ts` with its own bones, flat key colours for its roles and its face painted where the anchor needs it, registered in `GENERATED` (`page/load.ts`), and named `"model": "gen:<kind>"` in `sprite.json`. No credits, no binary, and the rig has exactly the bones the keys turn. Every clip is keyed from `rest`.
-- **Limbless** (the dot-eater, the jelly): no model or rig at all. Generate the frames as `page/ball.ts` does the spin ball: a shape in the roster's colours, its motion (a chomp, a bob) as frames, marks for speed. One generator per kind in `page/`, `"ball"`-style clips in `sprite.json`.
+- **Limbless** (the dot-eater, the jelly): no model or rig at all. Generate the frames as `page/ball.ts` does the spin ball: a shape in the roster's colours, its motion (a chomp, a bob) as frames, marks for speed. One generator per kind in `page/` (`page/chomper.ts` is the worked example), registered in `GENERATORS` in `page/shapes.ts`; `sprite.json` names it in `shape` (`{ "by": "chomper", "r": 9.6 }`) in place of `model`, and its clips carry only frames and timing, since the generator draws each clip by name. Its roles need no `swatches`, and a slot's options are counted from the parts it tags.
 
 ## Done
 
@@ -89,14 +89,15 @@ Set keys with `pnpm sprites keys KIND --keys a,b --zoom 6`; check the whole kind
 
 ## Files
 
-| File                               | What it holds                                                                         |
-| ---------------------------------- | ------------------------------------------------------------------------------------- |
-| `sprites.ts`                       | The command: serves the page, drives it, writes the frame table and the sheets        |
-| `settings.ts`                      | `Settings`, shared by the command and the page                                        |
-| `style.ts`                         | The concept, pose-sheet and model-sheet prompts, and each kind's brief                |
-| `CHECKLIST.md`                     | One kind's run sheet and done list                                                    |
-| `page/render.ts`                   | Loading, caricature, props and swaps, keyed poses, the camera and the role/depth pass |
-| `page/trace.ts`                    | Parts, folding, tracing, resampling, steadying, the eyes                              |
-| `page/ball.ts`                     | The generated spin ball (the model for limbless kinds)                                |
-| `page/roles.ts`, `page/weights.ts` | Texture to roles; weight fixes                                                        |
-| `page/inspect.ts`, `page/sheet.ts` | The turnaround; the contact, keys and rolls sheets (drawn by the game's drawer)       |
+| File                                | What it holds                                                                         |
+| ----------------------------------- | ------------------------------------------------------------------------------------- |
+| `sprites.ts`                        | The command: serves the page, drives it, writes the frame table and the sheets        |
+| `settings.ts`                       | `Settings`, shared by the command and the page                                        |
+| `style.ts`                          | The concept, pose-sheet and model-sheet prompts, and each kind's brief                |
+| `CHECKLIST.md`                      | One kind's run sheet and done list                                                    |
+| `page/render.ts`                    | Loading, caricature, props and swaps, keyed poses, the camera and the role/depth pass |
+| `page/trace.ts`                     | Parts, folding, tracing, resampling, steadying, the eyes                              |
+| `page/ball.ts`                      | The generated spin ball (the model for limbless kinds)                                |
+| `page/shapes.ts`, `page/chomper.ts` | Limbless kinds: the generator registry, and the dot-eater's generator                 |
+| `page/roles.ts`, `page/weights.ts`  | Texture to roles; weight fixes                                                        |
+| `page/inspect.ts`, `page/sheet.ts`  | The turnaround; the contact, keys and rolls sheets (drawn by the game's drawer)       |

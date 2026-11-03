@@ -4,6 +4,7 @@ import { ballFrames } from './ball';
 import { loadModel } from './load';
 import { classify } from './roles';
 import { steady, trace, type Traced } from './trace';
+import { shaped } from './shapes';
 import { rebind } from './weights';
 
 /**
@@ -90,6 +91,7 @@ const rad = (d: number) => (d * Math.PI) / 180;
 const FLOOR = 0.6;
 
 export async function renderSprites(url: string, s: Settings, only?: string[]) {
+  if (s.shape) return shaped(s, only);
   const model = await loadModel(url);
   const names = Object.keys(s.roles);
   if (!model.texture) throw new Error('the model has no colour texture to read roles from');
