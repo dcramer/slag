@@ -6,7 +6,9 @@ from collections import deque
 from PIL import Image, ImageFilter
 
 SRC, OUT, DEBUG = sys.argv[1], sys.argv[2], sys.argv[3]
-HEIGHT = float(sys.argv[4]) if len(sys.argv) > 4 else 21.0  # world px, soles to ear tips
+# The scale: `h21` sets the figure 21 world px from soles to ear tips (the design at rest), `a210` sets
+# its body (every role but the tail) to 210 world px square, so every pose of a kind comes out the same size.
+SIZE = sys.argv[4] if len(sys.argv) > 4 else 'h21'
 R = int(sys.argv[6]) if len(sys.argv) > 6 else 12  # px per world px the map is traced at
 BOX = dict(x0=-20, x1=20, y0=-3, y1=33)
 
@@ -113,11 +115,17 @@ while q:
 
 # The figure's box, feet at the origin, x centred on the body over the feet (not the tail).
 ys = [i // w for i in range(w * h) if role[i] >= 0]
-top, bottom = min(ys), max(ys)
+top = min(ys)
+# The soles: the lowest fur, so a tail or a cord hanging lower doesn't lift the figure off its feet.
+bottom = max(i // w for i in range(w * h) if role[i] == ROLES.index('fur'))
 F = ROLES.index('fur')
 low = [i % w for i in range(w * h) if role[i] == F and i // w > bottom - (bottom - top) * 0.25]
 cx = (min(low) + max(low)) / 2
-k = HEIGHT / (bottom - top + 1)  # world px per image px
+T = ROLES.index('tin')
+body = sum(1 for r in role if r >= 0 and r != T)
+# World px per image px.
+k = float(SIZE[1:]) / (bottom - top + 1) if SIZE[0] == 'h' else (float(SIZE[1:]) / body) ** 0.5
+print('body', round(body * k * k, 1), 'height', round((bottom - top + 1) * k, 2))
 
 W, H = (BOX['x1'] - BOX['x0']) * R, (BOX['y1'] - BOX['y0']) * R
 out = [-1] * (W * H)
@@ -234,7 +242,7 @@ if xs:
         out_lines.append({'role': r, 'pts': [round(v, 3) for p in rdp(pts, 0.12) for v in p]})
     lines = out_lines
 print('lines', len(lines))
-json.dump({'W': W, 'H': H, 'R': R, 'roles': ROLES, 'role': out, 'height': HEIGHT, 'lines': lines}, open(OUT, 'w'))
+json.dump({'W': W, 'H': H, 'R': R, 'roles': ROLES, 'role': out, 'height': round((bottom - top + 1) * k, 2), 'lines': lines}, open(OUT, 'w'))
 
 PAL = {-1: (240, 236, 228), 0: (240, 196, 40), 1: (30, 20, 16), 2: (216, 76, 54), 3: (170, 186, 188), 4: (236, 230, 218)}
 dbg = Image.new('RGB', (W, H))

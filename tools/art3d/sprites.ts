@@ -20,6 +20,7 @@ import { createServer } from 'vite';
 import type { SpriteSet } from '../../src/render/cast/sprites/types';
 import { argReader, launchBrowser } from '../lib/server';
 import type { Settings } from './settings';
+import { FLAT_KINDS } from './flat/kinds';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const argv = process.argv.slice(2);
@@ -110,7 +111,15 @@ try {
     );
     console.log(out);
   } else {
-    const kinds = words.length ? words : readdirSync(join(root, 'art/sprites')).filter((k) => existsSync(join(root, 'art/sprites', k, 'sprite.json')));
+    // A flat kind is traced from its drawings (tools/art3d/flat): its 3D settings are history, kept for the record.
+    for (const k of words)
+      if (FLAT_KINDS[k])
+        throw new Error(
+          `${k} is a flat kind, drawn from art/sprites/${k}/flat/: build it with \`pnpm exec tsx tools/art3d/flat/build.ts ${k}\`, not from its old 3D model.`,
+        );
+    const kinds = words.length
+      ? words
+      : readdirSync(join(root, 'art/sprites')).filter((k) => existsSync(join(root, 'art/sprites', k, 'sprite.json')) && !FLAT_KINDS[k]);
     for (const kind of kinds) {
       const t0 = Date.now();
       const set = await render(kind, settingsOf(kind));

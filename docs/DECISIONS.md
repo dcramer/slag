@@ -214,6 +214,8 @@ Every game design decision, preference and direction the owner has given, groupe
   Changed: the cast was clean, light and calm in colour.
 - **The grunge is worn shape: battered, lopsided, bent and taped, with clean bright colours; not grimy colour, not a rough line.** (picked from the zapmouse style test: "Worn, like worn-2")
   2026-11-02 · `in progress` · CHARACTERS.md → Decisions 9, `tools/art3d/style.ts`
+- **The zapmouse is drawn from its flat design and pose drawings, not its 3D model; rendered figures take no light bands.** "Yes, build it out" (after the flat zapmouse test in game, cel bands off characters)
+  2026-11-03 · `done` · CHARACTERS.md → Rendered kinds → Flat kinds, `tools/art3d/flat/`; replaces the zapmouse's 3D-traced frames
 - **Set-piece machines that look solid are made solid: guns on ledges, wheel and swing hubs, ladles, carts, signs, posts.** "Make them solid" (asked: make them solid, or draw them as not-ground)
   2026-11-02 · `open` · TODO.md → 21, `pnpm shot fairplay` (`PENDING`)
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"

@@ -39,6 +39,14 @@ Each field of an entry has one place it goes:
 | Rig                         | `rig --type humanoid` or `--type other`; **keyed** means the poses are keyed here                                                                                                      |
 | Concept prompt              | `BRIEFS[kind]`; `style.ts` adds the house style                                                                                                                                        |
 
+## Flat kinds (free)
+
+A kind drawn from its design and pose drawings instead of a model (docs/CHARACTERS.md → Rendered kinds → Flat kinds; the zapmouse). After step 0 below:
+
+1. **Poses:** for each pose in `FLAT_KINDS[kind].poses` (`tools/art3d/flat/kinds.ts`), `node $tripo image "$(pnpm -s exec tsx <slag>/tools/art3d/flat/build.ts pose KIND NAME)" --ref art/sprites/KIND/design.png --aspect 1:1 --count 2`, and keep the best as `art/sprites/KIND/flat/NAME.png`. Check each keeps the design's wear and size; a pose far from the design's stance needs `far`, or the model draws the design's stance again.
+2. **Frames:** `pnpm exec tsx tools/art3d/flat/build.ts KIND` (needs python3 with Pillow). It writes `frames.ts` and the role maps in `.cache/flat/KIND/` (`*.png` beside each, to check a pose's roles). `pnpm sprites` refuses a flat kind.
+3. **Check:** `pnpm vitest run tests/sprite-cast.test.ts`, `pnpm shot variety --kinds KIND`, `pnpm shot sprites --kind KIND`.
+
 ## Sheets (free)
 
 From terra (`cd /home/dcramer/src/terra`; the Tripo CLI reads that repo's `.env`). `tripo=tools/tripo/tripo.ts`.
