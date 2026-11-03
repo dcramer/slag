@@ -1,12 +1,12 @@
 import { shift } from '../../../src/core/color';
 import { type Kind, generateCharacter } from '../../../src/gen/character';
 import { drawFrame, hexHsl, paintOf } from '../../../src/render/cast/sprites/draw';
-import { picks } from '../../../src/render/cast/sprites/play';
+import { picks, roll } from '../../../src/render/cast/sprites/play';
 import type { FaceMood } from '../../../src/render/cast/sprites/face';
 import type { SpriteSet } from '../../../src/render/cast/sprites/types';
 
 const MOODS: Record<string, FaceMood> = { idle: 'idle', walk: 'walk', run: 'run', air: 'up', wall: 'wall', cheer: 'cheer', death: 'dead' };
-import { ratio } from '../../../src/render/ink-figure';
+import { inkOf, ratio } from '../../../src/render/ink-figure';
 
 /**
  * A contact sheet of a kind's frames, drawn by the game's own drawer (`src/render/cast/sprites/draw.ts`)
@@ -73,12 +73,14 @@ export function contact(set: SpriteSet, zoom: number, opts: { facings?: ('r' | '
 }
 
 /**
- * Six rolls of a kind: its standing frame as six characters of that kind wear it (their accessories,
- * from their own \`vary\` rolls), and one with every accessory on, at \`zoom\` px per world px.
+ * Six rolls of a kind: its standing frame as six characters of that kind wear it (the player's colour on
+ * the costume, a secondary region's alternate colour and their accessories, all from their own rolls, as
+ * the game dresses them), and the roster's colours with every accessory on, at `zoom` px per world px.
  */
 export function rolls(set: SpriteSet, zoom: number): string {
   const idle = set.clips.idle ?? Object.values(set.clips)[0];
-  const looks = [1, 2, 3, 4, 5, 6].map((seed) => picks(set, generateCharacter(seed, set.kind as Kind).vary));
+  const chars = [1, 2, 3, 4, 5, 6].map((seed) => generateCharacter(seed, set.kind as Kind));
+  const looks = chars.map((ch) => picks(set, ch.vary));
   looks.push((set.slots ?? []).map((sl) => sl.options - 1));
   const cell = 30 * zoom;
   const c = document.createElement('canvas');
@@ -87,15 +89,24 @@ export function rolls(set: SpriteSet, zoom: number): string {
   const g = c.getContext('2d')!;
   g.fillStyle = '#efe6d2';
   g.fillRect(0, 0, c.width, c.height);
-  const hsl = set.roles.map((r) => hexHsl(r.color));
-  const paints = set.roles.map((_, i) => paintOf(hsl[i]));
-  const main = hsl[set.roles.findIndex((r) => r.slot === 'paint')] ?? hsl[0];
   looks.forEach((pick, i) => {
+    const ch = chars[i];
+    const hsl = set.roles.map((r) =>
+      ch === undefined
+        ? hexHsl(r.color)
+        : r.slot === 'player'
+          ? ch.body
+          : r.slot === 'paint'
+            ? ch.paint
+            : hexHsl(r.alts ? [r.color, ...r.alts][roll(ch.vary[r.vary ?? 0], r.alts.length + 1)] : r.color),
+    );
+    const paints = set.roles.map((_, k) => paintOf(hsl[k]));
+    const main = hsl[[set.roles.findIndex((r) => r.slot === 'player'), set.roles.findIndex((r) => r.slot === 'paint')].find((k) => k >= 0) ?? 0];
     g.save();
     g.translate(10 + cell * (i + 0.5), 31 * zoom);
     g.scale(zoom, zoom);
     const face = set.face ? { kit: set.face, mood: 'idle' as const, facing: 1 } : undefined;
-    drawFrame(g, idle.r[0], paints, paintOf(main), ratio(main, shift(main, -14, 6)), 0.6, 7, 0, face, pick);
+    drawFrame(g, idle.r[0], paints, { ...paintOf(main), ink: inkOf(main) }, ratio(main, shift(main, -14, 6)), 0.6, 7, 0, face, pick);
     g.restore();
     g.fillStyle = '#3d2e26';
     g.font = '600 14px sans-serif';

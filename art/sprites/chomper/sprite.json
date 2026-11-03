@@ -14,9 +14,9 @@
     "smooth": 2
   },
   "roles": {
-    "body": { "color": "#f6d02a", "swatches": [], "slot": "paint" },
-    "bitten": { "color": "#e8b81c", "swatches": [] },
-    "scratch": { "color": "#b8901a", "swatches": [], "free": true },
+    "body": { "color": "#f6d02a", "swatches": [], "slot": "player" },
+    "bitten": { "color": "#e8b81c", "swatches": [], "slot": "player" },
+    "scratch": { "color": "#b8901a", "swatches": [], "slot": "player", "free": true },
     "napkin": { "color": "#fbf6ee", "swatches": [] },
     "check": { "color": "#c9473f", "swatches": [], "alts": ["#3f62b4", "#3f8a3a"], "vary": 3 },
     "crumb": { "color": "#d9a85a", "swatches": [], "free": true },

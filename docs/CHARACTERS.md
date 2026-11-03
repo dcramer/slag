@@ -1,6 +1,6 @@
 # Characters: homages and animals
 
-The runners are a cast of fourteen: ten homages to famous game characters in our own designs, and four plain animals for contrast. In the lore (DESIGN.md) they're the characters who never made the cut, from stray animals to knock-off heroes who almost got their own game. Each kind is a character design of its own, the way the barnyard party game's animals are: its own outline, its signature props, and a way of moving.
+The runners are a cast of fifteen: eleven homages to famous game characters in our own designs, and four plain animals for contrast. In the lore (DESIGN.md) they're the characters who never made the cut, from stray animals to knock-off heroes who almost got their own game. Each kind is a character design of its own, the way the barnyard party game's animals are: its own outline, its signature props, and a way of moving.
 
 `pnpm shot cast` shoots the sheet: the 8-player lineup at play scale on farm and mine, the race start, deaths, a 3× close-up, the lobby cards, the "is it the homage?" sheet (`cast-recognise.png`), the silhouette test (`cast-silhouettes.png`) and the catalog of every kind (`--only catalog` for the last three). In the console, `slagDebug.cast` has `catalog()`, `silhouettes()`, `recognise()` and `bench()`.
 
@@ -13,7 +13,7 @@ From the owner (logged in [DECISIONS.md](DECISIONS.md) → Characters):
 3. **Homages, never copies.** Each is our own design, read from its silhouette and one or two signature props, never the original's exact design or its real name. Sound-alike names are data (`KIND_NAMES` in `src/gen/character.ts`) and appear nowhere else. Player characters may have faces and personas; parts and machines stay faceless (DESIGN.md → Parody).
 4. **The iconic palette wins, and the player's color moves.** A homage keeps the colors it's known by (the plumber's red cap and blue overalls, the speedster's cobalt, the mouse's yellow). The player's color goes on a secondary but always-visible slot: a flat ring at its feet, no glow. A plain animal, or a homage that comes in every color anyway (the impostor crewmate, the puffball), is drawn in the player's color. Either way it's that player's HUD color, and with eight different kinds per lobby plus the ring, eight players stay told apart.
 5. **Random roll only.** New Look rolls everything, the kind included. A lobby never seats two of the same kind (`Match.looksFree`).
-6. **Saved looks re-roll once** whenever the cast changes what a seed means: `LOOK_CAST` in `src/ui/profile.ts` (now 6).
+6. **Saved looks re-roll once** whenever the cast changes what a seed means: `LOOK_CAST` in `src/ui/profile.ts` (now 7).
 7. **Clean, light, hand-drawn.** A thin pen that varies along the line, in a dark of the body's own color; two or three flat tones per surface; one soft, hard-edged shadow shape; calm color; no glow.
 8. **The roster is the twenty greatest characters to parody**, each with a clear twist of its own, because the homages had looked too much like the originals (Roster).
 
@@ -42,6 +42,7 @@ So each kind has: a clear head-to-body ratio, a readable expression, a line of a
 | jelly | the jellyfish parasite | a translucent green dome, three red nuclei inside, four ivory fangs, a hovering bob | ring |
 | goose | the goose up to no good | white, orange beak and feet, an S of a neck; on the run the honk pose, neck flat out and wings up | ring |
 | engineer | the team shooter's engineer | yellow hard hat with dark goggles on it, a square jaw, a red or blue work shirt, khaki trousers, a leather glove, a huge wrench | ring |
+| chomper | the round dot-eater | a yellow circle with a wedge mouth that chomps, one small eye, a scalloped bite out of its back, a checked napkin tucked into its lower lip | ring (rendered: the whole ball) |
 | fox | — | long and low, snout out front, tall ears, bushy tail carried up | body |
 | frog | — | crouched flat, two eye bumps; crouches and leaps | body |
 | penguin | — | upright egg, pale front, flippers; waddles | body |
@@ -120,12 +121,12 @@ What came out of it:
 - **Silhouette:** a yellow circle with a wedge-shaped mouth cut into its front. The smallest kind, and the only one with no limbs.
 - **Traits:** pure yellow; a wedge mouth that opens and shuts; one small eye above the mouth.
 - **Palette:** body `#f6d02a` (shade `#cba214`); mouth interior `#2a1f1a`; eye `#14121a`; bite edge `#e8b81c`; napkin `#fbf6ee` with a check `#c9473f`.
-- **Color slot:** costume.
+- **Color slot:** costume: the whole ball, its bitten edge with it. The napkin keeps its own colours, its check rolled red, blue or green.
 - **Gait:** bounces along, chomping with every stride; spins once on the jump.
 - **The nod:** the circle with a wedge cut out (the most recognised shape in games, and it needs nothing else); pure yellow (half the read); the chomp (it is a mouth, not a pie chart, only when it moves).
 - **Our twist:** someone got to him first: a neat bite is missing from the back of his circle, the joke being that the eater got eaten. A checked napkin is tucked under the mouth like a bib.
-- **Swaps:** a crumb on the lip; a toothpick in the corner of the mouth; a paper party hat; a fork-tine scratch.
-- **Rig:** **keyed**, no limbs: the mouth open and shut, squash on landing, a spin. Low risk: two shapes.
+- **Swaps:** a crumb on the lip; a toothpick in the corner of the mouth; a fork-tine scratch. (A paper party hat would break the outline, so it isn't one.)
+- **Rig:** none: generated as shapes (`tools/art3d/page/chomper.ts`): the mouth open and shut, squash on landing, a spin, a wall bitten on the slide, and the fold-away death that leaves the napkin. Rendered (round 3).
 - **Concept prompt:** A perfect yellow ball with a wedge-shaped mouth cut into its front, wide open, and one small black eye above it; a neat round bite missing from the back of the circle; a red-and-white checked napkin tucked under the mouth like a bib. No arms, no legs.
 
 ### The yellow electric mouse
@@ -374,7 +375,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest: thei
 |---|---|---|---|---|
 | 1 | plumber | Plumbo | humanoid | done (round 2) |
 | 2 | hedgehog | Sanic | humanoid, spin keyed | done (round 2) |
-| 3 | chomper | Snack-Man | **keyed**, no limbs | low: two shapes and a chomp |
+| 3 | chomper | Snack-Man | generated, no limbs | done (round 3) |
 | 4 | zapmouse | Pikachew | **keyed**, quadruped | medium: the scamper |
 | 5 | elf | Lonk | humanoid | low |
 | 6 | puffball | Kurby | **keyed**, ball and feet | medium: the puff |
@@ -421,7 +422,7 @@ How a Roster entry becomes a kind drawn from 3D. The entry is the one source for
 - **Cost.** About 0.005 ms per runner drawn from the frame-bitmap cache (the hand-drawn cast takes about 0.08–0.1), and about 0.4 ms for a frame the first time it's drawn at a scale. Frame data is about 350–400 KB per kind, a chunk fetched only with the flag on.
 - **Checks:** `tests/sprite-cast.test.ts` (every clip, the shared hitbox box pen and all, at least 18 px tall, rolls), and `pnpm shot sprites --kind K` (the comparison sheets, the six-rolls lobby, the draw cost, and `sprites-blind.png`, every kind as a shuffled, unnamed play-scale silhouette for fresh readers).
 
-**Blind reads so far** (fresh readers, silhouettes only): the speedster is named every time, medium-high to high. The plumber went from low to split (one reader "the plumber, medium", one unsure) after his cap, nose and girth were pushed and his plunger carried lower; in colour he reads at once. With the cup above his head the cup and the cap merged into one shape, so the plunger is carried low for good (owner, 2026-11-02).
+**Blind reads so far** (fresh readers, silhouettes only): the speedster is named every time, medium-high to high. The plumber went from low to split (one reader "the plumber, medium", one unsure) after his cap, nose and girth were pushed and his plunger carried lower; in colour he reads at once. With the cup above his head the cup and the cap merged into one shape, so the plunger is carried low for good (owner, 2026-11-02). Both readers name the dot-eater at high confidence, from the circle with its wedge mouth and the speed lines of its run.
 
 ## What every kind keeps
 

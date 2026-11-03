@@ -5,9 +5,9 @@ export const sprites: SpriteSet = {
   kind: 'chomper',
   height: 19.8,
   roles: [
-    { color: '#f6d02a', slot: 'paint' },
-    { color: '#e8b81c' },
-    { color: '#b8901a' },
+    { color: '#f6d02a', slot: 'player' },
+    { color: '#e8b81c', slot: 'player' },
+    { color: '#b8901a', slot: 'player' },
     { color: '#fbf6ee' },
     { color: '#c9473f', alts: ['#3f62b4', '#3f8a3a'], vary: 3 },
     { color: '#d9a85a' },
