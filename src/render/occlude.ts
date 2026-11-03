@@ -1,5 +1,5 @@
 import { TILE } from '../sim/constants';
-import { type Level, T_ONEWAY } from '../sim/level';
+import { type Level, levelKey, T_ONEWAY } from '../sim/level';
 
 /** World px a light reaches into solid ground: a lit rim on the surface, then rock in its own tone. */
 const REACH = 20;
@@ -23,7 +23,7 @@ export class LightOccluder {
   private key = '';
 
   private ensure(level: Level, rgb: readonly [number, number, number]) {
-    const key = `${level.seed}:${level.w}x${level.h}:${level.version}:${rgb.join(',')}`;
+    const key = `${levelKey(level)}:${level.version}:${rgb.join(',')}`;
     if (key === this.key && this.canvas) return this.canvas;
     this.key = key;
     const tw = level.w + MARGIN * 2;

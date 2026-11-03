@@ -5,6 +5,7 @@ import { drawFrame, paintOf } from '../../../src/render/cast/sprites/draw';
 import type { FaceMood } from '../../../src/render/cast/sprites/face';
 import { VARIETY, varietyOf } from '../../../src/render/cast/sprites/play';
 import type { SpriteSet } from '../../../src/render/cast/sprites/types';
+import { inkOf } from '../../../src/render/ink-figure';
 
 const MOODS: Record<string, FaceMood> = { idle: 'idle', walk: 'walk', run: 'run', air: 'up', wall: 'wall', cheer: 'cheer', death: 'dead' };
 
@@ -112,7 +113,7 @@ export function rolls(set: SpriteSet, zoom: number): string {
     g.translate(x, floor);
     g.scale(zoom, zoom);
     const face = set.face ? { kit: set.face, mood: clip, facing: 1 } : undefined;
-    drawFrame(g, frames[Math.floor(frames.length / 3)], hsl.map(paintOf), paintOf(main), shadowOf(main), 0.6, 7, 0, face, v.pick);
+    drawFrame(g, frames[Math.floor(frames.length / 3)], hsl.map(paintOf), { ...paintOf(main), ink: inkOf(main) }, shadowOf(main), 0.6, 7, 0, face, v.pick);
     g.restore();
     g.fillStyle = '#3d2e26';
     g.font = '600 13px sans-serif';

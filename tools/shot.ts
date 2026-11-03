@@ -42,6 +42,8 @@
  *                                           (themes with none: a test landmark per skin and shell; --concept filters those by skin or shell)
  *   pnpm shot artqa --theme T | --themes all [--only landmarks,hazards,decor] → every landmark, hazard and decor piece beside
  *                                           the theme's terrain and three parts, at play scale and 2× (the World art check)
+ *   pnpm shot themeswap [--themes volcano,jungle] → a level of every theme in turn on one page, each checked against a fresh page
+ *                                           (`own` profiles, then one `shared` profile): render state one level leaves the next
  *   pnpm shot flood [--look lava|toxic|water] [--low 2] [--high 5] → a tide let into the level, at warn, rise and high water
  *   pnpm shot join [--only full]           → the join-and-watch storyboard: connecting, Join or Watch, observing, AFK, failures (desktop + phone)
  *   pnpm shot home                         → main menu (desktop + 390×844 mobile)
@@ -81,6 +83,7 @@ import { shots as parts } from './shot/parts';
 import { shots as phases } from './shot/phases';
 import { shots as renderer } from './shot/renderer';
 import { shots as riders } from './shot/riders';
+import { shots as themeswap } from './shot/themeswap';
 import { shots as sprites } from './shot/sprites';
 
 const SCENARIOS = {
@@ -99,6 +102,7 @@ const SCENARIOS = {
   ...riders,
   ...sprites,
   ...join,
+  ...themeswap,
 };
 
 try {

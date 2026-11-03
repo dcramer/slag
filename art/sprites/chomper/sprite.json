@@ -1,0 +1,44 @@
+{
+  "shape": {
+    "by": "chomper",
+    "r": 9.6
+  },
+  "height": 19.8,
+  "yaw": 0,
+  "pitch": 0,
+  "step": 0.8,
+  "trace": {
+    "res": 12,
+    "min": 1.2,
+    "eps": 0.18,
+    "smooth": 2
+  },
+  "roles": {
+    "body": { "color": "#f6d02a", "swatches": [], "slot": "player" },
+    "bitten": { "color": "#e8b81c", "swatches": [], "slot": "player" },
+    "scratch": { "color": "#b8901a", "swatches": [], "slot": "player", "free": true },
+    "napkin": { "color": "#fbf6ee", "swatches": [] },
+    "check": { "color": "#c9473f", "swatches": [], "alts": ["#3f62b4", "#3f8a3a"], "vary": 3 },
+    "crumb": { "color": "#d9a85a", "swatches": [], "free": true },
+    "pick": { "color": "#e6cf9a", "swatches": [], "free": true },
+    "crumbs": { "color": "#b08454", "swatches": [], "free": true }
+  },
+  "slots": {
+    "crumb": 0,
+    "pick": 1,
+    "scratch": 2
+  },
+  "face": {
+    "r": 1.35,
+    "iris": "#14121a"
+  },
+  "clips": {
+    "idle": { "frames": 12, "loop": true, "fps": 6 },
+    "walk": { "frames": 8, "loop": true, "stride": 40 },
+    "run": { "frames": 8, "loop": true, "stride": 72 },
+    "air": { "frames": 12, "loop": false, "vy": [-420, 300] },
+    "wall": { "frames": 4, "loop": true, "fps": 8 },
+    "cheer": { "frames": 8, "loop": true, "fps": 8 },
+    "death": { "frames": 10, "loop": false, "fps": 12 }
+  }
+}

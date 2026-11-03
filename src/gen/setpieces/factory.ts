@@ -145,6 +145,7 @@ function* arms(rng: Rng, s: Site): Generator<Piece> {
 export const FACTORY: Recipe[] = [
   {
     name: 'press',
+    codex: { title: 'Hydraulic Press', note: 'Pancakes to order.', about: 'Slams down on a beat. Under it on the wrong beat is a crush.' },
     unique: true,
     weight: 3,
     role: 'hazard',
@@ -192,6 +193,30 @@ export const FACTORY: Recipe[] = [
         material: 'metal',
       }),
   },
-  defineSetPiece({ name: 'slag ladle', unique: true, weight: 2, role: 'hazard', repeat: true, candidates: ladles }),
-  defineSetPiece({ name: 'robot arm', unique: true, weight: 2, role: 'hazard', candidates: arms }),
+  defineSetPiece({
+    name: 'slag ladle',
+    unique: true,
+    weight: 2,
+    role: 'hazard',
+    repeat: true,
+    codex: {
+      title: 'Slag Ladle',
+      note: 'Pour decisions.',
+      about:
+        'Tips on a cycle and pours slag straight down. The spill runs along the floor and stays molten for a while; a part held under it catches the pour.',
+    },
+    candidates: ladles,
+  }),
+  defineSetPiece({
+    name: 'robot arm',
+    unique: true,
+    weight: 2,
+    role: 'hazard',
+    codex: {
+      title: 'Robot Arm',
+      note: 'Programmed to weld. Not to look.',
+      about: 'Chops down in front of its pedestal, sweeps its welding head along the floor, then folds back up. Only the head hurts, and only while it works.',
+    },
+    candidates: arms,
+  }),
 ];

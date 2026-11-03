@@ -116,6 +116,8 @@ export interface Face {
   r: number;
   iris: string;
   mouth?: [number, number];
+  /** `tall`: tall black ovals with a shine at the top and no whites (the puffball's), in place of cartoon eyes. */
+  eye?: 'tall';
   /**
    * Where the eyes go when the model's own are too small to find: from the biggest part of `role` (the
    * nose), the near and far eye's offsets in world px, facing right.
@@ -176,9 +178,19 @@ export interface Prop {
   slot?: string;
 }
 
+/**
+ * A limbless kind has no model (README → Non-humanoid kinds): `by` names its generator in page/shapes.ts,
+ * which draws every clip as shapes in the roles' colours, `r` world px round.
+ */
+export interface Shape {
+  by: string;
+  r: number;
+}
+
 export interface Settings {
-  /** The rigged, animated model, relative to the settings file. */
-  model: string;
+  /** The rigged, animated model, relative to the settings file: none for a kind drawn by a `shape` generator. */
+  model?: string;
+  shape?: Shape;
   /** World px from the soles to the top of the head, standing in the rest pose. */
   height: number;
   /** Degrees the figure turns toward the camera from a pure profile, and the camera looks down. */

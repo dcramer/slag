@@ -81,7 +81,7 @@ export interface SpriteSet {
   roles: readonly SpriteRole[];
   slots?: readonly SpriteSlot[];
   /** The cast's face kit over the traced eyes: eye size (world px), iris, and the mouth's place from the near eye. */
-  face?: { r: number; iris: string; mouth?: readonly [number, number] };
+  face?: { r: number; iris: string; mouth?: readonly [number, number]; eye?: 'tall' };
   gait?: SpriteGait;
   /** By the name `play.ts` reads (`idle`, `run`, …); `idle2`, `cheer2` are a clip's alternates, one picked per character. */
   clips: Readonly<Record<string, SpriteClip>>;
