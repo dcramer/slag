@@ -189,6 +189,9 @@ Every game design decision, preference and direction the owner has given, groupe
   Changed: every character rolled an eye count, style, iris, spread and height, and a mouth, under its kind's face.
 - **The costume-colour rule holds even where a colour is the character's identity: the dot-eater's whole ball takes the player's colour, not only his napkin.** (answer: "Keep player colour")
   2026-11-02 · `done` · CHARACTERS.md → the rules
+- **Parts may seal the level: placement is never refused for leaving no way through, and a sealed level needs a bomb.** "the placement restrictions feel buggy in some places?" / "game was refusing letting me place items that clearly had nothing there" / "also parts CAN seal it.. it can be unwinnable and require a bomb"
+  2026-11-02 · `in progress` · DESIGN.md → Props, `src/gen/level/winnable.ts`
+  Changed: a match kept a plan of at most `MAX_BRIDGES` bridges and refused a placement that left none.
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
   2026-11-02 · `done` · public/ASSETS.md
 
