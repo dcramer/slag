@@ -216,6 +216,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `in progress` · CHARACTERS.md → Decisions 9, `tools/art3d/style.ts`
 - **The zapmouse is drawn from its flat design and pose drawings, not its 3D model; rendered figures take no light bands.** "Yes, build it out" (after the flat zapmouse test in game, cel bands off characters)
   2026-11-03 · `done` · CHARACTERS.md → Rendered kinds → Flat kinds, `tools/art3d/flat/`; replaces the zapmouse's 3D-traced frames
+- **The plumber is drawn flat too, from a new game-size design worn with welding goggles, a cracked bill, a knotted strap, a knee patch and a taped plunger.** "Yes, the plumber"
+  2026-11-03 · `done` · CHARACTERS.md → Rendered kinds → Flat kinds, `tools/art3d/flat/kinds.ts`; replaces the plumber's 3D-traced frames, and his brown-canvas overalls (navy instead: flat, brown canvas is the gloves' tan)
 - **Set-piece machines that look solid are made solid: guns on ledges, wheel and swing hubs, ladles, carts, signs, posts.** "Make them solid" (asked: make them solid, or draw them as not-ground)
   2026-11-02 · `open` · TODO.md → 21, `pnpm shot fairplay` (`PENDING`)
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"

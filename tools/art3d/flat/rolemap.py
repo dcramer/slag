@@ -1,6 +1,7 @@
 """Illustration -> role map at the tracer's resolution, for convert.ts: flat colours become roles, the ink
 line is dropped (split between the regions either side of it), thick black stays a fill, and the lines
-inside one colour are kept as strokes. Args: design.png out.json debug.png [height opening res]."""
+inside one colour are kept as strokes. Args: design.png out.json debug.png size opening res kind.json, the
+kind's map from tools/art3d/flat/kinds.ts (`FlatKind.map`), which build.ts writes."""
 import json, sys
 from collections import deque
 from PIL import Image, ImageFilter
@@ -12,15 +13,16 @@ SIZE = sys.argv[4] if len(sys.argv) > 4 else 'h21'
 R = int(sys.argv[6]) if len(sys.argv) > 6 else 12  # px per world px the map is traced at
 BOX = dict(x0=-20, x1=20, y0=-3, y1=33)
 
-ROLES = ['fur', 'dark', 'cheek', 'tin', 'plug']
+KIND = json.load(open(sys.argv[7]))
+ROLES = KIND['roles']
 # Colour families as sampled from the design: (role, rgb). Shades fold into their role.
-FAMILIES = [
-    ('fur', (240, 196, 40)), ('fur', (186, 124, 30)), ('fur', (222, 170, 30)),
-    ('tin', (170, 186, 188)), ('tin', (126, 140, 142)), ('tin', (192, 192, 196)),
-    ('cheek', (216, 76, 54)),
-    ('plug', (236, 230, 218)),
-    ('dark', (30, 20, 16)),
-]
+FAMILIES = [(r, tuple(c)) for r, c in KIND['families']]
+# The ink's role (thin is line, thick a fill), roles whose thin edges are the line's fringe, the roles the
+# figure stands on, and the loose ones left out of its body size (a tail, a carried prop).
+INK, THIN, FEET, LOOSE = KIND['line'], KIND.get('thin', []), KIND['feet'], KIND.get('loose', [])
+# How thin (image px) a `thin` role's shape may be and still be only the line's fringe.
+FRINGE = KIND.get('fringe', 7)
+# The shortest interior line kept as a stroke (world px): shorter ones are flecks at play size.
 
 im = Image.open(SRC).convert('RGB')
 w, h = im.size
@@ -51,7 +53,7 @@ for y in range(h):
             role[i] = ROLES.index(nearest(px[x, y]))
 
 # Thick black is a fill (ear tips, cord, eyes); thin black is the ink line. An opening keeps only the thick.
-D = ROLES.index('dark')
+D = ROLES.index(INK)
 dark = Image.new('L', (w, h))
 dark.putdata([255 if r == D else 0 for r in role])
 OPEN = int(sys.argv[5]) if len(sys.argv) > 5 else 9
@@ -64,15 +66,15 @@ for y in range(h):
         if role[i] == D and not fd[x, y]:
             role[i] = LINE
 # Thin grey is the line's antialiased edge, not tin: tin is only where it's thick (the tail, the tape, the bolt).
-T = ROLES.index('tin')
-tin = Image.new('L', (w, h))
-tin.putdata([255 if r == T else 0 for r in role])
-tfill = tin.filter(ImageFilter.MinFilter(7)).filter(ImageFilter.MaxFilter(7)).load()
-for y in range(h):
-    for x in range(w):
-        i = y * w + x
-        if role[i] == T and not tfill[x, y]:
-            role[i] = LINE
+for T in [ROLES.index(n) for n in THIN]:
+    tin = Image.new('L', (w, h))
+    tin.putdata([255 if r == T else 0 for r in role])
+    tfill = tin.filter(ImageFilter.MinFilter(FRINGE)).filter(ImageFilter.MaxFilter(FRINGE)).load()
+    for y in range(h):
+        for x in range(w):
+            i = y * w + x
+            if role[i] == T and not tfill[x, y]:
+                role[i] = LINE
 
 # The illustration's interior lines (an arm over the body, the mouth, the gap between the legs): line pixels
 # with one role all round them and no background near. They become pen strokes; a line between two roles
@@ -112,17 +114,19 @@ while q:
         if j >= 0 and role[j] == LINE:
             role[j] = role[i]
             q.append(j)
+# Line with no colour beside it (a stray stroke off the figure) is background.
+role = [-1 if r == LINE else r for r in role]
 
 # The figure's box, feet at the origin, x centred on the body over the feet (not the tail).
 ys = [i // w for i in range(w * h) if role[i] >= 0]
 top = min(ys)
-# The soles: the lowest fur, so a tail or a cord hanging lower doesn't lift the figure off its feet.
-bottom = max(i // w for i in range(w * h) if role[i] == ROLES.index('fur'))
-F = ROLES.index('fur')
-low = [i % w for i in range(w * h) if role[i] == F and i // w > bottom - (bottom - top) * 0.25]
+# The soles: the lowest of the roles it stands on, so a tail or a prop hanging lower doesn't lift it off its feet.
+F = {ROLES.index(n) for n in FEET}
+bottom = max(i // w for i in range(w * h) if role[i] in F)
+low = [i % w for i in range(w * h) if role[i] in F and i // w > bottom - (bottom - top) * 0.25]
 cx = (min(low) + max(low)) / 2
-T = ROLES.index('tin')
-body = sum(1 for r in role if r >= 0 and r != T)
+L = {ROLES.index(n) for n in LOOSE}
+body = sum(1 for r in role if r >= 0 and r not in L)
 # World px per image px.
 k = float(SIZE[1:]) / (bottom - top + 1) if SIZE[0] == 'h' else (float(SIZE[1:]) / body) ** 0.5
 print('body', round(body * k * k, 1), 'height', round((bottom - top + 1) * k, 2))
@@ -235,7 +239,7 @@ if xs:
     for ln in lines:
         pts = [world(i) for i in ln]
         length = sum(((pts[j + 1][0] - pts[j][0]) ** 2 + (pts[j + 1][1] - pts[j][1]) ** 2) ** 0.5 for j in range(len(pts) - 1))
-        if length < 1.4:
+        if length < KIND.get('stroke', 1.4):
             continue
         under = [interior[(i // bw + by0) * w + (i % bw + bx0)] - 1 for i in ln]
         r = max(set(under), key=under.count)
@@ -244,7 +248,7 @@ if xs:
 print('lines', len(lines))
 json.dump({'W': W, 'H': H, 'R': R, 'roles': ROLES, 'role': out, 'height': round((bottom - top + 1) * k, 2), 'lines': lines}, open(OUT, 'w'))
 
-PAL = {-1: (240, 236, 228), 0: (240, 196, 40), 1: (30, 20, 16), 2: (216, 76, 54), 3: (170, 186, 188), 4: (236, 230, 218)}
+PAL = {-1: (240, 236, 228), **{i: next(c for r, c in FAMILIES if r == n) for i, n in enumerate(ROLES)}}
 dbg = Image.new('RGB', (W, H))
 dbg.putdata([PAL[v] for v in out])
 dbg = dbg.resize((W * 3, H * 3), Image.NEAREST)

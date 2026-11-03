@@ -40,9 +40,44 @@ export function posePrompt(pose: string, far = false): string {
     : `The same character exactly as in the reference image: the same design, proportions, colours, wear and tear, line and flat white background, drawn at the same size and in the same three-quarter view facing right. Only its pose changes, to this: ${pose} Nothing else changes: no ground, no shadow on the ground, no motion lines, no other figures.`;
 }
 
+type RGB = readonly [number, number, number];
+
 export interface FlatKind {
-  /** World px square of the body (every role but the tail) in every pose: the design's at 21 px tall. */
+  /** World px square of the body (every role but the loose ones) in every pose: the design's at its height. */
   body: number;
+  /**
+   * How `rolemap.py` reads the drawings: its roles, the colour families each folds (sampled from the design,
+   * shades included), the ink's role, roles whose thin edges are only the line's fringe (antialiased dots of a
+   * colour along the ink), the roles it stands
+   * on, the loose ones left out of its size, and the smallest part of a role worth a shape (world px²).
+   */
+  map: {
+    roles: readonly string[];
+    families: readonly (readonly [string, RGB])[];
+    line: string;
+    thin?: readonly string[];
+    feet: readonly string[];
+    loose?: readonly string[];
+    min?: Readonly<Record<string, number>>;
+    /** Image px: how thin a `thin` role's shape may be and still be only the line's fringe (default 7). */
+    fringe?: number;
+    /** The shortest interior line kept as a stroke, world px (default 1.4). */
+    stroke?: number;
+  };
+  /**
+   * Where the face kit goes: the eyes are the pair of `role` specks `area` big (world px²) and `gap` apart,
+   * and the specks it draws over (eyes, nose, a drawn mouth) are each role's parts smaller than its number.
+   */
+  eyes: { role: string; area: readonly [number, number]; gap: readonly [number, number]; specks: Readonly<Record<string, number>> };
+  /** A dark under the face drawn in another role (`below` the eyes, world px; a lying pose's by size and x). */
+  recolour?: { from: string; to: string; below: number; lying: readonly [number, number] };
+  /**
+   * The wear's marks (option 1 scuffed, option 2 scorched), each a role, a spot as fractions of the
+   * surface's box, and a radius, on the bare `on` roles below `chin` (world px under the eyes).
+   */
+  wear: { on: readonly string[]; chin: number; marks: readonly (readonly (readonly [string, number, number, number])[])[] };
+  /** On-off accessories drawn as strips from the near eye: a cross on the crown, a plaster across the cheek. */
+  accessories: readonly { slot: string; role: string; at: 'crown' | 'cheek'; size: readonly [number, number] }[];
   roles: readonly FlatRole[];
   slots: readonly { name: string; vary: number; options: number }[];
   face: { r: number; iris: string; mouth?: readonly [number, number]; eye?: 'tall' | 'dot' };
@@ -55,6 +90,42 @@ export interface FlatKind {
 export const FLAT_KINDS: Record<string, FlatKind> = {
   zapmouse: {
     body: 157,
+    map: {
+      roles: ['fur', 'dark', 'cheek', 'tin', 'plug'],
+      families: [
+        ['fur', [240, 196, 40]],
+        ['fur', [186, 124, 30]],
+        ['fur', [222, 170, 30]],
+        ['tin', [170, 186, 188]],
+        ['tin', [126, 140, 142]],
+        ['tin', [192, 192, 196]],
+        ['cheek', [216, 76, 54]],
+        ['plug', [236, 230, 218]],
+        ['dark', [30, 20, 16]],
+      ],
+      line: 'dark',
+      thin: ['tin'],
+      feet: ['fur'],
+      loose: ['tin'],
+      min: { dark: 0.12, cheek: 0.3, plug: 0.35 },
+    },
+    eyes: { role: 'dark', area: [0.06, 0.7], gap: [2, 5.5], specks: { dark: 1.2, cheek: 0.35 } },
+    recolour: { from: 'dark', to: 'cord', below: 2.5, lying: [0.4, -4] },
+    wear: {
+      on: ['fur'],
+      chin: 4.5,
+      marks: [
+        [
+          ['scuff', 0.32, 0.8, 1.1],
+          ['scuff2', 0.68, 0.7, 0.8],
+        ],
+        [
+          ['scorch', 0.38, 0.78, 1.4],
+          ['scuff2', 0.7, 0.72, 0.75],
+        ],
+      ],
+    },
+    accessories: [{ slot: 'tape', role: 'tape', at: 'crown', size: [2.9, 0.85] }],
     roles: [
       { name: 'tin', color: '#a9afb7' },
       { name: 'fur', color: '#f2c62a', slot: 'player' },
@@ -106,6 +177,113 @@ export const FLAT_KINDS: Record<string, FlatKind> = {
       cheer2: { pose: 'jumping for joy with one fist punched straight up into the air, the other arm swinging back.' },
       death: {
         pose: 'it has been knocked out and lies flat on its back on the floor, the whole body horizontal across the picture, head on the left and feet on the right, arms and legs splayed limp, eyes shut. Seen from the side.',
+        far: true,
+      },
+    },
+  },
+
+  plumber: {
+    body: 223,
+    map: {
+      roles: ['skin', 'red', 'redshade', 'blue', 'brown', 'tan', 'grey', 'dark'],
+      families: [
+        ['skin', [253, 195, 153]],
+        ['skin', [250, 217, 192]],
+        ['skin', [216, 170, 124]],
+        ['red', [187, 70, 58]],
+        ['redshade', [134, 42, 40]],
+        ['redshade', [107, 31, 31]],
+        ['redshade', [75, 32, 28]],
+        ['blue', [67, 95, 164]],
+        ['blue', [54, 68, 108]],
+        ['brown', [66, 45, 31]],
+        ['brown', [49, 34, 34]],
+        ['brown', [70, 47, 33]],
+        ['tan', [208, 141, 97]],
+        ['tan', [161, 117, 89]],
+        ['tan', [139, 85, 64]],
+        ['grey', [150, 155, 160]],
+        ['grey', [110, 115, 120]],
+        ['dark', [10, 4, 4]],
+        // The eyes' glints, inside the eyes.
+        ['dark', [255, 255, 255]],
+      ],
+      line: 'dark',
+      thin: ['skin', 'red', 'redshade', 'blue', 'brown', 'tan', 'grey'],
+      fringe: 5,
+      stroke: 2.4,
+      feet: ['brown'],
+      min: { dark: 0.12, grey: 0.25 },
+    },
+    roles: [
+      { name: 'skin', color: '#efc9a4' },
+      { name: 'red', color: '#c9473f', slot: 'player' },
+      // The drawing's own shadow on the cap and shirt, and the plunger's cup: a dark of the player's colour.
+      { name: 'redshade', color: '#808080', on: 1, tone: -22 },
+      // A colourway is the overalls (VARIETY.palette).
+      { name: 'blue', color: '#3f62b4', alts: ['#7e848a', '#2f3b5c'], vary: 6 },
+      { name: 'brown', color: '#4d3426' },
+      { name: 'tan', color: '#b08454' },
+      { name: 'grey', color: '#8e8a84' },
+      { name: 'dark', color: '#2a1f1a' },
+      // Wear on the overalls: a faded patch, and soot.
+      { name: 'scuff', color: '#808080', on: 3, tone: 14 },
+      { name: 'scorch', color: '#808080', on: 3, tone: -24 },
+      { name: 'plaster', color: '#e9d3b0' },
+    ],
+    slots: [
+      { name: 'plaster', vary: 1, options: 2 },
+      { name: 'wear', vary: 11, options: 3 },
+    ],
+    eyes: { role: 'dark', area: [0.2, 2.6], gap: [1.4, 4.5], specks: { dark: 2.8 } },
+    wear: {
+      on: ['blue'],
+      chin: 3,
+      marks: [
+        [
+          ['scuff', 0.5, 0.35, 1.0],
+          ['scuff', 0.3, 0.85, 0.8],
+        ],
+        [
+          ['scorch', 0.55, 0.4, 1.1],
+          ['scorch', 0.3, 0.82, 0.8],
+        ],
+      ],
+    },
+    accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [2.2, 0.9] }],
+    face: { r: 0.9, iris: '#3c6fd0' },
+    gait: { bounce: [0.15, 0.85], lean: [0, 0.035] },
+    clips: {
+      idle: { frames: ['idle'], loop: true, fps: 1 },
+      idle2: { frames: ['idle2', 'idle'], loop: true, holds: [1.8, 2.4] },
+      walk: { frames: ['walk-1', 'walk-2'], loop: true, stride: 30 },
+      run: { frames: ['run-1', 'run-2'], loop: true, stride: 44 },
+      air: { frames: ['air-1', 'air-2'], loop: false, vy: [-200, 200] },
+      wall: { frames: ['wall'], loop: true, fps: 1 },
+      cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.5, 0.25] },
+      cheer2: { frames: ['cheer2', 'idle'], loop: true, holds: [0.6, 0.3] },
+      death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box' },
+    },
+    poses: {
+      idle2: { pose: 'standing with his arms folded across his chest, chest puffed out, the plunger leaning against his shoulder.' },
+      'walk-1': { pose: 'walking to the right, mid-step: the near boot forward, the far boot back, the plunger over his shoulder.' },
+      'walk-2': { pose: 'walking to the right, the legs passing under the body: one boot planted, the other lifted a little, the plunger over his shoulder.' },
+      'run-1': {
+        pose: 'running fast to the right, leaning forward, one knee high and the other leg pushing off, the free arm pumping, the plunger over his shoulder.',
+      },
+      'run-2': {
+        pose: 'running fast to the right, leaning forward, both boots off the ground with the legs gathered under him, the plunger over his shoulder.',
+      },
+      'air-1': { pose: 'jumping straight up, one fist punched high over his head, the other hand gripping the plunger, the legs tucked under him.' },
+      'air-2': { pose: 'falling, both arms flung up, the plunger still in one hand, the legs reaching down, the mouth open in alarm.' },
+      wall: {
+        pose: 'seen from his side, he is sliding down a tall wall on the right edge of the picture (do not draw the wall), one glove flat against it and both boots braced on it, the plunger on his back, his head turned to look back at us.',
+        far: true,
+      },
+      cheer: { pose: 'cheering, both fists thrown high over his head, the plunger held up in one of them, up on his toes, a big grin under the mustache.' },
+      cheer2: { pose: 'leaning back laughing, turned a little toward us, one hand on his belly, the plunger over his shoulder.' },
+      death: {
+        pose: 'he has been knocked out and lies flat on his back on the floor, the whole body horizontal across the picture, head on the left and boots on the right, arms and legs splayed limp, eyes shut, the plunger dropped beside him. Seen from the side.',
         far: true,
       },
     },

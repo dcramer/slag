@@ -99,14 +99,13 @@ function strip(x: number, y: number, len: number, w: number, a: number): number[
   ].flatMap(([u, v]) => [x + u * c - v * s, y + u * s + v * c]);
 }
 
-/** The smallest part of a role worth its own shape (world px²): a cheek or a plug survives, a speck of line doesn't. */
-const MIN: Record<string, number | undefined> = { dark: 0.12, cheek: 0.3, plug: 0.35 };
-
 /** One pose drawing, traced into a facing-right frame with its feet at the origin. */
 function frameOf(name: string, clip: FlatClip): Frame {
   const png = name === 'idle' ? resolve(art, 'design.png') : resolve(art, 'flat', `${name}.png`);
   const json = resolve(cache, `${name}.json`);
-  execFileSync('python3', ['-I', resolve('tools/art3d/flat/rolemap.py'), png, json, resolve(cache, `${name}.png`), `a${spec.body}`, '9', '12'], {
+  const look = resolve(cache, 'map.json');
+  writeFileSync(look, JSON.stringify(spec.map));
+  execFileSync('python3', ['-I', resolve('tools/art3d/flat/rolemap.py'), png, json, resolve(cache, `${name}.png`), `a${spec.body}`, '9', '12', look], {
     stdio: 'pipe',
   });
   const m = JSON.parse(readFileSync(json, 'utf8')) as RoleMap;
@@ -115,22 +114,22 @@ function frameOf(name: string, clip: FlatClip): Frame {
     step: 1e9,
     trace: { res: m.R, min: 0.8, eps: 0.22, smooth: 2 },
     // The tracer reads only `min` (and `into`, `glint`, `band`, `free`, none of them here); colours are the kind's.
-    roles: Object.fromEntries(m.roles.map((n) => [n, { color: '', swatches: [], min: MIN[n] }])),
+    roles: Object.fromEntries(m.roles.map((n) => [n, { color: '', swatches: [], min: spec.map.min?.[n] }])),
   };
   const t = trace(Int16Array.from(m.role), new Float32Array(m.W * m.H), m.W, m.H, m.R, settings as Settings, m.roles);
   const roleOf = (n: string) => spec.roles.findIndex((r) => r.name === n);
   // Roles by name from the map's order into the kind's.
   let parts: Shape[] = t.parts.map((p) => ({ role: roleOf(m.roles[p.role]), ring: p.ring }));
-  const dark = roleOf('dark');
-  // The eyes: the two small dark specks side by side, nearest level, near (left, facing right) first.
-  const specks = parts.filter((p) => p.role === dark && area(p.ring) >= 0.06 && area(p.ring) < 0.7);
+  const dark = roleOf(spec.eyes.role);
+  // The eyes: the two dark specks side by side, nearest level, near (left, facing right) first.
+  const specks = parts.filter((p) => p.role === dark && area(p.ring) >= spec.eyes.area[0] && area(p.ring) < spec.eyes.area[1]);
   let eyes: Pt[] = [];
   let best = -1;
   for (const a of specks)
     for (const b of specks) {
       const [pa, pb] = [mid(a.ring), mid(b.ring)];
       const dx = pb[0] - pa[0];
-      if (dx < 2 || dx > 5.5 || Math.abs(pb[1] - pa[1]) > 1.2) continue;
+      if (dx < spec.eyes.gap[0] || dx > spec.eyes.gap[1] || Math.abs(pb[1] - pa[1]) > 1.2) continue;
       const score = area(a.ring) + area(b.ring) - Math.abs(pb[1] - pa[1]) * 0.2;
       if (score > best) {
         best = score;
@@ -145,15 +144,19 @@ function frameOf(name: string, clip: FlatClip): Frame {
     parts = parts.filter((p) => {
       const [x, y] = mid(p.ring);
       const face = x > x0 && x < x1 && y > y0 && y < y1;
-      return !(face && ((p.role === dark && area(p.ring) < 1.2) || (p.role === roleOf('cheek') && area(p.ring) < 0.35)));
+      return !(face && Object.entries(spec.eyes.specks).some(([n, most]) => p.role === roleOf(n) && area(p.ring) < most));
     });
   } else if (clip.eyes === false)
     // Shut eyes and an open mouth are specks too: the face's place is all the kit needs, and it has none.
     parts = parts.filter((p) => !(p.role === dark && area(p.ring) < 0.4));
-  // A black cord under the cheeks reads as a frowning mouth: the cord is the cord's colour, the ear tips stay black.
-  const belt = eyes.length ? Math.max(eyes[0][1], eyes[1][1]) + 2.5 : -10;
-  for (const p of parts)
-    if (p.role === dark && (clip.eyes === false ? area(p.ring) > 0.4 && mid(p.ring)[0] > -4 : mid(p.ring)[1] > belt)) p.role = roleOf('cord');
+  // A dark under the face drawn in a role of its own (the zapmouse's black cord, which reads as a frown).
+  const re = spec.recolour;
+  if (re) {
+    const below = eyes.length ? Math.max(eyes[0][1], eyes[1][1]) + re.below : -10;
+    for (const p of parts)
+      if (p.role === roleOf(re.from) && (clip.eyes === false ? area(p.ring) > re.lying[0] && mid(p.ring)[0] > re.lying[1] : mid(p.ring)[1] > below))
+        p.role = roleOf(re.to);
+  }
   // Back to front by role.
   parts.sort((a, b) => a.role - b.role);
   const f: Frame = { sil: t.sil, parts, lines: m.lines.map((l) => ({ role: roleOf(m.roles[l.role]), pts: l.pts })), eyes };
@@ -167,6 +170,8 @@ function frameOf(name: string, clip: FlatClip): Frame {
       left = Math.min(left, r[i]);
       right = Math.max(right, r[i]);
     }
+  // A stroke can end at the figure's edge, and its pen reaches past it.
+  for (const l of f.lines) for (let i = 1; i < l.pts.length; i += 2) low = Math.max(low, l.pts[i] + 0.3);
   const dx = clip.centre === 'box' ? -(left + right) / 2 : 0;
   return move(f, dx, -low);
 }
@@ -181,22 +186,22 @@ function move(f: Frame, dx: number, dy: number): Frame {
 }
 
 /**
- * The kind's marks on one frame: its accessory, and the scuffs and scorches of its wear, set on the body's
- * bare fur at spots that hold their place in the body's box from pose to pose, clear of the face.
+ * The kind's marks on one frame: its accessories, and the scuffs and scorches of its wear, set on the bare
+ * surface they belong on at spots that hold their place in the body's box from pose to pose, clear of the face.
  */
 function dress(f: Frame, seed: number): Frame {
-  const fur = spec.roles.findIndex((r) => r.name === 'fur');
-  // The fur in every piece (a belt or an arm splits it), and what's painted over it.
-  const body = f.parts.filter((p) => p.role === fur);
+  const on = new Set(spec.wear.on.map((n) => spec.roles.findIndex((r) => r.name === n)));
+  // The surface in every piece (a belt or an arm splits it), and what's painted over it.
+  const body = f.parts.filter((p) => on.has(p.role));
   if (!body.length) return f;
-  const over = f.parts.filter((p) => p.role > fur);
+  const over = f.parts.filter((p) => !on.has(p.role) && p.role > Math.min(...on));
   const xs = body.flatMap((p) => p.ring.filter((_, i) => i % 2 === 0));
   const ys = body.flatMap((p) => p.ring.filter((_, i) => i % 2 === 1));
   const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
   const onFur = (x: number, y: number) => body.some((p) => inside(x, y, p.ring)) && !over.some((p) => inside(x, y, p.ring));
   // Below the mouth and the cheeks: a pale patch there reads as a snout.
-  const chin = f.eyes.length ? Math.max(...f.eyes.map(([, ey]) => ey)) + 4.5 : -Infinity;
-  const clearOfFace = (x: number, y: number, r: number) => y - r > chin && f.eyes.every(([ex, ey]) => Math.hypot(x - ex, y - ey) > 0.875 + 1 + r + 0.2);
+  const chin = f.eyes.length ? Math.max(...f.eyes.map(([, ey]) => ey)) + spec.wear.chin : -Infinity;
+  const clearOfFace = (x: number, y: number, r: number) => y - r > chin && f.eyes.every(([ex, ey]) => Math.hypot(x - ex, y - ey) > spec.face.r * 1.2 + 1 + r);
   /** A spot `r` across inside the body at (u, v) of its box, or the nearest that is. */
   const spot = (u: number, v: number, r: number): Pt | null => {
     for (let k = 0; k < 80; k++) {
@@ -212,34 +217,22 @@ function dress(f: Frame, seed: number): Frame {
   const role = (n: string) => spec.roles.findIndex((r) => r.name === n);
   const extra: Shape[] = [];
   const wear = spec.slots.findIndex((s) => s.name === 'wear');
-  // Scuffed: rubbed pale patches; scorched: a burn and a scuff.
-  for (const [o, marks] of [
-    [
-      1,
-      [
-        ['scuff', 0.32, 0.8, 1.1],
-        ['scuff2', 0.68, 0.7, 0.8],
-      ],
-    ],
-    [
-      2,
-      [
-        ['scorch', 0.38, 0.78, 1.4],
-        ['scuff2', 0.7, 0.72, 0.75],
-      ],
-    ],
-  ] as const)
+  spec.wear.marks.forEach((marks, k) =>
     marks.forEach(([n, u, v, r], i) => {
+      const o = k + 1;
       const at = spot(u, v, r);
       if (at) extra.push({ role: role(n), ring: blob(at[0], at[1], r, r * 0.8, seed + o * 7 + i), option: [wear, o] });
       else console.log(`  no room for ${n} (wear ${o})`);
-    });
-  // The accessory: a cross of tape on the head, above the near eye.
-  const tape = spec.slots.findIndex((s) => s.name === 'tape');
-  if (f.eyes.length) {
+    }),
+  );
+  // Accessories, placed from the near eye: a cross of tape on the crown, a plaster across the cheek.
+  for (const acc of spec.accessories) {
+    if (!f.eyes.length) continue;
+    const slot = spec.slots.findIndex((sl) => sl.name === acc.slot);
     const [ex, ey] = f.eyes[0];
-    const [hx, hy] = [ex - 0.4, ey - 3.1];
-    for (const a of [0.55, -0.55]) extra.push({ role: role('tape'), ring: strip(hx, hy, 2.9, 0.85, a), option: [tape, 1] });
+    const [hx, hy] = acc.at === 'crown' ? [ex - 0.4, ey - 3.1] : [ex - 1.6, ey + 1.9];
+    for (const a of acc.at === 'crown' ? [0.55, -0.55] : [0.35])
+      extra.push({ role: role(acc.role), ring: strip(hx, hy, acc.size[0], acc.size[1], a), option: [slot, 1] });
   }
   return { ...f, parts: [...f.parts, ...extra] };
 }
@@ -266,7 +259,8 @@ function vframe(f: Frame, flip: boolean) {
   if (f.eyes.length) {
     const [a, b] = f.eyes;
     const x = (v: number) => (flip ? -v : v);
-    out.eyes = [Math.round(x(a[0]) * 8), Math.round(a[1] * 8), 7, Math.round(x(b[0]) * 8), Math.round(b[1] * 8), 6];
+    const [near, far] = [Math.round(spec.face.r * 8), Math.round(spec.face.r * 0.85 * 8)];
+    out.eyes = [Math.round(x(a[0]) * 8), Math.round(a[1] * 8), near, Math.round(x(b[0]) * 8), Math.round(b[1] * 8), far];
     // The head the eyes ride, turned with the line between them.
     const tilt = (Math.atan2(b[1] - a[1], b[0] - a[0]) * 180) / Math.PI;
     out.head = [Math.round(x((a[0] + b[0]) / 2) * 8), Math.round(((a[1] + b[1]) / 2 - 1) * 8), 64, Math.round(flip ? -tilt : tilt)];
