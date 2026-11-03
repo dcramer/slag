@@ -434,7 +434,7 @@ Every kind must also pass the silhouette sheet, the blind read and the "is it th
 
 ## Rendered kinds (spike)
 
-How a Roster entry becomes a kind drawn from 3D. The entry is the one source for the design (nod, twist, swaps, palette); this is the pipeline. The plumber and the speedster are done, behind `?sprites=1` (`slagDebug.sprites.use(true)`); without it the game loads and draws only the hand-drawn cast. Production steps and the done list: [tools/art3d](../tools/art3d/README.md) and its [checklist](../tools/art3d/CHECKLIST.md).
+How a Roster entry becomes a kind drawn from 3D. The entry is the one source for the design (nod, twist, swaps, palette); this is the pipeline. A kind with rendered frames is always drawn from them (no option); a kind without keeps its hand-drawn body until it is produced. Production steps and the done list: [tools/art3d](../tools/art3d/README.md) and its [checklist](../tools/art3d/CHECKLIST.md).
 
 - **Sheets first:** a concept, a model sheet pushed for a 20 px read, and a pose sheet. Tripo models, rigs and animates the model sheet; poses its motions can't make are keyed by hand from the pose sheet; a jump that is a shape of its own (the spin ball) is generated as one.
 - **The game's own hand.** The render is cut into flat parts, traced into a few clean curves, and inked at draw time by the cast's `contour` and `toned`, with the boil on threes. Outlines are resampled from a fixed start and held across frames when a part only moved, so lines move only with the boil.

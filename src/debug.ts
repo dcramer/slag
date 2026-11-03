@@ -34,7 +34,6 @@ import type { ThemeId } from './themes';
  *   ?debug=1            open the dev overlay (see installDevtoolsHooks)
  *   ?give=sword,puck    hand race runners these held items, cycled (`all` = one of each)
  *   ?lettering=0        no impact words (read by the Renderer)
- *   ?sprites=1          draw the kinds rendered from 3D models (render/cast/sprites, tools/art3d) in place of their hand-drawn bodies
  *   ?zoom=1             force the phone camera on (`?zoom=0` off, `?zoom=2.4` pins a zoom); see render/camera-follow.ts
  */
 export interface SlagDebug {
@@ -184,7 +183,6 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
   });
 
   const q = new URLSearchParams(location.search);
-  if (q.get('sprites') === '1') useSprites(true);
   const force: ProfileOverride = {};
   const size = q.get('size');
   if (size === 'classic' || size === 'wide' || size === 'tall') force.size = size;

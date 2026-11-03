@@ -111,7 +111,7 @@ export class Renderer {
   private fx = new Fx();
   private weather = new WeatherLayer();
   private rigs = new Map<number, Rig>();
-  /** Rendered kinds (`?sprites=1`) play their death clip for a moment where they came apart. */
+  /** Rendered kinds play their death clip for a moment where they came apart. */
   private fallen: { c: CharacterDef; x: number; y: number; facing: number; age: number }[] = [];
   private pw = 2;
   private ph = 2;

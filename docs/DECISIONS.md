@@ -205,6 +205,8 @@ Every game design decision, preference and direction the owner has given, groupe
   Changed: placed parts and set pieces claimed their whole swept path.
 - **Character production pauses once the running jobs finish: not enough Tripo credits for the whole roster.** "we dont have enough credits to finish all art, so lets pause when we get these jobs done"
   2026-11-02 · `open` · TODO.md → 29
+- **Rendered kinds are the only way they draw: no `?sprites=1` option; a kind without frames stays hand-drawn until produced.** "Make sprites the only way it works now, so no option at all"
+  2026-11-02 · `done` · `src/render/cast/sprites/index.ts`
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
   2026-11-02 · `done` · public/ASSETS.md
 

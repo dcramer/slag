@@ -1,6 +1,6 @@
 # art3d: characters drawn from 3D
 
-The production pipeline for the cast: one Roster entry in docs/CHARACTERS.md in, one kind the game draws out. A 3D model supplies the poses, volume and turn; the look is the game's own hand. Every pose is rendered side on, cut into flat parts, traced into a few clean curves, and inked at draw time by the cast's pen (`contour` and `toned` in `src/render/ink-figure.ts`) with the cast's face kit on top. It's a dev tool (Three.js in headless Chromium, served by Vite); the game ships only the generated `src/render/cast/sprites/<kind>/frames.ts`, behind `?sprites=1` until the owner rolls the cast out.
+The production pipeline for the cast: one Roster entry in docs/CHARACTERS.md in, one kind the game draws out. A 3D model supplies the poses, volume and turn; the look is the game's own hand. Every pose is rendered side on, cut into flat parts, traced into a few clean curves, and inked at draw time by the cast's pen (`contour` and `toned` in `src/render/ink-figure.ts`) with the cast's face kit on top. It's a dev tool (Three.js in headless Chromium, served by Vite); the game ships only the generated `src/render/cast/sprites/<kind>/frames.ts`; a kind with frames is always drawn from them.
 
 One agent per kind, in a worktree of its own: [CHECKLIST.md](CHECKLIST.md) is the run sheet and the done list. This README is the how.
 
