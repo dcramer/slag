@@ -89,7 +89,7 @@ What came out of it:
 ### The mustached plumber
 - **Kind:** `plumber` · **Name:** Plumbo
 - **A stranger should say:** "that's the plumber with the mustache."
-- **Silhouette:** stout and big-headed, about 45% head. A round cap with its bill sticking out front, a big round nose that breaks the profile, and the cup of a huge plunger standing up behind his head.
+- **Silhouette:** stout and big-headed, about 45% head. A round cap with its bill sticking out front, a big round nose that breaks the profile, and a huge plunger slung low across his back, its cup behind his shoulder so the cap, bill and nose own the head's outline.
 - **Traits:** red cap with a riveted brass badge carrying a small wrench (never a letter); a big round nose; a thick dark-brown mustache; blue bib overalls over a red shirt; leather gauntlets; steel-toe boots.
 - **Palette:** cap and shirt `#c9473f` (shade `#9c3530`); overalls `#3f62b4` (shade `#2e4a8c`); skin `#efc9a4`; mustache and hair `#4d3426`; badge `#c99a4a`; bolts `#9aa0a8`; gauntlets `#b08454`; boots `#6b4a35`; plunger cup `#b8433c` on a copper handle `#c27a45`.
 - **Color slot:** ring.
@@ -98,7 +98,7 @@ What came out of it:
 - **Our twist:** a foundry hand, not a castle plumber. The joke is an absurdly big rubber plunger on a copper handle strapped to his back like a greatsword. Welding goggles on the cap, hex-bolt overall buttons, a patched knee, tan gauntlets for the white gloves.
 - **Swaps:** a pencil behind the ear; a sticking plaster on one cheek; a roll of thread-seal tape on a belt loop; a pressure gauge in the bib pocket.
 - **Rig:** humanoid. Rendered (round 2).
-- **Concept prompt:** A stout, big-headed foundry handyman: a red cap with its bill out front, dark welding goggles strapped round it and a riveted brass badge stamped with a small wrench; a big round nose; a thick dark-brown mustache; blue bib overalls with steel hex-bolt buttons over a red shirt, one knee patched; big tan leather gauntlets; steel-toe boots. An absurdly big red rubber plunger on a copper handle is strapped across his back like a greatsword, its cup showing above his head.
+- **Concept prompt:** A stout, big-headed foundry handyman: a red cap with its bill out front, dark welding goggles strapped round it and a riveted brass badge stamped with a small wrench; a big round nose; a thick dark-brown mustache; blue bib overalls with steel hex-bolt buttons over a red shirt, one knee patched; big tan leather gauntlets; steel-toe boots. An absurdly big red rubber plunger on a copper handle is strapped across his back like a greatsword, slung low, its cup behind his shoulder.
 
 ### The blue speedster
 - **Kind:** `hedgehog` · **Name:** Sanic
@@ -421,7 +421,7 @@ How a Roster entry becomes a kind drawn from 3D. The entry is the one source for
 - **Cost.** About 0.005 ms per runner drawn from the frame-bitmap cache (the hand-drawn cast takes about 0.08–0.1), and about 0.4 ms for a frame the first time it's drawn at a scale. Frame data is about 350–400 KB per kind, a chunk fetched only with the flag on.
 - **Checks:** `tests/sprite-cast.test.ts` (every clip, the shared hitbox box pen and all, at least 18 px tall, rolls), and `pnpm shot sprites --kind K` (the comparison sheets, the six-rolls lobby, the draw cost, and `sprites-blind.png`, every kind as a shuffled, unnamed play-scale silhouette for fresh readers).
 
-**Blind reads so far** (fresh readers, silhouettes only): the speedster is named every time, medium-high to high. The plumber went from low to split (one reader "the plumber, medium", one unsure) after his cap, nose and girth were pushed and his plunger carried lower; in colour he reads at once. His roster silhouette line (the plunger's cup above his head) works against the read: the cup and the cap merge into one shape.
+**Blind reads so far** (fresh readers, silhouettes only): the speedster is named every time, medium-high to high. The plumber went from low to split (one reader "the plumber, medium", one unsure) after his cap, nose and girth were pushed and his plunger carried lower; in colour he reads at once. With the cup above his head the cup and the cap merged into one shape, so the plunger is carried low for good (owner, 2026-11-02).
 
 ## What every kind keeps
 

@@ -5,8 +5,8 @@ import type { Projectile, Runner, RunWorld } from '../sim/run';
 import type { GameEvent } from '../sim/types';
 import type { Fx } from './fx';
 import { drawBat, drawRaisedBrick, EXTRA_ICONS } from './items-extra';
-import { blob, line, type P, stroke } from './ink';
-import { ball, boxPts, glint, INK, part, path, pen, poly, sprite, stamp, tick } from './ink-props';
+import { blob, inkFor, line, type P, stroke } from './ink';
+import { ball, boxPts, glint, part, path, pen, poly, sprite, stamp, tick } from './ink-props';
 import { circle, ellipse, light, type RC } from './kit';
 
 /**
@@ -30,6 +30,12 @@ export const ITEM_HUE: Record<ItemKind, HSL> = {
 };
 
 const NOODLE: HSL = { h: 96, s: 72, l: 56 };
+const SHELL: HSL = { h: 128, s: 50, l: 44 };
+const NOTICE: HSL = { h: 45, s: 20, l: 95 };
+const STICKER: HSL = { h: 50, s: 95, l: 58 };
+const FUSE: HSL = { h: 34, s: 33, l: 52 };
+const PUFF: HSL = { h: 36, s: 21, l: 89 };
+const TAG: HSL = { h: 47, s: 91, l: 82 };
 
 /** Master Noodle's hilt, point up: pommel, wrapped grip and a hero's crossguard. The blade is drawn live. */
 const hilt = () =>
@@ -50,7 +56,7 @@ function noodle(s: CanvasRenderingContext2D, bend: number) {
     const t = i / 8;
     pts.push({ x: bend * t * t, y: 2.6 - t * 12.2 });
   }
-  s.fillStyle = INK;
+  s.fillStyle = inkFor(NOODLE);
   stroke(s, pts, { w: 5.04, seed: 3, taper: [0, 0], press: 0 });
   s.fillStyle = css(NOODLE, -10, 1, 4);
   stroke(s, pts, { w: 4.2, seed: 3, taper: [0, 0], press: 0 });
@@ -72,7 +78,7 @@ function noodle(s: CanvasRenderingContext2D, bend: number) {
     line(s, pts[i].x - nx * 1.9, pts[i].y - ny * 1.9, pts[i].x + nx * 1.9, pts[i].y + ny * 1.9, { w: 0.4, seed: i, taper: [0.2, 0.2], press: 0 });
   }
   const tip = pts[8];
-  s.fillStyle = INK;
+  s.fillStyle = inkFor(NOODLE);
   s.beginPath();
   s.ellipse(tip.x, tip.y, 2.6, 1.3, Math.atan2(tip.x - pts[7].x, -(tip.y - pts[7].y)), 0, Math.PI * 2);
   s.fill();
@@ -80,7 +86,8 @@ function noodle(s: CanvasRenderingContext2D, bend: number) {
   s.beginPath();
   s.ellipse(tip.x, tip.y, 2.05, 0.9, Math.atan2(tip.x - pts[7].x, -(tip.y - pts[7].y)), 0, Math.PI * 2);
   s.fill();
-  s.fillStyle = INK;
+  // The hole down the middle of the foam.
+  s.fillStyle = css(NOODLE, -38);
   s.beginPath();
   s.ellipse(tip.x, tip.y, 0.8, 0.4, Math.atan2(tip.x - pts[7].x, -(tip.y - pts[7].y)), 0, Math.PI * 2);
   s.fill();
@@ -99,7 +106,7 @@ const shell = () =>
       const a = Math.PI + (i / 12) * Math.PI;
       dome.push({ x: Math.cos(a) * 5.8, y: 1.2 + Math.sin(a) * 5 });
     }
-    const green: HSL = { h: 128, s: 50, l: 44 };
+    const green = SHELL;
     part(g, dome, green, 3, { depth: 0.8, thin: 0.45, thick: 1.1 });
     g.save();
     path(g, dome);
@@ -115,8 +122,9 @@ const shell = () =>
       tick(g, ax, ay, bx, by, 0.45, ax * 3 + ay, sc);
     g.restore();
     part(g, boxPts(-6.3, 0.8, 12.6, 2.2, 1, 4), { h: 48, s: 55, l: 78 }, 4, { depth: 0.3, thin: 0.4, thick: 0.9 });
+    // The leg holes look into the shell's dark inside.
     for (const x of [-3.2, 3.2]) {
-      g.fillStyle = INK;
+      g.fillStyle = css(green, -30);
       blob(g, x, 1.9, 1.05, 5 + x, 0.65, 0.1);
       g.fill();
     }
@@ -124,10 +132,10 @@ const shell = () =>
     g.save();
     g.translate(0.6, -4.2);
     g.rotate(-0.18);
-    part(g, boxPts(-2.1, -1.6, 4.2, 3.2, 0.2, 6), { h: 45, s: 20, l: 95 }, 6, { depth: 0.2, thin: 0.25, thick: 0.5 });
+    part(g, boxPts(-2.1, -1.6, 4.2, 3.2, 0.2, 6), NOTICE, 6, { depth: 0.2, thin: 0.25, thick: 0.5 });
     g.fillStyle = '#c62424';
     g.fillRect(-1.7, -1.2, 3.4, 0.7);
-    for (const y of [0, 0.8]) tick(g, -1.5, y, 1.3, y, 0.25, y * 9, 'rgba(40,30,30,0.7)');
+    for (const y of [0, 0.8]) tick(g, -1.5, y, 1.3, y, 0.25, y * 9, css(NOTICE, -62, 0.8));
     g.fillStyle = 'rgba(255,236,170,0.75)';
     g.fillRect(-2.6, -2, 1.4, 0.8);
     g.fillRect(1.3, 1.1, 1.4, 0.8);
@@ -181,8 +189,8 @@ const jetpack = () =>
     g.save();
     g.translate(3.4, -0.6);
     g.rotate(-0.35);
-    part(g, boxPts(-2.9, -1.2, 5.8, 2.4, 0.3, 13), { h: 50, s: 95, l: 58 }, 13, { depth: 0.2, thin: 0.3, thick: 0.55 });
-    g.fillStyle = '#1b1410';
+    part(g, boxPts(-2.9, -1.2, 5.8, 2.4, 0.3, 13), STICKER, 13, { depth: 0.2, thin: 0.3, thick: 0.55 });
+    g.fillStyle = inkFor(STICKER);
     g.font = 'bold 1.9px sans-serif';
     g.textAlign = 'center';
     g.textBaseline = 'middle';
@@ -205,9 +213,9 @@ const fogBomb = () =>
       tick(g, -5, 1 + k, 5, 1 + k, 0.3, k + 9, 'rgba(200,190,255,0.35)');
     }
     g.restore();
-    g.fillStyle = INK;
+    g.fillStyle = inkFor(FUSE);
     stroke(g, poly(0.4, -4.6, 1.8, -6.2, 3.6, -6), { w: 1.4, seed: 16, taper: [0, 0.3], press: 0 });
-    g.fillStyle = '#b08a5a';
+    g.fillStyle = css(FUSE);
     stroke(g, poly(0.4, -4.6, 1.8, -6.2, 3.6, -6), { w: 0.6, seed: 16, taper: [0, 0.3], press: 0 });
   });
 
@@ -519,11 +527,11 @@ function trialFlame(rc: RC, fx: number, fy: number, k: number, fc: number) {
   // The puff it ends in.
   const s = rc.s;
   const py = fy + len + 2.6;
-  s.fillStyle = INK;
+  s.fillStyle = inkFor(PUFF);
   s.beginPath();
   for (const [ox, r] of PUFF_BITS) blob(s, fx + ox, py, r + 0.55, 31 + ox, 1, 0.1, true);
   s.fill();
-  s.fillStyle = '#e9e4dc';
+  s.fillStyle = css(PUFF);
   s.beginPath();
   for (const [ox, r] of PUFF_BITS) blob(s, fx + ox, py, r, 31 + ox, 1, 0.1, true);
   s.fill();
@@ -539,10 +547,10 @@ function trialFlame(rc: RC, fx: number, fy: number, k: number, fc: number) {
   s.save();
   s.translate(tx, ty);
   s.rotate(sw * 0.15);
-  s.fillStyle = INK;
+  s.fillStyle = inkFor(TAG);
   path(s, poly(-1.9, -1.6, 1.9, -1.6, 1.9, 1.8, -1.9, 1.8, -2.6, 0.1));
   s.fill();
-  s.fillStyle = '#fbe9a6';
+  s.fillStyle = css(TAG);
   path(s, poly(-1.4, -1.1, 1.4, -1.1, 1.4, 1.3, -1.4, 1.3, -1.9, 0.1));
   s.fill();
   s.fillStyle = '#9a1c14';
@@ -616,7 +624,8 @@ export function drawItemShot(rc: RC, p: Projectile): void {
   const s = rc.s;
   const back = Math.min(14, Math.abs(p.vx) * 0.06);
   const dir = p.vx < 0 ? -1 : 1;
-  s.fillStyle = INK;
+  // Speed lines in a dark of the shell they trail.
+  s.fillStyle = inkFor(SHELL);
   for (let i = 0; i < 3; i++) {
     const y = p.y - 2.6 + i * 2.8;
     const x0 = p.x - dir * (6.5 + (i === 1 ? 0 : 1.6));

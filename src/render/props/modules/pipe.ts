@@ -6,9 +6,9 @@ import type { CharacterDef } from '../../../gen/character';
 import { TILE } from '../../../sim/constants';
 import { dirOf, isPipe, lonePipe, type ModuleOf, PIPE, pipeHalfWidth, pipePairs, type PipeLook, type PlacedProp, resolveProp } from '../../../sim/props';
 import type { Runner, RunWorld } from '../../../sim/run';
-import { type P, stroke } from '../../ink';
+import { inkFor, type P, stroke } from '../../ink';
 import { drawInkRunner } from '../../ink-character';
-import { boxPts, dot, INK, ovalPts, part, path, pen, poly, sprite, stamp, tone } from '../../ink-props';
+import { boxPts, dot, ovalPts, part, path, pen, poly, sprite, stamp, tone } from '../../ink-props';
 import { bulb, light, type RC } from '../../kit';
 import { defineArt, defineHeld } from '../common';
 
@@ -195,7 +195,7 @@ function body(look: PipeLook, len: number, f: Frame) {
     path(g, map(f, poly(-W / 2, LIP - 1, W / 2, LIP - 1, W / 2, LIP + 2.6, 0, LIP + 3.4, -W / 2, LIP + 2.6)));
     g.fill();
     g.restore();
-    pen(g, shaft, seed, 0.45, 1.9, 5);
+    pen(g, shaft, seed, 0.45, 1.9, 5, inkFor(t.base));
     // The lip: the full two tiles across, chunkier and a step brighter, banded the same way.
     const lip = map(f, outline(0, LIP, L, 0.4));
     tone(g, lip, t.base, { depth: 0.8, shade: -10 });
@@ -208,7 +208,7 @@ function body(look: PipeLook, len: number, f: Frame) {
     path(g, map(f, poly(-W / 2, LIP - 1.4, W / 2, LIP - 1.4, W / 2, LIP + 1, -W / 2, LIP + 1)));
     g.fill();
     g.restore();
-    pen(g, lip, seed + 1, 0.5, 2, 5);
+    pen(g, lip, seed + 1, 0.5, 2, 5, inkFor(t.base));
     // The mouth's rim, seen a touch from its own side: a bevelled ring round the opening.
     const rim = map(f, ovalPts(0, 3.4, W / 2 - 2, 2.7, seed + 2, 0.02, 20));
     part(g, rim, t.base, seed + 2, { depth: 0.6, shade: -12, thin: 0.3, thick: 0.9 });
@@ -230,15 +230,17 @@ function innerRim(f: Frame): P[] {
   return map(f, pts);
 }
 
+const CARD: HSL = { h: 44, s: 40, l: 88 };
+
 /** A plumber's job tag stuck on the shaft below the lip, upright whichever way the pipe faces, with the pair's number. */
 function tag(s: CanvasRenderingContext2D, x: number, y: number, n: number, f: Frame, len: number) {
   const p = at(f, SHAFT - 5, Math.max(LIP + 5, (len * TILE) / 2 + 3));
   const tx = x + p.x;
   const ty = y + p.y;
   const card = boxPts(tx - 3.1, ty - 3.5, 6.2, 7, 0.8, n, 0.1);
-  part(s, card, { h: 44, s: 40, l: 88 }, n + 3, { depth: 0.35, thin: 0.3, thick: 0.6 });
-  dot(s, tx, ty - 2.4, 0.45, n);
-  s.fillStyle = INK;
+  part(s, card, CARD, n + 3, { depth: 0.35, thin: 0.3, thick: 0.6 });
+  dot(s, tx, ty - 2.4, 0.45, n, undefined, inkFor(CARD));
+  s.fillStyle = inkFor(CARD);
   s.font = 'bold 6px sans-serif';
   s.textAlign = 'center';
   s.textBaseline = 'middle';
@@ -281,7 +283,8 @@ defineArt<'pipe'>({
     const t = LOOKS[m.look];
     const base = t.base;
     const h = hole(f).map((p) => ({ x: x + p.x, y: y + p.y }));
-    s.fillStyle = linked ? css(t.deep, -8) : INK;
+    // A lone mouth is a dead black hole, the very bottom of the pipe's own deepest tone.
+    s.fillStyle = linked ? css(t.deep, -8) : css({ ...t.deep, l: 4 });
     path(s, h);
     s.fill();
     if (linked) {

@@ -56,6 +56,19 @@ const BLAST_SCALE: Record<PartSize, number> = { small: 0.7, medium: 0.85, large:
 /** How much a card shows of each size: big enough to read alone, and still smaller for a smaller part. */
 const CARD_SIZE: Record<PartSize, number> = { small: 0.6, medium: 0.8, large: 0.96 };
 
+/**
+ * The same step for a part that's an open frame round a hub (a wheel's spokes and cars, a spin bar's rod and
+ * heads): its card is already fitted to the reach it sweeps, so the full step left a small one a few thin
+ * strokes in the middle of its card. It still steps, just less.
+ */
+const CARD_SIZE_OPEN: Record<PartSize, number> = { small: 0.84, medium: 0.9, large: 0.96 };
+
+function cardStep(def: PropDef): number {
+  if (!def.size) return 0.9;
+  const open = def.modules.some((m) => m.type === 'rotor' || m.type === 'swinger');
+  return (open ? CARD_SIZE_OPEN : CARD_SIZE)[def.size];
+}
+
 /** The picture a card draws of a part: what would leave its body a speck is trimmed to fit. */
 function cardDef(full: PropDef): PropDef {
   // A long rope would shrink to a thread on a card, so show only its top links: fewer of them, but
@@ -73,7 +86,10 @@ function cardDef(full: PropDef): PropDef {
       case 'swinger':
         return { ...m, arm: Math.min(m.arm, m.head === 'mace' ? 1.6 : 1.3) };
       case 'magnet':
-        return { ...m, radius: Math.min(m.radius, 1.7) };
+        return { ...m, radius: Math.min(m.radius, 0.95) };
+      case 'tesla':
+        // A long fence's pylons would be specks at either end of its card: stand them two tiles apart.
+        return { ...m, b: [m.a[0] + Math.sign(m.b[0] - m.a[0]) * Math.min(Math.abs(m.b[0] - m.a[0]), 2), m.a[1]] };
       case 'piston':
         return { ...m, reach: Math.min(m.reach, 1) };
       case 'flame':
@@ -85,6 +101,16 @@ function cardDef(full: PropDef): PropDef {
     }
   };
   const modules = full.modules.map(trim);
+  // A fence drawn shorter keeps only the cells its pylons stand in.
+  const fence = modules.find((m) => m.type === 'tesla');
+  if (fence && fence.type === 'tesla') {
+    const keep = (c: readonly [number, number]) => [fence.a, fence.b].some((p) => c[0] === Math.floor(p[0]) && c[1] === Math.floor(p[1]));
+    return {
+      ...full,
+      footprint: full.footprint.filter(keep),
+      modules: modules.map((m) => (m.type === 'body' ? { ...m, cells: m.cells.filter(keep) } : m)),
+    };
+  }
   // A wheel's footprint is the disk it sweeps: the card fits what it draws.
   const hub = modules.find((m) => m.type === 'rotor');
   if (!hub || hub.type !== 'rotor') return { ...full, modules };
@@ -122,7 +148,9 @@ function cardBounds(def: PropDef): { x0: number; y0: number; x1: number; y1: num
       grow(m.at[0] + dx * d, m.at[1] + dy * d, Math.abs(dy) * across, Math.abs(dx) * across);
     }
     if (m.type === 'magnet') grow(m.at[0], m.at[1], m.radius);
-    if (m.type === 'rotor') grow(m.hub[0], m.hub[1], m.arm + m.width / 2 + 0.2);
+    // A wheel's cars hang level as it turns: they reach out by half their width, but up and down only by
+    // half their depth, so the card doesn't box it as a disc and shrink it into the middle.
+    if (m.type === 'rotor') grow(m.hub[0], m.hub[1], m.arm + m.width / 2 + 0.2, m.arm + m.thick / 2 + 0.35);
     // A keg's aim chevrons reach out of it; a slingshot only shows them while someone's in it.
     if (m.type === 'keg') grow(w / 2, h / 2, w / 2 + (m.aim === 'player' ? 0 : 0.8), h / 2 + (m.aim === 'player' ? 0.1 : 0.8));
   }
@@ -146,7 +174,7 @@ export function drawPreview(rc: RC, full: PropDef, cx: number, cy: number, bw: n
   const blast = def.modules[0]?.type === 'bomb' ? BLAST_SCALE[def.size ?? 'large'] : 1;
   const fit = Math.min(bw / ((b.x1 - b.x0) * TILE), bh / ((b.y1 - b.y0) * TILE));
   // A one-tile charge steps by its blast alone, and stays clear of the tags above it.
-  const k = def.modules[0]?.type === 'bomb' ? Math.min(2.1, fit * 0.86) * blast : Math.min(2.6, fit * 0.86) * (def.size ? CARD_SIZE[def.size] : 0.9);
+  const k = def.modules[0]?.type === 'bomb' ? Math.min(2.1, fit * 0.86) * blast : Math.min(2.6, fit * 0.86) * cardStep(def);
   const s = rc.s;
   const g = rc.g;
   for (const ctx of [s, g]) {

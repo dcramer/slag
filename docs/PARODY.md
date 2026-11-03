@@ -37,7 +37,7 @@ Each row gives what the item or part mocks, its silhouette (what must read at ga
 | bridge | Tutorial Ledge, Load-Bearing Girder, Placeholder Plank | The first floating platform of every game | A capstoned stone ledge, a rope-lashed plank raft, or a truss girder with bolted end plates | No supports at all. The Placeholder roll looks like a grid-paper test texture inked by hand. |
 | platform | Floating Brick, Obligatory Crate, Ice Level, Baggage Claim, Bounce House | Floating bricks, crates, moving lifts and conveyors | The material's block: coursed stone, riveted plate armour, slatted crates, an ice cube with icicles | The wooden crate has stencilled "CRATE" slats. The conveyor is a belt machine (big head drum, small tail drum, painted rail) on whichever face it's turned to, with a little luggage tag. |
 | crumble | Biscuit, Donut Ledge, Wafer, Rusk | The crumbling donut lift | A sandwich biscuit: two docked biscuits round a band of cream | Crumbs fall as it goes. |
-| spikestrip | Floor Spikes, Death Carpet | Instant-death spikes | A row of spikes on a face | A welcome-mat edge with fringe. |
+| spikestrip | Floor Spikes, Death Carpet | Instant-death spikes | A row of spikes on a face | They stand on a red carpet runner, a gold fringe hanging off both ends. |
 | icecoat | Ice Physics, Black Ice, Glaze | The ice level | A glassy coat | Zamboni tread lines on the shine. |
 | slimecoat | Swamp Level, Slime Trail, Gunk | The poison swamp | A thick green coat | A single bubble swells and pops. |
 | spikeblock | Spike Block, Pincushion, Porcupine | The unstompable spiked enemy | A block bristling on its spiked faces | A "NO STOMPING" boot icon on the plain face. |

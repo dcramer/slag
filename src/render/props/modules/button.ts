@@ -1,7 +1,7 @@
 import { css, type HSL } from '../../../core/color';
 import { TILE } from '../../../sim/constants';
 import { buttonOn, buttonSolid, buttonUntil, dirOf } from '../../../sim/props';
-import { line } from '../../ink';
+import { inkFor, line } from '../../ink';
 import { boxPts, dot, glint, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import { bulb, light } from '../../kit';
 import { defineArt } from '../common';
@@ -43,7 +43,7 @@ function mount() {
       g.fill();
     }
     g.restore();
-    for (const x of [-6.3, 6.3]) dot(g, x, -1.9, 0.5, x, '#e6e8ee');
+    for (const x of [-6.3, 6.3]) dot(g, x, -1.9, 0.5, x, '#e6e8ee', inkFor(STEEL));
     // The collar the dome sits in.
     part(g, boxPts(-6.2, -4.8, 12.4, 2.3, 0.7, 5, 0.1), { ...STEEL, l: 34 }, 5, { depth: 0.4, shade: -12, thin: 0.4, thick: 1.1 });
     g.fillStyle = css(STEEL, 24);
@@ -64,7 +64,8 @@ function dome(s: CanvasRenderingContext2D, hue: number, press: number) {
 function block(hue: number, v: number) {
   return sprite(`btnblk|${hue | 0}|${v}`, -1, -1, TILE + 2, TILE + 2, (g) => {
     const body = boxPts(0.4, 0.4, TILE - 0.8, TILE - 0.8, 1.6, v + 11, 0.1);
-    tone(g, body, { h: hue, s: 55, l: 48 }, { depth: 1, shade: -16 });
+    const c: HSL = { h: hue, s: 55, l: 48 };
+    tone(g, body, c, { depth: 1, shade: -16 });
     const inner = boxPts(3, 3, TILE - 6, TILE - 6, 1, v + 12, 0.1);
     tone(g, inner, { h: hue, s: 60, l: 56 }, { depth: 0.5, shade: -10 });
     g.fillStyle = css({ h: hue, s: 60, l: 26 }, 0, 0.8);
@@ -73,7 +74,7 @@ function block(hue: number, v: number) {
     g.closePath();
     g.fill();
     g.fillRect(TILE / 2 - 4, TILE / 2 + 1.6, 8, 1.3);
-    pen(g, body, v + 13, 0.5, 1.2, 3);
+    pen(g, body, v + 13, 0.5, 1.2, 3, inkFor(c));
   });
 }
 
