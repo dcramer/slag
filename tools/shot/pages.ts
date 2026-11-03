@@ -286,6 +286,7 @@ export const shots: Scenarios = {
     await page.waitForSelector('.cx-modal[hidden]', { state: 'attached', timeout: 5000 });
     // The maps (`--map <theme>`): its section from the index, its look, a landmark browsed to with the keys, and a hazard.
     const mapTheme = opt('map', 'castle');
+    await page.waitForSelector(`.cx-index [data-sec=map-${mapTheme}]`, { timeout: 60_000 });
     await page.click(`.cx-index [data-sec=map-${mapTheme}]`);
     await page.waitForTimeout(400);
     await drawn(page);
@@ -342,6 +343,8 @@ export const shots: Scenarios = {
       await mp.tap('.cx-modal [data-act=close]');
       await mp.waitForTimeout(300);
     }
+    // The maps join the index once their registries load, which a busy machine can take a while over.
+    await mp.waitForSelector(`.cx-index [data-sec=map-${mapTheme}]`, { timeout: 60_000 });
     await mp.locator(`.cx-index [data-sec=map-${mapTheme}]`).scrollIntoViewIfNeeded();
     await mp.tap(`.cx-index [data-sec=map-${mapTheme}]`);
     await mp.waitForTimeout(600);
