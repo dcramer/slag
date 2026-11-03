@@ -23,7 +23,7 @@
       "bone": "spine_04",
       "at": [
         0,
-        -1.0,
+        -3.5,
         -3.4
       ],
       "rot": [
@@ -36,7 +36,7 @@
           "shape": "cylinder",
           "role": "lid",
           "size": [
-            3.7,
+            3.4,
             0.6,
             0
           ],
@@ -141,17 +141,17 @@
           "shape": "sphere",
           "role": "ear",
           "size": [
-            0.45,
-            1.0,
-            3.0
+            0.5,
+            1.1,
+            3.3
           ],
           "at": [
             -4.2,
-            3.0,
+            3.4,
             -3.2
           ],
           "rot": [
-            14,
+            30,
             50,
             0
           ]
@@ -160,17 +160,17 @@
           "shape": "sphere",
           "role": "ear",
           "size": [
-            0.45,
-            1.0,
-            3.0
+            0.5,
+            1.1,
+            3.3
           ],
           "at": [
             4.2,
-            3.0,
+            3.4,
             -3.2
           ],
           "rot": [
-            14,
+            30,
             -50,
             0
           ]
@@ -567,8 +567,12 @@
     }
   ],
   "face": {
-    "r": 1.2,
-    "iris": "#3c78c8"
+    "r": 1.05,
+    "iris": "#3c78c8",
+    "covers": {
+      "iris": "skin"
+    },
+    "spread": 0.85
   },
   "clips": {
     "idle": {
@@ -691,55 +695,55 @@
       "from": "idle@0.05",
       "bones": {
         "spine_01": [
-          -12,
+          18,
+          0,
+          0
+        ],
+        "head": [
+          -10,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          45,
+          0,
+          0
+        ],
+        "upperarm_far": [
+          35,
+          0,
+          0
+        ],
+        "lowerarm_near": [
+          -20,
+          0,
+          0
+        ],
+        "lowerarm_far": [
+          -20,
           0,
           0
         ],
         "thigh_near": [
-          -60,
+          -75,
           0,
           0
         ],
         "calf_near": [
-          95,
+          105,
           0,
           0
         ],
         "thigh_far": [
-          8,
+          12,
           0,
           0
         ],
         "calf_far": [
-          15,
-          0,
-          0
-        ],
-        "clavicle_near": [
-          0,
-          0,
-          -55
-        ],
-        "upperarm_near": [
-          0,
-          0,
-          -165
-        ],
-        "lowerarm_near": [
-          0,
-          0,
-          -5
-        ],
-        "upperarm_far": [
           25,
           0,
           0
         ]
-      },
-      "yaw": 12,
-      "scale": {
-        "upperarm_near": 1.35,
-        "hand_near": 0.9
       }
     },
     "fall": {
