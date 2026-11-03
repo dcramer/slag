@@ -8,9 +8,6 @@ Design intent for everything below is in `docs/DESIGN.md`.
 
 ---
 
-## 28. The codex covers maps
-The owner: "the codex needs to talk about maps". The codex (`src/codex/`) catalogs parts and projectiles only. Add the world: each theme with its landmarks, its own hazards and its look, read from the registries (`THEME_IDS`, `CONCEPTS`, `SET_PIECE_RECIPES`, decor `RULES`) so a new entry shows up without codex edits.
-
 ## 27. AI players and player scripts (future)
 Brains that fill seats by producing inputs, built in or written by players. Design: `docs/DESIGN.md` → AI players. Native AI first (phases 1–2); scripts after. Each phase is one agent, in order.
 
