@@ -126,6 +126,30 @@ export const CODEX_CSS = `
     box-shadow 0.12s;
 }
 
+.cx-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* Theme names are short: two to a row, so the whole index fits a 720p column. */
+.cx-chips[data-part='Maps'] {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.cx-part {
+  margin: 10px 0 1px 3px;
+  font: 800 12px/1 var(--ui);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.cx-part:first-child {
+  margin-top: 0;
+}
+
 .cx-index .n {
   font: 800 12px/1 var(--ui);
   letter-spacing: 0.08em;
@@ -342,6 +366,34 @@ export const CODEX_CSS = `
   outline-offset: 3px;
 }
 
+/* Maps: wider cards onto a level, the play view's shape. */
+.cx-sec[data-part='Maps'] .cx-grid {
+  grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
+}
+
+.cx-card[data-map] .cx-well {
+  aspect-ratio: 16 / 9;
+  background: var(--soot);
+}
+
+/* The theme's own card: the whole row, a panorama of the place. */
+.cx-card[data-map='theme'] {
+  grid-column: 1 / -1;
+}
+
+.cx-card[data-map='theme'] .cx-well {
+  aspect-ratio: 21 / 8;
+}
+
+.cx-card[data-map] .cx-well canvas {
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.cx-card[data-map] .cx-well.drawn canvas {
+  opacity: 1;
+}
+
 /* ------------------------------------------------------------ one part, up close */
 
 .cx-modal {
@@ -513,8 +565,37 @@ export const CODEX_CSS = `
   color: var(--ash);
 }
 
-.cx-quip[hidden] {
+.cx-quip[hidden],
+.cx-spec[hidden] {
   display: none;
+}
+
+/* A map up close: a bigger picture, and what the place is before its facts. */
+.cx-modal[data-kind='map'] .cx-sheet {
+  width: min(1180px, 100%);
+  grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr);
+}
+
+.cx-modal[data-kind='map'] .cx-stage .cx-well {
+  aspect-ratio: 16 / 9;
+}
+
+.cx-modal[data-kind='map'] .cx-info h2 {
+  font-size: clamp(30px, 3.4vw, 42px);
+}
+
+.cx-modal[data-kind='map'] .cx-quip {
+  margin-bottom: 16px;
+  font-size: 15.5px;
+  color: var(--bone);
+}
+
+.cx-modal[data-kind='map'] .cx-spec {
+  order: 1;
+}
+
+.cx-modal[data-kind='map'] .cx-actions {
+  order: 2;
 }
 
 .cx-actions {
@@ -640,10 +721,28 @@ export const CODEX_CSS = `
     overflow-x: auto;
     scrollbar-width: none;
   }
+  .cx-chips,
+  .cx-chips[data-part='Maps'] {
+    display: contents;
+  }
+  .cx-part {
+    flex: none;
+    align-self: center;
+    margin: 0 0 0 6px;
+  }
+  .cx-part:first-child {
+    margin-left: 0;
+  }
   .cx-index button {
     flex: none;
-    min-height: 36px;
+    min-height: 44px;
     font-size: 15px;
+  }
+  .cx-sec[data-part='Maps'] .cx-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cx-card[data-map='theme'] .cx-well {
+    aspect-ratio: 16 / 9;
   }
   .cx-main {
     padding: 26px 14px 36px;
@@ -683,6 +782,9 @@ export const CODEX_CSS = `
     gap: 18px;
     max-height: calc(100dvh - 28px);
     padding: 26px 16px 18px;
+  }
+  .cx-modal[data-kind='map'] .cx-sheet {
+    grid-template-columns: 1fr;
   }
   .cx-info h2 {
     margin-top: 12px;

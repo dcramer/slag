@@ -292,6 +292,10 @@ export const STARSHIP = defineConcept({
   ownsCrossing: true,
   family: ['turret', 'meteor shower', 'airlock', 'fuel cells', 'solar flare'],
   names: ['The Starship at {place}', 'The {place} Carrier', 'The Mothership of {place}', 'Docking Bay {place}'],
+  codex: {
+    about:
+      'A stubby carrier moored at the end of its gangway. Through the hangar where a cargo hauler runs, or over the flight deck under the bridge’s plasma gun.',
+  },
   box: (k, rng) => {
     const struct = structCols(k, rng, SHIP_MIN, [22, 34], true);
     return { w: crossFor(k, SHIP_MIN) + ARM + struct, h: boxH(k, DOOR + 2 + 3 + 7) };
@@ -417,6 +421,10 @@ export const RING_STATION = defineConcept({
   ownsCrossing: true,
   family: ['comm array', 'turret', 'airlock', 'meteor shower', 'docking arm'],
   names: ['The Ring Station of {place}', '{place} Ring', 'The Habitat at {place}', 'Station {place}'],
+  codex: {
+    about:
+      'A habitat ring round a hub. In one airlock and out the other under the maintenance saws, or up the hand holds and over the ring past the arcing antennas.',
+  },
   box: (k, rng) => {
     const struct = structCols(k, rng, RING_MIN, [17, 23], true);
     const Ro = Math.min(9, Math.floor((struct - 2) / 2));
@@ -556,6 +564,9 @@ export const PLANETOID = defineConcept({
   ownsCrossing: true,
   family: ['meteor shower', 'solar flare', 'fuel cells', 'turret'],
   names: ['The Planetoid of {place}', 'Little {place}', 'The World of {place}', '{place} Minor'],
+  codex: {
+    about: 'A lumpy little world with a moon of its own. Through the tunnel past the vent of its molten core, or over the top. Catch the moon for a lift.',
+  },
   box: (k, rng) => {
     const struct = structCols(k, rng, PLANET_MIN, [19, 25]);
     const Rp = Math.min(7, Math.floor((struct - 2 * ORBIT_GAP - 1) / 2));
@@ -713,6 +724,10 @@ export const LAUNCH_GANTRY = defineConcept({
   ownsCrossing: true,
   family: ['turret', 'meteor shower', 'fuel cells', 'airlock', 'comm array'],
   names: ['The Launch Pad at {place}', '{place} Launch Complex', 'The Gantry of {place}', 'Pad 39 {place}'],
+  codex: {
+    about:
+      'A rocket on its clamps beside its service tower. Under the rocket while the engine isn’t test-firing, or up the tower and across the access arm over the nose.',
+  },
   box: (k, rng) => {
     const struct = structCols(k, rng, GANTRY_MIN, [12, 16]);
     return { w: crossFor(k, GANTRY_MIN) + ARM + struct, h: boxH(k, DOOR + 1 + 3 * easyRise() + 2 + 6) };
@@ -855,6 +870,7 @@ export const MINING_RIG = defineConcept({
   ownsCrossing: true,
   family: ['meteor shower', 'fuel cells', 'solar flare', 'turret'],
   names: ['The Mining Rig of {place}', '{place} Diggings', 'The Asteroid Mine at {place}', 'Claim {place}'],
+  codex: { about: 'A long asteroid bored through, a drill plunging down its shaft. Through the bore past the hauler or the cutter, or over the rock.' },
   box: (k, rng) => {
     const struct = structCols(k, rng, RIG_MIN, [16, 26]);
     return { w: crossFor(k, RIG_MIN) + ARM + struct, h: boxH(k, DOOR + 3 + easyRise() + 8) };

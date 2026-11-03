@@ -124,9 +124,17 @@ export const FARM: Recipe[] = [
       }),
   },
   defineSetPiece({ name: 'electric fence', weight: 2, role: 'hazard', candidates: fences }),
-  defineSetPiece({ name: 'hay hook', weight: 1.6, role: 'hazard', unique: true, candidates: hooks }),
+  defineSetPiece({
+    name: 'hay hook',
+    weight: 1.6,
+    role: 'hazard',
+    unique: true,
+    codex: { title: 'Hay Hook', note: 'Hay there.', about: 'A heavy block on a chain, swinging from a jib with its hook at head height.' },
+    candidates: hooks,
+  }),
   defineSetPiece({
     name: 'muck spreader',
+    codex: { title: 'Muck Spreader', note: 'Organic.', about: 'Flings slow muck in short bursts. It sticks, and you slow down.' },
     weight: 1.6,
     role: 'hazard',
     unique: true,
@@ -145,6 +153,7 @@ export const FARM: Recipe[] = [
   }),
   defineSetPiece({
     name: 'pumpkin catapult',
+    codex: { title: 'Pumpkin Catapult', note: 'Gourd for you.', about: 'Lobs pumpkins that bounce about and knock you off your feet.' },
     weight: 1.4,
     role: 'hazard',
     unique: true,

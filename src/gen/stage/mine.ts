@@ -313,6 +313,10 @@ export const HEADFRAME = defineConcept({
   ownsCrossing: true,
   family: ['cave-in', 'ore bucket', 'runaway cart'],
   names: ['The Headframe of {place}', '{place} Pit Head', 'Number {place} Shaft', 'The Winding Tower at {place}'],
+  codex: {
+    about:
+      'A timber pit-head over the shaft, its cage riding up and down. Through the hall where rock falls out of the bins, or up the ladder and over the deck.',
+  },
   box: (k, rng) => boxFor(k, rng, HF_MIN, [18, 26], FRAME + rng.int(9, 11)),
   build: buildHeadframe,
   pieces: (rng, _s, l) => headframePieces(rng, l),
@@ -415,6 +419,9 @@ export const TRESTLE_LINE = defineConcept({
   ownsCrossing: true,
   family: ['runaway cart', 'minecart', 'cave-in'],
   names: ['The Trestle Line of {place}', '{place} Railway', 'The {place} Express', 'The High Line at {place}'],
+  codex: {
+    about: 'The mine railway on a trestle, broken in places, with a runaway cart on each line. Along the top or along the bottom, at the carts’ convenience.',
+  },
   box: (k, rng) => boxFor(k, rng, TR_MIN, [24, 40], 3 + rng.int(7, 9)),
   build: buildTrestle,
   pieces: (rng, _s, l) => trestlePieces(rng, l),
@@ -527,6 +534,10 @@ export const ORE_CRUSHER = defineConcept({
   ownsCrossing: true,
   family: ['cave-in', 'runaway cart', 'drill'],
   names: ['The Ore Crusher of {place}', 'The {place} Stamp Mill', 'The Grinder at {place}', '{place} Crushing Works'],
+  codex: {
+    about:
+      'An iron house with a hopper down its middle and ore pouring through it. Over the roof against the feed belts, or through the cart tunnel at its foot.',
+  },
   box: (k, rng) => boxFor(k, rng, OC_MIN, [16, 22], 4 + rng.int(7, 10)),
   build: buildCrusher,
   pieces: (rng, _s, l) => crusherPieces(rng, l),
@@ -658,6 +669,7 @@ export const CRYSTAL_GEODE = defineConcept({
   ownsCrossing: true,
   family: ['cave-in', 'firedamp', 'ore bucket'],
   names: ['The Crystal Geode of {place}', 'The {place} Geode', 'The Glittering Hollow of {place}', '{place} Crystal Cave'],
+  codex: { about: 'A dome of crystal with a bowl of spikes inside. Across the ledges to the high window, or up the outside and over the dome.' },
   box: (k, rng) => boxFor(k, rng, GE_MIN, [17, 24], 2 + rng.int(10, 12)),
   build: buildGeode,
   pieces: (rng, _s, l) => geodePieces(rng, l),
@@ -779,6 +791,9 @@ export const FLOODED_GALLERY = defineConcept({
   ownsCrossing: true,
   family: ['cave-in', 'firedamp', 'runaway cart'],
   names: ['The Flooded Gallery of {place}', '{place} Sump', 'The Drowned Level at {place}', 'The Wet Seam of {place}'],
+  codex: {
+    about: 'A timbered gallery under a slab of rock that floods on a slow cycle. Through it by timing, from refuge rock to refuge rock, or over the top.',
+  },
   box: (k, rng) => boxFor(k, rng, FG_GALLERY + 2 * FG_FLANK, [FG_GALLERY + 2 * FG_FLANK + 4, FG_GALLERY + 2 * FG_FLANK + 22], 3 + rng.int(8, 10)),
   build: buildGallery,
   pieces: (rng, s, l) => galleryPieces(rng, s, l),

@@ -444,6 +444,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 04:56Z · `done` · DESIGN.md → Controls and UI
 - **The codex is the global parts catalog, subtitled "Spoilers!".**
   2026-11-02 · git `cf6c496`, `0464596` · `done` · `src/codex/`
+- **The codex talks about maps too: every theme, its landmarks and its own hazards, pictured by the game's renderer.** "the codex needs to talk about maps"
+  2026-11-02 · `done` · DESIGN.md → Discovery, `src/codex/maps.ts`, TODO.md → 28
 - **The game has a favicon, app icons, Open Graph and oEmbed previews.** "Also need a favicon, oembed metadata and image, and apple icon etc"
   2026-11-02 07:06Z · `done`; checking them on a deploy is `open` · `pnpm brand`, TODO.md → 23
 

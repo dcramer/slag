@@ -402,6 +402,10 @@ export const CALDERA = defineConcept({
   ownsCrossing: true,
   family: ['lava plume', 'bombs', 'spitter', 'serpent'],
   names: ['The Caldera of {place}', 'Mount {place}', '{place} Crater', 'The Smoking Cone of {place}'],
+  codex: {
+    about:
+      'A stepped cone whose crater is the crossing, lava rising in it and a magma serpent leaping the rim. Over each flank by its steps, or through the lava tube under it.',
+  },
   box: (k, rng) => {
     const cross = crossFor(k, CALDERA_MIN);
     const room = k.W - 2 * SITE_MARGIN - cross;
@@ -575,6 +579,10 @@ export const MAGMA_TIDE = defineConcept({
   ownsCrossing: true,
   family: ['bombs', 'serpent', 'spitter', 'lava plume'],
   names: ['The Magma Tide of {place}', '{place} Lava Flats', 'High Lava at {place}', 'The Burning Shallows of {place}'],
+  codex: {
+    about:
+      'A basin under a broken basalt arch, a slow lava tide over its floor. Across the floor between tides by the refuge rocks, or along the arch and over its break.',
+  },
   box: (k, rng) => {
     const struct = BANK + 2 * TIDE_ABUT + TIDE_BASIN;
     const cross = crossFor(k, struct + 4);
@@ -719,6 +727,7 @@ export const LAVAFALL_ORGAN = defineConcept({
   ownsCrossing: true,
   family: ['lavafall', 'bombs', 'spitter'],
   names: ['The Lavafall Organ of {place}', '{place} Falls', 'The Pipes of {place}', '{place} Cathedral Rock'],
+  codex: { about: 'Terraces of basalt pipes with lava pouring off the drops. Up the face on the ledges, or through the tube under it and up the shaft.' },
   box: (k, rng) => {
     const cross = crossFor(k, ORGAN_MIN + BANK);
     const room = k.W - 2 * SITE_MARGIN - cross;
@@ -874,6 +883,9 @@ export const DRAGON_RIBS = defineConcept({
   ownsCrossing: true,
   family: ['vent', 'bombs', 'spitter'],
   names: ['The Dragon Ribs of {place}', 'The Bone Yard at {place}', "{place}'s Last Dragon", 'The Wyrm of {place}'],
+  codex: {
+    about: 'A fossil dragon half buried in the slope, still breathing fire. Walk the spine, or in through the mouth and out under the ribs past the vents.',
+  },
   box: (k, rng) => {
     const cross = crossFor(k, RIBS_MIN + BANK);
     const room = k.W - 2 * SITE_MARGIN - cross;
@@ -1010,6 +1022,7 @@ export const LAVA_TUBE = defineConcept({
   ownsCrossing: true,
   family: ['bombs', 'lava plume', 'obsidian bridge', 'serpent'],
   names: ['The Lava Tube of {place}', '{place} Underpass', 'The Hollow Mesa of {place}', 'The Pipeline at {place}'],
+  codex: { about: 'A mesa with a tube bored through it, dripping and pooling. Over the top, or drop in at the near end and climb out at the far one.' },
   box: (k, rng) => {
     const cross = crossFor(k, TUBE_MIN + BANK);
     const room = k.W - 2 * SITE_MARGIN - cross;

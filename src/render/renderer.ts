@@ -1,7 +1,7 @@
 import { css, type HSL, shift, toRgb } from '../core/color';
 import { clamp } from '../core/geom';
 import type { Match, Player } from '../game/match';
-import { overview, raceFloor } from '../game/view';
+import { overview, raceFloor, type ViewXform } from '../game/view';
 import { PLAYER_H, TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import { floorY, type Level, tileAt } from '../sim/level';
 import type { Solid } from '../sim/physics';
@@ -92,6 +92,8 @@ export class Renderer {
   private glow = document.createElement('canvas');
   /** Milliseconds a frame may spend inking a new level. Infinity bakes it whole at once (stepped screenshots, perf). */
   bakeBudgetMs = 5;
+  /** Hold the camera on this pose instead of following the match: pictures of a place (the codex's maps). */
+  pin: ViewXform | null = null;
   private lightC = document.createElement('canvas');
   private occluder = new LightOccluder();
   private sctx = this.scene.getContext('2d')!;
@@ -425,6 +427,12 @@ export class Renderer {
     const lv = m.level;
     const ww = lv.w * TILE;
     const wh = lv.h * TILE;
+    if (this.pin) {
+      this.cam.setBounds(ww, wh, 0);
+      this.cam.snap(this.pin);
+      this.cam.update(dt, false);
+      return;
+    }
     const ov = overview(lv);
     if (m.phase === 'pick' || m.phase === 'place') {
       this.cam.setBounds(ww, wh, ov.zoom);
