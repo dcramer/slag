@@ -121,6 +121,9 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Players are fully solid: you can stand on someone's head, ride them and shove them.** "players are fully collidable so you can jump on top of them not just pass through"
   2026-11-02 06:30Z · `done` · DESIGN.md → Players
   Changed: bodies only nudged each other softly, with no stacking (`ec85347`).
+- **A head is its own physics, an unstable perch rather than ground: nobody carries a rider, a rounded slick top slides it off, a jump underneath bucks it off and a hard stop, turn or shove knocks it off, harmlessly; you can still jump off a head.** "also when you're on someone's back, you should kind of get knocked off like slide/etc its separate physics"
+  2026-11-02 · `done` · DESIGN.md → Players
+  Changed: the runner underneath carried whoever stood on it and a rising runner lifted them; a stack stood for as long as its base did.
 - **The spawn zone is safe: nothing hurts you while you touch it.**
   2026-11-02 · git `ec85347` · `done` · DESIGN.md → Players
 - **Players in one lobby always look different.** "also our two dudes look the same"

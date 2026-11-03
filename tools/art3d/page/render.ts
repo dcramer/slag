@@ -191,26 +191,32 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
   // Props, on their bones, in the rest pose's axes and world px.
   // Accessory slots: each slot's options in order, and the roles that are theirs.
   const slotNames = Object.keys(s.slots ?? {});
-  const options: THREE.Group[][] = slotNames.map(() => []);
+  const options: THREE.Group[][][] = slotNames.map(() => []);
   const optionRoles: Set<number>[][] = slotNames.map(() => []);
   for (const p of s.props ?? []) {
-    const holder = addProp(p);
+    const holders = addProp(p);
     if (!p.slot) continue;
     const si = slotNames.indexOf(p.slot);
     if (si < 0) throw new Error(`prop slot "${p.slot}" isn't in slots`);
-    options[si].push(holder);
+    options[si].push(holders);
     optionRoles[si].push(new Set(p.parts.map((q) => names.indexOf(q.role))));
   }
   /** Shows option `k` of slot `si` and hides its others. */
-  const show = (si: number, k: number) => options[si].forEach((h, i) => (h.visible = i === k));
+  const show = (si: number, k: number) => options[si].forEach((hs, i) => hs.forEach((h) => (h.visible = i === k)));
   options.forEach((_, si) => show(si, 0));
-  function addProp(p: Prop): THREE.Group {
-    const b = bone(p.bone);
-    const rq = rootQ();
+  /** A group on bone `name` that undoes its turn and scale: its children are placed in the figure's rest axes, in world px. */
+  function holderOn(name: string): THREE.Group {
+    const b = bone(name);
     const holder = new THREE.Group();
-    holder.quaternion.copy(inModel(b, rq).invert());
-    const ws = b.getWorldScale(new THREE.Vector3()).x;
-    holder.scale.setScalar(1 / ws);
+    holder.quaternion.copy(inModel(b, rootQ()).invert());
+    holder.scale.setScalar(1 / b.getWorldScale(new THREE.Vector3()).x);
+    b.add(holder);
+    return holder;
+  }
+  /** The prop on its bone, and a holder of its own for each part on another bone (a wear option's marks). */
+  function addProp(p: Prop): THREE.Group[] {
+    const holder = holderOn(p.bone);
+    const holders = [holder];
     const rig = new THREE.Group();
     rig.position.set(...p.at);
     rig.rotation.set(rad(p.rot[0]), rad(p.rot[1]), rad(p.rot[2]));
@@ -229,10 +235,35 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
       if (part.at) mesh.position.set(...part.at);
       if (part.rot) mesh.rotation.set(rad(part.rot[0]), rad(part.rot[1]), rad(part.rot[2]));
       mesh.frustumCulled = false;
-      rig.add(mesh);
+      if (part.bone) {
+        const own = holderOn(part.bone);
+        own.add(mesh);
+        holders.push(own);
+        if (part.face) stick(own, mesh, part.at ?? [0, 0, 0], part.face, part.rot?.[2] ?? 0);
+      } else rig.add(mesh);
     }
-    b.add(holder);
-    return holder;
+    return holders;
+  }
+  /**
+   * A wear mark stuck on the skin: from \`at\` (inside the limb, from the joint) out along \`face\` to where
+   * the model's surface is, at rest, and turned flat against it, spun \`spin\` degrees about the way it faces.
+   * Half of it sinks into the body, so what shows is a flat cap the outline of the mark.
+   */
+  function stick(holder: THREE.Group, mesh: THREE.Mesh, at: [number, number, number], face: [number, number, number], spin: number) {
+    holder.updateMatrixWorld(true);
+    const dir = new THREE.Vector3(...face).normalize();
+    const from = holder.localToWorld(new THREE.Vector3(...at));
+    const out = holder
+      .localToWorld(new THREE.Vector3(...at).addScaledVector(dir, 1))
+      .sub(from)
+      .normalize();
+    const ray = new THREE.Raycaster(from.clone().addScaledVector(out, 200), out.clone().negate());
+    const hit = ray.intersectObjects(model.meshes, false)[0];
+    if (!hit) throw new Error(`a wear mark on ${holder.parent?.name} along ${face.join(',')} meets no skin`);
+    mesh.position.copy(holder.worldToLocal(hit.point.clone()));
+    mesh.quaternion
+      .setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir)
+      .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), rad(spin)));
   }
 
   scene.updateMatrixWorld(true);

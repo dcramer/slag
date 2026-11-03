@@ -26,11 +26,12 @@
  *   pnpm shot belts [--propseed 1]         → a conveyor at every rotation: as place ghosts, and placed with a runner on each belt face
  *   pnpm shot items --seed abc             → held items: in hand, loose, and each one used (`--give bat,tax` picks them)
  *   pnpm shot blood --theme farm --players 4 --noletters → staged deaths over four rounds: ooze, settled, place phase, expiry
- *   pnpm shot stack --seed abc             → stepped frames of runners stacking, walking as a stack, and a head-bounce
+ *   pnpm shot stack --seed abc             → stepped frames of heads as perches: a stack bucked, a slide, a hard stop, a knock, a tip, a jump off
  *   pnpm shot grabs                        → stepped frames of a rope swing, a keg shot and a backfire
  *   pnpm shot lineup [--seeds a,b]         → eight runners in a spread of poses, at play scale and close up
  *   pnpm shot cast [--only catalog]       → the toy cast (docs/CHARACTERS.md): lineups on farm and mine, close-up, deaths, lobby, catalog
  *   pnpm shot sprites [--kind plumber]   → a kind rendered from 3D (tools/art3d) in game beside the hand-drawn cast: lineups, 3×, run cycle, lobby
+ *   pnpm shot variety [--kinds plumber,hedgehog] → each rendered kind's curated variety: twelve looks, eight at play scale, the cast lineup
  *   pnpm shot codex                        → /codex: full page, top, a part up close, and on a phone
  *   pnpm shot screens                      → the 404 and error screens, desktop and phone
  *   pnpm shot webgl                        → a race through a lost and restored WebGL context, then with shaders that won't build and with no WebGL2

@@ -7,7 +7,7 @@ import { generateTheme } from '../src/gen/theme';
 import { Predictor } from '../src/net/predict';
 import { drawnVelocity } from '../src/net/session';
 import { hashMatch, restoreMatch, snapshotMatch } from '../src/net/snapshot';
-import { COLLIDE } from '../src/sim/collide';
+import { COLLIDE, PERCH } from '../src/sim/collide';
 import { DT, LEVEL_H, LEVEL_W, PHYS, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
 import { giveItem } from '../src/sim/items';
 import { type Level, spawnZone, tileAt } from '../src/sim/level';
@@ -102,11 +102,11 @@ function airborne(b: Body, x: number, y: number) {
 /** Put `b` in the air `gap` px over `under`'s head. */
 const dropOn = (b: Body, under: Body, gap = 20) => airborne(b, under.x, under.y - b.h - gap);
 
-/** A settled stack of `n`, the first runner at the bottom. */
+/** A settled stack of `n`, the first runner at the bottom, dead centred and fresh: a head holds nobody for long. */
 function stack(n: number, opts: Parameters<typeof lineup>[1] = {}) {
   const s = lineup(n, { spacing: 0, ...opts });
-  for (let i = 1; i < n; i++) airborne(s.bs[i], s.bs[0].x, s.bs[0].y - i * 40);
-  steps(s.run, 90);
+  for (let i = 1; i < n; i++) airborne(s.bs[i], s.bs[0].x, s.bs[0].y - i * 20);
+  steps(s.run, 30);
   return s;
 }
 
@@ -181,16 +181,18 @@ describe('standing on a runner', () => {
     expect(rs.every((r) => r.alive && r.items.daze === 0 && r.status.frozen === 0)).toBe(true);
   });
 
-  it('never tunnels: a fast-fall meeting a jump still stops on the head', () => {
+  it('never tunnels: a fast-fall meeting a jump stops on the head, and is bucked off it', () => {
     const { run, bs } = lineup(2);
     dropOn(bs[1], bs[0], 30);
     bs[1].vy = PHYS.fastFallMax;
     run.step([JUMP, press({ down: true })]);
+    let bucked = false;
     for (let f = 0; f < 6; f++) {
       run.step([HOLD_JUMP, press({ down: true })]);
       expect(feet(bs[1])).toBeLessThanOrEqual(bs[0].y + 1e-6);
+      bucked ||= bs[1].vy < bs[0].vy - PERCH.pop / 2;
     }
-    expect(bs[1].onGround).toBe(true);
+    expect(bucked).toBe(true);
   });
 
   it('jumping off a head is the same jump as off the floor', () => {
@@ -249,44 +251,20 @@ describe('standing on a runner', () => {
     expect(feet(bs[1])).toBe(FLOOR * TILE);
   });
 
-  it('you ride a head as it walks, runs and jumps, and your own input adds to it', () => {
-    const { run, bs } = lineup(2);
-    dropOn(bs[1], bs[0]);
-    steps(run, 30);
-    const off = bs[1].x - bs[0].x;
-    const x0 = bs[0].x;
-    for (let f = 0; f < 40; f++) run.step([f > 10 ? dash(1) : walk(1), NO_INPUT]);
-    expect(bs[0].x - x0).toBeGreaterThan(50);
-    expect(bs[1].x - bs[0].x).toBeCloseTo(off, 6);
-    expect(feet(bs[1])).toBeCloseTo(bs[0].y, 9);
-    steps(run, 40);
-    const y0 = bs[0].y;
-    run.step([JUMP, NO_INPUT]);
-    let top = y0;
-    for (let f = 0; f < 90; f++) {
-      run.step([HOLD_JUMP, NO_INPUT]);
-      top = Math.min(top, bs[0].y);
-      expect(feet(bs[1])).toBeCloseTo(bs[0].y, 9);
-    }
-    expect(y0 - top).toBeGreaterThan(3 * TILE);
-    expect(bs[0].onGround && bs[1].onGround).toBe(true);
-    const a = bs[1].x;
-    for (let f = 0; f < 5; f++) run.step([NO_INPUT, walk(-1)]);
-    expect(bs[1].x).toBeLessThan(a - 5);
-    expect(bs[1].onGround).toBe(true);
-  });
-
-  it('a rising runner lifts whoever is above instead of stopping on their feet', () => {
-    const { run, bs } = lineup(2);
+  it('a rising runner bucks whoever it meets instead of stopping on their feet', () => {
+    const { run, rs, bs } = lineup(2);
     airborne(bs[1], bs[0].x, bs[0].y - 30);
     run.step([JUMP, NO_INPUT]);
-    for (let f = 0; f < 5; f++) run.step([HOLD_JUMP, NO_INPUT]);
+    for (let f = 0; f < 5; f++) {
+      run.step([HOLD_JUMP, NO_INPUT]);
+      expect(feet(bs[1])).toBeLessThanOrEqual(bs[0].y + 1e-6);
+    }
     expect(bs[0].vy).toBeLessThan(-200);
-    expect(bs[1].onGround).toBe(true);
-    expect(feet(bs[1])).toBeCloseTo(bs[0].y, 9);
+    expect(rs[1].ride).toBe(-1);
+    expect(bs[1].vy).toBeLessThan(bs[0].vy);
   });
 
-  it('a ceiling stops the stack: the jumper bonks and nobody is squeezed', () => {
+  it('a ceiling stops the stack: the bucked rider and the jumper bonk, and nobody is squeezed', () => {
     const level = testLevel();
     for (let x = 10; x < 22; x++) level.tiles[(FLOOR - 3) * LEVEL_W + x] = 1; // Two tiles of headroom, 32 px, for 28 px of bodies.
     const { run, rs, bs } = lineup(2, { level });
@@ -306,16 +284,6 @@ describe('standing on a runner', () => {
     expect(rs.every((r) => r.alive)).toBe(true);
   });
 
-  it('you can walk along a row of heads', () => {
-    const { run, bs } = lineup(3, { spacing: 10.5 });
-    dropOn(bs[2], bs[0], 2);
-    steps(run, 30);
-    for (let f = 0; f < 12; f++) run.step([NO_INPUT, NO_INPUT, walk(1)]);
-    expect(bs[2].x).toBeGreaterThan(bs[0].x + 8);
-    expect(feet(bs[2])).toBeCloseTo(bs[1].y, 9);
-    expect(bs[2].onGround).toBe(true);
-  });
-
   it('a head within a ledge lip of your feet is a step up, not a wall', () => {
     const { run, bs } = lineup(2);
     airborne(bs[1], bs[0].x + bs[0].w + 1, bs[0].y - bs[1].h + 1);
@@ -323,6 +291,100 @@ describe('standing on a runner', () => {
     bs[1].vy = 50;
     steps(run, 2);
     expect(feet(bs[1])).toBeCloseTo(bs[0].y, 9);
+  });
+});
+
+describe('a head is a perch, not ground', () => {
+  type Pair = ReturnType<typeof lineup>;
+
+  /** Runner 1 just landed on runner 0's head, `off` px right of dead centre. */
+  const perched = (off = 0): Pair => {
+    const s = lineup(2);
+    airborne(s.bs[1], s.bs[0].x + off, s.bs[0].y - s.bs[1].h - 2);
+    for (let f = 0; f < 10 && s.rs[1].ride < 0; f++) s.run.step(noInputs(s.run));
+    expect(s.rs[1].ride).toBe(0);
+    return s;
+  };
+
+  /** Frames until runner 1 is off the head. */
+  const until = (s: Pair, inputs: (f: number) => InputFrame[], max = 200) => {
+    let f = 0;
+    for (; f < max && s.rs[1].ride === 0; f++) s.run.step(inputs(f));
+    return f;
+  };
+
+  /** Both back on the floor, apart, unhurt. */
+  const spilled = (s: Pair) => {
+    steps(s.run, 50);
+    for (const b of s.bs) expect(feet(b)).toBe(FLOOR * TILE);
+    expect(overlaps(s.bs[0], s.bs[1])).toBe(false);
+    expect(s.rs.every((r) => r.alive && r.items.daze === 0 && r.status.frozen === 0)).toBe(true);
+  };
+
+  it('nobody carries you: a base walking off leaves you behind, knocked off its back', () => {
+    const s = perched();
+    const x = s.bs[1].x;
+    expect(until(s, () => [walk(1), NO_INPUT])).toBeLessThan(8);
+    expect(s.bs[1].x).toBeLessThanOrEqual(x);
+    expect(s.bs[1].vx).toBeLessThan(0);
+    spilled(s);
+    expect(s.bs[1].x).toBeLessThan(x);
+  });
+
+  it('off centre, you slide off the side you are on, faster the further out', () => {
+    const times = [1, 2, 5].map((off) => {
+      const s = perched(off);
+      const n = until(s, () => noInputs(s.run));
+      expect(s.bs[1].x).toBeGreaterThan(s.bs[0].x + off);
+      spilled(s);
+      return n;
+    });
+    expect(times[0]).toBeLessThan(PERCH.hold);
+    expect(times[0]).toBeGreaterThan(times[1]);
+    expect(times[1]).toBeGreaterThan(times[2]);
+    const left = perched(-2);
+    expect(until(left, () => noInputs(left.run))).toBe(times[1]);
+    expect(left.bs[1].x).toBeLessThan(left.bs[0].x - 2);
+  });
+
+  it('dead centre on a base standing still, you last a moment and then tip off', () => {
+    const s = perched(0);
+    const n = until(s, () => noInputs(s.run));
+    expect(n).toBeGreaterThanOrEqual(PERCH.hold - 2);
+    expect(n).toBeLessThanOrEqual(PERCH.hold);
+    spilled(s);
+    expect(s.rs[1].ride).toBe(-1);
+  });
+
+  it('a jump bucks the rider up and off: a pop, not a lift, and it lands clear', () => {
+    const s = perched(0);
+    s.run.step([JUMP, NO_INPUT]);
+    expect(s.rs[1].ride).toBe(-1);
+    expect(s.bs[1].vy).toBeLessThan(s.bs[0].vy);
+    for (let f = 0; f < 60; f++) {
+      s.run.step([HOLD_JUMP, NO_INPUT]);
+      expect(s.rs[1].ride).toBe(-1);
+      expect(overlaps(s.bs[0], s.bs[1])).toBe(false);
+    }
+    spilled(s);
+  });
+
+  it('a hard stop throws the rider forward, and a hard start backward', () => {
+    const s = perched(0);
+    for (let f = 0; f < 30; f++) s.run.step([walk(1), walk(1)]);
+    expect(s.rs[1].ride).toBe(0);
+    expect(until(s, () => [NO_INPUT, walk(1)], 20)).toBeLessThan(6);
+    expect(s.bs[1].vx).toBeGreaterThan(PHYS.walkSpeed);
+    spilled(s);
+    expect(s.bs[1].x).toBeGreaterThan(s.bs[0].x + s.bs[0].w);
+  });
+
+  it('you can still jump off the moment you are knocked off: the head was ground', () => {
+    const s = perched(0);
+    until(s, () => [dash(1), NO_INPUT]);
+    expect(s.bs[1].onGround).toBe(false);
+    s.run.step([dash(1), JUMP]);
+    expect(s.bs[1].vy).toBeLessThan(-PHYS.jumpVel + 1);
   });
 });
 
@@ -412,14 +474,17 @@ describe('side contact', () => {
     expect(bs[0].x + bs[0].w).toBeCloseTo(bs[1].x, 6);
   });
 
-  it('a shove carries whoever stands on the shoved', () => {
-    const { run, bs } = lineup(3, { spacing: 10 });
+  it('a shove moves the head out from under its rider, who goes nowhere with it', () => {
+    const { run, rs, bs } = lineup(3, { spacing: 10 });
     dropOn(bs[2], bs[1]);
     steps(run, 30);
-    const off = bs[2].x - bs[1].x;
-    for (let f = 0; f < 30; f++) run.step([walk(1), NO_INPUT, NO_INPUT]);
-    expect(bs[2].x - bs[1].x).toBeCloseTo(off, 6);
-    expect(bs[2].onGround).toBe(true);
+    expect(rs[2].ride).toBe(1);
+    const [x1, x2] = [bs[1].x, bs[2].x];
+    for (let f = 0; f < 30 && rs[2].ride === 1; f++) run.step([walk(1), NO_INPUT, NO_INPUT]);
+    expect(rs[2].ride).not.toBe(1);
+    expect(bs[1].x).toBeGreaterThan(x1 + 2);
+    expect(bs[2].x).toBeLessThanOrEqual(x2);
+    expect(rs.every((r) => r.alive)).toBe(true);
   });
 
   it('blocks in the air too, until your feet clear the head', () => {
@@ -558,14 +623,18 @@ describe('stacks', () => {
     }
   });
 
-  it('walk as one when the bottom walks, and the top can jump off', () => {
-    const { run, bs } = stack(4);
-    for (let f = 0; f < 30; f++) run.step([walk(1), NO_INPUT, NO_INPUT, NO_INPUT]);
-    for (const b of bs) expect(b.x).toBeCloseTo(bs[0].x, 6);
+  it('the top can jump off, and the bottom walking away spills the rest', () => {
+    const { run, rs, bs } = stack(4);
     run.step([NO_INPUT, NO_INPUT, NO_INPUT, JUMP]);
     expect(bs[3].vy).toBeLessThan(-300);
     expect(bs[3].onGround).toBe(false);
     expect(bs[2].onGround).toBe(true);
+    for (let f = 0; f < 60; f++) run.step([walk(1), NO_INPUT, NO_INPUT, NO_INPUT]);
+    expect(rs.every((r) => r.ride === -1 && r.alive)).toBe(true);
+    for (const b of bs.slice(1, 3)) {
+      expect(b.x).toBeLessThan(bs[0].x - b.w);
+      expect(feet(b)).toBe(FLOOR * TILE);
+    }
   });
 
   it('reach higher than anyone can jump alone', () => {
@@ -806,10 +875,10 @@ describe('who collides', () => {
 
   it('frozen and dazed runners stay solid: you can stand on them and shove them', () => {
     const { run, rs, bs } = lineup(3, { spacing: 10 });
+    rs[1].status.frozen = 100;
     dropOn(bs[2], bs[1]);
     steps(run, 30);
     expect(rs[2].ride).toBe(1);
-    rs[1].status.frozen = 100;
     rs[0].items.daze = 15;
     const x0 = bs[1].x;
     for (let f = 0; f < 14; f++) run.step([walk(1), NO_INPUT, NO_INPUT]); // The dazed can't push.
@@ -817,7 +886,6 @@ describe('who collides', () => {
     rs[0].items.daze = 0;
     for (let f = 0; f < 20; f++) run.step([walk(1), NO_INPUT, NO_INPUT]);
     expect(bs[1].x).toBeGreaterThan(x0);
-    expect(rs[2].ride).toBe(1);
   });
 });
 
@@ -833,28 +901,35 @@ describe('interactions', () => {
     expect(rs[0].alive).toBe(true);
   });
 
-  it('a rider carried onto spikes dies, and the base it stood on is not credited', () => {
-    const blade = prop([{ type: 'spikes', cells: [[0, 0]], angle: Math.PI / 2 }], 18, FLOOR - 3);
-    const { run, rs, bs } = lineup(2, { props: [blade] });
+  it('a rider knocked off onto spikes dies, and the base that knocked it is not credited', () => {
+    const { run, rs, bs } = lineup(2, { props: [spikeAt(13)] });
     dropOn(bs[1], bs[0]);
     steps(run, 30);
-    for (let f = 0; f < 100 && rs[1].alive; f++) run.step([walk(1), NO_INPUT]);
+    expect(rs[1].ride).toBe(0);
+    for (let f = 0; f < 60 && rs[1].alive; f++) run.step([walk(1), NO_INPUT]);
     expect(rs[1].alive).toBe(false);
     expect([rs[1].cause, rs[1].killer]).toEqual(['hazard', 7]);
     expect(rs[0].alive).toBe(true);
     expect(feet(bs[0])).toBe(FLOOR * TILE);
   });
 
-  it('a spring under the base throws the whole stack', () => {
+  it('a spring under the base bucks its rider higher still', () => {
     const spring: Module = { type: 'spring', at: [0.5, 0.5], angle: UP, power: 500 };
-    const { run, rs, bs } = lineup(2, { props: [prop([spring], 16, FLOOR - 1)] });
+    const { run, rs, bs } = lineup(2, { props: [prop([spring], 14, FLOOR - 1)] });
+    bs[0].x = 14 * TILE - bs[0].w - 0.5;
     dropOn(bs[1], bs[0]);
     steps(run, 30);
-    for (let f = 0; f < 40 && rs[0].springCooldown === 0; f++) run.step([walk(1), NO_INPUT]);
+    // A nudge onto the pad, too gentle to knock the rider off on its own.
+    for (let f = 0; f < 3 && rs[0].springCooldown === 0; f++) {
+      expect(rs[1].ride).toBe(0);
+      run.step([walk(1), NO_INPUT]);
+    }
     expect(rs[0].springCooldown).toBeGreaterThan(0);
+    expect(rs[1].ride).toBe(-1);
+    expect(bs[1].vy).toBeLessThan(bs[0].vy);
     steps(run, 8);
     expect(feet(bs[0])).toBeLessThan(FLOOR * TILE - 20);
-    expect(feet(bs[1])).toBeCloseTo(bs[0].y, 9);
+    expect(feet(bs[1])).toBeLessThan(bs[0].y);
   });
 
   it('a bumper throws the rider it touches, and the base walks on', () => {
@@ -916,13 +991,16 @@ describe('interactions', () => {
   it('wind blows the rider off a base it never touches', () => {
     const fan: Module = { type: 'fan', at: [0.5, 0.5], angle: 0, length: 12, strength: 1300 };
     const { run, rs, bs } = lineup(2, { props: [prop([fan], 17, FLOOR - 2)] });
-    dropOn(bs[1], bs[0]);
-    steps(run, 30);
-    expect(rs[1].ride).toBe(0);
     while (bs[0].x < 19 * TILE) run.step([walk(1), NO_INPUT]);
     steps(run, 5);
     const x0 = bs[0].x;
-    steps(run, 60);
+    dropOn(bs[1], bs[0], 1);
+    let rode = false;
+    for (let f = 0; f < 60; f++) {
+      run.step(noInputs(run));
+      rode ||= rs[1].ride === 0;
+    }
+    expect(rode).toBe(true);
     expect(bs[0].x).toBe(x0);
     expect(rs[1].ride).toBe(-1);
     expect(bs[1].x).toBeGreaterThan(x0 + bs[0].w);
@@ -1067,17 +1145,42 @@ describe('online', () => {
     }
   });
 
+  it('two identical matches agree through every way off a head: a slide, a tip, a buck and a knock', () => {
+    /** B lands on A every 100 frames, off centre for the slide; A stands for the tip, jumps for the buck, walks off for the knock. */
+    const script = (m: Match, f: number): Record<string, InputFrame> => {
+      const [a, b] = m.run!.runners.map((r) => r.body);
+      const k = Math.floor(f / 100) % 4;
+      const t = f % 100;
+      if (t === 0) dropOn(b, a, 4);
+      if (t === 0 && k === 0) b.x += 3;
+      return { a: k === 2 && t === 20 ? JUMP : k === 2 && t > 20 ? HOLD_JUMP : k === 3 && t > 20 && t < 40 ? walk(1) : NO_INPUT, b: NO_INPUT };
+    };
+    const a = match(testLevel());
+    const b = match(testLevel());
+    const offs = new Set<string>();
+    for (let f = 0; f < 800; f++) {
+      const before = a.run!.runners[1].ride;
+      a.step(script(a, f));
+      b.step(script(b, f));
+      const r = a.run!.runners[1];
+      if (before >= 0 && r.ride < 0) offs.add(r.body.vy < -PERCH.hop ? 'buck' : r.body.vy < 0 ? 'thrown' : 'slid');
+      expect(hashMatch(b), `frame ${f}`).toBe(hashMatch(a));
+    }
+    expect([...offs].sort()).toEqual(['buck', 'slid', 'thrown']);
+  });
+
   it('snapshot round trip: restored mid-ride and mid-shove, the race goes on bit-identically', () => {
     const a = match();
     const rs = a.run!.runners;
     dropOn(rs[1].body, rs[0].body);
-    for (let f = 0; f < 40; f++) a.step({});
-    for (let f = 0; f < 20; f++) a.step({ a: walk(1) });
+    rs[1].body.x += 2;
+    for (let f = 0; f < 12; f++) a.step({});
     expect(rs[1].ride).toBe(rs[0].slot);
     const snap = JSON.parse(JSON.stringify(snapshotMatch(a)));
     const b = new Match(1);
     restoreMatch(b, snap);
     expect(b.run!.runners[1].ride).toBe(rs[0].slot);
+    expect(b.run!.runners[1].perch).toBe(rs[1].perch);
     expect(hashMatch(b)).toBe(hashMatch(a));
     for (let f = 0; f < 400; f++) {
       a.step(jostle(a, f));

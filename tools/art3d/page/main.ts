@@ -1,4 +1,5 @@
 import type * as THREE from 'three';
+import { VARIETY } from '../../../src/render/cast/sprites/play';
 import type { SpriteSet } from '../../../src/render/cast/sprites/types';
 import type { Settings } from '../settings';
 import { turnaround } from './inspect';
@@ -45,17 +46,25 @@ async function render(url: string, s: Settings, kind: string, only?: string[]): 
   }
   const roles = got.roles.map((n) => {
     const r = s.roles[n];
-    return { color: r.color, ...(r.slot ? { slot: r.slot } : {}), ...(r.alts ? { alts: r.alts, vary: r.vary ?? 0 } : {}) };
+    const on = r.on === undefined ? -1 : got.roles.indexOf(r.on);
+    if (r.on !== undefined && on < 0) throw new Error(`role ${n} is on "${r.on}", which isn't a role`);
+    return {
+      color: r.color,
+      ...(r.slot ? { slot: r.slot } : {}),
+      ...(r.alts ? { alts: r.alts, vary: r.vary ?? VARIETY.palette } : {}),
+      ...(on >= 0 ? { on, tone: r.tone ?? 0 } : {}),
+    };
   });
   const face = s.face ? { r: s.face.r, iris: s.face.iris, ...(s.face.mouth ? { mouth: s.face.mouth } : {}), ...(s.face.eye ? { eye: s.face.eye } : {}) } : null;
   // A slot's options are its props; a generated kind has none, so its frames' tags say how many it drew.
   const drawn = (si: number) =>
     1 + Math.max(0, ...Object.values(got.clips).flatMap((c) => c.r.flatMap((f) => f.parts.map((p) => (p.option?.[0] === si ? p.option[1] : 0)))));
   const slots = Object.entries(s.slots ?? {}).map(([name, vary], si) => ({
+    name,
     vary,
     options: s.shape ? drawn(si) : (s.props ?? []).filter((p) => p.slot === name).length,
   }));
-  return { kind, height: s.height, roles, ...(slots.length ? { slots } : {}), ...(face ? { face } : {}), clips };
+  return { kind, height: s.height, roles, ...(slots.length ? { slots } : {}), ...(face ? { face } : {}), ...(s.gait ? { gait: s.gait } : {}), clips };
 }
 
 const api = {
