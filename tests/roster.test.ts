@@ -5,6 +5,7 @@ import { MAX_BRIDGES } from '../src/gen/level';
 import {
   type Archetype,
   ARCHETYPE_WEIGHTS,
+  clearsParts,
   type Module,
   dryLean,
   generateCrate,
@@ -133,6 +134,11 @@ describe('a match roster', () => {
         expect(roster.flatMap((p) => p.variants).some(isBridgePart), ctx).toBe(true);
         expect(
           roster.some((p) => p.role === 'demolish'),
+          ctx,
+        ).toBe(true);
+        // A sealed level's way out (generateCrate).
+        expect(
+          roster.some((p) => p.variants.every(clearsParts)),
           ctx,
         ).toBe(true);
         expect(

@@ -200,7 +200,10 @@ Every game design decision, preference and direction the owner has given, groupe
   Changed: every card rolled a fresh random part (`908b1c2`).
 - **After rounds nobody finishes, crates lean toward bombs and building parts.** "handicap the rng on item selection so if conseuctive rounds people cant finish, you add more weight to a bomb or platforms"
   2026-11-02 04:42Z · `done` · DESIGN.md → Props (A match can always be finished)
-- **A match can always be finished: crates always offer what the level still needs, and placements that leave no plan are refused.**
+- **Parts can seal a level; a bomb is the way out. Nothing is refused for leaving no way to the flag, and a sealed level's crate deals a demolition part that clears placed parts.** "also parts CAN seal it.. it can be unwinnable and require a bomb"
+  2026-11-02 · `done` · DESIGN.md → Props (A fresh level can always be finished), `generateCrate` in `src/gen/props.ts`
+  Changed: a match kept a plan of at most `MAX_BRIDGES` bridges and refused a placement that left none (`3628776`, `fbee7a6`).
+- **A fresh level can always be finished: crates always offer what the level still needs.**
   2026-11-02 · git `3628776`, `fbee7a6` · `done` · DESIGN.md → Props
 - **Crate contents follow the level seed and round, and the card order is shuffled per match by the host.**
   2026-11-02 · git `0cdb23a` · `done` · DESIGN.md → Props

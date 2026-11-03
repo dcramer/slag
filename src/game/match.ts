@@ -3,7 +3,7 @@ import { deriveSeed, Rng } from '../core/rng';
 import { type CharacterDef, generateCharacter, CAST, type Kind } from '../gen/character';
 import { type Bridge, GRAVITY, type GravityClass, MAX_BRIDGES, type ProfileOverride, prove, settled } from '../gen/level';
 import { buildLevel, type LevelRequest } from '../gen/level/pregen';
-import { generateCrate, generateRoster, isBridgePart, type PropDef, type Role, rollSecret, rosterSize } from '../gen/props';
+import { clearsParts, generateCrate, generateRoster, isBridgePart, type PropDef, type Role, rollSecret, rosterSize } from '../gen/props';
 import { ageBlood, type BloodCell, cleanBlood, washBlood } from '../sim/blood';
 import { DT, MAX_PLAYERS, TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import type { Level } from '../sim/level';
@@ -104,6 +104,8 @@ export interface CrateItem {
    * (Match.reveal) and writes it here.
    */
   secret?: Role;
+  /** The demolition card a sealed level's crate deals (generateCrate): under Secret Parts it stays a part-clearer. */
+  clears?: true;
 }
 
 /** Directional cursor speed, px/s: slow enough for one-tile taps, ramping while held so crossing the screen doesn't drag. */
@@ -125,9 +127,9 @@ export function rulesProfile(rules: MatchRules): ProfileOverride {
  * Deterministic given the seed and per-device input stream; owns no DOM.
  */
 /**
- * Rounds this page has started with no proven way to the flag. Generation and `keepsWinnable` together promise
- * one, so any count is a broken guarantee, and the host reports it (src/game-client.ts). Diagnostics only, like
- * `lastGenInfo`: the sim never reads it, and it isn't match state.
+ * Rounds this page has started with no proven way to the flag on a level nothing has touched. Generation promises
+ * one there, so any count is a broken guarantee, and the host reports it (src/game-client.ts). A level parts have
+ * sealed is play, not a miss. Diagnostics only, like `lastGenInfo`: the sim never reads it, and it isn't match state.
  */
 export const planMisses = { count: 0 };
 
@@ -160,8 +162,9 @@ export class Match {
 
   /**
    * Bridges that would finish the level as it stands, proven with the real
-   * controller (gen/level/winnable.ts). Every placement keeps one, or is
-   * refused, and every crate offers as many bridge cards as it has.
+   * controller (gen/level/winnable.ts) as each round starts, and every crate
+   * offers as many bridge cards as it has. Parts may seal the level: then no
+   * plan is found, this keeps the last one, and the crate deals a way out.
    */
   plan: Bridge[] = [];
 
@@ -437,12 +440,15 @@ export class Match {
     this.round++;
     this.run = null;
     const count = Math.max(3, this.players.length + 2);
-    // Re-proven here, so bridges built from the plan shorten it. The crate offers every bridge it still has.
+    // Re-proven here, so bridges built from the plan shorten it. The crate offers every bridge it still has,
+    // or, when the parts have sealed the level, a demolition card that clears them.
     const s = settled(this.level, this.placed);
     const plan = prove(s.level, s.placed, this.plan);
     if (plan) this.plan = plan;
-    else planMisses.count++;
-    const crate = generateCrate(this.seed, this.round, count, plan?.length ?? MAX_BRIDGES, this.dryRounds, !!lonePipe(this.placed));
+    else if (!this.placed.length && !this.level.version) planMisses.count++;
+    const sealed = !plan;
+    const crate = generateCrate(this.seed, this.round, count, plan?.length ?? MAX_BRIDGES, this.dryRounds, !!lonePipe(this.placed), sealed);
+    const way = sealed ? crate.find(clearsParts) : undefined;
     const defs = new Rng(deriveSeed(this.seed ^ this.salt, `crate-order:${this.round}`)).shuffle(crate);
     // Cards in rows of up to 5 (8 players → 10 cards → 2 rows).
     const perRow = Math.min(count, 5);
@@ -457,7 +463,9 @@ export class Match {
       const total = inRow * cw + (inRow - 1) * gap;
       const rect = { x: (VIEW_W - total) / 2 + (i % perRow) * (cw + gap), y: top + row * (ch + gap), w: cw, h: ch };
       // Secret Parts keeps the crate's mix of roles (its bridge, its hazard, its dry-round lean) and hides the parts.
-      return this.rules.secretParts ? { def, claimedBy: -1, rect, secret: def.role } : { def, claimedBy: -1, rect };
+      const item: CrateItem = this.rules.secretParts ? { def, claimedBy: -1, rect, secret: def.role } : { def, claimedBy: -1, rect };
+      if (def === way) item.clears = true;
+      return item;
     });
     this.players.forEach((p, i) => {
       p.claim = -1;
@@ -556,10 +564,11 @@ export class Match {
    * seed can't tell anyone in advance; every peer claims on the same frame, so
    * every peer rolls the same part. A card that stood in for one of the crate's
    * bridges stays the bridge while the plan needs one, so claiming every build
-   * card still yields as many bridges as the plan has.
+   * card still yields as many bridges as the plan has, and a sealed level's
+   * way out stays a part-clearing demolition.
    */
   private reveal(card: CrateItem, i: number, p: Player): PropDef {
-    if (this.plan.length > 0 && isBridgePart(card.def)) return card.def;
+    if ((this.plan.length > 0 && isBridgePart(card.def)) || card.clears) return card.def;
     const rng = new Rng(deriveSeed(this.seed ^ this.salt, `secret:${this.round}:${i}:${p.slot}:${this.frame}`));
     const roster = generateRoster(this.seed, rosterSize(this.crate.length));
     const taken = this.crate.filter((c) => c.claimedBy >= 0).flatMap((c) => c.def.part ?? []);
@@ -623,10 +632,6 @@ export class Match {
         if (g?.ok) {
           const bomb = g.def.modules.find((m) => m.type === 'bomb');
           const pp: PlacedProp = { uid: this.nextUid, def: g.def, owner: p.slot, tx: g.tx, ty: g.ty, rot: p.rot, ...(g.ride && { ride: g.ride }) };
-          if (!this.keepsWinnable(pp)) {
-            this.events.push({ type: 'refuse', slot: p.slot, x: p.cursor.x, y: p.cursor.y });
-            continue;
-          }
           if (bomb && !bomb.delay) {
             this.blast(this.placed, blastSpec(bomb), g.tx, g.ty, p.rot);
           } else {
@@ -637,7 +642,7 @@ export class Match {
           linkPipes(this.placed);
           cleanBlood(this.blood, this.level, this.placed);
           p.placed = true;
-        }
+        } else if (g) this.events.push({ type: 'refuse', slot: p.slot, x: p.cursor.x, y: p.cursor.y });
       }
     }
     if (this.rules.placeSeconds > 0 && this.phaseFrame >= this.rules.placeSeconds * 60) {
@@ -650,25 +655,6 @@ export class Match {
         this.startRun();
       }
     }
-  }
-
-  /**
-   * Would the match stay winnable with `pp` placed (or set off, for a bomb)?
-   * If so the plan moves to one that proves it (gen/level/winnable.ts); if not
-   * the part is refused, so a placement can never strand the match.
-   */
-  private keepsWinnable(pp: PlacedProp): boolean {
-    const bomb = pp.def.modules.find((m) => m.type === 'bomb');
-    let level = this.level;
-    let placed: PlacedProp[];
-    if (bomb && bomb.type === 'bomb' && !bomb.delay) {
-      level = { ...level, tiles: level.tiles.slice(), setPieces: level.setPieces.slice() };
-      placed = detonate(level, [...this.placed], blastSpec(bomb), pp.tx, pp.ty, pp.rot, this.frame);
-    } else placed = [...this.placed, pp];
-    const s = settled(level, placed);
-    const plan = prove(s.level, s.placed, this.plan, false);
-    if (plan) this.plan = plan;
-    return !!plan;
   }
 
   // ---------------------------------------------------------------- run
