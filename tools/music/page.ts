@@ -7,9 +7,13 @@ import { composeSong } from '../../src/audio/music/compose';
 import type { Mix, MixName } from '../../src/audio/music/player';
 import type { Cue } from '../../src/audio/cues';
 import { AudioEngine } from '../../src/audio/engine';
+import { sampleSets } from '../../src/audio/music/instruments';
+import { loadSamples, setSampleBase } from '../../src/audio/music/sampler';
 import type { SongId } from '../../src/audio/music/styles';
 
 const RATE = 44100;
+/** tools/music.ts answers this origin from public/samples. */
+setSampleBase('https://samples.invalid/samples/');
 const PUMP = 0.05;
 const LAYERS = ['pad', 'bass', 'harmony', 'lead', 'drums', 'perc'] as const;
 
@@ -47,6 +51,7 @@ async function renderSong(
   const ctx = new OfflineAudioContext(2, Math.ceil(seconds * RATE), RATE);
   const eng = new AudioEngine(ctx, { master: 0.8, music: 0.6, sfx: 0.9 });
   const song = composeSong(seed, theme, arr ?? undefined);
+  await loadSamples(ctx, sampleSets(song.tracks.map((t) => t.inst)));
   eng.music.setMix(mix, 0.01);
   eng.music.setSong(song, 0.05);
   if (solo) eng.music.current!.setMix(Object.fromEntries(LAYERS.map((l) => [l, solo.includes(l) ? 1 : 0])) as Mix, 0.01);

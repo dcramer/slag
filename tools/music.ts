@@ -116,6 +116,10 @@ async function main() {
   try {
     const page = await browser.newPage();
     page.on('pageerror', (e) => console.error('page error:', e.message));
+    // The recorded instruments, as the game's host would serve them.
+    await page.route('https://samples.invalid/samples/**', (r) =>
+      r.fulfill({ path: `public${new URL(r.request().url()).pathname}`, contentType: 'audio/mpeg', headers: { 'access-control-allow-origin': '*' } }),
+    );
     await page.addScriptTag({ content: code });
     if (sfx) {
       for (const { file, cue } of sfxCues(sfx === 'all' ? SFX_NAMES : sfx.split(','))) {

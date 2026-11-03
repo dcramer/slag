@@ -1,4 +1,6 @@
 import { burst, envAHR, metal, pluck, sweep, tone, type Voice } from '../synth';
+import type { SampleSetId } from './sample-map';
+import { sampled } from './sampler';
 
 /**
  * Music instruments: tiny subtractive / FM / additive patches. Each builds
@@ -52,7 +54,8 @@ function vibrato(v: Voice, o: OscillatorNode, t: number, dur: number, rate: numb
   v.osc('sine', rate, t, dur, g);
 }
 
-export const INSTRUMENTS = {
+/** The synth patches: every instrument's own sound, and the fallback for the recorded ones below. */
+const SYNTH = {
   // --- farm
   banjo: (v, t, f) => {
     pluck(v, t, f, 0.32, 1, 3800);
@@ -392,4 +395,70 @@ export const INSTRUMENTS = {
   },
 } satisfies Record<string, Inst>;
 
+const S = SYNTH;
+
+/**
+ * Every instrument. Acoustic ones play recordings (sampler.ts) over their synth patch; synths stay
+ * synths. A few have no synth of their own and borrow the nearest one until their samples load.
+ */
+export const INSTRUMENTS = {
+  ...SYNTH,
+  banjo: sampled('strumstick', S.banjo),
+  whistle: sampled('recorder', S.whistle, { sustain: true }),
+  upright: sampled('contrabass', S.upright),
+  woodbass: sampled('contrabass', S.woodbass),
+  pluckbass: sampled('contrabass', S.pluckbass),
+  organ: sampled('organ', S.organ, { sustain: true, release: 0.2 }),
+  organbass: sampled('organpedal', S.organbass, { sustain: true, release: 0.2 }),
+  harpsichord: sampled('harpsichord', S.harpsichord),
+  marimba: sampled('marimba', S.marimba),
+  flute: sampled('flute', S.flute, { sustain: true, release: 0.15 }),
+  brass: sampled('horn', S.brass, { sustain: true, release: 0.2 }),
+  taiko: sampled('bassdrum', S.taiko, { tune: 36 }),
+  tom: sampled('tom', S.tom, { tune: 50 }),
+  accordion: sampled('accordion', S.accordion, { sustain: true, release: 0.1 }),
+  tuba: sampled('tuba', S.tuba),
+  bell: sampled('vibes', S.bell),
+  clank: sampled('brakedrum', S.clank),
+  fiddle: sampled('violin', S.fiddle, { sustain: true, release: 0.12 }),
+  guitar: sampled('ukulele', S.guitar),
+  lute: sampled('folkharp', S.lute),
+  twang: sampled('eguitar', S.twang),
+  bodhran: sampled('framedrum', S.bodhran),
+  celesta: sampled('glock', S.celesta),
+  ocarina: sampled('ocarina', S.ocarina, { sustain: true, release: 0.1 }),
+  kalimba: sampled('kalimba', S.kalimba),
+  talkdrum: sampled('slitdrum', S.talkdrum, { tune: 45 }),
+  powerchord: sampled('dguitar', S.powerchord, { sustain: true, release: 0.06, stack: [7] }),
+  epiano: sampled('fmpiano', S.epiano, { sustain: true, release: 0.3 }),
+  steeldrum: sampled('steeldrum', S.steeldrum),
+  sleigh: sampled('sleigh', S.sleigh),
+  softkick: sampled('bassdrum', S.softkick),
+  snare: sampled('snare', S.snare),
+  hat: sampled('hihat', S.hat),
+  shaker: sampled('shaker', S.shaker),
+  clap: sampled('clap', S.clap),
+  rim: sampled('sidestick', S.rim),
+  conga: sampled('conga', S.conga),
+  bongo: sampled('bongo', S.bongo),
+  anvil: sampled('anvil', S.anvil),
+  tambourine: sampled('tambourine', S.tambourine),
+  // Recorded only.
+  harmonica: sampled('harmonica', S.accordion, { sustain: true, release: 0.1 }),
+  recorder: sampled('altrecorder', S.flute, { sustain: true, release: 0.1 }),
+  sax: sampled('sax', S.synthlead, { sustain: true, release: 0.15 }),
+  cello: sampled('cello', S.darkpad, { sustain: true, release: 0.3 }),
+  chimes: sampled('chimes', S.bell),
+} satisfies Record<string, Inst>;
+
 export type InstId = keyof typeof INSTRUMENTS;
+
+/** The sample sets a list of instruments plays, so a song can load them before it starts. */
+export function sampleSets(insts: Iterable<InstId>): SampleSetId[] {
+  const out = new Set<SampleSetId>();
+  for (const i of insts) {
+    const p: Inst & { set?: SampleSetId } = INSTRUMENTS[i];
+    if (p.set) out.add(p.set);
+  }
+  return [...out];
+}
