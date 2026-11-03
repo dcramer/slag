@@ -26,6 +26,8 @@ export const kind: FlatKind = {
       ['dark', [255, 255, 255]],
       ['iron', [40, 44, 46]],
       ['iron', [60, 62, 66]],
+      // The poker's highlight stripe: nearer the lid's shade, it split the poker and let the silhouette's ink (the player's) through.
+      ['iron', [92, 92, 96]],
       ['dark', [12, 13, 17]],
     ],
     line: 'dark',
@@ -39,7 +41,8 @@ export const kind: FlatKind = {
   },
   roles: [
     { name: 'green', color: '#3f7a34', slot: 'player' },
-    { name: 'darn', color: '#5a9a4a' },
+    // The darned toe is a light of the costume, so it follows the player's colour.
+    { name: 'darn', color: '#5a9a4a', on: 0, tone: 18 },
     { name: 'skin', color: '#efc9a4' },
     { name: 'hair', color: '#e6c25a' },
     { name: 'brown', color: '#6b4a35' },
@@ -48,7 +51,7 @@ export const kind: FlatKind = {
     { name: 'iron', color: '#4a4a52' },
     { name: 'dark', color: '#2a1f1a' },
     { name: 'scuff', color: '#808080', on: 0, tone: 14 },
-    { name: 'scorch', color: '#808080', on: 0, tone: -24 },
+    { name: 'scorch', color: '#808080', on: 0, tone: -16 },
     { name: 'plaster', color: '#e9d3b0' },
   ],
   slots: [
@@ -61,12 +64,13 @@ export const kind: FlatKind = {
     chin: 3,
     marks: [
       [
-        ['scuff', 0.6, 0.6, 0.55],
-        ['scuff', 0.5, 0.85, 0.45],
+        ['scuff', 0.6, 0.6, 0.5],
+        ['scuff', 0.45, 0.76, 0.4],
       ],
+      // Off the jagged hem and quiet: a dark mark down there read as a hole or a blotch.
       [
-        ['scorch', 0.55, 0.65, 0.6],
-        ['scorch', 0.45, 0.88, 0.45],
+        ['scorch', 0.55, 0.62, 0.5],
+        ['scorch', 0.42, 0.76, 0.4],
       ],
     ],
   },
@@ -98,8 +102,10 @@ export const kind: FlatKind = {
       pose: 'seen from his side, he is sliding down a tall wall on the right edge of the picture (do not draw the wall), one glove flat against it and both boots braced on it, the lid on his back, his head turned to look back at us.',
       far: true,
     },
-    cheer: { pose: 'cheering with the poker raised high over his head in one fist, a big grin.' },
-    cheer2: { pose: 'holding the dustbin lid up high over his head in both hands like a trophy, grinning.' },
+    cheer: { pose: 'cheering with the poker raised high over his head in one fist, his eyes wide open and looking ahead, a big open grin.' },
+    cheer2: {
+      pose: 'holding the dustbin lid up high in one hand like a trophy, the arm stretched out to the side so the lid is well clear of his head and sock cap, the poker in the other hand, his eyes wide open, grinning.',
+    },
     death: {
       pose: 'he has been knocked out and lies flat on his back on the floor, the whole body horizontal across the picture, head on the left and boots on the right, arms and legs splayed limp, eyes shut, the poker and the lid dropped beside him. Seen from the side.',
       far: true,
