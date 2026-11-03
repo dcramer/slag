@@ -81,6 +81,12 @@ What came out of it:
 - **Faces.** Expressive eyes with highlights, and brows that react to running, jumping, falling and cheering.
 - **The nod and the twist.** The nod is the three or four traits a stranger names it by, and each entry says why each one is needed. The twist is ours: a foundry, scrapyard or knock-off flavour, a changed signature prop, and one joke. A twist never moves or hides a trait the nod needs.
 - **Swaps.** Small accessories inside the outline, rolled per look from `vary`: they never change the silhouette.
+- **Variety.** Every look of a kind is the same character by the same hand, so variety is curated, never rolled freely: the face, the proportions and the silhouette are fixed per kind. Besides the costume colour and the swaps, each kind designs three layers, each picked from the look seed (`VARIETY` in `src/render/cast/sprites/play.ts`) and render only:
+  - **Palette alts:** 2–3 designed colourways for one secondary region, never the costume, skin, eyes or face (the plumber's overalls, the speedster's shoes). A region the nod needs keeps its roster colour as one of them. Parts that belong together (a shoe and its sole) change together.
+  - **Idles and cheers:** two of each, the second keyed from the pose sheet or cut from another clip, plus a gait range: how much extra bounce on each step and how far forward it leans, small enough to stay in the shared box.
+  - **Wear:** clean, scuffed and scorched. A few small marks on the body, the limbs or the shoes in a tone of the surface they sit on (a faded patch, a scuff, a soot streak), never on the face, and too few to read as noise at play scale.
+
+  Done when the variety sheet (`pnpm shot variety --kinds K`) shows twelve looks that all read as the same character, and the play-scale row reads as clean as one look does.
 - **No letters or logos** on anything, at any scale: a badge carries a small mark of ours.
 
 **The concept prompt.** Every entry ends with a prompt of traits only. Append the house style to each one:
@@ -98,6 +104,10 @@ What came out of it:
 - **The nod:** the red cap with its bill out front (the first shape anyone names); the big round nose (it breaks the profile at 20 px, where no face detail survives); the thick mustache (the face, at any size); blue bib overalls over red (the colour block people know from across a room); the stout, big-headed build (it separates him from every slim hero).
 - **Our twist:** a foundry hand, not a castle plumber. The joke is an absurdly big rubber plunger on a copper handle strapped to his back like a greatsword. Welding goggles on the cap, hex-bolt overall buttons, a patched knee, tan gauntlets for the white gloves.
 - **Swaps:** a pencil behind the ear; a sticking plaster on one cheek; a roll of thread-seal tape on a belt loop; a pressure gauge in the bib pocket.
+- **Palette alts:** the overalls in denim blue `#3f62b4`, grey work cloth `#7e848a` or brown canvas `#8e6a44`.
+- **Idles and cheers:** the idle from the model; arms folded, chest out, breathing. The fist-pump cheer; leaning back laughing, turned to us.
+- **Gait range:** a jaunty bounce of 0.15–0.85 px on each step, a lean of up to 0.035.
+- **Wear:** scuffed is a faded patch on the bib and one on a thigh, pale scuffs on both boot toes; scorched is two soot streaks down the bib, one on the sleeve, one on the gauntlet and the far boot's toe.
 - **Rig:** humanoid. Rendered (round 2).
 - **Concept prompt:** A stout, big-headed foundry handyman: a red cap with its bill out front, dark welding goggles strapped round it and a riveted brass badge stamped with a small wrench; a big round nose; a thick dark-brown mustache; blue bib overalls with steel hex-bolt buttons over a red shirt, one knee patched; big tan leather gauntlets; steel-toe boots. An absurdly big red rubber plunger on a copper handle is strapped across his back like a greatsword, slung low, its cup behind his shoulder.
 
@@ -112,6 +122,10 @@ What came out of it:
 - **The nod:** the cobalt quills swept straight back (they are the whole silhouette); the big red shoes (the second thing anyone draws); the peach muzzle and belly (they tell a hedgehog from a blue blob); green eyes and the cocky grin (the attitude); the forward-leaning run and the spin-ball jump (the speedster in motion, readable when the shape blurs).
 - **Our twist:** a stubby scrapyard runner, chunky as a toy. Two separate eyes under heavy brows instead of the joined eye shape, a chipped tooth, soot-scorched quill tips, a hazard-striped neckerchief, brown fingerless gloves, red work high-tops with steel toecaps and a hazard-yellow strap.
 - **Swaps:** a sticking plaster across the nose; a sweatband on one wrist; a ring-pull hanging off the neckerchief; one shoelace undone.
+- **Palette alts:** the shoes and their soles and toecaps as one colourway: red on steel `#d8382f`/`#9a9894`, racing green on cream `#2f8a57`/`#ebe4d2`, or cream on red `#ebe5d6`/`#c8402f`. The strap stays hazard yellow.
+- **Idles and cheers:** the idle from the model; arms folded, tapping one toe. The model's cheer, and its later both-fists-up stretch.
+- **Gait range:** a bounce of up to 0.45 px and a lean of 0.01–0.06 on top of the hard forward lean he already runs with.
+- **Wear:** scuffed is grime on both toes and a scuff on the belly; scorched is soot on the back quills, the belly, a thigh and a shoe.
 - **Rig:** humanoid; the spin ball keyed. Rendered (round 2).
 - **Concept prompt:** A stubby, toy-chunky cobalt-blue hedgehog with long quills swept straight back, their tips soot-scorched; two separate green eyes under heavy brows; a peach muzzle and belly; a cocky one-sided grin with a chipped tooth; a hazard-striped neckerchief; brown fingerless leather gloves; big red work high-tops with steel toecaps and a hazard-yellow strap.
 
@@ -419,7 +433,8 @@ How a Roster entry becomes a kind drawn from 3D. The entry is the one source for
 - **The cast's face** is drawn on the traced eyes (or set by the nose when the model's are too small): whites, iris and glint, brows set into the run, wide on a fall, squinting on a cheer, crossed out on a death.
 - **Caricature is a setting:** bone scales (head, hands, feet), `girth` (drawn wider than the model), region roles that split a trait from its colour so it can be drawn bigger (the plumber's cap and nose), and props built from primitives (the plunger).
 - **Swaps** are the entry's accessories, each an on/off prop rolled from the character's `vary`, rendered in a pass of its own so it can't change the silhouette.
-- **Cost.** About 0.005 ms per runner drawn from the frame-bitmap cache (the hand-drawn cast takes about 0.08–0.1), and about 0.4 ms for a frame the first time it's drawn at a scale. Frame data is about 350–400 KB per kind, a chunk fetched only with the flag on.
+- **Variety** (Rules for every kind → Variety) is settings too: a palette role's `alts` on `vary` 6, `idle2` and `cheer2` clips, a `gait` range, and a `wear` slot of three props whose marks the tracer sticks onto the skin. `pnpm shot variety` draws twelve looks per kind and the cast lineup.
+- **Cost.** About 0.005 ms per runner drawn from the frame-bitmap cache (the hand-drawn cast takes about 0.08–0.1), and about 0.4 ms for a frame the first time it's drawn at a scale. Frame data is about 400–480 KB per kind with its variety, a chunk fetched only with the flag on.
 - **Checks:** `tests/sprite-cast.test.ts` (every clip, the shared hitbox box pen and all, at least 18 px tall, rolls), and `pnpm shot sprites --kind K` (the comparison sheets, the six-rolls lobby, the draw cost, and `sprites-blind.png`, every kind as a shuffled, unnamed play-scale silhouette for fresh readers).
 
 **Blind reads so far** (fresh readers, silhouettes only): the speedster is named every time, medium-high to high. The plumber went from low to split (one reader "the plumber, medium", one unsure) after his cap, nose and girth were pushed and his plunger carried lower; in colour he reads at once. With the cup above his head the cup and the cap merged into one shape, so the plunger is carried low for good (owner, 2026-11-02). Both readers name the dot-eater at high confidence, from the circle with its wedge mouth and the speed lines of its run.
