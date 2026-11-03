@@ -68,7 +68,8 @@ function eye(
       arc.push({ x: Math.cos(a) * r, y: 0.4 + Math.sin(a) * r * 0.85 });
     }
     s.fillStyle = INK;
-    stroke(s, arc, { w: Math.max(0.95, r * 0.9), seed, taper: [0.2, 0.2], press: 0.1 });
+    // A thin arc: as thick as the eye is wide, the two of a small face merged into one dark bar, a squint.
+    stroke(s, arc, { w: Math.max(0.55, r * 0.5), seed, taper: [0.2, 0.2], press: 0.1 });
     return;
   }
   if (m === 'dead') {
