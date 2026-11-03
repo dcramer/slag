@@ -121,6 +121,9 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Players are fully solid: you can stand on someone's head, ride them and shove them.** "players are fully collidable so you can jump on top of them not just pass through"
   2026-11-02 06:30Z · `done` · DESIGN.md → Players
   Changed: bodies only nudged each other softly, with no stacking (`ec85347`).
+- **A head is its own physics, an unstable perch rather than ground: nobody carries a rider, a rounded slick top slides it off, a jump underneath bucks it off and a hard stop, turn or shove knocks it off, harmlessly; you can still jump off a head.** "also when you're on someone's back, you should kind of get knocked off like slide/etc its separate physics"
+  2026-11-02 · `done` · DESIGN.md → Players
+  Changed: the runner underneath carried whoever stood on it and a rising runner lifted them; a stack stood for as long as its base did.
 - **The spawn zone is safe: nothing hurts you while you touch it.**
   2026-11-02 · git `ec85347` · `done` · DESIGN.md → Players
 - **Players in one lobby always look different.** "also our two dudes look the same"
@@ -209,7 +212,10 @@ Every game design decision, preference and direction the owner has given, groupe
   Changed: every card rolled a fresh random part (`908b1c2`).
 - **After rounds nobody finishes, crates lean toward bombs and building parts.** "handicap the rng on item selection so if conseuctive rounds people cant finish, you add more weight to a bomb or platforms"
   2026-11-02 04:42Z · `done` · DESIGN.md → Props (A match can always be finished)
-- **A match can always be finished: crates always offer what the level still needs, and placements that leave no plan are refused.**
+- **Parts can seal a level; a bomb is the way out. Nothing is refused for leaving no way to the flag, and a sealed level's crate deals a demolition part that clears placed parts.** "also parts CAN seal it.. it can be unwinnable and require a bomb"
+  2026-11-02 · `done` · DESIGN.md → Props (A fresh level can always be finished), `generateCrate` in `src/gen/props.ts`
+  Changed: a match kept a plan of at most `MAX_BRIDGES` bridges and refused a placement that left none (`3628776`, `fbee7a6`).
+- **A fresh level can always be finished: crates always offer what the level still needs.**
   2026-11-02 · git `3628776`, `fbee7a6` · `done` · DESIGN.md → Props
 - **Crate contents follow the level seed and round, and the card order is shuffled per match by the host.**
   2026-11-02 · git `0cdb23a` · `done` · DESIGN.md → Props

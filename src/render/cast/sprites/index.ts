@@ -2,7 +2,7 @@ import { type HSL, shift } from '../../../core/color';
 import type { CharacterDef, Kind } from '../../../gen/character';
 import { inkOf, lookOf, moodOf, type RunnerPose, ratio } from '../../ink-figure';
 import { drawFrame, hexHsl, type Paint, paintOf } from './draw';
-import { pick, picks, roll } from './play';
+import { gaitAt, pick, roll, type Variety, varietyOf } from './play';
 import type { SpriteSet } from './types';
 
 /**
@@ -44,8 +44,8 @@ export function spritesOf(c: CharacterDef): SpriteSet | null {
 
 interface Dressed {
   paints: Paint[];
-  /** The accessory option each slot shows, from the character's rolls. */
-  pick: number[];
+  /** What the character's rolls pick from its kind's variety: accessories, wear, idle, cheer, gait. */
+  v: Variety;
   body: Paint;
   shadow: string;
   k: number;
@@ -53,22 +53,51 @@ interface Dressed {
 
 const dressed = new WeakMap<CharacterDef, Dressed>();
 
-/** Each role's paint for this character: its slot's colour, or the roster's. Built once per character. */
+/**
+ * Each role's colour on a character: its slot's colour, its rolled palette, or the roster's; a wear mark
+ * in a tone of the role it sits on. Without a character, the roster's colours (the art3d sheets).
+ */
+export function coloursOf(set: SpriteSet, c?: CharacterDef): HSL[] {
+  const colour = (r: SpriteSet['roles'][number]) => (r.alts && c ? [r.color, ...r.alts][roll(c.vary[r.vary ?? 0], r.alts.length + 1)] : r.color);
+  const hsl = set.roles.map((r): HSL => (c && r.slot === 'paint' ? c.paint : c && r.slot === 'player' ? c.body : hexHsl(colour(r))));
+  set.roles.forEach((r, i) => {
+    if (r.on !== undefined) hsl[i] = shift(hsl[r.on], r.tone ?? 0);
+  });
+  return hsl;
+}
+
+/**
+ * The hard shadow's multiply, from the main colour. It falls across every part, shoes and gloves too, so
+ * it darkens them without the main colour's hue, which would tint a white sole the player's colour.
+ */
+export function shadowOf(main: HSL): string {
+  const grey = { h: main.h, s: Math.min(main.s, 8), l: main.l };
+  return ratio(grey, shift(grey, -14));
+}
+
+/** Each role's paint for this character, and its variety. Built once per character. */
 function dress(set: SpriteSet, c: CharacterDef): Dressed {
   let d = dressed.get(c);
   if (!d) {
-    const colour = (r: SpriteSet['roles'][number]) => (r.alts ? [r.color, ...r.alts][roll(c.vary[r.vary ?? 0], r.alts.length + 1)] : r.color);
-    const hsl = set.roles.map((r): HSL => (r.slot === 'paint' ? c.paint : r.slot === 'player' ? c.body : hexHsl(colour(r))));
-    const pick = picks(set, c.vary);
+    const hsl = coloursOf(set, c);
     const paints = set.roles.map((_, i) => paintOf(hsl[i]));
     // The silhouette is inked in a dark of its main colour: the player's, where the costume wears it (an
     // alternate costume, as a fighting game's roster does), else the kind's own.
     const main = hsl[[set.roles.findIndex((r) => r.slot === 'player'), set.roles.findIndex((r) => r.slot === 'paint')].find((i) => i >= 0) ?? 0];
-    d = { paints, pick, body: { ...paintOf(main), ink: inkOf(main) }, shadow: ratio(main, shift(main, -14, 6)), k: lookOf(c, false).weight };
+    d = {
+      paints,
+      v: varietyOf(set, c.vary),
+      body: { ...paintOf(main), ink: inkOf(main) },
+      shadow: shadowOf(main),
+      k: lookOf(c, false).weight,
+    };
     dressed.set(c, d);
   }
   return d;
 }
+
+/** A character's variety, as the drawer picks it (the shot sheets label it). */
+export const varietyFor = (set: SpriteSet, c: CharacterDef): Variety => dress(set, c).v;
 
 /**
  * Draws the body with its feet at the origin of the current transform (the caller has applied the
@@ -137,27 +166,34 @@ function bitmap(key: string, px: number, paint: (g: CanvasRenderingContext2D) =>
  * frame's bitmap is drawn at. False when the kind has no frame for the pose.
  */
 export function drawSprite(s: CanvasRenderingContext2D, set: SpriteSet, c: CharacterDef, p: RunnerPose, x: number, px?: number): boolean {
-  const got = pick(set, p, x);
-  if (!got) return false;
   const d = dress(set, c);
+  const got = pick(set, p, x, d.v);
+  if (!got) return false;
   const mood = p.dead !== undefined ? ('dead' as const) : moodOf(p);
   const face = set.face ? { kit: set.face, mood, facing: got.facing } : undefined;
   const t = p.t;
   const seed = c.seed & 0xffff;
-  const draw = (g: CanvasRenderingContext2D) => drawFrame(g, got.frame, d.paints, d.body, d.shadow, d.k, seed, t, face, d.pick);
-  if (!px || px > 24) {
-    draw(s);
-    return true;
+  const draw = (g: CanvasRenderingContext2D) => drawFrame(g, got.frame, d.paints, d.body, d.shadow, d.k, seed, t, face, d.v.pick);
+  // The character's own gait: a lift on each step and a lean, a skew about the feet the way it faces.
+  const gait = gaitAt(set, d.v, got.clip, x);
+  const moved = gait.dy !== 0 || gait.lean !== 0;
+  if (moved) {
+    s.save();
+    s.transform(1, 0, -gait.lean * got.facing, 1, 0, gait.dy);
   }
-  // The things that change a frame's drawing: its boil step, the face's mood and a blink.
-  const boil = Math.floor(t * 8) % 3;
-  const blink = mood === 'idle' && Math.sin(t * 1.3 + seed * 7) > 0.985;
-  const bucket = 2 ** (Math.ceil(Math.log2(px) * 4) / 4);
-  const key = `${idOf(d)}:${idOf(got.frame)}:${boil}:${mood}:${blink ? 1 : 0}:${bucket}`;
-  const b = bitmap(key, bucket, draw);
-  s.drawImage(b.cv, -b.ax / b.px, -b.ay / b.px, b.cv.width / b.px, b.cv.height / b.px);
+  if (!px || px > 24) draw(s);
+  else {
+    // The things that change a frame's drawing: its boil step, the face's mood and a blink.
+    const boil = Math.floor(t * 8) % 3;
+    const blink = mood === 'idle' && Math.sin(t * 1.3 + seed * 7) > 0.985;
+    const bucket = 2 ** (Math.ceil(Math.log2(px) * 4) / 4);
+    const key = `${idOf(d)}:${idOf(got.frame)}:${boil}:${mood}:${blink ? 1 : 0}:${bucket}`;
+    const b = bitmap(key, bucket, draw);
+    s.drawImage(b.cv, -b.ax / b.px, -b.ay / b.px, b.cv.width / b.px, b.cv.height / b.px);
+  }
+  if (moved) s.restore();
   return true;
 }
 
-export { pick } from './play';
+export { pick, type Variety } from './play';
 export type { SpriteSet } from './types';

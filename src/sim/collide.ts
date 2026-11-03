@@ -1,6 +1,6 @@
 import { clamp, overlaps, type Rect } from '../core/geom';
 import { DT, PHYS } from './constants';
-import { type Body, type CollisionWorld, DEFAULT_SURFACE, firstOverlap, moveX, moveY, TILE_ONEWAY_ID } from './physics';
+import { type Body, type CollisionWorld, firstOverlap, moveX, moveY, type Surface, TILE_ONEWAY_ID } from './physics';
 import type { Runner } from './run';
 
 /**
@@ -11,11 +11,15 @@ import type { Runner } from './run';
  * depends on who stepped first. This pass then settles the contacts from where
  * each body started and where its step took it, in two axes:
  *
- *  - **Vertical, lowest body first.** A head is a one-way platform: land on it
- *    from above, stand, jump, drop through with down + jump. Riders get their
- *    base's motion, so a stack of any height settles in one sweep, and the upper
- *    body always yields: a rising runner lifts whoever it meets. Only a ceiling
- *    can stop that, and then the riser bonks instead.
+ *  - **Vertical, lowest body first.** A head is a perch you land on from above,
+ *    jump off, or drop through with down + jump. A rider follows its base up and
+ *    down, so a stack of any height settles in one sweep, and the upper body
+ *    always yields: a rising runner never stops on someone's feet. Only a
+ *    ceiling can stop that, and then the riser bonks instead.
+ *  - **A perch is not ground** (`PERCH`). Nobody carries a rider sideways: it
+ *    keeps its own momentum on a slick, rounded top, slides off the side it's on,
+ *    and is thrown off when its base jumps, moves out from under it, or simply
+ *    holds it too long.
  *  - **Sideways, as a short time-of-impact simulation of the frame.** Bodies
  *    closing on each other meet at the moment they would touch and move on as a
  *    group, at a speed set by everyone's effort (`groupSpeed`). A lone walker
@@ -43,12 +47,35 @@ export const COLLIDE = {
   heldBelow: 0.6,
   /** Feet this far below a head still climb onto it, like a ledge lip. */
   lip: PHYS.ledgeLip,
-  /** Fastest sideways carry (px per frame), a little over a run: a base kicked out from under you leaves you behind. */
-  carryMax: 1.25 * PHYS.runSpeed * DT,
   /** Vertical overlap (px) that makes two bodies side contacts rather than a stack. */
   minSide: 0.01,
   /** How far (px) past its own step a group looks for room. */
   probe: 16,
+} as const;
+
+/**
+ * A head is its own physics: an unstable perch, not ground (docs/DESIGN.md → Players).
+ * It still counts as ground for coyote time, the jump buffer and dropping through.
+ */
+export const PERCH = {
+  /**
+   * Underfoot on a head: slick, so a rider keeps its own momentum and steers weakly. The skid is low
+   * enough that the dome beats it a pixel off centre, and a rider can only fight the dome close to the middle.
+   */
+  surface: { friction: 0.35, conveyor: 0, speedMult: 1, jumpMult: 1, bounce: 0, skid: 40 } as Surface,
+  /** The rounded top: px/s² outward per px off centre, like a ball on a dome. From 2 px off you're gone in under half a second, from 5 px in a quarter. */
+  dome: 50,
+  /** Frames a head holds anyone, even dead centre over a base standing still: then they tip off. */
+  hold: 60,
+  /** Rider and head parting faster than this (px/s), a frame after landing: a hard stop, turn or start knocks the rider off that way. Under a walk, so a base walking off tips you. */
+  knock: 90,
+  /** A base rising faster than this (px/s) bucks its rider: a jump, a spring, a bumper. A lip or a lift doesn't. */
+  buck: 200,
+  /** How much faster than its base (px/s) a bucked rider leaves: a pop, so the base's jump never catches up with its feet. */
+  pop: 60,
+  /** Sideways shove (px/s) and hop (px/s up) that throw a rider off: even from dead centre, the hop lands it clear of a head that stays put. */
+  kick: 100,
+  hop: 150,
 } as const;
 
 /** The float slack of `overlaps`: bodies closer than this are touching, not overlapping. */
@@ -79,9 +106,8 @@ interface Mover {
   /** Who it stood on at the start of the frame, and at the end of it. */
   rode: Mover | null;
   base: Mover | null;
-  /** Sideways motion of its own step, and with its base's carry on top. */
+  /** Sideways motion of its own step. Nobody carries anyone, so that's all it moves before side contact. */
   own: number;
-  dx: number;
   /** Direction it's slipping through bodies this frame (±1), or 0. */
   slip: number;
   slipped: boolean;
@@ -107,6 +133,7 @@ export function collideRunners(runners: readonly Runner[], start: readonly Runne
     if (r.alive && !r.finished && !r.attach.grip) ms.push(mover(r, start[i], safe(r)));
     else {
       r.ride = -1;
+      r.perch = 0;
       r.press = 0;
     }
   });
@@ -118,6 +145,7 @@ export function collideRunners(runners: readonly Runner[], start: readonly Runne
   const order = ms.slice().sort((a, b) => b.start.y - a.start.y || a.start.x - b.start.x || a.r.slot - b.r.slot);
   settleVertical(order, world);
   settleSides(order, world);
+  catchMissed(order, world);
   for (const m of order) finish(m);
 }
 
@@ -132,7 +160,6 @@ function mover(r: Runner, s: RunnerStart, safe: boolean): Mover {
     rode: null,
     base: null,
     own,
-    dx: own,
     slip: r.press >= COLLIDE.slipFrames ? Math.sign(own) : 0,
     slipped: false,
     x: s.x,
@@ -151,8 +178,6 @@ function solid(a: Mover, b: Mover): boolean {
   return !a.safe && !b.safe && !overlaps(a.start, b.start);
 }
 
-const carryOf = (v: number) => clamp(v, -COLLIDE.carryMax, COLLIDE.carryMax);
-
 // ---------------------------------------------------------------- vertical
 
 function settleVertical(order: readonly Mover[], world: CollisionWorld): void {
@@ -160,10 +185,7 @@ function settleVertical(order: readonly Mover[], world: CollisionWorld): void {
     const m = order[i];
     const p = m.rode;
     if (p && m.b.onGround) m.rode = null; // Its own step put it on the world.
-    else if (p) {
-      m.dx += carryOf(p.dx);
-      moveY(m.b, p.b.y - p.start.y, world);
-    }
+    else if (p) moveY(m.b, p.b.y - p.start.y, world); // Up and down with the head, never sideways.
     let best: Mover | null = null;
     for (let j = 0; j < i; j++) if (solid(m, order[j]) && landsOn(m, order[j]) && better(m, order[j], best)) best = order[j];
     if (best) rest(m, best, world);
@@ -177,7 +199,7 @@ function landsOn(m: Mover, p: Mover): boolean {
   const g1 = m.b.y + m.b.h - p.b.y;
   if (g0 > (m.b.vy < 0 ? TOUCH : COLLIDE.lip) || g1 < -TOUCH) return false;
   const rx = m.start.x - p.start.x;
-  const rd = m.dx - p.dx;
+  const rd = m.own - p.own;
   const reach = m.b.w - EPS;
   const atHead = g1 > g0 ? clamp(-g0 / (g1 - g0), 0, 1) : 0;
   if (Math.abs(rx + rd * atHead) < reach) return true;
@@ -188,7 +210,7 @@ function landsOn(m: Mover, p: Mover): boolean {
   return t <= 1 && g0 + (g1 - g0) * t <= COLLIDE.lip;
 }
 
-const sideOverlap = (m: Mover, p: Mover) => m.b.w - Math.abs(m.start.x + m.dx - p.start.x - p.dx);
+const sideOverlap = (m: Mover, p: Mover) => m.b.w - Math.abs(m.start.x + m.own - p.start.x - p.own);
 
 /** Of two heads under `m`, the higher, then the one more under it, then the lower slot. */
 function better(m: Mover, p: Mover, best: Mover | null): boolean {
@@ -229,32 +251,25 @@ function pinned(m: Mover, p: Mover, world: CollisionWorld): void {
 
 function settleSides(order: readonly Mover[], world: CollisionWorld): void {
   const pairs = sidePairs(order);
-  if (pairs.length === 0 && !order.some((m) => m.rode)) return;
+  if (pairs.length === 0) return;
   order.forEach((m, i) => (m.group = i));
   let t = 0;
   for (let n = 0; n < order.length; n++) {
     velocities(order, t, world);
-    let hit: [Mover, Mover] | null = null;
     let at = 1;
-    for (const pair of pairs) {
-      const [l, r] = pair;
-      if (l.group === r.group) continue;
-      const closing = l.v - r.v;
-      if (closing <= 1e-9) continue;
-      const when = t + Math.max(0, r.x - l.x - l.b.w) / closing;
-      if (when < at) {
-        at = when;
-        hit = pair;
-      }
-    }
-    if (!hit) break;
+    for (const [l, r] of pairs) if (l.group !== r.group) at = Math.min(at, meets(l, r, t));
+    if (at >= 1) break;
+    // Every pair meeting at that instant joins at once: taking them one by one would let array order pick the group.
+    const hits = pairs.filter(([l, r]) => l.group !== r.group && meets(l, r, t) === at);
     for (const m of order) m.x += m.v * (at - t);
     t = at;
-    const [keep, gone] = [hit[0].group, hit[1].group];
-    for (const m of order) {
-      if (m.group === keep || m.group === gone) {
-        m.group = keep;
-        m.grouped = true;
+    for (const [l, r] of hits) {
+      const [keep, gone] = [l.group, r.group];
+      for (const m of order) {
+        if (m.group === keep || m.group === gone) {
+          m.group = keep;
+          m.grouped = true;
+        }
       }
     }
   }
@@ -263,6 +278,13 @@ function settleSides(order: readonly Mover[], world: CollisionWorld): void {
     m.x += m.v * (1 - t);
     moveX(m.b, m.x - m.b.x, world);
   }
+}
+
+/** When (0..1 of the frame) this pair touches, moving as they are from time t; 1 if never this frame. Read before anyone moves to it. */
+function meets(l: Mover, r: Mover, t: number): number {
+  const closing = l.v - r.v;
+  if (closing <= 1e-9) return 1;
+  return Math.min(1, t + Math.max(0, r.x - l.x - l.b.w) / closing);
 }
 
 /** Bodies that can meet sideways this frame, left one first. A body that started above or below the other isn't one. */
@@ -288,20 +310,15 @@ function sidePairs(order: readonly Mover[]): [Mover, Mover][] {
   return pairs;
 }
 
-/** What everyone does from time t on. Twice, so riders of a group, and groups of riders, see each other's motion. */
+/** What everyone does from time t on: its own motion, or its group's. */
 function velocities(order: readonly Mover[], t: number, world: CollisionWorld): void {
-  for (let pass = 0; pass < 2; pass++) {
-    for (const m of order) {
-      m.want = m.own + (m.rode ? carryOf(m.rode.v) : 0);
-      if (!m.grouped) m.v = m.want;
-    }
-    for (const m of order) {
-      if (!m.grouped) continue;
-      const members = order.filter((o) => o.group === m.group);
-      if (members[0] !== m) continue;
-      const u = groupSpeed(members, t, world);
-      for (const o of members) o.v = u;
-    }
+  for (const m of order) if (!m.grouped) m.v = m.want;
+  for (const m of order) {
+    if (!m.grouped) continue;
+    const members = order.filter((o) => o.group === m.group);
+    if (members[0] !== m) continue;
+    const u = groupSpeed(members, t, world);
+    for (const o of members) o.v = u;
   }
 }
 
@@ -312,14 +329,12 @@ function velocities(order: readonly Mover[], t: number, world: CollisionWorld): 
  * difference, and nobody goes faster than the fastest of them is trying to.
  */
 function groupSpeed(members: readonly Mover[], t: number, world: CollisionWorld): number {
+  // Summed smallest first, so bodies at exactly the same spot add up the same in either order.
+  const wants = members.map((m) => m.want).sort((a, b) => a - b);
   let sum = 0;
-  let lo = Number.POSITIVE_INFINITY;
-  let hi = Number.NEGATIVE_INFINITY;
-  for (const m of members) {
-    sum += m.want;
-    lo = Math.min(lo, m.want);
-    hi = Math.max(hi, m.want);
-  }
+  for (const w of wants) sum += w;
+  const lo = wants[0];
+  const hi = wants[wants.length - 1];
   const shared = lo > 0 ? lo : hi < 0 ? hi : 0;
   const u = clamp(shared + COLLIDE.shove * (sum - members.length * shared), lo, hi);
   // No member may end up in terrain over what's left of the frame.
@@ -359,27 +374,82 @@ function free(b: Body, dir: -1 | 1, dist: number, world: CollisionWorld): number
   return dist;
 }
 
+/**
+ * Feet that just missed a head can end the frame in it anyway, when side contact
+ * holds that head back under them (a third body blocks it). They land on it after all.
+ */
+function catchMissed(order: readonly Mover[], world: CollisionWorld): void {
+  for (let i = 0; i < order.length; i++) {
+    const m = order[i];
+    if (m.base || m.b.dropFrames > 0) continue;
+    for (let j = 0; j < i; j++) {
+      const p = order[j];
+      if (solid(m, p) && overlaps(m.b, p.b) && m.start.y + m.b.h - p.start.y <= COLLIDE.lip) {
+        rest(m, p, world);
+        break;
+      }
+    }
+  }
+}
+
 // ---------------------------------------------------------------- results
 
-/** Write what the frame came to on the runner. */
+/** Write what the frame came to on the runner. Lowest first, so a base's throw has landed before its rider looks. */
 function finish(m: Mover): void {
   const { r, b, base } = m;
-  if (base && Math.abs(b.x - base.b.x) < b.w - EPS) {
-    r.ride = base.r.slot;
-    b.onGround = true;
-    b.groundRef = TILE_ONEWAY_ID; // A head is a one-way platform, so down + jump drops through it.
-    b.surface = DEFAULT_SURFACE;
-    b.vy = 0;
-    b.jumping = false;
-    b.wallDir = 0;
-    b.wallCoyote = 0;
-    b.wallJumpCd = 0;
-  } else r.ride = -1;
+  if (base && Math.abs(b.x - base.b.x) < b.w - EPS) perch(m, base);
+  else {
+    r.ride = -1;
+    r.perch = 0;
+  }
   const moved = (m.x - m.start.x) * Math.sign(m.want);
   const held = m.grouped && m.want !== 0 && moved < Math.abs(m.want) * COLLIDE.heldBelow;
   if (m.slipped) r.press = 0;
   else if (held) r.press = Math.min(r.press + 1, COLLIDE.slipFrames);
   else if (r.press > 0) r.press--;
+}
+
+/**
+ * `m` ends the frame on `p`'s head: stand there one more frame, or be thrown off.
+ * Everything here is geometry and the two bodies' motion, never slots.
+ */
+function perch(m: Mover, p: Mover): void {
+  const { r, b } = m;
+  const off = b.x - p.b.x;
+  // How fast the head is moving out from under the rider, from where both really went this frame.
+  const rel = (b.x - m.start.x - (p.b.x - p.start.x)) / DT;
+  // Off the side it's on; dead centre, the way it's moving against the head (a stack bucked at once spills both ways), else off the back.
+  const side = Math.sign(off) || Math.sign(rel) || Math.sign(b.vx - p.b.vx) || -p.b.facing;
+  if (p.b.vy < -PERCH.buck) return thrown(m, side, Math.min(b.vy, p.b.vy - PERCH.pop));
+  if (m.rode && Math.abs(rel) > PERCH.knock) return thrown(m, Math.sign(rel), -PERCH.hop);
+  if (r.perch >= PERCH.hold) return thrown(m, side, -PERCH.hop);
+  r.ride = p.r.slot;
+  r.perch++;
+  b.onGround = true;
+  b.groundRef = TILE_ONEWAY_ID; // Down + jump drops through a head, as through a one-way.
+  b.surface = PERCH.surface;
+  b.vy = 0;
+  b.vx += PERCH.dome * off * DT;
+  b.jumping = false;
+  b.wallDir = 0;
+  b.wallCoyote = 0;
+  b.wallJumpCd = 0;
+}
+
+/**
+ * Off the head, shoved `dir` and leaving at `vy`. It's still a head you just stood
+ * on, so coyote time and a buffered jump work as off a ledge. Never hurts.
+ */
+function thrown(m: Mover, dir: number, vy: number): void {
+  const { r, b } = m;
+  b.vx += dir * PERCH.kick;
+  b.vy = vy;
+  b.onGround = false;
+  b.groundRef = -1;
+  b.jumping = false;
+  b.coyote = Math.max(b.coyote, PHYS.coyoteFrames);
+  r.ride = -1;
+  r.perch = 0;
 }
 
 /**

@@ -50,7 +50,7 @@ export type GameEvent =
   /** Generic prop moment for fx/audio (pipe, bump, thud, snap, bounce, splat…). (x2, y2): a second point, e.g. a pipe's far mouth. */
   | { type: 'prop'; kind: string; x: number; y: number; x2?: number; y2?: number; r?: number }
   | { type: 'place'; slot: number; x: number; y: number }
-  /** A placement the match turned down because it would leave no way to the flag (gen/level/winnable.ts). */
+  /** A confirm on a ghost that can't go there (`spotAt`): a buzz and a red ring, nothing placed. */
   | { type: 'refuse'; slot: number; x: number; y: number }
   | { type: 'claim'; slot: number }
   | { type: 'phase'; phase: string }

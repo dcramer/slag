@@ -4,7 +4,7 @@ import { CAST, generateCharacter, type Kind } from './gen/character';
 import { ARCHETYPE_WEIGHTS, type Archetype, DEMOLISH, generateProp } from './gen/props';
 import type { NetSession } from './net/session';
 import { hashMatch } from './net/snapshot';
-import { blindOrder, castBench, castBlind, castCatalog, castColors, castRecognise, castSilhouettes } from './render/cast/sheet';
+import { blindOrder, castBench, castBlind, castCatalog, castColors, castRecognise, castSilhouettes, castVariety } from './render/cast/sheet';
 import { useSprites } from './render/cast/sprites';
 import type { Renderer } from './render/renderer';
 import { giveItem, ITEM_KINDS, type ItemKind } from './sim/items';
@@ -80,6 +80,7 @@ export interface SlagDebug {
     bench: typeof castBench;
     blind: typeof castBlind;
     blindOrder: typeof blindOrder;
+    variety: typeof castVariety;
   };
   /** Kinds rendered from 3D models (tools/art3d): turn them on or off. */
   sprites: { use: typeof useSprites; dress(slot: number, kind: string): void };
@@ -100,7 +101,16 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
     match,
     renderer,
     net,
-    cast: { catalog: castCatalog, colors: castColors, silhouettes: castSilhouettes, recognise: castRecognise, bench: castBench, blind: castBlind, blindOrder },
+    cast: {
+      catalog: castCatalog,
+      colors: castColors,
+      silhouettes: castSilhouettes,
+      recognise: castRecognise,
+      bench: castBench,
+      blind: castBlind,
+      blindOrder,
+      variety: castVariety,
+    },
     sprites: {
       use: useSprites,
       // For shots: put a seated player in a given kind (a look is cosmetic, and only this match sees it).

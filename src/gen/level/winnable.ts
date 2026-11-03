@@ -29,19 +29,22 @@ import { cycleFrames } from '../setpieces/place';
 import { type Bridge, canPlaceBridge, MAX_BRIDGES, searchBridges, withBridges } from './validate';
 
 /**
- * Every match stays winnable. The guarantee is an invariant the match keeps:
- * at all times there's a `plan` of at most MAX_BRIDGES bridges, each a legal
- * place for the crate's bridge card, with which the real controller
- * (sim/reach.ts) gets from spawn to the flag through the terrain and the plain
- * blocks players built, keeping clear of every other part (the barriers in
- * sim/props/barrier.ts). A level starts with its recorded solution, proven
- * this way when it's generated; a placement after which no plan is found is
- * refused, so no state of a match is without one. The crate always offers as
- * many bridge cards as the plan has bridges, so finishing never needs a part
- * nobody was given. Bombs, time bombs included, are settled before the proof.
+ * What a level needs to be finished. A `plan` is at most MAX_BRIDGES bridges,
+ * each a legal place for the crate's bridge card, with which the real
+ * controller (sim/reach.ts) gets from spawn to the flag through the terrain
+ * and the plain blocks players built, keeping clear of every other part (the
+ * barriers in sim/props/barrier.ts). Every fresh level starts with one, its
+ * recorded solution, proven this way when it's generated, and the crate always
+ * offers as many bridge cards as the plan has bridges, so finishing a fresh
+ * level never needs a part nobody was given.
  *
- * Proving is cheap enough for the frame a part goes down: the last plan is
- * re-checked first, and a ReachCache only re-traces what the new part touches.
+ * Parts may seal a level (the owner, 2026-11-02): nothing is refused for it.
+ * Each round's start re-proves the plan; when none is found the level is
+ * sealed and the crate deals a demolition card that clears parts instead
+ * (generateCrate). Bombs, time bombs included, are settled before the proof.
+ *
+ * Proving is cheap: the last plan is re-checked first, and a ReachCache only
+ * re-traces what changed.
  */
 
 /** Reach caches by level identity; their answers never depend on what ran before, so sharing them is safe. */
@@ -89,23 +92,19 @@ export function settled(level: Level, placed: readonly PlacedProp[]): { level: L
 }
 
 /**
- * A plan for `level` with `placed` standing in it, or null if none is found.
- * `prior`, the last plan, is tried first; what's left of it still counts, so
- * a bridge someone built from the plan shortens it. Pass the settled state
- * (see `settled`).
- *
- * `shortest` (round start, where the plan sets what the crate offers) also
- * drops bridges the level no longer needs, down to [] when the flag is
- * reachable as it stands. Without it (a placement, decided in the frame it's
- * made) any plan that still works is kept, which costs one analysis.
+ * A plan for `level` with `placed` standing in it, or null if none is found:
+ * the parts have sealed it. `prior`, the last plan, is tried first; what's
+ * left of it still counts, so a bridge someone built from the plan shortens
+ * it, and bridges the level no longer needs are dropped, down to [] when the
+ * flag is reachable as it stands. Pass the settled state (see `settled`).
  */
-export function prove(level: Level, placed: readonly PlacedProp[], prior: readonly Bridge[], shortest = true): Bridge[] | null {
+export function prove(level: Level, placed: readonly PlacedProp[], prior: readonly Bridge[]): Bridge[] | null {
   const field = fieldOf(level, placed);
   const cache = cacheFor(field);
   const works = (bs: readonly Bridge[]) => cache.analyze(bs.length ? withBridges(field, bs) : field).goalReached;
   const rest = prior.filter((b) => canPlaceBridge(field, b)).map((b) => ({ ...b }));
   if (rest.length <= MAX_BRIDGES && works(rest)) {
-    if (!shortest || !rest.length) return rest;
+    if (!rest.length) return rest;
     if (works([])) return [];
     if (rest.length === 2) for (const b of rest) if (works([b])) return [b];
     return rest;

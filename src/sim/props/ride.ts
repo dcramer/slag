@@ -8,6 +8,7 @@ import { type Contrib, moduleSim, solidId } from './registry';
 import {
   canPlace,
   carrierPos,
+  claimedCells,
   dirOf,
   footprint,
   footprintCells,
@@ -18,8 +19,10 @@ import {
   moves,
   newPropState,
   resolveProp,
+  rideSpan,
+  sweptCells,
 } from './transform';
-import type { Motion, PlacedProp, PropDef, Resolved, Ride } from './types';
+import type { PlacedProp, PropDef, Resolved, Ride } from './types';
 
 /**
  * Parts ride what they're stuck to (docs/DESIGN.md, Props). Placed flush
@@ -48,8 +51,6 @@ export const RIDE_SNAP = TILE * 0.75;
 const MIN_TOUCH = 4;
 /** Frames between samples of a ride's sweep: no mover gets half a tile in that. */
 const SWEEP_STEP = 2;
-/** Longest sweep looked at (frames): chains of movers with unrelated periods stop here. */
-const MAX_SWEEP = 2400;
 
 /** Can this part ride a mover? Every module must move rigidly with the prop, and it has no motion of its own. */
 export function canRide(def: PropDef): boolean {
@@ -129,7 +130,7 @@ export function spotAt(level: Level, placed: readonly PlacedProp[], def: PropDef
   if (!canRide(def)) spot = plain();
   else {
     const w = worldAt(level, placed, f);
-    const stuck = def.mount === 'face' ? coatRide(level, placed, w, def, rot, tx, ty, f) : blockRide(level, w, def, rot, tx, ty, f);
+    const stuck = def.mount === 'face' ? coatRide(level, placed, w, def, rot, tx, ty, f) : blockRide(level, placed, w, def, rot, tx, ty, f);
     spot = stuck ?? plain();
   }
   lastSpot = { key, spot };
@@ -153,7 +154,7 @@ const shared = (a: number, aw: number, b: number, bw: number) => Math.min(a + aw
  * across all its cells and the mover's faces, so it sits flush on top, under,
  * or beside it, lined up with a block's cells or a car's near edge.
  */
-function blockRide(level: Level, w: World, def: PropDef, rot: number, tx: number, ty: number, f: number): Spot | null {
+function blockRide(level: Level, placed: readonly PlacedProp[], w: World, def: PropDef, rot: number, tx: number, ty: number, f: number): Spot | null {
   const cells = footprint(def, rot).map(([x, y]) => [x + tx, y + ty] as Cell);
   let best: { mv: Mover; d: Vec; g: number } | null = null;
   const consider = (mv: Mover, d: Vec, g: number, touch: number) => {
@@ -182,7 +183,8 @@ function blockRide(level: Level, w: World, def: PropDef, rot: number, tx: number
   const ok =
     cells.every(([x, y]) => x >= 0 && y >= 0 && x < level.w && y < level.h && !isProtected(level, x, y)) &&
     clearAt(level, w, rects, d, ride) &&
-    sweepClear(level, rects, ride);
+    sweepClear(level, rects, ride) &&
+    pathUnclaimed(level, placed, { uid: -1, def, owner: -1, tx, ty, rot, ride });
   return { def, ok, ride };
 }
 
@@ -294,6 +296,17 @@ function clearAt(level: Level, w: World, rects: readonly Rect[], d: Vec, ride: R
   });
 }
 
+/** Does a rider's whole path keep out of what other parts claim (`claimedCells`)? What carries it may claim its cells. */
+function pathUnclaimed(level: Level, placed: readonly PlacedProp[], pp: PlacedProp): boolean {
+  const claims = claimedCells(level, placed);
+  const chain = new Set<number>();
+  for (let r: Ride | undefined = pp.ride; r; r = r.parent.ride) chain.add(r.uid);
+  return sweptCells(pp).every(([x, y]) => {
+    const o = claims.get(y * level.w + x);
+    return !o || chain.has(o.uid);
+  });
+}
+
 /**
  * Does a rider stay clear of rock, the level's sides and protected zones over
  * its carrier's whole cycle? `rects` are where it sits at zero offset.
@@ -310,28 +323,4 @@ function sweepClear(level: Level, rects: readonly Rect[], ride: Ride): boolean {
     }
   }
   return true;
-}
-
-/** Frames until a rider's whole chain of carriers is back where it started (capped). */
-export function rideSpan(r: Resolved): number {
-  let span = 1;
-  for (let c = r.carry; c; c = c.by.carry) {
-    const m = c.by.mods[c.mi];
-    for (const p of [motionPeriod(c.by.motion), m ? (moduleSim(m.type).carrier?.period(m) ?? 0) : 0])
-      if (p > 0) span = Math.min(MAX_SWEEP, lcm(span, Math.round(p)));
-  }
-  return span;
-}
-
-function motionPeriod(m: Motion): number {
-  if (m.type === 'rail') return m.period + 2 * (m.dwell ?? 0);
-  if (m.type === 'loop' || m.type === 'track') return m.period;
-  return 0;
-}
-
-function lcm(a: number, b: number): number {
-  let x = a;
-  let y = b;
-  while (y) [x, y] = [y, x % y];
-  return (a / x) * b;
 }

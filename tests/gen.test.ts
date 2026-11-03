@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
-import { generateCharacter } from '../src/gen/character';
+import { generateCharacter, VARY_FIRST, VARY_ROLLS } from '../src/gen/character';
 import { ARCHETYPE_WEIGHTS, generateCrate, generateProp, polyomino } from '../src/gen/props';
 import { footprint } from '../src/sim/props';
 
@@ -172,7 +172,10 @@ describe('characters', () => {
     ] as const;
     for (const [seed, ...rest] of was) {
       const c = generateCharacter(seed);
-      expect([c.name, r(c.hue), hsl(c.body), hsl(c.accent), c.kind, hsl(c.paint), c.vary.map(r)], `seed ${seed}`).toEqual(rest);
+      // The first six rolls are the ones every seed had; the rendered kinds' variety rolls come after them.
+      expect([c.name, r(c.hue), hsl(c.body), hsl(c.accent), c.kind, hsl(c.paint), c.vary.slice(0, VARY_FIRST).map(r)], `seed ${seed}`).toEqual(rest);
+      expect(c.vary.length).toBe(VARY_ROLLS);
+      expect(c.vary.every((v) => v >= 0 && v < 1)).toBe(true);
     }
   });
 });
