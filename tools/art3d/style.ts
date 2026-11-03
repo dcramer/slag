@@ -46,6 +46,8 @@ export interface Brief {
   pose: string;
   /** The poses across the pose sheet, in order. */
   poses: string;
+  /** The proportions, when not a figure's (`CHUNKY`): a limbless kind has no head, hands or feet to push. */
+  build?: string;
 }
 
 export const BRIEFS: Record<string, Brief> = {
@@ -92,16 +94,60 @@ export const BRIEFS: Record<string, Brief> = {
     // the green tunic flared at the hem with a brown belt (the colour and the hero's cut), a blond fringe,
     // and something to fight with on his back (a hero, not a shepherd).
     // Ours, and the joke: a hero kitted out from the bins. The cap is a long green woolly sock with a darned
-    // heel, the round shield a dented dustbin lid with its handle, the sword a sooty fireplace poker.
+    // toe, the round shield a dented dustbin lid with its handle, the sword a sooty fireplace poker.
+    // The twist and the nod lead: the image generator drops what comes late in a long prompt (the lid and
+    // the poker vanished when they came last).
     character:
       'Character: a slim young elf hero, never stout. A blond fringe (#e6c25a), long pointed ears, blue eyes. ' +
-      'His cap: a very long floppy green woolly sock (#3f7a34), its toe end flopping back and hanging down his back to his waist, a light green darn (#5a9a4a) on its heel. ' +
+      'His cap: a very long floppy green woolly sock (#3f7a34), its long foot flopping straight back behind his head and drooping to his shoulders, a light green darn (#5a9a4a) on its toe. ' +
       'A green tunic (#3f7a34) flared at the hem, a wide brown belt, cream sleeves and leggings, brown gloves and boots (#6b4a35). ' +
       'On his back as a shield, a dented round steel dustbin lid (#a8adb4) with its handle; a black iron fireplace poker (#4a4a52) with a hooked tip in place of a sword, its loop handle over his shoulder. No sword, no bow.',
     views: 'a front view, a side profile facing right, a back view showing the dustbin lid and poker on his back, and a three-quarter view facing right',
     pose: 'The sock cap flops straight back and down behind his head to the nape, clear of the arms. The dustbin lid sits flat on his back and the poker lies behind it, both clear of the arms and head.',
     poses:
       'standing idle, alert, one hand on his belt; mid-run striding out long with arms swinging and the sock cap streaming behind; crouched low before a jump, knees bent, arms swung back; a forward somersault in mid-air, tucked into a ball, the sock cap trailing; falling with arms up and legs reaching down; sliding down a wall on his right with one glove flat against it and both boots braced; cheering with the poker raised high overhead; knocked flat on his back with stars circling',
+  },
+  puffball: {
+    // The nod, each part of the read at race size: the ball (the whole body: no head, neck or legs apart
+    // from it), the big red oval feet (they make it a creature and part it from the dot-eater's wedge),
+    // the tall oval eyes with a shine at the top (the face), the blush (the sweetness).
+    // Ours, and the joke: a cheap vinyl squeeze toy off a bargain shelf. A moulding seam runs right round
+    // its middle, a white squeaker valve pokes out of its back (the one bump on the ball's outline that
+    // the original hasn't got), and a mould number is stamped under one foot.
+    build:
+      'Proportions for a tiny game sprite: the whole character is one near-perfect ball, about as wide as it is tall, with no separate head, no neck and no legs. Its feet are big, about half as wide as the ball each; its arms are short stubby nubs. A chunky squeezable toy, never a realistic creature.',
+    character:
+      'Character: a small round puffball creature, a near-perfect soft pink ball (#f2a0b8). ' +
+      'Two big oval red feet (#c9473f) under the ball like fat flattened jelly beans, wider than they are tall, the front one poking out ahead of the ball. ' +
+      'Two short stubby round arms, little rounded nubs low on its sides. ' +
+      'On the front of the ball: two tall narrow oval black eyes (#2a1f1a) side by side, each with a white oval shine at its top; two soft rosy blush ovals just under and outside the eyes; a tiny happy mouth between them. ' +
+      'The joke: it is a cheap vinyl squeeze toy. A raised moulding seam ridge runs right round its middle like an equator, plainly visible across its front, sides and back, the two halves a hair out of line. ' +
+      "A white plastic squeaker valve (#f4efe6), a short stubby nozzle with a round cap, sticks straight out of the middle of its back and breaks the ball's round outline in the side view. " +
+      'A mould number is stamped on the sole of one foot. Soft matte vinyl, cheerful and squishy.',
+    views: 'a front view, a side profile facing right, a back view showing the squeaker valve and the seam, and a three-quarter view facing right',
+    pose: 'The arms are short nubs held straight out to the sides, clear of the ball. The squeaker valve sticks straight out of its back.',
+    poses:
+      'standing idle on both feet, arms down; mid-run toddling forward with one big foot stepping out ahead and the arms swinging; squashed low before a jump, the ball flattened over its feet; puffed up perfectly round in mid-air with cheeks full, arms flapping out and feet dangling; falling with arms up and feet reaching down; sliding down a wall on its right, pressed flat against it with one nub arm and both feet braced; cheering with both arms up and eyes squeezed shut in a happy grin; knocked flat on its back with stars circling',
+  },
+  chomper: {
+    // The nod, each part of the read at race size: the circle with a wedge cut out of its front (the most
+    // recognised shape in games, and it needs nothing else); pure yellow (half the read); the chomp (a mouth,
+    // not a pie chart, only when it moves). One small eye above the mouth makes it a creature.
+    // Ours, and the joke: the eater got eaten. A neat round bite, scalloped by teeth, is missing from the
+    // back of the circle; a red-and-white checked napkin is tucked under the mouth like a bib.
+    character:
+      'Character: a perfect round ball creature, pure warm yellow (#f6d02a) with a darker yellow cel shadow (#cba214); no arms, no legs, no feet, no hands, no nose, no ears. ' +
+      'A big wedge-shaped mouth cut into the front of the ball like a slice taken out of a pie, its point at the centre of the ball, wide open, dark brown inside (#2a1f1a). ' +
+      'One small round black eye (#14121a) with a white glint, above the mouth toward the front. ' +
+      'The joke: someone got to him first. A neat round bite is missing from the top of the back of the ball, its edge scalloped by three tooth marks, the bitten edge a deeper yellow (#e8b81c). ' +
+      'A small red-and-white checked napkin (#fbf6ee with #c9473f checks) is tucked into his lower lip and hangs down over the front of the ball like a bib. Greedy, cheerful and always hungry.',
+    views:
+      'a side profile facing right with the mouth wide open, the same profile with the mouth snapped shut, a back view showing the round bite, and a three-quarter view facing right',
+    pose: 'No limbs to keep clear: one round ball.',
+    poses:
+      'sitting still at rest with the mouth half open; bouncing along mid-hop with the mouth wide open; squashed flat on landing with the mouth snapped shut; spinning in mid-air rotated halfway round, motion lines round it; at the top of a jump stretched a little tall with the mouth gaping; pressed against a wall on its right, biting into it as it slides down, crumbs falling; cheering, hopping high with the mouth wide open laughing; dying, the mouth opening wider and wider until the ball folds away to nothing, only the napkin left fluttering',
+    build:
+      'Proportions for a tiny game sprite: one bold simple round shape that still reads at 20 pixels tall, no limbs at all. A chunky toy, never realistic.',
   },
 };
 
@@ -114,7 +160,7 @@ function brief(kind: string): Brief {
 /** The concept sheet's prompt: the design in the game's own ink style. */
 export function conceptPrompt(kind: string): string {
   const b = brief(kind);
-  return [STYLE, CHUNKY, b.character, `Layout: one row of full-body views of the same character side by side: ${b.views}.`].join(' ');
+  return [STYLE, b.build ?? CHUNKY, b.character, `Layout: one row of full-body views of the same character side by side: ${b.views}.`].join(' ');
 }
 
 /** The pose sheet's prompt: the approved concept (the reference) through every pose the game plays. */
@@ -126,7 +172,7 @@ export function posePrompt(kind: string): string {
     `An animation pose sheet for a 2D platformer video game: eight full-body action poses of one cartoon character, in two rows of four, every pose facing right, each with clear space around it: ${b.poses}.`,
     'The character is exactly the one in the reference image, same design, proportions and colours; no turnaround, no separate parts.',
     STYLE.replace('Character model sheet for a 2D platformer video game, an original cartoon character design. ', ''),
-    CHUNKY,
+    b.build ?? CHUNKY,
     b.character,
   ].join(' ');
 }
@@ -136,7 +182,7 @@ export function modelPrompt(kind: string): string {
   const b = brief(kind);
   return [
     SCULPT,
-    CHUNKY,
+    b.build ?? CHUNKY,
     'The same character as the reference sheet, with exactly its design, proportions and colours.',
     b.character,
     'Front view, standing in a T-pose: both arms straight out to the sides at shoulder height, hands open, fingers together, legs straight and a little apart, feet flat.',

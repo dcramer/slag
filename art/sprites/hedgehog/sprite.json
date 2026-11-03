@@ -443,7 +443,12 @@
     "mouth": [
       1.4,
       2.7
-    ]
+    ],
+    "spread": 0.7,
+    "covers": {
+      "eye": "skin",
+      "iris": "skin"
+    }
   },
   "ball": {
     "r": 7,

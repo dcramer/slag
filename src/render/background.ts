@@ -5,7 +5,7 @@ import { VIEW_H, VIEW_W } from '../sim/constants';
 import type { Camera } from './camera';
 import type { ViewFrame } from './frame';
 import { blob, line, type P, sn, stroke } from './ink';
-import { circle, ellipse, flame, flutter, glowDot, light, type RC } from './kit';
+import { circle, ellipse, flame, flutter, glowDot, light, type RC, wipe } from './kit';
 import { along, backward, fillPts, inkOf, penPath } from './skyline-ink';
 import { type Feature, ridgeOf, SKYLINES } from './skylines';
 
@@ -53,18 +53,17 @@ class CanvasPool {
   }
 }
 
-/** Grow `c` to hold `w`×`h` px if it can't, clear all of it (a blur reads past the used rect), and scale it by `k`. */
+/** Grow `c` to hold `w`×`h` px if it can't, clear all of it with `wipe` (a blur reads past the used rect), and scale it by `k`. */
 function prepare(c: HTMLCanvasElement, w: number, h: number, k: number): CanvasRenderingContext2D {
   if (c.width < w || c.height < h) {
     c.width = Math.max(c.width, w);
     c.height = Math.max(c.height, h);
   }
   const g = c.getContext('2d')!;
-  g.setTransform(1, 0, 0, 1, 0, 0);
   g.globalAlpha = 1;
   g.globalCompositeOperation = 'source-over';
   g.filter = 'none';
-  g.clearRect(0, 0, c.width, c.height);
+  wipe(g);
   g.setTransform(k, 0, 0, k, 0, 0);
   return g;
 }

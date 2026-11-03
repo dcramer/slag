@@ -7,7 +7,7 @@ import { PAL, TYPE } from '../../ui/style';
 import { drawInkRunner } from '../ink-character';
 import { blob } from '../ink';
 import { glowDot } from '../kit';
-import { icon, plate, stampButton, tag } from '../hud-kit';
+import { icon, plate, stampButton, swatchDot, tag } from '../hud-kit';
 import type { Hud, HudAction, JoinCardInfo, NetArrival } from '../hud';
 import { promptGlyphs } from './footer';
 import { DISPLAY, UI } from './layout';
@@ -196,9 +196,12 @@ export function joinCard(hud: Hud, m: Match, card: JoinCardInfo, t: number) {
   c.font = `400 17px ${DISPLAY}`;
   const nw = c.measureText(ch.name).width;
   const nh = hud.mode === 'touch' ? 26 : 21;
-  const nameHover = editing && hud.button({ x: cx - nw / 2 - 14, y: ny - nh / 2, w: nw + 28, h: nh, action: 'name' });
+  const nameHover = editing && hud.button({ x: cx - nw / 2 - 20, y: ny - nh / 2, w: nw + 34, h: nh, action: 'name' });
   hud.text(ch.name, cx, ny, 17, nameHover ? PAL.amber : PAL.bone, 'center', DISPLAY, 400, 3.5);
-  if (editing) icon(c, 'pencil', cx + nw / 2 + 8, ny, 8, nameHover ? PAL.amber : PAL.dim);
+  if (editing) {
+    icon(c, 'pencil', cx + nw / 2 + 8, ny, 8, nameHover ? PAL.amber : PAL.dim);
+    swatchDot(c, cx - nw / 2 - 9, ny, 4.6, css(ch.body), nameHover);
+  }
   const by = y + h - 40;
   const space = hud.net?.space ?? 0;
   const open = space > 0;
@@ -216,7 +219,7 @@ export function joinCard(hud: Hud, m: Match, card: JoinCardInfo, t: number) {
   if (editing) {
     const items: [PromptAction, string, HudAction][] = [
       ['use', 'New Look', 'look'],
-      ['down', 'Rename', 'name'],
+      ['down', 'Name & Color', 'name'],
       ['alt', 'Cancel', 'cancel'],
     ];
     keyRow(hud, m, items, cx, y + h + 14);
@@ -231,10 +234,12 @@ function keyRow(hud: Hud, m: Match, items: [PromptAction, string, HudAction][], 
   const size = TYPE.label;
   const parts = items.map(([p, label, action]) => {
     const glyphs = hud.mode === 'touch' ? [] : promptGlyphs(hud, m, p);
+    // The label first: measuring a keycap sets its own font.
     c.font = `700 ${size}px ${UI}`;
+    const lw = c.measureText(label).width;
     let gw = 0;
     for (const g of glyphs) gw += glyphWidth(c, g, gh) + 3;
-    return { glyphs, label, action, w: gw + c.measureText(label).width + (gw ? 3 : 0) };
+    return { glyphs, label, action, w: gw + lw + (gw ? 3 : 0) };
   });
   const gap = 24;
   let x = cx - (parts.reduce((s, p) => s + p.w, 0) + gap * (parts.length - 1)) / 2;

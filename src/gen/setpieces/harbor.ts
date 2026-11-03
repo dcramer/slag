@@ -197,6 +197,7 @@ export const HARBOR: Recipe[] = [
   }),
   defineSetPiece({
     name: 'harpoon',
+    codex: { title: 'Harpoon Gun', note: 'Whale of a time.', about: 'Fires harpoons straight and fast.' },
     weight: 2,
     role: 'hazard',
     repeat: true,
@@ -214,6 +215,24 @@ export const HARBOR: Recipe[] = [
         length: 1.4,
       }),
   }),
-  defineSetPiece({ name: 'whirlpool', weight: 2, role: 'hazard', unique: true, candidates: whirlpools }),
-  defineSetPiece({ name: 'channel light', weight: 1.5, role: 'hazard', unique: true, candidates: channelLights }),
+  defineSetPiece({
+    name: 'whirlpool',
+    weight: 2,
+    role: 'hazard',
+    unique: true,
+    codex: { title: 'Whirlpool', note: 'Down the drain.', about: 'A waterspout over a gap of open water that drags you in.' },
+    candidates: whirlpools,
+  }),
+  defineSetPiece({
+    name: 'channel light',
+    weight: 1.5,
+    role: 'hazard',
+    unique: true,
+    codex: {
+      title: 'Channel Light',
+      note: 'Ships: fine. Runners: no.',
+      about: 'A lamp on a pier end sweeping a burning beam, dark for long stretches between.',
+    },
+    candidates: channelLights,
+  }),
 ];
