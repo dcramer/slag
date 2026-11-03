@@ -67,7 +67,7 @@
         "#d9622b",
         "#ece8df"
       ],
-      "vary": 4,
+      "vary": 6,
       "grow": [
         1,
         1.8
@@ -125,6 +125,30 @@
       "color": "#6b4a35",
       "swatches": [],
       "min": 0.3
+    },
+    "patch": {
+      "color": "#808080",
+      "swatches": [],
+      "free": true,
+      "min": 0.1,
+      "on": "fur",
+      "tone": 14
+    },
+    "scuff": {
+      "color": "#808080",
+      "swatches": [],
+      "free": true,
+      "min": 0.1,
+      "on": "fur",
+      "tone": 20
+    },
+    "soot": {
+      "color": "#808080",
+      "swatches": [],
+      "free": true,
+      "min": 0.1,
+      "on": "fur",
+      "tone": -24
     }
   },
   "regions": [
@@ -474,11 +498,11 @@
       "bone": "Pelvis",
       "at": [
         0,
-        13.280000000000001,
-        -11.25
+        12.58,
+        -10.75
       ],
       "rot": [
-        0,
+        -35,
         0,
         0
       ],
@@ -488,9 +512,9 @@
           "shape": "sphere",
           "role": "scorch",
           "size": [
-            0.6,
-            1.8,
-            1.8
+            0.5,
+            0.55,
+            1.5
           ]
         }
       ]
@@ -590,9 +614,9 @@
             -2.35
           ],
           "rot": [
-            -20,
+            -34,
             0,
-            36
+            14
           ]
         },
         {
@@ -609,9 +633,256 @@
             -2.35
           ],
           "rot": [
-            -20,
+            -12,
             0,
-            -36
+            -22
+          ]
+        }
+      ]
+    },
+    {
+      "bone": "Pelvis",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "wear",
+      "parts": []
+    },
+    {
+      "bone": "Pelvis",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "wear",
+      "parts": [
+        {
+          "shape": "sphere",
+          "role": "patch",
+          "size": [
+            0.9,
+            0.8,
+            0.4
+          ],
+          "at": [
+            -0.6,
+            0.4,
+            0
+          ],
+          "bone": "Spine01",
+          "face": [
+            -0.3,
+            0,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            15
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "patch",
+          "size": [
+            0.8,
+            0.7,
+            0.4
+          ],
+          "at": [
+            0,
+            -1.2,
+            0
+          ],
+          "bone": "R_Thigh",
+          "face": [
+            -0.3,
+            0,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            -10
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "scuff",
+          "size": [
+            0.9,
+            0.3,
+            0.4
+          ],
+          "at": [
+            0,
+            0,
+            0.6
+          ],
+          "bone": "R_Foot",
+          "face": [
+            0,
+            0.4,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            10
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "scuff",
+          "size": [
+            0.9,
+            0.3,
+            0.4
+          ],
+          "at": [
+            0,
+            0,
+            0.6
+          ],
+          "bone": "L_Foot",
+          "face": [
+            0,
+            0.4,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            -10
+          ]
+        }
+      ]
+    },
+    {
+      "bone": "Pelvis",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "wear",
+      "parts": [
+        {
+          "shape": "sphere",
+          "role": "soot",
+          "size": [
+            1.4,
+            0.4,
+            0.4
+          ],
+          "at": [
+            -0.4,
+            0.2,
+            0
+          ],
+          "bone": "Spine01",
+          "face": [
+            -0.2,
+            0,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            -25
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "soot",
+          "size": [
+            0.9,
+            0.3,
+            0.4
+          ],
+          "at": [
+            -0.3,
+            -0.8,
+            0
+          ],
+          "bone": "Spine01",
+          "face": [
+            -0.2,
+            0,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            -15
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "soot",
+          "size": [
+            0.8,
+            0.35,
+            0.4
+          ],
+          "at": [
+            0,
+            0,
+            0.6
+          ],
+          "bone": "L_Foot",
+          "face": [
+            0,
+            0.4,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            15
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "soot",
+          "size": [
+            0.9,
+            0.4,
+            0.4
+          ],
+          "at": [
+            0,
+            0,
+            0.6
+          ],
+          "bone": "R_Foot",
+          "face": [
+            0,
+            0.4,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            0
           ]
         }
       ]
@@ -621,7 +892,8 @@
     "cable": 0,
     "plaster": 1,
     "scorch": 2,
-    "fuse": 3
+    "fuse": 3,
+    "wear": 11
   },
   "keys": {
     "idle0": {
@@ -1863,6 +2135,166 @@
           0
         ]
       }
+    },
+    "tilt0": {
+      "from": "rest",
+      "bones": {
+        "Waist": [
+          2,
+          0,
+          0
+        ],
+        "Spine01": [
+          0,
+          0,
+          0
+        ],
+        "Spine02": [
+          0,
+          0,
+          0
+        ],
+        "Head": [
+          -4,
+          0,
+          14
+        ],
+        "near_Upperarm": [
+          -20,
+          0,
+          66
+        ],
+        "far_Upperarm": [
+          -20,
+          0,
+          -66
+        ]
+      }
+    },
+    "tilt1": {
+      "from": "rest",
+      "bones": {
+        "Waist": [
+          2,
+          0,
+          0
+        ],
+        "Spine01": [
+          0,
+          0,
+          0
+        ],
+        "Spine02": [
+          0,
+          0,
+          0
+        ],
+        "Head": [
+          -6,
+          0,
+          18
+        ],
+        "near_Upperarm": [
+          -24,
+          0,
+          64
+        ],
+        "far_Upperarm": [
+          -24,
+          0,
+          -64
+        ]
+      }
+    },
+    "laugh0": {
+      "from": "rest",
+      "bones": {
+        "Waist": [
+          -12,
+          0,
+          0
+        ],
+        "Spine01": [
+          -4,
+          0,
+          0
+        ],
+        "Spine02": [
+          0,
+          0,
+          0
+        ],
+        "Head": [
+          -18,
+          0,
+          0
+        ],
+        "near_Upperarm": [
+          -30,
+          0,
+          62
+        ],
+        "far_Upperarm": [
+          -20,
+          0,
+          30
+        ],
+        "near_Thigh": [
+          -25,
+          0,
+          0
+        ],
+        "near_Calf": [
+          40,
+          0,
+          0
+        ],
+        "far_Thigh": [
+          -10,
+          0,
+          0
+        ],
+        "far_Calf": [
+          20,
+          0,
+          0
+        ]
+      }
+    },
+    "laugh1": {
+      "from": "rest",
+      "bones": {
+        "Waist": [
+          -8,
+          0,
+          0
+        ],
+        "Spine01": [
+          -2,
+          0,
+          0
+        ],
+        "Spine02": [
+          0,
+          0,
+          0
+        ],
+        "Head": [
+          -12,
+          0,
+          0
+        ],
+        "near_Upperarm": [
+          -20,
+          0,
+          66
+        ],
+        "far_Upperarm": [
+          -20,
+          0,
+          50
+        ]
+      }
     }
   },
   "clips": {
@@ -1945,6 +2377,24 @@
       "fps": 12,
       "center": true,
       "girth": 1
+    },
+    "idle2": {
+      "keys": [
+        "tilt0",
+        "tilt1"
+      ],
+      "frames": 2,
+      "loop": true,
+      "fps": 1.5
+    },
+    "cheer2": {
+      "keys": [
+        "laugh0",
+        "laugh1"
+      ],
+      "frames": 4,
+      "loop": true,
+      "fps": 7
     }
   },
   "rebind": [
@@ -1953,5 +2403,15 @@
       "max": 0.35,
       "to": "Head"
     }
-  ]
+  ],
+  "gait": {
+    "bounce": [
+      0.15,
+      0.75
+    ],
+    "lean": [
+      0,
+      0.04
+    ]
+  }
 }
