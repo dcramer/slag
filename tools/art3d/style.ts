@@ -279,10 +279,19 @@ export const BRIEFS: Record<string, Brief> = {
     worn: 'the hem of the hi-vis vest is torn into two ragged points and one shoulder strap hangs loose; the tip of the folded wing has a big notch of feathers missing; the tail is bent over to one side; the spanner is bent in the middle.',
   },
   jelly: {
-    // Its agent writes the design stage from the Roster entry (README.md → 1. Design): the nod and the twist
-    // as big shapes, the signature prop first; the wear as two to four big changes, off the face.
-    design: '',
-    worn: '',
+    // The nod, each part of the read at race size: the green dome (the whole silhouette, and the only see-through
+    // body in the cast: drawn flat, a pale lime); the three red nuclei inside it (they make it this parasite,
+    // not a jellyfish); the four fangs hooked under the rim (the menace, and the only thing breaking the dome's
+    // underside); no face and no limbs (it is a creature that floats, never one that walks).
+    // Ours, and the joke: a lime jelly dessert that got ideas. The dome is turned out of a fluted jelly mould,
+    // the nuclei are three glacé cherries set in it, the fangs are sugared almonds, and a paper doily is stuck
+    // to its underside, its lace edge peeking out under the rim.
+    design:
+      'The character: a wobbly lime-green jelly dessert (#9ee38a) turned out of a fluted mould, a tall rounded dome with soft wide ribs down its sides, floating in the air. It has no face, no eyes, no mouth, no arms and no legs. ' +
+      'Inside it, seen through the jelly, three big round glossy red glacé cherries (#c9473f) set in a triangle, each as wide as a quarter of the dome. ' +
+      'A pale mint-white rim (#d8f2c8) round the bottom edge of the dome. Under the rim, four big ivory sugared-almond fangs (#efe6d2), smooth curved hooks pointing down and inwards, two at each side. ' +
+      'A white paper doily (#fbf6ee) with a scalloped lace edge is stuck flat to its underside, its scallops peeking out under the rim between the fangs.',
+    worn: 'the dome has slumped a little to one side as if melting, and one fat drip of jelly runs down its side and hangs below the rim; a big round spoonful is scooped out of the top of the dome at the back, a clear dent in its outline; one fang is snapped off short; the doily is torn and one ragged flap of it hangs down.',
   },
 };
 
