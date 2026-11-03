@@ -115,6 +115,8 @@ export function drawFrame(
   pick?: readonly number[],
   /** A kind traced from a flat illustration (`SpriteSet.flat`). */
   flat = false,
+  /** The wear slot's index: on a flat set its marks are a tone of what they sit on, with no ink of their own. */
+  wear = -1,
 ) {
   const boil = Math.floor(t * 8) % 3;
   for (const r of f.sil) {
@@ -127,7 +129,12 @@ export function drawFrame(
     const [role, r] = part;
     if (part.length === 4 && (pick?.[part[2]] ?? 0) !== part[3]) continue;
     const p = paints[role];
-    if (flat) inked(s, boiled(r, boil, seed + role), p.fill, p.ink, FLAT_PART[0], FLAT_PART[1] * k);
+    // A wear mark inked round read as a sewn-on patch: on a flat set it's only the tone.
+    if (flat && part.length === 4 && part[2] === wear) {
+      path(s, boiled(r, boil, seed + role));
+      s.fillStyle = p.fill;
+      s.fill();
+    } else if (flat) inked(s, boiled(r, boil, seed + role), p.fill, p.ink, FLAT_PART[0], FLAT_PART[1] * k);
     else toned(s, boiled(r, boil, seed + role), p.fill, p.shade, p.ink, PART_THIN, PART_THICK * k, SLIVER);
   }
   if (f.lines)

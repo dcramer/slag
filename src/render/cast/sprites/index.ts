@@ -126,6 +126,9 @@ export function rosterLook(c: CharacterDef): CharacterDef {
   return role ? { ...c, body: hexHsl(role.color) } : c;
 }
 
+/** The index of a set's wear slot, or -1. */
+const wearOf = (set: SpriteSet) => set.slots?.findIndex((sl) => sl.name === 'wear') ?? -1;
+
 /** A character's variety, as the drawer picks it (the shot sheets label it). */
 export const varietyFor = (set: SpriteSet, c: CharacterDef): Variety => dress(set, c).v;
 
@@ -204,7 +207,7 @@ export function drawSprite(s: CanvasRenderingContext2D, set: SpriteSet, c: Chara
   const face = set.face ? { kit: set.face, mood, facing: got.facing } : undefined;
   const t = p.t;
   const seed = c.seed & 0xffff;
-  const draw = (g: CanvasRenderingContext2D) => drawFrame(g, got.frame, d.paints, d.body, d.shadow, d.k, seed, t, face, d.v.pick, set.flat);
+  const draw = (g: CanvasRenderingContext2D) => drawFrame(g, got.frame, d.paints, d.body, d.shadow, d.k, seed, t, face, d.v.pick, set.flat, wearOf(set));
   // The character's own gait: a lift on each step and a lean, a skew about the feet the way it faces.
   const gait = gaitAt(set, d.v, got.clip, x);
   const moved = gait.dy !== 0 || gait.lean !== 0;
