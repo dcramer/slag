@@ -247,12 +247,15 @@ export const BRIEFS: Record<string, Brief> = {
     // a jelly bean), and the pack on its back (it breaks the outline behind and is half the read in profile).
     // Ours, and the joke: a crew issued from the scrapyard. The pack is a red jerrycan with a yellow-capped
     // spout, strapped on; the visor's crack is taped over; a dent in its side was knocked out with a hammer.
-    // The jerrycan leads: the image model drops what comes late, and the plain pack is the original's.
+    // The silhouette leads, because the first round failed the blind read as "a squarish blob": a can as tall
+    // as the bean, with its top level with the crown, made one box of the two, and a visor drawn inside the
+    // front outline left no bump. So: side on, the visor bulging out past the front, and the can a slim slab
+    // hung low on the back with a notch of background between it and the bean, its top well under the crown.
     design:
-      'The character: a little spacesuit crewmate. Strapped to its back as its backpack, a big red jerrycan fuel can (#c9473f) standing upright, as tall as half the body, with a yellow-capped spout (#e8c24a) sticking up and back from its top corner, held on by a tan strap (#d9c79a) round the body. ' +
-      'The body is one smooth rounded bean (#5aa84a), taller than wide, with no head, neck or arms apart from it, standing on two short stubby legs. ' +
-      'Across the upper front of the bean, a wide pale-blue visor (#a9dbe8) standing proud, a rounded capsule as wide as the bean, with one white glint (#ffffff): the visor is its whole face, no eyes, no mouth, no arms.',
-    worn: 'a crack across the back end of the visor is taped over with one strip of tan tape; the top of the bean has a big dent on the back side, beaten roughly flat with a hammer; the jerrycan is dented in on one side and its spout bent over; one stubby leg is a little shorter than the other.',
+      'The character, seen from the side in profile facing right: a little spacesuit crewmate, one tall smooth rounded bean (#5aa84a) with a high round dome on top, much taller than wide, standing on two short stubby legs with a clear gap between them; no head, neck or arms apart from the bean. ' +
+      'On the front, a big pale-blue visor (#a9dbe8), a rounded capsule that bulges far out past the front of the bean like a snout, a third of the bean wide, with one white glint (#ffffff): the visor is its whole face, no eyes, no mouth. ' +
+      'On its back, its backpack is a slim red jerrycan fuel can (#c9473f), a flat upright slab half as wide as the bean, hung low and held a hand width out from the bean on one thin tan strap (#d9c79a): its top is well below the top of the dome, and a wide gap of white background runs down between the can and the bean, above and below the strap. A short yellow spout (#e8c24a) points straight back from the top of the can.',
+    worn: 'a crack across the visor is taped over with one strip of tan tape near its back end; a big round hammered dent is knocked into the side of the bean below the visor, a flat lighter patch; the jerrycan is dented in on its side and its spout bent down; one stubby leg is a little shorter than the other. The dome on top stays round.',
   },
   hunter: {
     // The nod, each part of the read at race size: the two huge round shoulder pads (the silhouette: nobody

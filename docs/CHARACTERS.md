@@ -221,7 +221,7 @@ What came out of it:
 - **Our twist:** a crew issued from the scrapyard. The pack is a red jerrycan with a spout, strapped on; a crack across the visor is taped over; a dent in its side has been knocked out with a hammer.
 - **Swaps:** a sprout growing from the head; a sticky note on the visor; a paper sailor hat; a bandage round one leg.
 - **Palette alts:** the jerrycan in fuel red `#c9473f`, army olive `#6b7340` or bare steel `#8e949a`; its cap stays yellow.
-- **Rig:** drawn flat (2026-11-03): a game-size design worn with a tape strip across the visor's crack, a hammered-flat crown, a crumpled can and a bent spout; ten poses drawn, and a second idle cut from the design rocked back on its heel (the image model held the bean to the design's stance). No face kit: the visor is drawn as it is.
+- **Rig:** drawn flat (2026-11-03), side on: a tape strip across the visor's crack, a hammered dent in its side, a crumpled can and a bent spout; ten poses drawn, and a second idle cut from the design rocked back on its heel (the image model held the bean to the design's stance). No face kit: the visor is drawn as it is. The first round failed the blind read as "a squarish blob": the can stood as tall as the bean and fused with its back, and the visor sat inside the outline. In the design the visor was moved out past the front and the can moved back off the bean onto a short strap, by hand, and the poses copied both.
 - **Concept prompt:** A smooth bean-shaped spacesuit body on two stubby legs, no arms; a wide pale-blue visor with a white glint standing proud of its front, a crack across it taped over; a red jerrycan with a yellow-capped spout strapped to its back as a backpack; a hammered-out dent in its side.
 
 ### The necktie ape (new)

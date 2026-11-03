@@ -1,29 +1,34 @@
 import type { FlatKind } from '../kinds';
 
+/**
+ * The silhouette is the read: a bean, a visor bump out of its front, a slab on its back with background
+ * between. The image model draws the can flush on the bean and the visor inside its outline whatever the
+ * brief says, so design.png is the worn drawing edited by hand (a PIL script): the visor moved 45 px out past
+ * the front, the can taken off the back, widened 1.6×, moved 55 px back and 30 down, and joined by a short
+ * strap. The poses, drawn with it as the reference, kept both. In run-1 the swung leg touched the can's foot
+ * and closed a pocket of background, which would trace as a white patch: a white channel opens it again.
+ */
 export const kind: FlatKind = {
-  body: 265,
+  body: 241,
   map: {
     roles: ['can', 'cap', 'body', 'tan', 'visor', 'vshade', 'glint', 'dark'],
     families: [
-      ['body', [98, 167, 76]],
-      ['body', [59, 137, 84]],
-      ['body', [49, 109, 77]],
-      ['body', [136, 193, 114]],
-      ['body', [114, 172, 126]],
-      ['body', [77, 150, 81]],
-      ['visor', [170, 218, 227]],
-      ['visor', [178, 222, 230]],
-      ['vshade', [127, 175, 195]],
+      ['body', [87, 167, 73]],
+      ['body', [50, 131, 64]],
+      ['body', [98, 155, 86]],
+      // The hammered dent's pale patch folds into the suit: drawn flat, it would be a second colour on it.
+      ['body', [149, 190, 119]],
+      ['body', [184, 198, 163]],
+      ['visor', [172, 218, 229]],
+      ['vshade', [120, 172, 193]],
+      ['vshade', [135, 177, 173]],
       ['glint', [252, 253, 253]],
-      ['can', [162, 46, 46]],
-      ['can', [186, 69, 58]],
+      ['can', [175, 64, 56]],
+      ['can', [140, 45, 40]],
       ['cap', [236, 196, 81]],
-      ['tan', [224, 198, 128]],
-      ['tan', [189, 159, 102]],
-      ['dark', [20, 63, 40]],
-      ['dark', [16, 51, 29]],
-      ['dark', [81, 21, 17]],
-      ['dark', [80, 60, 52]],
+      ['tan', [226, 190, 138]],
+      ['dark', [29, 21, 16]],
+      ['dark', [60, 30, 25]],
     ],
     line: 'dark',
     thin: ['can', 'cap', 'body', 'tan', 'visor', 'vshade', 'glint'],
@@ -32,7 +37,7 @@ export const kind: FlatKind = {
     // No eyes or other dark fills: every dark is the line, even the thick seam between the suit and the can.
     ink: 21,
     feet: ['body'],
-    min: { dark: 0.12 },
+    min: { dark: 0.12, glint: 0.1 },
   },
   roles: [
     // A colourway is the jerrycan (VARIETY.palette): fuel red, army olive or bare steel.
@@ -73,7 +78,8 @@ export const kind: FlatKind = {
     idle2: { frames: ['idle2', 'idle'], loop: true, holds: [0.9, 2.4] },
     walk: { frames: ['walk-1', 'walk-2'], loop: true, stride: 26 },
     run: { frames: ['run-1', 'run-2'], loop: true, stride: 40 },
-    air: { frames: ['air-1', 'air-2'], loop: false, vy: [-200, 200] },
+    // The can held off its back makes it wide: in the air, where the drawer stretches it most, a touch smaller.
+    air: { frames: ['air-1', 'air-2'], loop: false, vy: [-200, 200], scale: 0.96 },
     wall: { frames: ['wall'], loop: true, fps: 1 },
     cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.5, 0.25] },
     cheer2: { frames: ['cheer2', 'idle'], loop: true, holds: [0.6, 0.3] },
