@@ -13,6 +13,7 @@
  *   pnpm shot pick|place --secret          → Secret Parts rule on: role cards, and the parts they rolled
  *   pnpm shot pick|place --parts block,saw → with those parts already in the level, as from earlier rounds
  *   pnpm shot place --card spikestrip --cursor 296,184 --then-race 90 → aim the first ghost, place it, shoot the race
+ *   pnpm shot place --card platform --cell 28,4 → the first ghost on that level cell (a refused one shows what's in the way)
  *   pnpm shot score --players 4            → round-score screen with every award, mid-fill and settled (`--nobody`: a scoreless round)
  *   pnpm shot levels --seeds a,b,c,d      (or --count 12) → contact sheet
  *   pnpm shot props --count 24            → prop gallery (crate cards)

@@ -5,7 +5,8 @@ import { overview, raceFloor, type ViewXform } from '../game/view';
 import { PLAYER_H, TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import { floorY, type Level, tileAt } from '../sim/level';
 import type { Solid } from '../sim/physics';
-import { type Beam, footprint, motionOffset, previewProps, type Resolved, resolveProp } from '../sim/props';
+import type { Cell } from '../core/geom';
+import { type Beam, footprint, footprintCells, motionOffset, placeFaults, previewProps, type Resolved, resolveProp, sweptCells } from '../sim/props';
 import type { RunWorld } from '../sim/run';
 import type { GameEvent } from '../sim/types';
 import { Backdrop } from './background';
@@ -613,28 +614,17 @@ export class Renderer {
       // A part that will ride a mover shows the loop it'll travel and the link it hangs on.
       drawRideCue(rc, ghost, solids, col);
       // The footprint as one outline round its tiles: exact enough to line up by, and it doesn't rule a grid over the part. A rider's is where it rides.
-      const cells = footprint(gh.def, p.rot);
       const [ox, oy] = motionOffset(ghost, rc.frame);
-      const set = new Set(cells.map(([x, y]) => `${x},${y}`));
       rc.g.strokeStyle = css(col, 10, 0.8);
       rc.g.lineWidth = 1.2;
-      rc.g.beginPath();
-      for (const [x, y] of cells) {
-        const x0 = (gh.tx + x) * TILE + ox + 0.5;
-        const y0 = (gh.ty + y) * TILE + oy + 0.5;
-        const x1 = x0 + TILE - 1;
-        const y1 = y0 + TILE - 1;
-        const side = (open: boolean, ax: number, ay: number, bx: number, by: number) => {
-          if (!open) return;
-          rc.g.moveTo(ax, ay);
-          rc.g.lineTo(bx, by);
-        };
-        side(!set.has(`${x},${y - 1}`), x0, y0, x1, y0);
-        side(!set.has(`${x + 1},${y}`), x1, y0, x1, y1);
-        side(!set.has(`${x},${y + 1}`), x0, y1, x1, y1);
-        side(!set.has(`${x - 1},${y}`), x0, y0, x0, y1);
-      }
+      outline(
+        rc.g,
+        footprint(gh.def, p.rot).map(([x, y]) => [gh.tx + x, gh.ty + y]),
+        ox,
+        oy,
+      );
       rc.g.stroke();
+      if (!ok && !gh.ride) drawFaults(rc, m, placeFaults(m.level, m.placed, m.crate[p.claim].def, p.rot, gh.tx, gh.ty));
     }
   }
 
@@ -879,4 +869,61 @@ export class Renderer {
       }
     }
   }
+}
+
+/** Trace the outer edge of a set of tiles (world cells, shifted by px), as one path: no grid ruled over the inside. */
+function outline(g: CanvasRenderingContext2D, cells: readonly Cell[], ox: number, oy: number) {
+  const set = new Set(cells.map(([x, y]) => `${x},${y}`));
+  g.beginPath();
+  for (const [x, y] of cells) {
+    const x0 = x * TILE + ox + 0.5;
+    const y0 = y * TILE + oy + 0.5;
+    const x1 = x0 + TILE - 1;
+    const y1 = y0 + TILE - 1;
+    const side = (open: boolean, ax: number, ay: number, bx: number, by: number) => {
+      if (!open) return;
+      g.moveTo(ax, ay);
+      g.lineTo(bx, by);
+    };
+    side(!set.has(`${x},${y - 1}`), x0, y0, x1, y0);
+    side(!set.has(`${x + 1},${y}`), x1, y0, x1, y1);
+    side(!set.has(`${x},${y + 1}`), x0, y1, x1, y1);
+    side(!set.has(`${x - 1},${y}`), x0, y0, x0, y1);
+  }
+}
+
+const FAULT: HSL = { h: 0, s: 90, l: 55 };
+
+/**
+ * Why a red ghost is red, where that isn't already in plain sight: the space
+ * a part or set piece keeps for itself (its path, its riders' headroom) is
+ * tinted and ringed in red wherever the ghost runs into it, and every cell
+ * that refuses the ghost gets a red cross. The cells are `placeFaults`, the
+ * rule `canPlace` decides by, so the marks are exactly what's in the way.
+ */
+function drawFaults(rc: RC, m: Match, f: { cells: Cell[]; by: readonly Match['placed'][number][] }) {
+  const g = rc.g;
+  const lv = m.level;
+  for (const p of f.by) {
+    const kept = (lv.setPieces.includes(p) ? footprintCells(p) : sweptCells(p)).filter(([x, y]) => !tileAt(lv, x, y));
+    g.fillStyle = css(FAULT, 0, 0.2);
+    for (const [x, y] of kept) g.fillRect(x * TILE, y * TILE, TILE, TILE);
+    g.strokeStyle = css(FAULT, 5, 0.55);
+    g.lineWidth = 1;
+    g.setLineDash([3, 3]);
+    outline(g, kept, 0, 0);
+    g.stroke();
+    g.setLineDash([]);
+  }
+  g.strokeStyle = css(FAULT, 10, 0.9);
+  g.lineWidth = 1.6;
+  g.beginPath();
+  for (const [x, y] of f.cells) {
+    const k = 4;
+    g.moveTo(x * TILE + k, y * TILE + k);
+    g.lineTo((x + 1) * TILE - k, (y + 1) * TILE - k);
+    g.moveTo((x + 1) * TILE - k, y * TILE + k);
+    g.lineTo(x * TILE + k, (y + 1) * TILE - k);
+  }
+  g.stroke();
 }
