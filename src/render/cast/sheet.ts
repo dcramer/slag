@@ -1,8 +1,10 @@
 import { deriveSeed } from '../../core/rng';
-import { CAST, type CharacterDef, generateCharacter, type Kind } from '../../gen/character';
+import { CAST, type CharacterDef, generateCharacter, type Kind, PLAYER_COLORS, withColor } from '../../gen/character';
 import { Rig } from '../character';
 import { drawInkAccessory, drawInkRunner, ropeAnchor, ropeOf, type RunnerPose } from '../ink-character';
 import { STRIDE } from '../ink-figure';
+import { spritesOf, varietyFor } from './sprites';
+import { roll, VARIETY } from './sprites/play';
 
 /**
  * The cast catalog for docs/CHARACTERS.md and `pnpm shot cast`: every kind on two seeds, a row of
@@ -100,6 +102,59 @@ export function castCatalog(t = 0.4): HTMLCanvasElement {
     const c = def(i * 2, 'cat', name);
     runner(s, c, 60 + step * (i + 0.5), qy + 80, { grounded: true }, 2.5, 1, t);
     runner(s, c, W / 2 + 30 + step * (i + 0.5), qy + 80, { grounded: true }, 2.5, 1, t);
+  });
+  document.body.appendChild(cv);
+  return cv;
+}
+
+/**
+ * The player palette on the cast (`pnpm shot cast --only colors`): every kind in every swatch, big, then at
+ * play scale on four grounds standing for the themes (dark rock, pale dirt, sky, snow) and the HUD's iron.
+ * Every swatch has to read as that kind's costume on all of them, and no two swatches as one.
+ */
+export function castColors(t = 0.4): HTMLCanvasElement {
+  const n = PLAYER_COLORS.length;
+  const cell = 92;
+  const rowH = 96;
+  const W = 140 + n * cell;
+  const grounds = ['#1e1814', '#cdb99a', '#8fb7d6', '#eef2f4', '#2b201b'];
+  const stripH = 72;
+  const H = 50 + CAST.length * rowH + 30 + grounds.length * stripH * 2;
+  const cv = document.createElement('canvas');
+  cv.width = W;
+  cv.height = H;
+  cv.style.cssText = `position:fixed;left:0;top:0;z-index:99;width:${W}px;height:${H}px`;
+  const s = cv.getContext('2d')!;
+  s.fillStyle = '#1a1210';
+  s.fillRect(0, 0, W, H);
+  s.font = '700 14px Barlow, sans-serif';
+  s.textAlign = 'center';
+  PLAYER_COLORS.forEach((c, i) => {
+    s.fillStyle = `hsl(${c.h} ${c.s}% ${c.l}%)`;
+    s.fillRect(140 + i * cell + 26, 12, cell - 52, 22);
+  });
+  CAST.forEach((kind, r) => {
+    const y = 50 + r * rowH;
+    s.fillStyle = '#c9b8a3';
+    s.textAlign = 'left';
+    s.fillText(kind, 12, y + rowH / 2);
+    const base = def(r, 'colors', kind);
+    PLAYER_COLORS.forEach((_, i) => runner(s, withColor(base, i), 140 + i * cell + cell / 2, y + rowH - 12, { grounded: true }, 3.6, 1, t));
+  });
+  // Play scale: the whole palette on one kind per strip, two strips per ground.
+  const y0 = 50 + CAST.length * rowH + 30;
+  grounds.forEach((g, gi) => {
+    for (let k = 0; k < 2; k++) {
+      const y = y0 + (gi * 2 + k) * stripH;
+      s.fillStyle = g;
+      s.fillRect(0, y, W, stripH);
+      const per = Math.ceil(CAST.length / 2);
+      for (let j = 0; j < per * 2; j++) {
+        const kind = CAST[(k * per + (j % per)) % CAST.length];
+        const i = j % n;
+        runner(s, withColor(def(j, 'strip', kind), i), 30 + j * ((W - 60) / (per * 2)), y + stripH - 8, { grounded: true }, 2.5, 1, t);
+      }
+    }
   });
   document.body.appendChild(cv);
   return cv;
@@ -301,3 +356,60 @@ export const blindOrder = (): string[] =>
   CAST.map((k, i) => [k, (i * 5 + 3) % CAST.length] as const)
     .sort((a, b) => a[1] - b[1])
     .map(([k]) => k);
+
+/**
+ * One rendered kind's curated variety (docs/CHARACTERS.md → Variety), drawn in game: twelve looks in
+ * twelve player colours, each standing in the idle it plays, cheering its cheer and mid-run with its own
+ * gait, labelled with what it rolled; then all twelve at play scale on light and dark ground. With
+ * `?sprites=1`, once the kind's frames have loaded. Every column must read as the same character by the
+ * same hand.
+ */
+export function castVariety(kind: Kind, t = 0.4): HTMLCanvasElement {
+  const looks = Array.from({ length: 12 }, (_, i) => def(i, 'variety', kind));
+  const cell = 150;
+  const big = 4.4;
+  const W = looks.length * cell + 40;
+  const H = 860;
+  const cv = document.createElement('canvas');
+  cv.width = W;
+  cv.height = H;
+  cv.style.cssText = `position:fixed;left:0;top:0;z-index:99;width:${W}px;height:${H}px`;
+  const s = cv.getContext('2d')!;
+  s.fillStyle = '#e9dcc4';
+  s.fillRect(0, 0, W, H);
+  s.fillStyle = '#1a1210';
+  s.fillRect(W / 2, 700, W / 2, 160);
+  s.textAlign = 'center';
+  const label = (txt: string, x: number, y: number, size = 13, color = '#3d2e26') => {
+    s.font = `700 ${size}px Barlow, sans-serif`;
+    s.fillStyle = color;
+    s.fillText(txt, x, y);
+  };
+  label(`${kind}: twelve looks, each in its own idle, cheer and gait`, W / 2, 26, 18);
+  looks.forEach((c, i) => {
+    const x = 20 + cell * (i + 0.5);
+    runner(s, c, x, 190, { grounded: true }, big, 1, t);
+    runner(s, c, x, 370, { grounded: true, celebrate: true }, big, 1, t);
+    runner(s, c, x, 550, { grounded: true, vx: 260 }, big, 1, t, MID_RUN);
+    const set = spritesOf(c);
+    if (!set) return;
+    const v = varietyFor(set, c);
+    const palette = set.roles.find((r) => r.alts && r.vary === VARIETY.palette);
+    const wear = set.slots?.findIndex((sl) => sl.name === 'wear') ?? -1;
+    label(`${v.clips.idle ?? 'idle'} · ${v.clips.cheer ?? 'cheer'}`, x, 590);
+    label(
+      `palette ${palette ? roll(c.vary[VARIETY.palette], palette.alts!.length + 1) : '-'} · ${['clean', 'scuffed', 'scorched'][v.pick[wear]] ?? '-'}`,
+      x,
+      608,
+    );
+    label(`bounce ${v.bounce.toFixed(2)} · lean ${v.lean.toFixed(3)}`, x, 626);
+  });
+  // Play scale (2.5 screen px per world px, as at 1080p): standing on light ground, running on dark.
+  const step = (W / 2 - 40) / looks.length;
+  looks.forEach((c, i) => {
+    runner(s, c, 20 + step * (i + 0.5), 800, { grounded: true }, 2.5, 1, t);
+    runner(s, c, W / 2 + 20 + step * (i + 0.5), 800, { grounded: true, vx: 260 }, 2.5, 1, t, MID_RUN + i * 9);
+  });
+  document.body.appendChild(cv);
+  return cv;
+}

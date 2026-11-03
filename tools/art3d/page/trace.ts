@@ -24,8 +24,10 @@ export interface Traced {
   sil: number[][];
   /** Parts, back to front. */
   parts: Part[];
-  /** Catch-lights: x, y, radius (world px) per eye. */
+  /** The eyes the face is drawn on: x, y, radius (world px) per eye, the near one first. */
   eyes: number[];
+  /** The head the eyes ride: its middle, radius (world px) and tilt (radians, clockwise on screen). */
+  head?: number[];
   /** Open pen strokes (motion marks), x, y pairs. */
   marks?: number[][];
 }
@@ -186,7 +188,8 @@ function drift(a: number[], b: number[], dx: number, dy: number): number {
   return sum / (a.length / 2);
 }
 
-const centre = (r: number[]) => {
+/** A ring's mean point. */
+export const centreOf = (r: number[]) => {
   let x = 0;
   let y = 0;
   for (let i = 0; i < r.length; i += 2) {
@@ -203,11 +206,11 @@ const centre = (r: number[]) => {
  */
 export function steady(prev: Traced, cur: Traced, tol: number): void {
   const keep = (ring: number[], from: number[][]): number[] => {
-    const [cx, cy] = centre(ring);
+    const [cx, cy] = centreOf(ring);
     let best: number[] | null = null;
     let bd = Infinity;
     for (const p of from) {
-      const [px, py] = centre(p);
+      const [px, py] = centreOf(p);
       const d = Math.hypot(px - cx, py - cy);
       if (d < bd) {
         bd = d;
@@ -215,7 +218,7 @@ export function steady(prev: Traced, cur: Traced, tol: number): void {
       }
     }
     if (!best || bd > 2) return ring;
-    const [px, py] = centre(best);
+    const [px, py] = centreOf(best);
     const dx = cx - px;
     const dy = cy - py;
     if (drift(ring, best, dx, dy) > tol || drift(best, ring, -dx, -dy) > tol) return ring;

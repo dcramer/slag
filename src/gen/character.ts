@@ -1,6 +1,6 @@
 import { type HSL, hsl3 } from '../core/color';
 import { nameBlocked } from '../core/name-filter';
-import { Rng } from '../core/rng';
+import { deriveSeed, Rng } from '../core/rng';
 import { word } from './names';
 
 /**
@@ -29,12 +29,10 @@ export const CAST = [
 ] as const;
 export type Kind = (typeof CAST)[number];
 
-export type EyeStyle = 'dot' | 'ring' | 'sleepy' | 'visor' | 'angry';
-export type Mouth = 'smile' | 'fang' | 'o' | 'flat' | 'none' | 'teeth' | 'grin';
-
 /**
  * A procedurally generated character. Purely cosmetic: every character uses the same hitbox and
- * physics so the competitive game stays fair.
+ * physics so the competitive game stays fair. Its face is its kind's, never rolled: every plumber has
+ * the plumber's eyes (`KINDS` in src/render/cast/kinds.ts, `face` in a rendered kind's sprite.json).
  */
 export interface CharacterDef {
   seed: number;
@@ -44,13 +42,17 @@ export interface CharacterDef {
   body: HSL;
   /** A second note in the player's livery, never louder than `body`. */
   accent: HSL;
+  /** Index into PLAYER_COLORS when `body` is a swatch; absent for a hue rolled from the seed alone (saved looks from before swatches). */
+  color?: number;
   kind: Kind;
   /** The kind's own color: a homage's iconic body color, a plain animal's pale chest. */
   paint: HSL;
-  /** Rolls in 0..1 that the kind's art reads in its own order: small details inside a design. */
+  /**
+   * Rolls in 0..1 that the kind's art reads in its own order: small details inside a design. The first
+   * `VARY_FIRST` are the original six; the rest are the rendered kinds' variety (`VARIETY` in
+   * src/render/cast/sprites/play.ts), from a stream of their own.
+   */
   vary: number[];
-  eyes: { count: 1 | 2 | 3; size: number; style: EyeStyle; iris: HSL; spread: number; y: number };
-  mouth: Mouth;
 }
 
 /**
@@ -97,6 +99,10 @@ const PAINTS: Record<Kind, readonly HSL[]> = {
   chomper: [hsl3(49, 92, 56), hsl3(46, 88, 55)],
 };
 
+/** How many `vary` rolls a character has, and how many of them come from the look's main stream. */
+export const VARY_ROLLS = 12;
+export const VARY_FIRST = 6;
+
 /**
  * A character for a look seed. `kind` forces the kind (a lobby keeps eight different kinds); everything
  * else rolls the same either way.
@@ -109,12 +115,12 @@ export function generateCharacter(seed: number, kind?: Kind): CharacterDef {
   const k = kind ?? rolled;
   const paints = PAINTS[k];
   const paint = paints[Math.floor(rng.next() * paints.length)];
-  const vary = Array.from({ length: 6 }, () => rng.next());
-  const count = rng.weighted<1 | 2 | 3>([
-    [2, 7],
-    [1, 2],
-    [3, 0.6],
-  ]);
+  // Rolls past the first six come from a stream of their own: drawn from `rng`, they'd change every roll
+  // after them (the name) for every seed there is.
+  const more = new Rng(deriveSeed(seed, 'vary'));
+  const vary = [...Array.from({ length: VARY_FIRST }, () => rng.next()), ...Array.from({ length: VARY_ROLLS - VARY_FIRST }, () => more.next())];
+  // Spent where the eye count was once rolled, so every seed keeps the name and colours it had.
+  rng.next();
   return {
     seed,
     name: shortName(rng),
@@ -124,29 +130,57 @@ export function generateCharacter(seed: number, kind?: Kind): CharacterDef {
     kind: k,
     paint,
     vary,
-    eyes: {
-      count,
-      size: count === 1 ? rng.range(2.6, 3.2) : rng.range(1.6, 2.2),
-      style: rng.weighted<EyeStyle>([
-        ['dot', 5],
-        ['ring', 2],
-        ['sleepy', 1.2],
-        ['angry', 1.2],
-      ]),
-      iris: hsl3(rng.range(0, 360), 70, 50),
-      spread: rng.range(0.2, 0.28),
-      y: rng.range(0.56, 0.68),
-    },
-    mouth: rng.weighted<Mouth>([
-      ['smile', 3],
-      ['fang', 1.2],
-      ['o', 1],
-      ['flat', 1.2],
-      ['none', 1],
-      ['teeth', 0.6],
-      ['grin', 1],
-    ]),
   };
+}
+
+/**
+ * The player palette: every color a player can wear, around the wheel at least MIN_HUE_APART apart, so
+ * two swatches never count as one color. Each is tuned by eye rather than set by formula (`pnpm shot cast
+ * --only colors`): lightness and saturation pull the close neighbours apart (lime from green, blue from
+ * violet), so every one reads as a whole costume (a cap and shirt, quills, a puffball), as a ring beside a
+ * kind's own palette, on every theme's ground and on the dark HUD.
+ */
+export const PLAYER_COLORS: readonly HSL[] = [
+  hsl3(356, 74, 56), // red
+  hsl3(28, 88, 55), // orange
+  hsl3(58, 86, 54), // yellow
+  hsl3(92, 62, 50), // lime
+  hsl3(128, 52, 46), // green
+  hsl3(166, 64, 44), // teal
+  hsl3(198, 78, 54), // sky
+  hsl3(228, 82, 60), // blue
+  hsl3(262, 58, 70), // violet
+  hsl3(294, 56, 60), // purple
+  hsl3(326, 74, 64), // pink
+];
+
+/** Degrees of hue a player's color keeps from everyone else's (the palette's closest pair is this far apart). */
+export const MIN_HUE_APART = 30;
+
+/** Degrees between two hues, the short way round. */
+export function hueApart(a: number, b: number): number {
+  const d = Math.abs(a - b) % 360;
+  return Math.min(d, 360 - d);
+}
+
+/** The same character in swatch `i`: body and hue from the palette, the accent keeping the interval it was rolled with. */
+export function withColor(c: CharacterDef, i: number): CharacterDef {
+  const sw = PLAYER_COLORS[i];
+  const off = c.accent.h - c.hue;
+  return { ...c, hue: sw.h, body: { ...sw }, accent: hsl3((((sw.h + off) % 360) + 360) % 360, c.accent.s, c.accent.l), color: i };
+}
+
+/** `c` wearing `from`'s color, whatever it is: a swatch, or a hue rolled before there were any. */
+export function keepColor(c: CharacterDef, from: CharacterDef): CharacterDef {
+  const { color: _drop, ...rest } = c;
+  const out: CharacterDef = { ...rest, hue: from.hue, body: from.body, accent: from.accent };
+  if (from.color !== undefined) out.color = from.color;
+  return out;
+}
+
+/** A swatch index off the wire or out of storage, or undefined if it isn't one. */
+export function swatchIndex(v: unknown): number | undefined {
+  return Number.isInteger(v) && (v as number) >= 0 && (v as number) < PLAYER_COLORS.length ? (v as number) : undefined;
 }
 
 /**

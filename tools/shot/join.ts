@@ -26,6 +26,8 @@ interface Frame {
   frames?: number;
   /** The join card: its stage, a second roll of the dice, a typed name. */
   card?: { stage: 'edit' | 'asking' | 'won' | 'taken'; reroll?: boolean; name?: string };
+  /** Then click our own name: the name screen, with the swatches. */
+  nameScreen?: boolean;
 }
 
 const watchers = (list: [string, boolean?, boolean?][], host = true) =>
@@ -100,6 +102,14 @@ const FRAMES: Frame[] = [
   { name: '21-failed-kicked', q: '', net: failed('Kicked', false, 47) },
   { name: '22-kicked-rejoin', q: '', net: failed('Kicked', false, 0) },
   { name: '23-gone-player', q: `players=4&${RACE}`, frames: 110, away: [2], afk: [3], net: online('4 Connected', 'seated', 4) },
+  // A watcher's Join in the lobby (03 is before): seated the lobby's way, our card among the players, no join card.
+  {
+    name: '24-lobby-joined-from-watching',
+    q: '',
+    lobby: 4,
+    net: online('5 Connected', 'seated', 4, { hostSlot: 1, watchers: watchers([['']], false) }),
+  },
+  { name: '25-name-colors', q: '', lobby: 3, nameScreen: true, net: online('Hosting · 3 Connected', 'seated', 5, { hostSlot: 0, kickable: [1, 2] }) },
 ];
 
 async function frame(p: Page, f: Frame, tag: string): Promise<string> {
@@ -145,6 +155,23 @@ async function frame(p: Page, f: Frame, tag: string): Promise<string> {
     },
     [f.net, f.afk ?? [], f.leaving ?? [], f.frames ?? 30, tag === 'phone', f.lobby ?? 0, f.card ?? null, f.away ?? []] as const,
   );
+  if (f.nameScreen) {
+    const b = await p.evaluate(() => {
+      const r = document.querySelector('[data-slag-view]')!.getBoundingClientRect();
+      const k = r.width / 768;
+      const x = (window as any).slagDebug.renderer.hud.buttons.find((q: any) => q.action === 'name');
+      return x && { x: r.left + (x.x + x.w / 2) * k, y: r.top + (x.y + x.h / 2) * k };
+    });
+    if (!b) throw new Error(`${f.name}: no name button`);
+    if (tag === 'phone') await p.touchscreen.tap(b.x, b.y);
+    else await p.mouse.click(b.x, b.y);
+    await p.waitForSelector('.slag-swatch', { timeout: 10_000 });
+    // A swatch picked: the preview wears it.
+    await p.evaluate(() =>
+      [...document.querySelectorAll<HTMLButtonElement>('.slag-swatch')].find((q) => !q.disabled && q.getAttribute('aria-pressed') !== 'true')?.click(),
+    );
+    await p.waitForTimeout(300);
+  }
   const path = `${out}/${f.name}-${tag}.png`;
   await p.screenshot({ path });
   pet();
