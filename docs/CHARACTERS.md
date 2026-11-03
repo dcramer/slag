@@ -220,7 +220,8 @@ What came out of it:
 - **The nod:** the bean on stubby legs (the whole silhouette); the wide pale visor (the face; without it it's a jelly bean); the pack on its back (it breaks the outline behind, and is half the bean's read in profile).
 - **Our twist:** a crew issued from the scrapyard. The pack is a red jerrycan with a spout, strapped on; a crack across the visor is taped over; a dent in its side has been knocked out with a hammer.
 - **Swaps:** a sprout growing from the head; a sticky note on the visor; a paper sailor hat; a bandage round one leg.
-- **Rig:** **keyed**: two legs and a body, no arms.
+- **Palette alts:** the jerrycan in fuel red `#c9473f`, army olive `#6b7340` or bare steel `#8e949a`; its cap stays yellow.
+- **Rig:** drawn flat (2026-11-03): a game-size design worn with a tape strip across the visor's crack, a hammered-flat crown, a crumpled can and a bent spout; ten poses drawn, and a second idle cut from the design rocked back on its heel (the image model held the bean to the design's stance). No face kit: the visor is drawn as it is.
 - **Concept prompt:** A smooth bean-shaped spacesuit body on two stubby legs, no arms; a wide pale-blue visor with a white glint standing proud of its front, a crack across it taped over; a red jerrycan with a yellow-capped spout strapped to its back as a backpack; a hammered-out dent in its side.
 
 ### The necktie ape (new)

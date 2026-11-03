@@ -242,10 +242,17 @@ export const BRIEFS: Record<string, Brief> = {
       'Proportions for a tiny game sprite: one bold simple round shape that still reads at 20 pixels tall, no limbs at all. A chunky toy, never realistic.',
   },
   impostor: {
-    // Its agent writes the design stage from the Roster entry (README.md → 1. Design): the nod and the twist
-    // as big shapes, the signature prop first; the wear as two to four big changes, off the face.
-    design: '',
-    worn: '',
+    // The nod, each part of the read at race size: the bean on two stubby legs (the whole silhouette, and no
+    // arms: arms make it a mascot), the wide pale visor standing proud of the front (the face; without it,
+    // a jelly bean), and the pack on its back (it breaks the outline behind and is half the read in profile).
+    // Ours, and the joke: a crew issued from the scrapyard. The pack is a red jerrycan with a yellow-capped
+    // spout, strapped on; the visor's crack is taped over; a dent in its side was knocked out with a hammer.
+    // The jerrycan leads: the image model drops what comes late, and the plain pack is the original's.
+    design:
+      'The character: a little spacesuit crewmate. Strapped to its back as its backpack, a big red jerrycan fuel can (#c9473f) standing upright, as tall as half the body, with a yellow-capped spout (#e8c24a) sticking up and back from its top corner, held on by a tan strap (#d9c79a) round the body. ' +
+      'The body is one smooth rounded bean (#5aa84a), taller than wide, with no head, neck or arms apart from it, standing on two short stubby legs. ' +
+      'Across the upper front of the bean, a wide pale-blue visor (#a9dbe8) standing proud, a rounded capsule as wide as the bean, with one white glint (#ffffff): the visor is its whole face, no eyes, no mouth, no arms.',
+    worn: 'a crack across the back end of the visor is taped over with one strip of tan tape; the top of the bean has a big dent on the back side, beaten roughly flat with a hammer; the jerrycan is dented in on one side and its spout bent over; one stubby leg is a little shorter than the other.',
   },
   hunter: {
     // Its agent writes the design stage from the Roster entry (README.md → 1. Design): the nod and the twist
