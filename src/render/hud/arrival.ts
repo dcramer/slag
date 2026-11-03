@@ -234,10 +234,12 @@ function keyRow(hud: Hud, m: Match, items: [PromptAction, string, HudAction][], 
   const size = TYPE.label;
   const parts = items.map(([p, label, action]) => {
     const glyphs = hud.mode === 'touch' ? [] : promptGlyphs(hud, m, p);
+    // The label first: measuring a keycap sets its own font.
     c.font = `700 ${size}px ${UI}`;
+    const lw = c.measureText(label).width;
     let gw = 0;
     for (const g of glyphs) gw += glyphWidth(c, g, gh) + 3;
-    return { glyphs, label, action, w: gw + c.measureText(label).width + (gw ? 3 : 0) };
+    return { glyphs, label, action, w: gw + lw + (gw ? 3 : 0) };
   });
   const gap = 24;
   let x = cx - (parts.reduce((s, p) => s + p.w, 0) + gap * (parts.length - 1)) / 2;
