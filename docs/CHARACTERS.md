@@ -333,7 +333,7 @@ What came out of it:
 - **The nod:** the two huge round shoulder pads (the silhouette: nobody else is wider at the top); the orange with red (the suit, from across a room); the green visor (the face); the arm cannon (the hunter, and the ball tuck says the rest).
 - **Our twist:** a power suit welded together in the scrapyard. The torso is a cut-down water heater, the shoulder pads are two red-and-white fishing buoys, the arm cannon is a length of drainpipe with an elbow joint, and the visor is green bottle glass.
 - **Swaps:** a rope coiled at the waist; a hand-painted stencil of ours on a buoy; a hazard sticker on the drainpipe; a dent in the helmet.
-- **Rig:** humanoid; the ball tuck keyed.
+- **Rig:** drawn flat (2026-11-03), no face (the visor is it): a dented crown, a chipped buoy, a taped elbow on the drainpipe and a grey replacement boot cut from its offcut; the cannon raised on the jump and the ball tuck on a long fall; the drainpipe grey, rust or bone-white PVC; a hazard sticker on the cannon's elbow.
 - **Concept prompt:** A bounty hunter in a power suit welded together from scrap: an orange suit whose torso is a cut-down water heater, two huge round red-and-white fishing buoys as shoulder pads wider than the body, a round helmet with a green bottle-glass visor, green lights on the chest, a narrow dark waist and chunky legs. One arm ends in a cannon made from a length of grey drainpipe with an elbow joint, held out front.
 
 ### The team shooter's engineer
