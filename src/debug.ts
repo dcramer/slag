@@ -1,6 +1,6 @@
 import type { BotSeats } from './brain/bots';
 import { parseSeed, Rng } from './core/rng';
-import type { Match } from './game/match';
+import type { BotLevel, Match } from './game/match';
 import { CAST, generateCharacter, type Kind } from './gen/character';
 import { ARCHETYPE_WEIGHTS, type Archetype, DEMOLISH, generateProp } from './gen/props';
 import type { NetSession } from './net/session';
@@ -45,8 +45,8 @@ export interface SlagDebug {
   net: NetSession | null;
   /** Join N players (kb1, kb2, pad0…pad5) and start round 1. */
   quickStart(players?: number): void;
-  /** Seat a built-in bot run by this page (src/brain); `step` plays its inputs. Returns its device. */
-  addBot(): string;
+  /** Seat a built-in bot run by this page (src/brain) at `level`; `step` plays its inputs. Returns its device. */
+  addBot(level?: BotLevel): string;
   /**
    * Place one prop of each archetype at deterministic legal spots (owner = player 1), turned `rot` quarter turns.
    * With `near` (a tile), each goes on the free spot closest to it instead.
@@ -171,9 +171,10 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
       // Stepped frames are pictures of a finished level: ink a new one whole, not a chunk per render.
       renderer.bakeBudgetMs = on ? Infinity : 5;
     },
-    addBot() {
+    addBot(level) {
       const d = dev(bots.add(match));
-      match.join(d);
+      const p = match.join(d);
+      if (p && level && level !== 'normal') p.bot = level;
       return d;
     },
     step(n = 1, inputs = {}) {

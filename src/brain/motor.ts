@@ -6,6 +6,8 @@ import { AMMO, AMMO_SIM, footprint, touchesHazard } from '../sim/props';
 import { type Move, movesFrom } from '../sim/reach';
 import type { RunWorld } from '../sim/run';
 import { type InputFrame, NO_INPUT } from '../sim/types';
+import { Rng } from '../core/rng';
+import type { Personality } from './personality';
 import { type RaceMap, raceMap } from './route';
 import type { Intent } from './types';
 
@@ -36,13 +38,12 @@ const SHORT = 12;
 const SETTLE_FRAMES = 40;
 /** Route units added to a landing per time the motor has already set off from that cell this race: it tries something new rather than circle. */
 const AGAIN = 15;
-/** Px of room kept from a hazard's edge. */
-const MARGIN = 2;
 /** Within this many px of the target, the cursor taps instead of holding, so it stops where it means to. */
 const TAP_NEAR = 40;
 
 type Act =
-  | { kind: 'move'; m: Move; i: number }
+  /** `loose`: a slipped move's fumbled frames, up to this index, are played as pressed whatever the body does; then it steers again. */
+  | { kind: 'move'; m: Move; i: number; loose?: number }
   | { kind: 'settle'; at: number; t: number }
   | { kind: 'wait' }
   /** A leap of faith: run at it, jump off the edge or at the wall, hold on until it lands. */
@@ -52,6 +53,9 @@ type Act =
 const LEAP_FRAMES = 200;
 
 export class Motor {
+  private readonly rng: Rng;
+  /** Frames left before it acts on what's next (Personality.reaction), holding what it held. */
+  private hesitate = 0;
   private run: RunWorld | null = null;
   private act: Act | null = null;
   /** The intent it was last given: a new one drops whatever it was doing. */
@@ -66,6 +70,14 @@ export class Motor {
   private prev: InputFrame = NO_INPUT;
   /** Frame of the last confirm or alt press: a press is an edge, so never on two frames running. */
   private pressed = -2;
+
+  constructor(
+    /** Its hands: how quick, clean and careful it is. Set again when the room's Bots rule changes. */
+    public traits: Personality,
+    seed: number,
+  ) {
+    this.rng = new Rng(seed);
+  }
 
   /** This frame's input for seat `p` doing `intent`. */
   drive(m: Match, p: Player, intent: Intent): InputFrame {
@@ -179,10 +191,25 @@ export class Motor {
     const map = raceMap(run);
     const b = r.body;
     const act = this.act;
-    if (act?.kind === 'move' && run.projectiles.length > this.shots && hurts(map, act.m, run.frame, b, shotsAhead(run, map), act.i)) this.act = null;
+    if (
+      act?.kind === 'move' &&
+      act.loose === undefined &&
+      run.projectiles.length > this.shots &&
+      hurts(map, act.m, run.frame, b, shotsAhead(run, map), this.traits.margin, act.i)
+    ) {
+      this.act = null;
+      this.hesitate = this.traits.reaction;
+    }
     this.shots = run.projectiles.length;
     const go = this.follow(b);
     if (go) return go;
+    // On landing, a moment to see what's next, unless something is coming for it where it stands: anyone flinches.
+    // In the air there's no time to stand and look: it steers at once.
+    if (this.hesitate > 0 && b.onGround && !hurtsStill(map, run.frame, b, shotsAhead(run, map), this.traits.margin)) {
+      this.hesitate--;
+      return NO_INPUT;
+    }
+    this.hesitate = 0;
     this.act = this.choose(map, run, b, ty * map.field.w + tx);
     return this.follow(b) ?? NO_INPUT;
   }
@@ -197,8 +224,12 @@ export class Motor {
         return NO_INPUT;
       case 'move': {
         const { m, i } = act;
-        if (i >= m.controls.length || (i > 0 && (Math.abs(b.x - m.path[2 * i - 2]) > DRIFT || Math.abs(b.y - m.path[2 * i - 1]) > DRIFT)))
+        const off = i > 0 && i > (act.loose ?? -1) && (Math.abs(b.x - m.path[2 * i - 2]) > DRIFT || Math.abs(b.y - m.path[2 * i - 1]) > DRIFT);
+        if (i >= m.controls.length || off) {
+          // A landing, or the world not doing what it expected: it takes a moment to see what's next.
+          if (m.air || off) this.hesitate = this.traits.reaction;
           return (this.act = null);
+        }
         act.i++;
         return this.press(m.controls[i]);
       }
@@ -237,7 +268,8 @@ export class Motor {
     const moves = movesFrom(map.field, b, run.solids);
     const shots = shotsAhead(run, map);
     // Standing here is about to hurt: no waiting for a better moment.
-    const exposed = hurtsStill(map, f, b, shots);
+    const margin = this.traits.margin;
+    const exposed = hurtsStill(map, f, b, shots, margin);
     for (const dist of [map.dist(target), map.rough(target)]) {
       let best: Move | null = null;
       let cost = Infinity;
@@ -248,18 +280,22 @@ export class Motor {
         if (mv.to === here && b.onGround && !exposed) continue;
         const c = dist[mv.to] + mv.controls.length * FRAME_COST + (this.visits.get(mv.to) ?? 0) * AGAIN;
         if (c >= cost) continue;
-        if (!hurts(map, mv, f, b, shots)) {
+        if (!hurts(map, mv, f, b, shots, margin)) {
           cost = c;
           best = mv;
         } else if (c < held) held = c;
       }
-      if (held < cost - SHORT && !exposed) return { kind: 'wait' };
+      if (held < cost - this.traits.hurry && !exposed) return { kind: 'wait' };
       if (b.onGround && !exposed && this.settled !== here && cost > dist[here] + SHORT) {
         this.settled = here;
         return { kind: 'settle', at: here, t: 0 };
       }
       if (best) {
         if (best.to !== here) this.settled = -1;
+        if (best.air && this.rng.chance(this.traits.slip)) {
+          const s = slipped(best, this.rng);
+          if (s) return { kind: 'move', m: s.m, i: 0, loose: s.until };
+        }
         return { kind: 'move', m: best, i: 0 };
       }
     }
@@ -319,19 +355,42 @@ function struck(map: RaceMap, shots: readonly Shot[], f: number, i: number, box:
 }
 
 /** Would a hazard reach the body if it stood where it is for the next few frames? */
-function hurtsStill(map: RaceMap, f: number, b: Body, shots: readonly Shot[]): boolean {
-  const box = { x: b.x - MARGIN, y: b.y - MARGIN, w: b.w + 2 * MARGIN, h: b.h + 2 * MARGIN };
+function hurtsStill(map: RaceMap, f: number, b: Body, shots: readonly Shot[], margin: number): boolean {
+  const box = { x: b.x - margin, y: b.y - margin, w: b.w + 2 * margin, h: b.h + 2 * margin };
   for (let i = 0; i < STILL_AHEAD; i++) if (struck(map, shots, f, i, box)) return true;
   return false;
 }
 
 /** Does the body meet a hazard anywhere along `mv` from its `from`th frame on, which is race frame `f`? */
-function hurts(map: RaceMap, mv: Move, f: number, b: Body, shots: readonly Shot[], from = 0): boolean {
-  const box = { x: 0, y: 0, w: b.w + 2 * MARGIN, h: b.h + 2 * MARGIN };
+function hurts(map: RaceMap, mv: Move, f: number, b: Body, shots: readonly Shot[], margin: number, from = 0): boolean {
+  const box = { x: 0, y: 0, w: b.w + 2 * margin, h: b.h + 2 * margin };
   for (let i = from; i < mv.controls.length; i++) {
-    box.x = mv.path[2 * i] - MARGIN;
-    box.y = mv.path[2 * i + 1] - MARGIN;
+    box.x = mv.path[2 * i] - margin;
+    box.y = mv.path[2 * i + 1] - margin;
     if (struck(map, shots, f, i - from, box)) return true;
   }
   return false;
+}
+
+/**
+ * `mv` as a thumb might fumble it: the jump pressed a few frames late, or let
+ * go a few frames early. The path no longer says where the body will be, so
+ * the fumbled frames, up to `until`, are played without checking (Act
+ * `loose`); after that the body is off its recording and the motor steers
+ * from wherever it got to, as a player saves a fumbled jump in the air.
+ */
+function slipped(mv: Move, rng: Rng): { m: Move; until: number } | null {
+  const controls = mv.controls.map((c) => ({ ...c }));
+  const j = controls.findIndex((c) => c.jumpPressed);
+  if (j < 0) return null;
+  if (j > 0 && rng.chance(0.5)) {
+    const n = rng.int(1, 3);
+    controls.splice(j, 0, ...Array.from({ length: n }, () => ({ ...controls[j - 1], jumpPressed: false })));
+    return { m: { ...mv, controls }, until: j + n + 1 };
+  }
+  let end = j;
+  while (end + 1 < controls.length && controls[end + 1].jump) end++;
+  const from = Math.max(j + 1, end - rng.int(2, 6));
+  for (let k = from; k <= end; k++) controls[k].jump = false;
+  return { m: { ...mv, controls }, until: end + 1 };
 }

@@ -299,7 +299,12 @@ Every game design decision, preference and direction the owner has given, groupe
 - **A bot with no real way on jumps for it anyway, and self-destructs when that gets it nowhere.** "their brain should have them kill themselves if theres no real option or somethig idk ("try to jump anyways")"
   2026-11-03 · `in progress` · DESIGN.md → AI players, src/brain/brains/runner.ts
 - **Bots take their time picking a card (read the crate, point at one or two), unless they're on a harder setting.** "their item selection should maybe slow down unless they're on a harder setting?"
-  2026-11-03 02:50Z · `in progress` (the slower pick); the harder setting is `planned` · TODO.md → 27, `TEMPO` in src/brain/brains/runner.ts
+  2026-11-03 02:50Z · `in progress` · `TEMPO` in src/brain/brains/runner.ts, scaled by each bot's pace
+- **Bots play with some variety, and have a difficulty.** "yeah make it a little bit of variability, and we could have difficulty tuning too for future? idk or for now tbqh"
+  2026-11-03 · `in progress` · DESIGN.md → AI players, src/brain/personality.ts
+- **Each bot's difficulty is set on its own card, not for the room.** "each bot should let you tweak its difficulty somehow on the character panel"
+  2026-11-03 · `in progress` · DESIGN.md → AI players; `Player.bot`, the `bot` action
+  Changed: a room-wide Bots rule in the Rules menu, replaced before it landed.
 - **Each theme has at least 1 and at most 3 grand landmarks among its 5+.** "id like at least one grand landmark, no more than 3 (in the min 5 landmarks)"
   2026-11-02 · `done` (enforced) · `GRAND_LANDMARKS` in src/gen/kinds.ts, tests/conformance/themes.test.ts
 - **The cast needs much more parody, and each parody must be instantly recognisable; the art must improve further.** "its better but you still need more parody and the art needs to be better yet..." / "the only thing that remotely resembles the thing its mimicking is the puff ball (kirby)". Iconic palettes win over the player-colour body rule; the player's colour moves to a visible secondary slot.

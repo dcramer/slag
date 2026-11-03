@@ -1,4 +1,5 @@
 import { Rng } from '../../core/rng';
+import type { Personality } from '../personality';
 import type { Brain, BrainView, Intent } from '../types';
 
 /**
@@ -13,8 +14,8 @@ const LAST_FRAMES = 120;
 /**
  * How long it takes over each choice, in frames [min, max]: a person reads the
  * crate and points at a card or two before taking one, then looks the level
- * over before carrying the part to its spot. A harder setting will shorten
- * these (docs/TODO.md 27, phase 2).
+ * over before carrying the part to its spot. A bot's pace (its personality)
+ * scales them: a Hard bot is quick.
  */
 const TEMPO = {
   read: [80, 150],
@@ -35,8 +36,9 @@ const SPOT_CHECKS = 16;
  * goes somewhere legal that doesn't seal the level. Taste and spite are
  * the next phase (docs/TODO.md 27).
  */
-export function runnerBrain(seed: number): Brain {
+export function runnerBrain(seed: number, traits: Personality): Brain {
   const rng = new Rng(seed);
+  const slow = ([lo, hi]: readonly [number, number]) => Math.round(rng.int(lo, hi) * traits.pace);
   let phase = '';
   let card = -1;
   let spot: Extract<Intent, { do: 'place' }> | null = null;
@@ -62,7 +64,7 @@ export function runnerBrain(seed: number): Brain {
     if (v.phaseFrame < pause) return { do: 'wait' };
     while (looks.length && v.phaseFrame >= lookUntil) {
       if (lookUntil) looks.shift();
-      lookUntil = v.phaseFrame + rng.int(...TEMPO.look);
+      lookUntil = v.phaseFrame + slow(TEMPO.look);
       if (!looks.length) break;
     }
     return looks.length ? { do: 'hover', card: looks[0] } : { do: 'pick', card };
@@ -102,7 +104,7 @@ export function runnerBrain(seed: number): Brain {
         near = Infinity;
         since = 0;
         // A beat before choosing, as a person takes in the crate or the level.
-        pause = v.phase === 'pick' ? rng.int(...TEMPO.read) : v.phase === 'place' ? rng.int(...TEMPO.survey) : 0;
+        pause = v.phase === 'pick' ? slow(TEMPO.read) : v.phase === 'place' ? slow(TEMPO.survey) : 0;
         looks = [];
         lookUntil = 0;
       }

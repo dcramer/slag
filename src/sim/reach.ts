@@ -303,6 +303,8 @@ const AIR_ROOTS: readonly (() => Policy)[] = ([-1, 0, 1] as const).flatMap((d) =
 export interface Move {
   /** The stand cell it lands on, `y * w + x`. */
   to: number;
+  /** It leaves the ground (a jump, fall or climb) rather than stepping along it. */
+  air: boolean;
   /** Controls for each frame, from the first. */
   controls: Controls[];
   /** The body's x and y after each frame, interleaved: where to expect it, so a player of the move sees when the world disagrees. */
@@ -704,7 +706,7 @@ class Tracer {
     return out;
   }
 
-  private trace(b: Body, f0: number, p: Policy, airborne0: boolean, log?: Omit<Move, 'to'>): void {
+  private trace(b: Body, f0: number, p: Policy, airborne0: boolean, log?: Omit<Move, 'to' | 'air'>): void {
     let airborne = airborne0;
     let wallForked = false;
     const bottom = this.h * TILE;
@@ -744,7 +746,7 @@ class Tracer {
       } else if (airborne) {
         if (this.careful && !this.stops(b)) return;
         const to = this.landing(b);
-        if (log && to >= 0) this.keep({ to, ...log });
+        if (log && to >= 0) this.keep({ to, air: true, ...log });
         return;
       }
       // Still walking along flat ground: neighbor edges (and the neighbor's own walk-off) cover that.
@@ -785,7 +787,7 @@ class Tracer {
 
   /** Walk into the next cell along the ground (no run), recorded: the step a route takes between neighbors. */
   private step(b: Body, dir: -1 | 1, from: number): void {
-    const log: Omit<Move, 'to'> = { controls: [], path: [] };
+    const log: Omit<Move, 'to' | 'air'> = { controls: [], path: [] };
     const c = this.c;
     for (let f = 0; f < STEP_FRAMES; f++) {
       c.left = dir < 0;
@@ -797,7 +799,7 @@ class Tracer {
       log.path.push(b.x, b.y);
       const k = Math.floor((b.y + b.h - 1) / TILE) * this.w + Math.floor((b.x + b.w / 2) / TILE);
       if (k !== from) {
-        if (this.stops(b)) this.keep({ to: k, ...log });
+        if (this.stops(b)) this.keep({ to: k, air: false, ...log });
         return;
       }
     }

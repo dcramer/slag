@@ -5,7 +5,7 @@ import { isBotDevice } from './brain/device';
 import { parseSeed } from './core/rng';
 import { installDebug } from './debug';
 import { type GenInfo, lastGenInfo } from './gen/level';
-import { Match, planMisses, rulesProfile } from './game/match';
+import { BOT_LEVELS, botLevelLabel, Match, planMisses, rulesProfile } from './game/match';
 import { roomSeed } from './game/room';
 import { loadRules, saveRules } from './game/rules';
 import { InputManager } from './input/input';
@@ -106,7 +106,12 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
   const bots = new BotSeats();
   renderer.hud.ownsBot = (d) => net.isLocal(d) && bots.has(localDev(d));
   renderer.hud.devices = {
-    deviceLabel: (d) => (isBotDevice(d) ? 'Bot' : net.isLocal(d) ? input.deviceLabel(localDev(d)) : 'online'),
+    deviceLabel: (d) =>
+      isBotDevice(d)
+        ? `${botLevelLabel(match.players.find((p) => p.device === d)?.bot ?? 'normal')} Bot`
+        : net.isLocal(d)
+          ? input.deviceLabel(localDev(d))
+          : 'online',
     hints: (d) => input.hints(net.isLocal(d) ? localDev(d) : 'pad0'),
     isLocal: (d) => net.isLocal(d),
     get settings() {
@@ -228,6 +233,12 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
       case 'bot':
         if (canAddBots()) net.act({ t: 'join', dev: net.globalDevice(bots.add(match)) });
         return true;
+      case 'botLevel': {
+        const p = match.players.find((q) => q.device === b.device);
+        if (p && renderer.hud.ownsBot(p.device))
+          net.act({ t: 'bot', dev: p.device, level: BOT_LEVELS[(BOT_LEVELS.indexOf(p.bot ?? 'normal') + 1) % BOT_LEVELS.length] });
+        return true;
+      }
       case 'unbot':
         if (match.phase === 'lobby' && b.device && renderer.hud.ownsBot(b.device)) {
           net.act({ t: 'leave', dev: b.device });

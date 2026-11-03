@@ -2,7 +2,7 @@ import { isBotDevice } from '../brain/device';
 import { tidyName } from '../core/name';
 import { nameBlocked } from '../core/name-filter';
 import { type CharacterDef, generateCharacter } from '../gen/character';
-import type { Match } from '../game/match';
+import { BOT_LEVELS, type BotLevel, type Match } from '../game/match';
 import { BLOOD_CHOICES, DEFAULT_RULES, GRAVITY_CHOICES, type MatchRules, nearestLength, RULE_CHOICES } from '../game/rules';
 import { MAX_PLAYERS } from '../sim/constants';
 
@@ -24,6 +24,8 @@ export type NetAction =
   | { t: 'look'; dev: string; seed: number; color?: number }
   /** Wear swatch `color` (PLAYER_COLORS). The first to reach a free swatch gets it; a later ask finds it taken and does nothing. */
   | { t: 'color'; dev: string; color: number }
+  /** How well a bot plays: its own machine's choice, shown on everyone's card. */
+  | { t: 'bot'; dev: string; level: BotLevel }
   /** Host only: the per-match salt (crate order) for the next match start. */
   | { t: 'salt'; salt: number }
   /** Host only, lobby only. */
@@ -215,6 +217,13 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
       const p = m.players.find((q) => q.device === a.dev);
       // Two tabs of one browser share a saved look; the second one keeps the character it rolled.
       if (p && Number.isInteger(a.seed)) m.setLook(p.slot, a.seed >>> 0, a.color);
+      return;
+    }
+    case 'bot': {
+      const p = m.players.find((q) => q.device === a.dev);
+      if (!p || !isBotDevice(a.dev) || !BOT_LEVELS.includes(a.level)) return; // wire data
+      if (a.level === 'normal') delete p.bot; // keep snapshots canonical
+      else p.bot = a.level;
       return;
     }
     case 'color': {

@@ -222,7 +222,9 @@ A level is a place with one landmark you'd name it after: the Great Wheel, the H
 - In pick and place everyone sees everyone's cursor and held part live. A card belongs to whoever the host hears first; nobody sees a claim that gets taken back.
 
 ## AI players
-Built-in bots race, pick and place (TODO 27, phase 1); personality, taste and host migration are next, then player scripts. The lobby's host adds a bot from an open bay (**Add Bot**) and sends it away with **Remove**; a bot readies itself.
+Built-in bots race, pick and place (TODO 27, phase 1); taste, spite and host migration are next, then player scripts. The lobby's host adds a bot from an open bay (**Add Bot**) and sends it away with **Remove**; a bot readies itself.
+
+- **Levels and personality.** Each bot has a level, Easy, Normal or Hard, set on its card by whoever runs it and shown on everyone's. Inside its level it rolls its own personality from its seed: how long it takes to see what's next after landing, how often it fumbles a jump (pressed late, let go early, then saved in the air if it can), how much room it keeps from hazards, how long it will wait for one to pass, and how long it takes over the crate. Two Normal bots play differently; an Easy one dithers and fumbles, a Hard one is quick and clean. It never sees more or moves better than a player could at any level.
 
 - **How a bot runs.** It follows the route the solvability proof would take, playing the controller's own moves, and waits out a hazard or a shot that its next move would meet. It doesn't know its way past what the proof doesn't model (riding movers, timing a door): with no way on, it runs and jumps for the flag anyway, and when even that gets it nowhere it self-destructs, as a stuck player would.
 

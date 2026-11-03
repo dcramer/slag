@@ -1,13 +1,18 @@
 import { deriveSeed } from '../core/rng';
-import type { Match } from '../game/match';
+import type { BotLevel, Match } from '../game/match';
 import type { InputFrame } from '../sim/types';
 import { botDevice } from './device';
 import { Motor } from './motor';
+import { rollPersonality } from './personality';
 import { BRAINS, type BrainId } from './registry';
 import type { Brain } from './types';
 import { senseView } from './view';
 
 interface Bot {
+  kind: BrainId;
+  seed: number;
+  /** The level its personality was rolled at: its seat's (Player.bot) changing rolls it again. */
+  level: BotLevel;
   brain: Brain;
   motor: Motor;
   /** It has had a seat: losing it now (a watch, a kick, the lobby emptied) lets the bot go. */
@@ -28,7 +33,16 @@ export class BotSeats {
     let n = 1;
     while (this.bots.has(botDevice(n))) n++;
     const dev = botDevice(n);
-    this.bots.set(dev, { brain: BRAINS[kind].make(deriveSeed(match.seed, `bot:${dev}:${match.frame}`)), motor: new Motor(), seated: false });
+    const seed = deriveSeed(match.seed, `bot:${dev}:${match.frame}`);
+    const traits = rollPersonality(seed, 'normal');
+    this.bots.set(dev, {
+      kind,
+      seed,
+      level: 'normal',
+      brain: BRAINS[kind].make(seed, traits),
+      motor: new Motor(traits, deriveSeed(seed, 'hands')),
+      seated: false,
+    });
     return dev;
   }
 
@@ -47,6 +61,13 @@ export class BotSeats {
       const p = match.players.find((q) => q.device === global(dev));
       if (p) {
         bot.seated = true;
+        const level = p.bot ?? 'normal';
+        if (level !== bot.level) {
+          const traits = rollPersonality(bot.seed, level);
+          bot.level = level;
+          bot.brain = BRAINS[bot.kind].make(bot.seed, traits);
+          bot.motor.traits = traits;
+        }
         out[dev] = bot.motor.drive(match, p, bot.brain.think(senseView(match, p)));
       } else if (bot.seated) this.bots.delete(dev);
     }

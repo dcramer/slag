@@ -54,7 +54,9 @@ export type HudAction =
   /** Seat a bot this machine runs (lobby, the host or offline). */
   | 'bot'
   /** Unseat the bot playing as `device`. */
-  | 'unbot';
+  | 'unbot'
+  /** The next level for the bot playing as `device`. */
+  | 'botLevel';
 
 export interface HudButton {
   x: number;

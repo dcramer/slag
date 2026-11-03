@@ -1,5 +1,6 @@
 import type { Phase } from '../game/match';
 import type { Role } from '../sim/props';
+import type { Personality } from './personality';
 
 /**
  * The contract between a brain and the game (docs/DESIGN.md → AI players).
@@ -124,8 +125,8 @@ export interface Brain {
   think(view: BrainView): Intent;
 }
 
-/** A kind of brain, as BRAINS lists it. `make` gets a seed so a bot's choices replay. */
+/** A kind of brain, as BRAINS lists it. `make` gets a seed so a bot's choices replay, and the bot's personality. */
 export interface BrainDef {
   label: string;
-  make(seed: number): Brain;
+  make(seed: number, traits: Personality): Brain;
 }

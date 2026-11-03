@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BotSeats } from '../src/brain/bots';
+import { rollPersonality } from '../src/brain/personality';
 import { botDevice, isBotDevice } from '../src/brain/device';
 import { Match } from '../src/game/match';
 import { isBridgePart } from '../src/gen/props';
@@ -74,6 +75,32 @@ describe('bots', () => {
 
   it('replays the same race from the same seed', () => {
     expect(botRace(5)).toEqual(botRace(5));
+  });
+
+  it('rolls its own personality, steadier and quicker the harder its level', () => {
+    const [easy, normal, hard] = (['easy', 'normal', 'hard'] as const).map((l) => rollPersonality(7, l));
+    expect(easy.reaction).toBeGreaterThan(normal.reaction);
+    expect(normal.reaction).toBeGreaterThanOrEqual(hard.reaction);
+    expect(easy.slip).toBeGreaterThan(normal.slip);
+    expect(normal.slip).toBeGreaterThan(hard.slip);
+    expect(easy.pace).toBeGreaterThan(normal.pace);
+    expect(normal.pace).toBeGreaterThan(hard.pace);
+    // Two bots at one level don't play alike.
+    expect(rollPersonality(8, 'normal')).not.toEqual(normal);
+    expect(rollPersonality(7, 'normal')).toEqual(normal);
+  });
+
+  it('keeps its level on its seat, where every peer sees it', () => {
+    const m = new Match(1);
+    const ns = newNetState();
+    const dev = `peer0001:${botDevice(1)}`;
+    applyAction(m, ns, { t: 'join', dev });
+    applyAction(m, ns, { t: 'join', dev: 'peer0001:kb1' });
+    applyAction(m, ns, { t: 'bot', dev, level: 'hard' });
+    applyAction(m, ns, { t: 'bot', dev: 'peer0001:kb1', level: 'easy' });
+    expect(m.players.map((p) => p.bot)).toEqual(['hard', undefined]);
+    applyAction(m, ns, { t: 'bot', dev, level: 'normal' });
+    expect('bot' in m.players[0]).toBe(false);
   });
 
   it('is a device: a removed bot is gone, not parked to come back', () => {

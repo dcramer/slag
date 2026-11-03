@@ -1,5 +1,5 @@
 import { css } from '../../core/color';
-import type { Match, Player } from '../../game/match';
+import { botLevelLabel, type Match, type Player } from '../../game/match';
 import { MAX_PLAYERS, VIEW_H, VIEW_W } from '../../sim/constants';
 import { isBotDevice } from '../../brain/device';
 import { THEME_LABELS } from '../../themes';
@@ -177,17 +177,14 @@ function playerCard(hud: Hud, p: Player, i: number, x: number, y: number, w: num
     );
     if (watchable) hud.btn({ x: x + w - 66, y: by, w: 26, h: bh, action: 'watch', device: p.device }, '', 'secondary', 'eye');
     hud.btn({ x: x + w - 36, y: by, w: 26, h: bh, action: 'look', device: p.device }, '', 'secondary', 'dice');
-  } else {
-    // A bot of yours has Remove at the right, so its status moves over to the room left of it.
-    const owned = hud.ownsBot(p.device);
-    const sx = owned ? x + (w - 70) / 2 + 2 : cx;
-    if (p.afk) tag(c, 'AFK', sx, by + bh / 2 - 1, PAL.steel, PAL.bone, TYPE.label, 'center');
-    else if (p.ready) tag(c, 'READY', sx, by + bh / 2 - 1, PAL.toxic, PAL.ink, TYPE.label, 'center');
-    else hud.text('Not Ready', sx, by + bh / 2 - 1, TYPE.body, PAL.dim, 'center', UI, 600);
-  }
-  if (!mine && hud.ownsBot(p.device))
+  } else if (hud.ownsBot(p.device)) {
+    // A bot you run: its level, a click to the next, and Remove. It readies itself, and its edge says so.
+    hud.btn({ x: x + 10, y: by, w: w - 86, h: bh, action: 'botLevel', device: p.device }, botLevelLabel(p.bot ?? 'normal'), 'secondary', undefined, TYPE.label);
     hud.btn({ x: x + w - 70, y: by, w: 60, h: bh, action: 'unbot', device: p.device }, 'Remove', 'ghost', undefined, TYPE.label);
-  else if (hud.net?.kickable?.includes(p.slot))
+  } else if (p.afk) tag(c, 'AFK', cx, by + bh / 2 - 1, PAL.steel, PAL.bone, TYPE.label, 'center');
+  else if (p.ready) tag(c, 'READY', cx, by + bh / 2 - 1, PAL.toxic, PAL.ink, TYPE.label, 'center');
+  else hud.text('Not Ready', cx, by + bh / 2 - 1, TYPE.body, PAL.dim, 'center', UI, 600);
+  if (hud.net?.kickable?.includes(p.slot))
     hud.btn({ x: x + w - 54, y: by, w: 44, h: bh, action: 'kick', device: p.device }, 'Kick', picked ? 'primary' : 'ghost', undefined, TYPE.label);
 }
 
