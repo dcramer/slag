@@ -21,7 +21,7 @@ Package manager is **pnpm** (`packageManager` in package.json). Never use npm or
 | `pnpm shot <scenario> [opts]` | Headless screenshots into `shots/` (gitignored). See "Verify visually". |
 | `pnpm perf [--only race8,gen,load]` | Benchmarks: frame-time, level-gen and page-load numbers into `shots/perf/`; `--compare <json>` flags regressions. Options are in `tools/perf.ts`. Run it on purpose, never as a routine step. |
 | `pnpm land [branch…]` | Orchestrators: merge worktree branches onto `origin/main`, gate once, push (`tools/land.ts`; see "Git workflow"). |
-| `pnpm music [--themes farm,title] [--seeds 1,2] [--solo lead]` | Renders songs through the real mixer offline into `shots/music/*.wav` and prints loudness and voice-limiter numbers (`tools/music.ts`). Listen to it after changing music; balance new layers by their `--solo` loudness. |
+| `pnpm music [--themes farm,title] [--seeds 1,2] [--solo lead]` | Renders songs through the real mixer offline into `shots/music/*.wav` and prints loudness and voice-limiter numbers (`tools/music.ts`). Listen to it after changing music; balance new layers by their `--solo` loudness. `--sfx all` renders every sound effect and variant into `shots/sfx/`; level a new one against the targets in `src/audio/sfx.ts`. |
 | `pnpm brand [icons\|og\|preview]` | Regenerate the favicon, app icons and link-preview cards (`tools/brand.ts`); `preview` → `shots/brand-icons.png`. |
 | `pnpm level <seed> [--theme farm]` | ASCII level dump: `#` solid, `=` one-way, `S`/`G` spawn/goal, `·` reachable stand cell, `P` set piece. |
 | `pnpm level --stats 50` | Per-theme stats over N seeds: ms/level, styles, `needBridges`, `fallbacks` (~2 min at 50). |

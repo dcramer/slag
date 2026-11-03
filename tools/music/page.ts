@@ -5,6 +5,7 @@
  */
 import { composeSong } from '../../src/audio/music/compose';
 import type { Mix, MixName } from '../../src/audio/music/player';
+import type { Cue } from '../../src/audio/cues';
 import { AudioEngine } from '../../src/audio/engine';
 import type { SongId } from '../../src/audio/music/styles';
 
@@ -72,4 +73,13 @@ async function renderSong(
   };
 }
 
-(globalThis as unknown as { renderSong: typeof renderSong }).renderSong = renderSong;
+/** One SFX cue alone through the mixer, unpositioned, at default volumes, from 50 ms in. */
+async function renderCue(cue: Cue, seconds: number): Promise<Pick<Render, 'left' | 'right'>> {
+  const ctx = new OfflineAudioContext(2, Math.ceil(seconds * RATE), RATE);
+  const eng = new AudioEngine(ctx, { master: 0.8, music: 0.6, sfx: 0.9 });
+  eng.play(cue, null, 0.05);
+  const buf = await ctx.startRendering();
+  return { left: pcm16(buf.getChannelData(0)), right: pcm16(buf.getChannelData(1)) };
+}
+
+Object.assign(globalThis, { renderSong, renderCue });
