@@ -200,6 +200,9 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Parts may seal the level: placement is never refused for leaving no way through, and a sealed level needs a bomb.** "the placement restrictions feel buggy in some places?" / "game was refusing letting me place items that clearly had nothing there" / "also parts CAN seal it.. it can be unwinnable and require a bomb"
   2026-11-02 · `in progress` · DESIGN.md → Props, `src/gen/level/winnable.ts`
   Changed: a match kept a plan of at most `MAX_BRIDGES` bridges and refused a placement that left none.
+- **Parts pass through each other: a mover's path or a set piece's swing may cross a placed part, so neither refuses a placement.** "you should be able to let some parts go through each other. your barn one. its ok to allow palcement there, and the items will just move through each other..."
+  2026-11-02 · `in progress` · DESIGN.md → Props, `src/sim/props/transform.ts`
+  Changed: placed parts and set pieces claimed their whole swept path.
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
   2026-11-02 · `done` · public/ASSETS.md
 
