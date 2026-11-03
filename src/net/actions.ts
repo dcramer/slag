@@ -1,4 +1,4 @@
-import { type CharacterDef, generateCharacter } from '../gen/character';
+import type { CharacterDef } from '../gen/character';
 import type { Match } from '../game/match';
 import { BLOOD_CHOICES, DEFAULT_RULES, GRAVITY_CHOICES, type MatchRules, nearestLength, RULE_CHOICES } from '../game/rules';
 import { MAX_PLAYERS } from '../sim/constants';
@@ -17,8 +17,10 @@ export type NetAction =
   /** Mid-match: the device's peer disconnected (or came back). */
   | { t: 'away'; dev: string; on: boolean }
   | { t: 'name'; dev: string; name: string }
-  /** Restore a saved look (character seed) for one of the sender's players. */
-  | { t: 'look'; dev: string; seed: number }
+  /** Restore a saved look (character seed) for one of the sender's players, in its saved swatch if it has one. */
+  | { t: 'look'; dev: string; seed: number; color?: number }
+  /** Wear swatch `color` (PLAYER_COLORS). The first to reach a free swatch gets it; a later ask finds it taken and does nothing. */
+  | { t: 'color'; dev: string; color: number }
   /** Host only: the per-match salt (crate order) for the next match start. */
   | { t: 'salt'; salt: number }
   /** Host only, lobby only. */
@@ -175,7 +177,12 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
     case 'look': {
       const p = m.players.find((q) => q.device === a.dev);
       // Two tabs of one browser share a saved look; the second one keeps the character it rolled.
-      if (p && Number.isInteger(a.seed) && m.looksFree({ ...generateCharacter(a.seed >>> 0), name: p.character.name }, p)) m.setLook(p.slot, a.seed >>> 0);
+      if (p && Number.isInteger(a.seed)) m.setLook(p.slot, a.seed >>> 0, a.color);
+      return;
+    }
+    case 'color': {
+      const p = m.players.find((q) => q.device === a.dev);
+      if (p) m.setColor(p.slot, a.color); // wire data: setColor checks it's a swatch
       return;
     }
     case 'salt':

@@ -1,4 +1,6 @@
-/** Local player profile (name), persisted to localStorage. */
+import { swatchIndex } from '../gen/character';
+
+/** Local player profile (name, look, color), persisted to localStorage. */
 export interface Profile {
   version: 1;
   /** Custom display name; null = keep the random generated one. */
@@ -9,6 +11,11 @@ export interface Profile {
   look?: number | null;
   /** Which cast `look` was rolled in. A look from another cast means nothing now and is dropped. */
   lookCast?: number;
+  /**
+   * The swatch the player wears (PLAYER_COLORS index), kept through every new look. Absent in a profile saved
+   * before swatches: that player wears their look's own rolled hue until they pick one.
+   */
+  color?: number;
 }
 
 /**
@@ -25,7 +32,12 @@ export function loadProfile(): Profile {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const p = JSON.parse(raw) as Profile;
-      if (p.version === 1) return p.lookCast === LOOK_CAST ? p : { ...p, look: null, lookCast: LOOK_CAST };
+      if (p.version === 1) {
+        // Storage is anyone's to edit: a color that isn't a swatch is no color.
+        const { color, ...rest } = p;
+        const q: Profile = swatchIndex(color) === undefined ? rest : p;
+        return q.lookCast === LOOK_CAST ? q : { ...q, look: null, lookCast: LOOK_CAST };
+      }
     }
   } catch {
     // ignore

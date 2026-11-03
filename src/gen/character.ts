@@ -42,6 +42,8 @@ export interface CharacterDef {
   body: HSL;
   /** A second note in the player's livery, never louder than `body`. */
   accent: HSL;
+  /** Index into PLAYER_COLORS when `body` is a swatch; absent for a hue rolled from the seed alone (saved looks from before swatches). */
+  color?: number;
   kind: Kind;
   /** The kind's own color: a homage's iconic body color, a plain animal's pale chest. */
   paint: HSL;
@@ -143,6 +145,55 @@ export function generateCharacter(seed: number, kind?: Kind): CharacterDef {
       ['grin', 1],
     ]),
   };
+}
+
+/**
+ * The player palette: every color a player can wear, around the wheel at least MIN_HUE_APART apart, so
+ * two swatches never count as one color. Each is tuned by eye rather than set by formula: the yellows and
+ * blues sit lighter than the reds, so all of them read on the dark HUD, on every theme's terrain and as a
+ * ring beside each kind's own palette.
+ */
+export const PLAYER_COLORS: readonly HSL[] = [
+  hsl3(356, 74, 56), // red
+  hsl3(28, 88, 55), // orange
+  hsl3(58, 86, 54), // yellow
+  hsl3(92, 62, 50), // lime
+  hsl3(128, 52, 46), // green
+  hsl3(166, 64, 44), // teal
+  hsl3(198, 78, 54), // sky
+  hsl3(228, 76, 64), // blue
+  hsl3(262, 62, 66), // violet
+  hsl3(294, 56, 60), // purple
+  hsl3(326, 74, 64), // pink
+];
+
+/** Degrees of hue a player's color keeps from everyone else's (the palette's closest pair is this far apart). */
+export const MIN_HUE_APART = 30;
+
+/** Degrees between two hues, the short way round. */
+export function hueApart(a: number, b: number): number {
+  const d = Math.abs(a - b) % 360;
+  return Math.min(d, 360 - d);
+}
+
+/** The same character in swatch `i`: body and hue from the palette, the accent keeping the interval it was rolled with. */
+export function withColor(c: CharacterDef, i: number): CharacterDef {
+  const sw = PLAYER_COLORS[i];
+  const off = c.accent.h - c.hue;
+  return { ...c, hue: sw.h, body: { ...sw }, accent: hsl3((((sw.h + off) % 360) + 360) % 360, c.accent.s, c.accent.l), color: i };
+}
+
+/** `c` wearing `from`'s color, whatever it is: a swatch, or a hue rolled before there were any. */
+export function keepColor(c: CharacterDef, from: CharacterDef): CharacterDef {
+  const { color: _drop, ...rest } = c;
+  const out: CharacterDef = { ...rest, hue: from.hue, body: from.body, accent: from.accent };
+  if (from.color !== undefined) out.color = from.color;
+  return out;
+}
+
+/** A swatch index off the wire or out of storage, or undefined if it isn't one. */
+export function swatchIndex(v: unknown): number | undefined {
+  return Number.isInteger(v) && (v as number) >= 0 && (v as number) < PLAYER_COLORS.length ? (v as number) : undefined;
 }
 
 /** Names that fit HUD chips: retry (deterministically) until ≤ 10 chars. */
