@@ -16,6 +16,7 @@ function describe(path: string): { title: string; image: string } | null {
   if (path === '/') return { title: NAME, image: '/opengraph-image.jpg' };
   if (path === '/codex') return { title: `${NAME} · Codex`, image: '/opengraph-image.jpg' };
   if (path === '/lobbies') return { title: `${NAME} · Lobbies`, image: '/opengraph-image.jpg' };
+  if (path === '/about') return { title: `${NAME} · About`, image: '/opengraph-image.jpg' };
   const room = roomFromPath(path);
   // Every lobby shares one invite card; Next serves it under the segment's placeholder, as og:image does.
   return room ? { title: inviteTitle(room), image: '/r/-/opengraph-image.jpg' } : null;

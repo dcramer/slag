@@ -64,6 +64,7 @@ export const piston = defineModule<'piston'>({
       surface: SURFACES.metal,
       propUid: ctx.r.pp.uid,
       mi: ctx.mi,
+      crush: true,
     });
     if (st.slamming) {
       const [dx, dy] = dirOf(m.angle);

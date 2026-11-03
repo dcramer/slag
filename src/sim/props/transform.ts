@@ -3,6 +3,7 @@ import { type Cell, cellsBounds, frac, pingPong, type Vec } from '../../core/geo
 import { TILE } from '../constants';
 import { isProtected, type Level, T_EMPTY, T_SOLID, tileAt } from '../level';
 import type { GameEvent } from '../types';
+import { previewProps } from './rays';
 import { moduleSim, type Xform } from './registry';
 import type { BlastShape, BlastTarget, Carry, ModuleOf, Motion, PlacedProp, PropDef, PropState, Resolved } from './types';
 
@@ -312,11 +313,11 @@ function lcm(a: number, b: number): number {
 }
 
 /**
- * Every cell a part takes for placing: its footprint where it holds still,
- * and every cell its footprint passes through on its cycle where it moves (on
- * a rail or loop of its own, or riding a mover). So a block can't go where a
- * mover will come through it, and a mover can't go where its path meets rock.
- * Unclipped: a path off the level's side reaches cells outside it.
+ * Every cell a part's cycle takes it through: its footprint where it holds
+ * still, and every cell its footprint passes through where it moves (on a rail
+ * or loop of its own, or riding a mover). A mover's path must keep out of rock
+ * and protected zones; other parts it passes through. Unclipped: a path off
+ * the level's side reaches cells outside it.
  */
 export function sweptCells(pp: PlacedProp): Cell[] {
   const home = footprintCells(pp);
@@ -327,82 +328,103 @@ export function sweptCells(pp: PlacedProp): Cell[] {
   for (const c of home) out.set(`${c[0]},${c[1]}`, c);
   for (let f = 0; f < span; f += SWEEP_STEP) {
     const [ox, oy] = motionOffset(r, f);
-    for (const [cx, cy] of home) {
-      const x0 = Math.floor((cx * TILE + ox + 0.5) / TILE);
-      const x1 = Math.floor((cx * TILE + ox + TILE - 0.5) / TILE);
-      const y0 = Math.floor((cy * TILE + oy + 0.5) / TILE);
-      const y1 = Math.floor((cy * TILE + oy + TILE - 0.5) / TILE);
-      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (!out.has(`${x},${y}`)) out.set(`${x},${y}`, [x, y]);
-    }
+    for (const [cx, cy] of home)
+      for (const c of cellsUnder(cx * TILE + ox, cy * TILE + oy, TILE, TILE)) if (!out.has(`${c[0]},${c[1]}`)) out.set(`${c[0]},${c[1]}`, c);
   }
   return [...out.values()];
 }
 
-const claimCache = new WeakMap<
-  readonly PlacedProp[],
-  { n: number; last: PlacedProp | undefined; pieces: readonly PlacedProp[]; claims: Map<number, PlacedProp> }
->();
-
-/**
- * Cell → the part whose claim it is, for placing: a set piece's footprint
- * (everything it sweeps, and the headroom it keeps), and `sweptCells` of
- * every placed part. Attachments claim nothing: they lie on a face.
- * Cached per placed-list contents.
- */
-export function claimedCells(level: Level, placed: readonly PlacedProp[]): Map<number, PlacedProp> {
-  const hit = claimCache.get(placed);
-  if (hit && hit.n === placed.length && hit.last === placed[placed.length - 1] && hit.pieces === level.setPieces) return hit.claims;
-  const claims = new Map<number, PlacedProp>();
-  const claim = (p: PlacedProp, cells: readonly Cell[]) => {
-    for (const [x, y] of cells) if (x >= 0 && y >= 0 && x < level.w && y < level.h && !claims.has(y * level.w + x)) claims.set(y * level.w + x, p);
-  };
-  for (const p of level.setPieces) claim(p, footprintCells(p));
-  for (const p of placed) if (p.def.mount !== 'face') claim(p, sweptCells(p));
-  claimCache.set(placed, { n: placed.length, last: placed[placed.length - 1], pieces: level.setPieces, claims });
-  return claims;
+/** Tiles under a px rect, half a px in from each edge so a rect flush with a tile line doesn't reach over it. */
+function cellsUnder(x: number, y: number, w: number, h: number): Cell[] {
+  const out: Cell[] = [];
+  for (let ty = Math.floor((y + 0.5) / TILE); ty <= Math.floor((y + h - 0.5) / TILE); ty++)
+    for (let tx = Math.floor((x + 0.5) / TILE); tx <= Math.floor((x + w - 0.5) / TILE); tx++) out.push([tx, ty]);
+  return out;
 }
 
-/** Why a part can't go at a spot: the world cells that refuse it, and the parts whose claims those are. */
+let lastOccupied: { key: unknown[]; cells: Map<number, PlacedProp> } | null = null;
+
+/**
+ * Cell → the part that's in it on frame f, for placing. A placed part is
+ * where its footprint is now: where it went in if it holds still, wherever its
+ * motion or its mover has taken it if not. A set piece is where its solids are
+ * now. Paths and swings take nothing: movers pass through whatever stands in
+ * their way (the owner, 2026-11-02), so a part may go anywhere a set piece or
+ * mover only passes. Attachments take nothing: they lie on a face. Cached for
+ * the frame: the ghost asks several times.
+ */
+export function occupiedCells(level: Level, placed: readonly PlacedProp[], f = 0): Map<number, PlacedProp> {
+  const key = [level, level.version, level.setPieces, placed, placed.length, placed[placed.length - 1], f];
+  if (lastOccupied && lastOccupied.key.length === key.length && lastOccupied.key.every((k, i) => k === key[i])) return lastOccupied.cells;
+  const cells = new Map<number, PlacedProp>();
+  const take = (p: PlacedProp, cs: readonly Cell[]) => {
+    for (const [x, y] of cs) if (x >= 0 && y >= 0 && x < level.w && y < level.h && !cells.has(y * level.w + x)) cells.set(y * level.w + x, p);
+  };
+  if (level.setPieces.length) {
+    const byUid = new Map(level.setPieces.map((p) => [p.uid, p]));
+    for (const s of previewProps(level, level.setPieces.map(resolveProp), f).solids) {
+      const p = byUid.get(s.propUid);
+      if (p && !s.film) take(p, cellsUnder(s.x, s.y, s.w, s.h));
+    }
+  }
+  for (const p of placed) {
+    if (p.def.mount === 'face') continue;
+    if (!moves(p)) take(p, footprintCells(p));
+    else {
+      const [ox, oy] = motionOffset(resolveProp(p), f);
+      for (const [cx, cy] of footprintCells(p)) take(p, cellsUnder(cx * TILE + ox, cy * TILE + oy, TILE, TILE));
+    }
+  }
+  lastOccupied = { key, cells };
+  return cells;
+}
+
+/** Why a part can't go at a spot: the world cells that refuse it, and the parts in those cells. */
 export interface PlaceFaults {
   cells: Cell[];
   by: PlacedProp[];
 }
 
 /**
- * Why this prop can't go here, cell by cell: the one rule behind `canPlace`
- * and the red marks on a refused ghost, so the ghost shows exactly the cells
- * that refuse it, and whose claim an empty-looking one is. Bombs need only be
- * in bounds. A part needs every cell its cycle takes it through (`sweptCells`)
- * in bounds, empty, unprotected and unclaimed. An attachment is refused only
- * where no cell mounts (`mountCells`), and a hung part where nothing above
- * holds it and the sky isn't clear.
+ * Why this prop can't go here on frame f, cell by cell: the one rule behind
+ * `canPlace` and the red crosses on a refused ghost, so the ghost marks
+ * exactly the cells that refuse it. Bombs need only be in bounds. A part needs
+ * its footprint in bounds, empty, unprotected and free of other parts where
+ * they are now (`occupiedCells`), and a part that moves needs its whole path
+ * (`sweptCells`) out of rock, protected zones and off the level's sides. An
+ * attachment is refused only where no cell mounts (`mountCells`), and a hung
+ * part where nothing above holds it and the sky isn't clear.
  */
-export function placeFaults(level: Level, placed: readonly PlacedProp[], def: PropDef, rot: number, tx: number, ty: number): PlaceFaults {
+export function placeFaults(level: Level, placed: readonly PlacedProp[], def: PropDef, rot: number, tx: number, ty: number, f = 0): PlaceFaults {
   const cells = footprint(def, rot).map(([x, y]) => [x + tx, y + ty] as Cell);
   const none: PlaceFaults = { cells: [], by: [] };
-  if (def.mount === 'face') return mountCells(level, placed, def, rot, tx, ty).length > 0 ? none : { cells, by: [] };
+  if (def.mount === 'face') return mountCells(level, placed, def, rot, tx, ty, f).length > 0 ? none : { cells, by: [] };
   const out = (x: number, y: number) => x < 0 || y < 0 || x >= level.w || y >= level.h;
   if (def.modules.some((m) => m.type === 'bomb')) return { cells: cells.filter(([x, y]) => out(x, y)), by: [] };
-  const claims = claimedCells(level, placed);
+  const taken = occupiedCells(level, placed, f);
   const bad: Cell[] = [];
   const by = new Set<PlacedProp>();
-  for (const [x, y] of sweptCells({ uid: 0, def, owner: -1, tx, ty, rot })) {
+  const home = new Set(cells.map(([x, y]) => `${x},${y}`));
+  for (const [x, y] of cells) {
     if (out(x, y) || tileAt(level, x, y) || isProtected(level, x, y)) bad.push([x, y]);
     else {
-      const owner = claims.get(y * level.w + x);
+      const owner = taken.get(y * level.w + x);
       if (!owner) continue;
       bad.push([x, y]);
       by.add(owner);
     }
   }
+  if (def.motion.type !== 'none')
+    for (const [x, y] of sweptCells({ uid: 0, def, owner: -1, tx, ty, rot }))
+      if (!home.has(`${x},${y}`) && (out(x, y) || tileAt(level, x, y) === T_SOLID || isProtected(level, x, y))) bad.push([x, y]);
   if (bad.length || def.mount !== 'hang') return { cells: bad, by: [...by] };
   const top = Math.min(...cells.map((c) => c[1]));
   return hasHook(level, placed, cells[0][0], top) || openSky(level, placed, cells[0][0], top) ? none : { cells, by: [] };
 }
 
-/** Can this prop go here? Bombs can go anywhere in-bounds; everything else needs free, unprotected cells all along its path (`placeFaults`). */
-export function canPlace(level: Level, placed: readonly PlacedProp[], def: PropDef, rot: number, tx: number, ty: number): boolean {
-  return placeFaults(level, placed, def, rot, tx, ty).cells.length === 0;
+/** Can this prop go here on frame f? Bombs can go anywhere in-bounds; everything else by `placeFaults`. */
+export function canPlace(level: Level, placed: readonly PlacedProp[], def: PropDef, rot: number, tx: number, ty: number, f = 0): boolean {
+  return placeFaults(level, placed, def, rot, tx, ty, f).cells.length === 0;
 }
 
 /** A cell something can hang from: solid terrain or a static placed block. */
@@ -429,10 +451,10 @@ export function openSky(level: Level, placed: readonly PlacedProp[], x: number, 
 const HANG_SNAP = 4;
 
 /** The row a hanging prop drops into near `ty`: the nearest with a ceiling over it, or `ty` when there's none. Shared by the ghost and placing. */
-export function hangRow(level: Level, placed: readonly PlacedProp[], def: PropDef, tx: number, ty: number): number {
+export function hangRow(level: Level, placed: readonly PlacedProp[], def: PropDef, tx: number, ty: number, f = 0): number {
   for (let d = 0; d <= HANG_SNAP; d++) {
-    if (canPlace(level, placed, def, 0, tx, ty - d)) return ty - d;
-    if (canPlace(level, placed, def, 0, tx, ty + d)) return ty + d;
+    if (canPlace(level, placed, def, 0, tx, ty - d, f)) return ty - d;
+    if (canPlace(level, placed, def, 0, tx, ty + d, f)) return ty + d;
   }
   return ty;
 }
@@ -464,25 +486,20 @@ function staticBodyCells(placed: readonly PlacedProp[], w: number): Set<number> 
 /**
  * Attachment rule, cell by cell: a cell mounts if it's an in-bounds host (solid
  * terrain or a static placed block), unprotected, with its face (in the mount
- * direction) exposed to an empty, unclaimed cell, and that face isn't coated
- * yet. Returns the def's own rot 0 cells that mount, in footprint order.
+ * direction) exposed to an empty cell no part is in on frame f
+ * (`occupiedCells`), and that face isn't coated yet. Returns the def's own rot 0 cells that mount, in footprint order.
  * An attachment places when any cell mounts (`canPlace`) and keeps only those
  * (`landedDef`): this is the one rule behind both.
  */
-export function mountCells(level: Level, placed: readonly PlacedProp[], def: PropDef, rot: number, tx: number, ty: number): Cell[] {
+export function mountCells(level: Level, placed: readonly PlacedProp[], def: PropDef, rot: number, tx: number, ty: number, f = 0): Cell[] {
   const angle = mountAngle(def, rot);
   const [dx, dy] = dirOf(angle);
   const face = Math.round(angle / (Math.PI / 2)) & 3;
   const blocks = staticBodyCells(placed, level.w);
-  const taken = new Set<number>();
-  for (const p of level.setPieces) for (const [x, y] of footprintCells(p)) taken.add(y * level.w + x);
+  const taken = occupiedCells(level, placed, f);
   const coated = new Set<string>();
   for (const p of placed) {
-    if (p.ride) continue;
-    if (p.def.mount !== 'face') {
-      for (const [x, y] of footprintCells(p)) taken.add(y * level.w + x);
-      continue;
-    }
+    if (p.ride || p.def.mount !== 'face') continue;
     const a = mountAngle(p.def, p.rot);
     for (const [x, y] of footprintCells(p)) coated.add(`${x},${y},${Math.round(a / (Math.PI / 2)) & 3}`);
   }
@@ -508,9 +525,9 @@ export function mountCells(level: Level, placed: readonly PlacedProp[], def: Pro
  * rotation box, so the cells stay where they were whatever got dropped. A
  * spot where nothing mounts returns the def whole, for the refused ghost.
  */
-export function landedDef(level: Level, placed: readonly PlacedProp[], def: PropDef, rot: number, tx: number, ty: number): PropDef {
+export function landedDef(level: Level, placed: readonly PlacedProp[], def: PropDef, rot: number, tx: number, ty: number, f = 0): PropDef {
   if (def.mount !== 'face') return def;
-  const kept = mountCells(level, placed, def, rot, tx, ty);
+  const kept = mountCells(level, placed, def, rot, tx, ty, f);
   if (kept.length === 0 || kept.length === def.footprint.length) return def;
   const keep = new Set(kept.map(([x, y]) => `${x},${y}`));
   const { w, h } = box(def);

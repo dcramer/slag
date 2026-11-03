@@ -200,6 +200,13 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Parts may seal the level: placement is never refused for leaving no way through, and a sealed level needs a bomb.** "the placement restrictions feel buggy in some places?" / "game was refusing letting me place items that clearly had nothing there" / "also parts CAN seal it.. it can be unwinnable and require a bomb"
   2026-11-02 · `in progress` · DESIGN.md → Props, `src/gen/level/winnable.ts`
   Changed: a match kept a plan of at most `MAX_BRIDGES` bridges and refused a placement that left none.
+- **Parts pass through each other: a mover's path or a set piece's swing may cross a placed part, so neither refuses a placement.** "you should be able to let some parts go through each other. your barn one. its ok to allow palcement there, and the items will just move through each other..."
+  2026-11-02 · `in progress` · DESIGN.md → Props, `src/sim/props/transform.ts`
+  Changed: placed parts and set pieces claimed their whole swept path.
+- **Character production pauses once the running jobs finish: not enough Tripo credits for the whole roster.** "we dont have enough credits to finish all art, so lets pause when we get these jobs done"
+  2026-11-02 · `open` · TODO.md → 29
+- **Rendered kinds are the only way they draw: no `?sprites=1` option; a kind without frames stays hand-drawn until produced.** "Make sprites the only way it works now, so no option at all"
+  2026-11-02 · `done` · `src/render/cast/sprites/index.ts`
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
   2026-11-02 · `done` · public/ASSETS.md
 
@@ -212,6 +219,9 @@ Every game design decision, preference and direction the owner has given, groupe
   Changed: every card rolled a fresh random part (`908b1c2`).
 - **After rounds nobody finishes, crates lean toward bombs and building parts.** "handicap the rng on item selection so if conseuctive rounds people cant finish, you add more weight to a bomb or platforms"
   2026-11-02 04:42Z · `done` · DESIGN.md → Props (A match can always be finished)
+- **Parts pass through each other: a mover's path or a set piece's swing doesn't stop a part being placed there, and the mover runs through it.** "you should be able to let some parts go through each other. your barn one. its ok to allow placement there, and the items will just move through each other..."
+  2026-11-02 · `done` · DESIGN.md → Props (Parts pass through each other), `occupiedCells` in `src/sim/props/transform.ts`, `passThrough` in `src/sim/physics.ts`
+  Changed: a part took every tile it would ever be in (a mover's path, a rider's path, a set piece's sweep and headroom), and placing there was refused.
 - **Parts can seal a level; a bomb is the way out. Nothing is refused for leaving no way to the flag, and a sealed level's crate deals a demolition part that clears placed parts.** "also parts CAN seal it.. it can be unwinnable and require a bomb"
   2026-11-02 · `done` · DESIGN.md → Props (A fresh level can always be finished), `generateCrate` in `src/gen/props.ts`
   Changed: a match kept a plan of at most `MAX_BRIDGES` bridges and refused a placement that left none (`3628776`, `fbee7a6`).
@@ -358,6 +368,10 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 15:58Z · `done` · DESIGN.md → Levels (Glacier)
 - **Adding a theme moves no existing seed to another theme.**
   2026-11-02 · git `ced9fff` · `done` · DESIGN.md → Levels, AGENTS.md → Theme
+- **The music must be good, not merely present.** "the music is awful. lets make that no longer true."
+  2026-11-02 · `done` · DESIGN.md → Controls and UI (Music), `src/audio/music/`
+- **Each level's music fits its theme, with variety between levels of the same theme.** "music should fit thematically per level and maybe have some variety idk?"
+  2026-11-02 · `done` · DESIGN.md → Controls and UI (Music), `arrangements` in `src/audio/music/styles.ts`
 - **Glacier and space feel hasn't been played by hand.**
   2026-11-02 · `open` · TODO.md → 22
 
@@ -387,6 +401,9 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 17:48Z · `in progress` (Haunted Wing) · SETPIECES.md
 - **Waves 3–5: concepts for every theme.**
   2026-11-02 · `planned` · SETPIECES.md → 5
+- **A combine harvester with spinning reel blades is a regular farm hazard, not only the Combine Run's: it drives a field on ordinary farm levels, classic ones included, and revs its reel before it pulls away.** "a combine with blades is a good farm prop as it adds a cool hazard"
+  2026-11-02 · `in progress` · SETPIECES.md → What Wave 3 (farm) landed, `src/gen/setpieces/farm.ts`
+  Changed: the bladed combine only drove the Combine Run, a wide-only landmark.
 - **Triggers between pieces and changes between rounds are out of scope for now.**
   2026-11-02 · `open` · DESIGN.md → Stage concepts
 
@@ -449,6 +466,9 @@ Every game design decision, preference and direction the owner has given, groupe
 
 ## UI, menus and copy
 
+- **The menus have music too, from the same audio as the game.** "we still have no music on like the title screen and stuff which is a little odd"
+  2026-11-02 · `done` · DESIGN.md → Controls and UI (Music), `src/audio/page.ts`
+
 - **The UI is a molten foundry that doubles as a toy box: cast-iron plates, hazard tape, molten metal.**
   2026-11-02 · git `9af0a03` · `done` · ART.md → Identity
 - **The main menu is the quality bar, full window height included; everything else rises to it.** "i love the way the home screen looks btw, and the fact that its full height/etc. so hoping we can make the game just as good"
@@ -480,6 +500,12 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · git `cf6c496`, `0464596` · `done` · `src/codex/`
 - **The codex talks about maps too: every theme, its landmarks and its own hazards, pictured by the game's renderer.** "the codex needs to talk about maps"
   2026-11-02 · `done` · DESIGN.md → Discovery, `src/codex/maps.ts`, TODO.md → 28
+- **The main menu ends with About, after Settings: who made it, its inspiration, credits, the license and a link to the source on GitHub.** "Need an About thing after settings, which includes license, inspiration, github link etc"
+  2026-11-02 · `done` · `src/ui/screens/about.ts`, `/about`
+- **About credits Ultimate Chicken Horse by name for the core concept, the one place a real game is named; every credit says what it is (display font, name filter), not just its name. No flavor prose on the page.** "those credits are weak, credit ultimate chicken horse for core concept" / "idk what lilita one etc even are..." / "i dont want ai slop for the description there either"
+  2026-11-02 · `done` · DESIGN.md → Parody, `src/ui/screens/markup.ts`
+- **About says first that the game is entirely AI-generated: David Cramer directed; Claude (Anthropic) wrote the code, art and sound; Tripo made the character models.** "make sure its clear this was entirely AI generated"
+  2026-11-02 · `done` · `src/ui/screens/markup.ts`
 - **The game has a favicon, app icons, Open Graph and oEmbed previews.** "Also need a favicon, oembed metadata and image, and apple icon etc"
   2026-11-02 07:06Z · `done`; checking them on a deploy is `open` · `pnpm brand`, TODO.md → 23
 

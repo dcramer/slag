@@ -2,7 +2,7 @@ import { css, type HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { type Level, T_ONEWAY, T_SOLID, tileAt } from '../../../sim/level';
-import { geyserColumn, geyserCycle, type Module, type ModuleOf, rotorAngles, type RotorArm, swingHeads, teslaCycle } from '../../../sim/props';
+import { driveAt, geyserColumn, geyserCycle, type Module, type ModuleOf, rotorAngles, type RotorArm, swingHeads, teslaCycle } from '../../../sim/props';
 import { inkFor, line, type P } from '../../ink';
 import { ball, bar, barLine, boxPts, dot, glint, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import { bulb, circle, glowDot, light, type RC, zap } from '../../kit';
@@ -581,21 +581,61 @@ const PAINTS: HSL[] = [
 const RUBBER: HSL = { h: 220, s: 6, l: 30 };
 const HUBCAP: HSL = { h: 44, s: 52, l: 50 };
 
-/** The combine over its body's cells: chassis, cab, grain tank, wheels and the header out front to the reel. */
+/**
+ * The combine over its body's cells: chassis, cab, grain tank, wheels and the header out front to the reel.
+ * Drawn facing left and mirrored about its middle when the reel is on its right. When its drive winds up
+ * for a pull-away (the tell), the machine shudders and the stack coughs smoke; the reel's own speed-up is
+ * the sim's, drawn by `combineReel`.
+ */
 function combine(rc: RC, m: Body, d: DrawCtx) {
   const s = rc.s;
   const xs = m.cells.map(([x]) => x * TILE + d.off[0]);
   const ys = m.cells.map(([, y]) => y * TILE + d.off[1]);
   const x0 = Math.min(...xs);
   const x1 = Math.max(...xs) + TILE;
-  const y0 = Math.min(...ys);
   const y1 = Math.max(...ys) + TILE;
+  const reel = d.r.mods.find((x): x is Swinger => x.type === 'swinger');
+  const face = reel && reel.hub[0] + d.off[0] > (x0 + x1) / 2 ? 1 : -1;
+  const drive = reel?.drive ? driveAt(reel.drive, rc.frame, d.r.phase) : null;
+  // The rev: a shudder that grows as it winds up, and a steady rumble while it drives.
+  const rev = drive ? (drive.moving ? 0.25 : drive.rev) : 0;
+  const shake = rev > 0 ? Math.sin(rc.frame * 2.1) * rev * 0.9 : 0;
+  combineExhaust(rc, face < 0 ? x1 - TILE * 2.2 : x0 + TILE * 2.2, Math.min(...ys) - 7 + shake, drive);
+  s.save();
+  if (face > 0) {
+    s.translate(x0 + x1, 0);
+    s.scale(-1, 1);
+  }
+  s.translate(0, shake);
+  combineBody(rc, x0, x1, Math.min(...ys), y1, reel, d, face);
+  s.restore();
+}
+
+/** Smoke from the stack: a puff now and then at idle, a thick stream as it revs, steady while it drives. On the backdrop, like all smoke. */
+function combineExhaust(rc: RC, x: number, y: number, drive: ReturnType<typeof driveAt> | null) {
+  if (!drive) return;
+  const g = rc.bg;
+  const heavy = drive.moving ? 0.5 : drive.rev;
+  const n = 2 + Math.round(heavy * 4);
+  for (let i = 0; i < n; i++) {
+    // Each puff rises and spreads over its life; a revving engine puffs faster and darker.
+    const life = 40 - heavy * 16;
+    const u = ((rc.frame + i * (life / n)) % life) / life;
+    const r = 1.6 + u * (4 + heavy * 3);
+    g.fillStyle = css({ h: 30, s: 6, l: 58 - heavy * 22 }, 0, (1 - u) * (0.25 + heavy * 0.45));
+    circle(g, x + Math.sin(u * 5 + i) * 1.5 + u * 3, y - u * (16 + heavy * 10), r);
+  }
+}
+
+/** The combine itself, facing left in whatever frame it's drawn in. */
+function combineBody(rc: RC, x0: number, x1: number, y0: number, y1: number, reel: Swinger | undefined, d: DrawCtx, face: number) {
+  const s = rc.s;
   const paint = PAINTS[Math.floor(d.style.woodHue) % PAINTS.length];
   const deck = y1 - 2 * TILE;
-  const reel = d.r.mods.find((x): x is Swinger => x.type === 'swinger');
   // The header: arms out to the reel and the cutter bar under it.
   if (reel) {
-    const rx = reel.hub[0] + d.off[0];
+    // The hub as it lands in this frame: mirrored with the body when it faces right.
+    const rx = face > 0 ? x0 + x1 - (reel.hub[0] + d.off[0]) : reel.hub[0] + d.off[0];
     const ry = reel.hub[1] + d.off[1];
     pole(s, x0 + 4, deck + 6, rx, ry, 2.2, paint, 1);
     const bar = boxPts(rx - reel.arm - 3, y1 - 6, x0 + 6 - (rx - reel.arm - 3), 4, 0.6, 2);
@@ -637,7 +677,8 @@ function combine(rc: RC, m: Body, d: DrawCtx) {
   ] as const) {
     ball(s, wx, y1 - r + 0.5, r, RUBBER, wx | 0);
     ball(s, wx, y1 - r + 0.5, r * 0.45, HUBCAP, (wx | 0) + 1);
-    const a = (d.off[0] / r) % (Math.PI * 2);
+    // Rolling the way it drives, in whichever frame it's drawn.
+    const a = ((-face * d.off[0]) / r) % (Math.PI * 2);
     for (let i = 0; i < 4; i++)
       dot(s, wx + Math.cos(a + (i * Math.PI) / 2) * r * 0.25, y1 - r + 0.5 + Math.sin(a + (i * Math.PI) / 2) * r * 0.25, 0.6, i, undefined, inkFor(HUBCAP));
   }

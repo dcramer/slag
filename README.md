@@ -75,3 +75,7 @@ src/
 ```
 
 The sim is a pure function of `(seed, per-frame inputs)` and has no DOM access. Tests play two headless matches and assert they come out identical. Online play rests on that: peers send only inputs over WebRTC (`docs/NETCODE.md`).
+
+## License
+
+Apache License 2.0: see [LICENSE](LICENSE). Third-party assets and data keep their own licenses, listed in [public/ASSETS.md](public/ASSETS.md).

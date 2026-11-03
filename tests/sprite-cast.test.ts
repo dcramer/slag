@@ -253,7 +253,7 @@ describe('rendered kinds: curated variety (docs/CHARACTERS.md → Variety)', () 
    * Kinds made before the variety layers were standard. Each takes its layers in a pass of its own and
    * leaves this list; a new kind is born with them.
    */
-  const BEFORE_VARIETY = new Set(['chomper', 'puffball', 'zapmouse', 'elf']);
+  const BEFORE_VARIETY = new Set<string>();
   const VARIED = SETS.filter((s) => !BEFORE_VARIETY.has(s.kind));
 
   it('covers the kinds that have their layers', () => expect(VARIED.length).toBeGreaterThanOrEqual(2));

@@ -6,7 +6,7 @@ import { cycleFrames } from '../gen/setpieces/place';
 import { SET_PIECES } from '../gen/setpieces';
 import { ownPieces } from '../gen/stage';
 import { RUN_COUNTDOWN, TILE, VIEW_H, VIEW_W } from '../sim/constants';
-import type { Level, TileRect } from '../sim/level';
+import type { Level, SizeClass, TileRect } from '../sim/level';
 import { buildSolids, type Contrib, footprintCells, motionOffset, type PropCtx, type Resolved, traceRays } from '../sim/props';
 import { RunWorld } from '../sim/run';
 import type { ThemeId } from '../themes';
@@ -54,7 +54,7 @@ const MAX_ZOOM = 2;
 /** Shots further than this from the piece (tiles) don't stretch its picture. */
 const SHOT_REACH = 12;
 
-const plain = (seed: number, theme: ThemeId): Level => generateLevel(seed, theme, { ...CLEAR, concept: 'plain', size: 'classic' });
+const plain = (seed: number, theme: ThemeId, size: SizeClass = 'classic'): Level => generateLevel(seed, theme, { ...CLEAR, concept: 'plain', size });
 
 /** The picture for a job, or null if its landmark never stands up or its hazard never places on the seeds tried. */
 export function planShot(job: MapJob): MapShot | null {
@@ -74,18 +74,22 @@ export function planShot(job: MapJob): MapShot | null {
     return null;
   }
   // The first placement clear of the level's edges, where the picture has room round it; else the first at all.
-  let first: Level | null = null;
-  for (let i = 0; i < SHOT_SEEDS.length; i++) {
-    const terrain: Level = { ...plain(SHOT_SEEDS[i], job.theme), setPieces: [] };
-    for (let k = 0; k < REROLLS; k++) {
-      const got = SET_PIECES[job.theme](new Rng(k * 7919 + i), terrain, { count: 1, family: [job.id] });
-      if (!got.length) continue;
-      const level = { ...terrain, setPieces: got };
-      first ??= level;
-      if (inside(level)) return hazardShot(level);
+  // On classic levels, or on wide ones for a hazard that needs more flat ground than they have (a combine's field).
+  for (const size of ['classic', 'wide'] as const) {
+    let first: Level | null = null;
+    for (let i = 0; i < SHOT_SEEDS.length; i++) {
+      const terrain: Level = { ...plain(SHOT_SEEDS[i], job.theme, size), setPieces: [] };
+      for (let k = 0; k < REROLLS; k++) {
+        const got = SET_PIECES[job.theme](new Rng(k * 7919 + i), terrain, { count: 1, family: [job.id] });
+        if (!got.length) continue;
+        const level = { ...terrain, setPieces: got };
+        first ??= level;
+        if (inside(level)) return hazardShot(level);
+      }
     }
+    if (first) return hazardShot(first);
   }
-  return first && hazardShot(first);
+  return null;
 }
 
 /** Tiles a hazard's piece keeps from the level's sides to be pictured where it stands, with room round it. */

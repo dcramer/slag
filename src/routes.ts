@@ -16,12 +16,14 @@ export type Route =
   | { screen: 'lobbies' }
   | { screen: 'lobby'; room: string; watch?: boolean }
   | { screen: 'codex' }
+  | { screen: 'about' }
   | { screen: 'missing'; path: string };
 export type ScreenName = Route['screen'];
 
 export const HOME: Route = { screen: 'home' };
 export const CODEX: Route = { screen: 'codex' };
 export const LOBBIES: Route = { screen: 'lobbies' };
+export const ABOUT: Route = { screen: 'about' };
 export const lobby = (room: string, opts: { watch?: boolean } = {}): Route => (opts.watch ? { screen: 'lobby', room, watch: true } : { screen: 'lobby', room });
 
 /** The screen a path shows. Lobby codes are case-insensitive; anything unknown is the 404 screen. */
@@ -29,6 +31,7 @@ export function parseRoute(path: string): Route {
   if (path === '/' || path === '') return HOME;
   if (path === '/codex' || path === '/codex/') return CODEX;
   if (path === '/lobbies' || path === '/lobbies/') return LOBBIES;
+  if (path === '/about' || path === '/about/') return ABOUT;
   const room = roomFromPath(path);
   return room ? lobby(room) : { screen: 'missing', path };
 }
@@ -42,6 +45,8 @@ export function routePath(r: Route): string {
       return '/codex';
     case 'lobbies':
       return '/lobbies';
+    case 'about':
+      return '/about';
     case 'lobby':
       return `/r/${r.room}`;
     case 'missing':
@@ -61,6 +66,7 @@ export function routeTitle(r: Route): string {
   if (r.screen === 'lobby') return `${NAME} · Lobby ${r.room}`;
   if (r.screen === 'codex') return `${NAME} · Codex`;
   if (r.screen === 'lobbies') return `${NAME} · Lobbies`;
+  if (r.screen === 'about') return `${NAME} · About`;
   return NAME;
 }
 
@@ -89,6 +95,7 @@ export const SCREEN_CHROME: Record<ScreenName, Chrome> = {
   home: PAGE_CHROME,
   lobbies: PAGE_CHROME,
   codex: PAGE_CHROME,
+  about: PAGE_CHROME,
   missing: PAGE_CHROME,
   lobby: GAME_CHROME,
 };

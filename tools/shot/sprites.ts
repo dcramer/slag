@@ -36,7 +36,7 @@ async function settle() {
 
 /** Eight runners on open floor, 25 px apart (the cast scenario's staging); `kinds` dresses them. */
 async function stage(sd: string, kinds: string[]): Promise<{ x: number; y: number; devs: string[] } | null> {
-  await open(`seed=${sd}&players=8&race=,&propseed=1&theme=${THEME}&lettering=0&sprites=1`);
+  await open(`seed=${sd}&players=8&race=,&propseed=1&theme=${THEME}&lettering=0`);
   await page.evaluate((ks) => ks.forEach((k, i) => (window as any).slagDebug.sprites.dress(i, k)), kinds);
   await step(150);
   // A string, not a function: the bundler wraps named helpers in a __name the page doesn't have.
@@ -175,7 +175,7 @@ async function filmstrip(): Promise<string> {
 }
 
 async function lobby(): Promise<string> {
-  await open(`seed=${seed}&sprites=1`);
+  await open(`seed=${seed}`);
   await page.evaluate((kind) => {
     const d = (window as any).slagDebug;
     // Six of the kind: six rolls of its accessories on the lobby cards.
@@ -241,7 +241,7 @@ async function bench(): Promise<string> {
 
 /** The blind read: every kind's play-scale silhouette, shuffled and numbered (`castBlind`). */
 async function blind(): Promise<string> {
-  await open(`seed=${seed}&sprites=1`);
+  await open(`seed=${seed}`);
   await settle();
   const box = await page.evaluate(() => {
     const d = (window as any).slagDebug;
@@ -267,7 +267,7 @@ async function blind(): Promise<string> {
  * cheer and gait each plays, its palette and wear, at 4.4× and at play scale, into `sprites-<kind>-variety.png`.
  */
 async function varietySheet(kind: string): Promise<string> {
-  await open(`seed=${seed}&sprites=1`);
+  await open(`seed=${seed}`);
   await page.setViewportSize({ width: 1880, height: 860 });
   await page.evaluate(
     (k) =>

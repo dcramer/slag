@@ -2,6 +2,7 @@
   "name": "slag",
   "version": "0.1.0",
   "private": true,
+  "license": "Apache-2.0",
   "type": "module",
   "description": "Browser-based competitive party platformer with procedurally generated levels, props, and characters.",
   "scripts": {
@@ -23,7 +24,8 @@
     "level": "tsx tools/level.ts",
     "online-test": "tsx tools/online-test.ts",
     "perf": "tsx tools/perf.ts",
-    "land": "tsx tools/land.ts"
+    "land": "tsx tools/land.ts",
+    "music": "tsx tools/music.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

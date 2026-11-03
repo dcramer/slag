@@ -80,18 +80,41 @@ export interface Clip {
 }
 
 /**
+ * An aim: where a bone points (from its joint to the next), in degrees in the figure's space, the same on
+ * either side of the figure (page/keys.ts), whatever the base pose and the bones above it do: `raise` up
+ * from straight down (90 level, 180 overhead), in the plane `out` round from straight ahead toward its own
+ * side (0 in front, 90 out to its side, 180 behind, negative across the body), then `twist` about its own
+ * length, turning its front out.
+ */
+export interface Limb {
+  raise?: number;
+  out?: number;
+  twist?: number;
+}
+
+/** A bone's entry in a key: a turn, `[x, y, z]` degrees about the figure's own axes, or an aim. */
+export type Turn = [number, number, number] | Limb;
+
+/**
  * A pose keyed by hand from the pose sheet: a base (a moment of a model animation, `clip@fraction`, or
- * `rest`), with bones turned about the figure's own axes (degrees: x to its left, so a turn about x swings
- * a limb forward or back; y up; z forward), and the whole figure rolled about the screen (a spin ball).
+ * `rest`), with bones turned about the figure's own axes (page/keys.ts: x to its left, y up, z forward;
+ * a negative turn about x swings a hanging limb forward), and the whole figure rolled about the screen
+ * (a spin ball).
  */
 export interface Key {
   from: string;
-  bones?: Record<string, [number, number, number]>;
+  bones?: Record<string, Turn>;
   roll?: number;
   /** Degrees turned further toward the camera for this pose. */
   yaw?: number;
   /** Bones stretched for this pose (an arm reaching past the head), on top of the caricature. */
   scale?: Record<string, number>;
+  /**
+   * The key to pose instead facing left, for a rig whose sides differ, where facing left can't be this
+   * pose's mirror image (the plumber's left hand joint sits mid-forearm, so his right arm raises the fist
+   * on both facings).
+   */
+  l?: string;
 }
 
 /**
@@ -117,8 +140,8 @@ export interface Face {
   r: number;
   iris: string;
   mouth?: [number, number];
-  /** `tall`: tall black ovals with a shine at the top and no whites (the puffball's), in place of cartoon eyes. */
-  eye?: 'tall';
+  /** `tall`: tall black ovals with a shine at the top and no whites (the puffball's); `dot`: small round black eyes with a shine (the electric mouse's). Either replaces the cartoon eyes. */
+  eye?: 'tall' | 'dot';
   /**
    * Where the eyes go when the model's own are too small to find: from the biggest part of `role` (the
    * nose), the near eye's offset in world px on the rest pose facing right. The far eye is its mirror
@@ -164,9 +187,14 @@ export interface Prop {
   /** Degrees about the figure's x, y, z. */
   rot: [number, number, number];
   parts: {
-    shape: 'cylinder' | 'cup' | 'sphere' | 'box';
+    shape: 'cylinder' | 'cup' | 'sphere' | 'box' | 'prism';
     role: string;
     size: [number, number, number];
+    /**
+     * A `prism`'s outline in the figure's side plane (z forward, y up, world px), extruded `size[0]` across
+     * x: a flat cut shape whose corners must stay sharp (the electric mouse's tin bolt).
+     */
+    points?: [number, number][];
     at?: [number, number, number];
     rot?: [number, number, number];
     /**

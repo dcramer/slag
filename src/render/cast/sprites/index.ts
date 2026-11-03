@@ -6,29 +6,39 @@ import { gaitAt, pick, roll, type Variety, varietyOf } from './play';
 import type { SpriteSet } from './types';
 
 /**
- * Kinds rendered from 3D models (tools/art3d, docs/CHARACTERS.md → Rendered kinds), drawn in place of
- * their hand-drawn body only when asked: `?sprites=1` (src/debug.ts) or `slagDebug.sprites.use(true)`.
- * Each kind's frames are a chunk of their own, fetched on first use, so the game without the flag loads
- * and draws exactly what it did.
+ * Kinds rendered from 3D models (tools/art3d, docs/CHARACTERS.md → Rendered kinds): a kind with frames is
+ * always drawn from them, and one without keeps its hand-drawn body. Each kind's frames are a chunk of
+ * their own, fetched the first time a character of that kind is drawn, which draws hand-drawn for the
+ * few frames until it arrives. `slagDebug.sprites.use(false)` draws the hand-drawn bodies instead, for
+ * the comparison sheets in `pnpm shot sprites` only.
  */
 export const LOADERS: Partial<Record<Kind, () => Promise<{ sprites: SpriteSet }>>> = {
   plumber: () => import('./plumber/frames'),
   hedgehog: () => import('./hedgehog/frames'),
   chomper: () => import('./chomper/frames'),
   puffball: () => import('./puffball/frames'),
+  zapmouse: () => import('./zapmouse/frames'),
+  elf: () => import('./elf/frames'),
 };
 
 const loaded: Partial<Record<Kind, SpriteSet>> = {};
-let on = false;
+const asked = new Set<Kind>();
+let on = true;
 
+/** Fetches a kind's frames once; until they arrive, its characters draw hand-drawn. */
+function request(kind: Kind) {
+  const load = LOADERS[kind];
+  if (!load || asked.has(kind)) return;
+  asked.add(kind);
+  void load().then((m) => {
+    loaded[kind] = m.sprites;
+  });
+}
+
+/** Debug only (comparison sheets): false draws every kind hand-drawn. Loads every kind's frames when on. */
 export function useSprites(v: boolean) {
   on = v;
-  if (v)
-    for (const [kind, load] of Object.entries(LOADERS) as [Kind, () => Promise<{ sprites: SpriteSet }>][])
-      if (!loaded[kind])
-        void load().then((m) => {
-          loaded[kind] = m.sprites;
-        });
+  if (v) for (const kind of SPRITE_KINDS) request(kind);
 }
 
 export const spritesOn = () => on;
@@ -36,9 +46,12 @@ export const spritesOn = () => on;
 /** The kinds that have rendered frames. */
 export const SPRITE_KINDS = Object.keys(LOADERS) as Kind[];
 
-/** This character's rendered frames, when the flag is on and its kind's have loaded. */
+/** This character's rendered frames, once its kind's have loaded (asking for them the first time). */
 export function spritesOf(c: CharacterDef): SpriteSet | null {
-  return on ? (loaded[c.kind] ?? null) : null;
+  if (!on) return null;
+  const set = loaded[c.kind];
+  if (!set) request(c.kind);
+  return set ?? null;
 }
 
 interface Dressed {
