@@ -202,6 +202,7 @@ A level is a place with one landmark you'd name it after: the Great Wheel, the H
 - Inputs are shown as **button prompts** (keycap, gamepad and mouse glyphs) in a footer, the way console games do it, and are never spelled out in prose.
 - Settings are tabs, one screen each with no scrolling at 720p (on phones, a full-screen sheet with big rows that scrolls): Audio, Video, Keyboard, Mouse, Gamepad (Touch replaces the last three under touch). The same menu opens on the home screen and in-game, and works with mouse, touch, keyboard (Q/E tabs, arrows) and gamepad (LB/RB tabs, Start opens, B closes). It reopens on the last tab of that page load. Reset Controls shows on the Keyboard tab only, since nothing else it resets is on screen.
 - Empty lobby slots show **OPEN**.
+- **Music is a tune, not a loop.** Each level's song is 32 bars in its theme's style, with the melody on top of the mix. The menus, lobby list, codex and Settings play one fixed title tune; a lobby crossfades to its level's song, and leaving brings the title tune back.
 
 ## Online
 - The URL `/r/<code>` identifies a lobby; the homepage is a normal main menu. There's no matchmaking: you join through a shared link, by typing its code under Join a Lobby, or from the lobby list.

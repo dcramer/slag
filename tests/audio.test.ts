@@ -3,8 +3,8 @@ import { type CueEnv, cuesForEvent, finishNotes, fireName, popName, slotPitch } 
 import { softClipCurve, Throttle } from '../src/audio/mixer';
 import { composeSong } from '../src/audio/music/compose';
 import { INSTRUMENTS } from '../src/audio/music/instruments';
-import { STYLES } from '../src/audio/music/styles';
-import { degreeToMidi, inScale } from '../src/audio/music/theory';
+import { type SongId, songStyle } from '../src/audio/music/styles';
+import { chordDegrees, degreeToMidi, inScale, stableTriad } from '../src/audio/music/theory';
 import { SFX } from '../src/audio/sfx';
 import { panFor, placeOneShot } from '../src/audio/spatial';
 import { fillNoise } from '../src/audio/synth';
@@ -49,14 +49,14 @@ describe('music composer', () => {
       expect(sigs.size, th).toBeGreaterThan(3);
     }
   });
-  it('writes in-key, in-range, well-formed parts for every theme', () => {
-    for (const th of THEME_IDS) {
+  it('writes in-key, in-range, well-formed parts for every theme and the title tune', () => {
+    for (const th of [...THEME_IDS, 'title'] as SongId[]) {
       for (let seed = 0; seed < 20; seed++) {
         const s = composeSong(seed, th);
         const total = s.bars * s.stepsPerBar;
-        expect(s.stepsPerBar).toBe(STYLES[th].stepsPerBeat * 4);
-        expect(s.bpm).toBeGreaterThanOrEqual(STYLES[th].bpm[0]);
-        expect(s.bpm).toBeLessThanOrEqual(STYLES[th].bpm[1]);
+        expect(s.stepsPerBar).toBe(songStyle(th).stepsPerBeat * 4);
+        expect(s.bpm).toBeGreaterThanOrEqual(songStyle(th).bpm[0]);
+        expect(s.bpm).toBeLessThanOrEqual(songStyle(th).bpm[1]);
         for (const tr of s.tracks) {
           expect(INSTRUMENTS[tr.inst], tr.inst).toBeTypeOf('function');
           expect(tr.notes.length, `${th} ${tr.name}`).toBeGreaterThan(0);
@@ -78,6 +78,30 @@ describe('music composer', () => {
         const pc = (((last.midi - s.root) % 12) + 12) % 12;
         expect([0, degreeToMidi(0, s.mode, 2) % 12, 7]).toContain(pc);
       }
+    }
+  });
+  it('builds every bar on a major or minor triad, and puts a chord tone on every beat of the melody', () => {
+    for (const th of [...THEME_IDS, 'title'] as SongId[]) {
+      for (let seed = 0; seed < 6; seed++) {
+        const s = composeSong(seed, th);
+        for (const d of s.chords) expect(stableTriad(s.mode, d), `${th} ${seed} chord ${d}`).toBe(true);
+        for (const n of s.tracks.find((t) => t.layer === 'lead')!.notes) {
+          if (n.step % s.stepsPerBeat) continue;
+          const chord = s.chords[Math.floor(n.step / s.stepsPerBar)];
+          const pcs = chordDegrees(chord, 3).map((d) => degreeToMidi(s.root, s.mode, d) % 12);
+          expect(pcs, `${th} ${seed} step ${n.step}`).toContain(n.midi % 12);
+        }
+      }
+    }
+  });
+  it('returns to its opening tune after the bridge', () => {
+    for (const th of THEME_IDS) {
+      const s = composeSong(5, th);
+      const lead = s.tracks.find((t) => t.layer === 'lead')!.notes;
+      const section = s.stepsPerBar * 8;
+      const a = lead.filter((n) => n.step < section);
+      const last = lead.filter((n) => n.step >= section * 3).map((n) => ({ ...n, step: n.step - section * 3 }));
+      expect(last, th).toEqual(a);
     }
   });
   it('harbor is in compound time (12 steps per bar)', () => {

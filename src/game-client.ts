@@ -1,5 +1,5 @@
 import 'client-only';
-import { createAudio } from './audio';
+import { pageAudio } from './audio/page';
 import { parseSeed } from './core/rng';
 import { installDebug } from './debug';
 import { type GenInfo, lastGenInfo } from './gen/level';
@@ -109,7 +109,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     },
   };
   renderer.hud.hidden = params.get('ui') === '0';
-  const audio = createAudio();
+  const audio = pageAudio();
   audio.isLocal = (d) => net.isLocal(d);
   const inputMode = new InputModeTracker(window);
   watchTelemetry(room, match, conn, renderer);
@@ -559,7 +559,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     inputMode.dispose();
     touchOverlay.dispose();
     renderer.dispose();
-    audio.dispose?.();
+    audio.menu?.();
     logo.remove();
     container.remove();
     setTelemetryContext(null);

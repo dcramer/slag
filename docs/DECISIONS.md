@@ -368,6 +368,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 15:58Z · `done` · DESIGN.md → Levels (Glacier)
 - **Adding a theme moves no existing seed to another theme.**
   2026-11-02 · git `ced9fff` · `done` · DESIGN.md → Levels, AGENTS.md → Theme
+- **The music must be good, not merely present.** "the music is awful. lets make that no longer true."
+  2026-11-02 · `done` · DESIGN.md → Controls and UI (Music), `src/audio/music/`
 - **Glacier and space feel hasn't been played by hand.**
   2026-11-02 · `open` · TODO.md → 22
 
@@ -458,6 +460,9 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `open` · TODO.md → 8
 
 ## UI, menus and copy
+
+- **The menus have music too, from the same audio as the game.** "we still have no music on like the title screen and stuff which is a little odd"
+  2026-11-02 · `done` · DESIGN.md → Controls and UI (Music), `src/audio/page.ts`
 
 - **The UI is a molten foundry that doubles as a toy box: cast-iron plates, hazard tape, molten metal.**
   2026-11-02 · git `9af0a03` · `done` · ART.md → Identity
