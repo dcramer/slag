@@ -35,7 +35,7 @@ Each field of an entry has one place it goes:
 | Palette alts                | `alts` on the region's role (and on every role that changes with it, as many each), on `vary` 6, the default                                                                           |
 | Idles and cheers            | `idle2` and `cheer2` clips: keys from the pose sheet, or a cut of another stretch of a model animation                                                                                 |
 | Gait range                  | `gait: { bounce, lean }`, each a `[low, high]` range under `GAIT_MAX`                                                                                                                  |
-| Wear                        | a `wear` slot on `vary` 11: three props, the first empty, then scuffed and scorched; their marks are parts stuck on the skin (`face`), each in a role `on` the surface with a `tone`     |
+| Wear                        | a `wear` slot on `vary` 11: three props, the first empty, then scuffed and scorched; their marks are parts stuck on the skin (`face`), each in a role `on` the surface with a `tone`   |
 | Rig                         | `rig --type humanoid` or `--type other`; **keyed** means the poses are keyed here                                                                                                      |
 | Concept prompt              | `BRIEFS[kind]`; `style.ts` adds the house style                                                                                                                                        |
 
