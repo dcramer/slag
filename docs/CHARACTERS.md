@@ -388,7 +388,8 @@ What came out of it:
 - **The nod:** the translucent green dome (the only see-through body in the cast); the three red nuclei (they make it this parasite, not a jellyfish); the four fangs hooked underneath (the menace); floating (it never walks).
 - **Our twist:** a lime jelly dessert that got ideas. The dome wobbles like set gelatine, the nuclei are three glacé cherries, the fangs are sugared almonds, and a paper doily is stuck to its underside.
 - **Swaps:** a cocktail umbrella stuck in the top; a sprig of mint; a spoon-dent; a wafer fan.
-- **Rig:** **keyed**, no limbs: the bob, the wobble and the chomp. Highest risk: the translucent dome needs its own glass pass through the tracer.
+- **Palette alts:** the sugared-almond fangs in ivory `#efe6d2`, pink `#f2c6cc` or pale blue `#c8dcee`.
+- **Rig:** drawn flat (2026-11-03), no face and no glass: the dome a flat colour (the player's), turned out of a fluted mould, worn with a melting drip down one side, a spoonful scooped out of its top, a snapped fang and a torn doily. The cherries are drawn in their shade `#9c3530`: in the roster's red they vanish into a red or pink dome, and with the mint on top a red jelly reads as a strawberry. The doily isn't drawn: between the fangs it merged them into one pale skirt, and held between clapped fangs it read as a grin. The chomp is fangs open and shut on the walk and run; the swap is the sprig of mint on its crown.
 - **Concept prompt:** A floating translucent lime-green jelly dome that wobbles like set gelatine, with three glacé cherries suspended inside it like nuclei, a pale rim, and four ivory sugared-almond fangs hooked underneath; a paper doily stuck to its underside. It hovers above the ground and never touches it.
 
 ### Production order
