@@ -1,6 +1,6 @@
 import { type HSL, shift } from '../../../core/color';
 import type { CharacterDef, Kind } from '../../../gen/character';
-import { inkOf, lookOf, moodOf, type RunnerPose, ratio } from '../../ink-figure';
+import { type Figure, inkOf, lookOf, moodOf, type RunnerPose, ratio } from '../../ink-figure';
 import { drawFrame, hexHsl, type Paint, paintOf } from './draw';
 import { gaitAt, pick, roll, type Variety, varietyOf } from './play';
 import type { SpriteSet } from './types';
@@ -188,9 +188,10 @@ function bitmap(key: string, px: number, paint: (g: CanvasRenderingContext2D) =>
 /**
  * Draws the body with its feet at the origin of the current transform (the caller has applied the
  * runner's position, scale and squash). `px` is screen px per world px before the squash: the scale the
- * frame's bitmap is drawn at. False when the kind has no frame for the pose.
+ * frame's bitmap is drawn at. `figures`, if given, gets the bitmap as drawn. False when the kind has no
+ * frame for the pose.
  */
-export function drawSprite(s: CanvasRenderingContext2D, set: SpriteSet, c: CharacterDef, p: RunnerPose, x: number, px?: number): boolean {
+export function drawSprite(s: CanvasRenderingContext2D, set: SpriteSet, c: CharacterDef, p: RunnerPose, x: number, px?: number, figures?: Figure[]): boolean {
   const d = dress(set, c);
   const got = pick(set, p, x, d.v);
   if (!got) return false;
@@ -198,7 +199,7 @@ export function drawSprite(s: CanvasRenderingContext2D, set: SpriteSet, c: Chara
   const face = set.face ? { kit: set.face, mood, facing: got.facing } : undefined;
   const t = p.t;
   const seed = c.seed & 0xffff;
-  const draw = (g: CanvasRenderingContext2D) => drawFrame(g, got.frame, d.paints, d.body, d.shadow, d.k, seed, t, face, d.v.pick);
+  const draw = (g: CanvasRenderingContext2D) => drawFrame(g, got.frame, d.paints, d.body, d.shadow, d.k, seed, t, face, d.v.pick, set.flat);
   // The character's own gait: a lift on each step and a lean, a skew about the feet the way it faces.
   const gait = gaitAt(set, d.v, got.clip, x);
   const moved = gait.dy !== 0 || gait.lean !== 0;
@@ -215,6 +216,7 @@ export function drawSprite(s: CanvasRenderingContext2D, set: SpriteSet, c: Chara
     const key = `${idOf(d)}:${idOf(got.frame)}:${boil}:${mood}:${blink ? 1 : 0}:${bucket}`;
     const b = bitmap(key, bucket, draw);
     s.drawImage(b.cv, -b.ax / b.px, -b.ay / b.px, b.cv.width / b.px, b.cv.height / b.px);
+    figures?.push({ cv: b.cv, m: s.getTransform(), x: -b.ax / b.px, y: -b.ay / b.px, w: b.cv.width / b.px, h: b.cv.height / b.px });
   }
   if (moved) s.restore();
   return true;

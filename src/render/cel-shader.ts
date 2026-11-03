@@ -40,6 +40,11 @@ const K = {
   bgBands: 1.1,
   /** Foreground brightness: the world carries the light. */
   fgExposure: 1.14,
+  /**
+   * How a rendered figure dims with the theme's ambient (its power): less than the world (0.6), so a runner
+   * reads in a dark mine with no light band across it, the way its own key light used to make it.
+   */
+  figAmbient: 0.3,
   /** Chroma (max - min channel) above which a foreground color is calmed, and how much of the excess survives. */
   chromaKnee: 0.5,
   chromaSlope: 0.5,
@@ -154,8 +159,11 @@ void main(){
   vec2 warp = (hand.rg - 0.5) * 3.0;
   vec2 fuv = uv + warp * ${f(K.warp)} * uView.x / uRes;
 
-  // Light bands, from the real light map.
-  vec3 L = texture(uLight, uv).rgb * 2.0 * uExposure;
+  // Light bands, from the real light map. Its alpha marks the rendered figures (Renderer.markFigures), and
+  // the upload premultiplied the light by it.
+  vec4 lm = texture(uLight, uv);
+  vec3 L = lm.rgb / max(lm.a, 0.05) * 2.0 * uExposure;
+  float fig = clamp((1.0 - texture(uLight, fuv).a) * 2.0, 0.0, 1.0);
   float ll = max(luma(L), 1e-3);
   float rel = ll / max(uAmbient, 0.05);
   float aa = fwidth(rel) * 0.75 + 0.004;
@@ -185,7 +193,9 @@ void main(){
     float ch = max(alb.r, max(alb.g, alb.b)) - min(alb.r, min(alb.g, alb.b));
     float keep = ch > ${f(K.chromaKnee)} ? (${f(K.chromaKnee)} + (ch - ${f(K.chromaKnee)}) * ${f(K.chromaSlope)}) / ch : 1.0;
     alb = mix(vec3(luma(alb)), alb, keep);
-    c = mix(c, clamp(alb, 0.0, 1.0) * tint * base * band * ${f(K.fgExposure)}, a);
+    // A figure keeps its own flat colours: no light band or light tint across it, and evenly lit.
+    float lit = mix(base * band, pow(uAmbient, ${f(K.figAmbient)}) * 1.05, fig);
+    c = mix(c, clamp(alb, 0.0, 1.0) * mix(tint, vec3(1.0), fig) * lit * ${f(K.fgExposure)}, a);
   }
 
   // Emissives: a soft halo, then hot shapes as opaque color, white only at the very core.

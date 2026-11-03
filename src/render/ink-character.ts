@@ -242,7 +242,7 @@ function drawSpriteRunner(rc: InkTarget, c: CharacterDef, art: KindArt, lk: Look
   const tf = s.getTransform();
   const px = Math.hypot(tf.a, tf.b);
   s.scale(sx, sy);
-  const ok = drawSprite(s, set, c, p, x / sc, px);
+  const ok = drawSprite(s, set, c, p, x / sc, px, rc.figures);
   s.restore();
   return ok;
 }

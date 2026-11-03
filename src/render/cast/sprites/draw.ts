@@ -1,6 +1,6 @@
 import { css, type HSL } from '../../../core/color';
 import { inkFor, type P, sn, stroke } from '../../ink';
-import { contour, path, toned } from '../../ink-figure';
+import { contour, inked, path, toned } from '../../ink-figure';
 import { drawFace, type FaceMood } from './face';
 import type { Ring, SpriteSet, VFrame } from './types';
 
@@ -23,6 +23,11 @@ export interface Paint {
 const PART_THIN = 0.3;
 const PART_THICK = 0.72;
 const SLIVER = 0.5;
+/** A flat kind's pens (lit side, shadow side), world px: the silhouette's, and a part's where two colours meet. */
+const FLAT_SIL = [0.3, 0.6];
+const FLAT_PART = [0.12, 0.32];
+/** An interior line's pen, in world px: lighter than the parts' contours round it. */
+const LINE_W = 0.38;
 /** The whole figure's hard shadow: the silhouette less itself pulled up-left (the hand-drawn body's numbers). */
 const SHADOW_DX = 2.1;
 const SHADOW_DY = 1.9;
@@ -103,15 +108,26 @@ export function drawFrame(
   face?: { kit: NonNullable<SpriteSet['face']>; mood: FaceMood; facing: number },
   /** The option each accessory slot shows (the first, if not given). */
   pick?: readonly number[],
+  /** A kind traced from a flat illustration (`SpriteSet.flat`). */
+  flat = false,
 ) {
   const boil = Math.floor(t * 8) % 3;
-  for (const r of f.sil) contour(s, boiled(r, boil, seed), body.fill, body.ink, k, seed);
+  for (const r of f.sil) {
+    if (flat) inked(s, boiled(r, boil, seed), body.fill, body.ink, FLAT_SIL[0] * k, FLAT_SIL[1] * k);
+    else contour(s, boiled(r, boil, seed), body.fill, body.ink, k, seed);
+  }
   for (const part of f.parts) {
     const [role, r] = part;
     if (part.length === 4 && (pick?.[part[2]] ?? 0) !== part[3]) continue;
     const p = paints[role];
-    toned(s, boiled(r, boil, seed + role), p.fill, p.shade, p.ink, PART_THIN, PART_THICK * k, SLIVER);
+    if (flat) inked(s, boiled(r, boil, seed + role), p.fill, p.ink, FLAT_PART[0], FLAT_PART[1] * k);
+    else toned(s, boiled(r, boil, seed + role), p.fill, p.shade, p.ink, PART_THIN, PART_THICK * k, SLIVER);
   }
+  if (f.lines)
+    f.lines.forEach(([role, r], i) => {
+      s.fillStyle = paints[role].ink;
+      stroke(s, boiled(r, boil, seed + 40 + i), { w: LINE_W * k, seed: seed + 40 + i, taper: [0.3, 0.45], press: 0.3 });
+    });
   for (const r of f.sil) {
     const pts = boiled(r, boil, seed);
     s.save();

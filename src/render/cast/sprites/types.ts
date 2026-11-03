@@ -24,6 +24,12 @@ export interface VFrame {
   head?: readonly number[];
   /** Open pen strokes drawn over the figure (a spin ball's motion marks). */
   marks?: readonly Ring[];
+  /**
+   * The drawing's own interior lines, where one form overlaps another of the same colour (an arm over the
+   * body, the gap between the legs, a mouth): open strokes, each with the role it lies on, inked in that
+   * role's pen. Without them a figure in one colour is one shape.
+   */
+  lines?: readonly (readonly [number, Ring])[];
 }
 
 export interface SpriteClip {
@@ -88,6 +94,11 @@ export interface SpriteSet {
   /** The cast's face kit over the traced eyes: eye size (world px), iris, and the mouth's place from the near eye. */
   face?: { r: number; iris: string; mouth?: readonly [number, number]; eye?: 'tall' | 'dot' };
   gait?: SpriteGait;
+  /**
+   * Traced from a flat illustration rather than a 3D render: its parts are the drawing's own shapes, so
+   * they're filled flat under a light pen, with no ink mass or shade sliver of their own.
+   */
+  flat?: boolean;
   /** By the name `play.ts` reads (`idle`, `run`, …); `idle2`, `cheer2` are a clip's alternates, one picked per character. */
   clips: Readonly<Record<string, SpriteClip>>;
 }

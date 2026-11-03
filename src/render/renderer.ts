@@ -17,6 +17,7 @@ import type { CharacterDef } from '../gen/character';
 import { spritesOf } from './cast/sprites';
 import { Rig } from './character';
 import { drawInkAccessory, drawInkAfterimage, drawInkRunner, partsOf, ropeAnchor, ropeOf } from './ink-character';
+import type { Figure } from './ink-figure';
 import { ForegroundLayer, Lettering, letteringAllowed } from './cel';
 import { Fx, type Part } from './fx';
 import { frameReach, VIEW_FRAME, type ViewFrame, viewFrame } from './frame';
@@ -64,6 +65,8 @@ const PART_COLOR: Record<Exclude<Part, 'shard'>, HSL> = {
 };
 
 const RUNNER_KEY: HSL = { h: 40, s: 30, l: 90 };
+/** How much of the light map's alpha a figure takes away: the cel pass reads `1 - a` over this as how much of a figure a pixel is. */
+const FIGURE_MARK = 0.5;
 
 /** The prop a player is about to place, as it would stand under their cursor. */
 function ghostProp(m: Match, p: Player): Resolved | null {
@@ -274,7 +277,8 @@ export class Renderer {
     const g = this.gctx;
     const lights: Light[] = [];
     const frame = m.run && m.phase === 'run' ? m.run.frame : m.frame;
-    const rc: RC = { s, bg: s, g, lights, t, frame, gust: skyGust(m) };
+    const figures: Figure[] = [];
+    const rc: RC = { s, bg: s, g, lights, t, frame, gust: skyGust(m), figures };
 
     // --- background (screen space, parallax from camera)
     const ox = -frameBox.x0 * sk;
@@ -396,6 +400,7 @@ export class Renderer {
 
     // --- light map
     this.paintLights(level, lights);
+    this.markFigures(figures);
 
     // --- composite
     this.flash *= Math.exp(-dt * 9);
@@ -494,6 +499,26 @@ export class Renderer {
     l.fillStyle = sky;
     l.fillRect(0, 0, this.lightC.width, this.lightC.height);
     l.globalCompositeOperation = 'source-over';
+  }
+
+  /**
+   * The light map's alpha marks the rendered figures, at half: the cel pass leaves its light bands and their
+   * tint off them (cel-shader.ts), so a character's flat colours stay its own under a lamp or its own key
+   * light, while the world round it still bands.
+   */
+  private markFigures(figures: readonly Figure[]) {
+    if (!figures.length) return;
+    const l = this.lctx;
+    const k = this.lightC.width / this.foreground.canvas.width;
+    l.globalCompositeOperation = 'destination-out';
+    l.globalAlpha = FIGURE_MARK;
+    for (const f of figures) {
+      l.setTransform(f.m.a * k, f.m.b * k, f.m.c * k, f.m.d * k, f.m.e * k, f.m.f * k);
+      l.drawImage(f.cv, f.x, f.y, f.w, f.h);
+    }
+    l.globalAlpha = 1;
+    l.globalCompositeOperation = 'source-over';
+    l.setTransform(1, 0, 0, 1, 0, 0);
   }
 
   private drawMarkers(rc: RC, level: Level) {

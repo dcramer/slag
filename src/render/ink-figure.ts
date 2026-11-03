@@ -29,6 +29,18 @@ export interface RunnerPose {
 export interface InkTarget {
   s: CanvasRenderingContext2D;
   g: CanvasRenderingContext2D | null;
+  /** In the world pass: every rendered figure as drawn, so the cel pass can leave its light bands off them (`Figure`). */
+  figures?: Figure[];
+}
+
+/** A figure's bitmap as it was drawn on the foreground layer: the image, the layer's transform, and its box under it. */
+export interface Figure {
+  cv: HTMLCanvasElement;
+  m: DOMMatrix;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
 }
 
 /** Walk and run speeds' midpoint (world px/s): above it the runner pumps its arms and leans in. */

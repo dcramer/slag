@@ -1,5 +1,6 @@
 import { css, type HSL } from '../core/color';
 import type { MetalStyle } from '../gen/props';
+import type { Figure } from './ink-figure';
 
 export interface Light {
   x: number;
@@ -28,6 +29,8 @@ export interface RC {
   frame: number;
   /** How hard the wind shows right now (`gustShown`, -1..1): 0 in still air. */
   gust?: number;
+  /** The rendered figures drawn this frame (`InkTarget.figures`). */
+  figures?: Figure[];
 }
 
 /**
