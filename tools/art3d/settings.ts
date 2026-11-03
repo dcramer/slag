@@ -107,6 +107,8 @@ export interface Face {
   r: number;
   iris: string;
   mouth?: [number, number];
+  /** `tall`: tall black ovals with a shine at the top and no whites (the puffball's), in place of cartoon eyes. */
+  eye?: 'tall';
   /**
    * Where the eyes go when the model's own are too small to find: from the biggest part of `role` (the
    * nose), the near and far eye's offsets in world px, facing right.

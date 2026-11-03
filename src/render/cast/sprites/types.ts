@@ -60,6 +60,6 @@ export interface SpriteSet {
   roles: readonly SpriteRole[];
   slots?: readonly SpriteSlot[];
   /** The cast's face kit over the traced eyes: eye size (world px), iris, and the mouth's place from the near eye. */
-  face?: { r: number; iris: string; mouth?: readonly [number, number] };
+  face?: { r: number; iris: string; mouth?: readonly [number, number]; eye?: 'tall' };
   clips: Readonly<Record<string, SpriteClip>>;
 }

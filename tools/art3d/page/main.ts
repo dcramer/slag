@@ -46,7 +46,7 @@ async function render(url: string, s: Settings, kind: string, only?: string[]): 
     const r = s.roles[n];
     return { color: r.color, ...(r.slot ? { slot: r.slot } : {}), ...(r.alts ? { alts: r.alts, vary: r.vary ?? 0 } : {}) };
   });
-  const face = s.face ? { r: s.face.r, iris: s.face.iris, ...(s.face.mouth ? { mouth: s.face.mouth } : {}) } : null;
+  const face = s.face ? { r: s.face.r, iris: s.face.iris, ...(s.face.mouth ? { mouth: s.face.mouth } : {}), ...(s.face.eye ? { eye: s.face.eye } : {}) } : null;
   const slots = Object.entries(s.slots ?? {}).map(([name, vary]) => ({ vary, options: (s.props ?? []).filter((p) => p.slot === name).length }));
   return { kind, height: s.height, roles, ...(slots.length ? { slots } : {}), ...(face ? { face } : {}), clips };
 }

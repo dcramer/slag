@@ -32,7 +32,7 @@ export function contact(set: SpriteSet, zoom: number, opts: { facings?: ('r' | '
   g.fillRect(0, 0, c.width, c.height);
   const hsl = set.roles.map((r) => hexHsl(r.color));
   const paints = set.roles.map((_, i) => paintOf(hsl[i]));
-  const main = hsl[set.roles.findIndex((r) => r.slot === 'paint')] ?? hsl[0];
+  const main = hsl[set.roles.findIndex((r) => r.slot === 'player')] ?? hsl[set.roles.findIndex((r) => r.slot === 'paint')] ?? hsl[0];
   const body = paintOf(main);
   const black = { fill: '#120b08', shade: '#120b08', ink: '#120b08' };
   rows.forEach((r, i) => {
@@ -89,7 +89,7 @@ export function rolls(set: SpriteSet, zoom: number): string {
   g.fillRect(0, 0, c.width, c.height);
   const hsl = set.roles.map((r) => hexHsl(r.color));
   const paints = set.roles.map((_, i) => paintOf(hsl[i]));
-  const main = hsl[set.roles.findIndex((r) => r.slot === 'paint')] ?? hsl[0];
+  const main = hsl[set.roles.findIndex((r) => r.slot === 'player')] ?? hsl[set.roles.findIndex((r) => r.slot === 'paint')] ?? hsl[0];
   looks.forEach((pick, i) => {
     g.save();
     g.translate(10 + cell * (i + 0.5), 31 * zoom);

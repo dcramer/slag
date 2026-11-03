@@ -430,7 +430,10 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
             cx /= best.length / 2;
             cy /= best.length / 2;
             const f = facing === 'r' ? 1 : -1;
-            tr.eyes.push(cx + f * a.near[0], cy + a.near[1], 0.5, cx + f * a.far[0], cy + a.far[1], 0.45);
+            // Turned with a rolled figure (y down here, so the screen's turn the other way).
+            const t = facing === 'r' ? -roll : roll;
+            const at = (o: [number, number]) => [cx + f * o[0] * Math.cos(t) + o[1] * Math.sin(t), cy - f * o[0] * Math.sin(t) + o[1] * Math.cos(t)];
+            tr.eyes.push(...at(a.near), 0.5, ...at(a.far), 0.45);
           }
         }
         for (const p of tr.parts) {
