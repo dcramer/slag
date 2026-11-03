@@ -54,6 +54,7 @@ Size tiers for parts are a mapping of the old rolled ranges, so check them too; 
 - The parts still under the bar are ranked in `docs/ART-QA.md` → "Next in the queue".
 
 - **Round hulls:** Ring Station and the Planetoid (space) draw stair-stepped hull edges, because their collision is whole tiles. Following the curve needs sub-tile fairing solids in each step notch (a few hundred rects per landmark), which turns the stairs into walkable slopes, so it needs its own proof, `noFreeRide` and performance work.
+- **Art that looks solid but isn't** (`pnpm shot fairplay`; the barn is fixed). Two lists wait: `PENDING_SHELLS`, 18 landmark backdrop shells that match their own walls through gaps (boiler house, starship, lavafall organ, gatehouse and more), each needing its own art pass; and `PENDING`, set-piece machines drawn in front with no collision (guns on ledges, rotor hubs, swinger hubs, ladles, carts, signs, posts, water before it floods), which need the owner's call: make them solid, or let them read as not-ground.
 ## 15. Parody names: decide on sound-alikes
 Names now parody genre tropes (`docs/PARODY.md`). A few are deliberate sound-alikes of trademarked names: Chain Chump, Thwunk, the -omb suffix, Master Noodle, Yolo Blocks. Decide whether to keep them.
 
