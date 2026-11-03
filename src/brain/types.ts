@@ -111,6 +111,8 @@ export type Intent =
   | { do: 'place'; tx: number; ty: number; rot: number }
   /** Race: get to the cell (tx, ty) by the route the motor finds. */
   | { do: 'goTo'; tx: number; ty: number }
+  /** Race: no proven way on, so run and jump for (tx, ty) anyway, off whatever edge is in the way. */
+  | { do: 'leap'; tx: number; ty: number }
   /** Race: hold self-destruct. */
   | { do: 'giveUp' };
 

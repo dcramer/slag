@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BotSeats } from '../src/brain/bots';
 import { botDevice, isBotDevice } from '../src/brain/device';
 import { Match } from '../src/game/match';
+import { isBridgePart } from '../src/gen/props';
 import { applyAction, newNetState } from '../src/net/actions';
 import { RunWorld } from '../src/sim/run';
 import { movesFrom } from '../src/sim/reach';
@@ -30,6 +31,28 @@ describe('bots', () => {
     expect(m.phase).toBe('score');
     // Each took a card and placed it, by moving a cursor and clicking like a player: no timer ran out on them.
     expect(m.players.every((p) => p.claim >= 0 && p.placed && !p.afk)).toBe(true);
+  });
+
+  it('looks for another spot when someone takes the one it meant to use', () => {
+    const m = new Match(1);
+    expect(m.plan.length).toBe(1);
+    const bots = new BotSeats();
+    for (let i = 0; i < 2; i++) m.join(bots.add(m));
+    m.rules = { ...m.rules, pickSeconds: 0, placeSeconds: 0 };
+    m.startMatch();
+    // Two planks in the crate and one bridge on the plan: both bots aim for the plan's spot.
+    const plank = m.crate.find((c) => isBridgePart(c.def))!.def;
+    m.crate[0].def = m.crate[1].def = plank;
+    for (let f = 0; f < 30 * 60 && m.phase !== 'run'; f++) m.step(bots.frames(m));
+    expect(m.phase).toBe('run');
+    expect(m.players.every((p) => p.placed && !p.afk)).toBe(true);
+    expect(m.placed).toHaveLength(2);
+  });
+
+  it('with no way on, jumps for it and gives up rather than wander', () => {
+    // The plan's bridge isn't built, so no route reaches the flag from spawn.
+    const r = botRace(1, { build: false, limit: RUN_COUNTDOWN + 15 * 60 });
+    expect(r.finished || r.cause !== null, `still wandering at race frame ${r.frames}`).toBe(true);
   });
 
   it('replays the same race from the same seed', () => {

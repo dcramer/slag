@@ -3,10 +3,10 @@ import { botRace } from '../lib/bot-race';
 
 /**
  * How often a built-in bot alone finishes a level with the plan's bridges
- * built. When phase 1 of TODO 27 landed it was 88 of seeds 1–100: the misses
- * were shots and timed hazards it misjudged (6), a way the route counts on
- * that's shut when it gets there (5, it gives up) and skids (2). A drop here
- * means the motor and the route have stopped agreeing.
+ * built. When phase 1 of TODO 27 landed it was 90 of seeds 1–100: the misses
+ * were shots and timed hazards it misjudged (6), leaps of faith and skids that
+ * fell (3), and one it gave up on. A drop here means the motor and the route
+ * have stopped agreeing.
  */
 const SEEDS = Array.from({ length: 100 }, (_, i) => i + 1);
 

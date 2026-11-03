@@ -14,7 +14,7 @@ The 3D-to-2D pipeline (`tools/art3d/`, playbook in its README and CHECKLIST) is 
 ## 27. AI players and player scripts (future)
 Brains that fill seats by producing inputs, built in or written by players. Design: `docs/DESIGN.md` → AI players. Native AI first (phases 1–2); scripts after. Each phase is one agent, in order.
 
-Phase 1 is in (`src/brain/`): a bot finishes 88 of 100 levels alone with the plan built (`tests/stats/bot-finish.test.ts`). Left over from it, for phase 2: shots that steer or bounce and hazards set off by runners aren't forecast; a way the route counts on that's shut when the bot gets there (a door on its cycle) makes it wander and give up; the host must be seated to add bots.
+Phase 1 is in (`src/brain/`): a bot finishes 90 of 100 levels alone with the plan built (`tests/stats/bot-finish.test.ts`). Left over from it, for phase 2: shots that steer or bounce and hazards set off by runners aren't forecast; a way the route counts on that's shut when the bot gets there (a door on its cycle) sends it on a leap of faith rather than waiting for it; a second bridge with the plan's spots taken goes anywhere legal rather than somewhere it helps; the host must be seated to add bots.
 
 2. **Pick, place and personality.** Pick by role and the round's state; place to trap rivals without stranding itself; parts may seal the level, so a bot should avoid sealing its own way unless it holds a bomb. Personality rolled from a seed (reaction, precision, risk, spite), with a generated name. Host-owned bot seats online, moving with host migration.
 3. **Player scripts.** A Web Worker sandbox with a per-frame deadline, the published `brain-api.d.ts`, the Workshop screen (load, trial over seeds, report, replays) and `pnpm brain trial`.

@@ -11,11 +11,11 @@ export interface BotRace {
 }
 
 /**
- * One bot alone on `seed`'s level with the plan's bridges already built, raced
- * to the end: does it find its way to the flag? Shared by tests/brain.test.ts
- * and the finish-rate suite in tests/stats/.
+ * One bot alone on `seed`'s level with the plan's bridges already built
+ * (unless `build` is false), raced to the end: does it find its way to the
+ * flag? Shared by tests/brain.test.ts and the finish-rate suite in tests/stats/.
  */
-export function botRace(seed: number, theme?: ThemeId, limit = 60 * 60): BotRace {
+export function botRace(seed: number, { theme, limit = 60 * 60, build = true }: { theme?: ThemeId; limit?: number; build?: boolean } = {}): BotRace {
   const m = new Match(seed, theme);
   const bots = new BotSeats();
   const dev = bots.add(m);
@@ -23,7 +23,7 @@ export function botRace(seed: number, theme?: ThemeId, limit = 60 * 60): BotRace
   m.startMatch();
   const bridge = m.crate.find((c) => isBridgePart(c.def))?.def;
   if (m.plan.length && !bridge) throw new Error(`seed ${seed}: the crate has no bridge for its plan`);
-  for (const b of m.plan) m.placed.push({ uid: 1000 + m.placed.length, def: bridge!, owner: 0, tx: b.x, ty: b.y, rot: 0 });
+  if (build) for (const b of m.plan) m.placed.push({ uid: 1000 + m.placed.length, def: bridge!, owner: 0, tx: b.x, ty: b.y, rot: 0 });
   m.startRun();
   const run = m.run!;
   const r = run.runners[0];

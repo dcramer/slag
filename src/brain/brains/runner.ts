@@ -1,15 +1,22 @@
 import { Rng } from '../../core/rng';
 import type { Brain, BrainView, Intent } from '../types';
 
-/** Seconds a race may go without getting closer to the flag before it gives up, as a stuck player would. */
-const STUCK_FRAMES = 12 * 60;
+/**
+ * A race that stops getting closer to the flag: after STUCK_FRAMES (or LOST_FRAMES standing where no
+ * route leads at all) it takes a leap of faith toward the flag for LEAP_FRAMES, and if that gets it
+ * nowhere, gives up LAST_FRAMES later, as a stuck player would.
+ */
+const STUCK_FRAMES = 6 * 60;
+const LOST_FRAMES = 90;
+const LEAP_FRAMES = 120;
+const LAST_FRAMES = 120;
 /** Spots tried when looking for somewhere to put a part, and how many of the legal ones are checked for sealing the level. */
 const SPOT_TRIES = 400;
 const SPOT_CHECKS = 16;
 
 /**
- * The plain built-in brain: runs the route to the flag and gives up when it
- * stops getting closer. Its picks and placements are only sensible: a
+ * The plain built-in brain: runs the route to the flag; with no way on, it
+ * jumps for it anyway, and gives up when even that gets it nowhere. Its picks and placements are only sensible: a
  * bridge the level's plan needs goes where the plan puts it, anything else
  * goes somewhere legal that doesn't seal the level. Taste and spite are
  * the next phase (docs/TODO.md 27).
@@ -36,7 +43,8 @@ export function runnerBrain(seed: number): Brain {
 
   const place = (v: BrainView): Intent => {
     if (v.placed || v.claim < 0) return { do: 'wait' };
-    if (!spot) spot = findSpot(v, rng);
+    // Someone may have put a part where it meant to go: look again whenever that spot stops being free.
+    if (!spot || !v.canPlace(spot.tx, spot.ty, spot.rot)) spot = findSpot(v, rng);
     return spot && v.phaseFrame >= pause ? spot : { do: 'wait' };
   };
 
@@ -46,8 +54,12 @@ export function runnerBrain(seed: number): Brain {
     if (me.togo < best) {
       best = me.togo;
       since = 0;
-    } else if (++since > STUCK_FRAMES) return { do: 'giveUp' };
-    return { do: 'goTo', tx: v.level.goal.tx, ty: v.level.goal.ty };
+    } else since++;
+    const wait = me.grounded && !Number.isFinite(me.togo) ? LOST_FRAMES : STUCK_FRAMES;
+    const { tx, ty } = v.level.goal;
+    if (since > wait + LEAP_FRAMES + LAST_FRAMES) return { do: 'giveUp' };
+    if (since > wait && since <= wait + LEAP_FRAMES) return { do: 'leap', tx, ty };
+    return { do: 'goTo', tx, ty };
   };
 
   return {

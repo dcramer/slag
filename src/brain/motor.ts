@@ -1,6 +1,6 @@
 import type { Match, Player } from '../game/match';
 import { DT, TILE } from '../sim/constants';
-import { T_SOLID } from '../sim/level';
+import { T_ONEWAY, T_SOLID } from '../sim/level';
 import type { Body, Controls } from '../sim/physics';
 import { AMMO, AMMO_SIM, footprint, touchesHazard } from '../sim/props';
 import { type Move, movesFrom } from '../sim/reach';
@@ -41,11 +41,21 @@ const MARGIN = 2;
 /** Within this many px of the target, the cursor taps instead of holding, so it stops where it means to. */
 const TAP_NEAR = 40;
 
-type Act = { kind: 'move'; m: Move; i: number } | { kind: 'settle'; at: number; t: number } | { kind: 'wait' };
+type Act =
+  | { kind: 'move'; m: Move; i: number }
+  | { kind: 'settle'; at: number; t: number }
+  | { kind: 'wait' }
+  /** A leap of faith: run at it, jump off the edge or at the wall, hold on until it lands. */
+  | { kind: 'leap'; dir: -1 | 1; t: number; jumped: boolean; flown: boolean };
+
+/** Frames a leap may last before the motor lets it go. */
+const LEAP_FRAMES = 200;
 
 export class Motor {
   private run: RunWorld | null = null;
   private act: Act | null = null;
+  /** The intent it was last given: a new one drops whatever it was doing. */
+  private doing: Intent['do'] | '' = '';
   /** The cell it last lined up in: once per arrival, or it would never leave a cell no move suits. */
   private settled = -1;
   /** Shots in flight when the move under way was chosen: a new one means checking the rest of it again. */
@@ -70,7 +80,10 @@ export class Motor {
   }
 
   private frame(m: Match, p: Player, intent: Intent): InputFrame {
-    if (intent.do !== 'goTo') this.act = null;
+    if (intent.do !== this.doing) {
+      this.doing = intent.do;
+      this.act = null;
+    }
     switch (intent.do) {
       case 'wait':
         return NO_INPUT;
@@ -104,7 +117,39 @@ export class Motor {
       }
       case 'goTo':
         return this.race(m, p, intent.tx, intent.ty);
+      case 'leap':
+        return this.leap(m, p, intent.tx);
     }
+  }
+
+  /** Run toward column `tx` and jump at the first edge or wall: what a player tries with no better idea. */
+  private leap(m: Match, p: Player, tx: number): InputFrame {
+    const run = m.phase === 'run' ? m.run : null;
+    const r = run?.runners.find((x) => x.slot === p.slot);
+    if (!run || !r || !r.alive || r.finished) return NO_INPUT;
+    const b = r.body;
+    let act = this.act?.kind === 'leap' ? this.act : null;
+    if (!act) {
+      if (!b.onGround) return NO_INPUT;
+      const to = (tx + 0.5) * TILE - (b.x + b.w / 2);
+      act = this.act = { kind: 'leap', dir: to < 0 ? -1 : to > 0 ? 1 : b.facing, t: 0, jumped: false, flown: false };
+    }
+    const { dir } = act;
+    if (!b.onGround) act.flown = true;
+    if (act.t++ > LEAP_FRAMES || (act.flown && b.onGround)) {
+      this.act = null;
+      return NO_INPUT;
+    }
+    let press = false;
+    if (b.onGround && !act.jumped) {
+      // About to run off the ground, or stopped by a wall after the run-up: jump now.
+      const field = raceMap(run).field;
+      const ahead = Math.floor((dir > 0 ? b.x + b.w + Math.max(1, Math.abs(b.vx) / 60) : b.x - Math.max(1, Math.abs(b.vx) / 60)) / TILE);
+      const under = field.tiles[Math.floor((b.y + b.h + 1) / TILE) * field.w + ahead];
+      press = (under !== T_SOLID && under !== T_ONEWAY) || (act.t > 10 && Math.abs(b.vx) < 5);
+      act.jumped = press;
+    }
+    return { ...NO_INPUT, left: dir < 0, right: dir > 0, run: true, jump: act.jumped, jumpPressed: press };
   }
 
   private click(m: Match, ok: boolean): InputFrame {
@@ -164,6 +209,8 @@ export class Motor {
         if (Math.abs(b.vx) >= 0.5) return this.press({ left: b.vx > 120, right: b.vx < -120, jump: false, jumpPressed: false });
         return this.press({ left: off < 0 && act.t % 3 === 0, right: off > 0 && act.t % 3 === 0, jump: false, jumpPressed: false });
       }
+      case 'leap':
+        return (this.act = null); // a leap belongs to the leap intent; a route picks afresh
     }
   }
 
