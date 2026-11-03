@@ -269,6 +269,7 @@ export const GALLEON = defineConcept({
   family: ['harpoon', 'shore battery', 'whirlpool'],
   budget: 2,
   names: ['The Galleon at {place}', 'The Flagship of {place}', '{place}: All Hands', 'The Ship in {place} Harbour'],
+  codex: { about: 'A whole ship at berth with her guns run out. Along the main deck, down a hatch through the gun deck, or up the rigging yard to yard.' },
   box: (k, rng) => ({ w: berthMax() + structureCols(k.W, rng, 18, 22), h: 3 * Math.max(3, Math.min(4, climb())) + 4 }),
   build: buildGalleon,
   pieces: galleonPieces,

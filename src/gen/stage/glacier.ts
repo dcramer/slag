@@ -327,6 +327,10 @@ export const ICE_PALACE = defineConcept({
   ownsCrossing: true,
   family: ['frost cannon', 'thin ice', 'hanging serac', 'frost vent'],
   names: ['The Ice Palace of {place}', 'The Frozen Court of {place}', 'The Snow Queen’s {place}', 'The Winter Hall at {place}'],
+  codex: {
+    about:
+      'Two towers of ice block and a great hall, icicles hanging from its vault. Through the hall on its ice floor, or up the tower, along the roof and past the frost cannon.',
+  },
   box: (k, rng) => {
     const cross = crossFor(k, PALACE_MIN + BANK);
     return { w: cross + BANK + structCols(k, rng, PALACE_MIN, [22, 32], true), h: boxH(k, DOOR + 5 + 3 * easyRise() + 6) };
@@ -435,6 +439,9 @@ export const SUMMIT = defineConcept({
   ownsCrossing: true,
   family: ['avalanche', 'frost vent', 'thin ice', 'frost cannon'],
   names: ['The Summit of {place}', 'Mount {place}', 'The Peak at {place}', 'The North Face of {place}'],
+  codex: {
+    about: 'A mountain with a cave through its toe and a cornice on the peak shedding snowballs. Up the tiers and down the long slide, or through the cave.',
+  },
   box: (k, rng) => {
     const cross = crossFor(k, SUMMIT_MIN + BANK);
     return { w: cross + BANK + structCols(k, rng, SUMMIT_MIN, [22, 34], true), h: boxH(k, DOOR + 3 + 5 * easyRise() + 4) };
@@ -540,6 +547,10 @@ export const FROZEN_WRECK = defineConcept({
   ownsCrossing: true,
   family: ['frost cannon', 'thin ice', 'hanging serac', 'avalanche'],
   names: ['The Wreck of {place}', 'The Frozen Ship at {place}', 'The {place} Expedition', 'Icebound at {place}'],
+  codex: {
+    about:
+      'A wooden ship frozen into the field, listing toward her bow. Up the anchor chain and along the glazed deck, or through the hold where the ice stove her in.',
+  },
   box: (k, rng) => {
     const cross = crossFor(k, WRECK_MIN + BANK);
     return { w: cross + BANK + structCols(k, rng, WRECK_MIN, [18, 28]), h: boxH(k, DOOR + 4 + 2 * easyRise() + 7) };
@@ -646,6 +657,7 @@ export const FROZEN_FALLS = defineConcept({
   ownsCrossing: true,
   family: ['thin ice', 'hanging serac', 'frost vent', 'avalanche'],
   names: ['The Frozen Falls of {place}', '{place} Falls', 'The Ice Cave at {place}', 'The Still Water of {place}'],
+  codex: { about: 'A waterfall that froze where it fell. Up the ledges beside it, or through the cave behind it, across a pool of thin ice.' },
   box: (k, rng) => {
     const cross = crossFor(k, FALLS_MIN + BANK);
     return { w: cross + BANK + structCols(k, rng, FALLS_MIN, [16, 26]), h: boxH(k, 5 * easyRise() + 7) };
@@ -733,6 +745,10 @@ export const SKI_JUMP = defineConcept({
   ownsCrossing: true,
   family: ['chairlift', 'frost cannon', 'thin ice', 'frost vent'],
   names: ['The {place} Ski Jump', 'The Big Air at {place}', 'The Hill at {place}', 'The {place} Invitational'],
+  codex: {
+    about:
+      'A start tower, an inrun of ice and a take-off with a snow cannon firing back up it. Down the inrun to be judged, or along the ground under the trestle.',
+  },
   box: (k, rng) => {
     const cross = crossFor(k, JUMP_MIN + BANK);
     return { w: cross + BANK + structCols(k, rng, JUMP_MIN, [18, 28]), h: boxH(k, 5 * easyRise() + 8) };

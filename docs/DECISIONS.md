@@ -186,6 +186,8 @@ Every game design decision, preference and direction the owner has given, groupe
   Changed: iconic palettes with the player's colour on a foot ring.
 - **Characters vary only in curated ways that keep the art: costume colour, accessory swaps, designed alternate palettes on one secondary region, pose personality (two idles, two cheers, a little gait), and wear. Faces, proportions and silhouettes are never rolled; random eyes and mouths go.** "idk if theres ways we can make it a little more procedural without losing our art work" / "'random eyeballs' dont work with the art style" / "Yes, add it"
   2026-11-02 · `in progress` · CHARACTERS.md → the rules, `tools/art3d/`
+- **The costume-colour rule holds even where a colour is the character's identity: the dot-eater's whole ball takes the player's colour, not only his napkin.** (answer: "Keep player colour")
+  2026-11-02 · `done` · CHARACTERS.md → the rules
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
   2026-11-02 · `done` · public/ASSETS.md
 
@@ -457,6 +459,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 04:56Z · `done` · DESIGN.md → Controls and UI
 - **The codex is the global parts catalog, subtitled "Spoilers!".**
   2026-11-02 · git `cf6c496`, `0464596` · `done` · `src/codex/`
+- **The codex talks about maps too: every theme, its landmarks and its own hazards, pictured by the game's renderer.** "the codex needs to talk about maps"
+  2026-11-02 · `done` · DESIGN.md → Discovery, `src/codex/maps.ts`, TODO.md → 28
 - **The game has a favicon, app icons, Open Graph and oEmbed previews.** "Also need a favicon, oembed metadata and image, and apple icon etc"
   2026-11-02 07:06Z · `done`; checking them on a deploy is `open` · `pnpm brand`, TODO.md → 23
 

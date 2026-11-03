@@ -319,6 +319,10 @@ export const GIRDER_WORKS = defineConcept({
   ownsCrossing: true,
   family: ['falling sign', 'live wire', 'gondola'],
   names: ['The Girder Works at {place}', '{place} Tower (Under Construction)', 'The Building Site of {place}', 'The Steel Skeleton of {place}'],
+  codex: {
+    about:
+      'A building going up: girder decks with bays left out and a hoist at either end. Along the roof under it all, or up and over the top deck under the wrecking ball.',
+  },
   box: (k, rng) => {
     const cross = crossFor(k, GIRDER_MIN + BANK);
     return { w: cross + BANK + structCols(k, rng, GIRDER_MIN, [22, 32], true), h: boxH(k, 4 * (DOOR + 2) + 7) };
@@ -399,6 +403,9 @@ export const NEON_BILLBOARD = defineConcept({
   ownsCrossing: true,
   family: ['neon sign', 'live wire', 'antennas'],
   names: ['The Neon Billboard of {place}', 'The Big Sign over {place}', '{place} Lights', 'The Billboard at {place}'],
+  codex: {
+    about: 'A billboard on steel legs, its ad lit from below. Under the board past the live wire, or up the ladder and across the neon letters as they light.',
+  },
   box: (k, rng) => {
     const cross = crossFor(k, BILL_MIN + BANK);
     return { w: cross + BANK + structCols(k, rng, BILL_MIN, [18, 28]), h: boxH(k, DOOR + 1 + 5 + 5) };
@@ -525,6 +532,10 @@ export const WATER_TOWERS = defineConcept({
   ownsCrossing: true,
   family: ['live wire', 'ac updraft', 'gondola'],
   names: ['The Water Towers of {place}', '{place} Tank Row', 'The Tanks over {place}', 'The Reservoir Roofs of {place}'],
+  codex: {
+    about:
+      'Two to four water tanks on legs. Under them past a live wire strung along the legs, or up the ladder and tank to tank, where a burst valve sprays across a hop.',
+  },
   box: (k, rng) => {
     const cross = crossFor(k, TOWER_MIN + BANK);
     return { w: cross + BANK + structCols(k, rng, TOWER_MIN, [18, 30]), h: boxH(k, DOOR + 2 + 5 + 5) };
@@ -651,6 +662,7 @@ export const CLOCK_TOWER = defineConcept({
   ownsCrossing: true,
   family: ['falling sign', 'antennas', 'gondola'],
   names: ['The Clock Tower of {place}', '{place} Clock Tower', 'Big {place}', 'The Town Clock at {place}'],
+  codex: { about: 'A town clock keeping the race’s time. Through the arch under the swinging pendulum, or up the ledges and over the top under the bell.' },
   box: (k, rng) => {
     const cross = crossFor(k, CLOCK_MIN + BANK);
     return { w: cross + BANK + structCols(k, rng, CLOCK_MIN, [16, 24], true), h: boxH(k, 5 * easyRise() + 18) };
@@ -757,6 +769,7 @@ export const EL_STATION = defineConcept({
   ownsCrossing: true,
   family: ['falling sign', 'live wire', 'neon sign'],
   names: ['The El Station at {place}', '{place} Elevated', 'The {place} Line', 'The Overground at {place}'],
+  codex: { about: 'An elevated railway and a train that waits for no one, mostly. Along the track, or along the street under it.' },
   box: (k, rng) => {
     const cross = crossFor(k, EL_MIN + BANK);
     return { w: cross + BANK + structCols(k, rng, EL_MIN, [22, 34]), h: boxH(k, DOOR + 3 + 7) };
