@@ -285,7 +285,7 @@ export const GREAT_WINDMILL = defineConcept({
   weight: 3,
   sizes: ['classic', 'wide'],
   ownsCrossing: true,
-  family: ['electric fence', 'tractor', 'hay hoist', 'hay hook', 'pumpkin catapult'],
+  family: ['electric fence', 'tractor', 'hay hoist', 'hay hook', 'pumpkin catapult', 'combine'],
   budget: 1,
   names: ['The Great Windmill of {place}', '{place} Mill', 'The Sails of {place}', 'The Windmill at {place}'],
   codex: {
@@ -468,7 +468,7 @@ export const GRAIN_ELEVATOR = defineConcept({
   weight: 2,
   sizes: ['classic', 'wide'],
   ownsCrossing: true,
-  family: ['electric fence', 'muck spreader', 'tractor', 'hay hook'],
+  family: ['electric fence', 'muck spreader', 'tractor', 'hay hook', 'combine'],
   budget: 1,
   names: ['The {place} Grain Elevator', '{place} Co-op Elevator', 'The Silos of {place}', 'The Bins at {place}'],
   codex: {
@@ -635,7 +635,7 @@ export const BIG_BARN = defineConcept({
   weight: 3,
   sizes: ['classic', 'wide'],
   ownsCrossing: true,
-  family: ['hay hook', 'hay hoist', 'tractor', 'muck spreader'],
+  family: ['hay hook', 'hay hoist', 'tractor', 'muck spreader', 'combine'],
   budget: 2,
   names: ['The Big Barn at {place}', '{place} Barn Raising', 'The Hayloft of {place}', 'The Red Barn of {place}'],
   codex: {
@@ -795,7 +795,7 @@ export const WATER_MILL = defineConcept({
   weight: 2,
   sizes: ['classic', 'wide'],
   ownsCrossing: true,
-  family: ['tractor', 'hay hook', 'pumpkin catapult', 'electric fence'],
+  family: ['tractor', 'hay hook', 'pumpkin catapult', 'electric fence', 'combine'],
   budget: 1,
   names: ['The Water Mill of {place}', '{place} Mill Pond', 'The Mill Race at {place}', 'The Old Mill, {place}'],
   codex: {
@@ -846,6 +846,72 @@ function buildCombine(g: Grid, rng: Rng, box: TileRect, parts: number): Landmark
   };
 }
 
+/** Columns in front of a combine's body its reel reaches into (the reel's hub, arm and blade). */
+export const REEL_REACH = 3;
+
+/** How a combine is sized and driven: its body's columns and its run along the field. */
+export interface HarvesterOpts {
+  /** Left column of the body where it parks to start; the reel turns in the `REEL_REACH` columns in front of it. */
+  x0: number;
+  /** The ground row it drives on. */
+  G: number;
+  /** Body columns: the header's deck, the cab, the grain tank. */
+  cw: number;
+  /** Which way its reel faces: -1 left, 1 right. It parks first with the reel out front and drives off backwards. */
+  face: -1 | 1;
+  /** Columns it drives out and back. */
+  travel: number;
+  /** Tiles per second while it drives. */
+  speed: number;
+  /** Frames parked at each end, and the last of them it revs for. */
+  dwell: number;
+  warn: number;
+  names: readonly string[];
+  /** Paint index into the farm skin's machine paints (red, green, yellow, blue). */
+  paints: readonly number[];
+}
+
+/**
+ * A combine harvester: a rideable body (the header's deck, the cab and the grain tank) on a horizontal
+ * rail with a park at each end, its reel a full turn of saw bats out front. The reel idles while it's
+ * parked and revs up for `warn` frames before every pull-away (the swinger's `drive`, matched to the
+ * rail), so you see it coming. The Combine Run's and the farm's set piece both.
+ */
+export function harvester(rng: Rng, o: HarvesterOpts): Piece {
+  const { x0, G, cw, travel, face } = o;
+  const cells: Cell[] = [];
+  for (let x = x0; x < x0 + cw; x++) for (const y of [G - 1, G - 2]) cells.push([x, y]);
+  // The cab at the front and the grain tank behind it.
+  const col = (i: number) => (face < 0 ? x0 + i : x0 + cw - 1 - i);
+  cells.push([col(1), G - 3], [col(cw - 2), G - 3], [col(cw - 1), G - 3]);
+  // An even period, so each leg of the rail is a whole number of frames, as the drive counts them.
+  const period = 2 * Math.max(1, Math.round((travel / o.speed) * 60));
+  const reel: Module = {
+    type: 'swinger',
+    head: 'saw',
+    hub: [face < 0 ? x0 - 1.1 : x0 + cw + 1.1, G - 1.7],
+    arm: 1,
+    angle0: rng.range(0, Math.PI),
+    period: rng.int(42, 60),
+    swing: 0,
+    // The bats come down at the front, raking the crop in.
+    dir: face < 0 ? -1 : 1,
+    radius: 0.42,
+    count: rng.pick([4, 5]),
+    link: 'rod',
+    drive: { park: o.dwell, move: period / 2, warn: Math.min(o.warn, o.dwell), idle: rng.range(0.22, 0.32) },
+  };
+  return {
+    name: rng.pick(o.names),
+    archetype: 'crusher',
+    role: 'hazard',
+    style: makeStyle(rng, ['steel', 'rust'], [2, 48, 118, 205], { trim: 'stripes', woodHue: 32 + rng.pick(o.paints) + 4 * rng.int(0, 1) }),
+    modules: [{ type: 'body', cells, material: 'metal', conveyor: 0, breakFrames: 0, respawnFrames: 0 }, reel],
+    // Out backwards from where it parks, and back reel first.
+    motion: { type: 'rail', angle: face < 0 ? 0 : Math.PI, range: travel, period, dwell: o.dwell },
+  };
+}
+
 function* combinePieces(rng: Rng, l: Landmark): Generator<Piece> {
   const a = l.anchors;
   const [f0, f1] = a.field;
@@ -854,33 +920,19 @@ function* combinePieces(rng: Rng, l: Landmark): Generator<Piece> {
   const cw = rng.int(5, 6);
   // Facing the way you come: its header and reel at the near end.
   const x0 = f0 + 4;
-  const travel = f1 - 2 - cw - x0 + 1;
-  const cells: Cell[] = [];
-  for (let x = x0; x < x0 + cw; x++) for (const y of [G - 1, G - 2]) cells.push([x, y]);
-  // The cab at the front and the grain tank behind it.
-  cells.push([x0 + 1, G - 3], [x0 + cw - 2, G - 3], [x0 + cw - 1, G - 3]);
-  const speed = rng.range(3.2, 4.6);
-  const reel: Module = {
-    type: 'swinger',
-    head: 'saw',
-    hub: [x0 - 1.1, G - 1.7],
-    arm: 1,
-    angle0: rng.range(0, Math.PI),
-    period: rng.int(42, 60),
-    swing: 0,
-    dir: -1,
-    radius: 0.42,
-    count: rng.pick([4, 5]),
-    link: 'rod',
-  };
-  yield {
-    name: rng.pick(['Combine Harvester', 'The Reaper', 'Big Red', 'Harvest Moon']),
-    archetype: 'crusher',
-    role: 'hazard',
-    style: makeStyle(rng, ['steel', 'rust'], [2, 48, 118, 205], { trim: 'stripes', woodHue: rng.range(30, 40) }),
-    modules: [{ type: 'body', cells, material: 'metal', conveyor: 0, breakFrames: 0, respawnFrames: 0 }, reel],
-    motion: { type: 'rail', angle: 0, range: travel, period: Math.round(((2 * travel) / speed) * 60), dwell: rng.int(40, 90) },
-  };
+  const dwell = rng.int(40, 90);
+  yield harvester(rng, {
+    x0,
+    G,
+    cw,
+    face: -1,
+    travel: f1 - 2 - cw - x0 + 1,
+    speed: rng.range(3.2, 4.6),
+    dwell,
+    warn: rng.int(30, 40),
+    names: ['Combine Harvester', 'The Reaper', 'Big Red', 'Harvest Moon'],
+    paints: [0, 1, 2, 3],
+  });
   // A live fence along the track, with its trestles behind.
   const [sw, sh] = a.shellSize;
   const fx = rng.int(f0 + 2, Math.max(f0 + 2, t1 - 6));

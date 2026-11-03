@@ -390,6 +390,9 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 17:48Z · `in progress` (Haunted Wing) · SETPIECES.md
 - **Waves 3–5: concepts for every theme.**
   2026-11-02 · `planned` · SETPIECES.md → 5
+- **A combine harvester with spinning reel blades is a regular farm hazard, not only the Combine Run's: it drives a field on ordinary farm levels, classic ones included, and revs its reel before it pulls away.** "a combine with blades is a good farm prop as it adds a cool hazard"
+  2026-11-02 · `in progress` · SETPIECES.md → What Wave 3 (farm) landed, `src/gen/setpieces/farm.ts`
+  Changed: the bladed combine only drove the Combine Run, a wide-only landmark.
 - **Triggers between pieces and changes between rounds are out of scope for now.**
   2026-11-02 · `open` · DESIGN.md → Stage concepts
 
