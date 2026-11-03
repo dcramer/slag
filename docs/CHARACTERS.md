@@ -192,7 +192,7 @@ What came out of it:
 - **Idles and cheers:** the idle's sway of the arms; looking up, arms behind it, tapping one toe. Both arms up, eyes shut; puffed up round, waving one arm.
 - **Gait range:** a toddle's bounce of 0.1–0.8 px on each step, a lean of up to 0.03.
 - **Wear:** scuffed is a shelf-worn toy: two pale scuffs on the ball, grime on the near toe, and a kid's marker X low on its side; scorched is soot on the ball's side and front, the near arm and the near toe.
-- **Rig:** drawn flat (2026-11-03): a bent valve, a bitten arm and a scuffed toe; its seam and its tape cross aren't drawn (at play size one read as a mouth, the other as a third eye).
+- **Rig:** drawn flat (2026-11-03): a bent valve, a bitten arm and a toe worn through to its cream padding `#ecdccb` (drawn in the body's colour, it tipped the shoe in the player's); its seam and its tape cross aren't drawn (at play size one read as a mouth, the other as a third eye, and the cross's last specks of ink as a second face).
 - **Concept prompt:** A near-perfect round ball creature on two big oval red feet, with stubby round arms; tall oval black eyes with a shine at the top, blush marks and a tiny mouth. It is a cheap vinyl squeeze toy: a moulding seam runs round its middle, a little white squeaker valve pokes out of its back, and a mould number is stamped under one foot.
 
 ### The voxel miner (new)

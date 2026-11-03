@@ -5,37 +5,44 @@ export const kind: FlatKind = {
   // Its seam traced as one long stroke across the ball and its pale highlight as a strip, a mouth at play
   // size; its tape cross beside the eyes read as a third eye: no interior lines, and tape and highlight are the ball.
   map: {
-    roles: ['pink', 'red', 'dark'],
+    roles: ['pink', 'red', 'sole', 'dark'],
     families: [
       ['pink', [244, 154, 179]],
       ['pink', [203, 98, 122]],
       ['pink', [222, 112, 142]],
       ['pink', [179, 105, 124]],
-      ['pink', [211, 168, 180]],
       ['red', [190, 64, 57]],
       ['red', [149, 43, 47]],
+      // The shade at the tip of a worn toe: as the ball's shade it tipped the shoe in the player's colour.
+      ['red', [194, 126, 134]],
       ['pink', [184, 176, 178]],
-      ['pink', [234, 200, 203]],
+      // The seam's highlight, and the worn-through toe of a shoe, which as pink was the player's colour on the shoe.
+      ['pink', [252, 190, 206]],
+      ['sole', [211, 168, 180]],
+      ['sole', [222, 186, 186]],
       ['dark', [71, 20, 40]],
       ['dark', [33, 4, 15]],
       ['dark', [255, 255, 255]],
     ],
     line: 'dark',
-    thin: ['pink', 'red'],
+    thin: ['pink', 'red', 'sole'],
     fringe: 5,
     stroke: 99,
     feet: ['red'],
-    min: { dark: 0.35 },
+    // The tape cross's ink left four specks round its eye (0.25 to 0.55 world px²): a second face at play size.
+    min: { dark: 0.6, sole: 0.4 },
   },
   roles: [
     { name: 'pink', color: '#f2a0bc', slot: 'player' },
     // A colourway is the feet (VARIETY.palette): red, orange or yellow.
     { name: 'red', color: '#c9473f', alts: ['#e07b2c', '#e8b23a'], vary: 6 },
+    // The shoe worn through at the toe: its padding, the same on every colourway.
+    { name: 'sole', color: '#ecdccb' },
     { name: 'white', color: '#f4efe6' },
     { name: 'dark', color: '#2a1f1a' },
     { name: 'scuff', color: '#808080', on: 0, tone: 8 },
     // One quiet mark a wear: on a smooth ball, a loud blob reads as a spot.
-    { name: 'scorch', color: '#808080', on: 0, tone: -18 },
+    { name: 'scorch', color: '#808080', on: 0, tone: -12 },
     { name: 'plaster', color: '#e9d3b0' },
   ],
   slots: [
