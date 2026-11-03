@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
 import { generateLevel } from '../src/gen/level';
 import { SET_PIECE_RECIPES, SET_PIECES } from '../src/gen/setpieces';
+import type { Level } from '../src/sim/level';
 import { THEME_IDS } from '../src/themes';
 import { expectClearOfSpawnAndGoal, expectPieceCap, expectPlacementRules, expectSafeWindows, levelsOfEveryTheme } from './lib/set-piece-checks';
 
@@ -24,8 +25,14 @@ describe('set pieces', () => {
       const seen = new Set<string>();
       // Re-roll the placer on the same terrains (cheap) rather than generating more levels.
       const terrains = levels.filter((l) => l.theme === theme).map((l) => ({ ...l.level, setPieces: [] }));
-      for (let k = 0; k < 24 && seen.size < SET_PIECE_RECIPES[theme].length; k++)
-        for (const t of terrains) for (const p of SET_PIECES[theme](new Rng(k * 7919 + t.seed), t)) seen.add(p.def.key.split(':')[2]);
+      const reroll = (ts: readonly Level[]) => {
+        for (let k = 0; k < 24 && seen.size < SET_PIECE_RECIPES[theme].length; k++)
+          for (const t of ts) for (const p of SET_PIECES[theme](new Rng(k * 7919 + t.seed), t)) seen.add(p.def.key.split(':')[2]);
+      };
+      reroll(terrains);
+      // Two levels are a small sample: a recipe that needs a long flat run (the farm's combine) or a rare spot (its hay hook)
+      // may find none on them. Then a plain wide level, generated only when needed.
+      if (seen.size < SET_PIECE_RECIPES[theme].length) reroll([{ ...generateLevel(1, theme, { concept: 'plain', size: 'wide' }), setPieces: [] }]);
       for (const r of SET_PIECE_RECIPES[theme]) expect(seen.has(r.name), `${theme}/${r.name}`).toBe(true);
     }
   });
