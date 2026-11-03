@@ -1308,9 +1308,13 @@ async function hostLabel(p: Page): Promise<number | undefined> {
   return p.evaluate(() => (window as any).slagDebug.renderer.hud.net?.hostSlot as number | undefined);
 }
 
+const KICK_TEST_BAN_S = 45;
+
 /** The host label on every screen, and following a migration; a kick by keyboard, then by mouse, with no way back. */
 async function kickScenario(browser: Browser, base: string) {
-  const r = await newRoom(browser, base, 'kick', 'ban=15', { viewport: { width: 960, height: 540 }, visual: true });
+  // The ban is shortened so the scenario can see it run out, but it must outlast a reload: on a loaded machine a page takes
+  // 6–12 s to come back, and a 15 s ban ran out before it did, so the room rightly let it in.
+  const r = await newRoom(browser, base, 'kick', `ban=${KICK_TEST_BAN_S}`, { viewport: { width: 960, height: 540 }, visual: true });
   const A = await r.open('A');
   const a0 = await waitFor(A, 'host seated', (v) => v.players.length === 1 && v.isHost);
   const [B, C, D] = [await r.open('B'), await r.open('C'), await r.open('D')];
@@ -1367,10 +1371,13 @@ async function kickScenario(browser: Browser, base: string) {
   // A reload inside the ban: the same screen, and the room never sees it.
   const stored = await victim.evaluate(() => Object.entries(sessionStorage).filter(([k]) => k.startsWith('slag.kicked')));
   const banEnd = await victim.evaluate(() => (window as any).slagDebug.net.kickedUntil as number);
-  console.log(`     reloading ${((banEnd - Date.now()) / 1000).toFixed(1)} s before the ban ends; this tab remembers ${JSON.stringify(stored)}`);
+  check(stored.length === 1, `the kicked tab remembers its ban for a reload (${JSON.stringify(stored)})`);
   await victim.reload();
   await victim.waitForFunction(() => 'slagDebug' in window, null, { timeout: 60_000 });
-  console.log(`     reloaded with ${((banEnd - Date.now()) / 1000).toFixed(1)} s of the ban left, status ${(await view(victim)).status}`);
+  const banLeft = (banEnd - Date.now()) / 1000;
+  console.log(`     reloaded with ${banLeft.toFixed(1)} s of the ban left`);
+  // Not a pass: the check below can't mean anything once the ban is over, so say why it will fail.
+  check(banLeft > 0, `the reload came back inside the ban (${banLeft.toFixed(1)} s left of ${KICK_TEST_BAN_S} s)`);
   await victim.bringToFront();
   const reloaded = await waitFor(victim, 'refused after a reload', (v) => v.status === 'kicked', 15_000);
   await victim.waitForFunction(() => (window as any).slagDebug.renderer.hud.net?.arrival?.rejoinIn > 0, null, { timeout: 10_000 }).catch(() => {});
@@ -1378,7 +1385,7 @@ async function kickScenario(browser: Browser, base: string) {
   await sleep(1000);
   check(!(await view(A)).players.some((q) => q.device.startsWith(`${victimId}:`)), 'the reloaded page is never seated');
   // Once it runs out: Rejoin, and it's back in the lobby with a seat.
-  await victim.waitForFunction(() => (window as any).slagDebug.renderer.hud.net?.arrival?.rejoinIn === 0, null, { timeout: 30_000 });
+  await victim.waitForFunction(() => (window as any).slagDebug.renderer.hud.net?.arrival?.rejoinIn === 0, null, { timeout: (KICK_TEST_BAN_S + 15) * 1000 });
   await victim.keyboard.press('Enter');
   await victim.waitForFunction(() => (window as any).slagDebug?.net?.status === 'online', null, { timeout: 60_000 }).catch(() => {});
   const back = await waitFor(A, 'the kicked player back after the ban', (v) => v.players.length === 4, 30_000);
