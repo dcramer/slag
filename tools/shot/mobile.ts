@@ -1,5 +1,6 @@
 import { devices } from 'playwright';
 import { touchLayout } from '../../src/input/touch';
+import { menuControls, menuOpen, pressMenu, waitMenu } from '../lib/menu';
 import { base, browser, engine, errors, opt, out, pet, seed, tq, type Scenarios } from './ctx';
 
 /**
@@ -131,8 +132,8 @@ async function mobile(deviceName: string) {
     await tapHud('join');
     await mp.waitForTimeout(400);
     // The name prompt only comes the first time this browser sits down.
-    if (await mp.isVisible('.slag-ov .slag-btn:not(.primary)')) {
-      await mp.tap('.slag-ov .slag-btn:not(.primary)');
+    if ((await menuOpen(mp)) === 'name') {
+      await pressMenu(mp, 'keep', 'tap');
       await mp.waitForTimeout(300);
     }
     const bad: string[] = [];
@@ -202,43 +203,30 @@ async function mobile(deviceName: string) {
   await checkTargets('lobby');
   // Settings: one sheet per tab, then back out.
   await tapHud('settings');
+  await waitMenu(mp, 'settings');
   await mp.waitForTimeout(300);
   await shotM('settings');
-  await mp.tap('.slag-tab:nth-child(2)');
+  await pressMenu(mp, (c) => c.id.startsWith('tab:') && !c.on, 'tap');
   await mp.waitForTimeout(200);
   await shotM('settings-video');
-  const smallest = await mp.evaluate(() =>
-    Math.min(
-      ...[...document.querySelectorAll('.slag-sheet button')].map((b) => b.getBoundingClientRect()).map((r) => Math.min(r.width, Math.max(r.height, 0))),
-    ),
-  );
+  const smallest = Math.min(...(await menuControls(mp)).filter((c) => !c.disabled).map((c) => Math.min(c.w, c.h)));
   console.log(`settings: smallest button ${smallest.toFixed(1)} CSS px`);
-  // The sheet is full-bleed through `:has()` (iOS Safari 15.4+), and pads for the notch with env(): both must apply.
-  const sheet = await mp.evaluate(() => {
-    const ov = getComputedStyle(document.querySelector('.slag-ov')!);
-    const card = getComputedStyle(document.querySelector('.slag-sheet')!);
-    return { has: CSS.supports('selector(:has(*))'), ovPad: ov.paddingTop, sheetPadLeft: card.paddingLeft };
-  });
-  console.log(`settings sheet: ${JSON.stringify(sheet)}`);
-  if (!sheet.has || sheet.ovPad !== '0px' || sheet.sheetPadLeft !== '16px')
-    throw new Error(`the settings sheet's :has() or safe-area padding didn't apply: ${JSON.stringify(sheet)}`);
-  await mp.tap('.slag-ov .slag-actions .primary');
+  // The sheet fills the phone and keeps every control on screen, clear of the notch.
+  const view = await mp.evaluate(() => ({ w: innerWidth, h: innerHeight }));
+  const off = (await menuControls(mp)).filter((c) => c.x < 0 || c.y < 0 || c.x + c.w > view.w + 0.5 || c.y + c.h > view.h + 0.5);
+  if (off.length) throw new Error(`settings: controls off screen: ${off.map((c) => c.id).join(', ')}`);
+  await pressMenu(mp, 'f:done', 'tap');
   await mp.waitForTimeout(200);
   // Join by tapping the first open slot, then dismiss the name prompt.
   await tapHud('join');
+  await waitMenu(mp, 'name');
   await mp.waitForTimeout(400);
   await shotM('name');
   // The name screen's swatches and buttons are thumb targets too.
-  const nameMin = await mp.evaluate(() =>
-    Math.min(
-      ...[...document.querySelectorAll('.slag-ov .slag-swatch, .slag-ov .slag-btn')]
-        .map((b) => b.getBoundingClientRect())
-        .map((r) => Math.min(r.width, r.height)),
-    ),
-  );
+  const nameMin = Math.min(...(await menuControls(mp)).filter((c) => c.id !== 'name').map((c) => Math.min(c.w, c.h)));
   console.log(`name: smallest target ${nameMin.toFixed(1)} CSS px`);
   if (nameMin < 43.9) throw new Error(`name: a swatch or button under 44 CSS px (${nameMin.toFixed(1)})`);
-  await mp.tap('.slag-ov .slag-btn:not(.primary)');
+  await pressMenu(mp, 'keep', 'tap');
   await mp.waitForTimeout(300);
   await shotM('lobby-joined');
   await checkTargets('lobby-joined');

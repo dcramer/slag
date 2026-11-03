@@ -16,7 +16,7 @@ These rules cover the menus, the lobby, and the in-game HUD. The world art (leve
 
 SLAG is junk melted down and recast, drawn the way a foundry hand sketches in a soot-smudged notebook: a light, sure pen over flat tones, with the heat as the only loud thing on the page. The UI looks like **cast-iron plates, hazard tape, and molten metal**. It feels handled and worn: drawn edges, hard but light drop shadows, buttons that physically press down. It should never read as a generic dark dashboard.
 
-- **Do** use riveted iron plates (`plate()` in `src/render/hud-kit.ts`, `.slag-card` / `.menu-item` in CSS), small corner radii (4–6 px), a light ink rim (pages: 1.5 px of `--rim`, ink at 82%; the HUD: the pen at 0.6–1.45 before `PEN.weight`, about 0.4–0.9 logical px, in `RIM`, ink at 82%), and a hard drop shadow straight down in `--drop` (2 px on the HUD, 3–5 px on pages).
+- **Do** use riveted iron plates (`plate()` in `src/render/hud-kit.ts`, `.menu-item` in CSS), small corner radii (4–6 px), a light ink rim (pages: 1.5 px of `--rim`, ink at 82%; the HUD: the pen at 0.6–1.45 before `PEN.weight`, about 0.4–0.9 logical px, in `RIM`, ink at 82%), and a hard drop shadow straight down in `--drop` (2 px on the HUD, 3–5 px on pages).
 - **Do** use molten light (amber → orange → ember gradients, additive glow, rising embers) for heat and focus. Glow belongs to *hot* things only: the logo, the pour, the selected item, sparks.
 - **Do** use hazard tape (`hazardTape()`, `--tape`) as an edge accent on bars and dialogs, and to mark empty or dangerous zones.
 - **Do** add texture: the speckle grain on plates and the SVG noise on pages.
@@ -90,8 +90,8 @@ On pages, body text is 15–18 px and menu items are 30 px display.
 - On phones the HUD grows by groups, each about its own anchor, up to about 1.8×: chips, timers, headings, crate cards, the score panel. A logical px is only ~0.75 CSS px there, so the type scale above would otherwise land below a readable size. The lobby's top-bar buttons become icons, and its footer loses the prompts the cards already carry. Hit rects grow to 44 CSS px even where the art doesn't; in the lobby they never overlap, because its buttons are spaced by their hit rects, not their art. On a lobby card the name's target is the whole card above the button row, so a short card still fits both.
 - Selection works like a console menu: one item is always active, shown with a molten fill, a diamond marker, a chevron, and a slight nudge. Mouse hover, keyboard arrows, the d-pad, and the stick all move the same selection.
 - Buttons are stamped: a top face over a darker side that sinks 1.5–3 px on hover or press. Primary buttons are molten with ink text, secondary are iron with bone text, and confirmed buttons are toxic.
-- Overlays (`src/ui/menus/`) are a single iron card with a hazard-tape top edge over a dark scrim. They have no blur and no glass.
-- Settings tabs are stamped plates in display type, with the active one molten and pressed in. Rows use the console selection above: the row holding the selected control fills molten, gets the diamond and nudges. Tab prompts flank the strip and Done carries its back prompt.
+- Menus (`src/ui/menus/`) are a single iron card with a hazard-tape top edge over a dark scrim, drawn with the HUD's own plates and buttons (`src/ui/kit/`). They have no blur and no glass.
+- Settings tabs are stamped plates in display type, with the active one molten and pressed in. Rows use the console selection above: the row holding the selected control fills molten and gets the diamond. Tab prompts flank the strip and Done carries its back prompt.
 
 ## World art: ink
 

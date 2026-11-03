@@ -1,28 +1,24 @@
 import type { AudioSystem } from '../../audio';
 import { BINDABLE, defaultSettings, type InputSettings, type KeyProfile, keyName, SLOTS } from '../../input/bindings';
-import { connectedPads, type InputManager } from '../../input/input';
+import type { InputManager } from '../../input/input';
+import { plate } from '../../render/hud-kit';
 import type { Glyph } from '../glyphs';
+import { CanvasMenu } from '../kit/menu';
+import type { ButtonOpts, Rect, Ui } from '../kit/ui';
 import { capLabel, type InputMode, promptModes } from '../prompts';
 import {
   cycleTab,
-  KEY_ACTIONS,
   type MenuAction,
-  type MenuDirection,
-  MenuPadReader,
-  type NavRect,
-  navTarget,
-  readMenuPad,
   resolveTab,
   SETTINGS_TABS,
   type SettingsSection,
   type SettingsTab,
   TAB_LABELS,
   tabSections,
-  type TabContext,
   visibleTabs,
 } from '../settings-nav';
+import { FONT, PAL } from '../style';
 import type { QualityTier } from '../touch/device';
-import { el, glyphEl, Overlay, promptRow } from './overlay';
 
 /** Graphics quality hook (game-client wires it to the renderer). `null` = automatic. */
 export interface QualityControl {
@@ -114,130 +110,96 @@ const MENU_PROMPTS = {
   back: { keyboard: { kind: 'key', label: 'Esc' }, gamepad: { kind: 'pad', button: 'B' } },
 } as const satisfies Record<string, Partial<Record<InputMode, Glyph>>>;
 
-/** Where the arrows can land: the active tab, the page's controls, the footer. */
-const MENU_ITEMS = '.slag-tab[aria-selected=true],.slag-panel button,.slag-panel input,.slag-actions button';
+const QUALITY: readonly [QualityTier | null, string][] = [
+  [null, 'Auto'],
+  ['high', 'High'],
+  ['mid', 'Medium'],
+  ['low', 'Low'],
+];
+
+type Profile = keyof Pick<InputSettings, 'single' | 'left' | 'right'>;
+
+/** Ids: the tabs, the page's controls (`p:`), the footer (`f:`). Only `p:` ones scroll. */
+const onPage = (id: string) => id.startsWith('p:');
 
 /** Reopening lands on the last tab of this page load. */
 let lastTab: SettingsTab = SETTINGS_TABS[0];
 
 /** Controls (remapping, split keyboard), audio volumes and video options, one tab per page. */
-export class SettingsMenu extends Overlay {
+export class SettingsMenu extends CanvasMenu {
   private draft!: InputSettings;
-  private listening: { profile: keyof Pick<InputSettings, 'single' | 'left' | 'right'>; action: (typeof BINDABLE)[number]; slot: number } | null = null;
-  private keyHandler = (e: KeyboardEvent) => this.onKey(e);
+  private listening: { profile: Profile; action: (typeof BINDABLE)[number]; slot: number } | null = null;
   private tab = lastTab;
-  private raf = 0;
-  private padReader: MenuPadReader | null = null;
-  private padCount = 0;
-  /** The last input was a pad: its prompts go first. */
-  private padFirst = false;
-  private refocus: HTMLElement | null = null;
-  private sections: Record<SettingsSection, (panel: HTMLElement) => void> = {
-    audio: (p) => this.audioSection(p),
-    touch: (p) => this.touchSection(p),
-    quality: (p) => this.displaySection(p),
-    keyboard: (p) => this.keyboardSection(p),
-    mouse: (p) => this.bindSection(p, MOUSE_ROWS),
-    gamepad: (p) => this.bindSection(p, PAD_ROWS),
+  /** Per page: the row's label column and how tall a row is, set as the page lays out. */
+  private rowH = 30;
+  private sections: Record<SettingsSection, (ui: Ui, x: number, y: number, w: number) => number> = {
+    audio: (ui, x, y, w) => this.audioSection(ui, x, y, w),
+    touch: (ui, x, y, w) => this.touchSection(ui, x, y, w),
+    quality: (ui, x, y, w) => this.displaySection(ui, x, y, w),
+    keyboard: (ui, x, y, w) => this.keyboardSection(ui, x, y, w),
+    mouse: (ui, x, y, w) => this.bindSection(ui, x, y, w, MOUSE_ROWS),
+    gamepad: (ui, x, y, w) => this.bindSection(ui, x, y, w, PAD_ROWS),
   };
   /** When set, the menu shows a "Leave Lobby" button that calls it. */
   leave: (() => void) | null = null;
-  /** Online: Watch for a player, Play for someone watching with a seat free. Read each time the menu draws; null shows nothing. */
+  /** Online: Watch for a player, Play for someone watching with a seat free. Read each frame; null shows nothing. */
   seat: (() => { label: 'Watch' | 'Play'; run: () => void } | null) | null = null;
   /** When set, the menu shows a graphics-quality picker. */
   quality: QualityControl | null = null;
 
   constructor(
-    input: InputManager,
+    private readonly manager: InputManager,
     private audio: AudioSystem,
   ) {
-    super(input);
+    super(manager, 'settings');
+  }
+
+  /** The tab on show (tools and tests read it). */
+  get page(): SettingsTab {
+    return this.tab;
   }
 
   open() {
-    this.draft = structuredClone(this.input.settings);
-    this.tab = lastTab;
-    this.render();
-    this.refocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    if (!this.input.touch.active) this.selectPanel();
-    window.addEventListener('keydown', this.keyHandler, true);
-    const pads = connectedPads();
-    this.padCount = pads.length;
-    this.padReader = new MenuPadReader(readMenuPad(pads));
-    this.input.capturePads(true);
-    this.paintPrompts();
-    cancelAnimationFrame(this.raf);
-    this.raf = requestAnimationFrame(this.poll);
-  }
-
-  override close() {
-    window.removeEventListener('keydown', this.keyHandler, true);
-    cancelAnimationFrame(this.raf);
+    this.draft = structuredClone(this.manager.settings);
+    this.tab = resolveTab(visibleTabs(this.tabContext()), lastTab);
     this.listening = null;
-    if (this.isOpen) this.input.capturePads(false);
-    const refocus = this.refocus;
-    this.refocus = null;
-    super.close();
-    refocus?.focus();
+    this.ui.resetScroll('panel');
+    this.mount();
+    this.ui.selected = null;
+    if (!this.manager.touch.active) this.selectPage();
   }
 
-  /** Gamepads don't raise key events: poll them, and watch for one being plugged in. */
-  private poll = () => {
-    this.raf = requestAnimationFrame(this.poll);
-    const pads = connectedPads();
-    if (pads.length !== this.padCount) {
-      this.padCount = pads.length;
-      this.paintPrompts();
-    }
-    for (const a of this.padReader?.step(readMenuPad(pads), performance.now()) ?? []) {
-      this.setPadFirst(true);
-      this.act(a);
-    }
-  };
-
-  private setPadFirst(on: boolean) {
-    if (this.padFirst === on) return;
-    this.padFirst = on;
-    this.paintPrompts();
+  protected override closed() {
+    this.listening = null;
   }
 
-  private tabContext(): TabContext {
-    return { touch: this.input.touch.active, quality: !!this.quality };
-  }
-
-  /** The active tab, the current page's controls and the footer buttons, in reading order. */
-  private items(): HTMLElement[] {
-    return [...(this.root?.querySelectorAll<HTMLElement>(MENU_ITEMS) ?? [])].filter((e) => !e.matches(':disabled'));
-  }
-
-  private selected(): HTMLElement | null {
-    const a = document.activeElement;
-    return a instanceof HTMLElement && this.root?.contains(a) ? a : null;
+  private tabContext() {
+    return { touch: this.manager.touch.active, quality: !!this.quality };
   }
 
   /** Select the first control on the page, or the tab itself on a page with nothing to change. */
-  private selectPanel() {
-    const first = this.root?.querySelector<HTMLElement>('.slag-panel button:enabled,.slag-panel input:enabled');
-    (first ?? this.root?.querySelector<HTMLElement>('.slag-tab[aria-selected=true]'))?.focus({ preventScroll: true });
+  private selectPage() {
+    const tab = `tab:${this.tab}`;
+    this.ui.selectSoon(onPage, (id) => id === tab);
   }
 
   private switchTab(tab: SettingsTab, stayOnTab: boolean) {
     if (tab !== this.tab) {
       this.tab = lastTab = tab;
       this.audio.ui?.('click');
-      this.render();
+      this.ui.resetScroll('panel');
     }
-    if (stayOnTab) this.root?.querySelector<HTMLElement>('.slag-tab[aria-selected=true]')?.focus();
-    else this.selectPanel();
+    if (stayOnTab) this.ui.selectSoon((id) => id === `tab:${tab}`);
+    else this.selectPage();
   }
 
-  /** Every input ends up here: keys, the pad, and (through focus) the mouse move one selection. */
-  private act(a: MenuAction) {
+  override busy() {
+    return !!this.listening;
+  }
+
+  act(a: MenuAction) {
     if (this.listening) {
-      if (a === 'back') {
-        this.listening = null;
-        this.render();
-      }
+      if (a === 'back') this.listening = null;
       return;
     }
     if (a === 'back') {
@@ -245,67 +207,12 @@ export class SettingsMenu extends Overlay {
       this.close();
     } else if (a === 'prevTab' || a === 'nextTab') {
       this.switchTab(cycleTab(visibleTabs(this.tabContext()), this.tab, a === 'prevTab' ? -1 : 1), false);
-    } else if (a === 'confirm') {
-      const cur = this.selected();
-      if (cur) cur.click();
-      else this.selectPanel();
-    } else this.move(a);
-  }
-
-  private move(dir: MenuDirection) {
-    const items = this.items();
-    const cur = this.selected();
-    const from = cur ? items.indexOf(cur) : -1;
-    if (!cur || from < 0) {
-      this.selectPanel();
-      return;
-    }
-    const sideways = dir === 'left' || dir === 'right';
-    const d = dir === 'left' ? -1 : 1;
-    if (sideways && cur.getAttribute('role') === 'tab') {
-      this.switchTab(cycleTab(visibleTabs(this.tabContext()), this.tab, d), true);
-    } else if (sideways && cur instanceof HTMLInputElement && cur.type === 'range') {
-      if (d < 0) cur.stepDown();
-      else cur.stepUp();
-      cur.dispatchEvent(new Event('input'));
-    } else {
-      const next = navTarget(this.itemBoxes(items), from, dir);
-      if (next !== null) items[next].focus();
     }
   }
 
-  /** Boxes as if the page weren't scrolled: rows clipped behind the tabs or the footer still sit between them. */
-  private itemBoxes(items: readonly HTMLElement[]): NavRect[] {
-    const panel = this.root?.querySelector('.slag-panel');
-    return items.map((e) => {
-      const { left, top, width, height } = e.getBoundingClientRect();
-      if (!panel) return { left, top, width, height };
-      const below = e.closest('.slag-actions') ? panel.scrollHeight - panel.clientHeight : 0;
-      return { left, top: top + below + (panel.contains(e) ? panel.scrollTop : 0), width, height };
-    });
-  }
-
-  private onKey(e: KeyboardEvent) {
-    if (!this.listening) {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
-      this.setPadFirst(false);
-      if (e.code === 'Tab') {
-        // Tab walks the card and never falls out to the page behind it.
-        e.preventDefault();
-        const items = this.items();
-        const at = items.indexOf(this.selected() ?? items[0]);
-        items[(at + (e.shiftKey ? items.length - 1 : 1)) % items.length]?.focus();
-        return;
-      }
-      const action = KEY_ACTIONS[e.code];
-      if (action) {
-        e.preventDefault();
-        this.act(action);
-      }
-      return;
-    }
-    e.preventDefault();
-    e.stopPropagation();
+  /** While a slot listens, the next key is the binding: Q is a key, not "previous tab". */
+  override key(e: KeyboardEvent): boolean {
+    if (!this.listening) return false;
     const { profile, action, slot } = this.listening;
     const prof: KeyProfile = this.draft[profile];
     const codes = prof[action].slice();
@@ -320,253 +227,290 @@ export class SettingsMenu extends Overlay {
     }
     prof[action] = codes.filter(Boolean).slice(0, SLOTS);
     this.listening = null;
-    this.input.apply(this.draft);
-    this.draft = structuredClone(this.input.settings);
-    this.render();
+    this.apply();
+    return true;
   }
 
-  private audioSection(card: HTMLElement) {
-    const muted = !!this.audio.volumes.muted;
-    const ranges: HTMLInputElement[] = [];
-    card.append(
-      this.switchRow('Mute All Sound', muted, (on) => {
-        this.audio.setVolumes({ muted: on });
-        for (const r of ranges) r.disabled = on;
-      }),
-    );
-    const LABEL = { master: 'Master', music: 'Music', sfx: 'Effects' } as const;
-    for (const k of ['master', 'music', 'sfx'] as const) {
-      const range = el('input', { type: 'range', min: '0', max: '1', step: '0.05', className: 'slag-range', disabled: muted });
-      range.value = String(this.audio.volumes[k]);
-      const val = el('span', { className: 'slag-val', textContent: pct(this.audio.volumes[k]) });
-      const paint = () => range.style.setProperty('--p', pct(Number(range.value)));
-      paint();
-      range.oninput = () => {
-        this.audio.setVolumes({ [k]: Number(range.value) });
-        val.textContent = pct(Number(range.value));
-        paint();
-      };
-      range.setAttribute('aria-label', `${LABEL[k]} volume`);
-      ranges.push(range);
-      card.append(el('div', { className: 'slag-row' }, el('label', { textContent: LABEL[k] }), range, val));
+  private apply() {
+    this.manager.apply(this.draft);
+    this.draft = structuredClone(this.manager.settings);
+  }
+
+  // ------------------------------------------------------------------------------------------------
+
+  draw(ui: Ui) {
+    const tabs = visibleTabs(this.tabContext());
+    this.tab = resolveTab(tabs, this.tab);
+    const { inner, full } = ui.sheet(560, 430);
+    const thumb = Math.max(ui.tap, 0);
+    this.rowH = Math.max(thumb, ui.thumbs ? 34 : 28);
+    let y = inner.y;
+    if (ui.H >= 330) {
+      ui.text('SETTINGS', inner.x, y + 12, 22, PAL.amber, 'left', 400, FONT.display);
+      y += 30;
     }
+    y = this.tabBar(ui, tabs, { x: inner.x, y, w: inner.w, h: Math.max(thumb, 28) }) + 8;
+    const footH = this.footerHeight(ui, inner.w, full);
+    const view = { x: inner.x, y, w: inner.w, h: inner.y + inner.h - footH - 8 - y };
+    ui.scroll('panel', view, () => {
+      let at = view.y;
+      for (const s of tabSections(this.tab, this.tabContext())) at = this.sections[s](ui, view.x, at, view.w);
+      return at;
+    });
+    this.footer(ui, { x: inner.x, y: inner.y + inner.h - footH, w: inner.w, h: footH });
   }
 
-  private switchRow(label: string, on: boolean, toggle: (on: boolean) => void): HTMLElement {
-    const sw = el('button', { className: 'slag-switch', type: 'button' });
-    sw.setAttribute('role', 'switch');
-    sw.setAttribute('aria-checked', String(on));
-    sw.setAttribute('aria-label', label);
-    sw.onclick = () => {
-      on = !on;
-      sw.setAttribute('aria-checked', String(on));
-      toggle(on);
+  /** The prompts for the inputs in play, for one of the menu's own keys. */
+  private prompts(ui: Ui, which: keyof typeof MENU_PROMPTS): Glyph[] {
+    const active: InputMode = this.manager.touch.active ? 'touch' : ui.mode === 'gamepad' ? 'gamepad' : 'keyboard';
+    const glyphs: Partial<Record<InputMode, Glyph>> = MENU_PROMPTS[which];
+    return promptModes(active, { keyboard: true, gamepad: ui.pads > 0 }).flatMap((m) => glyphs[m] ?? []);
+  }
+
+  private tabBar(ui: Ui, tabs: readonly SettingsTab[], r: Rect): number {
+    const gh = 15;
+    const prev = ui.W >= 420 ? this.prompts(ui, 'prev') : [];
+    const next = ui.W >= 420 ? this.prompts(ui, 'next') : [];
+    const pw = prev.length ? ui.glyphsWidth(prev, gh) + 8 : 0;
+    const nw = next.length ? ui.glyphsWidth(next, gh) + 8 : 0;
+    if (prev.length) ui.glyphs(prev, r.x, r.y + r.h / 2 - 1, gh);
+    if (next.length) ui.glyphs(next, r.x + r.w - nw + 8, r.y + r.h / 2 - 1, gh);
+    const gap = 5;
+    const w = (r.w - pw - nw - gap * (tabs.length - 1)) / tabs.length;
+    const size = w < 70 ? 11 : 12.5;
+    tabs.forEach((t, i) => {
+      const on = t === this.tab;
+      ui.button(`tab:${t}`, { x: r.x + pw + i * (w + gap), y: r.y, w, h: r.h }, TAB_LABELS[t].toUpperCase(), () => this.switchTab(t, true), {
+        style: on ? 'primary' : 'secondary',
+        font: FONT.display,
+        size,
+        on,
+        label: TAB_LABELS[t],
+        // Left and right on a tab walk the tabs, and the selection stays on the tab bar.
+        step: (d) => this.switchTab(cycleTab(tabs, this.tab, d), true),
+      });
+    });
+    return r.y + r.h;
+  }
+
+  private footItems(ui: Ui): { left: [string, string, () => void, ButtonOpts][]; right: [string, string, () => void, ButtonOpts][] } {
+    const left: [string, string, () => void, ButtonOpts][] = [];
+    const right: [string, string, () => void, ButtonOpts][] = [];
+    if (this.leave) {
+      left.push(['f:leave', 'Leave Lobby', () => this.leave?.(), { style: 'danger' }]);
+      const seat = this.seat?.();
+      if (seat)
+        left.push([
+          'f:seat',
+          seat.label,
+          () => {
+            seat.run();
+            this.close();
+          },
+          {},
+        ]);
+    }
+    if (this.tab === 'keyboard')
+      right.push([
+        'f:reset',
+        'Reset Controls',
+        () => {
+          this.draft = { ...defaultSettings(), splitKeyboard: this.draft.splitKeyboard };
+          this.apply();
+        },
+        {},
+      ]);
+    right.push(['f:done', 'Done', () => this.close(), { style: 'primary', glyphs: this.prompts(ui, 'back') }]);
+    return { left, right };
+  }
+
+  private footWidth(ui: Ui, items: [string, string, () => void, ButtonOpts][]) {
+    return items.reduce((w, [, label, , o]) => w + ui.buttonWidth(label, o) + 8, -8);
+  }
+
+  private btnH(ui: Ui) {
+    return Math.max(ui.tap, 28);
+  }
+
+  private footerHeight(ui: Ui, w: number, _full: boolean): number {
+    const { left, right } = this.footItems(ui);
+    const one = !left.length || this.footWidth(ui, left) + this.footWidth(ui, right) + 16 <= w;
+    return one ? this.btnH(ui) : this.btnH(ui) * 2 + 6;
+  }
+
+  /** Leave and Watch on the left, Reset and Done on the right; two lines when they don't fit on one. */
+  private footer(ui: Ui, r: Rect) {
+    const { left, right } = this.footItems(ui);
+    const h = this.btnH(ui);
+    const two = r.h > h;
+    const row = (items: typeof left, x: number, y: number) => {
+      for (const [id, label, press, o] of items) {
+        const w = ui.buttonWidth(label, o);
+        ui.button(id, { x, y, w, h }, label, press, o);
+        x += w + 8;
+      }
     };
-    const name = el('span', { className: 'lbl wide', textContent: label });
-    name.onclick = () => sw.click();
-    return el('div', { className: 'slag-row' }, name, sw);
+    row(left, r.x, r.y);
+    row(right, r.x + r.w - this.footWidth(ui, right), two ? r.y + h + 6 : r.y);
   }
 
-  private touchSection(card: HTMLElement) {
-    card.append(
-      this.switchRow('Vibration', this.input.touch.haptics, (on) => {
-        this.input.touch.haptics = on;
-        try {
-          localStorage.setItem(HAPTICS_KEY, on ? '1' : '0');
-        } catch {
-          // Not persisted; still applies this session.
-        }
-      }),
-    );
+  // ------------------------------------------------------------------------------------------------
+  // Rows
+
+  /** A row's plate: lit in molten while one of its controls is selected. Returns the text color on it. */
+  private row(ui: Ui, r: Rect, ids: readonly string[]): string {
+    if (!ui.litAny(ids)) return PAL.bone;
+    const c = ui.c;
+    plate(c, r.x - 6, r.y, r.w + 12, r.h - 2, { fill: '#e8571a', rivets: false, radius: 5, drop: 2, seed: 3 });
+    // The diamond in the margin, pointing at the row.
+    const cy = r.y + (r.h - 2) / 2;
+    c.fillStyle = PAL.ink;
+    c.beginPath();
+    c.moveTo(r.x - 12, cy - 5);
+    c.lineTo(r.x - 7, cy);
+    c.lineTo(r.x - 12, cy + 5);
+    c.lineTo(r.x - 17, cy);
+    c.fill();
+    c.fillStyle = PAL.amber;
+    c.beginPath();
+    c.moveTo(r.x - 12, cy - 3.4);
+    c.lineTo(r.x - 8.6, cy);
+    c.lineTo(r.x - 12, cy + 3.4);
+    c.lineTo(r.x - 15.4, cy);
+    c.fill();
+    return PAL.ink;
   }
 
-  private displaySection(card: HTMLElement) {
-    const q = this.quality;
-    if (!q) return;
-    const chips = el('div', { className: 'slag-chips' });
-    const opts: [QualityTier | null, string][] = [
-      [null, 'Auto'],
-      ['high', 'High'],
-      ['mid', 'Medium'],
-      ['low', 'Low'],
-    ];
-    const cur = q.pinned();
-    for (const [tier, label] of opts) {
-      const b = el('button', { className: `slag-btn ${cur === tier ? 'on' : ''}`, type: 'button', textContent: label });
-      b.onclick = () => {
-        q.set(tier);
-        for (const sib of chips.querySelectorAll('button')) sib.classList.toggle('on', sib === b);
-      };
-      chips.append(b);
+  private label(ui: Ui, s: string, x: number, cy: number, w: number, color: string, size = 12) {
+    ui.text(ui.fit(s, w, size), x, cy, size, color, 'left', 700);
+  }
+
+  private switchRow(ui: Ui, id: string, x: number, y: number, w: number, label: string, on: boolean, set: (on: boolean) => void): number {
+    const r = { x, y, w, h: this.rowH };
+    const ink = this.row(ui, r, [id]);
+    this.label(ui, label, x + 4, y + r.h / 2, w - 70, ink);
+    ui.toggle(id, { x, y, w: w - 4, h: r.h - 2 }, label, on, set);
+    return y + r.h + 2;
+  }
+
+  private audioSection(ui: Ui, x: number, y: number, w: number): number {
+    const muted = !!this.audio.volumes.muted;
+    y = this.switchRow(ui, 'p:mute', x, y, w, 'Mute All Sound', muted, (on) => this.audio.setVolumes({ muted: on }));
+    const LABEL = { master: 'Master', music: 'Music', sfx: 'Effects' } as const;
+    const lw = w < 360 ? 70 : 110;
+    for (const k of ['master', 'music', 'sfx'] as const) {
+      const id = `p:vol:${k}`;
+      const r = { x, y, w, h: this.rowH };
+      const ink = this.row(ui, r, [id]);
+      const v = this.audio.volumes[k];
+      this.label(ui, LABEL[k], x + 4, y + r.h / 2, lw - 8, muted ? PAL.dim : ink);
+      ui.slider(id, { x: x + lw, y: y + 2, w: w - lw - 54, h: r.h - 6 }, `${LABEL[k]} volume`, v, 0.05, (nv) => this.audio.setVolumes({ [k]: nv }), muted);
+      ui.text(pct(v), x + w - 4, y + r.h / 2, 11, ink === PAL.ink ? PAL.ink : PAL.ash, 'right', 700);
+      y += r.h + 2;
     }
-    card.append(el('div', { className: 'slag-row' }, el('span', { className: 'lbl', textContent: 'Graphics Quality' }), chips));
+    return y;
   }
 
-  private keyboardSection(card: HTMLElement) {
-    card.append(
-      this.switchRow('Split Keyboard (Two Players)', this.draft.splitKeyboard, (on) => {
-        this.draft.splitKeyboard = on;
-        this.input.apply(this.draft);
-        this.render();
-      }),
-    );
-    const profiles: { key: 'single' | 'left' | 'right'; title: string }[] = this.draft.splitKeyboard
+  private touchSection(ui: Ui, x: number, y: number, w: number): number {
+    return this.switchRow(ui, 'p:haptics', x, y, w, 'Vibration', this.manager.touch.haptics, (on) => {
+      this.manager.touch.haptics = on;
+      try {
+        localStorage.setItem(HAPTICS_KEY, on ? '1' : '0');
+      } catch {
+        // Not persisted; still applies this session.
+      }
+    });
+  }
+
+  private displaySection(ui: Ui, x: number, y: number, w: number): number {
+    const q = this.quality;
+    if (!q) return y;
+    const cur = q.pinned();
+    const ids = QUALITY.map(([tier]) => `p:quality:${tier ?? 'auto'}`);
+    // The label beside the chips while it fits, above them on a phone.
+    const lw = w >= 420 ? 150 : 0;
+    const h = this.btnH(ui);
+    const r = { x, y, w, h: (lw ? 0 : 22) + h + 8 };
+    const ink = this.row(ui, r, ids);
+    this.label(ui, 'Graphics Quality', x + 4, lw ? y + r.h / 2 : y + 12, lw ? lw - 8 : w, ink);
+    const cx = x + lw;
+    const cw = (w - lw - 4 - 6 * (QUALITY.length - 1)) / QUALITY.length;
+    QUALITY.forEach(([tier, label], i) => {
+      const on = cur === tier;
+      ui.button(ids[i], { x: cx + i * (cw + 6), y: y + r.h - h - 4, w: cw, h }, label, () => q.set(tier), { style: on ? 'ready' : 'secondary', on });
+    });
+    return y + r.h + 2;
+  }
+
+  private keyboardSection(ui: Ui, x: number, y: number, w: number): number {
+    y = this.switchRow(ui, 'p:split', x, y, w, 'Split Keyboard (Two Players)', this.draft.splitKeyboard, (on) => {
+      this.draft.splitKeyboard = on;
+      this.apply();
+    });
+    const profiles: { key: Profile; title: string }[] = this.draft.splitKeyboard
       ? [
           { key: 'left', title: 'Player A' },
           { key: 'right', title: 'Player B' },
         ]
       : [{ key: 'single', title: 'Keys' }];
-    const columns = `minmax(72px,1fr) repeat(${profiles.length * SLOTS},minmax(56px,96px))`;
-    const keyRow = (head = false) => {
-      const row = el('div', { className: `slag-row slag-keys ${head ? 'head' : ''}` });
-      row.style.gridTemplateColumns = columns;
-      return row;
-    };
-    const head = keyRow(true);
-    head.append(el('div'));
-    for (const p of profiles) {
-      const h = el('div', { className: 'h', textContent: p.title });
-      h.style.gridColumn = `span ${SLOTS}`;
-      head.append(h);
-    }
-    card.append(head);
+    const n = profiles.length * SLOTS;
+    const kw = Math.min(64, (w - 96) / n - 4);
+    const keysX = x + w - n * (kw + 4);
+    const rowH = Math.max(ui.tap, 22);
+    y += 2;
+    profiles.forEach((p, i) => {
+      ui.text(p.title.toUpperCase(), keysX + (i * SLOTS + SLOTS / 2) * (kw + 4) - 2, y + 5, 8, PAL.ash, 'center', 800);
+    });
+    y += 11;
     for (const a of BINDABLE) {
-      const row = keyRow();
-      row.append(el('div', { className: 'lbl', textContent: BIND_LABELS[a] }));
+      const ids = profiles.flatMap((p) => Array.from({ length: SLOTS }, (_, s) => `p:key:${p.key}:${a}:${s}`));
+      const ink = this.row(ui, { x, y, w, h: rowH + 2 }, ids);
+      this.label(ui, BIND_LABELS[a], x + 4, y + rowH / 2, keysX - x - 8, ink, 11);
+      let k = 0;
       for (const p of profiles) {
-        for (let slot = 0; slot < SLOTS; slot++) {
+        for (let slot = 0; slot < SLOTS; slot++, k++) {
           const listening = this.listening?.profile === p.key && this.listening.action === a && this.listening.slot === slot;
           const code = this.draft[p.key][a][slot];
-          const b = el('button', { className: `slag-btn key ${listening ? 'listen' : ''}`, type: 'button' });
-          if (listening) b.textContent = 'Press a Key';
-          else if (code) b.append(glyphEl({ kind: 'key', label: capLabel(code) }, 24));
-          else b.append(el('span', { className: 'slag-empty', textContent: 'Empty' }));
-          b.setAttribute('aria-label', `${BIND_LABELS[a]}, ${p.title} ${slot + 1}: ${code ? keyName(code) : 'empty'}`);
-          b.onclick = () => {
-            this.listening = { profile: p.key, action: a, slot };
-            this.render();
-          };
-          row.append(b);
+          const id = ids[k];
+          const label = `${BIND_LABELS[a]}, ${p.title} ${slot + 1}: ${listening ? 'press a key' : code ? keyName(code) : 'empty'}`;
+          const r = { x: keysX + k * (kw + 4), y, w: kw, h: rowH };
+          const press = () => (this.listening = { profile: p.key, action: a, slot });
+          if (listening) {
+            const pulse = Math.floor(ui.t * 3) % 2 === 0;
+            ui.button(id, r, 'Press a Key', press, { style: pulse ? 'primary' : 'danger', size: 8.5, label });
+          } else if (code) ui.button(id, r, '', press, { glyphs: [{ kind: 'key', label: capLabel(code) }], size: 11, label });
+          else ui.button(id, r, 'Empty', press, { style: 'ghost', size: 9, label });
         }
       }
-      card.append(row);
+      y += rowH + 2;
     }
-    card.append(
-      el(
-        'div',
-        { className: 'slag-keyfoot' },
-        el('div', { className: 'slag-note', textContent: 'Select a slot, then press the new key.' }),
-        promptRow([
-          { glyphs: [{ kind: 'key', label: '⌫' }], label: 'Clear' },
-          { glyphs: [{ kind: 'key', label: 'Esc' }], label: 'Cancel' },
-        ]),
-      ),
-    );
+    y += 3;
+    const tip = 'Select a slot, then press the new key.';
+    const items: [Glyph, string][] = [
+      [{ kind: 'key', label: '⌫' }, 'Clear'],
+      [{ kind: 'key', label: 'Esc' }, 'Cancel'],
+    ];
+    ui.text(ui.fit(tip, w - 150, 9.5), x + 4, y + 8, 9.5, PAL.ash, 'left', 600);
+    let px = x + w - 4;
+    for (let i = items.length - 1; i >= 0; i--) {
+      const [g, label] = items[i];
+      px -= ui.measure(label, 10) + 2;
+      ui.text(label, px, y + 8, 10, PAL.bone, 'left', 700);
+      px -= ui.glyphsWidth([g], 14) + 4;
+      ui.glyphs([g], px, y + 8, 14);
+      px -= 12;
+    }
+    return y + 16;
   }
 
   /** A control sheet: the fixed bindings of an input that can't be remapped. */
-  private bindSection(card: HTMLElement, rows: readonly BindRow[]) {
+  private bindSection(ui: Ui, x: number, y: number, w: number, rows: readonly BindRow[]): number {
     for (const r of rows) {
-      const binds = el('span', { className: 'slag-binds' }, ...r.glyphs.map((g) => glyphEl(g, 30)));
-      card.append(el('div', { className: 'slag-row' }, el('span', { className: 'lbl wide', textContent: r.label }), binds));
+      const gw = ui.glyphsWidth(r.glyphs, 20, 6);
+      this.label(ui, r.label, x + 4, y + this.rowH / 2, w - gw - 16, PAL.bone);
+      ui.glyphs(r.glyphs, x + w - gw - 4, y + this.rowH / 2, 20, 6);
+      y += this.rowH + 2;
     }
-  }
-
-  private tabBar(tabs: readonly SettingsTab[]): HTMLElement {
-    const list = el('div', { className: 'slag-tablist' });
-    list.setAttribute('role', 'tablist');
-    list.setAttribute('aria-label', 'Settings');
-    for (const t of tabs) {
-      const b = el('button', { className: 'slag-tab', type: 'button', id: `slag-tab-${t}`, textContent: TAB_LABELS[t] });
-      b.setAttribute('role', 'tab');
-      b.setAttribute('aria-selected', String(t === this.tab));
-      b.setAttribute('aria-controls', 'slag-panel');
-      b.onclick = () => this.switchTab(t, true);
-      list.append(b);
-    }
-    return el('div', { className: 'slag-tabs' }, this.promptSlot('prev'), list, this.promptSlot('next'));
-  }
-
-  /** A spot for a prompt: `paintPrompts` fills it for the inputs in play. */
-  private promptSlot(prompt: keyof typeof MENU_PROMPTS): HTMLElement {
-    const slot = el('span', { className: 'slag-tabkey' });
-    slot.dataset.prompt = prompt;
-    slot.setAttribute('aria-hidden', 'true');
-    return slot;
-  }
-
-  private paintPrompts() {
-    const active: InputMode = this.input.touch.active ? 'touch' : this.padFirst ? 'gamepad' : 'keyboard';
-    const modes = promptModes(active, { keyboard: true, gamepad: this.padCount > 0 });
-    for (const slot of this.root?.querySelectorAll<HTMLElement>('[data-prompt]') ?? []) {
-      const glyphs: Partial<Record<InputMode, Glyph>> = MENU_PROMPTS[slot.dataset.prompt as keyof typeof MENU_PROMPTS];
-      slot.replaceChildren(...modes.flatMap((m) => glyphs[m] ?? []).map((g) => glyphEl(g, 24)));
-    }
-  }
-  private render() {
-    const context = this.tabContext();
-    const tabs = visibleTabs(context);
-    this.tab = resolveTab(tabs, this.tab);
-    const card = el('div', { className: 'slag-card slag-sheet slag-settings' }, el('h2', { textContent: 'Settings' }), this.tabBar(tabs));
-    card.setAttribute('role', 'dialog');
-    card.setAttribute('aria-label', 'Settings');
-    const panel = el('div', { className: 'slag-panel', id: 'slag-panel' });
-    panel.setAttribute('role', 'tabpanel');
-    panel.setAttribute('aria-labelledby', `slag-tab-${this.tab}`);
-    panel.dataset.tab = this.tab;
-    for (const s of tabSections(this.tab, context)) this.sections[s](panel);
-    card.append(panel);
-    const done = el('button', { className: 'slag-btn primary', type: 'button' }, this.promptSlot('back'), 'Done');
-    done.onclick = () => this.close();
-    const actions = el('div', { className: 'slag-actions' });
-    if (this.leave) {
-      const leave = el('button', { className: 'slag-btn danger', type: 'button', textContent: 'Leave Lobby' });
-      leave.onclick = () => this.leave?.();
-      actions.append(leave);
-      const seat = this.seat?.();
-      if (seat) {
-        const b = el('button', { className: 'slag-btn', type: 'button', textContent: seat.label });
-        b.onclick = () => {
-          seat.run();
-          this.close();
-        };
-        actions.append(b);
-      }
-      actions.append(el('span', { className: 'grow' }));
-    }
-    if (this.tab === 'keyboard') {
-      const reset = el('button', { className: 'slag-btn', type: 'button', textContent: 'Reset Controls' });
-      reset.onclick = () => {
-        this.draft = { ...defaultSettings(), splitKeyboard: this.draft.splitKeyboard };
-        this.input.apply(this.draft);
-        this.render();
-      };
-      actions.append(reset);
-    }
-    actions.append(done);
-    card.append(actions);
-    card.addEventListener('pointermove', (e) => this.onPointerMove(e));
-    card.addEventListener('pointerdown', () => this.setPadFirst(false));
-    if (this.root) {
-      // A rebuild keeps your place: same scroll on the same page, same control selected.
-      const old = this.root.querySelector('.slag-panel');
-      const scroll = old instanceof HTMLElement && old.dataset.tab === this.tab ? old.scrollTop : 0;
-      const before = this.items();
-      const cur = this.selected();
-      const at = cur ? before.indexOf(cur) : -1;
-      this.root.replaceChildren(card);
-      panel.scrollTop = scroll;
-      const after = this.items();
-      if (at >= 0) after[Math.min(at, after.length - 1)]?.focus({ preventScroll: true });
-    } else this.mount(card);
-    this.paintPrompts();
-    card.querySelector('.slag-tab[aria-selected=true]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-  }
-
-  /** Mouse hover moves the same selection the arrows do. Only real movement: the DOM changing under a still mouse isn't a choice. */
-  private onPointerMove(e: PointerEvent) {
-    if (e.pointerType !== 'mouse' || e.buttons || (!e.movementX && !e.movementY)) return;
-    const item = (e.target as Element | null)?.closest<HTMLElement>('.slag-panel button,.slag-panel input,.slag-actions button');
-    if (item && !item.matches(':disabled') && item !== document.activeElement) item.focus({ preventScroll: true });
+    return y;
   }
 }

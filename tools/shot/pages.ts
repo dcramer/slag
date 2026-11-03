@@ -1,5 +1,6 @@
 /** Whole pages and contact sheets: levels, prop crates, the main menu, rules, settings, the lobby list, About and the codex. */
 import { devices } from 'playwright';
+import { hoverMenu, menuControl, menuControls, menuOpen, menuOverflow, menuSelected, pressMenu, waitMenu } from '../lib/menu';
 import { base, browser, errors, H, mode, open, opt, out, page, pet, seed, sheet, snap, step, theme, W, type Scenarios } from './ctx';
 
 export const shots: Scenarios = {
@@ -52,7 +53,7 @@ export const shots: Scenarios = {
     await page.waitForTimeout(200);
     await snap('home-join');
     await page.click('text=SETTINGS');
-    await page.waitForSelector('.slag-card', { timeout: 15_000 });
+    await waitMenu(page, 'settings', 15_000);
     await page.evaluate(() => document.fonts.ready);
     await page.waitForTimeout(300);
     await snap('home-settings');
@@ -63,26 +64,20 @@ export const shots: Scenarios = {
     await open(`seed=${seed}`);
     await step(5);
     await page.mouse.click(((768 - 196 + 42) / 768) * W, (28 / 432) * H);
-    await page.waitForSelector('.slag-sheet', { timeout: 5000 });
+    await waitMenu(page, 'rules', 5000);
     await snap(`rules-${W}x${H}`);
-    const over = await page.evaluate(() => {
-      const c = document.querySelector('.slag-sheet')!;
-      return c.scrollHeight - c.clientHeight;
-    });
+    const over = await menuOverflow(page);
     if (over > 0) throw new Error(`rules card overflows by ${over}px`);
   },
   async settings() {
     // Fails the run if a tab doesn't fit, or an input doesn't do what its prompt says.
-    const tabOf = (p: typeof page) => p.evaluate(() => document.querySelector('.slag-panel')?.getAttribute('data-tab'));
+    const tabOf = async (p: typeof page) => (await menuControls(p)).find((c) => c.id.startsWith('tab:') && c.on)?.id.slice(4);
     const expectTab = async (p: typeof page, want: string) => {
       await p.waitForTimeout(150);
       if ((await tabOf(p)) !== want) throw new Error(`settings: on tab ${await tabOf(p)}, expected ${want}`);
     };
     const expectFit = async (p: typeof page, label: string) => {
-      const over = await p.evaluate(() => {
-        const panel = document.querySelector('.slag-panel')!;
-        return panel.scrollHeight - panel.clientHeight;
-      });
+      const over = await menuOverflow(p);
       if (over > 0) throw new Error(`settings: ${label} overflows by ${over}px`);
     };
     // A returning player: no first-visit name prompt opening when the loop resumes, where it would take the pad's Start.
@@ -114,7 +109,7 @@ export const shots: Scenarios = {
     await page.evaluate(() => (window as any).slagDebug.match.join('kb1'));
     await step(5);
     await page.keyboard.press('Escape');
-    await page.waitForSelector('.slag-panel');
+    await waitMenu(page, 'settings');
     const tabs = ['audio', 'video', 'keyboard', 'mouse', 'gamepad'];
     for (const [i, tab] of tabs.entries()) {
       if (i > 0) await page.keyboard.press('e');
@@ -127,33 +122,33 @@ export const shots: Scenarios = {
     await page.keyboard.press('q');
     await expectTab(page, 'gamepad');
     // The biggest page: two players' worth of slots.
-    await page.click('#slag-tab-keyboard');
+    await pressMenu(page, 'tab:keyboard');
     await expectTab(page, 'keyboard');
-    await page.click('[aria-label="Split Keyboard (Two Players)"]');
+    await pressMenu(page, 'p:split');
     await page.waitForTimeout(100);
     await expectFit(page, 'split keyboard');
     await snap('settings-keyboard-split');
-    await page.click('[aria-label="Split Keyboard (Two Players)"]');
+    await pressMenu(page, 'p:split');
     await page.waitForTimeout(100);
     // Rebinding by key: Q is captured as the new key, not read as "previous tab". Selection stays put.
-    const selected = () => page.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.textContent);
+    const selected = () => menuSelected(page);
     const bindings = () => page.evaluate(() => JSON.parse(localStorage.getItem('slag.input.v1') ?? '{}').single?.jump);
+    await hoverMenu(page, 'p:split');
     await page.mouse.move(2, 2);
-    await page.locator('[aria-label="Split Keyboard (Two Players)"]').focus();
     await presses('ArrowDown', 5);
     await page.keyboard.press('ArrowLeft');
     await page.waitForTimeout(100);
     if (!String(await selected()).startsWith('Jump, Keys 1')) throw new Error(`settings: arrows landed on ${await selected()}`);
     await snap('settings-keyboard-selection');
     await page.keyboard.press('Enter');
-    await page.waitForSelector('.slag-btn.listen');
+    await page.waitForFunction(() => (window as any).slagUi.controls().some((c: any) => c.label.endsWith('press a key')));
     await snap('settings-keyboard-listen');
     await page.keyboard.press('q');
     await page.waitForTimeout(100);
     await expectTab(page, 'keyboard');
     if ((await bindings())?.[0] !== 'KeyQ') throw new Error(`settings: rebinding saved ${await bindings()}`);
     if (!String(await selected()).startsWith('Jump, Keys 1')) throw new Error(`settings: rebinding moved the selection to ${await selected()}`);
-    await page.click('text=Reset Controls');
+    await pressMenu(page, 'f:reset');
     await page.waitForTimeout(100);
     if ((await bindings())?.[0] !== 'Space') throw new Error(`settings: Reset Controls left ${await bindings()}`);
     // The pad walks the tabs, sweeps a slider, and backs out.
@@ -170,56 +165,56 @@ export const shots: Scenarios = {
     const volume = () => page.evaluate(() => JSON.parse(localStorage.getItem('slag.audio.v1') ?? '{}').master);
     if ((await volume()) !== 0.9) throw new Error(`settings: pad slider left master at ${await volume()}`);
     await pad(1);
-    if (await page.$('.slag-panel')) throw new Error('settings: pad B did not close the menu');
+    if (await menuOpen(page)) throw new Error('settings: pad B did not close the menu');
     // Opening runs through the game loop's input sampling, which screenshots keep paused.
     await page.evaluate(() => (window as any).slagDebug.pause(false));
     // Hold Start until the menu opens: the live loop under software GL can take longer than a quick tap to sample it.
     await page.evaluate(() => (window as any).slagShotPad.add(9));
-    await page.waitForSelector('.slag-panel');
+    await waitMenu(page, 'settings');
     await page.evaluate(() => (window as any).slagShotPad.delete(9));
     await page.waitForTimeout(120);
     await expectTab(page, 'audio');
     // Closing too: with the loop live, one software-GL frame can outlast a tap, and the menu polls pads once a frame.
     await page.evaluate(() => (window as any).slagShotPad.add(9));
-    await page.waitForSelector('.slag-panel', { state: 'detached', timeout: 10_000 }).catch(() => {});
+    await waitMenu(page, null).catch(() => {});
     await page.evaluate(() => (window as any).slagShotPad.delete(9));
-    if (await page.$('.slag-panel')) throw new Error('settings: pad Start did not close the menu');
+    if (await menuOpen(page)) throw new Error('settings: pad Start did not close the menu');
 
     // Saved settings survive a reload. Reopening lands on the tab you left.
     await page.reload();
     await page.waitForFunction(() => 'slagDebug' in window);
     await page.keyboard.press('Escape');
-    await page.waitForSelector('.slag-panel');
-    const master = await page.evaluate(() => (document.querySelector('[aria-label="Master volume"]') as HTMLInputElement).value);
-    if (master !== '0.9') throw new Error(`settings: master reloaded as ${master}`);
+    await waitMenu(page, 'settings');
+    const master = (await menuControl(page, 'p:vol:master')).value;
+    if (Math.abs((master ?? 0) - 0.9) > 1e-9) throw new Error(`settings: master reloaded as ${master}`);
     await page.keyboard.press('e');
     await page.keyboard.press('Escape');
+    await waitMenu(page, null);
     await page.keyboard.press('Escape');
-    await page.waitForSelector('.slag-panel');
+    await waitMenu(page, 'settings');
     await expectTab(page, 'video');
 
     // The same menu over the main menu: picks persist for the game to read, and no A falls through on Done.
     await page.goto(base);
     await page.evaluate(() => document.fonts.ready);
     await page.click('text=SETTINGS');
-    await page.waitForSelector('.slag-panel');
+    await waitMenu(page, 'settings');
     await page.keyboard.press('e');
     await expectTab(page, 'video');
     await page.waitForTimeout(200);
-    await page.click('.slag-chips >> text=Low');
+    await pressMenu(page, 'p:quality:low');
     await snap('settings-home');
     const saved = await page.evaluate(() => localStorage.getItem('slag.quality'));
     if (saved !== 'low') throw new Error(`settings: home saved ${saved}`);
     // Tab stays inside the card; the arrows reach Done from the page.
     await page.keyboard.press('Tab');
     await page.keyboard.press('Shift+Tab');
-    const inCard = await page.evaluate(() => !!document.activeElement?.closest('.slag-card'));
-    if (!inCard) throw new Error('settings: Tab left the card');
+    if ((await menuOpen(page)) !== 'settings' || !(await selected())) throw new Error('settings: Tab left the card');
     await page.keyboard.press('ArrowDown');
     if ((await selected())?.trim().endsWith('Done') !== true) throw new Error(`settings: arrows landed on ${await selected()}`);
     await pad(0);
     await page.waitForTimeout(300);
-    if (await page.$('.slag-panel')) throw new Error('settings: pad A on Done left the menu open, or reopened it');
+    if (await menuOpen(page)) throw new Error('settings: pad A on Done left the menu open, or reopened it');
 
     for (const [name, width, height] of [
       ['phone', 390, 844],
@@ -231,13 +226,11 @@ export const shots: Scenarios = {
       await phone.goto(base);
       await phone.evaluate(() => document.fonts.ready);
       await phone.tap('text=SETTINGS');
-      await phone.waitForSelector('.slag-panel');
+      await waitMenu(phone, 'settings');
       for (const tab of ['audio', 'video', 'touch']) {
-        await phone.tap(`#slag-tab-${tab}`);
+        await pressMenu(phone, `tab:${tab}`, 'tap');
         await expectTab(phone, tab);
-        const small = await phone.evaluate(
-          () => [...document.querySelectorAll('.slag-tab,.slag-settings .slag-btn')].filter((b) => b.getBoundingClientRect().height < 44).length,
-        );
+        const small = (await menuControls(phone)).filter((c) => !c.disabled && Math.min(c.w, c.h) < 44).length;
         if (small) throw new Error(`settings: ${small} controls under 44 px on ${name}`);
         await phone.screenshot({ path: `${out}/settings-${name}-${tab}.png` });
         console.log(`${out}/settings-${name}-${tab}.png`);

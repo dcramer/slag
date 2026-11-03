@@ -8,6 +8,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { devices, type Page } from 'playwright';
+import { pressMenu, waitMenu } from '../lib/menu';
 import { base, browser, errors, opt, out, page, pet, type Scenarios } from './ctx';
 
 type Seat = 'seated' | 'leaving' | 'queued' | 'watching';
@@ -165,11 +166,9 @@ async function frame(p: Page, f: Frame, tag: string): Promise<string> {
     if (!b) throw new Error(`${f.name}: no name button`);
     if (tag === 'phone') await p.touchscreen.tap(b.x, b.y);
     else await p.mouse.click(b.x, b.y);
-    await p.waitForSelector('.slag-swatch', { timeout: 10_000 });
+    await waitMenu(p, 'name');
     // A swatch picked: the preview wears it.
-    await p.evaluate(() =>
-      [...document.querySelectorAll<HTMLButtonElement>('.slag-swatch')].find((q) => !q.disabled && q.getAttribute('aria-pressed') !== 'true')?.click(),
-    );
+    await pressMenu(p, (c) => c.id.startsWith('color:') && !c.disabled && !c.on, tag === 'phone' ? 'tap' : 'click');
     await p.waitForTimeout(300);
   }
   const path = `${out}/${f.name}-${tag}.png`;

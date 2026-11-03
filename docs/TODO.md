@@ -80,6 +80,13 @@ Some steps need the owner. Run after setting the Vercel env vars.
 ## 22. Glacier and space follow-ups
 Both themes are on `main`. Space has no weather. Ice skids and 0.55 space gravity are measured, not played by hand.
 
+## 30. Native build
+A real game binary that runs the same TypeScript in a native host (owner decision: no Electron). The sim and generators stay as they are, because lockstep crossplay with the web build needs the same code. Steps, one agent each:
+
+1. **The DOM screens onto canvas.** Settings, Rules and the name screen are canvas on `src/ui/kit/`. Next: the main menu, the lobby list, About, 404 and the error screen, then the codex. `homeHTML()` stays as the web build's first paint.
+2. **A version gate on join.** Peers from different builds desync today: `SNAP_VERSION` covers the snapshot format, not the generator. Join should refuse a peer whose build differs.
+3. **The native host.** SDL3 for the window, input, pads and audio out, a JS engine for the game, and only the browser APIs the game uses: Canvas2D (Skia), WebGL2 (ANGLE), Web Audio, WebRTC data channels (libdatachannel), and the kit's `TextEntry` over SDL text input. Online play uses `setSignalBase` and an origin allowlist (`docs/NETCODE.md` → Portability).
+
 ## 25. Idea: switchable art styles
 The owner called switching art styles "a fun gimmick" while making cel the only look (`docs/DECISIONS.md` → World art). It's not scheduled. If it comes back, cel stays the default and the switch is a novelty, never a setting players need.
 
