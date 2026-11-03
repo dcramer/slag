@@ -1,15 +1,16 @@
 import { dcos, dsin } from '../../core/dmath';
 import type { Rng } from '../../core/rng';
-import { liveFence } from '../stage/farm';
+import { harvester, liveFence, REEL_REACH } from '../stage/farm';
 import { cannons, pendulums, vehicles, wheels } from './builders';
 import { defineSetPiece } from './contract';
-import { best, makeStyle, type Piece, type Recipe, SAFE_TILES, type Site } from './place';
+import { best, makeStyle, type Piece, type Recipe, type Run, SAFE_TILES, type Site } from './place';
 
 /**
  * Farm: a tractor ploughing a field, a windmill with rideable sails, a swinging hay bale on a hoist and a
  * live fence across a field path; and the farm's own hazards, which
  * no other theme has: a hay hook's heavy block swinging from a jib, a muck spreader flinging slow muck,
- * and a pumpkin catapult lobbing pumpkins that bounce and knock you about. Big enough to read across the
+ * a pumpkin catapult lobbing pumpkins that bounce and knock you about, and a combine harvester driving a
+ * field reel first, revving before it pulls away. Big enough to read across the
  * level, and everything that hangs hangs from a post that stands on the ground (docs/SETPIECES.md).
  */
 
@@ -66,6 +67,86 @@ function* hooks(rng: Rng, s: Site): Generator<Piece> {
         { type: 'swinger', head: 'mace', hub: [c.x + 0.5, c.hy], arm, angle0: DOWN, period: rng.int(150, 200), swing, dir: 1, radius, count: 1, link: 'chain' },
       ],
     };
+  }
+}
+
+/** Rows a combine stands in over its stand row: its tank, and a rider on it. */
+const COMBINE_ROWS = 4;
+
+/** Stretches of a run where a combine keeps clear of the spawn and the goal, every row it stands in. */
+function fieldsOf(s: Site, run: Run): Run[] {
+  const out: Run[] = [];
+  let x0 = -1;
+  for (let x = run.x0; x <= run.x1 + 1; x++) {
+    let ok = x <= run.x1;
+    for (let k = 0; ok && k < COMBINE_ROWS; k++) ok = s.zoneDist(x, run.y - k) > SAFE_TILES;
+    if (ok && x0 < 0) x0 = x;
+    if (!ok && x0 >= 0) {
+      out.push({ y: run.y, x0, x1: x - 1 });
+      x0 = -1;
+    }
+  }
+  return out;
+}
+
+/** Fewest columns a combine drives: enough that its reel leaves every cell it covers once each way. */
+const MIN_DRIVE = 3;
+
+interface Lane {
+  x0: number;
+  cw: number;
+  travel: number;
+  face: -1 | 1;
+}
+
+/**
+ * Where a combine `cw` wide facing `face` fits on a run, driving up to `want` columns: its reel's air out
+ * front where it parks first (over the drop off the run's end, often), its body and drive on the run, and
+ * a free column past where the drive ends, to push a runner into. Worked as facing left on a mirrored run.
+ */
+function laneOn(s: Site, run: Run, cw: number, want: number, face: -1 | 1): Lane | null {
+  const G = run.y + 1;
+  // Column `u` along the run from the end the reel faces.
+  const at = (u: number) => (face < 0 ? run.x0 + u : run.x1 - u);
+  const open = (u0: number, u1: number) => s.freeRect(Math.min(at(u0), at(u1)), G - COMBINE_ROWS, Math.max(at(u0), at(u1)), G - 1);
+  const len = run.x1 - run.x0 + 1;
+  let a = 0;
+  while (a + cw + MIN_DRIVE <= len && !open(a - REEL_REACH, a - 1)) a++;
+  if (a + cw + MIN_DRIVE > len) return null;
+  let travel = Math.min(want, len - a - cw);
+  while (travel >= MIN_DRIVE && !open(a + cw + travel, a + cw + travel)) travel--;
+  if (travel < MIN_DRIVE) return null;
+  return { x0: face < 0 ? at(a) : at(a + cw - 1), cw, travel, face };
+}
+
+/**
+ * A combine harvester on a field (`harvester`, gen/stage/farm.ts), sized for a classic level, whose fields
+ * are short: its body and its drive on a flat run, with head room over it for a rider. A field of earth
+ * first; most long flat runs on a farm's hills are boards, though, and it drives those as the tractor does.
+ * Its reel only needs air, so it parks first at whichever end of the run has room for it, mostly facing the
+ * spawn.
+ */
+function* combines(rng: Rng, s: Site): Generator<Piece> {
+  const big = rng.int(4, 5);
+  const want = rng.int(MIN_DRIVE, 7);
+  const faces: (-1 | 1)[] = rng.chance(0.65) ? [-1, 1] : [1, -1];
+  const runs = s.groundRuns(COMBINE_ROWS, 4 + MIN_DRIVE).flatMap((r) => fieldsOf(s, r).filter((c) => c.x1 - c.x0 + 1 >= 4 + MIN_DRIVE));
+  const earth = (r: Run) => s.solid(r.x0, r.y + 1) && s.solid(r.x1, r.y + 1) && s.solid((r.x0 + r.x1) >> 1, r.y + 1);
+  for (const run of best(rng, runs, (r) => (earth(r) ? 2 : 0) + (s.runReachable(r) ? 3 : 0) + Math.min(1.5, (r.x1 - r.x0) / 12))) {
+    let lane: Lane | null = null;
+    for (const cw of new Set([big, 4])) for (const face of faces) lane ??= laneOn(s, run, cw, want, face);
+    if (!lane) continue;
+    const dwell = rng.int(60, 100);
+    yield harvester(rng, {
+      ...lane,
+      G: run.y + 1,
+      speed: rng.range(2.2, 3.4),
+      dwell,
+      warn: rng.int(30, 42),
+      names: ['Combine Harvester', 'The Reaper', 'Little Red', 'Grim Reaper', 'Harvest Moon', 'Threshold'],
+      // Red or green: the machine everyone pictures.
+      paints: [0, 1],
+    });
   }
 }
 
@@ -150,6 +231,18 @@ export const FARM: Recipe[] = [
         elev: [0.35, 0.7],
         length: 1.2,
       }),
+  }),
+  defineSetPiece({
+    name: 'combine',
+    codex: {
+      title: 'Combine Harvester',
+      note: 'Reaps what you sow.',
+      about: 'Drives a field reel first. The reel idles while it waits, and revs before it pulls away.',
+    },
+    weight: 4,
+    role: 'hazard',
+    unique: true,
+    candidates: combines,
   }),
   defineSetPiece({
     name: 'pumpkin catapult',

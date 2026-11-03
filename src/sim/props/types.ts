@@ -61,6 +61,13 @@ export type LauncherStyle =
  * weight on its chain or rod (a wrecking ball, a clock's pendulum bob, a bell): blunt, no spikes or edge.
  */
 export type Head = 'saw' | 'mace' | 'axe' | 'log' | 'weight';
+/** A swinger's drive: see `drive` on the swinger module. Frames, and a fraction of full speed. */
+export interface Drive {
+  park: number;
+  move: number;
+  warn: number;
+  idle: number;
+}
 export type Aim = 'fixed' | 'sweep' | 'track';
 /** Set-piece looks (art only; the sim treats every look the same). */
 export type RotorLook =
@@ -218,6 +225,13 @@ export type Module =
       radius: number;
       count: number;
       link: 'none' | 'rod' | 'chain';
+      /**
+       * A full turn on a machine's drive (a combine's reel): it idles at `idle` of full speed while its piece
+       * is parked, winds up over the last `warn` frames of each park, and turns at full speed while the piece
+       * moves. `park` and `move` are the piece's rail in frames (its `dwell` and half its `period`), so the
+       * rev is the warning that the machine is about to pull away (`driveTurns`, ./modules/swinger.ts).
+       */
+      drive?: Drive;
     }
   | {
       type: 'launcher';

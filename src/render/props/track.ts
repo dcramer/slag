@@ -124,6 +124,8 @@ function middle(r: Resolved): { x: number; y: number; ex: number; ey: number } {
 function guide(r: Resolved, frame: number): Guide | null {
   const m = r.motion;
   if (m.type !== 'track' && !(m.type === 'rail' && m.dwell)) return null;
+  // A machine on a drive (a combine) drives itself along the ground on its own wheels: no cable.
+  if (r.mods.some((x) => x.type === 'swinger' && x.drive)) return null;
   const c = middle(r);
   if (m.type === 'rail') {
     const [dx, dy] = dirOf(m.angle);
