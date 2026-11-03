@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { BOX, type Clip, type Key, type Prop, type Settings } from '../settings';
 import { ballFrames } from './ball';
+import { applyTurns, boneOf, checkArms, restOf, turnsOf } from './keys';
 import { loadModel } from './load';
 import { classify } from './roles';
 import { shaped } from './shapes';
@@ -156,6 +157,8 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
     caricature();
   };
   rest();
+  // What aims are measured from (page/keys.ts).
+  const restPose = restOf(model.root, bones);
 
   // Stand the figure on the origin, scaled to its height in world px, centred on its hips.
   model.root.updateMatrixWorld(true);
@@ -278,16 +281,8 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
   const mixer = new THREE.AnimationMixer(model.root);
   const pin = new THREE.Vector3();
 
-  /**
-   * Poses the figure as `key` for a facing. `_near` and `_far` name the limbs on the camera's side and the
-   * other, authored as the figure faces right (near is its right); facing left they swap sides and mirror,
-   * so a turn about y or z changes sign.
-   */
+  /** Poses the figure as `key` for a facing (page/keys.ts: which bones, which way, mirrored facing left). */
   const poseKey = (key: Key, facing: 'r' | 'l') => {
-    const near = facing === 'r' ? '_r' : '_l';
-    const far = facing === 'r' ? '_l' : '_r';
-    const mirror = (n: string, e: [number, number, number]): [number, number, number] => (facing === 'l' && /_(near|far)$/.test(n) ? [e[0], -e[1], -e[2]] : e);
-    const turns = new Map(Object.entries(key.bones ?? {}).map(([n, e]) => [n.replace(/_near$/, near).replace(/_far$/, far), mirror(n, e)] as const));
     mixer.stopAllAction();
     if (key.from === 'rest') rest();
     else {
@@ -298,35 +293,32 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
       caricature();
     }
     scene.updateMatrixWorld(true);
-    const rq = rootQ();
-    for (const b of bones) {
-      const e = turns.get(b.name);
-      if (!e) continue;
-      const turnBy = new THREE.Quaternion().setFromEuler(new THREE.Euler(rad(e[0]), rad(e[1]), rad(e[2]), 'XYZ'));
-      const now = turnBy.multiply(inModel(b, rq));
-      const parent = b.parent ? inModel(b.parent, rq) : new THREE.Quaternion();
-      b.quaternion.copy(parent.invert().multiply(now));
-      b.updateMatrixWorld(true);
-      b.updateMatrixWorld(true);
-    }
+    applyTurns(model.root, bones, turnsOf(key, facing), restPose);
     for (const [n, f] of Object.entries(key.scale ?? {})) {
       // A stretch, on top of the caricature: a fist punched up past a big head.
-      const b = bone(n.replace(/_near$/, near).replace(/_far$/, far));
+      const b = bone(boneOf(n, facing).bone);
       b.scale.multiplyScalar(f);
       b.updateMatrixWorld(true);
     }
   };
+  // The arms hang in an idle (a humanoid rig's rest is a T-pose): key the check from there.
+  const hanging = model.clips.some((c) => c.name === 'idle' || c.name.startsWith('idle')) ? 'idle@0.05' : 'rest';
+  const misfit = checkArms(model.root, bones, restPose, () => poseKey({ from: hanging }, 'r'));
+  if (misfit.length) throw new Error(`keys won't turn this rig as the README says:\n${misfit.join('\n')}`);
+
   /** Every bone's local turn, to blend two keys by. */
   const snapshot = () => bones.map((b) => ({ q: b.quaternion.clone(), s: b.scale.x }));
 
   /** Poses the figure for sample `u` of clip `c`; returns the roll to apply about the hips. */
   const poseAt = (c: Clip, u: number, facing: 'r' | 'l'): { roll: number; yaw: number } => {
     if (c.keys) {
-      const keys = c.keys.map((n) => {
+      const keyNamed = (n: string) => {
         const key = s.keys?.[n];
         if (!key) throw new Error(`clip keys "${n}", which isn't in keys`);
         return key;
-      });
+      };
+      // A rig whose sides differ may pose another key facing left.
+      const keys = c.keys.map((n) => (facing === 'l' && keyNamed(n).l ? keyNamed(keyNamed(n).l!) : keyNamed(n)));
       const span = c.loop ? keys.length : keys.length - 1;
       const at = Math.max(0, u * span);
       const i = Math.min(keys.length - 1, Math.floor(at));

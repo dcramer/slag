@@ -496,6 +496,65 @@
           0
         ]
       }
+    },
+    "pump0": {
+      "from": "idle@0.05",
+      "yaw": 15,
+      "bones": {
+        "spine_01": [
+          -4,
+          0,
+          6
+        ],
+        "upperarm_far": {
+          "raise": 70,
+          "out": 50
+        },
+        "lowerarm_far": {
+          "raise": 150,
+          "out": 50
+        },
+        "upperarm_near": {
+          "raise": 15,
+          "out": 30
+        },
+        "lowerarm_near": {
+          "raise": 60,
+          "out": 10
+        }
+      }
+    },
+    "pump1": {
+      "from": "idle@0.05",
+      "yaw": 15,
+      "bones": {
+        "spine_01": [
+          -10,
+          0,
+          8
+        ],
+        "head": [
+          -6,
+          0,
+          0
+        ],
+        "upperarm_far": {
+          "raise": 135,
+          "out": 65
+        },
+        "lowerarm_far": {
+          "raise": 175,
+          "out": 65
+        },
+        "upperarm_near": {
+          "raise": 15,
+          "out": 30
+        },
+        "lowerarm_near": {
+          "raise": 60,
+          "out": 10
+        }
+      }
     }
   },
   "clips": {
@@ -564,12 +623,13 @@
       "fps": 3
     },
     "cheer2": {
-      "src": "cheer",
-      "from": 0.6,
-      "to": 0.8,
+      "keys": [
+        "pump0",
+        "pump1"
+      ],
       "frames": 4,
       "loop": true,
-      "fps": 4
+      "fps": 6
     }
   },
   "girth": 1.12,
@@ -730,7 +790,7 @@
           "role": "ringpull",
           "size": [
             0.8,
-            1.0,
+            1,
             0.35
           ],
           "at": [
@@ -779,7 +839,7 @@
             0
           ],
           "at": [
-            -1.0,
+            -1,
             0.2,
             1.6
           ],
