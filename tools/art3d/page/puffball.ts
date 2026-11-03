@@ -141,8 +141,7 @@ export function puffballModel(): Model {
   // The squeaker valve: a stubby nozzle and its round cap, high on its back on the seam's far side, where
   // it stands clear of the ball's outline from either side.
   const up = (VALVE * Math.PI) / 180;
-  const along = (d: number, geo: THREE.BufferGeometry) =>
-    geo.rotateX(up - Math.PI / 2).translate(0, C + Math.sin(up) * d, -Math.cos(up) * d);
+  const along = (d: number, geo: THREE.BufferGeometry) => geo.rotateX(up - Math.PI / 2).translate(0, C + Math.sin(up) * d, -Math.cos(up) * d);
   add(solid(along(1.12, new THREE.CylinderGeometry(0.12, 0.14, 0.34, 16)), 'valve'), body);
   add(solid(along(1.3, new THREE.CylinderGeometry(0.21, 0.21, 0.1, 18)), 'valve'), body);
   // Stubby arms, half sunk into the ball low on its sides.
