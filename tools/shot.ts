@@ -56,7 +56,9 @@
  *   pnpm shot settings                     → every settings tab over the lobby, driven by keys and a fake pad,
  *                                           then over the main menu on a phone (portrait and landscape), by tap
  *   pnpm shot mobile [--device "Pixel 7 landscape"]  → phone emulation driven by real
- *                                           multi-touch: lobby/join, pick, place, race, portrait
+ *                                           multi-touch: lobby/join, pick, place, race, portrait, then the lobby
+ *                                           at 1–8 players on its side and upright, offline and hosting
+ *                                           (`--only lobby`: just that)
  *
  * Options: --out shots  --size 1280x720 (window)  --world classic|wide|tall (level size)  --players 2  --frames N (sim frames to advance)
  *          --theme farm (force a theme; `levels --themes all` renders one level per theme)

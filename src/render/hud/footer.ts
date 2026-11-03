@@ -52,7 +52,9 @@ function footerItems(hud: Hud, m: Match): { items: FooterItem[]; left: string; a
   if (m.phase !== 'lobby' && (seat === 'watching' || seat === 'queued')) return { items: [], left: '', alpha: 1, bar: false };
   switch (m.phase) {
     case 'lobby': {
-      const primary = hud.mode === 'gamepad' ? m.players.find((p) => /(^|:)pad/.test(p.device)) : m.players.find((p) => p.device === hud.mouseDevice);
+      const local = (d: string) => hud.devices.isLocal?.(d) ?? true;
+      const primary =
+        hud.mode === 'gamepad' ? m.players.find((p) => /(^|:)pad/.test(p.device) && local(p.device)) : m.players.find((p) => p.device === hud.mouseDevice);
       const items: FooterItem[] = [];
       if ((hud.net?.kickSlot ?? -1) >= 0) {
         items.push({ action: 'confirm', label: 'Kick' }, { action: 'alt', label: 'Cancel' });
@@ -66,6 +68,8 @@ function footerItems(hud: Hud, m: Match): { items: FooterItem[]; left: string; a
       } else {
         items.push({ action: 'confirm', label: primary.ready ? 'Not Ready' : 'Ready Up', hud: 'ready', device: primary.device });
         items.push({ action: 'alt', label: 'New Look', hud: 'look', device: primary.device });
+        // Run opens the name screen: a pad's only way to the name and color its card shows.
+        items.push({ action: 'run', label: 'Name', hud: 'name', device: primary.device });
         items.push({ action: 'down', label: 'New Level', hud: 'level', device: primary.device });
       }
       if (!touch && hud.net?.kickable?.length) items.push({ action: 'use', label: 'Kick' });
