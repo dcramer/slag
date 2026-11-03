@@ -17,14 +17,14 @@ const [first, second, third] = process.argv.slice(2);
 // `build.ts pose KIND NAME`: the prompt for one pose drawing (Tripo `image … --ref design.png`).
 if (first === 'pose') {
   const p = FLAT_KINDS[second]?.poses[third];
-  if (!p) throw new Error(`No pose "${third}" for "${second}": poses are listed per kind in tools/art3d/flat/kinds.ts.`);
+  if (!p) throw new Error(`No pose "${third}" for "${second}": each kind's poses are in tools/art3d/flat/kinds/<kind>.ts.`);
   console.log(posePrompt(p.pose, p.far));
   process.exit(0);
 }
 // `build.ts body KIND HEIGHT`: the body size (`FlatKind.body`) that draws the design HEIGHT world px tall.
 if (first === 'body') {
   const k = FLAT_KINDS[second];
-  if (!k) throw new Error(`No flat kind "${second}" in tools/art3d/flat/kinds.ts: add its entry (any body) first.`);
+  if (!k) throw new Error(`No flat kind "${second}" in tools/art3d/flat/kinds/: add tools/art3d/flat/kinds/${second}.ts (any body) first.`);
   const dir = resolve('.cache/flat', second);
   mkdirSync(dir, { recursive: true });
   writeFileSync(resolve(dir, 'map.json'), JSON.stringify(k.map));
@@ -48,7 +48,7 @@ if (first === 'body') {
 }
 const kind = first ?? 'zapmouse';
 const spec = FLAT_KINDS[kind];
-if (!spec) throw new Error(`No flat kind "${kind}". Flat kinds are listed in tools/art3d/flat/kinds.ts: ${Object.keys(FLAT_KINDS).join(', ')}.`);
+if (!spec) throw new Error(`No flat kind "${kind}". Flat kinds are the files in tools/art3d/flat/kinds/: ${Object.keys(FLAT_KINDS).join(', ')}.`);
 const art = resolve('art/sprites', kind);
 const cache = resolve('.cache/flat', kind);
 mkdirSync(cache, { recursive: true });
@@ -182,72 +182,76 @@ function frameOf(name: string, clip: FlatClip): Frame {
   const roleOf = (n: string) => spec.roles.findIndex((r) => r.name === n);
   // Roles by name from the map's order into the kind's.
   let parts: Shape[] = t.parts.map((p) => ({ role: roleOf(m.roles[p.role]), ring: p.ring }));
-  const dark = roleOf(spec.eyes.role);
-  // The eyes: the two dark specks side by side, nearest level, near (left, facing right) first.
-  // An eye is in the top of the figure (`band`, fractions of its height) and clear of its outline: a speck on
-  // the edge is a scrap of the ink, a speck low down a stripe or a glove's.
-  const ys = t.sil.flatMap((r) => r.filter((_, i) => i % 2 === 1));
-  const [figTop, figLow] = [Math.min(...ys), Math.max(...ys)];
-  const [b0, b1] = spec.eyes.band ?? [0, 0.5];
-  const edge = (x: number, y: number) =>
-    Math.min(...t.sil.flatMap((r) => r.filter((_, i) => i % 2 === 0).map((rx, i) => Math.hypot(rx - x, r[i * 2 + 1] - y))));
-  // `FLAT_DEBUG=<pose>`: that pose's dark specks, to tune `eyes` (area, place in the band, distance to the edge).
-  if (process.env.FLAT_DEBUG === name)
-    for (const p of parts.filter((q) => q.role === dark)) {
-      const [x, y] = mid(p.ring);
-      console.log(
-        `  speck area ${area(p.ring).toFixed(2)} at ${x.toFixed(1)},${y.toFixed(1)} band ${((y - figTop) / (figLow - figTop)).toFixed(2)} edge ${edge(x, y).toFixed(2)}`,
-      );
-    }
-  const specks = parts.filter((p) => {
-    if (p.role !== dark || area(p.ring) < spec.eyes.area[0] || area(p.ring) >= spec.eyes.area[1]) return false;
-    const [x, y] = mid(p.ring);
-    return y >= figTop + (figLow - figTop) * b0 && y <= figTop + (figLow - figTop) * b1 && edge(x, y) > 0.45;
-  });
+  // A kind with no face (a visor, a jelly) has no eyes to find, and keeps the drawing's own.
   let eyes: Pt[] = [];
-  let best = -1;
-  for (const a of specks)
-    for (const b of specks) {
-      const [pa, pb] = [mid(a.ring), mid(b.ring)];
-      const dx = pb[0] - pa[0];
-      if (dx < spec.eyes.gap[0] || dx > spec.eyes.gap[1] || Math.abs(pb[1] - pa[1]) > 1.2) continue;
-      const score = area(a.ring) + area(b.ring) - Math.abs(pb[1] - pa[1]) * 0.2;
-      if (score > best) {
-        best = score;
-        eyes = [pa, pb];
+  const ek = spec.eyes;
+  if (ek) {
+    const dark = roleOf(ek.role);
+    // The eyes: the two dark specks side by side, nearest level, near (left, facing right) first.
+    // An eye is in the top of the figure (`band`, fractions of its height) and clear of its outline: a speck on
+    // the edge is a scrap of the ink, a speck low down a stripe or a glove's.
+    const ys = t.sil.flatMap((r) => r.filter((_, i) => i % 2 === 1));
+    const [figTop, figLow] = [Math.min(...ys), Math.max(...ys)];
+    const [b0, b1] = ek.band ?? [0, 0.5];
+    const edge = (x: number, y: number) =>
+      Math.min(...t.sil.flatMap((r) => r.filter((_, i) => i % 2 === 0).map((rx, i) => Math.hypot(rx - x, r[i * 2 + 1] - y))));
+    // `FLAT_DEBUG=<pose>`: that pose's dark specks, to tune `eyes` (area, place in the band, distance to the edge).
+    if (process.env.FLAT_DEBUG === name)
+      for (const p of parts.filter((q) => q.role === dark)) {
+        const [x, y] = mid(p.ring);
+        console.log(
+          `  speck area ${area(p.ring).toFixed(2)} at ${x.toFixed(1)},${y.toFixed(1)} band ${((y - figTop) / (figLow - figTop)).toFixed(2)} edge ${edge(x, y).toFixed(2)}`,
+        );
       }
-    }
-  // One eye found (a profile, the dot-eater): the biggest.
-  if (spec.eyes.count === 1) {
-    const one = [...specks].sort((a, b) => area(b.ring) - area(a.ring))[0];
-    eyes = one ? [mid(one.ring)] : [];
-    // The far eye of a face turned nearly side on is on the outline, or lost in its white: set from the near one.
-    const pair = spec.eyes.pair;
-    if (pair && one) {
-      // Pulled back toward the near eye until it's on the face.
-      for (let k = 1; k >= 0.3; k -= 0.1) {
-        const at: Pt = [eyes[0][0] + pair[0] * k, eyes[0][1] + pair[1] * k];
-        // With a margin, so the mirrored facing's rounding can't put it on the line.
-        if ([0, 1, 2, 3, 4, 5].every((j) => t.sil.some((r) => inside(at[0] + Math.cos(j) * 0.4, at[1] + Math.sin(j) * 0.4, r)))) {
-          eyes.push(at);
-          break;
+    const specks = parts.filter((p) => {
+      if (p.role !== dark || area(p.ring) < ek.area[0] || area(p.ring) >= ek.area[1]) return false;
+      const [x, y] = mid(p.ring);
+      return y >= figTop + (figLow - figTop) * b0 && y <= figTop + (figLow - figTop) * b1 && edge(x, y) > 0.45;
+    });
+    let best = -1;
+    for (const a of specks)
+      for (const b of specks) {
+        const [pa, pb] = [mid(a.ring), mid(b.ring)];
+        const dx = pb[0] - pa[0];
+        if (dx < ek.gap[0] || dx > ek.gap[1] || Math.abs(pb[1] - pa[1]) > 1.2) continue;
+        const score = area(a.ring) + area(b.ring) - Math.abs(pb[1] - pa[1]) * 0.2;
+        if (score > best) {
+          best = score;
+          eyes = [pa, pb];
+        }
+      }
+    // One eye found (a profile, the dot-eater): the biggest.
+    if (ek.count === 1) {
+      const one = [...specks].sort((a, b) => area(b.ring) - area(a.ring))[0];
+      eyes = one ? [mid(one.ring)] : [];
+      // The far eye of a face turned nearly side on is on the outline, or lost in its white: set from the near one.
+      const pair = ek.pair;
+      if (pair && one) {
+        // Pulled back toward the near eye until it's on the face.
+        for (let k = 1; k >= 0.3; k -= 0.1) {
+          const at: Pt = [eyes[0][0] + pair[0] * k, eyes[0][1] + pair[1] * k];
+          // With a margin, so the mirrored facing's rounding can't put it on the line.
+          if ([0, 1, 2, 3, 4, 5].every((j) => t.sil.some((r) => inside(at[0] + Math.cos(j) * 0.4, at[1] + Math.sin(j) * 0.4, r)))) {
+            eyes.push(at);
+            break;
+          }
         }
       }
     }
+    if (clip.eyes === false) eyes = [];
+    // The face's specks go (eyes, nose, a drawn mouth and its tongue): the kit draws eyes and mouth there.
+    if (eyes.length) {
+      const [x0, x1] = [eyes[0][0] - 2.5, eyes[eyes.length - 1][0] + 2.5];
+      const [y0, y1] = [Math.min(...eyes.map((e) => e[1])) - 1.5, Math.max(...eyes.map((e) => e[1])) + 3.6];
+      parts = parts.filter((p) => {
+        const [x, y] = mid(p.ring);
+        const face = x > x0 && x < x1 && y > y0 && y < y1;
+        return !(face && Object.entries(ek.specks).some(([n, most]) => p.role === roleOf(n) && area(p.ring) < most));
+      });
+    } else if (clip.eyes === false)
+      // Shut eyes and an open mouth are specks too: the face's place is all the kit needs, and it has none.
+      parts = parts.filter((p) => !(p.role === dark && area(p.ring) < 0.4));
   }
-  if (clip.eyes === false) eyes = [];
-  // The face's specks go (eyes, nose, a drawn mouth and its tongue): the kit draws eyes and mouth there.
-  if (eyes.length) {
-    const [x0, x1] = [eyes[0][0] - 2.5, eyes[eyes.length - 1][0] + 2.5];
-    const [y0, y1] = [Math.min(...eyes.map((e) => e[1])) - 1.5, Math.max(...eyes.map((e) => e[1])) + 3.6];
-    parts = parts.filter((p) => {
-      const [x, y] = mid(p.ring);
-      const face = x > x0 && x < x1 && y > y0 && y < y1;
-      return !(face && Object.entries(spec.eyes.specks).some(([n, most]) => p.role === roleOf(n) && area(p.ring) < most));
-    });
-  } else if (clip.eyes === false)
-    // Shut eyes and an open mouth are specks too: the face's place is all the kit needs, and it has none.
-    parts = parts.filter((p) => !(p.role === dark && area(p.ring) < 0.4));
   // A dark under the face drawn in a role of its own (the zapmouse's black cord, which reads as a frown).
   const re = spec.recolour;
   if (re) {
@@ -310,7 +314,8 @@ function dress(f: Frame, seed: number): Frame {
   const onFur = (x: number, y: number) => body.some((p) => inside(x, y, p.ring)) && !over.some((p) => inside(x, y, p.ring));
   // Below the mouth and the cheeks: a pale patch there reads as a snout.
   const chin = f.eyes.length ? Math.max(...f.eyes.map(([, ey]) => ey)) + spec.wear.chin : -Infinity;
-  const clearOfFace = (x: number, y: number, r: number) => y - r > chin && f.eyes.every(([ex, ey]) => Math.hypot(x - ex, y - ey) > spec.face.r * 1.2 + 1 + r);
+  const clearOfFace = (x: number, y: number, r: number) =>
+    y - r > chin && f.eyes.every(([ex, ey]) => Math.hypot(x - ex, y - ey) > (spec.face?.r ?? 1) * 1.2 + 1 + r);
   /** A spot `r` across inside the body at (u, v) of its box, or the nearest that is. */
   const spot = (u: number, v: number, r: number): Pt | null => {
     for (let k = 0; k < 80; k++) {
@@ -367,7 +372,8 @@ function vframe(f: Frame, flip: boolean) {
   };
   if (f.eyes.length) {
     const x = (v: number) => (flip ? -v : v);
-    const sizes = [Math.round(spec.face.r * 8), Math.round(spec.face.r * 0.85 * 8)];
+    const r = spec.face?.r ?? 1;
+    const sizes = [Math.round(r * 8), Math.round(r * 0.85 * 8)];
     out.eyes = f.eyes.flatMap(([ex, ey], i) => [Math.round(x(ex) * 8), Math.round(ey * 8), sizes[i]]);
     // The head the eyes ride, turned with the line between them (one eye: upright).
     const [a, b] = [f.eyes[0], f.eyes[f.eyes.length - 1]];

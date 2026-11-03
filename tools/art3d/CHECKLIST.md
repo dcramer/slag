@@ -4,11 +4,11 @@ For a production agent taking one Roster entry (docs/CHARACTERS.md → Roster) t
 
 ## Run sheet
 
-- [ ] **Worktree.** `pnpm install`. Read AGENTS.md, src/render/AGENTS.md, docs/ART.md → World art, your Roster entry and its "Rules for every kind", docs/CHARACTERS.md → Decisions 9, and the plumber's and zapmouse's entries in `tools/art3d/flat/kinds.ts` as worked examples.
-- [ ] **Brief.** `BRIEFS[kind].design` in `style.ts` from the entry: the nod and the twist as big shapes, the palette hex, the signature prop first; `worn`: two to four big worn changes, off the face. Its comment lists the nod with why each stays, and the twist. Never a real name.
+- [ ] **Worktree.** `pnpm install`. Read AGENTS.md, src/render/AGENTS.md, docs/ART.md → World art, your Roster entry and its "Rules for every kind", docs/CHARACTERS.md → Decisions 9, and `tools/art3d/flat/kinds/plumber.ts` and `zapmouse.ts` as worked examples (`chomper.ts` for a limbless kind).
+- [ ] **Brief.** `BRIEFS[kind].design` in `style.ts` from the entry (fill in its stub, if it has one): the nod and the twist as big shapes, the palette hex, the signature prop first; `worn`: two to four big worn changes, off the face. Its comment lists the nod with why each stays, and the twist. Never a real name.
 - [ ] **Design** (free, four) → pick one. **Twist pass:** if it reads as the original redrawn, redo it from the kind's concept as the reference, or push the twist in the wear edit.
 - [ ] **Wear edit** (free, three) → `art/sprites/<kind>/design.png`, and the prompt in your report.
-- [ ] **Entry.** `FLAT_KINDS[kind]` in `kinds.ts`: `poses` (the eleven in the README), then `map.families` from `swatch.py`, `roles` and the costume slot, `face`, `eyes`, `wear`, `accessories`, `gait`, `clips`. `build.ts body KIND HEIGHT` for `body`.
+- [ ] **Entry.** `tools/art3d/flat/kinds/<kind>.ts` (copy a worked example): `poses` (the eleven in the README), then `map.families` from `swatch.py`, `roles` and the costume slot, `face`, `eyes`, `wear`, `accessories`, `gait`, `clips`. `build.ts body KIND HEIGHT` for `body`.
 - [ ] **Poses** (free, two each) → `art/sprites/<kind>/flat/`. Reject a lost prop, a new limb, a changed colour; whiten a drawn wall line out.
 - [ ] **Register:** the kind in `LOADERS` (`src/render/cast/sprites/index.ts`), if it isn't there.
 - [ ] **Build** and iterate: `pnpm exec tsx tools/art3d/flat/build.ts <kind>` until every pose has its eyes (`FLAT_DEBUG`) and its wear ("no room for" gone), and `pnpm vitest run tests/sprite-cast.test.ts` passes.

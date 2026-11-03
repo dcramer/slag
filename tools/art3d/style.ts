@@ -58,15 +58,19 @@ export const WORN =
   'The same character exactly as in the reference image: the same pose, design, proportions, colours, line and flat white background. Change only this, and make each change big and obvious:';
 const WORN_END = 'Nothing else changes, no dirt, no texture.';
 
+/**
+ * A kind's brief. The flat route reads only `design` and `worn`; `character`, `views`, `pose` and `poses`
+ * are the retired 3D route's (concept, pose and model sheets: 3D.md), and a kind made flat needs none.
+ */
 export interface Brief {
   /** Who it is: shape, face, colours, clothes, the signature part. Traits only. */
-  character: string;
+  character?: string;
   /** The views across the concept sheet. */
-  views: string;
+  views?: string;
   /** What the T-pose sheet must keep clear for rigging, beyond the shared pose words. */
-  pose: string;
+  pose?: string;
   /** The poses across the pose sheet, in order. */
-  poses: string;
+  poses?: string;
   /** The proportions, when not a figure's (`CHUNKY`): a limbless kind has no head, hands or feet to push. */
   build?: string;
   /** The design stage's character: the nod and the twist as the few big shapes a 24 px sprite keeps. */
@@ -237,12 +241,50 @@ export const BRIEFS: Record<string, Brief> = {
     build:
       'Proportions for a tiny game sprite: one bold simple round shape that still reads at 20 pixels tall, no limbs at all. A chunky toy, never realistic.',
   },
+  impostor: {
+    // Its agent writes the design stage from the Roster entry (README.md → 1. Design): the nod and the twist
+    // as big shapes, the signature prop first; the wear as two to four big changes, off the face.
+    design: '',
+    worn: '',
+  },
+  hunter: {
+    // Its agent writes the design stage from the Roster entry (README.md → 1. Design): the nod and the twist
+    // as big shapes, the signature prop first; the wear as two to four big changes, off the face.
+    design: '',
+    worn: '',
+  },
+  engineer: {
+    // Its agent writes the design stage from the Roster entry (README.md → 1. Design): the nod and the twist
+    // as big shapes, the signature prop first; the wear as two to four big changes, off the face.
+    design: '',
+    worn: '',
+  },
+  goose: {
+    // Its agent writes the design stage from the Roster entry (README.md → 1. Design): the nod and the twist
+    // as big shapes, the signature prop first; the wear as two to four big changes, off the face.
+    design: '',
+    worn: '',
+  },
+  jelly: {
+    // Its agent writes the design stage from the Roster entry (README.md → 1. Design): the nod and the twist
+    // as big shapes, the signature prop first; the wear as two to four big changes, off the face.
+    design: '',
+    worn: '',
+  },
 };
 
 function brief(kind: string): Brief {
   const b = BRIEFS[kind];
   if (!b) throw new Error(`no brief for ${kind}: add one to BRIEFS in tools/art3d/style.ts (traits only, never the original's name)`);
   return b;
+}
+
+/** The 3D route's sheets need the whole brief. */
+function sheets(kind: string): Required<Pick<Brief, 'character' | 'views' | 'pose' | 'poses'>> & Brief {
+  const b = brief(kind);
+  if (!b.character || !b.views || !b.pose || !b.poses)
+    throw new Error(`${kind}'s brief has no 3D sheets (character, views, pose, poses): the 3D route is retired (tools/art3d/3D.md); make it flat (README.md).`);
+  return { ...b, character: b.character, views: b.views, pose: b.pose, poses: b.poses };
 }
 
 function designed(kind: string): Required<Pick<Brief, 'design' | 'worn'>> {
@@ -260,13 +302,13 @@ export const wornPrompt = (kind: string): string => [WORN, designed(kind).worn, 
 
 /** The concept sheet's prompt: the design in the game's own ink style. */
 export function conceptPrompt(kind: string): string {
-  const b = brief(kind);
+  const b = sheets(kind);
   return [STYLE, b.build ?? CHUNKY, b.character, `Layout: one row of full-body views of the same character side by side: ${b.views}.`].join(' ');
 }
 
 /** The pose sheet's prompt: the approved concept (the reference) through every pose the game plays. */
 export function posePrompt(kind: string): string {
-  const b = brief(kind);
+  const b = sheets(kind);
   // Led by the layout: with the concept as the reference, a prompt that opens on "model sheet" gets the
   // model sheet back.
   return [
@@ -280,7 +322,7 @@ export function posePrompt(kind: string): string {
 
 /** The model sheet's prompt: the approved concept (given as the reference) as one T-posed figure to model. */
 export function modelPrompt(kind: string): string {
-  const b = brief(kind);
+  const b = sheets(kind);
   return [
     SCULPT,
     b.build ?? CHUNKY,

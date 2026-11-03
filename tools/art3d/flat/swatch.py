@@ -1,4 +1,4 @@
-"""A design's colours, for a flat kind's `map.families` (tools/art3d/flat/kinds.ts): the figure's pixels (the
+"""A design's colours, for a flat kind's `map.families` (tools/art3d/flat/kinds/<kind>.ts): the figure's pixels (the
 white ground left out) cut to 28 colours, most used first, printed as `[r, g, b]` with their counts and drawn
 as a swatch sheet beside the design, to name each one's role by eye. Shades included: each folds into its role.
 Args: design.png sheet.png"""

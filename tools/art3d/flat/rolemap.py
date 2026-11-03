@@ -1,7 +1,7 @@
 """Illustration -> role map at the tracer's resolution, for convert.ts: flat colours become roles, the ink
 line is dropped (split between the regions either side of it), thick black stays a fill, and the lines
 inside one colour are kept as strokes. Args: design.png out.json debug.png size opening res kind.json, the
-kind's map from tools/art3d/flat/kinds.ts (`FlatKind.map`), which build.ts writes."""
+kind's map from tools/art3d/flat/kinds/<kind>.ts (`FlatKind.map`), which build.ts writes."""
 import json, sys
 from collections import deque
 from PIL import Image, ImageFilter

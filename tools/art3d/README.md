@@ -22,17 +22,17 @@ pnpm shot sprites --kind KIND                   # the run cycle, the six-rolls l
 
 ## From the Roster entry
 
-| Entry field                            | Where it goes                                                                                                                                                                                                                       |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Kind, Name                             | The kind id: `art/sprites/<kind>/`, `FLAT_KINDS` in `tools/art3d/flat/kinds.ts`, `LOADERS` in `src/render/cast/sprites/index.ts`. (`CAST`, `KIND_NAMES`, `PAINTS` in `src/gen/character.ts` for a kind that isn't in the game yet.) |
-| Silhouette, Traits, The nod, Our twist | `BRIEFS[kind].design` in `style.ts`: the nod and the twist as big shapes only, traits never a name. The wear: `BRIEFS[kind].worn`.                                                                                                  |
-| Palette, Color slot                    | `roles` in the kind's entry: each role's `color`; the costume is `slot: 'player'`. A shade that carries a shape is a dark of its role (`on`, `tone`).                                                                               |
-| Gait                                   | The clips: which drawings, and their timing.                                                                                                                                                                                        |
-| Swaps                                  | `accessories`: a strip on the crown or across the cheek, an on-off slot each.                                                                                                                                                       |
-| Palette alts                           | `alts` on one secondary role on `vary` 6.                                                                                                                                                                                           |
-| Idles and cheers                       | `idle2` and `cheer2`: a drawing each, alternating with the idle.                                                                                                                                                                    |
-| Gait range                             | `gait: { bounce, lean }`, each `[low, high]` under `GAIT_MAX`.                                                                                                                                                                      |
-| Wear                                   | Two in the drawing (the worn edit), and the `wear` slot: scuffs and a scorch laid on every pose (`wear.marks`).                                                                                                                     |
+| Entry field                            | Where it goes                                                                                                                                                                                                                        |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Kind, Name                             | The kind id: `art/sprites/<kind>/`, its entry `tools/art3d/flat/kinds/<kind>.ts`, `LOADERS` in `src/render/cast/sprites/index.ts`. (`CAST`, `KIND_NAMES`, `PAINTS` in `src/gen/character.ts` for a kind that isn't in the game yet.) |
+| Silhouette, Traits, The nod, Our twist | `BRIEFS[kind].design` in `style.ts`: the nod and the twist as big shapes only, traits never a name. The wear: `BRIEFS[kind].worn`.                                                                                                   |
+| Palette, Color slot                    | `roles` in the kind's entry: each role's `color`; the costume is `slot: 'player'`. A shade that carries a shape is a dark of its role (`on`, `tone`).                                                                                |
+| Gait                                   | The clips: which drawings, and their timing.                                                                                                                                                                                         |
+| Swaps                                  | `accessories`: a strip on the crown or across the cheek, an on-off slot each.                                                                                                                                                        |
+| Palette alts                           | `alts` on one secondary role on `vary` 6.                                                                                                                                                                                            |
+| Idles and cheers                       | `idle2` and `cheer2`: a drawing each, alternating with the idle.                                                                                                                                                                     |
+| Gait range                             | `gait: { bounce, lean }`, each `[low, high]` under `GAIT_MAX`.                                                                                                                                                                       |
+| Wear                                   | Two in the drawing (the worn edit), and the `wear` slot: scuffs and a scorch laid on every pose (`wear.marks`).                                                                                                                      |
 
 ## 1. Design, at game size
 
@@ -47,7 +47,7 @@ pnpm shot sprites --kind KIND                   # the run cycle, the six-rolls l
 
 ## 3. Poses
 
-Each pose's prompt is `posePrompt` (`kinds.ts`) on the kind's `poses`, with the design as the reference: the image model copies a reference closely, which is what holds the character from pose to pose. Two per pose, keep the best as `art/sprites/KIND/flat/NAME.png`. The usual set: `idle2`, `walk-1`, `walk-2`, `run-1`, `run-2`, `air-1` (rising), `air-2` (falling), `wall`, `cheer`, `cheer2`, `death`.
+Each pose's prompt is `posePrompt` (`flat/kinds.ts`) on the kind's `poses`, with the design as the reference: the image model copies a reference closely, which is what holds the character from pose to pose. Two per pose, keep the best as `art/sprites/KIND/flat/NAME.png`. The usual set: `idle2`, `walk-1`, `walk-2`, `run-1`, `run-2`, `air-1` (rising), `air-2` (falling), `wall`, `cheer`, `cheer2`, `death`.
 
 - **`far`** for a pose far from the design's stance (lying knocked out, side on to a wall): it lets go of the view, or the model hands back the design's stance.
 - **Reject** a drawing that lost a prop or the cap (the elf's falls threw his cap off), grew limbs (the dot-eater sprouted legs), changed a colour (a black plunger cup), or reads as a different expression than the clip (shut eyes are fine anywhere but the idle; the face kit has none to ride).
@@ -56,7 +56,7 @@ Each pose's prompt is `posePrompt` (`kinds.ts`) on the kind's `poses`, with the 
 
 ## 4. The map
 
-How `rolemap.py` reads the drawings, in the kind's `map` (`kinds.ts`):
+How `rolemap.py` reads the drawings, in the kind's `map` (`flat/kinds/<kind>.ts`):
 
 - **`families`**: every colour of the design, shades and highlights included, each named for its role. `swatch.py` prints them and draws a sheet beside the design. A shade folds into its role: the drawing's cel shadow is gone, the figure is flat. A shade that carries a shape (the plumber's cap shadow and plunger cup) is a role of its own drawn as a dark of the costume (`on`, `tone`), so it follows the player's colour.
 - **`line`** is the ink's role. Thin ink is the line and goes; ink thicker than `ink` px (default 9) stays a fill (the ear tips, the mouth). A thin dark prop (the elf's poker) gets a role of its own, or a lower `ink`.
@@ -88,13 +88,14 @@ How `rolemap.py` reads the drawings, in the kind's `map` (`kinds.ts`):
 
 ## Files
 
-| File              | What it holds                                                                                                |
-| ----------------- | ------------------------------------------------------------------------------------------------------------ |
-| `flat/kinds.ts`   | `FLAT_KINDS`: each kind's map, roles, face, variety, clips and pose prompts; `posePrompt`                    |
-| `flat/build.ts`   | The build: role maps, tracing, the face, wear and accessories, `frames.ts`; `pose KIND NAME` prints a prompt |
-| `flat/rolemap.py` | A drawing to a role map at the tracer's resolution, with its interior lines                                  |
-| `flat/swatch.py`  | A design's colours, for `map.families`                                                                       |
-| `style.ts`        | `DESIGN` and `WORN`, and each kind's brief (`design`, `worn`; the rest is the 3D route's)                    |
-| `page/trace.ts`   | Parts, folding, tracing, resampling (shared with the 3D route)                                               |
-| `CHECKLIST.md`    | One kind's run sheet and done list                                                                           |
-| `3D.md`           | The retired 3D route                                                                                         |
+| File                   | What it holds                                                                                                |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `flat/kinds.ts`        | The `FlatKind` type, `posePrompt`, and `FLAT_KINDS`, read from `flat/kinds/`                                 |
+| `flat/kinds/<kind>.ts` | One kind: its map, roles, face, variety, clips and pose prompts                                              |
+| `flat/build.ts`        | The build: role maps, tracing, the face, wear and accessories, `frames.ts`; `pose KIND NAME` prints a prompt |
+| `flat/rolemap.py`      | A drawing to a role map at the tracer's resolution, with its interior lines                                  |
+| `flat/swatch.py`       | A design's colours, for `map.families`                                                                       |
+| `style.ts`             | `DESIGN` and `WORN`, and each kind's brief (`design`, `worn`; the rest is the 3D route's)                    |
+| `page/trace.ts`        | Parts, folding, tracing, resampling (shared with the 3D route)                                               |
+| `CHECKLIST.md`         | One kind's run sheet and done list                                                                           |
+| `3D.md`                | The retired 3D route                                                                                         |
