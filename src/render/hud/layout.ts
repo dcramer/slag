@@ -16,6 +16,8 @@ export const MAX_HEAD_SCALE = 1.3;
 export const MAX_CARD_SCALE = 2;
 /** Phones: lobby bays grow until they're this short, and race chips stop at this share of the height. */
 export const MIN_BAY_H = 210;
+/** Phones: bays in two or more rows grow until they're this short, room allowing: a thumb-sized name over a thumb-sized button row. */
+export const MIN_SMALL_BAY_H = 130;
 export const MAX_CHIPS_H = 130;
 /** Width of the lobby's top bar on phones, end to end, at scale 1. */
 export const PHONE_BAR_W = 520;
