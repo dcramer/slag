@@ -143,7 +143,7 @@ What came out of it:
 - **Our twist:** someone got to him first: a neat bite is missing from the back of his circle, the joke being that the eater got eaten. A checked napkin is tucked under the mouth like a bib.
 - **Swaps:** a crumb on the lip; a toothpick in the corner of the mouth; a fork-tine scratch. (A paper party hat would break the outline, so it isn't one.)
 - **Palette alts:** the napkin's check in red `#c9473f`, blue `#3f62b4` or green `#3f8a3a`; the napkin stays white.
-- **Idles and cheers:** the breathing idle with a chomp at nothing; a sit with the mouth shut, eyeing the floor, then two pecks at it. The hop on the spot; rolling back on itself, mouth thrown wide, laughing.
+- **Idles and cheers:** the breathing idle with a chomp at nothing; the mouth snapping shut and open again. The hop on the spot; tipped back, mouth thrown wide, laughing.
 - **Gait range:** up to 0.7 px of extra bounce on each hop, a lean of up to 0.04.
 - **Wear:** scuffed is two pale scuffs and two crumbs stuck low on the back; scorched is two soot streaks up the back and the napkin's tip singed.
 - **Rig:** none: drawn flat (2026-11-03), its open mouth cut out of the figure so the wedge is a gap, worn with a taped crack across the top, a chipped lip and a stained, torn napkin: the mouth open and shut on the walk and run, a hop, an alarmed fall (its wall slide too), and the pancake death.
