@@ -276,7 +276,7 @@ function playerCard(hud: Hud, p: Player, i: number, x: number, y: number, w: num
     // Online, your own bay can give up its seat to watch: beside the dice, never in the way of Ready. A bay too
     // narrow for both leaves Watch to the Settings menu, which always has it.
     let watch = !!hud.net && !hud.net.offline;
-    if (watch && leftOf(1) - (x + 10) < 76) watch = false;
+    if (watch && phone && leftOf(1) - (x + 10) < 76) watch = false;
     const readyW = leftOf(watch ? 1 : 0) - (x + 10);
     hud.btn(
       { x: x + 10, y: by, w: readyW, h: bh, action: 'ready', device: p.device },

@@ -1784,7 +1784,8 @@ async function hostRate(host: Page, ms = 3000): Promise<number> {
 
 /** Host, guest and two watchers (one on a phone) through a round; then someone arrives mid-race and Joins. */
 async function observeScenario(browser: Browser, base: string) {
-  const r = await newRoom(browser, base, 'observe', '');
+  // A desktop-sized window: the default 480×270 lays the lobby out as a phone's, where Watch moves to Settings.
+  const r = await newRoom(browser, base, 'observe', '', { viewport: { width: 960, height: 540 } });
   const A = await r.open('A');
   const a0 = await waitFor(A, 'host', (v) => v.status === 'online' && v.isHost);
   const B = await r.open('B');
