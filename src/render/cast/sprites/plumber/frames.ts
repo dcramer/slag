@@ -37,7 +37,7 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              '2P+E/93/g//h/4X/5P+J/+f/jP/r/4z/7P+I/+v/g//t/4D/8v9+//b/ff/7/33//f+C//3/hv8AAIf/AQCC/wEAfv8EAHr/CQB6/w0Ae/8OAID/EQCC/xIAff8UAHv/FgCA/xkAg/8cAIb/HwCK/x8Aj/8bAJL/FgCT/xEAk/8NAJL/CACR/wMAkP///4//+v+P//X/j//z/5P/9P+Y//j/m//7/57/AACg/wQAof8JAKH/DgCh/wsApP8GAKX/AQCk//3/o//4/6L/8/+h/+//nv/r/5z/6P+Y/+X/lP/j/5D/4P+M/93/if/Y/4j/',
+              '2P+E/93/g//h/4X/5P+J/+f/jP/s/4z/7f+H/+v/g//u/4D/8/9+//f/ff/8/3z/AQB7/wYAev8KAHr/DwB7/xMAe/8VAH//GACD/xwAhv8fAIr/HwCO/xsAkf8XAJP/EgCT/w0Akv8JAJL/BACR////kP/6/4//9v+P//P/k//0/5f/9/+b//v/nv///6D/BACh/wkAof8OAKH/CwCk/wYApf8BAKT//f+j//j/ov/0/6H/7/+f/+v/nP/o/5j/5f+U/+P/kP/g/4z/3f+J/9j/iP8=',
             ],
             [0, 'KgDM/y4Azf8xAND/NQDT/zIA1P8tANL/KgDP/w=='],
             [1, '8P9a//T/V//4/1b//f9U/wEAVP8GAFT/CgBW/w4AWf8PAF3/DABh/woAZf8GAGP/BABf/wAAXf/7/17/9/9h//T/ZP/w/2f/7P9q/+j/bP/m/2n/5/9k/+n/YP/s/1z/'],
@@ -68,7 +68,7 @@ export const sprites: SpriteSet = {
             [4, '3/+Y/+P/mv/m/53/5f+g/+H/nv/e/5z/'],
             [4, 'AQDh/wUA4P8KAOD/DwDf/xMA3f8XAOD/GQDk/x0A5P8iAOb/JQDp/yUA7v8lAPP/IwD3/x4A+f8aAPn/FQD6/xAA+v8LAPn/BwD5/wIA9/////P//v/v//7/6v/+/+X/'],
             [4, '3//f/+P/3//o/+D/7P/h//H/4f/2/+H/+P/l//j/6f/6/+3/+//y//v/9//5//v/9f/9//D//v/r//7/5//+/+L//f/e//v/3P/2/9z/8v/c/+3/3P/o/93/5P8='],
-            [5, '6/97/+//ef/0/3n/+f94//7/d/8DAHb/BwB1/wwAdP8RAHT/EwB4/w8Aev8KAHv/BQB7/wAAe//8/3z/9/99//L/fv/t/3//6f9//w=='],
+            [5, '6/97/+//ef/0/3n/+f94//7/d/8CAHb/BwB1/wwAdP8RAHT/FAB3/xMAe/8PAHv/CgB6/wUAe/8AAHz//P98//f/ff/y/37/7f9//+n/f/8='],
             [5, '1/+J/9v/iP/g/4r/4/+O/+X/kv/o/5b/6/+a/+//nf/z/5//9/+h//z/pP/8/6b/+P+o//T/qf/w/6b/7P+j/+n/n//m/5z/4v+Y/97/mP/a/5b/1/+S/9b/jf8='],
             [5, '8/+R//X/lf/5/5n//P+b/wEAnf8GAJ7/CwCe/w8An/8LAKH/BgCi/wIAof/9/5//+f+d//X/mv/y/5b/'],
             [5, 'BwCR/wsAkv8QAJP/FACS/xkAkf8dAJH/GgCU/xYAl/8SAJj/DQCX/wkAlf8='],
@@ -124,7 +124,7 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              'KACI/yQAif8hAIz/HgCQ/xsAlP8YAJj/FQCc/xEAnv8NAKH/CQCi/wQAo////6T/+/+l//b/pP/y/6H/9/+h//z/of8BAKD/BQCe/wkAm/8MAJj/DgCT/wsAj/8HAI//AgCP//3/kP/5/5H/9P+S/+//k//q/5P/5v+S/+L/j//i/4r/5P+G/+j/g//r/4D/7P97/+//ff/w/4L/8v+A//P/e//3/3r//P96////fv8AAIL/AQCH/wMAhv8EAIL/BQB9/woAff8PAH7/EwCA/xYAg/8UAIj/FQCM/xkAjP8dAIn/IACF/yQAg/8oAIT/',
+              'KACI/yQAif8hAIz/HgCQ/xsAlP8YAJj/FQCc/xEAn/8NAKH/CACi/wQAo////6T/+v+l//b/pP/z/6H/+P+h//z/of8BAKD/BQCe/wkAm/8MAJf/DgCT/wsAj/8GAI//AQCQ//3/kf/4/5L/8/+S/+7/k//q/5P/5f+R/+L/jv/i/4r/5f+G/+j/g//r/3//7f97//L/e//2/3r/+/96/wAAe/8EAHz/CQB9/w4Afv8SAID/FQCD/xQAh/8VAIz/GQCM/x0Aif8gAIX/JACD/ygAhP8=',
             ],
             [0, '1//P/9P/0v/P/9T/zP/T/8//0P/T/83/1//M/w=='],
             [1, 'FQBc/xgAYP8aAGT/GwBp/xgAbP8UAGr/EABn/w0AZP8JAGH/BQBe/wEAXf/9/1//+v9j//b/Zf/0/2H/8v9d//L/Wf/2/1b/+/9U////VP8EAFT/CABW/w0AV/8RAFr/'],
@@ -155,7 +155,7 @@ export const sprites: SpriteSet = {
             [4, 'IgCc/x8Anv8bAKD/GgCd/x0Amv8hAJj/'],
             [4, 'AgDl/wMA6v8CAO//AQDz//7/9//6//n/9f/5//D/+v/s//r/5//5/+L/+f/e//f/2//z/9v/7v/c/+n/3//m/+P/5P/o/+T/6v/g/+3/3f/y/9//9v/g//v/4P8AAOH/'],
             [4, 'JADk/yQA6P8lAO3/JQDy/yQA9v8iAPv/HgD9/xoA/v8VAP7/EAD+/wwA/f8IAPv/BgD3/wUA8v8GAO3/CADp/wgA5f8LAOH/DwDh/xQA4f8ZAOD/HQDf/yIA3/8='],
-            [5, 'GAB//xMAf/8OAH7/CgB9/wUAfP8AAHv/+/97//b/e//x/3r/7f94//D/dP/0/3T/+f91//7/dv8DAHf/BwB4/wwAef8RAHn/FgB7/w=='],
+            [5, 'GAB//xMAf/8OAH7/CgB9/wUAfP8AAHz/+/97//b/ev/y/3v/7f97/+z/d//w/3T/9f90//n/df/+/3b/AwB3/wcAeP8MAHn/EQB5/xYAe/8='],
             [5, 'KwCN/yoAkv8nAJb/IwCY/x4AmP8bAJz/FwCf/xQAo/8RAKb/DQCp/wgAqP8EAKb/BQCk/wkAof8OAJ//EgCd/xUAmv8YAJb/GwCS/x4Ajv8hAIr/JQCI/yoAif8='],
             [5, 'DgCW/wsAmv8IAJ3/BACf////of/6/6L/9f+h//H/n//2/57/+/+e/wAAnf8EAJv/CACZ/wsAlf8OAJH/'],
             [5, '+P+V//T/l//v/5j/6v+X/+b/lP/j/5H/5/+R/+z/kv/x/5P/9f+S//r/kf8='],
@@ -215,12 +215,12 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              '2P99/9z/ff/f/4D/4v+E/+X/iP/p/4f/7P+D/+v/f//r/3v/7/94//P/d//4/3b//P94//z/ff/+/4H/AAB//wEAev8DAHb/BwBz/wwAcv8PAHT/DwB5/xIAe/8TAHf/FQB0/xcAeP8ZAHz/HQB//yAAg/8gAIf/HgCL/xoAjf8VAI7/EACO/wwAjf8HAIv/AgCL//7/iv/5/4n/9f+J//P/jf/0/5L/9/+V//v/mP///5v/BACc/wgAnP8NAJv/DwCe/wsAoP8GAKH/AQCg//z/n//4/57/8/+c/+//mv/r/5f/6P+U/+X/kP/i/4z/4P+I/93/hP/Z/4L/1f+B/w==',
+              '2P99/9z/ff/f/4D/4v+E/+X/iP/p/4f/7P+D/+r/f//o/3v/7P94//H/d//1/3b/+v91//z/ef8AAHj/AwB0/wcAc/8MAHL/EAB1/xQAdP8WAHj/GQB8/x0Af/8gAIL/IQCH/x4Ai/8aAI3/FQCO/xAAjv8MAI3/BwCL/wMAi//+/4r/+f+J//X/if/z/43/9P+R//f/lf/6/5j///+b/wMAnP8IAJz/DQCb/w8Anv8LAKD/BgCh/wEAoP/9/6D/+P+e//P/nP/v/5r/6/+X/+j/lP/l/5D/4v+M/+D/iP/d/4T/2f+C/9X/gf8=',
             ],
             [1, '7v9S//L/T//2/07/+/9M////S/8EAEv/CQBM/w0ATv8QAFH/DgBV/w0AWv8KAF3/BgBa/wMAV////1X/+/9V//b/V//z/1r/8P9e/+7/Yv/q/2X/5v9m/+X/Yf/l/13/5/9Y/+r/Vf8='],
             [
               1,
-              '6/9r//D/af/0/2r/+f9q//7/av8CAGj/BgBl/wgAYf8MAF//EABi/xQAZP8ZAGb/HQBm/yIAZv8nAGf/LABn/y8Aav8sAGz/KABr/yMAav8eAGn/GgBr/xUAa/8RAGz/DABt/wcAbv8DAG///v9x//n/cv/1/3P/8P9z/+v/c//n/3L/6P9u/w==',
+              '6/9r//D/af/0/2r/+f9q//7/av8CAGj/BgBl/wgAYf8MAF//EABi/xQAZP8ZAGb/HQBm/yIAZv8nAGf/LABn/y8Aav8sAGz/KABr/yMAav8eAGn/GgBr/xUAbP8RAGz/DABt/wcAbv8DAG///v9x//n/cv/1/3P/8P9z/+v/c//n/3L/6P9u/w==',
             ],
             [1, '/v+n/wMApv8HAKb/CQCq/wUAq/8AAKv/'],
             [1, 'GwCq/x8Aq/8iAK//JACz/yQAuP8gALr/GwC6/xgAtv8YALL/GACt/w=='],
@@ -252,7 +252,7 @@ export const sprites: SpriteSet = {
             [4, '3v+S/+H/k//k/5b/5P+a/+D/mf/d/5b/'],
             [4, '///e/wQA3f8IAN7/DQDe/xIA3f8WANz/GADg/xoA4/8fAOP/IwDk/yYA6P8nAOz/JwDx/yYA9v8iAPj/HQD5/xgA+v8UAPr/DwD5/woA+f8GAPf/AgD0/wAA8P///+v//v/n//7/4v8='],
             [4, '3//e/+T/3v/p/9//7f/f//L/4P/2/+D/+P/k//j/6f/6/+3/+//y//v/9v/5//r/9f/9//D//v/r//7/5//+/+L//v/e//z/2v/5/9n/9P/Z//D/2v/r/9v/5v/c/+L/'],
-            [5, '6v90/+//cv/z/3L/+P9y//3/cf8BAHD/BgBv/wsAbv8PAG7/FABv/xUAc/8QAHP/CwBz/wcAc/8CAHP//f90//n/df/0/3b/8P94/+v/ef/n/3f/'],
+            [5, '6v90/+//cv/0/3L/+P9y//3/cf8CAHD/BgBv/wsAbv8QAG3/FABv/xUAc/8RAHP/DABz/wcAc/8CAHP//v90//n/df/0/3b/8P94/+v/eP/n/3f/'],
             [5, '1f+C/9r/gf/e/4P/4f+H/+P/i//m/4//6f+T/+3/l//w/5r/9f+c//n/nv/8/6H/+P+h//P/oP/u/57/6v+c/+f/mP/j/5X/4P+S/9v/kf/X/4//1P+L/9P/hv8='],
             [5, 'BgCL/wsAjP8PAI3/FACO/xgAjf8dAIv/HQCO/xoAkP8WAJL/EQCT/w0Akf8JAI//'],
             [5, '8v+P//b/kf/5/5T//f+X/wIAl/8GAJr/CwCZ/w0Am/8JAJz/BACc////m//7/5n/9/+W//P/k/8='],
@@ -265,6 +265,9 @@ export const sprites: SpriteSet = {
             [6, '+P9W//z/VP8AAFT/BABX/wcAW/8IAF//BwBk/wQAZ/8AAGn/+/9o//f/Zf/z/2P/8P9h//H/Xf/0/1n/'],
             [6, 'HABd/xwAYP8bAGP/GQBk/xkAYv8aAGD/'],
             [6, '5f+d/+n/nf/s/6D/7v+k/+z/qP/o/6r/5P+o/+H/pf/i/6D/'],
+            [7, 'EABz/xIAc/8TAHX/EgB2/xAAdv8PAHT/'],
+            [7, '/v90/wAAdf8AAHf//v95//z/ef/8/3b/'],
+            [7, '//+A/wEAgf8BAIL/AACE//7/g//+/4L/'],
             [7, '1/+P/9r/kP/c/5P/2/+X/9j/lv/X/5P/'],
             [7, '4/+a/+X/mf/o/5r/5/+d/+T/nv/i/5z/'],
             [7, 'CwDA/wwAwP8NAMH/DQDC/wwAwv8LAMH/'],
@@ -310,7 +313,7 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              '2P+E/93/g//h/4X/5P+J/+f/jP/r/4z/7P+I/+v/g//t/4D/8v9+//b/ff/7/33//f+C//3/hv8AAIf/AQCC/wEAfv8EAHr/CQB6/w0Ae/8OAID/EQCC/xIAff8UAHv/FgCA/xkAg/8cAIb/HwCK/x8Aj/8bAJL/FgCT/xEAk/8NAJL/CACR/wMAkP///4//+v+P//X/j//z/5P/9P+Y//j/m//7/57/AACg/wQAof8JAKH/DgCh/wsApP8GAKX/AQCk//3/o//4/6L/8/+h/+//nv/r/5z/6P+Y/+X/lP/j/5D/4P+M/93/if/Y/4j/',
+              '2P+E/93/g//h/4X/5P+J/+f/jP/s/4z/7f+H/+v/g//u/4D/8/9+//f/ff/8/3z/AQB7/wYAev8KAHr/DwB7/xMAe/8VAH//GACD/xwAhv8fAIr/HwCO/xsAkf8XAJP/EgCT/w0Akv8JAJL/BACR////kP/6/4//9v+P//P/k//0/5f/9/+b//v/nv///6D/BACh/wkAof8OAKH/CwCk/wYApf8BAKT//f+j//j/ov/0/6H/7/+f/+v/nP/o/5j/5f+U/+P/kP/g/4z/3f+J/9j/iP8=',
             ],
             [0, 'KgDM/y4Azf8xAND/NQDT/zIA1P8tANL/KgDP/w=='],
             [1, '8P9a//T/V//4/1b//f9U/wEAVP8GAFT/CgBW/w4AWf8PAF3/DABh/woAZf8GAGP/BABf/wAAXf/7/17/9/9h//T/ZP/w/2f/7P9q/+j/bP/m/2n/5/9k/+n/YP/s/1z/'],
@@ -341,7 +344,7 @@ export const sprites: SpriteSet = {
             [4, '3/+Y/+P/mv/m/53/5f+g/+H/nv/e/5z/'],
             [4, 'AQDh/wUA4P8KAOD/DwDf/xMA3f8XAOD/GQDk/x0A5P8iAOb/JQDp/yUA7v8lAPP/IwD3/x4A+f8aAPn/FQD6/xAA+v8LAPn/BwD5/wIA9/////P//v/v//7/6v/+/+X/'],
             [4, '3//f/+P/3//o/+D/7P/h//H/4f/2/+H/+P/l//j/6f/6/+3/+//y//v/9//5//v/9f/9//D//v/r//7/5//+/+L//f/e//v/3P/2/9z/8v/c/+3/3P/o/93/5P8='],
-            [5, '6/97/+//ef/0/3n/+f94//7/d/8DAHb/BwB1/wwAdP8RAHT/EwB4/w8Aev8KAHv/BQB7/wAAe//8/3z/9/99//L/fv/t/3//6f9//w=='],
+            [5, '6/97/+//ef/0/3n/+f94//7/d/8CAHb/BwB1/wwAdP8RAHT/FAB3/xMAe/8PAHv/CgB6/wUAe/8AAHz//P98//f/ff/y/37/7f9//+n/f/8='],
             [5, '1/+J/9v/iP/g/4r/4/+O/+X/kv/o/5b/6/+a/+//nf/z/5//9/+h//z/pP/8/6b/+P+o//T/qf/w/6b/7P+j/+n/n//m/5z/4v+Y/97/mP/a/5b/1/+S/9b/jf8='],
             [5, '8/+R//X/lf/5/5n//P+b/wEAnf8GAJ7/CwCe/w8An/8LAKH/BgCi/wIAof/9/5//+f+d//X/mv/y/5b/'],
             [5, 'BwCR/wsAkv8QAJP/FACS/xkAkf8dAJH/GgCU/xYAl/8SAJj/DQCX/wkAlf8='],
@@ -397,12 +400,12 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              'LACB/ygAgv8kAIT/IQCI/x4AjP8cAJD/GQCU/xUAl/8RAJr/DQCc/wkAnv8EAJ////+g//v/of/2/6D/8v+e//P/m//4/5z//f+c/wIAm/8GAJj/CgCV/w0Akv8OAI3/DACJ/wcAif8DAIr//v+L//n/i//1/43/8P+O/+z/jv/n/43/4/+L/+D/h//h/4P/5P9//+f/fP/q/3j/6/90/+7/d//v/3v/8v95//L/dP/1/3L/+v9z//7/dv8AAHr/AAB//wMAgf8EAH3/BQB4/wkAdv8NAHf/EgB4/xYAe/8WAH//FQCD/xcAh/8bAIj/HgCE/yEAgP8kAH3/KQB9/w==',
+              'LACB/ygAgv8kAIT/IQCI/x4AjP8cAJD/GQCU/xUAl/8RAJr/DQCc/wkAnv8EAKD///+g//r/of/2/6D/8f+e//T/m//4/5z//f+c/wIAm/8GAJj/CgCV/w0Akf8OAI3/DACJ/wcAif8DAIr//v+L//n/i//1/43/8P+O/+v/jv/n/43/4v+L/+D/h//h/4L/5P9//+j/fP/q/3j/7P90//H/df/1/3L/+f9z//7/dP8BAHj/BAB5/wYAdf8LAHb/EAB3/xUAeP8YAHv/FgB//xUAg/8XAIf/GwCI/x4AhP8hAID/JAB9/ykAff8=',
             ],
             [1, 'FwBV/xoAWP8bAF3/HABh/xsAZv8WAGX/EwBi/xAAXv8OAFr/CgBX/wYAVf8BAFX//f9X//r/Wv/2/13/8/9a//L/Vf/w/1H/8/9O//j/TP/8/0v/AQBL/wYATP8KAE7/DwBP/xMAUv8='],
             [
               1,
-              'GQBu/xoAcv8VAHP/EABz/wwAc/8HAHL/AgBx//7/b//5/27/9f9t//D/bP/r/2v/5v9r/+L/af/d/2r/2f9r/9T/bP/R/2r/1f9n/9r/Z//e/2b/4/9m/+j/Zv/s/2T/8f9i//T/X//4/2H/+/9l//7/aP8DAGr/BwBq/wwAav8RAGn/FQBr/w==',
+              'GQBu/xoAcv8VAHP/EQBz/wwAc/8HAHL/AgBx//7/b//5/27/9f9t//D/bP/r/2z/5v9r/+L/af/d/2r/2f9r/9T/bP/R/2r/1f9n/9r/Z//e/2b/4/9m/+j/Zv/s/2T/8f9i//T/X//4/2H/+/9l//7/aP8DAGr/BwBq/wwAav8RAGn/FQBr/w==',
             ],
             [1, 'AACr//z/q//4/6r/+f+m//7/pv8CAKf/'],
             [1, '6P+t/+n/sv/o/7b/5f+6/+H/uv/d/7j/3f+z/9//r//i/6v/5v+q/w=='],
@@ -434,7 +437,7 @@ export const sprites: SpriteSet = {
             [4, 'JACW/yEAmf8dAJr/HACW/x8Ak/8jAJL/'],
             [4, 'AgDi/wIA5/8CAOv/AADw//7/9P/7//f/9v/5//L/+f/t//r/6P/6/+P/+f/f//j/2//2/9n/8f/Z/+z/2v/o/93/5P/i/+P/5v/j/+n/4P/r/9z/7//d//P/3v/4/97//f/d/wIA3v8='],
             [4, 'JADi/yYA5v8mAOv/JwDw/ycA9P8mAPn/IwD8/x4A/v8aAP7/FQD+/xAA/v8MAP3/CAD6/wYA9v8GAPL/BwDt/wkA6f8JAOT/CgDg/w8A4P8TAN//GADf/x0A3v8hAN7/'],
-            [5, 'GQB3/xYAef8RAHj/DAB2/wgAdf8DAHT///9z//r/c//1/3P/8P9z/+z/c//t/2//8f9u//b/bv/7/2////9w/wQAcf8IAHL/DQBy/xIAcv8WAHT/'],
+            [5, 'GQB3/xUAeP8RAHj/DAB2/wgAdf8DAHT//v9z//n/c//1/3P/8P9z/+v/c//t/2//8f9t//X/bv/6/2////9w/wMAcf8IAHL/DQBy/xIAcv8WAHT/'],
             [5, 'LgCG/y0Ai/8qAI//JgCR/yEAkv8dAJX/GgCY/xYAnP8SAJ7/DgCg/wkAof8EAKH/CACe/wwAnP8QAJr/FACX/xcAk/8bAI//HQCL/yAAh/8jAIP/JwCB/ysAgv8='],
             [5, '+P+P//T/kf/w/5P/6/+S/+f/kP/j/47/5P+L/+j/jf/t/47/8f+N//b/jP/6/4v/'],
             [5, 'DQCT/woAlv8GAJn/AQCb//3/nP/4/5z/8/+b//X/mf/6/5r//v+X/wMAl/8HAJT/CwCR/w8Aj/8='],
@@ -447,6 +450,9 @@ export const sprites: SpriteSet = {
             [6, 'DQBZ/xAAXf8RAGH/DgBj/wkAZf8FAGj/AQBp//z/Z//5/2T/+P9f//r/W//8/1f/AABU/wUAVP8JAFb/'],
             [6, '5v9g/+j/Yv/o/2T/5v9j/+X/YP/l/13/'],
             [6, 'HwCg/x8Apf8cAKj/GACq/xQAqP8SAKT/FACg/xcAnf8cAJ3/'],
+            [7, '8f90//H/dv/v/3b/7v91/+//c//x/3P/'],
+            [7, 'BAB2/wUAef8CAHn/AAB3/wAAdf8DAHT/'],
+            [7, 'AwCC/wIAg/8AAIT///+C/wAAgf8BAID/'],
             [7, 'KgCT/ygAlv8lAJf/JQCT/ycAkP8qAI//'],
             [7, 'HgCc/xwAnv8aAJ3/GQCa/xsAmf8dAJr/'],
             [7, '9f/B//X/wv/z/8L/8//B//T/wP/2/8D/'],
@@ -492,7 +498,7 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              'KACI/yQAif8hAIz/HgCQ/xsAlP8YAJj/FQCc/xEAnv8NAKH/CQCi/wQAo////6T/+/+l//b/pP/y/6H/9/+h//z/of8BAKD/BQCe/wkAm/8MAJj/DgCT/wsAj/8HAI//AgCP//3/kP/5/5H/9P+S/+//k//q/5P/5v+S/+L/j//i/4r/5P+G/+j/g//r/4D/7P97/+//ff/w/4L/8v+A//P/e//3/3r//P96////fv8AAIL/AQCH/wMAhv8EAIL/BQB9/woAff8PAH7/EwCA/xYAg/8UAIj/FQCM/xkAjP8dAIn/IACF/yQAg/8oAIT/',
+              'KACI/yQAif8hAIz/HgCQ/xsAlP8YAJj/FQCc/xEAn/8NAKH/CACi/wQAo////6T/+v+l//b/pP/z/6H/+P+h//z/of8BAKD/BQCe/wkAm/8MAJf/DgCT/wsAj/8GAI//AQCQ//3/kf/4/5L/8/+S/+7/k//q/5P/5f+R/+L/jv/i/4r/5f+G/+j/g//r/3//7f97//L/e//2/3r/+/96/wAAe/8EAHz/CQB9/w4Afv8SAID/FQCD/xQAh/8VAIz/GQCM/x0Aif8gAIX/JACD/ygAhP8=',
             ],
             [0, '1//P/9P/0v/P/9T/zP/T/8//0P/T/83/1//M/w=='],
             [1, 'FQBc/xgAYP8aAGT/GwBp/xgAbP8UAGr/EABn/w0AZP8JAGH/BQBe/wEAXf/9/1//+v9j//b/Zf/0/2H/8v9d//L/Wf/2/1b/+/9U////VP8EAFT/CABW/w0AV/8RAFr/'],
@@ -523,7 +529,7 @@ export const sprites: SpriteSet = {
             [4, 'IgCc/x8Anv8bAKD/GgCd/x0Amv8hAJj/'],
             [4, 'AgDl/wMA6v8CAO//AQDz//7/9//6//n/9f/5//D/+v/s//r/5//5/+L/+f/e//f/2//z/9v/7v/c/+n/3//m/+P/5P/o/+T/6v/g/+3/3f/y/9//9v/g//v/4P8AAOH/'],
             [4, 'JADk/yQA6P8lAO3/JQDy/yQA9v8iAPv/HgD9/xoA/v8VAP7/EAD+/wwA/f8IAPv/BgD3/wUA8v8GAO3/CADp/wgA5f8LAOH/DwDh/xQA4f8ZAOD/HQDf/yIA3/8='],
-            [5, 'GAB//xMAf/8OAH7/CgB9/wUAfP8AAHv/+/97//b/e//x/3r/7f94//D/dP/0/3T/+f91//7/dv8DAHf/BwB4/wwAef8RAHn/FgB7/w=='],
+            [5, 'GAB//xMAf/8OAH7/CgB9/wUAfP8AAHz/+/97//b/ev/y/3v/7f97/+z/d//w/3T/9f90//n/df/+/3b/AwB3/wcAeP8MAHn/EQB5/xYAe/8='],
             [5, 'KwCN/yoAkv8nAJb/IwCY/x4AmP8bAJz/FwCf/xQAo/8RAKb/DQCp/wgAqP8EAKb/BQCk/wkAof8OAJ//EgCd/xUAmv8YAJb/GwCS/x4Ajv8hAIr/JQCI/yoAif8='],
             [5, 'DgCW/wsAmv8IAJ3/BACf////of/6/6L/9f+h//H/n//2/57/+/+e/wAAnf8EAJv/CACZ/wsAlf8OAJH/'],
             [5, '+P+V//T/l//v/5j/6v+X/+b/lP/j/5H/5/+R/+z/kv/x/5P/9f+S//r/kf8='],
@@ -583,12 +589,12 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              '1/+B/9z/gP/g/4P/4/+H/+f/iv/r/4j/6/+D/+n/f//t/3z/8f96//b/ev/7/3v/+/+A//3/hP///4P/AAB+/wEAef8FAHf/CgB2/w4Aef8OAH7/EQB+/xEAef8UAHn/FQB9/xkAgP8dAIP/HgCI/x0AjP8ZAI7/FACP/w8AkP8LAJD/BgCP/wEAjv/9/4z/+P+M//P/jf/y/5H/9P+V//f/mf/7/5v/AACd/wUAnv8JAJ3/DQCf/wwAov8HAKL/AgCi//3/ov/5/6H/9P+g//D/nv/s/5v/6f+Y/+b/lP/j/5D/4P+M/93/iP/Z/4X/1f+E/w==',
+              '1/+B/9z/gP/g/4P/4/+H/+f/iv/r/4j/6/+E/+r/f//t/3v/8f96//b/ef/7/3n///96/wMAd/8IAHb/DAB4/xEAef8UAHr/FgB+/xoAgP8dAIT/HwCJ/x0Ajf8YAI7/EwCQ/w8AkP8KAJD/BQCP/wEAjv/8/4z/9/+M//P/jf/y/5L/9P+W//j/mf/8/5z/AACd/wUAnv8KAJ3/DgCf/wwAov8HAKL/AgCi//3/ov/4/6H/9P+g/+//nv/s/5v/6P+X/+b/lP/j/4//4P+L/93/iP/Z/4X/1f+E/w==',
             ],
             [1, '7/9W//P/U//3/1L//P9Q/wAAUP8FAFH/CgBS/w4AVf8NAFn/DABd/wkAYf8FAF//AgBb//7/Wf/5/1r/9f9c//L/YP/v/2T/7P9n/+j/av/k/2n/5P9k/+T/YP/n/1z/6/9Z/w=='],
             [
               1,
-              '6/9v/+//bv/0/27/+f9u//3/bf8BAGz/BQBo/wYAZP8KAGH/DQBl/xAAaP8VAGn/GQBq/x4Aav8jAGv/JwBr/ywAbf8rAHH/JwBx/yMAbv8eAG3/GgBu/xUAb/8QAHD/DABw/wcAcf8DAHP//v90//r/df/1/3b/8P93/+z/d//n/3b/5/9z/w==',
+              '6/9v/+//bv/0/27/+f9u//3/bf8BAGz/BQBo/wYAZP8KAGH/DQBk/xAAaP8VAGn/GQBq/x4Aav8jAGv/JwBr/ywAbf8rAHH/JwBx/yMAbv8eAG3/GgBu/xUAb/8RAHD/DABx/wcAcv8DAHP//v90//r/df/1/3f/8P93/+z/d//n/3b/5/9z/w==',
             ],
             [1, '//+o/wQAp/8IAKn/CACt/wQAr/8AAK///f+s/w=='],
             [1, '1f+v/9b/s//Z/7b/2/+6/9v/vv/W/77/0/+8/9L/t//T/7P/'],
@@ -615,7 +621,7 @@ export const sprites: SpriteSet = {
             [4, '3f+U/+H/lv/k/5n/4/+c/9//m//c/5j/'],
             [4, '4//W/+f/1//n/9v/6f/f/+z/4//x/+X/9f/l//P/6f/w/+z/8//w//T/9P/z//n/7//8/+r//P/l//z/4f/6/93/+P/a//T/1//w/9X/7P/U/+f/1f/j/9j/3//c/9z/3//Z/w=='],
             [4, 'BwDg/wsA3f8PANv/FADc/xcA3/8bAN3/IADc/yUA3P8pAN7/LADi/y0A5/8sAOv/KQDv/yUA8v8hAPX/HQD3/xoA+v8VAPz/EAD9/wwA+/8JAPj/BgD0/wMA8P8BAOv/AADn/wMA4/8='],
-            [5, '6v94/+7/dv/z/3b/+P91//z/dP8BAHP/BgBy/wsAcv8QAHL/EgB2/w4Ad/8JAHf/BAB3////eP/6/3j/9f95//H/e//s/3z/5/98/w=='],
+            [5, '6v94/+7/dv/z/3b/+P91//z/dP8BAHP/BgBy/woAcf8PAHH/EwB0/xEAd/8NAHf/CAB3/wMAd//+/3j/+v95//X/ev/x/3v/7P98/+f/fP8='],
             [
               5,
               '1v+G/9r/hP/e/4f/4f+L/+P/jv/m/5P/6f+W/+z/mv/v/53/8/+g//j/of/8/6L/+/+k//z/qP/+/6z/AQCv/wUAsv8JALX/DAC4/w0AvP8JAL3/BAC7/wAAuf/8/7f/9/+2//P/uP/v/7v/7P++/+f/wP/j/8D/3/++/9v/u//Z/7f/2f+y/9v/rv/e/6r/3P+m/9j/o//U/6D/0v+c/9T/mP/Z/5n/3f+b/+L/nP/k/5n/4f+V/9z/lf/Y/5L/1f+P/9T/iv8=',
@@ -629,6 +635,9 @@ export const sprites: SpriteSet = {
             [6, 'DgBY/xIAWP8WAFr/FgBf/xIAXf8QAFz/DwBg/xAAZf8TAGj/EQBo/w0AZf8LAGH/CwBc/w=='],
             [6, '9/9b//v/Wf///1n/AwBc/wYAYP8HAGT/BQBp/wIAbP/+/23/+f9s//b/av/x/2j/7v9l//D/Yf/z/17/'],
             [6, 'GABj/xkAZf8ZAGf/FwBp/xYAaP8XAGX/'],
+            [7, '/v93////eP///3r///97//3/ev/9/3n/'],
+            [7, 'DgB3/xAAd/8RAHj/EAB6/w8Aev8OAHn/'],
+            [7, '/v+E////hP8AAIX///+H//3/hv/9/4X/'],
             [7, '1/+S/9r/k//c/5X/3P+Z/9n/mP/X/5X/'],
             [9, 'BADH/wIAyP/+/8X/+//A//v/vv/9/77/AQDB/wQAxf8=', 1, 1],
             [9, '9f/f//P/3//w/9z/7f/Y/+7/1//v/9f/8//Z//X/3f8=', 1, 1],
@@ -675,7 +684,7 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              '2v+E/9//g//j/4X/5v+J/+j/jf/s/4z/7/+I/+3/hP/u/4D/8/9+//j/ff/8/33//v+B////hv8CAIj/AgCD/wMAfv8GAHv/CgB6/w8Aev8QAH//EgCC/xMAfv8WAHv/FwB//xoAgv8eAIX/IACK/x8Ajv8cAJH/FwCT/xMAk/8OAJP/CQCR/wUAkP8AAJD/+/+P//f/jv/0/5H/9P+W//j/mf/8/5z/AACe/wUAn/8JAKD/DgCh/wwApP8IAKT/AwCk//7/o//5/6L/9f+g//H/nv/t/5v/6v+Y/+f/lP/k/5D/4f+M/97/iP/Z/4j/',
+              '2v+E/9//g//j/4X/5v+J/+j/jf/t/43/7/+I/+3/hP/w/4D/9P9+//n/ff/9/3z/AgB7/wcAev8MAHr/EAB5/xUAe/8XAH//GgCC/x4Ahf8gAIn/IACO/xwAkf8YAJP/EwCT/w4Ak/8KAJH/BQCQ/wAAkP/8/4//9/+O//T/kf/0/5b/9/+Z//v/nP8AAJ7/BACf/wkAoP8OAKH/DQCk/wgApP8DAKT//v+j//r/ov/1/6D/8f+e/+3/m//q/5j/5/+U/+T/kP/h/4z/3v+J/9n/iP8=',
             ],
             [1, '8f9a//X/WP/5/1b//v9V/wMAVf8IAFX/DABX/xAAWf8QAF3/DgBi/wwAZf8IAGP/BABf/wAAXf/7/17/9/9h//T/Zf/y/2n/7v9s/+r/bv/o/2v/6P9m/+r/Yf/t/13/'],
             [
@@ -705,7 +714,7 @@ export const sprites: SpriteSet = {
             [4, '4f+X/+X/mP/o/5v/6P+f/+P/nv/g/5v/'],
             [4, '4//Z/+f/1//p/9r/6v/f/+3/4v/x/+X/9f/l//T/6f/y/+3/9f/w//b/9f/2//n/8v/8/+3//f/o//3/5P/8/9//+v/c//f/2f/z/9f/7//V/+r/1f/m/9j/4v/c/9//4P/c/w=='],
             [4, 'CADf/wwA3f8QANv/FADd/xgA4P8cAN7/IQDd/yUA3f8pAOD/KwDk/ywA6f8pAO3/JgDw/yIA8/8fAPb/GwD5/xcA/P8TAP7/DgD9/woA+/8HAPf/BQDz/wIA7/8BAOv/AQDm/wQA4v8='],
-            [5, '7f97//L/ef/2/3r/+/95/wAAd/8EAHb/CQB1/w4AdP8SAHT/FgB3/xUAe/8QAHv/CwB7/wYAe/8CAHv//f98//j/ff/0/37/7/9//+v/f/8='],
+            [5, '7f97//L/ef/3/3r/+/95/wAAd/8FAHb/CQB1/w4AdP8SAHX/FAB5/xAAe/8MAHv/BwB7/wIAfP/9/3z/+P99//T/fv/v/3//6/9//w=='],
             [5, '2f+J/93/iP/h/4r/5P+O/+f/kf/q/5X/7f+Z//D/nP/0/5//+P+h//3/o/8BAKX//f+m//j/pf/z/6T/7/+l/+v/pP/p/6D/5/+b/+T/mP/g/5f/3P+U/9n/kf/X/4z/'],
             [5, 'BwCQ/wsAkf8QAJL/FACT/xkAkv8eAJP/GgCW/xYAl/8RAJj/DQCW/wkAlP8='],
             [5, '9P+T//j/lf/7/5n///+b/wQAnf8JAJ7/DgCf/wsAof8GAKH/AQCg//3/nv/5/5v/9f+X/w=='],
@@ -719,6 +728,7 @@ export const sprites: SpriteSet = {
             [6, '9/9g//z/Xv8AAF3/BABf/wcAYv8JAGb/CQBr/wYAbv8CAHD//f9w//n/bv/1/2v/8v9o//T/Y/8='],
             [6, 'GwBm/xwAaP8bAGv/GQBs/xkAav8aAGj/'],
             [6, '5/+k/+z/pP/w/6P/9f+j//n/pf/9/6j///+s//z/sP/4/7H/8/+x/+//sP/q/67/5/+s/+X/qP8='],
+            [7, 'AQCH/wIAh/8DAIj/AgCK/wAAiv8AAIj/'],
             [7, '2/+V/93/lv/f/5j/3/+c/93/m//b/5j/'],
             [7, 'DQCj/w4Ao/8PAKT/DwCm/w4Apf8NAKT/'],
             [7, '6P/S/+r/0v/r/9X/6v/X/+j/1//n/9T/'],
@@ -763,12 +773,12 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              'LACE/ycAhf8jAIj/IACM/x0AkP8bAJT/GACY/xUAm/8RAJ7/DQCg/wgAof8DAKL//v+i//n/ov/1/6L/8/+f//f/nf/8/57/AQCd/wUAm/8JAJn/DQCV/w8Akf8NAI3/CQCM/wQAjP///47/+/+P//b/kP/x/5D/7P+P/+j/jv/j/4z/4v+I/+T/g//n/4D/6/99/+3/ef/w/3n/8P9+//P/fv/z/3n/9v92//v/d////3n/AQB+/wEAg/8EAIT/BQCA/wYAe/8KAHr/DwB6/xQAfP8XAH//FgCD/xYAiP8aAIr/HgCH/yEAg/8lAID/KQCB/w==',
+              'LACE/ycAhf8jAIj/IACL/x4Aj/8bAJT/GACX/xUAm/8RAJ7/DQCg/wgAof8DAKL///+i//r/ov/1/6L/8/+f//f/nf/8/57/AACd/wUAnP8JAJn/DACW/w8Akv8OAI3/CQCM/wUAjP8AAI7/+/+P//f/kP/y/5D/7f+Q/+j/jv/k/43/4v+J/+P/hP/m/4D/6/9+/+z/ev/w/3n/9P94//n/dv/9/3f/AQB6/wYAef8LAHn/DwB6/xQAe/8XAH//FQCE/xYAiP8aAIr/HgCH/yEAg/8lAID/KQCB/w==',
             ],
             [1, 'FgBZ/xoAXP8cAGD/HQBk/xwAaf8YAGr/FQBn/xEAZP8PAGD/DABc/wcAWv8DAFn//v9b//v/X//3/2H/9f9d//P/Wf/z/1X/9/9S//v/Uf8AAFD/BQBQ/woAUv8OAFP/EgBW/w=='],
             [
               1,
-              'GQBz/xoAdv8VAHf/EAB3/wwAdv8HAHX/AgB0//7/c//5/3H/9f9w//D/cP/r/2//5/9u/+L/bf/e/27/2v9x/9X/cf/V/23/2f9r/97/a//i/2r/5/9q/+z/af/w/2j/9P9l//f/Yf/6/2T//P9o////bP8DAG3/CABu/w0Abv8RAG7/FgBv/w==',
+              'GQBz/xoAdv8VAHf/EAB3/wwAd/8HAHX/AgB0//7/c//5/3L/9f9x//D/cP/r/2//5/9u/+L/bf/e/27/2v9x/9X/cf/V/23/2f9r/97/a//i/2r/5/9q/+z/af/w/2j/9P9k//f/Yf/6/2T//P9o////bP8DAG3/CABu/w0Abv8RAG7/FgBv/w==',
             ],
             [1, 'AwCs/wEAr//8/6//+P+t//n/qf/9/6f/AQCo/w=='],
             [1, 'LgCz/y4At/8uALz/KgC+/yYAvv8lALr/JwC2/ysAs/8sAK//'],
@@ -795,7 +805,7 @@ export const sprites: SpriteSet = {
             [4, 'JQCY/yEAm/8dAJz/HACZ/x8Alv8jAJT/'],
             [4, 'IQDZ/yUA3P8oAN//KwDj/y0A5/8sAOz/KQDw/ycA9P8kAPj/IAD6/xsA/P8WAPz/EgD8/w4A+f8NAPT/DQDw/xAA7P8OAOn/CwDl/xAA5f8UAOP/FwDf/xoA2/8ZANf/HQDW/w=='],
             [4, '/f/j/wAA5/8AAOv//v/w//v/9P/4//j/9P/7//D//f/r//z/5//6/+P/9//f//X/2//y/9f/7//V/+v/1P/n/9X/4v/X/97/3P/c/+H/3P/l/93/6f/f/+3/3P/x/9v/9f/d//r/4P8='],
-            [5, 'GQB8/xUAfP8QAHv/CwB5/wYAeP8CAHj//f93//j/d//z/3f/7/92//H/cv/2/3L/+/9y////c/8EAHT/CQB1/w4Adv8SAHb/FwB4/w=='],
+            [5, 'GQB8/xUAfP8QAHv/CwB6/wcAef8CAHj//v93//n/d//0/3f/7/93/+7/dP/x/3H/9v9x//v/cv8AAHP/BAB0/wkAdf8OAHb/EgB2/xcAeP8='],
             [
               5,
               'LACK/ysAj/8oAJL/JACV/yAAlf8dAJn/HwCc/yMAm/8oAJn/LACY/y8AnP8tAKD/KQCj/yUApv8jAKr/JQCu/ygAsv8oALf/JgC7/yIAvv8eAMD/GQDA/xUAvv8RALv/DgC4/wkAtv8FALf/AAC5//z/u//4/73/8/+8//T/uP/4/7X//P+y/wAAr/8DAKz/BQCo/wUApP8EAKL/CQCh/w0AoP8SAJ3/FQCa/xgAlv8bAJP/HQCO/yAAi/8jAIf/JwCE/ysAhv8=',
@@ -809,6 +819,9 @@ export const sprites: SpriteSet = {
             [6, '9f9c//X/Yf/z/2X/8P9o/+3/aP/w/2X/8v9g//H/XP/u/13/6/9f/+r/Wv/u/1j/8/9Y/w=='],
             [6, 'DgBe/xEAYf8TAGX/DwBo/wsAav8HAGz/AwBt//7/bP/7/2n/+v9k//v/YP/+/1z/AQBZ/wYAWf8KAFv/'],
             [6, '6f9l/+r/aP/q/2n/6P9n/+j/Zf/o/2P/'],
+            [7, 'AwB5/wMAev8CAHv/AQB6/wIAeP8DAHf/'],
+            [7, '8/95//L/ev/w/3r/8P94//H/d//y/3f/'],
+            [7, 'BACF/wMAhv8BAIf/AACF/wEAhP8DAIT/'],
             [7, 'KQCV/ycAmP8lAJn/JQCV/ycAk/8qAJL/'],
             [9, '/P/F////wf8DAL7/BQC+/wUAwP8CAMX//v/I//z/x/8=', 1, 1],
             [9, 'CwDd/w0A2f8RANf/EgDX/xMA2P8QANz/DQDf/wsA3/8=', 1, 1],
@@ -855,7 +868,7 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              'JwCI/yMAiP8fAIz/HACQ/xoAlP8XAJj/FACb/xAAnv8MAKD/BwCi/wIAo//+/6T/+f+k//T/pP/y/6H/9/+g//z/n/8AAJ7/BQCc/wkAmf8MAJb/DACR/woAjv8FAI//AQCQ//z/kP/3/5H/8/+T/+7/k//p/5P/5f+R/+H/jv/g/4r/4v+F/+b/gv/q/3//6/97/+3/fv/v/4L/8f9///H/ev/2/3r/+/97//7/fv/+/4P///+I/wIAhv8CAIH/BAB9/wkAff8OAH7/EgCA/xMAhP8SAIj/FACM/xgAjf8bAIn/HQCF/yIAg/8mAIT/',
+              'JwCI/yMAif8fAIz/HACQ/xoAlP8XAJj/FACb/xAAnv8LAKD/BwCi/wIAo//+/6T/+f+k//T/pP/z/6H/9/+g//z/n/8BAJ7/BQCc/wkAmf8MAJb/DACR/wkAjv8FAI//AACQ//v/kP/3/5H/8v+T/+3/k//p/5P/5P+R/+H/jv/g/4n/4/+F/+f/gv/q/3//6/97//D/ef/1/3r/+v96//7/e/8DAHz/CAB9/w0Afv8RAID/EwCE/xIAiP8UAI3/GACN/xsAif8dAIX/IgCD/yYAhP8=',
             ],
             [1, 'EwBd/xcAYf8YAGb/GQBr/xYAbv8SAGz/DwBp/w0AZf8JAGH/BQBe/wEAXf/8/1//+f9j//X/Zf/y/2L/8f9d//D/Wf/0/1f/+f9V//7/Vf8CAFX/BwBW/wwAWP8QAFr/'],
             [
@@ -885,7 +898,7 @@ export const sprites: SpriteSet = {
             [4, 'IQCb/x0Anv8ZAJ//GQCb/xwAmP8gAJf/'],
             [4, 'IQDc/yUA3/8oAOL/KwDm/ywA6v8qAO//JwDz/yUA9/8hAPr/HQD8/xgA/f8TAP3/DwD8/wsA+f8KAPX/DADw/w8A7f8MAOn/CwDl/xAA5f8UAOL/FwDf/xgA2v8ZANf/HQDZ/w=='],
             [4, '/P/i////5v8AAOv//v/v//z/8//5//f/9v/7//L//f/u//7/6f/8/+b/+f/i//b/3v/z/9v/8P/X/+3/1f/p/9X/5P/X/+D/2//d/+D/3f/l/97/6f/g/+z/3f/w/9v/9f/d//n/3/8='],
-            [5, 'FgB//xIAf/8NAH7/CAB9/wQAfP///3v/+v97//X/e//x/3v/7P97/+v/d//u/3T/8/90//j/df/8/3b/AQB3/wUAef8KAHr/DwB5/xMAe/8='],
+            [5, 'FgB//xEAf/8NAH7/CAB9/wMAfP///3z/+v97//X/e//w/3v/7P95/+7/df/z/3T/9/91//z/dv8BAHf/BQB5/woAev8PAHn/EwB7/w=='],
             [5, 'KgCM/ygAkf8lAJT/IQCX/xwAmP8ZAJv/GACg/xYApP8SAKX/DQCk/wkApf8EAKb/AACl/wQAo/8IAKH/DACf/xAAnP8UAJn/FwCV/xoAkf8cAI7/HwCK/yMAiP8oAIn/'],
             [5, '+P+U//T/lv/v/5j/6/+X/+b/lv/j/5P/5/+S/+z/k//x/5L/9f+R//r/kP8='],
             [5, 'CwCX/wgAm/8EAJ7///+g//r/of/1/6H/8/+f//f/nv/8/53/AQCb/wUAmf8JAJX/DQCT/w=='],
@@ -899,6 +912,7 @@ export const sprites: SpriteSet = {
             [6, 'DABj/w4AaP8MAGv/CABu/wMAcP///3D/+v9u//f/a//3/2b/+f9i//z/X/8AAF3/BQBe/wkAYP8='],
             [6, '5/9o/+f/av/n/2z/5f9r/+X/aP/l/2b/'],
             [6, 'HACo/xoArP8WAK7/EgCw/w0Asf8IALH/BACw/wIArP8EAKj/CACl/wwAo/8RAKP/FQCk/xkApP8='],
+            [7, 'AQCI/wAAiv/+/4r//v+I//7/h/8AAIf/'],
             [7, 'JgCY/yQAm/8hAJz/IQCY/yMAlv8mAJX/'],
             [7, '9P+k//P/pf/x/6b/8f+k//L/o//0/6P/'],
             [7, 'GgDU/xkA1/8WANf/FQDV/xYA0v8ZANL/'],
@@ -947,7 +961,7 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              '3v+K/+P/if/m/4z/6f+R/+3/k//x/5D/8f+M/+//h//0/4X/+P+E//3/g/8AAIf/AACL/wMAjf8EAIn/BQCE/wgAgf8NAID/EQCC/xEAh/8UAIf/FACC/xcAg/8ZAIf/HACL/yAAjv8hAJP/HQCW/xkAmP8UAJj/DwCY/wsAl/8GAJb/AQCV//z/lP/4/5X/+P+a//r/nv/+/6H/AgCj/wcApP8MAKX/EACn/wwAqf8HAKr/AwCq//7/qP/5/6b/9f+k//L/of/u/53/6/+a/+j/lv/l/5L/4v+P/93/jv8=',
+              '3v+K/+P/if/m/4z/6f+Q/+3/k//w/5H/8f+M//D/iP/z/4X/9/+D//z/g/8AAIP/BACC/wkAgP8OAID/EgCD/xYAgv8YAIX/GgCJ/x4AjP8gAJD/IACV/xsAl/8XAJj/EgCY/w0AmP8JAJf/BACW/wAAlf/7/5T/9/+X//j/m//7/5////+i/wMApP8IAKX/DQCl/w8AqP8LAKr/BgCq/wIAqf/9/6j/+f+m//X/pP/x/6D/7v+d/+v/mf/o/5X/5f+S/+H/j//d/47/',
             ],
             [1, '9P9i//j/X//9/17/AgBd/wYAXf8LAF7/DwBg/xIAZP8PAGj/DgBs/woAa/8HAGj/AwBl//7/Zv/6/2j/9/9r//T/cP/x/3P/7f91/+v/cf/s/23/7f9o//D/Zf8='],
             [
@@ -980,7 +994,7 @@ export const sprites: SpriteSet = {
               4,
               'GADa/x0A2P8hANr/JQDY/yoA1v8uANX/MwDW/zYA2v84AN7/OADj/zYA6P8zAOz/MADv/y0A8/8qAPf/JgD6/yIA/P8dAP3/GQD7/xUA+P8SAPT/DwDx/wwA7f8LAOj/DgDl/xEA4f8VAN3/',
             ],
-            [5, '8P+C//T/gP/5/4D//v9//wMAfv8HAH3/DAB8/xEAfP8VAH7/FQCB/xAAgf8LAIH/BgCB/wEAgv/8/4P/+P+E//P/hf/u/4X/'],
+            [5, '8P+C//T/gP/5/4D//v9//wMAfv8HAH3/DAB8/xEAfP8VAH7/FACB/xAAgf8LAIH/BgCC/wEAgv/8/4T/+P+E//P/hf/u/4X/'],
             [5, '3f+P/+H/jv/l/5D/6P+U/+r/mP/t/5z/8P+f//T/ov/4/6X//f+n/wEAqf/+/6v/+v+s//b/q//x/6n/7f+n/+n/pf/l/6L/4/+e/+D/mv/d/5f/2/+T/w=='],
             [5, 'CQCW/w4Al/8TAJj/GACY/xwAlv8eAJn/GgCb/xUAnf8QAJ3/DACa/w=='],
             [5, 'KACc/y0Amv8xAJv/NQCd/zkAoP87AKX/PACp/zwArv86ALL/NgC1/zMAuP8wALz/LQC//ygAv/8lALz/IQC4/x8AtP8eALD/IQCs/yIAp/8iAKP/JQCf/w=='],
@@ -992,6 +1006,9 @@ export const sprites: SpriteSet = {
             [6, '+/9n/wAAZf8FAGX/CABo/woAbf8KAHL/BwB2/wMAeP/+/3f/+v91//b/cv/1/27/+P9q/w=='],
             [6, 'GwBu/xwAcP8cAHL/GgB0/xkAc/8aAHD/'],
             [6, '6v+q/+7/qf/z/6r/+P+r//z/rf8AALD//v+0//r/tf/1/7X/8P+z/+z/sv/o/67/'],
+            [7, 'AwCB/wQAgv8EAIP/AwCE/wMAg/8DAIL/'],
+            [7, 'EgCB/xMAgf8UAIL/EwCD/xIAg/8SAIL/'],
+            [7, 'AwCL/wUAi/8FAI3/BACP/wIAj/8CAI3/'],
             [7, '3v+a/+H/m//j/57/4/+h/+D/oP/e/53/'],
             [7, 'DwCo/xAAqP8RAKn/EQCq/xAAqv8PAKn/'],
             [7, '5f+5/+f/u//m/8D/5f/F/+X/yv/m/87/5v/T/+L/1f/d/9T/2f/S/9v/zv/d/8n/3f/F/97/wP/h/7z/'],
@@ -1039,7 +1056,7 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              '5f+H/+r/h//t/4v/7/+P//P/kf/3/4//+P+K//b/hv/5/4P//v+B/wMAgf8HAIP/CACH/wkAjP8LAIr/DACF/w4AgP8SAH7/FwB+/xgAgv8aAIb/HACC/x4Afv8gAIL/IgCG/yYAif8pAI3/KgCR/yYAlP8iAJb/HQCW/xgAlv8TAJb/DgCV/woAk/8FAJL/AACT////l/8AAJz/BACf/wgAof8MAKP/EQCj/xYApP8ZAKb/FQCo/xAAqf8LAKj/BgCn/wIApv/9/6T/+f+i//X/n//y/5v/8P+X/+3/k//q/4//5v+M/+L/i/8=',
+              '5f+H/+n/h//t/4v/7/+P//P/kf/3/4//+P+L//b/hv/5/4P//f+B/wIAgP8HAID/CgCC/w4AgP8SAH7/FwB//xsAgP8gAH//IQCE/yQAiP8nAIv/KgCP/ygAk/8kAJX/HwCW/xsAl/8WAJb/EQCV/w0AlP8IAJP/AwCS////lP///5n/AQCd/wUAoP8JAKL/DgCj/xIApP8XAKT/GACn/xQAqP8PAKn/CgCo/wYAp/8BAKX//f+k//n/of/1/57/8v+a/+//lv/t/5L/6v+P/+b/jP/i/4v/',
             ],
             [1, '+/9d////W/8EAFn/CABY/w0AWP8SAFn/FgBb/xoAXv8YAGL/FwBm/xQAaf8RAGX/DQBi/wkAYf8EAGL/AABl//3/af/6/2z/9v9v//L/cf/x/23/8v9o//T/ZP/3/2D/'],
             [1, 'FQBo/xgAa/8bAG7/IABw/yQAcf8pAHH/LgBy/zMAcv83AHP/NwB4/zMAd/8vAHX/KgB0/yYAdf8hAHb/HQB4/xgAef8TAHn/DwB6/woAef8IAHb/DAB0/xAAcf8SAGz/'],
@@ -1049,7 +1066,7 @@ export const sprites: SpriteSet = {
               2,
               'y/95/8//dv/T/3X/1/93/9r/e//e/3v/4P92/+T/c//o/3H/7P9u/+//av/x/23/8P9x/+7/dv/r/3r/6P99/+X/gf/i/4T/4f+J/+H/jf/i/5L/4/+X/+X/m//j/5//4P+i/+D/pv/b/6f/1/+p/9P/rP/O/63/yf+t/8T/rf/A/6z/u/+r/7f/qv+0/6X/tP+h/7T/nP+1/5f/t/+T/7j/jv+6/4r/vf+G/8D/gv/D/37/x/97/w==',
             ],
-            [2, 'GwB4/yAAdv8kAHT/KQBz/y4AdP8zAHb/NAB6/y8Aev8rAHv/JgB9/yIAfv8dAH7/GQB8/w=='],
+            [2, 'GwB4/yAAdv8kAHT/KQBz/y4AdP8yAHb/NAB5/zAAe/8rAHr/JwB8/yMAff8eAH7/GgCA/xkAfP8='],
             [2, '7/99//P/ff/0/4H/8f+E/+3/hv/o/4f/6P+E/+v/gP8='],
             [2, 'BACq/wkAqP8OAKn/EgCr/xUAr/8TALP/DgCz/wsAsP8HAK3/'],
             [2, '5/+s/+r/r//o/7P/5f+3/+H/uf/i/7T/5P+w/w=='],
@@ -1071,7 +1088,7 @@ export const sprites: SpriteSet = {
               'HQDX/yEA1f8lANb/KgDW/y4A1P8zANP/NwDU/zsA1/89ANv/PwDg/z8A5f89AOj/OQDs/zYA7/8zAPP/LwD2/ywA+f8oAPz/JAD9/x8A/P8bAPn/GAD2/xUA8v8TAO7/EQDq/xEA5f8TAOH/FgDd/xkA2v8=',
             ],
             [5, 'DgB6/xMAeP8YAHj/GAB8/xQAfv8PAH7/'],
-            [5, '9/9+//z/ff8AAH3/BQB8/wgAf/8DAID///+B//r/gf/2/4H/'],
+            [5, '9/9+//z/ff8AAH3/BQB8/wgAf/8EAID///+B//r/gf/2/4H/'],
             [5, '4v+M/+f/i//r/47/7v+R//D/lf/z/5n/9v+d//r/oP/+/6P/AgCl/wYAp/8IAKn/BACr////rP/7/6r/9/+n//T/o//x/6D/7f+c/+n/m//l/5j/4v+V/+D/kP8='],
             [5, 'EQCU/xYAlv8aAJb/HwCW/yQAlv8lAJj/IQCa/xwAm/8YAJv/EwCY/w=='],
             [5, '/v+Y/wIAmv8GAJ7/CgCg/w8Aov8TAKP/EQCl/wwApP8HAKL/AwCg////nf8='],
@@ -1086,6 +1103,9 @@ export const sprites: SpriteSet = {
             [6, 'AQBk/wUAYf8KAGD/DgBi/xEAZv8TAGr/EgBv/w8Acv8LAHT/BgB0/wMAcf/+/3D/+v9v//v/av/9/2f/'],
             [6, 'JQBp/yUAa/8kAG7/IgBv/yIAbv8jAGv/'],
             [6, '8v+k//b/pv/6/6n//v+r/wIArP8GAK7/BwCy/wMAtf/+/7X/+v+0//X/s//x/7D/7/+t/+//qP8='],
+            [7, 'GwB//xwAgf8dAIT/GwCG/xoAhf8aAIL/'],
+            [7, 'CQB//wsAf/8MAIH/CgCC/wgAg/8IAIH/'],
+            [7, 'CgCK/wsAiv8MAIz/CwCN/wkAjf8JAIz/'],
             [7, '5P+Y/+f/mv/p/53/6P+g/+X/nv/k/5v/'],
             [7, 'HwDP/yMA0P8nANP/KADX/yQA1/8gANT/'],
             [9, 'BwDJ/wMAyP///8f/+v/D//r/wf/9/8H/AQDD/wYAxv8=', 1, 1],
@@ -1133,7 +1153,7 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              'JACO/x8Aj/8bAJL/GACW/xUAmv8SAJ3/DwCh/wsApP8HAKb/AwCo//7/qv/5/6r/9P+p//H/p//1/6X/+v+k//7/o/8DAKH/BgCe/wkAmv8JAJX/BACU////lf/7/5b/9v+X//H/mP/s/5j/6P+Y/+P/lv/g/5P/4f+O/+T/i//o/4f/6f+D/+z/gv/s/4f/8P+H//D/gv/z/4D/+P+B//v/hP/8/4n//f+N/wAAi/8BAIf/BACD/wgAhP8NAIX/EQCH/xAAjP8QAJD/FACT/xcAkf8aAIz/HgCJ/yIAiv8=',
+              'JACO/x8Aj/8bAJL/GACV/xYAmf8TAJ3/DwCg/wwApP8IAKb/AwCo////qf/6/6r/9f+q//H/qP/0/6X/+P+l//3/pP8CAKL/BQCf/wgAm/8JAJf/BgCU/wEAlf/8/5b/+P+X//P/mP/u/5j/6v+Y/+X/l//h/5X/4P+Q/+L/jP/m/4n/6f+F/+v/gv/v/4P/8/+A//j/gP/8/4L/AACD/wUAg/8JAIP/DgCF/xEAiP8PAIz/EACR/xQAk/8YAJD/GgCM/x4Aif8iAIr/',
             ],
             [1, 'EABl/xMAaP8VAG3/FQBx/xQAdf8PAHP/DABw/woAa/8HAGj/AgBm//7/Zf/5/2j/9v9r//L/bP/x/2j/7/9k//H/YP/1/17/+v9d////Xf8EAF7/CABf/wwAYv8='],
             [
@@ -1166,7 +1186,7 @@ export const sprites: SpriteSet = {
               4,
               '7P/d/+//4f/y/+X/9f/o//X/7f/y//H/7//0/+v/+P/o//v/4//9/97//P/a//r/1//3/9P/8//Q/+//zf/s/8v/6P/J/+P/yf/e/8v/2v/O/9b/0v/V/9f/1v/b/9j/4P/a/+T/2P/o/9r/',
             ],
-            [5, 'EwCF/w4Ahf8JAIT/BACD////gv/6/4H/9v+B//H/gf/s/4H/6/9+/+//fP/0/3z/+f99//7/fv8DAH//BwCA/wwAgP8RAIL/'],
+            [5, 'EwCF/w4Ahf8JAIT/BACE////gv/7/4L/9v+B//H/gf/s/4H/6/9+//D/fP/0/3z/+f99//7/fv8DAH//CACA/wwAgP8RAIL/'],
             [5, 'JgCT/yQAl/8hAJr/HgCe/xsAov8YAKX/EwCn/w8Aqf8LAKv/BgCs/wIAq/8AAKn/BACn/wgApf8MAKL/EACf/xMAnP8WAJj/GQCU/xwAkP8fAI7/JACP/w=='],
             [5, '9f+a//D/nf/r/53/5/+b/+P/mf/k/5b/6f+Y/+7/mP/z/5f/9/+W/w=='],
             [5, '3P+f/97/o//f/6f/3/+s/+L/sP/i/7T/3/+4/9z/vP/Y/7//0/+//9D/vP/N/7j/yv+1/8f/sv/E/67/xP+p/8X/pf/I/6D/y/+d/8//m//U/5r/2P+c/w=='],
@@ -1178,6 +1198,9 @@ export const sprites: SpriteSet = {
             [6, 'CQBq/wwAbv8KAHL/BwB1/wIAd//9/3j/+f92//b/cv/2/23/+P9o//z/Zf8BAGX/BQBn/w=='],
             [6, '5/9w/+j/c//n/3T/5f9y/+T/cP/l/27/'],
             [6, 'GACu/xUAsv8QALP/DAC1/wcAtf8CALT/AQCw/wUArf8JAKv/DgCq/xIAqf8XAKr/'],
+            [7, '/v+C//7/g//9/4T//f+D//3/gv/+/4H/'],
+            [7, '7/+C/+7/g//t/4P/7f+C/+3/gf/v/4H/'],
+            [7, '//+N//7/j//8/4//+/+N//z/i//9/4v/'],
             [7, 'IgCd/yEAoP8eAKH/HgCe/yAAm/8jAJr/'],
             [7, '8v+p//H/qv/v/6r/7/+p//D/qP/y/6j/'],
             [7, 'HwC8/yIAwP8kAMX/JADJ/yYAzv8nANL/IwDU/x8A1f8aANP/GgDO/xsAyv8bAMX/GgDA/xoAu/8cALn/'],
@@ -1225,7 +1248,7 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              'HgCL/xoAjP8WAI//EwCT/xEAl/8OAJv/CwCf/wcAov8DAKT///+m//r/p//1/6j/8f+p/+z/qP/n/6b/6v+k/+//o//0/6P/+f+h//3/n/8AAJz/AgCX/wAAk//7/5L/9/+T//L/lf/t/5b/6f+W/+T/lv/f/5b/2v+U/9f/kf/Y/43/2/+J/97/hv/h/4L/4/9+/+T/gv/m/4b/6P+C/+r/fv/v/37/8/+A//T/hf/1/4r/+P+M//n/h//6/4P//v+B/wMAgf8HAIP/CwCG/wkAiv8KAI//DQCR/xEAj/8UAIv/FwCH/xsAh/8=',
+              'HgCL/xoAjP8WAI//EwCS/xEAlv8OAJr/DACe/wgAof8EAKT///+l//v/p//2/6j/8v+p/+3/qP/o/6f/6f+k/+7/pP/z/6P/9/+i//z/oP8AAJ3/AgCZ/wEAlP/9/5L/+P+T//T/lP/v/5X/6/+W/+b/l//h/5b/3P+V/9j/k//X/4//2f+L/93/iP/g/4T/4f9//+X/gP/q/3//7v9+//P/gP/2/4L/+v+A////gP8DAIH/CACD/woAhv8IAIv/CgCP/w4Akf8RAI//FACL/xcAh/8bAIf/',
             ],
             [1, 'CQBg/wwAZP8PAGj/EABt/w4Acf8KAG//BgBs/wMAaf8BAGX//P9i//j/Yf/z/2L/8P9l/+z/af/q/2b/6f9i/+b/Xv/q/1v/7/9Z//P/WP/4/1j//f9Z/wEAW/8FAF3/'],
             [1, '7/9s//D/cf/0/3T/+P92//b/ef/y/3r/7f95/+j/ef/k/3j/3/92/9v/df/W/3T/0v91/83/d//K/3j/yv9z/87/cv/T/3L/1/9x/9z/cf/h/3D/5f9u/+j/a//s/2j/'],
@@ -1235,7 +1258,7 @@ export const sprites: SpriteSet = {
               2,
               'OgB7/z4Afv9BAIL/RACG/0YAiv9IAI7/SgCT/0sAl/9MAJz/TQCh/0wApf9KAKr/RgCr/0EArP88AK3/NwCt/zMArf8uAKz/KgCp/yUAp/8hAKb/IQCi/x0An/8bAJv/HQCX/x8Akv8fAI3/HwCJ/x8AhP8cAIH/GQB9/xUAev8TAHb/EQBx/xAAbf8SAGr/FQBu/xkAcf8dAHP/IAB2/yIAe/8mAHv/KQB3/y0Adf8yAHb/NgB5/w==',
             ],
-            [2, '6P98/+T/fv/f/37/2v99/9b/e//S/3r/zf96/87/dv/S/3T/1/9z/9z/dP/h/3b/5f94/w=='],
+            [2, '6P98/+f/gP/j/37/3v99/9n/fP/V/3r/0f97/8z/ef/O/3b/0/90/9j/c//c/3T/4f92/+X/eP8='],
             [2, 'FQCA/xkAhP8YAIf/FACG/xAAhP8MAIH/DQB9/xIAff8='],
             [2, '+v+t//b/sP/y/7P/7f+z/+z/r//u/6v/8/+p//j/qP/8/6r/'],
             [2, 'HACw/x8AtP8gALn/HAC3/xkAs/8XAK//GQCs/w=='],
@@ -1257,7 +1280,7 @@ export const sprites: SpriteSet = {
               '5//a/+v/3f/u/+H/8P/l//D/6v/u/+7/6//y/+j/9v/l//n/4f/8/93//f/Z//z/1f/5/9H/9v/O//P/yv/v/8f/7P/E/+j/wf/l/8H/4P/D/9v/xv/X/8n/1P/O/9P/0v/U/9f/1v/b/9b/3//V/+T/1/8=',
             ],
             [5, '8v9+/+3/fv/o/3z/6f94/+7/eP/y/3r/'],
-            [5, 'CwCB/wYAgf8CAIH//f+A//n/f//8/3z/AAB9/wUAff8JAH7/'],
+            [5, 'CwCB/wYAgf8BAIH//f+A//j/f//7/3z/AAB9/wUAff8JAH7/'],
             [5, 'IACQ/x8Alf8bAJj/FwCb/xMAnP8QAKD/DQCj/wkAp/8GAKr/AQCs//3/q//5/6n/+v+n////pf8DAKP/BwCg/wsAnf8OAJn/EACV/xMAkf8WAI7/GgCL/x4AjP8='],
             [5, '7f+Y/+n/m//k/5v/3/+a/9v/mP/c/5b/4f+W/+b/lv/r/5b/7/+U/w=='],
             [5, 'AQCd//3/oP/5/6L/9P+k//D/pf/t/6P/8v+i//f/oP/7/57///+a/wMAmP8='],
@@ -1272,6 +1295,9 @@ export const sprites: SpriteSet = {
             [6, 'AwBn/wYAav8GAG//AgBw//7/cf/6/3T/9v90//H/cv/v/2//7v9q/+//Zv/y/2L/9/9g//v/Yf///2T/'],
             [6, '3f9r/97/bv/e/2//3P9u/9v/a//c/2n/'],
             [6, 'EQCo/xIArf8PALD/CwCz/wcAtP8CALX//v+1//r/sv/6/67//v+s/wMAq/8HAKn/CgCm/w8ApP8='],
+            [7, '5v+C/+f/hf/l/4b/5P+E/+T/gf/l/3//'],
+            [7, '+f+B//j/g//2/4L/9f+B//b/f//4/3//'],
+            [7, '+P+M//f/jf/1/43/9P+M//X/iv/3/4r/'],
             [7, 'HACb/xsAnv8YAKD/GACd/xkAmv8cAJj/'],
             [7, '4f/U/93/1//Y/9f/2f/T/93/0P/i/8//'],
             [9, '+v/G////w/8DAMH/BgDB/wYAw/8BAMf//f/I//n/yf8=', 1, 1],
@@ -1323,12 +1349,12 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              '5/+C/+v/gf/v/4T/8f+I//X/jP/5/4r/+/+G//n/gf/6/33///98/wQAe/8IAHv/CgB//wsAhP8OAIX/DwCA/xAAe/8TAHj/GAB4/xwAev8cAH7/HwB+/yAAev8jAHn/JQB+/ygAgv8rAIX/LQCK/ysAjv8nAJD/IwCR/x4Akf8ZAJD/FACP/xAAjv8LAI3/BgCN/wIAjv8BAJP/BACX/wcAmv8MAJ3/EACe/xUAnv8aAJ7/GwCh/xcAo/8SAKT/DgCj/wkAov8FAKD/AACe//z/nP/4/5n/9f+V//L/kf/w/43/7f+J/+n/hv/l/4b/',
+              '5/+C/+v/gf/v/4T/8f+I//X/jP/5/4r/+/+G//n/gv/6/33//v97/wMAev8IAHr/DQB7/xEAef8WAHj/GgB3/x8AeP8kAHn/JQB+/ygAgv8rAIX/LQCK/ysAjv8nAJD/IgCR/x4Akf8ZAJD/FACP/w8Ajv8LAI3/BgCN/wIAj/8BAJP/BACX/wcAmv8MAJ3/EACe/xUAnv8aAJ7/GwCh/xcAo/8SAKT/DgCj/wkAov8EAKD/AACe//z/nP/4/5n/9f+V//L/kf/w/43/7f+J/+n/hv/l/4b/',
             ],
             [1, '/v9X/wIAVf8GAFP/CwBS/xAAUv8UAFL/GQBU/x0AVv8dAFr/GwBe/xkAYv8VAGH/EgBd/w4AW/8JAFv/BQBd/wEAYP/+/2T//P9o//j/a//0/2v/9P9m//X/Yv/3/13/+v9a/w=='],
             [
               1,
-              '+v9x//7/b/8DAG//CABv/wwAb/8RAG3/FABp/xUAZP8YAGP/HABm/yAAaf8kAGr/KQBr/y0AbP8pAG//JABx/yAAcv8bAHH/FwBz/xMAdf8OAHb/CQB3/wUAeP8AAHj/+/94//f/eP/2/3T/',
+              '+v9x//7/b/8DAG//BwBv/wwAb/8QAG3/EwBp/xUAZf8YAGP/HABm/x8Aaf8kAGr/KABr/y0AbP8pAG//JQBw/yAAcv8cAHP/FwB0/xIAdf8OAHb/CQB3/wQAd/8AAHj/+/94//f/eP/2/3T/',
             ],
             [1, 'LwBr/zQAa/84AG3/OwBw/zgAcv80AHD/LwBv/w=='],
             [1, 'KQCA/y4AgP8zAIH/NgCE/zUAiP80AI3/MgCR/zAAlv8tAJr/KwCe/ycAof8jAKH/IwCd/ycAmf8qAJb/LQCS/y4Ajf8tAIn/KgCE/w=='],
@@ -1337,9 +1363,8 @@ export const sprites: SpriteSet = {
               2,
               'zf9z/9H/cP/V/2//2v9x/93/df/g/3X/4/9x/+b/bv/q/2v/7v9o//H/Zf/0/2H/9f9m//T/av/x/2//7/9y/+v/dv/o/3n/5f99/+T/gf/k/4b/5P+L/+X/kP/n/5T/5f+Y/+L/nP/j/6H/3v+i/9n/o//V/6b/0f+n/8z/p//H/6f/wv+n/77/pv+5/6T/t/+g/7b/m/+2/5b/t/+S/7n/jf+7/4n/vf+F/7//gP/C/3z/xf95/8n/df8=',
             ],
-            [2, 'IgBx/yYAb/8rAG7/LwBu/zQAcP8zAHP/LwB1/yoAdv8mAHb/IgB1/w=='],
+            [2, 'JABv/ykAbv8uAG7/MwBw/zcAcv8zAHX/LwB0/yoAd/8sAHr/MQB8/zUAfv82AIL/MQCC/ywAgf8oAID/JQB8/yMAd/8iAHP/'],
             [2, '8v93//b/d//3/3v/8/9+/+//gP/r/4H/6v9+/+7/ev8='],
-            [2, 'JgB6/ysAev8vAHz/NAB+/zcAgf8yAIL/LQCC/ykAgf8lAH7/'],
             [2, 'BwCk/wwAo/8RAKP/FQCl/xgAqf8YAK3/FACv/xAArf8MAKn/CACn/w=='],
             [2, '6v+m/+3/qP/s/6z/6f+w/+b/s//j/7L/5f+u/+f/qv8='],
             [3, 'GgCh/x4An/8iAJ7/JgCi/ycApf8pAKn/JgCs/yMAr/8iALP/IwC4/yMAvf8fAL3/GwC7/xcAuP8UALT/EwCw/xcArf8YAKn/FwCl/w=='],
@@ -1360,7 +1385,7 @@ export const sprites: SpriteSet = {
             ],
             [
               5,
-              'LgBU/zMAU/84AFT/PABW/0AAWP9EAFv/RgBf/0gAZP9HAGj/RQBt/0IAcf9AAHX/PgB5/zwAff84AH//NAB+/y8AfP8rAHr/KQB2/y0AdP8yAHP/NgBz/zoAcP83AG3/MwBs/y4AbP8qAGv/KABn/ygAYv8mAF7/KABa/ysAV/8=',
+              'LgBU/zMAU/84AFT/PABV/0AAWP9DAFv/RgBf/0gAY/9HAGj/RQBs/0MAcP9AAHT/PgB5/z0Aff85AH//NAB+/zAAff8sAHv/KQB3/y0AdP8yAHT/NgBz/zoAcP83AG3/MgBs/y4AbP8pAGv/KABn/ygAYv8mAF7/KABa/ysAV/8=',
             ],
             [5, '+f94//7/d/8DAHf/BwB2/wwAdv8RAHX/FgBz/xoAc/8fAHP/IQB2/x0AeP8YAHj/EwB4/w4AeP8JAHn/BQB6/wAAe//7/33/9/98/w=='],
             [5, '5f+H/+n/hf/t/4j/8P+M//P/kP/2/5T/+f+X//z/mv8AAJ3/BQCf/wkAov8FAKL/AACi//v/ov/3/6L/9f+e//T/mv/w/5b/7P+V/+j/k//l/4//4/+L/w=='],
@@ -1372,6 +1397,7 @@ export const sprites: SpriteSet = {
             [6, 'HQBa/yEAWf8lAFv/JQBf/yEAYP8gAF3/HQBh/x4AZf8gAGn/HwBq/xwAZv8aAGL/GgBd/w=='],
             [6, 'BQBc/wkAWv8OAFr/EgBc/xUAYP8WAGX/FABp/xEAbf8NAG//CQBu/wUAa/8BAGn//f9n//7/Y/8BAF//'],
             [6, '8v+i//f/ov/7/6H/AACh/wQAo/8IAKb/CwCp/wkArv8FAK//AACv//v/rv/3/63/8/+q//D/pv8='],
+            [7, 'DAB4/w4AeP8OAHn/DQB7/wsAfP8KAHr/'],
             [7, '5f+S/+j/k//r/5b/6/+Z/+j/mP/m/5X/'],
             [7, 'CQD4/wsA+P8MAPn/DQD5/wsA+f8JAPn/'],
             [7, '9//8//j//P/5//3/9//9//b//v/2//3/'],
@@ -1425,7 +1451,7 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              '4/9//+j/ff/s/4D/7v+D//H/h//2/4f/+P+D//j/f//3/3v//P94/wAAd/8FAHf/CAB6/wkAfv8LAIP/DQB//w0Aev8MAHb/EAB0/xUAdP8ZAHX/GgB6/x0AfP8dAHf/IAB1/yIAef8kAH3/KACA/ysAhP8rAIj/KACM/yMAjf8fAI7/GgCO/xYAjP8RAIv/DACL/wgAiv8DAIj/AQCL/wMAj/8HAJL/CwCV/wsAmf8KAJ7/DgCf/xMAnv8XAJz/GQCY/x4Al/8eAJr/GgCd/xYAoP8SAKL/DgCk/wkAo/8FAKD/AgCd//3/m//6/5j/9v+V//P/kf/x/43/7v+J/+v/hv/n/4P/4v+C/w==',
+              '4/9//+j/ff/s/4D/7v+E//L/h//2/4f/+f+D//f/f//1/3v/+f94//7/d/8DAHb/CAB2/wsAeP8NAHX/EgB0/xYAdP8bAHb/HQB1/yIAdf8lAHn/KAB9/yoAgf8sAIb/KgCK/yYAjf8hAI7/HACO/xgAjf8TAIv/DgCL/woAiv8FAIn/AQCJ/wIAjv8GAJH/CQCU/wwAmP8KAJz/DQCf/xEAn/8WAJ3/GACZ/xwAl/8fAJn/GwCd/xcAoP8TAKL/DwCk/woAo/8GAKH/AgCe//7/nP/6/5n/9/+V//T/kf/x/43/7v+K/+v/hv/n/4P/4v+C/w==',
             ],
             [1, '+v9U//7/Uf8DAE//BwBO/wwATf8RAE7/FQBP/xoAUf8cAFX/GQBZ/xgAXf8UAF3/EQBa/w0AV/8IAFf/BABY/wAAW//9/1//+/9j//f/Zv/z/2j/8f9j//H/X//z/1r/9v9X/w=='],
             [1, 'FQBe/xkAYP8cAGT/IABm/yUAZ/8qAGb/LwBn/zMAZ/84AGn/OgBt/zUAbv8xAGz/LABq/ygAav8jAGz/IABv/xsAb/8XAG7/EgBv/w0Abv8NAGr/EQBn/xMAY/8='],
@@ -1436,7 +1462,7 @@ export const sprites: SpriteSet = {
               2,
               'yv9v/87/bP/T/2v/1/9t/9r/cf/e/3H/4P9t/+P/av/n/2f/6/9l/+7/Yf/x/13/8v9h//L/Zv/v/2r/7f9u/+n/cv/m/3X/4/95/+H/ff/h/4L/4f+G/+L/i//k/5D/5f+U/+H/lv/f/5r/3/+e/9r/n//W/6H/0v+j/83/pP/I/6X/w/+k/77/pP+6/6L/tv+g/7P/nP+y/5f/s/+S/7T/jv+2/4n/uP+F/7r/gP+9/3z/v/94/8L/df/G/3H/',
             ],
-            [2, 'IgBs/yYAav8qAGr/LwBq/zQAbP82AHD/MgBw/y0Acf8pAHP/JABz/yAAcf8='],
+            [2, 'IQBs/yYAav8qAGr/LwBq/zMAbP83AG//MgBw/y4Acf8qAHT/JgB2/yIAdP8gAHD/'],
             [2, '7/9z//T/c//z/3f/8P96/+z/ff/n/33/6P95/+z/dv8='],
             [2, 'KgCR/y8Ak/8xAJb/LwCa/ysAnf8oAKD/JACh/yYAnf8pAJn/KwCV/w=='],
             [2, 'DgCX/xMAlv8XAJj/FwCc/xUAn/8RAJ3/DQCa/w=='],
@@ -1458,9 +1484,9 @@ export const sprites: SpriteSet = {
             [4, 'CQDa/w4A2v8RAN3/FQDg/xoA4P8dAOD/HADl/xsA6f8eAO3/HwDy/x4A9/8bAPr/FgD8/xEA+/8NAPj/CgD1/wcA8f8FAOz/BADo/wUA4/8GAN7/'],
             [
               5,
-              'OABl/z0AZf8/AGn/QgBp/0YAZ/9IAGv/SABv/00AcP9PAHP/TQB3/08Aev9QAH7/TACC/0kAhf9FAIf/QQCK/z0Ajf87AJH/OACV/zQAlv8wAJP/LACR/ycAkf8jAJL/HgCS/xkAkf8VAI//EQCM/xQAi/8YAI3/HQCO/yIAjf8mAIz/KQCI/yoAhP8rAH//KwB6/ysAdf8sAHH/MABv/zUAcP85AG3/OABp/w==',
+              'OABl/z0AZf8/AGn/QgBp/0YAZ/9IAGv/SQBv/00AcP9PAHT/TAB4/1AAev9QAH//TACC/0gAhf9EAIj/QQCL/z0Ajv86AJL/OACW/zMAlv8vAJP/KwCR/yYAkf8iAJL/HQCS/xgAkf8UAI//EQCL/xUAi/8aAI3/HgCO/yMAjf8nAIv/KgCH/ysAg/8qAH7/KQB6/ysAd/8rAHL/LwBv/zQAcP84AG7/NwBp/w==',
             ],
-            [5, '+P90//3/c/8BAHP/BABv/wgAbf8NAG3/EQBu/xYAb/8bAG//HwBx/x0AdP8YAHX/EwB1/w4Adf8KAHX/BQB2/wAAd//7/3f/9v94/w=='],
+            [5, '+P90//z/c/8BAHP/BABv/wcAbf8MAGz/EABu/xUAb/8ZAG//HgBw/yAAdP8cAHX/FwB1/xIAdf8NAHX/CQB1/wQAdv8AAHf/+/93//b/d/8='],
             [5, '4v+D/+f/gv/r/4T/7f+I//D/jP/y/5D/9v+U//n/l//9/5n/AQCc/wUAn/8BAKD//f+e//n/nP/1/5n/8f+W/+7/k//p/5L/5f+Q/+L/jP/h/4f/'],
             [5, '4P+W/+X/lv/p/5j/7f+a/+//nv/t/6L/6f+i/+X/oP/h/53/3v+a/w=='],
             [
@@ -1473,6 +1499,10 @@ export const sprites: SpriteSet = {
             [6, 'JgBf/ycAYf8mAGT/JABl/yQAZP8lAGH/'],
             [6, '8f+d//X/nP/6/53//v+f/wIAof8GAKT/CACo/wYAq/8BAKz//P+s//j/qv/z/6n/8P+m/+//ov8='],
             [7, 'BwBr/wkAa/8KAGz/CABt/wYAbv8FAGz/'],
+            [7, 'KAB0/ysAdf8sAHj/KgB6/ycAev8nAHf/'],
+            [7, 'GwB1/x0Adf8dAHf/HQB4/xsAeP8aAHf/'],
+            [7, 'CgB2/wwAdv8NAHj/DAB5/woAef8JAHf/'],
+            [7, 'KQB9/ysAff8rAH//KwCA/ykAgP8oAH7/'],
             [7, '5P+P/+f/kf/p/5T/6P+X/+X/lf/k/5L/'],
             [8, 'CgCb/w4Amv8SAJz/EgCf/w4AoP8KAJ7/'],
             [9, 'CADF/wUAxP8BAMD//f+8//3/uf8AALr/BAC+/wgAwv8=', 1, 1],
@@ -1525,12 +1555,12 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              'HACG/xcAhv8UAIn/EQCN/w4Akf8LAJX/CACZ/wUAnP8AAJ7//P+g//f/ov/z/6P/7v+k/+n/o//l/6H/5/+e/+z/nv/w/57/9f+d//n/mv/9/5f///+T////jv/6/43/9v+N//H/jv/s/4//5/+Q/+P/kf/e/5H/2f+Q/9X/jv/T/4r/1v+F/9n/gv/c/37/3v95/+H/ev/h/37/5P9+/+X/ev/p/3j/7v94//H/e//y/4D/8v+F//X/hP/2/3//+P97//3/e/8CAHz/BgB9/wcAgf8GAIb/CACK/wwAjP8PAIj/EgCE/xUAgf8aAIL/',
+              'HACG/xcAhv8UAIn/EQCN/w4Akf8LAJX/CACZ/wUAnP8AAJ7//P+g//j/ov/z/6P/7v+k/+n/o//l/6H/5/+e/+z/nv/w/57/9f+d//n/mv/9/5f///+T////j//7/43/9v+N//H/jv/s/4//6P+Q/+P/kf/e/5H/2f+Q/9X/jv/T/4r/1f+F/9n/gv/b/37/3f95/+H/eP/m/3f/6/94/+//ef/0/3v/+f96//3/ev8CAHv/BgB9/wcAgv8GAIb/CACK/wwAjP8PAIj/EgCE/xUAgf8aAIL/',
             ],
             [1, 'BwBa/woAXf8LAGL/DABm/wwAa/8IAGv/BQBo/wIAZP///2D//P9d//f/W//z/1v/7/9d/+z/Yf/o/2L/5v9e/+T/Wv/k/1b/6P9U/+z/Uv/x/1L/9v9S//r/U////1X/AwBX/w=='],
             [
               1,
-              'CgB0/woAeP8FAHj/AQB4//z/eP/3/3f/8/92/+7/df/p/3P/5f9x/+H/cv/c/3H/2P9v/9T/bP/Y/2v/3P9q/+H/af/l/2b/6P9j/+v/ZP/t/2n/8P9t//T/b//5/2///v9v/wIAb/8HAHH/',
+              'CgB0/woAeP8FAHj/AQB4//z/d//3/3f/8/92/+7/df/p/3T/5f9z/+D/cv/c/3D/1/9v/9T/bP/Y/2v/3f9q/+H/af/l/2b/6P9j/+z/Zf/t/2n/8P9t//T/b//5/2///v9v/wIAb/8HAHH/',
             ],
             [1, '0f9v/83/cP/J/3L/xv9w/8n/bf/N/2v/0v9r/w=='],
             [1, '1v+E/9T/if/T/43/1P+S/9b/lv/a/5n/3f+d/93/of/Z/6H/1v+e/9P/mv/R/5b/z/+R/83/jf/L/4j/yv+E/87/gf/S/4D/1/+A/w=='],
@@ -1539,9 +1569,8 @@ export const sprites: SpriteSet = {
               2,
               'OAB1/zsAef8+AHz/QQCA/0MAhf9GAIn/SACN/0kAkv9LAJb/SwCb/0oAoP9HAKT/QwCm/z4Ap/85AKf/NQCn/zAAp/8rAKb/JwCj/yMAov8eAKH/HgCc/xsAmP8aAJT/HACQ/x0Ai/8cAIb/HQCB/xsAff8YAHn/FQB2/xIAcv8PAG//DQBq/wwAZv8NAGH/EABl/xIAaP8WAGv/GwBu/x4Acf8gAHX/JAB1/ycAcf8rAG//MABw/zQAc/8=',
             ],
-            [2, '3/91/9v/dv/W/3b/0v91/83/c//N/3D/0f9u/9b/bv/a/2//3v9x/w=='],
+            [2, '3/9z/93/d//c/3z/2f+A/9T/gf/P/4L/yv+C/8z/fv/Q/3z/1P96/9b/d//S/3T/zf91/8r/cv/O/3D/0/9u/9f/bv/c/2//'],
             [2, 'EwB6/xYAfv8WAIH/EQCA/w0Afv8KAHv/CgB3/w8Ad/8='],
-            [2, '3P9+/9j/gf/T/4L/zv+C/8r/gf/N/37/0f98/9b/ev/a/3r/'],
             [2, '+P+n//T/qf/x/63/7f+v/+j/rf/o/6n/6/+l//D/o//1/6P/+f+k/w=='],
             [2, 'GQCq/xwArv8dALL/GwCz/xcAsP8VAKz/EwCo/xYApv8='],
             [3, '6v+l/+n/qf/q/63/7v+w/+z/tP/p/7j/5v+7/+L/vf/e/73/3f+4/97/s//e/6//2v+s/9f/qf/Z/6X/2/+i/97/nv/j/5//5/+h/w=='],
@@ -1562,7 +1591,7 @@ export const sprites: SpriteSet = {
             ],
             [
               5,
-              '1f9X/9n/Wv/b/17/2f9i/9n/Z//X/2v/0v9s/87/bP/J/23/xv9w/8r/c//P/3P/1P90/9j/dv/V/3r/0f98/83/fv/I/3//xP99/8P/ef/B/3X/vv9x/7v/bf+6/2j/uf9k/7r/X/+9/1v/wf9Y/8X/Vv/J/1T/zv9T/9L/VP8=',
+              '1f9X/9n/Wv/b/17/2f9i/9n/Z//X/2v/0/9s/87/bP/K/23/x/9w/8r/c//P/3T/0/90/9f/d//V/3v/0f99/8z/fv/I/3//xP99/8P/ef/B/3T/vv9w/7v/bP+5/2j/uf9j/7r/X/+9/1v/wf9Y/8X/Vf/J/1T/zv9T/9L/VP8=',
             ],
             [5, 'CgB8/wUAff8AAHv//P96//f/ef/y/3j/7f94/+n/eP/k/3j/3/92/+H/c//m/3P/6/9z//D/df/0/3b/+f92//7/d/8DAHf/BwB4/w=='],
             [5, 'HQCL/xwAj/8ZAJP/FQCV/xAAlv8NAJr/DACe/woAov8FAKL/AACi//z/ov/4/6L//P+f/wAAnf8EAJr/CACX/wsAlP8NAJD/EACM/xMAiP8XAIX/HACH/w=='],
@@ -1574,6 +1603,7 @@ export const sprites: SpriteSet = {
             [6, '5v9d/+b/Yv/l/2b/4v9q/+D/af/i/2X/4/9h/+H/Xf/f/2D/2/9f/9v/W//f/1n/5P9a/w=='],
             [6, '//9f/wIAY/8DAGf/AABp//v/a//4/27/8/9v/+//bf/s/2n/6/9l/+v/YP/u/1z/8v9a//f/Wv/7/1z/'],
             [6, 'EACm/w4Aqv8KAK3/BQCu/wEAr//8/6//9/+u//b/qf/4/6b//P+j/wEAof8FAKH/CgCi/w4Aov8='],
+            [7, '9v96//X/fP/0/3v/8v95//P/eP/1/3j/'],
             [7, 'GgCV/xgAmP8VAJn/FgCW/xgAk/8bAJL/'],
             [7, '9//5//b/+f/0//n/9P/5//b/+P/4//j/'],
             [7, 'CwD9/wsA/v8JAP3/CAD9/wgA/P8KAPz/'],
@@ -1627,7 +1657,7 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              'HgCC/xoAg/8WAIb/EwCJ/xAAjf8NAJH/CgCV/wcAmP8DAJv///+d//v/oP/3/6P/8/+k/+7/ov/q/6D/5v+d/+P/mv/j/5f/5/+Y/+r/nP/u/57/8v+f//f/nv/1/5n/9v+V//r/kv/9/4//AACL//3/iP/5/4r/9P+L//D/i//r/4z/5/+O/+L/jv/d/43/2f+M/9X/iP/W/4T/2f+A/9z/ff/f/3n/4f91/+P/d//j/3z/5v96/+f/df/s/3T/8P90//T/dv/z/3r/9P9///b/g//4/37/+P96//z/d/8AAHf/BQB4/wkAe/8JAH//CACD/wsAh/8PAIf/EgCD/xUAgP8ZAH3/HQB//w==',
+              'HgCC/xkAg/8WAIb/EgCK/xAAjf8NAJH/CgCV/wYAmf8DAJz//v+e//v/of/3/6P/8v+k/+3/ov/p/6D/5f+d/+L/mf/k/5f/6P+Z/+v/nf/v/5//9P+f//f/nP/1/5j/9/+U//v/kf/+/47/AACJ//v/if/3/4r/8v+L/+3/i//p/43/5P+O/+D/jv/b/43/1/+K/9X/hv/W/4H/2f99/9v/ef/f/3X/4/91/+b/dv/q/3T/7/90//T/df/1/3j/+f92//7/dv8CAHf/BwB4/wsAe/8KAH//CACD/wsAh/8PAIf/EgCE/xUAgP8ZAH3/HQB//w==',
             ],
             [1, 'CgBX/w0AWv8PAF//EABj/w4AaP8JAGb/BgBj/wQAX/8BAFv//f9Y//j/V//0/1f/8P9a/+3/Xf/p/13/5/9Z/+X/Vf/n/1H/6/9P//D/Tv/1/03/+f9O//7/T/8CAFH/BgBU/w=='],
             [1, '7f9j/+//Z//z/2r/8/9u/+7/b//q/27/5f9v/+H/b//d/2z/2f9q/9T/av/Q/2z/y/9u/8f/bf/J/2n/zf9n/9L/Z//X/2b/2/9n/+D/Zv/k/2T/5/9g/+v/Xv8='],
@@ -1638,7 +1668,7 @@ export const sprites: SpriteSet = {
               2,
               'OwBx/z4Adf9BAHj/RAB8/0YAgP9JAIX/SwCJ/00Ajv9OAJL/TgCX/00AnP9LAKD/RwCi/0IApP89AKT/OACl/zQApP8vAKP/KwCh/yYAn/8hAJ7/IQCa/yAAlv8bAJT/HQCQ/x8Ai/8fAIb/HwCC/yAAff8eAHn/GwB1/xcAcv8UAG7/EQBq/w8AZv8OAGH/DwBd/xIAYf8VAGX/GQBn/x0Aav8hAG3/IwBx/ycAcf8qAG3/LgBr/zIAbP83AG//',
             ],
-            [2, '4P9x/9z/c//X/3P/0/9x/8//cP/K/3D/zf9s/9H/av/W/2r/2/9q/9//bP8='],
+            [2, '4f9w/97/dP/a/3b/1/90/9P/cf/O/3D/yv9v/83/bP/R/2r/1v9q/9v/av/f/2z/'],
             [2, 'FQB2/xgAef8ZAH3/FQB9/xEAev8OAHf/DQBz/xEAc/8='],
             [2, '1v+V/9j/mf/b/53/3f+h/9n/oP/V/53/0v+a/9D/lv/S/5P/1v+R/w=='],
             [2, '8/+a//D/nf/s/5//6f+c/+r/mP/u/5b/8v+X/w=='],
@@ -1660,9 +1690,9 @@ export const sprites: SpriteSet = {
             [4, '+v/e//z/4//8/+j//P/s//r/8f/3//X/9P/4/+//+//r//z/5v/6/+P/9//i//L/4//t/+X/6f/l/+X/4//g/+b/4P/r/+D/7//d//P/2v/3/9r/'],
             [
               5,
-              'yf9p/8j/bf/M/3D/0P9v/9X/cf/W/3X/1v96/9b/f//W/4T/1/+I/9r/jP/f/43/4/+O/+j/jf/s/4v/7/+M/+z/j//n/5H/4/+S/97/kv/Z/5H/1f+R/9H/k//N/5b/yP+V/8b/kf/D/43/wP+K/7z/h/+4/4X/tP+C/7H/fv+x/3r/tP93/7L/c/+0/3D/uP9v/7j/a/+7/2f/v/9p/8L/af/E/2X/yP9l/w==',
+              'yf9p/8n/bv/N/3D/0v9v/9X/cv/V/3f/2P96/9b/fv/W/4P/1v+H/9n/i//e/43/4v+O/+f/jf/r/4v/7/+L/+3/j//o/5H/5P+S/9//kv/a/5H/1f+R/9H/k//N/5b/yf+W/8b/kv/D/47/wP+L/7z/iP+4/4X/tf+C/7H/f/+x/3r/tP94/7L/dP+z/3D/uP9v/7j/a/+7/2f/v/9p/8L/af/E/2X/yP9l/w==',
             ],
-            [5, 'CgB4/wUAd/8BAHf//P92//f/df/y/3X/7f91/+j/df/k/3T/4v9x/+b/b//r/2//8P9u//T/bf/5/23//f9v////c/8EAHP/CQB0/w=='],
+            [5, 'CgB3/wYAd/8BAHf//P92//j/df/z/3X/7v91/+r/df/l/3X/4f90/+P/cP/n/2//7P9v//D/bv/1/2z/+f9t//3/b////3P/BABz/wkAdP8='],
             [5, 'IACH/x8AjP8cAJD/FwCS/xMAk/8PAJb/DACZ/wgAnP8EAJ7///+g//z/n////5z/AwCZ/wcAl/8LAJT/DgCQ/xEAjP8TAIj/FgCE/xoAgv8eAIP/'],
             [5, 'IgCa/yAAnf8cAKD/GACi/xMAov8RAJ7/EwCa/xcAmP8cAJb/IACW/w=='],
             [
@@ -1675,6 +1705,10 @@ export const sprites: SpriteSet = {
             [6, '3P9h/93/ZP/c/2X/2/9k/9r/Yf/b/1//'],
             [6, 'EgCi/xEApv8NAKn/CQCq/wQArP///6z/+/+r//j/qP/7/6T//v+h/wMAn/8HAJ3/CwCc/xAAnf8='],
             [7, '+/9s//r/bv/4/23/9v9s//f/a//6/2v/'],
+            [7, '2v93/9n/ev/W/3r/1f94/9b/df/Y/3T/'],
+            [7, '5v93/+b/eP/k/3j/4/93/+T/df/l/3X/'],
+            [7, '9/93//b/ef/1/3n/9P94//X/dv/3/3b/'],
+            [7, '2P9+/9f/gP/W/4D/1f9//9b/ff/X/33/'],
             [7, 'HQCS/xsAlf8YAJf/GACU/xoAkf8dAI//'],
             [8, '9/+e//P/oP/v/5//7v+c//L/mv/2/5v/'],
             [9, '+P/C//z/vv8AALr/AwC5/wMAvP///8D/+//E//j/xf8=', 1, 1],
@@ -1731,12 +1765,12 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              '0P+E/9X/g//Y/4f/2/+L/97/jv/i/43/5P+I/+L/hP/k/4D/6f9+/+3/ff/y/37/8/+C//T/h//3/4f/+P+C//r/ff/+/3v/AgB6/wQAf/8GAIP/CAB//wkAe/8MAH7/DgCC/xIAhf8VAIn/FQCN/xIAkf8OAJP/CQCU/wUAlP8AAJP/+/+S//f/kP/y/4//7f+P/+r/kv/r/5f/7v+b//L/nv/2/6D/+v+h////of8EAKH/AQCk//z/pf/4/6X/8/+k/+7/ov/q/6H/5f+e/+L/m//f/5j/3P+U/9n/kP/W/4z/0/+J/87/iP8=',
+              '0P+E/9X/g//Y/4f/2/+L/97/jv/i/43/5P+I/+L/hP/h/4D/5f9//+r/ff/v/33/8/99//j/ff/8/3v/AQB6/wUAfP8KAHv/DAB//w8Ag/8TAIb/FQCK/xUAjv8RAJL/DQCT/wgAlP8EAJP///+S//r/kf/2/5D/8f+P/+z/j//q/5P/6/+Y/+7/m//y/57/9v+g//v/of8AAKH/BACh/wEApP/8/6X/9/+l//P/pP/u/6L/6f+h/+X/nv/i/5v/3v+Y/9z/lP/Z/5D/1v+M/9L/if/O/4j/',
             ],
             [1, '5/9a/+v/WP/w/1b/9P9V//n/Vf/+/1b/AgBX/wYAWv8FAF7/AwBi/wAAZf/8/2P/+f9g//X/Xv/x/1//7f9i/+n/Zf/m/2j/4v9r/97/bf/d/2n/3v9k/+D/YP/j/13/'],
             [
               1,
-              '4/9z/+j/cf/s/3L/8f9y//b/cf/6/2///P9r//7/Z/8CAGb/BQBq/wkAbP8OAG3/EgBu/xcAbv8cAG7/IQBv/yMAc/8gAHX/GwBz/xcAcf8SAHH/DgBz/wkAc/8EAHT/AAB1//v/d//2/3f/8v92/+7/eP/q/3v/5f97/+D/ev/f/3b/',
+              '4/9z/+j/cf/s/3L/8f9y//b/cf/6/2///P9r//7/Z/8CAGb/BQBq/wkAbP8OAG3/EgBu/xcAbv8cAG7/IQBv/yMAc/8gAHX/GwBz/xcAcf8SAHH/DgBz/wkAdP8EAHX/AAB2//v/d//2/3f/8v92/+7/eP/q/3v/5f97/+D/ev/f/3b/',
             ],
             [1, 'FwCS/xoAlP8bAJn/GACd/xUAn/8QAKH/DACi/wsAoP8PAJ3/EgCa/xQAlv8='],
             [1, '1/+s/9z/rP/h/63/5f+w/+b/tf/j/7j/3v+6/9n/uv/V/7j/0v+0/9T/r/8='],
@@ -1744,7 +1778,7 @@ export const sprites: SpriteSet = {
               2,
               'tf91/7n/c/+9/3L/wv9z/8X/dv/I/3n/y/91/87/cv/S/2//1v9t/9n/af/c/2b/3f9r/9z/b//Z/3P/1v93/9P/e//Q/37/zf+C/87/h//N/4v/zv+Q/8//lP/R/5n/zv+c/8v/oP/K/6T/xv+l/8H/pv+9/6n/uP+q/7T/qv+v/6n/qv+o/6b/pv+i/6P/of+f/6H/mv+h/5X/ov+Q/6P/jP+m/4j/qP+D/6v/gP+u/3z/sf94/w==',
             ],
-            [2, 'CgBz/w4Acf8TAHD/FwBw/xwAcv8gAHX/HAB3/xgAdv8VAHn/EAB6/wsAev8GAHr/BgB2/w=='],
+            [2, 'CAB0/wwAcv8RAHH/FgBw/xoAcf8fAHP/HgB3/xkAd/8WAHf/EgB5/w0Aev8JAHz/BAB8/wQAd/8='],
             [2, '2/96/9//ef/f/33/3P+B/9j/g//T/4T/1P+A/9f/ff8='],
             [2, 'GgCS/x4Alf8fAJn/HgCd/xoAof8WAKP/EgCl/w8ApP8SAKH/FgCe/xkAm/8aAJf/'],
             [2, '8P+m//X/pf/5/6X//v+n/wEAqv8AAK7//P+w//j/r//1/6v/8f+p/w=='],
@@ -1768,7 +1802,7 @@ export const sprites: SpriteSet = {
               5,
               'KgB1/y4Adf8wAHr/MAB+/zAAg/8wAIj/MACN/zIAkP83AJH/NwCV/zQAmP8wAJf/LgCb/yoAnf8mAJ//IgCi/x4Aof8fAJ3/HgCY/xwAlP8YAJH/FgCO/xoAi/8dAIn/HwCF/yEAgP8jAHz/JgB4/w==',
             ],
-            [5, '+v93//7/df8DAHb/BAB5/wAAe//7/3v/'],
+            [5, '+v93//7/df8DAHX/BAB5/wAAe//7/3v/'],
             [5, '4v97/+b/ev/r/3r/8P96//P/fP/u/33/6f9+/+T/f//g/3//'],
             [5, 'zv+J/9P/iP/X/4v/2v+O/9z/kv/f/5b/4v+a/+b/nf/q/6D/7v+i//L/pP/z/6b/7/+o/+v/qP/m/6f/5P+j/+D/oP/d/53/2v+Z/9X/l//R/5b/zv+S/83/jv8='],
             [5, '/P+R/wEAkv8GAJP/CgCT/w8Ak/8QAJX/DACY/wcAmP8CAJf//v+U/w=='],
@@ -1780,6 +1814,8 @@ export const sprites: SpriteSet = {
             [6, '7v9f//P/Xf/3/17/+/9g//7/ZP/+/2n//f9t//n/cP/1/3L/8P9x/+3/bv/p/2r/6P9m/+v/Yv8='],
             [6, 'EABm/xEAaf8QAGv/DgBt/w4Aa/8PAGj/'],
             [6, '3f+h/+L/of/l/6T/6P+n/+3/qP/x/6r/8v+u/+//sf/q/7H/5f+w/+H/r//c/63/2v+p/9v/pP8='],
+            [7, '9f98//b/fP/3/33/9/9+//b/fv/1/33/'],
+            [7, '9v+H//f/h//4/4n/9/+K//X/iv/0/4j/'],
             [7, '0P+V/9P/lv/V/5n/1P+c/9L/mv/R/5j/'],
             [9, '9v/H//P/x//u/8X/6f/C/+j/v//r/7//8P/B//T/xP8=', 1, 1],
             [9, '8P/Z/+7/2f/q/9f/5//U/+X/0v/o/9L/7P/U/+//1/8=', 1, 1],
@@ -1823,12 +1859,12 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              'MgCI/y4Aif8qAIz/JwCQ/yUAlP8iAJj/HwCb/xsAnv8XAKH/EgCi/w4ApP8JAKX/BACl////pP/8/6H/AQCh/wYAof8LAKD/DwCe/xMAm/8WAJf/FwCS/xMAj/8PAI//CgCQ/wUAkv8BAJP//P+U//f/lP/y/5P/7v+R/+v/jf/s/4n/7/+F//L/gv/1/37/9/97//j/f//6/4P//P9///7/ev8DAHv/BgB9/wgAgv8JAIf/DACH/w0Agv8OAH7/EwB9/xgAfv8cAID/HgCE/x0AiP8eAI3/IgCO/yYAi/8oAIf/LACD/zAAhP8=',
+              'MgCI/y4Aif8qAIz/JwCQ/yUAlP8iAJj/HwCb/xsAnv8XAKH/EwCi/w4ApP8JAKX/BQCl/wAApP/8/6H/AQCh/wUAof8KAKD/DgCe/xIAm/8VAJj/FwCT/xQAj/8QAI//CwCQ/wYAkf8CAJL//f+T//j/lP/z/5P/7/+S/+z/jv/r/4r/7v+G//H/g//1/3//9v97//v/fP///3r/BAB7/wgAff8NAH3/EgB9/xYAff8bAH//IACA/x8AhP8dAIj/HgCN/yMAjv8mAIv/KACH/ywAg/8wAIT/',
             ],
             [1, 'HQBd/yAAYP8jAGT/JABp/yMAbf8eAGv/GwBo/xcAZf8UAGL/EABf/wsAXv8HAGD/BABj/wAAZf/9/2L//P9e//v/Wv/+/1f/AwBW/wcAVf8MAFX/EQBW/xUAWP8ZAFr/'],
             [
               1,
-              'IQB2/yAAev8cAHv/FwB7/xMAeP8PAHb/CgB3/wYAd/8BAHX//P90//j/c//z/3P/7v9x/+r/cf/l/3P/4f91/93/c//g/2//5f9u/+n/bv/u/27/8/9t//j/bP/7/2r//v9m/wIAZ/8EAGv/BwBv/wsAcf8PAHL/FABy/xkAcf8dAHP/',
+              'IQB2/yAAev8cAHv/FwB7/xMAeP8PAHb/CgB3/wUAd/8BAHb//P91//f/dP/z/3P/7v9x/+r/cf/l/3P/4f91/93/c//g/2//5f9u/+n/bv/u/27/8/9t//j/bP/7/2r//v9m/wIAZ/8EAGv/BwBv/wsAcf8QAHL/FABy/xkAcf8dAHP/',
             ],
             [1, '7P+W/+7/mv/y/53/9f+g//X/ov/w/6H/7P+f/+j/nf/m/5n/5/+U/+r/kv8='],
             [1, 'LQCv/y4AtP8sALj/JwC6/yIAuv8eALj/GwC1/xwAsP8gAK3/JQCs/yoArP8='],
@@ -1836,7 +1872,7 @@ export const sprites: SpriteSet = {
               2,
               'TwB4/1MAfP9WAID/WACD/1sAiP9dAIz/XwCQ/2AAlf9gAJr/YACf/14Ao/9bAKb/VgCo/1IAqf9NAKr/SACq/0QAqf8/AKb/OwCl/zYApP81AKD/MgCc/y8Amf8xAJT/MwCQ/zMAi/8zAIf/MwCC/zEAfv8tAHv/KgB3/ycAc/8lAG//JABr/yUAZv8nAGn/KwBt/y8Ab/8zAHL/NgB1/zgAef87AHb/PwBz/0MAcv9IAHP/TAB1/w==',
             ],
-            [2, '+/92//r/ev/1/3r/8f96/+z/ef/p/3b/5P93/+H/df/l/3L/6f9w/+7/cP/z/3H/9/9z/w=='],
+            [2, '/P93//z/fP/4/3z/8/96/+//ef/r/3f/5/93/+P/d//i/3P/5v9x/+v/cP/w/3H/9P9y//j/dP8='],
             [2, 'KQB9/y0AgP8tAIT/KQCD/yUAgf8iAH3/IQB5/yYAev8='],
             [2, '5v+X/+f/m//q/57/7/+h//L/pP/v/6X/6v+j/+b/of/j/53/4f+Z/+P/lf/m/5L/'],
             [2, 'DwCp/wsAq/8IAK//BQCw/wEArv8AAKr/AwCn/wcApf8MAKX/EACm/w=='],
@@ -1860,7 +1896,7 @@ export const sprites: SpriteSet = {
               5,
               '2/94/97/fP/g/4D/4f+F/+P/if/n/4v/6/+O/+j/kf/k/5T/4v+Y/+H/nf/j/6H/3/+i/9v/n//X/53/0v+b/9D/l//N/5j/yf+V/8r/kf/O/5D/0f+N/9H/iP/R/4P/0f9+/9H/ev/S/3X/1/91/w==',
             ],
-            [5, 'BgB7/wEAe//8/3n//v92/wMAdf8HAHf/'],
+            [5, 'BQB7/wEAe//8/3n//v91/wIAdf8HAHf/'],
             [5, 'IQB//xwAf/8XAH7/EwB9/w4AfP8RAHr/FQB6/xoAev8fAHv/'],
             [5, 'NACO/zMAkv8wAJb/KwCX/ycAmf8kAJ3/IQCg/x0Ao/8aAKf/FgCo/xEAqP8NAKb/DgCk/xMAov8XAKD/GwCd/x4Amv8iAJb/JACS/ycAjv8qAIv/LgCI/zIAif8='],
             [5, 'AgCU//7/l//5/5j/9f+Y//D/lf/x/5P/9v+T//v/k/8AAJL/BACR/w=='],
@@ -1872,6 +1908,8 @@ export const sprites: SpriteSet = {
             [6, 'FgBi/xgAZv8XAGr/FABu/xAAcf8MAHL/BwBw/wQAbf8CAGn/AwBk/wUAYP8JAF7/DgBd/xIAX/8='],
             [6, '8v9o//L/a//y/23/8P9r//D/af/w/2b/'],
             [6, 'JgCk/ycAqf8kAK3/IACv/xsAsP8XALH/EgCx/w4Arv8PAKr/FACo/xgAp/8cAKT/HwCh/yMAof8='],
+            [7, 'CwB9/wsAfv8JAH7/CQB9/woAfP8MAHz/'],
+            [7, 'DACI/wwAiv8KAIr/CQCJ/wkAh/8LAIf/'],
             [7, 'MACY/y4Amv8sAJz/LACZ/y4Alv8wAJX/'],
             [9, 'DADE/xAAwf8VAL//GAC//xcAwv8SAMX/DQDH/woAx/8=', 1, 1],
             [9, 'EQDX/xQA1P8YANL/GwDS/xkA1P8WANf/EgDZ/xAA2f8=', 1, 1],
@@ -1919,7 +1957,7 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              '2f+F/93/hP/h/4b/5P+K/+j/jf/s/4z/7f+I/+r/hP/r/4D/8P9///X/fv/5/37//f+B//3/hv8AAIn/AQCE/wEAgP8EAHz/CAB7/w0AfP8OAIH/EQCC/xIAfv8UAHz/FgCB/xkAhP8cAIf/HwCL/x0Aj/8ZAJL/FACT/xAAk/8LAJL/BgCR/wIAj//9/47/+P+O//X/kP/3/5X/+v+Y//7/m/8CAJz/BwCd/wwAnf8RAJ7/FACh/xIApP8OAKf/CQCp/wQAqf8AAKj/+/+n//f/pP/z/6L/7/+f/+v/nP/o/5j/5f+V/+L/kf/g/43/3f+J/9j/if8=',
+              '2f+F/93/hP/h/4b/5P+K/+j/jf/s/4z/7f+I/+r/hP/r/4D/8P9///T/ff/5/33//v99/wIAff8HAHv/DAB7/xAAe/8UAH3/FgCB/xkAhf8dAIj/HwCM/xwAkP8YAJL/FACT/w8Ak/8KAJL/BgCR/wEAj//8/47/+P+O//X/kf/3/5X/+v+Z//7/m/8DAJz/CACd/wwAnf8RAJ7/FACh/xEApf8NAKf/CQCp/wQAqf///6j/+/+m//f/pP/z/6L/7/+f/+v/nP/o/5j/5f+V/+L/kf/g/43/3f+J/9j/if8=',
             ],
             [1, '8f9a//X/WP/5/1b//v9V/wMAVf8HAFb/DABY/w8AW/8OAF//DABj/wkAZv8GAGL/AgBf//7/Xv/5/1//9f9i//P/Zv/w/2r/7P9t/+j/bv/n/2n/6P9l/+r/YP/t/13/'],
             [1, 'CQBm/w0AaP8QAGz/FQBt/xkAbv8eAG//IwBv/ycAcP8rAHL/KwB2/yYAdP8iAHL/HQBx/xkAcv8VAHX/EQB2/wwAdf8HAHb/AwB1/wIAcf8FAG7/BwBq/w=='],
@@ -1952,7 +1990,7 @@ export const sprites: SpriteSet = {
               5,
               'x/9y/8r/dP/K/3n/y/9+/87/gP/R/4T/0/+J/9X/jP/Y/4j/3f+J/+D/jP/i/5D/5f+U/+j/mP/s/5v/7/+f//P/ov/3/6T/+/+n/wAAqP8FAKn/AACq//v/qv/3/6j/8/+m/+7/pP/q/6H/5/+e/+P/m//f/5j/2/+Y/9f/m//V/5//0v+j/87/pv/J/6b/xv+i/8L/n/+//6L/vP+l/7j/o/+4/57/t/+a/7T/lv+z/5H/s/+M/7X/h/+3/4P/uf9//73/fP/B/3r/xP92/w==',
             ],
-            [5, '7P97//D/eP/1/3b/+f91//7/dP8CAHX/BwB2/wwAdv8QAHb/FAB5/xEAe/8MAHz/BwB8/wMAe//+/3z/+f99//X/fv/w/3//6/+A/+n/fv8='],
+            [5, '7P97//D/eP/1/3b/+f91//7/dP8DAHX/BwB2/wwAdv8RAHb/FAB5/xEAfP8MAHz/CAB8/wMAff/+/37/+v99//X/fv/w/3//7P+A/+n/fv8='],
             [
               5,
               'BgCR/woAkv8PAJP/FACU/xgAkv8cAJD/HwCL/yAAh/8hAIL/IwB+/ycAe/8sAHr/MAB6/zQAfP84AH//OgCD/zwAiP88AI3/OwCR/zgAlf80AJj/MACa/y0Anv8qAKH/JQCg/yEAnf8fAJn/HgCV/xoAlf8VAJf/EQCY/wwAl/8IAJX/',
@@ -1962,6 +2000,7 @@ export const sprites: SpriteSet = {
             [6, '9v9h//v/Xv8AAF7/BABg/wcAY/8IAGj/BgBt/wMAcP/+/3L/+v9w//b/bv/x/23/8P9o//P/ZP8='],
             [6, 'uP+k/7z/pf+9/6r/vP+v/7r/tP+2/7b/s/+y/7P/rf+1/6n/'],
             [7, '+f9y//z/cv///3P//f90//r/df/4/3T/'],
+            [7, '//+G/wEAhv8CAIj/AQCK////iv/+/4j/'],
             [8, '/v+h/wIAoP8GAKP/BQCm/wEApv/9/6T/'],
             [9, 'BQC9/wIAvf/9/7v/+v+3//j/tP/7/7T/AAC3/wQAuv8=', 1, 1],
             [9, '9//c//X/3P/y/9n/8P/W/+//0//x/9P/9P/W//b/2f8=', 1, 1],
@@ -2007,7 +2046,7 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              '2P+E/93/g//h/4X/5P+J/+f/jP/r/4z/7P+I/+v/g//t/4D/8v9+//b/ff/7/33//f+C//3/hv8AAIf/AQCC/wEAfv8EAHr/CQB6/w0Ae/8OAID/EQCC/xIAff8UAHv/FgCA/xkAg/8cAIb/HwCK/x8Aj/8bAJL/FgCT/xEAk/8NAJL/CACR/wMAkP///4//+v+P//X/j//z/5P/9P+Y//j/m//7/57/AACg/wQAof8JAKH/DgCh/wsApP8GAKX/AQCk//3/o//4/6L/8/+h/+//nv/r/5z/6P+Y/+X/lP/j/5D/4P+M/93/if/Y/4j/',
+              '2P+E/93/g//h/4X/5P+J/+f/jP/s/4z/7f+H/+v/g//u/4D/8/9+//f/ff/8/3z/AQB7/wYAev8KAHr/DwB7/xMAe/8VAH//GACD/xwAhv8fAIr/HwCO/xsAkf8XAJP/EgCT/w0Akv8JAJL/BACR////kP/6/4//9v+P//P/k//0/5f/9/+b//v/nv///6D/BACh/wkAof8OAKH/CwCk/wYApf8BAKT//f+j//j/ov/0/6H/7/+f/+v/nP/o/5j/5f+U/+P/kP/g/4z/3f+J/9j/iP8=',
             ],
             [0, 'KgDM/y4Azf8xAND/NQDT/zIA1P8tANL/KgDP/w=='],
             [1, '8P9a//T/V//4/1b//f9U/wEAVP8GAFT/CgBW/w4AWf8PAF3/DABh/woAZf8GAGP/BABf/wAAXf/7/17/9/9h//T/ZP/w/2f/7P9q/+j/bP/m/2n/5/9k/+n/YP/s/1z/'],
@@ -2038,7 +2077,7 @@ export const sprites: SpriteSet = {
             [4, '3/+Y/+P/mv/m/53/5f+g/+H/nv/e/5z/'],
             [4, 'AQDh/wUA4P8KAOD/DwDf/xMA3f8XAOD/GQDk/x0A5P8iAOb/JQDp/yUA7v8lAPP/IwD3/x4A+f8aAPn/FQD6/xAA+v8LAPn/BwD5/wIA9/////P//v/v//7/6v/+/+X/'],
             [4, '3//f/+P/3//o/+D/7P/h//H/4f/2/+H/+P/l//j/6f/6/+3/+//y//v/9//5//v/9f/9//D//v/r//7/5//+/+L//f/e//v/3P/2/9z/8v/c/+3/3P/o/93/5P8='],
-            [5, '6/97/+//ef/0/3n/+f94//7/d/8DAHb/BwB1/wwAdP8RAHT/EwB4/w8Aev8KAHv/BQB7/wAAe//8/3z/9/99//L/fv/t/3//6f9//w=='],
+            [5, '6/97/+//ef/0/3n/+f94//7/d/8CAHb/BwB1/wwAdP8RAHT/FAB3/xMAe/8PAHv/CgB6/wUAe/8AAHz//P98//f/ff/y/37/7f9//+n/f/8='],
             [5, '1/+J/9v/iP/g/4r/4/+O/+X/kv/o/5b/6/+a/+//nf/z/5//9/+h//z/pP/8/6b/+P+o//T/qf/w/6b/7P+j/+n/n//m/5z/4v+Y/97/mP/a/5b/1/+S/9b/jf8='],
             [5, '8/+R//X/lf/5/5n//P+b/wEAnf8GAJ7/CwCe/w8An/8LAKH/BgCi/wIAof/9/5//+f+d//X/mv/y/5b/'],
             [5, 'BwCR/wsAkv8QAJP/FACS/xkAkf8dAJH/GgCU/xYAl/8SAJj/DQCX/wkAlf8='],
@@ -2094,7 +2133,7 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              'KACJ/yQAif8hAI3/HwCR/xwAlf8ZAJj/FQCc/xEAn/8OAKL/CgCk/wUAp/8BAKj//P+p//f/qf/z/6f/7/+k/+z/of/w/57/9f+d//n/nf/+/5z/AwCb/wcAmP8KAJX/CwCQ/wgAjv8DAI7///+P//r/kf/2/5L/8f+T/+z/k//o/5L/5P+P/+H/i//k/4f/6P+E/+v/gf/s/3z/7/9+//D/gv/z/4H/9P98//j/e//9/3z///+A/wAAhP8BAIn/BACG/wQAgf8HAH7/DAB+/xEAf/8VAID/FgCE/xQAiP8VAIz/GQCN/xwAiv8fAIb/IwCE/ygAhf8=',
+              'KACJ/yQAif8hAI3/HwCR/xwAlf8ZAJj/FQCc/xIAn/8OAKL/CgCk/wYApv8BAKj//P+p//j/qf/z/6f/7/+l/+z/of/v/57/9P+d//n/nf/+/5z/AgCb/wYAmf8JAJX/CwCR/wkAjv8EAI7///+P//v/kf/2/5L/8v+T/+3/k//o/5L/5P+Q/+H/jP/j/4j/5/+F/+r/gf/s/33/8P97//X/e//6/3v//v99/wMAff8IAH3/DAB9/xEAf/8VAID/FgCE/xQAiP8VAIz/GQCN/xwAiv8fAIb/IwCE/ygAhf8=',
             ],
             [1, 'FABd/xcAYP8ZAGX/GgBp/xkAbv8VAG3/EQBq/w4AZv8LAGL/BwBf/wMAXv/+/1//+/9i//j/Zv/0/2P/8/9f//H/W//1/1j/+f9W//7/Vf8CAFX/BwBW/wwAWP8QAFr/'],
             [1, '+v9q//v/bv///3H//v91//n/dv/1/3X/8P92/+z/df/o/3L/4/9x/9//cv/a/3T/1v92/9X/cv/Z/3D/3v9v/+L/b//n/27/7P9t//D/bP/z/2j/9/9m/w=='],
@@ -2127,7 +2166,7 @@ export const sprites: SpriteSet = {
               5,
               'PAB2/z8Aev9EAHz/RwB//0oAg/9MAIf/TQCM/00Akf9MAJb/SQCa/0gAnv9IAKP/RACl/0IAov8+AJ//OwCi/zcApv8zAKb/LwCj/ywAn/8pAJv/JgCY/yEAmP8dAJv/GgCe/xYAof8SAKT/DgCm/wkAqP8FAKr/AACq//z/qf8BAKj/BQCn/wkApP8OAKL/EQCf/xUAm/8YAJj/GwCU/x4AkP8gAIz/JACJ/ygAiP8rAIz/LQCJ/y8AhP8yAID/NgB+/zYAef82AHT/OgBy/w==',
             ],
-            [5, 'GAB+/xUAgP8QAH//DAB+/wcAff8DAHz//v97//n/fP/0/3z/8P97/+z/ef/w/3b/9f92//r/dv/+/3X/AwB0/wcAdf8MAHb/EAB4/xQAe/8='],
+            [5, 'GAB+/xUAgP8QAH//DAB+/wcAff8CAH7//f99//n/fP/0/3z/7/98/+z/ef/w/3b/9P92//n/dv/+/3X/AgB0/wcAdf8MAHb/EAB4/xQAe/8='],
             [
               5,
               '+f+V//T/l//w/5j/6/+X/+f/lf/i/5X/4v+Z/9//nf/b/6D/1/+h/9P/nv/R/5r/zf+Y/8n/lf/G/5H/xP+N/8X/iP/G/4P/yf9//8z/fP/Q/3r/1f96/9n/e//d/37/4P+C/+H/h//i/4v/5P+Q/+j/kv/t/5T/8v+T//b/kv/7/5H/',
@@ -2137,6 +2176,7 @@ export const sprites: SpriteSet = {
             [6, 'DgBk/xAAaP8QAG3/CwBu/wcAcP8CAHL//v9w//r/bf/5/2j/+f9j//z/YP8BAF7/BgBe/woAYf8='],
             [6, 'SwCp/00Arf9OALL/SwC2/0cAtP9FAK//RACq/0UApf9JAKT/'],
             [7, 'CQB0/wYAdf8EAHT/AgBz/wQAcv8HAHL/'],
+            [7, 'AwCI/wIAiv8AAIr///+I////hv8BAIb/'],
             [8, 'AwCk////pv/7/6b/+/+j//7/oP8CAKH/'],
             [9, '/P+6/wAAt/8FALT/CAC0/wYAt/8DALv//v+9//v/vf8=', 1, 1],
             [9, 'CgDZ/wwA1v8PANP/EQDT/xAA1v8OANn/CwDc/wkA3P8=', 1, 1],
@@ -2182,7 +2222,7 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              'KACI/yQAif8hAIz/HgCQ/xsAlP8YAJj/FQCc/xEAnv8NAKH/CQCi/wQAo////6T/+/+l//b/pP/y/6H/9/+h//z/of8BAKD/BQCe/wkAm/8MAJj/DgCT/wsAj/8HAI//AgCP//3/kP/5/5H/9P+S/+//k//q/5P/5v+S/+L/j//i/4r/5P+G/+j/g//r/4D/7P97/+//ff/w/4L/8v+A//P/e//3/3r//P96////fv8AAIL/AQCH/wMAhv8EAIL/BQB9/woAff8PAH7/EwCA/xYAg/8UAIj/FQCM/xkAjP8dAIn/IACF/yQAg/8oAIT/',
+              'KACI/yQAif8hAIz/HgCQ/xsAlP8YAJj/FQCc/xEAn/8NAKH/CACi/wQAo////6T/+v+l//b/pP/z/6H/+P+h//z/of8BAKD/BQCe/wkAm/8MAJf/DgCT/wsAj/8GAI//AQCQ//3/kf/4/5L/8/+S/+7/k//q/5P/5f+R/+L/jv/i/4r/5f+G/+j/g//r/3//7f97//L/e//2/3r/+/96/wAAe/8EAHz/CQB9/w4Afv8SAID/FQCD/xQAh/8VAIz/GQCM/x0Aif8gAIX/JACD/ygAhP8=',
             ],
             [0, '1//P/9P/0v/P/9T/zP/T/8//0P/T/83/1//M/w=='],
             [1, 'FQBc/xgAYP8aAGT/GwBp/xgAbP8UAGr/EABn/w0AZP8JAGH/BQBe/wEAXf/9/1//+v9j//b/Zf/0/2H/8v9d//L/Wf/2/1b/+/9U////VP8EAFT/CABW/w0AV/8RAFr/'],
@@ -2213,7 +2253,7 @@ export const sprites: SpriteSet = {
             [4, 'IgCc/x8Anv8bAKD/GgCd/x0Amv8hAJj/'],
             [4, 'AgDl/wMA6v8CAO//AQDz//7/9//6//n/9f/5//D/+v/s//r/5//5/+L/+f/e//f/2//z/9v/7v/c/+n/3//m/+P/5P/o/+T/6v/g/+3/3f/y/9//9v/g//v/4P8AAOH/'],
             [4, 'JADk/yQA6P8lAO3/JQDy/yQA9v8iAPv/HgD9/xoA/v8VAP7/EAD+/wwA/f8IAPv/BgD3/wUA8v8GAO3/CADp/wgA5f8LAOH/DwDh/xQA4f8ZAOD/HQDf/yIA3/8='],
-            [5, 'GAB//xMAf/8OAH7/CgB9/wUAfP8AAHv/+/97//b/e//x/3r/7f94//D/dP/0/3T/+f91//7/dv8DAHf/BwB4/wwAef8RAHn/FgB7/w=='],
+            [5, 'GAB//xMAf/8OAH7/CgB9/wUAfP8AAHz/+/97//b/ev/y/3v/7f97/+z/d//w/3T/9f90//n/df/+/3b/AwB3/wcAeP8MAHn/EQB5/xYAe/8='],
             [5, 'KwCN/yoAkv8nAJb/IwCY/x4AmP8bAJz/FwCf/xQAo/8RAKb/DQCp/wgAqP8EAKb/BQCk/wkAof8OAJ//EgCd/xUAmv8YAJb/GwCS/x4Ajv8hAIr/JQCI/yoAif8='],
             [5, 'DgCW/wsAmv8IAJ3/BACf////of/6/6L/9f+h//H/n//2/57/+/+e/wAAnf8EAJv/CACZ/wsAlf8OAJH/'],
             [5, '+P+V//T/l//v/5j/6v+X/+b/lP/j/5H/5/+R/+z/kv/x/5P/9f+S//r/kf8='],
@@ -2273,7 +2313,7 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              '2P9+/9z/fv/g/4H/4/+E/+f/h//r/4b/7P+C/+r/ff/u/3r/8v94//f/d//7/3b/AAB1/wUAdf8KAHT/DgB0/xMAdP8WAHj/GQB8/x0Afv8gAIL/IQCG/yAAiv8cAI3/FwCO/xIAjv8OAI3/CQCL/wUAif8AAIr//P+I//f/h//0/4n/9v+N//j/kf/5/5b/+v+a//3/nv8BAKD/BgCg/woAnf8OAJr/EgCZ/xUAmv8SAJ3/DgCg/woAo/8FAKT/AACk//z/ov/4/6D/9P+e//D/m//s/5j/6f+V/+X/kf/j/43/4P+J/93/hf/Z/4P/1f+C/w==',
+              '2P9+/9z/fv/g/4H/4/+E/+f/h//r/4b/7P+B/+v/ff/u/3r/8v94//f/d//8/3b/AAB1/wUAdf8KAHT/DwB0/xMAdf8WAHj/GQB8/x0Afv8gAIL/IQCG/yAAi/8bAI3/FwCO/xIAjv8NAI3/CQCL/wQAif8AAIn/+/+I//f/h//0/4n/9v+N//j/kf/5/5b/+/+b//7/nv8CAKD/BgCf/woAnf8OAJr/EgCY/xUAmv8SAJ3/DgCg/woAo/8FAKT/AQCk//z/o//4/6D/9P+e//D/m//s/5j/6f+V/+X/kf/j/43/4P+J/93/hf/Z/4P/1f+C/w==',
             ],
             [1, '7/9S//P/UP/3/07//P9N/wEATP8FAE3/CgBO/w4AUP8RAFP/DgBX/w0AW/8JAF3/BgBa/wIAV//9/1b/+f9Y//X/Wv/x/13/7v9h/+r/ZP/m/2b/5f9h/+X/Xf/n/1j/6/9V/w=='],
             [
@@ -2285,7 +2325,7 @@ export const sprites: SpriteSet = {
             [1, '6v/S/+//0v/z/9X/8//Z/+//3f/q/9v/6P/X/w=='],
             [
               2,
-              'uv9v/77/bf/D/2z/yP9t/8v/cP/P/3L/0v9v/9T/a//Y/2j/3f9m/+D/Yv/j/1//5f9i/+T/Z//i/2v/3/9v/9z/c//Y/3b/1f96/9X/fv/U/4P/1P+I/9X/jf/X/5H/1v+W/9P/mf/T/57/0P+h/8z/oP/H/6L/w/+l/77/pf+5/6b/tf+l/7D/pP+r/6P/p/+h/6X/nf+k/5j/pf+U/6b/j/+n/4r/qf+G/6z/gv+u/33/sf95/7P/df+2/3L/',
+              'uv9v/77/bf/D/2z/x/9s/8v/cP/P/3L/0v9v/9T/a//Y/2j/3P9m/+D/Y//j/1//5f9i/+T/Zv/i/2v/3/9u/9z/cv/Z/3X/1v95/9T/ff/V/4L/1P+H/9X/i//X/4//2P+U/9T/l//S/5v/0/+f/8//oP/L/6H/xv+j/8L/pf+9/6b/uf+m/7T/pf+v/6T/q/+j/6b/of+l/53/pP+Y/6X/k/+m/47/qP+K/6r/hv+s/4H/rv99/7H/ef+z/3X/tv9y/w==',
             ],
             [2, 'FQBs/xkAav8eAGn/IwBp/ycAa/8sAG3/KgBw/yUAcf8hAHH/HQBz/xgAc/8UAHH/'],
             [2, '4/9z/+f/c//n/3f/4/96/9//ff/a/33/2/96/9//dv8='],
@@ -2300,14 +2340,14 @@ export const sprites: SpriteSet = {
             [4, '+v9Z////Wf8BAF3/BQBd/wUAYv8CAGb//v9o//r/Zf/3/2H/9/9c/w=='],
             [4, '6P9n/+z/Zf/x/2T/9f9l//n/af/1/2v/8f9r/+z/bf/o/3D/5f9z/+H/dv/d/3j/2f97/9X/fv/T/3v/1v93/9r/dP/d/3D/4f9t/+T/av8='],
             [4, '5P96/+j/ev/r/37/7P+C/+r/h//n/4n/4/+G/+D/gv/g/33/'],
-            [4, '9P+H//j/hv/9/4f/AgCJ/wYAjP8JAI//DgCR/xIAkv8XAJH/GwCP/x8AjP8gAI//HQCT/xkAlv8VAJf/EACW/w4Amv8LAJ7/BwCe/wMAm////5n/+v+Y//j/lP/3/4//9P+L/w=='],
-            [4, '3v+S/+L/lP/l/5j/5P+b/9//mf/c/5b/'],
+            [4, '9P+H//j/hv/9/4f/AQCJ/wUAi/8JAI7/DQCR/xIAkv8WAJH/GwCP/x4AjP8hAI7/HgCS/xsAlf8XAJj/EgCY/w4Am/8KAJ7/BgCe/wIAm//+/5n/+v+X//j/k//2/4//9P+L/w=='],
+            [4, '3f+S/+L/lP/l/5j/5P+c/+D/mv/c/5b/'],
             [4, 'AQDg/wUA3/8KAN//DwDe/xQA3P8YAN7/GQDi/x4A4/8iAOT/JgDn/ycA7P8nAPH/JgD1/yIA+P8dAPn/GAD5/xMA+f8OAPn/CgD4/wUA9v8BAPP////u////6f///+T/'],
             [4, '3f/d/+L/3f/m/9//6//f//D/3//0/+D/+P/i//j/5//5/+v/+//w//v/9f/5//n/9v/8//H//v/t//7/6P/+/+P//v/f//z/3P/5/9v/9P/a//D/2//r/9v/5v/b/+H/'],
             [5, '6/90//D/dP/1/3P/+v9y////cf8DAG//CABu/w0Abf8SAG7/FABy/xEAdP8MAHX/BwB1/wIAdf/9/3b/+f92//T/d//v/3j/6v94/w=='],
-            [5, '1f+D/9n/gv/e/4T/4f+I/+T/jP/m/5D/6f+U/+z/mP/w/5v/9P+d//j/n//5/6L/9P+h//D/n//s/53/6P+a/+T/lv/h/5P/3P+S/9j/kP/V/4z/1P+I/w=='],
+            [5, '1f+D/9r/gv/e/4X/4f+I/+T/jP/n/5D/6f+U/+3/mP/w/5v/9f+d//n/oP/4/6L/8/+h/+//n//r/5z/5/+Z/+T/lv/g/5P/2/+T/9f/kP/U/4z/0/+H/w=='],
             [5, 'BgCK/woAi/8PAIz/FACM/xgAi/8dAIv/HQCO/xkAkf8VAJL/EACS/wwAkf8IAI7/'],
-            [5, '0/+Y/9j/l//c/5n/4P+c/9//oP/a/6L/1v+g/9L/nP8='],
+            [5, '1f+V/9r/lv/e/5j/4f+c/+D/oP/b/6L/1/+g/9P/nf/S/5n/'],
             [5, 'FgCu/xoArP8eAKr/IQCt/yQAsf8lALb/JQC7/yQAv/8hAMP/HgDG/xkAyP8WAMX/FwDB/xcAvP8WALf/FQCy/w=='],
             [
               5,
@@ -2349,7 +2389,7 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              '2P+E/93/g//h/4X/5P+J/+f/jP/r/4z/7P+I/+v/g//t/4D/8v9+//b/ff/7/33//f+C//3/hv8AAIf/AQCC/wEAfv8EAHr/CQB6/w0Ae/8OAID/EQCC/xIAff8UAHv/FgCA/xkAg/8cAIb/HwCK/x8Aj/8bAJL/FgCT/xEAk/8NAJL/CACR/wMAkP///4//+v+P//X/j//z/5P/9P+Y//j/m//7/57/AACg/wQAof8JAKH/DgCh/wsApP8GAKX/AQCk//3/o//4/6L/8/+h/+//nv/r/5z/6P+Y/+X/lP/j/5D/4P+M/93/if/Y/4j/',
+              '2P+E/93/g//h/4X/5P+J/+f/jP/s/4z/7f+H/+v/g//u/4D/8/9+//f/ff/8/3z/AQB7/wYAev8KAHr/DwB7/xMAe/8VAH//GACD/xwAhv8fAIr/HwCO/xsAkf8XAJP/EgCT/w0Akv8JAJL/BACR////kP/6/4//9v+P//P/k//0/5f/9/+b//v/nv///6D/BACh/wkAof8OAKH/CwCk/wYApf8BAKT//f+j//j/ov/0/6H/7/+f/+v/nP/o/5j/5f+U/+P/kP/g/4z/3f+J/9j/iP8=',
             ],
             [0, 'KgDM/y4Azf8xAND/NQDT/zIA1P8tANL/KgDP/w=='],
             [1, '8P9a//T/V//4/1b//f9U/wEAVP8GAFT/CgBW/w4AWf8PAF3/DABh/woAZf8GAGP/BABf/wAAXf/7/17/9/9h//T/ZP/w/2f/7P9q/+j/bP/m/2n/5/9k/+n/YP/s/1z/'],
@@ -2380,7 +2420,7 @@ export const sprites: SpriteSet = {
             [4, '3/+Y/+P/mv/m/53/5f+g/+H/nv/e/5z/'],
             [4, 'AQDh/wUA4P8KAOD/DwDf/xMA3f8XAOD/GQDk/x0A5P8iAOb/JQDp/yUA7v8lAPP/IwD3/x4A+f8aAPn/FQD6/xAA+v8LAPn/BwD5/wIA9/////P//v/v//7/6v/+/+X/'],
             [4, '3//f/+P/3//o/+D/7P/h//H/4f/2/+H/+P/l//j/6f/6/+3/+//y//v/9//5//v/9f/9//D//v/r//7/5//+/+L//f/e//v/3P/2/9z/8v/c/+3/3P/o/93/5P8='],
-            [5, '6/97/+//ef/0/3n/+f94//7/d/8DAHb/BwB1/wwAdP8RAHT/EwB4/w8Aev8KAHv/BQB7/wAAe//8/3z/9/99//L/fv/t/3//6f9//w=='],
+            [5, '6/97/+//ef/0/3n/+f94//7/d/8CAHb/BwB1/wwAdP8RAHT/FAB3/xMAe/8PAHv/CgB6/wUAe/8AAHz//P98//f/ff/y/37/7f9//+n/f/8='],
             [5, '1/+J/9v/iP/g/4r/4/+O/+X/kv/o/5b/6/+a/+//nf/z/5//9/+h//z/pP/8/6b/+P+o//T/qf/w/6b/7P+j/+n/n//m/5z/4v+Y/97/mP/a/5b/1/+S/9b/jf8='],
             [5, '8/+R//X/lf/5/5n//P+b/wEAnf8GAJ7/CwCe/w8An/8LAKH/BgCi/wIAof/9/5//+f+d//X/mv/y/5b/'],
             [5, 'BwCR/wsAkv8QAJP/FACS/xkAkf8dAJH/GgCU/xYAl/8SAJj/DQCX/wkAlf8='],
@@ -2436,7 +2476,7 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              'LACC/ycAg/8jAIX/IACJ/x4Ajf8bAJH/GACV/xQAmP8RAJv/DQCe/wkAoP8FAKL/AACk//v/pP/3/6P/8/+g/+//nf/s/5r/7v+Z//P/mv/2/53/+/+g////oP8DAJ7/BgCa/wgAlv8IAJH/CwCN/w0Aif8JAIf/BQCI/wAAiv/8/4n/9/+L//P/jf/u/47/6f+O/+X/jf/h/4r/3/+G/+H/gv/k/37/6P98/+r/eP/t/3T/8v90//f/dP/8/3X/AAB1/wUAdv8KAHf/DgB4/xMAev8WAH3/FQCC/xUAhv8aAIf/HQCE/yEAgf8kAH7/KQB+/w==',
+              'LACC/ycAg/8jAIX/IACJ/x4Ajf8bAJH/GACV/xQAmP8RAJv/DQCe/wkAoP8EAKP/AACk//v/pP/3/6P/8v+g/+//nf/s/5r/7v+Y//L/mv/2/53/+v+f////oP8DAJ7/BgCb/wgAlv8IAJH/CwCN/w0Aif8KAIf/BQCI/wEAif/8/4n/9/+L//P/jf/v/47/6v+O/+X/jf/h/4v/3/+G/+D/gv/j/37/6P98/+r/eP/t/3X/8v90//f/dP/7/3X/AAB1/wUAdv8KAHf/DgB4/xMAev8WAH3/FQCB/xUAhv8aAIf/HQCE/yEAgf8kAH7/KQB+/w==',
             ],
             [1, 'FgBV/xkAWP8bAF3/HABh/xsAZv8WAGT/EwBh/w8AXf8LAFr/BwBY/wMAVv/+/1f/+/9a//f/Xf/0/1v/8v9X/+//U//y/1D/9v9O//v/Tf8AAEz/BQBN/wkATv8OAFD/EgBS/w=='],
             [
@@ -2448,7 +2488,7 @@ export const sprites: SpriteSet = {
             [1, 'GADX/xYA2/8RAN3/DQDZ/w0A1f8SANL/FgDS/w=='],
             [
               2,
-              'SgBy/00Adf9QAHn/UgB9/1UAgv9XAIb/WQCK/1sAj/9cAJT/XACY/1wAnf9aAKH/VQCj/1EApP9MAKX/RwCm/0IApf8+AKX/OQCi/zUAoP8wAKH/LQCe/y4Amf8rAJb/KQCR/ysAjf8tAIj/LACD/ywAfv8rAHr/KAB2/yUAc/8iAG//HwBr/x0AZ/8cAGL/HQBf/yAAYv8kAGb/KABo/ywAa/8vAG//MQBy/zUAcP85AG3/PgBs/0IAbf9HAG//',
+              'SgBy/00Adf9QAHn/UgB9/1UAgf9XAIb/WQCK/1sAjv9cAJP/XACY/1wAnf9aAKH/VgCj/1EApP9NAKX/SACm/0MApv8/AKX/OgCj/zYAof8xAKD/LQCf/y8Am/8sAJf/KQCU/ykAj/8rAIv/LACH/ywAgv8sAH3/KwB5/ygAdf8kAHL/IQBu/x4Aa/8cAGb/HABi/x4AX/8hAGP/JABm/ykAaP8sAGv/LwBv/zIAcv82AHD/OQBs/z4AbP9CAG3/RwBv/w==',
             ],
             [2, '7P9x/+j/c//j/3P/3/9x/9z/cf/X/3D/1f9t/9n/a//e/2n/4/9p/+f/av/s/2z/'],
             [2, 'IgB2/yUAev8mAH3/IQB9/x0Aev8aAHf/GQBz/x4Ac/8='],
@@ -2463,14 +2503,14 @@ export const sprites: SpriteSet = {
             [4, 'CQBc/wkAYf8HAGX/AwBo//7/Zv/7/2L/+/9d////Xf8CAFn/BgBZ/w=='],
             [4, 'HABq/yAAbf8jAHD/JwB0/yoAd/8tAHv/KwB+/ycAe/8jAHj/IAB2/xwAc/8YAHD/FABt/xAAa/8LAGv/CABp/wsAZf8QAGT/FABl/xgAZ/8='],
             [4, 'IAB9/yAAgv8eAIb/GgCJ/xYAh/8UAIL/FQB+/xgAev8dAHr/'],
-            [4, 'DQCL/woAj/8JAJT/BgCY/wIAmf/9/5v/+v+e//X/nv/y/5r/8f+W/+z/l//n/5b/4/+T/+D/j//h/4z/5f+P/+n/kf/u/5L/8/+R//f/j//7/4z///+J/wMAh/8IAIb/DQCH/w=='],
-            [4, 'JQCW/yEAmf8dAJv/HACY/x8AlP8jAJL/'],
+            [4, 'DQCL/woAj/8JAJP/BwCX/wIAmf/+/5v/+v+e//b/nv/z/5v/7v+Y/+r/mP/m/5X/4v+S/+D/jv/i/4z/5v+P/+r/kf/v/5L/9P+R//j/jv/7/4v///+J/wQAh/8IAIb/DQCH/w=='],
+            [4, 'JQCW/yEAmv8cAJz/HACY/x8AlP8jAJL/'],
             [4, 'AQDk/wIA6f8BAO7////z//v/9v/3//j/8v/5/+3/+f/o//n/4//5/9//+P/b//X/2f/x/9n/7P/b/+f/3v/k/+P/4//o/+L/6f/e/+3/3P/y/97/9v/f//v/3/8AAOD/'],
             [4, 'JQDh/yYA5v8mAOv/JgDw/yYA9P8lAPn/IgD8/x0A/v8YAP7/FAD+/w8A/v8LAPz/BwD5/wYA9f8GAPD/BwDr/wkA5/8JAOL/DADg/xEA3/8WAN//GgDf/x8A3f8kAN3/'],
             [5, 'FwB4/xIAeP8NAHf/CAB2/wMAdv/+/3X/+f91//T/df/v/3T/7P9y/+//bv/0/23/+P9u//3/b/8CAHH/BwBy/wsAc/8QAHT/FQB0/w=='],
-            [5, 'LQCI/ysAjP8oAJD/JACS/yAAk/8cAJb/GQCa/xUAnf8RAJ//DACh/wgAov8IAJ//DACd/xEAm/8UAJj/FwCU/xoAkP8dAIz/IACI/yMAhP8nAIL/LACD/w=='],
+            [5, 'LgCH/ywAjP8pAJD/JgCT/yEAk/8dAJb/GQCZ/xYAnP8SAJ//DQCh/wgAov8IAKD/DACd/xAAm/8UAJj/FwCU/xoAkP8dAIz/IACI/yMAhf8nAIL/LACD/w=='],
             [5, '+f+O//X/kf/w/5L/7P+S/+f/kf/j/47/5P+L/+j/i//t/4z/8v+M//b/i//7/4r/'],
-            [5, 'LgCc/ysAoP8mAKL/IQCg/yAAnP8kAJn/KQCX/y0AmP8='],
+            [5, 'LgCZ/y0Anf8qAKD/JQCi/yEAoP8gAJz/IwCY/ycAlv8rAJX/'],
             [5, '7P+y/+v/t//q/7z/6v/B/+r/xf/n/8j/4//G/9//w//c/7//2/+7/9v/tv/d/7H/3/+t/+P/qv/m/6z/6/+u/w=='],
             [
               5,
@@ -2512,7 +2552,7 @@ export const sprites: SpriteSet = {
           parts: [
             [
               0,
-              'KACI/yQAif8hAIz/HgCQ/xsAlP8YAJj/FQCc/xEAnv8NAKH/CQCi/wQAo////6T/+/+l//b/pP/y/6H/9/+h//z/of8BAKD/BQCe/wkAm/8MAJj/DgCT/wsAj/8HAI//AgCP//3/kP/5/5H/9P+S/+//k//q/5P/5v+S/+L/j//i/4r/5P+G/+j/g//r/4D/7P97/+//ff/w/4L/8v+A//P/e//3/3r//P96////fv8AAIL/AQCH/wMAhv8EAIL/BQB9/woAff8PAH7/EwCA/xYAg/8UAIj/FQCM/xkAjP8dAIn/IACF/yQAg/8oAIT/',
+              'KACI/yQAif8hAIz/HgCQ/xsAlP8YAJj/FQCc/xEAn/8NAKH/CACi/wQAo////6T/+v+l//b/pP/z/6H/+P+h//z/of8BAKD/BQCe/wkAm/8MAJf/DgCT/wsAj/8GAI//AQCQ//3/kf/4/5L/8/+S/+7/k//q/5P/5f+R/+L/jv/i/4r/5f+G/+j/g//r/3//7f97//L/e//2/3r/+/96/wAAe/8EAHz/CQB9/w4Afv8SAID/FQCD/xQAh/8VAIz/GQCM/x0Aif8gAIX/JACD/ygAhP8=',
             ],
             [0, '1//P/9P/0v/P/9T/zP/T/8//0P/T/83/1//M/w=='],
             [1, 'FQBc/xgAYP8aAGT/GwBp/xgAbP8UAGr/EABn/w0AZP8JAGH/BQBe/wEAXf/9/1//+v9j//b/Zf/0/2H/8v9d//L/Wf/2/1b/+/9U////VP8EAFT/CABW/w0AV/8RAFr/'],
@@ -2543,7 +2583,7 @@ export const sprites: SpriteSet = {
             [4, 'IgCc/x8Anv8bAKD/GgCd/x0Amv8hAJj/'],
             [4, 'AgDl/wMA6v8CAO//AQDz//7/9//6//n/9f/5//D/+v/s//r/5//5/+L/+f/e//f/2//z/9v/7v/c/+n/3//m/+P/5P/o/+T/6v/g/+3/3f/y/9//9v/g//v/4P8AAOH/'],
             [4, 'JADk/yQA6P8lAO3/JQDy/yQA9v8iAPv/HgD9/xoA/v8VAP7/EAD+/wwA/f8IAPv/BgD3/wUA8v8GAO3/CADp/wgA5f8LAOH/DwDh/xQA4f8ZAOD/HQDf/yIA3/8='],
-            [5, 'GAB//xMAf/8OAH7/CgB9/wUAfP8AAHv/+/97//b/e//x/3r/7f94//D/dP/0/3T/+f91//7/dv8DAHf/BwB4/wwAef8RAHn/FgB7/w=='],
+            [5, 'GAB//xMAf/8OAH7/CgB9/wUAfP8AAHz/+/97//b/ev/y/3v/7f97/+z/d//w/3T/9f90//n/df/+/3b/AwB3/wcAeP8MAHn/EQB5/xYAe/8='],
             [5, 'KwCN/yoAkv8nAJb/IwCY/x4AmP8bAJz/FwCf/xQAo/8RAKb/DQCp/wgAqP8EAKb/BQCk/wkAof8OAJ//EgCd/xUAmv8YAJb/GwCS/x4Ajv8hAIr/JQCI/yoAif8='],
             [5, 'DgCW/wsAmv8IAJ3/BACf////of/6/6L/9f+h//H/n//2/57/+/+e/wAAnf8EAJv/CACZ/wsAlf8OAJH/'],
             [5, '+P+V//T/l//v/5j/6v+X/+b/lP/j/5H/5/+R/+z/kv/x/5P/9f+S//r/kf8='],

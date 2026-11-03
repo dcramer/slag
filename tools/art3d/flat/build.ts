@@ -10,7 +10,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { trace } from '../page/trace';
-import type { Settings } from '../settings';
+import { BOX, type Settings } from '../settings';
 import { FLAT_KINDS, type FlatClip, posePrompt } from './kinds';
 
 const [first, second, third] = process.argv.slice(2);
@@ -168,6 +168,45 @@ function cutOut(role: Int16Array, m: RoleMap, cut: NonNullable<(typeof spec)['ma
   }
 }
 
+/**
+ * The drawing's face specks (eyes, nose, mouth) painted over in the role map from the colours round them,
+ * before the figure is traced again: dropped from the traced parts, a speck on a part's edge left a notch
+ * that showed the silhouette's ink under the kit's eyes and its thin cheer arcs.
+ */
+function paintOver(role: Int16Array, m: RoleMap, rings: number[][]) {
+  const toPx = (v: number, o: number) => (v - o) * m.R - 0.5;
+  const marked = new Uint8Array(role.length);
+  for (const r of rings) {
+    const xs = r.filter((_, i) => i % 2 === 0);
+    const ys = r.filter((_, i) => i % 2 === 1);
+    const [px0, px1] = [Math.floor(toPx(Math.min(...xs), BOX.x0)) - 1, Math.ceil(toPx(Math.max(...xs), BOX.x0)) + 1];
+    const [py0, py1] = [Math.floor(toPx(Math.min(...ys), -BOX.y1)) - 1, Math.ceil(toPx(Math.max(...ys), -BOX.y1)) + 1];
+    for (let py = Math.max(0, py0); py <= Math.min(m.H - 1, py1); py++)
+      for (let px = Math.max(0, px0); px <= Math.min(m.W - 1, px1); px++) {
+        const i = py * m.W + px;
+        // Grown a pixel, so its antialiased rim goes with it.
+        if (
+          role[i] >= 0 &&
+          [0, 1, 2, 3, 4, 5, 6, 7, 8].some((k) => inside((px + 0.5 + ((k % 3) - 1)) / m.R + BOX.x0, (py + 0.5 + (((k / 3) | 0) - 1)) / m.R - BOX.y1, r))
+        )
+          marked[i] = 1;
+      }
+  }
+  // Each marked pixel takes the role that reaches it first from outside the specks.
+  const queue: number[] = [];
+  for (let i = 0; i < role.length; i++) if (!marked[i] && role[i] >= 0) queue.push(i);
+  for (let h = 0; h < queue.length; h++) {
+    const i = queue[h];
+    const x = i % m.W;
+    for (const j of [x > 0 ? i - 1 : -1, x < m.W - 1 ? i + 1 : -1, i - m.W, i + m.W])
+      if (j >= 0 && j < role.length && marked[j]) {
+        marked[j] = 0;
+        role[j] = role[i];
+        queue.push(j);
+      }
+  }
+}
+
 /** One pose drawing, traced into a facing-right frame with its feet at the origin. */
 function frameOf(name: string, clip: FlatClip): Frame {
   const png = name === 'idle' ? resolve(art, 'design.png') : resolve(art, 'flat', `${name}.png`);
@@ -191,12 +230,13 @@ function frameOf(name: string, clip: FlatClip): Frame {
   };
   const role = Int16Array.from(m.role);
   if (spec.map.cut) cutOut(role, m, spec.map.cut);
-  const t = trace(role, new Float32Array(m.W * m.H), m.W, m.H, m.R, settings as Settings, m.roles);
+  let t = trace(role, new Float32Array(m.W * m.H), m.W, m.H, m.R, settings as Settings, m.roles);
   const roleOf = (n: string) => spec.roles.findIndex((r) => r.name === n);
   // Roles by name from the map's order into the kind's.
   let parts: Shape[] = t.parts.map((p) => ({ role: roleOf(m.roles[p.role]), ring: p.ring }));
   // A kind with no face (a visor, a jelly) has no eyes to find, and keeps the drawing's own.
   let eyes: Pt[] = [];
+  let gone: Shape[] = [];
   const ek = spec.eyes;
   if (ek) {
     const dark = roleOf(ek.role);
@@ -256,14 +296,23 @@ function frameOf(name: string, clip: FlatClip): Frame {
     if (eyes.length) {
       const [x0, x1] = [eyes[0][0] - 2.5, eyes[eyes.length - 1][0] + 2.5];
       const [y0, y1] = [Math.min(...eyes.map((e) => e[1])) - 1.5, Math.max(...eyes.map((e) => e[1])) + 3.6];
-      parts = parts.filter((p) => {
+      gone = parts.filter((p) => {
         const [x, y] = mid(p.ring);
         const face = x > x0 && x < x1 && y > y0 && y < y1;
-        return !(face && Object.entries(ek.specks).some(([n, most]) => p.role === roleOf(n) && area(p.ring) < most));
+        return face && Object.entries(ek.specks).some(([n, most]) => p.role === roleOf(n) && area(p.ring) < most);
       });
     } else if (clip.eyes === false)
       // Shut eyes and an open mouth are specks too: the face's place is all the kit needs, and it has none.
-      parts = parts.filter((p) => !(p.role === dark && area(p.ring) < 0.4));
+      gone = parts.filter((p) => p.role === dark && area(p.ring) < 0.4);
+  }
+  if (gone.length) {
+    paintOver(
+      role,
+      m,
+      gone.map((p) => p.ring),
+    );
+    t = trace(role, new Float32Array(m.W * m.H), m.W, m.H, m.R, settings as Settings, m.roles);
+    parts = t.parts.map((p) => ({ role: roleOf(m.roles[p.role]), ring: p.ring }));
   }
   // A dark under the face drawn in a role of its own (the zapmouse's black cord, which reads as a frown).
   const re = spec.recolour;
