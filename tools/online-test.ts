@@ -1666,7 +1666,18 @@ async function viewScenario(browser: Browser, base: string, kind: string, fits: 
     return { tx: o.tx, ty: o.ty, slot: q.slot, part: o.def.name as string, modules: o.def.modules.map((x: any) => x.type).join() as string };
   }, devB);
   await clickWorld(B, spot.x, spot.y);
-  await waitFor(A, 'the part placed', (v) => v.players.find((p) => p.device === devB)!.placed, 15_000);
+  const placed = await waitFor(A, 'the part placed', (v) => v.players.find((p) => p.device === devB)!.placed, 15_000);
+  if (!placed.players.find((p) => p.device === devB)!.placed) {
+    // Seen twice with a Firefox host and a WebKit guest (a keg at 2,0 on the tall level), not yet explained: say what each side thought.
+    const why = (p: Page) =>
+      p.evaluate((dev) => {
+        const m = (window as any).slagDebug.match;
+        const q = m.players.find((x: any) => x.device === dev);
+        const o = m.ghostOrigin(q);
+        return { cursor: q.cursor, rot: q.rot, legal: m.canPlaceFor(q), origin: [o.tx, o.ty], phaseFrame: m.phaseFrame };
+      }, devB);
+    console.log(`     not placed: host ${JSON.stringify(await why(A))}, guest ${JSON.stringify(await why(B))}, aimed at ${JSON.stringify(spot)}`);
+  }
   const put = await A.evaluate((slot) => {
     const p = (window as any).slagDebug.match.placed.find((q: any) => q.owner === slot);
     return p ? { tx: p.tx, ty: p.ty } : null;
