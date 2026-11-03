@@ -41,7 +41,9 @@ export const kind: FlatKind = {
     fringe: 5,
     stroke: 2.4,
     feet: ['orange', 'pipe'],
-    min: { dark: 0.12, glint: 0.2 },
+    // No dark fill is worth a shape: the drawing's darks on the suit (the dents, the belt's ends at the hips)
+    // were black specks at play size. A white scrap at the hip in idle2 was a pale ring there.
+    min: { dark: 0.5, glint: 0.2, stripe: 1.2 },
   },
   roles: [
     // The fishing buoys: red with a white band, the shoulders nobody else in the cast is wider at.
@@ -50,13 +52,16 @@ export const kind: FlatKind = {
     // The suit: the water-heater torso, the helmet and the legs.
     { name: 'orange', color: '#d9661f', slot: 'player' },
     { name: 'waist', color: '#4a4a52' },
-    // A colourway is the drainpipe and the boot made from its offcut (VARIETY.palette): grey, rusted iron or bone-white PVC.
-    { name: 'pipe', color: '#8e9298', alts: ['#9a5f3e', '#d6cdb6'], vary: 6 },
+    // A colourway is the drainpipe and the boot made from its offcut (VARIETY.palette): grey, rusted iron or
+    // bone-white PVC. The rust is a deep one: a light rust was the orange and yellow suits' own brown, and the
+    // cannon and boots merged into them.
+    { name: 'pipe', color: '#8e9298', alts: ['#6f3b2a', '#d6cdb6'], vary: 6 },
     { name: 'visor', color: '#2f7a3c' },
     { name: 'glint', color: '#9fe08a' },
     { name: 'dark', color: '#2a1f1a' },
-    // Wear on the suit: a rubbed patch, and soot.
-    { name: 'scuff', color: '#808080', on: 2, tone: 14 },
+    // Wear on the suit: a scrape, and soot, one mark each on the thigh: two marks on the narrow legs read as
+    // spots, and a scrape wide enough to show its fill inside its pen as a ring.
+    { name: 'scuff', color: '#808080', on: 2, tone: -8 },
     { name: 'scorch', color: '#808080', on: 2, tone: -17 },
     { name: 'sticker', color: '#e8c24a' },
   ],
@@ -70,16 +75,7 @@ export const kind: FlatKind = {
   wear: {
     on: ['orange'],
     chin: 0.5,
-    marks: [
-      [
-        ['scuff', 0.45, 0.5, 0.55],
-        ['scuff', 0.65, 0.85, 0.5],
-      ],
-      [
-        ['scorch', 0.5, 0.45, 0.65],
-        ['scorch', 0.35, 0.85, 0.45],
-      ],
-    ],
+    marks: [[['scuff', 0.62, 0.78, 0.42]], [['scorch', 0.62, 0.78, 0.65]]],
   },
   accessories: [{ slot: 'sticker', role: 'sticker', at: 'cheek', size: [2.4, 0.95] }],
   gait: { bounce: [0, 0.4], lean: [0, 0.03] },
