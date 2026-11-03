@@ -64,6 +64,9 @@ class FakeChannel implements RtcChannel {
     if (this.readyState === 'closed') return;
     this.readyState = 'closed';
     this.onclose?.();
+    // A browser closing its end tells the other (SCTP abort) when there's a route; with none, the other end hears nothing.
+    const to = this.other;
+    if (to && this.net.route(this.owner, to.owner)) setTimeout(() => to.close(), 5);
   }
 }
 
@@ -181,6 +184,8 @@ class World {
   maxHosts = 0;
   /** How long more than one live peer hosted. */
   splitMs = 0;
+  /** Most live hosts ever advancing the sim at once (hosting and not paused): over 1 is a fork, not just a split. */
+  maxRunning = 0;
   peers = new Map<string, Peer>();
   hidden = false;
 
@@ -228,12 +233,14 @@ class World {
       const hosts = [...this.peers.values()].filter((p) => !p.gone && p.session.isHost && p.session.status !== 'unavailable').length;
       this.maxHosts = Math.max(this.maxHosts, hosts);
       if (hosts > 1) this.splitMs += TICK;
+      const running = [...this.peers.values()].filter((p) => !p.gone && p.session.isHost && !p.session.paused && p.session.status !== 'unavailable').length;
+      this.maxRunning = Math.max(this.maxRunning, running);
     }
   }
 
-  async runUntil(cond: () => boolean, ms: number) {
+  async runUntil(cond: () => boolean, ms: number, inputs?: (p: Peer) => Record<string, InputFrame>) {
     const start = Date.now();
-    while (!cond() && Date.now() - start < ms) await this.run(100);
+    while (!cond() && Date.now() - start < ms) await this.run(100, inputs);
     return Date.now() - start;
   }
 
@@ -276,6 +283,7 @@ class World {
     expect(this.settled()).toBe(true);
     this.maxHosts = 0;
     this.splitMs = 0;
+    this.maxRunning = 0;
     return ids.map((id) => this.peers.get(id)!);
   }
 }
@@ -744,6 +752,31 @@ describe('host migration', () => {
     expect(new Set(await w.drained()).size).toBe(1);
   });
 
+  it('two guests losing a live host at once: the host freezes first, so only one host ever runs and nothing forks', async () => {
+    const w = new World();
+    const [a, b] = await w.room('aaaa', 'bbbb', 'cccc');
+    const walk = () => ({ kb1: press({ right: true, confirmPressed: true }) });
+    await w.runUntil(() => a.session.match.players.length === 3, 5000);
+    await w.run(1000, walk);
+    // Both of the host's links go silent together: from either guest it looks exactly like the host dying.
+    w.net.blocked.add('aaaa,bbbb');
+    w.net.blocked.add('aaaa,cccc');
+    const frozenAt: number[] = [];
+    for (let i = 0; i < 40 && !b.session.isHost; i++) {
+      await w.run(100, walk);
+      if (a.session.paused && !frozenAt.length) frozenAt.push(Date.now());
+    }
+    expect(b.session.isHost).toBe(true); // C's offer was B's proof: the room moved
+    expect(frozenAt.length).toBe(1); // ...but A froze before then, and stays frozen
+    w.net.blocked.clear();
+    await w.runUntil(() => w.settled() && b.session.members.length === 3, 30_000, walk);
+    expect(w.settled()).toBe(true);
+    expect(a.session.hostId).toBe('bbbb');
+    expect(w.maxHosts).toBe(2);
+    expect(w.maxRunning).toBe(1);
+    expect(new Set(await w.drained()).size).toBe(1);
+  });
+
   it('two peers that both host: the store settles it for the lower order', async () => {
     const w = new World();
     const [, b, c] = await w.room('aaaa', 'bbbb', 'cccc');
@@ -867,32 +900,40 @@ describe('election under varied timing', () => {
     expect(Date.now() - t0).toBeLessThan(together ? 15_000 : 10_000);
   });
 
-  it.each(seeds(24, 2000))('flaky guests: one alone never moves the room, and any split is over within 5 s (seed %i)', async (seed) => {
-    const r = new Rng(seed);
-    const w = new World();
-    const ids = ['aaaa', 'bbbb', 'cccc', 'dddd'];
-    const peers = await w.room(...ids);
-    const a = peers[0];
-    for (const id of ids) if (r.chance(0.5)) w.apiLatencyFor.set(id, r.int(0, 900));
-    let flaky = ids.slice(1).filter(() => r.chance(0.4));
-    if (!flaky.length) flaky = [ids[r.int(1, 3)]];
-    const pairs = flaky.map((f) => ['aaaa', f].sort().join());
-    for (const p of pairs) w.net.blocked.add(p);
-    await w.run(r.int(2000, 4000));
-    for (const p of pairs) w.net.blocked.delete(p);
-    // A guest whose handshakes with the host keep failing drops to local play by design ('Cannot Reach Host'): it's out.
-    const done = () => {
-      for (const p of peers) if (p.session.status === 'unavailable') p.gone = true;
-      const host = peers.find((p) => !p.gone && p.session.isHost);
-      return w.settled() && !!host && !host.session.members.some((m) => m.linking);
-    };
-    await w.runUntil(done, 30_000);
-    expect(done()).toBe(true);
-    // Two guests losing the host at once look exactly like the host dying, so the room may move then, but only once.
-    expect(w.splitMs).toBeLessThan(5000);
-    if (flaky.length === 1 && !a.gone) {
-      expect(a.session.isHost).toBe(true);
-      expect(w.maxHosts).toBe(1);
-    }
-  });
+  it.each(seeds(24, 2000))(
+    'flaky guests: one alone never moves the room, only one host ever runs, and any split is over within 5 s (seed %i)',
+    async (seed) => {
+      const r = new Rng(seed);
+      const w = new World();
+      const ids = ['aaaa', 'bbbb', 'cccc', 'dddd'];
+      const peers = await w.room(...ids);
+      const a = peers[0];
+      for (const id of ids) if (r.chance(0.5)) w.apiLatencyFor.set(id, r.int(0, 900));
+      let flaky = ids.slice(1).filter(() => r.chance(0.4));
+      if (!flaky.length) flaky = [ids[r.int(1, 3)]];
+      const pairs = flaky.map((f) => ['aaaa', f].sort().join());
+      for (const p of pairs) w.net.blocked.add(p);
+      await w.run(r.int(2000, 4000));
+      for (const p of pairs) w.net.blocked.delete(p);
+      // A guest whose handshakes with the host keep failing drops to local play by design ('Cannot Reach Host'): it's out.
+      const done = () => {
+        for (const p of peers) if (p.session.status === 'unavailable') p.gone = true;
+        const host = peers.find((p) => !p.gone && p.session.isHost);
+        // Caught up too: a guest whose silence was shorter than SILENCE_MS is still 'online' but frames behind.
+        const caughtUp = peers.every((p) => p.gone || !host || host.session.match.frame - p.session.match.frame < 30);
+        return w.settled() && !!host && !host.session.members.some((m) => m.linking) && caughtUp;
+      };
+      await w.runUntil(done, 30_000);
+      expect(done()).toBe(true);
+      // Two guests losing the host at once look exactly like the host dying, so the room may move then, but only once,
+      // and the old host is frozen before the new one exists: two may think they host for a moment, never two play.
+      expect(w.splitMs).toBeLessThan(5000);
+      expect(w.maxRunning).toBe(1);
+      expect(new Set(await w.drained()).size).toBe(1);
+      if (flaky.length === 1 && !a.gone) {
+        expect(a.session.isHost).toBe(true);
+        expect(w.maxHosts).toBe(1);
+      }
+    },
+  );
 });

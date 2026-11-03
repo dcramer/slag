@@ -388,6 +388,12 @@ class Hasher {
     if (v === null || v === undefined) return this.int(0x6e756c6c);
     switch (typeof v) {
       case 'number':
+        // A NaN's bits are up to the engine (sign, payload, whether a typed-array store canonicalizes it), so every NaN
+        // hashes as one: otherwise two peers in sync could disagree on the hash of the same state.
+        if (Number.isNaN(v)) {
+          this.int(0x7ff80000);
+          return;
+        }
         HF[0] = v;
         this.int(HU[0]);
         this.int(HU[1]);

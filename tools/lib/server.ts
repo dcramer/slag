@@ -219,6 +219,39 @@ export async function launchBrowser(extraArgs: string[] = []): Promise<Browser> 
   return chromium.launch({ executablePath, args: [...gl, ...extraArgs] });
 }
 
+export const ENGINES = ['chromium', 'firefox', 'webkit'] as const;
+export type Engine = (typeof ENGINES)[number];
+
+/**
+ * A headless browser of any engine. Chromium is `launchBrowser` (software GL, `chromiumArgs`). Firefox shows real
+ * host ICE candidates instead of mDNS names, which don't resolve between headless contexts, the same reason
+ * online-test turns them off in Chromium. WebKit needs `pnpm exec playwright install webkit` and its system
+ * libraries (`playwright install-deps webkit`).
+ */
+export async function launchEngine(engine: Engine, chromiumArgs: string[] = []): Promise<Browser> {
+  if (engine === 'chromium') return launchBrowser(chromiumArgs);
+  const pw = await import('playwright');
+  if (engine === 'firefox')
+    return pw.firefox.launch({
+      firefoxUserPrefs: {
+        'media.peerconnection.ice.obfuscate_host_addresses': false,
+        'media.navigator.permission.disabled': true,
+        'media.peerconnection.ice.loopback': true,
+        // A hung page stands in for a crashed one (online-test), so never offer to stop its script.
+        'dom.max_script_run_time': 0,
+      },
+    });
+  return pw.webkit.launch();
+}
+
+/** `--engines chromium,firefox` → the engines named, in that order; every engine when absent. */
+export function engineList(arg: string | undefined, fallback: readonly Engine[] = ENGINES): Engine[] {
+  if (!arg) return [...fallback];
+  const names = arg.split(',').filter(Boolean);
+  for (const n of names) if (!(ENGINES as readonly string[]).includes(n)) throw new Error(`unknown engine ${n}: expected ${ENGINES.join(', ')}`);
+  return names as Engine[];
+}
+
 /** Tiny `--key value` / `--flag` argv reader. */
 export function argReader(argv: string[]) {
   return {
