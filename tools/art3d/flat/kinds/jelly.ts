@@ -16,6 +16,8 @@ export const kind: FlatKind = {
       ['rim', [216, 244, 206]],
       ['rim', [232, 246, 218]],
       ['rim', [218, 237, 208]],
+      // The plate's shaded underside: as the dome's highlight it hung a lobe of the dome's colour on a hook.
+      ['rim', [164, 208, 170]],
       ['red', [187, 64, 56]],
       ['red', [170, 48, 42]],
       ['red', [182, 98, 83]],

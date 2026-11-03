@@ -11,31 +11,31 @@ export const kind: FlatKind = {
       ['tin', [170, 186, 188]],
       ['tin', [126, 140, 142]],
       ['tin', [192, 192, 196]],
+      // The tail's crumpled highlights are cool and the plug warm: one pale family took both, and orange
+      // plugs left orange slivers along the tail.
+      ['tin', [218, 222, 228]],
+      // The ear's tape is a neutral grey, and the fur's highlight a pale yellow: both were nearest the plug's shade.
+      ['tin', [160, 160, 162]],
+      ['tin', [204, 204, 206]],
+      ['fur', [246, 222, 124]],
       ['cheek', [216, 76, 54]],
-      ['plug', [236, 230, 218]],
+      ['plug', [216, 210, 194]],
+      ['plug', [190, 178, 158]],
       ['dark', [30, 20, 16]],
     ],
     line: 'dark',
     thin: ['tin'],
     feet: ['fur'],
     loose: ['tin'],
-    min: { dark: 0.12, cheek: 0.3, plug: 0.35 },
+    min: { dark: 0.12, cheek: 0.3, plug: 0.8 },
   },
   eyes: { role: 'dark', area: [0.06, 0.7], gap: [2, 5.5], specks: { dark: 1.2, cheek: 0.35 } },
   recolour: { from: 'dark', to: 'cord', below: 2.5, lying: [0.4, -4] },
   wear: {
     on: ['fur'],
     chin: 4.5,
-    marks: [
-      [
-        ['scuff', 0.32, 0.8, 1.1],
-        ['scuff2', 0.68, 0.7, 0.8],
-      ],
-      [
-        ['scorch', 0.38, 0.78, 1.4],
-        ['scuff2', 0.7, 0.72, 0.75],
-      ],
-    ],
+    // One mark a wear: two on the belly read as a rash of rings and blobs.
+    marks: [[['scuff', 0.3, 0.8, 0.95]], [['scorch', 0.68, 0.76, 1.0]]],
   },
   accessories: [{ slot: 'tape', role: 'tape', at: 'crown', size: [2.9, 0.85] }],
   roles: [
@@ -47,9 +47,8 @@ export const kind: FlatKind = {
     { name: 'cheek', color: '#e0473b' },
     { name: 'dark', color: '#2a1f1a' },
     // Wear, in tones of the fur it's on: rubbed pale, and burnt.
-    { name: 'scuff', color: '#808080', on: 1, tone: 9 },
-    { name: 'scuff2', color: '#808080', on: 1, tone: 13 },
-    { name: 'scorch', color: '#808080', on: 1, tone: -24 },
+    { name: 'scuff', color: '#808080', on: 1, tone: 10 },
+    { name: 'scorch', color: '#808080', on: 1, tone: -16 },
     { name: 'tape', color: '#c9c6bd' },
   ],
   slots: [
