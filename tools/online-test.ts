@@ -58,6 +58,7 @@ import { overview, type ViewXform, worldToView } from '../src/game/view';
 import { generateLevel } from '../src/gen/level';
 import { TILE } from '../src/sim/constants';
 import { spawnZone, T_EMPTY, T_SOLID, tileAt } from '../src/sim/level';
+import { menuControls, pressMenu, waitMenu } from './lib/menu';
 import { type Engine, engineList, launchEngine, startServer } from './lib/server';
 
 const argv = process.argv.slice(2);
@@ -1784,7 +1785,8 @@ async function hostRate(host: Page, ms = 3000): Promise<number> {
 
 /** Host, guest and two watchers (one on a phone) through a round; then someone arrives mid-race and Joins. */
 async function observeScenario(browser: Browser, base: string) {
-  const r = await newRoom(browser, base, 'observe', '');
+  // A desktop-sized window: the default 480×270 lays the lobby out as a phone's, where Watch moves to Settings.
+  const r = await newRoom(browser, base, 'observe', '', { viewport: { width: 960, height: 540 } });
   const A = await r.open('A');
   const a0 = await waitFor(A, 'host', (v) => v.status === 'online' && v.isHost);
   const B = await r.open('B');
@@ -1817,15 +1819,14 @@ async function observeScenario(browser: Browser, base: string) {
   // A color picked on the name screen: on every peer, and nobody else can pick it.
   await setDrawing(A, true);
   await clickHud(A, 'name');
-  await A.waitForSelector('.slag-swatch', { timeout: 15_000 });
-  const pick = await A.evaluate(() => {
+  await waitMenu(A, 'name', 15_000);
+  const mine = await A.evaluate(() => {
     const d = (window as any).slagDebug;
-    const me = d.match.players.find((p: any) => p.device.startsWith(`${d.net.self}:`));
-    const all = [...document.querySelectorAll<HTMLButtonElement>('.slag-swatch')];
-    const i = all.findIndex((b, k) => !b.disabled && k !== me.character.color);
-    all[i]?.click();
-    return i;
+    return d.match.players.find((p: any) => p.device.startsWith(`${d.net.self}:`)).character.color as number;
   });
+  const swatch = (await menuControls(A)).find((c) => c.id.startsWith('color:') && !c.disabled && c.id !== `color:${mine}`);
+  if (swatch) await pressMenu(A, swatch.id);
+  const pick = swatch ? Number(swatch.id.slice('color:'.length)) : -1;
   await r.shot(A, 'name-screen-colors');
   await A.keyboard.press('Escape');
   const colorOf = (p: Page, peer: string) =>
@@ -2092,12 +2093,13 @@ async function browseScenario(browser: Browser, base: string) {
   await setDrawing(A, true);
   await sleep(1000); // drawn at the new size, so the HUD's buttons are where they now are
   if (await clickHud(A, 'rules')) {
-    await A.click('.slag-sheet button:text-is("Private")');
+    await waitMenu(A, 'rules');
+    await pressMenu(A, 'Lobby: Private');
     await sleep(300); // past the chips' colour transition
     const card = `${out}/online-browse-rules.png`;
     await A.screenshot({ path: card });
     console.log(`     ${card}`);
-    await A.click('.slag-sheet button:text-is("Done")');
+    await pressMenu(A, 'f:done');
   }
   await setDrawing(A, false);
   await sleep(300);

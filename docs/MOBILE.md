@@ -118,7 +118,7 @@ A phone squeezes the play view into ~570–720 CSS px, so a tile is ~12 px. The 
 
 ## Settings on phones
 
-At 760 CSS px wide or 520 tall, Settings and Match Rules become a full-screen sheet (`.slag-sheet` in `src/ui/menus/overlay.ts`): safe-area padding, rows of at least 60 px, buttons of at least 48 px, bigger slider thumbs and switches, and a panel that scrolls. In landscape, Done and Leave Lobby share the tab row, so the rows keep the height.
+The menus are canvas (`src/ui/kit/`), laid out in units of at least 1.4 CSS px on a touch-first device, so a phone gets less room to lay out in rather than smaller type. When the card won't fit, Settings, Match Rules and the name screen fill the window as a sheet (`Ui.sheet`), and their pages scroll under a finger. Every control is at least 44 CSS px, in its art and its hit rect (`Ui.tap`).
 
 ## Layout
 
@@ -137,7 +137,7 @@ At 760 CSS px wide or 520 tall, Settings and Match Rules become a full-screen sh
   - `gesturestart` and `dblclick` cancelled
   - no user-select, callouts or tap highlight
   - `maximum-scale=1, user-scalable=no` on the game route only, so `/codex` stays zoomable
-- DOM menus (`.slag-ov`) and overlay buttons (`[data-slag-ui]`) are excluded from game touch handling. While a menu is open (`input.captured`), touch is reset and ignored.
+- The menu canvas and overlay buttons (`[data-slag-ui]`) are excluded from game touch handling. While a menu is open (`input.captured`), touch is reset and ignored.
 
 ## Performance knobs
 

@@ -1,12 +1,15 @@
-import { nameBlocked } from '../../core/name-filter';
-import { connectedPads } from '../../input/input';
-import { type CharacterDef, PLAYER_COLORS } from '../../gen/character';
 import { css } from '../../core/color';
+import { nameBlocked } from '../../core/name-filter';
+import { type CharacterDef, PLAYER_COLORS } from '../../gen/character';
+import type { InputManager } from '../../input/input';
+import { track } from '../../render/hud-kit';
 import { drawInkRunner } from '../../render/ink-character';
+import { CanvasMenu } from '../kit/menu';
+import { domTextEntry, memoryTextEntry, type TextEntry } from '../kit/text-entry';
+import type { Ui } from '../kit/ui';
 import { sanitizeName } from '../profile';
-import { KEY_ACTIONS, type MenuAction, MenuPadReader, navTarget, readMenuPad } from '../settings-nav';
-import { PAL } from '../style';
-import { el, Overlay } from './overlay';
+import type { MenuAction } from '../settings-nav';
+import { FONT, PAL } from '../style';
 
 /** What the name screen shows and changes: the name, and the color the player wears. */
 export interface NameScreen {
@@ -24,170 +27,141 @@ export interface NameScreen {
   onDone(name: string | null): void;
 }
 
-/** Spoken names for the swatches, for screen readers: the swatch itself says it to everyone else. */
+/** Spoken names for the swatches: the swatch itself says it to everyone else. */
 const COLOR_NAMES = ['Red', 'Orange', 'Yellow', 'Lime', 'Green', 'Teal', 'Sky', 'Blue', 'Violet', 'Purple', 'Pink'];
 
-const CSS = `
-.slag-namecard .slag-actions .slag-btn{min-height:44px}
-.slag-who{display:flex;gap:16px;align-items:center;margin-top:10px}
-.slag-who canvas{flex:none;width:112px;height:112px;border-radius:6px;background:radial-gradient(circle at 50% 78%,rgba(255,120,40,.28),rgba(20,12,8,.0) 60%),${PAL.soot};border:2px solid ${PAL.ink};box-shadow:inset 0 3px 0 rgba(0,0,0,.4)}
-.slag-who .slag-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:12px}
-.slag-swatches{display:flex;flex-wrap:wrap;gap:6px}
-.slag-swatch{all:unset;display:block;flex:none;box-sizing:border-box;position:relative;width:44px;height:44px;border-radius:6px;border:2px solid ${PAL.ink};box-shadow:0 3px 0 ${PAL.ink},inset 0 -6px 0 rgba(0,0,0,.18);cursor:pointer;transition:transform .06s,box-shadow .06s}
-.slag-swatch:hover{transform:translateY(-1px)}
-.slag-swatch:active{transform:translateY(2px);box-shadow:0 1px 0 ${PAL.ink}}
-.slag-swatch[aria-pressed=true]{outline:3px solid ${PAL.bone};outline-offset:2px}
-.slag-swatch:focus-visible{outline:3px solid ${PAL.amber};outline-offset:2px}
-.slag-swatch[aria-pressed=true]:focus-visible{outline-color:${PAL.amber}}
-.slag-swatch:disabled{cursor:default;filter:saturate(.35) brightness(.55);box-shadow:inset 0 3px 0 rgba(0,0,0,.4)}
-.slag-swatch:disabled::after{content:"";position:absolute;inset:8px;background:linear-gradient(45deg,transparent 45%,${PAL.ink} 45% 55%,transparent 55%),linear-gradient(-45deg,transparent 45%,${PAL.ink} 45% 55%,transparent 55%)}
-@media (max-width:520px){.slag-who{flex-direction:column;align-items:stretch}.slag-who canvas{align-self:center}}
-@media (max-height:520px){.slag-who canvas{width:96px;height:96px}.slag-who{margin-top:4px}}
-`;
-
-let styled = false;
-function ensureStyle() {
-  if (styled) return;
-  styled = true;
-  const st = document.createElement('style');
-  st.textContent = CSS;
-  document.head.appendChild(st);
-}
+const MAX_NAME = 12;
 
 /**
  * Who you are: your name, with the random one a click away, and your color from the player palette, shown
  * live on your character. Mouse, touch, keys (arrows between controls, Enter, Esc) and any pad (the d-pad
  * or stick, Ⓐ, Ⓑ).
  */
-export class NamePrompt extends Overlay {
-  private raf = 0;
-  private pads: MenuPadReader | null = null;
-  private keys: ((e: KeyboardEvent) => void) | null = null;
+export class NamePrompt extends CanvasMenu {
+  private s: NameScreen | null = null;
+  private picked: number | undefined;
+  private entry: TextEntry | null = null;
+
+  constructor(input: Pick<InputManager, 'captured' | 'capturePads'>) {
+    super(input, 'name');
+  }
 
   open(s: NameScreen) {
-    ensureStyle();
-    let picked: number | undefined;
-    const input = el('input', { className: 'slag-input', value: s.current ?? s.randomName, maxLength: 12, placeholder: s.randomName });
-    input.setAttribute('aria-label', 'Your name');
-    const finish = (name: string | null) => {
-      s.onDone(name);
-      this.close();
-    };
-    const ok = el('button', { className: 'slag-btn primary', type: 'button', textContent: 'Save' });
-    ok.onclick = () => {
-      const name = sanitizeName(input.value);
-      if (!nameBlocked(name)) return finish(name || null);
-      // Refused: the field goes back to the name you had, with nothing said.
-      input.value = s.current ?? s.randomName;
-      input.select();
-    };
-    const keep = el('button', { className: 'slag-btn', type: 'button', textContent: `Keep “${s.randomName}”` });
-    keep.onclick = () => finish(null);
-    const swatches = PLAYER_COLORS.map((c, i) => {
-      const b = el('button', { className: 'slag-swatch', type: 'button' });
-      b.style.background = css(c);
-      b.setAttribute('aria-label', COLOR_NAMES[i] ?? `Color ${i + 1}`);
-      b.onclick = () => {
+    this.close();
+    this.s = s;
+    this.picked = undefined;
+    this.entry =
+      typeof document === 'undefined'
+        ? memoryTextEntry()
+        : domTextEntry({
+            maxLength: MAX_NAME,
+            label: 'Your name',
+            onKey: (e) => this.fieldKey(e),
+            onFocus: () => this.ui.select('name'),
+          });
+    this.entry.value = s.current ?? s.randomName;
+    this.entry.selectAll();
+    this.mount();
+    this.ui.select('name');
+  }
+
+  protected override closed() {
+    this.entry?.dispose();
+    this.entry = null;
+  }
+
+  act(a: MenuAction) {
+    if (a === 'back') this.close();
+  }
+
+  /** Keys while typing: the field keeps letters and the caret keys, the menu takes the rest. */
+  private fieldKey(e: KeyboardEvent): boolean {
+    if (e.key === 'Enter') this.save();
+    else if (e.key === 'Escape') this.close();
+    else if (e.key === 'ArrowDown') this.send('down');
+    else if (e.key === 'Tab') this.ui.cycle(e.shiftKey);
+    else return false;
+    return true;
+  }
+
+  private finish(name: string | null) {
+    this.s?.onDone(name);
+    this.close();
+  }
+
+  private save() {
+    const s = this.s;
+    const entry = this.entry;
+    if (!s || !entry) return;
+    const name = sanitizeName(entry.value);
+    if (!nameBlocked(name)) return this.finish(name || null);
+    // Refused: the field goes back to the name you had, with nothing said.
+    entry.value = s.current ?? s.randomName;
+    entry.selectAll();
+    this.ui.select('name');
+  }
+
+  draw(ui: Ui) {
+    const s = this.s;
+    const entry = this.entry;
+    if (!s || !entry) return;
+    const ch = s.preview(this.picked);
+    const { inner } = ui.sheet(460, 320);
+    let y = inner.y;
+    if (ui.H >= 260) {
+      ui.text('YOUR NAME', inner.x, y + 12, 22, PAL.amber, 'left', 400, FONT.display);
+      y += 32;
+    }
+    const tap = Math.max(ui.tap, 26);
+    const btnH = Math.max(ui.tap, 28);
+    // The character beside the field and swatches, or above them on a narrow phone.
+    const narrow = inner.w < 330;
+    const box = narrow ? Math.min(84, inner.h - btnH - 2 * tap - 40) : Math.min(104, inner.w * 0.28);
+    const bx = narrow ? inner.x + (inner.w - box) / 2 : inner.x;
+    this.preview(ui, ch, bx, y, box);
+    const cx = narrow ? inner.x : inner.x + box + 14;
+    const cw = inner.x + inner.w - cx;
+    let cy = narrow ? y + box + 10 : y;
+    ui.field('name', { x: cx, y: cy, w: cw, h: Math.max(ui.tap, 32) }, 'Your name', entry, s.randomName, () => this.save());
+    cy += Math.max(ui.tap, 32) + 10;
+    const gap = 6;
+    const per = Math.max(1, Math.floor((cw + gap) / (tap + gap)));
+    PLAYER_COLORS.forEach((c, i) => {
+      const on = ch.color === i;
+      const free = on || s.free(i);
+      const r = { x: cx + (i % per) * (tap + gap), y: cy + Math.floor(i / per) * (tap + gap), w: tap, h: tap + 3 };
+      ui.swatch(`color:${i}`, r, COLOR_NAMES[i] ?? `Color ${i + 1}`, css(c), on, !free, () => {
         if (!s.free(i)) return;
-        picked = i;
+        this.picked = i;
         s.onColor(i);
-        paint();
-      };
-      return b;
-    });
-    const canvas = el('canvas', { width: 224, height: 224 });
-    canvas.setAttribute('aria-hidden', 'true');
-    const ctx = canvas.getContext('2d');
-    const card = el(
-      'div',
-      { className: 'slag-card slag-namecard' },
-      el('h2', { textContent: 'Your Name' }),
-      el('div', { className: 'slag-who' }, canvas, el('div', { className: 'slag-col' }, input, el('div', { className: 'slag-swatches' }, ...swatches))),
-      el('div', { className: 'slag-actions' }, keep, ok),
-    );
-    /** The swatches as the room has them now, and the character in the chosen one. */
-    const paint = (t = performance.now() / 1000) => {
-      const ch = s.preview(picked);
-      swatches.forEach((b, i) => {
-        const on = ch.color === i;
-        b.setAttribute('aria-pressed', String(on));
-        b.disabled = !on && !s.free(i);
       });
-      if (!ctx) return;
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawInkRunner({ s: ctx, g: null }, ch, canvas.width / 2, canvas.height * 0.82, {
-        facing: Math.sin(t * 0.8) > 0 ? 1 : -1,
+    });
+    const keep = `Keep “${ui.fit(s.randomName, 120, 11)}”`;
+    const by = inner.y + inner.h - btnH;
+    const sw = ui.buttonWidth('Save', { style: 'primary' }) + 12;
+    const kw = ui.buttonWidth(keep);
+    ui.button('keep', { x: inner.x + inner.w - sw - 8 - kw, y: by, w: kw, h: btnH }, keep, () => this.finish(null), { label: `Keep “${s.randomName}”` });
+    ui.button('save', { x: inner.x + inner.w - sw, y: by, w: sw, h: btnH }, 'Save', () => this.save(), { style: 'primary' });
+  }
+
+  /** The character in its chosen color, turning now and then to show both sides. */
+  private preview(ui: Ui, ch: CharacterDef, x: number, y: number, size: number) {
+    const c = ui.c;
+    track(c, x, y, size, size, (g) => {
+      g.fillStyle = 'rgba(255,120,40,0.18)';
+      g.beginPath();
+      g.ellipse(size / 2, size * 0.8, size * 0.42, size * 0.16, 0, 0, Math.PI * 2);
+      g.fill();
+      g.save();
+      drawInkRunner({ s: g, g: null }, ch, size / 2, size * 0.82, {
+        facing: Math.sin(ui.t * 0.8) > 0 ? 1 : -1,
         vx: 0,
         vy: 0,
         grounded: true,
-        t,
-        scale: 7,
+        t: ui.t,
+        scale: (size / 112) * 3.5,
       });
-    };
-    const items = (): HTMLElement[] => [input, ...swatches.filter((b) => !b.disabled), keep, ok];
-    const act = (a: MenuAction) => {
-      const cur = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-      if (a === 'back') this.close();
-      else if (a === 'confirm') (cur === input ? ok : cur)?.click();
-      else if (a === 'up' || a === 'down' || a === 'left' || a === 'right') {
-        const list = items();
-        const from = cur ? list.indexOf(cur) : -1;
-        if (from < 0) return input.focus();
-        const next = navTarget(
-          list.map((e) => e.getBoundingClientRect()),
-          from,
-          a,
-        );
-        if (next !== null) list[next].focus();
-      }
-    };
-    input.onkeydown = (e) => {
-      e.stopPropagation();
-      if (e.key === 'Enter') ok.click();
-      else if (e.key === 'Escape') this.close();
-      else if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        act('down');
-      }
-    };
-    this.keys = (e) => {
-      if (e.target === input || e.ctrlKey || e.metaKey || e.altKey) return;
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        return this.close();
-      }
-      const a = KEY_ACTIONS[e.code];
-      if (a && a !== 'prevTab' && a !== 'nextTab') {
-        e.preventDefault();
-        e.stopPropagation();
-        act(a);
-      }
-    };
-    this.mount(card);
-    window.addEventListener('keydown', this.keys, true);
-    this.pads = new MenuPadReader(readMenuPad(connectedPads()));
-    this.input.capturePads(true);
-    const frame = () => {
-      this.raf = requestAnimationFrame(frame);
-      for (const a of this.pads?.step(readMenuPad(connectedPads()), performance.now()) ?? []) act(a);
-      paint();
-    };
-    this.raf = requestAnimationFrame(frame);
-    paint();
-    setTimeout(() => {
-      input.focus();
-      input.select();
-    }, 0);
-  }
-
-  override close() {
-    cancelAnimationFrame(this.raf);
-    if (this.keys) window.removeEventListener('keydown', this.keys, true);
-    this.keys = null;
-    if (this.pads) this.input.capturePads(false);
-    this.pads = null;
-    super.close();
+      g.restore();
+    });
   }
 }

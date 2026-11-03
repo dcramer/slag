@@ -1,5 +1,6 @@
 import { css } from '../../core/color';
-import type { Match, Player } from '../../game/match';
+import { isBotDevice } from '../../brain/device';
+import { botLevelLabel, type Match, type Player } from '../../game/match';
 import { MAX_PLAYERS, VIEW_H, VIEW_W } from '../../sim/constants';
 import { THEME_LABELS } from '../../themes';
 import { drawGlyph, type Glyph } from '../../ui/glyphs';
@@ -101,6 +102,12 @@ export function lobby(hud: Hud, m: Match, t: number, dt: number) {
         (joinable && hud.button({ x, y, w: bw, h: bh, action: 'join', device: hud.mouseDevice })) ||
         (joinable && hud.mode === 'touch' && i === m.players.length);
       bay(c, x, y, bw, bh, hover, t);
+      // The first open bay can take a bot instead of a person. Its hit area, a thumb tall on a phone, stays inside the bay.
+      if (hud.canAddBots && i === m.players.length) {
+        const reach = Math.max(24, hud.tap);
+        const mid = Math.min(y + bh - (bh > 200 ? 28 : 20), y + bh - 2 - reach / 2);
+        hud.btn({ x: x + bw / 2 - 44, y: mid - 12, w: 88, h: 24, action: 'bot' }, 'Add Bot', 'ghost', undefined, TYPE.label);
+      }
       hud.text('OPEN', x + bw / 2, y + bh / 2 - (hover ? 8 : 4), bh > 200 ? 26 : 22, hover ? PAL.amber : PAL.dim, 'center', DISPLAY, 400);
       if (hover) {
         const gx = x + bw / 2 - 18;
@@ -260,7 +267,7 @@ function playerCard(hud: Hud, p: Player, i: number, x: number, y: number, w: num
   const lw = c.measureText(label).width;
   hud.text(label, x + w - 10, y + 17.5, TYPE.caption, PAL.ash, 'right', UI, 600);
   if (p.device.endsWith('touch')) drawGlyph(c, { kind: 'touch' }, x + w - 24 - lw, y + 17.5, 11);
-  else icon(c, pad ? 'gamepad' : 'keyboard', x + w - 18 - lw, y + 17.5, 9, PAL.ash);
+  else if (!isBotDevice(p.device)) icon(c, pad ? 'gamepad' : 'keyboard', x + w - 18 - lw, y + 17.5, 9, PAL.ash);
   hud.text(p.character.name, cx, ny, nsize, nameHover ? PAL.amber : PAL.bone, 'center', DISPLAY, 400, 3.5);
   if (editable) {
     icon(c, 'pencil', cx + nw / 2 + 8, ny, 8, nameHover ? PAL.amber : PAL.dim);
@@ -276,7 +283,7 @@ function playerCard(hud: Hud, p: Player, i: number, x: number, y: number, w: num
     // Online, your own bay can give up its seat to watch: beside the dice, never in the way of Ready. A bay too
     // narrow for both leaves Watch to the Settings menu, which always has it.
     let watch = !!hud.net && !hud.net.offline;
-    if (watch && leftOf(1) - (x + 10) < 76) watch = false;
+    if (watch && phone && leftOf(1) - (x + 10) < 76) watch = false;
     const readyW = leftOf(watch ? 1 : 0) - (x + 10);
     hud.btn(
       { x: x + 10, y: by, w: readyW, h: bh, action: 'ready', device: p.device },
@@ -287,6 +294,15 @@ function playerCard(hud: Hud, p: Player, i: number, x: number, y: number, w: num
     );
     if (watch) hud.btn({ x: slot(1) - sw / 2, y: by, w: sw, h: bh, action: 'watch', device: p.device }, '', 'secondary', 'eye');
     hud.btn({ x: slot(0) - sw / 2, y: by, w: sw, h: bh, action: 'look', device: p.device }, '', 'secondary', 'dice');
+    return;
+  }
+  if (hud.ownsBot(p.device)) {
+    // A bot you run: its level (a click for the next) and Remove at the right end. It readies itself, and its edge says so.
+    const rw = 60;
+    const rx = x + w - Math.max(10 + rw / 2, 2 + Math.max(rw, tap) / 2);
+    const levelW = rx - Math.max(rw, tap) / 2 - 4 - (x + 10);
+    hud.btn({ x: x + 10, y: by, w: levelW, h: bh, action: 'botLevel', device: p.device }, botLevelLabel(p.bot ?? 'normal'), 'secondary', undefined, TYPE.label);
+    hud.btn({ x: rx - rw / 2, y: by, w: rw, h: bh, action: 'unbot', device: p.device }, 'Remove', 'ghost', undefined, TYPE.label);
     return;
   }
   // Someone else's: their status, and the host's Kick at the right end.

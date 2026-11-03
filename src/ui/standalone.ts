@@ -22,20 +22,14 @@ export function openStandaloneSettings(onClose: () => void): () => void {
   let closed = false;
   menu.onClose = () => {
     closed = true;
-    window.removeEventListener('keydown', onKey);
     input.dispose();
     onClose();
   };
-  const onKey = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') menu.close();
-  };
-  window.addEventListener('keydown', onKey);
   menu.open();
   return () => {
     if (!closed) {
       menu.onClose = null;
       menu.close();
-      window.removeEventListener('keydown', onKey);
       input.dispose();
     }
   };

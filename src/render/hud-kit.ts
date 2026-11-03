@@ -359,13 +359,14 @@ export function hazardTape(c: Ctx, x: number, y: number, w: number, h: number, a
 // ---------------------------------------------------------------------------------------------------
 // Buttons and tags
 
-export type ButtonStyle = 'primary' | 'secondary' | 'ready' | 'ghost';
+export type ButtonStyle = 'primary' | 'secondary' | 'ready' | 'ghost' | 'danger';
 
 const BTN: Record<ButtonStyle, { top: string; hot: string; side: string; text: string }> = {
   primary: { top: '#ff8a2a', hot: '#ffa04f', side: '#a8320c', text: PAL.ink },
   secondary: { top: '#4a3a31', hot: '#5d4a3e', side: '#1e1511', text: PAL.bone },
   ready: { top: '#a6e22e', hot: '#b5e852', side: '#4b7410', text: PAL.ink },
   ghost: { top: 'rgba(43,32,27,0.85)', hot: '#5d4a3e', side: 'rgba(14,9,7,0.85)', text: PAL.bone },
+  danger: { top: '#6a2216', hot: '#84301f', side: '#2c0c06', text: PAL.bone },
 };
 
 /**
@@ -396,6 +397,15 @@ export function stampButton(c: Ctx, x: number, y: number, w: number, h: number, 
     }
   });
   return sink;
+}
+
+/** The pen ring a hovered button wears, round any box: what the menus put round the control that's selected. */
+export function ring(c: Ctx, x: number, y: number, w: number, h: number, color: string = PAL.amber) {
+  baked(c, `rg|${w}|${h}|${color}`, x, y, w, h, 6, (g) => {
+    const seed = sizeSeed(w, h) + 43;
+    g.fillStyle = color;
+    penLoop(g, cutPts(-2.6, -2.6, w + 5.2, h + 5.2, Math.min(7, h / 3) + 2, seed), seed, 0.9, 1.5);
+  });
 }
 
 export function buttonText(style: ButtonStyle): string {

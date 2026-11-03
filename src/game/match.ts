@@ -42,6 +42,15 @@ import { type RoundResult, scoreRound } from './scoring';
 
 export type Phase = 'lobby' | 'pick' | 'place' | 'run' | 'score' | 'victory';
 
+/** How well a bot plays (src/brain/personality.ts). The match only keeps it so every peer's card shows it. */
+export type BotLevel = 'easy' | 'normal' | 'hard';
+
+export const BOT_LEVELS: readonly BotLevel[] = ['easy', 'normal', 'hard'];
+
+export function botLevelLabel(v: BotLevel): string {
+  return v === 'easy' ? 'Easy' : v === 'hard' ? 'Hard' : 'Normal';
+}
+
 export interface Player {
   slot: number;
   device: string;
@@ -82,6 +91,8 @@ export interface Player {
   afkRounds?: number;
   /** Online: going to watch. Plays out the round, then leaves the match as the race is scored. */
   leaving?: boolean;
+  /** A bot's level, set by whoever runs it; absent is Normal (and on everyone else's seat, means nothing). */
+  bot?: BotLevel;
 }
 
 /** No input for this long in an untimed pick, place or race (counted from the phase's start): the phase stops waiting on you. A timer already ends the wait, so a timed phase never marks anyone AFK. */

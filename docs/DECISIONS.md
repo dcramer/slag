@@ -311,6 +311,17 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 23:20Z · `planned` · DESIGN.md → AI players, TODO.md → 27
 - **Leaning: scripts sense an idea of values, not the literal values (rounded positions, speed bands, outcomes from the lookahead).** "i think scripts should maybe get an idea for values but not literal values?"
   2026-11-02 23:22Z · `open` · DESIGN.md → AI players
+- **Start the AI with phase 1: built-in bots that race, pick and place, added by the lobby's host.** "id like to start working on the AI" / "Yes, start phase 1"
+  2026-11-03 · `in progress` · DESIGN.md → AI players, TODO.md → 27, src/brain/
+- **A bot with no real way on jumps for it anyway, and self-destructs when that gets it nowhere.** "their brain should have them kill themselves if theres no real option or somethig idk ("try to jump anyways")"
+  2026-11-03 · `in progress` · DESIGN.md → AI players, src/brain/brains/runner.ts
+- **Bots take their time picking a card (read the crate, point at one or two), unless they're on a harder setting.** "their item selection should maybe slow down unless they're on a harder setting?"
+  2026-11-03 02:50Z · `in progress` · `TEMPO` in src/brain/brains/runner.ts, scaled by each bot's pace
+- **Bots play with some variety, and have a difficulty.** "yeah make it a little bit of variability, and we could have difficulty tuning too for future? idk or for now tbqh"
+  2026-11-03 · `in progress` · DESIGN.md → AI players, src/brain/personality.ts
+- **Each bot's difficulty is set on its own card, not for the room.** "each bot should let you tweak its difficulty somehow on the character panel"
+  2026-11-03 · `in progress` · DESIGN.md → AI players; `Player.bot`, the `bot` action
+  Changed: a room-wide Bots rule in the Rules menu, replaced before it landed.
 - **Each theme has at least 1 and at most 3 grand landmarks among its 5+.** "id like at least one grand landmark, no more than 3 (in the min 5 landmarks)"
   2026-11-02 · `done` (enforced) · `GRAND_LANDMARKS` in src/gen/kinds.ts, tests/conformance/themes.test.ts
 - **The cast needs much more parody, and each parody must be instantly recognisable; the art must improve further.** "its better but you still need more parody and the art needs to be better yet..." / "the only thing that remotely resembles the thing its mimicking is the puff ball (kirby)". Iconic palettes win over the player-colour body rule; the player's colour moves to a visible secondary slot.
@@ -625,6 +636,10 @@ Every game design decision, preference and direction the owner has given, groupe
 - **pnpm is the package manager and Node 24 the runtime; pnpm settings live in `pnpm-workspace.yaml`.** "get this fixed up"
   2026-11-02 02:46Z · `done` · AGENTS.md → Commands
   Changed: npm, then Node 22 (`6ebfbd4`).
+- **A standalone build is a native game binary, not the web page in a bundled browser: Electron is out.** "lol electron is not a good solution", "thats not how you package games tho"
+  2026-11-02 · `open` · TODO.md → 30
+- **The menus move onto the game's own canvas renderer, so a native host needs no DOM for them: first a widget kit and Settings, with the Name and Rules menus.** "we can redo the menus using the same renderer?", "Yes, start there"
+  2026-11-02 · `in progress` · AGENTS.md → Where things live, ART.md → UI, TODO.md → 30
 
 ## Tooling and process
 

@@ -1,9 +1,11 @@
 import 'client-only';
 import { pageAudio } from './audio/page';
+import { BotSeats } from './brain/bots';
+import { isBotDevice } from './brain/device';
 import { parseSeed } from './core/rng';
 import { installDebug } from './debug';
 import { type GenInfo, lastGenInfo } from './gen/level';
-import { Match, planMisses, rulesProfile } from './game/match';
+import { BOT_LEVELS, botLevelLabel, Match, planMisses, rulesProfile } from './game/match';
 import { roomSeed } from './game/room';
 import { loadRules, saveRules } from './game/rules';
 import { InputManager } from './input/input';
@@ -19,7 +21,7 @@ import { type CharacterDef, generateCharacter, PLAYER_COLORS, withColor } from '
 import type { InputFrame } from './sim/types';
 import { Renderer } from './render/renderer';
 import type { Level } from './sim/level';
-import { DT, POP_HOLD } from './sim/constants';
+import { DT, MAX_PLAYERS, POP_HOLD } from './sim/constants';
 import { addBreadcrumb, reportEvent, setContext, setTelemetryContext, type TelemetryContext, type TelemetryData } from './telemetry';
 import { THEME_IDS } from './themes';
 import { InputModeTracker } from './ui/input-mode';
@@ -100,8 +102,16 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
   const net = conn.net;
   const myDevice = () => net.globalDevice(input.pointerDevice);
   const localDev = (d: string) => (net.isLocal(d) && d.includes(':') ? d.slice(d.indexOf(':') + 1) : d);
+  /** Bots this machine runs: seated as its own devices, so their inputs travel like a second keyboard's. */
+  const bots = new BotSeats();
+  renderer.hud.ownsBot = (d) => net.isLocal(d) && bots.has(localDev(d));
   renderer.hud.devices = {
-    deviceLabel: (d) => (net.isLocal(d) ? input.deviceLabel(localDev(d)) : 'online'),
+    deviceLabel: (d) =>
+      isBotDevice(d)
+        ? `${botLevelLabel(match.players.find((p) => p.device === d)?.bot ?? 'normal')} Bot`
+        : net.isLocal(d)
+          ? input.deviceLabel(localDev(d))
+          : 'online',
     hints: (d) => input.hints(net.isLocal(d) ? localDev(d) : 'pad0'),
     isLocal: (d) => net.isLocal(d),
     get settings() {
@@ -114,7 +124,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
   const inputMode = new InputModeTracker(window);
   watchTelemetry(room, match, conn, renderer);
 
-  // --- local menus (DOM overlays) and profile ---------------------------------
+  // --- local menus (canvas, src/ui/kit) and profile ----------------------------
   const settingsMenu = new SettingsMenu(input, audio);
   settingsMenu.leave = () => nav.go(HOME);
   // Watch is here, a menu away, so it's never pressed by accident mid-race; the lobby card has it too.
@@ -239,6 +249,21 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
         return true;
       case 'kick':
         if (b.device) conn.kick(b.device);
+        return true;
+      case 'bot':
+        if (canAddBots()) net.act({ t: 'join', dev: net.globalDevice(bots.add(match)) });
+        return true;
+      case 'botLevel': {
+        const p = match.players.find((q) => q.device === b.device);
+        if (p && renderer.hud.ownsBot(p.device))
+          net.act({ t: 'bot', dev: p.device, level: BOT_LEVELS[(BOT_LEVELS.indexOf(p.bot ?? 'normal') + 1) % BOT_LEVELS.length] });
+        return true;
+      }
+      case 'unbot':
+        if (match.phase === 'lobby' && b.device && renderer.hud.ownsBot(b.device)) {
+          net.act({ t: 'leave', dev: b.device });
+          bots.remove(localDev(b.device));
+        }
         return true;
       case 'invite': {
         const url = conn.inviteUrl;
@@ -461,8 +486,15 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     hoverKey = key;
   }
 
+  /** The lobby's host (or an offline game), seated itself, with a seat to spare. */
+  function canAddBots(): boolean {
+    return (
+      match.phase === 'lobby' && (net.isHost || !net.transport) && match.players.some((p) => p.device === myDevice()) && match.players.length < MAX_PLAYERS
+    );
+  }
+
   const loop = { paused: false };
-  installDebug(match, renderer, loop, net, life.signal);
+  installDebug(match, renderer, loop, net, life.signal, bots);
   // The main menu's logo, laid over the HUD's top bar wherever the HUD puts it, every rendered frame (stepped ones too).
   const logo = new FloatingLogo(container);
   renderer.placeLogo = (box) => logo.place(box);
@@ -516,6 +548,10 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
       if (seatAction) runAction(seatAction);
       conn.lobbyInput(frames);
       nameInput(frames);
+      Object.assign(
+        frames,
+        bots.frames(match, (d) => net.globalDevice(d)),
+      );
       net.tick(frames);
       acc -= DT;
     }
@@ -538,6 +574,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     renderer.hud.pointer = input.touch.active ? null : input.pointerPos; // no hover highlights under a finger
     uiHover();
     renderer.hud.mouseDevice = myDevice();
+    renderer.hud.canAddBots = canAddBots();
     renderer.hud.net = conn.hudInfo();
     conn.toast((msg) => renderer.hud.toast(msg, 3000, true)); // every net toast is bad news
     inputMode.update();

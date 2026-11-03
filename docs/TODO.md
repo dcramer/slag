@@ -14,12 +14,13 @@ Every rendered kind is drawn flat now (`tools/art3d/`, playbook in its README an
 ## 27. AI players and player scripts (future)
 Brains that fill seats by producing inputs, built in or written by players. Design: `docs/DESIGN.md` → AI players. Native AI first (phases 1–2); scripts after. Each phase is one agent, in order.
 
-1. **Brain and motor, racing only.** The `Brain` interface, `BrainView` v1, a `BRAINS` registry and a motor that replays `src/sim/reach.ts` policies as intents. A built-in brain follows the reach route and replans around hazards. Bots fill local seats. A test runs a headless match and checks a bot finishes a few solvable levels; finish rates over many seeds go in `tests/stats/`.
-2. **Pick, place and personality.** Pick by role and the round's state; place to trap rivals without stranding itself; parts may seal the level, so a bot should avoid sealing its own way unless it holds a bomb. Personality rolled from a seed (reaction, precision, risk, spite), with a generated name. Host-owned bot seats online, moving with host migration.
+Phase 1 is in (`src/brain/`): a bot alone with the plan built finishes 73 of 100 levels at Easy, 87 at Normal and 90 at Hard (`tests/stats/bot-finish.test.ts`). Left over from it, for phase 2: shots that steer or bounce and hazards set off by runners aren't forecast; a way the route counts on that's shut when the bot gets there (a door on its cycle) sends it on a leap of faith rather than waiting for it; a second bridge with the plan's spots taken goes anywhere legal rather than somewhere it helps; the host must be seated to add bots.
+
+2. **Pick, place and spite.** Levels (Easy, Normal, Hard on a bot's card) and a personality per bot (reaction, slips, caution, patience, pace: `src/brain/personality.ts`) are in. Left: pick by role and the round's state; place to trap rivals without stranding itself (spite, a new trait); parts may seal the level, so a bot should avoid sealing its own way unless it holds a bomb. Host-owned bot seats online, moving with host migration.
 3. **Player scripts.** A Web Worker sandbox with a per-frame deadline, the published `brain-api.d.ts`, the Workshop screen (load, trial over seeds, report, replays) and `pnpm brain trial`.
 4. **Copy for Your AI.** The prompt pack: API, current script, worst failures from the last trial.
 
-- Decide with the owner: player scripts in online rooms and the lobby list, whether bots and scripts score, how far the lookahead sees, and whether senses name prop kinds.
+- Decide with the owner: player scripts in online rooms and the lobby list, whether bots and scripts score (today a bot scores and can win like anyone), how far the lookahead sees, and whether senses name prop kinds.
 
 ## 2. Online follow-ups
 Online play is on `main`, verified by real-browser checks in `pnpm online-test` and the Upstash-compatible `pnpm test:store`. See `docs/NETCODE.md`.
@@ -78,6 +79,13 @@ Some steps need the owner. Run after setting the Vercel env vars.
 
 ## 22. Glacier and space follow-ups
 Both themes are on `main`. Space has no weather. Ice skids and 0.55 space gravity are measured, not played by hand.
+
+## 30. Native build
+A real game binary that runs the same TypeScript in a native host (owner decision: no Electron). The sim and generators stay as they are, because lockstep crossplay with the web build needs the same code. Steps, one agent each:
+
+1. **The DOM screens onto canvas.** Settings, Rules and the name screen are canvas on `src/ui/kit/`. Next: the main menu, the lobby list, About, 404 and the error screen, then the codex. `homeHTML()` stays as the web build's first paint.
+2. **A version gate on join.** Peers from different builds desync today: `SNAP_VERSION` covers the snapshot format, not the generator. Join should refuse a peer whose build differs.
+3. **The native host.** SDL3 for the window, input, pads and audio out, a JS engine for the game, and only the browser APIs the game uses: Canvas2D (Skia), WebGL2 (ANGLE), Web Audio, WebRTC data channels (libdatachannel), and the kit's `TextEntry` over SDL text input. Online play uses `setSignalBase` and an origin allowlist (`docs/NETCODE.md` → Portability).
 
 ## 25. Idea: switchable art styles
 The owner called switching art styles "a fun gimmick" while making cel the only look (`docs/DECISIONS.md` → World art). It's not scheduled. If it comes back, cel stays the default and the switch is a novelty, never a setting players need.

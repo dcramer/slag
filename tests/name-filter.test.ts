@@ -11,9 +11,9 @@ import { NetSession } from '../src/net/session';
 import { cleanListing, DEFAULT_ICE, type LobbiesReply } from '../src/net/signal-protocol';
 import { hashMatch, restoreMatch, snapshotMatch } from '../src/net/snapshot';
 import { LoopbackHub, type TransportHandlers } from '../src/net/transport';
-import type { InputManager } from '../src/input/input';
 import { NamePrompt } from '../src/ui/menus/name';
 import { loadProfile } from '../src/ui/profile';
+import { MockPath, mockCtx } from './lib/canvas';
 
 // No word from the lists is spelled out here: every blocked case is built from the lists' own entries.
 const plain = (e: string) => e.replaceAll('*', '');
@@ -95,54 +95,25 @@ describe('the name filter', () => {
 describe('name entry', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  /** Just enough DOM for an overlay: elements are plain objects, and every one made is kept to find later. */
-  function stubDom() {
-    const made: Record<string, unknown>[] = [];
-    const node = () => ({
-      append() {},
-      appendChild() {},
-      remove() {},
-      setAttribute() {},
-      getAttribute() {},
-      addEventListener() {},
-      focus() {},
-      select() {},
-      getContext: () => null,
-      style: {},
-    });
-    // The name screen also polls the pads and paints its preview every frame: none of that runs here.
-    vi.stubGlobal('window', { addEventListener() {}, removeEventListener() {} });
-    vi.stubGlobal('requestAnimationFrame', () => 0);
-    vi.stubGlobal('cancelAnimationFrame', () => {});
-    vi.stubGlobal('document', {
-      createElement: (tag: string) => {
-        const e = { tag, ...node() };
-        made.push(e);
-        return e;
-      },
-      head: node(),
-      body: node(),
-    });
-    return made;
-  }
-
   it('refuses a listed name and keeps the one you had, with nothing said', () => {
-    const made = stubDom();
+    vi.stubGlobal('Path2D', MockPath);
     const done: (string | null)[] = [];
-    const prompt = new NamePrompt({ captured: false, capturePads() {} } as unknown as InputManager);
+    const prompt = new NamePrompt({ captured: false, capturePads() {} });
     const ch = generateCharacter(3);
     prompt.open({ randomName: 'Grimble', current: 'Dot', preview: () => ch, free: () => true, onColor() {}, onDone: (n) => done.push(n) });
-    const input = made.find((e) => e.tag === 'input') as { value: string };
-    const save = made.find((e) => e.textContent === 'Save') as { onclick: () => void };
-    input.value = EVASIONS.title(slur);
-    const before = made.length;
-    save.onclick();
+    prompt.frame(mockCtx(), 480, 300);
+    const field = prompt.ui.control('name')!.entry!;
+    const save = () => prompt.ui.control('save')!.press!();
+    const before = prompt.ui.controls.map((k) => k.id);
+    field.value = EVASIONS.title(slur);
+    save();
+    prompt.frame(mockCtx(), 480, 300);
     expect(done).toEqual([]);
-    expect(input.value).toBe('Dot');
+    expect(field.value).toBe('Dot');
     expect(prompt.isOpen).toBe(true);
-    expect(made.length).toBe(before); // no message put up
-    input.value = 'Ada';
-    save.onclick();
+    expect(prompt.ui.controls.map((k) => k.id)).toEqual(before); // no message put up
+    field.value = 'Ada';
+    save();
     expect(done).toEqual(['Ada']);
   });
 

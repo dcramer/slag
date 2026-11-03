@@ -8,6 +8,17 @@ export const shots: Scenarios = {
       const d = (window as any).slagDebug;
       for (const dev of ['kb1', 'kb2', 'pad0', 'pad1', 'pad2', 'pad3', 'pad4', 'pad5'].slice(0, n)) d.match.join(dev);
     }, players);
+    // `--bots 2`: that many built-in bots take the next seats (they ready themselves), at Easy, Normal, Hard in turn.
+    await page.evaluate(
+      (n) => {
+        const d = (window as any).slagDebug;
+        // Levels cycle Easy, Normal, Hard so the shot shows each card.
+        for (let i = 0; i < n; i++) d.addBot((['easy', 'normal', 'hard'] as const)[i % 3]);
+        // The live loop sets this each frame and shots pause it: the first open bay offers a bot, as it does to a seated host.
+        d.renderer.hud.canAddBots = true;
+      },
+      Number(opt('bots') ?? 0),
+    );
     await step(30);
     await snap(`lobby-${seed}`);
   },
