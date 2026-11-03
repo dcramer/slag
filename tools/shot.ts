@@ -70,7 +70,7 @@
  *          --spread (race: stand the runners on open ground)
  *          --pop N (race: after --frames, the first runner holds self-destruct N frames: ring and countdown)  --popall (every runner)
  *          --mode keyboard|gamepad|touch (footer prompt glyphs)  --net (fake online-lobby info)
- *          --noletters (no impact words)
+ *          --noletters (no impact words)  --nocel (the Canvas2D compositor: no cel pass, to judge art without it)
  * Software GL is slow; frames are advanced deterministically via slagDebug.step().
  */
 

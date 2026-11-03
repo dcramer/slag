@@ -36,6 +36,15 @@ export const engine: Engine = engineList(opt('engine', 'chromium'))[0];
 // `pnpm exec playwright install chromium` (or the engine named) if this can't find a browser.
 export const browser = await launchEngine(engine);
 export const page = await browser.newPage({ viewport: { width: W, height: H } });
+// `--nocel`: no WebGL2, so the game composites through its Canvas2D fallback, without the cel pass's light
+// bands, edge ink and hard shadows (post.ts): to judge art with and without it.
+if (argv.includes('--nocel'))
+  await page.addInitScript(() => {
+    const get = HTMLCanvasElement.prototype.getContext;
+    (HTMLCanvasElement.prototype as any).getContext = function (this: HTMLCanvasElement, id: string, ...rest: unknown[]) {
+      return id === 'webgl2' ? null : (get as any).call(this, id, ...rest);
+    };
+  });
 export const errors: string[] = [];
 page.on('pageerror', (e: Error) => errors.push(String(e)));
 page.on('console', (m: { type(): string; text(): string }) => m.type() === 'error' && errors.push(m.text()));
