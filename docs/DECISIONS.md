@@ -203,6 +203,8 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Parts pass through each other: a mover's path or a set piece's swing may cross a placed part, so neither refuses a placement.** "you should be able to let some parts go through each other. your barn one. its ok to allow palcement there, and the items will just move through each other..."
   2026-11-02 · `in progress` · DESIGN.md → Props, `src/sim/props/transform.ts`
   Changed: placed parts and set pieces claimed their whole swept path.
+- **Character production pauses once the running jobs finish: not enough Tripo credits for the whole roster.** "we dont have enough credits to finish all art, so lets pause when we get these jobs done"
+  2026-11-02 · `open` · TODO.md → 29
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
   2026-11-02 · `done` · public/ASSETS.md
 
