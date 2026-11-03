@@ -2,14 +2,28 @@ import { Rng } from '../../core/rng';
 import type { Brain, BrainView, Intent } from '../types';
 
 /**
- * A race that stops getting closer to the flag: after STUCK_FRAMES (or LOST_FRAMES standing where no
- * route leads at all) it takes a leap of faith toward the flag for LEAP_FRAMES, and if that gets it
- * nowhere, gives up LAST_FRAMES later, as a stuck player would.
+ * A race that stops getting closer to the flag (by its route, or the rough way where no route leads):
+ * after STUCK_FRAMES (LOST_FRAMES standing where no route leads at all) it takes a leap of faith toward
+ * the flag for LEAP_FRAMES, and if that gets it nowhere, gives up LAST_FRAMES later, as a stuck player would.
  */
 const STUCK_FRAMES = 6 * 60;
-const LOST_FRAMES = 90;
+const LOST_FRAMES = 4 * 60;
 const LEAP_FRAMES = 120;
 const LAST_FRAMES = 120;
+/**
+ * How long it takes over each choice, in frames [min, max]: a person reads the
+ * crate and points at a card or two before taking one, then looks the level
+ * over before carrying the part to its spot. A harder setting will shorten
+ * these (docs/TODO.md 27, phase 2).
+ */
+const TEMPO = {
+  read: [80, 150],
+  looks: [1, 2],
+  /** Per card pointed at, from setting off toward it. */
+  look: [45, 80],
+  survey: [60, 130],
+} as const satisfies Record<string, readonly [number, number]>;
+
 /** Spots tried when looking for somewhere to put a part, and how many of the legal ones are checked for sealing the level. */
 const SPOT_TRIES = 400;
 const SPOT_CHECKS = 16;
@@ -27,7 +41,12 @@ export function runnerBrain(seed: number): Brain {
   let card = -1;
   let spot: Extract<Intent, { do: 'place' }> | null = null;
   let pause = 0;
+  /** Cards still to point at before taking `card`, and the phase frame it moves on from the current one. */
+  let looks: number[] = [];
+  let lookUntil = 0;
   let best = Infinity;
+  /** The closest it has been the rough way while no route covered it: getting closer that way is progress too. */
+  let near = Infinity;
   let since = 0;
 
   const pick = (v: BrainView): Intent => {
@@ -37,8 +56,16 @@ export function runnerBrain(seed: number): Brain {
       if (!free.length) return { do: 'wait' };
       const want = free.find((i) => (v.level.plan.length > 0 && v.crate[i].bridge) || v.crate[i].clears);
       card = want ?? rng.pick(free);
+      const others = rng.shuffle(free.filter((i) => i !== card));
+      looks = others.slice(0, rng.int(...TEMPO.looks));
     }
-    return v.phaseFrame < pause ? { do: 'wait' } : { do: 'pick', card };
+    if (v.phaseFrame < pause) return { do: 'wait' };
+    while (looks.length && v.phaseFrame >= lookUntil) {
+      if (lookUntil) looks.shift();
+      lookUntil = v.phaseFrame + rng.int(...TEMPO.look);
+      if (!looks.length) break;
+    }
+    return looks.length ? { do: 'hover', card: looks[0] } : { do: 'pick', card };
   };
 
   const place = (v: BrainView): Intent => {
@@ -53,6 +80,9 @@ export function runnerBrain(seed: number): Brain {
     if (!v.live || !me || !me.alive || me.finished) return { do: 'wait' };
     if (me.togo < best) {
       best = me.togo;
+      since = 0;
+    } else if (!Number.isFinite(me.togo) && me.grounded && me.away < near) {
+      near = me.away;
       since = 0;
     } else since++;
     const wait = me.grounded && !Number.isFinite(me.togo) ? LOST_FRAMES : STUCK_FRAMES;
@@ -69,9 +99,12 @@ export function runnerBrain(seed: number): Brain {
         card = -1;
         spot = null;
         best = Infinity;
+        near = Infinity;
         since = 0;
         // A beat before choosing, as a person takes in the crate or the level.
-        pause = rng.int(20, 60);
+        pause = v.phase === 'pick' ? rng.int(...TEMPO.read) : v.phase === 'place' ? rng.int(...TEMPO.survey) : 0;
+        looks = [];
+        lookUntil = 0;
       }
       switch (v.phase) {
         case 'lobby':

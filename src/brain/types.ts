@@ -35,6 +35,8 @@ export interface SelfSense {
   finished: boolean;
   /** Tiles of route to the flag over moves the controller is sure of, rounded; Infinity when none lead there. */
   togo: number;
+  /** Tiles to the flag around the rock, through open air where no move is sure, rounded: how close it is when there's no route. */
+  away: number;
 }
 
 export interface RunnerSense {
@@ -107,6 +109,8 @@ export type Intent =
   | { do: 'ready' }
   /** Pick: take crate card `card`. */
   | { do: 'pick'; card: number }
+  /** Pick: point at crate card `card` without taking it, as a player weighs it up. */
+  | { do: 'hover'; card: number }
   /** Place: put the held part with its origin at (tx, ty), turned `rot`. */
   | { do: 'place'; tx: number; ty: number; rot: number }
   /** Race: get to the cell (tx, ty) by the route the motor finds. */

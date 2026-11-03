@@ -33,6 +33,23 @@ describe('bots', () => {
     expect(m.players.every((p) => p.claim >= 0 && p.placed && !p.afk)).toBe(true);
   });
 
+  it('takes its time over the crate: reads it, points at another card, then takes one', () => {
+    const m = new Match(2);
+    const bots = new BotSeats();
+    m.join(bots.add(m));
+    m.rules = { ...m.rules, pickSeconds: 0 };
+    m.startMatch();
+    const p = m.players[0];
+    const pointed = new Set<number>();
+    while (p.claim < 0 && m.phaseFrame < 20 * 60) {
+      m.step(bots.frames(m));
+      pointed.add(m.crateItemAt(p.cursor.x, p.cursor.y));
+    }
+    expect(p.claim).toBeGreaterThanOrEqual(0);
+    expect(m.phaseFrame).toBeGreaterThan(120);
+    expect([...pointed].filter((i) => i >= 0 && i !== p.claim).length).toBeGreaterThan(0);
+  });
+
   it('looks for another spot when someone takes the one it meant to use', () => {
     const m = new Match(1);
     expect(m.plan.length).toBe(1);

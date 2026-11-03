@@ -65,7 +65,9 @@ function selfOf(m: Match, p: Player): SelfSense | null {
   const map = raceMap(run);
   const w = map.field.w;
   const inside = tx >= 0 && tx < w && ty >= 0 && ty < map.field.h;
-  const d = inside ? map.dist(m.level.goal.ty * w + m.level.goal.tx)[ty * w + tx] : Infinity;
+  const goal = m.level.goal.ty * w + m.level.goal.tx;
+  const d = inside ? map.dist(goal)[ty * w + tx] : Infinity;
+  const rough = inside ? map.rough(goal)[ty * w + tx] : Infinity;
   return {
     x: round4((b.x + b.w / 2) / TILE),
     y: round4((b.y + b.h) / TILE),
@@ -79,6 +81,7 @@ function selfOf(m: Match, p: Player): SelfSense | null {
     alive: r.alive,
     finished: r.finished,
     togo: Number.isFinite(d) ? Math.round(d / 10) : Infinity,
+    away: Number.isFinite(rough) ? Math.round(rough / 10) : Infinity,
   };
 }
 

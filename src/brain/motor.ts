@@ -91,11 +91,12 @@ export class Motor {
         return m.phase === 'lobby' && !p.ready && this.canPress(m) ? { ...NO_INPUT, confirmPressed: true } : NO_INPUT;
       case 'giveUp':
         return { ...NO_INPUT, alt: true, altPressed: !this.prev.alt };
-      case 'pick': {
+      case 'pick':
+      case 'hover': {
         const card = m.crate[intent.card];
         if (m.phase !== 'pick' || !card || p.claim >= 0) return NO_INPUT;
         const r = card.rect;
-        if (m.crateItemAt(p.cursor.x, p.cursor.y) === intent.card) return this.click(m, m.phaseFrame > 10);
+        if (m.crateItemAt(p.cursor.x, p.cursor.y) === intent.card) return intent.do === 'pick' ? this.click(m, m.phaseFrame > 10) : NO_INPUT;
         return this.steer(p, r.x + r.w / 2, r.y + r.h / 2, 1);
       }
       case 'place': {
@@ -243,6 +244,8 @@ export class Motor {
       // The best move a hazard is in the way of: worth waiting for if it beats every clear one.
       let held = Infinity;
       for (const mv of moves) {
+        // A hop that lands where it stands only ever dodges something; otherwise standing still says the same.
+        if (mv.to === here && b.onGround && !exposed) continue;
         const c = dist[mv.to] + mv.controls.length * FRAME_COST + (this.visits.get(mv.to) ?? 0) * AGAIN;
         if (c >= cost) continue;
         if (!hurts(map, mv, f, b, shots)) {
