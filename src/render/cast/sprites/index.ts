@@ -59,8 +59,9 @@ function dress(set: SpriteSet, c: CharacterDef): Dressed {
     const hsl = set.roles.map((r): HSL => (r.slot === 'paint' ? c.paint : r.slot === 'player' ? c.body : hexHsl(colour(r))));
     const pick = picks(set, c.vary);
     const paints = set.roles.map((_, i) => paintOf(hsl[i]));
-    // The silhouette is inked in a dark of the kind's own colour, as a hand-drawn homage's is.
-    const main = hsl[set.roles.findIndex((r) => r.slot === 'paint')] ?? hsl[0];
+    // The silhouette is inked in a dark of its main colour: the player's, where the costume wears it (an
+    // alternate costume, as a fighting game's roster does), else the kind's own.
+    const main = hsl[[set.roles.findIndex((r) => r.slot === 'player'), set.roles.findIndex((r) => r.slot === 'paint')].find((i) => i >= 0) ?? 0];
     d = { paints, pick, body: { ...paintOf(main), ink: inkOf(main) }, shadow: ratio(main, shift(main, -14, 6)), k: lookOf(c, false).weight };
     dressed.set(c, d);
   }
