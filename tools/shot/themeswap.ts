@@ -42,9 +42,11 @@ async function shootTheme(th: ThemeId, force: Force): Promise<Buffer> {
       cam.shake = 0;
       let r = 0x9e3779b9;
       Math.random = () => (r = (Math.imul(r ^ (r >>> 15), 0x2c1b3c6d) + 0x6d2b79f5) >>> 0) / 4294967296;
-      // As a first frame, so particles step the same on either page; then twice at one time: the first finishes the
-      // bakes, the second is the picture.
+      // A first frame at match frame 0 (the page ran a few before the harness paused it, and set pieces move with
+      // it), so particles and set pieces stand the same on either page; then twice at one time: the first finishes
+      // the bakes, the second is the picture.
       d.renderer.last = 0;
+      d.match.frame = 0;
       d.render(4000);
       d.render(4000);
     },
