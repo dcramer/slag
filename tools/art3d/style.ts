@@ -273,25 +273,24 @@ export const BRIEFS: Record<string, Brief> = {
     worn: 'the helmet has a big dent knocked into the top of its crown; the drainpipe cannon is bent crooked at the elbow and wrapped there in a wide band of grey tape; the back buoy has a big chip knocked out of its rim; one boot is a mismatched grey replacement, bigger than the other.',
   },
   engineer: {
-    // The nod, each part of the read at race size: the huge wrench over the shoulder (the read in profile,
-    // so it leads the brief), the domed yellow hat with dark goggles on it (the head shape and the trade),
-    // the square jaw (the gruff builder at 20 px, where no face detail survives), and the work shirt over
-    // khakis (the colour block, the shirt in the player's colour).
-    // Ours, and the joke: a backyard engineer. The hat is an upturned yellow mixing bowl with a chin strap,
-    // the goggles are blue swimming goggles, the wrench is a giant adjustable spanner taped to a broom
-    // handle, and a kid's toy turret is clipped to his belt.
-    // The colours lead the head and the body: past the prop the model drops what comes late, and a design
-    // with the glove and the turret up front came back in a blue vest and green shorts. So the glove, the
-    // belt and the turret go in with the wear, as an edit that holds the colours.
+    // The nod, each part of the read at race size: the huge wrench (the read in profile, so it leads the
+    // brief), the wide hard hat with its brim and the goggles on it (the head shape and the trade), the
+    // stocky square build and square jaw (the gruff builder at 20 px, where no face detail survives), and
+    // the work shirt over khakis (the colour block, the shirt in the player's colour).
+    // Ours, and the joke: a backyard engineer. The hard hat is an upturned yellow mixing bowl, the goggles
+    // are blue swimming goggles, and the wrench's handle is taped up where it snapped.
+    // The silhouette is three shapes, so the wrench rides level on his shoulder, its open jaw out behind
+    // him below the brim: carried up behind his head, its jaw and the handle read as spikes off the hat
+    // and something held out in front (blind read, 2026-11-03), and the toy turret on his belt broke the
+    // outline at the hip, so it went.
+    // Fresh designs from this brief put the goggles over his eyes (the original's look), so the pick is the
+    // first design reshaped in an edit to this brief's shapes (art/sprites/engineer/design.prompt.txt).
     design:
-      'The character: a stocky, square-jawed backyard handyman. Over one shoulder he carries his huge signature tool, as long as he is tall: a giant grey adjustable spanner head (#8e8a84) lashed with grey tape onto the end of a long wooden broom handle (#c49a62), the spanner jaw sticking up high behind his head. ' +
-      'On his head, as a hard hat, a big upturned yellow mixing bowl (#e9b730), a wide smooth dome with a rolled rim, held on by a chin strap; a pair of swimming goggles with a dark strap (#3a4246) and two round light-blue lenses (#5fb0c8) is pushed up onto the front of the bowl. ' +
-      'Under it a big square jaw and chin, peach skin (#efc9a4), a short stubbly face, two small black eyes. ' +
-      'A red work shirt (#b8433c) with rolled sleeves, khaki work trousers (#8c7a58) with a brown belt (#6b4a35), one big tan leather work glove (#a8794a) on the hand holding the handle, chunky brown boots. ' +
-      'Clipped to his belt at the hip, a small toy turret on a tripod, a chunky plastic toy in bright orange.',
-    worn:
-      'the hand gripping the broom handle wears a big tan leather work glove (#a8794a) and the other hand is bare; a wide brown belt (#6b4a35) with a chunky bright-orange toy turret on three stubby legs clipped to its front, as big as his fist; his jaw is smooth clean-shaven skin; ' +
-      "and he is battered: a big dent is knocked into the top of the yellow bowl's dome; a big chip is broken out of the bowl's rim at the back; the broom handle is snapped in the middle and splinted with a big wad of grey tape; one trouser knee is torn open in a big ragged hole.",
+      'The character: a short, stocky, square-built backyard handyman with a boxy torso and short thick legs. ' +
+      'Resting level on one shoulder he carries one huge plain grey adjustable spanner (#8e8a84), about two thirds as long as he is tall: its handle lies flat along the top of his shoulder, gripped right at the shoulder, and its big head sticks straight out behind his back at shoulder height, well below his hat, its jaw a wide open C facing back. Nothing sticks out in front of him. ' +
+      'On his head, as a hard hat, a yellow mixing bowl (#e9b730) worn upside down, its wide flat rim sticking far out past his head all round like a hard hat brim; swimming goggles with a dark strap (#3a4246) and two light-blue lenses (#5fb0c8) pushed up on the bowl. ' +
+      'A big square jaw, peach skin (#efc9a4), two small black eyes. A red work shirt (#b8433c), khaki trousers (#8c7a58), a brown belt (#6b4a35), one tan leather work glove (#a8794a) on the hand on the spanner, chunky brown boots. Nothing on his belt.',
+    worn: "a big dent is knocked into the top of the yellow bowl; a big chip is broken out of the bowl's rim at the back; the spanner's handle is snapped in the middle and bound with a big wad of grey tape; one trouser knee is torn open in a big ragged hole.",
   },
   goose: {
     // The nod, each part of the read at race size: the S of a neck (a goose, not a duck or a chicken), white
