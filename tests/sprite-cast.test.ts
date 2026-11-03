@@ -127,6 +127,52 @@ describe('rendered kinds: frames', () => {
       expect(-top, s.kind).toBeGreaterThanOrEqual(18);
     }
   });
+
+  it('keep every eye on the head it rides and on the figure, at the kit’s size, in every frame, deaths included', () => {
+    const inside = (x: number, y: number, ring: readonly { x: number; y: number }[]) => {
+      let odd = false;
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const a = ring[i];
+        const b = ring[j];
+        if (a.y > y !== b.y > y && x < ((b.x - a.x) * (y - a.y)) / (b.y - a.y) + a.x) odd = !odd;
+      }
+      return odd;
+    };
+    for (const s of SETS) {
+      if (!s.face) continue;
+      for (const [name, c] of Object.entries(s.clips))
+        for (const [facing, fs] of [
+          ['r', c.r],
+          ['l', c.l],
+        ] as const)
+          fs.forEach((f, i) => {
+            const at = `${s.kind} ${name} ${facing}${i}`;
+            if (!f.eyes?.length) return;
+            // The head is what the drawer turns brows, crosses and the mouth with.
+            expect(f.head, `${at}: eyes without a head`).toBeDefined();
+            const [hx, hy, hr] = f.head!.map((v) => v / 8);
+            const sil = f.sil.map(ringPoints);
+            for (let e = 0; e < f.eyes.length; e += 3) {
+              const x = f.eyes[e] / 8;
+              const y = f.eyes[e + 1] / 8;
+              expect(Math.hypot(x - hx, y - hy), `${at}: eye off the head`).toBeLessThanOrEqual(hr);
+              expect(
+                sil.some((r) => inside(x, y, r)),
+                `${at}: eye off the figure`,
+              ).toBe(true);
+              const r = f.eyes[e + 2] / 8;
+              expect(r / s.face!.r, `${at}: eye size`).toBeGreaterThanOrEqual(0.6);
+              expect(r / s.face!.r, `${at}: eye size`).toBeLessThanOrEqual(1.5);
+            }
+          });
+      // At rest the face shows, both ways round.
+      for (const fs of [s.clips.idle.r, s.clips.idle.l])
+        expect(
+          fs.every((f) => (f.eyes?.length ?? 0) >= 3),
+          `${s.kind} idle`,
+        ).toBe(true);
+    }
+  });
 });
 
 describe('rendered kinds: choosing frames', () => {

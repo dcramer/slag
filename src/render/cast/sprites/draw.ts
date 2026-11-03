@@ -134,5 +134,5 @@ export function drawFrame(
     s.fillStyle = body.ink;
     f.marks.forEach((r, i) => stroke(s, pointsOf(r), { w: 0.8 - i * 0.12, seed: seed + i, taper: [0.15, 0.6], press: 0.2 }));
   }
-  if (face && f.eyes) drawFace(s, face.kit, f.eyes, face.mood, face.facing, t, seed);
+  if (face && f.eyes) drawFace(s, face.kit, f.eyes, face.mood, face.facing, t, seed, f.head);
 }
