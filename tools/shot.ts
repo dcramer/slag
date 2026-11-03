@@ -26,7 +26,7 @@
  *   pnpm shot belts [--propseed 1]         → a conveyor at every rotation: as place ghosts, and placed with a runner on each belt face
  *   pnpm shot items --seed abc             → held items: in hand, loose, and each one used (`--give bat,tax` picks them)
  *   pnpm shot blood --theme farm --players 4 --noletters → staged deaths over four rounds: ooze, settled, place phase, expiry
- *   pnpm shot stack --seed abc             → stepped frames of runners stacking, walking as a stack, and a head-bounce
+ *   pnpm shot stack --seed abc             → stepped frames of heads as perches: a stack bucked, a slide, a hard stop, a knock, a tip, a jump off
  *   pnpm shot grabs                        → stepped frames of a rope swing, a keg shot and a backfire
  *   pnpm shot lineup [--seeds a,b]         → eight runners in a spread of poses, at play scale and close up
  *   pnpm shot cast [--only catalog]       → the toy cast (docs/CHARACTERS.md): lineups on farm and mine, close-up, deaths, lobby, catalog
