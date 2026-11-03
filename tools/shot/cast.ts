@@ -4,7 +4,7 @@
  * toys coming apart, the lobby cards and the catalog of every kind, composed into `cast.png`.
  */
 import { writeFileSync } from 'node:fs';
-import { browser, open, opt, out, page, pet, seed, type Scenarios, step } from './ctx';
+import { browser, castSheet, open, opt, out, page, pet, seed, type Scenarios, step } from './ctx';
 
 const LIGHT = opt('light', 'farm')!;
 const DARK = opt('dark', 'mine')!;
@@ -138,15 +138,7 @@ async function lobby(): Promise<string> {
 
 async function catalog(): Promise<string> {
   await open(`seed=${seed}`);
-  await page.evaluate(() => document.fonts.ready);
-  const box = await page.evaluate(() => {
-    const cv = (window as any).slagDebug.cast.catalog();
-    return { width: cv.width, height: cv.height };
-  });
-  const path = `${out}/cast-catalog.png`;
-  await page.screenshot({ path, clip: { x: 0, y: 0, ...box } });
-  console.log(path);
-  pet();
+  const path = await castSheet('cast-catalog', 'catalog');
   const bench = await page.evaluate(() => (window as any).slagDebug.cast.bench(300));
   console.log(`bench: ${bench.toFixed(3)} ms/runner`);
   return path;
@@ -157,52 +149,17 @@ async function colors(): Promise<string> {
   const drawn = !!opt('drawn');
   await open(`seed=${seed}`);
   await page.evaluate((d) => (window as any).slagDebug.sprites.use(!d), drawn);
-  await page.evaluate(() => document.fonts.ready);
-  const box = await page.evaluate(() => {
-    const cv = (window as any).slagDebug.cast.colors();
-    return { width: cv.width, height: cv.height };
-  });
-  // Sprite sheets load on first draw: give them a moment, then draw again.
-  if (!drawn) {
-    await page.waitForTimeout(1500);
-    await page.evaluate(() => {
-      document.querySelectorAll('canvas[style*="z-index:99"]').forEach((c) => c.remove());
-      (window as any).slagDebug.cast.colors();
-    });
-  }
-  const path = `${out}/cast-colors${drawn ? '-drawn' : ''}.png`;
-  await page.screenshot({ path, clip: { x: 0, y: 0, ...box } });
-  console.log(path);
-  pet();
-  return path;
+  return castSheet(`cast-colors${drawn ? '-drawn' : ''}`, 'colors');
 }
 
 async function silhouettes(): Promise<string> {
   await open(`seed=${seed}`);
-  await page.evaluate(() => document.fonts.ready);
-  const box = await page.evaluate(() => {
-    const cv = (window as any).slagDebug.cast.silhouettes();
-    return { width: cv.width, height: cv.height };
-  });
-  const path = `${out}/cast-silhouettes.png`;
-  await page.screenshot({ path, clip: { x: 0, y: 0, ...box } });
-  console.log(path);
-  pet();
-  return path;
+  return castSheet('cast-silhouettes', 'silhouettes');
 }
 
 async function recognise(): Promise<string> {
   await open(`seed=${seed}`);
-  await page.evaluate(() => document.fonts.ready);
-  const box = await page.evaluate(() => {
-    const cv = (window as any).slagDebug.cast.recognise();
-    return { width: cv.width, height: cv.height };
-  });
-  const path = `${out}/cast-recognise.png`;
-  await page.screenshot({ path, clip: { x: 0, y: 0, ...box } });
-  console.log(path);
-  pet();
-  return path;
+  return castSheet('cast-recognise', 'recognise');
 }
 
 async function compose(name: string, html: string, width = 1900) {

@@ -5,7 +5,7 @@ import { ARCHETYPE_WEIGHTS, type Archetype, DEMOLISH, generateProp } from './gen
 import type { NetSession } from './net/session';
 import { hashMatch, snapshotMatch, toWire } from './net/snapshot';
 import { blindOrder, castBench, castBlind, castCatalog, castColors, castRecognise, castSilhouettes, castVariety } from './render/cast/sheet';
-import { useSprites } from './render/cast/sprites';
+import { spritesReady, useSprites } from './render/cast/sprites';
 import type { Renderer } from './render/renderer';
 import { giveItem, ITEM_KINDS, type ItemKind } from './sim/items';
 import { canPlace, landedDef, linkPipes, type PropDef } from './sim/props';
@@ -85,7 +85,7 @@ export interface SlagDebug {
     variety: typeof castVariety;
   };
   /** Kinds rendered from 3D models (tools/art3d): turn them on or off. */
-  sprites: { use: typeof useSprites; dress(slot: number, kind: string): void };
+  sprites: { use: typeof useSprites; ready: typeof spritesReady; dress(slot: number, kind: string): void };
 }
 
 export interface LoopControl {
@@ -115,6 +115,7 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
     },
     sprites: {
       use: useSprites,
+      ready: spritesReady,
       // For shots: put a seated player in a given kind (a look is cosmetic, and only this match sees it).
       dress(slot: number, kind: string) {
         const p = match.player(slot);

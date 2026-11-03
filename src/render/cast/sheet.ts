@@ -3,7 +3,7 @@ import { CAST, type CharacterDef, generateCharacter, type Kind, PLAYER_COLORS, w
 import { Rig } from '../character';
 import { drawInkAccessory, drawInkRunner, ropeAnchor, ropeOf, type RunnerPose } from '../ink-character';
 import { STRIDE } from '../ink-figure';
-import { spritesOf, varietyFor } from './sprites';
+import { rosterLook, spritesOf, varietyFor } from './sprites';
 import { roll, VARIETY } from './sprites/play';
 
 /**
@@ -244,13 +244,15 @@ const READS_AS: Record<Kind, string> = {
 
 /**
  * The "is it the homage?" sheet: every kind close up, mid-run, beside a one-line "this is ___" caption,
- * with its play-scale read next to it. Judge each against the caption; the puffball is the bar.
+ * with its play-scale read next to it, in the kind's roster colour. Judge each against the caption; the
+ * puffball is the bar.
  */
 export function castRecognise(t = 0.4): HTMLCanvasElement {
   const cols = 4;
   const rows = Math.ceil(CAST.length / cols);
   const cw = 470;
-  const ch = 230;
+  // Tall enough for the rendered kinds, whose ears and quills stand a head above the hand-drawn ones.
+  const ch = 260;
   const W = cols * cw + 20;
   const H = rows * ch + 60;
   const cv = document.createElement('canvas');
@@ -269,10 +271,10 @@ export function castRecognise(t = 0.4): HTMLCanvasElement {
     const y = 50 + Math.floor(i / cols) * ch;
     s.fillStyle = '#d9cbb2';
     s.fillRect(x + 4, y, cw - 8, ch - 10);
-    const c = def(i * 2, 'cat', kind);
-    runner(s, c, x + 130, y + 170, { grounded: true }, 6, 1, t);
-    runner(s, c, x + 300, y + 170, { grounded: true, vx: 260 }, 6, 1, t, MID_RUN);
-    runner(s, c, x + 420, y + 170, { grounded: true }, 2.5, 1, t);
+    const c = rosterLook(def(i * 2, 'cat', kind));
+    runner(s, c, x + 130, y + 200, { grounded: true }, 6, 1, t);
+    runner(s, c, x + 300, y + 200, { grounded: true, vx: 260 }, 6, 1, t, MID_RUN);
+    runner(s, c, x + 420, y + 200, { grounded: true }, 2.5, 1, t);
     s.font = '700 17px Barlow, sans-serif';
     s.fillStyle = '#120b08';
     s.textAlign = 'left';

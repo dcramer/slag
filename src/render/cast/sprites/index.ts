@@ -22,23 +22,27 @@ export const LOADERS: Partial<Record<Kind, () => Promise<{ sprites: SpriteSet }>
 };
 
 const loaded: Partial<Record<Kind, SpriteSet>> = {};
-const asked = new Set<Kind>();
+const asked: Partial<Record<Kind, Promise<void>>> = {};
 let on = true;
 
 /** Fetches a kind's frames once; until they arrive, its characters draw hand-drawn. */
-function request(kind: Kind) {
+function request(kind: Kind): Promise<void> {
   const load = LOADERS[kind];
-  if (!load || asked.has(kind)) return;
-  asked.add(kind);
-  void load().then((m) => {
+  if (!load) return Promise.resolve();
+  return (asked[kind] ??= load().then((m) => {
     loaded[kind] = m.sprites;
-  });
+  }));
+}
+
+/** Debug only (shots): resolves once every rendered kind's frames are in, so a sheet drawn after it shows none of them hand-drawn. */
+export function spritesReady(): Promise<void> {
+  return Promise.all(SPRITE_KINDS.map(request)).then(() => {});
 }
 
 /** Debug only (comparison sheets): false draws every kind hand-drawn. Loads every kind's frames when on. */
 export function useSprites(v: boolean) {
   on = v;
-  if (v) for (const kind of SPRITE_KINDS) request(kind);
+  if (v) for (const kind of SPRITE_KINDS) void request(kind);
 }
 
 export const spritesOn = () => on;
@@ -50,7 +54,7 @@ export const SPRITE_KINDS = Object.keys(LOADERS) as Kind[];
 export function spritesOf(c: CharacterDef): SpriteSet | null {
   if (!on) return null;
   const set = loaded[c.kind];
-  if (!set) request(c.kind);
+  if (!set) void request(c.kind);
   return set ?? null;
 }
 
@@ -106,6 +110,15 @@ function dress(set: SpriteSet, c: CharacterDef): Dressed {
     dressed.set(c, d);
   }
   return d;
+}
+
+/**
+ * The character in its kind's roster colour, where the costume otherwise wears the player's: the look a
+ * stranger should name, for the "is it the homage?" sheet. Unchanged until the kind's frames are in.
+ */
+export function rosterLook(c: CharacterDef): CharacterDef {
+  const role = loaded[c.kind]?.roles.find((r) => r.slot === 'player');
+  return role ? { ...c, body: hexHsl(role.color) } : c;
 }
 
 /** A character's variety, as the drawer picks it (the shot sheets label it). */

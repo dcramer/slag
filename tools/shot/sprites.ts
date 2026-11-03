@@ -6,7 +6,7 @@
  */
 import { existsSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { browser, open, opt, out, page, pet, seed, type Scenarios, step } from './ctx';
+import { browser, castSheet, open, opt, out, page, pet, seed, type Scenarios, step } from './ctx';
 
 const KIND = opt('kind', 'plumber')!;
 const THEME = opt('theme', 'farm')!;
@@ -242,23 +242,9 @@ async function bench(): Promise<string> {
 /** The blind read: every kind's play-scale silhouette, shuffled and numbered (`castBlind`). */
 async function blind(): Promise<string> {
   await open(`seed=${seed}`);
-  await settle();
-  const box = await page.evaluate(() => {
-    const d = (window as any).slagDebug;
-    // Twice: the first draw starts the rendered kinds' frames loading.
-    d.cast.blind().remove();
-    return new Promise<{ width: number; height: number; order: string[] }>((done) =>
-      setTimeout(() => {
-        const cv = d.cast.blind();
-        done({ width: cv.width, height: cv.height, order: d.cast.blindOrder() });
-      }, 600),
-    );
-  });
-  const path = `${out}/sprites-blind.png`;
-  await page.screenshot({ path, clip: { x: 0, y: 0, width: box.width, height: box.height } });
-  writeFileSync(`${out}/sprites-blind-answers.txt`, box.order.map((k, i) => `${i + 1}. ${k}`).join('\n') + '\n');
-  console.log(path);
-  pet();
+  const path = await castSheet('sprites-blind', 'blind');
+  const order: string[] = await page.evaluate(() => (window as any).slagDebug.cast.blindOrder());
+  writeFileSync(`${out}/sprites-blind-answers.txt`, order.map((k, i) => `${i + 1}. ${k}`).join('\n') + '\n');
   return path;
 }
 
@@ -268,26 +254,7 @@ async function blind(): Promise<string> {
  */
 async function varietySheet(kind: string): Promise<string> {
   await open(`seed=${seed}`);
-  await page.setViewportSize({ width: 1880, height: 860 });
-  await page.evaluate(
-    (k) =>
-      new Promise<void>((done) => {
-        const d = (window as any).slagDebug;
-        // Twice: the first draw starts the kind's frames loading.
-        d.cast.variety(k).remove();
-        setTimeout(() => {
-          d.cast.variety(k);
-          done();
-        }, 800);
-      }),
-    kind,
-  );
-  const path = `${out}/sprites-${kind}-variety.png`;
-  await page.screenshot({ path, clip: { x: 0, y: 0, width: 1880, height: 860 } });
-  await page.setViewportSize({ width: 1280, height: 720 });
-  console.log(path);
-  pet();
-  return path;
+  return castSheet(`sprites-${kind}-variety`, 'variety', kind);
 }
 
 export const shots: Scenarios = {

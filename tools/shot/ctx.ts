@@ -47,6 +47,8 @@ export async function open(q: string) {
   await page.goto(`${base}r/SHOTS?${q}${tq}&net=off`);
   await page.waitForFunction(() => 'slagDebug' in window, null, { timeout: 30_000 });
   await page.evaluate(() => document.fonts.ready);
+  // The rendered kinds' frames load on first use and draw hand-drawn until then: every shot shows what ships.
+  await page.evaluate(() => (window as any).slagDebug.sprites.ready());
   await page.evaluate(() => (window as any).slagDebug.pause(true));
   await page.evaluate(
     ([m, net]) => {
@@ -74,6 +76,27 @@ export async function open(q: string) {
     },
     [mode ?? '', fakeNet] as const,
   );
+}
+/**
+ * Shoots one of the cast's debug sheets (`slagDebug.cast[name](...args)`) whole, at `out/<file>.png`. A sheet
+ * is a fixed canvas often bigger than the window, so the window grows to it for the shot.
+ */
+export async function castSheet(file: string, name: string, ...args: unknown[]): Promise<string> {
+  const box = await page.evaluate(
+    ([n, a]) => {
+      const cv = (window as any).slagDebug.cast[n as string](...(a as unknown[]));
+      return { width: cv.width as number, height: cv.height as number };
+    },
+    [name, args] as const,
+  );
+  const was = page.viewportSize()!;
+  await page.setViewportSize({ width: Math.max(was.width, box.width), height: Math.max(was.height, box.height) });
+  const path = `${out}/${file}.png`;
+  await page.screenshot({ path, clip: { x: 0, y: 0, ...box } });
+  await page.setViewportSize(was);
+  console.log(path);
+  pet();
+  return path;
 }
 export const LAUNCHER_STYLES = 'crossbow,ballista,cannon,totem,turret,thrower,rocket,glaive,gumball,mortar,gooper,cryo,prism';
 export const step = (n: number) => page.evaluate((k) => (window as any).slagDebug.step(k), n);
