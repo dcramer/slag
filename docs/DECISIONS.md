@@ -218,6 +218,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-03 · `done` · CHARACTERS.md → Rendered kinds → Flat kinds, `tools/art3d/flat/`; replaces the zapmouse's 3D-traced frames
 - **The plumber is drawn flat too, from a new game-size design worn with welding goggles, a cracked bill, a knotted strap, a knee patch and a taped plunger.** "Yes, the plumber"
   2026-11-03 · `done` · CHARACTERS.md → Rendered kinds → Flat kinds, `tools/art3d/flat/kinds.ts`; replaces the plumber's 3D-traced frames, and his brown-canvas overalls (navy instead: flat, brown canvas is the gloves' tan)
+- **The plumber's plunger cup stays a dark of the player's colour, as the flat pass draws it.** "Leave it" (asked: back to its own red?)
+  2026-11-03 · `done` · CHARACTERS.md → The mustached plumber → Palette; replaces the cup's own red `#b8433c`
 - **Set-piece machines that look solid are made solid: guns on ledges, wheel and swing hubs, ladles, carts, signs, posts.** "Make them solid" (asked: make them solid, or draw them as not-ground)
   2026-11-02 · `open` · TODO.md → 21, `pnpm shot fairplay` (`PENDING`)
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
