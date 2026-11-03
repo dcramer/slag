@@ -100,6 +100,10 @@ function eye(
     tallEye(s, r, m, f);
     return;
   }
+  if (face.eye === 'dot') {
+    dotEye(s, r, m, f);
+    return;
+  }
   const wide = m === 'fall' ? 1.15 : 1;
   // Narrowed into the run, under the brow.
   const tall = m === 'run' ? 0.85 : 1.2 * wide;
@@ -190,6 +194,17 @@ function tallEye(s: CanvasRenderingContext2D, r: number, m: FaceMood, f: number)
   poly(s, oval(0, 0, r * wide, r * tall, 10), INK);
   const sy = -r * tall * (m === 'up' ? 0.5 : 0.38);
   poly(s, oval(f * r * 0.12, sy, r * 0.52, r * 0.78, 8), GLINT);
+}
+
+/**
+ * A small round black eye with a shine up toward the front and no white (the electric mouse's): a little
+ * wider on a fall, narrowed into the run.
+ */
+function dotEye(s: CanvasRenderingContext2D, r: number, m: FaceMood, f: number) {
+  const wide = m === 'fall' ? 1.15 : 1;
+  const tall = m === 'fall' ? 1.25 : m === 'run' ? 0.85 : 1.05;
+  poly(s, oval(0, 0, r * wide, r * tall, 10), INK);
+  poly(s, oval(f * r * 0.28, -r * tall * (m === 'up' ? 0.45 : 0.32), r * 0.42, r * 0.42, 7), GLINT);
 }
 
 /** A wide open grin, lopsided toward the front. */

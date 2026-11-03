@@ -1499,13 +1499,14 @@ export const rosterSize = (cards: number): number => Math.max(ROSTER_MIN, cards 
 const pool = (...kinds: Archetype[]) => ARCHETYPE_WEIGHTS.filter(([k]) => kinds.includes(k));
 const HAZARDS = pool(...HAZARD);
 /**
- * What every roster holds after its bridge: a demolition part, since dry rounds
- * lean on it to clear what's in the way (mostly placed parts: changing terrain is
- * rare, see the bomb recipe), held items, and a spread of roles. Hazards get three so the crate's hazard
- * card isn't always the same one.
+ * What every roster holds after its bridge: a demolition part that clears placed
+ * parts (`clearsParts`), since a level the parts have sealed is opened by one and
+ * dry rounds lean on it (the drill only digs, so it comes in with the rest), held
+ * items, and a spread of roles. Hazards get three so the crate's hazard card isn't
+ * always the same one.
  */
 const ROSTER_SLOTS = [
-  pool('bomb', 'charge', 'drill', 'timebomb'),
+  pool('bomb', 'charge', 'timebomb'),
   pool('mystery'),
   HAZARDS,
   HAZARDS,
@@ -1544,24 +1545,32 @@ export function generateRoster(seed: number, size: number): Part[] {
 /** How much less likely a part already in the crate is to fill another card, so a crate stays a choice between parts. */
 const REPEAT_WEIGHT = 0.3;
 
+/** Does this part's blast take placed parts away? Every demolition part but the drill, which only digs. */
+export function clearsParts(def: PropDef): boolean {
+  return def.modules.some((m) => m.type === 'bomb' && m.target !== 'terrain');
+}
+
 /**
  * A round's crate, drawn from the match's roster. It always holds a hazard
  * and at least `bridges` medium bridge cards (capped so the hazard keeps its
- * place): what the level still needs, so a match can't run out of ways to
- * reach the flag. Past that no card is shown twice, but a part can show up
- * again at another size. `dry`, rounds in a row nobody finished, tilts the rest
- * toward parts that unstick a match (dryLean), and `lone`, a pipe in the level
- * still waiting for its partner, toward the pipe (crateLean); nothing says so
- * on screen.
+ * place): what the level still needs, so a fresh level can always be finished.
+ * `sealed`, a level the placed parts have shut, also deals a demolition card
+ * that clears parts (`clearsParts`), the way out, and then one bridge at most
+ * so all three fit in the smallest crate. Past that no card is shown twice,
+ * but a part can show up again at another size. `dry`, rounds in a row nobody
+ * finished, tilts the rest toward parts that unstick a match (dryLean), and
+ * `lone`, a pipe in the level still waiting for its partner, toward the pipe
+ * (crateLean); nothing says so on screen.
  */
-export function generateCrate(seed: number, round: number, count: number, bridges = 1, dry = 0, lone = false): PropDef[] {
+export function generateCrate(seed: number, round: number, count: number, bridges = 1, dry = 0, lone = false, sealed = false): PropDef[] {
   const rng = new Rng(deriveSeed(seed, `crate:${round}`));
   const roster = generateRoster(seed, rosterSize(count));
-  const need = Math.max(1, Math.min(bridges, count - 1));
+  const need = sealed ? 1 : Math.max(1, Math.min(bridges, count - 1));
   const cards: PropDef[] = Array.from({ length: need }, () => medium(roster[0]));
   const left = (p: Part) => p.variants.filter((v) => !cards.includes(v));
   const draw = (p: Part) => cards.push(rng.pick(left(p)));
   draw(rng.pick(roster.filter((p) => HAZARD.includes(p.archetype))));
+  if (sealed) draw(rng.pick(roster.filter((p) => p.variants.every(clearsParts))));
   while (cards.length < count) {
     const open = roster.filter((p) => left(p).length);
     draw(rng.weighted(open.map((p) => [p, crateLean(p.archetype, dry, lone) * (cards.some((c) => c.part === p.id) ? REPEAT_WEIGHT : 1)] as const)));

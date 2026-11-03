@@ -89,6 +89,8 @@ export interface Runner {
   attach: RunnerAttach;
   /** Slot of the runner this one is standing on, or -1 (sim/collide.ts). */
   ride: number;
+  /** Frames in a row this runner has stood on heads: a head holds nobody for long (PERCH in sim/collide.ts). */
+  perch: number;
   /** Frames this runner has held alt toward a self-destruct (`popCharge`), 0 when not charging. Everyone sees it fill. */
   pop: number;
   /** Frames this runner has been held up by other bodies; enough of them and it slips through (sim/collide.ts). */
@@ -178,6 +180,7 @@ export class RunWorld {
       items: newRunnerItems(),
       attach: newAttach(),
       ride: -1,
+      perch: 0,
       pop: 0,
       press: 0,
     }));

@@ -195,19 +195,21 @@ export const shots: Scenarios = {
     );
   },
   async stack() {
-    // Body contact as stepped frames: three runners stack, the bottom one walks them along, and a fourth bounces off the top.
+    // Body contact as stepped frames. A head is a perch, not ground: three runners stack and the bottom one's jump bucks
+    // them off; then one rider at a time slides off an off-centre perch, is thrown forward by a hard stop, is knocked
+    // off the back by a base walking away, tips off a still base, and jumps off a head.
     await open(`seed=${seed}&players=4&race=mystery&propseed=${opt('propseed', '1')}`);
     await step(190);
     const spot = await page.evaluate(() => {
       const run = (window as any).slagDebug.match.run;
       const L = run.level;
       for (let ty = 8; ty < L.h - 2; ty++) {
-        for (let tx = 7; tx < L.w - 14; tx++) {
-          const clear = [0, 1, 2, 3, 4, 5, 6].every(
+        for (let tx = 4; tx < L.w - 16; tx++) {
+          const clear = [...Array(10).keys()].every(
             (dx) => L.tiles[(ty + 1) * L.w + tx + dx] === 1 && [0, 1, 2, 3, 4, 5, 6, 7].every((dy) => L.tiles[(ty - dy) * L.w + tx + dx] === 0),
           );
           if (!clear) continue;
-          const x = (tx + 1) * 16 + 3;
+          const x = (tx + 4) * 16 + 3;
           const feet = (ty + 1) * 16;
           run.runners.forEach((r: any, i: number) => {
             r.body.x = x;
@@ -216,7 +218,7 @@ export const shots: Scenarios = {
             r.body.onGround = false;
             r.body.groundRef = -1;
           });
-          return [x, feet - 40];
+          return [x, feet - 40, (tx + 1) * 16];
         }
       }
       throw new Error('no open floor for a stack');
@@ -226,11 +228,11 @@ export const shots: Scenarios = {
       // The camera drifts and zooms during a race, so ask it where the stack landed on screen.
       const cam = await page.evaluate(() => {
         const d = (window as any).slagDebug;
-        return { x: d.renderer.cam.x, y: d.renderer.cam.y, zoom: d.renderer.cam.zoom, stack: d.match.run.runners[0].body.x };
+        return { x: d.renderer.cam.x, y: d.renderer.cam.y, zoom: d.renderer.cam.zoom };
       });
       const [w, h] = [300 * zk, 200 * zk];
       const size = page.viewportSize()!;
-      const px = ((cam.stack - cam.x) * cam.zoom + 384) * zk;
+      const px = ((spot[0] - cam.x) * cam.zoom + 384) * zk;
       const py = ((spot[1] - cam.y) * cam.zoom + 216) * zk;
       const path = `${out}/${name}.png`;
       await page.screenshot({
@@ -242,42 +244,83 @@ export const shots: Scenarios = {
     const press = (n: number, inputs: object) => page.evaluate(([c, i]) => (window as any).slagDebug.step(c, i), [n, inputs] as const);
     const rows = () =>
       page.evaluate(() =>
-        (window as any).slagDebug.match.run.runners.map((r: any) => `#${r.slot} y=${r.body.y.toFixed(1)} ride=${r.ride} ground=${r.body.onGround}`).join('  '),
+        (window as any).slagDebug.match.run.runners
+          .map((r: any) => `#${r.slot} x=${r.body.x.toFixed(1)} y=${r.body.y.toFixed(1)} ride=${r.ride} perch=${r.perch}`)
+          .join('  '),
       );
     const frames: string[] = [];
     const shoot = async (label: string) => {
       await crop(`stack-${String(frames.length).padStart(2, '0')}-${label}`, frames);
       console.log(label, await rows());
     };
-    // Runners 1..3 fall onto runner 0.
+    /** Runner 0 back on the floor at the spot, runner 1 just over its head `off` px right of centre, the other two parked to the left. */
+    const perch = (off: number) =>
+      page.evaluate(
+        ([[x, , park], o]) => {
+          const run = (window as any).slagDebug.match.run;
+          const feet = run.runners[0].body.y + run.runners[0].body.h;
+          run.runners.forEach((r: any, i: number) => {
+            const b = r.body;
+            b.x = i === 0 ? x : i === 1 ? x + o : park + (i - 2) * 14;
+            b.y = i === 1 ? feet - 2 * b.h - 2 : feet - b.h;
+            b.vx = b.vy = 0;
+            b.onGround = i !== 1;
+            b.groundRef = i === 1 ? -1 : -2;
+            r.perch = 0;
+          });
+        },
+        [spot, off] as const,
+      );
+    const jump = { jump: true, jumpPressed: true };
+    // Runners 1..3 fall onto runner 0 and stack, dead centre.
     await press(4, {});
     await shoot('falling');
-    await press(40, {});
+    await press(36, {});
     await shoot('stacked');
-    await press(24, { kb1: { right: true } });
-    await shoot('carried');
-    await press(16, { kb1: { right: true, run: true } });
-    await shoot('carried-run');
+    // The bottom jumps: everyone above is bucked up and off, a pop rather than a lift.
+    await press(1, { kb1: jump });
+    await press(4, { kb1: { jump: true } });
+    await shoot('bucked');
+    await press(10, { kb1: { jump: true } });
+    await shoot('bucked-apex');
+    await press(40, {});
+    await shoot('spilled');
+    // A rider 3 px off centre slides off the rounded top toward its side.
+    await perch(3);
+    await press(6, {});
+    await shoot('off-centre');
+    await press(12, {});
+    await shoot('sliding');
     await press(14, {});
-    await shoot('settled');
-    // The top runner jumps straight up, and buffers a jump on the way back down: a head-bounce.
-    await press(1, { pad1: { jump: true, jumpPressed: true } });
-    await press(9, { pad1: { jump: true } });
+    await shoot('slid-off');
+    // Base and rider walk together; the base stops hard and the rider flies on.
+    await perch(0);
+    await press(6, {});
+    await press(24, { kb1: { right: true }, kb2: { right: true } });
+    await shoot('walking-together');
+    await press(4, { kb2: { right: true } });
+    await shoot('hard-stop');
+    await press(10, { kb2: { right: true } });
+    await shoot('thrown-forward');
+    // The base walks off from under a rider standing still: it's left behind, knocked off the back.
+    await perch(0);
+    await press(6, {});
+    await press(4, { kb1: { right: true } });
+    await shoot('walked-out');
+    await press(10, { kb1: { right: true } });
+    await shoot('knocked-back');
+    // Dead centre on a base standing still: a moment, then it tips.
+    await perch(0);
+    await press(56, {});
+    await shoot('held');
+    await press(10, {});
+    await shoot('tipped');
+    // Jumping off a head still works.
+    await perch(1);
+    await press(6, {});
+    await press(1, { kb2: jump });
+    await press(10, { kb2: { jump: true } });
     await shoot('jump-off');
-    await press(14, { pad1: { jump: true } });
-    await shoot('apex');
-    const top = await page.evaluate(() => (window as any).slagDebug.match.run.runners[2].body.y - 14);
-    for (let i = 0; i < 60; i++) {
-      const y = await page.evaluate(() => (window as any).slagDebug.match.run.runners[3].body.y);
-      if (y > top - 12) break;
-      await press(1, {});
-    }
-    await shoot('coming-down');
-    await press(1, { pad1: { jump: true, jumpPressed: true } });
-    await press(3, { pad1: { jump: true } });
-    await shoot('head-bounce');
-    await press(10, { pad1: { jump: true } });
-    await shoot('bounced');
     await sheet(`stack-${seed}`, frames, 4);
   },
   async items() {

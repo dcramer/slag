@@ -117,8 +117,8 @@ export interface Face {
   r: number;
   iris: string;
   mouth?: [number, number];
-  /** `tall`: tall black ovals with a shine at the top and no whites (the puffball's), in place of cartoon eyes. */
-  eye?: 'tall';
+  /** `tall`: tall black ovals with a shine at the top and no whites (the puffball's); `dot`: small round black eyes with a shine (the electric mouse's). Either replaces the cartoon eyes. */
+  eye?: 'tall' | 'dot';
   /**
    * Where the eyes go when the model's own are too small to find: from the biggest part of `role` (the
    * nose), the near eye's offset in world px on the rest pose facing right. The far eye is its mirror
@@ -164,9 +164,14 @@ export interface Prop {
   /** Degrees about the figure's x, y, z. */
   rot: [number, number, number];
   parts: {
-    shape: 'cylinder' | 'cup' | 'sphere' | 'box';
+    shape: 'cylinder' | 'cup' | 'sphere' | 'box' | 'prism';
     role: string;
     size: [number, number, number];
+    /**
+     * A `prism`'s outline in the figure's side plane (z forward, y up, world px), extruded `size[0]` across
+     * x: a flat cut shape whose corners must stay sharp (the electric mouse's tin bolt).
+     */
+    points?: [number, number][];
     at?: [number, number, number];
     rot?: [number, number, number];
     /**

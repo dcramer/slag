@@ -8,11 +8,14 @@ Design intent for everything below is in `docs/DESIGN.md`.
 
 ---
 
+## 29. Character art: the rest of the roster (paused for credits)
+The 3D-to-2D pipeline (`tools/art3d/`, playbook in its README and CHECKLIST) is the direction, and the roster of twenty is in `docs/CHARACTERS.md` → Roster, with the production order there. Done so far: plumber, speedster, chomper, puffball, zapmouse, and the elf in progress. Paused by the owner until there are Tripo credits for the rest ("we dont have enough credits to finish all art"). Limbless kinds (the jelly) need no model and cost nothing. When it resumes: add the five kinds not yet in `CAST` (miner, merc, sneak, robot, king) in one change so saved looks re-roll once, and run humanoids after the shared arm-key fix.
+
 ## 27. AI players and player scripts (future)
 Brains that fill seats by producing inputs, built in or written by players. Design: `docs/DESIGN.md` → AI players. Native AI first (phases 1–2); scripts after. Each phase is one agent, in order.
 
 1. **Brain and motor, racing only.** The `Brain` interface, `BrainView` v1, a `BRAINS` registry and a motor that replays `src/sim/reach.ts` policies as intents. A built-in brain follows the reach route and replans around hazards. Bots fill local seats. A test runs a headless match and checks a bot finishes a few solvable levels; finish rates over many seeds go in `tests/stats/`.
-2. **Pick, place and personality.** Pick by role and the round's state; place to trap rivals without stranding itself (the winnability plan already refuses a placement that leaves no way through). Personality rolled from a seed (reaction, precision, risk, spite), with a generated name. Host-owned bot seats online, moving with host migration.
+2. **Pick, place and personality.** Pick by role and the round's state; place to trap rivals without stranding itself; parts may seal the level, so a bot should avoid sealing its own way unless it holds a bomb. Personality rolled from a seed (reaction, precision, risk, spite), with a generated name. Host-owned bot seats online, moving with host migration.
 3. **Player scripts.** A Web Worker sandbox with a per-frame deadline, the published `brain-api.d.ts`, the Workshop screen (load, trial over seeds, report, replays) and `pnpm brain trial`.
 4. **Copy for Your AI.** The prompt pack: API, current script, worst failures from the last trial.
 
