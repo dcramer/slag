@@ -1,3 +1,4 @@
+import { nameBlocked } from '../core/name-filter';
 import { swatchIndex } from '../gen/character';
 
 /** Local player profile (name, look, color), persisted to localStorage. */
@@ -32,18 +33,21 @@ export function loadProfile(): Profile {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const p = JSON.parse(raw) as Profile;
-      if (p.version === 1) {
-        // Storage is anyone's to edit: a color that isn't a swatch is no color.
-        const { color, ...rest } = p;
-        const q: Profile = swatchIndex(color) === undefined ? rest : p;
-        return q.lookCast === LOOK_CAST ? q : { ...q, look: null, lookCast: LOOK_CAST };
-      }
+      if (p.version !== 1) return fresh();
+      // Saved before the name filter refused it: back to the generated name.
+      const named = typeof p.name === 'string' && nameBlocked(p.name) ? { ...p, name: null } : p;
+      // Storage is anyone's to edit: a color that isn't a swatch is no color.
+      const { color, ...rest } = named;
+      const q: Profile = swatchIndex(color) === undefined ? rest : named;
+      return q.lookCast === LOOK_CAST ? q : { ...q, look: null, lookCast: LOOK_CAST };
     }
   } catch {
     // ignore
   }
-  return { version: 1, name: null, prompted: false };
+  return fresh();
 }
+
+const fresh = (): Profile => ({ version: 1, name: null, prompted: false });
 
 export function saveProfile(p: Profile) {
   try {

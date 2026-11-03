@@ -17,6 +17,16 @@ Loaded from Google Fonts by `app/layout.tsx`, not bundled. Both are under the
 The link-preview cards (`app/opengraph-image.jpg`, `app/r/[room]/opengraph-image.jpg`) contain text
 rendered in both. The OFL governs the font software, not images made with it, so they carry no conditions.
 
+## Word lists
+
+The name filter (`src/core/name-filter/`) reads two published lists, copied verbatim into `words.ts` by
+`tools/name-words.ts`. Which entries it uses, and how strictly, is decided in `index.ts`.
+
+| List | Source | License |
+|---|---|---|
+| List of Dirty, Naughty, Obscene, and Otherwise Bad Words (Shutterstock and contributors), English (`en`), commit `5faf2ba`; unmodified, the filter leaves two entries out | https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| profanity-list, English (`en.json`, without its ids), commit `c279243` | https://github.com/dsojevic/profanity-list | MIT, Copyright (c) 2021 David Sojevic |
+
 ## Brand marks
 
 The icon mark (`app/icon.svg`, drawn by hand as paths, no font) and every file made from it

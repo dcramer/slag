@@ -132,6 +132,8 @@ Every game design decision, preference and direction the owner has given, groupe
   Changed: the colour changed only with a New Look roll.
 - **One player per swatch: a swatch someone seated wears shows as taken and can't be picked, and when two reach for the same free one at once the host's order gives it to the first.** The agent's pick for the clash rule the owner left open; deterministic, and the HUD keeps telling players apart by colour. Profiles saved before swatches keep their rolled colour until they pick one.
   2026-11-02 · `done` · DESIGN.md → Players
+- **Player names are filtered, so nobody puts a slur on everyone's screen or on the public lobby list.** "we also need some kind of word filter for names so people dont put racial slurs/etc"
+  2026-11-02 23:11Z · `done` · DESIGN.md → Players, NETCODE.md → Seats and kicks, public/ASSETS.md → Word lists
 
 ## Characters
 
@@ -184,6 +186,11 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `done` · CHARACTERS.md → Roster
 - **Character source art (models and sheets) lives in Git LFS; builds skip it and use the generated frames.** (answer: "Git LFS")
   2026-11-02 · `done` · `.gitattributes`, `tools/art3d/README.md`
+- **The player's colour is the character's main costume colour (an alternate costume), not a foot ring.** "the sprites seem to always be the same color? like they're not re-coloring their primary based on the player color?" / "ok well thats wrong"
+  2026-11-02 · `done` for the plumber and speedster · CHARACTERS.md → the rules
+  Changed: iconic palettes with the player's colour on a foot ring.
+- **Characters vary only in curated ways that keep the art: costume colour, accessory swaps, designed alternate palettes on one secondary region, pose personality (two idles, two cheers, a little gait), and wear. Faces, proportions and silhouettes are never rolled; random eyes and mouths go.** "idk if theres ways we can make it a little more procedural without losing our art work" / "'random eyeballs' dont work with the art style" / "Yes, add it"
+  2026-11-02 · `in progress` · CHARACTERS.md → the rules, `tools/art3d/`
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
   2026-11-02 · `done` · public/ASSETS.md
 

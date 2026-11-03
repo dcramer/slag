@@ -1,4 +1,5 @@
 import { type HSL, hsl3 } from '../core/color';
+import { nameBlocked } from '../core/name-filter';
 import { Rng } from '../core/rng';
 import { word } from './names';
 
@@ -196,11 +197,17 @@ export function swatchIndex(v: unknown): number | undefined {
   return Number.isInteger(v) && (v as number) >= 0 && (v as number) < PLAYER_COLORS.length ? (v as number) : undefined;
 }
 
-/** Names that fit HUD chips: retry (deterministically) until ≤ 10 chars. */
+/**
+ * Names that fit HUD chips: retry (deterministically) until ≤ 10 chars and one the name filter allows, since the
+ * generated name is what a refused one falls back to.
+ */
 function shortName(rng: Rng): string {
   for (let i = 0; i < 20; i++) {
     const n = word(rng, 2, 3);
-    if (n.length <= 10) return n;
+    if (n.length <= 10 && !nameBlocked(n)) return n;
   }
-  return word(rng, 1, 1);
+  for (;;) {
+    const n = word(rng, 1, 1);
+    if (!nameBlocked(n)) return n;
+  }
 }

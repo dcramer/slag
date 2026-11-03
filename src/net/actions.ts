@@ -1,4 +1,6 @@
-import type { CharacterDef } from '../gen/character';
+import { tidyName } from '../core/name';
+import { nameBlocked } from '../core/name-filter';
+import { type CharacterDef, generateCharacter } from '../gen/character';
 import type { Match } from '../game/match';
 import { BLOOD_CHOICES, DEFAULT_RULES, GRAVITY_CHOICES, type MatchRules, nearestLength, RULE_CHOICES } from '../game/rules';
 import { MAX_PLAYERS } from '../sim/constants';
@@ -84,9 +86,29 @@ export function freeSeats(m: Match, ns: NetState): number {
   return MAX_PLAYERS - m.players.filter((p) => !p.leaving).length - ns.queue.length;
 }
 
-/** Names come off the wire: the same limits as a player's. */
+/** Names come off the wire: the same limits as a player's, and '' for one the name filter refuses. */
 export function cleanName(v: unknown): string {
-  return typeof v === 'string' ? v.slice(0, 12).trim() : '';
+  const name = tidyName(v);
+  return nameBlocked(name) ? '' : name;
+}
+
+/** A character off the wire or out of a save, with its seed's own name in place of one the name filter refuses. */
+export function cleanCharacter(c: CharacterDef): CharacterDef {
+  return typeof c.name === 'string' && c.name && !nameBlocked(c.name) ? c : { ...c, name: generateCharacter(c.seed).name };
+}
+
+/**
+ * A guest's action as the host passes it on to the room: a name the filter refuses goes out as the player's own
+ * generated name (or none, for a watcher's label), so the room never carries it. A watch's `afk` is the host's call.
+ */
+export function relayAction(m: Match, a: NetAction): NetAction {
+  if (a.t === 'watch') {
+    const name = cleanName(a.name);
+    return name ? { t: 'watch', dev: a.dev, on: a.on, name } : { t: 'watch', dev: a.dev, on: a.on };
+  }
+  if (a.t !== 'name' || !nameBlocked(tidyName(a.name))) return a;
+  const p = m.players.find((q) => q.device === a.dev);
+  return { ...a, name: p ? generateCharacter(p.character.seed).name : '' };
 }
 
 /** Peer id that owns a global device id (`<peer>:<local device>`), or '' for un-namespaced (offline/debug) devices. */
@@ -111,7 +133,8 @@ function seat(m: Match, ns: NetState, dev: string, char?: CharacterDef) {
   const peer = peerOf(dev);
   // Dropped mid-match for being gone too long and back: the same look, and the points they had.
   const park = ns.parked[peer]?.find((x) => x.dev === dev);
-  const p = m.join(dev, char ?? park?.char);
+  const old = char ?? park?.char;
+  const p = m.join(dev, old && cleanCharacter(old));
   if (p && park?.score && m.phase !== 'lobby') p.score = park.score;
   ns.queue = ns.queue.filter((q) => q.peer !== peer);
   const parked = ns.parked[peer]?.filter((x) => x.dev !== dev);
@@ -179,8 +202,11 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
     }
     case 'name': {
       const p = m.players.find((q) => q.device === a.dev);
-      const name = cleanName(a.name); // wire data: don't trust the type
-      if (p && name && !m.players.some((q) => q !== p && q.character.name === name)) m.setName(p.slot, name);
+      if (!p) return;
+      const typed = tidyName(a.name); // wire data: don't trust the type
+      // Refused by the name filter: the player goes by the name its look came with.
+      const name = nameBlocked(typed) ? generateCharacter(p.character.seed).name : typed;
+      if (name && !m.players.some((q) => q !== p && q.character.name === name)) m.setName(p.slot, name);
       return;
     }
     case 'look': {

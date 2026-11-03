@@ -1,3 +1,4 @@
+import { nameBlocked } from '../../core/name-filter';
 import { connectedPads } from '../../input/input';
 import { type CharacterDef, PLAYER_COLORS } from '../../gen/character';
 import { css } from '../../core/color';
@@ -72,7 +73,13 @@ export class NamePrompt extends Overlay {
       this.close();
     };
     const ok = el('button', { className: 'slag-btn primary', type: 'button', textContent: 'Save' });
-    ok.onclick = () => finish(sanitizeName(input.value) || null);
+    ok.onclick = () => {
+      const name = sanitizeName(input.value);
+      if (!nameBlocked(name)) return finish(name || null);
+      // Refused: the field goes back to the name you had, with nothing said.
+      input.value = s.current ?? s.randomName;
+      input.select();
+    };
     const keep = el('button', { className: 'slag-btn', type: 'button', textContent: `Keep “${s.randomName}”` });
     keep.onclick = () => finish(null);
     const swatches = PLAYER_COLORS.map((c, i) => {
