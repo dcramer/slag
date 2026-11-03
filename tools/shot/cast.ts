@@ -152,6 +152,30 @@ async function catalog(): Promise<string> {
   return path;
 }
 
+/** The player palette on every kind (`--only colors`); `--sprites` draws the kinds from their 3D models. */
+async function colors(): Promise<string> {
+  const sprites = opt('sprites') ? '&sprites=1' : '';
+  await open(`seed=${seed}${sprites}`);
+  await page.evaluate(() => document.fonts.ready);
+  const box = await page.evaluate(() => {
+    const cv = (window as any).slagDebug.cast.colors();
+    return { width: cv.width, height: cv.height };
+  });
+  // Sprite sheets load on first draw: give them a moment, then draw again.
+  if (sprites) {
+    await page.waitForTimeout(1500);
+    await page.evaluate(() => {
+      document.querySelectorAll('canvas[style*="z-index:99"]').forEach((c) => c.remove());
+      (window as any).slagDebug.cast.colors();
+    });
+  }
+  const path = `${out}/cast-colors${sprites ? '-sprites' : ''}.png`;
+  await page.screenshot({ path, clip: { x: 0, y: 0, ...box } });
+  console.log(path);
+  pet();
+  return path;
+}
+
 async function silhouettes(): Promise<string> {
   await open(`seed=${seed}`);
   await page.evaluate(() => document.fonts.ready);
@@ -204,6 +228,10 @@ const row = (...cells: string[]) => `<div style="display:flex;gap:12px;align-ite
 
 export const shots: Scenarios = {
   async cast() {
+    if (opt('only') === 'colors') {
+      await colors();
+      return;
+    }
     if (opt('only') === 'catalog') {
       // Fast iteration on the art: the catalog and the silhouette test alone.
       await catalog();

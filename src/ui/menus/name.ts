@@ -31,7 +31,7 @@ const CSS = `
 .slag-who canvas{flex:none;width:112px;height:112px;border-radius:6px;background:radial-gradient(circle at 50% 78%,rgba(255,120,40,.28),rgba(20,12,8,.0) 60%),${PAL.soot};border:2px solid ${PAL.ink};box-shadow:inset 0 3px 0 rgba(0,0,0,.4)}
 .slag-who .slag-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:12px}
 .slag-swatches{display:flex;flex-wrap:wrap;gap:6px}
-.slag-swatch{all:unset;box-sizing:border-box;position:relative;width:44px;height:44px;border-radius:6px;border:2px solid ${PAL.ink};box-shadow:0 3px 0 ${PAL.ink},inset 0 -6px 0 rgba(0,0,0,.18);cursor:pointer;transition:transform .06s,box-shadow .06s}
+.slag-swatch{all:unset;display:block;flex:none;box-sizing:border-box;position:relative;width:44px;height:44px;border-radius:6px;border:2px solid ${PAL.ink};box-shadow:0 3px 0 ${PAL.ink},inset 0 -6px 0 rgba(0,0,0,.18);cursor:pointer;transition:transform .06s,box-shadow .06s}
 .slag-swatch:hover{transform:translateY(-1px)}
 .slag-swatch:active{transform:translateY(2px);box-shadow:0 1px 0 ${PAL.ink}}
 .slag-swatch[aria-pressed=true]{outline:3px solid ${PAL.bone};outline-offset:2px}
