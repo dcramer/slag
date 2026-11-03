@@ -19,8 +19,10 @@ export type NetAction =
   /** Mid-match: the device's peer disconnected (or came back). */
   | { t: 'away'; dev: string; on: boolean }
   | { t: 'name'; dev: string; name: string }
-  /** Restore a saved look (character seed) for one of the sender's players. */
-  | { t: 'look'; dev: string; seed: number }
+  /** Restore a saved look (character seed) for one of the sender's players, in its saved swatch if it has one. */
+  | { t: 'look'; dev: string; seed: number; color?: number }
+  /** Wear swatch `color` (PLAYER_COLORS). The first to reach a free swatch gets it; a later ask finds it taken and does nothing. */
+  | { t: 'color'; dev: string; color: number }
   /** Host only: the per-match salt (crate order) for the next match start. */
   | { t: 'salt'; salt: number }
   /** Host only, lobby only. */
@@ -118,6 +120,15 @@ export function peerOf(dev: string): string {
 /** Where seats change hands: the lobby, and the round boundary (the score and victory screens). */
 export const SEAT_PHASES = new Set(['lobby', 'score', 'victory']);
 
+/**
+ * What a watcher's Join opens. Mid-match, the join card: the toy, the name and color to settle before going in, and
+ * how the ask went. In the lobby, nothing: the seat is taken the way arriving takes one, and the lobby card that
+ * appears already changes all of that.
+ */
+export function joinOpensCard(phase: string): boolean {
+  return phase !== 'lobby';
+}
+
 function seat(m: Match, ns: NetState, dev: string, char?: CharacterDef) {
   const peer = peerOf(dev);
   // Dropped mid-match for being gone too long and back: the same look, and the points they had.
@@ -201,7 +212,12 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
     case 'look': {
       const p = m.players.find((q) => q.device === a.dev);
       // Two tabs of one browser share a saved look; the second one keeps the character it rolled.
-      if (p && Number.isInteger(a.seed) && m.looksFree({ ...generateCharacter(a.seed >>> 0), name: p.character.name }, p)) m.setLook(p.slot, a.seed >>> 0);
+      if (p && Number.isInteger(a.seed)) m.setLook(p.slot, a.seed >>> 0, a.color);
+      return;
+    }
+    case 'color': {
+      const p = m.players.find((q) => q.device === a.dev);
+      if (p) m.setColor(p.slot, a.color); // wire data: setColor checks it's a swatch
       return;
     }
     case 'salt':

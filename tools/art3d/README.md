@@ -63,7 +63,7 @@ The settings are `Settings` in `settings.ts`, documented field by field. Start f
 - **Roles.** `pnpm sprites inspect` lists the texture's colour clusters; give each a role in the entry's palette (`swatches` are the colours as painted; `color` the palette's). Eyes get `glint` (and a `band`, from the top, when goggles or a visor sit above them). Too-fine details fold `into` a neighbour or get a smaller `min`.
 - **The nod, drawn bigger.** A trait that shares a colour with something else (the plumber's nose and cap are the shirt's red) is split off by a `region` (a box of the bind pose) into a role of its own, which can then `grow`. `scale` grows bones (head, hands, feet); `girth` draws the figure wider than the model, per clip if a pose would leave the box.
 - **Props.** The signature prop the generator drops, built from `cylinder`, `cup`, `sphere` and `box` on a bone, in world px and the figure's axes (x its left, y up, z forward). Swaps: two props per `slot`, the first empty; their roles are their own and `free` (off the silhouette); `slots` maps each to a `vary` index.
-- **Face.** `face: { r, iris, mouth? }`; `anchor` sets the eyes from another part (the nose) when the model's eyes are too small to trace.
+- **Face.** `face: { r, iris, mouth? }`; `eye: "tall"` draws tall black eyes with a shine and a blush instead of cartoon eyes. The eyes are found once, on the rest pose facing right (the `glint` role's two biggest parts, or `anchor`: the near eye set from another part, the nose or the puffball's painted smile, when the model's are too small to trace), then ride the head bone (`bone`, default `head`) through every frame: the far eye is the near one's mirror across the head, an eye turned away or behind something nearer isn't drawn, and the head's tilt turns brows, crosses and mouth. `spread` sets them further apart (or closer) than the model's own; `covers` draws the model's own eye roles as the skin under them, inside the head only, so a traced white doesn't show round the drawn one. A rig with no head bone keeps the per-frame anchor, turned with a rolled pose. `tests/sprite-cast.test.ts` holds every eye of every frame on its head and on the figure.
 - **Clips.** idle (fps), walk and run (`stride`, world px per loop), air (`vy` from the jump's keys, or `ball: true` with a `ball`), wall (keys), cheer (fps), death (`center`). Sources: a model animation (`src`, `from`, `to`) or `keys`.
 - **Keys.** From the pose sheet: a base (`idle@0.05`), bones turned in degrees about the figure's axes (about x swings a limb forward or back), named `_near` / `_far` for the camera's side and the other (authored facing right; facing left mirrors), `yaw` to cheat the pose toward the camera, `scale` to stretch a bone (keep it small: the owner wants poses, not rubber), `roll` to spin the figure.
 - **Weights.** `rebind` moves skin weight from a bone the skin is far from (a strapped prop painted to a finger) to the one it should follow.
@@ -72,8 +72,11 @@ Set keys with `pnpm sprites keys KIND --keys a,b --zoom 6`; check the whole kind
 
 ## Non-humanoid kinds (keyed)
 
-- **Rigged** (`--type other`): Tripo names the bones its own way; `pnpm sprites inspect` lists them. Key poses with those names. `_near` / `_far` resolve to names ending `_l` / `_r`, and `near_` / `far_` to names starting `R_` / `L_` (Tripo's biped `--type other` rig: `near_Thigh`); a rig with neither names its limbs outright, one key per facing if it's asymmetric. Presets for other rigs are few (`walk` for quadrupeds) and prompt motions aren't available, so every clip but walk is keyed.
-- **Limbless** (the dot-eater, the jelly): no model or rig at all. Generate the frames as `page/ball.ts` does the spin ball: a shape in the roster's colours, its motion (a chomp, a bob) as frames, marks for speed. One generator per kind in `page/`, `"ball"`-style clips in `sprite.json`.
+- **Rigged** (`--type other`): Tripo names the bones its own way; `pnpm sprites inspect` lists them. Key poses with those names. `_near` / `_far` resolve to names ending `_l` / `_r`, and `near_` / `far_` to names starting `R_` / `L_` (Tripo's biped `--type other` rig: `near_Thigh`); a rig with neither names its limbs outright, one key per facing if it's asymmetric. Presets for other rigs are few (`walk` for quadrupeds) and prompt motions aren't available, so every clip but walk is keyed. Key every clip from `rest` when props ride the head or hips: the presets and the bind pose disagree on where the auto-rig's stray weights put things.
+- **Generated** (the puffball): a body simple enough to build from primitives is built in `page/<kind>.ts` with its own bones, flat key colours for its roles and its face painted where the anchor needs it, registered in `GENERATED` (`page/load.ts`), and named `"model": "gen:<kind>"` in `sprite.json`. No credits, no binary, and the rig has exactly the bones the keys turn. Every clip is keyed from `rest`.
+- **Limbless** (the dot-eater, the jelly): no model or rig at all. Generate the frames as `page/ball.ts` does the spin ball: a shape in the roster's colours, its motion (a chomp, a bob) as frames, marks for speed. One generator per kind in `page/` (`page/chomper.ts` is the worked example), registered in `GENERATORS` in `page/shapes.ts`; `sprite.json` names it in `shape` (`{ "by": "chomper", "r": 9.6 }`) in place of `model`, and its clips carry only frames and timing, since the generator draws each clip by name. Its roles need no `swatches`, and a slot's options are counted from the parts it tags.
+
+> > > > > > > origin/main
 
 ## Done
 
@@ -88,14 +91,15 @@ Set keys with `pnpm sprites keys KIND --keys a,b --zoom 6`; check the whole kind
 
 ## Files
 
-| File                               | What it holds                                                                         |
-| ---------------------------------- | ------------------------------------------------------------------------------------- |
-| `sprites.ts`                       | The command: serves the page, drives it, writes the frame table and the sheets        |
-| `settings.ts`                      | `Settings`, shared by the command and the page                                        |
-| `style.ts`                         | The concept, pose-sheet and model-sheet prompts, and each kind's brief                |
-| `CHECKLIST.md`                     | One kind's run sheet and done list                                                    |
-| `page/render.ts`                   | Loading, caricature, props and swaps, keyed poses, the camera and the role/depth pass |
-| `page/trace.ts`                    | Parts, folding, tracing, resampling, steadying, the eyes                              |
-| `page/ball.ts`                     | The generated spin ball (the model for limbless kinds)                                |
-| `page/roles.ts`, `page/weights.ts` | Texture to roles; weight fixes                                                        |
-| `page/inspect.ts`, `page/sheet.ts` | The turnaround; the contact, keys and rolls sheets (drawn by the game's drawer)       |
+| File                                | What it holds                                                                         |
+| ----------------------------------- | ------------------------------------------------------------------------------------- |
+| `sprites.ts`                        | The command: serves the page, drives it, writes the frame table and the sheets        |
+| `settings.ts`                       | `Settings`, shared by the command and the page                                        |
+| `style.ts`                          | The concept, pose-sheet and model-sheet prompts, and each kind's brief                |
+| `CHECKLIST.md`                      | One kind's run sheet and done list                                                    |
+| `page/render.ts`                    | Loading, caricature, props and swaps, keyed poses, the camera and the role/depth pass |
+| `page/trace.ts`                     | Parts, folding, tracing, resampling, steadying, the rest pose's eyes                  |
+| `page/ball.ts`                      | The generated spin ball (the model for limbless kinds)                                |
+| `page/shapes.ts`, `page/chomper.ts` | Limbless kinds: the generator registry, and the dot-eater's generator                 |
+| `page/roles.ts`, `page/weights.ts`  | Texture to roles; weight fixes                                                        |
+| `page/inspect.ts`, `page/sheet.ts`  | The turnaround; the contact, keys and rolls sheets (drawn by the game's drawer)       |

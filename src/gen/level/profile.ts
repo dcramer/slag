@@ -122,7 +122,7 @@ export type GravityClass = keyof typeof GRAVITY;
 export const SPACE_GRAVITY = 0.55;
 
 /** Themes whose world has its own gravity on Auto. */
-const THEME_GRAVITY: Partial<Record<ThemeId, number>> = { space: SPACE_GRAVITY };
+export const THEME_GRAVITY: Partial<Record<ThemeId, number>> = { space: SPACE_GRAVITY };
 
 export function gravityClass(g: number): GravityClass {
   return g < 0.85 ? 'low' : g > 1.15 ? 'high' : 'normal';

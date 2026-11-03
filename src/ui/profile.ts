@@ -1,6 +1,7 @@
 import { nameBlocked } from '../core/name-filter';
+import { swatchIndex } from '../gen/character';
 
-/** Local player profile (name), persisted to localStorage. */
+/** Local player profile (name, look, color), persisted to localStorage. */
 export interface Profile {
   version: 1;
   /** Custom display name; null = keep the random generated one. */
@@ -11,6 +12,11 @@ export interface Profile {
   look?: number | null;
   /** Which cast `look` was rolled in. A look from another cast means nothing now and is dropped. */
   lookCast?: number;
+  /**
+   * The swatch the player wears (PLAYER_COLORS index), kept through every new look. Absent in a profile saved
+   * before swatches: that player wears their look's own rolled hue until they pick one.
+   */
+  color?: number;
 }
 
 /**
@@ -18,7 +24,7 @@ export interface Profile {
  * next one is saved from the new cast. 2: the foundry toys. 3: slimmer toys, the lantern in for the
  * crucible. 4: twelve hand-designed toys. 5: animals and critters. 6: mostly homages (docs/CHARACTERS.md).
  */
-export const LOOK_CAST = 6;
+export const LOOK_CAST = 7;
 
 const KEY = 'slag.profile.v1';
 
@@ -30,7 +36,10 @@ export function loadProfile(): Profile {
       if (p.version !== 1) return fresh();
       // Saved before the name filter refused it: back to the generated name.
       const named = typeof p.name === 'string' && nameBlocked(p.name) ? { ...p, name: null } : p;
-      return named.lookCast === LOOK_CAST ? named : { ...named, look: null, lookCast: LOOK_CAST };
+      // Storage is anyone's to edit: a color that isn't a swatch is no color.
+      const { color, ...rest } = named;
+      const q: Profile = swatchIndex(color) === undefined ? rest : named;
+      return q.lookCast === LOOK_CAST ? q : { ...q, look: null, lookCast: LOOK_CAST };
     }
   } catch {
     // ignore

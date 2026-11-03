@@ -3,7 +3,8 @@ import { BOX, type Clip, type Key, type Prop, type Settings } from '../settings'
 import { ballFrames } from './ball';
 import { loadModel } from './load';
 import { classify } from './roles';
-import { steady, trace, type Traced } from './trace';
+import { shaped } from './shapes';
+import { centreOf, steady, trace, type Traced } from './trace';
 import { rebind } from './weights';
 
 /**
@@ -90,6 +91,7 @@ const rad = (d: number) => (d * Math.PI) / 180;
 const FLOOR = 0.6;
 
 export async function renderSprites(url: string, s: Settings, only?: string[]) {
+  if (s.shape) return shaped(s, only);
   const model = await loadModel(url);
   const names = Object.keys(s.roles);
   if (!model.texture) throw new Error('the model has no colour texture to read roles from');
@@ -338,7 +340,17 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
   const role = new Int16Array(W * H);
   const depth = new Float32Array(W * H);
 
-  const shoot = (): Traced => {
+  // Where the face kit draws the eyes, the model's own eye roles are drawn as what they sit on (`covers`),
+  // inside the head only (a white eye and a white shoe strap are one role), so a traced white doesn't show
+  // round the drawn eye.
+  const covers = Object.entries(s.face?.covers ?? {}).map(([from, to]) => {
+    const a = names.indexOf(from);
+    const b = names.indexOf(to);
+    if (a < 0 || b < 0) throw new Error(`face.covers ${from} → ${to}: no such role`);
+    return [a, b] as const;
+  });
+  /** Renders and traces the pose; `face` (x, y, radius) is where `covers` applies. */
+  const shoot = (face?: readonly number[]): Traced => {
     renderer.setRenderTarget(rt);
     renderer.setClearColor(0x000000, 0);
     renderer.clear();
@@ -353,7 +365,180 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
         depth[y * W + x] = ((buf[j + 1] * 256 + buf[j + 2]) / 65535) * 200;
       }
     }
+    if (face && covers.length) {
+      const [hx, hy, hr] = face;
+      for (let y = 0; y < H; y++)
+        for (let x = 0; x < W; x++) {
+          const i = y * W + x;
+          const c = covers.find(([a]) => a === role[i]);
+          if (c && Math.hypot((x + 0.5) / R + BOX.x0 - hx, (y + 0.5) / R - BOX.y1 - hy) < hr) role[i] = c[1];
+        }
+    }
     return trace(role, depth, W, H, R, s, names);
+  };
+
+  /** The pixel at a traced point (world px, y down), or -1 off the frame. */
+  const pixelAt = (x: number, y: number) => {
+    const px = Math.floor((x - BOX.x0) * R);
+    const py = Math.floor((y + BOX.y1) * R);
+    return px < 0 || py < 0 || px >= W || py >= H ? -1 : py * W + px;
+  };
+
+  /**
+   * The eyes the tracer or the anchor finds on a frame, near first (x, y, radius in world px): the eye
+   * role's parts, or, for a kind whose eyes are too small to trace, set from its nose, turned with a
+   * rolled pose (`roll`, radians).
+   */
+  const foundEyes = (tr: Traced, facing: 'r' | 'l', roll = 0): number[] => {
+    const a = s.face?.anchor;
+    if (!a) return tr.eyes;
+    const ri = names.indexOf(a.role);
+    let best: number[] | null = null;
+    for (const p of tr.parts) if (p.role === ri && (!best || p.ring.length > best.length)) best = p.ring;
+    if (!best) return [];
+    const [cx, cy] = centreOf(best);
+    const f = facing === 'r' ? 1 : -1;
+    // Turned with a rolled figure (y down here, so the screen's turn the other way).
+    const t = facing === 'r' ? -roll : roll;
+    const at = (o: readonly [number, number]) => [cx + f * o[0] * Math.cos(t) + o[1] * Math.sin(t), cy - f * o[0] * Math.sin(t) + o[1] * Math.cos(t)];
+    return [...at(a.near), s.face!.r, ...at(a.far ?? a.near), s.face!.r];
+  };
+
+  /**
+   * The face rides the head. The eyes are found once, on the rest pose facing right, and lifted onto the
+   * head in 3D: the near eye onto the surface the camera sees there, the far one its mirror across the
+   * head's middle. Every frame then projects them through its own pose, turn and roll, so they stay on
+   * the face however the head moves, and an eye turned away or hidden behind something nearer isn't
+   * drawn. A kind without a head bone (a generated ball) keeps the eyes the tracer finds per frame.
+   */
+  const rig = (() => {
+    const head = s.face
+      ? (bones.find((b) => b.name === (s.face?.bone ?? 'head')) ?? bones.find((b) => /head/i.test(b.name) && !/end|top|nub/i.test(b.name)))
+      : undefined;
+    if (!head || !s.face) return null;
+    rest();
+    shift.position.set(0, 0, 0);
+    shift.rotation.set(0, 0, 0);
+    turn.rotation.y = rad(90 - s.yaw);
+    scene.updateMatrixWorld(true);
+    // The head's own shape: the skin weighted most to it or a bone below it.
+    const under = new Set<THREE.Object3D>();
+    head.traverse((o) => under.add(o));
+    const box = new THREE.Box3();
+    const v = new THREE.Vector3();
+    for (const m of skinned) {
+      const idx = m.geometry.getAttribute('skinIndex');
+      const wt = m.geometry.getAttribute('skinWeight');
+      for (let i = 0; i < idx.count; i++) {
+        let bi = 0;
+        let bw = -1;
+        for (let c = 0; c < 4; c++)
+          if (wt.getComponent(i, c) > bw) {
+            bw = wt.getComponent(i, c);
+            bi = idx.getComponent(i, c);
+          }
+        if (!under.has(m.skeleton.bones[bi])) continue;
+        m.getVertexPosition(i, v);
+        box.expandByPoint(m.localToWorld(v));
+      }
+    }
+    if (box.isEmpty()) throw new Error(`the head bone "${head.name}" carries no skin`);
+    const centre = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const tr = shoot();
+    const eyes = foundEyes(tr, 'r');
+    if (!eyes.length) throw new Error('no eyes on the rest pose: give the eye role `glint`, or set face.anchor');
+    // The near eye, on the surface the camera sees at that spot (or the nearest the figure covers).
+    let at = -1;
+    const [ex, ey] = eyes;
+    for (let ring = 0; ring <= 6 && at < 0; ring++)
+      for (let dy = -ring; dy <= ring && at < 0; dy++)
+        for (let dx = -ring; dx <= ring && at < 0; dx++) {
+          const j = pixelAt(ex + dx / R, ey + dy / R);
+          if (j >= 0 && role[j] >= 0) at = j;
+        }
+    if (at < 0) throw new Error(`the rest pose's eye at ${ex.toFixed(1)}, ${ey.toFixed(1)} isn't on the figure`);
+    const near = new THREE.Vector3(ex, -ey, 100 - depth[at]);
+    // Its mirror across the head's middle, in the model's own axes (x across the figure).
+    const nearM = model.root.worldToLocal(near.clone());
+    const midM = model.root.worldToLocal(centre.clone());
+    // `spread` sets them further apart than the model's own (a model's small close-set eyes, drawn as the
+    // cartoon's), each about the head's middle.
+    const half = (nearM.x - midM.x) * (s.face.spread ?? 1);
+    const near3 = model.root.localToWorld(new THREE.Vector3(midM.x + half, nearM.y, nearM.z));
+    const far = model.root.localToWorld(new THREE.Vector3(midM.x - half, nearM.y, nearM.z));
+    const q = head.getWorldQuaternion(new THREE.Quaternion());
+    const turnOf = (p: THREE.Vector3) => p.clone().sub(centre).normalize().z;
+    return {
+      head,
+      eyes: [near3, far].map((p) => head.worldToLocal(p.clone())),
+      centre: head.worldToLocal(centre.clone()),
+      /** Up, in the head's own axes: its tilt on screen each frame. */
+      up: new THREE.Vector3(0, 1, 0).applyQuaternion(q.clone().invert()),
+      /** Every point of the head is inside this sphere, however it turns. */
+      r: size.length() / 2,
+      /** The face's reach on screen at rest, from the head's middle: where `covers` applies. */
+      face: Math.max(size.x, size.y) / 2,
+      scale: head.getWorldScale(new THREE.Vector3()).x,
+      /** How squarely the near eye faces the camera at rest: the turn the face's size is set at. */
+      turn: turnOf(near3),
+    };
+  })();
+  /** Least that an eye faces the camera to be drawn; and how far behind the surface in front it may sit (world px). */
+  const TURNED_AWAY = 0.12;
+  const HIDDEN = 1.2;
+  /** How far round an eye the figure must reach (world px): it sits in the face, never on the outline. */
+  const AROUND = [
+    [0.6, 0],
+    [-0.6, 0],
+    [0, 0.6],
+    [0, -0.6],
+  ] as const;
+  /** The furthest an eye at the face's edge is moved in to sit on it (world px). */
+  const NUDGE = 1.25;
+  const free = names.map((n) => !!s.roles[n].free);
+  const solid = (j: number) => j >= 0 && role[j] >= 0 && !free[role[j]];
+
+  /** The head through this frame's pose: its middle, radius and tilt on screen, and its scale against rest. */
+  const headNow = () => {
+    if (!rig) return null;
+    const { head } = rig;
+    const hs = head.getWorldScale(new THREE.Vector3()).x / rig.scale;
+    const c = head.localToWorld(rig.centre.clone());
+    const up = rig.up.clone().applyQuaternion(head.getWorldQuaternion(new THREE.Quaternion()));
+    return { c, hs, at: [c.x, -c.y, rig.r * hs, Math.atan2(up.x, up.y)], face: [c.x, -c.y, rig.face * hs] };
+  };
+
+  /** The eyes that show on this frame (near first), and its head, from the render just shot. */
+  const faceNow = (tr: Traced, h: NonNullable<ReturnType<typeof headNow>>) => {
+    if (!rig || !s.face) return;
+    const shown: { x: number; y: number; r: number; d: number }[] = [];
+    for (const p of rig.eyes) {
+      const w = rig.head.localToWorld(p.clone());
+      const turned = w.clone().sub(h.c).normalize().z;
+      if (turned < TURNED_AWAY) continue;
+      const d = 100 - w.z;
+      const j = pixelAt(w.x, -w.y);
+      if (j < 0 || role[j] < 0 || depth[j] < d - HIDDEN) continue;
+      // Well inside the outline, not on its edge where the traced line may cut in past it: an eye at the
+      // face's front edge (the far eye of a turned head) is drawn a little in from it, toward the head's middle.
+      const toward = Math.hypot(h.c.x - w.x, h.c.y - w.y) || 1;
+      let x = w.x;
+      let y = -w.y;
+      for (let k = 0; k <= NUDGE / 0.25; k++) {
+        x = w.x + ((h.c.x - w.x) / toward) * k * 0.25;
+        y = -(w.y + ((h.c.y - w.y) / toward) * k * 0.25);
+        if (AROUND.every(([dx, dy]) => solid(pixelAt(x + dx, y + dy)))) break;
+        x = NaN;
+      }
+      if (Number.isNaN(x)) continue;
+      // Foreshortened as it turns away: the far eye of a three-quarter head is the smaller.
+      const r = s.face.r * h.hs * Math.min(1.1, Math.max(0.7, 0.7 + (0.3 * turned) / rig.turn));
+      shown.push({ x, y, r, d });
+    }
+    shown.sort((a, b) => a.d - b.d);
+    tr.eyes = shown.flatMap((e) => [e.x, e.y, e.r]);
+    tr.head = [...h.at];
   };
 
   const out: Record<string, TracedClip> = {};
@@ -403,7 +588,11 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
             scene.updateMatrixWorld(true);
           }
         }
-        const tr = shoot();
+        const h = headNow();
+        const tr = shoot(h?.face);
+        // Before the accessory passes reuse the depth buffer the eyes are checked against.
+        if (h) faceNow(tr, h);
+        else tr.eyes = foundEyes(tr, facing, roll);
         // Accessories: option 0 of every slot is in this pass; each other option gets a pass of its own, and
         // only its parts are kept. Every option's parts are tagged with their slot and option.
         for (let si = 0; si < slotNames.length; si++) {
@@ -411,7 +600,7 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
           for (let k = 1; k < options[si].length; k++) {
             show(si, k);
             scene.updateMatrixWorld(true);
-            const alt = shoot();
+            const alt = shoot(h?.face);
             for (const p of alt.parts)
               if (optionRoles[si][k].has(p.role)) {
                 p.option = [si, k];
@@ -422,29 +611,24 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
           scene.updateMatrixWorld(true);
         }
         tr.parts.sort((a, b) => b.depth - a.depth);
-        if (!tr.eyes.length && s.face?.anchor) {
-          // No eye big enough to trace: set them by the nose, as an artist would.
-          const a = s.face.anchor;
-          const ri = names.indexOf(a.role);
-          let best: number[] | null = null;
-          for (const p of tr.parts) if (p.role === ri && (!best || p.ring.length > best.length)) best = p.ring;
-          if (best) {
-            let cx = 0;
-            let cy = 0;
-            for (let i = 0; i < best.length; i += 2) {
-              cx += best[i];
-              cy += best[i + 1];
-            }
-            cx /= best.length / 2;
-            cy /= best.length / 2;
-            const f = facing === 'r' ? 1 : -1;
-            tr.eyes.push(cx + f * a.near[0], cy + a.near[1], 0.5, cx + f * a.far[0], cy + a.far[1], 0.45);
-          }
-        }
         for (const p of tr.parts) {
           const grow = s.roles[names[p.role]].grow;
           if (!grow) continue;
-          // Bigger about its back edge, so a bill or a nose reaches further forward from where it starts.
+          // Bigger about its back edge, so a bill or a nose reaches further forward from where it starts:
+          // forward as the head faces, so on a head tipped over (a fall, a lean) it doesn't swell over the face.
+          const a = tr.head?.[3] ?? 0;
+          const [ox, oy] = centreOf(p.ring);
+          const turnBy = (ring: number[], by: number) => {
+            const cs = Math.cos(by);
+            const sn = Math.sin(by);
+            for (let i = 0; i < ring.length; i += 2) {
+              const dx = ring[i] - ox;
+              const dy = ring[i + 1] - oy;
+              ring[i] = ox + dx * cs - dy * sn;
+              ring[i + 1] = oy + dx * sn + dy * cs;
+            }
+          };
+          if (a) turnBy(p.ring, -a);
           let x0 = Infinity;
           let x1 = -Infinity;
           let cy = 0;
@@ -456,6 +640,7 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
           cy /= p.ring.length / 2;
           const ax = facing === 'r' ? x0 : x1;
           p.ring = p.ring.map((v, i) => (i % 2 ? cy + (v - cy) * grow[1] : ax + (v - ax) * grow[0]));
+          if (a) turnBy(p.ring, a);
         }
         const girth = c.girth ?? s.girth ?? 1;
         if (girth !== 1) {
@@ -465,6 +650,10 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
           tr.sil.forEach(wide);
           tr.parts.forEach((p) => wide(p.ring));
           for (let i = 0; i < tr.eyes.length; i += 3) tr.eyes[i] *= g;
+          if (tr.head) {
+            tr.head[0] *= g;
+            tr.head[2] *= Math.max(1, g);
+          }
         }
         if (c.center) {
           // A figure lying down is as long as it was tall: centred on the spot, it stays inside the runner's box.
@@ -480,12 +669,15 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
           tr.sil.forEach(by);
           tr.parts.forEach((p) => by(p.ring));
           for (let i = 0; i < tr.eyes.length; i += 3) tr.eyes[i] -= dx;
+          if (tr.head) tr.head[0] -= dx;
         }
         if (c.pin !== 'hips') {
           // A grounded clip stands on the floor: a sole it rolls under (a heel-toe walk, the camera's tilt)
           // lifts the figure instead of sinking the runner.
           let low = -Infinity;
-          for (const ring of tr.sil) for (let i = 1; i < ring.length; i += 2) low = Math.max(low, ring[i]);
+          // Grown parts count: a nose drawn bigger on a head lying down mustn't sink through the floor.
+          for (const ring of [...tr.sil, ...tr.parts.filter((p) => !free[p.role]).map((p) => p.ring)])
+            for (let i = 1; i < ring.length; i += 2) low = Math.max(low, ring[i]);
           // The soles sit just above the floor line, where the pen's ink round them lands on it.
           const lift = low > -FLOOR ? low + FLOOR : 0;
           if (lift) {
@@ -493,6 +685,7 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
             tr.sil.forEach(up);
             tr.parts.forEach((p) => up(p.ring));
             for (let i = 1; i < tr.eyes.length; i += 3) tr.eyes[i] -= lift;
+            if (tr.head) tr.head[1] -= lift;
           }
         }
         // Shapes that only moved keep their lines from the frame before.

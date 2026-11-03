@@ -98,7 +98,22 @@ describe('name entry', () => {
   /** Just enough DOM for an overlay: elements are plain objects, and every one made is kept to find later. */
   function stubDom() {
     const made: Record<string, unknown>[] = [];
-    const node = () => ({ append() {}, appendChild() {}, remove() {}, setAttribute() {}, addEventListener() {}, focus() {}, select() {} });
+    const node = () => ({
+      append() {},
+      appendChild() {},
+      remove() {},
+      setAttribute() {},
+      getAttribute() {},
+      addEventListener() {},
+      focus() {},
+      select() {},
+      getContext: () => null,
+      style: {},
+    });
+    // The name screen also polls the pads and paints its preview every frame: none of that runs here.
+    vi.stubGlobal('window', { addEventListener() {}, removeEventListener() {} });
+    vi.stubGlobal('requestAnimationFrame', () => 0);
+    vi.stubGlobal('cancelAnimationFrame', () => {});
     vi.stubGlobal('document', {
       createElement: (tag: string) => {
         const e = { tag, ...node() };
@@ -114,10 +129,11 @@ describe('name entry', () => {
   it('refuses a listed name and keeps the one you had, with nothing said', () => {
     const made = stubDom();
     const done: (string | null)[] = [];
-    const prompt = new NamePrompt({ captured: false } as unknown as InputManager);
-    prompt.open('Grimble', 'Dot', (n) => done.push(n));
+    const prompt = new NamePrompt({ captured: false, capturePads() {} } as unknown as InputManager);
+    const ch = generateCharacter(3);
+    prompt.open({ randomName: 'Grimble', current: 'Dot', preview: () => ch, free: () => true, onColor() {}, onDone: (n) => done.push(n) });
     const input = made.find((e) => e.tag === 'input') as { value: string };
-    const save = made.find((e) => e.textContent === 'Save Name') as { onclick: () => void };
+    const save = made.find((e) => e.textContent === 'Save') as { onclick: () => void };
     input.value = EVASIONS.title(slur);
     const before = made.length;
     save.onclick();

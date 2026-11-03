@@ -83,6 +83,11 @@ export interface Recipe {
    * (`hazardSignature`, ./contract.ts) matches no other theme's recipe, which tests/conformance checks.
    */
   unique?: boolean;
+  /**
+   * Its card in the codex's maps (src/codex/maps.ts), which shows every `unique` recipe under its theme: the
+   * name it goes by, a one-line joke and what it does. tests/codex-maps.test.ts asks every unique recipe for one.
+   */
+  codex?: { title: string; note: string; about: string };
   /** Lazily yields candidates, best first. The placer takes the first valid one. */
   candidates(rng: Rng, s: Site): Iterable<Piece>;
 }

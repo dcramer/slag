@@ -1,5 +1,5 @@
 import { deriveSeed } from '../../core/rng';
-import { CAST, type CharacterDef, generateCharacter, type Kind } from '../../gen/character';
+import { CAST, type CharacterDef, generateCharacter, type Kind, PLAYER_COLORS, withColor } from '../../gen/character';
 import { Rig } from '../character';
 import { drawInkAccessory, drawInkRunner, ropeAnchor, ropeOf, type RunnerPose } from '../ink-character';
 import { STRIDE } from '../ink-figure';
@@ -106,6 +106,59 @@ export function castCatalog(t = 0.4): HTMLCanvasElement {
 }
 
 /**
+ * The player palette on the cast (`pnpm shot cast --only colors`): every kind in every swatch, big, then at
+ * play scale on four grounds standing for the themes (dark rock, pale dirt, sky, snow) and the HUD's iron.
+ * Every swatch has to read as that kind's costume on all of them, and no two swatches as one.
+ */
+export function castColors(t = 0.4): HTMLCanvasElement {
+  const n = PLAYER_COLORS.length;
+  const cell = 92;
+  const rowH = 96;
+  const W = 140 + n * cell;
+  const grounds = ['#1e1814', '#cdb99a', '#8fb7d6', '#eef2f4', '#2b201b'];
+  const stripH = 72;
+  const H = 50 + CAST.length * rowH + 30 + grounds.length * stripH * 2;
+  const cv = document.createElement('canvas');
+  cv.width = W;
+  cv.height = H;
+  cv.style.cssText = `position:fixed;left:0;top:0;z-index:99;width:${W}px;height:${H}px`;
+  const s = cv.getContext('2d')!;
+  s.fillStyle = '#1a1210';
+  s.fillRect(0, 0, W, H);
+  s.font = '700 14px Barlow, sans-serif';
+  s.textAlign = 'center';
+  PLAYER_COLORS.forEach((c, i) => {
+    s.fillStyle = `hsl(${c.h} ${c.s}% ${c.l}%)`;
+    s.fillRect(140 + i * cell + 26, 12, cell - 52, 22);
+  });
+  CAST.forEach((kind, r) => {
+    const y = 50 + r * rowH;
+    s.fillStyle = '#c9b8a3';
+    s.textAlign = 'left';
+    s.fillText(kind, 12, y + rowH / 2);
+    const base = def(r, 'colors', kind);
+    PLAYER_COLORS.forEach((_, i) => runner(s, withColor(base, i), 140 + i * cell + cell / 2, y + rowH - 12, { grounded: true }, 3.6, 1, t));
+  });
+  // Play scale: the whole palette on one kind per strip, two strips per ground.
+  const y0 = 50 + CAST.length * rowH + 30;
+  grounds.forEach((g, gi) => {
+    for (let k = 0; k < 2; k++) {
+      const y = y0 + (gi * 2 + k) * stripH;
+      s.fillStyle = g;
+      s.fillRect(0, y, W, stripH);
+      const per = Math.ceil(CAST.length / 2);
+      for (let j = 0; j < per * 2; j++) {
+        const kind = CAST[(k * per + (j % per)) % CAST.length];
+        const i = j % n;
+        runner(s, withColor(def(j, 'strip', kind), i), 30 + j * ((W - 60) / (per * 2)), y + stripH - 8, { grounded: true }, 2.5, 1, t);
+      }
+    }
+  });
+  document.body.appendChild(cv);
+  return cv;
+}
+
+/**
  * The silhouette test: every kind as a solid black shape, at rest and mid-run, at 1 px per world px (a
  * runner about 16 px tall) and at play scale (2.5×, as at 1080p), then mid-run in color on dark and light
  * ground. Each should be nameable from its shape alone, and no two should share one.
@@ -184,6 +237,7 @@ const READS_AS: Record<Kind, string> = {
   frog: 'a frog',
   penguin: 'a penguin',
   chicken: 'a chicken',
+  chomper: 'the round dot-eater',
 };
 
 /**
@@ -256,7 +310,7 @@ export function castBlind(t = 0.4): HTMLCanvasElement {
     .sort((a, b) => a[1] - b[1])
     .map(([k]) => k);
   // Narrow enough for every kind across a 1280 px window.
-  const cell = 88;
+  const cell = Math.min(88, Math.floor(1260 / order.length));
   const W = order.length * cell + 20;
   const H = 360;
   const cv = document.createElement('canvas');

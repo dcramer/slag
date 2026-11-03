@@ -247,14 +247,29 @@ export const shots: Scenarios = {
     }
   },
   async codex() {
+    // Map cards paint a still the first time they're in view: wait for the ones on screen (or go on after `ms`).
+    const drawn = (p: typeof page, ms = 15_000) =>
+      p
+        .waitForFunction(
+          () =>
+            [...document.querySelectorAll('.cx-card[data-map] .cx-well')].every((w) => {
+              const r = w.getBoundingClientRect();
+              return r.bottom < 0 || r.top > innerHeight || w.classList.contains('drawn');
+            }),
+          null,
+          { timeout: ms },
+        )
+        .catch(() => console.log('codex: some map stills still painting'))
+        .finally(pet);
     await page.goto(`${base}codex`);
     await page.evaluate(() => document.fonts.ready);
     await page.waitForTimeout(1500);
-    // Scroll through so lazily-animated cards paint, then capture the whole page.
+    // Scroll through so lazily-animated cards and map stills paint, then capture the whole page.
     const h = await page.evaluate(() => document.body.scrollHeight);
     for (let y = 0; y < h; y += 600) {
       await page.evaluate((yy) => window.scrollTo(0, yy), y);
       await page.waitForTimeout(120);
+      await drawn(page);
     }
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.waitForTimeout(300);
@@ -267,31 +282,79 @@ export const shots: Scenarios = {
     await page.keyboard.press('Enter');
     await page.waitForTimeout(600);
     await snap('codex-open');
-    // Esc closes the part, then backs out to the main menu.
+    await page.keyboard.press('Escape');
+    await page.waitForSelector('.cx-modal[hidden]', { state: 'attached', timeout: 5000 });
+    // The maps (`--map <theme>`): its section from the index, its look, a landmark browsed to with the keys, and a hazard.
+    const mapTheme = opt('map', 'castle');
+    await page.waitForSelector(`.cx-index [data-sec=map-${mapTheme}]`, { timeout: 60_000 });
+    await page.click(`.cx-index [data-sec=map-${mapTheme}]`);
+    await page.waitForTimeout(400);
+    await drawn(page);
+    await snap('codex-maps');
+    await page.click(`#map-${mapTheme} .cx-card[data-map=theme]`);
+    await page.waitForTimeout(1500);
+    await snap('codex-map-theme');
+    await page.keyboard.press('ArrowRight');
+    await page.waitForTimeout(1500);
+    await snap('codex-map-landmark');
+    await page.keyboard.press('Escape');
+    await page.waitForSelector('.cx-modal[hidden]', { state: 'attached', timeout: 5000 });
+    await page.click(`#map-${mapTheme} .cx-card[data-map=hazard]`);
+    await page.waitForTimeout(1500);
+    await snap('codex-map-hazard');
+    // Esc closes the close-up, then backs out to the main menu.
     await page.keyboard.press('Escape');
     await page.waitForSelector('.cx-modal[hidden]', { state: 'attached', timeout: 5000 });
     await page.keyboard.press('Escape');
     await page.waitForSelector('[data-screen=home]', { timeout: 5000 });
-    // A phone: the top of the catalog, scrolled into a section, and a part opened by tap.
+    // A phone: the top of the catalog, a section, a part opened by tap; then a theme's maps and a landmark up close.
     const mctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
     const mp = await mctx.newPage();
     mp.on('pageerror', (e: Error) => errors.push(String(e)));
+    const mshot = async (name: string) => {
+      await mp.screenshot({ path: `${out}/${name}.png` });
+      console.log(`${out}/${name}.png`);
+    };
+    /** Every button on screen is a tap target: fails on one under 44 CSS px either way. */
+    const taps = async () => {
+      const small = await mp.evaluate(() =>
+        [...document.querySelectorAll<HTMLElement>('.codex button')].flatMap((b) => {
+          const r = b.getBoundingClientRect();
+          const seen = r.width > 0 && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth;
+          return seen && (r.width < 44 || r.height < 44) ? [`${b.className || b.dataset.sec} ${Math.round(r.width)}x${Math.round(r.height)}`] : [];
+        }),
+      );
+      if (small.length) throw new Error(`codex: tap targets under 44 CSS px: ${small.join(', ')}`);
+    };
     await mp.goto(`${base}codex`);
     await mp.evaluate(() => document.fonts.ready);
     await mp.waitForTimeout(1200);
-    await mp.screenshot({ path: `${out}/codex-mobile.png` });
-    console.log(`${out}/codex-mobile.png`);
+    await mshot('codex-mobile');
+    await taps();
     await mp.tap('.cx-index [data-sec=launchers]');
     await mp.waitForTimeout(800);
-    await mp.screenshot({ path: `${out}/codex-mobile-launchers.png` });
-    console.log(`${out}/codex-mobile-launchers.png`);
+    await mshot('codex-mobile-launchers');
     const card = await mp.$('#launchers .cx-card');
     if (card) {
       await card.tap();
       await mp.waitForTimeout(800);
-      await mp.screenshot({ path: `${out}/codex-mobile-open.png` });
-      console.log(`${out}/codex-mobile-open.png`);
+      await mshot('codex-mobile-open');
+      await taps();
+      await mp.tap('.cx-modal [data-act=close]');
+      await mp.waitForTimeout(300);
     }
+    // The maps join the index once their registries load, which a busy machine can take a while over.
+    await mp.waitForSelector(`.cx-index [data-sec=map-${mapTheme}]`, { timeout: 60_000 });
+    await mp.locator(`.cx-index [data-sec=map-${mapTheme}]`).scrollIntoViewIfNeeded();
+    await mp.tap(`.cx-index [data-sec=map-${mapTheme}]`);
+    await mp.waitForTimeout(600);
+    await drawn(mp);
+    await mshot('codex-mobile-maps');
+    await taps();
+    await mp.tap(`#map-${mapTheme} .cx-card[data-map=landmark]`);
+    await mp.waitForTimeout(1500);
+    await mshot('codex-mobile-landmark');
+    await taps();
     await mctx.close();
   },
   /**

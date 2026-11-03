@@ -288,6 +288,9 @@ export const GREAT_WINDMILL = defineConcept({
   family: ['electric fence', 'tractor', 'hay hoist', 'hay hook', 'pumpkin catapult'],
   budget: 1,
   names: ['The Great Windmill of {place}', '{place} Mill', 'The Sails of {place}', 'The Windmill at {place}'],
+  codex: {
+    about: 'A mill house under sails the size of the sky. Straight through the hall, or up the outside stair and over the roof while the sails come round.',
+  },
   box: (k, rng) => ({ w: front() + structureCols(k.W, [20, 26], rng), h: 15 }),
   build: buildWindmill,
   pieces: (rng, _s, l) => windmillPieces(rng, l),
@@ -468,6 +471,10 @@ export const GRAIN_ELEVATOR = defineConcept({
   family: ['electric fence', 'muck spreader', 'tractor', 'hay hook'],
   budget: 1,
   names: ['The {place} Grain Elevator', '{place} Co-op Elevator', 'The Silos of {place}', 'The Bins at {place}'],
+  codex: {
+    about:
+      'Two or three silos with a bucket lift between them. Ride the leg, climb the ladder up the first bin, or duck through the conveyor tunnel underneath.',
+  },
   box: (k, rng) => ({ w: front() + structureCols(k.W, [20, 26], rng), h: 15 }),
   build: buildElevator,
   pieces: (rng, _s, l) => elevatorPieces(rng, l),
@@ -631,6 +638,10 @@ export const BIG_BARN = defineConcept({
   family: ['hay hook', 'hay hoist', 'tractor', 'muck spreader'],
   budget: 2,
   names: ['The Big Barn at {place}', '{place} Barn Raising', 'The Hayloft of {place}', 'The Red Barn of {place}'],
+  codex: {
+    about:
+      'A red barn with haylofts either side of an open mow. In through the stalls past the live fence, or up the outside stair to the hay door and across the lofts.',
+  },
   box: (k, rng) => ({ w: front() + structureCols(k.W, [22, 30], rng), h: 15 }),
   build: buildBarn,
   pieces: (rng, _s, l) => barnPieces(rng, l),
@@ -787,6 +798,9 @@ export const WATER_MILL = defineConcept({
   family: ['tractor', 'hay hook', 'pumpkin catapult', 'electric fence'],
   budget: 1,
   names: ['The Water Mill of {place}', '{place} Mill Pond', 'The Mill Race at {place}', 'The Old Mill, {place}'],
+  codex: {
+    about: 'A stone mill turning a water wheel over its tail race. Up through the floors inside, or up the ladder to the roof and out along the flume.',
+  },
   box: (k, rng) => ({ w: front() + structureCols(k.W, [20, 26], rng), h: 15 }),
   build: buildMill,
   pieces: (rng, _s, l) => millPieces(rng, l),
@@ -883,6 +897,7 @@ export const COMBINE_RUN = defineConcept({
   family: ['tractor', 'electric fence', 'muck spreader', 'pumpkin catapult'],
   budget: 1,
   names: ['The Harvest at {place}', '{place} Combine Run', 'Reaping Day at {place}', 'The Back Forty of {place}'],
+  codex: { about: 'A combine harvester mowing a long field, reel first. Along the farm track on its trestles, or down in the crop, timing the harvest.' },
   box: (k, rng) => ({ w: front() + structureCols(k.W, [26, 40], rng), h: 10 }),
   build: buildCombine,
   pieces: (rng, _s, l) => combinePieces(rng, l),

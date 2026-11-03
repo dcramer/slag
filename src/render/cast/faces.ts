@@ -44,15 +44,18 @@ export function eye(d: D, x: number, y: number, r: number, glint = true) {
   if (glint) poly(d.s, oval(x + d.f * r * 0.3 - r * 0.15, y - r * 0.45, r * 0.3, r * 0.3, 6), '#fffaf0');
 }
 
-/** A small mouth from the character's rolled one: a line, a smile or an O. */
-export function mouthMark(d: D, x: number, y: number, w: number) {
-  const kind = d.m === 'cheer' ? 'smile' : d.m === 'fall' ? 'o' : d.c.mouth;
+/** A kind's resting mouth: a smile, a flat line, or none. */
+export type MouthKind = 'smile' | 'flat' | 'none';
+
+/** A small mouth, the kind's own at rest: a smile on a cheer and an O on a fall, whatever it is. */
+export function mouthMark(d: D, x: number, y: number, w: number, rest: MouthKind) {
+  const kind = d.m === 'cheer' ? 'smile' : d.m === 'fall' ? 'o' : rest;
   if (kind === 'none') return;
-  if (kind === 'o' || kind === 'grin' || kind === 'teeth') {
+  if (kind === 'o') {
     poly(d.s, oval(x, y, w * 0.28, w * 0.34, 8), d.lk.eye);
     return;
   }
-  const curve = kind === 'smile' || kind === 'fang' ? 0.8 : 0;
+  const curve = kind === 'smile' ? 0.8 : 0;
   mark(
     d.s,
     d.lk.eye,
@@ -67,11 +70,11 @@ export function mouthMark(d: D, x: number, y: number, w: number) {
   );
 }
 
-/** Two eyes, a little mouth: the plain face. */
-export function pair(d: D, u: number, spread: number, r: number, mouthAt = 0.2) {
+/** Two eyes and the kind's mouth `mouthAt` of the height below them: the plain face. */
+export function pair(d: D, u: number, spread: number, r: number, mouth: MouthKind = 'none', mouthAt = 0.2) {
   const y = Y(d, u);
   for (const sd of [-1, 1]) eye(d, sd * d.W * spread + d.f * 0.5, y, r);
-  if (mouthAt > 0) mouthMark(d, d.f * 0.8, y + d.H * mouthAt, 2.4);
+  if (mouth !== 'none') mouthMark(d, d.f * 0.8, y + d.H * mouthAt, 2.4, mouth);
 }
 
 /** A robot's visor: a dark slit with two pale lamps that slide toward where it's going. */
@@ -198,7 +201,8 @@ export function tallEyes(d: D, u: number, spread: number) {
     poly(d.s, oval(x - 0.1, y - 0.9, 0.5, 0.75, 8), '#fffaf0');
     poly(d.s, oval(x + sd * 1.8, y + 2.2, 1.2, 0.6, 8), 'rgba(232,96,120,0.55)');
   }
-  mouthMark(d, d.f * 0.6, y + 2.6, 1.8);
+  // The tiny mouth of the roster entry.
+  mouthMark(d, d.f * 0.6, y + 2.6, 1.8, 'smile');
 }
 
 /** A side-on bird's eye, near the front of the head. */

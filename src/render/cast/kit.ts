@@ -117,12 +117,13 @@ export interface KindArt {
   glass?: number;
   /** A tail the rig trails behind it. */
   rope?: Rope;
-  /** The kind's own face (a side eye, a visor, goggles, a mask...), in place of the shared cartoon eyes and mouth. */
-  paintFace?: (d: D) => void;
+  /**
+   * The kind's own face (cartoon eyes, a side eye, a visor, goggles, a mask...): its eye count, style,
+   * iris, place and mouth, the same on every character of the kind, acting out the mood.
+   */
+  paintFace: (d: D) => void;
   /** Shiny metal or a wet skin: one hard glint on the lit shoulder. Fur and feathers get none. */
   shine?: boolean;
-  /** Face overrides on the character's rolled one, for kinds that keep the cartoon face. */
-  face?: (c: CharacterDef) => { eyes?: Partial<CharacterDef['eyes']>; mouth?: CharacterDef['mouth'] };
   /** Mitten (or flipper) color: white gloves, the body, the kind's own color, steel. */
   hands?: 'glove' | 'body' | 'paint' | 'iron' | 'leather';
   /** Behind the body (keys, handles, legs, fins). */
@@ -355,10 +356,6 @@ export function rivet(d: D, x: number, y: number) {
   poly(d.s, oval(x, y, 0.7, 0.7, 6), IRON_SH);
   poly(d.s, oval(x - 0.2, y - 0.2, 0.32, 0.32, 5), TIN);
 }
-
-/** Where `mouth()` puts the mouth, in face space. */
-export const mouthY = (d: D) => Math.min(d.by - 2.6, d.by - d.H * d.c.eyes.y + d.c.eyes.size * 1.24 * (d.c.eyes.count === 3 ? 1.2 : 1) + 2.9);
-export const mouthX = (d: D) => Math.max(-d.W / 2 + 4, Math.min(d.W / 2 - 4, d.f * 1.5));
 
 /** A ribbon along the rig's rope, fat to thin, toned and inked. */
 export function ribbon(s: CanvasRenderingContext2D, pts: readonly P[], w0: number, w1: number, fill: string, shade: string, ink: string) {

@@ -1,6 +1,7 @@
 import type * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+import { puffballModel } from './puffball';
 
 /** A model as the renderer uses it: its scene, its meshes, its animations and its colour texture. */
 export interface Model {
@@ -10,8 +11,13 @@ export interface Model {
   texture: THREE.Texture | null;
 }
 
-/** Loads a GLB as Tripo gives it (meshopt-compressed when downloaded from Studio, plain when exported). */
+/** Bodies generated here instead of modelled, named in sprite.json as `"model": "gen:<name>"`. */
+const GENERATED: Record<string, () => Model> = { puffball: puffballModel };
+
+/** Loads a GLB as Tripo gives it (meshopt-compressed when downloaded from Studio, plain when exported), or a generated body. */
 export async function loadModel(url: string): Promise<Model> {
+  const gen = /gen:(\w+)$/.exec(url)?.[1];
+  if (gen) return GENERATED[gen]();
   const loader = new GLTFLoader();
   loader.setMeshoptDecoder(MeshoptDecoder);
   const gltf = await loader.loadAsync(url);

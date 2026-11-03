@@ -100,18 +100,31 @@ export interface Ball {
 }
 
 /**
- * The cast's face kit drawn over the traced eyes (src/render/cast/sprites/face.ts): eye size in world
- * px, the iris colour, and where the mouth sits from the near eye (world px, facing right), if it shows.
+ * The cast's face kit drawn over the eyes (src/render/cast/sprites/face.ts): eye size in world px, the
+ * iris colour, and where the mouth sits from the near eye (world px, facing right, head upright), if it
+ * shows. The eyes are found once on the rest pose and ride the head bone through every frame (render.ts).
  */
 export interface Face {
   r: number;
   iris: string;
   mouth?: [number, number];
+  /** `tall`: tall black ovals with a shine at the top and no whites (the puffball's), in place of cartoon eyes. */
+  eye?: 'tall';
   /**
    * Where the eyes go when the model's own are too small to find: from the biggest part of `role` (the
-   * nose), the near and far eye's offsets in world px, facing right.
+   * nose), the near eye's offset in world px on the rest pose facing right. The far eye is its mirror
+   * across the head; `far` is used only by a kind with no head bone.
    */
-  anchor?: { role: string; near: [number, number]; far: [number, number] };
+  anchor?: { role: string; near: [number, number]; far?: [number, number] };
+  /**
+   * The model's own eye roles the drawn face replaces, each with the role it's drawn as instead (the
+   * skin it sits on): the rest pose still traces them, to find where the eyes are.
+   */
+  covers?: Record<string, string>;
+  /** The eyes' distance from the head's middle, as a multiple of the model's own (default 1). */
+  spread?: number;
+  /** The bone the face rides (default `head`, else the first bone named like it). */
+  bone?: string;
 }
 
 /**
@@ -156,9 +169,19 @@ export interface Prop {
   slot?: string;
 }
 
+/**
+ * A limbless kind has no model (README → Non-humanoid kinds): `by` names its generator in page/shapes.ts,
+ * which draws every clip as shapes in the roles' colours, `r` world px round.
+ */
+export interface Shape {
+  by: string;
+  r: number;
+}
+
 export interface Settings {
-  /** The rigged, animated model, relative to the settings file. */
-  model: string;
+  /** The rigged, animated model, relative to the settings file: none for a kind drawn by a `shape` generator. */
+  model?: string;
+  shape?: Shape;
   /** World px from the soles to the top of the head, standing in the rest pose. */
   height: number;
   /** Degrees the figure turns toward the camera from a pure profile, and the camera looks down. */
