@@ -12,7 +12,7 @@ Design intent for everything below is in `docs/DESIGN.md`.
 Brains that fill seats by producing inputs, built in or written by players. Design: `docs/DESIGN.md` → AI players. Native AI first (phases 1–2); scripts after. Each phase is one agent, in order.
 
 1. **Brain and motor, racing only.** The `Brain` interface, `BrainView` v1, a `BRAINS` registry and a motor that replays `src/sim/reach.ts` policies as intents. A built-in brain follows the reach route and replans around hazards. Bots fill local seats. A test runs a headless match and checks a bot finishes a few solvable levels; finish rates over many seeds go in `tests/stats/`.
-2. **Pick, place and personality.** Pick by role and the round's state; place to trap rivals without stranding itself (the winnability plan already refuses a placement that leaves no way through). Personality rolled from a seed (reaction, precision, risk, spite), with a generated name. Host-owned bot seats online, moving with host migration.
+2. **Pick, place and personality.** Pick by role and the round's state; place to trap rivals without stranding itself; parts may seal the level, so a bot should avoid sealing its own way unless it holds a bomb. Personality rolled from a seed (reaction, precision, risk, spite), with a generated name. Host-owned bot seats online, moving with host migration.
 3. **Player scripts.** A Web Worker sandbox with a per-frame deadline, the published `brain-api.d.ts`, the Workshop screen (load, trial over seeds, report, replays) and `pnpm brain trial`.
 4. **Copy for Your AI.** The prompt pack: API, current script, worst failures from the last trial.
 
