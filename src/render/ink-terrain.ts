@@ -517,14 +517,18 @@ export function inkEdges(g: CanvasRenderingContext2D, loops: readonly EdgeP[][],
       const jx = sn(p.x * 0.02, p.y * 0.02, seed + 50) * 0.3;
       return Math.floor(p.x / 42 + jx) * 4096 + Math.floor(p.y / 42 - jx);
     };
-    let start = 0;
+    let start = -1;
     for (let i = 0; i < n; i++) {
       if (cell(loop[i]) !== cell(loop[(i + n - 1) % n]) || loop[i].hidden !== loop[(i + n - 1) % n].hidden) {
         start = i;
         break;
       }
     }
-    let run: EdgeP[] = [];
+    // Every run starts on the last point of the cell before it, the first one too: the loop starts wherever the
+    // tracer found its first corner, which a crater across the level can move, so a run that lacked it there
+    // would ink differently from the same run anywhere else in the loop.
+    let run: EdgeP[] = start < 0 ? [] : [loop[(start + n - 1) % n]];
+    start = Math.max(0, start);
     const flush = () => {
       if (run.length >= 3 && !run[0].hidden && run.some((p) => near(area, p.x, p.y, 8))) {
         const m = run[run.length >> 1];
