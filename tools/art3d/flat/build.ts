@@ -112,6 +112,19 @@ function blob(x: number, y: number, rx: number, ry: number, seed: number, n = 7)
   return out;
 }
 
+/**
+ * A wear mark: a slanted streak `r` long about (x, y), not a round blob, which on a smooth surface read
+ * as a spot (a rash on the belly, polka dots on the overalls).
+ */
+function streak(x: number, y: number, r: number, seed: number): number[] {
+  const a = 0.35 + 0.5 * Math.abs(Math.sin(seed * 7.1));
+  const pts = blob(0, 0, r * 1.35, r * 0.42, seed, 8);
+  const [c, s] = [Math.cos(a), Math.sin(a)];
+  const out: number[] = [];
+  for (let i = 0; i < pts.length; i += 2) out.push(x + pts[i] * c - pts[i + 1] * s, y + pts[i] * s + pts[i + 1] * c);
+  return out;
+}
+
 /** A strip of tape, `len` long and `w` wide, centred on (x, y) at angle `a`. */
 function strip(x: number, y: number, len: number, w: number, a: number): number[] {
   const c = Math.cos(a);
@@ -335,7 +348,7 @@ function dress(f: Frame, seed: number): Frame {
     marks.forEach(([n, u, v, r], i) => {
       const o = k + 1;
       const at = spot(u, v, r);
-      if (at) extra.push({ role: role(n), ring: blob(at[0], at[1], r, r * 0.8, seed + o * 7 + i), option: [wear, o] });
+      if (at) extra.push({ role: role(n), ring: streak(at[0], at[1], r, seed + o * 7 + i), option: [wear, o] });
       else console.log(`  no room for ${n} (wear ${o})`);
     }),
   );

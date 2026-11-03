@@ -28,6 +28,11 @@ const FLAT_SIL = [0.3, 0.6];
 const FLAT_PART = [0.12, 0.32];
 /** An interior line's pen, in world px: lighter than the parts' contours round it. */
 const LINE_W = 0.38;
+/**
+ * A flat kind's interior lines, in one ink: in the ink of the colour they lie on, a line counted on the
+ * costume crossed a face in the player's colour.
+ */
+const LINE_INK = '#2a1f1a';
 /** The whole figure's hard shadow: the silhouette less itself pulled up-left (the hand-drawn body's numbers). */
 const SHADOW_DX = 2.1;
 const SHADOW_DY = 1.9;
@@ -113,7 +118,9 @@ export function drawFrame(
 ) {
   const boil = Math.floor(t * 8) % 3;
   for (const r of f.sil) {
-    if (flat) inked(s, boiled(r, boil, seed), body.fill, body.ink, FLAT_SIL[0] * k, FLAT_SIL[1] * k);
+    // Filled with its own ink, not the costume: the parts boil and round apart from the silhouette, and
+    // filled in the player's colour the gaps between them showed it round every boot, tool and tail.
+    if (flat) inked(s, boiled(r, boil, seed), body.ink, body.ink, FLAT_SIL[0] * k, FLAT_SIL[1] * k);
     else contour(s, boiled(r, boil, seed), body.fill, body.ink, k, seed);
   }
   for (const part of f.parts) {
@@ -125,7 +132,7 @@ export function drawFrame(
   }
   if (f.lines)
     f.lines.forEach(([role, r], i) => {
-      s.fillStyle = paints[role].ink;
+      s.fillStyle = flat ? LINE_INK : paints[role].ink;
       stroke(s, boiled(r, boil, seed + 40 + i), { w: LINE_W * k, seed: seed + 40 + i, taper: [0.3, 0.45], press: 0.3 });
     });
   for (const r of f.sil) {
