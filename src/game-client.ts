@@ -394,7 +394,6 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
         restoring = p.character.seed !== profile.look || (profile.color !== undefined && p.character.color !== profile.color);
         if (restoring) net.act({ t: 'look', dev: p.device, seed: profile.look, ...(profile.color === undefined ? {} : { color: profile.color }) });
         appliedLook = profile.look;
-        colorSent = `${p.slot}:${profile.color}`; // the look carries the color
       } else {
         appliedLook = p.character.seed;
         profile.look = appliedLook;
