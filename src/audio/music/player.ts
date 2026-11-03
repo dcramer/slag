@@ -117,7 +117,7 @@ class SongPlayer {
         if (this.mix[tr.layer] < 0.02) continue; // muted layer: save the CPU
         const v = this.mixer.voice({ bus: 'music', prio: LAYER_PRIO[tr.layer], gain: tr.gain * n.vel, dest: this.trackIn[ti] }, t);
         if (!v) continue;
-        INSTRUMENTS[tr.inst](v, t, mtof(n.midi), n.len * this.stepDur);
+        INSTRUMENTS[tr.inst](v, t + (n.nudge ?? 0), mtof(n.midi), n.len * this.stepDur);
         this.scheduled++;
       }
       this.step++;
@@ -222,7 +222,7 @@ export class MusicDirector {
     const beat = 60 / s.bpm;
     const step = beat / 2;
     const lead = s.lead;
-    const lg = Math.max(0.1, leadGain(s)) * 1.6;
+    const lg = leadGain(s) * 1.6;
     [0, 2, 4].forEach((d, i) => this.play(lead, this.note(d, 0), t + i * step * 0.5, step * 0.45, lg));
     this.play(lead, this.note(7, 0), t + 1.5 * step, beat, lg);
     for (const d of [0, 2, 4]) this.play(s.harmony, this.note(d, -1), t + 1.5 * step, beat * 1.5, harmonyGain(s) * 0.8, 2);
@@ -249,10 +249,15 @@ export class MusicDirector {
     // Major chord (picardy third in minor keys) under the held note.
     const tonic = this.note(0, -1);
     for (const iv of [0, 4, 7, 12]) this.play(s.harmony, tonic + iv, t + beat * 3, beat * 3, harmonyGain(s) * 0.55, 2);
-    this.play('sub', tonic - 24, t + beat * 3, beat * 3, 0.12, 2);
-    for (let i = 0; i < 8; i++) this.play('snare', 60, t + beat * 2 + (i * beat) / 8, 0.1, 0.06 + i * 0.012, 2);
-    this.play('kick', 60, t + beat * 3, 0.3, 0.3, 3);
-    this.play('crash', 60, t + beat * 3, 1, 0.08, 3);
+    // The song's own bass and kit, at the gains its mix was balanced with, so the fanfare sits at the song's level.
+    const bass = s.tracks.find((tr) => tr.layer === 'bass');
+    const [low, roll] = s.tracks.filter((tr) => tr.layer === 'drums');
+    if (bass) this.play(bass.inst, tonic - 24, t + beat * 3, beat * 3, bass.gain, 2);
+    if (roll) for (let i = 0; i < 8; i++) this.play(roll.inst, low?.notes[0]?.midi ?? 60, t + beat * 2 + (i * beat) / 8, 0.1, roll.gain * (0.35 + i * 0.09), 2);
+    if (low) {
+      this.play(low.inst, low.notes[0]?.midi ?? 60, t + beat * 3, 0.3, low.gain * 0.7, 3);
+      this.play('crash', 60, t + beat * 3, 1, low.gain * 0.25, 3);
+    }
   }
 
   /** Bring the song back after a stinger. */

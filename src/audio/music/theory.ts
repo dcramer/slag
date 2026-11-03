@@ -30,3 +30,10 @@ export function inScale(root: number, mode: ModeName, midi: number): boolean {
   const pc = (((midi - root) % 12) + 12) % 12;
   return (MODES[mode] as readonly number[]).includes(pc);
 }
+
+/** True if the triad on `deg` is major or minor (not diminished or augmented), so it can carry a bar on its own. */
+export function stableTriad(mode: ModeName, deg: number): boolean {
+  const third = degreeToMidi(0, mode, deg + 2) - degreeToMidi(0, mode, deg);
+  const fifth = degreeToMidi(0, mode, deg + 4) - degreeToMidi(0, mode, deg);
+  return fifth === 7 && (third === 3 || third === 4);
+}

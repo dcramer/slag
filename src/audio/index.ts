@@ -36,6 +36,8 @@ export interface AudioSystem {
   ui?(cue: UiCue): void;
   /** Does this player device play on this screen? Only its self-destruct countdown ticks. Absent: everyone does. */
   isLocal?: (device: string) => boolean;
+  /** Optional: no match owns the audio any more (a menu screen, or the lobby closed): play the title tune. */
+  menu?(): void;
   /** Optional: stop every sound and release the audio device; the game that owned it is gone. */
   dispose?(): void;
 }

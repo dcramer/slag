@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { RunnerTracker } from '../src/audio/actions';
 import { collectEmitters, propTransients } from '../src/audio/emitters';
 import { AudioEngine } from '../src/audio/engine';
@@ -176,6 +176,31 @@ describe('WebAudioSystem', () => {
     expect(ctx.nodes).toBe(1); // only the fake's destination
     a.setVolumes({ music: 0.3 });
     expect(new WebAudioSystem({ createContext: () => null, storage: s }).volumes.music).toBe(0.3);
+  });
+
+  it('plays the title tune off the menus, hands over to a lobby and takes it back', () => {
+    vi.useFakeTimers();
+    try {
+      const ctx = new FakeAudioContext();
+      const a = new WebAudioSystem({ createContext: () => ctx.asContext(), storage: store() });
+      a.menu();
+      expect(ctx.nodes).toBe(1); // nothing before the unlock gesture
+      a.unlock();
+      const music = a.engine!.music;
+      expect(music.song!.theme).toBe('title');
+      // No game loop pumps the menus: the system keeps the title tune scheduled itself.
+      ctx.advance(1);
+      vi.advanceTimersByTime(1000);
+      expect(music.current!.scheduled).toBeGreaterThan(0);
+      const m = new Match(3);
+      a.update(m, 0);
+      expect(music.song!.theme).toBe(m.level.theme.id);
+      a.menu();
+      expect(music.song!.theme).toBe('title');
+      a.dispose();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('plays a whole match: bounded voices, loops and valid params', () => {

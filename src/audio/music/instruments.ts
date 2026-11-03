@@ -23,6 +23,19 @@ function wave(v: Voice, name: 'organ' | 'reed'): PeriodicWave {
   return w[name];
 }
 
+const curves = new WeakMap<BaseAudioContext, Float32Array<ArrayBuffer>>();
+
+/** Overdrive transfer curve (tanh), one per context. */
+function drive(ctx: BaseAudioContext): Float32Array<ArrayBuffer> {
+  let c = curves.get(ctx);
+  if (!c) {
+    c = new Float32Array(1024);
+    for (let i = 0; i < c.length; i++) c[i] = Math.tanh(((i / (c.length - 1)) * 2 - 1) * 4);
+    curves.set(ctx, c);
+  }
+  return c;
+}
+
 /** Sustained note helper: gain node with an AHR envelope. */
 function held(v: Voice, t: number, d: number, a: number, r: number, sustain = 1, to: AudioNode = v.out): GainNode {
   const g = v.gain(to);
@@ -231,6 +244,111 @@ export const INSTRUMENTS = {
     const bp = v.filter(g, 'bandpass', 1600, 0.6);
     v.noise('white', t, 0.2, bp);
     tone(v, 'triangle', 210, 170, t, 0.002, 0.07, 0.6);
+  },
+
+  // --- second arrangements (see `arrangements` in styles.ts)
+  fiddle: (v, t, f, d) => {
+    const L = len(d, 0.05, 0.1);
+    const g = held(v, t, d, 0.05, 0.1, 0.85);
+    const lp = v.filter(g, 'lowpass', 3800, 0.8);
+    // A second, nasal resonance gives the bowed edge.
+    const body = v.filter(g, 'bandpass', 2600, 1.6);
+    const o = v.osc('sawtooth', f, t, L, lp);
+    o.connect(v.gain(body, 0.5));
+    vibrato(v, o, t, L, 5.8, f * 0.012, 0.18);
+    burst(v, 'white', t, 0.015, 0.07, 0.06, 'bandpass', f * 3, f * 3, 2);
+  },
+  guitar: (v, t, f) => {
+    pluck(v, t, f, 0.55, 1, 2600);
+    tone(v, 'sine', f, f, t, 0.002, 0.5, 0.3);
+  },
+  lute: (v, t, f) => {
+    pluck(v, t, f, 0.45, 1, 1700);
+    tone(v, 'triangle', f * 2, f * 2, t, 0.001, 0.15, 0.2);
+  },
+  twang: (v, t, f, d) => {
+    const L = Math.max(0.5, d + 0.35);
+    const g = v.env(v.out, t, 1, 0.002, L);
+    const lp = v.filter(g, 'lowpass', 3500, 3);
+    sweep(lp.frequency, 3600, f * 2.2, t, 0.45);
+    const o = v.osc('sawtooth', f, t, L + 0.05, lp);
+    v.osc('square', f, t, L + 0.05, v.gain(lp, 0.3));
+    vibrato(v, o, t, L, 6, f * 0.01, 0.25);
+  },
+  bodhran: (v, t) => {
+    tone(v, 'sine', 120, 70, t, 0.002, 0.18, 1);
+    burst(v, 'brown', t, 0.002, 0.06, 0.5, 'lowpass', 600);
+    burst(v, 'white', t, 0.001, 0.02, 0.15, 'bandpass', 1800);
+  },
+  celesta: (v, t, f) => {
+    tone(v, 'sine', f, f, t, 0.002, 0.9, 1);
+    tone(v, 'sine', f * 2, f * 2, t, 0.001, 0.4, 0.15);
+    tone(v, 'sine', f * 4, f * 4, t, 0.001, 0.12, 0.25);
+  },
+  ocarina: (v, t, f, d) => {
+    const L = len(d, 0.04, 0.1);
+    const g = held(v, t, d, 0.04, 0.1);
+    const o = v.osc('sine', f, t, L, g);
+    v.osc('sine', f * 2, t, L, v.gain(g, 0.06));
+    vibrato(v, o, t, L, 5, f * 0.008, 0.3);
+    burst(v, 'pink', t, 0.03, d * 0.4 + 0.05, 0.08, 'bandpass', f * 2, f * 2, 3);
+  },
+  kalimba: (v, t, f) => {
+    tone(v, 'sine', f, f, t, 0.002, 0.8, 1);
+    tone(v, 'sine', f * 5.9, f * 5.9, t, 0.001, 0.05, 0.25);
+    burst(v, 'white', t, 0.001, 0.006, 0.12, 'bandpass', 3000);
+  },
+  talkdrum: (v, t, f) => {
+    tone(v, 'sine', f * 2.2, f * 1.6, t, 0.003, 0.25, 1);
+    burst(v, 'white', t, 0.001, 0.015, 0.2, 'bandpass', 1200);
+  },
+  powerchord: (v, t, f, d) => {
+    const L = len(d * 0.9, 0.004, 0.08);
+    const g = held(v, t, d * 0.9, 0.004, 0.08, 0.8);
+    const lp = v.filter(g, 'lowpass', 2400, 1);
+    const ws = v.ctx.createWaveShaper();
+    ws.curve = drive(v.ctx);
+    ws.connect(lp);
+    // Root, fifth and octave into one overdriven amp.
+    for (const [r, c] of [
+      [1, -5],
+      [1.4983, 5],
+      [2, 0],
+    ])
+      v.osc('sawtooth', f * r, t, L, v.gain(ws, 0.5), c);
+  },
+  epiano: (v, t, f, d) => {
+    const L = Math.max(0.8, d + 0.4);
+    const g = v.env(v.out, t, 1, 0.003, L);
+    const car = v.osc('sine', f, t, L + 0.05, g);
+    const idx = v.gain(car.frequency);
+    sweep(idx.gain, f * 1.4, f * 0.08, t, 0.5);
+    v.osc('sine', f, t, L + 0.05, idx);
+    tone(v, 'sine', f * 14, f * 14, t, 0.001, 0.03, 0.08);
+  },
+  steeldrum: (v, t, f) => {
+    const g = v.env(v.out, t, 1, 0.002, 0.55);
+    for (const [r, a] of [
+      [1, 1],
+      [2, 0.45],
+      [3.02, 0.2],
+    ]) {
+      const o = v.osc('sine', f * r, t, 0.6, v.gain(g, a));
+      sweep(o.frequency, f * r * 1.01, f * r, t, 0.05);
+    }
+    burst(v, 'white', t, 0.001, 0.01, 0.15, 'bandpass', f * 4, f * 4, 2);
+  },
+  sleigh: (v, t) => {
+    metal(v, t, 5200, 0.25, 1, [1, 1.37, 1.81, 2.3]);
+    burst(v, 'white', t, 0.002, 0.12, 0.5, 'highpass', 7000);
+  },
+  theremin: (v, t, f, d) => {
+    const L = len(d, 0.12, 0.25);
+    const g = held(v, t, d, 0.12, 0.25);
+    const o = v.osc('sine', f, t, L, g);
+    sweep(o.frequency, f * 0.97, f, t, 0.12);
+    v.osc('triangle', f, t, L, v.gain(g, 0.08));
+    vibrato(v, o, t, L, 6.2, f * 0.025, 0.05);
   },
 
   // --- shared kit
