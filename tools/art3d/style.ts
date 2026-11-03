@@ -285,23 +285,24 @@ export const BRIEFS: Record<string, Brief> = {
   },
   engineer: {
     // The nod, each part of the read at race size: the huge wrench (the read in profile, so it leads the
-    // brief), the wide hard hat with its brim and the goggles on it (the head shape and the trade), the
-    // stocky square build and square jaw (the gruff builder at 20 px, where no face detail survives), and
-    // the work shirt over khakis (the colour block, the shirt in the player's colour).
-    // Ours, and the joke: a backyard engineer. The hard hat is an upturned yellow mixing bowl, the goggles
-    // are blue swimming goggles, and the wrench's handle is taped up where it snapped.
-    // The silhouette is three shapes, so the wrench rides level on his shoulder, its open jaw out behind
-    // him below the brim: carried up behind his head, its jaw and the handle read as spikes off the hat
-    // and something held out in front (blind read, 2026-11-03), and the toy turret on his belt broke the
-    // outline at the hip, so it went.
-    // Fresh designs from this brief put the goggles over his eyes (the original's look), so the pick is the
-    // first design reshaped in an edit to this brief's shapes (art/sprites/engineer/design.prompt.txt).
+    // brief), the tall round hard hat with the goggles' band round it (the head shape and the trade), the
+    // broad square build and clean square jaw (the gruff builder), and the work shirt over khakis (the
+    // colour block, the shirt in the player's colour).
+    // Ours, and the joke: a backyard engineer. The hard hat is a deep upturned yellow mixing bowl, the
+    // goggles are blue swimming goggles, and the wrench is one giant spanner, battered.
+    // The silhouette is three shapes the plumber hasn't got (blind reads, 2026-11-03): a tall dome with a
+    // short rim all round, since a wide brim or a bill on a short man read as the plumber's rival; a broad,
+    // taller build; and one big open jaw up beside his shoulder, clear of the hat, the spanner gripped by its
+    // end at his hip. Carried up behind his head it read as spikes off the hat, a second jaw down by his
+    // boots read as a curled tail, and stubble read as a jagged mustache.
+    // Fresh designs from this brief put the goggles over his eyes (the original's look), so the pick is an
+    // earlier design reshaped in edits (art/sprites/engineer/design.prompt.txt).
     design:
-      'The character: a short, stocky, square-built backyard handyman with a boxy torso and short thick legs. ' +
-      'Resting level on one shoulder he carries one huge plain grey adjustable spanner (#8e8a84), about two thirds as long as he is tall: its handle lies flat along the top of his shoulder, gripped right at the shoulder, and its big head sticks straight out behind his back at shoulder height, well below his hat, its jaw a wide open C facing back. Nothing sticks out in front of him. ' +
-      'On his head, as a hard hat, a yellow mixing bowl (#e9b730) worn upside down, its wide flat rim sticking far out past his head all round like a hard hat brim; swimming goggles with a dark strap (#3a4246) and two light-blue lenses (#5fb0c8) pushed up on the bowl. ' +
-      'A big square jaw, peach skin (#efc9a4), two small black eyes. A red work shirt (#b8433c), khaki trousers (#8c7a58), a brown belt (#6b4a35), one tan leather work glove (#a8794a) on the hand on the spanner, chunky brown boots. Nothing on his belt.',
-    worn: "a big dent is knocked into the top of the yellow bowl; a big chip is broken out of the bowl's rim at the back; the spanner's handle is snapped in the middle and bound with a big wad of grey tape; one trouser knee is torn open in a big ragged hole.",
+      'The character: a tall, broad, square-shouldered backyard handyman, not short: a wide chest, thick arms, long thick legs and big boots. ' +
+      'His huge signature tool is one grey adjustable spanner (#8e8a84) with a single big open C jaw, gripped by the end of its handle in his gloved hand at his hip and slanting up past his shoulder, the jaw up beside his shoulder and clear of his hat; nothing of it below his hip. ' +
+      'On his head, as a hard hat, a deep yellow mixing bowl (#e9b730) worn upside down: a tall round dome, its rolled rim a short even brim all the way round; a dark goggle strap (#3a4246) runs right round the dome as a band, two round light-blue swimming-goggle lenses (#5fb0c8) on its front. ' +
+      'A smooth, clean-shaven square jaw, peach skin (#efc9a4), two small black eyes, no stubble, no mustache. A red work shirt (#b8433c), khaki trousers (#8c7a58), a brown belt (#6b4a35), tan leather work gloves (#a8794a), chunky brown boots.',
+    worn: "a big dent is knocked into the side of the yellow dome; a chip is broken out of the bowl's rim at the back; the spanner's handle is snapped in the middle and bound with a big wad of grey tape; one trouser knee is torn open in a big ragged hole.",
   },
   goose: {
     // The nod, each part of the read at race size: the S of a neck (a goose, not a duck or a chicken), white
