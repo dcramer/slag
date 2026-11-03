@@ -663,7 +663,7 @@ export class Match {
     }
     const tx = Math.floor(p.cursor.x / TILE - (w - 1) / 2);
     const y = Math.floor(p.cursor.y / TILE - (h - 1) / 2);
-    const ty = def.mount === 'hang' ? hangRow(this.level, this.placed, def, tx, y) : y;
+    const ty = def.mount === 'hang' ? hangRow(this.level, this.placed, def, tx, y, this.frame) : y;
     const spot = spotAt(this.level, this.placed, def, p.rot, tx, ty, this.frame);
     return { ...spot, tx, ty };
   }

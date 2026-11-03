@@ -219,6 +219,9 @@ Every game design decision, preference and direction the owner has given, groupe
   Changed: every card rolled a fresh random part (`908b1c2`).
 - **After rounds nobody finishes, crates lean toward bombs and building parts.** "handicap the rng on item selection so if conseuctive rounds people cant finish, you add more weight to a bomb or platforms"
   2026-11-02 04:42Z · `done` · DESIGN.md → Props (A match can always be finished)
+- **Parts pass through each other: a mover's path or a set piece's swing doesn't stop a part being placed there, and the mover runs through it.** "you should be able to let some parts go through each other. your barn one. its ok to allow placement there, and the items will just move through each other..."
+  2026-11-02 · `done` · DESIGN.md → Props (Parts pass through each other), `occupiedCells` in `src/sim/props/transform.ts`, `passThrough` in `src/sim/physics.ts`
+  Changed: a part took every tile it would ever be in (a mover's path, a rider's path, a set piece's sweep and headroom), and placing there was refused.
 - **Parts can seal a level; a bomb is the way out. Nothing is refused for leaving no way to the flag, and a sealed level's crate deals a demolition part that clears placed parts.** "also parts CAN seal it.. it can be unwinnable and require a bomb"
   2026-11-02 · `done` · DESIGN.md → Props (A fresh level can always be finished), `generateCrate` in `src/gen/props.ts`
   Changed: a match kept a plan of at most `MAX_BRIDGES` bridges and refused a placement that left none (`3628776`, `fbee7a6`).

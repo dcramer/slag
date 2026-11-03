@@ -8,13 +8,14 @@ import { LEVEL_H, LEVEL_W } from '../src/sim/constants';
 import { isProtected, type Level, T_SOLID, tileAt } from '../src/sim/level';
 import {
   canPlace,
-  claimedCells,
   footprintCells,
   type Motion,
   motionOffset,
   motionPeriod,
+  occupiedCells,
   type PlacedProp,
   placeFaults,
+  previewProps,
   resolveProp,
   rideSpan,
   spotAt,
@@ -56,7 +57,7 @@ const ONE = block([[0, 0]]);
 /** A one-tile platform running 4 tiles right and back. */
 const RAIL = block([[0, 0]], { type: 'rail', angle: 0, range: 4, period: 120 });
 
-describe('a moving part takes its whole path', () => {
+describe('a moving part', () => {
   it('is refused where its rail runs into rock or a protected pocket, and goes where the run is clear', () => {
     const lv = testLevel();
     // Home cell free, but the rail reaches x=30, the pillar.
@@ -71,36 +72,43 @@ describe('a moving part takes its whole path', () => {
     expect(placeFaults(lv, [], left, 0, 6, FLOOR - 2).cells.every(([x, y]) => isProtected(lv, x, y))).toBe(true);
   });
 
-  it('claims its path from later parts, so nothing goes where it will come through', () => {
+  it('passes through other parts: only where it is now refuses, and that moves with it', () => {
     const lv = testLevel();
     const mover: PlacedProp = { uid: 1, def: RAIL, owner: 0, tx: 10, ty: 10, rot: 0 };
-    for (let x = 10; x <= 14; x++) {
-      expect(canPlace(lv, [mover], ONE, 0, x, 10), `x=${x}`).toBe(false);
-      expect(placeFaults(lv, [mover], ONE, 0, x, 10).by).toEqual([mover]);
+    const r = resolveProp(mover);
+    for (const f of [0, 20, 45, 70]) {
+      const at = 10 + Math.round(motionOffset(r, f)[0] / 16);
+      for (let x = 10; x <= 14; x++) {
+        // Where it is on frame f (the one or two cells it straddles) refuses; the rest of its rail doesn't.
+        const here = Math.abs(10 * 16 + motionOffset(r, f)[0] - x * 16) < 16 - 0.5;
+        expect(canPlace(lv, [mover], ONE, 0, x, 10, f), `frame ${f}, x=${x}`).toBe(!here);
+        if (here) expect(placeFaults(lv, [mover], ONE, 0, x, 10, f).by).toEqual([mover]);
+      }
+      expect(canPlace(lv, [mover], ONE, 0, at, 10, f)).toBe(false);
     }
-    expect(canPlace(lv, [mover], ONE, 0, 15, 10)).toBe(true);
-    expect(canPlace(lv, [mover], ONE, 0, 12, 11)).toBe(true);
+    // A new mover's rail may cross it as well.
+    expect(canPlace(lv, [mover], block([[0, 0]], { type: 'rail', angle: -Math.PI / 2, range: 4, period: 90 }), 0, 12, 13, 0)).toBe(
+      canPlace(lv, [mover], ONE, 0, 12, 13, 0),
+    );
   });
 
-  it('a rider claims the cells its mover carries it through', () => {
+  it('a rider rides through still parts, and a still part may go in its path', () => {
     const lv = testLevel();
     const lift = block([[0, 0]], { type: 'rail', angle: -Math.PI / 2, range: 4, period: 120 });
     const carrier: PlacedProp = { uid: 1, def: lift, owner: 0, tx: 12, ty: 15, rot: 0 };
     // Beside wherever the lift is on frame 0.
     const ty = Math.round(15 + motionOffset(resolveProp(carrier), 0)[1] / 16);
-    const s = spotAt(lv, [carrier], ONE, 0, 13, ty, 0);
+    // A block at the foot of its path, well clear of where it is now.
+    const still: PlacedProp = { uid: 3, def: ONE, owner: 0, tx: 13, ty: 15, rot: 0 };
+    expect(ty).toBeLessThan(14);
+    const s = spotAt(lv, [carrier, still], ONE, 0, 13, ty, 0);
     expect(s.ride?.uid).toBe(1);
     expect(s.ok).toBe(true);
     const rider: PlacedProp = { uid: 2, def: s.def, owner: 0, tx: 13, ty, rot: 0, ...(s.ride && { ride: s.ride }) };
-    // Beside the lift, the rider goes up to row 11 and back.
-    for (let y = 11; y <= 15; y++) expect(claimedCells(lv, [carrier, rider]).get(y * lv.w + 13), `row ${y}`).toBe(rider);
-    expect(canPlace(lv, [carrier, rider], ONE, 0, 13, 12)).toBe(false);
-    expect(canPlace(lv, [carrier, rider], ONE, 0, 14, 12)).toBe(true);
-    // And the other way round: a block already in that column keeps the rider off the lift.
-    const still: PlacedProp = { uid: 3, def: ONE, owner: 0, tx: 13, ty: 11, rot: 0 };
-    const blocked = spotAt(lv, [carrier, still], ONE, 0, 13, ty, 0);
-    expect(blocked.ride?.uid).toBe(1);
-    expect(blocked.ok).toBe(false);
+    // Its path, rows 11 to 15, is open to still parts except where it is now.
+    const at = occupiedCells(lv, [carrier, rider], 0);
+    for (let y = 11; y <= 15; y++) expect(canPlace(lv, [carrier, rider], ONE, 0, 13, y, 0), `row ${y}`).toBe(at.get(y * lv.w + 13) !== rider);
+    expect([11, 12, 13, 14, 15].filter((y) => at.get(y * lv.w + 13) === rider).length).toBeLessThanOrEqual(2);
   });
 
   it('a lift with stops sweeps its whole cycle, every park included', () => {
@@ -115,20 +123,27 @@ describe('a moving part takes its whole path', () => {
   });
 });
 
-describe('a refused ghost shows why', () => {
-  it('names the set piece whose reserved cells it would take, even where nothing is drawn', () => {
+describe('set pieces', () => {
+  it('refuse a part only where their solids are now: paths, swings and headroom take nothing', { timeout: 30_000 }, () => {
+    let open = 0;
     for (const theme of THEME_IDS) {
       const lv = generateLevel((3 * 2654435761 + 17) >>> 0, theme);
-      for (const sp of lv.setPieces)
-        for (const [x, y] of footprintCells(sp).slice(0, 3)) {
-          const f = placeFaults(lv, [], ONE, 0, x, y);
-          expect(f.cells).toEqual([[x, y]]);
-          expect(f.by.length).toBe(1);
-          expect(footprintCells(f.by[0]).some(([a, b]) => a === x && b === y)).toBe(true);
-        }
+      for (const f of [0, 97]) {
+        const solids = previewProps(lv, lv.setPieces.map(resolveProp), f).solids.filter((s) => !s.film);
+        for (const sp of lv.setPieces)
+          for (const [x, y] of footprintCells(sp)) {
+            if (tileAt(lv, x, y) || isProtected(lv, x, y)) continue;
+            const inSolid = solids.some((s) => s.x < (x + 1) * 16 - 0.5 && s.x + s.w > x * 16 + 0.5 && s.y < (y + 1) * 16 - 0.5 && s.y + s.h > y * 16 + 0.5);
+            expect(canPlace(lv, [], ONE, 0, x, y, f), `${theme} ${sp.def.name} ${x},${y} frame ${f}`).toBe(!inSolid);
+            if (!inSolid) open++;
+          }
+      }
     }
+    expect(open).toBeGreaterThan(50);
   });
+});
 
+describe('a refused ghost shows why', () => {
   it('marks exactly the cells canPlace refuses, and nothing on a spot that takes the part', () => {
     const lv = testLevel();
     const wide = block([
@@ -172,7 +187,7 @@ describe('every moving part can still be placed', () => {
         if (!canPlace(lv, [], def, 0, x, y)) continue;
         checked++;
         for (const [cx, cy] of sweptCells({ uid: 0, def, owner: 0, tx: x, ty: y, rot: 0 })) {
-          expect(tileAt(lv, cx, cy), `${x},${y} → ${cx},${cy}`).toBe(0);
+          expect(tileAt(lv, cx, cy), `${x},${y} → ${cx},${cy}`).not.toBe(T_SOLID);
           expect(isProtected(lv, cx, cy)).toBe(false);
         }
       }
