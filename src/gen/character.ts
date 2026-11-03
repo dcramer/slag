@@ -29,12 +29,10 @@ export const CAST = [
 ] as const;
 export type Kind = (typeof CAST)[number];
 
-export type EyeStyle = 'dot' | 'ring' | 'sleepy' | 'visor' | 'angry';
-export type Mouth = 'smile' | 'fang' | 'o' | 'flat' | 'none' | 'teeth' | 'grin';
-
 /**
  * A procedurally generated character. Purely cosmetic: every character uses the same hitbox and
- * physics so the competitive game stays fair.
+ * physics so the competitive game stays fair. Its face is its kind's, never rolled: every plumber has
+ * the plumber's eyes (`KINDS` in src/render/cast/kinds.ts, `face` in a rendered kind's sprite.json).
  */
 export interface CharacterDef {
   seed: number;
@@ -49,8 +47,6 @@ export interface CharacterDef {
   paint: HSL;
   /** Rolls in 0..1 that the kind's art reads in its own order: small details inside a design. */
   vary: number[];
-  eyes: { count: 1 | 2 | 3; size: number; style: EyeStyle; iris: HSL; spread: number; y: number };
-  mouth: Mouth;
 }
 
 /**
@@ -110,11 +106,8 @@ export function generateCharacter(seed: number, kind?: Kind): CharacterDef {
   const paints = PAINTS[k];
   const paint = paints[Math.floor(rng.next() * paints.length)];
   const vary = Array.from({ length: 6 }, () => rng.next());
-  const count = rng.weighted<1 | 2 | 3>([
-    [2, 7],
-    [1, 2],
-    [3, 0.6],
-  ]);
+  // Spent where the eye count was once rolled, so every seed keeps the name and colours it had.
+  rng.next();
   return {
     seed,
     name: shortName(rng),
@@ -124,28 +117,6 @@ export function generateCharacter(seed: number, kind?: Kind): CharacterDef {
     kind: k,
     paint,
     vary,
-    eyes: {
-      count,
-      size: count === 1 ? rng.range(2.6, 3.2) : rng.range(1.6, 2.2),
-      style: rng.weighted<EyeStyle>([
-        ['dot', 5],
-        ['ring', 2],
-        ['sleepy', 1.2],
-        ['angry', 1.2],
-      ]),
-      iris: hsl3(rng.range(0, 360), 70, 50),
-      spread: rng.range(0.2, 0.28),
-      y: rng.range(0.56, 0.68),
-    },
-    mouth: rng.weighted<Mouth>([
-      ['smile', 3],
-      ['fang', 1.2],
-      ['o', 1],
-      ['flat', 1.2],
-      ['none', 1],
-      ['teeth', 0.6],
-      ['grin', 1],
-    ]),
   };
 }
 
