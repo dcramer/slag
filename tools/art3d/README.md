@@ -83,7 +83,7 @@ How `rolemap.py` reads the drawings, in the kind's `map` (`flat/kinds/<kind>.ts`
 ## How it draws
 
 - **Tracing** (`flat/build.ts`): each drawing's role map, at 12 px per world px, is cut into parts and traced by `page/trace.ts` with no depth steps (a drawing is flat); interior lines are thinned to their centres and walked into strokes. The frame's feet sit on the floor with the pen just under it; facing left is the mirror.
-- **Drawing** (`src/render/cast/sprites/`): `draw.ts` draws a flat set's silhouette in its own ink (so the gaps between parts never show the costume's colour) and its parts filled flat under a light pen (`flat`), the interior lines in one ink, one hard shadow shape and the face from `face.ts`; `index.ts` dresses it for a character (the costume's colour, the palette, the rolled accessories and wear, the gait's lift and lean) and keeps each drawn frame as a bitmap; `play.ts` picks the clip and frame from the pose.
+- **Drawing** (`src/render/cast/sprites/`): `draw.ts` draws a flat set's silhouette in one neutral ink (so the gaps between parts never show the costume's colour, or a dark of it) and its parts filled flat under a light pen (`flat`), the interior lines in that ink, no hard shadow of its own (its offset mottled thin limbs), one hard shadow shape and the face from `face.ts`; `index.ts` dresses it for a character (the costume's colour, the palette, the rolled accessories and wear, the gait's lift and lean) and keeps each drawn frame as a bitmap; `play.ts` picks the clip and frame from the pose.
 - **Light**: every rendered figure marks its shape in the light map's alpha (`Renderer.markFigures`), and the cel pass lights it evenly, with no light band across it (`figAmbient` in `cel-shader.ts`).
 
 ## Files
