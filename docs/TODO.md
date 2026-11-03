@@ -8,6 +8,9 @@ Design intent for everything below is in `docs/DESIGN.md`.
 
 ---
 
+## 28. The codex covers maps
+The owner: "the codex needs to talk about maps". The codex (`src/codex/`) catalogs parts and projectiles only. Add the world: each theme with its landmarks, its own hazards and its look, read from the registries (`THEME_IDS`, `CONCEPTS`, `SET_PIECE_RECIPES`, decor `RULES`) so a new entry shows up without codex edits.
+
 ## 27. AI players and player scripts (future)
 Brains that fill seats by producing inputs, built in or written by players. Design: `docs/DESIGN.md` → AI players. Native AI first (phases 1–2); scripts after. Each phase is one agent, in order.
 
@@ -47,8 +50,8 @@ Size tiers for parts are a mapping of the old rolled ranges, so check them too; 
 **Undecided: character height.** Characters fit a one-block gap today. The owner wondered about a 1.5- or 2-block gap, since one block feels less interesting, then leaned back toward one. Decide in playtest. Changing it means redoing level design and `reach.ts` tuning.
 
 ## 21. Ink art leftovers
-- Small cog lifts and small spin bars stay small on crate cards, because small parts draw at 0.6 scale.
-- The parts still under the bar are ranked in `docs/ART-QA.md` ("Next in the queue"). The geyser vent can't stand taller until the sim gives it a solid rim (same file, "Needs a sim change").
+- The geyser vent can't stand taller until the sim gives it a solid rim, and the reach proof and the set-piece placer both have to see that rim (`docs/ART-QA.md` → "Needs a sim change").
+- The parts still under the bar are ranked in `docs/ART-QA.md` → "Next in the queue".
 
 ## 15. Parody names: decide on sound-alikes
 Names now parody genre tropes (`docs/PARODY.md`). A few are deliberate sound-alikes of trademarked names: Chain Chump, Thwunk, the -omb suffix, Master Noodle, Yolo Blocks. Decide whether to keep them.

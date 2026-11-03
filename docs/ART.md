@@ -123,4 +123,4 @@ Everything in the world is drawn the way a person inks a comic: flat tones, hard
 
 **Banned.** `ctx.stroke()` for an outline; gradients as shading; soft glows on things that aren't hot; photo or painted textures; anything that traces a rectangle with an even line; `Math.random` in a mark, because marks must land in the same place every time.
 
-How to draw a theme piece to these rules with the kit is in `src/render/AGENTS.md` → Drawing a landmark, hazard or decor piece. `tests/ink-rules.test.ts` fails theme art on the mechanical faults (raw strokes, near-black `INK` or a pen helper left on it, hard-coded near-blacks, gradients), and `pnpm shot artqa --theme T` shows a theme's pieces beside its terrain and parts.
+How to draw a theme piece to these rules with the kit is in `src/render/AGENTS.md` → Drawing a landmark, hazard or decor piece. `tests/ink-rules.test.ts` fails theme art and crate-part art on the mechanical faults (raw strokes, near-black `INK` or a pen helper left on it, hard-coded near-blacks, gradients), and `pnpm shot artqa --theme T` shows a theme's pieces beside its terrain and parts.

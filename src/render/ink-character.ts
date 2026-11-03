@@ -250,8 +250,11 @@ function drawSpriteRunner(rc: InkTarget, c: CharacterDef, art: KindArt, lk: Look
   s.translate(x, y);
   s.scale(sc, sc);
   if (art.ring) ring(s, lk, 14 * art.size[0]);
+  // Screen px per world px before the squash: the scale the frame's bitmap is drawn at.
+  const tf = s.getTransform();
+  const px = Math.hypot(tf.a, tf.b);
   s.scale(sx, sy);
-  const ok = drawSprite(s, set, c, p, x / sc);
+  const ok = drawSprite(s, set, c, p, x / sc, px);
   s.restore();
   return ok;
 }

@@ -5,7 +5,7 @@ import { turnaround } from './inspect';
 import { loadModel } from './load';
 import { renderSprites } from './render';
 import { swatches } from './roles';
-import { contact } from './sheet';
+import { contact, rolls } from './sheet';
 
 /**
  * The page the art3d command drives in headless Chromium (tools/art3d/sprites.ts). Everything it can do
@@ -28,8 +28,9 @@ async function render(url: string, s: Settings, kind: string, only?: string[]): 
     const frames = (fs: typeof tc.r) =>
       fs.map((f) => ({
         sil: f.sil.map(enc),
-        parts: f.parts.map((p) => [p.role, enc(p.ring)] as const),
-        ...(f.glints.length ? { glints: f.glints.map((v) => Math.round(v * 8)) } : {}),
+        parts: f.parts.map((p) => (p.option ? ([p.role, enc(p.ring), p.option[0], p.option[1]] as const) : ([p.role, enc(p.ring)] as const))),
+        ...(f.eyes.length ? { eyes: f.eyes.map((v) => Math.round(v * 8)) } : {}),
+        ...(f.marks?.length ? { marks: f.marks.map(enc) } : {}),
       }));
     clips[name] = {
       loop: c.loop,
@@ -43,9 +44,11 @@ async function render(url: string, s: Settings, kind: string, only?: string[]): 
   }
   const roles = got.roles.map((n) => {
     const r = s.roles[n];
-    return { color: r.color, ...(r.slot ? { slot: r.slot } : {}) };
+    return { color: r.color, ...(r.slot ? { slot: r.slot } : {}), ...(r.alts ? { alts: r.alts, vary: r.vary ?? 0 } : {}) };
   });
-  return { kind, height: s.height, roles, clips };
+  const face = s.face ? { r: s.face.r, iris: s.face.iris, ...(s.face.mouth ? { mouth: s.face.mouth } : {}) } : null;
+  const slots = Object.entries(s.slots ?? {}).map(([name, vary]) => ({ vary, options: (s.props ?? []).filter((p) => p.slot === name).length }));
+  return { kind, height: s.height, roles, ...(slots.length ? { slots } : {}), ...(face ? { face } : {}), clips };
 }
 
 const api = {
@@ -54,6 +57,11 @@ const api = {
     return {
       sheet: turnaround(model, size),
       clips: model.clips.map((c) => ({ name: c.name, seconds: c.duration })),
+      bones: (() => {
+        const names: string[] = [];
+        model.root.traverse((o) => (o as THREE.Bone).isBone && names.push(o.name));
+        return names;
+      })(),
       swatches: model.texture
         ? swatches(model.texture, k, model.meshes[0].geometry.getAttribute('uv') as THREE.BufferAttribute, model.meshes[0].geometry.index)
         : [],
@@ -61,6 +69,7 @@ const api = {
   },
   render,
   contact,
+  rolls,
 };
 
 (window as unknown as { art3d: typeof api }).art3d = api;

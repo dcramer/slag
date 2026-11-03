@@ -1,3 +1,4 @@
+import { tidyName } from '../core/name';
 import { MAX_PLAYERS } from '../sim/constants';
 
 /**
@@ -63,6 +64,8 @@ export interface RoomListing {
   /** The current level's theme id (src/themes.ts). */
   theme: string;
   phase: ListedPhase;
+  /** The hosting player's name, whoever hosts now. Absent when it has none, or the API refused it. */
+  host?: string;
 }
 
 export interface ListedRoom extends RoomListing {
@@ -81,7 +84,17 @@ export function cleanListing(v: unknown): RoomListing | null {
   const l = v as Record<string, unknown>;
   if (!count(l.max, MAX_PLAYERS) || (l.max as number) < 1 || !count(l.players, l.max as number) || !count(l.observers, MAX_PEERS)) return null;
   if (typeof l.theme !== 'string' || !/^[a-z]{1,16}$/.test(l.theme) || !LISTED_PHASES.includes(l.phase as ListedPhase)) return null;
-  return { players: l.players as number, max: l.max as number, observers: l.observers as number, theme: l.theme, phase: l.phase as ListedPhase };
+  const out: RoomListing = {
+    players: l.players as number,
+    max: l.max as number,
+    observers: l.observers as number,
+    theme: l.theme,
+    phase: l.phase as ListedPhase,
+  };
+  // Text from a stranger, shown to strangers: a bad name loses the name, not the room.
+  const host = tidyName(l.host);
+  if (host) out.host = host;
+  return out;
 }
 
 export interface MemberInfo {

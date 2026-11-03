@@ -1,8 +1,8 @@
 import { css, type HSL } from '../../../core/color';
 import { TILE } from '../../../sim/constants';
 import { type ModuleOf, mysterySpent, mysteryState } from '../../../sim/props';
-import { blob, line, type P, stroke } from '../../ink';
-import { boxPts, dot, glint, INK, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
+import { blob, inkFor, line, type P, stroke } from '../../ink';
+import { boxPts, dot, glint, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import { bulb, light, type RC } from '../../kit';
 import { defineArt, type DrawCtx } from '../common';
 
@@ -51,7 +51,7 @@ function glyph(lit: boolean) {
     g.translate(0.2, 0.4);
     g.transform(1, 0, -0.12, 1, 0, 0);
     // Ink first, fat, then the hard drop shadow down and right, then the face.
-    g.fillStyle = INK;
+    g.fillStyle = inkFor(GOLD);
     stroke(g, HOOK, { w: 3.72, seed: 3, taper: [0.06, 0.04], press: 0.1 });
     star(g, 0.25, 4.5, 2.5);
     g.fillStyle = lit ? css(GOLD, -26, 1, 6) : css(GOLD, -34, 1, -10);
@@ -100,8 +100,8 @@ function cube(spent: boolean) {
         g.fillStyle = css(c, 12);
         stroke(g, poly(x + r * 0.2, y + r * 0.9, x + r, y + r * 0.1, x + r * 0.6, y - r * 0.7), { w: 0.45, seed: x, taper: [0.2, 0.3], press: 0 });
       }
-      tick(g, T * 0.55 - 1, T - 4.6, T * 0.4, T * 0.5, 0.45, 9, INK);
-      tick(g, T * 0.4, T * 0.5, T * 0.46, T * 0.36, 0.35, 10, INK);
+      tick(g, T * 0.55 - 1, T - 4.6, T * 0.4, T * 0.5, 0.45, 9, inkFor(c));
+      tick(g, T * 0.4, T * 0.5, T * 0.46, T * 0.36, 0.35, 10, inkFor(c));
     } else {
       // A sheen across the frame's top edge.
       glint(g, poly(2.4, 1.1, 6, 0.9, 10, 1.1), 'rgba(255,252,230,0.9)', 0.6);
@@ -113,11 +113,12 @@ function cube(spent: boolean) {
       [1.45, T - 1.45],
       [T - 1.45, T - 1.45],
     ])
-      dot(g, x, y, 0.72, x * 3 + y, spent ? css(c, 20) : CREAM);
-    pen(g, body, 7, 0.6, 1.9, 4);
+      dot(g, x, y, 0.72, x * 3 + y, spent ? css(c, 20) : CREAM, inkFor(c));
+    pen(g, body, 7, 0.6, 1.9, 4, inkFor(c));
     // The coin slot on top: the loot-box gag.
-    part(g, boxPts(T / 2 - 3, -0.8, 6, 1.7, 0.4, 8, 0), { h: 220, s: 8, l: spent ? 34 : 56 }, 8, { depth: 0.3, thin: 0.3, thick: 0.6 });
-    g.fillStyle = INK;
+    const plate: HSL = { h: 220, s: 8, l: spent ? 34 : 56 };
+    part(g, boxPts(T / 2 - 3, -0.8, 6, 1.7, 0.4, 8, 0), plate, 8, { depth: 0.3, thin: 0.3, thick: 0.6 });
+    g.fillStyle = inkFor(plate);
     line(g, T / 2 - 2, 0.05, T / 2 + 2, 0.05, { w: 0.52, seed: 4, taper: [0, 0], press: 0 });
   });
 }

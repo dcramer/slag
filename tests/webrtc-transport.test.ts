@@ -457,6 +457,7 @@ describe('free tier budget', () => {
 });
 
 describe('lobby list', () => {
+  const nameOf = (p: Peer) => p.session.match.players.find((q) => q.device.startsWith(`${p.id}:`))!.character.name;
   const listed = async (w: World): Promise<ListedRoom | undefined> =>
     ((await handleOp('lobbies', {}, { store: w.store, ice: [] })) as { rooms: ListedRoom[] }).rooms.find((r) => r.room === 'ROOM1');
 
@@ -464,13 +465,31 @@ describe('lobby list', () => {
     const w = new World();
     const [a] = await w.room('aaaa');
     await w.run(600);
-    expect(await listed(w)).toEqual({ room: 'ROOM1', players: 1, max: 8, observers: 0, theme: a.session.match.level.theme.id, phase: 'lobby' });
+    expect(await listed(w)).toEqual({
+      room: 'ROOM1',
+      players: 1,
+      max: 8,
+      observers: 0,
+      theme: a.session.match.level.theme.id,
+      phase: 'lobby',
+      host: nameOf(a),
+    });
     // A player and a watcher arriving show within the nudge, not a beat later; only the host writes the list.
     w.join('bbbb');
     w.join('cccc', true);
     await w.run(7000);
     expect(await listed(w)).toMatchObject({ players: 2, observers: 1 });
     expect(w.peers.get('bbbb')!.signal.calls).toBeLessThan(a.signal.calls);
+  });
+
+  it("lists the room again within the nudge when the host's name changes", async () => {
+    const w = new World();
+    const [a] = await w.room('aaaa', 'bbbb');
+    await w.run(6000);
+    const dev = a.session.match.players.find((p) => p.device.startsWith('aaaa:'))!.device;
+    a.session.act({ t: 'name', dev, name: 'Grimble' });
+    await w.run(6000);
+    expect(await listed(w)).toMatchObject({ host: 'Grimble' });
   });
 
   it('takes a room off at once when the host makes it Private, and back when it is public again', async () => {
@@ -489,13 +508,15 @@ describe('lobby list', () => {
 
   it('the next host lists the room when one leaves, and the last one out takes it off with its goodbye', async () => {
     const w = new World();
-    await w.room('aaaa', 'bbbb');
+    const [a, b] = await w.room('aaaa', 'bbbb');
     await w.run(6000);
-    expect(await listed(w)).toMatchObject({ players: 2 });
+    expect(await listed(w)).toMatchObject({ players: 2, host: nameOf(a) });
     w.leave('aaaa');
     await w.runUntil(() => w.settled(), 20_000);
     await w.run(6000);
-    expect(await listed(w)).toMatchObject({ players: 1 });
+    // Listed under whoever hosts now.
+    expect(nameOf(b)).not.toBe(nameOf(a));
+    expect(await listed(w)).toMatchObject({ players: 1, host: nameOf(b) });
     w.leave('bbbb');
     await w.run(100);
     expect(await listed(w)).toBeUndefined();

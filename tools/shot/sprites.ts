@@ -178,8 +178,9 @@ async function lobby(): Promise<string> {
   await open(`seed=${seed}&sprites=1`);
   await page.evaluate((kind) => {
     const d = (window as any).slagDebug;
-    for (const dev of ['kb1', 'kb2', 'pad0', 'pad1']) d.match.join(dev);
-    for (let i = 0; i < 4; i++) d.sprites.dress(i, kind);
+    // Six of the kind: six rolls of its accessories on the lobby cards.
+    for (const dev of ['kb1', 'kb2', 'pad0', 'pad1', 'pad2', 'pad3']) d.match.join(dev);
+    for (let i = 0; i < 6; i++) d.sprites.dress(i, kind);
   }, KIND);
   await step(30);
   await settle();
@@ -212,6 +213,31 @@ const img = (f: string | undefined, label: string, w = '100%') =>
     : '';
 const h = (t: string) => `<h2 style="margin:6px 0 10px;font:400 30px 'Lilita One',system-ui;color:#ffb02e">${t}</h2>`;
 const row = (...cells: string[]) => `<div style="display:flex;gap:12px;align-items:flex-start">${cells.join('')}</div>`;
+
+/**
+ * Draw cost per runner, 8 runners at play scale (`castBench`): the kind hand-drawn, the kind rendered,
+ * and the whole cast as drawn today, on this machine's software canvas.
+ */
+async function bench(): Promise<string> {
+  await open(`seed=${seed}`);
+  const got = await page.evaluate(async (kind) => {
+    const d = (window as any).slagDebug;
+    const drawn = d.cast.bench(300, [kind]);
+    const cast = d.cast.bench(300);
+    d.sprites.use(true);
+    // The kind's frames load on first use.
+    await new Promise((done) => setTimeout(done, 800));
+    d.cast.bench(20, [kind]);
+    const rendered = d.cast.bench(300, [kind]);
+    d.sprites.use(false);
+    return { drawn, rendered, cast };
+  }, KIND);
+  const text = `${KIND}: rendered ${got.rendered.toFixed(3)} ms/runner, hand-drawn ${got.drawn.toFixed(3)} ms/runner, the whole cast hand-drawn ${got.cast.toFixed(3)} ms/runner (8 runners at play scale, software canvas)`;
+  writeFileSync(`${out}/sprites-${KIND}-bench.txt`, text + '\n');
+  console.log(text);
+  pet();
+  return text;
+}
 
 /** The blind read: every kind's play-scale silhouette, shuffled and numbered (`castBlind`). */
 async function blind(): Promise<string> {
@@ -248,6 +274,7 @@ export const shots: Scenarios = {
     const film = await filmstrip();
     const lb = await lobby();
     const bl = await blind();
+    const cost = await bench();
     const traced = resolve(out, 'art3d/traced-x3.png');
     const r1 = (f: string) => resolve(out, `art3d/r1-${KIND}-${f}.png`);
     await composePng(
@@ -267,7 +294,8 @@ export const shots: Scenarios = {
         row(img(mixed['3d1'], 'Among the hand-drawn cast, play scale', '50%'), img(mixed['3d3'], 'Among the cast, 3×', '50%')) +
         img(film, 'Round 2: run cycle into a jump, 3×, every second or fourth sim frame') +
         img(r1('runcycle'), 'Round 1: the same') +
-        img(lb, 'Lobby cards') +
+        img(lb, 'Lobby cards: six of the kind, six rolls of its accessories') +
+        `<p style="color:#c9b8a3">Draw cost: ${cost}</p>` +
         img(bl, 'The blind read: every kind as a play-scale silhouette, shuffled and unnamed (answers in sprites-blind-answers.txt)') +
         img(resolve(out, `art3d/${KIND}-frames.png`), 'Every frame, both facings, 4×, drawn by the game’s drawer'),
     );

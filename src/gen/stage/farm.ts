@@ -180,11 +180,13 @@ function buildWindmill(g: Grid, rng: Rng, box: TileRect, parts: number): Landmar
   const R = G - (hatch ? storey(easyRise() > 2 ? 1 : 2) : easyRise() + 3);
   const steps = stairRows(G, R);
   const nb = steps.length;
-  // The hub over the middle of the structure, the mill under it, the stair against its near wall.
-  const hx = s.x + s.w / 2;
+  // The mill in the middle of the structure where the stair against its near wall leaves room, and the hub
+  // over the mill's middle: the tower is drawn round the hub, so a hub left at the structure's middle stood
+  // the tower off its own mill whenever the stair pushed the mill along.
   const mw = Math.max(7, Math.min(s.w - 2 * nb - 2, rng.int(7, 11)));
-  const mx0 = Math.max(s.x + 2 * nb, Math.round(hx - mw / 2));
+  const mx0 = Math.max(s.x + 2 * nb, Math.round(s.x + s.w / 2 - mw / 2));
   const mx1 = Math.min(s.x + s.w - 2, mx0 + mw - 1);
+  const hx = (mx0 + mx1 + 1) / 2;
   fill(g, mx0, R, mx1, R);
   fill(g, mx0, R, mx0, G - 1);
   fill(g, mx1, R, mx1, G - 1);

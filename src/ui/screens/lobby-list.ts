@@ -38,3 +38,12 @@ export const PHASE_TAGS: Record<ListedPhase, string> = {
 export function themeLabel(id: string): string {
   return THEME_IDS.includes(id as ThemeId) ? THEME_LABELS[id as ThemeId] : id.charAt(0).toUpperCase() + id.slice(1);
 }
+
+/**
+ * A row's two lines. The host's name leads, since a name is what people recognise, over the theme and the code;
+ * a room whose host has no name leads with its theme, as a stamped heading.
+ */
+export function rowTitle(r: ListedRoom): { title: string; sub: string } {
+  const theme = themeLabel(r.theme);
+  return r.host ? { title: r.host, sub: `${theme} · ${r.room}` } : { title: theme.toUpperCase(), sub: r.room };
+}

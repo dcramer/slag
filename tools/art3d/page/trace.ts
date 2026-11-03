@@ -15,6 +15,8 @@ export interface Part {
   ring: number[];
   /** Mean depth, for painting back to front. */
   depth: number;
+  /** An accessory's part: its slot and option. */
+  option?: [number, number];
 }
 
 export interface Traced {
@@ -23,7 +25,9 @@ export interface Traced {
   /** Parts, back to front. */
   parts: Part[];
   /** Catch-lights: x, y, radius (world px) per eye. */
-  glints: number[];
+  eyes: number[];
+  /** Open pen strokes (motion marks), x, y pairs. */
+  marks?: number[][];
 }
 
 /** The outer boundary of the 8-connected pixel set holding `start`, as pixel centres, clockwise (Moore tracing). */
@@ -107,6 +111,130 @@ function chaikin(pts: [number, number][], n: number): [number, number][] {
     p = q;
   }
   return p;
+}
+
+/**
+ * A closed ring resampled at an even spacing, clockwise, starting from the point furthest up and toward
+ * the light. The same shape always gives the same points, wherever the tracer happened to start, so a
+ * part that holds still between frames draws the same line, and the pen's boil (keyed to a point's
+ * index) moves it the same way.
+ */
+function resample(pts: [number, number][], step: number): [number, number][] {
+  if (pts.length < 3) return pts;
+  // Clockwise on screen (y down) means a positive signed area.
+  let a = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i];
+    const q = pts[(i + 1) % pts.length];
+    a += p[0] * q[1] - q[0] * p[1];
+  }
+  const ring = a < 0 ? pts.map((_, i) => pts[pts.length - 1 - i]) : pts;
+  let cx = 0;
+  let cy = 0;
+  for (const [x, y] of ring) {
+    cx += x;
+    cy += y;
+  }
+  cx /= ring.length;
+  cy /= ring.length;
+  let start = 0;
+  let best = -Infinity;
+  ring.forEach(([x, y], i) => {
+    const v = -(x - cx) * 0.55 - (y - cy) * 0.83;
+    if (v > best) {
+      best = v;
+      start = i;
+    }
+  });
+  const loop = [...ring.slice(start), ...ring.slice(0, start)];
+  let len = 0;
+  for (let i = 0; i < loop.length; i++) {
+    const p = loop[i];
+    const q = loop[(i + 1) % loop.length];
+    len += Math.hypot(q[0] - p[0], q[1] - p[1]);
+  }
+  const n = Math.max(6, Math.round(len / step));
+  const out: [number, number][] = [];
+  let seg = 0;
+  let segStart = 0;
+  let segLen = Math.hypot(loop[1 % loop.length][0] - loop[0][0], loop[1 % loop.length][1] - loop[0][1]);
+  for (let k = 0; k < n; k++) {
+    const d = (k / n) * len;
+    while (segStart + segLen < d && seg < loop.length - 1) {
+      segStart += segLen;
+      seg++;
+      const p = loop[seg];
+      const q = loop[(seg + 1) % loop.length];
+      segLen = Math.hypot(q[0] - p[0], q[1] - p[1]);
+    }
+    const p = loop[seg];
+    const q = loop[(seg + 1) % loop.length];
+    const u = segLen > 0 ? (d - segStart) / segLen : 0;
+    out.push([p[0] + (q[0] - p[0]) * u, p[1] + (q[1] - p[1]) * u]);
+  }
+  return out;
+}
+
+/** Mean distance from each point of `a` to the nearest point of `b` (flat x, y arrays), after moving `b` by (dx, dy). */
+function drift(a: number[], b: number[], dx: number, dy: number): number {
+  let sum = 0;
+  for (let i = 0; i < a.length; i += 2) {
+    let best = Infinity;
+    for (let j = 0; j < b.length; j += 2) best = Math.min(best, (a[i] - b[j] - dx) ** 2 + (a[i + 1] - b[j + 1] - dy) ** 2);
+    sum += Math.sqrt(best);
+  }
+  return sum / (a.length / 2);
+}
+
+const centre = (r: number[]) => {
+  let x = 0;
+  let y = 0;
+  for (let i = 0; i < r.length; i += 2) {
+    x += r[i];
+    y += r[i + 1];
+  }
+  return [x / (r.length / 2), y / (r.length / 2)];
+};
+
+/**
+ * Holds shapes steady across a clip: a part (or a silhouette outline) that is the previous frame's
+ * moved bodily, within `tol` world px, is drawn as that one, moved. Only real changes of shape redraw a
+ * line; what's left of the wobble is the pen's own boil.
+ */
+export function steady(prev: Traced, cur: Traced, tol: number): void {
+  const keep = (ring: number[], from: number[][]): number[] => {
+    const [cx, cy] = centre(ring);
+    let best: number[] | null = null;
+    let bd = Infinity;
+    for (const p of from) {
+      const [px, py] = centre(p);
+      const d = Math.hypot(px - cx, py - cy);
+      if (d < bd) {
+        bd = d;
+        best = p;
+      }
+    }
+    if (!best || bd > 2) return ring;
+    const [px, py] = centre(best);
+    const dx = cx - px;
+    const dy = cy - py;
+    if (drift(ring, best, dx, dy) > tol || drift(best, ring, -dx, -dy) > tol) return ring;
+    return best.map((v, i) => Math.round((v + (i % 2 ? dy : dx)) * 16) / 16);
+  };
+  cur.sil = cur.sil.map((r) => keep(r, prev.sil));
+  // Eyes that barely moved stay put, so the face doesn't swim.
+  if (prev.eyes.length === cur.eyes.length)
+    for (let i = 0; i < cur.eyes.length; i += 3)
+      if (Math.hypot(cur.eyes[i] - prev.eyes[i], cur.eyes[i + 1] - prev.eyes[i + 1]) < tol * 1.5) {
+        cur.eyes[i] = prev.eyes[i];
+        cur.eyes[i + 1] = prev.eyes[i + 1];
+        cur.eyes[i + 2] = prev.eyes[i + 2];
+      }
+  for (const p of cur.parts)
+    p.ring = keep(
+      p.ring,
+      prev.parts.filter((q) => q.role === p.role).map((q) => q.ring),
+    );
 }
 
 const ringArea = (r: [number, number][]) => {
@@ -227,7 +355,7 @@ export function trace(role: Int16Array, depth: Float32Array, W: number, H: numbe
   const toWorld = (pts: [number, number][]) => pts.map(([x, y]): [number, number] => [(x + 0.5) / R + BOX.x0, (y + 0.5) / R - BOX.y1]);
   // Simplify to the few points that carry the shape, round them into curves, then drop the points the
   // curves made that a line would do as well (a quarter of a sprite pixel).
-  const shape = (pts: [number, number][]) => simplify(chaikin(simplify(pts, t.eps * R), t.smooth), 0.06 * R);
+  const shape = (pts: [number, number][]) => resample(chaikin(simplify(pts, t.eps * R), t.smooth), 0.6 * R);
   const flat = (pts: [number, number][]) => toWorld(pts).flatMap(([x, y]) => [Math.round(x * 16) / 16, Math.round(y * 16) / 16]);
   const parts: Part[] = [];
   const ids = new Map<number, number[]>();
@@ -273,11 +401,12 @@ export function trace(role: Int16Array, depth: Float32Array, W: number, H: numbe
   parts.sort((a, b) => b.depth - a.depth);
 
   // 5. The silhouette: every outer outline of the figure.
-  const fg = (x: number, y: number) => x >= 0 && y >= 0 && x < W && y < H && r[y * W + x] >= 0;
+  const free = names.map((n) => !!s.roles[n].free);
+  const fg = (x: number, y: number) => x >= 0 && y >= 0 && x < W && y < H && r[y * W + x] >= 0 && !free[r[y * W + x]];
   const sil: number[][] = [];
   const seen = new Uint8Array(n);
   for (let i = 0; i < n; i++) {
-    if (r[i] < 0 || seen[i]) continue;
+    if (r[i] < 0 || free[r[i]] || seen[i]) continue;
     const st = [i];
     seen[i] = 1;
     let count = 0;
@@ -286,7 +415,7 @@ export function trace(role: Int16Array, depth: Float32Array, W: number, H: numbe
       count++;
       const x = p % W;
       for (const q of [x > 0 ? p - 1 : -1, x < W - 1 ? p + 1 : -1, p - W, p + W, p - W - 1, p - W + 1, p + W - 1, p + W + 1])
-        if (q >= 0 && q < n && r[q] >= 0 && !seen[q]) {
+        if (q >= 0 && q < n && r[q] >= 0 && !free[r[q]] && !seen[q]) {
           seen[q] = 1;
           st.push(q);
         }
@@ -294,8 +423,8 @@ export function trace(role: Int16Array, depth: Float32Array, W: number, H: numbe
     if (count < t.min * R * R) continue;
     sil.push(flat(shape(boundary(fg, i % W, (i / W) | 0))));
   }
-  // 6. Catch-lights: the glint roles' parts in the upper half of the figure (an eye, not a boot sole),
-  // at the part's top-left, toward the light.
+  // 6. The eyes, for the face kit: the eye role's two biggest parts in the top two fifths of the figure
+  // (an eye, never a boot sole or a glove), the nearer (bigger) first.
   let top = Infinity;
   let bottom = -Infinity;
   for (const ring of sil)
@@ -303,7 +432,7 @@ export function trace(role: Int16Array, depth: Float32Array, W: number, H: numbe
       top = Math.min(top, ring[i]);
       bottom = Math.max(bottom, ring[i]);
     }
-  const glints: number[] = [];
+  const found: { x: number; y: number; r: number; a: number }[] = [];
   for (const p of parts) {
     if (!s.roles[names[p.role]].glint) continue;
     let x0 = Infinity;
@@ -316,8 +445,14 @@ export function trace(role: Int16Array, depth: Float32Array, W: number, H: numbe
       y0 = Math.min(y0, p.ring[i + 1]);
       y1 = Math.max(y1, p.ring[i + 1]);
     }
-    if ((y0 + y1) / 2 > top + (bottom - top) * 0.5) continue;
-    glints.push(x0 + (x1 - x0) * 0.34, y0 + (y1 - y0) * 0.32, Math.max(0.24, Math.min(x1 - x0, y1 - y0) * 0.22));
+    const [b0, b1] = s.roles[names[p.role]].band ?? [0, 0.4];
+    const at = ((y0 + y1) / 2 - top) / (bottom - top);
+    if (at < b0 || at > b1) continue;
+    found.push({ x: (x0 + x1) / 2, y: (y0 + y1) / 2, r: Math.max(0.3, Math.min(x1 - x0, y1 - y0) / 2), a: (x1 - x0) * (y1 - y0) });
   }
-  return { sil, parts, glints };
+  const eyes = found
+    .sort((a, b) => b.a - a.a)
+    .slice(0, 2)
+    .flatMap((e) => [e.x, e.y, e.r]);
+  return { sil, parts, eyes };
 }
