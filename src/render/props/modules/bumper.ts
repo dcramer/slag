@@ -1,12 +1,14 @@
 import { css, type HSL } from '../../../core/color';
 import { BUMPER_FLASH } from '../../../sim/props';
-import { type P, stroke } from '../../ink';
-import { INK, ovalPts, part, path, sprite, stamp } from '../../ink-props';
+import { inkFor, type P, stroke } from '../../ink';
+import { ovalPts, part, path, sprite, stamp } from '../../ink-props';
 import { circle, light, type MetalPalette } from '../../kit';
 import { defineArt } from '../common';
 
 /** Frames the score stays up after a kick. */
 const SCORE = 40;
+/** The score's gold, outlined in a dark of itself. */
+const SCORE_GOLD: HSL = { h: 50, s: 100, l: 65 };
 
 /**
  * A pinball pop bumper, baked: a dark skirt, a white rubber ring round it, a lit cap with a crown ring,
@@ -22,14 +24,14 @@ function bumper(R: number, cap: HSL, pal: MetalPalette) {
     g.fillStyle = css(cap, 22);
     path(g, ovalPts(-0.3, -0.5, R * 0.5, R * 0.5, 5, 0.02, 18));
     g.fill();
-    // The star, ink under it so it reads as a decal and not a hole.
+    // The star, a dark of the cap under it so it reads as a decal and not a hole.
     const star: P[] = [];
     for (let i = 0; i < 10; i++) {
       const a = -Math.PI / 2 + (i / 10) * Math.PI * 2;
       const r = (i % 2 ? 0.17 : 0.4) * R;
       star.push({ x: -0.3 + Math.cos(a) * r, y: -0.5 + Math.sin(a) * r });
     }
-    g.fillStyle = INK;
+    g.fillStyle = inkFor(cap);
     path(
       g,
       star.map((p) => ({ x: p.x + 0.35, y: p.y + 0.4 })),
@@ -78,7 +80,7 @@ defineArt<'bumper'>({
       s.font = 'bold 6px sans-serif';
       s.textAlign = 'center';
       s.textBaseline = 'middle';
-      s.fillStyle = INK;
+      s.fillStyle = inkFor(SCORE_GOLD);
       for (const [ox, oy] of [
         [-0.6, 0],
         [0.6, 0],
@@ -87,7 +89,7 @@ defineArt<'bumper'>({
         [0.6, 0.9],
       ])
         s.fillText('100', x + ox, ty + oy);
-      s.fillStyle = '#ffe04a';
+      s.fillStyle = css(SCORE_GOLD);
       s.fillText('100', x, ty);
       s.restore();
     }

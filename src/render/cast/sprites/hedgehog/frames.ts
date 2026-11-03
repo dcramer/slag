@@ -6,7 +6,7 @@ export const sprites: SpriteSet = {
   height: 22,
   roles: [
     { color: '#f0c99c' },
-    { color: '#2f5bd0', slot: 'paint' },
+    { color: '#2f5bd0', slot: 'player' },
     { color: '#f4f1ea' },
     { color: '#3a9a46' },
     { color: '#2a2624' },

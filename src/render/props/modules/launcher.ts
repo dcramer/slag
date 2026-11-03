@@ -3,8 +3,8 @@ import { hash2 } from '../../../core/rng';
 import type { Vec } from '../../../core/geom';
 import { TILE } from '../../../sim/constants';
 import { footprintCells, launcherAngle, type LauncherStyle, type ModuleOf, type PropStyle, type Resolved } from '../../../sim/props';
-import { blob, line, type P, stroke } from '../../ink';
-import { ball, boxPts, dot, glint, INK, ovalPts, part, path, pen, poly, type Sprite, sprite, stamp, tick, tone } from '../../ink-props';
+import { blob, inkFor, line, type P, stroke } from '../../ink';
+import { ball, bar, barLine, boxPts, dot, glint, ovalPts, part, path, pen, poly, type Sprite, sprite, stamp, tick, tone } from '../../ink-props';
 import { bulb, circle, glowDot, light, type MetalPalette, type RC } from '../../kit';
 import { beamOf, defineArt, type DrawCtx } from '../common';
 import { iron } from '../machine';
@@ -76,6 +76,11 @@ export interface Look {
 
 const STEEL: HSL = { h: 212, s: 9, l: 70 };
 const BRASS: HSL = { h: 42, s: 58, l: 50 };
+const FLETCH: HSL = { h: 356, s: 62, l: 48 };
+const PLASTER: HSL = { h: 28, s: 46, l: 76 };
+const CHALK = 'rgba(240,236,226,0.92)';
+const GOO: HSL = { h: 98, s: 52, l: 44 };
+const GLASS: HSL = { h: 168, s: 14, l: 80 };
 
 /** A stone tone from the part's hue: grey with a cast. */
 const stone = (k: Bk, l = 58): HSL => ({ h: k.st.hue, s: 9, l });
@@ -124,9 +129,9 @@ const LOOKS: Record<LauncherStyle, Look> = {
           tick(g, x, y, x + 1.3, y + 0.7, 0.45, i, css(st, -22, 1, 4));
         }
         g.restore();
-        pen(g, shrine, k.seed + 4, 0.55, 1.7);
+        pen(g, shrine, k.seed + 4, 0.55, 1.7, 3, inkFor(st));
         // Where the slot turns: a drum cut into the face, sunk into shadow at its top and lit at its lip.
-        g.fillStyle = INK;
+        g.fillStyle = css(st, -42, 1, 4);
         path(g, ovalPts(0, 0, 4.3, 4.3, k.seed + 3, 0.03, 20));
         g.fill();
         g.fillStyle = css(st, 10);
@@ -135,14 +140,25 @@ const LOOKS: Record<LauncherStyle, Look> = {
         g.fillStyle = css(st, -16, 1, 4);
         path(g, ovalPts(-0.15, -0.2, 3.3, 3.3, k.seed + 5, 0.03, 20));
         g.fill();
-        // Scratched on the plinth's corner: a leg, bent at a bandaged knee.
-        const sc = css(st, -34, 1, 6);
-        tick(g, -6.6, 1.6, -5, 3.2, 0.5, 7, sc);
-        tick(g, -5, 3.2, -5.6, 4.8, 0.5, 8, sc);
-        tick(g, -5.6, 4.8, -6.5, 4.9, 0.45, 9, sc);
-        g.fillStyle = '#f1e8d2';
-        line(g, -5.8, 2.6, -4.4, 3.7, { w: 1.1, seed: 10, taper: [0.05, 0.05], press: 0 });
-        tick(g, -5.45, 2.75, -4.75, 3.55, 0.35, 11, '#c0182a');
+        // Its knee, low on the stone: an old arrow stuck fast in it, red fletching out, and a sticking plaster
+        // slapped over where it went in.
+        const shaft: HSL = { h: 30, s: 34, l: 46 };
+        barLine(g, -8.3, 0.1, -5.2, 3.3, 0.55, shaft, 7, { rim: 0.22 });
+        // Two vanes off the tail, either side of the shaft.
+        for (const sd of [-1, 1])
+          part(g, poly(-8.3, 0.1, -8.3 + 1.6 * 0.7, 0.1 + 1.6 * 0.72, -8.3 - sd * 1.15 * 0.72 + 0.1, 0.1 + sd * 1.15 * 0.7 + 0.1), FLETCH, 8 + sd, {
+            depth: 0.15,
+            thin: 0.2,
+            thick: 0.45,
+          });
+        g.save();
+        g.translate(-5.2, 3.4);
+        g.rotate(0.62);
+        part(g, boxPts(-1.9, -0.75, 3.8, 1.5, 0.6, 9, 0.08), PLASTER, 9, { depth: 0.2, shade: -12, thin: 0.25, thick: 0.55 });
+        g.fillStyle = css(PLASTER, -10);
+        g.fillRect(-0.6, -0.55, 1.2, 1.1);
+        for (const x of [-1.3, 1.3]) dot(g, x, 0, 0.16, 10 + x, undefined, css(PLASTER, -26));
+        g.restore();
       },
     ],
     barrel: [
@@ -150,7 +166,7 @@ const LOOKS: Record<LauncherStyle, Look> = {
       (g, k) => {
         const st = stone(k, 58);
         // The slot, cut from the middle out through the face: a lit lip above it, a dark one below.
-        g.fillStyle = INK;
+        g.fillStyle = css(st, -44, 1, 4);
         path(g, poly(-1.6, -1.2, 6.9, -1.5, 6.9, 1.5, -1.6, 1.2));
         g.fill();
         tick(g, -1, -2.1, 6.4, -2.3, 0.5, 6, css(st, 20));
@@ -163,10 +179,10 @@ const LOOKS: Record<LauncherStyle, Look> = {
       // A bolt waits in the slot, its head out.
       s.fillStyle = '#9a7a52';
       s.fillRect(0, -0.35, 5, 0.7);
-      s.fillStyle = '#d5dae2';
+      s.fillStyle = css(STEEL, 14);
       path(s, poly(4.4, -1.3, 7.6, 0, 4.4, 1.3, 5, 0));
       s.fill();
-      s.fillStyle = INK;
+      s.fillStyle = inkFor(STEEL);
       stroke(s, poly(4.4, -1.3, 7.6, 0, 4.4, 1.3), { w: 0.5, seed: 1, taper: [0.1, 0.1], press: 0 });
     },
   },
@@ -213,8 +229,9 @@ const LOOKS: Record<LauncherStyle, Look> = {
         g.save();
         g.translate(-3.6, 2.6);
         g.rotate(-0.3);
-        part(g, boxPts(-1.6, -1.5, 3.2, 3, 0.3, k.seed + 10, 0.1), { h: 52, s: 90, l: 70 }, k.seed + 10, { depth: 0.2, thin: 0.25, thick: 0.55 });
-        for (const y of [-0.6, 0.3]) tick(g, -1, y, 1, y + 0.1, 0.25, k.seed + y, 'rgba(18,11,8,0.6)');
+        const note: HSL = { h: 52, s: 90, l: 70 };
+        part(g, boxPts(-1.6, -1.5, 3.2, 3, 0.3, k.seed + 10, 0.1), note, k.seed + 10, { depth: 0.2, thin: 0.25, thick: 0.55 });
+        for (const y of [-0.6, 0.3]) tick(g, -1, y, 1, y + 0.1, 0.25, k.seed + y, css({ h: 222, s: 40, l: 30 }, 0, 0.75));
         g.restore();
       },
     ],
@@ -246,18 +263,20 @@ const LOOKS: Record<LauncherStyle, Look> = {
         g.clip();
         g.fillStyle = css(black, 26);
         line(g, -4, -3.2, 5.6, -3.4, { w: 0.9, seed: k.seed + 1, taper: [0.2, 0.3], press: 0.1 });
-        // A chalk tally of hits: four strokes and the one across them.
-        for (const x of [2.9, 3.5, 4.1, 4.7]) tick(g, x, -2.6, x - 0.1, -0.5, 0.3, x * 7, 'rgba(240,236,226,0.85)');
-        tick(g, 2.5, -0.9, 5.1, -2.3, 0.3, 9, 'rgba(240,236,226,0.85)');
+        // A chalk tally of hits, big enough to count from across the level: a gate of five ahead of the
+        // roundel, and three more behind it.
+        for (const x of [2.9, 3.7, 4.5, 5.2]) tick(g, x, -3.6, x - 0.15, 0.2, 0.5, x * 7, CHALK);
+        tick(g, 2.3, -0.4, 5.6, -3.2, 0.5, 9, CHALK);
+        for (const x of [-5.7, -4.9]) tick(g, x, -1.4, x - 0.1, 2.2, 0.5, x * 5, CHALK);
         g.restore();
         // The muzzle: a fat lit rim and a dark bore.
         const rim = boxPts(5.4, -5.6, 2.8, 11.2, 1.2, k.seed + 2);
         part(g, rim, { ...black, l: 30 }, k.seed + 2, { depth: 0.5, thin: 0.5, thick: 1.3, shade: -10 });
-        g.fillStyle = INK;
+        g.fillStyle = css(black, -13);
         path(g, ovalPts(8, 0, 0.9, 3.8, k.seed + 3, 0.02, 14));
         g.fill();
         // Bolts down the back, where the barrel meets its breech.
-        for (const y of [-2.6, 0, 2.6]) dot(g, -3.4, y, 0.55, k.seed + y, css(black, 40));
+        for (const y of [-2.6, 0, 2.6]) dot(g, -3.4, y, 0.55, k.seed + y, css(black, 40), inkFor(black));
       },
     ],
     recoil: 0.5,
@@ -294,7 +313,7 @@ const LOOKS: Record<LauncherStyle, Look> = {
           const r = 0.4 + (i / 16) * 1.6;
           coil.push({ x: Math.cos(a) * r, y: Math.sin(a) * r });
         }
-        g.fillStyle = INK;
+        g.fillStyle = inkFor(iron(k.pal, 46));
         stroke(g, coil, { w: 0.35, seed: k.seed + 11, taper: [0.1, 0.1], press: 0 });
       },
     ],
@@ -335,10 +354,10 @@ const LOOKS: Record<LauncherStyle, Look> = {
         part(g, lip, { ...green, l: 46 }, k.seed + 3, { depth: 0.6, thin: 0.5, thick: 1.3, shade: -16 });
         g.fillStyle = css(green, 28);
         line(g, 6.6, -4.4, 6.6, 3, { w: 0.8, seed: k.seed + 4, taper: [0.2, 0.3], press: 0.1 });
-        g.fillStyle = INK;
+        g.fillStyle = css(green, -30, 1, -10);
         path(g, ovalPts(9.4, 0, 0.8, 4, k.seed + 5, 0.02, 14));
         g.fill();
-        dot(g, 0, 0, 1.2, k.seed + 6, css(k.pal.spec, -10));
+        dot(g, 0, 0, 1.2, k.seed + 6, css(k.pal.spec, -10), inkFor(green));
       },
     ],
     recoil: 0.5,
@@ -346,13 +365,14 @@ const LOOKS: Record<LauncherStyle, Look> = {
       if (l.ready) loaded(s, l, 10.6, 0.65, -0.4);
     },
   },
-  // Sneeze Cannon: a goo tank on a little cart, the muzzle poking out of a tissue box.
+  // Sneeze Cannon: a glass tank of goo on a little flatbed cart, the muzzle poking out of a tissue box.
   gooper: {
     house: [
       [-9.5, 2, 19, 7],
       (g, k) => {
-        g.fillStyle = INK;
-        line(g, -5, 6, 4, 6, { w: 1.12, seed: k.seed, taper: [0, 0], press: 0 });
+        const bed = iron(k.pal, 40);
+        barLine(g, -5, 6, 3.6, 6, 0.7, iron(k.pal, 30), k.seed, { rim: 0.25 });
+        part(g, boxPts(-7.6, 3.4, 13.4, 1.8, 0.5, k.seed + 1, 0.1), bed, k.seed + 1, { depth: 0.4, shade: -16, thin: 0.4, thick: 1 });
         for (const x of [-5, 3.6]) wheel(g, x, 6.1, 1.9, k.pal, k.seed + x);
       },
     ],
@@ -376,32 +396,52 @@ const LOOKS: Record<LauncherStyle, Look> = {
         ])
           circle(g, x, y, 0.75);
         g.restore();
-        tick(g, 8.4, -3.1, 10.8, -3.1, 0.5, k.seed + 3);
+        tick(g, 8.4, -3.1, 10.8, -3.1, 0.5, k.seed + 3, css({ h: 330, s: 45, l: 74 }, -34));
         part(g, boxPts(12, -1.5, 1.6, 3, 0.4, k.seed + 4), k.pal.base, k.seed + 4, { depth: 0.3, thin: 0.3, thick: 0.7 });
-        g.fillStyle = INK;
+        g.fillStyle = css(GOO, -26, 1, -10);
         path(g, ovalPts(13.5, 0, 0.5, 1.1, k.seed + 5, 0.02, 10));
         g.fill();
       },
     ],
+    // The tank: a glass globe two-thirds full of green goo, bubbles rising in it and a lit line where the
+    // goo meets the air, a steel cap and valve on top and a strap holding it down to the bed.
     front: [
-      [-8.5, -8, 16, 16],
+      [-8.5, -9.5, 16, 17.5],
       (g, k) => {
-        const tank = ovalPts(-1, 0, 6, 6, k.seed + 2, 0.02);
-        tone(g, tank, { h: 98, s: 58, l: 46 }, { depth: 1 });
+        const cx = -1;
+        const cy = -0.6;
+        const R = 5.6;
+        const tank = ovalPts(cx, cy, R, R, k.seed + 2, 0.02, 26);
+        tone(g, tank, GLASS, { depth: 0.8, shade: -12 });
         g.save();
         path(g, tank);
         g.clip();
-        g.fillStyle = css({ h: 98, s: 58, l: 64 });
+        // The goo, its surface rocking a little off level, lit along it; its far side in shadow.
+        const lv = cy - 1;
+        const goo = poly(cx - R - 1, lv + 0.5, cx - 2, lv - 0.1, cx + 1.5, lv + 0.2, cx + R + 1, lv - 0.4, cx + R + 1, cy + R + 1, cx - R - 1, cy + R + 1);
+        tone(g, goo, GOO, { depth: 1, shade: -14 });
+        g.fillStyle = css(GOO, 20);
+        line(g, cx - R + 0.6, lv + 0.45, cx + R - 0.8, lv - 0.3, { w: 0.6, seed: k.seed + 5, taper: [0.2, 0.3], press: 0.1 });
+        g.fillStyle = css(GOO, 26);
         for (const [x, y, r] of [
-          [-3, 2.4, 0.9],
-          [0.6, 3.4, 0.6],
-          [1.6, 0.4, 0.5],
+          [cx - 2.4, cy + 2.6, 0.75],
+          [cx + 0.4, cy + 3.6, 0.5],
+          [cx + 1.6, cy + 1, 0.42],
         ])
           circle(g, x, y, r);
         g.restore();
-        glint(g, poly(-5, -1.6, -4.2, -3.6, -2.4, -5), 'rgba(240,255,220,0.9)', 0.8);
-        pen(g, tank, k.seed + 3, 0.5, 1.3);
-        part(g, boxPts(-7.4, -1, 12.8, 2.1, 0.6, k.seed + 4), k.pal.base, k.seed + 4, { depth: 0.4, thin: 0.35, thick: 0.85 });
+        // Glass: a hard glint and a second, smaller one.
+        glint(g, poly(cx - 4.4, cy - 0.6, cx - 3.8, cy - 2.8, cx - 2, cy - 4.4), 'rgba(255,255,255,0.9)', 0.75);
+        glint(g, poly(cx + 3.2, cy + 2.2, cx + 3.8, cy + 0.8), 'rgba(255,255,255,0.7)', 0.45);
+        pen(g, tank, k.seed + 3, 0.45, 1.1, 3, inkFor(GOO));
+        // The strap over it, down to the bed either side.
+        const strap = iron(k.pal, 44);
+        bar(g, poly(cx - 4.6, 4, cx - 4.7, cy + 2.8, cx - 3.6, cy + 1.2), 0.8, strap, k.seed + 6, { rim: 0.25 });
+        bar(g, poly(cx + 4.6, 4, cx + 4.7, cy + 2.8, cx + 3.6, cy + 1.2), 0.8, strap, k.seed + 7, { rim: 0.25 });
+        // The cap screwed into its neck, and the valve wheel on top.
+        part(g, boxPts(cx - 2, cy - R - 1.2, 4, 1.9, 0.5, k.seed + 8, 0.1), strap, k.seed + 8, { depth: 0.4, shade: -16, thin: 0.35, thick: 0.85 });
+        barLine(g, cx, cy - R - 1.2, cx, cy - R - 2.4, 0.6, strap, k.seed + 9, { rim: 0.2 });
+        barLine(g, cx - 1.6, cy - R - 2.6, cx + 1.6, cy - R - 2.6, 0.7, { h: 4, s: 55, l: 48 }, k.seed + 10, { rim: 0.25 });
       },
     ],
     aimed(s, l) {
@@ -418,18 +458,31 @@ const LOOKS: Record<LauncherStyle, Look> = {
     mount: [
       [-7.5, -9, 15, 17.5],
       (g, k) => {
+        // A waxed paper cup: stripes wrapping round it, and its far third turned into shadow, where the
+        // stripes go darker and narrower as they wrap away.
+        const paper: HSL = { h: 40, s: 25, l: 92 };
+        const stripe: HSL = { h: (k.st.hue + 200) % 360, s: 58, l: 52 };
         const cup = poly(-5.4, -2.6, 5.4, -2.6, 4, 7.5, -4, 7.5);
-        tone(g, cup, { h: 40, s: 25, l: 92 }, { depth: 0.9, shade: -14 });
+        tone(g, cup, paper, { depth: 0.9, shade: -14 });
         g.save();
         path(g, cup);
         g.clip();
-        g.fillStyle = css({ h: (k.st.hue + 200) % 360, s: 75, l: 52 });
         for (let x = -8; x < 8; x += 3.2) {
-          path(g, poly(x, 8, x + 1.4, 8, x + 4.8, -3, x + 3.4, -3));
+          const far = x > 0.6;
+          g.fillStyle = css(stripe, far ? -14 : 0);
+          path(g, poly(x, 8, x + (far ? 1.1 : 1.5), 8, x + (far ? 4.4 : 4.8), -3, x + 3.4, -3));
           g.fill();
         }
+        // The shadow shape down the far side, and a lit run down the near one.
+        g.fillStyle = css(paper, -22, 0.55, 4);
+        path(g, poly(2.6, -3, 6, -3, 6, 8, 1.8, 8));
+        g.fill();
+        g.fillStyle = 'rgba(255,255,255,0.75)';
+        line(g, -4.3, -1.6, -3.2, 6.6, { w: 0.55, seed: k.seed + 5, taper: [0.2, 0.4], press: 0.1 });
         g.restore();
-        pen(g, cup, k.seed, 0.5, 1.2);
+        pen(g, cup, k.seed, 0.5, 1.2, 3, inkFor(stripe));
+        // A rolled rim at the cup's lip.
+        tick(g, -5.2, 7.3, 3.9, 7.4, 0.4, k.seed + 6, css(paper, -30));
         const lid: P[] = [];
         for (let i = 0; i <= 10; i++) {
           const a = Math.PI + (i / 10) * Math.PI;
@@ -463,8 +516,8 @@ const LOOKS: Record<LauncherStyle, Look> = {
           g.fill();
         }
         g.restore();
-        pen(g, straw, k.seed + 4, 0.35, 0.75);
-        for (const x of [7.8, 8.6, 9.4]) tick(g, x, -0.9, x, 0.9, 0.3, x);
+        pen(g, straw, k.seed + 4, 0.35, 0.75, 3, inkFor({ h: 0, s: 60, l: 56 }));
+        for (const x of [7.8, 8.6, 9.4]) tick(g, x, -0.9, x, 0.9, 0.3, x, css({ h: 30, s: 30, l: 60 }));
       },
     ],
     aimed(s, l) {
@@ -510,10 +563,10 @@ const LOOKS: Record<LauncherStyle, Look> = {
         tick(g, c.x, c.y, tip.x, tip.y, 0.35, 2, css(k.glow, -40, 0.6));
         tick(g, a.x, a.y, c.x, c.y, 0.35, 3, css(k.glow, -40, 0.6));
         tick(g, b.x, b.y, c.x, c.y, 0.35, 4, css(k.glow, -40, 0.6));
-        pen(g, [tip, b, a], k.seed + 1, 0.5, 1.2);
+        pen(g, [tip, b, a], k.seed + 1, 0.5, 1.2, 3, inkFor(k.glow));
         // The brass clamp that holds it by its back face, screwed tight.
         part(g, boxPts(-7.2, -3.4, 2.9, 6.8, 0.7, k.seed + 6, 0.1), BRASS, k.seed + 6, { depth: 0.4, shade: -16, thin: 0.4, thick: 1.1 });
-        for (const y of [-1.9, 1.9]) dot(g, -5.75, y, 0.45, y + k.seed, css(BRASS, 30));
+        for (const y of [-1.9, 1.9]) dot(g, -5.75, y, 0.45, y + k.seed, css(BRASS, 30), inkFor(BRASS));
       },
     ],
     over(l) {
@@ -679,7 +732,7 @@ function drawTrackerCam(rc: RC, cx: number, cy: number, angle: number, rot: numb
   stamp(
     s,
     sprite('L|stalk', -2, -2, 4, 9, (g) => {
-      tick(g, 0, 0.8, 0.4, 5.6, 1.6, 1);
+      barLine(g, 0, 0.8, 0.4, 5.6, 1, { h: 220, s: 8, l: 34 }, 1, { rim: 0.3 });
       ball(g, 0, 0.4, 1.2, { h: 220, s: 8, l: 34 }, 2);
     }),
   );

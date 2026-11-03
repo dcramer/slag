@@ -1,8 +1,8 @@
-import { css } from '../../../core/color';
+import { css, type HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
-import { blob, type P, stroke } from '../../ink';
+import { blob, inkFor, type P, stroke } from '../../ink';
 import { inkLoop } from '../../ink-parts';
-import { INK, path } from '../../ink-props';
+import { path } from '../../ink-props';
 import type { MetalPalette, RC } from '../../kit';
 import { whoosh } from '../ink-motion';
 
@@ -11,6 +11,13 @@ import { whoosh } from '../ink-motion';
  * rim, a darker blued body with expansion slots, an arbor nut, and motion lines trailing round it. The
  * outline is turned into a reused buffer each frame, so a spinning blade allocates nothing.
  */
+
+/** The honed rim's steel, and the hazard paint some blades wear; each inks in a dark of itself. */
+const RIM: HSL = { h: 220, s: 9, l: 54 };
+const RIM_FILL = css(RIM);
+const RIM_INK = inkFor(RIM);
+const HAZARD: HSL = { h: 45, s: 92, l: 56 };
+const HAZARD_PAINT = [css(HAZARD), inkFor(HAZARD)];
 
 const teethCache = new Map<string, P[]>();
 
@@ -69,7 +76,7 @@ export function sawBlade(rc: RC, x: number, y: number, R: number, rot: number, p
   const n = Math.max(10, Math.round(R * 1.15));
   const pts = turned(teeth(R, n, seed), x, y, rot);
   // The honed rim: bright steel with a hard shadow down the lower right that stays put.
-  s.fillStyle = '#7e8696';
+  s.fillStyle = RIM_FILL;
   path(s, pts);
   s.fill();
   s.save();
@@ -91,7 +98,7 @@ export function sawBlade(rc: RC, x: number, y: number, R: number, rot: number, p
   s.arc(x - R * 0.14, y - R * 0.16, R * 0.74, 0, Math.PI * 2);
   s.fill();
   // Expansion slots, turning: a short cut in from the rim ending in a round hole.
-  s.fillStyle = INK;
+  s.fillStyle = inkFor(pal.dark);
   for (let i = 0; i < 4; i++) {
     const a = rot + (i / 4) * Math.PI * 2 + 0.4;
     const c = Math.cos(a);
@@ -110,7 +117,7 @@ export function sawBlade(rc: RC, x: number, y: number, R: number, rot: number, p
     // Hazard paint round the body.
     for (let i = 0; i < 8; i++) {
       const a = rot + (i / 8) * Math.PI * 2;
-      s.fillStyle = i % 2 ? '#1b1a18' : 'rgb(246 196 38)';
+      s.fillStyle = HAZARD_PAINT[i % 2];
       s.beginPath();
       s.arc(x, y, R * 0.66, a, a + Math.PI / 4);
       s.arc(x, y, R * 0.56, a + Math.PI / 4, a, true);
@@ -119,7 +126,7 @@ export function sawBlade(rc: RC, x: number, y: number, R: number, rot: number, p
   }
   s.restore();
   // The arbor: a washer and a nut.
-  s.fillStyle = INK;
+  s.fillStyle = inkFor(pal.dark);
   blob(s, x + 0.2, y + 0.25, R * 0.27, seed + 4, 1, 0.05);
   s.fill();
   s.fillStyle = css(pal.light, -8);
@@ -131,7 +138,7 @@ export function sawBlade(rc: RC, x: number, y: number, R: number, rot: number, p
   s.fill();
   // Ink: heavy away from the light, a thinner line round the body.
   const out = turned(teeth(R, n, seed), x, y, rot);
-  s.fillStyle = INK;
+  s.fillStyle = RIM_INK;
   inkLoop(s, out, x, y, seed, 0.6, 1.6, 4);
   s.fillStyle = css(pal.dark, -30, 0.9);
   stroke(s, circlePts(x, y, R * 0.75, 22).concat(ring[0]), { w: 0.6, seed: seed + 9, taper: [0.2, 0.2], press: 0.4 });
@@ -140,7 +147,7 @@ export function sawBlade(rc: RC, x: number, y: number, R: number, rot: number, p
     const back = Math.sign(spin);
     for (let k = 0; k < 3; k++) {
       const a = k * 2.09 + ((rc.frame >> 2) % 3) * 0.7;
-      whoosh(s, x, y, R + 2.2, a, back * 1.1, k === 1 ? 1 : 1.25, k === 1 ? INK : 'rgba(250,250,255,0.92)', seed + k);
+      whoosh(s, x, y, R + 2.2, a, back * 1.1, k === 1 ? 1 : 1.25, k === 1 ? RIM_INK : 'rgba(250,250,255,0.92)', seed + k);
     }
   }
 }

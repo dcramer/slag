@@ -274,7 +274,7 @@
         "#7a2a25",
         "#5d1e1a"
       ],
-      "slot": "paint"
+      "slot": "player"
     },
     "overalls": {
       "color": "#3f62b4",
@@ -338,16 +338,15 @@
     "cap": {
       "color": "#c9473f",
       "swatches": [],
-      "slot": "paint",
+      "slot": "player",
       "grow": [
         1.28,
         1.05
       ]
     },
     "nose": {
-      "color": "#c9473f",
+      "color": "#efc9a4",
       "swatches": [],
-      "slot": "paint",
       "grow": [
         1.8,
         1.55
