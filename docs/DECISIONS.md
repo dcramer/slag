@@ -186,6 +186,8 @@ Every game design decision, preference and direction the owner has given, groupe
   Changed: iconic palettes with the player's colour on a foot ring.
 - **Characters vary only in curated ways that keep the art: costume colour, accessory swaps, designed alternate palettes on one secondary region, pose personality (two idles, two cheers, a little gait), and wear. Faces, proportions and silhouettes are never rolled; random eyes and mouths go.** "idk if theres ways we can make it a little more procedural without losing our art work" / "'random eyeballs' dont work with the art style" / "Yes, add it"
   2026-11-02 · `in progress` · CHARACTERS.md → the rules, `tools/art3d/`
+- **The costume-colour rule holds even where a colour is the character's identity: the dot-eater's whole ball takes the player's colour, not only his napkin.** (answer: "Keep player colour")
+  2026-11-02 · `done` · CHARACTERS.md → the rules
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
   2026-11-02 · `done` · public/ASSETS.md
 
