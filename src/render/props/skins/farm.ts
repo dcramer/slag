@@ -14,7 +14,7 @@ import type { CannonPose, Deco, DecoSkin, PieceSkin, Rotor, RotorSkin, ThemeSkin
  *
  * Behind the terrain, hazed toward the sky so none of it reads as somewhere to stand (docs/ART.md, Fair
  * play): the windmill's tapered tower and cap over its mill house's back wall; the grain elevator's
- * headhouse on its leg; the barn's back wall following its own roof line, its doors, rafters and hay;
+ * headhouse on its leg; the barn's raw-board back wall following its own roof line, its doors, beams and hay;
  * the water mill's stone back wall with the pit wheel, the axle out to the water wheel, its A-frame and the
  * flume's trough; the farm track's trestle bents and rail.
  *
@@ -79,7 +79,11 @@ function seam(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, b
 
 const WOOD: HSL = { h: 28, s: 36, l: 34 };
 const LIGHTWOOD: HSL = { h: 34, s: 30, l: 52 };
-const BARNRED: HSL = { h: 4, s: 46, l: 30 };
+/**
+ * The barn's inside: raw boards, not the red the roof is painted. Behind the roof's notches a red wall read as
+ * more roof, brick over cells you can place in and walk through (docs/ART.md, Fair play).
+ */
+const BARNWOOD: HSL = { h: 28, s: 12, l: 22 };
 const WHITE: HSL = { h: 40, s: 18, l: 86 };
 const STONE: HSL = { h: 32, s: 9, l: 46 };
 const IRON: HSL = { h: 215, s: 8, l: 28 };
@@ -243,17 +247,17 @@ function barnShell(lv: Level, m: Deco, t: Hz) {
   return sprite(`farm|barn|${m.w}|${m.h}|${roof.join(',')}|${loft}|${seed}|${t.k}`, -2, -2, m.w + 4, m.h + 4, (g) => {
     const py = (row: number) => (row - y0) * TILE;
     const H = m.h;
-    // The back wall under the roof line, boards running up it.
+    // The back wall under the roof line, boards running up it. No rafters along the roof's steps: a beam under
+    // each step read as the roof running on into the notches.
     const pts: P[] = [{ x: TILE, y: H }];
     for (let i = 1; i < w - 1; i++) pts.push({ x: i * TILE, y: py(roof[i]) }, { x: (i + 1) * TILE, y: py(roof[i]) });
     pts.push({ x: (w - 1) * TILE, y: H });
-    flat(g, pts, BARNRED, t, seed, 0.2);
+    flat(g, pts, BARNWOOD, t, seed, 0.2);
     g.save();
     path(g, pts);
     g.clip();
-    for (let x = TILE + 7; x < (w - 1) * TILE; x += 13) seam(g, x, 0, x + 0.3, H, t.ink(BARNRED), seed + x);
-    // Rafters under the roof line, a tie beam, and the loft beam.
-    for (let i = 1; i < w - 2; i++) beam(g, i * TILE + 8, py(roof[i]) + 3, (i + 1) * TILE + 8, py(roof[i + 1]) + 3, 2.2, WOOD, t, seed + i);
+    for (let x = TILE + 7; x < (w - 1) * TILE; x += 13) seam(g, x, 0, x + 0.3, H, t.ink(BARNWOOD), seed + x);
+    // A tie beam and the loft beam.
     if (loft > 0) beam(g, TILE, py(loft) + 2, (w - 1) * TILE, py(loft) + 2, 3, WOOD, t, seed + 40);
     const tie = loft > 0 ? py(loft) - 4.5 * TILE : H * 0.3;
     beam(g, TILE, tie, (w - 1) * TILE, tie, 2.2, WOOD, t, seed + 41);

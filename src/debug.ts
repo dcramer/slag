@@ -3,7 +3,7 @@ import type { Match } from './game/match';
 import { CAST, generateCharacter, type Kind } from './gen/character';
 import { ARCHETYPE_WEIGHTS, type Archetype, DEMOLISH, generateProp } from './gen/props';
 import type { NetSession } from './net/session';
-import { hashMatch } from './net/snapshot';
+import { hashMatch, snapshotMatch, toWire } from './net/snapshot';
 import { blindOrder, castBench, castBlind, castCatalog, castColors, castRecognise, castSilhouettes, castVariety } from './render/cast/sheet';
 import { useSprites } from './render/cast/sprites';
 import type { Renderer } from './render/renderer';
@@ -25,6 +25,7 @@ import type { ThemeId } from './themes';
  *   ?race=saw,laser     drop those archetypes in and jump straight to a race
  *   ?race=all           one of every archetype
  *   ?propseed=7         seed for debug-generated props
+ *   ?salt=7             the match's crate salt, otherwise rolled per page (tools/determinism.ts needs it fixed)
  *   ?size=tall          force the level profile's size class (classic|wide|tall)
  *   ?route=zigzag       force the route shape (ltr|climb|descent|zigzag)
  *   ?density=0.9        force terrain density (0..1)
@@ -69,6 +70,8 @@ export interface SlagDebug {
   render(ms?: number): void;
   /** Deterministic state hash of the confirmed match (peers in sync ⇔ equal hashes at equal frames). */
   hash(): number;
+  /** The confirmed match as wire data, exactly what `hash` covers: tools diff two of these to find where peers or engines part. */
+  snapshot(): unknown;
   /** The cast (docs/CHARACTERS.md): a catalog canvas of every kind, the silhouette test, and a draw-cost bench. */
   cast: {
     catalog: typeof castCatalog;
@@ -175,6 +178,7 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
       renderer.render(match, ms ?? performance.now(), match.drainEvents());
     },
     hash: () => hashMatch(match),
+    snapshot: () => toWire(snapshotMatch(match)),
   };
   const w = window as unknown as { slagDebug?: SlagDebug };
   w.slagDebug = api;
@@ -199,6 +203,7 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
     match.newLevel(match.seed);
   }
   installDevtoolsHooks(api, q.get('debug'), signal);
+  if (q.get('salt')) match.nextSalt = Number(q.get('salt')) >>> 0;
   const players = Number(q.get('players') ?? 0);
   const race = q.get('race');
   if (race) {

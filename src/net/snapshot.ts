@@ -31,7 +31,7 @@ import { cleanCharacter } from './actions';
  * Worktree branches never bump it, since two bumps always conflict: `pnpm land` bumps it once
  * for a batch that changed this file's code or that test's field lists (`--snap` for a change in what a field means).
  */
-export const SNAP_VERSION = 48;
+export const SNAP_VERSION = 49;
 
 export interface RunSnap {
   slots: number[];
@@ -388,6 +388,12 @@ class Hasher {
     if (v === null || v === undefined) return this.int(0x6e756c6c);
     switch (typeof v) {
       case 'number':
+        // A NaN's bits are up to the engine (sign, payload, whether a typed-array store canonicalizes it), so every NaN
+        // hashes as one: otherwise two peers in sync could disagree on the hash of the same state.
+        if (Number.isNaN(v)) {
+          this.int(0x7ff80000);
+          return;
+        }
         HF[0] = v;
         this.int(HU[0]);
         this.int(HU[1]);

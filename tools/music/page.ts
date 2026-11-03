@@ -5,10 +5,15 @@
  */
 import { composeSong } from '../../src/audio/music/compose';
 import type { Mix, MixName } from '../../src/audio/music/player';
+import type { Cue } from '../../src/audio/cues';
 import { AudioEngine } from '../../src/audio/engine';
+import { sampleSets } from '../../src/audio/music/instruments';
+import { loadSamples, setSampleBase } from '../../src/audio/music/sampler';
 import type { SongId } from '../../src/audio/music/styles';
 
 const RATE = 44100;
+/** tools/music.ts answers this origin from public/samples. */
+setSampleBase('https://samples.invalid/samples/');
 const PUMP = 0.05;
 const LAYERS = ['pad', 'bass', 'harmony', 'lead', 'drums', 'perc'] as const;
 
@@ -46,6 +51,7 @@ async function renderSong(
   const ctx = new OfflineAudioContext(2, Math.ceil(seconds * RATE), RATE);
   const eng = new AudioEngine(ctx, { master: 0.8, music: 0.6, sfx: 0.9 });
   const song = composeSong(seed, theme, arr ?? undefined);
+  await loadSamples(ctx, sampleSets(song.tracks.map((t) => t.inst)));
   eng.music.setMix(mix, 0.01);
   eng.music.setSong(song, 0.05);
   if (solo) eng.music.current!.setMix(Object.fromEntries(LAYERS.map((l) => [l, solo.includes(l) ? 1 : 0])) as Mix, 0.01);
@@ -72,4 +78,13 @@ async function renderSong(
   };
 }
 
-(globalThis as unknown as { renderSong: typeof renderSong }).renderSong = renderSong;
+/** One SFX cue alone through the mixer, unpositioned, at default volumes, from 50 ms in. */
+async function renderCue(cue: Cue, seconds: number): Promise<Pick<Render, 'left' | 'right'>> {
+  const ctx = new OfflineAudioContext(2, Math.ceil(seconds * RATE), RATE);
+  const eng = new AudioEngine(ctx, { master: 0.8, music: 0.6, sfx: 0.9 });
+  eng.play(cue, null, 0.05);
+  const buf = await ctx.startRendering();
+  return { left: pcm16(buf.getChannelData(0)), right: pcm16(buf.getChannelData(1)) };
+}
+
+Object.assign(globalThis, { renderSong, renderCue });

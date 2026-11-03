@@ -74,6 +74,24 @@ export function mountGame(root: HTMLElement, opts: MountOptions = {}): () => voi
   };
   for (const ev of ['pointerdown', 'keydown', 'touchend'] as const) document.addEventListener(ev, unlock, { capture: true, signal: page.signal });
 
+  // Menu feedback on every screen but the lobby, which voices its own: a tick as the pointer, keys or a pad reach a
+  // button, a click when one is pressed. Focus that a press just moved isn't a second tick.
+  let pressedAt = 0;
+  const control = (t: EventTarget | null) => (t instanceof Element ? t.closest('button, a[href], [role=button]') : null);
+  const menuSound = (cue: 'hover' | 'click') => currentScreen !== 'lobby' && audio?.ui?.(cue);
+  const on = { signal: page.signal };
+  root.addEventListener('pointerdown', () => (pressedAt = performance.now()), on);
+  root.addEventListener(
+    'pointerover',
+    (e) => {
+      const c = control(e.target);
+      if (c && !c.contains(e.relatedTarget as Node | null)) menuSound('hover');
+    },
+    on,
+  );
+  root.addEventListener('focusin', (e) => control(e.target) && performance.now() - pressedAt > 250 && menuSound('hover'), on);
+  root.addEventListener('click', (e) => control(e.target) && menuSound('click'), on);
+
   const unmount = () => {
     const done = current;
     const screen = currentScreen;

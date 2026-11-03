@@ -174,6 +174,23 @@ export class Voice {
     return s;
   }
 
+  /** A recorded buffer from `offset` seconds in, at playback `rate`, for at most `dur` seconds. */
+  sample(buf: AudioBuffer, t: number, rate: number, dur: number, to: AudioNode, offset = 0): AudioBufferSourceNode {
+    const s = this.ctx.createBufferSource();
+    s.buffer = buf;
+    s.playbackRate.setValueAtTime(rate, t);
+    s.connect(to);
+    s.start(t, offset);
+    s.stop(t + dur);
+    this.end = Math.max(this.end, t + dur);
+    this.srcs.push(s);
+    this.live++;
+    s.onended = () => {
+      if (--this.live <= 0) this.finish();
+    };
+    return s;
+  }
+
   /** Gain node into a node or an AudioParam (modulation depth). */
   gain(to: AudioNode | AudioParam, v = 0): GainNode {
     const g = this.ctx.createGain();

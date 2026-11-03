@@ -9,6 +9,7 @@
  *   pnpm music --themes farm --arr jig  one of a theme's arrangements (default: the seed picks)
  *   pnpm music --sting fanfare          a stinger (fanfare, round) over the song's mix, from the first frame
  *   pnpm music --solo lead,bass         only these layers (pad, bass, harmony, lead, drums, perc), at full level
+ *   pnpm music --sfx all                every sound effect and variant alone (or --sfx jump,land), into shots/sfx
  *
  * Writes <out>/<theme>-<seed>.wav (default shots/music). No server: the page is a bundle of
  * tools/music/page.ts injected into about:blank.
@@ -16,6 +17,8 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { build } from 'vite';
+import type { Cue } from '../src/audio/cues';
+import { SFX_NAMES } from '../src/audio/sfx';
 import type { Render } from './music/page';
 import type { SongId } from '../src/audio/music/styles';
 import { THEME_IDS } from '../src/themes';
@@ -29,7 +32,8 @@ const mix = opt('mix', 'drive')!;
 const solo = opt('solo')?.split(',') ?? null;
 const sting = opt('sting') ?? null;
 const arr = opt('arr') ?? null;
-const outDir = resolve(opt('out', 'shots/music')!);
+const sfx = opt('sfx');
+const outDir = resolve(opt('out', sfx ? 'shots/sfx' : 'shots/music')!);
 const RATE = 44100;
 
 function wav(left: Buffer, right: Buffer): Buffer {
@@ -55,10 +59,32 @@ function wav(left: Buffer, right: Buffer): Buffer {
   return Buffer.concat([h, data]);
 }
 
-/** Peak and loudest 3 s RMS window, in dBFS, from the left channel. */
-function levels(pcm: Buffer): { peak: number; rms: number } {
+/** Every variant an effect is played with in the game (src/audio/cues.ts), so each gets heard. */
+const SFX_VARIANTS: Record<string, string[]> = {
+  land: ['soft', 'stone', 'metal', 'wood', 'ice', 'goo'],
+  step: ['soft', 'stone', 'metal', 'wood', 'ice', 'goo'],
+  splash: ['water', 'slag', 'acid', 'void', 'tar'],
+  place: ['wood', 'metal', 'magic'],
+  countdown: ['', 'go'],
+  'ui-tick': ['', 'urgent'],
+  'ui-toggle': ['on', 'off'],
+};
+/** Song-key notes for the musical cues, in F major as the director would hand them over. */
+const SFX_NOTES: Record<string, number[]> = { finish: [65, 69, 72, 77], claim: [77, 81], place: [65, 72], join: [65, 72], countdown: [72] };
+
+function sfxCues(names: string[]): { file: string; cue: Cue }[] {
+  return names.flatMap((name) =>
+    (SFX_VARIANTS[name] ?? ['']).map((variant) => {
+      const notes = name === 'countdown' && variant === 'go' ? [77, 81, 84] : (SFX_NOTES[name] ?? []);
+      return { file: variant ? `${name}.${variant}` : name, cue: { name, variant, notes, amount: 0.6 } as Cue };
+    }),
+  );
+}
+
+/** Peak and loudest `seconds` RMS window, in dBFS, from the left channel. */
+function levels(pcm: Buffer, seconds = 3): { peak: number; rms: number } {
   const n = pcm.length / 2;
-  const win = RATE * 3;
+  const win = Math.round(RATE * seconds);
   let peak = 0;
   let best = 0;
   let acc = 0;
@@ -90,7 +116,25 @@ async function main() {
   try {
     const page = await browser.newPage();
     page.on('pageerror', (e) => console.error('page error:', e.message));
+    // The recorded instruments, as the game's host would serve them.
+    await page.route('https://samples.invalid/samples/**', (r) =>
+      r.fulfill({ path: `public${new URL(r.request().url()).pathname}`, contentType: 'audio/mpeg', headers: { 'access-control-allow-origin': '*' } }),
+    );
     await page.addScriptTag({ content: code });
+    if (sfx) {
+      for (const { file, cue } of sfxCues(sfx === 'all' ? SFX_NAMES : sfx.split(','))) {
+        const r = await page.evaluate(
+          ([c, sec]) => (globalThis as unknown as { renderCue: (c: Cue, s: number) => Promise<Pick<Render, 'left' | 'right'>> }).renderCue(c, sec),
+          [cue, 2] as const,
+        );
+        const L = Buffer.from(r.left, 'base64');
+        writeFileSync(`${outDir}/${file}.wav`, wav(L, Buffer.from(r.right, 'base64')));
+        // Loudest 400 ms: the "momentary" window loudness meters use for short sounds.
+        const lv = levels(L, 0.4);
+        console.log(`${file.padEnd(20)} peak ${String(lv.peak).padStart(6)} dB  loudest-400ms ${String(lv.rms).padStart(6)} dB`);
+      }
+      return;
+    }
     for (const theme of themes)
       for (const seed of seeds) {
         const r = await page.evaluate((args) => (globalThis as unknown as { renderSong: (...a: unknown[]) => Promise<Render> }).renderSong(...args), [

@@ -629,22 +629,15 @@ describe('reconnect and late join', () => {
 describe('drawn runners', () => {
   const runner = (slot: number, vx: number, vy: number, ride = -1, press = 0) => ({ slot, ride, press, body: { vx, vy } }) as unknown as Runner;
 
-  it('projects a pusher held up by bodies as standing, and a rider by its own walk plus its base', () => {
+  it('projects a pusher held up by bodies as standing, and a rider by its own velocity alone: a head carries nobody', () => {
     const base = runner(0, 106, -50);
     const rider = runner(1, 20, 0, 0);
     const pusher = runner(2, 106, 0, -1, 3);
     const onPusher = runner(3, 0, 0, 2);
-    const all = [base, rider, pusher, onPusher];
-    expect(drawnVelocity(all, base)).toEqual({ x: 106, y: -50 });
-    expect(drawnVelocity(all, rider)).toEqual({ x: 126, y: -50 });
-    expect(drawnVelocity(all, pusher)).toEqual({ x: 0, y: 0 });
-    expect(drawnVelocity(all, onPusher)).toEqual({ x: 0, y: 0 });
-  });
-
-  it('survives a riding loop without hanging', () => {
-    const a = runner(0, 10, 0, 1);
-    const b = runner(1, 10, 0, 0);
-    expect(drawnVelocity([a, b], a).x).toBe(20);
+    expect(drawnVelocity(base)).toEqual({ x: 106, y: -50 });
+    expect(drawnVelocity(rider)).toEqual({ x: 20, y: 0 });
+    expect(drawnVelocity(pusher)).toEqual({ x: 0, y: 0 });
+    expect(drawnVelocity(onPusher)).toEqual({ x: 0, y: 0 });
   });
 });
 

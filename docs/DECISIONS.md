@@ -207,6 +207,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `open` · TODO.md → 29
 - **Rendered kinds are the only way they draw: no `?sprites=1` option; a kind without frames stays hand-drawn until produced.** "Make sprites the only way it works now, so no option at all"
   2026-11-02 · `done` · `src/render/cast/sprites/index.ts`
+- **Set-piece machines that look solid are made solid: guns on ledges, wheel and swing hubs, ladles, carts, signs, posts.** "Make them solid" (asked: make them solid, or draw them as not-ground)
+  2026-11-02 · `open` · TODO.md → 21, `pnpm shot fairplay` (`PENDING`)
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
   2026-11-02 · `done` · public/ASSETS.md
 
@@ -370,6 +372,12 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · git `ced9fff` · `done` · DESIGN.md → Levels, AGENTS.md → Theme
 - **The music must be good, not merely present.** "the music is awful. lets make that no longer true."
   2026-11-02 · `done` · DESIGN.md → Controls and UI (Music), `src/audio/music/`
+- **Acoustic instruments in the music are CC0 recordings, chosen over modeling them in code.** "the music doesnt really fit with the level themes" / "CC0 samples"
+  2026-11-02 · `done` · DESIGN.md → Controls and UI (Music), public/ASSETS.md → Music samples, `tools/samples.ts`
+  Changed: every instrument was a synth patch, under the "prefer procedural" asset rule.
+- **The music is darker, the title tune most of all.** "ideally the music would be a bit darker, especially on the title"
+  2026-11-02 · `done` · DESIGN.md → Controls and UI (Music), `TITLE_STYLE` in `src/audio/music/styles.ts`
+  Changed: a bright major title tune and major modes on farm, harbor, jungle, glacier and space.
 - **Each level's music fits its theme, with variety between levels of the same theme.** "music should fit thematically per level and maybe have some variety idk?"
   2026-11-02 · `done` · DESIGN.md → Controls and UI (Music), `arrangements` in `src/audio/music/styles.ts`
 - **Glacier and space feel hasn't been played by hand.**

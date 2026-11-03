@@ -154,33 +154,53 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     }
   }
 
-  function promptName() {
-    const p = match.players.find((q) => q.device === myDevice());
+  /**
+   * The name screen for a seat on this screen: by default the pointer's, whose name and color are saved for next
+   * time. Another local seat (a pad beside you) gets the same screen, and its picks last as long as the seat.
+   */
+  function promptName(dev = myDevice()) {
+    const p = match.players.find((q) => q.device === dev);
     if (!p) return;
+    const own = dev === myDevice();
     let decided = false;
     // Whatever you end up with — typed, kept-random, or just closing the prompt — is remembered.
     const keep = (name: string) => {
       decided = true;
-      profile.name = name;
-      profile.prompted = true;
-      saveProfile(profile);
+      if (own) {
+        profile.name = name;
+        profile.prompted = true;
+        saveProfile(profile);
+      }
       net.act({ t: 'name', dev: p.device, name }); // sequenced by the host online
     };
     namePrompt.onClose = () => {
-      if (!decided) keep(p.character.name);
+      if (!decided && own) keep(p.character.name);
     };
     const me = () => match.players.find((q) => q.device === p.device);
     namePrompt.open({
       randomName: p.character.name,
-      current: profile.name,
+      current: own ? profile.name : null,
       preview: (i) => {
         const q = me() ?? p;
         return tint(q.character, i, i !== undefined && match.colorFree(i, q));
       },
       free: (i) => match.colorFree(i, me()),
-      onColor: pickColor,
+      onColor: own ? pickColor : (i) => net.act({ t: 'color', dev: p.device, color: i }),
       onDone: (name) => keep(name ?? p.character.name),
     });
+  }
+
+  /** Run held last step, per local device: a press of it in the lobby opens that seat's name screen (a pad has no pointer). */
+  const runHeld = new Map<string, boolean>();
+  function nameInput(frames: Record<string, InputFrame>) {
+    for (const [dev, f] of Object.entries(frames)) {
+      const was = runHeld.get(dev) ?? false;
+      runHeld.set(dev, !!f.run);
+      if (!f.run || was || dev === TOUCH_DEVICE || match.phase !== 'lobby' || card || menus.some((m) => m.isOpen)) continue;
+      if ((renderer.hud.net?.kickSlot ?? -1) >= 0) continue;
+      const g = net.globalDevice(dev);
+      if (match.players.some((q) => q.device === g)) promptName(g);
+    }
   }
 
   input.onEscape = () => {
@@ -215,7 +235,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
         return true;
       case 'name':
         if (card) cardName();
-        else promptName();
+        else promptName(b.device);
         return true;
       case 'kick':
         if (b.device) conn.kick(b.device);
@@ -495,6 +515,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
       const seatAction = conn.seatInput(frames);
       if (seatAction) runAction(seatAction);
       conn.lobbyInput(frames);
+      nameInput(frames);
       net.tick(frames);
       acc -= DT;
     }
@@ -641,8 +662,12 @@ function watchTelemetry(room: string, match: Match, conn: RoomConnection, render
 /** Calls `step(now)` from a worker: always online, where a stalled tick stalls the room; offline, only while hidden. Ends with `signal`. */
 function keepTicking(online: boolean, step: (now: number) => void, signal: AbortSignal) {
   let worker: Worker | null = null;
+  // A page being unloaded goes hidden after pagehide: no worker for it (WebKit refuses the blob then, and logs an error).
+  let leaving = false;
+  addEventListener('pagehide', () => (leaving = true), { signal });
+  addEventListener('pageshow', () => (leaving = false), { signal });
   const sync = () => {
-    const wanted = online || document.hidden;
+    const wanted = (online || document.hidden) && !leaving;
     if (wanted && !worker) {
       try {
         const url = URL.createObjectURL(new Blob([`setInterval(() => postMessage(0), ${online ? 8 : 50})`], { type: 'text/javascript' }));
