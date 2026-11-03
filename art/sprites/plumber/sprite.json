@@ -256,6 +256,278 @@
           ]
         }
       ]
+    },
+    {
+      "bone": "pelvis",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "wear",
+      "parts": []
+    },
+    {
+      "bone": "pelvis",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "wear",
+      "parts": [
+        {
+          "shape": "sphere",
+          "role": "patch",
+          "size": [
+            0.9,
+            0.8,
+            0.4
+          ],
+          "at": [
+            0,
+            -1.5,
+            0
+          ],
+          "bone": "thigh_r",
+          "face": [
+            0,
+            0,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            15
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "patch",
+          "size": [
+            0.8,
+            0.7,
+            0.4
+          ],
+          "at": [
+            -0.6,
+            0,
+            0
+          ],
+          "bone": "spine_02",
+          "face": [
+            -0.3,
+            0,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            -10
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "scuff",
+          "size": [
+            0.9,
+            0.3,
+            0.4
+          ],
+          "at": [
+            0,
+            0,
+            1
+          ],
+          "bone": "foot_r",
+          "face": [
+            0,
+            0.4,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            10
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "scuff",
+          "size": [
+            0.9,
+            0.3,
+            0.4
+          ],
+          "at": [
+            0,
+            0,
+            1
+          ],
+          "bone": "foot_l",
+          "face": [
+            0,
+            0.4,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            -10
+          ]
+        }
+      ]
+    },
+    {
+      "bone": "pelvis",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "wear",
+      "parts": [
+        {
+          "shape": "sphere",
+          "role": "soot",
+          "size": [
+            1.5,
+            0.4,
+            0.4
+          ],
+          "at": [
+            0.2,
+            -0.4,
+            0
+          ],
+          "bone": "spine_02",
+          "face": [
+            -0.2,
+            0,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            -25
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "soot",
+          "size": [
+            0.9,
+            0.3,
+            0.4
+          ],
+          "at": [
+            0.3,
+            -1.2,
+            0
+          ],
+          "bone": "spine_02",
+          "face": [
+            -0.2,
+            0,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            -15
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "sootshirt",
+          "size": [
+            1.1,
+            0.4,
+            0.4
+          ],
+          "at": [
+            -1.2,
+            0,
+            0
+          ],
+          "bone": "upperarm_r",
+          "face": [
+            0,
+            0,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            20
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "sootglove",
+          "size": [
+            0.8,
+            0.35,
+            0.4
+          ],
+          "at": [
+            -0.6,
+            0,
+            0
+          ],
+          "bone": "hand_r",
+          "face": [
+            0,
+            0,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "sootboot",
+          "size": [
+            0.9,
+            0.4,
+            0.4
+          ],
+          "at": [
+            0,
+            0,
+            1
+          ],
+          "bone": "foot_l",
+          "face": [
+            0,
+            0.4,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            0
+          ]
+        }
+      ]
     }
   ],
   "roles": {
@@ -283,7 +555,12 @@
         "#1d3262",
         "#425f94",
         "#4f4a68"
-      ]
+      ],
+      "alts": [
+        "#7e848a",
+        "#8e6a44"
+      ],
+      "vary": 6
     },
     "hair": {
       "color": "#4d3426",
@@ -376,6 +653,54 @@
       "swatches": [],
       "free": true,
       "min": 0.12
+    },
+    "patch": {
+      "color": "#808080",
+      "swatches": [],
+      "free": true,
+      "min": 0.1,
+      "on": "overalls",
+      "tone": 14
+    },
+    "scuff": {
+      "color": "#808080",
+      "swatches": [],
+      "free": true,
+      "min": 0.1,
+      "on": "boots",
+      "tone": 22
+    },
+    "soot": {
+      "color": "#808080",
+      "swatches": [],
+      "free": true,
+      "min": 0.1,
+      "on": "overalls",
+      "tone": -24
+    },
+    "sootshirt": {
+      "color": "#808080",
+      "swatches": [],
+      "free": true,
+      "min": 0.1,
+      "on": "paint",
+      "tone": -26
+    },
+    "sootglove": {
+      "color": "#808080",
+      "swatches": [],
+      "free": true,
+      "min": 0.1,
+      "on": "gauntlets",
+      "tone": -30
+    },
+    "sootboot": {
+      "color": "#808080",
+      "swatches": [],
+      "free": true,
+      "min": 0.1,
+      "on": "boots",
+      "tone": -14
     }
   },
   "clips": {
@@ -446,6 +771,24 @@
       "fps": 14,
       "center": true,
       "girth": 1
+    },
+    "idle2": {
+      "keys": [
+        "fold0",
+        "fold1"
+      ],
+      "frames": 2,
+      "loop": true,
+      "fps": 1.5
+    },
+    "cheer2": {
+      "src": "cheer",
+      "from": 0.45,
+      "to": 0.66,
+      "frames": 4,
+      "loop": true,
+      "fps": 4,
+      "girth": 1.15
     }
   },
   "keys": {
@@ -871,6 +1214,71 @@
           0
         ]
       }
+    },
+    "fold0": {
+      "from": "idle@0.05",
+      "bones": {
+        "spine_01": [
+          -5,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          -30,
+          0,
+          0
+        ],
+        "lowerarm_near": [
+          -70,
+          0,
+          0
+        ],
+        "upperarm_far": [
+          -30,
+          0,
+          0
+        ],
+        "lowerarm_far": [
+          -70,
+          0,
+          0
+        ]
+      }
+    },
+    "fold1": {
+      "from": "idle@0.05",
+      "bones": {
+        "spine_01": [
+          -8,
+          0,
+          0
+        ],
+        "head": [
+          -4,
+          0,
+          0
+        ],
+        "upperarm_near": [
+          -30,
+          0,
+          0
+        ],
+        "lowerarm_near": [
+          -70,
+          0,
+          0
+        ],
+        "upperarm_far": [
+          -30,
+          0,
+          0
+        ],
+        "lowerarm_far": [
+          -70,
+          0,
+          0
+        ]
+      }
     }
   },
   "girth": 1.28,
@@ -919,6 +1327,17 @@
     "pencil": 0,
     "plaster": 1,
     "tape": 2,
-    "gauge": 3
+    "gauge": 3,
+    "wear": 11
+  },
+  "gait": {
+    "bounce": [
+      0.15,
+      0.85
+    ],
+    "lean": [
+      0,
+      0.035
+    ]
   }
 }

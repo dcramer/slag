@@ -1,5 +1,5 @@
 import { type HSL, hsl3 } from '../core/color';
-import { Rng } from '../core/rng';
+import { deriveSeed, Rng } from '../core/rng';
 import { word } from './names';
 
 /**
@@ -45,7 +45,11 @@ export interface CharacterDef {
   kind: Kind;
   /** The kind's own color: a homage's iconic body color, a plain animal's pale chest. */
   paint: HSL;
-  /** Rolls in 0..1 that the kind's art reads in its own order: small details inside a design. */
+  /**
+   * Rolls in 0..1 that the kind's art reads in its own order: small details inside a design. The first
+   * `VARY_FIRST` are the original six; the rest are the rendered kinds' variety (`VARIETY` in
+   * src/render/cast/sprites/play.ts), from a stream of their own.
+   */
   vary: number[];
   eyes: { count: 1 | 2 | 3; size: number; style: EyeStyle; iris: HSL; spread: number; y: number };
   mouth: Mouth;
@@ -93,6 +97,10 @@ const PAINTS: Record<Kind, readonly HSL[]> = {
   chicken: [hsl3(4, 70, 52), hsl3(354, 64, 50)],
 };
 
+/** How many `vary` rolls a character has, and how many of them come from the look's main stream. */
+export const VARY_ROLLS = 12;
+export const VARY_FIRST = 6;
+
 /**
  * A character for a look seed. `kind` forces the kind (a lobby keeps eight different kinds); everything
  * else rolls the same either way.
@@ -105,7 +113,10 @@ export function generateCharacter(seed: number, kind?: Kind): CharacterDef {
   const k = kind ?? rolled;
   const paints = PAINTS[k];
   const paint = paints[Math.floor(rng.next() * paints.length)];
-  const vary = Array.from({ length: 6 }, () => rng.next());
+  // Rolls past the first six come from a stream of their own: drawn from `rng`, they'd change every roll
+  // after them (the eyes, the name) for every seed there is.
+  const more = new Rng(deriveSeed(seed, 'vary'));
+  const vary = [...Array.from({ length: VARY_FIRST }, () => rng.next()), ...Array.from({ length: VARY_ROLLS - VARY_FIRST }, () => more.next())];
   const count = rng.weighted<1 | 2 | 3>([
     [2, 7],
     [1, 2],
