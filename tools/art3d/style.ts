@@ -261,10 +261,25 @@ export const BRIEFS: Record<string, Brief> = {
     worn: '',
   },
   engineer: {
-    // Its agent writes the design stage from the Roster entry (README.md → 1. Design): the nod and the twist
-    // as big shapes, the signature prop first; the wear as two to four big changes, off the face.
-    design: '',
-    worn: '',
+    // The nod, each part of the read at race size: the huge wrench over the shoulder (the read in profile,
+    // so it leads the brief), the domed yellow hat with dark goggles on it (the head shape and the trade),
+    // the square jaw (the gruff builder at 20 px, where no face detail survives), and the work shirt over
+    // khakis (the colour block, the shirt in the player's colour).
+    // Ours, and the joke: a backyard engineer. The hat is an upturned yellow mixing bowl with a chin strap,
+    // the goggles are blue swimming goggles, the wrench is a giant adjustable spanner taped to a broom
+    // handle, and a kid's toy turret is clipped to his belt.
+    // The colours lead the head and the body: past the prop the model drops what comes late, and a design
+    // with the glove and the turret up front came back in a blue vest and green shorts. So the glove, the
+    // belt and the turret go in with the wear, as an edit that holds the colours.
+    design:
+      'The character: a stocky, square-jawed backyard handyman. Over one shoulder he carries his huge signature tool, as long as he is tall: a giant grey adjustable spanner head (#8e8a84) lashed with grey tape onto the end of a long wooden broom handle (#c49a62), the spanner jaw sticking up high behind his head. ' +
+      'On his head, as a hard hat, a big upturned yellow mixing bowl (#e9b730), a wide smooth dome with a rolled rim, held on by a chin strap; a pair of swimming goggles with a dark strap (#3a4246) and two round light-blue lenses (#5fb0c8) is pushed up onto the front of the bowl. ' +
+      'Under it a big square jaw and chin, peach skin (#efc9a4), a short stubbly face, two small black eyes. ' +
+      'A red work shirt (#b8433c) with rolled sleeves, khaki work trousers (#8c7a58) with a brown belt (#6b4a35), one big tan leather work glove (#a8794a) on the hand holding the handle, chunky brown boots. ' +
+      'Clipped to his belt at the hip, a small toy turret on a tripod, a chunky plastic toy in bright orange.',
+    worn:
+      'the hand gripping the broom handle wears a big tan leather work glove (#a8794a) and the other hand is bare; a wide brown belt (#6b4a35) with a chunky bright-orange toy turret on three stubby legs clipped to its front, as big as his fist; his jaw is smooth clean-shaven skin; ' +
+      "and he is battered: a big dent is knocked into the top of the yellow bowl's dome; a big chip is broken out of the bowl's rim at the back; the broom handle is snapped in the middle and splinted with a big wad of grey tape; one trouser knee is torn open in a big ragged hole.",
   },
   goose: {
     // The nod, each part of the read at race size: the S of a neck (a goose, not a duck or a chicken), white
