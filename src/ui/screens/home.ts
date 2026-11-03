@@ -1,7 +1,7 @@
 import { newRoomCode, roomFromPath } from '../../game/room';
 import { connectedPads } from '../../input/input';
 import type { Nav, Unmount } from '../../router';
-import { CODEX, LOBBIES, lobby } from '../../routes';
+import { ABOUT, CODEX, LOBBIES, lobby } from '../../routes';
 import { MenuPadReader, readMenuPad } from '../settings-nav';
 import { homeHTML, homePromptsHTML, MENU_ITEMS, type MenuItemId } from './markup';
 
@@ -107,6 +107,7 @@ export function mountHome(root: HTMLElement, nav: Nav): Unmount {
     else if (id === 'lobbies') nav.go(LOBBIES);
     else if (id === 'codex') nav.go(CODEX);
     else if (id === 'settings') openSettings();
+    else if (id === 'about') nav.go(ABOUT);
     else openJoin();
   };
 

@@ -500,6 +500,14 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · git `cf6c496`, `0464596` · `done` · `src/codex/`
 - **The codex talks about maps too: every theme, its landmarks and its own hazards, pictured by the game's renderer.** "the codex needs to talk about maps"
   2026-11-02 · `done` · DESIGN.md → Discovery, `src/codex/maps.ts`, TODO.md → 28
+- **The main menu ends with About, after Settings: who made it, its inspiration, credits, the license and a link to the source on GitHub.** "Need an About thing after settings, which includes license, inspiration, github link etc"
+  2026-11-02 · `done` · `src/ui/screens/about.ts`, `/about`
+- **About credits Ultimate Chicken Horse by name for the core concept, the one place a real game is named; every credit says what it is (display font, name filter), not just its name. No flavor prose on the page.** "those credits are weak, credit ultimate chicken horse for core concept" / "idk what lilita one etc even are..." / "i dont want ai slop for the description there either"
+  2026-11-02 · `done` · DESIGN.md → Parody, `src/ui/screens/markup.ts`
+- **About says first that the game is entirely AI-generated: David Cramer directed; Claude (Anthropic) wrote the code, art and sound; Tripo made the character models.** "make sure its clear this was entirely AI generated"
+  2026-11-02 · `done` · `src/ui/screens/markup.ts`
+- **On About, David Cramer's role reads "Head of Slop".** "for 'Direction' have it say 'Head of Slop' and be me"
+  2026-11-02 · `done` · `src/ui/screens/markup.ts`
 - **The game has a favicon, app icons, Open Graph and oEmbed previews.** "Also need a favicon, oembed metadata and image, and apple icon etc"
   2026-11-02 07:06Z · `done`; checking them on a deploy is `open` · `pnpm brand`, TODO.md → 23
 

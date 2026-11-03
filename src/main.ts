@@ -10,7 +10,7 @@ import { isTouchFirst } from './ui/touch/device';
 /**
  * The game's one entry point for every host. `mountGame(root)` takes over an
  * element and shows whichever screen the URL names (src/routes.ts): the main
- * menu, the lobby list, a lobby, the codex or the 404. Moving between them never reloads the
+ * menu, the lobby list, a lobby, the codex, About or the 404. Moving between them never reloads the
  * page (src/router.ts), so one page load can play many lobbies.
  *
  * A host only has to supply the element. Next (app/) server-renders the main
@@ -34,6 +34,7 @@ const SCREENS: Record<ScreenName, Mount> = {
   lobby: async (root, r, nav) =>
     (await import('./game-client')).mountLobby(root, r.screen === 'lobby' ? r.room : '', nav, { watch: r.screen === 'lobby' && r.watch }),
   codex: async (root, _r, nav) => (await import('./codex/main')).mountCodex(root, nav),
+  about: async (root, _r, nav) => (await import('./ui/screens/about')).mountAbout(root, nav),
   missing: (root, _r, nav) => mountPlain(root, 'missing', nav),
 };
 

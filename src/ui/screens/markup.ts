@@ -2,14 +2,14 @@ import { type Glyph, glyphSVG, type PadButton } from '../glyphs';
 import { logoSVG } from './logo-art';
 
 /**
- * Markup of the DOM screens as plain strings: the main menu, the 404 and
+ * Markup of the DOM screens as plain strings: the main menu, lobbies, about, the 404 and
  * error screens, and the logo. Pure and deterministic, so a host may
  * server-render it for a fast first paint (app/ does), and the screen code
  * adopts what's already on the page instead of building it again. Styles are
  * in ./css.ts; behavior is in ./home.ts and ./plain.ts.
  */
 
-export type MenuItemId = 'play' | 'lobbies' | 'join' | 'codex' | 'settings';
+export type MenuItemId = 'play' | 'lobbies' | 'join' | 'codex' | 'settings' | 'about';
 
 export const MENU_ITEMS: readonly { id: MenuItemId; title: string; sub: string }[] = [
   { id: 'play', title: 'PLAY', sub: 'Start a New Lobby' },
@@ -17,6 +17,7 @@ export const MENU_ITEMS: readonly { id: MenuItemId; title: string; sub: string }
   { id: 'join', title: 'JOIN A LOBBY', sub: 'Enter a Lobby Code' },
   { id: 'codex', title: 'CODEX', sub: 'Spoilers!' },
   { id: 'settings', title: 'SETTINGS', sub: 'Audio, Video and Controls' },
+  { id: 'about', title: 'ABOUT', sub: 'Credits, License and Source' },
 ];
 
 /**
@@ -156,6 +157,78 @@ export function lobbiesHTML(): string {
     `<section class="lb-empty"><h2></h2>` +
     `<button type="button" class="menu-item" data-act="play" data-active="false"><span class="t">PLAY</span><span class="s">Start a New Lobby</span><span class="chev"></span></button></section></main>` +
     `<footer class="footbar"><span class="meta">Lobbies</span><div class="prompts" aria-hidden="true">${lobbiesPromptsHTML(false, 'Join')}</div></footer></div>`
+  );
+}
+
+/** Where the source lives: About links it, and its license beside it. */
+export const REPO_URL = 'https://github.com/dcramer/slag';
+
+/** About's links: the menu plates its selection moves through. */
+export const ABOUT_LINKS: readonly { title: string; sub: string; href: string }[] = [
+  { title: 'SOURCE CODE', sub: 'github.com/dcramer/slag', href: REPO_URL },
+  { title: 'LICENSE', sub: 'Apache 2.0', href: `${REPO_URL}/blob/main/LICENSE` },
+];
+
+interface Credit {
+  /** What it is to the game, since a font's or a list's own name says nothing. */
+  role: string;
+  name: string;
+  who?: string;
+  license?: string;
+}
+
+/** Who made it: a person ran it, and AI wrote, drew and scored everything. The page says so first. */
+const ABOUT_MAKERS: readonly Credit[] = [
+  { role: 'HEAD OF SLOP', name: 'David Cramer' },
+  { role: 'CODE, ART AND SOUND', name: 'Claude', who: 'Anthropic' },
+  { role: 'CHARACTER MODELS', name: 'Tripo' },
+];
+
+/** The game whose loop this one is built on, credited by name: the one place a real game's name appears (docs/DESIGN.md → Parody). */
+const ABOUT_INSPIRATION: Credit = { role: 'CORE CONCEPT', name: 'Ultimate Chicken Horse', who: 'Clever Endeavour Games' };
+
+/**
+ * What the game ships that it didn't make (public/ASSETS.md has the sources). The word lists' licenses ask for this
+ * attribution; the fonts' don't, but they carry every word on screen.
+ */
+const ABOUT_CREDITS: readonly Credit[] = [
+  { role: 'DISPLAY FONT', name: 'Lilita One', who: 'Juan Montoreano', license: 'OFL 1.1' },
+  { role: 'TEXT FONT', name: 'Barlow', who: 'Jeremy Tribby', license: 'OFL 1.1' },
+  { role: 'NAME FILTER', name: 'Bad-Word List', who: 'Shutterstock and Contributors', license: 'CC BY 4.0' },
+  { role: 'NAME FILTER', name: 'Profanity List', who: 'David Sojevic', license: 'MIT' },
+];
+
+const creditHTML = (c: Credit) =>
+  `<li><span class="ab-role">${c.role}</span><span class="ab-name"><b>${c.name}</b>${c.who ? ` by ${c.who}` : ''}</span>` +
+  (c.license ? `<span class="ab-lic">${c.license}</span>` : '') +
+  '</li>';
+
+/** The About screen's footer: the selection, Open, and Back. */
+export function aboutPromptsHTML(pad: boolean): string {
+  const p = (keys: string[], buttons: readonly PadButton[], label: string, act?: string) => promptHTML(keys, pad ? buttons : null, label, act);
+  return p(['↑', '↓'], ['DPAD'], 'Select') + p(['Enter'], ['A'], 'Open') + p(['Esc'], ['B'], 'Back', 'back');
+}
+
+/**
+ * The About screen: the Lobbies screen's header, a plate that says it's entirely AI-generated, who made it, what inspired it and who to thank, and
+ * the links as menu plates. Pure, so a host may server-render it.
+ */
+export function aboutHTML(): string {
+  const links = ABOUT_LINKS.map(
+    (l, i) =>
+      `<li><a class="menu-item" href="${l.href}" target="_blank" rel="noopener" data-active="${i === 0}">` +
+      `<span class="t">${l.title}</span><span class="s">${l.sub}</span><span class="chev"></span></a></li>`,
+  ).join('');
+  return (
+    `<div class="about" data-screen="about">${forgeHTML()}` +
+    `<main class="lb-main"><header class="lb-head"><button type="button" class="lb-back" data-act="back" aria-label="Main Menu"></button>` +
+    `${scaledLogoHTML()}<h1>ABOUT</h1></header>` +
+    `<section class="plain-card ab-card"><p class="ab-by">ENTIRELY AI-GENERATED</p>` +
+    `<h2>MADE BY</h2><ul class="ab-credits">${ABOUT_MAKERS.map(creditHTML).join('')}</ul>` +
+    `<h2>INSPIRED BY</h2><ul class="ab-credits ab-star">${creditHTML(ABOUT_INSPIRATION)}</ul>` +
+    `<h2>CREDITS</h2><ul class="ab-credits">${ABOUT_CREDITS.map(creditHTML).join('')}</ul></section>` +
+    `<ul class="ab-links" aria-label="Links">${links}</ul></main>` +
+    `<footer class="footbar"><span class="meta">About</span><div class="prompts" aria-hidden="true">${aboutPromptsHTML(false)}</div></footer></div>`
   );
 }
 

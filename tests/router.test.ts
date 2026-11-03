@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { memoryHistory, Router } from '../src/router';
-import { CODEX, GAME_CHROME, HOME, LOBBIES, lobby, PAGE_CHROME, parseRoute, type Route, routePath, routeTitle, viewportContent } from '../src/routes';
+import { ABOUT, CODEX, GAME_CHROME, HOME, LOBBIES, lobby, PAGE_CHROME, parseRoute, type Route, routePath, routeTitle, viewportContent } from '../src/routes';
 import { homeHTML, MENU_ITEMS, plainHTML } from '../src/ui/screens/markup';
 
 describe('routes', () => {
@@ -8,13 +8,14 @@ describe('routes', () => {
     expect(parseRoute('/')).toEqual(HOME);
     expect(parseRoute('/codex')).toEqual(CODEX);
     expect(parseRoute('/lobbies')).toEqual(LOBBIES);
+    expect(parseRoute('/about')).toEqual(ABOUT);
     expect(parseRoute('/r/k7qx2')).toEqual(lobby('K7QX2'));
     expect(parseRoute('/r/!!')).toEqual({ screen: 'missing', path: '/r/!!' });
     expect(parseRoute('/nope')).toEqual({ screen: 'missing', path: '/nope' });
   });
 
   it('round-trips canonical paths', () => {
-    for (const r of [HOME, CODEX, LOBBIES, lobby('ABCDE')]) expect(parseRoute(routePath(r))).toEqual(r);
+    for (const r of [HOME, CODEX, LOBBIES, ABOUT, lobby('ABCDE')]) expect(parseRoute(routePath(r))).toEqual(r);
   });
 
   it('titles match what the server sends', () => {
@@ -22,6 +23,7 @@ describe('routes', () => {
     expect(routeTitle(lobby('ABCDE'))).toBe('SLAG · Lobby ABCDE');
     expect(routeTitle(CODEX)).toBe('SLAG · Codex');
     expect(routeTitle(LOBBIES)).toBe('SLAG · Lobbies');
+    expect(routeTitle(ABOUT)).toBe('SLAG · About');
   });
 
   it('writes viewports the way Next does', () => {
