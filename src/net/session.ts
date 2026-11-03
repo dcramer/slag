@@ -1287,7 +1287,7 @@ export class NetSession {
       const b = r.body;
       const was = this.eased.get(r.slot);
       if (was) {
-        const v = drawnVelocity(run.runners, r);
+        const v = drawnVelocity(r);
         const dx = was.x + v.x * DT * steps - b.x;
         const dy = was.y + v.y * DT * steps - b.y;
         if (Math.sqrt(dx * dx + dy * dy) <= CORRECTION_MAX) {
@@ -1339,23 +1339,12 @@ export class NetSession {
 }
 
 /**
- * How fast a runner really moves, for projecting where it's drawn. `vx` is what
- * it's trying to do: one held up by bodies (sim/collide.ts) barely moves however
- * hard it walks, and a rider goes where its base goes on top of its own walk.
- * Projecting by `vx` alone draws pushers inside who they push and riders lagging
- * their base.
+ * How fast a runner really moves, for projecting where it's drawn. `vx` is what it's trying to do: one held up by
+ * bodies (sim/collide.ts) barely moves however hard it walks, so projecting by `vx` would draw pushers inside who
+ * they push. A head is a perch, not ground: a rider isn't carried, so its own velocity is all it has.
  */
-export function drawnVelocity(runners: readonly Runner[], r: Runner): { x: number; y: number } {
-  let x = 0;
-  let y = 0;
-  let at: Runner | undefined = r;
-  for (let n = 0; at && n < runners.length; n++) {
-    if (at.press <= 0) x += at.body.vx;
-    y += at.body.vy;
-    const under: number = at.ride;
-    at = under >= 0 ? runners.find((o) => o.slot === under) : undefined;
-  }
-  return { x, y };
+export function drawnVelocity(r: Runner): { x: number; y: number } {
+  return { x: r.press > 0 ? 0 : r.body.vx, y: r.body.vy };
 }
 
 function structuredCloneJson<T>(v: T): T {
