@@ -13,13 +13,18 @@ import { TILE } from '../sim/constants';
 import { AMMO, type Ammo, footprint, makeProjectile, type PropDef, resolveProp } from '../sim/props';
 import { CODEX_CSS } from './css';
 import { PART_INFO, summarize } from './describe';
+import type { MapPainter } from './map-view';
+import type { MapSection } from './maps';
 import { PROJECTILE_NOTES, partGroups } from './parts';
+import type { MapJob } from './shots';
 
 /**
  * /codex — the catalog of potential components: every part (blocks,
  * heads, launchers, emitters, motion, finishes), item and projectile, drawn
  * live with the same art as the game. These are global, not per-seed; the
- * crate assembles them into props with procedurally rolled numbers.
+ * crate assembles them into props with procedurally rolled numbers. After
+ * the parts, the maps (./maps.ts): every theme, its landmarks and its own
+ * hazards, pictured by the game's renderer as cards scroll into view.
  *
  * It's a game screen like the main menu: the same backdrop and logo, one
  * selected card at a time (arrows, d-pad or stick; mouse hover), Enter or Ⓐ
@@ -41,13 +46,19 @@ interface Entry {
   quip: string | null;
   /** Placeable parts turn; items and shots don't. */
   turns: boolean;
+  /** A map's picture, drawn by the renderer instead of `draw`. */
+  map?: MapJob;
 }
+
+/** The two halves of the codex, each a heading in the index. */
+type Part = 'Parts' | 'Maps';
 
 interface Section {
   id: string;
   title: string;
   blurb: string;
   entries: Entry[];
+  part: Part;
 }
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -121,10 +132,11 @@ function drawShot(rc: RC, ammo: Ammo, w: number, h: number) {
   rc.g.restore();
 }
 
-/** Every section of the catalog, parts first, projectiles last. */
+/** Every section of the catalog: parts first, projectiles after them, then a map per theme. */
 function catalog(): Section[] {
   const sections: Section[] = partGroups().map((g) => ({
     id: g.id,
+    part: 'Parts',
     title: titleCase(g.title),
     blurb: g.blurb,
     entries: g.entries.map((e): Entry => {
@@ -144,6 +156,7 @@ function catalog(): Section[] {
   }));
   sections.push({
     id: 'projectiles',
+    part: 'Parts',
     title: 'Projectiles',
     blurb: 'Incoming.',
     entries: (Object.keys(AMMO) as Ammo[]).map((ammo) => {
@@ -163,30 +176,50 @@ function catalog(): Section[] {
   return sections;
 }
 
-function codexHTML(sections: readonly Section[]): string {
-  let i = 0;
-  const index = sections
-    .map((s) => `<button type="button" data-sec="${s.id}"><span class="t">${esc(s.title)}</span><span class="n">${s.entries.length}</span></button>`)
-    .join('');
-  const body = sections
+/** The maps' sections (./maps.ts), as the catalog shows them: pictures instead of live parts, nothing turns. */
+function mapCatalog(list: readonly MapSection[]): Section[] {
+  return list.map((m) => ({
+    id: m.id,
+    part: 'Maps',
+    title: m.title,
+    blurb: m.blurb,
+    entries: m.entries.map((e) => ({ title: e.title, note: e.note, spec: e.spec, quip: e.quip, group: m.title, draw: () => {}, turns: false, map: e.job })),
+  }));
+}
+
+/** One half's heading in the index and its chips: parts one under another; the maps, short theme names, two to a row. */
+function indexHTML(part: Part, sections: readonly Section[]): string {
+  const chips = sections.map(
+    (s) => `<button type="button" data-sec="${s.id}"><span class="t">${esc(s.title)}</span><span class="n">${s.entries.length}</span></button>`,
+  );
+  return `<span class="cx-part">${part}</span><div class="cx-chips" data-part="${part}">${chips.join('')}</div>`;
+}
+
+/** Sections and their cards, the first card numbered `i`. */
+function sectionsHTML(sections: readonly Section[], i: number): string {
+  return sections
     .map(
       (s) =>
-        `<section class="cx-sec" id="${s.id}"><header class="cx-head"><h2>${esc(s.title)}</h2><span class="n">${s.entries.length}</span><p>${esc(s.blurb)}</p></header>` +
+        `<section class="cx-sec" id="${s.id}" data-part="${s.part}"><header class="cx-head"><h2>${esc(s.title)}</h2><span class="n">${s.entries.length}</span><p>${esc(s.blurb)}</p></header>` +
         `<div class="cx-grid">${s.entries
           .map(
             (e) =>
-              `<button type="button" class="cx-card" data-i="${i++}" data-active="false"><span class="cx-well"></span>` +
+              `<button type="button" class="cx-card" data-i="${i++}" data-active="false"${e.map ? ` data-map="${e.map.kind}"` : ''}><span class="cx-well"></span>` +
               `<span class="cx-plate"><span class="t">${esc(e.title)}</span><span class="s">${esc(e.note)}</span><span class="chev"></span></span></button>`,
           )
           .join('')}</div></section>`,
     )
     .join('');
+}
+
+/** The screen's frame: side, an empty index and catalog (`mountCodex` fills them), the close-up and the footer. */
+function codexHTML(): string {
   const key = (label: string) => `<span class="slag-glyph">${glyphSVG({ kind: 'key', label }, 22)}</span>`;
   return (
     `<div class="codex" data-screen="codex">${forgeHTML()}` +
     `<aside class="cx-side"><div class="cx-brand"><button type="button" class="cx-back" data-act="back" aria-label="Main Menu"></button>${scaledLogoHTML()}<h1 class="cx-title">CODEX</h1></div>` +
-    `<nav class="cx-index" aria-label="Sections">${index}</nav></aside>` +
-    `<main class="cx-main">${body}</main>` +
+    `<nav class="cx-index" aria-label="Sections"></nav></aside>` +
+    `<main class="cx-main"></main>` +
     `<div class="cx-modal" role="dialog" aria-modal="true" aria-labelledby="cx-name" hidden><div class="cx-sheet">` +
     `<div class="cx-stage"><span class="cx-well"></span><button type="button" class="cx-nav prev" data-act="prev" aria-label="Previous"></button><button type="button" class="cx-nav next" data-act="next" aria-label="Next"></button></div>` +
     `<div class="cx-info"><span class="cx-tag"></span><h2 id="cx-name"></h2><p class="cx-joke"></p><ul class="cx-spec"></ul><p class="cx-quip"></p>` +
@@ -223,9 +256,13 @@ export function mountCodex(root: HTMLElement, nav: Nav): Unmount {
   const st = document.createElement('style');
   st.textContent = CODEX_CSS;
   document.head.append(st);
-  const sections = catalog();
-  const entries = sections.flatMap((s) => s.entries);
-  const firstOf = sections.map((_, si) => sections.slice(0, si).reduce((n, s) => n + s.entries.length, 0));
+  // Filled by `add`: the parts now, the maps once their registries load.
+  const sections: Section[] = [];
+  const entries: Entry[] = [];
+  const firstOf: number[] = [];
+  const cards: HTMLButtonElement[] = [];
+  const secEls: HTMLElement[] = [];
+  const indexBtns: HTMLButtonElement[] = [];
   const sectionOf = (i: number) => {
     let si = 0;
     while (si + 1 < firstOf.length && firstOf[si + 1] <= i) si++;
@@ -233,21 +270,20 @@ export function mountCodex(root: HTMLElement, nav: Nav): Unmount {
   };
 
   const wrap = document.createElement('div');
-  wrap.innerHTML = codexHTML(sections);
+  wrap.innerHTML = codexHTML();
   const el = wrap.firstElementChild as HTMLElement;
   root.append(el);
   const $ = (sel: string) => el.querySelector<HTMLElement>(sel)!;
-  const cards = [...el.querySelectorAll<HTMLButtonElement>('.cx-card')];
-  const secEls = [...el.querySelectorAll<HTMLElement>('.cx-sec')];
-  const indexBtns = [...el.querySelectorAll<HTMLButtonElement>('.cx-index button')];
   const side = $('.cx-side');
   const index = $('.cx-index');
+  const main = $('.cx-main');
   const foot = $('.cx-foot');
   const prompts = $('.cx-foot .prompts');
   const modal = $('.cx-modal');
   const rotBtn = $('[data-act=rotate]');
   const phone = matchMedia('(max-width: 860px)');
 
+  const life = new AbortController();
   // Live stages: each card draws its part every frame while it's on screen.
   const lives: Live[] = [];
   const observer = new IntersectionObserver((list) => {
@@ -267,11 +303,47 @@ export function mountCodex(root: HTMLElement, nav: Nav): Unmount {
     observer.observe(well);
     return live;
   };
-  cards.forEach((c, i) => stage(c.querySelector('.cx-well')!, (rc, w, h) => entries[i].draw(rc, w, h, 0)));
+  // Maps: the renderer, its level generator and a worker load the first time a map card comes near the screen.
+  let maps: MapPainter | null = null;
+  let mapsLoading: Promise<MapPainter> | null = null;
+  const painter = () =>
+    (mapsLoading ??= import('./map-view').then((m) => {
+      if (life.signal.aborted) throw new Error('codex closed');
+      return (maps = new m.MapPainter());
+    }));
+  // A map card gets one still, painted the first time it's in view.
+  const painted = new Set<number>();
+  const mapObserver = new IntersectionObserver(
+    (list) => {
+      for (const e of list) {
+        const i = Number((e.target as HTMLElement).dataset.card);
+        const job = entries[i].map!;
+        if (!e.isIntersecting) {
+          maps?.unwant(job);
+          continue;
+        }
+        if (painted.has(i)) continue;
+        painted.add(i);
+        const canvas = e.target.querySelector('canvas')!;
+        const dpr = Math.min(2, window.devicePixelRatio || 1);
+        canvas.width = Math.round(canvas.clientWidth * dpr);
+        canvas.height = Math.round(canvas.clientHeight * dpr);
+        void painter()
+          .then((p) => p.paint(job, canvas))
+          .then((ok) => (e.target as HTMLElement).classList.toggle('drawn', ok))
+          .catch(() => painted.delete(i));
+      }
+    },
+    { rootMargin: '200px 0px' },
+  );
   let open = -1;
   let rot = 0;
   const closeUp = stage($('.cx-stage .cx-well'), (rc, w, h) => {
-    if (open >= 0) entries[open].draw(rc, w, h, rot);
+    if (open < 0) return;
+    const job = entries[open].map;
+    if (!job) entries[open].draw(rc, w, h, rot);
+    else if (maps) maps.frame(job, rc.s, w, h);
+    else void painter();
   });
 
   let pad = connectedPads().length > 0;
@@ -295,7 +367,6 @@ export function mountCodex(root: HTMLElement, nav: Nav): Unmount {
     if (how.focus) cards[i].focus({ preventScroll: true });
     if (how.scroll) reveal(cards[i]);
   };
-  setActive(0);
 
   const move = (dir: 'up' | 'down' | 'left' | 'right') => {
     let to: number | null;
@@ -326,11 +397,17 @@ export function mountCodex(root: HTMLElement, nav: Nav): Unmount {
     shownSec = si;
     indexBtns.forEach((b, i) => b.setAttribute('aria-current', String(i === si)));
     // On a phone the index is a strip: keep the lit chip in it.
+    const b = indexBtns[si];
     if (phone.matches) {
-      const b = indexBtns[si];
       if (b.offsetLeft < index.scrollLeft || b.offsetLeft + b.offsetWidth > index.scrollLeft + index.clientWidth)
         index.scrollTo({ left: b.offsetLeft - 14, behavior: 'smooth' });
+      return;
     }
+    // On a short window the side column scrolls: keep the lit chip in it too, and the logo while the first section is up.
+    const r = b.getBoundingClientRect();
+    const box = side.getBoundingClientRect();
+    if (si === 0) side.scrollTo({ top: 0, behavior: 'smooth' });
+    else if (r.top < box.top || r.bottom > box.bottom) side.scrollBy({ top: r.top - box.top - box.height / 2, behavior: 'smooth' });
   };
 
   const showPart = (i: number) => {
@@ -353,6 +430,7 @@ export function mountCodex(root: HTMLElement, nav: Nav): Unmount {
     quip.textContent = e.quip ?? '';
     quip.hidden = !e.quip;
     rotBtn.hidden = !e.turns;
+    modal.dataset.kind = e.map ? 'map' : 'part';
     if (active !== i) setActive(i, { scroll: true });
     paintFooter();
   };
@@ -379,14 +457,45 @@ export function mountCodex(root: HTMLElement, nav: Nav): Unmount {
     else if (a === 'next') browse(1);
   };
 
-  const life = new AbortController();
   const on = { signal: life.signal };
-  cards.forEach((c, i) => {
-    c.addEventListener('mouseenter', () => setActive(i), on);
-    c.addEventListener('focus', () => i !== active && setActive(i), on);
-    c.addEventListener('click', () => openPart(i), on);
-  });
-  indexBtns.forEach((b, si) => b.addEventListener('click', () => toSection(si), on));
+
+  /** Put a half of the catalog on the page: its index heading and chips, its sections and cards, all wired up. */
+  const add = (part: Part, more: readonly Section[]) => {
+    const start = entries.length;
+    const firstSec = sections.length;
+    for (const s of more) {
+      firstOf.push(entries.length);
+      sections.push(s);
+      entries.push(...s.entries);
+    }
+    index.insertAdjacentHTML('beforeend', indexHTML(part, more));
+    main.insertAdjacentHTML('beforeend', sectionsHTML(more, start));
+    cards.push(...[...main.querySelectorAll<HTMLButtonElement>('.cx-card')].slice(start));
+    secEls.push(...[...main.querySelectorAll<HTMLElement>('.cx-sec')].slice(firstSec));
+    indexBtns.push(...[...index.querySelectorAll<HTMLButtonElement>('button')].slice(firstSec));
+    for (let i = start; i < cards.length; i++) {
+      const c = cards[i];
+      c.addEventListener('mouseenter', () => setActive(i), on);
+      c.addEventListener('focus', () => i !== active && setActive(i), on);
+      c.addEventListener('click', () => openPart(i), on);
+      const well = c.querySelector<HTMLElement>('.cx-well')!;
+      if (!entries[i].map) {
+        stage(well, (rc, w, h) => entries[i].draw(rc, w, h, 0));
+        continue;
+      }
+      well.append(document.createElement('canvas'));
+      well.dataset.card = String(i);
+      mapObserver.observe(well);
+    }
+    for (let si = firstSec; si < indexBtns.length; si++) indexBtns[si].addEventListener('click', () => toSection(si), on);
+    shownSec = -1;
+    spy();
+  };
+  add('Parts', catalog());
+  setActive(0);
+  // The maps read the level generator's registries: they load after the parts are up, so opening the codex stays quick.
+  void import('./maps').then((m) => !life.signal.aborted && add('Maps', mapCatalog(m.mapSections())));
+
   el.addEventListener('click', (e) => act((e.target as Element).closest<HTMLElement>('[data-act]')?.dataset.act), on);
   modal.addEventListener('click', (e) => e.target === modal && closePart(), on);
 
@@ -480,6 +589,8 @@ export function mountCodex(root: HTMLElement, nav: Nav): Unmount {
     life.abort();
     cancelAnimationFrame(raf);
     observer.disconnect();
+    mapObserver.disconnect();
+    maps?.dispose();
     el.remove();
     st.remove();
   };

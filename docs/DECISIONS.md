@@ -127,6 +127,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 04:36Z · `done` · DESIGN.md → Players, NETCODE.md → Seats and kicks
 - **The New Look dice rerolls the look and keeps the name, without flicker.** "when i click roill the dice it flickers a bit.. and the player name ... also flickers"
   2026-11-02 15:50Z · `done` · DESIGN.md → Players
+- **Player names are filtered, so nobody puts a slur on everyone's screen or on the public lobby list.** "we also need some kind of word filter for names so people dont put racial slurs/etc"
+  2026-11-02 23:11Z · `done` · DESIGN.md → Players, NETCODE.md → Seats and kicks, public/ASSETS.md → Word lists
 
 ## Characters
 
@@ -179,6 +181,13 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `done` · CHARACTERS.md → Roster
 - **Character source art (models and sheets) lives in Git LFS; builds skip it and use the generated frames.** (answer: "Git LFS")
   2026-11-02 · `done` · `.gitattributes`, `tools/art3d/README.md`
+- **The player's colour is the character's main costume colour (an alternate costume), not a foot ring.** "the sprites seem to always be the same color? like they're not re-coloring their primary based on the player color?" / "ok well thats wrong"
+  2026-11-02 · `done` for the plumber and speedster · CHARACTERS.md → the rules
+  Changed: iconic palettes with the player's colour on a foot ring.
+- **Characters vary only in curated ways that keep the art: costume colour, accessory swaps, designed alternate palettes on one secondary region, pose personality (two idles, two cheers, a little gait), and wear. Faces, proportions and silhouettes are never rolled; random eyes and mouths go.** "idk if theres ways we can make it a little more procedural without losing our art work" / "'random eyeballs' dont work with the art style" / "Yes, add it"
+  2026-11-02 · `in progress` · CHARACTERS.md → the rules, `tools/art3d/`
+- **The costume-colour rule holds even where a colour is the character's identity: the dot-eater's whole ball takes the player's colour, not only his napkin.** (answer: "Keep player colour")
+  2026-11-02 · `done` · CHARACTERS.md → the rules
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
   2026-11-02 · `done` · public/ASSETS.md
 
@@ -450,6 +459,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 04:56Z · `done` · DESIGN.md → Controls and UI
 - **The codex is the global parts catalog, subtitled "Spoilers!".**
   2026-11-02 · git `cf6c496`, `0464596` · `done` · `src/codex/`
+- **The codex talks about maps too: every theme, its landmarks and its own hazards, pictured by the game's renderer.** "the codex needs to talk about maps"
+  2026-11-02 · `done` · DESIGN.md → Discovery, `src/codex/maps.ts`, TODO.md → 28
 - **The game has a favicon, app icons, Open Graph and oEmbed previews.** "Also need a favicon, oembed metadata and image, and apple icon etc"
   2026-11-02 07:06Z · `done`; checking them on a deploy is `open` · `pnpm brand`, TODO.md → 23
 

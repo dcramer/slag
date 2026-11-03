@@ -48,8 +48,19 @@ function brow(s: CanvasRenderingContext2D, m: FaceMood, inner: number, r: number
   );
 }
 
-/** One eye about the origin (the caller has moved to it and turned with the head). */
-function eye(s: CanvasRenderingContext2D, iris: string, m: FaceMood, f: number, r: number, blink: boolean, inner: number, seed: number) {
+/** One eye about the origin (the caller has moved to it and turned with the head); `far` is the far one. */
+function eye(
+  s: CanvasRenderingContext2D,
+  face: NonNullable<SpriteSet['face']>,
+  m: FaceMood,
+  f: number,
+  r: number,
+  blink: boolean,
+  inner: number,
+  far: boolean,
+  seed: number,
+) {
+  if (face.eye === 'tall' && m !== 'dead') blush(s, r, f, far);
   if (m === 'cheer') {
     const arc: P[] = [];
     for (let j = 0; j <= 6; j++) {
@@ -85,6 +96,10 @@ function eye(s: CanvasRenderingContext2D, iris: string, m: FaceMood, f: number, 
     );
     return;
   }
+  if (face.eye === 'tall') {
+    tallEye(s, r, m, f);
+    return;
+  }
   const wide = m === 'fall' ? 1.15 : 1;
   // Narrowed into the run, under the brow.
   const tall = m === 'run' ? 0.85 : 1.2 * wide;
@@ -92,7 +107,7 @@ function eye(s: CanvasRenderingContext2D, iris: string, m: FaceMood, f: number, 
   const px = f * r * 0.35;
   const py = m === 'up' ? -r * 0.3 : m === 'fall' ? r * 0.2 : 0;
   const pr = m === 'fall' ? 0.48 : 0.6;
-  poly(s, oval(px, py, r * pr, r * Math.min(tall, pr + 0.15), 9), iris);
+  poly(s, oval(px, py, r * pr, r * Math.min(tall, pr + 0.15), 9), face.iris);
   poly(s, oval(px + f * 0.08, py, r * 0.32, r * Math.min(tall * 0.8, 0.42), 7), INK);
   poly(s, oval(px - r * 0.2, py - r * 0.35, r * 0.2, r * 0.2, 6), GLINT);
   brow(s, m, inner, r, seed);
@@ -125,10 +140,12 @@ export function drawFace(
     s.save();
     s.translate(eyes[k * 3] / 8, eyes[k * 3 + 1] / 8);
     if (tilt) s.rotate(tilt);
-    eye(s, face.iris, m, f, r, blink, inner, seed + k * 3);
+    eye(s, face, m, f, r, blink, inner, k > 0, seed + k * 3);
     s.restore();
   }
   if (!face.mouth) return;
+  // Tall eyes come with the model's own painted smile; the kit opens the mouth over it.
+  if (face.eye === 'tall' && m !== 'cheer' && m !== 'fall') return;
   s.save();
   s.translate(eyes[0] / 8, eyes[1] / 8);
   if (tilt) s.rotate(tilt);
@@ -153,6 +170,26 @@ export function drawFace(
     );
   }
   s.restore();
+}
+
+/** The puffball's blush, soft on any body colour. */
+const BLUSH = 'rgba(232,96,120,0.55)';
+
+/** A soft blush under a tall eye toward its cheek; the far one nearer the front, foreshortened. */
+function blush(s: CanvasRenderingContext2D, r: number, f: number, far: boolean) {
+  poly(s, oval(f * (far ? 1.1 : -1.9) * r, 2.5 * r, (far ? 0.75 : 1.25) * r, 0.6 * r, 8), BLUSH);
+}
+
+/**
+ * A tall black oval eye with a shine at the top and no white (the puffball's): taller and wider on a fall,
+ * the shine riding up on the way up.
+ */
+function tallEye(s: CanvasRenderingContext2D, r: number, m: FaceMood, f: number) {
+  const wide = m === 'fall' ? 1.15 : 1;
+  const tall = m === 'fall' ? 2.25 : m === 'run' ? 1.8 : 2;
+  poly(s, oval(0, 0, r * wide, r * tall, 10), INK);
+  const sy = -r * tall * (m === 'up' ? 0.5 : 0.38);
+  poly(s, oval(f * r * 0.12, sy, r * 0.52, r * 0.78, 8), GLINT);
 }
 
 /** A wide open grin, lopsided toward the front. */

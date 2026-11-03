@@ -10,7 +10,6 @@ import type { RunnerPose } from '../src/render/ink-figure';
 
 // Every registered kind, loaded as the game loads it: a new kind needs no change here.
 const SETS: SpriteSet[] = await Promise.all(SPRITE_KINDS.map(async (k) => (await LOADERS[k]!()).sprites));
-const hedgehog = SETS.find((s) => s.kind === 'hedgehog')!;
 
 /** A 2D context that only records where paths go, in the frame's own space (transforms are ignored). */
 function recorder() {
@@ -140,6 +139,9 @@ describe('rendered kinds: frames', () => {
     };
     for (const s of SETS) {
       if (!s.face) continue;
+      // A kind traced from a rig records the head its eyes ride; a generated shape (no head bone) doesn't,
+      // and its whole figure is the face's place.
+      const rigged = Object.values(s.clips).some((c) => [...c.r, ...c.l].some((f) => f.head));
       for (const [name, c] of Object.entries(s.clips))
         for (const [facing, fs] of [
           ['r', c.r],
@@ -149,17 +151,19 @@ describe('rendered kinds: frames', () => {
             const at = `${s.kind} ${name} ${facing}${i}`;
             if (!f.eyes?.length) return;
             // The head is what the drawer turns brows, crosses and the mouth with.
-            expect(f.head, `${at}: eyes without a head`).toBeDefined();
-            const [hx, hy, hr] = f.head!.map((v) => v / 8);
+            if (rigged) expect(f.head, `${at}: eyes without a head`).toBeDefined();
             const sil = f.sil.map(ringPoints);
             for (let e = 0; e < f.eyes.length; e += 3) {
               const x = f.eyes[e] / 8;
               const y = f.eyes[e + 1] / 8;
-              expect(Math.hypot(x - hx, y - hy), `${at}: eye off the head`).toBeLessThanOrEqual(hr);
               expect(
                 sil.some((r) => inside(x, y, r)),
                 `${at}: eye off the figure`,
               ).toBe(true);
+              if (!f.head) continue;
+              const [hx, hy, hr] = f.head.map((v) => v / 8);
+              expect(Math.hypot(x - hx, y - hy), `${at}: eye off the head`).toBeLessThanOrEqual(hr);
+              // Drawn at the frame's own size (foreshortened, scaled with the head), close to the kit's.
               const r = f.eyes[e + 2] / 8;
               expect(r / s.face!.r, `${at}: eye size`).toBeGreaterThanOrEqual(0.6);
               expect(r / s.face!.r, `${at}: eye size`).toBeLessThanOrEqual(1.5);
@@ -226,13 +230,16 @@ describe('rendered kinds: choosing frames', () => {
     }
   });
 
-  it('recolours the kind’s own colour from the character, and keeps the roster’s elsewhere', () => {
-    const c = generateCharacter(5, 'hedgehog');
+  it('wears the player’s colour on its costume, like a fighting game’s alternate costume, and keeps the roster’s elsewhere', () => {
     for (const s of SETS) {
-      const slot = s.roles.findIndex((r) => r.slot === 'paint');
-      expect(slot, s.kind).toBeGreaterThanOrEqual(0);
+      expect(
+        s.roles.some((r) => r.slot === 'player'),
+        s.kind,
+      ).toBe(true);
       expect(s.roles.filter((r) => !r.slot).every((r) => /^#[0-9a-f]{6}$/.test(r.color))).toBe(true);
     }
-    expect(paintOf(c.paint).fill).not.toBe(paintOf(hexHsl(hedgehog.roles[hedgehog.roles.findIndex((r) => r.slot === 'paint')].color)).fill);
+    // Two players of one kind wear two colours.
+    const [a, b] = [generateCharacter(5, 'hedgehog'), generateCharacter(6, 'hedgehog')];
+    expect(paintOf(a.body).fill).not.toBe(paintOf(b.body).fill);
   });
 });

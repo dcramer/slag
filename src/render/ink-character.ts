@@ -249,7 +249,8 @@ function drawSpriteRunner(rc: InkTarget, c: CharacterDef, art: KindArt, lk: Look
   s.save();
   s.translate(x, y);
   s.scale(sc, sc);
-  if (art.ring) ring(s, lk, 14 * art.size[0]);
+  // A costume in the player's colour says whose runner it is; a ring would say it twice.
+  if (art.ring && !set.roles.some((r) => r.slot === 'player')) ring(s, lk, 14 * art.size[0]);
   // Screen px per world px before the squash: the scale the frame's bitmap is drawn at.
   const tf = s.getTransform();
   const px = Math.hypot(tf.a, tf.b);

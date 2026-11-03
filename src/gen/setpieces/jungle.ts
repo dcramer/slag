@@ -150,6 +150,7 @@ export const JUNGLE: Recipe[] = [
   },
   defineSetPiece({
     name: 'dart idol',
+    codex: { title: 'Dart Idol', note: 'Pointed remarks.', about: 'A carved idol that shoots darts down whatever it faces.' },
     unique: true,
     weight: 2,
     role: 'hazard',
@@ -167,6 +168,21 @@ export const JUNGLE: Recipe[] = [
         length: 0.95,
       }),
   }),
-  defineSetPiece({ name: 'snapjaw', unique: true, weight: 2, role: 'hazard', repeat: true, candidates: snapjaws }),
-  defineSetPiece({ name: 'log trap', unique: true, weight: 2, role: 'hazard', candidates: logTraps }),
+  defineSetPiece({
+    name: 'snapjaw',
+    unique: true,
+    weight: 2,
+    role: 'hazard',
+    repeat: true,
+    codex: { title: 'Snapjaw', note: 'Feed me.', about: 'A trap on a root stump that snaps shut on whoever steps on it, then opens up again.' },
+    candidates: snapjaws,
+  }),
+  defineSetPiece({
+    name: 'log trap',
+    unique: true,
+    weight: 2,
+    role: 'hazard',
+    codex: { title: 'Log Trap', note: 'Timber.', about: 'A log on two ropes swinging level across the path. It hurts along its whole length.' },
+    candidates: logTraps,
+  }),
 ];

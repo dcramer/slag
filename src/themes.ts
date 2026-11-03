@@ -27,6 +27,20 @@ export const THEME_LABELS: Record<ThemeId, string> = {
   space: 'Space',
 };
 
+/** Each theme's one-line joke on its page in the codex's maps (src/codex/maps.ts). */
+export const THEME_NOTES: Record<ThemeId, string> = {
+  farm: 'Fresh air. Live fences.',
+  factory: 'Days without incident: 0.',
+  castle: 'Drafty, haunted, moated. Viewing by appointment.',
+  jungle: 'Everything here bites. The furniture too.',
+  volcano: 'The floor is lava. Literally.',
+  harbor: 'Mind the gap. The gap is the sea.',
+  mine: 'Mind your head. The roof won’t.',
+  rooftops: 'Nobody takes the stairs.',
+  glacier: 'Slippery when frozen. Always frozen.',
+  space: 'No floor. No weather. No refunds.',
+};
+
 /**
  * Themes whose ground floats (space): nothing stands on anything. The renderer ends a body at the top or
  * bottom row instead of running it on as a column, and a landmark there may float (gen/stage/contract.ts).

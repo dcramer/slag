@@ -205,6 +205,7 @@ export const VOLCANO: Recipe[] = [
   },
   {
     name: 'spitter',
+    codex: { title: 'Magma Spitter', note: 'Say it, don’t spray it.', about: 'Spits fireballs low across the ground, one to three at a time.' },
     unique: true,
     weight: 2,
     role: 'hazard',
@@ -238,7 +239,26 @@ export const VOLCANO: Recipe[] = [
         material: 'stone',
       }),
   },
-  defineSetPiece({ name: 'bombs', unique: true, weight: 2.5, role: 'hazard', repeat: true, candidates: bombs }),
-  defineSetPiece({ name: 'serpent', unique: true, weight: 2.5, role: 'hazard', candidates: serpents }),
+  defineSetPiece({
+    name: 'bombs',
+    unique: true,
+    weight: 2.5,
+    role: 'hazard',
+    repeat: true,
+    codex: { title: 'Volcanic Bombs', note: 'Forecast: rocks.', about: 'Rocks fall out of the sky. The shadow on the spot grows first.' },
+    candidates: bombs,
+  }),
+  defineSetPiece({
+    name: 'serpent',
+    unique: true,
+    weight: 2.5,
+    role: 'hazard',
+    codex: {
+      title: 'Magma Serpent',
+      note: 'Breaches like a whale. Burns like lava.',
+      about: 'A chain of molten coils leaping out of a lava pit and diving back in. The lava boils where it’s about to jump.',
+    },
+    candidates: serpents,
+  }),
   defineSetPiece({ name: 'obsidian bridge', weight: 1.5, role: 'build', candidates: obsidianBridges }),
 ];

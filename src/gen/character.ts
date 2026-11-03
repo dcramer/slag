@@ -1,4 +1,5 @@
 import { type HSL, hsl3 } from '../core/color';
+import { nameBlocked } from '../core/name-filter';
 import { Rng } from '../core/rng';
 import { word } from './names';
 
@@ -24,6 +25,7 @@ export const CAST = [
   'frog',
   'penguin',
   'chicken',
+  'chomper',
 ] as const;
 export type Kind = (typeof CAST)[number];
 
@@ -70,6 +72,7 @@ export const KIND_NAMES: Record<Kind, string> = {
   frog: 'Frog',
   penguin: 'Penguin',
   chicken: 'Chicken',
+  chomper: 'Snack-Man',
 };
 
 /**
@@ -91,6 +94,7 @@ const PAINTS: Record<Kind, readonly HSL[]> = {
   frog: [hsl3(60, 40, 84), hsl3(45, 36, 86)],
   penguin: [hsl3(40, 30, 94), hsl3(200, 12, 92)],
   chicken: [hsl3(4, 70, 52), hsl3(354, 64, 50)],
+  chomper: [hsl3(49, 92, 56), hsl3(46, 88, 55)],
 };
 
 /**
@@ -145,11 +149,17 @@ export function generateCharacter(seed: number, kind?: Kind): CharacterDef {
   };
 }
 
-/** Names that fit HUD chips: retry (deterministically) until ≤ 10 chars. */
+/**
+ * Names that fit HUD chips: retry (deterministically) until ≤ 10 chars and one the name filter allows, since the
+ * generated name is what a refused one falls back to.
+ */
 function shortName(rng: Rng): string {
   for (let i = 0; i < 20; i++) {
     const n = word(rng, 2, 3);
-    if (n.length <= 10) return n;
+    if (n.length <= 10 && !nameBlocked(n)) return n;
   }
-  return word(rng, 1, 1);
+  for (;;) {
+    const n = word(rng, 1, 1);
+    if (!nameBlocked(n)) return n;
+  }
 }

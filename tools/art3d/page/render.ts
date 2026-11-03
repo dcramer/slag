@@ -3,6 +3,7 @@ import { BOX, type Clip, type Key, type Prop, type Settings } from '../settings'
 import { ballFrames } from './ball';
 import { loadModel } from './load';
 import { classify } from './roles';
+import { shaped } from './shapes';
 import { centreOf, steady, trace, type Traced } from './trace';
 import { rebind } from './weights';
 
@@ -90,6 +91,7 @@ const rad = (d: number) => (d * Math.PI) / 180;
 const FLOOR = 0.6;
 
 export async function renderSprites(url: string, s: Settings, only?: string[]) {
+  if (s.shape) return shaped(s, only);
   const model = await loadModel(url);
   const names = Object.keys(s.roles);
   if (!model.texture) throw new Error('the model has no colour texture to read roles from');
@@ -376,9 +378,10 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
 
   /**
    * The eyes the tracer or the anchor finds on a frame, near first (x, y, radius in world px): the eye
-   * role's parts, or, for a kind whose eyes are too small to trace, set from its nose.
+   * role's parts, or, for a kind whose eyes are too small to trace, set from its nose, turned with a
+   * rolled pose (`roll`, radians).
    */
-  const foundEyes = (tr: Traced, facing: 'r' | 'l'): number[] => {
+  const foundEyes = (tr: Traced, facing: 'r' | 'l', roll = 0): number[] => {
     const a = s.face?.anchor;
     if (!a) return tr.eyes;
     const ri = names.indexOf(a.role);
@@ -387,8 +390,10 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
     if (!best) return [];
     const [cx, cy] = centreOf(best);
     const f = facing === 'r' ? 1 : -1;
-    const far = a.far ?? a.near;
-    return [cx + f * a.near[0], cy + a.near[1], s.face!.r, cx + f * far[0], cy + far[1], s.face!.r];
+    // Turned with a rolled figure (y down here, so the screen's turn the other way).
+    const t = facing === 'r' ? -roll : roll;
+    const at = (o: readonly [number, number]) => [cx + f * o[0] * Math.cos(t) + o[1] * Math.sin(t), cy - f * o[0] * Math.sin(t) + o[1] * Math.cos(t)];
+    return [...at(a.near), s.face!.r, ...at(a.far ?? a.near), s.face!.r];
   };
 
   /**
@@ -579,7 +584,7 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
         const tr = shoot(h?.face);
         // Before the accessory passes reuse the depth buffer the eyes are checked against.
         if (h) faceNow(tr, h);
-        else tr.eyes = foundEyes(tr, facing);
+        else tr.eyes = foundEyes(tr, facing, roll);
         // Accessories: option 0 of every slot is in this pass; each other option gets a pass of its own, and
         // only its parts are kept. Every option's parts are tagged with their slot and option.
         for (let si = 0; si < slotNames.length; si++) {

@@ -1,3 +1,5 @@
+import { nameBlocked } from '../core/name-filter';
+
 /** Local player profile (name), persisted to localStorage. */
 export interface Profile {
   version: 1;
@@ -16,7 +18,7 @@ export interface Profile {
  * next one is saved from the new cast. 2: the foundry toys. 3: slimmer toys, the lantern in for the
  * crucible. 4: twelve hand-designed toys. 5: animals and critters. 6: mostly homages (docs/CHARACTERS.md).
  */
-export const LOOK_CAST = 6;
+export const LOOK_CAST = 7;
 
 const KEY = 'slag.profile.v1';
 
@@ -25,13 +27,18 @@ export function loadProfile(): Profile {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const p = JSON.parse(raw) as Profile;
-      if (p.version === 1) return p.lookCast === LOOK_CAST ? p : { ...p, look: null, lookCast: LOOK_CAST };
+      if (p.version !== 1) return fresh();
+      // Saved before the name filter refused it: back to the generated name.
+      const named = typeof p.name === 'string' && nameBlocked(p.name) ? { ...p, name: null } : p;
+      return named.lookCast === LOOK_CAST ? named : { ...named, look: null, lookCast: LOOK_CAST };
     }
   } catch {
     // ignore
   }
-  return { version: 1, name: null, prompted: false };
+  return fresh();
 }
+
+const fresh = (): Profile => ({ version: 1, name: null, prompted: false });
 
 export function saveProfile(p: Profile) {
   try {
