@@ -72,7 +72,7 @@ Set keys with `pnpm sprites keys KIND --keys a,b --zoom 6`; check the whole kind
 
 ## Non-humanoid kinds (keyed)
 
-- **Rigged** (`--type other`): Tripo names the bones its own way; `pnpm sprites inspect` lists them. Key poses with those names. `_near` / `_far` resolve to names ending `_l` / `_r`; a rig without that suffix names its limbs outright, one key per facing if it's asymmetric. Presets for other rigs are few (`walk` for quadrupeds) and prompt motions aren't available, so every clip but walk is keyed.
+- **Rigged** (`--type other`): Tripo names the bones its own way; `pnpm sprites inspect` lists them. Key poses with those names. `_near` / `_far` resolve to names ending `_l` / `_r`, and `near_` / `far_` to names starting `R_` / `L_` (Tripo's biped `--type other` rig: `near_Thigh`); a rig with neither names its limbs outright, one key per facing if it's asymmetric. Presets for other rigs are few (`walk` for quadrupeds) and prompt motions aren't available, so every clip but walk is keyed.
 - **Limbless** (the dot-eater, the jelly): no model or rig at all. Generate the frames as `page/ball.ts` does the spin ball: a shape in the roster's colours, its motion (a chomp, a bob) as frames, marks for speed. One generator per kind in `page/`, `"ball"`-style clips in `sprite.json`.
 
 ## Done
