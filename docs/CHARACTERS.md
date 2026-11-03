@@ -161,13 +161,13 @@ What came out of it:
 - **A stranger should say:** "the little pink puffball."
 - **Silhouette:** a near-perfect ball on two big oval feet, with stubby round arms.
 - **Traits:** tall oval eyes with a shine at the top; blush marks; a tiny mouth; big red feet.
-- **Palette:** body is the player's color, pink by default; feet `#c9473f`; eyes `#2a1f1a`; blush `rgba(232,96,120,0.55)`; seam a dark of the body; valve `#f4efe6`.
-- **Color slot:** body, because the original comes in every color.
+- **Palette:** body is the player's color, pink by default; feet `#c9473f`, or one of two designed alternatives (`#e07b2c`, `#e8b23a`) rolled per look; eyes `#2a1f1a`; blush `rgba(232,96,120,0.55)`; seam the body's colour, inked; valve `#f4efe6`.
+- **Color slot:** costume: the ball, its arms and its seam, because the original comes in every color.
 - **Gait:** toddles on its big feet; puffs up round and floats in the air.
 - **The nod:** the ball (the whole body); the big red feet (they make it a creature, and part it from the dot-eater); the tall oval eyes with a shine (the face); the blush (the sweetness).
-- **Our twist:** a cheap vinyl squeeze toy. A moulding seam runs round its middle, a squeaker valve pokes out of its back, a mould number is stamped on the sole of one foot, and it squeaks when it lands.
+- **Our twist:** a cheap vinyl squeeze toy. A moulding seam runs round its middle between the front and back halves, a squeaker valve pokes out high on its back (the one bump on the ball's outline), a mould number is stamped on the sole of one foot, and it squeaks when it lands.
 - **Swaps:** a price sticker on its side; a scuff of shelf dust; a tiny bow; a bite mark from a dog.
-- **Rig:** **keyed**: a ball with feet and stubs, the puff in the air.
+- **Rig:** **keyed**: a ball with feet and stubs, the puff in the air. Rendered: the body is generated, not modelled (`tools/art3d/page/puffball.ts`), and the face kit's tall eyes and blush are set by its painted smile; the mould number never shows at play scale and is left off.
 - **Concept prompt:** A near-perfect round ball creature on two big oval red feet, with stubby round arms; tall oval black eyes with a shine at the top, blush marks and a tiny mouth. It is a cheap vinyl squeeze toy: a moulding seam runs round its middle, a little white squeaker valve pokes out of its back, and a mould number is stamped under one foot.
 
 ### The voxel miner (new)
@@ -377,7 +377,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest: thei
 | 3 | chomper | Snack-Man | **keyed**, no limbs | low: two shapes and a chomp |
 | 4 | zapmouse | Pikachew | **keyed**, quadruped | medium: the scamper |
 | 5 | elf | Lonk | humanoid | low |
-| 6 | puffball | Kurby | **keyed**, ball and feet | medium: the puff |
+| 6 | puffball | Kurby | **keyed**, ball and feet | done (generated body) |
 | 7 | miner | Stove | humanoid, stiff | low: the simplest model |
 | 8 | impostor | Sussy | **keyed**, legs only | low |
 | 9 | ape | Dankey Kang | humanoid, gallop keyed | medium |
