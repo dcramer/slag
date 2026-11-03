@@ -29,8 +29,8 @@ const FLAT_PART = [0.12, 0.32];
 /** An interior line's pen, in world px: lighter than the parts' contours round it. */
 const LINE_W = 0.38;
 /**
- * A flat kind's interior lines, in one ink: in the ink of the colour they lie on, a line counted on the
- * costume crossed a face in the player's colour.
+ * A flat kind's interior lines and silhouette, in one ink: in the ink of the colour they lie on, a line
+ * counted on the costume crossed a face in the player's colour.
  */
 const LINE_INK = '#2a1f1a';
 /** The whole figure's hard shadow: the silhouette less itself pulled up-left (the hand-drawn body's numbers). */
@@ -118,9 +118,9 @@ export function drawFrame(
 ) {
   const boil = Math.floor(t * 8) % 3;
   for (const r of f.sil) {
-    // Filled with its own ink, not the costume: the parts boil and round apart from the silhouette, and
-    // filled in the player's colour the gaps between them showed it round every boot, tool and tail.
-    if (flat) inked(s, boiled(r, boil, seed), body.ink, body.ink, FLAT_SIL[0] * k, FLAT_SIL[1] * k);
+    // Filled and inked in the one neutral ink, not the costume's: the parts boil and round apart from the
+    // silhouette, and in the player's colour (or a dark of it) the gaps showed round every boot and tool.
+    if (flat) inked(s, boiled(r, boil, seed), LINE_INK, LINE_INK, FLAT_SIL[0] * k, FLAT_SIL[1] * k);
     else contour(s, boiled(r, boil, seed), body.fill, body.ink, k, seed);
   }
   for (const part of f.parts) {
@@ -135,23 +135,26 @@ export function drawFrame(
       s.fillStyle = flat ? LINE_INK : paints[role].ink;
       stroke(s, boiled(r, boil, seed + 40 + i), { w: LINE_W * k, seed: seed + 40 + i, taper: [0.3, 0.45], press: 0.3 });
     });
-  for (const r of f.sil) {
-    const pts = boiled(r, boil, seed);
-    s.save();
-    path(s, pts);
-    s.clip();
-    path(s, pts);
-    for (let i = 0; i < pts.length; i++) {
-      const q = pts[i];
-      if (i) s.lineTo(q.x - SHADOW_DX, q.y - SHADOW_DY);
-      else s.moveTo(q.x - SHADOW_DX, q.y - SHADOW_DY);
+  // The hard shadow, the silhouette less itself pulled up-left: not on a flat set, whose drawings fold their
+  // own shading away, and where the offset is wider than a hook or a foot it mottled every thin limb.
+  if (!flat)
+    for (const r of f.sil) {
+      const pts = boiled(r, boil, seed);
+      s.save();
+      path(s, pts);
+      s.clip();
+      path(s, pts);
+      for (let i = 0; i < pts.length; i++) {
+        const q = pts[i];
+        if (i) s.lineTo(q.x - SHADOW_DX, q.y - SHADOW_DY);
+        else s.moveTo(q.x - SHADOW_DX, q.y - SHADOW_DY);
+      }
+      s.closePath();
+      s.globalCompositeOperation = 'multiply';
+      s.fillStyle = shadow;
+      s.fill('evenodd');
+      s.restore();
     }
-    s.closePath();
-    s.globalCompositeOperation = 'multiply';
-    s.fillStyle = shadow;
-    s.fill('evenodd');
-    s.restore();
-  }
   // Motion marks, in the body's ink, trailing what moves fast.
   if (f.marks) {
     s.fillStyle = body.ink;
