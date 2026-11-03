@@ -5,8 +5,8 @@ import type { FlatKind } from '../kinds';
  * between. The image model draws the can flush on the bean and the visor inside its outline whatever the
  * brief says, so design.png is the worn drawing edited by hand (a PIL script): the visor moved 45 px out past
  * the front, the can taken off the back, widened 1.6×, moved 55 px back and 30 down, and joined by a short
- * strap. The poses, drawn with it as the reference, kept both. In run-1 the swung leg touched the can's foot
- * and closed a pocket of background, which would trace as a white patch: a white channel opens it again.
+ * strap. The poses, drawn with it as the reference, kept both. In run-1 and run-2 the swung leg touched the
+ * can's foot and closed a pocket of background, which would trace as a white patch: a white channel opens it again.
  */
 export const kind: FlatKind = {
   body: 241,
@@ -37,14 +37,24 @@ export const kind: FlatKind = {
     // No eyes or other dark fills: every dark is the line, even the thick seam between the suit and the can.
     ink: 21,
     feet: ['body'],
-    min: { dark: 0.12, glint: 0.1 },
+    // The can's handle hole and the loop of its spout are white like the visor's glint, and read as a second
+    // face's eye on the pack: the hole is cut through where it's open to the outside, and what's left of
+    // them (the spout's loop, the hole closed in by the bean on the floor) is smaller than the glint and folds
+    // into the can.
+    cut: { role: 'glint', area: 0.4 },
+    min: { dark: 0.12, glint: 0.65 },
   },
   roles: [
     // A colourway is the jerrycan (VARIETY.palette): fuel red, army olive or bare steel.
     { name: 'can', color: '#c9473f', alts: ['#6b7340', '#8e949a'], vary: 6 },
     { name: 'cap', color: '#e8c24a' },
     { name: 'body', color: '#5aa84a', slot: 'player' },
-    { name: 'tan', color: '#d9c79a' },
+    // The tape over the visor's crack, as brown packing tape: in the strap's pale tan it was the farm's own
+    // colour, and read as the background cutting a notch into the visor.
+    { name: 'tan', color: '#b98a52' },
+    // The strap, drawn in the tape's colour and told from it by where it is (`recolour`): pale, so the pack
+    // still stands off the bean with background between.
+    { name: 'strap', color: '#d9c79a' },
     { name: 'visor', color: '#a9dbe8' },
     { name: 'vshade', color: '#6aa6ba' },
     { name: 'glint', color: '#ffffff' },
@@ -61,13 +71,15 @@ export const kind: FlatKind = {
   ],
   // No face: the visor is its face, drawn as it is, and no face kit draws over it. The glint is found as the
   // one "eye" only so the build has a place to set the sticky note from and the wear's chin; with no `face`,
-  // nothing is drawn on it. Below the band's top is the jerrycan's handle hole, white like the glint.
+  // nothing is drawn on it.
   eyes: { role: 'glint', area: [0.1, 4], gap: [99, 99], specks: {}, count: 1, band: [0.17, 0.6] },
   wear: {
     on: ['body'],
     chin: 2.5,
     marks: [[['scuff', 0.6, 0.62, 1.1]], [['scorch', 0.62, 0.7, 1.0]]],
   },
+  // The tan below the visor is the strap.
+  recolour: { from: 'tan', to: 'strap', below: 3, lying: [99, 0] },
   // A sticky note on the visor, small enough to leave the visor its read.
   accessories: [{ slot: 'note', role: 'note', at: 'cheek', size: [1.5, 1.3] }],
   gait: { bounce: [0.1, 0.6], lean: [0, 0.03] },

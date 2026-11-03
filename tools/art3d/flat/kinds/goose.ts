@@ -3,7 +3,7 @@ import type { FlatKind } from '../kinds';
 export const kind: FlatKind = {
   body: 172,
   map: {
-    roles: ['white', 'vest', 'stripe', 'orange', 'steel', 'dark'],
+    roles: ['white', 'vest', 'orange', 'steel', 'dark'],
     families: [
       ['white', [241, 237, 226]],
       ['white', [190, 174, 161]],
@@ -13,10 +13,12 @@ export const kind: FlatKind = {
       ['vest', [225, 203, 58]],
       ['vest', [185, 149, 86]],
       ['vest', [216, 201, 110]],
-      ['stripe', [191, 193, 198]],
+      // The reflective bands fold into the vest: drawn flat, they and the scraps of their arcs cut it into a
+      // dozen patches, each with its own pen, and the grey between them read as the white showing through.
+      ['vest', [191, 193, 198]],
       ['orange', [213, 132, 69]],
       ['orange', [151, 124, 106]],
-      ['stripe', [136, 136, 144]],
+      ['vest', [136, 136, 144]],
       ['steel', [152, 158, 164]],
       ['steel', [104, 112, 120]],
       ['orange', [97, 71, 58]],
@@ -24,18 +26,16 @@ export const kind: FlatKind = {
       ['dark', [38, 20, 21]],
     ],
     line: 'dark',
-    thin: ['white', 'vest', 'stripe', 'orange', 'steel'],
+    thin: ['white', 'vest', 'orange', 'steel'],
     fringe: 5,
     stroke: 2.4,
     feet: ['orange'],
     loose: ['steel'],
-    // Only the vest's big reflective bands: the scraps of its arcs round the wing are noise at play size.
-    min: { dark: 0.04, stripe: 2.5 },
+    min: { dark: 0.04 },
   },
   roles: [
     { name: 'white', color: '#f3f0ea' },
     { name: 'vest', color: '#e8d23a', slot: 'player' },
-    { name: 'stripe', color: '#b3b9c3' },
     { name: 'orange', color: '#d9894a' },
     // A colourway is the loot in its beak (VARIETY.palette): bare steel, blued or green-painted. Never red or
     // brass: a red spanner in an open beak reads as a tongue, and brass as the beak.
@@ -58,6 +58,9 @@ export const kind: FlatKind = {
     chin: 4,
     marks: [[['scuff', 0.25, 0.82, 0.65]], [['scorch', 0.25, 0.8, 0.75]]],
   },
+  // The dark where each leg meets the belly is the drawing's shadow there, a speck between the legs at play
+  // size: the leg's.
+  recolour: { from: 'dark', to: 'orange', below: 10, lying: [99, 0] },
   accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [1.9, 0.8] }],
   face: { r: 0.7, iris: '#2a1f1a', eye: 'dot' },
   gait: { bounce: [0.1, 0.6], lean: [0, 0.03] },
