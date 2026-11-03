@@ -47,10 +47,8 @@
       ],
       "alts": [
         "#e07b2c",
-        "#c9473f",
         "#e8b23a"
-      ],
-      "vary": 4
+      ]
     },
     "valve": {
       "color": "#f4efe6",
@@ -92,6 +90,44 @@
       "swatches": [],
       "free": true,
       "min": 0.08
+    },
+    "scuff": {
+      "color": "#808080",
+      "swatches": [],
+      "free": true,
+      "min": 0.1,
+      "on": "body",
+      "tone": 20
+    },
+    "grime": {
+      "color": "#808080",
+      "swatches": [],
+      "free": true,
+      "min": 0.1,
+      "on": "foot",
+      "tone": -18
+    },
+    "marker": {
+      "color": "#4b63b5",
+      "swatches": [],
+      "free": true,
+      "min": 0.06
+    },
+    "soot": {
+      "color": "#808080",
+      "swatches": [],
+      "free": true,
+      "min": 0.1,
+      "on": "body",
+      "tone": -24
+    },
+    "sootfoot": {
+      "color": "#808080",
+      "swatches": [],
+      "free": true,
+      "min": 0.1,
+      "on": "foot",
+      "tone": -26
     }
   },
   "face": {
@@ -713,6 +749,102 @@
         ]
       },
       "roll": -80
+    },
+    "tap0": {
+      "from": "rest",
+      "bones": {
+        "body": [
+          -22,
+          0,
+          0
+        ],
+        "foot_near": [
+          -32,
+          0,
+          0
+        ],
+        "arm_near": [
+          0,
+          -35,
+          8
+        ],
+        "arm_far": [
+          0,
+          35,
+          -8
+        ]
+      }
+    },
+    "tap1": {
+      "from": "rest",
+      "bones": {
+        "body": [
+          -22,
+          0,
+          0
+        ],
+        "foot_near": [
+          -4,
+          0,
+          0
+        ],
+        "arm_near": [
+          0,
+          -35,
+          4
+        ],
+        "arm_far": [
+          0,
+          35,
+          -4
+        ]
+      }
+    },
+    "wave0": {
+      "from": "rest",
+      "bones": {
+        "foot_near": [
+          -14,
+          0,
+          0
+        ],
+        "arm_near": [
+          0,
+          -20,
+          -165
+        ],
+        "arm_far": [
+          0,
+          0,
+          30
+        ]
+      },
+      "scale": {
+        "body": 1.1
+      }
+    },
+    "wave1": {
+      "from": "rest",
+      "bones": {
+        "foot_near": [
+          -4,
+          0,
+          0
+        ],
+        "arm_near": [
+          0,
+          -45,
+          -125
+        ],
+        "arm_far": [
+          0,
+          0,
+          20
+        ]
+      },
+      "scale": {
+        "body": 1.12
+      }
     }
   },
   "clips": {
@@ -724,6 +856,15 @@
       "frames": 6,
       "loop": true,
       "fps": 4
+    },
+    "idle2": {
+      "keys": [
+        "tap0",
+        "tap1"
+      ],
+      "frames": 2,
+      "loop": true,
+      "fps": 3
     },
     "walk": {
       "keys": [
@@ -781,6 +922,15 @@
       "frames": 6,
       "loop": true,
       "fps": 8
+    },
+    "cheer2": {
+      "keys": [
+        "wave0",
+        "wave1"
+      ],
+      "frames": 2,
+      "loop": true,
+      "fps": 5
     },
     "death": {
       "keys": [
@@ -1024,12 +1174,295 @@
           ]
         }
       ]
+    },
+    {
+      "bone": "body",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "wear",
+      "parts": []
+    },
+    {
+      "bone": "body",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "wear",
+      "parts": [
+        {
+          "shape": "sphere",
+          "role": "scuff",
+          "size": [
+            1.1,
+            0.32,
+            0.4
+          ],
+          "at": [
+            0,
+            0,
+            0
+          ],
+          "bone": "body",
+          "face": [
+            -0.85,
+            -0.15,
+            -0.5
+          ],
+          "rot": [
+            0,
+            0,
+            20
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "scuff",
+          "size": [
+            0.9,
+            0.3,
+            0.4
+          ],
+          "at": [
+            0,
+            0,
+            0
+          ],
+          "bone": "body",
+          "face": [
+            0.35,
+            -0.45,
+            0.8
+          ],
+          "rot": [
+            0,
+            0,
+            -15
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "grime",
+          "size": [
+            0.9,
+            0.3,
+            0.4
+          ],
+          "at": [
+            -3.8,
+            -8.2,
+            4.2
+          ],
+          "bone": "foot_r",
+          "face": [
+            0,
+            0.4,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            10
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "marker",
+          "size": [
+            1.15,
+            0.17,
+            0.3
+          ],
+          "at": [
+            0,
+            0,
+            0
+          ],
+          "bone": "body",
+          "face": [
+            -0.6,
+            -0.45,
+            0.65
+          ],
+          "rot": [
+            0,
+            0,
+            45
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "marker",
+          "size": [
+            1.15,
+            0.17,
+            0.3
+          ],
+          "at": [
+            0,
+            0,
+            0
+          ],
+          "bone": "body",
+          "face": [
+            -0.6,
+            -0.45,
+            0.65
+          ],
+          "rot": [
+            0,
+            0,
+            -45
+          ]
+        }
+      ]
+    },
+    {
+      "bone": "body",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "slot": "wear",
+      "parts": [
+        {
+          "shape": "sphere",
+          "role": "soot",
+          "size": [
+            1.6,
+            0.4,
+            0.4
+          ],
+          "at": [
+            0,
+            0,
+            0
+          ],
+          "bone": "body",
+          "face": [
+            -0.8,
+            -0.35,
+            0.1
+          ],
+          "rot": [
+            0,
+            0,
+            25
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "soot",
+          "size": [
+            1.0,
+            0.32,
+            0.4
+          ],
+          "at": [
+            0,
+            0,
+            0
+          ],
+          "bone": "body",
+          "face": [
+            0.15,
+            -0.7,
+            0.7
+          ],
+          "rot": [
+            0,
+            0,
+            -20
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "soot",
+          "size": [
+            0.8,
+            0.3,
+            0.4
+          ],
+          "at": [
+            -7.6,
+            -1.9,
+            0.7
+          ],
+          "bone": "arm_r",
+          "face": [
+            -1,
+            -0.5,
+            -0.4
+          ],
+          "rot": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "shape": "sphere",
+          "role": "sootfoot",
+          "size": [
+            0.9,
+            0.4,
+            0.4
+          ],
+          "at": [
+            -3.8,
+            -8.2,
+            4.2
+          ],
+          "bone": "foot_r",
+          "face": [
+            0,
+            0.4,
+            1
+          ],
+          "rot": [
+            0,
+            0,
+            0
+          ]
+        }
+      ]
     }
   ],
   "slots": {
     "sticker": 0,
     "dust": 1,
     "bow": 2,
-    "bite": 3
+    "bite": 3,
+    "wear": 11
+  },
+  "gait": {
+    "bounce": [
+      0.1,
+      0.8
+    ],
+    "lean": [
+      0,
+      0.03
+    ]
   }
 }

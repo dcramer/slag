@@ -8,6 +8,9 @@ Design intent for everything below is in `docs/DESIGN.md`.
 
 ---
 
+## 29. Character art: the rest of the roster (paused for credits)
+The 3D-to-2D pipeline (`tools/art3d/`, playbook in its README and CHECKLIST) is the direction, and the roster of twenty is in `docs/CHARACTERS.md` → Roster, with the production order there. Done so far: plumber, speedster, chomper, puffball, zapmouse, and the elf in progress. Paused by the owner until there are Tripo credits for the rest ("we dont have enough credits to finish all art"). Limbless kinds (the jelly) need no model and cost nothing. When it resumes: add the five kinds not yet in `CAST` (miner, merc, sneak, robot, king) in one change so saved looks re-roll once, and run humanoids after the shared arm-key fix.
+
 ## 27. AI players and player scripts (future)
 Brains that fill seats by producing inputs, built in or written by players. Design: `docs/DESIGN.md` → AI players. Native AI first (phases 1–2); scripts after. Each phase is one agent, in order.
 

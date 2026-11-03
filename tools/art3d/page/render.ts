@@ -230,7 +230,12 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
             ? new THREE.SphereGeometry(a, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, h / a, 1)
             : part.shape === 'box'
               ? new THREE.BoxGeometry(a, h, c)
-              : new THREE.SphereGeometry(1, 16, 12).scale(a, h, c);
+              : part.shape === 'prism'
+                ? // Drawn in x, y as z, y, extruded along z, then turned so the extrusion runs across the figure.
+                  new THREE.ExtrudeGeometry(new THREE.Shape((part.points ?? []).map(([z, y]) => new THREE.Vector2(z, y))), { depth: a, bevelEnabled: false })
+                    .translate(0, 0, -a / 2)
+                    .rotateY(-Math.PI / 2)
+                : new THREE.SphereGeometry(1, 16, 12).scale(a, h, c);
       const mesh = new THREE.Mesh(geo, material(names.indexOf(part.role)));
       if (part.at) mesh.position.set(...part.at);
       if (part.rot) mesh.rotation.set(rad(part.rot[0]), rad(part.rot[1]), rad(part.rot[2]));
@@ -286,8 +291,16 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
   const poseKey = (key: Key, facing: 'r' | 'l') => {
     const near = facing === 'r' ? '_r' : '_l';
     const far = facing === 'r' ? '_l' : '_r';
-    const mirror = (n: string, e: [number, number, number]): [number, number, number] => (facing === 'l' && /_(near|far)$/.test(n) ? [e[0], -e[1], -e[2]] : e);
-    const turns = new Map(Object.entries(key.bones ?? {}).map(([n, e]) => [n.replace(/_near$/, near).replace(/_far$/, far), mirror(n, e)] as const));
+    // A rig that names its sides first (Tripo's own: `L_Thigh`) is keyed `near_Thigh` and `far_Thigh`.
+    const side = (n: string) =>
+      n
+        .replace(/_near$/, near)
+        .replace(/_far$/, far)
+        .replace(/^near_/, facing === 'r' ? 'R_' : 'L_')
+        .replace(/^far_/, facing === 'r' ? 'L_' : 'R_');
+    const mirror = (n: string, e: [number, number, number]): [number, number, number] =>
+      facing === 'l' && /_(near|far)$|^(near|far)_/.test(n) ? [e[0], -e[1], -e[2]] : e;
+    const turns = new Map(Object.entries(key.bones ?? {}).map(([n, e]) => [side(n), mirror(n, e)] as const));
     mixer.stopAllAction();
     if (key.from === 'rest') rest();
     else {
@@ -311,7 +324,7 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
     }
     for (const [n, f] of Object.entries(key.scale ?? {})) {
       // A stretch, on top of the caricature: a fist punched up past a big head.
-      const b = bone(n.replace(/_near$/, near).replace(/_far$/, far));
+      const b = bone(side(n));
       b.scale.multiplyScalar(f);
       b.updateMatrixWorld(true);
     }
