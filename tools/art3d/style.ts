@@ -267,13 +267,21 @@ export const BRIEFS: Record<string, Brief> = {
     // Ours, and the joke: a power suit welded together in the scrapyard. The cannon is a length of grey
     // drainpipe with an elbow joint, the shoulder pads are two red-and-white fishing buoys, the torso a
     // cut-down water heater tank, the visor green bottle glass.
+    // The first design (2026-11-03) failed the blind read: the buoys sat level with the helmet and the dent
+    // lobed its crown, so shoulders and head read as one lobed cap (a mushroom, an afro), and the cannon
+    // across the chest was lost in the body. So the buoys hang low and wide at the ends of a shoulder plate,
+    // the helmet rises clear above them (level with it they read as mouse ears), and the cannon is long,
+    // straight and level, clear of the body. The pick came back in a grey suit and was recoloured orange in
+    // an edit (art/sprites/hunter/recolour.prompt.txt) before the wear edit, and after it both boots were
+    // made grey (boots.prompt.txt): the poses kept drawing two grey boots, and one orange one flickered.
     design:
       'The character: a stocky armored bounty hunter in a power suit welded together from scrapyard junk, no face showing. ' +
-      'Its front arm is a long grey drainpipe (#8e9298) with a bent elbow joint, held straight out in front as an arm cannon, its open round end dark inside. ' +
-      'Its shoulder pads are two huge round fishing buoys, red (#c9473f) with one white band (#f4efe6) round each, the two together wider than the whole body: the widest part of the figure. ' +
-      'A round orange helmet (#d9661f) with a wide green bottle-glass visor (#2f7a3c) across its front. ' +
-      'The torso is a cut-down orange water heater tank, a short round can, with two small green lights (#7fd06a) on its chest; a narrow dark-grey waist (#4a4a52); short chunky orange legs and big chunky orange boots.',
-    worn: 'the helmet has a big dent knocked into the top of its crown; the drainpipe cannon is bent crooked at the elbow and wrapped there in a wide band of grey tape; the back buoy has a big chip knocked out of its rim; one boot is a mismatched grey replacement, bigger than the other.',
+      'Its front arm is a long straight grey drainpipe (#8e9298), held out level to the right as an arm cannon, clear of the body, its open round end dark inside. ' +
+      'Its shoulder pads are two huge round fishing buoys, red (#c9473f) with one white band (#f4efe6) each, the widest part of the figure, ' +
+      'mounted far apart at the ends of a wide shoulder plate, low, their tops no higher than the visor. ' +
+      'Between them stands a smaller round orange helmet (#d9661f) with a wide green bottle-glass visor (#2f7a3c), its whole dome clear above the buoys. ' +
+      'The torso is a cut-down orange water heater tank, a short round can, two small green lights on its chest; a narrow dark-grey waist; short chunky orange legs and big chunky orange boots.',
+    worn: 'a wide band of grey tape is wrapped round the drainpipe cannon near its root; the water heater torso has a big dent in its side and a square riveted patch plate; one boot is a mismatched grey replacement, bigger than the other. The helmet and the buoys keep their smooth round outlines.',
   },
   engineer: {
     // The nod, each part of the read at race size: the huge wrench (the read in profile, so it leads the
