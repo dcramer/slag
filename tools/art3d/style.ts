@@ -293,7 +293,8 @@ export const BRIEFS: Record<string, Brief> = {
     // The silhouette is three shapes the plumber hasn't got (blind reads, 2026-11-03): a tall dome with a
     // short rim all round, since a wide brim or a bill on a short man read as the plumber's rival; a broad,
     // taller build; and one big open jaw up beside his shoulder, clear of the hat, the spanner gripped by its
-    // end at his hip. Carried up behind his head it read as spikes off the hat, a second jaw down by his
+    // end at his hip, and a huge square lantern jaw jutting forward (the face's read; a narrow chin under
+    // the hat was a small peach block at play size). Carried up behind his head it read as spikes off the hat, a second jaw down by his
     // boots read as a curled tail, and stubble read as a jagged mustache.
     // Fresh designs from this brief put the goggles over his eyes (the original's look), so the pick is an
     // earlier design reshaped in edits (art/sprites/engineer/design.prompt.txt).
@@ -301,7 +302,7 @@ export const BRIEFS: Record<string, Brief> = {
       'The character: a tall, broad, square-shouldered backyard handyman, not short: a wide chest, thick arms, long thick legs and big boots. ' +
       'His huge signature tool is one grey adjustable spanner (#8e8a84) with a single big open C jaw, gripped by the end of its handle in his gloved hand at his hip and slanting up past his shoulder, the jaw up beside his shoulder and clear of his hat; nothing of it below his hip. ' +
       'On his head, as a hard hat, a deep yellow mixing bowl (#e9b730) worn upside down: a tall round dome, its rolled rim a short even brim all the way round; a dark goggle strap (#3a4246) runs right round the dome as a band, two round light-blue swimming-goggle lenses (#5fb0c8) on its front. ' +
-      'A smooth, clean-shaven square jaw, peach skin (#efc9a4), two small black eyes, no stubble, no mustache. A red work shirt (#b8433c), khaki trousers (#8c7a58), a brown belt (#6b4a35), tan leather work gloves (#a8794a), chunky brown boots.',
+      'A huge clean-shaven square lantern jaw, wider than his neck and as wide as the dome, jutting forward past his face, flat along the bottom with hard corners; peach skin (#efc9a4), two small black eyes, no stubble, no mustache. A red work shirt (#b8433c), khaki trousers (#8c7a58), a brown belt (#6b4a35), tan leather work gloves (#a8794a), chunky brown boots.',
     worn: "a big dent is knocked into the side of the yellow dome; a chip is broken out of the bowl's rim at the back; the spanner's handle is snapped in the middle and bound with a big wad of grey tape; one trouser knee is torn open in a big ragged hole.",
   },
   goose: {

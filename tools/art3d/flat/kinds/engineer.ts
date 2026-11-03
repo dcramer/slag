@@ -1,7 +1,7 @@
 import type { FlatKind } from '../kinds';
 
 export const kind: FlatKind = {
-  body: 176,
+  body: 177,
   map: {
     roles: ['skin', 'shirt', 'khaki', 'brown', 'tan', 'grey', 'yellow', 'strap', 'lens', 'white', 'dark'],
     families: [
@@ -101,38 +101,38 @@ export const kind: FlatKind = {
   // hat, and nothing raised over the hat: a fist or the spanner held up read as spikes off it (blind read).
   poses: {
     idle2: {
-      pose: 'standing with his chest puffed out and the bare hand on his hip, the huge one-jawed spanner held as in the reference, gripped by its end in the gloved hand at his hip and slanting up past his shoulder, its big open jaw up beside his shoulder and clear of his hat, nothing of it below his hip, looking pleased with himself.',
+      pose: 'standing with his chest puffed out and the bare hand on his hip, the huge one-jawed spanner held as in the reference, gripped by its end in the gloved hand at his hip and slanting up past his shoulder, its big open jaw up beside his shoulder and clear of his hat, nothing of it below his hip, looking pleased with himself. His huge square lantern jaw, flat-bottomed with hard corners, juts out as in the reference.',
     },
     'walk-1': {
-      pose: 'trudging to the right with a heavy step, mid-step: the near boot forward, the far boot back, the huge one-jawed spanner held as in the reference, gripped by its end in the gloved hand at his hip and slanting up past his shoulder, its big open jaw up beside his shoulder and clear of his hat, nothing of it below his hip.',
+      pose: 'trudging to the right with a heavy step, mid-step: the near boot forward, the far boot back, the huge one-jawed spanner held as in the reference, gripped by its end in the gloved hand at his hip and slanting up past his shoulder, its big open jaw up beside his shoulder and clear of his hat, nothing of it below his hip. His huge square lantern jaw, flat-bottomed with hard corners, juts out as in the reference.',
     },
     'walk-2': {
-      pose: 'trudging to the right, the legs passing under the body: one boot planted flat, the other lifted a little, the huge one-jawed spanner held as in the reference, gripped by its end in the gloved hand at his hip and slanting up past his shoulder, its big open jaw up beside his shoulder and clear of his hat, nothing of it below his hip.',
+      pose: 'trudging to the right, the legs passing under the body: one boot planted flat, the other lifted a little, the huge one-jawed spanner held as in the reference, gripped by its end in the gloved hand at his hip and slanting up past his shoulder, its big open jaw up beside his shoulder and clear of his hat, nothing of it below his hip. His huge square lantern jaw, flat-bottomed with hard corners, juts out as in the reference.',
     },
     'run-1': {
-      pose: 'running hard to the right, leaning forward, one knee high and the other leg pushing off, the bare fist pumping low, the huge one-jawed spanner held as in the reference, gripped by its end in the gloved hand at his hip and slanting up past his shoulder, its big open jaw up beside his shoulder and clear of his hat, nothing of it below his hip.',
+      pose: 'running hard to the right, leaning forward, one knee high and the other leg pushing off, the bare fist pumping low, the huge one-jawed spanner held as in the reference, gripped by its end in the gloved hand at his hip and slanting up past his shoulder, its big open jaw up beside his shoulder and clear of his hat, nothing of it below his hip. His huge square lantern jaw, flat-bottomed with hard corners, juts out as in the reference.',
     },
     'run-2': {
-      pose: 'running hard to the right, leaning forward, both boots off the ground with the legs gathered under him, the bare fist pumping low, the huge one-jawed spanner held as in the reference, gripped by its end in the gloved hand at his hip and slanting up past his shoulder, its big open jaw up beside his shoulder and clear of his hat, nothing of it below his hip.',
+      pose: 'running hard to the right, leaning forward, both boots off the ground with the legs gathered under him, the bare fist pumping low, the huge one-jawed spanner held as in the reference, gripped by its end in the gloved hand at his hip and slanting up past his shoulder, its big open jaw up beside his shoulder and clear of his hat, nothing of it below his hip. His huge square lantern jaw, flat-bottomed with hard corners, juts out as in the reference.',
     },
     'air-1': {
-      pose: 'jumping up, the knees tucked up under him, the bare fist clenched at his chest, the huge one-jawed spanner held as in the reference, gripped by its end in the gloved hand at his hip and slanting up past his shoulder, its big open jaw up beside his shoulder and clear of his hat, nothing of it below his hip; nothing raised above his hat.',
+      pose: 'jumping up, the knees tucked up under him, the bare fist clenched at his chest, the huge one-jawed spanner held as in the reference, gripped by its end in the gloved hand at his hip and slanting up past his shoulder, its big open jaw up beside his shoulder and clear of his hat, nothing of it below his hip; nothing raised above his hat. His huge square lantern jaw, flat-bottomed with hard corners, juts out as in the reference.',
     },
     'air-2': {
-      pose: 'falling, the legs reaching down, the bare arm flung out to the side, the mouth open in alarm, the huge one-jawed spanner held as in the reference, gripped by its end in the gloved hand at his hip and slanting up past his shoulder, its big open jaw up beside his shoulder and clear of his hat, nothing of it below his hip; nothing raised above his hat.',
+      pose: 'falling, the legs reaching down, the bare arm flung out to the side, the mouth open in alarm, the huge one-jawed spanner held as in the reference, gripped by its end in the gloved hand at his hip and slanting up past his shoulder, its big open jaw up beside his shoulder and clear of his hat, nothing of it below his hip; nothing raised above his hat. His huge square lantern jaw, flat-bottomed with hard corners, juts out as in the reference.',
     },
     wall: {
-      pose: 'seen from his side, he is sliding down a tall wall on the right edge of the picture (do not draw the wall), the bare hand flat against it and both boots braced on it, the huge one-jawed spanner gripped by its end in the gloved hand and slanting up behind him, its big open jaw clear of his hat, his head turned to look back at us.',
+      pose: 'seen from his side, he is sliding down a tall wall on the right edge of the picture (do not draw the wall), the bare hand flat against it and both boots braced on it, the huge one-jawed spanner gripped by its end in the gloved hand and slanting up behind him, its big open jaw clear of his hat, his head turned to look back at us. His huge square lantern jaw, flat-bottomed with hard corners, juts out as in the reference.',
       far: true,
     },
     cheer: {
-      pose: 'cheering, the bare fist punched up beside his hat, a big grin, up on his toes, the huge one-jawed spanner held as in the reference, gripped by its end in the gloved hand at his hip and slanting up past his shoulder, its big open jaw up beside his shoulder and clear of his hat, nothing of it below his hip.',
+      pose: 'cheering, the bare fist punched up beside his hat, a big grin, up on his toes, the huge one-jawed spanner held as in the reference, gripped by its end in the gloved hand at his hip and slanting up past his shoulder, its big open jaw up beside his shoulder and clear of his hat, nothing of it below his hip. His huge square lantern jaw, flat-bottomed with hard corners, juts out as in the reference.',
     },
     cheer2: {
-      pose: 'leaning back laughing, turned a little toward us, the bare hand on his belly, the huge one-jawed spanner held as in the reference, gripped by its end in the gloved hand at his hip and slanting up past his shoulder, its big open jaw up beside his shoulder and clear of his hat, nothing of it below his hip.',
+      pose: 'leaning back laughing, turned a little toward us, the bare hand on his belly, the huge one-jawed spanner held as in the reference, gripped by its end in the gloved hand at his hip and slanting up past his shoulder, its big open jaw up beside his shoulder and clear of his hat, nothing of it below his hip. His huge square lantern jaw, flat-bottomed with hard corners, juts out as in the reference.',
     },
     death: {
-      pose: 'he has been knocked out and lies flat on his back on the floor, the whole body horizontal across the picture, head on the left and boots on the right, arms and legs splayed limp, eyes shut, the round hard hat still on his head, the one huge one-jawed spanner dropped beside him. One figure only, seen from the side.',
+      pose: 'he has been knocked out and lies flat on his back on the floor, the whole body horizontal across the picture, head on the left and boots on the right, arms and legs splayed limp, eyes shut, the round hard hat still on his head, the one huge one-jawed spanner dropped beside him. One figure only, seen from the side. His huge square lantern jaw, flat-bottomed with hard corners, juts out as in the reference.',
       far: true,
     },
   },

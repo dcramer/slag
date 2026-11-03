@@ -19,3 +19,8 @@ The same character as in the reference image: the same face, colours, clothes, w
 
 6. One jaw, broader (3 drawn, the second picked: the handle stops just past his fist):
 The same character exactly as in the reference image: the same face, hat, goggles, colours, clothes, wear, line, pose and flat white background. Change only this, and make each change big and obvious: the spanner has only one jaw, the big open C jaw up beside his shoulder; its other end is a plain rounded handle end that stops just below his gloved fist, so nothing of the spanner reaches down past his hip; and he is broader, his shoulders and chest much wider. Nothing else changes, no dirt, no texture.
+
+7. Lantern jaw (3 drawn, the second picked: the widest, flattest-bottomed jaw):
+The same character exactly as in the reference image: the same pose, hat, goggles, spanner, colours, clothes, wear, line and flat white background. Change only his jaw, and make it big and obvious: a huge square lantern jaw, much wider than his neck and as wide as the hat's dome, jutting forward past his face, flat along the bottom with hard square corners, clean-shaven, no stubble, no beard, no chin dimple. Nothing else changes, no dirt, no texture.
+
+The picked design and every pose but flat/wall.png and flat/death.png are stored mirrored: the image model drew them turned to the left (the face and the stride), and he runs right.
