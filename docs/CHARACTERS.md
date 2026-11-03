@@ -127,8 +127,8 @@ What came out of it:
 - **Palette alts:** the shoes and their soles and toecaps as one colourway: red on steel `#d8382f`/`#9a9894`, racing green on cream `#2f8a57`/`#ebe4d2`, or cream on red `#ebe5d6`/`#c8402f`. The strap stays hazard yellow.
 - **Idles and cheers:** the idle from the model; arms folded, tapping one toe. The model's cheer, and its later both-fists-up stretch.
 - **Gait range:** a bounce of up to 0.45 px and a lean of 0.01–0.06 on top of the hard forward lean he already runs with.
-- **Wear:** scuffed is grime on both toes and a scuff on the belly; scorched is soot on the back quills, the belly, a thigh and a shoe.
-- **Rig:** drawn flat (2026-11-03), from the round-2 concept as the reference (without it the image model drew the original's joined eyes): a taped quill stump, scorched tips, a torn neckerchief and a flapping sole; the jump a looping spin ball.
+- **Wear:** scuffed is a scuff on the belly; scorched is a scorch there, and soot on the quill tips in every look (two marks or a strong tone on the belly read as a rash).
+- **Rig:** drawn flat (2026-11-03), from the round-2 concept as the reference (without it the image model drew the original's joined eyes): a taped quill stump, scorched tips, a torn neckerchief and a flapping sole; the jump a looping spin ball, with no face. The irises and the neckerchief's dark stripes are roles of their own: as the ink, the face kit put its eyes on a stripe or a quill's soot, and the stripes were a chain of ink dots. The stretch was redrawn with its eyes open (shut, the kit had nothing to ride).
 - **Concept prompt:** A stubby, toy-chunky cobalt-blue hedgehog with long quills swept straight back, their tips soot-scorched; two separate green eyes under heavy brows; a peach muzzle and belly; a cocky one-sided grin with a chipped tooth; a hazard-striped neckerchief; brown fingerless leather gloves; big red work high-tops with steel toecaps and a hazard-yellow strap.
 
 ### The round dot-eater
