@@ -207,6 +207,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `open` · TODO.md → 29
 - **Rendered kinds are the only way they draw: no `?sprites=1` option; a kind without frames stays hand-drawn until produced.** "Make sprites the only way it works now, so no option at all"
   2026-11-02 · `done` · `src/render/cast/sprites/index.ts`
+- **Set-piece machines that look solid are made solid: guns on ledges, wheel and swing hubs, ladles, carts, signs, posts.** "Make them solid" (asked: make them solid, or draw them as not-ground)
+  2026-11-02 · `open` · TODO.md → 21, `pnpm shot fairplay` (`PENDING`)
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
   2026-11-02 · `done` · public/ASSETS.md
 
@@ -379,6 +381,16 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 15:58Z · `done` · DESIGN.md → Levels (Glacier)
 - **Adding a theme moves no existing seed to another theme.**
   2026-11-02 · git `ced9fff` · `done` · DESIGN.md → Levels, AGENTS.md → Theme
+- **The music must be good, not merely present.** "the music is awful. lets make that no longer true."
+  2026-11-02 · `done` · DESIGN.md → Controls and UI (Music), `src/audio/music/`
+- **Acoustic instruments in the music are CC0 recordings, chosen over modeling them in code.** "the music doesnt really fit with the level themes" / "CC0 samples"
+  2026-11-02 · `done` · DESIGN.md → Controls and UI (Music), public/ASSETS.md → Music samples, `tools/samples.ts`
+  Changed: every instrument was a synth patch, under the "prefer procedural" asset rule.
+- **The music is darker, the title tune most of all.** "ideally the music would be a bit darker, especially on the title"
+  2026-11-02 · `done` · DESIGN.md → Controls and UI (Music), `TITLE_STYLE` in `src/audio/music/styles.ts`
+  Changed: a bright major title tune and major modes on farm, harbor, jungle, glacier and space.
+- **Each level's music fits its theme, with variety between levels of the same theme.** "music should fit thematically per level and maybe have some variety idk?"
+  2026-11-02 · `done` · DESIGN.md → Controls and UI (Music), `arrangements` in `src/audio/music/styles.ts`
 - **Glacier and space feel hasn't been played by hand.**
   2026-11-02 · `open` · TODO.md → 22
 
@@ -473,6 +485,9 @@ Every game design decision, preference and direction the owner has given, groupe
 
 ## UI, menus and copy
 
+- **The menus have music too, from the same audio as the game.** "we still have no music on like the title screen and stuff which is a little odd"
+  2026-11-02 · `done` · DESIGN.md → Controls and UI (Music), `src/audio/page.ts`
+
 - **The UI is a molten foundry that doubles as a toy box: cast-iron plates, hazard tape, molten metal.**
   2026-11-02 · git `9af0a03` · `done` · ART.md → Identity
 - **The main menu is the quality bar, full window height included; everything else rises to it.** "i love the way the home screen looks btw, and the fact that its full height/etc. so hoping we can make the game just as good"
@@ -504,6 +519,14 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · git `cf6c496`, `0464596` · `done` · `src/codex/`
 - **The codex talks about maps too: every theme, its landmarks and its own hazards, pictured by the game's renderer.** "the codex needs to talk about maps"
   2026-11-02 · `done` · DESIGN.md → Discovery, `src/codex/maps.ts`, TODO.md → 28
+- **The main menu ends with About, after Settings: who made it, its inspiration, credits, the license and a link to the source on GitHub.** "Need an About thing after settings, which includes license, inspiration, github link etc"
+  2026-11-02 · `done` · `src/ui/screens/about.ts`, `/about`
+- **About credits Ultimate Chicken Horse by name for the core concept, the one place a real game is named; every credit says what it is (display font, name filter), not just its name. No flavor prose on the page.** "those credits are weak, credit ultimate chicken horse for core concept" / "idk what lilita one etc even are..." / "i dont want ai slop for the description there either"
+  2026-11-02 · `done` · DESIGN.md → Parody, `src/ui/screens/markup.ts`
+- **About says first that the game is entirely AI-generated: David Cramer directed; Claude (Anthropic) wrote the code, art and sound; Tripo made the character models.** "make sure its clear this was entirely AI generated"
+  2026-11-02 · `done` · `src/ui/screens/markup.ts`
+- **On About, David Cramer's role reads "Head of Slop".** "for 'Direction' have it say 'Head of Slop' and be me"
+  2026-11-02 · `done` · `src/ui/screens/markup.ts`
 - **The game has a favicon, app icons, Open Graph and oEmbed previews.** "Also need a favicon, oembed metadata and image, and apple icon etc"
   2026-11-02 07:06Z · `done`; checking them on a deploy is `open` · `pnpm brand`, TODO.md → 23
 

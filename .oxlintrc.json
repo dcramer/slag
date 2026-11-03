@@ -129,7 +129,16 @@
           { "object": "Math", "property": "log10", "message": "Math.log10 differs across browsers and desyncs lockstep. src/core/dmath.ts has no port yet: add one there (fdlibm, exact operations only), or express it with dsin/dcos/datan2/dexp/dlog." },
           { "object": "Math", "property": "cbrt", "message": "Math.cbrt differs across browsers and desyncs lockstep. src/core/dmath.ts has no port yet: add one there (fdlibm, exact operations only), or express it with dsin/dcos/datan2/dexp/dlog." },
           { "object": "Date", "property": "now", "message": "Deterministic code: no wall clock. Count sim frames instead." },
-          { "object": "performance", "property": "now", "message": "Deterministic code: no wall clock. Count sim frames instead." }
+          { "object": "performance", "property": "now", "message": "Deterministic code: no wall clock. Count sim frames instead." },
+          { "property": "localeCompare", "message": "localeCompare compares and formats by the browser's locale and ICU data, which differ between engines, versions and players, so peers would disagree. Compare with < and >, or format with plain string ops." },
+          { "property": "toLocaleString", "message": "toLocaleString compares and formats by the browser's locale and ICU data, which differ between engines, versions and players, so peers would disagree. Compare with < and >, or format with plain string ops." },
+          { "property": "toLocaleUpperCase", "message": "toLocaleUpperCase compares and formats by the browser's locale and ICU data, which differ between engines, versions and players, so peers would disagree. Compare with < and >, or format with plain string ops." },
+          { "property": "toLocaleLowerCase", "message": "toLocaleLowerCase compares and formats by the browser's locale and ICU data, which differ between engines, versions and players, so peers would disagree. Compare with < and >, or format with plain string ops." },
+          { "object": "Intl", "property": "Collator", "message": "Intl.Collator compares and formats by the browser's locale and ICU data, which differ between engines, versions and players, so peers would disagree. Compare with < and >, or format with plain string ops." },
+          { "object": "Intl", "property": "NumberFormat", "message": "Intl.NumberFormat compares and formats by the browser's locale and ICU data, which differ between engines, versions and players, so peers would disagree. Compare with < and >, or format with plain string ops." },
+          { "object": "Intl", "property": "DateTimeFormat", "message": "Intl.DateTimeFormat compares and formats by the browser's locale and ICU data, which differ between engines, versions and players, so peers would disagree. Compare with < and >, or format with plain string ops." },
+          { "object": "Intl", "property": "Segmenter", "message": "Intl.Segmenter compares and formats by the browser's locale and ICU data, which differ between engines, versions and players, so peers would disagree. Compare with < and >, or format with plain string ops." },
+          { "object": "Intl", "property": "PluralRules", "message": "Intl.PluralRules compares and formats by the browser's locale and ICU data, which differ between engines, versions and players, so peers would disagree. Compare with < and >, or format with plain string ops." }
         ]
       }
     },

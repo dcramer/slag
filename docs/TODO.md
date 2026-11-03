@@ -36,6 +36,8 @@ Online play is on `main`, verified by real-browser checks in `pnpm online-test` 
 ## 6. Real phones
 Phone support (follow camera, pinch, scaled HUD, settings sheet) is on `main` but has only run in Chromium emulation. Try iOS Safari and a real Android phone: `:has()` in the sheet CSS, safe-area insets, pinch feel, and frame rate.
 
+
+**Regression to check first:** `pnpm shot mobile --device "iPhone SE landscape"` fails its two-runner camera check ("a live runner left the screen", `[true,false]`, the same on two runs) since the perch physics and pass-through landed (`src/sim/collide.ts`, `src/sim/physics.ts`). It passed before. The iPhone 13 run and the lobby part pass.
 ## 8. Render polish
 - **Impact words** can hide a hazard for most of a second; `?lettering=0` turns them off. Decide whether they stay. Big plain walls are a taste call. Try a real phone.
 
@@ -55,6 +57,7 @@ Size tiers for parts are a mapping of the old rolled ranges, so check them too; 
 - The parts still under the bar are ranked in `docs/ART-QA.md` → "Next in the queue".
 
 - **Round hulls:** Ring Station and the Planetoid (space) draw stair-stepped hull edges, because their collision is whole tiles. Following the curve needs sub-tile fairing solids in each step notch (a few hundred rects per landmark), which turns the stairs into walkable slopes, so it needs its own proof, `noFreeRide` and performance work.
+- **Art that looks solid but isn't** (`pnpm shot fairplay`; the barn is fixed). Two lists wait: `PENDING_SHELLS`, 18 landmark backdrop shells that match their own walls through gaps (boiler house, starship, lavafall organ, gatehouse and more), each needing its own art pass; and `PENDING`, set-piece machines drawn in front with no collision (guns on ledges, rotor hubs, swinger hubs, ladles, carts, signs, posts, water before it floods), which the owner wants made solid ("Make them solid"): each gets a body solid matching what it draws, kept out of the solution's way and checked by `noFreeRide`, the static proof and conformance.
 ## 15. Parody names: decide on sound-alikes
 Names now parody genre tropes (`docs/PARODY.md`). A few are deliberate sound-alikes of trademarked names: Chain Chump, Thwunk, the -omb suffix, Master Noodle, Yolo Blocks. Decide whether to keep them.
 

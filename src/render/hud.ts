@@ -243,6 +243,11 @@ export class Hud {
     return this.pointer !== null && this.pointer.x >= r.x && this.pointer.x < r.x + r.w && this.pointer.y >= r.y && this.pointer.y < r.y + r.h;
   }
 
+  /** The smallest tap target in the logical px of the group being drawn (0 off phones). */
+  get tap(): number {
+    return this.tapMin / this.group.s;
+  }
+
   /** Draw at view = o + logical × s on both layers, until the returned function is called. */
   begin(s: number, ox: number, oy: number): () => void {
     if (s === 1 && !ox && !oy) return () => {};

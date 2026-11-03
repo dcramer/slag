@@ -43,17 +43,22 @@
  *                                           (themes with none: a test landmark per skin and shell; --concept filters those by skin or shell)
  *   pnpm shot artqa --theme T | --themes all [--only landmarks,hazards,decor] → every landmark, hazard and decor piece beside
  *                                           the theme's terrain and three parts, at play scale and 2× (the World art check)
+ *   pnpm shot fairplay [--theme T] [--concept id|plain] [--count N] [--decor] → every landmark and set piece raced and read back:
+ *                                           solid-looking art on the play layer past the hitbox by more than EDGE_DRIFT fails (docs/ART.md, Fair play)
  *   pnpm shot themeswap [--themes volcano,jungle] → a level of every theme in turn on one page, each checked against a fresh page
  *                                           (`own` profiles, then one `shared` profile): render state one level leaves the next
  *   pnpm shot flood [--look lava|toxic|water] [--low 2] [--high 5] → a tide let into the level, at warn, rise and high water
  *   pnpm shot join [--only full]           → the join-and-watch storyboard: connecting, Join or Watch, observing, AFK, failures (desktop + phone)
  *   pnpm shot home                         → main menu (desktop + 390×844 mobile)
  *   pnpm shot lobbies                      → the lobby list (stubbed rooms): Join, Watch, empty; phones, failing on a tap target under 44 px
+ *   pnpm shot about                        → About, from the main menu by keys; phones, failing on a tap target under 44 px
  *   pnpm shot rules                        → the match rules card (fails if it doesn't fit the window)
  *   pnpm shot settings                     → every settings tab over the lobby, driven by keys and a fake pad,
  *                                           then over the main menu on a phone (portrait and landscape), by tap
  *   pnpm shot mobile [--device "Pixel 7 landscape"]  → phone emulation driven by real
- *                                           multi-touch: lobby/join, pick, place, race, portrait
+ *                                           multi-touch: lobby/join, pick, place, race, portrait, then the lobby
+ *                                           at 1–8 players on its side and upright, offline and hosting
+ *                                           (`--only lobby`: just that)
  *
  * Options: --out shots  --size 1280x720 (window)  --world classic|wide|tall (level size)  --players 2  --frames N (sim frames to advance)
  *          --theme farm (force a theme; `levels --themes all` renders one level per theme)
@@ -72,6 +77,7 @@
 import { shots as artqa } from './shot/artqa';
 import { shots as cast } from './shot/cast';
 import { shots as decor } from './shot/decor';
+import { shots as fairplay } from './shot/fairplay';
 import { browser, errors, scenario, server } from './shot/ctx';
 import { shots as flood } from './shot/flood';
 import { shots as hazards } from './shot/hazards';
@@ -104,6 +110,7 @@ const SCENARIOS = {
   ...sprites,
   ...join,
   ...themeswap,
+  ...fairplay,
 };
 
 try {

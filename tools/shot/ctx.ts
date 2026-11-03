@@ -4,7 +4,7 @@
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { argReader, launchBrowser, startServer, watchdog } from '../lib/server';
+import { argReader, type Engine, engineList, launchEngine, startServer, watchdog } from '../lib/server';
 
 export const argv = process.argv.slice(2);
 export const scenario = argv[0] && !argv[0].startsWith('--') ? argv.shift()! : 'race';
@@ -31,8 +31,10 @@ mkdirSync(out, { recursive: true });
 export const server = await startServer();
 export const base = server.base;
 export const pet = watchdog();
-// `pnpm exec playwright install chromium` if this can't find a browser.
-export const browser = await launchBrowser();
+/** `--engine webkit` (or firefox): the same scenarios in another engine. WebKit with an iPhone profile stands in for iOS Safari. */
+export const engine: Engine = engineList(opt('engine', 'chromium'))[0];
+// `pnpm exec playwright install chromium` (or the engine named) if this can't find a browser.
+export const browser = await launchEngine(engine);
 export const page = await browser.newPage({ viewport: { width: W, height: H } });
 export const errors: string[] = [];
 page.on('pageerror', (e: Error) => errors.push(String(e)));
@@ -55,6 +57,8 @@ export async function open(q: string) {
         // Peers named after the lobby's players as they join (read live), so the cards show the host tag and pings.
         // (No named helpers in here: the bundler wraps them in a __name the page doesn't have.)
         const match = (window as any).slagDebug.match;
+        // Only the first keyboard plays on this screen; the rest are the peers. (An arrow in an array: see above.)
+        hud.devices = { ...hud.devices, isLocal: [(d: string) => d === 'kb1'][0] };
         const pings = [undefined, 42, 135, 230];
         hud.net = {
           status: 'Hosting · 3 Connected',

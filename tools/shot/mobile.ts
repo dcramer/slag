@@ -1,6 +1,6 @@
 import { devices } from 'playwright';
 import { touchLayout } from '../../src/input/touch';
-import { base, browser, errors, opt, out, pet, seed, tq, type Scenarios } from './ctx';
+import { base, browser, engine, errors, opt, out, pet, seed, tq, type Scenarios } from './ctx';
 
 /**
  * Phone emulation (touch + isMobile + DPR) driven through CDP multi-touch, with the
@@ -15,8 +15,8 @@ async function mobile(deviceName: string) {
   const mp = await ctx.newPage();
   mp.on('pageerror', (e: Error) => errors.push(String(e)));
   mp.on('console', (m: { type(): string; text(): string }) => m.type() === 'error' && errors.push(m.text()));
-  const cdp = await ctx.newCDPSession(mp);
-  const tag = deviceName.toLowerCase().replaceAll(/\W+/g, '-');
+  const cdp = engine === 'chromium' ? await ctx.newCDPSession(mp) : null;
+  const tag = `${engine === 'chromium' ? '' : `${engine}-`}${deviceName.toLowerCase().replaceAll(/\W+/g, '-')}`;
   const shotM = async (name: string) => {
     const p = `${out}/mobile-${tag}-${name}.png`;
     await mp.screenshot({ path: p });
@@ -24,8 +24,33 @@ async function mobile(deviceName: string) {
     pet();
   };
   type Pt = { x: number; y: number; id: number };
-  const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', touchPoints: Pt[]) =>
-    cdp.send('Input.dispatchTouchEvent', { type, touchPoints: touchPoints.map((t) => ({ ...t, radiusX: 8, radiusY: 8, force: 1 })) });
+  /** Fingers down now, for engines without CDP: their pointer events are made in the page from the change. */
+  const fingers = new Map<number, Pt>();
+  const touch = async (type: 'touchStart' | 'touchMove' | 'touchEnd', touchPoints: Pt[]) => {
+    if (cdp) {
+      await cdp.send('Input.dispatchTouchEvent', { type, touchPoints: touchPoints.map((t) => ({ ...t, radiusX: 8, radiusY: 8, force: 1 })) });
+      return;
+    }
+    // Only Chromium takes raw multi-touch from outside. Elsewhere the game's own input path (touch pointer events on the
+    // window, src/input/touch.ts) is fed the same fingers: what changed since the last call goes down, moves or lifts.
+    const events: { type: string; id: number; x: number; y: number }[] = [];
+    const now = new Map(touchPoints.map((t) => [t.id, t]));
+    for (const t of touchPoints) {
+      const was = fingers.get(t.id);
+      if (!was) events.push({ type: 'pointerdown', ...t });
+      else if (was.x !== t.x || was.y !== t.y) events.push({ type: 'pointermove', ...t });
+    }
+    for (const [id, t] of fingers) if (!now.has(id)) events.push({ type: 'pointerup', ...t, id });
+    fingers.clear();
+    for (const [id, t] of now) fingers.set(id, t);
+    await mp.evaluate((evs) => {
+      for (const e of evs) {
+        const target = document.elementFromPoint(e.x, e.y) ?? document.body;
+        const init = { pointerId: 100 + e.id, pointerType: 'touch', isPrimary: e.id === 1, clientX: e.x, clientY: e.y, bubbles: true, cancelable: true };
+        target.dispatchEvent(new PointerEvent(e.type, { ...init, buttons: e.type === 'pointerup' ? 0 : 1 }));
+      }
+    }, events);
+  };
   const tap = async (x: number, y: number) => {
     await touch('touchStart', [{ x, y, id: 1 }]);
     await mp.waitForTimeout(60);
@@ -75,6 +100,99 @@ async function mobile(deviceName: string) {
     });
   // Same geometry the game uses (emulation reports no safe-area insets).
   const layout = async () => touchLayout(...(await mp.evaluate(() => [innerWidth, innerHeight] as [number, number])));
+  /** Two tap targets that overlap make a thumb's tap a coin toss between them. */
+  const overlaps = async (where: string) => {
+    const all = await hudButtons();
+    const found: string[] = [];
+    for (let i = 0; i < all.length; i++)
+      for (let j = i + 1; j < all.length; j++) {
+        const a = all[i];
+        const b = all[j];
+        const ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+        const oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+        if (ox > 0.5 && oy > 0.5) found.push(`${where}: ${a.action} and ${b.action} tap targets overlap by ${ox.toFixed(1)}×${oy.toFixed(1)} CSS px`);
+      }
+    return found;
+  };
+
+  /**
+   * The lobby at every player count, on its side and upright: from five players the bays go to two rows of small
+   * cards, and each card's name, swatch, status and buttons must still fit and stay thumb-sized.
+   */
+  const crowdedLobby = async () => {
+    const land = desc.viewport;
+    const upright = { width: land.height, height: land.width };
+    const [side, up] = land.width > land.height ? [land, upright] : [upright, land];
+    await mp.setViewportSize(side);
+    await mp.goto(`${base}r/SHOTL?seed=${seed}${tq}&net=off`);
+    await mp.waitForFunction(() => 'slagDebug' in window, null, { timeout: 30_000 });
+    await mp.evaluate(() => document.fonts.ready);
+    await mp.waitForTimeout(800);
+    await tapHud('join');
+    await mp.waitForTimeout(400);
+    // The name prompt only comes the first time this browser sits down.
+    if (await mp.isVisible('.slag-ov .slag-btn:not(.primary)')) {
+      await mp.tap('.slag-ov .slag-btn:not(.primary)');
+      await mp.waitForTimeout(300);
+    }
+    const bad: string[] = [];
+    for (let n = 1; n <= 8; n++) {
+      if (n > 1) await mp.evaluate((dev) => (window as any).slagDebug.match.join(dev), `pad${n - 2}`);
+      // Someone ready shows the other status: the second seat readies up.
+      if (n === 2) await mp.evaluate(() => ((window as any).slagDebug.match.players[1].ready = true));
+      for (const [o, vp] of [
+        ['side', side],
+        ['upright', up],
+      ] as const) {
+        await mp.setViewportSize(vp);
+        await mp.waitForTimeout(250);
+        if (o === 'upright' && (await mp.isVisible('.slag-rotate button'))) {
+          await mp.tap('.slag-rotate button');
+          await mp.waitForTimeout(250);
+        }
+        if ([1, 4, 5, 8].includes(n)) await shotM(`lobby-${n}p-${o}`);
+        await checkTargets(`lobby ${n}p ${o}`);
+        bad.push(...(await overlaps(`lobby ${n}p ${o}`)));
+        // Hosting online, staged on a paused frame: the room panel takes height, our card gains Watch, everyone else's a Kick.
+        await mp.evaluate(() => {
+          const d = (window as any).slagDebug;
+          d.pause(true);
+          const m = d.match;
+          const hud = d.renderer.hud;
+          // Only our own seat plays on this screen. (An arrow in an array: the bundler names one in a property with a __name the page lacks.)
+          hud.shotDevices ??= hud.devices;
+          hud.devices = { ...hud.shotDevices, isLocal: [(dev: string) => dev === 'touch'][0] };
+          hud.net = {
+            status: `Hosting · ${m.players.length + 1} Connected`,
+            seat: 'seated',
+            space: 8 - m.players.length,
+            inviteUrl: 'x',
+            hostSlot: 0,
+            kickable: m.players.slice(1).map((p: any) => p.slot),
+            watchers: [{ peer: 'w0', name: 'Gawker', afk: false, self: false, kickable: true }],
+            peers: m.players.map((p: any, i: number) => ({ name: p.character.name, isHost: i === 0, local: i === 0, pingMs: i ? 30 + i * 25 : undefined })),
+          };
+          d.render();
+        });
+        if ([1, 4, 5, 8].includes(n)) await shotM(`lobby-${n}p-${o}-online`);
+        await checkTargets(`lobby ${n}p ${o} online`);
+        bad.push(...(await overlaps(`lobby ${n}p ${o} online`)));
+        await mp.evaluate(() => {
+          const d = (window as any).slagDebug;
+          d.renderer.hud.devices = d.renderer.hud.shotDevices;
+          d.pause(false);
+        });
+      }
+    }
+    await mp.setViewportSize(land);
+    if (bad.length) throw new Error(bad.join('\n'));
+  };
+
+  if (opt('only') === 'lobby') {
+    await crowdedLobby();
+    await ctx.close();
+    return;
+  }
 
   await mp.goto(`${base}r/SHOTS?seed=${seed}${tq}&net=off`);
   await mp.waitForFunction(() => 'slagDebug' in window, null, { timeout: 30_000 });
@@ -95,6 +213,15 @@ async function mobile(deviceName: string) {
     ),
   );
   console.log(`settings: smallest button ${smallest.toFixed(1)} CSS px`);
+  // The sheet is full-bleed through `:has()` (iOS Safari 15.4+), and pads for the notch with env(): both must apply.
+  const sheet = await mp.evaluate(() => {
+    const ov = getComputedStyle(document.querySelector('.slag-ov')!);
+    const card = getComputedStyle(document.querySelector('.slag-sheet')!);
+    return { has: CSS.supports('selector(:has(*))'), ovPad: ov.paddingTop, sheetPadLeft: card.paddingLeft };
+  });
+  console.log(`settings sheet: ${JSON.stringify(sheet)}`);
+  if (!sheet.has || sheet.ovPad !== '0px' || sheet.sheetPadLeft !== '16px')
+    throw new Error(`the settings sheet's :has() or safe-area padding didn't apply: ${JSON.stringify(sheet)}`);
   await mp.tap('.slag-ov .slag-actions .primary');
   await mp.waitForTimeout(200);
   // Join by tapping the first open slot, then dismiss the name prompt.
@@ -294,6 +421,7 @@ async function mobile(deviceName: string) {
   await shotM('race-two-players');
   console.log('two players on screen', JSON.stringify(both), JSON.stringify(await pose()));
   if (both.includes(false)) throw new Error('a live runner left the screen');
+  await crowdedLobby();
   await ctx.close();
 }
 

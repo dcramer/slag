@@ -3,7 +3,7 @@ import { Match } from '../src/game/match';
 import { DEFAULT_RULES, MATCH_LENGTHS } from '../src/game/rules';
 import { sanitizeRules } from '../src/net/actions';
 import { Predictor } from '../src/net/predict';
-import { fromWire, hashMatch, restoreMatch, snapshotMatch, toWire } from '../src/net/snapshot';
+import { fromWire, hashMatch, hashSnap, restoreMatch, snapshotMatch, toWire } from '../src/net/snapshot';
 import { giveItem, type ItemKind, ITEMS, spawnItem } from '../src/sim/items';
 import { RunWorld } from '../src/sim/run';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
@@ -101,6 +101,16 @@ describe('match snapshots', () => {
     expect(back.c).toBe(Infinity);
     expect(back.d.get(1)!.e).toBe(-Infinity);
     expect([...back.f]).toEqual([1, 2, 3, 250]);
+  });
+
+  it('hashes every NaN alike: its bits are up to the engine, and peers in sync must agree', () => {
+    const nan = (hi: number, lo: number) => new Float64Array(new Uint32Array([lo, hi]).buffer)[0];
+    const snap = (x: number) => ({ ...snapshotMatch(new Match(7)), rules: { ...DEFAULT_RULES, targetScore: x } });
+    const quiet = nan(0x7ff80000, 0);
+    const other = nan(0xfff80000, 1); // negative, with a payload: what x86 makes of 0/0, plus junk
+    expect(Number.isNaN(other)).toBe(true);
+    expect(hashSnap(snap(quiet))).toBe(hashSnap(snap(other)));
+    expect(hashSnap(snap(quiet))).not.toBe(hashSnap(snap(0)));
   });
 
   it('snapshot → restore → step N matches stepping the original N frames, in every phase', () => {

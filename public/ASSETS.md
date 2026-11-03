@@ -1,7 +1,7 @@
 # Third-party assets
 
-No third-party art or sound. Everything slag draws is made in code: terrain, parts, characters, backdrops and sound, with
-one exception behind a flag, the rendered kinds below. Record each asset here with its source URL and license (see
+No third-party art. Everything slag draws is made in code: terrain, parts, characters, backdrops and sound effects, with
+one exception behind a flag, the rendered kinds below. The music's acoustic instruments are recordings (Music samples, below). Record each asset here with its source URL and license (see
 "Conventions" in `AGENTS.md`).
 
 ## Fonts
@@ -53,3 +53,17 @@ game loads none of it.
 | `src/render/cast/sprites/<kind>/frames.ts` | Traced by `tools/art3d` from `model.glb` | this repository | ours |
 
 Three.js (MIT, https://github.com/mrdoob/three.js) renders them; it is a devDependency of the tool and is not in the game.
+
+## Music samples
+
+The music's recorded instruments in `public/samples/`, built by `pnpm samples` (`tools/samples.ts`, which lists every source file): a few notes per instrument, trimmed, peak-normalized and encoded as mono MP3. Synth parts stay synthesized, and every instrument falls back to its synth patch until its samples load.
+
+| Library | Sets | Source | License |
+|---|---|---|---|
+| Versilian Community Sample Library (Versilian Studios), commit `c1ea7bc` | harmonica (harmonica), recorder (tin whistle), altrecorder (recorder), ocarina (ocarina), harpsichord (harpsichord), organ (pipe organ), organpedal (organ pedals), strumstick (banjo (no CC0 banjo exists; the strumstick is a twangy fretted dulcimer)), folkharp (lute and harp), marimba (marimba), kalimba (kalimba), glock (celesta and music box), vibes (bells), chimes (tubular bells), fmpiano (electric piano), sax (tenor saxophone), framedrum (bodhrán), conga (conga), bongo (bongo), tambourine (tambourine), anvil (anvil), shaker (shaker), clap (claps), bassdrum (bass drum and taiko), snare (snare), sidestick (rim), hihat (hi-hat), tom (tom), brakedrum (pickaxe clank), slitdrum (talking drum), sleigh (sleigh bells) | https://github.com/sgossner/VCSL | CC0 1.0 |
+| Versilian Studios Chamber Orchestra 2, Community Edition, commit `4403009` | violin (fiddle), contrabass (upright and plucked bass), cello (low strings), horn (brass), tuba (tuba), flute (flute) | https://github.com/sgossner/VSCO-2-CE | CC0 1.0 |
+| FreePats Button Accordion HN, commit `d70d164` | accordion (accordion) | https://github.com/freepats/button-accordion-HN | CC0 1.0 |
+| FreePats Ukulele, commit `86d345f` | ukulele (strummed guitar) | https://github.com/freepats/ukulele1 | CC0 1.0 |
+| FreePats Electric Guitar FSBS (clean), commit `192cf0d` | eguitar (twangy electric guitar) | https://github.com/freepats/electric-guitar-FSBS-clean | CC0 1.0 |
+| FreePats Electric Guitar FSBS (distorted 1), commit `bbae17f` | dguitar (overdriven power chords) | https://github.com/freepats/electric-guitar-FSBS-dist1 | CC0 1.0 |
+| jlearman Steel Drum (sfzinstruments), commit `dc15a36` | steeldrum (steel drum) | https://github.com/sfzinstruments/jlearman.SteelDrum | The Unlicense (public domain) |

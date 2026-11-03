@@ -7,8 +7,11 @@ import { type Cue, type CueEnv, cuesForEvent, GROUND_TONE, slotPitch } from './c
 import { collectEmitters, type Emitter, type PropCue, propTransients, weatherEmitters } from './emitters';
 import { AudioEngine } from './engine';
 import type { AudioSystem, UiCue } from './index';
-import { composeSong } from './music/compose';
+import { composeSong, type Song } from './music/compose';
+import { sampleSets } from './music/instruments';
 import type { MixName } from './music/player';
+import { loadSamples } from './music/sampler';
+import { TITLE_SEED } from './music/styles';
 import { listenerFor } from './spatial';
 import { defaultStorage, type KV, loadVolumes, sanitizeVolumes, saveVolumes, type Volumes } from './volumes';
 
@@ -20,6 +23,10 @@ import { defaultStorage, type KV, loadVolumes, sanitizeVolumes, saveVolumes, typ
  * Besides sim events it derives sounds from state diffs between rendered
  * frames: player actions (jump/land/wall-jump…), prop cycle edges, the
  * race countdown, timer warnings, score tallies and lobby/menu changes.
+ *
+ * One system serves the whole page (src/audio/page.ts): a lobby drives it
+ * with `update` while it is open, and every other screen hears the title
+ * tune (`menu`), which keeps itself scheduled because no game loop pumps it.
  */
 
 export interface AudioOptions {
@@ -38,6 +45,9 @@ function browserContext(): BaseAudioContext | null {
     return null;
   }
 }
+
+/** Seconds a new song waits for its samples before starting on synth patches. */
+const SAMPLE_WAIT = 2.5;
 
 /** Place → prop material for the placement thunk. */
 const PLACE_VARIANT: Record<string, string> = { laser: 'magic', tesla: 'magic', bomb: 'magic' };
@@ -71,6 +81,9 @@ export class WebAudioSystem implements AudioSystem {
   private transients: PropCue[] = [];
   private previewAt = 0;
   private life = new AbortController();
+  /** No match owns the audio: play the title tune, pumped by `menuPump`. */
+  private inMenu = false;
+  private menuPump: ReturnType<typeof setInterval> | null = null;
 
   constructor(opts: AudioOptions = {}) {
     this.storage = opts.storage === undefined ? defaultStorage() : opts.storage;
@@ -90,6 +103,7 @@ export class WebAudioSystem implements AudioSystem {
         if (this.ctx) {
           this.engine = new AudioEngine(this.ctx, this.volumes);
           this.watchVisibility();
+          if (this.inMenu) this.startTitle();
         } else this.failed = true;
       } catch {
         this.failed = true;
@@ -120,7 +134,50 @@ export class WebAudioSystem implements AudioSystem {
     );
   }
 
+  /** Leave whatever match was playing: forget its state, let its loops ring out, and play the title tune. */
+  menu(): void {
+    this.isLocal = undefined;
+    this.songKey = '';
+    this.tracker = new RunnerTracker();
+    this.run = null;
+    this.runFrame = -1;
+    this.lastSecs = -1;
+    this.tally = -1;
+    this.lobby.clear();
+    this.lobbySeed = -1;
+    this.hover.clear();
+    this.rot.clear();
+    this.popSecs.clear();
+    this.victoryAt = -1;
+    this.emitters.length = 0;
+    this.transients.length = 0;
+    this.inMenu = true;
+    if (this.engine) this.startTitle();
+  }
+
+  private startTitle() {
+    const e = this.engine!;
+    if (this.loopsLive) e.loops.silence({ x: 0, y: 0, zoom: 1, runners: [] });
+    this.loopsLive = false;
+    if (this.songKey !== 'title') {
+      this.songKey = 'title';
+      e.music.setMix('build', 0.05);
+      this.startSong(composeSong(TITLE_SEED, 'title'), 2);
+    }
+    // The lookahead is 0.2 s; a 50 ms timer keeps it full with room to spare. Hidden tabs suspend the context anyway.
+    this.menuPump ??= setInterval(() => {
+      if (this.running) this.engine!.music.pump(this.ctx!.currentTime);
+    }, 50);
+  }
+
+  private stopMenuPump() {
+    this.inMenu = false;
+    if (this.menuPump !== null) clearInterval(this.menuPump);
+    this.menuPump = null;
+  }
+
   dispose(): void {
+    this.stopMenuPump();
     this.life.abort();
     const c = this.ctx as AudioContext | null;
     this.ctx = null;
@@ -207,10 +264,26 @@ export class WebAudioSystem implements AudioSystem {
     if (key === this.songKey) return;
     const first = this.songKey === '';
     this.songKey = key;
-    this.engine!.music.setSong(composeSong(m.level.seed, m.level.theme.id), first ? 2.5 : 1.6);
+    this.startSong(composeSong(m.level.seed, m.level.theme.id), first ? 2.5 : 1.6);
+  }
+
+  /**
+   * Crossfade to `song` once its recorded instruments have loaded, or after SAMPLE_WAIT seconds
+   * (they then join mid-song). The current song plays on meanwhile; a newer request wins.
+   */
+  private startSong(song: Song, fade: number) {
+    const e = this.engine!;
+    const key = this.songKey;
+    const go = () => {
+      if (this.engine === e && this.songKey === key) e.music.setSong(song, fade);
+    };
+    const loading = loadSamples(this.ctx!, sampleSets(song.tracks.map((t) => t.inst)));
+    if (!loading) go();
+    else void Promise.race([loading, new Promise((r) => setTimeout(r, SAMPLE_WAIT * 1000))]).then(go);
   }
 
   update(match: Match, _nowMs: number): void {
+    if (this.inMenu) this.stopMenuPump();
     if (!this.running) return;
     const e = this.engine!;
     this.syncSong(match);
