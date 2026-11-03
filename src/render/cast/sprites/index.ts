@@ -14,6 +14,7 @@ import type { SpriteSet } from './types';
 export const LOADERS: Partial<Record<Kind, () => Promise<{ sprites: SpriteSet }>>> = {
   plumber: () => import('./plumber/frames'),
   hedgehog: () => import('./hedgehog/frames'),
+  chomper: () => import('./chomper/frames'),
 };
 
 const loaded: Partial<Record<Kind, SpriteSet>> = {};

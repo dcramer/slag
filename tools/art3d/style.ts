@@ -46,6 +46,8 @@ export interface Brief {
   pose: string;
   /** The poses across the pose sheet, in order. */
   poses: string;
+  /** The proportions, when not a figure's (`CHUNKY`): a limbless kind has no head, hands or feet to push. */
+  build?: string;
 }
 
 export const BRIEFS: Record<string, Brief> = {
@@ -86,6 +88,26 @@ export const BRIEFS: Record<string, Brief> = {
     poses:
       'standing idle with one foot tapping; mid-run leaning hard forward with legs a blur; crouched low before a jump; curled into a tight spinning ball in mid-air, quills outward, no limbs showing; falling with arms out and legs reaching down; sliding down a wall on his right with one glove flat against it and both sneakers braced; cheering with one fist up; knocked flat on his back with stars circling',
   },
+  chomper: {
+    // The nod, each part of the read at race size: the circle with a wedge cut out of its front (the most
+    // recognised shape in games, and it needs nothing else); pure yellow (half the read); the chomp (a mouth,
+    // not a pie chart, only when it moves). One small eye above the mouth makes it a creature.
+    // Ours, and the joke: the eater got eaten. A neat round bite, scalloped by teeth, is missing from the
+    // back of the circle; a red-and-white checked napkin is tucked under the mouth like a bib.
+    character:
+      'Character: a perfect round ball creature, pure warm yellow (#f6d02a) with a darker yellow cel shadow (#cba214); no arms, no legs, no feet, no hands, no nose, no ears. ' +
+      'A big wedge-shaped mouth cut into the front of the ball like a slice taken out of a pie, its point at the centre of the ball, wide open, dark brown inside (#2a1f1a). ' +
+      'One small round black eye (#14121a) with a white glint, above the mouth toward the front. ' +
+      'The joke: someone got to him first. A neat round bite is missing from the top of the back of the ball, its edge scalloped by three tooth marks, the bitten edge a deeper yellow (#e8b81c). ' +
+      'A small red-and-white checked napkin (#fbf6ee with #c9473f checks) is tucked into his lower lip and hangs down over the front of the ball like a bib. Greedy, cheerful and always hungry.',
+    views:
+      'a side profile facing right with the mouth wide open, the same profile with the mouth snapped shut, a back view showing the round bite, and a three-quarter view facing right',
+    pose: 'No limbs to keep clear: one round ball.',
+    poses:
+      'sitting still at rest with the mouth half open; bouncing along mid-hop with the mouth wide open; squashed flat on landing with the mouth snapped shut; spinning in mid-air rotated halfway round, motion lines round it; at the top of a jump stretched a little tall with the mouth gaping; pressed against a wall on its right, biting into it as it slides down, crumbs falling; cheering, hopping high with the mouth wide open laughing; dying, the mouth opening wider and wider until the ball folds away to nothing, only the napkin left fluttering',
+    build:
+      'Proportions for a tiny game sprite: one bold simple round shape that still reads at 20 pixels tall, no limbs at all. A chunky toy, never realistic.',
+  },
 };
 
 function brief(kind: string): Brief {
@@ -97,7 +119,7 @@ function brief(kind: string): Brief {
 /** The concept sheet's prompt: the design in the game's own ink style. */
 export function conceptPrompt(kind: string): string {
   const b = brief(kind);
-  return [STYLE, CHUNKY, b.character, `Layout: one row of full-body views of the same character side by side: ${b.views}.`].join(' ');
+  return [STYLE, b.build ?? CHUNKY, b.character, `Layout: one row of full-body views of the same character side by side: ${b.views}.`].join(' ');
 }
 
 /** The pose sheet's prompt: the approved concept (the reference) through every pose the game plays. */
@@ -109,7 +131,7 @@ export function posePrompt(kind: string): string {
     `An animation pose sheet for a 2D platformer video game: eight full-body action poses of one cartoon character, in two rows of four, every pose facing right, each with clear space around it: ${b.poses}.`,
     'The character is exactly the one in the reference image, same design, proportions and colours; no turnaround, no separate parts.',
     STYLE.replace('Character model sheet for a 2D platformer video game, an original cartoon character design. ', ''),
-    CHUNKY,
+    b.build ?? CHUNKY,
     b.character,
   ].join(' ');
 }

@@ -57,7 +57,7 @@ page.on('console', (m) => {
 const fsUrl = (p: string) => `/@fs${resolve(p)}`;
 const dataPng = (url: string) => Buffer.from(url.slice(url.indexOf(',') + 1), 'base64');
 const settingsOf = (kind: string) => JSON.parse(readFileSync(join(root, 'art/sprites', kind, 'sprite.json'), 'utf8')) as Settings;
-const modelUrl = (kind: string, s: Settings) => fsUrl(join(root, 'art/sprites', kind, s.model));
+const modelUrl = (kind: string, s: Settings) => (s.model ? fsUrl(join(root, 'art/sprites', kind, s.model)) : '');
 const render = (kind: string, s: Settings): Promise<SpriteSet> =>
   page.evaluate(([u, st, k]) => (window as any).art3d.render(u, st, k), [modelUrl(kind, s), s, kind] as const);
 const sheet = (set: SpriteSet, zoom: number, opts: object = {}): Promise<string> =>
