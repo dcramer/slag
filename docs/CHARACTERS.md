@@ -140,6 +140,10 @@ What came out of it:
 - **The nod:** the circle with a wedge cut out (the most recognised shape in games, and it needs nothing else); pure yellow (half the read); the chomp (it is a mouth, not a pie chart, only when it moves).
 - **Our twist:** someone got to him first: a neat bite is missing from the back of his circle, the joke being that the eater got eaten. A checked napkin is tucked under the mouth like a bib.
 - **Swaps:** a crumb on the lip; a toothpick in the corner of the mouth; a fork-tine scratch. (A paper party hat would break the outline, so it isn't one.)
+- **Palette alts:** the napkin's check in red `#c9473f`, blue `#3f62b4` or green `#3f8a3a`; the napkin stays white.
+- **Idles and cheers:** the breathing idle with a chomp at nothing; a sit with the mouth shut, eyeing the floor, then two pecks at it. The hop on the spot; rolling back on itself, mouth thrown wide, laughing.
+- **Gait range:** up to 0.7 px of extra bounce on each hop, a lean of up to 0.04.
+- **Wear:** scuffed is two pale scuffs and two crumbs stuck low on the back; scorched is two soot streaks up the back and the napkin's tip singed.
 - **Rig:** none: generated as shapes (`tools/art3d/page/chomper.ts`): the mouth open and shut, squash on landing, a spin, a wall bitten on the slide, and the fold-away death that leaves the napkin. Rendered (round 3).
 - **Concept prompt:** A perfect yellow ball with a wedge-shaped mouth cut into its front, wide open, and one small black eye above it; a neat round bite missing from the back of the circle; a red-and-white checked napkin tucked under the mouth like a bib. No arms, no legs.
 
@@ -182,6 +186,10 @@ What came out of it:
 - **The nod:** the ball (the whole body); the big red feet (they make it a creature, and part it from the dot-eater); the tall oval eyes with a shine (the face); the blush (the sweetness).
 - **Our twist:** a cheap vinyl squeeze toy. A moulding seam runs round its middle between the front and back halves, a squeaker valve pokes out high on its back (the one bump on the ball's outline), a mould number is stamped on the sole of one foot, and it squeaks when it lands.
 - **Swaps:** a price sticker on its side; a scuff of shelf dust; a tiny bow; a bite mark from a dog.
+- **Palette alts:** the feet in red `#c9473f`, orange `#e07b2c` or yellow `#e8b23a`.
+- **Idles and cheers:** the idle's sway of the arms; looking up, arms behind it, tapping one toe. Both arms up, eyes shut; puffed up round, waving one arm.
+- **Gait range:** a toddle's bounce of 0.1–0.8 px on each step, a lean of up to 0.03.
+- **Wear:** scuffed is a shelf-worn toy: two pale scuffs on the ball, grime on the near toe, and a kid's marker X low on its side; scorched is soot on the ball's side and front, the near arm and the near toe.
 - **Rig:** **keyed**: a ball with feet and stubs, the puff in the air. Rendered: the body is generated, not modelled (`tools/art3d/page/puffball.ts`), and the face kit's tall eyes and blush are set by its painted smile; the mould number never shows at play scale and is left off.
 - **Concept prompt:** A near-perfect round ball creature on two big oval red feet, with stubby round arms; tall oval black eyes with a shine at the top, blush marks and a tiny mouth. It is a cheap vinyl squeeze toy: a moulding seam runs round its middle, a little white squeaker valve pokes out of its back, and a mould number is stamped under one foot.
 
