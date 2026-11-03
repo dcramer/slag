@@ -1009,7 +1009,7 @@ export const KINDS: Record<Kind, KindArt> = {
   },
   // The round dot-eater: a yellow circle with a wedge of a mouth cut into its front and one small eye
   // above it, hopping. Ours: a scalloped bite out of the back of the circle, and a checked napkin tucked
-  // into the lower lip. Its rendered frames (tools/art3d, `?sprites=1`) chomp; this stands in for them.
+  // into the lower lip. Its rendered frames (tools/art3d) chomp; this draws only while they load.
   chomper: {
     size: [1.18, 1.1],
     outline:

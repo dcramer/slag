@@ -8,7 +8,7 @@ import { type Contrib, moduleSim, solidId } from './registry';
 import {
   canPlace,
   carrierPos,
-  claimedCells,
+  occupiedCells,
   dirOf,
   footprint,
   footprintCells,
@@ -20,7 +20,6 @@ import {
   newPropState,
   resolveProp,
   rideSpan,
-  sweptCells,
 } from './transform';
 import type { PlacedProp, PropDef, Resolved, Ride } from './types';
 
@@ -74,8 +73,8 @@ interface World {
   props: Resolved[];
   solids: Solid[];
   movers: Mover[];
-  /** Cell key → uids of parts whose footprint claims it (riders aside: their cells are checked where they are). */
-  claims: Map<number, number[]>;
+  /** Cell key → the placed part in it on this frame (`occupiedCells`); set pieces are in `solids`. */
+  claims: Map<number, PlacedProp>;
 }
 
 let lastWorld: { key: unknown[]; world: World } | null = null;
@@ -102,16 +101,8 @@ function worldAt(level: Level, placed: readonly PlacedProp[], f: number): World 
     const part = s.id - solidId(s.propUid, s.mi, 0);
     if (c.at(m, f, r.phase, part)) movers.push({ s, r, part });
   }
-  const claims = new Map<number, number[]>();
-  for (const p of [...level.setPieces, ...placed]) {
-    if (p.ride) continue;
-    for (const [x, y] of footprintCells(p)) {
-      const k = y * level.w + x;
-      const list = claims.get(k);
-      if (list) list.push(p.uid);
-      else claims.set(k, [p.uid]);
-    }
-  }
+  const claims = new Map<number, PlacedProp>();
+  for (const [k, p] of occupiedCells(level, placed, f)) if (!level.setPieces.includes(p)) claims.set(k, p);
   const world = { props, solids, movers, claims };
   lastWorld = { key, world };
   return world;
@@ -125,12 +116,12 @@ function worldAt(level: Level, placed: readonly PlacedProp[], f: number): World 
 export function spotAt(level: Level, placed: readonly PlacedProp[], def: PropDef, rot: number, tx: number, ty: number, f: number): Spot {
   const key = [level, level.version, level.setPieces, placed, placed.length, placed[placed.length - 1], def, rot, tx, ty, f];
   if (lastSpot && same(lastSpot.key, key)) return lastSpot.spot;
-  const plain = (): Spot => ({ def: landedDef(level, placed, def, rot, tx, ty), ok: canPlace(level, placed, def, rot, tx, ty) });
+  const plain = (): Spot => ({ def: landedDef(level, placed, def, rot, tx, ty, f), ok: canPlace(level, placed, def, rot, tx, ty, f) });
   let spot: Spot;
   if (!canRide(def)) spot = plain();
   else {
     const w = worldAt(level, placed, f);
-    const stuck = def.mount === 'face' ? coatRide(level, placed, w, def, rot, tx, ty, f) : blockRide(level, placed, w, def, rot, tx, ty, f);
+    const stuck = def.mount === 'face' ? coatRide(level, placed, w, def, rot, tx, ty, f) : blockRide(level, w, def, rot, tx, ty, f);
     spot = stuck ?? plain();
   }
   lastSpot = { key, spot };
@@ -154,7 +145,7 @@ const shared = (a: number, aw: number, b: number, bw: number) => Math.min(a + aw
  * across all its cells and the mover's faces, so it sits flush on top, under,
  * or beside it, lined up with a block's cells or a car's near edge.
  */
-function blockRide(level: Level, placed: readonly PlacedProp[], w: World, def: PropDef, rot: number, tx: number, ty: number, f: number): Spot | null {
+function blockRide(level: Level, w: World, def: PropDef, rot: number, tx: number, ty: number, f: number): Spot | null {
   const cells = footprint(def, rot).map(([x, y]) => [x + tx, y + ty] as Cell);
   let best: { mv: Mover; d: Vec; g: number } | null = null;
   const consider = (mv: Mover, d: Vec, g: number, touch: number) => {
@@ -183,8 +174,7 @@ function blockRide(level: Level, placed: readonly PlacedProp[], w: World, def: P
   const ok =
     cells.every(([x, y]) => x >= 0 && y >= 0 && x < level.w && y < level.h && !isProtected(level, x, y)) &&
     clearAt(level, w, rects, d, ride) &&
-    sweepClear(level, rects, ride) &&
-    pathUnclaimed(level, placed, { uid: -1, def, owner: -1, tx, ty, rot, ride });
+    sweepClear(level, rects, ride);
   return { def, ok, ride };
 }
 
@@ -233,7 +223,7 @@ function coatRide(level: Level, placed: readonly PlacedProp[], w: World, def: Pr
   }
   let best = groups[0];
   for (const q of groups) if (q.idx.length > best.idx.length || (q.idx.length === best.idx.length && Math.abs(q.g) < Math.abs(best.g) - 1e-9)) best = q;
-  if (!best || best.idx.length <= mountCells(level, placed, def, rot, tx, ty).length) return null;
+  if (!best || best.idx.length <= mountCells(level, placed, def, rot, tx, ty, f).length) return null;
   const keep = new Set(best.idx.map((i) => `${def.footprint[i][0]},${def.footprint[i][1]}`));
   const landed = trimmed(def, keep);
   const ride = rideFrom(best.mv, best.d, f);
@@ -292,18 +282,10 @@ function clearAt(level: Level, w: World, rects: readonly Rect[], d: Vec, ride: R
   return rects.every((rc) => {
     const at = shrink({ ...rc, x: rc.x + d[0], y: rc.y + d[1] }, 0.5);
     if (w.solids.some((s) => overlaps(s, at))) return false;
-    return !tilesUnder(shrink(at, 0.5), (x, y) => w.claims.get(y * level.w + x)?.some((u) => !chain.has(u)) ?? false);
-  });
-}
-
-/** Does a rider's whole path keep out of what other parts claim (`claimedCells`)? What carries it may claim its cells. */
-function pathUnclaimed(level: Level, placed: readonly PlacedProp[], pp: PlacedProp): boolean {
-  const claims = claimedCells(level, placed);
-  const chain = new Set<number>();
-  for (let r: Ride | undefined = pp.ride; r; r = r.parent.ride) chain.add(r.uid);
-  return sweptCells(pp).every(([x, y]) => {
-    const o = claims.get(y * level.w + x);
-    return !o || chain.has(o.uid);
+    return !tilesUnder(shrink(at, 0.5), (x, y) => {
+      const p = w.claims.get(y * level.w + x);
+      return !!p && !chain.has(p.uid);
+    });
   });
 }
 

@@ -6,7 +6,7 @@ import { PLAYER_H, TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import { floorY, type Level, tileAt } from '../sim/level';
 import type { Solid } from '../sim/physics';
 import type { Cell } from '../core/geom';
-import { type Beam, footprint, footprintCells, motionOffset, placeFaults, previewProps, type Resolved, resolveProp, sweptCells } from '../sim/props';
+import { type Beam, footprint, motionOffset, placeFaults, previewProps, type Resolved, resolveProp } from '../sim/props';
 import type { RunWorld } from '../sim/run';
 import type { GameEvent } from '../sim/types';
 import { Backdrop } from './background';
@@ -111,7 +111,7 @@ export class Renderer {
   private fx = new Fx();
   private weather = new WeatherLayer();
   private rigs = new Map<number, Rig>();
-  /** Rendered kinds (`?sprites=1`) play their death clip for a moment where they came apart. */
+  /** Rendered kinds play their death clip for a moment where they came apart. */
   private fallen: { c: CharacterDef; x: number; y: number; facing: number; age: number }[] = [];
   private pw = 2;
   private ph = 2;
@@ -624,7 +624,7 @@ export class Renderer {
         oy,
       );
       rc.g.stroke();
-      if (!ok && !gh.ride) drawFaults(rc, m, placeFaults(m.level, m.placed, m.crate[p.claim].def, p.rot, gh.tx, gh.ty));
+      if (!ok && !gh.ride) drawFaults(rc, placeFaults(m.level, m.placed, m.crate[p.claim].def, p.rot, gh.tx, gh.ty, m.frame).cells);
     }
   }
 
@@ -895,30 +895,16 @@ function outline(g: CanvasRenderingContext2D, cells: readonly Cell[], ox: number
 const FAULT: HSL = { h: 0, s: 90, l: 55 };
 
 /**
- * Why a red ghost is red, where that isn't already in plain sight: the space
- * a part or set piece keeps for itself (its path, its riders' headroom) is
- * tinted and ringed in red wherever the ghost runs into it, and every cell
- * that refuses the ghost gets a red cross. The cells are `placeFaults`, the
- * rule `canPlace` decides by, so the marks are exactly what's in the way.
+ * Why a red ghost is red: every cell that refuses it gets a red cross. The
+ * cells are `placeFaults`, the rule `canPlace` decides by, so the crosses are
+ * exactly what's in the way, a mover's path into rock included.
  */
-function drawFaults(rc: RC, m: Match, f: { cells: Cell[]; by: readonly Match['placed'][number][] }) {
+function drawFaults(rc: RC, cells: readonly Cell[]) {
   const g = rc.g;
-  const lv = m.level;
-  for (const p of f.by) {
-    const kept = (lv.setPieces.includes(p) ? footprintCells(p) : sweptCells(p)).filter(([x, y]) => !tileAt(lv, x, y));
-    g.fillStyle = css(FAULT, 0, 0.2);
-    for (const [x, y] of kept) g.fillRect(x * TILE, y * TILE, TILE, TILE);
-    g.strokeStyle = css(FAULT, 5, 0.55);
-    g.lineWidth = 1;
-    g.setLineDash([3, 3]);
-    outline(g, kept, 0, 0);
-    g.stroke();
-    g.setLineDash([]);
-  }
   g.strokeStyle = css(FAULT, 10, 0.9);
   g.lineWidth = 1.6;
   g.beginPath();
-  for (const [x, y] of f.cells) {
+  for (const [x, y] of cells) {
     const k = 4;
     g.moveTo(x * TILE + k, y * TILE + k);
     g.lineTo((x + 1) * TILE - k, (y + 1) * TILE - k);

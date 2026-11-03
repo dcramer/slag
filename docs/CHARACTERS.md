@@ -140,6 +140,10 @@ What came out of it:
 - **The nod:** the circle with a wedge cut out (the most recognised shape in games, and it needs nothing else); pure yellow (half the read); the chomp (it is a mouth, not a pie chart, only when it moves).
 - **Our twist:** someone got to him first: a neat bite is missing from the back of his circle, the joke being that the eater got eaten. A checked napkin is tucked under the mouth like a bib.
 - **Swaps:** a crumb on the lip; a toothpick in the corner of the mouth; a fork-tine scratch. (A paper party hat would break the outline, so it isn't one.)
+- **Palette alts:** the napkin's check in red `#c9473f`, blue `#3f62b4` or green `#3f8a3a`; the napkin stays white.
+- **Idles and cheers:** the breathing idle with a chomp at nothing; a sit with the mouth shut, eyeing the floor, then two pecks at it. The hop on the spot; rolling back on itself, mouth thrown wide, laughing.
+- **Gait range:** up to 0.7 px of extra bounce on each hop, a lean of up to 0.04.
+- **Wear:** scuffed is two pale scuffs and two crumbs stuck low on the back; scorched is two soot streaks up the back and the napkin's tip singed.
 - **Rig:** none: generated as shapes (`tools/art3d/page/chomper.ts`): the mouth open and shut, squash on landing, a spin, a wall bitten on the slide, and the fold-away death that leaves the napkin. Rendered (round 3).
 - **Concept prompt:** A perfect yellow ball with a wedge-shaped mouth cut into its front, wide open, and one small black eye above it; a neat round bite missing from the back of the circle; a red-and-white checked napkin tucked under the mouth like a bib. No arms, no legs.
 
@@ -149,12 +153,12 @@ What came out of it:
 - **Silhouette:** chubby and round, with two long pointed ears and a zigzag tail that breaks the outline behind.
 - **Traits:** yellow; long ears tipped black; round red cheeks; a lightning-bolt tail; two brown stripes across the back; small black eyes with a white glint.
 - **Palette:** body `#f2c62a` (shade `#c99c14`); ear tips `#2a1f1a`; cheeks `#e0473b`; stripes `#6b4a35`; tail `#c4c8ce` (shade `#8e9298`) with rivets `#6b6f76`; cord `#2a2a30`, plug `#d9d4c8`.
-- **Color slot:** costume.
+- **Color slot:** costume: the yellow fur (body, head, arms, legs; the `fur` role). The ear tips, cheeks, stripes, tin bolt and cord keep the roster's colours.
 - **Gait:** a quick scamper on all fours at a run, ears streaming back.
 - **The nod:** the long black-tipped ears (the outline, at any size); the zigzag tail (the one shape no other mouse has); the red cheeks (the face, at 20 px); the yellow (what everyone remembers first).
 - **Our twist:** a scrapyard knock-off wired up by hand. The bolt tail is a zigzag cut from sheet tin and riveted on at the root; a frayed power cord is knotted round its middle like a belt, the plug dangling; one ear is bent and taped.
 - **Swaps:** a chewed-through bit of cable in its paw; a sticking plaster on one ear; a spark-scorch on the tail tip; a fuse tucked behind an ear.
-- **Rig:** **keyed**, quadruped: the scamper on all fours, the stand on two legs at idle.
+- **Rig:** **keyed**, quadruped: the scamper on all fours, the stand on two legs at idle. Rendered: a Tripo `--type other` biped rig, every clip keyed from the bind pose; the bolt is a flat tin prism prop, the ear tips are drawn longer than the model. Variety: the cord belt in black, an orange extension lead or a white flex; a curious head-tilt idle and a laughing cheer; scuffed and sooty wear.
 - **Concept prompt:** A chubby, round yellow mouse with two long pointed ears tipped black, one ear bent and taped; round red cheeks; small black eyes with a white glint; two brown stripes across its back; a zigzag lightning-bolt tail cut from sheet tin and riveted on at the root; a frayed black power cord knotted round its middle like a belt, the plug dangling.
 
 ### The green-tunic elf hero
@@ -182,6 +186,10 @@ What came out of it:
 - **The nod:** the ball (the whole body); the big red feet (they make it a creature, and part it from the dot-eater); the tall oval eyes with a shine (the face); the blush (the sweetness).
 - **Our twist:** a cheap vinyl squeeze toy. A moulding seam runs round its middle between the front and back halves, a squeaker valve pokes out high on its back (the one bump on the ball's outline), a mould number is stamped on the sole of one foot, and it squeaks when it lands.
 - **Swaps:** a price sticker on its side; a scuff of shelf dust; a tiny bow; a bite mark from a dog.
+- **Palette alts:** the feet in red `#c9473f`, orange `#e07b2c` or yellow `#e8b23a`.
+- **Idles and cheers:** the idle's sway of the arms; looking up, arms behind it, tapping one toe. Both arms up, eyes shut; puffed up round, waving one arm.
+- **Gait range:** a toddle's bounce of 0.1–0.8 px on each step, a lean of up to 0.03.
+- **Wear:** scuffed is a shelf-worn toy: two pale scuffs on the ball, grime on the near toe, and a kid's marker X low on its side; scorched is soot on the ball's side and front, the near arm and the near toe.
 - **Rig:** **keyed**: a ball with feet and stubs, the puff in the air. Rendered: the body is generated, not modelled (`tools/art3d/page/puffball.ts`), and the face kit's tall eyes and blush are set by its painted smile; the mould number never shows at play scale and is left off.
 - **Concept prompt:** A near-perfect round ball creature on two big oval red feet, with stubby round arms; tall oval black eyes with a shine at the top, blush marks and a tiny mouth. It is a cheap vinyl squeeze toy: a moulding seam runs round its middle, a little white squeaker valve pokes out of its back, and a mould number is stamped under one foot.
 
@@ -426,7 +434,7 @@ Every kind must also pass the silhouette sheet, the blind read and the "is it th
 
 ## Rendered kinds (spike)
 
-How a Roster entry becomes a kind drawn from 3D. The entry is the one source for the design (nod, twist, swaps, palette); this is the pipeline. The plumber and the speedster are done, behind `?sprites=1` (`slagDebug.sprites.use(true)`); without it the game loads and draws only the hand-drawn cast. Production steps and the done list: [tools/art3d](../tools/art3d/README.md) and its [checklist](../tools/art3d/CHECKLIST.md).
+How a Roster entry becomes a kind drawn from 3D. The entry is the one source for the design (nod, twist, swaps, palette); this is the pipeline. A kind with rendered frames is always drawn from them (no option); a kind without keeps its hand-drawn body until it is produced. Production steps and the done list: [tools/art3d](../tools/art3d/README.md) and its [checklist](../tools/art3d/CHECKLIST.md).
 
 - **Sheets first:** a concept, a model sheet pushed for a 20 px read, and a pose sheet. Tripo models, rigs and animates the model sheet; poses its motions can't make are keyed by hand from the pose sheet; a jump that is a shape of its own (the spin ball) is generated as one.
 - **The game's own hand.** The render is cut into flat parts, traced into a few clean curves, and inked at draw time by the cast's `contour` and `toned`, with the boil on threes. Outlines are resampled from a fixed start and held across frames when a part only moved, so lines move only with the boil.
@@ -437,7 +445,7 @@ How a Roster entry becomes a kind drawn from 3D. The entry is the one source for
 - **Cost.** About 0.005 ms per runner drawn from the frame-bitmap cache (the hand-drawn cast takes about 0.08–0.1), and about 0.4 ms for a frame the first time it's drawn at a scale. Frame data is about 400–480 KB per kind with its variety, a chunk fetched only with the flag on.
 - **Checks:** `tests/sprite-cast.test.ts` (every clip, the shared hitbox box pen and all, at least 18 px tall, rolls), and `pnpm shot sprites --kind K` (the comparison sheets, the six-rolls lobby, the draw cost, and `sprites-blind.png`, every kind as a shuffled, unnamed play-scale silhouette for fresh readers).
 
-**Blind reads so far** (fresh readers, silhouettes only): the speedster is named every time, medium-high to high. The plumber went from low to split (one reader "the plumber, medium", one unsure) after his cap, nose and girth were pushed and his plunger carried lower; in colour he reads at once. With the cup above his head the cup and the cap merged into one shape, so the plunger is carried low for good (owner, 2026-11-02). Both readers name the dot-eater at high confidence, from the circle with its wedge mouth and the speed lines of its run.
+**Blind reads so far** (fresh readers, silhouettes only): the speedster is named every time, medium-high to high. The plumber went from low to split (one reader "the plumber, medium", one unsure) after his cap, nose and girth were pushed and his plunger carried lower; in colour he reads at once. With the cup above his head the cup and the cap merged into one shape, so the plunger is carried low for good (owner, 2026-11-02). Both readers name the dot-eater at high confidence, from the circle with its wedge mouth and the speed lines of its run. The electric mouse is named by both, medium and medium-high, from the tall pointed ears and the jagged zigzag tail raised behind; one reader also saw a rabbit holding something.
 
 ## What every kind keeps
 
