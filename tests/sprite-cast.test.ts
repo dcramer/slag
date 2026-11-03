@@ -10,7 +10,6 @@ import type { RunnerPose } from '../src/render/ink-figure';
 
 // Every registered kind, loaded as the game loads it: a new kind needs no change here.
 const SETS: SpriteSet[] = await Promise.all(SPRITE_KINDS.map(async (k) => (await LOADERS[k]!()).sprites));
-const hedgehog = SETS.find((s) => s.kind === 'hedgehog')!;
 
 /** A 2D context that only records where paths go, in the frame's own space (transforms are ignored). */
 function recorder() {
@@ -180,13 +179,16 @@ describe('rendered kinds: choosing frames', () => {
     }
   });
 
-  it('recolours the kind’s own colour from the character, and keeps the roster’s elsewhere', () => {
-    const c = generateCharacter(5, 'hedgehog');
+  it('wears the player’s colour on its costume, like a fighting game’s alternate costume, and keeps the roster’s elsewhere', () => {
     for (const s of SETS) {
-      const slot = s.roles.findIndex((r) => r.slot === 'paint');
-      expect(slot, s.kind).toBeGreaterThanOrEqual(0);
+      expect(
+        s.roles.some((r) => r.slot === 'player'),
+        s.kind,
+      ).toBe(true);
       expect(s.roles.filter((r) => !r.slot).every((r) => /^#[0-9a-f]{6}$/.test(r.color))).toBe(true);
     }
-    expect(paintOf(c.paint).fill).not.toBe(paintOf(hexHsl(hedgehog.roles[hedgehog.roles.findIndex((r) => r.slot === 'paint')].color)).fill);
+    // Two players of one kind wear two colours.
+    const [a, b] = [generateCharacter(5, 'hedgehog'), generateCharacter(6, 'hedgehog')];
+    expect(paintOf(a.body).fill).not.toBe(paintOf(b.body).fill);
   });
 });
