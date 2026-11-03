@@ -1,8 +1,8 @@
 import { css, type HSL } from '../../../core/color';
 import { TILE } from '../../../sim/constants';
 import { SNAP_ARM, SNAP_COOL, SNAP_SPIKE, SNAP_UP, snapperPhase } from '../../../sim/props';
-import { line, type P, stroke } from '../../ink';
-import { boxPts, dot, INK, part, path, sprite, stamp } from '../../ink-props';
+import { inkFor, line, type P, stroke } from '../../ink';
+import { boxPts, dot, part, path, sprite, stamp } from '../../ink-props';
 import { bulb, type MetalPalette } from '../../kit';
 import { defineArt } from '../common';
 
@@ -17,17 +17,19 @@ function plate(pal: MetalPalette) {
     line(g, -7.2, -10.7, 7.2, -10.7, { w: 0.5, seed: 4, taper: [0.1, 0.1], press: 0.1 });
     // A slot per spike, with the tip's glint deep inside it.
     for (let i = 0; i < 4; i++) {
-      g.fillStyle = INK;
+      g.fillStyle = css(iron, -18);
       path(g, boxPts(-7.2 + i * 4, -10.4, 2.4, 1.3, 0.4, 5 + i, 0));
       g.fill();
       g.fillStyle = '#9aa0ac';
       g.fillRect(-6.3 + i * 4, -9.6, 0.6, 0.4);
     }
-    for (const x of [-7.3, 7.3]) dot(g, x, -9, 0.5, x, css(pal.light));
+    for (const x of [-7.3, 7.3]) dot(g, x, -9, 0.5, x, css(pal.light), inkFor(iron));
   });
 }
 
 const STREAMERS = ['#ff4f8b', '#ffd23a', '#3ad1ff', '#7be36a'];
+/** The spikes' steel, between their lit and shaded halves: their outline is a dark of it. */
+const SPIKE_INK = inkFor({ h: 220, s: 12, l: 72 });
 
 /**
  * Pop-up spike plate, a surprise party (docs/PARODY.md, snapper). Tips peek and rattle while arming, shoot
@@ -73,7 +75,7 @@ defineArt<'snapper'>({
           const l = { x: bx - 1.7, y: top };
           const r = { x: bx + 1.7, y: top };
           const mid = { x: bx, y: top };
-          s.fillStyle = INK;
+          s.fillStyle = SPIKE_INK;
           path(s, [
             { x: l.x - 0.5, y: l.y },
             { x: tip.x, y: tip.y - 0.7 },

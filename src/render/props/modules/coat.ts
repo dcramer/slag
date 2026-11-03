@@ -2,7 +2,7 @@ import { css, type HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { boostDir, COAT_PX, dirOf, type ModuleOf } from '../../../sim/props';
-import { blob, line, type P, sn, stroke } from '../../ink';
+import { blob, inkFor, line, type P, sn, stroke } from '../../ink';
 import { boxPts, glint, pen, sprite, stamp, tick, tone } from '../../ink-props';
 import { glowDot, light, type RC } from '../../kit';
 import { defineArt } from '../common';
@@ -23,7 +23,8 @@ const T = COAT_PX + 0.5;
 const ICE: HSL = { h: 196, s: 70, l: 82 };
 const ICE_INK = '#1d4a63';
 const SLIME: HSL = { h: 102, s: 72, l: 44 };
-const SLIME_INK = '#183509';
+/** Slime keeps its green even in its pen: a dark of it at its own saturation, not a muted ink. */
+const SLIME_INK = css(SLIME, -32);
 /** A spike strip's rail: gunmetal, since it has no host block of its own to take a metal from. */
 const STRIP_RAIL: HSL = { h: 222, s: 12, l: 20 };
 /** How much thicker a crate card draws a coat. */
@@ -79,8 +80,46 @@ function enter(s: CanvasRenderingContext2D, r: Run, card: boolean) {
   if (card) s.scale(1, CARD_THICK);
 }
 
-/** Spikes protruding from each host face: a gunmetal rail, or what the look says they're made of. */
+const CARPET: HSL = { h: 352, s: 50, l: 37 };
+const FRINGE: HSL = { h: 44, s: 66, l: 62 };
+
+/**
+ * The Death Carpet (docs/PARODY.md, spikestrip): a red runner laid along the face under the spikes, a gold
+ * border on it and a gold fringe hanging off both ends, so the rug shows past the last spike either side.
+ */
+function carpetRun(len: number, seed: number) {
+  return sprite(`ct|carpet|${len}|${seed % 5}`, -5, -4, len + 10, 5, (g) => {
+    const rug = boxPts(-1.4, -2.9, len + 2.8, 2.9, 0.4, seed, 0.15);
+    tone(g, rug, CARPET, { depth: 0.5, shade: -12 });
+    g.fillStyle = css(FRINGE);
+    line(g, -0.8, -2.2, len + 0.8, -2.25, { w: 0.45, seed: seed + 1, taper: [0.05, 0.05], press: 0.1 });
+    pen(g, rug, seed + 2, 0.35, 0.8, 3, inkFor(CARPET));
+    // The fringe: tassels off each end, fanned a little.
+    for (const [x0, dir] of [
+      [-1.4, -1],
+      [len + 1.4, 1],
+    ] as const) {
+      for (let i = 0; i < 4; i++) {
+        const y = -2.5 + i * 0.75;
+        const x1 = x0 + dir * (2 + hash2(i, seed, 3) * 0.7);
+        g.fillStyle = inkFor(FRINGE);
+        line(g, x0, y, x1, y + (i - 1.5) * 0.25, { w: 0.55, seed: seed + i * 3, taper: [0.05, 0.4], press: 0.1 });
+        g.fillStyle = css(FRINGE, 8);
+        line(g, x0, y, x1 - dir * 0.2, y + (i - 1.5) * 0.25, { w: 0.3, seed: seed + i * 3 + 1, taper: [0.05, 0.4], press: 0.1 });
+      }
+    }
+  });
+}
+
+/** Spikes protruding from each host face: on a carpet with a gunmetal rail, or made of what the look says. */
 function drawSpikeStrip(rc: RC, m: Coat) {
+  if (!m.look) {
+    for (const r of runsOf(m)) {
+      enter(rc.s, r, false);
+      stamp(rc.s, carpetRun(r.len, r.seed));
+      rc.s.restore();
+    }
+  }
   drawSpikeCells(rc.s, m.cells, m.angle, m.look, STRIP_RAIL);
 }
 
@@ -267,7 +306,7 @@ function drawSlime(rc: RC, m: Coat, card: boolean) {
 
 const ASPHALT: HSL = { h: 220, s: 8, l: 26 };
 const ROAD_PAINT: HSL = { h: 46, s: 95, l: 58 };
-const ROAD_INK = '#0f0d12';
+const ROAD_INK = inkFor(ASPHALT);
 
 /** One run of a Boost Strip: a strip of road with a painted chevron on every tile, all pointing +x, and a skid mark or two. */
 function boostRun(len: number, seed: number) {
@@ -280,7 +319,7 @@ function boostRun(len: number, seed: number) {
     g.closePath();
     g.clip();
     // Skid marks: someone braked here once. It didn't help.
-    g.fillStyle = 'rgba(8,6,10,0.7)';
+    g.fillStyle = css(ASPHALT, -20, 0.7);
     for (let x = 1; x < len - 4; x += 7) {
       if (hash2(x, 3, seed) < 0.5) continue;
       line(g, x, -T + 0.8, x + 4 + hash2(x, 4, seed) * 3, -T + 1, { w: 0.5, seed: seed + x, taper: [0.3, 0.6], press: 0.3 });

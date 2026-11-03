@@ -2,9 +2,9 @@ import { css, type HSL } from '../../../core/color';
 import type { Rect } from '../../../core/geom';
 import { hash2 } from '../../../core/rng';
 import type { ModuleOf, PropStyle, RotorArm } from '../../../sim/props';
-import { blob, line, type P, stroke } from '../../ink';
+import { blob, inkFor, line, type P, stroke } from '../../ink';
 import { inkLoop } from '../../ink-parts';
-import { ball, boxPts, dot, glint, INK, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
+import { ball, boxPts, dot, glint, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import type { MetalPalette, RC } from '../../kit';
 import { arcPts } from '../ink-motion';
 
@@ -88,7 +88,7 @@ export function cogWheel(rc: RC, m: Rotor, pal: MetalPalette, arms: readonly Rot
   for (let i = 0; i < arms.length; i++) strut(s, hx, hy, arms[i].x, arms[i].y, pal, 11 + i);
   // A drop shadow on the wall behind: the gear's silhouette, hard, down and to the right.
   const pts = gearPts(hx, hy, R, base, m.seed & 0xffff, gearScratch);
-  rc.bg.fillStyle = 'rgba(8,4,12,0.28)';
+  rc.bg.fillStyle = css({ h: pal.dark.h, s: pal.dark.s, l: 5 }, 0, 0.28);
   rc.bg.save();
   rc.bg.translate(R * 0.14 + 1.5, R * 0.18 + 2);
   path(rc.bg, pts);
@@ -130,7 +130,7 @@ export function cogHub(s: CanvasRenderingContext2D, m: Rotor, pal: MetalPalette,
   ball(s, hx, hy, r, pal.base, 131);
   for (let i = 0; i < 6; i++) {
     const a = base + (i / 6) * Math.PI * 2;
-    dot(s, hx + Math.cos(a) * r * 0.62, hy + Math.sin(a) * r * 0.62, Math.max(0.55, r * 0.11), 140 + i, css(pal.spec, -6));
+    dot(s, hx + Math.cos(a) * r * 0.62, hy + Math.sin(a) * r * 0.62, Math.max(0.55, r * 0.11), 140 + i, css(pal.spec, -6), inkFor(pal.base));
   }
   ball(s, hx, hy, Math.max(1.6, r * 0.32), { h: 44, s: 70, l: 52 }, 132);
 }
@@ -145,12 +145,13 @@ export function waterBottle(s: CanvasRenderingContext2D, hx: number, hy: number,
     g.fillStyle = css({ h: 200, s: 70, l: 58 }, 0, 0.85);
     path(g, boxPts(-2.2, 3.6, 4.4, 6, 1.2, 8, 0.1));
     g.fill();
-    part(g, boxPts(-1.6, 10, 3.2, 1.8, 0.4, 9), { h: 0, s: 0, l: 30 }, 9, { depth: 0.3, thin: 0.3, thick: 0.6 });
-    tick(g, 0, 11.8, 0.3, 15.5, 0.7, 10, INK);
+    const cap: HSL = { h: 0, s: 0, l: 30 };
+    part(g, boxPts(-1.6, 10, 3.2, 1.8, 0.4, 9), cap, 9, { depth: 0.3, thin: 0.3, thick: 0.6 });
+    tick(g, 0, 11.8, 0.3, 15.5, 0.7, 10, inkFor(cap));
     g.fillStyle = 'rgba(160,215,255,0.95)';
     blob(g, 0.4, 16, 0.6, 3, 1.2, 0.1);
     g.fill();
-    pen(g, body, 7, 0.35, 0.8);
+    pen(g, body, 7, 0.35, 0.8, 3, inkFor(glass));
     glint(g, poly(-1.6, 1.6, -1.7, 4, -1.5, 6.5), 'rgba(255,255,255,0.9)', 0.6);
   });
   stamp(s, sp, hx + R * 0.2, hy + R * 0.38);
@@ -181,18 +182,18 @@ function deck(w: number, h: number, st: PropStyle, pal: MetalPalette) {
       g.arc(x + sc / 2, top, sc / 2, 0, Math.PI);
       g.fill();
     }
-    g.fillStyle = INK;
+    g.fillStyle = inkFor(paint);
     for (let x = 1; x < w - 1; x += sc)
       stroke(g, arcPts(x + sc / 2, top, sc / 2, 0.15, Math.PI - 0.15, 6), { w: 0.45, seed: x, taper: [0.3, 0.3], press: 0.2 });
     g.restore();
-    pen(g, tub, seed + 1, 0.5, 1.7, 4);
+    pen(g, tub, seed + 1, 0.5, 1.7, 4, inkFor(paint));
     // Marquee bulbs along the skirt, clear of the pin.
     const nb = Math.max(2, Math.round(w / 8));
     const by = top + (h - top) * 0.62;
     for (let i = 0; i < nb; i++) {
       const bx = 3 + ((w - 6) * (i + 0.5)) / nb;
       if (Math.abs(bx - w / 2) < 3) continue;
-      g.fillStyle = INK;
+      g.fillStyle = inkFor(paint);
       blob(g, bx, by, 1.35, i + 50, 1, 0.08);
       g.fill();
       g.fillStyle = '#ffe9a0';
@@ -205,13 +206,13 @@ function deck(w: number, h: number, st: PropStyle, pal: MetalPalette) {
     const plank = boxPts(0, 0, w, top, Math.min(1.2, top * 0.4), seed + 2, 0.1);
     tone(g, plank, wood, { depth: 0.7, shade: -20 });
     for (let x = 3 + hash2(w, 1, 2) * 3; x < w - 4; x += 5 + hash2(x, 2, 3) * 4) tick(g, x, top * 0.42, x + 2.6, top * 0.48, 0.35, x, css(wood, -24));
-    for (const nx of [1.8, w - 1.8]) dot(g, nx, top * 0.5, 0.45, nx, css(pal.spec));
-    pen(g, plank, seed + 3, 0.45, 1.2, 3);
+    for (const nx of [1.8, w - 1.8]) dot(g, nx, top * 0.5, 0.45, nx, css(pal.spec), inkFor(wood));
+    pen(g, plank, seed + 3, 0.45, 1.2, 3, inkFor(wood));
     // The pin the strut ends on, in a little steel plate on the face.
     const cx = w / 2;
     const cy = top + (h - top) * 0.5;
     part(g, boxPts(cx - 2, cy - 1.7, 4, 3.4, 0.8, 12), pal.base, 12, { depth: 0.4, thin: 0.3, thick: 0.7 });
-    dot(g, cx, cy, 0.8, 13, css(pal.spec));
+    dot(g, cx, cy, 0.8, 13, css(pal.spec), inkFor(pal.base));
   });
 }
 

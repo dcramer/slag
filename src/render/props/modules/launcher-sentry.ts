@@ -1,7 +1,7 @@
-import { css, type HSL } from '../../../core/color';
+import { css, type HSL, shift } from '../../../core/color';
 import { type ModuleOf, SENTRY_MUZZLE, sentryAim, sentryMode } from '../../../sim/props';
-import { line, type P, stroke } from '../../ink';
-import { boxPts, dot, glint, INK, part, path, poly, sprite, stamp, tick } from '../../ink-props';
+import { inkFor, line, type P, stroke } from '../../ink';
+import { bar, boxPts, dot, glint, part, path, poly, sprite, stamp, tick } from '../../ink-props';
 import { glowDot, light, type MetalPalette, type RC } from '../../kit';
 import { beamOf, defineArt, type DrawCtx } from '../common';
 import { iron } from '../machine';
@@ -28,17 +28,14 @@ const BARREL_END = SENTRY_MUZZLE + 0.4;
 
 const keyOf = (d: DrawCtx) => `${d.style.metal}|${d.style.hue | 0}`;
 
-/** One splayed leg: a heavy ink stroke under a lit one, a flat foot pad at the end. */
+/** One splayed leg: a heavy bar, lit on the near side, a flat foot pad at the end. */
 function leg(g: CanvasRenderingContext2D, hx: number, hy: number, fx: number, fy: number, col: HSL, seed: number) {
   const pts: P[] = [
     { x: hx, y: hy },
     { x: (hx + fx) / 2, y: (hy + fy) / 2 - 0.3 },
     { x: fx, y: fy },
   ];
-  g.fillStyle = INK;
-  stroke(g, pts, { w: 2.6, seed, taper: [0, 0], press: 0.1 });
-  g.fillStyle = css(col, fx < hx ? 16 : 2);
-  stroke(g, pts, { w: 1.7, seed: seed + 1, taper: [0, 0], press: 0.1 });
+  bar(g, pts, 1.7, shift(col, fx < hx ? 16 : 2), seed, { rim: 0.45, taper: [0, 0], press: 0.1, ink: inkFor(col) });
   part(g, boxPts(fx - 2, fy - 0.9, 4, 1.5, 0.5, seed + 2), { ...col, l: col.l - 10 }, seed + 2, { depth: 0.3, thin: 0.35, thick: 0.7 });
 }
 
@@ -46,15 +43,16 @@ function leg(g: CanvasRenderingContext2D, hx: number, hy: number, fx: number, fy
 function base(g: CanvasRenderingContext2D, pal: MetalPalette, hue: number) {
   const metal = iron(pal, 42);
   const gun: HSL = { h: pal.dark.h, s: Math.min(14, pal.dark.s), l: 34 };
-  g.fillStyle = 'rgba(16,10,8,0.45)';
+  g.fillStyle = inkFor(gun, 0.45);
   path(g, poly(-7.8, 8, 7.8, 8, 6.8, 7.1, -6.8, 7.1));
   g.fill();
   leg(g, 0.3, 2.6, 1.2, 7.4, { ...gun, l: gun.l - 8 }, 21);
   leg(g, -0.8, 2.4, -6.6, 7.4, gun, 11);
   leg(g, 0.8, 2.4, 6.6, 7.4, gun, 16);
   // The yoke: a squat drum under the head.
-  part(g, boxPts(-2.6, 1.6, 5.2, 2.2, 0.8, 31), { ...metal, l: metal.l - 8 }, 31, { depth: 0.5, thin: 0.45, thick: 1.1 });
-  dot(g, 0, 2.7, 0.55, 33, css(pal.light));
+  const yoke: HSL = { ...metal, l: metal.l - 8 };
+  part(g, boxPts(-2.6, 1.6, 5.2, 2.2, 0.8, 31), yoke, 31, { depth: 0.5, thin: 0.45, thick: 1.1 });
+  dot(g, 0, 2.7, 0.55, 33, css(pal.light), inkFor(yoke));
   // The ammo box on the left of the yoke, a belt feeding up into the head.
   const box = boxPts(-7.6, 2, 4.2, 3.4, 0.6, 41);
   part(g, box, { ...OLIVE, h: OLIVE.h + (hue % 20) - 10 }, 41, { depth: 0.7, thin: 0.45, thick: 1.2 });
@@ -62,14 +60,14 @@ function base(g: CanvasRenderingContext2D, pal: MetalPalette, hue: number) {
   g.fillStyle = css(OLIVE, 26);
   path(g, boxPts(-6.4, 3.7, 1.8, 0.9, 0.2, 43));
   g.fill();
-  g.fillStyle = css({ h: 42, s: 70, l: 52 });
+  const brass: HSL = { h: 42, s: 70, l: 52 };
+  g.fillStyle = css(brass);
   stroke(g, poly(-4.4, 2.2, -3.4, 0.8, -2.4, 0), { w: 1.1, seed: 44, taper: [0, 0], press: 0 });
-  g.fillStyle = INK;
   for (const [x, y] of [
     [-4.3, 1.9],
     [-3.4, 0.9],
   ])
-    tick(g, x - 0.5, y - 0.3, x + 0.5, y + 0.3, 0.35, 45 + x);
+    tick(g, x - 0.5, y - 0.3, x + 0.5, y + 0.3, 0.35, 45 + x, inkFor(brass));
 }
 
 /** The head along +x, lit side up: a boxy housing, a sloped front plate, twin barrels, and the lamp's hood. */
@@ -79,7 +77,7 @@ function head(g: CanvasRenderingContext2D, pal: MetalPalette) {
   for (const [i, y] of BARRELS.entries()) {
     const b = boxPts(3, y - 0.85, BARREL_END - 3, 1.7, 0.4, 51 + i);
     part(g, b, dark, 51 + i, { depth: 0.35, thin: 0.35, thick: 0.85 });
-    g.fillStyle = INK;
+    g.fillStyle = inkFor(dark);
     path(g, boxPts(BARREL_END - 1.2, y - 1.05, 1.2, 2.1, 0.3, 53 + i));
     g.fill();
     g.fillStyle = css(metal, 18);
@@ -93,7 +91,7 @@ function head(g: CanvasRenderingContext2D, pal: MetalPalette) {
   g.fillStyle = css(metal, -20, 1, 4);
   line(g, -3.4, -2.6, -3.4, 1.8, { w: 0.4, seed: 62, taper: [0.2, 0.2], press: 0.2 });
   glint(g, poly(-5, -2.8, -1.6, -2.95, 0.8, -2.9), css(pal.light, 10), 0.5);
-  for (const x of [-4.6, -2.2]) dot(g, x, 1.4, 0.42, 63 + x, css(pal.light));
+  for (const x of [-4.6, -2.2]) dot(g, x, 1.4, 0.42, 63 + x, css(pal.light), inkFor(metal));
   // The lamp's hood on top, open to the front.
   part(g, boxPts(-3, -5.6, 3.6, 2.4, 0.6, 65), dark, 65, { depth: 0.4, thin: 0.4, thick: 0.9 });
 }

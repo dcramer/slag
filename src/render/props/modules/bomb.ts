@@ -4,15 +4,16 @@ import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import type { Level } from '../../../sim/level';
 import { blastHits, blastSpec, type BombLook, cellsAt, type ModuleOf, type PlacedProp } from '../../../sim/props';
-import { blob, line, stroke } from '../../ink';
-import { ball, boxPts, dot, glint, ovalPts, part, path, poly, sprite, stamp, tick } from '../../ink-props';
+import { blob, inkFor, line, stroke } from '../../ink';
+import { ball, bar, barLine, boxPts, dot, glint, ovalPts, part, path, poly, sprite, stamp, tick } from '../../ink-props';
 import { bulb, glowDot, light, METALS, type RC } from '../../kit';
 import { defineArt } from '../common';
 import { arcPts } from '../ink-motion';
 
 type Bomb = ModuleOf<'bomb'>;
 
-const INK = '#120b08';
+const CORD: HSL = { h: 30, s: 48, l: 57 };
+const BRASS = METALS.brass.base;
 
 /** A fuse: a twist of cord with an ink edge, and a spark at the end that's actually hot. */
 function fuse(rc: RC, x: number, y: number) {
@@ -23,10 +24,7 @@ function fuse(rc: RC, x: number, y: number) {
     { x: x + 6.8, y: y - 10.4 },
     { x: x + 8.5, y: y - 8.5 },
   ];
-  s.fillStyle = INK;
-  stroke(s, pts, { w: 2.4, seed: 4, taper: [0, 0.2], press: 0 });
-  s.fillStyle = '#c9925a';
-  stroke(s, pts, { w: 1.1, seed: 4, taper: [0, 0.3], press: 0 });
+  bar(s, pts, 1.1, CORD, 4, { rim: 0.62, taper: [0, 0.1] });
   const fl = 0.7 + Math.sin(rc.t * 30) * 0.3;
   s.fillStyle = 'rgb(255 214 90)';
   for (let i = 0; i < 4; i++) {
@@ -51,8 +49,8 @@ function bombBody(base: HSL) {
     // The cap: a riveted brass collar the fuse goes into.
     const cap = boxPts(0.6, -7.4, 5, 3.6, 0.8, 5, 0.15);
     part(g, cap, { h: 42, s: 58, l: 50 }, 5, { depth: 0.6, shade: -22, thin: 0.4, thick: 1 });
-    dot(g, 2, -5.6, 0.4, 6, '#fff3c0');
-    dot(g, 4.3, -5.6, 0.4, 7, '#fff3c0');
+    dot(g, 2, -5.6, 0.4, 6, '#fff3c0', inkFor(BRASS));
+    dot(g, 4.3, -5.6, 0.4, 7, '#fff3c0', inkFor(BRASS));
   });
 }
 
@@ -66,10 +64,7 @@ function windKey(rc: RC, x: number, y: number) {
   const turn = Math.cos(rc.t * 4);
   const bx = x - 9.8;
   const by = y + 0.6;
-  s.fillStyle = INK;
-  line(s, x - 6.2, by, bx + 0.6, by, { w: 1.72, seed: 31, taper: [0, 0], press: 0 });
-  s.fillStyle = css(brass, 6);
-  line(s, x - 6.2, by - 0.2, bx + 0.6, by - 0.2, { w: 1, seed: 31, taper: [0, 0], press: 0 });
+  barLine(s, x - 6.2, by, bx + 0.6, by, 1, { ...brass, l: brass.l + 6 }, 31, { rim: 0.36 });
   const k = Math.max(0.4, Math.abs(turn));
   for (const sg of [-1, 1]) {
     s.save();
@@ -78,7 +73,7 @@ function windKey(rc: RC, x: number, y: number) {
     part(s, ovalPts(0, 0, 2, 2.7, 32 + sg, 0.03, 12), turn > 0 ? brass : { ...brass, l: brass.l - 10 }, 33 + sg, { depth: 0.4, thin: 0.35, thick: 0.8 });
     s.restore();
   }
-  dot(s, bx, by, 0.9, 34, css(METALS.brass.light));
+  dot(s, bx, by, 0.9, 34, css(METALS.brass.light), inkFor(brass));
 }
 
 function drawBall(rc: RC, x: number, y: number, base: HSL = { h: 230, s: 18, l: 20 }, key = false) {
@@ -95,10 +90,7 @@ function patchDisk() {
   return sprite('bomb|emp2', -10, -13.5, 20, 20, (g) => {
     const steel = METALS.steel.base;
     // The antenna, out of the dome's crown.
-    g.fillStyle = INK;
-    line(g, 0.3, -5.6, 1.2, -11.2, { w: 1.2, seed: 1, taper: [0, 0.2], press: 0.1 });
-    g.fillStyle = '#aab2bf';
-    line(g, 0.3, -5.6, 1.2, -11.2, { w: 0.5, seed: 1, taper: [0, 0.2], press: 0.1 });
+    barLine(g, 0.3, -5.6, 1.2, -11.2, 0.5, { h: 216, s: 12, l: 71 }, 1, { rim: 0.35 });
     // The puck: a thick drum, its top face lit.
     const drum = boxPts(-8.4, -1.4, 16.8, 5.6, 2.4, 3, 0.1);
     part(g, drum, { ...steel, l: steel.l - 10 }, 3, { depth: 0.8, shade: -14, thin: 0.5, thick: 1.6 });
@@ -109,7 +101,7 @@ function patchDisk() {
     line(g, -6.4, -1.4, -1, -2.3, { w: 0.5, seed: 4, taper: [0.2, 0.4], press: 0 });
     // Vents and lamps round the side.
     for (const lx of [-6.4, -5, 5, 6.4]) tick(g, lx, 1.6, lx - 0.2, 3.2, 0.45, lx * 3, css(steel, -40, 1, 4));
-    for (const lx of [-3.6, 3.6]) dot(g, lx, 2.3, 0.6, lx * 5, '#7fd6ff');
+    for (const lx of [-3.6, 3.6]) dot(g, lx, 2.3, 0.6, lx * 5, '#7fd6ff', inkFor(steel));
     // The dome: glass, a copper coil inside, a hard glint.
     const dome = ovalPts(0, -1.4, 5, 4.6, 6, 0.02, 20).filter((p) => p.y <= -1.2);
     dome.push({ x: 5, y: -1.2 }, { x: -5, y: -1.2 });
@@ -143,16 +135,44 @@ function patchDisk() {
   });
 }
 
-/** The Mole: a drill with blinkers on, so it only ever sees straight ahead. */
+const MOLE_PAINT: HSL = { h: 44, s: 64, l: 52 };
+const BIT: HSL = { h: 210, s: 10, l: 74 };
+const LEATHER: HSL = { h: 22, s: 40, l: 30 };
+
+/** Half the drill bit's height at local x: a cone from its collar (x 2.2) to its point (x 9). */
+const bitHalf = (x: number) => 4.3 * Math.max(0, 1 - (x - 2.2) / 6.8);
+
+/**
+ * The Mole: a tunnelling machine seen side on, nose to +x. A fat painted drum with a riveted band and a
+ * capped exhaust at its tail, a steel collar, and a big cone of a bit whose flutes turn live. It wears
+ * horse blinkers, a leather flap above and below on a buckled strap, so it only ever sees straight ahead.
+ */
 function mole() {
-  return sprite('bomb|drill', -8.5, -7.5, 18, 15, (g) => {
-    part(g, boxPts(-7.4, -4.2, 8.4, 8.4, 1.6, 6), METALS.brass.base, 6, { depth: 0.8, thin: 0.45, thick: 1.1 });
-    part(g, poly(0.6, -4, 8.6, 0, 0.6, 4), METALS.steel.light, 7, { depth: 0.6, thin: 0.45, thick: 1 });
-    // Blinkers: a leather flap either side, a strap over the top.
+  return sprite('bomb|drill', -9, -8, 19, 16, (g) => {
+    // The tail: a stubby exhaust out the back of the drum, and a cap.
+    barLine(g, -7.2, -2.6, -8.4, -4.6, 1, { ...BIT, l: 50 }, 5, { rim: 0.3 });
+    const drum = boxPts(-8, -4.6, 9.4, 9.2, 2.6, 6, 0.2);
+    part(g, drum, MOLE_PAINT, 6, { depth: 0.9, shade: -18, thin: 0.5, thick: 1.3 });
+    g.save();
+    path(g, drum);
+    g.clip();
+    // A lit run along the drum's top, and the band round its middle.
+    g.fillStyle = css(MOLE_PAINT, 22);
+    line(g, -6.6, -3.2, -0.6, -3.4, { w: 0.8, seed: 7, taper: [0.2, 0.4], press: 0.1 });
+    g.fillStyle = css(MOLE_PAINT, -22, 1, 4);
+    g.fillRect(-5.9, -5, 1.6, 10);
+    g.restore();
+    for (const y of [-2.8, 0, 2.8]) dot(g, -5.1, y, 0.38, 8 + y, css(MOLE_PAINT, 24), inkFor(MOLE_PAINT));
+    // The collar the bit turns in.
+    part(g, boxPts(0.6, -5, 2, 10, 0.7, 9, 0.1), { ...BIT, l: 58 }, 9, { depth: 0.4, shade: -16, thin: 0.35, thick: 0.9 });
+    // The bit: a cone, lit along its top flank.
+    const cone = poly(2.2, -4.3, 9, 0, 2.2, 4.3);
+    part(g, cone, BIT, 10, { depth: 0.6, shade: -20, thin: 0.4, thick: 1 });
+    // Blinkers: a leather flap above and below the drum's front, on a strap buckled round it.
     for (const sg of [-1, 1])
-      part(g, poly(-3.2, sg * 3.6, 0.8, sg * 4.2, 1.6, sg * 6.4, -2.6, sg * 6), { h: 22, s: 45, l: 26 }, 8 + sg, { depth: 0.3, thin: 0.35, thick: 0.8 });
-    tick(g, -2.4, -4.4, -2.4, 4.4, 0.9, 10, '#5a3418');
-    dot(g, -5, 0, 0.8, 11, css(METALS.brass.light));
+      part(g, poly(-3.4, sg * 4.2, 0.4, sg * 4.6, 1.2, sg * 7.2, -2.8, sg * 6.8), LEATHER, 11 + sg, { depth: 0.3, shade: -12, thin: 0.35, thick: 0.8 });
+    barLine(g, -1.6, -4.6, -1.6, 4.6, 0.9, { ...LEATHER, l: 36 }, 13, { rim: 0.25 });
+    part(g, boxPts(-2.3, -0.8, 1.4, 1.6, 0.3, 14, 0.05), METALS.brass.light, 14, { depth: 0.2, thin: 0.25, thick: 0.5 });
   });
 }
 
@@ -165,7 +185,7 @@ function donut() {
     g.fillStyle = css(glaze);
     path(g, ovalPts(-0.2, 0.9, 6.9, 3.8, 13, 0.1, 24));
     g.fill();
-    g.fillStyle = INK;
+    g.fillStyle = inkFor(dough);
     path(g, ovalPts(0, 1.4, 2.4, 1.2, 14, 0.05, 12));
     g.fill();
     const cols = ['#ffffff', '#ffd93a', '#5ad1ff', '#7be36a', '#ff6a3a'];
@@ -186,7 +206,7 @@ function donut() {
 function alarm() {
   return sprite('bomb|alarm', -6, -7, 12, 12, (g) => {
     for (const sg of [-1, 1]) ball(g, sg * 2.8, -3.8, 1.3, METALS.brass.base, 20 + sg);
-    g.fillStyle = INK;
+    g.fillStyle = inkFor(BRASS);
     blob(g, 0, 0, 4.4, 22, 1, 0.03);
     g.fill();
     g.fillStyle = '#f1ead8';
@@ -220,12 +240,15 @@ const LOOKS: Record<BombLook, (rc: RC, m: Bomb, x: number, y: number, rot: numbe
     s.translate(x, y);
     s.rotate((rot & 3) * (Math.PI / 2));
     stamp(s, mole());
-    // Flutes running down the bit as it turns.
-    s.fillStyle = INK;
-    const sp = (rc.t * 20) % 2;
+    // Flutes winding down the bit as it turns: a cut in shadow and a lit edge after it.
+    const sp = (rc.t * 3) % 1;
     for (let k = 0; k < 4; k++) {
-      const u = (k + sp / 2) / 4;
-      line(s, 1 + u * 7, -3.4 * (1 - u), 1.8 + u * 7, 3.4 * (1 - u), { w: 0.5, seed: k, taper: [0.1, 0.1], press: 0 });
+      const xa = 2.5 + ((k + sp) / 4) * 5.6;
+      const xb = xa + 1.1;
+      s.fillStyle = css(BIT, -34, 1, 4);
+      line(s, xa, -bitHalf(xa) + 0.2, xb, bitHalf(xb) - 0.2, { w: 0.55, seed: k, taper: [0.15, 0.3], press: 0 });
+      s.fillStyle = css(BIT, 18);
+      line(s, xa + 0.5, -bitHalf(xa + 0.5) + 0.3, xb + 0.4, bitHalf(xb + 0.4) - 0.4, { w: 0.3, seed: k + 5, taper: [0.2, 0.4], press: 0 });
     }
     s.restore();
   },

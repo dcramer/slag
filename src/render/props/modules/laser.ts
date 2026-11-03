@@ -1,8 +1,8 @@
 import { css, type HSL } from '../../../core/color';
 import type { Vec } from '../../../core/geom';
 import { dirOf, laserAngle, laserCycle, type Module, type ModuleOf, type PropStyle, type Resolved } from '../../../sim/props';
-import type { P } from '../../ink';
-import { ball, boxPts, dot, glint, INK, ovalPts, part, pen, poly, sprite, stamp, tone } from '../../ink-props';
+import { inkFor, type P } from '../../ink';
+import { ball, boxPts, dot, glint, ovalPts, part, pen, poly, sprite, stamp, tone } from '../../ink-props';
 import { TILE } from '../../../sim/constants';
 import { T_SOLID, tileAt } from '../../../sim/level';
 import { circle, glowDot, light, type MetalPalette, type RC } from '../../kit';
@@ -31,33 +31,35 @@ function dome(k: Face): P[] {
 
 function bunker(k: Face, pal: MetalPalette, hue: number) {
   return sprite(`lz|bunker|${k}|${pal.base.h},${pal.base.l}|${hue | 0}`, -11, -11, 22, 22, (g) => {
-    flange(g, k, -6.6, 6.6, 4.8, pal, 2);
+    const metal = iron(pal, 40);
+    flange(g, k, -6.6, 6.6, 4.8, pal, 2, inkFor(pal.dark));
     for (const x of LAMPS) {
       const p = tf(k, x, 6.3);
-      g.fillStyle = INK;
+      g.fillStyle = inkFor(pal.dark);
       disc(g, p.x, p.y, 0.95, 3 + x);
       g.fill();
     }
     // A low armored dome, flat at the back where it bolts down.
     const body = dome(k);
-    tone(g, body, iron(pal, 40), { depth: 1.3, shade: -17 });
+    tone(g, body, metal, { depth: 1.3, shade: -17 });
     within(g, body, () => {
-      flat(g, lbox(k, -9, -9, 18, 3.4, 0, 5), css(iron(pal, 40), -14, 1, 4));
-      ltick(g, k, -8, -5.5, 8, -5.5, 0.7, 6, INK, [0, 0]);
+      flat(g, lbox(k, -9, -9, 18, 3.4, 0, 5), css(metal, -14, 1, 4));
+      ltick(g, k, -8, -5.5, 8, -5.5, 0.7, 6, inkFor(metal), [0, 0]);
       for (const sg of [-1, 1])
         for (const y of [-2.6, 0.4]) {
           flat(g, lbox(k, sg > 0 ? 5.3 : -7.4, y - 0.55, 2.1, 1.1, 0.5, 7 + y + sg), css(pal.dark, -8));
-          ltick(g, k, sg * 7.2, y + 0.95, sg * 5.5, y + 0.95, 0.45, 8 + y + sg, css(iron(pal, 40), 20), [0.1, 0.1]);
+          ltick(g, k, sg * 7.2, y + 0.95, sg * 5.5, y + 0.95, 0.45, 8 + y + sg, css(metal, 20), [0.1, 0.1]);
         }
     });
-    pen(g, body, 8, 0.55, 1.5);
+    pen(g, body, 8, 0.55, 1.5, 3, inkFor(metal));
     // The turret: a painted dome on a dark race ring, the pointer's swivel on its crown.
     const c = tf(k, 0, RING_Y);
-    g.fillStyle = INK;
+    const paint: HSL = { h: hue, s: 52, l: 50 };
+    g.fillStyle = inkFor(metal);
     disc(g, c.x + 0.3, c.y + 0.35, 5.6, 9);
     g.fill();
-    orb(g, c.x, c.y, 4.7, { h: hue, s: 52, l: 50 }, 10);
-    g.fillStyle = css({ h: hue, s: 52, l: 50 }, -26, 1, 6);
+    orb(g, c.x, c.y, 4.7, paint, 10, inkFor(paint));
+    g.fillStyle = css(paint, -26, 1, 6);
     disc(g, c.x + 0.2, c.y + 0.25, 2.5, 11);
     g.fill();
   });
@@ -79,9 +81,9 @@ function pointer(hue: number) {
     // The clip and the button.
     g.fillStyle = '#c9ced8';
     g.fillRect(-4.2, -2, 4.6, 0.7);
-    g.fillStyle = INK;
+    g.fillStyle = inkFor(body);
     g.fillRect(0.2, -2.1, 0.5, 1);
-    dot(g, 2.4, -1.3, 0.6, 7, '#ff6b6b');
+    dot(g, 2.4, -1.3, 0.6, 7, '#ff6b6b', inkFor(body));
     glint(g, poly(-4, -0.6, -1, -0.75, 3, -0.7), css(body, 34), 0.45);
   });
 }
@@ -97,10 +99,11 @@ function lampPost() {
 /** The lamp head along +x: a brass drum with a hood, its lens at x = 6, painted the light's warm glass. */
 function lampHead(hue: number) {
   return sprite(`lz|lamp|${hue | 0}`, -7, -6, 15, 12, (g) => {
-    part(g, boxPts(-5, -3.6, 10, 7.2, 2, 5), { h: 42, s: 52, l: 46 }, 5, { depth: 0.6, thin: 0.45, thick: 1 });
+    const brass: HSL = { h: 42, s: 52, l: 46 };
+    part(g, boxPts(-5, -3.6, 10, 7.2, 2, 5), brass, 5, { depth: 0.6, thin: 0.45, thick: 1 });
     part(g, poly(-5, -3.6, 6.4, -4.8, 6.4, -3.2, -5, -2.4), { h: 42, s: 40, l: 34 }, 6, { depth: 0.2, thin: 0.35, thick: 0.7 });
     part(g, ovalPts(5.6, 0, 1.6, 3.4, 7, 0.02, 12), { h: hue, s: 70, l: 80 }, 7, { depth: 0.2, thin: 0.35, thick: 0.8 });
-    dot(g, -2, 0, 1, 8, '#2a2016');
+    dot(g, -2, 0, 1, 8, css(brass, -30, 1, -12), inkFor(brass));
   });
 }
 
