@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { applyTurns, checkArms, restOf, turnsOf, type Facing } from '../tools/art3d/page/keys';
+import { applyTurns, boneOf, checkArms, restOf, turnsOf, type Facing } from '../tools/art3d/page/keys';
 import type { Key } from '../tools/art3d/settings';
 
 /**
@@ -163,6 +163,21 @@ describe('keyed arms', () => {
     const b = r.pose(key, 'r', 'here');
     expect(b.at('lowerarm_r').distanceTo(want.at)).toBeLessThan(1e-6);
     expect(b.turnOf('upperarm_r').angleTo(want.turn)).toBeLessThan(1e-6);
+  });
+
+  it('names a bone by side, suffix or prefix, and mirrors it as the facing says', () => {
+    expect(boneOf('upperarm_near', 'r')).toMatchObject({ bone: 'upperarm_r', side: 1 });
+    expect(boneOf('upperarm_far', 'r')).toMatchObject({ bone: 'upperarm_l', side: -1 });
+    expect(boneOf('near_Thigh', 'l')).toMatchObject({ bone: 'L_Thigh', side: -1 });
+    expect(boneOf('far_Thigh', 'l')).toMatchObject({ bone: 'R_Thigh', side: 1 });
+    expect(boneOf('L_Thigh', 'r')).toMatchObject({ bone: 'L_Thigh', by: 'named' });
+    expect(boneOf('Spine01', 'l')).toMatchObject({ bone: 'Spine01', by: 'centre' });
+    const turns = turnsOf({ bones: { near_Thigh: [10, 20, 30], L_Thigh: [10, 20, 30], Spine01: [10, 20, 30] } }, 'l');
+    expect(turns.map((t) => t.euler)).toEqual([
+      [10, -20, -30],
+      [10, 20, 30],
+      [10, -20, -30],
+    ]);
   });
 
   it('an end bone has nothing to aim', () => {

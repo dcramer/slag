@@ -111,6 +111,11 @@ export interface Solid extends Rect {
   step?: number;
   /** A wet film on a surface (blood): footing for runners only. Rays, crushers and shots pass through to what's under it. */
   film?: boolean;
+  /**
+   * Made to crush (a crusher's head, which stops on whatever is under it): it pins a runner against a part
+   * as hard as against the world. Every other mover passes through a runner it would pin against a part.
+   */
+  crush?: boolean;
 }
 
 export const TILE_SOLID_ID = -2;
@@ -169,6 +174,12 @@ export interface Body extends Rect {
   /** Frames left ignoring one-way tiles (drop-through). */
   dropFrames: number;
   facing: -1 | 1;
+  /**
+   * A moving solid this body is passing through: one that would have pinned it
+   * against a part rather than the world. Every overlap test skips it while the
+   * body steps, until they're apart. Absent the rest of the time.
+   */
+  pass?: number;
 }
 
 export interface Controls {
@@ -271,6 +282,7 @@ export function firstOverlap(r: Rect, world: CollisionWorld, dynamicOnly = false
   const solids = world.solids;
   for (let i = 0; i < solids.length; i++) {
     const s = solids[i];
+    if (s.id === passing) continue;
     if (s.oneWay && s.y < oneWayFrom - 0.01) continue;
     if (overlaps(r, s)) return s;
   }
@@ -356,6 +368,26 @@ function cornerNudge(b: Body, s: Solid, world: CollisionWorld): boolean {
 /** Slack when asking which side of a solid's last position a body was on: touching counts as outside. */
 const SWEEP_EPS = 1e-6;
 
+/** The solid the body being stepped is passing through (Body.pass), or -1: `firstOverlap` skips it. Set only inside `stepBody`. */
+let passing = -1;
+
+/** Terrain, as `firstOverlap` reports it: only the world pins a runner hard enough to crush, or a solid made to (`Solid.crush`). */
+const isTile = (s: Solid) => s.id === TILE_SOLID_ID || s.id === TILE_ONEWAY_ID;
+
+/**
+ * Let moving solid `s` pass through the body instead of pushing it: it would
+ * pin the body against a part, not the world. A rider stops riding it, like a
+ * runner knocked off by a ceiling, and falls once the part above lets it.
+ */
+function passThrough(b: Body, s: Solid) {
+  b.pass = s.id;
+  passing = s.id;
+  if (b.groundRef === s.id) {
+    b.groundRef = -1;
+    b.onGround = false;
+  }
+}
+
 /**
  * Push the body out of any dynamic solid that moved into it. Returns false if it can't escape (crushed).
  *
@@ -364,10 +396,14 @@ const SWEEP_EPS = 1e-6;
  * body in one frame, pop a runner out on top of its head instead of driving them into the floor.
  * Only when the body already overlapped the solid's last position (it was riding or wedged) does the
  * shallowest side decide. A push that ends inside terrain is a pin against the world: crushed, and the
- * body stays where the solid caught it, so the run can credit whoever owns that solid.
+ * body stays where the solid caught it, so the run can credit whoever owns that solid. Pinned between
+ * parts instead, the body stays where the frame found it and the mover passes through it (`passThrough`):
+ * parts pass through each other, so only a crusher (`Solid.crush`) crushes a runner against a part.
  */
 function depenetrate(b: Body, world: CollisionWorld): boolean {
   if (world.solids.length === 0) return true;
+  const x0 = b.x;
+  const y0 = b.y;
   for (let iter = 0; iter < 3; iter++) {
     const s = firstOverlap(b, world, true);
     if (!s) return true;
@@ -395,13 +431,27 @@ function depenetrate(b: Body, world: CollisionWorld): boolean {
     else if (m === l) b.x -= pushL;
     else b.x += pushR;
     if (!firstOverlap(b, world, true)) {
-      if (!firstOverlap(b, world)) return true;
+      const hit = firstOverlap(b, world);
+      if (!hit) return true;
       b.x = ox;
       b.y = oy;
       return false;
     }
   }
-  return !firstOverlap(b, world);
+  const hit = firstOverlap(b, world);
+  if (!hit) return true;
+  if (isTile(hit)) return false;
+  // Pinned between parts. A crusher still crushes; any other mover passes through, from where the frame found the body.
+  b.x = x0;
+  b.y = y0;
+  let mover: Solid | null = null;
+  for (const s of world.solids) {
+    if (s.id === passing || !overlaps(b, s)) continue;
+    if (s.crush) return false;
+    if (!mover && (s.dx || s.dy)) mover = s;
+  }
+  if (mover && passing < 0) passThrough(b, mover);
+  return true;
 }
 
 function findSolid(world: CollisionWorld, id: number): Solid | undefined {
@@ -486,6 +536,18 @@ function wallJump(b: Body, dir: -1 | 1, surf: Surface, held: number): void {
  * Returns false if the body was crushed.
  */
 export function stepBody(b: Body, c: Controls, world: CollisionWorld, wind: WindForce | null = null): boolean {
+  passing = -1;
+  if (b.pass !== undefined) {
+    const s = findSolid(world, b.pass);
+    if (s && overlaps(b, s)) passing = b.pass;
+    else delete b.pass;
+  }
+  const ok = step(b, c, world, wind);
+  passing = -1;
+  return ok;
+}
+
+function step(b: Body, c: Controls, world: CollisionWorld, wind: WindForce | null): boolean {
   // Ride whatever we were standing on.
   if (b.groundRef >= 0) {
     const s = findSolid(world, b.groundRef);
@@ -494,7 +556,12 @@ export function stepBody(b: Body, c: Controls, world: CollisionWorld, wind: Wind
       // first; otherwise a sideways move would collide with the platform itself and
       // shove the rider off (diagonal movers: rotors, pendulums, loops).
       if (s.dy < 0) {
+        // The carrier never blocks its own rider: stopped by something above, the rider stays under it
+        // and `depenetrate` settles the pinch, rather than the carrier's top sending it out under its bottom.
+        const was = passing;
+        passing = s.id;
         moveY(b, s.dy, world);
+        passing = was;
         moveX(b, s.dx, world);
       } else {
         moveX(b, s.dx, world);

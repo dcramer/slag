@@ -2,6 +2,7 @@
   "name": "slag",
   "version": "0.1.0",
   "private": true,
+  "license": "Apache-2.0",
   "type": "module",
   "description": "Browser-based competitive party platformer with procedurally generated levels, props, and characters.",
   "scripts": {

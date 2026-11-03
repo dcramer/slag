@@ -61,7 +61,7 @@ Each is grouped by its fingerprint, `['slag-event', name]` plus the group if any
 | `net-unavailable` | warning | session | Online play gave up on this page. Grouped by why: `Cannot Reach Host` (no TURN), `WebRTC Unsupported`, `Signaling Unreachable`, an unconfigured store. |
 | `snapshot-refused` | warning | session, guest | The host's snapshot is from another build. Once a page. |
 | `level-fallback` | error / warning | `src/level-ahead.ts`, game-client (host) | The generator fell back: group `fallback` (flat floor or legacy sculptor, error) or `concept-fallback` (the concept's landmark failed and the level went plain, warning). `data`: seed, theme, profile. |
-| `plan-lost` | error | game-client, host | A round started with no proven way to the flag (`planMisses`), a broken winnability guarantee. |
+| `plan-lost` | error | game-client, host | A round started with no proven way to the flag on a level nothing has touched yet (`planMisses`), a broken generation guarantee. Parts sealing a level is play and isn't reported. |
 
 Errors (`reportError`):
 

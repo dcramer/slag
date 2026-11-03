@@ -33,18 +33,26 @@ export interface BoneTurn {
 
 /**
  * The bone a key names, on a facing, and the side of the figure it's on. `_near` and `_far` are the
- * camera's side and the other, authored facing right (near is the figure's right); a bone named for its
- * side outright (`hand_l`) is that side's on both facings; a bone on the centre line counts as near.
+ * camera's side and the other, authored facing right (near is the figure's right): `upperarm_near` is
+ * `upperarm_r` facing right; a rig that names its sides first (Tripo's biped `--type other`: `L_Thigh`) is
+ * keyed `near_Thigh`. A bone named for its side outright (`hand_l`, `L_Thigh`) is that side's on both
+ * facings; a bone on the centre line counts as near.
  */
 export function boneOf(name: string, facing: Facing): { bone: string; side: Side; by: 'near' | 'far' | 'named' | 'centre' } {
   const near = facing === 'r' ? 'r' : 'l';
   const far = facing === 'r' ? 'l' : 'r';
-  const side = (s: string): Side => (s === 'r' ? 1 : -1);
-  let m = /^(.*)_near$/.exec(name);
-  if (m) return { bone: `${m[1]}_${near}`, side: side(near), by: 'near' };
-  m = /^(.*)_far$/.exec(name);
-  if (m) return { bone: `${m[1]}_${far}`, side: side(far), by: 'far' };
-  m = /_([lr])$/.exec(name);
+  const side = (s: string): Side => (s.toLowerCase() === 'r' ? 1 : -1);
+  let m = /^(.*)_(near|far)$/.exec(name);
+  if (m) {
+    const s = m[2] === 'near' ? near : far;
+    return { bone: `${m[1]}_${s}`, side: side(s), by: m[2] as 'near' | 'far' };
+  }
+  m = /^(near|far)_(.*)$/.exec(name);
+  if (m) {
+    const s = m[1] === 'near' ? near : far;
+    return { bone: `${s.toUpperCase()}_${m[2]}`, side: side(s), by: m[1] as 'near' | 'far' };
+  }
+  m = /_([lr])$/.exec(name) ?? /^([LR])_/.exec(name);
   if (m) return { bone: name, side: side(m[1]), by: 'named' };
   return { bone: name, side: side(near), by: 'centre' };
 }

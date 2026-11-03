@@ -233,7 +233,12 @@ export async function renderSprites(url: string, s: Settings, only?: string[]) {
             ? new THREE.SphereGeometry(a, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, h / a, 1)
             : part.shape === 'box'
               ? new THREE.BoxGeometry(a, h, c)
-              : new THREE.SphereGeometry(1, 16, 12).scale(a, h, c);
+              : part.shape === 'prism'
+                ? // Drawn in x, y as z, y, extruded along z, then turned so the extrusion runs across the figure.
+                  new THREE.ExtrudeGeometry(new THREE.Shape((part.points ?? []).map(([z, y]) => new THREE.Vector2(z, y))), { depth: a, bevelEnabled: false })
+                    .translate(0, 0, -a / 2)
+                    .rotateY(-Math.PI / 2)
+                : new THREE.SphereGeometry(1, 16, 12).scale(a, h, c);
       const mesh = new THREE.Mesh(geo, material(names.indexOf(part.role)));
       if (part.at) mesh.position.set(...part.at);
       if (part.rot) mesh.rotation.set(rad(part.rot[0]), rad(part.rot[1]), rad(part.rot[2]));

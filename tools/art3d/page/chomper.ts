@@ -45,6 +45,22 @@ const SHUT = 0.06;
 const BITE = 3.98;
 const TOOTH = 0.36;
 const ARC = 64;
+/** The wear slot's index in sprite.json's `slots`, after the three swaps. */
+const WEAR = 3;
+/**
+ * The wear's marks, on the low back of the ball, clear of the eye, the napkin, the bite and the scratch:
+ * angle round from the mouth (ball space), distance out as a share of the radius, half-width and
+ * half-height (world px, laid along the curve), the role, and the option. Scuffed is two pale scuffs and
+ * two crumbs stuck where a messy eater drops them; scorched is soot up the back (and on the napkin's tip).
+ */
+const MARKS: [number, number, number, number, string, number][] = [
+  [2.05, 0.74, 1.1, 0.3, 'scuff', 1],
+  [2.42, 0.5, 0.8, 0.28, 'scuff', 1],
+  [1.72, 0.84, 0.42, 0.36, 'crumbs', 1],
+  [1.92, 0.9, 0.34, 0.3, 'crumbs', 1],
+  [2.12, 0.76, 1.9, 0.3, 'soot', 2],
+  [2.3, 0.54, 1.2, 0.26, 'soot', 2],
+];
 
 const wrap = (a: number) => ((((a + Math.PI) % TAU) + TAU) % TAU) - Math.PI;
 const dir = (a: number, r = 1): [number, number] => [Math.cos(a) * r, Math.sin(a) * r];
@@ -60,6 +76,15 @@ const MOTIONS: Record<string, (u: number, i: number, c: Clip) => Pose> = {
     const a = lerp(0.34 + 0.1 * Math.sin(u * TAU), SHUT, chomp);
     return { a, sy: 1 - chomp * 0.05, sx: 1 + chomp * 0.04 };
   },
+  // The second idle: a long sit, mouth shut, eyeing the floor; then it tips forward and pecks at it twice, as if a dot were down there.
+  idle2: (_u, i) =>
+    [
+      { a: SHUT + 0.04, rot: 0.16, sx: 1.03, sy: 0.97 },
+      { a: 0.62, rot: 0.5, sx: 1.02, sy: 0.99 },
+      { a: SHUT, rot: 0.56, sx: 1.05, sy: 0.94 },
+      { a: 0.56, rot: 0.5, sx: 1.02, sy: 0.99 },
+      { a: SHUT, rot: 0.54, sx: 1.05, sy: 0.94 },
+    ][i % 5],
   // A hop per stride and a chomp per hop: shut and squashed on the floor, wide open at the top.
   walk: (u) => step(u, 1.8, 0),
   run: (u) => ({ ...step(u, 2.8, 0.14), marks: 'speed' }),
@@ -94,6 +119,14 @@ const MOTIONS: Record<string, (u: number, i: number, c: Clip) => Pose> = {
       swing: 0.3 * h,
     };
   },
+  // The second cheer: grounded, rolling back on itself with the mouth thrown wide, laughing, then snapping forward.
+  cheer2: (_u, i) =>
+    [
+      { a: 0.84, rot: -0.44, dx: -2, swing: 0.15 },
+      { a: 0.5, rot: -0.24, dx: -1.1, swing: 0.1 },
+      { a: 0.88, rot: -0.48, dx: -2.2, swing: 0.18 },
+      { a: SHUT + 0.04, rot: 0.1, sx: 1.06, sy: 0.93, swing: 0.05 },
+    ][i % 4],
   // The dot-eater's own end: the mouth turns up and opens until the ball folds away, leaving the napkin.
   death: (_u, i, c) => {
     const n = c.frames;
@@ -257,6 +290,13 @@ export function chomperFrame(s: Settings, clip: string, c: Clip, u: number, i: n
   // A fork-tine scratch on the back (a swap).
   if (solid(2.7, 0.3)) for (const o of [-0.9, 0, 0.9]) part('scratch', stick([R * -0.5 + o * 0.7, R * 0.22 + o * 0.45], -0.95, 2.4, 0.34), [2, 1]);
 
+  // The wear (a slot of its own): only while the mouth hasn't opened over it.
+  for (const [t, d, rx, ry, name, option] of MARKS) {
+    if (!solid(t, 0.3)) continue;
+    const [mx, my] = dir(t, R * d);
+    part(name, blob(mx, my, rx, ry, 7, t + Math.PI / 2), [WEAR, option]);
+  }
+
   // The napkin, tucked into the lower lip and hanging (in screen space) below it.
   const lip = mu + a;
   if (lip < Math.PI * 0.85) {
@@ -286,6 +326,9 @@ export function chomperFrame(s: Settings, clip: string, c: Clip, u: number, i: n
       const [u0, u1, v0, v1] = [gu / 3 + 0.03, (gu + 1) / 3 - 0.03, (gv / 3) * 0.8 + 0.03, ((gv + 1) / 3) * 0.8 - 0.03];
       part('check', [P(u0, v0), P(u1, v0), P(u1, v1), P(u0, v1)], undefined, true);
     }
+    // Scorched: the napkin's tip singed.
+    const [sx0, sy0] = P(0.5, 0.82);
+    part('sootnap', blob(sx0, sy0, 0.9, 0.5, 6, down), [WEAR, 2], true);
   }
 
   // A crumb on the upper lip, and a toothpick in the corner of the mouth (swaps).
