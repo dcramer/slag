@@ -45,7 +45,7 @@ Lint: `oxlint` (type-aware, `.oxlintrc.json`). Warnings are real findings, not n
 
 - `race --seed S --race saw,laser,launcher --frames 200` (`--race all` = one of every archetype)
 - `lobby` | `pick` | `place` with `--seed S --players N`
-- `mobile [--device "iPhone SE landscape"]`: emulated phone, real multi-touch, fails on a tap target under 44 CSS px or a runner off screen
+- `mobile [--device "iPhone SE landscape"] [--only lobby]`: emulated phone, real multi-touch, fails on a tap target under 44 CSS px, two lobby tap targets that overlap (1–8 players, on its side and upright), or a runner off screen
 - `levels --count 9`, `--seeds a,b,c` or `--themes all` → contact sheet `shots/levels.png`
 - `cast`: the character cast, lineups at play scale on farm and mine, a close-up, deaths, the lobby, the "is it the homage?" sheet, the silhouette test and a catalog of every kind (`--only catalog`)
 - `artqa --theme T` (`--themes all`): every landmark, hazard and decor piece of a theme beside its terrain and three parts, at play scale and 2× (`src/render/AGENTS.md` → Drawing a landmark, hazard or decor piece)

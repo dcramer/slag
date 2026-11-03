@@ -55,6 +55,8 @@ export async function open(q: string) {
         // Peers named after the lobby's players as they join (read live), so the cards show the host tag and pings.
         // (No named helpers in here: the bundler wraps them in a __name the page doesn't have.)
         const match = (window as any).slagDebug.match;
+        // Only the first keyboard plays on this screen; the rest are the peers. (An arrow in an array: see above.)
+        hud.devices = { ...hud.devices, isLocal: [(d: string) => d === 'kb1'][0] };
         const pings = [undefined, 42, 135, 230];
         hud.net = {
           status: 'Hosting · 3 Connected',

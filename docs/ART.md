@@ -74,7 +74,7 @@ On pages, body text is 15–18 px and menu items are 30 px display.
 **Never spell out an input in prose** ("click", "press Space", "A = jump"). Show a glyph followed by the action:
 
 ```
-[Enter] Ⓐ  Ready Up      [R] Ⓑ  New Look      [Esc]  Settings
+[Enter] Ⓐ  Ready Up      [R] Ⓑ  New Look      [Shift] Ⓧ  Name      [Esc]  Settings
 ```
 
 - The glyphs live in `src/ui/glyphs.ts`. `drawGlyph` draws on canvas and `glyphSVG` returns an inline-SVG string for the DOM and server pages. There are keycaps (bone cap, ink label), Xbox-layout face buttons (A green, B red, X blue, Y yellow), shoulder and trigger buttons, a stick, a d-pad, mouse buttons (the lit button is molten), and a touch tap.
@@ -87,7 +87,7 @@ On pages, body text is 15–18 px and menu items are 30 px display.
 ## Layout and interaction
 
 - Touch and click targets are at least 22 logical px on the HUD and 44 CSS px on pages and on phones. Empty lobby slots are whole-card targets.
-- On phones the HUD grows by groups, each about its own anchor, up to about 1.8×: chips, timers, headings, crate cards, the score panel. A logical px is only ~0.75 CSS px there, so the type scale above would otherwise land below a readable size. The lobby's top-bar buttons become icons, and its footer loses the prompts the cards already carry. Hit rects grow to 44 CSS px even where the art doesn't.
+- On phones the HUD grows by groups, each about its own anchor, up to about 1.8×: chips, timers, headings, crate cards, the score panel. A logical px is only ~0.75 CSS px there, so the type scale above would otherwise land below a readable size. The lobby's top-bar buttons become icons, and its footer loses the prompts the cards already carry. Hit rects grow to 44 CSS px even where the art doesn't; in the lobby they never overlap, because its buttons are spaced by their hit rects, not their art. On a lobby card the name's target is the whole card above the button row, so a short card still fits both.
 - Selection works like a console menu: one item is always active, shown with a molten fill, a diamond marker, a chevron, and a slight nudge. Mouse hover, keyboard arrows, the d-pad, and the stick all move the same selection.
 - Buttons are stamped: a top face over a darker side that sinks 1.5–3 px on hover or press. Primary buttons are molten with ink text, secondary are iron with bone text, and confirmed buttons are toxic.
 - Overlays (`src/ui/menus/`) are a single iron card with a hazard-tape top edge over a dark scrim. They have no blur and no glass.
