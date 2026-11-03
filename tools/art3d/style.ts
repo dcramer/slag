@@ -316,11 +316,14 @@ export const BRIEFS: Record<string, Brief> = {
     // Ours, and the joke: a lime jelly dessert that got ideas. The dome is turned out of a fluted jelly mould,
     // the nuclei are three glacé cherries set in it, the fangs are sugared almonds, and a paper doily is stuck
     // to its underside, its lace edge peeking out under the rim.
+    // The fangs are long, few and splayed: short and close under the dome, the silhouette read as a ghost's skirt
+    // (blind read, 2026-11-03). The shipped design is the worn one edited twice (art/sprites/jelly/fangs.prompt.txt,
+    // then cherries.prompt.txt, so the cherries stand apart and trace as three).
     design:
       'The character: a wobbly lime-green jelly dessert (#9ee38a) turned out of a fluted mould, a tall rounded dome with soft wide ribs down its sides, floating in the air. It has no face, no eyes, no mouth, no arms and no legs. ' +
       'Inside it, seen through the jelly, three big round glossy red glacé cherries (#c9473f) set in a triangle, each as wide as a quarter of the dome. ' +
-      'A pale mint-white rim (#d8f2c8) round the bottom edge of the dome. Under the rim, four big ivory sugared-almond fangs (#efe6d2), smooth curved hooks pointing down and inwards, two at each side. ' +
-      'A white paper doily (#fbf6ee) with a scalloped lace edge is stuck flat to its underside, its scallops peeking out under the rim between the fangs.',
+      'A pale mint-white rim (#d8f2c8) flaring out round the bottom of the dome like a bell. Under it, four huge ivory sugared-almond fangs (#efe6d2), curved hooks as long as the dome is tall, spread far apart with open space between them: the outer two sweep out past the rim, the inner two hang down, every tip curling in. ' +
+      'A white paper doily (#fbf6ee) with a scalloped lace edge is stuck flat to its underside.',
     worn: 'the dome has slumped a little to one side as if melting, and one fat drip of jelly runs down its side and hangs below the rim; a big round spoonful is scooped out of the top of the dome at the back, a clear dent in its outline; one fang is snapped off short; the doily is torn and one ragged flap of it hangs down.',
   },
 };
