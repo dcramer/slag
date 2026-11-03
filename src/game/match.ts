@@ -611,15 +611,17 @@ export class Match {
 
   /**
    * Restore a player's saved look (a character seed), keeping their current name: in swatch `color` if it's
-   * free, else in the color they wear now, else the seed's own hue (a look saved before swatches). Refused
-   * (false) if no way of wearing it is free: someone here has that toy, that name or every one of those colors.
+   * free, else the free swatch nearest it, else the color they wear now; with no `color` (a look saved before
+   * swatches), in the seed's own hue. Refused (false) if no way of wearing it is free: someone here has that
+   * toy or that name, or wears every one of those colors.
    */
   setLook(slot: number, seed: number, color?: number): boolean {
     const p = this.player(slot);
     if (!p) return false;
     const base = { ...generateCharacter(seed), name: p.character.name };
     const i = swatchIndex(color);
-    const tries = i === undefined ? [base] : [withColor(base, i), keepColor(base, p.character)];
+    const near = i === undefined ? undefined : this.freeColorNear(PLAYER_COLORS[i].h, p);
+    const tries = i === undefined ? [base] : [withColor(base, i), ...(near === undefined ? [] : [withColor(base, near)]), keepColor(base, p.character)];
     const c = tries.find((t) => this.looksFree(t, p));
     if (!c) return false;
     if (c.seed !== p.character.seed || c.hue !== p.character.hue || c.color !== p.character.color) p.character = c;

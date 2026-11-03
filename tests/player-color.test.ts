@@ -87,6 +87,7 @@ describe('colors in a match', () => {
     expect(m.setLook(a.slot, seed, b.character.color)).toBe(true);
     expect(a.character.seed).toBe(seed);
     expect(a.character.color).not.toBe(b.character.color);
+    expect(a.character.color).toBe(m.freeColorNear(PLAYER_COLORS[b.character.color!].h, a));
     expect(hueApart(a.character.hue, b.character.hue)).toBeGreaterThanOrEqual(MIN_HUE_APART);
     const free = PLAYER_COLORS.findIndex((_, i) => m.colorFree(i, a) && i !== a.character.color);
     expect(m.setLook(a.slot, seed, free)).toBe(true);
