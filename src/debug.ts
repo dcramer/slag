@@ -1,3 +1,4 @@
+import type { BotSeats } from './brain/bots';
 import { parseSeed, Rng } from './core/rng';
 import type { Match } from './game/match';
 import { CAST, generateCharacter, type Kind } from './gen/character';
@@ -22,6 +23,7 @@ import type { ThemeId } from './themes';
  *   ?seed=abc           level seed
  *   ?theme=farm         force a theme (see src/themes.ts)
  *   ?players=2          auto-join N keyboard/pad players and start the match
+ *   ?bots=2             seat N built-in bots (src/brain) in the lobby
  *   ?race=saw,laser     drop those archetypes in and jump straight to a race
  *   ?race=all           one of every archetype
  *   ?propseed=7         seed for debug-generated props
@@ -43,6 +45,8 @@ export interface SlagDebug {
   net: NetSession | null;
   /** Join N players (kb1, kb2, pad0…pad5) and start round 1. */
   quickStart(players?: number): void;
+  /** Seat a built-in bot run by this page (src/brain); `step` plays its inputs. Returns its device. */
+  addBot(): string;
   /**
    * Place one prop of each archetype at deterministic legal spots (owner = player 1), turned `rot` quarter turns.
    * With `near` (a tile), each goes on the free spot closest to it instead.
@@ -92,7 +96,7 @@ export interface LoopControl {
 const DEVICES = ['kb1', 'kb2', 'pad0', 'pad1', 'pad2', 'pad3', 'pad4', 'pad5'];
 
 /** Installs `window.slagDebug` for this game; it goes away again when `signal` aborts (the game left the page). */
-export function installDebug(match: Match, renderer: Renderer, loop: LoopControl, net: NetSession | null, signal: AbortSignal): SlagDebug {
+export function installDebug(match: Match, renderer: Renderer, loop: LoopControl, net: NetSession | null, signal: AbortSignal, bots: BotSeats): SlagDebug {
   let uid = 5000;
   // Online, match devices are '<peer>:kb1'; offline sessions keep raw ids.
   const dev = (d: string) => net?.globalDevice(d) ?? d;
@@ -167,8 +171,16 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
       // Stepped frames are pictures of a finished level: ink a new one whole, not a chunk per render.
       renderer.bakeBudgetMs = on ? Infinity : 5;
     },
+    addBot() {
+      const d = dev(bots.add(match));
+      match.join(d);
+      return d;
+    },
     step(n = 1, inputs = {}) {
-      for (let i = 0; i < n; i++) match.step(inputs);
+      for (let i = 0; i < n; i++) {
+        const own = bots.frames(match, dev);
+        match.step({ ...Object.fromEntries(Object.entries(own).map(([d, f]) => [dev(d), f])), ...inputs });
+      }
       renderer.render(match, performance.now(), match.drainEvents());
     },
     render(ms) {
@@ -199,6 +211,7 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
     match.newLevel(match.seed);
   }
   installDevtoolsHooks(api, q.get('debug'), signal);
+  for (let i = Number(q.get('bots') ?? 0); i > 0; i--) api.addBot();
   const players = Number(q.get('players') ?? 0);
   const race = q.get('race');
   if (race) {

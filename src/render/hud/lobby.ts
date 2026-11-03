@@ -1,6 +1,7 @@
 import { css } from '../../core/color';
 import type { Match, Player } from '../../game/match';
 import { MAX_PLAYERS, VIEW_H, VIEW_W } from '../../sim/constants';
+import { isBotDevice } from '../../brain/device';
 import { THEME_LABELS } from '../../themes';
 import { drawGlyph, type Glyph } from '../../ui/glyphs';
 import { PAL, TYPE } from '../../ui/style';
@@ -86,6 +87,9 @@ export function lobby(hud: Hud, m: Match, t: number, dt: number) {
         (joinable && hud.button({ x, y, w: bw, h: bh, action: 'join', device: hud.mouseDevice })) ||
         (joinable && hud.mode === 'touch' && i === m.players.length);
       bay(c, x, y, bw, bh, hover, t);
+      // The first open bay can take a bot instead of a person.
+      if (hud.canAddBots && i === m.players.length)
+        hud.btn({ x: x + bw / 2 - 44, y: y + bh - (rows === 1 ? 40 : 32), w: 88, h: 24, action: 'bot' }, 'Add Bot', 'ghost', undefined, TYPE.label);
       hud.text('OPEN', x + bw / 2, y + bh / 2 - (hover ? 8 : 4), rows === 1 ? 26 : 22, hover ? PAL.amber : PAL.dim, 'center', DISPLAY, 400);
       if (hover) {
         const gx = x + bw / 2 - 18;
@@ -122,7 +126,7 @@ function playerCard(hud: Hud, p: Player, i: number, x: number, y: number, w: num
   const lw = c.measureText(label).width;
   hud.text(label, x + w - 10, y + 17.5, TYPE.caption, PAL.ash, 'right', UI, 600);
   if (p.device.endsWith('touch')) drawGlyph(c, { kind: 'touch' }, x + w - 24 - lw, y + 17.5, 11);
-  else icon(c, pad ? 'gamepad' : 'keyboard', x + w - 18 - lw, y + 17.5, 9, PAL.ash);
+  else if (!isBotDevice(p.device)) icon(c, pad ? 'gamepad' : 'keyboard', x + w - 18 - lw, y + 17.5, 9, PAL.ash);
   // Character on a slag pedestal.
   const cx = x + w / 2;
   const feet = y + (big ? h * 0.6 : h * 0.56);
@@ -173,12 +177,17 @@ function playerCard(hud: Hud, p: Player, i: number, x: number, y: number, w: num
     );
     if (watchable) hud.btn({ x: x + w - 66, y: by, w: 26, h: bh, action: 'watch', device: p.device }, '', 'secondary', 'eye');
     hud.btn({ x: x + w - 36, y: by, w: 26, h: bh, action: 'look', device: p.device }, '', 'secondary', 'dice');
-  } else if (p.afk) {
-    tag(c, 'AFK', cx, by + bh / 2 - 1, PAL.steel, PAL.bone, TYPE.label, 'center');
-  } else if (p.ready) {
-    tag(c, 'READY', cx, by + bh / 2 - 1, PAL.toxic, PAL.ink, TYPE.label, 'center');
-  } else hud.text('Not Ready', cx, by + bh / 2 - 1, TYPE.body, PAL.dim, 'center', UI, 600);
-  if (hud.net?.kickable?.includes(p.slot))
+  } else {
+    // A bot of yours has Remove at the right, so its status moves over to the room left of it.
+    const owned = hud.ownsBot(p.device);
+    const sx = owned ? x + (w - 70) / 2 + 2 : cx;
+    if (p.afk) tag(c, 'AFK', sx, by + bh / 2 - 1, PAL.steel, PAL.bone, TYPE.label, 'center');
+    else if (p.ready) tag(c, 'READY', sx, by + bh / 2 - 1, PAL.toxic, PAL.ink, TYPE.label, 'center');
+    else hud.text('Not Ready', sx, by + bh / 2 - 1, TYPE.body, PAL.dim, 'center', UI, 600);
+  }
+  if (!mine && hud.ownsBot(p.device))
+    hud.btn({ x: x + w - 70, y: by, w: 60, h: bh, action: 'unbot', device: p.device }, 'Remove', 'ghost', undefined, TYPE.label);
+  else if (hud.net?.kickable?.includes(p.slot))
     hud.btn({ x: x + w - 54, y: by, w: 44, h: bh, action: 'kick', device: p.device }, 'Kick', picked ? 'primary' : 'ghost', undefined, TYPE.label);
 }
 

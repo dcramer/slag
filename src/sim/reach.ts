@@ -1,12 +1,14 @@
-import { TILE as TILE_IMPORT } from './constants';
+import { PHYS, TILE as TILE_IMPORT } from './constants';
 import { type Level, type Ride, T_EMPTY, T_ONEWAY as T_ONEWAY_IMPORT, T_SOLID as T_SOLID_IMPORT } from './level';
 import {
   type Body,
   bodyAtCell as bodyAtCellImport,
   type CollisionWorld,
   type Controls,
+  type Solid,
   stepBody as stepBodyImport,
   TILE_ONEWAY_ID as TILE_ONEWAY_ID_IMPORT,
+  TILE_SOLID_ID,
 } from './physics';
 import { surfaceGrid } from './ground';
 import { footing } from './weather';
@@ -97,6 +99,9 @@ const MAX_WALL_JUMPS = 10;
 const RUN_FRAMES = 170;
 /** Frames in the longest single move this analysis can prove. Gust lulls are sized by it (sim/weather.ts). */
 export const LONGEST_MOVE = Math.max(MAX_FRAMES, MAX_WALL_FRAMES, RUN_FRAMES);
+/** Frames a recorded step to the next cell may take, and a recorded stop. */
+const STEP_FRAMES = 40;
+const STOP_FRAMES = 60;
 /** Frame at which straight-up jumps fork into late-steer variants. */
 const LATE_STEER = 12;
 
@@ -159,6 +164,24 @@ class RunPolicy implements Policy {
     const holding = since < 0 || since < this.releaseAfter;
     c.left = holding && this.dir < 0;
     c.right = holding && this.dir > 0;
+  }
+}
+
+/** Already in the air: steer one way (or not at all), holding jump or not, and never press it. Where a replanned move starts. */
+class DriftPolicy implements Policy {
+  readonly maxFrames = MAX_FRAMES;
+  constructor(
+    readonly dir: -1 | 0 | 1,
+    readonly hold: boolean,
+    readonly wallFork?: -1 | 1,
+  ) {}
+  input(_f: number, _b: Body, c: Controls) {
+    c.run = false;
+    c.left = this.dir < 0;
+    c.right = this.dir > 0;
+    c.down = false;
+    c.jump = this.hold;
+    c.jumpPressed = false;
   }
 }
 
@@ -271,6 +294,44 @@ function rootPolicy(root: number, world: CollisionWorld): Policy {
   return new DropPolicy(([0, -1, 1] as const)[root - ROOT_DROP]);
 }
 
+/** Policies for a body already in the air: drift left, right or not at all, jump held or not; the sideways drifts fork wall climbs. */
+const AIR_ROOTS: readonly (() => Policy)[] = ([-1, 0, 1] as const).flatMap((d) =>
+  [false, true].map((hold) => () => new DriftPolicy(d, hold, d === 0 ? undefined : d)),
+);
+
+/** One move the controller can make from where a body is now. */
+export interface Move {
+  /** The stand cell it lands on, `y * w + x`. */
+  to: number;
+  /** Controls for each frame, from the first. */
+  controls: Controls[];
+  /** The body's x and y after each frame, interleaved: where to expect it, so a player of the move sees when the world disagrees. */
+  path: number[];
+}
+
+/**
+ * Every move the policies above make from `body` as it is now, on `level`'s
+ * tiles, keeping the quickest landing on each cell. On the ground that's every
+ * root, run-ups from wherever it stands included; in the air, the drifts in
+ * AIR_ROOTS and the wall climbs they fork. The body is copied, never moved.
+ * Steps to a neighboring cell are moves too. Every landing is one the body
+ * can stop on. `solids` stand in the way as they are now (a race's parts,
+ * frozen at this frame). It's what a bot plays (src/brain/motor.ts): the
+ * moves the solvability proof walks, so a route the proof finds is one a bot
+ * can run.
+ */
+export function movesFrom(level: Level, body: Body, solids: readonly Solid[] = []): Move[] {
+  const tracer = new Tracer(level, true);
+  tracer.setSurface(footing(level), level.ground);
+  return tracer.moves(body, solids);
+}
+
+/** What a standing body stands on in a trace: the solid it's on if it's there, else the tile (a part's block written into the tiles is terrain). */
+function groundOf(b: Body, solids: readonly Solid[], oneWay: boolean): number {
+  if (b.groundRef >= 0 && solids.some((s) => s.id === b.groundRef)) return b.groundRef;
+  return oneWay ? TILE_ONEWAY_ID : TILE_SOLID_ID;
+}
+
 /** A cell a body can stand in: not solid itself, with a solid or one-way tile beneath. */
 export function isStandable(level: Level, tx: number, ty: number): boolean {
   if (tx < 0 || tx >= level.w || ty < 0 || ty >= level.h - 1) return false;
@@ -343,11 +404,16 @@ export class ReachCache {
    * a permanent gale leaves open and `[0, air]` what a player gets by picking
    * their moments.
    */
-  constructor(level: Level, airs: readonly number[] = CALM) {
+  constructor(
+    level: Level,
+    airs: readonly number[] = CALM,
+    /** Count only landings the body can stop on (see Tracer.careful): the moves a bot will make, not every move the proof may. */
+    careful = false,
+  ) {
     this.tiles = level.tiles.slice();
     this.winds = airs.map((air) => (air === 0 ? null : { vx: air, vy: 0, ky: 0, dy: 0 }));
     this.trails = new Array<Trail | undefined>(level.w * level.h * ROOT_COUNT * airs.length);
-    this.tracer = new Tracer(level);
+    this.tracer = new Tracer(level, careful);
     this.diff = new Int32Array((level.w + 1) * (level.h + 1));
     this.surface = footing(level);
     this.ground = level.ground;
@@ -507,6 +573,9 @@ export function analyzeReach(level: Level, stopAtGoal = true, onEdge?: (from: nu
   return { goalReached, reachable: new Set(cells) };
 }
 
+/** A fork of a trace nobody records: shared, so the proof's hot loop makes no closure per trace. */
+const unrecorded = (): undefined => undefined;
+
 /** Runs policies (and their forks) through the real controller with reused scratch input, tracking what each root read. */
 class Tracer {
   readonly w: number;
@@ -533,7 +602,11 @@ class Tracer {
   /** The side wind of the root being traced. */
   private wind: WindForce | null = null;
 
-  constructor(level: Level) {
+  constructor(
+    level: Level,
+    /** A landing counts only if the body can stop there without skidding off or into a no-go tile. */
+    readonly careful = false,
+  ) {
     this.w = level.w;
     this.h = level.h;
     this.tiles = level.tiles;
@@ -569,9 +642,8 @@ class Tracer {
     this.tiles = tiles;
   }
 
-  /** Trace one root policy from a cell, on its own. */
-  run(root: number, tx: number, ty: number, oneWay: boolean, wind: WindForce | null): Trail {
-    this.wind = wind;
+  /** Fresh bookkeeping for one root traced from cell (tx, ty). */
+  private reset(tx: number, ty: number): void {
     this.bx0 = this.bx1 = tx;
     this.by0 = this.by1 = ty;
     this.clear.x0 = 1;
@@ -580,6 +652,12 @@ class Tracer {
     this.land = [];
     this.cands = [];
     this.stamp++;
+  }
+
+  /** Trace one root policy from a cell, on its own. */
+  run(root: number, tx: number, ty: number, oneWay: boolean, wind: WindForce | null): Trail {
+    this.wind = wind;
+    this.reset(tx, ty);
     const b = bodyAtCell(tx, ty);
     // It's already standing here: a jump on frame 0 leaves this ground.
     const under = this.world.surfaceAt ? this.world.surfaceAt(tx, ty + 1) : this.world.tileSurface;
@@ -592,16 +670,51 @@ class Tracer {
     return { land: this.land, x0: this.bx0, y0: this.by0, x1: this.bx1, y1: this.by1, cands: this.cands };
   }
 
-  private trace(b: Body, f0: number, p: Policy, airborne0: boolean): void {
+  /** Moves found by `moves`, while it runs; null otherwise, so the proof's traces record nothing. */
+  private found: Move[] | null = null;
+
+  /** Every root from `b0` as it is, recorded, among `solids` (see movesFrom). */
+  moves(b0: Body, solids: readonly Solid[]): Move[] {
+    this.world.solids = solids;
+    const tx = Math.floor((b0.x + b0.w / 2) / TILE);
+    const ty = Math.floor((b0.y + b0.h - 1) / TILE);
+    const airborne = !b0.onGround;
+    const oneWay = !airborne && this.world.tileAt(tx, ty + 1) === T_ONEWAY;
+    const roots: (() => Policy)[] = airborne ? [...AIR_ROOTS] : [];
+    if (!airborne) for (let r = 0; r < ROOT_COUNT; r++) if (r < ROOT_DROP || oneWay) roots.push(() => rootPolicy(r, this.world));
+    this.found = [];
+    for (const make of roots) {
+      this.reset(tx, ty);
+      this.touched = false;
+      const b = { ...b0 };
+      if (b.onGround) b.groundRef = groundOf(b0, solids, oneWay);
+      this.trace(b, 0, make(), airborne, { controls: [], path: [] });
+    }
+    if (!airborne)
+      for (const dir of [-1, 1] as const) {
+        this.reset(tx, ty);
+        this.touched = false;
+        const b = { ...b0 };
+        b.groundRef = groundOf(b0, solids, oneWay);
+        this.step(b, dir, ty * this.w + tx);
+      }
+    const out = this.found;
+    this.found = null;
+    this.world.solids = [];
+    return out;
+  }
+
+  private trace(b: Body, f0: number, p: Policy, airborne0: boolean, log?: Omit<Move, 'to'>): void {
     let airborne = airborne0;
     let wallForked = false;
     const bottom = this.h * TILE;
     const x0 = b.x;
+    const fork = log ? () => ({ controls: log.controls.slice(), path: log.path.slice() }) : unrecorded;
     for (let f = f0; f < p.maxFrames; f++) {
-      if (p.forks) for (const fk of p.forks) if (fk.at === f) this.trace({ ...b }, f, fk.make(), airborne);
+      if (p.forks) for (const fk of p.forks) if (fk.at === f) this.trace({ ...b }, f, fk.make(), airborne, fork());
       if (p.wallFork && !wallForked && !b.onGround && b.wallDir === p.wallFork && b.vy >= 0) {
         wallForked = true;
-        this.trace({ ...b }, f, new WallPolicy(p.wallFork, false, false), airborne);
+        this.trace({ ...b }, f, new WallPolicy(p.wallFork, false, false), airborne, fork());
       }
       if (p.key) {
         if (b.y < -TILE) return; // climbed out over the top of the level: nothing to land on up there
@@ -618,14 +731,20 @@ class Tracer {
         this.touched = false;
         return;
       }
+      if (log) {
+        log.controls.push({ ...this.c });
+        log.path.push(b.x, b.y);
+      }
       const child = p.after?.(b);
-      if (child) this.trace({ ...b }, f + 1, child, airborne);
+      if (child) this.trace({ ...b }, f + 1, child, airborne, fork());
       if (b.y > bottom) return;
       if (!b.onGround) {
         airborne = true;
         if (b.y + b.h > feet) this.offerBridge(b, feet);
       } else if (airborne) {
-        this.landing(b);
+        if (this.careful && !this.stops(b)) return;
+        const to = this.landing(b);
+        if (log && to >= 0) this.keep({ to, ...log });
         return;
       }
       // Still walking along flat ground: neighbor edges (and the neighbor's own walk-off) cover that.
@@ -643,22 +762,77 @@ class Tracer {
     this.cands.push(k);
   }
 
-  /** Record the standable cell under a body that just landed. */
-  private landing(b: Body): void {
+  /** Record the standable cell under a body that just landed, and return it (-1 if none). */
+  private landing(b: Body): number {
     const fy = Math.floor((b.y + b.h - 1) / TILE);
-    if (!this.record(Math.floor((b.x + b.w / 2) / TILE), fy) && !this.record(Math.floor(b.x / TILE), fy)) this.record(Math.floor((b.x + b.w - 1) / TILE), fy);
+    let k = this.record(Math.floor((b.x + b.w / 2) / TILE), fy);
+    if (k < 0) k = this.record(Math.floor(b.x / TILE), fy);
+    if (k < 0) k = this.record(Math.floor((b.x + b.w - 1) / TILE), fy);
     this.touched = false;
+    return k;
   }
 
-  private record(fx: number, fy: number): boolean {
-    if (fx < 0 || fx >= this.w || fy < 0 || fy >= this.h - 1) return false;
+  private record(fx: number, fy: number): number {
+    if (fx < 0 || fx >= this.w || fy < 0 || fy >= this.h - 1) return -1;
     const t = this.world.tileAt(fx, fy);
-    if (t === T_SOLID || t === T_NOGO) return false;
+    if (t === T_SOLID || t === T_NOGO) return -1;
     const below = this.world.tileAt(fx, fy + 1);
-    if (below !== T_SOLID && below !== T_ONEWAY) return false;
+    if (below !== T_SOLID && below !== T_ONEWAY) return -1;
     const k = fy * this.w + fx;
     if (!this.land.includes(k)) this.land.push(k);
+    return k;
+  }
+
+  /** Walk into the next cell along the ground (no run), recorded: the step a route takes between neighbors. */
+  private step(b: Body, dir: -1 | 1, from: number): void {
+    const log: Omit<Move, 'to'> = { controls: [], path: [] };
+    const c = this.c;
+    for (let f = 0; f < STEP_FRAMES; f++) {
+      c.left = dir < 0;
+      c.right = dir > 0;
+      c.run = c.down = c.jump = c.jumpPressed = false;
+      stepBody(b, c, this.world, this.wind);
+      if (this.touched || !b.onGround) return;
+      log.controls.push({ ...c });
+      log.path.push(b.x, b.y);
+      const k = Math.floor((b.y + b.h - 1) / TILE) * this.w + Math.floor((b.x + b.w / 2) / TILE);
+      if (k !== from) {
+        if (this.stops(b)) this.keep({ to: k, ...log });
+        return;
+      }
+    }
+  }
+
+  /**
+   * Could a body that just landed (or stepped) here come to a stop without
+   * leaving the ground or touching a no-go tile? A run that lands at full
+   * speed at the near end of a short ledge skids off it.
+   */
+  private stops(b0: Body): boolean {
+    const b = { ...b0 };
+    const c = this.c;
+    for (let f = 0; f < STOP_FRAMES; f++) {
+      if (Math.abs(b.vx) < 0.5) return true;
+      // Past a walk, hold against the skid; at a walk, letting go stops it.
+      const hard = Math.abs(b.vx) > PHYS.walkSpeed + 1;
+      c.left = hard && b.vx > 0;
+      c.right = hard && b.vx < 0;
+      c.run = c.down = c.jump = c.jumpPressed = false;
+      stepBody(b, c, this.world, this.wind);
+      if (this.touched || !b.onGround) {
+        this.touched = false;
+        return false;
+      }
+    }
     return true;
+  }
+
+  /** The quickest recorded landing on each cell. */
+  private keep(m: Move): void {
+    const found = this.found!;
+    const i = found.findIndex((x) => x.to === m.to);
+    if (i < 0) found.push(m);
+    else if (m.controls.length < found[i].controls.length) found[i] = m;
   }
 }
 
@@ -675,14 +849,20 @@ const AIR_UP = 30;
  * climbing dear, so a gap a bridge spans or a runner mid-jump still has a
  * distance. Depends only on the level, so it's the same on every peer: worth
  * caching per level version (see `goalFieldOf` in items).
+ *
+ * `air: false` drops the open-air links: distance by proven moves alone,
+ * Infinity wherever none lead, which is what a bot needs to follow a route
+ * (src/brain/route.ts); `careful` keeps only landings it can stop on, the
+ * moves `movesFrom` offers. `target` measures to another cell than the flag.
  */
-export function goalField(level: Level): Float64Array {
+export function goalField(level: Level, opts: { air?: boolean; target?: number; careful?: boolean } = {}): Float64Array {
+  const { air = true } = opts;
   const { w, h, tiles } = level;
   const n = w * h;
   const rev: number[][] = Array.from({ length: n }, () => []);
   const starts: number[] = [];
   for (let k = 0; k < n; k++) if (isStandable(level, k % w, (k - (k % w)) / w)) starts.push(k);
-  new ReachCache(level).analyze(level, false, {
+  new ReachCache(level, CALM, opts.careful).analyze(level, false, {
     from: { cells: starts, known: new Uint8Array(n) },
     onEdge: (from, to) => {
       if (from >= 0 && from !== to && !rev[to].includes(from)) rev[to].push(from);
@@ -691,7 +871,7 @@ export function goalField(level: Level): Float64Array {
   const dist = new Float64Array(n).fill(Number.POSITIVE_INFINITY);
   const open = (k: number) => tiles[k] !== T_SOLID;
   const heap = new MinHeap();
-  const goal = level.goal.ty * w + level.goal.tx;
+  const goal = opts.target ?? level.goal.ty * w + level.goal.tx;
   dist[goal] = 0;
   heap.push(0, goal);
   const relax = (k: number, d: number) => {
@@ -705,10 +885,12 @@ export function goalField(level: Level): Float64Array {
     if (d > dist[k]) continue;
     const x = k % w;
     // Predecessors: whoever moves into k. From below means climbing.
-    if (x > 0 && open(k - 1)) relax(k - 1, d + AIR_SIDE);
-    if (x < w - 1 && open(k + 1)) relax(k + 1, d + AIR_SIDE);
-    if (k >= w && open(k - w)) relax(k - w, d + AIR_DOWN);
-    if (k + w < n && open(k + w)) relax(k + w, d + AIR_UP);
+    if (air) {
+      if (x > 0 && open(k - 1)) relax(k - 1, d + AIR_SIDE);
+      if (x < w - 1 && open(k + 1)) relax(k + 1, d + AIR_SIDE);
+      if (k >= w && open(k - w)) relax(k - w, d + AIR_DOWN);
+      if (k + w < n && open(k + w)) relax(k + w, d + AIR_UP);
+    }
     for (const p of rev[k]) {
       const dx = (p % w) - x;
       const dy = (p - (p % w)) / w - (k - x) / w;

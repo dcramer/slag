@@ -1,3 +1,4 @@
+import { isBotDevice } from '../brain/device';
 import { tidyName } from '../core/name';
 import { nameBlocked } from '../core/name-filter';
 import { type CharacterDef, generateCharacter } from '../gen/character';
@@ -182,7 +183,8 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
         (ns.parked[peer] ??= []).push({ dev: a.dev, char: p.character, score: p.score });
       } else {
         const p = m.leave(a.dev);
-        if (!p) return;
+        // A bot sent away is gone, not parked: a parked seat comes back the moment its peer is in the lobby.
+        if (!p || isBotDevice(a.dev)) return;
         (ns.parked[peer] ??= []).push({ dev: a.dev, char: p.character });
       }
       if (ns.parked[peer].length > 4) ns.parked[peer].shift();

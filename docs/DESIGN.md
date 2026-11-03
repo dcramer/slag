@@ -222,7 +222,9 @@ A level is a place with one landmark you'd name it after: the Great Wheel, the H
 - In pick and place everyone sees everyone's cursor and held part live. A card belongs to whoever the host hears first; nobody sees a claim that gets taken back.
 
 ## AI players
-Not built yet; the plan is TODO 27. Native AI comes first: built-in bots, in local and online play. Player scripts come after.
+Built-in bots race, pick and place (TODO 27, phase 1); personality, taste and host migration are next, then player scripts. The lobby's host adds a bot from an open bay (**Add Bot**) and sends it away with **Remove**; a bot readies itself.
+
+- **How a bot runs.** It follows the route the solvability proof would take, playing the controller's own moves, and waits out a hazard or a shot that its next move would meet. It doesn't know its way past what the proof doesn't model (riding movers, timing a door), and gives up with self-destruct when it stops getting closer, as a stuck player would.
 
 - **A brain is an input device.** It fills a seat and produces that seat's `InputFrame`s, nothing else. It runs on one machine: the host for built-in bots, the owner's own machine for a player's script. Its inputs cross the network like a human's, so the sim never runs brain code, lockstep and fairness stay as they are, and a brain doesn't have to be deterministic. That is what makes player scripts possible: nobody ships or sandboxes untrusted code on every peer.
 - **A brain never cheats.** One hitbox, one physics model, the same inputs as anyone. In pick and place it moves a cursor and clicks like a player, so everyone watches it choose.

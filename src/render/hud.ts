@@ -50,7 +50,11 @@ export type HudAction =
   /** Stay on this page and play here, offline (a room that failed). */
   | 'offline'
   /** Kicked, and the ban ran out: try the room again. */
-  | 'rejoin';
+  | 'rejoin'
+  /** Seat a bot this machine runs (lobby, the host or offline). */
+  | 'bot'
+  /** Unseat the bot playing as `device`. */
+  | 'unbot';
 
 export interface HudButton {
   x: number;
@@ -166,6 +170,10 @@ export class Hud {
   room = '';
   /** Device the mouse controls (gets name/settings buttons). */
   mouseDevice = 'kb1';
+  /** This machine may seat a bot: the lobby's host (or offline), seated itself, with a seat free. */
+  canAddBots = false;
+  /** Is this device a bot this machine runs (its card gets Remove)? */
+  ownsBot: (device: string) => boolean = () => false;
   /** Latest pointer position in view coords, for hover highlights. */
   pointer: { x: number; y: number } | null = null;
   /** Online lobby info (peers, status, invite link); set by the net layer when connected. */

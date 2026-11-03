@@ -1,0 +1,55 @@
+import { deriveSeed } from '../core/rng';
+import type { Match } from '../game/match';
+import type { InputFrame } from '../sim/types';
+import { botDevice } from './device';
+import { Motor } from './motor';
+import { BRAINS, type BrainId } from './registry';
+import type { Brain } from './types';
+import { senseView } from './view';
+
+interface Bot {
+  brain: Brain;
+  motor: Motor;
+  /** It has had a seat: losing it now (a watch, a kick, the lobby emptied) lets the bot go. */
+  seated: boolean;
+}
+
+/**
+ * The bots this machine runs, by local device. Each frame, every one that's
+ * seated thinks over its view and its motor answers with the seat's input,
+ * which the caller hands on with the keyboards' (net/session.ts carries it
+ * from there). A bot not yet seated sends nothing.
+ */
+export class BotSeats {
+  private bots = new Map<string, Bot>();
+
+  /** A new bot's local device; seat it with a join action. */
+  add(match: Match, kind: BrainId = 'runner'): string {
+    let n = 1;
+    while (this.bots.has(botDevice(n))) n++;
+    const dev = botDevice(n);
+    this.bots.set(dev, { brain: BRAINS[kind].make(deriveSeed(match.seed, `bot:${dev}:${match.frame}`)), motor: new Motor(), seated: false });
+    return dev;
+  }
+
+  remove(dev: string): void {
+    this.bots.delete(dev);
+  }
+
+  has(dev: string): boolean {
+    return this.bots.has(dev);
+  }
+
+  /** This frame's input for every seated bot, by local device. `global` names a local device the way the match does. */
+  frames(match: Match, global: (dev: string) => string = (d) => d): Record<string, InputFrame> {
+    const out: Record<string, InputFrame> = {};
+    for (const [dev, bot] of this.bots) {
+      const p = match.players.find((q) => q.device === global(dev));
+      if (p) {
+        bot.seated = true;
+        out[dev] = bot.motor.drive(match, p, bot.brain.think(senseView(match, p)));
+      } else if (bot.seated) this.bots.delete(dev);
+    }
+    return out;
+  }
+}
