@@ -1,5 +1,5 @@
 /**
- * Styles for the DOM screens (main menu, 404, error) and the logo, as one
+ * Styles for the DOM screens (main menu, lobbies, about, 404, error) and the logo, as one
  * string so a host can inline it in its HTML for a styled first paint. The
  * shell (src/main.ts) adds it to the page if the host didn't. Tokens mirror
  * PAL and FONT in ../style.ts; the rules behind them are in docs/ART.md.
@@ -449,6 +449,24 @@ body {
   }
 }
 
+/* A short desktop window (720p) still fits all six plates and the footer: the plates pack a little tighter. */
+@media (min-width: 861px) and (max-height: 800px) {
+  .home-main {
+    padding-top: 24px;
+  }
+  .brand {
+    margin-bottom: 36px;
+  }
+  .menu {
+    gap: 9px;
+  }
+  .menu .menu-item {
+    min-height: 56px;
+    padding-top: 6px;
+    padding-bottom: 8px;
+  }
+}
+
 @media (pointer: coarse) {
   .footbar {
     display: none;
@@ -717,7 +735,8 @@ button.prompt:focus-visible {
 
 /* ------------------------------------------------------------ lobbies */
 
-.lobbies {
+.lobbies,
+.about {
   position: relative;
   min-height: 100dvh;
   display: grid;
@@ -1083,6 +1102,100 @@ button.prompt:focus-visible {
   }
   .lb-row .chev {
     display: none;
+  }
+}
+
+/* ------------------------------------------------------------ about */
+
+/* The Lobbies screen's frame and header; one plate of words, then the links as menu plates. */
+.ab-card {
+  width: auto;
+  margin: 0 8px 22px 24px;
+}
+
+.ab-card p {
+  margin-bottom: 22px;
+}
+
+.ab-card .ab-by {
+  font: 400 26px/1.1 var(--display);
+  color: var(--bone);
+  text-shadow: 0 2px 0 var(--drop);
+}
+
+.ab-card h2 {
+  margin: 0 0 8px;
+  font: 800 13px/1 var(--ui);
+  letter-spacing: 0.14em;
+  color: var(--amber);
+}
+
+.ab-credits {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font: 600 16px/1.3 var(--ui);
+}
+
+.ab-credits li {
+  display: contents;
+}
+
+.ab-what {
+  color: var(--bone);
+  font-weight: 700;
+}
+
+.ab-who {
+  color: var(--ash);
+}
+
+.ab-lic {
+  justify-self: end;
+  padding: 4px 7px 3px;
+  font: 800 12px/1 var(--ui);
+  letter-spacing: 0.1em;
+  color: var(--ash);
+  background: var(--soot);
+  border: 1.5px solid var(--rim);
+  border-radius: 4px;
+}
+
+.ab-links {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0 8px 0 24px;
+  list-style: none;
+}
+
+@media (max-width: 860px) {
+  .ab-card {
+    margin-left: 0;
+    margin-right: 0;
+  }
+  .ab-links {
+    padding-left: 0;
+  }
+}
+
+/* A phone held upright: each credit's name and license on one line, who under it. */
+@media (max-width: 600px) {
+  .ab-credits {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-auto-flow: row dense;
+    row-gap: 4px;
+  }
+  .ab-who {
+    grid-column: 1 / -1;
+    margin-bottom: 8px;
+  }
+  .ab-lic {
+    grid-column: 2;
   }
 }
 

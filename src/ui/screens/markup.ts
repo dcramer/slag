@@ -2,14 +2,14 @@ import { type Glyph, glyphSVG, type PadButton } from '../glyphs';
 import { logoSVG } from './logo-art';
 
 /**
- * Markup of the DOM screens as plain strings: the main menu, the 404 and
+ * Markup of the DOM screens as plain strings: the main menu, lobbies, about, the 404 and
  * error screens, and the logo. Pure and deterministic, so a host may
  * server-render it for a fast first paint (app/ does), and the screen code
  * adopts what's already on the page instead of building it again. Styles are
  * in ./css.ts; behavior is in ./home.ts and ./plain.ts.
  */
 
-export type MenuItemId = 'play' | 'lobbies' | 'join' | 'codex' | 'settings';
+export type MenuItemId = 'play' | 'lobbies' | 'join' | 'codex' | 'settings' | 'about';
 
 export const MENU_ITEMS: readonly { id: MenuItemId; title: string; sub: string }[] = [
   { id: 'play', title: 'PLAY', sub: 'Start a New Lobby' },
@@ -17,6 +17,7 @@ export const MENU_ITEMS: readonly { id: MenuItemId; title: string; sub: string }
   { id: 'join', title: 'JOIN A LOBBY', sub: 'Enter a Lobby Code' },
   { id: 'codex', title: 'CODEX', sub: 'Spoilers!' },
   { id: 'settings', title: 'SETTINGS', sub: 'Audio, Video and Controls' },
+  { id: 'about', title: 'ABOUT', sub: 'Credits, License and Source' },
 ];
 
 /**
@@ -156,6 +157,59 @@ export function lobbiesHTML(): string {
     `<section class="lb-empty"><h2></h2>` +
     `<button type="button" class="menu-item" data-act="play" data-active="false"><span class="t">PLAY</span><span class="s">Start a New Lobby</span><span class="chev"></span></button></section></main>` +
     `<footer class="footbar"><span class="meta">Lobbies</span><div class="prompts" aria-hidden="true">${lobbiesPromptsHTML(false, 'Join')}</div></footer></div>`
+  );
+}
+
+/** Where the source lives: About links it, and its license beside it. */
+export const REPO_URL = 'https://github.com/dcramer/slag';
+
+/** About's links: the menu plates its selection moves through. */
+export const ABOUT_LINKS: readonly { title: string; sub: string; href: string }[] = [
+  { title: 'SOURCE CODE', sub: 'github.com/dcramer/slag', href: REPO_URL },
+  { title: 'LICENSE', sub: 'Apache 2.0', href: `${REPO_URL}/blob/main/LICENSE` },
+];
+
+/**
+ * Who and what to thank (public/ASSETS.md has the sources). The word lists' licenses ask for this attribution;
+ * the fonts' don't, but they carry every word on screen.
+ */
+const ABOUT_CREDITS: readonly { what: string; who: string; license: string }[] = [
+  { what: 'Lilita One', who: 'Juan Montoreano', license: 'OFL 1.1' },
+  { what: 'Barlow', who: 'Jeremy Tribby', license: 'OFL 1.1' },
+  { what: 'Bad-Word List', who: 'Shutterstock and Contributors', license: 'CC BY 4.0' },
+  { what: 'Profanity List', who: 'David Sojevic', license: 'MIT' },
+];
+
+/** The About screen's footer: the selection, Open, and Back. */
+export function aboutPromptsHTML(pad: boolean): string {
+  const p = (keys: string[], buttons: readonly PadButton[], label: string, act?: string) => promptHTML(keys, pad ? buttons : null, label, act);
+  return p(['↑', '↓'], ['DPAD'], 'Select') + p(['Enter'], ['A'], 'Open') + p(['Esc'], ['B'], 'Back', 'back');
+}
+
+/**
+ * The About screen: the Lobbies screen's header, a plate with who made it, what it parodies and who to thank, and
+ * the links as menu plates. Pure, so a host may server-render it. Names a parody's targets by trope, never by title
+ * (docs/DESIGN.md → Parody).
+ */
+export function aboutHTML(): string {
+  const links = ABOUT_LINKS.map(
+    (l, i) =>
+      `<li><a class="menu-item" href="${l.href}" target="_blank" rel="noopener" data-active="${i === 0}">` +
+      `<span class="t">${l.title}</span><span class="s">${l.sub}</span><span class="chev"></span></a></li>`,
+  ).join('');
+  const credits = ABOUT_CREDITS.map(
+    (c) => `<li><span class="ab-what">${c.what}</span><span class="ab-who">${c.who}</span><span class="ab-lic">${c.license}</span></li>`,
+  ).join('');
+  return (
+    `<div class="about" data-screen="about">${forgeHTML()}` +
+    `<main class="lb-main"><header class="lb-head"><button type="button" class="lb-back" data-act="back" aria-label="Main Menu"></button>` +
+    `${scaledLogoHTML()}<h1>ABOUT</h1></header>` +
+    `<section class="plain-card ab-card"><p class="ab-by">Made by David Cramer.</p>` +
+    `<h2>INSPIRATION</h2><p>The build-then-race party platformers came first. Then a plumber’s blocks, pipes and shells, an ape’s barrels and girders, ` +
+    `and a crossover brawler’s worth of items. The runners are the knock-off heroes who never made the cut.</p>` +
+    `<h2>CREDITS</h2><ul class="ab-credits">${credits}</ul></section>` +
+    `<ul class="ab-links" aria-label="Links">${links}</ul></main>` +
+    `<footer class="footbar"><span class="meta">About</span><div class="prompts" aria-hidden="true">${aboutPromptsHTML(false)}</div></footer></div>`
   );
 }
 

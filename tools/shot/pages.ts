@@ -1,4 +1,4 @@
-/** Whole pages and contact sheets: levels, prop crates, the main menu, rules, settings, the lobby list and the codex. */
+/** Whole pages and contact sheets: levels, prop crates, the main menu, rules, settings, the lobby list, About and the codex. */
 import { devices } from 'playwright';
 import { base, browser, errors, H, mode, open, opt, out, page, pet, seed, sheet, snap, step, theme, W, type Scenarios } from './ctx';
 
@@ -415,6 +415,45 @@ export const shots: Scenarios = {
       );
       if (small) throw new Error(`lobbies: ${small} tap targets under 44 px on ${d}`);
       const name = `${out}/lobbies-${d.toLowerCase().replaceAll(/\W+/g, '-')}.png`;
+      await mp.screenshot({ path: name, fullPage: true });
+      console.log(name);
+      pet();
+      await ctx.close();
+    }
+  },
+  /** About, reached from the main menu by keys; then a phone upright and on its side, failing on a tap target under 44 CSS px. */
+  async about() {
+    await page.goto(base);
+    await page.waitForSelector('[data-screen=home] .menu-item:not([disabled])');
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('[data-screen=about]');
+    await page.evaluate(() => document.fonts.ready);
+    await page.waitForTimeout(600);
+    await snap('about');
+    await page.keyboard.press('ArrowDown');
+    await page.waitForTimeout(150);
+    await snap('about-license');
+    // Esc leaves for the main menu.
+    await page.keyboard.press('Escape');
+    await page.waitForSelector('[data-screen=home]');
+    for (const d of ['iPhone 13', 'iPhone SE landscape']) {
+      const { defaultBrowserType: _ignored, ...desc } = devices[d];
+      const ctx = await browser.newContext(desc);
+      const mp = await ctx.newPage();
+      mp.on('pageerror', (e: Error) => errors.push(String(e)));
+      await mp.goto(`${base}about`);
+      await mp.evaluate(() => document.fonts.ready);
+      await mp.waitForTimeout(500);
+      const small = await mp.evaluate(
+        () =>
+          [...document.querySelectorAll<HTMLElement>('[data-screen=about] :is(a, button)')]
+            .filter((b) => b.offsetParent !== null)
+            .map((b) => b.getBoundingClientRect())
+            .filter((r) => r.width < 44 || r.height < 44).length,
+      );
+      if (small) throw new Error(`about: ${small} tap targets under 44 px on ${d}`);
+      const name = `${out}/about-${d.toLowerCase().replaceAll(/\W+/g, '-')}.png`;
       await mp.screenshot({ path: name, fullPage: true });
       console.log(name);
       pet();

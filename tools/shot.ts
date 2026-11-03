@@ -49,6 +49,7 @@
  *   pnpm shot join [--only full]           → the join-and-watch storyboard: connecting, Join or Watch, observing, AFK, failures (desktop + phone)
  *   pnpm shot home                         → main menu (desktop + 390×844 mobile)
  *   pnpm shot lobbies                      → the lobby list (stubbed rooms): Join, Watch, empty; phones, failing on a tap target under 44 px
+ *   pnpm shot about                        → About, from the main menu by keys; phones, failing on a tap target under 44 px
  *   pnpm shot rules                        → the match rules card (fails if it doesn't fit the window)
  *   pnpm shot settings                     → every settings tab over the lobby, driven by keys and a fake pad,
  *                                           then over the main menu on a phone (portrait and landscape), by tap
