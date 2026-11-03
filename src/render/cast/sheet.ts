@@ -282,7 +282,7 @@ export function castRecognise(t = 0.4): HTMLCanvasElement {
   return cv;
 }
 
-/** Draw cost per runner, 8 at play scale, in ms: the cast as drawn, or only `kinds` (rendered ones too, with `?sprites=1`). */
+/** Draw cost per runner, 8 at play scale, in ms: the cast as drawn, or only `kinds` (rendered ones from their frames). */
 export function castBench(n = 200, kinds?: Kind[]): number {
   const cv = document.createElement('canvas');
   cv.width = 800;
@@ -361,7 +361,7 @@ export const blindOrder = (): string[] =>
  * One rendered kind's curated variety (docs/CHARACTERS.md → Variety), drawn in game: twelve looks in
  * twelve player colours, each standing in the idle it plays, cheering its cheer and mid-run with its own
  * gait, labelled with what it rolled; then all twelve at play scale on light and dark ground. With
- * `?sprites=1`, once the kind's frames have loaded. Every column must read as the same character by the
+ * as rendered, once the kind's frames have loaded. Every column must read as the same character by the
  * same hand.
  */
 export function castVariety(kind: Kind, t = 0.4): HTMLCanvasElement {

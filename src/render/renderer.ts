@@ -5,7 +5,8 @@ import { overview, raceFloor, type ViewXform } from '../game/view';
 import { PLAYER_H, TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import { floorY, type Level, tileAt } from '../sim/level';
 import type { Solid } from '../sim/physics';
-import { type Beam, footprint, motionOffset, previewProps, type Resolved, resolveProp } from '../sim/props';
+import type { Cell } from '../core/geom';
+import { type Beam, footprint, motionOffset, placeFaults, previewProps, type Resolved, resolveProp } from '../sim/props';
 import type { RunWorld } from '../sim/run';
 import type { GameEvent } from '../sim/types';
 import { Backdrop } from './background';
@@ -107,12 +108,10 @@ export class Renderer {
   private backdrop = new Backdrop();
   private terrain = new TerrainPainter();
   private surround = new Surround();
-  /** Per slot, the ghost the match last turned down (it would have left no way to the flag): it stays red until it moves. */
-  private refused = new Map<number, string>();
   private fx = new Fx();
   private weather = new WeatherLayer();
   private rigs = new Map<number, Rig>();
-  /** Rendered kinds (`?sprites=1`) play their death clip for a moment where they came apart. */
+  /** Rendered kinds play their death clip for a moment where they came apart. */
   private fallen: { c: CharacterDef; x: number; y: number; facing: number; age: number }[] = [];
   private pw = 2;
   private ph = 2;
@@ -603,7 +602,7 @@ export class Renderer {
       const gh = m.ghostOrigin(p);
       const ghost = ghostProp(m, p);
       if (!gh || !ghost) continue;
-      const ok = gh.ok && this.refused.get(p.slot) !== ghostKey(m, p, gh);
+      const ok = gh.ok;
       const col = ok ? p.character.body : { h: 0, s: 90, l: 55 };
       s.globalAlpha = 0.85;
       rc.g.globalAlpha = 0.85;
@@ -615,28 +614,17 @@ export class Renderer {
       // A part that will ride a mover shows the loop it'll travel and the link it hangs on.
       drawRideCue(rc, ghost, solids, col);
       // The footprint as one outline round its tiles: exact enough to line up by, and it doesn't rule a grid over the part. A rider's is where it rides.
-      const cells = footprint(gh.def, p.rot);
       const [ox, oy] = motionOffset(ghost, rc.frame);
-      const set = new Set(cells.map(([x, y]) => `${x},${y}`));
       rc.g.strokeStyle = css(col, 10, 0.8);
       rc.g.lineWidth = 1.2;
-      rc.g.beginPath();
-      for (const [x, y] of cells) {
-        const x0 = (gh.tx + x) * TILE + ox + 0.5;
-        const y0 = (gh.ty + y) * TILE + oy + 0.5;
-        const x1 = x0 + TILE - 1;
-        const y1 = y0 + TILE - 1;
-        const side = (open: boolean, ax: number, ay: number, bx: number, by: number) => {
-          if (!open) return;
-          rc.g.moveTo(ax, ay);
-          rc.g.lineTo(bx, by);
-        };
-        side(!set.has(`${x},${y - 1}`), x0, y0, x1, y0);
-        side(!set.has(`${x + 1},${y}`), x1, y0, x1, y1);
-        side(!set.has(`${x},${y + 1}`), x0, y1, x1, y1);
-        side(!set.has(`${x - 1},${y}`), x0, y0, x0, y1);
-      }
+      outline(
+        rc.g,
+        footprint(gh.def, p.rot).map(([x, y]) => [gh.tx + x, gh.ty + y]),
+        ox,
+        oy,
+      );
       rc.g.stroke();
+      if (!ok && !gh.ride) drawFaults(rc, placeFaults(m.level, m.placed, m.crate[p.claim].def, p.rot, gh.tx, gh.ty, m.frame).cells);
     }
   }
 
@@ -860,13 +848,9 @@ export class Renderer {
           this.cam.shake = 14;
           this.flash = 0.25;
           break;
-        case 'refuse': {
-          const p = m.player(e.slot);
-          const gh = p && m.ghostOrigin(p);
-          if (p && gh) this.refused.set(p.slot, ghostKey(m, p, gh));
+        case 'refuse':
           this.fx.add('ring', e.x, e.y, 0, 0, { h: 0, s: 90, l: 55 }, 24, 0.35);
           break;
-        }
         case 'place': {
           const c = m.player(e.slot)?.character.body ?? th.accent;
           this.fx.add('ring', e.x, e.y, 0, 0, c, 30, 0.4);
@@ -887,7 +871,45 @@ export class Renderer {
   }
 }
 
-/** What a ghost is: part, turn and spot, and what else stands (a refusal can lift once something else goes in). */
-function ghostKey(m: Match, p: Match['players'][number], gh: { def: { key: string }; tx: number; ty: number }): string {
-  return `${gh.def.key}:${p.rot}:${gh.tx}:${gh.ty}:${m.placed.length}:${m.level.version}`;
+/** Trace the outer edge of a set of tiles (world cells, shifted by px), as one path: no grid ruled over the inside. */
+function outline(g: CanvasRenderingContext2D, cells: readonly Cell[], ox: number, oy: number) {
+  const set = new Set(cells.map(([x, y]) => `${x},${y}`));
+  g.beginPath();
+  for (const [x, y] of cells) {
+    const x0 = x * TILE + ox + 0.5;
+    const y0 = y * TILE + oy + 0.5;
+    const x1 = x0 + TILE - 1;
+    const y1 = y0 + TILE - 1;
+    const side = (open: boolean, ax: number, ay: number, bx: number, by: number) => {
+      if (!open) return;
+      g.moveTo(ax, ay);
+      g.lineTo(bx, by);
+    };
+    side(!set.has(`${x},${y - 1}`), x0, y0, x1, y0);
+    side(!set.has(`${x + 1},${y}`), x1, y0, x1, y1);
+    side(!set.has(`${x},${y + 1}`), x0, y1, x1, y1);
+    side(!set.has(`${x - 1},${y}`), x0, y0, x0, y1);
+  }
+}
+
+const FAULT: HSL = { h: 0, s: 90, l: 55 };
+
+/**
+ * Why a red ghost is red: every cell that refuses it gets a red cross. The
+ * cells are `placeFaults`, the rule `canPlace` decides by, so the crosses are
+ * exactly what's in the way, a mover's path into rock included.
+ */
+function drawFaults(rc: RC, cells: readonly Cell[]) {
+  const g = rc.g;
+  g.strokeStyle = css(FAULT, 10, 0.9);
+  g.lineWidth = 1.6;
+  g.beginPath();
+  for (const [x, y] of cells) {
+    const k = 4;
+    g.moveTo(x * TILE + k, y * TILE + k);
+    g.lineTo((x + 1) * TILE - k, (y + 1) * TILE - k);
+    g.moveTo((x + 1) * TILE - k, y * TILE + k);
+    g.lineTo(x * TILE + k, (y + 1) * TILE - k);
+  }
+  g.stroke();
 }

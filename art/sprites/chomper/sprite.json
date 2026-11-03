@@ -18,27 +18,34 @@
     "bitten": { "color": "#e8b81c", "swatches": [], "slot": "player" },
     "scratch": { "color": "#b8901a", "swatches": [], "slot": "player", "free": true },
     "napkin": { "color": "#fbf6ee", "swatches": [] },
-    "check": { "color": "#c9473f", "swatches": [], "alts": ["#3f62b4", "#3f8a3a"], "vary": 3 },
+    "check": { "color": "#c9473f", "swatches": [], "alts": ["#3f62b4", "#3f8a3a"] },
     "crumb": { "color": "#d9a85a", "swatches": [], "free": true },
     "pick": { "color": "#e6cf9a", "swatches": [], "free": true },
-    "crumbs": { "color": "#b08454", "swatches": [], "free": true }
+    "crumbs": { "color": "#b08454", "swatches": [], "free": true },
+    "scuff": { "color": "#808080", "swatches": [], "free": true, "on": "body", "tone": 20 },
+    "soot": { "color": "#808080", "swatches": [], "free": true, "on": "body", "tone": -24 },
+    "sootnap": { "color": "#808080", "swatches": [], "free": true, "on": "napkin", "tone": -26 }
   },
   "slots": {
     "crumb": 0,
     "pick": 1,
-    "scratch": 2
+    "scratch": 2,
+    "wear": 11
   },
+  "gait": { "bounce": [0, 0.7], "lean": [0, 0.04] },
   "face": {
     "r": 1.35,
     "iris": "#14121a"
   },
   "clips": {
     "idle": { "frames": 12, "loop": true, "fps": 6 },
+    "idle2": { "frames": 5, "loop": true, "holds": [1.4, 0.14, 0.14, 0.14, 0.22] },
     "walk": { "frames": 8, "loop": true, "stride": 40 },
     "run": { "frames": 8, "loop": true, "stride": 72 },
     "air": { "frames": 12, "loop": false, "vy": [-420, 300] },
     "wall": { "frames": 4, "loop": true, "fps": 8 },
     "cheer": { "frames": 8, "loop": true, "fps": 8 },
+    "cheer2": { "frames": 4, "loop": true, "holds": [0.24, 0.1, 0.24, 0.14] },
     "death": { "frames": 10, "loop": false, "fps": 12 }
   }
 }

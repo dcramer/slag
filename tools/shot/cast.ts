@@ -152,24 +152,25 @@ async function catalog(): Promise<string> {
   return path;
 }
 
-/** The player palette on every kind (`--only colors`); `--sprites` draws the kinds from their 3D models. */
+/** The player palette on every kind (`--only colors`), rendered kinds from their 3D models; `--drawn` forces every kind hand-drawn. */
 async function colors(): Promise<string> {
-  const sprites = opt('sprites') ? '&sprites=1' : '';
-  await open(`seed=${seed}${sprites}`);
+  const drawn = !!opt('drawn');
+  await open(`seed=${seed}`);
+  await page.evaluate((d) => (window as any).slagDebug.sprites.use(!d), drawn);
   await page.evaluate(() => document.fonts.ready);
   const box = await page.evaluate(() => {
     const cv = (window as any).slagDebug.cast.colors();
     return { width: cv.width, height: cv.height };
   });
   // Sprite sheets load on first draw: give them a moment, then draw again.
-  if (sprites) {
+  if (!drawn) {
     await page.waitForTimeout(1500);
     await page.evaluate(() => {
       document.querySelectorAll('canvas[style*="z-index:99"]').forEach((c) => c.remove());
       (window as any).slagDebug.cast.colors();
     });
   }
-  const path = `${out}/cast-colors${sprites ? '-sprites' : ''}.png`;
+  const path = `${out}/cast-colors${drawn ? '-drawn' : ''}.png`;
   await page.screenshot({ path, clip: { x: 0, y: 0, ...box } });
   console.log(path);
   pet();

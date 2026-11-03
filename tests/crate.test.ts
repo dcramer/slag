@@ -8,6 +8,7 @@ import { setProbeGravity } from '../src/gen/level/probe';
 import { hardGap } from '../src/gen/level/sculptors/common';
 import {
   ARCHETYPE_WEIGHTS,
+  clearsParts,
   crateLean,
   DEMOLISH,
   dryLean,
@@ -82,6 +83,26 @@ describe('the crate guarantee', () => {
 
   it('is deterministic', () => {
     expect(generateCrate(7, 3, 5, 2)).toEqual(generateCrate(7, 3, 5, 2));
+    expect(generateCrate(7, 3, 5, 2, 0, false, true)).toEqual(generateCrate(7, 3, 5, 2, 0, false, true));
+  });
+
+  it('deals a sealed level a demolition card that clears parts, beside its hazard and a bridge, in every crate size', () => {
+    for (const count of [3, 4, 5, 6, 8, 10]) {
+      for (let round = 1; round <= 12; round++) {
+        for (const dry of [0, 3]) {
+          const crate = generateCrate(seedAt(round), round, count, MAX_BRIDGES, dry, false, true);
+          expect(crate.length).toBe(count);
+          expect(crate.some(clearsParts), `${count} cards, round ${round}`).toBe(true);
+          expect(crate.some((d) => d.role === 'hazard')).toBe(true);
+          expect(crate.some(isBridgePart)).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('a level with a way through keeps its crate as it was', () => {
+    for (let round = 1; round <= 6; round++)
+      expect(generateCrate(seedAt(round), round, 4, 1, 0, false, false)).toEqual(generateCrate(seedAt(round), round, 4, 1));
   });
 });
 
