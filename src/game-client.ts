@@ -9,6 +9,7 @@ import { loadRules, saveRules } from './game/rules';
 import { InputManager } from './input/input';
 import { TOUCH_DEVICE, touchModeFor } from './input/touch';
 import { connectRoom, type RoomConnection } from './net/client';
+import { joinOpensCard } from './net/actions';
 import { SNAP_VERSION } from './net/snapshot';
 import type { Nav, Unmount } from './router';
 import { HOME, lobby } from './routes';
@@ -213,7 +214,6 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
         );
         return true;
       case 'name':
-      case 'color':
         if (card) cardName();
         else promptName();
         return true;
@@ -298,7 +298,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
    */
   function openCard() {
     if (!net.transport || net.seated || net.queued || net.space <= 0) return;
-    if (match.phase === 'lobby') {
+    if (!joinOpensCard(match.phase)) {
       card = null;
       lobbyAsk = true;
       net.play();
@@ -314,7 +314,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
   function cardSeat() {
     if (card?.stage !== 'edit' || net.space <= 0) return;
     // The match ended into the lobby while the card was up: seated the lobby's way.
-    if (match.phase === 'lobby') return openCard();
+    if (!joinOpensCard(match.phase)) return openCard();
     card.stage = 'asking';
     net.play();
   }

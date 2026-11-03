@@ -31,8 +31,6 @@ export type HudAction =
   | 'ready'
   | 'look'
   | 'name'
-  /** Your color: opens the name screen, where the swatches are. */
-  | 'color'
   | 'level'
   | 'settings'
   | 'rules'

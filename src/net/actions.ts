@@ -98,6 +98,15 @@ export function peerOf(dev: string): string {
 /** Where seats change hands: the lobby, and the round boundary (the score and victory screens). */
 export const SEAT_PHASES = new Set(['lobby', 'score', 'victory']);
 
+/**
+ * What a watcher's Join opens. Mid-match, the join card: the toy, the name and color to settle before going in, and
+ * how the ask went. In the lobby, nothing: the seat is taken the way arriving takes one, and the lobby card that
+ * appears already changes all of that.
+ */
+export function joinOpensCard(phase: string): boolean {
+  return phase !== 'lobby';
+}
+
 function seat(m: Match, ns: NetState, dev: string, char?: CharacterDef) {
   const peer = peerOf(dev);
   // Dropped mid-match for being gone too long and back: the same look, and the points they had.
