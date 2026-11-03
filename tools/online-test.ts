@@ -246,17 +246,26 @@ async function validSpot(p: Page, device: string, far = false): Promise<{ x: num
       const W = m.level.w * tile;
       const H = m.level.h * tile;
       let found: { x: number; y: number } | null = null;
-      // Tile centres: the wire carries whole view px, so below zoom 1 an edge can round into the next tile.
-      for (let y = tile / 2; y < H && !found; y += tile) {
+      // The pointer crosses the wire in whole view px, and engines round mouse positions differently, so below zoom 1 it
+      // can land a few world px off. A part is centred on the cursor, so for an even-sized one a tile's centre is exactly
+      // where its origin flips (a keg two tall aimed at row 0 went to row -1). Take a point whose ghost stays put, and
+      // stays legal, anywhere that rounding can move it.
+      const r = Math.min(tile / 2 - 1, 2 / ov.zoom + 1);
+      const at = (x: number, y: number) => {
+        me.cursor.x = x;
+        me.cursor.y = y;
+        const o = m.ghostOrigin(me);
+        return o?.ok ? `${o.tx},${o.ty}` : '';
+      };
+      for (let y = tile / 2; y < H && !found; y += tile / 2) {
         const vy = (y - ov.cy) * ov.zoom + 216;
         if (vy < 64 || vy > 384) continue;
-        for (let i = tile / 2; i < W && !found; i += tile) {
+        for (let i = tile / 2; i < W && !found; i += tile / 2) {
           const x = fromRight ? W - i : i;
           const vx = (x - ov.cx) * ov.zoom + 384;
           if (vx < 24 || vx > 744) continue;
-          me.cursor.x = x;
-          me.cursor.y = y;
-          if (m.canPlaceFor(me)) found = { x, y };
+          const o = at(x, y);
+          if (o && [at(x - r, y), at(x + r, y), at(x, y - r), at(x, y + r)].every((q) => q === o)) found = { x, y };
         }
       }
       me.cursor.x = keep.x;
