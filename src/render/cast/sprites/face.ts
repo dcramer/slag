@@ -57,6 +57,7 @@ export function drawFace(
     const y = eyes[i + 1] / 8;
     // The far eye is a little smaller: the head is turned.
     const r = face.r * (i ? 0.82 : 1);
+    if (face.eye === 'tall' && m !== 'dead') blush(s, x, y, r, f, i > 0);
     if (m === 'cheer') {
       const arc: P[] = [];
       for (let j = 0; j <= 6; j++) {
@@ -92,6 +93,10 @@ export function drawFace(
       );
       continue;
     }
+    if (face.eye === 'tall') {
+      tallEye(s, x, y, r, m, f);
+      continue;
+    }
     const wide = m === 'fall' ? 1.2 : 1;
     // Narrowed into the run, under the brow.
     const tall = m === 'run' ? 0.78 : 1.15 * wide;
@@ -105,6 +110,8 @@ export function drawFace(
     brow(s, m, f, x, y, r, seed + i);
   }
   if (!face.mouth || eyes.length < 3) return;
+  // Tall eyes come with the model's own painted smile; the kit opens the mouth over it.
+  if (face.eye === 'tall' && m !== 'cheer' && m !== 'fall') return;
   const mx = eyes[0] / 8 + f * face.mouth[0];
   const my = eyes[1] / 8 + face.mouth[1];
   if (m === 'cheer' || m === 'fall') {
@@ -125,6 +132,26 @@ export function drawFace(
     seed,
     [0.2, 0.2],
   );
+}
+
+/** The puffball's blush, soft on any body colour. */
+const BLUSH = 'rgba(232,96,120,0.55)';
+
+/** A soft blush under a tall eye toward its cheek; the far one nearer the front, foreshortened. */
+function blush(s: CanvasRenderingContext2D, x: number, y: number, r: number, f: number, far: boolean) {
+  poly(s, oval(x + f * (far ? 1.1 : -1.9) * r, y + 2.5 * r, (far ? 0.75 : 1.25) * r, 0.6 * r, 8), BLUSH);
+}
+
+/**
+ * A tall black oval eye with a shine at the top and no white (the puffball's): taller and wider on a fall,
+ * the shine riding up on the way up.
+ */
+function tallEye(s: CanvasRenderingContext2D, x: number, y: number, r: number, m: FaceMood, f: number) {
+  const wide = m === 'fall' ? 1.15 : 1;
+  const tall = m === 'fall' ? 2.25 : m === 'run' ? 1.8 : 2;
+  poly(s, oval(x, y, r * wide, r * tall, 10), INK);
+  const sy = y - r * tall * (m === 'up' ? 0.5 : 0.38);
+  poly(s, oval(x + f * r * 0.12, sy, r * 0.52, r * 0.78, 8), GLINT);
 }
 
 /** A wide open grin, lopsided toward the front. */

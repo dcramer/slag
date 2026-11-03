@@ -353,6 +353,10 @@ export const STEP_TEMPLE = defineConcept({
   ownsCrossing: true,
   family: ['dart idol', 'snapjaw', 'log trap', 'boulder'],
   names: ['The Step Temple of {place}', 'Temple of {place}', 'The Sunken Pyramid of {place}', 'The Idol Run at {place}'],
+  codex: {
+    about:
+      'A stepped pyramid: a boulder patrolling the summit, darts down the stair, pressure plates on the landings. Over the top, or through the passage at its foot.',
+  },
   box: (k, rng) => {
     const cross = crossFor(k, TEMPLE_MIN + BANK);
     return { w: cross + BANK + structCols(k, rng, TEMPLE_MIN, [20, 32], true), h: boxH(k, DOOR + 3 + 4 * easyRise() + 4) };
@@ -478,6 +482,9 @@ export const WATERFALL_CLIFF = defineConcept({
   ownsCrossing: true,
   family: ['snapjaw', 'log swing', 'dart idol'],
   names: ['The Falls of {place}', '{place} Falls', 'The Hidden Grotto of {place}', 'The Cliffs of {place}'],
+  codex: {
+    about: 'A river spilling off a sheer cliff onto the ledges you’d climb. Up through the falls when they ease off, or through the grotto behind them.',
+  },
   box: (k, rng) => {
     const cross = crossFor(k, CLIFF_MIN + BANK);
     return { w: cross + BANK + structCols(k, rng, CLIFF_MIN, [16, 26]), h: boxH(k, 5 * easyRise() + 6) };
@@ -632,6 +639,10 @@ export const CANOPY_VILLAGE = defineConcept({
   ownsCrossing: true,
   family: ['snapjaw', 'log trap', 'dart idol', 'log swing'],
   names: ['The Canopy Village of {place}', '{place} Treetops', 'The Tree Houses of {place}', 'The High Village at {place}'],
+  codex: {
+    about:
+      'Tree houses on two to four trunks, rope bridges between them with a few planks gone soft. Across the decks, up the pulley lift, or through the hollow trunks below.',
+  },
   box: (k, rng) => {
     const cross = crossFor(k, VILLAGE_MIN + BANK);
     return { w: cross + BANK + structCols(k, rng, VILLAGE_MIN, [22, 34], true), h: boxH(k, 3 * easyRise() + 10) };
@@ -759,6 +770,10 @@ export const THORN_GORGE = defineConcept({
   ownsCrossing: true,
   family: ['log trap', 'snapjaw', 'dart idol'],
   names: ['The Thorn Gorge of {place}', '{place} Gorge', 'The Briars of {place}', 'The Broken Bridge at {place}'],
+  codex: {
+    about:
+      'A gorge lined with thorns and a rope bridge that gave up. Past it, a bramble bluff: through the tunnel under its thorny roof, or over the top under the swinging logs.',
+  },
   box: (k, rng) => {
     const cross = crossFor(k, GORGE_MIN + BANK);
     return { w: cross + BANK + structCols(k, rng, GORGE_MIN, [16, 26]), h: boxH(k, DOOR + 3 + easyRise() + 8) };
@@ -868,6 +883,10 @@ export const SUN_GATE = defineConcept({
   ownsCrossing: true,
   family: ['dart idol', 'snapjaw', 'boulder'],
   names: ['The Sun Gate of {place}', 'The Burning Glass of {place}', 'The Solar Gate at {place}', '{place} Monolith'],
+  codex: {
+    about:
+      'A carved monolith whose two lenses focus the sun into burning beams. Through the gate between beats, or up and over the crown, where a dart idol keeps watch.',
+  },
   box: (k, rng) => {
     const cross = crossFor(k, GATE_MIN + BANK);
     return { w: cross + BANK + structCols(k, rng, GATE_MIN, [14, 18]), h: boxH(k, 5 * easyRise() + 7) };

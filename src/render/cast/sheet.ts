@@ -237,6 +237,7 @@ const READS_AS: Record<Kind, string> = {
   frog: 'a frog',
   penguin: 'a penguin',
   chicken: 'a chicken',
+  chomper: 'the round dot-eater',
 };
 
 /**
@@ -309,7 +310,7 @@ export function castBlind(t = 0.4): HTMLCanvasElement {
     .sort((a, b) => a[1] - b[1])
     .map(([k]) => k);
   // Narrow enough for every kind across a 1280 px window.
-  const cell = 88;
+  const cell = Math.min(88, Math.floor(1260 / order.length));
   const W = order.length * cell + 20;
   const H = 360;
   const cv = document.createElement('canvas');

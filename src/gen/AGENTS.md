@@ -44,6 +44,9 @@ A conformance failure names the rule and the entry (`landmark/castle/haunted-win
 | `varies`                                              | what its seed changes, in words; the engine measures it                                                                      |                                                                 | 2+ structural parameters (`layoutOf`: box, tiles, pieces, footprints, placement) differ between any two seeds at the same size |
 | `names`                                               | templates with `{place}`                                                                                                     |                                                                 | the level is named after it                                                                                                    |
 | `family`                                              | filler recipes of its own theme                                                                                              |                                                                 | each is a recipe of the theme                                                                                                  |
+| `codex`                                               | `about`: what it is and its ways through, a line or two for its page in the codex's maps                                     |                                                                 | `tests/codex-maps`: it has one, and the codex's seeds raise it (`SHOT_SEEDS`, `src/codex/shots.ts`)                            |
+
+The codex's maps (`src/codex/maps.ts`) show every registered concept under its theme with no codex edit: a still of a level raised round it, framed on its box, and the live race up close.
 
 ### Add a set piece or hazard
 
@@ -51,6 +54,7 @@ A `Recipe` in `setpieces/<theme>.ts` (`defineSetPiece` types one), in `SET_PIECE
 
 - While generating: `finalize` (swept cells free, nothing that hurts or moves near the spawn or goal, static solids don't cut the path), `keep` (the solution still holds clear of every cell with no `MIN_OPENING` window), `noFreeRide`, and `tellFaults` (everything that switches on from nothing warns for at least `MIN_TELL` frames).
 - Conformance: it can be placed; every module that hurts has a tell in `TELLS` (a new hurting module type needs an entry); its art exists, and reads `beamOf` if it reaches through space; it's never lethal every frame unless it never moves; no free ride; `unique` holds.
+- The codex: a `unique` recipe shows up under its theme in the codex's maps by itself, caught at the busiest frame of its cycle. Give it `codex: { title, note, about }` (its name, a one-line joke, what it does); `tests/codex-maps` asks for it and for a picture at the codex's seeds.
 
 ### Add a decor piece
 

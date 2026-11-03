@@ -25,6 +25,7 @@ export const CAST = [
   'frog',
   'penguin',
   'chicken',
+  'chomper',
 ] as const;
 export type Kind = (typeof CAST)[number];
 
@@ -73,6 +74,7 @@ export const KIND_NAMES: Record<Kind, string> = {
   frog: 'Frog',
   penguin: 'Penguin',
   chicken: 'Chicken',
+  chomper: 'Snack-Man',
 };
 
 /**
@@ -94,6 +96,7 @@ const PAINTS: Record<Kind, readonly HSL[]> = {
   frog: [hsl3(60, 40, 84), hsl3(45, 36, 86)],
   penguin: [hsl3(40, 30, 94), hsl3(200, 12, 92)],
   chicken: [hsl3(4, 70, 52), hsl3(354, 64, 50)],
+  chomper: [hsl3(49, 92, 56), hsl3(46, 88, 55)],
 };
 
 /**

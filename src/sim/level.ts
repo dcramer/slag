@@ -114,16 +114,17 @@ const PROFILE_KEYS = new WeakMap<LevelProfile, string>();
 
 /**
  * Which generated level this is, for anything cached per level. A seed
- * regenerated under other rules (gravity, weather, any profile knob) is
- * another level at the same seed, size and version, so the key carries the
- * whole profile and the weather. A crater only bumps `version`, so it keeps
- * this key. The profile is fixed once generated, so its part is memoized.
+ * regenerated under another theme or other rules (gravity, weather, any
+ * profile knob) is another level at the same seed, size and version, so the
+ * key carries the theme, the whole profile and the weather. A crater only
+ * bumps `version`, so it keeps this key. The profile is fixed once generated,
+ * so its part is memoized.
  */
 export function levelKey(l: Level): string {
   let pk = l.profile ? PROFILE_KEYS.get(l.profile) : '-';
   if (pk === undefined) PROFILE_KEYS.set(l.profile!, (pk = JSON.stringify(l.profile)));
   // A forced concept (?concept=) is another level at the same seed and profile.
-  return `${l.seed}:${l.w}x${l.h}:${l.gravity ?? 1}:${pk}:${l.weather?.kind ?? 'clear'}${l.landmark ? `:${l.landmark.concept}` : ''}`;
+  return `${l.seed}:${l.theme.id}:${l.w}x${l.h}:${l.gravity ?? 1}:${pk}:${l.weather?.kind ?? 'clear'}${l.landmark ? `:${l.landmark.concept}` : ''}`;
 }
 
 /** Tile kind at (tx, ty). Outside x is a solid wall; outside y is empty. */

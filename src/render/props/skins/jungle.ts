@@ -668,17 +668,50 @@ function sunDisc(rc: RC, m: ModuleOf<'flame'>, d: DrawCtx) {
   stamp(rc.s, sp, cx, cy);
 }
 
+const BRONZE: HSL = { h: 34, s: 54, l: 40 };
+
+/** `pts` (relative to the origin) turned by `a` and set down at (x, y). */
+const turned = (pts: readonly P[], x: number, y: number, a: number): P[] =>
+  pts.map((p) => ({ x: x + p.x * Math.cos(a) - p.y * Math.sin(a), y: y + p.x * Math.sin(a) + p.y * Math.cos(a) }));
+
+/**
+ * The two optics in the lintel, never a pair: they sit at its two ends at one height, so two round glasses there
+ * read as eyes under the carved disc (docs/ART.md: no faces on machines). The outer one is a burning glass, a
+ * tall oval tipped to face its beam on a bronze fork out of the stone; the inner one is a prism, a small wedge
+ * of glass in a clamp, its point along its beam.
+ */
 function lens(rc: RC, m: ModuleOf<'flame'>, d: DrawCtx) {
   const x = m.at[0] + d.off[0];
   const y = m.at[1] + d.off[1];
   const c = flameCycle(m, rc.frame, d.r.phase);
-  ball(rc.s, x, y, 4.4, { h: 34, s: 54, l: 40 }, 3);
-  rc.s.fillStyle = css(GLASS, c.seg === 0 ? -6 : 10);
-  path(rc.s, ovalPts(x, y, 2.9, 2.9, 4, 0.02, 14));
-  rc.s.fill();
-  dot(rc.s, x - 1, y - 1, 0.6, 5, css(GLASS, 22), inkFor(GLASS));
+  const glass = css(GLASS, c.seg === 0 ? -6 : 10);
   const heat = c.seg === 1 ? c.t / c.len : c.seg === 2 ? 1 : 0;
-  if (heat > 0) bulb(rc.g, x, y, 2.4, SUN, 0.35 + heat * 0.65);
+  const a = m.angle;
+  const s = rc.s;
+  if (d.r.mods.findIndex((x) => x.type === 'flame') === d.mi) {
+    // The burning glass: a fork from the lintel above, the glass on its pivots, its face square to the beam.
+    const back = { x: x - Math.cos(a) * 3.2, y: y - Math.sin(a) * 3.2 };
+    barLine(s, back.x, y - 6.4, back.x, y - 3.2, 1.6, BRONZE, 31);
+    barLine(s, back.x - 1, y - 3.4, x + 0.6, y - 1.2, 1.1, BRONZE, 32);
+    const ring = turned(ovalPts(0, 0, 1.9, 4.8, 33, 0.02, 16), x, y, a);
+    part(s, ring, BRONZE, 34, { depth: 0.5, thin: 0.45, thick: 1.1 });
+    s.fillStyle = glass;
+    path(s, turned(ovalPts(0, 0, 1.05, 3.7, 35, 0.02, 14), x, y, a));
+    s.fill();
+    const [g0, g1] = turned(poly(-0.3, -2.4, -0.3, -0.6), x, y, a);
+    tick(s, g0.x, g0.y, g1.x, g1.y, 0.45, 36, css(GLASS, 24));
+    dot(s, back.x, y - 3.2, 0.45, 37, css(BRONZE, 24), inkFor(BRONZE));
+    if (heat > 0) bulb(rc.g, x, y, 2, SUN, 0.35 + heat * 0.65);
+    return;
+  }
+  // The prism: a wedge pointing down its beam, held by a clamp bolted to the lintel's underside.
+  barLine(s, x, y - 5.6, x, y - 2.2, 1.3, BRONZE, 41);
+  part(s, boxPts(x - 2.2, y - 3.2, 4.4, 1.6, 0.5, 42), BRONZE, 42, { depth: 0.4, thin: 0.4, thick: 1 });
+  const wedge = turned(poly(3.2, 0, -1.6, -2.2, -1.2, 0.3, -1.6, 2.2), x, y, a);
+  part(s, wedge, GLASS, 43, { depth: 0.5, thin: 0.4, thick: 1, shade: -14 });
+  const [e0, e1] = turned(poly(-0.9, -1.2, 2.2, -0.1), x, y, a);
+  tick(s, e0.x, e0.y, e1.x, e1.y, 0.4, 44, css(GLASS, 26));
+  if (heat > 0) bulb(rc.g, x + Math.cos(a) * 1.6, y + Math.sin(a) * 1.6, 1.4, SUN, 0.35 + heat * 0.65);
 }
 
 function sunbeam(rc: RC, m: ModuleOf<'flame'>, d: DrawCtx) {

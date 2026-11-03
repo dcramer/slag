@@ -143,6 +143,10 @@ export const FOUNDRY = defineConcept({
   ownsCrossing: true,
   family: ['slag ladle', 'press', 'forklift'],
   names: ['The Foundry at {place}', '{place} Iron Works', 'The Slag Works of {place}', '{place} Casting Shop'],
+  codex: {
+    about:
+      'A cupola furnace with crane ladles tipping slag across the casting floor. Under the pours and out through the tapping passage, or along the runway to the charging door.',
+  },
   scale: 'grand',
   varies: ['vat width', 'foundry length (wide)', 'cupola width and height', 'runway height', 'a casting pit', 'ladles: how many, where, how high'],
   box: (k, rng) => ({ w: widestGap() + BANK + structCols(k, rng, FOUNDRY_MIN, [20, 30]), h: foundryRows(k.H) }),
@@ -298,6 +302,10 @@ export const BOILER_HOUSE = defineConcept({
   ownsCrossing: true,
   family: ['forklift', 'cog lift', 'slag ladle'],
   names: ['The Boiler House at {place}', '{place} Steam Plant', 'The Old Boilers of {place}', '{place} Power House'],
+  codex: {
+    about:
+      'A brick boiler room whose fireboxes blow back at the door, and one safety valve with opinions. Through the boilers, or up the fire escape and over the roof.',
+  },
   varies: [
     'vat width',
     'house length (wide)',
@@ -426,6 +434,7 @@ export const ROBOT_LINE = defineConcept({
   ownsCrossing: true,
   family: ['robot arm', 'forklift', 'press'],
   names: ['The Robot Line at {place}', '{place} Assembly Plant', 'The Line at {place}', '{place} Motor Works'],
+  codex: { about: 'Robot arms welding car bodies along a raised deck. Along the deck between strikes, or under it all, down the service trench.' },
   varies: ['vat width', 'line length (wide)', 'deck height', 'a service trench', 'robots: how many, where, which way', 'car bodies: where, which way'],
   box: (k, rng) => ({ w: widestGap() + BANK + structCols(k, rng, LINE_MIN, [22, 32]), h: 4 + ARM_HEAD + 2 }),
   build: buildRobotLine,

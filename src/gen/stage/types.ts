@@ -64,6 +64,12 @@ export interface Concept {
    */
   names?: readonly string[];
   /**
+   * Its page in the codex's maps (src/codex/maps.ts), which shows every registered concept: `about` is what
+   * it is and its ways through, a line or two in the house voice. tests/codex-maps.test.ts asks every concept
+   * for one.
+   */
+  codex?: { about: string };
+  /**
    * A contraption big enough to carry you over a gap no part could: a lift
    * or ferry parked at both ends, a wheel rim level with both banks. Its
    * pieces go in before the proof, and at least one must carry a runner

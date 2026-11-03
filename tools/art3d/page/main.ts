@@ -46,8 +46,14 @@ async function render(url: string, s: Settings, kind: string, only?: string[]): 
     const r = s.roles[n];
     return { color: r.color, ...(r.slot ? { slot: r.slot } : {}), ...(r.alts ? { alts: r.alts, vary: r.vary ?? 0 } : {}) };
   });
-  const face = s.face ? { r: s.face.r, iris: s.face.iris, ...(s.face.mouth ? { mouth: s.face.mouth } : {}) } : null;
-  const slots = Object.entries(s.slots ?? {}).map(([name, vary]) => ({ vary, options: (s.props ?? []).filter((p) => p.slot === name).length }));
+  const face = s.face ? { r: s.face.r, iris: s.face.iris, ...(s.face.mouth ? { mouth: s.face.mouth } : {}), ...(s.face.eye ? { eye: s.face.eye } : {}) } : null;
+  // A slot's options are its props; a generated kind has none, so its frames' tags say how many it drew.
+  const drawn = (si: number) =>
+    1 + Math.max(0, ...Object.values(got.clips).flatMap((c) => c.r.flatMap((f) => f.parts.map((p) => (p.option?.[0] === si ? p.option[1] : 0)))));
+  const slots = Object.entries(s.slots ?? {}).map(([name, vary], si) => ({
+    vary,
+    options: s.shape ? drawn(si) : (s.props ?? []).filter((p) => p.slot === name).length,
+  }));
   return { kind, height: s.height, roles, ...(slots.length ? { slots } : {}), ...(face ? { face } : {}), clips };
 }
 
