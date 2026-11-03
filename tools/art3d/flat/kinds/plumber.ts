@@ -64,9 +64,7 @@ export const kind: FlatKind = {
     { name: 'plaster', vary: 1, options: 2 },
     { name: 'wear', vary: 11, options: 3 },
   ],
-  // The drawing's eyes stay under the kit's: taken out, they left holes in the skin that showed the
-  // silhouette's ink, a dark of the player's colour, under the cheer's arcs and the blink.
-  eyes: { role: 'dark', area: [0.2, 2.6], gap: [1.4, 4.5], specks: { dark: 0.2 } },
+  eyes: { role: 'dark', area: [0.2, 2.6], gap: [1.4, 4.5], specks: { dark: 2.8 } },
   // The knee patch, in the overalls' own cloth: in the shirt's red it took the player's colour, a fleck on
   // the leg at every step. The lowest red by far (the sleeves end 7.3 under the eyes), and the rightmost lying.
   recolour: { from: 'red', to: 'blue', below: 8.2, lying: [1.2, 2] },
