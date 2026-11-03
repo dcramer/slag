@@ -565,18 +565,8 @@ async function probeContact(p: Page) {
         const [a, b] = rs.map((r) => r.body);
         const sideBySide = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) > 0.5;
         const depth = sideBySide ? Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) : 0;
-        for (const r of rs) {
-          let vx = 0;
-          let vy = 0;
-          let at = r;
-          for (let n = 0; at && n < rs.length; n++) {
-            if (at.press <= 0) vx += at.body.vx;
-            vy += at.body.vy;
-            const under = at.ride;
-            at = under >= 0 ? rs.find((o) => o.slot === under) : undefined;
-          }
-          w.__contact.push([t, r.slot, r.body.x, r.body.y, vx, vy, depth, r.ride]);
-        }
+        // How fast each really moves, as the session draws it (drawnVelocity): a held-up pusher stands, and a head carries nobody.
+        for (const r of rs) w.__contact.push([t, r.slot, r.body.x, r.body.y, r.press > 0 ? 0 : r.body.vx, r.body.vy, depth, r.ride]);
       }
       requestAnimationFrame(loop);
     };

@@ -1211,7 +1211,7 @@ describe('online', () => {
         const known = history[Math.max(0, f - lag)].b;
         for (let k = Math.max(0, f - lag + 1); k <= f; k++) shown.step({ a: history[k].a, b: { ...known, jumpPressed: false } });
         const runners = shown.run!.runners;
-        const v = runners.map((r) => drawnVelocity(runners, r));
+        const v = runners.map((r) => drawnVelocity(r));
         const now = runners.map(({ body: b }, i) => {
           const was = drawn[i];
           if (!was || !ease) return { x: b.x, y: b.y };
