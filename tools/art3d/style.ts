@@ -260,10 +260,16 @@ export const BRIEFS: Record<string, Brief> = {
     worn: '',
   },
   goose: {
-    // Its agent writes the design stage from the Roster entry (README.md → 1. Design): the nod and the twist
-    // as big shapes, the signature prop first; the wear as two to four big changes, off the face.
-    design: '',
-    worn: '',
+    // The nod, each part of the read at race size: the S of a neck (a goose, not a duck or a chicken), white
+    // with an orange beak and feet (the farmyard goose), and the honk with its wings flung up (the
+    // troublemaker, which is the whole character).
+    // Ours, and the joke: a site goose. A stolen yellow hi-vis vest worn back to front over its body, and
+    // something nicked always clamped in its beak: a steel spanner in the design.
+    design:
+      'The character: a mischievous white goose holding a big stolen steel spanner (#9aa0a8) crosswise in its orange beak, the spanner as long as its head. ' +
+      'A long S-shaped neck, a plump white body (#f3f0ea) shaped like a teardrop, a short pointed tail tipped up behind, two orange webbed feet on short orange legs, an orange beak (#d9894a), one small black eye. ' +
+      'Over its body it wears a stolen yellow hi-vis safety vest (#e8d23a), put on back to front, with two wide pale grey reflective stripes (#c9ccd2) round it; its white folded wing pokes out of the armhole.',
+    worn: 'the hem of the hi-vis vest is torn into two ragged points and one shoulder strap hangs loose; the tip of the folded wing has a big notch of feathers missing; the tail is bent over to one side; the spanner is bent in the middle.',
   },
   jelly: {
     // Its agent writes the design stage from the Roster entry (README.md → 1. Design): the nod and the twist
