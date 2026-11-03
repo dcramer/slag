@@ -6,6 +6,7 @@
  *   pnpm music --themes farm,title --seeds 1,2,3 --seconds 60   (title: the menu tune)
  *   pnpm music --mix calm               a phase mix from player.ts (silent, countdown, calm, build, score, drive)
  *   pnpm music --out shots/music-before
+ *   pnpm music --themes farm --arr jig  one of a theme's arrangements (default: the seed picks)
  *   pnpm music --sting fanfare          a stinger (fanfare, round) over the song's mix, from the first frame
  *   pnpm music --solo lead,bass         only these layers (pad, bass, harmony, lead, drums, perc), at full level
  *
@@ -27,6 +28,7 @@ const seconds = Number(opt('seconds', '40'));
 const mix = opt('mix', 'drive')!;
 const solo = opt('solo')?.split(',') ?? null;
 const sting = opt('sting') ?? null;
+const arr = opt('arr') ?? null;
 const outDir = resolve(opt('out', 'shots/music')!);
 const RATE = 44100;
 
@@ -98,13 +100,14 @@ async function main() {
           mix,
           solo,
           sting,
+          arr,
         ] as const);
         const L = Buffer.from(r.left, 'base64');
-        const file = `${outDir}/${theme}-${seed}${solo ? `-${solo.join('+')}` : ''}${sting ? `-${sting}` : ''}.wav`;
+        const file = `${outDir}/${theme}${arr ? `.${arr}` : ''}-${seed}${solo ? `-${solo.join('+')}` : ''}${sting ? `-${sting}` : ''}.wav`;
         writeFileSync(file, wav(L, Buffer.from(r.right, 'base64')));
         const lv = levels(L);
         console.log(
-          `${theme.padEnd(9)} seed ${String(seed).padEnd(4)} ${r.bpm} bpm ${r.mode.padEnd(16)} peak ${lv.peak} dB  loudest-3s ${lv.rms} dB  voices ${r.played} stolen ${r.stolen} dropped ${r.dropped}  ${file}`,
+          `${theme.padEnd(9)} seed ${String(seed).padEnd(4)} ${r.arrangement.padEnd(10)} ${r.bpm} bpm ${r.mode.padEnd(16)} peak ${lv.peak} dB  loudest-3s ${lv.rms} dB  voices ${r.played} stolen ${r.stolen} dropped ${r.dropped}  ${file}`,
         );
       }
   } finally {

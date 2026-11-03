@@ -370,6 +370,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · git `ced9fff` · `done` · DESIGN.md → Levels, AGENTS.md → Theme
 - **The music must be good, not merely present.** "the music is awful. lets make that no longer true."
   2026-11-02 · `done` · DESIGN.md → Controls and UI (Music), `src/audio/music/`
+- **Each level's music fits its theme, with variety between levels of the same theme.** "music should fit thematically per level and maybe have some variety idk?"
+  2026-11-02 · `done` · DESIGN.md → Controls and UI (Music), `arrangements` in `src/audio/music/styles.ts`
 - **Glacier and space feel hasn't been played by hand.**
   2026-11-02 · `open` · TODO.md → 22
 

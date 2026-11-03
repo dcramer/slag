@@ -3,7 +3,7 @@ import { type CueEnv, cuesForEvent, finishNotes, fireName, popName, slotPitch } 
 import { softClipCurve, Throttle } from '../src/audio/mixer';
 import { composeSong } from '../src/audio/music/compose';
 import { INSTRUMENTS } from '../src/audio/music/instruments';
-import { type SongId, songStyle } from '../src/audio/music/styles';
+import { arranged, arrangementNames, type SongId } from '../src/audio/music/styles';
 import { chordDegrees, degreeToMidi, inScale, stableTriad } from '../src/audio/music/theory';
 import { SFX } from '../src/audio/sfx';
 import { panFor, placeOneShot } from '../src/audio/spatial';
@@ -54,9 +54,10 @@ describe('music composer', () => {
       for (let seed = 0; seed < 20; seed++) {
         const s = composeSong(seed, th);
         const total = s.bars * s.stepsPerBar;
-        expect(s.stepsPerBar).toBe(songStyle(th).stepsPerBeat * 4);
-        expect(s.bpm).toBeGreaterThanOrEqual(songStyle(th).bpm[0]);
-        expect(s.bpm).toBeLessThanOrEqual(songStyle(th).bpm[1]);
+        const st = arranged(th, s.arrangement);
+        expect(s.stepsPerBar).toBe(st.stepsPerBeat * 4);
+        expect(s.bpm).toBeGreaterThanOrEqual(st.bpm[0]);
+        expect(s.bpm).toBeLessThanOrEqual(st.bpm[1]);
         for (const tr of s.tracks) {
           expect(INSTRUMENTS[tr.inst], tr.inst).toBeTypeOf('function');
           expect(tr.notes.length, `${th} ${tr.name}`).toBeGreaterThan(0);
@@ -105,7 +106,20 @@ describe('music composer', () => {
     }
   });
   it('harbor is in compound time (12 steps per bar)', () => {
-    expect(composeSong(9, 'harbor').stepsPerBar).toBe(12);
+    expect(composeSong(9, 'harbor', 'shanty').stepsPerBar).toBe(12);
+  });
+  it('gives a theme more than one band, each with patterns that fit its meter', () => {
+    for (const th of THEME_IDS) {
+      const names = arrangementNames(th);
+      expect(names.length, th).toBeGreaterThan(1);
+      expect(new Set([1, 2, 3, 4, 5, 6, 7, 8].map((seed) => composeSong(seed, th).arrangement)).size, th).toBeGreaterThan(1);
+      for (const name of names) {
+        const st = arranged(th, name);
+        const spb = st.stepsPerBeat * 4;
+        for (const p of [...st.bass.patterns, ...st.drums.flatMap((d) => d.patterns)]) expect(p.length, `${th} ${name} ${p}`).toBe(spb);
+        expect(composeSong(1, th, name).arrangement).toBe(name);
+      }
+    }
   });
 });
 

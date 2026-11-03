@@ -18,6 +18,7 @@ export interface Render {
   bpm: number;
   root: number;
   mode: string;
+  arrangement: string;
   played: number;
   stolen: number;
   dropped: number;
@@ -40,10 +41,11 @@ async function renderSong(
   mix: MixName,
   solo: string[] | null,
   sting: 'fanfare' | 'round' | null,
+  arr: string | null,
 ): Promise<Render> {
   const ctx = new OfflineAudioContext(2, Math.ceil(seconds * RATE), RATE);
   const eng = new AudioEngine(ctx, { master: 0.8, music: 0.6, sfx: 0.9 });
-  const song = composeSong(seed, theme);
+  const song = composeSong(seed, theme, arr ?? undefined);
   eng.music.setMix(mix, 0.01);
   eng.music.setSong(song, 0.05);
   if (solo) eng.music.current!.setMix(Object.fromEntries(LAYERS.map((l) => [l, solo.includes(l) ? 1 : 0])) as Mix, 0.01);
@@ -63,6 +65,7 @@ async function renderSong(
     bpm: song.bpm,
     root: song.root,
     mode: song.mode,
+    arrangement: song.arrangement,
     played: s.played,
     stolen: s.stolen,
     dropped: s.dropped,

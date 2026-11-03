@@ -1,6 +1,6 @@
 import { deriveSeed, Rng } from '../../core/rng';
 import type { InstId } from './instruments';
-import { type DrumPart, type Layer, type SongId, songStyle } from './styles';
+import { arranged, arrangementNames, type DrumPart, type Layer, type SongId } from './styles';
 import { chordDegrees, degreeToMidi, type ModeName, stableTriad } from './theory';
 
 /**
@@ -28,6 +28,8 @@ export interface NoteEv {
   /** Length in steps. */
   len: number;
   vel: number;
+  /** Seconds after the step (a strummed chord's later strings). */
+  nudge?: number;
 }
 
 export interface Track {
@@ -55,6 +57,8 @@ export interface Song {
   lead: InstId;
   harmony: InstId;
   space: [number, number, number];
+  /** Which of the style's arrangements this is. */
+  arrangement: string;
   /** Overall song level. */
   level: number;
 }
@@ -63,9 +67,12 @@ const SECTION_BARS = 8;
 const FORM = ['A', 'A', 'B', 'A'] as const;
 const SONG_BARS = SECTION_BARS * FORM.length;
 
-export function composeSong(seed: number, theme: SongId): Song {
-  const st = songStyle(theme);
+/** `arrangement` forces one of the style's arrangements by name (renders); otherwise the seed picks. */
+export function composeSong(seed: number, theme: SongId, arrangement?: string): Song {
   const rng = new Rng(deriveSeed(seed, `music:${theme}`));
+  const names = arrangementNames(theme);
+  const picked = rng.pick(names);
+  const st = arranged(theme, arrangement && names.includes(arrangement) ? arrangement : picked);
   const spb = st.stepsPerBeat * 4;
   const bpm = rng.int(st.bpm[0], st.bpm[1]);
   const swing = rng.range(st.swing[0], st.swing[1]);
@@ -100,10 +107,17 @@ export function composeSong(seed: number, theme: SongId): Song {
     inst: st.harmony.inst,
     gain: st.harmony.gain,
     pan: -0.2,
-    notes: harmonyPart(ctx, st.harmony.pattern, st.harmony.octave, st.harmony.every ?? 2, st.harmony.inst === 'drone'),
+    notes: harmonyPart(ctx, st.harmony.pattern, st.harmony.octave, st.harmony.every ?? 2, st.harmony.inst === 'drone', !!st.harmony.strum),
   });
   if (st.pad)
-    tracks.push({ name: 'pad', layer: 'pad', inst: st.pad.inst, gain: st.pad.gain, pan: 0.15, notes: harmonyPart(ctx, 'sustain', st.pad.octave, 2, false) });
+    tracks.push({
+      name: 'pad',
+      layer: 'pad',
+      inst: st.pad.inst,
+      gain: st.pad.gain,
+      pan: 0.15,
+      notes: harmonyPart(ctx, 'sustain', st.pad.octave, 2, false, false),
+    });
   const lead = melody(ctx, st.lead.octave, st.lead.density, st.lead.legato);
   tracks.push({ name: 'lead', layer: 'lead', inst: st.lead.inst, gain: st.lead.gain, pan: 0.12, notes: lead });
   if (st.counter)
@@ -134,6 +148,7 @@ export function composeSong(seed: number, theme: SongId): Song {
     lead: st.lead.inst,
     harmony: st.harmony.inst,
     space: st.space,
+    arrangement: st.name,
     level: st.level ?? 1,
   };
 }
@@ -239,7 +254,30 @@ function voiceLead(c: Ctx, base: number): number[][] {
   });
 }
 
-function harmonyPart(c: Ctx, pattern: string, octave: number, every: number, power: boolean): NoteEv[] {
+/** Guitar strokes per meter: [step, velocity]; softer ones are up-strokes on the top three strings. */
+const STRUMS: Record<3 | 4, [number, number][]> = {
+  4: [
+    [0, 1],
+    [4, 0.8],
+    [6, 0.6],
+    [8, 0.9],
+    [12, 0.8],
+    [14, 0.6],
+  ],
+  3: [
+    [0, 1],
+    [3, 0.75],
+    [5, 0.55],
+    [6, 0.9],
+    [9, 0.75],
+    [11, 0.55],
+  ],
+};
+const UP = 0.7;
+/** Seconds between strings in a strum. */
+const STRING_GAP = 0.012;
+
+function harmonyPart(c: Ctx, pattern: string, octave: number, every: number, power: boolean, strum: boolean): NoteEv[] {
   const out: NoteEv[] = [];
   const base = c.root + 12 * octave;
   const roll = c.rng.pick(ROLLS);
@@ -261,8 +299,27 @@ function harmonyPart(c: Ctx, pattern: string, octave: number, every: number, pow
       for (let s = c.stepsPerBeat; s < c.spb; s += c.stepsPerBeat * 2) for (let i = 0; i < 3; i++) at(s, i, c.stepsPerBeat - 1, 0.85);
     } else if (pattern === 'pulse') {
       for (let s = 0; s < c.spb; s += 2) for (let i = 0; i < 3; i++) at(s, i, 1, s % c.stepsPerBeat === 0 ? 0.9 : 0.65);
+    } else if (pattern === 'strum') {
+      const strokes = STRUMS[c.stepsPerBeat];
+      strokes.forEach(([s, vel], k) => {
+        const len = (strokes[k + 1]?.[0] ?? c.spb) - s;
+        for (let i = vel < UP ? 1 : 0; i < 4; i++) at(s, i, len, vel);
+      });
+    } else if (pattern === 'chug') {
+      const r = degreeToMidi(base, c.mode, deg);
+      const root = r > base + 7 ? r - 12 : r;
+      for (let s = 0; s < c.spb; s += every) out.push({ step: bar * c.spb + s, midi: root, len: every, vel: s % (c.stepsPerBeat * 2) === 0 ? 1 : 0.75 });
     } else for (let i = 0; i < 3; i++) at(0, i, c.spb, 0.8);
   });
+  if (strum) {
+    // Down-strokes ring low to high, up-strokes high to low.
+    const byStep = new Map<number, NoteEv[]>();
+    for (const n of out) byStep.set(n.step, [...(byStep.get(n.step) ?? []), n]);
+    for (const chord of byStep.values()) {
+      chord.sort((a, b) => a.midi - b.midi);
+      chord.forEach((n, i) => (n.nudge = (n.vel < UP ? chord.length - 1 - i : i) * STRING_GAP));
+    }
+  }
   return out;
 }
 

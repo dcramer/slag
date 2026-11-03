@@ -117,7 +117,7 @@ class SongPlayer {
         if (this.mix[tr.layer] < 0.02) continue; // muted layer: save the CPU
         const v = this.mixer.voice({ bus: 'music', prio: LAYER_PRIO[tr.layer], gain: tr.gain * n.vel, dest: this.trackIn[ti] }, t);
         if (!v) continue;
-        INSTRUMENTS[tr.inst](v, t, mtof(n.midi), n.len * this.stepDur);
+        INSTRUMENTS[tr.inst](v, t + (n.nudge ?? 0), mtof(n.midi), n.len * this.stepDur);
         this.scheduled++;
       }
       this.step++;
