@@ -137,6 +137,7 @@ function* thinIces(rng: Rng, s: Site): Generator<Piece> {
 export const GLACIER: Recipe[] = [
   {
     name: 'frost cannon',
+    codex: { title: 'Frost Cannon', note: 'Brain freeze.', about: 'Fires frost that freezes you where you stand.' },
     unique: true,
     weight: 2.5,
     role: 'hazard',
@@ -208,6 +209,29 @@ export const GLACIER: Recipe[] = [
         material: 'ice',
       }),
   },
-  defineSetPiece({ name: 'avalanche', unique: true, weight: 2.2, role: 'hazard', candidates: avalanches }),
-  defineSetPiece({ name: 'thin ice', unique: true, weight: 2, role: 'hazard', repeat: true, candidates: thinIces }),
+  defineSetPiece({
+    name: 'avalanche',
+    unique: true,
+    weight: 2.2,
+    role: 'hazard',
+    codex: {
+      title: 'Avalanche',
+      note: 'It started as a snowflake.',
+      about: 'A cornice lets go of a snowball that rolls along whatever it lands on, off ledges and down steps, gathering speed.',
+    },
+    candidates: avalanches,
+  }),
+  defineSetPiece({
+    name: 'thin ice',
+    unique: true,
+    weight: 2,
+    role: 'hazard',
+    repeat: true,
+    codex: {
+      title: 'Thin Ice',
+      note: 'Rated for one penguin.',
+      about: 'Ice over water, flush with the floor and slick. It cracks, gives way, then skins over again.',
+    },
+    candidates: thinIces,
+  }),
 ];

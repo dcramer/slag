@@ -319,6 +319,10 @@ export const HAUNTED_WING: Concept = {
   family: ['glass', 'chandelier', 'axe', 'chandrop'],
   budget: 2,
   names: ['The Haunted Wing of {place}', 'The East Wing of {place}', 'The Unrentable Wing of {place}', '{place}: Viewing by Appointment'],
+  codex: {
+    about:
+      'Three storeys of plank and plaster, broken glass in every window and a dumbwaiter that still rings for service. Through the hall, or up the stairs and out the top floor’s back door.',
+  },
   varies: ['moat width', 'interior width (wide)', 'chimney side', 'window glass', 'cab timing'],
   box: (k, rng) => ({ w: moatMax() + 1 + 2 * glassMargin() + 4 + manorInterior(k.W > 56, rng), h: MANOR_H }),
   build: buildManor,
@@ -486,6 +490,9 @@ export const THRONE_HALL = defineConcept({
   family: ['chandelier', 'ram', 'axe', 'cannon', 'chandrop'],
   budget: 1,
   names: ['The Throne Hall of {place}', 'The Boss Room of {place}', 'The Great Hall of {place}'],
+  codex: {
+    about: 'A long hall between two towers, chandeliers swinging as one and a heavier one over the throne. Under them to the boss door, or over the roof.',
+  },
   varies: ['moat width', 'hall length', 'tower heights', 'dais steps and depth', 'roof merlons'],
   box: (k, rng) => ({ w: moatMax() + 1 + (k.W > 56 ? rng.int(26, 32) : classicHall(rng)), h: HALL_AIR + CEIL + rng.int(2, 3) }),
   build: buildThroneHall,

@@ -180,6 +180,10 @@ export const GATEHOUSE = defineConcept({
   family: ['cannon', 'glass', 'axe', 'ram'],
   budget: 2,
   names: ['The Gatehouse of {place}', 'The Barbican of {place}', 'The Gates of {place}', '{place}: Drawbridge Up'],
+  codex: {
+    about:
+      'Two towers and a gate, a portcullis waiting for whoever stops under it and fire from the murder holes. Through the passage, or up the tower and along the wall-walk.',
+  },
   box: (k, rng) => ({ w: moatMax() + 1 + structCols(k, rng, GATE_MIN, [16, 22]), h: boxH(k.H, DOOR + 3 + 4 + 2) }),
   build: buildGatehouse,
   pieces: (rng, s, l) => gatehousePieces(rng, s, l),
@@ -325,6 +329,10 @@ export const BELL_TOWER = defineConcept({
   family: ['glass', 'chandelier', 'chandrop', 'axe'],
   budget: 2,
   names: ['The Bell Tower of {place}', 'The Belfry of {place}', '{place} Chapel', 'The Bells of {place}'],
+  codex: {
+    about:
+      'A chapel and its belfry. Through the arch and down the nave under a chandelier hung to drop, or up the tower, past the swinging bell and over the gable.',
+  },
   box: (k, rng) => ({ w: moatMax() + 1 + structCols(k, rng, BELL_MIN, [16, 22]), h: boxH(k.H, 20) }),
   build: buildBellTower,
   pieces: (rng, s, l) => bellTowerPieces(rng, s, l),
@@ -496,6 +504,10 @@ export const BOSS_BRIDGE = defineConcept({
   family: ['cannon', 'axe', 'chandrop', 'glass'],
   budget: 2,
   names: ['The Boss Bridge of {place}', 'The Last Castle of {place}', 'The Lava Keep of {place}', '{place}: The Princess Is Elsewhere'],
+  codex: {
+    about:
+      'Two keeps over a trench of lava, firebars turning over the bridge between them. Across the bridge while the lava breathes, or up and over the walkway. The lever does nothing.',
+  },
   box: (k, rng) => ({ w: moatMax() + 1 + structCols(k, rng, BRIDGE_MIN, [18, 24]), h: boxH(k.H, 8 + 2 + 3) }),
   build: buildBossBridge,
   pieces: (rng, s, l) => bossBridgePieces(rng, s, l),
