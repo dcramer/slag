@@ -45,7 +45,7 @@
           "shape": "cup",
           "role": "rubber",
           "size": [
-            3.0,
+            3,
             -2.8,
             0
           ],
@@ -829,11 +829,17 @@
     },
     "launch": {
       "from": "idle@0.05",
+      "yaw": 20,
       "bones": {
         "spine_01": [
           -12,
           0,
-          0
+          -8
+        ],
+        "head": [
+          0,
+          0,
+          -10
         ],
         "thigh_near": [
           -60,
@@ -855,36 +861,37 @@
           0,
           0
         ],
-        "clavicle_near": [
-          0,
-          0,
-          -55
-        ],
-        "upperarm_near": [
-          0,
-          0,
-          -165
-        ],
-        "lowerarm_near": [
-          0,
-          0,
-          -5
-        ],
+        "upperarm_near": {
+          "raise": 135,
+          "out": 95
+        },
+        "lowerarm_near": {
+          "raise": 165,
+          "out": 80,
+          "twist": -60
+        },
         "upperarm_far": [
           25,
           0,
           0
         ]
       },
-      "yaw": 12,
-      "scale": {
-        "upperarm_near": 1.35,
-        "hand_near": 0.9
-      }
+      "l": "launch_l"
     },
     "apex": {
       "from": "idle@0.05",
+      "yaw": 20,
       "bones": {
+        "spine_01": [
+          -12,
+          0,
+          -8
+        ],
+        "head": [
+          0,
+          0,
+          -10
+        ],
         "thigh_near": [
           -85,
           0,
@@ -905,37 +912,22 @@
           0,
           0
         ],
-        "clavicle_near": [
-          0,
-          0,
-          -55
-        ],
-        "upperarm_near": [
-          0,
-          0,
-          -158
-        ],
-        "lowerarm_near": [
-          0,
-          0,
-          -5
-        ],
+        "upperarm_near": {
+          "raise": 140,
+          "out": 95
+        },
+        "lowerarm_near": {
+          "raise": 172,
+          "out": 85,
+          "twist": -60
+        },
         "upperarm_far": [
           25,
           0,
           0
-        ],
-        "spine_01": [
-          -12,
-          0,
-          0
         ]
       },
-      "yaw": 12,
-      "scale": {
-        "upperarm_near": 1.35,
-        "hand_near": 0.9
-      }
+      "l": "apex_l"
     },
     "fall": {
       "from": "idle@0.05",
@@ -1274,6 +1266,104 @@
           0
         ]
       }
+    },
+    "launch_l": {
+      "from": "idle@0.05",
+      "yaw": 30,
+      "bones": {
+        "spine_01": [
+          -12,
+          0,
+          8
+        ],
+        "head": [
+          0,
+          0,
+          10
+        ],
+        "thigh_near": [
+          -60,
+          0,
+          0
+        ],
+        "calf_near": [
+          95,
+          0,
+          0
+        ],
+        "thigh_far": [
+          8,
+          0,
+          0
+        ],
+        "calf_far": [
+          15,
+          0,
+          0
+        ],
+        "upperarm_far": {
+          "raise": 135,
+          "out": 95
+        },
+        "lowerarm_far": {
+          "raise": 165,
+          "out": 80
+        },
+        "upperarm_near": [
+          25,
+          0,
+          0
+        ]
+      }
+    },
+    "apex_l": {
+      "from": "idle@0.05",
+      "yaw": 30,
+      "bones": {
+        "spine_01": [
+          -12,
+          0,
+          8
+        ],
+        "head": [
+          0,
+          0,
+          10
+        ],
+        "thigh_near": [
+          -85,
+          0,
+          0
+        ],
+        "calf_near": [
+          120,
+          0,
+          0
+        ],
+        "thigh_far": [
+          -55,
+          0,
+          0
+        ],
+        "calf_far": [
+          100,
+          0,
+          0
+        ],
+        "upperarm_far": {
+          "raise": 140,
+          "out": 95
+        },
+        "lowerarm_far": {
+          "raise": 172,
+          "out": 85
+        },
+        "upperarm_near": [
+          25,
+          0,
+          0
+        ]
+      }
     }
   },
   "girth": 1.28,
@@ -1299,7 +1389,7 @@
         0.72,
         0.7,
         0.82,
-        1.0
+        1
       ]
     },
     {
