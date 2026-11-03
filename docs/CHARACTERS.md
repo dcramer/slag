@@ -33,17 +33,17 @@ So each kind has: a clear head-to-body ratio, a readable expression, a line of a
 
 | Kind | Homage (what a stranger should say) | Signature traits | Player's color |
 |---|---|---|---|
-| plumber | the mustached plumber | red cap with a round white badge (our own mark, a little wrench, never the letter), big round nose, thick mustache, blue overalls with two gold buttons, white gloves, brown shoes; big head, stout | ring at the feet |
-| hedgehog | the blue speedster | cobalt, spikes swept straight back, joined eyes with green irises, peach muzzle and belly, a one-sided grin, red sneakers with a white strap; runs leaning hard, spins in the air | ring |
-| elf | the green-tunic elf hero | long green cap flopping back, pointed ear, blond fringe, flared green tunic with a belt, a kite shield and a sword hilt on the back | ring |
-| hunter | the armored bounty hunter | orange armor, huge round red shoulder pads, a round helmet with a green visor, an arm cannon held out | ring |
-| zapmouse | the yellow electric mouse | yellow, long ears with black tips, red cheeks, a lightning-bolt tail, brown back stripes | ring |
-| impostor | the impostor crewmate | a bean on stubby legs, a wide pale visor standing proud, a backpack | body |
-| puffball | the pink puffball | a ball on big red feet, stubby arms, tall eyes with a shine, blush; puffs up in the air | body |
-| jelly | the jellyfish parasite | a translucent green dome, three red nuclei inside, four ivory fangs, a hovering bob | ring |
-| goose | the goose up to no good | white, orange beak and feet, an S of a neck; on the run the honk pose, neck flat out and wings up | ring |
-| engineer | the team shooter's engineer | yellow hard hat with dark goggles on it, a square jaw, a red or blue work shirt, khaki trousers, a leather glove, a huge wrench | ring |
-| chomper | the round dot-eater | a yellow circle with a wedge mouth that chomps, one small eye, a scalloped bite out of its back, a checked napkin tucked into its lower lip | ring (rendered: the whole ball) |
+| plumber | the mustached plumber | red cap with a round white badge (our own mark, a little wrench, never the letter), big round nose, thick mustache, blue overalls with two gold buttons, white gloves, brown shoes; big head, stout | costume: cap and shirt |
+| hedgehog | the blue speedster | cobalt, spikes swept straight back, joined eyes with green irises, peach muzzle and belly, a one-sided grin, red sneakers with a white strap; runs leaning hard, spins in the air | costume: the quills |
+| elf | the green-tunic elf hero | long green cap flopping back, pointed ear, blond fringe, flared green tunic with a belt, a kite shield and a sword hilt on the back | costume: cap and tunic |
+| hunter | the armored bounty hunter | orange armor, huge round red shoulder pads, a round helmet with a green visor, an arm cannon held out | costume: the suit |
+| zapmouse | the yellow electric mouse | yellow, long ears with black tips, red cheeks, a lightning-bolt tail, brown back stripes | costume: the fur |
+| impostor | the impostor crewmate | a bean on stubby legs, a wide pale visor standing proud, a backpack | costume: the bean |
+| puffball | the pink puffball | a ball on big red feet, stubby arms, tall eyes with a shine, blush; puffs up in the air | costume: the ball |
+| jelly | the jellyfish parasite | a translucent green dome, three red nuclei inside, four ivory fangs, a hovering bob | costume: the dome |
+| goose | the goose up to no good | white, orange beak and feet, an S of a neck; on the run the honk pose, neck flat out and wings up | costume: the vest |
+| engineer | the team shooter's engineer | yellow hard hat with dark goggles on it, a square jaw, a red or blue work shirt, khaki trousers, a leather glove, a huge wrench | costume: the shirt |
+| chomper | the round dot-eater | a yellow circle with a wedge mouth that chomps, one small eye, a scalloped bite out of its back, a checked napkin tucked into its lower lip | costume: the whole ball |
 | fox | — | long and low, snout out front, tall ears, bushy tail carried up | body |
 | frog | — | crouched flat, two eye bumps; crouches and leaps | body |
 | penguin | — | upright egg, pale front, flippers; waddles | body |
@@ -452,6 +452,8 @@ How a Roster entry becomes a kind the game draws from art. The entry is the one 
 - **Checks:** `tests/sprite-cast.test.ts` (every clip, the shared hitbox box pen and all, at least 18 px tall, every eye on its head, the variety layers), and `pnpm shot sprites --kind K` and `pnpm shot variety --kinds K` (the run cycle, the six-rolls lobby, twelve looks, the draw cost, and `sprites-blind.png`, every kind as a shuffled, unnamed play-scale silhouette for fresh readers).
 
 **Blind reads of the flat kinds** (2026-11-03, two fresh readers, silhouettes only): the plumber, the speedster and the elf are named by both at high confidence (the elf up from medium as a 3D kind); the electric mouse by both, medium-high and high, from the ears and the zigzag tail; the puffball by both at medium. The dot-eater fails: "a plain round ball with a small tuft or bow on top, no mouth wedge visible" (unsure; a low "Ms. Pac-Man-style dot-eater with a bow"), and a low "Jigglypuff". Drawn flat, its mouth was a dark fill inside the figure, so the silhouette was a plain circle, and the tape cross on its crown read as a bow. With the mouth cut out of the figure (`cut`) and the tape moved to its cheek, two more fresh readers name it at high confidence: "a circle with a wedge mouth cut out, and the wedge is still visible in every pose". They read the other five as the first two did.
+
+**The second batch** (2026-11-03, the impostor, hunter, engineer, goose and jelly drawn flat; two fresh readers): the first eleven hold (the plumber, speedster, mouse, elf and dot-eater medium to high), and the goose reads at medium as before. Three fall back: the impostor ("a squarish rounded blob with small nubs", "a boxy, heavy blob", unsure twice; its jerrycan merges into its back and its visor doesn't stand proud of the bean), the jelly (low twice, "a dome with a fringed or legged bottom edge"), and the puffball (unsure and low, "the small bumps on top make it less clear": its plaster cross on the crown). The hunter and the engineer still aren't named, as before they were drawn flat. Being redrawn.
 
 **Blind reads of the 3D-traced kinds** (before 2026-11-03): the speedster is named every time, medium-high to high. The plumber went from low to split (one reader "the plumber, medium", one unsure) after his cap, nose and girth were pushed and his plunger carried lower; in colour he reads at once. With the cup above his head the cup and the cap merged into one shape, so the plunger is carried low for good (owner, 2026-11-02). Both readers name the dot-eater at high confidence, from the circle with its wedge mouth and the speed lines of its run. The electric mouse is named by both, medium and medium-high, from the tall pointed ears and the jagged zigzag tail raised behind; one reader also saw a rabbit holding something. The elf read as the plumber ("a cap with a forward brim") while his cap's tail stuck straight back level with the crown; drooped from the crown, with the ears up behind it and turned nearer profile, he reads as the elf hero to both fresh readers, one at medium.
 

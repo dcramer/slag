@@ -48,7 +48,8 @@ export const kind: FlatKind = {
     chin: 3.5,
     marks: [[['scuff', 0.68, 0.78, 1.0]], [['scorch', 0.7, 0.75, 1.1]]],
   },
-  accessories: [{ slot: 'plaster', role: 'plaster', at: 'crown', size: [2.4, 0.85] }],
+  // Across the cheek: on a ball's crown a cross read as bumps on top, and the ball as another character.
+  accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [2.2, 0.85] }],
   face: { r: 1, iris: '#2a1f1a', mouth: [2, 2.6], eye: 'tall' },
   gait: { bounce: [0.1, 0.8], lean: [0, 0.03] },
   clips: {

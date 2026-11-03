@@ -222,6 +222,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-03 · `done` · CHARACTERS.md → The mustached plumber → Palette; replaces the cup's own red `#b8433c`
 - **Every rendered kind is drawn flat; the 3D route is retired.** "Lets try to work through the remaining sprites. Make sure our pipeline documentation is correct from our learnings"
   2026-11-03 · `done` · CHARACTERS.md → Rendered kinds, `tools/art3d/README.md`, `tools/art3d/3D.md`; replaces the 3D-traced hedgehog, elf, dot-eater and puffball. The hedgehog's design came from his round-2 concept as the reference (the image model otherwise drew the original's joined eyes); the puffball's seam and tape cross aren't drawn (a mouth and a third eye at play size); the dot-eater slides down a wall in its fall
+- **The rest of the roster is drawn flat too, one agent a kind: first the five in the cast (the impostor, the hunter, the engineer, the goose and the jelly), then the nine not yet in it, in one change.** "conintue" (after the six flat kinds landed)
+  2026-11-03 · `in progress` · TODO.md → 29, CHARACTERS.md → Rendered kinds → the second batch
 - **Set-piece machines that look solid are made solid: guns on ledges, wheel and swing hubs, ladles, carts, signs, posts.** "Make them solid" (asked: make them solid, or draw them as not-ground)
   2026-11-02 · `open` · TODO.md → 21, `pnpm shot fairplay` (`PENDING`)
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
