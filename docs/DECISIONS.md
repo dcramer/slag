@@ -602,6 +602,10 @@ Every game design decision, preference and direction the owner has given, groupe
 - **pnpm is the package manager and Node 24 the runtime; pnpm settings live in `pnpm-workspace.yaml`.** "get this fixed up"
   2026-11-02 02:46Z · `done` · AGENTS.md → Commands
   Changed: npm, then Node 22 (`6ebfbd4`).
+- **A standalone build is a native game binary, not the web page in a bundled browser: Electron is out.** "lol electron is not a good solution", "thats not how you package games tho"
+  2026-11-02 · `open` · TODO.md → 30
+- **The menus move onto the game's own canvas renderer, so a native host needs no DOM for them: first a widget kit and Settings, with the Name and Rules menus.** "we can redo the menus using the same renderer?", "Yes, start there"
+  2026-11-02 · `in progress` · AGENTS.md → Where things live, ART.md → UI, TODO.md → 30
 
 ## Tooling and process
 

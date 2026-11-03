@@ -1,5 +1,6 @@
 import { devices } from 'playwright';
 import { touchLayout } from '../../src/input/touch';
+import { menuControls, pressMenu, waitMenu } from '../lib/menu';
 import { base, browser, errors, opt, out, pet, seed, tq, type Scenarios } from './ctx';
 
 /**
@@ -84,34 +85,26 @@ async function mobile(deviceName: string) {
   await checkTargets('lobby');
   // Settings: one sheet per tab, then back out.
   await tapHud('settings');
+  await waitMenu(mp, 'settings');
   await mp.waitForTimeout(300);
   await shotM('settings');
-  await mp.tap('.slag-tab:nth-child(2)');
+  await pressMenu(mp, (c) => c.id.startsWith('tab:') && !c.on, 'tap');
   await mp.waitForTimeout(200);
   await shotM('settings-video');
-  const smallest = await mp.evaluate(() =>
-    Math.min(
-      ...[...document.querySelectorAll('.slag-sheet button')].map((b) => b.getBoundingClientRect()).map((r) => Math.min(r.width, Math.max(r.height, 0))),
-    ),
-  );
+  const smallest = Math.min(...(await menuControls(mp)).filter((c) => !c.disabled).map((c) => Math.min(c.w, c.h)));
   console.log(`settings: smallest button ${smallest.toFixed(1)} CSS px`);
-  await mp.tap('.slag-ov .slag-actions .primary');
+  await pressMenu(mp, 'f:done', 'tap');
   await mp.waitForTimeout(200);
   // Join by tapping the first open slot, then dismiss the name prompt.
   await tapHud('join');
+  await waitMenu(mp, 'name');
   await mp.waitForTimeout(400);
   await shotM('name');
   // The name screen's swatches and buttons are thumb targets too.
-  const nameMin = await mp.evaluate(() =>
-    Math.min(
-      ...[...document.querySelectorAll('.slag-ov .slag-swatch, .slag-ov .slag-btn')]
-        .map((b) => b.getBoundingClientRect())
-        .map((r) => Math.min(r.width, r.height)),
-    ),
-  );
+  const nameMin = Math.min(...(await menuControls(mp)).filter((c) => c.id !== 'name').map((c) => Math.min(c.w, c.h)));
   console.log(`name: smallest target ${nameMin.toFixed(1)} CSS px`);
   if (nameMin < 43.9) throw new Error(`name: a swatch or button under 44 CSS px (${nameMin.toFixed(1)})`);
-  await mp.tap('.slag-ov .slag-btn:not(.primary)');
+  await pressMenu(mp, 'keep', 'tap');
   await mp.waitForTimeout(300);
   await shotM('lobby-joined');
   await checkTargets('lobby-joined');

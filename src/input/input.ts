@@ -63,7 +63,7 @@ export class InputManager {
     // --- touch wiring (mobile) ---
     this.touch.toView = (cx, cy) => this.toView(cx, cy);
     this.touch.onUiTap = (x, y) => this.touchUiTap(x, y);
-    this.touch.attach(target, (e) => this.captured || !!(e.target as Element | null)?.closest?.('[data-slag-ui],.slag-ov'), this.life.signal);
+    this.touch.attach(target, (e) => this.captured || !!(e.target as Element | null)?.closest?.('[data-slag-ui]'), this.life.signal);
     target.addEventListener(
       'keydown',
       (e) => {

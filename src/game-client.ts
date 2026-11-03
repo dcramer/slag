@@ -114,7 +114,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
   const inputMode = new InputModeTracker(window);
   watchTelemetry(room, match, conn, renderer);
 
-  // --- local menus (DOM overlays) and profile ---------------------------------
+  // --- local menus (canvas, src/ui/kit) and profile ----------------------------
   const settingsMenu = new SettingsMenu(input, audio);
   settingsMenu.leave = () => nav.go(HOME);
   // Watch is here, a menu away, so it's never pressed by accident mid-race; the lobby card has it too.
