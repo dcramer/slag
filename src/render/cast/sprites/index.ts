@@ -20,6 +20,7 @@ export const LOADERS: Partial<Record<Kind, () => Promise<{ sprites: SpriteSet }>
   puffball: () => import('./puffball/frames'),
   zapmouse: () => import('./zapmouse/frames'),
   elf: () => import('./elf/frames'),
+  goose: () => import('./goose/frames'),
 };
 
 const loaded: Partial<Record<Kind, SpriteSet>> = {};

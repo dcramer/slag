@@ -361,7 +361,7 @@ What came out of it:
 - **The nod:** the S of a neck (the goose, not a duck or a chicken); white with an orange beak and feet (the farmyard goose); the honk pose with wings flung up (the troublemaker, which is the whole character).
 - **Our twist:** a site goose. It wears a stolen hi-vis vest put on back to front, and always has something nicked in its beak: whatever the roll gives (see Swaps).
 - **Swaps** (the loot in its beak): a spanner; a plunger cup; a single sock; a rubber duck.
-- **Rig:** **keyed**, bird: the waddle, the honk charge, the wing flap on the jump.
+- **Rig:** drawn flat (2026-11-03): the vest's hem torn ragged, the tail bent over, the spanner bent; the loot is a spanner in every pose, its swaps a colourway (bare, blued or green-painted steel: a red one in the beak read as a tongue) and a plaster on the back of the head; the run is the honk charge, neck flat out and wings flung up, and only the vest's two big reflective bands are drawn (the scraps of its arcs were noise at play size).
 - **Concept prompt:** A mischievous white farmyard goose with a long S-shaped neck, a tail tipped up, an orange beak and orange webbed feet and a small black eye; it wears a stolen yellow hi-vis vest on back to front and holds a stolen spanner in its beak.
 
 ### The barnyard party game's horse (new)
