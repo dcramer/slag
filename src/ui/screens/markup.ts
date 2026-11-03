@@ -169,16 +169,39 @@ export const ABOUT_LINKS: readonly { title: string; sub: string; href: string }[
   { title: 'LICENSE', sub: 'Apache 2.0', href: `${REPO_URL}/blob/main/LICENSE` },
 ];
 
-/**
- * Who and what to thank (public/ASSETS.md has the sources). The word lists' licenses ask for this attribution;
- * the fonts' don't, but they carry every word on screen.
- */
-const ABOUT_CREDITS: readonly { what: string; who: string; license: string }[] = [
-  { what: 'Lilita One', who: 'Juan Montoreano', license: 'OFL 1.1' },
-  { what: 'Barlow', who: 'Jeremy Tribby', license: 'OFL 1.1' },
-  { what: 'Bad-Word List', who: 'Shutterstock and Contributors', license: 'CC BY 4.0' },
-  { what: 'Profanity List', who: 'David Sojevic', license: 'MIT' },
+interface Credit {
+  /** What it is to the game, since a font's or a list's own name says nothing. */
+  role: string;
+  name: string;
+  who?: string;
+  license?: string;
+}
+
+/** Who made it: a person directed, and AI wrote, drew and scored everything. The page says so first. */
+const ABOUT_MAKERS: readonly Credit[] = [
+  { role: 'DIRECTION', name: 'David Cramer' },
+  { role: 'CODE, ART AND SOUND', name: 'Claude', who: 'Anthropic' },
+  { role: 'CHARACTER MODELS', name: 'Tripo' },
 ];
+
+/** The game whose loop this one is built on, credited by name: the one place a real game's name appears (docs/DESIGN.md → Parody). */
+const ABOUT_INSPIRATION: Credit = { role: 'CORE CONCEPT', name: 'Ultimate Chicken Horse', who: 'Clever Endeavour Games' };
+
+/**
+ * What the game ships that it didn't make (public/ASSETS.md has the sources). The word lists' licenses ask for this
+ * attribution; the fonts' don't, but they carry every word on screen.
+ */
+const ABOUT_CREDITS: readonly Credit[] = [
+  { role: 'DISPLAY FONT', name: 'Lilita One', who: 'Juan Montoreano', license: 'OFL 1.1' },
+  { role: 'TEXT FONT', name: 'Barlow', who: 'Jeremy Tribby', license: 'OFL 1.1' },
+  { role: 'NAME FILTER', name: 'Bad-Word List', who: 'Shutterstock and Contributors', license: 'CC BY 4.0' },
+  { role: 'NAME FILTER', name: 'Profanity List', who: 'David Sojevic', license: 'MIT' },
+];
+
+const creditHTML = (c: Credit) =>
+  `<li><span class="ab-role">${c.role}</span><span class="ab-name"><b>${c.name}</b>${c.who ? ` by ${c.who}` : ''}</span>` +
+  (c.license ? `<span class="ab-lic">${c.license}</span>` : '') +
+  '</li>';
 
 /** The About screen's footer: the selection, Open, and Back. */
 export function aboutPromptsHTML(pad: boolean): string {
@@ -187,9 +210,8 @@ export function aboutPromptsHTML(pad: boolean): string {
 }
 
 /**
- * The About screen: the Lobbies screen's header, a plate with who made it, what it parodies and who to thank, and
- * the links as menu plates. Pure, so a host may server-render it. Names a parody's targets by trope, never by title
- * (docs/DESIGN.md → Parody).
+ * The About screen: the Lobbies screen's header, a plate that says it's entirely AI-generated, who made it, what inspired it and who to thank, and
+ * the links as menu plates. Pure, so a host may server-render it.
  */
 export function aboutHTML(): string {
   const links = ABOUT_LINKS.map(
@@ -197,17 +219,14 @@ export function aboutHTML(): string {
       `<li><a class="menu-item" href="${l.href}" target="_blank" rel="noopener" data-active="${i === 0}">` +
       `<span class="t">${l.title}</span><span class="s">${l.sub}</span><span class="chev"></span></a></li>`,
   ).join('');
-  const credits = ABOUT_CREDITS.map(
-    (c) => `<li><span class="ab-what">${c.what}</span><span class="ab-who">${c.who}</span><span class="ab-lic">${c.license}</span></li>`,
-  ).join('');
   return (
     `<div class="about" data-screen="about">${forgeHTML()}` +
     `<main class="lb-main"><header class="lb-head"><button type="button" class="lb-back" data-act="back" aria-label="Main Menu"></button>` +
     `${scaledLogoHTML()}<h1>ABOUT</h1></header>` +
-    `<section class="plain-card ab-card"><p class="ab-by">Made by David Cramer.</p>` +
-    `<h2>INSPIRATION</h2><p>The build-then-race party platformers came first. Then a plumber’s blocks, pipes and shells, an ape’s barrels and girders, ` +
-    `and a crossover brawler’s worth of items. The runners are the knock-off heroes who never made the cut.</p>` +
-    `<h2>CREDITS</h2><ul class="ab-credits">${credits}</ul></section>` +
+    `<section class="plain-card ab-card"><p class="ab-by">ENTIRELY AI-GENERATED</p>` +
+    `<h2>MADE BY</h2><ul class="ab-credits">${ABOUT_MAKERS.map(creditHTML).join('')}</ul>` +
+    `<h2>INSPIRED BY</h2><ul class="ab-credits ab-star">${creditHTML(ABOUT_INSPIRATION)}</ul>` +
+    `<h2>CREDITS</h2><ul class="ab-credits">${ABOUT_CREDITS.map(creditHTML).join('')}</ul></section>` +
     `<ul class="ab-links" aria-label="Links">${links}</ul></main>` +
     `<footer class="footbar"><span class="meta">About</span><div class="prompts" aria-hidden="true">${aboutPromptsHTML(false)}</div></footer></div>`
   );

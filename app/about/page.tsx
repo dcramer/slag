@@ -5,7 +5,7 @@ import Game from '../Game';
 import { NAME, oembedAlternate, SITE_CARD } from '../site';
 
 const title = routeTitle(ABOUT);
-const description = 'Who made SLAG, what it parodies, credits, and the source.';
+const description = 'Credits, license and source code for SLAG.';
 
 export const metadata: Metadata = {
   title,

@@ -1130,30 +1130,53 @@ button.prompt:focus-visible {
   color: var(--amber);
 }
 
+/* One role column width for every list, so the three line up. */
 .ab-credits {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 8px 18px;
-  margin: 0;
+  grid-template-columns: 160px minmax(0, 1fr) auto;
+  gap: 10px 18px;
+  align-items: baseline;
+  margin: 0 0 22px;
   padding: 0;
   list-style: none;
   font: 600 16px/1.3 var(--ui);
+  color: var(--ash);
+}
+
+.ab-credits:last-child {
+  margin-bottom: 0;
 }
 
 .ab-credits li {
   display: contents;
 }
 
-.ab-what {
-  color: var(--bone);
-  font-weight: 700;
+/* Explicit columns, so a credit with no license still starts the next one on a new row. */
+.ab-role {
+  grid-column: 1;
+  font: 800 12px/1 var(--ui);
+  letter-spacing: 0.12em;
+  color: var(--dim);
 }
 
-.ab-who {
-  color: var(--ash);
+.ab-name {
+  grid-column: 2;
+}
+
+.ab-name b {
+  font-weight: 700;
+  color: var(--bone);
+}
+
+/* The core concept's credit: the game's name in the display face. */
+.ab-star .ab-name b {
+  font: 400 24px/1 var(--display);
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 0 var(--drop);
 }
 
 .ab-lic {
+  grid-column: 3;
   justify-self: end;
   padding: 4px 7px 3px;
   font: 800 12px/1 var(--ui);
@@ -1183,14 +1206,14 @@ button.prompt:focus-visible {
   }
 }
 
-/* A phone held upright: each credit's name and license on one line, who under it. */
+/* A phone held upright: each credit's role and license on one line, the credit under them. */
 @media (max-width: 600px) {
   .ab-credits {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-auto-flow: row dense;
-    row-gap: 4px;
+    row-gap: 6px;
   }
-  .ab-who {
+  .ab-name {
     grid-column: 1 / -1;
     margin-bottom: 8px;
   }
