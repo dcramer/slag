@@ -131,6 +131,27 @@ body = sum(1 for r in role if r >= 0 and r not in L)
 k = float(SIZE[1:]) / (bottom - top + 1) if SIZE[0] == 'h' else (float(SIZE[1:]) / body) ** 0.5
 print('body', round(body * k * k, 1), 'height', round((bottom - top + 1) * k, 2))
 
+# Holes: the drawing's background closed in by the figure (between an arm and the body, a handle's eye),
+# each patch of near-white over `holes` world px² made background again, so the build cuts it through.
+# Off unless the kind asks: on a white goose the body itself is a closed-in white.
+HOLES = KIND.get('holes')
+if HOLES:
+    seen = bytearray(w * h)
+    for i0 in range(w * h):
+        if bg[i0] or seen[i0] or min(px[i0 % w, i0 // w]) < 228:
+            continue
+        patch = [i0]
+        seen[i0] = 1
+        for i in patch:
+            x, y = i % w, i // w
+            for j in ((i - 1) if x > 0 else -1, (i + 1) if x < w - 1 else -1, i - w if y > 0 else -1, i + w if y < h - 1 else -1):
+                if j >= 0 and not seen[j] and not bg[j] and min(px[j % w, j // w]) >= 228:
+                    seen[j] = 1
+                    patch.append(j)
+        if len(patch) * k * k >= HOLES:
+            for i in patch:
+                role[i] = -1
+
 W, H = (BOX['x1'] - BOX['x0']) * R, (BOX['y1'] - BOX['y0']) * R
 out = [-1] * (W * H)
 # Majority of the source pixels under each output pixel.

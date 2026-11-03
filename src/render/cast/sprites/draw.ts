@@ -117,6 +117,11 @@ export function drawFrame(
   flat = false,
   /** The wear slot's index: on a flat set its marks are a tone of what they sit on, with no ink of their own. */
   wear = -1,
+  /**
+   * Cut the frame's holes through what's drawn: only on a canvas of the frame's own (the bitmap cache),
+   * since it clears whatever lies under them.
+   */
+  cut = false,
 ) {
   const boil = Math.floor(t * 8) % 3;
   for (const r of f.sil) {
@@ -137,6 +142,20 @@ export function drawFrame(
     } else if (flat) inked(s, boiled(r, boil, seed + role), p.fill, p.ink, FLAT_PART[0], FLAT_PART[1] * k);
     else toned(s, boiled(r, boil, seed + role), p.fill, p.shade, p.ink, PART_THIN, PART_THICK * k, SLIVER);
   }
+  // The background a figure closes in, cleared through it and inked round. Uncut, it's the silhouette's ink.
+  if (cut && f.holes)
+    for (const r of f.holes) {
+      const pts = boiled(r, boil, seed);
+      s.save();
+      s.globalCompositeOperation = 'destination-out';
+      path(s, pts);
+      s.fill();
+      s.restore();
+      path(s, pts);
+      s.lineWidth = FLAT_PART[1] * k;
+      s.strokeStyle = LINE_INK;
+      s.stroke();
+    }
   if (f.lines)
     f.lines.forEach(([role, r], i) => {
       s.fillStyle = flat ? LINE_INK : paints[role].ink;

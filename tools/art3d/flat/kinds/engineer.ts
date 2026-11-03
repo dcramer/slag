@@ -49,6 +49,8 @@ export const kind: FlatKind = {
     fringe: 5,
     stroke: 2.4,
     ink: 5,
+    // The gaps between arm and body and between the legs, and the wrench's eye, cut through: inked, they read as dirt. The teeth (0.7) stay.
+    holes: 0.8,
     feet: ['khaki'],
     min: { dark: 0.03, grey: 0.25, lens: 0.2, mouth: 0.2 },
   },

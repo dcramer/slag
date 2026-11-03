@@ -207,7 +207,8 @@ export function drawSprite(s: CanvasRenderingContext2D, set: SpriteSet, c: Chara
   const face = set.face ? { kit: set.face, mood, facing: got.facing } : undefined;
   const t = p.t;
   const seed = c.seed & 0xffff;
-  const draw = (g: CanvasRenderingContext2D) => drawFrame(g, got.frame, d.paints, d.body, d.shadow, d.k, seed, t, face, d.v.pick, set.flat, wearOf(set));
+  const draw = (g: CanvasRenderingContext2D, cut = false) =>
+    drawFrame(g, got.frame, d.paints, d.body, d.shadow, d.k, seed, t, face, d.v.pick, set.flat, wearOf(set), cut);
   // The character's own gait: a lift on each step and a lean, a skew about the feet the way it faces.
   const gait = gaitAt(set, d.v, got.clip, x);
   const moved = gait.dy !== 0 || gait.lean !== 0;
@@ -222,7 +223,8 @@ export function drawSprite(s: CanvasRenderingContext2D, set: SpriteSet, c: Chara
     const blink = mood === 'idle' && Math.sin(t * 1.3 + seed * 7) > 0.985;
     const bucket = 2 ** (Math.ceil(Math.log2(px) * 4) / 4);
     const key = `${idOf(d)}:${idOf(got.frame)}:${boil}:${mood}:${blink ? 1 : 0}:${bucket}`;
-    const b = bitmap(key, bucket, draw);
+    // The frame's own canvas, so its holes can be cut through it.
+    const b = bitmap(key, bucket, (g) => draw(g, true));
     s.drawImage(b.cv, -b.ax / b.px, -b.ay / b.px, b.cv.width / b.px, b.cv.height / b.px);
     figures?.push({ cv: b.cv, m: s.getTransform(), x: -b.ax / b.px, y: -b.ay / b.px, w: b.cv.width / b.px, h: b.cv.height / b.px });
   }

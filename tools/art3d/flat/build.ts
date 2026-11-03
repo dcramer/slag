@@ -71,6 +71,8 @@ interface Shape {
 }
 interface Frame {
   sil: number[][];
+  /** Background the figure closes in, cut through it (`map.holes`). */
+  holes: number[][];
   parts: Shape[];
   lines: { role: number; pts: number[] }[];
   eyes: Pt[];
@@ -166,6 +168,41 @@ function cutOut(role: Int16Array, m: RoleMap, cut: NonNullable<(typeof spec)['ma
     }
     if (open && patch.length / (m.R * m.R) > cut.area) for (const j of patch) role[j] = -1;
   }
+}
+
+/**
+ * The outlines of the background a figure closes in: the map's empty pixels that the empty border can't
+ * reach, traced as a figure of their own.
+ */
+function holesOf(role: Int16Array, m: RoleMap): number[][] {
+  if (!spec.map.holes) return [];
+  const out = new Uint8Array(role.length);
+  const queue: number[] = [];
+  for (let i = 0; i < role.length; i++) {
+    const x = i % m.W;
+    const y = (i / m.W) | 0;
+    if (role[i] < 0 && (x === 0 || y === 0 || x === m.W - 1 || y === m.H - 1)) {
+      out[i] = 1;
+      queue.push(i);
+    }
+  }
+  for (let h = 0; h < queue.length; h++) {
+    const i = queue[h];
+    const x = i % m.W;
+    for (const j of [x > 0 ? i - 1 : -1, x < m.W - 1 ? i + 1 : -1, i - m.W, i + m.W])
+      if (j >= 0 && j < role.length && !out[j] && role[j] < 0) {
+        out[j] = 1;
+        queue.push(j);
+      }
+  }
+  const hole = new Int16Array(role.length).fill(-1);
+  for (let i = 0; i < role.length; i++) if (role[i] < 0 && !out[i]) hole[i] = 0;
+  const settings: Pick<Settings, 'step' | 'trace' | 'roles'> = {
+    step: 1e9,
+    trace: { res: m.R, min: spec.map.holes, eps: 0.22, smooth: 2 },
+    roles: { hole: { color: '', swatches: [] } },
+  };
+  return trace(hole, new Float32Array(role.length), m.W, m.H, m.R, settings as Settings, ['hole']).sil;
 }
 
 /**
@@ -324,7 +361,7 @@ function frameOf(name: string, clip: FlatClip): Frame {
   }
   // Back to front by role.
   parts.sort((a, b) => a.role - b.role);
-  const f: Frame = { sil: t.sil, parts, lines: m.lines.map((l) => ({ role: roleOf(m.roles[l.role]), pts: l.pts })), eyes };
+  const f: Frame = { sil: t.sil, holes: holesOf(role, m), parts, lines: m.lines.map((l) => ({ role: roleOf(m.roles[l.role]), pts: l.pts })), eyes };
   // The soles on the floor, the pen and its boil just under it; a lying figure centred on itself.
   let low = -Infinity;
   let left = Infinity;
@@ -345,6 +382,7 @@ function frameOf(name: string, clip: FlatClip): Frame {
   const sc = (r: number[]) => r.map((v) => v * k);
   return {
     sil: g.sil.map(sc),
+    holes: g.holes.map(sc),
     parts: g.parts.map((p) => ({ ...p, ring: sc(p.ring) })),
     lines: g.lines.map((l) => ({ ...l, pts: sc(l.pts) })),
     eyes: g.eyes.map(([x, y]) => [x * k, y * k]),
@@ -354,6 +392,7 @@ function frameOf(name: string, clip: FlatClip): Frame {
 function move(f: Frame, dx: number, dy: number): Frame {
   return {
     sil: f.sil.map((r) => shift(r, dx, dy)),
+    holes: f.holes.map((r) => shift(r, dx, dy)),
     parts: f.parts.map((p) => ({ ...p, ring: shift(p.ring, dx, dy) })),
     lines: f.lines.map((l) => ({ ...l, pts: shift(l.pts, dx, dy) })),
     eyes: f.eyes.map(([x, y]) => [x + dx, y + dy]),
@@ -429,6 +468,7 @@ function vframe(f: Frame, flip: boolean) {
   const ring = (r: number[]) => enc(flip ? mirror(r) : r);
   const out: Record<string, unknown> = {
     sil: f.sil.map(ring),
+    ...(f.holes.length ? { holes: f.holes.map(ring) } : {}),
     parts: f.parts.map((p) => (p.option ? [p.role, ring(p.ring), ...p.option] : [p.role, ring(p.ring)])),
     lines: f.lines.map((l) => [l.role, enc(flip ? flipLine(l.pts) : l.pts)]),
   };

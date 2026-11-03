@@ -13,6 +13,8 @@ export type Ring = string;
 export interface VFrame {
   /** The silhouette's outer outlines. */
   sil: readonly Ring[];
+  /** Background the figure closes in (between an arm and the body, a handle's eye): cut through the frame. */
+  holes?: readonly Ring[];
   /** Parts back to front: the role and its outline, then, for an accessory, its slot and option. */
   parts: readonly (readonly [number, Ring] | readonly [number, Ring, number, number])[];
   /** The eyes the face is drawn on: x, y, radius in eighths of a world px, the near eye first. */

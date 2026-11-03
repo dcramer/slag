@@ -71,6 +71,11 @@ export interface FlatKind {
     ink?: number;
     /** A drawn hole cut out of the figure: each patch of `role` over `area` world px² open to the outside. */
     cut?: { role: string; area: number };
+    /**
+     * Holes cut through the figure: the drawing's background closed in by it (between an arm and the body,
+     * a handle's eye), each patch over this many world px². Off by default: a white body is closed in too.
+     */
+    holes?: number;
   };
   /**
    * Where the face kit goes: the eyes are the pair of `role` specks `area` big (world px²) and `gap` apart,
