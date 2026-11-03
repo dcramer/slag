@@ -28,6 +28,7 @@ export interface NameScreen {
 const COLOR_NAMES = ['Red', 'Orange', 'Yellow', 'Lime', 'Green', 'Teal', 'Sky', 'Blue', 'Violet', 'Purple', 'Pink'];
 
 const CSS = `
+.slag-namecard .slag-actions .slag-btn{min-height:44px}
 .slag-who{display:flex;gap:16px;align-items:center;margin-top:10px}
 .slag-who canvas{flex:none;width:112px;height:112px;border-radius:6px;background:radial-gradient(circle at 50% 78%,rgba(255,120,40,.28),rgba(20,12,8,.0) 60%),${PAL.soot};border:2px solid ${PAL.ink};box-shadow:inset 0 3px 0 rgba(0,0,0,.4)}
 .slag-who .slag-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:12px}
@@ -99,7 +100,7 @@ export class NamePrompt extends Overlay {
     const ctx = canvas.getContext('2d');
     const card = el(
       'div',
-      { className: 'slag-card' },
+      { className: 'slag-card slag-namecard' },
       el('h2', { textContent: 'Your Name' }),
       el('div', { className: 'slag-who' }, canvas, el('div', { className: 'slag-col' }, input, el('div', { className: 'slag-swatches' }, ...swatches))),
       el('div', { className: 'slag-actions' }, keep, ok),
