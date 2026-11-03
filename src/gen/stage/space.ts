@@ -570,6 +570,62 @@ export const PLANETOID = defineConcept({
 const GANTRY_MIN = 11;
 /** The rocket's width. */
 const ROCKET_W = 3;
+/** Rows its nose stands over the body. */
+export const NOSE_ROWS = 2;
+/** Height of each of the nose's and the fins' collision steps, in tiles (2 world px): the curve stays within a pixel of them. */
+const STEP = 1 / 8;
+
+/** The nose's half width `v` of the way up it (0 its foot, 1 its tip), in tiles: an ogive off the body's full width. */
+export function noseHalf(v: number): number {
+  return (ROCKET_W / 2) * (1 - v * v);
+}
+
+/**
+ * A fin's top `u` of the way out from the body (0 against it, 1 its tip), in tiles down from the top of its cell:
+ * the leading edge swept down and out. Its bottom is the cell's.
+ */
+export function finTop(u: number): number {
+  return 0.1 + 0.62 * u;
+}
+
+/**
+ * The nose, fins and escape tower as sub-tile solids, so they collide as the shapes they're drawn as rather than
+ * as tiles (docs/ART.md, Fair play): each curve stepped every 2 px, a step's width taken at its middle.
+ */
+function rocketTrim(rx0: number, rt: number, base: number, fins: boolean, tower: boolean): Module[] {
+  const body = (cells: Vec[], shape: [number, number, number, number][]): Module => ({
+    type: 'body',
+    cells,
+    material: 'metal',
+    conveyor: 0,
+    breakFrames: 0,
+    respawnFrames: 0,
+    shape,
+  });
+  const cx = rx0 + ROCKET_W / 2;
+  const n = NOSE_ROWS / STEP;
+  const nose: [number, number, number, number][] = [];
+  for (let k = 0; k < n; k++) {
+    const h = noseHalf((k + 0.5) / n);
+    nose.push([cx - h, rt - (k + 1) * STEP, h * 2, STEP]);
+  }
+  const noseCells: Vec[] = [];
+  for (let y = rt - NOSE_ROWS; y < rt; y++) for (let x = rx0; x < rx0 + ROCKET_W; x++) noseCells.push([x, y]);
+  const out = [body(noseCells, nose)];
+  if (fins)
+    for (const side of [-1, 1] as const) {
+      const fx = side < 0 ? rx0 - 1 : rx0 + ROCKET_W;
+      const fin: [number, number, number, number][] = [];
+      for (let k = 0; k < 1 / STEP; k++) {
+        const top = finTop((k + 0.5) * STEP);
+        fin.push([side < 0 ? fx + 1 - (k + 1) * STEP : fx + k * STEP, base + top, STEP, 1 - top]);
+      }
+      out.push(body([[fx, base]], fin));
+    }
+  // The escape tower: a lattice mast a third of a tile wide on the nose's tip.
+  if (tower) out.push(body([[rx0 + 1, rt - NOSE_ROWS - 1]], [[cx - 0.18, rt - NOSE_ROWS - 1 + 0.1, 0.36, 0.9]]));
+  return out;
+}
 
 function buildGantry(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const R = easyRise();
@@ -588,12 +644,10 @@ function buildGantry(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const rh = Math.max(4, Math.min(above - DOOR - 5, rng.int(2, 3) * R + rng.int(0, 2)));
   const rt = base - rh + 1;
   g.fill(rx0, rt, rx1, base, 1, true);
-  // Fins either side of its foot, a nose and, on some, the escape tower over it.
+  // Fins either side of its foot, a nose and, on some, the escape tower over it: sub-tile solids, the
+  // rocket's pieces (rocketTrim), so its terrain is the body alone.
   const fins = rng.chance(0.6);
-  if (fins) for (const x of [rx0 - 1, rx1 + 1]) g.set(x, base, 1, true);
-  g.set(rx0 + 1, rt - 1, 1, true);
-  const tower = rng.chance(0.5) && rt - 3 > at.y;
-  if (tower) g.set(rx0 + 1, rt - 2, 1, true);
+  const tower = rng.chance(0.5) && rt - NOSE_ROWS - 2 > at.y;
   // The access arm level with the rocket's top, from the tower to its side.
   const shaft = rx0 - s0 >= 5;
   const armX0 = s0 + (shaft ? 4 : 2);
@@ -605,16 +659,28 @@ function buildGantry(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   return {
     concept: 'launch-gantry',
     rect: { x: at.x, y: Math.max(0, rt - 4), w: at.w, h: D + 2 - Math.max(0, rt - 4) + 1 },
-    air: [{ x: rx0 - 1, y: D - DOOR, w: ROCKET_W + 2, h: DOOR }, ...(shaft ? [{ x: s0 + 2, y: rt, w: 2, h: D - rt }] : [])],
+    air: [
+      { x: rx0 - 1, y: D - DOOR, w: ROCKET_W + 2, h: DOOR },
+      ...(shaft ? [{ x: s0 + 2, y: rt, w: 2, h: D - rt }] : []),
+      // The nose's and the fins' cells: open in the terrain, their pieces' to fill.
+      { x: rx0, y: rt - NOSE_ROWS - (tower ? 1 : 0), w: ROCKET_W, h: NOSE_ROWS + (tower ? 1 : 0) },
+      ...(fins
+        ? [
+            { x: rx0 - 1, y: base, w: 1, h: 1 },
+            { x: rx1 + 1, y: base, w: 1, h: 1 },
+          ]
+        : []),
+    ],
     anchors: {
       deck: [D, 0],
       exit: [s1 + 1, D],
       pad: [s0, s1],
       rocket: [rx0, rt],
       base: [base, rh],
+      trim: [fins ? 1 : 0, tower ? 1 : 0],
       shaft: [shaft ? s0 + 2 : -1, rt],
       ...ways([
-        { x: mid, y: 0, w: 1, h: rt - (tower ? 2 : 1) },
+        { x: mid, y: 0, w: 1, h: rt - NOSE_ROWS - (tower ? 1 : 0) },
         { x: mid, y: D - DOOR, w: 1, h: DOOR },
       ]),
       sig0: [rh, tail],
@@ -631,6 +697,15 @@ function* gantryPieces(rng: Rng, l: Landmark): Generator<Piece> {
   const [base] = l.anchors.base;
   const [D] = l.anchors.deck;
   const [sx] = l.anchors.shaft;
+  const [fins, tower] = l.anchors.trim;
+  // The rocket's nose, fins and escape tower: its shape, so they're its own piece, nothing to place round.
+  yield {
+    name: rng.pick(['The Rocket', 'Flight Hardware', 'Payload', 'Do Not Climb']),
+    archetype: 'platform',
+    role: 'build',
+    style: HULL(rng),
+    modules: rocketTrim(rx0, rt, base, fins > 0, tower > 0),
+  };
   // The engine test-firing down into the trench under the rocket, with the tower, clamps, umbilicals and
   // the rocket's paint behind it all.
   yield {
