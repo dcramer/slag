@@ -209,8 +209,9 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `done` · `src/render/cast/sprites/index.ts`
 - **The rendered kinds aren't finished and are too detailed for the game's resolution: the pipeline is improved on the zapmouse first, whether through the illustration prompt or a later stage, then carried to the rest.** "its the new sprite based ones im talking about btw. we didnt finish them and im not 100% happy w/ the current outcome" / "we'll use zapmouse as a way to test an improved pipeline. whether thats an improved illustration prompt or something else" / "so i agree, its _too detailed_ for our game resolution"
   2026-11-02 · `in progress` · CHARACTERS.md → Rendered kinds, `tools/art3d/`
-- **Every character is a little disheveled, because of the lore.** "all the characters need to be a little disheveled because of slag's lore"
-  2026-11-02 · `in progress` · CHARACTERS.md → Rules for every kind
+- **Every character is a little disheveled and grungier, because of the lore, and simpler than the concept sheets, which are too complicated for the game's art style; the art style itself may change to fit.** "all the characters need to be a little disheveled because of slag's lore" / "yeah they're fine but i worry those are just too complicated for our game art style (and we might need to tweak our art style). and i want them grungier as a thematic thing because of the game's lore"
+  2026-11-02 · `open` · CHARACTERS.md → Decisions 7, ART.md
+  Changed: the cast was clean, light and calm in colour.
 - **Set-piece machines that look solid are made solid: guns on ledges, wheel and swing hubs, ladles, carts, signs, posts.** "Make them solid" (asked: make them solid, or draw them as not-ground)
   2026-11-02 · `open` · TODO.md → 21, `pnpm shot fairplay` (`PENDING`)
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
