@@ -1,11 +1,11 @@
-import { css, type HSL } from '../../../core/color';
+import { css, type HSL, shift } from '../../../core/color';
 import type { Vec } from '../../../core/geom';
 import { TILE } from '../../../sim/constants';
 import { type Level, tileAt } from '../../../sim/level';
 import type { Solid } from '../../../sim/physics';
 import { type Module, type ModuleOf, type PlateArc, plateArc, plateStart, type PropStyle } from '../../../sim/props';
-import { line, type P, stroke } from '../../ink';
-import { boxPts, dot, glint, INK, ovalPts, part, path, poly, sprite, stamp, tick } from '../../ink-props';
+import { inkFor, line, type P, stroke } from '../../ink';
+import { bar, boxPts, dot, glint, ovalPts, part, path, poly, sprite, stamp, tick } from '../../ink-props';
 import { glowDot, light, type RC } from '../../kit';
 import { type DrawCtx, defineArt, type PropDrawOpts } from '../common';
 
@@ -23,9 +23,9 @@ function ticking(s: CanvasRenderingContext2D, top: number) {
   for (let x = -7; x < 8; x += 2.4) tick(s, x, top - 4.6, x - 0.3, top - 0.4, 0.55, x * 3, '#3d64a8');
   s.restore();
   // The button pulls the ticking in: two creases into it.
-  tick(s, -2.2, top - 3.4, -0.5, top - 2.6, 0.35, 8, 'rgba(18,11,8,0.6)');
-  tick(s, 2.2, top - 3.4, 0.5, top - 2.6, 0.35, 9, 'rgba(18,11,8,0.6)');
-  dot(s, 0, top - 2.5, 0.65, 10, '#e8e2d4');
+  tick(s, -2.2, top - 3.4, -0.5, top - 2.6, 0.35, 8, inkFor(TICKING, 0.6));
+  tick(s, 2.2, top - 3.4, 0.5, top - 2.6, 0.35, 9, inkFor(TICKING, 0.6));
+  dot(s, 0, top - 2.5, 0.65, 10, '#e8e2d4', inkFor(TICKING));
 }
 
 const WIRE: HSL = { h: 215, s: 12, l: 72 };
@@ -57,17 +57,11 @@ function coil(s: CanvasRenderingContext2D, top: number, seed: number) {
   const step = h / (TURNS * 2);
   for (let c = 0; c < TURNS; c++) {
     const pts = halfTurn(FOOT - step * (2 * c + 1), FOOT - step * (2 * c + 2), false);
-    s.fillStyle = INK;
-    stroke(s, pts, { w: 2, seed: seed + c, taper: [0.1, 0.1], press: 0.2 });
-    s.fillStyle = css(WIRE, -30);
-    stroke(s, pts, { w: 0.9, seed: seed + c, taper: [0.15, 0.15], press: 0.2 });
+    bar(s, pts, 0.9, shift(WIRE, -30), seed + c, { rim: 0.55, taper: [0.1, 0.1], press: 0.2 });
   }
   for (let c = 0; c < TURNS; c++) {
     const pts = halfTurn(FOOT - step * 2 * c, FOOT - step * (2 * c + 1), true);
-    s.fillStyle = INK;
-    stroke(s, pts, { w: 2.3, seed: seed + c + 9, taper: [0.06, 0.06], press: 0.25 });
-    s.fillStyle = css(WIRE, -20);
-    stroke(s, pts, { w: 1.25, seed: seed + c + 9, taper: [0.1, 0.1], press: 0.2 });
+    bar(s, pts, 1.25, shift(WIRE, -20), seed + c + 9, { rim: 0.52, taper: [0.06, 0.06], press: 0.2 });
     s.fillStyle = css(WIRE);
     stroke(s, pts.slice(0, 6), { w: 1.15, seed: seed + c + 9, taper: [0.1, 0.4], press: 0.2 });
     s.fillStyle = 'rgba(255,255,255,0.9)';
@@ -87,9 +81,9 @@ function base(s: CanvasRenderingContext2D) {
       part(g, boxPts(-7.6, FOOT, 15.2, 3, 0.9, 3, 0.12), PLATE, 3, { depth: 0.6, shade: -16, thin: 0.45, thick: 1.4 });
       g.fillStyle = css(PLATE, 22);
       line(g, -6.4, FOOT + 0.7, 5, FOOT + 0.65, { w: 0.5, seed: 4, taper: [0.2, 0.4], press: 0.1 });
-      for (const x of [-5.9, 5.9]) dot(g, x, FOOT + 1.6, 0.55, x, '#e6e8ee');
+      for (const x of [-5.9, 5.9]) dot(g, x, FOOT + 1.6, 0.55, x, '#e6e8ee', inkFor(PLATE));
       // The seat the bottom turn sits in.
-      g.fillStyle = INK;
+      g.fillStyle = css(PLATE, -32, 1, 4);
       path(g, ovalPts(0, FOOT + 0.2, COIL_R + 0.6, 0.9, 5, 0.03, 14));
       g.fill();
     }),
@@ -104,7 +98,7 @@ function topPlate(hue: number) {
     const body = boxPts(-8, -5.2, 16, 4, 1.7, 7, 0.22);
     part(g, body, pad, 7, { depth: 0.9, shade: -20, thin: 0.5, thick: 1.6 });
     glint(g, poly(-6, -4.2, -1.8, -4.4, 3.5, -4.25), css(pad, 30, 1, -8), 0.7);
-    for (const x of [-4.5, 4.5]) dot(g, x, -3, 0.5, x + 8, css(pad, 26));
+    for (const x of [-4.5, 4.5]) dot(g, x, -3, 0.5, x + 8, css(pad, 26), inkFor(pad));
   });
 }
 
@@ -134,7 +128,7 @@ function inkSpring(rc: RC, at: Vec, angle: number, hue: number, pop: number, see
   s.restore();
   if (pop > 0) {
     // A spring that's firing gets action lines, not a glow.
-    s.fillStyle = INK;
+    s.fillStyle = inkFor({ h: hue, s: 78, l: 52 });
     for (const k of [-1, 0, 1]) line(s, at[0] + k * 7, at[1] - 16 - pop * 2, at[0] + k * 10, at[1] - 22 - pop * 7, { w: 1.2, seed: k + 2, taper: [0.1, 0.8] });
   }
 }
@@ -155,6 +149,8 @@ function drawSpring(rc: RC, m: M<'spring'>, off: Vec, st: PropStyle, o: PropDraw
 
 const STEEL: HSL = { h: 215, s: 10, l: 52 };
 const CHALK = 'rgba(250,248,238,0.92)';
+/** The chalk's shadow: a dark of the chalk, since the ground under it is whatever the level is. */
+const CHALK_TONE: HSL = { h: 53, s: 55, l: 95 };
 const STAMP: HSL = { h: 356, s: 70, l: 44 };
 
 /** The Launch Plate's still parts, facing right: a bolted base and a round plate on a hinge at its back, with an arrow on it. */
@@ -162,7 +158,7 @@ function plateSprite(hue: number) {
   return sprite(`plate|${hue | 0}`, -9, -8, 18, 9, (g) => {
     const base = boxPts(-7.6, -2.6, 15.2, 2.8, 0.8, 3, 0.15);
     part(g, base, STEEL, 3, { depth: 0.5, shade: -18, thin: 0.4, thick: 1 });
-    for (const x of [-5.6, 5.6]) dot(g, x, -1.2, 0.45, x, '#e6e8ee');
+    for (const x of [-5.6, 5.6]) dot(g, x, -1.2, 0.45, x, '#e6e8ee', inkFor(STEEL));
     // The NO REFUNDS stamp on the base's front: a red box of illegible ink.
     g.fillStyle = css(STAMP, 0, 0.85);
     g.fillRect(-2.6, -2, 5.2, 1.5);
@@ -183,7 +179,7 @@ function plateTop(s: CanvasRenderingContext2D, hue: number, lift: number) {
   path(s, a);
   s.fill();
   // The hinge pin at the back.
-  dot(s, 0.2, -0.3, 0.8, 9, '#e6e8ee');
+  dot(s, 0.2, -0.3, 0.8, 9, '#e6e8ee', inkFor(STEEL));
   s.restore();
 }
 
@@ -207,7 +203,7 @@ function arcOf(m: ModuleOf<'spring'>, d: DrawCtx, rc: RC, level: Level, solids: 
 /** The chalk X where the plate lands you: a squashed bullseye lying on the floor, crossed. */
 function landingX(rc: RC, x: number, y: number) {
   const g = rc.bg;
-  g.fillStyle = 'rgba(30,20,14,0.55)';
+  g.fillStyle = inkFor(CHALK_TONE, 0.55);
   for (const [ax, ay, bx, by] of [
     [-4.6, -3.9, 4.6, -0.3],
     [4.6, -3.9, -4.6, -0.3],
@@ -237,7 +233,7 @@ function dottedArc(rc: RC, pts: readonly Vec[]) {
   const g = rc.bg;
   for (let i = 3; i < pts.length - 1; i += 3) {
     const [x, y] = pts[i];
-    g.fillStyle = 'rgba(30,20,14,0.6)';
+    g.fillStyle = inkFor(CHALK_TONE, 0.6);
     g.beginPath();
     g.arc(x, y - 7, 1.5, 0, Math.PI * 2);
     g.fill();

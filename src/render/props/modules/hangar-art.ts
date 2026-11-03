@@ -1,7 +1,7 @@
 import { css, type HSL } from '../../../core/color';
 import { HANGAR_APRON, HANGAR_ARCH, hangarRoof } from '../../../sim/props';
-import { line, type P } from '../../ink';
-import { boxPts, dot, glint, INK, part, path, pen, poly, tick, tone } from '../../ink-props';
+import { inkFor, line, type P } from '../../ink';
+import { boxPts, dot, glint, part, path, pen, poly, tick, tone } from '../../ink-props';
 import type { MetalPalette } from '../../kit';
 
 /**
@@ -50,10 +50,10 @@ export function hangarLoft(g: CanvasRenderingContext2D, hue: HSL, pal: MetalPale
   g.fillStyle = css(tarmac, 18);
   line(g, X(ax0 + 1), Y(aTop + 0.6), X(ax1 - 1), Y(aTop + 0.6), { w: 0.5, seed: seed + 9, taper: [0.1, 0.2], press: 0 });
   for (let x = ax0 + 3; x < ax1 - 2; x += 3.2) tick(g, X(x), Y(aTop + 1.9), X(x + 1.7), Y(aTop + 1.9), 0.55, x, '#f4efe4');
-  for (const x of [ax0 + 4, ax0 + 8, ax1 - 2]) dot(g, X(x), Y(15), 0.6, x, '#9df7ff');
+  for (const x of [ax0 + 4, ax0 + 8, ax1 - 2]) dot(g, X(x), Y(15), 0.6, x, '#9df7ff', inkFor(tarmac));
   // The windsock at the runway's end: a thin pole, the sock in hazard orange, filled with a breeze.
   const poleX = X(ax1 - 1.6);
-  g.fillStyle = INK;
+  g.fillStyle = inkFor(pal.base);
   line(g, poleX, Y(aTop), poleX + 0.1, Y(1.4), { w: 0.52, seed: seed + 4, taper: [0, 0.1], press: 0 });
   const sock = poly(poleX - 0.2, Y(1.3), poleX - 0.2, Y(3.5), poleX - 4.6, Y(3), poleX - 4.8, Y(1.7));
   part(g, sock, { h: 22, s: 92, l: 56 }, seed + 5, { depth: 0.3, thin: 0.3, thick: 0.7 });
@@ -85,16 +85,16 @@ export function hangarLoft(g: CanvasRenderingContext2D, hue: HSL, pal: MetalPale
   path(g, poly(X(7), Y(4.4), X(12.6), Y(2.6), X(11), Y(3.8), X(13.6), Y(4), X(8.6), Y(5)));
   g.fill();
   g.restore();
-  pen(g, shell, seed, 0.55, 1.6, 4);
+  pen(g, shell, seed, 0.55, 1.6, 4, inkFor(tin));
   // The door: dark and arched, its frame a shade of steel, a stripe of light on the floor inside.
   const door = doorway(10, 5.4, 16, 6, 9.6);
   part(g, door, pal.base, seed + 2, { depth: 0.5, shade: -18, thin: 0.4, thick: 0.9 });
-  g.fillStyle = '#17121c';
+  g.fillStyle = inkFor(pal.dark);
   path(g, doorway(10, 4.4, 16, 7.2, 10));
   g.fill();
   g.fillStyle = 'rgba(255,226,150,0.5)';
   path(g, poly(X(6.4), Y(15.8), X(13.6), Y(15.8), X(12.2), Y(13.8), X(7.8), Y(13.8)));
   g.fill();
   glint(g, poly(X(2.4), Y(7.6), X(4), Y(4.6), X(6.6), Y(2.8)), 'rgba(255,255,255,0.85)', 0.55);
-  tick(g, X(0.4), Y(15.7), X(19.6), Y(15.8), 0.9, seed + 6, INK);
+  tick(g, X(0.4), Y(15.7), X(19.6), Y(15.8), 0.9, seed + 6, inkFor(tarmac));
 }

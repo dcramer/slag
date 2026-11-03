@@ -4,9 +4,9 @@ import { describe, expect, it } from 'vitest';
 
 /**
  * The mechanical half of docs/ART.md → World art, checked over src/render. Theme art (landmark skins and shells, set pieces,
- * decor) is held to all of it: those pieces share a screen with the terrain and the crate parts and must look drawn by the
- * same hand. How to draw one is in src/render/AGENTS.md → Drawing a landmark, hazard or decor piece; `pnpm shot artqa --theme T`
- * is how to see it.
+ * decor) and crate-part art (every prop module's art, the part kit, held items) are held to all of it: they share a screen
+ * with the terrain and must look drawn by the same hand. How to draw one is in src/render/AGENTS.md → Drawing a landmark,
+ * hazard or decor piece; `pnpm shot artqa --theme T` and `pnpm shot cards --arch a,b` are how to see it.
  */
 
 const RENDER = 'src/render';
@@ -17,6 +17,9 @@ const THEME_ART = [
   /^src\/render\/props\/skins\/[a-z-]+\.ts$/,
   /^src\/render\/props\/modules\/(arm|cannon|cart|cavein|deco|deco-cab|deco-shells|flood|geyser|ladle|lob|neon|rotor|setpiece|sign|swinger|thaw|vehicle|wire)\.ts$/,
 ];
+
+/** Crate-part art: every module's art (a new module's file matches by name), the part kit and the held items. */
+const PART_ART = [/^src\/render\/props\/modules\/[a-z-]+\.ts$/, /^src\/render\/ink-parts\.ts$/, /^src\/render\/items(-[a-z]+)?\.ts$/];
 
 /**
  * Files where a raw canvas stroke is light or a telegraph, not ink: the HUD, weather and the backdrop's bubbles, the cel pass,
@@ -59,6 +62,9 @@ function code(src: string): string {
 const lineOf = (src: string, at: number) => src.slice(0, at).split('\n').length;
 const all = files(RENDER).filter((f) => f.endsWith('.ts'));
 const themeArt = all.filter((f) => THEME_ART.some((r) => r.test(f)));
+const partArt = all.filter((f) => PART_ART.some((r) => r.test(f)));
+/** Everything held to the ink rules below. */
+const held = [...new Set([...themeArt, ...partArt])];
 
 /** Every `re` match in the files, as `file:line: text`. */
 function hits(list: readonly string[], re: RegExp, keep: (m: RegExpMatchArray, src: string) => boolean = () => true): string[] {
@@ -110,9 +116,12 @@ function lightness(lit: string): number | null {
 }
 
 describe('ink rules (docs/ART.md → World art)', () => {
-  it('finds the theme art it checks', () => {
+  it('finds the theme and part art it checks', () => {
     expect(themeArt.length).toBeGreaterThan(20);
     expect(themeArt).toContain('src/render/props/modules/deco-shells.ts');
+    expect(partArt.length).toBeGreaterThan(40);
+    for (const f of ['src/render/props/modules/launcher.ts', 'src/render/ink-parts.ts', 'src/render/items.ts', 'src/render/items-extra.ts'])
+      expect(partArt).toContain(f);
   });
 
   it('no raw canvas strokes in world art', () => {
@@ -126,26 +135,26 @@ describe('ink rules (docs/ART.md → World art)', () => {
     ).toEqual([]);
   });
 
-  it('theme art never inks in near-black INK', () => {
-    const bad = hits(themeArt, /\bINK\b/g);
+  it('theme and part art never ink in near-black INK', () => {
+    const bad = hits(held, /\bINK\b/g);
     expect(
       bad,
-      `A line is a dark of what it outlines, never one black (docs/ART.md, The line). Outline with part() or pen(..., inkFor(base)), rim a bar with bar()/barLine() (ink-props.ts), and mark a surface with tick(..., css(surface, -30)). INK is for marks with no one colour under them, and a theme piece always has one:\n${bad.join('\n')}`,
+      `A line is a dark of what it outlines, never one black (docs/ART.md, The line). Outline with part() or pen(..., inkFor(base)), rim a bar with bar()/barLine() (ink-props.ts), and mark a surface with tick(..., css(surface, -30)). INK is for marks with no one colour under them, and a theme piece or a part always has one:\n${bad.join('\n')}`,
     ).toEqual([]);
   });
 
-  it('theme art passes its colour to the pen helpers that default to INK', () => {
+  it('theme and part art pass their colour to the pen helpers that default to INK', () => {
     // Argument counts at which pen, tick and dot stop falling back to their near-black default.
     const need: Record<string, number> = { pen: 7, tick: 8, dot: 7 };
-    const bad = hits(themeArt, /(?<![.\w])(pen|tick|dot)\(/g, (m, src) => args(src, m.index! + m[0].length - 1).length < need[m[1]]);
+    const bad = hits(held, /(?<![.\w])(pen|tick|dot)\(/g, (m, src) => args(src, m.index! + m[0].length - 1).length < need[m[1]]);
     expect(
       bad,
       `pen(), tick() and dot() fall back to near-black INK when no colour is passed. Pass a dark of the surface: pen(g, pts, seed, thin, thick, 3, inkFor(base)), tick(..., w, seed, css(surface, -30)), dot(..., fleck, inkFor(plate)):\n${bad.join('\n')}`,
     ).toEqual([]);
   });
 
-  it('theme art has no hard-coded near-black colours', () => {
-    const bad = hits(themeArt, /'(#[0-9a-fA-F]{3,6}|rgba?\([^']*\)|hsla?\([^']*\)|black)'|`(rgba?\([^`$]*)/g, (m) => {
+  it('theme and part art have no hard-coded near-black colours', () => {
+    const bad = hits(held, /'(#[0-9a-fA-F]{3,6}|rgba?\([^']*\)|hsla?\([^']*\)|black)'|`(rgba?\([^`$]*)/g, (m) => {
       const l = lightness(m[1] ?? m[2]);
       return l !== null && l < 0.16;
     });
@@ -155,8 +164,8 @@ describe('ink rules (docs/ART.md → World art)', () => {
     ).toEqual([]);
   });
 
-  it('theme art shades with flat tones, not gradients', () => {
-    const bad = hits(themeArt, /\b(createLinearGradient|createRadialGradient|createConicGradient|vgrad)\(/g);
+  it('theme and part art shade with flat tones, not gradients', () => {
+    const bad = hits(held, /\b(createLinearGradient|createRadialGradient|createConicGradient|vgrad)\(/g);
     expect(
       bad,
       `World art is flat tones cut as shapes (docs/ART.md, Tone): no gradients. Use tone() or part() from ink-props.ts for two tones and a hard shadow, and glowDot() on rc.g only for something hot:\n${bad.join('\n')}`,

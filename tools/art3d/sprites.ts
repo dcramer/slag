@@ -5,6 +5,7 @@
  *   pnpm sprites study KIND [--frames 16] [--clips a,b] [--from 0.3 --to 0.6] [--face]
  *                                          every animation in the model, sampled evenly, as a sheet
  *   pnpm sprites keys KIND [--keys a,b]    each keyed pose on its own, to set them from the pose sheet
+ *                                          (--pick 0,0,0,0,2 draws those slot options: the wear, say)
  *   pnpm sprites inspect FILE.glb          a turnaround of a raw model, its clips and its texture's colours
  *
  * It serves tools/art3d/page/ with Vite, drives it in headless Chromium (the same browser the shot tools
@@ -25,6 +26,8 @@ const argv = process.argv.slice(2);
 const { opt, flag } = argReader(argv);
 const words = argv.filter((a, i) => !a.startsWith('--') && !(i > 0 && argv[i - 1].startsWith('--') && !['--face'].includes(argv[i - 1])));
 const shots = join(root, 'shots/art3d');
+/** The option each slot shows on the sheets, when set: `--pick 0,0,0,0,2` puts a kind's fifth slot (its wear) on its third. */
+const pickOpt = opt('pick')?.split(',').map(Number);
 
 /** The game's frames for a kind, as a TypeScript module (generated: never edited by hand). */
 function framesModule(set: SpriteSet): string {
@@ -57,7 +60,7 @@ page.on('console', (m) => {
 const fsUrl = (p: string) => `/@fs${resolve(p)}`;
 const dataPng = (url: string) => Buffer.from(url.slice(url.indexOf(',') + 1), 'base64');
 const settingsOf = (kind: string) => JSON.parse(readFileSync(join(root, 'art/sprites', kind, 'sprite.json'), 'utf8')) as Settings;
-const modelUrl = (kind: string, s: Settings) => fsUrl(join(root, 'art/sprites', kind, s.model));
+const modelUrl = (kind: string, s: Settings) => (s.model ? fsUrl(join(root, 'art/sprites', kind, s.model)) : '');
 const render = (kind: string, s: Settings): Promise<SpriteSet> =>
   page.evaluate(([u, st, k]) => (window as any).art3d.render(u, st, k), [modelUrl(kind, s), s, kind] as const);
 const sheet = (set: SpriteSet, zoom: number, opts: object = {}): Promise<string> =>
@@ -101,7 +104,10 @@ try {
     }
     const set = await render(kind, s);
     const out = join(shots, `${kind}-${words[0]}.png`);
-    writeFileSync(out, dataPng(await sheet(set, Number(opt('zoom', words[0] === 'keys' ? '8' : '3')), { facings: words[0] === 'keys' ? ['r', 'l'] : ['r'] })));
+    writeFileSync(
+      out,
+      dataPng(await sheet(set, Number(opt('zoom', words[0] === 'keys' ? '8' : '3')), { facings: words[0] === 'keys' ? ['r', 'l'] : ['r'], pick: pickOpt })),
+    );
     console.log(out);
   } else {
     const kinds = words.length ? words : readdirSync(join(root, 'art/sprites')).filter((k) => existsSync(join(root, 'art/sprites', k, 'sprite.json')));
@@ -113,8 +119,8 @@ try {
       const file = join(dest, 'frames.ts');
       writeFileSync(file, framesModule(set));
       spawnSync(join(root, 'node_modules/.bin/oxfmt'), [file], { stdio: 'ignore' });
-      writeFileSync(join(shots, `${kind}-frames.png`), dataPng(await sheet(set, Number(opt('zoom', '4')), { only: opt('only')?.split(',') })));
-      writeFileSync(join(shots, `${kind}-rolls.png`), dataPng(await page.evaluate(([st]) => (window as any).art3d.rolls(st, 8), [set] as const)));
+      writeFileSync(join(shots, `${kind}-frames.png`), dataPng(await sheet(set, Number(opt('zoom', '4')), { only: opt('only')?.split(','), pick: pickOpt })));
+      writeFileSync(join(shots, `${kind}-rolls.png`), dataPng(await page.evaluate(([st]) => (window as any).art3d.rolls(st, 6), [set] as const)));
       writeFileSync(join(shots, `${kind}-silhouettes.png`), dataPng(await sheet(set, 1.67, { silhouette: true, facings: ['r'] })));
       const frames = Object.values(set.clips).reduce((a, c) => a + c.r.length + c.l.length, 0);
       console.log(

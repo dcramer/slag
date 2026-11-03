@@ -486,7 +486,7 @@ export const KINDS: Record<Kind, KindArt> = {
         poly(d.s, oval(x + sd * 1.6, y + 2.6, 1.5, 1.3, 10), '#e0473b');
       }
       brows(d, [-d.W * 0.16 + d.f * 0.6, d.W * 0.16 + d.f * 0.6], y, 1);
-      mouthMark(d, d.f * 0.6, y + 2.6, 1.6);
+      mouthMark(d, d.f * 0.6, y + 2.6, 1.6, 'smile');
     },
     print: (d) => {
       for (const u of [0.42, 0.58])
@@ -753,7 +753,7 @@ export const KINDS: Record<Kind, KindArt> = {
       const y = Y(d, 0.66);
       for (const sd of [-1, 1]) eye(d, sd * d.W * 0.1 + d.f * 0.8, y, 0.75);
       brows(d, [-d.W * 0.1 + d.f * 0.8, d.W * 0.1 + d.f * 0.8], y, 0.9);
-      mouthMark(d, d.f * 1.4, Y(d, 0.5), 2.6);
+      mouthMark(d, d.f * 1.4, Y(d, 0.5), 2.6, 'flat');
     },
     print: (d) => {
       // The face and square jaw in skin, khaki trousers and a belt under the shirt.
@@ -952,7 +952,7 @@ export const KINDS: Record<Kind, KindArt> = {
     hands: 'body',
     faceX: 0.1,
     gait: (g) => (g.moving ? { rot: S(g.ph) * 0.14, pivot: 0, upright: 0.3 } : { rot: S(g.t * 1.5) * 0.02, pivot: 0 }),
-    paintFace: (d) => pair(d, 0.8, 0.12, 0.7, 0),
+    paintFace: (d) => pair(d, 0.8, 0.12, 0.7),
     print: (d) => {
       const pts: P[] = [];
       for (let i = 0; i <= 14; i++) {
@@ -1005,6 +1005,47 @@ export const KINDS: Record<Kind, KindArt> = {
       return g.moving ? { hop: abs(S(g.ph * 1.4)) * 0.8, rot: S(g.ph * 1.4) * 0.05, pivot: 0 } : {};
     },
     paintFace: (d) => tallEyes(d, 0.6, 0.11),
+    parts: ['shard', 'shard'],
+  },
+  // The round dot-eater: a yellow circle with a wedge of a mouth cut into its front and one small eye
+  // above it, hopping. Ours: a scalloped bite out of the back of the circle, and a checked napkin tucked
+  // into the lower lip. Its rendered frames (tools/art3d, `?sprites=1`) chomp; this stands in for them.
+  chomper: {
+    size: [1.18, 1.1],
+    outline:
+      'M 0.030 -0.500 L 0.413 -0.218 L 0.372 -0.166 L 0.326 -0.121 L 0.274 -0.082 L 0.217 -0.050 L 0.157 -0.025 L 0.094 -0.009 L 0.029 -0.001 L -0.036 -0.001 L -0.100 -0.010 L -0.163 -0.027 L -0.223 -0.053 L -0.280 -0.085 L -0.331 -0.125 L -0.377 -0.171 L -0.416 -0.223 L -0.449 -0.280 L -0.474 -0.340 L -0.490 -0.403 L -0.499 -0.467 L -0.499 -0.533 L -0.490 -0.597 L -0.390 -0.632 L -0.350 -0.672 L -0.333 -0.721 L -0.304 -0.765 L -0.258 -0.792 L -0.228 -0.838 L -0.177 -0.855 L -0.128 -0.870 L -0.084 -0.909 L -0.036 -0.999 L 0.029 -0.999 L 0.094 -0.991 L 0.157 -0.975 L 0.217 -0.950 L 0.274 -0.918 L 0.326 -0.879 L 0.372 -0.834 L 0.413 -0.782 Z',
+    lift: 0.4,
+    feet: 'none',
+    arms: 'none',
+    fill: 'paint',
+    ring: true,
+    gait: (g) => (g.moving ? { hop: abs(S(g.ph)) * 1.6, sx: 1 + abs(S(g.ph)) * 0.03 } : {}),
+    paintFace: (d) => {
+      const x = d.f * d.W * 0.16;
+      eye(d, x, Y(d, 0.78), 1.15);
+      brows(d, [x], Y(d, 0.78), 1.15);
+    },
+    front: (d) => {
+      // The napkin, tucked into the lower lip and hanging over the front, checked in red.
+      const x0 = d.f * d.W * 0.12;
+      const x1 = d.f * d.W * 0.36;
+      const y0 = Y(d, 0.42);
+      const y1 = Y(d, 0.29);
+      const nap = [
+        { x: x0, y: y0 },
+        { x: x1, y: y1 },
+        { x: x1 + d.f * 0.4, y: y1 + 2.6 },
+        { x: (x0 + x1) / 2 + d.f * 0.6, y: y0 + 5.2 },
+        { x: x0 - d.f * 0.2, y: y0 + 2.6 },
+      ];
+      toned(d.s, nap, '#fbf6ee', '#e2d8c6', d.lk.ink, 0.3, 0.6 * d.k, 0.4);
+      for (const [u, v] of [
+        [0.25, 0.35],
+        [0.7, 0.3],
+        [0.5, 0.65],
+      ] as const)
+        poly(d.s, oval(x0 + (x1 - x0) * u + d.f * 0.3, y0 + (y1 - y0) * u + v * 4.4, 0.6, 0.6, 4), RED);
+    },
     parts: ['shard', 'shard'],
   },
 };

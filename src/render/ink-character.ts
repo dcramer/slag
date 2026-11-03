@@ -22,7 +22,7 @@ import {
 import { drawSprite, type SpriteSet, spritesOf } from './cast/sprites';
 import type { Rig } from './character';
 import { line, type P, sn } from './ink';
-import { arm, contour, eyes, hand, type InkTarget, type Look, lookOf, moodOf, mouth, path, type RunnerPose, STRIDE, toned, tonedOval } from './ink-figure';
+import { arm, contour, hand, type InkTarget, type Look, lookOf, moodOf, path, type RunnerPose, STRIDE, toned, tonedOval } from './ink-figure';
 
 /**
  * A runner, inked: one of the cast (docs/CHARACTERS.md), animals and critters. Players watch these more
@@ -55,19 +55,6 @@ export function ropeAnchor(c: CharacterDef, facing: number): Anchor {
 /** What this character bursts into when it dies. */
 export function partsOf(c: CharacterDef): readonly Part[] {
   return artOf(c).parts;
-}
-
-const faces = new WeakMap<CharacterDef, CharacterDef>();
-
-/** The character with its kind's face overrides on top of its rolled face. */
-function faceOf(c: CharacterDef, art: KindArt): CharacterDef {
-  let fc = faces.get(c);
-  if (!fc) {
-    const o = art.face?.(c);
-    fc = o ? { ...c, eyes: { ...c.eyes, ...o.eyes }, mouth: o.mouth ?? c.mouth } : c;
-    faces.set(c, fc);
-  }
-  return fc;
 }
 
 /** Each kind's outline (and its pose variants) at its size, facing right: authored once, sampled once. */
@@ -249,7 +236,8 @@ function drawSpriteRunner(rc: InkTarget, c: CharacterDef, art: KindArt, lk: Look
   s.save();
   s.translate(x, y);
   s.scale(sc, sc);
-  if (art.ring) ring(s, lk, 14 * art.size[0]);
+  // A costume in the player's colour says whose runner it is; a ring would say it twice.
+  if (art.ring && !set.roles.some((r) => r.slot === 'player')) ring(s, lk, 14 * art.size[0]);
   // Screen px per world px before the squash: the scale the frame's bitmap is drawn at.
   const tf = s.getTransform();
   const px = Math.hypot(tf.a, tf.b);
@@ -264,7 +252,6 @@ export function drawInkRunner(rc: InkTarget, c: CharacterDef, x: number, y: numb
   const s = rc.s;
   const art = artOf(c);
   const lk = look(c, art);
-  const fc = faceOf(c, art);
   const W = 14 * art.size[0];
   const H = 15 * art.size[1];
   const f = p.facing < 0 ? -1 : 1;
@@ -332,7 +319,7 @@ export function drawInkRunner(rc: InkTarget, c: CharacterDef, x: number, y: numb
   const d: D = {
     s,
     g: rc.g,
-    c: fc,
+    c,
     lk,
     W,
     H,
@@ -426,11 +413,7 @@ export function drawInkRunner(rc: InkTarget, c: CharacterDef, x: number, y: numb
   s.save();
   // The face rides the body's lean toward where it's going.
   s.translate(f * W * (art.faceX ?? 0) + bx(0.7), 0);
-  if (art.paintFace) art.paintFace(d);
-  else {
-    eyes(s, fc, lk, W, H, by, p, m);
-    mouth(s, fc, lk, W, H, by, p, m);
-  }
+  art.paintFace(d);
   art.snout?.(d);
   s.restore();
 

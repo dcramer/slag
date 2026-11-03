@@ -180,6 +180,10 @@ export const GATEHOUSE = defineConcept({
   family: ['cannon', 'glass', 'axe', 'ram'],
   budget: 2,
   names: ['The Gatehouse of {place}', 'The Barbican of {place}', 'The Gates of {place}', '{place}: Drawbridge Up'],
+  codex: {
+    about:
+      'Two towers and a gate, a portcullis waiting for whoever stops under it and fire from the murder holes. Through the passage, or up the tower and along the wall-walk.',
+  },
   box: (k, rng) => ({ w: moatMax() + 1 + structCols(k, rng, GATE_MIN, [16, 22]), h: boxH(k.H, DOOR + 3 + 4 + 2) }),
   build: buildGatehouse,
   pieces: (rng, s, l) => gatehousePieces(rng, s, l),
@@ -325,6 +329,10 @@ export const BELL_TOWER = defineConcept({
   family: ['glass', 'chandelier', 'chandrop', 'axe'],
   budget: 2,
   names: ['The Bell Tower of {place}', 'The Belfry of {place}', '{place} Chapel', 'The Bells of {place}'],
+  codex: {
+    about:
+      'A chapel and its belfry. Through the arch and down the nave under a chandelier hung to drop, or up the tower, past the swinging bell and over the gable.',
+  },
   box: (k, rng) => ({ w: moatMax() + 1 + structCols(k, rng, BELL_MIN, [16, 22]), h: boxH(k.H, 20) }),
   build: buildBellTower,
   pieces: (rng, s, l) => bellTowerPieces(rng, s, l),
@@ -334,8 +342,14 @@ export const BELL_TOWER = defineConcept({
 
 const BRIDGE_MIN = 14;
 /** A firebar's fireballs: how far apart along it, and how big. */
-const BALL_STEP = 0.65;
+const BALL_STEP = 0.6;
 export const BALL_R = 0.34;
+/**
+ * The innermost fireball's arm. The balls run in from the tip, as close to the pin as leaves every cell they
+ * cross clear for a while each turn (the safe window): the pin on a grid line lets them come in further.
+ */
+const BALL_IN = 0.55;
+const BALL_IN_CENTRED = 1.2;
 
 function buildBossBridge(g: Grid, rng: Rng, box: TileRect, parts: number): Landmark {
   digMoat(g, rng, box, parts);
@@ -350,8 +364,8 @@ function buildBossBridge(g: Grid, rng: Rng, box: TileRect, parts: number): Landm
   const b0 = s1 - K + 1;
   const t0 = f1 + 1;
   const t1 = b0 - 1;
-  // The hall between the keeps: six or seven rows of air over the lower bridge, the walkway over it.
-  const Ha = rng.int(6, 7);
+  // The hall between the keeps: seven or eight rows of air over the lower bridge, the walkway over it.
+  const Ha = rng.int(7, 8);
   const U = G - Ha - 1;
   const Ft = U - rng.int(0, 2);
   const Bt = U - rng.int(0, 2);
@@ -407,7 +421,9 @@ function buildBossBridge(g: Grid, rng: Rng, box: TileRect, parts: number): Landm
 /** A firebar: fireballs strung along one arm, turning round a pin, every one a swinger on the same hub and beat. */
 function firebar(hub: Vec, len: number, angle0: number, period: number, dir: 1 | -1): Module[] {
   const out: Module[] = [];
-  for (let arm = 1.2; arm <= len + 1e-6; arm += BALL_STEP)
+  // A pin in the middle of a cell: the inner balls would never leave it, so they start further out.
+  const centred = hub[0] % 1 !== 0 && hub[1] % 1 !== 0;
+  for (let arm = len; arm >= (centred ? BALL_IN_CENTRED : BALL_IN) - 1e-6; arm -= BALL_STEP)
     out.push({ type: 'swinger', head: 'saw', hub, arm, angle0, period, swing: 0, dir, radius: BALL_R, count: 1, link: 'none' });
   return out;
 }
@@ -419,7 +435,7 @@ function* bossBridgePieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
   const [Ft, Bt] = l.anchors.tops;
   const [G] = l.anchors.ground;
   // The keeps' insides and the trench's piers and chains behind, and the lava rising and falling in it,
-  // never up to the bridge.
+  // never more than halfway up the piers.
   const top = Math.min(Ft, Bt) - 1;
   const lava = capFlood(
     s.level,
@@ -429,7 +445,8 @@ function* bossBridgePieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
       at: [t0, s.h],
       w: t1 - t0 + 1,
       low: 0,
-      high: Math.max(1, s.h - G - 2),
+      // Halfway up the trench at most: higher drowns the bridge's piers, and the bridge reads as floating.
+      high: Math.max(1, Math.min(s.h - G - 2, Math.ceil((s.h - G - 1) / 2))),
       off: rng.int(180, 260),
       warn: rng.int(60, 80),
       rise: rng.int(70, 100),
@@ -458,7 +475,10 @@ function* bossBridgePieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
   const period = rng.int(170, 240);
   for (let i = 0; i < n; i++) {
     const want = n === 1 ? lo + (hi - lo) * rng.range(0.3, 0.7) : lo + ((hi - lo) * i) / (n - 1);
-    const cx = Math.min(hi, Math.max(lo, Math.round(want * 2) / 2));
+    const cx =
+      Math.ceil(lo) <= Math.floor(hi)
+        ? Math.min(Math.floor(hi), Math.max(Math.ceil(lo), Math.round(want)))
+        : Math.min(hi, Math.max(lo, Math.round(want * 2) / 2));
     mods.push(...firebar([cx, cy], len, rng.range(0, Math.PI * 2), period + i * 23, rng.chance(0.5) ? 1 : -1));
   }
   yield {
@@ -484,7 +504,11 @@ export const BOSS_BRIDGE = defineConcept({
   family: ['cannon', 'axe', 'chandrop', 'glass'],
   budget: 2,
   names: ['The Boss Bridge of {place}', 'The Last Castle of {place}', 'The Lava Keep of {place}', '{place}: The Princess Is Elsewhere'],
-  box: (k, rng) => ({ w: moatMax() + 1 + structCols(k, rng, BRIDGE_MIN, [18, 24]), h: boxH(k.H, 7 + 2 + 3) }),
+  codex: {
+    about:
+      'Two keeps over a trench of lava, firebars turning over the bridge between them. Across the bridge while the lava breathes, or up and over the walkway. The lever does nothing.',
+  },
+  box: (k, rng) => ({ w: moatMax() + 1 + structCols(k, rng, BRIDGE_MIN, [18, 24]), h: boxH(k.H, 8 + 2 + 3) }),
   build: buildBossBridge,
   pieces: (rng, s, l) => bossBridgePieces(rng, s, l),
 });

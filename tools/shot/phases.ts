@@ -62,7 +62,7 @@ export const shots: Scenarios = {
         },
         opt('card', ''),
       );
-    // `--cursor x,y` aims the first player's ghost (view px); `--then-race N` places it and shoots the race N frames in.
+    // `--cursor x,y` aims the first player's ghost (view px, before place starts); `--then-race N` places it and shoots the race N frames in.
     await page.evaluate(
       (at) => {
         if (at) (window as any).slagDebug.match.players[0].cursor = { x: at[0], y: at[1] };
@@ -70,7 +70,16 @@ export const shots: Scenarios = {
       opt('cursor')?.split(',').map(Number) ?? null,
     );
     await step(60);
-    await snap(`place-${seed}${secret ? '-secret' : ''}`);
+    // `--cell x,y` aims the first player's ghost at that level cell (the ghost's middle), once place has begun.
+    const cell = opt('cell')?.split(',').map(Number);
+    if (cell) {
+      await page.evaluate((c) => {
+        const p = (window as any).slagDebug.match.players[0];
+        p.cursor = { x: (c[0] + 0.5) * 16, y: (c[1] + 0.5) * 16 };
+      }, cell);
+      await step(2);
+    }
+    await snap(`place-${seed}${secret ? '-secret' : ''}${cell ? `-${cell.join('-')}` : ''}`);
     if (opt('then-race')) {
       await page.evaluate(() => {
         const d = (window as any).slagDebug;

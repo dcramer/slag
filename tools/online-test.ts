@@ -32,12 +32,14 @@
  *               the old host freezes first, so two hosts never play at once, and everyone ends identical
  *   latency     input-to-screen delay between peers, stalls and jumps
  *   hidden      the same with the host's tab in the background
- *   contact     the same with two runners pushing and riding each other
+ *   contact     the same with two runners shoving each other, one landing on the other's head and thrown off it
  *   bc          BroadcastChannel transport (?net=bc)
- *   observe     host, guest, a desktop watcher (?watch) and a phone watcher through a round: never seated, never
- *               waited on, the same state; then a late joiner mid-race watches, Joins with the card, is seated at the boundary
- *   seatrace    seven seated and two watchers who Join at the same moment for the last seat: one wins, the other is
- *               told and sees Match Full; a player leaves and the loser's Join lights up and works
+ *   observe     host, guest, a desktop watcher (?watch) and a phone watcher; in the lobby a watcher's Join seats it
+ *               straight away (no join card) and Watch swaps it back; a color picked on the name screen reaches every
+ *               peer; then through a round: never seated, never waited on, the same state; then a late joiner mid-race
+ *               watches, Joins with the card, is seated at the boundary
+ *   seatrace    seven seated and two watchers in the lobby who Join at the same moment for the last seat: one is seated
+ *               at once, the other is told (Seat Taken) and sees Match Full; a player leaves and the loser's Join works
  *   gone        a guest's page closes mid-race: shown unplugged, the room plays on, its seat frees after the (shortened)
  *               drop; then everyone leaves, and past the (shortened) room expiry the link starts a fresh room
  *   idle        a guest's tab hidden through an untimed pick and an untimed race: the room keeps going, it is
@@ -582,8 +584,8 @@ async function probeContact(p: Page) {
   });
 }
 
-/** The biggest drawn teleport of any runner, the deepest one was drawn inside the other, and how far a rider was drawn sliding on its base. */
-async function contactReport(p: Page, label: string): Promise<{ snap: number; depth: number; slide: number; frames: number }> {
+/** The biggest drawn teleport of any runner, and the deepest one was drawn inside the other. */
+async function contactReport(p: Page, label: string): Promise<{ snap: number; depth: number; frames: number }> {
   const rows = (await p.evaluate(() => {
     const w = window as any;
     w.__contactOn = false;
@@ -591,19 +593,11 @@ async function contactReport(p: Page, label: string): Promise<{ snap: number; de
   })) as [number, number, number, number, number, number, number, number][];
   let snap = 0;
   let depth = 0;
-  let slide = 0;
-  let seat: number | null = null;
   const last = new Map<number, (typeof rows)[number]>();
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
-    const [t, slot, x, y, vx, vy, d, ride] = row;
+    const [t, slot, x, y, vx, vy, d] = row;
     depth = Math.max(depth, d);
-    // Nobody walks on top during this test, so where a rider sits on its base shouldn't change.
-    const base = ride >= 0 ? rows.slice(Math.max(0, i - 1), i + 2).find((o) => o[0] === t && o[1] === ride) : undefined;
-    if (base) {
-      seat ??= x - base[2];
-      slide = Math.max(slide, Math.abs(x - base[2] - seat));
-    }
     const was = last.get(slot);
     last.set(slot, row);
     if (!was || t <= was[0]) continue;
@@ -611,9 +605,8 @@ async function contactReport(p: Page, label: string): Promise<{ snap: number; de
     snap = Math.max(snap, Math.hypot(x - was[2], y - was[3]) - Math.hypot(vx, vy) * dt);
   }
   const frames = rows.length / 2;
-  const sliding = seat === null ? '' : `, a rider slid ${slide.toFixed(1)} px on its base`;
-  console.log(`     ${label}: biggest snap ${snap.toFixed(1)} px, drawn ${depth.toFixed(1)} px inside the other runner${sliding}, over ${frames} frames`);
-  return { snap, depth, slide, frames };
+  console.log(`     ${label}: biggest snap ${snap.toFixed(1)} px, drawn ${depth.toFixed(1)} px inside the other runner, over ${frames} frames`);
+  return { snap, depth, frames };
 }
 
 /** Pulses `key` on `p`: held, released, so a remote view mispredicts every edge. */
@@ -637,10 +630,25 @@ async function walkTo(host: Page, p: Page, slot: number, x: number) {
 }
 
 /**
- * Puts B standing on A's head: B steps away from A, jumps, and steers toward A's
- * x until it lands. Steering, not timing: gravity and air control vary by level.
+ * Lands B on A's head: B steps away from A, jumps, and steers toward A's x until
+ * it lands. Steering, not timing: gravity and air control vary by level. A head
+ * holds nobody for long, so the host page watches every frame for the landing.
  */
 async function mount(A: Page, B: Page, a: number, b: number): Promise<boolean> {
+  await A.evaluate(
+    ([a, b]) => {
+      const w = window as any;
+      w.__mounted = false;
+      const watch = () => {
+        const r = w.slagDebug.match.run?.runners.find((x: any) => x.slot === b);
+        if (r?.ride === a) w.__mounted = true;
+        else requestAnimationFrame(watch);
+      };
+      requestAnimationFrame(watch);
+    },
+    [a, b] as const,
+  );
+  const landed = () => A.evaluate(() => (window as any).__mounted as boolean);
   const both = async () => {
     const rs = await bodies(A);
     return [rs.find((r) => r.slot === a)!, rs.find((r) => r.slot === b)!] as const;
@@ -654,7 +662,7 @@ async function mount(A: Page, B: Page, a: number, b: number): Promise<boolean> {
   };
   for (let attempt = 0; attempt < 8; attempt++) {
     const [ra, rb] = await both();
-    if (rb.ride === a) return true;
+    if (await landed()) return true;
     const out = rb.x >= ra.x ? 'ArrowRight' : 'ArrowLeft';
     await B.keyboard.down(out);
     await sleep(140 + 60 * (attempt % 3));
@@ -665,7 +673,7 @@ async function mount(A: Page, B: Page, a: number, b: number): Promise<boolean> {
     while (Date.now() - t0 < 2500) {
       await sleep(8);
       const [ra2, rb2] = await both();
-      if (rb2.ride === a || (rb2.ground && Date.now() - t0 > 200)) break;
+      if (rb2.ride === a || (await landed()) || (rb2.ground && Date.now() - t0 > 200)) break;
       const dx = ra2.x - rb2.x;
       // Feet still below the head: keep clear of A sideways, or we'd only bump into it.
       const below = rb2.y + 14 > ra2.y;
@@ -673,15 +681,48 @@ async function mount(A: Page, B: Page, a: number, b: number): Promise<boolean> {
     }
     await steer('');
     await B.keyboard.up('Space');
+    if (await landed()) return true;
     await sleep(600);
   }
-  return (await both())[1].ride === a;
+  return landed();
+}
+
+/** Mounts B on A, then has A do `act` while the host's truth is sampled every frame: A's and B's x and B's feet over A's head. */
+async function thrownOff(A: Page, B: Page, a: number, b: number, act: () => Promise<void>) {
+  if (!(await mount(A, B, a, b))) return null;
+  await A.evaluate(
+    ([a, b]) => {
+      const w = window as any;
+      w.__perch = [];
+      const t0 = Date.now();
+      const loop = () => {
+        const rs = w.slagDebug.match.run?.runners;
+        const ra = rs?.find((x: any) => x.slot === a);
+        const rb = rs?.find((x: any) => x.slot === b);
+        if (ra && rb) w.__perch.push([ra.body.x, rb.body.x, ra.body.y - (rb.body.y + rb.body.h), rb.ride]);
+        if (Date.now() - t0 < 1500) requestAnimationFrame(loop);
+      };
+      requestAnimationFrame(loop);
+    },
+    [a, b] as const,
+  );
+  await act();
+  await sleep(1600);
+  const rows = (await A.evaluate(() => (window as any).__perch)) as [number, number, number, number][];
+  const [first, last] = [rows[0], rows[rows.length - 1]];
+  return {
+    off: last[3] !== a,
+    baseMoved: last[0] - first[0],
+    riderMoved: last[1] - first[1],
+    popped: Math.max(...rows.filter((r) => r[3] !== a).map((r) => r[2])),
+  };
 }
 
 /**
  * Runners are solid to each other, and a guest draws them predicted and eased.
- * Pushing and riding are where a projection by `vx` alone goes wrong: a pusher
- * held up by a body doesn't move at its walk, and a rider moves with its base.
+ * Pushing is where a projection by `vx` alone goes wrong: a pusher held up by a
+ * body doesn't move at its walk. A head is a perch: a base walking off knocks
+ * its rider off the back, and a base's jump bucks it up and off.
  */
 async function contactScenario(browser: Browser, base: string) {
   const r = await newRoom(browser, base, 'contact', '', { room: roomWithRunway(), viewport: { width: 640, height: 360 } });
@@ -708,21 +749,25 @@ async function contactScenario(browser: Browser, base: string) {
   check(shoved > 8 && truth.depth < 0.5, `the host shoved the guest ${shoved.toFixed(0)} px, and never into it (${truth.depth.toFixed(1)} px deep)`);
   check(push.frames > 60 && push.snap < 24, `shoving: no teleport on the guest (${push.snap.toFixed(1)} px)`);
   check(push.depth < 2, `shoving: the pusher isn't drawn inside who it pushes (${push.depth.toFixed(1)} px)`);
-  // B on A's head; A walks back and forth and B rides.
-  for (const p of [A, B]) await p.evaluate(() => ((window as any).__netDelay = 0));
-  const mounted = await mount(A, B, a, b);
-  check(mounted, 'the guest stands on the host');
-  if (mounted) {
-    for (const p of [A, B]) await p.evaluate((ms) => ((window as any).__netDelay = ms), ONE_WAY_MS);
-    await sleep(500);
-    await probeContact(B);
-    await pulse(A, ['ArrowLeft', 'ArrowRight'], 8);
-    const still = (await bodies(A)).find((x) => x.slot === b)?.ride === a;
-    const ride = await contactReport(B, `${ONE_WAY_MS} ms each way, the guest rides the host, drawn on the guest`);
-    check(ride.frames > 60 && ride.snap < 24, `riding: no teleport on the guest (${ride.snap.toFixed(1)} px)`);
-    check(ride.slide < 2, `riding: the rider doesn't lag its base (${ride.slide.toFixed(1)} px)`);
-    check(still, 'the guest is still riding after the walk');
+  // B lands on A's head and is thrown off it: A walks off, then A jumps. Both at the scenario's delay, drawn on the guest.
+  await probeContact(B);
+  const walked = await thrownOff(A, B, a, b, () => pulse(A, ['ArrowRight'], 1, 400, 0));
+  check(!!walked, "the guest lands on the host's head");
+  if (walked) {
+    check(walked.off, 'the host walking off knocks the guest off its head');
+    check(
+      walked.baseMoved > 20 && walked.riderMoved < walked.baseMoved / 2,
+      `nobody carries the guest: the host walked ${walked.baseMoved.toFixed(0)} px, the guest went ${walked.riderMoved.toFixed(0)} px`,
+    );
   }
+  const jumped = await thrownOff(A, B, a, b, () => pulse(A, ['Space'], 1, 250, 0));
+  check(!!jumped, "the guest lands on the host's head again");
+  if (jumped) {
+    check(jumped.off, "the host's jump bucks the guest off");
+    check(jumped.popped > 6, `bucked, not lifted: the guest's feet rose ${jumped.popped.toFixed(1)} px clear of the host's head`);
+  }
+  const perch = await contactReport(B, `${ONE_WAY_MS} ms each way, the guest landing on the host and thrown off, drawn on the guest`);
+  check(perch.frames > 60 && perch.snap < 24, `thrown off a head: no teleport on the guest (${perch.snap.toFixed(1)} px)`);
   const real = r.errors.filter((e) => !/favicon/.test(e));
   check(real.length === 0, `no page errors${real.length ? `:\n${real.join('\n')}` : ''}`);
   await r.dispose();
@@ -1714,7 +1759,7 @@ async function clickHud(p: Page, action: string): Promise<boolean> {
   }
 }
 
-/** A watcher's Join by keys: confirm opens the card (true once it's up), and confirm again asks the host. A miss is a FAIL, not a crash. */
+/** A watcher's Join by keys mid-match: confirm opens the card (true once it's up), and confirm again asks the host. A miss is a FAIL, not a crash. */
 async function joinByKeys(p: Page): Promise<boolean> {
   await p.keyboard.press('Enter');
   try {
@@ -1766,6 +1811,51 @@ async function observeScenario(browser: Browser, base: string) {
   const h = await waitFor(A, 'watchers listed', (v) => v.watchers.length === 2);
   check(h.players.length === 2, `two seats and two watchers (${h.players.length} seated, ${h.watchers.length} watching)`);
   await r.shot(O, 'lobby');
+  // Join from watching in the lobby: seated straight away, the lobby's way, with no join card; Watch swaps back.
+  await setDrawing(O, true);
+  await clickHud(O, 'play');
+  const joined = await waitFor(O, 'watcher seated in the lobby', (v) => v.seated && v.players.length === 3);
+  const cardUp = await O.evaluate(() => !!(window as any).slagDebug.renderer.hud.joinCard);
+  check(joined.phase === 'lobby' && joined.seatAsk === 'won' && !cardUp, `a watcher's Join in the lobby seats it with no join card (card ${cardUp})`);
+  await waitFor(A, 'the host sees the new seat', (v) => v.players.some((p) => p.device.startsWith(`${joined.self}:`)));
+  await sleep(400);
+  await r.shot(O, 'lobby-joined-from-watching');
+  await clickHud(O, 'watch');
+  await waitFor(O, 'back to watching', (v) => v.watching && !v.seated);
+  await waitFor(A, 'its seat freed', (v) => v.players.length === 2);
+  await setDrawing(O, false);
+  // A color picked on the name screen: on every peer, and nobody else can pick it.
+  await setDrawing(A, true);
+  await clickHud(A, 'name');
+  await A.waitForSelector('.slag-swatch', { timeout: 15_000 });
+  const pick = await A.evaluate(() => {
+    const d = (window as any).slagDebug;
+    const me = d.match.players.find((p: any) => p.device.startsWith(`${d.net.self}:`));
+    const all = [...document.querySelectorAll<HTMLButtonElement>('.slag-swatch')];
+    const i = all.findIndex((b, k) => !b.disabled && k !== me.character.color);
+    all[i]?.click();
+    return i;
+  });
+  await r.shot(A, 'name-screen-colors');
+  await A.keyboard.press('Escape');
+  const colorOf = (p: Page, peer: string) =>
+    p.evaluate((id) => (window as any).slagDebug.match.players.find((q: any) => q.device.startsWith(`${id}:`))?.character.color, peer);
+  let seen = -1;
+  for (let i = 0; i < 40 && seen !== pick; i++) {
+    seen = await colorOf(B, a0.self);
+    if (seen !== pick) await sleep(150);
+  }
+  check(pick >= 0 && seen === pick && (await colorOf(A, a0.self)) === pick, `a color picked on the name screen reaches every peer (${pick} → ${seen})`);
+  const takenForB = await B.evaluate((i) => {
+    const d = (window as any).slagDebug;
+    return !d.match.colorFree(
+      i,
+      d.match.players.find((q: any) => q.device.startsWith(`${d.net.self}:`)),
+    );
+  }, pick);
+  check(takenForB, 'and it shows as taken for everyone else');
+  await setDrawing(A, false);
+  await compareHashes([A, B, O, P], 'a picked color');
   await A.evaluate((x) => (window as any).slagDebug.net.act({ t: 'rules', rules: x }), FAST_RULES);
   await sleep(300);
   for (const p of [A, B]) await p.keyboard.press('Enter');
@@ -1792,8 +1882,8 @@ async function observeScenario(browser: Browser, base: string) {
   const l = await waitFor(L, 'late joiner in', (v) => v.synced && v.watching && v.phase === 'run');
   check(l.intent === 'watch' && !l.seated && l.space > 0, `arriving mid-race is watching, with ${l.space} seats free`);
   await setDrawing(L, true);
-  await clickHud(L, 'play');
-  await L.waitForFunction(() => (window as any).slagDebug.renderer.hud.joinCard?.stage === 'edit', null, { timeout: 15_000 });
+  // Mid-match, Join (by keys here; the lobby above used the mouse) opens the join card.
+  await joinByKeys(L);
   await r.shot(L, 'join-card');
   await setDrawing(L, true);
   await clickHud(L, 'seat');
@@ -1820,7 +1910,18 @@ async function seatRaceScenario(browser: Browser, base: string) {
   const X = await r.open('X', { query: 'watch' });
   const Y = await r.open('Y', { query: 'watch' });
   for (const p of [X, Y]) await waitFor(p, 'watcher in', (v) => v.synced && v.watching && v.space === 1, 60_000);
-  for (const p of [X, Y]) await joinByKeys(p);
+  // Every toast, kept: a toast is gone from the HUD once it has been up its time.
+  for (const p of [X, Y])
+    await p.evaluate(() => {
+      const hud = (window as any).slagDebug.renderer.hud;
+      const show = hud.toast.bind(hud);
+      hud.__toasts = [];
+      hud.toast = (msg: string, ...rest: unknown[]) => {
+        hud.__toasts.push(msg);
+        show(msg, ...rest);
+      };
+    });
+  // In the lobby Join asks at once: no join card in between.
   await Promise.all([X.keyboard.press('Enter'), Y.keyboard.press('Enter')]);
   // Settled when one has won and the other either lost the host's ruling or saw the seat go before its press counted
   // (Join is disabled on a full match, so it never asked): either way it's watching a full match.
@@ -1834,12 +1935,18 @@ async function seatRaceScenario(browser: Browser, base: string) {
   check(h.players.length === MAX_PLAYERS && !h.players.some((p) => p.device.startsWith(`${lv.self}:`)), 'eight seated, the loser not among them');
   const l2 = await waitFor(loser, 'loser watching', (v) => v.watching && v.space === 0);
   check(l2.intent === 'watch', 'the loser is back to watching, with the match full');
+  const cards = await Promise.all([X, Y].map((p) => p.evaluate(() => !!(window as any).slagDebug.renderer.hud.joinCard)));
+  check(!cards.some(Boolean), 'no join card in the lobby, for the winner or the loser');
+  if (lv.seatAsk === 'taken') {
+    const toasts = await loser.evaluate(() => (window as any).slagDebug.renderer.hud.__toasts as string[]);
+    check(toasts.includes('Seat Taken'), `the loser is told in the lobby's own way (toasts ${JSON.stringify(toasts)})`);
+  }
   await r.shot(loser, 'taken');
   await compareHashes([...players, X, Y], 'everyone agrees who won');
   // A player leaves: the loser's Join lights up, and works.
   await players[MAX_PLAYERS - 2].close();
   await waitFor(loser, 'a seat frees', (v) => v.space === 1, 30_000);
-  if (await joinByKeys(loser)) await loser.keyboard.press('Enter');
+  await loser.keyboard.press('Enter');
   // The first answer is still 'taken' until this one is asked: wait for the new answer.
   const again = await waitFor(loser, 'Join on the freed seat won', (v) => v.seatAsk === 'won', 30_000);
   check(again.seatAsk === 'won', `Join on a freed seat wins it (${again.seatAsk})`);

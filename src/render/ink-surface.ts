@@ -551,19 +551,34 @@ export function markJelly(g: CanvasRenderingContext2D, b: Cut) {
   g.fillStyle = T.base;
   trace(g, b.loops, -2.1, -3.3);
   g.fill();
+  // The deep of the slab: where it's thickest, low in each bottom cell, the colour goes dark the way a
+  // jelly does looking through it, with the light that got through pooling in a bright line under it.
   for (const [x, y] of b.cells) {
-    if (hash2(x, y, seed + 2) > 0.6) continue;
-    const bx = x * TILE + 4 + hash2(x, y, seed + 3) * 8;
-    const by = y * TILE + 7 + hash2(x, y, seed + 4) * 5;
-    const br = 0.9 + hash2(x, y, seed + 5) * 0.8;
+    if (b.has(x, y + 1)) continue;
+    const X = x * TILE;
+    const Y = y * TILE;
+    const l = b.has(x - 1, y) ? X : X + 2.2;
+    const r = b.has(x + 1, y) ? X + TILE : X + TILE - 3;
+    g.fillStyle = T.shade;
+    blob(g, (l + r) / 2, Y + 11.4, (r - l) / 2 + 0.6, seed + x * 3 + y, 0.22, 0.06);
+    g.fill();
     g.fillStyle = T.light;
-    blob(g, bx, by, br + 0.55, seed + x, 1, 0.1);
+    line(g, l + 1, Y + 13.4, r - 1.2, Y + 13.5, { w: 0.8, seed: seed + x + 9, taper: [0.3, 0.3], press: 0.1 });
+  }
+  // Bubbles caught in it: a lit rim, a body and a hard fleck.
+  for (const [x, y] of b.cells) {
+    if (hash2(x, y, seed + 2) > 0.7) continue;
+    const bx = x * TILE + 4 + hash2(x, y, seed + 3) * 8;
+    const by = y * TILE + 6 + hash2(x, y, seed + 4) * 5;
+    const br = 1.1 + hash2(x, y, seed + 5) * 1;
+    g.fillStyle = T.light;
+    blob(g, bx, by, br + 0.6, seed + x, 1, 0.1);
     g.fill();
     g.fillStyle = T.base;
-    blob(g, bx + 0.3, by + 0.35, br, seed + y, 1, 0.1);
+    blob(g, bx + 0.35, by + 0.4, br, seed + y, 1, 0.1);
     g.fill();
     g.fillStyle = 'rgb(255 250 252)';
-    g.fillRect(bx - br * 0.6, by - br * 0.7, 0.55, 0.5);
+    g.fillRect(bx - br * 0.65, by - br * 0.75, 0.7, 0.6);
   }
   for (const r of b.runs) {
     if (!topOpen(b, r)) continue;
@@ -571,21 +586,23 @@ export function markJelly(g: CanvasRenderingContext2D, b: Cut) {
     const X1 = (r.x1 + 1) * TILE;
     const Y = r.y * TILE;
     const k = seed + r.y * 31 + r.x0;
-    const reach = Math.min(X1 - X0 - 7, 7 + (X1 - X0) * 0.38);
+    const reach = Math.min(X1 - X0 - 7, 8 + (X1 - X0) * 0.42);
     g.fillStyle = 'rgb(255 251 253)';
-    // The window: a hard bar under the top, turning down the lit side, then a short dash and a dot.
+    // The window: a fat hard bar under the top, turning down the lit side, a second shorter one under
+    // it, then a short dash and a dot: wet gloss you can read across the level.
     stroke(
       g,
       [
-        { x: X0 + 2.3, y: Y + 7.2 },
-        { x: X0 + 2.5, y: Y + 4.2 },
-        { x: X0 + 4.4, y: Y + 2.7 },
-        { x: X0 + reach, y: Y + 2.6 },
+        { x: X0 + 2.3, y: Y + 8.4 },
+        { x: X0 + 2.5, y: Y + 4.4 },
+        { x: X0 + 4.6, y: Y + 2.8 },
+        { x: X0 + reach, y: Y + 2.7 },
       ],
-      { w: 1.9, seed: k, taper: [0.3, 0.25], press: 0.1 },
+      { w: 2.3, seed: k, taper: [0.3, 0.25], press: 0.1 },
     );
-    if (X1 - X0 > 20) line(g, X0 + reach + 2.4, Y + 2.65, X0 + reach + 5.4, Y + 2.7, { w: 1.4, seed: k + 1, taper: [0.25, 0.25], press: 0.1 });
-    blob(g, X1 - 4.2, Y + 3.6, 0.7, k + 2, 1, 0.1);
+    line(g, X0 + 5.2, Y + 5.6, X0 + Math.max(7.4, reach * 0.55), Y + 5.5, { w: 1.1, seed: k + 3, taper: [0.3, 0.4], press: 0.1 });
+    if (X1 - X0 > 20) line(g, X0 + reach + 2.4, Y + 2.75, X0 + reach + 5.8, Y + 2.8, { w: 1.6, seed: k + 1, taper: [0.25, 0.25], press: 0.1 });
+    blob(g, X1 - 4.2, Y + 3.6, 0.8, k + 2, 1, 0.1);
     g.fill();
   }
 }

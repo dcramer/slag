@@ -1,11 +1,11 @@
-import { css, type HSL } from '../../../core/color';
+import { css, type HSL, shift } from '../../../core/color';
 import type { CharacterDef } from '../../../gen/character';
 import { TILE } from '../../../sim/constants';
 import { flingBack, type Grip, KEG, kegAim, type ModuleOf } from '../../../sim/props';
 import type { Runner, RunWorld } from '../../../sim/run';
 import { drawInkRunner } from '../../ink-character';
-import { blob, line, type P, stroke } from '../../ink';
-import { dot, INK, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
+import { blob, inkFor, line, type P, stroke } from '../../ink';
+import { bar, dot, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import { glowDot, light, type MetalPalette, type RC } from '../../kit';
 import { type DrawCtx, defineArt, defineHeld, gripOf } from '../common';
 
@@ -60,7 +60,7 @@ function aimChevrons(rc: RC, x: number, y: number, a: number, heat: number, alph
       chev[k].y = py + dy * u + dx * v;
     };
     for (const [grow, style] of [
-      [1.1, `rgba(18,11,8,${fade})`],
+      [1.1, inkFor(c, fade)],
       [0, css(c, 0, fade)],
     ] as const) {
       set(0, -4 - grow, -5 - grow);
@@ -141,14 +141,14 @@ function cask(wood: HSL, pal: MetalPalette) {
       part(g, hoop, pal.base, t * 100, { depth: 0.6, shade: -24, thin: 0.4, thick: 1 });
       g.fillStyle = css(pal.light, 4);
       line(g, hx - 0.8, -hh + 1, hx - 0.5, -2, { w: 0.6, seed: t, taper: [0.2, 0.4], press: 0 });
-      for (const ry of [-hh + 2.4, hh - 2.4]) dot(g, hx + 0.2, ry, 0.5, ry, css(pal.spec));
+      for (const ry of [-hh + 2.4, hh - 2.4]) dot(g, hx + 0.2, ry, 0.5, ry, css(pal.spec), inkFor(pal.base));
     }
-    pen(g, body, 5, 0.6, 1.9, 4);
+    pen(g, body, 5, 0.6, 1.9, 4, inkFor(wood));
     // The mouth: an iron-rimmed bore, dark, its lower wall catching the light.
     const rim = ovalPts(MOUTH + 0.2, 0, 3.2, 9, 8, 0.02, 18);
     part(g, rim, pal.base, 9, { depth: 0.5, shade: -20, thin: 0.5, thick: 1.2 });
     const bore = ovalPts(MOUTH + 0.5, 0.3, 1.9, 7.2, 10, 0.03, 16);
-    g.fillStyle = '#0d0806';
+    g.fillStyle = css(wood, -30, 1, 4);
     path(g, bore);
     g.fill();
     g.fillStyle = css(wood, -10);
@@ -161,6 +161,8 @@ function cask(wood: HSL, pal: MetalPalette) {
 }
 
 const RUBBER: HSL = { h: 6, s: 62, l: 42 };
+/** The fuse's cord. */
+const FUSE: HSL = { h: 41, s: 45, l: 74 };
 const LEATHER: HSL = { h: 26, s: 45, l: 34 };
 /** How much bigger than its bake the fork is drawn. */
 const FORK = 1.3;
@@ -181,7 +183,7 @@ function fork(wood: HSL) {
     blob(g, -0.6, 12.4, 0.7, 2, 0.7, 0.2);
     g.fill();
     // The band's knots round each tip.
-    for (const [x, y] of TIPS) dot(g, x, y + 0.6, 1.1, x, css(RUBBER, 10));
+    for (const [x, y] of TIPS) dot(g, x, y + 0.6, 1.1, x, css(RUBBER, 10), inkFor(RUBBER));
   });
 }
 
@@ -236,10 +238,7 @@ function drawFling(rc: RC, m: Keg, d: DrawCtx) {
     band[1].y = (ay + ty + py) / 2 + (1 - pull) * 1.5;
     band[2].x = px + Math.sign(tx) * 2.2;
     band[2].y = py;
-    s.fillStyle = INK;
-    stroke(s, band, { w: 2.2 - pull * 0.8, seed: tx + 1, taper: [0, 0], press: 0 });
-    s.fillStyle = css(RUBBER, 6);
-    stroke(s, band, { w: 1.2 - pull * 0.5, seed: tx + 2, taper: [0, 0], press: 0 });
+    bar(s, band, 1.2 - pull * 0.5, shift(RUBBER, 6), tx + 1, { rim: 0.5 - pull * 0.15, taper: [0, 0], press: 0 });
   }
   const pouch = ovalPts(px, py + 0.6, 3.6, 2, 6, 0.06, 12);
   part(s, pouch, LEATHER, 6, { depth: 0.4, shade: -12, thin: 0.4, thick: 0.9 });
@@ -288,10 +287,7 @@ defineArt<'keg'>({
       f[1].y = 2.6;
       f[2].x = -MOUTH - cord;
       f[2].y = 0;
-      s.fillStyle = INK;
-      stroke(s, f, { w: 2.3, seed: 2, taper: [0, 0.2], press: 0 });
-      s.fillStyle = '#d9c7a1';
-      stroke(s, f, { w: 1, seed: 2, taper: [0, 0.3], press: 0 });
+      bar(s, f, 1, FUSE, 2, { rim: 0.5, taper: [0, 0.3], press: 0 });
     }
     stamp(s, cask({ h: d.style.woodHue, s: 50, l: 38 }, d.pal));
     s.restore();

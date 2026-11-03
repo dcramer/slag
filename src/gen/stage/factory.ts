@@ -74,6 +74,10 @@ export const GREAT_WHEEL: Concept = {
   ownsCrossing: true,
   family: ['press', 'forklift'],
   names: ['The Great Wheel of {place}', '{place} Flywheel Works', 'The Big Wheel at {place}', '{place} Wheelhouse'],
+  codex: {
+    about:
+      'A flywheel two storeys tall, cars riding its rim and saws riding the gaps between them. Ride it if you’re brave; the catwalk underneath is for everyone else.',
+  },
   scale: 'grand',
   varies: ['vat width', 'wheel size (wide)', 'cars', 'saws'],
   box: (k, rng) => ({ w: hardGap(rng) + wheelCols(wheelArm(k.W, k.H)), h: WHEEL_ROWS }),
@@ -159,6 +163,7 @@ export const STAMPING_LINE: Concept = defineConcept({
   ownsCrossing: true,
   family: ['forklift', 'cog lift', 'robot arm'],
   names: ['The Stamping Line at {place}', '{place} Press Shop', 'The Pancake Line of {place}', '{place} Panel Works'],
+  codex: { about: 'Three to five presses slamming in sequence over a conveyor. Sprint the beat along the bed, or climb to the girder and walk over the lot.' },
   varies: ['vat width', 'line length', 'girder height', 'where the girder starts and ends', 'a plinth under the bed', 'press width and count'],
   // The widest vat this gravity rolls, then the line: the vat the build digs is rolled inside its columns.
   box: (k, rng) => {

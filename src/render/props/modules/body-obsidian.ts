@@ -37,7 +37,8 @@ function slab(v: number) {
     path(g, poly(2, TILE - 3, 7 + v, 8, TILE - 2, TILE - 2.5));
     g.fill();
     glint(g, poly(a + 1, 2.4, TILE - 4, 2.8), 'rgba(226,214,255,0.85)', 0.7, v);
-    pen(g, pts, v + 3, 0.55, 1.3, 4);
+    // The glass is near black already: its pen goes a step deeper so the slab's edge still reads.
+    pen(g, pts, v + 3, 0.55, 1.3, 4, css(GLASS, -6, 1, 4));
   });
 }
 

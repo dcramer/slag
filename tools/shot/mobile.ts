@@ -135,6 +135,16 @@ async function mobile(deviceName: string) {
   await tapHud('join');
   await mp.waitForTimeout(400);
   await shotM('name');
+  // The name screen's swatches and buttons are thumb targets too.
+  const nameMin = await mp.evaluate(() =>
+    Math.min(
+      ...[...document.querySelectorAll('.slag-ov .slag-swatch, .slag-ov .slag-btn')]
+        .map((b) => b.getBoundingClientRect())
+        .map((r) => Math.min(r.width, r.height)),
+    ),
+  );
+  console.log(`name: smallest target ${nameMin.toFixed(1)} CSS px`);
+  if (nameMin < 43.9) throw new Error(`name: a swatch or button under 44 CSS px (${nameMin.toFixed(1)})`);
   await mp.tap('.slag-ov .slag-btn:not(.primary)');
   await mp.waitForTimeout(300);
   await shotM('lobby-joined');

@@ -9,12 +9,13 @@ import { loadRules, saveRules } from './game/rules';
 import { InputManager } from './input/input';
 import { TOUCH_DEVICE, touchModeFor } from './input/touch';
 import { connectRoom, type RoomConnection } from './net/client';
+import { joinOpensCard } from './net/actions';
 import { SNAP_VERSION } from './net/snapshot';
 import type { Nav, Unmount } from './router';
 import { HOME, lobby } from './routes';
 import { ITEMS } from './sim/items';
 import type { HudAction, JoinCardInfo } from './render/hud';
-import { type CharacterDef, generateCharacter } from './gen/character';
+import { type CharacterDef, generateCharacter, PLAYER_COLORS, withColor } from './gen/character';
 import type { InputFrame } from './sim/types';
 import { Renderer } from './render/renderer';
 import type { Level } from './sim/level';
@@ -135,6 +136,24 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
   const profile = loadProfile();
   const menus = [settingsMenu, rulesMenu, namePrompt];
 
+  /** The character in swatch `i` if it can be worn, else as it is: one object per answer, so the renderer's caches hold. */
+  let tinted: { from: CharacterDef; i: number; def: CharacterDef } | null = null;
+  function tint(ch: CharacterDef, i: number | undefined, free: boolean): CharacterDef {
+    if (i === undefined || ch.color === i || !free) return ch;
+    if (tinted?.from !== ch || tinted.i !== i) tinted = { from: ch, i, def: withColor(ch, i) };
+    return tinted.def;
+  }
+  /** Wear swatch `i` from now on: saved, and asked of the room when seated (sequenced by the host online). */
+  function pickColor(i: number) {
+    profile.color = i;
+    saveProfile(profile);
+    const p = match.players.find((q) => q.device === myDevice());
+    if (p) {
+      colorSent = `${p.slot}:${i}`;
+      net.act({ t: 'color', dev: p.device, color: i });
+    }
+  }
+
   function promptName() {
     const p = match.players.find((q) => q.device === myDevice());
     if (!p) return;
@@ -150,7 +169,18 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     namePrompt.onClose = () => {
       if (!decided) keep(p.character.name);
     };
-    namePrompt.open(p.character.name, profile.name, (name) => keep(name ?? p.character.name));
+    const me = () => match.players.find((q) => q.device === p.device);
+    namePrompt.open({
+      randomName: p.character.name,
+      current: profile.name,
+      preview: (i) => {
+        const q = me() ?? p;
+        return tint(q.character, i, i !== undefined && match.colorFree(i, q));
+      },
+      free: (i) => match.colorFree(i, me()),
+      onColor: pickColor,
+      onDone: (name) => keep(name ?? p.character.name),
+    });
   }
 
   input.onEscape = () => {
@@ -247,20 +277,44 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
   function cardCharacter(): CharacterDef {
     if (profile.look == null) {
       profile.look = (Math.random() * 4294967296) >>> 0;
+      // A new player starts in a swatch, like a seat's roll; an old profile with a look keeps its rolled hue.
+      profile.color ??= match.freeColorNear(generateCharacter(profile.look).hue);
       saveProfile(profile);
     }
-    const key = `${profile.look}:${profile.name ?? ''}`;
+    // The swatch you'd get: the saved one, or the free one nearest it if someone seated wears it.
+    let i = profile.color;
+    if (i !== undefined && !match.colorFree(i)) i = match.freeColorNear(PLAYER_COLORS[i].h);
+    const key = `${profile.look}:${profile.name ?? ''}:${i ?? ''}`;
     if (cardChar?.key !== key) {
       const def = generateCharacter(profile.look);
-      cardChar = { key, def: profile.name ? { ...def, name: profile.name } : def };
+      const named = profile.name ? { ...def, name: profile.name } : def;
+      cardChar = { key, def: i === undefined ? named : withColor(named, i) };
     }
     return cardChar.def;
   }
+  /**
+   * Join from watching. In the lobby there's nothing to wait for and nothing the lobby card can't change, so it
+   * seats you the way arriving does: your card appears among the players. Mid-match it opens the join card.
+   */
   function openCard() {
-    if (net.transport && !net.seated && !net.queued && net.space > 0) card = { stage: 'edit', until: 0, now: false };
+    if (!net.transport || net.seated || net.queued || net.space <= 0) return;
+    if (!joinOpensCard(match.phase)) {
+      card = null;
+      lobbyAsk = true;
+      net.play();
+    } else card = { stage: 'edit', until: 0, now: false };
+  }
+  /** A Join from watching in the lobby is out: a lost race for the last seat is said the lobby's way, in a toast. */
+  let lobbyAsk = false;
+  function settleLobbyAsk() {
+    if (!lobbyAsk || net.seatAsk === 'asking') return;
+    lobbyAsk = false;
+    if (net.seatAsk === 'taken') renderer.hud.toast('Seat Taken', 2400, true);
   }
   function cardSeat() {
     if (card?.stage !== 'edit' || net.space <= 0) return;
+    // The match ended into the lobby while the card was up: seated the lobby's way.
+    if (!joinOpensCard(match.phase)) return openCard();
     card.stage = 'asking';
     net.play();
   }
@@ -273,11 +327,18 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     if (card?.stage !== 'edit') return;
     const ch = cardCharacter();
     namePrompt.onClose = () => {};
-    namePrompt.open(ch.name, profile.name, (name) => {
-      if (!name) return;
-      profile.name = name;
-      profile.prompted = true;
-      saveProfile(profile);
+    namePrompt.open({
+      randomName: ch.name,
+      current: profile.name,
+      preview: () => cardCharacter(),
+      free: (i) => match.colorFree(i),
+      onColor: pickColor,
+      onDone: (name) => {
+        if (!name) return;
+        profile.name = name;
+        profile.prompted = true;
+        saveProfile(profile);
+      },
     });
   }
   /** Keyboard and gamepad on the card: confirm joins, alt cancels, use rolls a new look, down renames. */
@@ -301,6 +362,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     }
     if (card && ((card.until && now > card.until) || (card.stage === 'edit' && (net.seated || net.queued)))) card = null;
     renderer.hud.joinCard = card ? { character: cardCharacter(), stage: card.stage, now: card.now } : undefined;
+    settleLobbyAsk();
   }
   window.addEventListener('keydown', () => audio.unlock(), { once: true, signal: life.signal });
 
@@ -319,6 +381,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
   let appliedLook: number | null = null;
   let restoring = false;
   let nameSent = '';
+  let colorSent = '';
   function syncProfile() {
     const p = match.players.find((q) => q.device === myDevice());
     if (!p) {
@@ -328,12 +391,13 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     // Look: restore the saved one on join; afterwards a new look (reroll) becomes the saved one.
     if (appliedLook === null) {
       if (profile.look != null) {
-        restoring = p.character.seed !== profile.look;
-        if (restoring) net.act({ t: 'look', dev: p.device, seed: profile.look });
+        restoring = p.character.seed !== profile.look || (profile.color !== undefined && p.character.color !== profile.color);
+        if (restoring) net.act({ t: 'look', dev: p.device, seed: profile.look, ...(profile.color === undefined ? {} : { color: profile.color }) });
         appliedLook = profile.look;
       } else {
         appliedLook = p.character.seed;
         profile.look = appliedLook;
+        if (p.character.color !== undefined) profile.color = p.character.color;
         saveProfile(profile);
       }
     } else if (p.character.seed !== appliedLook && !net.pending) {
@@ -352,6 +416,12 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     if (profile.name && !taken && p.character.name !== profile.name && nameSent !== want) {
       nameSent = want;
       net.act({ t: 'name', dev: p.device, name: profile.name });
+    }
+    // Color: the saved swatch, once it's free (someone else wore it when we sat down, say). Asked once per seat and swatch.
+    const wear = `${p.slot}:${profile.color}`;
+    if (profile.color !== undefined && p.character.color !== profile.color && colorSent !== wear && !net.pending && match.colorFree(profile.color, p)) {
+      colorSent = wear;
+      net.act({ t: 'color', dev: p.device, color: profile.color });
     }
     if (!profile.prompted && match.phase === 'lobby' && !menus.some((m) => m.isOpen)) {
       profile.prompted = true;

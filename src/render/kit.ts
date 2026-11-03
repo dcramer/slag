@@ -197,6 +197,21 @@ export function scratch(key: string, w: number, h: number): HTMLCanvasElement {
 }
 
 /**
+ * Clear all of a reused canvas, in two halves. One clear of the whole canvas is Chrome's "overwrite" fast
+ * path, and when nothing is drawn after it the canvas can keep its old picture: a backdrop glow layer that
+ * lit nothing came back holding the last theme's skyline (a harbor's ships, a volcano's mountains), drawn
+ * as a translucent veil over the next level. Two clears that each miss part of the canvas never take it.
+ * Leaves the transform at identity.
+ */
+export function wipe(g: CanvasRenderingContext2D) {
+  const { width: w, height: h } = g.canvas;
+  const half = h >> 1;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.clearRect(0, 0, w, half);
+  g.clearRect(0, half, w, h - half);
+}
+
+/**
  * Erase everything in `a` (current transform units) outside the closed, non-overlapping loops of `mask`.
  * A destination-in fill should do this, but Chrome's GPU raster can bound it to part of the canvas and
  * leave what lies outside the path: a chunk of a progressive bake kept its material's flat fill wherever
