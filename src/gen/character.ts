@@ -150,9 +150,10 @@ export function generateCharacter(seed: number, kind?: Kind): CharacterDef {
 
 /**
  * The player palette: every color a player can wear, around the wheel at least MIN_HUE_APART apart, so
- * two swatches never count as one color. Each is tuned by eye rather than set by formula: the yellows and
- * blues sit lighter than the reds, so all of them read on the dark HUD, on every theme's terrain and as a
- * ring beside each kind's own palette.
+ * two swatches never count as one color. Each is tuned by eye rather than set by formula (`pnpm shot cast
+ * --only colors`): lightness and saturation pull the close neighbours apart (lime from green, blue from
+ * violet), so every one reads as a whole costume (a cap and shirt, quills, a puffball), as a ring beside a
+ * kind's own palette, on every theme's ground and on the dark HUD.
  */
 export const PLAYER_COLORS: readonly HSL[] = [
   hsl3(356, 74, 56), // red
@@ -162,8 +163,8 @@ export const PLAYER_COLORS: readonly HSL[] = [
   hsl3(128, 52, 46), // green
   hsl3(166, 64, 44), // teal
   hsl3(198, 78, 54), // sky
-  hsl3(228, 76, 64), // blue
-  hsl3(262, 62, 66), // violet
+  hsl3(228, 82, 60), // blue
+  hsl3(262, 58, 70), // violet
   hsl3(294, 56, 60), // purple
   hsl3(326, 74, 64), // pink
 ];
