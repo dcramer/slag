@@ -177,6 +177,12 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
     },
     addBot(level) {
       const d = dev(bots.add(match, 'runner', dev));
+      // Online, a seat is a host-sequenced action like the lobby's Add Bot, or the room would fork.
+      if (net?.transport) {
+        net.act({ t: 'join', dev: d });
+        if (level && level !== 'normal') net.act({ t: 'bot', dev: d, level });
+        return d;
+      }
       const p = match.join(d);
       if (p && level && level !== 'normal') p.bot = level;
       return d;
