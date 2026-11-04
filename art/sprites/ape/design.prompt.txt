@@ -1,0 +1,16 @@
+How design.png and the pose drawings were made (2026-11-04, Studio credits: 2 an image, 16 in all).
+
+1. Design (`node tools/art3d/style.ts design ape`; 2 drawn, the first picked): both were the same hunched gorilla with knuckles on the floor; the first wore the tie more crooked and its taped fists read cleaner, the second had fur fringes at the wrists.
+
+2. Wear (`node tools/art3d/style.ts worn ape`, the first design as the reference; 2 drawn, the first picked): its tie stays on the chest with a ragged tip, where the second's blew sideways over the arm and stopped reading as a tie. Its peeled banana stands up over the crown.
+
+3. Poses, three to a 16:9 image with the design as the reference, cut apart at the white between the figures (each keeps its drawn scale; `body` sizes every pose alike). The prompt for each sheet:
+The same character exactly as in the reference image: the same design, proportions, colours, wear and tear, line and flat white background, in the same three-quarter view facing right. Draw him three times side by side in one row: three separate full-body figures of the same size, with wide white space between them, none touching or overlapping, each in its own pose. Left: <pose> Middle: <pose> Right: <pose> Nothing else changes: no ground, no shadow on the ground, no motion lines, no text, no other figures.
+(The poses are each drawing's `poses` entry in tools/art3d/flat/kinds/ape.ts. For sheetD, wall and death, two figures and the `far` opening: "The same character as in the reference image: the same design, proportions, colours, wear and tear, line and flat white background, drawn at the same size.")
+
+- sheets/sheetA.png → flat/walk-1, walk-2, idle2
+- sheets/sheetB.png → flat/run-1, run-2, air-1
+- sheets/sheetC.png → flat/air-2, cheer, cheer2 (cut by connected ink: an arm of one reached over the next's column)
+- sheets/sheetD.png → flat/wall, death
+
+Hand fixes: run-1's dust puffs behind the feet are whitened out. idle2's half-shut eyes, walk-2's eyes pressed under the brow and cheer2's shut eyes each got a dark dot painted on, so the face kit finds them (it draws its own eyes there).
