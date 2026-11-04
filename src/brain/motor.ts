@@ -1,9 +1,9 @@
 import type { Match, Player } from '../game/match';
 import { DT, PHYS, TILE } from '../sim/constants';
-import { T_ONEWAY, T_SOLID } from '../sim/level';
+import { type Level, T_ONEWAY, T_SOLID } from '../sim/level';
 import type { Body, Controls } from '../sim/physics';
 import { AMMO, AMMO_SIM, footprint, touchesHazard } from '../sim/props';
-import { brakeFrom, type Move, movesFrom } from '../sim/reach';
+import { brakeFrom, isStandable, type Move, movesFrom, type WindColumns } from '../sim/reach';
 import { gustAir } from '../sim/weather';
 import type { RunWorld } from '../sim/run';
 import { type InputFrame, NO_INPUT } from '../sim/types';
@@ -18,9 +18,10 @@ import type { Intent } from './types';
  * act on the real game, but it only ever presses buttons.
  *
  * In a race it plays the controller's own moves (reach.ts `movesFrom`, run
- * steps along the ground included, traced in the gust blowing now): from
- * where the body is, it takes the move whose landing is nearest the target
- * by the route, counting the time it takes, among those that keep clear of
+ * steps along the ground included, traced in the gust blowing now and in the
+ * parts' winds as they will blow): from where the body is, it takes the move
+ * whose landing is nearest the target by the route, counting the time it
+ * takes, among those that keep clear of
  * the hazards the parts' cycles will bring, of the parts' solids moving into
  * the way, and (in the air) of a gust changing under it. It looks one move
  * past a landing a hazard is about to reach, and won't land where it can't
@@ -285,24 +286,24 @@ export class Motor {
    * The best thing to do from here: every move the controller has from this
    * body, scored by the time it takes plus the route from where it lands.
    * With no route anywhere, the open-air distance at least points the way.
-   * Moves are traced in the gust blowing now, and one in the air while the
-   * gust changes is held back like one a hazard is in the way of: a player
-   * waits for the lull. A move that lands somewhere about to hurt with no
-   * clear way on is a trap, worth waiting out like a blocked one. Waiting
-   * brakes to a stop first, and only where it can stop. With nothing clear
-   * and danger coming, it takes whatever is hit last rather than stand there.
+   * Moves are traced in the gust blowing now and the parts' winds, and one in
+   * the air while the gust changes is held back like one a hazard is in the
+   * way of: a player waits for the lull. A move that lands somewhere about
+   * to hurt with no clear way on is a trap, worth waiting out like a blocked
+   * one. Waiting brakes to a stop first, and only where it can stop. With
+   * nothing clear and danger coming, it takes whatever is hit last rather
+   * than stand there.
    */
   private choose(map: RaceMap, run: RunWorld, b: Body, target: number): Act | null {
     const f = run.frame;
-    const w = map.field.w;
-    const here = cellOf(b, w);
+    const here = standCell(map.field, b);
     if (here === target && b.onGround) return null;
     if (b.onGround && here !== this.last) {
       this.last = here;
       this.visits.set(here, (this.visits.get(here) ?? 0) + 1);
     }
     const air = gustAir(run.level, f);
-    const moves = movesFrom(map.field, b, run.solids, air);
+    const moves = movesFrom(map.field, b, run.solids, air, columns(map, f));
     const shots = shotsAhead(run, map);
     // Standing here is about to hurt: no waiting for a better moment.
     const margin = this.traits.margin;
@@ -409,7 +410,7 @@ export class Motor {
   private hold(map: RaceMap, run: RunWorld, b: Body, shots: readonly Shot[], air: number, until: number): Act | null {
     if (!b.onGround) return null; // no standing still in the air: it steers
     if (Math.abs(b.vx) < 0.5) return { kind: 'wait', until };
-    const stop = brakeFrom(map.field, b, run.solids, air);
+    const stop = brakeFrom(map.field, b, run.solids, air, columns(map, run.frame));
     if (!stop || hurts(map, stop, run.frame, b, shots, this.traits.margin)) return null;
     return { kind: 'move', m: stop, i: 0 };
   }
@@ -418,7 +419,7 @@ export class Motor {
   private canStop(map: RaceMap, run: RunWorld, b: Body, shots: readonly Shot[], air: number, f = run.frame, ahead = STILL_AHEAD): boolean {
     const margin = this.traits.margin;
     if (Math.abs(b.vx) < 0.5) return !hurtsStill(map, f, b, shots, margin, ahead);
-    const stop = brakeFrom(map.field, b, run.solids, air);
+    const stop = brakeFrom(map.field, b, run.solids, air, columns(map, f));
     return !!stop && !hurts(map, stop, f, b, shots, margin) && !hurtsStill(map, f + stop.controls.length, stop.end, NO_SHOTS, margin, ahead);
   }
 
@@ -433,7 +434,7 @@ export class Motor {
     const e = mv.end;
     const air = gustAir(run.level, t);
     if (this.canStop(map, run, e, NO_SHOTS, air, t, TRAP_AHEAD)) return false;
-    for (const next of movesFrom(map.field, e, run.solids, air)) {
+    for (const next of movesFrom(map.field, e, run.solids, air, columns(map, t))) {
       if (next.to === mv.to || !Number.isFinite(dist[next.to])) continue;
       if (!hurts(map, next, t, e, NO_SHOTS, margin) && !hurtsStill(map, t + next.controls.length, next.end, NO_SHOTS, margin)) return false;
     }
@@ -459,8 +460,24 @@ export class Motor {
   }
 }
 
-function cellOf(b: Body, w: number): number {
-  return Math.floor((b.y + b.h - 1) / TILE) * w + Math.floor((b.x + b.w / 2) / TILE);
+/** The parts' winds from race frame `f` on, as a trace started then meets them. */
+function columns(map: RaceMap, f: number): WindColumns {
+  return (i) => map.winds(f + i);
+}
+
+/**
+ * The cell a body stands in, named as the trace names a landing (reach.ts
+ * `landing`): under its middle, or else under whichever edge is on the
+ * ledge. A body on a ledge's lip with its middle over the drop is on the
+ * ledge's cell, where the route goes on from; by its middle alone it would
+ * be nowhere, and every hop in place there would look like getting on.
+ */
+function standCell(field: Level, b: Body): number {
+  const ty = Math.floor((b.y + b.h - 1) / TILE);
+  const mid = Math.floor((b.x + b.w / 2) / TILE);
+  if (b.onGround && !isStandable(field, mid, ty))
+    for (const tx of [Math.floor(b.x / TILE), Math.floor((b.x + b.w - 1) / TILE)]) if (isStandable(field, tx, ty)) return ty * field.w + tx;
+  return ty * field.w + mid;
 }
 
 /** Frames ahead a body standing still checks for something coming its way, and that shots in flight are followed. */
