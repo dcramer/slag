@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
-import { generateLevel, isAcceptable, lastGenInfo } from '../src/gen/level';
+import { DIFFICULTIES, generateLevel, isAcceptable, lastGenInfo, setLevelDifficulty } from '../src/gen/level';
 import { jumpProfile, probeGravity, setProbeGravity } from '../src/gen/level/probe';
 import { analyzeRoutes, MAX_SHARED } from '../src/gen/level/routes';
 import { type Crossing, hopGap, jumpCrossing, jumpGap, reachMin, rollChallenges, TWO_PART_TRIES, TWO_PARTS } from '../src/gen/level/sculptors/common';
@@ -127,23 +127,32 @@ describe('sculptor tuning', () => {
     }
   });
 
-  it('jumpable gaps ask for your range: mostly running jumps, many the longest, hops at the end of a walk', () => {
+  it('jumpable gaps ask more of your range the harder the level: fewer walking hops, more of the longest jump', () => {
     setProbeGravity(1);
-    const rng = new Rng(7);
     const j = jumpProfile(1);
-    const gaps = Array.from({ length: 400 }, () => jumpGap(rng));
-    expect(gaps.every((g) => g >= j.walkGap - 1 && g <= j.gap)).toBe(true);
-    const walking = gaps.filter((g) => g <= j.walkGap).length / gaps.length;
-    expect(walking).toBeGreaterThan(0.2);
-    expect(walking).toBeLessThan(0.4);
-    expect(gaps.filter((g) => g === j.gap).length / gaps.length).toBeGreaterThan(0.25);
+    const shares = DIFFICULTIES.map((d) => {
+      setLevelDifficulty(d);
+      const rng = new Rng(7);
+      const gaps = Array.from({ length: 400 }, () => jumpGap(rng));
+      expect(gaps.every((g) => g >= j.walkGap - 1 && g <= j.gap)).toBe(true);
+      return { walk: gaps.filter((g) => g <= j.walkGap).length / gaps.length, full: gaps.filter((g) => g === j.gap).length / gaps.length };
+    });
+    // A gentle level never asks for the longest jump; each harder one walks less and jumps full range more.
+    expect(shares[0].full).toBe(0);
+    for (let i = 1; i < shares.length; i++) {
+      expect(shares[i].walk).toBeLessThan(shares[i - 1].walk);
+      expect(shares[i].full).toBeGreaterThan(shares[i - 1].full);
+    }
+    const rng = new Rng(7);
     for (let i = 0; i < 100; i++) expect(hopGap(rng)).toBeGreaterThanOrEqual(j.walkGap - 1);
     for (let i = 0; i < 100; i++) expect(hopGap(rng)).toBeLessThanOrEqual(j.walkGap);
+    setLevelDifficulty('medium');
   });
 
   for (const gravity of [0.7, 1, 1.35]) {
     it(`the controller clears every jumpable crossing, stones and the longest jumps included, at gravity ${gravity}`, { timeout: 30_000 }, () => {
       setProbeGravity(gravity);
+      setLevelDifficulty('hard');
       const rng = new Rng(11);
       const seen = new Map<string, Crossing>();
       for (let i = 0; i < 60; i++) {
@@ -161,6 +170,7 @@ describe('sculptor tuning', () => {
         expect(analyzeReach({ ...l, gravity }).goalReached, `width ${c.w} stones ${c.stones.join(',')}`).toBe(true);
       }
       setProbeGravity(1);
+      setLevelDifficulty('medium');
     });
   }
 

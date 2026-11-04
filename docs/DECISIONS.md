@@ -388,6 +388,11 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · git `3628776` · `done` · DESIGN.md → Levels
 - **Levels ask for precision: jumps reach the edge of your range, footholds are small, and every level has a run of them, as a baseline for all levels rather than a per-level setting.** "[the build-then-race party platformer] is about precision platforming and this needs more of that" (a playtester's feedback) / "i think this is broad feedback not a tweak per level?"
   2026-11-03 · `done` · DESIGN.md → Levels (Precision is the point); hazards hugging the line is `open` · TODO.md → 3
+- **Levels come in three difficulties, a fifth gentle, half medium and the rest hard, so a match deals a spread of levels instead of one flat mix.** "i think the difficulty curve is there are too many easy levels, vs too many hard levels" / "Yes, 20/50/30"
+  2026-11-04 · `done` · DESIGN.md → Levels, src/gen/level/difficulty.ts
+  Changed: one precision baseline for every level (2026-11-03).
+- **A level's difficulty is picked by measuring it: the generator draws layouts until the tight jumps on its more forgiving route fit its difficulty.** "Pick levels by score" (asked: pick by score, a layout family built for hard levels, or playtest first)
+  2026-11-04 · `done` for gentle and medium; hard lands in its band about half the time · DESIGN.md → Levels, src/gen/level/precision.ts, TODO.md → 3
   Changed: "Run is a choice": most gaps were walking hops, none was the longest running jump, and a level had under one jumpable death gap.
 - **Levels are mostly open, with route options, never one narrow way.**
   2026-11-02 · git `0464596`, `d125b8b` · `done` · DESIGN.md → Levels

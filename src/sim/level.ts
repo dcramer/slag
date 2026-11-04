@@ -19,6 +19,8 @@ export const T_ONEWAY = 2;
 
 /** World-size class of a level (see gen/level/profile.ts). */
 export type SizeClass = 'classic' | 'wide' | 'tall';
+/** How much precision a level asks of you (see gen/level/difficulty.ts). */
+export type Difficulty = 'gentle' | 'medium' | 'hard';
 /**
  * Overall route shape: ltr = left to right at roughly one height; climb =
  * goal well above spawn; descent = goal well below spawn; zigzag = switchback
@@ -44,6 +46,9 @@ export interface LevelProfile {
   route: RouteShape;
   /** World gravity scale (copied to Level.gravity). */
   gravity: number;
+  difficulty: Difficulty;
+  /** Which draw of its layout the level is (gen/level/index.ts): with the rest of the profile, what rebuilds it. */
+  draw?: number;
 }
 
 export interface Level {

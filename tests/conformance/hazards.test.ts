@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
 import { Rng } from '../../src/core/rng';
-import { generateLevel, lastGenInfo } from '../../src/gen/level';
+import { DIFFICULTIES, generateLevel, lastGenInfo } from '../../src/gen/level';
 import { noFreeRide } from '../../src/gen/level/winnable';
 import { hazardSignature, type Recipe, SET_PIECE_RECIPES, SET_PIECES } from '../../src/gen/setpieces';
 import { CONCEPTS, ownPieces } from '../../src/gen/stage';
@@ -19,7 +19,7 @@ import { artFaults, hazardFaults, once, rule } from './lib';
  * Each recipe is placed on its own, on plain levels of its theme, until two of it stand.
  */
 
-const TERRAIN_SEEDS = [1, 2, 3, 4, 5, 6];
+const TERRAIN_SEEDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 const REROLLS = 12;
 const WANT = 2;
 
@@ -28,10 +28,11 @@ interface Placed {
   pp: PlacedProp;
 }
 
-/** A plain level of the theme with its set pieces taken out, to place recipes on one at a time. */
+/** A plain level of the theme with its set pieces taken out, to place recipes on one at a time: every difficulty, which shapes the terrain, in turn. */
 const terrain = (theme: ThemeId, i: number): Level => {
   const size: SizeClass = i % 3 === 2 ? 'wide' : 'classic';
-  return { ...generateLevel(TERRAIN_SEEDS[i], theme, { concept: 'plain', size }), setPieces: [] };
+  const difficulty = DIFFICULTIES[Math.floor(i / 2) % DIFFICULTIES.length];
+  return { ...generateLevel(TERRAIN_SEEDS[i], theme, { concept: 'plain', size, difficulty }), setPieces: [] };
 };
 
 /** Up to WANT instances of each recipe of a theme, placed alone. */

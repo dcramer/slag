@@ -467,6 +467,27 @@ export const BRIEFS: Record<string, Brief> = {
       'Big red rubber wellington boots (#d8442f) to the knee, short thick arms. In one hand it carries a pale grey plastic carrier bag (#c9c6bd) with a big white egg with green spots poking out of the top.',
     worn: 'the bicycle seat sits crooked, its cover torn open at the back in a big ragged flap; its chrome stem is bent; one of the head spikes is snapped off short; the top of one wellington boot is folded down; the carrier bag has a big torn hole in its side.',
   },
+  king: {
+    // The nod, each part of the read at race size: the spiked shell humped behind (it breaks the outline
+    // behind and above, the read in profile, so it leads the brief); the two horns and the wild red mane (they
+    // make him the king and not a foot soldier); the hulking upright build with a toothy snout (the boss in a
+    // cast of heroes, and upright against the ape's hunch).
+    // Ours, and the joke: a knock-off boss who never got his castle. The shell is riveted boiler plate, its
+    // spikes welded-on bolts, and a paper party crown sits crooked between his horns. The soot puff from his
+    // nostrils stays out: anything dark under the face reads as a mouth at play size.
+    design:
+      'The character: a hulking, upright, barrel-chested turtle king, nearly as wide as he is tall, a grumpy brute boss. ' +
+      'On his back a huge humped turtle shell (#3f8a3a) made of riveted boiler plate, bulging out far behind him and up past his shoulders, with a thick cream rim (#efe2c0) and four big cream cone spikes, welded-on steel bolts, sticking out of it backwards and up: the biggest shapes in his outline. ' +
+      'Yellow-orange skin (#e8b23c), a big wide toothy snout jutting forward with two white fangs, a pale cream belly plate in wide bands (#e9d29a), two big cream horns curving up and back from his head, a wild spiky red-orange mane (#d9502e) and heavy red-orange brows. ' +
+      'Thick arms with black spiked cuffs (#2a2a30) on the wrists, short thick legs and big clawed feet. A small yellow paper party crown (#f0cf4a) sits crooked between his horns.',
+    // The designs drew no crown, so the edit puts it on, in a pale blue the drawing uses nowhere else (it is a
+    // tone of the player's colour in the game). The shipped design is this edit edited twice more
+    // (art/sprites/king/design.prompt.txt): for huge spikes, long horns and a small crown, since at play size the
+    // first one's spikes were bumps and two blind readers took it for the ape as often as for the king; then for a
+    // clean outline (a smooth mane, plain cuffs, a smooth tail, a three-pointed crown), since every small tuft and
+    // stud broke the outline too and readers saw a porcupine.
+    worn: "a big pale-blue paper party crown (#9cc8e8) with five tall zigzag points sits crooked on his head between his horns, one of its points torn and folded down; one of the shell's spikes is bent over sideways; a big square grey riveted patch plate (#9aa0a8) is bolted onto the shell; one horn is chipped off short at the tip.",
+  },
 };
 
 function brief(kind: string): Brief {
