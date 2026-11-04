@@ -16,7 +16,9 @@ import { botRace } from '../lib/bot-race';
  * precision (more jumpable crossings, stepping stones, full-range jumps) made
  * the same 257 finishes take 555 frames; taking the least bad move when it
  * lands at a run on a ledge too short to stop on or wait (it had coasted off):
- * 259 in 556. The misses left are
+ * 259 in 556. Foreseeing parts a runner sets off (a dropper it walked under
+ * looked idle until it slammed) and looking past every clear move while
+ * where it stands is about to hurt: 261 in 555. The misses left are
  * mostly routes into places it can't leave (it gives up), shots and timed
  * hazards past the one move it looks ahead, and low-gravity falls.
  */
