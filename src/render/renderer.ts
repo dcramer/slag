@@ -91,6 +91,10 @@ const TRAIL_LIFE = 0.2;
  * light layers in world space through a smoothed camera, the WebGL compositor
  * runs them through the cel pass, and a separate 2D canvas carries the HUD.
  */
+/** A picture of the level (`still`): its width in px, and how often it's retaken. */
+const STILL_W = 480;
+const STILL_EVERY = 4;
+
 export class Renderer {
   private scene = document.createElement('canvas');
   private glow = document.createElement('canvas');
@@ -119,6 +123,17 @@ export class Renderer {
   private pw = 2;
   private ph = 2;
   private frameBox: ViewFrame = VIEW_FRAME;
+  /** The window's width in CSS px, as the canvases were last sized for it. */
+  private cssW = 1;
+  /**
+   * A small copy of the play view for a picture of the level (the lobby's level dialog), taken right after the
+   * composite: the world canvas keeps no buffer to read later. Retaken on a new level and every STILL_EVERY frames while asked for.
+   */
+  private stillC: HTMLCanvasElement | null = null;
+  private stillWanted = 0;
+  private stillFrame = 0;
+  /** The level the still was last taken of: a new one is taken at once. */
+  private stillOf: unknown = null;
   /** Invisible box over the play view: the 0..VIEW_W×0..VIEW_H area that pointers map through. */
   readonly viewBox = document.createElement('div');
   private last = 0;
@@ -178,6 +193,7 @@ export class Renderer {
     // notch and status bar. Layers fill the rest (frame.ts). The bottom home-indicator strip may
     // overlap the picture; touch controls keep clear of it.
     const f = viewFrame(vw, vh, safeInsets());
+    this.cssW = vw;
     this.frameBox = f;
     this.cam.setFrame(f);
     this.hud.setFrame(f);
@@ -415,10 +431,32 @@ export class Renderer {
       originY: rc.s.getTransform().f,
       ambient: level.theme.ambientLight,
     });
+    if (this.stillWanted > 0) {
+      this.stillWanted--;
+      if (this.stillFrame++ % STILL_EVERY === 0 || this.stillOf !== m.level) this.copyStill();
+      this.stillOf = m.level;
+    }
     if (!this.hud.hidden) this.hud.draw(m, t, this.pw, this.ph);
     else this.hud.clear(this.pw, this.ph);
     if (this.wordsOn) this.letters.draw(this.hudCanvas.getContext('2d')!, this.cam, this.pw);
     this.placeLogo?.(this.logoBox());
+  }
+
+  /** The play view as of a few frames ago, or null before the first copy. Ask every frame it should stay fresh. */
+  still(): HTMLCanvasElement | null {
+    this.stillWanted = 2;
+    return this.stillC;
+  }
+
+  private copyStill() {
+    const f = this.frameBox;
+    const k = this.pw / this.cssW;
+    const c = (this.stillC ??= document.createElement('canvas'));
+    if (c.width !== STILL_W) {
+      c.width = STILL_W;
+      c.height = Math.round((STILL_W * VIEW_H) / VIEW_W);
+    }
+    c.getContext('2d')!.drawImage(this.glCanvas, f.left * k, f.top * k, f.width * k, f.height * k, 0, 0, c.width, c.height);
   }
 
   /**

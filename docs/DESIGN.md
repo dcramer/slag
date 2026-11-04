@@ -190,7 +190,8 @@ A level is a place with one landmark you'd name it after: the Great Wheel, the H
 - Parts: Few, Some, Many or All, default Many: how many different parts the match's crates deal from. See Props.
 - Secret Parts: default off. See Props.
 - Lobby: Public or Private, default Public, online only. Private keeps the lobby off the lobby list. Never carried over to the host's next lobby.
-- A rule the level is built from (gravity, weather) rebuilds the lobby's level on the spot, for everyone.
+- A rule the level is built from (gravity, weather, difficulty) rebuilds the lobby's level on the spot, for everyone.
+- **The Level card** opens from the level's plate in the lobby's top bar (New Level beside it still rolls a new one). It shows the level as it plays, with arrows either side that turn through the themes and **Any** (the seed's own theme); the theme and the level's name sit under the picture with a dice for a random theme. Below that are the **seed**, which you can type (a number or a word, read as a link's `?seed=`) or roll with a dice, and the **difficulty**: Grab Bag (the default: each level rolls its own, see Levels), Sunday Stroll, Fair Fight or Pain Train, the match's rule for every level. Every change rebuilds the level on the spot. A chosen theme stays for the levels after it. Online it's the host's, like the rules.
 - The Rules card is one screen with no scrolling at 720p: a label and a row of choices per rule, no explanations.
 
 ## Controls and UI

@@ -6,6 +6,7 @@
  * More variations will land here (crate size, scoring tweaks, modifiers…).
  */
 import { DEFAULT_VARIETY, type PartVariety } from '../gen/props';
+import type { Difficulty } from '../sim/level';
 
 export { PART_VARIETIES, type PartVariety } from '../gen/props';
 export interface MatchRules {
@@ -29,6 +30,11 @@ export interface MatchRules {
   gravity: GravityRule;
   /** Off makes every level clear. Changing it in the lobby regenerates the level. */
   weather: boolean;
+  /**
+   * Level difficulty: 'varies' lets each level roll its own (a fifth gentle, half medium, the rest hard,
+   * gen/level/difficulty.ts); otherwise every level is that one. Changing it in the lobby regenerates the level.
+   */
+  difficulty: DifficultyRule;
   /** Rounds a puddle lasts, counting the one it was spilled in. 0 = no blood at all. */
   bloodRounds: number;
   /**
@@ -46,6 +52,8 @@ export interface MatchRules {
 }
 
 export type GravityRule = 'auto' | 'low' | 'normal' | 'high';
+
+export type DifficultyRule = 'varies' | Difficulty;
 
 /**
  * The lobby's one match length setting. Each entry pairs a target with a
@@ -74,6 +82,7 @@ export const DEFAULT_RULES: MatchRules = {
   raceSeconds: 0,
   gravity: 'auto',
   weather: true,
+  difficulty: 'varies',
   bloodRounds: 2,
   secretParts: false,
   parts: DEFAULT_VARIETY,
@@ -92,6 +101,13 @@ export const RULE_CHOICES: Record<TimerRule, number[]> = {
 export const GRAVITY_CHOICES: readonly GravityRule[] = ['auto', 'low', 'normal', 'high'];
 
 export const BLOOD_CHOICES: readonly number[] = [0, 1, 2, 3];
+
+export const DIFFICULTY_CHOICES: readonly DifficultyRule[] = ['varies', 'gentle', 'medium', 'hard'];
+
+const DIFFICULTY_LABELS: Record<DifficultyRule, string> = { varies: 'Grab Bag', gentle: 'Sunday Stroll', medium: 'Fair Fight', hard: 'Pain Train' };
+
+/** Button text for a difficulty choice (menus). */
+export const difficultyLabel = (v: DifficultyRule): string => DIFFICULTY_LABELS[v];
 
 const VARIETY_LABELS: Record<PartVariety, string> = { few: 'Few', some: 'Some', many: 'Many', all: 'All' };
 

@@ -3,8 +3,9 @@ import { tidyName } from '../core/name';
 import { nameBlocked } from '../core/name-filter';
 import { type CharacterDef, generateCharacter } from '../gen/character';
 import { BOT_LEVELS, type BotLevel, type Match } from '../game/match';
-import { BLOOD_CHOICES, DEFAULT_RULES, GRAVITY_CHOICES, type MatchRules, nearestLength, PART_VARIETIES, RULE_CHOICES } from '../game/rules';
+import { BLOOD_CHOICES, DEFAULT_RULES, DIFFICULTY_CHOICES, GRAVITY_CHOICES, type MatchRules, nearestLength, PART_VARIETIES, RULE_CHOICES } from '../game/rules';
 import { MAX_PLAYERS } from '../sim/constants';
+import { THEME_IDS, type ThemeId } from '../themes';
 
 /**
  * Discrete, host-sequenced match actions. They ride in input bundles and are
@@ -35,6 +36,8 @@ export type NetAction =
   | { t: 'salt'; salt: number }
   /** Host only, lobby only. */
   | { t: 'rules'; rules: MatchRules }
+  /** Host only, lobby only: the lobby's level by seed, in `theme` or (null) the one the seed picks. */
+  | { t: 'level'; seed: number; theme: ThemeId | null }
   /**
    * Host only, lobby only: out of the room, and refused until match frame `until` if it comes back, by its peer
    * id and by `client`, the browser's own id (identity.ts), which a new tab or a cleared session doesn't change.
@@ -264,6 +267,11 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
     case 'rules':
       if (m.phase === 'lobby') m.setRules(sanitizeRules(a.rules));
       return;
+    case 'level':
+      // Wire data: a seed and a theme this build has, or nothing changes.
+      if (Number.isInteger(a.seed) && (a.theme === null || (THEME_IDS as readonly unknown[]).includes(a.theme)))
+        m.pickLevel(a.seed >>> 0, a.theme ?? undefined);
+      return;
     case 'kick':
       if (m.phase !== 'lobby' || typeof a.peer !== 'string') return;
       for (const p of m.players.filter((q) => peerOf(q.device) === a.peer)) m.leave(p.device);
@@ -320,6 +328,7 @@ const RULE_CHECKS: { [K in keyof MatchRules]: (v: unknown, r: Partial<MatchRules
   placeSeconds: choice(RULE_CHOICES.placeSeconds),
   raceSeconds: choice(RULE_CHOICES.raceSeconds),
   gravity: choice(GRAVITY_CHOICES),
+  difficulty: choice(DIFFICULTY_CHOICES),
   weather: (v) => (typeof v === 'boolean' ? v : undefined),
   bloodRounds: choice(BLOOD_CHOICES),
   secretParts: (v) => (typeof v === 'boolean' ? v : undefined),
