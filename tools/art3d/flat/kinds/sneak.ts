@@ -64,6 +64,8 @@ export const kind: FlatKind = {
     thin: ['box', 'boxside', 'tape', 'tail', 'stripe', 'suit', 'boot', 'skin'],
     fringe: 5,
     stroke: 3.6,
+    // No corner cutting: smoothed, the box traced as a rounded slab, and read as a bean.
+    smooth: 0,
     feet: ['boot'],
     loose: ['tail', 'stripe'],
     min: { dark: 0.12 },
