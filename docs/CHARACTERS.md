@@ -52,7 +52,7 @@ So each kind has: a clear head-to-body ratio, a readable expression, a line of a
 | robot | the blue robot boy | a round helmet with ear discs, an arm cannon, small | costume (its entry) |
 | sneak | the sneaking soldier | a box on two legs with an eye slot, a bandana | costume (its entry) |
 | cuptoon | the cup-headed toon | a cup for a head with a straw, rubber-hose limbs, shorts | costume (its entry) |
-| horse | the barnyard party game's horse | a long head, a mane, standing on two legs | costume (its entry) |
+| horse | the barnyard party game's horse | a long head tilted down with a pale nose, upright ears, a flat mane, standing on two legs; a scarf and a zip (a costume) | costume: the onesie, scarf a dark of it |
 
 **Is it the homage?** `cast-recognise.png` puts each kind close up beside "This is ___", in its roster colour. Every sheet waits for the rendered kinds' frames (`slagDebug.sprites.ready()`), so it shows what ships; before 2026-11-02 the catalog, recognise and silhouette sheets drew those kinds hand-drawn, so the reads below were judged on the old bodies. As of this round, every homage reads as its caption to us: the plumber, speedster, elf, mouse, impostor, puffball, jelly and goose at once; the bounty hunter and the engineer a beat slower, because their reads lean on props (the shoulder pads and cannon, the hat and wrench) more than on a silhouette nobody else shares. The silhouette test still separates every kind, though the plumber and the hunter are the closest pair of stout shapes.
 
@@ -373,15 +373,19 @@ What came out of it:
 ### The barnyard party game's horse (new)
 - **Kind:** `horse` · **Name:** Hoarse
 - **A stranger should say:** "the horse from the chicken-horse game."
-- **Silhouette:** upright on two legs, with a long head and muzzle out in front, two upright ears, a mane down the neck, and a tail behind.
-- **Traits:** a brown coat; a dark mane and tail; a pale muzzle with nostrils; hooves; a goofy grin.
-- **Palette:** coat `#9a6a40` (shade `#734e2e`); mane and tail `#3a2a20`; muzzle `#e6cfae`; hooves `#2a1f1a`; zip `#c9ccd2`; scarf `#c9473f` and `#f4efe6`.
-- **Color slot:** costume.
-- **Gait:** a high-stepping prance, mane bouncing; kicks its heels on the jump.
-- **The nod:** the long muzzle out front and the upright ears (the horse, in profile); standing on two legs (the party game's horse, not a farm horse); the goofy grin (its personality).
-- **Our twist:** it's a costume. A zip runs up its belly, the head is a size too big for the neck, and it's lost its voice: a knitted scarf wound round its throat.
-- **Swaps:** a lozenge tin in one hoof; a hand-sewn patch; a party horn; a sticking plaster on the muzzle.
-- **Rig:** humanoid with a long head. Medium risk: the big head must stay inside the envelope.
+- **Silhouette:** upright on two legs, with a long head tilted down and its muzzle out in front, two upright ears, a mane flat down the neck, and a narrow tail hanging behind.
+- **Traits:** a long pale-nosed muzzle with big nostrils; a dark mane and tail; hooves; a goofy buck-toothed grin.
+- **Palette:** the costume in the player's colour (drawn `#c8743a`), the scarf a dark of it (tone −22); the rest neutral: nose and muzzle `#e6cfae`; mane, tail and hooves `#4a3428`; zip and knee patch `#9a9c98`; an open mouth's tongue `#9a3d36`.
+- **Color slot:** costume: the onesie, head and all, and the scarf in a dark of it.
+- **Gait:** a high-stepping prance; kicks its heels on the jump.
+- **The nod:** the long muzzle out front, tilted down, and the upright ears (the horse, in profile: a level snout under a fanned tail read as a fox standing up); standing on two legs (the party game's horse, not a farm horse); the goofy grin (its personality).
+- **Our twist:** it's a costume. A zip runs up its belly, stuck open at the bottom, the head is a size too big, and it's lost its voice: a knitted scarf wound round its throat.
+- **Swaps:** a sticking plaster on the cheek (a lozenge tin, a hand-sewn patch and a party horn are for later).
+- **Palette alts:** the mane, tail and hooves together in dark bay `#4a3428`, black `#302c2c` or chestnut `#74492f`.
+- **Idles and cheers:** the idle from the design; arms folded, smug, one hoof tapping. Both hooves thrown up; waving one hoof, the other on its hip.
+- **Gait range:** a bounce of 0.2–0.9 px on each step, a lean of up to 0.03.
+- **Wear:** in the drawing, the zip stuck open and a stitched grey patch on one knee; scuffed is a faded patch on the belly, scorched a soot mark there.
+- **Rig:** drawn flat (2026-11-04): a game-size design with the scarf, zip and patch added in a wear edit (over the prompt's length the image model dropped the scarf) and the head tilted down and the tail narrowed in a second; eleven poses drawn three to a sheet (`art/sprites/horse/design.prompt.txt`). Each drawing's near pupil is repainted solid: drawn, a pupil was a ring of ink round its glint, taken for the line, and the far one sits on the outline. Blind reads (2026-11-04, ten fresh readers over five drawings): never named; read as Fox McCloud or a plain fox ("pointed snout and ears, bushy tail, stands upright on two legs", low) and as the bandicoot ("spiky tuft on the head, lanky", low to medium), as a level head, a shaggy mane, tall ears or a fanned tail made it a canine. In colour it reads as a horse at once.
 - **Concept prompt:** A goofy upright cartoon horse standing on two legs, with a long head and muzzle out in front, two upright ears, a pale muzzle with nostrils, a dark mane and tail and a big grin; it is clearly a costume, with a zip running up its brown belly and a head a size too big for its neck, and a red-and-white knitted scarf wound round its throat.
 
 ### The jellyfish parasite
