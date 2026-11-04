@@ -1,6 +1,6 @@
 import type { Rect } from '../../../core/geom';
 import { TILE } from '../../constants';
-import { defineModule } from '../registry';
+import { defineModule, type SenseCtx } from '../registry';
 import type { ModuleOf, PropState } from '../types';
 import { faceRect } from './coat';
 
@@ -46,6 +46,12 @@ function snapperSense(m: Snapper): Rect {
   return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
 }
 
+/** Where it notices you, cell by cell (a plate split by trimming has no sensor over the gap): nothing while it can't fire. */
+function snapperZones(m: Snapper, ctx: SenseCtx): Rect[] {
+  if (!ctx.live || snapperPhase(m, ctx.state, ctx.mi, ctx.frame + 1).seg !== SNAP_IDLE) return [];
+  return m.cells.map(([cx, cy]) => faceRect(cx, cy, m.angle, SNAP_SENSE));
+}
+
 /**
  * Pop-up spike plate, mounted flush on a face like a spike strip. Harmless
  * until someone steps in front of it: it clicks and its tips peek out
@@ -61,10 +67,9 @@ export const snapper = defineModule<'snapper'>({
     if (snapperPhase(m, ctx.state, ctx.mi, ctx.frame).seg !== SNAP_UP) return;
     for (const [cx, cy] of m.cells) out.hazards.push({ owner: ctx.r.pp.owner, kind: 'rect', r: faceRect(cx, cy, m.angle, SNAP_SPIKE, 1) });
   },
+  sense: snapperZones,
   tick(m, ctx) {
-    if (!ctx.live || snapperPhase(m, ctx.state, ctx.mi, ctx.frame + 1).seg !== SNAP_IDLE) return;
-    // Cell by cell: a plate split by trimming has no sensor over the gap.
-    const zones = m.cells.map(([cx, cy]) => faceRect(cx, cy, m.angle, SNAP_SENSE));
+    const zones = snapperZones(m, ctx);
     if (ctx.runners.some((r) => r.active && zones.some((z) => r.x < z.x + z.w && r.x + r.w > z.x && r.y < z.y + z.h && r.y + r.h > z.y))) {
       const z = snapperSense(m);
       ctx.state.vars.set(t0Key(ctx.mi), ctx.frame + 1);
