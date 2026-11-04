@@ -49,8 +49,9 @@ export const kind: FlatKind = {
     fringe: 5,
     stroke: 2.4,
     ink: 7,
-    // The gaps between arm and body and between the legs, and the wrench's eye, cut through: inked, they read as dirt. The teeth (0.7) stay.
-    holes: 0.8,
+    // The gaps between arm and body and between the legs, and the wrench's eye, cut through: inked, they read as dirt
+    // (the laugh's, by the hip, is 0.76: inked, a hole under the shirt). The grin's teeth (0.44) stay.
+    holes: 0.6,
     feet: ['khaki'],
     // Skin: the torn knees (0.6 to 1.2 world px²) go, a tan speck with a pen at play size; every other skin part is over 4.
     min: { dark: 0.03, grey: 0.25, lens: 0.2, mouth: 0.2, skin: 1.5 },
@@ -109,7 +110,9 @@ export const kind: FlatKind = {
     run: { frames: ['run-1', 'run-2'], loop: true, stride: 40 },
     air: { frames: ['air-1', 'air-2'], loop: false, vy: [-200, 200], centre: 'box' },
     wall: { frames: ['wall'], loop: true, fps: 1, centre: 'box' },
-    cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.5, 0.25] },
+    // The fist-up grin sits higher on his face, its top 0.8 under the dropped eyes: dropped as far, the shut
+    // eyes lay on the mouth's top edge, one dark blob with it. Halfway between brim and grin.
+    cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.5, 0.25], shift: [0, -0.6] },
     // The laugh's eyes are shut, which is what the kit's cheer draws: shut out, the face had no eyes at all.
     cheer2: { frames: ['cheer2', 'idle'], loop: true, holds: [0.6, 0.3] },
     death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box' },
