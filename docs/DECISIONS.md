@@ -228,6 +228,10 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-04 · `in progress` · CHARACTERS.md → Decisions 4, Rules for every kind → Player's color and Variety; replaces each homage's own hues on its secondary parts (the plumber's blue overalls, the speedster's red shoes, the engineer's yellow hat) and the coloured palette alts
 - **The art's open items all get done: the marks left at 4.4×, the three kinds that don't read (the engineer, the hunter against the robot boy, the jelly's hooks), and the nine kinds not yet in the cast, which replace the four plain animals.** "Its worth addressing these. and getting it done"
   2026-11-04 · `in progress` · TODO.md → 29, CHARACTERS.md → Roster
+- **Spend Tripo Studio credits to finish the cast's images once the free allowance runs out.** "Spend the credits" (asked: about 1,500–3,500 credits; images turned out to cost 2 each)
+  2026-11-04 · `done` · `tools/art3d/README.md`
+- **Agents may run Tripo image calls without a prompt: allowed in the owner's user settings, since each worktree reads its own project settings.** "Add the rule" · "Add to user settings"
+  2026-11-04 · `done` · `~/.claude/settings.json` (`tripo.ts image`, `balance`)
 - **Set-piece machines that look solid are made solid: guns on ledges, wheel and swing hubs, ladles, carts, signs, posts.** "Make them solid" (asked: make them solid, or draw them as not-ground)
   2026-11-02 · `open` · TODO.md → 21, `pnpm shot fairplay` (`PENDING`)
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"

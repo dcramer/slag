@@ -453,7 +453,7 @@ The hunter and the engineer sit late although they're easy to rig: their hand-dr
 
 - **The puffball and the dot-eater:** feet, arms and a mouth against a wedge and no limbs.
 - **The goose and the horse:** two farmyard homages, but white versus brown and an S-neck versus a long muzzle.
-- **The hunter and the robot boy:** both carry an arm cannon. The hunter is bigger, orange and wider at the shoulders than anywhere; the robot boy is small and blue with a round helmet and ear discs.
+- **The hunter and the robot boy:** both carry an arm cannon. The hunter is the tallest kind, long-legged, the cannon straight out from the shoulder; the robot boy is small with a round helmet and ear discs, the can at arm's length. Two blind reads took the old, stocky hunter for the robot boy.
 - **The speedster and the robot boy:** both blue. Quills swept back against a round helmet.
 - **The miner and the sneaking soldier:** both boxy. A cube head on a body with arms against one box on two legs.
 - **The ape and the turtle king:** the two brutes. Hunched, brown and long-armed against upright, green-shelled, spiked and horned.
