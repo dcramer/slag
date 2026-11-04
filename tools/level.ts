@@ -7,13 +7,14 @@
  *   Force profile knobs on either: --size classic|wide|tall --route ltr|climb|descent|zigzag
  *                                  --density 0..1 --gravity 0.7 --hazards 0..4 --weather rain
  *                                  --concept <id>|plain (a stage concept of the theme's, gen/stage)
+ *                                  --difficulty gentle|medium|hard
  *
  * Legend: # solid  = one-way  S spawn  G goal  · reachable stand cell  P set-piece footprint
  *         B a bridge from the validator's solution (levels that need props)
  */
 import { deriveSeed, parseSeed, Rng } from '../src/core/rng';
 import { SCULPTORS } from '../src/gen/level/sculptors';
-import { BRIDGE_W, describeProfile, generateLevel, gravityClass, judge, lastGenInfo, type ProfileOverride } from '../src/gen/level';
+import { BRIDGE_W, DIFFICULTIES, describeProfile, generateLevel, gravityClass, judge, lastGenInfo, type ProfileOverride } from '../src/gen/level';
 import { MAX_SHARED } from '../src/gen/level/routes';
 import type { RouteShape, SizeClass } from '../src/sim/level';
 import { T_ONEWAY, T_SOLID } from '../src/sim/level';
@@ -36,6 +37,8 @@ if (opt('gravity')) force.gravity = Number(opt('gravity'));
 if (opt('hazards')) force.hazards = Number(opt('hazards'));
 if (opt('weather')) force.weather = opt('weather') as WeatherKind;
 if (opt('concept')) force.concept = opt('concept');
+const difficulty = DIFFICULTIES.find((d) => d === opt('difficulty'));
+if (difficulty) force.difficulty = difficulty;
 
 /** Share of levels whose solution takes 0, 1, 2 and 3 parts. */
 function partShares(parts: number[], n: number): Record<string, string> {
@@ -95,7 +98,13 @@ if (args.includes('--stats')) {
       weather[sky] = (weather[sky] ?? 0) + 1;
       const solid = l.tiles.reduce((a, t) => a + (t ? 1 : 0), 0) / l.tiles.length;
       const info = lastGenInfo;
-      for (const key of [`size:${p.size}`, `gravity:${gravityClass(p.gravity)}`, `route:${p.route}`, `hazards:${l.setPieces.length}`])
+      for (const key of [
+        `difficulty:${p.difficulty}`,
+        `size:${p.size}`,
+        `gravity:${gravityClass(p.gravity)}`,
+        `route:${p.route}`,
+        `hazards:${l.setPieces.length}`,
+      ])
         addTo(key, dt, info.bridges.length > 0, info.fallback, info.attempts, l.setPieces.length, solid);
       ms += dt;
       times.push(dt);

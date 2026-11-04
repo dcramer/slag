@@ -21,6 +21,12 @@ import { safeWindowFaults } from '../lib/set-piece-checks';
 
 /** `<kind>/<theme>/<id>/<rule>` → why it's waived, and what fixes it. */
 export const WAIVERS: Record<string, string> = {
+  'hazard/castle/chandrop/unique':
+    'the volcano lava tube drops cooling rock from its ceiling with the same dropper module, so the chandelier is no longer the only hazard of its kind once the suite raises a lava tube with drips. Fix (owner call): give the drips a mechanism of their own, or take the chandelier off the list of castle hazards.',
+  'landmark/castle/gatehouse/varies':
+    'a classic gatehouse rolls few dials (gate thickness, two tower heights the box clips, width), so seeds 1 and 2 land on the same layout once the seed streams shift. Fix: give it more to vary, a portcullis count or murder holes in its layout.',
+  'landmark/mine/trestle-line/varies':
+    'a classic trestle line rolls few dials, so seeds 1 and 2 land on the same layout once the seed streams shift. Fix: give it more to vary.',
   'landmark/jungle/canopy-village/varies':
     'a classic village has room for two trees three columns apart and no rotten planks, so it makes about five small rolls and seeds 2 and 3 land on the same ones (24 layouts in 30 seeds). Fix: give the classic village more to vary, a wider spread of trees or a third one.',
 };

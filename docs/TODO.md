@@ -32,7 +32,11 @@ Online play is on `main`, verified by real-browser checks in `pnpm online-test` 
 
 ## 3. Level follow-ups
 - The winnability proof assumes timed hazards can be passed in their 30-frame openings, and only uses 2-bridge plans.
-- More precision (DESIGN.md → Precision is the point). Landmarks own most of a classic level, and their stairs and storeys are spaced comfortably (`easyRise`), so they hold most of a route's jumps: give them tighter steps and footholds. Then let static hazards hug landings and jump arcs (spikes under a jump, a saw over it) with proven clearance, and a wall-jump shaft the route needs now and then.
+- Hard levels land in their band (two or more tight jumps on the more forgiving route) only about half the time: a level has little room for tight jumps besides its part's crossing, and its second route walks round them. A layout family built for hard levels (islands and perches over the void) is the real fix. Static hazards hugging landings and jump arcs with proven clearance, and a wall-jump shaft the route needs now and then, would add to it.
+- Bots never overshoot (their fumbles in `src/brain/motor.ts` only come up short), so bot finish rates can't feel stones or perches, and can't tell a hard level from a medium one. A fumble that runs on after landing would let them.
+- The castle chandelier and the volcano lava tube's drips are the same hazard (a dropper from the ceiling), so the chandelier's `unique` check is waived. Decide which keeps it.
+- The canopy village, the gatehouse and the trestle line roll too few dials for their seeds to stay apart (waived in `tests/conformance/lib.ts`): give each more to vary.
+- The rooftops falling sign rarely finds a spot on plain levels (a few in a hundred): it needs a ceiling or a wall over flat ground, and harder levels break the ground up.
 
 ## 6. Real phones
 Phone support (follow camera, pinch, scaled HUD, settings sheet) is on `main` but has only run in Chromium emulation. Try iOS Safari and a real Android phone: `:has()` in the sheet CSS, safe-area insets, pinch feel, and frame rate.

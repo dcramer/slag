@@ -11,6 +11,8 @@ import { footing } from '../../sim/weather';
 import { openUp } from './lanes';
 import { setProbeGravity } from './probe';
 import { type ProfileOverride, rollProfile } from './profile';
+import { DIFFICULTY, setLevelDifficulty } from './difficulty';
+import { levelPrecision } from './precision';
 import { analyzeRoutes, MAX_SHARED } from './routes';
 import { FALLBACK_SCULPTOR, SCULPTORS } from './sculptors';
 import { LAST_RESORT } from './sculptors/common';
@@ -21,6 +23,7 @@ import { rollWeather } from './weather';
 import { noFreeRide, planHolds } from './winnable';
 
 export type { BridgeHint, SculptCtx, Sculptor, Shape } from './types';
+export { DIFFICULTIES, DIFFICULTY, levelDifficulty, setLevelDifficulty } from './difficulty';
 export { describeProfile, GRAVITY, type GravityClass, gravityClass, type ProfileOverride, rollProfile } from './profile';
 export { BRIDGE_W, type Bridge, canPlaceBridge, isAcceptable, judge, MAX_BRIDGES, withBridges } from './validate';
 export { fieldOf, partsNeeded, planHolds, prove, settled } from './winnable';
@@ -43,9 +46,10 @@ export interface GenInfo {
   sculpted: number;
   /**
    * Candidates rejected on the way here, by reason (`closed` = still too narrow after lanes, `landmark` = the
-   * concept's landmark wasn't raised, a required piece of it didn't go in, or a carrier's ride wasn't proven).
+   * concept's landmark wasn't raised, a required piece of it didn't go in, or a carrier's ride wasn't proven,
+   * `precision` = a whole draw whose precision didn't fit the level's difficulty).
    */
-  rejects: { unsolvable: number; tooEasy: number; closed: number; landmark: number };
+  rejects: { unsolvable: number; tooEasy: number; closed: number; landmark: number; precision: number };
   /** The stage concept the level was built as (gen/stage); absent for a plain level. */
   concept?: string;
   /** A concept was rolled but the level fell back to plain after MAX_LANDMARK_REJECTS. */
@@ -54,6 +58,9 @@ export interface GenInfo {
   landmark?: Landmark;
   /** Why landmark attempts broke the concept's contract (../stage/contract.ts), one line per rejected attempt. */
   landmarkFaults?: string[];
+  /** Tight jumps on the level's more forgiving route (./precision.ts), and the sculpts drawn to fit its difficulty (the tier's `draws` + 1 when none fit and the nearest was redrawn). */
+  precision: number;
+  draws: number;
 }
 
 export let lastGenInfo: GenInfo = {
@@ -62,8 +69,10 @@ export let lastGenInfo: GenInfo = {
   fallback: false,
   shared: 1,
   sculpted: 1,
-  rejects: { unsolvable: 0, tooEasy: 0, closed: 0, landmark: 0 },
+  rejects: { unsolvable: 0, tooEasy: 0, closed: 0, landmark: 0, precision: 0 },
   conceptFallback: false,
+  precision: 0,
+  draws: 0,
 };
 /** Attempts used by the last generateLevel call (kept for older callers). */
 let lastGenAttempts = 0;
@@ -91,156 +100,211 @@ let lastGenAttempts = 0;
 export function generateLevel(seed: number, themeOverride?: ThemeId, profileOverride?: ProfileOverride): Level {
   const themeId = themeOverride ?? pickThemeId(seed);
   const theme = generateTheme(seed, themeId);
-  let profile = rollProfile(seed, themeId, profileOverride);
-  const concept = rollConcept(seed, themeId, profile, profileOverride?.concept);
-  // A forced concept gets a size and route it fits, unless those were forced too.
-  if (concept && !fits(concept, profile) && !profileOverride?.size && !profileOverride?.route) {
-    const size = concept.sizes.includes(profile.size) ? profile.size : concept.sizes[0];
-    const route = concept.routes && !concept.routes.includes(profile.route) ? concept.routes[0] : undefined;
-    profile = rollProfile(seed, themeId, { ...profileOverride, size, ...(route ? { route } : {}) });
-  }
+  /**
+   * The layout draw `n` builds: its profile (size, route, density, set pieces) and stage concept. Draw 0's are
+   * the seed's own; a later draw rolls its own from labels of its own, but keeps the seed's gravity and
+   * difficulty: what the level is, as against how it's laid out.
+   */
+  const layout = (n: number, keep?: LevelProfile): { profile: LevelProfile; concept: Concept | null } => {
+    const salt = n ? `:draw${n}` : '';
+    const o: ProfileOverride = { ...profileOverride, ...(keep ? { gravity: keep.gravity, difficulty: keep.difficulty } : {}) };
+    let profile = rollProfile(seed, themeId, o, salt);
+    const concept = rollConcept(seed, themeId, profile, profileOverride?.concept, salt);
+    // A forced concept gets a size and route it fits, unless those were forced too.
+    if (concept && !fits(concept, profile) && !profileOverride?.size && !profileOverride?.route) {
+      const size = concept.sizes.includes(profile.size) ? profile.size : concept.sizes[0];
+      const route = concept.routes && !concept.routes.includes(profile.route) ? concept.routes[0] : undefined;
+      profile = rollProfile(seed, themeId, { ...o, size, ...(route ? { route } : {}) }, salt);
+    }
+    return { profile, concept };
+  };
+  const first = layout(0);
   // Sculptor helpers size gaps/steps from jumps measured at this level's gravity.
-  setProbeGravity(profile.gravity);
+  setProbeGravity(first.profile.gravity);
+  setLevelDifficulty(first.profile.difficulty);
   const challenge = new Rng(deriveSeed(seed, `challenge:${themeId}`)).next();
-  const rejects = { unsolvable: 0, tooEasy: 0, closed: 0, landmark: 0 };
-  const faults: string[] = [];
-  for (let attempt = 0; attempt < MAX_ATTEMPTS + LEGACY_ATTEMPTS; attempt++) {
-    const rng = new Rng(deriveSeed(seed, `level:${attempt}`));
-    const sculptor = attempt < MAX_ATTEMPTS ? SCULPTORS[themeId] : FALLBACK_SCULPTOR;
-    const live = concept && attempt < MAX_ATTEMPTS && rejects.landmark < MAX_LANDMARK_REJECTS ? concept : undefined;
-    const shape = sculptor({ rng, themeId, theme, attempt, profile, challenge, ...(live ? { concept: live } : {}) });
-    const landmark = live ? shape.landmark : undefined;
-    if (live && !landmark) {
-      rejects.landmark++;
-      continue;
+  // Picked by difficulty: draws of the whole sculpt until one's precision fits the level's (./precision.ts), or the nearest of its tier's `draws`.
+  const { precision: band, draws } = DIFFICULTY[first.profile.difficulty];
+  const off = (score: number) => (score < band[0] ? band[0] - score : score > band[1] ? score - band[1] : 0);
+  // Draws turned down so far. Each draw is a function of the seed, its number and its layout alone, so a snapshot's profile names one and it rebuilds.
+  let turned = 0;
+  // A level named by its draw (a snapshot's profile) is that draw, with no search.
+  const named = profileOverride?.draw;
+  if (named !== undefined) {
+    const level = sculptDraw(named, named ? layout(named, first.profile) : first, null) as Level;
+    lastGenInfo.draws = 1;
+    return level;
+  }
+  let pick = { n: 0, off: Infinity };
+  for (let n = 0; n < draws; n++) {
+    const got = sculptDraw(n, n ? layout(n, first.profile) : first, (score) => off(score) === 0);
+    if (typeof got !== 'number') {
+      lastGenInfo.draws = n + 1;
+      return got;
     }
-    const level = toLevel(seed, shape, theme, profile);
-    if (live && landmark) level.landmark = { concept: live.id, rect: landmark.rect, ...(landmark.skin ? { skin: landmark.skin } : {}) };
-    const cache = new ReachCache(level);
-    const landmarkRng = new Rng(deriveSeed(seed, `landmark:${attempt}`));
-    // A carrier's ride is part of the proof, so it goes in first; the solution it has to keep comes later.
-    let carriers: PlacedProp[] | null = null;
-    if (live?.carrier && landmark) {
-      carriers = placeLandmark(live, landmark, level, cache, landmarkRng, themeId, () => true, false);
-      const rides = carriers?.flatMap((pp) => rideProof(level, pp)) ?? [];
-      if (!rides.some((r) => rideSpans(level.w, r, live.carrier?.minGap ?? 0))) {
-        rejects.landmark++;
+    turned++;
+    if (off(got) < pick.off) pick = { n, off: off(got) };
+  }
+  const picked = sculptDraw(pick.n, pick.n ? layout(pick.n, first.profile) : first, null) as Level;
+  lastGenInfo.draws = draws + 1;
+  return picked;
+
+  /**
+   * One draw of the level: attempts until a sculpt passes every gate. Draw 0 rolls as levels always have; a
+   * later one rolls its own layout and terrain from labels of its own. With `keepIf`, a sculpt whose precision
+   * it turns down stops there, before set pieces and weather, and its score comes back instead.
+   */
+  function sculptDraw(n: number, drawn: { profile: LevelProfile; concept: Concept | null }, keepIf: ((score: number) => boolean) | null): Level | number {
+    const { concept } = drawn;
+    const profile: LevelProfile = { ...drawn.profile, draw: n };
+    const rejects = { unsolvable: 0, tooEasy: 0, closed: 0, landmark: 0, precision: turned };
+    const faults: string[] = [];
+    const lab = (s: string) => (n ? `draw${n}:${s}` : s);
+    for (let attempt = 0; attempt < MAX_ATTEMPTS + LEGACY_ATTEMPTS; attempt++) {
+      const rng = new Rng(deriveSeed(seed, lab(`level:${attempt}`)));
+      const sculptor = attempt < MAX_ATTEMPTS ? SCULPTORS[themeId] : FALLBACK_SCULPTOR;
+      const live = concept && attempt < MAX_ATTEMPTS && rejects.landmark < MAX_LANDMARK_REJECTS ? concept : undefined;
+      const reject = () => rejects.landmark++;
+      const shape = sculptor({ rng, themeId, theme, attempt, profile, challenge, ...(live ? { concept: live } : {}) });
+      const landmark = live ? shape.landmark : undefined;
+      if (live && !landmark) {
+        reject();
         continue;
       }
-      level.rides = rides;
-    }
-    // Passable bare: not a level. Only the very last attempts accept it, to keep generation total.
-    const insist = attempt < LAST_RESORT;
-    if (insist && cache.analyze(level).goalReached) {
-      rejects.tooEasy++;
-      continue;
-    }
-    const v = judge(level, shape.bridgeHints, shape.crossings, cache);
-    if (!v.ok) {
-      rejects.unsolvable++;
-      continue;
-    }
-    let shared = v.shared;
-    let landmarkShared = v.landmark;
-    if (!v.open) {
-      // Mostly open: give the level the second route it lacks. Lanes stay away from bridges, so the
-      // solution still stands; openUp's own analysis re-proves it (an unreachable goal scores 1).
-      const routes = openUp(level, shape, v.bridges, new Rng(deriveSeed(seed, `lanes:${attempt}`)), cache);
-      if (routes.shared > MAX_SHARED) {
-        rejects.closed++;
-        continue;
+      const level = toLevel(seed, shape, theme, profile);
+      if (live && landmark) level.landmark = { concept: live.id, rect: landmark.rect, ...(landmark.skin ? { skin: landmark.skin } : {}) };
+      const cache = new ReachCache(level);
+      const landmarkRng = new Rng(deriveSeed(seed, lab(`landmark:${attempt}`)));
+      // A carrier's ride is part of the proof, so it goes in first; the solution it has to keep comes later.
+      let carriers: PlacedProp[] | null = null;
+      if (live?.carrier && landmark) {
+        carriers = placeLandmark(live, landmark, level, cache, landmarkRng, themeId, () => true, false);
+        const rides = carriers?.flatMap((pp) => rideProof(level, pp)) ?? [];
+        if (!rides.some((r) => rideSpans(level.w, r, live.carrier?.minGap ?? 0))) {
+          reject();
+          continue;
+        }
+        level.rides = rides;
       }
-      if (v.bridges.length && insist && cache.analyze(level).goalReached) {
+      // Passable bare: not a level. Only the very last attempts accept it, to keep generation total.
+      const insist = attempt < LAST_RESORT;
+      if (insist && cache.analyze(level).goalReached) {
         rejects.tooEasy++;
         continue;
       }
-      shared = routes.shared;
-      landmarkShared = routes.landmark;
-    }
-    // The count sets what crates offer, so it has to be the real one, on the final terrain.
-    const one = v.bridges.length === 2 ? oneBridgeEnough(level, shape.bridgeHints, cache) : null;
-    const bridges = one ? [one] : v.bridges;
-    if (one) {
-      const routes = analyzeRoutes(level, bridges, cache);
-      shared = routes.shared;
-      landmarkShared = routes.landmark;
-      if (shared > MAX_SHARED) {
-        rejects.closed++;
+      const v = judge(level, shape.bridgeHints, shape.crossings, cache);
+      if (!v.ok) {
+        rejects.unsolvable++;
         continue;
       }
+      let shared = v.shared;
+      let landmarkShared = v.landmark;
+      if (!v.open) {
+        // Mostly open: give the level the second route it lacks. Lanes stay away from bridges, so the
+        // solution still stands; openUp's own analysis re-proves it (an unreachable goal scores 1).
+        const routes = openUp(level, shape, v.bridges, new Rng(deriveSeed(seed, lab(`lanes:${attempt}`))), cache);
+        if (routes.shared > MAX_SHARED) {
+          rejects.closed++;
+          continue;
+        }
+        if (v.bridges.length && insist && cache.analyze(level).goalReached) {
+          rejects.tooEasy++;
+          continue;
+        }
+        shared = routes.shared;
+        landmarkShared = routes.landmark;
+      }
+      // The count sets what crates offer, so it has to be the real one, on the final terrain.
+      const one = v.bridges.length === 2 ? oneBridgeEnough(level, shape.bridgeHints, cache) : null;
+      const bridges = one ? [one] : v.bridges;
+      if (one) {
+        const routes = analyzeRoutes(level, bridges, cache);
+        shared = routes.shared;
+        landmarkShared = routes.landmark;
+        if (shared > MAX_SHARED) {
+          rejects.closed++;
+          continue;
+        }
+      }
+      level.solution = bridges;
+      const precision = levelPrecision(level, analyzeRoutes(level, bridges, cache), bridges);
+      if (keepIf && !keepIf(precision)) return precision;
+      // Set pieces must never block the known prop solution: a match starts from it, keeping clear of every
+      // piece's barrier (./winnable.ts), so a piece goes in only if the solution still holds that way.
+      const keep = (pieces: readonly PlacedProp[]) => planHolds(level, pieces, bridges, cache);
+      const needed = new Set(bridges.flatMap((b) => Array.from({ length: BRIDGE_W }, (_, i) => b.y * level.w + b.x + i)));
+      const clearOfBridges = (p: PlacedProp) => !footprintCells(p).some(([x, y]) => needed.has(y * level.w + x));
+      // The landmark's pieces, all of them: one that won't go in (or a carrier in the solution's way) rejects the attempt.
+      // They go in on the terrain's own footing, before the weather: a rejected attempt changes the terrain, and
+      // what weather a level gets mustn't (a restored snapshot regenerates the level without it).
+      const fixed = landmark ? (carriers ?? placeLandmark(live!, landmark, level, cache, landmarkRng, themeId, keep)) : [];
+      // A carrier's free-ride check waits for its rides, so its own crossing is in the baseline.
+      const freeRide = (c: PlacedProp, i: number, all: readonly PlacedProp[]) => !noFreeRide(level, c, all.slice(0, i), cache);
+      if (!fixed || (carriers && (!carriers.every(clearOfBridges) || !keep(carriers) || carriers.some(freeRide)))) {
+        reject();
+        continue;
+      }
+      // The concept's contract: scale, footing, the protected pockets, two ways through.
+      const broken = live && landmark ? landmarkFaults(level, live, landmark.rect, fixed, landmarkShared) : [];
+      if (broken.length) {
+        faults.push(`${live!.id} attempt ${attempt}: ${broken.join('; ')}`);
+        reject();
+        continue;
+      }
+      // Before the filler: its placer checks the path with the ghost, which walks on this footing.
+      level.weather = rollWeather(seed, theme, level, profileOverride?.weather);
+      // Rain or snow the landmark's pieces can't keep the solution in stays clear, like any the gate turns down.
+      if (fixed.length && !profileOverride?.weather && footing(level) && !keep(fixed)) level.weather = rollWeather(seed, theme, level, 'clear');
+      // Rain and snow change the footing the routes were measured on (the gate kept them open): record what the level has.
+      if (footing(level)) shared = analyzeRoutes(level, bridges, cache).shared;
+      lastGenAttempts = attempt + 1;
+      lastGenInfo = {
+        attempts: attempt + 1,
+        bridges,
+        fallback: attempt >= MAX_ATTEMPTS,
+        shared,
+        sculpted: v.shared,
+        rejects,
+        ...(live && landmark ? { concept: live.id, landmark } : {}),
+        conceptFallback: !!concept && !landmark,
+        ...(faults.length ? { landmarkFaults: faults } : {}),
+        precision,
+        draws: 0,
+      };
+      const budget = live ? (live.budget ?? fixed.length) : 0;
+      const pieces = SET_PIECES[themeId](new Rng(deriveSeed(seed, lab(`setpieces:${attempt}`))), level, {
+        count: Math.max(0, profile.hazards - budget),
+        danger: profile.danger,
+        cache,
+        keep: fixed.length ? (ps) => keep([...fixed, ...ps]) : keep,
+        ...(live && landmark ? { standing: fixed, avoid: landmark.air, family: live.family } : {}),
+      });
+      // (The placer already avoids these cells; this is a safety net. Keep uids contiguous, the landmark's first.)
+      level.setPieces = [...fixed, ...pieces.filter(clearOfBridges)].map((p, i) => ({ ...p, uid: SET_PIECE_UID + i }));
+      while (level.setPieces.length && !planHolds(level, [], bridges, cache)) level.setPieces.pop();
+      if (level.rides) {
+        // A ride is only as good as its carrier.
+        level.rides = level.rides.filter((r) => level.setPieces.some((p) => p.uid === r.uid));
+        if (!level.rides.length) delete level.rides;
+      }
+      if (live && landmark) level.theme = { ...theme, name: conceptName(seed, live, theme.name) };
+      return level;
     }
-    level.solution = bridges;
-    // Set pieces must never block the known prop solution: a match starts from it, keeping clear of every
-    // piece's barrier (./winnable.ts), so a piece goes in only if the solution still holds that way.
-    const keep = (pieces: readonly PlacedProp[]) => planHolds(level, pieces, bridges, cache);
-    const needed = new Set(bridges.flatMap((b) => Array.from({ length: BRIDGE_W }, (_, i) => b.y * level.w + b.x + i)));
-    const clearOfBridges = (p: PlacedProp) => !footprintCells(p).some(([x, y]) => needed.has(y * level.w + x));
-    // The landmark's pieces, all of them: one that won't go in (or a carrier in the solution's way) rejects the attempt.
-    // They go in on the terrain's own footing, before the weather: a rejected attempt changes the terrain, and
-    // what weather a level gets mustn't (a restored snapshot regenerates the level without it).
-    const fixed = landmark ? (carriers ?? placeLandmark(live!, landmark, level, cache, landmarkRng, themeId, keep)) : [];
-    // A carrier's free-ride check waits for its rides, so its own crossing is in the baseline.
-    const freeRide = (c: PlacedProp, i: number, all: readonly PlacedProp[]) => !noFreeRide(level, c, all.slice(0, i), cache);
-    if (!fixed || (carriers && (!carriers.every(clearOfBridges) || !keep(carriers) || carriers.some(freeRide)))) {
-      rejects.landmark++;
-      continue;
-    }
-    // The concept's contract: scale, footing, the protected pockets, two ways through.
-    const broken = live && landmark ? landmarkFaults(level, live, landmark.rect, fixed, landmarkShared) : [];
-    if (broken.length) {
-      faults.push(`${live!.id} attempt ${attempt}: ${broken.join('; ')}`);
-      rejects.landmark++;
-      continue;
-    }
-    // Before the filler: its placer checks the path with the ghost, which walks on this footing.
-    level.weather = rollWeather(seed, theme, level, profileOverride?.weather);
-    // Rain or snow the landmark's pieces can't keep the solution in stays clear, like any the gate turns down.
-    if (fixed.length && !profileOverride?.weather && footing(level) && !keep(fixed)) level.weather = rollWeather(seed, theme, level, 'clear');
-    // Rain and snow change the footing the routes were measured on (the gate kept them open): record what the level has.
-    if (footing(level)) shared = analyzeRoutes(level, bridges, cache).shared;
-    lastGenAttempts = attempt + 1;
+    lastGenAttempts = MAX_ATTEMPTS + LEGACY_ATTEMPTS;
     lastGenInfo = {
-      attempts: attempt + 1,
-      bridges,
-      fallback: attempt >= MAX_ATTEMPTS,
-      shared,
-      sculpted: v.shared,
+      attempts: lastGenAttempts,
+      bridges: [],
+      fallback: true,
+      shared: 1,
+      sculpted: 1,
       rejects,
-      ...(live && landmark ? { concept: live.id, landmark } : {}),
-      conceptFallback: !!concept && !landmark,
+      conceptFallback: !!concept,
       ...(faults.length ? { landmarkFaults: faults } : {}),
+      precision: 0,
+      draws: 0,
     };
-    const budget = live ? (live.budget ?? fixed.length) : 0;
-    const pieces = SET_PIECES[themeId](new Rng(deriveSeed(seed, `setpieces:${attempt}`)), level, {
-      count: Math.max(0, profile.hazards - budget),
-      danger: profile.danger,
-      cache,
-      keep: fixed.length ? (ps) => keep([...fixed, ...ps]) : keep,
-      ...(live && landmark ? { standing: fixed, avoid: landmark.air, family: live.family } : {}),
-    });
-    // (The placer already avoids these cells; this is a safety net. Keep uids contiguous, the landmark's first.)
-    level.setPieces = [...fixed, ...pieces.filter(clearOfBridges)].map((p, i) => ({ ...p, uid: SET_PIECE_UID + i }));
-    while (level.setPieces.length && !planHolds(level, [], bridges, cache)) level.setPieces.pop();
-    if (level.rides) {
-      // A ride is only as good as its carrier.
-      level.rides = level.rides.filter((r) => level.setPieces.some((p) => p.uid === r.uid));
-      if (!level.rides.length) delete level.rides;
-    }
-    if (live && landmark) level.theme = { ...theme, name: conceptName(seed, live, theme.name) };
-    return level;
+    return toLevel(seed, fallbackShape(profile.w, profile.h), theme, profile);
   }
-  lastGenAttempts = MAX_ATTEMPTS + LEGACY_ATTEMPTS;
-  lastGenInfo = {
-    attempts: lastGenAttempts,
-    bridges: [],
-    fallback: true,
-    shared: 1,
-    sculpted: 1,
-    rejects,
-    conceptFallback: !!concept,
-    ...(faults.length ? { landmarkFaults: faults } : {}),
-  };
-  return toLevel(seed, fallbackShape(profile.w, profile.h), theme, profile);
 }
 
 /**
