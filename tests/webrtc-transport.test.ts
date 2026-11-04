@@ -536,20 +536,22 @@ describe('host migration', () => {
     expect(new Set(await w.drained()).size).toBe(1);
   });
 
-  it('two peers that both host: the store settles it for the lower order', async () => {
+  it('a peer that loses the API as the host dies never hosts blind: the next in line hosts, and it joins once back', async () => {
     const w = new World();
     const [, b, c] = await w.room('aaaa', 'bbbb', 'cccc');
-    // B loses the API just as A dies. B hosts by the roster; C, getting no answer from B, writes it off and hosts too.
+    // B loses the API just as A dies. It can't offer anyone (its offers never reach the store), so it proves nothing
+    // and waits; C, getting no answer from B, writes it off and hosts.
     w.apiDownFor.add('bbbb');
     w.crash('aaaa');
-    await w.runUntil(() => b.session.isHost && c.session.isHost, 25_000);
-    expect(b.session.isHost && c.session.isHost).toBe(true);
-    w.apiDownFor.delete('bbbb');
-    const took = await w.runUntil(() => w.settled() && !b.session.isHost, 60_000);
-    expect(took).toBeLessThan(8000); // B checks the store as soon as its API is back, not at its next heartbeat
-    expect(w.settled()).toBe(true);
+    await w.runUntil(() => c.session.isHost && !c.session.paused, 25_000);
     expect(c.session.isHost).toBe(true);
+    expect(b.session.isHost).toBe(false);
+    w.apiDownFor.delete('bbbb');
+    const took = await w.runUntil(() => w.settled() && c.session.members.length === 2, 60_000);
+    expect(took).toBeLessThan(8000);
+    expect(w.settled()).toBe(true);
     expect(b.session.hostId).toBe('cccc');
+    expect(w.maxHosts).toBe(1);
     expect(new Set(await w.drained()).size).toBe(1);
   });
 
@@ -624,6 +626,120 @@ describe('host migration', () => {
     expect(b.session.match.frame).toBeGreaterThanOrEqual(cFrame);
     expect(new Set(await w.drained()).size).toBe(1);
     expect(a.gone).toBe(true);
+  });
+});
+
+/** Peek at the transport's private state, for timing a case to the moment it has a handshake open or a guest in grace. */
+const inner = (p: Peer) => p.transport as unknown as { inbound: Map<string, unknown>; frame(l: unknown, text: string): void };
+
+describe('handing the room on', () => {
+  it('a host stepping back while a newcomer is still linking hands it on cleanly, newcomer included', async () => {
+    const w = new World();
+    const [a] = await w.room('aaaa', 'bbbb');
+    await w.run(2000);
+    const n = w.join('nnnn');
+    for (let i = 0; i < 2000 && inner(a).inbound.size === 0; i++) await vi.advanceTimersByTimeAsync(2);
+    expect(inner(a).inbound.size).toBe(1);
+    a.transport.reorder();
+    const took = await w.runUntil(() => w.settled() && n.session.hostId === 'bbbb' && a.session.hostId === 'bbbb', 30_000);
+    expect(took).toBeLessThan(4000);
+    expect(w.maxRunning).toBe(1);
+  });
+
+  it('a host stepping back while the guest next in line is in its grace never leaves two hosts', async () => {
+    const w = new World();
+    const [a, b, c, d] = await w.room('aaaa', 'bbbb', 'cccc', 'dddd');
+    await w.run(2000);
+    w.net.dead.add('bbbb'); // B's network drops out for a moment
+    await w.runUntil(() => a.session.members.find((m: Member) => m.id === 'bbbb')?.linking === true, 5000);
+    a.transport.reorder();
+    await w.run(1000);
+    w.net.dead.delete('bbbb');
+    await w.runUntil(() => w.settled() && [a, b, c, d].every((p) => p.session.members.length === 4), 30_000);
+    await w.run(20_000);
+    expect(w.settled()).toBe(true);
+    expect(b.session.isHost).toBe(true);
+    expect(w.maxRunning).toBe(1);
+    expect(new Set(await w.drained()).size).toBe(1);
+  });
+
+  it('a lost handover frame: the old host offering to the next in line is a handover, not proof it died', async () => {
+    const w = new World();
+    const [a, b, c, d] = await w.room('aaaa', 'bbbb', 'cccc', 'dddd');
+    await w.run(2000);
+    // The `m` frame dies with the links (a real pc.close() can drop what it hasn't sent): guests only see the close.
+    const frame = inner(a).frame.bind(a.transport);
+    inner(a).frame = (l, text) => (text[0] === 'm' ? undefined : frame(l, text));
+    a.transport.reorder();
+    const took = await w.runUntil(() => w.settled() && b.session.isHost && [a, c, d].every((p) => p.session.hostId === 'bbbb'), 30_000);
+    expect(took).toBeLessThan(6000);
+    expect(w.maxRunning).toBe(1);
+    expect(b.session.stats.migrations).toBe(1);
+  });
+
+  it('a newcomer whose join lands just before the host steps back is sent on, not left to time out', async () => {
+    const w = new World();
+    const [a] = await w.room('aaaa', 'bbbb');
+    await w.run(2000);
+    const n = w.join('nnnn');
+    await vi.advanceTimersByTimeAsync(1);
+    a.transport.reorder();
+    const took = await w.runUntil(() => w.settled() && n.session.hostId === 'bbbb' && a.session.hostId === 'bbbb', 30_000);
+    expect(took).toBeLessThan(5000);
+  });
+
+  it('a host stepping back as its API fails never writes off the next in line, or hosts alone', async () => {
+    const w = new World();
+    const [a, b, c] = await w.room('aaaa', 'bbbb', 'cccc');
+    await w.run(2000);
+    a.transport.reorder();
+    await vi.advanceTimersByTimeAsync(1);
+    w.apiDownFor.add('aaaa');
+    await w.run(25_000);
+    w.apiDownFor.delete('aaaa');
+    await w.runUntil(() => w.settled() && [a, b, c].every((p) => p.session.members.length === 3), 40_000);
+    expect(w.settled()).toBe(true);
+    expect(b.session.isHost).toBe(true);
+    expect(w.maxRunning).toBe(1);
+  });
+
+  it("the host's page vanishes and its id comes straight back: one migration, and it rejoins as a guest", async () => {
+    const w = new World();
+    const [, b, c] = await w.room('aaaa', 'bbbb', 'cccc');
+    await w.run(2000);
+    w.vanish('aaaa');
+    await w.run(300);
+    const a = w.join('aaaa');
+    await w.runUntil(() => w.settled() && b.session.members.length === 3, 30_000);
+    await w.run(30_000);
+    expect(w.settled()).toBe(true);
+    expect(b.session.isHost).toBe(true);
+    expect(a.session.hostId).toBe('bbbb');
+    expect(b.session.stats.migrations + c.session.stats.migrations + a.session.stats.migrations).toBe(1);
+  });
+});
+
+describe('a guest the store forgot', () => {
+  // A phone asleep past its liveness (50 s): the store forgot it, and its link to the host is dead too. Its re-offer
+  // can't be delivered because of *it*, not the host: it rejoins, and never writes off the host or hosts a fork.
+  it.each([
+    ['alone with the host', ['aaaa', 'bbbb'], 0],
+    ['with another guest, over a slow API', ['aaaa', 'bbbb', 'cccc'], 150],
+  ] as const)('%s: it rejoins under the same host', async (_label, ids, latency) => {
+    const w = new World();
+    const peers = await w.room(...ids);
+    const [a] = peers;
+    const g = peers.at(-1)!;
+    w.apiLatency = latency;
+    await w.store.run([['DEL', `slag:ROOM1:p:${g.id}`]]);
+    w.net.blocked.add(['aaaa', g.id].join());
+    await w.run(3000);
+    w.net.blocked.delete(['aaaa', g.id].join());
+    await w.runUntil(() => w.settled() && a.session.members.length === ids.length, 30_000);
+    expect(w.settled()).toBe(true);
+    expect(a.session.isHost).toBe(true);
+    expect(g.session.stats.migrations).toBe(0);
+    expect(w.maxHosts).toBe(1);
   });
 });
 

@@ -1,5 +1,16 @@
 import { SignalError, type SignalApi, sessionStamp } from './signal-client';
-import { BEAT_MS, DEFAULT_ICE, type IceServer, isSignal, type Mail, MAX_PEERS, type MemberInfo, type RoomListing, type Signal } from './signal-protocol';
+import {
+  BEAT_MS,
+  DEFAULT_ICE,
+  type IceServer,
+  isSignal,
+  type Mail,
+  MAX_PEERS,
+  type MemberInfo,
+  PEER_TTL_S,
+  type RoomListing,
+  type Signal,
+} from './signal-protocol';
 import { type LinkStatus, type Member, sortMembers, type Transport, type TransportHandlers } from './transport';
 
 /**
@@ -158,6 +169,15 @@ const LIST_NUDGE_MS = 5000;
 const UNLIST_RETRY_MS = 1000;
 /** Offers read while we weren't host, kept in case we become it. */
 const STASH_MS = 10_000;
+/** An offer the API failed to take is sent again this soon. */
+const OFFER_RETRY_MS = 1000;
+/**
+ * The store's head that isn't in our roster is a guest that died without a goodbye or a host we split from. A ghost
+ * leaves the store once its liveness runs out; one still listed past this is alive, and a host with guests yields to it.
+ */
+const RIVAL_PROVEN_MS = (PEER_TTL_S + 10) * 1000;
+/** A host handing the room on keeps its old links this long, so the handover frame goes out before they close. */
+const HANDOVER_CLOSE_MS = 1000;
 /** Safe across browsers; bigger messages are split. */
 const CHUNK_CHARS = 16_000;
 /** Above this the channel is backed up: drop realtime traffic, the session recovers it. */
@@ -172,6 +192,8 @@ interface Link {
   rt: RtcChannel | null;
   open: boolean;
   answered: boolean;
+  /** When our offer reached the store (0: not yet). One that never did (the API was down) proves nothing about the peer. */
+  sent: number;
   heard: number;
   /** Reassembly of a split reliable message. */
   parts: string;
@@ -220,6 +242,11 @@ export class WebRtcTransport implements Transport {
   private inbound = new Map<string, Link>();
   /** Peers we wrote off, with the order of the session we mean. */
   private dead = new Map<string, number>();
+  /** The store's head when it wasn't us, and since when (see RIVAL_PROVEN_MS). */
+  private rival = '';
+  private rivalSince = 0;
+  /** Stepped behind the players while the room was settling: hand it on once it has (see handOn). */
+  private stepBack = false;
   /** The host we lost and are re-offering to: nothing is decided until it fails or is contradicted. */
   private probing = '';
   /** We're next in line, holding off until the probe settles. */
@@ -243,6 +270,8 @@ export class WebRtcTransport implements Transport {
   private pollAt = 0;
   private polling = false;
   private pollFails = 0;
+  /** When a mailbox read last succeeded. */
+  private lastMail = 0;
   private wakeUntil = 0;
   private soloSince = 0;
   private beatTimer: ReturnType<typeof setInterval> | null = null;
@@ -446,6 +475,13 @@ export class WebRtcTransport implements Transport {
 
   private follow(id: string, timeout: number) {
     this.clearFence();
+    // Handshakes a host was still answering: once open they would take the newcomer for our host (and it us).
+    // They re-offer to whoever hosts, and we send them there (see hostLinked).
+    for (const l of this.inbound.values()) quiet(l);
+    this.inbound.clear();
+    if (this.graceTimer) clearTimeout(this.graceTimer);
+    this.graceTimer = null;
+    this.stepBack = false;
     this.role = 'guest';
     this.listed = ''; // the host we follow lists the room now
     this.hostId = id;
@@ -456,7 +492,7 @@ export class WebRtcTransport implements Transport {
 
   private newLink(id: string, c: string, order: number): Link {
     const pc = this.rtc(this.ice);
-    const link: Link = { id, c, order, pc, rel: null, rt: null, open: false, answered: false, heard: Date.now(), parts: '' };
+    const link: Link = { id, c, order, pc, rel: null, rt: null, open: false, answered: false, sent: 0, heard: Date.now(), parts: '' };
     pc.onconnectionstatechange = () => {
       if (pc.connectionState === 'failed' || pc.connectionState === 'closed') this.onLinkDown(link);
     };
@@ -482,8 +518,22 @@ export class WebRtcTransport implements Transport {
       await gathered(link.pc);
       const sdp = link.pc.localDescription?.sdp;
       if (!sdp || this.dials.get(id)?.link !== link) return;
-      const delivered = await this.signal.send(id, { k: 'offer', c: link.c, o: this.order, sdp });
-      if (!delivered) return this.dialFailed(id, link); // the store already knows it's gone: no need to wait
+      let delivered: boolean;
+      for (;;) {
+        try {
+          delivered = await this.signal.send(id, { k: 'offer', c: link.c, o: this.order, sdp });
+          break;
+        } catch (e) {
+          // The API is out (a phone back from sleep, a blip): try again shortly rather than sit out the whole window,
+          // which outlasts the grace the other side gives us. Forgotten by the store (our liveness lapsed): the beat
+          // rejoins us, and then the offer goes.
+          if (e instanceof SignalError && e.code === 'forgotten') void this.heartbeat();
+          await sleep(OFFER_RETRY_MS);
+          if (this.closed || this.dials.get(id)?.link !== link) return;
+        }
+      }
+      link.sent = Date.now();
+      if (!delivered) return this.dialFailed(id, link, true); // the store already knows it's gone: no need to wait
       const d = this.dials.get(id);
       if (d?.link !== link || link.answered) return;
       clearTimeout(d.timer);
@@ -548,12 +598,16 @@ export class WebRtcTransport implements Transport {
     d.link.pc.close();
   }
 
-  private dialFailed(id: string, link: Link) {
+  /** `refused`: the store said `id` is gone, which is proof; a window running out is proof only if we could read our mail. */
+  private dialFailed(id: string, link: Link, refused = false) {
     const d = this.dials.get(id);
     if (!d || d.link !== link) return;
     const answered = link.answered;
     const window = d.window;
     this.dropDial(id);
+    // The offer never reached the store, or we couldn't read our mail since (the API was down): nothing is known about
+    // the peer, and an answer may be waiting. Ask again.
+    if (!answered && !refused && (!link.sent || this.lastMail <= link.sent)) return this.dial(id, window);
     if (answered) {
       // It answered but we can't get through: a NAT problem, or it died just now. Try again: a dead peer won't answer twice.
       const tries = (this.failures.get(id) ?? 0) + 1;
@@ -635,6 +689,7 @@ export class WebRtcTransport implements Transport {
   private takeOver() {
     const hadRoster = [...this.roster.values()].filter((m) => m.id !== this.self);
     for (const id of this.dials.keys()) this.dropDial(id);
+    this.failures.clear(); // handshakes that failed under another host say nothing about the next one
     this.candidate = false;
     this.probing = '';
     this.clearFence();
@@ -737,7 +792,13 @@ export class WebRtcTransport implements Transport {
     this.links.set(link.id, link);
     if (old && old !== link) quiet(old);
     this.failures.delete(link.id);
-    if (this.probing && this.probing !== link.id) this.confirmDead(this.probing);
+    if (this.probing && this.probing !== link.id) {
+      // A host now behind the one we reached in line stepped back (its handover frame lost with the link): it's a
+      // guest of the room now, not dead, and writing it off would take it out of the store with its mailbox.
+      const was = this.roster.get(this.probing);
+      if (was && was.order > link.order) this.closeLink(this.probing);
+      else this.confirmDead(this.probing);
+    }
     this.probing = '';
     this.candidate = false;
     this.hostId = link.id;
@@ -746,6 +807,14 @@ export class WebRtcTransport implements Transport {
       if (id === link.id) continue;
       this.links.delete(id);
       quiet(l);
+    }
+    // Offers that reached us while we had no host (a newcomer that took us for host just as we stepped back, a peer
+    // that lost the old host too): send them on now, rather than leave them to time out.
+    const stash = this.stash;
+    this.stash = [];
+    for (const x of stash) {
+      if (x.mail.from === link.id || x.mail.s.k !== 'offer' || Date.now() - x.at >= STASH_MS) continue;
+      void this.signal.send(x.mail.from, { k: 'redirect', c: x.mail.s.c, to: link.id }).catch(() => false);
     }
     // Status goes open when the host's roster arrives: only then do we know the room.
   }
@@ -883,14 +952,29 @@ export class WebRtcTransport implements Transport {
    * killed in the background stays listed until its liveness runs out), and handing the room to it strands everyone.
    */
   private handOn() {
-    const next = sortMembers([...this.roster.values()].filter((m) => m.id !== this.self && !m.linking && this.links.get(m.id)?.open))[0];
-    if (next && next.order < this.order) this.yieldTo(next.id, next.order);
+    this.stepBack = false;
+    if (this.role !== 'host' || this.closed) return;
+    const ahead = sortMembers([...this.roster.values()].filter((m) => m.id !== this.self && m.order < this.order));
+    if (!ahead.length) return;
+    // Not while the room is settling: a guest in its grace may be alive, and is then the next in line (passing it over
+    // leaves it hosting alone); a newcomer mid-handshake should land here first and move with everyone. The watchdog
+    // asks again (a lost guest is let go within GUEST_GRACE_MS, a handshake within OPEN_MS).
+    if (ahead.some((m) => m.linking) || this.inbound.size) {
+      this.stepBack = true;
+      return;
+    }
+    const next = ahead.find((m) => this.links.get(m.id)?.open);
+    if (next) this.yieldTo(next.id, next.order);
   }
 
   /** `id` keeps the room (a lower order hosting too, or the next in line after we stepped back); we bring our guests over. */
   private yieldTo(id: string, order: number) {
-    for (const l of this.links.values()) this.frame(l, `m${id}`);
-    for (const lid of this.links.keys()) this.closeLink(lid);
+    // RTCPeerConnection.close() aborts the association and can drop what it hasn't sent, so the handover frame gets a
+    // moment to go out first; guests close their end as soon as they read it. Out of `links`, nothing they say counts.
+    const old = [...this.links.values()];
+    this.links.clear();
+    for (const l of old) this.frame(l, `m${id}`);
+    setTimeout(() => old.forEach(quiet), HANDOVER_CLOSE_MS);
     this.roster = new Map([
       [id, { id, order }],
       [this.self, { id: this.self, order: this.order }],
@@ -980,6 +1064,7 @@ export class WebRtcTransport implements Transport {
       else this.onGuestLost(l);
     }
     this.checkFence(t);
+    if (this.stepBack) this.handOn();
     if (this.role === 'host' && (t < this.checkUntil || this.fenced) && t - this.lastBeat >= RIVAL_CHECK_MS) void this.heartbeat();
     else if (this.role === 'host') this.relist(t);
     this.maybeSleep(t);
@@ -1022,7 +1107,16 @@ export class WebRtcTransport implements Transport {
       // Not first in the store's line while it still holds us: the store can't tell a rival host from a guest that died
       // without a goodbye (it stays listed until its liveness runs out), so only our own linked guests count (handOn).
       // A real rival host wrote us off when it took over, and the branch above settles that.
-      else if (this.role === 'host' && r.head && r.head !== this.self) this.handOn();
+      else if (this.role === 'host' && r.head && r.head !== this.self && !this.dead.has(r.head)) {
+        const t = Date.now();
+        if (this.rival !== r.head) [this.rival, this.rivalSince] = [r.head, t];
+        // A host with nobody linked or expected has no room to lose: it goes to the room's head (one that turns out
+        // dead fails its offer and the walk moves on). One of our own guests ahead of us: we stepped back (handOn).
+        // Anyone else must outlast a ghost's liveness first (RIVAL_PROVEN_MS).
+        if (this.links.size === 0 && ![...this.roster.values()].some((m) => m.linking)) await this.checkRival();
+        else if (this.roster.has(r.head)) this.handOn();
+        else if (t - this.rivalSince >= RIVAL_PROVEN_MS) await this.checkRival();
+      } else this.rival = '';
       // Still the room's host after everyone we were waiting on came back or ran out of time: play on.
       if (this.fenced && this.role === 'host' && started >= this.fenceAsk && this.fenceWaitingOn(Date.now()) === 0) this.unfence();
     } catch {
@@ -1041,6 +1135,10 @@ export class WebRtcTransport implements Transport {
     const self = this.roster.get(this.self);
     if (self) self.order = r.order;
     if (this.role === 'host') this.rivalFrom(r.members);
+  }
+
+  private async checkRival() {
+    this.rivalFrom(await this.signal.members());
   }
 
   private rivalFrom(list: MemberInfo[]) {
@@ -1100,6 +1198,7 @@ export class WebRtcTransport implements Transport {
     this.polling = true;
     try {
       const mail = await this.signal.poll();
+      this.lastMail = Date.now();
       this.noteSignalOk();
       for (const m of mail) await this.onMail(m);
     } catch {
@@ -1115,6 +1214,15 @@ export class WebRtcTransport implements Transport {
     if (s.k === 'answer') return this.onAnswer(m.from, s);
     if (s.k === 'redirect') return this.onRedirect(m.from, s);
     if (this.role === 'host') return this.onOffer(m.from, s);
+    // Our own host offering to us from behind us in line has handed us the room (it stepped back, its handover frame
+    // lost with the link): take it. Never proof that it died, and never a redirect back to itself. (From ahead of us
+    // it's only a probe: a peer that lost the same host, or a new session of it reaching for us as host.)
+    if (this.role === 'guest' && m.from === this.hostId && Number.isSafeInteger(s.o) && s.o > this.order) {
+      this.stash.push({ mail: m, at: Date.now() });
+      this.closeLink(m.from);
+      this.dropDial(m.from);
+      return this.takeOver();
+    }
     // Settled under a host, so this peer has the wrong idea of who hosts.
     if (this.role === 'guest' && !this.probing && this.links.has(this.hostId)) {
       await this.signal.send(m.from, { k: 'redirect', c: s.c, to: this.hostId }).catch(() => false);

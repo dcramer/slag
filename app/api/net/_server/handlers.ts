@@ -85,7 +85,10 @@ function since(v: unknown): number | undefined {
   return v as number;
 }
 
-/** Live members in join order, forgetting any whose heartbeat lapsed. */
+/**
+ * Live members in join order, leaving out any whose heartbeat lapsed. It never prunes them: a ZREM after the MGET
+ * would race a rejoin landing in between and drop a live peer for good. The join script prunes, atomically.
+ */
 async function readMembers(store: Store, room: string): Promise<MemberInfo[]> {
   const [reply] = (await store.run([['ZRANGE', members(room), 0, -1, 'WITHSCORES']])) as [string[] | null];
   const flat = reply ?? [];
@@ -93,8 +96,6 @@ async function readMembers(store: Store, room: string): Promise<MemberInfo[]> {
   for (let i = 0; i + 1 < flat.length; i += 2) if (flat[i] !== LAST_ORDER) list.push({ id: flat[i], order: Number(flat[i + 1]) });
   if (list.length === 0) return list;
   const [marks] = (await store.run([['MGET', ...list.map((m) => alive(room, m.id))]])) as [(string | null)[]];
-  const dead = list.filter((_, i) => marks[i] === null);
-  if (dead.length) await store.run([['ZREM', members(room), ...dead.map((m) => m.id)]]);
   return list.filter((_, i) => marks[i] !== null);
 }
 
@@ -205,7 +206,10 @@ async function deliver(ctx: Ctx, room: string, peer: string, to: string, signal:
     ['EXISTS', alive(room, peer)],
     ['EXISTS', alive(room, to)],
   ]);
-  if (fromOk !== 1 || toOk !== 1) return { delivered: false };
+  // Which side is missing matters: a sender the store forgot (liveness lapsed while its phone slept) must rejoin,
+  // not take the target for dead.
+  if (fromOk !== 1) return { delivered: false, gone: 'self' };
+  if (toOk !== 1) return { delivered: false, gone: 'to' };
   const mail: Mail = { from: peer, s: signal };
   await ctx.store.run([
     ['RPUSH', box(room, to), JSON.stringify(mail)],

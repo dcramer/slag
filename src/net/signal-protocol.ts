@@ -136,6 +136,12 @@ export interface BeatReply {
 export interface MembersReply {
   members: MemberInfo[];
 }
+export interface SignalReply {
+  delivered: boolean;
+  /** Undelivered because the store has no live session for the sender (`self`) or the target (`to`). */
+  gone?: 'self' | 'to';
+}
+
 export interface PollReply {
   mail: Mail[];
 }

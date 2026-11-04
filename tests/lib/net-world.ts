@@ -4,7 +4,7 @@ import { MemoryStore } from '../../app/api/net/_server/store';
 import { Match } from '../../src/game/match';
 import { roomSeed } from '../../src/game/room';
 import { NetSession, type SessionOptions } from '../../src/net/session';
-import { SignalError, type SignalApi } from '../../src/net/signal-client';
+import { deliveredOrThrow, SignalError, type SignalApi } from '../../src/net/signal-client';
 import { DEFAULT_ICE, type Mail, type MemberInfo, type RoomListing, type Signal } from '../../src/net/signal-protocol';
 import { hashMatch } from '../../src/net/snapshot';
 import { type RtcChannel, type RtcPeer, WebRtcTransport } from '../../src/net/webrtc-transport';
@@ -43,7 +43,7 @@ export class FakeChannel implements RtcChannel {
   sent = 0;
   constructor(
     readonly label: string,
-    readonly owner: string,
+    public owner: string,
     private net: FakeNet,
   ) {}
   send(data: string) {
@@ -76,7 +76,7 @@ export class FakePc implements RtcPeer {
   channels: FakeChannel[] = [];
   id: string;
   constructor(
-    readonly owner: string,
+    public owner: string,
     private net: FakeNet,
   ) {
     this.id = `pc${net.n++}`;
@@ -145,7 +145,7 @@ export class DirectSignal implements SignalApi {
     const r = await this.call('signal', { to, signal });
     const die = this.world.dieAfterAnswer;
     if (signal.k === 'answer' && (die === this.peer || die === `${this.peer}>${to}`)) this.world.crash(this.peer);
-    return r.delivered;
+    return deliveredOrThrow(r);
   };
   poll = (): Promise<Mail[]> => {
     this.polls++;
@@ -216,6 +216,26 @@ export class World {
     p.gone = true;
   }
 
+  /**
+   * The page is gone without a word (a refresh whose goodbye never went out, a phone's tab killed) and its peer id
+   * may come back with `join`: its links go silent and its timers stop, but the id itself stays usable.
+   */
+  vanish(id: string) {
+    const p = this.peers.get(id)!;
+    const t = p.transport as unknown as { closed: boolean; stopTimers(): void };
+    t.closed = true;
+    t.stopTimers();
+    p.gone = true;
+    const ghost = `${id}~${this.net.n}`;
+    for (const pc of this.net.pcs.values()) {
+      if (pc.owner !== id) continue;
+      pc.owner = ghost;
+      for (const ch of pc.channels) ch.owner = ghost;
+    }
+    this.net.dead.add(ghost);
+    this.peers.delete(id);
+  }
+
   async run(ms: number, inputs: (p: Peer) => Record<string, InputFrame> = () => ({})) {
     const ticks = Math.ceil(ms / TICK);
     for (let i = 0; i < ticks; i++) {
@@ -246,7 +266,9 @@ export class World {
     return (
       live.every((p) => p.session.status === 'online' && p.session.synced && !p.session.paused) &&
       new Set(live.map((p) => p.session.hostId)).size === 1 &&
-      live.filter((p) => p.session.isHost).length === 1
+      live.filter((p) => p.session.isHost).length === 1 &&
+      // The session and its transport agree on who hosts.
+      live.every((p) => p.session.hostId === (p.transport as unknown as { hostId: string }).hostId)
     );
   }
 
