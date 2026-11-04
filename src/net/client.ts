@@ -130,7 +130,9 @@ export function connectRoom(room: string, match: Match, opts: ConnectOptions): R
   // Resume-save: the last state this browser saw, so a room everyone left can pick up where it was.
   let lastSave = 0;
   const save = () => {
-    if (!transport || (net.role === 'guest' && !net.synced)) return;
+    // Only the room's state: a page still joining starts as a host of its own empty lobby, and one that never got in
+    // (unavailable, kicked) or is between hosts holds nothing better, so saving would bury the last good save.
+    if (!transport || net.status !== 'online' || net.paused || (net.role === 'guest' && !net.synced)) return;
     saveResume(room, snapshotMatch(match), net.ns);
   };
   const timer = setInterval(() => {
