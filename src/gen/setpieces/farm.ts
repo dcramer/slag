@@ -89,8 +89,8 @@ function fieldsOf(s: Site, run: Run): Run[] {
   return out;
 }
 
-/** Fewest columns a combine drives: enough that its reel leaves every cell it covers once each way. */
-const MIN_DRIVE = 3;
+/** Fewest columns a combine drives: enough that its reel leaves every cell it covers clear for a window each way (at 3, a lane could leave two cells under its reel never clear for 60 frames). */
+const MIN_DRIVE = 4;
 
 interface Lane {
   x0: number;

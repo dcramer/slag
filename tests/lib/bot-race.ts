@@ -2,6 +2,7 @@ import { BotSeats } from '../../src/brain/bots';
 import { type BotLevel, Match } from '../../src/game/match';
 import type { ProfileOverride } from '../../src/gen/level';
 import { isBridgePart } from '../../src/gen/props';
+import type { Difficulty } from '../../src/sim/level';
 import type { PlacedProp } from '../../src/sim/props';
 import type { ThemeId } from '../../src/themes';
 
@@ -22,12 +23,21 @@ export interface BotRaceOptions {
   level?: BotLevel;
   /** This many bots of the same level pick and place a round's parts first, and the racer runs over whatever they left. */
   parts?: number;
+  /** Force the level's difficulty (gen/level/difficulty.ts). */
+  difficulty?: Difficulty;
 }
 
-function botMatch(seed: number, theme: ThemeId | undefined, size: ProfileOverride['size'] | undefined, players: number, level: BotLevel | undefined) {
+function botMatch(
+  seed: number,
+  theme: ThemeId | undefined,
+  size: ProfileOverride['size'] | undefined,
+  players: number,
+  level: BotLevel | undefined,
+  difficulty?: Difficulty,
+) {
   const m = new Match(seed, theme);
-  if (size) {
-    m.forceProfile = { size };
+  if (size || difficulty) {
+    m.forceProfile = { ...(size ? { size } : {}), ...(difficulty ? { difficulty } : {}) };
     m.newLevel(seed, theme);
   }
   const bots = new BotSeats();
@@ -44,16 +54,16 @@ function botMatch(seed: number, theme: ThemeId | undefined, size: ProfileOverrid
  * round of their own, raced to the end: does it find its way to the flag?
  * Shared by tests/brain.test.ts and the finish-rate suites in tests/stats/.
  */
-export function botRace(seed: number, { theme, size, limit = 60 * 60, build = true, level, parts = 0 }: BotRaceOptions = {}): BotRace {
+export function botRace(seed: number, { theme, size, limit = 60 * 60, build = true, level, parts = 0, difficulty }: BotRaceOptions = {}): BotRace {
   let placed: PlacedProp[] | null = null;
   if (parts > 0) {
-    const { m, bots } = botMatch(seed, theme, size, parts, level);
+    const { m, bots } = botMatch(seed, theme, size, parts, level, difficulty);
     m.rules = { ...m.rules, pickSeconds: 0, placeSeconds: 0 };
     m.startMatch();
     for (let f = 0; f < 60 * 60 && m.phase !== 'run'; f++) m.step(bots.frames(m));
     placed = m.placed;
   }
-  const { m, bots } = botMatch(seed, theme, size, 1, level);
+  const { m, bots } = botMatch(seed, theme, size, 1, level, difficulty);
   m.startMatch();
   if (placed) m.placed = placed.map((pp) => ({ ...pp }));
   else if (build) {

@@ -32,6 +32,8 @@ export type HudAction =
   | 'look'
   | 'name'
   | 'level'
+  /** The lobby's level dialog: theme, seed and difficulty. */
+  | 'levelMenu'
   | 'settings'
   | 'rules'
   | 'invite'

@@ -1,12 +1,12 @@
 import { Rng } from '../core/rng';
 import type { ViewXform } from '../game/view';
-import { generateLevel } from '../gen/level';
+import { DIFFICULTIES, generateLevel } from '../gen/level';
 import type { ProfileOverride } from '../gen/level/profile';
 import { cycleFrames } from '../gen/setpieces/place';
 import { SET_PIECES } from '../gen/setpieces';
 import { ownPieces } from '../gen/stage';
 import { RUN_COUNTDOWN, TILE, VIEW_H, VIEW_W } from '../sim/constants';
-import type { Level, SizeClass, TileRect } from '../sim/level';
+import type { Difficulty, Level, SizeClass, TileRect } from '../sim/level';
 import { buildSolids, type Contrib, footprintCells, motionOffset, type PropCtx, type Resolved, traceRays } from '../sim/props';
 import { RunWorld } from '../sim/run';
 import type { ThemeId } from '../themes';
@@ -54,7 +54,8 @@ const MAX_ZOOM = 2;
 /** Shots further than this from the piece (tiles) don't stretch its picture. */
 const SHOT_REACH = 12;
 
-const plain = (seed: number, theme: ThemeId, size: SizeClass = 'classic'): Level => generateLevel(seed, theme, { ...CLEAR, concept: 'plain', size });
+const plain = (seed: number, theme: ThemeId, size: SizeClass = 'classic', difficulty?: Difficulty): Level =>
+  generateLevel(seed, theme, { ...CLEAR, concept: 'plain', size, ...(difficulty ? { difficulty } : {}) });
 
 /** The picture for a job, or null if its landmark never stands up or its hazard never places on the seeds tried. */
 export function planShot(job: MapJob): MapShot | null {
@@ -78,7 +79,8 @@ export function planShot(job: MapJob): MapShot | null {
   for (const size of ['classic', 'wide'] as const) {
     let first: Level | null = null;
     for (let i = 0; i < SHOT_SEEDS.length; i++) {
-      const terrain: Level = { ...plain(SHOT_SEEDS[i], job.theme, size), setPieces: [] };
+      // Every difficulty in turn, as tests/conformance/hazards samples them: the terrain is the difficulty's.
+      const terrain: Level = { ...plain(SHOT_SEEDS[i], job.theme, size, DIFFICULTIES[Math.floor(i / 2) % DIFFICULTIES.length]), setPieces: [] };
       for (let k = 0; k < REROLLS; k++) {
         const got = SET_PIECES[job.theme](new Rng(k * 7919 + i), terrain, { count: 1, family: [job.id] });
         if (!got.length) continue;

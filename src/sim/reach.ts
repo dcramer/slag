@@ -332,6 +332,15 @@ export function movesFrom(level: Level, body: Body, solids: readonly Solid[] = [
   return tracerFor(level, air, columns).moves(body, solids);
 }
 
+/**
+ * `movesFrom` for many bodies on one unchanged level, sharing one tracer: what
+ * a caller asking from every cell of a route uses (gen/level/precision.ts).
+ */
+export function movesOn(level: Level): (body: Body) => Move[] {
+  const tracer = tracerFor(level, 0);
+  return (body) => tracer.moves(body, []);
+}
+
 /** The parts' wind columns blowing `f` frames from now (sim/wind.ts). Only a bot's moves trace in them: the proof never does. */
 export type WindColumns = (f: number) => readonly Wind[];
 

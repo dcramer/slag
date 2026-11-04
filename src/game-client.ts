@@ -26,7 +26,7 @@ import { addBreadcrumb, reportEvent, setContext, setTelemetryContext, type Telem
 import { THEME_IDS } from './themes';
 import { InputModeTracker } from './ui/input-mode';
 import { LevelAhead, reportGenFallback } from './level-ahead';
-import { loadHaptics, NamePrompt, RulesMenu, SettingsMenu } from './ui/menus';
+import { LevelMenu, loadHaptics, NamePrompt, RulesMenu, SettingsMenu } from './ui/menus';
 import { FloatingLogo } from './ui/screens/logo';
 import { detectQuality, isTouchFirst, savedQuality, saveQuality } from './ui/touch/device';
 import { TouchOverlay } from './ui/touch/overlay';
@@ -142,9 +142,10 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     },
   };
   const rulesMenu = new RulesMenu(input);
+  const levelMenu = new LevelMenu(input);
   const namePrompt = new NamePrompt(input);
   const profile = loadProfile();
-  const menus = [settingsMenu, rulesMenu, namePrompt];
+  const menus = [settingsMenu, rulesMenu, levelMenu, namePrompt];
 
   /** The character in swatch `i` if it can be worn, else as it is: one object per answer, so the renderer's caches hold. */
   let tinted: { from: CharacterDef; i: number; def: CharacterDef } | null = null;
@@ -242,6 +243,25 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
           // Public or Private only means something for a room on the lobby list.
           { listed: !!net.transport?.list },
         );
+        return true;
+      case 'levelMenu':
+        levelMenu.open({
+          seed: () => match.seed,
+          theme: () => match.themeOverride ?? null,
+          rules: () => match.rules,
+          name: () => match.level.theme.name,
+          shownTheme: () => match.level.theme.id,
+          picture: () => renderer.still(),
+          // Online the level and the rules are the host's, as the Rules menu's are.
+          setLevel: (seed, theme) => {
+            if (match.phase === 'lobby' && net.isHost) net.act({ t: 'level', seed, theme });
+          },
+          setRules: (r) => {
+            if (match.phase !== 'lobby' || !net.isHost) return;
+            net.act({ t: 'rules', rules: r });
+            saveRules(r);
+          },
+        });
         return true;
       case 'name':
         if (card) cardName();

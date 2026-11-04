@@ -136,9 +136,13 @@ const SCORE_FRAMES = 60 * 4;
 /** New Level presses kept ready: more than anyone gets through before the worker catches up. */
 const REROLLS_AHEAD = 3;
 
-/** Level-profile knobs the rules force (gravity class). */
+/** Level-profile knobs the rules force (gravity class, weather off, difficulty). */
 export function rulesProfile(rules: MatchRules): ProfileOverride {
-  return { ...(rules.gravity === 'auto' ? {} : { gravity: GRAVITY[rules.gravity] }), ...(!rules.weather ? { weather: 'clear' as const } : {}) };
+  return {
+    ...(rules.gravity === 'auto' ? {} : { gravity: GRAVITY[rules.gravity] }),
+    ...(!rules.weather ? { weather: 'clear' as const } : {}),
+    ...(rules.difficulty === 'varies' ? {} : { difficulty: rules.difficulty }),
+  };
 }
 
 /**
@@ -222,6 +226,18 @@ export class Match {
     const gravities = (Object.keys(GRAVITY) as GravityClass[]).map((g) => at(this.seed, { ...this.forceProfile, gravity: GRAVITY[g] }));
     const here = JSON.stringify(profile);
     return [...rerolls.map((s) => at(s)), ...[at(this.seed, this.forceProfile), ...gravities].filter((r) => JSON.stringify(r.profile) !== here)];
+  }
+
+  /**
+   * The lobby's level, chosen: `seed`, in `theme` or, with none, the one the seed picks. A theme stays chosen for
+   * the levels after it, as a URL's does. Everyone readies again for the new level. Lobby only; peers apply it on
+   * the same frame (net/actions.ts).
+   */
+  pickLevel(seed: number, theme: ThemeId | undefined) {
+    if (this.phase !== 'lobby') return;
+    this.themeOverride = theme;
+    this.newLevel(seed, theme);
+    for (const q of this.players) q.ready = false;
   }
 
   /**
@@ -399,10 +415,7 @@ export class Match {
         p.ready = false;
       }
       if (inp.confirmPressed) p.ready = !p.ready;
-      if (inp.downPressed) {
-        this.newLevel(deriveSeed(this.seed, 'reroll'));
-        for (const q of this.players) q.ready = false;
-      }
+      if (inp.downPressed) this.pickLevel(deriveSeed(this.seed, 'reroll'), this.themeOverride);
     }
     for (const p of this.players) if (!p.ready && this.idleFrames(p) >= LOBBY_IDLE_FRAMES) p.afk = true;
     // Someone has to be here and ready; someone who isn't here doesn't hold the rest up.

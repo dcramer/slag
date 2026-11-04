@@ -1,6 +1,7 @@
 import type { Rng } from '../../core/rng';
 import { isProtected, type Level, T_EMPTY, T_ONEWAY } from '../../sim/level';
 import type { ReachCache } from '../../sim/reach';
+import { difficultyKnobs } from './difficulty';
 import { jumpProfile } from './probe';
 import { analyzeRoutes, lineTiles, MAX_SHARED, type Routes } from './routes';
 import { easyRise } from './sculptors/common';
@@ -35,7 +36,7 @@ interface Lane {
   /** Rows above the route (3 is one plain jump from the floor below). */
   off: number;
   /** Platform length range. */
-  len: [number, number];
+  len: readonly [number, number];
 }
 
 /** Lay lanes until the level is open enough or there's nowhere left to try. Writes into `level.tiles` (the shape's array). */
@@ -130,10 +131,11 @@ function layLane(level: Level, cells: number[], blocked: Uint8Array, rng: Rng): 
   const top = routeTops(w, cells);
   const xs = [...top.keys()].sort((a, b) => a - b);
   if (xs.length < MIN_STRETCH) return false;
+  const t = difficultyKnobs();
   const lane: Lane = rng.weighted<Lane>([
-    [{ off: 3, len: [2, 4] }, 3],
-    [{ off: 4, len: [2, 4] }, 2],
-    [{ off: 3, len: [6, 10] }, 2],
+    [{ off: 3, len: t.laneLen }, 3],
+    [{ off: 4, len: t.laneLen }, 2],
+    [{ off: 3, len: [6, 10] }, t.floorLanes],
   ]);
   const rise = easyRise();
   const hop = Math.max(1, jumpProfile().walkGap);
@@ -178,8 +180,8 @@ function layLane(level: Level, cells: number[], blocked: Uint8Array, rng: Rng): 
     for (let c = bestX; c < bestX + len; c++) level.tiles[(best + 1) * w + c] = T_ONEWAY;
     placed++;
     last = best;
-    // Each hop is near the end of a walking jump: a lane is a line you jump, not a floor you stroll.
-    x = bestX + len + rng.int(Math.max(1, hop - 1), hop);
+    // Each hop is near the end of a walking jump (at it, on hard levels): a lane is a line you jump, not a floor you stroll.
+    x = bestX + len + rng.int(Math.max(1, hop - t.hopSlack), hop);
   }
   return placed > 0;
 }
