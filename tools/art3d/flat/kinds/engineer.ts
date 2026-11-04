@@ -82,7 +82,7 @@ export const kind: FlatKind = {
   // The drawn eyes sit about 1.4 apart under the brim. Wider, a scrap of the brim's ink on the face's left
   // outline paired with the right eye, and the near eye sat on the outline over the wrench.
   // Found in the role map: his small eyes don't survive the tracer's smoothing. Above the goggles' white gaps.
-  eyes: { role: 'dark', from: 'map', area: [0.06, 0.4], band: [0.185, 0.55], gap: [1.0, 2.2], specks: { dark: 2.8 } },
+  eyes: { role: 'dark', from: 'map', area: [0.06, 0.4], band: [0.185, 0.55], gap: [1.0, 2.2], specks: { dark: 2.8 }, drop: 1 },
   wear: {
     on: ['shirt', 'khaki'],
     chin: 3,
@@ -99,7 +99,8 @@ export const kind: FlatKind = {
     ],
   },
   accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [1.5, 0.7] }],
-  face: { r: 0.62, iris: '#3c6fd0' },
+  // Off the brim and thicker than the floor: his shut eyes and laugh were hairlines on the brim's ink line.
+  face: { r: 0.62, iris: '#3c6fd0', mark: 0.6 },
   gait: { bounce: [0.1, 0.6], lean: [0, 0.03] },
   clips: {
     idle: { frames: ['idle'], loop: true, fps: 1 },

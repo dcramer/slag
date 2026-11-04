@@ -96,6 +96,11 @@ export interface FlatKind {
     /** With `count: 1`, a far eye set this far (world px) from the near one, for a face turned nearly side on. */
     pair?: readonly [number, number];
     /**
+     * Moves the kit's eyes this far down (world px) from the drawn ones, after the drawn face is painted over.
+     * Eyes drawn tucked under a brim put the kit's shut eyes on the brim's ink, where they vanish.
+     */
+    drop?: number;
+    /**
      * `map`: find the eyes in the role map, before tracing. An eye a few map pixels across (a small face's) is
      * smoothed away by the tracer, so on traced parts only one merged into the ink round it survives.
      */
@@ -112,12 +117,18 @@ export interface FlatKind {
    * surface's box, and a radius, on the bare `on` roles below `chin` (world px under the eyes).
    */
   wear: { on: readonly string[]; chin: number; marks: readonly (readonly (readonly [string, number, number, number])[])[] };
-  /** On-off accessories drawn as strips from the near eye: a cross on the crown, a plaster across the cheek. */
-  accessories: readonly { slot: string; role: string; at: 'crown' | 'cheek'; size: readonly [number, number] }[];
+  /**
+   * On-off accessories drawn as strips from the near eye: a cross on the crown, a plaster across the cheek.
+   * `offset` (world px) moves one off its usual place: on a small face the cheek's lands on the jaw or a blush.
+   */
+  accessories: readonly { slot: string; role: string; at: 'crown' | 'cheek'; size: readonly [number, number]; offset?: readonly [number, number] }[];
   roles: readonly FlatRole[];
   slots: readonly { name: string; vary: number; options: number }[];
-  /** The cast's face kit; none for a kind with no face to draw (a visor, a jelly). */
-  face?: { r: number; iris: string; mouth?: readonly [number, number]; eye?: 'tall' | 'dot' };
+  /**
+   * The cast's face kit; none for a kind with no face to draw (a visor, a jelly). `mark` is the least width of its
+   * shut eyes and cheer arcs (world px), for a small eye whose marks would otherwise be a hairline.
+   */
+  face?: { r: number; iris: string; mouth?: readonly [number, number]; eye?: 'tall' | 'dot'; mark?: number };
   gait: { bounce: readonly [number, number]; lean: readonly [number, number] };
   clips: Readonly<Record<string, FlatClip>>;
   /** Each pose drawing's pose, for `posePrompt` (`far` for one far from the design's). */

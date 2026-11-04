@@ -411,6 +411,9 @@ function frameOf(name: string, clip: FlatClip): Frame {
   }
   // Back to front by role.
   parts.sort((a, b) => a.role - b.role);
+  // The kit's eyes, moved off a brim once the drawn ones are painted over and the recolours placed by them.
+  const drop = ek?.drop ?? 0;
+  if (drop) eyes = eyes.map(([x, y]) => [x, y + drop] as Pt);
   const f: Frame = { sil: t.sil, holes: holesOf(role, m), parts, lines: m.lines.map((l) => ({ role: roleOf(m.roles[l.role]), pts: l.pts })), eyes };
   // The soles on the floor, the pen and its boil just under it; a lying figure centred on itself.
   let low = -Infinity;
@@ -495,7 +498,8 @@ function dress(f: Frame, seed: number): Frame {
     if (!f.eyes.length) continue;
     const slot = spec.slots.findIndex((sl) => sl.name === acc.slot);
     const [ex, ey] = f.eyes[0];
-    const [hx, hy] = acc.at === 'crown' ? [ex - 0.4, ey - 3.1] : [ex - 1.6, ey + 1.9];
+    const [dx, dy] = acc.offset ?? [0, 0];
+    const [hx, hy] = acc.at === 'crown' ? [ex - 0.4 + dx, ey - 3.1 + dy] : [ex - 1.6 + dx, ey + 1.9 + dy];
     for (const a of acc.at === 'crown' ? [0.55, -0.55] : [0.35])
       extra.push({ role: role(acc.role), ring: strip(hx, hy, acc.size[0], acc.size[1], a), option: [slot, 1] });
   }
