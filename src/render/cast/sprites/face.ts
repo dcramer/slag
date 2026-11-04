@@ -68,8 +68,9 @@ function eye(
       arc.push({ x: Math.cos(a) * r, y: 0.4 + Math.sin(a) * r * 0.85 });
     }
     s.fillStyle = INK;
-    // A thin arc: as thick as the eye is wide, the two of a small face merged into one dark bar, a squint.
-    stroke(s, arc, { w: Math.max(0.55, r * 0.5), seed, taper: [0.2, 0.2], press: 0.1 });
+    // A thin arc, with the eye's size: as thick as the eye is wide, the two of a small face merged into one
+    // dark bar, a squint; with a high floor, a small eye's arc was a dot.
+    stroke(s, arc, { w: Math.max(0.35, r * 0.5), seed, taper: [0.2, 0.2], press: 0.1 });
     return;
   }
   if (m === 'dead') {
@@ -91,7 +92,8 @@ function eye(
         { x: -r, y: 0 },
         { x: r, y: 0 },
       ],
-      0.8,
+      // With the eye's size: a fixed 0.8 on a small eye was a bar like a moustache.
+      Math.max(0.4, r * 0.6),
       seed,
       [0.2, 0.2],
     );

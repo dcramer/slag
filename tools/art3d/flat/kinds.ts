@@ -46,6 +46,8 @@ export function posePrompt(pose: string, far = false): string {
 
 type RGB = readonly [number, number, number];
 
+type Recolour = { from: string; to: string; below: number; lying: readonly [number, number] };
+
 export interface FlatKind {
   /** World px square of the body (every role but the loose ones) in every pose: the design's at its height. */
   body: number;
@@ -94,8 +96,12 @@ export interface FlatKind {
     /** With `count: 1`, a far eye set this far (world px) from the near one, for a face turned nearly side on. */
     pair?: readonly [number, number];
   };
-  /** A dark under the face drawn in another role (`below` the eyes, world px; a lying pose's by size and x). */
-  recolour?: { from: string; to: string; below: number; lying: readonly [number, number] };
+  /**
+   * A colour drawn in another role by its place: `below` the eyes (world px), or a lying pose's by size and x
+   * (the zapmouse's black cord, which reads as a frown; the plumber's boots apart from his hair). One rule
+   * or several, applied in order.
+   */
+  recolour?: Recolour | readonly Recolour[];
   /**
    * The wear's marks (option 1 scuffed, option 2 scorched), each a role, a spot as fractions of the
    * surface's box, and a radius, on the bare `on` roles below `chin` (world px under the eyes).

@@ -26,6 +26,16 @@ const SLIVER = 0.5;
 /** A flat kind's pens (lit side, shadow side), world px: the silhouette's, and a part's where two colours meet. */
 const FLAT_SIL = [0.3, 0.6];
 const FLAT_PART = [0.12, 0.32];
+/** A flat part smaller than this (world px²) is drawn with no pen of its own. */
+const SPECK = 0.6;
+
+/** A ring's area, world px². */
+function area(pts: readonly P[]): number {
+  let a = 0;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) a += pts[j].x * pts[i].y - pts[i].x * pts[j].y;
+  return Math.abs(a) / 2;
+}
+
 /** An interior line's pen, in world px: lighter than the parts' contours round it. */
 const LINE_W = 0.38;
 /**
@@ -139,8 +149,15 @@ export function drawFrame(
       path(s, boiled(r, boil, seed + role));
       s.fillStyle = p.fill;
       s.fill();
-    } else if (flat) inked(s, boiled(r, boil, seed + role), p.fill, p.ink, FLAT_PART[0], FLAT_PART[1] * k);
-    else toned(s, boiled(r, boil, seed + role), p.fill, p.shade, p.ink, PART_THIN, PART_THICK * k, SLIVER);
+    } else if (flat) {
+      const pts = boiled(r, boil, seed + role);
+      // A speck of a part (a glint, a stud) inked round in a dark of its colour read as a pupil: it's only the fill.
+      if (area(pts) < SPECK) {
+        path(s, pts);
+        s.fillStyle = p.fill;
+        s.fill();
+      } else inked(s, pts, p.fill, p.ink, FLAT_PART[0], FLAT_PART[1] * k);
+    } else toned(s, boiled(r, boil, seed + role), p.fill, p.shade, p.ink, PART_THIN, PART_THICK * k, SLIVER);
   }
   // The background a figure closes in, cleared through it and inked round. Uncut, it's the silhouette's ink.
   if (cut && f.holes)

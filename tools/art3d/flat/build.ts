@@ -352,8 +352,7 @@ function frameOf(name: string, clip: FlatClip): Frame {
     parts = t.parts.map((p) => ({ role: roleOf(m.roles[p.role]), ring: p.ring }));
   }
   // A dark under the face drawn in a role of its own (the zapmouse's black cord, which reads as a frown).
-  const re = spec.recolour;
-  if (re) {
+  for (const re of spec.recolour ? [spec.recolour].flat() : []) {
     const below = eyes.length ? Math.max(...eyes.map((e) => e[1])) + re.below : -10;
     for (const p of parts)
       if (p.role === roleOf(re.from) && (clip.eyes === false ? area(p.ring) > re.lying[0] && mid(p.ring)[0] > re.lying[1] : mid(p.ring)[1] > below))
