@@ -309,22 +309,24 @@ export const BRIEFS: Record<string, Brief> = {
   },
   engineer: {
     // The nod, each part of the read at race size: the kit, carried low and clear of the body (the read in
-    // silhouette, so it leads the brief): a toolbox hanging by its handle from one hand and the wrench held low
-    // in the other, its open jaw out in front; the round hard hat with the goggles strapped on it (the head
-    // shape and the trade); the broad square build and the square jaw (the gruff builder); the work shirt
-    // over khakis (the colour block).
+    // silhouette, so it leads the brief): a hard rectangular toolbox hanging from one hand (a box with square
+    // corners, which no other kind carries) and one huge wrench held low in the other, its open jaw out in
+    // front; the dome hard hat with a rim all round and the goggles on it (the head shape and the trade: a dome
+    // with a rim both sides, where the plumber's cap has a bill out front only); the tall, broad, square build
+    // with a small head for it and the square jaw (the gruff builder, and never the plumber's big head on a
+    // stout body); the work shirt over khakis (the colour block).
     // Ours, and the joke: a backyard engineer. The hard hat is a battered bowl of a helmet, the goggles are
-    // swimming goggles, the wrench one giant spanner, the toolbox a dented green tin one.
+    // swimming goggles, the wrench one giant spanner, the toolbox a dented tin one.
     // Blind reads (2026-11-03 and 11-04): carried up by his shoulder, the spanner's jaw read as ears or as spikes
-    // off the hat, and with no toolbox nobody named the homage ("a mechanic or engineer, but I can't name the
-    // source"). A wide brim on a short man read as the plumber's rival. With the toolbox in one hand and the
-    // spanner low in the other, a reader named him. The pick is an earlier design reshaped in edits
-    // (art/sprites/engineer/design.prompt.txt).
+    // off the hat; a wide brim on a short man read as the plumber's rival; short and stocky with the kit low,
+    // he was named only at low confidence, and an audit paired him with the plumber at play scale. So he is
+    // drawn tall, with the hat a dome and the toolbox a crisp box (art/sprites/engineer/design.prompt.txt).
     design:
-      'The character: a broad, square-shouldered backyard handyman carrying his kit low at his sides, clear of his body: in one hand a big green metal toolbox (#3f7f5a) hanging by its arched handle beside his knee, and in his gloved other hand one giant grey spanner (#8e8a84) held low, slanting forward and down, its single big open C jaw out in front of his knees. Nothing raised above his shoulders and nothing beside his head. ' +
-      'On his head a round yellow hard hat (#e9b730) with a short rim all round; a dark goggle strap (#3a4246) runs round it as a band, two round swimming-goggle lenses on its front. ' +
-      'A huge clean-shaven square lantern jaw, wider than his neck, jutting forward, flat along the bottom with hard corners; peach skin (#efc9a4), two small black eyes. A red work shirt (#b8433c), khaki trousers (#8c7a58), a brown belt, tan leather work gloves (#a8794a), chunky brown boots.',
-    worn: "a big dent is knocked into the side of the hard hat; the toolbox's lid is dented; the spanner is bent a little; one trouser knee is torn open in a big ragged hole.",
+      'The character: a tall, broad, square-built handyman, long-legged, a big square slab of a chest on long sturdy legs, his head small for his body, head and hat a quarter of his height. ' +
+      'His kit is carried low, clear of his body. In his hand on the left of the picture a big hard rectangular metal toolbox (#3f7f5a), a crisp box longer than it is tall with straight edges, square corners and a flat lid, hanging by a small handle beside his knee, clear of his leg. In his gloved hand on the right of the picture one giant grey spanner (#8e8a84) held low, slanting forward and down, its single big open C jaw out in front of his knees. Nothing beside or above his head. ' +
+      'On his head a round yellow hard hat (#e9b730): a tall smooth dome with a narrow rim sticking out evenly all the way round, front, sides and back, no bill, no peak; a dark goggle strap (#3a4246) round the dome as a band. ' +
+      'A square clean-shaven jaw, peach skin (#efc9a4), two small black eyes. A red work shirt (#b8433c), khaki trousers (#8c7a58), tan work gloves (#a8794a), chunky brown boots.',
+    worn: "a big dent is knocked into the side of the hard hat's dome, its rim still running all round; one top corner of the toolbox is crumpled in, its straight edges and square corners otherwise kept; the spanner's handle is bent a little; the hole in the trouser knee is gone, the trousers whole.",
   },
   goose: {
     // The nod, each part of the read at race size: the S of a neck (a goose, not a duck or a chicken), white

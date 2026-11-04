@@ -38,8 +38,6 @@ const BLUE_SH = '#2e4a8c';
 const RED = '#c9473f';
 const RED_SH = '#9c3530';
 const GOLD = '#e8c24a';
-const YELLOW = '#e9b730';
-const YELLOW_SH = '#bb8a1c';
 const KHAKI = '#8c7a58';
 const KHAKI_SH = '#6c5c40';
 
@@ -715,48 +713,78 @@ export const KINDS: Record<Kind, KindArt> = {
     parts: ['shard', 'shard'],
   },
 
-  // The team shooter's engineer: a yellow hard hat with dark goggles on it, a square jaw, a work shirt in
-  // red or blue, khaki trousers, a leather glove and a huge wrench. Trudges, heavy-stepped.
+  // The team shooter's engineer: tall, broad and square, his head small for his body under a dome hard hat with
+  // a rim all round (never a cap's bill out front: that's the plumber), goggles strapped on it, a square jaw, a
+  // work shirt in the player's colour over khakis, a hard rectangular toolbox hanging from his back hand and one
+  // huge wrench held low in the front one. Trudges, heavy-stepped. His rendered frames draw instead once loaded.
   engineer: {
-    size: [1.04, 0.96],
+    size: [1.06, 1.08],
+    // Square shoulders on a slab of a torso, a small head on a thick neck, the jaw jutting forward.
     outline:
-      'M -0.04 -0.84 C 0.2 -0.86 0.36 -0.78 0.38 -0.64 L 0.43 -0.48 L 0.34 -0.43 C 0.48 -0.4 0.52 -0.26 0.48 -0.12 C 0.46 -0.04 0.38 0 0.28 0 L -0.32 0 C -0.44 0 -0.5 -0.1 -0.5 -0.24 C -0.5 -0.44 -0.42 -0.56 -0.34 -0.6 C -0.38 -0.74 -0.26 -0.84 -0.04 -0.84 Z',
-    lift: 2.8,
+      'M -0.1 -0.94 C 0.06 -0.96 0.2 -0.92 0.22 -0.84 L 0.28 -0.76 L 0.27 -0.62 L 0.44 -0.58 C 0.5 -0.56 0.5 -0.51 0.5 -0.46 L 0.46 -0.06 C 0.46 -0.02 0.42 0 0.38 0 L -0.38 0 C -0.42 0 -0.46 -0.02 -0.46 -0.06 L -0.5 -0.46 C -0.5 -0.52 -0.47 -0.56 -0.42 -0.58 L -0.2 -0.62 L -0.22 -0.84 C -0.22 -0.92 -0.18 -0.94 -0.1 -0.94 Z',
+    lift: 3.4,
     feet: 'boot',
     boots: [BROWN, BROWN_SH],
     arms: 'mitten',
     hands: 'leather',
-    fill: 'paint',
-    ring: true,
-    faceX: 0.08,
-    gait: (g) => (g.moving ? { hop: abs(S(g.ph)) * 0.5, sy: 1 - abs(S(g.ph)) * 0.05, upright: 0.6 } : {}),
+    fill: 'player',
+    faceX: 0.06,
+    gait: (g) => (g.moving ? { hop: abs(S(g.ph)) * 0.5, sy: 1 - abs(S(g.ph)) * 0.05, upright: 0.7 } : {}),
     paintFace: (d) => {
-      const y = Y(d, 0.66);
-      for (const sd of [-1, 1]) eye(d, sd * d.W * 0.1 + d.f * 0.8, y, 0.75);
-      brows(d, [-d.W * 0.1 + d.f * 0.8, d.W * 0.1 + d.f * 0.8], y, 0.9);
-      mouthMark(d, d.f * 1.4, Y(d, 0.5), 2.6, 'flat');
+      const y = Y(d, 0.77);
+      for (const sd of [-1, 1]) eye(d, sd * d.W * 0.08 + d.f * 0.6, y, 0.7);
+      brows(d, [-d.W * 0.08 + d.f * 0.6, d.W * 0.08 + d.f * 0.6], y, 0.8);
+      mouthMark(d, d.f * 1.2, Y(d, 0.66), 2.2, 'flat');
     },
     print: (d) => {
       // The face and square jaw in skin, khaki trousers and a belt under the shirt.
-      spot(d.s, d.f * d.W * 0.14, Y(d, 0.62), d.W * 0.36, d.H * 0.2, d.sd, SKIN, 0.05);
-      tone(d, -0.2, 0.24, KHAKI, KHAKI_SH);
-      tone(d, 0.22, 0.27, BROWN, BROWN_SH);
+      spot(d.s, d.f * d.W * 0.05, Y(d, 0.73), d.W * 0.25, d.H * 0.15, d.sd, SKIN, 0.05);
+      tone(d, -0.2, 0.26, KHAKI, KHAKI_SH);
+      tone(d, 0.25, 0.29, BROWN, BROWN_SH);
+    },
+    back: (d) => {
+      // The toolbox, a hard box with square corners and a handle, hanging beside his back knee: a dark of the
+      // shirt, clear of the legs.
+      const x0 = -d.f * d.W * 0.44;
+      const x1 = x0 - d.f * 6.2;
+      const y0 = Y(d, 0.06) - 1.4;
+      const y1 = y0 + 3.8;
+      const corner = (x: number, y: number) => ({ x, y });
+      toned(d.s, [corner(x0, y0), corner(x1, y0), corner(x1, y1), corner(x0, y1)], d.lk.playerDark, d.lk.playerShade, d.lk.ink, 0.3, 0.7 * d.k, 0.3);
+      const hx = (x0 + x1) / 2;
+      d.s.fillStyle = d.lk.ink;
+      line(d.s, hx - 1.3, y0, hx - 1, y0 - 1.3, { w: 0.6, seed: 4, taper: [0, 0], press: 0 });
+      line(d.s, hx - 1, y0 - 1.3, hx + 1, y0 - 1.3, { w: 0.6, seed: 5, taper: [0, 0], press: 0 });
+      line(d.s, hx + 1, y0 - 1.3, hx + 1.3, y0, { w: 0.6, seed: 6, taper: [0, 0], press: 0 });
+      mark(
+        d.s,
+        d.lk.ink,
+        [
+          { x: x0, y: y0 + 1.2 },
+          { x: x1, y: y0 + 1.2 },
+        ],
+        0.4,
+        7,
+        [0, 0],
+      );
     },
     front: (d) => {
-      // The hard hat, yellow, with dark goggles strapped round it.
-      const x = d.bx(0.95);
-      const brim = Y(d, 0.8);
+      // The hard hat, a light of the shirt: a tall dome over a rim that sticks out evenly all round it, front
+      // and back alike, and the goggles strapped round the dome.
+      const x = d.bx(0.95) + d.f * d.W * 0.02;
+      const rim = Y(d, 0.86);
       toned(
         d.s,
         [
-          { x: x - d.W * 0.4, y: brim },
-          { x: x - d.W * 0.34, y: d.top - 2.8 },
-          { x, y: d.top - 4 },
-          { x: x + d.W * 0.34, y: d.top - 2.8 },
-          { x: x + d.W * 0.4, y: brim },
+          { x: x - d.W * 0.3, y: rim },
+          { x: x - d.W * 0.28, y: d.top - 2.4 },
+          { x: x - d.W * 0.12, y: d.top - 4 },
+          { x: x + d.W * 0.12, y: d.top - 4 },
+          { x: x + d.W * 0.28, y: d.top - 2.4 },
+          { x: x + d.W * 0.3, y: rim },
         ],
-        YELLOW,
-        YELLOW_SH,
+        d.lk.playerHi,
+        d.lk.player,
         d.lk.ink,
         0.4,
         0.8 * d.k,
@@ -765,61 +793,50 @@ export const KINDS: Record<Kind, KindArt> = {
       toned(
         d.s,
         [
-          { x: x - d.W * 0.6, y: brim - 0.4 },
-          { x: x + d.W * 0.6, y: brim - 0.6 },
-          { x: x + d.W * 0.56, y: brim + 0.9 },
-          { x: x - d.W * 0.56, y: brim + 1.1 },
+          { x: x - d.W * 0.46, y: rim - 0.3 },
+          { x: x + d.W * 0.46, y: rim - 0.3 },
+          { x: x + d.W * 0.44, y: rim + 0.9 },
+          { x: x - d.W * 0.44, y: rim + 0.9 },
         ],
-        YELLOW,
-        YELLOW_SH,
+        d.lk.playerHi,
+        d.lk.player,
         d.lk.ink,
         0.3,
         0.7 * d.k,
         0.4,
       );
-      const gy = d.top - 1.4;
+      const gy = rim - 1.6;
       mark(
         d.s,
-        '#2a2624',
+        '#3a4246',
         [
-          { x: x - d.W * 0.36, y: gy + 0.3 },
-          { x: x + d.W * 0.36, y: gy - 0.1 },
+          { x: x - d.W * 0.29, y: gy + 0.2 },
+          { x: x + d.W * 0.29, y: gy },
         ],
-        1,
+        0.9,
         1,
         [0, 0],
       );
       for (const sd of [-0.5, 0.5]) {
-        const gx = x + d.f * d.W * (0.1 + sd * 0.36);
-        tonedOval(d.s, gx, gy, 1.6, 1.4, 10, '#3a4246', '#262c2f', d.lk.ink, 0.3, 0.6 * d.k, 0.4);
-        mark(
-          d.s,
-          '#a9c4cc',
-          [
-            { x: gx - 0.7, y: gy - 0.3 },
-            { x: gx - 0.2, y: gy - 0.8 },
-          ],
-          0.4,
-          sd,
-          [0.2, 0.2],
-        );
+        const gx = x + d.f * d.W * (0.1 + sd * 0.26);
+        tonedOval(d.s, gx, gy, 1.2, 1.1, 10, '#8e8a84', '#6b6862', d.lk.ink, 0.3, 0.6 * d.k, 0.4);
       }
     },
     tool: (d, hx, hy) => {
-      // A huge wrench: a long handle and an open jaw, up over his shoulder.
-      const a = -Math.PI / 2 + d.f * (d.m === 'run' ? 0.55 : 0.3);
-      const tx = hx + Math.cos(a) * 7.4;
-      const ty = hy + Math.sin(a) * 7.4;
-      d.s.fillStyle = d.lk.ink;
-      line(d.s, hx, hy, tx, ty, { w: 2.6, seed: 2, taper: [0, 0], press: 0 });
-      d.s.fillStyle = STEEL;
-      line(d.s, hx, hy, tx, ty, { w: 1.4, seed: 2, taper: [0, 0], press: 0 });
-      const ca = Math.cos(a);
+      // One huge wrench, held low and slanting forward and down, its open jaw out in front of his knees.
+      const a = d.pose === 'run' ? 0.35 : 0.75;
+      const ca = d.f * Math.cos(a);
       const sa = Math.sin(a);
-      const at = (u: number, v: number) => ({ x: tx + ca * u - sa * v, y: ty + sa * u + ca * v });
+      const tx = hx + ca * 6.8;
+      const ty = hy + sa * 6.8;
+      d.s.fillStyle = d.lk.ink;
+      line(d.s, hx, hy, tx, ty, { w: 2.4, seed: 2, taper: [0, 0], press: 0 });
+      d.s.fillStyle = STEEL;
+      line(d.s, hx, hy, tx, ty, { w: 1.2, seed: 2, taper: [0, 0], press: 0 });
+      const at = (u: number, v: number) => ({ x: tx + ca * u - sa * v * d.f, y: ty + sa * u + ca * v * d.f });
       toned(
         d.s,
-        [at(-0.6, -2.6), at(2.6, -3), at(2.8, -1.2), at(1, -1), at(1, 1), at(2.8, 1.2), at(2.6, 3), at(-0.6, 2.6)],
+        [at(-0.6, -2.4), at(2.4, -2.8), at(2.6, -1.1), at(0.9, -0.9), at(0.9, 0.9), at(2.6, 1.1), at(2.4, 2.8), at(-0.6, 2.4)],
         STEEL,
         STEEL_SH,
         d.lk.ink,
