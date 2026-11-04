@@ -3,11 +3,13 @@ import type { FlatKind } from '../kinds';
 export const kind: FlatKind = {
   body: 223,
   map: {
-    roles: ['skin', 'red', 'redshade', 'blue', 'brown', 'tan', 'grey', 'dark', 'mouth'],
+    roles: ['skin', 'red', 'redshade', 'blue', 'brown', 'handle', 'tan', 'tanshade', 'grey', 'dark', 'mouth'],
     families: [
       ['skin', [253, 195, 153]],
       ['skin', [250, 217, 192]],
       ['skin', [216, 170, 124]],
+      // The face's shade under the cap, the ear and the jaw: pinker than the gloves, it folded into their tan.
+      ['skin', [207, 126, 106]],
       ['red', [187, 70, 58]],
       ['redshade', [134, 42, 40]],
       ['redshade', [107, 31, 31]],
@@ -19,13 +21,17 @@ export const kind: FlatKind = {
       ['brown', [66, 45, 31]],
       ['brown', [49, 34, 34]],
       ['brown', [70, 47, 33]],
-      ['tan', [208, 141, 97]],
+      // The gloves, and their shade as a shape of its own: folded into the tan, the fist and its curled
+      // fingers drew as one shapeless lump at the hip.
+      ['tan', [205, 155, 86]],
       ['tan', [161, 117, 89]],
-      ['tan', [139, 85, 64]],
-      // The copper handle and its shadow: nearer the cap's red than the gloves' tan, so the handle drew in
-      // the player's colour wherever it crossed the overalls.
-      ['tan', [186, 106, 62]],
-      ['tan', [147, 66, 42]],
+      ['tanshade', [152, 101, 56]],
+      ['tanshade', [139, 85, 64]],
+      // The copper handle, its shadow and its shine: a role of its own, or it was the gloves' tan, and the
+      // gloves and handle drew as one shapeless mass. Nearer the cap's red, it drew in the player's colour.
+      ['handle', [188, 107, 62]],
+      ['handle', [147, 66, 42]],
+      ['handle', [232, 153, 109]],
       ['grey', [150, 155, 160]],
       ['grey', [110, 115, 120]],
       ['dark', [10, 4, 4]],
@@ -36,11 +42,15 @@ export const kind: FlatKind = {
       ['dark', [255, 255, 255]],
     ],
     line: 'dark',
-    thin: ['skin', 'red', 'redshade', 'blue', 'brown', 'tan', 'grey', 'mouth'],
+    thin: ['skin', 'red', 'redshade', 'blue', 'brown', 'handle', 'tan', 'tanshade', 'grey', 'mouth'],
     fringe: 5,
     stroke: 2.4,
     feet: ['brown'],
-    min: { dark: 0.12, grey: 0.25 },
+    min: { dark: 0.12, grey: 0.25, tanshade: 0.3 },
+    // The gaps under the back arm (run-1, 3 world px²), between the waving glove and the brim (air-2) and
+    // behind the handle (run-2): traced, they were dark blobs. Over the open grin's teeth (0.27) and the
+    // white the cup's neck closes in by the hair (0.3 to 0.45), which stays a dark speck.
+    holes: 0.5,
   },
   roles: [
     { name: 'skin', color: '#efc9a4' },
@@ -50,8 +60,12 @@ export const kind: FlatKind = {
     // A colourway is the overalls (VARIETY.palette): denim, grey work cloth, washed denim. A navy went: on a
     // dark ground it and the boots sank into the ground.
     { name: 'blue', color: '#3f62b4', alts: ['#7e848a', '#86a3d4'], vary: 6 },
-    { name: 'brown', color: '#4d3426' },
+    // The boots, hair and mustache: one colour in the drawing, so one role. Lighter than the drawing's: on a
+    // dark ground the boots sank into it.
+    { name: 'brown', color: '#5e412d' },
+    { name: 'handle', color: '#a65f38' },
     { name: 'tan', color: '#b08454' },
+    { name: 'tanshade', color: '#7f5c39' },
     { name: 'grey', color: '#8e8a84' },
     { name: 'dark', color: '#2a1f1a' },
     { name: 'mouth', color: '#9a3d36' },
