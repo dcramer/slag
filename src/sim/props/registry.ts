@@ -145,6 +145,11 @@ export interface PropCtx {
   live: boolean;
 }
 
+/** What `sense` reads: the frame's context and its solids (a lane stops on whatever is in it). */
+export interface SenseCtx extends PropCtx {
+  solids?: readonly Solid[];
+}
+
 export interface RunnerView {
   x: number;
   y: number;
@@ -235,6 +240,13 @@ export interface ModuleSim<M extends Module = Module> {
   holds?(m: M): Cell[];
   /** Advance timers, fire projectiles, emit events. Runs after runners move. */
   tick?(m: M, ctx: TickCtx): void;
+  /**
+   * For a part a runner sets off (a dropper's lane, a snapper's plate): where a runner on this
+   * frame would set it off, given its state, or nothing while it isn't armed. Its `tick` reads the
+   * same zones, so the two can't disagree. Bots foresee what their own approach sets off with it
+   * (src/brain/foresight.ts): what such a part does next isn't a function of the frame alone.
+   */
+  sense?(m: M, ctx: SenseCtx): Rect[];
   /** A runner is standing on one of this module's solids. */
   onStand?(m: M, ctx: TickCtx): void;
   /** A runner overlaps one of this module's triggers. `first` is true on the frame they enter it. */

@@ -3,7 +3,7 @@ import { TILE } from '../../constants';
 import { isProtected, type Level, T_EMPTY, tileAt } from '../../level';
 import type { Solid } from '../../physics';
 import { reportBeam, solidGap } from '../rays';
-import { defineModule, solidId } from '../registry';
+import { defineModule, type SenseCtx, solidId } from '../registry';
 import { dirOf } from '../transform';
 import type { ModuleOf, PropState } from '../types';
 import { SURFACES } from './body';
@@ -89,6 +89,21 @@ function dropperStop(level: Level, solids: readonly Solid[], m: Dropper, d: numb
   return d + solidGap(solids, shifted(dropperRect(m, off[0], off[1]), m.angle, d), dx, dy, travel - d, uid);
 }
 
+/** The lane an idle, re-armed head watches, from its face to where it would land (`travel` px): empty while it can't drop. */
+function dropperLane(m: Dropper, ctx: SenseCtx, p: DropperPose, travel: number): Rect[] {
+  if (p.state !== DROP_IDLE || !ctx.live || p.t < DROP_COOL || travel <= 0) return [];
+  const base = dropperRect(m, ctx.off[0], ctx.off[1]);
+  const [dx, dy] = dirOf(m.angle);
+  return [
+    {
+      x: dx > 0 ? base.x + base.w : dx < 0 ? base.x - travel : base.x,
+      y: dy > 0 ? base.y + base.h : dy < 0 ? base.y - travel : base.y,
+      w: dx !== 0 ? travel : base.w,
+      h: dy !== 0 ? travel : base.h,
+    },
+  ];
+}
+
 /**
  * Proximity crusher. It hangs still, watching the lane in front of its face;
  * when someone enters the lane it shakes (telegraph), then slams until it
@@ -131,6 +146,10 @@ export const dropper = defineModule<'dropper'>({
       out.hazards.push({ owner: ctx.r.pp.owner, kind: 'rect', r: lead });
     }
   },
+  sense(m, ctx) {
+    const p = dropperPose(ctx.state, ctx.mi, ctx.frame);
+    return dropperLane(m, ctx, p, dropperStop(ctx.level, ctx.solids ?? [], m, p.d, ctx.off, ctx.r.pp.uid));
+  },
   trace(m, ctx, out) {
     const p = dropperPose(ctx.state, ctx.mi, ctx.frame);
     const stop = dropperStop(ctx.level, out.solids, m, p.d, ctx.off, ctx.r.pp.uid);
@@ -148,18 +167,11 @@ export const dropper = defineModule<'dropper'>({
     let d = p.d;
     switch (p.state) {
       case DROP_IDLE: {
-        if (!ctx.live || p.t < DROP_COOL || travel <= 0) break;
-        const base = dropperRect(m, ctx.off[0], ctx.off[1]);
-        const [dx, dy] = dirOf(m.angle);
-        // The lane: the head's path, from its face to where it would land.
-        const lane: Rect = {
-          x: dx > 0 ? base.x + base.w : dx < 0 ? base.x - travel : base.x,
-          y: dy > 0 ? base.y + base.h : dy < 0 ? base.y - travel : base.y,
-          w: dx !== 0 ? travel : base.w,
-          h: dy !== 0 ? travel : base.h,
-        };
-        const seen = ctx.runners.some((r) => r.active && r.x < lane.x + lane.w && r.x + r.w > lane.x && r.y < lane.y + lane.h && r.y + r.h > lane.y);
+        const seen = dropperLane(m, ctx, p, travel).some((lane) =>
+          ctx.runners.some((r) => r.active && r.x < lane.x + lane.w && r.x + r.w > lane.x && r.y < lane.y + lane.h && r.y + r.h > lane.y),
+        );
         if (seen) {
+          const base = dropperRect(m, ctx.off[0], ctx.off[1]);
           set(DROP_WARN);
           ctx.emit({ type: 'prop', kind: 'dropper-warn', x: base.x + base.w / 2, y: base.y + base.h / 2 });
         }
