@@ -49,11 +49,16 @@ export function lobby(hud: Hud, m: Match, t: number, dt: number) {
   const themeLabel = THEME_LABELS[lv.id].toUpperCase();
   const lx = 140;
   const lw = bar.lw;
-  plate(c, lx, 13, lw, 30, { rivets: false });
+  const refreshW = m.players.length ? (phone ? 40 : 94) : 0;
+  // On a phone New Level's icon grows to a thumb's width: the plate's own area stops short of where it grows to.
+  const reach = phone && m.players.length ? Math.max(0, (hud.tap - 32) / 2) + 2 : 0;
+  // The plate opens the level's dialog (theme, seed, difficulty); New Level beside it rolls a new one.
+  const over = hud.button({ x: lx, y: 13, w: lw - refreshW - reach, h: 30, action: 'levelMenu' });
+  plate(c, lx, 13, lw, 30, { rivets: false, ...(over ? { stroke: PAL.amber } : {}) });
   c.font = `800 ${TYPE.caption}px ${UI}`;
   const tw = tag(c, themeLabel, lx + 8, 28, PAL.hazard, PAL.ink, TYPE.caption);
   // The name stops short of the refresh button: smaller type first, then cut.
-  const nameW = lw - 24 - tw - (m.players.length ? (phone ? 40 : 94) : 0);
+  const nameW = lw - 24 - tw - refreshW;
   fitText(hud, lv.name, lx + 16 + tw, 28.5, nameW, 14, 10, PAL.bone, DISPLAY, 400);
   if (m.players.length) {
     const device = me?.device ?? m.players[0].device;

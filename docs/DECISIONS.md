@@ -523,6 +523,11 @@ Every game design decision, preference and direction the owner has given, groupe
 
 ## UI, menus and copy
 
+- **The lobby has a Level card to pick the level: its theme and seed, each with a dice, and the difficulty, with no dice; difficulty can stay variable (each level rolls its own).** "can we make it so the level options allows you to select difficulty? ... a dialog to select it? or to rng it? it'd let you pick theme, seed, and difficulty? and have a dice roll for ... each of them?" / "well maybe not dice on difficulty" / "difficulty could be variable? so it doesnt force one"
+  2026-11-04 · `done` · DESIGN.md → Rules (the Level card), `src/ui/menus/level.ts`
+- **The theme is chosen by turning left and right through pictures of the level, with its title under it, not from a list of names; the difficulties have names with personality.** "we want like an image of the theme or something? kind of like on codex? ... instead of choosing the named level its a left/right kind of arrow with the visual and title of it?" / "put some personality into the difficulty levels (for their labels)"
+  2026-11-04 · `done` · DESIGN.md → Rules (the Level card): Grab Bag, Sunday Stroll, Fair Fight, Pain Train
+
 - **The menus have music too, from the same audio as the game.** "we still have no music on like the title screen and stuff which is a little odd"
   2026-11-02 · `done` · DESIGN.md → Controls and UI (Music), `src/audio/page.ts`
 

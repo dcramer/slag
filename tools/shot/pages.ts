@@ -69,6 +69,27 @@ export const shots: Scenarios = {
     const over = await menuOverflow(page);
     if (over > 0) throw new Error(`rules card overflows by ${over}px`);
   },
+  async level() {
+    // The lobby's level dialog from its plate, then a theme and a difficulty chosen: the level behind it rebuilds. Fails if the card doesn't fit.
+    await open(`seed=${seed}`);
+    await step(5);
+    await page.mouse.click((250 / 768) * W, (28 / 432) * H);
+    await waitMenu(page, 'level', 5000);
+    // The dialog's picture is copied on the frame after it asks.
+    await step(2);
+    await snap(`level-${W}x${H}`);
+    const over = await menuOverflow(page);
+    if (over > 0) throw new Error(`level card overflows by ${over}px`);
+    // The choices go out as actions, which only the live loop's session applies (step drives the match alone).
+    await page.evaluate(() => (window as any).slagDebug.pause(false));
+    await pressMenu(page, 'theme:prev');
+    await page.waitForFunction(() => (window as any).slagDebug.match.level.theme.id === 'space', null, { timeout: 15_000 });
+    await pressMenu(page, 'difficulty:hard');
+    await page.waitForFunction(() => (window as any).slagDebug.match.rules.difficulty === 'hard', null, { timeout: 15_000 });
+    await page.waitForTimeout(400);
+    await page.evaluate(() => (window as any).slagDebug.pause(true));
+    await snap(`level-chosen-${W}x${H}`);
+  },
   async settings() {
     // Fails the run if a tab doesn't fit, or an input doesn't do what its prompt says.
     const tabOf = async (p: typeof page) => (await menuControls(p)).find((c) => c.id.startsWith('tab:') && c.on)?.id.slice(4);

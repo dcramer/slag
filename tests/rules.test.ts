@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Match } from '../src/game/match';
 import { DEFAULT_RULES, loadRules, type MatchRules, saveRules } from '../src/game/rules';
 import { rollKind } from '../src/gen/level/weather';
-import { applyAction, newNetState, sanitizeRules } from '../src/net/actions';
+import { applyAction, type NetAction, newNetState, sanitizeRules } from '../src/net/actions';
 import { cloneSnap, hashMatch, restoreMatch, snapshotMatch } from '../src/net/snapshot';
 import { NetSession } from '../src/net/session';
 import { LoopbackHub } from '../src/net/transport';
@@ -17,6 +17,7 @@ const CHANGED: MatchRules = {
   raceSeconds: 60,
   gravity: 'low',
   weather: false,
+  difficulty: 'hard',
   bloodRounds: 3,
   secretParts: true,
   parts: 'all',
@@ -111,7 +112,19 @@ describe('level-shaping rules in the lobby', () => {
         expect(m.rules[k], k).toBe(CHANGED[k]);
         return m.level !== before;
       });
-    expect(rebuilt.sort()).toEqual(['gravity', 'weather']);
+    expect(rebuilt.sort()).toEqual(['difficulty', 'gravity', 'weather']);
+  });
+
+  it('a difficulty rebuilds the level at it, and Varies gives the seed its own back', () => {
+    const m = new Match(4242);
+    const own = m.level;
+    for (const d of ['gentle', 'medium', 'hard'] as const) {
+      rulesAct(m, { ...m.rules, difficulty: d });
+      expect(m.level.profile?.difficulty).toBe(d);
+    }
+    rulesAct(m, { ...m.rules, difficulty: 'varies' });
+    expect(m.level.profile).toEqual(own.profile);
+    expect([...m.level.tiles]).toEqual([...own.tiles]);
   });
 
   it('survives a change to some other rule, without a rebuild', () => {
@@ -204,5 +217,66 @@ describe('level-shaping rules in the lobby', () => {
       for (const s of peers) if (s !== host) s.tick({});
     }
     for (const s of peers) expect(hashMatch(s.match)).toBe(hashMatch(host.match));
+  });
+});
+
+const levelAct = (m: Match, seed: number, theme: unknown) => applyAction(m, newNetState(), { t: 'level', seed, theme } as NetAction);
+
+describe('choosing the lobby level', () => {
+  it('builds the chosen seed in the chosen theme, and everyone readies again', () => {
+    const m = new Match(4242);
+    m.join('a:kb1');
+    m.players[0].ready = true;
+    levelAct(m, 777, 'glacier');
+    expect(m.seed).toBe(777);
+    expect(m.level.theme.id).toBe('glacier');
+    expect(m.players[0].ready).toBe(false);
+    // A chosen theme stays for the next level; none gives the seed its own.
+    m.pickLevel(778, m.themeOverride);
+    expect(m.level.theme.id).toBe('glacier');
+    levelAct(m, 777, null);
+    expect(m.themeOverride).toBeUndefined();
+    expect(m.level.theme.id).toBe(new Match(777).level.theme.id);
+  });
+
+  it('ignores a theme this build lacks, a seed that is not one, and any change once the match is under way', () => {
+    const m = new Match(4242);
+    const level = m.level;
+    levelAct(m, 777, 'atlantis');
+    levelAct(m, 1.5, null);
+    expect(m.level).toBe(level);
+    m.join('a:kb1');
+    m.startMatch();
+    const playing = m.level;
+    levelAct(m, 777, 'farm');
+    expect(m.level).toBe(playing);
+  });
+
+  it('is the host’s: a guest’s choice never reaches the room, the host’s reaches everyone', () => {
+    const TICK = 1000 / 60;
+    const hub = new LoopbackHub({ latency: 40, jitter: 10, seed: 6 });
+    const peers = ['aaaa', 'bbbb'].map((id) => new NetSession({ transport: hub.transport(id), match: new Match(4242), now: () => hub.now }));
+    const run = (n: number) => {
+      for (let i = 0; i < n; i++) {
+        hub.advance(TICK);
+        for (const s of peers) {
+          s.tick({});
+          s.drainEvents();
+        }
+      }
+    };
+    run(60);
+    const host = peers.find((s) => s.isHost)!;
+    const guest = peers.find((s) => !s.isHost)!;
+    guest.act({ t: 'level', seed: 999, theme: 'space' });
+    run(40);
+    for (const s of peers) expect(s.match.seed).toBe(4242);
+    host.act({ t: 'level', seed: 999, theme: 'space' });
+    run(40);
+    for (const s of peers) {
+      expect(s.match.seed).toBe(999);
+      expect(s.match.level.theme.id).toBe('space');
+      expect([...s.match.level.tiles]).toEqual([...host.match.level.tiles]);
+    }
   });
 });

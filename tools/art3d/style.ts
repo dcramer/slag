@@ -488,6 +488,27 @@ export const BRIEFS: Record<string, Brief> = {
     // stud broke the outline too and readers saw a porcupine.
     worn: "a big pale-blue paper party crown (#9cc8e8) with five tall zigzag points sits crooked on his head between his horns, one of its points torn and folded down; one of the shell's spikes is bent over sideways; a big square grey riveted patch plate (#9aa0a8) is bolted onto the shell; one horn is chipped off short at the tip.",
   },
+  horse: {
+    // The nod, each part of the read at race size: the long head, a muzzle as long as the body is tall, tilted
+    // down like a real horse's (a horse in profile, and what tells it from the goose's S-neck and the dino's
+    // level snout, which has no ears); two upright ears; standing upright on two legs like a person (the party
+    // game's horse, not a farm horse); the goofy buck-toothed grin (its personality); a dark mane flat down the
+    // neck and a narrow tail hanging behind (a horse, not a donkey or a dog).
+    // Ours, and the joke: it is a cheap horse costume. The head is a size too big, a zip runs up its belly to the
+    // scarf, stuck open at the bottom, and it has lost its voice: a thick knitted scarf wound round its throat.
+    // A shaggy mane, tall ears and a bushy or knotted tail read as a fox (Fox McCloud) or the bandicoot in the
+    // blind reads (2026-11-04), so the mane lies flat, the ears are small and the head is pushed long and tilted
+    // down. Over the prompt's length the image model drops the scarf, so the scarf comes in the wear edit, and
+    // the tilt and the narrow tail in a second edit (art/sprites/horse/design.prompt.txt).
+    // The palette is neutral (Decisions 4): the coat in the player's colour, the scarf a dark of it; the
+    // muzzle, mane, hooves and zip stay their own.
+    design:
+      'The character: a goofy cartoon horse standing upright on two legs like a person, and it is clearly a cheap horse costume. ' +
+      'Its enormous long horse head, a size too big for the costume, is as long as its whole body is tall and is its biggest shape, held out in front of it like a brick: a long straight muzzle sticking far out past its chest, ending in a wide, rounded pale cream nose (#e6cfae) with two big round nostrils and a wide goofy grin of big flat buck teeth; two big round eyes high at the back of the head; two small neat pointed ears standing straight up side by side. ' +
+      'A smooth dark brown mane (#4a3428) lies flat down the back of its neck in one long sweep, no tuft on top of the head, and a long smooth dark brown tail hangs straight down behind it. ' +
+      'The costume body is a baggy onesie (#9a6a40), the same colour as the head, with big round dark brown hooves for hands and feet.',
+    worn: 'a thick knitted red scarf (#c9473f) is wound round its throat under the head, one end hanging down its chest; a big silver zip runs straight up the middle of its belly from between its legs to the scarf, stuck open at the bottom, its two sides parted in a V over the lower belly; a big square patch of grey cloth is sewn on one knee with big stitches; the end of the tail is frayed into ragged strands.',
+  },
 };
 
 function brief(kind: string): Brief {

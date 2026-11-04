@@ -927,9 +927,9 @@ export class NetSession {
     }
   }
 
-  /** Guests may only act for their own devices; rules and seating belong to the host. */
+  /** Guests may only act for their own devices; rules, the level and seating belong to the host. */
   private allowed(from: string, a: NetAction): boolean {
-    if (a.t === 'rules' || a.t === 'join' || a.t === 'salt' || a.t === 'kick' || a.t === 'adopt') return false;
+    if (a.t === 'rules' || a.t === 'level' || a.t === 'join' || a.t === 'salt' || a.t === 'kick' || a.t === 'adopt') return false;
     return peerOf(a.dev) === from;
   }
 
