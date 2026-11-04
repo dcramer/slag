@@ -31,9 +31,15 @@ export const kind: FlatKind = {
     thin: ['tin', 'eartape'],
     feet: ['fur'],
     loose: ['tin', 'eartape'],
-    min: { dark: 0.12, cheek: 0.3, plug: 0.8 },
+    // The cord seen behind the arm at the tail's root (0.3 to 1.5 world px²) was a loose brown speck: under 1.6
+    // a dark goes into what's round it. The tail's tip (1.7 and up) and the ear tips stay; the eyes come from the map.
+    // The far cheek in both cheers is squeezed against the raised arm, a red sliver mid-face that read as a rash.
+    // It's the smallest far cheek (traced, cheer's under 0.85 world px² and cheer2's 0.86, the wall's 0.875,
+    // the rest 0.9 and up): under 0.87 a cheek goes into the fur, and so does air-2's tongue. A close cut, so
+    // check every pose's part count when a drawing or a family changes.
+    min: { dark: 1.6, cheek: 0.87, plug: 0.8 },
   },
-  eyes: { role: 'dark', area: [0.06, 0.7], gap: [2, 5.5], specks: { dark: 1.2, cheek: 0.35 } },
+  eyes: { role: 'dark', area: [0.06, 0.85], gap: [2, 5.5], specks: { dark: 1.2, cheek: 0.35 }, from: 'map' },
   // Every drawing's cord belt is grown 7 px into the fur: half a world px wide, under the tracer's tolerance, it
   // traced as a ragged wedge with drips, a mud smear.
   recolour: { from: 'dark', to: 'cord', below: 2.5, lying: [0.4, -4] },

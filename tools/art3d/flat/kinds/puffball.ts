@@ -20,10 +20,11 @@ export const kind: FlatKind = {
       ['pink', [252, 190, 206]],
       ['sole', [211, 168, 180]],
       ['sole', [222, 186, 186]],
-      // The squeaker valve's cream and its shade: as the eyes' glint, white went to the ink, and the valve
-      // was a dark knot on the crown.
-      ['white', [244, 239, 229]],
-      ['white', [218, 201, 195]],
+      // The squeaker valve's cream and its shade, folded into the ball: as the eyes' glint, white went to the
+      // ink, and the valve was a dark knot on the crown; in a role of its own, joined to the rim by its thin
+      // stem, it traced as a stray outlined blob beside the head. As the ball it's the one bump on its outline.
+      ['pink', [244, 239, 229]],
+      ['pink', [218, 201, 195]],
       ['dark', [71, 20, 40]],
       ['dark', [33, 4, 15]],
       ['dark', [255, 255, 255]],
@@ -34,7 +35,9 @@ export const kind: FlatKind = {
     stroke: 99,
     feet: ['red'],
     // The tape cross's ink left four specks round its eye (0.25 to 0.55 world px²): a second face at play size.
-    min: { dark: 0.6, sole: 0.4 },
+    // The open mouth's tongue (0.8 to 1.2 world px², the feet 18 and up) is red too: kept, it was a speck of the
+    // feet's colourway inside the mouth.
+    min: { dark: 0.6, sole: 0.4, red: 2 },
   },
   roles: [
     { name: 'pink', color: '#f2a0bc', slot: 'player' },
