@@ -8,8 +8,9 @@ import type { FlatKind } from '../kinds';
  * flaps, failed the blind read as a shaggy, hunched ape (2026-11-04); this one is side on.
  * Poses: three to a 16:9 image with the design as the reference, cut apart (`body` sizes them alike); cheer2 on
  * its own. In death the legs are lightened to a grey in the drawing: drawn, they were the tails' slate. Every
- * drawing with the slot has it painted flat skin with two pupils at fixed places across it: drawn, the pupils
- * touched the slot's dark cut end and traced as one blob, and the face kit found no pair.
+ * drawing with the slot has it painted white with two pupils at fixed places across it, and cut through
+ * (`holes`), so the box shows a slit in silhouette: without it, the blind read saw a meat cube. Drawn, the
+ * pupils touched the slot's dark cut end and traced as one blob, and the face kit found no pair.
  */
 export const kind: FlatKind = {
   body: 216,
@@ -66,6 +67,9 @@ export const kind: FlatKind = {
     stroke: 3.6,
     // No corner cutting: smoothed, the box traced as a rounded slab, and read as a bean.
     smooth: 0,
+    // The eye slot, painted white in every drawing with its two pupils, cut through: a box with a slit shows in
+    // silhouette. Over the stripes' size.
+    holes: 2,
     feet: ['boot'],
     loose: ['tail', 'stripe'],
     min: { dark: 0.12 },
