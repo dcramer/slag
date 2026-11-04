@@ -259,14 +259,12 @@ export const BRIEFS: Record<string, Brief> = {
   },
   hunter: {
     // The nod, each part of the read at race size: the two huge round shoulder pads (the silhouette: nobody
-    // else in the cast is wider at the top than anywhere else), the orange suit with red shoulders (the
-    // colour block from across a room), the round helmet with its green visor (the face: no face shows), and
-    // the arm cannon held out front (what the hunter does; the ball tuck on a long fall says the rest).
-    // Bigger, broader and orange where the robot boy is small, blue and has ear discs; no cap or nose to
-    // rhyme with the plumber.
-    // Ours, and the joke: a power suit welded together in the scrapyard. The cannon is a length of grey
-    // drainpipe with an elbow joint, the shoulder pads are two red-and-white fishing buoys, the torso a
-    // cut-down water heater tank, the visor green bottle glass.
+    // else in the cast is wider at the top than anywhere else), the tall long-legged build, the helmet with
+    // its visor band (the face: no face shows), and the arm cannon held out front (what the hunter does; the
+    // ball tuck on a long fall says the rest). Tall, broad-shouldered and long-legged where the robot boy is
+    // small, big-booted and has ear discs; no cap or nose to rhyme with the plumber.
+    // Ours, and the joke: a power suit welded together in the scrapyard. The cannon is a length of
+    // drainpipe, the shoulder pads are two banded fishing buoys, the torso a cut-down water heater tank.
     // The first design (2026-11-03) failed the blind read: the buoys sat level with the helmet and the dent
     // lobed its crown, so shoulders and head read as one lobed cap (a mushroom, an afro), and the cannon
     // across the chest was lost in the body. So the buoys hang low and wide at the ends of a shoulder plate,
@@ -274,36 +272,59 @@ export const BRIEFS: Record<string, Brief> = {
     // straight and level, clear of the body. The pick came back in a grey suit and was recoloured orange in
     // an edit (art/sprites/hunter/recolour.prompt.txt) before the wear edit, and after it both boots were
     // made grey (boots.prompt.txt): the poses kept drawing two grey boots, and one orange one flickered.
+    // The second design passed one blind reader and lost the other to the robot boy (2026-11-04): a round
+    // helmet over a cannon on short legs and big boots is the robot boy's own silhouette. So the third is
+    // tall and long-legged, the legs half its height and no big boots (those are the robot boy's), the buoys
+    // bigger than the helmet, and the visor a wide band across the helmet's front. That one's cannon, carried
+    // across the waist, barely left the outline and the buoys and helmet read as one lobed head ("Rayman-
+    // like"), so the cannon is the forearm held straight out from the shoulder and the legs are thick. The
+    // pick came back rusty and was recoloured (art/sprites/hunter/recolour.prompt.txt). Drawn colours only part
+    // the roles: the suit, its buoys and its cannon all wear the player's colour in tones (Decisions 4), and
+    // the visor is a dark glass.
     design:
-      'The character: a stocky armored bounty hunter in a power suit welded together from scrapyard junk, no face showing. ' +
-      'Its front arm is a long straight grey drainpipe (#8e9298), held out level to the right as an arm cannon, clear of the body, its open round end dark inside. ' +
-      'Its shoulder pads are two huge round fishing buoys, red (#c9473f) with one white band (#f4efe6) each, the widest part of the figure, ' +
-      'mounted far apart at the ends of a wide shoulder plate, low, their tops no higher than the visor. ' +
-      'Between them stands a smaller round orange helmet (#d9661f) with a wide green bottle-glass visor (#2f7a3c), its whole dome clear above the buoys. ' +
-      'The torso is a cut-down orange water heater tank, a short round can, two small green lights on its chest; a narrow dark-grey waist; short chunky orange legs and big chunky orange boots.',
-    worn: 'a wide band of grey tape is wrapped round the drainpipe cannon near its root; the water heater torso has a big dent in its side and a square riveted patch plate; one boot is a mismatched grey replacement, bigger than the other. The helmet and the buoys keep their smooth round outlines.',
+      'The character: a tall, long-legged armored bounty hunter in a power suit welded together from scrapyard junk, no face showing, standing tall and upright, about five helmets tall. ' +
+      'Its near arm is stretched straight out forward from the shoulder at chest height, and over its whole forearm, like a sleeve, is a long thick straight grey drainpipe (#8e9298) as an arm cannon, level, its open round end dark inside, reaching far out to the right of the body, as long as the body is wide, none of it across the chest, no hand holding it. ' +
+      'Its shoulder pads are two huge round fishing buoys, red (#c9473f) with one white band (#f4efe6) each, each bigger than the helmet, the widest part of the figure by far, ' +
+      'mounted far apart at the ends of a wide shoulder plate, their tops level with the helmet’s chin. ' +
+      'Between them, high and clear above them, a small orange helmet (#d9661f), a little taller than wide, with a wide dark smoky-glass visor (#34404a) as a band right across its front. ' +
+      'The torso is a cut-down orange water heater tank over a narrow dark-grey waist (#4a4a52). ' +
+      'Long armoured orange legs, as long as the rest of the figure, broad in the thigh and the shin, with big round dark-grey knee pads, ending in small pointed orange feet: no big boots.',
+    worn: 'a wide band of grey tape is wrapped round the drainpipe cannon near its root; the orange chest plate has a big dent in its side and a square riveted orange patch plate; the drainpipe’s open end is dented into a slight oval. The helmet and the buoys keep their smooth round outlines.',
+  },
+  robot: {
+    // The nod, each part of the read at race size: the round helmet with its round ear discs (the head nobody
+    // else in the cast has, and the face showing in its opening); the two blues, a dark helmet, gloves and
+    // boots and a light suit (the robot from across a room: here the player's colour and a light tone of it);
+    // the big boots on a small body (the proportions, a kid's); the arm cannon held out (what he does).
+    // Small and round-headed where the hunter is big, wide at the shoulders and visored; a smooth round
+    // helmet where the speedster's quills sweep back.
+    // Ours, and the joke: a robot boy from the parts bin. The cannon is a tin can with both ends cut out and
+    // its paper label still on, a big battery is strapped to his back, and one boot was repainted a shade off.
+    design:
+      'The character: a small boyish robot kid, about half of him one big round helmet. His signature prop: his front forearm ends in an arm cannon made from a tin food can (#c9ccd2), a short fat silver cylinder with ribbed rims, both ends cut out so it is open and dark inside, held out level in front of him at chest height, with a paper label (#f4efe6) round its middle and one wide red band (#d8382f) on the label. ' +
+      'On his head a big smooth round blue helmet (#2a5fc4), a ball wider than his body, with one light-blue stripe (#4fb8ec) running from the brow back over the crown and two round flat ear discs on its sides, and a big round opening at the front showing a cheerful peach face (#f3d0aa) with two big eyes. ' +
+      'A small light-blue suit (#4fb8ec), narrow, with no shoulders to speak of and short arms; a blue mitten glove (#2a5fc4) on the free hand; huge chunky round blue boots (#2a5fc4), the biggest shapes below the helmet. ' +
+      'Strapped upright on his back, a big dark battery (#2a2a30), a fat cylinder with a brass band (#c99a4a) round it and a little terminal stud on top, peeking out behind him under the helmet.',
+    worn: 'a big round dent is knocked into the top of the helmet, flattening its crown at the back; the front rim of the tin can is crumpled in and its paper label torn, one flap of it hanging loose; the far boot has been repainted a lighter blue and is a little bigger than the near one; the battery is bound on with a wide band of grey tape. The face, the eyes and the ear discs stay as they are.',
   },
   engineer: {
-    // The nod, each part of the read at race size: the huge wrench (the read in profile, so it leads the
-    // brief), the tall round hard hat with the goggles' band round it (the head shape and the trade), the
-    // broad square build and clean square jaw (the gruff builder), and the work shirt over khakis (the
-    // colour block, the shirt in the player's colour).
-    // Ours, and the joke: a backyard engineer. The hard hat is a deep upturned yellow mixing bowl, the
-    // goggles are blue swimming goggles, and the wrench is one giant spanner, battered.
-    // The silhouette is three shapes the plumber hasn't got (blind reads, 2026-11-03): a tall dome with a
-    // short rim all round, since a wide brim or a bill on a short man read as the plumber's rival; a broad,
-    // taller build; and one big open jaw up beside his shoulder, clear of the hat, the spanner gripped by its
-    // end at his hip, and a huge square lantern jaw jutting forward (the face's read; a narrow chin under
-    // the hat was a small peach block at play size). Carried up behind his head it read as spikes off the hat, a second jaw down by his
-    // boots read as a curled tail, and stubble read as a jagged mustache.
-    // Fresh designs from this brief put the goggles over his eyes (the original's look), so the pick is an
-    // earlier design reshaped in edits (art/sprites/engineer/design.prompt.txt).
+    // The nod, each part of the read at race size: the kit, carried low and clear of the body (the read in
+    // silhouette, so it leads the brief): a toolbox hanging by its handle from one hand and the wrench held low
+    // in the other, its open jaw out in front; the round hard hat with the goggles strapped on it (the head
+    // shape and the trade); the broad square build and the square jaw (the gruff builder); the work shirt
+    // over khakis (the colour block).
+    // Ours, and the joke: a backyard engineer. The hard hat is a battered bowl of a helmet, the goggles are
+    // swimming goggles, the wrench one giant spanner, the toolbox a dented green tin one.
+    // Blind reads (2026-11-03 and 11-04): carried up by his shoulder, the spanner's jaw read as ears or as spikes
+    // off the hat, and with no toolbox nobody named the homage ("a mechanic or engineer, but I can't name the
+    // source"). A wide brim on a short man read as the plumber's rival. With the toolbox in one hand and the
+    // spanner low in the other, a reader named him. The pick is an earlier design reshaped in edits
+    // (art/sprites/engineer/design.prompt.txt).
     design:
-      'The character: a tall, broad, square-shouldered backyard handyman, not short: a wide chest, thick arms, long thick legs and big boots. ' +
-      'His huge signature tool is one grey adjustable spanner (#8e8a84) with a single big open C jaw, gripped by the end of its handle in his gloved hand at his hip and slanting up past his shoulder, the jaw up beside his shoulder and clear of his hat; nothing of it below his hip. ' +
-      'On his head, as a hard hat, a deep yellow mixing bowl (#e9b730) worn upside down: a tall round dome, its rolled rim a short even brim all the way round; a dark goggle strap (#3a4246) runs right round the dome as a band, two round light-blue swimming-goggle lenses (#5fb0c8) on its front. ' +
-      'A huge clean-shaven square lantern jaw, wider than his neck and as wide as the dome, jutting forward past his face, flat along the bottom with hard corners; peach skin (#efc9a4), two small black eyes, no stubble, no mustache. A red work shirt (#b8433c), khaki trousers (#8c7a58), a brown belt (#6b4a35), tan leather work gloves (#a8794a), chunky brown boots.',
-    worn: "a big dent is knocked into the side of the yellow dome; a chip is broken out of the bowl's rim at the back; the spanner's handle is snapped in the middle and bound with a big wad of grey tape; one trouser knee is torn open in a big ragged hole.",
+      'The character: a broad, square-shouldered backyard handyman carrying his kit low at his sides, clear of his body: in one hand a big green metal toolbox (#3f7f5a) hanging by its arched handle beside his knee, and in his gloved other hand one giant grey spanner (#8e8a84) held low, slanting forward and down, its single big open C jaw out in front of his knees. Nothing raised above his shoulders and nothing beside his head. ' +
+      'On his head a round yellow hard hat (#e9b730) with a short rim all round; a dark goggle strap (#3a4246) runs round it as a band, two round swimming-goggle lenses on its front. ' +
+      'A huge clean-shaven square lantern jaw, wider than his neck, jutting forward, flat along the bottom with hard corners; peach skin (#efc9a4), two small black eyes. A red work shirt (#b8433c), khaki trousers (#8c7a58), a brown belt, tan leather work gloves (#a8794a), chunky brown boots.',
+    worn: "a big dent is knocked into the side of the hard hat; the toolbox's lid is dented; the spanner is bent a little; one trouser knee is torn open in a big ragged hole.",
   },
   goose: {
     // The nod, each part of the read at race size: the S of a neck (a goose, not a duck or a chicken), white
@@ -337,6 +358,25 @@ export const BRIEFS: Record<string, Brief> = {
       'From a round hand-hole high on the back half of the box, the two long tails of his bandana stream straight back behind it, as long as the box is wide: dark navy cloth (#3a4a5c), two broad white stripes (#f4efe6) across each near its tip, like a tea towel.',
     worn: 'a round hand-hole is torn ragged high on the back half of the box, and out of it the two long tails of his bandana stream straight back behind the box, each as long as the box is wide: dark navy cloth (#3a4a5c) with two broad white stripes across each near its tip, like a tea towel, one tail frayed at its end; two big crossed strips of pale packing tape (#e6d6a6) are stuck over a split in the lower back corner of the box; a big printed arrow on the back half of the box, below the hand-hole, points down, in a darker brown. The box keeps its crisp straight edges and square corners, and the eye slot and the eyes stay as they are.',
   },
+  cuptoon: {
+    // The nod, each part of the read at race size: the mug for a head with its loop handle (the one head
+    // nobody else in the cast has, and the whole silhouette: a squat cylinder wider than the body under it);
+    // the straw standing up out of it (it breaks the top of the outline, where every other kind is round or
+    // capped); the black rubber-hose limbs, big white gloves and big round shoes (the 1930s cartoon read,
+    // which is half the joke); the high-waisted shorts (the toon costume, and the costume block in the
+    // player's colour).
+    // Ours, and the joke: a camping mug, not fine china. White enamel with a thick rim, a chip knocked out of
+    // the rim at the back, a paper straw gone soggy and flopped over, and a tea-bag's string hung over the rim
+    // with its paper tag dangling by the handle.
+    design:
+      'The character: a small 1930s rubber-hose cartoon toon whose whole head is a big white enamel camping mug (#f4efe6), a squat round cylinder wider than it is tall and wider than the body under it, ' +
+      'with a thick blue enamel rim (#3a5a8c) round its top and one big round loop handle sticking out from the back of the mug; its open top is tipped toward us a little so dark brown tea (#8a5a3a) shows inside the rim. ' +
+      'Standing straight up out of the tea, a tall red-and-white striped paper straw (#d8382f), as tall as the mug. ' +
+      'On the front of the mug, two big black pie-cut cartoon eyes and a small round red nose, a wide happy smile. ' +
+      'Under the mug a tiny body: big baggy high-waisted red shorts (#c9473f), thin black rubber-hose arms and legs that bend in smooth curves with no elbows or knees, ' +
+      'big puffy white cartoon gloves (#fbf6ee) and big round brown cartoon shoes (#6b4a35).',
+    worn: 'a big chip is broken out of the blue rim at the back of the mug, a jagged notch in its outline, and a black chip of enamel is knocked off the side of the mug just under the handle; the paper straw has gone soggy and flops over at the top in a big droop; a tea-bag string hangs over the back of the rim with a big yellow paper tag (#e8c24a) dangling from it beside the handle; the sole of one shoe has come loose and flaps open at the toe. The front of the mug and the face stay clean.',
+  },
   jelly: {
     // The nod, each part of the read at race size: the green dome (the whole silhouette, and the only see-through
     // body in the cast: drawn flat, a pale lime); the three red nuclei inside it (they make it this parasite,
@@ -345,15 +385,87 @@ export const BRIEFS: Record<string, Brief> = {
     // Ours, and the joke: a lime jelly dessert that got ideas. The dome is turned out of a fluted jelly mould,
     // the nuclei are three glacé cherries set in it, the fangs are sugared almonds, and a paper doily is stuck
     // to its underside, its lace edge peeking out under the rim.
-    // The fangs are long, few and splayed: short and close under the dome, the silhouette read as a ghost's skirt
-    // (blind read, 2026-11-03). The shipped design is the worn one edited twice (art/sprites/jelly/fangs.prompt.txt,
-    // then cherries.prompt.txt, so the cherries stand apart and trace as three).
+    // The fangs are the parasite's mandibles: evenly along the rim the silhouette read as a ghost's hem (blind
+    // read, 2026-11-03), long curling hooks as an octopus and short hooks at the rim's edge as an ape's arms
+    // (2026-11-04); two big ones under the middle curving in to a pincer, and a small one each side, it reads. The
+    // shipped design is the worn one edited three times (art/sprites/jelly/fangs.prompt.txt, cherries.prompt.txt so
+    // the cherries stand apart and trace as three, then mandibles.prompt.txt on mandibles-ref.png, the design with
+    // its hooks whitened out), then touched by hand (tools/art3d/flat/kinds/jelly.ts → clips).
     design:
       'The character: a wobbly lime-green jelly dessert (#9ee38a) turned out of a fluted mould, a tall rounded dome with soft wide ribs down its sides, floating in the air. It has no face, no eyes, no mouth, no arms and no legs. ' +
       'Inside it, seen through the jelly, three big round glossy red glacé cherries (#c9473f) set in a triangle, each as wide as a quarter of the dome. ' +
-      'A pale mint-white rim (#d8f2c8) flaring out round the bottom of the dome like a bell. Under it, four huge ivory sugared-almond fangs (#efe6d2), curved hooks as long as the dome is tall, spread far apart with open space between them: the outer two sweep out past the rim, the inner two hang down, every tip curling in. ' +
+      'A pale mint-white rim (#d8f2c8) flaring out round the bottom of the dome like a bell. Under it, four curved ivory sugared-almond fangs (#efe6d2), set in from the edge of the rim: two big ones, thick at the root and sharply pointed, half as long as the dome is tall, hang from under the middle and curve in until their tips almost cross, like a pincer; a smaller one each side curves in the same way. ' +
       'A white paper doily (#fbf6ee) with a scalloped lace edge is stuck flat to its underside.',
     worn: 'the dome has slumped a little to one side as if melting, and one fat drip of jelly runs down its side and hangs below the rim; a big round spoonful is scooped out of the top of the dome at the back, a clear dent in its outline; one fang is snapped off short; the doily is torn and one ragged flap of it hangs down.',
+  },
+  miner: {
+    // The nod, each part of the read at race size: the cube head as wide as the body (the only square head in
+    // games anyone knows, and the whole silhouette); every part a box with unbending limbs (the shape language,
+    // not a costume: no curve anywhere, which no other kind has); the shirt over darker trousers (the outfit's
+    // colour block, the shirt in the player's colour and the trousers a dark of it); the pickaxe (what he
+    // does, and it breaks the outline above the shoulder). Arms and a head on a body, never one box on legs:
+    // that's the sneaking soldier.
+    // Ours, and the joke: a wooden toy knock-off. He's carved from wooden blocks, bare wood for skin, the
+    // paint chipped at the corners, a dowel peg at each joint, and his pickaxe is a painted wooden toy.
+    design:
+      'The character: a stiff little toy man made entirely of wooden blocks, every part a box with flat faces and hard square corners, no curves anywhere. ' +
+      'He grips a big chunky toy pickaxe in his front hand, its long square wooden handle (#8a5c34) slanting up past his shoulder and its blocky grey head (#8e9298) a flat wide pointed T clear above his shoulder, beside his head. ' +
+      'A huge cube head, as wide as his body and a third of his height, seen at three-quarters so two of its square faces show: a flat face of bare pale wood (#c9946a), two square eyes, each a white square with a blue-violet square pupil, and a flat cap of square-cut dark-brown hair (#4a3020) over the top and back of the cube. ' +
+      'A rectangular box torso in a painted cyan T-shirt (#3fb0b0), straight square box arms with cyan sleeves and bare-wood block hands, two straight square box legs in dark-blue trousers (#2c3a80), flat grey block shoes (#6b6b72). ' +
+      'A round wooden dowel peg shows at each shoulder.',
+    worn: "one top back corner of the cube head is broken off, a big square notch out of its outline; the cyan paint has flaked off the bottom corner of the shirt, a big patch of bare pale wood showing there; the pickaxe's wooden handle is cracked and bound with a thick wad of grey tape; one point of the pickaxe head is snapped off short.",
+  },
+  merc: {
+    // The nod, each part of the read at race size: the blade bigger than he is (the read: no one else in the
+    // cast carries one, and it leads the brief), always in his hand, never on his back (the plumber's plunger
+    // owns the back); the crown of big blond spikes pointing up (the head shape, sharper and taller than the
+    // speedster's swept quills); the one big shoulder piece over a slim, dark-cut outfit (the brooding
+    // mercenary, not a knight or a hero in a tunic).
+    // Ours, and the joke: the legendary blade is a giant serrated bread knife with a riveted wooden handle and
+    // a rounded tip, no guard; the shoulder piece is a car hubcap; the spikes are singed at the tips.
+    // The palette is neutral (Decisions 4): the top in the player's colour, the trousers a dark of it; hair,
+    // skin, steel, wood and leather stay their own.
+    design:
+      'The character: a slim, brooding young swordsman gripping a giant serrated bread knife as tall as he is: one broad, flat, straight steel blade (#c9ccd2) as wide as his head, a row of big saw teeth along its front edge, a rounded tip, no guard, on a chunky wooden handle (#7a5232) with two rivets. ' +
+      'He holds it by the handle in one hand down at his side, the blade standing upright beside him with its tip resting on the ground. ' +
+      'On his head a huge crown of big spiky blond hair (#f0d470), five thick spikes pointing up and back, the tallest part of him. Peach skin (#f0cfa8), two big eyes, a stern mouth. ' +
+      'A sleeveless knit top (#4a5ab0), baggy trousers in a much darker shade of the same blue (#283266), two brown belts (#6b4a35) crossed at the hip, heavy brown boots. On one shoulder a single big round shoulder piece: a grey car hubcap (#9aa0a8).',
+    worn: 'the tip of every hair spike is singed black; the hubcap has a big dent knocked into it and a crack across it; two teeth are snapped out of the middle of the knife edge, leaving a big notch; one trouser leg is torn off ragged at the shin.',
+  },
+  ape: {
+    // The nod, each part of the read at race size: the hunched gorilla shape with arms longer than its legs
+    // and huge shoulders over a small low head (the brute, from across the screen, and the line between him
+    // and the upright, shelled turtle king); the necktie on the bare chest (the one thing that makes it this
+    // ape and not any ape); the pale face and muzzle jutting forward (the cartoon face).
+    // Ours, and the joke: a foundry barrel-hauler on his lunch break. The tie is a clip-on worn crooked on a
+    // bare chest, his knuckles are wrapped in grey duct tape, and a banana is tucked behind one ear like a pencil.
+    // The palette is neutral (Decisions 4): the fur in the player's colour, the tie a dark of it; face, chest,
+    // tape and clip stay their own. Drawn here in the roster's browns and red so the roles trace apart.
+    design:
+      'The character: a big hunched cartoon gorilla, a brute: huge round shoulders and a barrel chest, very long thick arms, longer than its short bowed legs, hanging down so its two huge fists rest on their knuckles on the ground beside its feet. ' +
+      'A small head set low and forward between the shoulders, a heavy brow, a big protruding muzzle. ' +
+      'Brown fur (#7a4e2c) all over; a pale tan (#e2b98a) face, muzzle and bare chest. ' +
+      'On the bare chest a red clip-on necktie (#d03a30), short and wide, worn crooked, with a grey clip (#c9ccd2). ' +
+      'Both huge fists wrapped in grey duct tape (#9aa0a8). A yellow banana (#f2d04a) tucked behind one ear like a pencil. Two small black eyes under the brow.',
+    worn: 'the necktie hangs crooked, twisted to one side, its tip torn off ragged; on the front fist the grey tape has come loose and one long strip of it hangs down; the banana is bent in the middle and half peeled, one flap of peel hanging down behind the ear.',
+  },
+  dino: {
+    // The nod, each part of the read at race size: the big round snout well out in front (the profile, and
+    // the first shape anyone names), the eyes high on top of the head (the face from the side), the saddle on
+    // its back (a mount waiting for a hero, without the hero), the short tail and big boots on an upright
+    // body (a dinosaur that walks like a person), and green with a white belly (drawn green so the map keeps
+    // the parts apart; the body is the player's colour, the spikes and boots tones of it: Decisions 4).
+    // Ours, and the joke: a hand-me-down mount. The saddle is a black bicycle seat strapped on with a belt,
+    // its chrome stem sticking out behind; the boots are rubber wellies; it carries its own spotted egg about
+    // in a carrier bag.
+    // The tail is long and the seat low (blind read, 2026-11-04): with a short tail and the seat up behind the head,
+    // the head and snout read as a cap and its bill. The shipped design reached that in an edit of the worn one
+    // (art/sprites/dino/design.prompt.txt); the brief asks for it outright.
+    design:
+      "The character: a cheerful upright green dinosaur with a black bicycle seat (#3a3a3e) strapped low and flat on the middle of its back as a saddle by a brown belt (#6b4a35) round its belly, the seat's chrome stem (#c9ccd2) poking out down and back under it. " +
+      'A huge round bulbous snout sticking well out in front of its face, as big as the rest of its head; two big eyes set high on top of the head; a big round white belly and white cheeks (#f6f2e8); green skin (#4cbf4a); three round orange spikes (#e8853a) down the back of its head; a long thick tail sticking straight out behind it level with its hips. ' +
+      'Big red rubber wellington boots (#d8442f) to the knee, short thick arms. In one hand it carries a pale grey plastic carrier bag (#c9c6bd) with a big white egg with green spots poking out of the top.',
+    worn: 'the bicycle seat sits crooked, its cover torn open at the back in a big ragged flap; its chrome stem is bent; one of the head spikes is snapped off short; the top of one wellington boot is folded down; the carrier bag has a big torn hole in its side.',
   },
 };
 

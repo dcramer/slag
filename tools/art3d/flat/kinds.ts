@@ -74,6 +74,11 @@ export interface FlatKind {
     fringe?: number;
     /** The shortest interior line kept as a stroke, world px (default 1.4). */
     stroke?: number;
+    /**
+     * Rounds of corner cutting on every traced outline (default 2): each cuts a quarter off both edges at a
+     * corner, which makes a pixel step one confident curve and a cube a ball. 0 for a kind drawn in boxes.
+     */
+    smooth?: number;
     /** Image px: how thick the ink must be to stay a fill and not a line (default 9; a thin iron poker needs less). */
     ink?: number;
     /** A drawn hole cut out of the figure: each patch of `role` over `area` world px² open to the outside. */

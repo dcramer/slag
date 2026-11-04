@@ -55,10 +55,11 @@ export const kind: FlatKind = {
   roles: [
     { name: 'tin', color: '#a9afb7' },
     { name: 'fur', color: '#f2c62a', slot: 'player' },
-    // A colourway is the cord and its plug together (VARIETY.palette). Never a white plug: on the fur it read
-    // as a pale hole at the groin, not a pendant.
-    { name: 'plug', color: '#7c848d', alts: ['#d9622b', '#7c848d'], vary: 6 },
-    { name: 'cord', color: '#7a5236', alts: ['#4b5560', '#9a3b2a'], vary: 6 },
+    // A colourway is the cord and its plug together (VARIETY.palette), in neutrals: a brown flex on a steel plug,
+    // a slate one on a pale grey plug, a taupe one on black plastic. Never a white plug: on the fur it read as a
+    // pale hole at the groin, not a pendant.
+    { name: 'plug', color: '#7c848d', alts: ['#b3aa9b', '#5a5e66'], vary: 6 },
+    { name: 'cord', color: '#7a5236', alts: ['#4b5560', '#857a6e'], vary: 6 },
     { name: 'cheek', color: '#e0473b' },
     { name: 'dark', color: '#2a1f1a' },
     // Wear, in tones of the fur it's on: rubbed pale, and burnt.

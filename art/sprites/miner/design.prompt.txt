@@ -1,0 +1,10 @@
+How design.png and the poses were made (2026-11-04).
+
+1. Design (`node tools/art3d/style.ts design miner`; 4 drawn, the third picked: the clearest silhouette, the cube head, the pickaxe held clear in front and the arms and legs apart. All four came back in a green shirt, which is fine: the shirt is the player's colour. The third's legs were bare wood, so the wear edit paints the trousers on.)
+
+2. Wear (2 drawn from the third, the first picked: the second filled its crown's notch with wood):
+The same character exactly as in the reference image: the same pose, design, proportions, line and flat white background. Change only this, and make each change big and obvious: his two block legs are painted as dark-blue trousers (#2c3a80) from the shirt's hem down, and his feet are flat grey block shoes (#6b6b72); one top back corner of the cube head is broken off, a big square notch out of its outline; the green paint has flaked off the bottom front corner of the shirt, a big patch of bare pale wood showing there; the pickaxe's wooden handle is cracked and bound with a thick wad of grey tape; one point of the pickaxe head is snapped off short. Nothing else changes, no dirt, no texture.
+
+3. By hand (`python3 -I fixhead.py worn.png design.png`): the notch landed in the middle of the crown, a V between two blocks of hair, and at play size the cube read as two ears. Filled back into a flat-topped cube.
+
+4. Poses (`python3 -I puppet.py design.png flat/`): two walk drawings from the image model (`build.ts pose miner walk-1`, `walk-2`, one each) came back as the design again, stance and all, and the month's free images ran out. He's a wooden toy, every limb a rigid block on a dowel, so every pose is cut from the design itself: the near arm, the far arm with the pickaxe, and the two legs turned about their joints, the whole figure tipped for the run's lean and the laugh, and turned flat for the knockout. A raised pickaxe slides up behind him rather than turning (turned, its head went behind the cube and read as a horn), and a raised near arm goes out behind him (over the cube's side face it read as a hand on the brow).

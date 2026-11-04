@@ -57,21 +57,23 @@ export const kind: FlatKind = {
     { name: 'red', color: '#c9473f', slot: 'player' },
     // The drawing's own shadow on the cap and shirt, and the plunger's cup: a dark of the player's colour.
     { name: 'redshade', color: '#808080', on: 1, tone: -22 },
-    // A colourway is the overalls (VARIETY.palette): denim, grey work cloth, washed denim. A navy went: on a
-    // dark ground it and the boots sank into the ground.
-    { name: 'blue', color: '#3f62b4', alts: ['#7e848a', '#86a3d4'], vary: 6 },
+    // The overalls: a dark of the cap and shirt, so the bib over the shirt is the player's colour block. Darker
+    // still, on a dark ground the bib and the boots sank into one mass (a navy cloth did).
+    { name: 'blue', color: '#808080', on: 1, tone: -20 },
     // The boots, hair and mustache: one colour in the drawing, so one role. Lighter than the drawing's: on a
     // dark ground the boots sank into it.
     { name: 'brown', color: '#5e412d' },
     { name: 'handle', color: '#a65f38' },
-    { name: 'tan', color: '#b08454' },
-    { name: 'tanshade', color: '#7f5c39' },
+    // A colourway is the gauntlets (VARIETY.palette), in neutrals: tan leather, pale canvas, dark leather.
+    { name: 'tan', color: '#b08454', alts: ['#cdc4b2', '#76583f'], vary: 6 },
+    { name: 'tanshade', color: '#7f5c39', alts: ['#9e9585', '#523d2c'], vary: 6 },
     { name: 'grey', color: '#8e8a84' },
     { name: 'dark', color: '#2a1f1a' },
     { name: 'mouth', color: '#9a3d36' },
-    // Wear on the overalls: a faded streak, and soot. Quiet tones: louder, a mark on the flat bib read as a spot.
-    { name: 'scuff', color: '#808080', on: 3, tone: 10 },
-    { name: 'scorch', color: '#808080', on: 3, tone: -16 },
+    // Wear on the overalls: a faded streak, and soot, 10 over and 16 under the overalls' tone. Quiet tones:
+    // louder, a mark on the flat bib read as a spot.
+    { name: 'scuff', color: '#808080', on: 1, tone: -10 },
+    { name: 'scorch', color: '#808080', on: 1, tone: -36 },
     { name: 'plaster', color: '#e9d3b0' },
   ],
   slots: [
@@ -81,8 +83,8 @@ export const kind: FlatKind = {
   // Down to 0.06 for the laughing arcs of cheer2 (0.51 and 0.07: the far one traces thin), so the kit draws its
   // cheer arcs there; shut to the kit, the near arc stayed as a lone dash.
   eyes: { role: 'dark', area: [0.06, 2.6], gap: [1.4, 4.5], specks: { dark: 2.8 } },
-  // The knee patch, in the overalls' own cloth: in the shirt's red it took the player's colour, a fleck on
-  // the leg at every step. The lowest red by far (the sleeves end 7.3 under the eyes), and the rightmost lying.
+  // The knee patch, in the overalls' own cloth: in the shirt's tone it was a bright fleck on the leg at every
+  // step. The lowest red by far (the sleeves end 7.3 under the eyes), and the rightmost lying.
   recolour: { from: 'red', to: 'blue', below: 8.2, lying: [1.2, 2] },
   wear: {
     on: ['blue'],
@@ -98,8 +100,11 @@ export const kind: FlatKind = {
       ],
     ],
   },
-  accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [2.2, 0.9] }],
-  face: { r: 0.9, iris: '#3c6fd0' },
+  // Up and back from the cheek's place: there its low edge ran into the moustache's.
+  accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [2.2, 0.9], offset: [-0.3, -0.6] }],
+  // The blink's dashes and the cheer's arcs at a width of their own: at the eye's (0.54) a blink was a pale brown
+  // hairline, nearly eyeless at play scale.
+  face: { r: 0.9, iris: '#3c6fd0', mark: 1.1 },
   gait: { bounce: [0.15, 0.85], lean: [0, 0.035] },
   clips: {
     idle: { frames: ['idle'], loop: true, fps: 1 },

@@ -11,7 +11,7 @@ export const sprites: SpriteSet = {
     { color: '#efc9a4' },
     { color: '#e6c25a' },
     { color: '#6b4a35' },
-    { color: '#a8adb4', alts: ['#5f80a8', '#5a5e66'], vary: 6 },
+    { color: '#a8adb4', alts: ['#5a5e66', '#d2ccc0'], vary: 6 },
     { color: '#4a4a52' },
     { color: '#2a1f1a' },
     { color: '#808080', on: 0, tone: 14 },
@@ -22,7 +22,7 @@ export const sprites: SpriteSet = {
     { name: 'plaster', vary: 1, options: 2 },
     { name: 'wear', vary: 11, options: 3 },
   ],
-  face: { r: 0.65, iris: '#3c78c8' },
+  face: { r: 0.65, iris: '#3c78c8', mark: 0.6 },
   gait: { bounce: [0.2, 0.8], lean: [0, 0.04] },
   clips: {
     idle: {
