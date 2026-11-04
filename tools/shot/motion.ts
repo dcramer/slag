@@ -4,8 +4,8 @@ import { argv, open, opt, out, page, players, seed, sheet, snap, step, tq, type 
 
 export const shots: Scenarios = {
   async grabs() {
-    // Swing, keg shot and backfire as stepped frames: motion can't be judged from a single still.
-    await open(`seed=${seed}&players=1&race=rope,rope,keg,keg&propseed=${opt('propseed', '1')}`);
+    // Swing, keg shot, backfire and the slingshot as stepped frames: motion can't be judged from a single still.
+    await open(`seed=${seed}&players=1&race=rope,rope,keg,keg,fling&propseed=${opt('propseed', '1')}`);
     await step(70);
     const [vw] = [page.viewportSize()!.width];
     const k = vw / 768;
@@ -13,7 +13,9 @@ export const shots: Scenarios = {
       page.evaluate(
         ([t, v]) => {
           const run = (window as any).slagDebug.match.run;
-          const m = run.resolved.find((r: any) => r.mods[0].type === t).mods[0];
+          // A slingshot is a keg with a player's aim.
+          const sling = t === 'fling';
+          const m = run.resolved.find((r: any) => r.mods[0].type === (sling ? 'keg' : t) && (r.mods[0].aim === 'player') === sling).mods[0];
           const b = run.runners[0].body;
           b.x = m.at[0] - b.w / 2;
           b.y = (t === 'rope' ? m.at[1] + m.length * 0.75 : m.at[1]) - b.h / 2;
@@ -85,6 +87,35 @@ export const shots: Scenarios = {
       await crop(`grabs-back-${String(back.length).padStart(2, '0')}`, keg, back);
     }
     await sheet(`grabs-back-${seed}`, back, 5);
+    // The slingshot: run in holding right (the rest aim stays), point up-left, then up-right and fire
+    // holding it through the flight; then a second sit left alone until the band shivers and snaps.
+    const fling: string[] = [];
+    const yf = await go('fling', 215);
+    const ur = { right: true, up: true };
+    for (const [n, inp] of [
+      [3, { right: true, run: true }],
+      [12, { left: true, up: true }],
+      [30, { left: true, up: true }],
+      [20, ur],
+    ] as const) {
+      await press(n, inp);
+      await crop(`grabs-fling-${String(fling.length).padStart(2, '0')}`, yf, fling);
+    }
+    await press(1, { ...ur, jump: true, jumpPressed: true });
+    for (const n of [3, 5, 6, 8, 10, 14]) {
+      await press(n, ur);
+      await crop(`grabs-fling-${String(fling.length).padStart(2, '0')}`, yf, fling);
+    }
+    await press(400, {});
+    const burn = await page.evaluate(() => (window as any).slagDebug.match.run.resolved.find((r: any) => r.mods[0].aim === 'player').mods[0].burn as number);
+    await go('fling', 0);
+    let held = 0;
+    for (const t of [burn - 60, burn - 30, burn - 12, burn - 4, burn + 6, burn + 30]) {
+      await press(t - held, {});
+      held = t;
+      await crop(`grabs-fling-${String(fling.length).padStart(2, '0')}`, yf, fling);
+    }
+    await sheet(`grabs-fling-${seed}`, fling, 4);
   },
   async lineup() {
     // Eight runners in a row on open floor, in a spread of poses: once at gameplay scale (zoom 1 at
