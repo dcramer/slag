@@ -38,6 +38,8 @@ export interface Grip {
   fuse: number;
   /** Keg: compass direction the aim locked to. */
   aim: number;
+  /** Fling: frames the stick has held one axis of a diagonal aim (`FLING.settle`). */
+  settle: number;
   /** Stuffed inside the part: no held items. */
   sealed: boolean;
   /** Pipe: uid of the pipe the runner comes out of, or -1 while still going in. */
@@ -173,7 +175,23 @@ export function settleGrabs(w: RunWorld, grabs: GrabRequest[]): void {
     if (w.runners.some((o) => o.attach.grip?.uid === uid && o.attach.grip.mi === mi)) continue;
     stick(r);
     const { vx, vy } = r.body;
-    a.grip = { uid, mi, t: 0, x: g.x, y: g.y, len: g.len ?? 0, s: g.s ?? 0, hooked: !!g.hooked, fuse: -1, aim: 0, sealed: !!g.sealed, to: -1, vx, vy };
+    a.grip = {
+      uid,
+      mi,
+      t: 0,
+      x: g.x,
+      y: g.y,
+      len: g.len ?? 0,
+      s: g.s ?? 0,
+      hooked: !!g.hooked,
+      fuse: -1,
+      aim: 0,
+      settle: 0,
+      sealed: !!g.sealed,
+      to: -1,
+      vx,
+      vy,
+    };
     w.events.push({ type: 'prop', kind: g.kind, x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h / 2 });
   }
   grabs.length = 0;

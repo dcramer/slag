@@ -563,6 +563,9 @@ Every game design decision, preference and direction the owner has given, groupe
 - **The self-destruct hold is 3 s, and your own charge counts down 3, 2, 1 in the middle of the screen.** "self destruct could probably be more like a 3 second hold" / "and show in the center of the screen as like a countdown so you dont miss it?"
   2026-11-02 · `done` · DESIGN.md → Controls and UI, MOBILE.md
   Changed: the hold was 1.25 s, with only the ring around the runner.
+- **The Y-Fling aims where the stick points, like every other control: the pouch draws back the other way on its own, jump fires, letting go of the stick keeps the aim and the pull, and the keys you ran in with don't aim until you press a direction afresh.** "the slingshot controls are also weird seems hard to use", then chose "point where you go" from three options
+  2026-11-03 · `done` · DESIGN.md → Props (Y-Fling)
+  Changed: you pulled the stick away from the target and the pull built only while held; running in turned the aim backwards, letting go leaked the pull, and the pull still held after firing steered and fast-fell against the shot.
 - **Phones haven't been tried on real devices.**
   2026-11-02 · `open` · TODO.md → 6
 
