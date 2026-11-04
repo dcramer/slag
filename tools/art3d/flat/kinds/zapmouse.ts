@@ -3,7 +3,7 @@ import type { FlatKind } from '../kinds';
 export const kind: FlatKind = {
   body: 157,
   map: {
-    roles: ['fur', 'dark', 'cheek', 'tin', 'plug'],
+    roles: ['fur', 'dark', 'cheek', 'tin', 'plug', 'eartape'],
     families: [
       ['fur', [240, 196, 40]],
       ['fur', [186, 124, 30]],
@@ -14,9 +14,13 @@ export const kind: FlatKind = {
       // The tail's crumpled highlights are cool and the plug warm: one pale family took both, and orange
       // plugs left orange slivers along the tail.
       ['tin', [218, 222, 228]],
-      // The ear's tape is a neutral grey, and the fur's highlight a pale yellow: both were nearest the plug's shade.
-      ['tin', [160, 160, 162]],
+      // The tail's bolt plate, a cooler grey than the ear's tape.
+      ['tin', [144, 149, 155]],
       ['tin', [204, 204, 206]],
+      // The ear's tape is a neutral grey (the fur's highlight a pale yellow: both were nearest the plug's shade).
+      // In the tail's tin it read as a wrong fill; in a role of its own it's drawn as the crown's tape.
+      ['eartape', [164, 167, 170]],
+      ['eartape', [124, 128, 128]],
       ['fur', [246, 222, 124]],
       ['cheek', [216, 76, 54]],
       ['plug', [216, 210, 194]],
@@ -24,12 +28,14 @@ export const kind: FlatKind = {
       ['dark', [30, 20, 16]],
     ],
     line: 'dark',
-    thin: ['tin'],
+    thin: ['tin', 'eartape'],
     feet: ['fur'],
-    loose: ['tin'],
+    loose: ['tin', 'eartape'],
     min: { dark: 0.12, cheek: 0.3, plug: 0.8 },
   },
   eyes: { role: 'dark', area: [0.06, 0.7], gap: [2, 5.5], specks: { dark: 1.2, cheek: 0.35 } },
+  // Every drawing's cord belt is grown 7 px into the fur: half a world px wide, under the tracer's tolerance, it
+  // traced as a ragged wedge with drips, a mud smear.
   recolour: { from: 'dark', to: 'cord', below: 2.5, lying: [0.4, -4] },
   wear: {
     on: ['fur'],
@@ -41,8 +47,9 @@ export const kind: FlatKind = {
   roles: [
     { name: 'tin', color: '#a9afb7' },
     { name: 'fur', color: '#f2c62a', slot: 'player' },
-    // A colourway is the cord and its plug together (VARIETY.palette).
-    { name: 'plug', color: '#e8e2d4', alts: ['#d9622b', '#e8e2d4'], vary: 6 },
+    // A colourway is the cord and its plug together (VARIETY.palette). Never a white plug: on the fur it read
+    // as a pale hole at the groin, not a pendant.
+    { name: 'plug', color: '#7c848d', alts: ['#d9622b', '#7c848d'], vary: 6 },
     { name: 'cord', color: '#7a5236', alts: ['#4b5560', '#9a3b2a'], vary: 6 },
     { name: 'cheek', color: '#e0473b' },
     { name: 'dark', color: '#2a1f1a' },
@@ -50,6 +57,7 @@ export const kind: FlatKind = {
     { name: 'scuff', color: '#808080', on: 1, tone: 10 },
     { name: 'scorch', color: '#808080', on: 1, tone: -16 },
     { name: 'tape', color: '#c9c6bd' },
+    { name: 'eartape', color: '#c9c6bd' },
   ],
   slots: [
     { name: 'tape', vary: 1, options: 2 },
