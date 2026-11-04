@@ -1,6 +1,8 @@
 import { BotSeats } from '../../src/brain/bots';
 import { type BotLevel, Match } from '../../src/game/match';
+import type { ProfileOverride } from '../../src/gen/level';
 import { isBridgePart } from '../../src/gen/props';
+import type { PlacedProp } from '../../src/sim/props';
 import type { ThemeId } from '../../src/themes';
 
 export interface BotRace {
@@ -10,24 +12,55 @@ export interface BotRace {
   cause: string | null;
 }
 
+export interface BotRaceOptions {
+  theme?: ThemeId;
+  /** Force the level's size class (a theme that never rolls it keeps its own). */
+  size?: ProfileOverride['size'];
+  limit?: number;
+  /** Build the plan's bridges before the race (the default); ignored with `parts`. */
+  build?: boolean;
+  level?: BotLevel;
+  /** This many bots of the same level pick and place a round's parts first, and the racer runs over whatever they left. */
+  parts?: number;
+}
+
+function botMatch(seed: number, theme: ThemeId | undefined, size: ProfileOverride['size'] | undefined, players: number, level: BotLevel | undefined) {
+  const m = new Match(seed, theme);
+  if (size) {
+    m.forceProfile = { size };
+    m.newLevel(seed, theme);
+  }
+  const bots = new BotSeats();
+  for (let i = 0; i < players; i++) {
+    const p = m.join(bots.add(m))!;
+    if (level && level !== 'normal') p.bot = level;
+  }
+  return { m, bots };
+}
+
 /**
  * One bot alone on `seed`'s level with the plan's bridges already built
- * (unless `build` is false), raced to the end: does it find its way to the
- * flag? Shared by tests/brain.test.ts and the finish-rate suite in tests/stats/.
+ * (unless `build` is false), or over the parts `parts` bots placed in a
+ * round of their own, raced to the end: does it find its way to the flag?
+ * Shared by tests/brain.test.ts and the finish-rate suites in tests/stats/.
  */
-export function botRace(
-  seed: number,
-  { theme, limit = 60 * 60, build = true, level }: { theme?: ThemeId; limit?: number; build?: boolean; level?: BotLevel } = {},
-): BotRace {
-  const m = new Match(seed, theme);
-  const bots = new BotSeats();
-  const dev = bots.add(m);
-  const p = m.join(dev)!;
-  if (level && level !== 'normal') p.bot = level;
+export function botRace(seed: number, { theme, size, limit = 60 * 60, build = true, level, parts = 0 }: BotRaceOptions = {}): BotRace {
+  let placed: PlacedProp[] | null = null;
+  if (parts > 0) {
+    const { m, bots } = botMatch(seed, theme, size, parts, level);
+    m.rules = { ...m.rules, pickSeconds: 0, placeSeconds: 0 };
+    m.startMatch();
+    for (let f = 0; f < 60 * 60 && m.phase !== 'run'; f++) m.step(bots.frames(m));
+    placed = m.placed;
+  }
+  const { m, bots } = botMatch(seed, theme, size, 1, level);
   m.startMatch();
-  const bridge = m.crate.find((c) => isBridgePart(c.def))?.def;
-  if (m.plan.length && !bridge) throw new Error(`seed ${seed}: the crate has no bridge for its plan`);
-  if (build) for (const b of m.plan) m.placed.push({ uid: 1000 + m.placed.length, def: bridge!, owner: 0, tx: b.x, ty: b.y, rot: 0 });
+  if (placed) m.placed = placed.map((pp) => ({ ...pp }));
+  else if (build) {
+    const bridge = m.crate.find((c) => isBridgePart(c.def))?.def;
+    if (m.plan.length && !bridge) throw new Error(`seed ${seed}: the crate has no bridge for its plan`);
+    for (const b of m.plan) m.placed.push({ uid: 1000 + m.placed.length, def: bridge!, owner: 0, tx: b.x, ty: b.y, rot: 0 });
+  }
   m.startRun();
   const run = m.run!;
   const r = run.runners[0];

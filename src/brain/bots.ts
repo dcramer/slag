@@ -1,7 +1,7 @@
 import { deriveSeed } from '../core/rng';
 import type { BotLevel, Match } from '../game/match';
 import type { InputFrame } from '../sim/types';
-import { botDevice } from './device';
+import { botDevice, isBotDevice } from './device';
 import { Motor } from './motor';
 import { rollPersonality } from './personality';
 import { BRAINS, type BrainId } from './registry';
@@ -28,11 +28,17 @@ interface Bot {
 export class BotSeats {
   private bots = new Map<string, Bot>();
 
-  /** A new bot's local device; seat it with a join action. */
-  add(match: Match, kind: BrainId = 'runner'): string {
+  /** A new bot's local device; seat it with a join action. `global` names a local device the way the match does. */
+  add(match: Match, kind: BrainId = 'runner', global: (dev: string) => string = (d) => d): string {
     let n = 1;
-    while (this.bots.has(botDevice(n))) n++;
+    // Not a seat already ours either: one taken over from a host that left has no brain here until the next frame.
+    while (this.bots.has(botDevice(n)) || match.players.some((p) => p.device === global(botDevice(n)))) n++;
     const dev = botDevice(n);
+    this.start(match, dev, kind);
+    return dev;
+  }
+
+  private start(match: Match, dev: string, kind: BrainId) {
     const seed = deriveSeed(match.seed, `bot:${dev}:${match.frame}`);
     const traits = rollPersonality(seed, 'normal');
     this.bots.set(dev, {
@@ -43,7 +49,6 @@ export class BotSeats {
       motor: new Motor(traits, deriveSeed(seed, 'hands')),
       seated: false,
     });
-    return dev;
   }
 
   remove(dev: string): void {
@@ -54,8 +59,16 @@ export class BotSeats {
     return this.bots.has(dev);
   }
 
-  /** This frame's input for every seated bot, by local device. `global` names a local device the way the match does. */
+  /**
+   * This frame's input for every seated bot, by local device. `global` names a local device the way the match does.
+   * A bot seat that is ours with no brain here (online, taken over from a host that left: bot seats are the room's,
+   * run by whoever hosts) gets a fresh one, at the level its seat shows.
+   */
   frames(match: Match, global: (dev: string) => string = (d) => d): Record<string, InputFrame> {
+    for (const p of match.players) {
+      const dev = p.device.slice(p.device.lastIndexOf(':') + 1);
+      if (isBotDevice(dev) && global(dev) === p.device && !this.bots.has(dev)) this.start(match, dev, 'runner');
+    }
     const out: Record<string, InputFrame> = {};
     for (const [dev, bot] of this.bots) {
       const p = match.players.find((q) => q.device === global(dev));

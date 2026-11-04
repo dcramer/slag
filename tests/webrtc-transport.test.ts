@@ -1,292 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { handleOp } from '../app/api/net/_server/handlers';
-import { MemoryStore } from '../app/api/net/_server/store';
 import { Match } from '../src/game/match';
 import type { MatchRules } from '../src/game/rules';
 import { roomSeed } from '../src/game/room';
 import { NetSession } from '../src/net/session';
 import { installTelemetry } from '../src/telemetry';
-import { SignalError, type SignalApi } from '../src/net/signal-client';
-import { DEFAULT_ICE, LIST_TTL_S, type ListedRoom, type Mail, type MemberInfo, type RoomListing, type Signal } from '../src/net/signal-protocol';
-import { hashMatch } from '../src/net/snapshot';
+import { SignalError } from '../src/net/signal-client';
+import { LIST_TTL_S, type ListedRoom, type MemberInfo } from '../src/net/signal-protocol';
 import type { Member } from '../src/net/transport';
-import { type RtcChannel, type RtcPeer, WebRtcTransport } from '../src/net/webrtc-transport';
+import { WebRtcTransport } from '../src/net/webrtc-transport';
 import { Rng } from '../src/core/rng';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
-
-/**
- * The real transport, real handlers and real store, with only the two things
- * a test can't have swapped out: RTCPeerConnection (a fake network below) and
- * HTTP (a direct call into the handlers). Time is vitest's fake clock.
- */
-
-const TICK = 1000 / 60;
-
-class FakeNet {
-  pcs = new Map<string, FakePc>();
-  /** Crashed machines: nothing in or out, and nobody gets told. */
-  dead = new Set<string>();
-  /** Pairs with no route, like two strict NATs. */
-  blocked = new Set<string>();
-  slowIce = false;
-  /** A crashed remote never answers ICE checks, so a handshake with it hangs instead of failing, as in a real browser. */
-  deadHangs = false;
-  n = 0;
-  route(a: string, b: string) {
-    return !this.dead.has(a) && !this.dead.has(b) && !this.blocked.has([a, b].sort().join());
-  }
-}
-
-class FakeChannel implements RtcChannel {
-  readyState = 'connecting';
-  bufferedAmount = 0;
-  other: FakeChannel | null = null;
-  onopen: any = null;
-  onclose: any = null;
-  onmessage: any = null;
-  sent = 0;
-  constructor(
-    readonly label: string,
-    readonly owner: string,
-    private net: FakeNet,
-  ) {}
-  send(data: string) {
-    this.sent++;
-    const to = this.other;
-    if (!to || !this.net.route(this.owner, to.owner)) return;
-    setTimeout(() => to.onmessage?.({ data }), 5);
-  }
-  open() {
-    this.readyState = 'open';
-    this.onopen?.();
-  }
-  close() {
-    if (this.readyState === 'closed') return;
-    this.readyState = 'closed';
-    this.onclose?.();
-    // A browser closing its end tells the other (SCTP abort) when there's a route; with none, the other end hears nothing.
-    const to = this.other;
-    if (to && this.net.route(this.owner, to.owner)) setTimeout(() => to.close(), 5);
-  }
-}
-
-class FakePc implements RtcPeer {
-  connectionState = 'new';
-  iceGatheringState: string;
-  localDescription: { sdp: string } | null = null;
-  onicegatheringstatechange: any = null;
-  onconnectionstatechange: any = null;
-  ondatachannel: any = null;
-  channels: FakeChannel[] = [];
-  id: string;
-  constructor(
-    readonly owner: string,
-    private net: FakeNet,
-  ) {
-    this.id = `pc${net.n++}`;
-    net.pcs.set(this.id, this);
-    // Slow ICE: gathering never reports complete, so every handshake waits out the gather timeout, as with STUN unreachable.
-    this.iceGatheringState = net.slowIce ? 'gathering' : 'complete';
-  }
-  createDataChannel(label: string) {
-    const c = new FakeChannel(label, this.owner, this.net);
-    this.channels.push(c);
-    return c;
-  }
-  createOffer = async () => ({ type: 'offer' as const, sdp: this.id });
-  createAnswer = async () => ({ type: 'answer' as const, sdp: this.id });
-  async setLocalDescription(d: { sdp?: string }) {
-    this.localDescription = { sdp: d.sdp! };
-  }
-  async setRemoteDescription(d: { type: 'offer' | 'answer'; sdp: string }) {
-    if (d.type !== 'answer') return;
-    const remote = this.net.pcs.get(d.sdp)!;
-    setTimeout(() => {
-      if (this.net.deadHangs && this.net.dead.has(remote.owner)) return;
-      if (!this.net.route(this.owner, remote.owner)) {
-        this.connectionState = 'failed';
-        this.onconnectionstatechange?.();
-        return;
-      }
-      for (const c of this.channels) {
-        const twin = new FakeChannel(c.label, remote.owner, this.net);
-        c.other = twin;
-        twin.other = c;
-        remote.channels.push(twin);
-        remote.ondatachannel?.({ channel: twin });
-      }
-      for (const c of [...this.channels, ...remote.channels]) c.open();
-    }, 20);
-  }
-  close() {
-    this.connectionState = 'closed';
-    for (const c of this.channels) c.close();
-  }
-}
-
-class DirectSignal implements SignalApi {
-  calls = 0;
-  polls = 0;
-  constructor(
-    private store: MemoryStore,
-    private room: string,
-    private peer: string,
-    private world: World,
-  ) {}
-  private async call(op: Parameters<typeof handleOp>[0], extra: Record<string, unknown> = {}): Promise<any> {
-    if (this.world.net.dead.has(this.peer) || this.world.apiDown || this.world.apiDownFor.has(this.peer)) throw new SignalError('network');
-    this.calls++;
-    const latency = this.world.apiLatencyFor.get(this.peer) ?? this.world.apiLatency;
-    if (latency) await new Promise((r) => setTimeout(r, latency));
-    return handleOp(op, { room: this.room, peer: this.peer, ...extra }, { store: this.store, ice: DEFAULT_ICE });
-  }
-  join = (since: number) => this.call('join', { since });
-  beat = (host: boolean, list?: RoomListing | false) => this.call('beat', list === undefined ? { host } : { host, list });
-  members = (): Promise<MemberInfo[]> => this.call('members').then((r) => r.members);
-  gone = (peer: string, order: number): Promise<MemberInfo[]> => this.call('gone', { gone: peer, order }).then((r) => r.members);
-  send = async (to: string, signal: Signal): Promise<boolean> => {
-    if (this.world.lose(this.peer, to, signal)) return true; // the store took it and it vanished
-    const r = await this.call('signal', { to, signal });
-    const die = this.world.dieAfterAnswer;
-    if (signal.k === 'answer' && (die === this.peer || die === `${this.peer}>${to}`)) this.world.crash(this.peer);
-    return r.delivered;
-  };
-  poll = (): Promise<Mail[]> => {
-    this.polls++;
-    return this.call('poll').then((r) => r.mail);
-  };
-  leave(order: number, since: number, unlist = false) {
-    void this.call('leave', unlist ? { order, since, unlist } : { order, since }).catch(() => {});
-  }
-}
-
-interface Peer {
-  id: string;
-  transport: WebRtcTransport;
-  session: NetSession;
-  signal: DirectSignal;
-  status: string[];
-  gone: boolean;
-}
-
-class World {
-  net = new FakeNet();
-  store = new MemoryStore();
-  apiDown = false;
-  apiDownFor = new Set<string>();
-  apiLatency = 0;
-  apiLatencyFor = new Map<string, number>();
-  /** `peer` crashes right after sending any answer; `peer>to`, right after answering `to`. */
-  dieAfterAnswer = '';
-  /** Handshake messages the store says it delivered but nobody ever reads. */
-  lose: (from: string, to: string, s: Signal) => boolean = () => false;
-  /** Most live peers ever hosting at once, sampled every tick: anything over 1 is a split brain. */
-  maxHosts = 0;
-  /** How long more than one live peer hosted. */
-  splitMs = 0;
-  /** Most live hosts ever advancing the sim at once (hosting and not paused): over 1 is a fork, not just a split. */
-  maxRunning = 0;
-  peers = new Map<string, Peer>();
-  hidden = false;
-
-  join(id: string, watch = false) {
-    const signal = new DirectSignal(this.store, 'ROOM1', id, this);
-    const transport = new WebRtcTransport('ROOM1', id, { signal, rtc: () => new FakePc(id, this.net), hidden: () => this.hidden });
-    const status: string[] = [];
-    const inner = transport.start.bind(transport);
-    transport.start = (h) =>
-      inner({
-        ...h,
-        status: (s, d) => {
-          status.push(s);
-          h.status(s, d);
-        },
-      });
-    const session = new NetSession({ transport, match: new Match(roomSeed('TEST')), now: () => Date.now(), watch });
-    const p: Peer = { id, transport, session, signal, status, gone: false };
-    this.peers.set(id, p);
-    return p;
-  }
-
-  /** Crash: no goodbye of any kind, and its timers talk to nothing from now on. */
-  crash(id: string) {
-    this.net.dead.add(id);
-    this.peers.get(id)!.gone = true;
-  }
-
-  leave(id: string) {
-    const p = this.peers.get(id)!;
-    p.session.close();
-    p.gone = true;
-  }
-
-  async run(ms: number, inputs: (p: Peer) => Record<string, InputFrame> = () => ({})) {
-    const ticks = Math.ceil(ms / TICK);
-    for (let i = 0; i < ticks; i++) {
-      await vi.advanceTimersByTimeAsync(TICK);
-      for (const p of this.peers.values()) {
-        if (p.gone) continue;
-        p.session.tick(inputs(p));
-        void p.session.view;
-        p.session.drainEvents();
-      }
-      const hosts = [...this.peers.values()].filter((p) => !p.gone && p.session.isHost && p.session.status !== 'unavailable').length;
-      this.maxHosts = Math.max(this.maxHosts, hosts);
-      if (hosts > 1) this.splitMs += TICK;
-      const running = [...this.peers.values()].filter((p) => !p.gone && p.session.isHost && !p.session.paused && p.session.status !== 'unavailable').length;
-      this.maxRunning = Math.max(this.maxRunning, running);
-    }
-  }
-
-  async runUntil(cond: () => boolean, ms: number, inputs?: (p: Peer) => Record<string, InputFrame>) {
-    const start = Date.now();
-    while (!cond() && Date.now() - start < ms) await this.run(100, inputs);
-    return Date.now() - start;
-  }
-
-  /** Everyone who's left agrees on a host and is running. */
-  settled() {
-    const live = [...this.peers.values()].filter((p) => !p.gone);
-    return (
-      live.every((p) => p.session.status === 'online' && p.session.synced && !p.session.paused) &&
-      new Set(live.map((p) => p.session.hostId)).size === 1 &&
-      live.filter((p) => p.session.isHost).length === 1
-    );
-  }
-
-  liveHashes() {
-    const live = [...this.peers.values()].filter((p) => !p.gone);
-    const host = live.find((p) => p.session.isHost)!;
-    host.session.flush();
-    return live.map((p) => [p.session.match.frame, hashMatch(p.session.match)]);
-  }
-
-  /** Freeze the host and let guests drain, so state is comparable frame for frame. */
-  async drained() {
-    const live = [...this.peers.values()].filter((p) => !p.gone);
-    const host = live.find((p) => p.session.isHost)!;
-    const guests = live.filter((p) => p !== host);
-    host.session.flush();
-    for (let i = 0; i < 60; i++) {
-      await vi.advanceTimersByTimeAsync(TICK);
-      for (const g of guests) g.session.tick({});
-    }
-    return live.map((p) => `${p.session.match.frame}:${hashMatch(p.session.match)}`);
-  }
-
-  async room(...ids: string[]) {
-    for (const id of ids) {
-      this.join(id);
-      await this.run(300);
-    }
-    await this.runUntil(() => this.settled() && [...this.peers.values()].every((p) => p.session.members.length === ids.length), 20_000);
-    expect(this.settled()).toBe(true);
-    this.maxHosts = 0;
-    this.splitMs = 0;
-    this.maxRunning = 0;
-    return ids.map((id) => this.peers.get(id)!);
-  }
-}
+import { DirectSignal, FakePc, type Peer, World } from './lib/net-world';
 
 const press = (k: Partial<InputFrame>): InputFrame => ({ ...NO_INPUT, ...k });
 
@@ -606,6 +331,40 @@ describe('host migration', () => {
     expect(new Set(await w.drained()).size).toBe(1);
   });
 
+  it('a host who starts watching hands the room to a live guest, never to one that crashed and the store still lists', async () => {
+    const w = new World();
+    const [a, d, b, c] = await w.room('aaaa', 'dddd', 'bbbb', 'cccc');
+    // A phone killed in the background: no goodbye, so the store lists it until its liveness runs out (50 s).
+    w.crash('dddd');
+    await w.run(12_000);
+    expect(a.session.members.some((m: Member) => m.id === 'dddd')).toBe(false);
+    a.session.watch();
+    const took = await w.runUntil(() => w.settled() && b.session.isHost && !a.session.seated, 30_000);
+    expect(b.session.isHost).toBe(true);
+    expect([a, c].every((p) => p.session.hostId === 'bbbb')).toBe(true);
+    expect(took).toBeLessThan(6000);
+    expect(w.maxRunning).toBe(1);
+    expect(d.gone).toBe(true);
+    expect(new Set(await w.drained()).size).toBe(1);
+  });
+
+  it('a new host never hands the room to a guest that crashed earlier and the store still lists', async () => {
+    const w = new World();
+    const [a, d, b, c] = await w.room('aaaa', 'dddd', 'bbbb', 'cccc');
+    w.crash('dddd');
+    await w.run(12_000);
+    expect(a.session.members.some((m: Member) => m.id === 'dddd')).toBe(false);
+    w.crash('aaaa');
+    await w.runUntil(() => w.settled(), 20_000);
+    // Past the new host's rival checks: it stays put.
+    await w.run(15_000);
+    expect(w.settled()).toBe(true);
+    expect(b.session.isHost).toBe(true);
+    expect(c.session.hostId).toBe('bbbb');
+    expect(b.session.stats.migrations).toBe(1);
+    expect(d.gone && w.maxHosts === 1).toBe(true);
+  });
+
   it('the new host dying straight after taking over: the walk carries on to the next', async () => {
     const w = new World();
     const [, b, c, d] = await w.room('aaaa', 'bbbb', 'cccc', 'dddd');
@@ -777,20 +536,22 @@ describe('host migration', () => {
     expect(new Set(await w.drained()).size).toBe(1);
   });
 
-  it('two peers that both host: the store settles it for the lower order', async () => {
+  it('a peer that loses the API as the host dies never hosts blind: the next in line hosts, and it joins once back', async () => {
     const w = new World();
     const [, b, c] = await w.room('aaaa', 'bbbb', 'cccc');
-    // B loses the API just as A dies. B hosts by the roster; C, getting no answer from B, writes it off and hosts too.
+    // B loses the API just as A dies. It can't offer anyone (its offers never reach the store), so it proves nothing
+    // and waits; C, getting no answer from B, writes it off and hosts.
     w.apiDownFor.add('bbbb');
     w.crash('aaaa');
-    await w.runUntil(() => b.session.isHost && c.session.isHost, 25_000);
-    expect(b.session.isHost && c.session.isHost).toBe(true);
-    w.apiDownFor.delete('bbbb');
-    const took = await w.runUntil(() => w.settled() && !b.session.isHost, 60_000);
-    expect(took).toBeLessThan(8000); // B checks the store as soon as its API is back, not at its next heartbeat
-    expect(w.settled()).toBe(true);
+    await w.runUntil(() => c.session.isHost && !c.session.paused, 25_000);
     expect(c.session.isHost).toBe(true);
+    expect(b.session.isHost).toBe(false);
+    w.apiDownFor.delete('bbbb');
+    const took = await w.runUntil(() => w.settled() && c.session.members.length === 2, 60_000);
+    expect(took).toBeLessThan(8000);
+    expect(w.settled()).toBe(true);
     expect(b.session.hostId).toBe('cccc');
+    expect(w.maxHosts).toBe(1);
     expect(new Set(await w.drained()).size).toBe(1);
   });
 
@@ -865,6 +626,120 @@ describe('host migration', () => {
     expect(b.session.match.frame).toBeGreaterThanOrEqual(cFrame);
     expect(new Set(await w.drained()).size).toBe(1);
     expect(a.gone).toBe(true);
+  });
+});
+
+/** Peek at the transport's private state, for timing a case to the moment it has a handshake open or a guest in grace. */
+const inner = (p: Peer) => p.transport as unknown as { inbound: Map<string, unknown>; frame(l: unknown, text: string): void };
+
+describe('handing the room on', () => {
+  it('a host stepping back while a newcomer is still linking hands it on cleanly, newcomer included', async () => {
+    const w = new World();
+    const [a] = await w.room('aaaa', 'bbbb');
+    await w.run(2000);
+    const n = w.join('nnnn');
+    for (let i = 0; i < 2000 && inner(a).inbound.size === 0; i++) await vi.advanceTimersByTimeAsync(2);
+    expect(inner(a).inbound.size).toBe(1);
+    a.transport.reorder();
+    const took = await w.runUntil(() => w.settled() && n.session.hostId === 'bbbb' && a.session.hostId === 'bbbb', 30_000);
+    expect(took).toBeLessThan(4000);
+    expect(w.maxRunning).toBe(1);
+  });
+
+  it('a host stepping back while the guest next in line is in its grace never leaves two hosts', async () => {
+    const w = new World();
+    const [a, b, c, d] = await w.room('aaaa', 'bbbb', 'cccc', 'dddd');
+    await w.run(2000);
+    w.net.dead.add('bbbb'); // B's network drops out for a moment
+    await w.runUntil(() => a.session.members.find((m: Member) => m.id === 'bbbb')?.linking === true, 5000);
+    a.transport.reorder();
+    await w.run(1000);
+    w.net.dead.delete('bbbb');
+    await w.runUntil(() => w.settled() && [a, b, c, d].every((p) => p.session.members.length === 4), 30_000);
+    await w.run(20_000);
+    expect(w.settled()).toBe(true);
+    expect(b.session.isHost).toBe(true);
+    expect(w.maxRunning).toBe(1);
+    expect(new Set(await w.drained()).size).toBe(1);
+  });
+
+  it('a lost handover frame: the old host offering to the next in line is a handover, not proof it died', async () => {
+    const w = new World();
+    const [a, b, c, d] = await w.room('aaaa', 'bbbb', 'cccc', 'dddd');
+    await w.run(2000);
+    // The `m` frame dies with the links (a real pc.close() can drop what it hasn't sent): guests only see the close.
+    const frame = inner(a).frame.bind(a.transport);
+    inner(a).frame = (l, text) => (text[0] === 'm' ? undefined : frame(l, text));
+    a.transport.reorder();
+    const took = await w.runUntil(() => w.settled() && b.session.isHost && [a, c, d].every((p) => p.session.hostId === 'bbbb'), 30_000);
+    expect(took).toBeLessThan(6000);
+    expect(w.maxRunning).toBe(1);
+    expect(b.session.stats.migrations).toBe(1);
+  });
+
+  it('a newcomer whose join lands just before the host steps back is sent on, not left to time out', async () => {
+    const w = new World();
+    const [a] = await w.room('aaaa', 'bbbb');
+    await w.run(2000);
+    const n = w.join('nnnn');
+    await vi.advanceTimersByTimeAsync(1);
+    a.transport.reorder();
+    const took = await w.runUntil(() => w.settled() && n.session.hostId === 'bbbb' && a.session.hostId === 'bbbb', 30_000);
+    expect(took).toBeLessThan(5000);
+  });
+
+  it('a host stepping back as its API fails never writes off the next in line, or hosts alone', async () => {
+    const w = new World();
+    const [a, b, c] = await w.room('aaaa', 'bbbb', 'cccc');
+    await w.run(2000);
+    a.transport.reorder();
+    await vi.advanceTimersByTimeAsync(1);
+    w.apiDownFor.add('aaaa');
+    await w.run(25_000);
+    w.apiDownFor.delete('aaaa');
+    await w.runUntil(() => w.settled() && [a, b, c].every((p) => p.session.members.length === 3), 40_000);
+    expect(w.settled()).toBe(true);
+    expect(b.session.isHost).toBe(true);
+    expect(w.maxRunning).toBe(1);
+  });
+
+  it("the host's page vanishes and its id comes straight back: one migration, and it rejoins as a guest", async () => {
+    const w = new World();
+    const [, b, c] = await w.room('aaaa', 'bbbb', 'cccc');
+    await w.run(2000);
+    w.vanish('aaaa');
+    await w.run(300);
+    const a = w.join('aaaa');
+    await w.runUntil(() => w.settled() && b.session.members.length === 3, 30_000);
+    await w.run(30_000);
+    expect(w.settled()).toBe(true);
+    expect(b.session.isHost).toBe(true);
+    expect(a.session.hostId).toBe('bbbb');
+    expect(b.session.stats.migrations + c.session.stats.migrations + a.session.stats.migrations).toBe(1);
+  });
+});
+
+describe('a guest the store forgot', () => {
+  // A phone asleep past its liveness (50 s): the store forgot it, and its link to the host is dead too. Its re-offer
+  // can't be delivered because of *it*, not the host: it rejoins, and never writes off the host or hosts a fork.
+  it.each([
+    ['alone with the host', ['aaaa', 'bbbb'], 0],
+    ['with another guest, over a slow API', ['aaaa', 'bbbb', 'cccc'], 150],
+  ] as const)('%s: it rejoins under the same host', async (_label, ids, latency) => {
+    const w = new World();
+    const peers = await w.room(...ids);
+    const [a] = peers;
+    const g = peers.at(-1)!;
+    w.apiLatency = latency;
+    await w.store.run([['DEL', `slag:ROOM1:p:${g.id}`]]);
+    w.net.blocked.add(['aaaa', g.id].join());
+    await w.run(3000);
+    w.net.blocked.delete(['aaaa', g.id].join());
+    await w.runUntil(() => w.settled() && a.session.members.length === ids.length, 30_000);
+    expect(w.settled()).toBe(true);
+    expect(a.session.isHost).toBe(true);
+    expect(g.session.stats.migrations).toBe(0);
+    expect(w.maxHosts).toBe(1);
   });
 });
 
