@@ -19,7 +19,7 @@ export const sprites: SpriteSet = {
     { name: 'plaster', vary: 1, options: 2 },
     { name: 'wear', vary: 11, options: 3 },
   ],
-  face: { r: 0.7, iris: '#2a1f1a', eye: 'dot' },
+  face: { r: 0.7, iris: '#2a1f1a', eye: 'dot', mark: 0.5 },
   gait: { bounce: [0.1, 0.6], lean: [0, 0.03] },
   clips: {
     idle: {
@@ -57,7 +57,7 @@ export const sprites: SpriteSet = {
             ],
             [5, 'zv/H/8z/x//H/8X/xP/C/8P/v//F/7//yv/B/83/xP8=', 1, 1],
             [6, 'zv/G/8v/xf/H/8H/w/+9/8P/uv/G/7v/yv++/87/w/8=', 1, 2],
-            [7, '/f9Z/wsAX/8JAGP/+/9f/w==', 0, 1],
+            [7, 'BQBS/xAAV/8OAFv/AwBY/w==', 0, 1],
           ],
           lines: [
             [2, 'MABd/zEAYP8vAGH/JABf/yAAYv8iAGP/IwBh/w=='],
@@ -114,7 +114,7 @@ export const sprites: SpriteSet = {
             ],
             [5, 'MwDE/zYAwf87AL//PQC//zwAwv85AMX/NADH/zIAx/8=', 1, 1],
             [6, 'MgDD/zYAvv86ALv/PQC6/z0Avf85AMH/NQDF/zIAxv8=', 1, 2],
-            [7, 'BQBf//f/Y//1/1//AwBZ/w==', 0, 1],
+            [7, '/f9Y//L/W//w/1f/+/9S/w==', 0, 1],
           ],
           lines: [
             [2, '0P9d/8//YP/R/2H/3P9f/+D/Yv/e/2P/3f9h/w=='],
@@ -173,7 +173,7 @@ export const sprites: SpriteSet = {
             [3, 'DABd/xEAW/8VAFz/GgBb/x8AWv8kAFj/KQBY/ywAW/8sAF//JwBh/yMAYv8eAGT/GwBo/xcAa/8TAGz/EABp/xMAZf8RAGL/DABi/wkAYP8='],
             [5, '1P/B/9L/wv/N/8D/yv++/8n/u//L/7v/z/+8/9L/v/8=', 1, 1],
             [6, '1f+//9L/v//N/73/yf+6/8f/t//K/7f/z/+5/9T/vP8=', 1, 2],
-            [7, 'BQBT/xMAWf8RAF7/AwBZ/w==', 0, 1],
+            [7, 'DQBN/xgAUv8WAFb/CwBS/w==', 0, 1],
           ],
           lines: [
             [0, 'CQBL/wgAVP8KAGP/'],
@@ -231,7 +231,7 @@ export const sprites: SpriteSet = {
             ],
             [5, 'zv/H/8z/x//H/8X/xP/C/8P/v//F/7//yv/B/83/xP8=', 1, 1],
             [6, 'zv/G/8v/xf/H/8H/w/+9/8P/uv/G/7v/yv++/87/w/8=', 1, 2],
-            [7, '/f9Z/wsAX/8JAGP/+/9f/w==', 0, 1],
+            [7, 'BQBS/xAAV/8OAFv/AwBY/w==', 0, 1],
           ],
           lines: [
             [2, 'MABd/zEAYP8vAGH/JABf/yAAYv8iAGP/IwBh/w=='],
@@ -286,7 +286,7 @@ export const sprites: SpriteSet = {
             [3, '+P9g//X/Yv/w/2L/7v9l//H/af/u/2z/6f9r/+X/aP/i/2T/3v9i/9n/Yf/V/1//1P9b/9j/WP/d/1j/4f9a/+b/W//r/1z/8P9b//X/Xf8='],
             [5, 'LgC//zEAvP81ALv/NwC7/zYAvv8zAMD/LgDC/ywAwf8=', 1, 1],
             [6, 'LAC8/zEAuf82ALf/OQC3/zcAuv8zAL3/LgC//ysAv/8=', 1, 2],
-            [7, '/f9Z/+//Xv/t/1n/+/9T/w==', 0, 1],
+            [7, '9f9S/+r/Vv/o/1L/8/9N/w==', 0, 1],
           ],
           lines: [
             [0, '9/9L//j/VP/2/2P/'],
@@ -344,7 +344,7 @@ export const sprites: SpriteSet = {
             ],
             [5, 'MwDE/zYAwf87AL//PQC//zwAwv85AMX/NADH/zIAx/8=', 1, 1],
             [6, 'MgDD/zYAvv86ALv/PQC6/z0Avf85AMH/NQDF/zIAxv8=', 1, 2],
-            [7, 'BQBf//f/Y//1/1//AwBZ/w==', 0, 1],
+            [7, '/f9Y//L/W//w/1f/+/9S/w==', 0, 1],
           ],
           lines: [
             [2, '0P9d/8//YP/R/2H/3P9f/+D/Yv/e/2P/3f9h/w=='],
@@ -404,7 +404,7 @@ export const sprites: SpriteSet = {
             ],
             [5, 'wf/I/8D/yf+8/8b/uf/C/7n/wP+7/8D/v//D/8H/xv8=', 1, 1],
             [6, 'xP/F/8H/xv+8/8P/uf/A/7f/vf+6/7z/v/+//8L/w/8=', 1, 2],
-            [7, '8v9a/wAAX////2T/8P9g/w==', 0, 1],
+            [7, '+v9T/wUAWP8EAFz/+P9Z/w==', 0, 1],
           ],
           lines: [
             [2, 'JQBe/yYAYP8kAGH/GQBg/xgAZP8WAGT/'],
@@ -460,7 +460,7 @@ export const sprites: SpriteSet = {
             ],
             [5, 'x//H/8X/x//B/8T/v//A/7//v//B/77/xf/B/8f/xf8=', 1, 1],
             [6, 'yP/F/8X/xf/B/8H/v/+9/77/uv/A/7r/xf++/8f/wv8=', 1, 2],
-            [7, '+P9a/wYAYP8EAGT/9v9g/w==', 0, 1],
+            [7, 'AABU/wsAWP8JAFz//v9Z/w==', 0, 1],
           ],
           lines: [
             [3, 'KwBf/ykAYf8fAGD/HQBi/xEAZv8='],
@@ -516,7 +516,7 @@ export const sprites: SpriteSet = {
             ],
             [5, 'PwDG/0EAw/9FAMD/RwDA/0cAwv9EAMb/QADJ/z8AyP8=', 1, 1],
             [6, 'PgDD/0EAv/9GALz/SQC9/0cAwP9EAMP/PwDG/zwAxf8=', 1, 2],
-            [7, 'EABg/wEAZP8AAF//DgBa/w==', 0, 1],
+            [7, 'CABZ//z/XP/7/1j/BgBT/w==', 0, 1],
           ],
           lines: [
             [2, '2/9e/9r/YP/c/2H/5/9g/+j/ZP/q/2T/'],
@@ -572,7 +572,7 @@ export const sprites: SpriteSet = {
             ],
             [5, 'OQDF/zsAwf8/AL7/QQC//0EAwP8/AMT/OwDH/zkAx/8=', 1, 1],
             [6, 'OQDC/zsAvv9AALr/QgC6/0EAvf8/AMH/OwDF/zgAxf8=', 1, 2],
-            [7, 'CgBg//z/ZP/6/2D/CABa/w==', 0, 1],
+            [7, 'AgBZ//f/XP/1/1j/AABU/w==', 0, 1],
           ],
           lines: [
             [3, '1f9f/9f/Yf/h/2D/4/9i/+//Zv8='],
@@ -621,7 +621,7 @@ export const sprites: SpriteSet = {
             [3, 'NgC7/zoAuf8/ALf/QgC5/z8Avf88AMD/OgDF/zYAxv82AML/MgDC/zIAvv8='],
             [5, '2P/Z/9X/2f/R/9f/zf/U/83/0v/P/9L/1P/T/9f/1/8=', 1, 1],
             [6, '3P/c/9r/3P/V/9n/0//V/9L/0v/U/9L/2f/W/9v/2f8=', 1, 2],
-            [7, 'IwC3/zEAvf8vAML/IQC9/w==', 0, 1],
+            [7, 'KwCx/zYAtf80ALn/KQC2/w==', 0, 1],
           ],
           lines: [
             [0, 'u/91/7z/d//E/3//y/+D/w=='],
@@ -667,7 +667,7 @@ export const sprites: SpriteSet = {
             [3, 'OADA/z0Av/9BALz/RQC5/0kAt/9MALn/SgC9/0YAwP9CAMP/PwDH/zsAyf85AMb/NgDE/w=='],
             [5, '1P/X/9H/1v/N/9X/yf/S/8n/0P/L/9D/z//S/9P/1f8=', 1, 1],
             [6, '0v/Z/9H/2v/M/9n/x//W/8f/1P/J/9P/zv/U/9L/1/8=', 1, 2],
-            [7, 'KwC4/zkAvv83AML/KQC+/w==', 0, 1],
+            [7, 'MwCx/z4Atv88ALr/MQC3/w==', 0, 1],
           ],
           lines: [
             [0, 'tP96/7r/gP/E/4f/'],
@@ -706,7 +706,7 @@ export const sprites: SpriteSet = {
             [3, 'zv++/87/wv/K/8L/yv/G/8b/xf/E/8D/wf+9/77/uf/B/7f/xv+5/8r/u/8='],
             [5, 'KQDX/ywA0/8xANL/MwDS/zMA1P8vANf/KwDZ/ygA2f8=', 1, 1],
             [6, 'JQDZ/ycA1v8sANL/LgDS/y0A1f8rANn/JgDc/yQA3P8=', 1, 2],
-            [7, '3/+9/9H/wv/P/73/3f+3/w==', 0, 1],
+            [7, '1/+2/8z/uf/K/7X/1f+x/w==', 0, 1],
           ],
           lines: [
             [0, 'RQB1/0QAd/88AH//NQCD/w=='],
@@ -752,7 +752,7 @@ export const sprites: SpriteSet = {
             [3, 'yv/E/8f/xv/F/8n/wf/H/77/w/+6/8D/tv+9/7T/uf+3/7f/u/+5/7//vP/D/7//yP/A/w=='],
             [5, 'LQDV/zEA0v81AND/NwDQ/zcA0v8zANX/LwDW/ywA1/8=', 1, 1],
             [6, 'LgDX/zIA1P83ANP/OQDU/zkA1v80ANn/LwDa/y4A2f8=', 1, 2],
-            [7, '1/++/8n/wv/H/77/1f+4/w==', 0, 1],
+            [7, 'z/+3/8T/uv/C/7b/zf+x/w==', 0, 1],
           ],
           lines: [
             [0, 'TAB6/0YAgP88AIf/'],
@@ -801,7 +801,7 @@ export const sprites: SpriteSet = {
             [3, 'OgCD/z4AhP9CAIf/RQCL/0kAjf9NAJD/SwCU/0cAkv9HAJf/QwCX/0AAlP8/AI//PACL/zkAh/8='],
             [5, '9f/X//L/1v/v/9T/7P/Q/+v/zv/u/8//8f/R//X/1f8=', 1, 1],
             [6, '9f/U//P/1P/v/9L/6//O/+v/zP/t/8v/8v/O//X/0v8=', 1, 2],
-            [7, 'EwB+/yEAhP8fAIn/EQCE/w==', 0, 1],
+            [7, 'GwB4/yYAff8kAIH/GQB9/w==', 0, 1],
           ],
           lines: [
             [0, '6/+D/+j/gv/n/4X/6v+K/+//jv8='],
@@ -847,7 +847,7 @@ export const sprites: SpriteSet = {
             [4, 'EgCs/xIArf8SAK7/EgCu/xEArv8RAK3/'],
             [5, '0f/W/8//1f/L/9L/yP/P/8j/zP/K/83/zv/Q/9H/1P8=', 1, 1],
             [6, '0f/U/87/0//L/9D/x//L/8j/yf/K/8r/zv/N/9L/0v8=', 1, 2],
-            [7, '7/97//3/gf/7/4b/7f+B/w==', 0, 1],
+            [7, '9/91/wIAev8AAH7/9f96/w==', 0, 1],
           ],
           lines: [
             [2, 'HAB9/xsAgP8SAH7/EQCA/wsAgv8KAIT/DACE/w=='],
@@ -898,7 +898,7 @@ export const sprites: SpriteSet = {
             [3, 'x/+H/8T/i//C/4//wf+U/77/l/+6/5f/uv+S/7b/lP+0/5D/uP+N/7z/i/+//4f/wv+E/8f/g/8='],
             [5, 'CwDV/w8A0f8SAM//FQDO/xQA0P8RANT/DgDW/wsA1/8=', 1, 1],
             [6, 'CwDS/w4Azv8TAMv/FQDM/xUAzv8RANL/DQDU/wsA1P8=', 1, 2],
-            [7, '7/+E/+H/if/f/4T/7f9+/w==', 0, 1],
+            [7, '5/99/9z/gf/a/33/5f94/w==', 0, 1],
           ],
           lines: [
             [0, 'FQCD/xgAgv8ZAIX/FgCK/xEAjv8='],
@@ -944,7 +944,7 @@ export const sprites: SpriteSet = {
             [4, '7/+t//D/rv/v/67/7v+u/+7/rf/v/6z/'],
             [5, 'LwDU/zIA0P82AM3/OADM/zgAz/81ANL/MQDV/y8A1v8=', 1, 1],
             [6, 'LgDS/zIAzf82AMr/OADJ/zkAy/81AND/MgDT/y8A1P8=', 1, 2],
-            [7, 'EwCB/wUAhv8DAIH/EQB7/w==', 0, 1],
+            [7, 'CwB6/wAAfv/+/3r/CQB1/w==', 0, 1],
           ],
           lines: [
             [2, '5P99/+X/gP/u/37/7/+A//X/gv/2/4T/9P+E/w=='],
@@ -999,7 +999,7 @@ export const sprites: SpriteSet = {
             [3, 'JgCB/yoAgf8uAIP/MQCH/zUAiv85AIz/PACQ/zkAk/81AJX/MwCY/zAAlv8uAJH/LQCN/yoAif8nAIX/'],
             [5, '4P/e/93/3v/Z/9z/1f/Z/9T/1//W/9f/2//Z/9//2/8=', 1, 1],
             [6, '4P/d/9z/3P/Y/9n/1P/V/9T/0v/X/9T/2//W/9//2v8=', 1, 2],
-            [7, '//97/w0Agf8LAIb//f+B/w==', 0, 1],
+            [7, 'BwB1/xIAev8QAH7/BQB6/w==', 0, 1],
           ],
           lines: [
             [2, 'LgB+/ywAgP8jAH//IgCA/xcAhP8='],
@@ -1052,7 +1052,7 @@ export const sprites: SpriteSet = {
             [3, '2f+F/9b/if/T/43/0v+R/9D/lv/N/5j/y/+V/8f/k//E/5D/x/+M/8v/iv/P/4f/0v+D/9b/gf/a/4H/'],
             [5, 'IQDb/yUA2f8qANf/LADX/ysA2f8nANz/IwDe/yAA3v8=', 1, 1],
             [6, 'IQDa/yUA1v8pANT/LADS/ywA1f8oANn/JADc/yAA3f8=', 1, 2],
-            [7, 'AwCB//X/hv/z/4H/AQB7/w==', 0, 1],
+            [7, '+/96//D/fv/u/3r/+f91/w==', 0, 1],
           ],
           lines: [
             [2, '0v9+/9T/gP/d/3//3v+A/+n/hP8='],
@@ -1083,6 +1083,7 @@ export const sprites: SpriteSet = {
     cheer: {
       loop: true,
       holds: [0.5, 0.25],
+      shift: [0.2, 0.5],
       r: [
         {
           sil: [
@@ -1109,11 +1110,10 @@ export const sprites: SpriteSet = {
             [3, 'CAB4/w0AeP8RAHf/FgB1/xoAcv8eAHD/IwBv/ycAbP8qAGn/LgBm/zIAaP8vAGz/NABs/zQAcP8wAHL/KwBy/ycAc/8iAHX/HgB4/xoAev8WAH3/EwCB/w8Ag/8KAIP/CwB//wcAfP8='],
             [5, '2v/T/9f/0//T/9H/0P/O/87/y//R/8v/1f/O/9n/0f8=', 1, 1],
             [6, '3P/Q/9j/0P/T/8//zv/M/83/yv/Q/8r/1f/L/9r/zf8=', 1, 2],
-            [7, '+P91/wYAe/8EAID/9v97/w==', 0, 1],
+            [7, 'AgBz/w0AeP8LAHz/AAB4/w==', 0, 1],
           ],
           lines: [
             [3, 'JQBw/yUAcv8WAHn/EQB9/xEAhf8='],
-            [0, 'AABx////e/8BAIX/'],
             [0, 'BQB6/wUAfv8LAH3/DAB8/wUAe/8='],
             [0, 'QgCB/0EAg/85AIv/MQCP/zAAlf8oAJr/'],
             [0, 'yP+I/8n/h//J/4X/y/+F/9T/if/Z/47/'],
@@ -1138,8 +1138,8 @@ export const sprites: SpriteSet = {
             [1, 'BgCw/wsAvf8KAMr/EgDK/w=='],
             [1, 'HwCz/x4Axf8ZAMn/'],
           ],
-          eyes: [11, -148, 6],
-          head: [11, -156, 64, 0],
+          eyes: [13, -144, 6],
+          head: [13, -152, 64, 0],
         },
         {
           sil: [
@@ -1172,7 +1172,7 @@ export const sprites: SpriteSet = {
             ],
             [5, 'zv/H/8z/x//H/8X/xP/C/8P/v//F/7//yv/B/83/xP8=', 1, 1],
             [6, 'zv/G/8v/xf/H/8H/w/+9/8P/uv/G/7v/yv++/87/w/8=', 1, 2],
-            [7, '/f9Z/wsAX/8JAGP/+/9f/w==', 0, 1],
+            [7, 'BQBS/xAAV/8OAFv/AwBY/w==', 0, 1],
           ],
           lines: [
             [2, 'MABd/zEAYP8vAGH/JABf/yAAYv8iAGP/IwBh/w=='],
@@ -1223,11 +1223,10 @@ export const sprites: SpriteSet = {
             [3, '+v98//b/f//2/4P/8f+D/+3/gf/q/33/5/96/+L/eP/e/3X/2v9z/9X/cv/Q/3L/zP9w/83/bP/R/2z/z/9o/9L/Zv/W/2n/2v9s/93/b//i/3D/5v9y/+v/df/v/3f/9P94//n/eP8='],
             [5, 'JwDR/ysAzv8vAMv/MgDL/zAAzv8tANH/KQDT/yYA0/8=', 1, 1],
             [6, 'JgDN/ysAy/8wAMr/MwDK/zIAzP8tAM//KADQ/yQA0P8=', 1, 2],
-            [7, 'CgB7//z/gP/6/3v/CAB1/w==', 0, 1],
+            [7, 'AAB4//X/fP/z/3j//v9z/w==', 0, 1],
           ],
           lines: [
             [3, '2/9w/9v/cv/q/3n/7/99/+//hf8='],
-            [0, 'AABx/wEAe////4X/'],
             [0, '+/96//v/fv/1/33/9P98//v/e/8='],
             [0, 'vv+B/7//g//H/4v/z/+P/9D/lf/Y/5r/'],
             [0, 'OACI/zcAh/83AIX/NQCF/ywAif8nAI7/'],
@@ -1252,8 +1251,8 @@ export const sprites: SpriteSet = {
             [1, '+v+w//X/vf/2/8r/7v/K/w=='],
             [1, '4f+z/+L/xf/n/8n/'],
           ],
-          eyes: [-11, -148, 6],
-          head: [-11, -156, 64, 0],
+          eyes: [-13, -144, 6],
+          head: [-13, -152, 64, 0],
         },
         {
           sil: [
@@ -1286,7 +1285,7 @@ export const sprites: SpriteSet = {
             ],
             [5, 'MwDE/zYAwf87AL//PQC//zwAwv85AMX/NADH/zIAx/8=', 1, 1],
             [6, 'MgDD/zYAvv86ALv/PQC6/z0Avf85AMH/NQDF/zIAxv8=', 1, 2],
-            [7, 'BQBf//f/Y//1/1//AwBZ/w==', 0, 1],
+            [7, '/f9Y//L/W//w/1f/+/9S/w==', 0, 1],
           ],
           lines: [
             [2, '0P9d/8//YP/R/2H/3P9f/+D/Yv/e/2P/3f9h/w=='],
@@ -1341,7 +1340,7 @@ export const sprites: SpriteSet = {
             [3, 'AQBv/wUAb/8KAG//DwBu/xQAbP8YAG3/GwBv/xcAcv8TAHT/DwB3/wwAe/8JAH7/BAB+/wMAev8GAHf/AgB2////c/8='],
             [5, '1f/P/9P/z//P/8z/zf/I/8z/xf/P/8b/0v/J/9T/zP8=', 1, 1],
             [6, '1//N/9T/zP/Q/8n/zP/F/8v/wv/O/8P/0v/G/9b/yv8=', 1, 2],
-            [7, '8/9p/wEAb/8AAHP/8f9v/w==', 0, 1],
+            [7, '+/9i/wYAZ/8FAGv/+f9o/w==', 0, 1],
           ],
           lines: [
             [2, 'EABq/xcAa/8iAG7/JQBt/ycAa/8='],
@@ -1394,7 +1393,7 @@ export const sprites: SpriteSet = {
             ],
             [5, 'zv/H/8z/x//H/8X/xP/C/8P/v//F/7//yv/B/83/xP8=', 1, 1],
             [6, 'zv/G/8v/xf/H/8H/w/+9/8P/uv/G/7v/yv++/87/w/8=', 1, 2],
-            [7, '/f9Z/wsAX/8JAGP/+/9f/w==', 0, 1],
+            [7, 'BQBS/xAAV/8OAFv/AwBY/w==', 0, 1],
           ],
           lines: [
             [2, 'MABd/zEAYP8vAGH/JABf/yAAYv8iAGP/IwBh/w=='],
@@ -1445,7 +1444,7 @@ export const sprites: SpriteSet = {
             [3, 'AgBz////dv/6/3f//f96//3/fv/4/37/9P97//H/d//t/3T/6f9y/+X/b//o/23/7f9s//L/bv/2/2//+/9v/wAAb/8='],
             [5, 'LADM/y4Ayf8xAMb/NADF/zMAyP8xAMz/LQDP/ysAz/8=', 1, 1],
             [6, 'KgDK/y4Axv8yAMP/NQDC/zQAxf8wAMn/LADM/ykAzf8=', 1, 2],
-            [7, 'DwBv/wAAc////2//DQBp/w==', 0, 1],
+            [7, 'BwBo//v/a//6/2f/BQBi/w==', 0, 1],
           ],
           lines: [
             [2, '8P9q/+n/a//e/27/2/9t/9n/a/8='],
@@ -1498,7 +1497,7 @@ export const sprites: SpriteSet = {
             ],
             [5, 'MwDE/zYAwf87AL//PQC//zwAwv85AMX/NADH/zIAx/8=', 1, 1],
             [6, 'MgDD/zYAvv86ALv/PQC6/z0Avf85AMH/NQDF/zIAxv8=', 1, 2],
-            [7, 'BQBf//f/Y//1/1//AwBZ/w==', 0, 1],
+            [7, '/f9Y//L/W//w/1f/+/9S/w==', 0, 1],
           ],
           lines: [
             [2, '0P9d/8//YP/R/2H/3P9f/+D/Yv/e/2P/3f9h/w=='],

@@ -64,8 +64,11 @@ export const kind: FlatKind = {
   // The dark where each leg meets the belly is the drawing's shadow there, a speck between the legs at play
   // size: the leg's.
   recolour: { from: 'dark', to: 'orange', below: 10, lying: [99, 0] },
-  accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [1.9, 0.8] }],
-  face: { r: 0.7, iris: '#2a1f1a', eye: 'dot' },
+  // On the cheek behind the eye, the engineer's size: the cast's spot is past the back of a goose's narrow head,
+  // and it stuck out into the air there, and below the neck on the run.
+  accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [1.5, 0.7], offset: [0.8, -0.9] }],
+  // A small eye's cheer arc and blink, bolder than the kit's floor: on the small cheer head a hairline was lost.
+  face: { r: 0.7, iris: '#2a1f1a', eye: 'dot', mark: 0.5 },
   gait: { bounce: [0.1, 0.6], lean: [0, 0.03] },
   clips: {
     idle: { frames: ['idle'], loop: true, fps: 1 },
@@ -75,7 +78,10 @@ export const kind: FlatKind = {
     run: { frames: ['run-1', 'run-2'], loop: true, stride: 42, centre: 'box' },
     air: { frames: ['air-1', 'air-2'], loop: false, vy: [-200, 200] },
     wall: { frames: ['wall'], loop: true, fps: 1, centre: 'box' },
-    cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.5, 0.25] },
+    // The neck stretched up, the head is drawn small and its eye high under the crown: the shut eye's arc lay
+    // on the crown's outline, a doubled line and no eye. The drawing's outline down the back of the head is
+    // thinned: as thick as it was, its inner half read as an interior line, a second outline just inside.
+    cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.5, 0.25], shift: [0.2, 0.5] },
     cheer2: { frames: ['cheer2', 'idle'], loop: true, holds: [0.6, 0.3] },
     death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box', scale: 0.9 },
   },
