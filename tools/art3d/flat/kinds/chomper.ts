@@ -3,21 +3,24 @@ import type { FlatKind } from '../kinds';
 export const kind: FlatKind = {
   body: 293,
   map: {
-    roles: ['yellow', 'dark', 'grey', 'napkin', 'check'],
+    roles: ['yellow', 'dark', 'grey', 'check'],
     families: [
       ['yellow', [244, 203, 33]],
       ['yellow', [187, 144, 32]],
       ['yellow', [245, 208, 57]],
       ['dark', [41, 28, 20]],
       ['grey', [154, 154, 153]],
-      ['napkin', [248, 243, 230]],
+      // The napkin's white goes into its check: its gingham traced as a coloured wedge spotted with white
+      // dashes, a rash at play size. The napkin is one flat colour, a pale wash of its check.
+      ['check', [248, 243, 230]],
       ['check', [166, 61, 39]],
       ['check', [179, 103, 59]],
     ],
     line: 'dark',
-    thin: ['yellow', 'grey', 'napkin', 'check'],
+    thin: ['yellow', 'grey', 'check'],
     fringe: 5,
-    stroke: 2.4,
+    // The crack on the crown traced as a 2.9 px zigzag beside the mouth's top corner, a stray tick at play size.
+    stroke: 3.1,
     // Its open mouth is a gap, not a dark fill: the wedge is the read, in the silhouette above all.
     cut: { role: 'dark', area: 2 },
     feet: ['yellow'],
@@ -28,9 +31,9 @@ export const kind: FlatKind = {
     { name: 'yellow', color: '#f6d02a', slot: 'player' },
     { name: 'dark', color: '#2a1f1a' },
     { name: 'grey', color: '#9aa0a8' },
-    { name: 'napkin', color: '#fbf6ee' },
-    // A colourway is the napkin's check (VARIETY.palette): red, blue or green.
-    { name: 'check', color: '#c9473f', alts: ['#3f62b4', '#3f8a3a'], vary: 6 },
+    // A colourway is the napkin (VARIETY.palette), washed in its check: rose, blue or green. Pale, so it never
+    // lands on the ball's colour: in a full green, a green ball's jaw was gone.
+    { name: 'check', color: '#f4c6bf', alts: ['#c6d3f2', '#cde6c3'], vary: 6 },
     { name: 'scuff', color: '#808080', on: 0, tone: 8 },
     // One quiet mark a wear: on a smooth ball, a loud blob reads as a spot.
     { name: 'scorch', color: '#808080', on: 0, tone: -18 },
