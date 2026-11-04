@@ -29,6 +29,9 @@ export const kind: FlatKind = {
     thin: ['white', 'vest', 'orange', 'steel'],
     fringe: 5,
     stroke: 2.4,
+    // The ink between the open beak and the spanner in its jaws is as thick as the eye, and the bigger of the
+    // two took the eye's place: thicker than the line, the eye stays and the beak's ink goes.
+    ink: 11,
     feet: ['orange'],
     loose: ['steel'],
     min: { dark: 0.04 },
