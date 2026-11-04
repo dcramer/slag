@@ -78,7 +78,9 @@ export const kind: FlatKind = {
     { name: 'plaster', vary: 1, options: 2 },
     { name: 'wear', vary: 11, options: 3 },
   ],
-  eyes: { role: 'dark', area: [0.2, 2.6], gap: [1.4, 4.5], specks: { dark: 2.8 } },
+  // Down to 0.06 for the laughing arcs of cheer2 (0.51 and 0.07: the far one traces thin), so the kit draws its
+  // cheer arcs there; shut to the kit, the near arc stayed as a lone dash.
+  eyes: { role: 'dark', area: [0.06, 2.6], gap: [1.4, 4.5], specks: { dark: 2.8 } },
   // The knee patch, in the overalls' own cloth: in the shirt's red it took the player's colour, a fleck on
   // the leg at every step. The lowest red by far (the sleeves end 7.3 under the eyes), and the rightmost lying.
   recolour: { from: 'red', to: 'blue', below: 8.2, lying: [1.2, 2] },
@@ -107,8 +109,7 @@ export const kind: FlatKind = {
     air: { frames: ['air-1', 'air-2'], loop: false, vy: [-200, 200] },
     wall: { frames: ['wall'], loop: true, fps: 1 },
     cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.5, 0.25] },
-    // Shut, laughing eyes: none for the kit.
-    cheer2: { frames: ['cheer2', 'idle'], loop: true, holds: [0.6, 0.3], eyes: false },
+    cheer2: { frames: ['cheer2', 'idle'], loop: true, holds: [0.6, 0.3] },
     death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box' },
   },
   poses: {

@@ -19,8 +19,10 @@ export const kind: FlatKind = {
     line: 'dark',
     thin: ['yellow', 'grey', 'check'],
     fringe: 5,
-    // The crack on the crown traced as a 2.9 px zigzag beside the mouth's top corner, a stray tick at play size.
-    stroke: 3.1,
+    // No interior lines: the crack on the crown traced as a stray tick beside the mouth's top corner, and the
+    // rest were the outline's thick ink walked as lines just inside the edge, a second jagged rim round the
+    // napkin and down the seam between it and the ball.
+    stroke: 99,
     // Its open mouth is a gap, not a dark fill: the wedge is the read, in the silhouette above all.
     cut: { role: 'dark', area: 2 },
     feet: ['yellow'],
@@ -44,7 +46,8 @@ export const kind: FlatKind = {
     { name: 'wear', vary: 11, options: 3 },
   ],
   // The drawn eye is 1.4 to 3.1 px² (the scowl's brow joins it); a crack's speck is under 0.5, and took the kit's eye.
-  eyes: { role: 'dark', area: [0.6, 4], gap: [1, 4], specks: { dark: 4 }, count: 1 },
+  // The eye's glint is the napkin's white: kept, it showed under the kit's blink as a pale dot.
+  eyes: { role: 'dark', area: [0.6, 4], gap: [1, 4], specks: { dark: 4, check: 0.5 }, count: 1 },
   wear: {
     on: ['yellow'],
     chin: 2,

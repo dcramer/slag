@@ -43,7 +43,9 @@ export const kind: FlatKind = {
     feet: ['orange', 'pipe'],
     // No dark fill is worth a shape: the drawing's darks on the suit (the dents, the belt's ends at the hips)
     // were black specks at play size. A white scrap at the hip in idle2 was a pale ring there.
-    min: { dark: 0.5, glint: 0.2, stripe: 1.2 },
+    // The slate knee joints in the run (0.9 world px²) go, as the dents do: kept, the soles' recolour below
+    // (which goes by height) took them too.
+    min: { dark: 0.5, glint: 0.2, stripe: 1.2, waist: 1 },
   },
   roles: [
     // The fishing buoys: red with a white band, the shoulders nobody else in the cast is wider at.
@@ -64,6 +66,9 @@ export const kind: FlatKind = {
     { name: 'scuff', color: '#808080', on: 2, tone: -8 },
     { name: 'scorch', color: '#808080', on: 2, tone: -17 },
     { name: 'sticker', color: '#e8c24a' },
+    // A raised boot's sole (the stomp, the walk's front step, the ball): drawn in the belt's slate, it stayed
+    // slate on a rusted or white boot. A dark of the boot.
+    { name: 'sole', color: '#808080', on: 4, tone: -16 },
   ],
   slots: [
     { name: 'sticker', vary: 1, options: 2 },
@@ -72,6 +77,9 @@ export const kind: FlatKind = {
   // No face to draw: the visor hides it. The near buoy's white band is found as the anchor instead, so the
   // sticker lands on the buoy: anchored on the visor, it sat under the face and read as a mouth.
   eyes: { role: 'stripe', area: [1, 60], gap: [0, 0], specks: {}, count: 1, band: [0, 1] },
+  // The soles are the belt's colour in the drawing: anything of it well under the buoy's band (the belt is
+  // 4 under it, a sole 6.8 and more) is a sole. Never in the death, whose boots show none.
+  recolour: { from: 'waist', to: 'sole', below: 5.5, lying: [99, 99] },
   wear: {
     on: ['orange'],
     chin: 0.5,
