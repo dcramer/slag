@@ -2,13 +2,15 @@ import type { Match, Player } from '../game/match';
 import { DT, PHYS, TILE } from '../sim/constants';
 import { type Level, T_ONEWAY, T_SOLID } from '../sim/level';
 import type { Body, Controls } from '../sim/physics';
-import { AMMO, AMMO_SIM, footprint, touchesHazard } from '../sim/props';
+import type { Rect } from '../core/geom';
+import { AMMO, AMMO_SIM, footprint, type Hazard, touchesHazard } from '../sim/props';
 import { brakeFrom, isStandable, type Move, movesFrom, type WindColumns } from '../sim/reach';
 import { gustAir } from '../sim/weather';
 import type { RunWorld } from '../sim/run';
 import { type InputFrame, NO_INPUT } from '../sim/types';
 import { Rng } from '../core/rng';
 import type { Personality } from './personality';
+import { type Foresight, foresight } from './foresight';
 import { type RaceMap, raceMap } from './route';
 import type { Intent } from './types';
 
@@ -23,7 +25,8 @@ import type { Intent } from './types';
  * whose landing is nearest the target by the route, counting the time it
  * takes, among those that keep clear of
  * the hazards the parts' cycles will bring, of the parts' solids moving into
- * the way, and (in the air) of a gust changing under it. It looks one move
+ * the way, of parts a runner sets off (foresight.ts: its own approach
+ * included), and (in the air) of a gust changing under it. It looks one move
  * past a landing a hazard is about to reach, and won't land where it can't
  * stop and has no clear way on. A held move is worth waiting for only while
  * it still beats the clear ones once the wait it needs is counted as time,
@@ -68,6 +71,8 @@ export class Motor {
   /** Frames left before it acts on what's next (Personality.reaction), holding what it held. */
   private hesitate = 0;
   private run: RunWorld | null = null;
+  /** The parts set off by a runner, as they'll go from where the race stands (set each frame of a race). */
+  private fore: Foresight = BLIND;
   private act: Act | null = null;
   /** The intent it was last given: a new one drops whatever it was doing. */
   private doing: Intent['do'] | '' = '';
@@ -200,25 +205,26 @@ export class Motor {
       this.last = -1;
     }
     const map = raceMap(run);
+    this.fore = foresight(run, map);
     const b = r.body;
     const act = this.act;
     if (
       act?.kind === 'move' &&
       act.loose === undefined &&
       run.projectiles.length > this.shots &&
-      hurts(map, act.m, run.frame, b, shotsAhead(run, map), this.traits.margin, act.i)
+      hurts(map, this.fore, act.m, run.frame, b, shotsAhead(run, map), this.traits.margin, act.i)
     ) {
       this.act = null;
       this.hesitate = this.traits.reaction;
     }
     this.shots = run.projectiles.length;
     // Waiting for its moment, but something is coming for it where it stands: it looks again now.
-    if (act?.kind === 'wait' && hurtsStill(map, run.frame, b, shotsAhead(run, map), this.traits.margin)) this.act = null;
+    if (act?.kind === 'wait' && hurtsStill(map, this.fore, run.frame, b, shotsAhead(run, map), this.traits.margin)) this.act = null;
     const go = this.follow(b);
     if (go) return go;
     // On landing, a moment to see what's next, unless something is coming for it where it stands: anyone flinches.
     // In the air there's no time to stand and look: it steers at once.
-    if (this.hesitate > 0 && b.onGround && !hurtsStill(map, run.frame, b, shotsAhead(run, map), this.traits.margin)) {
+    if (this.hesitate > 0 && b.onGround && !hurtsStill(map, this.fore, run.frame, b, shotsAhead(run, map), this.traits.margin)) {
       this.hesitate--;
       return NO_INPUT;
     }
@@ -307,8 +313,8 @@ export class Motor {
     const shots = shotsAhead(run, map);
     // Standing here is about to hurt: no waiting for a better moment.
     const margin = this.traits.margin;
-    const exposed = hurtsStill(map, f, b, shots, margin);
-    const blocked = (mv: Move) => hurts(map, mv, f, b, shots, margin) || (mv.air && gusty(run.level, mv, f, air));
+    const exposed = hurtsStill(map, this.fore, f, b, shots, margin);
+    const blocked = (mv: Move) => hurts(map, this.fore, mv, f, b, shots, margin) || (mv.air && gusty(run.level, mv, f, air));
     // Nothing clear, and nowhere to stop and wait for it: on a short ledge at a run, coasting is a fall.
     let cornered = false;
     for (const dist of [map.dist(target), map.rough(target)]) {
@@ -331,7 +337,7 @@ export class Motor {
           held.push({ mv, p, trap: false });
           continue;
         }
-        if (looks < TRAP_LOOKS && !exposed && this.trap(map, run, mv, f, dist)) {
+        if ((exposed || looks < TRAP_LOOKS) && this.trap(map, run, mv, f, dist)) {
           looks++;
           held.push({ mv, p, trap: true });
           continue;
@@ -399,7 +405,7 @@ export class Motor {
         continue;
       }
       for (let k = WAIT_STEP; k <= WAIT_AHEAD && p + k * FRAME_COST < value; k += WAIT_STEP) {
-        if (!hurts(map, mv, f + k, b, NO_SHOTS, margin) && !(mv.air && gusty(run.level, mv, f + k, gustAir(run.level, f + k)))) {
+        if (!hurts(map, this.fore, mv, f + k, b, NO_SHOTS, margin) && !(mv.air && gusty(run.level, mv, f + k, gustAir(run.level, f + k)))) {
           value = p + k * FRAME_COST;
           until = f + k;
           break;
@@ -414,16 +420,18 @@ export class Motor {
     if (!b.onGround) return null; // no standing still in the air: it steers
     if (Math.abs(b.vx) < 0.5) return { kind: 'wait', until };
     const stop = brakeFrom(map.field, b, run.solids, air, columns(map, run.frame));
-    if (!stop || hurts(map, stop, run.frame, b, shots, this.traits.margin)) return null;
+    if (!stop || hurts(map, this.fore, stop, run.frame, b, shots, this.traits.margin)) return null;
     return { kind: 'move', m: stop, i: 0 };
   }
 
   /** Could it stop where it is, braking if it's moving, with nothing reaching it on the way or once it's stopped? */
   private canStop(map: RaceMap, run: RunWorld, b: Body, shots: readonly Shot[], air: number, f = run.frame, ahead = STILL_AHEAD): boolean {
     const margin = this.traits.margin;
-    if (Math.abs(b.vx) < 0.5) return !hurtsStill(map, f, b, shots, margin, ahead);
+    if (Math.abs(b.vx) < 0.5) return !hurtsStill(map, this.fore, f, b, shots, margin, ahead);
     const stop = brakeFrom(map.field, b, run.solids, air, columns(map, f));
-    return !!stop && !hurts(map, stop, f, b, shots, margin) && !hurtsStill(map, f + stop.controls.length, stop.end, NO_SHOTS, margin, ahead);
+    return (
+      !!stop && !hurts(map, this.fore, stop, f, b, shots, margin) && !hurtsStill(map, this.fore, f + stop.controls.length, stop.end, NO_SHOTS, margin, ahead)
+    );
   }
 
   /**
@@ -439,7 +447,8 @@ export class Motor {
     if (this.canStop(map, run, e, NO_SHOTS, air, t, TRAP_AHEAD)) return false;
     for (const next of movesFrom(map.field, e, run.solids, air, columns(map, t))) {
       if (next.to === mv.to || !Number.isFinite(dist[next.to])) continue;
-      if (!hurts(map, next, t, e, NO_SHOTS, margin) && !hurtsStill(map, t + next.controls.length, next.end, NO_SHOTS, margin)) return false;
+      if (!hurts(map, this.fore, next, t, e, NO_SHOTS, margin) && !hurtsStill(map, this.fore, t + next.controls.length, next.end, NO_SHOTS, margin, TRAP_AHEAD))
+        return false;
     }
     return true;
   }
@@ -448,10 +457,10 @@ export class Motor {
   private escape(map: RaceMap, run: RunWorld, b: Body, shots: readonly Shot[], moves: readonly Move[], target: number): Act | null {
     const dist = map.rough(target);
     let best: Move | null = null;
-    let hit = b.onGround && Math.abs(b.vx) < 0.5 ? firstHitStill(map, run.frame, b, shots) : -1;
+    let hit = b.onGround && Math.abs(b.vx) < 0.5 ? firstHitStill(map, this.fore, run.frame, b, shots) : -1;
     let cost = Infinity;
     for (const mv of moves) {
-      const h = firstHit(map, mv, run.frame, b, shots);
+      const h = firstHit(map, this.fore, mv, run.frame, b, shots);
       const c = dist[mv.to] + mv.controls.length * FRAME_COST;
       if (h > hit || (h === hit && best && c < cost)) {
         best = mv;
@@ -493,6 +502,7 @@ const TRAP_LOOKS = 4;
 /** Px/s the gust may differ from the one an air move was traced in before the move won't land where it said. */
 const GUST_SLACK = 20;
 const NO_SHOTS: readonly Shot[] = [];
+const BLIND: Foresight = { watch: () => ({ at: () => ({ hazards: [], moved: [] }) }) };
 /** How far ahead (frames) and how finely it watches a blocked move for its moment, and how many blocked moves it watches. */
 const WAIT_AHEAD = 150;
 const WAIT_STEP = 3;
@@ -536,33 +546,47 @@ function shotsAhead(run: RunWorld, map: RaceMap): Shot[] {
   return out;
 }
 
-/** Does a box at (x, y) meet anything that hurts `i` frames from race frame `f`? */
-function struck(map: RaceMap, shots: readonly Shot[], f: number, i: number, box: { x: number; y: number; w: number; h: number }): boolean {
+/** Does a box at (x, y) meet anything that hurts `i` frames from race frame `f`, the parts set off along the way (`set`) included? */
+function struck(
+  map: RaceMap,
+  shots: readonly Shot[],
+  f: number,
+  i: number,
+  box: { x: number; y: number; w: number; h: number },
+  set: readonly Hazard[],
+): boolean {
   for (const h of map.hazards(f + i)) if (touchesHazard(box, h)) return true;
+  for (const h of set) if (touchesHazard(box, h)) return true;
   for (const s of shots) if (i < s.xs.length && touchesHazard(box, { owner: -1, kind: 'circle', x: s.xs[i], y: s.ys[i], r: s.r })) return true;
   return false;
 }
 
-/** Would a hazard reach the body if it stood where it is for the next `ahead` frames? */
-function hurtsStill(map: RaceMap, f: number, b: Body, shots: readonly Shot[], margin: number, ahead = STILL_AHEAD): boolean {
+/** Would a hazard reach the body if it stood where it is for the next `ahead` frames? Standing there sets off what watches the spot. */
+function hurtsStill(map: RaceMap, fore: Foresight, f: number, b: Body, shots: readonly Shot[], margin: number, ahead = STILL_AHEAD): boolean {
   const box = { x: b.x - margin, y: b.y - margin, w: b.w + 2 * margin, h: b.h + 2 * margin };
-  for (let i = 0; i < ahead; i++) if (struck(map, shots, f, i, box)) return true;
+  const w = fore.watch();
+  for (let i = 0; i < ahead; i++) {
+    const seen = w.at(f + i, box);
+    if (struck(map, shots, f, i, box, seen.hazards) || bumpedBy(seen.moved, b.x, b.y, b)) return true;
+  }
   return false;
 }
 
 /** Frames until something reaches a body standing where it is (Infinity if nothing does within STILL_AHEAD), with no room to spare. */
-function firstHitStill(map: RaceMap, f: number, b: Body, shots: readonly Shot[]): number {
-  for (let i = 0; i < STILL_AHEAD; i++) if (struck(map, shots, f, i, b)) return i;
+function firstHitStill(map: RaceMap, fore: Foresight, f: number, b: Body, shots: readonly Shot[]): number {
+  const w = fore.watch();
+  for (let i = 0; i < STILL_AHEAD; i++) if (struck(map, shots, f, i, b, w.at(f + i, b).hazards)) return i;
   return Infinity;
 }
 
 /** Frames into `mv` it's first hit (Infinity if never), with no room to spare. */
-function firstHit(map: RaceMap, mv: Move, f: number, b: Body, shots: readonly Shot[]): number {
+function firstHit(map: RaceMap, fore: Foresight, mv: Move, f: number, b: Body, shots: readonly Shot[]): number {
   const box = { x: 0, y: 0, w: b.w, h: b.h };
+  const w = fore.watch();
   for (let i = 0; i < mv.controls.length; i++) {
     box.x = mv.path[2 * i];
     box.y = mv.path[2 * i + 1];
-    if (struck(map, shots, f, i, box)) return i;
+    if (struck(map, shots, f, i, box, w.at(f + i, box).hazards)) return i;
   }
   return Infinity;
 }
@@ -573,13 +597,21 @@ function gusty(level: RunWorld['level'], mv: Move, f: number, air: number): bool
   return false;
 }
 
-/** Does the body meet a hazard, or a part's solid that has moved into its way, anywhere along `mv` from its `from`th frame on, which is race frame `f`? */
-function hurts(map: RaceMap, mv: Move, f: number, b: Body, shots: readonly Shot[], margin: number, from = 0): boolean {
+/**
+ * Does the body meet a hazard, or a part's solid that has moved into its
+ * way, anywhere along `mv` from its `from`th frame on, which is race frame
+ * `f`? Parts the move itself sets off on the way count as they'll go.
+ */
+function hurts(map: RaceMap, fore: Foresight, mv: Move, f: number, b: Body, shots: readonly Shot[], margin: number, from = 0): boolean {
   const box = { x: 0, y: 0, w: b.w + 2 * margin, h: b.h + 2 * margin };
+  const w = fore.watch();
   for (let i = from; i < mv.controls.length; i++) {
-    box.x = mv.path[2 * i] - margin;
-    box.y = mv.path[2 * i + 1] - margin;
-    if (struck(map, shots, f, i - from, box) || bumped(map, f + i - from, mv.path[2 * i], mv.path[2 * i + 1], b)) return true;
+    const x = mv.path[2 * i];
+    const y = mv.path[2 * i + 1];
+    box.x = x - margin;
+    box.y = y - margin;
+    const seen = w.at(f + i - from, box);
+    if (struck(map, shots, f, i - from, box, seen.hazards) || bumped(map, f + i - from, x, y, b) || bumpedBy(seen.moved, x, y, b)) return true;
   }
   return false;
 }
@@ -589,7 +621,11 @@ const BUMP = 1;
 
 /** Would a body at (x, y) on race frame `f` be inside a part's solid that has moved there since the race began? */
 function bumped(map: RaceMap, f: number, x: number, y: number, b: Body): boolean {
-  for (const s of map.moving(f)) if (x + b.w - BUMP > s.x && x + BUMP < s.x + s.w && y + b.h - BUMP > s.y && y + BUMP < s.y + s.h) return true;
+  return bumpedBy(map.moving(f), x, y, b);
+}
+
+function bumpedBy(solids: readonly Rect[], x: number, y: number, b: Body): boolean {
+  for (const s of solids) if (x + b.w - BUMP > s.x && x + BUMP < s.x + s.w && y + b.h - BUMP > s.y && y + BUMP < s.y + s.h) return true;
   return false;
 }
 
