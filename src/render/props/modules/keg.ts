@@ -18,6 +18,8 @@ const WHITE_HOT: HSL = { h: 48, s: 100, l: 86 };
 const MOUTH = 13;
 /** Frames the cask kicks back after firing. */
 const RECOIL = 9;
+/** Frames before a slingshot's band snaps that it starts to shiver. */
+const STRAIN = 50;
 
 /** Smoothstep-eased angle (radians) of a tipping keg, or the stop it locked to once lit. */
 function shownAngle(m: Keg, grip: Grip | undefined, frame: number, phase: number): number {
@@ -194,10 +196,11 @@ const band: P[] = [
 ];
 
 /**
- * Y-Fling (docs/PARODY.md, fling): a forked stick and a rubber band with a leather pouch. Whoever
- * sits in it pulls the pouch back, and the band stretches thinner the further it goes; chevrons out
- * of the pouch show where it will send them, brighter the harder the pull. Snapped, the band hangs in
- * two pieces from the tips until it's grown back.
+ * Y-Fling (docs/PARODY.md, fling): a forked stick and a rubber band with a leather pouch. Whoever sits
+ * in it points where they want to go and the pouch draws back the other way on its own, the band
+ * stretching thinner the further it goes and shivering before it snaps; chevrons out of the pouch show
+ * where it will send them, brighter the harder the pull. Snapped, the band hangs in two pieces from the
+ * tips until it's grown back.
  */
 function drawFling(rc: RC, m: Keg, d: DrawCtx) {
   const s = rc.s;
@@ -228,8 +231,11 @@ function drawFling(rc: RC, m: Keg, d: DrawCtx) {
   }
   const full = Math.max(1, m.charge ?? 1);
   const pull = grip ? Math.min(1, grip.s / full) : 0;
-  const px = ax + (grip ? grip.x : 0);
-  const py = grip ? ay + grip.y + 3 : ay - 7;
+  // The tell before it snaps: over its last STRAIN frames the pouch shivers harder and harder.
+  const strain = grip ? Math.max(0, Math.min(1, (grip.t - (m.burn - STRAIN)) / STRAIN)) : 0;
+  const shiver = strain * strain * 1.4;
+  const px = ax + (grip ? grip.x : 0) + Math.sin(rc.frame * 2.3) * shiver;
+  const py = (grip ? ay + grip.y + 3 : ay - 7) + Math.cos(rc.frame * 3.1) * shiver * 0.6;
   if (grip) aimChevrons(rc, px, py, grip.aim * QUARTER, pull > 0.99 ? 1 : 0, 0.35 + pull * 0.65);
   for (const [tx, ty] of tips) {
     band[0].x = ax + tx;

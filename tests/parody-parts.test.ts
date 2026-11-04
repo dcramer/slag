@@ -658,25 +658,28 @@ describe('y-fling', () => {
     return [r.body.vx, r.body.vy] as Vec;
   };
 
-  it('fires the opposite way to the pull', () => {
+  const heading = (vx: number, vy: number) => {
+    const n = Math.hypot(vx, vy);
+    return COMPASS.findIndex(([cx, cy]) => Math.abs(cx - vx / n) < 1e-6 && Math.abs(cy - vy / n) < 1e-6);
+  };
+
+  it('fires where the stick points, and the placed aim with the stick left alone', () => {
     for (const [hold, want] of [
-      [pull({ left: true, down: true }), 7],
-      [pull({ right: true }), 4],
-      [pull({ down: true }), 6],
-      [pull({ right: true, up: true }), 3],
+      [pull({ right: true, up: true }), 7],
+      [pull({ left: true }), 4],
+      [pull({ up: true }), 6],
+      [pull({ left: true, down: true }), 3],
+      [NO_INPUT, 7],
     ] as const) {
       const { run, r } = inPouch();
-      const [vx, vy] = fire(run, r, hold, CHARGE);
-      const n = Math.hypot(vx, vy);
-      expect(vx / n).toBeCloseTo(COMPASS[want][0], 5);
-      expect(vy / n).toBeCloseTo(COMPASS[want][1], 5);
+      expect(heading(...fire(run, r, hold, CHARGE))).toBe(want);
     }
   });
 
-  it('goes harder the longer you pull, up to its power', () => {
-    const speed = (frames: number) => {
+  it('draws back on its own: harder the longer you sit, up to its power, whatever the stick does', () => {
+    const speed = (frames: number, hold: InputFrame = pull({ right: true, up: true })) => {
       const { run, r } = inPouch();
-      return Math.hypot(...fire(run, r, pull({ left: true, down: true }), frames));
+      return Math.hypot(...fire(run, r, hold, frames));
     };
     const flick = speed(0);
     const half = speed(CHARGE / 2);
@@ -688,7 +691,56 @@ describe('y-fling', () => {
     expect(full).toBeGreaterThan(half);
     expect(full).toBeCloseTo(POWER, 3);
     expect(speed(CHARGE * 2)).toBeCloseTo(POWER, 3);
+    expect(speed(CHARGE, NO_INPUT)).toBeCloseTo(POWER, 3);
     expect(flingSpeed(sling.modules[0] as ModuleOf<'keg'>, CHARGE)).toBe(POWER);
+  });
+
+  it('lets go of the stick without losing the aim or the pull', () => {
+    const { run, r } = inPouch();
+    steps(run, 10, pull({ left: true, up: true }));
+    // Two keys never lift together: up goes a few frames before left, then nothing.
+    steps(run, 3, pull({ left: true }));
+    const [vx, vy] = fire(run, r, NO_INPUT, CHARGE);
+    expect(heading(vx, vy)).toBe(5);
+    expect(Math.hypot(vx, vy)).toBeCloseTo(POWER, 3);
+    // Held on its own, the axis does take over.
+    const { run: run2, r: r2 } = inPouch();
+    steps(run2, 10, pull({ left: true, up: true }));
+    expect(heading(...fire(run2, r2, pull({ left: true }), FLING.settle))).toBe(4);
+  });
+
+  it('ignores the keys you ran in with until you press a direction afresh', () => {
+    const p = place(sling, SX, SY);
+    const { run, r } = race([p]);
+    fly(r, (SX - 1) * TILE, (SY + 1) * TILE, PHYS.runSpeed);
+    const RUN_IN = pull({ right: true, run: true });
+    for (let i = 0; i < 20 && !r.attach.grip; i++) steps(run, 1, RUN_IN);
+    expect(r.attach.grip).not.toBeNull();
+    // Still holding right, a quick jump goes the placed way (up-right), never back the way you came.
+    steps(run, 3, RUN_IN);
+    expect(r.attach.grip!.aim).toBe(7);
+    // Adding up brings right back with it.
+    steps(run, 2, pull({ right: true, up: true }));
+    expect(r.attach.grip!.aim).toBe(7);
+    steps(run, 2, pull({ right: true }));
+    expect(r.attach.grip!.aim).toBe(7);
+    steps(run, FLING.settle, pull({ right: true }));
+    expect(r.attach.grip!.aim).toBe(0);
+  });
+
+  it('carries the shot when you keep holding the aim through the flight', () => {
+    const flight = (after: InputFrame) => {
+      const { run, r } = inPouch();
+      const aim = pull({ right: true, up: true });
+      fire(run, r, aim, CHARGE);
+      const x0 = r.body.x;
+      steps(run, 30, after);
+      return r.body.x - x0;
+    };
+    const held = flight(pull({ right: true, up: true }));
+    // Holding the aim never costs distance against letting go, and the shot goes far either way.
+    expect(held).toBeGreaterThanOrEqual(flight(NO_INPUT));
+    expect(held).toBeGreaterThan(8 * TILE);
   });
 
   it('snaps if you hang on too long, drops you, and grows back', () => {
@@ -721,7 +773,7 @@ describe('y-fling', () => {
     fly(other, (SX + 1) * TILE, (SY + 1) * TILE);
     steps(run, 3);
     expect(other.attach.grip).toBeNull();
-    fire(run, r, pull({ down: true }), 4);
+    fire(run, r, pull({ up: true }), 4);
     // Fired straight up out of the pouch: the cooldown keeps it from catching you on the way back through.
     expect(r.attach.cd).toBeGreaterThan(0);
     const { run: run2, r: r2 } = inPouch();
@@ -737,7 +789,7 @@ describe('y-fling', () => {
     sameTwice(() => {
       const { run, r } = race([place(sling, SX, SY)]);
       fly(r, (SX + 1) * TILE, (SY + 1) * TILE);
-      return { run, script: (w, f) => w.step([f < 30 ? pull({ left: true, down: true }) : f === 30 ? JUMP : NO_INPUT]) };
+      return { run, script: (w, f) => w.step([f < 30 ? pull({ right: true, up: true }) : f === 30 ? JUMP : NO_INPUT]) };
     }, 120);
   });
 });
