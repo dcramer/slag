@@ -335,6 +335,23 @@ export const BRIEFS: Record<string, Brief> = {
       'A white paper doily (#fbf6ee) with a scalloped lace edge is stuck flat to its underside.',
     worn: 'the dome has slumped a little to one side as if melting, and one fat drip of jelly runs down its side and hangs below the rim; a big round spoonful is scooped out of the top of the dome at the back, a clear dent in its outline; one fang is snapped off short; the doily is torn and one ragged flap of it hangs down.',
   },
+  merc: {
+    // The nod, each part of the read at race size: the blade bigger than he is (the read: no one else in the
+    // cast carries one, and it leads the brief), always in his hand, never on his back (the plumber's plunger
+    // owns the back); the crown of big blond spikes pointing up (the head shape, sharper and taller than the
+    // speedster's swept quills); the one big shoulder piece over a slim, dark-cut outfit (the brooding
+    // mercenary, not a knight or a hero in a tunic).
+    // Ours, and the joke: the legendary blade is a giant serrated bread knife with a riveted wooden handle and
+    // a rounded tip, no guard; the shoulder piece is a car hubcap; the spikes are singed at the tips.
+    // The palette is neutral (Decisions 4): the top in the player's colour, the trousers a dark of it; hair,
+    // skin, steel, wood and leather stay their own.
+    design:
+      'The character: a slim, brooding young swordsman gripping a giant serrated bread knife as tall as he is: one broad, flat, straight steel blade (#c9ccd2) as wide as his head, a row of big saw teeth along its front edge, a rounded tip, no guard, on a chunky wooden handle (#7a5232) with two rivets. ' +
+      'He holds it by the handle in one hand down at his side, the blade standing upright beside him with its tip resting on the ground. ' +
+      'On his head a huge crown of big spiky blond hair (#f0d470), five thick spikes pointing up and back, the tallest part of him. Peach skin (#f0cfa8), two big eyes, a stern mouth. ' +
+      'A sleeveless knit top (#4a5ab0), baggy trousers in a much darker shade of the same blue (#283266), two brown belts (#6b4a35) crossed at the hip, heavy brown boots. On one shoulder a single big round shoulder piece: a grey car hubcap (#9aa0a8).',
+    worn: 'the tip of every hair spike is singed black; the hubcap has a big dent knocked into it and a crack across it; two teeth are snapped out of the middle of the knife edge, leaving a big notch; one trouser leg is torn off ragged at the shin.',
+  },
 };
 
 function brief(kind: string): Brief {
