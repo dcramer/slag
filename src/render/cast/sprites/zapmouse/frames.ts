@@ -8,8 +8,8 @@ export const sprites: SpriteSet = {
   roles: [
     { color: '#a9afb7' },
     { color: '#f2c62a', slot: 'player' },
-    { color: '#7c848d', alts: ['#d9622b', '#7c848d'], vary: 6 },
-    { color: '#7a5236', alts: ['#4b5560', '#9a3b2a'], vary: 6 },
+    { color: '#7c848d', alts: ['#b3aa9b', '#5a5e66'], vary: 6 },
+    { color: '#7a5236', alts: ['#4b5560', '#857a6e'], vary: 6 },
     { color: '#e0473b' },
     { color: '#2a1f1a' },
     { color: '#808080', on: 1, tone: 10 },
