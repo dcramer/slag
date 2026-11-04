@@ -3,7 +3,7 @@ import type { FlatKind } from '../kinds';
 export const kind: FlatKind = {
   body: 229,
   map: {
-    roles: ['blue', 'peach', 'red', 'yellow', 'grey', 'brown', 'white', 'dark', 'iris', 'sole', 'tape'],
+    roles: ['blue', 'peach', 'shoe', 'scarf', 'grey', 'brown', 'white', 'dark', 'iris', 'sole', 'tape'],
     families: [
       ['blue', [60, 98, 181]],
       ['blue', [45, 72, 134]],
@@ -14,9 +14,9 @@ export const kind: FlatKind = {
       ['peach', [223, 188, 148]],
       ['peach', [194, 159, 125]],
       ['peach', [239, 191, 125]],
-      ['red', [192, 54, 39]],
-      ['red', [101, 39, 29]],
-      ['yellow', [237, 201, 97]],
+      ['shoe', [192, 54, 39]],
+      ['shoe', [101, 39, 29]],
+      ['scarf', [237, 201, 97]],
       ['grey', [141, 142, 134]],
       // The tape round the back quill: a role of its own, drawn in the quills' colour (grey, it was a lump behind
       // the head at play size).
@@ -24,9 +24,9 @@ export const kind: FlatKind = {
       ['tape', [130, 126, 116]],
       ['brown', [137, 86, 59]],
       ['brown', [105, 74, 53]],
-      // The scarf's dark stripes fold into its yellow: at play size a hazard stripe is a dark mottle on the chest.
-      ['yellow', [76, 66, 54]],
-      // The flapping sole's dark underside: a role of its own, or (as the stripes' yellow) the shoe opens yellow.
+      // The scarf's dark stripes fold into its cloth: at play size a hazard stripe is a dark mottle on the chest.
+      ['scarf', [76, 66, 54]],
+      // The flapping sole's dark underside: a role of its own, or (as the stripes' cloth) the shoe opens in the scarf's colour.
       ['sole', [64, 64, 64]],
       ['white', [255, 255, 252]],
       // The eye white's shade under the brow: white, or a grey scrap over the eye.
@@ -40,12 +40,13 @@ export const kind: FlatKind = {
       ['iris', [88, 140, 68]],
     ],
     line: 'dark',
-    thin: ['blue', 'peach', 'red', 'yellow', 'grey', 'brown', 'white', 'sole', 'tape'],
+    thin: ['blue', 'peach', 'shoe', 'scarf', 'grey', 'brown', 'white', 'sole', 'tape'],
     fringe: 5,
     stroke: 2.4,
-    // The neckerchief's and gloves' outlines stay line, not scraps of ink on them.
-    ink: 13,
-    feet: ['red', 'grey'],
+    // The neckerchief's and gloves' outlines stay line, not scraps of ink on them. Over 13: the knot behind the neck,
+    // its stripes' shade wrapped in thick ink, stayed a solid black blob there in every pose.
+    ink: 19,
+    feet: ['shoe', 'grey'],
     // The face's stray specks fold away: a white gap by the glove, scraps of the grin and of the scarf's dark
     // (painted over, a speck leaves a rim). The tape's light grey on the soles folds into the shoe.
     min: { dark: 0.85, white: 0.8, iris: 0.1, tape: 3.5 },
@@ -53,11 +54,17 @@ export const kind: FlatKind = {
   roles: [
     { name: 'blue', color: '#2f5bd0', slot: 'player' },
     { name: 'peach', color: '#f0c99c' },
-    // A colourway is the sneakers (VARIETY.palette): red, racing green or cream.
-    { name: 'red', color: '#d8382f', alts: ['#2f8a57', '#ebe5d6'], vary: 6 },
-    { name: 'yellow', color: '#e8c24a' },
+    // The sneakers, a dark of the quills: far enough off them that the legs end in shoes.
+    { name: 'shoe', color: '#808080', on: 0, tone: -22 },
+    // The neckerchief, a dark of the quills: its tails cross them behind the neck. A light of them was the
+    // muzzle's peach on an orange hedgehog, and the neckerchief and the chin drew as one shape.
+    { name: 'scarf', color: '#808080', on: 0, tone: -15 },
+    // The strap, told from the neckerchief (one yellow in the drawing) by where it is (`recolour`).
+    { name: 'strap', color: '#ebe5d6' },
+    // The toecaps.
     { name: 'grey', color: '#9a9894' },
-    { name: 'brown', color: '#7a5236' },
+    // A colourway is the gloves (VARIETY.palette): brown, black or tan leather.
+    { name: 'brown', color: '#7a5236', alts: ['#45403c', '#a8794a'], vary: 6 },
     { name: 'white', color: '#fbf8f2' },
     { name: 'dark', color: '#2a1f1a' },
     { name: 'iris', color: '#3a9a46' },
@@ -71,6 +78,12 @@ export const kind: FlatKind = {
   slots: [
     { name: 'plaster', vary: 0, options: 2 },
     { name: 'wear', vary: 11, options: 3 },
+  ],
+  // The strap: the drawing's yellow under the face; lying or spun, the yellow right of the neckerchief, less
+  // the spin's streak of neckerchief on the right (2.7 world px², a strap at most 1.9, by the lying shoe's 3.9).
+  recolour: [
+    { from: 'scarf', to: 'strap', below: 7, lying: [0.5, -2] },
+    { from: 'strap', to: 'scarf', below: 99, lying: [2.2, 1] },
   ],
   eyes: { role: 'iris', area: [0.05, 1.5], gap: [1, 4.5], specks: { dark: 1.6, white: 4, iris: 2 }, band: [0.1, 0.45] },
   wear: {

@@ -30,7 +30,9 @@
       "Bash(git show *)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git pull --rebase origin main)"
+      "Bash(git pull --rebase origin main)",
+      "Bash(node /home/dcramer/src/terra/tools/tripo/tripo.ts image *)",
+      "Bash(node /home/dcramer/src/terra/tools/tripo/tripo.ts balance)"
     ]
   },
   "hooks": {

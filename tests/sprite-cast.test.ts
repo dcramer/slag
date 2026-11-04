@@ -333,8 +333,10 @@ describe('rendered kinds: curated variety (docs/CHARACTERS.md → Variety)', () 
       const a = generateCharacter(3, s.kind as Kind);
       const b = { ...a, body: { h: (a.body.h + 180) % 360, s: a.body.s, l: a.body.l } };
       const [ca, cb] = [coloursOf(s, a), coloursOf(s, b)];
+      // A wear mark can be a tone of a role that is itself a tone of the player's (the king's scuff on his shell).
+      const derives = (r: (typeof s.roles)[number]): boolean => r.slot === 'player' || (r.on !== undefined && derives(s.roles[r.on]));
       s.roles.forEach((r, i) => {
-        const fromPlayer = r.slot === 'player' || (r.on !== undefined && s.roles[r.on].slot === 'player');
+        const fromPlayer = derives(r);
         if (!fromPlayer) expect(ca[i], `${s.kind} role ${i}`).toEqual(cb[i]);
       });
     }

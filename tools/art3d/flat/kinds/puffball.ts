@@ -41,17 +41,18 @@ export const kind: FlatKind = {
   },
   roles: [
     { name: 'pink', color: '#f2a0bc', slot: 'player' },
-    // A colourway is the feet (VARIETY.palette): red, orange or yellow.
-    { name: 'red', color: '#c9473f', alts: ['#e07b2c', '#e8b23a'], vary: 6 },
-    // The shoe scuffed through at the toe, a pale tone of the shoe: in a cream padding it was the farm's own
+    // The feet, a dark of the ball: the player's colour, as the plumber's cap shade is.
+    { name: 'red', color: '#808080', on: 0, tone: -18 },
+    // The shoe scuffed through at the toe, a tone between the shoe and the ball: in a cream padding it was the farm's own
     // colour, and read as a hole in the toe.
-    { name: 'sole', color: '#e9958e', on: 1, tone: 18 },
+    { name: 'sole', color: '#808080', on: 0, tone: -8 },
     { name: 'white', color: '#f4efe6' },
     { name: 'dark', color: '#2a1f1a' },
     { name: 'scuff', color: '#808080', on: 0, tone: 8 },
     // One quiet mark a wear: on a smooth ball, a loud blob reads as a spot.
     { name: 'scorch', color: '#808080', on: 0, tone: -12 },
-    { name: 'plaster', color: '#e9d3b0' },
+    // A colourway is the plaster (VARIETY.palette): fabric, gauze or grey tape.
+    { name: 'plaster', color: '#e9d3b0', alts: ['#f1ede4', '#b9bcbf'], vary: 6 },
   ],
   slots: [
     { name: 'plaster', vary: 0, options: 2 },

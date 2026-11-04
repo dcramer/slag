@@ -46,8 +46,8 @@ export const kind: FlatKind = {
     { name: 'skin', color: '#efc9a4' },
     { name: 'hair', color: '#e6c25a' },
     { name: 'brown', color: '#6b4a35' },
-    // A colourway is the dustbin lid (VARIETY.palette): galvanised, recycling blue or black plastic.
-    { name: 'lid', color: '#a8adb4', alts: ['#5f80a8', '#5a5e66'], vary: 6 },
+    // A colourway is the dustbin lid (VARIETY.palette), in neutrals: galvanised, black plastic or white enamel.
+    { name: 'lid', color: '#a8adb4', alts: ['#5a5e66', '#d2ccc0'], vary: 6 },
     { name: 'iron', color: '#4a4a52' },
     { name: 'dark', color: '#2a1f1a' },
     { name: 'scuff', color: '#808080', on: 0, tone: 14 },
@@ -81,7 +81,9 @@ export const kind: FlatKind = {
   // A cross of plaster on his crown, a bonk on the head. On the cheek his small face put it on the jawline, and
   // its edge drew a dark line across the jaw that read as a scar or stubble.
   accessories: [{ slot: 'plaster', role: 'plaster', at: 'crown', size: [2.2, 0.75] }],
-  face: { r: 0.65, iris: '#3c78c8' },
+  // The blink's dashes and the cheer's arcs at a width of their own: at the small eye's (0.39 and 0.33) they were
+  // pale brown hairlines, and the face read as eyeless.
+  face: { r: 0.65, iris: '#3c78c8', mark: 0.6 },
   gait: { bounce: [0.2, 0.8], lean: [0, 0.04] },
   clips: {
     idle: { frames: ['idle'], loop: true, fps: 1 },

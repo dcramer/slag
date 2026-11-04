@@ -152,7 +152,8 @@ export function drawFrame(
     } else if (flat) {
       const pts = boiled(r, boil, seed + role);
       // A speck of a part (a glint, a stud) inked round in a dark of its colour read as a pupil: it's only the fill.
-      if (area(pts) < SPECK) {
+      // Sized on the traced ring, not the boiled one, so a part near the line keeps or loses its pen on every frame.
+      if (area(pointsOf(r)) < SPECK) {
         path(s, pts);
         s.fillStyle = p.fill;
         s.fill();

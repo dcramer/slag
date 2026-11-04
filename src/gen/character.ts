@@ -21,11 +21,16 @@ export const CAST = [
   'jelly',
   'goose',
   'engineer',
-  'fox',
-  'frog',
-  'penguin',
-  'chicken',
   'chomper',
+  'miner',
+  'ape',
+  'merc',
+  'king',
+  'dino',
+  'robot',
+  'sneak',
+  'cuptoon',
+  'horse',
 ] as const;
 export type Kind = (typeof CAST)[number];
 
@@ -70,11 +75,16 @@ export const KIND_NAMES: Record<Kind, string> = {
   jelly: 'Meltroid',
   goose: 'Honkers',
   engineer: 'Engie',
-  fox: 'Fox',
-  frog: 'Frog',
-  penguin: 'Penguin',
-  chicken: 'Chicken',
   chomper: 'Snack-Man',
+  miner: 'Stove',
+  ape: 'Dankey Kang',
+  merc: 'Clod',
+  king: 'Browser',
+  dino: 'Yoshee',
+  robot: 'Meh Man',
+  sneak: 'Snek',
+  cuptoon: 'Mughead',
+  horse: 'Hoarse',
 };
 
 /**
@@ -92,11 +102,16 @@ const PAINTS: Record<Kind, readonly HSL[]> = {
   jelly: [hsl3(100, 60, 70), hsl3(110, 56, 66)],
   goose: [hsl3(40, 20, 95), hsl3(30, 12, 93)],
   engineer: [hsl3(2, 60, 46), hsl3(214, 52, 46)],
-  fox: [hsl3(40, 40, 90), hsl3(30, 30, 86)],
-  frog: [hsl3(60, 40, 84), hsl3(45, 36, 86)],
-  penguin: [hsl3(40, 30, 94), hsl3(200, 12, 92)],
-  chicken: [hsl3(4, 70, 52), hsl3(354, 64, 50)],
   chomper: [hsl3(49, 92, 56), hsl3(46, 88, 55)],
+  miner: [hsl3(180, 47, 47)],
+  ape: [hsl3(25, 45, 35)],
+  merc: [hsl3(232, 38, 48)],
+  king: [hsl3(100, 45, 40)],
+  dino: [hsl3(110, 55, 46)],
+  robot: [hsl3(220, 65, 47)],
+  sneak: [hsl3(35, 42, 55)],
+  cuptoon: [hsl3(2, 65, 50)],
+  horse: [hsl3(25, 50, 40)],
 };
 
 /** How many `vary` rolls a character has, and how many of them come from the look's main stream. */

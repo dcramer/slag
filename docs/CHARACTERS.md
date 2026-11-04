@@ -8,10 +8,10 @@ The runners are a cast of fifteen: eleven homages to famous game characters in o
 
 From the owner (logged in [DECISIONS.md](DECISIONS.md) → Characters):
 
-1. **Every character is a homage.** The lore makes the runners the knock-off heroes who almost got their own game, so the whole cast parodies famous game characters (see Roster). Until the art pipeline lands, four plain animals from round 5 are still in the game.
+1. **Every character is a homage.** The lore makes the runners the knock-off heroes who almost got their own game, so the whole cast parodies famous game characters (see Roster). The four plain animals from round 5 left the cast when the last nine homages came in (2026-11-04).
 2. **Recognisability comes first.** A stranger should name each homage at a glance. For each one we list the three or four traits people actually know it by and make every one of them unmistakable at play scale.
 3. **Homages, never copies.** Each is our own design, read from its silhouette and one or two signature props, never the original's exact design or its real name. Sound-alike names are data (`KIND_NAMES` in `src/gen/character.ts`) and appear nowhere else. Player characters may have faces and personas; parts and machines stay faceless (DESIGN.md → Parody).
-4. **The iconic palette wins, and the player's color moves.** A homage keeps the colors it's known by (the plumber's red cap and blue overalls, the speedster's cobalt, the mouse's yellow). The player's color goes on a secondary but always-visible slot: a flat ring at its feet, no glow. A plain animal, or a homage that comes in every color anyway (the impostor crewmate, the puffball), is drawn in the player's color. Either way it's that player's HUD color, and with eight different kinds per lobby plus the ring, eight players stay told apart.
+4. **A neutral palette, and the colour is the player's.** Each kind's own colours are neutrals: skin, eyes, hair, metal, wood, bone, cloth greys and the ink. Nearly every coloured part takes the player's colour: the costume in it, every other coloured part in a lighter or darker tone of it (the plumber's cap and overalls, the engineer's hat and shirt). The shape carries the read, not the original's hues. It's that player's HUD color, and with eight different kinds per lobby, eight players stay told apart. (Owner, 2026-11-04; before, a homage kept its iconic hues and the player's colour went on one costume region.)
 5. **Random roll only.** New Look rolls everything, the kind included. A lobby never seats two of the same kind (`Match.looksFree`).
 6. **Saved looks re-roll once** whenever the cast changes what a seed means: `LOOK_CAST` in `src/ui/profile.ts` (now 7).
 7. **Clean, light, hand-drawn.** A thin pen that varies along the line, in a dark of the body's own color; two or three flat tones per surface; one soft, hard-edged shadow shape; calm color; no glow.
@@ -33,21 +33,26 @@ So each kind has: a clear head-to-body ratio, a readable expression, a line of a
 
 | Kind | Homage (what a stranger should say) | Signature traits | Player's color |
 |---|---|---|---|
-| plumber | the mustached plumber | red cap with a round white badge (our own mark, a little wrench, never the letter), big round nose, thick mustache, blue overalls with two gold buttons, white gloves, brown shoes; big head, stout | costume: cap and shirt |
-| hedgehog | the blue speedster | cobalt, spikes swept straight back, joined eyes with green irises, peach muzzle and belly, a one-sided grin, red sneakers with a white strap; runs leaning hard, spins in the air | costume: the quills |
-| elf | the green-tunic elf hero | long green cap flopping back, pointed ear, blond fringe, flared green tunic with a belt, a kite shield and a sword hilt on the back | costume: cap and tunic |
-| hunter | the armored bounty hunter | orange armor, huge round red shoulder pads, a round helmet with a green visor, an arm cannon held out | costume: the suit |
-| zapmouse | the yellow electric mouse | yellow, long ears with black tips, red cheeks, a lightning-bolt tail, brown back stripes | costume: the fur |
-| impostor | the impostor crewmate | a bean on stubby legs, a wide pale visor standing proud, a backpack | costume: the bean |
-| puffball | the pink puffball | a ball on big red feet, stubby arms, tall eyes with a shine, blush; puffs up in the air | costume: the ball |
-| jelly | the jellyfish parasite | a translucent green dome, three red nuclei inside, four ivory fangs, a hovering bob | costume: the dome |
-| goose | the goose up to no good | white, orange beak and feet, an S of a neck; on the run the honk pose, neck flat out and wings up | costume: the vest |
-| engineer | the team shooter's engineer | yellow hard hat with dark goggles on it, a square jaw, a red or blue work shirt, khaki trousers, a leather glove, a huge wrench | costume: the shirt |
-| chomper | the round dot-eater | a yellow circle with a wedge mouth that chomps, one small eye, a scalloped bite out of its back, a checked napkin tucked into its lower lip | costume: the whole ball |
-| fox | — | long and low, snout out front, tall ears, bushy tail carried up | body |
-| frog | — | crouched flat, two eye bumps; crouches and leaps | body |
-| penguin | — | upright egg, pale front, flippers; waddles | body |
-| chicken | — | tall and bottom-heavy on thin legs, red comb; struts | body |
+| plumber | the mustached plumber | a cap with its bill out front and a round badge (our own mark, a little wrench, never the letter), big round nose, thick mustache, bib overalls over the shirt with two buttons, gauntlets, boots; big head, stout | costume: cap and shirt; overalls and plunger cup a dark of it |
+| hedgehog | the blue speedster | spikes swept straight back, joined eyes with green irises, peach muzzle and belly, a one-sided grin, big sneakers with a pale strap; runs leaning hard, spins in the air | costume: the quills; sneakers and neckerchief darks of it |
+| elf | the green-tunic elf hero | long cap flopping back, pointed ear, blond fringe, flared tunic with a belt, a shield and a sword hilt on the back | costume: cap and tunic; the darned toe a light of it |
+| hunter | the armored bounty hunter | tall and long-legged, huge round shoulder pads wider than anything else, a helmet with a wide visor band, the forearm a cannon held straight out from the shoulder; tucks into a ball | costume: the suit, the buoys a dark of it, the cannon a light |
+| zapmouse | the yellow electric mouse | yellow, long ears with black tips, red cheeks, a lightning-bolt tail | costume: the fur; the cheeks keep their red (a face mark), the tin tail and the cord are neutral |
+| impostor | the impostor crewmate | a bean on stubby legs, a wide pale visor standing proud, a backpack | costume: the bean, and the pack a dark of it |
+| puffball | the pink puffball | a ball on big feet, stubby arms, tall eyes with a shine, blush; puffs up in the air | costume: the ball, and the feet a dark of it |
+| jelly | the jellyfish parasite | a dome, three nuclei inside, four fangs under it (two big ones a pincer), a hovering bob | costume: the dome, the nuclei and rim in tones of it |
+| goose | the goose up to no good | white, a tan beak and feet, an S of a neck; on the run the honk pose, neck flat out and wings up | costume: the vest; the beak and feet a neutral tan |
+| engineer | the team shooter's engineer | a toolbox in one hand and a huge wrench held low in the other, a round hard hat with goggles on it, a square jaw, a work shirt, khaki trousers, leather gloves | costume: the shirt, the hat and toolbox in tones of it |
+| chomper | the round dot-eater | a circle with a wedge mouth that chomps, one small eye, a scalloped bite out of its back, a linen napkin tucked into its lower lip | costume: the whole ball |
+| miner | the voxel miner | a cube head as wide as the body, square stiff limbs, a taped toy pickaxe; carved from wood | costume: the shirt, the trousers a dark of it |
+| ape | the necktie ape | hunched, long arms, a necktie | costume: the fur, the tie a shade of it |
+| merc | the spiky-haired mercenary | a crown of big blond spikes singed at the tips, a giant serrated bread knife always in hand, a hubcap on one shoulder | costume: the top, the trousers a dark of it |
+| king | the spiked turtle king | a spiked shell humped behind, two horns, a red mane, a paper crown, a brute's upright build | costume: the shell |
+| dino | the green saddled dino | a huge round snout out front, eyes on top of the head, white belly and cheeks, a torn black bicycle seat strapped low on its back, a long tail straight out behind, wellies, a carrier bag with its own spotted egg | costume: the skin (the head spikes a light of it, the wellies a dark) |
+| robot | the blue robot boy | a big round helmet with a stripe and ear discs, the face in its opening, a light suit, big boots, a tin-can arm cannon held out, a battery on his back; small | costume: helmet, gloves and boots, the suit a light tone |
+| sneak | the sneaking soldier | side on, a square cardboard box on two crouched legs, his eyes in a slot, a striped bandana's two tails out of a hand-hole behind | costume: the box (its back end, tape, arrow and bandana tones of it) |
+| cuptoon | the cup-headed toon | a white enamel mug for a head, its handle out the back and a straw bent over out of the tea, black rubber-hose limbs, white gloves, high-waisted shorts, big round shoes | costume: the shorts |
+| horse | the barnyard party game's horse | a long head tilted down with a pale nose, upright ears, a flat mane, standing on two legs; a scarf and a zip (a costume) | costume: the onesie, scarf a dark of it |
 
 **Is it the homage?** `cast-recognise.png` puts each kind close up beside "This is ___", in its roster colour. Every sheet waits for the rendered kinds' frames (`slagDebug.sprites.ready()`), so it shows what ships; before 2026-11-02 the catalog, recognise and silhouette sheets drew those kinds hand-drawn, so the reads below were judged on the old bodies. As of this round, every homage reads as its caption to us: the plumber, speedster, elf, mouse, impostor, puffball, jelly and goose at once; the bounty hunter and the engineer a beat slower, because their reads lean on props (the shoulder pads and cannon, the hat and wrench) more than on a silhouette nobody else shares. The silhouette test still separates every kind, though the plumber and the hunter are the closest pair of stout shapes.
 
@@ -78,13 +83,13 @@ What came out of it:
 - **Size.** About 16 world px tall at play scale, inside the shared 14×15 body envelope. One hitbox for everyone. Big props stay thin or behind the body.
 - **Style.** Clean, confident curves; few shapes; smooth tapered lines in a dark of each part's own color; two or three flat tones per surface; one soft, hard-edged shadow shape; calm color; no glow, no gradients.
 - **Facing.** Drawn facing right, standing on the floor.
-- **Player's color.** The kind's main costume colour, like a fighting game's alternate costumes: the region a stranger would name the character's colour by wears the player's colour, its shade cut from it, and the rest of the palette stays the roster's. Two players of one kind are told apart by it at a glance. A rendered kind marks that role `slot: 'player'` in its entry (`tools/art3d/flat/kinds.ts`) and draws no ring. Nothing that a stranger reads as skin, eyes or a face takes it. This holds even where the colour is the original's identity (the dot-eater's ball): the shape carries the read.
+- **Player's color.** Decisions 4: the kind's palette is neutral, and nearly every colour on it is the player's. The region a stranger would name the character's colour by wears the player's colour (`slot: 'player'` in its entry, `tools/art3d/flat/kinds.ts`); every other coloured part is a tone of it (`on` that role, `tone` lighter or darker), far enough apart that the parts stay separate shapes; the rest is neutral (skin, eyes, hair, metal, wood, bone, cloth greys, ink). No ring. Nothing that a stranger reads as skin, eyes or a face takes it. This holds even where a colour is the original's identity (the dot-eater's ball, the plumber's blue overalls): the shape carries the read.
 - **Faces.** Expressive eyes with highlights, and brows that react to running, jumping, falling and cheering. The face is the kind's, never rolled: eye count, style, iris, place and mouth are part of its design (`paintFace` in `KINDS`, `face` in a rendered kind's entry), so every character of a kind has the same face and only its expression changes. A rendered kind's eyes are found in every pose (`tools/art3d/README.md` → Face, variety, frames).
 - **The nod and the twist.** The nod is the three or four traits a stranger names it by, and each entry says why each one is needed. The twist is ours: a foundry, scrapyard or knock-off flavour, a changed signature prop, and one joke. A twist never moves or hides a trait the nod needs.
 - **Swaps.** Small accessories inside the outline, rolled per look from `vary`: they never change the silhouette.
 - **Disheveled.** Two or three worn tells per kind, each a change to the outline or a big flat shape that reads at play scale (Decisions 9). They are the design, not a roll: every look of a kind is battered the same way.
 - **Variety.** Every look of a kind is the same character by the same hand, so variety is curated, never rolled freely: the face, the proportions and the silhouette are fixed per kind. Besides the costume colour and the swaps, each kind designs three layers, each picked from the look seed (`VARIETY` in `src/render/cast/sprites/play.ts`) and render only:
-  - **Palette alts:** 2–3 designed colourways for one secondary region, never the costume, skin, eyes or face (the plumber's overalls, the speedster's shoes). A region the nod needs keeps its roster colour as one of them. Parts that belong together (a shoe and its sole) change together.
+  - **Palette alts:** 2–3 designed colourways for one neutral region, in neutrals (a steel, a bone, a worn leather; the hair's shade), never the costume, its tones, skin, eyes or face. Parts that belong together (a shoe and its sole) change together.
   - **Idles and cheers:** two of each, the second keyed from the pose sheet or cut from another clip, plus a gait range: how much extra bounce on each step and how far forward it leans, small enough to stay in the shared box.
   - **Wear:** clean, scuffed and scorched. A few small marks on the body, the limbs or the shoes in a tone of the surface they sit on (a faded patch, a scuff, a soot streak), never on the face, and too few to read as noise at play scale.
 
@@ -99,14 +104,14 @@ What came out of it:
 - **Kind:** `plumber` · **Name:** Plumbo
 - **A stranger should say:** "that's the plumber with the mustache."
 - **Silhouette:** stout and big-headed, about 45% head. A round cap with its bill sticking out front, a big round nose that breaks the profile, and a huge plunger slung low across his back, its cup behind his shoulder so the cap, bill and nose own the head's outline.
-- **Traits:** red cap with a riveted brass badge carrying a small wrench (never a letter); a big round nose; a thick dark-brown mustache; blue bib overalls over a red shirt; leather gauntlets; steel-toe boots.
-- **Palette:** cap and shirt `#c9473f` (shade `#9c3530`); overalls `#3f62b4` (shade `#2e4a8c`); skin `#efc9a4`; mustache and hair `#4d3426`; badge `#c99a4a`; bolts `#9aa0a8`; gauntlets `#b08454`; boots `#6b4a35`; plunger cup a dark of the cap's colour (the player's, owner 2026-11-03) on a copper handle `#c27a45`.
-- **Color slot:** costume: the cap and shirt (the overalls stay blue).
+- **Traits:** red cap with a riveted brass badge carrying a small wrench (never a letter); a big round nose; a thick dark-brown mustache; bib overalls over a shirt, a dark of its colour; leather gauntlets; steel-toe boots.
+- **Palette:** cap and shirt the player's colour (roster `#c9473f`); their shade and the plunger cup 22 darker (the cup since owner 2026-11-03); the overalls and their knee patch 20 darker, so the bib still reads as its own block over the shirt (darker, on a dark ground the bib and the boots sank into one mass); skin `#efc9a4`; mustache, hair and boots `#5e412d`; bolts and goggles `#8e8a84`; gauntlets `#b08454` (shade `#7f5c39`); copper handle `#a65f38`.
+- **Color slot:** costume: the cap and shirt, and in tones of it the overalls and the cup (owner, 2026-11-04: the overalls were blue).
 - **Gait:** a jaunty run with a bounce on every step and arms pumping; one fist high on the jump.
-- **The nod:** the red cap with its bill out front (the first shape anyone names); the big round nose (it breaks the profile at 20 px, where no face detail survives); the thick mustache (the face, at any size); blue bib overalls over red (the colour block people know from across a room); the stout, big-headed build (it separates him from every slim hero).
+- **The nod:** the red cap with its bill out front (the first shape anyone names); the big round nose (it breaks the profile at 20 px, where no face detail survives); the thick mustache (the face, at any size); bib overalls over the shirt (the colour block people know from across a room, now a dark over a light of the player's colour); the stout, big-headed build (it separates him from every slim hero).
 - **Our twist:** a foundry hand, not a castle plumber. The joke is an absurdly big rubber plunger on a copper handle strapped to his back like a greatsword. Welding goggles on the cap, hex-bolt overall buttons, a patched knee, tan gauntlets for the white gloves.
 - **Swaps:** a pencil behind the ear; a sticking plaster on one cheek; a roll of thread-seal tape on a belt loop; a pressure gauge in the bib pocket.
-- **Palette alts:** the overalls in denim blue `#3f62b4`, grey work cloth `#7e848a` or washed denim `#86a3d4` (brown canvas `#8e6a44` went with the flat pass: drawn flat it's the gloves' tan, and the bib loses its colour block; navy work cloth `#2f3b5c` went next: on a dark ground the overalls and boots sank into it). The knee patch is the overalls' own cloth, outlined: in the shirt's red it took the player's colour, a fleck on the leg at every step.
+- **Palette alts:** the gauntlets in tan leather `#b08454`, pale canvas `#cdc4b2` (the original's white gloves, as work gloves) or dark leather `#76583f`, each with its shade. The overalls' colourways (denim, grey work cloth, washed denim) went with the neutral palette (2026-11-04). The knee patch is the overalls' own cloth, outlined: in the shirt's tone it was a fleck on the leg at every step.
 - **Idles and cheers:** the idle from the model; arms folded, chest out, breathing. The fist-pump cheer; leaning back laughing, turned to us.
 - **Gait range:** a jaunty bounce of 0.15–0.85 px on each step, a lean of up to 0.035.
 - **Wear:** scuffed is a faded patch on the bib and one on a thigh, pale scuffs on both boot toes; scorched is two soot streaks down the bib, one on the sleeve, one on the gauntlet and the far boot's toe.
@@ -118,17 +123,17 @@ What came out of it:
 - **A stranger should say:** "the fast blue hedgehog."
 - **Silhouette:** a big head with three or four long spikes swept straight back, a small body, thin legs, big shoes.
 - **Traits:** cobalt quills swept back; green eyes; a peach muzzle and belly; a cocky one-sided grin; big red shoes with a strap.
-- **Palette:** quills `#2f5bd0` (shade `#2346a6`); muzzle and belly `#f0c99c`; irises `#3a9a46`; shoes `#d8382f` (shade `#a8281f`); strap `#e8c24a`; toecaps `#9aa0a8`; gloves `#7a5236`; neckerchief `#e8c24a`, drawn as one clean yellow.
-- **Color slot:** costume: the quills.
+- **Palette:** quills the player's colour (`#2f5bd0` on the sheets), the taped quill with them; sneakers a dark of it (tone −22); neckerchief a dark of it (tone −15), drawn as one clean cloth (a light of it was the muzzle's peach on an orange hedgehog); muzzle and belly `#f0c99c`; irises `#3a9a46`; strap `#ebe5d6`; toecaps `#9a9894`; sole `#4c4236`; gloves `#7a5236`.
+- **Color slot:** costume: the quills; the sneakers and the neckerchief are darks of it.
 - **Gait:** runs leaning hard forward, legs a blur; curls into a spinning ball in the air.
 - **The nod:** the cobalt quills swept straight back (they are the whole silhouette); the big red shoes (the second thing anyone draws); the peach muzzle and belly (they tell a hedgehog from a blue blob); green eyes and the cocky grin (the attitude); the forward-leaning run and the spin-ball jump (the speedster in motion, readable when the shape blurs).
 - **Our twist:** a stubby scrapyard runner, chunky as a toy. Two separate eyes under heavy brows instead of the joined eye shape, a chipped tooth, soot-scorched quill tips, a hazard-striped neckerchief, brown fingerless gloves, red work high-tops with steel toecaps and a hazard-yellow strap.
 - **Swaps:** a sticking plaster across the nose; a sweatband on one wrist; a ring-pull hanging off the neckerchief; one shoelace undone.
-- **Palette alts:** the shoes and their soles and toecaps as one colourway: red on steel `#d8382f`/`#9a9894`, racing green on cream `#2f8a57`/`#ebe4d2`, or cream on red `#ebe5d6`/`#c8402f`. The strap stays hazard yellow.
+- **Palette alts:** the gloves in brown `#7a5236`, black `#45403c` or tan `#a8794a` leather (the shoes are the player's now).
 - **Idles and cheers:** the idle from the model; arms folded, tapping one toe. The model's cheer, and its later both-fists-up stretch.
 - **Gait range:** a bounce of up to 0.45 px and a lean of 0.01–0.06 on top of the hard forward lean he already runs with.
 - **Wear:** scuffed is a scuff on the belly; scorched is a scorch there, and soot on the quill tips in every look (two marks or a strong tone on the belly read as a rash).
-- **Rig:** drawn flat (2026-11-03), from the round-2 concept as the reference (without it the image model drew the original's joined eyes): a taped quill stump, scorched tips, a torn neckerchief and a flapping sole; the jump a looping spin ball, with no face. The irises are a role of their own: as the ink, the face kit put its eyes on a quill's soot. The neckerchief's hazard stripes fold into its yellow: at play size they were a dark mottle across the chest, never stripes. The taped quill is drawn in the quills' colour with its wrap lines: grey, it was a lump behind the head. The face's stray white and dark specks (a gap by the glove, scraps of the grin) fold away (`min`). The stretch was redrawn with its eyes open (shut, the kit had nothing to ride).
+- **Rig:** drawn flat (2026-11-03), from the round-2 concept as the reference (without it the image model drew the original's joined eyes): a taped quill stump, scorched tips, a torn neckerchief and a flapping sole; the jump a looping spin ball, with no face. The irises are a role of their own: as the ink, the face kit put its eyes on a quill's soot. The neckerchief's hazard stripes fold into its cloth: at play size they were a dark mottle across the chest, never stripes; its knot, stripes in shade wrapped in thick ink, is the line's (`ink: 19`), or it was a black blob behind the neck. The strap is told from the neckerchief, one yellow in the drawing, by where it is (`recolour`). The taped quill is drawn in the quills' colour with its wrap lines: grey, it was a lump behind the head. The face's stray white and dark specks (a gap by the glove, scraps of the grin) fold away (`min`). The stretch was redrawn with its eyes open (shut, the kit had nothing to ride).
 - **Concept prompt:** A stubby, toy-chunky cobalt-blue hedgehog with long quills swept straight back, their tips soot-scorched; two separate green eyes under heavy brows; a peach muzzle and belly; a cocky one-sided grin with a chipped tooth; a hazard-striped neckerchief; brown fingerless leather gloves; big red work high-tops with steel toecaps and a hazard-yellow strap.
 
 ### The round dot-eater
@@ -136,13 +141,13 @@ What came out of it:
 - **A stranger should say:** "the yellow ball that eats dots."
 - **Silhouette:** a yellow circle with a wedge-shaped mouth cut into its front. The smallest kind, and the only one with no limbs.
 - **Traits:** pure yellow; a wedge mouth that opens and shuts; one small eye above the mouth.
-- **Palette:** body `#f6d02a` (shade `#cba214`); mouth interior `#2a1f1a`; eye `#14121a`; bite edge `#e8b81c`; napkin one flat wash of its check, `#f4c6bf`.
-- **Color slot:** costume: the whole ball, its bitten edge with it. The napkin keeps its own colour, rolled rose, blue or green.
+- **Palette:** body the player's colour (`#f6d02a` on the sheets), its bitten edge with it; eye `#14121a`; tape `#9aa0a8`; plaster `#e9d3b0`; napkin one flat linen, `#f2ede2` (its check drawn flat was a rash, and a coloured wash took a colour of its own off the player's).
+- **Color slot:** costume: the whole ball, its bitten edge with it. The napkin is a neutral linen.
 - **Gait:** bounces along, chomping with every stride; spins once on the jump.
 - **The nod:** the circle with a wedge cut out (the most recognised shape in games, and it needs nothing else); pure yellow (half the read); the chomp (it is a mouth, not a pie chart, only when it moves).
 - **Our twist:** someone got to him first: a neat bite is missing from the back of his circle, the joke being that the eater got eaten. A checked napkin is tucked under the mouth like a bib.
 - **Swaps:** a crumb on the lip; a toothpick in the corner of the mouth; a fork-tine scratch. (A paper party hat would break the outline, so it isn't one.)
-- **Palette alts:** the napkin washed rose `#f4c6bf`, blue `#c6d3f2` or green `#cde6c3`: pale, so it never lands on the ball's colour.
+- **Palette alts:** the napkin in white `#f2ede2`, bone `#e0d2b6` or grey `#c8cac6` linen.
 - **Idles and cheers:** the breathing idle with a chomp at nothing; the mouth snapping shut and open again. The hop on the spot; tipped back, mouth thrown wide, laughing.
 - **Gait range:** up to 0.7 px of extra bounce on each hop, a lean of up to 0.04.
 - **Wear:** scuffed is two pale scuffs and two crumbs stuck low on the back; scorched is two soot streaks up the back and the napkin's tip singed.
@@ -153,14 +158,14 @@ What came out of it:
 - **Kind:** `zapmouse` · **Name:** Pikachew
 - **A stranger should say:** "the yellow electric mouse."
 - **Silhouette:** chubby and round, with two long pointed ears and a zigzag tail that breaks the outline behind.
-- **Traits:** yellow; long ears tipped black; round red cheeks; a lightning-bolt tail; two brown stripes across the back; small black eyes with a white glint.
-- **Palette:** body `#f2c62a` (shade `#c99c14`); ear tips `#2a1f1a`; cheeks `#e0473b`; stripes `#6b4a35`; tail `#c4c8ce` (shade `#8e9298`) with rivets `#6b6f76`; cord `#2a2a30`, plug `#d9d4c8`.
-- **Color slot:** costume: the yellow fur (body, head, arms, legs; the `fur` role). The ear tips, cheeks, stripes, tin bolt and cord keep the roster's colours.
+- **Traits:** yellow; long ears tipped black; round red cheeks; a lightning-bolt tail; small black eyes with a white glint.
+- **Palette:** fur the player's colour (`#f2c62a` in the roster); ear tips the ink `#2a1f1a`; cheeks `#e0473b`, a face mark; tail tin `#a9afb7`; tape `#c9c6bd`; cord brown `#7a5236`, slate `#4b5560` or taupe `#857a6e`, with its plug in steel `#7c848d`, pale grey `#b3aa9b` or black plastic `#5a5e66`. The drawing's back stripes fold into the fur.
+- **Color slot:** costume: the fur (body, head, arms, legs; the `fur` role). Everything else is neutral: the ear tips, the tin tail, the tape, the cord and its plug; the cheeks keep their warm red as a face mark.
 - **Gait:** a quick scamper, ears streaming back: upright since it was drawn flat (2026-11-03); the 3D one ran on all fours.
 - **The nod:** the long black-tipped ears (the outline, at any size); the zigzag tail (the one shape no other mouse has); the red cheeks (the face, at 20 px); the yellow (what everyone remembers first).
 - **Our twist:** a scrapyard knock-off wired up by hand. The bolt tail is a zigzag cut from sheet tin and riveted on at the root; a frayed power cord is knotted round its middle like a belt, the plug dangling; one ear is bent and taped.
 - **Swaps:** a chewed-through bit of cable in its paw; a sticking plaster on one ear; a spark-scorch on the tail tip; a fuse tucked behind an ear.
-- **Rig:** drawn flat (2026-11-03): the worn design (the shorter ear bent and taped, a dented head, a bent tin tail) upright in every pose; the cord belt in brown, slate or rust, the plug cream or orange; a tape cross on the crown.
+- **Rig:** drawn flat (2026-11-03): the worn design (the shorter ear bent and taped, a dented head, a bent tin tail) upright in every pose; the cord belt in brown, slate or taupe, the plug steel, pale grey or black (2026-11-04, Decisions 4: before, a rust cord and an orange plug); a tape cross on the crown.
 - **Concept prompt:** A chubby, round yellow mouse with two long pointed ears tipped black, one ear bent and taped; round red cheeks; small black eyes with a white glint; two brown stripes across its back; a zigzag lightning-bolt tail cut from sheet tin and riveted on at the root; a frayed black power cord knotted round its middle like a belt, the plug dangling.
 
 ### The green-tunic elf hero
@@ -168,7 +173,7 @@ What came out of it:
 - **A stranger should say:** "the elf hero with the green cap."
 - **Silhouette:** slim. A long green cap flopping back like a tail, a pointed ear sticking out, a tunic flared at the hem, and a round shield on the back.
 - **Traits:** a long floppy green cap; blond fringe; a long pointed ear; a green tunic with a brown belt; a shield and a sword hilt on the back; brown boots.
-- **Palette:** cap and tunic `#3f7a34` (shade `#2c5a25`); darn a light of the costume (`#5a9a4a` on the green), so it follows the player's colour; hair `#e6c25a`; skin `#efc9a4`; belt, boots and gloves `#6b4a35`; lid `#a8adb4` (shade `#7a7f86`), or a recycling-blue `#5f80a8` or black-plastic `#5a5e66` lid; poker `#4a4a52`.
+- **Palette:** cap and tunic the player's colour (roster `#3f7a34`); the darned toe 18 lighter; hair `#e6c25a`; skin `#efc9a4`; belt, boots and gloves `#6b4a35`; lid galvanised `#a8adb4`, black plastic `#5a5e66` or white enamel `#d2ccc0` (a recycling-blue lid went with the neutral palette, 2026-11-04); poker `#4a4a52`.
 - **Color slot:** costume: the sock cap and the tunic.
 - **Gait:** strides out with the cap tip swinging; a forward somersault on the jump.
 - **The nod:** the long green cap flopping back (the silhouette people draw); the pointed ear (it makes him an elf and not a gnome); the flared green tunic with its belt (the colour and the hero's cut); something to fight with on his back (a hero, not a shepherd).
@@ -181,32 +186,36 @@ What came out of it:
 - **Kind:** `puffball` · **Name:** Kurby
 - **A stranger should say:** "the little pink puffball."
 - **Silhouette:** a near-perfect ball on two big oval feet, with stubby round arms.
-- **Traits:** tall oval eyes with a shine at the top; blush marks; a tiny mouth; big red feet.
-- **Palette:** body is the player's color, pink by default; feet `#c9473f`, or one of two designed alternatives (`#e07b2c`, `#e8b23a`) rolled per look; eyes `#2a1f1a`; blush `#ec7a94`; seam the body's colour, inked; valve `#f4efe6`.
-- **Color slot:** costume: the ball, its arms and its seam, because the original comes in every color.
+- **Traits:** tall oval eyes with a shine at the top; blush marks; a tiny mouth; big feet.
+- **Palette:** body is the player's color, pink by default; feet a dark of it (tone −18), the toe scuffed through a step lighter (−8); eyes `#2a1f1a`; blush `#ec7a94`; seam and valve folded into the ball; plaster fabric `#e9d3b0`, gauze `#f1ede4` or grey tape `#b9bcbf`.
+- **Color slot:** costume: the ball, its arms and its seam, because the original comes in every color; the feet in a dark of it.
 - **Gait:** toddles on its big feet; puffs up round and floats in the air.
-- **The nod:** the ball (the whole body); the big red feet (they make it a creature, and part it from the dot-eater); the tall oval eyes with a shine (the face); the blush (the sweetness).
+- **The nod:** the ball (the whole body); the big feet, darker than the ball (they make it a creature, and part it from the dot-eater); the tall oval eyes with a shine (the face); the blush (the sweetness).
 - **Our twist:** a cheap vinyl squeeze toy. A moulding seam runs round its middle between the front and back halves, a squeaker valve pokes out high on its back (the one bump on the ball's outline), a mould number is stamped on the sole of one foot, and it squeaks when it lands.
 - **Swaps:** a price sticker on its side; a scuff of shelf dust; a tiny bow; a bite mark from a dog.
-- **Palette alts:** the feet in red `#c9473f`, orange `#e07b2c` or yellow `#e8b23a`.
+- **Palette alts:** the plaster in fabric tan `#e9d3b0`, gauze `#f1ede4` or grey tape `#b9bcbf`. The feet were red, orange or yellow until 2026-11-04 (Decisions 4).
 - **Idles and cheers:** the idle's sway of the arms; looking up, arms behind it, tapping one toe. Both arms up, eyes shut; puffed up round, waving one arm.
 - **Gait range:** a toddle's bounce of 0.1–0.8 px on each step, a lean of up to 0.03.
 - **Wear:** scuffed is a shelf-worn toy: two pale scuffs on the ball, grime on the near toe, and a kid's marker X low on its side; scorched is soot on the ball's side and front, the near arm and the near toe.
-- **Rig:** drawn flat (2026-11-03): a bent valve, a bitten arm and a toe scuffed pale, a light tone of the shoe (in its cream padding it was the farm's ground and read as a hole; in the body's colour, it tipped the shoe in the player's); the valve in its own cream (as the eyes' white it went to the ink, a dark knot on the crown); the blush one solid pink (see-through, it went grey on a green or teal ball); its seam and its tape cross aren't drawn (at play size one read as a mouth, the other as a third eye, and the cross's last specks of ink as a second face).
+- **Rig:** drawn flat (2026-11-03): a bent valve, a bitten arm and a toe scuffed pale, a step lighter than the shoe and darker than the ball (in its cream padding it was the farm's ground and read as a hole); the valve in its own cream (as the eyes' white it went to the ink, a dark knot on the crown); the blush one solid pink (see-through, it went grey on a green or teal ball); its seam and its tape cross aren't drawn (at play size one read as a mouth, the other as a third eye, and the cross's last specks of ink as a second face).
 - **Concept prompt:** A near-perfect round ball creature on two big oval red feet, with stubby round arms; tall oval black eyes with a shine at the top, blush marks and a tiny mouth. It is a cheap vinyl squeeze toy: a moulding seam runs round its middle, a little white squeaker valve pokes out of its back, and a mould number is stamped under one foot.
 
-### The voxel miner (new)
+### The voxel miner
 - **Kind:** `miner` · **Name:** Stove
 - **A stranger should say:** "the blocky guy from the block-building game."
 - **Silhouette:** every part a box: a cube head as wide as the body, a rectangular torso, square arms and legs, and a pickaxe. No curve anywhere, which no other kind has.
 - **Traits:** a cube head with a flat square face; short square-cut brown hair; a cyan T-shirt; blue trousers; grey shoes; a square pickaxe.
-- **Palette:** shirt `#3fb0b0` (shade `#2b8686`); trousers `#3d4fa8` (shade `#2c3a80`); skin `#c9946a` (shade `#a07250`); hair `#4a3020`; eyes `#f4efe6` and `#4a3cae`; shoes `#6b6b72`; wood grain a dark of each paint; pick head `#8e9298`, handle `#8a5c34`.
-- **Color slot:** costume.
-- **Gait:** stiff-limbed: arms and legs swing straight from the shoulder and hip with no bend, the head rocking; the pick swings on the jump.
+- **Palette:** shirt `#3fb0b0`, the player's; trousers a dark of it (tone −22); skin bare birch `#e8c89c`, the cube's side face a darker grain `#c49a6c`, the flaked corner `#f2dcb8`; hair `#4a3020`; irises `#4a3cae`; shoes, pick head and tape one grey `#8a8c92`; handle `#8a5c34`. The birch is paler than the roster's `#c9946a`: in it a yellow or orange shirt ran into the face.
+- **Color slot:** costume: the shirt, the trousers a dark of it (Decisions 4).
+- **Gait:** stiff-limbed: arms and legs swing straight from the shoulder and hip with no bend, a small hop and almost no lean; the pick goes up on the jump.
+- **Palette alts:** the hair in dark brown `#4a3020`, chestnut `#6b4426` or ash `#5c5650`.
+- **Idles and cheers:** the idle from the model; standing to attention, feet together, the pick upright by his shoulder. The pick thrust up high, the free arm out behind; tipped back on his heel laughing.
+- **Gait range:** a bounce of 0.1–0.55 px on each step, a lean of up to 0.02.
+- **Wear:** scuffed is a faded patch on the shirt and one on the trousers; scorched is soot on each.
 - **The nod:** the cube head (the only square head in games anyone knows); the boxy, unbending limbs (it's the shape language, not a costume); cyan over blue (the outfit read across a room); the pickaxe (what he does).
 - **Our twist:** a wooden toy knock-off. He's carved from wooden blocks with the grain showing on every face and a dowel peg at each joint; the paint is chipped at the corners; his pickaxe is a painted wooden toy with a price sticker still on it.
 - **Swaps:** a square sticking plaster on the head; a block of turf under one arm; a chip out of one corner; a pencil-drawn tally on his arm.
-- **Rig:** humanoid with stiff limbs (no elbow or knee bend). The easiest model in the set.
+- **Rig:** drawn flat (2026-11-04): worn with a flaked shirt corner showing bare wood, a taped, cracked handle and a snapped pick point (the edit's chip out of the crown sat mid-crown and read as two ears, so it was filled back in by hand). Traced with no corner cutting (`map.smooth: 0`): rounded like every other kind, the cube head was a ball under a mop of hair. The image model's walk drawings came back as the design again, so every pose is the design's own blocks turned about their joints, the way a wooden toy moves (`art/sprites/miner/design.prompt.txt`). A raised arm goes out behind him and a raised pick slides up beside his head: over the cube's side face an arm read as a hand on the brow, and a pick turned up behind the cube as a horn. Blind read (two fresh readers): "blocky miner, high: square head and body, and a pickaxe raised in one hand"; "medium: square blocky head and boxy body, swinging a pickaxe or hammer".
 - **Concept prompt:** A blocky man made entirely of boxes, carved from wooden blocks: a cube head as wide as his body with a flat square face, square white-and-blue eyes and short square-cut brown hair; a cyan T-shirt, blue trousers and grey shoes painted on, the paint chipped at the corners, the wood grain showing on every face and a dowel peg at each joint. He holds a square painted wooden toy pickaxe with a price sticker on the handle.
 
 ### The impostor crewmate
@@ -214,13 +223,13 @@ What came out of it:
 - **A stranger should say:** "the crewmate from the impostor game."
 - **Silhouette:** a bean on two stubby legs, a wide visor standing proud of the front, and a pack behind.
 - **Traits:** a smooth bean body; a pale-blue visor; a backpack; no arms.
-- **Palette:** body is the player's color; visor `#a9dbe8` (shade `#6aa6ba`); tape `#d3d8dc` (silver duct tape: in the strap's pale tan it was the farm's own colour, and read as a notch cut in the visor; in brown packing tape, a brow); strap `#d9c79a`; can `#c9473f` (shade `#9c3530`) with cap `#e8c24a`.
-- **Color slot:** body, because the original comes in every color.
+- **Palette:** body is the player's color; the can a dark of it (tone −16); visor `#a9dbe8` (shade `#6aa6ba`), a neutral pale glass; tape `#d3d8dc` (silver duct tape: in the strap's pale tan it was the farm's own colour, and read as a notch cut in the visor; in brown packing tape, a brow); strap `#d9c79a`; the sticky note `#f4e38a`.
+- **Color slot:** body, because the original comes in every color, and the pack in a dark of it.
 - **Gait:** a waddling shuffle on its stubby legs.
 - **The nod:** the bean on stubby legs (the whole silhouette); the wide pale visor (the face; without it it's a jelly bean); the pack on its back (it breaks the outline behind, and is half the bean's read in profile).
-- **Our twist:** a crew issued from the scrapyard. The pack is a red jerrycan with a spout, strapped on; a crack across the visor is taped over; a dent in its side has been knocked out with a hammer.
+- **Our twist:** a crew issued from the scrapyard. The pack is a jerrycan with a spout, strapped on; a crack across the visor is taped over; a dent in its side has been knocked out with a hammer.
 - **Swaps:** a sprout growing from the head; a sticky note on the visor; a paper sailor hat; a bandage round one leg.
-- **Palette alts:** the jerrycan in fuel red `#c9473f`, army olive `#6b7340` or bare steel `#8e949a`; its cap stays yellow.
+- **Palette alts:** the strap in tan webbing `#d9c79a`, grey webbing `#b4b9bf` or bone `#ece4d2`. The jerrycan was fuel red, olive or steel until 2026-11-04 (Decisions 4).
 - **Rig:** drawn flat (2026-11-03), side on: a tape strip across the visor's crack, a hammered dent in its side, a crumpled can and a bent spout; ten poses drawn, and a second idle cut from the design rocked back on its heel (the image model held the bean to the design's stance). No face kit: the visor is drawn as it is. The first round failed the blind read as "a squarish blob": the can stood as tall as the bean and fused with its back, and the visor sat inside the outline. In the design the visor was moved out past the front and the can moved back off the bean onto a short strap, by hand, and the poses copied both. The can's handle hole is cut through, and its spout's white loop folded into the can: white like the visor's glint, they read as an eye on the pack. The visor is blank glass: the crack is painted out of the drawings and the glint folded into the glass, since the crack's zigzag read as a frown and the small white glint, inked round, as an eye.
 - **Concept prompt:** A smooth bean-shaped spacesuit body on two stubby legs, no arms; a wide pale-blue visor with a white glint standing proud of its front, a crack across it taped over; a red jerrycan with a yellow-capped spout strapped to its back as a backpack; a hammered-out dent in its side.
 
@@ -229,13 +238,17 @@ What came out of it:
 - **A stranger should say:** "the big ape with the red tie."
 - **Silhouette:** hunched, with huge shoulders and long arms, a small head low and forward, and a protruding muzzle.
 - **Traits:** brown fur; a tan face, muzzle and chest; a red necktie; big knuckles.
-- **Palette:** fur `#7a4e2c` (shade `#5a3820`); face and chest `#e2b98a`; tie `#d03a30` (shade `#a02a22`) with a clip `#c9ccd2`; tape `#9aa0a8`; banana `#f2d04a`.
-- **Color slot:** costume.
+- **Palette:** the fur in the player's colour (drawn `#7a4e2c`), the tie a shade of it (tone −10); the rest neutral: face and chest `#e2b98a`, tape `#9aa0a8`, ink. The banana is a light of the fur (tone +30, 2026-11-04): the fixed yellow it had broke the neutral palette and vanished on yellow apes.
+- **Color slot:** costume: the fur, and the tie in a shade of it. A darker tie (tone −18), on the pale chest right under the muzzle, read as a gaping mouth; a lighter one sank into the chest on the orange and yellow swatches.
+- **Palette alts:** the duct tape in grey `#9aa0a8`, a pale cloth tape `#b8b2a4` or a dark gaffer `#6f757c`.
 - **Gait:** knuckle-gallops on all fours at a run, arms leading; beats its chest on a cheer.
+- **Idles and cheers:** the idle hunched on his knuckles; scratching his crown, bored. Beating his chest with a roar; both fists thrown up with a grin.
+- **Gait range:** a bounce of 0.1–0.6 px and a lean of up to 0.03.
+- **Wear:** drawn in, the tie torn ragged at the tip, the tape on one fist come loose and trailing, the banana half peeled. Scuffed is a faded patch on the shoulder and one on the far arm; scorched, soot in the same places.
 - **The nod:** the hunched gorilla shape with arms longer than its legs (the brute, from across the screen); the red necktie (the one thing that makes it this ape and not any ape); the tan face and muzzle (the cartoon face).
 - **Our twist:** a foundry barrel-hauler on his lunch break. The tie is a clip-on, worn crooked on a bare chest; his knuckles are wrapped in grey duct tape; a banana is tucked behind one ear like a pencil.
-- **Swaps:** a hard-hat sticker on the chest; a sweat drop; a staple-gun ID badge on the tie; a bruise on one knuckle.
-- **Rig:** humanoid; the knuckle gallop is keyed by hand.
+- **Swaps:** a hard-hat sticker on the chest; a sweat drop; a staple-gun ID badge on the tie; a bruise on one knuckle. Drawn flat he rolls a sticking plaster across the cheek, the strip the flat route draws; the others need marks it has no slot for.
+- **Rig:** drawn flat (2026-11-04): a game-size design (two drawn, the one with the clearer tie and tape picked) worn with the torn tie, the trailing tape and the peeled banana; the eleven poses drawn three to a 16:9 sheet and cut apart (`art/sprites/ape/design.prompt.txt`). Walk and run are on all fours, the run a knuckle gallop (the arms reaching, then the legs swinging through). The air clip is centred and drawn a little smaller: his fists raised over his head left the shared box. His small eyes, tight under the brow, are found in the role map with a thin ink cut (`ink: 5`); the half-shut, shut and passing eyes of three poses were dotted in by hand for the face kit to find. Blind read: both fresh readers name him at medium ("hunched gorilla with a big back, long arms, knuckle-walking run").
 - **Concept prompt:** A big hunched cartoon gorilla with huge shoulders, arms longer than its legs and a small head set low and forward; brown fur; a tan face, protruding muzzle and chest; a red clip-on necktie worn crooked on its bare chest; knuckles wrapped in grey duct tape; a banana tucked behind one ear like a pencil.
 
 ### The spiky-haired mercenary (new)
@@ -243,155 +256,180 @@ What came out of it:
 - **A stranger should say:** "the spiky-haired guy with the giant sword."
 - **Silhouette:** a crown of big blond spikes and a blade as tall as he is, held low and trailing behind at a run, its point on the floor at idle as he leans on it. Slim, one big shoulder piece. The blade is always in hand, never strapped to his back (the plumber's plunger owns that).
 - **Traits:** spiky blond hair; a sleeveless dark knit top; baggy dark trousers; two belts crossed at the hip; one metal shoulder piece; heavy boots; a huge, broad blade.
-- **Palette:** hair `#f0d470` (shade `#c9a84a`); top `#3a3f5c` (shade `#2a2e44`); trousers `#4a4060`; belts and boots `#6b4a35`; pauldron `#9aa0a8`; skin `#f0cfa8`; eyes `#6ec8e0`; blade `#c9ccd2` (shade `#8e9298`), teeth `#a8adb4`; handle `#7a5232`.
-- **Color slot:** costume.
+- **Palette:** the sleeveless knit top in the player's colour (drawn `#4a5ab0`), the trousers a dark of it (tone −24); the rest neutral: hair `#f0d470`, its singed tips `#3e3834`; belts, boots and the knife's handle `#6b4a35`; hubcap `#9aa0a8`; blade `#c9ccd2`; skin `#f0cfa8`; eyes `#4fa8c8`.
+- **Color slot:** costume: the top, and the trousers in a dark of it.
+- **Palette alts:** the hubcap in chrome `#9aa0a8`, gunmetal `#6b7078` or a gold-painted cap `#b8a070`.
 - **Gait:** a low, loping run with the blade dragging behind; a spinning slash on the jump; at idle he leans on the blade with one hand.
 - **The nod:** the spiky blond hair (the head shape, sharper than the speedster's quills and pointing up); the blade bigger than he is (the read: no other character carries one); the single big shoulder piece and the slim dark outfit (the brooding mercenary).
 - **Our twist:** the legendary oversized blade is a giant serrated bread knife with a riveted wooden handle. His shoulder piece is a hubcap, and the spikes of his hair are singed at the tips.
 - **Swaps:** a crumb on the blade; a sticking plaster on the cheek; a grey feather in the belt; a price sticker on the hubcap.
-- **Rig:** humanoid; the blade a prop on the hand bone, sized as caricature like the plumber's plunger.
+- **Rig:** drawn flat (2026-11-04): a game-size design worn with the hubcap, a notch snapped out of the saw edge, singed spike tips and a torn shin (the designs drew no hubcap, so the wear edit added it), then edited twice more: at the design's size, two fresh readers saw only "a thin figure with pointed ears or spiky hair and a long thin blade" (unsure twice), so the spikes are twice as big, out to both sides, and the knife stands as tall as he is without his hair, and he is drawn 24 px tall. Two more fresh readers name him then, both at medium: "spiky-haired swordsman… tall spiky hair, slim body, long blade upright beside him". Eleven poses, drawn three to an image and cut apart. The knife is a `loose` role, left out of his size, and stays tip-down beside him or trailing behind, never raised over the spikes; drawn across his shins on the run it merged with his legs, so it trails behind his hip. His air and wall slide are drawn a little smaller (`scale`), or the spikes over a raised arm left the box. The singed tips are a role of their own: as ink or the boots' brown, every tip had specks. His eyes come from the role map with a lower `ink`, or the sheets' small pupils traced as lines.
 - **Concept prompt:** A slim brooding young mercenary with a crown of big spiky blond hair singed at the tips and pale blue eyes; a sleeveless dark knit top, baggy dark trousers, two brown belts crossed at the hip, heavy boots; a car hubcap strapped on as a single shoulder piece. He grips a giant serrated bread knife as tall as he is, with a riveted wooden handle, its point resting on the ground.
 
-### The spiked turtle king (new)
+### The spiked turtle king
 - **Kind:** `king` · **Name:** Browser
 - **A stranger should say:** "the big spiky turtle king."
-- **Silhouette:** the bulkiest kind: a hulking upright turtle with a spiked shell humped behind, two horns, a wild mane, a big jaw, and spiked cuffs. It fills the envelope's width.
-- **Traits:** a green shell with a cream rim and spikes; yellow-orange skin; a pale banded belly; two cream horns; a red-orange mane and brows; spiked black cuffs; a toothy snout.
-- **Palette:** shell `#3f8a3a` (shade `#2c6a2a`); rim, spikes and horns `#efe2c0` (shade `#c9b890`); bolts `#9aa0a8`; skin `#e8b23c` (shade `#bb8a1c`); belly `#e9d29a`; mane `#d9502e`; cuffs `#2a2a30`; crown `#f0cf4a`.
-- **Color slot:** costume.
-- **Gait:** a heavy stomp, shoulders rolling; on a long fall he tucks into his shell and spins.
+- **Silhouette:** the bulkiest kind: a hulking upright turtle with a shell humped behind and four huge spikes standing out of it, two long horns, a swept-back mane and a long snout. It fills the envelope's width. Nothing else breaks the outline: a tufted mane, studded cuffs, a spiked tail and a many-pointed crown each added a bump, and readers saw a porcupine.
+- **Traits:** a shell with a cream rim and spikes; yellow-orange skin; a pale banded belly; two cream horns; a red-orange mane and brows; plain dark cuffs; a toothy snout.
+- **Palette:** skin the player's colour (2026-11-04: it is most of him, and in a fixed gold every king was the same king); the shell a dark of it (tone −22), the mane darker (−36), the paper crown a light (+26); rim, spikes and horns `#efe2c0`; patch plate `#9aa0a8`; belly `#e9d29a`; cuffs `#7a5f44`.
+- **Color slot:** costume: the shell. The crown is a tone of it; skin, belly, mane, horns and cuffs are his own.
+- **Gait:** a heavy stomp, shoulders rolling; on a fall near its top speed he tucks into his shell.
 - **The nod:** the spiked shell (it breaks the outline behind and above; the read in profile); the horns and the red mane (they mark the king and not a foot soldier); the hulking upright build (the boss in a cast of heroes).
-- **Our twist:** a knock-off boss who never got his castle. His shell is riveted boiler plate with the spikes welded-on bolts; a paper party crown sits between his horns; when he's angry a puff of soot comes out of his nostrils instead of fire.
-- **Swaps:** a dented spike; a party blower in his teeth; a sticking plaster on the snout; a chain cuff for a spiked one.
-- **Rig:** humanoid; the shell a prop on the spine. Medium risk: a big body inside the shared envelope.
-- **Concept prompt:** A hulking upright turtle king with yellow-orange skin, a big toothy snout, a pale banded belly, two cream horns and a wild red-orange mane; his green shell, humped behind him, is made of riveted boiler plate, with welded-on steel bolts for spikes round a cream rim; black spiked cuffs on his wrists; a paper party crown between his horns; a small puff of soot from his nostrils.
+- **Our twist:** a knock-off boss who never got his castle. His shell is riveted boiler plate with a bolted-on patch plate and huge welded bolts for spikes; a paper party crown sits between his horns. The soot puff from his nostrils is left out: anything dark under the face reads as a mouth at play size.
+- **Swaps:** a sticking plaster on the snout.
+- **Palette alts:** the cuffs in worn leather `#7a5f44`, black iron `#34343a` or steel `#8e8a84`.
+- **Idles and cheers:** the idle from the design; arms folded, smug. Both fists up beside his horns, grinning; laughing, a hand on his belly.
+- **Gait range:** a bounce of 0.1–0.5 px on each step, a lean of up to 0.025: he stays upright, against the ape's hunch.
+- **Wear:** scuffed is two faded patches on the shell; scorched is two soot streaks there. Only the shell takes marks (the skin is the face's colour).
+- **Rig:** drawn flat (2026-11-04): the design worn with the crown and a bolted patch plate, then edited for huge spikes, long horns and a small crown, then for the clean outline (Silhouette). With the first design's spikes two blind readers saw "a bulky body with a spiky, bumpy outline" and named the king or the ape, low; with the second, "maybe Bowser (low). Round body covered in spikes, could equally be a hedgehog or porcupine". Twelve poses drawn three to an image and cut apart (`art/sprites/king/poses.prompt.txt`), every one with his head level and both eyes open (chin up, narrowed or side on, the face kit found no pair), the jump with his fists at his chest (arms flung up, it read as the ape), the falling tuck into the shell a third air drawing, and the knocked-out pose flipped on his back like an upturned turtle.
+- **Concept prompt:** A hulking upright turtle king with yellow-orange skin, a big toothy snout, a pale banded belly, two long cream horns and a smooth swept-back red-orange mane; his shell, humped behind him, is made of riveted boiler plate with a bolted-on patch, four huge welded-on bolts for spikes round a cream rim; plain dark cuffs on his wrists; a small paper party crown between his horns.
 
-### The green saddled dino (new)
+### The green saddled dino
 - **Kind:** `dino` · **Name:** Yoshee
 - **A stranger should say:** "the green dinosaur with the saddle."
-- **Silhouette:** upright, with a big round snout well out in front, eyes high on top of the head, a short tail, a saddle on its back, and big boots.
-- **Traits:** green skin; a bulbous round snout; a white belly and cheeks; a red saddle; orange spikes down the back of the head; red boots; big eyes on top of the head.
-- **Palette:** skin `#4cbf4a` (shade `#35913a`); belly and cheeks `#f6f2e8`; saddle `#d8382f` (shade `#a8281f`) with a chrome stem `#c9ccd2`; spikes `#e8853a`; wellies `#d8442f` (shade `#a83222`).
-- **Color slot:** costume.
-- **Gait:** a happy trot, head bobbing; on the jump, legs paddling in the air.
-- **The nod:** the big round snout out front (the profile); the eyes on top of the head (the face, from the side); the saddle (it says "ridden by a hero" without the hero); green with a white belly and red boots (the colour block).
-- **Our twist:** a hand-me-down mount. The saddle is a red bicycle seat strapped on with a belt, its chrome stem sticking out; the boots are red rubber wellies; it has a spotted egg of its own in a carrier bag.
-- **Swaps:** a bike bell on the belt; a reflector on the tail; a sticking plaster on the snout; a dangling price tag on one welly.
-- **Rig:** humanoid with a tail.
-- **Concept prompt:** A cheerful upright green dinosaur with a big round bulbous snout well out in front, big eyes set high on top of its head, a white belly and cheeks, orange spikes down the back of its head and a short tail; a red bicycle seat strapped on its back with a belt as a saddle, its chrome stem sticking out; red rubber wellington boots; a spotted egg in a carrier bag hanging from one hand.
+- **Silhouette:** upright, with a huge round snout well out in front, eyes high on top of the head, a long tail straight out behind at the hips, a saddle low on its back, and big boots. The tail is what tells the head and snout from a cap and its bill: with a short tail and the seat up behind the head, a blind reader saw "a capped hero" (2026-11-04).
+- **Traits:** a bulbous round snout; a white belly and cheeks; a saddle; spikes down the back of the head; boots; big eyes on top of the head.
+- **Palette:** neutral but for the player's colour (Decisions 4): the skin is the player's, the head spikes a light of it (+16) and the wellies a dark (−22); belly, cheeks and eye whites cream `#f6f2e8`; seat `#3d3d42` with its torn foam `#e2c88a` on a chrome stem `#c9ccd2`; belt `#6b4a35`; carrier bag `#c9c6bd`; the open mouth `#9a3d36` (as the wellies' red, a grin took the player's colour).
+- **Color slot:** costume: the skin.
+- **Gait:** a happy trot, head bobbing; on the fall, legs paddling in the air.
+- **The nod:** the big round snout out front (the profile); the eyes on top of the head (the face, from the side); the saddle (it says "ridden by a hero" without the hero); the long tail on an upright body (a dinosaur that walks like a person, and not a capped hero in silhouette); a white belly under a coloured skin, boots a dark of it (the colour block).
+- **Our twist:** a hand-me-down mount. The saddle is a black bicycle seat strapped on with a belt, torn open in a ragged flap, its chrome stem bent and sticking out; the boots are rubber wellies, one folded down; it carries a spotted egg of its own in a torn carrier bag.
+- **Swaps:** a sticking plaster on the cheek (a bike bell, a reflector on the tail and a price tag on a welly are ideas for later: each needs a slot the flat kinds don't have yet).
+- **Palette alts:** the bicycle seat in black `#3d3d42`, brown leather `#6e4a32` or grey `#7e848a`.
+- **Idles and cheers:** the idle from the design; a hand on its hip, head tilted. The cheer: one fist and the bag thrown up; the second: hopping on one welly, a fist punched up.
+- **Gait range:** a bounce of 0.2–0.9 px on each step, a lean of up to 0.03.
+- **Wear:** in the drawing, the torn seat, the bent stem, a snapped head spike, a welly folded down and a hole in the bag; scuffed is two faded patches on the skin, scorched two soot streaks, below the face.
+- **Rig:** drawn flat (2026-11-04): a game-size design worn in an edit, then edited again for the long tail and the low seat; eleven poses drawn three to a 16:9 image and cut apart (art/sprites/dino/design.prompt.txt).
+- **Concept prompt:** A cheerful upright green dinosaur with a big round bulbous snout well out in front, big eyes set high on top of its head, a white belly and cheeks, orange spikes down the back of its head and a long tail sticking straight out behind; a torn black bicycle seat strapped low on its back with a belt as a saddle, its bent chrome stem sticking out; red rubber wellington boots; a spotted egg in a carrier bag hanging from one hand.
 
 ### The blue robot boy (new)
 - **Kind:** `robot` · **Name:** Meh Man
 - **A stranger should say:** "the little blue robot with the arm cannon."
 - **Silhouette:** small and boyish: a round helmet with round ear discs, big chunky boots, and one forearm that ends in a cylinder cannon held out. Smaller than the hunter, with no shoulders to speak of.
 - **Traits:** a blue helmet with a light-blue stripe and round ear discs; a face in the helmet's opening; a light-blue suit; darker blue gloves and boots; the arm cannon.
-- **Palette:** helmet, gloves and boots `#2a5fc4` (shade `#1e4592`); suit and stripe `#4fb8ec` (shade `#3a8cbc`); skin `#f3d0aa`; eyes `#2a5fc4`; can `#c9ccd2` with a label `#d8382f` and `#f4efe6`; battery `#2a2a30` with a band `#c99a4a`.
-- **Color slot:** costume.
+- **Palette:** helmet, gloves and near boot in the player's colour (`#2a5fc4` on the sheets); suit, stripe and far ear disc a light tone of it (+18); the near ear disc's face a dark of it (−12); the repainted far boot a shade off it (+9); the label's band on the can the player's colour; skin `#f3d0aa`; irises `#2a5fc4`; can and tape `#c9ccd2`, label paper `#efe6d6`, the can's open end `#4a3f3c`; battery `#3a3a42` with a brass cap and band `#c99a4a`.
+- **Color slot:** costume: the helmet, gloves and boots (the suit is its light tone).
+- **Palette alts:** the battery in charcoal `#3a3a42`, slate `#6b7178` or a worn brown `#5e412d`.
+- **Idles and cheers:** the idle from the model; rocking back on his heels scratching the back of his helmet. A fist punched up over the helmet; a little hop, waving.
+- **Gait range:** a bounce of 0.2–0.9 px on each step, a lean of up to 0.03.
+- **Wear:** scuffed is a pale scuff on the suit's chest, scorched a soot mark there (tones of the suit).
 - **Gait:** a bouncy run on the big boots; the cannon arm up and out on the jump.
 - **The nod:** the round helmet with ear discs (the head nobody else has); the two blues (the robot read from across a room); the big boots on a small body (the proportions); the arm cannon (what he does).
 - **Our twist:** a robot boy from the parts bin. His cannon is a tin can with both ends cut out, its label still on; a big battery is strapped to his back; one boot was repainted a shade off.
 - **Swaps:** a dent in the helmet; a screw loose on the ear disc; a strip of tape on a knee; a little puff of steam from the cannon.
-- **Rig:** humanoid; the can a prop on the forearm.
+- **Rig:** drawn flat (2026-11-04): a design with the can held out level in front at chest height (the hunter's lesson: raised or across the chest, a cannon vanishes into the outline), worn in one edit that also made the suit light blue and added the battery, which no design drew (`art/sprites/robot/worn.prompt.txt`): a dent knocked into the helmet's crown, the can's rim crumpled and its label torn and flapping, the far boot repainted paler and bigger, the battery taped on. The near ear disc's face is a role of its own: folded into the helmet, the disc was lost in its round. Eleven poses, the can held out level in all but the knockout. In colour he reads at once; the first blind read failed ("small narrow rounded blob with little legs, nothing distinctive", "small oval body with a little bump on top", unsure twice), and both readers took the hunter for him: held close at the chest, the can barely clears the helmet, the battery fills the notch under it, and the near ear disc is inside the outline. Redrawn with the arm straight out (`reach.prompt.txt` asked only for that and barely moved it; `reach2.prompt.txt`, as a new pose, put the can at full arm length with background all round it and the battery slimmer and lower), and the eleven poses drawn from it three to an image and cut apart (`art/sprites/robot/trios/`). Two more fresh readers then named him, but only at low ("unsure (low: blaster robot boy). Large round head, one arm held out holding a block-like object"; "unsure (low: blue robot with arm cannon)"), and both still took the hunter's silhouette for him, medium and medium-high. At play size the can reads as a block. With the hunter redrawn tall and long-legged, two more readers named the hunter as the hunter, and the robot at low again ("Mega Man, low (big round head, one arm held straight out like a cannon)"; "maybe the robot with an arm cannon, low… holding something blocky"). A can twice as fat (`fat.png`, its poses in `art/sprites/robot/fat/`) was worse: it sat against the helmet and two more readers were unsure ("big round head with something sticking out to the right; maybe a mushroom-capped figure"). A muzzle notch carved into the can's end of the arm-length drawings read no better ("possibly Mega Man (low)"; "could be Mega Man or Toad, can't tell"). Now drawn from `disc.png`: both ear discs stand proud of the helmet, bumps nobody else's silhouette has, and the forearm is one short round tin-can barrel with a dark round muzzle, held level at full arm length (a long barrel from the shoulder is the hunter's silhouette, so not that); its poses are cut from `art/sprites/robot/disc/` along a seam through the ink where the figures touch (`cut.py`). The best read yet, but under the bar: "Mega Man parody, low-medium. Round helmeted head, one arm held straight out like an arm cannon", and "unsure. Big round head on a small body, holding something stubby out in front". He ships drawn from these frames all the same (2026-11-04): in colour he reads at once, the frames beat the hand-drawn kit, and the turtle king ships on a read as close (low-medium twice). A further pass would push the discs and the barrel further from the helmet.
 - **Concept prompt:** A small, boyish blue robot with a round helmet carrying a light-blue stripe and round ear discs, a cheerful face in the helmet opening, a light-blue suit, darker blue gloves and big chunky boots, one boot repainted a slightly different blue. One forearm ends in an arm cannon that is a tin can with both ends cut out and its red-and-white label still on; a big battery is strapped to his back.
 
-### The sneaking soldier (new)
+### The sneaking soldier
 - **Kind:** `sneak` · **Name:** Snek
 - **A stranger should say:** "the soldier hiding in a cardboard box."
-- **Silhouette:** a cardboard box on two legs, with a bandana's long tails streaming out of a hand-hole. At idle the box drops over him, one eye in a slot; on the jump his head pops out, bandana and all.
-- **Traits:** a cardboard box worn over the body; a head with a dark bandana and long tails; a grey-blue sneaking suit; a stubble jaw; boots.
-- **Palette:** box `#c49a62` (shade `#9a7444`); tape `#d9c79a`; arrow `#2a1f1a`; suit `#4d5a66` (shade `#36414c`); bandana `#3a4a5c` with stripes `#f4efe6`; skin `#d9b08c`; hair and stubble `#4a3a2c`; boots `#2a2a30`.
-- **Color slot:** costume.
-- **Gait:** a fast, crouched shuffle with the box bobbing; freezes for a beat on landing, as if nobody saw.
-- **The nod:** the box (the joke everyone knows him by, and the only box with legs in the cast); the bandana with long tails (the soldier inside, at 20 px); the low, crouched sneak (the stealth read in motion).
-- **Our twist:** the box is badly made for the job. Its "this way up" arrow points down, it's patched with packing tape, and the eye slot is cut with a kitchen knife; his bandana is a striped tea towel.
-- **Swaps:** a sticker of ours on the box; a fragile-glass icon; a string handle; a coffee ring stain.
-- **Rig:** humanoid; the box a prop on the spine. Medium risk: the box and the pop-out are keyed.
-- **Concept prompt:** A gruff stubble-jawed soldier in a grey-blue sneaking suit and boots, crouched and running inside a cardboard box worn over his body, only his legs showing below it; his head pokes out of a hand-hole wearing a striped tea towel tied as a bandana with long tails streaming behind. The box is patched with packing tape, its printed "this way up" arrow pointing down, a rough eye slot cut in its side.
+- **Silhouette:** side on, a crisp square-cornered cardboard box worn over him to the knees, level along the bottom, on two short crouched legs with a gap between them; a striped bandana's two long tails stream out of a torn hand-hole behind. His eyes peer out of a slot near the front. On the laugh his head pops out of the top, bandana and all.
+- **Traits:** a cardboard box worn over the body; a dark bandana with long tails; a grey sneaking suit; boots; on the laugh, a gruff stubble jaw.
+- **Palette:** the box is the player's colour; its back end a dark of it (tone −18), the packing tape a light of it (+18), the printed arrow a darker one (−32), the bandana darker again (−38) with neutral stripes `#f4efe6`; suit `#6a7078`; boots `#3a3a40`; skin `#d9b08c`; ink `#2a1f1a`.
+- **Color slot:** costume: the box.
+- **Gait:** a fast, crouched shuffle with the box bobbing and staying upright.
+- **The nod:** the box (the joke everyone knows him by, and the only box with legs in the cast); the bandana with long tails (the soldier inside, at 20 px); his eyes in the slot (somebody's in there); the low, crouched sneak (the stealth read in motion).
+- **Our twist:** the box is badly made for the job. Its printed arrow points down, a split corner is patched with crossed packing tape, the hand-hole is torn ragged and the eye slot hacked out; his bandana is a striped tea towel, one tail frayed.
+- **Swaps:** a sticker on the box (`sticker`).
+- **Palette alts:** the suit in grey `#6a7078`, olive grey `#6e6c5e` or a light grey `#858a90`.
+- **Idles and cheers:** the idle crouch; frozen mid-step as if nobody saw. A hop for joy with the eyes shut; the laugh, his head popped out of the top.
+- **Gait range:** a bounce of 0.1–0.6 px on each step, a lean of up to 0.03.
+- **Wear:** scuffed is two pale scuffs on the box, scorched two soot streaks, both tones of the box.
+- **Rig:** drawn flat (2026-11-04), side on: twelve drawings, three or two to a 16:9 image cut apart, the laugh on its own. Each drawing's eye slot is painted flat and given two pupils at fixed places, so the face kit finds the same eyes in every pose (drawn, the pupils touched the slot's dark cut end and traced as one blob). The first design, in three-quarter view with a crushed top corner and flared flaps, failed the blind read as "a shaggy, hunched" ape; side on, it reads as "a square blocky body on short legs", but neither of two fresh readers names the homage (a low "meat cube" each). Open top flaps and longer tails were tried and went: at play scale the flaps read as ears and the tails as an ape's long arms. Traced with no corner cutting (`smooth: 0`) the box kept its corners, but two more fresh readers still saw "Super Meat Boy, medium: square block body with short limbs". So the eye slot is cut through the box (each drawing's slot painted white round its two pupils, `holes`): in silhouette a box with a slit, in play the eyes peer out of a gap. Two more fresh readers name it: "stealth soldier in a cardboard box (Snake), medium: a box body with legs sticking out under it, crouched and sneaking even mid-jump" and "Solid Snake hiding in a cardboard box, low-medium".
+- **Concept prompt:** Seen from the side, a soldier hiding inside a big plain cardboard box worn upside down over his whole head and body down to his knees, a crisp upright box with square corners; two short legs in a grey sneaking suit and big dark boots, crouched mid-step; his eyes peer out of a rough slot near the box's front, and the two long tails of a striped tea-towel bandana stream out of a torn hand-hole at its back. The box's printed arrow points down, and crossed packing tape patches a split corner.
 
-### The cup-headed toon (new)
+### The cup-headed toon
 - **Kind:** `cuptoon` · **Name:** Mughead
 - **A stranger should say:** "the cartoon guy with a cup for a head."
-- **Silhouette:** a white cup for a head with a handle on the side and a striped straw sticking up out of the top; a small rubber-hose body.
-- **Traits:** a cup head with liquid at the rim; a striped straw; pie-cut black eyes; a small red nose; white gloves; red shorts; brown shoes; drawn in a 1930s cartoon spirit.
-- **Palette:** mug `#f4efe6` (shade `#cfc6b8`) with chips `#2a3a5c` and a blue rim `#3a5a8c`; tea `#8a5a3a`; tag `#e8c24a`; straw `#d8382f` and `#fbf6ee`; eyes `#14121a`; nose `#d8382f`; shorts `#c9473f`; gloves `#fbf6ee`; shoes `#6b4a35`.
-- **Color slot:** costume.
-- **Gait:** a bouncy rubber-hose strut with arms swinging in loops; the straw wobbles.
-- **The nod:** the cup head with its handle (the one head nobody else has); the striped straw (it breaks the top of the outline); pie-cut eyes, rubber-hose limbs and a red nose (the 1930s cartoon read, which is half the joke); red shorts and white gloves (the toon costume).
-- **Our twist:** a camping mug, not fine china: white enamel with a blue rim and black chips where it's been dropped; a paper straw going soggy and bent; a tea-bag string hanging over the rim with its tag.
-- **Swaps:** a sugar cube on the rim; a steam curl; a sticking plaster on a chip; a biscuit in one glove.
-- **Rig:** humanoid. Medium risk: rubber-hose limbs bend in arcs, not at elbows, so the run and cheer are keyed.
-- **Concept prompt:** A 1930s rubber-hose cartoon character whose head is a white enamel camping mug with a blue rim, black chips where it's been dropped, a handle on its side and tea at the rim; a red-and-white striped paper straw bent and going soggy sticks up from the top, and a tea-bag string with its yellow tag hangs over the rim; pie-cut black eyes, a small red nose, white gloves, red shorts and brown shoes on noodle limbs.
+- **Silhouette:** a white mug for a head, a squat cylinder wider than the body under it, with a loop handle out the back and a striped straw flopped over out of the top; a tiny rubber-hose body under it.
+- **Traits:** a mug head with tea at the rim; a striped straw; big black pie-cut eyes; white gloves; high-waisted shorts; big round shoes; black hose limbs that bend in curves; drawn in a 1930s cartoon spirit.
+- **Palette:** mug `#f4efe6` (shade `#cfc6b8`), tea `#7a4e30`, gloves `#f4efe6`, hose limbs and neck `#1c1a24`, shoes `#6b4a35`: neutrals. The shorts are the player's colour; the straw's stripes are drawn in it, the rim a dark of it, the tea-bag tag a light of it.
+- **Color slot:** costume: the shorts.
+- **Gait:** a bouncy rubber-hose strut with arms swinging in loops; a jig for a second cheer.
+- **The nod:** the mug head with its handle (the one head nobody else has); the straw (it breaks the top of the outline); big pie-cut eyes, black hose limbs and white gloves (the 1930s cartoon read, which is half the joke); the high-waisted shorts (the toon costume, and the colour block).
+- **Our twist:** a camping mug, not fine china: white enamel with a thick rim chipped at the front, a paper straw gone soggy and bent over, a tea-bag string hung over the rim with its tag dangling by the handle, one shoe's sole flapping.
+- **Swaps:** a sticking plaster on one cheek.
+- **Palette alts:** the shoes in brown leather `#6b4a35`, tan `#9a7448` or grey `#6e6a66`.
+- **Idles and cheers:** the idle from the model; gloves on his hips, rocking on his heels. Both gloves thrown up; a jig with one leg kicked high.
+- **Gait range:** a bounce of 0.2–0.85 px on each step, a lean of up to 0.03.
+- **Wear:** scuffed is a faded streak on the shorts, scorched a soot streak there; the mug, the face, stays clean.
+- **Rig:** drawn flat (2026-11-04): a design worn with the chipped rim, the bent straw, the tea-bag tag and the flapping sole, and a black chip on the mug's side painted back out in an edit (dark beside the face reads as a mouth); eleven poses, drawn two and three to a sheet and cut apart. The drawn red nose goes with the drawn face: the face kit has no nose, and red, it was the player's colour.
+- **Concept prompt:** A 1930s rubber-hose cartoon character whose head is a white enamel camping mug with a thick rim, a chip broken out of it, a loop handle on its back and tea at the rim; a striped paper straw bent over and going soggy sticks up from the top, and a tea-bag string with its paper tag hangs over the rim by the handle; big black pie-cut eyes, white gloves, high-waisted shorts and big round shoes on black noodle limbs.
 
 ### The armored bounty hunter
 - **Kind:** `hunter` · **Name:** Sammus
 - **A stranger should say:** "the bounty hunter in the orange power suit."
-- **Silhouette:** a round helmet, two huge round shoulder pads wider than the body, a narrow waist, chunky legs, and an arm cannon held out front. Taller and broader than the robot boy.
-- **Traits:** orange armor; red spherical shoulder pads; a green visor across the helmet; an arm cannon; green lights on the chest.
-- **Palette:** armor `#d9661f` (shade `#a84b14`); shoulders `#c9473f` with stripes `#f4efe6`; visor `#2f7a3c` with glint `#9fe08a`; drainpipe `#8e9298` (shade `#5c5852`); lights `#7fd06a`; waist `#4a4a52`.
-- **Color slot:** costume.
+- **Silhouette:** the tallest of the cast, about five helmets tall: two huge round shoulder pads, each bigger than the helmet and wider than anything else on it, a helmet with a visor band between them, a narrow waist, long thick armoured legs (half its height, no big boots), and an arm cannon held straight out from the shoulder, reaching far past the body. The robot boy is small, round-helmeted and big-booted; the hunter is none of those.
+- **Traits:** an armored suit; huge spherical shoulder pads; a wide visor band across the helmet; an arm cannon; long legs with round knee joints.
+- **Palette:** the suit in the player's colour (roster `#d9661f`); the buoys a dark of it (−28) with a band `#f1ece2`; the drainpipe cannon a light of it (+18); the visor dark smoky glass `#38434c` with glint `#a7b3bb`; the undersuit (collar, waist, gloves, knee pads) gunmetal `#4b5059`.
+- **Color slot:** costume: the suit, with the buoys and the cannon in tones of it.
 - **Gait:** heavy, steady strides; raises the cannon on the jump; tucks into a ball on a long fall.
-- **The nod:** the two huge round shoulder pads (the silhouette: nobody else is wider at the top); the orange with red (the suit, from across a room); the green visor (the face); the arm cannon (the hunter, and the ball tuck says the rest).
-- **Our twist:** a power suit welded together in the scrapyard. The torso is a cut-down water heater, the shoulder pads are two red-and-white fishing buoys, the arm cannon is a length of drainpipe with an elbow joint, and the visor is green bottle glass.
+- **The nod:** the two huge round shoulder pads (the silhouette: nobody else is wider at the top); the tall, long-legged build (what parts it from the small, big-booted robot boy, who also carries a cannon); the visor band across the helmet (the face); the arm cannon (the hunter, and the ball tuck says the rest).
+- **Our twist:** a power suit welded together in the scrapyard. The torso is a cut-down water heater, the shoulder pads are two banded fishing buoys, the arm cannon is a length of drainpipe painted to match, and the visor is smoked glass.
 - **Swaps:** a rope coiled at the waist; a hand-painted stencil of ours on a buoy; a hazard sticker on the drainpipe; a dent in the helmet.
-- **Rig:** drawn flat (2026-11-03), no face (the visor is it). The first drawing failed the blind read ("a mushroom retainer's lobed cap", "a monkey with big ears"): its buoys sat level with the helmet and merged with it into one lobed blob, and the cannon across its chest was lost in the body. Redrawn with the buoys hung low and wide at the ends of a shoulder plate, the helmet clear above them, and a long straight cannon held out level, clear of the body, in every standing, running and jumping pose (raised, it vanished into the outline). Worn with a taped cannon, a dented and patched water-heater torso and grey replacement boots (the poses kept drawing both grey, so both are). The ball tuck on a long fall; the drainpipe and boots grey `#8e9298`, deep rust `#6f3b2a` or bone-white PVC `#d6cdb6` (a light rust `#9a5f3e` was the orange and yellow suits' own brown, and the cannon and boots merged into them); a hazard sticker on the near buoy; one wear mark on the thigh, a scrape or soot.
-- **Concept prompt:** A bounty hunter in a power suit welded together from scrap: an orange suit whose torso is a cut-down water heater, two huge round red-and-white fishing buoys as shoulder pads wider than the body, a round helmet with a green bottle-glass visor, green lights on the chest, a narrow dark waist and chunky legs. One arm ends in a cannon made from a length of grey drainpipe with an elbow joint, held out front.
+- **Rig:** drawn flat (2026-11-03), no face (the visor is it). The first drawing failed the blind read ("a mushroom retainer's lobed cap", "a monkey with big ears"): its buoys sat level with the helmet and merged with it into one lobed blob, and the cannon across its chest was lost in the body. Redrawn with the buoys hung low and wide at the ends of a shoulder plate, the helmet clear above them, and a long straight cannon held out level, clear of the body, in every standing, running and jumping pose (raised, it vanished into the outline). That one was named by one blind reader and taken for the blue robot boy by the other, and by both of the robot boy's readers (2026-11-04: "rounded helmet, arm cannon held out, chunky boots"): a round helmet over a level cannon on short legs in big boots is the robot boy's silhouette. Redrawn tall (2026-11-04), its readers lost the robot boy but saw "Rayman-like, low: a big lobed head on thin limbs": the cannon, carried across the waist, barely left the outline, and the buoys and helmet were one lobed head. So the design is the fourth: the cannon is the forearm, held straight out from the shoulder and reaching far past the body, the legs long and thick with big knee pads, a visor band across the helmet; the tallest kind, 25 world px standing (the run at 0.96, the air and wall clips at 0.9, inside the shared box). Worn with a taped cannon, a dented chest with a riveted patch, and a dented muzzle. The ball tuck on a long fall; the undersuit gunmetal `#4b5059`, slate `#646a73` or old iron `#3e3a37` (a light steel or bone one blotched the suit like camouflage); a sticker in the suit's colour on the near buoy's band; one wear mark on the thigh, a scrape or soot.
+- **Concept prompt:** A tall, long-legged bounty hunter in a power suit welded together from scrap: an orange suit whose torso is a cut-down water heater, two huge round red-and-white fishing buoys as shoulder pads, each bigger than the helmet and wider than anything else, a helmet with a wide smoked-glass visor band, a narrow dark waist, and long thick armoured legs with big round knee pads and small feet. The near forearm is a long cannon made from a length of drainpipe, held straight out from the shoulder.
 
 ### The team shooter's engineer
 - **Kind:** `engineer` · **Name:** Engie
-- **A stranger should say:** "the engineer with the hard hat and the wrench."
-- **Silhouette:** broad and square-shouldered, a tall round hard hat with a short rim all round, and one huge open-jawed wrench slanting up past his shoulder from his hip, its jaw clear of the hat.
-- **Traits:** a tall round yellow hard hat with a short rim all round; dark goggles strapped round it as a band; a huge clean-shaven square lantern jaw, as wide as the dome and jutting forward, flat-bottomed with hard corners; a red or blue work shirt; khaki trousers with a belt; leather work gloves; a huge wrench with one big open jaw.
-- **Palette:** bowl `#e9b730` (shade `#bb8a1c`); goggles `#3a4246` with lenses `#5fb0c8`; shirt `#b8433c` or `#3f62a8`; trousers `#8c7a58`; belt `#6b4a35`; glove `#a8794a`; wrench `#8e8a84` (shade `#5c5852`); broom handle `#c49a62`; skin `#efc9a4`.
+- **A stranger should say:** "the engineer with the hard hat, the toolbox and the wrench."
+- **Silhouette:** broad and square-shouldered under a round hard hat with a rim all round, his kit carried low and clear of the body: a toolbox hanging by its handle from one hand beside his knee, and one huge open-jawed wrench held low in the other, slanting forward, its jaw out in front of his knees. Nothing beside or above his head.
+- **Traits:** a round hard hat with a rim all round; goggles strapped round it as a band; a huge clean-shaven square lantern jaw, jutting forward, flat-bottomed with hard corners; a work shirt; khaki trousers with a belt; leather work gloves; a toolbox; a huge wrench with one big open jaw.
+- **Palette:** the shirt in the player's colour; the hard hat a light tone of it (+20) and the toolbox a dark one (−16). Neutrals: goggles `#3a4246` with grey lenses `#8e8a84`; trousers `#8c7a58`, the belt and boots drawn in them; gloves `#a8794a`; wrench `#8e8a84`; skin `#efc9a4`. (Before 2026-11-04 the hat was its own yellow `#e9b730`.)
 - **Color slot:** costume.
-- **Gait:** trudges, heavy-stepped, the wrench swinging.
-- **The nod:** the domed hard hat with goggles on it (the head shape and the trade); the square jaw (the gruff Texan, at 20 px); the huge wrench over the shoulder (the read in profile); the work shirt and khakis (the colour block).
-- **Our twist:** a backyard engineer. The hard hat is a deep upturned yellow mixing bowl, the goggles are swimming goggles pushed up on it, and the wrench is one giant battered spanner. (Drawn flat, the broom handle and the toy turret on his belt went: at play size they made a tangle that hid the hat and the wrench.)
+- **Gait:** trudges, heavy-stepped, the toolbox and the wrench swinging at his sides.
+- **The nod:** the toolbox and the wrench, carried low (the read in silhouette: the kit the original is known for); the hard hat with goggles on it (the head shape and the trade); the square jaw (the gruff Texan, at 20 px); the work shirt and khakis (the colour block).
+- **Our twist:** a backyard engineer. The goggles are swimming goggles pushed up on a battered hard hat, the wrench is one giant spanner, and the toolbox a dented green tin one. (Drawn flat, the broom handle and the toy turret on his belt went: at play size they made a tangle that hid the hat and the wrench.)
 - **Swaps:** a pencil behind the ear; a tape measure on the belt; a toothpick; a grease smear on the cheek.
-- **Palette alts:** the trousers in khaki `#8c7a58`, slate work cloth `#6b7178` or olive drab `#5e5f3c`; the boots are drawn in them (drawn flat, the boots and trousers are one colour in the drawing).
-- **Rig:** drawn flat (2026-11-03), redrawn twice after failed blind reads. Carried up behind his head, the spanner and the toy turret read as "a capped figure with spiky bits sticking up from the head"; then a wide brim on a short, stocky man read as the plumber's rival ("wide brimmed hat and a spiky, jagged face/mustache outline on a stocky body"); a spanner with a second jaw down by his boots read as "a long curled tail". Now a broad, taller build under a tall round dome with a short rim and the goggles as a band, a clean-shaven jaw, and one spanner gripped by its end at his hip, slanting up past his shoulder, its one big open jaw beside his shoulder and clear of the hat. The jaw was then made a huge square lantern jaw, as wide as the dome and jutting forward (owner: "the jaw isnt super square"), and every drawing but the wall slide and the knockout mirrored, because the poses had come back turned to the left while he runs right. Worn with a dented dome; the drawings' torn knees are left out, since at play size the skin through a rip read as a stray speck on the trousers. The goggles stay pushed up, so the cast's face shows; eleven poses.
-- **Concept prompt:** A broad, square-shouldered engineer with a deep yellow mixing bowl worn upside down as a tall round hard hat, its rim a short brim all round, swimming goggles strapped round it as a band; a huge clean-shaven square lantern jaw jutting forward; a red work shirt, khaki trousers with a belt and leather work gloves; one giant battered spanner, gripped by the end of its handle at his hip and slanting up past his shoulder, its single big open jaw beside his shoulder.
+- **Palette alts:** the trousers in khaki `#8c7a58`, slate work cloth `#6b7178` or charcoal `#5b5955`; the boots are drawn in them (drawn flat, the boots and trousers are one colour in the drawing).
+- **Rig:** drawn flat (2026-11-03), redrawn three times after failed blind reads. Carried up behind his head, the spanner and the toy turret read as "a capped figure with spiky bits sticking up from the head"; then a wide brim on a short, stocky man read as the plumber's rival ("wide brimmed hat and a spiky, jagged face/mustache outline on a stocky body"); a spanner with a second jaw down by his boots read as "a long curled tail". Now a broad, taller build under a tall round dome with a short rim and the goggles as a band, a clean-shaven jaw, and one spanner gripped by its end at his hip, slanting up past his shoulder, its one big open jaw beside his shoulder and clear of the hat. The jaw was then made a huge square lantern jaw, as wide as the dome and jutting forward (owner: "the jaw isnt super square"), and every drawing but the wall slide and the knockout mirrored, because the poses had come back turned to the left while he runs right. Worn with a dented dome; the drawings' torn knees are left out, since at play size the skin through a rip read as a stray speck on the trousers. Still unnamed ("a mechanic or engineer, but I can't name the source", and in silhouette the jaw up by his shoulder read as ears), he was redrawn a fourth time (2026-11-04) with a toolbox hanging from one hand and the spanner held low in the other, its jaw out in front of his knees. Two fresh readers then named him, both at low ("engineer-type worker in a hard hat holding a wrench, possibly the TF2 Engineer"; "a hard-hat or helmeted worker, maybe a TF2 Engineer type… a tool or box carried low in one hand"). The hard hat and the shirt are one player's colour in two tones, the toolbox a dark tone of it, and the rest neutrals (Decision 4). That design came back facing right, so nothing is mirrored any more. The drawing's hat shade and gloves are one ochre, so the gloves are the hat's parts below the face (`recolour`). The goggles stay pushed up, so the cast's face shows; ten pose drawings, the jump drawing the whole air clip.
+- **Concept prompt:** A broad, square-shouldered engineer in a round yellow hard hat with a rim all round, swimming goggles strapped round it as a band; a huge clean-shaven square lantern jaw jutting forward; a red work shirt, khaki trousers with a belt and leather work gloves; a big green tin toolbox hanging by its handle from one hand beside his knee, and one giant spanner held low in the other, slanting forward, its single big open jaw out in front of his knees.
 
 ### The goose up to no good
 - **Kind:** `goose` · **Name:** Honkers
 - **A stranger should say:** "the troublemaking goose."
 - **Silhouette:** a long body, an S-shaped neck and a tail tipped up. On the run it takes the honk pose: neck thrust out flat, wings flung up.
-- **Traits:** white feathers; an orange beak and webbed feet; a small black eye; the honk with its beak wide open.
-- **Palette:** body `#f3f0ea` (shade `#bdb5a8`); beak and feet `#d9894a` (shade `#a35f2b`); eye `#2a1f1a`; vest `#e8d23a` with stripes `#c9ccd2`.
-- **Color slot:** costume.
+- **Traits:** white feathers; a tan beak and webbed feet; a small black eye; the honk with its beak wide open.
+- **Palette:** body `#f3f0ea`; beak and feet a neutral warm tan `#c08a58` (in a tone of the vest the beak and its loot ran into one shape); eye `#2a1f1a`; vest the player's colour (`#e8d23a` in the roster), its bands folded in; spanner bare steel `#9aa0a8`, blued `#5d6d86` or dark iron `#4f5359`; tape `#8e8a84`.
+- **Color slot:** costume: the vest.
 - **Gait:** a waddle; when running, the honk charge with neck out and wings up.
-- **The nod:** the S of a neck (the goose, not a duck or a chicken); white with an orange beak and feet (the farmyard goose); the honk pose with wings flung up (the troublemaker, which is the whole character).
+- **The nod:** the S of a neck (the goose, not a duck or a chicken); white with a beak and webbed feet in a warm tan (the farmyard goose); the honk pose with wings flung up (the troublemaker, which is the whole character).
 - **Our twist:** a site goose. It wears a stolen hi-vis vest put on back to front, and always has something nicked in its beak: whatever the roll gives (see Swaps).
 - **Swaps** (the loot in its beak): a spanner; a plunger cup; a single sock; a rubber duck.
-- **Rig:** drawn flat (2026-11-03): the vest's hem torn ragged, the tail bent over, the spanner bent; the loot is a spanner in every pose, its swaps a colourway (bare, blued or green-painted steel: a red one in the beak read as a tongue) and a plaster on the back of the head; the run is the honk charge, neck flat out and wings flung up, and the vest is one block of the player's colour: drawn flat, its reflective bands and the scraps of their arcs cut it into a dozen patches, and their pale grey read as the white showing through (their edges stay as lines).
+- **Rig:** drawn flat (2026-11-03): the vest's hem torn ragged, the tail bent over, the spanner bent; the loot is a spanner in every pose, its swaps a colourway (bare, blued or dark iron: a red one in the beak read as a tongue) and a strip of grey tape behind the eye, small and level with it (lower, the spanner ran over it); the run is the honk charge, neck flat out and wings flung up, and the vest is one block of the player's colour: drawn flat, its reflective bands and the scraps of their arcs cut it into a dozen patches, and their pale grey read as the white showing through (their edges stay as lines).
 - **Concept prompt:** A mischievous white farmyard goose with a long S-shaped neck, a tail tipped up, an orange beak and orange webbed feet and a small black eye; it wears a stolen yellow hi-vis vest on back to front and holds a stolen spanner in its beak.
 
 ### The barnyard party game's horse (new)
 - **Kind:** `horse` · **Name:** Hoarse
 - **A stranger should say:** "the horse from the chicken-horse game."
-- **Silhouette:** upright on two legs, with a long head and muzzle out in front, two upright ears, a mane down the neck, and a tail behind.
-- **Traits:** a brown coat; a dark mane and tail; a pale muzzle with nostrils; hooves; a goofy grin.
-- **Palette:** coat `#9a6a40` (shade `#734e2e`); mane and tail `#3a2a20`; muzzle `#e6cfae`; hooves `#2a1f1a`; zip `#c9ccd2`; scarf `#c9473f` and `#f4efe6`.
-- **Color slot:** costume.
-- **Gait:** a high-stepping prance, mane bouncing; kicks its heels on the jump.
-- **The nod:** the long muzzle out front and the upright ears (the horse, in profile); standing on two legs (the party game's horse, not a farm horse); the goofy grin (its personality).
-- **Our twist:** it's a costume. A zip runs up its belly, the head is a size too big for the neck, and it's lost its voice: a knitted scarf wound round its throat.
-- **Swaps:** a lozenge tin in one hoof; a hand-sewn patch; a party horn; a sticking plaster on the muzzle.
-- **Rig:** humanoid with a long head. Medium risk: the big head must stay inside the envelope.
+- **Silhouette:** upright on two legs, with a long head tilted down and its muzzle out in front, two upright ears, a mane flat down the neck, and a narrow tail hanging behind.
+- **Traits:** a long pale-nosed muzzle with big nostrils; a dark mane and tail; hooves; a goofy buck-toothed grin.
+- **Palette:** the costume in the player's colour (drawn `#c8743a`), the scarf a dark of it (tone −22); the rest neutral: nose and muzzle `#e6cfae`; mane, tail and hooves `#4a3428`; zip and knee patch `#9a9c98`; an open mouth's tongue `#9a3d36`.
+- **Color slot:** costume: the onesie, head and all, and the scarf in a dark of it.
+- **Gait:** a high-stepping prance; kicks its heels on the jump.
+- **The nod:** the long muzzle out front, tilted down, and the upright ears (the horse, in profile: a level snout under a fanned tail read as a fox standing up); standing on two legs (the party game's horse, not a farm horse); the goofy grin (its personality).
+- **Our twist:** it's a costume. A zip runs up its belly, stuck open at the bottom, the head is a size too big, and it's lost its voice: a knitted scarf wound round its throat.
+- **Swaps:** a sticking plaster on the cheek (a lozenge tin, a hand-sewn patch and a party horn are for later).
+- **Palette alts:** the mane, tail and hooves together in dark bay `#4a3428`, black `#302c2c` or chestnut `#74492f`.
+- **Idles and cheers:** the idle from the design; arms folded, smug, one hoof tapping. Both hooves thrown up; waving one hoof, the other on its hip.
+- **Gait range:** a bounce of 0.2–0.9 px on each step, a lean of up to 0.03.
+- **Wear:** in the drawing, the zip stuck open and a stitched grey patch on one knee; scuffed is a faded patch on the belly, scorched a soot mark there.
+- **Rig:** drawn flat (2026-11-04): a game-size design with the scarf, zip and patch added in a wear edit (over the prompt's length the image model dropped the scarf) and the head tilted down and the tail narrowed in a second; eleven poses drawn three to a sheet (`art/sprites/horse/design.prompt.txt`). Each drawing's near pupil is repainted solid: drawn, a pupil was a ring of ink round its glint, taken for the line, and the far one sits on the outline. Blind reads (2026-11-04, ten fresh readers over five drawings): never named; read as Fox McCloud or a plain fox ("pointed snout and ears, bushy tail, stands upright on two legs", low) and as the bandicoot ("spiky tuft on the head, lanky", low to medium), as a level head, a shaggy mane, tall ears or a fanned tail made it a canine. In colour it reads as a horse at once.
 - **Concept prompt:** A goofy upright cartoon horse standing on two legs, with a long head and muzzle out in front, two upright ears, a pale muzzle with nostrils, a dark mane and tail and a big grin; it is clearly a costume, with a zip running up its brown belly and a head a size too big for its neck, and a red-and-white knitted scarf wound round its throat.
 
 ### The jellyfish parasite
 - **Kind:** `jelly` · **Name:** Meltroid
 - **A stranger should say:** "the floating jellyfish thing from the space game."
-- **Silhouette:** a translucent dome with four fangs hooked underneath; it floats and never touches the floor.
+- **Silhouette:** a dome with four fangs hooked underneath: two big ones under its middle curving in to a pincer, a small one each side; it floats and never touches the floor.
 - **Traits:** a see-through green membrane; three red nuclei inside it; a pale rim; four ivory fangs.
-- **Palette:** membrane `#9ee38a` at 60% opacity; cherries `#c9473f` (shade `#9c3530`); rim `#d8f2c8`; fangs `#efe6d2` (shade `#c8bba0`); doily `#fbf6ee`; mint `#4ca04a`.
-- **Color slot:** costume.
+- **Palette:** the dome in the player's colour (`#9ee38a` on the sheets); the cherries a dark of it, the rim a light of it, the mint a dark of it; fangs a bone `#efe6d2`.
+- **Color slot:** costume: the dome, its cherries, rim and mint in tones of it.
 - **Gait:** hovers with a slow bob and chomps its fangs, faster when moving.
 - **The nod:** the translucent green dome (the only see-through body in the cast); the three red nuclei (they make it this parasite, not a jellyfish); the four fangs hooked underneath (the menace); floating (it never walks).
 - **Our twist:** a lime jelly dessert that got ideas. The dome wobbles like set gelatine, the nuclei are three glacé cherries, the fangs are sugared almonds, and a paper doily is stuck to its underside.
 - **Swaps:** a cocktail umbrella stuck in the top; a sprig of mint; a spoon-dent; a wafer fan.
-- **Palette alts:** the sugared-almond fangs in ivory `#efe6d2`, pink `#f2c6cc` or pale blue `#c8dcee`.
-- **Rig:** drawn flat (2026-11-03), no face and no glass: the dome a flat colour (the player's), turned out of a fluted mould and flaring at its rim like a bell, worn with a melting drip down one side, a spoonful scooped out of its top and a torn doily. Its four fangs are long curved hooks, as long as the dome is tall and splayed wide apart: on short fangs set close together its silhouette read as the dome-headed ghost's skirt in the blind read (2026-11-03). The cherries are drawn in their shade `#9c3530`: in the roster's red they vanish into a red or pink dome, and with the mint on top a red jelly reads as a strawberry. The doily isn't drawn: between the fangs it merged them into one pale skirt. Three drawings carry every clip (the hooks hanging, curled in, spread wide): asked to move its hooks, the image model added more, an octopus. The chomp is spread and curled on the walk and run; the swap is a sprig of mint on the dome.
+- **Palette alts:** the sugared-almond fangs in ivory `#efe6d2`, old bone `#e0cfa8` or grey bone `#d6d4cb`.
+- **Rig:** drawn flat (2026-11-03), no face and no glass: the dome a flat colour (the player's), turned out of a fluted mould and flaring at its rim like a bell, worn with a melting drip down one side and a spoonful scooped out of its top. Its fangs are the parasite's mandibles (2026-11-04): two big ones, half the dome's height, hang from under the middle of the rim and curve in until their tips nearly cross, a pincer, with a small one each side just inside the rim. In blind reads the fangs' spacing was the read: short fangs evenly along the rim read as the dome-headed ghost's hem (2026-11-03), long curling hooks as an octopus, and short hooked fangs at the rim's edge as the parasite, the ghost or the ape's arms by a few pixels. The cherries are a dark of the dome, the rib lines painted out of them (a rib down a cherry read as a crack); the doily isn't drawn (between the fangs it merged them into one pale skirt). Three drawings carry every clip (the mandibles hanging, pinched shut, spread): asked to move its fangs, the image model adds more, so the two poses are the design with its fangs swung about their roots. The chomp is spread and pinched on the walk and run; the swap is a sprig of mint on the dome.
 - **Concept prompt:** A floating translucent lime-green jelly dome that wobbles like set gelatine, with three glacé cherries suspended inside it like nuclei, a pale rim, and four ivory sugared-almond fangs hooked underneath; a paper doily stuck to its underside. It hovers above the ground and never touches it.
 
 ### Production order
@@ -427,7 +465,7 @@ The hunter and the engineer sit late although they're easy to rig: their hand-dr
 
 - **The puffball and the dot-eater:** feet, arms and a mouth against a wedge and no limbs.
 - **The goose and the horse:** two farmyard homages, but white versus brown and an S-neck versus a long muzzle.
-- **The hunter and the robot boy:** both carry an arm cannon. The hunter is bigger, orange and wider at the shoulders than anywhere; the robot boy is small and blue with a round helmet and ear discs.
+- **The hunter and the robot boy:** both carry an arm cannon. The hunter is the tallest kind, long-legged, the cannon straight out from the shoulder; the robot boy is small with a round helmet and ear discs, the can at arm's length. Two blind reads took the old, stocky hunter for the robot boy.
 - **The speedster and the robot boy:** both blue. Quills swept back against a round helmet.
 - **The miner and the sneaking soldier:** both boxy. A cube head on a body with arms against one box on two legs.
 - **The ape and the turtle king:** the two brutes. Hunched, brown and long-armed against upright, green-shelled, spiked and horned.

@@ -7,13 +7,13 @@ export const sprites: SpriteSet = {
   flat: true,
   roles: [
     { color: '#f2a0bc', slot: 'player' },
-    { color: '#c9473f', alts: ['#e07b2c', '#e8b23a'], vary: 6 },
-    { color: '#e9958e', on: 1, tone: 18 },
+    { color: '#808080', on: 0, tone: -18 },
+    { color: '#808080', on: 0, tone: -8 },
     { color: '#f4efe6' },
     { color: '#2a1f1a' },
     { color: '#808080', on: 0, tone: 8 },
     { color: '#808080', on: 0, tone: -12 },
-    { color: '#e9d3b0' },
+    { color: '#e9d3b0', alts: ['#f1ede4', '#b9bcbf'], vary: 6 },
   ],
   slots: [
     { name: 'plaster', vary: 0, options: 2 },

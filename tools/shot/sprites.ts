@@ -142,6 +142,9 @@ async function filmstrip(): Promise<string> {
     rs[0].body.x = best.tx * 16 + 4;
     rs[0].body.y = best.ty * 16 - rs[0].body.h;
     for (const r of rs.slice(1)) r.body.y -= 2000;
+    // The film is of the runner, not the level: a set piece's hazard on that floor (an electric fence) killed it
+    // in the first frame, so the whole level is the spawn's safe zone for the shot.
+    d.match.run.safeZone = { x: 0, y: 0, w: L.w * 16, h: L.h * 16 };
   })()`);
   await press(10, {});
   const go = { [dv[0]]: { right: true, run: true } };

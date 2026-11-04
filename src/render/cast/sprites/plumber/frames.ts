@@ -9,23 +9,23 @@ export const sprites: SpriteSet = {
     { color: '#efc9a4' },
     { color: '#c9473f', slot: 'player' },
     { color: '#808080', on: 1, tone: -22 },
-    { color: '#3f62b4', alts: ['#7e848a', '#86a3d4'], vary: 6 },
+    { color: '#808080', on: 1, tone: -20 },
     { color: '#5e412d' },
     { color: '#a65f38' },
-    { color: '#b08454' },
-    { color: '#7f5c39' },
+    { color: '#b08454', alts: ['#cdc4b2', '#76583f'], vary: 6 },
+    { color: '#7f5c39', alts: ['#9e9585', '#523d2c'], vary: 6 },
     { color: '#8e8a84' },
     { color: '#2a1f1a' },
     { color: '#9a3d36' },
-    { color: '#808080', on: 3, tone: 10 },
-    { color: '#808080', on: 3, tone: -16 },
+    { color: '#808080', on: 1, tone: -10 },
+    { color: '#808080', on: 1, tone: -36 },
     { color: '#e9d3b0' },
   ],
   slots: [
     { name: 'plaster', vary: 1, options: 2 },
     { name: 'wear', vary: 11, options: 3 },
   ],
-  face: { r: 0.9, iris: '#3c6fd0' },
+  face: { r: 0.9, iris: '#3c6fd0', mark: 1.1 },
   gait: { bounce: [0.15, 0.85], lean: [0, 0.035] },
   clips: {
     idle: {
@@ -90,7 +90,7 @@ export const sprites: SpriteSet = {
             [11, '+P/a//b/2//y/9n/7//X/+3/1f/v/9T/8//W//b/2P8=', 1, 1],
             [12, '///F//v/xP/3/8H/8/+8//P/uf/2/7r/+v++//7/wv8=', 1, 2],
             [12, '+P/Z//b/2f/y/9f/7v/V/+3/0//w/9P/8//V//f/1/8=', 1, 2],
-            [13, '6/+L//z/kf/6/5f/6f+R/w==', 0, 1],
+            [13, '6f+G//n/jP/3/5L/5v+M/w==', 0, 1],
           ],
           lines: [
             [1, 'EgBb/wcAVf/8/1X/8P9a/+b/Y/8='],
@@ -183,7 +183,7 @@ export const sprites: SpriteSet = {
             [11, 'CgDY/w0A1v8RANT/EwDV/xEA1/8OANn/CgDb/wgA2v8=', 1, 1],
             [12, 'AgDC/wYAvv8KALr/DQC5/w0AvP8JAMH/BQDE/wEAxf8=', 1, 2],
             [12, 'CQDX/w0A1f8QANP/EwDT/xIA1f8OANf/CgDZ/wgA2f8=', 1, 2],
-            [13, 'FwCR/wYAl/8EAJH/FQCL/w==', 0, 1],
+            [13, 'GgCM/wkAkv8HAIz/FwCG/w==', 0, 1],
           ],
           lines: [
             [1, '7v9b//n/Vf8EAFX/EABa/xoAY/8='],
@@ -284,7 +284,7 @@ export const sprites: SpriteSet = {
             [11, '9P/Z//P/2f/v/9f/7f/T/+3/0f/v/9H/8v/U//T/1/8=', 1, 1],
             [12, 'BwDO/wQAz////8z/+v/J//j/xv/8/8b/AQDJ/wYAzP8=', 1, 2],
             [12, '9v/X//T/1//w/9X/7f/S/+z/0P/u/9D/8v/S//X/1f8=', 1, 2],
-            [13, '6/+E//z/i//6/5H/6f+L/w==', 0, 1],
+            [13, '6f+A//n/hv/3/4z/5/+G/w==', 0, 1],
           ],
           lines: [
             [1, 'FABT/xAAU/8OAFD/BwBN//v/TP/w/1H/5f9b/w=='],
@@ -375,7 +375,7 @@ export const sprites: SpriteSet = {
             [11, '+P/a//b/2//y/9n/7//X/+3/1f/v/9T/8//W//b/2P8=', 1, 1],
             [12, '///F//v/xP/3/8H/8/+8//P/uf/2/7r/+v++//7/wv8=', 1, 2],
             [12, '+P/Z//b/2f/y/9f/7v/V/+3/0//w/9P/8//V//f/1/8=', 1, 2],
-            [13, '6/+L//z/kf/6/5f/6f+R/w==', 0, 1],
+            [13, '6f+G//n/jP/3/5L/5v+M/w==', 0, 1],
           ],
           lines: [
             [1, 'EgBb/wcAVf/8/1X/8P9a/+b/Y/8='],
@@ -472,7 +472,7 @@ export const sprites: SpriteSet = {
             [11, 'DADX/w4A1P8RANH/EwDR/xMA0/8RANf/DQDZ/wwA2f8=', 1, 1],
             [12, '+v/M////yf8EAMb/CADG/wYAyf8BAMz//P/P//n/zv8=', 1, 2],
             [12, 'CwDV/w4A0v8SAND/FADQ/xMA0v8QANX/DADX/woA1/8=', 1, 2],
-            [13, 'FwCL/wYAkf8EAIv/FQCE/w==', 0, 1],
+            [13, 'GQCG/wkAjP8HAIb/FwCA/w==', 0, 1],
           ],
           lines: [
             [1, '7P9T//D/U//y/1D/+f9N/wUATP8QAFH/GwBb/w=='],
@@ -563,7 +563,7 @@ export const sprites: SpriteSet = {
             [11, 'CgDY/w0A1v8RANT/EwDV/xEA1/8OANn/CgDb/wgA2v8=', 1, 1],
             [12, 'AgDC/wYAvv8KALr/DQC5/w0AvP8JAMH/BQDE/wEAxf8=', 1, 2],
             [12, 'CQDX/w0A1f8QANP/EwDT/xIA1f8OANf/CgDZ/wgA2f8=', 1, 2],
-            [13, 'FwCR/wYAl/8EAJH/FQCL/w==', 0, 1],
+            [13, 'GgCM/wkAkv8HAIz/FwCG/w==', 0, 1],
           ],
           lines: [
             [1, '7v9b//n/Vf8EAFX/EABa/xoAY/8='],
@@ -660,7 +660,7 @@ export const sprites: SpriteSet = {
             [11, '9f/e//T/3v/w/9z/7v/Y/+7/1//w/9b/8//Z//X/3P8=', 1, 1],
             [12, 'CQDL/wYAy/8BAMj//f/E//v/wf/+/8H/BADE/wgAyP8=', 1, 2],
             [12, '9v/d//T/3f/w/9r/7//W/+7/1P/w/9T/8//X//X/2v8=', 1, 2],
-            [13, '6v+I//r/jv/4/5T/5/+O/w==', 0, 1],
+            [13, '5/+D//f/iv/2/4//5f+K/w==', 0, 1],
           ],
           lines: [
             [1, 'EQBY/w8AWP8MAFX/BgBS//r/Uv/v/1b/5f9g/w=='],
@@ -761,7 +761,7 @@ export const sprites: SpriteSet = {
             [11, '+//e//j/3v/1/93/8f/a//H/2P/z/9j/9//a//r/3P8=', 1, 1],
             [12, 'AQDH//7/x//6/8P/9/+///b/vP/5/7z//f/A/wAAxP8=', 1, 2],
             [12, '+v/d//j/3f/0/9v/8v/X//L/1f/0/9X/9//Y//n/2/8=', 1, 2],
-            [13, '7f+L//3/kv/7/5f/6v+S/w==', 0, 1],
+            [13, '6v+G//v/jf/5/5L/6P+N/w==', 0, 1],
           ],
           lines: [
             [1, 'EwBc/xEAXP8PAFn/CQBW//3/Vv/z/1n/6P9j/w=='],
@@ -850,7 +850,7 @@ export const sprites: SpriteSet = {
             [11, 'CwDc/w0A2f8QANb/EgDX/xIA2P8QANz/DADe/wsA3v8=', 1, 1],
             [12, '+P/I//z/xP8CAMH/BQDB/wMAxP///8j/+v/L//f/y/8=', 1, 2],
             [12, 'CwDa/w0A1/8QANT/EgDU/xEA1v8QANr/DADd/woA3f8=', 1, 2],
-            [13, 'GQCO/wgAlP8GAI7/FgCI/w==', 0, 1],
+            [13, 'GwCK/woAj/8JAIr/GQCD/w==', 0, 1],
           ],
           lines: [
             [1, '7/9Y//H/WP/0/1X/+v9S/wYAUv8RAFb/GwBg/w=='],
@@ -951,7 +951,7 @@ export const sprites: SpriteSet = {
             [11, 'BgDc/wkA2v8NANj/DwDY/w8A2v8LAN3/CADe/wUA3v8=', 1, 1],
             [12, 'AADE/wMAwP8HALz/CgC8/wkAv/8GAMP/AgDH////x/8=', 1, 2],
             [12, 'BwDb/wkA2P8MANX/DgDV/w4A1/8MANv/CADd/wYA3f8=', 1, 2],
-            [13, 'FgCS/wUAl/8DAJL/EwCL/w==', 0, 1],
+            [13, 'GACN/wcAkv8FAI3/FgCG/w==', 0, 1],
           ],
           lines: [
             [1, '7f9c/+//XP/x/1n/9/9W/wMAVv8NAFn/GABj/w=='],
@@ -1046,7 +1046,7 @@ export const sprites: SpriteSet = {
             [11, '+f/j//b/4//z/+L/7//f/+//3f/x/93/9f/e//j/4f8=', 1, 1],
             [12, 'BgDN/wQAzv///8r//f/G//z/w//+/8P/AwDH/wYAy/8=', 1, 2],
             [12, '+P/g//f/4f/z/+D/7//e/+//3P/w/9v/9f/c//j/3/8=', 1, 2],
-            [13, '7v+R//7/l//8/53/7P+X/w==', 0, 1],
+            [13, '7P+M//z/k//6/5j/6f+T/w==', 0, 1],
           ],
           lines: [
             [1, 'FQBk/xIAZP8LAF7///9e//X/Yv/r/2v/'],
@@ -1143,7 +1143,7 @@ export const sprites: SpriteSet = {
             [11, '+P/m//X/5f/y/+L/7//f/+//3f/y/97/9P/g//f/5P8=', 1, 1],
             [12, 'CwDF/wkAx/8EAMX////C////wP8AAL7/BgDA/woAw/8=', 1, 2],
             [12, '+P/i//b/4//y/+H/7//e/+//3P/x/9z/9P/e//f/4f8=', 1, 2],
-            [13, '9v+O/wcAlf8FAJr/9P+V/w==', 0, 1],
+            [13, '9P+J/wQAkP8CAJX/8v+Q/w==', 0, 1],
           ],
           lines: [
             [1, 'HQBg/xoAYP8YAF3/EgBa/wcAWf/7/17/8v9n/w=='],
@@ -1239,7 +1239,7 @@ export const sprites: SpriteSet = {
             [11, 'CADh/wsA3v8PAN3/EQDd/xEA3/8NAOL/CgDj/wcA4/8=', 1, 1],
             [12, '+v/L//3/x/8CAMP/BADD/wMAxv8BAMr//P/O//r/zf8=', 1, 2],
             [12, 'CADf/wsA3P8QANv/EQDc/xEA3v8NAOD/CQDh/wgA4P8=', 1, 2],
-            [13, 'FACX/wQAnf8CAJf/EgCR/w==', 0, 1],
+            [13, 'FwCT/wYAmP8EAJP/FACM/w==', 0, 1],
           ],
           lines: [
             [1, '6/9k/+7/ZP/1/17/AQBe/wsAYv8VAGv/'],
@@ -1336,7 +1336,7 @@ export const sprites: SpriteSet = {
             [11, 'CQDk/wwA4P8OAN7/EQDd/xEA3/8OAOL/CwDl/wgA5v8=', 1, 1],
             [12, '9v/D//r/wP8AAL7/AQDA/wEAwv/8/8X/9//H//X/xf8=', 1, 2],
             [12, 'CQDh/wwA3v8PANz/EQDc/xEA3v8OAOH/CgDj/wgA4v8=', 1, 2],
-            [13, 'DACV//v/mv/5/5X/CgCO/w==', 0, 1],
+            [13, 'DgCQ//7/lf/8/5D/DACJ/w==', 0, 1],
           ],
           lines: [
             [1, '4/9g/+b/YP/o/13/7v9a//n/Wf8FAF7/DgBn/w=='],
@@ -1439,7 +1439,7 @@ export const sprites: SpriteSet = {
             [11, 'AgDc////2//8/9n/+f/V//n/0//8/9T////W/wIA2v8=', 1, 1],
             [12, 'DQDC/wsAwv8GAL//AgC7/wIAuf8EALj/CQC7/w0Av/8=', 1, 2],
             [12, 'BQDb/wMA2v8AANj//f/U//7/0v8AANP/AwDV/wUA2f8=', 1, 2],
-            [13, '+f+J/wkAkP8HAJX/9v+Q/w==', 0, 1],
+            [13, '9v+E/wcAi/8FAJD/9P+L/w==', 0, 1],
           ],
           lines: [
             [1, 'IQBZ/x4AWf8bAFb/FQBT/woAU//+/1f/9P9h/w=='],
@@ -1536,7 +1536,7 @@ export const sprites: SpriteSet = {
             [11, 'AQDY//7/2P/6/9f/9//U//X/0v/4/9L//P/U/wAA1v8=', 1, 1],
             [12, 'CwDB/wcAv/8DALz/AAC3/wAAtf8DALb/BwC5/wsAvv8=', 1, 2],
             [12, 'BADW/wEA1f/+/9P/+//Q//v/zv/9/8//AADQ/wMA1P8=', 1, 2],
-            [13, '+P+G/wgAjP8GAJL/9f+M/w==', 0, 1],
+            [13, '9f+B/wUAiP8DAI3/8/+I/w==', 0, 1],
           ],
           lines: [
             [1, 'HgBV/xwAVf8ZAFL/EwBP/wcATv/8/1P/8v9d/w=='],
@@ -1639,7 +1639,7 @@ export const sprites: SpriteSet = {
             [11, '/v/a/wEA1v8EANT/BwDT/wcA1f8EANn/AQDb//7/3P8=', 1, 1],
             [12, '8/+///f/u//8/7j//v+5//7/u//6/7//9f/C//P/wv8=', 1, 2],
             [12, '+//Z//3/1f8AANP/AgDS/wMA1P8AANj//f/a//v/2/8=', 1, 2],
-            [13, 'CgCQ//n/lf/3/5D/BwCJ/w==', 0, 1],
+            [13, 'DACL//v/kP/5/4v/CgCE/w==', 0, 1],
           ],
           lines: [
             [1, '3/9Z/+L/Wf/l/1b/6/9T//b/U/8CAFf/DABh/w=='],
@@ -1736,7 +1736,7 @@ export const sprites: SpriteSet = {
             [11, 'AADW/wQA1P8IANL/CwDS/wkA1P8GANf/AgDY////2P8=', 1, 1],
             [12, '9f++//n/uf/9/7b/AAC1/wAAt//9/7z/+f+///X/wf8=', 1, 2],
             [12, '/f/U/wAA0P8DAM//BQDO/wUA0P8CANP////V//z/1v8=', 1, 2],
-            [13, 'CwCM//r/kv/4/4z/CACG/w==', 0, 1],
+            [13, 'DQCI//3/jf/7/4j/CwCB/w==', 0, 1],
           ],
           lines: [
             [1, '4v9V/+T/Vf/n/1L/7f9P//n/Tv8EAFP/DgBd/w=='],
@@ -1839,7 +1839,7 @@ export const sprites: SpriteSet = {
             [11, '7//c/+3/3P/p/9r/5v/X/+X/1f/n/9T/6//X/+7/2f8=', 1, 1],
             [12, '+P/M//T/y//w/8j/7P/D/+z/wf/v/8L/8//E//j/yf8=', 1, 2],
             [12, '8P/Y/+7/2P/q/9f/5v/V/+X/0//n/9P/6//U/+//1v8=', 1, 2],
-            [13, '4v+L//L/kv/w/5f/3/+S/w==', 0, 1],
+            [13, '3/+G//D/jf/u/5L/3f+N/w==', 0, 1],
           ],
           lines: [
             [1, 'CABc/wYAXP/+/1f/8v9W/+j/Wv/e/2T/'],
@@ -1928,7 +1928,7 @@ export const sprites: SpriteSet = {
             [11, 'EgDZ/xUA1/8ZANT/GwDV/xoA1/8XANr/EwDc/xEA3P8=', 1, 1],
             [12, 'CADJ/w0AxP8RAML/FADB/xQAw/8QAMj/DADL/wgAzP8=', 1, 2],
             [12, 'EQDW/xUA1P8ZANP/GwDT/xoA1f8WANf/EgDY/xAA2P8=', 1, 2],
-            [13, 'IQCS/xAAl/8OAJL/HgCL/w==', 0, 1],
+            [13, 'IwCN/xIAkv8QAI3/IQCG/w==', 0, 1],
           ],
           lines: [
             [1, '+P9c//r/XP8CAFf/DgBW/xgAWv8iAGT/'],
@@ -2021,7 +2021,7 @@ export const sprites: SpriteSet = {
             [11, '9//c//X/3P/y/9n/8P/W/+//0//x/9P/9P/W//b/2f8=', 1, 1],
             [12, 'CQC//wYAv/8BAL7/+/+7//n/uf/9/7j/AgC6/wgAvP8=', 1, 2],
             [12, '+P/a//b/2f/y/9f/7//U/+7/0f/x/9L/9P/U//f/1/8=', 1, 2],
-            [13, '6/+L//v/kv/5/5f/6P+S/w==', 0, 1],
+            [13, '6P+G//n/jf/3/5L/5v+N/w==', 0, 1],
           ],
           lines: [
             [2, 'vf9S/8T/UP/Q/1L/2/9X/+H/Xf8='],
@@ -2113,7 +2113,7 @@ export const sprites: SpriteSet = {
             [11, '+P/a//b/2//y/9n/7//X/+3/1f/v/9T/8//W//b/2P8=', 1, 1],
             [12, '///F//v/xP/3/8H/8/+8//P/uf/2/7r/+v++//7/wv8=', 1, 2],
             [12, '+P/Z//b/2f/y/9f/7v/V/+3/0//w/9P/8//V//f/1/8=', 1, 2],
-            [13, '6/+L//z/kf/6/5f/6f+R/w==', 0, 1],
+            [13, '6f+G//n/jP/3/5L/5v+M/w==', 0, 1],
           ],
           lines: [
             [1, 'EgBb/wcAVf/8/1X/8P9a/+b/Y/8='],
@@ -2207,7 +2207,7 @@ export const sprites: SpriteSet = {
             [11, 'CgDZ/wwA1v8PANP/EQDT/xAA1v8OANn/CwDc/wkA3P8=', 1, 1],
             [12, '+P+8//7/uv8DALj/BwC5/wUAu////77/+v+///f/v/8=', 1, 2],
             [12, 'CQDX/wwA1P8PANL/EgDR/xEA1P8OANf/CgDZ/wgA2v8=', 1, 2],
-            [13, 'GACS/wcAl/8FAJL/FQCL/w==', 0, 1],
+            [13, 'GgCN/wkAkv8HAI3/GACG/w==', 0, 1],
           ],
           lines: [
             [2, 'QwBS/zwAUP8wAFL/JQBX/x8AXf8='],
@@ -2299,7 +2299,7 @@ export const sprites: SpriteSet = {
             [11, 'CgDY/w0A1v8RANT/EwDV/xEA1/8OANn/CgDb/wgA2v8=', 1, 1],
             [12, 'AgDC/wYAvv8KALr/DQC5/w0AvP8JAMH/BQDE/wEAxf8=', 1, 2],
             [12, 'CQDX/w0A1f8QANP/EwDT/xIA1f8OANf/CgDZ/wgA2f8=', 1, 2],
-            [13, 'FwCR/wYAl/8EAJH/FQCL/w==', 0, 1],
+            [13, 'GgCM/wkAkv8HAIz/FwCG/w==', 0, 1],
           ],
           lines: [
             [1, '7v9b//n/Vf8EAFX/EABa/xoAY/8='],
@@ -2392,7 +2392,7 @@ export const sprites: SpriteSet = {
             [10, '+/+Z////mf8DAJv/BgCe/wMAoP///5//+/+d/w=='],
             [11, '9v/a//X/2v/x/9f/7//U/+//0v/w/9L/9P/U//b/2P8=', 1, 1],
             [12, '9//Z//X/2P/x/9X/7//S/+7/z//x/9D/9P/T//b/1v8=', 1, 2],
-            [13, '6f+D//n/iv/3/5D/5v+K/w==', 0, 1],
+            [13, '5v9///f/hf/1/4v/5P+F/w==', 0, 1],
           ],
           lines: [
             [1, 'FABU/xAAVP8IAE7/+/9N//D/Uv/l/1z/'],
@@ -2483,7 +2483,7 @@ export const sprites: SpriteSet = {
             [11, '+P/a//b/2//y/9n/7//X/+3/1f/v/9T/8//W//b/2P8=', 1, 1],
             [12, '///F//v/xP/3/8H/8/+8//P/uf/2/7r/+v++//7/wv8=', 1, 2],
             [12, '+P/Z//b/2f/y/9f/7v/V/+3/0//w/9P/8//V//f/1/8=', 1, 2],
-            [13, '6/+L//z/kf/6/5f/6f+R/w==', 0, 1],
+            [13, '6f+G//n/jP/3/5L/5v+M/w==', 0, 1],
           ],
           lines: [
             [1, 'EgBb/wcAVf/8/1X/8P9a/+b/Y/8='],
@@ -2572,7 +2572,7 @@ export const sprites: SpriteSet = {
             [10, 'BQCd/wIAn//9/6D/+v+e//3/m/8CAJn/BgCZ/w=='],
             [11, 'CgDY/wwA1P8QANL/EQDS/xEA1P8PANf/CwDa/woA2v8=', 1, 1],
             [12, 'CgDW/wwA0/8PAND/EgDP/xEA0v8PANX/CwDY/wkA2f8=', 1, 2],
-            [13, 'GgCK/wkAkP8HAIr/FwCD/w==', 0, 1],
+            [13, 'HACF/wsAi/8JAIX/GgB//w==', 0, 1],
           ],
           lines: [
             [1, '7P9U//D/VP/4/07/BQBN/xAAUv8bAFz/'],
@@ -2663,7 +2663,7 @@ export const sprites: SpriteSet = {
             [11, 'CgDY/w0A1v8RANT/EwDV/xEA1/8OANn/CgDb/wgA2v8=', 1, 1],
             [12, 'AgDC/wYAvv8KALr/DQC5/w0AvP8JAMH/BQDE/wEAxf8=', 1, 2],
             [12, 'CQDX/w0A1f8QANP/EwDT/xIA1f8OANf/CgDZ/wgA2f8=', 1, 2],
-            [13, 'FwCR/wYAl/8EAJH/FQCL/w==', 0, 1],
+            [13, 'GgCM/wkAkv8HAIz/FwCG/w==', 0, 1],
           ],
           lines: [
             [1, '7v9b//n/Vf8EAFX/EABa/xoAY/8='],

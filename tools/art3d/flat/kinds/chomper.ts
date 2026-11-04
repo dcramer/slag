@@ -11,7 +11,7 @@ export const kind: FlatKind = {
       ['dark', [41, 28, 20]],
       ['grey', [154, 154, 153]],
       // The napkin's white goes into its check: its gingham traced as a coloured wedge spotted with white
-      // dashes, a rash at play size. The napkin is one flat colour, a pale wash of its check.
+      // dashes, a rash at play size. The napkin is one flat linen.
       ['check', [248, 243, 230]],
       ['check', [166, 61, 39]],
       ['check', [179, 103, 59]],
@@ -33,9 +33,9 @@ export const kind: FlatKind = {
     { name: 'yellow', color: '#f6d02a', slot: 'player' },
     { name: 'dark', color: '#2a1f1a' },
     { name: 'grey', color: '#9aa0a8' },
-    // A colourway is the napkin (VARIETY.palette), washed in its check: rose, blue or green. Pale, so it never
-    // lands on the ball's colour: in a full green, a green ball's jaw was gone.
-    { name: 'check', color: '#f4c6bf', alts: ['#c6d3f2', '#cde6c3'], vary: 6 },
+    // A colourway is the napkin (VARIETY.palette), one flat linen: white, bone or grey. Neutral: a wash of its
+    // check in a colour took a colour of its own off the player's, and its pen, a dark of it, tinted the rim.
+    { name: 'check', color: '#f2ede2', alts: ['#e0d2b6', '#c8cac6'], vary: 6 },
     { name: 'scuff', color: '#808080', on: 0, tone: 8 },
     // One quiet mark a wear: on a smooth ball, a loud blob reads as a spot.
     { name: 'scorch', color: '#808080', on: 0, tone: -18 },
