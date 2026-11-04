@@ -12,9 +12,8 @@ import { BRIDGE_W, type BridgeHint } from './types';
  * jump on it, replay the controller's own move a little wrong (letting go of
  * jump early, jumping a beat late or early, running on after landing) and
  * see whether that still lands or falls out of the level. A jump no slip
- * forgives is a tight one. Bots only ever come up short (src/brain/motor.ts
- * `slipped`), so a perch you'd run straight off looks safe to them; this
- * counts the overshoot too.
+ * forgives is a tight one. Bots fumble with these same slips
+ * (src/brain/motor.ts `slipped`), so a harder level beats them more often.
  *
  * A level is as hard as its easier route: a player takes the forgiving way
  * when there is one (`levelPrecision`). Hazards aren't counted here, only the
@@ -118,6 +117,25 @@ function withBridges(level: Level, bridges: readonly BridgeHint[]): Uint8Array {
   return tiles;
 }
 
+const SLIPS: readonly Slip[] = ['short', 'late', 'early', 'long'];
+/** Each level's collision world, built once: the tiles a slip is traced on don't change while a level is in play. */
+const worlds = new WeakMap<Level, CollisionWorld>();
+
+/**
+ * The slips that turn `controls`, played from `body`, into a fall out of
+ * `level`: a jump with any is a tight one. A bot that chokes on a tight jump
+ * makes one of these (src/brain/motor.ts), as a person's nerves go on the
+ * jumps a level's difficulty counts.
+ */
+export function fatalSlips(level: Level, body: Body, controls: readonly Controls[]): Slip[] {
+  let world = worlds.get(level);
+  if (!world) worlds.set(level, (world = worldOf(level, level.tiles)));
+  return SLIPS.filter((kind) => {
+    const c = slip(controls, kind);
+    return !!c && falls(level, world, body, c);
+  });
+}
+
 /** How many of the jumps along `route` (stand cells, spawn first) some slip turns into a fall. */
 export function routePrecision(level: Level, route: readonly number[], bridges: readonly BridgeHint[] = []): RoutePrecision {
   const tiles = withBridges(level, bridges);
@@ -133,7 +151,7 @@ export function routePrecision(level: Level, route: readonly number[], bridges: 
     for (const m of moves(body)) if (m.to === to && m.air && (!move || m.controls.length < move.length)) move = m.controls;
     if (!move) continue;
     jumps++;
-    for (const kind of ['short', 'late', 'early', 'long'] as const) {
+    for (const kind of SLIPS) {
       const c = slip(move, kind);
       if (c && falls(level, world, body, c)) {
         tight++;
