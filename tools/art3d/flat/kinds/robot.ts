@@ -91,37 +91,40 @@ export const kind: FlatKind = {
     cheer2: { frames: ['cheer2', 'idle'], loop: true, holds: [0.6, 0.3] },
     death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box' },
   },
-  // The tin-can cannon is held out level in front, clear of the body, in every standing, running and jumping
-  // pose: with the round helmet it is the read, and the hunter's raised cannon vanished into its outline.
+  // The cannon arm is stretched straight out, the can at full arm length clear of the helmet, in every standing,
+  // running and jumping pose: held at the chest it barely cleared the helmet, and the silhouette was a lump
+  // (blind read, 2026-11-04).
   poses: {
     idle2: {
-      pose: 'standing, rocking back on his heels, the tin-can cannon held out level in front at chest height, his free hand scratching the back of his helmet, eyes open.',
+      pose: 'standing, rocking back on his heels, his cannon arm stretched straight out in front at shoulder height, the tin can at full arm length clear of his helmet, his free hand scratching the back of his helmet, eyes open.',
     },
-    'walk-1': { pose: 'walking to the right, mid-step: the near boot forward, the far boot back, the tin-can cannon held out level in front at chest height.' },
+    'walk-1': {
+      pose: 'walking to the right, mid-step: the near boot forward, the far boot back, his cannon arm stretched straight out in front at shoulder height, the tin can at full arm length clear of his helmet.',
+    },
     'walk-2': {
-      pose: 'walking to the right, the legs passing under the body: one boot planted, the other lifted a little, the tin-can cannon held out level in front at chest height.',
+      pose: 'walking to the right, the legs passing under the body: one boot planted, the other lifted a little, his cannon arm stretched straight out in front at shoulder height, the tin can at full arm length clear of his helmet.',
     },
     'run-1': {
-      pose: 'running to the right in a bouncy stride, leaning forward, one knee high and the other leg pushing off, the tin-can cannon held out level in front, the battery on his back.',
+      pose: 'running to the right in a bouncy stride, leaning forward, one knee high and the other leg pushing off, his cannon arm stretched straight out in front, the tin can at full arm length clear of his helmet, the battery on his back.',
     },
     'run-2': {
-      pose: 'running to the right in a bouncy stride, leaning forward, both big boots off the ground with the legs gathered under him, the tin-can cannon held out level in front, the battery on his back.',
+      pose: 'running to the right in a bouncy stride, leaning forward, both big boots off the ground with the legs gathered under him, his cannon arm stretched straight out in front, the tin can at full arm length clear of his helmet, the battery on his back.',
     },
     'air-1': {
-      pose: 'jumping up, both big boots tucked up under him, the tin-can cannon held up and out in front pointing a little upward, the free arm up, eyes open.',
+      pose: 'jumping up, both big boots tucked up under him, his cannon arm stretched straight out in front pointing a little upward, the tin can at full arm length clear of his helmet, the free arm up, eyes open.',
     },
     'air-2': {
-      pose: 'falling, both big boots reaching straight down and apart, the free arm flung up, the tin-can cannon held out level in front, his mouth open in alarm, eyes wide open.',
+      pose: 'falling, both big boots reaching straight down and apart, the free arm flung up, his cannon arm stretched straight out in front, the tin can at full arm length clear of his helmet, his mouth open in alarm, eyes wide open.',
     },
     wall: {
-      pose: 'seen from his side, he is sliding down a tall wall on the right edge of the picture (do not draw the wall), his free glove and both big boots braced flat against it, knees bent, the tin-can cannon held out level away from the wall pointing to the left, his helmet turned to look back along the cannon, eyes open.',
+      pose: 'seen from his side, he is sliding down a tall wall on the right edge of the picture (do not draw the wall), his free glove and both big boots braced flat against it, knees bent, his cannon arm stretched straight out away from the wall pointing to the left, the tin can at full arm length, his helmet turned to look back along the cannon, eyes open.',
       far: true,
     },
     cheer: {
-      pose: 'cheering, up on his toes, the free fist punched high over his helmet, the tin-can cannon held out level in front, a big open grin, eyes open.',
+      pose: 'cheering, up on his toes, the free fist punched high over his helmet, his cannon arm stretched straight out in front, the tin can at full arm length clear of his helmet, a big open grin, eyes open.',
     },
     cheer2: {
-      pose: 'a happy little hop, both big boots off the ground and kicked back, the tin-can cannon held out level in front, the free hand waving, a big grin, eyes open.',
+      pose: 'a happy little hop, both big boots off the ground and kicked back, his cannon arm stretched straight out in front, the tin can at full arm length clear of his helmet, the free hand waving, a big grin, eyes open.',
     },
     death: {
       pose: 'he has been knocked out and lies flat on his back on the floor, the whole body horizontal across the picture, helmet on the left and boots on the right, legs splayed limp, eyes shut, the tin-can cannon still on his arm and lying flat along his side, the battery under him. Seen from the side.',
