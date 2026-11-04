@@ -131,8 +131,8 @@ function layLane(level: Level, cells: number[], blocked: Uint8Array, rng: Rng): 
   const xs = [...top.keys()].sort((a, b) => a - b);
   if (xs.length < MIN_STRETCH) return false;
   const lane: Lane = rng.weighted<Lane>([
-    [{ off: 3, len: [3, 5] }, 3],
-    [{ off: 4, len: [3, 5] }, 2],
+    [{ off: 3, len: [2, 4] }, 3],
+    [{ off: 4, len: [2, 4] }, 2],
     [{ off: 3, len: [6, 10] }, 2],
   ]);
   const rise = easyRise();
@@ -178,7 +178,8 @@ function layLane(level: Level, cells: number[], blocked: Uint8Array, rng: Rng): 
     for (let c = bestX; c < bestX + len; c++) level.tiles[(best + 1) * w + c] = T_ONEWAY;
     placed++;
     last = best;
-    x = bestX + len + rng.int(1, hop);
+    // Each hop is near the end of a walking jump: a lane is a line you jump, not a floor you stroll.
+    x = bestX + len + rng.int(Math.max(1, hop - 1), hop);
   }
   return placed > 0;
 }

@@ -1,7 +1,22 @@
 import type { Rng } from '../../../core/rng';
 import { finish, Grid, groundFromHeights, noise1D } from '../kit';
 import type { SculptCtx, Sculptor } from '../types';
-import { type Claim, claimSite, easyGap, easyRise, flatten, hardGap, type Knobs, knobs, pit, raiseLandmark, relax, rollChallenges, Slots } from './common';
+import {
+  type Claim,
+  claimSite,
+  easyRise,
+  flatten,
+  hardGap,
+  jumpCount,
+  jumpCrossing,
+  type Knobs,
+  knobs,
+  pit,
+  raiseLandmark,
+  relax,
+  rollChallenges,
+  Slots,
+} from './common';
 
 type FarmStyle = 'fields' | 'barnyard' | 'windmill' | 'orchard';
 type Stamp = (g: Grid, rng: Rng, x: number, w: number, f: number) => void;
@@ -40,11 +55,11 @@ export const farm: Sculptor = (ctx) => {
   const challenges = rollChallenges(attempt, k);
   g.wantsProps = challenges > 0;
   const own = claim?.concept.ownsCrossing ? Math.min(1, challenges) : 0;
-  const pits: { x0: number; x1: number; hard: boolean }[] = [];
-  const nEasy = rng.int(0, style === 'fields' ? 2 : 1) + Math.floor((k.wide - 1) * rng.range(1, 2.5));
+  const pits: { x0: number; x1: number; hard: boolean; stones: number[] }[] = [];
+  const nEasy = jumpCount(rng, k) + (style === 'fields' ? 1 : 0);
   for (let i = own; i < challenges + nEasy; i++) {
     const hard = i < challenges;
-    const w = hard ? hardGap(rng) : easyGap(rng, 2);
+    const { w, stones } = hard ? { w: hardGap(rng), stones: [] } : jumpCrossing(rng, 2);
     const a = slots.take(rng, w + 4, 2, 8, W - 9);
     if (a === null) continue;
     const x0 = a + 2;
@@ -54,7 +69,7 @@ export const farm: Sculptor = (ctx) => {
       surf[x] = x >= x0 && x <= x1 ? H : bank;
       locked[x] = 1;
     }
-    pits.push({ x0, x1, hard });
+    pits.push({ x0, x1, hard, stones });
   }
 
   // Landmarks on flattened ground: one bag per ~48 columns, thinned on sparse maps.
@@ -75,7 +90,7 @@ export const farm: Sculptor = (ctx) => {
   for (const x of [0, 1, 2, 3, 4, 5, W - 6, W - 5, W - 4, W - 3, W - 2, W - 1]) locked[x] = 1;
   relax(surf, H, locked, 1);
   groundFromHeights(g, surf);
-  for (const p of pits) pit(g, p.x0, p.x1, surf[p.x0 - 1], p.hard);
+  for (const p of pits) pit(g, p.x0, p.x1, surf[p.x0 - 1], p.hard, p.stones);
   for (const p of placed) p.f.stamp(g, rng, p.x, p.w, surf[p.x]);
 
   // Small decor on whatever flat ground is left.

@@ -4,7 +4,8 @@ import type { SculptCtx, Sculptor } from '../types';
 import {
   type Claim,
   claimSite,
-  easyGap,
+  jumpCount,
+  jumpCrossing,
   easyRise,
   flatten,
   hardGap,
@@ -58,17 +59,17 @@ export const castle: Sculptor = (ctx) => {
   g.wantsProps = challenges > 0;
   // A landmark that owns the crossing digs one of them itself, in front of it.
   const own = claim?.concept.ownsCrossing && challenges > 0 ? 1 : 0;
-  const moats: { a: number; b: number; hard: boolean; stubs: [number, number] }[] = [];
-  for (let i = 0; i < Math.max(challenges - own, rng.int(0, 1) + Math.floor((k.wide - 1) * 2 * rng.next())); i++) {
+  const moats: { a: number; b: number; hard: boolean; stubs: [number, number]; stones: number[] }[] = [];
+  for (let i = 0, n = challenges - own + jumpCount(rng, k); i < n; i++) {
     const hard = i < challenges - own;
-    const open = hard ? hardGap(rng) : easyGap(rng, 2);
+    const { w: open, stones } = hard ? { w: hardGap(rng), stones: [] } : jumpCrossing(rng, 2);
     const stubs: [number, number] = hard && rng.chance(0.7) ? [rng.int(1, 2), rng.int(1, 2)] : [0, 0];
     const w = open + stubs[0] + stubs[1];
     const a = slots.take(rng, w, 3, 8, W - 9);
     if (a === null) continue;
     if (hard) keepClear(slots, a, w);
     level(a - 2, a + w + 1, Math.max(floor[a - 2], floor[a + w + 1]));
-    moats.push({ a, b: a + w - 1, hard, stubs });
+    moats.push({ a, b: a + w - 1, hard, stubs, stones });
   }
 
   // The goal often sits on a donjon at the right edge, reached by a stair.
@@ -105,7 +106,7 @@ export const castle: Sculptor = (ctx) => {
 
   for (const m of moats) {
     const row = floor[m.a - 1];
-    pit(g, m.a, m.b, row, m.hard);
+    pit(g, m.a, m.b, row, m.hard, m.stones);
     // Collapsed bridge: deck stubs (2 thick) with a corbel under the bank end.
     if (m.stubs[0]) g.fill(m.a, row, m.a + m.stubs[0] - 1, row + 1);
     if (m.stubs[1]) g.fill(m.b - m.stubs[1] + 1, row, m.b, row + 1);

@@ -3,7 +3,7 @@ import { SAFE_TILES } from '../../setpieces/place';
 import { rooftopsOwns } from '../../stage/rooftops';
 import { finish, Grid, hintGap, POCKET } from '../kit';
 import type { SculptCtx, Sculptor, Shape } from '../types';
-import { easyGap, easyRise, hardGap, type Knobs, knobs, raiseLandmark, rollChallenges, undercut } from './common';
+import { jumpGap, easyRise, hardGap, type Knobs, knobs, raiseLandmark, rollChallenges, undercut } from './common';
 import { rooftopsTall } from './tall';
 
 type RoofStyle = 'downtown' | 'tenements' | 'skyline';
@@ -53,7 +53,7 @@ export const rooftops: Sculptor = (ctx) => {
     const end = prev.x + prev.w;
     const remaining = W - end;
     const hard = hardLeft > 0 && rng.chance(0.5 + (remaining < 24 ? 0.5 : 0));
-    const gap = hard ? hardGap(rng) : easyGap(rng, style === 'tenements' ? 1 : 2);
+    const gap = hard ? hardGap(rng) : jumpGap(rng, style === 'tenements' ? 1 : 2);
     const w = rng.int(minW, maxW);
     // Random walk around the route ramp (climbing skylines step up toward the goal).
     const want = baseRoof + k.ramp(end + gap + (w >> 1));
@@ -165,7 +165,7 @@ function rooftopsStage(ctx: SculptCtx, k: Knobs): Shape {
   const bs: Building[] = [];
   const gaps: { a: number; b: number }[] = [];
   for (;;) {
-    const gap = easyGap(rng, 2);
+    const gap = jumpGap(rng, 2);
     const w = rng.int(5, 9);
     // A second alley needs a building between it and the landmark, and the goal's roof after it.
     const tail = extra && bs.length > 0 ? hardW + 7 : 7;
@@ -180,7 +180,7 @@ function rooftopsStage(ctx: SculptCtx, k: Knobs): Shape {
     prev = roof;
   }
   const hardLast = extra && bs.length > 0 && at + hardW + 6 <= W;
-  const lastGap = hardLast ? hardW : Math.max(2, Math.min(easyGap(rng, 2), W - at - 6));
+  const lastGap = hardLast ? hardW : Math.max(2, Math.min(jumpGap(rng, 2), W - at - 6));
   const gx = at + lastGap;
   const gR = hardLast ? prev : Math.max(6, Math.min(H - 5, prev + rng.int(-2, 2)));
   bs.push({ x: gx, w: W - gx, roof: gR });

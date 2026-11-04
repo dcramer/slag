@@ -32,6 +32,7 @@ Online play is on `main`, verified by real-browser checks in `pnpm online-test` 
 
 ## 3. Level follow-ups
 - The winnability proof assumes timed hazards can be passed in their 30-frame openings, and only uses 2-bridge plans.
+- More precision (DESIGN.md → Precision is the point). Landmarks own most of a classic level, and their stairs and storeys are spaced comfortably (`easyRise`), so they hold most of a route's jumps: give them tighter steps and footholds. Then let static hazards hug landings and jump arcs (spikes under a jump, a saw over it) with proven clearance, and a wall-jump shaft the route needs now and then.
 
 ## 6. Real phones
 Phone support (follow camera, pinch, scaled HUD, settings sheet) is on `main` but has only run in Chromium emulation. Try iOS Safari and a real Android phone: `:has()` in the sheet CSS, safe-area insets, pinch feel, and frame rate.

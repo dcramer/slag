@@ -340,7 +340,10 @@ export const BELL_TOWER = defineConcept({
 
 // ------------------------------------------------------------------------------------------------ boss bridge
 
-const BRIDGE_MIN = 14;
+/** The narrowest trench a firebar turns in clear of both keeps: twice its reach under the tallest hall. */
+const TRENCH_MIN = 8;
+/** A trench and two three-column keeps, a column in from either end. */
+const BRIDGE_MIN = TRENCH_MIN + 2 + 2 * 3;
 /** A firebar's fireballs: how far apart along it, and how big. */
 const BALL_STEP = 0.6;
 export const BALL_R = 0.34;
@@ -358,7 +361,7 @@ function buildBossBridge(g: Grid, rng: Rng, box: TileRect, parts: number): Landm
   const s0 = at.x;
   const s1 = at.x + at.w - 1;
   g.clear(s0, at.y, s1, G - 1);
-  const K = at.w >= BRIDGE_MIN + 2 && rng.chance(0.5) ? 4 : 3;
+  const K = at.w - 2 - 2 * 4 >= TRENCH_MIN && rng.chance(0.5) ? 4 : 3;
   const f0 = s0 + 2;
   const f1 = f0 + K - 1;
   const b0 = s1 - K + 1;

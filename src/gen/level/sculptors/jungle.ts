@@ -5,7 +5,8 @@ import type { SculptCtx, Sculptor } from '../types';
 import {
   type Claim,
   claimSite,
-  easyGap,
+  jumpCount,
+  jumpCrossing,
   easyRise,
   flatten,
   hardGap,
@@ -57,15 +58,15 @@ export const jungle: Sculptor = (ctx) => {
   const claim = ctx.concept ? claimJungleSite(ctx, k, slots, surf, locked) : null;
   if (ctx.concept && !claim) return finish(g, { row: sRow - 1 }, { row: gRow - 1 }, 'jungle:unclaimed');
 
-  // Pools: hard ones get a broken log, easy ones sometimes a whole log.
+  // Pools: hard ones get a broken log, easy ones now and then a whole one, or stones.
   const challenges = rollChallenges(attempt, k);
   g.wantsProps = challenges > 0;
   const own = claim ? jungleOwns(claim.concept, k, attempt, challenges) : 0;
   const hardLeft = Math.max(0, challenges - own);
-  const pools: { a: number; b: number; hard: boolean }[] = [];
-  for (let i = 0; i < hardLeft + k.count(rng.int(0, 2)); i++) {
+  const pools: { a: number; b: number; hard: boolean; stones: number[] }[] = [];
+  for (let i = 0, n = hardLeft + jumpCount(rng, k); i < n; i++) {
     const hard = i < hardLeft;
-    const w = hard ? hardGap(rng) : easyGap(rng, 2);
+    const { w, stones } = hard ? { w: hardGap(rng), stones: [] } : jumpCrossing(rng, 2);
     const a = slots.take(rng, w, 3, 8, W - 9);
     if (a === null) continue;
     if (hard) keepClear(slots, a, w);
@@ -74,7 +75,7 @@ export const jungle: Sculptor = (ctx) => {
       surf[x] = bank;
       locked[x] = 1;
     }
-    pools.push({ a, b: a + w - 1, hard });
+    pools.push({ a, b: a + w - 1, hard, stones });
   }
   const temples: { x: number; w: number }[] = [];
   for (let n = style === 'temple' ? Math.max(1, Math.round(k.wide * 0.7)) : 0; n > 0; n--) {
@@ -105,8 +106,8 @@ export const jungle: Sculptor = (ctx) => {
   }
   for (const p of pools) {
     const row = surf[p.a - 1];
-    pit(g, p.a, p.b, row, p.hard);
-    logBridge(g, rng, p.a, p.b, row, p.hard);
+    pit(g, p.a, p.b, row, p.hard, p.stones);
+    if (!p.stones.length) logBridge(g, rng, p.a, p.b, row, p.hard);
   }
   for (const t of temples) ziggurat(g, rng, t.x, t.w, surf[t.x]);
 
@@ -218,7 +219,8 @@ function logBridge(g: Grid, rng: Rng, a: number, b: number, row: number, hard: b
     }
     return;
   }
-  if (!rng.chance(0.5)) return;
+  // Rarely: a log you walk over is a crossing that asks nothing.
+  if (!rng.chance(0.2)) return;
   g.fill(a - 1, row - 1, b + 1, row - 1);
   g.fill(a - 2, row - 2, a - 1, row - 1); // root ball
   g.set(b + 1, row - 2, 2);

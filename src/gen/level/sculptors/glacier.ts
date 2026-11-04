@@ -7,7 +7,8 @@ import type { SculptCtx, Sculptor, Shape } from '../types';
 import {
   type Claim,
   claimSite,
-  easyGap,
+  jumpCount,
+  jumpCrossing,
   easyRise,
   flatten,
   hardGap,
@@ -78,11 +79,11 @@ export const glacier: Sculptor = (ctx) => {
   // Two parts is often one crevasse two bridges wide: two one-bridge crevasses and their banks crowd a classic level.
   const double = left === 2 && (W < 64 || rng.chance(0.4));
   const hards = double ? 1 : Math.max(0, left);
-  const pits: { x0: number; x1: number; hard: boolean }[] = [];
-  const nEasy = rng.int(1, 2) + Math.floor((k.wide - 1) * rng.range(1, 2));
+  const pits: { x0: number; x1: number; hard: boolean; stones: number[] }[] = [];
+  const nEasy = jumpCount(rng, k);
   for (let i = 0; i < hards + nEasy; i++) {
     const hard = i < hards;
-    const w = hard ? hardGap(rng, double ? 2 : 1) : easyGap(rng, 2);
+    const { w, stones } = hard ? { w: hardGap(rng, double ? 2 : 1), stones: [] } : jumpCrossing(rng, 2);
     const lip = hard ? 3 : 2;
     const a = slots.take(rng, w + lip * 2, 1, 6, W - 7);
     if (a === null) continue;
@@ -94,7 +95,7 @@ export const glacier: Sculptor = (ctx) => {
       surf[x] = x >= x0 && x <= x1 ? H : bank;
       locked[x] = 1;
     }
-    pits.push({ x0, x1, hard });
+    pits.push({ x0, x1, hard, stones });
   }
 
   // Seracs: blocks of ice on flattened ground, low enough to hop.
@@ -112,7 +113,7 @@ export const glacier: Sculptor = (ctx) => {
   for (const x of [0, 1, 2, 3, 4, 5, W - 6, W - 5, W - 4, W - 3, W - 2, W - 1]) locked[x] = 1;
   relax(surf, H, locked, style === 'icefall' ? 3 : 1);
   for (let x = 0; x < W; x++) if (surf[x] < H) g.fill(x, surf[x], x, H - 1);
-  for (const p of pits) pit(g, p.x0, p.x1, surf[p.x0 - 1], p.hard);
+  for (const p of pits) pit(g, p.x0, p.x1, surf[p.x0 - 1], p.hard, p.stones);
   for (const s of seracs) serac(g, ice, rng, s.x, s.w, surf[s.x]);
   if (style === 'icefall') frozenFalls(g, ice, surf);
   const lm = claim ? raiseLandmark(g, ctx, claim, own) : null;

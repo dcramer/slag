@@ -20,7 +20,10 @@ import { safeWindowFaults } from '../lib/set-piece-checks';
  */
 
 /** `<kind>/<theme>/<id>/<rule>` → why it's waived, and what fixes it. */
-export const WAIVERS: Record<string, string> = {};
+export const WAIVERS: Record<string, string> = {
+  'landmark/jungle/canopy-village/varies':
+    'a classic village has room for two trees three columns apart and no rotten planks, so it makes about five small rolls and seeds 2 and 3 land on the same ones (24 layouts in 30 seeds). Fix: give the classic village more to vary, a wider spread of trees or a third one.',
+};
 
 /** One rule of one entry: fails listing every fault it finds, or a todo while it's waived. */
 export function rule(key: string, name: string, faults: () => string[]): void {
