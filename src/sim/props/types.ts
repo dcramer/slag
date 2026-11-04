@@ -483,8 +483,8 @@ export type Module =
       delay: number;
       burn: number;
       /**
-       * 'player': a slingshot (Y-Fling). The runner aims by pulling the stick the other way, the pull
-       * builds over `charge` frames from a weak flick to `power`, and jump fires. `dirs[0]` is the rest
+       * 'player': a slingshot (Y-Fling). The runner points the stick where they want to go, the pull
+       * builds on its own over `charge` frames from a weak flick to `power`, and jump fires. `dirs[0]` is the rest
        * aim; `burn` is how long the band holds before it snaps, and it takes `regrow` frames to come back.
        */
       aim?: 'player';

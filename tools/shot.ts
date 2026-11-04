@@ -28,7 +28,7 @@
  *   pnpm shot items --seed abc             → held items: in hand, loose, and each one used (`--give bat,tax` picks them)
  *   pnpm shot blood --theme farm --players 4 --noletters → staged deaths over four rounds: ooze, settled, place phase, expiry
  *   pnpm shot stack --seed abc             → stepped frames of heads as perches: a stack bucked, a slide, a hard stop, a knock, a tip, a jump off
- *   pnpm shot grabs                        → stepped frames of a rope swing, a keg shot and a backfire
+ *   pnpm shot grabs                        → stepped frames of a rope swing, a keg shot, a backfire and a Y-Fling (aim, fire, snap)
  *   pnpm shot lineup [--seeds a,b]         → eight runners in a spread of poses, at play scale and close up
  *   pnpm shot cast [--only catalog]       → the toy cast (docs/CHARACTERS.md): lineups on farm and mine, close-up, deaths, lobby, catalog
  *   pnpm shot sprites [--kind plumber]   → a kind rendered from 3D (tools/art3d) in game beside the hand-drawn cast: lineups, 3×, run cycle, lobby

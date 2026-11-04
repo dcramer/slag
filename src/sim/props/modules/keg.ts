@@ -1,6 +1,6 @@
 import type { Cell, Vec } from '../../../core/geom';
 import type { InputFrame } from '../../types';
-import type { Grip } from '../attach';
+import { type Grip, LATCH, latchOf } from '../attach';
 import { addTrigger, cellOf, defineModule, type RunnerMut, solidId, type TouchCtx } from '../registry';
 import type { ModuleOf, PropState } from '../types';
 
@@ -34,15 +34,20 @@ export const KEG = {
   soot: 100,
 } as const;
 
-/** Y-Fling (a keg with `aim: 'player'`): a slingshot you aim and pull yourself. */
+/** Y-Fling (a keg with `aim: 'player'`): a slingshot you point where you want to go. */
 export const FLING = {
   /** Share of `power` an unpulled flick still gets. */
   flick: 0.35,
   /** How far (px) a full pull draws the pouch back. */
   draw: 7,
-  /** Pull lost per frame with the stick let go (frames of charge): the band creeps back. */
-  ease: 2,
+  /**
+   * Frames a lone axis has to be held before it takes over from a diagonal it's part of. Two keys never
+   * lift on the same frame, so letting go of up-right lands on right or up for a frame or two first.
+   */
+  settle: 6,
 } as const;
+
+const AIM_KEYS = LATCH.left | LATCH.right | LATCH.up | LATCH.down;
 
 /** Compass index (0 right, 2 down, 4 left, 6 up) of a direction on the 8-way stick, or -1 for none. */
 export function compassOf(dx: number, dy: number): number {
@@ -51,8 +56,14 @@ export function compassOf(dx: number, dy: number): number {
   return -1;
 }
 
-/** Where the stick pulls (screen space, one of -1/0/1 each way). */
-const pullOf = (inp: InputFrame): Vec => [(inp.right ? 1 : 0) - (inp.left ? 1 : 0), (inp.down ? 1 : 0) - (inp.up ? 1 : 0)];
+/** Where the stick points (screen space, one of -1/0/1 each way), leaving out keys still held from running in. */
+function pointOf(inp: InputFrame, latch: number): Vec {
+  const on = (held: boolean | undefined, bit: number) => (held && !(latch & bit) ? 1 : 0);
+  return [on(inp.right, LATCH.right) - on(inp.left, LATCH.left), on(inp.down, LATCH.down) - on(inp.up, LATCH.up)];
+}
+
+/** Is compass `lone` one axis of diagonal `aim`? */
+const partOf = (aim: number, lone: number) => aim % 2 === 1 && lone % 2 === 0 && (lone === (aim + 1) % 8 || lone === (aim + 7) % 8);
 
 const snapKey = (mi: number) => `${mi}:snap`;
 
@@ -68,24 +79,33 @@ export function flingSpeed(m: Keg, pull: number): number {
 }
 
 /**
- * One frame in a slingshot's pouch. The stick pulls the pouch back and the
- * aim is the other way; holding it builds the pull, letting go eases it off.
- * Jump fires along the aim. Sit there past `burn` and the band snaps: you drop
- * out and it's gone for `regrow` frames. `g.s` is the pull in frames, `g.aim`
- * the compass aim; the pouch sits `g.x, g.y` off the fork.
+ * One frame in a slingshot's pouch. The stick points where you'll go, as every
+ * other control does; the pouch draws back the other way on its own, from a
+ * flick to full power over `charge` frames, and jump fires along the aim. Let
+ * go of the stick and the aim stays where it was. Keys still held from running
+ * in don't aim until a direction is pressed afresh, so arriving never turns it.
+ * Sit there past `burn` and the band snaps: you drop out and it's gone for
+ * `regrow` frames. `g.s` is the pull in frames, `g.aim` the compass aim,
+ * `g.settle` how long a lone axis has held out of a diagonal; the pouch sits
+ * `g.x, g.y` off the fork.
  */
 function holdFling(m: Keg, ctx: TouchCtx, who: RunnerMut, g: Grip, inp: InputFrame): boolean {
   const b = who.body;
   const ax = m.at[0] + ctx.off[0];
   const ay = m.at[1] + ctx.off[1];
   if (g.t === 0) g.aim = m.dirs[0];
-  const [px, py] = pullOf(inp);
-  const dir = compassOf(-px, -py);
+  // A fresh press brings the keys held from the run-in back into the aim: arrive holding right, add up, and it's up-right.
+  if (latchOf(inp) & AIM_KEYS & ~who.attach.latch) who.attach.latch &= ~AIM_KEYS;
+  const [px, py] = pointOf(inp, who.attach.latch);
+  const dir = compassOf(px, py);
   const full = Math.max(1, m.charge ?? 1);
-  if (dir >= 0) {
-    g.aim = dir;
-    g.s = Math.min(full, g.s + 1);
-  } else g.s = Math.max(0, g.s - FLING.ease);
+  g.s = Math.min(full, g.s + 1);
+  if (dir >= 0 && dir !== g.aim && partOf(g.aim, dir)) {
+    if (++g.settle >= FLING.settle) g.aim = dir;
+  } else {
+    if (dir >= 0) g.aim = dir;
+    g.settle = 0;
+  }
   // The pouch comes to the fork, then draws back against the aim as far as the pull and the room around it allow.
   const [cx, cy] = COMPASS[g.aim];
   const back = (FLING.draw * g.s) / full;
@@ -176,6 +196,8 @@ export const keg = defineModule<'keg'>({
     if (!ctx.live || !first || !canGrab(m, ctx)) return;
     const b = who.body;
     const sling = m.aim === 'player';
+    // What you ran in holding doesn't aim the slingshot (holdFling): it waits for a fresh press.
+    if (sling && ctx.inp) who.attach.latch |= latchOf(ctx.inp) & AIM_KEYS;
     ctx.grab({ x: b.x + b.w / 2 - m.at[0] - ctx.off[0], y: b.y + b.h / 2 - m.at[1] - ctx.off[1], sealed: !sling, kind: sling ? 'fling-in' : 'keg-in' });
   },
   hold(m, ctx, who, g, inp) {
