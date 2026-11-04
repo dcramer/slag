@@ -49,7 +49,7 @@ So each kind has: a clear head-to-body ratio, a readable expression, a line of a
 | merc | the spiky-haired mercenary | spiked hair, a blade taller than he is | costume (its entry) |
 | king | the spiked turtle king | a spiked shell, horns, a fiery mane, a brute's build | costume (its entry) |
 | dino | the green saddled dino | a long snout, a saddle, a round tail, boots | costume (its entry) |
-| robot | the blue robot boy | a round helmet with ear discs, an arm cannon, small | costume (its entry) |
+| robot | the blue robot boy | a big round helmet with a stripe and ear discs, the face in its opening, a light suit, big boots, a tin-can arm cannon held out, a battery on his back; small | costume: helmet, gloves and boots, the suit a light tone |
 | sneak | the sneaking soldier | a box on two legs with an eye slot, a bandana | costume (its entry) |
 | cuptoon | the cup-headed toon | a cup for a head with a straw, rubber-hose limbs, shorts | costume (its entry) |
 | horse | the barnyard party game's horse | a long head, a mane, standing on two legs | costume (its entry) |
@@ -290,13 +290,17 @@ What came out of it:
 - **A stranger should say:** "the little blue robot with the arm cannon."
 - **Silhouette:** small and boyish: a round helmet with round ear discs, big chunky boots, and one forearm that ends in a cylinder cannon held out. Smaller than the hunter, with no shoulders to speak of.
 - **Traits:** a blue helmet with a light-blue stripe and round ear discs; a face in the helmet's opening; a light-blue suit; darker blue gloves and boots; the arm cannon.
-- **Palette:** helmet, gloves and boots `#2a5fc4` (shade `#1e4592`); suit and stripe `#4fb8ec` (shade `#3a8cbc`); skin `#f3d0aa`; eyes `#2a5fc4`; can `#c9ccd2` with a label `#d8382f` and `#f4efe6`; battery `#2a2a30` with a band `#c99a4a`.
-- **Color slot:** costume.
+- **Palette:** helmet, gloves and near boot in the player's colour (`#2a5fc4` on the sheets); suit, stripe and far ear disc a light tone of it (+18); the near ear disc's face a dark of it (−12); the repainted far boot a shade off it (+9); the label's band on the can the player's colour; skin `#f3d0aa`; irises `#2a5fc4`; can and tape `#c9ccd2`, label paper `#efe6d6`, the can's open end `#4a3f3c`; battery `#3a3a42` with a brass cap and band `#c99a4a`.
+- **Color slot:** costume: the helmet, gloves and boots (the suit is its light tone).
+- **Palette alts:** the battery in charcoal `#3a3a42`, slate `#6b7178` or a worn brown `#5e412d`.
+- **Idles and cheers:** the idle from the model; rocking back on his heels scratching the back of his helmet. A fist punched up over the helmet; a little hop, waving.
+- **Gait range:** a bounce of 0.2–0.9 px on each step, a lean of up to 0.03.
+- **Wear:** scuffed is a pale scuff on the suit's chest, scorched a soot mark there (tones of the suit).
 - **Gait:** a bouncy run on the big boots; the cannon arm up and out on the jump.
 - **The nod:** the round helmet with ear discs (the head nobody else has); the two blues (the robot read from across a room); the big boots on a small body (the proportions); the arm cannon (what he does).
 - **Our twist:** a robot boy from the parts bin. His cannon is a tin can with both ends cut out, its label still on; a big battery is strapped to his back; one boot was repainted a shade off.
 - **Swaps:** a dent in the helmet; a screw loose on the ear disc; a strip of tape on a knee; a little puff of steam from the cannon.
-- **Rig:** humanoid; the can a prop on the forearm.
+- **Rig:** drawn flat (2026-11-04): a design with the can held out level in front at chest height (the hunter's lesson: raised or across the chest, a cannon vanishes into the outline), worn in one edit that also made the suit light blue and added the battery, which no design drew (`art/sprites/robot/worn.prompt.txt`): a dent knocked into the helmet's crown, the can's rim crumpled and its label torn and flapping, the far boot repainted paler and bigger, the battery taped on. The near ear disc's face is a role of its own: folded into the helmet, the disc was lost in its round. Eleven poses, the can held out level in all but the knockout. In colour he reads at once; the first blind read failed ("small narrow rounded blob with little legs, nothing distinctive", "small oval body with a little bump on top", unsure twice), and both readers took the hunter for him: held close at the chest, the can barely clears the helmet, the battery fills the notch under it, and the near ear disc is inside the outline. Next: the can at arm's length with background between it and the helmet, the battery slimmer and lower with a gap above it, the far disc proud of the helmet.
 - **Concept prompt:** A small, boyish blue robot with a round helmet carrying a light-blue stripe and round ear discs, a cheerful face in the helmet opening, a light-blue suit, darker blue gloves and big chunky boots, one boot repainted a slightly different blue. One forearm ends in an arm cannon that is a tin can with both ends cut out and its red-and-white label still on; a big battery is strapped to his back.
 
 ### The sneaking soldier (new)
