@@ -48,7 +48,7 @@ So each kind has: a clear head-to-body ratio, a readable expression, a line of a
 | ape | the necktie ape | hunched, long arms, a necktie | costume: the fur, the tie a shade of it |
 | merc | the spiky-haired mercenary | a crown of big blond spikes singed at the tips, a giant serrated bread knife always in hand, a hubcap on one shoulder | costume: the top, the trousers a dark of it |
 | king | the spiked turtle king | a spiked shell, horns, a fiery mane, a brute's build | costume (its entry) |
-| dino | the green saddled dino | a long snout, a saddle, a round tail, boots | costume (its entry) |
+| dino | the green saddled dino | a huge round snout out front, eyes on top of the head, white belly and cheeks, a torn black bicycle seat strapped low on its back, a long tail straight out behind, wellies, a carrier bag with its own spotted egg | costume: the skin (the head spikes a light of it, the wellies a dark) |
 | robot | the blue robot boy | a big round helmet with a stripe and ear discs, the face in its opening, a light suit, big boots, a tin-can arm cannon held out, a battery on his back; small | costume: helmet, gloves and boots, the suit a light tone |
 | sneak | the sneaking soldier | a box on two legs with an eye slot, a bandana | costume (its entry) |
 | cuptoon | the cup-headed toon | a white enamel mug for a head, its handle out the back and a straw bent over out of the tea, black rubber-hose limbs, white gloves, high-waisted shorts, big round shoes | costume: the shorts |
@@ -280,19 +280,23 @@ What came out of it:
 - **Rig:** humanoid; the shell a prop on the spine. Medium risk: a big body inside the shared envelope.
 - **Concept prompt:** A hulking upright turtle king with yellow-orange skin, a big toothy snout, a pale banded belly, two cream horns and a wild red-orange mane; his green shell, humped behind him, is made of riveted boiler plate, with welded-on steel bolts for spikes round a cream rim; black spiked cuffs on his wrists; a paper party crown between his horns; a small puff of soot from his nostrils.
 
-### The green saddled dino (new)
+### The green saddled dino
 - **Kind:** `dino` · **Name:** Yoshee
 - **A stranger should say:** "the green dinosaur with the saddle."
-- **Silhouette:** upright, with a big round snout well out in front, eyes high on top of the head, a short tail, a saddle on its back, and big boots.
-- **Traits:** green skin; a bulbous round snout; a white belly and cheeks; a red saddle; orange spikes down the back of the head; red boots; big eyes on top of the head.
-- **Palette:** skin `#4cbf4a` (shade `#35913a`); belly and cheeks `#f6f2e8`; saddle `#d8382f` (shade `#a8281f`) with a chrome stem `#c9ccd2`; spikes `#e8853a`; wellies `#d8442f` (shade `#a83222`).
-- **Color slot:** costume.
-- **Gait:** a happy trot, head bobbing; on the jump, legs paddling in the air.
-- **The nod:** the big round snout out front (the profile); the eyes on top of the head (the face, from the side); the saddle (it says "ridden by a hero" without the hero); green with a white belly and red boots (the colour block).
-- **Our twist:** a hand-me-down mount. The saddle is a red bicycle seat strapped on with a belt, its chrome stem sticking out; the boots are red rubber wellies; it has a spotted egg of its own in a carrier bag.
-- **Swaps:** a bike bell on the belt; a reflector on the tail; a sticking plaster on the snout; a dangling price tag on one welly.
-- **Rig:** humanoid with a tail.
-- **Concept prompt:** A cheerful upright green dinosaur with a big round bulbous snout well out in front, big eyes set high on top of its head, a white belly and cheeks, orange spikes down the back of its head and a short tail; a red bicycle seat strapped on its back with a belt as a saddle, its chrome stem sticking out; red rubber wellington boots; a spotted egg in a carrier bag hanging from one hand.
+- **Silhouette:** upright, with a huge round snout well out in front, eyes high on top of the head, a long tail straight out behind at the hips, a saddle low on its back, and big boots. The tail is what tells the head and snout from a cap and its bill: with a short tail and the seat up behind the head, a blind reader saw "a capped hero" (2026-11-04).
+- **Traits:** a bulbous round snout; a white belly and cheeks; a saddle; spikes down the back of the head; boots; big eyes on top of the head.
+- **Palette:** neutral but for the player's colour (Decisions 4): the skin is the player's, the head spikes a light of it (+16) and the wellies a dark (−22); belly, cheeks and eye whites cream `#f6f2e8`; seat `#3d3d42` with its torn foam `#e2c88a` on a chrome stem `#c9ccd2`; belt `#6b4a35`; carrier bag `#c9c6bd`; the open mouth `#9a3d36` (as the wellies' red, a grin took the player's colour).
+- **Color slot:** costume: the skin.
+- **Gait:** a happy trot, head bobbing; on the fall, legs paddling in the air.
+- **The nod:** the big round snout out front (the profile); the eyes on top of the head (the face, from the side); the saddle (it says "ridden by a hero" without the hero); the long tail on an upright body (a dinosaur that walks like a person, and not a capped hero in silhouette); a white belly under a coloured skin, boots a dark of it (the colour block).
+- **Our twist:** a hand-me-down mount. The saddle is a black bicycle seat strapped on with a belt, torn open in a ragged flap, its chrome stem bent and sticking out; the boots are rubber wellies, one folded down; it carries a spotted egg of its own in a torn carrier bag.
+- **Swaps:** a sticking plaster on the cheek (a bike bell, a reflector on the tail and a price tag on a welly are ideas for later: each needs a slot the flat kinds don't have yet).
+- **Palette alts:** the bicycle seat in black `#3d3d42`, brown leather `#6e4a32` or grey `#7e848a`.
+- **Idles and cheers:** the idle from the design; a hand on its hip, head tilted. The cheer: one fist and the bag thrown up; the second: hopping on one welly, a fist punched up.
+- **Gait range:** a bounce of 0.2–0.9 px on each step, a lean of up to 0.03.
+- **Wear:** in the drawing, the torn seat, the bent stem, a snapped head spike, a welly folded down and a hole in the bag; scuffed is two faded patches on the skin, scorched two soot streaks, below the face.
+- **Rig:** drawn flat (2026-11-04): a game-size design worn in an edit, then edited again for the long tail and the low seat; eleven poses drawn three to a 16:9 image and cut apart (art/sprites/dino/design.prompt.txt).
+- **Concept prompt:** A cheerful upright green dinosaur with a big round bulbous snout well out in front, big eyes set high on top of its head, a white belly and cheeks, orange spikes down the back of its head and a long tail sticking straight out behind; a torn black bicycle seat strapped low on its back with a belt as a saddle, its bent chrome stem sticking out; red rubber wellington boots; a spotted egg in a carrier bag hanging from one hand.
 
 ### The blue robot boy (new)
 - **Kind:** `robot` · **Name:** Meh Man
