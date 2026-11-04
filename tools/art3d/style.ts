@@ -291,6 +291,22 @@ export const BRIEFS: Record<string, Brief> = {
       'Long armoured orange legs, as long as the rest of the figure, broad in the thigh and the shin, with big round dark-grey knee pads, ending in small pointed orange feet: no big boots.',
     worn: 'a wide band of grey tape is wrapped round the drainpipe cannon near its root; the orange chest plate has a big dent in its side and a square riveted orange patch plate; the drainpipe’s open end is dented into a slight oval. The helmet and the buoys keep their smooth round outlines.',
   },
+  robot: {
+    // The nod, each part of the read at race size: the round helmet with its round ear discs (the head nobody
+    // else in the cast has, and the face showing in its opening); the two blues, a dark helmet, gloves and
+    // boots and a light suit (the robot from across a room: here the player's colour and a light tone of it);
+    // the big boots on a small body (the proportions, a kid's); the arm cannon held out (what he does).
+    // Small and round-headed where the hunter is big, wide at the shoulders and visored; a smooth round
+    // helmet where the speedster's quills sweep back.
+    // Ours, and the joke: a robot boy from the parts bin. The cannon is a tin can with both ends cut out and
+    // its paper label still on, a big battery is strapped to his back, and one boot was repainted a shade off.
+    design:
+      'The character: a small boyish robot kid, about half of him one big round helmet. His signature prop: his front forearm ends in an arm cannon made from a tin food can (#c9ccd2), a short fat silver cylinder with ribbed rims, both ends cut out so it is open and dark inside, held out level in front of him at chest height, with a paper label (#f4efe6) round its middle and one wide red band (#d8382f) on the label. ' +
+      'On his head a big smooth round blue helmet (#2a5fc4), a ball wider than his body, with one light-blue stripe (#4fb8ec) running from the brow back over the crown and two round flat ear discs on its sides, and a big round opening at the front showing a cheerful peach face (#f3d0aa) with two big eyes. ' +
+      'A small light-blue suit (#4fb8ec), narrow, with no shoulders to speak of and short arms; a blue mitten glove (#2a5fc4) on the free hand; huge chunky round blue boots (#2a5fc4), the biggest shapes below the helmet. ' +
+      'Strapped upright on his back, a big dark battery (#2a2a30), a fat cylinder with a brass band (#c99a4a) round it and a little terminal stud on top, peeking out behind him under the helmet.',
+    worn: 'a big round dent is knocked into the top of the helmet, flattening its crown at the back; the front rim of the tin can is crumpled in and its paper label torn, one flap of it hanging loose; the far boot has been repainted a lighter blue and is a little bigger than the near one; the battery is bound on with a wide band of grey tape. The face, the eyes and the ear discs stay as they are.',
+  },
   engineer: {
     // The nod, each part of the read at race size: the kit, carried low and clear of the body (the read in
     // silhouette, so it leads the brief): a toolbox hanging by its handle from one hand and the wrench held low
