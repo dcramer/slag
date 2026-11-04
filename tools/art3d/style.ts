@@ -259,14 +259,12 @@ export const BRIEFS: Record<string, Brief> = {
   },
   hunter: {
     // The nod, each part of the read at race size: the two huge round shoulder pads (the silhouette: nobody
-    // else in the cast is wider at the top than anywhere else), the orange suit with red shoulders (the
-    // colour block from across a room), the round helmet with its green visor (the face: no face shows), and
-    // the arm cannon held out front (what the hunter does; the ball tuck on a long fall says the rest).
-    // Bigger, broader and orange where the robot boy is small, blue and has ear discs; no cap or nose to
-    // rhyme with the plumber.
-    // Ours, and the joke: a power suit welded together in the scrapyard. The cannon is a length of grey
-    // drainpipe with an elbow joint, the shoulder pads are two red-and-white fishing buoys, the torso a
-    // cut-down water heater tank, the visor green bottle glass.
+    // else in the cast is wider at the top than anywhere else), the tall long-legged build, the helmet with
+    // its visor band (the face: no face shows), and the arm cannon held out front (what the hunter does; the
+    // ball tuck on a long fall says the rest). Tall, broad-shouldered and long-legged where the robot boy is
+    // small, big-booted and has ear discs; no cap or nose to rhyme with the plumber.
+    // Ours, and the joke: a power suit welded together in the scrapyard. The cannon is a length of
+    // drainpipe, the shoulder pads are two banded fishing buoys, the torso a cut-down water heater tank.
     // The first design (2026-11-03) failed the blind read: the buoys sat level with the helmet and the dent
     // lobed its crown, so shoulders and head read as one lobed cap (a mushroom, an afro), and the cannon
     // across the chest was lost in the body. So the buoys hang low and wide at the ends of a shoulder plate,
@@ -274,14 +272,24 @@ export const BRIEFS: Record<string, Brief> = {
     // straight and level, clear of the body. The pick came back in a grey suit and was recoloured orange in
     // an edit (art/sprites/hunter/recolour.prompt.txt) before the wear edit, and after it both boots were
     // made grey (boots.prompt.txt): the poses kept drawing two grey boots, and one orange one flickered.
+    // The second design passed one blind reader and lost the other to the robot boy (2026-11-04): a round
+    // helmet over a cannon on short legs and big boots is the robot boy's own silhouette. So the third is
+    // tall and long-legged, the legs half its height and no big boots (those are the robot boy's), the buoys
+    // bigger than the helmet, and the visor a wide band across the helmet's front. That one's cannon, carried
+    // across the waist, barely left the outline and the buoys and helmet read as one lobed head ("Rayman-
+    // like"), so the cannon is the forearm held straight out from the shoulder and the legs are thick. The
+    // pick came back rusty and was recoloured (art/sprites/hunter/recolour.prompt.txt). Drawn colours only part
+    // the roles: the suit, its buoys and its cannon all wear the player's colour in tones (Decisions 4), and
+    // the visor is a dark glass.
     design:
-      'The character: a stocky armored bounty hunter in a power suit welded together from scrapyard junk, no face showing. ' +
-      'Its front arm is a long straight grey drainpipe (#8e9298), held out level to the right as an arm cannon, clear of the body, its open round end dark inside. ' +
-      'Its shoulder pads are two huge round fishing buoys, red (#c9473f) with one white band (#f4efe6) each, the widest part of the figure, ' +
-      'mounted far apart at the ends of a wide shoulder plate, low, their tops no higher than the visor. ' +
-      'Between them stands a smaller round orange helmet (#d9661f) with a wide green bottle-glass visor (#2f7a3c), its whole dome clear above the buoys. ' +
-      'The torso is a cut-down orange water heater tank, a short round can, two small green lights on its chest; a narrow dark-grey waist; short chunky orange legs and big chunky orange boots.',
-    worn: 'a wide band of grey tape is wrapped round the drainpipe cannon near its root; the water heater torso has a big dent in its side and a square riveted patch plate; one boot is a mismatched grey replacement, bigger than the other. The helmet and the buoys keep their smooth round outlines.',
+      'The character: a tall, long-legged armored bounty hunter in a power suit welded together from scrapyard junk, no face showing, standing tall and upright, about five helmets tall. ' +
+      'Its near arm is stretched straight out forward from the shoulder at chest height, and over its whole forearm, like a sleeve, is a long thick straight grey drainpipe (#8e9298) as an arm cannon, level, its open round end dark inside, reaching far out to the right of the body, as long as the body is wide, none of it across the chest, no hand holding it. ' +
+      'Its shoulder pads are two huge round fishing buoys, red (#c9473f) with one white band (#f4efe6) each, each bigger than the helmet, the widest part of the figure by far, ' +
+      'mounted far apart at the ends of a wide shoulder plate, their tops level with the helmet’s chin. ' +
+      'Between them, high and clear above them, a small orange helmet (#d9661f), a little taller than wide, with a wide dark smoky-glass visor (#34404a) as a band right across its front. ' +
+      'The torso is a cut-down orange water heater tank over a narrow dark-grey waist (#4a4a52). ' +
+      'Long armoured orange legs, as long as the rest of the figure, broad in the thigh and the shin, with big round dark-grey knee pads, ending in small pointed orange feet: no big boots.',
+    worn: 'a wide band of grey tape is wrapped round the drainpipe cannon near its root; the orange chest plate has a big dent in its side and a square riveted orange patch plate; the drainpipe’s open end is dented into a slight oval. The helmet and the buoys keep their smooth round outlines.',
   },
   engineer: {
     // The nod, each part of the read at race size: the huge wrench (the read in profile, so it leads the
