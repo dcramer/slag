@@ -78,7 +78,9 @@ export const kind: FlatKind = {
     { name: 'plaster', vary: 1, options: 2 },
     { name: 'wear', vary: 11, options: 3 },
   ],
-  eyes: { role: 'dark', area: [0.015, 2.6], gap: [1.0, 4.5], specks: { dark: 2.8 } },
+  // The drawn eyes sit about 1.4 apart under the brim. Wider, a scrap of the brim's ink on the face's left
+  // outline paired with the right eye, and the near eye sat on the outline over the wrench.
+  eyes: { role: 'dark', area: [0.015, 2.6], gap: [1.0, 2.2], specks: { dark: 2.8 } },
   wear: {
     on: ['shirt', 'khaki'],
     chin: 3,
@@ -104,7 +106,8 @@ export const kind: FlatKind = {
     air: { frames: ['air-1', 'air-2'], loop: false, vy: [-200, 200], centre: 'box' },
     wall: { frames: ['wall'], loop: true, fps: 1, centre: 'box' },
     cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.5, 0.25] },
-    cheer2: { frames: ['cheer2', 'idle'], loop: true, holds: [0.6, 0.3], eyes: false },
+    // The laugh's eyes are shut, which is what the kit's cheer draws: shut out, the face had no eyes at all.
+    cheer2: { frames: ['cheer2', 'idle'], loop: true, holds: [0.6, 0.3] },
     death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box' },
   },
   // Every pose keeps the spanner as the design holds it, its open jaw up beside his shoulder and clear of the
