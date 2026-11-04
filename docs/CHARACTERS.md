@@ -44,7 +44,7 @@ So each kind has: a clear head-to-body ratio, a readable expression, a line of a
 | goose | the goose up to no good | white, orange beak and feet, an S of a neck; on the run the honk pose, neck flat out and wings up | costume: the vest |
 | engineer | the team shooter's engineer | yellow hard hat with dark goggles on it, a square jaw, a red or blue work shirt, khaki trousers, a leather glove, a huge wrench | costume: the shirt |
 | chomper | the round dot-eater | a yellow circle with a wedge mouth that chomps, one small eye, a scalloped bite out of its back, a checked napkin tucked into its lower lip | costume: the whole ball |
-| miner | the voxel miner | a cube head, a blocky body, a pickaxe | costume (its entry) |
+| miner | the voxel miner | a cube head as wide as the body, square stiff limbs, a taped toy pickaxe; carved from wood | costume: the shirt, the trousers a dark of it |
 | ape | the necktie ape | hunched, long arms, a necktie | costume (its entry) |
 | merc | the spiky-haired mercenary | spiked hair, a blade taller than he is | costume (its entry) |
 | king | the spiked turtle king | a spiked shell, horns, a fiery mane, a brute's build | costume (its entry) |
@@ -200,18 +200,22 @@ What came out of it:
 - **Rig:** drawn flat (2026-11-03): a bent valve, a bitten arm and a toe scuffed pale, a light tone of the shoe (in its cream padding it was the farm's ground and read as a hole; in the body's colour, it tipped the shoe in the player's); the valve in its own cream (as the eyes' white it went to the ink, a dark knot on the crown); the blush one solid pink (see-through, it went grey on a green or teal ball); its seam and its tape cross aren't drawn (at play size one read as a mouth, the other as a third eye, and the cross's last specks of ink as a second face).
 - **Concept prompt:** A near-perfect round ball creature on two big oval red feet, with stubby round arms; tall oval black eyes with a shine at the top, blush marks and a tiny mouth. It is a cheap vinyl squeeze toy: a moulding seam runs round its middle, a little white squeaker valve pokes out of its back, and a mould number is stamped under one foot.
 
-### The voxel miner (new)
+### The voxel miner
 - **Kind:** `miner` · **Name:** Stove
 - **A stranger should say:** "the blocky guy from the block-building game."
 - **Silhouette:** every part a box: a cube head as wide as the body, a rectangular torso, square arms and legs, and a pickaxe. No curve anywhere, which no other kind has.
 - **Traits:** a cube head with a flat square face; short square-cut brown hair; a cyan T-shirt; blue trousers; grey shoes; a square pickaxe.
-- **Palette:** shirt `#3fb0b0` (shade `#2b8686`); trousers `#3d4fa8` (shade `#2c3a80`); skin `#c9946a` (shade `#a07250`); hair `#4a3020`; eyes `#f4efe6` and `#4a3cae`; shoes `#6b6b72`; wood grain a dark of each paint; pick head `#8e9298`, handle `#8a5c34`.
-- **Color slot:** costume.
-- **Gait:** stiff-limbed: arms and legs swing straight from the shoulder and hip with no bend, the head rocking; the pick swings on the jump.
+- **Palette:** shirt `#3fb0b0`, the player's; trousers a dark of it (tone −22); skin bare birch `#e8c89c`, the cube's side face a darker grain `#c49a6c`, the flaked corner `#f2dcb8`; hair `#4a3020`; irises `#4a3cae`; shoes, pick head and tape one grey `#8a8c92`; handle `#8a5c34`. The birch is paler than the roster's `#c9946a`: in it a yellow or orange shirt ran into the face.
+- **Color slot:** costume: the shirt, the trousers a dark of it (Decisions 4).
+- **Gait:** stiff-limbed: arms and legs swing straight from the shoulder and hip with no bend, a small hop and almost no lean; the pick goes up on the jump.
+- **Palette alts:** the hair in dark brown `#4a3020`, chestnut `#6b4426` or ash `#5c5650`.
+- **Idles and cheers:** the idle from the model; standing to attention, feet together, the pick upright by his shoulder. The pick thrust up high, the free arm out behind; tipped back on his heel laughing.
+- **Gait range:** a bounce of 0.1–0.55 px on each step, a lean of up to 0.02.
+- **Wear:** scuffed is a faded patch on the shirt and one on the trousers; scorched is soot on each.
 - **The nod:** the cube head (the only square head in games anyone knows); the boxy, unbending limbs (it's the shape language, not a costume); cyan over blue (the outfit read across a room); the pickaxe (what he does).
 - **Our twist:** a wooden toy knock-off. He's carved from wooden blocks with the grain showing on every face and a dowel peg at each joint; the paint is chipped at the corners; his pickaxe is a painted wooden toy with a price sticker still on it.
 - **Swaps:** a square sticking plaster on the head; a block of turf under one arm; a chip out of one corner; a pencil-drawn tally on his arm.
-- **Rig:** humanoid with stiff limbs (no elbow or knee bend). The easiest model in the set.
+- **Rig:** drawn flat (2026-11-04): worn with a flaked shirt corner showing bare wood, a taped, cracked handle and a snapped pick point (the edit's chip out of the crown sat mid-crown and read as two ears, so it was filled back in by hand). Traced with no corner cutting (`map.smooth: 0`): rounded like every other kind, the cube head was a ball under a mop of hair. The image model's walk drawings came back as the design again, so every pose is the design's own blocks turned about their joints, the way a wooden toy moves (`art/sprites/miner/design.prompt.txt`). A raised arm goes out behind him and a raised pick slides up beside his head: over the cube's side face an arm read as a hand on the brow, and a pick turned up behind the cube as a horn. Blind read (two fresh readers): "blocky miner, high: square head and body, and a pickaxe raised in one hand"; "medium: square blocky head and boxy body, swinging a pickaxe or hammer".
 - **Concept prompt:** A blocky man made entirely of boxes, carved from wooden blocks: a cube head as wide as his body with a flat square face, square white-and-blue eyes and short square-cut brown hair; a cyan T-shirt, blue trousers and grey shoes painted on, the paint chipped at the corners, the wood grain showing on every face and a dowel peg at each joint. He holds a square painted wooden toy pickaxe with a price sticker on the handle.
 
 ### The impostor crewmate

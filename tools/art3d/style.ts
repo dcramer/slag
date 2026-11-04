@@ -335,6 +335,23 @@ export const BRIEFS: Record<string, Brief> = {
       'A white paper doily (#fbf6ee) with a scalloped lace edge is stuck flat to its underside.',
     worn: 'the dome has slumped a little to one side as if melting, and one fat drip of jelly runs down its side and hangs below the rim; a big round spoonful is scooped out of the top of the dome at the back, a clear dent in its outline; one fang is snapped off short; the doily is torn and one ragged flap of it hangs down.',
   },
+  miner: {
+    // The nod, each part of the read at race size: the cube head as wide as the body (the only square head in
+    // games anyone knows, and the whole silhouette); every part a box with unbending limbs (the shape language,
+    // not a costume: no curve anywhere, which no other kind has); the shirt over darker trousers (the outfit's
+    // colour block, the shirt in the player's colour and the trousers a dark of it); the pickaxe (what he
+    // does, and it breaks the outline above the shoulder). Arms and a head on a body, never one box on legs:
+    // that's the sneaking soldier.
+    // Ours, and the joke: a wooden toy knock-off. He's carved from wooden blocks, bare wood for skin, the
+    // paint chipped at the corners, a dowel peg at each joint, and his pickaxe is a painted wooden toy.
+    design:
+      'The character: a stiff little toy man made entirely of wooden blocks, every part a box with flat faces and hard square corners, no curves anywhere. ' +
+      'He grips a big chunky toy pickaxe in his front hand, its long square wooden handle (#8a5c34) slanting up past his shoulder and its blocky grey head (#8e9298) a flat wide pointed T clear above his shoulder, beside his head. ' +
+      'A huge cube head, as wide as his body and a third of his height, seen at three-quarters so two of its square faces show: a flat face of bare pale wood (#c9946a), two square eyes, each a white square with a blue-violet square pupil, and a flat cap of square-cut dark-brown hair (#4a3020) over the top and back of the cube. ' +
+      'A rectangular box torso in a painted cyan T-shirt (#3fb0b0), straight square box arms with cyan sleeves and bare-wood block hands, two straight square box legs in dark-blue trousers (#2c3a80), flat grey block shoes (#6b6b72). ' +
+      'A round wooden dowel peg shows at each shoulder.',
+    worn: "one top back corner of the cube head is broken off, a big square notch out of its outline; the cyan paint has flaked off the bottom corner of the shirt, a big patch of bare pale wood showing there; the pickaxe's wooden handle is cracked and bound with a thick wad of grey tape; one point of the pickaxe head is snapped off short.",
+  },
 };
 
 function brief(kind: string): Brief {
