@@ -317,6 +317,25 @@ export const BRIEFS: Record<string, Brief> = {
       'Over its body it wears a stolen yellow hi-vis safety vest (#e8d23a), put on back to front, with two wide pale grey reflective stripes (#c9ccd2) round it; its white folded wing pokes out of the armhole.',
     worn: 'the hem of the hi-vis vest is torn into two ragged points and one shoulder strap hangs loose; the tip of the folded wing has a big notch of feathers missing; the tail is bent over to one side; the spanner is bent in the middle.',
   },
+  cuptoon: {
+    // The nod, each part of the read at race size: the mug for a head with its loop handle (the one head
+    // nobody else in the cast has, and the whole silhouette: a squat cylinder wider than the body under it);
+    // the straw standing up out of it (it breaks the top of the outline, where every other kind is round or
+    // capped); the black rubber-hose limbs, big white gloves and big round shoes (the 1930s cartoon read,
+    // which is half the joke); the high-waisted shorts (the toon costume, and the costume block in the
+    // player's colour).
+    // Ours, and the joke: a camping mug, not fine china. White enamel with a thick rim, a chip knocked out of
+    // the rim at the back, a paper straw gone soggy and flopped over, and a tea-bag's string hung over the rim
+    // with its paper tag dangling by the handle.
+    design:
+      'The character: a small 1930s rubber-hose cartoon toon whose whole head is a big white enamel camping mug (#f4efe6), a squat round cylinder wider than it is tall and wider than the body under it, ' +
+      'with a thick blue enamel rim (#3a5a8c) round its top and one big round loop handle sticking out from the back of the mug; its open top is tipped toward us a little so dark brown tea (#8a5a3a) shows inside the rim. ' +
+      'Standing straight up out of the tea, a tall red-and-white striped paper straw (#d8382f), as tall as the mug. ' +
+      'On the front of the mug, two big black pie-cut cartoon eyes and a small round red nose, a wide happy smile. ' +
+      'Under the mug a tiny body: big baggy high-waisted red shorts (#c9473f), thin black rubber-hose arms and legs that bend in smooth curves with no elbows or knees, ' +
+      'big puffy white cartoon gloves (#fbf6ee) and big round brown cartoon shoes (#6b4a35).',
+    worn: 'a big chip is broken out of the blue rim at the back of the mug, a jagged notch in its outline, and a black chip of enamel is knocked off the side of the mug just under the handle; the paper straw has gone soggy and flops over at the top in a big droop; a tea-bag string hangs over the back of the rim with a big yellow paper tag (#e8c24a) dangling from it beside the handle; the sole of one shoe has come loose and flaps open at the toe. The front of the mug and the face stay clean.',
+  },
   jelly: {
     // The nod, each part of the read at race size: the green dome (the whole silhouette, and the only see-through
     // body in the cast: drawn flat, a pale lime); the three red nuclei inside it (they make it this parasite,

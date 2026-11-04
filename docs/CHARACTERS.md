@@ -51,7 +51,7 @@ So each kind has: a clear head-to-body ratio, a readable expression, a line of a
 | dino | the green saddled dino | a long snout, a saddle, a round tail, boots | costume (its entry) |
 | robot | the blue robot boy | a round helmet with ear discs, an arm cannon, small | costume (its entry) |
 | sneak | the sneaking soldier | a box on two legs with an eye slot, a bandana | costume (its entry) |
-| cuptoon | the cup-headed toon | a cup for a head with a straw, rubber-hose limbs, shorts | costume (its entry) |
+| cuptoon | the cup-headed toon | a white enamel mug for a head, its handle out the back and a straw bent over out of the tea, black rubber-hose limbs, white gloves, high-waisted shorts, big round shoes | costume: the shorts |
 | horse | the barnyard party game's horse | a long head, a mane, standing on two legs | costume (its entry) |
 
 **Is it the homage?** `cast-recognise.png` puts each kind close up beside "This is ___", in its roster colour. Every sheet waits for the rendered kinds' frames (`slagDebug.sprites.ready()`), so it shows what ships; before 2026-11-02 the catalog, recognise and silhouette sheets drew those kinds hand-drawn, so the reads below were judged on the old bodies. As of this round, every homage reads as its caption to us: the plumber, speedster, elf, mouse, impostor, puffball, jelly and goose at once; the bounty hunter and the engineer a beat slower, because their reads lean on props (the shoulder pads and cannon, the hat and wrench) more than on a silhouette nobody else shares. The silhouette test still separates every kind, though the plumber and the hunter are the closest pair of stout shapes.
@@ -313,19 +313,23 @@ What came out of it:
 - **Rig:** humanoid; the box a prop on the spine. Medium risk: the box and the pop-out are keyed.
 - **Concept prompt:** A gruff stubble-jawed soldier in a grey-blue sneaking suit and boots, crouched and running inside a cardboard box worn over his body, only his legs showing below it; his head pokes out of a hand-hole wearing a striped tea towel tied as a bandana with long tails streaming behind. The box is patched with packing tape, its printed "this way up" arrow pointing down, a rough eye slot cut in its side.
 
-### The cup-headed toon (new)
+### The cup-headed toon
 - **Kind:** `cuptoon` · **Name:** Mughead
 - **A stranger should say:** "the cartoon guy with a cup for a head."
-- **Silhouette:** a white cup for a head with a handle on the side and a striped straw sticking up out of the top; a small rubber-hose body.
-- **Traits:** a cup head with liquid at the rim; a striped straw; pie-cut black eyes; a small red nose; white gloves; red shorts; brown shoes; drawn in a 1930s cartoon spirit.
-- **Palette:** mug `#f4efe6` (shade `#cfc6b8`) with chips `#2a3a5c` and a blue rim `#3a5a8c`; tea `#8a5a3a`; tag `#e8c24a`; straw `#d8382f` and `#fbf6ee`; eyes `#14121a`; nose `#d8382f`; shorts `#c9473f`; gloves `#fbf6ee`; shoes `#6b4a35`.
-- **Color slot:** costume.
-- **Gait:** a bouncy rubber-hose strut with arms swinging in loops; the straw wobbles.
-- **The nod:** the cup head with its handle (the one head nobody else has); the striped straw (it breaks the top of the outline); pie-cut eyes, rubber-hose limbs and a red nose (the 1930s cartoon read, which is half the joke); red shorts and white gloves (the toon costume).
-- **Our twist:** a camping mug, not fine china: white enamel with a blue rim and black chips where it's been dropped; a paper straw going soggy and bent; a tea-bag string hanging over the rim with its tag.
-- **Swaps:** a sugar cube on the rim; a steam curl; a sticking plaster on a chip; a biscuit in one glove.
-- **Rig:** humanoid. Medium risk: rubber-hose limbs bend in arcs, not at elbows, so the run and cheer are keyed.
-- **Concept prompt:** A 1930s rubber-hose cartoon character whose head is a white enamel camping mug with a blue rim, black chips where it's been dropped, a handle on its side and tea at the rim; a red-and-white striped paper straw bent and going soggy sticks up from the top, and a tea-bag string with its yellow tag hangs over the rim; pie-cut black eyes, a small red nose, white gloves, red shorts and brown shoes on noodle limbs.
+- **Silhouette:** a white mug for a head, a squat cylinder wider than the body under it, with a loop handle out the back and a striped straw flopped over out of the top; a tiny rubber-hose body under it.
+- **Traits:** a mug head with tea at the rim; a striped straw; big black pie-cut eyes; white gloves; high-waisted shorts; big round shoes; black hose limbs that bend in curves; drawn in a 1930s cartoon spirit.
+- **Palette:** mug `#f4efe6` (shade `#cfc6b8`), tea `#7a4e30`, gloves `#f4efe6`, hose limbs and neck `#1c1a24`, shoes `#6b4a35`: neutrals. The shorts are the player's colour; the straw's stripes are drawn in it, the rim a dark of it, the tea-bag tag a light of it.
+- **Color slot:** costume: the shorts.
+- **Gait:** a bouncy rubber-hose strut with arms swinging in loops; a jig for a second cheer.
+- **The nod:** the mug head with its handle (the one head nobody else has); the straw (it breaks the top of the outline); big pie-cut eyes, black hose limbs and white gloves (the 1930s cartoon read, which is half the joke); the high-waisted shorts (the toon costume, and the colour block).
+- **Our twist:** a camping mug, not fine china: white enamel with a thick rim chipped at the front, a paper straw gone soggy and bent over, a tea-bag string hung over the rim with its tag dangling by the handle, one shoe's sole flapping.
+- **Swaps:** a sticking plaster on one cheek.
+- **Palette alts:** the shoes in brown leather `#6b4a35`, tan `#9a7448` or grey `#6e6a66`.
+- **Idles and cheers:** the idle from the model; gloves on his hips, rocking on his heels. Both gloves thrown up; a jig with one leg kicked high.
+- **Gait range:** a bounce of 0.2–0.85 px on each step, a lean of up to 0.03.
+- **Wear:** scuffed is a faded streak on the shorts, scorched a soot streak there; the mug, the face, stays clean.
+- **Rig:** drawn flat (2026-11-04): a design worn with the chipped rim, the bent straw, the tea-bag tag and the flapping sole, and a black chip on the mug's side painted back out in an edit (dark beside the face reads as a mouth); eleven poses, drawn two and three to a sheet and cut apart. The drawn red nose goes with the drawn face: the face kit has no nose, and red, it was the player's colour.
+- **Concept prompt:** A 1930s rubber-hose cartoon character whose head is a white enamel camping mug with a thick rim, a chip broken out of it, a loop handle on its back and tea at the rim; a striped paper straw bent over and going soggy sticks up from the top, and a tea-bag string with its paper tag hangs over the rim by the handle; big black pie-cut eyes, white gloves, high-waisted shorts and big round shoes on black noodle limbs.
 
 ### The armored bounty hunter
 - **Kind:** `hunter` · **Name:** Sammus
