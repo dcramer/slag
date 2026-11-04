@@ -95,6 +95,11 @@ export interface FlatKind {
     band?: readonly [number, number];
     /** With `count: 1`, a far eye set this far (world px) from the near one, for a face turned nearly side on. */
     pair?: readonly [number, number];
+    /**
+     * `map`: find the eyes in the role map, before tracing. An eye a few map pixels across (a small face's) is
+     * smoothed away by the tracer, so on traced parts only one merged into the ink round it survives.
+     */
+    from?: 'map';
   };
   /**
    * A colour drawn in another role by its place: `below` the eyes (world px), or a lying pose's by size and x

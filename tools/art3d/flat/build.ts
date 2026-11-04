@@ -170,6 +170,33 @@ function cutOut(role: Int16Array, m: RoleMap, cut: NonNullable<(typeof spec)['ma
   }
 }
 
+/** Each connected patch of map role `r`: its middle (world px, before the feet are set) and area (world px²). */
+function mapSpecks(role: Int16Array, m: RoleMap, r: number): { at: Pt; a: number }[] {
+  const seen = new Uint8Array(role.length);
+  const out: { at: Pt; a: number }[] = [];
+  for (let i0 = 0; i0 < role.length; i0++) {
+    if (role[i0] !== r || seen[i0]) continue;
+    const patch = [i0];
+    seen[i0] = 1;
+    let sx = 0;
+    let sy = 0;
+    for (let h = 0; h < patch.length; h++) {
+      const i = patch[h];
+      const x = i % m.W;
+      sx += x;
+      sy += (i / m.W) | 0;
+      for (const j of [x > 0 ? i - 1 : -1, x < m.W - 1 ? i + 1 : -1, i - m.W, i + m.W])
+        if (j >= 0 && j < role.length && !seen[j] && role[j] === r) {
+          seen[j] = 1;
+          patch.push(j);
+        }
+    }
+    const n = patch.length;
+    out.push({ at: [(sx / n + 0.5) / m.R + BOX.x0, (sy / n + 0.5) / m.R - BOX.y1], a: n / (m.R * m.R) });
+  }
+  return out;
+}
+
 /**
  * The outlines of the background a figure closes in: the map's empty pixels that the empty border can't
  * reach, traced as a figure of their own.
@@ -214,6 +241,7 @@ function paintOver(role: Int16Array, m: RoleMap, rings: number[][]) {
   const toPx = (v: number, o: number) => (v - o) * m.R - 0.5;
   const marked = new Uint8Array(role.length);
   for (const r of rings) {
+    const mine: number[] = [];
     const xs = r.filter((_, i) => i % 2 === 0);
     const ys = r.filter((_, i) => i % 2 === 1);
     const [px0, px1] = [Math.floor(toPx(Math.min(...xs), BOX.x0)) - 1, Math.ceil(toPx(Math.max(...xs), BOX.x0)) + 1];
@@ -226,8 +254,26 @@ function paintOver(role: Int16Array, m: RoleMap, rings: number[][]) {
           role[i] >= 0 &&
           [0, 1, 2, 3, 4, 5, 6, 7, 8].some((k) => inside((px + 0.5 + ((k % 3) - 1)) / m.R + BOX.x0, (py + 0.5 + (((k / 3) | 0) - 1)) / m.R - BOX.y1, r))
         )
-          marked[i] = 1;
+          mine.push(i);
       }
+    // Then the whole speck: the traced ring is smoothed inside its pixels, and the rim it misses floods back.
+    // Every pixel of the speck's own colour joined to it, kept near the ring (a speck may touch the ink).
+    const count = new Map<number, number>();
+    for (const i of mine) count.set(role[i], (count.get(role[i]) ?? 0) + 1);
+    const own = [...count].sort((a, b) => b[1] - a[1])[0]?.[0];
+    const near = 1.5 * m.R;
+    for (let h = 0; h < mine.length; h++) {
+      const i = mine[h];
+      marked[i] = 1;
+      const x = i % m.W;
+      for (const j of [x > 0 ? i - 1 : -1, x < m.W - 1 ? i + 1 : -1, i - m.W, i + m.W]) {
+        if (j < 0 || j >= role.length || marked[j] || role[j] !== own) continue;
+        const [jx, jy] = [j % m.W, (j / m.W) | 0];
+        if (jx < px0 - near || jx > px1 + near || jy < py0 - near || jy > py1 + near) continue;
+        marked[j] = 1;
+        mine.push(j);
+      }
+    }
   }
   // Each marked pixel takes the role that reaches it first from outside the specks.
   const queue: number[] = [];
@@ -293,18 +339,23 @@ function frameOf(name: string, clip: FlatClip): Frame {
           `  speck area ${area(p.ring).toFixed(2)} at ${x.toFixed(1)},${y.toFixed(1)} band ${((y - figTop) / (figLow - figTop)).toFixed(2)} edge ${edge(x, y).toFixed(2)}`,
         );
       }
-    const specks = parts.filter((p) => {
-      if (p.role !== dark || area(p.ring) < ek.area[0] || area(p.ring) >= ek.area[1]) return false;
-      const [x, y] = mid(p.ring);
+    // Candidates from the traced parts, or (`from: 'map'`) from the role map itself, where an eye too small to
+    // survive the tracer's smoothing is still a clean speck of its own.
+    const found =
+      ek.from === 'map'
+        ? mapSpecks(role, m, m.roles.indexOf(ek.role))
+        : parts.filter((p) => p.role === dark).map((p) => ({ at: mid(p.ring), a: area(p.ring) }));
+    const specks = found.filter(({ at: [x, y], a }) => {
+      if (a < ek.area[0] || a >= ek.area[1]) return false;
       return y >= figTop + (figLow - figTop) * b0 && y <= figTop + (figLow - figTop) * b1 && edge(x, y) > 0.45;
     });
     let best = -1;
     for (const a of specks)
       for (const b of specks) {
-        const [pa, pb] = [mid(a.ring), mid(b.ring)];
+        const [pa, pb] = [a.at, b.at];
         const dx = pb[0] - pa[0];
         if (dx < ek.gap[0] || dx > ek.gap[1] || Math.abs(pb[1] - pa[1]) > 1.2) continue;
-        const score = area(a.ring) + area(b.ring) - Math.abs(pb[1] - pa[1]) * 0.2;
+        const score = a.a + b.a - Math.abs(pb[1] - pa[1]) * 0.2;
         if (score > best) {
           best = score;
           eyes = [pa, pb];
@@ -312,8 +363,8 @@ function frameOf(name: string, clip: FlatClip): Frame {
       }
     // One eye found (a profile, the dot-eater): the biggest.
     if (ek.count === 1) {
-      const one = [...specks].sort((a, b) => area(b.ring) - area(a.ring))[0];
-      eyes = one ? [mid(one.ring)] : [];
+      const one = [...specks].sort((a, b) => b.a - a.a)[0];
+      eyes = one ? [one.at] : [];
       // The far eye of a face turned nearly side on is on the outline, or lost in its white: set from the near one.
       const pair = ek.pair;
       if (pair && one) {

@@ -48,7 +48,7 @@ export const kind: FlatKind = {
     thin: ['skin', 'shirt', 'khaki', 'tan', 'grey', 'yellow', 'strap', 'lens', 'mouth'],
     fringe: 5,
     stroke: 2.4,
-    ink: 5,
+    ink: 7,
     // The gaps between arm and body and between the legs, and the wrench's eye, cut through: inked, they read as dirt. The teeth (0.7) stay.
     holes: 0.8,
     feet: ['khaki'],
@@ -80,7 +80,8 @@ export const kind: FlatKind = {
   ],
   // The drawn eyes sit about 1.4 apart under the brim. Wider, a scrap of the brim's ink on the face's left
   // outline paired with the right eye, and the near eye sat on the outline over the wrench.
-  eyes: { role: 'dark', area: [0.015, 2.6], gap: [1.0, 2.2], specks: { dark: 2.8 } },
+  // Found in the role map: his small eyes don't survive the tracer's smoothing. Above the goggles' white gaps.
+  eyes: { role: 'dark', from: 'map', area: [0.06, 0.4], band: [0.185, 0.55], gap: [1.0, 2.2], specks: { dark: 2.8 } },
   wear: {
     on: ['shirt', 'khaki'],
     chin: 3,
