@@ -226,7 +226,7 @@ function holesOf(role: Int16Array, m: RoleMap): number[][] {
   for (let i = 0; i < role.length; i++) if (role[i] < 0 && !out[i]) hole[i] = 0;
   const settings: Pick<Settings, 'step' | 'trace' | 'roles'> = {
     step: 1e9,
-    trace: { res: m.R, min: spec.map.holes, eps: 0.22, smooth: 2 },
+    trace: { res: m.R, min: spec.map.holes, eps: 0.22, smooth: spec.map.smooth ?? 2 },
     roles: { hole: { color: '', swatches: [] } },
   };
   return trace(hole, new Float32Array(role.length), m.W, m.H, m.R, settings as Settings, ['hole']).sil;
@@ -307,7 +307,7 @@ function frameOf(name: string, clip: FlatClip): Frame {
   // Only what the tracer reads: no depth steps (a drawing is flat), and each role's smallest part.
   const settings: Pick<Settings, 'step' | 'trace' | 'roles'> = {
     step: 1e9,
-    trace: { res: m.R, min: 0.8, eps: 0.22, smooth: 2 },
+    trace: { res: m.R, min: 0.8, eps: 0.22, smooth: spec.map.smooth ?? 2 },
     // The tracer reads only `min` (and `into`, `glint`, `band`, `free`, none of them here); colours are the kind's.
     roles: Object.fromEntries(m.roles.map((n) => [n, { color: '', swatches: [], min: spec.map.min?.[n] }])),
   };
