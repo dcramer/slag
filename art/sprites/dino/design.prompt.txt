@@ -1,0 +1,25 @@
+How design.png and the pose drawings were made (2026-11-04), on paid Studio credits (2 an image).
+
+1. Design (`node tools/art3d/style.ts design dino`; 2 drawn, the second picked): both drew the original's head and
+body, the twist as props; the second had the clearer bicycle seat on its chrome stem, its arms clear of the body.
+
+2. Wear (`node tools/art3d/style.ts worn dino`; 3 drawn from the second design, the second picked: the black seat
+torn open in a flap with its foam showing, the bent stem, a snapped head spike, a welly folded down, the bag torn).
+
+3. Tail and seat, an edit of the worn design (3 drawn, the third picked). The first poses' blind read was split:
+one reader named the dino, the other saw "a capped hero", the head and snout reading as a cap and bill, the short
+tail lost in the body and the seat up by the head:
+The same character exactly as in the reference image: the same pose, face, design, proportions, colours, wear and tear, line and flat white background. Change only this, and make each change big and obvious: its tail is much longer and thicker, a big green tail sticking straight out behind it level with its hips, tapering to a point, as long as its head is wide; the torn black bicycle seat is moved down to sit low and flat on the middle of its back like a saddle, just above the tail, its bent chrome stem poking out down and back under it, nothing of it up by the head; the huge round snout is a little bigger and rounder, hanging out well in front of the face below the eyes. Nothing else changes, no dirt, no texture.
+
+4. Poses, three to a 16:9 image (two for the wall and death) with the design as the reference, cut apart at the
+figures' own outlines, each at the scale it was drawn (`body` sizes every pose alike). The prompts are the poses in
+tools/art3d/flat/kinds/dino.ts, after: "The same character exactly as in the reference image: ... in the same
+three-quarter view facing right, with its long tail sticking straight out behind and the torn bicycle seat low on
+its back. Draw it three times side by side in one row: three separate figures of the same size, with wide white
+space between them, none touching or overlapping, each in its own pose. Left: ... Middle: ... Right: ... Nothing
+else changes: no ground, no shadow on the ground, no motion lines, no text, no other figures."
+Sheets: walk-1, walk-2, idle2 | run-1, run-2, air-1 | air-2, cheer, cheer2 | wall, death.
+
+5. Hand edits: in air-1, run-2 and cheer2 the far pupil was drawn touching the snout's line and traced as part of
+it, so the eye finder saw one eye: each is painted over in the eye's cream and drawn again a little up and back,
+clear of the line.

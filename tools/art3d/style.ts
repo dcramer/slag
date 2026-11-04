@@ -335,6 +335,24 @@ export const BRIEFS: Record<string, Brief> = {
       'A white paper doily (#fbf6ee) with a scalloped lace edge is stuck flat to its underside.',
     worn: 'the dome has slumped a little to one side as if melting, and one fat drip of jelly runs down its side and hangs below the rim; a big round spoonful is scooped out of the top of the dome at the back, a clear dent in its outline; one fang is snapped off short; the doily is torn and one ragged flap of it hangs down.',
   },
+  dino: {
+    // The nod, each part of the read at race size: the big round snout well out in front (the profile, and
+    // the first shape anyone names), the eyes high on top of the head (the face from the side), the saddle on
+    // its back (a mount waiting for a hero, without the hero), the short tail and big boots on an upright
+    // body (a dinosaur that walks like a person), and green with a white belly (drawn green so the map keeps
+    // the parts apart; the body is the player's colour, the spikes and boots tones of it: Decisions 4).
+    // Ours, and the joke: a hand-me-down mount. The saddle is a black bicycle seat strapped on with a belt,
+    // its chrome stem sticking out behind; the boots are rubber wellies; it carries its own spotted egg about
+    // in a carrier bag.
+    // The tail is long and the seat low (blind read, 2026-11-04): with a short tail and the seat up behind the head,
+    // the head and snout read as a cap and its bill. The shipped design reached that in an edit of the worn one
+    // (art/sprites/dino/design.prompt.txt); the brief asks for it outright.
+    design:
+      "The character: a cheerful upright green dinosaur with a black bicycle seat (#3a3a3e) strapped low and flat on the middle of its back as a saddle by a brown belt (#6b4a35) round its belly, the seat's chrome stem (#c9ccd2) poking out down and back under it. " +
+      'A huge round bulbous snout sticking well out in front of its face, as big as the rest of its head; two big eyes set high on top of the head; a big round white belly and white cheeks (#f6f2e8); green skin (#4cbf4a); three round orange spikes (#e8853a) down the back of its head; a long thick tail sticking straight out behind it level with its hips. ' +
+      'Big red rubber wellington boots (#d8442f) to the knee, short thick arms. In one hand it carries a pale grey plastic carrier bag (#c9c6bd) with a big white egg with green spots poking out of the top.',
+    worn: 'the bicycle seat sits crooked, its cover torn open at the back in a big ragged flap; its chrome stem is bent; one of the head spikes is snapped off short; the top of one wellington boot is folded down; the carrier bag has a big torn hole in its side.',
+  },
 };
 
 function brief(kind: string): Brief {
