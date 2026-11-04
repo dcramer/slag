@@ -235,11 +235,16 @@ const READS_AS: Record<Kind, string> = {
   jelly: 'the jellyfish parasite',
   goose: 'the goose up to no good',
   engineer: "the team shooter's engineer",
-  fox: 'a fox',
-  frog: 'a frog',
-  penguin: 'a penguin',
-  chicken: 'a chicken',
   chomper: 'the round dot-eater',
+  miner: 'the voxel miner',
+  ape: 'the necktie ape',
+  merc: 'the spiky-haired mercenary',
+  king: 'the spiked turtle king',
+  dino: 'the green saddled dino',
+  robot: 'the blue robot boy',
+  sneak: 'the sneaking soldier',
+  cuptoon: 'the cup-headed toon',
+  horse: "the barnyard party game's horse",
 };
 
 /**
