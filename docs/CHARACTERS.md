@@ -33,9 +33,9 @@ So each kind has: a clear head-to-body ratio, a readable expression, a line of a
 
 | Kind | Homage (what a stranger should say) | Signature traits | Player's color |
 |---|---|---|---|
-| plumber | the mustached plumber | red cap with a round white badge (our own mark, a little wrench, never the letter), big round nose, thick mustache, blue overalls with two gold buttons, white gloves, brown shoes; big head, stout | costume: cap and shirt |
+| plumber | the mustached plumber | a cap with its bill out front and a round badge (our own mark, a little wrench, never the letter), big round nose, thick mustache, bib overalls over the shirt with two buttons, gauntlets, boots; big head, stout | costume: cap and shirt; overalls and plunger cup a dark of it |
 | hedgehog | the blue speedster | cobalt, spikes swept straight back, joined eyes with green irises, peach muzzle and belly, a one-sided grin, red sneakers with a white strap; runs leaning hard, spins in the air | costume: the quills |
-| elf | the green-tunic elf hero | long green cap flopping back, pointed ear, blond fringe, flared green tunic with a belt, a kite shield and a sword hilt on the back | costume: cap and tunic |
+| elf | the green-tunic elf hero | long cap flopping back, pointed ear, blond fringe, flared tunic with a belt, a shield and a sword hilt on the back | costume: cap and tunic; the darned toe a light of it |
 | hunter | the armored bounty hunter | orange armor, huge round red shoulder pads, a round helmet with a green visor, an arm cannon held out | costume: the suit |
 | zapmouse | the yellow electric mouse | yellow, long ears with black tips, red cheeks, a lightning-bolt tail, brown back stripes | costume: the fur |
 | impostor | the impostor crewmate | a bean on stubby legs, a wide pale visor standing proud, a backpack | costume: the bean |
@@ -104,14 +104,14 @@ What came out of it:
 - **Kind:** `plumber` · **Name:** Plumbo
 - **A stranger should say:** "that's the plumber with the mustache."
 - **Silhouette:** stout and big-headed, about 45% head. A round cap with its bill sticking out front, a big round nose that breaks the profile, and a huge plunger slung low across his back, its cup behind his shoulder so the cap, bill and nose own the head's outline.
-- **Traits:** red cap with a riveted brass badge carrying a small wrench (never a letter); a big round nose; a thick dark-brown mustache; blue bib overalls over a red shirt; leather gauntlets; steel-toe boots.
-- **Palette:** cap and shirt `#c9473f` (shade `#9c3530`); overalls `#3f62b4` (shade `#2e4a8c`); skin `#efc9a4`; mustache and hair `#4d3426`; badge `#c99a4a`; bolts `#9aa0a8`; gauntlets `#b08454`; boots `#6b4a35`; plunger cup a dark of the cap's colour (the player's, owner 2026-11-03) on a copper handle `#c27a45`.
-- **Color slot:** costume: the cap and shirt (the overalls stay blue).
+- **Traits:** red cap with a riveted brass badge carrying a small wrench (never a letter); a big round nose; a thick dark-brown mustache; bib overalls over a shirt, a dark of its colour; leather gauntlets; steel-toe boots.
+- **Palette:** cap and shirt the player's colour (roster `#c9473f`); their shade and the plunger cup 22 darker (the cup since owner 2026-11-03); the overalls and their knee patch 20 darker, so the bib still reads as its own block over the shirt (darker, on a dark ground the bib and the boots sank into one mass); skin `#efc9a4`; mustache, hair and boots `#5e412d`; bolts and goggles `#8e8a84`; gauntlets `#b08454` (shade `#7f5c39`); copper handle `#a65f38`.
+- **Color slot:** costume: the cap and shirt, and in tones of it the overalls and the cup (owner, 2026-11-04: the overalls were blue).
 - **Gait:** a jaunty run with a bounce on every step and arms pumping; one fist high on the jump.
-- **The nod:** the red cap with its bill out front (the first shape anyone names); the big round nose (it breaks the profile at 20 px, where no face detail survives); the thick mustache (the face, at any size); blue bib overalls over red (the colour block people know from across a room); the stout, big-headed build (it separates him from every slim hero).
+- **The nod:** the red cap with its bill out front (the first shape anyone names); the big round nose (it breaks the profile at 20 px, where no face detail survives); the thick mustache (the face, at any size); bib overalls over the shirt (the colour block people know from across a room, now a dark over a light of the player's colour); the stout, big-headed build (it separates him from every slim hero).
 - **Our twist:** a foundry hand, not a castle plumber. The joke is an absurdly big rubber plunger on a copper handle strapped to his back like a greatsword. Welding goggles on the cap, hex-bolt overall buttons, a patched knee, tan gauntlets for the white gloves.
 - **Swaps:** a pencil behind the ear; a sticking plaster on one cheek; a roll of thread-seal tape on a belt loop; a pressure gauge in the bib pocket.
-- **Palette alts:** the overalls in denim blue `#3f62b4`, grey work cloth `#7e848a` or washed denim `#86a3d4` (brown canvas `#8e6a44` went with the flat pass: drawn flat it's the gloves' tan, and the bib loses its colour block; navy work cloth `#2f3b5c` went next: on a dark ground the overalls and boots sank into it). The knee patch is the overalls' own cloth, outlined: in the shirt's red it took the player's colour, a fleck on the leg at every step.
+- **Palette alts:** the gauntlets in tan leather `#b08454`, pale canvas `#cdc4b2` (the original's white gloves, as work gloves) or dark leather `#76583f`, each with its shade. The overalls' colourways (denim, grey work cloth, washed denim) went with the neutral palette (2026-11-04). The knee patch is the overalls' own cloth, outlined: in the shirt's tone it was a fleck on the leg at every step.
 - **Idles and cheers:** the idle from the model; arms folded, chest out, breathing. The fist-pump cheer; leaning back laughing, turned to us.
 - **Gait range:** a jaunty bounce of 0.15–0.85 px on each step, a lean of up to 0.035.
 - **Wear:** scuffed is a faded patch on the bib and one on a thigh, pale scuffs on both boot toes; scorched is two soot streaks down the bib, one on the sleeve, one on the gauntlet and the far boot's toe.
@@ -173,7 +173,7 @@ What came out of it:
 - **A stranger should say:** "the elf hero with the green cap."
 - **Silhouette:** slim. A long green cap flopping back like a tail, a pointed ear sticking out, a tunic flared at the hem, and a round shield on the back.
 - **Traits:** a long floppy green cap; blond fringe; a long pointed ear; a green tunic with a brown belt; a shield and a sword hilt on the back; brown boots.
-- **Palette:** cap and tunic `#3f7a34` (shade `#2c5a25`); darn a light of the costume (`#5a9a4a` on the green), so it follows the player's colour; hair `#e6c25a`; skin `#efc9a4`; belt, boots and gloves `#6b4a35`; lid `#a8adb4` (shade `#7a7f86`), or a recycling-blue `#5f80a8` or black-plastic `#5a5e66` lid; poker `#4a4a52`.
+- **Palette:** cap and tunic the player's colour (roster `#3f7a34`); the darned toe 18 lighter; hair `#e6c25a`; skin `#efc9a4`; belt, boots and gloves `#6b4a35`; lid galvanised `#a8adb4`, black plastic `#5a5e66` or white enamel `#d2ccc0` (a recycling-blue lid went with the neutral palette, 2026-11-04); poker `#4a4a52`.
 - **Color slot:** costume: the sock cap and the tunic.
 - **Gait:** strides out with the cap tip swinging; a forward somersault on the jump.
 - **The nod:** the long green cap flopping back (the silhouette people draw); the pointed ear (it makes him an elf and not a gnome); the flared green tunic with its belt (the colour and the hero's cut); something to fight with on his back (a hero, not a shepherd).
