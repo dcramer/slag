@@ -5,39 +5,57 @@ import type { FlatKind } from '../kinds';
 const KNIFE = 'the giant serrated bread knife in his hand, never on his back';
 
 export const kind: FlatKind = {
-  body: 103,
+  body: 177,
   map: {
     roles: ['skin', 'top', 'pants', 'hair', 'singe', 'brown', 'hub', 'steel', 'dark'],
-    // Sampled from the design (art/sprites/merc/design.png, `swatch.py`).
+    // Sampled from the design (art/sprites/merc/design.png, `swatch.py`), and from the one before its hair and
+    // knife were made bigger.
     families: [
       ['skin', [254, 199, 147]],
       ['skin', [254, 200, 151]],
       ['skin', [235, 196, 160]],
       ['skin', [217, 138, 107]],
+      ['skin', [249, 197, 128]],
+      ['skin', [247, 191, 129]],
+      ['skin', [181, 122, 90]],
       ['top', [69, 94, 170]],
+      ['top', [79, 85, 130]],
       ['pants', [42, 52, 101]],
       ['pants', [42, 49, 87]],
       ['pants', [50, 52, 90]],
       ['pants', [54, 57, 90]],
       ['pants', [22, 25, 55]],
       ['pants', [37, 36, 59]],
+      ['pants', [40, 47, 92]],
+      ['pants', [39, 43, 76]],
+      ['pants', [52, 47, 74]],
+      ['pants', [28, 24, 44]],
       ['hair', [239, 205, 111]],
       ['hair', [233, 205, 112]],
       ['hair', [236, 207, 122]],
       ['hair', [226, 201, 135]],
       ['hair', [220, 180, 120]],
       ['hair', [203, 154, 82]],
+      ['hair', [238, 201, 95]],
+      ['hair', [202, 147, 78]],
+      ['hair', [208, 163, 94]],
+      ['hair', [235, 208, 145]],
       // Belts, boots and the knife's handle: leather and wood, one brown in the drawing.
       ['brown', [114, 75, 50]],
       ['brown', [128, 94, 69]],
       ['brown', [106, 76, 59]],
       ['brown', [70, 48, 38]],
+      ['brown', [107, 67, 44]],
+      ['brown', [124, 99, 81]],
+      ['brown', [76, 44, 26]],
+      ['brown', [160, 112, 72]],
       // The hubcap, darker than the blade, so the two stay two shapes.
       ['hub', [163, 156, 146]],
       ['hub', [166, 170, 176]],
       ['hub', [132, 138, 144]],
       ['hub', [117, 118, 130]],
       ['hub', [104, 108, 120]],
+      ['hub', [173, 164, 153]],
       // The singed tips of the spikes, and their edge into the blond: as ink or the boots' brown, they were
       // specks round each tip.
       ['singe', [40, 40, 36]],
@@ -47,6 +65,7 @@ export const kind: FlatKind = {
       ['steel', [192, 196, 202]],
       ['steel', [189, 191, 198]],
       ['steel', [226, 224, 224]],
+      ['steel', [193, 191, 196]],
       ['dark', [255, 255, 255]],
       ['dark', [9, 3, 13]],
       ['dark', [16, 12, 28]],
@@ -56,6 +75,9 @@ export const kind: FlatKind = {
     thin: ['skin', 'top', 'pants', 'hair', 'singe', 'brown', 'hub', 'steel'],
     fringe: 5,
     stroke: 2.4,
+    // The poses are cut from sheets of three, drawn smaller than the design: at the default, their pupils traced as
+    // lines and half the poses had no eyes to find.
+    ink: 5,
     feet: ['brown'],
     // The knife is left out of his size, so every pose is sized by the body alone.
     loose: ['steel'],
@@ -86,17 +108,17 @@ export const kind: FlatKind = {
     { name: 'wear', vary: 11, options: 3 },
   ],
   // The near eye from the role map; the far one sits on the face's outline under the fringe, so it's set from it.
-  eyes: { role: 'dark', from: 'map', area: [0.06, 1.2], gap: [1.6, 4.2], band: [0.2, 0.45], specks: { dark: 2, brown: 1.2 }, count: 1, pair: [2.9, 0] },
+  eyes: { role: 'dark', from: 'map', area: [0.06, 1.6], gap: [1.6, 4.2], band: [0.2, 0.45], specks: { dark: 2, brown: 1.2 }, count: 1, pair: [2.9, 0] },
   wear: {
     on: ['top', 'pants'],
     chin: 3,
     marks: [
       [
-        ['scuff', 0.5, 0.35, 0.7],
+        ['scuff', 0.5, 0.5, 0.5],
         ['scuff2', 0.45, 0.6, 0.5],
       ],
       [
-        ['scorch', 0.5, 0.4, 0.6],
+        ['scorch', 0.5, 0.5, 0.5],
         ['scorch2', 0.4, 0.62, 0.5],
       ],
     ],
@@ -109,8 +131,9 @@ export const kind: FlatKind = {
     idle2: { frames: ['idle2', 'idle'], loop: true, holds: [1.8, 2.4] },
     walk: { frames: ['walk-1', 'walk-2'], loop: true, stride: 30 },
     run: { frames: ['run-1', 'run-2'], loop: true, stride: 44 },
-    air: { frames: ['air-1', 'air-2'], loop: false, vy: [-200, 200], centre: 'box' },
-    wall: { frames: ['wall'], loop: true, fps: 1, centre: 'box' },
+    // Smaller in the air: the falling drawing's raised arm and the spikes over it reached past the box's top.
+    air: { frames: ['air-1', 'air-2'], loop: false, vy: [-200, 200], centre: 'box', scale: 0.88 },
+    wall: { frames: ['wall'], loop: true, fps: 1, centre: 'box', scale: 0.94 },
     cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.5, 0.25] },
     cheer2: { frames: ['cheer2', 'idle'], loop: true, holds: [0.6, 0.3] },
     death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box' },
