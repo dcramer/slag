@@ -606,6 +606,40 @@ describe('host migration', () => {
     expect(new Set(await w.drained()).size).toBe(1);
   });
 
+  it('a host who starts watching hands the room to a live guest, never to one that crashed and the store still lists', async () => {
+    const w = new World();
+    const [a, d, b, c] = await w.room('aaaa', 'dddd', 'bbbb', 'cccc');
+    // A phone killed in the background: no goodbye, so the store lists it until its liveness runs out (50 s).
+    w.crash('dddd');
+    await w.run(12_000);
+    expect(a.session.members.some((m: Member) => m.id === 'dddd')).toBe(false);
+    a.session.watch();
+    const took = await w.runUntil(() => w.settled() && b.session.isHost && !a.session.seated, 30_000);
+    expect(b.session.isHost).toBe(true);
+    expect([a, c].every((p) => p.session.hostId === 'bbbb')).toBe(true);
+    expect(took).toBeLessThan(6000);
+    expect(w.maxRunning).toBe(1);
+    expect(d.gone).toBe(true);
+    expect(new Set(await w.drained()).size).toBe(1);
+  });
+
+  it('a new host never hands the room to a guest that crashed earlier and the store still lists', async () => {
+    const w = new World();
+    const [a, d, b, c] = await w.room('aaaa', 'dddd', 'bbbb', 'cccc');
+    w.crash('dddd');
+    await w.run(12_000);
+    expect(a.session.members.some((m: Member) => m.id === 'dddd')).toBe(false);
+    w.crash('aaaa');
+    await w.runUntil(() => w.settled(), 20_000);
+    // Past the new host's rival checks: it stays put.
+    await w.run(15_000);
+    expect(w.settled()).toBe(true);
+    expect(b.session.isHost).toBe(true);
+    expect(c.session.hostId).toBe('bbbb');
+    expect(b.session.stats.migrations).toBe(1);
+    expect(d.gone && w.maxHosts === 1).toBe(true);
+  });
+
   it('the new host dying straight after taking over: the walk carries on to the next', async () => {
     const w = new World();
     const [, b, c, d] = await w.room('aaaa', 'bbbb', 'cccc', 'dddd');

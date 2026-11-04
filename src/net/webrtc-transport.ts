@@ -24,10 +24,12 @@ import { type LinkStatus, type Member, sortMembers, type Transport, type Transpo
  * when a lower peer left at the same moment. Proof runs both ways: a peer with
  * no host that gets an offer from one behind it takes over at once (claim), so
  * it's never written off for being slow to settle its own handshake. If two
- * peers do end up hosting (a pair that can't connect), the store settles it: a
- * host's heartbeat reports the room's lowest order, or that it was written
- * off, and the higher host hands its guests to the lower. Fresh hosts check
- * every few seconds (RIVAL_CHECK_MS), so that takes seconds, not a heartbeat.
+ * peers do end up hosting (a pair that can't connect), the store settles it:
+ * whoever took over wrote the other off, so that one's heartbeat finds itself
+ * gone, rejoins later in the order and hands its guests to the lower host.
+ * Fresh hosts check every few seconds (RIVAL_CHECK_MS), so that takes seconds,
+ * not a heartbeat. The store's lowest order alone proves nothing: a guest that
+ * died without a goodbye stays listed until its liveness runs out.
  *
  * Fencing. Two guests that lose a live host at once look exactly like it
  * dying: one's offer is the other's proof, and they elect a new host. So a
@@ -142,8 +144,8 @@ const SLEEP_AFTER_MS = 10 * 60_000;
 const BACKOFF_MAX_MS = 30_000;
 /**
  * A host fresh from a migration, or whose API just came back, asks the store
- * this often for a while whether a lower order is hosting too or it was written
- * off, instead of waiting for the next BEAT_MS: two hosts must not run for long.
+ * this often for a while whether it was written off, instead of waiting for the
+ * next BEAT_MS: two hosts must not run for long.
  */
 const RIVAL_CHECK_MS = 2000;
 const RIVAL_WINDOW_MS = 12_000;
@@ -378,7 +380,7 @@ export class WebRtcTransport implements Transport {
   /**
    * Take a new, later join order without dropping any link: an observer ahead of a player (the session decides).
    * A guest tells the host, which pushes the roster, so every peer's election skips it from then on. A host
-   * that is no longer first hands the room over, as when the store shows it a lower rival.
+   * that is no longer first hands the room to the first guest linked to it (see handOn).
    */
   reorder() {
     if (this.order < 0 || this.closed || this.reordering) return;
@@ -397,7 +399,7 @@ export class WebRtcTransport implements Transport {
         this.emitMembers();
         if (this.role === 'host') {
           this.pushRoster();
-          this.rivalFrom(r.members);
+          this.handOn();
         }
       })
       .catch(() => {
@@ -875,7 +877,17 @@ export class WebRtcTransport implements Transport {
     this.dial(to, CANDIDATE_MS);
   }
 
-  /** The store says a lower-order peer is hosting too. It keeps the room; we bring our guests over. */
+  /**
+   * We stepped behind the players, so the room goes to the first of them in line, by our roster: only a guest linked
+   * to us now is sure to be alive. The store's lowest order may be a guest that died without a goodbye (a phone
+   * killed in the background stays listed until its liveness runs out), and handing the room to it strands everyone.
+   */
+  private handOn() {
+    const next = sortMembers([...this.roster.values()].filter((m) => m.id !== this.self && !m.linking && this.links.get(m.id)?.open))[0];
+    if (next && next.order < this.order) this.yieldTo(next.id, next.order);
+  }
+
+  /** `id` keeps the room (a lower order hosting too, or the next in line after we stepped back); we bring our guests over. */
   private yieldTo(id: string, order: number) {
     for (const l of this.links.values()) this.frame(l, `m${id}`);
     for (const lid of this.links.keys()) this.closeLink(lid);
@@ -1007,7 +1019,10 @@ export class WebRtcTransport implements Transport {
       if (host) this.listed = shown && r.alive ? listedKey(shown) : '';
       if (this.closed) return;
       if (!r.alive) await this.rejoin();
-      else if (this.role === 'host' && r.head && r.head !== this.self && !this.dead.has(r.head)) await this.checkRival();
+      // Not first in the store's line while it still holds us: the store can't tell a rival host from a guest that died
+      // without a goodbye (it stays listed until its liveness runs out), so only our own linked guests count (handOn).
+      // A real rival host wrote us off when it took over, and the branch above settles that.
+      else if (this.role === 'host' && r.head && r.head !== this.self) this.handOn();
       // Still the room's host after everyone we were waiting on came back or ran out of time: play on.
       if (this.fenced && this.role === 'host' && started >= this.fenceAsk && this.fenceWaitingOn(Date.now()) === 0) this.unfence();
     } catch {
@@ -1026,10 +1041,6 @@ export class WebRtcTransport implements Transport {
     const self = this.roster.get(this.self);
     if (self) self.order = r.order;
     if (this.role === 'host') this.rivalFrom(r.members);
-  }
-
-  private async checkRival() {
-    this.rivalFrom(await this.signal.members());
   }
 
   private rivalFrom(list: MemberInfo[]) {
