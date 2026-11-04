@@ -2354,7 +2354,6 @@ export const sprites: SpriteSet = {
             ],
             [1, '4/+j/+f/of/s/6L/7/+m//D/q//w/6//7v+z/+n/sv/k/7L/4f+1/97/uf/Z/7r/1v+2/9f/sv/a/67/3P+q/+D/pv8='],
             [1, '/P+q/wAAqP8FAKj/CQCp/wcArf8DAK7//v+t/w=='],
-            [1, '6v/S/+//0v/z/9X/8//Z/+//3f/q/9v/6P/X/w=='],
             [
               2,
               'uv9v/77/bf/D/2z/yP9t/8v/cP/P/3L/0v9u/9X/a//Z/2j/3f9m/+D/Yv/j/17/5f9j/+T/Z//i/2z/3/9v/9v/c//Y/3b/1f96/9X/f//U/4T/1P+I/9X/jf/Y/5H/1/+W/9P/mP/T/53/0f+h/8z/oP/I/6L/w/+k/7//pf+6/6b/tf+l/7D/pP+s/6P/p/+h/6X/nf+k/5n/pf+U/6b/j/+n/4r/qf+G/6z/gv+u/37/sP95/7P/df+2/3L/',
@@ -2368,6 +2367,7 @@ export const sprites: SpriteSet = {
               'DQCi/xEAoP8WAJ//GQCh/xwApP8dAKj/GwCs/xgAr/8WALP/FgC4/xcAvf8XAML/FgDG/xUAy/8VAND/FQDV/xQA2f8RAN3/DQDf/wgA4P8DAN7/AADb//7/1//6/9f/+P/b//T/3v/w/9//6//f/+b/3v/i/9v/4f/X/+H/0v/h/87/4//J/+f/yP/s/8n/8P/L//X/zf/5/87//v/P/wMAzf8HAMv/CgDH/wwAw/8LAL//CwC6/wYAuP8CALf///+z/wEAr/8EAKz/CQCq/wsAp/8=',
             ],
             [3, '8P+g//T/of/4/6T/+/+n//z/rP/5/6//9f+w//H/rf/v/6n/7/+l/w=='],
+            [3, '6v/S/+//0v/z/9X/8//Z/+//3f/q/9v/6P/X/w=='],
             [4, 'EQBX/xYAVv8YAFj/GABb/xoAXv8YAGP/FABk/xAAYP8PAFv/'],
             [4, '+v9Z////Wf8BAF3/BQBd/wUAYv8CAGb//v9o//r/Zf/3/2H/9/9c/w=='],
             [4, '6P9n/+z/Zf/x/2T/9f9l//n/af/1/2v/8f9r/+z/bf/o/3D/5f9z/+H/dv/d/3j/2f97/9X/fv/T/3v/1v93/9r/dP/d/3D/4f9t/+T/av8='],
@@ -2388,11 +2388,11 @@ export const sprites: SpriteSet = {
             [8, 'EABU/xQAU/8XAFb/EgBX/xAAW/8RAF//FABj/xQAZ/8QAGX/DgBh/wwAXP8NAFj/'],
             [8, '9/9Y//v/Vv8AAFX/BABX/wcAW/8IAGD/BwBl/wQAaf///2v/+v9q//f/Z//y/2b/7v9k//D/Yf/0/2H/9P9c/w=='],
             [8, 'FQBY/xoAWP8cAFz/GwBg/xkAZP8XAGX/GABh/xkAXP8VAFz/'],
-            [9, '+v94////eP8CAHz///98//r/ff/4/3z/'],
             [9, '1/+Q/9r/kf/c/5T/3P+X/9n/l//X/5T/'],
             [10, '+/+Z////mf8DAJv/BgCe/wMAoP///5//+/+d/w=='],
             [11, '9v/a//X/2v/x/9f/7//U/+//0v/w/9L/9P/U//b/2P8=', 1, 1],
             [12, '9//Z//X/2P/x/9X/7//S/+7/z//x/9D/9P/T//b/1v8=', 1, 2],
+            [13, '6f+D//n/iv/3/5D/5v+K/w==', 0, 1],
           ],
           lines: [
             [1, 'FABU/xAAVP8IAE7/+/9N//D/Uv/l/1z/'],
@@ -2422,6 +2422,8 @@ export const sprites: SpriteSet = {
             [4, '2v/4/9v/9//i//r/6f/7//j/+f8='],
             [4, '4P/8/+f//v/1//3/'],
           ],
+          eyes: [-3, -133, 7, 16, -137, 6],
+          head: [6, -143, 64, -10],
         },
         {
           sil: [
@@ -2532,7 +2534,6 @@ export const sprites: SpriteSet = {
             ],
             [1, 'IQCm/yQAqv8nAK7/KgCy/yoAtv8nALr/IwC5/yAAtf8cALL/FwCy/xMAs/8QAK//EACr/xIApv8VAKL/GQCh/x0Ao/8='],
             [1, 'AwCt//7/rv/5/63/9/+p//v/qP8AAKj/BQCq/w=='],
-            [1, 'GADX/xYA2/8RAN3/DQDZ/w0A1f8SANL/FgDS/w=='],
             [
               2,
               'SgBy/00Adf9QAHn/UwB+/1UAgv9XAIb/WQCK/1sAj/9cAJT/XACZ/1wAnf9ZAKH/VQCj/1AApP9LAKX/RwCm/0IApf89AKT/OQCi/zQAoP8wAKH/LQCd/y0AmP8pAJb/KQCR/ysAjf8sAIj/LACE/ywAf/8rAHr/KQB2/yUAc/8iAG//HwBs/x0AZ/8cAGP/HQBe/yAAYv8kAGb/KABo/ywAa/8vAG7/MQBy/zUAcP85AG3/PQBs/0IAbf9HAG//',
@@ -2546,6 +2547,7 @@ export const sprites: SpriteSet = {
               '9f+n//j/qv/8/6z/AACv/wIAs////7f/+v+4//b/uv/1/7//9P/D//b/x//6/8v//v/N/wIAz/8HAM7/DADN/xAAy/8VAMn/GQDI/x4Ayf8fAM7/IADS/yAA1/8eANv/GgDe/xYA3/8RAN//DADe/wkA2/8GANf/AgDX/wAA2//9/97/+f/g//T/3//v/93/7f/Z/+z/1f/s/9D/6//L/+r/xv/p/8L/6f+9/+r/uP/q/7P/6f+v/+X/rP/j/6j/5f+k/+j/of/r/5//7/+g//T/ov8=',
             ],
             [3, 'EgCl/xEAqf8PAK3/DACw/wcAr/8EAKz/BgCn/wkApP8MAKH/EQCg/w=='],
+            [3, 'GADX/xYA2/8RAN3/DQDZ/w0A1f8SANL/FgDS/w=='],
             [4, '8f9b//D/YP/t/2T/6f9j/+f/Xv/p/1v/6f9Y/+v/Vv/v/1f/'],
             [4, 'CQBc/wkAYf8HAGX/AwBo//7/Zv/7/2L/+/9d////Xf8CAFn/BgBZ/w=='],
             [4, 'HABq/yAAbf8jAHD/JwB0/yoAd/8tAHv/KwB+/ycAe/8jAHj/IAB2/xwAc/8YAHD/FABt/xAAa/8LAGv/CABp/wsAZf8QAGT/FABl/xgAZ/8='],
@@ -2566,11 +2568,11 @@ export const sprites: SpriteSet = {
             [8, '9P9Y//T/XP/z/2H/8P9l/+z/Z//t/2P/8P9f//D/W//u/1f/6v9W/+z/U//x/1T/'],
             [8, 'DQBc/w0AYf8QAGH/EwBk/w4AZv8KAGf/BgBq/wEAa//9/2n/+v9l//n/YP/5/1v//P9X/wEAVf8FAFb/CgBY/w=='],
             [8, '7P9c/+f/XP/o/2H/6v9l/+f/ZP/l/2D/5f9c/+f/WP/r/1j/'],
-            [9, 'CQB8/wYAff8BAHz//v98/wEAeP8GAHj/'],
             [9, 'KgCU/ygAl/8lAJf/JACU/ycAkf8qAJD/'],
             [10, 'BQCd/wIAn//9/6D/+v+e//3/m/8CAJn/BgCZ/w=='],
             [11, 'CgDY/wwA1P8QANL/EQDS/xEA1P8PANf/CwDa/woA2v8=', 1, 1],
             [12, 'CgDW/wwA0/8PAND/EgDP/xEA0v8PANX/CwDY/wkA2f8=', 1, 2],
+            [13, 'GgCK/wkAkP8HAIr/FwCD/w==', 0, 1],
           ],
           lines: [
             [1, '7P9U//D/VP/4/07/BQBN/xAAUv8bAFz/'],
@@ -2600,6 +2602,8 @@ export const sprites: SpriteSet = {
             [4, 'JgD4/yUA9/8eAPr/FwD7/wgA+f8='],
             [4, 'IAD8/xkA/v8LAP3/'],
           ],
+          eyes: [3, -133, 7, -16, -137, 6],
+          head: [-6, -143, 64, 10],
         },
         {
           sil: [
