@@ -78,7 +78,9 @@ export const kind: FlatKind = {
       ],
     ],
   },
-  accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [1.9, 0.8] }],
+  // A cross of plaster on his crown, a bonk on the head. On the cheek his small face put it on the jawline, and
+  // its edge drew a dark line across the jaw that read as a scar or stubble.
+  accessories: [{ slot: 'plaster', role: 'plaster', at: 'crown', size: [2.2, 0.75] }],
   face: { r: 0.65, iris: '#3c78c8' },
   gait: { bounce: [0.2, 0.8], lean: [0, 0.04] },
   clips: {

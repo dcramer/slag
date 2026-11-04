@@ -80,6 +80,8 @@ export const kind: FlatKind = {
     idle2: { frames: ['idle2', 'idle'], loop: true, holds: [1.4, 1.8] },
     // Three drawings carry every clip: the hooks hanging (the design), curled in (idle2) and spread wide (cheer).
     // Asked to move its hooks, the image model added more (six to eight, an octopus), so a pose is one of those.
+    // Two drawings are touched up by hand: the cheer's drip no longer runs over the lower-right cherry (it bit a
+    // notch out of it), and idle2's top-left flute outline is painted out (a dark arc on a dome otherwise plain).
     // The chomp: spread, then curled in; the run is the same faster, leaning on the gait.
     walk: { frames: ['cheer', 'idle2'], loop: true, stride: 24 },
     run: { frames: ['cheer', 'idle2'], loop: true, stride: 34 },
