@@ -210,6 +210,7 @@ interface Dial {
 const FATAL: Record<string, string> = {
   unconfigured: 'Online Not Set Up',
   full: 'Room Is Full',
+  replaced: 'Open In Another Tab',
 };
 
 export interface WebRtcOptions {
@@ -1099,8 +1100,10 @@ export class WebRtcTransport implements Transport {
       const host = this.role === 'host';
       // A host lists the room (unless it's Private), or takes it off the list once it went Private.
       const shown = host ? this.listing() : null;
-      const r = await this.signal.beat(host, shown ?? (host && this.listed ? false : undefined));
+      const r = await this.signal.beat(this.since, host, shown ?? (host && this.listed ? false : undefined));
       this.noteSignalOk();
+      // Another tab of this browser has our peer id now: two sessions of one peer would share a mailbox and a seat.
+      if (r.replaced) return this.giveUp(FATAL.replaced);
       if (host) this.listed = shown && r.alive ? listedKey(shown) : '';
       if (this.closed) return;
       if (!r.alive) await this.rejoin();

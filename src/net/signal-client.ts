@@ -44,7 +44,7 @@ export interface SignalApi {
   /** `since` stamps the session (see `sessionStamp`), so the store can tell two sessions of this peer apart. */
   join(since: number): Promise<JoinReply>;
   /** A host's beat may put the room on the lobby list (`list`), or take it off (`false`). */
-  beat(host: boolean, list?: RoomListing | false): Promise<BeatReply>;
+  beat(since: number, host: boolean, list?: RoomListing | false): Promise<BeatReply>;
   members(): Promise<MemberInfo[]>;
   /** Report `peer` (the session with this `order`) dead, and get the room back. */
   gone(peer: string, order: number): Promise<MemberInfo[]>;
@@ -109,7 +109,8 @@ export class HttpSignal implements SignalApi {
   }
 
   join = (since: number) => this.call<JoinReply>('join', { since });
-  beat = (host: boolean, list?: RoomListing | false) => this.call<BeatReply>('beat', list === undefined ? { host } : { host, list });
+  beat = (since: number, host: boolean, list?: RoomListing | false) =>
+    this.call<BeatReply>('beat', list === undefined ? { since, host } : { since, host, list });
   members = () => this.call<MembersReply>('members').then((r) => r.members);
   gone = (peer: string, order: number) => this.call<MembersReply>('gone', { gone: peer, order }).then((r) => r.members);
   send = (to: string, signal: Signal) => this.call<SignalReply>('signal', { to, signal }).then(deliveredOrThrow);

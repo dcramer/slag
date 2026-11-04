@@ -140,19 +140,28 @@ async function remove(store: Store, room: string, peer: string, by: { stamp: num
  * A heartbeat. A host also renews the room and learns its lowest order, and with `list` puts the room on the lobby
  * list (in one script, only while its session is alive); `list: false` takes it off, for a room just made Private.
  * A listing that fails `cleanListing` is ignored rather than failing the beat: liveness matters more than the list.
+ * `stamp` names the beating session: a newer one holding the peer's liveness (the id taken by another tab) makes it
+ * `replaced`. The renewal reads the stamp back (GETEX), so knowing costs no command.
  */
-async function beat(ctx: Ctx, room: string, peer: string, host: boolean, list: unknown): Promise<BeatReply> {
+async function beat(ctx: Ctx, room: string, peer: string, host: boolean, list: unknown, stamp?: number): Promise<BeatReply> {
+  const reply = (renewed: boolean, held: unknown, head?: string): BeatReply => {
+    const r: BeatReply = { alive: renewed };
+    if (head !== undefined) r.head = head;
+    if (renewed && stamp !== undefined && Number(held) > stamp) r.replaced = true;
+    return r;
+  };
   if (!host) {
-    const [renewed] = await ctx.store.run([['EXPIRE', alive(room, peer), PEER_TTL_S]]);
-    return { alive: renewed === 1 };
+    const [held] = await ctx.store.run([['GETEX', alive(room, peer), 'EX', PEER_TTL_S]]);
+    return reply(held !== null, held);
   }
   const shown = list === false ? null : cleanListing(list);
   const base = [
-    ['EXPIRE', alive(room, peer), PEER_TTL_S],
+    ['GETEX', alive(room, peer), 'EX', PEER_TTL_S],
     ['EXPIRE', members(room), ROOM_TTL_S],
     ['ZRANGE', members(room), 0, 0],
   ];
   let renewed: number;
+  let held: unknown;
   let head: string | null | undefined;
   if (shown) {
     const now = (ctx.now ?? Date.now)();
@@ -161,7 +170,7 @@ async function beat(ctx: Ctx, room: string, peer: string, host: boolean, list: u
       [alive(room, peer), members(room), LOBBIES, listing(room)],
       [PEER_TTL_S, ROOM_TTL_S, now, JSON.stringify(shown), LIST_TTL_S, INDEX_TTL_S, room],
     );
-    [[renewed, head]] = (await ctx.store.run([script])) as [[number, string | null]];
+    [[renewed, head, held]] = (await ctx.store.run([script])) as [[number, string | null, string | null]];
   } else {
     const unlist =
       list === false
@@ -170,11 +179,12 @@ async function beat(ctx: Ctx, room: string, peer: string, host: boolean, list: u
             ['DEL', listing(room)],
           ]
         : [];
-    const [r, , first] = (await ctx.store.run([...base, ...unlist])) as [number, number, string[] | null];
-    renewed = r;
+    const [r, , first] = (await ctx.store.run([...base, ...unlist])) as [string | null, number, string[] | null];
+    renewed = r === null ? 0 : 1;
+    held = r;
     head = first?.[0];
   }
-  return { alive: renewed === 1, head: head === LAST_ORDER || head === null ? undefined : head };
+  return reply(renewed === 1, held, head === LAST_ORDER || head === null ? undefined : head);
 }
 
 /**
@@ -243,7 +253,7 @@ export async function handleOp(op: SignalOp, body: unknown, ctx: Ctx): Promise<u
     case 'join':
       return join(ctx, room, peer, since(b.since));
     case 'beat':
-      return beat(ctx, room, peer, b.host === true, b.list);
+      return beat(ctx, room, peer, b.host === true, b.list, since(b.since));
     case 'leave': {
       const seen = order(b.order);
       const stamp = since(b.since);

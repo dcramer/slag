@@ -78,7 +78,7 @@ A build served from another origin (a packaged app pointing at the hosted API) n
 
 Keys, all with a TTL: `slag:<ROOM>:m` the member sorted set (300 s, renewed by the host), which also holds `#` scored with the last order handed out, `slag:<ROOM>:p:<peer>` liveness (50 s, renewed by `beat`), `slag:<ROOM>:b:<peer>` the mailbox (30 s), `slag:<ROOM>:l` the room's listing (50 s, renewed by the host's beat), and one key for every room, `slag:lobbies`, the lobby index (a day, renewed whenever a room is newly listed).
 
-The liveness value is the joining session's `since` stamp (ms, increasing per tab). One peer id can have two sessions in flight: a lobby that remounts, or a page reloaded while its join was on the way. A join older than the stamp held writes nothing, and a `leave` removes the entry only if no newer session wrote it, whatever order the store holds. A session closed before its join reply arrives sends a `leave` when the reply lands.
+The liveness value is the joining session's `since` stamp (ms, increasing per tab). One peer id can have two sessions in flight: a lobby that remounts, or a page reloaded while its join was on the way. A join older than the stamp held writes nothing, and a `leave` removes the entry only if no newer session wrote it, whatever order the store holds. A session closed before its join reply arrives sends a `leave` when the reply lands. A `beat` carries the stamp too and renews liveness with `GETEX`, which reads the held stamp back for no extra command: a newer one means another tab took the peer id, the beat says `replaced`, and the older session stops (`Open In Another Tab`).
 
 Joining and removing are Lua scripts (`app/api/net/_server/scripts.ts`), so each check and its write are one atomic step: plain commands would let the other session's write land in between. Scripts also serialize joins, so the next order is simply one above everything in the set, `#` included; no counter is needed. Upstash bills a script as one command plus one per call it makes, so the scripts cost no more than the pipelines they replaced. MemoryStore runs a TypeScript mirror of each script, making the same calls, and `pnpm test:store` checks the mirrors against the real Lua.
 
@@ -133,7 +133,7 @@ STUN is public (Google, Cloudflare). Pairs that can't connect directly need TURN
 
 ### Identity and devices
 
-- Each tab has a **peer id** (8 chars). It lives in `sessionStorage` (a refresh keeps it) plus a lease table in `localStorage` (a new tab takes the most recently used free id, so closing and reopening the link gets your seat back; two live tabs never share one).
+- Each tab has a **peer id** (8 chars). It lives in `sessionStorage` (a refresh keeps it) plus a lease table in `localStorage` (a new tab takes the most recently used free id, so closing and reopening the link gets your seat back; two live tabs never share one). A hidden tab's timers can stall past its lease, so a second tab can still take its id; the store's stamps settle that (see Signaling API).
 - Match devices are namespaced `<peer>:<local device>` (`k3j9x2ab:kb1`), so one machine can seat several local players. Offline sessions keep raw ids.
 
 ### Host election and migration

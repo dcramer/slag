@@ -167,6 +167,20 @@ describe('presence', () => {
     expect((await w.op('members', { peer: 'aaaa' })).members.map((m: any) => m.id)).toEqual(['aaaa']);
   });
 
+  it('tells a session whose peer id a newer session took (another tab) that it was replaced, for host and guest beats', async () => {
+    const w = world();
+    await w.op('join', { peer: 'aaaa', since: 100 });
+    await w.op('join', { peer: 'bbbb', since: 100 });
+    for (const peer of ['aaaa', 'bbbb']) await w.op('join', { peer, since: 200 });
+    for (const host of [true, false]) {
+      const peer = host ? 'aaaa' : 'bbbb';
+      expect(await w.op('beat', { peer, host, since: 100 })).toEqual({ alive: true, replaced: true, ...(host ? { head: 'aaaa' } : {}) });
+      expect((await w.op('beat', { peer, host, since: 200 })).replaced).toBeUndefined();
+      // A client that sends no stamp is never told.
+      expect((await w.op('beat', { peer, host })).replaced).toBeUndefined();
+    }
+  });
+
   it('caps a room at MAX_PEERS, with room for a full lobby plus spectators', async () => {
     expect(MAX_PEERS).toBeGreaterThanOrEqual(MAX_PLAYERS);
     const w = world();

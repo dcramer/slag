@@ -743,6 +743,38 @@ describe('a guest the store forgot', () => {
   });
 });
 
+describe('one peer id in two tabs', () => {
+  // A hidden tab's timers can stall past its lease on the peer id (identity.ts), so a second tab opened on the same
+  // link takes the id. The store keeps the newer session; the older tab must stop, not share a mailbox and seat with it.
+  it.each([
+    ['a guest', 'bbbb'],
+    ['the host', 'aaaa'],
+  ] as const)('the older tab, %s, stops and the newer one plays on in its place', async (_label, id) => {
+    const w = new World();
+    await w.room('aaaa', 'bbbb', 'cccc');
+    const old = w.peers.get(id)!;
+    w.peers.delete(id);
+    w.peers.set(`${id}-old`, old);
+    w.maxHosts = 0;
+    const fresh = w.join(id);
+    await w.runUntil(
+      () =>
+        old.session.status === 'unavailable' &&
+        w.peers.size === 4 &&
+        (() => {
+          old.gone = true;
+          return w.settled() && fresh.session.members.length === 3;
+        })(),
+      60_000,
+    );
+    expect(old.session.status).toBe('unavailable');
+    expect(old.session.detail).toBe('Open In Another Tab');
+    old.gone = true;
+    expect(w.settled()).toBe(true);
+    expect(fresh.session.members.map((m) => m.id).sort()).toEqual(['aaaa', 'bbbb', 'cccc']);
+  });
+});
+
 describe('election under varied timing', () => {
   // Seeded runs over the knobs that decide who hears what when: API latency per peer, whether a dead peer's handshake
   // fails or hangs, when the second host dies (before, while or after answering). Each seed is one deterministic room.

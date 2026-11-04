@@ -137,7 +137,7 @@ export class DirectSignal implements SignalApi {
     return handleOp(op, { room: this.room, peer: this.peer, ...extra }, { store: this.store, ice: DEFAULT_ICE });
   }
   join = (since: number) => this.call('join', { since });
-  beat = (host: boolean, list?: RoomListing | false) => this.call('beat', list === undefined ? { host } : { host, list });
+  beat = (since: number, host: boolean, list?: RoomListing | false) => this.call('beat', list === undefined ? { since, host } : { since, host, list });
   members = (): Promise<MemberInfo[]> => this.call('members').then((r) => r.members);
   gone = (peer: string, order: number): Promise<MemberInfo[]> => this.call('gone', { gone: peer, order }).then((r) => r.members);
   send = async (to: string, signal: Signal): Promise<boolean> => {
