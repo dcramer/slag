@@ -210,7 +210,8 @@ export const STAMPING_LINE: Concept = defineConcept({
     const beamR = l.anchors.end[0];
     const G = l.anchors.floor[1];
     const inner = beamR - beamL - 1;
-    const pw = inner >= 20 && rng.chance(0.5) ? 4 : 3;
+    // Narrow presses now and then, so even a classic level's line (no room to grow) varies its press count.
+    const pw = inner >= 20 && rng.chance(0.5) ? 4 : rng.chance(0.4) ? 2 : 3;
     // At least three presses: a classic level's line packs them a column apart.
     const pg = Math.floor((inner + 2) / (pw + 2)) >= 3 ? rng.int(1, 2) : 1;
     const n = Math.floor((inner + pg) / (pw + pg));

@@ -72,8 +72,8 @@ function* channelLights(rng: Rng, s: Site): Generator<Piece> {
   for (let y = 3; y < s.h - 2; y++)
     for (let x = 2; x < s.w - 2; x++)
       for (const d of [1, -1] as const) {
-        // An edge: ground under this cell, open water past it.
-        if (!s.free(x, y) || !s.solid(x, y + 1) || !s.free(x, y - 1) || !s.overPit(x + d, y)) continue;
+        // An edge: ground under this cell, open water past it, and nothing overhead there for the beam to cut through.
+        if (!s.free(x, y) || !s.solid(x, y + 1) || !s.free(x, y - 1) || s.groundBelow(x + d, 0) >= 0) continue;
         if (s.zoneDist(x, y) <= SAFE_TILES + 2) continue;
         let near = 0;
         for (let k = 2; k < 12; k++) for (let dy = -2; dy <= 3; dy++) if (s.reachable(x + d * k, y + dy)) near++;

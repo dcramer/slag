@@ -3,9 +3,10 @@ import { Rng } from '../src/core/rng';
 import { generateLevel, isAcceptable, lastGenInfo } from '../src/gen/level';
 import { jumpProfile, probeGravity, setProbeGravity } from '../src/gen/level/probe';
 import { analyzeRoutes, MAX_SHARED } from '../src/gen/level/routes';
-import { easyGap, hopGap, reachMin, rollChallenges, TWO_PART_TRIES, TWO_PARTS } from '../src/gen/level/sculptors/common';
+import { type Crossing, hopGap, jumpCrossing, jumpGap, reachMin, rollChallenges, TWO_PART_TRIES, TWO_PARTS } from '../src/gen/level/sculptors/common';
 import { LEVEL_H, LEVEL_W } from '../src/sim/constants';
 import { type Level, T_ONEWAY, T_SOLID } from '../src/sim/level';
+import { analyzeReach } from '../src/sim/reach';
 import { THEME_IDS } from '../src/themes';
 import { expectOpenLevel } from './lib/level-checks';
 
@@ -126,17 +127,42 @@ describe('sculptor tuning', () => {
     }
   });
 
-  it('easy gaps mix walking hops with running jumps; hops never need a run', () => {
+  it('jumpable gaps ask for your range: mostly running jumps, many the longest, hops at the end of a walk', () => {
     setProbeGravity(1);
     const rng = new Rng(7);
     const j = jumpProfile(1);
-    const gaps = Array.from({ length: 400 }, () => easyGap(rng));
-    expect(gaps.every((g) => g >= 2 && g < j.gap)).toBe(true);
+    const gaps = Array.from({ length: 400 }, () => jumpGap(rng));
+    expect(gaps.every((g) => g >= j.walkGap - 1 && g <= j.gap)).toBe(true);
     const walking = gaps.filter((g) => g <= j.walkGap).length / gaps.length;
-    expect(walking).toBeGreaterThan(0.45);
-    expect(walking).toBeLessThan(0.75);
+    expect(walking).toBeGreaterThan(0.2);
+    expect(walking).toBeLessThan(0.4);
+    expect(gaps.filter((g) => g === j.gap).length / gaps.length).toBeGreaterThan(0.25);
+    for (let i = 0; i < 100; i++) expect(hopGap(rng)).toBeGreaterThanOrEqual(j.walkGap - 1);
     for (let i = 0; i < 100; i++) expect(hopGap(rng)).toBeLessThanOrEqual(j.walkGap);
   });
+
+  for (const gravity of [0.7, 1, 1.35]) {
+    it(`the controller clears every jumpable crossing, stones and the longest jumps included, at gravity ${gravity}`, { timeout: 30_000 }, () => {
+      setProbeGravity(gravity);
+      const rng = new Rng(11);
+      const seen = new Map<string, Crossing>();
+      for (let i = 0; i < 60; i++) {
+        const c = jumpCrossing(rng);
+        seen.set(`${c.w}:${c.stones.join(',')}`, c);
+      }
+      const all = [...seen.values()];
+      expect(all.some((c) => c.stones.length > 0)).toBe(true);
+      expect(all.some((c) => !c.stones.length && c.w === jumpProfile(gravity).gap)).toBe(true);
+      for (const c of all) {
+        const l = floorLevel((tiles, row) => {
+          const x0 = Math.floor((LEVEL_W - c.w) / 2);
+          for (let y = row + 1; y < LEVEL_H; y++) for (let x = x0; x < x0 + c.w; x++) tiles[y * LEVEL_W + x] = c.stones.includes(x - x0) ? T_SOLID : 0;
+        });
+        expect(analyzeReach({ ...l, gravity }).goalReached, `width ${c.w} stones ${c.stones.join(',')}`).toBe(true);
+      }
+      setProbeGravity(1);
+    });
+  }
 
   it('stretches the narrowest easy gap with the walking reach, leaving normal and high gravity as they were', () => {
     const was = probeGravity();
@@ -151,7 +177,7 @@ describe('sculptor tuning', () => {
     expect(lo).toBeGreaterThan(2);
     expect(lo).toBeLessThanOrEqual(jumpProfile(0.7).walkGap);
     for (let i = 0; i < 100; i++) {
-      expect(easyGap(rng)).toBeGreaterThanOrEqual(lo);
+      expect(jumpGap(rng)).toBeGreaterThanOrEqual(lo);
       expect(hopGap(rng, 2)).toBeGreaterThanOrEqual(lo);
     }
     setProbeGravity(was);

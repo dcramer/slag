@@ -44,23 +44,28 @@ export const LAST_RESORT = 22;
 export const TWO_PART_TRIES = 5;
 
 /**
- * A gap (empty columns) jumpable between ledges at equal height. Mostly a
- * walking hop, sometimes one that takes a run-up: a run is a choice you make
- * for speed, so a level shouldn't keep demanding it. Only use this where the
- * near ledge is long enough to run on; short ledges want `hopGap`.
+ * A gap (empty columns) jumpable between ledges at equal height, sized to ask
+ * for your range: precision is the point, so a gap is either a walking jump
+ * near its limit or a running one, and a good share are the longest running
+ * jump there is (a 4-cell run-up is enough for it, and reach.ts proves it).
+ * Only use this where the near ledge is long enough to run on; short ledges
+ * want `hopGap`. `max` caps it where something overhead shortens the arc.
  */
-export function easyGap(rng: Rng, min = 2): number {
+export function jumpGap(rng: Rng, min = 2, max = Infinity): number {
   const j = jumpProfile();
   const lo = reachMin(min);
   const walk = Math.max(lo, j.walkGap);
-  const run = Math.max(walk, j.gap - 1);
-  return rng.chance(0.4) ? rng.int(Math.min(run, walk + 1), run) : rng.int(lo, walk);
+  const run = Math.max(lo, Math.min(max, j.gap));
+  const roll = rng.next();
+  if (roll < 0.3 || run <= walk) return Math.min(run, rng.int(Math.max(lo, walk - 1), walk));
+  return roll < 0.65 ? run : rng.int(walk + 1, run);
 }
 
-/** A gap you can clear with a walking jump, from a stone or perch too short to run on. */
+/** A gap at the end of a walking jump, from a stone or perch too short to run on. */
 export function hopGap(rng: Rng, min = 1): number {
   const lo = reachMin(min);
-  return rng.int(lo, Math.max(lo, jumpProfile().walkGap));
+  const walk = Math.max(lo, jumpProfile().walkGap);
+  return rng.int(Math.max(lo, walk - 1), walk);
 }
 
 /**
@@ -119,9 +124,48 @@ export function rollChallenges(attempt: number, k: Pick<Knobs, 'challenge'> & Pa
   return k.challenge < (k.twoParts ?? TWO_PARTS) && attempt < TWO_PART_TRIES ? 2 : 1;
 }
 
-/** Carve a pit (columns x0..x1 empty to the bottom) and hint a bridge at floor row `row` if it's wide. */
-export function pit(g: Grid, x0: number, x1: number, row: number, hard: boolean): void {
+/** A jumpable crossing: its width, and the columns (from its left edge) of one-tile stones standing in it. */
+export interface Crossing {
+  w: number;
+  stones: number[];
+}
+
+/** Share of jumpable crossings that are a run of stones instead of one jump. */
+const STONE_SHARE = 0.35;
+
+/**
+ * A crossing you jump: mostly one `jumpGap`, and now and then one to three
+ * one-tile stones over the drop, level with the banks, each a walking jump at
+ * the end of its reach from the last. A stone is too short to run on, and a
+ * running start off the bank carries you past the first one.
+ */
+export function jumpCrossing(rng: Rng, min = 2): Crossing {
+  if (!rng.chance(STONE_SHARE)) return { w: jumpGap(rng, min), stones: [] };
+  const stones: number[] = [];
+  let x = hopGap(rng, min);
+  for (let n = rng.int(1, 3); n > 0; n--) {
+    stones.push(x);
+    x += 1 + hopGap(rng, min);
+  }
+  return { w: x, stones };
+}
+
+/**
+ * How many jumpable crossings a ground route gets besides the ones that need
+ * parts: two or three across a classic level, more as it widens. Not scaled
+ * by density: a sparse level is still a run of jumps over the drop.
+ */
+export function jumpCount(rng: Rng, k: Pick<Knobs, 'wide'>): number {
+  return Math.round(rng.int(2, 3) * k.wide);
+}
+
+/**
+ * Carve a pit (columns x0..x1 empty to the bottom), stand `stones` in it (columns from x0, tops on `row`),
+ * and hint a bridge at floor row `row` if it's wide.
+ */
+export function pit(g: Grid, x0: number, x1: number, row: number, hard: boolean, stones: readonly number[] = []): void {
   g.clear(x0, 0, x1, g.h - 1);
+  for (const s of stones) g.column(x0 + s, row);
   if (!hard) return;
   hintGap(g, x0, x1, row);
   undercut(g, x1 + 1);

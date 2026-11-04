@@ -2,7 +2,7 @@ import type { Rng } from '../../../core/rng';
 import { finish, Grid, hintGap, noise2D, POCKET, smoothCA, T_EMPTY, T_ONEWAY, T_SOLID } from '../kit';
 import { jumpProfile } from '../probe';
 import type { SculptCtx, Shape } from '../types';
-import { easyGap, easyRise, hardGap, type Knobs, knobs, rollChallenges, undercut } from './common';
+import { jumpGap, easyRise, hardGap, type Knobs, knobs, rollChallenges, undercut } from './common';
 
 /** Columns a storey's second connector occupies. */
 const ALT_W = 4;
@@ -223,7 +223,7 @@ function sculptTall(ctx: SculptCtx, kit: TallKit): Shape {
     if (easy <= 0) break;
     if (used.has(ri)) continue;
     const s = storeys[ri];
-    const w = easyGap(rng, 2);
+    const w = jumpGap(rng, 2);
     // Between where the route arrives and leaves, clear of this storey's connectors and the pockets.
     const p = Math.min(s.arrive, s.leave);
     const q = Math.max(s.arrive, s.leave);

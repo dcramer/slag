@@ -1,7 +1,7 @@
 import type { Rng } from '../../../core/rng';
 import { finish, Grid } from '../kit';
 import type { Sculptor } from '../types';
-import { claimSite, easyGap, easyRise, hardGap, knobs, pit, keepClear, raiseLandmark, rollChallenges, Slots, stepRows } from './common';
+import { claimSite, easyRise, hardGap, jumpCount, jumpCrossing, knobs, pit, keepClear, raiseLandmark, rollChallenges, Slots, stepRows } from './common';
 import { factoryTall } from './tall';
 
 type FactoryStyle = 'foundry' | 'warehouse' | 'assembly';
@@ -47,16 +47,16 @@ export const factory: Sculptor = (ctx) => {
     slots.mark(claim.at.x - 4, claim.at.x - 1);
     slots.mark(claim.at.x + claim.at.w, claim.at.x + claim.at.w + 8);
   }
-  const vats: { a: number; b: number; hard: boolean }[] = [];
-  const nEasy = rng.int(style === 'foundry' ? 1 : 0, 2) + Math.floor((k.wide - 1) * rng.range(1, 2.5));
+  const vats: { a: number; b: number; hard: boolean; stones: number[] }[] = [];
+  const nEasy = jumpCount(rng, k) + (style === 'foundry' ? 1 : 0);
   for (let i = owned; i < challenges + nEasy; i++) {
     const hard = i < challenges;
-    const w = hard ? hardGap(rng) : easyGap(rng, 2);
+    const { w, stones } = hard ? { w: hardGap(rng), stones: [] } : jumpCrossing(rng, 2);
     const a = slots.take(rng, w, 3, 9, W - 10);
     if (a === null) continue;
     if (hard) keepClear(slots, a, w);
     level(a - 2, a + w + 1, Math.max(floor[a - 2], floor[a + w + 1]));
-    vats.push({ a, b: a + w - 1, hard });
+    vats.push({ a, b: a + w - 1, hard, stones });
   }
   // Floor machinery sits on level ground.
   const placed: { m: Machine; x: number; w: number }[] = [];
@@ -74,9 +74,9 @@ export const factory: Sculptor = (ctx) => {
   for (let x = 0; x < W; x++) g.fill(x, floor[x], x, H - 1);
   if ((style !== 'assembly' || rng.chance(0.5)) && rng.chance(0.3 + 0.7 * k.density)) g.fill(0, 0, W - 1, ceil);
   for (const v of vats) {
-    pit(g, v.a, v.b, floor[v.a - 1], v.hard);
+    pit(g, v.a, v.b, floor[v.a - 1], v.hard, v.stones);
     g.clear(v.a, 0, v.b, ceil); // the shaft above a vat opens the roof
-    if (!v.hard && rng.chance(0.5)) {
+    if (!v.hard && !v.stones.length && rng.chance(0.5)) {
       g.set(v.a - 1, floor[v.a - 1] - 1, 1); // lips
       g.set(v.b + 1, floor[v.b + 1] - 1, 1);
     }

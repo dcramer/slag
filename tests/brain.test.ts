@@ -84,7 +84,8 @@ describe('bots', () => {
   it.each([
     ['glacier', 'tall', 11, 'steps in off a ledge’s lip to jump from its middle, instead of hopping in place under the overhang until it gives up'],
     ['harbor', undefined, 8, 'jumps through a part’s side wind traced in that wind, instead of landing short where the tide comes in'],
-    ['jungle', undefined, 13, 'walks onto a ledge where a run step couldn’t stop short of what’s coming'],
+    ['farm', undefined, 4, 'walks onto a ledge where a run step couldn’t stop short of what’s coming'],
+    ['jungle', undefined, 13, 'backs off a dropper and a snapper its landing set off, instead of jumping into the lane as the head slams'],
   ] as const)('%s %s %i: %s', (theme, size, seed, _what) => {
     const r = botRace(seed, { theme, size, level: 'hard', parts: 3 });
     expect(r, `died of ${r.cause} at race frame ${r.frames}`).toMatchObject({ finished: true });

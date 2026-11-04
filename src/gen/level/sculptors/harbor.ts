@@ -3,7 +3,7 @@ import { FAR_ROOM, NEAR_QUAY, berthMax } from '../../stage/harbor-kit';
 import { finish, Grid, hintGap } from '../kit';
 import { jumpProfile } from '../probe';
 import type { SculptCtx, Sculptor, Shape } from '../types';
-import { easyGap, easyRise, hardGap, hopGap, type Knobs, knobs, raiseLandmark, rollChallenges } from './common';
+import { jumpGap, easyRise, hardGap, hopGap, type Knobs, knobs, raiseLandmark, rollChallenges } from './common';
 
 type HarborStyle = 'docks' | 'galleon' | 'marina';
 type Kind = 'pier' | 'ship' | 'boat' | 'buoys';
@@ -56,7 +56,7 @@ export const harbor: Sculptor = (ctx) => {
   if (challenges && style === 'galleon' && rng.chance(0.75)) hardIdx.add(0);
   while (hardIdx.size < Math.min(challenges, nGaps)) hardIdx.add(rng.int(0, nGaps - 1));
   const hard = Array.from({ length: nGaps }, (_, i) => hardIdx.has(i));
-  const gaps = hard.map((h) => (h ? hardGap(rng) : easyGap(rng, 2)));
+  const gaps = hard.map((h) => (h ? hardGap(rng) : jumpGap(rng, 2)));
   const total = () => widths.reduce((a, b) => a + b, 0) + gaps.reduce((a, b) => a + b, 0) + 12;
   const minHard = jumpProfile().gap + 2;
   while (total() > W) {
@@ -153,14 +153,14 @@ function harborStage(ctx: SculptCtx, kn: Knobs): Shape {
   for (;;) {
     const kind = rng.pick(pool);
     const ew = widthOf(kind);
-    const gap = easyGap(rng, 2);
+    const gap = jumpGap(rng, 2);
     const last = extra ? hardW : 2;
     if (used + gap + ew + last + 6 > W - xs) break;
     elems.push({ kind, w: ew, gap });
     used += gap + ew;
   }
   const hardLast = extra && elems.length > 0;
-  const lastGap = hardLast ? hardW : Math.min(easyGap(rng, 2), W - xs - used - 6);
+  const lastGap = hardLast ? hardW : Math.min(jumpGap(rng, 2), W - xs - used - 6);
   const quayR = W - xs - used - lastGap;
   let at = xs;
   let prev = exitRow;

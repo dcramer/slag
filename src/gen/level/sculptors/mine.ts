@@ -5,7 +5,8 @@ import type { SculptCtx, Sculptor, Shape } from '../types';
 import {
   type Claim,
   claimSite,
-  easyGap,
+  jumpCount,
+  jumpGap,
   easyRise,
   flatten,
   hardGap,
@@ -103,11 +104,11 @@ export const mine: Sculptor = (ctx) => {
   // Chasms in the floors (never in a shaft): hard ones need a bridge.
   const taken: [number, number][] = cuts.slice(1, -1).map((c) => [c - 3, c + 3]);
   const j = jumpProfile();
-  for (let i = 0; i < challenges + rng.int(0, 1); i++) {
+  for (let i = 0, n = challenges + jumpCount(rng, k); i < n; i++) {
     const hard = i < challenges;
     // Hard chasms sit under a low rock ceiling that caps the jump arc, so they
     // need less width than an open-air chasm to be unjumpable.
-    const w = hard ? rng.int(j.gap + 1, j.gap + 4) : easyGap(rng, 2);
+    const w = hard ? rng.int(j.gap + 1, j.gap + 4) : jumpGap(rng, 2, j.gapAt(2));
     for (let tries = 0; tries < 60; tries++) {
       const a = rng.int(6, W - 7 - w);
       const b = a + w - 1;
@@ -192,7 +193,7 @@ function mineStage(ctx: SculptCtx): Shape {
   const pits: { a: number; b: number; bank: number; hard: boolean; lip: number }[] = [];
   for (let i = 0; i < hardLeft + k.count(rng.int(0, 1)); i++) {
     const hard = i < hardLeft;
-    const w = hard ? hardGap(rng) : easyGap(rng, 2);
+    const w = hard ? hardGap(rng) : jumpGap(rng, 2);
     const a = slots.take(rng, w, 3, 8, W - 9);
     if (a === null) continue;
     if (hard) keepClear(slots, a, w);

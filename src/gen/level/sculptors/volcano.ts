@@ -1,11 +1,14 @@
 import type { Rng } from '../../../core/rng';
 import { volcanoOwns } from '../../stage/volcano';
 import { finish, Grid, hintGap, noise1D } from '../kit';
+import { jumpProfile } from '../probe';
 import type { SculptCtx, Sculptor } from '../types';
 import {
   type Claim,
   claimSite,
-  easyGap,
+  jumpCount,
+  jumpCrossing,
+  jumpGap,
   easyRise,
   flatten,
   hardGap,
@@ -101,7 +104,7 @@ export const volcano: Sculptor = (ctx) => {
     if (x !== null) {
       const mid = x + (cw >> 1);
       const peak = Math.max(5, Math.min(...surf.slice(x, x + cw)) - rng.int(7, 10));
-      const cr = hardLeft > 0 ? hardGap(rng) : easyGap(rng, 2);
+      const cr = hardLeft > 0 ? hardGap(rng) : jumpGap(rng, 2);
       if (hardLeft > 0) hardLeft--;
       const ca = mid - (cr >> 1);
       const cb = ca + cr - 1;
@@ -117,25 +120,25 @@ export const volcano: Sculptor = (ctx) => {
     }
   }
   // Remaining lava pits.
-  const pits: { a: number; b: number; hard: boolean }[] = [];
-  for (let i = 0; i < hardLeft + k.count(rng.int(1, 2), 1); i++) {
+  const pits: { a: number; b: number; hard: boolean; stones: number[] }[] = [];
+  for (let i = 0, n = hardLeft + jumpCount(rng, k); i < n; i++) {
     const hard = i < hardLeft;
-    const w = hard ? hardGap(rng) : easyGap(rng, 2);
+    const { w, stones } = hard ? { w: hardGap(rng), stones: [] } : jumpCrossing(rng, 2);
     const a = slots.take(rng, w, 3, 8, W - 9);
     if (a === null) continue;
     if (hard) keepClear(slots, a, w);
     const bank = Math.max(surf[a - 1], surf[a + w]);
-    // Level banks either side of a hard pit, wide enough to walk up to and land on.
-    const lip = hard ? 4 : 1;
+    // Level banks either side of a pit you need a run-up for, wide enough to run on and land on.
+    const lip = hard || w > jumpProfile().walkGap ? 4 : 2;
     for (let x = a - lip; x < a + w + lip; x++) {
       surf[x] = x >= a && x < a + w ? H : bank;
       locked[x] = 1;
     }
-    pits.push({ a, b: a + w - 1, hard });
+    pits.push({ a, b: a + w - 1, hard, stones });
   }
   relax(surf, H, locked, 2);
   for (let x = 0; x < W; x++) if (surf[x] < H) g.fill(x, surf[x], x, H - 1);
-  for (const p of pits) pit(g, p.a, p.b, surf[p.a - 1], p.hard);
+  for (const p of pits) pit(g, p.a, p.b, surf[p.a - 1], p.hard, p.stones);
   if (crater) {
     pit(g, crater.a, crater.b, crater.rim, true);
     // Jagged rim teeth.

@@ -145,12 +145,13 @@ describe('self-destruct on touch', () => {
     const r = m.run!.runners[0];
     const t = make();
     const { pop, stickHome: st, stickR } = t.layout;
+    // Steer back into the wall behind the spawn, so no level's first gap decides whether it survives.
     t.down(1, st.x, st.y);
-    t.move(1, st.x + stickR * 0.5, st.y);
+    t.move(1, st.x - stickR * 0.5, st.y);
     t.down(2, pop.x, pop.y);
     for (let i = 0; i < POP_HOLD * 2; i++) m.step({ kb1: t.sample() });
     expect(r.alive).toBe(true);
-    t.up(1, st.x + stickR * 0.5, st.y);
+    t.up(1, st.x - stickR * 0.5, st.y);
     for (let i = 0; i < POP_HOLD * 2; i++) m.step({ kb1: t.sample() });
     expect(r.alive).toBe(true);
     // Lift and press again, hands off the stick: that one is meant.

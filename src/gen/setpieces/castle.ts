@@ -96,7 +96,9 @@ function* axes(rng: Rng, s: Site): Generator<Piece> {
           hub: [c.x + 0.5, c.y + 0.3],
           arm,
           angle0: DOWN,
-          period: rng.int(150, 210),
+          // Slow enough that the bottom of the arc stays clear past a timed hazard's window between passes, even
+          // with the widest swing and the biggest head: at 150 frames those leave under 60.
+          period: rng.int(180, 220),
           swing,
           dir: 1,
           radius,

@@ -382,6 +382,9 @@ Every game design decision, preference and direction the owner has given, groupe
   Changed: about 80% needed parts (`6fcda7b`).
 - **What stops a bare run is a gap or wall a part solves, never a sealed level, with at most two small bridges.**
   2026-11-02 · git `3628776` · `done` · DESIGN.md → Levels
+- **Levels ask for precision: jumps reach the edge of your range, footholds are small, and every level has a run of them, as a baseline for all levels rather than a per-level setting.** "[the build-then-race party platformer] is about precision platforming and this needs more of that" (a playtester's feedback) / "i think this is broad feedback not a tweak per level?"
+  2026-11-03 · `done` · DESIGN.md → Levels (Precision is the point); hazards hugging the line is `open` · TODO.md → 3
+  Changed: "Run is a choice": most gaps were walking hops, none was the longest running jump, and a level had under one jumpable death gap.
 - **Levels are mostly open, with route options, never one narrow way.**
   2026-11-02 · git `0464596`, `d125b8b` · `done` · DESIGN.md → Levels
 - **Levels vary in size, aspect, density and route shape.**
