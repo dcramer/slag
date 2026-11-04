@@ -1,6 +1,7 @@
 import { deriveSeed, Rng } from '../../core/rng';
 import { LEVEL_H, LEVEL_W } from '../../sim/constants';
 import type { LevelProfile, RouteShape, SizeClass } from '../../sim/level';
+import { DIFFICULTY, rollDifficulty } from './difficulty';
 import type { WeatherKind } from '../../sim/weather';
 import type { ThemeId } from '../../themes';
 
@@ -95,7 +96,7 @@ const TALL_SIZES = { w: [32, 40], h: [40, 60] } as const;
 const WIDE_SIZES = { w: [64, 96], h: [24, 30] } as const;
 
 /** Debug/tools: force some knobs (the rest still roll from the seed). A size the theme can't do falls back to its widest. */
-export type ProfileOverride = Partial<Pick<LevelProfile, 'size' | 'route' | 'density' | 'hazards' | 'danger' | 'gravity'>> & {
+export type ProfileOverride = Partial<Pick<LevelProfile, 'size' | 'route' | 'density' | 'hazards' | 'danger' | 'gravity' | 'difficulty' | 'draw'>> & {
   weather?: WeatherKind;
   /** A stage concept id of the theme's (gen/stage), or 'plain'; with no size or route forced, the level takes one the concept fits. */
   concept?: string;
@@ -128,8 +129,9 @@ export function gravityClass(g: number): GravityClass {
   return g < 0.85 ? 'low' : g > 1.15 ? 'high' : 'normal';
 }
 
-export function rollProfile(seed: number, themeId: ThemeId, o: ProfileOverride = {}): LevelProfile {
-  const rng = new Rng(deriveSeed(seed, `profile:${themeId}`));
+/** `salt` rolls another layout for the same seed (a later draw of the level, ./index.ts). */
+export function rollProfile(seed: number, themeId: ThemeId, o: ProfileOverride = {}, salt = ''): LevelProfile {
+  const rng = new Rng(deriveSeed(seed, `profile:${themeId}${salt}`));
   const rolled = rng.weighted(SIZE_WEIGHTS[themeId]);
   const size = o.size && SIZE_WEIGHTS[themeId].some(([s]) => s === o.size) ? o.size : o.size === 'tall' ? 'wide' : rolled;
   let w: number = LEVEL_W;
@@ -159,8 +161,11 @@ export function rollProfile(seed: number, themeId: ThemeId, o: ProfileOverride =
     [3, 3],
     [4, 1.5],
   ]);
-  const hazards = Math.min(4, hz + (size !== 'classic' && rng.chance(0.4) ? 1 : 0));
-  const danger = clamp01(rng.range(0, 1));
+  // Rolled from a stream of its own, so the knobs above roll as they always did; harder levels get more set pieces, and nastier ones.
+  const difficulty = o.difficulty ?? rollDifficulty(seed);
+  const tier = DIFFICULTY[difficulty];
+  const hazards = Math.max(0, Math.min(4, hz + (size !== 'classic' && rng.chance(0.4) ? 1 : 0) + tier.hazards));
+  const danger = clamp01(tier.danger[0] + rng.range(0, 1) * (tier.danger[1] - tier.danger[0]));
   return {
     size,
     w,
@@ -180,6 +185,7 @@ export function rollProfile(seed: number, themeId: ThemeId, o: ProfileOverride =
           ['high', 1.5],
         ])
       ],
+    difficulty,
   };
 }
 
@@ -189,5 +195,5 @@ const round2 = (v: number) => Math.round(v * 100) / 100;
 /** One-line summary for tools/debug. */
 export function describeProfile(p: LevelProfile): string {
   const dens = p.density < 0.33 ? 'sparse' : p.density > 0.66 ? 'dense' : 'normal';
-  return `${p.size} ${p.w}×${p.h} · ${p.route} · ${dens} (${p.density}) · hazards ${p.hazards} danger ${p.danger} · gravity ${gravityClass(p.gravity)} (${p.gravity})`;
+  return `${p.difficulty} · ${p.size} ${p.w}×${p.h} · ${p.route} · ${dens} (${p.density}) · hazards ${p.hazards} danger ${p.danger} · gravity ${gravityClass(p.gravity)} (${p.gravity})`;
 }

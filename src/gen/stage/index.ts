@@ -65,12 +65,14 @@ export function rollConcept(
   themeId: ThemeId,
   profile: Pick<LevelProfile, 'size' | 'route'> & Partial<LevelProfile>,
   force?: string,
+  /** Rolls another concept for the same seed (a later draw of the level, gen/level/index.ts). */
+  salt = '',
 ): Concept | null {
   const all = CONCEPTS[themeId];
   if (force !== undefined) return all.find((c) => c.id === force) ?? null;
   const pool = all.filter((c) => fits(c, profile));
   if (!pool.length) return null;
-  const rng = new Rng(deriveSeed(seed, `concept:${themeId}`));
+  const rng = new Rng(deriveSeed(seed, `concept:${themeId}${salt}`));
   if (rng.next() < PLAIN_SHARE) return null;
   return rng.weighted(pool.map((c) => [c, c.weight] as const));
 }

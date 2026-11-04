@@ -140,13 +140,13 @@ describe('stage concepts', () => {
 
   it('retries the attempt when a landmark piece fails, and falls back to plain after too many', () => {
     use(plinth((n) => n <= 2));
-    generateLevel(SEEDS[0], 'farm', { concept: 'test-plinth' });
+    generateLevel(SEEDS[0], 'farm', { concept: 'test-plinth', draw: 0 });
     expect(lastGenInfo.concept).toBe('test-plinth');
     expect(lastGenInfo.rejects.landmark).toBe(2);
 
     CONCEPTS.farm.length = 0;
     use(plinth(() => true));
-    const l = generateLevel(SEEDS[0], 'farm', { concept: 'test-plinth' });
+    const l = generateLevel(SEEDS[0], 'farm', { concept: 'test-plinth', draw: 0 });
     expect(lastGenInfo.concept).toBeUndefined();
     expect(lastGenInfo.conceptFallback).toBe(true);
     expect(lastGenInfo.rejects.landmark).toBe(MAX_LANDMARK_REJECTS);

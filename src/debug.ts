@@ -11,7 +11,7 @@ import type { Renderer } from './render/renderer';
 import { giveItem, ITEM_KINDS, type ItemKind } from './sim/items';
 import { canPlace, landedDef, linkPipes, type PropDef } from './sim/props';
 import { stageRiders, stillPart, topOf } from './debug-riders';
-import type { ProfileOverride } from './gen/level';
+import { DIFFICULTIES, type ProfileOverride } from './gen/level';
 import type { InputFrame } from './sim/types';
 import { WEATHER_KINDS } from './sim/weather';
 import type { ThemeId } from './themes';
@@ -32,6 +32,7 @@ import type { ThemeId } from './themes';
  *   ?route=zigzag       force the route shape (ltr|climb|descent|zigzag)
  *   ?density=0.9        force terrain density (0..1)
  *   ?gravity=0.7        force world gravity scale
+ *   ?difficulty=hard    force the level's difficulty (gentle|medium|hard)
  *   ?weather=rain       force the weather (clear|wind|mist|rain|snow), skipping worldgen's solvability gate
  *   ?concept=id         force a stage concept of the theme's (gen/stage), or `plain`
  *   ?debug=1            open the dev overlay (see installDevtoolsHooks)
@@ -214,6 +215,8 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
   if (route === 'ltr' || route === 'climb' || route === 'descent' || route === 'zigzag') force.route = route;
   if (q.get('density')) force.density = Number(q.get('density'));
   if (q.get('gravity')) force.gravity = Number(q.get('gravity'));
+  const difficulty = DIFFICULTIES.find((d) => d === q.get('difficulty'));
+  if (difficulty) force.difficulty = difficulty;
   const weather = WEATHER_KINDS.find((k) => k === q.get('weather'));
   if (weather) force.weather = weather;
   const concept = q.get('concept');

@@ -5,6 +5,7 @@ import { BRIDGE_W } from '../types';
 import type { RouteShape, TileRect } from '../../../sim/level';
 import { SAFE_TILES } from '../../setpieces/place';
 import type { Concept, Landmark } from '../../stage/types';
+import { difficultyKnobs } from '../difficulty';
 import { jumpProfile, probeGravity } from '../probe';
 import type { SculptCtx } from '../types';
 import type { ThemeId } from '../../../themes';
@@ -45,9 +46,10 @@ export const TWO_PART_TRIES = 5;
 
 /**
  * A gap (empty columns) jumpable between ledges at equal height, sized to ask
- * for your range: precision is the point, so a gap is either a walking jump
- * near its limit or a running one, and a good share are the longest running
- * jump there is (a 4-cell run-up is enough for it, and reach.ts proves it).
+ * for your range: a walking jump near its limit or a running one, and on all
+ * but gentle levels a share are the longest running jump there is (a 4-cell
+ * run-up is enough for it, and reach.ts proves it). The level's difficulty
+ * sets the shares (difficulty.ts).
  * Only use this where the near ledge is long enough to run on; short ledges
  * want `hopGap`. `max` caps it where something overhead shortens the arc.
  */
@@ -56,9 +58,10 @@ export function jumpGap(rng: Rng, min = 2, max = Infinity): number {
   const lo = reachMin(min);
   const walk = Math.max(lo, j.walkGap);
   const run = Math.max(lo, Math.min(max, j.gap));
+  const t = difficultyKnobs();
   const roll = rng.next();
-  if (roll < 0.3 || run <= walk) return Math.min(run, rng.int(Math.max(lo, walk - 1), walk));
-  return roll < 0.65 ? run : rng.int(walk + 1, run);
+  if (roll < t.walk || run <= walk) return Math.min(run, rng.int(Math.max(lo, walk - 1), walk));
+  return roll < t.walk + t.full ? run : rng.int(walk + 1, Math.max(walk + 1, run - 1));
 }
 
 /** A gap at the end of a walking jump, from a stone or perch too short to run on. */
@@ -99,14 +102,15 @@ export function hardGap(rng: Rng, parts = 1): number {
 }
 
 /**
- * Comfortable vertical spacing for steps, rungs and shelves: one less than a
- * plain full jump (no wall tricks), so structures keep their proportions.
+ * Vertical spacing for steps, rungs and shelves: a plain full jump (no wall
+ * tricks) less the level's slack (difficulty.ts), a tile on gentle and medium
+ * levels and half that on hard ones, where every step is a near-full jump.
  * Never below 2: heavy gravity would otherwise give 1-row steps, and a solid
  * flight of those starts on the floor and seals the storey it stands in
  * instead of floating at head height.
  */
 export function easyRise(): number {
-  return Math.max(2, Math.floor(jumpMetrics(probeGravity()).jumpHeight) - 1);
+  return Math.max(2, Math.floor(jumpMetrics(probeGravity()).jumpHeight - difficultyKnobs().riseSlack));
 }
 
 /**
@@ -131,19 +135,19 @@ export interface Crossing {
 }
 
 /** Share of jumpable crossings that are a run of stones instead of one jump. */
-const STONE_SHARE = 0.35;
-
 /**
- * A crossing you jump: mostly one `jumpGap`, and now and then one to three
- * one-tile stones over the drop, level with the banks, each a walking jump at
- * the end of its reach from the last. A stone is too short to run on, and a
- * running start off the bank carries you past the first one.
+ * A crossing you jump: one `jumpGap`, or (on all but gentle levels, more often
+ * the harder the level) one to three one-tile stones over the drop, level with
+ * the banks, each a walking jump at the end of its reach from the last. A
+ * stone is too short to run on, and a running start off the bank carries you
+ * past the first one.
  */
 export function jumpCrossing(rng: Rng, min = 2): Crossing {
-  if (!rng.chance(STONE_SHARE)) return { w: jumpGap(rng, min), stones: [] };
+  const t = difficultyKnobs();
+  if (!t.maxStones || !rng.chance(t.stones)) return { w: jumpGap(rng, min), stones: [] };
   const stones: number[] = [];
   let x = hopGap(rng, min);
-  for (let n = rng.int(1, 3); n > 0; n--) {
+  for (let n = rng.int(1, t.maxStones); n > 0; n--) {
     stones.push(x);
     x += 1 + hopGap(rng, min);
   }
@@ -152,11 +156,13 @@ export function jumpCrossing(rng: Rng, min = 2): Crossing {
 
 /**
  * How many jumpable crossings a ground route gets besides the ones that need
- * parts: two or three across a classic level, more as it widens. Not scaled
- * by density: a sparse level is still a run of jumps over the drop.
+ * parts, across a classic level (more as it widens): the level's difficulty
+ * sets the range. Not scaled by density: a sparse level is still a run of
+ * jumps over the drop.
  */
 export function jumpCount(rng: Rng, k: Pick<Knobs, 'wide'>): number {
-  return Math.round(rng.int(2, 3) * k.wide);
+  const [lo, hi] = difficultyKnobs().crossings;
+  return Math.round(rng.int(lo, hi) * k.wide);
 }
 
 /**
