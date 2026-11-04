@@ -50,7 +50,7 @@ So each kind has: a clear head-to-body ratio, a readable expression, a line of a
 | king | the spiked turtle king | a spiked shell, horns, a fiery mane, a brute's build | costume (its entry) |
 | dino | the green saddled dino | a long snout, a saddle, a round tail, boots | costume (its entry) |
 | robot | the blue robot boy | a round helmet with ear discs, an arm cannon, small | costume (its entry) |
-| sneak | the sneaking soldier | a box on two legs with an eye slot, a bandana | costume (its entry) |
+| sneak | the sneaking soldier | side on, a square cardboard box on two crouched legs, his eyes in a slot, a striped bandana's two tails out of a hand-hole behind | costume: the box (its back end, tape, arrow and bandana tones of it) |
 | cuptoon | the cup-headed toon | a cup for a head with a straw, rubber-hose limbs, shorts | costume (its entry) |
 | horse | the barnyard party game's horse | a long head, a mane, standing on two legs | costume (its entry) |
 
@@ -299,19 +299,23 @@ What came out of it:
 - **Rig:** humanoid; the can a prop on the forearm.
 - **Concept prompt:** A small, boyish blue robot with a round helmet carrying a light-blue stripe and round ear discs, a cheerful face in the helmet opening, a light-blue suit, darker blue gloves and big chunky boots, one boot repainted a slightly different blue. One forearm ends in an arm cannon that is a tin can with both ends cut out and its red-and-white label still on; a big battery is strapped to his back.
 
-### The sneaking soldier (new)
+### The sneaking soldier
 - **Kind:** `sneak` · **Name:** Snek
 - **A stranger should say:** "the soldier hiding in a cardboard box."
-- **Silhouette:** a cardboard box on two legs, with a bandana's long tails streaming out of a hand-hole. At idle the box drops over him, one eye in a slot; on the jump his head pops out, bandana and all.
-- **Traits:** a cardboard box worn over the body; a head with a dark bandana and long tails; a grey-blue sneaking suit; a stubble jaw; boots.
-- **Palette:** box `#c49a62` (shade `#9a7444`); tape `#d9c79a`; arrow `#2a1f1a`; suit `#4d5a66` (shade `#36414c`); bandana `#3a4a5c` with stripes `#f4efe6`; skin `#d9b08c`; hair and stubble `#4a3a2c`; boots `#2a2a30`.
-- **Color slot:** costume.
-- **Gait:** a fast, crouched shuffle with the box bobbing; freezes for a beat on landing, as if nobody saw.
-- **The nod:** the box (the joke everyone knows him by, and the only box with legs in the cast); the bandana with long tails (the soldier inside, at 20 px); the low, crouched sneak (the stealth read in motion).
-- **Our twist:** the box is badly made for the job. Its "this way up" arrow points down, it's patched with packing tape, and the eye slot is cut with a kitchen knife; his bandana is a striped tea towel.
-- **Swaps:** a sticker of ours on the box; a fragile-glass icon; a string handle; a coffee ring stain.
-- **Rig:** humanoid; the box a prop on the spine. Medium risk: the box and the pop-out are keyed.
-- **Concept prompt:** A gruff stubble-jawed soldier in a grey-blue sneaking suit and boots, crouched and running inside a cardboard box worn over his body, only his legs showing below it; his head pokes out of a hand-hole wearing a striped tea towel tied as a bandana with long tails streaming behind. The box is patched with packing tape, its printed "this way up" arrow pointing down, a rough eye slot cut in its side.
+- **Silhouette:** side on, a crisp square-cornered cardboard box worn over him to the knees, level along the bottom, on two short crouched legs with a gap between them; a striped bandana's two long tails stream out of a torn hand-hole behind. His eyes peer out of a slot near the front. On the laugh his head pops out of the top, bandana and all.
+- **Traits:** a cardboard box worn over the body; a dark bandana with long tails; a grey sneaking suit; boots; on the laugh, a gruff stubble jaw.
+- **Palette:** the box is the player's colour; its back end a dark of it (tone −18), the packing tape a light of it (+18), the printed arrow a darker one (−32), the bandana darker again (−38) with neutral stripes `#f4efe6`; suit `#6a7078`; boots `#3a3a40`; skin `#d9b08c`; ink `#2a1f1a`.
+- **Color slot:** costume: the box.
+- **Gait:** a fast, crouched shuffle with the box bobbing and staying upright.
+- **The nod:** the box (the joke everyone knows him by, and the only box with legs in the cast); the bandana with long tails (the soldier inside, at 20 px); his eyes in the slot (somebody's in there); the low, crouched sneak (the stealth read in motion).
+- **Our twist:** the box is badly made for the job. Its printed arrow points down, a split corner is patched with crossed packing tape, the hand-hole is torn ragged and the eye slot hacked out; his bandana is a striped tea towel, one tail frayed.
+- **Swaps:** a sticker on the box (`sticker`).
+- **Palette alts:** the suit in grey `#6a7078`, olive grey `#6e6c5e` or a light grey `#858a90`.
+- **Idles and cheers:** the idle crouch; frozen mid-step as if nobody saw. A hop for joy with the eyes shut; the laugh, his head popped out of the top.
+- **Gait range:** a bounce of 0.1–0.6 px on each step, a lean of up to 0.03.
+- **Wear:** scuffed is two pale scuffs on the box, scorched two soot streaks, both tones of the box.
+- **Rig:** drawn flat (2026-11-04), side on: twelve drawings, three or two to a 16:9 image cut apart, the laugh on its own. Each drawing's eye slot is painted flat and given two pupils at fixed places, so the face kit finds the same eyes in every pose (drawn, the pupils touched the slot's dark cut end and traced as one blob). The first design, in three-quarter view with a crushed top corner and flared flaps, failed the blind read as "a shaggy, hunched" ape; side on, it reads as "a square blocky body on short legs", but neither of two fresh readers names the homage (a low "meat cube" each). Open top flaps and longer tails were tried and went: at play scale the flaps read as ears and the tails as an ape's long arms. What holds it back is the tracer: its smoothing cuts a quarter off every edge of the traced outline, so the box's corners round off at play size and it reads as a soft slab, near the crewmate's bean. In its roster colour, on the "is it the homage?" sheet, it reads as the boxed soldier.
+- **Concept prompt:** Seen from the side, a soldier hiding inside a big plain cardboard box worn upside down over his whole head and body down to his knees, a crisp upright box with square corners; two short legs in a grey sneaking suit and big dark boots, crouched mid-step; his eyes peer out of a rough slot near the box's front, and the two long tails of a striped tea-towel bandana stream out of a torn hand-hole at its back. The box's printed arrow points down, and crossed packing tape patches a split corner.
 
 ### The cup-headed toon (new)
 - **Kind:** `cuptoon` · **Name:** Mughead

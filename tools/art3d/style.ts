@@ -317,6 +317,26 @@ export const BRIEFS: Record<string, Brief> = {
       'Over its body it wears a stolen yellow hi-vis safety vest (#e8d23a), put on back to front, with two wide pale grey reflective stripes (#c9ccd2) round it; its white folded wing pokes out of the armhole.',
     worn: 'the hem of the hi-vis vest is torn into two ragged points and one shoulder strap hangs loose; the tip of the folded wing has a big notch of feathers missing; the tail is bent over to one side; the spanner is bent in the middle.',
   },
+  sneak: {
+    // The nod, each part of the read at race size: the cardboard box with legs (the joke everyone knows him
+    // by, and the whole silhouette: the only box with legs in the cast, square-cornered where the crewmate's
+    // bean is round, and no head or arms showing where the miner is a cube head on a body with arms); the
+    // bandana's long tails streaming out of the box (the soldier inside, at 20 px, and what breaks the box's
+    // outline behind); his eyes peering out of a slot in it (somebody is in there); the low, crouched sneak on
+    // two short legs (the stealth read in motion).
+    // Ours, and the joke: the box is badly made for the job. Patched with packing tape, its printed arrow
+    // pointing down, the hand-hole torn ragged, and a striped tea towel for a bandana.
+    // Side on, a crisp rectangle with a level bottom edge and a clear gap between the legs: the first design,
+    // in three-quarter view with its top corner crushed and its flaps flared, failed the blind read as "a
+    // shaggy, hunched" ape (2026-11-04), its slanted top and torn corner rounding the box into a blob and its
+    // flaps a skirt over the legs. So the wear keeps the box's outline square.
+    design:
+      'The character, seen from the side in profile facing right: a soldier hiding inside a big plain brown cardboard box (#c49a62) worn upside down over his whole head and body, down to his knees. The box is the whole figure: a crisp upright rectangle with straight edges and sharp square corners, a little taller than it is wide, its bottom edge straight and level, no flaps showing. ' +
+      'Below it only his two short legs show, in a grey-blue sneaking suit (#4d5a66), apart in a low crouching step with a clear gap of white background between them, in big dark boots (#2a2a30). No arms and no head show outside the box. ' +
+      'High on the box, near its front edge, a wide rough eye slot is cut, and through it his tan skin (#d9b08c) and two small black eyes peer out. ' +
+      'From a round hand-hole high on the back half of the box, the two long tails of his bandana stream straight back behind it, as long as the box is wide: dark navy cloth (#3a4a5c), two broad white stripes (#f4efe6) across each near its tip, like a tea towel.',
+    worn: 'a round hand-hole is torn ragged high on the back half of the box, and out of it the two long tails of his bandana stream straight back behind the box, each as long as the box is wide: dark navy cloth (#3a4a5c) with two broad white stripes across each near its tip, like a tea towel, one tail frayed at its end; two big crossed strips of pale packing tape (#e6d6a6) are stuck over a split in the lower back corner of the box; a big printed arrow on the back half of the box, below the hand-hole, points down, in a darker brown. The box keeps its crisp straight edges and square corners, and the eye slot and the eyes stay as they are.',
+  },
   jelly: {
     // The nod, each part of the read at race size: the green dome (the whole silhouette, and the only see-through
     // body in the cast: drawn flat, a pale lime); the three red nuclei inside it (they make it this parasite,
