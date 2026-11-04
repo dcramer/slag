@@ -1,11 +1,20 @@
 import type { Kind } from '../../gen/character';
 import type { P } from '../ink';
-import { brows, eye, mouthMark, pair, sideEye, tallEyes, toonEyes } from './faces';
-import { type D, type KindArt, line, mark, ORANGE, ORANGE_SH, oval, poly, spot, STEEL, STEEL_SH, stroke, toned, tonedOval, Y } from './kit';
+import { brows, eye, mouthMark, sideEye, tallEyes, toonEyes } from './faces';
+import { art as miner } from './art/miner';
+import { art as ape } from './art/ape';
+import { art as merc } from './art/merc';
+import { art as king } from './art/king';
+import { art as dino } from './art/dino';
+import { art as robot } from './art/robot';
+import { art as sneak } from './art/sneak';
+import { art as cuptoon } from './art/cuptoon';
+import { art as horse } from './art/horse';
+import { type D, type KindArt, line, mark, ORANGE, ORANGE_SH, oval, poly, spot, STEEL, STEEL_SH, toned, tonedOval, Y } from './kit';
 
 /**
- * The cast, one hand-designed character per kind (docs/CHARACTERS.md): ten homages to famous game
- * characters in our own designs, and four plain animals for contrast. A homage reads from its
+ * The cast, one hand-designed character per kind (docs/CHARACTERS.md): homages to famous game
+ * characters in our own designs. A homage reads from its
  * silhouette and the three or four traits people actually know it by (the plumber's cap, nose and
  * mustache; the speedster's swept spikes and red sneakers), in its own iconic palette, with the player's
  * color on a ring at its feet. Never the real character's exact design, and never its real name: the
@@ -33,34 +42,6 @@ const YELLOW = '#e9b730';
 const YELLOW_SH = '#bb8a1c';
 const KHAKI = '#8c7a58';
 const KHAKI_SH = '#6c5c40';
-
-/** A pointed ear standing on the head: base from x0 to x1, tip at (tx, ty). */
-function ear(d: D, x0: number, x1: number, tx: number, ty: number, fill: string, shade: string, inner?: string) {
-  toned(
-    d.s,
-    [
-      { x: x0, y: ty + 5 },
-      { x: tx, y: ty },
-      { x: x1, y: ty + 5.4 },
-    ],
-    fill,
-    shade,
-    d.lk.ink,
-    0.4,
-    0.8 * d.k,
-    0.5,
-  );
-  if (inner)
-    poly(
-      d.s,
-      [
-        { x: x0 + (x1 - x0) * 0.3, y: ty + 4.4 },
-        { x: tx + (x0 - tx) * 0.1, y: ty + 1.4 },
-        { x: x0 + (x1 - x0) * 0.75, y: ty + 4.6 },
-      ],
-      inner,
-    );
-}
 
 /** A beak or bill out of the front of a head at (x, y). */
 function beak(d: D, x: number, y: number, len: number, h: number, open = 0) {
@@ -850,148 +831,6 @@ export const KINDS: Record<Kind, KindArt> = {
     parts: ['gear', 'bolt', 'spring', 'shard'],
   },
 
-  // Long and low, a pointed snout well out in front, tall ears, a bushy tail streaming behind. Trots.
-  fox: {
-    size: [1.24, 0.8],
-    outline:
-      'M -0.46 -0.12 C -0.52 -0.38 -0.4 -0.56 -0.16 -0.6 C 0.02 -0.62 0.12 -0.66 0.18 -0.76 C 0.22 -0.9 0.3 -0.96 0.4 -0.94 C 0.5 -0.9 0.54 -0.82 0.68 -0.76 C 0.62 -0.68 0.52 -0.66 0.46 -0.6 C 0.44 -0.44 0.46 -0.24 0.38 -0.08 C 0.32 0 0.2 0 0.1 0 L -0.36 0 C -0.42 0 -0.46 -0.06 -0.46 -0.12 Z',
-    lift: 2.4,
-    feet: 'paw',
-    arms: 'none',
-    faceX: 0.34,
-    rope: { kind: 'tail', len: 7 },
-    gait: (g) => (g.moving ? { hop: abs(S(g.ph * 2)) * 0.9, rot: S(g.ph * 2) * 0.03, pivot: 0, upright: 0.6 } : {}),
-    paintFace: (d) => {
-      eye(d, d.f * 0.6, Y(d, 0.84), 0.75);
-      poly(d.s, oval(d.f * d.W * 0.33, Y(d, 0.77), 0.8, 0.65, 7), d.lk.eye);
-    },
-    print: (d) => {
-      // The pale chest and muzzle.
-      spot(d.s, d.f * d.W * 0.38, Y(d, 0.42), d.W * 0.16, d.H * 0.34, d.sd, d.lk.paint, 0.15);
-      spot(d.s, d.f * d.W * 0.5, Y(d, 0.7), d.W * 0.16, d.H * 0.08, d.sd + 1, d.lk.paint, 0.15);
-    },
-    front: (d) => {
-      const x = d.bx(1);
-      ear(d, x + d.f * d.W * 0.2, x + d.f * d.W * 0.32, x + d.f * d.W * 0.22, d.top - 4.4, d.lk.fill, d.lk.fillShade, d.lk.playerDark);
-      ear(d, x + d.f * d.W * 0.32, x + d.f * d.W * 0.44, x + d.f * d.W * 0.38, d.top - 3.6, d.lk.fill, d.lk.fillShade, d.lk.playerDark);
-    },
-    parts: ['shard', 'shard'],
-  },
-  // Crouched flat, haunches high at the back, two eye bumps up front. Crouches and leaps.
-  frog: {
-    size: [1.3, 0.7],
-    outline:
-      'M -0.5 -0.1 C -0.56 -0.4 -0.4 -0.64 -0.18 -0.7 C -0.06 -0.74 0 -0.76 0.03 -0.8 C 0.06 -1 0.24 -1 0.26 -0.84 C 0.28 -0.78 0.31 -0.78 0.33 -0.84 C 0.37 -1 0.54 -0.96 0.52 -0.78 C 0.5 -0.6 0.56 -0.4 0.5 -0.24 C 0.46 -0.1 0.3 0 0.1 0 L -0.36 0 C -0.46 0 -0.5 -0.04 -0.5 -0.1 Z',
-    lift: 2.3,
-    feet: 'none',
-    arms: 'none',
-    shine: true,
-    gait: (g) => {
-      if (!g.grounded) return { k: 1, sy: 1.08, sx: 0.94 };
-      if (!g.moving) return { k: 0 };
-      const a = S(g.ph * 0.5);
-      return a > 0 ? { hop: a * (2.4 + g.run * 1.6), k: a, sy: 1 + a * 0.1, sx: 1 - a * 0.06, rot: -0.12 * a } : { k: 0, sy: 1 + a * 0.14, sx: 1 - a * 0.1 };
-    },
-    paintFace: (d) => {
-      for (const u of [0.145, 0.43]) {
-        const x = d.f * d.W * u;
-        const y = Y(d, 0.86);
-        poly(d.s, oval(x, y, 1.4, 1.3, 10), '#f6f1e6');
-        eye(d, x + d.f * 0.3, y + 0.1, 0.7, false);
-      }
-      const y = Y(d, 0.56);
-      mark(
-        d.s,
-        d.lk.ink,
-        [
-          { x: d.f * d.W * 0.12, y: y - 0.4 },
-          { x: d.f * d.W * 0.32, y: y + 0.6 },
-          { x: d.f * d.W * 0.5, y: y - 0.5 },
-        ],
-        0.8,
-        d.sd,
-        [0.15, 0.15],
-      );
-    },
-    print: (d) => spot(d.s, d.f * d.W * 0.14, Y(d, 0.12), d.W * 0.38, d.H * 0.3, d.sd, d.lk.paint, 0.1),
-    back: (d) => {
-      // The hind leg: folded under the haunch, kicked out long on the leap.
-      const k = d.gait.k ?? 0;
-      const hx = -d.f * d.W * 0.34;
-      const knee = { x: hx - d.f * (2.4 + k * 1.6), y: d.by - 1.2 + k * 1.6 };
-      const foot = { x: hx - d.f * (0.6 + k * 4.6), y: -0.4 + k * 2.2 };
-      d.s.fillStyle = d.lk.ink;
-      stroke(d.s, [{ x: hx, y: Y(d, 0.3) }, knee, foot], { w: 2.6 * d.k + 1, seed: 5, taper: [0, 0.3], press: 0 });
-      d.s.fillStyle = d.lk.fill;
-      stroke(d.s, [{ x: hx, y: Y(d, 0.3) }, knee, foot], { w: 1.6, seed: 5, taper: [0, 0.3], press: 0 });
-      toned(
-        d.s,
-        [
-          { x: foot.x - d.f * 0.6, y: foot.y - 1 },
-          { x: foot.x - d.f * 3, y: foot.y + 0.4 },
-          { x: foot.x + d.f * 0.8, y: foot.y + 0.8 },
-        ],
-        d.lk.fill,
-        d.lk.fillShade,
-        d.lk.ink,
-        0.4,
-        0.7 * d.k,
-        0.4,
-      );
-    },
-    parts: ['shard', 'shard'],
-  },
-  // Upright, a pale front, flippers, a little beak. Waddles side to side.
-  penguin: {
-    size: [0.84, 1],
-    outline:
-      'M 0.06 -1 C 0.3 -1 0.4 -0.86 0.38 -0.7 C 0.42 -0.6 0.44 -0.5 0.44 -0.34 C 0.44 -0.14 0.34 0 0.12 0 L -0.18 0 C -0.38 0 -0.48 -0.16 -0.46 -0.36 C -0.44 -0.62 -0.3 -0.98 0.06 -1 Z',
-    lift: 2.4,
-    feet: 'web',
-    arms: 'flipper',
-    hands: 'body',
-    faceX: 0.1,
-    gait: (g) => (g.moving ? { rot: S(g.ph) * 0.14, pivot: 0, upright: 0.3 } : { rot: S(g.t * 1.5) * 0.02, pivot: 0 }),
-    paintFace: (d) => pair(d, 0.8, 0.12, 0.7),
-    print: (d) => {
-      const pts: P[] = [];
-      for (let i = 0; i <= 14; i++) {
-        const a = (i / 14) * Math.PI * 2;
-        pts.push({ x: d.f * d.W * 0.1 + Math.cos(a) * d.W * 0.3, y: Y(d, 0.36) + Math.sin(a) * d.H * 0.4 });
-      }
-      poly(d.s, pts, d.lk.paint);
-    },
-    snout: (d) => beak(d, d.f * d.W * 0.22, Y(d, 0.72), 2.2, 0.8, d.m === 'cheer' ? 0.8 : 0),
-    parts: ['shard', 'shard'],
-  },
-  // Tall and bottom-heavy on thin legs, a red comb, tail feathers up behind. Struts, head bobbing.
-  chicken: {
-    size: [0.9, 1.04],
-    outline:
-      'M 0.14 -1 C 0.3 -1 0.36 -0.9 0.34 -0.8 C 0.34 -0.72 0.3 -0.66 0.28 -0.6 C 0.44 -0.5 0.52 -0.3 0.44 -0.14 C 0.36 0 0.1 0 -0.1 0 C -0.36 0 -0.5 -0.14 -0.5 -0.3 C -0.5 -0.4 -0.56 -0.5 -0.64 -0.66 C -0.54 -0.64 -0.46 -0.58 -0.4 -0.5 C -0.3 -0.56 -0.1 -0.58 -0.04 -0.64 C -0.04 -0.8 0 -1 0.14 -1 Z',
-    lift: 3.4,
-    feet: 'stilt',
-    arms: 'none',
-    faceX: 0.18,
-    gait: (g) => {
-      if (!g.moving) return { rot: S(g.t * 2.2 + g.seed) > 0.85 ? 0.14 : 0, pivot: 0 };
-      return { hop: abs(S(g.ph)) * 0.6, bend: S(g.ph * 2) * 0.08, upright: 0.4 };
-    },
-    paintFace: (d) => sideEye(d, 0.88, d.f * 0.2, 0.75),
-    print: (d) =>
-      toned(d.s, oval(-d.f * d.W * 0.08, Y(d, 0.32), d.W * 0.26, d.H * 0.16, 12, -d.f * 0.3), d.lk.fillShade, d.lk.playerDark, d.lk.ink, 0.05, 0.1, 0.4),
-    front: (d) => {
-      // The comb.
-      const x = d.bx(1) + d.f * d.W * 0.16;
-      for (let i = 0; i < 3; i++)
-        tonedOval(d.s, x + d.f * (i - 1) * 1.3, d.top - 0.6 - (i === 1 ? 0.6 : 0), 1.1, 1.3, 8, d.lk.paint, d.lk.paintShade, d.lk.ink, 0.3, 0.6 * d.k, 0.4);
-    },
-    snout: (d) => {
-      beak(d, d.f * d.W * 0.18, Y(d, 0.82), 2, 0.7, d.m === 'cheer' ? 0.7 : 0);
-      tonedOval(d.s, d.f * d.W * 0.18, Y(d, 0.72), 0.7, 1.1, 8, d.lk.paint, d.lk.paintShade, d.lk.ink, 0.3, 0.6 * d.k, 0.4);
-    },
-    parts: ['shard', 'shard'],
-  },
   // A round puffball on big feet, stubby arms, tall eyes. Toddles; puffs up round in the air.
   puffball: {
     size: [0.96, 0.9],
@@ -1048,4 +887,13 @@ export const KINDS: Record<Kind, KindArt> = {
     },
     parts: ['shard', 'shard'],
   },
+  miner,
+  ape,
+  merc,
+  king,
+  dino,
+  robot,
+  sneak,
+  cuptoon,
+  horse,
 };
