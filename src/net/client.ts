@@ -3,7 +3,7 @@ import type { Match } from '../game/match';
 import type { HudAction, NetArrival, NetInfo, NetWatcher } from '../render/hud';
 import type { InputFrame } from '../sim/types';
 import { addBreadcrumb } from '../telemetry';
-import { peerOf } from './actions';
+import { peerOf, personOf } from './actions';
 import { acquirePeerId, clientId, kickedUntil, loadResume, markKicked, saveResume } from './identity';
 import { NetSession, type NetStatus } from './session';
 import { HttpSignal } from './signal-client';
@@ -174,15 +174,17 @@ export function connectRoom(room: string, match: Match, opts: ConnectOptions): R
   /** Not in the room, whatever the link says: an invite from here would only bring people to this. */
   const cutOff = () => net.status === 'unavailable' || net.status === 'kicked' || (net.refused && !net.synced);
   const kickable = () =>
-    net.isHost && transport && match.phase === 'lobby' ? match.players.filter((p) => peerOf(p.device) && peerOf(p.device) !== net.self).map((p) => p.slot) : [];
-  const peerInSlot = (slot: number) => peerOf(match.player(slot)?.device ?? '');
+    net.isHost && transport && match.phase === 'lobby'
+      ? match.players.filter((p) => personOf(p.device) && personOf(p.device) !== net.self).map((p) => p.slot)
+      : [];
+  const peerInSlot = (slot: number) => personOf(match.player(slot)?.device ?? '');
   let kickSlot = -1;
   let lastToast = '';
   /** In the room at least once: the joining screen is for getting in, not for every later hiccup (toasts cover those). */
   let wasIn = false;
   let offline = false;
   const seat = (): NetInfo['seat'] => {
-    if (net.seated) return match.players.some((p) => peerOf(p.device) === net.self && p.leaving) ? 'leaving' : 'seated';
+    if (net.seated) return match.players.some((p) => personOf(p.device) === net.self && p.leaving) ? 'leaving' : 'seated';
     // Asking in the lobby (an arrival) is a seat a few frames away; owed one mid-round is a seat next round.
     return net.queued || (net.intent === 'play' && !net.watching) ? 'queued' : 'watching';
   };
@@ -221,7 +223,7 @@ export function connectRoom(room: string, match: Match, opts: ConnectOptions): R
         inviteUrl: cutOff() ? undefined : inviteUrl,
         offline: cutOff(),
         stranded: net.refused && !net.synced,
-        hostSlot: match.players.find((p) => peerOf(p.device) === net.hostId)?.slot,
+        hostSlot: match.players.find((p) => personOf(p.device) === net.hostId)?.slot,
         kickable: kickable(),
         kickSlot,
         peers: net.peers().map((p) => ({ name: p.name, isHost: p.isHost, pingMs: p.ping === null || p.isHost ? undefined : p.ping, local: p.isSelf })),

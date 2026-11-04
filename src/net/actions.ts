@@ -26,6 +26,11 @@ export type NetAction =
   | { t: 'color'; dev: string; color: number }
   /** How well a bot plays: its own machine's choice, shown on everyone's card. */
   | { t: 'bot'; dev: string; level: BotLevel }
+  /**
+   * Host only: a bot seat moves to the host as device `to` (`<host>:botN`), look, score and all. Bot seats are the
+   * room's and the host runs them, so a new host takes over every one it finds under another peer's id.
+   */
+  | { t: 'adopt'; dev: string; to: string }
   /** Host only: the per-match salt (crate order) for the next match start. */
   | { t: 'salt'; salt: number }
   /** Host only, lobby only. */
@@ -36,8 +41,8 @@ export type NetAction =
    */
   | { t: 'kick'; peer: string; client?: string; until?: number }
   /**
-   * A peer watches (`on`) or wants to play again. Watching gives up the peer's seats: at once in the lobby,
-   * at the round boundary mid-match. `name` labels its chip. `afk` is the host's: it saw the player idle.
+   * A peer watches (`on`) or wants to play again. Watching gives up the peer's own seats (never the bots it runs,
+   * which are the room's): at once in the lobby, at the round boundary mid-match. `name` labels its chip. `afk` is the host's: it saw the player idle.
    */
   | { t: 'watch'; dev: string; on: boolean; name?: string; afk?: boolean }
   /**
@@ -120,6 +125,14 @@ export function peerOf(dev: string): string {
   return i < 0 ? '' : dev.slice(0, i);
 }
 
+/**
+ * The peer whose person sits in this seat: its peer, or '' for a bot. A bot's device names the machine that runs
+ * it, which is whoever hosts, so it never makes that peer seated, holds its place in line or follows it to watch.
+ */
+export function personOf(dev: string): string {
+  return isBotDevice(dev) ? '' : peerOf(dev);
+}
+
 /** Where seats change hands: the lobby, and the round boundary (the score and victory screens). */
 export const SEAT_PHASES = new Set(['lobby', 'score', 'victory']);
 
@@ -161,8 +174,8 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
         return;
       }
       // Already in, or already owed one: a second click is the same request.
-      if (m.players.some((p) => peerOf(p.device) === peer && !p.leaving) || ns.queue.some((q) => q.peer === peer)) return;
-      const mine = m.players.filter((p) => peerOf(p.device) === peer);
+      if (m.players.some((p) => personOf(p.device) === peer && !p.leaving) || ns.queue.some((q) => q.peer === peer)) return;
+      const mine = m.players.filter((p) => personOf(p.device) === peer);
       if (mine.length) {
         // On the way out and changed their mind: they keep the seat they have.
         for (const p of mine) delete p.leaving;
@@ -226,6 +239,13 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
       else p.bot = a.level;
       return;
     }
+    case 'adopt': {
+      const p = m.players.find((q) => q.device === a.dev);
+      // Wire data: bot seats only, onto a bot device nobody holds.
+      if (!p || typeof a.to !== 'string' || !isBotDevice(a.dev) || !isBotDevice(a.to) || !peerOf(a.to) || m.players.some((q) => q.device === a.to)) return;
+      p.device = a.to;
+      return;
+    }
     case 'color': {
       const p = m.players.find((q) => q.device === a.dev);
       if (p) m.setColor(p.slot, a.color); // wire data: setColor checks it's a swatch
@@ -254,7 +274,7 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
     case 'watch': {
       const peer = peerOf(a.dev);
       if (!peer || bannedFor(m, ns, peer) > 0) return;
-      const mine = m.players.filter((q) => peerOf(q.device) === peer);
+      const mine = m.players.filter((q) => personOf(q.device) === peer);
       if (!a.on) {
         delete ns.watching[peer];
         for (const p of mine) delete p.leaving; // changed their mind before the boundary: they stay

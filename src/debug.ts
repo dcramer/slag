@@ -176,7 +176,7 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
       renderer.bakeBudgetMs = on ? Infinity : 5;
     },
     addBot(level) {
-      const d = dev(bots.add(match));
+      const d = dev(bots.add(match, 'runner', dev));
       const p = match.join(d);
       if (p && level && level !== 'normal') p.bot = level;
       return d;
