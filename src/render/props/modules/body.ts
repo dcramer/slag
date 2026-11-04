@@ -12,6 +12,7 @@ import { light, type MetalPalette, type RC } from '../../kit';
 import { bbox, defineArt, type PropDrawOpts } from '../common';
 import { housed } from '../machine';
 import { drawObsidian } from './body-obsidian';
+import { drawHydrant } from './hydrant-art';
 
 type M<T extends Module['type']> = ModuleOf<T>;
 
@@ -255,7 +256,9 @@ defineArt<'body'>({
   draw: (rc, m, d) =>
     m.look === 'obsidian'
       ? drawObsidian(rc, m, d.off, d.o)
-      : m.look === 'tetra' && !housed(d.r)
-        ? drawTetra(rc, m, d.off)
-        : drawBody(rc, m, d.style, d.pal, d.off, d.r, d.o),
+      : m.look === 'hydrant'
+        ? drawHydrant(rc, m, d.off, d.r)
+        : m.look === 'tetra' && !housed(d.r)
+          ? drawTetra(rc, m, d.off)
+          : drawBody(rc, m, d.style, d.pal, d.off, d.r, d.o),
 });

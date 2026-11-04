@@ -1,4 +1,14 @@
-import { BLOOD_CHOICES, GRAVITY_CHOICES, gravityLabel, MATCH_LENGTHS, type MatchRules, RULE_CHOICES, type TimerRule } from '../../game/rules';
+import {
+  BLOOD_CHOICES,
+  GRAVITY_CHOICES,
+  gravityLabel,
+  MATCH_LENGTHS,
+  type MatchRules,
+  PART_VARIETIES,
+  RULE_CHOICES,
+  type TimerRule,
+  varietyLabel,
+} from '../../game/rules';
 import type { InputManager } from '../../input/input';
 import { CanvasMenu } from '../kit/menu';
 import type { Ui } from '../kit/ui';
@@ -86,7 +96,9 @@ export class RulesMenu extends CanvasMenu {
     );
     return [
       lobby ? [length, lobby] : [length],
-      ...timers.map((t) => [t]),
+      // Pick and place share a row, so Parts fits on the card with no scrolling at 720p.
+      [timers[0], timers[1]],
+      ...timers.slice(2).map((t) => [t]),
       [
         group(
           'gravity',
@@ -101,14 +113,21 @@ export class RulesMenu extends CanvasMenu {
       ],
       [
         group(
-          'blood',
-          'Blood Rounds',
-          BLOOD_CHOICES.map((v) => ({ label: v === 0 ? 'Off' : `${v}`, on: d.bloodRounds === v, apply: () => (d.bloodRounds = v) })),
+          'parts',
+          'Parts',
+          PART_VARIETIES.map((v) => ({ label: varietyLabel(v), on: d.parts === v, apply: () => (d.parts = v) })),
         ),
         group(
           'secret',
           'Secret Parts',
           [false, true].map((v) => ({ label: v ? 'On' : 'Off', on: d.secretParts === v, apply: () => (d.secretParts = v) })),
+        ),
+      ],
+      [
+        group(
+          'blood',
+          'Blood Rounds',
+          BLOOD_CHOICES.map((v) => ({ label: v === 0 ? 'Off' : `${v}`, on: d.bloodRounds === v, apply: () => (d.bloodRounds = v) })),
         ),
       ],
     ];

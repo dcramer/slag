@@ -237,6 +237,8 @@ export const shots: Scenarios = {
       { kind: 'panic', at: [36, 290, 345], inp: (f) => ({ right: f < 30 }) },
       { kind: 'fling', at: [24, 44, 58], inp: (f) => ({ left: f < 40, down: f < 40, jump: f === 40, jumpPressed: f === 40 }) },
       { kind: 'platform:tetra', at: [10], inp: () => ({}) },
+      // A whole cycle, a shot every 30 frames: rattling and blasting are both in there somewhere.
+      { kind: 'hydrant', at: [30, 60, 90, 120, 150, 180, 210, 240, 270], inp: () => ({}) },
       // Last: its blast's smoke would drift into the next stage's shots.
       { kind: 'fuse', at: [70, 150, 182], inp: (f) => ({ left: f > 30 && f < 60 }) },
     ];
@@ -323,6 +325,7 @@ export const shots: Scenarios = {
           let tx = s.x;
           let ty = s.y;
           if (kind === 'fuse') tx = p.tx;
+          if (kind === 'hydrant') tx = p.tx + 2;
           if (kind === 'fuse') ty = p.ty - 1;
           if (kind === 'platform:tetra') tx = p.tx + p.def.footprint.find((c: number[]) => c[1] === 0)[0];
           if (kind === 'platform:tetra') ty = p.ty - 1;
