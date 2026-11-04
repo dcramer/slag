@@ -356,7 +356,6 @@ export const BRIEFS: Record<string, Brief> = {
       'The costume body is a baggy onesie (#9a6a40), the same colour as the head, with big round dark brown hooves for hands and feet.',
     worn: 'a thick knitted red scarf (#c9473f) is wound round its throat under the head, one end hanging down its chest; a big silver zip runs straight up the middle of its belly from between its legs to the scarf, stuck open at the bottom, its two sides parted in a V over the lower belly; a big square patch of grey cloth is sewn on one knee with big stitches; the end of the tail is frayed into ragged strands.',
   },
-
 };
 
 function brief(kind: string): Brief {
