@@ -45,7 +45,7 @@ So each kind has: a clear head-to-body ratio, a readable expression, a line of a
 | engineer | the team shooter's engineer | a toolbox in one hand and a huge wrench held low in the other, a round hard hat with goggles on it, a square jaw, a work shirt, khaki trousers, leather gloves | costume: the shirt, the hat and toolbox in tones of it |
 | chomper | the round dot-eater | a circle with a wedge mouth that chomps, one small eye, a scalloped bite out of its back, a linen napkin tucked into its lower lip | costume: the whole ball |
 | miner | the voxel miner | a cube head as wide as the body, square stiff limbs, a taped toy pickaxe; carved from wood | costume: the shirt, the trousers a dark of it |
-| ape | the necktie ape | hunched, long arms, a necktie | costume (its entry) |
+| ape | the necktie ape | hunched, long arms, a necktie | costume: the fur, the tie a shade of it |
 | merc | the spiky-haired mercenary | a crown of big blond spikes singed at the tips, a giant serrated bread knife always in hand, a hubcap on one shoulder | costume: the top, the trousers a dark of it |
 | king | the spiked turtle king | a spiked shell, horns, a fiery mane, a brute's build | costume (its entry) |
 | dino | the green saddled dino | a long snout, a saddle, a round tail, boots | costume (its entry) |
@@ -238,13 +238,17 @@ What came out of it:
 - **A stranger should say:** "the big ape with the red tie."
 - **Silhouette:** hunched, with huge shoulders and long arms, a small head low and forward, and a protruding muzzle.
 - **Traits:** brown fur; a tan face, muzzle and chest; a red necktie; big knuckles.
-- **Palette:** fur `#7a4e2c` (shade `#5a3820`); face and chest `#e2b98a`; tie `#d03a30` (shade `#a02a22`) with a clip `#c9ccd2`; tape `#9aa0a8`; banana `#f2d04a`.
-- **Color slot:** costume.
+- **Palette:** the fur in the player's colour (drawn `#7a4e2c`), the tie a shade of it (tone −10); the rest neutral: face and chest `#e2b98a`, tape `#9aa0a8`, ink. The banana keeps a fixed yellow `#e8c84e`, a few pixels behind the ear: in a tone of the fur it was no banana.
+- **Color slot:** costume: the fur, and the tie in a shade of it. A darker tie (tone −18), on the pale chest right under the muzzle, read as a gaping mouth; a lighter one sank into the chest on the orange and yellow swatches.
+- **Palette alts:** the duct tape in grey `#9aa0a8`, a pale cloth tape `#b8b2a4` or a dark gaffer `#6f757c`.
 - **Gait:** knuckle-gallops on all fours at a run, arms leading; beats its chest on a cheer.
+- **Idles and cheers:** the idle hunched on his knuckles; scratching his crown, bored. Beating his chest with a roar; both fists thrown up with a grin.
+- **Gait range:** a bounce of 0.1–0.6 px and a lean of up to 0.03.
+- **Wear:** drawn in, the tie torn ragged at the tip, the tape on one fist come loose and trailing, the banana half peeled. Scuffed is a faded patch on the shoulder and one on the far arm; scorched, soot in the same places.
 - **The nod:** the hunched gorilla shape with arms longer than its legs (the brute, from across the screen); the red necktie (the one thing that makes it this ape and not any ape); the tan face and muzzle (the cartoon face).
 - **Our twist:** a foundry barrel-hauler on his lunch break. The tie is a clip-on, worn crooked on a bare chest; his knuckles are wrapped in grey duct tape; a banana is tucked behind one ear like a pencil.
-- **Swaps:** a hard-hat sticker on the chest; a sweat drop; a staple-gun ID badge on the tie; a bruise on one knuckle.
-- **Rig:** humanoid; the knuckle gallop is keyed by hand.
+- **Swaps:** a hard-hat sticker on the chest; a sweat drop; a staple-gun ID badge on the tie; a bruise on one knuckle. Drawn flat he rolls a sticking plaster across the cheek, the strip the flat route draws; the others need marks it has no slot for.
+- **Rig:** drawn flat (2026-11-04): a game-size design (two drawn, the one with the clearer tie and tape picked) worn with the torn tie, the trailing tape and the peeled banana; the eleven poses drawn three to a 16:9 sheet and cut apart (`art/sprites/ape/design.prompt.txt`). Walk and run are on all fours, the run a knuckle gallop (the arms reaching, then the legs swinging through). The air clip is centred and drawn a little smaller: his fists raised over his head left the shared box. His small eyes, tight under the brow, are found in the role map with a thin ink cut (`ink: 5`); the half-shut, shut and passing eyes of three poses were dotted in by hand for the face kit to find. Blind read: both fresh readers name him at medium ("hunched gorilla with a big back, long arms, knuckle-walking run").
 - **Concept prompt:** A big hunched cartoon gorilla with huge shoulders, arms longer than its legs and a small head set low and forward; brown fur; a tan face, protruding muzzle and chest; a red clip-on necktie worn crooked on its bare chest; knuckles wrapped in grey duct tape; a banana tucked behind one ear like a pencil.
 
 ### The spiky-haired mercenary (new)

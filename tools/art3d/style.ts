@@ -412,6 +412,23 @@ export const BRIEFS: Record<string, Brief> = {
       'A sleeveless knit top (#4a5ab0), baggy trousers in a much darker shade of the same blue (#283266), two brown belts (#6b4a35) crossed at the hip, heavy brown boots. On one shoulder a single big round shoulder piece: a grey car hubcap (#9aa0a8).',
     worn: 'the tip of every hair spike is singed black; the hubcap has a big dent knocked into it and a crack across it; two teeth are snapped out of the middle of the knife edge, leaving a big notch; one trouser leg is torn off ragged at the shin.',
   },
+  ape: {
+    // The nod, each part of the read at race size: the hunched gorilla shape with arms longer than its legs
+    // and huge shoulders over a small low head (the brute, from across the screen, and the line between him
+    // and the upright, shelled turtle king); the necktie on the bare chest (the one thing that makes it this
+    // ape and not any ape); the pale face and muzzle jutting forward (the cartoon face).
+    // Ours, and the joke: a foundry barrel-hauler on his lunch break. The tie is a clip-on worn crooked on a
+    // bare chest, his knuckles are wrapped in grey duct tape, and a banana is tucked behind one ear like a pencil.
+    // The palette is neutral (Decisions 4): the fur in the player's colour, the tie a dark of it; face, chest,
+    // tape and clip stay their own. Drawn here in the roster's browns and red so the roles trace apart.
+    design:
+      'The character: a big hunched cartoon gorilla, a brute: huge round shoulders and a barrel chest, very long thick arms, longer than its short bowed legs, hanging down so its two huge fists rest on their knuckles on the ground beside its feet. ' +
+      'A small head set low and forward between the shoulders, a heavy brow, a big protruding muzzle. ' +
+      'Brown fur (#7a4e2c) all over; a pale tan (#e2b98a) face, muzzle and bare chest. ' +
+      'On the bare chest a red clip-on necktie (#d03a30), short and wide, worn crooked, with a grey clip (#c9ccd2). ' +
+      'Both huge fists wrapped in grey duct tape (#9aa0a8). A yellow banana (#f2d04a) tucked behind one ear like a pencil. Two small black eyes under the brow.',
+    worn: 'the necktie hangs crooked, twisted to one side, its tip torn off ragged; on the front fist the grey tape has come loose and one long strip of it hangs down; the banana is bent in the middle and half peeled, one flap of peel hanging down behind the ear.',
+  },
 };
 
 function brief(kind: string): Brief {
