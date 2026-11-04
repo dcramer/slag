@@ -1,10 +1,10 @@
 import type { FlatKind } from '../kinds';
 
 export const kind: FlatKind = {
-  body: 322,
+  body: 257,
   // No face: the three cherries are the read, in the drawing's own shapes. Its ribs are the mould's flutes.
   map: {
-    roles: ['green', 'rim', 'red', 'fang', 'doily', 'dark'],
+    roles: ['green', 'rim', 'red', 'fang', 'dark'],
     families: [
       ['green', [143, 214, 91]],
       ['green', [172, 234, 98]],
@@ -25,40 +25,40 @@ export const kind: FlatKind = {
       ['fang', [214, 204, 177]],
       ['fang', [210, 196, 161]],
       ['fang', [142, 147, 102]],
-      ['doily', [250, 248, 242]],
+      // The fangs' highlights, near-white.
+      ['fang', [253, 251, 229]],
+      ['fang', [246, 234, 202]],
       ['dark', [54, 89, 40]],
       ['dark', [81, 38, 23]],
       ['dark', [58, 47, 28]],
       ['dark', [91, 73, 47]],
     ],
     line: 'dark',
-    thin: ['green', 'rim', 'red', 'fang', 'doily'],
+    thin: ['green', 'rim', 'red', 'fang'],
     // The mould's ribs run in front of the cherries as green bands about 10 image px wide: as fringe, they
     // fold into the cherry either side, or each cherry traces in halves.
     fringe: 13,
-    // Only the long rib lines: the short ones, and a rib's run across a cherry, are flecks at play size.
+    // Only the long rib lines: the short ones are flecks at play size.
     stroke: 5,
-    // No doily at play size: between the fangs it merges the four hooks into one pale skirt (cut out), and a
-    // patch held between clapped fangs reads as a grin (folded into them).
-    cut: { role: 'doily', area: 0.3 },
+    // The pincers' tips cross in idle2, closing in the space under the rim: cut through, over a highlight's size.
+    holes: 10,
     feet: ['fang'],
-    min: { doily: 12 },
   },
   roles: [
     { name: 'green', color: '#9ee38a', slot: 'player' },
     // The rim is a light of the dome, so it follows the player's colour.
     { name: 'rim', color: '#808080', on: 0, tone: 14 },
-    // The roster's cherry shade, not its red: on a red or pink dome the red cherries vanish, and with the mint on top
-    // a red jelly reads as a strawberry.
-    { name: 'red', color: '#9c3530' },
-    // A colourway is the sugared almonds (VARIETY.palette): ivory, pink or pale blue.
-    { name: 'fang', color: '#efe6d2', alts: ['#f2c6cc', '#c8dcee'], vary: 6 },
-    { name: 'doily', color: '#fbf6ee' },
+    // The cherries are a dark of the dome (Decisions 4): far enough below it that the three stay separate shapes,
+    // and above the ink, so each keeps its outline.
+    { name: 'red', color: '#808080', on: 0, tone: -24 },
+    // Bone, a neutral: a colourway is how the sugared almonds have aged (VARIETY.palette): ivory, old bone, grey.
+    { name: 'fang', color: '#efe6d2', alts: ['#e0cfa8', '#d6d4cb'], vary: 6 },
     { name: 'dark', color: '#2a1f1a' },
     { name: 'scuff', color: '#808080', on: 0, tone: 8 },
     // One quiet mark a wear: on a smooth dome, a loud blob reads as a spot.
     { name: 'scorch', color: '#808080', on: 0, tone: -12 },
-    { name: 'mint', color: '#4ca04a' },
+    // The garnish in a dark of the dome too, so a sprig on a red jelly isn't a strawberry's leaves.
+    { name: 'mint', color: '#808080', on: 0, tone: -16 },
   ],
   slots: [
     { name: 'mint', vary: 1, options: 2 },
@@ -66,7 +66,7 @@ export const kind: FlatKind = {
   ],
   // No face to draw (no `face`): the left cherry is only the anchor the mint is placed from (the top one traces
   // joined to its neighbour in some drawings), and nothing goes.
-  eyes: { role: 'red', area: [3, 40], gap: [1, 4], specks: {}, count: 1, band: [0.35, 0.45] },
+  eyes: { role: 'red', area: [3, 40], gap: [1, 4], specks: {}, count: 1, band: [0.35, 0.52] },
   wear: {
     on: ['green'],
     chin: 0,
@@ -78,27 +78,25 @@ export const kind: FlatKind = {
   clips: {
     idle: { frames: ['idle'], loop: true, fps: 1 },
     idle2: { frames: ['idle2', 'idle'], loop: true, holds: [1.4, 1.8] },
-    // Three drawings carry every clip: the hooks hanging (the design), curled in (idle2) and spread wide (cheer).
-    // Asked to move its hooks, the image model added more (six to eight, an octopus), so a pose is one of those.
-    // Two drawings are touched up by hand: the cheer's drip no longer runs over the lower-right cherry (it bit a
-    // notch out of it), and idle2's top-left flute outline is painted out (a dark arc on a dome otherwise plain).
-    // The chomp: spread, then curled in; the run is the same faster, leaning on the gait.
+    // Three drawings carry every clip: the mandibles hanging (the design), pinched shut (idle2) and spread (cheer).
+    // Asked to move its fangs, the image model adds more (six to eight, an octopus), so idle2 and cheer are the
+    // design itself with each fang swung about its root under the rim: idle2 the big pair in by 6 degrees (their
+    // tips cross) and the small by 8, cheer the big out by 8 and the small by 6. In every drawing the ribs are
+    // painted out of the cherries by hand: a rib down a cherry was a crack through it.
+    // The chomp: spread, then pinched in; the run is the same faster, leaning on the gait.
     walk: { frames: ['cheer', 'idle2'], loop: true, stride: 24 },
     run: { frames: ['cheer', 'idle2'], loop: true, stride: 34 },
     air: { frames: ['idle', 'cheer'], loop: false, vy: [-200, 200] },
     // Nothing to press to a wall: it slides in its fall.
     wall: { frames: ['cheer'], loop: true, fps: 1 },
     cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.5, 0.25] },
-    // Flexing its hooks for joy: curled, spread, curled.
+    // Flexing its mandibles for joy: pinched, spread, pinched.
     cheer2: { frames: ['idle2', 'cheer'], loop: true, holds: [0.35, 0.35] },
     death: { frames: ['death'], loop: false, fps: 1, centre: 'box' },
   },
   poses: {
-    idle2: { pose: 'bobbing gently, the four long hooks curled up a little tighter at their tips, still spread wide apart.' },
-    cheer: {
-      pose: 'bobbing up with joy: the same four hooks as in the reference, exactly four and no more, all four spread out wider to the sides, the cherries jiggling.',
-    },
-    // Drawn from the design before its hooks were lengthened: a puddle, its fangs lying loose.
+    // idle2 and cheer aren't prompted: they are the design with its fangs swung (the clips' note). The death was
+    // drawn from the short-fanged design before the long hooks, and fits the mandibles: a puddle, its fangs lying loose.
     death: {
       pose: 'melted into a low flat puddle of green jelly on the floor, much wider than it is tall, the three cherries sitting in it and the four fangs lying loose round it. Seen from the side.',
       far: true,
