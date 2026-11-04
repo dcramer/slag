@@ -47,7 +47,7 @@ So each kind has: a clear head-to-body ratio, a readable expression, a line of a
 | miner | the voxel miner | a cube head, a blocky body, a pickaxe | costume (its entry) |
 | ape | the necktie ape | hunched, long arms, a necktie | costume (its entry) |
 | merc | the spiky-haired mercenary | spiked hair, a blade taller than he is | costume (its entry) |
-| king | the spiked turtle king | a spiked shell, horns, a fiery mane, a brute's build | costume (its entry) |
+| king | the spiked turtle king | a spiked shell humped behind, two horns, a red mane, a paper crown, a brute's upright build | costume: the shell |
 | dino | the green saddled dino | a long snout, a saddle, a round tail, boots | costume (its entry) |
 | robot | the blue robot boy | a round helmet with ear discs, an arm cannon, small | costume (its entry) |
 | sneak | the sneaking soldier | a box on two legs with an eye slot, a bandana | costume (its entry) |
@@ -257,19 +257,23 @@ What came out of it:
 - **Rig:** humanoid; the blade a prop on the hand bone, sized as caricature like the plumber's plunger.
 - **Concept prompt:** A slim brooding young mercenary with a crown of big spiky blond hair singed at the tips and pale blue eyes; a sleeveless dark knit top, baggy dark trousers, two brown belts crossed at the hip, heavy boots; a car hubcap strapped on as a single shoulder piece. He grips a giant serrated bread knife as tall as he is, with a riveted wooden handle, its point resting on the ground.
 
-### The spiked turtle king (new)
+### The spiked turtle king
 - **Kind:** `king` · **Name:** Browser
 - **A stranger should say:** "the big spiky turtle king."
-- **Silhouette:** the bulkiest kind: a hulking upright turtle with a spiked shell humped behind, two horns, a wild mane, a big jaw, and spiked cuffs. It fills the envelope's width.
-- **Traits:** a green shell with a cream rim and spikes; yellow-orange skin; a pale banded belly; two cream horns; a red-orange mane and brows; spiked black cuffs; a toothy snout.
-- **Palette:** shell `#3f8a3a` (shade `#2c6a2a`); rim, spikes and horns `#efe2c0` (shade `#c9b890`); bolts `#9aa0a8`; skin `#e8b23c` (shade `#bb8a1c`); belly `#e9d29a`; mane `#d9502e`; cuffs `#2a2a30`; crown `#f0cf4a`.
-- **Color slot:** costume.
-- **Gait:** a heavy stomp, shoulders rolling; on a long fall he tucks into his shell and spins.
+- **Silhouette:** the bulkiest kind: a hulking upright turtle with a shell humped behind and four huge spikes standing out of it, two long horns, a swept-back mane and a long snout. It fills the envelope's width. Nothing else breaks the outline: a tufted mane, studded cuffs, a spiked tail and a many-pointed crown each added a bump, and readers saw a porcupine.
+- **Traits:** a shell with a cream rim and spikes; yellow-orange skin; a pale banded belly; two cream horns; a red-orange mane and brows; plain dark cuffs; a toothy snout.
+- **Palette:** shell the player's colour; rim, spikes and horns `#efe2c0`; patch plate `#9aa0a8`; skin `#e8b23c`; belly `#e9d29a`; mane `#d9502e` (hair); cuffs `#7a5f44`; the paper crown a light tone of the shell's colour.
+- **Color slot:** costume: the shell. The crown is a tone of it; skin, belly, mane, horns and cuffs are his own.
+- **Gait:** a heavy stomp, shoulders rolling; on a fall near its top speed he tucks into his shell.
 - **The nod:** the spiked shell (it breaks the outline behind and above; the read in profile); the horns and the red mane (they mark the king and not a foot soldier); the hulking upright build (the boss in a cast of heroes).
-- **Our twist:** a knock-off boss who never got his castle. His shell is riveted boiler plate with the spikes welded-on bolts; a paper party crown sits between his horns; when he's angry a puff of soot comes out of his nostrils instead of fire.
-- **Swaps:** a dented spike; a party blower in his teeth; a sticking plaster on the snout; a chain cuff for a spiked one.
-- **Rig:** humanoid; the shell a prop on the spine. Medium risk: a big body inside the shared envelope.
-- **Concept prompt:** A hulking upright turtle king with yellow-orange skin, a big toothy snout, a pale banded belly, two cream horns and a wild red-orange mane; his green shell, humped behind him, is made of riveted boiler plate, with welded-on steel bolts for spikes round a cream rim; black spiked cuffs on his wrists; a paper party crown between his horns; a small puff of soot from his nostrils.
+- **Our twist:** a knock-off boss who never got his castle. His shell is riveted boiler plate with a bolted-on patch plate and huge welded bolts for spikes; a paper party crown sits between his horns. The soot puff from his nostrils is left out: anything dark under the face reads as a mouth at play size.
+- **Swaps:** a sticking plaster on the snout.
+- **Palette alts:** the cuffs in worn leather `#7a5f44`, black iron `#34343a` or steel `#8e8a84`.
+- **Idles and cheers:** the idle from the design; arms folded, smug. Both fists up beside his horns, grinning; laughing, a hand on his belly.
+- **Gait range:** a bounce of 0.1–0.5 px on each step, a lean of up to 0.025: he stays upright, against the ape's hunch.
+- **Wear:** scuffed is two faded patches on the shell; scorched is two soot streaks there. Only the shell takes marks (the skin is the face's colour).
+- **Rig:** drawn flat (2026-11-04): the design worn with the crown and a bolted patch plate, then edited for huge spikes, long horns and a small crown, then for the clean outline (Silhouette). With the first design's spikes two blind readers saw "a bulky body with a spiky, bumpy outline" and named the king or the ape, low; with the second, "maybe Bowser (low). Round body covered in spikes, could equally be a hedgehog or porcupine". Twelve poses drawn three to an image and cut apart (`art/sprites/king/poses.prompt.txt`), every one with his head level and both eyes open (chin up, narrowed or side on, the face kit found no pair), the jump with his fists at his chest (arms flung up, it read as the ape), the falling tuck into the shell a third air drawing, and the knocked-out pose flipped on his back like an upturned turtle.
+- **Concept prompt:** A hulking upright turtle king with yellow-orange skin, a big toothy snout, a pale banded belly, two long cream horns and a smooth swept-back red-orange mane; his shell, humped behind him, is made of riveted boiler plate with a bolted-on patch, four huge welded-on bolts for spikes round a cream rim; plain dark cuffs on his wrists; a small paper party crown between his horns.
 
 ### The green saddled dino (new)
 - **Kind:** `dino` · **Name:** Yoshee
