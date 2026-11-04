@@ -20,13 +20,17 @@ import { botRace } from '../lib/bot-race';
  * looked idle until it slammed) and looking past every clear move while
  * where it stands is about to hurt: 261 in 555. The misses left are
  * mostly routes into places it can't leave (it gives up), shots and timed
- * hazards past the one move it looks ahead, and low-gravity falls.
+ * hazards past the one move it looks ahead, and low-gravity falls. Since
+ * bots make mistakes at every level, it runs them with steady hands (no
+ * fumbles, pauses, wrong turns or lag), so it keeps measuring the motor and
+ * the route rather than a player's lapses. Taking a safe move over a tight
+ * jump that costs little more, and braking while it looks: 254 in 546.
  */
 const SEEDS = Array.from({ length: 10 }, (_, i) => i + 1);
 const SIZES = ['classic', 'wide', 'tall'] as const;
 
 describe('hard bot routes', () => {
-  it('finishes most levels with parts placed, at every size', () => {
+  it('finishes most levels with parts placed, at every size', { timeout: 400_000 }, () => {
     let races = 0;
     let finished = 0;
     let frames = 0;
@@ -36,7 +40,7 @@ describe('hard bot routes', () => {
         for (const seed of SEEDS) {
           // A size the theme never rolls falls back to one it does: count each level once.
           if (size === 'tall' && (theme === 'farm' || theme === 'harbor')) continue;
-          const r = botRace(seed, { theme, size: size === 'classic' ? undefined : size, level: 'hard', parts: 3 });
+          const r = botRace(seed, { theme, size: size === 'classic' ? undefined : size, level: 'hard', parts: 3, steady: true });
           races++;
           if (r.finished) {
             finished++;

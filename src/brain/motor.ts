@@ -9,6 +9,7 @@ import { gustAir } from '../sim/weather';
 import type { RunWorld } from '../sim/run';
 import { type InputFrame, NO_INPUT } from '../sim/types';
 import { Rng } from '../core/rng';
+import { fatalSlips, type Slip, slip } from '../gen/level/precision';
 import type { Personality } from './personality';
 import { type Foresight, foresight } from './foresight';
 import { type RaceMap, raceMap } from './route';
@@ -39,6 +40,13 @@ import type { Intent } from './types';
  * where it is does as well as the route promises, it stops and lines up
  * first, where stopping is safe. Cursor intents move the cursor with the
  * arrows and click, so everyone watches it choose.
+ *
+ * Its hands aren't flawless at any level (Personality): now and then a jump
+ * comes out off, more often on a tight one (a slip would drop it) or with a rival at its
+ * heels, and it plays the fumble out for a moment before steering again.
+ * Before such a jump, or where a hazard made it weigh its moves, it may stop
+ * to think, less often on ground it has thought on before, and a pause may
+ * end on a worse line than the best.
  */
 
 /** Route units (tenths of a tile) one frame is worth: about a walk. */
@@ -53,6 +61,22 @@ const SETTLE_FRAMES = 40;
 const AGAIN = 15;
 /** Within this many px of the target, the cursor taps instead of holding, so it stops where it means to. */
 const TAP_NEAR = 40;
+/** Px a rival must be within for the bot to feel it at its heels. */
+const HEELS = 3 * TILE;
+/** Most a fumble's chance can climb under pressure. */
+const MAX_SLIP = 0.5;
+/** Scales the chance to stop and think where it has thought before in this level: it remembers, roughly. */
+const FAMILIAR = 0.3;
+/** Chance a pause runs twice as long: now and then it really has to think. */
+const LONG_THINK = 0.1;
+/** Route units a worse line may cost over the best one: a plausible mistake, not a walk the wrong way. */
+const STRAY_COST = 40;
+const FUMBLES: readonly Slip[] = ['short', 'late', 'early', 'long'];
+const NO_SLIPS: readonly Slip[] = [];
+/** Moves past a tight best one it looks at for a safe one. */
+const SAFE_LOOKS = 4;
+/** Px/s under which braking lets go, so it stops rather than turns round. */
+const BRAKE_TO = 8;
 
 type Act =
   /** `loose`: a slipped move's fumbled frames, up to this index, are played as pressed whatever the body does; then it steers again. */
@@ -82,6 +106,13 @@ export class Motor {
   private shots = 0;
   /** Times it has set off from each cell this race. */
   private visits = new Map<number, number>();
+  /** Cells it has stopped to think on in this level, across its rounds: it doubts less where it has been. */
+  private seen = new Set<number>();
+  /** The cell it last weighed thinking on: once per arrival. */
+  private mulled = -1;
+  /** Frames of thinking still owed on that cell once it has stopped, and whether it ends on a worse line. */
+  private musing = 0;
+  private strays = false;
   private last = -1;
   private prev: InputFrame = NO_INPUT;
   /** Frame of the last confirm or alt press: a press is an edge, so never on two frames running. */
@@ -198,7 +229,11 @@ export class Motor {
     const r = run?.runners.find((x) => x.slot === p.slot);
     if (!run || !r || !r.alive || r.finished) return NO_INPUT;
     if (run !== this.run) {
+      if (run.level !== this.run?.level) this.seen.clear();
       this.run = run;
+      this.mulled = -1;
+      this.musing = 0;
+      this.strays = false;
       this.act = null;
       this.settled = -1;
       this.visits.clear();
@@ -223,10 +258,12 @@ export class Motor {
     const go = this.follow(b);
     if (go) return go;
     // On landing, a moment to see what's next, unless something is coming for it where it stands: anyone flinches.
+    // It brakes meanwhile, as a player who doesn't know what's next stops rather than coasts off the ledge.
     // In the air there's no time to stand and look: it steers at once.
     if (this.hesitate > 0 && b.onGround && !hurtsStill(map, this.fore, run.frame, b, shotsAhead(run, map), this.traits.margin)) {
       this.hesitate--;
-      return NO_INPUT;
+      if (Math.abs(b.vx) <= BRAKE_TO || this.gust() !== 0) return this.still(b);
+      return this.press({ left: b.vx > 0, right: b.vx < 0, jump: false, jumpPressed: false });
     }
     this.hesitate = 0;
     this.act = this.choose(map, run, b, ty * map.field.w + tx);
@@ -329,6 +366,7 @@ export class Motor {
       ranked.sort((x, y) => x.c - y.c);
       let best: Move | null = null;
       let cost = Infinity;
+      let at = -1;
       // Moves a hazard is in the way of, or that land in a trap: worth waiting for if one still promises more once the wait is counted.
       const held: { mv: Move; p: number; trap: boolean }[] = [];
       let looks = 0;
@@ -344,6 +382,7 @@ export class Motor {
         }
         best = mv;
         cost = p;
+        at = ranked.findIndex((x) => x.mv === mv);
         break;
       }
       if (held.length && !exposed && b.onGround) {
@@ -365,10 +404,34 @@ export class Motor {
         return { kind: 'settle', at: here, t: 0 };
       }
       if (best) {
-        if (best.to !== here) this.settled = -1;
-        if (best.air && this.rng.chance(this.traits.slip)) {
-          const s = slipped(best, this.rng);
-          if (s) return { kind: 'move', m: s.m, i: 0, loose: s.until };
+        let fatal = best.air ? fatalSlips(map.field, b, best.controls) : NO_SLIPS;
+        // A tight jump: a safe move that costs little more is worth it, as a player takes the forgiving way.
+        if (fatal.length && at >= 0)
+          for (const x of ranked.slice(at + 1, at + 1 + SAFE_LOOKS)) {
+            if (x.p > cost + this.traits.care) break;
+            if (x.mv.to === here || blocked(x.mv)) continue;
+            const risk = x.mv.air ? fatalSlips(map.field, b, x.mv.controls) : NO_SLIPS;
+            if (risk.length || this.trap(map, run, x.mv, f, dist)) continue;
+            best = x.mv;
+            cost = x.p;
+            fatal = risk;
+            break;
+          }
+        const think = this.think(map, run, b, shots, air, here, exposed, fatal.length > 0 || held.length > 0);
+        if (think) return think;
+        if (this.strays && at >= 0) {
+          this.strays = false;
+          const worse = ranked.slice(at + 1).find((x) => x.mv.to !== here && x.mv.to !== best!.to && x.p <= cost + STRAY_COST && !blocked(x.mv));
+          if (worse) best = worse.mv;
+        }
+        if (best.to !== here) {
+          this.settled = -1;
+          this.mulled = -1;
+        }
+        if (best.air && this.rng.chance(Math.min(MAX_SLIP, this.traits.slip * this.pressure(run, b, fatal.length > 0)))) {
+          // On a tight jump, nerves pick the fumble that drops it; anywhere else it's any fumble, mostly saved.
+          const s = slipped(best, this.rng, fatal.length ? fatal : FUMBLES);
+          if (s) return { kind: 'move', m: s.m, i: 0, loose: Math.min(s.m.controls.length, s.until + this.traits.save) };
         }
         return { kind: 'move', m: best, i: 0 };
       }
@@ -381,6 +444,43 @@ export class Motor {
       }
     }
     return exposed || cornered || !b.onGround ? this.escape(map, run, b, shots, moves, target) : null;
+  }
+
+  /**
+   * A pause to think before going on from `here`, if it takes one: rolled
+   * once per arrival where the next move is a tight jump or a hazard made it
+   * weigh its moves (`hard`), less often where it has thought before. It
+   * brakes to a stop first, and only where standing is safe; whether the
+   * pause ends on a worse line is rolled with it.
+   */
+  private think(map: RaceMap, run: RunWorld, b: Body, shots: readonly Shot[], air: number, here: number, exposed: boolean, hard: boolean): Act | null {
+    if (!b.onGround || exposed) return null;
+    if (this.mulled !== here) {
+      this.mulled = here;
+      this.musing = 0;
+      this.strays = false;
+      if (!hard || !this.rng.chance(this.traits.think * (this.seen.has(here) ? FAMILIAR : 1))) return null;
+      this.seen.add(here);
+      this.musing = Math.round(this.traits.muse * this.rng.range(0.5, 1.5) * (this.rng.chance(LONG_THINK) ? 2 : 1));
+      this.strays = this.rng.chance(this.traits.stray);
+    }
+    if (this.musing <= 0) return null;
+    const hold = this.hold(map, run, b, shots, air, run.frame + this.musing);
+    if (hold?.kind === 'wait') this.musing = 0;
+    // Nowhere safe to stop: no time to think either.
+    else if (!hold) this.musing = 0;
+    return hold;
+  }
+
+  /** How much more likely a jump is to come out off: a tight one, and a rival at its heels, each make it choke. */
+  private pressure(run: RunWorld, b: Body, tight: boolean): number {
+    let k = tight ? this.traits.choke : 1;
+    const me = b.x + b.w / 2;
+    const close = run.runners.some(
+      (r) => r.body !== b && r.alive && !r.finished && Math.abs(r.body.x + r.body.w / 2 - me) < HEELS && Math.abs(r.body.y - b.y) < HEELS,
+    );
+    if (close) k *= Math.sqrt(this.traits.choke);
+    return k;
   }
 
   /**
@@ -630,24 +730,25 @@ function bumpedBy(solids: readonly Rect[], x: number, y: number, b: Body): boole
 }
 
 /**
- * `mv` as a thumb might fumble it: the jump pressed a few frames late, or let
- * go a few frames early. The path no longer says where the body will be, so
- * the fumbled frames, up to `until`, are played without checking (Act
- * `loose`); after that the body is off its recording and the motor steers
- * from wherever it got to, as a player saves a fumbled jump in the air.
+ * `mv` as a thumb might fumble it, the way a level's difficulty counts
+ * (gen/level/precision.ts `slip`): let go of jump early, pressed a beat late
+ * or early, or never braking, carried on through the landing and past it.
+ * Some come up short, some run straight off a stone or a short perch. The
+ * path no longer says where the body will be, so the fumbled frames, up to
+ * `until`, are played without checking (Act `loose`); after that the body
+ * is off its recording and the motor steers from wherever it got to, as a
+ * player saves a fumbled jump in the air.
  */
-function slipped(mv: Move, rng: Rng): { m: Move; until: number } | null {
-  const controls = mv.controls.map((c) => ({ ...c }));
-  const j = controls.findIndex((c) => c.jumpPressed);
-  if (j < 0) return null;
-  if (j > 0 && rng.chance(0.5)) {
-    const n = rng.int(1, 3);
-    controls.splice(j, 0, ...Array.from({ length: n }, () => ({ ...controls[j - 1], jumpPressed: false })));
-    return { m: { ...mv, controls }, until: j + n + 1 };
+function slipped(mv: Move, rng: Rng, kinds: readonly Slip[]): { m: Move; until: number } | null {
+  const j = mv.controls.findIndex((c) => c.jumpPressed);
+  for (const kind of rng.shuffle([...kinds])) {
+    const controls = slip(mv.controls, kind);
+    if (!controls) continue;
+    let end = j;
+    while (end + 1 < mv.controls.length && mv.controls[end + 1].jump) end++;
+    const shift = controls.length - mv.controls.length;
+    const until = kind === 'short' ? end + 1 : kind === 'long' ? controls.length : j + Math.max(0, shift) + 1;
+    return { m: { ...mv, controls }, until };
   }
-  let end = j;
-  while (end + 1 < controls.length && controls[end + 1].jump) end++;
-  const from = Math.max(j + 1, end - rng.int(2, 6));
-  for (let k = from; k <= end; k++) controls[k].jump = false;
-  return { m: { ...mv, controls }, until: end + 1 };
+  return null;
 }

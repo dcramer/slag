@@ -11,10 +11,14 @@ import { RUN_COUNTDOWN } from '../src/sim/constants';
 import { NO_INPUT } from '../src/sim/types';
 import { botRace } from './lib/bot-race';
 
+/** A hard level with a tight jump on a Hard bot's way (THINK), and one where a fumble there is a fall (CHOKE). */
+const THINK_SEED = 3;
+const CHOKE_SEED = 8;
+
 describe('bots', () => {
-  // Seeds a bot finishes today; the share over many levels is tests/stats/bot-finish.test.ts.
+  // Seeds a bot with steady hands finishes today; the share over many levels is tests/stats/bot-finish.test.ts.
   it.each([1, 3, 12])('runs seed %i to the flag with the plan built', (seed) => {
-    const r = botRace(seed);
+    const r = botRace(seed, { steady: true });
     expect(r, `seed ${seed}: died of ${r.cause} at race frame ${r.frames}`).toMatchObject({ finished: true });
   });
 
@@ -67,7 +71,7 @@ describe('bots', () => {
     expect(m.placed).toHaveLength(2);
   });
 
-  // Hard bots on levels each of these once beat: what a good player does instead.
+  // Hard bots with steady hands on levels each of these once beat: what a good player does instead.
   it.each([
     ['harbor', 1, 'waits on the boardwalk for the tide to go out instead of walking down onto the beach and standing there as it floods'],
     ['harbor', 10, 'waits for a gust to drop before it jumps, instead of being blown off every jump'],
@@ -75,7 +79,7 @@ describe('bots', () => {
     ['rooftops', 8, 'steers in the air instead of letting go while it waits for a hazard'],
     ['farm', 20, 'goes the clear way rather than waiting for a long run that never comes clear'],
   ] as const)('%s %i: %s', (theme, seed, _what) => {
-    const r = botRace(seed, { theme, level: 'hard' });
+    const r = botRace(seed, { theme, level: 'hard', steady: true });
     expect(r, `died of ${r.cause} at race frame ${r.frames}`).toMatchObject({ finished: true });
     expect(r.frames).toBeLessThan(1200);
   });
@@ -87,7 +91,7 @@ describe('bots', () => {
     ['farm', undefined, 4, 'walks onto a ledge where a run step couldn’t stop short of what’s coming'],
     ['jungle', undefined, 13, 'backs off a dropper and a snapper its landing set off, instead of jumping into the lane as the head slams'],
   ] as const)('%s %s %i: %s', (theme, size, seed, _what) => {
-    const r = botRace(seed, { theme, size, level: 'hard', parts: 3 });
+    const r = botRace(seed, { theme, size, level: 'hard', parts: 3, steady: true });
     expect(r, `died of ${r.cause} at race frame ${r.frames}`).toMatchObject({ finished: true });
     expect(r.frames).toBeLessThan(1200);
   });
@@ -96,6 +100,20 @@ describe('bots', () => {
     // The plan's bridge isn't built, so no route reaches the flag from spawn.
     const r = botRace(1, { build: false, limit: RUN_COUNTDOWN + 15 * 60 });
     expect(r.finished || r.cause !== null, `still wandering at race frame ${r.frames}`).toBe(true);
+  });
+
+  it('stops to think before a tight jump, where steady hands go straight on', () => {
+    const opts = { level: 'hard', difficulty: 'hard', steady: true } as const;
+    expect(botRace(THINK_SEED, opts).pause).toBeLessThan(20);
+    const r = botRace(THINK_SEED, { ...opts, hands: (p) => ({ ...p, think: 1, muse: 60 }) });
+    expect(r.pause).toBeGreaterThanOrEqual(30);
+    expect(r.finished).toBe(true);
+  });
+
+  it('chokes on a tight jump: the fumble a hard level counts drops it', () => {
+    const opts = { level: 'hard', difficulty: 'hard' } as const;
+    expect(botRace(CHOKE_SEED, { ...opts, steady: true }).finished).toBe(true);
+    expect(botRace(CHOKE_SEED, { ...opts, steady: true, hands: (p) => ({ ...p, slip: 1, choke: 1 }) })).toMatchObject({ finished: false, cause: 'fall' });
   });
 
   it('replays the same race from the same seed', () => {
@@ -110,6 +128,15 @@ describe('bots', () => {
     expect(normal.slip).toBeGreaterThan(hard.slip);
     expect(easy.pace).toBeGreaterThan(normal.pace);
     expect(normal.pace).toBeGreaterThan(hard.pace);
+    // No level is flawless: even Hard fumbles and stops to think, it just saves a fumble sooner and doubts less.
+    for (const p of [easy, normal, hard]) {
+      expect(p.slip).toBeGreaterThan(0);
+      expect(p.think).toBeGreaterThan(0);
+      expect(p.choke).toBeGreaterThan(1);
+    }
+    expect(easy.save).toBeGreaterThan(hard.save);
+    expect(easy.think).toBeGreaterThan(hard.think);
+    expect(easy.stray).toBeGreaterThan(hard.stray);
     // Two bots at one level don't play alike.
     expect(rollPersonality(8, 'normal')).not.toEqual(normal);
     expect(rollPersonality(7, 'normal')).toEqual(normal);

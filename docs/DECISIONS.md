@@ -332,6 +332,11 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Each bot's difficulty is set on its own card, not for the room.** "each bot should let you tweak its difficulty somehow on the character panel"
   2026-11-03 · `in progress` · DESIGN.md → AI players; `Player.bot`, the `bot` action
   Changed: a room-wide Bots rule in the Rules menu, replaced before it landed.
+- **No bot level is unbeatable: every level fumbles, chokes on tight jumps and randomly stops to think; harder bots are harder mostly by sabotage, not perfect hands.** "for our AI difficulty i dont want them to be unbeatable, harder difficulties probably should have more sabotage type behavior and they should still randomly have to stop and think idk" / "tl;dr im not sure hard bots ever make mistakes?"
+  2026-11-04 · `done` (mistakes and pauses), sabotage `planned` (TODO.md → 27) · DESIGN.md → AI players, src/brain/personality.ts
+  Changed: Hard bots reacted in 0–1 frames and fumbled about one jump in a hundred, only ever coming up short.
+- **Bot finish targets, alone with the plan built (gentle, medium, hard level): Easy 75, 50, 30 in a hundred; Normal 90, 70, 50; Hard 95, 85, 70.** Proposed and taken with "Yes, start part 1".
+  2026-11-04 · `in progress` (gentle and medium are there; hard levels play little harder than medium ones until more of them land in their band) · DESIGN.md → AI players, tests/stats/bot-finish.test.ts
 - **Each theme has at least 1 and at most 3 grand landmarks among its 5+.** "id like at least one grand landmark, no more than 3 (in the min 5 landmarks)"
   2026-11-02 · `done` (enforced) · `GRAND_LANDMARKS` in src/gen/kinds.ts, tests/conformance/themes.test.ts
 - **The cast needs much more parody, and each parody must be instantly recognisable; the art must improve further.** "its better but you still need more parody and the art needs to be better yet..." / "the only thing that remotely resembles the thing its mimicking is the puff ball (kirby)". Iconic palettes win over the player-colour body rule; the player's colour moves to a visible secondary slot.
