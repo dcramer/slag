@@ -52,7 +52,8 @@ export const kind: FlatKind = {
     // The gaps between arm and body and between the legs, and the wrench's eye, cut through: inked, they read as dirt. The teeth (0.7) stay.
     holes: 0.8,
     feet: ['khaki'],
-    min: { dark: 0.03, grey: 0.25, lens: 0.2, mouth: 0.2 },
+    // Skin: the torn knees (0.6 to 1.2 world px²) go, a tan speck with a pen at play size; every other skin part is over 4.
+    min: { dark: 0.03, grey: 0.25, lens: 0.2, mouth: 0.2, skin: 1.5 },
   },
   roles: [
     { name: 'skin', color: '#efc9a4' },
@@ -88,11 +89,12 @@ export const kind: FlatKind = {
     marks: [
       [
         ['scuff', 0.55, 0.3, 1.0],
-        ['scuff2', 0.42, 0.8, 0.45],
+        // The trousers' marks on the thighs: on the thin shins, by the boots, they read as blotches.
+        ['scuff2', 0.42, 0.62, 0.45],
       ],
       [
         ['scorch', 0.5, 0.3, 1.1],
-        ['scorch2', 0.58, 0.8, 0.45],
+        ['scorch2', 0.58, 0.62, 0.45],
       ],
     ],
   },
