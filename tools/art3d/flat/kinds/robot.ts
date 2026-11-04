@@ -1,7 +1,7 @@
 import type { FlatKind } from '../kinds';
 
 export const kind: FlatKind = {
-  body: 158,
+  body: 157,
   map: {
     roles: ['batt', 'brass', 'tin', 'paper', 'label', 'hole', 'light', 'blue', 'disc', 'boot2', 'skin', 'dark'],
     families: [
@@ -32,6 +32,16 @@ export const kind: FlatKind = {
       ['blue', [52, 107, 190]],
       // The near ear disc's face: folded into the helmet, the disc was lost in its round.
       ['disc', [45, 109, 171]],
+      ['disc', [48, 104, 172]],
+      // The arm-length redraw's own shades: the helmet's deep shadow, the label's, the battery's grey.
+      ['blue', [28, 57, 110]],
+      ['blue', [39, 59, 103]],
+      ['label', [133, 43, 41]],
+      ['batt', [77, 72, 86]],
+      ['tin', [157, 163, 170]],
+      ['brass', [194, 130, 97]],
+      ['paper', [197, 189, 173]],
+      ['paper', [225, 211, 194]],
       ['boot2', [142, 179, 206]],
       ['boot2', [131, 186, 218]],
       ['skin', [255, 198, 142]],
