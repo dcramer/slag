@@ -36,7 +36,9 @@ export const kind: FlatKind = {
     // The far cheek in both cheers is squeezed against the raised arm, a red sliver mid-face that read as a rash.
     // It's the smallest far cheek (traced, cheer's under 0.85 world px² and cheer2's 0.86, the wall's 0.875,
     // the rest 0.9 and up): under 0.87 a cheek goes into the fur, and so does air-2's tongue. A close cut, so
-    // check every pose's part count when a drawing or a family changes.
+    // check every pose's part count when a drawing or a family changes. The head's outline past that cheek, where
+    // the raised arm overlaps the face, is painted out of both cheer drawings (its ring kept, so the cheek stays
+    // small enough to go): one colour either side, it was kept as a stroke, a scratch and a tick mid-face.
     min: { dark: 1.6, cheek: 0.87, plug: 0.8 },
   },
   eyes: { role: 'dark', area: [0.06, 0.85], gap: [2, 5.5], specks: { dark: 1.2, cheek: 0.35 }, from: 'map' },
