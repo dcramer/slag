@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { foresight } from '../src/brain/foresight';
+import { raceMap } from '../src/brain/route';
 import { propTag } from '../src/codex/describe';
 import { type Cell, normalizeCells } from '../src/core/geom';
 import { Rng } from '../src/core/rng';
@@ -35,6 +37,7 @@ import {
   steer,
   detonate,
   TRACK_CONE,
+  touchesHazard,
 } from '../src/sim/props';
 import { type Runner, RunWorld } from '../src/sim/run';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
@@ -236,6 +239,28 @@ describe('dropstone', () => {
     steps(run, 40);
     expect(r.alive).toBe(false);
     expect(r.killer).toBe(7);
+  });
+  it('is foreseen by a bot from where it would set it off, as the slam really comes', () => {
+    const level = testLevel();
+    const p = place(drop, 10, FLOOR - 7);
+    const { run, r } = race(level, [p]);
+    standAt(r, 20, FLOOR - 1);
+    steps(run, 30);
+    const box = () => ({ x: r.body.x, y: r.body.y, w: r.body.w, h: r.body.h });
+    const away = box();
+    standAt(r, 10, FLOOR - 1);
+    const under = box();
+    const sight = foresight(run, raceMap(run));
+    const clear = sight.watch();
+    const set = sight.watch();
+    let seen = -1;
+    for (let f = run.frame; f < run.frame + 120; f++) {
+      expect(clear.at(f, away).hazards).toHaveLength(0);
+      if (seen < 0 && set.at(f, under).hazards.some((h) => touchesHazard(under, h))) seen = f;
+    }
+    while (r.alive && run.frame < seen + 60) run.step([NO_INPUT]);
+    expect(r.alive).toBe(false);
+    expect(run.frame - 1).toBe(seen);
   });
   it('stops short of a protected zone', () => {
     const level = testLevel();
