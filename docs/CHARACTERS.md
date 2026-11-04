@@ -46,7 +46,7 @@ So each kind has: a clear head-to-body ratio, a readable expression, a line of a
 | chomper | the round dot-eater | a circle with a wedge mouth that chomps, one small eye, a scalloped bite out of its back, a linen napkin tucked into its lower lip | costume: the whole ball |
 | miner | the voxel miner | a cube head as wide as the body, square stiff limbs, a taped toy pickaxe; carved from wood | costume: the shirt, the trousers a dark of it |
 | ape | the necktie ape | hunched, long arms, a necktie | costume (its entry) |
-| merc | the spiky-haired mercenary | spiked hair, a blade taller than he is | costume (its entry) |
+| merc | the spiky-haired mercenary | a crown of big blond spikes singed at the tips, a giant serrated bread knife always in hand, a hubcap on one shoulder | costume: the top, the trousers a dark of it |
 | king | the spiked turtle king | a spiked shell, horns, a fiery mane, a brute's build | costume (its entry) |
 | dino | the green saddled dino | a long snout, a saddle, a round tail, boots | costume (its entry) |
 | robot | the blue robot boy | a big round helmet with a stripe and ear discs, the face in its opening, a light suit, big boots, a tin-can arm cannon held out, a battery on his back; small | costume: helmet, gloves and boots, the suit a light tone |
@@ -252,13 +252,14 @@ What came out of it:
 - **A stranger should say:** "the spiky-haired guy with the giant sword."
 - **Silhouette:** a crown of big blond spikes and a blade as tall as he is, held low and trailing behind at a run, its point on the floor at idle as he leans on it. Slim, one big shoulder piece. The blade is always in hand, never strapped to his back (the plumber's plunger owns that).
 - **Traits:** spiky blond hair; a sleeveless dark knit top; baggy dark trousers; two belts crossed at the hip; one metal shoulder piece; heavy boots; a huge, broad blade.
-- **Palette:** hair `#f0d470` (shade `#c9a84a`); top `#3a3f5c` (shade `#2a2e44`); trousers `#4a4060`; belts and boots `#6b4a35`; pauldron `#9aa0a8`; skin `#f0cfa8`; eyes `#6ec8e0`; blade `#c9ccd2` (shade `#8e9298`), teeth `#a8adb4`; handle `#7a5232`.
-- **Color slot:** costume.
+- **Palette:** the sleeveless knit top in the player's colour (drawn `#4a5ab0`), the trousers a dark of it (tone −24); the rest neutral: hair `#f0d470`, its singed tips `#3e3834`; belts, boots and the knife's handle `#6b4a35`; hubcap `#9aa0a8`; blade `#c9ccd2`; skin `#f0cfa8`; eyes `#4fa8c8`.
+- **Color slot:** costume: the top, and the trousers in a dark of it.
+- **Palette alts:** the hubcap in chrome `#9aa0a8`, gunmetal `#6b7078` or a gold-painted cap `#b8a070`.
 - **Gait:** a low, loping run with the blade dragging behind; a spinning slash on the jump; at idle he leans on the blade with one hand.
 - **The nod:** the spiky blond hair (the head shape, sharper than the speedster's quills and pointing up); the blade bigger than he is (the read: no other character carries one); the single big shoulder piece and the slim dark outfit (the brooding mercenary).
 - **Our twist:** the legendary oversized blade is a giant serrated bread knife with a riveted wooden handle. His shoulder piece is a hubcap, and the spikes of his hair are singed at the tips.
 - **Swaps:** a crumb on the blade; a sticking plaster on the cheek; a grey feather in the belt; a price sticker on the hubcap.
-- **Rig:** humanoid; the blade a prop on the hand bone, sized as caricature like the plumber's plunger.
+- **Rig:** drawn flat (2026-11-04): a game-size design worn with the hubcap, a notch snapped out of the saw edge, singed spike tips and a torn shin (the designs drew no hubcap, so the wear edit added it), then edited twice more: at the design's size, two fresh readers saw only "a thin figure with pointed ears or spiky hair and a long thin blade" (unsure twice), so the spikes are twice as big, out to both sides, and the knife stands as tall as he is without his hair, and he is drawn 24 px tall. Two more fresh readers name him then, both at medium: "spiky-haired swordsman… tall spiky hair, slim body, long blade upright beside him". Eleven poses, drawn three to an image and cut apart. The knife is a `loose` role, left out of his size, and stays tip-down beside him or trailing behind, never raised over the spikes; drawn across his shins on the run it merged with his legs, so it trails behind his hip. His air and wall slide are drawn a little smaller (`scale`), or the spikes over a raised arm left the box. The singed tips are a role of their own: as ink or the boots' brown, every tip had specks. His eyes come from the role map with a lower `ink`, or the sheets' small pupils traced as lines.
 - **Concept prompt:** A slim brooding young mercenary with a crown of big spiky blond hair singed at the tips and pale blue eyes; a sleeveless dark knit top, baggy dark trousers, two brown belts crossed at the hip, heavy boots; a car hubcap strapped on as a single shoulder piece. He grips a giant serrated bread knife as tall as he is, with a riveted wooden handle, its point resting on the ground.
 
 ### The spiked turtle king (new)
