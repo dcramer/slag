@@ -39,17 +39,20 @@ export const kind: FlatKind = {
   roles: [
     { name: 'white', color: '#f3f0ea' },
     { name: 'vest', color: '#e8d23a', slot: 'player' },
-    { name: 'orange', color: '#d9894a' },
-    // A colourway is the loot in its beak (VARIETY.palette): bare steel, blued or green-painted. Never red or
+    // The beak and feet, a neutral warm tan: in a tone of the vest the beak and its loot ran together into one
+    // shape (a green beak on a green spanner, a blue one on blued steel), and a purple beak was no goose's.
+    { name: 'orange', color: '#c08a58' },
+    // A colourway is the loot in its beak (VARIETY.palette): bare steel, blued or dark iron. Never red or
     // brass: a red spanner in an open beak reads as a tongue, and brass as the beak.
-    { name: 'steel', color: '#9aa0a8', alts: ['#5d6d86', '#4f8a5a'], vary: 6 },
+    { name: 'steel', color: '#9aa0a8', alts: ['#5d6d86', '#4f5359'], vary: 6 },
     { name: 'dark', color: '#2a1f1a' },
     // One quiet mark a wear, low on the rump: the vest has no room between its bands, and a loud mark on the
     // white reads as a button or a hole.
     { name: 'scuff', color: '#808080', on: 0, tone: -7 },
     { name: 'scorch', color: '#808080', on: 0, tone: -20 },
-    // A darker tan than the cast's plaster: a pale one is lost on the white neck.
-    { name: 'plaster', color: '#c99a6a' },
+    // Grey tape: a pale one is lost on the white head, and a tan one beside the beak's tan made the head one
+    // patchy colour.
+    { name: 'plaster', color: '#8e8a84' },
   ],
   slots: [
     { name: 'plaster', vary: 1, options: 2 },
@@ -64,9 +67,11 @@ export const kind: FlatKind = {
   // The dark where each leg meets the belly is the drawing's shadow there, a speck between the legs at play
   // size: the leg's.
   recolour: { from: 'dark', to: 'orange', below: 10, lying: [99, 0] },
-  // On the cheek behind the eye, the engineer's size: the cast's spot is past the back of a goose's narrow head,
-  // and it stuck out into the air there, and below the neck on the run.
-  accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [1.5, 0.7], offset: [0.8, -0.9] }],
+  // Behind the eye, level with it, and small: the cast's spot is past the back of a goose's narrow head, and
+  // it stuck out into the air there, and below the neck on the run; lower, on the cheek or the throat, the loot
+  // held back along the jaw ran over it (the wings-up cheer's head is tipped back, the idle's spanner hangs);
+  // any longer, it stuck out past the tipped-back head.
+  accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [0.95, 0.5], offset: [0.35, -1.9] }],
   // A small eye's cheer arc and blink, bolder than the kit's floor: on the small cheer head a hairline was lost.
   face: { r: 0.7, iris: '#2a1f1a', eye: 'dot', mark: 0.5 },
   gait: { bounce: [0.1, 0.6], lean: [0, 0.03] },

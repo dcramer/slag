@@ -37,11 +37,11 @@ So each kind has: a clear head-to-body ratio, a readable expression, a line of a
 | hedgehog | the blue speedster | cobalt, spikes swept straight back, joined eyes with green irises, peach muzzle and belly, a one-sided grin, red sneakers with a white strap; runs leaning hard, spins in the air | costume: the quills |
 | elf | the green-tunic elf hero | long green cap flopping back, pointed ear, blond fringe, flared green tunic with a belt, a kite shield and a sword hilt on the back | costume: cap and tunic |
 | hunter | the armored bounty hunter | orange armor, huge round red shoulder pads, a round helmet with a green visor, an arm cannon held out | costume: the suit |
-| zapmouse | the yellow electric mouse | yellow, long ears with black tips, red cheeks, a lightning-bolt tail, brown back stripes | costume: the fur |
-| impostor | the impostor crewmate | a bean on stubby legs, a wide pale visor standing proud, a backpack | costume: the bean |
-| puffball | the pink puffball | a ball on big red feet, stubby arms, tall eyes with a shine, blush; puffs up in the air | costume: the ball |
+| zapmouse | the yellow electric mouse | yellow, long ears with black tips, red cheeks, a lightning-bolt tail | costume: the fur; the cheeks keep their red (a face mark), the tin tail and the cord are neutral |
+| impostor | the impostor crewmate | a bean on stubby legs, a wide pale visor standing proud, a backpack | costume: the bean, and the pack a dark of it |
+| puffball | the pink puffball | a ball on big feet, stubby arms, tall eyes with a shine, blush; puffs up in the air | costume: the ball, and the feet a dark of it |
 | jelly | the jellyfish parasite | a translucent green dome, three red nuclei inside, four ivory fangs, a hovering bob | costume: the dome |
-| goose | the goose up to no good | white, orange beak and feet, an S of a neck; on the run the honk pose, neck flat out and wings up | costume: the vest |
+| goose | the goose up to no good | white, a tan beak and feet, an S of a neck; on the run the honk pose, neck flat out and wings up | costume: the vest; the beak and feet a neutral tan |
 | engineer | the team shooter's engineer | yellow hard hat with dark goggles on it, a square jaw, a red or blue work shirt, khaki trousers, a leather glove, a huge wrench | costume: the shirt |
 | chomper | the round dot-eater | a yellow circle with a wedge mouth that chomps, one small eye, a scalloped bite out of its back, a checked napkin tucked into its lower lip | costume: the whole ball |
 | miner | the voxel miner | a cube head, a blocky body, a pickaxe | costume (its entry) |
@@ -158,14 +158,14 @@ What came out of it:
 - **Kind:** `zapmouse` · **Name:** Pikachew
 - **A stranger should say:** "the yellow electric mouse."
 - **Silhouette:** chubby and round, with two long pointed ears and a zigzag tail that breaks the outline behind.
-- **Traits:** yellow; long ears tipped black; round red cheeks; a lightning-bolt tail; two brown stripes across the back; small black eyes with a white glint.
-- **Palette:** body `#f2c62a` (shade `#c99c14`); ear tips `#2a1f1a`; cheeks `#e0473b`; stripes `#6b4a35`; tail `#c4c8ce` (shade `#8e9298`) with rivets `#6b6f76`; cord `#2a2a30`, plug `#d9d4c8`.
-- **Color slot:** costume: the yellow fur (body, head, arms, legs; the `fur` role). The ear tips, cheeks, stripes, tin bolt and cord keep the roster's colours.
+- **Traits:** yellow; long ears tipped black; round red cheeks; a lightning-bolt tail; small black eyes with a white glint.
+- **Palette:** fur the player's colour (`#f2c62a` in the roster); ear tips the ink `#2a1f1a`; cheeks `#e0473b`, a face mark; tail tin `#a9afb7`; tape `#c9c6bd`; cord brown `#7a5236`, slate `#4b5560` or taupe `#857a6e`, with its plug in steel `#7c848d`, pale grey `#b3aa9b` or black plastic `#5a5e66`. The drawing's back stripes fold into the fur.
+- **Color slot:** costume: the fur (body, head, arms, legs; the `fur` role). Everything else is neutral: the ear tips, the tin tail, the tape, the cord and its plug; the cheeks keep their warm red as a face mark.
 - **Gait:** a quick scamper, ears streaming back: upright since it was drawn flat (2026-11-03); the 3D one ran on all fours.
 - **The nod:** the long black-tipped ears (the outline, at any size); the zigzag tail (the one shape no other mouse has); the red cheeks (the face, at 20 px); the yellow (what everyone remembers first).
 - **Our twist:** a scrapyard knock-off wired up by hand. The bolt tail is a zigzag cut from sheet tin and riveted on at the root; a frayed power cord is knotted round its middle like a belt, the plug dangling; one ear is bent and taped.
 - **Swaps:** a chewed-through bit of cable in its paw; a sticking plaster on one ear; a spark-scorch on the tail tip; a fuse tucked behind an ear.
-- **Rig:** drawn flat (2026-11-03): the worn design (the shorter ear bent and taped, a dented head, a bent tin tail) upright in every pose; the cord belt in brown, slate or rust, the plug cream or orange; a tape cross on the crown.
+- **Rig:** drawn flat (2026-11-03): the worn design (the shorter ear bent and taped, a dented head, a bent tin tail) upright in every pose; the cord belt in brown, slate or taupe, the plug steel, pale grey or black (2026-11-04, Decisions 4: before, a rust cord and an orange plug); a tape cross on the crown.
 - **Concept prompt:** A chubby, round yellow mouse with two long pointed ears tipped black, one ear bent and taped; round red cheeks; small black eyes with a white glint; two brown stripes across its back; a zigzag lightning-bolt tail cut from sheet tin and riveted on at the root; a frayed black power cord knotted round its middle like a belt, the plug dangling.
 
 ### The green-tunic elf hero
@@ -186,18 +186,18 @@ What came out of it:
 - **Kind:** `puffball` · **Name:** Kurby
 - **A stranger should say:** "the little pink puffball."
 - **Silhouette:** a near-perfect ball on two big oval feet, with stubby round arms.
-- **Traits:** tall oval eyes with a shine at the top; blush marks; a tiny mouth; big red feet.
-- **Palette:** body is the player's color, pink by default; feet `#c9473f`, or one of two designed alternatives (`#e07b2c`, `#e8b23a`) rolled per look; eyes `#2a1f1a`; blush `#ec7a94`; seam the body's colour, inked; valve `#f4efe6`.
-- **Color slot:** costume: the ball, its arms and its seam, because the original comes in every color.
+- **Traits:** tall oval eyes with a shine at the top; blush marks; a tiny mouth; big feet.
+- **Palette:** body is the player's color, pink by default; feet a dark of it (tone −18), the toe scuffed through a step lighter (−8); eyes `#2a1f1a`; blush `#ec7a94`; seam and valve folded into the ball; plaster fabric `#e9d3b0`, gauze `#f1ede4` or grey tape `#b9bcbf`.
+- **Color slot:** costume: the ball, its arms and its seam, because the original comes in every color; the feet in a dark of it.
 - **Gait:** toddles on its big feet; puffs up round and floats in the air.
-- **The nod:** the ball (the whole body); the big red feet (they make it a creature, and part it from the dot-eater); the tall oval eyes with a shine (the face); the blush (the sweetness).
+- **The nod:** the ball (the whole body); the big feet, darker than the ball (they make it a creature, and part it from the dot-eater); the tall oval eyes with a shine (the face); the blush (the sweetness).
 - **Our twist:** a cheap vinyl squeeze toy. A moulding seam runs round its middle between the front and back halves, a squeaker valve pokes out high on its back (the one bump on the ball's outline), a mould number is stamped on the sole of one foot, and it squeaks when it lands.
 - **Swaps:** a price sticker on its side; a scuff of shelf dust; a tiny bow; a bite mark from a dog.
-- **Palette alts:** the feet in red `#c9473f`, orange `#e07b2c` or yellow `#e8b23a`.
+- **Palette alts:** the plaster in fabric tan `#e9d3b0`, gauze `#f1ede4` or grey tape `#b9bcbf`. The feet were red, orange or yellow until 2026-11-04 (Decisions 4).
 - **Idles and cheers:** the idle's sway of the arms; looking up, arms behind it, tapping one toe. Both arms up, eyes shut; puffed up round, waving one arm.
 - **Gait range:** a toddle's bounce of 0.1–0.8 px on each step, a lean of up to 0.03.
 - **Wear:** scuffed is a shelf-worn toy: two pale scuffs on the ball, grime on the near toe, and a kid's marker X low on its side; scorched is soot on the ball's side and front, the near arm and the near toe.
-- **Rig:** drawn flat (2026-11-03): a bent valve, a bitten arm and a toe scuffed pale, a light tone of the shoe (in its cream padding it was the farm's ground and read as a hole; in the body's colour, it tipped the shoe in the player's); the valve in its own cream (as the eyes' white it went to the ink, a dark knot on the crown); the blush one solid pink (see-through, it went grey on a green or teal ball); its seam and its tape cross aren't drawn (at play size one read as a mouth, the other as a third eye, and the cross's last specks of ink as a second face).
+- **Rig:** drawn flat (2026-11-03): a bent valve, a bitten arm and a toe scuffed pale, a step lighter than the shoe and darker than the ball (in its cream padding it was the farm's ground and read as a hole); the valve in its own cream (as the eyes' white it went to the ink, a dark knot on the crown); the blush one solid pink (see-through, it went grey on a green or teal ball); its seam and its tape cross aren't drawn (at play size one read as a mouth, the other as a third eye, and the cross's last specks of ink as a second face).
 - **Concept prompt:** A near-perfect round ball creature on two big oval red feet, with stubby round arms; tall oval black eyes with a shine at the top, blush marks and a tiny mouth. It is a cheap vinyl squeeze toy: a moulding seam runs round its middle, a little white squeaker valve pokes out of its back, and a mould number is stamped under one foot.
 
 ### The voxel miner (new)
@@ -219,13 +219,13 @@ What came out of it:
 - **A stranger should say:** "the crewmate from the impostor game."
 - **Silhouette:** a bean on two stubby legs, a wide visor standing proud of the front, and a pack behind.
 - **Traits:** a smooth bean body; a pale-blue visor; a backpack; no arms.
-- **Palette:** body is the player's color; visor `#a9dbe8` (shade `#6aa6ba`); tape `#d3d8dc` (silver duct tape: in the strap's pale tan it was the farm's own colour, and read as a notch cut in the visor; in brown packing tape, a brow); strap `#d9c79a`; can `#c9473f` (shade `#9c3530`) with cap `#e8c24a`.
-- **Color slot:** body, because the original comes in every color.
+- **Palette:** body is the player's color; the can a dark of it (tone −16); visor `#a9dbe8` (shade `#6aa6ba`), a neutral pale glass; tape `#d3d8dc` (silver duct tape: in the strap's pale tan it was the farm's own colour, and read as a notch cut in the visor; in brown packing tape, a brow); strap `#d9c79a`; the sticky note `#f4e38a`.
+- **Color slot:** body, because the original comes in every color, and the pack in a dark of it.
 - **Gait:** a waddling shuffle on its stubby legs.
 - **The nod:** the bean on stubby legs (the whole silhouette); the wide pale visor (the face; without it it's a jelly bean); the pack on its back (it breaks the outline behind, and is half the bean's read in profile).
-- **Our twist:** a crew issued from the scrapyard. The pack is a red jerrycan with a spout, strapped on; a crack across the visor is taped over; a dent in its side has been knocked out with a hammer.
+- **Our twist:** a crew issued from the scrapyard. The pack is a jerrycan with a spout, strapped on; a crack across the visor is taped over; a dent in its side has been knocked out with a hammer.
 - **Swaps:** a sprout growing from the head; a sticky note on the visor; a paper sailor hat; a bandage round one leg.
-- **Palette alts:** the jerrycan in fuel red `#c9473f`, army olive `#6b7340` or bare steel `#8e949a`; its cap stays yellow.
+- **Palette alts:** the strap in tan webbing `#d9c79a`, grey webbing `#b4b9bf` or bone `#ece4d2`. The jerrycan was fuel red, olive or steel until 2026-11-04 (Decisions 4).
 - **Rig:** drawn flat (2026-11-03), side on: a tape strip across the visor's crack, a hammered dent in its side, a crumpled can and a bent spout; ten poses drawn, and a second idle cut from the design rocked back on its heel (the image model held the bean to the design's stance). No face kit: the visor is drawn as it is. The first round failed the blind read as "a squarish blob": the can stood as tall as the bean and fused with its back, and the visor sat inside the outline. In the design the visor was moved out past the front and the can moved back off the bean onto a short strap, by hand, and the poses copied both. The can's handle hole is cut through, and its spout's white loop folded into the can: white like the visor's glint, they read as an eye on the pack. The visor is blank glass: the crack is painted out of the drawings and the glint folded into the glass, since the crack's zigzag read as a frown and the small white glint, inked round, as an eye.
 - **Concept prompt:** A smooth bean-shaped spacesuit body on two stubby legs, no arms; a wide pale-blue visor with a white glint standing proud of its front, a crack across it taped over; a red jerrycan with a yellow-capped spout strapped to its back as a backpack; a hammered-out dent in its side.
 
@@ -360,14 +360,14 @@ What came out of it:
 - **Kind:** `goose` · **Name:** Honkers
 - **A stranger should say:** "the troublemaking goose."
 - **Silhouette:** a long body, an S-shaped neck and a tail tipped up. On the run it takes the honk pose: neck thrust out flat, wings flung up.
-- **Traits:** white feathers; an orange beak and webbed feet; a small black eye; the honk with its beak wide open.
-- **Palette:** body `#f3f0ea` (shade `#bdb5a8`); beak and feet `#d9894a` (shade `#a35f2b`); eye `#2a1f1a`; vest `#e8d23a` with stripes `#c9ccd2`.
-- **Color slot:** costume.
+- **Traits:** white feathers; a tan beak and webbed feet; a small black eye; the honk with its beak wide open.
+- **Palette:** body `#f3f0ea`; beak and feet a neutral warm tan `#c08a58` (in a tone of the vest the beak and its loot ran into one shape); eye `#2a1f1a`; vest the player's colour (`#e8d23a` in the roster), its bands folded in; spanner bare steel `#9aa0a8`, blued `#5d6d86` or dark iron `#4f5359`; tape `#8e8a84`.
+- **Color slot:** costume: the vest.
 - **Gait:** a waddle; when running, the honk charge with neck out and wings up.
-- **The nod:** the S of a neck (the goose, not a duck or a chicken); white with an orange beak and feet (the farmyard goose); the honk pose with wings flung up (the troublemaker, which is the whole character).
+- **The nod:** the S of a neck (the goose, not a duck or a chicken); white with a beak and webbed feet in a warm tan (the farmyard goose); the honk pose with wings flung up (the troublemaker, which is the whole character).
 - **Our twist:** a site goose. It wears a stolen hi-vis vest put on back to front, and always has something nicked in its beak: whatever the roll gives (see Swaps).
 - **Swaps** (the loot in its beak): a spanner; a plunger cup; a single sock; a rubber duck.
-- **Rig:** drawn flat (2026-11-03): the vest's hem torn ragged, the tail bent over, the spanner bent; the loot is a spanner in every pose, its swaps a colourway (bare, blued or green-painted steel: a red one in the beak read as a tongue) and a plaster on the back of the head; the run is the honk charge, neck flat out and wings flung up, and the vest is one block of the player's colour: drawn flat, its reflective bands and the scraps of their arcs cut it into a dozen patches, and their pale grey read as the white showing through (their edges stay as lines).
+- **Rig:** drawn flat (2026-11-03): the vest's hem torn ragged, the tail bent over, the spanner bent; the loot is a spanner in every pose, its swaps a colourway (bare, blued or dark iron: a red one in the beak read as a tongue) and a strip of grey tape behind the eye, small and level with it (lower, the spanner ran over it); the run is the honk charge, neck flat out and wings flung up, and the vest is one block of the player's colour: drawn flat, its reflective bands and the scraps of their arcs cut it into a dozen patches, and their pale grey read as the white showing through (their edges stay as lines).
 - **Concept prompt:** A mischievous white farmyard goose with a long S-shaped neck, a tail tipped up, an orange beak and orange webbed feet and a small black eye; it wears a stolen yellow hi-vis vest on back to front and holds a stolen spanner in its beak.
 
 ### The barnyard party game's horse (new)

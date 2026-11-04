@@ -49,16 +49,18 @@ export const kind: FlatKind = {
     min: { dark: 0.12, glint: 99, vshade: 0.8 },
   },
   roles: [
-    // A colourway is the jerrycan (VARIETY.palette): fuel red, army olive or bare steel.
-    { name: 'can', color: '#c9473f', alts: ['#6b7340', '#8e949a'], vary: 6 },
-    { name: 'cap', color: '#e8c24a' },
+    // The jerrycan, a dark of the suit: the pack is the bean's own, as the original's is.
+    { name: 'can', color: '#808080', on: 2, tone: -16 },
+    // Steel. The drawings' cap is too small to trace: nothing is drawn in it today.
+    { name: 'cap', color: '#9aa0a8' },
     { name: 'body', color: '#5aa84a', slot: 'player' },
     // The tape over the visor's crack, as silver duct tape: in the strap's pale tan it was the farm's own
     // colour, and read as the background cutting a notch into the visor; as brown packing tape, a brow.
     { name: 'tan', color: '#d3d8dc' },
     // The strap, drawn in the tape's colour and told from it by where it is (`recolour`): pale, so the pack
-    // still stands off the bean with background between.
-    { name: 'strap', color: '#d9c79a' },
+    // still stands off the bean with background between. A colourway (VARIETY.palette): tan webbing, grey
+    // webbing or bone.
+    { name: 'strap', color: '#d9c79a', alts: ['#b4b9bf', '#ece4d2'], vary: 6 },
     { name: 'visor', color: '#a9dbe8' },
     { name: 'vshade', color: '#6aa6ba' },
     { name: 'glint', color: '#ffffff' },
