@@ -9,7 +9,7 @@ export const sprites: SpriteSet = {
     { color: '#f6d02a', slot: 'player' },
     { color: '#2a1f1a' },
     { color: '#9aa0a8' },
-    { color: '#f4c6bf', alts: ['#c6d3f2', '#cde6c3'], vary: 6 },
+    { color: '#f2ede2', alts: ['#e0d2b6', '#c8cac6'], vary: 6 },
     { color: '#808080', on: 0, tone: 8 },
     { color: '#808080', on: 0, tone: -18 },
     { color: '#e9d3b0' },
