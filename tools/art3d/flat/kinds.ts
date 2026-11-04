@@ -27,6 +27,11 @@ export interface FlatClip {
   holds?: readonly number[];
   /** False when the drawing's eyes are shut: no face is drawn. */
   eyes?: false;
+  /**
+   * Moves the kit's eyes (world px, x then y) on this clip's frames, after `eyes.drop`: a head tilted in one pose
+   * puts the shut eyes on the mouth or the crown's outline.
+   */
+  shift?: readonly [number, number];
   /** `box`: centred on the figure, for a pose not standing on its feet (lying knocked out), or one too wide about them (a wall slide). */
   centre?: 'box';
   /** Drawn this much smaller (or bigger) about the feet than the body size gives: a pose too wide for the box. */

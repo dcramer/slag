@@ -412,8 +412,9 @@ function frameOf(name: string, clip: FlatClip): Frame {
   // Back to front by role.
   parts.sort((a, b) => a.role - b.role);
   // The kit's eyes, moved off a brim once the drawn ones are painted over and the recolours placed by them.
-  const drop = ek?.drop ?? 0;
-  if (drop) eyes = eyes.map(([x, y]) => [x, y + drop] as Pt);
+  const [sx, sy] = clip.shift ?? [0, 0];
+  const drop = (ek?.drop ?? 0) + sy;
+  if (drop || sx) eyes = eyes.map(([x, y]) => [x + sx, y + drop] as Pt);
   const f: Frame = { sil: t.sil, holes: holesOf(role, m), parts, lines: m.lines.map((l) => ({ role: roleOf(m.roles[l.role]), pts: l.pts })), eyes };
   // The soles on the floor, the pen and its boil just under it; a lying figure centred on itself.
   let low = -Infinity;
