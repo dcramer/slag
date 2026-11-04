@@ -4,6 +4,7 @@ import type { Rect } from '../core/geom';
 import { buildSolids, type Contrib, type Hazard, motionOffset, newPropState, type PlacedProp, type Resolved, traceRays } from '../sim/props';
 import { goalField } from '../sim/reach';
 import type { RunWorld } from '../sim/run';
+import type { Wind } from '../sim/wind';
 
 /**
  * The race as a route sees it, shared by every bot on this machine: the
@@ -31,6 +32,8 @@ export interface RaceMap {
    * solids as they stand now can be bumped by one of these.
    */
   moving(f: number): readonly Rect[];
+  /** The parts' wind columns on race frame `f` (fans, vents), without the weather's gust. */
+  winds(f: number): readonly Wind[];
 }
 
 const maps = new WeakMap<RunWorld, RaceMap>();
@@ -47,7 +50,7 @@ export function raceMap(run: RunWorld): RaceMap {
 
 function mapOf(level: Level, placed: readonly PlacedProp[], resolved: readonly Resolved[]): RaceMap {
   const field = fieldOf(level, placed);
-  const ahead = new Map<number, { hazards: Hazard[]; moving: Rect[] }>();
+  const ahead = new Map<number, { hazards: Hazard[]; moving: Rect[]; winds: Wind[] }>();
   const state = newPropState();
   const at = (f: number): Contrib => {
     const out: Contrib = { solids: [], hazards: [], springs: [], winds: [], triggers: [], beams: [] };
@@ -68,13 +71,14 @@ function mapOf(level: Level, placed: readonly PlacedProp[], resolved: readonly R
         const o = still.get(s.id);
         return !o || o.x !== s.x || o.y !== s.y || o.w !== s.w || o.h !== s.h;
       });
-      hit = { hazards: out.hazards, moving };
+      hit = { hazards: out.hazards, moving, winds: out.winds };
       ahead.set(f, hit);
     }
     return hit;
   };
   const hazards = (f: number) => frame(f).hazards;
   const moving = (f: number) => frame(f).moving;
+  const winds = (f: number) => frame(f).winds;
   const exact = new Map<number, Float64Array>();
   const loose = new Map<number, Float64Array>();
   const cached = (cache: Map<number, Float64Array>, target: number, air: boolean) => {
@@ -85,5 +89,5 @@ function mapOf(level: Level, placed: readonly PlacedProp[], resolved: readonly R
     }
     return d;
   };
-  return { field, dist: (t) => cached(exact, t, false), rough: (t) => cached(loose, t, true), hazards, moving };
+  return { field, dist: (t) => cached(exact, t, false), rough: (t) => cached(loose, t, true), hazards, moving, winds };
 }

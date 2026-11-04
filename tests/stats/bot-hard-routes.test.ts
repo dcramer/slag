@@ -8,9 +8,13 @@ import { botRace } from '../lib/bot-race';
  * a match throws at it, not just the plan. Before the motor looked a move
  * ahead, timed gusts and moving parts, counted waiting as time and ran along
  * the ground, these 280 races gave 238 finishes in 555 race frames on average;
- * with it, 250 in 526. The misses left are mostly parts' winds the route
- * doesn't trace (a vent holding it up), skids on ice at a run into a hazard,
- * and low-gravity falls after a bump.
+ * with it, 250 in 526. Once it knew a ledge's lip as the ledge (it had hopped
+ * in place under overhangs there until it gave up), traced moves in the parts'
+ * winds and kept a walk-speed way onto each cell beside the quickest (for
+ * ground a run can't stop on): 257 in 541, the extra finishes long levels (on
+ * races both finish, seeds 1–20, 515 frames became 518). The misses left are
+ * mostly routes into places it can't leave (it gives up), shots and timed
+ * hazards past the one move it looks ahead, and low-gravity falls.
  */
 const SEEDS = Array.from({ length: 10 }, (_, i) => i + 1);
 const SIZES = ['classic', 'wide', 'tall'] as const;
