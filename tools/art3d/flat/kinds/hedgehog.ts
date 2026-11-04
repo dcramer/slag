@@ -3,7 +3,7 @@ import type { FlatKind } from '../kinds';
 export const kind: FlatKind = {
   body: 229,
   map: {
-    roles: ['blue', 'peach', 'red', 'yellow', 'grey', 'brown', 'white', 'dark', 'iris', 'stripe'],
+    roles: ['blue', 'peach', 'red', 'yellow', 'grey', 'brown', 'white', 'dark', 'iris', 'sole', 'tape'],
     families: [
       ['blue', [60, 98, 181]],
       ['blue', [45, 72, 134]],
@@ -18,14 +18,16 @@ export const kind: FlatKind = {
       ['red', [101, 39, 29]],
       ['yellow', [237, 201, 97]],
       ['grey', [141, 142, 134]],
-      // The tape round the back quill: grey, or its light shade is the belly's tan, floating off the head.
-      ['grey', [172, 166, 158]],
-      ['grey', [130, 126, 116]],
+      // The tape round the back quill: a role of its own, drawn in the quills' colour (grey, it was a lump behind
+      // the head at play size).
+      ['tape', [172, 166, 158]],
+      ['tape', [130, 126, 116]],
       ['brown', [137, 86, 59]],
       ['brown', [105, 74, 53]],
-      // The scarf's dark stripes: a role of their own, apart from the ink, or they're grey chips (as grey) or a
-      // chain of ink dots across him (as the ink).
-      ['stripe', [76, 66, 54]],
+      // The scarf's dark stripes fold into its yellow: at play size a hazard stripe is a dark mottle on the chest.
+      ['yellow', [76, 66, 54]],
+      // The flapping sole's dark underside: a role of its own, or (as the stripes' yellow) the shoe opens yellow.
+      ['sole', [64, 64, 64]],
       ['white', [255, 255, 252]],
       // The eye white's shade under the brow: white, or a grey scrap over the eye.
       ['white', [180, 188, 196]],
@@ -38,13 +40,15 @@ export const kind: FlatKind = {
       ['iris', [88, 140, 68]],
     ],
     line: 'dark',
-    thin: ['blue', 'peach', 'red', 'yellow', 'grey', 'brown', 'white', 'stripe'],
+    thin: ['blue', 'peach', 'red', 'yellow', 'grey', 'brown', 'white', 'sole', 'tape'],
     fringe: 5,
     stroke: 2.4,
     // The neckerchief's and gloves' outlines stay line, not scraps of ink on them.
     ink: 13,
     feet: ['red', 'grey'],
-    min: { dark: 0.12, white: 0.1, iris: 0.1 },
+    // The face's stray specks fold away: a white gap by the glove, scraps of the grin and of the scarf's dark
+    // (painted over, a speck leaves a rim). The tape's light grey on the soles folds into the shoe.
+    min: { dark: 0.85, white: 0.8, iris: 0.1, tape: 3.5 },
   },
   roles: [
     { name: 'blue', color: '#2f5bd0', slot: 'player' },
@@ -57,7 +61,9 @@ export const kind: FlatKind = {
     { name: 'white', color: '#fbf8f2' },
     { name: 'dark', color: '#2a1f1a' },
     { name: 'iris', color: '#3a9a46' },
-    { name: 'stripe', color: '#4c4236' },
+    { name: 'sole', color: '#4c4236' },
+    // The taped quill is the quills' colour, its wrap lines left to say tape.
+    { name: 'tape', color: '#2f5bd0', on: 0, tone: 0 },
     { name: 'scuff', color: '#808080', on: 1, tone: 10 },
     { name: 'scorch', color: '#808080', on: 1, tone: -16 },
     { name: 'plaster', color: '#e9d3b0' },
@@ -66,7 +72,7 @@ export const kind: FlatKind = {
     { name: 'plaster', vary: 0, options: 2 },
     { name: 'wear', vary: 11, options: 3 },
   ],
-  eyes: { role: 'iris', area: [0.05, 1.5], gap: [1, 4.5], specks: { dark: 1.6, white: 4, iris: 2, stripe: 1 }, band: [0.1, 0.45] },
+  eyes: { role: 'iris', area: [0.05, 1.5], gap: [1, 4.5], specks: { dark: 1.6, white: 4, iris: 2 }, band: [0.1, 0.45] },
   wear: {
     on: ['peach'],
     chin: 3,
@@ -81,8 +87,9 @@ export const kind: FlatKind = {
     idle2: { frames: ['idle2', 'idle'], loop: true, holds: [1.8, 2.4] },
     walk: { frames: ['walk-1', 'walk-2'], loop: true, stride: 30 },
     run: { frames: ['run-1', 'run-2'], loop: true, stride: 48 },
-    // The jump is the spin ball, all the way up and down, with no face.
-    air: { frames: ['air-1', 'air-1b'], loop: true, fps: 12, eyes: false },
+    // The jump is the spin ball, all the way up and down, with no face; centred on itself, since its feet are
+    // wherever the spin left them.
+    air: { frames: ['air-1', 'air-1b'], loop: true, fps: 12, eyes: false, centre: 'box' },
     wall: { frames: ['wall'], loop: true, fps: 1, centre: 'box' },
     cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.5, 0.25] },
     cheer2: { frames: ['cheer2', 'idle'], loop: true, holds: [0.7, 0.3] },

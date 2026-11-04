@@ -33,7 +33,7 @@ export const kind: FlatKind = {
     line: 'dark',
     thin: ['green', 'darn', 'skin', 'hair', 'brown', 'lid', 'iron'],
     fringe: 5,
-    stroke: 2.4,
+    stroke: 6,
     feet: ['brown'],
     loose: ['iron'],
     ink: 5,
@@ -58,6 +58,10 @@ export const kind: FlatKind = {
     { name: 'plaster', vary: 1, options: 2 },
     { name: 'wear', vary: 11, options: 3 },
   ],
+  // What's left of the drawing's eyes once its specks are painted over (a rim the traced speck missed), and the
+  // dark scraps under the face, drawn as skin: under the kit's thin cheer arcs and blink the rim read as a
+  // black eye.
+  recolour: { from: 'dark', to: 'skin', below: -0.8, lying: [99, 0] },
   eyes: { role: 'dark', area: [0.12, 1.8], gap: [1.2, 4.5], specks: { dark: 2 }, band: [0.1, 0.45], count: 1, pair: [1.7, 0] },
   wear: {
     on: ['green'],
@@ -75,7 +79,7 @@ export const kind: FlatKind = {
     ],
   },
   accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [1.9, 0.8] }],
-  face: { r: 0.9, iris: '#3c78c8' },
+  face: { r: 0.65, iris: '#3c78c8' },
   gait: { bounce: [0.2, 0.8], lean: [0, 0.04] },
   clips: {
     idle: { frames: ['idle'], loop: true, fps: 1 },
