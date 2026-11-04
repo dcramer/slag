@@ -48,7 +48,8 @@ export const kind: FlatKind = {
     // gaping mouth; lighter, the orange and yellow ties sank into the chest.
     { name: 'tie', color: '#808080', on: 0, tone: -10 },
     { name: 'tape', color: '#9aa0a8', alts: ['#b8b2a4', '#6f757c'], vary: 6 },
-    { name: 'banana', color: '#e8c84e' },
+    // The banana, a light of the fur: a fixed yellow broke the neutral palette and vanished on yellow apes.
+    { name: 'banana', color: '#808080', on: 0, tone: 30 },
     { name: 'dark', color: '#2a1f1a' },
     { name: 'scuff', color: '#808080', on: 0, tone: 10 },
     { name: 'scorch', color: '#808080', on: 0, tone: -16 },

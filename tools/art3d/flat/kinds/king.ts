@@ -57,17 +57,18 @@ export const kind: FlatKind = {
     min: { dark: 0.12, plate: 0.3, cuff: 0.25, mouth: 0.2 },
   },
   roles: [
-    // The shell is the costume, in the player's colour.
-    { name: 'shell', color: '#3f8a3a', slot: 'player' },
+    // The shell, a dark of the player's colour: his scales are the costume (Decisions 4, the neutral palette), the
+    // largest region on him; a fixed gold there made every king the same king.
+    { name: 'shell', color: '#808080', on: 2, tone: -22 },
     { name: 'bone', color: '#efe2c0' },
-    { name: 'skin', color: '#e8b23c' },
+    { name: 'skin', color: '#e8b23c', slot: 'player' },
     { name: 'belly', color: '#e9d29a' },
-    { name: 'mane', color: '#d9502e' },
+    { name: 'mane', color: '#808080', on: 2, tone: -36 },
     // A colourway is the cuffs (VARIETY.palette): worn leather, black iron, steel.
     { name: 'cuff', color: '#7a5f44', alts: ['#34343a', '#8e8a84'], vary: 6 },
     { name: 'plate', color: '#9aa0a8' },
     // The paper crown: a light tone of the player's colour.
-    { name: 'crown', color: '#808080', on: 0, tone: 26 },
+    { name: 'crown', color: '#808080', on: 2, tone: 26 },
     { name: 'mouth', color: '#9a3d36' },
     { name: 'dark', color: '#2a1f1a' },
     { name: 'scuff', color: '#808080', on: 0, tone: 12 },

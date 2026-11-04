@@ -238,7 +238,7 @@ What came out of it:
 - **A stranger should say:** "the big ape with the red tie."
 - **Silhouette:** hunched, with huge shoulders and long arms, a small head low and forward, and a protruding muzzle.
 - **Traits:** brown fur; a tan face, muzzle and chest; a red necktie; big knuckles.
-- **Palette:** the fur in the player's colour (drawn `#7a4e2c`), the tie a shade of it (tone −10); the rest neutral: face and chest `#e2b98a`, tape `#9aa0a8`, ink. The banana keeps a fixed yellow `#e8c84e`, a few pixels behind the ear: in a tone of the fur it was no banana.
+- **Palette:** the fur in the player's colour (drawn `#7a4e2c`), the tie a shade of it (tone −10); the rest neutral: face and chest `#e2b98a`, tape `#9aa0a8`, ink. The banana is a light of the fur (tone +30, 2026-11-04): the fixed yellow it had broke the neutral palette and vanished on yellow apes.
 - **Color slot:** costume: the fur, and the tie in a shade of it. A darker tie (tone −18), on the pale chest right under the muzzle, read as a gaping mouth; a lighter one sank into the chest on the orange and yellow swatches.
 - **Palette alts:** the duct tape in grey `#9aa0a8`, a pale cloth tape `#b8b2a4` or a dark gaffer `#6f757c`.
 - **Gait:** knuckle-gallops on all fours at a run, arms leading; beats its chest on a cheer.
@@ -271,7 +271,7 @@ What came out of it:
 - **A stranger should say:** "the big spiky turtle king."
 - **Silhouette:** the bulkiest kind: a hulking upright turtle with a shell humped behind and four huge spikes standing out of it, two long horns, a swept-back mane and a long snout. It fills the envelope's width. Nothing else breaks the outline: a tufted mane, studded cuffs, a spiked tail and a many-pointed crown each added a bump, and readers saw a porcupine.
 - **Traits:** a shell with a cream rim and spikes; yellow-orange skin; a pale banded belly; two cream horns; a red-orange mane and brows; plain dark cuffs; a toothy snout.
-- **Palette:** shell the player's colour; rim, spikes and horns `#efe2c0`; patch plate `#9aa0a8`; skin `#e8b23c`; belly `#e9d29a`; mane `#d9502e` (hair); cuffs `#7a5f44`; the paper crown a light tone of the shell's colour.
+- **Palette:** skin the player's colour (2026-11-04: it is most of him, and in a fixed gold every king was the same king); the shell a dark of it (tone −22), the mane darker (−36), the paper crown a light (+26); rim, spikes and horns `#efe2c0`; patch plate `#9aa0a8`; belly `#e9d29a`; cuffs `#7a5f44`.
 - **Color slot:** costume: the shell. The crown is a tone of it; skin, belly, mane, horns and cuffs are his own.
 - **Gait:** a heavy stomp, shoulders rolling; on a fall near its top speed he tucks into his shell.
 - **The nod:** the spiked shell (it breaks the outline behind and above; the read in profile); the horns and the red mane (they mark the king and not a foot soldier); the hulking upright build (the boss in a cast of heroes).
