@@ -64,8 +64,9 @@ export const kind: FlatKind = {
     marks: [[['scuff', 0.68, 0.78, 1.0]], [['scorch', 0.7, 0.75, 1.1]]],
   },
   // Across the cheek: on a ball's crown a cross read as bumps on top, and the ball as another character.
-  // Above the blush: in the usual place the blush, drawn over it, made a muddy cream-on-pink patch.
-  accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [2.2, 0.85], offset: [-0.6, -1] }],
+  // Above the blush: in the usual place the blush, drawn over it, made a muddy cream-on-pink patch. Out
+  // toward the side as well, 0.6 clear of both: nearer, it touched the near eye, a tan-and-black lump.
+  accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [2.2, 0.85], offset: [-1.2, -1.3] }],
   face: { r: 1, iris: '#2a1f1a', mouth: [2, 2.6], eye: 'tall' },
   gait: { bounce: [0.1, 0.8], lean: [0, 0.03] },
   clips: {
