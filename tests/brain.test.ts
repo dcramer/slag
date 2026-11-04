@@ -6,7 +6,7 @@ import { Match } from '../src/game/match';
 import { isBridgePart } from '../src/gen/props';
 import { applyAction, newNetState } from '../src/net/actions';
 import { RunWorld } from '../src/sim/run';
-import { movesFrom } from '../src/sim/reach';
+import { brakeFrom, movesFrom } from '../src/sim/reach';
 import { RUN_COUNTDOWN } from '../src/sim/constants';
 import { NO_INPUT } from '../src/sim/types';
 import { botRace } from './lib/bot-race';
@@ -65,6 +65,19 @@ describe('bots', () => {
     expect(m.phase).toBe('run');
     expect(m.players.every((p) => p.placed && !p.afk)).toBe(true);
     expect(m.placed).toHaveLength(2);
+  });
+
+  // Hard bots on levels each of these once beat: what a good player does instead.
+  it.each([
+    ['harbor', 1, 'waits on the boardwalk for the tide to go out instead of walking down onto the beach and standing there as it floods'],
+    ['harbor', 10, 'waits for a gust to drop before it jumps, instead of being blown off every jump'],
+    ['space', 18, 'brakes on a short ledge it lands on at a run, instead of skidding off it to line up'],
+    ['rooftops', 8, 'steers in the air instead of letting go while it waits for a hazard'],
+    ['farm', 20, 'goes the clear way rather than waiting for a long run that never comes clear'],
+  ] as const)('%s %i: %s', (theme, seed, _what) => {
+    const r = botRace(seed, { theme, level: 'hard' });
+    expect(r, `died of ${r.cause} at race frame ${r.frames}`).toMatchObject({ finished: true });
+    expect(r.frames).toBeLessThan(1200);
   });
 
   it('with no way on, jumps for it and gives up rather than wander', () => {
@@ -130,5 +143,36 @@ describe('movesFrom', () => {
       expect([body.x, body.y], `frame ${i}`).toEqual([mv.path[2 * i], mv.path[2 * i + 1]]);
     }
     expect(Math.floor((body.y + body.h - 1) / 16) * m.level.w + Math.floor((body.x + body.w / 2) / 16)).toBe(mv.to);
+  });
+
+  it('runs along the ground: a step to the next cell holds run once a run gets there sooner', () => {
+    const m = new Match(3);
+    const run = new RunWorld(m.level, [], [0]);
+    while (run.frame < RUN_COUNTDOWN) run.step([NO_INPUT]);
+    const body = run.runners[0].body;
+    const w = m.level.w;
+    // Walk toward the flag a few frames, then look at the step to the cell after.
+    for (let i = 0; i < 8; i++) run.step([{ ...NO_INPUT, right: true }]);
+    const here = Math.floor((body.y + body.h - 1) / 16) * w + Math.floor((body.x + body.w / 2) / 16);
+    const step = movesFrom(m.level, body, run.solids).find((mv) => !mv.air && mv.to === here + 1);
+    expect(step).toBeDefined();
+    expect(step!.controls.every((c) => c.run && c.right)).toBe(true);
+  });
+
+  it('brakes to a stop it recorded exactly, standing where it said', () => {
+    const m = new Match(3);
+    const run = new RunWorld(m.level, [], [0]);
+    while (run.frame < RUN_COUNTDOWN) run.step([NO_INPUT]);
+    const body = run.runners[0].body;
+    for (let i = 0; i < 12; i++) run.step([{ ...NO_INPUT, right: true, run: true }]);
+    expect(Math.abs(body.vx)).toBeGreaterThan(150);
+    const stop = brakeFrom(m.level, body, run.solids);
+    expect(stop).not.toBeNull();
+    for (let i = 0; i < stop!.controls.length; i++) {
+      run.step([{ ...NO_INPUT, ...stop!.controls[i], down: false, run: !!stop!.controls[i].run }]);
+      expect([body.x, body.y], `frame ${i}`).toEqual([stop!.path[2 * i], stop!.path[2 * i + 1]]);
+    }
+    expect(body.onGround && Math.abs(body.vx) < 0.5).toBe(true);
+    expect([body.x, body.vx]).toEqual([stop!.end.x, stop!.end.vx]);
   });
 });

@@ -1,5 +1,6 @@
 import { fieldOf } from '../gen/level';
 import type { Level } from '../sim/level';
+import type { Rect } from '../core/geom';
 import { buildSolids, type Contrib, type Hazard, motionOffset, newPropState, type PlacedProp, type Resolved, traceRays } from '../sim/props';
 import { goalField } from '../sim/reach';
 import type { RunWorld } from '../sim/run';
@@ -24,6 +25,12 @@ export interface RaceMap {
    * anything set off by a runner aren't in it.
    */
   hazards(f: number): readonly Hazard[];
+  /**
+   * The parts' solids that stand somewhere else on race frame `f` than at the
+   * start: a gate, an arm, a crusher coming round. A move traced among the
+   * solids as they stand now can be bumped by one of these.
+   */
+  moving(f: number): readonly Rect[];
 }
 
 const maps = new WeakMap<RunWorld, RaceMap>();
@@ -40,20 +47,34 @@ export function raceMap(run: RunWorld): RaceMap {
 
 function mapOf(level: Level, placed: readonly PlacedProp[], resolved: readonly Resolved[]): RaceMap {
   const field = fieldOf(level, placed);
-  const ahead = new Map<number, Hazard[]>();
+  const ahead = new Map<number, { hazards: Hazard[]; moving: Rect[] }>();
   const state = newPropState();
-  const hazards = (f: number) => {
-    let hs = ahead.get(f);
-    if (!hs) {
-      const out: Contrib = { solids: [], hazards: [], springs: [], winds: [], triggers: [], beams: [] };
-      const ctx = (r: Resolved, mi: number) => ({ level, frame: f, r, off: motionOffset(r, f), prev: motionOffset(r, f - 1), state, mi, live: true });
-      buildSolids(resolved, ctx, out);
-      traceRays(resolved, ctx, out);
-      hs = out.hazards;
-      ahead.set(f, hs);
-    }
-    return hs;
+  const at = (f: number): Contrib => {
+    const out: Contrib = { solids: [], hazards: [], springs: [], winds: [], triggers: [], beams: [] };
+    const ctx = (r: Resolved, mi: number) => ({ level, frame: f, r, off: motionOffset(r, f), prev: motionOffset(r, f - 1), state, mi, live: true });
+    buildSolids(resolved, ctx, out);
+    traceRays(resolved, ctx, out);
+    return out;
   };
+  // Where every solid stands at the start: anything elsewhere later has moved.
+  const still = new Map<number, Rect>();
+  for (const s of at(0).solids) still.set(s.id, s);
+  const frame = (f: number) => {
+    let hit = ahead.get(f);
+    if (!hit) {
+      const out = at(f);
+      const moving = out.solids.filter((s) => {
+        if (s.oneWay || s.film) return false;
+        const o = still.get(s.id);
+        return !o || o.x !== s.x || o.y !== s.y || o.w !== s.w || o.h !== s.h;
+      });
+      hit = { hazards: out.hazards, moving };
+      ahead.set(f, hit);
+    }
+    return hit;
+  };
+  const hazards = (f: number) => frame(f).hazards;
+  const moving = (f: number) => frame(f).moving;
   const exact = new Map<number, Float64Array>();
   const loose = new Map<number, Float64Array>();
   const cached = (cache: Map<number, Float64Array>, target: number, air: boolean) => {
@@ -64,5 +85,5 @@ function mapOf(level: Level, placed: readonly PlacedProp[], resolved: readonly R
     }
     return d;
   };
-  return { field, dist: (t) => cached(exact, t, false), rough: (t) => cached(loose, t, true), hazards };
+  return { field, dist: (t) => cached(exact, t, false), rough: (t) => cached(loose, t, true), hazards, moving };
 }

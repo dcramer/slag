@@ -309,6 +309,8 @@ export interface Move {
   controls: Controls[];
   /** The body's x and y after each frame, interleaved: where to expect it, so a player of the move sees when the world disagrees. */
   path: number[];
+  /** The body as the move leaves it: what a player looking one move further ahead starts from. */
+  end: Body;
 }
 
 /**
@@ -322,10 +324,29 @@ export interface Move {
  * moves the solvability proof walks, so a route the proof finds is one a bot
  * can run.
  */
-export function movesFrom(level: Level, body: Body, solids: readonly Solid[] = []): Move[] {
+export function movesFrom(level: Level, body: Body, solids: readonly Solid[] = [], air = 0): Move[] {
+  return tracerFor(level, air).moves(body, solids);
+}
+
+/**
+ * Bringing a moving body to a stop where it stands, as a player holds
+ * against a skid: back against the speed past a walk, then let go. Null if it
+ * can't stop on this ground (it would skid off or into a no-go tile). What a
+ * bot does to wait for something to pass. `air` as in `movesFrom`.
+ */
+export function brakeFrom(level: Level, body: Body, solids: readonly Solid[] = [], air = 0): Move | null {
+  return tracerFor(level, air).brake(body, solids);
+}
+
+/**
+ * A tracer for `movesFrom`, `air` the steady side wind (px/s, + right) its moves
+ * are traced in: a gust blowing now, which a move started in it has to fight.
+ */
+function tracerFor(level: Level, air: number): Tracer {
   const tracer = new Tracer(level, true);
   tracer.setSurface(footing(level), level.ground);
-  return tracer.moves(body, solids);
+  tracer.blow(air === 0 ? null : { vx: air, vy: 0, ky: 0, dy: 0 });
+  return tracer;
 }
 
 /** What a standing body stands on in a trace: the solid it's on if it's there, else the tile (a part's block written into the tiles is terrain). */
@@ -644,6 +665,11 @@ class Tracer {
     this.tiles = tiles;
   }
 
+  /** The side wind `moves` and `brake` trace in. */
+  blow(wind: WindForce | null): void {
+    this.wind = wind;
+  }
+
   /** Fresh bookkeeping for one root traced from cell (tx, ty). */
   private reset(tx: number, ty: number): void {
     this.bx0 = this.bx1 = tx;
@@ -693,20 +719,21 @@ class Tracer {
       this.trace(b, 0, make(), airborne, { controls: [], path: [] });
     }
     if (!airborne)
-      for (const dir of [-1, 1] as const) {
-        this.reset(tx, ty);
-        this.touched = false;
-        const b = { ...b0 };
-        b.groundRef = groundOf(b0, solids, oneWay);
-        this.step(b, dir, ty * this.w + tx);
-      }
+      for (const dir of [-1, 1] as const)
+        for (const run of [true, false]) {
+          this.reset(tx, ty);
+          this.touched = false;
+          const b = { ...b0 };
+          b.groundRef = groundOf(b0, solids, oneWay);
+          this.step(b, dir, ty * this.w + tx, run);
+        }
     const out = this.found;
     this.found = null;
     this.world.solids = [];
     return out;
   }
 
-  private trace(b: Body, f0: number, p: Policy, airborne0: boolean, log?: Omit<Move, 'to' | 'air'>): void {
+  private trace(b: Body, f0: number, p: Policy, airborne0: boolean, log?: Omit<Move, 'to' | 'air' | 'end'>): void {
     let airborne = airborne0;
     let wallForked = false;
     const bottom = this.h * TILE;
@@ -746,7 +773,7 @@ class Tracer {
       } else if (airborne) {
         if (this.careful && !this.stops(b)) return;
         const to = this.landing(b);
-        if (log && to >= 0) this.keep({ to, air: true, ...log });
+        if (log && to >= 0) this.keep({ to, air: true, ...log, end: { ...b } });
         return;
       }
       // Still walking along flat ground: neighbor edges (and the neighbor's own walk-off) cover that.
@@ -785,24 +812,64 @@ class Tracer {
     return k;
   }
 
-  /** Walk into the next cell along the ground (no run), recorded: the step a route takes between neighbors. */
-  private step(b: Body, dir: -1 | 1, from: number): void {
-    const log: Omit<Move, 'to' | 'air'> = { controls: [], path: [] };
+  /** Run (or walk) into the next cell along the ground, recorded: the step a route takes between neighbors. Run first, so a walk replaces it only where it gets there sooner. */
+  private step(b: Body, dir: -1 | 1, from: number, run: boolean): void {
+    const log: Omit<Move, 'to' | 'air' | 'end'> = { controls: [], path: [] };
     const c = this.c;
     for (let f = 0; f < STEP_FRAMES; f++) {
       c.left = dir < 0;
       c.right = dir > 0;
-      c.run = c.down = c.jump = c.jumpPressed = false;
+      c.down = c.jump = c.jumpPressed = false;
+      c.run = run;
       stepBody(b, c, this.world, this.wind);
       if (this.touched || !b.onGround) return;
       log.controls.push({ ...c });
       log.path.push(b.x, b.y);
       const k = Math.floor((b.y + b.h - 1) / TILE) * this.w + Math.floor((b.x + b.w / 2) / TILE);
       if (k !== from) {
-        if (this.stops(b)) this.keep({ to: k, air: false, ...log });
+        if (this.stops(b)) this.keep({ to: k, air: false, ...log, end: { ...b } });
         return;
       }
     }
+  }
+
+  /** `brakeFrom`: the stop `stops` makes, recorded; null if it can't stop here. */
+  brake(b0: Body, solids: readonly Solid[]): Move | null {
+    if (!b0.onGround) return null;
+    this.world.solids = solids;
+    const tx = Math.floor((b0.x + b0.w / 2) / TILE);
+    const ty = Math.floor((b0.y + b0.h - 1) / TILE);
+    this.reset(tx, ty);
+    this.touched = false;
+    const b = { ...b0 };
+    b.groundRef = groundOf(b0, solids, this.world.tileAt(tx, ty + 1) === T_ONEWAY);
+    const controls: Controls[] = [];
+    const path: number[] = [];
+    let out: Move | null = null;
+    for (let f = 0; f < STOP_FRAMES; f++) {
+      if (Math.abs(b.vx) < 0.5) {
+        const k = Math.floor((b.y + b.h - 1) / TILE) * this.w + Math.floor((b.x + b.w / 2) / TILE);
+        out = { to: k, air: false, controls, path, end: { ...b } };
+        break;
+      }
+      this.brakeInput(b);
+      controls.push({ ...this.c });
+      stepBody(b, this.c, this.world, this.wind);
+      path.push(b.x, b.y);
+      if (this.touched || !b.onGround) break;
+    }
+    this.touched = false;
+    this.world.solids = [];
+    return out;
+  }
+
+  /** Past a walk, hold against the skid; at a walk, letting go stops it. */
+  private brakeInput(b: Body): void {
+    const c = this.c;
+    const hard = Math.abs(b.vx) > PHYS.walkSpeed + 1;
+    c.left = hard && b.vx > 0;
+    c.right = hard && b.vx < 0;
+    c.run = c.down = c.jump = c.jumpPressed = false;
   }
 
   /**
@@ -815,11 +882,7 @@ class Tracer {
     const c = this.c;
     for (let f = 0; f < STOP_FRAMES; f++) {
       if (Math.abs(b.vx) < 0.5) return true;
-      // Past a walk, hold against the skid; at a walk, letting go stops it.
-      const hard = Math.abs(b.vx) > PHYS.walkSpeed + 1;
-      c.left = hard && b.vx > 0;
-      c.right = hard && b.vx < 0;
-      c.run = c.down = c.jump = c.jumpPressed = false;
+      this.brakeInput(b);
       stepBody(b, c, this.world, this.wind);
       if (this.touched || !b.onGround) {
         this.touched = false;

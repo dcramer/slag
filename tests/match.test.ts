@@ -250,6 +250,7 @@ describe('match rules', () => {
       weather: true,
       bloodRounds: 2,
       secretParts: false,
+      parts: 'many',
       private: false,
       ...timers,
     });
@@ -267,6 +268,7 @@ describe('match rules', () => {
       weather: true,
       bloodRounds: 2,
       secretParts: false,
+      parts: 'many',
       private: false,
       ...timers,
     });

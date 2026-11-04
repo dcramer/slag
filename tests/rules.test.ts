@@ -19,6 +19,7 @@ const CHANGED: MatchRules = {
   weather: false,
   bloodRounds: 3,
   secretParts: true,
+  parts: 'all',
   private: true,
 };
 
@@ -49,6 +50,7 @@ describe('sanitizeRules', () => {
       weather: 'maybe',
       bloodRounds: 99,
       secretParts: 1,
+      parts: 'heaps',
     } as unknown as Partial<MatchRules>;
     expect(sanitizeRules(junk)).toEqual(DEFAULT_RULES);
   });

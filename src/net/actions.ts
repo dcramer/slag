@@ -3,7 +3,7 @@ import { tidyName } from '../core/name';
 import { nameBlocked } from '../core/name-filter';
 import { type CharacterDef, generateCharacter } from '../gen/character';
 import { BOT_LEVELS, type BotLevel, type Match } from '../game/match';
-import { BLOOD_CHOICES, DEFAULT_RULES, GRAVITY_CHOICES, type MatchRules, nearestLength, RULE_CHOICES } from '../game/rules';
+import { BLOOD_CHOICES, DEFAULT_RULES, GRAVITY_CHOICES, type MatchRules, nearestLength, PART_VARIETIES, RULE_CHOICES } from '../game/rules';
 import { MAX_PLAYERS } from '../sim/constants';
 
 /**
@@ -323,6 +323,7 @@ const RULE_CHECKS: { [K in keyof MatchRules]: (v: unknown, r: Partial<MatchRules
   weather: (v) => (typeof v === 'boolean' ? v : undefined),
   bloodRounds: choice(BLOOD_CHOICES),
   secretParts: (v) => (typeof v === 'boolean' ? v : undefined),
+  parts: choice(PART_VARIETIES),
   private: (v) => (typeof v === 'boolean' ? v : undefined),
 };
 
