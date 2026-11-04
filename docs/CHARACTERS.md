@@ -136,17 +136,17 @@ What came out of it:
 - **A stranger should say:** "the yellow ball that eats dots."
 - **Silhouette:** a yellow circle with a wedge-shaped mouth cut into its front. The smallest kind, and the only one with no limbs.
 - **Traits:** pure yellow; a wedge mouth that opens and shuts; one small eye above the mouth.
-- **Palette:** body `#f6d02a` (shade `#cba214`); mouth interior `#2a1f1a`; eye `#14121a`; bite edge `#e8b81c`; napkin `#fbf6ee` with a check `#c9473f`.
-- **Color slot:** costume: the whole ball, its bitten edge with it. The napkin keeps its own colours, its check rolled red, blue or green.
+- **Palette:** body `#f6d02a` (shade `#cba214`); mouth interior `#2a1f1a`; eye `#14121a`; bite edge `#e8b81c`; napkin one flat wash of its check, `#f4c6bf`.
+- **Color slot:** costume: the whole ball, its bitten edge with it. The napkin keeps its own colour, rolled rose, blue or green.
 - **Gait:** bounces along, chomping with every stride; spins once on the jump.
 - **The nod:** the circle with a wedge cut out (the most recognised shape in games, and it needs nothing else); pure yellow (half the read); the chomp (it is a mouth, not a pie chart, only when it moves).
 - **Our twist:** someone got to him first: a neat bite is missing from the back of his circle, the joke being that the eater got eaten. A checked napkin is tucked under the mouth like a bib.
 - **Swaps:** a crumb on the lip; a toothpick in the corner of the mouth; a fork-tine scratch. (A paper party hat would break the outline, so it isn't one.)
-- **Palette alts:** the napkin's check in red `#c9473f`, blue `#3f62b4` or green `#3f8a3a`; the napkin stays white.
+- **Palette alts:** the napkin washed rose `#f4c6bf`, blue `#c6d3f2` or green `#cde6c3`: pale, so it never lands on the ball's colour.
 - **Idles and cheers:** the breathing idle with a chomp at nothing; the mouth snapping shut and open again. The hop on the spot; tipped back, mouth thrown wide, laughing.
 - **Gait range:** up to 0.7 px of extra bounce on each hop, a lean of up to 0.04.
 - **Wear:** scuffed is two pale scuffs and two crumbs stuck low on the back; scorched is two soot streaks up the back and the napkin's tip singed.
-- **Rig:** none: drawn flat (2026-11-03), its open mouth cut out of the figure so the wedge is a gap, worn with a taped crack across the top, a chipped lip and a stained, torn napkin: the mouth open and shut on the walk and run, a hop, an alarmed fall (its wall slide too), and the pancake death.
+- **Rig:** none: drawn flat (2026-11-03), its open mouth cut out of the figure so the wedge is a gap, worn with a taped crack across the top, a chipped lip and a torn napkin drawn flat (its gingham traced as white dashes on a coloured wedge, a rash at play size; the crown's crack isn't drawn, a stray tick by the mouth): the mouth open and shut on the walk and run, a hop, an alarmed fall (its wall slide too), and the pancake death.
 - **Concept prompt:** A perfect yellow ball with a wedge-shaped mouth cut into its front, wide open, and one small black eye above it; a neat round bite missing from the back of the circle; a red-and-white checked napkin tucked under the mouth like a bib. No arms, no legs.
 
 ### The yellow electric mouse
@@ -182,7 +182,7 @@ What came out of it:
 - **A stranger should say:** "the little pink puffball."
 - **Silhouette:** a near-perfect ball on two big oval feet, with stubby round arms.
 - **Traits:** tall oval eyes with a shine at the top; blush marks; a tiny mouth; big red feet.
-- **Palette:** body is the player's color, pink by default; feet `#c9473f`, or one of two designed alternatives (`#e07b2c`, `#e8b23a`) rolled per look; eyes `#2a1f1a`; blush `rgba(232,96,120,0.55)`; seam the body's colour, inked; valve `#f4efe6`.
+- **Palette:** body is the player's color, pink by default; feet `#c9473f`, or one of two designed alternatives (`#e07b2c`, `#e8b23a`) rolled per look; eyes `#2a1f1a`; blush `#ec7a94`; seam the body's colour, inked; valve `#f4efe6`.
 - **Color slot:** costume: the ball, its arms and its seam, because the original comes in every color.
 - **Gait:** toddles on its big feet; puffs up round and floats in the air.
 - **The nod:** the ball (the whole body); the big red feet (they make it a creature, and part it from the dot-eater); the tall oval eyes with a shine (the face); the blush (the sweetness).
@@ -192,7 +192,7 @@ What came out of it:
 - **Idles and cheers:** the idle's sway of the arms; looking up, arms behind it, tapping one toe. Both arms up, eyes shut; puffed up round, waving one arm.
 - **Gait range:** a toddle's bounce of 0.1–0.8 px on each step, a lean of up to 0.03.
 - **Wear:** scuffed is a shelf-worn toy: two pale scuffs on the ball, grime on the near toe, and a kid's marker X low on its side; scorched is soot on the ball's side and front, the near arm and the near toe.
-- **Rig:** drawn flat (2026-11-03): a bent valve, a bitten arm and a toe worn through to its cream padding `#ecdccb` (drawn in the body's colour, it tipped the shoe in the player's); its seam and its tape cross aren't drawn (at play size one read as a mouth, the other as a third eye, and the cross's last specks of ink as a second face).
+- **Rig:** drawn flat (2026-11-03): a bent valve, a bitten arm and a toe scuffed pale, a light tone of the shoe (in its cream padding it was the farm's ground and read as a hole; in the body's colour, it tipped the shoe in the player's); the valve in its own cream (as the eyes' white it went to the ink, a dark knot on the crown); the blush one solid pink (see-through, it went grey on a green or teal ball); its seam and its tape cross aren't drawn (at play size one read as a mouth, the other as a third eye, and the cross's last specks of ink as a second face).
 - **Concept prompt:** A near-perfect round ball creature on two big oval red feet, with stubby round arms; tall oval black eyes with a shine at the top, blush marks and a tiny mouth. It is a cheap vinyl squeeze toy: a moulding seam runs round its middle, a little white squeaker valve pokes out of its back, and a mould number is stamped under one foot.
 
 ### The voxel miner (new)
@@ -213,15 +213,15 @@ What came out of it:
 - **Kind:** `impostor` · **Name:** Sussy
 - **A stranger should say:** "the crewmate from the impostor game."
 - **Silhouette:** a bean on two stubby legs, a wide visor standing proud of the front, and a pack behind.
-- **Traits:** a smooth bean body; a pale-blue visor with a white glint; a backpack; no arms.
-- **Palette:** body is the player's color; visor `#a9dbe8` (shade `#6aa6ba`); glint `#ffffff`; tape `#b98a52` (brown packing tape: in the strap's pale tan it was the farm's own colour, and read as a notch cut in the visor); strap `#d9c79a`; can `#c9473f` (shade `#9c3530`) with cap `#e8c24a`.
+- **Traits:** a smooth bean body; a pale-blue visor; a backpack; no arms.
+- **Palette:** body is the player's color; visor `#a9dbe8` (shade `#6aa6ba`); tape `#d3d8dc` (silver duct tape: in the strap's pale tan it was the farm's own colour, and read as a notch cut in the visor; in brown packing tape, a brow); strap `#d9c79a`; can `#c9473f` (shade `#9c3530`) with cap `#e8c24a`.
 - **Color slot:** body, because the original comes in every color.
 - **Gait:** a waddling shuffle on its stubby legs.
 - **The nod:** the bean on stubby legs (the whole silhouette); the wide pale visor (the face; without it it's a jelly bean); the pack on its back (it breaks the outline behind, and is half the bean's read in profile).
 - **Our twist:** a crew issued from the scrapyard. The pack is a red jerrycan with a spout, strapped on; a crack across the visor is taped over; a dent in its side has been knocked out with a hammer.
 - **Swaps:** a sprout growing from the head; a sticky note on the visor; a paper sailor hat; a bandage round one leg.
 - **Palette alts:** the jerrycan in fuel red `#c9473f`, army olive `#6b7340` or bare steel `#8e949a`; its cap stays yellow.
-- **Rig:** drawn flat (2026-11-03), side on: a tape strip across the visor's crack, a hammered dent in its side, a crumpled can and a bent spout; ten poses drawn, and a second idle cut from the design rocked back on its heel (the image model held the bean to the design's stance). No face kit: the visor is drawn as it is. The first round failed the blind read as "a squarish blob": the can stood as tall as the bean and fused with its back, and the visor sat inside the outline. In the design the visor was moved out past the front and the can moved back off the bean onto a short strap, by hand, and the poses copied both. The can's handle hole is cut through, and its spout's white loop folded into the can: white like the visor's glint, they read as an eye on the pack.
+- **Rig:** drawn flat (2026-11-03), side on: a tape strip across the visor's crack, a hammered dent in its side, a crumpled can and a bent spout; ten poses drawn, and a second idle cut from the design rocked back on its heel (the image model held the bean to the design's stance). No face kit: the visor is drawn as it is. The first round failed the blind read as "a squarish blob": the can stood as tall as the bean and fused with its back, and the visor sat inside the outline. In the design the visor was moved out past the front and the can moved back off the bean onto a short strap, by hand, and the poses copied both. The can's handle hole is cut through, and its spout's white loop folded into the can: white like the visor's glint, they read as an eye on the pack. The visor is blank glass: the crack is painted out of the drawings and the glint folded into the glass, since the crack's zigzag read as a frown and the small white glint, inked round, as an eye.
 - **Concept prompt:** A smooth bean-shaped spacesuit body on two stubby legs, no arms; a wide pale-blue visor with a white glint standing proud of its front, a crack across it taped over; a red jerrycan with a yellow-capped spout strapped to its back as a backpack; a hammered-out dent in its side.
 
 ### The necktie ape (new)

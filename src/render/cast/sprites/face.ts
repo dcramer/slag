@@ -177,8 +177,11 @@ export function drawFace(
   s.restore();
 }
 
-/** The puffball's blush, soft on any body colour. */
-const BLUSH = 'rgba(232,96,120,0.55)';
+/**
+ * The puffball's blush, one pink on any body colour: see-through, it took the body's hue, and on a green or
+ * a teal ball the cheek over the body went grey while the one over the open mouth stayed pink.
+ */
+const BLUSH = '#ec7a94';
 
 /** A soft blush under a tall eye toward its cheek; the far one nearer the front, foreshortened. */
 function blush(s: CanvasRenderingContext2D, r: number, f: number, far: boolean) {

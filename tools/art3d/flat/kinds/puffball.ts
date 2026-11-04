@@ -5,7 +5,7 @@ export const kind: FlatKind = {
   // Its seam traced as one long stroke across the ball and its pale highlight as a strip, a mouth at play
   // size; its tape cross beside the eyes read as a third eye: no interior lines, and tape and highlight are the ball.
   map: {
-    roles: ['pink', 'red', 'sole', 'dark'],
+    roles: ['pink', 'red', 'sole', 'white', 'dark'],
     families: [
       ['pink', [244, 154, 179]],
       ['pink', [203, 98, 122]],
@@ -20,12 +20,16 @@ export const kind: FlatKind = {
       ['pink', [252, 190, 206]],
       ['sole', [211, 168, 180]],
       ['sole', [222, 186, 186]],
+      // The squeaker valve's cream and its shade: as the eyes' glint, white went to the ink, and the valve
+      // was a dark knot on the crown.
+      ['white', [244, 239, 229]],
+      ['white', [218, 201, 195]],
       ['dark', [71, 20, 40]],
       ['dark', [33, 4, 15]],
       ['dark', [255, 255, 255]],
     ],
     line: 'dark',
-    thin: ['pink', 'red', 'sole'],
+    thin: ['pink', 'red', 'sole', 'white'],
     fringe: 5,
     stroke: 99,
     feet: ['red'],
@@ -36,8 +40,9 @@ export const kind: FlatKind = {
     { name: 'pink', color: '#f2a0bc', slot: 'player' },
     // A colourway is the feet (VARIETY.palette): red, orange or yellow.
     { name: 'red', color: '#c9473f', alts: ['#e07b2c', '#e8b23a'], vary: 6 },
-    // The shoe worn through at the toe: its padding, the same on every colourway.
-    { name: 'sole', color: '#ecdccb' },
+    // The shoe scuffed through at the toe, a pale tone of the shoe: in a cream padding it was the farm's own
+    // colour, and read as a hole in the toe.
+    { name: 'sole', color: '#e9958e', on: 1, tone: 18 },
     { name: 'white', color: '#f4efe6' },
     { name: 'dark', color: '#2a1f1a' },
     { name: 'scuff', color: '#808080', on: 0, tone: 8 },
