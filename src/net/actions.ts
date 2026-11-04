@@ -177,8 +177,15 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
       if (m.players.some((p) => personOf(p.device) === peer && !p.leaving) || ns.queue.some((q) => q.peer === peer)) return;
       const mine = m.players.filter((p) => personOf(p.device) === peer);
       if (mine.length) {
-        // On the way out and changed their mind: they keep the seat they have.
-        for (const p of mine) delete p.leaving;
+        // On the way out and changed their mind: they keep the seat they have, unless someone has been promised it since
+        // (a watcher's Join won it mid-round): then they lost the race like anyone.
+        const back = mine.filter((p) => p.leaving);
+        if (freeSeats(m, ns) < back.length) return;
+        for (const p of back) delete p.leaving;
+        // A park from being dropped mid-match is stale once the seat is kept: a later rejoin would restore it.
+        const parked = ns.parked[peer]?.filter((x) => !back.some((p) => p.device === x.dev));
+        if (parked?.length) ns.parked[peer] = parked;
+        else delete ns.parked[peer];
         delete ns.watching[peer];
         return;
       }

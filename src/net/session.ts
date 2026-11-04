@@ -180,7 +180,10 @@ export interface SessionOptions {
 interface RemoteQueue {
   frames: { seq: number; f: PeerFrame }[];
   consumed: number;
+  /** The last action sequenced from this peer: queued for the next bundle, maybe not applied yet. */
   actN: number;
+  /** The last action a bundle has applied, which is all a snapshot may ack (see syncMsg). */
+  ackN: number;
   last: PeerFrame;
   /** Host ticks in a row with nothing queued. */
   dry: number;
@@ -271,7 +274,7 @@ export class NetSession {
   /** True once this peer has followed the room's timeline, so its frame number means something to a new host. */
   private onTimeline = false;
   /** Set while a freshly promoted host gathers the room (see collectTick). */
-  private collecting: { until: number; got: Map<string, number>; pulled: string; pullAt: number } | null = null;
+  private collecting: { until: number; got: Map<string, number>; pulled: string; pullAt: number; chose: boolean } | null = null;
   private smooth = new Map<number, { x: number; y: number }>();
   /** Where each runner was last drawn in a predicted view. */
   private eased = new Map<number, { x: number; y: number }>();
@@ -469,7 +472,8 @@ export class NetSession {
     const a = this.asked;
     if (!a || this.pendingActs.some(([, x]) => x === a) || this.hostActions.includes(a)) return;
     this.asked = null;
-    const won = this.seated || this.queued;
+    // A seat it still holds but is leaving, kept because the room had no seat to give back, isn't one.
+    const won = this.match.players.some((p) => personOf(p.device) === this.self && !p.leaving) || this.queued;
     this.seatAsk = won ? 'won' : 'taken';
     addBreadcrumb('room', won ? 'join won' : 'join lost', { frame: this.match.frame, queued: this.queued });
     if (!won) this.intent = 'watch';
@@ -571,7 +575,8 @@ export class NetSession {
     if (!this.arrived) {
       this.arrived = true;
       // A watch link, or a match already running: watch, with Join a click away.
-      if ((this.intent === 'watch' && !w) || (!w && !this.seated && this.match.phase !== 'lobby')) this.watch();
+      // Owed a seat already (a refresh after winning one): keep the place in line.
+      if ((this.intent === 'watch' && !w) || (!w && !this.seated && !this.queued && this.match.phase !== 'lobby')) this.watch();
     }
     // Without a seat mid-match and not asking for one (dropped while gone, say): watching, with Join a click away.
     if (this.arrived && !w && this.intent === 'play' && !this.seated && !this.queued && !this.asked && this.match.phase !== 'lobby') this.watch();
@@ -701,7 +706,7 @@ export class NetSession {
     this.outbox = [];
     this.hashes.clear();
     this.synced = true;
-    this.collecting = { until: this.now() + COLLECT_MS, got: new Map(), pulled: '', pullAt: 0 };
+    this.collecting = { until: this.now() + COLLECT_MS, got: new Map(), pulled: '', pullAt: 0, chose: false };
   }
 
   /** Host-side view of each guest, from the ack and input state every peer tracks out of bundles. */
@@ -712,7 +717,7 @@ export class NetSession {
       const k = this.acks[m.id] ?? [0, 0];
       const last: PeerFrame = {};
       for (const [dev, e] of Object.entries(this.lastInputs)) if (peerOf(dev) === m.id) last[dev.slice(m.id.length + 1)] = e;
-      this.queues.set(m.id, { frames: [], consumed: k[0], actN: k[1], last: heldPeerFrame(last), dry: 0 });
+      this.queues.set(m.id, { frames: [], consumed: k[0], actN: k[1], ackN: k[1], last: heldPeerFrame(last), dry: 0 });
     }
   }
 
@@ -720,12 +725,17 @@ export class NetSession {
   private collectTick(t: number) {
     const c = this.collecting!;
     if (c.pulled) {
-      if (t - c.pullAt > PULL_MS) this.finishCollect();
-      return;
+      if (this.members.some((m) => m.id === c.pulled) && t - c.pullAt <= PULL_MS) return;
+      // Gone or silent: the next furthest, so a peer that was ahead of us is never rewound to our frame.
+      c.got.delete(c.pulled);
+      c.pulled = '';
     }
-    const others = this.members.filter((m) => m.id !== this.self);
-    const everyone = others.every((m) => !m.linking && c.got.has(m.id));
-    if (!everyone && t < c.until) return;
+    if (!c.chose) {
+      const others = this.members.filter((m) => m.id !== this.self);
+      const everyone = others.every((m) => !m.linking && c.got.has(m.id));
+      if (!everyone && t < c.until) return;
+      c.chose = true;
+    }
     let furthest = this.onTimeline ? this.match.frame : -1;
     let from = '';
     for (const [id, f] of c.got) {
@@ -882,7 +892,7 @@ export class NetSession {
   private queue(peer: string): RemoteQueue {
     let q = this.queues.get(peer);
     if (!q) {
-      q = { frames: [], consumed: 0, actN: 0, last: {}, dry: 0 };
+      q = { frames: [], consumed: 0, actN: 0, ackN: 0, last: {}, dry: 0 };
       this.queues.set(peer, q);
     }
     return q;
@@ -946,7 +956,9 @@ export class NetSession {
 
   private syncMsg(why: string): Msg {
     const k: Record<string, [number, number]> = {};
-    for (const [p, q] of this.queues) k[p] = [q.consumed, q.actN];
+    // Applied actions only: one sequenced since the last bundle isn't in this state, and acking it would prune it from
+    // the asker, which then reads its answer from a state that doesn't have it (or loses it if we die first).
+    for (const [p, q] of this.queues) k[p] = [q.consumed, q.ackN];
     const last: Record<string, Enc> = {};
     for (const [p, q] of this.queues) for (const [d, e] of Object.entries(q.last)) last[`${p}:${d}`] = e;
     return { t: 'sync', s: snapshotMatch(this.match), k, ns: structuredCloneJson(this.ns), last, why };
@@ -960,6 +972,7 @@ export class NetSession {
     const seatedPeers = new Set(this.match.players.map((p) => peerOf(p.device)));
     const k: Record<string, [number, number]> = {};
     for (const [peer, q] of this.queues) {
+      q.ackN = q.actN; // every action sequenced so far goes out in this bundle
       const sig = `${q.consumed},${q.actN}`;
       if (this.sentK.get(peer) !== sig) {
         this.sentK.set(peer, sig);
@@ -1019,6 +1032,8 @@ export class NetSession {
 
   /** Each send repeats the last bundle: on an unreliable channel that turns a lost packet into nothing instead of a stall. */
   private sendBundles() {
+    // Others follow our frames now: this timeline is the room's, so a hello after we step aside says how far it got.
+    this.onTimeline = true;
     const b = this.resend ? [this.resend, ...this.outbox] : this.outbox;
     this.send({ t: 'b', b }, undefined, true);
     this.resend = this.outbox.at(-1) ?? this.resend;
@@ -1192,7 +1207,9 @@ export class NetSession {
     for (const f of this.inbox.keys()) if (f < m.frame) this.inbox.delete(f);
     const mine = msg.k[this.self];
     if (mine) this.prune(mine);
-    if (fresh || Math.abs(this.emittedThrough - m.frame) > 120) this.emittedThrough = m.frame;
+    // A newcomer starts emitting from here; a peer already on the timeline (a migration's sync) has emitted the frames it
+    // simulated, predicted ones included, and won't again.
+    if ((fresh && !this.onTimeline) || Math.abs(this.emittedThrough - m.frame) > 120) this.emittedThrough = m.frame;
     this.synced = true;
     this.onTimeline = true;
     this.stats.syncs++;
