@@ -746,7 +746,7 @@ export const KINDS: Record<Kind, KindArt> = {
       // The toolbox, a hard box with square corners and a handle, hanging beside his back knee: a dark of the
       // shirt, clear of the legs.
       const x0 = -d.f * d.W * 0.44;
-      const x1 = x0 - d.f * 6.2;
+      const x1 = x0 - d.f * 5.6;
       const y0 = Y(d, 0.06) - 1.4;
       const y1 = y0 + 3.8;
       const corner = (x: number, y: number) => ({ x, y });
@@ -824,11 +824,11 @@ export const KINDS: Record<Kind, KindArt> = {
     },
     tool: (d, hx, hy) => {
       // One huge wrench, held low and slanting forward and down, its open jaw out in front of his knees.
-      const a = d.pose === 'run' ? 0.35 : 0.75;
+      const a = d.pose === 'run' ? 0.35 : d.pose === 'air' ? 1.3 : 0.75;
       const ca = d.f * Math.cos(a);
       const sa = Math.sin(a);
-      const tx = hx + ca * 6.8;
-      const ty = hy + sa * 6.8;
+      const tx = hx + ca * 5.8;
+      const ty = hy + sa * 5.8;
       d.s.fillStyle = d.lk.ink;
       line(d.s, hx, hy, tx, ty, { w: 2.4, seed: 2, taper: [0, 0], press: 0 });
       d.s.fillStyle = STEEL;
