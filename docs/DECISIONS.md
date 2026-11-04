@@ -342,6 +342,11 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `done`
 - **The rest of the parody backlog.**
   2026-11-02 · `planned` · PARODY-BACKLOG.md → 1
+- **A fire hydrant part: a plug you stand on whose jet of water shoves runners.** "we need a fire hydrant type item"
+  2026-11-03 · `done` · DESIGN.md → Props (Fire Hydrant), `hydrant` in `src/gen/props.ts`
+- **More parts per match, set by a Parts rule (Few, Some, Many, All), default Many.** "the number of items per round seems a LITTLe limited.. like you mostly see the same items so we should up that, and maybe make it a level config?"
+  2026-11-03 · `done` · DESIGN.md → Props (roster), Rules; `rosterSize` in `src/gen/props.ts`
+  Changed: every match had the short roster, 8 to 14 parts (now Few).
 - **Small parts still draw small on crate cards.**
   2026-11-02 · `open` · TODO.md → 21
 

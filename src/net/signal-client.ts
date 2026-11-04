@@ -12,6 +12,7 @@ import type {
   Signal,
   SignalErrorCode,
   SignalOp,
+  SignalReply,
 } from './signal-protocol';
 
 /**
@@ -32,7 +33,8 @@ export function signalUrl(op: SignalOp): string {
 
 /** `network` means the request never got an answer; everything else is the API's own code. */
 export class SignalError extends Error {
-  constructor(readonly code: SignalErrorCode | 'network') {
+  /** `network`: no answer. `forgotten`: the store has no session of ours (it lapsed); rejoin before anything else. */
+  constructor(readonly code: SignalErrorCode | 'network' | 'forgotten') {
     super(code);
   }
 }
@@ -42,15 +44,21 @@ export interface SignalApi {
   /** `since` stamps the session (see `sessionStamp`), so the store can tell two sessions of this peer apart. */
   join(since: number): Promise<JoinReply>;
   /** A host's beat may put the room on the lobby list (`list`), or take it off (`false`). */
-  beat(host: boolean, list?: RoomListing | false): Promise<BeatReply>;
+  beat(since: number, host: boolean, list?: RoomListing | false): Promise<BeatReply>;
   members(): Promise<MemberInfo[]>;
   /** Report `peer` (the session with this `order`) dead, and get the room back. */
   gone(peer: string, order: number): Promise<MemberInfo[]>;
-  /** False if `to` isn't in the room any more. */
+  /** False if `to` isn't in the room any more; throws `forgotten` if we aren't. */
   send(to: string, s: Signal): Promise<boolean>;
   poll(): Promise<Mail[]>;
   /** Fire and forget; must survive the page unloading. `unlist`: a host that listed the room takes it off the list. */
   leave(order: number, since: number, unlist?: boolean): void;
+}
+
+/** The `signal` reply as `send` reports it: a store that forgot us is our problem, not the target's. */
+export function deliveredOrThrow(r: SignalReply): boolean {
+  if (r.gone === 'self') throw new SignalError('forgotten');
+  return r.delivered;
 }
 
 let lastStamp = 0;
@@ -101,10 +109,11 @@ export class HttpSignal implements SignalApi {
   }
 
   join = (since: number) => this.call<JoinReply>('join', { since });
-  beat = (host: boolean, list?: RoomListing | false) => this.call<BeatReply>('beat', list === undefined ? { host } : { host, list });
+  beat = (since: number, host: boolean, list?: RoomListing | false) =>
+    this.call<BeatReply>('beat', list === undefined ? { since, host } : { since, host, list });
   members = () => this.call<MembersReply>('members').then((r) => r.members);
   gone = (peer: string, order: number) => this.call<MembersReply>('gone', { gone: peer, order }).then((r) => r.members);
-  send = (to: string, signal: Signal) => this.call<{ delivered: boolean }>('signal', { to, signal }).then((r) => r.delivered);
+  send = (to: string, signal: Signal) => this.call<SignalReply>('signal', { to, signal }).then(deliveredOrThrow);
   poll = () => this.call<PollReply>('poll').then((r) => r.mail);
 
   leave(order: number, since: number, unlist = false) {

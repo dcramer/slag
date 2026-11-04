@@ -418,6 +418,14 @@ export function partGroups(): PartGroup[] {
           note: 'Big hair day.',
           def: def('fan', [body([[0, 0]]), { type: 'fan', at: c(), angle: UP, length: 4, strength: 2200 }]),
         },
+        {
+          title: 'fire hydrant',
+          note: 'Property of the city. Opened by a kid with a wrench.',
+          def: def('hydrant', [
+            body([[0, 0]], 'metal', { look: 'hydrant', hue: 4 }),
+            { type: 'geyser', look: 'hydrant', at: [0.48, 0.6], angle: 0, width: 0.7, length: 5, off: 120, warn: 42, on: 60, lethal: false, strength: 2200 },
+          ]),
+        },
       ],
     },
     {

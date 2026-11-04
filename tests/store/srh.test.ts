@@ -31,6 +31,8 @@ describe('dev store and production store agree', () => {
     ['SET', `${k}:t`, 1730000000123, 'EX', 60], // a session stamp as the liveness marker
     ['GET', `${k}:t`],
     ['GET', `${k}:missing`],
+    ['GETEX', `${k}:t`, 'EX', 50], // a beat: renew liveness and read its stamp back
+    ['GETEX', `${k}:missing`, 'EX', 50],
     ['MGET', `${k}:t`],
     ['INCR', `${k}:n`],
     ['INCR', `${k}:n`],
@@ -264,7 +266,7 @@ describe('every op, end to end', () => {
 
     const offer = { k: 'offer', c: 'abc', o: b.order, sdp: 'v=0\r\no=- 1 2 IN IP4 127.0.0.1\r\n"quotes" and ünicode' };
     expect(await handleOp('signal', { room: r, peer: 'bbbb', to: 'aaaa', signal: offer }, ctx)).toEqual({ delivered: true });
-    expect(await handleOp('signal', { room: r, peer: 'bbbb', to: 'nobody', signal: offer }, ctx)).toEqual({ delivered: false });
+    expect(await handleOp('signal', { room: r, peer: 'bbbb', to: 'nobody', signal: offer }, ctx)).toEqual({ delivered: false, gone: 'to' });
     expect(await handleOp('poll', { room: r, peer: 'aaaa' }, ctx)).toEqual({ mail: [{ from: 'bbbb', s: offer }] });
     expect(await handleOp('poll', { room: r, peer: 'aaaa' }, ctx)).toEqual({ mail: [] });
 

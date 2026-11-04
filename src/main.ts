@@ -27,15 +27,38 @@ import { isTouchFirst } from './ui/touch/device';
 
 type Mount = (root: HTMLElement, route: Route, nav: Nav) => Unmount | Promise<Unmount>;
 
-/** Every screen. The game and the codex load on first visit; the menu, 404 and error screens are small and ship with the shell. */
-const SCREENS: Record<ScreenName, Mount> = {
-  home: (root, _r, nav) => mountHome(root, nav),
-  lobbies: async (root, _r, nav) => (await import('./ui/screens/lobbies')).mountLobbies(root, nav),
-  lobby: async (root, r, nav) =>
-    (await import('./game-client')).mountLobby(root, r.screen === 'lobby' ? r.room : '', nav, { watch: r.screen === 'lobby' && r.watch }),
-  codex: async (root, _r, nav) => (await import('./codex/main')).mountCodex(root, nav),
-  about: async (root, _r, nav) => (await import('./ui/screens/about')).mountAbout(root, nav),
-  missing: (root, _r, nav) => mountPlain(root, 'missing', nav),
+/**
+ * Every screen. The game and the codex load on first visit; the menu, 404 and error screens are small and ship with
+ * the shell. Loading a screen's code and mounting it are separate steps: a visitor can move on while the code is on
+ * its way, and a lobby that mounted anyway would join its room only to leave it again.
+ */
+const SCREENS: Record<ScreenName, () => Mount | Promise<Mount>> = {
+  home: () => (root, _r, nav) => mountHome(root, nav),
+  lobbies: () =>
+    import('./ui/screens/lobbies').then(
+      ({ mountLobbies }) =>
+        (root, _r, nav) =>
+          mountLobbies(root, nav),
+    ),
+  lobby: () =>
+    import('./game-client').then(
+      ({ mountLobby }) =>
+        (root, r, nav) =>
+          mountLobby(root, r.screen === 'lobby' ? r.room : '', nav, { watch: r.screen === 'lobby' && r.watch }),
+    ),
+  codex: () =>
+    import('./codex/main').then(
+      ({ mountCodex }) =>
+        (root, _r, nav) =>
+          mountCodex(root, nav),
+    ),
+  about: () =>
+    import('./ui/screens/about').then(
+      ({ mountAbout }) =>
+        (root, _r, nav) =>
+          mountAbout(root, nav),
+    ),
+  missing: () => (root, _r, nav) => mountPlain(root, 'missing', nav),
 };
 
 export interface MountOptions {
@@ -122,15 +145,18 @@ export function mountGame(root: HTMLElement, opts: MountOptions = {}): () => voi
       root.replaceChildren();
       current = mountPlain(root, 'error', router);
     };
+    // Still the screen to show once its code is here: navigated away meanwhile, it never mounts.
+    const mount = (m: Mount): Unmount | Promise<Unmount> => (token === shown ? m(root, route, router) : () => {});
     let result: Unmount | Promise<Unmount>;
     try {
-      result = SCREENS[route.screen](root, route, router);
+      const screen = SCREENS[route.screen]();
+      result = screen instanceof Promise ? screen.then(mount) : mount(screen);
     } catch (e) {
       fail(e);
       return;
     }
     Promise.resolve(result).then((done) => {
-      // Navigated away while it loaded: drop it.
+      // Navigated away while it mounted: drop it.
       if (token === shown) current = done;
       else done();
     }, fail);

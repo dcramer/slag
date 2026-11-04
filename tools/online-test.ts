@@ -28,6 +28,8 @@
  *   duo         the same in a race with no third peer: the guest has nobody to ask
  *   leave       the host navigates away (goodbye path) mid-race
  *   twice       the host dies, and the new host dies straight after taking over
+ *   hostwatch   the host clicks Watch in the lobby (and `hostwatch-match`: mid-match, out at the boundary): it steps behind
+ *               the players and hands the room on, everyone ends on one host, identical, and nobody freezes for long
  *   double      both guests lose a live host at once (every data channel silent, signaling up): the room may move, but
  *               the old host freezes first, so two hosts never play at once, and everyone ends identical
  *   latency     input-to-screen delay between peers, stalls and jumps
@@ -65,7 +67,7 @@ const argv = process.argv.slice(2);
 /** Named groups, each short enough to run alone on a loaded machine. */
 const GROUPS: Record<string, string[]> = {
   lobby: ['flow', 'fresh', 'kick', 'view', 'refused', 'browse'],
-  migration: ['pick', 'place', 'run', 'duo', 'leave', 'twice', 'double'],
+  migration: ['pick', 'place', 'run', 'duo', 'leave', 'twice', 'double', 'hostwatch', 'hostwatch-match'],
   feel: ['latency', 'hidden', 'contact'],
   seats: ['observe', 'seatrace', 'idle', 'gone'],
   misc: ['play', 'bc', 'unset'],
@@ -898,7 +900,7 @@ async function newRoom(
 const FAST_RULES = { targetScore: 80, maxRounds: 25, pickSeconds: 30, placeSeconds: 45, raceSeconds: 30 };
 
 /** n peers joined, seated and ready: the room is in `pick`. The first page is host. */
-async function startMatch(r: Room, n: number, rules: Record<string, number> = FAST_RULES): Promise<{ pages: Page[]; ids: string[] }> {
+async function startMatch(r: Room, n: number, rules: Record<string, number> = FAST_RULES, bots = 0): Promise<{ pages: Page[]; ids: string[] }> {
   const pages: Page[] = [];
   const ids: string[] = [];
   const tags = 'ABCDEFGH';
@@ -913,6 +915,10 @@ async function startMatch(r: Room, n: number, rules: Record<string, number> = FA
   check(new Set(ids).size === n, `${n} peers joined with distinct ids`);
   await pages[0].evaluate((x) => (window as any).slagDebug.net.act({ t: 'rules', rules: x }), rules);
   await waitFor(pages[0], 'everyone seated', (v) => v.players.length === n);
+  for (let i = 0; i < bots; i++) {
+    await pages[0].evaluate(() => (window as any).slagDebug.addBot());
+    await waitFor(pages[0], 'bot seated', (v) => v.players.length === n + i + 1);
+  }
   for (const p of pages) await p.keyboard.press('Enter');
   for (const p of pages) await waitFor(p, 'match start', (v) => v.phase === 'pick');
   return { pages, ids };
@@ -1005,7 +1011,8 @@ const recoveries: string[] = [];
 async function killScenario(browser: Browser, base: string, phase: 'pick' | 'place' | 'run', n = 3) {
   const label = n === 3 ? phase : `${phase} with ${n}`;
   const r = await newRoom(browser, base, n === 3 ? phase : 'duo', '');
-  const { pages, ids } = await startMatch(r, n);
+  // A bot in the pick room: bot seats are the room's, so it must move to the new host, never go away.
+  const { pages, ids } = await startMatch(r, n, FAST_RULES, phase === 'pick' ? 1 : 0);
   if (phase !== 'pick') await toPlace(pages);
   if (phase === 'run') {
     await toRun(pages, ids);
@@ -1024,6 +1031,11 @@ async function killScenario(browser: Browser, base: string, phase: 'pick' | 'pla
   check(after.phase === before.phase, `phase survives (${before.phase} → ${after.phase})`);
   const a = await waitFor(pages[1], "old host's player marked away", (v) => v.players.find((q) => q.device.startsWith(`${ids[0]}:`))?.away === true, 15_000);
   check(a.players.find((q) => q.device.startsWith(`${ids[0]}:`))?.away === true, 'crashed host handled as a dropped player');
+  if (phase === 'pick') {
+    const bot = await waitFor(pages[1], 'the bot seat moves to the new host', (v) => v.players.some((q) => q.device.startsWith(`${ids[1]}:bot`)), 15_000);
+    const seat = bot.players.find((q) => q.device.includes(':bot'));
+    check(!!seat?.device.startsWith(`${ids[1]}:bot`) && !seat.away, `the bot plays on from the new host (${seat?.device}${seat?.away ? ', away' : ''})`);
+  }
   if (survivors.length > 1) await compareHashes(survivors, phase);
   await r.shot(pages.at(-1)!, 'after');
   const real = r.errors.filter((e) => !/favicon|ERR_/.test(e));
@@ -1783,6 +1795,106 @@ async function hostRate(host: Page, ms = 3000): Promise<number> {
   return ((await view(host)).frame - f0) / ((Date.now() - t0) / 1000);
 }
 
+/**
+ * Watches every page every 100 ms until `done` holds on all of them (or `ms` passes): the most hosts at once, the
+ * most hosts advancing the sim at once, and how long anyone spent frozen (paused, unsynced or not online). A host
+ * handing the room on because it chose to watch is planned, so nobody should notice beyond a beat.
+ */
+async function sampleRoom(pages: Page[], done: (vs: NetView[]) => boolean, ms: number) {
+  const t0 = Date.now();
+  let hosts = 0;
+  let running = 0;
+  let frozenMs = 0;
+  const statuses = new Set<string>();
+  let last = t0;
+  let vs = await Promise.all(pages.map(view));
+  while (!done(vs) && Date.now() - t0 < ms) {
+    await sleep(100);
+    vs = await Promise.all(pages.map(view));
+    const now = Date.now();
+    hosts = Math.max(hosts, vs.filter((v) => v.isHost).length);
+    running = Math.max(running, vs.filter((v) => v.isHost && !v.paused).length);
+    for (const v of vs) if (v.status !== 'online') statuses.add(v.status);
+    if (vs.some((v) => v.status !== 'online' || v.paused || !v.synced)) frozenMs += now - last;
+    last = now;
+  }
+  return { secs: (Date.now() - t0) / 1000, ok: done(vs), hosts, running, frozenMs, statuses: [...statuses], vs };
+}
+
+/**
+ * The host chooses to watch: in the lobby its seat goes at once, mid-match at the round boundary; either way it then
+ * steps behind the players in the join order and hands the room to the next in line (NETCODE.md → Watchers step
+ * behind players). A planned handover: everyone ends on one host, identical, with the host's old seat gone and its
+ * page watching, and nobody frozen for more than a moment.
+ */
+async function hostWatchScenario(browser: Browser, base: string, midMatch: boolean) {
+  const label = midMatch ? 'hostwatch-match' : 'hostwatch';
+  const r = await newRoom(browser, base, label, '');
+  const pages: Page[] = [];
+  const ids: string[] = [];
+  if (midMatch) {
+    const m = await startMatch(r, 3);
+    pages.push(...m.pages);
+    ids.push(...m.ids);
+  } else {
+    for (const tag of ['A', 'B', 'C']) {
+      pages.push(await r.open(tag));
+      const v = await waitFor(pages.at(-1)!, `${tag} online`, (x) => x.synced && x.status === 'online');
+      ids.push(v.self);
+    }
+    await waitFor(pages[0], 'everyone seated', (v) => v.players.length === 3);
+    await pages[0].evaluate(() => (window as any).slagDebug.addBot());
+    await waitFor(pages[0], 'bot seated', (v) => v.players.length === 4);
+  }
+  const [A, B, C] = pages;
+  await A.evaluate(() => (window as any).slagDebug.net.watch());
+  if (midMatch) {
+    // Seated (leaving) through the round; the handover comes once the round is scored.
+    await toPlace(pages);
+    await toRun(pages, ids);
+    await waitFor(A, 'the round scored', (v) => v.phase !== 'run' && v.phase !== 'place', 90_000);
+  }
+  const s = await sampleRoom(
+    pages,
+    (vs) =>
+      vs.every((v) => v.hostId === ids[1] && v.status === 'online' && v.synced && !v.paused) &&
+      vs.filter((v) => v.isHost).length === 1 &&
+      !vs[0].seated &&
+      vs[0].watching,
+    40_000,
+  );
+  recoveries.push(`${label} (host starts watching): ${s.secs.toFixed(1)}s, frozen ${(s.frozenMs / 1000).toFixed(1)}s`);
+  console.log(
+    `     handed over in ${s.secs.toFixed(1)}s; frozen ${(s.frozenMs / 1000).toFixed(1)}s; statuses seen ${s.statuses.join(',') || 'online'}; at most ${s.hosts} host(s), ${s.running} playing`,
+  );
+  if (!s.ok) await dumpNet(pages, label);
+  check(
+    s.ok,
+    `the room moves to the next in line, everyone online (${s.vs.map((v) => `${v.self}:${v.hostId}/${v.status}/${v.synced}/${v.paused}`).join(' ')})`,
+  );
+  check(s.running <= 1, `never two hosts playing at once (at most ${s.running})`);
+  check(s.frozenMs < 2500, `nobody frozen for long (${(s.frozenMs / 1000).toFixed(1)}s)`);
+  const v = await view(B);
+  check(!v.players.some((p) => p.device.startsWith(`${ids[0]}:`)), "the watcher's seat is gone");
+  const people = v.players.filter((p) => !p.device.includes(':bot'));
+  check(people.length === 2, `the two players keep their seats (${people.map((p) => p.device).join(',')})`);
+  if (!midMatch) {
+    const bot = await waitFor(B, 'the bot seat moves to the new host', (x) => x.players.some((q) => q.device.startsWith(`${ids[1]}:bot`)), 15_000);
+    check(
+      bot.players.filter((q) => q.device.includes(':bot')).length === 1,
+      `the bot stays seated, run by the new host (${bot.players.map((q) => q.device).join(',')})`,
+    );
+  }
+  await compareHashes([A, B, C], label);
+  // The room still plays: the new host's state moves on and the watcher follows it.
+  const f0 = (await view(C)).frame;
+  await sleep(1500);
+  check((await view(C)).frame > f0 + 30, 'the room plays on');
+  const real = r.errors.filter((e) => !/favicon|ERR_/.test(e));
+  check(real.length === 0, `no page errors${real.length ? `:\n${real.join('\n')}` : ''}`);
+  await r.dispose();
+}
+
 /** Host, guest and two watchers (one on a phone) through a round; then someone arrives mid-race and Joins. */
 async function observeScenario(browser: Browser, base: string) {
   // A desktop-sized window: the default 480×270 lays the lobby out as a phone's, where Watch moves to Settings.
@@ -2202,6 +2314,8 @@ try {
   if (wanted('leave')) await guarded(() => leaveScenario(browser, server.base));
   if (wanted('twice')) await guarded(() => twiceScenario(browser, server.base));
   if (wanted('double')) await guarded(() => doubleScenario(browser, server.base));
+  if (wanted('hostwatch')) await guarded(() => hostWatchScenario(browser, server.base, false));
+  if (wanted('hostwatch-match')) await guarded(() => hostWatchScenario(browser, server.base, true));
   if (wanted('latency')) await guarded(() => latencyScenario(browser, server.base));
   if (wanted('hidden')) await guarded(() => hiddenScenario(browser, server.base));
   if (wanted('contact')) await guarded(() => contactScenario(browser, server.base));

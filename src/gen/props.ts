@@ -82,6 +82,7 @@ export const ARCHETYPE_WEIGHTS: readonly (readonly [Archetype, number])[] = [
   ['panic', 1],
   ['fuse', 1.1],
   ['fling', 1],
+  ['hydrant', 1.1],
 ];
 
 /**
@@ -1461,6 +1462,54 @@ const RECIPES: Record<Archetype, PartRecipe> = {
     };
   },
 
+  // A fire hydrant: a plug you can stand on whose outlet rattles, then blasts a jet of water that shoves
+  // whoever it catches. Some have both side caps off. Rotation turns the jet (straight up is a launch);
+  // the plug itself always stands upright.
+  hydrant(rng) {
+    const strength = rng.range(1700, 2600);
+    const twin = rng.chance(0.3);
+    const hue = rng.weighted<number>([
+      [4, 5],
+      [48, 2],
+      [130, 1],
+      [212, 1],
+    ]);
+    const off = rng.int(100, 160);
+    const warn = rng.int(36, 50);
+    const on = rng.int(45, 75);
+    const plug: Module = { type: 'body', cells: [[0, 0]], material: 'metal', conveyor: 0, breakFrames: 0, respawnFrames: 0, look: 'hydrant', hue };
+    // `at` sits just inside the plug's cell, so the jet's first cell is the plug's own and the part stays one tile.
+    const jet = (size: PartSize, x: number, angle: number): Module => ({
+      type: 'geyser',
+      look: 'hydrant',
+      at: [x, 0.6],
+      angle,
+      width: 0.7,
+      length: by(size, 3, 5, 7),
+      off,
+      warn,
+      on,
+      lethal: false,
+      strength,
+    });
+    return {
+      archetype: 'hydrant',
+      role: 'utility',
+      name: title(
+        rng,
+        twin
+          ? ['Two-Way', 'Double-Barreled']
+          : strength > 2300
+            ? ['Full-Bore', 'High-Pressure']
+            : strength < 1950
+              ? ['Leaky', 'Dribbling']
+              : ['Municipal', 'Uncapped'],
+        ['Fire Hydrant', 'Fire Plug', 'Johnny Pump', 'Standpipe'],
+      ),
+      sized: (size) => ({ modules: twin ? [plug, jet(size, 0.48, AXIS[0]), jet(size, 0.52, AXIS[2])] : [plug, jet(size, 0.48, AXIS[0])] }),
+    };
+  },
+
   // The angry-bird slingshot: sit in the pouch, pull back, let go.
   fling(rng) {
     const power = rng.int(520, 680);
@@ -1489,12 +1538,25 @@ const RECIPES: Record<Archetype, PartRecipe> = {
   },
 };
 
-/** Every roster holds at least this many parts: the bridge plus ROSTER_SLOTS. */
-const ROSTER_MIN = 8;
-/** Parts a roster holds beyond one crate's cards, so crates differ round to round but every part keeps coming back. */
-const ROSTER_SPARE = 4;
+/**
+ * How many different parts a match deals from (the Parts rule). Few is a short list players learn
+ * by heart; All is every part there is. Every size holds the bridge plus ROSTER_SLOTS at least.
+ */
+export type PartVariety = 'few' | 'some' | 'many' | 'all';
+export const PART_VARIETIES: readonly PartVariety[] = ['few', 'some', 'many', 'all'];
+export const DEFAULT_VARIETY: PartVariety = 'many';
+/** Per variety: the fewest parts, and how many a roster holds beyond one crate's cards so crates differ round to round. */
+const ROSTER: Record<PartVariety, readonly [min: number, spare: number]> = {
+  few: [8, 4],
+  some: [12, 7],
+  many: [18, 10],
+  all: [ARCHETYPE_WEIGHTS.length + 1, 0],
+};
 /** How many unique parts a match with `cards`-card crates draws from. */
-export const rosterSize = (cards: number): number => Math.max(ROSTER_MIN, cards + ROSTER_SPARE);
+export const rosterSize = (cards: number, variety: PartVariety = DEFAULT_VARIETY): number => {
+  const [min, spare] = ROSTER[variety];
+  return Math.max(min, cards + spare);
+};
 
 const pool = (...kinds: Archetype[]) => ARCHETYPE_WEIGHTS.filter(([k]) => kinds.includes(k));
 const HAZARDS = pool(...HAZARD);
@@ -1511,7 +1573,7 @@ const ROSTER_SLOTS = [
   HAZARDS,
   HAZARDS,
   HAZARDS,
-  pool('spring', 'fan', 'slimecoat', 'pipe', 'bumper', 'magnet', 'web', 'hangar', 'rope', 'keg', 'launchplate', 'boost', 'fling'),
+  pool('spring', 'fan', 'slimecoat', 'pipe', 'bumper', 'magnet', 'web', 'hangar', 'rope', 'keg', 'launchplate', 'boost', 'fling', 'hydrant'),
   pool('platform', 'crumble', 'blinker', 'wheel', 'panic'),
 ];
 
@@ -1560,11 +1622,20 @@ export function clearsParts(def: PropDef): boolean {
  * but a part can show up again at another size. `dry`, rounds in a row nobody
  * finished, tilts the rest toward parts that unstick a match (dryLean), and
  * `lone`, a pipe in the level still waiting for its partner, toward the pipe
- * (crateLean); nothing says so on screen.
+ * (crateLean); nothing says so on screen. `variety` is the Parts rule (rosterSize).
  */
-export function generateCrate(seed: number, round: number, count: number, bridges = 1, dry = 0, lone = false, sealed = false): PropDef[] {
+export function generateCrate(
+  seed: number,
+  round: number,
+  count: number,
+  bridges = 1,
+  dry = 0,
+  lone = false,
+  sealed = false,
+  variety: PartVariety = DEFAULT_VARIETY,
+): PropDef[] {
   const rng = new Rng(deriveSeed(seed, `crate:${round}`));
-  const roster = generateRoster(seed, rosterSize(count));
+  const roster = generateRoster(seed, rosterSize(count, variety));
   const need = sealed ? 1 : Math.max(1, Math.min(bridges, count - 1));
   const cards: PropDef[] = Array.from({ length: need }, () => medium(roster[0]));
   const left = (p: Part) => p.variants.filter((v) => !cards.includes(v));

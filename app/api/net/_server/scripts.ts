@@ -164,7 +164,8 @@ function removeMirror(call: Call, [m, alive, box, index, listing]: string[], [pe
  * A host's beat that lists its room. KEYS: liveness key, member set, lobby index, the room's listing. ARGV: peer TTL,
  * room TTL, now (ms), the listing (JSON), listing TTL, index TTL, the room.
  *
- * Reply: [1 if the host is still alive, the lowest-order member or nil], as the plain beat's commands reply.
+ * Reply: [1 if the host is still alive, the lowest-order member or nil, the stamp its liveness holds or nil], as the
+ * plain beat's commands reply.
  * - Only a live session lists: a beat that lands after its own leave, or after the host was written off, must not
  *   put a room nobody hosts back on the list. That check is why this is a script and not pipelined commands.
  * - The index is scored by the beat's time and a reader takes only recent scores, so a room whose host stops beating
@@ -173,7 +174,8 @@ function removeMirror(call: Call, [m, alive, box, index, listing]: string[], [pe
  *   day, so it lapses only if no room was newly listed for a day, and then every host lists again on its next beat.
  */
 const LIST_BEAT_LUA = `
-local renewed = redis.call('EXPIRE', KEYS[1], ARGV[1])
+local held = redis.call('GETEX', KEYS[1], 'EX', ARGV[1])
+local renewed = held and 1 or 0
 redis.call('EXPIRE', KEYS[2], ARGV[2])
 local head = redis.call('ZRANGE', KEYS[2], 0, 0)[1]
 if renewed == 1 then
@@ -183,11 +185,12 @@ if renewed == 1 then
   end
   redis.call('SET', KEYS[4], ARGV[4], 'EX', ARGV[5])
 end
-return {renewed, head or false}
+return {renewed, head or false, held or false}
 `;
 
 function listBeatMirror(call: Call, [alive, m, index, listing]: string[], [peerTtl, roomTtl, now, json, listTtl, indexTtl, room]: string[]): unknown {
-  const renewed = call(['EXPIRE', alive, peerTtl]) as number;
+  const held = call(['GETEX', alive, 'EX', peerTtl]) as string | null;
+  const renewed = held === null ? 0 : 1;
   call(['EXPIRE', m, roomTtl]);
   const head = (call(['ZRANGE', m, 0, 0]) as string[])[0] ?? null;
   if (renewed === 1) {
@@ -197,7 +200,7 @@ function listBeatMirror(call: Call, [alive, m, index, listing]: string[], [peerT
     }
     call(['SET', listing, json, 'EX', listTtl]);
   }
-  return [renewed, head];
+  return [renewed, head, held];
 }
 
 export const JOIN: Script = { lua: JOIN_LUA, mirror: joinMirror };

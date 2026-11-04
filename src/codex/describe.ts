@@ -108,6 +108,9 @@ export function summarize(def: PropDef): string[] {
       case 'spring':
         out.push(m.exact && m.arc ? `launch plate ${fmt(m.arc[0])} across, ${fmt(-m.arc[1])} up · lands on its X` : `spring power ${fmt(m.power)}`);
         break;
+      case 'geyser':
+        out.push(`${m.lethal ? 'eruption' : 'jet'} ${fmt(m.length)} tiles · on ${secs(m.on)} / off ${secs(m.off + m.warn)}`);
+        break;
       case 'fan':
         out.push(`fan ${fmt(m.length)} tiles · strength ${fmt(m.strength)}`);
         break;

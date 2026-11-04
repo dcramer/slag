@@ -103,7 +103,9 @@ export type GeyserLook =
   | 'toxic'
   | 'snow'
   // Harbor: a sea monster's tentacle rising out of the water (no face), lethal where it stands.
-  | 'tentacle';
+  | 'tentacle'
+  // A fire hydrant's jet: water out of an outlet the hydrant body draws itself, so no vent of its own.
+  | 'hydrant';
 export type DecoKind =
   | 'press'
   | 'ac'
@@ -735,7 +737,8 @@ export type Motion =
 /** 'boost': a strip of arrows that kicks you along its face (Boost Strip; see BOOST in ./modules/coat.ts). */
 export type CoatKind = 'spikes' | 'ice' | 'slime' | 'boost';
 /** Art-only block looks on a body. 'obsidian': volcanic glass over lava, cracking red as it gives (a volcano bridge). */
-export type BlockLook = 'tetra' | 'obsidian';
+/** 'hydrant': a fire hydrant standing in its cell, outlets where its geysers jet (gen/props.ts hydrant recipe). */
+export type BlockLook = 'tetra' | 'obsidian' | 'hydrant';
 
 // --- Stage concepts (docs/SETPIECES.md): looks, art only -----------------------
 /** What a spike strip (or a spike coat) is made of; unset is plain metal spikes. */
@@ -788,7 +791,8 @@ export type Archetype =
   | 'boost'
   | 'panic'
   | 'fuse'
-  | 'fling';
+  | 'fling'
+  | 'hydrant';
 
 export type Role = 'build' | 'hazard' | 'utility' | 'demolish';
 /** Crate parts come in up to three sizes; nothing else differs between them. */

@@ -131,11 +131,21 @@ export interface BeatReply {
   /** False when the store no longer has this peer (expired or evicted): it must join again. */
   alive: boolean;
   /** Hosts only: the lowest-order member, which is how two peers that both think they host find out. */
-  head?: string;
+  head?: string /**
+   * A newer session of this peer id holds its place: another tab took the id (identity.ts gives it out once a
+   * tab's lease lapses, and a hidden tab's timers can stall that long). This session must stop.
+   */;
+  replaced?: true;
 }
 export interface MembersReply {
   members: MemberInfo[];
 }
+export interface SignalReply {
+  delivered: boolean;
+  /** Undelivered because the store has no live session for the sender (`self`) or the target (`to`). */
+  gone?: 'self' | 'to';
+}
+
 export interface PollReply {
   mail: Mail[];
 }

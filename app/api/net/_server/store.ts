@@ -116,6 +116,12 @@ export class MemoryStore implements Store {
         if (!e) return 0;
         e.until = this.now() + Number(rest[0]) * 1000;
         return 1;
+      case 'GETEX': {
+        // Only the EX form: read the value and renew its TTL in one command.
+        if (!e) return null;
+        e.until = this.now() + Number(rest[1]) * 1000;
+        return typeof e.v === 'string' ? e.v : null;
+      }
       case 'EXISTS':
         return e ? 1 : 0;
       case 'DEL':

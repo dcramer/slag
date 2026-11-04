@@ -12,7 +12,7 @@ import {
 } from './physics';
 import { surfaceGrid } from './ground';
 import { footing } from './weather';
-import type { WindForce } from './wind';
+import { type Wind, type WindForce, windAt } from './wind';
 
 // Hot-path imports rebound to module locals (vitest's module transform turns
 // imported bindings into getter calls; this file is worldgen's inner loop).
@@ -309,23 +309,52 @@ export interface Move {
   controls: Controls[];
   /** The body's x and y after each frame, interleaved: where to expect it, so a player of the move sees when the world disagrees. */
   path: number[];
+  /** The body as the move leaves it: what a player looking one move further ahead starts from. */
+  end: Body;
 }
 
 /**
  * Every move the policies above make from `body` as it is now, on `level`'s
- * tiles, keeping the quickest landing on each cell. On the ground that's every
+ * tiles, keeping the quickest landing on each cell (and the quickest at a
+ * walk, if that one comes in faster). On the ground that's every
  * root, run-ups from wherever it stands included; in the air, the drifts in
  * AIR_ROOTS and the wall climbs they fork. The body is copied, never moved.
  * Steps to a neighboring cell are moves too. Every landing is one the body
  * can stop on. `solids` stand in the way as they are now (a race's parts,
  * frozen at this frame). It's what a bot plays (src/brain/motor.ts): the
  * moves the solvability proof walks, so a route the proof finds is one a bot
- * can run.
+ * can run. `columns`, if given, is the parts' wind (fans, vents) blowing `f`
+ * frames from now: each frame of a move is traced in the column it's in
+ * then, so a move through a vent rises where the vent lifts it, and one
+ * taken while a geyser is about to blow knows it will.
  */
-export function movesFrom(level: Level, body: Body, solids: readonly Solid[] = []): Move[] {
+export function movesFrom(level: Level, body: Body, solids: readonly Solid[] = [], air = 0, columns?: WindColumns): Move[] {
+  return tracerFor(level, air, columns).moves(body, solids);
+}
+
+/** The parts' wind columns blowing `f` frames from now (sim/wind.ts). Only a bot's moves trace in them: the proof never does. */
+export type WindColumns = (f: number) => readonly Wind[];
+
+/**
+ * Bringing a moving body to a stop where it stands, as a player holds
+ * against a skid: back against the speed past a walk, then let go. Null if it
+ * can't stop on this ground (it would skid off or into a no-go tile). What a
+ * bot does to wait for something to pass. `air` as in `movesFrom`.
+ */
+export function brakeFrom(level: Level, body: Body, solids: readonly Solid[] = [], air = 0, columns?: WindColumns): Move | null {
+  return tracerFor(level, air, columns).brake(body, solids);
+}
+
+/**
+ * A tracer for `movesFrom`, `air` the steady side wind (px/s, + right) its moves
+ * are traced in: a gust blowing now, which a move started in it has to fight;
+ * `columns` the parts' winds on top of it.
+ */
+function tracerFor(level: Level, air: number, columns?: WindColumns): Tracer {
   const tracer = new Tracer(level, true);
   tracer.setSurface(footing(level), level.ground);
-  return tracer.moves(body, solids);
+  tracer.blow(air === 0 ? null : { vx: air, vy: 0, ky: 0, dy: 0 }, columns);
+  return tracer;
 }
 
 /** What a standing body stands on in a trace: the solid it's on if it's there, else the tile (a part's block written into the tiles is terrain). */
@@ -603,6 +632,8 @@ class Tracer {
   private stamp = 0;
   /** The side wind of the root being traced. */
   private wind: WindForce | null = null;
+  /** The parts' winds over time (movesFrom `columns`): only a bot's moves have them, never the proof's roots. */
+  private columns: WindColumns | null = null;
 
   constructor(
     level: Level,
@@ -644,6 +675,26 @@ class Tracer {
     this.tiles = tiles;
   }
 
+  /** The side wind `moves` and `brake` trace in, and the parts' columns over it. */
+  blow(wind: WindForce | null, columns?: WindColumns): void {
+    this.wind = wind;
+    this.columns = columns ?? null;
+  }
+
+  /**
+   * The air on body `b` on frame `f` of a move: the side wind, and a part's
+   * column it's in then, the stronger on each axis, as RunWorld's `windAt`
+   * over the parts' winds and the gust has it.
+   */
+  private airAt(b: Body, f: number): WindForce | null {
+    const cols = this.columns!(f);
+    const part = cols.length ? windAt(b, cols) : null;
+    const wind = this.wind;
+    if (!part) return wind;
+    if (!wind || Math.abs(part.vx) >= Math.abs(wind.vx)) return part;
+    return { ...part, vx: wind.vx };
+  }
+
   /** Fresh bookkeeping for one root traced from cell (tx, ty). */
   private reset(tx: number, ty: number): void {
     this.bx0 = this.bx1 = tx;
@@ -659,6 +710,7 @@ class Tracer {
   /** Trace one root policy from a cell, on its own. */
   run(root: number, tx: number, ty: number, oneWay: boolean, wind: WindForce | null): Trail {
     this.wind = wind;
+    this.columns = null;
     this.reset(tx, ty);
     const b = bodyAtCell(tx, ty);
     // It's already standing here: a jump on frame 0 leaves this ground.
@@ -693,20 +745,21 @@ class Tracer {
       this.trace(b, 0, make(), airborne, { controls: [], path: [] });
     }
     if (!airborne)
-      for (const dir of [-1, 1] as const) {
-        this.reset(tx, ty);
-        this.touched = false;
-        const b = { ...b0 };
-        b.groundRef = groundOf(b0, solids, oneWay);
-        this.step(b, dir, ty * this.w + tx);
-      }
+      for (const dir of [-1, 1] as const)
+        for (const run of [true, false]) {
+          this.reset(tx, ty);
+          this.touched = false;
+          const b = { ...b0 };
+          b.groundRef = groundOf(b0, solids, oneWay);
+          this.step(b, dir, ty * this.w + tx, run);
+        }
     const out = this.found;
     this.found = null;
     this.world.solids = [];
     return out;
   }
 
-  private trace(b: Body, f0: number, p: Policy, airborne0: boolean, log?: Omit<Move, 'to' | 'air'>): void {
+  private trace(b: Body, f0: number, p: Policy, airborne0: boolean, log?: Omit<Move, 'to' | 'air' | 'end'>): void {
     let airborne = airborne0;
     let wallForked = false;
     const bottom = this.h * TILE;
@@ -728,7 +781,7 @@ class Tracer {
       }
       p.input(f, b, this.c);
       const feet = b.y + b.h;
-      stepBody(b, this.c, this.world, this.wind);
+      stepBody(b, this.c, this.world, this.columns ? this.airAt(b, f) : this.wind);
       if (this.touched) {
         this.touched = false;
         return;
@@ -744,9 +797,9 @@ class Tracer {
         airborne = true;
         if (b.y + b.h > feet) this.offerBridge(b, feet);
       } else if (airborne) {
-        if (this.careful && !this.stops(b)) return;
+        if (this.careful && !this.stops(b, f + 1)) return;
         const to = this.landing(b);
-        if (log && to >= 0) this.keep({ to, air: true, ...log });
+        if (log && to >= 0) this.keep({ to, air: true, ...log, end: { ...b } });
         return;
       }
       // Still walking along flat ground: neighbor edges (and the neighbor's own walk-off) cover that.
@@ -785,42 +838,79 @@ class Tracer {
     return k;
   }
 
-  /** Walk into the next cell along the ground (no run), recorded: the step a route takes between neighbors. */
-  private step(b: Body, dir: -1 | 1, from: number): void {
-    const log: Omit<Move, 'to' | 'air'> = { controls: [], path: [] };
+  /** Run (or walk) into the next cell along the ground, recorded: the step a route takes between neighbors. Run first, so a walk replaces it only where it gets there sooner. */
+  private step(b: Body, dir: -1 | 1, from: number, run: boolean): void {
+    const log: Omit<Move, 'to' | 'air' | 'end'> = { controls: [], path: [] };
     const c = this.c;
     for (let f = 0; f < STEP_FRAMES; f++) {
       c.left = dir < 0;
       c.right = dir > 0;
-      c.run = c.down = c.jump = c.jumpPressed = false;
-      stepBody(b, c, this.world, this.wind);
+      c.down = c.jump = c.jumpPressed = false;
+      c.run = run;
+      stepBody(b, c, this.world, this.columns ? this.airAt(b, f) : this.wind);
       if (this.touched || !b.onGround) return;
       log.controls.push({ ...c });
       log.path.push(b.x, b.y);
       const k = Math.floor((b.y + b.h - 1) / TILE) * this.w + Math.floor((b.x + b.w / 2) / TILE);
       if (k !== from) {
-        if (this.stops(b)) this.keep({ to: k, air: false, ...log });
+        if (this.stops(b, f + 1)) this.keep({ to: k, air: false, ...log, end: { ...b } });
         return;
       }
     }
   }
 
+  /** `brakeFrom`: the stop `stops` makes, recorded; null if it can't stop here. */
+  brake(b0: Body, solids: readonly Solid[]): Move | null {
+    if (!b0.onGround) return null;
+    this.world.solids = solids;
+    const tx = Math.floor((b0.x + b0.w / 2) / TILE);
+    const ty = Math.floor((b0.y + b0.h - 1) / TILE);
+    this.reset(tx, ty);
+    this.touched = false;
+    const b = { ...b0 };
+    b.groundRef = groundOf(b0, solids, this.world.tileAt(tx, ty + 1) === T_ONEWAY);
+    const controls: Controls[] = [];
+    const path: number[] = [];
+    let out: Move | null = null;
+    for (let f = 0; f < STOP_FRAMES; f++) {
+      if (Math.abs(b.vx) < 0.5) {
+        const k = Math.floor((b.y + b.h - 1) / TILE) * this.w + Math.floor((b.x + b.w / 2) / TILE);
+        out = { to: k, air: false, controls, path, end: { ...b } };
+        break;
+      }
+      this.brakeInput(b);
+      controls.push({ ...this.c });
+      stepBody(b, this.c, this.world, this.columns ? this.airAt(b, f) : this.wind);
+      path.push(b.x, b.y);
+      if (this.touched || !b.onGround) break;
+    }
+    this.touched = false;
+    this.world.solids = [];
+    return out;
+  }
+
+  /** Past a walk, hold against the skid; at a walk, letting go stops it. */
+  private brakeInput(b: Body): void {
+    const c = this.c;
+    const hard = Math.abs(b.vx) > PHYS.walkSpeed + 1;
+    c.left = hard && b.vx > 0;
+    c.right = hard && b.vx < 0;
+    c.run = c.down = c.jump = c.jumpPressed = false;
+  }
+
   /**
    * Could a body that just landed (or stepped) here come to a stop without
    * leaving the ground or touching a no-go tile? A run that lands at full
-   * speed at the near end of a short ledge skids off it.
+   * speed at the near end of a short ledge skids off it. `f0` is the frame
+   * of the move the landing comes on, for the parts' winds.
    */
-  private stops(b0: Body): boolean {
+  private stops(b0: Body, f0 = 0): boolean {
     const b = { ...b0 };
     const c = this.c;
     for (let f = 0; f < STOP_FRAMES; f++) {
       if (Math.abs(b.vx) < 0.5) return true;
-      // Past a walk, hold against the skid; at a walk, letting go stops it.
-      const hard = Math.abs(b.vx) > PHYS.walkSpeed + 1;
-      c.left = hard && b.vx > 0;
-      c.right = hard && b.vx < 0;
-      c.run = c.down = c.jump = c.jumpPressed = false;
-      stepBody(b, c, this.world, this.wind);
+      this.brakeInput(b);
+      stepBody(b, c, this.world, this.columns ? this.airAt(b, f0 + f) : this.wind);
       if (this.touched || !b.onGround) {
         this.touched = false;
         return false;
@@ -829,10 +919,15 @@ class Tracer {
     return true;
   }
 
-  /** The quickest recorded landing on each cell. */
+  /**
+   * The quickest recorded landing on each cell, at a walk and faster: the
+   * quickest arrives at a run, and on ice a run can't be stopped where a
+   * walk could, so the slower one is kept beside it for a bot to weigh.
+   */
   private keep(m: Move): void {
     const found = this.found!;
-    const i = found.findIndex((x) => x.to === m.to);
+    const fast = Math.abs(m.end.vx) > PHYS.walkSpeed + 1;
+    const i = found.findIndex((x) => x.to === m.to && Math.abs(x.end.vx) > PHYS.walkSpeed + 1 === fast);
     if (i < 0) found.push(m);
     else if (m.controls.length < found[i].controls.length) found[i] = m;
   }

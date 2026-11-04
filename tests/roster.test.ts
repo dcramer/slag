@@ -12,6 +12,7 @@ import {
   generatePart,
   generateRoster,
   isBridgePart,
+  PART_VARIETIES,
   type PropDef,
   rosterSize,
 } from '../src/gen/props';
@@ -51,6 +52,7 @@ const SIZE_FIELDS: Partial<Record<Module['type'], string[]>> = {
   tesla: ['b'],
   piston: ['at', 'width'],
   fan: ['length'],
+  geyser: ['length'],
   bomb: ['radius'],
   pipe: ['cells'],
   bumper: ['radius'],
@@ -110,6 +112,25 @@ describe('a match roster', () => {
         expect(new Set(roster.map((p) => p.id)).size).toBe(roster.length);
         expect(new Set(roster.slice(1).map((p) => p.archetype)).size).toBe(roster.length - 1);
       }
+    }
+  });
+
+  it('grows with the Parts rule, each bigger roster starting with the smaller one', () => {
+    for (const players of [1, 4, MAX_PLAYERS]) {
+      const sizes = PART_VARIETIES.map((v) => rosterSize(cardsFor(players), v));
+      for (let k = 1; k < sizes.length; k++) expect(sizes[k], `${players}p ${PART_VARIETIES[k]}`).toBeGreaterThan(sizes[k - 1]);
+      for (let i = 0; i < 10; i++) {
+        const rosters = sizes.map((n) => generateRoster(seedAt(i), n));
+        for (let k = 1; k < rosters.length; k++) expect(rosters[k].slice(0, rosters[k - 1].length)).toEqual(rosters[k - 1]);
+      }
+    }
+  });
+
+  it('deals from every part there is on All', () => {
+    for (let i = 0; i < 10; i++) {
+      const kinds = new Set(generateRoster(seedAt(i), rosterSize(cardsFor(2), 'all')).map((p) => p.archetype));
+      // The platform kind is the bridge's when its own roll is plain footing (generateRoster).
+      for (const [k] of ARCHETYPE_WEIGHTS) if (k !== 'platform') expect(kinds.has(k), `seed ${seedAt(i)} ${k}`).toBe(true);
     }
   });
 
@@ -230,13 +251,13 @@ describe('crates', () => {
     }
   });
 
-  it('let every part on the roster turn up over a long match', () => {
+  it('let every part on a Few roster turn up over a long match', () => {
     for (const players of [2, 4, 8]) {
       const count = cardsFor(players);
       for (let i = 0; i < 20; i++) {
         const seen = new Set<string>();
-        for (let round = 1; round <= 25; round++) for (const d of generateCrate(seedAt(i), round, count)) seen.add(d.part!);
-        expect(seen.size, `${players}p seed ${seedAt(i)}`).toBeGreaterThanOrEqual(rosterSize(count) - 1);
+        for (let round = 1; round <= 25; round++) for (const d of generateCrate(seedAt(i), round, count, 1, 0, false, false, 'few')) seen.add(d.part!);
+        expect(seen.size, `${players}p seed ${seedAt(i)}`).toBeGreaterThanOrEqual(rosterSize(count, 'few') - 1);
       }
     }
   });

@@ -5,6 +5,9 @@
  *
  * More variations will land here (crate size, scoring tweaks, modifiers…).
  */
+import { DEFAULT_VARIETY, type PartVariety } from '../gen/props';
+
+export { PART_VARIETIES, type PartVariety } from '../gen/props';
 export interface MatchRules {
   targetScore: number;
   /**
@@ -33,6 +36,8 @@ export interface MatchRules {
    * parts, and a claim rolls the part from the match roster (Match.claim).
    */
   secretParts: boolean;
+  /** How many different parts the match's crates deal from (rosterSize in gen/props.ts). */
+  parts: PartVariety;
   /**
    * Online: kept off the public lobby list, so only an invite link or the code gets anyone in. Lobbies are public
    * by default, and every new lobby starts public: this is never saved with the host's preferences.
@@ -71,6 +76,7 @@ export const DEFAULT_RULES: MatchRules = {
   weather: true,
   bloodRounds: 2,
   secretParts: false,
+  parts: DEFAULT_VARIETY,
   private: false,
 };
 
@@ -86,6 +92,11 @@ export const RULE_CHOICES: Record<TimerRule, number[]> = {
 export const GRAVITY_CHOICES: readonly GravityRule[] = ['auto', 'low', 'normal', 'high'];
 
 export const BLOOD_CHOICES: readonly number[] = [0, 1, 2, 3];
+
+const VARIETY_LABELS: Record<PartVariety, string> = { few: 'Few', some: 'Some', many: 'Many', all: 'All' };
+
+/** Button text for a Parts choice (menus). */
+export const varietyLabel = (v: PartVariety): string => VARIETY_LABELS[v];
 
 /** Button text for a gravity choice (menus). */
 export function gravityLabel(v: GravityRule): string {

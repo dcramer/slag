@@ -3,8 +3,18 @@ import { POST } from '../app/api/net/[op]/route';
 import { clientKey, iceFromEnv, originAllowed, RateLimiter } from '../app/api/net/_server/guard';
 import { ApiError, handleOp } from '../app/api/net/_server/handlers';
 import { LIST_CACHE_MS, ReplyCache } from '../app/api/net/_server/cache';
-import { MemoryStore, storeFromEnv, upstashStore } from '../app/api/net/_server/store';
-import { DEFAULT_ICE, LIST_TTL_S, type LobbiesReply, MAX_LISTED, MAX_MAILBOX, MAX_PEERS, MAX_SDP_CHARS, PEER_TTL_S } from '../src/net/signal-protocol';
+import { MemoryStore, type Store, storeFromEnv, upstashStore } from '../app/api/net/_server/store';
+import {
+  DEFAULT_ICE,
+  LIST_TTL_S,
+  type LobbiesReply,
+  MAX_LISTED,
+  MAX_MAILBOX,
+  MAX_PEERS,
+  MAX_SDP_CHARS,
+  type MemberInfo,
+  PEER_TTL_S,
+} from '../src/net/signal-protocol';
 import { MAX_PLAYERS } from '../src/sim/constants';
 
 function world() {
@@ -155,6 +165,20 @@ describe('presence', () => {
     w.tick(10);
     expect((await w.op('beat', { peer: 'bbbb' })).alive).toBe(false);
     expect((await w.op('members', { peer: 'aaaa' })).members.map((m: any) => m.id)).toEqual(['aaaa']);
+  });
+
+  it('tells a session whose peer id a newer session took (another tab) that it was replaced, for host and guest beats', async () => {
+    const w = world();
+    await w.op('join', { peer: 'aaaa', since: 100 });
+    await w.op('join', { peer: 'bbbb', since: 100 });
+    for (const peer of ['aaaa', 'bbbb']) await w.op('join', { peer, since: 200 });
+    for (const host of [true, false]) {
+      const peer = host ? 'aaaa' : 'bbbb';
+      expect(await w.op('beat', { peer, host, since: 100 })).toEqual({ alive: true, replaced: true, ...(host ? { head: 'aaaa' } : {}) });
+      expect((await w.op('beat', { peer, host, since: 200 })).replaced).toBeUndefined();
+      // A client that sends no stamp is never told.
+      expect((await w.op('beat', { peer, host })).replaced).toBeUndefined();
+    }
   });
 
   it('caps a room at MAX_PEERS, with room for a full lobby plus spectators', async () => {
@@ -500,6 +524,41 @@ describe('http edge', () => {
     } finally {
       env.NODE_ENV = keep;
     }
+  });
+});
+
+describe('members under a rejoin', () => {
+  it('never drops a peer that rejoined between reading liveness and answering', async () => {
+    const store = new MemoryStore();
+    const ctx = { store, ice: [] };
+    await handleOp('join', { room: 'ROOM1', peer: 'aaaa', since: 1 }, ctx);
+    await handleOp('join', { room: 'ROOM1', peer: 'bbbb', since: 1 }, ctx);
+    await store.run([['DEL', 'slag:ROOM1:p:bbbb']]); // bbbb's liveness lapsed (a phone asleep)
+    let injected = false;
+    const racy: Store = {
+      async run(cmds) {
+        const out = await store.run(cmds);
+        if (!injected && cmds[0][0] === 'MGET') {
+          injected = true;
+          await handleOp('join', { room: 'ROOM1', peer: 'bbbb', since: 2 }, ctx); // its beat said gone: it rejoins now
+        }
+        return out;
+      },
+    };
+    await handleOp('members', { room: 'ROOM1', peer: 'aaaa' }, { store: racy, ice: [] });
+    const m = (await handleOp('members', { room: 'ROOM1', peer: 'aaaa' }, ctx)) as { members: MemberInfo[] };
+    expect(m.members.map((x) => x.id)).toEqual(['aaaa', 'bbbb']);
+  });
+
+  it("says which side is gone when a signal can't be delivered", async () => {
+    const store = new MemoryStore();
+    const ctx = { store, ice: [] };
+    await handleOp('join', { room: 'ROOM1', peer: 'aaaa', since: 1 }, ctx);
+    await handleOp('join', { room: 'ROOM1', peer: 'bbbb', since: 1 }, ctx);
+    const offer = { k: 'offer', c: 'abc', o: 1, sdp: 'x' };
+    await store.run([['DEL', 'slag:ROOM1:p:bbbb']]);
+    expect(await handleOp('signal', { room: 'ROOM1', peer: 'aaaa', to: 'bbbb', signal: offer }, ctx)).toEqual({ delivered: false, gone: 'to' });
+    expect(await handleOp('signal', { room: 'ROOM1', peer: 'bbbb', to: 'aaaa', signal: offer }, ctx)).toEqual({ delivered: false, gone: 'self' });
   });
 });
 

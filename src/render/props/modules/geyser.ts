@@ -72,23 +72,29 @@ interface Flow {
   spray: HSL;
 }
 
+/** A hydrant's jet leaves its outlet this far (px) from `at`, which sits just inside the plug's cell (gen/props.ts). */
+const HYDRANT_LIP = 7;
+
+const WATER: Flow = {
+  bands: [
+    [0.62, 'hsl(212 48% 34%)'],
+    [0.5, 'hsl(203 52% 48%)'],
+    [0.3, 'hsl(196 54% 66%)'],
+    [0.09, 'hsl(190 50% 88%)'],
+  ],
+  ink: inkFor({ h: 212, s: 48, l: 34 }),
+  ripple: 1.1,
+  billow: 0,
+  rider: 'foam',
+  crest: ['hsl(195 60% 96%)', 'hsl(200 45% 76%)'],
+  rock: { h: 150, s: 10, l: 34 },
+  crust: 'wet',
+  spray: { h: 198, s: 70, l: 84 },
+};
+
 const FLOWS: Partial<Record<GeyserLook, Flow>> = {
-  water: {
-    bands: [
-      [0.62, 'hsl(212 48% 34%)'],
-      [0.5, 'hsl(203 52% 48%)'],
-      [0.3, 'hsl(196 54% 66%)'],
-      [0.09, 'hsl(190 50% 88%)'],
-    ],
-    ink: inkFor({ h: 212, s: 48, l: 34 }),
-    ripple: 1.1,
-    billow: 0,
-    rider: 'foam',
-    crest: ['hsl(195 60% 96%)', 'hsl(200 45% 76%)'],
-    rock: { h: 150, s: 10, l: 34 },
-    crust: 'wet',
-    spray: { h: 198, s: 70, l: 84 },
-  },
+  water: WATER,
+  hydrant: WATER,
   toxic: {
     bands: [
       [0.64, 'hsl(110 58% 20%)'],
@@ -316,6 +322,8 @@ function cushion() {
 }
 
 function drawVent(rc: RC, m: Geyser, d: DrawCtx) {
+  // The hydrant body draws its own outlets (hydrant-art.ts).
+  if (m.look === 'hydrant') return;
   const up = dirOf(m.angle)[1] < 0;
   if (up && isPit(m, d)) {
     if (m.look === 'lava' && themeOf(d) === 'volcano') {
@@ -586,7 +594,7 @@ function drawColumn(rc: RC, m: Geyser, d: DrawCtx) {
   const a = aimOf(m, m.at[0] + d.off[0], m.at[1] + d.off[1]);
   const pit = a.up && isPit(m, d);
   // Where the column leaves its vent: the crater, the pit's surface, or the mouth's lip.
-  const base = !a.up ? -1 : pit ? -6 : -1.6;
+  const base = m.look === 'hydrant' ? -HYDRANT_LIP : !a.up ? -1 : pit ? -6 : -1.6;
   const lava = m.look === 'lava';
   const flow = FLOWS[m.look];
   const v = ventOf(d);

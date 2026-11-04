@@ -251,7 +251,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
         if (b.device) conn.kick(b.device);
         return true;
       case 'bot':
-        if (canAddBots()) net.act({ t: 'join', dev: net.globalDevice(bots.add(match)) });
+        if (canAddBots()) net.act({ t: 'join', dev: net.globalDevice(bots.add(match, 'runner', (d) => net.globalDevice(d))) });
         return true;
       case 'botLevel': {
         const p = match.players.find((q) => q.device === b.device);

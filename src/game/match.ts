@@ -489,7 +489,7 @@ export class Match {
     if (plan) this.plan = plan;
     else if (!this.placed.length && !this.level.version) planMisses.count++;
     const sealed = !plan;
-    const crate = generateCrate(this.seed, this.round, count, plan?.length ?? MAX_BRIDGES, this.dryRounds, !!lonePipe(this.placed), sealed);
+    const crate = generateCrate(this.seed, this.round, count, plan?.length ?? MAX_BRIDGES, this.dryRounds, !!lonePipe(this.placed), sealed, this.rules.parts);
     const way = sealed ? crate.find(clearsParts) : undefined;
     const defs = new Rng(deriveSeed(this.seed ^ this.salt, `crate-order:${this.round}`)).shuffle(crate);
     // Cards in rows of up to 5 (8 players → 10 cards → 2 rows).
@@ -612,7 +612,7 @@ export class Match {
   private reveal(card: CrateItem, i: number, p: Player): PropDef {
     if ((this.plan.length > 0 && isBridgePart(card.def)) || card.clears) return card.def;
     const rng = new Rng(deriveSeed(this.seed ^ this.salt, `secret:${this.round}:${i}:${p.slot}:${this.frame}`));
-    const roster = generateRoster(this.seed, rosterSize(this.crate.length));
+    const roster = generateRoster(this.seed, rosterSize(this.crate.length, this.rules.parts));
     const taken = this.crate.filter((c) => c.claimedBy >= 0).flatMap((c) => c.def.part ?? []);
     return { ...rollSecret(rng, roster, card.secret!, this.dryRounds, taken, !!lonePipe(this.placed)), key: card.def.key };
   }
