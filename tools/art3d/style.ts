@@ -284,26 +284,23 @@ export const BRIEFS: Record<string, Brief> = {
     worn: 'a wide band of grey tape is wrapped round the drainpipe cannon near its root; the water heater torso has a big dent in its side and a square riveted patch plate; one boot is a mismatched grey replacement, bigger than the other. The helmet and the buoys keep their smooth round outlines.',
   },
   engineer: {
-    // The nod, each part of the read at race size: the huge wrench (the read in profile, so it leads the
-    // brief), the tall round hard hat with the goggles' band round it (the head shape and the trade), the
-    // broad square build and clean square jaw (the gruff builder), and the work shirt over khakis (the
-    // colour block, the shirt in the player's colour).
-    // Ours, and the joke: a backyard engineer. The hard hat is a deep upturned yellow mixing bowl, the
-    // goggles are blue swimming goggles, and the wrench is one giant spanner, battered.
-    // The silhouette is three shapes the plumber hasn't got (blind reads, 2026-11-03): a tall dome with a
-    // short rim all round, since a wide brim or a bill on a short man read as the plumber's rival; a broad,
-    // taller build; and one big open jaw up beside his shoulder, clear of the hat, the spanner gripped by its
-    // end at his hip, and a huge square lantern jaw jutting forward (the face's read; a narrow chin under
-    // the hat was a small peach block at play size). Carried up behind his head it read as spikes off the hat, a second jaw down by his
-    // boots read as a curled tail, and stubble read as a jagged mustache.
-    // Fresh designs from this brief put the goggles over his eyes (the original's look), so the pick is an
-    // earlier design reshaped in edits (art/sprites/engineer/design.prompt.txt).
+    // The nod, each part of the read at race size: the kit, carried low and clear of the body (the read in
+    // silhouette, so it leads the brief): a toolbox hanging by its handle from one hand and the wrench held low
+    // in the other, its open jaw out in front; the round hard hat with the goggles strapped on it (the head
+    // shape and the trade); the broad square build and the square jaw (the gruff builder); the work shirt
+    // over khakis (the colour block).
+    // Ours, and the joke: a backyard engineer. The hard hat is a battered bowl of a helmet, the goggles are
+    // swimming goggles, the wrench one giant spanner, the toolbox a dented green tin one.
+    // Blind reads (2026-11-03 and 11-04): carried up by his shoulder, the spanner's jaw read as ears or as spikes
+    // off the hat, and with no toolbox nobody named the homage ("a mechanic or engineer, but I can't name the
+    // source"). A wide brim on a short man read as the plumber's rival. With the toolbox in one hand and the
+    // spanner low in the other, a reader named him. The pick is an earlier design reshaped in edits
+    // (art/sprites/engineer/design.prompt.txt).
     design:
-      'The character: a tall, broad, square-shouldered backyard handyman, not short: a wide chest, thick arms, long thick legs and big boots. ' +
-      'His huge signature tool is one grey adjustable spanner (#8e8a84) with a single big open C jaw, gripped by the end of its handle in his gloved hand at his hip and slanting up past his shoulder, the jaw up beside his shoulder and clear of his hat; nothing of it below his hip. ' +
-      'On his head, as a hard hat, a deep yellow mixing bowl (#e9b730) worn upside down: a tall round dome, its rolled rim a short even brim all the way round; a dark goggle strap (#3a4246) runs right round the dome as a band, two round light-blue swimming-goggle lenses (#5fb0c8) on its front. ' +
-      'A huge clean-shaven square lantern jaw, wider than his neck and as wide as the dome, jutting forward past his face, flat along the bottom with hard corners; peach skin (#efc9a4), two small black eyes, no stubble, no mustache. A red work shirt (#b8433c), khaki trousers (#8c7a58), a brown belt (#6b4a35), tan leather work gloves (#a8794a), chunky brown boots.',
-    worn: "a big dent is knocked into the side of the yellow dome; a chip is broken out of the bowl's rim at the back; the spanner's handle is snapped in the middle and bound with a big wad of grey tape; one trouser knee is torn open in a big ragged hole.",
+      'The character: a broad, square-shouldered backyard handyman carrying his kit low at his sides, clear of his body: in one hand a big green metal toolbox (#3f7f5a) hanging by its arched handle beside his knee, and in his gloved other hand one giant grey spanner (#8e8a84) held low, slanting forward and down, its single big open C jaw out in front of his knees. Nothing raised above his shoulders and nothing beside his head. ' +
+      'On his head a round yellow hard hat (#e9b730) with a short rim all round; a dark goggle strap (#3a4246) runs round it as a band, two round swimming-goggle lenses on its front. ' +
+      'A huge clean-shaven square lantern jaw, wider than his neck, jutting forward, flat along the bottom with hard corners; peach skin (#efc9a4), two small black eyes. A red work shirt (#b8433c), khaki trousers (#8c7a58), a brown belt, tan leather work gloves (#a8794a), chunky brown boots.',
+    worn: "a big dent is knocked into the side of the hard hat; the toolbox's lid is dented; the spanner is bent a little; one trouser knee is torn open in a big ragged hole.",
   },
   goose: {
     // The nod, each part of the read at race size: the S of a neck (a goose, not a duck or a chicken), white
