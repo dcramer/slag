@@ -309,6 +309,8 @@ export class Motor {
     const margin = this.traits.margin;
     const exposed = hurtsStill(map, f, b, shots, margin);
     const blocked = (mv: Move) => hurts(map, mv, f, b, shots, margin) || (mv.air && gusty(run.level, mv, f, air));
+    // Nothing clear, and nowhere to stop and wait for it: on a short ledge at a run, coasting is a fall.
+    let cornered = false;
     for (const dist of [map.dist(target), map.rough(target)]) {
       // `c` ranks moves, with what it has tried already counted against them; `p` is what the route promises.
       const ranked: { mv: Move; c: number; p: number }[] = [];
@@ -368,10 +370,11 @@ export class Motor {
         // Nothing clear and nothing worth a known wait: stand a beat and look again, if it can stop here.
         const hold = this.hold(map, run, b, shots, air, run.frame + 1);
         if (hold) return hold;
-        break; // it can neither stop nor go clear: the least bad move
+        cornered = true; // it can neither stop nor go clear: the least bad move
+        break;
       }
     }
-    return exposed || !b.onGround ? this.escape(map, run, b, shots, moves, target) : null;
+    return exposed || cornered || !b.onGround ? this.escape(map, run, b, shots, moves, target) : null;
   }
 
   /**
