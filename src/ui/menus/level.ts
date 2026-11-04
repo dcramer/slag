@@ -19,7 +19,7 @@ export interface LevelPick {
   name: () => string;
   shownTheme: () => ThemeId;
   /** A picture of the level as it plays (Renderer.still), or null before there is one. */
-  picture: () => CanvasImageSource | null;
+  picture: () => HTMLCanvasElement | null;
   setLevel: (seed: number, theme: ThemeId | null) => void;
   setRules: (r: MatchRules) => void;
 }
@@ -131,7 +131,7 @@ export class LevelMenu extends CanvasMenu {
     }
     const theme = p.theme();
     const rules = p.rules();
-    const { inner } = ui.sheet(560, 440);
+    const { inner } = ui.sheet(560, 680);
     let y = inner.y;
     if (ui.H >= 330) {
       ui.text('LEVEL', inner.x, y + 12, 22, PAL.amber, 'left', 400, FONT.display);
@@ -147,33 +147,54 @@ export class LevelMenu extends CanvasMenu {
     ui.scroll('panel', view, () => {
       // Room for the picture's frame above it.
       let at = view.y + 4;
-      // The level as it plays, between the arrows, and what it is under it.
-      const aw = Math.max(ui.tap, 34);
-      const room = view.w - 2 * (aw + 10);
-      // The picture takes what the rows under it leave, so the card fits a small window without scrolling.
-      const below = 4 + Math.max(h, 30) + 12 + (14 + Math.max(ui.tap, 32) + 10) + (14 + h + 8) + 16;
-      const ph = Math.round(Math.max(64, Math.min(190, (room * 9) / 16, view.h - below)));
-      const pw = Math.round((ph * 16) / 9);
-      const px = view.x + (view.w - pw) / 2;
-      this.arrow(ui, 'theme:prev', { x: px - 10 - aw, y: at, w: aw, h: ph }, -1, 'The theme before', () => turn(-1));
-      this.arrow(ui, 'theme:next', { x: px + pw + 10, y: at, w: aw, h: ph }, 1, 'The theme after', () => turn(1));
+      // The level as it plays, the card's width.
+      const pw = Math.round(view.w - 4);
+      const px = view.x + 2;
+      // The picture takes what the rows under it leave, so the card fits a small window without scrolling:
+      // a short window crops it top and bottom rather than narrowing it.
+      const below = 4 + 12 + (14 + Math.max(ui.tap, 32) + 10) + (14 + h + 8) + 4;
+      const ph = Math.round(Math.max(64, Math.min((pw * 9) / 16, view.h - below)));
       const c = ui.c;
       c.fillStyle = PAL.ink;
       c.fillRect(px - 3, at - 3, pw + 6, ph + 6);
       const pic = p.picture();
-      if (pic) c.drawImage(pic, px, at, pw, ph);
+      if (pic && pic.width && pic.height) {
+        const sh = Math.min(pic.height, (pic.width * ph) / pw);
+        const sw = (sh * pw) / ph;
+        c.drawImage(pic, (pic.width - sw) / 2, (pic.height - sh) / 2, sw, sh, px, at, pw, ph);
+      }
+      // What it is, on a band across the picture's foot, as the codex's cards have it.
+      const band = Math.min(44, Math.max(30, ph * 0.22));
+      c.fillStyle = 'rgba(18,10,7,0.78)';
+      c.fillRect(px, at + ph - band, pw, band);
+      const tag = (theme ? THEME_LABELS[theme] : `Any · ${THEME_LABELS[p.shownTheme()]}`).toUpperCase();
+      const big = band >= 38;
+      ui.text(tag, px + 12, at + ph - band + (big ? 11 : 9), big ? 9 : 8, theme ? PAL.amber : PAL.ash, 'left', 800);
+      const ds = Math.max(ui.tap, band - 8);
+      ui.text(
+        ui.fit(p.name(), pw - 36 - ds, big ? 16 : 13, 400, FONT.display),
+        px + 12,
+        at + ph - (big ? 11 : 8),
+        big ? 16 : 13,
+        PAL.bone,
+        'left',
+        400,
+        FONT.display,
+      );
       c.strokeStyle = theme ? PAL.amber : PAL.ash;
       c.lineWidth = 2;
       c.strokeRect(px - 2, at - 2, pw + 4, ph + 4);
-      at += ph + 12;
-      const tag = (theme ? THEME_LABELS[theme] : `Any · ${THEME_LABELS[p.shownTheme()]}`).toUpperCase();
-      ui.text(tag, px, at + 6, 9, theme ? PAL.amber : PAL.ash, 'left', 800);
-      ui.text(ui.fit(p.name(), pw - h - gap, 16, 400, FONT.display), px, at + 24, 16, PAL.bone, 'left', 400, FONT.display);
-      this.dice(ui, 'theme:dice', px + pw - h, at, h, 'A random theme', () => {
+      // The arrows on its edges, over the picture above the band; the theme's dice at the band's end.
+      const aw = Math.max(ui.tap, 34);
+      const ah = Math.min(ph - band - 12, Math.max(ui.tap, 72));
+      const ay = at + (ph - band - ah) / 2;
+      this.arrow(ui, 'theme:prev', { x: px + 6, y: ay, w: aw, h: ah }, -1, 'The theme before', () => turn(-1));
+      this.arrow(ui, 'theme:next', { x: px + pw - 6 - aw, y: ay, w: aw, h: ah }, 1, 'The theme after', () => turn(1));
+      this.dice(ui, 'theme:dice', px + pw - 6 - ds, at + ph - band + (band - ds) / 2, ds, 'A random theme', () => {
         const others = THEME_IDS.filter((t) => t !== theme);
         p.setLevel(p.seed(), others[Math.floor(Math.random() * others.length)]);
       });
-      at += Math.max(h, 30) + 12;
+      at += ph + 12;
 
       // Seed: typed (Enter, or closing), or rolled.
       const head = (title: string) => ui.text(title, view.x, at + 6, 8, PAL.ash, 'left', 800);
