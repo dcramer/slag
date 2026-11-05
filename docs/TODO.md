@@ -54,7 +54,7 @@ A full-cast read (2026-11-04, every kind drawn, cells wide enough for a held pro
 Tools that would have saved their agents turns: a design read from a quick trace of the design at blind-sheet size (a design read from the drawing passed the slayer at medium while the traced sheet failed); a `keep` list of white roles exempt from `holes` (the hopper's and the slayer's tint scripts); keeping a design prompt under about 900 characters, since the image model drops what comes last.
 
 ## 32. Grow the cast toward 100
-**Blocked (2026-11-04):** the image service (Tripo) now refuses every request with `403: Your project has been banned due to violation of our policy`, mid-way through the tomb raider. The owner checks the account before any agent draws a kind; no agent retries it until then.
+Tripo's `403: Your project has been banned due to violation of our policy` refuses that one prompt (it flags what reads as copyright), not the account: README → Tripo's refusals.
 
 The owner is happy with about 100 kinds, from every genre, with more iconic women. Candidates the cast doesn't have yet, each with the one shape that would carry it in black at play size (★ a woman). Pick by that shape first: a kind needs an outline nobody else in the cast has, so check the pairs listed against what's there (the elf, the merc and the slayer are already three slim swordsmen). Seat a batch through the contract step (`CAST`, names, `PAINTS`, `READS_AS`, `CAST_NOTES`, a `docs/characters/<kind>.md` entry, `LOOK_CAST`), then one agent a kind (tools/art3d/CHECKLIST.md).
 

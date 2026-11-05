@@ -21,6 +21,8 @@ pnpm shot sprites --kind KIND                   # the run cycle, the six-rolls l
 
 `tripo.ts` reads terra's `.env`, so `node` it from anywhere. Run it bare, by its full path, with the prompt pasted in as one literal string: the user settings allow exactly `node /home/dcramer/src/terra/tools/tripo/tripo.ts image *` and `… balance`, and a `$tripo` variable or a `$(…)` prompt is neither that rule nor something the worktree guard lets through. The build needs python3 with Pillow. Sources under `art/` are in Git LFS (`.gitattributes`); builds and tests never read them, only `frames.ts`. Role maps land in `.cache/flat/KIND/` (a `*.png` beside each, to check a pose's roles).
 
+**Tripo's refusals.** `403: Your project has been banned due to violation of our policy` is a filter on that prompt, usually for something that reads as a copyrighted character, not a ban on the account (`… balance` still answers, and other prompts go through). Don't resend it: take out the franchise's names and its most trademark detail, describe the shape instead, and lean on the twist.
+
 ## From the kind's entry
 
 | Entry field                            | Where it goes                                                                                                                                                                                                                        |
