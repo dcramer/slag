@@ -88,6 +88,13 @@ export interface FlatKind {
      * a handle's eye), each patch over this many world px². Off by default: a white body is closed in too.
      */
     holes?: number;
+    /**
+     * How light (the least of r, g and b) a hole's pixel may be and still count as the background's white (default
+     * 228, the border's own test). Lower takes in the antialiased rim round each hole, and the ink beside it goes to
+     * the figure instead of leaving a white sliver inside the hole: the cuptoon's white body. A patch is a hole only
+     * if most of it passes 228, so a white body, all of it darker, never is.
+     */
+    white?: number;
   };
   /**
    * Where the face kit goes: the eyes are the pair of `role` specks `area` big (world px²) and `gap` apart,
@@ -115,6 +122,13 @@ export interface FlatKind {
      * smoothed away by the tracer, so on traced parts only one merged into the ink round it survives.
      */
     from?: 'map';
+    /**
+     * Pupils drawn as an ink ring round a white glint: the ring is thin, so the map took it for line and the pupil
+     * went. Each patch closed in by ink alone, no bigger than this (world px²) and in the `band`, is filled with ink
+     * first, and every round lone speck of ink there up to `area`'s top is kept a fill, so a pupil narrower than
+     * `map.ink` stays one speck too. Keep it well under an eye white's size.
+     */
+    glint?: number;
   };
   /**
    * A colour drawn in another role by its place: `below` the eyes (world px), or a lying pose's by size and x
