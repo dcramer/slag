@@ -58,7 +58,7 @@ So each kind has: a clear head-to-body ratio, a readable expression, a line of a
 | worm | the worm in the super suit | a bulky suit with huge shoulders, a worm's head on a long bendy neck rising out of the collar with bulging eyes, a big chunky pistol in one hand | costume: the suit, the boots and gloves a dark of it |
 | dragon | the little purple dragon | small and low on four stubby legs, side on: a big round head with two long horns swept straight back, stubby umbrella-cloth wings on bent spokes, a pale belly, a ridge of small spines, a tail ending in a taped arrowhead with a firefly jar hanging from it | costume: the scales; the wing cloth a light of it, the far legs a dark |
 | hopper | the snouted cube hopper | a round ball with no arms on two short legs in worn trainers, two big eyes standing up out of its crown, a long tube snout sticking straight out front and flared at its open end, a party blower; hops both feet together | costume: the ball and legs; the snout and the blower's streamer lights of it |
-| warrior | the round Slavic warrior | a huge round belly on short legs, a big drooping moustache, a pointed iron helmet, a belted tunic, thick bare arms, a sword at his belt | costume: the tunic |
+| warrior | the round Slavic warrior | a huge round belly on short legs, a big round bald head, a small iron pot of a helmet with a knob on top and its handle out behind, a big round nose over a short bushy moustache, a short belted tunic, thick bare arms, a sword at his belt, a half-eaten roast leg held out like a club | costume: the tunic |
 | slayer | the white-haired monster slayer | long white hair tied back, two sword hilts standing up over his shoulders, a wolf medallion on a chain, cat's eyes, a scarred brow, a dark leather coat and boots | costume: the coat |
 
 **Is it the homage?** `cast-recognise.png` puts each kind close up beside "This is ___", in its roster colour. Every sheet waits for the rendered kinds' frames (`slagDebug.sprites.ready()`), so it shows what ships; before 2026-11-02 the catalog, recognise and silhouette sheets drew those kinds hand-drawn, so the reads below were judged on the old bodies. As of this round, every homage reads as its caption to us: the plumber, speedster, elf, mouse, impostor, puffball, jelly and goose at once; the bounty hunter and the engineer a beat slower, because their reads lean on props (the shoulder pads and cannon, the hat and wrench) more than on a silhouette nobody else shares. The silhouette test still separates every kind, though the plumber and the hunter are the closest pair of stout shapes.
@@ -513,16 +513,24 @@ What came out of it:
 ### The round Slavic warrior (new)
 - **Kind:** `warrior` · **Name:** Kakosh
 - **A stranger should say:** "the fat warrior from the Polish comic." The nod is the comic's big, round, boastful half of the pair, never his slim partner.
-- **Silhouette:** a huge round belly on short legs, so he's wider than he's tall below the shoulders; a pointed iron helmet on a round head; a big drooping moustache past his chin; thick bare arms.
-- **Traits:** check these against the comic before drawing (the helmet's shape, the moustache, the tunic and belt, what he carries) and keep only what reads at play size. A huge belly; a big drooping moustache; a pointed iron helmet; a short belted tunic; thick bare arms; a short sword at his belt; boastful, lazy and always hungry.
-- **Palette:** the tunic in the player's colour; skin, moustache, helmet iron, belt leather and boots neutral.
-- **Color slot:** costume.
+- **Silhouette:** a huge round belly on short legs, so he's wider than he's tall below the shoulders; a big round bald head sitting right on the shoulders with a small helmet perched on its crown, narrower than the head; thick bare arms; a roast leg held out clear in front.
+- **Traits:** checked against the comic (2026-11-04): he's bald, with a big round nose and a short, bushy dark moustache (the big drooping red one belongs to the castellan, not to him); his helmet is a small round iron dome with a knob or short spike on top, too small for his head; a short red tunic with a belt, dark trousers, boots, thick bare arms, a sword; gluttonous, boastful and a little cowardly. Kept at play size: the belly, the small helmet on the bald head, the moustache.
+- **Palette:** the tunic in the player's colour (drawn `#c24a40`); the rest neutral: skin `#efc09a`, the patch on the belly in the skin's salmon (the drawing's patch and the skin's shade are one colour), moustache `#5a4030`, the pot's iron `#8e949a`, leather (belt, boots, scabbard) `#7a5034`, trousers `#857a70`, the roast `#b0602e` and its bone `#ecdcb8`, an open mouth `#9a3d36`.
+- **Color slot:** costume: the tunic.
 - **Gait:** a heavy, proud waddle, the belly leading.
-- **The nod:** the round belly under a pointed helmet (the outline); the moustache (the face); the sword at his belt.
-- **Our twist:** the helmet is a dented cooking pot hammered to a point, and he carries a half-eaten roast leg in his other hand like a club.
-- **Swaps:** a plaster on the nose; crumbs in the moustache; a dent in the pot.
-- **Rig:** to draw flat (2026-11-04).
-- **Concept prompt:** (written by the kind's agent, from the traits above checked against the comic).
+- **The nod:** the round belly on short legs (the outline, and not the plumber's big head on a stout body); the small helmet perched on the bald head (the comic's, and not the plumber's billed cap or the king's horns); the round nose and moustache (the face); the belted tunic and the sword at his belt.
+- **Our twist:** the helmet is an upside-down iron cooking pot with its knob on top and its long handle sticking out behind his head, dented and the handle bent; he carries a half-eaten roast leg out in front of him like a club.
+- **Swaps:** a plaster on the cheek. The crumbs in the moustache are dropped (specks at play size), and the dent in the pot is in every drawing.
+- **Palette alts:** the leather (belt, boots and scabbard together) in brown `#7a5034`, slate `#5a5450` or tan `#a88458`.
+- **Idles and cheers:** the idle from the design, the roast leg held out; standing smug with his arms crossed over the top of his belly. Thrusting the roast leg up in triumph with a huge open grin; a belly laugh, leaning back and slapping his belly, eyes shut.
+- **Gait range:** a bounce of 0.15–0.8 px on each step, a lean of up to 0.03.
+- **Wear:** in the drawing, a dent knocked into the pot and its handle bent down, a square patch sewn on the belly, the tunic's hem torn into a notch at the back, the front boot's sole flapping; scuffed is a faded streak on the tunic, scorched a soot mark there.
+- **Rig:** drawn flat (2026-11-04, `art/sprites/warrior/design.prompt.txt`): a game-size design (it came back shirtless and clean-shaven, the prompt's tail past the image model's reach), the tunic, belt and moustache added in one edit and the wear in a second; eleven poses three to a 16:9 image and cut apart. The falling and wall drawings are drawn at 0.95 of the body size to stay in the box. The blind read fails in three rounds, each with two fresh readers, the misread moving every time and no reader pairing him with another kind:
+  - Round 1, the shipped drawings: "unsure. Bulky with a big hood or a mass of hair"; "unsure (low): hooded or long-haired rounded figure". At play size the head, the pot and the bent handle close into one mound on the shoulders, with no neck.
+  - Round 2, a tall spike on the pot and its handle straight out level (`r2/`, every pose redrawn): "Cloud, low. Spiky hair and a long blade or rod sticking out"; "unsure (bulky body with a big hair or hat mass; nothing stands out)". The handle became a blade, and the merc's homage.
+  - Round 3, a new design side on, the belly bulging out in front, a big bald head with the pot narrower than it and a loop handle each side (`r3/design.png`, read standing in every pose): "unsure (a tall cone or pointed head, a pear-shaped body)"; "unsure, wizard or Black Mage (low; cone or triangle silhouette with a pointed top)".
+  - In every round a reader took the engineer beside him for "a knight or warrior… a helmet with a knob on top": a round hat with a knob reads as a warrior's helmet, on a body with a neck. The warrior has no neck, so his helmet is never a shape of its own. The homage is a comics character, and readers asked for game characters don't reach for him from an outline. Round 1 ships because it pairs with nobody (round 2 read as the merc's homage); the next idea is a shape nobody else has, not another edit of this one.
+- **Concept prompt:** A short, hugely fat cartoon warrior with a huge round belly in a short red tunic with a wide brown belt and a sword at his hip, a big round bald head with a big round nose over a short bushy dark moustache, a small upside-down iron cooking pot perched on his crown for a helmet with a knob on top and its long handle sticking out behind, thick bare arms, short legs in brown trousers and big boots, holding a half-eaten roast leg out in front of him like a club.
 
 ### The white-haired monster slayer (new)
 - **Kind:** `slayer` · **Name:** Gerald
@@ -584,7 +592,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest: thei
 | 23 | worm | Earthworm Gym | humanoid + head stalk | medium: the neck |
 | 24 | dragon | Spiro | **keyed**, quadruped | medium: wings and tail |
 | 25 | hopper | Kewbert | **keyed**, legs only | low |
-| 26 | warrior | Kakosh | humanoid, round | medium: the belly and helmet against the king and the plumber |
+| 26 | warrior | Kakosh | humanoid, round | drawn flat; the blind read fails (the head and helmet close into one mound) |
 | 27 | slayer | Gerald | humanoid | medium: the hair and hilts against the merc and the elf |
 
 The hunter and the engineer sit late although they're easy to rig: their hand-drawn versions read a beat slower than the rest, so they gain least from going first.
