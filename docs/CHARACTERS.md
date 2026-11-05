@@ -1,6 +1,6 @@
 # Characters: homages and animals
 
-The runners are a cast of twenty-five homages to famous game characters, in our own designs. In the lore (DESIGN.md) they're the characters who never made the cut, from stray animals to knock-off heroes who almost got their own game. Each kind is a character design of its own, the way the barnyard party game's animals are: its own outline, its signature props, and a way of moving.
+The runners are a cast of twenty-seven homages to famous game characters, in our own designs. In the lore (DESIGN.md) they're the characters who never made the cut, from stray animals to knock-off heroes who almost got their own game. Each kind is a character design of its own, the way the barnyard party game's animals are: its own outline, its signature props, and a way of moving.
 
 `pnpm shot cast` shoots the sheet: the 8-player lineup at play scale on farm and mine, the race start, deaths, a 3× close-up, the lobby cards, the "is it the homage?" sheet (`cast-recognise.png`), the silhouette test (`cast-silhouettes.png`) and the catalog of every kind (`--only catalog` for the last three). In the console, `slagDebug.cast` has `catalog()`, `silhouettes()`, `recognise()` and `bench()`.
 
@@ -58,12 +58,14 @@ So each kind has: a clear head-to-body ratio, a readable expression, a line of a
 | worm | the worm in the super suit | a bulky suit with huge shoulders, a worm's head on a long bendy neck rising out of the collar with bulging eyes, a big chunky pistol in one hand | costume: the suit, the boots and gloves a dark of it |
 | dragon | the little purple dragon | small and low on four stubby legs, side on: a big round head with two long horns swept straight back, stubby umbrella-cloth wings on bent spokes, a pale belly, a ridge of small spines, a tail ending in a taped arrowhead with a firefly jar hanging from it | costume: the scales; the wing cloth a light of it, the far legs a dark |
 | hopper | the snouted cube hopper | a round ball with no arms on two short legs in worn trainers, two big eyes standing up out of its crown, a long tube snout sticking straight out front and flared at its open end, a party blower; hops both feet together | costume: the ball and legs; the snout and the blower's streamer lights of it |
+| warrior | the round Slavic warrior | a huge round belly on short legs, a big drooping moustache, a pointed iron helmet, a belted tunic, thick bare arms, a sword at his belt | costume: the tunic |
+| slayer | the white-haired monster slayer | long white hair tied back, two sword hilts standing up over his shoulders, a wolf medallion on a chain, cat's eyes, a scarred brow, a dark leather coat and boots | costume: the coat |
 
 **Is it the homage?** `cast-recognise.png` puts each kind close up beside "This is ___", in its roster colour. Every sheet waits for the rendered kinds' frames (`slagDebug.sprites.ready()`), so it shows what ships; before 2026-11-02 the catalog, recognise and silhouette sheets drew those kinds hand-drawn, so the reads below were judged on the old bodies. As of this round, every homage reads as its caption to us: the plumber, speedster, elf, mouse, impostor, puffball, jelly and goose at once; the bounty hunter and the engineer a beat slower, because their reads lean on props (the shoulder pads and cannon, the hat and wrench) more than on a silhouette nobody else shares. The silhouette test still separates every kind, though the plumber and the hunter are the closest pair of stout shapes.
 
 ## Roster (all homages)
 
-The cast this is heading to: **twenty kinds, the greatest game characters to parody**, every one a homage, because the lore makes the runners the characters who never made the cut, the knock-off heroes who almost got their own game. The ten homages from round 5 stay, and so do five of the six round-6 picks. The four plain animals (fox, frog, penguin, chicken) go. Round 10 (owner, 2026-11-04) adds five retro picks past the twenty: the rapping paper puppy, the limbless hero, the worm in the super suit, the little purple dragon and the snouted cube hopper.
+The cast this is heading to: **twenty kinds, the greatest game characters to parody**, every one a homage, because the lore makes the runners the characters who never made the cut, the knock-off heroes who almost got their own game. The ten homages from round 5 stay, and so do five of the six round-6 picks. The four plain animals (fox, frog, penguin, chicken) go. Round 10 (owner, 2026-11-04) adds five retro picks past the twenty: the rapping paper puppy, the limbless hero, the worm in the super suit, the little purple dragon and the snouted cube hopper. Round 11 (owner, 2026-11-04) adds a comics hero and a game hero: the round Slavic warrior and the white-haired monster slayer.
 
 This spec feeds the art pipeline (Rendered kinds below): a design at game size, worn in an edit and drawn in each pose, traced flat into the cast's own shapes. Each entry is written to be used as prompt material, so it describes traits only and never names a real character. Every kind is our own design: it must read as the homage from its silhouette and props, never copy the original's exact design, and never carry its name or logo. Sound-alike names stay in data (`KIND_NAMES`). **The nod is the silhouette; the rest is ours.** A concept that looks like the original redrawn is rejected, however good it looks.
 
@@ -508,6 +510,34 @@ What came out of it:
 - **Rig:** drawn flat (2026-11-04, art/sprites/hopper/design.prompt.txt): one game-size design side on, worn in one edit, and eleven poses three to a 16:9 image, cut apart. Asked for a stretched leap, the image model drew a stride with a third trainer three times, so the run is a crouch to spring and a landing, both feet together. The eye whites are tinted a step off white in every drawing (whites.py) so `holes` cuts the gap between the legs and never the eyes. His own wall drawing tilts the head back and puts the two eyes too far off level for the face kit, so he slides down a wall in his fall. The cheer is one drawing, centred: the streamer reaches past the box from the feet. Two fresh readers named him from the silhouette alone, both at medium ("Q*bert parody, medium. A tubular snout sticking out sideways from a round head on short legs, hopping in the jump"; "Q*bert, medium. Round head-body with a tube-like snout sticking forward, on short legs, tall in the hop"), and neither paired him with another kind when asked whether any two figures could be the same character.
 - **Concept prompt:** A round orange cartoon ball with no arms, seen from its side, standing on two short orange legs close together in big worn old canvas trainers, two big round white eyes with black pupils high on top, and a long straight paler orange tube snout sticking straight out level from its front, as long as the ball is wide, flared like a trumpet at its dark open end, two pale paper bands round it like a party blower.
 
+### The round Slavic warrior (new)
+- **Kind:** `warrior` · **Name:** Kakosh
+- **A stranger should say:** "the fat warrior from the Polish comic." The nod is the comic's big, round, boastful half of the pair, never his slim partner.
+- **Silhouette:** a huge round belly on short legs, so he's wider than he's tall below the shoulders; a pointed iron helmet on a round head; a big drooping moustache past his chin; thick bare arms.
+- **Traits:** check these against the comic before drawing (the helmet's shape, the moustache, the tunic and belt, what he carries) and keep only what reads at play size. A huge belly; a big drooping moustache; a pointed iron helmet; a short belted tunic; thick bare arms; a short sword at his belt; boastful, lazy and always hungry.
+- **Palette:** the tunic in the player's colour; skin, moustache, helmet iron, belt leather and boots neutral.
+- **Color slot:** costume.
+- **Gait:** a heavy, proud waddle, the belly leading.
+- **The nod:** the round belly under a pointed helmet (the outline); the moustache (the face); the sword at his belt.
+- **Our twist:** the helmet is a dented cooking pot hammered to a point, and he carries a half-eaten roast leg in his other hand like a club.
+- **Swaps:** a plaster on the nose; crumbs in the moustache; a dent in the pot.
+- **Rig:** to draw flat (2026-11-04).
+- **Concept prompt:** (written by the kind's agent, from the traits above checked against the comic).
+
+### The white-haired monster slayer (new)
+- **Kind:** `slayer` · **Name:** Gerald
+- **A stranger should say:** "the white-haired monster hunter with two swords."
+- **Silhouette:** tall and lean, long white hair tied back, two sword hilts standing up over his shoulders in an X, a long dark coat to the knees. Taller and leaner than the merc and the elf, never a hood.
+- **Traits:** long white hair in a ponytail; two swords on his back; a wolf's-head medallion on a chain; cat's eyes, yellow with slit pupils; a scar down over one eye; a dark studded leather coat, gloves and tall boots; a grim mouth.
+- **Palette:** the coat in the player's colour, the gloves and boots a dark of it; the hair white, the skin, the steel and the medallion neutral.
+- **Color slot:** costume.
+- **Gait:** a steady, wary prowl, the hands near the hilts.
+- **The nod:** the white hair and the two hilts over the shoulders (the outline); the medallion; the cat's eyes.
+- **Our twist:** the second sword is a bent umbrella, and the wolf medallion is a bottle cap stamped with a wolf, on a shoelace.
+- **Swaps:** a plaster on the scar; a tangle of hay in the hair; a torn sleeve.
+- **Rig:** to draw flat (2026-11-04).
+- **Concept prompt:** A tall, lean cartoon monster hunter seen from the side, long white hair tied back in a ponytail, two sword hilts standing up over his shoulders in an X (one of them is a bent umbrella), cat's eyes, yellow with slit pupils, a scar down over one eye, a wolf's-head medallion that is a stamped bottle cap on a shoelace, a long dark studded leather coat to the knees, gloves and tall boots.
+
 ### The jellyfish parasite
 - **Kind:** `jelly` · **Name:** Meltroid
 - **A stranger should say:** "the floating jellyfish thing from the space game."
@@ -554,6 +584,8 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest: thei
 | 23 | worm | Earthworm Gym | humanoid + head stalk | medium: the neck |
 | 24 | dragon | Spiro | **keyed**, quadruped | medium: wings and tail |
 | 25 | hopper | Kewbert | **keyed**, legs only | low |
+| 26 | warrior | Kakosh | humanoid, round | medium: the belly and helmet against the king and the plumber |
+| 27 | slayer | Gerald | humanoid | medium: the hair and hilts against the merc and the elf |
 
 The hunter and the engineer sit late although they're easy to rig: their hand-drawn versions read a beat slower than the rest, so they gain least from going first.
 

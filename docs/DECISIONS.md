@@ -239,6 +239,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-04 · `done` · `~/.claude/settings.json` (`tripo.ts image`, `balance`)
 - **The cast grows past twenty with retro picks: the rapping paper puppy (the owner's example), the limbless hero, the worm in a super suit, the little purple dragon and the snouted cube hopper. The weak reads and audit leftovers get fixed in the same push.** "Ok lets continue working through. Something akin to some old timey characters would be good to add to our list too. Parapa the Rapper for example" (asked which to add beside him: all four offered)
   2026-11-04 · `in progress` · CHARACTERS.md → The cast, Roster; `LOOK_CAST` 9
+- **Two more picks past the retro five: the round Slavic warrior from the Polish comic (its big round half; the comic gives "at least some recognizable character") and the white-haired monster slayer. The sneaking soldier already stands for the stealth game's hero.** "add kajko & kokosz to our list - at least some recognizable character from it" · "witcher is another good one, snake from metal gear solid"
+  2026-11-04 · `in progress` · CHARACTERS.md → The cast, Roster; `LOOK_CAST` 10
 - **Set-piece machines that look solid are made solid: guns on ledges, wheel and swing hubs, ladles, carts, signs, posts.** "Make them solid" (asked: make them solid, or draw them as not-ground)
   2026-11-02 · `open` · TODO.md → 21, `pnpm shot fairplay` (`PENDING`)
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
