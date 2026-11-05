@@ -186,6 +186,7 @@ The sim is a pure function of `(seed, per-frame inputs)`, so **inputs and host-s
 - **Every message is parsed once, where it arrives** (`parseMsg` in `wire.ts`): each field has the type the session's code says, or the whole message is dropped and counted (`stats.malformed`). Nothing a peer sends can throw, and nothing past the parser checks a type again. Game rules (which values a rule allows, who sits where) stay in `applyAction`.
 - **Who may ask for an action is data** (`ACTION_AUTH` in `actions.ts`): `host`, or `self`, a peer for its own devices. It's exhaustive, so a new action doesn't compile until it says, and only one that names a device can be `self`. A guest's `join` is a request for a seat, granted by the host's reconcile.
 - **Sizes are bounded at both ends.** A guest sends at most `ACTS_PER_MSG` requests per message and the next batch once those are acked; the host puts at most `ACTS_PER_BUNDLE` actions in a bundle and holds the rest a frame. What a sender never exceeds, the parser refuses.
+- **No guest can crowd out the others.** The host sequences at most `ACTS_PER_TICK` requests per guest per tick, however many messages it sends; the rest stay unacked and come again. Per-peer tables (pings, heartbeats, client ids, a guest's acks) forget peers that left, so they stay the size of the room.
 - **Gates the guest predicts come from the match.** A guest marks a click pending only through `Match.acceptsConfirm`, the gate the host's step uses, so it never marks one the host refuses.
 
 ### Prediction (races)
