@@ -275,6 +275,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-04 · `done` (both drawn flat; their blind reads are open, TODO.md → 31) · CHARACTERS.md → The cast, Roster; `LOOK_CAST` 10
 - **The cast needs iconic women, from franchises it doesn't touch yet: the braided tomb raider, the bun-haired street fighter and the horned bug with the needle.** "we def need a few female characters that are iconic, ideally from new sets, but in generally we're lacking some there" (asked which: the three offered beside a platformer heroine)
   2026-11-04 · `in progress` · CHARACTERS.md → The cast, Roster; `LOOK_CAST` 11
+- **The sneaking soldier stays drawn inside his cardboard box, not redrawn as the soldier out of it.** "Keep the box" (asked, after "i think you lost the snake character?": he reads as a box on legs, so whether to draw him out of it)
+  2026-11-04 · `done` · docs/characters/sneak.md
 - **Every drawn kind's eyes work the way the cup-headed toon's do: each kind's kit eye is its homage's own eye design, drawn by the face kit so it acts, and bold enough to read at play scale.** "seems like we want mughead approach so the eyes are animated/drawn correctly" (after "some have issues w/ their eyes")
   2026-11-04 · `done` (but for the worm, the warrior and the slayer, being drawn) · CHARACTERS.md → Rendered kinds → The cast's face, `EYES` in `src/render/cast/sprites/face.ts`, `tools/art3d/README.md` → 5
   Changed: every kind but the mug, the puffball, the dino and the three dot-eyed kinds wore one generic round eye (a white, a rim, a coloured iris, a pupil and a glint), and a head side on wore its far eye as a second full circle beside the near one.
