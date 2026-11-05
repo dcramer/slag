@@ -14,7 +14,7 @@ import { botRace } from '../lib/bot-race';
  * stretch fewer than four bots got into isn't judged. The run-out past the hard stretch has no band: the slag always
  * wins there.
  */
-const SEEDS = Array.from({ length: 16 }, (_, i) => i + 1);
+const SEEDS = Array.from({ length: 32 }, (_, i) => i + 1);
 const LEVELS: readonly BotLevel[] = ['easy', 'normal', 'hard'];
 /** A shaft's laps, as every Rising Slag shaft has them (gen/level/difficulty.ts `stretchesOf`). */
 const LAPS = stretchesOf({ tide: true, curve: true, size: 'tall', h: LOOP_ROWS + LOOP_BAND, difficulty: 'medium' });

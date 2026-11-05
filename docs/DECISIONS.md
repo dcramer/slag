@@ -99,6 +99,11 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-04 · `done` for the marker (`ModeDef.builds`, the Level card); interchangeable sets `planned` · DESIGN.md → Modes, TODO.md → 31
 - **A level set is a kit of pieces with declared sizes and attributes (landmarks, hazards, decor, floors, connectors, walls), and the level builders, one per shape or mode, are set-agnostic and compose any set's kit, so every set supports every mode.** "i guess really all level sets should support all modes right because isnt it just retyling stuff etc?" / "i was thinking the landmarks etc are part of the set kit and the level builders just know how to use them (because tey know their sizes/attributes/etc)"
   2026-11-04 · `done` (`SET_KITS`, `KIT_KINDS`, `BUILDERS`, `src/gen/level/sets/`, `builders/`; tower kits in every set, so Rising Slag loops everywhere; the course, climb and descent builders, levels unchanged); an arena builder `planned` · DESIGN.md → Levels, TODO.md → 32
+- **Rising Slag's leash is set the way SpeedRunners' camera is, in seconds behind the leader (about 3–4 s): 4.5, 3.75 and 3 s of climb by lap, squeezing from 30 s.** "hows our difficulty vs speedrunners" / "Lets do it"
+  2026-11-04 · `done` · DESIGN.md → Modes; `TIER_LEASH_SECONDS`, `SQUEEZE` in `src/gen/level/tide.ts`
+  Changed: 18, 15 and 8 rows (the hard laps about 2 s), squeezing from 45 s.
+- **Catch-up for the trailing pack is open: rethink which items exist, and maybe give loops mystery boxes of their own rather than only placed ones.** "im not sure on (2) we might wanna rethink which items exist, and/or add mystery boxes by default maybe? not just placed ones?"
+  2026-11-04 · `open` · TODO.md → 31
 - **A rule the level is built from (gravity, weather) rebuilds the lobby's level for everyone at once.**
   2026-11-02 · git `e64c3e5` · `done` · DESIGN.md → Rules
 
