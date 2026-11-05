@@ -122,7 +122,7 @@ export function rollPersonality(seed: number, level: BotLevel): Personality {
 /**
  * Hands with no lapses and no lag: no fumbles, no pauses to think, no wrong
  * turns, and it sees what's next at once. Only for measuring the motor itself
- * (tests/stats/bot-hard-routes.test.ts and the motor's regressions), where a
+ * (tests/lib/hard-routes.ts and the motor's regressions), where a
  * bot's mistakes would hide whether its moves and the route still agree.
  */
 export function steady(p: Personality): Personality {

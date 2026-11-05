@@ -16,7 +16,7 @@ describe('a landmark skin clip', () => {
     for (const [seed, concept] of [
       ['hz10', 'lighthouse'],
       ['hz6', 'galleon'],
-      ['hz1', 'tidal-pier'],
+      ['hz3', 'tidal-pier'],
     ] as const) {
       const l = generateLevel(parseSeed(seed), 'harbor', { concept });
       const r = l.landmark!.rect;

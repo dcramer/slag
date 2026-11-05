@@ -6,6 +6,7 @@ import {
   MAX_LOGS_PER_MESSAGE,
   reportError,
   reportEvent,
+  flushTelemetry,
   reportLog,
   setContext,
   setTag,
@@ -181,5 +182,17 @@ describe('telemetry', () => {
       ['level-fallback', 'warning', { seed: 42, theme: 'farm', profile: '{"size":"wide"}', attempts: 9 }, { group: 'concept-fallback' }],
       ['level-fallback', 'error', { seed: 7, theme: 'auto', profile: '{}', attempts: 50 }, { group: 'fallback' }],
     ]);
+  });
+});
+
+describe('telemetry flush', () => {
+  it('asks the backend to send now, and survives one that cannot', () => {
+    expect(() => flushTelemetry()).not.toThrow();
+    const flush = vi.fn();
+    installTelemetry({ ...recorder(), flush });
+    flushTelemetry();
+    expect(flush).toHaveBeenCalledOnce();
+    installTelemetry({ ...thrower(), flush: () => thrower().error(null) });
+    expect(() => flushTelemetry()).not.toThrow();
   });
 });

@@ -144,6 +144,12 @@ export interface CollisionWorld {
    * falling body. The owner resets it (x0 > x1) whenever the tiles might have changed.
    */
   clear?: { x0: number; y0: number; x1: number; y1: number };
+  /**
+   * Level width in tiles. Past either side is open air: a runner can lean
+   * out over the edge, and one that goes all the way off dies (`offMap`).
+   * Unset, `tileAt` answers for every column.
+   */
+  cols?: number;
 }
 
 /** Plain data only (snapshot-friendly). */
@@ -252,8 +258,9 @@ const NO_ONEWAY = Number.POSITIVE_INFINITY;
 export function firstOverlap(r: Rect, world: CollisionWorld, dynamicOnly = false, oneWayFrom = NO_ONEWAY): Solid | null {
   const clear = world.clear;
   if (!dynamicOnly && (!clear || r.x < clear.x0 || r.x + r.w - 1e-3 >= clear.x1 || r.y < clear.y0 || r.y + r.h - 1e-3 >= clear.y1)) {
-    const x0 = Math.floor(r.x / TILE);
-    const x1 = Math.floor((r.x + r.w - 1e-3) / TILE);
+    const cols = world.cols;
+    const x0 = cols === undefined ? Math.floor(r.x / TILE) : Math.max(0, Math.floor(r.x / TILE));
+    const x1 = cols === undefined ? Math.floor((r.x + r.w - 1e-3) / TILE) : Math.min(cols - 1, Math.floor((r.x + r.w - 1e-3) / TILE));
     const y0 = Math.floor(r.y / TILE);
     const y1 = Math.floor((r.y + r.h - 1e-3) / TILE);
     {

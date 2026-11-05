@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { PHYS, TILE } from '../src/sim/constants';
+import { PHYS, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
 import { ICE_SURFACE } from '../src/sim/ground';
-import { T_ONEWAY, T_SOLID } from '../src/sim/level';
+import { generateTheme } from '../src/gen/theme';
+import { type Level, offMap, T_ONEWAY, T_SOLID } from '../src/sim/level';
+import { RunWorld } from '../src/sim/run';
+import { type InputFrame, NO_INPUT } from '../src/sim/types';
 import {
   type Body,
   bodyAtCell,
@@ -198,6 +201,52 @@ describe('player controller: walls', () => {
     extra?.(rows);
     return grid(rows);
   }
+
+  it('past the side edges is open air: no wall to slide or climb, and a runner can lean out and come back', () => {
+    const w: CollisionWorld = { ...grid(open(40, 31, 30)), cols: 40 };
+    for (const side of [-1, 1] as const) {
+      const b = bodyAtCell(side < 0 ? 0 : 39, 29);
+      const press = { left: side < 0, right: side > 0 };
+      run(b, w, 120, (f) => ctl({ ...press, jump: f % 6 < 3, jumpPressed: f % 6 === 0 }));
+      expect(b.wallJumps).toBe(0);
+      expect(offMap(b, 40)).toBe(true);
+      // A toe over the edge stays on the floor and walks back.
+      const lean = bodyAtCell(side < 0 ? 0 : 39, 29);
+      lean.x = side < 0 ? -lean.w / 2 : 40 * TILE - lean.w / 2;
+      run(lean, w, 2, () => idle);
+      expect(lean.onGround).toBe(true);
+      run(lean, w, 20, () => ctl({ left: side > 0, right: side < 0 }));
+      expect(offMap(lean, 40)).toBe(false);
+      expect(lean.x).toBeGreaterThanOrEqual(0);
+      expect(lean.x + lean.w).toBeLessThanOrEqual(40 * TILE);
+    }
+  });
+
+  it('a runner who goes off a side of the level dies of it, and spills nothing', () => {
+    const W = 30;
+    const H = 16;
+    const tiles = new Uint8Array(W * H);
+    for (let x = 0; x < W; x++) tiles[(H - 1) * W + x] = T_SOLID;
+    const level: Level = {
+      seed: 1,
+      w: W,
+      h: H,
+      tiles,
+      spawn: { tx: 4, ty: H - 2 },
+      goal: { tx: W - 3, ty: H - 2 },
+      protectedRects: [],
+      theme: generateTheme(1, 'farm'),
+      style: 'test',
+      version: 0,
+      setPieces: [],
+    };
+    const race = new RunWorld(level, [], [0]);
+    const left: InputFrame = { ...NO_INPUT, left: true };
+    for (let f = 0; f < RUN_COUNTDOWN + 120 && race.runners[0].alive; f++) race.step([left]);
+    expect(race.runners[0].alive).toBe(false);
+    expect(race.runners[0].cause).toBe('out');
+    expect(race.blood).toHaveLength(0);
+  });
 
   it('wall slide caps fall speed while pressing into the wall', () => {
     const w = wallWorld(0);

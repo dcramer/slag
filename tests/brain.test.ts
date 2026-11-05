@@ -84,7 +84,7 @@ describe('bots', () => {
     expect(r.frames).toBeLessThan(1200);
   });
 
-  // The same, over the parts three Hard bots placed (as in tests/stats/bot-hard-routes.test.ts), placed as they did before bots blocked the way.
+  // The same, over the parts three Hard bots placed (as in tests/lib/hard-routes.ts), placed as they did before bots blocked the way.
   it.each([
     ['glacier', 'tall', 11, 'steps in off a ledge’s lip to jump from its middle, instead of hopping in place under the overhang until it gives up'],
     ['harbor', undefined, 8, 'jumps through a part’s side wind traced in that wind, instead of landing short where the tide comes in'],

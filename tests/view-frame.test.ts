@@ -249,13 +249,15 @@ describe('the land around a level', () => {
     }
   });
 
-  it('carries solid terrain that reaches the edge on past it, so nothing ends in a cut', () => {
+  it('draws no ground past either side: leaving the level there is a drop', () => {
     for (const l of levels) {
-      const a = surroundLevel(l, 6, 0);
-      for (let y = 0; y < l.h; y++) {
-        if (l.tiles[y * l.w] === T_SOLID) expect(a.tiles[y * a.w + 5], `${l.theme.id} left row ${y}`).toBe(T_SOLID);
-        if (l.tiles[y * l.w + l.w - 1] === T_SOLID) expect(a.tiles[y * a.w + 6 + l.w], `${l.theme.id} right row ${y}`).toBe(T_SOLID);
-      }
+      const [mx, top, bottom] = [6, 4, 10];
+      const a = surroundLevel(l, mx, top, bottom);
+      for (let y = 0; y < a.h; y++)
+        for (let d = 0; d < mx; d++) {
+          expect(a.tiles[y * a.w + d], `${l.theme.id} left column ${d - mx} row ${y - top}`).toBe(0);
+          expect(a.tiles[y * a.w + mx + l.w + d], `${l.theme.id} right column ${l.w + d} row ${y - top}`).toBe(0);
+        }
     }
   });
 
@@ -270,25 +272,26 @@ describe('the land around a level', () => {
 
   it('never puts anything inside the level: only its own edge, under its own tiles', () => {
     const sizes = ['classic', 'wide', 'tall'] as const;
-    for (const t of THEME_IDS) {
-      for (const size of sizes) {
-        for (const seed of [31, 0x5ee4]) {
-          const l = generateLevel(seed, t, { size });
-          for (const [mx, top, bottom] of MARGINS) {
-            const a = surroundLevel(l, mx, top, bottom);
-            for (let y = 0; y < l.h; y++) {
-              for (let x = 0; x < l.w; x++) {
-                if (a.tiles[(y + top) * a.w + x + mx] !== T_SOLID) continue;
-                const ring = x < RING || x >= l.w - RING || y < RING || y >= l.h - RING;
-                const where = `${t} ${size} seed ${seed} margins ${mx},${top},${bottom}: tile ${x},${y}`;
-                expect(ring, `${where} is inside the ring`).toBe(true);
-                expect(l.tiles[y * l.w + x], `${where} isn't the level's own`).toBe(T_SOLID);
-              }
+    const faults: string[] = [];
+    // Every theme at every size once, the two seeds taking turns: 60 levels took over 30 s on CI.
+    THEME_IDS.forEach((t, ti) =>
+      sizes.forEach((size, si) => {
+        const seed = [31, 0x5ee4][(ti + si) % 2];
+        const l = generateLevel(seed, t, { size });
+        for (const [mx, top, bottom] of MARGINS) {
+          const a = surroundLevel(l, mx, top, bottom);
+          for (let y = 0; y < l.h; y++)
+            for (let x = 0; x < l.w; x++) {
+              if (a.tiles[(y + top) * a.w + x + mx] !== T_SOLID) continue;
+              const ring = x < RING || x >= l.w - RING || y < RING || y >= l.h - RING;
+              const where = `${t} ${size} seed ${seed} margins ${mx},${top},${bottom}: tile ${x},${y}`;
+              if (!ring) faults.push(`${where} is inside the ring`);
+              if (l.tiles[y * l.w + x] !== T_SOLID) faults.push(`${where} isn't the level's own`);
             }
-          }
         }
-      }
-    }
+      }),
+    );
+    expect(faults).toEqual([]);
   });
 
   describe('space', () => {
@@ -314,21 +317,6 @@ describe('the land around a level', () => {
             }
           }
         }
-      }
-    });
-
-    it('has bodies adrift past both sides, clear of the edge', () => {
-      for (const l of spaces) {
-        const [mx, top, bottom] = [24, 12, 12];
-        const a = surroundLevel(l, mx, top, bottom);
-        const count = (x0: number, x1: number) => {
-          let n = 0;
-          for (let y = 0; y < a.h; y++) for (let x = x0; x < x1; x++) n += a.tiles[y * a.w + x] === T_SOLID ? 1 : 0;
-          return n;
-        };
-        // Beyond where the level's edge carries on (at most 4 columns), there's still something out there.
-        expect(count(0, mx - 4), `seed ${l.seed} left`).toBeGreaterThan(0);
-        expect(count(mx + l.w + 4, a.w), `seed ${l.seed} right`).toBeGreaterThan(0);
       }
     });
   });

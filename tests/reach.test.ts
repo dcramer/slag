@@ -115,12 +115,12 @@ describe('reach analyzer', () => {
       '..............................',
       '..............................',
       '..............................',
+      '..............................',
       '.........G....................',
       '.....==========...............',
       '..............................',
       '..............................',
       '.....==========...............',
-      '..............................',
       '..............................',
       '.........S....................',
       '##############################',
@@ -129,7 +129,23 @@ describe('reach analyzer', () => {
     expect(analyzeReach(l).goalReached).toBe(true);
     // The lower platform is standable and reached too.
     const all = analyzeReach(l, false).reachable;
-    expect(all.has(7 * l.w + 7)).toBe(true);
+    expect(all.has(8 * l.w + 7)).toBe(true);
+  });
+
+  it('the side edges are not walls: nothing climbs them', () => {
+    // Four tiles up is over a jump's height; only a kick off the left edge used to reach it.
+    const rows = [
+      '##############################',
+      '..............................',
+      '.........G....................',
+      '.....==========...............',
+      '..............................',
+      '..............................',
+      '..............................',
+      '.........S....................',
+      '##############################',
+    ];
+    expect(analyzeReach(level(rows)).goalReached).toBe(false);
   });
 
   it('drops through a one-way floor', () => {

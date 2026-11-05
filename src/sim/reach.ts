@@ -1,5 +1,5 @@
 import { PHYS, TILE as TILE_IMPORT } from './constants';
-import { type Level, type Ride, T_EMPTY, T_ONEWAY as T_ONEWAY_IMPORT, T_SOLID as T_SOLID_IMPORT } from './level';
+import { type Level, offMap, type Ride, T_EMPTY, T_ONEWAY as T_ONEWAY_IMPORT, T_SOLID as T_SOLID_IMPORT } from './level';
 import {
   type Body,
   bodyAtCell as bodyAtCellImport,
@@ -666,6 +666,7 @@ class Tracer {
         if (t === T_NOGO) this.touched = true;
         return t;
       },
+      cols: w,
       solids: [],
       gravity: level.gravity ?? 1,
       clear: this.clear,
@@ -801,7 +802,7 @@ class Tracer {
       }
       const child = p.after?.(b);
       if (child) this.trace({ ...b }, f + 1, child, airborne, fork());
-      if (b.y > bottom) return;
+      if (b.y > bottom || offMap(b, this.w)) return;
       if (!b.onGround) {
         airborne = true;
         if (b.y + b.h > feet) this.offerBridge(b, feet);

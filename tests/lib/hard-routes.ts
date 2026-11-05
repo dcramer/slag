@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { expect } from 'vitest';
+import type { SizeClass } from '../../src/sim/level';
 import { THEME_IDS } from '../../src/themes';
-import { botRace } from '../lib/bot-race';
+import { botRace } from './bot-race';
 
 /**
  * A Hard bot over every theme at every size its theme rolls, racing over the
@@ -26,31 +27,32 @@ import { botRace } from '../lib/bot-race';
  * the route rather than a player's lapses. Taking a safe move over a tight
  * jump that costs little more, and braking while it looks: 254 in 546.
  * Since Hard bots put their hazards where they make the way hardest, short
- * of sealing it: 249 in 549, most misses now a hazard in the way.
+ * of sealing it: 249 in 549, most misses now a hazard in the way. Split by
+ * size so the three run in parallel (one file took over 400 s on CI): classic
+ * 91 of 100 in 500, wide 86 of 100 in 543, tall 71 of 80 in 624.
  */
-const SEEDS = Array.from({ length: 10 }, (_, i) => i + 1);
-const SIZES = ['classic', 'wide', 'tall'] as const;
 
-describe('hard bot routes', () => {
-  it('finishes most levels with parts placed, at every size', { timeout: 400_000 }, () => {
-    let races = 0;
-    let finished = 0;
-    let frames = 0;
-    const misses: string[] = [];
-    for (const size of SIZES)
-      for (const theme of THEME_IDS)
-        for (const seed of SEEDS) {
-          // A size the theme never rolls falls back to one it does: count each level once.
-          if (size === 'tall' && (theme === 'farm' || theme === 'harbor')) continue;
-          const r = botRace(seed, { theme, size: size === 'classic' ? undefined : size, level: 'hard', parts: 3, steady: true });
-          races++;
-          if (r.finished) {
-            finished++;
-            frames += r.frames;
-          } else misses.push(`${theme}/${size}/${seed}:${r.cause}`);
-        }
-    console.log(`hard: finished ${finished} of ${races} in ${Math.round(frames / finished)} frames on average; missed ${misses.join(' ')}`);
-    expect(finished / races).toBeGreaterThanOrEqual(0.87);
-    expect(frames / finished).toBeLessThan(560);
-  });
-});
+/** The seeds each theme races at every size. */
+const SEEDS = Array.from({ length: 10 }, (_, i) => i + 1);
+
+/** One size's hard races: every theme at that size, each level once, held to its own band. */
+export function expectHardRoutes(size: SizeClass, band: { finished: number; frames: number }) {
+  let races = 0;
+  let finished = 0;
+  let frames = 0;
+  const misses: string[] = [];
+  for (const theme of THEME_IDS)
+    for (const seed of SEEDS) {
+      // A size the theme never rolls falls back to one it does: count each level once.
+      if (size === 'tall' && (theme === 'farm' || theme === 'harbor')) continue;
+      const r = botRace(seed, { theme, size: size === 'classic' ? undefined : size, level: 'hard', parts: 3, steady: true });
+      races++;
+      if (r.finished) {
+        finished++;
+        frames += r.frames;
+      } else misses.push(`${theme}/${seed}:${r.cause}`);
+    }
+  console.log(`hard ${size}: finished ${finished} of ${races} in ${Math.round(frames / finished)} frames on average; missed ${misses.join(' ')}`);
+  expect(finished / races).toBeGreaterThanOrEqual(band.finished);
+  expect(frames / finished).toBeLessThan(band.frames);
+}

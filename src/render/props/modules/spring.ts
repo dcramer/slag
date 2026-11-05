@@ -192,7 +192,7 @@ function arcOf(m: ModuleOf<'spring'>, d: DrawCtx, rc: RC, level: Level, solids: 
   const key = `${start[0]},${start[1]}|${m.arc![0]},${m.arc![1]}|${level.seed},${level.version}|${solids.length}|${d.o.emit ? rc.frame >> 3 : 0}`;
   let a = arcs.get(key);
   if (!a) {
-    const world = { tileAt: (x: number, y: number) => tileAt(level, x, y), solids, gravity: level.gravity ?? 1 };
+    const world = { tileAt: (x: number, y: number) => tileAt(level, x, y), cols: level.w, solids, gravity: level.gravity ?? 1 };
     a = plateArc(world, start, m.arc!, 240, level.h * TILE);
     if (arcs.size > 64) arcs.clear();
     arcs.set(key, a);

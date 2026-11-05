@@ -25,6 +25,7 @@ const buffer: TelemetryReporter = {
   event: (name, level, data, opts) => enqueue((r) => r.event(name, level, data, opts)),
   breadcrumb: (category, message, data) => enqueue((r) => r.breadcrumb(category, message, data)),
   log: (level, message, data) => enqueue((r) => r.log?.(level, message, data)),
+  metric: (type, name, value, opts) => enqueue((r) => r.metric?.(type, name, value, opts)),
 };
 
 const onWindowError = (e: ErrorEvent) => buffer.error(e.error ?? e.message);

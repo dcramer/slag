@@ -497,6 +497,25 @@ export const BRIEFS: Record<string, Brief> = {
     // player's colour in the game); the wear stays off the head and the dome's outline but for one bent spike.
     worn: "a big square grey riveted patch plate (#9aa0a8) is bolted flat onto the middle of the green shell; a big chunk is broken out of the shell's cream rim near the bottom; the pale-blue paper crown sits crooked, one of its points torn and folded down; one of the shell's spikes is bent over sideways.",
   },
+  dragon: {
+    // The nod, each part of the read at race size: small and low on four short legs, side on (the horse is tall
+    // with a long neck, the dino upright); the horns swept straight back off the head (the head's outline, and
+    // back, never up like the king's); stubby wings standing up off the back (a dragon, not a lizard); the pale
+    // belly and the ridge of small spines (the purple dragon's markings, in neutral bone); the tail's arrowhead
+    // tip (the tip everyone draws him with).
+    // Ours, and the joke: the wings are umbrella cloth on bent spokes, and he carries his own light, a firefly
+    // in a jam jar tied to his tail.
+    // The palette is neutral (Decisions 4): the scales in the player's colour, the wing cloth a light of it; the
+    // belly, horns, spines and tip bone; the jar glass.
+    design:
+      'The character: a small cute cartoon baby dragon standing low on all four short stubby legs, seen from its side, facing right, its whole outline unmistakably a little dragon, long and low with no neck. ' +
+      'Its big round head has a short blunt snout and one big eye, and two long pale bone horns (#ecdcb8) sweep straight back off the top of its head, flat and backward, longer than the head. ' +
+      'Two small stubby wings stand up off its shoulders, each made of umbrella cloth (#c4a2ea) stretched over three bent thin black metal spokes, the cloth scalloped between the spoke tips. ' +
+      'A row of small pale bone triangle spines runs along the top of its back. A pale bone belly (#ecdcb8). ' +
+      'A long thin tail curves out behind and ends in a big flat pale bone arrowhead tip; a small glass jam jar with a firefly glowing pale inside hangs from the tail on a string. ' +
+      'The head, body, legs and tail are all one purple (#8a5cc0).',
+    worn: "one wing's cloth is torn, a big flap of it hanging loose, and one of its spokes is bent and poking out past the cloth; a big square patch of grey cloth (#9a9c98) is sewn on the other wing with big stitches; the arrowhead tail tip is bent sideways and wrapped with a strip of grey tape.",
+  },
   horse: {
     // The nod, each part of the read at race size, and each a shape only a horse has in outline: four long legs
     // under a long barrel body (upright on two legs, ten blind readers took it for a fox or the bandicoot); a long
@@ -539,8 +558,69 @@ export const BRIEFS: Record<string, Brief> = {
       'Big dark heavy boots and big dark gloves (#33506b).',
     worn: "a big square patch of paler blue cloth (#9fbfd8) is sewn onto the knee of one leg of the suit with big stitches; a second paler patch is stitched over the top of the pillow shoulder on the left of the picture, the pillow sagging a little under it; the hair dryer's barrel is dented in at its middle and its nozzle is a little crumpled; one boot's sole is coming away at the toe, flapping open. The worm's head, eyes, grin and neck stay as they are.",
   },
-
-
+  rapper: {
+    // The nod, each part of the read at race size: the tall knit beanie standing straight up off the head, a thumb
+    // with a round top and a snug band (the head's outline; with a brim, or leaning back to a point, it read as a
+    // wizard's hat); the long floppy ear hanging behind the head (a dog, and not the zapmouse, whose ears stand up);
+    // the round nose on a snout low on the face (level with the band, it read as a cap's bill: the plumber); the
+    // flat card body with a sliver of edge down the back (the paper look the original is known for); the mic held out
+    // in front (the rapper). Side on: in the three-quarter view the beanie, head, ears and mic were one tall pill in
+    // silhouette. The baggy tee and shorts and big trainers are the colour block, on a chubby body, so the cuptoon's
+    // tight hose-limbed toon doesn't rhyme.
+    // Ours, and the joke: he's a cardboard shop standee come loose (the card's edge, a fold crease across his middle, a
+    // torn bite out of the card at his shorts). The karaoke mic's coiled cord went: hanging below his arm, it read as
+    // a monkey's curly tail.
+    // The palette is neutral (Decisions 4): the beanie and the tee in the player's colour, the shorts a dark of it;
+    // the fur cream, the nose brown, the trainers grey, the mic black, the card's edge plain cardboard.
+    // The design was reached in edits (art/sprites/rapper/design.prompt.txt); this is it as one brief, for a redraw.
+    design:
+      'The character: a chubby cartoon puppy who is a flat cardboard cut-out, seen side on in profile, facing right. ' +
+      'His signature: a very tall knitted beanie (#e8922e) standing straight up on his head like a thumb, round on top, never pointed, with a snug thick ribbed band only a little wider than his head and no brim. ' +
+      "He holds a chunky black cordless microphone out in front of him at arm's length, clear of his face. " +
+      'A big round head of pale cream fur (#f1dfb8) under the band, a snout low on his face ending in a big round dark brown nose (#4a3428), two eyes, one long floppy dog ear hanging down behind his head past his chin. ' +
+      'A short round body in a baggy orange tee (#e8922e), baggy dark brown-orange shorts (#9a4f1e), short cream legs, huge chunky grey trainers (#9aa0a8) with thick pale soles. ' +
+      'Down the back edge of his outline a narrow strip of plain brown cardboard edge (#b8946a) shows, the thickness of the cut-out.',
+    worn: "he is a cardboard shop standee come loose: a crisp fold crease runs straight across his middle at the waist, the card kinked a little there; a torn bite is missing from the card at the edge of his shorts, showing the rough brown card inside. The beanie's shape and the ear don't change.",
+  },
+  limbless: {
+    // The nod, each part of the read at race size: the gaps where the arms and legs should be (the read in
+    // silhouette, so it leads the brief: nobody else in the cast is in pieces), the big white gloves and big shoes
+    // floating clear of the body with background all round them (what makes the gaps a hero and not a ball), the
+    // spiky tuft of hair standing straight up off the crown (the one bump on the head's outline, and the
+    // puffball has none), and the big nose out front (it parts the head from the dot-eater's and the puffball's
+    // plain rounds).
+    // Ours, and the joke: a knock-off. The gloves are yellow washing-up gloves bleached white with their cuffs
+    // rolled, one shoe is a size bigger than the other, and a big safety pin holds the neckerchief.
+    // The palette is neutral (Decisions 4): the top in the player's colour and the shoes a tone of it; the gloves,
+    // skin, hair and neckerchief neutrals. The shoes and neckerchief are drawn in hues of their own (gold, red) so
+    // the role map tells them from the top; the game paints them in the kind's roles.
+    design:
+      'The character: a cartoon hero with no arms and no legs at all, made of separate floating pieces with wide empty white space between every piece. ' +
+      'In the middle a big round head and under it a small round body, the two joined: nothing else is attached to him. ' +
+      'Two huge white rubber gloves (#eeeae2) float in the air on either side of his body at chest height, well away from it, each glove with a wide gap of white background all round it, no arm, no wrist, nothing joining it to the body. ' +
+      'Two huge chunky golden shoes (#e9b52f) float under him, well below the body, each with a gap of white background all round it, no legs, no ankles, nothing joining them to the body. ' +
+      'On the very top of his head a tall spiky tuft of brown hair (#8a5a34) stands straight up in three big spikes. A huge round nose (#f0c8a0) sticks far out of the front of his face, two big oval eyes above it, peach skin (#f0c8a0). ' +
+      'The body is a small round purple hooded top (#7b3fa6) with a big round pale ring on the chest, and a red neckerchief (#c9473f) tied round where his neck would be, between head and body.',
+    worn: 'the gloves are washing-up gloves, each with its long cuff rolled down in a thick ring at the wrist; the far shoe is much bigger than the near one, a size too big, its toe curled up; a big silver safety pin is stuck through the front of the neckerchief; one spike of the hair tuft is bent over at its tip. Every glove and shoe still floats free of the body with white space all round it.',
+  },
+  hopper: {
+    // The nod, each part of the read at race size and each a shape in outline: the long tube snout sticking
+    // straight out front, wider at its open end (the read: nobody else in the cast has a horn for a nose, and it
+    // parts him from the puffball's plain ball); the round ball with no arms on two short legs with big feet
+    // (the arcade hopper, not a creature with hands); the big eyes on top (the face, looking down the snout);
+    // the hop, both feet together (the clips, never a walk).
+    // Ours, and the joke: the snout is a paper party blower, striped and creased, that unrolls when he cheers,
+    // and he hops in a pair of worn-out old trainers.
+    // The palette is neutral (Decisions 4): the ball in the player's colour, the snout a light tone of it; the
+    // trainers a worn canvas grey.
+    design:
+      'The character: a round orange ball (#e8742a) with no arms at all, seen from its side facing right. ' +
+      'Out of the front of the ball, from its middle, a long straight tube snout sticks straight out level to the right, as long as the ball is wide, a narrow cylinder that flares wider at its round open end like a trumpet, the open end dark inside (#3a2418); the snout is a paler orange (#f4a868). ' +
+      'Two big round white eyes with black pupils sit high on top of the ball, looking forward. ' +
+      'Under the ball two short thick orange legs, close together, end in two big chunky old canvas trainers (#d4d0c6) with thick grey soles (#8e8a84), the feet much bigger than the legs. ' +
+      'The snout is a paper party blower: two pale bands are wrapped round it.',
+    worn: 'the toe of the front trainer is split open and its sole flaps loose; the snout has a big crease kinked into it halfway along, so it bends a little but still points straight out; a round tuft of fur sticks up out of the back of the ball. The eyes stay as they are.',
+  },
 };
 
 function brief(kind: string): Brief {

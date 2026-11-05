@@ -1,4 +1,7 @@
-import type { Module, ModuleOf } from '../../sim/props';
+import type { Rect } from '../../core/geom';
+import { RUN_COUNTDOWN, TILE } from '../../sim/constants';
+import type { Level } from '../../sim/level';
+import { type Contrib, type Hazard, type Module, type ModuleOf, moduleSim, motionOffset, newPropState, type PlacedProp, resolveProp } from '../../sim/props';
 import type { Recipe } from './place';
 
 /**
@@ -6,8 +9,8 @@ import type { Recipe } from './place';
  * data and checked by the engine. At generation time a candidate whose hazards don't warn is refused like
  * any other bad candidate (the placer and the landmark pipeline call `tellFaults`); the rest was already
  * enforced there: `finalize` keeps everything that hurts off the spawn and goal, `keep` (planHolds) keeps
- * the solution clear of every cell with no MIN_OPENING window, and `noFreeRide` refuses a mover that
- * carries a bare run. tests/conformance/hazards holds every registered recipe to all of it, plus art that
+ * the solution clear of every cell with no MIN_OPENING window, `windowFaults` refuses a piece that is lethal
+ * somewhere every frame, and `noFreeRide` refuses a mover that carries a bare run. tests/conformance/hazards holds every registered recipe to all of it, plus art that
  * draws what the sim hurts with and the theme-unique flag.
  */
 
@@ -68,6 +71,69 @@ export function tellFaults(mods: readonly Module[]): string[] {
     if (frames < MIN_TELL) out.push(`${m.type} warns for ${frames} frames (at least ${MIN_TELL})`);
   }
   return out;
+}
+
+/** Frames `windowFaults` watches a piece for, from the race start: longer than every hazard's cycle. */
+const WINDOW_SPAN = 900;
+/** A cell a moving hazard crosses has to stay clear longer than this between passes. */
+export const SAFE_WINDOW = 60;
+
+/**
+ * No piece is lethal every frame: a hazard leaves a window to get past it. A piece whose blades are always
+ * out somewhere (the Great Wheel's saw spokes) has to keep moving them: every cell they cross is clear for
+ * longer than SAFE_WINDOW between passes. A hazard that never moves (a spike strip, a broken window's
+ * glass) is a wall the proof keeps clear of, and a long lull anywhere is window enough. Empty when it holds.
+ */
+export function windowFaults(level: Level, pp: PlacedProp): string[] {
+  if (!pp.def.modules.some((m) => m.type in TELLS)) return [];
+  const r = resolveProp(pp);
+  const state = newPropState();
+  let quiet = 0;
+  let any = false;
+  let first: string | null = null;
+  let still = true;
+  /** Per cell a hazard touched: the frame it was last touched and the longest clear stretch so far. */
+  const cells = new Map<number, [number, number]>();
+  for (let f = RUN_COUNTDOWN; f < RUN_COUNTDOWN + WINDOW_SPAN; f++) {
+    const out: Contrib = { solids: [], hazards: [], springs: [], winds: [] };
+    // Where the piece's own motion has carried it (a combine on its rail): its hazards ride along.
+    const off = motionOffset(r, f);
+    const prev = motionOffset(r, f - 1);
+    r.mods.forEach((m, mi) => moduleSim(m.type).build?.(m, { level, frame: f, r, off, prev, state, mi, live: true }, out));
+    if (out.hazards.length) any = true;
+    else if (++quiet > SAFE_WINDOW) return [];
+    if (still) {
+      const key = JSON.stringify(out.hazards);
+      if (first === null) first = key;
+      else if (key !== first) still = false;
+    }
+    for (const h of out.hazards) {
+      const b = hazardBox(h);
+      for (let y = Math.floor(b.y / TILE); y <= Math.floor((b.y + b.h) / TILE); y++)
+        for (let x = Math.floor(b.x / TILE); x <= Math.floor((b.x + b.w) / TILE); x++) {
+          const k = y * level.w + x;
+          const c = cells.get(k);
+          if (!c) cells.set(k, [f, f - RUN_COUNTDOWN]);
+          else if (c[0] !== f) {
+            c[1] = Math.max(c[1], f - c[0] - 1);
+            c[0] = f;
+          }
+        }
+    }
+  }
+  if (!any || still) return [];
+  const out: string[] = [];
+  for (const [k, [last, open]] of cells)
+    if (Math.max(open, RUN_COUNTDOWN + WINDOW_SPAN - 1 - last) <= SAFE_WINDOW)
+      out.push(`${pp.def.name}: cell ${k} is never clear for more than ${SAFE_WINDOW} frames`);
+  return out;
+}
+
+/** The box a hazard covers, in world pixels. */
+export function hazardBox(h: Hazard): Rect {
+  if (h.kind === 'rect') return h.r;
+  if (h.kind === 'circle') return { x: h.x - h.r, y: h.y - h.r, w: 2 * h.r, h: 2 * h.r };
+  return { x: Math.min(h.x1, h.x2) - h.r, y: Math.min(h.y1, h.y2) - h.r, w: Math.abs(h.x2 - h.x1) + 2 * h.r, h: Math.abs(h.y2 - h.y1) + 2 * h.r };
 }
 
 /**
