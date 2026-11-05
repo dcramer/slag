@@ -8,9 +8,6 @@ Design intent for everything below is in `docs/DESIGN.md`.
 
 ---
 
-## 29. Character art: the weak reads
-All twenty kinds in `CAST` are drawn flat (`tools/art3d/`, playbook in its README and CHECKLIST; results per kind in `docs/CHARACTERS.md` → Roster). Three ship under the blind-read bar and read only in colour: the horse (read as a fox every time), the robot boy and the king (low-medium). Each is one agent with the checklist; images cost 2 credits each past the free 100 a month, so give each a cap. Shared fixes the agents asked for: a glinted-pupil option in `build.ts`, a per-kind near-white threshold for holes (cuptoon), the chomper's jaw ink normals in `ink-figure.ts`, and one sheet cutter for the three-poses-to-an-image method. The horse's lozenge tin, sewn patch and party horn swaps aren't drawn.
-
 ## 27. AI players and player scripts (future)
 Brains that fill seats by producing inputs, built in or written by players. Design: `docs/DESIGN.md` → AI players. Native AI first (phases 1–2); scripts after. Each phase is one agent, in order.
 

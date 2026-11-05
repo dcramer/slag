@@ -468,7 +468,7 @@ The hunter and the engineer sit late although they're easy to rig: their hand-dr
 - **The hunter and the robot boy:** both carry an arm cannon. The hunter is the tallest kind, long-legged, the cannon straight out from the shoulder; the robot boy is small with a round helmet and ear discs, the can at arm's length. Two blind reads took the old, stocky hunter for the robot boy.
 - **The speedster and the robot boy:** both blue. Quills swept back against a round helmet.
 - **The miner and the sneaking soldier:** both boxy. A cube head on a body with arms against one box on two legs.
-- **The ape and the turtle king:** the two brutes. Hunched, brown and long-armed against upright, green-shelled, spiked and horned.
+- **The ape and the turtle king:** the two brutes. Hunched, brown and long-armed against upright, side on under a smooth shell dome with three big spikes, horned, the jaw open.
 - **The mercenary and the plumber:** both carry a huge prop. The plunger is strapped to the plumber's back; the blade is always in the mercenary's hand, trailing low or leaning on the floor.
 - **The mercenary and the elf:** both carry a blade, but a poker on the elf's back against a blade bigger than the mercenary.
 - **The crewmate and the sneaking soldier:** both a body on two stubby legs. A rounded bean with a visor against a square box with an eye slot.
