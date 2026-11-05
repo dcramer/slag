@@ -3,6 +3,7 @@ import type { DecorDef } from './decor';
 import { blob, inkFor, line, type P, stroke } from './ink';
 import { barLine, boxPts, part } from './ink-props';
 import { light } from './kit';
+import { bits01 } from './decor-kit';
 
 /**
  * Decor for the glacier and for space, inked: a cairn, an expedition
@@ -10,8 +11,6 @@ import { light } from './kit';
  * and cosmetic like all decor, so none of it reads as something to stand on
  * or dodge.
  */
-
-const k01 = (seed: number, n: number) => ((seed >>> n) % 1000) / 1000;
 
 /** A pennant's cloth, flapping with time `t` (0 when baked still). */
 function pennantCloth(s: CanvasRenderingContext2D, x: number, top: number, len: number, color: HSL, t: number, dir: number) {
@@ -38,7 +37,7 @@ export const FRONTIER_DECOR = {
       let r = 3.4 * d.size;
       const n = 3 + (d.seed % 2);
       for (let i = 0; i < n; i++) {
-        const x = d.x + (k01(d.seed, i * 3) - 0.5) * 2;
+        const x = d.x + (bits01(d.seed, i * 3) - 0.5) * 2;
         s.fillStyle = inkFor(d.color);
         blob(s, x, y - r * 0.7, r + 0.4, d.seed + i, 0.66, 0.2);
         s.fill();
@@ -68,8 +67,8 @@ export const FRONTIER_DECOR = {
     bake(s, d) {
       const n = 2 + (d.seed % 3);
       for (let i = 0; i < n; i++) {
-        const x = d.x + (i - (n - 1) / 2) * 3 + (k01(d.seed, i * 2) - 0.5) * 1.5;
-        const len = (3 + k01(d.seed, i * 4) * 7) * d.size;
+        const x = d.x + (i - (n - 1) / 2) * 3 + (bits01(d.seed, i * 2) - 0.5) * 1.5;
+        const len = (3 + bits01(d.seed, i * 4) * 7) * d.size;
         s.fillStyle = inkFor(d.color);
         line(s, x, d.y - 0.6, x, d.y + len + 0.5, { w: 2.6, seed: d.seed + i, taper: [0, 0.95], press: 0 });
         s.fillStyle = css(d.color);

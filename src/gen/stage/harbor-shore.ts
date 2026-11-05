@@ -6,9 +6,10 @@ import { type Grid, T_ONEWAY, T_SOLID } from '../level/kit';
 import { jumpProfile } from '../level/probe';
 import { makeStyle, type Piece, type Site } from '../setpieces/place';
 import { capFlood } from './flood';
-import { berthMax, climb, digBerth, fitsWith, footing, structureCols, structureOf, trial } from './harbor-kit';
+import { climb, digBerth, fitsWith, footing, structureCols, structureOf, trial } from './harbor-kit';
 import { defineConcept } from './contract';
 import type { Landmark } from './types';
+import { oneGap } from './kit';
 
 /**
  * The harbor's shore landmarks (docs/SETPIECES.md, Harbor), each standing past its berth on the sea floor:
@@ -153,7 +154,7 @@ export const TIDAL_PIER = defineConcept({
   budget: 2,
   names: ['The Pier at {place}', '{place} Pleasure Pier', 'The Tidal Pier of {place}', '{place}: Mind the Tide'],
   codex: { about: 'A boardwalk on pilings over a beach the tide keeps taking back. Along the boardwalk, or across the sand between the tide and the wave.' },
-  box: (k, rng) => ({ w: berthMax() + structureCols(k.W, rng, 18, 22), h: climb() + 6 }),
+  box: (k, rng) => ({ w: oneGap() + structureCols(k.W, rng, 18, 22), h: climb() + 6 }),
   build: buildPier,
   pieces: pierPieces,
   varies: ['length', 'boardwalk sections and their heights', 'beach depth', 'which way the wave breaks', 'tide and wave timing'],
@@ -315,7 +316,7 @@ export const CONTAINER_TERMINAL = defineConcept({
   budget: 2,
   names: ['The Container Terminal at {place}', '{place} Freight Yard', 'Berth Nine, {place}', '{place} Box Port'],
   codex: { about: 'Container stacks under a gantry crane with a box swinging on its hook. Through the open containers at their feet, or over the tops.' },
-  box: (k, rng) => ({ w: berthMax() + structureCols(k.W, rng, 16, 21), h: 17 }),
+  box: (k, rng) => ({ w: oneGap() + structureCols(k.W, rng, 16, 21), h: 17 }),
   build: buildTerminal,
   pieces: terminalPieces,
   varies: ['stack count, widths and heights', 'aisles', 'which end the cargo drops at', 'trolley travel and timing'],
@@ -449,7 +450,7 @@ export const LIGHTHOUSE = defineConcept({
   codex: {
     about: 'A tower on a rock, its lamp sweeping the sea. Straight through its foot, or up the turning stair and round the gallery while the beam looks away.',
   },
-  box: (k, rng) => ({ w: berthMax() + structureCols(k.W, rng, 16, 20), h: 26 }),
+  box: (k, rng) => ({ w: oneGap() + structureCols(k.W, rng, 16, 20), h: 26 }),
   build: buildLighthouse,
   pieces: lighthousePieces,
   scale: 'grand',
@@ -627,7 +628,7 @@ export const KRAKEN_LAGOON = defineConcept({
   budget: 2,
   names: ['Kraken Lagoon, {place}', 'The Lagoon at {place}', '{place}: Do Not Feed', 'The Deep End of {place}'],
   codex: { about: 'Islets a hop apart in a lagoon with arms. Across the islets between tentacles, or up the sea stacks and over the rope bridge.' },
-  box: (k, rng) => ({ w: berthMax() + structureCols(k.W, rng, 17, 21), h: 13 }),
+  box: (k, rng) => ({ w: oneGap() + structureCols(k.W, rng, 17, 21), h: 13 }),
   build: buildLagoon,
   pieces: lagoonPieces,
   varies: ['islet count, widths and heights', 'gaps', 'stack height', 'which gaps the tentacles rise in, and their beats'],

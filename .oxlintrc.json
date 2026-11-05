@@ -1,6 +1,8 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["typescript", "unicorn", "oxc", "import"],
+  // slag's own rules (tools/lint/slag-plugin.mjs): each one's message says why it exists and what to do instead.
+  "jsPlugins": ["./tools/lint/slag-plugin.mjs"],
   "options": {
     "typeAware": true,
     "reportUnusedDisableDirectives": "warn"
@@ -36,7 +38,8 @@
     "react/react-in-jsx-scope": "off",
     "unicorn/no-array-sort": "off",
     "unicorn/no-array-fill-with-reference-type": "off",
-    "oxc/no-map-spread": "off"
+    "oxc/no-map-spread": "off",
+    "slag/no-copied-kit": "error"
   },
   "overrides": [
     {

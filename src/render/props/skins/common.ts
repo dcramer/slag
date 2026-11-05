@@ -1,8 +1,10 @@
-import { type HSL } from '../../../core/color';
+import { css, type HSL } from '../../../core/color';
 import type { Rect } from '../../../core/geom';
+import { TILE } from '../../../sim/constants';
 import type { CannonLook, DecoKind, Module, ModuleOf, RotorArm, RotorLook } from '../../../sim/props';
 import type { ThemeId } from '../../../themes';
-import { barLine, boxPts, tone } from '../../ink-props';
+import { inkFor, type P } from '../../ink';
+import { barLine, boxPts, pen, tone } from '../../ink-props';
 import type { RC } from '../../kit';
 import type { DrawCtx } from '../common';
 
@@ -28,6 +30,54 @@ export function slab(s: CanvasRenderingContext2D, p: Rect, base: HSL, seed: numb
   tone(s, pts, base, { depth: Math.min(1.4, p.h * 0.2) });
   return pts;
 }
+
+/**
+ * How a theme draws its backdrop shells under the level's sky. Shells stand behind the play, so their tones
+ * go part of the way toward the fog, and their pen is a dark of each tone, never black. Each theme picks its
+ * own numbers (how far back its shells sit, how much colour the haze takes) and keeps them.
+ */
+export interface HazeSpec {
+  /** Share of the way a tone's lightness goes toward the fog's. */
+  haze: number;
+  /** Saturation lost, as a multiple of `haze` (1 by default; more where the haze should take more colour than light). */
+  desat?: number;
+  /** The pen: `inkFor` the hazed tone, or a dark of it, `dark` × its lightness and never under `floor`. */
+  pen: 'ink' | { dark: number; floor: number };
+  /** `flat`'s depth when it isn't given one (1 by default). */
+  depth?: number;
+  /** `flat`'s pen weights, thin and thick (0.3, 0.8 by default). */
+  weights?: readonly [number, number];
+}
+
+/** A theme's shell tones under this level's sky (`HazeSpec`): `k` keys a baked sprite to the sky it was hazed for. */
+export function hazer(d: DrawCtx, spec: HazeSpec) {
+  const fog = d.o.level?.theme.fog;
+  const { haze } = spec;
+  const desat = spec.desat ?? 1;
+  const ink = spec.pen;
+  /** A tone `k` of the way toward the fog. */
+  const sink = (c: HSL, k: number): HSL => (fog ? { h: c.h, s: c.s * (1 - k * desat), l: c.l + (fog.l - c.l) * k } : c);
+  const hsl = (c: HSL): HSL => sink(c, haze);
+  return {
+    k: fog ? `${fog.h | 0},${fog.s | 0},${fog.l | 0},${haze}` : '-',
+    hsl,
+    sink,
+    c: (b: HSL, dl = 0, a = 1) => css(hsl(b), dl, a),
+    ink: ink === 'ink' ? (b: HSL) => inkFor(hsl(b)) : (b: HSL) => css({ h: b.h, s: b.s * 0.5, l: Math.max(ink.floor, hsl(b).l * ink.dark) }),
+    depth: spec.depth ?? 1,
+    weights: spec.weights ?? ([0.3, 0.8] as const),
+  };
+}
+export type Haze = ReturnType<typeof hazer>;
+
+/** A flat shape in a hazed tone, penned in a dark of itself. */
+export function flat(g: CanvasRenderingContext2D, pts: readonly P[], base: HSL, t: Haze, seed: number, depth = t.depth) {
+  tone(g, pts, t.hsl(base), { depth });
+  pen(g, pts, seed, t.weights[0], t.weights[1], 3, t.ink(base));
+}
+
+/** A shell's box in tiles: its top-left column and row, and how many columns and rows it spans. */
+export const boxOf = (m: Deco) => ({ x: Math.round(m.at[0] / TILE), y: Math.round(m.at[1] / TILE), w: Math.round(m.w / TILE), h: Math.round(m.h / TILE) });
 
 export interface RotorSkin {
   /** Scenery behind the terrain (BACKDROP). */

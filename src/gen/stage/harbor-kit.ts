@@ -4,10 +4,10 @@ import type { PlacedProp } from '../../sim/props';
 import { type Grid, hintGap, T_SOLID } from '../level/kit';
 import { jumpProfile } from '../level/probe';
 import { hardGap, undercut } from '../level/sculptors/common';
-import { BRIDGE_W } from '../level/types';
 import { noFreeRide, planHolds } from '../level/winnable';
 import { windowFaults } from '../setpieces/contract';
 import { finalize, type Piece, type Site } from '../setpieces/place';
+import { oneGap } from './kit';
 
 /** Uids a trial piece takes: any will do, it's thrown away. */
 const TRIAL_UID = 90_000;
@@ -19,19 +19,13 @@ const TRIAL_UID = 90_000;
  * bottom row) or rests on something that does: nothing floats, the hull of a moored ship included.
  */
 
-/** The widest one-part crossing at this gravity (hardGap's top end): every box has room for it. */
-export function berthMax(gravity?: number): number {
-  const j = jumpProfile(gravity);
-  return Math.max(j.gap + 2, BRIDGE_W + 2 * j.walkGap);
-}
-
 /** Columns a harbor landmark keeps clear of the spawn end (its near quay) and the goal end (a gap and the far quay). */
 export const NEAR_QUAY = 6;
 export const FAR_ROOM = 9;
 
 /** Columns left for a landmark's structure past its berth, on a level `w` wide at this gravity. */
 export function roomFor(w: number, gravity?: number): number {
-  return w - NEAR_QUAY - FAR_ROOM - berthMax(gravity);
+  return w - NEAR_QUAY - FAR_ROOM - oneGap(gravity);
 }
 
 /** A concept that needs `least` columns of structure fits a level only if there's that much room past its berth. */
@@ -42,7 +36,7 @@ export const fitsWith =
 
 /** The structure's columns: everything right of the berth. Its first column is the berth's far bank. */
 export function structureOf(at: TileRect): TileRect {
-  const m = berthMax();
+  const m = oneGap();
   return { x: at.x + m, y: at.y, w: at.w - m, h: at.h };
 }
 
@@ -67,7 +61,7 @@ export function digBerth(g: Grid, rng: Rng, at: TileRect, parts: number): void {
     g.fill(at.x, G, last, g.h - 1, T_SOLID, true);
     return;
   }
-  const gap = Math.min(berthMax(), hardGap(rng, parts));
+  const gap = Math.min(oneGap(), hardGap(rng, parts));
   const first = last - gap + 1;
   g.fill(at.x, G, first - 1, g.h - 1, T_SOLID, true);
   g.clear(first, 0, last, g.h - 1);

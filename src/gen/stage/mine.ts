@@ -1,15 +1,14 @@
 import type { Vec } from '../../core/geom';
 import type { Rng } from '../../core/rng';
-import { type LevelProfile, T_ONEWAY, type TileRect } from '../../sim/level';
+import { T_ONEWAY, type TileRect } from '../../sim/level';
 import type { Module, PropStyle } from '../../sim/props';
-import { type Grid, hintGap, POCKET } from '../level/kit';
-import { jumpProfile } from '../level/probe';
+import { type Grid, hintGap } from '../level/kit';
 import { easyRise, hardGap, hopGap, type Knobs, TWO_PART_TRIES, undercut } from '../level/sculptors/common';
-import { BRIDGE_W } from '../level/types';
-import { makeStyle, type Piece, SAFE_TILES, type Site } from '../setpieces/place';
+import { makeStyle, type Piece, type Site } from '../setpieces/place';
 import { defineConcept } from './contract';
 import { capFlood } from './flood';
 import type { Concept, Landmark } from './types';
+import { bankKit, col, ledges as rungs, listSig, oneGap, shell, SITE_MARGIN, twoGap, ways } from './kit';
 
 /**
  * Mine stage concepts (docs/SETPIECES.md, Mine): five places dug out of the rock, each one landmark that
@@ -40,49 +39,10 @@ import type { Concept, Landmark } from './types';
  * through, and `sig{i}` are the structural numbers the seed rolled.
  */
 
-/** Columns a landmark keeps from either end (sculptors/common.ts claimSite). */
-const SITE_MARGIN = POCKET + SAFE_TILES;
 /** Flat floor between the chasm and the structure: the bridge's landing and a run-up. */
 const BANK = 3;
 
-/** The widest one-part crossing at this gravity (hardGap's top end). */
-function oneGap(gravity?: number): number {
-  const j = jumpProfile(gravity);
-  return Math.max(j.gap + 2, BRIDGE_W + 2 * j.walkGap);
-}
-
-/** The one-part crossing a classic level's box makes room for: a column or so short of hardGap's widest. */
-function snugGap(gravity?: number): number {
-  return Math.min(oneGap(gravity), jumpProfile(gravity).gap + 3);
-}
-
-/** The widest two-part crossing at this gravity. */
-function twoGap(gravity?: number): number {
-  const j = jumpProfile(gravity);
-  return Math.max(j.gapAt(-6) + j.rise + 1, j.gap + 2 * BRIDGE_W + j.walkGap + 1);
-}
-
-/**
- * Share of levels whose landmark's own chasm takes two parts, where its box has room for a two-part one
- * (wide levels). A mine built round a landmark has none of the plain mine's sealed chasms that need a
- * second part by chance, so the wide ones ask more often to keep the theme near TWO_PARTS.
- */
-const LANDMARK_TWO = 0.55;
-const asksTwo = (k: Knobs) => k.challenge < Math.max(k.twoParts, LANDMARK_TWO);
-
-/** Columns for the chasm a landmark owns: a two-part one where asked for and there's room, else one part. */
-function crossFor(k: Knobs, struct: number): number {
-  if (asksTwo(k) && twoGap() + BANK + struct <= k.W - 2 * SITE_MARGIN) return twoGap();
-  return k.W > 56 ? oneGap() : snugGap();
-}
-
-/** Does a landmark of `struct` columns fit beside a one-part chasm on this level? */
-function roomFor(p: Partial<LevelProfile>, struct: number): boolean {
-  return snugGap(p.gravity) + BANK + struct <= (p.w ?? 48) - 2 * SITE_MARGIN;
-}
-
-/** The chasm the build digs: as wide as `parts` take. */
-const crossCols = (parts: number) => (parts >= 2 ? twoGap() : oneGap());
+const { crossFor, roomFor, crossCols } = bankKit({ bank: BANK, two: 0.55, bankInRoom: true });
 
 /** A box: the chasm, a bank, and `struct` columns of structure, or as many more as `want` and the level allow. */
 function boxFor(k: Knobs, rng: Rng, struct: number, want: readonly [number, number], h: number): { w: number; h: number } {
@@ -115,42 +75,12 @@ function site(g: Grid, rng: Rng, at: TileRect, min: number, parts: number): { G:
   return { G, s0: at.x + cross + BANK, s1: at.x + at.w - 1 };
 }
 
-/** One-way rungs two wide at columns x, x+1, a comfortable hop apart from the ground row G up to row `top`. */
-function rungs(g: Grid, x: number, top: number, G: number): void {
-  const R = easyRise();
-  for (let y = G - R; y > top; y -= R) for (const c of [x, x + 1]) g.set(c, y, T_ONEWAY, true);
-}
-
-/** Solid column x from row G - h to G - 1. */
-function col(g: Grid, x: number, h: number, G: number): void {
-  if (h > 0) g.fill(x, G - h, x, G - 1, 1, true);
-}
-
-/** The anchors of the ways through: each a rect that, filled, shuts that way. */
-function ways(rects: readonly TileRect[]): Record<string, Vec> {
-  const out: Record<string, Vec> = {};
-  rects.forEach((r, i) => {
-    out[`way${i}`] = [r.x, r.y];
-    out[`way${i}s`] = [r.w, r.h];
-  });
-  return out;
-}
-
-/** A list of layout numbers as one signature pair: how many, and a sum weighted by place, so a reorder shows. */
-const listSig = (xs: readonly number[]): Vec => [xs.length, xs.reduce((t, v, i) => t + v * (i + 1), 0)];
-
 const TIMBER = (rng: Rng): PropStyle => makeStyle(rng, ['rust', 'steel'], [24, 30], { woodHue: rng.range(20, 32), glowHue: rng.range(34, 46) });
 const IRON = (rng: Rng): PropStyle => makeStyle(rng, ['rust', 'steel'], [20, 28], { trim: 'rivets', woodHue: rng.range(20, 30) });
 
-/** A backdrop shell from the anchors `name` and `name`Size. */
-const shell = (rng: Rng, l: Landmark, kind: 'headframe' | 'trestle' | 'facade', name = 'shell'): Module => ({
-  type: 'deco',
-  kind,
-  at: l.anchors[name],
-  w: l.anchors[`${name}Size`][0],
-  h: l.anchors[`${name}Size`][1],
-  seed: rng.int(0, 1 << 20),
-});
+/** The backdrop shell the build recorded in the anchors `shell` and `shellSize`. */
+const shellAt = (rng: Rng, l: Landmark, kind: 'headframe' | 'trestle' | 'facade'): Module =>
+  shell(rng, l.anchors.shell, l.anchors.shellSize[0], l.anchors.shellSize[1], kind);
 
 /** Rocks out of a span of roof `at` (its top-left under the roof), `w` × `h`, onto the floor under it. */
 const rockfall = (rng: Rng, at: Vec, w: number, h: number): Module => ({
@@ -255,7 +185,7 @@ function* headframePieces(rng: Rng, l: Landmark): Generator<Piece> {
     archetype: 'dropper',
     role: 'hazard',
     style: TIMBER(rng),
-    modules: [shell(rng, l, 'headframe'), rockfall(rng, a.fall, fw, fh)],
+    modules: [shellAt(rng, l, 'headframe'), rockfall(rng, a.fall, fw, fh)],
   };
   // The cage: a floor riding the shaft, parked flush with the floor, the landing and the deck in turn.
   const range = G - D;
@@ -381,7 +311,7 @@ function* trestlePieces(rng: Rng, l: Landmark): Generator<Piece> {
     archetype: 'crusher',
     role: 'hazard',
     style: IRON(rng),
-    modules: [shell(rng, l, 'trestle'), runaway(rng, [dir > 0 ? g0 : g0 + span, G], span, dir)],
+    modules: [shellAt(rng, l, 'trestle'), runaway(rng, [dir > 0 ? g0 : g0 + span, G], span, dir)],
   };
   // On top: a runaway on the longest stretch of track, rolling toward a break.
   let best: Vec | null = null;
@@ -476,7 +406,7 @@ function* crusherPieces(rng: Rng, l: Landmark): Generator<Piece> {
     archetype: 'dropper',
     role: 'hazard',
     style: IRON(rng),
-    modules: [shell(rng, l, 'facade'), rockfall(rng, [hx, T], 2, G - T)],
+    modules: [shellAt(rng, l, 'facade'), rockfall(rng, [hx, T], 2, G - T)],
   };
   // The feed belts on the roof, both carrying toward the hopper.
   const speed = rng.int(50, 85);
@@ -627,7 +557,7 @@ function* geodePieces(rng: Rng, l: Landmark): Generator<Piece> {
     role: 'hazard',
     style: makeStyle(rng, ['steel', 'jade'], [285, 190, 320]),
     modules: [
-      shell(rng, l, 'facade'),
+      shellAt(rng, l, 'facade'),
       { type: 'body', cells, material: 'stone', conveyor: 0, breakFrames: 0, respawnFrames: 0 },
       { type: 'spikes', cells: cells.slice(), angle: -Math.PI / 2, look: 'crystal' },
     ],
@@ -755,7 +685,7 @@ function* galleryPieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
     archetype: 'fan',
     role: 'hazard',
     style: TIMBER(rng),
-    modules: [shell(rng, l, 'facade'), ...mods],
+    modules: [shellAt(rng, l, 'facade'), ...mods],
   };
   // The pump, blowing the shaft clear: up from the gallery's floor to the top.
   if (a.pump) {

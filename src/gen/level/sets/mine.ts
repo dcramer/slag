@@ -3,21 +3,7 @@ import { finish, Grid, groundFromHeights, hintGap, noise1D, noise2D, smoothCA } 
 import { jumpProfile } from '../probe';
 import type { SculptCtx, Shape } from '../types';
 import type { CarvedKit } from './types';
-import {
-  type Claim,
-  claimSite,
-  jumpGap,
-  flatten,
-  hardGap,
-  type Knobs,
-  keepClear,
-  knobs,
-  raiseLandmark,
-  relax,
-  rollChallenges,
-  Slots,
-  undercut,
-} from '../sculptors/common';
+import { claimFlatSite, hardGap, jumpGap, keepClear, knobs, raiseLandmark, relax, rollChallenges, Slots, undercut } from '../sculptors/common';
 
 /**
  * Mine: solid rock carved from the inside. Noise caverns with a rough,
@@ -118,7 +104,7 @@ function mineStage(ctx: SculptCtx): Shape {
   for (let x = W - 6; x < W; x++) surf[x] = gRow;
   locked.fill(1, 0, 6);
   locked.fill(1, W - 6, W);
-  const claim = claimMineSite(ctx, k, slots, surf, locked);
+  const claim = claimFlatSite(ctx, k, slots, surf, locked, 4, true);
   if (!claim) return finish(g, { row: sRow - 1 }, { row: gRow - 1 }, 'mine:unclaimed');
   const challenges = rollChallenges(attempt, k);
   g.wantsProps = challenges > 0;
@@ -177,21 +163,4 @@ function mineStage(ctx: SculptCtx): Shape {
     g.plank(x - 1, x + 1, cy);
   }
   return finish(g, { row: sRow - 1 }, { row: gRow - 1 }, 'mine:stage');
-}
-
-/**
- * The landmark's site (claimSite) on floor levelled a couple of columns past it either side, never so low
- * that a slot or a bowl in its floor has no rock under it. Nothing else lands within a running jump of its
- * far side, where a chasm could be cleared bare off its top.
- */
-function claimMineSite(ctx: SculptCtx, k: Knobs, slots: Slots, surf: number[], locked: Uint8Array): Claim | null {
-  const claim = claimSite(ctx, k, slots, surf, locked);
-  if (!claim) return null;
-  const { x, w } = claim.at;
-  const ground = Math.min(claim.ground, k.H - 4);
-  if (ground - claim.at.h < 1) return null;
-  slots.mark(x - 3, x + w + 8);
-  flatten(surf, k.H, x - 2, x + w + 1, ground);
-  for (let i = Math.max(0, x - 3); i <= Math.min(k.W - 1, x + w + 2); i++) locked[i] = 1;
-  return { ...claim, ground, at: { ...claim.at, y: ground - claim.at.h } };
 }

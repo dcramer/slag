@@ -2,8 +2,7 @@ import type { Rng } from '../../../core/rng';
 import { volcanoOwns } from '../../stage/volcano';
 import { type Grid, hintGap, noise1D } from '../kit';
 import { jumpProfile } from '../probe';
-import type { SculptCtx } from '../types';
-import { type Claim, claimSite, easyRise, flatten, hardGap, hopGap, jumpGap, type Knobs, pit, type Slots } from '../sculptors/common';
+import { claimFlatSite, easyRise, hardGap, hopGap, jumpGap, pit } from '../sculptors/common';
 import type { CourseKit } from './types';
 
 interface VolcanoState {
@@ -50,7 +49,7 @@ export const VOLCANO_COURSE: CourseKit<VolcanoState> = {
     sink: true,
     keepClear: true,
   },
-  site: (c) => claimVolcanoSite(c.ctx, c.k, c.slots, c.surf, c.locked),
+  site: (c) => claimFlatSite(c.ctx, c.k, c.slots, c.surf, c.locked),
   owns: volcanoOwns,
   plan(c) {
     const { g, rng, k, style, slots, surf, locked, state } = c;
@@ -144,22 +143,6 @@ export const VOLCANO_COURSE: CourseKit<VolcanoState> = {
     }
   },
 };
-
-/**
- * The landmark's site (claimSite), on ground levelled a couple of columns past it either side and never
- * so low that its tubes have no rock under them. Nothing else lands within a running jump of its far
- * side, where a pit could be cleared bare off its top.
- */
-function claimVolcanoSite(ctx: SculptCtx, k: Knobs, slots: Slots, surf: number[], locked: Uint8Array): Claim | null {
-  const claim = claimSite(ctx, k, slots, surf, locked);
-  if (!claim) return null;
-  const { x, w } = claim.at;
-  const ground = Math.min(claim.ground, k.H - 5);
-  slots.mark(x - 3, x + w + 8);
-  flatten(surf, k.H, x - 2, x + w + 1, ground);
-  for (let i = Math.max(0, x - 3); i <= Math.min(k.W - 1, x + w + 2); i++) locked[i] = 1;
-  return { ...claim, ground, at: { ...claim.at, y: ground - claim.at.h } };
-}
 
 /** Floating rock: flat top at row y, tapering to a dripping point underneath. */
 function rock(g: Grid, rng: Rng, x: number, y: number, w: number): void {

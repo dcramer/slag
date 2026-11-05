@@ -7,8 +7,8 @@ import { boxPts, dot, ovalPts, part, path, poly, sprite, stamp, tick } from '../
 import { bulb, glowDot, light, type RC } from '../../kit';
 import type { DrawCtx } from '../common';
 import { SHELLS } from '../modules/deco-shells';
-import type { Deco, DecoSkin, PieceSkin } from './common';
-import { bands, brickwork, flat, FRAME, type Haze, hazer, IRON, member, rivets, STEEL } from './factory-ink';
+import { type Deco, type DecoSkin, flat, type Haze, hazer, type PieceSkin } from './common';
+import { bands, brickwork, FRAME, IRON, member, rivets, SHELL, STEEL } from './factory-ink';
 
 /**
  * Factory skins for the Foundry, the Boiler House and the Robot Line (gen/stage/factory-works.ts). Their
@@ -72,7 +72,7 @@ function leg(g: CanvasRenderingContext2D, x: number, y0: number, y1: number, w: 
 
 /** The casting bay, baked: the runway's lattice legs at its ends and about every five tiles, knee braces up to it. */
 function foundryBay(w: number, floor: number, t: Haze) {
-  return sprite(`fw|bay|${w | 0}|${floor | 0}|${t.key}`, -8, -4, w + 16, floor + 8, (g) => {
+  return sprite(`fw|bay|${w | 0}|${floor | 0}|${t.k}`, -8, -4, w + 16, floor + 8, (g) => {
     const n = Math.max(1, Math.round((w - TILE) / (5 * TILE)));
     const xs = Array.from({ length: n + 1 }, (_, i) => TILE * 0.5 + ((w - TILE) * i) / n);
     xs.forEach((x, i) => {
@@ -92,7 +92,7 @@ function foundryBay(w: number, floor: number, t: Haze) {
  * sky between blocks. Bands of the shell show where the tiles leave it open.
  */
 function cupolaLining(w: number, h: number, t: Haze) {
-  return sprite(`fw|cupola|${w | 0}|${h | 0}|${t.key}`, -2, -2, w + 4, h + 4, (g) => {
+  return sprite(`fw|cupola|${w | 0}|${h | 0}|${t.k}`, -2, -2, w + 4, h + 4, (g) => {
     flat(g, boxPts(0, 0, w, h, 0.5, 5, 0.04), FIREBRICK, t, 6, 0.4);
     for (let y = 5; y < h - 2; y += 6) for (let x = (y / 6) % 2 ? 3 : 8; x < w - 3; x += 10) tick(g, x, y, x + 4, y, 0.4, x + y, t.ink(FIREBRICK));
     // Its shell's ribs, down both sides.
@@ -116,7 +116,7 @@ function tapHole(rc: RC, x: number, floor: number) {
 
 /** The foundry's shells: the cupola's lining (its top row is the tower's own) or the casting bay under the runway. */
 function foundryHall(rc: RC, m: Deco, d: DrawCtx) {
-  const t = hazer(d);
+  const t = hazer(d, SHELL);
   const x0 = m.at[0] + d.off[0];
   const y0 = m.at[1] + d.off[1];
   if (solid(d.o.level, Math.floor(x0 / TILE), Math.round(y0 / TILE))) {
@@ -134,7 +134,7 @@ function foundryHall(rc: RC, m: Deco, d: DrawCtx) {
 
 /** The boiler room's back wall, baked: brick with a few courses marked, arched windows, the steam main and its drops. */
 function boilerWall(w: number, h: number, t: Haze, seed: number) {
-  return sprite(`fw|boil|${w | 0}|${h | 0}|${seed % 5}|${t.key}`, -2, -2, w + 4, h + 4, (g) => {
+  return sprite(`fw|boil|${w | 0}|${h | 0}|${seed % 5}|${t.k}`, -2, -2, w + 4, h + 4, (g) => {
     flat(g, boxPts(0, 0, w, h, 0.4, seed, 0.04), BRICK, t, seed + 1, 0.5);
     brickwork(g, 1, 1, w - 2, h - 2, BRICK, t, seed);
     const n = Math.max(2, Math.round(w / (5 * TILE)));
@@ -154,7 +154,7 @@ function boilerWall(w: number, h: number, t: Haze, seed: number) {
 }
 
 function boilerHall(rc: RC, m: Deco, d: DrawCtx) {
-  stamp(rc.s, boilerWall(m.w, m.h, hazer(d), m.seed), m.at[0] + d.off[0], m.at[1] + d.off[1]);
+  stamp(rc.s, boilerWall(m.w, m.h, hazer(d, SHELL), m.seed), m.at[0] + d.off[0], m.at[1] + d.off[1]);
 }
 
 /** What a stack is built of: a boiler house's brick, a cupola's riveted steel. */
@@ -162,7 +162,7 @@ const STACK_STEEL: HSL = { h: 18, s: 26, l: 34 };
 
 /** The stack, baked: a chimney tapering up from what it stands on, banded, its cap corbelled out, a ladder up its side. */
 function stack(w: number, h: number, t: Haze, seed: number, base: HSL) {
-  return sprite(`fw|stack|${w | 0}|${h | 0}|${base.h}|${t.key}`, -w * 0.3 - 4, -10, w * 1.6 + 8, h + 12, (g) => {
+  return sprite(`fw|stack|${w | 0}|${h | 0}|${base.h}|${t.k}`, -w * 0.3 - 4, -10, w * 1.6 + 8, h + 12, (g) => {
     const top = w * 0.78;
     const body = poly((w - top) / 2, 4, (w + top) / 2, 4, w, h, 0, h);
     flat(g, body, base, t, seed, 0.9);
@@ -200,7 +200,7 @@ function stack(w: number, h: number, t: Haze, seed: number, base: HSL) {
 export const boilerStack: DecoSkin = (rc, m, d) => {
   const x = m.at[0] + d.off[0];
   const y = m.at[1] + d.off[1];
-  stamp(rc.s, stack(m.w, m.h, hazer(d), m.seed % 97, d.o.level?.landmark?.concept === 'foundry' ? STACK_STEEL : BRICK), x, y);
+  stamp(rc.s, stack(m.w, m.h, hazer(d, SHELL), m.seed % 97, d.o.level?.landmark?.concept === 'foundry' ? STACK_STEEL : BRICK), x, y);
   // Smoke off the top, soft, on the background layer; a lamp on the cap, blinking.
   for (let i = 0; i < 4; i++) {
     const u = (rc.t * 0.12 + i / 4 + (m.seed % 10) / 10) % 1;
@@ -375,7 +375,7 @@ export const factoryPiece: PieceSkin = (rc, layer, m, d) => {
 
 /** The line, baked: legs and cross braces under the deck, the robot cells' mesh fences behind the arms on it. */
 function lineBay(w: number, deck: number, floor: number, t: Haze, seed: number) {
-  return sprite(`fw|line|${w | 0}|${deck | 0}|${floor | 0}|${t.key}`, -4, -4, w + 8, floor + 8, (g) => {
+  return sprite(`fw|line|${w | 0}|${deck | 0}|${floor | 0}|${t.k}`, -4, -4, w + 8, floor + 8, (g) => {
     // Fences: yellow posts every couple of tiles, a mesh between them, two tiles tall on the deck.
     const fy = deck - TILE * 2.2;
     for (let x = TILE; x < w - 4; x += 2 * TILE) {
@@ -421,7 +421,7 @@ function hungCar(g: CanvasRenderingContext2D, x0: number, y0: number, t: Haze, h
 }
 
 function robotHall(rc: RC, m: Deco, d: DrawCtx) {
-  const t = hazer(d);
+  const t = hazer(d, SHELL);
   const x0 = m.at[0] + d.off[0];
   const y0 = m.at[1] + d.off[1];
   const lv = d.o.level;
