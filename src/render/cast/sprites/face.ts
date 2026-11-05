@@ -176,6 +176,24 @@ export const EYES: Record<EyeStyle, EyeArt> = {
       glint(s, f * r * 0.02, -r * 0.08, r * 0.16);
     },
   },
+  // An almond all iris, no white, round a tall slit pupil: the monster slayer's cat's eyes, whose colour is the
+  // trait, so the iris fills the eye at any size. The kit's brows set the glare; on a fall the slit opens round.
+  cat: {
+    extent: [1.05, 0.8],
+    brow: true,
+    open(s, r, m, f, iris) {
+      const rx = r * 1.05 * wideOf(m);
+      const ry = r * 0.8 * squintOf(m);
+      const pts = almond(rx, ry, f);
+      inked(s, pts, iris, INK, r * RIM_THIN, r * RIM_THICK);
+      within(s, pts, () => {
+        const y = lookY(m) * r;
+        if (m === 'fall') poly(s, oval(f * r * 0.18, y, r * 0.32, r * 0.42, 9), INK);
+        else poly(s, oval(f * r * 0.2, y, r * 0.17, r * 0.72, 8), INK);
+      });
+      glint(s, f * r * 0.36, -r * 0.22, r * 0.14);
+    },
+  },
   // A round white half hidden under a flat heavy lid, a big pupil below it: the ape's, the mercenary's brood, the
   // puppy's eyes under the beanie. The lid lifts on the way up and is gone on a fall.
   heavy: {
@@ -373,7 +391,8 @@ export function eyesOf(face: FaceKit, eyes: readonly number[]): EyeAt[] {
  * The face on one frame. `eyes` is the frame's x, y, radius triples (eighths of a world px, near eye
  * first) and `head` its head (middle, radius, tilt in degrees), which turns the face with it. `figure` is the
  * frame's outline: the eyes are drawn inside it, so one set near the head's edge never pokes past the line
- * (the brows may stand clear of it, as a cartoon's do).
+ * (the brows may stand clear of it, as a cartoon's do). `lid` is the colour `face.lid` paints over a drawn white when
+ * the eyes shut.
  */
 export function drawFace(
   s: CanvasRenderingContext2D,
@@ -385,12 +404,14 @@ export function drawFace(
   seed: number,
   head?: readonly number[],
   figure?: readonly (readonly P[])[],
+  lid?: string,
 ) {
   const at = eyesOf(face, eyes);
   if (!at.length) return;
   const art = EYES[face.eye ?? 'round'];
   const blink = m === 'idle' && Math.sin(t * 1.3 + seed * 7) > 0.985;
   const tilt = head ? (head[3] * Math.PI) / 180 : 0;
+  const shut = blink || m === 'cheer' || m === 'dead';
   // Back to front, so the near eye overlaps the far one as it would on a turned head.
   for (let k = at.length - 1; k >= 0; k--) {
     const e = at[k];
@@ -402,6 +423,7 @@ export function drawFace(
     s.save();
     if (figure) clipTo(s, figure);
     to();
+    if (shut && lid && face.lid) poly(s, oval(0, 0, e.r * face.lid.r, e.r * face.lid.r * 1.15, 12), lid);
     eye(s, face, m, f, e.r, blink, k > 0, seed + k * 3);
     s.restore();
     if (!art.brow || blink) continue;
