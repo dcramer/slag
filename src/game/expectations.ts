@@ -40,3 +40,21 @@ export const PASS_BANDS: Record<ModeId, Record<BotLevel, Record<Difficulty, read
     hard: { gentle: [0.72, 0.96], medium: [0.6, 0.88], hard: [0.58, 0.9] },
   },
 };
+
+/**
+ * Catch-up in Rising Slag: the share of rounds the runner highest 15 s after GO (`at`, frames) goes on to win, four
+ * Normal bots on a bare loop (seeds 1–128, the rounds where both are known; tests/stats/slag-catch-up.test.ts).
+ * `boxes`: the loop's own boxes as built. `items` and `bare`: what those boxes deal by rank put in every empty hand
+ * every 5 s, then used by the bots' item tactics, or never used. Measured 59, 62 and 55: catch-up isn't there yet.
+ * Bots use what they hold (about 640 uses), but the leader's defensive draws cancel the pack's attacks, and bots
+ * hardly ever collect what a box pops. The target, from the lead-camera racer, is the early leader winning about
+ * half the time (docs/MODES.md); these bands only catch a regression.
+ */
+export const LEAD_HOLDS = {
+  at: 15 * 60,
+  bands: {
+    boxes: [0.46, 0.72],
+    items: [0.49, 0.75],
+    bare: [0.42, 0.68],
+  },
+} as const satisfies { at: number; bands: Record<string, readonly [number, number]> };

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { PHYS, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
 import { ICE_SURFACE } from '../src/sim/ground';
+import { Rng } from '../src/core/rng';
 import { generateTheme } from '../src/gen/theme';
 import { type Level, offMap, T_ONEWAY, T_SOLID } from '../src/sim/level';
 import { RunWorld } from '../src/sim/run';
@@ -12,8 +13,10 @@ import {
   type Controls,
   createBody,
   DEFAULT_SURFACE,
+  firstOverlap,
   jumpMetrics,
   type Solid,
+  solidGrid,
   type Surface,
   stepBody,
   TILE_ONEWAY_ID,
@@ -500,3 +503,61 @@ function PLAYER_W_OF(): number {
 function propWall(surface: Surface): Solid {
   return { x: 20 * TILE, y: 0, w: TILE, h: 30 * TILE, id: 9, dx: 0, dy: 0, surface, propUid: 1, mi: 0 };
 }
+
+describe('solid grid', () => {
+  /** Overlapping solids, one-ways, movers, one huge and some off the level: whatever a race's parts build. */
+  function solids(rng: Rng): Solid[] {
+    const out: Solid[] = [];
+    for (let i = 0; i < 60; i++) {
+      const huge = i === 7;
+      out.push({
+        x: huge ? -5000 : rng.range(-80, 800),
+        y: huge ? 300 : rng.range(-80, 450),
+        w: huge ? 20000 : rng.range(2, 70),
+        h: rng.range(2, 40),
+        id: i,
+        dx: rng.chance(0.2) ? rng.range(-2, 2) : 0,
+        dy: rng.chance(0.2) ? rng.range(-2, 2) : 0,
+        surface: DEFAULT_SURFACE,
+        propUid: i,
+        mi: 0,
+        ...(rng.chance(0.3) && { oneWay: true }),
+      });
+    }
+    return out;
+  }
+
+  it('answers every overlap and every step exactly as the plain scan', () => {
+    for (const seed of [1, 2, 3]) {
+      const rng = new Rng(seed);
+      const list = solids(rng);
+      const plain = grid(
+        Array.from({ length: 27 }, (_, y) => (y === 26 ? '#'.repeat(48) : '.'.repeat(48))),
+        list,
+      );
+      const fast: CollisionWorld = { ...plain, grid: solidGrid(list) };
+      for (let i = 0; i < 2000; i++) {
+        const r = { x: rng.range(-100, 820), y: rng.range(-100, 470), w: rng.range(0.5, 40), h: rng.range(0.5, 40) };
+        const from = rng.chance(0.5) ? rng.range(-100, 470) : Number.POSITIVE_INFINITY;
+        expect(firstOverlap(r, fast, true, from)).toBe(firstOverlap(r, plain, true, from));
+      }
+      for (let i = 0; i < 40; i++) {
+        const a = createBody(rng.range(0, 740), rng.range(0, 380));
+        const b = { ...a };
+        for (let f = 0; f < 90; f++) {
+          const c: Controls = {
+            left: rng.chance(0.4),
+            right: rng.chance(0.4),
+            down: rng.chance(0.1),
+            jump: rng.chance(0.5),
+            jumpPressed: rng.chance(0.2),
+            run: rng.chance(0.5),
+          };
+          stepBody(a, c, plain);
+          stepBody(b, c, fast);
+        }
+        expect(b).toEqual(a);
+      }
+    }
+  });
+});

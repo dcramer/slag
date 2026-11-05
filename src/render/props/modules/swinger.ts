@@ -5,7 +5,7 @@ import { tileAt } from '../../../sim/level';
 import { LOG_LEN, LOG_THICK, type ModuleOf, type PropStyle, type Resolved, swingHeads } from '../../../sim/props';
 import { inkFor, line, type P, stroke } from '../../ink';
 import { ball, barLine, boxPts, dot, glint, ovalPts, part, path, poly, sprite, stamp, tick } from '../../ink-props';
-import { light, type MetalPalette, type RC } from '../../kit';
+import { light, type MetalPalette, type RC, poseFrame } from '../../kit';
 import { defineArt, type PropDrawOpts } from '../common';
 import { whoosh } from '../ink-motion';
 import { sawBlade } from './saw-art';
@@ -279,7 +279,7 @@ function swoosh(s: CanvasRenderingContext2D, hx: number, hy: number, arm: number
 
 function drawSwinger(rc: RC, m: Swinger, r: Resolved, off: Vec, pal: MetalPalette, st: PropStyle, o: PropDrawOpts) {
   const s = rc.s;
-  const f = rc.frame;
+  const f = poseFrame(rc);
   const hx = m.hub[0] + off[0];
   const hy = m.hub[1] + off[1];
   const heads = o.card ? cardAngles(m).map((a) => ({ x: hx + Math.cos(a) * m.arm, y: hy + Math.sin(a) * m.arm, a })) : swingHeads(m, f, r.phase, off);

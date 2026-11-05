@@ -32,7 +32,7 @@ Package manager is **pnpm** (`packageManager` in package.json). Never use npm or
 | `pnpm determinism` | The sim in Chromium, Firefox and WebKit on the same seeds and scripted inputs, every frame's hash compared (~2 min). Run it after touching `src/core/dmath.ts`, or anything numeric the sim or generators share. |
 | `pnpm test:store` | The Upstash REST store path against real Redis behind SRH (needs Docker, starts `compose.store.yml`). `-- --browser pick,run,leave` adds real browsers. In CI, not in `pnpm check`. |
 
-Lint: `oxlint` (type-aware, `.oxlintrc.json`; slag's own rules are a JS plugin, `tools/lint/slag-plugin.mjs`). Warnings are real findings, not noise: `pnpm lint` and CI fail on them like errors. Format: `oxfmt` (`.oxfmtrc.json`: 2 spaces, single quotes, 160 columns). Don't add `oxlint-disable` comments to get green; fix the code or change the rule in `.oxlintrc.json` with a reason.
+Lint: `oxlint` (type-aware; slag's own rules are a JS plugin, `tools/lint/slag-plugin.mjs`). `.oxlintrc.json` is generated: edit `tools/lint/config.ts`, where each restriction list is written once and a zone's list includes every overlapping earlier zone's (oxlint itself replaces a rule's options per override), then `pnpm lint:config` (`pnpm format` runs it too; `pnpm lint` fails while it's stale). Warnings are real findings, not noise: `pnpm lint` and CI fail on them like errors. Format: `oxfmt` (`.oxfmtrc.json`: 2 spaces, single quotes, 160 columns). Don't add `oxlint-disable` comments to get green; fix the code or change the rule in `tools/lint/config.ts` with a reason. A tool run fails on an option nothing in it read (`argReader`, `tools/lib/server.ts`), so a mistyped flag can't pass silently.
 
 ## Definition of done
 

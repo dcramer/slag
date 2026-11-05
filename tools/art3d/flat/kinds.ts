@@ -2,7 +2,7 @@ import type { FaceKit } from '../../../src/render/cast/sprites/types';
 import { readdirSync } from 'node:fs';
 
 /**
- * The flat kinds (docs/CHARACTERS.md → Rendered kinds → Flat kinds): for each, its roles in the order
+ * The flat kinds (docs/CHARACTERS.md → Rendered kinds): for each, its roles in the order
  * they're painted, back to front, the poses its clips are traced from (`art/sprites/<kind>/flat/<name>.png`,
  * `idle` being the design itself), and its variety as data, each in `kinds/<kind>.ts`. `build.ts` reads them.
  */

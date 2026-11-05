@@ -4,7 +4,7 @@ import { TILE } from '../../sim/constants';
 import { dirOf, motionOffset, type Resolved } from '../../sim/props';
 import { line, type P, stroke } from '../ink';
 import { INK, ovalPts, part, sprite, stamp, tick } from '../ink-props';
-import { METALS, type RC } from '../kit';
+import { METALS, poseFrame, type RC } from '../kit';
 
 /**
  * The guide a whole moving prop runs on: a track's polyline, or a lift's rail
@@ -19,7 +19,7 @@ import { METALS, type RC } from '../kit';
  * don't move like machines with a guide.
  */
 export function drawTrack(rc: RC, r: Resolved): void {
-  const g = guide(r, rc.frame);
+  const g = guide(r, poseFrame(rc));
   if (!g) return;
   const s = rc.s;
   const pal = METALS[r.pp.def.style.metal];

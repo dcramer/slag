@@ -1,7 +1,7 @@
 import { cellsBounds, type Vec } from '../../core/geom';
 import { TILE } from '../../sim/constants';
 import { dirOf, type Module, motionOffset, type PartSize, type PropDef, type Resolved, resolveProp } from '../../sim/props';
-import { circle, METALS, type RC } from '../kit';
+import { circle, METALS, type RC, poseFrame } from '../kit';
 import { BACKDROP, moduleArt, type PropDrawOpts } from './common';
 import './modules';
 import { PISTON_CARD_HEAD } from './modules/piston';
@@ -19,7 +19,7 @@ export { drawRideCue } from './ride';
 type M<T extends Module['type']> = Extract<Module, { type: T }>;
 
 function drawLayers(rc: RC, r: Resolved, o: PropDrawOpts, first: number, last: number) {
-  const off: Vec = motionOffset(r, rc.frame);
+  const off: Vec = motionOffset(r, poseFrame(rc));
   const style = r.pp.def.style;
   const pal = METALS[style.metal];
   // A theme's own set pieces may be drawn its own way (skins/<theme>.ts), module by module.

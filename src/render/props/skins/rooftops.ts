@@ -5,7 +5,7 @@ import { type Level, T_EMPTY, T_ONEWAY, T_SOLID, tileAt } from '../../../sim/lev
 import { geyserColumn, geyserCycle, type Module, type ModuleOf, swingHeads, vehicleCols, vehiclePose } from '../../../sim/props';
 import { blob, inkFor, line, type P, stroke } from '../../ink';
 import { barLine, boxPts, glint, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
-import { bulb, glowDot, light, type RC } from '../../kit';
+import { bulb, glowDot, light, type RC, poseFrame } from '../../kit';
 import { beamOf, type DrawCtx } from '../common';
 import { letterPts } from '../modules/neon';
 import { SHELLS } from '../modules/deco-shells';
@@ -185,7 +185,7 @@ function wreckingBall(rc: RC, m: ModuleOf<'swinger'>, d: DrawCtx) {
   const s = rc.s;
   const hx = m.hub[0] + d.off[0];
   const hy = m.hub[1] + d.off[1];
-  const [h] = swingHeads(m, rc.frame, d.r.phase, d.off);
+  const [h] = swingHeads(m, poseFrame(rc), d.r.phase, d.off);
   // The chain: links along the arm, alternately face on and edge on.
   const n = Math.max(4, Math.round(m.arm / 3.2));
   barLine(s, hx, hy, h.x, h.y, 0.6, { ...STEEL, l: STEEL.l - 14 }, 1, { rim: 0.4, taper: [0, 0], press: 0 });
@@ -759,7 +759,7 @@ function pendulum(rc: RC, m: ModuleOf<'swinger'>, d: DrawCtx) {
   const s = rc.s;
   const hx = m.hub[0] + d.off[0];
   const hy = m.hub[1] + d.off[1];
-  const [h] = swingHeads(m, rc.frame, d.r.phase, d.off);
+  const [h] = swingHeads(m, poseFrame(rc), d.r.phase, d.off);
   barLine(s, hx, hy, h.x, h.y, 1.2, { ...BRASS, l: BRASS.l + 4 }, 1, { rim: 0.3, taper: [0, 0], press: 0, lit: 16 });
   const R = m.radius * 0.85;
   orb(s, hx, hy, 1.8, BRASS, 3);
@@ -775,7 +775,7 @@ function bell(rc: RC, m: ModuleOf<'swinger'>, d: DrawCtx) {
   const s = rc.s;
   const hx = m.hub[0] + d.off[0];
   const hy = m.hub[1] + d.off[1];
-  const [h] = swingHeads(m, rc.frame, d.r.phase, d.off);
+  const [h] = swingHeads(m, poseFrame(rc), d.r.phase, d.off);
   const R = m.radius * 0.85;
   barLine(s, hx, hy, h.x, h.y, 0.9, { ...STEEL, l: STEEL.l - 6 }, 1, { rim: 0.3, taper: [0, 0], press: 0 });
   orb(s, hx, hy, 1.6, STEEL, 3);
@@ -887,7 +887,7 @@ function elBack(rc: RC, m: Deco, d: DrawCtx) {
 
 /** The train: a steel car with its windows lit, doors, a roof vent and the destination board, faceless. */
 function train(rc: RC, m: ModuleOf<'vehicle'>, d: DrawCtx) {
-  const p = vehiclePose(m, rc.frame, d.r.phase);
+  const p = vehiclePose(m, poseFrame(rc), d.r.phase);
   const cols = vehicleCols(m, p.x, d.off);
   const x0 = cols[0].x;
   const x1 = cols[cols.length - 1].x + cols[cols.length - 1].w;

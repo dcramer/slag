@@ -29,7 +29,11 @@ import { botRace } from './bot-race';
  * Since Hard bots put their hazards where they make the way hardest, short
  * of sealing it: 249 in 549, most misses now a hazard in the way. Split by
  * size so the three run in parallel (one file took over 400 s on CI): classic
- * 91 of 100 in 500, wide 86 of 100 in 543, tall 71 of 80 in 624.
+ * 91 of 100 in 500, wide 86 of 100 in 543, tall 71 of 80 in 624. Since a
+ * bot's keepsWay only keeps the plan everyone is building (it no longer
+ * searches for another), tall went from 71 in 633 to 72 in 637: the new
+ * finish is a long one (space/3, 885 frames), and the races both finish
+ * are no slower.
  */
 
 /** The seeds each theme races at every size. */

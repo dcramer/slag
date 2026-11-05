@@ -4,7 +4,7 @@ import type { Model } from './load';
 /**
  * The puffball's body, generated rather than modelled: a ball is the one shape image-to-3D can only make
  * worse, and a rig built here has exactly the bones its keyed poses need. It's a cheap vinyl squeeze toy
- * (docs/CHARACTERS.md → The pink puffball): a ball moulded in two halves, front and back, with the seam
+ * (docs/characters/puffball.md): a ball moulded in two halves, front and back, with the seam
  * standing proud between them, a squeaker valve out of its back, stubby arms, and two big oval feet (the
  * mould number under one is left off: no pose the game draws shows a sole). Every part is painted in a flat key colour that `sprite.json`'s roles
  * pick out, as they would from a model's texture; the mouth is painted on the ball, and the face kit sets the

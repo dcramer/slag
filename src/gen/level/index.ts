@@ -27,7 +27,7 @@ import { noFreeRide, planHolds } from './winnable';
 export { DIFFICULTIES, DIFFICULTY, setLevelDifficulty, stretchesOf } from './difficulty';
 export { describeProfile, GRAVITY, type GravityClass, gravityClass, type ProfileOverride, rollProfile } from './profile';
 export { BRIDGE_W, type Bridge, canPlaceBridge, isAcceptable, judge, MAX_BRIDGES, withBridges } from './validate';
-export { fieldOf, partsNeeded, planHolds, prove, settled } from './winnable';
+export { cacheFor, fieldOf, partsNeeded, planHolds, prove, settled } from './winnable';
 
 const MAX_ATTEMPTS = 30;
 const LEGACY_ATTEMPTS = 20;
