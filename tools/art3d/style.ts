@@ -643,30 +643,29 @@ export const BRIEFS: Record<string, Brief> = {
     worn: "the pot helmet has a big dent knocked into its side and the end of its handle is bent down; a big square patch of paler cloth is sewn on the tunic over the belly; the hem of the tunic is torn into a ragged notch at the back; the sole of the front boot flaps loose at the toe. The face, the moustache and the knob on the pot don't change.",
   },
   slayer: {
-    // The nod, each part of the read at race size and each a shape in outline: the two hilts standing up over his
-    // shoulders in an X, clear of the head (the read: nobody else in the cast carries two blades on the back, and
-    // the elf's one poker lies flat); the long white hair tied back, a ponytail hanging behind (the only white
-    // hair in the cast, and never a hood); tall and lean in a long coat flared to the knees (not the slim merc in
-    // a knit top, not the elf's short tunic); the round medallion on his chest and the yellow cat's eyes (the
-    // monster hunter, in colour).
-    // Ours, and the joke: the second sword is a furled black umbrella, its crook handle the second hilt, and the
-    // wolf medallion is a bottle cap stamped with a wolf's head, on a shoelace.
-    // The palette is neutral (Decisions 4): the coat in the player's colour, the gloves and boots a dark of it;
-    // the hair white, the skin, the steel and the bottle cap their own.
-    // Pushed for 24 px: the first designs, a long coat with a small head and thin hilts, were a plain pillar in
-    // silhouette; the second, a big head with the ponytail streaming out behind, was the elf's flopping cap in
-    // outline, and the sword's hilt merged into the hair. So the ponytail hangs down his back, and the two hilts
-    // stand upright behind each shoulder, one each side of the head and far above it, with background between.
-    // What ships came from two more edits of the worn design (art/sprites/slayer/design.prompt.txt): one each side of
-    // the head the hilts read as horns in the blind reads, so the sword and the umbrella are slung over one shoulder.
+    // The nod, each part of the read at race size and each a shape in outline: a long straight sword in his hand,
+    // held low in a fighter's guard (a swordsman's crouch, where the elf carries a poker and the merc leans on a
+    // bread knife bigger than he is); two hilts crossing above one shoulder, clear of the head (two blades on the
+    // back: nobody else in the cast); broad shoulders, a thick chest and a wide stance (the male hero: in a long coat
+    // and with flowing hair, a full-cast blind read took him for a princess in a gown, and slim is the elf's build);
+    // a short coat open at the front over two legs in tall boots (never a skirt); the white hair tied tight back in
+    // a short tail (white, the only white hair in the cast, never loose past the shoulders); the round medallion on
+    // his chest and the yellow cat's eyes (the monster hunter, in colour).
+    // Ours, and the joke: the second sword on his back is a furled black umbrella, its crook the second hilt, and the
+    // wolf medallion is a crimped bottle cap pressed with a wolf's head, on a shoelace.
+    // The palette is neutral (Decisions 4): the coat in the player's colour, the gloves and boots a dark of it; the
+    // hair white, the skin, the steel, the trousers and the bottle cap their own.
+    // The first version (a long coat, flowing hair, the hilts behind a slim figure) is in art/sprites/slayer/r1/.
+    // This design prompt drew crouched brutes with no coat, cap or cat's eyes; what ships is edits of the first
+    // version's design toward it (art/sprites/slayer/design.prompt.txt), with no wear edit.
     design:
-      'The character: a lean, grim monster hunter. Two thick long handles stand straight up behind his shoulders, one on each side of his head, both rising far above the top of his head, each as thick as his arm, with wide white background between each handle and his head: ' +
-      'behind his left shoulder the hilt of a big sword with a wide straight steel cross-guard (#b8bcc4) making a big cross shape, and behind his right shoulder the big hooked crook handle of a furled black umbrella (#3a3a40), curled like a big letter J. ' +
-      'Thick white hair (#f2f0ec) swept back and tied in a ponytail that hangs straight down his back, never sticking out. A pale face (#e6c4a2), narrow yellow cat eyes, a scar down over one eye, a stern frown. ' +
-      'A long brown leather coat (#7a5638) buttoned to the neck, flaring wide out to his knees like a bell, a belt at the waist, his legs apart below it. On his chest a big round silver bottle cap (#c8ccd0) hangs on a shoelace. ' +
-      'Dark brown gloves and tall dark brown boots (#4a3222).',
-    // The design drew no medallion, so the edit adds the bottle cap (the twist) with the wear.
-    worn: "a big round silver bottle cap (#c8ccd0) with a crimped edge now hangs in the middle of his chest on a brown shoelace, as wide as his eye-to-eye span, a little wolf's head pressed into it; one broken spoke pokes out sideways from the umbrella's furled cloth by his shoulder, its crook handle still a clean J; the hem of the coat is torn into a big ragged notch on one side; one boot's sole is flapping loose at the toe. The face, the hair and the sword stay as they are.",
+      "The character: a broad-shouldered, heroic monster hunter with a thick chest, standing in a wide fighter's crouch, his legs far apart and his knees bent. " +
+      'In his front hand he holds a long straight silver sword (#c8ccd2) low in a guard, its long blade pointing forward and down in front of him, well clear of his body and legs. ' +
+      'Strapped across his back, two hilts stick up together above his back shoulder, crossing each other in an X and standing well clear of his head: the cross-guard hilt of a second, steel sword (#b8bcc4) and the hooked J crook of a furled black umbrella (#3a3a40). ' +
+      'White hair (#f2f0ec) pulled back tight against his head and tied in a short tail at the nape, never loose past his shoulders. A pale face (#e6c4a2), narrow yellow cat eyes, a scar down over one eye, a stern frown. ' +
+      'A short green leather coat (#5a6250) only to mid-thigh, open and split at the front, a belt at the waist; below it two clear legs in dark grey trousers (#4a4a50) and tall brown boots (#54382a). Brown gloves. ' +
+      'On his chest a big round silver bottle cap (#c8ccd0) with a crimped edge on a brown shoelace.',
+    worn: "one broken spoke pokes out sideways from the umbrella's furled cloth by his shoulder, its crook still a clean J; the hem of the coat is torn into a big ragged notch on one side; there is a big notch chipped out of the edge of the sword in his hand; one boot's sole is flapping loose at the toe. The face, the hair and the bottle cap stay as they are.",
   },
 };
 
