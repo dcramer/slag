@@ -5,7 +5,7 @@ import { jumpProfile } from './probe';
 import { BRIDGE_W, type BridgeHint, type Shape } from './types';
 
 /**
- * Sculpting toolkit shared by the per-theme sculptors: a tile grid with a
+ * Sculpting toolkit shared by the level builders and set kits: a tile grid with a
  * "keep" mask (cells later stamps must leave empty), 1-D value noise for
  * heightmaps, cellular-automaton smoothing for organic shapes, and the
  * spawn/goal pocket finisher every sculptor ends with.

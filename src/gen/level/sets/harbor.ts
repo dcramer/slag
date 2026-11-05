@@ -1,11 +1,11 @@
 import type { Rng } from '../../../core/rng';
 import { FAR_ROOM, NEAR_QUAY } from '../../stage/harbor-kit';
+import { oneGap } from '../../stage/kit';
 import { finish, Grid, hintGap } from '../kit';
 import { jumpProfile } from '../probe';
-import { harborTall } from './tall';
-import type { SculptCtx, Sculptor, Shape } from '../types';
-import { jumpGap, easyRise, hardGap, hopGap, type Knobs, knobs, raiseLandmark, rollChallenges } from './common';
-import { oneGap } from '../../stage/kit';
+import type { SculptCtx, Shape } from '../types';
+import { jumpGap, easyRise, hardGap, hopGap, type Knobs, knobs, raiseLandmark, rollChallenges } from '../sculptors/common';
+import type { ChainKit } from './types';
 
 type HarborStyle = 'docks' | 'galleon' | 'marina';
 type Kind = 'pier' | 'ship' | 'boat' | 'buoys';
@@ -18,95 +18,71 @@ type Kind = 'pier' | 'ship' | 'boat' | 'buoys';
  * forecastle and quarterdeck, masts with one-way yards, diagonal rigging
  * ratlines and a crow's nest), small boats, and buoy hops.
  */
-export const harbor: Sculptor = (ctx) => {
-  // Only Rising Slag asks this set for a tower (its races never go tall): its shaft is the tall builder's (./tall.ts).
-  if (ctx.profile.size === 'tall') return harborTall(ctx);
-  const { rng, attempt } = ctx;
-  const kn = knobs(ctx, 5);
-  if (ctx.concept) return harborStage(ctx, kn);
-  const { W, H } = kn;
-  const style = rng.weighted<HarborStyle>([
-    ['docks', 3],
-    ['galleon', 4],
-    ['marina', 2],
-  ]);
-  const g = new Grid(W, H);
-  const q = H - rng.int(7, 10); // quay top row
-  const challenges = rollChallenges(attempt, kn);
-  g.wantsProps = challenges > 0;
-  const kinds: Kind[] =
-    style === 'galleon'
-      ? ['ship']
-      : style === 'docks'
-        ? rng.shuffle<Kind>(['pier', rng.pick<Kind>(['boat', 'pier'])])
-        : rng.shuffle<Kind>(['boat', 'buoys', 'boat']);
-  const widthOf = (k: Kind) =>
-    k === 'ship' ? rng.int(20, 24) : k === 'pier' ? rng.int(7, 11 + Math.round(kn.density * 4)) : k === 'boat' ? rng.int(6, 8) : rng.int(5, 8);
-  const widths = kinds.map(widthOf);
-  // Wide harbors sprawl: keep adding moorings (sparse maps leave more open water) until the waterfront is full.
-  const pool: Kind[] = style === 'galleon' ? ['pier', 'boat', 'ship'] : style === 'docks' ? ['pier', 'boat', 'pier'] : ['boat', 'buoys', 'pier'];
-  const fill = 0.62 + 0.16 * kn.density;
-  while (widths.reduce((a, b) => a + b, 0) + (kinds.length + 1) * 4 + 12 < W * fill) {
-    const kind = rng.pick(pool);
-    const at = rng.int(0, kinds.length);
-    kinds.splice(at, 0, kind);
-    widths.splice(at, 0, widthOf(kind));
-  }
+export const HARBOR_CHAIN: ChainKit = {
+  name: 'harbor',
+  maxClimb: 5,
+  style: (rng) =>
+    rng.weighted<HarborStyle>([
+      ['docks', 3],
+      ['galleon', 4],
+      ['marina', 2],
+    ]),
+  depth: [7, 10],
+  layout(rng, kn, style, challenges) {
+    const { W } = kn;
+    const kinds: Kind[] =
+      style === 'galleon'
+        ? ['ship']
+        : style === 'docks'
+          ? rng.shuffle<Kind>(['pier', rng.pick<Kind>(['boat', 'pier'])])
+          : rng.shuffle<Kind>(['boat', 'buoys', 'boat']);
+    const widthOf = (k: Kind) =>
+      k === 'ship' ? rng.int(20, 24) : k === 'pier' ? rng.int(7, 11 + Math.round(kn.density * 4)) : k === 'boat' ? rng.int(6, 8) : rng.int(5, 8);
+    const widths = kinds.map(widthOf);
+    // Wide harbors sprawl: keep adding moorings (sparse maps leave more open water) until the waterfront is full.
+    const pool: Kind[] = style === 'galleon' ? ['pier', 'boat', 'ship'] : style === 'docks' ? ['pier', 'boat', 'pier'] : ['boat', 'buoys', 'pier'];
+    const fill = 0.62 + 0.16 * kn.density;
+    while (widths.reduce((a, b) => a + b, 0) + (kinds.length + 1) * 4 + 12 < W * fill) {
+      const kind = rng.pick(pool);
+      const at = rng.int(0, kinds.length);
+      kinds.splice(at, 0, kind);
+      widths.splice(at, 0, widthOf(kind));
+    }
 
-  // Lay out: quay | gap | element | gap | ... | quay. A galleon's hard gap is
-  // usually the boarding gap (its masts would give a long falling jump after it).
-  const nGaps = kinds.length + 1;
-  const hardIdx = new Set<number>();
-  if (challenges && style === 'galleon' && rng.chance(0.75)) hardIdx.add(0);
-  while (hardIdx.size < Math.min(challenges, nGaps)) hardIdx.add(rng.int(0, nGaps - 1));
-  const hard = Array.from({ length: nGaps }, (_, i) => hardIdx.has(i));
-  const gaps = hard.map((h) => (h ? hardGap(rng) : jumpGap(rng, 2)));
-  const total = () => widths.reduce((a, b) => a + b, 0) + gaps.reduce((a, b) => a + b, 0) + 12;
-  const minHard = jumpProfile().gap + 2;
-  while (total() > W) {
-    const si = kinds.indexOf('ship');
-    const easy = gaps.findIndex((gp, i) => !hard[i] && gp > 2);
-    const wide = gaps.findIndex((gp, i) => hard[i] && gp > minHard);
-    if (si >= 0 && widths[si] > 15) widths[si]--;
-    else if (easy >= 0) gaps[easy]--;
-    else if (wide >= 0) gaps[wide]--;
-    else if (kinds.length > 1) {
-      // Drop the last element and the gap before it (keeping any hard flag on the final gap).
-      const k = kinds.length - 1;
-      if (hard[k]) hard[k + 1] = true;
-      kinds.pop();
-      widths.pop();
-      gaps.splice(k, 1);
-      hard.splice(k, 1);
-    } else break;
-  }
-  hardIdx.clear();
-  hard.forEach((h, i) => {
-    if (h) hardIdx.add(i);
-  });
-  const used = widths.reduce((a, b) => a + b, 0) + gaps.reduce((a, b) => a + b, 0);
-  const quayL = Math.max(6, Math.min(W - used - 6, Math.floor((W - used) * rng.range(0.4, 0.6))));
-  const quayR = W - used - quayL;
-  if (quayR < 6) return finish(g, { row: q - 1 }, { row: q - 1 }, 'harbor:broken'); // validator rejects; next attempt
-
-  const qL = q + kn.ramp(0);
-  const gR = Math.max(6, Math.min(H - 5, q + kn.ramp(W - 1) + rng.int(-2, 1)));
-  quay(g, rng, 0, quayL - 1, qL, 'left');
-  quay(g, rng, W - quayR, W - 1, gR, 'right');
-  let x = quayL;
-  let prevDeck = qL;
-  for (let i = 0; i < kinds.length; i++) {
-    const gap = gaps[i];
-    const x0 = x + gap;
-    const deck = elementDeck(rng, kinds[i], q, kn.ramp(x + (widths[i] >> 1)));
-    if (hardIdx.has(i)) hintGap(g, x, x0 - 1, Math.max(prevDeck, deck));
-    const top = stamp(g, rng, kinds[i], x0, widths[i], deck);
-    prevDeck = top;
-    x = x0 + widths[i];
-  }
-  if (hardIdx.has(kinds.length)) hintGap(g, x, W - quayR - 1, Math.max(prevDeck, gR));
-
-  return finish(g, { row: qL - 1 }, { row: gR - 1 }, `harbor:${style}`);
+    // Lay out: quay | gap | element | gap | ... | quay. A galleon's hard gap is
+    // usually the boarding gap (its masts would give a long falling jump after it).
+    const nGaps = kinds.length + 1;
+    const hardIdx = new Set<number>();
+    if (challenges && style === 'galleon' && rng.chance(0.75)) hardIdx.add(0);
+    while (hardIdx.size < Math.min(challenges, nGaps)) hardIdx.add(rng.int(0, nGaps - 1));
+    const hard = Array.from({ length: nGaps }, (_, i) => hardIdx.has(i));
+    const gaps = hard.map((h) => (h ? hardGap(rng) : jumpGap(rng, 2)));
+    const total = () => widths.reduce((a, b) => a + b, 0) + gaps.reduce((a, b) => a + b, 0) + 12;
+    const minHard = jumpProfile().gap + 2;
+    while (total() > W) {
+      const si = kinds.indexOf('ship');
+      const easy = gaps.findIndex((gp, i) => !hard[i] && gp > 2);
+      const wide = gaps.findIndex((gp, i) => hard[i] && gp > minHard);
+      if (si >= 0 && widths[si] > 15) widths[si]--;
+      else if (easy >= 0) gaps[easy]--;
+      else if (wide >= 0) gaps[wide]--;
+      else if (kinds.length > 1) {
+        // Drop the last element and the gap before it (keeping any hard flag on the final gap).
+        const k = kinds.length - 1;
+        if (hard[k]) hard[k + 1] = true;
+        kinds.pop();
+        widths.pop();
+        gaps.splice(k, 1);
+        hard.splice(k, 1);
+      } else break;
+    }
+    return { bodies: kinds.map((kind, i) => ({ kind, w: widths[i] })), gaps, hard, state: undefined };
+  },
+  dock: { min: 6, clamp: [6, 5], build: (g, rng, x0, x1, q, side) => quay(g, rng, x0, x1, q, side) },
+  // Piers and ships follow the ramp under the middle of where their water starts.
+  deck: (rng, b, _i, at, _x0, _prev, { base, k }) => elementDeck(rng, b.kind as Kind, base, k.ramp(at + (b.w >> 1))),
+  body: (g, rng, b, _i, x0, deck) => stamp(g, rng, b.kind as Kind, x0, b.w, deck),
+  stage: (ctx) => harborStage(ctx, knobs(ctx, 5)),
 };
 
 /**

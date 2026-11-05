@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { GRAVITY, generateLevel, isAcceptable, rollProfile } from '../src/gen/level';
 import { jumpProfile, probeGravity, setProbeGravity } from '../src/gen/level/probe';
 import { SPACE_GRAVITY } from '../src/gen/level/profile';
-import { chain, spaceHop } from '../src/gen/level/sculptors/space';
+import { chain, spaceHop } from '../src/gen/level/sets/space';
 import { Rng } from '../src/core/rng';
 import type { Theme } from '../src/gen/theme';
 import { Match } from '../src/game/match';

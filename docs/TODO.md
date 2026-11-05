@@ -97,10 +97,10 @@ Modes are entries in `MODES` (`src/game/modes.ts`, DESIGN.md → Modes). Rising 
 3. **Gauntlet.** Co-op: everyone must finish, and the crate deals hazards. Scoring flips Race's "everyone finished scores nothing".
 
 ## 32. Set kits and level builders
-Owner direction (docs/DECISIONS.md → Levels): a level set is a kit of pieces with declared attributes, and the level builders compose any set's kit, so every set supports every mode. Every set has a tower kit now, so Rising Slag loops everywhere. Landmarks, set pieces and decor already declare contracts that conformance enforces; what's left is the shapes, which each set's sculptor writes by hand today. The tall builder over `TallKit` is the pattern: one builder, a few pieces per set. In order, one agent each:
+Owner direction (docs/DECISIONS.md → Levels): a level set is a kit of pieces with declared attributes, and the level builders compose any set's kit, so every set supports every mode. The contract is in (`SET_KITS`, `KIT_KINDS`, `src/gen/AGENTS.md` → Set kits and level builders), every set has a tower kit (Rising Slag loops everywhere), and every set's course, climb and descent come from builders (`src/gen/level/builders/`), levels unchanged. Next, one agent each:
 
-1. **The kit contract, written down**: what a set provides (ground and floor profiles, connectors with their rise and reach, walls and shells, gap styles, its landmarks, hazards and decor) and what a builder may ask of them, as data in the registry, with a conformance check that every set provides every kind.
-2. **Builders, one at a time**: the course (ltr, classic and wide), the climb and the descent, each moved off the per-set sculptors onto kits, holding the race's numbers as they go (`pnpm level --stats 50`: no fallbacks, needBridges, parts shares, open routes, precision bands). Then a Brawl arena is one new builder.
+1. **A Brawl arena builder** (TODO 31 → 2): a `BuilderDef` asking for ground, gap, stamps and the tower pieces, composing every set's kit.
+2. **Landmark levels onto the plans.** Harbor, space, rooftops and mine still lay out a level round a landmark their own way (each kit's `stage`), and mine's has a loop that re-rolls its own length every pass. Move them onto the chain and carved plans, holding `pnpm level --stats 50`. The two-part ask share is still keyed by theme in `TWO_PART_ASK` (`sculptors/common.ts`); it belongs on the kit.
 
 ## 30. Native build
 A real game binary that runs the same TypeScript in a native host (owner decision: no Electron). The sim and generators stay as they are, because lockstep crossplay with the web build needs the same code. Steps, one agent each:

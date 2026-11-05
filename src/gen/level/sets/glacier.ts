@@ -3,28 +3,15 @@ import { GROUND_ICE } from '../../../sim/ground';
 import { T_EMPTY, T_SOLID } from '../../../sim/level';
 import { glacierOwns } from '../../stage/glacier';
 import { rectsOf } from '../../stage/kit';
-import { finish, Grid, noise1D } from '../kit';
-import type { Sculptor, Shape } from '../types';
-import {
-  claimFlatSite,
-  jumpCount,
-  jumpCrossing,
-  easyRise,
-  flatten,
-  hardGap,
-  hopGap,
-  keepClear,
-  knobs,
-  pit,
-  raiseLandmark,
-  relax,
-  rollChallenges,
-  Slots,
-  stepRows,
-} from './common';
-import { glacierTall } from './tall';
+import { type Grid, noise1D } from '../kit';
+import type { Shape } from '../types';
+import { claimFlatSite, easyRise, hopGap, stepRows } from '../sculptors/common';
+import type { CourseKit } from './types';
 
-type GlacierStyle = 'crevasses' | 'icefall' | 'cave';
+interface GlacierState {
+  /** Tiles that are ice, laid into the shape by `glaze` at the end. */
+  ice: Uint8Array;
+}
 
 /**
  * Glacier: a smooth ice field split by crevasses, stepped icefalls with
@@ -42,92 +29,69 @@ type GlacierStyle = 'crevasses' | 'icefall' | 'cave';
  * A stage concept's landmark (stage/glacier.ts) claims its site first, on an ice field (never in a cave,
  * whose roof would bury it), owns the level's hard crossing, and says which of its tiles are ice.
  */
-export const glacier: Sculptor = (ctx) => {
-  if (ctx.profile.size === 'tall') return glaze(glacierTall(ctx), new Uint8Array(ctx.profile.w * ctx.profile.h), ctx.rng, 0.75);
-  const { rng, attempt } = ctx;
-  const k = knobs(ctx);
-  const { W, H } = k;
-  const style = rng.weighted<GlacierStyle>([
+export const GLACIER_COURSE: CourseKit<GlacierState> = {
+  name: 'glacier',
+  styles: (k, ctx) => [
     ['crevasses', 4],
     ['icefall', 3],
     ['cave', ctx.concept ? 0 : 1.5 + 2 * k.density],
-  ]);
-  const g = new Grid(W, H);
-  const ice = new Uint8Array(W * H);
-  const slots = new Slots(6, W - 7);
-  const locked = new Uint8Array(W);
-  const base = H - rng.int(5, style === 'cave' ? 7 : 8);
-  let surf: number[];
-  if (style === 'icefall') surf = stepRows(rng, k, base, [4, 8], 0.75, 2);
-  else {
-    // Ice fields are smooth: long swells, no teeth.
-    const n = noise1D(rng, W, rng.int(9, 15), 2, 0.4);
-    const amp = 1.5 + 2 * k.density;
-    surf = n.map((v, x) => Math.max(style === 'cave' ? 12 : 6, Math.min(H - 3, Math.round(base + k.ramp(x) + v * amp))));
-  }
-
-  // The stage concept's landmark comes first; it owns one crossing, or both where its box made room for a two-part one.
-  const claim = ctx.concept ? claimFlatSite(ctx, k, slots, surf, locked) : null;
-  if (ctx.concept && !claim) return finish(g, { row: surf[2] - 1 }, { row: surf[W - 3] - 1 }, 'glacier:unclaimed');
-
+  ],
+  ground: {
+    profile(rng, k, style) {
+      const { W, H } = k;
+      const ice = new Uint8Array(W * H);
+      const base = H - rng.int(5, style === 'cave' ? 7 : 8);
+      if (style === 'icefall') return { surf: stepRows(rng, k, base, [4, 8], 0.75, 2), state: { ice } };
+      // Ice fields are smooth: long swells, no teeth.
+      const n = noise1D(rng, W, rng.int(9, 15), 2, 0.4);
+      const amp = 1.5 + 2 * k.density;
+      return { surf: n.map((v, x) => Math.max(style === 'cave' ? 12 : 6, Math.min(H - 3, Math.round(base + k.ramp(x) + v * amp)))), state: { ice } };
+    },
+    pockets: 'max',
+    step: (style) => (style === 'icefall' ? 3 : 1),
+  },
   // Crevasses: hard ones need a bridge, easy ones are a hop. Each gets rock lips to land on.
-  const challenges = rollChallenges(attempt, k);
-  g.wantsProps = challenges > 0;
-  const own = claim ? glacierOwns(claim.concept, k, attempt, challenges) : 0;
-  const left = challenges - own;
-  // Two parts is often one crevasse two bridges wide: two one-bridge crevasses and their banks crowd a classic level.
-  const double = left === 2 && (W < 64 || rng.chance(0.4));
-  const hards = double ? 1 : Math.max(0, left);
-  const pits: { x0: number; x1: number; hard: boolean; stones: number[] }[] = [];
-  const nEasy = jumpCount(rng, k);
-  for (let i = 0; i < hards + nEasy; i++) {
-    const hard = i < hards;
-    const { w, stones } = hard ? { w: hardGap(rng, double ? 2 : 1), stones: [] } : jumpCrossing(rng, 2);
-    const lip = hard ? 3 : 2;
-    const a = slots.take(rng, w + lip * 2, 1, 6, W - 7);
-    if (a === null) continue;
-    const x0 = a + lip;
-    const x1 = x0 + w - 1;
-    if (hard) keepClear(slots, x0, w);
-    const bank = Math.max(surf[x0 - 1], surf[x1 + 1]);
-    for (let x = a; x <= x1 + lip; x++) {
-      surf[x] = x >= x0 && x <= x1 ? H : bank;
-      locked[x] = 1;
-    }
-    pits.push({ x0, x1, hard, stones });
-  }
-
+  gap: {
+    pad: (hard) => (hard ? 3 : 2),
+    margin: 1,
+    range: [6, 7],
+    bank: (hard) => (hard ? 3 : 2),
+    sample: 1,
+    sink: true,
+    keepClear: true,
+    // Two parts is often one crevasse two bridges wide: two one-bridge crevasses and their banks crowd a classic level.
+    double: (rng, k) => k.W < 64 || rng.chance(0.4),
+  },
   // Seracs: blocks of ice on flattened ground, low enough to hop.
-  const seracs: { x: number; w: number }[] = [];
-  for (let i = k.count(style === 'crevasses' ? rng.int(2, 3) : rng.int(0, 2)); i > 0; i--) {
-    const w = rng.int(2, 4);
-    const x = slots.take(rng, w, 2);
-    if (x === null) continue;
-    flatten(surf, H, x - 1, x + w);
-    for (let c = x - 1; c <= x + w; c++) locked[c] = 1;
-    seracs.push({ x, w });
-  }
-  const sRow = flatten(surf, H, 0, 5);
-  const gRow = flatten(surf, H, W - 6, W - 1);
-  for (const x of [0, 1, 2, 3, 4, 5, W - 6, W - 5, W - 4, W - 3, W - 2, W - 1]) locked[x] = 1;
-  relax(surf, H, locked, style === 'icefall' ? 3 : 1);
-  for (let x = 0; x < W; x++) if (surf[x] < H) g.fill(x, surf[x], x, H - 1);
-  for (const p of pits) pit(g, p.x0, p.x1, surf[p.x0 - 1], p.hard, p.stones);
-  for (const s of seracs) serac(g, ice, rng, s.x, s.w, surf[s.x]);
-  if (style === 'icefall') frozenFalls(g, ice, surf);
-  const lm = claim ? raiseLandmark(g, ctx, claim, own) : null;
-  // The landmark's own ice, and no shelf hung in its sky.
-  if (lm)
-    for (const r of rectsOf(lm, 'ice'))
-      for (let y = Math.max(0, r.y); y < Math.min(H, r.y + r.h); y++)
-        for (let x = Math.max(0, r.x); x < Math.min(W, r.x + r.w); x++) if (g.get(x, y) === T_SOLID) ice[y * W + x] = 1;
-  const off = lm ? [{ x0: lm.rect.x - 3, x1: lm.rect.x + lm.rect.w + 2 }] : [];
-  if (style !== 'cave') shelves(g, ice, rng, k.count(rng.int(0, 2)), surf, [...pits, ...off]);
-  else ceiling(g, ice, rng, surf, pits);
-  // A landmark leaves the field little room for crevasses of its own: a melt pond goes where it can.
-  if (lm) meltPond(g, rng, lm.rect, pits);
+  stamps: {
+    bag: (rng, k, style) => Array.from({ length: k.count(style === 'crevasses' ? rng.int(2, 3) : rng.int(0, 2)) }, () => SERAC),
+    margin: 2,
+    level: 'max',
+  },
+  site: (c) => claimFlatSite(c.ctx, c.k, c.slots, c.surf, c.locked),
+  owns: glacierOwns,
+  dress({ g, style, surf, state: { ice } }) {
+    if (style === 'icefall') frozenFalls(g, ice, surf);
+  },
+  crown({ g, rng, k, style, surf, gaps: pits, state: { ice } }, lm) {
+    const { W, H } = k;
+    // The landmark's own ice, and no shelf hung in its sky.
+    if (lm)
+      for (const r of rectsOf(lm, 'ice'))
+        for (let y = Math.max(0, r.y); y < Math.min(H, r.y + r.h); y++)
+          for (let x = Math.max(0, r.x); x < Math.min(W, r.x + r.w); x++) if (g.get(x, y) === T_SOLID) ice[y * W + x] = 1;
+    const off = lm ? [{ x0: lm.rect.x - 3, x1: lm.rect.x + lm.rect.w + 2 }] : [];
+    if (style !== 'cave') shelves(g, ice, rng, k.count(rng.int(0, 2)), surf, [...pits, ...off]);
+    else ceiling(g, ice, rng, surf, pits);
+    // A landmark leaves the field little room for crevasses of its own: a melt pond goes where it can.
+    if (lm) meltPond(g, rng, lm.rect, pits);
+  },
+  post: (shape, { rng, style, state: { ice } }) => glaze(shape, ice, rng, style === 'icefall' ? 0.75 : 0.85),
+};
 
-  return glaze(finish(g, { row: sRow - 1 }, { row: gRow - 1 }, `glacier:${style}`), ice, rng, style === 'icefall' ? 0.75 : 0.85);
+const SERAC = {
+  w: (rng: Rng) => rng.int(2, 4),
+  stamp: (g: Grid, rng: Rng, x: number, w: number, f: number, c: { state: GlacierState }) => serac(g, c.state.ice, rng, x, w, f),
 };
 
 /**

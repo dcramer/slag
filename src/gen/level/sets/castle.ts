@@ -1,24 +1,8 @@
 import type { Rng } from '../../../core/rng';
-import { finish, Grid } from '../kit';
-import type { SculptCtx, Sculptor } from '../types';
-import {
-  type Claim,
-  claimSite,
-  jumpCount,
-  jumpCrossing,
-  easyRise,
-  flatten,
-  hardGap,
-  keepClear,
-  type Knobs,
-  knobs,
-  pit,
-  raiseLandmark,
-  rollChallenges,
-  Slots,
-  stepRows,
-} from './common';
-import { castleTall } from './tall';
+import type { Grid } from '../kit';
+import { type Claim, claimSite, easyRise, flatten, type Knobs, type Slots, stepRows } from '../sculptors/common';
+import type { SculptCtx } from '../types';
+import type { CourseKit } from './types';
 
 type CastleStyle = 'bailey' | 'gatehouse' | 'dungeon';
 
@@ -27,100 +11,89 @@ interface Module {
   stamp: (g: Grid, rng: Rng, x: number, w: number, fl: number) => void;
 }
 
+/** Rows the donjon holding the goal rises (0: none). */
+interface CastleState {
+  goalKeep: number;
+}
+
 /**
  * Castle: crenellated stone masses on level courtyards. Towers (arched
  * passages or outside stairs, corbelled tops, arrow slits), curtain walls
  * with a stair ramp and a crenellated wall-walk, a gatehouse with turrets
  * over an arched gate, a moat (often with a collapsed bridge — the classic
  * place to need a bridge prop), and dungeon ceilings with portcullis teeth.
+ * The goal often sits on a donjon at the right edge, reached by a stair.
  */
-export const castle: Sculptor = (ctx) => {
-  if (ctx.profile.size === 'tall') return castleTall(ctx);
-  const { rng, attempt } = ctx;
-  const k = knobs(ctx);
-  const { W, H } = k;
-  const style = rng.weighted<CastleStyle>([
+export const CASTLE_COURSE: CourseKit<CastleState> = {
+  name: 'castle',
+  styles: (k) => [
     ['bailey', 3],
     ['gatehouse', 3],
     ['dungeon', 1 + 2 * k.density],
-  ]);
-  const g = new Grid(W, H);
-  const slots = new Slots(6, W - 7);
-  const f = H - rng.int(5, 8);
-  const floor = stepRows(rng, k, f, [6, 12], 0.6, 2);
-  const level = (a: number, b: number, row = floor[Math.max(0, a)]) => {
-    for (let x = Math.max(0, a); x <= Math.min(W - 1, b); x++) floor[x] = row;
-    return row;
-  };
-  const claim = ctx.concept ? claimCastleSite(ctx, k, slots, floor) : null;
-
+  ],
+  ground: {
+    // Courtyards: level sections stepping a climbable rise from the last.
+    profile: (rng, k) => ({ surf: stepRows(rng, k, k.H - rng.int(5, 8), [6, 12], 0.6, 2), state: { goalKeep: 0 } }),
+    pockets: 'near',
+    lay(c) {
+      const { g, k, surf } = c;
+      const { W, H } = k;
+      const keep = c.state.goalKeep;
+      if (keep) surf.fill(c.gRow, W - 13, W - 6);
+      for (let x = 0; x < W; x++) g.fill(x, surf[x], x, H - 1);
+      if (!keep) return;
+      g.fill(W - 6, c.gRow - keep, W - 1, c.gRow - 1);
+      g.fill(W - 7, c.gRow - keep, W - 7, c.gRow - keep + 1);
+      crenellate(g, W - 7, W - 7, c.gRow - keep - 1);
+      stairs(g, W - 7, keep, c.gRow);
+      c.gRow -= keep;
+    },
+  },
   // Moats: hard ones keep a collapsed bridge's stubs, easy ones are a hop.
-  const challenges = rollChallenges(attempt, k);
-  g.wantsProps = challenges > 0;
-  // A landmark that owns the crossing digs one of them itself, in front of it.
-  const own = claim?.concept.ownsCrossing && challenges > 0 ? 1 : 0;
-  const moats: { a: number; b: number; hard: boolean; stubs: [number, number]; stones: number[] }[] = [];
-  for (let i = 0, n = challenges - own + jumpCount(rng, k); i < n; i++) {
-    const hard = i < challenges - own;
-    const { w: open, stones } = hard ? { w: hardGap(rng), stones: [] } : jumpCrossing(rng, 2);
-    const stubs: [number, number] = hard && rng.chance(0.7) ? [rng.int(1, 2), rng.int(1, 2)] : [0, 0];
-    const w = open + stubs[0] + stubs[1];
-    const a = slots.take(rng, w, 3, 8, W - 9);
-    if (a === null) continue;
-    if (hard) keepClear(slots, a, w);
-    level(a - 2, a + w + 1, Math.max(floor[a - 2], floor[a + w + 1]));
-    moats.push({ a, b: a + w - 1, hard, stubs, stones });
-  }
-
-  // The goal often sits on a donjon at the right edge, reached by a stair.
-  let goalKeep = 0;
-  if (rng.chance(0.4) && slots.free(W - 13, W - 7, 2) && Math.min(...floor.slice(W - 13)) > 15) {
-    goalKeep = rng.int(5, 8);
-    slots.mark(W - 13, W - 7);
-  }
-  const placed: { m: Module; x: number; w: number }[] = [];
-  const bag: Module[] = [];
-  for (let r = 0; r < Math.max(1, Math.round(k.wide * (0.55 + 0.7 * k.density))); r++) bag.push(...BAGS[style](rng));
-  for (const m of bag) {
-    let w = m.w(rng);
-    let x = slots.take(rng, w, 1);
-    if (x === null) {
-      w = TOWER.w(rng) - 1;
-      x = slots.take(rng, w, 1);
-      if (x === null) continue;
-      placed.push({ m: TOWER, x, w });
-    } else placed.push({ m, x, w });
-    level(x - 1, x + w);
-  }
-  const sRow = level(0, 5);
-  let gRow = level(W - 6, W - 1);
-  if (goalKeep) {
-    level(W - 13, W - 7, gRow);
-    for (let x = 0; x < W; x++) g.fill(x, floor[x], x, H - 1);
-    g.fill(W - 6, gRow - goalKeep, W - 1, gRow - 1);
-    g.fill(W - 7, gRow - goalKeep, W - 7, gRow - goalKeep + 1);
-    crenellate(g, W - 7, W - 7, gRow - goalKeep - 1);
-    stairs(g, W - 7, goalKeep, gRow);
-    gRow -= goalKeep;
-  } else for (let x = 0; x < W; x++) g.fill(x, floor[x], x, H - 1);
-
-  for (const m of moats) {
-    const row = floor[m.a - 1];
-    pit(g, m.a, m.b, row, m.hard, m.stones);
+  gap: {
+    pad: () => 0,
+    margin: 3,
+    range: [8, 9],
+    bank: () => 2,
+    sample: 2,
+    sink: false,
+    keepClear: true,
+    roll(rng, hard) {
+      const stubs: [number, number] = hard && rng.chance(0.7) ? [rng.int(1, 2), rng.int(1, 2)] : [0, 0];
+      return { w: stubs[0] + stubs[1], extra: stubs };
+    },
     // Collapsed bridge: deck stubs (2 thick) with a corbel under the bank end.
-    if (m.stubs[0]) g.fill(m.a, row, m.a + m.stubs[0] - 1, row + 1);
-    if (m.stubs[1]) g.fill(m.b - m.stubs[1] + 1, row, m.b, row + 1);
-    if (m.stubs[0]) g.set(m.a, row + 2, 1);
-    if (m.stubs[1]) g.set(m.b, row + 2, 1);
-  }
-  for (const p of placed) p.m.stamp(g, rng, p.x, p.w, floor[p.x]);
-
-  if (style === 'dungeon') dungeonCeiling(g, rng, floor, claim);
-  else if (k.density > 0.7 && rng.chance(0.5)) dungeonCeiling(g, rng, floor, claim);
-  // Last, so it stands whole over anything a neighbour's stair spilled into its box.
-  if (claim) raiseLandmark(g, ctx, claim, own);
-
-  return finish(g, { row: sRow - 1 }, { row: gRow - 1 }, `castle:${style}`);
+    dress(g, _rng, m, row) {
+      const stubs = m.extra as [number, number];
+      if (stubs[0]) g.fill(m.x0, row, m.x0 + stubs[0] - 1, row + 1);
+      if (stubs[1]) g.fill(m.x1 - stubs[1] + 1, row, m.x1, row + 1);
+      if (stubs[0]) g.set(m.x0, row + 2, 1);
+      if (stubs[1]) g.set(m.x1, row + 2, 1);
+    },
+  },
+  stamps: {
+    bag(rng, k, style) {
+      const bag: Module[] = [];
+      for (let r = 0; r < Math.max(1, Math.round(k.wide * (0.55 + 0.7 * k.density))); r++) bag.push(...BAGS[style as CastleStyle](rng));
+      return bag;
+    },
+    margin: 1,
+    level: 'near',
+    // Declared below: TOWER, read once the module has loaded.
+    fallback: { stamp: { w: (rng) => TOWER.w(rng), stamp: (g, rng, x, w, f) => TOWER.stamp(g, rng, x, w, f) }, shrink: 1 },
+  },
+  site: (c) => claimCastleSite(c.ctx, c.k, c.slots, c.surf),
+  reserve({ rng, k, slots, surf, state }) {
+    const W = k.W;
+    if (rng.chance(0.4) && slots.free(W - 13, W - 7, 2) && Math.min(...surf.slice(W - 13)) > 15) {
+      state.goalKeep = rng.int(5, 8);
+      slots.mark(W - 13, W - 7);
+    }
+  },
+  dress({ g, rng, k, style, surf, claim }) {
+    if (style === 'dungeon') dungeonCeiling(g, rng, surf, claim);
+    else if (k.density > 0.7 && rng.chance(0.5)) dungeonCeiling(g, rng, surf, claim);
+  },
 };
 
 /**
