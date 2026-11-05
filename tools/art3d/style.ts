@@ -694,6 +694,29 @@ export const BRIEFS: Record<string, Brief> = {
     // size), and none on the wrists, so the edit moves it there with the wear.
     worn: "the spiked collar is gone from her neck, the dress's high collar shows there; instead a thick black dog collar (#2e2a2a) with big steel spikes sticking out all round goes round each wrist; the toe end of each rolled-up sock has come loose and flops down from under its bun like a short ribbon; the dress's hem is torn into a big ragged notch at the side; the front boot's sole is flapping loose at the toe. Both buns stay big and round, one each side of her head.",
   },
+  stinger: {
+    // The nod, each part of the read at race size and each a shape in outline: the white mask with two long horns
+    // off its top, sharp crescents hooking back (the read: nobody else in the cast has a horned mask; the king's horns
+    // sit on a big jawed head side on, the hedgehog's spikes sweep back off a ball, the hopper's eyes are round knobs on
+    // stalks; drawn straighter, the horns read as a rabbit's ears in the first blind read); the red cloak hanging from
+    // the shoulders in a short bell to the knees, thin dark legs clearly under it (a long garment on a slim figure read
+    // as a princess's gown on the slayer); the needle, thick, held level and sticking out past her on both sides (her
+    // weapon; drawn thin, it was gone at play size).
+    // Ours, and the joke: the needle is a knitting needle with a knob on its end, trailing yarn, and the cloak is a
+    // patched dishcloth with a frayed hem (the wear edit).
+    // The palette is neutral (Decisions 4): the cloak in the player's colour; the mask white, the limbs dark, the
+    // needle steel and the yarn cream, all their own. The colours lead the brief: the image model drops what comes last.
+    // What ships came from a second edit of the worn design (art/sprites/stinger/design.prompt.txt): the crescent horns
+    // and the thick needle. This is it as one brief, for a redraw.
+    design:
+      'The character: a small, slim cartoon bug warrior girl in three-quarter view facing right, in four colours: a red cloak (#b8343c), a white mask (#f2eee6), thin black limbs (#2a2630) and a steel needle (#b4bac2). ' +
+      'Her head is a big smooth white mask, round on top and narrowing to a blunt point at the chin, with two big black eye holes. Two long white horns rise from the top of the mask, each a sharp crescent that sweeps up and hooks back at its tip, as tall as the mask, with white background between them. ' +
+      'The red cloak hangs from her shoulders in a short wide bell to her knees. Under it two thin black legs with pointed feet. ' +
+      'One thin black fist holds a chunky steel knitting needle, as thick as her leg and longer than she is tall, level, sticking far out past her body on both sides, a big round knob on its end and a short strand of cream yarn (#e6dcc4) hanging from it.',
+    // The design came back as the original redrawn, so the edit carries the twist with the wear: the dishcloth's
+    // stripes and patch, its frayed hem, and the yarn off the needle's knob.
+    worn: 'the cloak is an old striped dishcloth: two wide pale pink stripes (#e8a6a6) run across it near the hem, a big square patch of grey cloth (#a8a29a) is sewn on one side with big stitches, and the hem is frayed into a ragged fringe of loose threads; a strand of cream yarn (#e6dcc4) hangs from the round knob of the knitting needle in one short loose loop. The mask, its eye holes and the two horns stay exactly as they are.',
+  },
 };
 
 function brief(kind: string): Brief {
