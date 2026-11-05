@@ -272,25 +272,26 @@ describe('the land around a level', () => {
 
   it('never puts anything inside the level: only its own edge, under its own tiles', () => {
     const sizes = ['classic', 'wide', 'tall'] as const;
-    for (const t of THEME_IDS) {
-      for (const size of sizes) {
-        for (const seed of [31, 0x5ee4]) {
-          const l = generateLevel(seed, t, { size });
-          for (const [mx, top, bottom] of MARGINS) {
-            const a = surroundLevel(l, mx, top, bottom);
-            for (let y = 0; y < l.h; y++) {
-              for (let x = 0; x < l.w; x++) {
-                if (a.tiles[(y + top) * a.w + x + mx] !== T_SOLID) continue;
-                const ring = x < RING || x >= l.w - RING || y < RING || y >= l.h - RING;
-                const where = `${t} ${size} seed ${seed} margins ${mx},${top},${bottom}: tile ${x},${y}`;
-                expect(ring, `${where} is inside the ring`).toBe(true);
-                expect(l.tiles[y * l.w + x], `${where} isn't the level's own`).toBe(T_SOLID);
-              }
+    const faults: string[] = [];
+    // Every theme at every size once, the two seeds taking turns: 60 levels took over 30 s on CI.
+    THEME_IDS.forEach((t, ti) =>
+      sizes.forEach((size, si) => {
+        const seed = [31, 0x5ee4][(ti + si) % 2];
+        const l = generateLevel(seed, t, { size });
+        for (const [mx, top, bottom] of MARGINS) {
+          const a = surroundLevel(l, mx, top, bottom);
+          for (let y = 0; y < l.h; y++)
+            for (let x = 0; x < l.w; x++) {
+              if (a.tiles[(y + top) * a.w + x + mx] !== T_SOLID) continue;
+              const ring = x < RING || x >= l.w - RING || y < RING || y >= l.h - RING;
+              const where = `${t} ${size} seed ${seed} margins ${mx},${top},${bottom}: tile ${x},${y}`;
+              if (!ring) faults.push(`${where} is inside the ring`);
+              if (l.tiles[y * l.w + x] !== T_SOLID) faults.push(`${where} isn't the level's own`);
             }
-          }
         }
-      }
-    }
+      }),
+    );
+    expect(faults).toEqual([]);
   });
 
   describe('space', () => {

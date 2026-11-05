@@ -3,7 +3,7 @@ import { BRIDGE_W } from './validate';
 import { deriveSeed, Rng } from '../../core/rng';
 import type { Level, LevelProfile } from '../../sim/level';
 import { pickThemeId, type ThemeId } from '../../themes';
-import { commit, finalize, SET_PIECE_UID, SET_PIECES, Site, tellFaults } from '../setpieces';
+import { commit, finalize, SET_PIECE_UID, SET_PIECES, Site, tellFaults, windowFaults } from '../setpieces';
 import { type Concept, conceptName, fits, type Landmark, landmarkFaults, rollConcept } from '../stage';
 import { generateTheme, type Theme } from '../theme';
 import { ReachCache } from '../../sim/reach';
@@ -308,7 +308,7 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
 }
 
 /**
- * A landmark's pieces, every one required: each must pass `finalize`, `keep` and, when `free`,
+ * A landmark's pieces, every one required: each must pass `finalize`, `windowFaults`, `keep` and, when `free`,
  * `noFreeRide`, or the landmark doesn't stand (null). Their uids come first among the level's set pieces.
  */
 function placeLandmark(
@@ -326,7 +326,7 @@ function placeLandmark(
   for (const piece of c.pieces(rng, s, l)) {
     if (tellFaults(piece.modules).length) return null;
     const pp = finalize(s, piece, SET_PIECE_UID + out.length, `setpiece:${themeId}:${c.id}`);
-    if (!pp || !keep([...out, pp]) || (free && !noFreeRide(level, pp, out, cache))) return null;
+    if (!pp || windowFaults(level, pp).length || !keep([...out, pp]) || (free && !noFreeRide(level, pp, out, cache))) return null;
     out.push(pp);
     commit(s, pp);
   }

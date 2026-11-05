@@ -9,9 +9,12 @@ on:
 permissions:
   contents: read
 
+# A newer push cancels a pull request's run, but never main's: main lands every few minutes and CI takes
+# longer than that, so cancelling there left main with no finished run to say whether it was green. A queued
+# main run still gives way to the next one, so main tests at most one run behind.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   NEXT_TELEMETRY_DISABLED: 1

@@ -376,13 +376,13 @@ export const AMMO_SIM: Partial<Record<Ammo, AmmoSim>> = {
   snowball: { move: roll },
 };
 
-/** Shots whose own mover worldgen traces exactly (`traceShot`): a roll follows the ground, so no ballistic guess says where it goes. */
-export const TRACED_AMMO: ReadonlySet<Ammo> = new Set<Ammo>(['snowball']);
-
-/** Where one shot goes, frame by frame, through the level's terrain alone, until it ends or `frames` pass. */
-export function traceShot(level: Level, s: ProjectileSpawn, frames = DEFAULT_LIFE): { x: number; y: number }[] {
+/**
+ * Where one shot goes, frame by frame, through the level's terrain alone and a steady side wind of `gust`
+ * (px/s, + right), until it ends or `frames` pass: how worldgen keeps a set piece's shots off the spawn and goal.
+ */
+export function traceShot(level: Level, s: ProjectileSpawn, frames = DEFAULT_LIFE, gust = 0): { x: number; y: number }[] {
   const noop = () => {};
-  const w: ProjWorld = { level, frame: 0, solids: [], gravity: level.gravity ?? 1, runners: [], spawn: noop, emit: noop, kill: noop };
+  const w: ProjWorld = { level, frame: 0, solids: [], gravity: level.gravity ?? 1, runners: [], spawn: noop, emit: noop, kill: noop, gust };
   const p = makeProjectile(s, 0, 0);
   const out: { x: number; y: number }[] = [];
   for (let f = 1; f <= frames; f++) {
