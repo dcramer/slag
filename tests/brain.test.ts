@@ -137,6 +137,9 @@ describe('bots', () => {
     expect(easy.save).toBeGreaterThan(hard.save);
     expect(easy.think).toBeGreaterThan(hard.think);
     expect(easy.stray).toBeGreaterThan(hard.stray);
+    // Harder is meaner: it acts on a grudge more often, and better.
+    expect(easy.spite).toBeLessThan(normal.spite);
+    expect(normal.spite).toBeLessThan(hard.spite);
     // Two bots at one level don't play alike.
     expect(rollPersonality(8, 'normal')).not.toEqual(normal);
     expect(rollPersonality(7, 'normal')).toEqual(normal);

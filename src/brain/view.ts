@@ -95,6 +95,7 @@ export function senseView(m: Match, p: Player): BrainView {
     phaseFrame: m.phaseFrame,
     slot: p.slot,
     ready: p.ready,
+    score: p.score,
     level: {
       w: m.level.w,
       h: m.level.h,
@@ -106,6 +107,7 @@ export function senseView(m: Match, p: Player): BrainView {
     props: m.phase === 'lobby' ? [] : propsOf(m),
     crate: m.crate.map((c) => ({
       claimed: c.claimedBy >= 0,
+      by: c.claimedBy,
       role: c.secret ?? c.def.role,
       bridge: !c.secret && isBridgePart(c.def),
       clears: !!c.clears,
@@ -124,6 +126,15 @@ export function senseView(m: Match, p: Player): BrainView {
             finished: r.finished,
           }))
       : [],
+    rivals: m.players
+      .filter((q) => q.slot !== p.slot)
+      .map((q) => ({
+        slot: q.slot,
+        score: q.score,
+        hover: m.phase === 'pick' && q.claim < 0 ? m.crateItemAt(q.cursor.x, q.cursor.y) : -1,
+        cursor: m.phase === 'place' && !q.placed ? { x: round4(q.cursor.x / TILE), y: round4(q.cursor.y / TILE) } : null,
+      })),
+    kills: (m.phase === 'run' || m.phase === 'score') && m.run ? m.run.kills.map((k) => ({ ...k })) : [],
     live: !!run && run.frame >= RUN_COUNTDOWN,
     canPlace: (tx, ty, rot) => !!held && m.phase === 'place' && ghostAt(m, held, rot, tx, ty).ok,
     keepsWay: (tx, ty, rot) => {
