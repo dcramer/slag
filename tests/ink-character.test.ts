@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { generateCharacter, CAST } from '../src/gen/character';
 import { drawInkRunner, type RunnerPose } from '../src/render/ink-character';
 import { CAST_ART } from '../src/render/cast';
+import { useSprites } from '../src/render/cast/sprites';
 import type { D } from '../src/render/cast/kit';
 import { inked, lookOf, type Mood } from '../src/render/ink-figure';
 
@@ -33,6 +34,10 @@ const POSES: Record<string, RunnerPose> = {
 };
 
 describe('inked runner', () => {
+  // The hand-drawn bodies. A draw starts fetching its kind's frames, and once they arrive the runner is
+  // drawn from them instead, so without this a test that ran later on a loaded machine drew a sprite.
+  beforeAll(() => useSprites(false));
+
   // Every runner shares one 10x14 hitbox: the drawing may be bigger, but not so big that one toy hides
   // another or reads as a different size of player.
   it('draws every toy, seed and pose within a fixed box around the hitbox', () => {
