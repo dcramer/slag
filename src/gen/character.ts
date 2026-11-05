@@ -4,11 +4,11 @@ import { deriveSeed, Rng } from '../core/rng';
 import { word } from './names';
 
 /**
- * The cast (docs/CHARACTERS.md): mostly homages to famous game characters in our own designs, with a few
- * plain animals for contrast. Each kind is a fixed design; the seed picks the kind, a variant of its own
- * colors and the player's color. A homage keeps the palette people recognise it by, and the player's
- * color goes on a secondary slot (a ring at its feet, a scarf, a band); a plain animal, or a homage that
- * comes in every color anyway, is drawn in the player's color. Either way it's the player's HUD color.
+ * The cast (docs/CHARACTERS.md): homages to famous game characters in our own designs. Each kind is a
+ * fixed design; the seed picks the kind, a variant of its own colors and the player's color, which is the
+ * player's HUD color. A kind drawn from its frames wears it on its costume; a hand-drawn body keeps the
+ * palette people recognise it by and puts it on a secondary slot (a ring at its feet, a scarf, a band), or
+ * on the body for a homage that comes in every color anyway.
  */
 export const CAST = [
   'plumber',
@@ -38,6 +38,9 @@ export const CAST = [
   'hopper',
   'warrior',
   'slayer',
+  'raider',
+  'fighter',
+  'stinger',
 ] as const;
 export type Kind = (typeof CAST)[number];
 
@@ -57,7 +60,7 @@ export interface CharacterDef {
   /** Index into PLAYER_COLORS when `body` is a swatch; absent for a hue rolled from the seed alone (saved looks from before swatches). */
   color?: number;
   kind: Kind;
-  /** The kind's own color: a homage's iconic body color, a plain animal's pale chest. */
+  /** The kind's own color: a homage's iconic body color. */
   paint: HSL;
   /**
    * Rolls in 0..1 that the kind's art reads in its own order: small details inside a design. The first
@@ -100,11 +103,14 @@ export const KIND_NAMES: Record<Kind, string> = {
   hopper: 'Kewbert',
   warrior: 'Kakosh',
   slayer: 'Gerald',
+  raider: 'Laura Craft',
+  fighter: 'Chun-Lee',
+  stinger: 'Hornette',
 };
 
 /**
  * Each kind's own color, a few close variants of it: a homage's iconic body color (the speedster's
- * cobalt, the mouse's yellow), or a plain animal's pale chest. Calm, never louder than the player's.
+ * cobalt, the mouse's yellow). Calm, never louder than the player's.
  */
 const PAINTS: Record<Kind, readonly HSL[]> = {
   plumber: [hsl3(4, 70, 50)],
@@ -134,6 +140,9 @@ const PAINTS: Record<Kind, readonly HSL[]> = {
   hopper: [hsl3(22, 85, 52)],
   warrior: [hsl3(8, 55, 45)],
   slayer: [hsl3(28, 30, 40)],
+  raider: [hsl3(185, 45, 45)],
+  fighter: [hsl3(215, 60, 45)],
+  stinger: [hsl3(355, 65, 45)],
 };
 
 /** How many `vary` rolls a character has, and how many of them come from the look's main stream. */

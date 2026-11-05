@@ -1,6 +1,6 @@
 /** Renderer checks: WebGL failure paths, the cel pass timing, and partial ink redraws against full bakes. */
 import { writeFileSync } from 'node:fs';
-import { argv, base, browser, errors, frames, H, open, opt, out, page, pet, players, seed, snap, step, tq, W, type Scenarios } from './ctx';
+import { base, browser, errors, frames, H, open, opt, out, page, pet, players, seed, snap, step, tq, W, type Scenarios, flag } from './ctx';
 import { forceLandmark } from './landmarks';
 
 export const shots: Scenarios = {
@@ -206,7 +206,7 @@ export const shots: Scenarios = {
         fullMs: Math.round(med(full)),
         wrong,
       };
-    }, argv.includes('--timing'));
+    }, flag('timing'));
     (report.wrong as { a: string; b: string }[]).forEach((w, i) => {
       if (w.a) {
         writeFileSync(`${out}/partial-${i}.png`, Buffer.from(w.a.split(',')[1], 'base64'));

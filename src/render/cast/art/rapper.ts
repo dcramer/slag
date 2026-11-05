@@ -3,7 +3,7 @@ import { pair } from '../faces';
 import { line } from '../../ink';
 
 /**
- * The rapping paper puppy (docs/CHARACTERS.md → Roster): a chubby cut-out puppy side on, a tall thumb of a knit beanie
+ * The rapping paper puppy (docs/characters/rapper.md): a chubby cut-out puppy side on, a tall thumb of a knit beanie
  * standing straight up off his head, a long floppy ear hanging behind it, a round nose on a snout low on his face, a
  * baggy tee and shorts on big trainers, and a cordless mic held out in front of him. The beanie and the tee are the
  * player's colour, the shorts a dark of it; the fur, the nose, the trainers, the mic and the card's edge down his

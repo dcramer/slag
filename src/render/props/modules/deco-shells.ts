@@ -1,11 +1,13 @@
-import { css, type HSL } from '../../../core/color';
+import { type HSL } from '../../../core/color';
+import { poseFrame } from '../../kit';
 import { hash2 } from '../../../core/rng';
 import type { DecoKind, ModuleOf } from '../../../sim/props';
 import { rotorAngles } from '../../../sim/props/modules/rotor';
 import { blob, line, type P, stroke } from '../../ink';
-import { bar, boxPts, ovalPts, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
+import { bar, boxPts, ovalPts, path, poly, sprite, stamp, tick } from '../../ink-props';
 import type { RC } from '../../kit';
 import type { DrawCtx } from '../common';
+import { flat, type Haze, hazer, type HazeSpec } from '../skins/common';
 
 /**
  * The backdrop shells behind a stage concept's landmark (docs/SETPIECES.md §4): a manor's facade behind its
@@ -21,26 +23,8 @@ type Shell = (rc: RC, m: Deco, d: DrawCtx) => void;
 
 /** Share of the way a shell's tones go toward the sky's haze: far enough to sit back, not so far it vanishes. */
 const HAZE = 0.32;
-
-/** A shell's palette under this level's sky: each tone hazed, and a pen that's a dark of the wood or metal, not black. */
-interface Tones {
-  key: string;
-  c: (base: HSL, dl?: number) => string;
-  hsl: (base: HSL) => HSL;
-  ink: (base: HSL) => string;
-}
-
-function tonesOf(d: DrawCtx): Tones {
-  const fog = d.o.level?.theme.fog;
-  // Haze takes color and contrast, not hue: mixing hues toward a blue sky would turn timber green.
-  const hsl = (c: HSL) => (fog ? { h: c.h, s: c.s * (1 - HAZE * 1.4), l: c.l + (fog.l - c.l) * HAZE } : c);
-  return {
-    key: fog ? `${fog.h | 0},${fog.s | 0},${fog.l | 0}` : '-',
-    hsl,
-    c: (base, dl = 0) => css(hsl(base), dl),
-    ink: (base) => css({ h: base.h, s: base.s * 0.5, l: Math.max(6, hsl(base).l * 0.28) }),
-  };
-}
+/** Haze takes colour and contrast, not hue: mixing hues toward a blue sky would turn timber green. The pen is thin. */
+const SHELL: HazeSpec = { haze: HAZE, desat: 1.4, pen: { dark: 0.28, floor: 6 }, weights: [0.35, 0.9] };
 
 const WOOD: HSL = { h: 26, s: 34, l: 34 };
 const STEEL: HSL = { h: 212, s: 9, l: 46 };
@@ -51,7 +35,7 @@ const GLASS: HSL = { h: 228, s: 24, l: 15 };
 const HAZARD: HSL = { h: 46, s: 88, l: 50 };
 
 /** A member drawn with the backdrop pen: the member's hazed tone in a thin rim of its own dark, thinner than anything in play. */
-function member(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, base: HSL, t: Tones, seed: number) {
+function member(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, base: HSL, t: Haze, seed: number) {
   bar(g, along2(ax, ay, bx, by), w, t.hsl(base), seed, { ink: t.ink(base), rim: 0.25, press: 0.05 });
 }
 
@@ -64,7 +48,7 @@ function along2(ax: number, ay: number, bx: number, by: number): P[] {
 }
 
 /** An open truss between two points: two chords and a zigzag of web between them. */
-function truss(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, width: number, base: HSL, t: Tones, seed: number) {
+function truss(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, width: number, base: HSL, t: Haze, seed: number) {
   const len = Math.hypot(bx - ax, by - ay) || 1;
   const ux = (bx - ax) / len;
   const uy = (by - ay) / len;
@@ -80,23 +64,17 @@ function truss(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, 
   for (const k of [-1, 1]) member(g, ax + nx * k, ay + ny * k, bx + nx * k, by + ny * k, 1.5, base, t, seed + 50 + k);
 }
 
-/** A flat shape in a hazed tone, penned thin. */
-function flat(g: CanvasRenderingContext2D, pts: readonly P[], base: HSL, t: Tones, seed: number, depth = 1) {
-  tone(g, pts, t.hsl(base), { depth });
-  pen(g, pts, seed, 0.35, 0.9, 3, t.ink(base));
-}
-
 /** A foot plate under a leg, so it bears on the ground rather than stopping short of it. */
-function foot(g: CanvasRenderingContext2D, x: number, y: number, w: number, base: HSL, t: Tones, seed: number) {
+function foot(g: CanvasRenderingContext2D, x: number, y: number, w: number, base: HSL, t: Haze, seed: number) {
   flat(g, boxPts(x - w / 2, y - 2.5, w, 2.5, 0.5, seed), base, t, seed, 0.4);
 }
 
 /** A manor wing's front, behind its rooms: gable and slates, a timber frame, tall windows, a chimney, a stone plinth. */
 const facade: Shell = (rc, m, d) => {
-  const t = tonesOf(d);
+  const t = hazer(d, SHELL);
   const { w, h } = m;
   const sd = m.seed % 8;
-  const sp = sprite(`shell|facade|${w}|${h}|${sd}|${t.key}`, -6, -14, w + 12, h + 15, (g) => {
+  const sp = sprite(`shell|facade|${w}|${h}|${sd}|${t.k}`, -6, -14, w + 12, h + 15, (g) => {
     const rh = Math.min(h * 0.3, w * 0.36);
     // Chimney first: the roof overlaps its foot.
     const cx = w * (0.62 + 0.16 * hash2(sd, 1, 1));
@@ -159,9 +137,9 @@ const facade: Shell = (rc, m, d) => {
 
 /** A gantry: two lattice legs on foot plates, a truss across the top with hazard ends and a hoist rail under it. */
 const gantry: Shell = (rc, m, d) => {
-  const t = tonesOf(d);
+  const t = hazer(d, SHELL);
   const { w, h } = m;
-  const sp = sprite(`shell|gantry|${w}|${h}|${t.key}`, -6, -2, w + 12, h + 3, (g) => {
+  const sp = sprite(`shell|gantry|${w}|${h}|${t.k}`, -6, -2, w + 12, h + 3, (g) => {
     const lw = Math.min(10, w * 0.12);
     for (const x of [lw / 2 + 1, w - lw / 2 - 1]) {
       truss(g, x, 10, x, h - 2.5, lw, STEEL, t, x | 0);
@@ -175,8 +153,8 @@ const gantry: Shell = (rc, m, d) => {
 };
 
 /** The flywheel's rim: a ring of plate on spokes, bolted, baked once and turned with the wheel it stands behind. */
-function rim(r: number, n: number, t: Tones) {
-  return sprite(`shell|rim|${r | 0}|${n}|${t.key}`, -r - 3, -r - 3, r * 2 + 6, r * 2 + 6, (g) => {
+function rim(r: number, n: number, t: Haze) {
+  return sprite(`shell|rim|${r | 0}|${n}|${t.k}`, -r - 3, -r - 3, r * 2 + 6, r * 2 + 6, (g) => {
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2;
       const c = Math.cos(a);
@@ -208,13 +186,13 @@ function rim(r: number, n: number, t: Tones) {
 }
 
 const flywheel: Shell = (rc, m, d) => {
-  const t = tonesOf(d);
+  const t = hazer(d, SHELL);
   // Behind the great wheel it turns with the wheel; on its own it holds still.
   const wheel = d.r.mods.find((x): x is ModuleOf<'rotor'> => x.type === 'rotor' && x.swing === 0);
   const r = Math.max(8, Math.min(m.w, m.h) / 2 - 2);
   const cx = wheel ? wheel.hub[0] + d.off[0] : m.at[0] + d.off[0] + m.w / 2;
   const cy = wheel ? wheel.hub[1] + d.off[1] : m.at[1] + d.off[1] + m.h / 2;
-  const a = wheel ? rotorAngles(wheel, rc.frame, d.r.phase)[0] : 0;
+  const a = wheel ? rotorAngles(wheel, poseFrame(rc), d.r.phase)[0] : 0;
   const s = rc.s;
   s.save();
   s.translate(cx, cy);
@@ -225,9 +203,9 @@ const flywheel: Shell = (rc, m, d) => {
 
 /** A pit headframe: splayed timber legs, a back stay, braces, a deck, the sheave wheel on top and its cable down the shaft. */
 const headframe: Shell = (rc, m, d) => {
-  const t = tonesOf(d);
+  const t = hazer(d, SHELL);
   const { w, h } = m;
-  const sp = sprite(`shell|headframe|${w}|${h}|${t.key}`, -4, -4, w + 8, h + 5, (g) => {
+  const sp = sprite(`shell|headframe|${w}|${h}|${t.k}`, -4, -4, w + 8, h + 5, (g) => {
     const top = 14;
     const sr = Math.min(10, w * 0.2);
     const cx = w / 2;
@@ -266,10 +244,10 @@ const headframe: Shell = (rc, m, d) => {
 
 /** A ship's ribs in frame: keel, curved ribs up to the sheer line, a few strakes planked on low, a rail along the top. */
 const hullRibs: Shell = (rc, m, d) => {
-  const t = tonesOf(d);
+  const t = hazer(d, SHELL);
   const { w, h } = m;
   const sd = m.seed % 8;
-  const sp = sprite(`shell|hull|${w}|${h}|${sd}|${t.key}`, -6, -6, w + 12, h + 7, (g) => {
+  const sp = sprite(`shell|hull|${w}|${h}|${sd}|${t.k}`, -6, -6, w + 12, h + 7, (g) => {
     // Sheer and keel lines: both rise toward the bow (right) and the stern.
     const sheer = (x: number) => 4 - 4 * Math.pow((x / w - 0.5) * 2, 2) + (x > w * 0.7 ? -((x - w * 0.7) / w) * 10 : 0);
     const keel = (x: number) => h - 3 - Math.max(0, Math.pow(Math.abs((x / w - 0.5) * 2), 4) * h * 0.55);
@@ -313,11 +291,11 @@ const hullRibs: Shell = (rc, m, d) => {
 
 /** A billboard on scaffolding: lamps on arms, a framed face of pasted sheets selling a crate, legs to the roof. */
 const billboard: Shell = (rc, m, d) => {
-  const t = tonesOf(d);
+  const t = hazer(d, SHELL);
   const { w, h } = m;
   const sd = m.seed % 6;
   const ink = (c: HSL) => t.ink(c);
-  const sp = sprite(`shell|billboard|${w}|${h}|${sd}|${t.key}`, -4, -8, w + 8, h + 9, (g) => {
+  const sp = sprite(`shell|billboard|${w}|${h}|${sd}|${t.k}`, -4, -8, w + 8, h + 9, (g) => {
     const bh = Math.max(14, Math.round(h * 0.56));
     for (let x = w * 0.18; x < w; x += w * 0.32) {
       member(g, x, 0, x, -5, 0.8, STEEL, t, x | 0);
@@ -365,10 +343,10 @@ const billboard: Shell = (rc, m, d) => {
 
 /** A clock dial set into the wall: bezel, face, hour marks heavier at the quarters. Its hands are the rotors in front. */
 const clockface: Shell = (rc, m, d) => {
-  const t = tonesOf(d);
+  const t = hazer(d, SHELL);
   const r = Math.max(8, Math.min(m.w, m.h) / 2 - 1);
   const hands = d.r.mods.some((x) => x.type === 'rotor');
-  const sp = sprite(`shell|clock|${r | 0}|${hands ? 1 : 0}|${t.key}`, -r - 2, -r - 2, r * 2 + 4, r * 2 + 4, (g) => {
+  const sp = sprite(`shell|clock|${r | 0}|${hands ? 1 : 0}|${t.k}`, -r - 2, -r - 2, r * 2 + 4, r * 2 + 4, (g) => {
     flat(g, ovalPts(0, 0, r, r, 1, 0.01, 40), BRASS, t, 1, 1.2);
     flat(g, ovalPts(0, 0, r - 3, r - 3, 2, 0.01, 40), { h: 44, s: 30, l: 80 }, t, 2, 0.6);
     g.fillStyle = t.ink(BRASS);

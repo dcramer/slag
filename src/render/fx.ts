@@ -377,6 +377,9 @@ export class Fx {
           light(rc, p.x, p.y, p.size * 3, p.color, Math.min(1.5, k * 2.25));
           break;
         }
+        default:
+          // Dust and smoke are puffs, drawn on the background first (drawPuffs).
+          break;
       }
     }
   }

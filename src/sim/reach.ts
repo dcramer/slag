@@ -6,6 +6,8 @@ import {
   type CollisionWorld,
   type Controls,
   type Solid,
+  type SolidGrid,
+  solidGrid,
   stepBody as stepBodyImport,
   TILE_ONEWAY_ID as TILE_ONEWAY_ID_IMPORT,
   TILE_SOLID_ID,
@@ -336,9 +338,21 @@ export function movesFrom(level: Level, body: Body, solids: readonly Solid[] = [
  * `movesFrom` for many bodies on one unchanged level, sharing one tracer: what
  * a caller asking from every cell of a route uses (gen/level/precision.ts).
  */
-export function movesOn(level: Level): (body: Body) => Move[] {
+export function movesOn(level: Level): (body: Body, read?: ReadBox) => Move[] {
   const tracer = tracerFor(level, 0);
-  return (body) => tracer.moves(body, []);
+  return (body, read) => {
+    const out = tracer.moves(body, []);
+    if (read) tracer.readBox(read);
+    return out;
+  };
+}
+
+/** Tiles a trace read, inclusive (may reach past the level's edge, where tiles never change): its answer holds while none of them change. */
+export interface ReadBox {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
 }
 
 /** The parts' wind columns blowing `f` frames from now (sim/wind.ts). Only a bot's moves trace in them: the proof never does. */
@@ -364,6 +378,34 @@ function tracerFor(level: Level, air: number, columns?: WindColumns): Tracer {
   tracer.setSurface(footing(level), level.ground);
   tracer.blow(air === 0 ? null : { vx: air, vy: 0, ky: 0, dy: 0 }, columns);
   return tracer;
+}
+
+/** Below this many solids a plain scan beats building a grid. */
+const GRID_MIN = 12;
+/** The last grid built, and the solids as they stood: a bot traces many moves against one frame's solids. */
+let lastGrid: { grid: SolidGrid; seen: Solid[]; at: number[] } | null = null;
+
+/**
+ * A grid over `solids` for tracing (physics.ts `SolidGrid`), reused while
+ * they're the same solids where they were: the race's list is refilled in
+ * place every frame, so it's checked by content, not by the array.
+ */
+function gridOf(solids: readonly Solid[]): SolidGrid | undefined {
+  if (solids.length < GRID_MIN) return undefined;
+  const hit = lastGrid;
+  if (hit && hit.grid.solids === solids && hit.seen.length === solids.length) {
+    let same = true;
+    for (let i = 0; same && i < solids.length; i++) {
+      const s = solids[i];
+      const j = i * 4;
+      same = s === hit.seen[i] && s.x === hit.at[j] && s.y === hit.at[j + 1] && s.w === hit.at[j + 2] && s.h === hit.at[j + 3];
+    }
+    if (same) return hit.grid;
+  }
+  const at: number[] = [];
+  for (const s of solids) at.push(s.x, s.y, s.w, s.h);
+  lastGrid = { grid: solidGrid(solids), seen: solids.slice(), at };
+  return lastGrid.grid;
 }
 
 /** What a standing body stands on in a trace: the solid it's on if it's there, else the tile (a part's block written into the tiles is terrain). */
@@ -736,12 +778,31 @@ class Tracer {
 
   /** Moves found by `moves`, while it runs; null otherwise, so the proof's traces record nothing. */
   private found: Move[] | null = null;
+  /** Box of tiles read by every root of the last `moves` (unclipped: the caller clips). */
+  private used: ReadBox = { x0: 0, y0: 0, x1: -1, y1: -1 };
+
+  /** Widen `used` by the box the root just traced read. */
+  private widen(): void {
+    const u = this.used;
+    u.x0 = Math.min(u.x0, this.bx0);
+    u.y0 = Math.min(u.y0, this.by0);
+    u.x1 = Math.max(u.x1, this.bx1);
+    u.y1 = Math.max(u.y1, this.by1);
+  }
+
+  /** Copy the tiles the last `moves` read into `out`. */
+  readBox(out: ReadBox): void {
+    Object.assign(out, this.used);
+  }
 
   /** Every root from `b0` as it is, recorded, among `solids` (see movesFrom). */
   moves(b0: Body, solids: readonly Solid[]): Move[] {
     this.world.solids = solids;
+    this.world.grid = gridOf(solids);
     const tx = Math.floor((b0.x + b0.w / 2) / TILE);
     const ty = Math.floor((b0.y + b0.h - 1) / TILE);
+    // The one-way check below reads the tile underfoot before any root starts its own box.
+    this.used = { x0: tx, y0: ty, x1: tx, y1: ty + 1 };
     const airborne = !b0.onGround;
     const oneWay = !airborne && this.world.tileAt(tx, ty + 1) === T_ONEWAY;
     const roots: (() => Policy)[] = airborne ? [...AIR_ROOTS] : [];
@@ -753,6 +814,7 @@ class Tracer {
       const b = { ...b0 };
       if (b.onGround) b.groundRef = groundOf(b0, solids, oneWay);
       this.trace(b, 0, make(), airborne, { controls: [], path: [] });
+      this.widen();
     }
     if (!airborne)
       for (const dir of [-1, 1] as const)
@@ -762,10 +824,12 @@ class Tracer {
           const b = { ...b0 };
           b.groundRef = groundOf(b0, solids, oneWay);
           this.step(b, dir, ty * this.w + tx, run);
+          this.widen();
         }
     const out = this.found;
     this.found = null;
     this.world.solids = [];
+    this.world.grid = undefined;
     return out;
   }
 
@@ -873,6 +937,7 @@ class Tracer {
   brake(b0: Body, solids: readonly Solid[]): Move | null {
     if (!b0.onGround) return null;
     this.world.solids = solids;
+    this.world.grid = gridOf(solids);
     const tx = Math.floor((b0.x + b0.w / 2) / TILE);
     const ty = Math.floor((b0.y + b0.h - 1) / TILE);
     this.reset(tx, ty);
@@ -896,6 +961,7 @@ class Tracer {
     }
     this.touched = false;
     this.world.solids = [];
+    this.world.grid = undefined;
     return out;
   }
 
@@ -961,15 +1027,17 @@ const AIR_UP = 30;
  * Infinity wherever none lead, which is what a bot needs to follow a route
  * (src/brain/route.ts); `careful` keeps only landings it can stop on, the
  * moves `movesFrom` offers. `target` measures to another cell than the flag.
+ * `cache`, made with the same `careful`, keeps the traces for the next field
+ * on this level: a race's parts change a few cells between rounds.
  */
-export function goalField(level: Level, opts: { air?: boolean; target?: number; careful?: boolean } = {}): Float64Array {
+export function goalField(level: Level, opts: { air?: boolean; target?: number; careful?: boolean; cache?: ReachCache } = {}): Float64Array {
   const { air = true } = opts;
   const { w, h, tiles } = level;
   const n = w * h;
   const rev: number[][] = Array.from({ length: n }, () => []);
   const starts: number[] = [];
   for (let k = 0; k < n; k++) if (isStandable(level, k % w, (k - (k % w)) / w)) starts.push(k);
-  new ReachCache(level, CALM, opts.careful).analyze(level, false, {
+  (opts.cache ?? new ReachCache(level, CALM, opts.careful)).analyze(level, false, {
     from: { cells: starts, known: new Uint8Array(n) },
     onEdge: (from, to) => {
       if (from >= 0 && from !== to && !rev[to].includes(from)) rev[to].push(from);

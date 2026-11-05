@@ -4,9 +4,10 @@ import type { PlacedProp } from '../../sim/props';
 import { type Grid, T_EMPTY, T_ONEWAY } from '../level/kit';
 import { jumpProfile } from '../level/probe';
 import { makeStyle, type Piece, type Site } from '../setpieces/place';
-import { berthMax, climb, digBerth, fitsWith, footing, structureCols, structureOf, trial } from './harbor-kit';
+import { climb, digBerth, fitsWith, footing, structureCols, structureOf, trial } from './harbor-kit';
 import { defineConcept } from './contract';
 import type { Landmark } from './types';
+import { oneGap } from './kit';
 
 /**
  * Galleon at Berth (docs/SETPIECES.md, Harbor): a whole ship moored past the berth, run deck by deck. It is
@@ -256,7 +257,7 @@ export const GALLEON = defineConcept({
   budget: 2,
   names: ['The Galleon at {place}', 'The Flagship of {place}', '{place}: All Hands', 'The Ship in {place} Harbour'],
   codex: { about: 'A whole ship at berth with her guns run out. Along the main deck, down a hatch through the gun deck, or up the rigging yard to yard.' },
-  box: (k, rng) => ({ w: berthMax() + structureCols(k.W, rng, 18, 22), h: 3 * Math.max(3, Math.min(4, climb())) + 4 }),
+  box: (k, rng) => ({ w: oneGap() + structureCols(k.W, rng, 18, 22), h: 3 * Math.max(3, Math.min(4, climb())) + 4 }),
   build: buildGalleon,
   pieces: galleonPieces,
   scale: 'grand',

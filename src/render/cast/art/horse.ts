@@ -2,7 +2,7 @@ import { brows, eye, mouthMark } from '../faces';
 import { type D, type KindArt, mark, poly, spot, toned, Y } from '../kit';
 
 /**
- * The barnyard party game's horse (docs/CHARACTERS.md → Roster): on all four legs, side on, in a cheap horse
+ * The barnyard party game's horse (docs/characters/horse.md): on all four legs, side on, in a cheap horse
  * costume: a long neck with the mane standing up along it as a crest, a long blunt head with a pale nose, a
  * long straight tail hanging to the heels, flat hooves wider than the legs, a scarf in a dark of the costume
  * wound round the neck and a zip down the chest. A rendered kind draws from its frames

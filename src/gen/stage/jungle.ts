@@ -1,16 +1,15 @@
 import { datan2, dhypot } from '../../core/dmath';
-import type { Cell, Vec } from '../../core/geom';
+import { type Cell, DOWN, UP, type Vec } from '../../core/geom';
 import type { Rng } from '../../core/rng';
-import { type LevelProfile, T_ONEWAY, type TileRect } from '../../sim/level';
+import { T_ONEWAY, type TileRect } from '../../sim/level';
 import type { Module, PropStyle } from '../../sim/props';
-import { type Grid, hintGap, POCKET } from '../level/kit';
-import { jumpProfile } from '../level/probe';
-import { easyRise, hardGap, type Knobs, pit, TWO_PART_TRIES, undercut } from '../level/sculptors/common';
-import { BRIDGE_W } from '../level/types';
+import { type Grid } from '../level/kit';
+import { easyRise, type Knobs, TWO_PART_TRIES } from '../level/sculptors/common';
 import { snapjaw } from '../setpieces/jungle';
-import { makeStyle, type Piece, SAFE_TILES, type Site } from '../setpieces/place';
+import { makeStyle, type Piece, type Site } from '../setpieces/place';
 import { defineConcept } from './contract';
 import type { Concept, Landmark } from './types';
+import { bankCrossing, bankKit, boxH, col, DOOR, ledges, listOf, listSig, oneGap, passage, record, shell, stepWidths, twoGap, ways } from './kit';
 
 /**
  * Jungle stage concepts (docs/SETPIECES.md, Jungle): five places, each one landmark that owns the level's
@@ -36,136 +35,10 @@ import type { Concept, Landmark } from './types';
  * one way through (each way is a genuine alternative); `sig{i}` are the structural numbers the seed rolled.
  */
 
-/** Columns a landmark keeps from either end (sculptors/common.ts claimSite). */
-const SITE_MARGIN = POCKET + SAFE_TILES;
 /** Flat bank between the river and the structure: the bridge's landing and a run-up. */
 const BANK = 3;
-/** Rows a passage through a structure is tall: a runner's height and a jump's start. */
-const DOOR = 3;
 
-const UP = -Math.PI / 2;
-const DOWN = Math.PI / 2;
-
-/** The widest one-part crossing at this gravity (hardGap's top end). */
-function oneGap(gravity?: number): number {
-  const j = jumpProfile(gravity);
-  return Math.max(j.gap + 2, BRIDGE_W + 2 * j.walkGap);
-}
-
-/** The one-part crossing a classic level's box makes room for: a column short of hardGap's widest. */
-function snugGap(gravity?: number): number {
-  return Math.min(oneGap(gravity), jumpProfile(gravity).gap + 3);
-}
-
-/** The widest two-part crossing at this gravity. */
-function twoGap(gravity?: number): number {
-  const j = jumpProfile(gravity);
-  return Math.max(j.gapAt(-6) + j.rise + 1, j.gap + 2 * BRIDGE_W + j.walkGap + 1);
-}
-
-/**
- * Share of levels whose landmark's own crossing takes two parts, where its box has room for a two-part one
- * (wide levels). A level built round a landmark has little room left for the sculptor's own pools, so the
- * wide ones ask more often to keep the theme near TWO_PARTS (measured with `pnpm level --stats 200`).
- */
-const LANDMARK_TWO = 0.4;
-const asksTwo = (k: Knobs) => k.challenge < Math.max(k.twoParts, LANDMARK_TWO);
-
-/** Columns for the crossing a landmark owns: two-part where asked and there's room, else one-part. Never rolls. */
-function crossFor(k: Knobs, struct: number): number {
-  if (asksTwo(k) && twoGap() + struct <= k.W - 2 * SITE_MARGIN) return twoGap();
-  return k.W > 56 ? oneGap() : snugGap();
-}
-
-/** Does a landmark of `struct` columns fit beside a one-part crossing on this level? */
-function roomFor(p: Partial<LevelProfile>, struct: number): boolean {
-  return snugGap(p.gravity) + struct <= (p.w ?? 48) - 2 * SITE_MARGIN;
-}
-
-/** The crossing the build digs: as wide as `parts` take, or as the box allows. */
-const crossCols = (parts: number) => (parts >= 2 ? twoGap() : oneGap());
-
-/** Columns of structure for a box: what a classic level's middle leaves, more on a wide one. */
-function structCols(k: Knobs, rng: Rng, min: number, wide: readonly [number, number], grand = false): number {
-  const room = k.W - 2 * SITE_MARGIN - crossFor(k, min + BANK) - BANK;
-  // A grand landmark owns a classic level's whole middle.
-  return Math.min(room, k.W > 56 ? rng.int(wide[0], wide[1]) : grand ? room : min + rng.int(0, 3));
-}
-
-/** Rows a box asks for, never more than a level of this height has over its ground (claimSite needs a row of sky). */
-const boxH = (k: Knobs, h: number) => Math.min(k.H - 9, h);
-
-/**
- * The swamp river in front of a landmark: a `hardGap` pit dug to the bottom at the right end of its `cols`
- * columns, its bridge hinted and its far bank undercut. Columns it doesn't need stay riverbank. Returns
- * the gap's columns.
- */
-function river(g: Grid, rng: Rng, x0: number, cols: number, G: number, parts: number): [number, number] {
-  const b = x0 + cols - 1;
-  if (parts <= 0) return [b + 1, b];
-  const gw = Math.min(cols, hardGap(rng, parts));
-  const a = b - gw + 1;
-  pit(g, a, b, G, false);
-  hintGap(g, a, b, G);
-  undercut(g, b + 1, 2, G);
-  return [a, b];
-}
-
-/** One-way ledges two wide at columns x, x+1, a comfortable hop apart from the ground row G up to the surface row `top`. */
-function ledges(g: Grid, x: number, top: number, G: number): number[] {
-  const R = easyRise();
-  const rows: number[] = [];
-  for (let y = G - R; y > top; y -= R) {
-    for (const c of [x, x + 1]) g.set(c, y, T_ONEWAY, true);
-    rows.push(y);
-  }
-  return rows;
-}
-
-/** Solid column x from row G - h to G - 1. */
-function col(g: Grid, x: number, h: number, G: number): void {
-  if (h > 0) g.fill(x, G - h, x, G - 1, 1, true);
-}
-
-/** A passage DOOR rows tall at the ground (row G is the floor) from column a to b. */
-function passage(g: Grid, a: number, b: number, G: number): void {
-  g.clear(Math.min(a, b), G - DOOR, Math.max(a, b), G - 1);
-}
-
-/** The anchors of the ways through: each a rect that, filled, shuts that way. */
-function ways(rects: readonly TileRect[]): Record<string, Vec> {
-  const out: Record<string, Vec> = {};
-  rects.forEach((r, i) => {
-    out[`way${i}`] = [r.x, r.y];
-    out[`way${i}s`] = [r.w, r.h];
-  });
-  return out;
-}
-
-/** A list of layout numbers as one signature pair: how many, and a sum weighted by place, so a reorder shows. */
-const listSig = (xs: readonly number[]): Vec => [xs.length, xs.reduce((t, v, i) => t + v * (i + 1), 0)];
-
-/** Steps `n` columns wide in all, `count` of them, each at least one column, the spare spread at random. */
-function stepWidths(rng: Rng, count: number, n: number): number[] {
-  const out = Array.from({ length: count }, () => 1);
-  for (let spare = n - count; spare > 0; spare--) {
-    const open = out.map((w, i) => (w < 3 ? i : -1)).filter((i) => i >= 0);
-    if (!open.length) break;
-    out[rng.pick(open)]++;
-  }
-  return out;
-}
-
-/** Points recorded as `${key}{i}` anchors, back as a list. */
-function listOf(l: Landmark, key: string): Vec[] {
-  const out: Vec[] = [];
-  for (let i = 0; l.anchors[`${key}${i}`]; i++) out.push(l.anchors[`${key}${i}`]);
-  return out;
-}
-const record = (key: string, xs: readonly Vec[]) => Object.fromEntries(xs.map((v, i) => [`${key}${i}`, v]));
-
-/** A backdrop shell (drawn by the jungle skin, chosen by the level's concept and the box's shape). */
-const shell = (rng: Rng, at: Vec, w: number, h: number): Module => ({ type: 'deco', kind: 'facade', at, w, h, seed: rng.int(0, 1 << 20) });
+const { crossFor, roomFor, crossCols, structCols } = bankKit({ bank: BANK, two: 0.4 });
 
 const STONE = (rng: Rng): PropStyle => makeStyle(rng, ['jade', 'steel'], [40, 100, 160], { woodHue: rng.range(18, 30), glowHue: rng.range(110, 160) });
 const LEAFY = (rng: Rng): PropStyle => makeStyle(rng, 'jade', [100, 120, 140], { woodHue: rng.range(20, 32), glowHue: rng.range(80, 130) });
@@ -213,7 +86,7 @@ function buildTemple(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const G = at.y + at.h;
   const cross = Math.min(at.w - TEMPLE_MIN - BANK, crossCols(parts));
   g.clear(at.x, 0, at.x + at.w - 1, G - 1);
-  river(g, rng, at.x, cross, G, parts);
+  bankCrossing(g, rng, at.x, cross, G, parts);
   const s0 = at.x + cross + BANK;
   const s1 = at.x + at.w - 1;
   // The plinth: the passage through its foot, its roof two or three rows thick.
@@ -359,7 +232,7 @@ export const STEP_TEMPLE = defineConcept({
   },
   box: (k, rng) => {
     const cross = crossFor(k, TEMPLE_MIN + BANK);
-    return { w: cross + BANK + structCols(k, rng, TEMPLE_MIN, [20, 32], true), h: boxH(k, DOOR + 3 + 4 * easyRise() + 4) };
+    return { w: cross + BANK + structCols(k, rng, TEMPLE_MIN, [20, 32], true), h: boxH(k.H, DOOR + 3 + 4 * easyRise() + 4) };
   },
   build: buildTemple,
   pieces: (rng, s, l) => templePieces(rng, s, l),
@@ -374,7 +247,7 @@ function buildCliff(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const G = at.y + at.h;
   const cross = Math.min(at.w - CLIFF_MIN - BANK, crossCols(parts));
   g.clear(at.x, 0, at.x + at.w - 1, G - 1);
-  river(g, rng, at.x, cross, G, parts);
+  bankCrossing(g, rng, at.x, cross, G, parts);
   const s0 = at.x + cross + BANK;
   const s1 = at.x + at.w - 1;
   const c0 = s0 + 2;
@@ -487,7 +360,7 @@ export const WATERFALL_CLIFF = defineConcept({
   },
   box: (k, rng) => {
     const cross = crossFor(k, CLIFF_MIN + BANK);
-    return { w: cross + BANK + structCols(k, rng, CLIFF_MIN, [16, 26]), h: boxH(k, 5 * easyRise() + 6) };
+    return { w: cross + BANK + structCols(k, rng, CLIFF_MIN, [16, 26]), h: boxH(k.H, 5 * easyRise() + 6) };
   },
   build: buildCliff,
   pieces: (rng, _s, l) => cliffPieces(rng, l),
@@ -504,7 +377,7 @@ function buildVillage(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark 
   const G = at.y + at.h;
   const cross = Math.min(at.w - VILLAGE_MIN - BANK, crossCols(parts));
   g.clear(at.x, 0, at.x + at.w - 1, G - 1);
-  river(g, rng, at.x, cross, G, parts);
+  bankCrossing(g, rng, at.x, cross, G, parts);
   const s0 = at.x + cross + BANK;
   const s1 = at.x + at.w - 1;
   // Decks a storey up (a runner walks the floor under them), each tree's a little higher or lower than the last.
@@ -645,7 +518,7 @@ export const CANOPY_VILLAGE = defineConcept({
   },
   box: (k, rng) => {
     const cross = crossFor(k, VILLAGE_MIN + BANK);
-    return { w: cross + BANK + structCols(k, rng, VILLAGE_MIN, [22, 34], true), h: boxH(k, 3 * easyRise() + 10) };
+    return { w: cross + BANK + structCols(k, rng, VILLAGE_MIN, [22, 34], true), h: boxH(k.H, 3 * easyRise() + 10) };
   },
   build: buildVillage,
   pieces: (rng, _s, l) => villagePieces(rng, l),
@@ -660,7 +533,7 @@ function buildGorge(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const G = at.y + at.h;
   const cross = Math.min(at.w - GORGE_MIN - BANK, crossCols(parts));
   g.clear(at.x, 0, at.x + at.w - 1, G - 1);
-  const [a, b] = river(g, rng, at.x, cross, G, parts);
+  const [a, b] = bankCrossing(g, rng, at.x, cross, G, parts);
   const s0 = at.x + cross + BANK;
   const s1 = at.x + at.w - 1;
   // The bramble bluff: up its roots (one-way), over its top, or through the tunnel under it.
@@ -776,7 +649,7 @@ export const THORN_GORGE = defineConcept({
   },
   box: (k, rng) => {
     const cross = crossFor(k, GORGE_MIN + BANK);
-    return { w: cross + BANK + structCols(k, rng, GORGE_MIN, [16, 26]), h: boxH(k, DOOR + 3 + easyRise() + 8) };
+    return { w: cross + BANK + structCols(k, rng, GORGE_MIN, [16, 26]), h: boxH(k.H, DOOR + 3 + easyRise() + 8) };
   },
   build: buildGorge,
   pieces: (rng, s, l) => gorgePieces(rng, s, l),
@@ -791,7 +664,7 @@ function buildGate(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const G = at.y + at.h;
   const cross = Math.min(at.w - GATE_MIN - BANK, crossCols(parts));
   g.clear(at.x, 0, at.x + at.w - 1, G - 1);
-  river(g, rng, at.x, cross, G, parts);
+  bankCrossing(g, rng, at.x, cross, G, parts);
   const s0 = at.x + cross + BANK;
   const s1 = at.x + at.w - 1;
   // The monolith: tall, sometimes crowned a row proud at either end, the gate through its foot.
@@ -889,7 +762,7 @@ export const SUN_GATE = defineConcept({
   },
   box: (k, rng) => {
     const cross = crossFor(k, GATE_MIN + BANK);
-    return { w: cross + BANK + structCols(k, rng, GATE_MIN, [14, 18]), h: boxH(k, 5 * easyRise() + 7) };
+    return { w: cross + BANK + structCols(k, rng, GATE_MIN, [14, 18]), h: boxH(k.H, 5 * easyRise() + 7) };
   },
   build: buildGate,
   pieces: (rng, _s, l) => gatePieces(rng, l),

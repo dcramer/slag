@@ -4,6 +4,7 @@ import type { Decor, DecorDef } from './decor';
 import { inkFor, line, type P, stroke } from './ink';
 import { bar, barLine, boxPts, glint, ovalPts, part, path, pen, poly, tick, tone } from './ink-props';
 import { bulb, circle, flutter, light } from './kit';
+import { hashKnobs, low16 } from './decor-kit';
 
 /**
  * The city roofs' own decor, inked like the brick and concrete they stand on: pigeons on the parapet, a
@@ -22,8 +23,7 @@ const TIN: HSL = hsl3(205, 8, 62);
 const PIGEON: HSL = hsl3(222, 10, 50);
 const LEAF: HSL = hsl3(110, 36, 34);
 
-const sd = (d: Decor) => d.seed & 0xffff;
-const k01 = (d: Decor, n: number) => hash2(n, 11, sd(d));
+const knob = hashKnobs(11);
 const fx = (d: Decor) => (d.flip ? -1 : 1);
 
 /** Points from (x, y) offsets about the foot, scaled by the piece's size and mirrored by its flip. */
@@ -97,7 +97,7 @@ export const ROOFTOPS_DECOR = {
         const dir = (i + (d.flip ? 1 : 0)) % 2 ? -1 : 1;
         const t = rc.t * 1.1 + i * 1.7 + (d.seed % 13);
         const peck = Math.sin(t) > 0.9 ? 1.6 : 0;
-        pigeon(rc.s, d.x + (i - (n - 1) / 2) * 10, d.y + 0.5, dir, 1.5 * d.size, peck, sd(d) + i);
+        pigeon(rc.s, d.x + (i - (n - 1) / 2) * 10, d.y + 0.5, dir, 1.5 * d.size, peck, low16(d.seed) + i);
       }
     },
   },
@@ -107,24 +107,34 @@ export const ROOFTOPS_DECOR = {
       // A brick stack, its coping slab and one or two clay pots on top.
       const w = 8;
       const h = 13 * d.size;
-      const pts = boxPts(d.x - w / 2, d.y - h, w, h + 0.5, 0.6, sd(d), 0.08);
-      part(s, pts, shift(BRICK, 0, 0, (k01(d, 1) - 0.5) * 8), sd(d), { depth: 1, thin: 0.4, thick: 1 });
+      const pts = boxPts(d.x - w / 2, d.y - h, w, h + 0.5, 0.6, low16(d.seed), 0.08);
+      part(s, pts, shift(BRICK, 0, 0, (knob(d, 1) - 0.5) * 8), low16(d.seed), { depth: 1, thin: 0.4, thick: 1 });
       // A few brick courses, lifted where the pen skipped, a header joint here and there.
       for (let y = d.y - 3.5, i = 0; y > d.y - h + 2; y -= 4, i++) {
-        const cut = k01(d, i + 9) < 0.4;
+        const cut = knob(d, i + 9) < 0.4;
         tick(s, d.x - w / 2 + 0.8, y, cut ? d.x - 0.5 : d.x + w / 2 - 0.8, y, 0.35, y, css(BRICK, -18));
         if (i % 2) tick(s, d.x + 1.2, y, d.x + 1.2, y - 3.6, 0.3, y + 3, css(BRICK, -18));
       }
-      part(s, boxPts(d.x - w / 2 - 1, d.y - h - 1.6, w + 2, 2, 0.4, sd(d) + 1, 0.05), hsl3(30, 6, 62), sd(d) + 1, { depth: 0.4, thin: 0.3, thick: 0.8 });
+      part(s, boxPts(d.x - w / 2 - 1, d.y - h - 1.6, w + 2, 2, 0.4, low16(d.seed) + 1, 0.05), hsl3(30, 6, 62), low16(d.seed) + 1, {
+        depth: 0.4,
+        thin: 0.3,
+        thick: 0.8,
+      });
       const pots = 1 + (d.seed % 2);
       for (let i = 0; i < pots; i++) {
         const px = d.x + (pots === 1 ? 0 : (i - 0.5) * 3.8);
-        const ph = 4 + k01(d, i + 2) * 2;
-        part(s, poly(px - 1.6, d.y - h - 1.6, px - 1.1, d.y - h - 1.6 - ph, px + 1.1, d.y - h - 1.6 - ph, px + 1.6, d.y - h - 1.6), TERRA, sd(d) + 3 + i, {
-          depth: 0.4,
-          thin: 0.3,
-          thick: 0.7,
-        });
+        const ph = 4 + knob(d, i + 2) * 2;
+        part(
+          s,
+          poly(px - 1.6, d.y - h - 1.6, px - 1.1, d.y - h - 1.6 - ph, px + 1.1, d.y - h - 1.6 - ph, px + 1.6, d.y - h - 1.6),
+          TERRA,
+          low16(d.seed) + 3 + i,
+          {
+            depth: 0.4,
+            thin: 0.3,
+            thick: 0.7,
+          },
+        );
         s.fillStyle = inkFor(TERRA);
         s.fillRect(px - 1, d.y - h - 1.8 - ph, 2, 0.8);
       }
@@ -136,7 +146,7 @@ export const ROOFTOPS_DECOR = {
       // A low pitched light on a curb: two glass slopes in a metal frame, the glazing bars over them.
       const w = 17 * d.size;
       const curb = 3;
-      part(s, boxPts(d.x - w / 2, d.y - curb, w, curb + 0.5, 0.4, sd(d), 0.06), hsl3(30, 6, 54), sd(d), { depth: 0.4, thin: 0.3, thick: 0.8 });
+      part(s, boxPts(d.x - w / 2, d.y - curb, w, curb + 0.5, 0.4, low16(d.seed), 0.06), hsl3(30, 6, 54), low16(d.seed), { depth: 0.4, thin: 0.3, thick: 0.8 });
       const top = d.y - curb - 7.5 * d.size;
       const roof = poly(d.x - w / 2 + 0.6, d.y - curb, d.x - 1.5, top, d.x + 1.5, top, d.x + w / 2 - 0.6, d.y - curb);
       tone(s, roof, GLASS, { depth: 0.8 });
@@ -149,7 +159,7 @@ export const ROOFTOPS_DECOR = {
         barLine(s, d.x - w / 2 + 0.6 + (w - 1.2) * u, d.y - curb, d.x - 1.5 + 3 * u, top, 0.55, shift(TIN, -6), i, { rim: 0.2 });
       }
       glint(s, poly(d.x - w / 2 + 3, d.y - curb - 1, d.x - 4, top + 2), 'rgba(220,235,255,0.7)', 0.8);
-      pen(s, roof, sd(d) + 1, 0.35, 0.9, 3, inkFor(GLASS));
+      pen(s, roof, low16(d.seed) + 1, 0.35, 0.9, 3, inkFor(GLASS));
     },
     live(rc, d) {
       // Someone's home: a warm lamp under the glass at night.
@@ -166,32 +176,32 @@ export const ROOFTOPS_DECOR = {
         const h = 4.4;
         for (let i = 0; i < 3; i++) {
           const px = d.x - w / 2 + 2.2 + i * ((w - 4.4) / 2);
-          tick(s, px, d.y - h, px + (k01(d, i) - 0.5) * 1.2, d.y - h - 9 * d.size, 0.5, i, css(WOOD, 12));
+          tick(s, px, d.y - h, px + (knob(d, i) - 0.5) * 1.2, d.y - h - 9 * d.size, 0.5, i, css(WOOD, 12));
           for (let j = 0; j < 4; j++) {
             s.fillStyle = css(LEAF, j % 2 ? 6 : -4);
             const ly = d.y - h - 2 - j * 2.2 * d.size;
             path(s, ovalPts(px + (j % 2 ? 1.6 : -1.6), ly, 2, 1.1, i * 9 + j, 0.1, 8));
             s.fill();
           }
-          if (k01(d, i + 5) < 0.6) {
+          if (knob(d, i + 5) < 0.6) {
             s.fillStyle = inkFor(hsl3(6, 70, 50));
             circle(s, px + 1.2, d.y - h - 3.6, 1.25);
             s.fillStyle = css(hsl3(6, 70, 50));
             circle(s, px + 1.2, d.y - h - 3.6, 0.9);
           }
         }
-        part(s, boxPts(d.x - w / 2, d.y - h, w, h + 0.5, 0.5, sd(d), 0.06), WOOD, sd(d), { depth: 0.6, thin: 0.35, thick: 0.9 });
+        part(s, boxPts(d.x - w / 2, d.y - h, w, h + 0.5, 0.5, low16(d.seed), 0.06), WOOD, low16(d.seed), { depth: 0.6, thin: 0.35, thick: 0.9 });
         for (const x of [d.x - w / 4, d.x + w / 4]) tick(s, x, d.y - h + 0.6, x, d.y - 0.2, 0.35, x, css(WOOD, -16));
       } else {
         for (let i = 0; i < 3; i++) {
           const px = d.x + (i - 1) * 5;
-          const ph = 4 + k01(d, i) * 1.6;
+          const ph = 4 + knob(d, i) * 1.6;
           s.fillStyle = css(LEAF, i * 4 - 4);
           for (let j = 0; j < 3; j++) {
             path(s, ovalPts(px + (j - 1) * 1.4, d.y - ph - 1.8 - (j % 2) * 1.2, 1.4, 1.9, i * 7 + j, 0.1, 8));
             s.fill();
           }
-          part(s, poly(px - 2.2, d.y - ph, px + 2.2, d.y - ph, px + 1.6, d.y + 0.4, px - 1.6, d.y + 0.4), TERRA, sd(d) + i, {
+          part(s, poly(px - 2.2, d.y - ph, px + 2.2, d.y - ph, px + 1.6, d.y + 0.4, px - 1.6, d.y + 0.4), TERRA, low16(d.seed) + i, {
             depth: 0.4,
             thin: 0.3,
             thick: 0.7,
@@ -207,11 +217,11 @@ export const ROOFTOPS_DECOR = {
       const w = 7.5 * d.size;
       const h = 10 * d.size;
       for (const x of [-2.2, 2.2])
-        part(s, boxPts(d.x + x - 1.6, d.y - 1.6, 3.2, 2.1, 0.3, sd(d) + x, 0.05), BRICK, sd(d) + x, { depth: 0.3, thin: 0.3, thick: 0.7 });
-      const body = boxPts(d.x - w / 2, d.y - 1.6 - h, w, h, 1.4, sd(d), 0.3);
-      part(s, body, d.color, sd(d), { depth: 0.9, thin: 0.4, thick: 1 });
+        part(s, boxPts(d.x + x - 1.6, d.y - 1.6, 3.2, 2.1, 0.3, low16(d.seed) + x, 0.05), BRICK, low16(d.seed) + x, { depth: 0.3, thin: 0.3, thick: 0.7 });
+      const body = boxPts(d.x - w / 2, d.y - 1.6 - h, w, h, 1.4, low16(d.seed), 0.3);
+      part(s, body, d.color, low16(d.seed), { depth: 0.9, thin: 0.4, thick: 1 });
       for (const u of [0.22, 0.78]) tick(s, d.x - w / 2 + 0.4, d.y - 1.6 - h * u, d.x + w / 2 - 0.4, d.y - 1.6 - h * u, 0.55, u * 10, css(d.color, -22));
-      rod(s, at(d, 1.5, -12.6, 1.5, -14.5, 4, -14.5), 1, shift(TIN, -6), sd(d) + 4);
+      rod(s, at(d, 1.5, -12.6, 1.5, -14.5, 4, -14.5), 1, shift(TIN, -6), low16(d.seed) + 4);
     },
   },
   roofdoor: {
@@ -221,22 +231,22 @@ export const ROOFTOPS_DECOR = {
       // A brick doorway, wider than its door, a step at its foot.
       const w = 13;
       const h = 19 * Math.min(1.1, d.size);
-      const frame = boxPts(d.x - w / 2, d.y - h, w, h + 0.5, 0.6, sd(d), 0.05);
-      part(s, frame, shift(BRICK, -4), sd(d), { depth: 0.6, thin: 0.35, thick: 0.9 });
+      const frame = boxPts(d.x - w / 2, d.y - h, w, h + 0.5, 0.6, low16(d.seed), 0.05);
+      part(s, frame, shift(BRICK, -4), low16(d.seed), { depth: 0.6, thin: 0.35, thick: 0.9 });
       for (let y = d.y - 3; y > d.y - h + 2; y -= 3.5) tick(s, d.x - w / 2 + 0.6, y, d.x - w / 2 + 2.2, y, 0.35, y, css(BRICK, -20));
       const dx0 = d.x - 3.6;
-      const door = boxPts(dx0, d.y - h + 3.2, 7.2, h - 4.4, 0.3, sd(d) + 1, 0.04);
-      const paint = hsl3(k01(d, 3) < 0.5 ? 150 : 8, 30, 34);
-      part(s, door, paint, sd(d) + 1, { depth: 0.5, thin: 0.3, thick: 0.7 });
+      const door = boxPts(dx0, d.y - h + 3.2, 7.2, h - 4.4, 0.3, low16(d.seed) + 1, 0.04);
+      const paint = hsl3(knob(d, 3) < 0.5 ? 150 : 8, 30, 34);
+      part(s, door, paint, low16(d.seed) + 1, { depth: 0.5, thin: 0.3, thick: 0.7 });
       // Its wired glass pane, the push bar, and a step.
-      part(s, boxPts(dx0 + 1.6, d.y - h + 5, 4, 3.6, 0.3, sd(d) + 4, 0.05), GLASS, sd(d) + 4, { depth: 0.3, thin: 0.25, thick: 0.6 });
+      part(s, boxPts(dx0 + 1.6, d.y - h + 5, 4, 3.6, 0.3, low16(d.seed) + 4, 0.05), GLASS, low16(d.seed) + 4, { depth: 0.3, thin: 0.25, thick: 0.6 });
       tick(s, dx0 + 1, d.y - h * 0.45, dx0 + 6.2, d.y - h * 0.45, 0.6, 2, css(TIN, 6));
-      part(s, boxPts(d.x - 5, d.y - 1.4, 10, 1.9, 0.3, sd(d) + 5, 0.05), hsl3(30, 6, 56), sd(d) + 5, { depth: 0.3, thin: 0.25, thick: 0.6 });
+      part(s, boxPts(d.x - 5, d.y - 1.4, 10, 1.9, 0.3, low16(d.seed) + 5, 0.05), hsl3(30, 6, 56), low16(d.seed) + 5, { depth: 0.3, thin: 0.25, thick: 0.6 });
       part(
         s,
         poly(d.x - w / 2 - 1.6, d.y - h + 0.2, d.x - w / 2 - 0.6, d.y - h - 1.8, d.x + w / 2 + 0.6, d.y - h - 1.8, d.x + w / 2 + 1.6, d.y - h + 0.2),
         TIN,
-        sd(d) + 2,
+        low16(d.seed) + 2,
         {
           depth: 0.3,
           thin: 0.3,
@@ -275,15 +285,15 @@ export const ROOFTOPS_DECOR = {
         pts.push({ x: x0 + (x1 - x0) * u, y: y + sag * 4 * u * (1 - u) });
       }
       s.fillStyle = inkFor(TIN);
-      stroke(s, pts, { w: 0.5, seed: sd(d), taper: [0, 0], press: 0 });
+      stroke(s, pts, { w: 0.5, seed: low16(d.seed), taper: [0, 0], press: 0 });
       const n = Math.max(2, Math.floor((x1 - x0) / 7));
       for (let i = 0; i < n; i++) {
         const u = (i + 0.5) / n;
         const gx = x0 + (x1 - x0) * u;
         const gy = y + sag * 4 * u * (1 - u);
         const sw = flutter(rc, 1.6, i * 1.3 + (d.seed % 7)) * 0.22;
-        const c = shift(d.color, (hash2(i, 5, sd(d)) - 0.5) * 20, 0, (hash2(i, 4, sd(d)) - 0.5) * 220);
-        garment(s, gx, gy, Math.floor(hash2(i, 6, sd(d)) * 4), c, sw, sd(d) + i);
+        const c = shift(d.color, (hash2(i, 5, low16(d.seed)) - 0.5) * 20, 0, (hash2(i, 4, low16(d.seed)) - 0.5) * 220);
+        garment(s, gx, gy, Math.floor(hash2(i, 6, low16(d.seed)) * 4), c, sw, low16(d.seed) + i);
       }
     },
   },
@@ -292,13 +302,13 @@ export const ROOFTOPS_DECOR = {
     bake(s, d) {
       // A turbine vent: a short stack under a dome of curved vanes.
       const k = d.size;
-      part(s, boxPts(d.x - 2, d.y - 4 * k, 4, 4 * k + 0.5, 0.3, sd(d), 0.05), shift(TIN, -10), sd(d), { depth: 0.4, thin: 0.3, thick: 0.8 });
+      part(s, boxPts(d.x - 2, d.y - 4 * k, 4, 4 * k + 0.5, 0.3, low16(d.seed), 0.05), shift(TIN, -10), low16(d.seed), { depth: 0.4, thin: 0.3, thick: 0.8 });
       const dome: P[] = [];
       for (let i = 0; i <= 10; i++) {
         const a = Math.PI + (i / 10) * Math.PI;
         dome.push({ x: d.x + Math.cos(a) * 4.6 * k, y: d.y - 4 * k + Math.sin(a) * 6 * k });
       }
-      part(s, dome, TIN, sd(d) + 1, { depth: 0.6, thin: 0.35, thick: 0.9 });
+      part(s, dome, TIN, low16(d.seed) + 1, { depth: 0.6, thin: 0.35, thick: 0.9 });
       tick(s, d.x, d.y - 10 * k, d.x, d.y - 11.4 * k, 0.8, 2, inkFor(TIN));
     },
     live(rc, d) {

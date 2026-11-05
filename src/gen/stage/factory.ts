@@ -7,8 +7,9 @@ import { greatWheel } from '../setpieces/builders';
 import { makeStyle, type Piece } from '../setpieces/place';
 import { defineConcept } from './contract';
 import { BOILER_HOUSE, FOUNDRY, ROBOT_LINE } from './factory-works';
-import { roomFor, SITE_MARGIN, vat, widestGap } from './factory-kit';
+import { roomFor, vat } from './factory-kit';
 import type { Concept } from './types';
+import { oneGap, SITE_MARGIN } from './kit';
 
 /**
  * Factory stage concepts (docs/SETPIECES.md, Factory).
@@ -168,16 +169,16 @@ export const STAMPING_LINE: Concept = defineConcept({
   // The widest vat this gravity rolls, then the line: the vat the build digs is rolled inside its columns.
   box: (k, rng) => {
     const [lo, hi] = lineRange(k.W);
-    const room = k.W - 2 * SITE_MARGIN - widestGap() - 1;
-    return { w: widestGap() + 1 + Math.max(lo, Math.min(room, rng.int(lo, hi))), h: 13 };
+    const room = k.W - 2 * SITE_MARGIN - oneGap() - 1;
+    return { w: oneGap() + 1 + Math.max(lo, Math.min(room, rng.int(lo, hi))), h: 13 };
   },
   build(g, rng, at, parts) {
     const G = at.y + at.h;
-    const lineW = at.w - widestGap() - 1;
+    const lineW = at.w - oneGap() - 1;
     const x0 = at.x;
     const L0 = x0 + at.w - lineW;
     const R = x0 + at.w - 1;
-    if (parts > 0) vat(g, L0 - 1 - Math.min(widestGap(), hardGap(rng)), L0 - 2, G);
+    if (parts > 0) vat(g, L0 - 1 - Math.min(oneGap(), hardGap(rng)), L0 - 2, G);
     // The girder: the presses hang under it, and its top is the way over them. Where the line has columns
     // to spare, an end stands a column in from its ladder.
     const B = G - 8 - rng.int(0, 2);

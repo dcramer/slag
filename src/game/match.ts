@@ -12,7 +12,7 @@ import {
   swatchIndex,
   withColor,
 } from '../gen/character';
-import { type Bridge, GRAVITY, type GravityClass, MAX_BRIDGES, type ProfileOverride, prove, settled } from '../gen/level';
+import { type Bridge, DIFFICULTIES, GRAVITY, type GravityClass, MAX_BRIDGES, type ProfileOverride, prove, settled } from '../gen/level';
 import { buildLevel, type LevelRequest } from '../gen/level/pregen';
 import { clearsParts, generateCrate, generateRoster, isBridgePart, type PropDef, type Role, rollSecret, rosterSize } from '../gen/props';
 import { ageBlood, type BloodCell, cleanBlood, washBlood } from '../sim/blood';
@@ -38,7 +38,7 @@ import { type GameEvent, type InputFrame, NO_INPUT } from '../sim/types';
 import type { ThemeId } from '../themes';
 import { DEFAULT_RULES, type MatchRules } from './rules';
 import { overview, viewToWorld, worldToView } from './view';
-import { MODES } from './modes';
+import { MODE_IDS, MODES } from './modes';
 import type { RoundResult } from './scoring';
 
 export type Phase = 'lobby' | 'pick' | 'place' | 'run' | 'score' | 'victory';
@@ -139,6 +139,18 @@ const CONFIRM_DELAY = 10;
 /** New Level presses kept ready: more than anyone gets through before the worker catches up. */
 const REROLLS_AHEAD = 3;
 
+/**
+ * Every value of each rule the level is built from (`rulesProfile`). A change to one regenerates the lobby's level on
+ * every peer's same frame, so each one-step change is built ahead: one not built ahead stalls the whole room while
+ * the main thread generates it.
+ */
+const LEVEL_RULES: { [K in keyof MatchRules]?: readonly MatchRules[K][] } = {
+  difficulty: ['varies', ...DIFFICULTIES],
+  gravity: ['auto', ...(Object.keys(GRAVITY) as GravityClass[])],
+  weather: [true, false],
+  mode: MODE_IDS,
+};
+
 /** Level-profile knobs the rules force (gravity class, weather off, difficulty). */
 export function rulesProfile(rules: MatchRules): ProfileOverride {
   return {
@@ -226,10 +238,18 @@ export class Match {
     if (this.phase !== 'lobby') return [at(deriveSeed(this.seed, 'next-match'))];
     const rerolls = [deriveSeed(this.seed, 'reroll')];
     while (rerolls.length < REROLLS_AHEAD) rerolls.push(deriveSeed(rerolls[rerolls.length - 1], 'reroll'));
-    // The Rules menu can ask for this seed again at any gravity.
-    const gravities = (Object.keys(GRAVITY) as GravityClass[]).map((g) => at(this.seed, { ...this.forceProfile, gravity: GRAVITY[g] }));
-    const here = JSON.stringify(profile);
-    return [...rerolls.map((s) => at(s)), ...[at(this.seed, this.forceProfile), ...gravities].filter((r) => JSON.stringify(r.profile) !== here)];
+    // The Rules menu can change any one rule the level is built from, from the rules as they are.
+    const seen = new Set([JSON.stringify(profile)]);
+    const changes: LevelRequest[] = [];
+    for (const [rule, values] of Object.entries(LEVEL_RULES))
+      for (const value of values) {
+        const p = this.profileOverride({ ...this.rules, [rule]: value });
+        const key = JSON.stringify(p);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        changes.push(at(this.seed, p));
+      }
+    return [...rerolls.map((s) => at(s)), ...changes];
   }
 
   /**

@@ -5,10 +5,10 @@ import { type Level, T_SOLID, tileAt } from '../../../sim/level';
 import { type Module, type ModuleOf, swingHeads } from '../../../sim/props';
 import { blob, inkFor, line, type P } from '../../ink';
 import { bar, barLine, boxPts, dot, ovalPts, part, path, poly, sprite, stamp, tick } from '../../ink-props';
-import { circle, flame, flutter, glowDot, light, type RC } from '../../kit';
+import { circle, flame, flutter, glowDot, light, type RC, poseFrame } from '../../kit';
 import type { DrawCtx } from '../common';
-import { ashlar, BANNER, doorway, flat, GILT, type Hz, hz, STONE, WOOD } from './castle-ink';
-import type { Deco } from './common';
+import { ashlar, BANNER, doorway, GILT, SHELL, STONE, WOOD } from './castle-ink';
+import { type Deco, flat, type Haze, hazer } from './common';
 
 /**
  * The castle's newer stage concepts, drawn (gen/stage/castle-keep.ts): the backdrop shell behind each
@@ -64,7 +64,7 @@ const frameOf = (m: Deco) => {
 };
 
 /** An interior seen through a passage: coursed stone in shadow, vault ribs every few tiles, a lit sill. */
-function vault(g: CanvasRenderingContext2D, t: Hz, x: number, y: number, w: number, h: number, seed: number) {
+function vault(g: CanvasRenderingContext2D, t: Haze, x: number, y: number, w: number, h: number, seed: number) {
   ashlar(g, t, x, y, w, h, SHADE, seed, 8);
   for (let xx = x + 22 + (seed % 9); xx < x + w - 10; xx += 46) {
     const rib = poly(
@@ -95,7 +95,7 @@ function vault(g: CanvasRenderingContext2D, t: Hz, x: number, y: number, w: numb
 }
 
 /** A wall torch on its bracket: the iron baked, the flame live. */
-function bracket(g: CanvasRenderingContext2D, t: Hz, x: number, y: number, seed: number) {
+function bracket(g: CanvasRenderingContext2D, t: Haze, x: number, y: number, seed: number) {
   flat(g, poly(x - 1.6, y + 6, x + 1.6, y + 6, x + 1, y + 1, x - 1, y + 1), IRON, t, seed, 0.3);
   flat(g, poly(x - 2.4, y + 1.4, x + 2.4, y + 1.4, x + 1.6, y - 1.4, x - 1.6, y - 1.4), WOOD, t, seed + 1, 0.3);
 }
@@ -169,7 +169,7 @@ function gateOf(m: Deco, lv: Level): Gate {
   };
 }
 
-function gateBack(m: Deco, t: Hz, lv: Level) {
+function gateBack(m: Deco, t: Haze, lv: Level) {
   return sprite(`castle|gate|${m.w}|${m.h}|${m.seed}|${t.k}|${lv.seed}`, -2, -2, m.w + 4, m.h + 4, (g) => {
     const { X, Y } = frameOf(m);
     const q = gateOf(m, lv);
@@ -211,7 +211,7 @@ const gateTorches = (m: Deco, q: Gate) => [frameOf(m).X(q.f0) + 2 * TILE, frameO
 
 function gatehouse(rc: RC, m: Deco, d: DrawCtx) {
   const lv = d.o.level!;
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   const ox = m.at[0] + d.off[0];
   const oy = m.at[1] + d.off[1];
   stamp(rc.s, gateBack(m, t, lv), ox, oy);
@@ -224,7 +224,7 @@ function gatehouse(rc: RC, m: Deco, d: DrawCtx) {
 }
 
 /** The drawbridge, off its hinge at the gate's bank and hanging into the moat, one chain holding and one snapped. */
-function drawbridge(m: Deco, t: Hz, lv: Level) {
+function drawbridge(m: Deco, t: Haze, lv: Level) {
   return sprite(`castle|bridge|${m.w}|${m.h}|${m.seed}|${t.k}|${lv.seed}`, -4, -4, m.w + 8, m.h + 8, (g) => {
     const { tx0, tx1, X, Y } = frameOf(m);
     const r = lv.landmark!.rect;
@@ -328,7 +328,7 @@ function chapelOf(m: Deco, lv: Level): Chapel {
   return { G, t0: tx0, t1, s1: tx1, R, Tb: down(sol, tx0, R + 1, G), st: down(sol, Math.floor((tx0 + t1) / 2), ty0, G), Nr: down(sol, tx1, ty0, G) };
 }
 
-function chapelBack(m: Deco, t: Hz, lv: Level) {
+function chapelBack(m: Deco, t: Haze, lv: Level) {
   return sprite(`castle|chapel|${m.w}|${m.h}|${m.seed}|${t.k}|${lv.seed}`, -4, -4, m.w + 8, m.h + 8, (g) => {
     const { X, Y } = frameOf(m);
     const q = chapelOf(m, lv);
@@ -467,7 +467,7 @@ function chapelBack(m: Deco, t: Hz, lv: Level) {
 
 function chapel(rc: RC, m: Deco, d: DrawCtx) {
   const lv = d.o.level!;
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   stamp(rc.s, chapelBack(m, t, lv), m.at[0] + d.off[0], m.at[1] + d.off[1]);
 }
 
@@ -496,7 +496,7 @@ function keepOf(m: Deco, lv: Level): Keep {
   return { G, f0: tx0, s1: tx1, t0, t1, U: down(sol, t0, ty0, G) };
 }
 
-function keepBack(m: Deco, t: Hz, lv: Level) {
+function keepBack(m: Deco, t: Haze, lv: Level) {
   return sprite(`castle|keep|${m.w}|${m.h}|${m.seed}|${t.k}|${lv.seed}`, -2, -2, m.w + 4, m.h + 4, (g) => {
     const { X, Y } = frameOf(m);
     const q = keepOf(m, lv);
@@ -576,7 +576,7 @@ function keepBack(m: Deco, t: Hz, lv: Level) {
 
 function lavaKeep(rc: RC, m: Deco, d: DrawCtx) {
   const lv = d.o.level!;
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   const ox = m.at[0] + d.off[0];
   const oy = m.at[1] + d.off[1];
   stamp(rc.s, keepBack(m, t, lv), ox, oy);
@@ -595,7 +595,7 @@ export function castleStageShell(rc: RC, m: Deco, d: DrawCtx): boolean {
   const concept = lv?.landmark?.concept;
   if (!lv || !concept) return false;
   if (concept === 'gatehouse') {
-    if (Math.round(m.at[0] / TILE) < lv.landmark!.rect.x) stamp(rc.s, drawbridge(m, hz(d), lv), m.at[0] + d.off[0], m.at[1] + d.off[1]);
+    if (Math.round(m.at[0] / TILE) < lv.landmark!.rect.x) stamp(rc.s, drawbridge(m, hazer(d, SHELL), lv), m.at[0] + d.off[0], m.at[1] + d.off[1]);
     else gatehouse(rc, m, d);
     return true;
   }
@@ -617,7 +617,7 @@ function bell(rc: RC, m: Swinger, d: DrawCtx) {
   const s = rc.s;
   const hx = m.hub[0] + d.off[0];
   const hy = m.hub[1] + d.off[1];
-  const [h] = swingHeads(m, rc.frame, d.r.phase, d.off);
+  const [h] = swingHeads(m, poseFrame(rc), d.r.phase, d.off);
   const a = h.a - Math.PI / 2;
   // The headstock: a timber beam across the pin, the rod down to the crown.
   part(s, boxPts(hx - 9, hy - 2.6, 18, 4.4, 0.6, 3, 0.1), { h: 24, s: 34, l: 26 }, 3, { depth: 0.5, thin: 0.3, thick: 0.8 });
@@ -674,7 +674,7 @@ function firebar(rc: RC, m: Swinger, d: DrawCtx) {
   const s = rc.s;
   const hx = m.hub[0] + d.off[0];
   const hy = m.hub[1] + d.off[1];
-  const [h] = swingHeads(m, rc.frame, d.r.phase, d.off);
+  const [h] = swingHeads(m, poseFrame(rc), d.r.phase, d.off);
   const mods = d.r.mods;
   // The innermost ball's module draws the bar and the pin, once per bar.
   const inner = mods.every((o) => o.type !== 'swinger' || o.hub[0] !== m.hub[0] || o.hub[1] !== m.hub[1] || o.arm >= m.arm);

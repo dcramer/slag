@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { generateLevel, lastGenInfo, withBridges } from '../src/gen/level';
-import { waysOf } from '../src/gen/stage/volcano';
+import { waysOf } from '../src/gen/stage/kit';
 import { TILE } from '../src/sim/constants';
 import { type Level, T_EMPTY, T_SOLID, tileAt } from '../src/sim/level';
 import {

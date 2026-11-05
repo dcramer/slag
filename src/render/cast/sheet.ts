@@ -252,6 +252,9 @@ const READS_AS: Record<Kind, string> = {
   hopper: 'the snouted cube hopper',
   warrior: 'the round Slavic warrior',
   slayer: 'the white-haired monster slayer',
+  raider: 'the braided tomb raider',
+  fighter: 'the bun-haired street fighter',
+  stinger: 'the horned bug with the needle',
 };
 
 /**

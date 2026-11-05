@@ -1,9 +1,9 @@
 import { css, type HSL, hsl3, shift } from '../core/color';
-import { hash2 } from '../core/rng';
 import type { Decor, DecorDef } from './decor';
 import { blob, inkFor, line, type P, stroke } from './ink';
 import { boxPts, glint, ovalPts, part, path, tick } from './ink-props';
 import { flame, flutter, glowDot, light } from './kit';
+import { hashKnobs, low16 } from './decor-kit';
 
 /**
  * The castle's decor, inked like the stone it stands on: a suit of armour with nobody in it, a brazier on
@@ -20,8 +20,7 @@ const WAX: HSL = hsl3(44, 34, 84);
 const FIRE: HSL = hsl3(30, 100, 58);
 const CLOTH: HSL = hsl3(352, 48, 36);
 
-const sd = (d: Decor) => d.seed & 0xffff;
-const k01 = (d: Decor, n: number) => hash2(n, 7, sd(d));
+const knob = hashKnobs(7);
 /** Mirror about the piece's foot when it's flipped. */
 const fx = (d: Decor) => (d.flip ? -1 : 1);
 
@@ -52,43 +51,49 @@ export const CASTLE_DECOR = {
       // A suit of armour on its plinth, gauntlets on the pommel of a sword stood point-down: a closed helm
       // with a breathing grille and a plume, nobody inside.
       const c = d.color;
-      shape(s, at(d, -5.5, 0, 5.5, 0, 5, -2.4, -5, -2.4), shift(IRON, 0, 0, 14), sd(d), 0.5);
+      shape(s, at(d, -5.5, 0, 5.5, 0, 5, -2.4, -5, -2.4), shift(IRON, 0, 0, 14), low16(d.seed), 0.5);
       // Legs: greaves and sabatons.
       for (const side of [-1, 1])
-        shape(s, at(d, side * 0.6, -2.4, side * 3.4, -2.4, side * 3, -11, side * 0.9, -11), shift(c, 0, 0, side > 0 ? -8 : 0), sd(d) + side, 0.4);
+        shape(s, at(d, side * 0.6, -2.4, side * 3.4, -2.4, side * 3, -11, side * 0.9, -11), shift(c, 0, 0, side > 0 ? -8 : 0), low16(d.seed) + side, 0.4);
       // The cuirass, broad at the shoulder, a tasset skirt under it.
-      shape(s, at(d, -3.8, -10.4, 3.8, -10.4, 4.4, -12.6, 4.2, -18.4, -4.2, -18.4, -4.4, -12.6), c, sd(d) + 3, 0.8);
+      shape(s, at(d, -3.8, -10.4, 3.8, -10.4, 4.4, -12.6, 4.2, -18.4, -4.2, -18.4, -4.4, -12.6), c, low16(d.seed) + 3, 0.8);
       tick(s, X(d, -3.4), Y(d, -12.6), X(d, 3.4), Y(d, -12.6), 0.4, 4, inkFor(c));
-      glint(s, at(d, -2.4, -17.4, -1.8, -14.2), css(c, 26), 0.6, sd(d));
+      glint(s, at(d, -2.4, -17.4, -1.8, -14.2), css(c, 26), 0.6, low16(d.seed));
       // Pauldrons, and the arms down to the hands on the pommel.
       for (const side of [-1, 1]) {
-        shape(s, ovalPts(X(d, side * 4.4), Y(d, -17.6), 2.2 * d.size, 1.6 * d.size, sd(d) + side * 5, 0.06, 12), shift(c, 0, 0, 4), sd(d) + side * 5, 0.4);
-        rod(s, at(d, side * 4.6, -16.6, side * 4.2, -12.6, side * 1.4, -9.6), 1.5, shift(c, 0, 0, -6), sd(d) + side * 7);
+        shape(
+          s,
+          ovalPts(X(d, side * 4.4), Y(d, -17.6), 2.2 * d.size, 1.6 * d.size, low16(d.seed) + side * 5, 0.06, 12),
+          shift(c, 0, 0, 4),
+          low16(d.seed) + side * 5,
+          0.4,
+        );
+        rod(s, at(d, side * 4.6, -16.6, side * 4.2, -12.6, side * 1.4, -9.6), 1.5, shift(c, 0, 0, -6), low16(d.seed) + side * 7);
       }
       // The sword: blade down past the hands to the plinth, a crossguard under the gauntlets.
-      rod(s, at(d, 0, -9.2, 0, -2.6), 1.1, STEEL, sd(d) + 9);
-      rod(s, at(d, -2.4, -9.4, 2.4, -9.4), 0.7, shift(IRON, 0, 0, 10), sd(d) + 10);
+      rod(s, at(d, 0, -9.2, 0, -2.6), 1.1, STEEL, low16(d.seed) + 9);
+      rod(s, at(d, -2.4, -9.4, 2.4, -9.4), 0.7, shift(IRON, 0, 0, 10), low16(d.seed) + 10);
       // The great helm: a pot with a ridge down its face and a grille of breathing holes, never eyes.
       const helm = at(d, -2.8, -18.6, 2.8, -18.6, 3, -22.6, 2, -24.6, -2, -24.6, -3, -22.6);
-      shape(s, helm, c, sd(d) + 11, 0.6);
+      shape(s, helm, c, low16(d.seed) + 11, 0.6);
       tick(s, X(d, 0.4), Y(d, -24.2), X(d, 0.4), Y(d, -19.2), 0.4, 12, inkFor(c));
       for (let i = 0; i < 3; i++) tick(s, X(d, 1.4), Y(d, -20 - i * 0.9), X(d, 2.2), Y(d, -20 - i * 0.9), 0.3, 13 + i, inkFor(c));
       // The plume, its colour the house's.
-      shape(s, at(d, 0, -24.4, -1.4, -27.6, -4.6, -28.4, -2.6, -26.6, -1.2, -24.4), CLOTH, sd(d) + 14, 0.4);
+      shape(s, at(d, 0, -24.4, -1.4, -27.6, -4.6, -28.4, -2.6, -26.6, -1.2, -24.4), CLOTH, low16(d.seed) + 14, 0.4);
     },
   },
   brazier: {
     color: () => FIRE,
     bake(s, d) {
       // An iron bowl on three splayed legs, coals heaped in it.
-      for (const lx of [-4, 0.4, 4]) rod(s, at(d, lx, 0, lx * 0.35, -7.4), 0.8, IRON, sd(d) + lx);
-      rod(s, at(d, -3, -3.2, 3, -3.2), 0.5, IRON, sd(d) + 7);
-      shape(s, at(d, -5.4, -11, 5.4, -11, 3.8, -7, -3.8, -7), IRON, sd(d), 0.5);
+      for (const lx of [-4, 0.4, 4]) rod(s, at(d, lx, 0, lx * 0.35, -7.4), 0.8, IRON, low16(d.seed) + lx);
+      rod(s, at(d, -3, -3.2, 3, -3.2), 0.5, IRON, low16(d.seed) + 7);
+      shape(s, at(d, -5.4, -11, 5.4, -11, 3.8, -7, -3.8, -7), IRON, low16(d.seed), 0.5);
       for (const x of [-3.6, 3.6]) tick(s, X(d, x), Y(d, -10.6), X(d, x * 0.8), Y(d, -7.4), 0.35, x, css(IRON, 18));
       // Coals: dark lumps with the hot cracks between them.
       for (let i = 0; i < 4; i++) {
         s.fillStyle = css(hsl3(14, 30, 16));
-        blob(s, X(d, -3 + i * 2), Y(d, -11.2 - (i % 2) * 0.6), 1.2 * d.size, sd(d) + i, 1, 0.15);
+        blob(s, X(d, -3 + i * 2), Y(d, -11.2 - (i % 2) * 0.6), 1.2 * d.size, low16(d.seed) + i, 1, 0.15);
         s.fill();
       }
       s.fillStyle = css(FIRE, -6);
@@ -113,17 +118,17 @@ export const CASTLE_DECOR = {
         [3.4, -25, 'pike'],
       ];
       for (const [i, [x, top, kind]] of hafts.entries()) {
-        const lean = (k01(d, i) - 0.5) * 1.6;
-        rod(s, at(d, x, -0.4, x + lean, top), 0.7, shift(WOOD, 0, 0, 8), sd(d) + i);
+        const lean = (knob(d, i) - 0.5) * 1.6;
+        rod(s, at(d, x, -0.4, x + lean, top), 0.7, shift(WOOD, 0, 0, 8), low16(d.seed) + i);
         const tx = x + lean;
         if (kind === 'halberd') {
-          shape(s, at(d, tx, top - 3.4, tx + 0.8, top - 0.6, tx - 0.8, top - 0.6), STEEL, sd(d) + i + 3, 0.3);
-          shape(s, at(d, tx + 0.4, top + 0.2, tx + 4, top - 0.6, tx + 4.4, top + 3, tx + 0.4, top + 2.2), STEEL, sd(d) + i + 4, 0.4);
-        } else shape(s, at(d, tx, top - (kind === 'pike' ? 3 : 4.2), tx + 1, top + 0.4, tx - 1, top + 0.4), STEEL, sd(d) + i + 3, 0.3);
+          shape(s, at(d, tx, top - 3.4, tx + 0.8, top - 0.6, tx - 0.8, top - 0.6), STEEL, low16(d.seed) + i + 3, 0.3);
+          shape(s, at(d, tx + 0.4, top + 0.2, tx + 4, top - 0.6, tx + 4.4, top + 3, tx + 0.4, top + 2.2), STEEL, low16(d.seed) + i + 4, 0.4);
+        } else shape(s, at(d, tx, top - (kind === 'pike' ? 3 : 4.2), tx + 1, top + 0.4, tx - 1, top + 0.4), STEEL, low16(d.seed) + i + 3, 0.3);
       }
       // The frame: two uprights and the rails the hafts rest in.
-      for (const x of [-5.4, 5.4]) rod(s, at(d, x, 0, x, -12), 1.1, WOOD, sd(d) + x);
-      for (const y of [-2.2, -10.4]) rod(s, at(d, -6, y, 6, y), 0.9, shift(WOOD, 0, 0, -4), sd(d) + y);
+      for (const x of [-5.4, 5.4]) rod(s, at(d, x, 0, x, -12), 1.1, WOOD, low16(d.seed) + x);
+      for (const y of [-2.2, -10.4]) rod(s, at(d, -6, y, 6, y), 0.9, shift(WOOD, 0, 0, -4), low16(d.seed) + y);
     },
   },
   candles: {
@@ -131,11 +136,11 @@ export const CASTLE_DECOR = {
     bake(s, d) {
       // A cluster of candles burnt to different heights, wax run down them into a pool on the floor.
       s.fillStyle = css(WAX, -6);
-      path(s, ovalPts(d.x, d.y + 0.2, 5.4 * d.size, 1.1 * d.size, sd(d), 0.1, 14));
+      path(s, ovalPts(d.x, d.y + 0.2, 5.4 * d.size, 1.1 * d.size, low16(d.seed), 0.1, 14));
       s.fill();
       for (const [i, c] of candleSet(d).entries()) {
-        const pts = boxPts(c.x - c.w / 2, c.y, c.w, d.y + 0.5 - c.y, 0.4, sd(d) + i, 0.1);
-        part(s, pts, WAX, sd(d) + i, { depth: 0.5, shade: -14, thin: 0.25, thick: 0.6 });
+        const pts = boxPts(c.x - c.w / 2, c.y, c.w, d.y + 0.5 - c.y, 0.4, low16(d.seed) + i, 0.1);
+        part(s, pts, WAX, low16(d.seed) + i, { depth: 0.5, shade: -14, thin: 0.25, thick: 0.6 });
         s.fillStyle = css(WAX, 10);
         line(s, c.x + c.w * 0.25, c.y + 0.4, c.x + c.w * 0.3, c.y + 2.6, { w: 0.7, seed: i, taper: [0.1, 0.6], press: 0 });
         tick(s, c.x, c.y, c.x, c.y - 0.9, 0.35, i, inkFor(WAX));
@@ -153,9 +158,9 @@ export const CASTLE_DECOR = {
     color: () => WOOD,
     bake(s, d) {
       // The stocks: two posts and a board with a hole for a head and two for hands, nobody in them.
-      for (const x of [-6, 6]) rod(s, at(d, x, 0, x, -14), 1.4, WOOD, sd(d) + x);
+      for (const x of [-6, 6]) rod(s, at(d, x, 0, x, -14), 1.4, WOOD, low16(d.seed) + x);
       const board = at(d, -7.4, -14.6, 7.4, -14.6, 7.4, -9.4, -7.4, -9.4);
-      shape(s, board, shift(WOOD, 0, 0, 8), sd(d), 0.6);
+      shape(s, board, shift(WOOD, 0, 0, 8), low16(d.seed), 0.6);
       tick(s, X(d, -7.2), Y(d, -12), X(d, 7.2), Y(d, -12), 0.45, 3, inkFor(WOOD));
       for (const [x, r] of [
         [-4.4, 1.1],
@@ -167,7 +172,7 @@ export const CASTLE_DECOR = {
         s.fill();
       }
       // A rusty padlock on its hasp.
-      shape(s, boxPts(X(d, 6.8) - 1.1, Y(d, -11.4), 2.2 * d.size, 2.2 * d.size, 0.4, sd(d) + 5), hsl3(20, 40, 34), sd(d) + 5, 0.3);
+      shape(s, boxPts(X(d, 6.8) - 1.1, Y(d, -11.4), 2.2 * d.size, 2.2 * d.size, 0.4, low16(d.seed) + 5), hsl3(20, 40, 34), low16(d.seed) + 5, 0.3);
     },
   },
   rubble: {
@@ -176,17 +181,17 @@ export const CASTLE_DECOR = {
       // Fallen masonry: dressed blocks tumbled off a wall, one cracked, one on its corner, chips round them.
       // Dressed stone is paler than the rubble core it fell from, so it reads off the ground it lies on.
       const c = shift(d.color, 0, -4, 12);
-      shape(s, at(d, -8.4, 0, -1.6, 0, -1.8, -4.6, -8.2, -4.8), shift(c, 0, 0, -6), sd(d), 0.9);
-      shape(s, at(d, -0.8, 0, 7.2, 0, 7.4, -4, -0.6, -4.3), c, sd(d) + 1, 0.9);
-      shape(s, at(d, -4.6, -4.5, 0.6, -9.2, 5.2, -4.4), shift(c, 0, 0, 8), sd(d) + 2, 0.7);
+      shape(s, at(d, -8.4, 0, -1.6, 0, -1.8, -4.6, -8.2, -4.8), shift(c, 0, 0, -6), low16(d.seed), 0.9);
+      shape(s, at(d, -0.8, 0, 7.2, 0, 7.4, -4, -0.6, -4.3), c, low16(d.seed) + 1, 0.9);
+      shape(s, at(d, -4.6, -4.5, 0.6, -9.2, 5.2, -4.4), shift(c, 0, 0, 8), low16(d.seed) + 2, 0.7);
       tick(s, X(d, 2.2), Y(d, -0.5), X(d, 3.6), Y(d, -3.2), 0.45, 3, inkFor(c));
       tick(s, X(d, -6.6), Y(d, -2.2), X(d, -3.4), Y(d, -2.4), 0.4, 4, css(c, -16));
       for (let i = 0; i < 3; i++)
         shape(
           s,
-          ovalPts(X(d, 8.8 + i * 1.8), Y(d, -0.7 - (i % 2) * 0.3), (0.9 - i * 0.15) * d.size, 0.7 * d.size, sd(d) + i + 5, 0.2, 8),
+          ovalPts(X(d, 8.8 + i * 1.8), Y(d, -0.7 - (i % 2) * 0.3), (0.9 - i * 0.15) * d.size, 0.7 * d.size, low16(d.seed) + i + 5, 0.2, 8),
           shift(c, 0, 0, -4),
-          sd(d) + i + 5,
+          low16(d.seed) + i + 5,
           0.2,
         );
     },
@@ -246,7 +251,7 @@ export const CASTLE_DECOR = {
         ],
         0.8,
         hsl3(40, 22, 78),
-        sd(d),
+        low16(d.seed),
       );
       // Bars round a dome top and a pointed foot, banded twice, in iron lit enough to read off a dark wall.
       const bar = shift(d.color, 0, 0, 22);
@@ -284,8 +289,8 @@ export const CASTLE_DECOR = {
 function candleSet(d: Decor): { x: number; y: number; w: number }[] {
   const n = 3 + (d.seed % 3);
   return Array.from({ length: n }, (_, i) => {
-    const x = d.x + (i - (n - 1) / 2) * 2.6 * d.size * fx(d) + (k01(d, i + 9) - 0.5) * 0.8;
-    const tall = (3 + k01(d, i) * 7) * d.size;
+    const x = d.x + (i - (n - 1) / 2) * 2.6 * d.size * fx(d) + (knob(d, i + 9) - 0.5) * 0.8;
+    const tall = (3 + knob(d, i) * 7) * d.size;
     return { x, y: d.y + 0.5 - tall, w: 1.8 * d.size };
   });
 }

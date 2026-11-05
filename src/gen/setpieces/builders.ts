@@ -1,5 +1,5 @@
 import { dcos, dsin } from '../../core/dmath';
-import type { Cell, Vec } from '../../core/geom';
+import { type Cell, DOWN, UP, type Vec } from '../../core/geom';
 import type { Rng } from '../../core/rng';
 import type { TileRect } from '../../sim/level';
 import type { Ammo, Archetype, CannonLook, GeyserLook, Material, Module, PropStyle, Role, RotorLook, RotorSupport, VehicleLook } from '../../sim/props';
@@ -14,8 +14,6 @@ import { best, type Piece, SAFE_TILES, type Site } from './place';
 type Range = readonly [number, number];
 const roll = (rng: Rng, r: Range) => rng.range(r[0], r[1]);
 const rollInt = (rng: Rng, r: Range) => rng.int(r[0], r[1]);
-const UP = -Math.PI / 2;
-const DOWN = Math.PI / 2;
 
 interface Common {
   name: string;

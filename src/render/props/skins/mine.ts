@@ -1,14 +1,14 @@
-import { css, type HSL } from '../../../core/color';
+import { type HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { T_EMPTY } from '../../../sim/level';
 import { motionOffset, resolveProp } from '../../../sim/props';
-import { inkFor, type P } from '../../ink';
+import { type P } from '../../ink';
 import { bar, barLine, boxPts, dot, ovalPts, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import { light } from '../../kit';
 import type { DrawCtx } from '../common';
 import { SHELLS } from '../modules/deco-shells';
-import type { Deco, DecoSkin, ThemeSkins } from './common';
+import { type Deco, type DecoSkin, flat, type Haze, hazer, type HazeSpec, type ThemeSkins } from './common';
 
 /**
  * Mine skins: the backdrop shells of its stage concepts (docs/SETPIECES.md, Mine), behind the landmark's
@@ -29,13 +29,7 @@ import type { Deco, DecoSkin, ThemeSkins } from './common';
  */
 
 const HAZE = 0.14;
-function hz(d: DrawCtx) {
-  const fog = d.o.level?.theme.fog;
-  const k = fog ? `${fog.h | 0},${fog.l | 0}` : '-';
-  const hsl = (c: HSL): HSL => (fog ? { h: c.h, s: c.s * (1 - HAZE), l: c.l + (fog.l - c.l) * HAZE } : c);
-  return { k, hsl, c: (b: HSL, dl = 0, a = 1) => css(hsl(b), dl, a), ink: (b: HSL) => inkFor(hsl(b)) };
-}
-type Hz = ReturnType<typeof hz>;
+const SHELL: HazeSpec = { haze: HAZE, pen: 'ink', depth: 0.8 };
 
 const WOOD: HSL = { h: 28, s: 36, l: 40 };
 const DARKWOOD: HSL = { h: 24, s: 30, l: 29 };
@@ -44,18 +38,12 @@ const RUST: HSL = { h: 18, s: 40, l: 34 };
 const DARK: HSL = { h: 26, s: 18, l: 11 };
 
 /** A backdrop timber or rod: its hazed tone in a thin rim of its own dark, lit along its top when it's broad enough to show it. */
-function beam(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, base: HSL, t: Hz, seed: number) {
+function beam(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, base: HSL, t: Haze, seed: number) {
   barLine(g, ax, ay, bx, by, w, t.hsl(base), seed, { lit: w >= 1.8 ? 9 : 0 });
 }
 
-/** A flat backdrop shape: its hazed tone and a thin pen of its own dark. */
-function flat(g: CanvasRenderingContext2D, pts: readonly P[], base: HSL, t: Hz, seed: number, depth = 0.8) {
-  tone(g, pts, t.hsl(base), { depth });
-  pen(g, pts, seed, 0.3, 0.8, 3, t.ink(base));
-}
-
 /** A spoked wheel of radius `r`, baked once and turned live: rim, hub and spokes. */
-function wheel(key: string, r: number, spokes: number, base: HSL, t: Hz, teeth = 0) {
+function wheel(key: string, r: number, spokes: number, base: HSL, t: Haze, teeth = 0) {
   return sprite(`mine|wheel|${key}|${r}|${spokes}|${teeth}|${t.k}`, -r - 4, -r - 4, 2 * r + 8, 2 * r + 8, (g) => {
     const rim: P[] = [];
     const n = Math.max(24, teeth * 2);
@@ -89,7 +77,7 @@ function turn(s: CanvasRenderingContext2D, sp: ReturnType<typeof wheel>, x: numb
 const FRAME = 6;
 
 /** The tower: legs and bracing from the deck to the floor, the A-frame over it, the deck's bearers. */
-function tower(m: Deco, t: Hz, shaft: number) {
+function tower(m: Deco, t: Haze, shaft: number) {
   return sprite(`mine|headframe|${m.w}|${m.h}|${shaft}|${m.seed}|${t.k}`, -10, -6, m.w + 20, m.h + 8, (g) => {
     const deck = FRAME * TILE;
     const foot = m.h - TILE * 0.2;
@@ -132,7 +120,7 @@ function shaftOf(m: Deco, d: DrawCtx): number {
 }
 
 const headframe: DecoSkin = (rc, m, d) => {
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   const x = m.at[0] + d.off[0];
   const y = m.at[1] + d.off[1];
   const shaft = shaftOf(m, d);
@@ -150,7 +138,7 @@ const headframe: DecoSkin = (rc, m, d) => {
 // ------------------------------------------------------------------------------------------- trestle
 
 /** Bents under the deck every few tiles: two legs splayed onto a sill, X-braced, a cap under the deck. */
-function bents(m: Deco, t: Hz) {
+function bents(m: Deco, t: Haze) {
   return sprite(`mine|trestle|${m.w}|${m.h}|${m.seed}|${t.k}`, -8, -2, m.w + 16, m.h + 4, (g) => {
     const n = Math.max(2, Math.round(m.w / (4 * TILE)));
     const foot = m.h - 2;
@@ -167,12 +155,12 @@ function bents(m: Deco, t: Hz) {
   });
 }
 
-const trestle: DecoSkin = (rc, m, d) => stamp(rc.s, bents(m, hz(d)), m.at[0] + d.off[0], m.at[1] + d.off[1]);
+const trestle: DecoSkin = (rc, m, d) => stamp(rc.s, bents(m, hazer(d, SHELL)), m.at[0] + d.off[0], m.at[1] + d.off[1]);
 
 // ------------------------------------------------------------------------------------------- ore crusher
 
 /** The works behind the house: the back wall in panels, the chute, the stack and headgear over the roof. */
-function works(m: Deco, t: Hz) {
+function works(m: Deco, t: Haze) {
   return sprite(`mine|works|${m.w}|${m.h}|${m.seed}|${t.k}`, -6, -TILE * 3, m.w + 12, m.h + TILE * 3 + 2, (g) => {
     const roof = 4 * TILE;
     // The tunnel's back wall: one dark sheet of riveted plate, its seams lifting where the hand did, a rivet or two at each.
@@ -197,7 +185,7 @@ function works(m: Deco, t: Hz) {
 }
 
 const crusher: DecoSkin = (rc, m, d) => {
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   const x = m.at[0] + d.off[0];
   const y = m.at[1] + d.off[1];
   stamp(rc.s, works(m, t), x, y);
@@ -230,7 +218,7 @@ const crusher: DecoSkin = (rc, m, d) => {
  * a few clusters of crystal lying in the bottom corners. Nothing points out at you: the only spikes in a
  * geode are the ones that kill, on its floor.
  */
-function lining(m: Deco, t: Hz, hue: HSL) {
+function lining(m: Deco, t: Haze, hue: HSL) {
   return sprite(`mine|geode|${m.w}|${m.h}|${m.seed}|${hue.h | 0}|${t.k}`, 0, 0, m.w, m.h, (g) => {
     const cx = m.w / 2;
     const base = m.h * 0.78;
@@ -266,13 +254,13 @@ function lining(m: Deco, t: Hz, hue: HSL) {
 
 const geode: DecoSkin = (rc, m, d) => {
   const hue = d.o.level?.theme.terrain.vein ?? { h: 284, s: 60, l: 60 };
-  stamp(rc.s, lining(m, hz(d), hue), m.at[0] + d.off[0], m.at[1] + d.off[1]);
+  stamp(rc.s, lining(m, hazer(d, SHELL), hue), m.at[0] + d.off[0], m.at[1] + d.off[1]);
 };
 
 // ------------------------------------------------------------------------------------------- flooded gallery
 
 /** Timber sets along the gallery's back wall, the pump's pipe under its roof, a tide line on the posts. */
-function timbering(m: Deco, t: Hz) {
+function timbering(m: Deco, t: Haze) {
   return sprite(`mine|gallery|${m.w}|${m.h}|${m.seed}|${t.k}`, -2, -2, m.w + 4, m.h + 4, (g) => {
     g.fillStyle = t.c(DARK, 1);
     g.fillRect(0, 0, m.w, m.h);
@@ -288,7 +276,7 @@ function timbering(m: Deco, t: Hz) {
   });
 }
 
-const gallery: DecoSkin = (rc, m, d) => stamp(rc.s, timbering(m, hz(d)), m.at[0] + d.off[0], m.at[1] + d.off[1]);
+const gallery: DecoSkin = (rc, m, d) => stamp(rc.s, timbering(m, hazer(d, SHELL)), m.at[0] + d.off[0], m.at[1] + d.off[1]);
 
 // ------------------------------------------------------------------------------------------- registry
 

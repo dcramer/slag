@@ -4,10 +4,22 @@ import { TILE } from '../../../sim/constants';
 import { type Level, T_ONEWAY, T_SOLID, tileAt } from '../../../sim/level';
 import { driveAt, geyserColumn, geyserCycle, type Module, type ModuleOf, rotorAngles, type RotorArm, swingHeads, teslaCycle } from '../../../sim/props';
 import { inkFor, line, type P } from '../../ink';
-import { ball, bar, barLine, boxPts, dot, glint, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
-import { bulb, circle, glowDot, light, type RC, zap } from '../../kit';
+import { ball, bar, barLine, boxPts, dot, glint, ovalPts, part, path, poly, sprite, stamp, tick, tone } from '../../ink-props';
+import { bulb, circle, glowDot, light, poseFrame, type RC, zap } from '../../kit';
 import { BACKDROP, beamOf, type DrawCtx } from '../common';
-import type { CannonPose, Deco, DecoSkin, PieceSkin, Rotor, RotorSkin, ThemeSkins } from './common';
+import {
+  type CannonPose,
+  type Deco,
+  type DecoSkin,
+  flat,
+  type Haze,
+  hazer,
+  type HazeSpec,
+  type PieceSkin,
+  type Rotor,
+  type RotorSkin,
+  type ThemeSkins,
+} from './common';
 
 /**
  * Farm skins: the farm's stage concepts (gen/stage/farm.ts) and its own hazards, drawn at landmark scale.
@@ -31,23 +43,10 @@ type Body = ModuleOf<'body'>;
 type Cannon = ModuleOf<'cannon'>;
 
 const HAZE = 0.3;
-/** A hazed tone: toward the level's fog in lightness and saturation, never in hue. */
-function hz(d: DrawCtx) {
-  const fog = d.o.level?.theme.fog;
-  const k = fog ? `${fog.h | 0},${fog.l | 0}` : '-';
-  const hsl = (c: HSL): HSL => (fog ? { h: c.h, s: c.s * (1 - HAZE), l: c.l + (fog.l - c.l) * HAZE } : c);
-  return { k, hsl, c: (b: HSL, dl = 0, a = 1) => css(hsl(b), dl, a), ink: (b: HSL) => css({ h: b.h, s: b.s * 0.5, l: Math.max(5, hsl(b).l * 0.3) }) };
-}
-type Hz = ReturnType<typeof hz>;
-
-/** A flat backdrop shape: its hazed tone and a thin pen of its own dark. */
-function flat(g: CanvasRenderingContext2D, pts: readonly P[], base: HSL, t: Hz, seed: number, depth = 0.6) {
-  tone(g, pts, t.hsl(base), { depth });
-  pen(g, pts, seed, 0.3, 0.8, 3, t.ink(base));
-}
+const SHELL: HazeSpec = { haze: HAZE, pen: { dark: 0.3, floor: 5 }, depth: 0.6 };
 
 /** A backdrop beam: its hazed tone inside a thin rim of its own dark. */
-function beam(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, base: HSL, t: Hz, seed: number) {
+function beam(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, base: HSL, t: Haze, seed: number) {
   barLine(g, ax, ay, bx, by, w, t.hsl(base), seed, { ink: t.ink(base), rim: 0.25, press: 0.05 });
 }
 
@@ -107,7 +106,7 @@ const CAPS: HSL[] = [
  * The mill's back wall from its roof to the ground, the tower rising from behind the roof to the cap, and
  * the cap on the hub. Local px from the deco's top-left; `hx`, `hy` the hub, `R` the roof's top.
  */
-function windmillShell(m: Deco, t: Hz, hx: number, hy: number, R: number) {
+function windmillShell(m: Deco, t: Haze, hx: number, hy: number, R: number) {
   const seed = m.seed;
   const tower = TOWERS[seed % 3];
   const cap = CAPS[(seed >> 3) % 3];
@@ -161,7 +160,7 @@ function windmillShell(m: Deco, t: Hz, hx: number, hy: number, R: number) {
 const windmill: DecoSkin = (rc, m, d) => {
   const rotor = d.r.mods.find((x): x is Rotor => x.type === 'rotor');
   if (!rotor) return;
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   const ox = m.at[0] + d.off[0];
   const oy = m.at[1] + d.off[1];
   const R = rotor.hub[1] + rotor.arm + 1.5 * TILE;
@@ -171,7 +170,7 @@ const windmill: DecoSkin = (rc, m, d) => {
 // ------------------------------------------------------------------------------------------------ grain elevator
 
 /** The leg's casing behind the cab from the boot to the bin tops, and the headhouse on top with its pulley and spout. */
-function headhouseShell(m: Deco, t: Hz) {
+function headhouseShell(m: Deco, t: Haze) {
   const seed = m.seed;
   const paint: HSL = [
     { h: 4, s: 46, l: 42 },
@@ -208,7 +207,7 @@ function headhouseShell(m: Deco, t: Hz) {
 }
 
 const headhouse: DecoSkin = (rc, m, d) => {
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   stamp(rc.s, headhouseShell(m, t), m.at[0] + d.off[0], m.at[1] + d.off[1]);
 };
 
@@ -240,7 +239,7 @@ function barnInside(lv: Level, m: Deco) {
   return { x0, y0, w, G, roof, loft };
 }
 
-function barnShell(lv: Level, m: Deco, t: Hz) {
+function barnShell(lv: Level, m: Deco, t: Haze) {
   const inside = barnInside(lv, m);
   const { w, roof, loft, y0 } = inside;
   const seed = m.seed;
@@ -309,7 +308,7 @@ function barnShell(lv: Level, m: Deco, t: Hz) {
 const barn: DecoSkin = (rc, m, d) => {
   const lv = d.o.level;
   if (!lv) return;
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   stamp(rc.s, barnShell(lv, m, t), m.at[0] + d.off[0], m.at[1] + d.off[1]);
   const inside = barnInside(lv, m);
   if (inside.loft > 0) light(rc, m.at[0] + m.w / 2, inside.loft * TILE + 20, 70, { h: 40, s: 80, l: 70 }, 0.25);
@@ -318,7 +317,7 @@ const barn: DecoSkin = (rc, m, d) => {
 // ------------------------------------------------------------------------------------------------ water mill
 
 /** The mill's stone back wall and pit wheel, the axle out to the water wheel, its A-frame, and the flume's trough. */
-function flumeShell(lv: Level, m: Deco, t: Hz, rotor: Rotor) {
+function flumeShell(lv: Level, m: Deco, t: Haze, rotor: Rotor) {
   const x0 = Math.round(m.at[0] / TILE);
   const R = Math.round(m.at[1] / TILE);
   const mw = Math.round(m.w / TILE);
@@ -384,13 +383,13 @@ const flume: DecoSkin = (rc, m, d) => {
   const lv = d.o.level;
   const rotor = d.r.mods.find((x): x is Rotor => x.type === 'rotor');
   if (!lv || !rotor) return;
-  stamp(rc.s, flumeShell(lv, m, hz(d), rotor), m.at[0] + d.off[0], m.at[1] + d.off[1]);
+  stamp(rc.s, flumeShell(lv, m, hazer(d, SHELL), rotor), m.at[0] + d.off[0], m.at[1] + d.off[1]);
 };
 
 // ------------------------------------------------------------------------------------------------ farm track
 
 /** Trestle bents under the farm track every few tiles, X-braced, and a handrail along it. */
-function trestleShell(m: Deco, t: Hz) {
+function trestleShell(m: Deco, t: Haze) {
   return sprite(`farm|trestle|${m.w}|${m.h}|${m.seed}|${t.k}`, -4, -18, m.w + 8, m.h + 20, (g) => {
     const n = Math.max(2, Math.round(m.w / (5 * TILE)));
     for (let i = 0; i <= n; i++) {
@@ -405,7 +404,7 @@ function trestleShell(m: Deco, t: Hz) {
   });
 }
 
-const trestle: DecoSkin = (rc, m, d) => stamp(rc.s, trestleShell(m, hz(d)), m.at[0] + d.off[0], m.at[1] + d.off[1]);
+const trestle: DecoSkin = (rc, m, d) => stamp(rc.s, trestleShell(m, hazer(d, SHELL)), m.at[0] + d.off[0], m.at[1] + d.off[1]);
 
 // ------------------------------------------------------------------------------------------------ water wheel
 
@@ -415,8 +414,8 @@ const waterwheel: RotorSkin = {
     const g = rc.s;
     const hx = m.hub[0] + d.off[0];
     const hy = m.hub[1] + d.off[1];
-    const a0 = rotorAngles(m, rc.frame, d.r.phase)[0];
-    const t = hz(d);
+    const a0 = rotorAngles(m, poseFrame(rc), d.r.phase)[0];
+    const t = hazer(d, SHELL);
     for (const r of [m.arm + 3, m.arm - 7]) {
       const ring = ovalPts(hx, hy, r, r, 3, 0, 40);
       bar(g, [...ring, ring[0]], 3, t.hsl(WOOD), 4, { ink: t.ink(WOOD), rim: 0.3, taper: [0, 0], press: 0 });
@@ -446,7 +445,7 @@ const waterwheel: RotorSkin = {
     const hx = m.hub[0] + d.off[0];
     const hy = m.hub[1] + d.off[1];
     ball(rc.s, hx, hy, 6, IRON, 41);
-    const a0 = rotorAngles(m, rc.frame, d.r.phase)[0];
+    const a0 = rotorAngles(m, poseFrame(rc), d.r.phase)[0];
     for (let i = 0; i < 4; i++)
       dot(rc.s, hx + Math.cos(a0 + (i * Math.PI) / 2) * 3.6, hy + Math.sin(a0 + (i * Math.PI) / 2) * 3.6, 0.8, 42 + i, css(STEEL, 10), inkFor(IRON));
   },
@@ -523,7 +522,7 @@ function hungFromBeam(m: Swinger, d: DrawCtx): number | null {
 function hookJib(rc: RC, m: Swinger, d: DrawCtx) {
   const lv = d.o.level;
   if (!lv || hungFromBeam(m, d) !== null) return;
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   const hx = m.hub[0] + d.off[0];
   const hy = m.hub[1] + d.off[1];
   const run = Math.floor(hy / TILE + m.arm / TILE);
@@ -545,7 +544,7 @@ function hayHook(rc: RC, m: Swinger, d: DrawCtx) {
   const top = hungFromBeam(m, d);
   if (top !== null) pole(s, hx, top, hx, hy, 1.2, IRON, 1);
   ball(s, hx, hy, 2.2, IRON, 2);
-  for (const h of swingHeads(m, rc.frame, d.r.phase, d.off)) {
+  for (const h of swingHeads(m, poseFrame(rc), d.r.phase, d.off)) {
     const n = Math.max(3, Math.round(m.arm / 4));
     for (let i = 0; i < n; i++) {
       const u0 = i / n;
@@ -689,7 +688,7 @@ function combineReel(rc: RC, m: Swinger, d: DrawCtx) {
   const s = rc.s;
   const hx = m.hub[0] + d.off[0];
   const hy = m.hub[1] + d.off[1];
-  const heads = swingHeads(m, rc.frame, d.r.phase, d.off);
+  const heads = swingHeads(m, poseFrame(rc), d.r.phase, d.off);
   for (const h of heads) pole(s, hx, hy, h.x, h.y, 1.2, HUBCAP, 3);
   for (const h of heads) {
     const tx = -Math.sin(h.a);

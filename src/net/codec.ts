@@ -78,3 +78,15 @@ export function heldPeerFrame(f: PeerFrame | undefined): PeerFrame {
   if (f) for (const [k, e] of Object.entries(f)) if (held(e) !== 0) out[k] = held(e);
   return out;
 }
+
+/** The same buttons and pointer on every device (devices with nothing pressed are left out of either). */
+export function samePeerFrame(a: PeerFrame, b: PeerFrame): boolean {
+  const ka = Object.keys(a);
+  if (ka.length !== Object.keys(b).length) return false;
+  return ka.every((k) => {
+    const x = a[k];
+    const y = b[k];
+    if (typeof x === 'number' || typeof y === 'number') return x === y;
+    return y !== undefined && x[0] === y[0] && x[1] === y[1] && x[2] === y[2];
+  });
+}

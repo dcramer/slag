@@ -7,6 +7,7 @@ import { commit, finalize, SET_PIECE_UID, SET_PIECES, Site, tellFaults, windowFa
 import { type Concept, conceptName, fits, type Landmark, landmarkFaults, rollConcept } from '../stage';
 import { generateTheme, type Theme } from '../theme';
 import { ReachCache } from '../../sim/reach';
+import { loopBoxes } from './loop-boxes';
 import { slagTide } from './tide';
 import { footing } from '../../sim/weather';
 import { openUp } from './lanes';
@@ -26,7 +27,7 @@ import { noFreeRide, planHolds } from './winnable';
 export { DIFFICULTIES, DIFFICULTY, setLevelDifficulty, stretchesOf } from './difficulty';
 export { describeProfile, GRAVITY, type GravityClass, gravityClass, type ProfileOverride, rollProfile } from './profile';
 export { BRIDGE_W, type Bridge, canPlaceBridge, isAcceptable, judge, MAX_BRIDGES, withBridges } from './validate';
-export { fieldOf, partsNeeded, planHolds, prove, settled } from './winnable';
+export { cacheFor, fieldOf, partsNeeded, planHolds, prove, settled } from './winnable';
 
 const MAX_ATTEMPTS = 30;
 const LEGACY_ATTEMPTS = 20;
@@ -282,7 +283,10 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
         ...(live && landmark ? { standing: fixed, avoid: landmark.air, family: live.family } : {}),
       });
       // (The placer already avoids these cells; this is a safety net. Keep uids contiguous, the landmark's first.)
-      level.setPieces = [...fixed, ...pieces.filter(clearOfBridges)].map((p, i) => ({ ...p, uid: SET_PIECE_UID + i }));
+      // A Rising Slag loop gets mystery boxes of its own, after the builder and its set pieces (./loop-boxes.ts).
+      const kept = [...fixed, ...pieces.filter(clearOfBridges)];
+      const boxes = loopBoxes(level, kept, keep, new Rng(deriveSeed(seed, lab(`loop-boxes:${attempt}`))));
+      level.setPieces = [...kept, ...boxes].map((p, i) => ({ ...p, uid: SET_PIECE_UID + i }));
       while (level.setPieces.length && !planHolds(level, [], bridges, cache)) level.setPieces.pop();
       if (level.rides) {
         // A ride is only as good as its carrier.

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Match } from '../src/game/match';
+import type { MatchRules } from '../src/game/rules';
 import { generateLevel } from '../src/gen/level';
 import { buildLevel, hasLevel, levelKey, offerLevel } from '../src/gen/level/pregen';
 import { hashMatch } from '../src/net/snapshot';
@@ -46,9 +47,23 @@ describe('levels built ahead', () => {
       m.step(down);
       expect(levelKey(ahead[0])).toBe(levelKey({ seed: m.seed, theme: m.themeOverride, profile: m.profileOverride() }));
     }
-    const ahead = m.upcoming().map(levelKey);
-    m.setRules({ ...m.rules, gravity: 'high' });
-    expect(ahead).toContain(levelKey({ seed: m.seed, theme: m.themeOverride, profile: m.profileOverride() }));
+    // Any one rule the level is built from, changed from rules that aren't the defaults.
+    m.setRules({ ...m.rules, weather: false, difficulty: 'hard' });
+    const changes: Partial<MatchRules>[] = [
+      { gravity: 'high' },
+      { gravity: 'low' },
+      { difficulty: 'varies' },
+      { difficulty: 'gentle' },
+      { weather: true },
+      { mode: 'slag' },
+    ];
+    for (const change of changes) {
+      const ahead = m.upcoming().map(levelKey);
+      const was = m.rules;
+      m.setRules({ ...was, ...change });
+      expect(ahead, JSON.stringify(change)).toContain(levelKey({ seed: m.seed, theme: m.themeOverride, profile: m.profileOverride() }));
+      m.setRules(was);
+    }
   });
 
   it('leave a match identical to one that generated them itself', { timeout: 30_000 }, () => {

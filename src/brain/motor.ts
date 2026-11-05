@@ -87,6 +87,9 @@ type Act =
   /** A leap of faith: run at it, jump off the edge or at the wall, hold on until it lands. */
   | { kind: 'leap'; dir: -1 | 1; t: number; jumped: boolean; flown: boolean };
 
+/** Tiles off its column a hop steers back from. */
+const HOP_SLACK = 0.15;
+
 /** Frames a leap may last before the motor lets it go. */
 const LEAP_FRAMES = 200;
 
@@ -117,6 +120,8 @@ export class Motor {
   private prev: InputFrame = NO_INPUT;
   /** Frame of the last confirm or alt press: a press is an edge, so never on two frames running. */
   private pressed = -2;
+  /** No time to pick a move this frame (see drive). */
+  private rushed = false;
 
   constructor(
     /** Its hands: how quick, clean and careful it is. Set again when the room's Bots rule changes. */
@@ -126,8 +131,14 @@ export class Motor {
     this.rng = new Rng(seed);
   }
 
-  /** This frame's input for seat `p` doing `intent`. */
-  drive(m: Match, p: Player, intent: Intent): InputFrame {
+  /**
+   * This frame's input for seat `p` doing `intent`. `rushed`: the machine has
+   * no time this frame (BotSeats' budget), so it plays on with the move under
+   * way and picks no new one: on the ground it brakes, as on a landing's
+   * pause; in the air it holds what it held, presses aside.
+   */
+  drive(m: Match, p: Player, intent: Intent, rushed = false): InputFrame {
+    this.rushed = rushed;
     const out = this.frame(m, p, intent);
     if (out.confirmPressed || out.altPressed) this.pressed = m.frame;
     this.prev = out;
@@ -181,7 +192,28 @@ export class Motor {
         return this.race(m, p, intent.tx, intent.ty);
       case 'leap':
         return this.leap(m, p, intent.tx);
+      case 'hop':
+        return this.hop(m, p, intent.tx);
+      case 'use':
+        // An edge, so never on two frames running; the arrows turn it to face its mark as it lets go.
+        if (this.prev.usePressed || m.phase !== 'run') return NO_INPUT;
+        return { ...NO_INPUT, usePressed: true, left: intent.dir === -1, right: intent.dir === 1, up: !!intent.up };
     }
+  }
+
+  /**
+   * Jump straight up in column `tx`, holding it while rising, and again each time it lands. It stops first and
+   * steers back over the column in the air: a box hangs over a perch as often as a floor.
+   */
+  private hop(m: Match, p: Player, tx: number): InputFrame {
+    const r = m.phase === 'run' ? m.run?.runners.find((x) => x.slot === p.slot) : undefined;
+    if (!r || !r.alive || r.finished) return NO_INPUT;
+    const b = r.body;
+    const off = (tx * TILE + (TILE - b.w) / 2 - b.x) / TILE;
+    const lean = { left: off < -HOP_SLACK, right: off > HOP_SLACK };
+    if (!b.onGround) return { ...NO_INPUT, ...lean, jump: this.prev.jump && b.vy < 0 };
+    if (Math.abs(b.vx) > BRAKE_TO) return { ...NO_INPUT, left: b.vx > 0, right: b.vx < 0 };
+    return this.prev.jump ? NO_INPUT : { ...NO_INPUT, jump: true, jumpPressed: true };
   }
 
   /** Run toward column `tx` and jump at the first edge or wall: what a player tries with no better idea. */
@@ -241,9 +273,10 @@ export class Motor {
       this.visits.clear();
       this.last = -1;
     }
+    const b = r.body;
+    if (this.rushed) return this.follow(b) ?? this.coast(b);
     const map = raceMap(run);
     this.fore = foresight(run, map);
-    const b = r.body;
     const act = this.act;
     if (
       act?.kind === 'move' &&
@@ -305,6 +338,14 @@ export class Motor {
       case 'leap':
         return (this.act = null); // a leap belongs to the leap intent; a route picks afresh
     }
+  }
+
+  /** Rushed with nothing under way: brake on the ground, keep the held buttons in the air (a jump not cut short). */
+  private coast(b: Body): InputFrame {
+    if (b.onGround)
+      return Math.abs(b.vx) <= BRAKE_TO || this.gust() !== 0 ? this.still(b) : this.press({ left: b.vx > 0, right: b.vx < 0, jump: false, jumpPressed: false });
+    const { left, right, jump, run, down } = this.prev;
+    return { ...NO_INPUT, left, right, jump, run, down };
   }
 
   /** The gust blowing on the race this frame, px/s (+ right). */

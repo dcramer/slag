@@ -1,16 +1,15 @@
 import { datan2 } from '../../core/dmath';
-import type { Cell, Vec } from '../../core/geom';
+import { type Cell, DOWN, type Vec } from '../../core/geom';
 import type { Rng } from '../../core/rng';
-import { type LevelProfile, T_ONEWAY, type TileRect } from '../../sim/level';
+import { T_ONEWAY, type TileRect } from '../../sim/level';
 import type { Module, PropStyle } from '../../sim/props';
-import { type Grid, hintGap, POCKET } from '../level/kit';
-import { jumpProfile } from '../level/probe';
-import { easyRise, hardGap, hopGap, type Knobs, pit, TWO_PART_TRIES, undercut } from '../level/sculptors/common';
-import { BRIDGE_W } from '../level/types';
+import { type Grid } from '../level/kit';
+import { easyRise, hopGap, type Knobs, TWO_PART_TRIES } from '../level/sculptors/common';
 import { cornice, thinIce } from '../setpieces/glacier';
-import { makeStyle, type Piece, SAFE_TILES } from '../setpieces/place';
+import { makeStyle, type Piece } from '../setpieces/place';
 import { defineConcept } from './contract';
 import type { Concept, Landmark } from './types';
+import { bankCrossing, bankKit, boxH, col, DOOR, ledges, listOf, listSig, oneGap, passage, record, rects, shell, stepWidths, twoGap, ways } from './kit';
 
 /**
  * Glacier stage concepts (docs/SETPIECES.md, Glacier): five places on the ice, each one landmark that owns
@@ -39,149 +38,10 @@ import type { Concept, Landmark } from './types';
  * rolled.
  */
 
-/** Columns a landmark keeps from either end (sculptors/common.ts claimSite). */
-const SITE_MARGIN = POCKET + SAFE_TILES;
 /** Flat bank between the crevasse and the structure: the bridge's landing and a run-up. */
 const BANK = 3;
-/** Rows a passage through a structure is tall: a runner's height and a jump's start. */
-const DOOR = 3;
 
-const DOWN = Math.PI / 2;
-
-/** The widest one-part crossing at this gravity (hardGap's top end). */
-function oneGap(gravity?: number): number {
-  const j = jumpProfile(gravity);
-  return Math.max(j.gap + 2, BRIDGE_W + 2 * j.walkGap);
-}
-
-/** The one-part crossing a classic level's box makes room for: a column short of hardGap's widest. */
-function snugGap(gravity?: number): number {
-  return Math.min(oneGap(gravity), jumpProfile(gravity).gap + 3);
-}
-
-/** The widest two-part crossing at this gravity. */
-function twoGap(gravity?: number): number {
-  const j = jumpProfile(gravity);
-  return Math.max(j.gapAt(-6) + j.rise + 1, j.gap + 2 * BRIDGE_W + j.walkGap + 1);
-}
-
-/**
- * Share of levels whose landmark's own crossing takes two parts, where its box has room for a two-part one
- * (wide levels). A level built round a landmark has little room left for the sculptor's own crevasses, so
- * the wide ones ask more often to keep the theme near TWO_PARTS (measured with `pnpm level --stats 200`).
- */
-const LANDMARK_TWO = 0.3;
-const asksTwo = (k: Knobs) => k.challenge < Math.max(k.twoParts, LANDMARK_TWO);
-
-/** Columns for the crossing a landmark owns: two-part where asked and there's room, else one-part. Never rolls. */
-function crossFor(k: Knobs, struct: number): number {
-  if (asksTwo(k) && twoGap() + struct <= k.W - 2 * SITE_MARGIN) return twoGap();
-  return k.W > 56 ? oneGap() : snugGap();
-}
-
-/** Does a landmark of `struct` columns fit beside a one-part crossing on this level? */
-function roomFor(p: Partial<LevelProfile>, struct: number): boolean {
-  return snugGap(p.gravity) + struct <= (p.w ?? 48) - 2 * SITE_MARGIN;
-}
-
-/** The crossing the build digs: as wide as `parts` take, or as the box allows. */
-const crossCols = (parts: number) => (parts >= 2 ? twoGap() : oneGap());
-
-/** Columns of structure for a box: what a classic level's middle leaves, more on a wide one. */
-function structCols(k: Knobs, rng: Rng, min: number, wide: readonly [number, number], grand = false): number {
-  const room = k.W - 2 * SITE_MARGIN - crossFor(k, min + BANK) - BANK;
-  // A grand landmark owns a classic level's whole middle.
-  return Math.min(room, k.W > 56 ? rng.int(wide[0], wide[1]) : grand ? room : min + rng.int(0, 3));
-}
-
-/** Rows a box asks for, never more than a level of this height has over its ground (claimSite needs a row of sky). */
-const boxH = (k: Knobs, h: number) => Math.min(k.H - 9, h);
-
-/**
- * The crevasse in front of a landmark: a `hardGap` pit dug to the meltwater at the right end of its `cols`
- * columns, its bridge hinted and its far bank undercut. Columns it doesn't need stay ice field. Returns the
- * gap's columns.
- */
-function crevasse(g: Grid, rng: Rng, x0: number, cols: number, G: number, parts: number): [number, number] {
-  const b = x0 + cols - 1;
-  if (parts <= 0) return [b + 1, b];
-  const gw = Math.min(cols, hardGap(rng, parts));
-  const a = b - gw + 1;
-  pit(g, a, b, G, false);
-  hintGap(g, a, b, G);
-  undercut(g, b + 1, 2, G);
-  return [a, b];
-}
-
-/** One-way ledges two wide at columns x, x+1, a comfortable hop apart from the ground row G up to the surface row `top`. */
-function ledges(g: Grid, x: number, top: number, G: number): number[] {
-  const R = easyRise();
-  const rows: number[] = [];
-  for (let y = G - R; y > top; y -= R) {
-    for (const c of [x, x + 1]) g.set(c, y, T_ONEWAY, true);
-    rows.push(y);
-  }
-  return rows;
-}
-
-/** Solid column x from row G - h to G - 1. */
-function col(g: Grid, x: number, h: number, G: number): void {
-  if (h > 0) g.fill(x, G - h, x, G - 1, 1, true);
-}
-
-/** A passage `h` rows tall at the ground (row G is the floor) from column a to b. */
-function passage(g: Grid, a: number, b: number, G: number, h = DOOR): void {
-  g.clear(Math.min(a, b), G - h, Math.max(a, b), G - 1);
-}
-
-/** Anchors of a list of rects under `key`: `${key}{i}` its corner, `${key}{i}s` its size. */
-function rects(key: string, rs: readonly TileRect[]): Record<string, Vec> {
-  const out: Record<string, Vec> = {};
-  rs.forEach((r, i) => {
-    out[`${key}${i}`] = [r.x, r.y];
-    out[`${key}${i}s`] = [r.w, r.h];
-  });
-  return out;
-}
-
-/** The anchors of the ways through: each a rect that, filled, shuts that way. */
-const ways = (rs: readonly TileRect[]) => rects('way', rs);
-
-/** Rects recorded with `rects` under `key`, back as a list. */
-export function rectsOf(l: Pick<Landmark, 'anchors'>, key: string): TileRect[] {
-  const out: TileRect[] = [];
-  for (let i = 0; l.anchors[`${key}${i}`]; i++) {
-    const [x, y] = l.anchors[`${key}${i}`];
-    const [w, h] = l.anchors[`${key}${i}s`];
-    out.push({ x, y, w, h });
-  }
-  return out;
-}
-
-/** A list of layout numbers as one signature pair: how many, and a sum weighted by place, so a reorder shows. */
-const listSig = (xs: readonly number[]): Vec => [xs.length, xs.reduce((t, v, i) => t + v * (i + 1), 0)];
-
-/** Steps `n` columns wide in all, `count` of them, each at least one column, the spare spread at random. */
-function stepWidths(rng: Rng, count: number, n: number, most = 3): number[] {
-  const out = Array.from({ length: count }, () => 1);
-  for (let spare = n - count; spare > 0; spare--) {
-    const open = out.map((w, i) => (w < most ? i : -1)).filter((i) => i >= 0);
-    if (!open.length) break;
-    out[rng.pick(open)]++;
-  }
-  return out;
-}
-
-/** Points recorded as `${key}{i}` anchors, back as a list. */
-function listOf(l: Landmark, key: string): Vec[] {
-  const out: Vec[] = [];
-  for (let i = 0; l.anchors[`${key}${i}`]; i++) out.push(l.anchors[`${key}${i}`]);
-  return out;
-}
-const record = (key: string, xs: readonly Vec[]) => Object.fromEntries(xs.map((v, i) => [`${key}${i}`, v]));
-
-/** A backdrop shell (drawn by the glacier skin, chosen by the level's concept and the box's shape). */
-const shell = (rng: Rng, at: Vec, w: number, h: number): Module => ({ type: 'deco', kind: 'facade', at, w, h, seed: rng.int(0, 1 << 20) });
+const { crossFor, roomFor, crossCols, structCols } = bankKit({ bank: BANK, two: 0.3 });
 
 const ICY = (rng: Rng): PropStyle => makeStyle(rng, ['steel', 'bone'], [196, 205, 215], { trim: 'stripes', woodHue: rng.range(20, 30) });
 
@@ -233,7 +93,7 @@ function buildPalace(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const G = at.y + at.h;
   const cross = Math.min(at.w - PALACE_MIN - BANK, crossCols(parts));
   g.clear(at.x, 0, at.x + at.w - 1, G - 1);
-  crevasse(g, rng, at.x, cross, G, parts);
+  bankCrossing(g, rng, at.x, cross, G, parts);
   const s0 = at.x + cross + BANK;
   const s1 = at.x + at.w - 1;
   // The towers: the front one past the ledges up its face, the back one at the far end, each two or three wide.
@@ -333,7 +193,7 @@ export const ICE_PALACE = defineConcept({
   },
   box: (k, rng) => {
     const cross = crossFor(k, PALACE_MIN + BANK);
-    return { w: cross + BANK + structCols(k, rng, PALACE_MIN, [22, 32], true), h: boxH(k, DOOR + 5 + 3 * easyRise() + 6) };
+    return { w: cross + BANK + structCols(k, rng, PALACE_MIN, [22, 32], true), h: boxH(k.H, DOOR + 5 + 3 * easyRise() + 6) };
   },
   build: buildPalace,
   pieces: (rng, _s, l) => palacePieces(rng, l),
@@ -348,7 +208,7 @@ function buildSummit(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const G = at.y + at.h;
   const cross = Math.min(at.w - SUMMIT_MIN - BANK, crossCols(parts));
   g.clear(at.x, 0, at.x + at.w - 1, G - 1);
-  crevasse(g, rng, at.x, cross, G, parts);
+  bankCrossing(g, rng, at.x, cross, G, parts);
   const s0 = at.x + cross + BANK;
   const s1 = at.x + at.w - 1;
   // The toe: an apron of ice the cave runs through, its roof two or three rows thick.
@@ -444,7 +304,7 @@ export const SUMMIT = defineConcept({
   },
   box: (k, rng) => {
     const cross = crossFor(k, SUMMIT_MIN + BANK);
-    return { w: cross + BANK + structCols(k, rng, SUMMIT_MIN, [22, 34], true), h: boxH(k, DOOR + 3 + 5 * easyRise() + 4) };
+    return { w: cross + BANK + structCols(k, rng, SUMMIT_MIN, [22, 34], true), h: boxH(k.H, DOOR + 3 + 5 * easyRise() + 4) };
   },
   build: buildSummit,
   pieces: (rng, _s, l) => summitPieces(rng, l),
@@ -459,7 +319,7 @@ function buildWreck(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const G = at.y + at.h;
   const cross = Math.min(at.w - WRECK_MIN - BANK, crossCols(parts));
   g.clear(at.x, 0, at.x + at.w - 1, G - 1);
-  crevasse(g, rng, at.x, cross, G, parts);
+  bankCrossing(g, rng, at.x, cross, G, parts);
   const s0 = at.x + cross + BANK;
   const s1 = at.x + at.w - 1;
   const p0 = s0 + 2;
@@ -553,7 +413,7 @@ export const FROZEN_WRECK = defineConcept({
   },
   box: (k, rng) => {
     const cross = crossFor(k, WRECK_MIN + BANK);
-    return { w: cross + BANK + structCols(k, rng, WRECK_MIN, [18, 28]), h: boxH(k, DOOR + 4 + 2 * easyRise() + 7) };
+    return { w: cross + BANK + structCols(k, rng, WRECK_MIN, [18, 28]), h: boxH(k.H, DOOR + 4 + 2 * easyRise() + 7) };
   },
   build: buildWreck,
   pieces: (rng, _s, l) => wreckPieces(rng, l),
@@ -570,7 +430,7 @@ function buildFalls(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const G = at.y + at.h;
   const cross = Math.min(at.w - FALLS_MIN - BANK, crossCols(parts));
   g.clear(at.x, 0, at.x + at.w - 1, G - 1);
-  crevasse(g, rng, at.x, cross, G, parts);
+  bankCrossing(g, rng, at.x, cross, G, parts);
   const s0 = at.x + cross + BANK;
   const s1 = at.x + at.w - 1;
   const c0 = s0 + 2;
@@ -660,7 +520,7 @@ export const FROZEN_FALLS = defineConcept({
   codex: { about: 'A waterfall that froze where it fell. Up the ledges beside it, or through the cave behind it, across a pool of thin ice.' },
   box: (k, rng) => {
     const cross = crossFor(k, FALLS_MIN + BANK);
-    return { w: cross + BANK + structCols(k, rng, FALLS_MIN, [16, 26]), h: boxH(k, 5 * easyRise() + 7) };
+    return { w: cross + BANK + structCols(k, rng, FALLS_MIN, [16, 26]), h: boxH(k.H, 5 * easyRise() + 7) };
   },
   build: buildFalls,
   pieces: (rng, _s, l) => fallsPieces(rng, l),
@@ -675,7 +535,7 @@ function buildJump(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const G = at.y + at.h;
   const cross = Math.min(at.w - JUMP_MIN - BANK, crossCols(parts));
   g.clear(at.x, 0, at.x + at.w - 1, G - 1);
-  crevasse(g, rng, at.x, cross, G, parts);
+  bankCrossing(g, rng, at.x, cross, G, parts);
   const s0 = at.x + cross + BANK;
   const s1 = at.x + at.w - 1;
   // The start tower, two wide, its door at the foot.
@@ -751,7 +611,7 @@ export const SKI_JUMP = defineConcept({
   },
   box: (k, rng) => {
     const cross = crossFor(k, JUMP_MIN + BANK);
-    return { w: cross + BANK + structCols(k, rng, JUMP_MIN, [18, 28]), h: boxH(k, 5 * easyRise() + 8) };
+    return { w: cross + BANK + structCols(k, rng, JUMP_MIN, [18, 28]), h: boxH(k.H, 5 * easyRise() + 8) };
   },
   build: buildJump,
   pieces: (rng, _s, l) => jumpPieces(rng, l),
