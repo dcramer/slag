@@ -12,7 +12,7 @@ import type { Temperament } from './temperament';
  */
 
 /** Bumped when BrainView changes shape. A player's script will declare the version it was written against. */
-export const BRAIN_VIEW_VERSION = 2;
+export const BRAIN_VIEW_VERSION = 3;
 
 /** How fast across the ground, as a player would say it. */
 export type Pace = 'still' | 'walking' | 'running' | 'flying';
@@ -127,6 +127,16 @@ export interface BrainView {
   canPlace(tx: number, ty: number, rot: number): boolean;
   /** Place: would the level still have a way to the flag, with at most its bridges, after that? */
   keepsWay(tx: number, ty: number, rot: number): boolean;
+  /**
+   * Place: where everyone will run, with the plan built: the stand cells (y * w + x) of the quickest way to the flag
+   * and its best alternative, and how hard the run is as the parts stand (as `assess` measures it).
+   */
+  route(): { cells: number[]; tight: number; length: number };
+  /**
+   * Place: how hard the run would be with the held part there: the tight jumps (ones a slip turns into a fall) on the
+   * more forgiving way, and its length in tiles. Null if the spot isn't legal or would break the plan's way through.
+   */
+  assess(tx: number, ty: number, rot: number): { tight: number; length: number } | null;
 }
 
 /** What a brain wants this frame. The motor does the rest, with the same inputs a player has. */

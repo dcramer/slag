@@ -84,14 +84,14 @@ describe('bots', () => {
     expect(r.frames).toBeLessThan(1200);
   });
 
-  // The same, over the parts three Hard bots placed (as in tests/stats/bot-hard-routes.test.ts).
+  // The same, over the parts three Hard bots placed (as in tests/stats/bot-hard-routes.test.ts), placed as they did before bots blocked the way.
   it.each([
     ['glacier', 'tall', 11, 'steps in off a ledge’s lip to jump from its middle, instead of hopping in place under the overhang until it gives up'],
     ['harbor', undefined, 8, 'jumps through a part’s side wind traced in that wind, instead of landing short where the tide comes in'],
     ['farm', undefined, 4, 'walks onto a ledge where a run step couldn’t stop short of what’s coming'],
     ['jungle', undefined, 13, 'backs off a dropper and a snapper its landing set off, instead of jumping into the lane as the head slams'],
   ] as const)('%s %s %i: %s', (theme, size, seed, _what) => {
-    const r = botRace(seed, { theme, size, level: 'hard', parts: 3, steady: true });
+    const r = botRace(seed, { theme, size, level: 'hard', parts: 3, steady: true, hands: (p) => ({ ...p, block: 0 }) });
     expect(r, `died of ${r.cause} at race frame ${r.frames}`).toMatchObject({ finished: true });
     expect(r.frames).toBeLessThan(1200);
   });
@@ -140,6 +140,10 @@ describe('bots', () => {
     // Harder is meaner: it acts on a grudge more often, and better.
     expect(easy.spite).toBeLessThan(normal.spite);
     expect(normal.spite).toBeLessThan(hard.spite);
+    // And gets in everyone's way more, weighing more spots for the one that hurts.
+    expect(easy.block).toBeLessThan(normal.block);
+    expect(normal.block).toBeLessThan(hard.block);
+    expect(easy.weigh).toBeLessThan(hard.weigh);
     // Two bots at one level don't play alike.
     expect(rollPersonality(8, 'normal')).not.toEqual(normal);
     expect(rollPersonality(7, 'normal')).toEqual(normal);

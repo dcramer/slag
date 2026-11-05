@@ -477,25 +477,25 @@ export const BRIEFS: Record<string, Brief> = {
     worn: 'the bicycle seat sits crooked, its cover torn open at the back in a big ragged flap; its chrome stem is bent; one of the head spikes is snapped off short; the top of one wellington boot is folded down; the carrier bag has a big torn hole in its side.',
   },
   king: {
-    // The nod, each part of the read at race size: the spiked shell humped behind (it breaks the outline
-    // behind and above, the read in profile, so it leads the brief); the two horns and the wild red mane (they
-    // make him the king and not a foot soldier); the hulking upright build with a toothy snout (the boss in a
-    // cast of heroes, and upright against the ape's hunch).
-    // Ours, and the joke: a knock-off boss who never got his castle. The shell is riveted boiler plate, its
-    // spikes welded-on bolts, and a paper party crown sits crooked between his horns. The soot puff from his
-    // nostrils stays out: anything dark under the face reads as a mouth at play size.
+    // The nod, each part of the read at race size, as two big shapes side on: the turtle shell seen as a shell
+    // (a smooth dome on his back with its rim standing out as a lip and only three big spikes on top: spikes all
+    // round read as a hedgehog or a porcupine twice), and the big horned head with a heavy open jaw and fangs,
+    // the horns and the mane swept back (the king, and not a foot soldier or the ape); then the plated belly and
+    // the wide, low brute's stance (the boss in a cast of heroes, upright against the ape's hunch).
+    // Ours, and the joke: a knock-off boss who never got his castle. A patch plate is bolted on his shell and a
+    // paper party crown sits between his horns. The soot puff from his nostrils stays out: anything dark under
+    // the face reads as a mouth at play size.
+    // Drawn side on: in the shared three-quarter view the head sat inside one round mass with the shell, and two
+    // quick readers named that silhouette low or not at all; side on, the snout and its open jaw stand out in front
+    // and both named it at medium (art/sprites/king/design.prompt.txt).
     design:
-      'The character: a hulking, upright, barrel-chested turtle king, nearly as wide as he is tall, a grumpy brute boss. ' +
-      'On his back a huge humped turtle shell (#3f8a3a) made of riveted boiler plate, bulging out far behind him and up past his shoulders, with a thick cream rim (#efe2c0) and four big cream cone spikes, welded-on steel bolts, sticking out of it backwards and up: the biggest shapes in his outline. ' +
-      'Yellow-orange skin (#e8b23c), a big wide toothy snout jutting forward with two white fangs, a pale cream belly plate in wide bands (#e9d29a), two big cream horns curving up and back from his head, a wild spiky red-orange mane (#d9502e) and heavy red-orange brows. ' +
-      'Thick arms with black spiked cuffs (#2a2a30) on the wrists, short thick legs and big clawed feet. A small yellow paper party crown (#f0cf4a) sits crooked between his horns.',
-    // The designs drew no crown, so the edit puts it on, in a pale blue the drawing uses nowhere else (it is a
-    // tone of the player's colour in the game). The shipped design is this edit edited twice more
-    // (art/sprites/king/design.prompt.txt): for huge spikes, long horns and a small crown, since at play size the
-    // first one's spikes were bumps and two blind readers took it for the ape as often as for the king; then for a
-    // clean outline (a smooth mane, plain cuffs, a smooth tail, a three-pointed crown), since every small tuft and
-    // stud broke the outline too and readers saw a porcupine.
-    worn: "a big pale-blue paper party crown (#9cc8e8) with five tall zigzag points sits crooked on his head between his horns, one of its points torn and folded down; one of the shell's spikes is bent over sideways; a big square grey riveted patch plate (#9aa0a8) is bolted onto the shell; one horn is chipped off short at the tip.",
+      'The character: a hulking turtle king seen side on in profile, facing right, wide, heavy and low. Two big shapes carry him. ' +
+      'On his back: a huge smooth half-dome turtle shell (#3f8a3a) from his shoulders down to his hips, bulging far out behind him, its thick cream rim (#efe2c0) standing out round its edge like a lip, and only three big cream cone spikes standing up along its top. ' +
+      "Out front, on a thick neck: a huge head reaching forward, its long blunt snout far out in front of his belly, his heavy jaw wide open in a roar like a crocodile's, a wide wedge of a gap between the jaws with four big white fangs; heavy brows; two long cream horns sweeping up and back; a smooth red-orange mane (#d9502e) swept back behind them. " +
+      'Yellow-orange skin (#e8b23c), a pale cream banded belly plate (#e9d29a), huge thick arms with plain dark cuffs (#4a4a50), thick legs planted wide apart, big clawed feet, a thick tail. A small pale-blue paper crown (#9cc8e8) between his horns.',
+    // The crown came in an edit before this one, in a pale blue the drawing uses nowhere else (a light tone of the
+    // player's colour in the game); the wear stays off the head and the dome's outline but for one bent spike.
+    worn: "a big square grey riveted patch plate (#9aa0a8) is bolted flat onto the middle of the green shell; a big chunk is broken out of the shell's cream rim near the bottom; the pale-blue paper crown sits crooked, one of its points torn and folded down; one of the shell's spikes is bent over sideways.",
   },
   horse: {
     // The nod, each part of the read at race size, and each a shape only a horse has in outline: four long legs
