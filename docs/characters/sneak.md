@@ -1,0 +1,20 @@
+# The sneaking soldier
+
+A kind of the cast: [CHARACTERS.md](../CHARACTERS.md) has the rules every kind follows.
+
+- **Kind:** `sneak` · **Name:** Snek
+- **A stranger should say:** "the soldier hiding in a cardboard box."
+- **Silhouette:** side on, a crisp square-cornered cardboard box worn over him to the knees, level along the bottom, on two short crouched legs with a gap between them; a striped bandana's two long tails stream out of a torn hand-hole behind. His eyes peer out of a slot near the front. On the laugh his head pops out of the top, bandana and all.
+- **Traits:** a cardboard box worn over the body; a dark bandana with long tails; a grey sneaking suit; boots; on the laugh, a gruff stubble jaw.
+- **Palette:** the box is the player's colour; its back end a dark of it (tone −18), the packing tape a light of it (+18), the printed arrow a darker one (−32), the bandana darker again (−38) with neutral stripes `#f4efe6`; suit `#6a7078`; boots `#3a3a40`; skin `#d9b08c`; ink `#2a1f1a`.
+- **Color slot:** costume: the box.
+- **Gait:** a fast, crouched shuffle with the box bobbing and staying upright.
+- **The nod:** the box (the joke everyone knows him by, and the only box with legs in the cast); the bandana with long tails (the soldier inside, at 20 px); his eyes in the slot (somebody's in there); the low, crouched sneak (the stealth read in motion).
+- **Our twist:** the box is badly made for the job. Its printed arrow points down, a split corner is patched with crossed packing tape, the hand-hole is torn ragged and the eye slot hacked out; his bandana is a striped tea towel, one tail frayed.
+- **Swaps:** a sticker on the box (`sticker`).
+- **Palette alts:** the suit in grey `#6a7078`, olive grey `#6e6c5e` or a light grey `#858a90`.
+- **Idles and cheers:** the idle crouch; frozen mid-step as if nobody saw. A hop for joy with the eyes shut; the laugh, his head popped out of the top.
+- **Gait range:** a bounce of 0.1–0.6 px on each step, a lean of up to 0.03.
+- **Wear:** scuffed is two pale scuffs on the box, scorched two soot streaks, both tones of the box.
+- **Rig:** drawn flat (2026-11-04), side on: twelve drawings, three or two to a 16:9 image cut apart, the laugh on its own. Each drawing's eye slot is painted flat and given two pupils at fixed places, so the face kit finds the same eyes in every pose (drawn, the pupils touched the slot's dark cut end and traced as one blob). The first design, in three-quarter view with a crushed top corner and flared flaps, failed the blind read as "a shaggy, hunched" ape; side on, it reads as "a square blocky body on short legs", but neither of two fresh readers names the homage (a low "meat cube" each). Open top flaps and longer tails were tried and went: at play scale the flaps read as ears and the tails as an ape's long arms. Traced with no corner cutting (`smooth: 0`) the box kept its corners, but two more fresh readers still saw "Super Meat Boy, medium: square block body with short limbs". So the eye slot is cut through the box (each drawing's slot painted white round its two pupils, `holes`): in silhouette a box with a slit, in play the eyes peer out of a gap. Two more fresh readers name it: "stealth soldier in a cardboard box (Snake), medium: a box body with legs sticking out under it, crouched and sneaking even mid-jump" and "Solid Snake hiding in a cardboard box, low-medium".
+- **Concept prompt:** Seen from the side, a soldier hiding inside a big plain cardboard box worn upside down over his whole head and body down to his knees, a crisp upright box with square corners; two short legs in a grey sneaking suit and big dark boots, crouched mid-step; his eyes peer out of a rough slot near the box's front, and the two long tails of a striped tea-towel bandana stream out of a torn hand-hole at its back. The box's printed arrow points down, and crossed packing tape patches a split corner.
