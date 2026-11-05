@@ -13,7 +13,17 @@ function windowOf(intervals: number[]): FrameWindow {
 describe('frame window', () => {
   it('counts slow frames and hitches, and puts p95 on the slow tail', () => {
     const w = windowOf([...Array<number>(180).fill(16.7), ...Array<number>(15).fill(25), ...Array<number>(5).fill(80)]);
-    expect(w.summary()).toEqual({ frames: 200, slow: 20, hitch: 5, p95: 26 });
+    expect(w.summary()).toMatchObject({ frames: 200, slow: 20, hitch: 5, p95: 26 });
+  });
+
+  it('tells a browser capping the rate from a game too slow to keep up', () => {
+    const at = (workMs: number) => {
+      const w = new FrameWindow();
+      for (let i = 0; i < 200; i++) w.push(33.3, workMs);
+      return w.summary();
+    };
+    expect(at(4)).toMatchObject({ p95: 34, workP95: 5 });
+    expect(at(22.5)).toMatchObject({ p95: 34, workP95: 23 });
   });
 
   it('ignores gaps that are the page not drawing, and nonsense intervals', () => {
@@ -29,7 +39,7 @@ describe('frame window', () => {
   it('says nothing about a window too short to mean anything, however many frames it drew', () => {
     expect(windowOf(Array<number>(Math.floor(MIN_MS / 8.3)).fill(8.3)).summary()).toBeNull();
     // A device at 6 fps fills its windows with few frames, and those are the ones that matter most.
-    expect(windowOf(Array<number>(12).fill(170)).summary()).toEqual({ frames: 12, slow: 12, hitch: 12, p95: 170 });
+    expect(windowOf(Array<number>(12).fill(170)).summary()).toMatchObject({ frames: 12, slow: 12, hitch: 12, p95: 170 });
   });
 });
 
@@ -80,12 +90,13 @@ describe('frame metrics', () => {
   it('sends counts that add up across players and the window p95, tagged with the measured phase', () => {
     const r = recorder();
     installTelemetry(r);
-    reportFrames('run', { frames: 600, slow: 12, hitch: 0, p95: 18 });
+    reportFrames('run', { frames: 600, slow: 12, hitch: 0, p95: 18, workP95: 6 });
     const attributes = { 'match.phase': 'run' };
     expect(r.metric.mock.calls).toEqual([
       ['count', 'frame.total', 600, { attributes }],
       ['count', 'frame.slow', 12, { attributes }],
       ['distribution', 'frame.p95', 18, { unit: 'millisecond', attributes }],
+      ['distribution', 'frame.work.p95', 6, { unit: 'millisecond', attributes }],
     ]);
   });
 

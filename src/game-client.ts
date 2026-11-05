@@ -579,6 +579,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
   }
   function frame(now: number) {
     if (life.signal.aborted) return;
+    const start = performance.now();
     advance(now, 0.25);
     buildAhead();
     if (loop.paused) {
@@ -623,7 +624,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     audio.handle(events, view);
     audio.update(view, now);
     renderer.render(view, now, events);
-    pacing.frame(now, match.phase);
+    pacing.frame(now, match.phase, performance.now() - start);
     requestAnimationFrame(frame);
   }
   const pacing = new FramePacing();
