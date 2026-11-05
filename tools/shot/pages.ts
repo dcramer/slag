@@ -73,7 +73,7 @@ export const shots: Scenarios = {
     // The lobby's level dialog from its plate, then a theme and a difficulty chosen: the level behind it rebuilds. Fails if the card doesn't fit.
     await open(`seed=${seed}`);
     await step(5);
-    await page.mouse.click((250 / 768) * W, (28 / 432) * H);
+    await page.mouse.click((360 / 768) * W, (28 / 432) * H);
     await waitMenu(page, 'level', 5000);
     // The dialog's picture is copied on the frame after it asks.
     await step(2);
@@ -89,6 +89,29 @@ export const shots: Scenarios = {
     await page.waitForTimeout(400);
     await page.evaluate(() => (window as any).slagDebug.pause(true));
     await snap(`level-chosen-${W}x${H}`);
+  },
+  async mode() {
+    // The lobby's Mode card from its plate, Rising Slag picked (the level behind rebuilds for it), then the Level
+    // card, which marks a set that doesn't build the mode yet (`--theme farm`). Fails if a card doesn't fit.
+    await open(`seed=${seed}`);
+    await step(5);
+    await page.mouse.click((199 / 768) * W, (28 / 432) * H);
+    await waitMenu(page, 'mode', 5000);
+    await snap(`mode-${W}x${H}`);
+    const over = await menuOverflow(page);
+    if (over > 0) throw new Error(`mode card overflows by ${over}px`);
+    await page.evaluate(() => (window as any).slagDebug.pause(false));
+    await pressMenu(page, 'mode:slag');
+    await page.waitForFunction(() => (window as any).slagDebug.match.rules.mode === 'slag', null, { timeout: 15_000 });
+    await waitMenu(page, null, 5000);
+    await page.waitForTimeout(400);
+    await page.evaluate(() => (window as any).slagDebug.pause(true));
+    await step(2);
+    await snap(`mode-lobby-${W}x${H}`);
+    await page.mouse.click((360 / 768) * W, (28 / 432) * H);
+    await waitMenu(page, 'level', 5000);
+    await step(2);
+    await snap(`mode-level-${W}x${H}`);
   },
   async settings() {
     // Fails the run if a tab doesn't fit, or an input doesn't do what its prompt says.

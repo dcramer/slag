@@ -83,12 +83,18 @@ function underdogs(slots: readonly number[], scorers: readonly number[], standin
   });
 }
 
+/** Rising Slag's points by place, the last one standing first: who outlasted the most of the field. */
+export const SURVIVE_PLACES = [POINTS.survive, 6, 3] as const;
+
 /**
  * Rising Slag scoring (game/modes.ts):
- * - The last one standing scores. Runners caught on the same last frame share it, unless that's everyone:
- *   a slag that takes the whole field at once scores nothing, as a race nobody finishes doesn't.
+ * - The field scores by how long it outlasted the slag: the last one standing, then the last to fall before
+ *   them, then the one before that (`SURVIVE_PLACES`), so a round pays more than its winner, as a race pays
+ *   every finisher. Never everyone: the first one out always gets nothing, so a duel pays only its winner.
+ *   Runners caught on the same frame share the better place, and a slag that takes the whole field at once
+ *   scores nothing, as a race nobody finishes doesn't.
  * - Every kill pays its killer, standing or not: shoving is free, but a bonk into the slag or a part's
- *   kill is credited the usual way. A trailing survivor gets the underdog bonus.
+ *   kill is credited the usual way. A trailing scorer gets the underdog bonus.
  * - Alone, nobody can outlast you, so you score for how far the slag had to climb to catch you:
  *   `progress` is that share of the climb to the top (0…1) for a slot, and reaching the top pays a full win.
  */
@@ -105,12 +111,28 @@ export function scoreSurvival(
     if (points <= 0) return { verdict: 'too-hard', awards: [], finishers: [] };
     return { verdict: 'normal', awards: [{ slot: f.slot, points, reason: 'survive' }], finishers: points === POINTS.survive ? [f.slot] : [] };
   }
-  const standing = fates.filter((f) => f.alive);
-  const last = Math.max(...fates.map((f) => f.deathFrame));
-  const winners = (standing.length ? standing : fates.filter((f) => f.deathFrame === last)).map((f) => f.slot);
-  if (winners.length === fates.length) return { verdict: 'too-hard', awards: [], finishers: [] };
-  const awards: Award[] = winners.map((slot) => ({ slot, points: POINTS.survive, reason: 'survive' }));
+  // Outlasting order: whoever's standing, then the latest caught first. A frame's worth of deaths is one place.
+  const when = (f: Fate) => (f.alive ? Infinity : f.deathFrame);
+  const order = [...fates].sort((a, b) => when(b) - when(a));
+  if (when(order[0]) === when(order[order.length - 1])) return { verdict: 'too-hard', awards: [], finishers: [] };
+  const awards: Award[] = [];
+  let place = 0;
+  for (let i = 0; i < order.length && place < SURVIVE_PLACES.length && i < order.length - 1;) {
+    const tied = order.filter((f) => when(f) === when(order[i]));
+    // The first ones out never score, however the ties fall.
+    if (i + tied.length >= order.length) break;
+    for (const f of tied) awards.push({ slot: f.slot, points: SURVIVE_PLACES[place], reason: 'survive' });
+    i += tied.length;
+    place += tied.length;
+  }
+  const winners = order.filter((f) => when(f) === when(order[0])).map((f) => f.slot);
   for (const k of kills) if (k.killer !== k.victim && slots.includes(k.killer)) awards.push({ slot: k.killer, points: POINTS.trap, reason: 'trap' });
-  awards.push(...underdogs(slots, winners, standings));
+  awards.push(
+    ...underdogs(
+      slots,
+      awards.filter((a) => a.reason === 'survive').map((a) => a.slot),
+      standings,
+    ),
+  );
   return { verdict: 'normal', awards, finishers: winners };
 }

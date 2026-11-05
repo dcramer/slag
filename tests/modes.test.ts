@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { Match } from '../src/game/match';
 import { climbed, MODES } from '../src/game/modes';
 import { DEFAULT_RULES } from '../src/game/rules';
-import { POINTS, scoreSurvival } from '../src/game/scoring';
+import { generateCrate } from '../src/gen/props';
+import { leaderIndex } from '../src/sim/items/tax';
+import { POINTS, scoreSurvival, SURVIVE_PLACES } from '../src/game/scoring';
 import { buildsTowers, LOOP_ROWS, LOOP_W, rollProfile } from '../src/gen/level/profile';
 import { LOOP_HEAD_START } from '../src/gen/level/tide';
 import { generateTheme } from '../src/gen/theme';
@@ -206,17 +208,50 @@ describe('Rising Slag races', () => {
   });
 });
 
+describe('Rising Slag parts and items', () => {
+  it("deals no bridge it doesn't need, and always a hazard", () => {
+    for (let round = 1; round <= 6; round++) {
+      const crate = generateCrate(31, round, 5, 0, 0, false, false, 'many', MODES.slag.crate);
+      expect(crate).toHaveLength(5);
+      expect(crate.some((c) => c.role === 'hazard')).toBe(true);
+    }
+  });
+
+  it('sends the winged shell after whoever has climbed highest, laps and all', () => {
+    const lv = new Match(31, 'mine', SLAG).level;
+    const run = new RunWorld(lv, [], [0, 1], 0, 1, [], true, MODES.slag.run);
+    // Slot 0 stands high in the shaft on its first lap; slot 1 is low in it, but a lap on.
+    run.runners[0].body = bodyAtCell(10, 12);
+    run.runners[1].body = bodyAtCell(10, 40);
+    run.runners[1].lap = 1;
+    expect(leaderIndex(run)).toBe(1);
+  });
+});
+
 describe('survival scoring', () => {
   const fate = (slot: number, deathFrame: number) => ({ slot, alive: deathFrame < 0, deathFrame });
 
-  it('pays the last one standing', () => {
-    const r = scoreSurvival([fate(0, 300), fate(1, -1), fate(2, 500)], []);
-    expect(r.awards).toEqual([{ slot: 1, points: POINTS.survive, reason: 'survive' }]);
+  it('pays by how long each outlasted the slag, never the first one out', () => {
+    const r = scoreSurvival([fate(0, 300), fate(1, -1), fate(2, 500), fate(3, 200), fate(4, 100)], []);
+    expect(r.awards).toEqual([
+      { slot: 1, points: SURVIVE_PLACES[0], reason: 'survive' },
+      { slot: 2, points: SURVIVE_PLACES[1], reason: 'survive' },
+      { slot: 0, points: SURVIVE_PLACES[2], reason: 'survive' },
+    ]);
     expect(r.finishers).toEqual([1]);
+    // A duel pays only its winner; three pay two.
+    expect(scoreSurvival([fate(0, 300), fate(1, -1)], []).awards).toEqual([{ slot: 1, points: POINTS.survive, reason: 'survive' }]);
+    expect(scoreSurvival([fate(0, 300), fate(1, -1), fate(2, 100)], []).awards.map((a) => a.slot)).toEqual([1, 0]);
   });
 
-  it('shares a last frame, but a slag that takes everyone at once pays nobody', () => {
+  it('shares a frame, but a slag that takes everyone at once pays nobody', () => {
     expect(scoreSurvival([fate(0, 300), fate(1, 700), fate(2, 700)], []).finishers).toEqual([1, 2]);
+    // Two caught together on the last frame share first; the next place goes to the one caught after.
+    expect(scoreSurvival([fate(0, 300), fate(1, 700), fate(2, 700), fate(3, 100)], []).awards.map((a) => [a.slot, a.points])).toEqual([
+      [1, SURVIVE_PLACES[0]],
+      [2, SURVIVE_PLACES[0]],
+      [0, SURVIVE_PLACES[2]],
+    ]);
     const all = scoreSurvival([fate(0, 700), fate(1, 700)], [{ victim: 0, killer: 1 }]);
     expect(all.verdict).toBe('too-hard');
     expect(all.awards).toEqual([]);

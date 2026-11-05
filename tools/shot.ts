@@ -53,6 +53,7 @@
  *   pnpm shot lobbies                      → the lobby list (stubbed rooms): Join, Watch, empty; phones, failing on a tap target under 44 px
  *   pnpm shot about                        → About, from the main menu by keys; phones, failing on a tap target under 44 px
  *   pnpm shot rules                        → the match rules card (fails if it doesn't fit the window)
+ *   pnpm shot mode [--theme farm]          → the lobby's Mode card, Rising Slag picked, then the Level card (fails if one doesn't fit)
  *   pnpm shot level                        → the lobby's Level card, then a theme and a difficulty chosen (fails if it doesn't fit)
  *   pnpm shot settings                     → every settings tab over the lobby, driven by keys and a fake pad,
  *                                           then over the main menu on a phone (portrait and landscape), by tap

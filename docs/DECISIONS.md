@@ -90,6 +90,13 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Rising Slag is a looping shaft: climb out of the top and carry on from the bottom, so the map fits the screen and every part placed is met once a lap.** "i can see the whole map... while item placement is fine its not super useful if its randomly in the middle of a huge map?... it could be more like a map that scrolls infinitely so when you place you're in a loop?" / "yeah rising slag as a looping shaft is more interesting"
   2026-11-04 · `done` · DESIGN.md → Modes; `Level.loop`, `closeLoop` in `src/gen/level/sculptors/tall.ts`, `lapShift` in `src/sim/level.ts`
   Changed: a 200-row tower with a difficulty curve up its height. The curve now runs lap by lap through the slag's leash. Also takes in the level-edge feedback relayed from another session: walled sides, 48+ columns wide.
+- **Switching modes needs a better home than the Rules card: the mode leads the lobby on a plate of its own, opening a Mode card of big tiles.** "one thing i know we need is a better way to switch modes.. the level settin gis awkward for that" / "lets do it"
+  2026-11-04 · `done` · DESIGN.md → Modes; `src/ui/menus/mode.ts`, `src/render/mode-emblem.ts`
+  Changed: Mode was a row on the Rules card.
+- **Rising Slag scores by placement (10, 6, 3 for outlasting the slag), deals its own crate mix, and its winged shell hunts the highest climber.** (agreed with "lets do it", after a review that winner-take-all scoring, race crates and a flag-seeking shell would make the mode feel unfair)
+  2026-11-04 · `done` · DESIGN.md → Modes; `SURVIVE_PLACES`, `ModeDef.crate`
+- **Level sets should be fully interchangeable across modes, since the engine builds the level; until they are, a set may show which modes it supports.** "its totally ok if level sets show which modes they support while they're wip" / "tho ideally the level sets are fully interchangeable since the main engine should build the level."
+  2026-11-04 · `done` for the marker (`ModeDef.builds`, the Level card); interchangeable sets `planned` · DESIGN.md → Modes, TODO.md → 31
 - **A rule the level is built from (gravity, weather) rebuilds the lobby's level for everyone at once.**
   2026-11-02 · git `e64c3e5` · `done` · DESIGN.md → Rules
 

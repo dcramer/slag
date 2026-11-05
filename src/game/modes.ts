@@ -4,6 +4,9 @@
  * shared, so a new mode is an entry here, not a branch in the match.
  */
 import type { ProfileOverride } from '../gen/level';
+import { buildsTowers } from '../gen/level/profile';
+import { type CrateMix, RACE_CRATE } from '../gen/props';
+import type { ThemeId } from '../themes';
 import { TILE } from '../sim/constants';
 import { feetUp, RACE_RUN, type RunRules, type RunWorld } from '../sim/run';
 import { type RoundResult, scoreRound, scoreSurvival, type Standing } from './scoring';
@@ -26,6 +29,14 @@ export interface ModeDef {
   profile: ProfileOverride;
   /** What a race is for (sim/run.ts). */
   run: RunRules;
+  /** How its crates are dealt (gen/props.ts `CrateMix`). */
+  crate: CrateMix;
+  /**
+   * Whether a level set (theme) builds this mode's level as the mode means it. Every set should, since the engine
+   * builds the level; one that doesn't yet still plays (Rising Slag in a farm is a classic climb, no loop), and the
+   * Level card says so while it's work in progress.
+   */
+  builds: (theme: ThemeId) => boolean;
   score(o: RoundInput): RoundResult;
 }
 
@@ -34,6 +45,8 @@ export const MODES: Record<ModeId, ModeDef> = {
     label: 'Race',
     profile: {},
     run: RACE_RUN,
+    crate: RACE_CRATE,
+    builds: () => true,
     score: ({ slots, run, standings }) => scoreRound(slots, run.finishOrder, run.kills, standings),
   },
   /**
@@ -45,6 +58,11 @@ export const MODES: Record<ModeId, ModeDef> = {
     label: 'Rising Slag',
     profile: { tide: true },
     run: { flag: false, lastStanding: true },
+    // A loop climbs bare, so no bridge is owed: the crate leans to what you put in each other's way, and to
+    // utility, and away from building (a shortcut for whoever's ahead) and demolition (nothing needs clearing).
+    crate: { bridges: false, roles: { hazard: 1.6, utility: 1.3, build: 0.6, demolish: 0.35 } },
+    // A looping shaft is a tower's storeys: sets with no tower shapes yet (farm, harbor, space) climb a classic level.
+    builds: buildsTowers,
     score: ({ run, standings }) =>
       scoreSurvival(
         run.runners.map((r) => ({ slot: r.slot, alive: r.alive, deathFrame: r.deathFrame })),

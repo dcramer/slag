@@ -504,7 +504,17 @@ export class Match {
     if (plan) this.plan = plan;
     else if (!this.placed.length && !this.level.version) planMisses.count++;
     const sealed = !plan;
-    const crate = generateCrate(this.seed, this.round, count, plan?.length ?? MAX_BRIDGES, this.dryRounds, !!lonePipe(this.placed), sealed, this.rules.parts);
+    const crate = generateCrate(
+      this.seed,
+      this.round,
+      count,
+      plan?.length ?? MAX_BRIDGES,
+      this.dryRounds,
+      !!lonePipe(this.placed),
+      sealed,
+      this.rules.parts,
+      MODES[this.rules.mode].crate,
+    );
     const way = sealed ? crate.find(clearsParts) : undefined;
     const defs = new Rng(deriveSeed(this.seed ^ this.salt, `crate-order:${this.round}`)).shuffle(crate);
     // Cards in rows of up to 5 (8 players → 10 cards → 2 rows).

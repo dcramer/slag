@@ -34,6 +34,8 @@ export type HudAction =
   | 'level'
   /** The lobby's level dialog: theme, seed and difficulty. */
   | 'levelMenu'
+  /** The lobby's Mode card: what the match is played for (game/modes.ts). */
+  | 'modeMenu'
   | 'settings'
   | 'rules'
   | 'invite'
