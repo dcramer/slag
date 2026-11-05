@@ -1,6 +1,6 @@
 # Owner decisions
 
-Every game design decision, preference and direction the owner has given, grouped by topic. Compiled 2026-11-02. [DESIGN.md](DESIGN.md) holds the rules as they stand; this is the full log behind them, reversals included.
+Every game design decision, preference and direction the owner has given, grouped by topic. Compiled 2026-11-02. [DESIGN.md](DESIGN.md) holds the rules as they stand; this is the log behind them. A decision that was replaced or no longer applies is pruned: the one that replaced it says what it replaced in its Changed note.
 
 **Sources.** Every Claude Code transcript for this project on this machine (the coordinating session of 2026-11-02 and a short pnpm-config session the same day): the owner's own messages and their answers to questions, never subagent output. Earlier sessions ran on other machines and their transcripts are gone, so they're covered only through git history: commit messages and the history of `DESIGN.md`, `ART.md` and `TODO.md`. A decision taken from git cites its commit; one from a transcript cites its time (UTC). All dates are UTC.
 
@@ -177,94 +177,55 @@ Every game design decision, preference and direction the owner has given, groupe
 
 ## Characters
 
-- **Runners should have more identity and variety (a bumblebee pattern, say), maybe themed bodies instead of heads, the way the barnyard game uses animals.** "they're a little generic now and while they're cute and fun id love to see more interesting textures/variety"
-  2026-11-02 16:30Z · `done` as a proposal · CHARACTERS.md
-- **Direction C, foundry toys.**
-  2026-11-02 17:16Z (answer) · `done`, then replaced · CHARACTERS.md
-- **The cast is a mix of animals and invented critters, and the critters may parody famous characters (a fake jellyfish-brain floater, a mustached plumber, a robot, a goose, a hard-hat engineer).** "idk how we ended up with toys. that wasnt the original goal, and its not on theme" · "critters could include other parody things... like a fake metroid, a fake mario, a robot, a goose, etc. a fake engineer from tf2 etc"
-  2026-11-02 · `in progress` · CHARACTERS.md, DESIGN.md → Players and Parody
-  Changed: toys replaced by animals plus parody critters.
-- **The cast is mostly homages: about two thirds parody famous game characters, with a few plain animals for contrast, and the art is raised further.** "its better but you still need more parody and the art needs to be better yet..."
-  2026-11-02 · `in progress` · CHARACTERS.md, DESIGN.md → Players
 - **Every character is a homage, which fits the lore (the cast is knock-off heroes who almost got their own game).** "tbqh EVERY character can be an homage so it fits our story design"
-  2026-11-02 · `planned` · CHARACTERS.md → Roster (all homages)
-  Changed: four plain animals (fox, frog, penguin, chicken) were kept for contrast.
+  2026-11-02 · `done` · CHARACTERS.md → Decisions 1
+  Changed: the cast was foundry toys, then animals and parody critters, then mostly homages with four plain animals (fox, frog, penguin, chicken) for contrast.
 - **The roster is the twenty greatest characters to parody, worth the credits it takes to get them right.** "you can spend the credits you need to get the greatest 20 parodies of all time to exist"
-  2026-11-02 · `in progress` · CHARACTERS.md → Roster
+  2026-11-02 · `done` · CHARACTERS.md → Decisions 8
   Changed: the roster was sixteen kinds; five join (the voxel miner, the spiky-haired mercenary, the sneaking soldier, the blue robot boy, the spiked turtle king) and the horned bug knight goes to the reserves.
-- **Hand-drawn character art pauses until the art pipeline (generated concept, traced into rigged vector parts) is tested.** "its prob worth just waiting for our pipeline test tho because the art is still jank"
-  2026-11-02 · `open` · CHARACTERS.md → History
-- **Recognisability is the top criterion: each homage must read as its original at a glance, so its iconic palette wins and the player's colour moves to a secondary slot (a ring at its feet).** "the only thing that remotely resembles the thing its mimicking is the puff ball (kirby)"
-  2026-11-02 · `in progress` · CHARACTERS.md
-  Changed: the player's colour was always the body or a big worn piece.
+- **Recognisability is the top criterion: each homage must read as its original at a glance.** "the only thing that remotely resembles the thing its mimicking is the puff ball (kirby)"
+  2026-11-02 · `done` · CHARACTERS.md → Decisions 2
 - **Player characters may parody famous characters under our own designs and sound-alike names; parts and machines stay faceless.**
-  2026-11-02 · `in progress` · DESIGN.md → Parody, CHARACTERS.md
+  2026-11-02 · `done` · DESIGN.md → Parody, CHARACTERS.md
 - **Characters are drawn cleaner, lighter and more hand-drawn: thinner, varied lines in a dark of the body color, calmer color, fewer bold outlines.** "i want more cleanly designed art that isnt so loud/bold lines etc and more visually hand draw"
-  2026-11-02 · `in progress` · CHARACTERS.md, ART.md → World art
+  2026-11-02 · `done` · CHARACTERS.md → Decisions 7, ART.md → World art
 - **Each kind is a distinct character design (its own outline, signature part and gait), and fewer strong kinds beat many similar ones.** "ultimate chicken horse doesnt have this issue because the characters are clearly unique looking"
   2026-11-02 · `done` · CHARACTERS.md
-- **The player's colour is the loudest note: the body, or a big worn piece for a kind whose palette is its identity.**
-  2026-11-02 17:16Z (answer) · `in progress` · CHARACTERS.md
-  Changed: on the toys it was always a worn or painted part, never the body.
 - **New characters come from a random roll only; players don't choose a kind.**
   2026-11-02 17:16Z (answer) · `done` · CHARACTERS.md
 - **Everyone's saved look is re-rolled once, and again whenever the cast changes what a seed means.**
   2026-11-02 17:16Z (answer) · `done` · CHARACTERS.md
 - **Characters and the menu crowd take the art style, but stay as clean as they are.** "i like how they look right now so make sure ou keep it clean like it is and dont break it"
   2026-11-02 15:49Z · `done` · git `a6963c8`, `3eb7c44`; ART.md → World art
-- **Character art comes from a generated-concept pipeline, tested before any rollout: no rollout until the owner picks one.** "Lets test that out. but dont duct tape like we need great results here" / "Not yet"
-  2026-11-02 · `in progress` · CHARACTERS.md
-- **Traced frames (round 2) look out of place beside the hand-drawn cast; wait for the 3D-to-2D test before choosing.** "i agree w/ your asssessment. they look out of place. lets wait on the new test"
-  2026-11-02 · `open` · branch `worktree-agent-ae6810c61c411904c`, behind `?traced=1`
 - **The traced homages look too much like the originals: every kind needs a clear twist of its own on top of the recognisable silhouette.** "they look TOO much like the things were trying to parody... so we'd need to spice it up too"
-  2026-11-02 · `open` · CHARACTERS.md → Roster
-- **3D-to-2D round 1 misses on art style and on "parody the original"; try a round 2 with a model sheet and a pose sheet, restroked in the game's own ink.** "the main issue with that 3d to 2d pipeline is the art style, and that its not following our 'parody the original'. i also agree that we could do a pose sheet/etc. lets try another round with improvements"
-  2026-11-02 · `in progress` · branch `worktree-agent-aacd068f51e46176c`, behind `?sprites=1`
-- **3D-to-2D round 2 (a model sheet and a pose sheet, traced into flat parts and inked by the cast's own pen) is the direction: "thats SO MUCH BETTER".** Polish these two kinds before rolling out to the rest.
-  2026-11-02 · `in progress` · `src/render/cast/sprites/`, behind `?sprites=1`; CHARACTERS.md
+  2026-11-02 · `done` · CHARACTERS.md → Decisions 8, Rules for every kind → The nod and the twist
 - **The plumber carries his plunger low, its cup behind his shoulder, so the cap, bill and nose own his silhouette.** (answer: "Carry it lower")
-  2026-11-02 · `done` · CHARACTERS.md → Roster
+  2026-11-02 · `done` · docs/characters/plumber.md
 - **Character source art (models and sheets) lives in Git LFS; builds skip it and use the generated frames.** (answer: "Git LFS")
   2026-11-02 · `done` · `.gitattributes`, `tools/art3d/README.md`
 - **The player's colour is the character's main costume colour (an alternate costume), not a foot ring.** "the sprites seem to always be the same color? like they're not re-coloring their primary based on the player color?" / "ok well thats wrong"
-  2026-11-02 · `done` for the plumber and speedster · CHARACTERS.md → the rules
+  2026-11-02 · `done` · CHARACTERS.md → Decisions 4
   Changed: iconic palettes with the player's colour on a foot ring.
 - **Characters vary only in curated ways that keep the art: costume colour, accessory swaps, designed alternate palettes on one secondary region, pose personality (two idles, two cheers, a little gait), and wear. Faces, proportions and silhouettes are never rolled; random eyes and mouths go.** "idk if theres ways we can make it a little more procedural without losing our art work" / "'random eyeballs' dont work with the art style as an example of something that likely needs to go away" / "Yes, add it"
-  2026-11-02 · `in progress` (faces `done`: each kind's face is its own, in `KINDS` and a rendered kind's `sprite.json`) · CHARACTERS.md → the rules, `tools/art3d/`
+  2026-11-02 · `done` · CHARACTERS.md → Rules for every kind → Variety, `VARIETY` in `src/render/cast/sprites/play.ts`
   Changed: every character rolled an eye count, style, iris, spread and height, and a mouth, under its kind's face.
 - **The costume-colour rule holds even where a colour is the character's identity: the dot-eater's whole ball takes the player's colour, not only his napkin.** (answer: "Keep player colour")
-  2026-11-02 · `done` · CHARACTERS.md → the rules
-- **Parts may seal the level: placement is never refused for leaving no way through, and a sealed level needs a bomb.** "the placement restrictions feel buggy in some places?" / "game was refusing letting me place items that clearly had nothing there" / "also parts CAN seal it.. it can be unwinnable and require a bomb"
-  2026-11-02 · `in progress` · DESIGN.md → Props, `src/gen/level/winnable.ts`
-  Changed: a match kept a plan of at most `MAX_BRIDGES` bridges and refused a placement that left none.
-- **Parts pass through each other: a mover's path or a set piece's swing may cross a placed part, so neither refuses a placement.** "you should be able to let some parts go through each other. your barn one. its ok to allow palcement there, and the items will just move through each other..."
-  2026-11-02 · `in progress` · DESIGN.md → Props, `src/sim/props/transform.ts`
-  Changed: placed parts and set pieces claimed their whole swept path.
-- **Character production pauses once the running jobs finish: not enough Tripo credits for the whole roster.** "we dont have enough credits to finish all art, so lets pause when we get these jobs done"
-  2026-11-02 · `open` · TODO.md → 29
+  2026-11-02 · `done` · CHARACTERS.md → Rules for every kind → Player's color
 - **Rendered kinds are the only way they draw: no `?sprites=1` option; a kind without frames stays hand-drawn until produced.** "Make sprites the only way it works now, so no option at all"
   2026-11-02 · `done` · `src/render/cast/sprites/index.ts`
-- **The rendered kinds aren't finished and are too detailed for the game's resolution: the pipeline is improved on the zapmouse first, whether through the illustration prompt or a later stage, then carried to the rest.** "its the new sprite based ones im talking about btw. we didnt finish them and im not 100% happy w/ the current outcome" / "we'll use zapmouse as a way to test an improved pipeline. whether thats an improved illustration prompt or something else" / "so i agree, its _too detailed_ for our game resolution"
-  2026-11-02 · `in progress` · CHARACTERS.md → Rendered kinds, `tools/art3d/`
 - **Every character is a little disheveled and grungier, because of the lore, and simpler than the concept sheets, which are too complicated for the game's art style; the art style itself may change to fit.** "all the characters need to be a little disheveled because of slag's lore" / "yeah they're fine but i worry those are just too complicated for our game art style (and we might need to tweak our art style). and i want them grungier as a thematic thing because of the game's lore"
-  2026-11-02 · `open` · CHARACTERS.md → Decisions 7, ART.md
+  2026-11-02 · `done` · CHARACTERS.md → Decisions 9, ART.md
   Changed: the cast was clean, light and calm in colour.
 - **The grunge is worn shape: battered, lopsided, bent and taped, with clean bright colours; not grimy colour, not a rough line.** (picked from the zapmouse style test: "Worn, like worn-2")
-  2026-11-02 · `in progress` · CHARACTERS.md → Decisions 9, `tools/art3d/style.ts`
-- **The zapmouse is drawn from its flat design and pose drawings, not its 3D model; rendered figures take no light bands.** "Yes, build it out" (after the flat zapmouse test in game, cel bands off characters)
-  2026-11-03 · `done` · CHARACTERS.md → Rendered kinds → Flat kinds, `tools/art3d/flat/`; replaces the zapmouse's 3D-traced frames
-- **The plumber is drawn flat too, from a new game-size design worn with welding goggles, a cracked bill, a knotted strap, a knee patch and a taped plunger.** "Yes, the plumber"
-  2026-11-03 · `done` · CHARACTERS.md → Rendered kinds → Flat kinds, `tools/art3d/flat/kinds.ts`; replaces the plumber's 3D-traced frames, and his brown-canvas overalls (navy instead: flat, brown canvas is the gloves' tan)
+  2026-11-02 · `done` · CHARACTERS.md → Decisions 9, `tools/art3d/style.ts`
+- **Rendered figures take no light bands.** "Yes, build it out" (after the flat zapmouse test in game, cel bands off characters)
+  2026-11-03 · `done` · CHARACTERS.md → Rendered kinds → Out of the light bands
 - **The plumber's plunger cup stays a dark of the player's colour, as the flat pass draws it.** "Leave it" (asked: back to its own red?)
-  2026-11-03 · `done` · CHARACTERS.md → The mustached plumber → Palette; replaces the cup's own red `#b8433c`
+  2026-11-03 · `done` · docs/characters/plumber.md → Palette; replaces the cup's own red `#b8433c`
 - **Every rendered kind is drawn flat; the 3D route is retired.** "Lets try to work through the remaining sprites. Make sure our pipeline documentation is correct from our learnings"
-  2026-11-03 · `done` · CHARACTERS.md → Rendered kinds, `tools/art3d/README.md`, `tools/art3d/3D.md`; replaces the 3D-traced hedgehog, elf, dot-eater and puffball. The hedgehog's design came from his round-2 concept as the reference (the image model otherwise drew the original's joined eyes); the puffball's seam and tape cross aren't drawn (a mouth and a third eye at play size); the dot-eater slides down a wall in its fall
-- **The rest of the roster is drawn flat too, one agent a kind: first the five in the cast (the impostor, the hunter, the engineer, the goose and the jelly), then the nine not yet in it, in one change.** "conintue" (after the six flat kinds landed)
-  2026-11-03 · `in progress` · TODO.md → 29, CHARACTERS.md → Rendered kinds → the second batch
+  2026-11-03 · `done` · CHARACTERS.md → Rendered kinds, `tools/art3d/README.md`, `tools/art3d/3D.md`; replaces the 3D-traced kinds
 - **Every kind's own palette is neutral, and nearly every colour on it is the player's: the costume in the player's colour, every other coloured part in a lighter or darker tone of it (the engineer's hat too); skin, eyes, hair, metal, wood, cloth greys and ink stay neutral. The swatches stay as they are: no kind skips one.** "The colors have been fine and things like eng hat can be color coded.. mostly the palette of the characters should be neutral and then pretty much all colors should be the player color"
   2026-11-04 · `done` · CHARACTERS.md → Decisions 4, Rules for every kind → Player's color and Variety; replaces each homage's own hues on its secondary parts (the plumber's blue overalls, the speedster's red shoes, the engineer's yellow hat) and the coloured palette alts
-- **The art's open items all get done: the marks left at 4.4×, the three kinds that don't read (the engineer, the hunter against the robot boy, the jelly's hooks), and the nine kinds not yet in the cast, which replace the four plain animals.** "Its worth addressing these. and getting it done"
-  2026-11-04 · `done` · TODO.md → 29, CHARACTERS.md → Roster
 - **Spend Tripo Studio credits to finish the cast's images once the free allowance runs out.** "Spend the credits" (asked: about 1,500–3,500 credits; images turned out to cost 2 each)
   2026-11-04 · `done` · `tools/art3d/README.md`
 - **Agents may run Tripo image calls without a prompt: allowed in the owner's user settings, since each worktree reads its own project settings.** "Add the rule" · "Add to user settings"
@@ -282,8 +243,6 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Every drawn kind's eyes work the way the cup-headed toon's do: each kind's kit eye is its homage's own eye design, drawn by the face kit so it acts, and bold enough to read at play scale.** "seems like we want mughead approach so the eyes are animated/drawn correctly" (after "some have issues w/ their eyes")
   2026-11-04 · `done` (but for the worm, the warrior and the slayer, being drawn) · CHARACTERS.md → Rendered kinds → The cast's face, `EYES` in `src/render/cast/sprites/face.ts`, `tools/art3d/README.md` → 5
   Changed: every kind but the mug, the puffball, the dino and the three dot-eyed kinds wore one generic round eye (a white, a rim, a coloured iris, a pupil and a glint), and a head side on wore its far eye as a second full circle beside the near one.
-- **Set-piece machines that look solid are made solid: guns on ledges, wheel and swing hubs, ladles, carts, signs, posts.** "Make them solid" (asked: make them solid, or draw them as not-ground)
-  2026-11-02 · `open` · TODO.md → 21, `pnpm shot fairplay` (`PENDING`)
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
   2026-11-02 · `done` · public/ASSETS.md
 
@@ -523,6 +482,8 @@ Every game design decision, preference and direction the owner has given, groupe
   Changed: the bladed combine only drove the Combine Run, a wide-only landmark.
 - **Triggers between pieces and changes between rounds are out of scope for now.**
   2026-11-02 · `open` · DESIGN.md → Stage concepts
+- **Set-piece machines that look solid are made solid: guns on ledges, wheel and swing hubs, ladles, carts, signs, posts.** "Make them solid" (asked: make them solid, or draw them as not-ground)
+  2026-11-02 · `open` · TODO.md → 21, `pnpm shot fairplay` (`PENDING`)
 
 ## Weather and blood
 
@@ -768,3 +729,5 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `open` · TODO.md → 10
 - **Apply the quick wins from the transcript review: guard-safe commands for worktree agents, one `pnpm land` per batch instead of a merge and a gate per branch, and `SNAP_VERSION` bumped once at landing, never in a branch.** "Apply quick wins"
   2026-11-02 · `done` · AGENTS.md → Git workflow, `tools/land.ts`, `src/net/snapshot.ts`
+- **Decisions that were replaced or no longer apply are pruned from this log; what replaced them keeps a Changed note.** "old decisions that are no longer relevant should also be cleaned up"
+  2026-11-04 · `done` for Characters · DECISIONS.md

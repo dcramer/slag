@@ -25,7 +25,7 @@ import { line, type P, sn } from './ink';
 import { arm, contour, hand, type InkTarget, type Look, lookOf, moodOf, path, type RunnerPose, STRIDE, toned, tonedOval } from './ink-figure';
 
 /**
- * A runner, inked: one of the cast (docs/CHARACTERS.md), animals and critters. Players watch these more
+ * A runner, inked: one of the cast (docs/CHARACTERS.md). Players watch these more
  * than anything else, and in a race they're about 40 screen px tall, so the drawing is silhouette and
  * clean shapes: a light pen in a dark of the body's own color, one soft shadow shape, the player's color
  * as the loudest note, and eyes and a mouth that mean it.
