@@ -93,7 +93,7 @@ export const kind: FlatKind = {
     marks: [[['scuff', 0.5, 0.62, 0.6]], [['scorch', 0.5, 0.62, 0.6]]],
   },
   accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [2.2, 0.9] }],
-  face: { r: 1, iris: '#3a9a46', mouth: [1.4, 2.7] },
+  face: { r: 0.9, iris: '#3a9a46', mouth: [1.4, 2.7] },
   gait: { bounce: [0, 0.45], lean: [0.01, 0.06] },
   clips: {
     idle: { frames: ['idle'], loop: true, fps: 1 },

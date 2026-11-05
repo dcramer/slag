@@ -4,7 +4,8 @@ import { Match } from '../src/game/match';
 import { roomSeed } from '../src/game/room';
 import { generateCharacter } from '../src/gen/character';
 import { ACTION_AUTH, deviceId, localOf, type NetAction, newNetState, peerOf } from '../src/net/actions';
-import { NetSession } from '../src/net/session';
+import { ACTS_PER_TICK, NetSession } from '../src/net/session';
+import { MAX_PEERS } from '../src/net/signal-protocol';
 import { hashMatch, snapshotMatch } from '../src/net/snapshot';
 import { LoopbackHub } from '../src/net/transport';
 import { ACTS_PER_MSG, BUNDLES_PER_MSG, FRAMES_PER_MSG, parseAction, parseMsg } from '../src/net/wire';
@@ -30,6 +31,9 @@ const SAMPLES: { [K in NetAction['t']]: Extract<NetAction, { t: K }> } = {
 };
 const ALL = Object.values(SAMPLES) as NetAction[];
 const wire = (v: unknown): unknown => JSON.parse(JSON.stringify(v));
+/** One snapshot for every message that carries one: building a Match is most of what these tests cost. */
+let snapCache: ReturnType<typeof snapshotMatch> | undefined;
+const snap = () => (snapCache ??= snapshotMatch(new Match(roomSeed('TEST'))));
 
 describe('device ids', () => {
   it('split back into the peer and the local device they were built from', () => {
@@ -81,7 +85,7 @@ describe('parseAction', () => {
 /** A real host's messages, as they cross the wire. */
 function hostTraffic(): unknown[] {
   const hub = new LoopbackHub({ latency: 20 });
-  const a = new NetSession({ transport: hub.transport('aaaa'), match: new Match(roomSeed('WIRE')), now: () => hub.now });
+  const a = new NetSession({ transport: hub.transport('aaaa'), match: new Match(roomSeed('TEST')), now: () => hub.now });
   const seen: unknown[] = [];
   hub.transport('zzzz').start({ status() {}, members() {}, message: (_f, d) => seen.push(d) });
   for (let i = 0; i < 200; i++) {
@@ -93,17 +97,16 @@ function hostTraffic(): unknown[] {
 
 describe('parseMsg', () => {
   it('takes back every kind of message a session sends', () => {
-    const snap = snapshotMatch(new Match(5));
     const ns = { ...newNetState(), watching: { bbbb: { name: 'Bo', afk: true as const } }, queue: [{ peer: 'cccc', dev: 'cccc:kb1' }] };
     const msgs = [
       { t: 'in', s: 1_700_000_000_000, f: [{ kb1: 1 }, {}, { kb1: [65, 10.5, 20] }], a: ALL.map((a, i) => [1_700_000_000_000 + i, a]), c: 30, h: [60, 123456] },
       { t: 'b', b: [{ f: 10, i: { 'aaaa:kb1': 3 }, a: [SAMPLES.salt], k: { bbbb: [5, 6] } }, { f: 11 }] },
-      { t: 'sync', s: snap, k: { bbbb: [1, 2] }, ns, last: { 'aaaa:kb1': 1 }, why: 'hello' },
+      { t: 'sync', s: snap(), k: { bbbb: [1, 2] }, ns, last: { 'aaaa:kb1': 1 }, why: 'hello' },
       { t: 'hello', f: -1, c: 'client1' },
       { t: 'hello', f: 40 },
       { t: 'need', f: 12 },
       { t: 'pull' },
-      { t: 'state', s: snap, k: {}, ns: newNetState(), last: {} },
+      { t: 'state', s: snap(), k: {}, ns: newNetState(), last: {} },
       { t: 'ping', ts: 12.5 },
       { t: 'pong', ts: 12.5 },
       { t: 'pings', p: { bbbb: 40 } },
@@ -149,9 +152,9 @@ describe('parseMsg', () => {
       { t: 'b' },
       { t: 'need' },
       { t: 'pong' },
-      { t: 'sync', s: snapshotMatch(new Match(5)), k: {}, last: {}, why: 'x' },
+      { t: 'sync', s: snap(), k: {}, last: {}, why: 'x' },
       { t: 'sync', k: {}, ns: newNetState(), last: {}, why: 'x' },
-      { t: 'sync', s: snapshotMatch(new Match(5)), k: {}, ns: { ...newNetState(), queue: undefined }, last: {}, why: 'x' },
+      { t: 'sync', s: snap(), k: {}, ns: { ...newNetState(), queue: undefined }, last: {}, why: 'x' },
       { t: 'state', s: { frame: 1 }, k: {}, ns: newNetState(), last: {} },
       // Oversized.
       { t: 'in', s: 1, f: Array.from({ length: FRAMES_PER_MSG + 1 }, () => ({})), c: 0 },
@@ -168,7 +171,7 @@ describe('parseMsg', () => {
 /** A host and a guest in a lobby, and a third peer whose transport sends whatever the test hands it. */
 function roomWithRaw() {
   const hub = new LoopbackHub({ latency: 20, jitter: 5, seed: 9 });
-  const mk = (id: string) => new NetSession({ transport: hub.transport(id), match: new Match(roomSeed('WIRE')), now: () => hub.now });
+  const mk = (id: string) => new NetSession({ transport: hub.transport(id), match: new Match(roomSeed('TEST')), now: () => hub.now });
   const a = mk('aaaa');
   const run = (n: number) => {
     for (let i = 0; i < n; i++) {
@@ -184,17 +187,25 @@ function roomWithRaw() {
   const b = mk('bbbb');
   run(10);
   const got: NetAction[] = [];
+  /** Each bundle's actions, by frame: a lossy resend repeats one, so this keeps each frame once. */
+  const bundles = new Map<number, NetAction[]>();
+  const pings: Record<string, number>[] = [];
   const raw = hub.transport('gggg');
   raw.start({
     status() {},
     members() {},
     message: (_from, d) => {
       const m = parseMsg(d);
-      if (m?.t === 'b') for (const x of m.b) got.push(...(x.a ?? []));
+      if (m?.t === 'b')
+        for (const x of m.b) {
+          got.push(...(x.a ?? []));
+          bundles.set(x.f, x.a ?? []);
+        }
+      if (m?.t === 'pings') pings.push(m.p);
     },
   });
   run(30);
-  return { hub, a, b, raw, run, got };
+  return { hub, a, b, raw, run, got, bundles, pings };
 }
 
 describe('hostile peers', () => {
@@ -238,6 +249,54 @@ describe('hostile peers', () => {
     expect(hashMatch(b.match)).toBe(hashMatch(a.match));
   });
 
+  it('a guest flooding requests gets a few sequenced a tick, and nobody else waits on it', () => {
+    const { a, b, raw, run, bundles } = roomWithRaw();
+    let n = 1;
+    // Ten full messages a tick, every request new: far more than any bundle could carry.
+    const flood = () => {
+      for (let i = 0; i < 10; i++) {
+        const acts = Array.from({ length: ACTS_PER_MSG }, (_, j) => [n++, { t: 'color', dev: 'gggg:kb1', color: j % 8 }]);
+        raw.send({ t: 'in', s: 1, f: [], c: 0, a: acts }, 'aaaa');
+      }
+    };
+    for (let i = 0; i < 20; i++) {
+      flood();
+      run(1);
+    }
+    b.act({ t: 'name', dev: 'bbbb:kb1', name: 'Bea' });
+    let waited = 0;
+    while (a.match.players.find((p) => p.device === 'bbbb:kb1')!.character.name !== 'Bea' && waited < 60) {
+      flood();
+      run(1);
+      waited++;
+    }
+    expect(waited).toBeLessThan(10);
+    const floods = [...bundles.values()].map((acts) => acts.filter((x) => 'dev' in x && x.dev === 'gggg:kb1').length);
+    expect(Math.max(...floods)).toBe(ACTS_PER_TICK);
+  });
+
+  it('peers that come and go are forgotten: pings, and a guest’s acks, stay the size of the room', () => {
+    const { hub, a, b, run, pings } = roomWithRaw();
+    // Two crowds of passers-by, between them more than a guest keeps acks for.
+    for (let round = 0; round < 2; round++) {
+      const crowd = Array.from({ length: MAX_PEERS + 1 }, (_, i) => {
+        // All a passer-by needs to leave a trace: input (an ack entry everywhere) and a pong (a ping on the host).
+        const t = hub.transport(`t${round}${String(i).padStart(2, '0')}`);
+        t.start({ status() {}, members() {}, message: (_f, d) => parseMsg(d)?.t === 'ping' && t.send({ t: 'pong', ts: (d as { ts: number }).ts }, 'aaaa') });
+        t.send({ t: 'in', s: 1, f: [], c: 0 }, 'aaaa');
+        return t;
+      });
+      run(70);
+      for (const t of crowd) t.close();
+      run(5);
+    }
+    run(130); // a ping round after the last one left
+    const members = new Set(a.members.map((m) => m.id));
+    expect(Object.keys(pings.at(-1)!).every((id) => members.has(id))).toBe(true);
+    const acks = (b as unknown as { acks: Record<string, unknown> }).acks;
+    expect(Object.keys(acks).length).toBeLessThanOrEqual(2 * MAX_PEERS + 1);
+  });
+
   it('a guest sending each host-only action, or acting for another peer’s device, gets none of them sequenced', () => {
     const { a, raw, run, got } = roomWithRaw();
     const before = { rules: { ...a.match.rules }, seed: a.match.seed, salt: a.match.nextSalt };
@@ -248,8 +307,11 @@ describe('hostile peers', () => {
     // And one it may send, so the test sees that the pipe works.
     const mine: NetAction = { t: 'watch', dev: 'gggg:kb1', on: true, name: 'Gee' };
     const sent = [...hostOnly.map((t) => SAMPLES[t]), ...others, mine];
-    raw.send({ t: 'in', s: 1, f: [], c: 0, a: sent.map((x, i) => [i + 1, x]) }, 'aaaa');
-    run(60);
+    // Resent every tick, as a guest does until they're acked: the host takes a few a tick.
+    for (let i = 0; i < 60; i++) {
+      raw.send({ t: 'in', s: 1, f: [], c: 0, a: sent.map((x, j) => [j + 1, x]) }, 'aaaa');
+      run(1);
+    }
     expect(got).toContainEqual(mine);
     for (const x of [...hostOnly.map((t) => SAMPLES[t]), ...others]) expect(got, x.t).not.toContainEqual(x);
     // Nothing a guest can't ask for came out: the host's own lobby joins are all there is of those.
