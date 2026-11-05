@@ -537,27 +537,26 @@ export const BRIEFS: Record<string, Brief> = {
     worn: 'it is a cheap horse costume: a thick knitted red scarf (#c9473f) is wound round the top of its neck just under the head, one short end hanging down its chest; a big silver zip runs straight down the front of its chest from under the scarf to between its front legs, stuck open at the bottom, its two sides parted in a V; a big square patch of grey cloth is sewn on the knee of one front leg with big stitches.',
   },
   worm: {
-    // The nod, each part of the read at race size: the worm on a stalk, a thick bare pink worm body rising dead
-    // straight up out of the suit's collar with a blunt head on top (the read: nobody else in the cast is a head on
-    // a stalk, so it leads the brief and stays tall, upright and clear above the shoulders); the huge round
-    // shoulders on a stocky suit (the super suit the stalk rises out of); the big chunky pistol at the hip (what he
-    // does). Held at the hip and pointing down, never level from the shoulder: the hunter's and the robot boy's
-    // cannons are held out from the shoulder, and that outline is theirs. Stocky with no toolbox or hard hat, and a
-    // bare head on a stalk where the engineer has a hat on a small head.
-    // Ours, and the joke: a knock-off hero. The super suit is a second-hand boiler suit stuffed out with pillows at
-    // the shoulders, and the pistol is a big old hair dryer, its cord trailing.
-    // Blind reads (2026-11-04, art/sprites/worm/design.prompt.txt): an S-curled neck read as a snout or a tail;
-    // a thin one as almost nothing; the eyes standing on top of the head as ears; the dryer tilted up in front of
-    // the chest made a capped, stocky man. So the stalk is thick and straight, the eyes on the head's front.
+    // The nod, each part of the read at race size: a thin bare pink worm neck rising out of the suit's collar with
+    // a distinct head on it, wider than the neck, two huge bulging eyes standing up out of its top and a wide open
+    // grin (the read: nobody else in the cast is a head on a stalk; the neck arcs forward once at the top, never
+    // an S, which read as a dragon's snout, and the head is never the neck's own width, which read as a thumb);
+    // the super suit's heroic build, big round shoulder pads, a broad chest, a narrow belted waist, slim legs and
+    // big boots (the hero the worm is wearing); a chunky raygun held out in one hand, clear of the body (what he
+    // does). A hand-held gun at arm's length, small enough for one hand, never a cannon worn on the forearm and
+    // never level from the shoulder: that's the hunter's and the robot boy's outline.
+    // Ours, and the joke: a knock-off hero. The raygun is an old hair dryer, its cord dangling; one small patch on
+    // the suit. Kept clean: the stuffed, patched boiler suit of the first rounds was a shapeless sack at play size.
     design:
-      'The character: a cartoon earthworm wearing a bulky suit. ' +
-      'His neck is the worm itself: a thick bare pink worm body (#f19aa6) with rings round it, rising dead straight up out of the suit collar like a pole, never bending or arching, as tall as the whole suit, clear of the shoulders with white background all round it. ' +
-      'On top of it his worm head, a blunt round knob pointing forward, a little wider than the neck, with two bulging round eyes on its front and a wide toothy grin. ' +
-      'In his gloved hands at his hip he holds a big chunky grey hair dryer (#8e8a84) like a pistol, its fat barrel pointing forward and down at the ground in front of his boots, never raised to his shoulder, a short black cord from its handle. ' +
-      'The suit (#5f8fb5) is a bulky boiler suit stuffed out into two huge round pillow shoulders, wider than anything else on him, on a stocky body and short thick legs planted apart. ' +
-      'Big dark heavy boots and big dark gloves (#33506b).',
-    worn: "a big square patch of paler blue cloth (#9fbfd8) is sewn onto the knee of one leg of the suit with big stitches; a second paler patch is stitched over the top of the pillow shoulder on the left of the picture, the pillow sagging a little under it; the hair dryer's barrel is dented in at its middle and its nozzle is a little crumpled; one boot's sole is coming away at the toe, flapping open. The worm's head, eyes, grin and neck stay as they are.",
+      'The character: a cartoon earthworm wearing a superhero space suit, seen from the side, facing right. ' +
+      'The suit (#5f8fb5) has a heroic build: two big round ball-shaped shoulder pads, a broad chest, a narrow waist with a dark belt, slim legs and big chunky dark boots (#33506b), big dark gloves (#33506b); one smooth clean shape with few lines. ' +
+      'Out of the collar rises his thin bare pink worm neck (#f19aa6), as long as his torso and clearly thinner than his head, rising up and curving forward in one gentle arc at the top. ' +
+      'On its end his worm head, clearly wider than the neck, with two huge round bulging white eyes standing up out of the top of the head and a wide open toothy grin. ' +
+      "His front arm is held out in front of him, angled down a little, and at arm's length in that gloved hand he holds a small chunky grey hair dryer (#8e8a84) like a raygun pistol, its round barrel pointing forward, clear of his body with white background all round it, its short black cord dangling. " +
+      'One small paler patch on one knee.',
+    worn: "the hair dryer's barrel is dented in at its middle; a small square paler patch (#9fbfd8) is stitched onto one knee; one boot's toe is scuffed and its sole coming away a little. The worm's head, eyes, grin and neck, the shoulders and the outline of the suit stay as they are.",
   },
+
   rapper: {
     // The nod, each part of the read at race size: the tall knit beanie standing straight up off the head, a thumb
     // with a round top and a snug band (the head's outline; with a brim, or leaning back to a point, it read as a
@@ -620,6 +619,28 @@ export const BRIEFS: Record<string, Brief> = {
       'Under the ball two short thick orange legs, close together, end in two big chunky old canvas trainers (#d4d0c6) with thick grey soles (#8e8a84), the feet much bigger than the legs. ' +
       'The snout is a paper party blower: two pale bands are wrapped round it.',
     worn: 'the toe of the front trainer is split open and its sole flaps loose; the snout has a big crease kinked into it halfway along, so it bends a little but still points straight out; a round tuft of fur sticks up out of the back of the ball. The eyes stay as they are.',
+  },
+  warrior: {
+    // The nod, each part of the read at race size and each checked against the comic: the huge round belly on
+    // short legs (the outline: side on, it bulges out in front, wider than the head, so not the plumber's big head
+    // on a stout body); the small round iron helmet with a knob on top, too small for him, perched high on a bald
+    // round head (the comic's, where the plumber has a billed cap and the king horns); the big round nose over a
+    // short bushy dark moustache (the face; the big drooping red one is the castellan's, not his); the short
+    // belted tunic and thick bare arms (the warrior); the sword at his belt.
+    // Ours, and the joke: the helmet is an iron cooking pot turned upside down and hammered to a knobbed point, its
+    // long handle sticking out behind his head, and he carries a half-eaten roast leg out in front like a club:
+    // always hungry. Asked side on, the image model drew him three-quarter, and dropped the prompt's tail (the tunic,
+    // the belt, the moustache): they went on in an edit (art/sprites/warrior/design.prompt.txt, with the two rounds
+    // after it that didn't read better blind).
+    // The palette is neutral (Decisions 4): the tunic in the player's colour; the skin, the moustache, the iron, the
+    // leather, the meat and the bone neutrals.
+    design:
+      'The character: a short, hugely fat cartoon warrior seen side on in profile, facing right. His huge round belly is the biggest shape, bulging far out in front of him, so he is wider than he is tall below the shoulders. ' +
+      "His signature: in his front fist he holds a big half-eaten roast leg of meat (#b8692f) straight out in front of him at arm's length like a club, its round pale bone end (#ecdcb8) sticking out of his fist, clear of his body. " +
+      "On his bald round head sits a small upside-down iron cooking pot (#8e949a) for a helmet, too small for him, perched high on his crown and hammered up into a short point with a round knob on top, the pot's long straight handle sticking straight out behind his head. " +
+      'A big round nose, a short thick bushy dark-brown moustache (#3a2a20) under it, two big eyes, peach skin (#efc9a4), thick bare arms. ' +
+      'A short red tunic (#c9473f) with short sleeves stretched over the belly, a wide brown leather belt (#6e4a2e) under the belly with a short sword in a scabbard hanging at his hip, short stocky legs in brown trousers and big brown boots (#6e4a2e).',
+    worn: "the pot helmet has a big dent knocked into its side and the end of its handle is bent down; a big square patch of paler cloth is sewn on the tunic over the belly; the hem of the tunic is torn into a ragged notch at the back; the sole of the front boot flaps loose at the toe. The face, the moustache and the knob on the pot don't change.",
   },
 };
 

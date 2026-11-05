@@ -3,8 +3,8 @@ import { finish, Grid, hintGap, noise2D, POCKET, smoothCA, T_EMPTY, T_ONEWAY, T_
 import { jumpProfile } from '../probe';
 import type { SculptCtx, Shape } from '../types';
 import { LOOP_BAND, LOOP_SPAWN } from '../../../sim/level';
-import { difficultyKnobs, withDifficulty } from '../difficulty';
-import { jumpGap, easyRise, hardGap, type Knobs, knobs, rollChallenges, undercut } from './common';
+import { withDifficulty } from '../difficulty';
+import { jumpGap, easyRise, hardGap, type Knobs, knobs, LAST_RESORT, rollChallenges, undercut } from './common';
 
 /** Columns a storey's second connector occupies. */
 const ALT_W = 4;
@@ -95,7 +95,8 @@ function sculptTall(ctx: SculptCtx, kit: TallKit): Shape {
   const loop = ctx.profile.tide ? H - LOOP_BAND : 0;
   const bottom = loop ? loop + LOOP_SPAWN : H - rng.int(4, 6);
   const top = loop ? LOOP_SPAWN : rng.int(5, 7);
-  const tier = ctx.profile.difficulty;
+  // A loop's last attempts climb by stairs alone, which always climb, so a loop never falls back to a shape that can't close.
+  const tier = loop && attempt >= LAST_RESORT ? 'gentle' : ctx.profile.difficulty;
   // Storeys sit more than a (wall-assisted) climb apart, so connectors matter; dense = tighter.
   const sMin = j.rise + 1;
   const sMax = j.rise + 2 + Math.round((1 - k.density) * 2);
@@ -376,14 +377,14 @@ function rungShaft(g: Grid, l: Link, rise: number, rungW = 2): void {
 }
 
 /**
- * The hop between a perch flight's perches: a walking jump near its limit (a one-tile perch gives no run-up), as
- * far as the climb's rise still lets it reach, one shorter where the tier leaves slack.
+ * The hop between a perch flight's perches: a walking jump a column short of its limit (a one-tile perch gives no
+ * run-up). Both limits are measured on the level or from a run, and a walking jump that also rises near its full
+ * height reaches less far than either, so the column is the margin that keeps every flight climbable; the tier's
+ * rise (`easyRise`) is what makes a hard flight tight.
  */
 function perchHop(): number {
   const j = jumpProfile();
-  const rise = easyRise();
-  const reach = Math.min(j.walkGap, Math.max(1, j.gapAt(rise)));
-  return Math.max(1, reach - (difficultyKnobs().riseSlack >= 1 ? 1 : 0));
+  return Math.max(1, Math.min(j.walkGap, Math.max(1, j.gapAt(easyRise()))) - 1);
 }
 
 /** Columns a perch flight takes: a perch, its hop, a perch. */
@@ -657,6 +658,88 @@ const GLACIER: TallKit = {
 };
 
 export const glacierTall = (ctx: SculptCtx): Shape => sculptTall(ctx, GLACIER);
+/**
+ * The three sets that never build race towers have tower kits of their own for Rising Slag's shaft (game/modes.ts):
+ * the climb's structure is the builder's, the set brings its floors, connectors and dressing, and its look does the
+ * rest (docs/DECISIONS.md → Levels: a set is a kit, a builder composes it).
+ */
+
+/** Hay lofts in a barn: packed-earth floors that grass and farm decor grow on, opened by plank loft boards; ladders and board stairs. */
+const FARM: TallKit = {
+  style: 'farm',
+  margin: 1,
+  linkW: (rise) => stairW(rise),
+  deck(g, rng, s, x0, x1, ground) {
+    if (ground) return g.fill(x0, s.row + 1, x1, g.h - 1, T_SOLID, true);
+    g.fill(x0, s.row + 1, x1, s.row + 1, T_SOLID, true);
+    // Loft boards: stretches of the floor you can jump up through and drop down.
+    for (let x = x0 + 3; x < x1 - 6; x += rng.int(7, 12)) {
+      if (!rng.chance(0.4)) continue;
+      const w = rng.int(3, 5);
+      g.clear(x, s.row + 1, x + w - 1, s.row + 1);
+      g.plank(x, x + w - 1, s.row + 1);
+    }
+  },
+  link(g, rng, l) {
+    if (rng.chance(0.5)) return stairFlight(g, l, easyRise(), T_ONEWAY);
+    const w = 4;
+    return rungShaft(g, { ...l, x: l.dir > 0 ? l.x : l.x + l.w - w, w }, easyRise());
+  },
+  dress(g, rng, storeys, links) {
+    // A hay bale or two on a floor: a block you hop.
+    for (const s of storeys) {
+      if (!rng.chance(0.6)) continue;
+      const x = rng.int(s.x0 + 3, Math.max(s.x0 + 3, s.x1 - 4));
+      if (links.some((l) => x + 2 >= l.x - 1 && x <= l.x + l.w) || Math.abs(x - s.arrive) < 3 || Math.abs(x - s.leave) < 3) continue;
+      if (g.empty(x, s.row) && g.empty(x + 1, s.row) && g.get(x, s.row + 1) === T_SOLID && g.get(x + 1, s.row + 1) === T_SOLID) g.fill(x, s.row, x + 1, s.row);
+    }
+  },
+};
+
+/** Warehouse decks over the water: two-row pier floors, crate stacks to hop, crate stair flights and ladders. */
+const HARBOR: TallKit = {
+  style: 'harbor',
+  margin: 1,
+  linkW: (rise) => stairW(rise),
+  deck(g, _rng, s, x0, x1, ground) {
+    g.fill(x0, s.row + 1, x1, ground ? g.h - 1 : s.row + 2, T_SOLID, true);
+  },
+  link(g, rng, l) {
+    if (rng.chance(0.55)) return stairFlight(g, l, easyRise(), T_SOLID, 1);
+    const w = 4;
+    return rungShaft(g, { ...l, x: l.dir > 0 ? l.x : l.x + l.w - w, w }, easyRise());
+  },
+  dress(g, rng, storeys, links, k) {
+    for (const s of storeys) {
+      for (let i = Math.round(rng.range(0, 2) * (0.6 + k.density)); i > 0; i--) {
+        const x = rng.int(s.x0 + 2, Math.max(s.x0 + 2, s.x1 - 3));
+        if (links.some((l) => x + 2 >= l.x - 1 && x <= l.x + l.w) || Math.abs(x - s.arrive) < 3 || Math.abs(x - s.leave) < 3) continue;
+        if (!g.empty(x, s.row) || !g.empty(x + 1, s.row) || g.empty(x, s.row + 1) || g.empty(x + 1, s.row + 1)) continue;
+        g.fill(x, s.row - rng.int(0, 1), x + 1, s.row);
+      }
+    }
+  },
+};
+
+/** A station shaft: thin hull decks with service gaps, ladders between them. Space's gravity spaces the decks itself (probe.ts). */
+const SPACE: TallKit = {
+  style: 'space',
+  margin: 1,
+  linkW: () => 5,
+  deck(g, rng, s, x0, x1, ground) {
+    if (ground) return g.fill(x0, s.row + 1, x1, g.h - 1, T_SOLID, true);
+    g.fill(x0, s.row + 1, x1, s.row + 1, T_SOLID, true);
+    // Service gaps: a hop over open shaft.
+    for (let x = x0 + 4; x < x1 - 6; x += rng.int(9, 14)) if (rng.chance(0.35)) g.clear(x, s.row + 1, x + rng.int(1, 2), s.row + 1);
+  },
+  link(g, _rng, l) {
+    return rungShaft(g, l, easyRise());
+  },
+};
+
+export const farmTall = (ctx: SculptCtx): Shape => sculptTall(ctx, FARM);
+export const harborTall = (ctx: SculptCtx): Shape => sculptTall(ctx, HARBOR);
+export const spaceTall = (ctx: SculptCtx): Shape => sculptTall(ctx, SPACE);
 export const castleTall = (ctx: SculptCtx): Shape => sculptTall(ctx, CASTLE);
 export const factoryTall = (ctx: SculptCtx): Shape => sculptTall(ctx, FACTORY);
 export const mineTall = (ctx: SculptCtx): Shape => sculptTall(ctx, MINE);
