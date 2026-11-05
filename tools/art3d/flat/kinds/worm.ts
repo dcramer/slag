@@ -151,7 +151,9 @@ export const kind: FlatKind = {
       pose: 'seen from his side, he is sliding down a tall wall that is just to his right (do not draw the wall), one empty glove and both big boots braced flat against it, knees bent, the hair dryer held in his other hand at his hip pointing down, his thick pink worm neck rising straight up out of the collar, his head turned to look back at us, eyes open.',
       far: true,
     },
-    cheer: { pose: `cheering, up on his toes, one empty gloved fist punched high in the air, the hair dryer in the other hand at his hip, a big open grin, his eyes open, ${KIT}.` },
+    cheer: {
+      pose: `cheering, up on his toes, one empty gloved fist punched high in the air, the hair dryer in the other hand at his hip, a big open grin, his eyes open, ${KIT}.`,
+    },
     cheer2: { pose: `laughing, the head tipped back, his eyes shut, a big grin, ${KIT}.` },
     death: {
       pose: 'he has been knocked out and lies flat on his back on the floor, the whole body horizontal, the suit on the left and boots on the right, his thick pink worm neck lying limp and straight along the floor to the left with the head at its end, eyes shut, the hair dryer dropped flat on the floor beside him.',
