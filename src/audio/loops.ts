@@ -208,6 +208,25 @@ const LOOP_SPECS: Record<LoopKind, KindSpec> = {
       return () => {};
     },
   },
+  // Rising Slag: a deep molten boil, thick bubbles popping through it; rushing, a hiss rises out of it.
+  slag: {
+    max: 1,
+    gain: 0.5,
+    build(b) {
+      const amp = b.gain(b.out, 0.8);
+      const lp = b.filter(amp, 'lowpass', 220, 0.9);
+      b.noise('brown', b.gain(lp, 1));
+      b.noise('crackle', b.filter(b.gain(amp, 0.45), 'bandpass', 520, 1.4), 0.55);
+      const hiss = b.gain(b.out, 0);
+      b.noise('white', b.filter(hiss, 'highpass', 3200));
+      const churn = b.gain(amp.gain, 0.22);
+      b.osc('sine', 0.7, churn);
+      return (p, t) => {
+        hiss.gain.setTargetAtTime(p * 0.22, t, 0.12);
+        lp.frequency.setTargetAtTime(p ? 420 : 220, t, 0.12);
+      };
+    },
+  },
   mist: {
     max: 1,
     gain: 0.2,

@@ -1269,9 +1269,9 @@ function randomId(): string {
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-/** What of a listing is worth listing again early: seats, watchers, theme, the host's name, and lobby or match (not every phase of a round). */
+/** What of a listing is worth listing again early: seats, watchers, theme, mode, the host's name, and lobby or match (not every phase of a round). */
 function listedKey(l: RoomListing): string {
-  return `${l.players}/${l.max}/${l.observers}/${l.theme}/${l.phase === 'lobby' ? 'lobby' : 'match'}/${l.host ?? ''}`;
+  return `${l.players}/${l.max}/${l.observers}/${l.theme}/${l.mode ?? ''}/${l.phase === 'lobby' ? 'lobby' : 'match'}/${l.host ?? ''}`;
 }
 
 /** Wait for all ICE candidates to land in the local description, within reason. */

@@ -20,7 +20,7 @@ function view(over: Partial<BrainView>): BrainView {
     slot: 0,
     ready: false,
     score: 0,
-    level: { w: 24, h: 12, tiles: new Uint8Array(24 * 12), spawn: { tx: 1, ty: 9 }, goal: { tx: 22, ty: 9 }, plan: [] },
+    level: { w: 24, h: 12, tiles: new Uint8Array(24 * 12), spawn: { tx: 1, ty: 9 }, goal: { tx: 22, ty: 9 }, flag: true, plan: [] },
     props: [],
     crate: [],
     claim: -1,

@@ -8,6 +8,7 @@
  *                                  --density 0..1 --gravity 0.7 --hazards 0..4 --weather rain
  *                                  --concept <id>|plain (a stage concept of the theme's, gen/stage)
  *                                  --difficulty gentle|medium|hard
+ *                                  --tide (a Rising Slag tower: game/modes.ts)
  *
  * Legend: # solid  = one-way  S spawn  G goal  · reachable stand cell  P set-piece footprint
  *         B a bridge from the validator's solution (levels that need props)
@@ -39,6 +40,7 @@ if (opt('weather')) force.weather = opt('weather') as WeatherKind;
 if (opt('concept')) force.concept = opt('concept');
 const difficulty = DIFFICULTIES.find((d) => d === opt('difficulty'));
 if (difficulty) force.difficulty = difficulty;
+if (args.includes('--tide')) force.tide = true;
 
 /** Share of levels whose solution takes 0, 1, 2 and 3 parts. */
 function partShares(parts: number[], n: number): Record<string, string> {
