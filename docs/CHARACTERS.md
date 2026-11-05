@@ -1,6 +1,6 @@
 # Characters
 
-The runners are a cast of thirty homages to famous game characters, in our own designs. In the lore (DESIGN.md) they're the knock-off heroes who almost got their own game. Each kind is a character design of its own, the way the barnyard party game's animals are: its own outline, its signature props, and a way of moving.
+The runners are a cast of thirty-four homages to famous game characters, in our own designs. In the lore (DESIGN.md) they're the knock-off heroes who almost got their own game. Each kind is a character design of its own, the way the barnyard party game's animals are: its own outline, its signature props, and a way of moving.
 
 `pnpm shot cast` shoots the sheet: the 8-player lineup at play scale on farm and mine, the race start, deaths, a 3× close-up, the lobby cards, the "is it the homage?" sheet (`cast-recognise.png`: each kind close up beside "This is ___"), the silhouette test (`cast-silhouettes.png`) and the catalog of every kind (`--only catalog` for the last three). Every sheet waits for the rendered kinds' frames (`slagDebug.sprites.ready()`), so it shows what ships. In the console, `slagDebug.cast` has `catalog()`, `silhouettes()`, `recognise()` and `bench()`.
 
@@ -65,6 +65,10 @@ Each kind's entry is its own file in [characters/](characters/): what a stranger
 | [raider](characters/raider.md) | the braided tomb raider | a long single braid swinging behind her head, a tank top and shorts, twin pistols in thigh holsters, a small backpack, boots | costume: the tank top |
 | [fighter](characters/fighter.md) | the bun-haired street fighter | two round hair buns either side of her head like ox horns, a high-collared qipao with puffed shoulders, spiked bracelets, thick strong legs, a kicking stance | costume: the qipao |
 | [stinger](characters/stinger.md) | the horned bug with the needle | a small bug with a white mask face and two long crescent horns hooking back, a red dishcloth cloak hanging from the shoulders in a short bell, thin dark legs under it, a thick knitting needle held level with yarn off its knob | costume: the cloak; the stripes a light of it |
+| [mage](characters/mage.md) | the black mage with the glowing eyes | a huge straw hat with a brim wider than his shoulders and a bent point, no face under it but two glowing eyes in the dark, a long robe with flared cuffs, a broom-handle staff with a bulb | costume: the robe |
+| [creeper](characters/creeper.md) | the green block creeper | a tall block body with a square head the same width, four stubby block legs, no arms, a frowning face of square holes, a birthday-candle fuse | costume: the body |
+| [tophat](characters/tophat.md) | the little girl in the tall top hat | a tin-can top hat as tall as the rest of her, a short cape with a high collar, a ponytail out the back, a huge cocktail umbrella | costume: the hat and cape |
+| [pyramid](characters/pyramid.md) | the triangle-helmeted executioner | a huge pyramid helmet pointing out past his shoulder, a long butcher's apron, thick bare arms, a giant cheese slicer dragged behind | costume: the apron |
 
 **Reserves**, if a kind won't read: the spinning bandicoot (its tuft and grin rhyme with the speedster), the shovel-wielding knight, the red-haired mountain climber, the falling-block party bean (rhymes with the crewmate). The space marine in green armour reads as a generic soldier at 20 px; the plumber's tall brother, the ape's red-capped nephew and the king's turtle foot soldiers rhyme with kinds already in.
 
@@ -130,6 +134,10 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 28 | raider | Laura Craft | humanoid | drawn flat; named by both blind readers at medium, one still pairing her with the puppy (long hair behind a slim figure) |
 | 29 | fighter | Chun-Lee | humanoid | drawn flat; the blind read not passed (a nameless fighter, or with the buns clear of the head a bear): the buns are ears on a big round head |
 | 30 | stinger | Hornette | humanoid, cloaked | drawn flat; the blind read passes (straight horns read as rabbit ears until they curved into crescents) |
+| 31 | mage | Vivvy | humanoid, robed | high: the hat and the eyes; the king's crown and the elf's cap to watch |
+| 32 | creeper | Creepah | **keyed**, four legs, no arms | medium: the miner's cube head and the sneak's box |
+| 33 | tophat | Hat Kidd | humanoid, small | medium: the hat; the plumber's cap and the robot's helmet to watch |
+| 34 | pyramid | Pyramid Ted | humanoid, big + blade | medium: the helmet against the stinger's horns and the merc's blade |
 
 **What to check.** No two kinds may rhyme. Watch these pairs:
 

@@ -1,5 +1,5 @@
 import { deriveSeed } from '../core/rng';
-import { CAST, type CharacterDef, generateCharacter, KIND_NAMES, type Kind, PLAYER_COLORS, withColor } from '../gen/character';
+import { CAST_ORDER, type CharacterDef, generateCharacter, KIND_NAMES, type Kind, PLAYER_COLORS, withColor } from '../gen/character';
 import { Rig } from '../render/character';
 import { drawInkAccessory, drawInkRunner, ropeAnchor, ropeOf, type RunnerPose } from '../render/ink-character';
 import type { RC } from '../render/kit';
@@ -42,6 +42,10 @@ export const CAST_NOTES: Record<Kind, string> = {
   raider: 'Returns nothing to museums.',
   fighter: 'Kicks first, small talk never.',
   stinger: 'Sews her own way out.',
+  mage: 'Two eyes. No questions.',
+  creeper: 'Means well. Hugs once.',
+  tophat: 'Collects anything not nailed down.',
+  pyramid: 'Never hurries. Never late.',
 };
 
 export interface CastEntry {
@@ -51,9 +55,9 @@ export interface CastEntry {
   def: CharacterDef;
 }
 
-/** Every kind, in cast order, each in a player color of its own around the palette. */
+/** Every kind, in `CAST_ORDER`, each in a player color of its own around the palette. */
 export function castEntries(): CastEntry[] {
-  return CAST.map((kind, i) => ({
+  return CAST_ORDER.map((kind, i) => ({
     kind,
     title: KIND_NAMES[kind],
     note: CAST_NOTES[kind],
