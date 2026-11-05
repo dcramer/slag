@@ -102,8 +102,8 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Rising Slag's leash is set the way SpeedRunners' camera is, in seconds behind the leader (about 3–4 s): 4.5, 3.75 and 3 s of climb by lap, squeezing from 30 s.** "hows our difficulty vs speedrunners" / "Lets do it"
   2026-11-04 · `done` · DESIGN.md → Modes; `TIER_LEASH_SECONDS`, `SQUEEZE` in `src/gen/level/tide.ts`
   Changed: 18, 15 and 8 rows (the hard laps about 2 s), squeezing from 45 s.
-- **Catch-up for the trailing pack is open: rethink which items exist, and maybe give loops mystery boxes of their own rather than only placed ones.** "im not sure on (2) we might wanna rethink which items exist, and/or add mystery boxes by default maybe? not just placed ones?"
-  2026-11-04 · `open` · TODO.md → 31
+- **Catch-up for the trailing pack: rethink which items exist, and maybe give loops mystery boxes of their own rather than only placed ones.** "im not sure on (2) we might wanna rethink which items exist, and/or add mystery boxes by default maybe? not just placed ones?" / "Boxes first"
+  2026-11-04 · `done` for the boxes (every loop places its own, dealing by rank: `src/gen/level/loop-boxes.ts`, `CATCH_UP`); which items exist is `open` (a grapple, a shot that hits whoever is above you) · DESIGN.md → Modes, TODO.md → 31
 - **A rule the level is built from (gravity, weather) rebuilds the lobby's level for everyone at once.**
   2026-11-02 · git `e64c3e5` · `done` · DESIGN.md → Rules
 
@@ -275,6 +275,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-04 · `done` (both drawn flat; their blind reads are open, TODO.md → 31) · CHARACTERS.md → The cast, Roster; `LOOK_CAST` 10
 - **The cast needs iconic women, from franchises it doesn't touch yet: the braided tomb raider, the bun-haired street fighter and the horned bug with the needle.** "we def need a few female characters that are iconic, ideally from new sets, but in generally we're lacking some there" (asked which: the three offered beside a platformer heroine)
   2026-11-04 · `in progress` · CHARACTERS.md → The cast, Roster; `LOOK_CAST` 11
+- **The sneaking soldier stays drawn inside his cardboard box, not redrawn as the soldier out of it.** "Keep the box" (asked, after "i think you lost the snake character?": he reads as a box on legs, so whether to draw him out of it)
+  2026-11-04 · `done` · docs/characters/sneak.md
 - **Every drawn kind's eyes work the way the cup-headed toon's do: each kind's kit eye is its homage's own eye design, drawn by the face kit so it acts, and bold enough to read at play scale.** "seems like we want mughead approach so the eyes are animated/drawn correctly" (after "some have issues w/ their eyes")
   2026-11-04 · `done` (but for the worm, the warrior and the slayer, being drawn) · CHARACTERS.md → Rendered kinds → The cast's face, `EYES` in `src/render/cast/sprites/face.ts`, `tools/art3d/README.md` → 5
   Changed: every kind but the mug, the puffball, the dino and the three dot-eyed kinds wore one generic round eye (a white, a rim, a coloured iris, a pupil and a glint), and a head side on wore its far eye as a second full circle beside the near one.
@@ -754,6 +756,12 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 15:27Z · `done` · git `8b1ea2e`
 - **Resume interrupted agents, and resume merging.** "Resume all" / "Yes, resume merging"
   2026-11-02 07:22Z, 16:20Z · `done`
+- **Unused code is part of the gate: knip runs in `pnpm check` and CI, and what it finds is deleted, not ignored.** "add knip if it snot there too"
+  2026-11-04 · `done` · AGENTS.md → Commands
+- **Full sweeps move out of `pnpm test`: it runs a rotation of each sweep and `tests/stats/` runs the whole product, through one helper in `tests/lib/`.** "some of our tests could maybe be a dedicated suite or benchmark or something else thats not run on every change?"
+  2026-11-04 · `done` · AGENTS.md → Definition of done
+- **Keep what an audit or a fix teaches, in short docs: a line in the owning AGENTS.md for a rule, a TODO item for open work, no long write-ups.** "we dont need crazy docs but i wanna make sure we keep learnings"
+  2026-11-04 · `done` · AGENTS.md, TODO.md → 33
 - **Make the GitHub Actions check required (an owner step).**
   2026-11-02 · `open` · TODO.md → 10
 - **Apply the quick wins from the transcript review: guard-safe commands for worktree agents, one `pnpm land` per batch instead of a merge and a gate per branch, and `SNAP_VERSION` bumped once at landing, never in a branch.** "Apply quick wins"

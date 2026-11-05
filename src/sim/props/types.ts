@@ -463,6 +463,11 @@ export type Module =
       look: MysteryLook;
       /** Cosmetic variation seed. */
       seed: number;
+      /**
+       * A Rising Slag loop's own box (gen/level/loop-boxes.ts): it deals by the hitter's rank, from `CATCH_UP`
+       * (./modules/mystery.ts), instead of from `pool`.
+       */
+      catchUp?: boolean;
     }
   /**
    * A swing that hangs `length` tiles from a ceiling (`mount: 'hang'`); `at` is

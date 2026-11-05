@@ -11,7 +11,9 @@ import { LOOP_HEAD_START } from '../src/gen/level/tide';
 import { generateTheme } from '../src/gen/theme';
 import { hashMatch, restoreMatch, snapshotMatch } from '../src/net/snapshot';
 import { FPS, LEVEL_H, LEVEL_W, POP_HOLD, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
-import { lapShift, type Level, LOOP_BAND, LOOP_SPAWN } from '../src/sim/level';
+import { isProtected, lapShift, type Level, LOOP_BAND, LOOP_SPAWN } from '../src/sim/level';
+import { moduleSim, newPropState } from '../src/sim/props';
+import { CATCH_UP } from '../src/sim/props/modules/mystery';
 import { bodyAtCell } from '../src/sim/physics';
 import { RunWorld } from '../src/sim/run';
 import { leashRows, stepTide, type Tide } from '../src/sim/tide';
@@ -82,6 +84,14 @@ describe('Rising Slag levels', () => {
     const rows = lv.tide!.leash.map((l) => l.rows);
     expect(rows[0]).toBeGreaterThan(rows[2]);
     expect(lv.tide!.leash[1].from).toBe(LOOP_ROWS);
+    // Mystery boxes of its own, a few up the shaft, never on the seam's band, each dealing by rank.
+    const boxes = lv.setPieces.filter((p) => p.def.key === 'loop-box');
+    expect(boxes.length).toBeGreaterThanOrEqual(2);
+    for (const b of boxes) {
+      const [x, y] = b.def.footprint[0];
+      expect(isProtected(lv, x, y)).toBe(false);
+      expect(b.def.modules[0]).toMatchObject({ type: 'mystery', catchUp: true });
+    }
     // Back to a race, the lobby's level is rebuilt without it.
     m.setRules(DEFAULT_RULES);
     expect(m.level.tide).toBeUndefined();
@@ -218,6 +228,48 @@ describe('Rising Slag parts and items', () => {
     run.runners[1].body = bodyAtCell(10, 40);
     run.runners[1].lap = 1;
     expect(leaderIndex(run)).toBe(1);
+  });
+});
+
+describe("a loop's mystery boxes", () => {
+  it('deal catch-up to whoever is behind and defence to the leader', () => {
+    const box = {
+      type: 'mystery' as const,
+      cells: [[10, 10]] as [number, number][],
+      pool: ['smoke' as const],
+      uses: 0,
+      refill: 1,
+      look: 'crate' as const,
+      seed: 1,
+      catchUp: true,
+    };
+    /** The item the box pops when knocked from below by a runner `up` climbed, beside one at `other`. */
+    const knock = (uid: number, up: number, other: number) => {
+      const got: string[] = [];
+      const ctx = {
+        live: true,
+        state: newPropState(),
+        frame: 100,
+        mi: 0,
+        off: [0, 0],
+        prev: [0, 0],
+        level: flatLevel(),
+        itemSeed: 7,
+        r: { pp: { uid }, phase: 0 },
+        runners: [
+          { x: 10 * TILE + 2, y: 11 * TILE, w: 12, h: 22, active: true, up },
+          { x: 300, y: 100, w: 12, h: 22, active: true, up: other },
+        ],
+        spawnItem: (s: { kind: string }) => got.push(s.kind),
+        emit: () => {},
+      };
+      moduleSim('mystery').tick!(box, ctx as never);
+      return got[0];
+    };
+    for (let uid = 1; uid <= 8; uid++) {
+      expect(CATCH_UP.chase).toContain(knock(uid, 500, 100));
+      expect(CATCH_UP.lead).toContain(knock(uid, 100, 500));
+    }
   });
 });
 

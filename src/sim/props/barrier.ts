@@ -36,9 +36,12 @@ export interface Barrier {
   noGo: number[];
 }
 
-/** Frames sampled, from the race start: longer than every module's cycle but the slowest. */
-const SPAN = 720;
-const STEP = 6;
+/**
+ * Frames sampled, from the race start: longer than every module's cycle but the slowest.
+ * Every one of them: a fast saw or rotor arm crosses a cell between two samples a few frames apart,
+ * and a route proven through that cell runs into it.
+ */
+export const BARRIER_SPAN = 720;
 /** A cell clear for this many frames in a row can be slipped through. Anything that hurts in bursts (a sentry) holds fire at least this long between them. */
 export const MIN_OPENING = 30;
 
@@ -83,7 +86,7 @@ function sample(level: Level, r: Resolved): Barrier {
     const m = r.mods[mi];
     if (m.type === 'body') for (const [x, y] of m.cells) if (x >= 0 && y >= 0 && x < w && y < h) ground.add(y * w + x);
   }
-  /** Per cell: [last sample it was held, longest opening so far (samples)]. */
+  /** Per cell: [last frame it was held, longest opening so far (frames)]. */
   const held = new Map<number, [number, number]>();
   const state = newPropState();
   const out: Contrib = { solids: [], hazards: [], springs: [], winds: [], triggers: [] };
@@ -96,7 +99,7 @@ function sample(level: Level, r: Resolved): Barrier {
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) here.add(y * w + x);
   };
   let n = 0;
-  for (let f = RUN_COUNTDOWN; f < RUN_COUNTDOWN + SPAN; f += STEP, n++) {
+  for (let f = RUN_COUNTDOWN; f < RUN_COUNTDOWN + BARRIER_SPAN; f++, n++) {
     out.solids.length = out.hazards.length = out.springs.length = out.winds.length = out.triggers!.length = 0;
     here.clear();
     const ctx = (rr: Resolved, mi: number) => ({ level, frame: f, r: rr, off: motionOffset(rr, f), prev: motionOffset(rr, f - 1), state, mi, live: true });
@@ -116,8 +119,7 @@ function sample(level: Level, r: Resolved): Barrier {
     }
   }
   const noGo = new Set<number>();
-  const need = Math.ceil(MIN_OPENING / STEP);
-  for (const [k, [last, open]] of held) if (Math.max(open, n - last - 1) < need && !ground.has(k)) noGo.add(k);
+  for (const [k, [last, open]] of held) if (Math.max(open, n - last - 1) < MIN_OPENING && !ground.has(k)) noGo.add(k);
   // What a module knows it holds from its own cycle, which may be longer than the span sampled.
   for (const m of r.mods)
     for (const [x, y] of moduleSim(m.type).holds?.(m) ?? []) if (x >= 0 && y >= 0 && x < w && y < h && !ground.has(y * w + x)) noGo.add(y * w + x);

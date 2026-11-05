@@ -11,7 +11,7 @@ const BAG = '#c9c6bd';
 const BAG_SH = '#a8a49a';
 
 /**
- * The green saddled dino (docs/CHARACTERS.md → Roster), hand-inked from its drawn design: an upright body
+ * The green saddled dino (docs/characters/dino.md), hand-inked from its drawn design: an upright body
  * under a huge round snout well out in front, two big eyes on top of the head, a long tail straight out
  * behind, and the twist, a torn black bicycle seat strapped low on its back with its chrome stem poking
  * out. The body is the player's colour, the head spikes a light of it; the belly, cheeks and eye whites
