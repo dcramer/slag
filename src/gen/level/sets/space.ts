@@ -2,8 +2,9 @@ import type { Rng } from '../../../core/rng';
 import { deckOf, SPACE_DOCK, SPACE_UNDER, spaceAsksTwo, spaceOwns } from '../../stage/space';
 import { finish, Grid, hintGap } from '../kit';
 import { jumpProfile } from '../probe';
-import type { SculptCtx, Sculptor, Shape } from '../types';
-import { easyRise, hardGap, type Knobs, knobs, raiseLandmark, rollChallenges } from './common';
+import type { SculptCtx, Shape } from '../types';
+import type { ChainKit } from './types';
+import { easyRise, hardGap, type Knobs, knobs, raiseLandmark, rollChallenges } from '../sculptors/common';
 
 type SpaceStyle = 'asteroids' | 'station';
 
@@ -45,60 +46,45 @@ export function spaceHop(density: number): { lo: number; hi: number } {
  * bridges wide doesn't work here: at this gravity a long fall onto one low
  * bridge and a jump back up crosses it.
  */
-export const space: Sculptor = (ctx) => {
-  if (ctx.concept) return spaceStage(ctx);
-  const { rng, attempt } = ctx;
-  const style: SpaceStyle = ctx.theme?.terrain?.kind === 'hull' ? 'station' : 'asteroids';
-  const k = knobs(ctx);
-  const { W, H } = k;
-  const g = new Grid(W, H);
-  const asked = rollChallenges(attempt, k);
-  const challenges = asked && W < 64 ? 1 : asked;
-  g.wantsProps = challenges > 0;
-  const base = H - rng.int(7, 10);
-
-  const hop = spaceHop(k.density);
-  const { widths, gaps, hard } = chain(rng, W, hop, challenges, style === 'station' ? [4, 8] : [3, 7]);
-  const used = widths.reduce((a, b) => a + b, 0) + gaps.reduce((a, b) => a + b, 0);
-  const dockL = Math.max(DOCK, Math.min(W - used - DOCK, Math.floor((W - used) * rng.range(0.4, 0.6))));
-  const dockR = W - used - dockL;
-  const sTop = Math.max(8, Math.min(H - 7, base + k.ramp(0)));
-  const gTop = Math.max(8, Math.min(H - 7, base + k.ramp(W - 1) + rng.int(-2, 1)));
-  if (dockR < DOCK) return finish(g, { row: sTop - 1, depth: 2 }, { row: gTop - 1, depth: 2 }, `space:broken`);
-
-  dock(g, 0, dockL - 1, sTop);
-  dock(g, W - dockR, W - 1, gTop);
-  let x = dockL;
-  let prev = sTop;
-  const tops: { x: number; w: number; top: number }[] = [];
-  for (let i = 0; i < widths.length; i++) {
-    const x0 = x + gaps[i];
-    const w = widths[i];
-    let top = Math.max(8, Math.min(H - 7, base + k.ramp(x0 + (w >> 1)) + rng.int(-2, 2)));
-    top = Math.max(prev - 3, Math.min(prev + 4, top));
-    if (hard[i]) hintGap(g, x, x0 - 1, Math.max(prev, top));
-    if (style === 'station') module(g, rng, x0, w, top);
-    else asteroid(g, rng, x0, w, top, hard[i]);
-    tops.push({ x: x0, w, top });
-    prev = top;
-    x = x0 + w;
-  }
-  if (hard[widths.length]) hintGap(g, x, W - dockR - 1, Math.max(prev, gTop));
+export const SPACE_CHAIN: ChainKit<{ hop: { lo: number; hi: number } }> = {
+  name: 'space',
+  // The look picks the style (hull plating builds a station, regolith an asteroid field).
+  style: (_rng, _k, ctx) => (ctx.theme?.terrain?.kind === 'hull' ? 'station' : 'asteroids'),
+  depth: [7, 10],
+  // Only a wide level has room for two crossings.
+  parts: (asked, k) => (asked && k.W < 64 ? 1 : asked),
+  layout(rng, k, style, challenges) {
+    const hop = spaceHop(k.density);
+    const { widths, gaps, hard } = chain(rng, k.W, hop, challenges, style === 'station' ? [4, 8] : [3, 7]);
+    return { bodies: widths.map((w) => ({ kind: style, w })), gaps, hard, state: { hop } };
+  },
+  dock: { min: DOCK, clamp: [8, 7], depth: 2, build: (g, _rng, x0, x1, top) => dock(g, x0, x1, top) },
+  deck(rng, b, _i, _at, x0, prev, { base, k }) {
+    const top = Math.max(8, Math.min(k.H - 7, base + k.ramp(x0 + (b.w >> 1)) + rng.int(-2, 2)));
+    return Math.max(prev - 3, Math.min(prev + 4, top));
+  },
+  body(g, rng, b, _i, x0, top, hard) {
+    if (b.kind === 'station') module(g, rng, x0, b.w, top);
+    else asteroid(g, rng, x0, b.w, top, hard);
+    return top;
+  },
   // Far banks of hard crossings are lipped (asteroids taper, docks and modules overhang their clamps), so
   // nobody wall-climbs out of the void. Above the chain, a second lane a plain jump up, off the crossings.
-  const row = (c: number) => {
-    if (c < dockL) return sTop;
-    if (c >= W - dockR) return gTop;
-    const on = tops.find((t) => c >= t.x - 1 && c <= t.x + t.w);
-    if (on) return on.top;
-    // Tops run left to right: the body after `c` is the first one past it, and the one before is just ahead of that.
-    const next = tops.findIndex((t) => t.x > c);
-    const before = next < 0 ? tops[tops.length - 1] : tops[next - 1];
-    return Math.max(before?.top ?? sTop, next < 0 ? gTop : tops[next].top);
-  };
-  upperLane(g, rng, row, dockL - 3, W - dockR + 2, style === 'station', hop);
-
-  return finish(g, { row: sTop - 1, depth: 2 }, { row: gTop - 1, depth: 2 }, `space:${style}`);
+  dress({ g, rng, k, style, tops, dockL, dockR, sTop, gTop, state: { hop } }) {
+    const W = k.W;
+    const row = (c: number) => {
+      if (c < dockL) return sTop;
+      if (c >= W - dockR) return gTop;
+      const on = tops.find((t) => c >= t.x - 1 && c <= t.x + t.w);
+      if (on) return on.top;
+      // Tops run left to right: the body after `c` is the first one past it, and the one before is just ahead of that.
+      const next = tops.findIndex((t) => t.x > c);
+      const before = next < 0 ? tops[tops.length - 1] : tops[next - 1];
+      return Math.max(before?.top ?? sTop, next < 0 ? gTop : tops[next].top);
+    };
+    upperLane(g, rng, row, dockL - 3, W - dockR + 2, style === 'station', hop);
+  },
+  stage: (ctx) => spaceStage(ctx),
 };
 
 /** The bodies between the docks, left to right, and the voids before, between and after them. */

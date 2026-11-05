@@ -1,22 +1,7 @@
 import type { Rng } from '../../../core/rng';
-import { finish, Grid, groundFromHeights, noise1D } from '../kit';
-import type { SculptCtx, Sculptor } from '../types';
-import {
-  type Claim,
-  claimSite,
-  easyRise,
-  flatten,
-  hardGap,
-  jumpCount,
-  jumpCrossing,
-  type Knobs,
-  knobs,
-  pit,
-  raiseLandmark,
-  relax,
-  rollChallenges,
-  Slots,
-} from './common';
+import { type Grid, noise1D } from '../kit';
+import { claimSite, easyRise, flatten, type Knobs, relax } from '../sculptors/common';
+import type { CourseKit } from './types';
 
 type FarmStyle = 'fields' | 'barnyard' | 'windmill' | 'orchard';
 type Stamp = (g: Grid, rng: Rng, x: number, w: number, f: number) => void;
@@ -31,100 +16,59 @@ interface Feature {
  * flattened ground — a gabled barn (doors, hay-loft one-way, stepped roof),
  * a domed silo with a hay-bale staircase, a tapered windmill tower with a
  * one-way gallery, fruit trees with branch perches, hay wagons, fence rows
- * with one-way rails and haystack mounds.
+ * with one-way rails and haystack mounds. Ponds: hard ones need a bridge,
+ * easy ones are a hop, with a column of bank either side.
  */
-export const farm: Sculptor = (ctx) => {
-  const { rng, attempt } = ctx;
-  const k = knobs(ctx);
-  const { W, H } = k;
-  const style = rng.weighted<FarmStyle>([
+export const FARM_COURSE: CourseKit = {
+  name: 'farm',
+  styles: (k) => [
     ['fields', k.wide > 1.4 ? 5 : 3],
     ['barnyard', 4],
     ['windmill', 3],
     ['orchard', 3],
-  ]);
-  const g = new Grid(W, H);
-  const slots = new Slots(6, W - 7);
-  const locked = new Uint8Array(W);
-  const surf = heights(rng, k);
-  // The stage concept's landmark comes first: it owns the level's hard pond (stage/farm.ts).
-  const claim = ctx.concept ? claimFarmSite(ctx, k, slots, surf, locked) : null;
-  if (ctx.concept && !claim) return finish(g, { row: surf[2] - 1 }, { row: surf[W - 3] - 1 }, 'farm:unclaimed');
-
-  // Ponds first: hard ones need a bridge, easy ones are a hop. Wide farms get more of them.
-  const challenges = rollChallenges(attempt, k);
-  g.wantsProps = challenges > 0;
-  const own = claim?.concept.ownsCrossing ? Math.min(1, challenges) : 0;
-  const pits: { x0: number; x1: number; hard: boolean; stones: number[] }[] = [];
-  const nEasy = jumpCount(rng, k) + (style === 'fields' ? 1 : 0);
-  for (let i = own; i < challenges + nEasy; i++) {
-    const hard = i < challenges;
-    const { w, stones } = hard ? { w: hardGap(rng), stones: [] } : jumpCrossing(rng, 2);
-    const a = slots.take(rng, w + 4, 2, 8, W - 9);
-    if (a === null) continue;
-    const x0 = a + 2;
-    const x1 = x0 + w - 1;
-    const bank = Math.max(surf[x0 - 2], surf[x1 + 2]);
-    for (let x = a; x <= a + w + 3; x++) {
-      surf[x] = x >= x0 && x <= x1 ? H : bank;
-      locked[x] = 1;
+  ],
+  ground: { profile: (rng, k) => ({ surf: heights(rng, k), state: undefined }), pockets: 'max', step: () => 1 },
+  gap: { pad: () => 2, margin: 2, range: [8, 9], bank: () => 2, sample: 2, sink: true, keepClear: false, extra: (style) => (style === 'fields' ? 1 : 0) },
+  stamps: {
+    // One bag per ~48 columns, thinned on sparse maps.
+    bag(rng, k, style) {
+      const bag: Feature[] = [];
+      for (let r = 0; r < Math.max(1, Math.round(k.wide * (0.6 + 0.6 * k.density))); r++) bag.push(...FEATURES[style as FarmStyle](rng));
+      if (k.density < 0.3 && bag.length > 1) bag.length = Math.max(1, bag.length - 1);
+      return bag;
+    },
+    margin: 2,
+    level: 'max',
+  },
+  /**
+   * The landmark's site (claimSite), with a column of farmyard levelled either side. Nothing else lands just
+   * right of it: a pond there could be cleared bare by a jump off its roof or its sails. It owns the level's hard pond (stage/farm.ts).
+   */
+  site({ ctx, k, slots, surf, locked }) {
+    const claim = claimSite(ctx, k, slots, surf, locked);
+    if (!claim) return null;
+    const { x, w } = claim.at;
+    slots.mark(x - 2, x + w + 8);
+    flatten(surf, k.H, x - 1, x + w, claim.ground);
+    return claim;
+  },
+  // Small decor on whatever flat ground is left; the landmark goes up after, so it stands whole over anything a neighbour spilled into its box.
+  dress({ g, rng, k, slots, surf }) {
+    const { W, H } = k;
+    const decor: Feature[] = [FENCE, HAYSTACK, HAYSTACK, WAGON];
+    for (let i = k.count(rng.int(1, 3)); i > 0; i--) {
+      const f = rng.pick(decor);
+      const w = f.w(rng);
+      for (let tries = 0; tries < 12; tries++) {
+        const x = rng.int(7, W - 8 - w);
+        if (!slots.free(x, x + w - 1, 1) || !isFlat(surf, H, x, x + w - 1)) continue;
+        slots.mark(x, x + w - 1);
+        f.stamp(g, rng, x, w, surf[x]);
+        break;
+      }
     }
-    pits.push({ x0, x1, hard, stones });
-  }
-
-  // Landmarks on flattened ground: one bag per ~48 columns, thinned on sparse maps.
-  const bag: Feature[] = [];
-  for (let r = 0; r < Math.max(1, Math.round(k.wide * (0.6 + 0.6 * k.density))); r++) bag.push(...FEATURES[style](rng));
-  if (k.density < 0.3 && bag.length > 1) bag.length = Math.max(1, bag.length - 1);
-  const placed: { f: Feature; x: number; w: number }[] = [];
-  for (const f of bag) {
-    const w = f.w(rng);
-    const x = slots.take(rng, w, 2);
-    if (x === null) continue;
-    flatten(surf, H, x - 1, x + w);
-    for (let i = x - 1; i <= x + w; i++) locked[i] = 1;
-    placed.push({ f, x, w });
-  }
-  const sRow = flatten(surf, H, 0, 5);
-  const gRow = flatten(surf, H, W - 6, W - 1);
-  for (const x of [0, 1, 2, 3, 4, 5, W - 6, W - 5, W - 4, W - 3, W - 2, W - 1]) locked[x] = 1;
-  relax(surf, H, locked, 1);
-  groundFromHeights(g, surf);
-  for (const p of pits) pit(g, p.x0, p.x1, surf[p.x0 - 1], p.hard, p.stones);
-  for (const p of placed) p.f.stamp(g, rng, p.x, p.w, surf[p.x]);
-
-  // Small decor on whatever flat ground is left.
-  const decor: Feature[] = [FENCE, HAYSTACK, HAYSTACK, WAGON];
-  for (let i = k.count(rng.int(1, 3)); i > 0; i--) {
-    const f = rng.pick(decor);
-    const w = f.w(rng);
-    for (let tries = 0; tries < 12; tries++) {
-      const x = rng.int(7, W - 8 - w);
-      if (!slots.free(x, x + w - 1, 1) || !isFlat(surf, H, x, x + w - 1)) continue;
-      slots.mark(x, x + w - 1);
-      f.stamp(g, rng, x, w, surf[x]);
-      break;
-    }
-  }
-
-  // Last, so it stands whole over anything a neighbour spilled into its box.
-  if (claim) raiseLandmark(g, ctx, claim, own);
-
-  return finish(g, { row: sRow - 1 }, { row: gRow - 1 }, `farm:${style}`);
+  },
 };
-
-/**
- * The landmark's site (claimSite), with a column of farmyard levelled either side. Nothing else lands just
- * right of it: a pond there could be cleared bare by a jump off its roof or its sails.
- */
-function claimFarmSite(ctx: SculptCtx, k: Knobs, slots: Slots, surf: number[], locked: Uint8Array): Claim | null {
-  const claim = claimSite(ctx, k, slots, surf, locked);
-  if (!claim) return null;
-  const { x, w } = claim.at;
-  slots.mark(x - 2, x + w + 8);
-  flatten(surf, k.H, x - 1, x + w, claim.ground);
-  return claim;
-}
 
 /** Rolling hills on a route ramp (climbing farms terrace uphill toward the goal). */
 function heights(rng: Rng, k: Knobs): number[] {

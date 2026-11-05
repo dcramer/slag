@@ -8,7 +8,7 @@ import { checkPolicy } from '../lib/level-checks';
 import { once, rule } from './lib';
 
 /**
- * The level contract for every theme's sculptor (SCULPTORS, src/gen/level/sculptors), across sizes and
+ * The level contract for every theme's level shapes (BUILDERS over SET_KITS, src/gen/level/builders), across sizes and
  * gravities: no fallback, proven solvable with at most MAX_BRIDGES parts by the real controller, mostly
  * open, the theme's own style, and the same level from the same seed. The shares behind these rules are
  * measured over many seeds in tests/stats: parts needed and two-part share (theme-levels.test.ts), open

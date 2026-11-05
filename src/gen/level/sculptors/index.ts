@@ -1,30 +1,13 @@
-import type { ThemeId } from '../../../themes';
+import { THEME_IDS, type ThemeId } from '../../../themes';
+import { builderFor } from '../builders';
+import { SET_KITS } from '../sets';
 import type { Sculptor } from '../types';
-import { castle } from './castle';
-import { factory } from './factory';
-import { farm } from './farm';
-import { glacier } from './glacier';
-import { harbor } from './harbor';
-import { jungle } from './jungle';
 import { legacy } from './legacy';
-import { mine } from './mine';
-import { rooftops } from './rooftops';
-import { space } from './space';
-import { volcano } from './volcano';
 
-/** Level-shape generator per theme (one file each in this folder). */
-export const SCULPTORS: Record<ThemeId, Sculptor> = {
-  farm,
-  factory,
-  castle,
-  jungle,
-  volcano,
-  harbor,
-  mine,
-  rooftops,
-  glacier,
-  space,
-};
+/** A theme's level shapes: the builder for the level's profile (builders/) composing the theme's kit (sets/). */
+export const SCULPTORS = Object.fromEntries(
+  THEME_IDS.map((id) => [id, ((ctx) => builderFor(ctx.profile).build(ctx, SET_KITS[id])) satisfies Sculptor]),
+) as Record<ThemeId, Sculptor>;
 
 /**
  * Theme-agnostic generator the pipeline falls back to if a theme sculptor

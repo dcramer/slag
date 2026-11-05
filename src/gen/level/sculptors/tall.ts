@@ -76,7 +76,7 @@ export interface TallKit {
 }
 
 /** Plan and build a tall level with a theme kit. */
-function sculptTall(ctx: SculptCtx, kit: TallKit): Shape {
+export function sculptTall(ctx: SculptCtx, kit: TallKit): Shape {
   const { rng, attempt } = ctx;
   const k = knobs(ctx);
   const { W, H } = k;
@@ -421,7 +421,7 @@ function perchFlight(g: Grid, l: Link): void {
 // Theme kits.
 
 /** Stone tower floors (2 thick), stair flights, crenellated battlements, arrow-slit tower walls. */
-const CASTLE: TallKit = {
+export const CASTLE_TOWER: TallKit = {
   style: 'castle',
   margin: 2,
   linkW: (rise) => stairW(rise),
@@ -452,7 +452,7 @@ const CASTLE: TallKit = {
 };
 
 /** Steel floors, stair stringers (one-way) or ladders, crates and ducts. */
-const FACTORY: TallKit = {
+export const FACTORY_TOWER: TallKit = {
   style: 'factory',
   margin: 1,
   linkW: (rise) => stairW(rise),
@@ -489,7 +489,7 @@ const FACTORY: TallKit = {
 };
 
 /** Solid rock: noise caverns, a tunnel carved per level, rung shafts between them, timber cap beams. */
-const MINE: TallKit = {
+export const MINE_TOWER: TallKit = {
   style: 'mine',
   margin: 1,
   linkW: () => 5,
@@ -532,7 +532,7 @@ const MINE: TallKit = {
 };
 
 /** Giant edge trunks, mossy branch decks, vine ladders, a canopy crown over the top. */
-const JUNGLE: TallKit = {
+export const JUNGLE_TOWER: TallKit = {
   style: 'jungle',
   margin: 3,
   linkW: () => 4,
@@ -582,7 +582,7 @@ const JUNGLE: TallKit = {
 };
 
 /** Stacked roofs with window facades hanging below, fire-escape ladders, rooftop clutter. */
-const ROOFTOPS: TallKit = {
+export const ROOFTOPS_TOWER: TallKit = {
   style: 'rooftops',
   margin: 1,
   linkW: () => 4,
@@ -618,7 +618,7 @@ const ROOFTOPS: TallKit = {
 };
 
 /** Jagged rock ledges over a lava floor, rock-step ramps, floating stones and spires. */
-const VOLCANO: TallKit = {
+export const VOLCANO_TOWER: TallKit = {
   style: 'volcano',
   margin: 1,
   linkW: (rise) => stairW(rise),
@@ -644,7 +644,7 @@ const VOLCANO: TallKit = {
 };
 
 /** Shelves of rock stacked up an icefall, rock-step flights between them; the ice is laid later (glacier.ts `glaze`). */
-const GLACIER: TallKit = {
+export const GLACIER_TOWER: TallKit = {
   style: 'glacier',
   margin: 1,
   linkW: (rise) => stairW(rise),
@@ -655,11 +655,3 @@ const GLACIER: TallKit = {
     return stairFlight(g, l, easyRise(), T_SOLID, 1);
   },
 };
-
-export const glacierTall = (ctx: SculptCtx): Shape => sculptTall(ctx, GLACIER);
-export const castleTall = (ctx: SculptCtx): Shape => sculptTall(ctx, CASTLE);
-export const factoryTall = (ctx: SculptCtx): Shape => sculptTall(ctx, FACTORY);
-export const mineTall = (ctx: SculptCtx): Shape => sculptTall(ctx, MINE);
-export const jungleTall = (ctx: SculptCtx): Shape => sculptTall(ctx, JUNGLE);
-export const rooftopsTall = (ctx: SculptCtx): Shape => sculptTall(ctx, ROOFTOPS);
-export const volcanoTall = (ctx: SculptCtx): Shape => sculptTall(ctx, VOLCANO);

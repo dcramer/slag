@@ -2,6 +2,7 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": [
     "tools/name-words.ts",
+    "tools/sculpt-hash.ts",
     "tools/art3d/style.ts",
     "tools/art3d/flat/build.ts",
     "tools/art3d/flat/kinds/*.ts",
