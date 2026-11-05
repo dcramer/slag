@@ -1,4 +1,7 @@
 import { BotSeats } from '../../src/brain/bots';
+import { deriveSeed, Rng } from '../../src/core/rng';
+import { giveItem } from '../../src/sim/items';
+import { CATCH_UP } from '../../src/sim/props';
 import { type Personality, steady as steadyHands } from '../../src/brain/personality';
 import { type BotLevel, Match } from '../../src/game/match';
 import type { ProfileOverride } from '../../src/gen/level';
@@ -132,4 +135,86 @@ export function botRace(
     splits,
     slagged: !r.alive && slagAt(run.slag, m.level, r),
   };
+}
+
+export interface BotRound {
+  /** Slot highest up `at` frames after GO (laps and all), or -1 if the round was over by then. */
+  leader: number;
+  /** Slot that outlasted everyone, or -1 when the last ones went on the same frame (or the clock ran out first). */
+  winner: number;
+  /** Items used by kind, as the race tells it (`item` events). */
+  uses: Record<string, number>;
+  /** Items picked up. */
+  pickups: number;
+  /** Items boxes popped. */
+  pops: number;
+  /** Race frames from GO to the end. */
+  frames: number;
+}
+
+/**
+ * `players` bots of `level` playing one round of `mode` (Rising Slag by default) on `seed`'s bare level (no parts
+ * placed), to its end: who led `at` frames after GO (highest up, laps and all), and who outlasted everyone. Catch-up's
+ * measure (tests/stats/slag-catch-up.test.ts).
+ */
+export function botRound(
+  seed: number,
+  {
+    players = 4,
+    level = 'normal',
+    at = 15 * 60,
+    limit = 4 * 60 * 60,
+    hands = (p) => p,
+    deal = 0,
+    mode = 'slag',
+  }: {
+    players?: number;
+    level?: BotLevel;
+    at?: number;
+    limit?: number;
+    hands?: (p: Personality) => Personality;
+    /** Every `deal` frames from GO, every empty hand gets what a loop's box deals its rank (`CATCH_UP`): items reaching everyone, as boxes on the way would. */
+    deal?: number;
+    mode?: ModeId;
+  } = {},
+): BotRound {
+  const { m, bots } = botMatch(seed, undefined, undefined, players, level, undefined, hands, mode);
+  m.startMatch();
+  m.startRun();
+  const run = m.run!;
+  let leader = -1;
+  const uses: Record<string, number> = {};
+  let pickups = 0;
+  let pops = 0;
+  const top = () => {
+    let best = -1;
+    let feet = Infinity;
+    for (const r of run.runners)
+      if (r.alive && !r.finished && feetUp(m.level, r) < feet) {
+        feet = feetUp(m.level, r);
+        best = r.slot;
+      }
+    return best;
+  };
+  const dealer = new Rng(deriveSeed(seed, 'deal'));
+  while (run.endFrame < 0 && run.frame < limit) {
+    if (run.frame === RUN_COUNTDOWN + at) leader = top();
+    if (deal > 0 && run.frame > RUN_COUNTDOWN && (run.frame - RUN_COUNTDOWN) % deal === 0) {
+      const lead = top();
+      for (const r of run.runners) if (r.alive && !r.finished && !r.items.held) giveItem(r, dealer.pick(r.slot === lead ? CATCH_UP.lead : CATCH_UP.chase));
+    }
+    m.step(bots.frames(m));
+    for (const e of m.drainEvents())
+      if (e.type === 'item' && e.what === 'use') uses[e.kind] = (uses[e.kind] ?? 0) + 1;
+      else if (e.type === 'item' && e.what === 'pickup') pickups++;
+      else if (e.type === 'item' && e.what === 'pop') pops++;
+  }
+  const alive = run.runners.filter((r) => r.alive && !r.finished);
+  let winner = alive.length === 1 ? alive[0].slot : -1;
+  if (!alive.length) {
+    const last = Math.max(...run.runners.map((r) => r.deathFrame));
+    const at = run.runners.filter((r) => r.deathFrame === last);
+    if (at.length === 1) winner = at[0].slot;
+  }
+  return { leader, winner, uses, pickups, pops, frames: run.frame - RUN_COUNTDOWN };
 }
