@@ -620,6 +620,28 @@ export const BRIEFS: Record<string, Brief> = {
       'The snout is a paper party blower: two pale bands are wrapped round it.',
     worn: 'the toe of the front trainer is split open and its sole flaps loose; the snout has a big crease kinked into it halfway along, so it bends a little but still points straight out; a round tuft of fur sticks up out of the back of the ball. The eyes stay as they are.',
   },
+  warrior: {
+    // The nod, each part of the read at race size and each checked against the comic: the huge round belly on
+    // short legs (the outline: side on, it bulges out in front, wider than the head, so not the plumber's big head
+    // on a stout body); the small round iron helmet with a knob on top, too small for him, perched high on a bald
+    // round head (the comic's, where the plumber has a billed cap and the king horns); the big round nose over a
+    // short bushy dark moustache (the face; the big drooping red one is the castellan's, not his); the short
+    // belted tunic and thick bare arms (the warrior); the sword at his belt.
+    // Ours, and the joke: the helmet is an iron cooking pot turned upside down and hammered to a knobbed point, its
+    // long handle sticking out behind his head, and he carries a half-eaten roast leg out in front like a club:
+    // always hungry. Asked side on, the image model drew him three-quarter, and dropped the prompt's tail (the tunic,
+    // the belt, the moustache): they went on in an edit (art/sprites/warrior/design.prompt.txt, with the two rounds
+    // after it that didn't read better blind).
+    // The palette is neutral (Decisions 4): the tunic in the player's colour; the skin, the moustache, the iron, the
+    // leather, the meat and the bone neutrals.
+    design:
+      'The character: a short, hugely fat cartoon warrior seen side on in profile, facing right. His huge round belly is the biggest shape, bulging far out in front of him, so he is wider than he is tall below the shoulders. ' +
+      "His signature: in his front fist he holds a big half-eaten roast leg of meat (#b8692f) straight out in front of him at arm's length like a club, its round pale bone end (#ecdcb8) sticking out of his fist, clear of his body. " +
+      "On his bald round head sits a small upside-down iron cooking pot (#8e949a) for a helmet, too small for him, perched high on his crown and hammered up into a short point with a round knob on top, the pot's long straight handle sticking straight out behind his head. " +
+      'A big round nose, a short thick bushy dark-brown moustache (#3a2a20) under it, two big eyes, peach skin (#efc9a4), thick bare arms. ' +
+      'A short red tunic (#c9473f) with short sleeves stretched over the belly, a wide brown leather belt (#6e4a2e) under the belly with a short sword in a scabbard hanging at his hip, short stocky legs in brown trousers and big brown boots (#6e4a2e).',
+    worn: "the pot helmet has a big dent knocked into its side and the end of its handle is bent down; a big square patch of paler cloth is sewn on the tunic over the belly; the hem of the tunic is torn into a ragged notch at the back; the sole of the front boot flaps loose at the toe. The face, the moustache and the knob on the pot don't change.",
+  },
 };
 
 function brief(kind: string): Brief {
