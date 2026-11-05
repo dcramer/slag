@@ -11,7 +11,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { trace } from '../page/trace';
 import { BOX, type Settings } from '../settings';
-import { FLAT_KINDS, type FlatClip, type FlatKind, posePrompt } from './kinds';
+import { FLAT_KINDS, type FlatClip, type FlatKind, kitFace, posePrompt } from './kinds';
 
 /** What `rolemap.py` reads: the kind's map, and its eyes' glint (`eyes.glint`) with the band and the pupil size it's looked for at. */
 const mapFor = (k: FlatKind) =>
@@ -583,7 +583,7 @@ const set = {
   flat: true,
   roles: spec.roles.map(({ name: _, ...r }) => r),
   slots: spec.slots,
-  face: spec.face,
+  face: kitFace(spec),
   gait: spec.gait,
   clips,
 };

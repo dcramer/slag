@@ -83,7 +83,7 @@ export const kind: FlatKind = {
   accessories: [{ slot: 'plaster', role: 'plaster', at: 'crown', size: [2.2, 0.75] }],
   // The blink's dashes and the cheer's arcs at a width of their own: at the small eye's (0.39 and 0.33) they were
   // pale brown hairlines, and the face read as eyeless.
-  face: { r: 0.65, iris: '#3c78c8', mark: 0.6 },
+  face: { r: 0.72, iris: '#3c78c8', mark: 0.6, eye: 'anime' },
   gait: { bounce: [0.2, 0.8], lean: [0, 0.04] },
   clips: {
     idle: { frames: ['idle'], loop: true, fps: 1 },

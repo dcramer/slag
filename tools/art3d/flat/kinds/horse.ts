@@ -85,7 +85,7 @@ export const kind: FlatKind = {
   },
   // On the jowl, under and behind the near eye.
   accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [1.8, 0.8] }],
-  face: { r: 0.65, iris: '#2a1f1a' },
+  face: { r: 0.85, iris: '#2a1f1a', eye: 'profile', far: 'none' },
   gait: { bounce: [0.2, 0.9], lean: [0, 0.03] },
   clips: {
     // Standing square with its neck slanting forward, its nose reaches past the box over its feet: centred on itself.

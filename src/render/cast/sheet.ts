@@ -4,7 +4,7 @@ import { Rig } from '../character';
 import { drawInkAccessory, drawInkRunner, ropeAnchor, ropeOf, type RunnerPose } from '../ink-character';
 import { STRIDE } from '../ink-figure';
 import { rosterLook, spritesOf, varietyFor } from './sprites';
-import { roll, VARIETY } from './sprites/play';
+import { pick, roll, VARIETY } from './sprites/play';
 
 /**
  * The cast catalog for docs/CHARACTERS.md and `pnpm shot cast`: every kind on two seeds, a row of
@@ -428,6 +428,93 @@ export function castVariety(kind: Kind, t = 0.4): HTMLCanvasElement {
   looks.forEach((c, i) => {
     runner(s, c, 20 + step * (i + 0.5), 800, { grounded: true }, 2.5, 1, t);
     runner(s, c, W / 2 + 20 + step * (i + 0.5), 800, { grounded: true, vx: 260 }, 2.5, 1, t, MID_RUN + i * 9);
+  });
+  document.body.appendChild(cv);
+  return cv;
+}
+
+/** The moods the face kit acts, as the poses that show them: `blink` is the idle caught mid-blink. */
+const FACE_POSES: [string, Partial<RunnerPose>][] = [
+  ['idle', { grounded: true }],
+  ['blink', { grounded: true }],
+  ['walk', { grounded: true, vx: 100 }],
+  ['run', { grounded: true, vx: 260 }],
+  ['up', { grounded: false, vy: -320 }],
+  ['fall', { grounded: false, vy: 420 }],
+  ['wall', { grounded: false, vy: 60, wall: 1 }],
+  ['cheer', { grounded: true, celebrate: true }],
+  ['dead', { grounded: true, dead: 1.2 }],
+];
+
+/**
+ * Every drawn kind's face through the moods (`pnpm shot cast --only faces`): its head close up in each, then
+ * at play scale (2.5 screen px per world px) standing and mid-run, blown up px for px, so the eye is judged
+ * as a player sees it. Each has to read as the kind's own there and act in every mood.
+ */
+export function castFaces(t = 0.4): HTMLCanvasElement {
+  const kinds = CAST.filter((k) => spritesOf(def(0, 'face', k))?.face);
+  const zoom = 10;
+  const cw = 160;
+  const ch = 120;
+  const play = 3;
+  const W = 110 + (FACE_POSES.length + 2) * cw;
+  const H = 40 + kinds.length * ch;
+  const cv = document.createElement('canvas');
+  cv.width = W;
+  cv.height = H;
+  cv.style.cssText = `position:fixed;left:0;top:0;z-index:99;width:${W}px;height:${H}px`;
+  const s = cv.getContext('2d')!;
+  s.fillStyle = '#e9dcc4';
+  s.fillRect(0, 0, W, H);
+  const label = (txt: string, x: number, y: number) => {
+    s.font = '700 14px Barlow, sans-serif';
+    s.fillStyle = '#3d2e26';
+    s.textAlign = 'center';
+    s.fillText(txt, x, y);
+  };
+  FACE_POSES.forEach(([name], j) => label(name, 110 + cw * (j + 0.5), 26));
+  label('play, standing', 110 + cw * (FACE_POSES.length + 0.5), 26);
+  label('play, running', 110 + cw * (FACE_POSES.length + 1.5), 26);
+  const scratch = document.createElement('canvas');
+  scratch.width = Math.ceil(cw / play);
+  scratch.height = Math.ceil(ch / play);
+  const g = scratch.getContext('2d')!;
+  kinds.forEach((kind, i) => {
+    const c = rosterLook(def(i, 'face', kind));
+    const set = spritesOf(c)!;
+    const y0 = 40 + i * ch;
+    label(kind, 55, y0 + ch / 2);
+    // This character's blink (`drawFace`): when the idle's sine peaks.
+    const seed = c.seed & 0xffff;
+    const period = (Math.PI * 2) / 1.3;
+    const blinkT = ((((Math.PI / 2 - seed * 7) / 1.3) % period) + period) % period;
+    // Centred on the eyes, or on the head's height where the pose shows none.
+    const centre = (p: Partial<RunnerPose>, tt: number, stride = 0) => {
+      const eyes = pick(set, { facing: 1, vx: 0, vy: 0, grounded: true, t: tt, ...p }, stride, varietyFor(set, c))?.frame.eyes;
+      return eyes?.length ? [(eyes[0] + eyes[eyes.length - 3]) / 16, (eyes[1] + eyes[eyes.length - 2]) / 16] : [0, -12];
+    };
+    FACE_POSES.forEach(([name, p], j) => {
+      const x0 = 110 + j * cw;
+      const tt = name === 'blink' ? blinkT : t;
+      const [ex, ey] = centre(p, tt);
+      s.save();
+      s.beginPath();
+      s.rect(x0 + 2, y0 + 2, cw - 4, ch - 4);
+      s.clip();
+      s.fillStyle = j % 2 ? '#d9cbb2' : '#e2d4bc';
+      s.fillRect(x0, y0, cw, ch);
+      runner(s, c, x0 + cw / 2 - ex * zoom, y0 + ch / 2 - ey * zoom, p, zoom, 1, tt);
+      s.restore();
+    });
+    ([{ grounded: true }, { grounded: true, vx: 260 }] as Partial<RunnerPose>[]).forEach((p, j) => {
+      g.fillStyle = '#d9cbb2';
+      g.fillRect(0, 0, scratch.width, scratch.height);
+      const [ex, ey] = centre(p, t, p.vx ? MID_RUN : 0);
+      runner(g, c, scratch.width / 2 - ex * 2.5, scratch.height / 2 - ey * 2.5, p, 2.5, 1, t, p.vx ? MID_RUN : 0);
+      s.imageSmoothingEnabled = false;
+      s.drawImage(scratch, 110 + (FACE_POSES.length + j) * cw, y0, scratch.width * play, scratch.height * play);
+      s.imageSmoothingEnabled = true;
+    });
   });
   document.body.appendChild(cv);
   return cv;
