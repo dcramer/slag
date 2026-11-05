@@ -141,8 +141,9 @@ export const kind: FlatKind = {
   },
   // The plaster goes over the scar on his cheek.
   accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [1.8, 0.75] }],
-  // Cat's eyes: a yellow iris.
-  face: { r: 0.65, iris: '#e0b830', mark: 0.55 },
+  // Cat's eyes: yellow almonds round a slit (`cat` in the face kit's EYES). Three-quarter, the far eye is the kit's
+  // sliver behind the near one.
+  face: { r: 0.75, iris: '#e0b830', mark: 0.55, eye: 'cat' },
   gait: { bounce: [0.1, 0.5], lean: [0, 0.03] },
   clips: {
     idle: { frames: ['idle'], loop: true, fps: 1 },

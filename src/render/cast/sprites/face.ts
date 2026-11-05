@@ -176,6 +176,24 @@ export const EYES: Record<EyeStyle, EyeArt> = {
       glint(s, f * r * 0.02, -r * 0.08, r * 0.16);
     },
   },
+  // An almond all iris, no white, round a tall slit pupil: the monster slayer's cat's eyes, whose colour is the
+  // trait, so the iris fills the eye at any size. The kit's brows set the glare; on a fall the slit opens round.
+  cat: {
+    extent: [1.05, 0.8],
+    brow: true,
+    open(s, r, m, f, iris) {
+      const rx = r * 1.05 * wideOf(m);
+      const ry = r * 0.8 * squintOf(m);
+      const pts = almond(rx, ry, f);
+      inked(s, pts, iris, INK, r * RIM_THIN, r * RIM_THICK);
+      within(s, pts, () => {
+        const y = lookY(m) * r;
+        if (m === 'fall') poly(s, oval(f * r * 0.18, y, r * 0.32, r * 0.42, 9), INK);
+        else poly(s, oval(f * r * 0.2, y, r * 0.17, r * 0.72, 8), INK);
+      });
+      glint(s, f * r * 0.36, -r * 0.22, r * 0.14);
+    },
+  },
   // A round white half hidden under a flat heavy lid, a big pupil below it: the ape's, the mercenary's brood, the
   // puppy's eyes under the beanie. The lid lifts on the way up and is gone on a fall.
   heavy: {
