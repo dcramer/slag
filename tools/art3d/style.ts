@@ -491,25 +491,24 @@ export const BRIEFS: Record<string, Brief> = {
     worn: "a big pale-blue paper party crown (#9cc8e8) with five tall zigzag points sits crooked on his head between his horns, one of its points torn and folded down; one of the shell's spikes is bent over sideways; a big square grey riveted patch plate (#9aa0a8) is bolted onto the shell; one horn is chipped off short at the tip.",
   },
   horse: {
-    // The nod, each part of the read at race size: the long head, a muzzle as long as the body is tall, tilted
-    // down like a real horse's (a horse in profile, and what tells it from the goose's S-neck and the dino's
-    // level snout, which has no ears); two upright ears; standing upright on two legs like a person (the party
-    // game's horse, not a farm horse); the goofy buck-toothed grin (its personality); a dark mane flat down the
-    // neck and a narrow tail hanging behind (a horse, not a donkey or a dog).
-    // Ours, and the joke: it is a cheap horse costume. The head is a size too big, a zip runs up its belly to the
-    // scarf, stuck open at the bottom, and it has lost its voice: a thick knitted scarf wound round its throat.
-    // A shaggy mane, tall ears and a bushy or knotted tail read as a fox (Fox McCloud) or the bandicoot in the
-    // blind reads (2026-11-04), so the mane lies flat, the ears are small and the head is pushed long and tilted
-    // down. Over the prompt's length the image model drops the scarf, so the scarf comes in the wear edit, and
-    // the tilt and the narrow tail in a second edit (art/sprites/horse/design.prompt.txt).
+    // The nod, each part of the read at race size, and each a shape only a horse has in outline: four long legs
+    // under a long barrel body (upright on two legs, ten blind readers took it for a fox or the bandicoot); a long
+    // neck rising steeply from the chest with the mane standing up along it as a crest; a long boxy head with a
+    // blunt muzzle as deep at the nose as at the eyes, never a fox's point; a long tail of straight hair hanging
+    // to the heels, never a brush; flat-bottomed hooves wider than the legs; the goofy buck-toothed grin (its
+    // personality, in colour).
+    // Ours, and the joke: it is a cheap horse costume, put in by the wear edit (a zip along its belly, a knitted
+    // scarf wound round its throat because it has lost its voice, a patch on one knee).
     // The palette is neutral (Decisions 4): the coat in the player's colour, the scarf a dark of it; the
-    // muzzle, mane, hooves and zip stay their own.
+    // muzzle, mane, tail, hooves and zip stay their own.
     design:
-      'The character: a goofy cartoon horse standing upright on two legs like a person, and it is clearly a cheap horse costume. ' +
-      'Its enormous long horse head, a size too big for the costume, is as long as its whole body is tall and is its biggest shape, held out in front of it like a brick: a long straight muzzle sticking far out past its chest, ending in a wide, rounded pale cream nose (#e6cfae) with two big round nostrils and a wide goofy grin of big flat buck teeth; two big round eyes high at the back of the head; two small neat pointed ears standing straight up side by side. ' +
-      'A smooth dark brown mane (#4a3428) lies flat down the back of its neck in one long sweep, no tuft on top of the head, and a long smooth dark brown tail hangs straight down behind it. ' +
-      'The costume body is a baggy onesie (#9a6a40), the same colour as the head, with big round dark brown hooves for hands and feet.',
-    worn: 'a thick knitted red scarf (#c9473f) is wound round its throat under the head, one end hanging down its chest; a big silver zip runs straight up the middle of its belly from between its legs to the scarf, stuck open at the bottom, its two sides parted in a V over the lower belly; a big square patch of grey cloth is sewn on one knee with big stitches; the end of the tail is frayed into ragged strands.',
+      'The character: a goofy cartoon horse standing on all four legs, seen from its side, facing right, its whole outline unmistakably a horse. ' +
+      'A long thick neck rises steeply up and forward from its chest, and a short stiff dark brown mane (#4a3428) stands straight up along the whole top of the neck in one neat smooth crest, like a brush, from between the ears down to the shoulders. ' +
+      'On top of the neck its long boxy horse head points forward and down: a long blunt rectangular muzzle, as deep at the nose as at the eyes and never tapering, ending square in a big pale cream nose (#e6cfae) with a big round nostril and big flat buck teeth in a goofy grin; one big round eye high on the head; two small pointed ears. ' +
+      'Its body is a long round barrel (#c8743a) on four long straight legs, each leg ending in a big flat-bottomed dark brown hoof, wider than the leg. ' +
+      'A long tail of straight dark brown hair falls from the top of its rump straight down to its heels, narrow at the root and wider at the end. ' +
+      'The head, neck, body and legs are all one colour.',
+    worn: 'it is a cheap horse costume: a thick knitted red scarf (#c9473f) is wound round the top of its neck just under the head, one short end hanging down its chest; a big silver zip runs straight down the front of its chest from under the scarf to between its front legs, stuck open at the bottom, its two sides parted in a V; a big square patch of grey cloth is sewn on the knee of one front leg with big stitches.',
   },
 };
 
