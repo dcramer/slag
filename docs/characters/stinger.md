@@ -4,13 +4,20 @@ A kind of the cast: [CHARACTERS.md](../CHARACTERS.md) has the rules every kind f
 
 - **Kind:** `stinger` · **Name:** Hornette
 - **A stranger should say:** "the bug knight with the horned mask and the needle."
-- **Silhouette:** small and slim: a white mask face with two long horns curving up and back off it, a red cloak hanging from her shoulders in a bell to the knees, thin dark legs under it, a long thin needle held out or slung on a thread trailing behind.
-- **Traits:** a white mask with dark eye holes; two long curved horns; a red cloak; thin dark limbs; a long needle on a thread; quick and agile.
-- **Palette:** the cloak in the player's colour; the mask white, the limbs dark, the needle steel, the thread neutral.
-- **Color slot:** costume.
-- **Gait:** quick darting steps; she throws the needle on its thread and dashes after it.
-- **The nod:** the horned white mask (the read); the bell of the red cloak; the needle and thread.
-- **Our twist:** the needle is a knitting needle trailing yarn, and the cloak is a patched dishcloth with a frayed hem.
-- **Swaps:** a chip off one horn; a plaster on the mask; a stray loop of yarn.
-- **Rig:** to draw flat (2026-11-04).
-- **Concept prompt:** A small slim cartoon bug warrior seen from the side, with a white mask face, big dark eye holes and two long horns curving up and back off its top, a red cloak made from a patched dishcloth with a frayed hem hanging from her shoulders to her knees in a bell, thin dark legs, holding a long knitting needle trailing a thread of yarn.
+- **Silhouette:** small and slim: a white mask face with two long horns off its top, sharp crescents hooking back with background between them, a red cloak hanging from her shoulders in a short bell to the knees, thin dark legs clearly under it, and a thick knitting needle held level, sticking out past her on both sides.
+- **Traits:** a white mask with dark eye holes; two long crescent horns; a red cloak; thin dark limbs; a long needle with yarn off it; quick and agile.
+- **Palette:** costume (the player's, `#b8343c` on the sheets): the cloak; the dishcloth's stripes a light of it (+30). The mask a neutral white `#f2eee6` (a face), the limbs and eye holes a dark `#2a2630`; the needle and the patch one grey `#a4a2a0`.
+- **Color slot:** costume: the cloak.
+- **Palette alts:** the needle and the patch in steel `#a4a2a0`, bamboo `#c4a878` or charcoal `#6e6a66`.
+- **Gait:** quick darting steps, leaning far into the dash.
+- **Idles and cheers:** the idle from the design; leaning on the needle planted point down like a cane, the head tilted. The needle thrust up and forward like a salute; a curtsy, holding the cloak's hem out.
+- **Gait range:** a bounce of 0.1–0.6 px on each step, a lean of up to 0.04.
+- **Wear:** in the drawing, the cloak's frayed hem and its grey patch; scuffed is a pale scuff on the cloak, scorched a soot mark low on it (tones of the cloak).
+- **The nod:** the horned white mask (the read: nobody else in the cast has one); the bell of the red cloak with thin legs under it; the needle held out.
+- **Our twist:** the needle is a chunky knitting needle with a round knob, yarn hanging off it, and the cloak is an old striped dishcloth, patched, its hem frayed.
+- **Swaps:** a plaster on the mask (`plaster`, the cheek). The chip off a horn and the stray loop of yarn aren't drawn: a chip is a speck at play size, and the yarn already hangs from the knob.
+- **Rig:** drawn flat (2026-11-04, `art/sprites/stinger/design.prompt.txt`), three-quarter view, 24 px tall with the horns. The design came back as the original redrawn, so the wear edit carries the twist (the dishcloth's stripes and patch, the frayed hem, the yarn). The eyes are the mask's two black eye holes, found as a pair of dark specks under the horns, and drawn by the face kit's `hole` eye, added to `EYES` for her: a black oval with a glint and no blush (the `tall` eye's blush read as cheeks painted on the mask). `art/sprites/stinger/eyes.py` moves one run drawing's near eye hole back from the mask's edge, where the build took it for ink. Design read, the black design beside six cast designs, two fresh readers: "Hornet (the horned bug with the needle, from the bug-kingdom metroidvania), medium-high. Two tall pointed horns on the head, a thin body, a flared cloak or skirt, and a long thin needle sticking out to the left"; "Hornet from Hollow Knight (medium). Tall two-pronged horned head on a small cloaked body, thin legs, and a long needle sticking out to the left." The blind sheet, two rounds of two fresh readers:
+  - **Round 1**, straight horns and a thin needle: "unsure, a long-eared rabbit or a horned, cloaked bug. Two tall upright ears or horns over a small flared, cloak-like body" and "unsure. Two long upright pointed horns or ears on a thin body with a pointed bottom. A plain rabbit or the horned bug (Hornet), low", the second with "15 and 30 might both be the horned cloaked bug" (the slayer). At play size the thin needle was gone, and straight horns were ears.
+  - **Round 2** (what ships), an edit of the worn design: the horns sharp crescents hooking back, the needle as thick as her leg and longer than she is. "Hornet from Hollow Knight (horned bug with the needle), medium-high. Two tall horns, cloak, needle weapon, thin legs" and "Hornet-style (Hollow Knight) bug, medium. Two long horns, a cloak flaring to points, a needle-thin weapon". Neither paired her with anyone.
+  - **Sizes:** the jump is drawn at 0.88, the wall slide at 0.9 and the knockout at 0.7, inside the shared box.
+- **Concept prompt:** A small slim cartoon bug warrior girl in three-quarter view, a big smooth white mask face with two big black eye holes, two long white horns off its top, each a sharp crescent sweeping up and hooking back, a red cloak made from an old striped dishcloth, patched, its hem frayed, hanging from her shoulders to her knees in a short bell, thin black legs under it, holding a chunky steel knitting needle with a round knob level in one fist, sticking out past her on both sides, a strand of cream yarn hanging from the knob.

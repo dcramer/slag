@@ -64,7 +64,7 @@ Each kind's entry is its own file in [characters/](characters/): what a stranger
 | [slayer](characters/slayer.md) | the white-haired monster slayer | broad-shouldered in a wide stance, a short coat over two legs in tall boots, white hair tied tight back, a long sword held low in hand and two hilts side by side above his back shoulder (one an umbrella's), a bottle-cap wolf medallion, yellow cat's eyes, a scar | costume: the coat; the gloves and boots a dark of it |
 | [raider](characters/raider.md) | the braided tomb raider | a long single braid swinging behind her head, a tank top and shorts, twin pistols in thigh holsters, a small backpack, boots | costume: the tank top |
 | [fighter](characters/fighter.md) | the bun-haired street fighter | two round hair buns either side of her head like ox horns, a high-collared qipao with puffed shoulders, spiked bracelets, thick strong legs, a kicking stance | costume: the qipao |
-| [stinger](characters/stinger.md) | the horned bug with the needle | a small bug with a white mask face and two long curved horns, a red cloak hanging from the shoulders like a bell, thin dark legs, a long needle on a thread | costume: the cloak |
+| [stinger](characters/stinger.md) | the horned bug with the needle | a small bug with a white mask face and two long crescent horns hooking back, a red dishcloth cloak hanging from the shoulders in a short bell, thin dark legs under it, a thick knitting needle held level with yarn off its knob | costume: the cloak; the stripes a light of it |
 
 **Reserves**, if a kind won't read: the spinning bandicoot (its tuft and grin rhyme with the speedster), the shovel-wielding knight, the red-haired mountain climber, the falling-block party bean (rhymes with the crewmate). The space marine in green armour reads as a generic soldier at 20 px; the plumber's tall brother, the ape's red-capped nephew and the king's turtle foot soldiers rhyme with kinds already in.
 
@@ -129,7 +129,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 27 | slayer | Gerald | humanoid | drawn flat, redrawn broad with a sword in hand; the blind read not passed (unpaired, but the two hilts read as rabbit ears) |
 | 28 | raider | Laura Craft | humanoid | medium: the braid against the slayer's tail and the elf's cap |
 | 29 | fighter | Chun-Lee | humanoid | low: the buns |
-| 30 | stinger | Hornette | **keyed**, bug | medium: the horns against the king's and the hedgehog's spikes |
+| 30 | stinger | Hornette | humanoid, cloaked | drawn flat; the blind read passes (straight horns read as rabbit ears until they curved into crescents) |
 
 **What to check.** No two kinds may rhyme. Watch these pairs:
 
