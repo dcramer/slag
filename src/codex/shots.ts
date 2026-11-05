@@ -2,7 +2,7 @@ import { Rng } from '../core/rng';
 import type { ViewXform } from '../game/view';
 import { DIFFICULTIES, generateLevel } from '../gen/level';
 import type { ProfileOverride } from '../gen/level/profile';
-import { cycleFrames } from '../gen/setpieces/place';
+import { cycleFrames } from '../sim/props';
 import { SET_PIECES } from '../gen/setpieces';
 import { ownPieces } from '../gen/stage';
 import { RUN_COUNTDOWN, TILE, VIEW_H, VIEW_W } from '../sim/constants';

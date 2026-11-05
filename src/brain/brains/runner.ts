@@ -1,20 +1,10 @@
-import { Rng } from '../../core/rng';
+import { deriveSeed, Rng } from '../../core/rng';
 import { Grudges } from '../grudge';
+import { STRATEGIES, type Strategy } from '../strategies';
 import type { Personality } from '../personality';
 import type { Temperament } from '../temperament';
 import type { Brain, BrainView, CardSense, Intent } from '../types';
 
-/**
- * A race that stops getting closer to the flag (by its route, or the rough way where no route leads):
- * after STUCK_FRAMES (LOST_FRAMES standing where no route leads at all) it takes a leap of faith toward
- * the flag for LEAP_FRAMES, and if that gets it nowhere, gives up LAST_FRAMES later, as a stuck player would.
- */
-const STUCK_FRAMES = 6 * 60;
-const LOST_FRAMES = 4 * 60;
-const LEAP_FRAMES = 120;
-const LAST_FRAMES = 120;
-/** How much further the route gets at once for a bot to take it as a loop's lap line crossed (route tiles, rounded as `togo` is). */
-const LAP_RESET = 8;
 /**
  * How long it takes over each choice, in frames [min, max]: a person reads the
  * crate and points at a card or two before taking one, then looks the level
@@ -80,8 +70,8 @@ interface Weighing {
 }
 
 /**
- * The built-in brain: runs the route to the flag; with no way on, it jumps
- * for it anyway, and gives up when even that gets it nowhere. A bridge the
+ * The built-in brain: races the way its mode's strategy plays (strategies/),
+ * picks and places the same in every mode. A bridge the
  * level's plan needs goes where the plan puts it, anything else somewhere
  * legal that doesn't seal the level, unless it has it in for someone
  * (grudge.ts, by its temperament): then it may snatch the card its target
@@ -101,10 +91,10 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
   /** Cards still to point at before taking `card`, and the phase frame it moves on from the current one. */
   let looks: number[] = [];
   let lookUntil = 0;
-  let best = Infinity;
-  /** The closest it has been the rough way while no route covered it: getting closer that way is progress too. */
-  let near = Infinity;
-  let since = 0;
+  /** Its own stream for the race, apart from the one its picks and placements draw from. */
+  const raceRng = new Rng(deriveSeed(seed, 'race'));
+  /** How it plays this race, by the match's mode; made at the start of each. */
+  let strategy: Strategy | null = null;
   let scheme = NO_SCHEME;
   /** Place: the phase frame it stops eyeing its target. */
   let glareUntil = 0;
@@ -250,29 +240,8 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
       }
     }
     if (!v.live || !me || !me.alive || me.finished) return { do: 'wait' };
-    // Round a loop the goal is the lap line: crossing it puts the whole climb ahead again, which is a new lap, not a loss.
-    if (!v.level.flag && Number.isFinite(me.togo) && Number.isFinite(best) && me.togo > best + LAP_RESET) {
-      best = me.togo;
-      since = 0;
-    }
-    if (me.togo < best) {
-      best = me.togo;
-      since = 0;
-    } else if (!Number.isFinite(me.togo) && me.grounded && me.away < near) {
-      near = me.away;
-      since = 0;
-    } else since++;
-    const wait = me.grounded && !Number.isFinite(me.togo) ? LOST_FRAMES : STUCK_FRAMES;
-    const { tx, ty } = v.level.goal;
-    // With no flag the top is somewhere to hold: stand on it, and never give up into the slag. A stuck bot leaps and tries again.
-    if (!v.level.flag && me.togo === 0) {
-      since = 0;
-      return { do: 'wait' };
-    }
-    if (!v.level.flag && since > wait + LEAP_FRAMES) since = 0;
-    if (since > wait + LEAP_FRAMES + LAST_FRAMES) return { do: 'giveUp' };
-    if (since > wait && since <= wait + LEAP_FRAMES) return { do: 'leap', tx, ty };
-    return { do: 'goTo', tx, ty };
+    strategy ??= STRATEGIES[v.mode].make(raceRng, traits);
+    return strategy.think(v, me);
   };
 
   return {
@@ -287,9 +256,7 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
         card = -1;
         spot = null;
         weighing = null;
-        best = Infinity;
-        near = Infinity;
-        since = 0;
+        strategy = null;
         // A beat before choosing, as a person takes in the crate or the level.
         pause = v.phase === 'pick' ? slow(TEMPO.read) : v.phase === 'place' ? slow(TEMPO.survey) : 0;
         looks = [];

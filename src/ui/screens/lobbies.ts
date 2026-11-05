@@ -147,7 +147,7 @@ export function mountLobbies(root: HTMLElement, nav: Nav): Unmount {
 
   // Mouse and touch: rows act on click; the filters, Back and Play are buttons too.
   for (const t of tabs) t.addEventListener('click', () => setFilter(t.dataset.filter as LobbyFilter), on);
-  play.addEventListener('click', () => nav.go(lobby(newRoomCode())), on);
+  play.addEventListener('click', () => nav.go(lobby(newRoomCode(Math.random))), on);
   play.addEventListener('mouseenter', () => select(0), on);
   el.addEventListener('click', (e) => (e.target as Element).closest('[data-act=back]') && back(), on);
 

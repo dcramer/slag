@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { Theme } from '../src/gen/theme';
 import { type Level, T_ONEWAY, T_SOLID } from '../src/sim/level';
 import { jumpMetrics } from '../src/sim/physics';
-import { analyzeReach, isStandable } from '../src/sim/reach';
+import { analyzeReach, goalField, isStandable, ReachCache } from '../src/sim/reach';
+import { generateLevel } from '../src/gen/level';
 
 /**
  * Handcrafted level from ASCII rows: '#' solid, '=' one-way, 'S' spawn, 'G' goal,
@@ -176,5 +177,25 @@ describe('reach analyzer', () => {
         '##############################',
       ]),
     ).toBe(false);
+  });
+});
+
+describe('goal field', () => {
+  it('measures through a kept cache exactly what it measures fresh, round after round of parts', () => {
+    const lv = generateLevel(3);
+    const cache = new ReachCache(lv, undefined, true);
+    const tiles = lv.tiles.slice();
+    for (let round = 0; round < 4; round++) {
+      // A part's worth of rock on the ground somewhere along the level.
+      const x = 8 + round * 9;
+      for (let y = 0; y < lv.h - 1; y++)
+        if (tiles[(y + 1) * lv.w + x] === T_SOLID && tiles[y * lv.w + x] !== T_SOLID) {
+          tiles[y * lv.w + x] = tiles[y * lv.w + x + 1] = T_SOLID;
+          break;
+        }
+      const at = { ...lv, tiles: tiles.slice() };
+      cache.rebase(at.tiles);
+      for (const air of [false, true]) expect(goalField(at, { air, careful: true, cache })).toEqual(goalField(at, { air, careful: true }));
+    }
   });
 });

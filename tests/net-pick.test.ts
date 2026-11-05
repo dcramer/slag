@@ -313,12 +313,12 @@ describe('watching a remote runner', () => {
     expect(hashMatch(b.match)).toBe(hashMatch(a.match));
   });
 
-  it('keeps the host queue short, so a burst costs one moment and not lasting lag', () => {
+  it('folds a host queue that stays long, so a burst costs one moment and not lasting lag', () => {
     const { r, a } = inRace(20);
     const queue = (a as any).queues.get('bbbb');
-    queue.frames = Array.from({ length: 12 }, (_, i) => ({ seq: queue.consumed + i + 1, f: {} }));
-    r.run(1);
-    expect(queue.frames.length).toBeLessThanOrEqual(3);
+    queue.frames = Array.from({ length: 30 }, (_, i) => ({ seq: queue.consumed + i + 1, f: {}, at: r.hub.now }));
+    r.run(20);
+    expect(queue.frames.length).toBeLessThanOrEqual(4);
   });
 
   it('survives a lost bundle without waiting on a resend', () => {
@@ -340,6 +340,29 @@ describe('watching a remote runner', () => {
     hub.route = route;
     r.run(30);
     expect(dropped).toBeGreaterThan(20);
+    expect(needs).toBe(0);
+    expect(a.match.frame - b.match.frame).toBeLessThan(6);
+  });
+
+  it('survives a burst of lost bundles without waiting on a resend', () => {
+    const { r, a, b } = inRace(40);
+    let needs = 0;
+    const send = (b as any).send.bind(b);
+    (b as any).send = (m: { t: string }, to?: string, lossy?: boolean) => {
+      if (m.t === 'need') needs++;
+      send(m, to, lossy);
+    };
+    const hub = r.hub as any;
+    const route = hub.route.bind(hub);
+    let sent = 0;
+    // Eight in a row lost, every second: what a congested or fading link does.
+    hub.route = (from: string, data: { t: string }, to?: string, lossy?: boolean) => {
+      if (from === 'aaaa' && data.t === 'b' && sent++ % 60 < 8) return;
+      route(from, data, to, lossy);
+    };
+    r.run(240);
+    hub.route = route;
+    r.run(30);
     expect(needs).toBe(0);
     expect(a.match.frame - b.match.frame).toBeLessThan(6);
   });

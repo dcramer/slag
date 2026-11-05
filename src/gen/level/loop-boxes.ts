@@ -34,16 +34,17 @@ function boxAt(tx: number, ty: number, seed: number): PropDef {
 }
 
 /**
- * Where a box can hang: an empty cell with open air either side and two rows under it, over a stand cell on a floor
- * (solid or one-way), so a climber knocks it from below without it walling a jump off.
+ * Where a box can hang: an empty cell with open air either side, over two rows of headroom and a floor (solid or
+ * one-way) under them. Three rows up is head height for a hop from the floor, and a full jump lands on its top,
+ * where what it pops comes to rest: any higher and nobody could reach the item.
  */
 function hangs(level: Level, x: number, y: number, taken: ReadonlySet<number>): boolean {
   const { w } = level;
   const at = (cx: number, cy: number) => level.tiles[cy * w + cx];
-  if (taken.has(y * w + x) || isProtected(level, x, y) || isProtected(level, x, y + 3)) return false;
-  for (let dy = 0; dy <= 3; dy++) if (at(x, y + dy) !== T_EMPTY) return false;
+  if (taken.has(y * w + x) || isProtected(level, x, y) || isProtected(level, x, y + 2)) return false;
+  for (let dy = 0; dy <= 2; dy++) if (at(x, y + dy) !== T_EMPTY) return false;
   if (at(x - 1, y) !== T_EMPTY || at(x + 1, y) !== T_EMPTY) return false;
-  const floor = at(x, y + 4);
+  const floor = at(x, y + 3);
   return floor === T_SOLID || floor === T_ONEWAY;
 }
 
@@ -56,7 +57,7 @@ export function loopBoxes(level: Level, pieces: readonly PlacedProp[], keep: (pi
   if (!loop) return [];
   const taken = new Set(pieces.flatMap((p) => footprintCells(p).map(([x, y]) => y * level.w + x)));
   const spots: [number, number][] = [];
-  for (let y = LOOP_BAND; y + 4 < loop + LOOP_BAND; y++) for (let x = 3; x < level.w - 3; x++) if (hangs(level, x, y, taken)) spots.push([x, y]);
+  for (let y = LOOP_BAND; y + 3 < loop + LOOP_BAND; y++) for (let x = 3; x < level.w - 3; x++) if (hangs(level, x, y, taken)) spots.push([x, y]);
   rng.shuffle(spots);
   const want = Math.max(2, Math.round(loop / ROWS_PER_BOX));
   const out: PlacedProp[] = [];

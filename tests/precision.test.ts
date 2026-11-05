@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { generateLevel, lastGenInfo } from '../src/gen/level';
 import { DIFFICULTIES, DIFFICULTY, rollDifficulty } from '../src/gen/level/difficulty';
-import { routePrecision, slip } from '../src/gen/level/precision';
+import { JumpCache, routeJumps, routePrecision, slip } from '../src/gen/level/precision';
+import { Rng } from '../src/core/rng';
 import { setProbeGravity } from '../src/gen/level/probe';
 import { analyzeRoutes } from '../src/gen/level/routes';
 import { LEVEL_H, LEVEL_W } from '../src/sim/constants';
@@ -88,6 +89,28 @@ describe('difficulty', () => {
         expect(lastGenInfo.draws).toBeLessThanOrEqual(draws + 1);
         // The pick is part of the level: the same seed gives the same one.
         expect(generateLevel(seed, 'farm', { difficulty }).tiles).toEqual(l.tiles);
+      }
+    }
+  });
+
+  it('measures from its cache exactly what it measures fresh, as tiles change a little at a time', () => {
+    for (const seed of [2, 5]) {
+      const level = generateLevel(seed);
+      const bridges = level.solution ?? [];
+      const route = analyzeRoutes(level, bridges).fastest;
+      const cache = new JumpCache(level);
+      const rng = new Rng(seed);
+      const tiles = level.tiles.slice();
+      for (let i = 0; i < 12; i++) {
+        // A block dropped near the route, the way a weighed part lands.
+        const c = route[rng.int(0, route.length - 1)];
+        const x = (c % level.w) + rng.int(-2, 2);
+        const y = Math.floor(c / level.w) + rng.int(-2, 1);
+        const at = { ...level, tiles: tiles.slice() };
+        for (let dy = 0; dy < 2; dy++)
+          for (let dx = 0; dx < 2; dx++)
+            if (x + dx >= 0 && x + dx < level.w && y + dy >= 0 && y + dy < level.h) at.tiles[(y + dy) * level.w + x + dx] = T_SOLID;
+        expect(routeJumps(at, route, bridges, cache)).toEqual(routeJumps(at, route, bridges));
       }
     }
   });

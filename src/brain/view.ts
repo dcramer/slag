@@ -1,15 +1,17 @@
 import type { Match, Player } from '../game/match';
-import { MODES } from '../game/modes';
+import type { ModeId } from '../game/modes';
 import { isBridgePart, type PropDef } from '../gen/props';
-import { type Bridge, fieldOf, planHolds, prove, settled } from '../gen/level';
-import { levelPrecision } from '../gen/level/precision';
+import { type Bridge, cacheFor, canPlaceBridge, fieldOf, prove, settled, withBridges } from '../gen/level';
+import { JumpCache, levelPrecision } from '../gen/level/precision';
 import { analyzeRoutes } from '../gen/level/routes';
 import type { Level } from '../sim/level';
 import { RUN_COUNTDOWN, TILE } from '../sim/constants';
-import { barrierOf, hangRow, type PlacedProp, spotAt } from '../sim/props';
+import { barrierOf, hangRow, motionOffset, mysterySpent, mysteryState, type PlacedProp, spotAt } from '../sim/props';
 import type { Body } from '../sim/physics';
+import { routeDistance } from '../sim/items';
+import { feetUp, type Runner, type RunWorld } from '../sim/run';
 import { raceMap } from './route';
-import { BRAIN_VIEW_VERSION, type BrainView, type Lift, type Pace, type PropSense, type SelfSense } from './types';
+import { BRAIN_VIEW_VERSION, type BoxSense, type BrainView, type Lift, type Objective, type Pace, type PropSense, type SelfSense } from './types';
 
 /**
  * What a seat senses: the match as a player would read it, never the sim's
@@ -46,20 +48,62 @@ function lift(b: Body): Lift {
   return b.vy < 0 ? 'rising' : b.vy < 400 ? 'falling' : 'plunging';
 }
 
+/**
+ * What each mode's race is for, as a bot sees it. A new mode fails typecheck here until it says, and its strategy
+ * (strategies/) reads it.
+ */
+const OBJECTIVES: Record<ModeId, (m: Match) => Objective> = {
+  race: (m) => ({ kind: 'reach', cell: { ...m.level.goal } }),
+  slag: (m) => ({ kind: 'climb', lapLine: { ...m.level.goal }, loop: m.level.loop ?? 0 }),
+};
+
+/** Rows `r`'s feet stand above the spawn's floor, laps and all. */
+const upOf = (run: RunWorld, r: Runner) => round4(((run.level.spawn.ty + 1) * TILE - feetUp(run.level, r)) / TILE);
+
+/** Runners still racing ahead of `r`: everyone finished, and whoever is nearer the flag by route, or round a climb, higher. */
+function rankOf(run: RunWorld, r: Runner): number {
+  const active = (q: Runner) => q.alive && !q.finished;
+  if (!active(r)) return 0;
+  const by = run.level.tide ? (q: Runner) => feetUp(run.level, q) : (q: Runner) => routeDistance(run.level, q);
+  const mine = by(r);
+  return run.runners.filter((q) => q !== r && (q.finished || (active(q) && by(q) < mine))).length;
+}
+
+/** The mystery boxes standing in the race, where they stand now. */
+function boxesOf(run: RunWorld): BoxSense[] {
+  const out: BoxSense[] = [];
+  for (const rp of run.resolved)
+    rp.mods.forEach((mod, mi) => {
+      if (mod.type !== 'mystery') return;
+      const st = mysteryState(run.propState.get(rp.pp.uid), mi);
+      const ready = !mysterySpent(mod, st.pops) && run.frame >= st.ready;
+      const [ox, oy] = motionOffset(rp, run.frame);
+      for (const [cx, cy] of mod.cells) out.push({ tx: Math.round(cx + ox / TILE), ty: Math.round(cy + oy / TILE), ready });
+    });
+  return out;
+}
+
 /** Where the held part lands with the cursor aimed at (tx, y): what Match.ghostOrigin decides, for any turn. */
 export function ghostAt(m: Match, def: PropDef, rot: number, tx: number, y: number) {
   const ty = def.mount === 'hang' ? hangRow(m.level, m.placed, def, tx, y, m.frame) : y;
   return { ...spotAt(m.level, m.placed, def, rot, tx, ty, m.frame), tx, ty };
 }
 
+/** Each level's jumps as measured, shared by every bot weighing spots on it: a spot only re-measures the jumps near it. */
+const jumpCaches = new WeakMap<Level, JumpCache>();
+
 /** How hard the run is over `placed`: tight jumps on the forgiving way and its length, or null when no plan gets through. */
 function hardness(level: Level, placed: readonly PlacedProp[], prior: readonly Bridge[]) {
+  let jumps = jumpCaches.get(level);
+  if (!jumps) jumpCaches.set(level, (jumps = new JumpCache(level)));
   const s = settled(level, placed);
-  // Only the plan everyone is already building counts: searching for another can take a frame's whole budget many times over.
-  if (!planHolds(s.level, s.placed, prior)) return null;
   const field = fieldOf(s.level, s.placed);
-  const routes = analyzeRoutes(field, prior);
-  const tight = levelPrecision(field, routes, prior);
+  // The level's own cache: each spot weighed differs from the last by a few cells, so only those get traced again.
+  const cache = cacheFor(field);
+  // Only the plan everyone is already building counts: searching for another can take a frame's whole budget many times over.
+  if (!prior.every((b) => canPlaceBridge(field, b)) || !cache.analyze(withBridges(field, prior)).goalReached) return null;
+  const routes = analyzeRoutes(field, prior, cache);
+  const tight = levelPrecision(field, routes, prior, jumps);
   return { routes, tight, length: routes.length };
 }
 
@@ -79,11 +123,12 @@ function routeOf(m: Match): Route {
 
 const NO_ROUTE: Route = { cells: [], tight: 0, length: 0 };
 
-/** The level still has a plan (at most its bridges) with `pp` standing too. */
+/** The plan everyone is building (or what's left of it) still gets through with `pp` standing too. */
 function keepsWay(m: Match, pp: PlacedProp): boolean {
   if (pp.def.modules.some((x) => x.type === 'bomb' && !x.delay)) return true; // a blast only takes away
   const s = settled(m.level, [...m.placed, pp]);
-  return prove(s.level, s.placed, m.plan) !== null;
+  // Never searches for another plan: that runs dozens of analyses, and a bot asks this of many spots in a row.
+  return prove(s.level, s.placed, m.plan, false) !== null;
 }
 
 function selfOf(m: Match, p: Player): SelfSense | null {
@@ -91,6 +136,7 @@ function selfOf(m: Match, p: Player): SelfSense | null {
   const r = m.phase === 'run' ? run?.runners.find((x) => x.slot === p.slot) : undefined;
   if (!run || !r) return null;
   const b = r.body;
+  const it = r.items;
   const tx = Math.floor((b.x + b.w / 2) / TILE);
   const ty = Math.floor((b.y + b.h - 1) / TILE);
   const map = raceMap(run);
@@ -113,7 +159,32 @@ function selfOf(m: Match, p: Player): SelfSense | null {
     finished: r.finished,
     togo: Number.isFinite(d) ? Math.round(d / 10) : Infinity,
     away: Number.isFinite(rough) ? Math.round(rough / 10) : Infinity,
+    up: upOf(run, r),
+    slag: run.slag === null ? null : round4((run.slag - feetUp(run.level, r)) / TILE),
+    rank: rankOf(run, r),
+    held: it.held ? { ...it.held } : null,
+    armed: !!it.held && it.cooldown === 0 && it.swing === 0 && it.windup === 0 && it.daze === 0 && it.thrust === 0,
   };
+}
+
+/** Tiles of route a stop at (tx, ty) adds to `p`'s way to the goal, rounded; Infinity where no route leads through it. */
+function detourOf(m: Match, p: Player, tx: number, ty: number): number {
+  const run = m.phase === 'run' ? m.run : null;
+  const r = run?.runners.find((x) => x.slot === p.slot);
+  if (!run || !r) return Infinity;
+  const map = raceMap(run);
+  const w = map.field.w;
+  const b = r.body;
+  const hx = Math.floor((b.x + b.w / 2) / TILE);
+  const hy = Math.floor((b.y + b.h - 1) / TILE);
+  if (hx < 0 || hx >= w || hy < 0 || hy >= map.field.h || tx < 0 || tx >= w || ty < 0 || ty >= map.field.h) return Infinity;
+  const here = hy * w + hx;
+  const at = ty * w + tx;
+  const goal = m.level.goal.ty * w + m.level.goal.tx;
+  const there = map.dist(at)[here] + map.dist(goal)[at];
+  if (!Number.isFinite(there)) return Infinity;
+  const now = map.dist(goal)[here];
+  return Math.max(0, Math.round((there - (Number.isFinite(now) ? now : map.rough(goal)[here])) / 10));
 }
 
 /** The view for seat `p` of `m` this frame. */
@@ -123,6 +194,7 @@ export function senseView(m: Match, p: Player): BrainView {
   return {
     version: BRAIN_VIEW_VERSION,
     phase: m.phase,
+    mode: m.rules.mode,
     phaseFrame: m.phaseFrame,
     slot: p.slot,
     ready: p.ready,
@@ -132,8 +204,6 @@ export function senseView(m: Match, p: Player): BrainView {
       h: m.level.h,
       tiles: m.level.tiles,
       spawn: { ...m.level.spawn },
-      goal: { ...m.level.goal },
-      flag: MODES[m.rules.mode].run.flag,
       plan: m.plan.map((b) => ({ tx: b.x, ty: b.y })),
     },
     props: m.phase === 'lobby' ? [] : propsOf(m),
@@ -144,6 +214,10 @@ export function senseView(m: Match, p: Player): BrainView {
       bridge: !c.secret && isBridgePart(c.def),
       clears: !!c.clears,
     })),
+    objective: OBJECTIVES[m.rules.mode](m),
+    boxes: run ? boxesOf(run) : [],
+    drops: run ? run.items.drops.map((d) => ({ x: round4(d.x / TILE), y: round4(d.y / TILE), kind: d.kind })) : [],
+    detour: (tx, ty) => detourOf(m, p, tx, ty),
     claim: p.claim,
     placed: p.placed,
     self: selfOf(m, p),
@@ -154,6 +228,8 @@ export function senseView(m: Match, p: Player): BrainView {
             slot: r.slot,
             x: round4((r.body.x + r.body.w / 2) / TILE),
             y: round4((r.body.y + r.body.h) / TILE),
+            up: upOf(run, r),
+            grounded: r.body.onGround,
             alive: r.alive,
             finished: r.finished,
           }))

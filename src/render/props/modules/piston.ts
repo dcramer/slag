@@ -4,7 +4,7 @@ import { TILE } from '../../../sim/constants';
 import { dirOf, type ModuleOf, pistonHead, pistonState, type Resolved } from '../../../sim/props';
 import { inkFor, line } from '../../ink';
 import { bar, barLine, boxPts, dot, ovalPts, part, path, pen, sprite, stamp, tick, tone } from '../../ink-props';
-import { bulb, light, type MetalPalette, type RC } from '../../kit';
+import { bulb, light, type MetalPalette, type RC, poseFrame } from '../../kit';
 import { beamOf, defineArt, type PropDrawOpts } from '../common';
 import { bolt, type Face, faceOf, flange, flat, housed, iron, lbox, lp, ltick, tf, within } from '../machine';
 
@@ -119,7 +119,7 @@ function windup(m: Piston, f: number, phase: number): number {
 }
 
 function drawPistonShaft(rc: RC, m: Piston, r: Resolved, mi: number, off: Vec, pal: MetalPalette, o: PropDrawOpts) {
-  const st = pistonState(m, rc.frame, r.phase);
+  const st = pistonState(m, poseFrame(rc), r.phase);
   const hd = pistonHead(m, st.ext, off, beamOf(o, r, mi)?.len);
   const [dx, dy] = dirOf(m.angle);
   const s = rc.s;
@@ -135,7 +135,7 @@ function drawPistonShaft(rc: RC, m: Piston, r: Resolved, mi: number, off: Vec, p
 }
 
 function drawPistonHead(rc: RC, m: Piston, r: Resolved, mi: number, off: Vec, pal: MetalPalette, o: PropDrawOpts) {
-  const st = pistonState(m, rc.frame, r.phase);
+  const st = pistonState(m, poseFrame(rc), r.phase);
   const hd = pistonHead(m, st.ext, off, beamOf(o, r, mi)?.len);
   const s = rc.s;
   const [dx, dy] = dirOf(m.angle);

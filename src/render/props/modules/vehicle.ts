@@ -3,7 +3,7 @@ import { hash2 } from '../../../core/rng';
 import { type ModuleOf, vehicleCols, vehiclePose } from '../../../sim/props';
 import { inkFor, line, type P, stroke } from '../../ink';
 import { ball, bar, barLine, boxPts, dot, glint, ovalPts, part, path, pen, poly, type Sprite, sprite, stamp, tick, tone } from '../../ink-props';
-import { bulb, circle, flutter, glowDot, light, type MetalPalette, METALS, type RC } from '../../kit';
+import { bulb, circle, flutter, glowDot, light, type MetalPalette, METALS, type RC, poseFrame } from '../../kit';
 import { type DrawCtx, defineArt } from '../common';
 import { wheel } from './setpiece';
 
@@ -40,7 +40,7 @@ interface Frame {
 }
 
 function frameOf(rc: RC, m: Vehicle, d: DrawCtx): Frame {
-  const pose = vehiclePose(m, rc.frame, d.r.phase);
+  const pose = vehiclePose(m, poseFrame(rc), d.r.phase);
   const cols = vehicleCols(m, pose.x, d.off);
   const W = cols.length * m.colW;
   const x0 = cols[0].x;
