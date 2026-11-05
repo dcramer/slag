@@ -2,7 +2,7 @@ import { isBotDevice } from '../brain/device';
 import { tidyName } from '../core/name';
 import { nameBlocked } from '../core/name-filter';
 import { type CharacterDef, generateCharacter } from '../gen/character';
-import type { BotLevel, Match } from '../game/match';
+import type { BotLevel, Match, Player } from '../game/match';
 import { MODE_IDS } from '../game/modes';
 import { BLOOD_CHOICES, DEFAULT_RULES, DIFFICULTY_CHOICES, GRAVITY_CHOICES, type MatchRules, nearestLength, PART_VARIETIES, RULE_CHOICES } from '../game/rules';
 import { MAX_PLAYERS } from '../sim/constants';
@@ -15,8 +15,8 @@ import type { ThemeId } from '../themes';
  * per-device input goes through here.
  */
 export type NetAction =
-  /** Seat a device (rejoin with its old look, or a spectator promoted between rounds). */
-  | { t: 'join'; dev: string; char?: CharacterDef }
+  /** Seat a device (rejoin with its old look, or a spectator promoted between rounds), wearing `wear` if it can. */
+  | { t: 'join'; dev: string; char?: CharacterDef; wear?: Wear }
   /** Lobby only: a peer left; its players are parked so a rejoin gets the same look back. */
   | { t: 'leave'; dev: string }
   /** Mid-match: the device's peer disconnected (or came back). */
@@ -54,7 +54,7 @@ export type NetAction =
    * race for the last seat: a request that finds no seat free does nothing, so its sender knows it lost. In
    * the lobby and between rounds the seat is taken at once; mid-round the request queues for the boundary.
    */
-  | { t: 'seat'; dev: string; on: boolean };
+  | { t: 'seat'; dev: string; on: boolean; wear?: Wear };
 
 /** Replicated session state that isn't part of the Match (kept identical on every peer by the same actions). */
 export interface NetState {
@@ -68,7 +68,17 @@ export interface NetState {
   /** Peers watching rather than playing, by choice or for being idle. A refresh keeps it: the peer id survives one. */
   watching: Record<string, Watcher>;
   /** Seats won mid-round, taken at the next round boundary in this order. */
-  queue: { peer: string; dev: string }[];
+  queue: { peer: string; dev: string; wear?: Wear }[];
+}
+
+/**
+ * The look a person saved (a character seed, its swatch, their name), sent with the ask for a seat so they're
+ * seated already wearing it: put on after a seat rolled at random, it flickered from a stranger to them.
+ */
+export interface Wear {
+  seed: number;
+  color?: number;
+  name?: string;
 }
 
 export interface Watcher {
@@ -109,11 +119,19 @@ export function cleanCharacter(c: CharacterDef): CharacterDef {
   return typeof c.name === 'string' && c.name && !nameBlocked(c.name) ? c : { ...c, name: generateCharacter(c.seed).name };
 }
 
+/** A saved look off the wire, without a name the name filter refuses: the room never carries one. */
+export function cleanWear(w: Wear): Wear {
+  if (w.name === undefined || cleanName(w.name)) return w;
+  const { name: _, ...rest } = w;
+  return rest;
+}
+
 /**
  * A guest's action as the host passes it on to the room: a name the filter refuses goes out as the player's own
  * generated name (or none, for a watcher's label), so the room never carries it. A watch's `afk` is the host's call.
  */
 export function relayAction(m: Match, a: NetAction): NetAction {
+  if (a.t === 'seat' && a.wear) return { ...a, wear: cleanWear(a.wear) };
   if (a.t === 'watch') {
     const name = cleanName(a.name);
     return name ? { t: 'watch', dev: a.dev, on: a.on, name } : { t: 'watch', dev: a.dev, on: a.on };
@@ -192,12 +210,17 @@ export function joinOpensCard(phase: string): boolean {
   return phase !== 'lobby';
 }
 
-function seat(m: Match, ns: NetState, dev: string, char?: CharacterDef) {
+function seat(m: Match, ns: NetState, dev: string, char?: CharacterDef, wear?: Wear) {
   const peer = peerOf(dev);
   // Dropped mid-match for being gone too long and back: the same look, and the points they had.
   const park = ns.parked[peer]?.find((x) => x.dev === dev);
   const old = char ?? park?.char;
   const p = m.join(dev, old && cleanCharacter(old));
+  if (p && !old && wear) {
+    // Refused (someone here wears that toy or that name): the rolled one stays, as a `look` would leave it.
+    m.setLook(p.slot, wear.seed >>> 0, wear.color);
+    if (wear.name) setName(m, p, wear.name);
+  }
   if (p && park?.score && m.phase !== 'lobby') p.score = park.score;
   ns.queue = ns.queue.filter((q) => q.peer !== peer);
   const parked = ns.parked[peer]?.filter((x) => x.dev !== dev);
@@ -205,12 +228,19 @@ function seat(m: Match, ns: NetState, dev: string, char?: CharacterDef) {
   else delete ns.parked[peer];
 }
 
+/** A name as typed, on a seated player: one the filter refuses is the name its look came with, and one taken stays out. */
+function setName(m: Match, p: Player, typed: string) {
+  const tidy = tidyName(typed);
+  const name = nameBlocked(tidy) ? generateCharacter(p.character.seed).name : tidy;
+  if (name && !m.players.some((q) => q !== p && q.character.name === name)) m.setName(p.slot, name);
+}
+
 export function applyAction(m: Match, ns: NetState, a: NetAction): void {
   switch (a.t) {
     case 'join': {
       const peer = peerOf(a.dev);
       if (!SEAT_PHASES.has(m.phase) || m.players.length >= MAX_PLAYERS || ns.watching[peer]) return;
-      seat(m, ns, a.dev, a.char);
+      seat(m, ns, a.dev, a.char, a.wear);
       return;
     }
     case 'seat': {
@@ -238,8 +268,8 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
       }
       if (freeSeats(m, ns) <= 0) return; // lost the race: still watching
       delete ns.watching[peer];
-      if (SEAT_PHASES.has(m.phase)) seat(m, ns, a.dev);
-      else ns.queue.push({ peer, dev: a.dev });
+      if (SEAT_PHASES.has(m.phase)) seat(m, ns, a.dev, undefined, a.wear);
+      else ns.queue.push(a.wear ? { peer, dev: a.dev, wear: a.wear } : { peer, dev: a.dev });
       return;
     }
     case 'leave': {
@@ -273,11 +303,7 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
     }
     case 'name': {
       const p = m.players.find((q) => q.device === a.dev);
-      if (!p) return;
-      const typed = tidyName(a.name);
-      // Refused by the name filter: the player goes by the name its look came with.
-      const name = nameBlocked(typed) ? generateCharacter(p.character.seed).name : typed;
-      if (name && !m.players.some((q) => q !== p && q.character.name === name)) m.setName(p.slot, name);
+      if (p) setName(m, p, a.name);
       return;
     }
     case 'look': {

@@ -1,5 +1,5 @@
 /** Parts close up: crate cards at every size, placed parts in a race, and every building part. */
-import { argv, LAUNCHER_STYLES, open, opt, out, page, seed, sheet, snap, step, type Scenarios, W } from './ctx';
+import { LAUNCHER_STYLES, open, opt, out, page, seed, sheet, snap, step, type Scenarios, W, flag } from './ctx';
 
 export const shots: Scenarios = {
   async cards() {
@@ -130,7 +130,7 @@ export const shots: Scenarios = {
           });
         }
       },
-      [arch, Number(opt('count', '2')), styles, opt('aim') ?? '', argv.includes('--bait'), materials, Number(opt('rot', '0'))] as const,
+      [arch, Number(opt('count', '2')), styles, opt('aim') ?? '', flag('bait'), materials, Number(opt('rot', '0'))] as const,
     );
     await step(Number(opt('frames', '60')));
     const spots = await page.evaluate(() =>

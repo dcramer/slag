@@ -2,7 +2,7 @@ import type { Clip, Settings } from '../settings';
 import type { Part, Traced } from './trace';
 
 /**
- * The round dot-eater (docs/CHARACTERS.md → Roster, `chomper`), generated rather than modelled: it has no
+ * The round dot-eater (docs/characters/chomper.md), generated rather than modelled: it has no
  * limbs to rig. The nod is the circle with a wedge cut out of its front, pure yellow, and the chomp, so
  * the mouth opens and snaps shut through every clip. Ours: the eater got eaten, a scalloped bite out of
  * the back of the circle with its bitten edge showing, and a checked napkin tucked into the lower lip.

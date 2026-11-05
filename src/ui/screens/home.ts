@@ -103,7 +103,7 @@ export function mountHome(root: HTMLElement, nav: Nav): Unmount {
 
   const activate = (id: MenuItemId) => {
     showError('');
-    if (id === 'play') nav.go(lobby(newRoomCode()));
+    if (id === 'play') nav.go(lobby(newRoomCode(Math.random)));
     else if (id === 'lobbies') nav.go(LOBBIES);
     else if (id === 'codex') nav.go(CODEX);
     else if (id === 'settings') openSettings();

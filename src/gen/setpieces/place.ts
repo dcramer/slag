@@ -5,6 +5,7 @@ import { PLAYER_H, PLAYER_W, RUN_COUNTDOWN, TILE } from '../../sim/constants';
 import { isProtected, type Level, T_EMPTY, T_SOLID, tileAt, type TileRect } from '../../sim/level';
 import {
   AMMO,
+  cycleFrames,
   type Archetype,
   buildSolids,
   type Contrib,
@@ -242,32 +243,6 @@ function hazardHits(h: Hazard, z: Rect): boolean {
   const n = Math.max(1, Math.ceil(dhypot(h.x2 - h.x1, h.y2 - h.y1) / 4));
   for (let i = 0; i <= n; i++) if (rectCircle(z, h.x1 + ((h.x2 - h.x1) * i) / n, h.y1 + ((h.y2 - h.y1) * i) / n, h.r)) return true;
   return false;
-}
-
-/** Frames for one full cycle of every timed module and the piece's own motion (bounded). */
-export function cycleFrames(mods: readonly Module[], motion: Motion = { type: 'none' }): number {
-  let p = 120;
-  if (motion.type === 'rail') p = Math.max(p, motion.period + 2 * (motion.dwell ?? 0) * (1 + (motion.stops?.length ?? 0)));
-  if (motion.type === 'loop' || motion.type === 'track') p = Math.max(p, motion.period);
-  for (const m of mods) {
-    if (m.type === 'rotor') p = Math.max(p, m.period);
-    if (m.type === 'vehicle') p = Math.max(p, 2 * (Math.round(m.span / (m.speed / 60)) + m.pause) + 4);
-    if (m.type === 'piston') p = Math.max(p, m.period);
-    if (m.type === 'geyser') p = Math.max(p, m.off + m.warn + m.on);
-    if (m.type === 'tesla') p = Math.max(p, m.off + m.warn + m.on);
-    if (m.type === 'flame') p = Math.max(p, m.off + m.warn + m.on);
-    if (m.type === 'flood') p = Math.max(p, m.off + m.warn + m.rise + m.hold + m.fall);
-    if (m.type === 'lob') p = Math.max(p, m.off + m.warn + m.flight + Math.max(0, m.count - 1) * m.lag);
-    if (m.type === 'cavein') p = Math.max(p, m.off + m.warn + m.on);
-    if (m.type === 'cart') p = Math.max(p, m.off + m.warn + m.run + m.back);
-    if (m.type === 'sign') p = Math.max(p, m.off + m.warn + m.fall + m.live + m.lift);
-    if (m.type === 'wire') p = Math.max(p, m.off + m.warn + m.run);
-    if (m.type === 'neon') p = Math.max(p, m.off + m.warn + m.on);
-    if (m.type === 'thaw') p = Math.max(p, m.frozen + m.warn + m.open);
-    if (m.type === 'ladle') p = Math.max(p, m.off + m.warn + m.pour + m.set);
-    if (m.type === 'arm') p = Math.max(p, m.rest + m.warn + m.strike + m.weld + m.back);
-  }
-  return Math.min(p, 1600);
 }
 
 /**

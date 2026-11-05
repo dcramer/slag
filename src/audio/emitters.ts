@@ -150,6 +150,9 @@ export function collectEmitters(run: RunWorld, f: number, out: Emitter[] = []): 
           });
           return;
         }
+        default:
+          // The rest make no steady sound.
+          break;
       }
     });
   }
@@ -205,6 +208,9 @@ export function propTransients(run: RunWorld, f: number, out: PropCue[] = []): P
           });
           return;
         }
+        default:
+          // The rest make no sound of their own as they move.
+          break;
       }
     });
   }

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Rect } from '../src/core/geom';
 import { fieldOf, generateLevel, lastGenInfo, planHolds, withBridges } from '../src/gen/level';
 import { noFreeRide } from '../src/gen/level/winnable';
-import { cycleFrames } from '../src/gen/setpieces/place';
+import { cycleFrames } from '../src/sim/props';
 import { manorPlan, throneDais, throneHallPlan } from '../src/gen/stage/castle';
 import { EDGE_DRIFT } from '../src/render/ink';
 import { drawShardGlass } from '../src/render/props/modules/shards';

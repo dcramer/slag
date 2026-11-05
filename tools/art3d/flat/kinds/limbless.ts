@@ -1,7 +1,7 @@
 import type { FlatKind } from '../kinds';
 
 // Every pose keeps the gaps: he has no arms or legs, and nobody else in the cast is in pieces, so the white round
-// each glove and shoe is the read (docs/CHARACTERS.md → The limbless hero).
+// each glove and shoe is the read (docs/characters/limbless.md).
 const FLOAT = 'his two gloves and two shoes floating free of his body with white space all round each, nothing joining them to him';
 
 export const kind: FlatKind = {

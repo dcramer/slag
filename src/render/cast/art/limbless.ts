@@ -2,7 +2,7 @@ import { band, type D, type KindArt, oval, poly, tonedOval, Y } from '../kit';
 import { pair } from '../faces';
 
 /**
- * The limbless hero (docs/CHARACTERS.md → Roster): a small round body in the player's colour under a big head
+ * The limbless hero (docs/characters/limbless.md): a small round body in the player's colour under a big head
  * with a huge nose out front and a spiky tuft standing up, and nothing joining it to its white gloves and big
  * shoes, which float clear of it with background all round. The shoes are a light tone of the player's colour,
  * the far one a size bigger; the neckerchief a neutral linen. A rendered kind draws from its frames

@@ -7,6 +7,8 @@ import { VIEW_FRAME, type ViewFrame } from './frame';
 const FRAME_MARGIN = 36;
 /** Rate zoom eases back in at (per second), against 3.2 for everything else. */
 const ZOOM_IN_RATE = 1.2;
+/** Seconds between the shake's kicks: the rate it always had at 60 Hz. */
+const SHAKE_KICK = 1 / 60;
 
 /**
  * Smoothed 2D camera. Two things are handed to it and nothing else is assumed:
@@ -34,6 +36,8 @@ export class Camera {
   shake = 0;
   private sx = 0;
   private sy = 0;
+  /** The shake's last two kicks (-0.5..0.5 of `shake` a side) and seconds since the newer one: see `jolt`. */
+  private kick = { ax: 0, ay: 0, bx: 0, by: 0, t: 0 };
   /** World size in px. */
   ww = 0;
   wh = 0;
@@ -145,8 +149,24 @@ export class Camera {
     this.y = this.clampY(this.y);
     this.shake *= Math.exp(-dt * 7);
     if (this.shake < 0.05) this.shake = 0;
-    this.sx = (Math.random() - 0.5) * this.shake;
-    this.sy = (Math.random() - 0.5) * this.shake;
+    this.jolt(dt);
+  }
+
+  /**
+   * The shake's offset: a new random kick every SHAKE_KICK seconds and a straight line between them, so it
+   * jolts as hard at 144 Hz as at 60 instead of re-rolling every drawn frame.
+   */
+  private jolt(dt: number) {
+    const k = this.kick;
+    for (k.t += dt; k.t >= SHAKE_KICK; k.t -= SHAKE_KICK) {
+      k.ax = k.bx;
+      k.ay = k.by;
+      k.bx = Math.random() - 0.5;
+      k.by = Math.random() - 0.5;
+    }
+    const u = k.t / SHAKE_KICK;
+    this.sx = (k.ax + (k.bx - k.ax) * u) * this.shake;
+    this.sy = (k.ay + (k.by - k.ay) * u) * this.shake;
   }
 
   /** The hard rule behind `frameAll`: zoom out, then move, by exactly what keeps everyone in view this frame. */

@@ -5,7 +5,7 @@ import { type Level, T_SOLID, tileAt } from '../../../sim/level';
 import { type Module, type ModuleOf, swingHeads } from '../../../sim/props';
 import { blob, inkFor, line, type P } from '../../ink';
 import { bar, barLine, boxPts, dot, ovalPts, part, path, poly, sprite, stamp, tick } from '../../ink-props';
-import { circle, flame, flutter, glowDot, light, type RC } from '../../kit';
+import { circle, flame, flutter, glowDot, light, type RC, poseFrame } from '../../kit';
 import type { DrawCtx } from '../common';
 import { ashlar, BANNER, doorway, GILT, SHELL, STONE, WOOD } from './castle-ink';
 import { type Deco, flat, type Haze, hazer } from './common';
@@ -617,7 +617,7 @@ function bell(rc: RC, m: Swinger, d: DrawCtx) {
   const s = rc.s;
   const hx = m.hub[0] + d.off[0];
   const hy = m.hub[1] + d.off[1];
-  const [h] = swingHeads(m, rc.frame, d.r.phase, d.off);
+  const [h] = swingHeads(m, poseFrame(rc), d.r.phase, d.off);
   const a = h.a - Math.PI / 2;
   // The headstock: a timber beam across the pin, the rod down to the crown.
   part(s, boxPts(hx - 9, hy - 2.6, 18, 4.4, 0.6, 3, 0.1), { h: 24, s: 34, l: 26 }, 3, { depth: 0.5, thin: 0.3, thick: 0.8 });
@@ -674,7 +674,7 @@ function firebar(rc: RC, m: Swinger, d: DrawCtx) {
   const s = rc.s;
   const hx = m.hub[0] + d.off[0];
   const hy = m.hub[1] + d.off[1];
-  const [h] = swingHeads(m, rc.frame, d.r.phase, d.off);
+  const [h] = swingHeads(m, poseFrame(rc), d.r.phase, d.off);
   const mods = d.r.mods;
   // The innermost ball's module draws the bar and the pin, once per bar.
   const inner = mods.every((o) => o.type !== 'swinger' || o.hub[0] !== m.hub[0] || o.hub[1] !== m.hub[1] || o.arm >= m.arm);

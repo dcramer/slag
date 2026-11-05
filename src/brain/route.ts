@@ -2,7 +2,7 @@ import { fieldOf } from '../gen/level';
 import type { Level } from '../sim/level';
 import type { Rect } from '../core/geom';
 import { buildSolids, type Contrib, type Hazard, motionOffset, newPropState, type PlacedProp, type Resolved, traceRays } from '../sim/props';
-import { goalField } from '../sim/reach';
+import { goalField, ReachCache } from '../sim/reach';
 import type { RunWorld } from '../sim/run';
 import type { Solid } from '../sim/physics';
 import type { Wind } from '../sim/wind';
@@ -40,6 +40,25 @@ export interface RaceMap {
 }
 
 const maps = new WeakMap<RunWorld, RaceMap>();
+
+/**
+ * Careful reach traces by level, kept from race to race: a round's parts
+ * change a few cells, so a race's distance fields re-trace only those instead
+ * of the whole level inside one step. Answers never depend on what ran before.
+ */
+const traces = new Map<string, ReachCache>();
+const MAX_TRACES = 2;
+
+function tracesFor(field: Level): ReachCache {
+  const key = `${field.seed}:${field.theme.id}:${field.w}x${field.h}:${field.gravity ?? 1}`;
+  let c = traces.get(key);
+  if (c) traces.delete(key);
+  else c = new ReachCache(field, undefined, true);
+  traces.set(key, c);
+  if (traces.size > MAX_TRACES) traces.delete(traces.keys().next().value!);
+  c.rebase(field.tiles);
+  return c;
+}
 
 /** The map of `run`, made once per race (parts stand still once it starts). */
 export function raceMap(run: RunWorld): RaceMap {
@@ -88,7 +107,7 @@ function mapOf(level: Level, placed: readonly PlacedProp[], resolved: readonly R
   const cached = (cache: Map<number, Float64Array>, target: number, air: boolean) => {
     let d = cache.get(target);
     if (!d) {
-      d = goalField(field, { air, target, careful: true });
+      d = goalField(field, { air, target, careful: true, cache: tracesFor(field) });
       cache.set(target, d);
     }
     return d;

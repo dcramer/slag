@@ -252,13 +252,31 @@ export function engineList(arg: string | undefined, fallback: readonly Engine[] 
   return names as Engine[];
 }
 
-/** Tiny `--key value` / `--flag` argv reader. */
+/**
+ * Tiny `--key value` / `--flag` argv reader. A tool reads its options wherever it needs them, so there's no list to
+ * check them against up front; instead a run that ends cleanly with an option nothing read fails and names it. A
+ * typo (`--seeds` for `--seed`) or a flag this scenario ignores would otherwise do nothing, silently.
+ */
 export function argReader(argv: string[]) {
+  const asked = new Set<string>();
+  process.once('exit', (code) => {
+    if (code !== 0) return;
+    const unread = argv.filter((a) => a.startsWith('--') && !asked.has(a.slice(2)));
+    if (!unread.length) return;
+    console.error(
+      `unknown or unused option${unread.length > 1 ? 's' : ''} ${unread.join(' ')}: nothing in this run read ${unread.length > 1 ? 'them' : 'it'}. Options it did read: ${[...asked].map((k) => `--${k}`).join(' ') || 'none'}.`,
+    );
+    process.exitCode = 2;
+  });
   return {
     opt: (k: string, d?: string) => {
+      asked.add(k);
       const i = argv.indexOf(`--${k}`);
       return i >= 0 ? argv[i + 1] : d;
     },
-    flag: (k: string) => argv.includes(`--${k}`),
+    flag: (k: string) => {
+      asked.add(k);
+      return argv.includes(`--${k}`);
+    },
   };
 }

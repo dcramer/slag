@@ -2,7 +2,7 @@ import { brows, eye, mouthMark } from '../faces';
 import { type D, type KindArt, poly, spot, STEEL_SH, toned, tonedOval, Y } from '../kit';
 
 /**
- * The necktie ape (docs/CHARACTERS.md → Roster): a hunched brute, huge shoulders over a small head low and
+ * The necktie ape (docs/characters/ape.md): a hunched brute, huge shoulders over a small head low and
  * forward, arms longer than his legs with both taped fists on the floor, a pale face and chest, and a clip-on
  * tie worn crooked on the bare chest, a banana behind his ear. A rendered kind draws from its frames
  * (src/render/cast/sprites/); this is what shows before they load, and on the hand-drawn sheets.

@@ -1,13 +1,12 @@
 import 'client-only';
 import { pageAudio } from './audio/page';
-import { BotSeats } from './brain/bots';
+import { type BotBudget, BotSeats } from './brain/bots';
 import { isBotDevice } from './brain/device';
 import { parseSeed } from './core/rng';
 import { installDebug } from './debug';
 import { type GenInfo, lastGenInfo } from './gen/level';
 import { BOT_LEVELS, botLevelLabel, Match, planMisses, rulesProfile } from './game/match';
 import { roomSeed } from './game/room';
-import { loadRules, saveRules } from './game/rules';
 import { InputManager } from './input/input';
 import { TOUCH_DEVICE, touchModeFor } from './input/touch';
 import { connectRoom, type RoomConnection } from './net/client';
@@ -32,9 +31,12 @@ import { FloatingLogo } from './ui/screens/logo';
 import { detectQuality, isTouchFirst, savedQuality, saveQuality } from './ui/touch/device';
 import { TouchOverlay } from './ui/touch/overlay';
 import { loadProfile, saveProfile } from './ui/profile';
+import { loadRules, saveRules } from './ui/rule-prefs';
 
 /** About the gap between a pinch's two fingers landing, in sim frames. */
 const PINCH_WAIT_FRAMES = 6;
+/** Wall-clock ms a frame gives its bots to think, over all its steps: past it they play on with what they meant (BotBudget). */
+const BOT_THINK_MS = 3;
 
 /** One level builder for the page: its worker outlives any one lobby, so the next one starts warm. */
 let levelAhead: LevelAhead | null = null;
@@ -97,6 +99,11 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     params,
     onRejoin: () => nav.hardLoad(lobby(room)),
     name: () => loadProfile().name ?? '',
+    wear: () => {
+      const p = loadProfile();
+      if (p.look == null) return undefined;
+      return { seed: p.look, ...(p.color === undefined ? {} : { color: p.color }), ...(p.name ? { name: p.name } : {}) };
+    },
     // Back from the back/forward cache with the session closed: join the room again.
     onRestored: () => nav.hardLoad(lobby(room)),
   });
@@ -566,12 +573,15 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
   }
   /** Run the fixed steps due by `now`. Online, the session sequences inputs (host) or applies bundles (guest). */
   function advance(now: number, maxCatchUp: number) {
-    acc += Math.min(maxCatchUp, (now - last) / 1000);
+    // A guest runs a few percent fast or slow to keep its input queue on the host as deep as its link needs.
+    acc += Math.min(maxCatchUp, (now - last) / 1000) * net.pace;
     last = now;
     if (loop.paused) {
       acc = 0;
       return;
     }
+    // Every step this frame runs shares one deadline for bot thinking, catch-up steps included (BotBudget).
+    const botBudget: BotBudget = { until: performance.now() + BOT_THINK_MS, now: () => performance.now() };
     while (acc >= DT) {
       // Host-rolled per-match salt, re-rolled on entering the lobby; a host action so every peer shares it.
       if (net.isHost && !net.paused && match.phase === 'lobby' && match.phaseFrame === 0) net.act({ t: 'salt', salt: (Math.random() * 4294967296) >>> 0 });
@@ -584,7 +594,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
       nameInput(frames);
       Object.assign(
         frames,
-        bots.frames(match, (d) => net.globalDevice(d)),
+        bots.frames(match, (d) => net.globalDevice(d), botBudget),
       );
       net.tick(frames);
       acc -= DT;
@@ -636,7 +646,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     if (tp && input.touch.active && events.some((e) => e.type === 'death' && e.slot === tp.slot)) input.touch.buzz(30);
     audio.handle(events, view);
     audio.update(view, now);
-    renderer.render(view, now, events);
+    renderer.render(view, now, events, acc / DT); // drawn between the last two steps (render/blend.ts)
     pacing.frame(now, match.phase, performance.now() - start);
     requestAnimationFrame(frame);
   }
