@@ -250,6 +250,8 @@ const READS_AS: Record<Kind, string> = {
   worm: 'the worm in the super suit',
   dragon: 'the little purple dragon',
   hopper: 'the snouted cube hopper',
+  warrior: 'the round Slavic warrior',
+  slayer: 'the white-haired monster slayer',
 };
 
 /**
