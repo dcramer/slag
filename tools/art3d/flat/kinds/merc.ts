@@ -86,13 +86,15 @@ export const kind: FlatKind = {
   },
   roles: [
     { name: 'skin', color: '#f0cfa8' },
-    // The sleeveless knit top is the costume, in the player's colour; the trousers are a dark of it, far enough
-    // down that the two stay two shapes.
+    // The sleeveless knit top is the costume, in the player's colour, and the trousers a dark of it near enough to
+    // read as the same colour: at −24 they were dark trousers, and at play scale he was blond hair and a grey
+    // blade. The crossed belts between them keep the two shapes apart.
     { name: 'top', color: '#4a5ab0', slot: 'player' },
-    { name: 'pants', color: '#808080', on: 1, tone: -24 },
+    { name: 'pants', color: '#808080', on: 1, tone: -12 },
     { name: 'hair', color: '#f0d470' },
     { name: 'singe', color: '#3e3834' },
-    { name: 'brown', color: '#6b4a35' },
+    // Belts, boots and the knife's handle, a deep dark of the top: dyed leather, so the whole outfit is his colour.
+    { name: 'brown', color: '#808080', on: 1, tone: -32 },
     // A colourway is the hubcap (VARIETY.palette): chrome, a gunmetal or a gold-painted cap. Neutrals only.
     { name: 'hub', color: '#9aa0a8', alts: ['#6b7078', '#b8a070'], vary: 6 },
     { name: 'steel', color: '#c9ccd2' },
