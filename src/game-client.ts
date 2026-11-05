@@ -11,7 +11,7 @@ import { loadRules, saveRules } from './game/rules';
 import { InputManager } from './input/input';
 import { TOUCH_DEVICE, touchModeFor } from './input/touch';
 import { connectRoom, type RoomConnection } from './net/client';
-import { joinOpensCard } from './net/actions';
+import { joinOpensCard, localOf } from './net/actions';
 import { SNAP_VERSION } from './net/snapshot';
 import type { Nav, Unmount } from './router';
 import { HOME, lobby } from './routes';
@@ -102,7 +102,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
   });
   const net = conn.net;
   const myDevice = () => net.globalDevice(input.pointerDevice);
-  const localDev = (d: string) => (net.isLocal(d) && d.includes(':') ? d.slice(d.indexOf(':') + 1) : d);
+  const localDev = (d: string) => (net.isLocal(d) ? localOf(d) : d);
   /** Bots this machine runs: seated as its own devices, so their inputs travel like a second keyboard's. */
   const bots = new BotSeats();
   renderer.hud.ownsBot = (d) => net.isLocal(d) && bots.has(localDev(d));

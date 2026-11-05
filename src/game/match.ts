@@ -133,6 +133,8 @@ const CURSOR_SPEED_MAX = 640;
 const CURSOR_RAMP_FRAMES = 24;
 
 const SCORE_FRAMES = 60 * 4;
+/** Frames at the start of pick and place in which a confirm does nothing (Match.acceptsConfirm). */
+const CONFIRM_DELAY = 10;
 /** New Level presses kept ready: more than anyone gets through before the worker catches up. */
 const REROLLS_AHEAD = 3;
 
@@ -568,6 +570,14 @@ export class Match {
     this.setPhase('place');
   }
 
+  /**
+   * A confirm in the first CONFIRM_DELAY frames of pick or place does nothing. One gate for everyone who asks: a guest
+   * predicting its own claim (net/session.ts) and a bot deciding when to click, or they act on clicks the match refuses.
+   */
+  acceptsConfirm(): boolean {
+    return this.phaseFrame > CONFIRM_DELAY;
+  }
+
   crateItemAt(x: number, y: number): number {
     return this.crate.findIndex((c) => x >= c.rect.x && x < c.rect.x + c.rect.w && y >= c.rect.y && y < c.rect.y + c.rect.h);
   }
@@ -577,11 +587,11 @@ export class Match {
       const inp = this.input(p, inputs);
       this.moveCursor(p, inp);
       if (!this.rules.pickSeconds && p.claim < 0 && this.idleFrames(p) >= IDLE_FRAMES) p.afk = true; // a timer already ends the wait
-      if (this.gone(p) && p.claim < 0 && this.phaseFrame > 10) {
+      if (this.gone(p) && p.claim < 0 && this.acceptsConfirm()) {
         const i = this.crate.findIndex((c) => c.claimedBy < 0);
         if (i >= 0) this.claim(p, i);
       }
-      if (p.claim < 0 && inp.confirmPressed && this.phaseFrame > 10) {
+      if (p.claim < 0 && inp.confirmPressed && this.acceptsConfirm()) {
         const i = this.crateItemAt(p.cursor.x, p.cursor.y);
         if (i >= 0 && this.crate[i].claimedBy < 0) this.claim(p, i);
       }
@@ -703,7 +713,7 @@ export class Match {
       const inp = this.input(p, inputs);
       this.moveCursor(p, inp);
       if (inp.altPressed) p.rot = (p.rot + 1) % 4;
-      if (inp.confirmPressed && this.phaseFrame > 10) {
+      if (inp.confirmPressed && this.acceptsConfirm()) {
         const g = this.ghostOrigin(p);
         if (g?.ok) {
           const bomb = g.def.modules.find((m) => m.type === 'bomb');

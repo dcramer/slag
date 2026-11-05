@@ -2,10 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { Match } from '../src/game/match';
 import { DEFAULT_RULES, loadRules, type MatchRules, saveRules } from '../src/game/rules';
 import { rollKind } from '../src/gen/level/weather';
-import { applyAction, type NetAction, newNetState, sanitizeRules } from '../src/net/actions';
+import { applyAction, newNetState, sanitizeRules } from '../src/net/actions';
 import { cloneSnap, hashMatch, restoreMatch, snapshotMatch } from '../src/net/snapshot';
 import { NetSession } from '../src/net/session';
 import { LoopbackHub } from '../src/net/transport';
+import { parseAction } from '../src/net/wire';
 import { levelKey } from '../src/sim/level';
 
 /** A legal value other than the default for every rule. Add a rule and this test fails until it says so. */
@@ -220,7 +221,11 @@ describe('level-shaping rules in the lobby', () => {
   });
 });
 
-const levelAct = (m: Match, seed: number, theme: unknown) => applyAction(m, newNetState(), { t: 'level', seed, theme } as NetAction);
+/** A level action as it comes off the wire: what doesn't parse never reaches the match. */
+const levelAct = (m: Match, seed: number, theme: unknown) => {
+  const a = parseAction({ t: 'level', seed, theme });
+  if (a) applyAction(m, newNetState(), a);
+};
 
 describe('choosing the lobby level', () => {
   it('builds the chosen seed in the chosen theme, and everyone readies again', () => {
