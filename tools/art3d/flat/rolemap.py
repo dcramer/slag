@@ -52,8 +52,80 @@ for y in range(h):
         if not bg[i]:
             role[i] = ROLES.index(nearest(px[x, y]))
 
-# Thick black is a fill (ear tips, cord, eyes); thin black is the ink line. An opening keeps only the thick.
 D = ROLES.index(INK)
+
+# Glinted pupils (`eyes.glint`, which build.ts passes as `glint`): a pupil drawn as an ink ring round a white glint
+# is thin all round, so the opening below would take it for line and the pupil would go. Each patch of other
+# colours closed in by the ink alone, no bigger than `glint` world px² and in the eyes' band, is filled with the
+# ink first, so the pupil is one solid speck. An eye white closed in by the outline and the pupil is far bigger.
+# Then every round speck of ink on its own in the band, up to an eye's size (`eyes.area`), is kept a fill: a small
+# pupil is narrower than `ink` too, and the opening would take it for line all the same.
+GLINT = KIND.get('glint')
+if GLINT:
+    GLINT, (b0, b1), PUPIL = GLINT['area'], GLINT['band'], GLINT['pupil']
+    ys0 = [i // w for i in range(w * h) if role[i] >= 0]
+    top0, low0 = min(ys0), max(ys0)
+    # World px per image px, before the line is split: near enough to size a glint by.
+    loose0 = {ROLES.index(n) for n in LOOSE}
+    k0 = float(SIZE[1:]) / (low0 - top0 + 1) if SIZE[0] == 'h' else (float(SIZE[1:]) / sum(1 for r in role if r >= 0 and r not in loose0)) ** 0.5
+    y0g, y1g = top0 + (low0 - top0) * b0, top0 + (low0 - top0) * b1
+    seen = bytearray(w * h)
+    filled = 0
+    for i0 in range(w * h):
+        if seen[i0] or role[i0] < 0 or role[i0] == D or not (y0g <= i0 // w <= y1g):
+            continue
+        patch = [i0]
+        seen[i0] = 1
+        shut = True
+        big = False
+        for i in patch:
+            x, y = i % w, i // w
+            for j in ((i - 1) if x > 0 else -1, (i + 1) if x < w - 1 else -1, i - w if y > 0 else -1, i + w if y < h - 1 else -1):
+                if j < 0:
+                    shut = False
+                elif role[j] < 0:
+                    shut = False
+                elif role[j] != D and not seen[j]:
+                    seen[j] = 1
+                    patch.append(j)
+            if len(patch) * k0 * k0 > GLINT:
+                big = True
+        # A glint is white: a patch with no light in it is a colour closed in by ink (a stripe, a scrap).
+        if shut and not big and any(min(px[i % w, i // w]) >= 200 for i in patch):
+            filled += 1
+            for i in patch:
+                role[i] = D
+            gx = sum(i % w for i in patch) / len(patch)
+            gy = sum(i // w for i in patch) / len(patch)
+            print(f'glint {len(patch) * k0 * k0:.3f} px² at {gx:.0f},{gy:.0f} (band {(gy - top0) / (low0 - top0):.2f})')
+    print('glints', filled)
+    # Round lone specks of ink in the band: each 8-connected patch of it, as full of its box as a disc nearly is.
+    pupil = bytearray(w * h)
+    seen = bytearray(w * h)
+    for i0 in range(w * h):
+        if seen[i0] or role[i0] != D or not (y0g <= i0 // w <= y1g):
+            continue
+        patch = [i0]
+        seen[i0] = 1
+        for i in patch:
+            x, y = i % w, i // w
+            for dy in (-1, 0, 1):
+                for dx in (-1, 0, 1):
+                    xx, yy = x + dx, y + dy
+                    j = yy * w + xx
+                    if 0 <= xx < w and 0 <= yy < h and not seen[j] and role[j] == D:
+                        seen[j] = 1
+                        patch.append(j)
+        if len(patch) * k0 * k0 > PUPIL:
+            continue
+        xs = [i % w for i in patch]
+        ys = [i // w for i in patch]
+        bw, bh = max(xs) - min(xs) + 1, max(ys) - min(ys) + 1
+        if len(patch) >= 0.6 * bw * bh and max(bw, bh) <= 2 * min(bw, bh):
+            for i in patch:
+                pupil[i] = 1
+
+# Thick black is a fill (ear tips, cord, eyes); thin black is the ink line. An opening keeps only the thick.
 dark = Image.new('L', (w, h))
 dark.putdata([255 if r == D else 0 for r in role])
 OPEN = int(sys.argv[5]) if len(sys.argv) > 5 else 9
@@ -63,7 +135,7 @@ LINE = -2
 for y in range(h):
     for x in range(w):
         i = y * w + x
-        if role[i] == D and not fd[x, y]:
+        if role[i] == D and not fd[x, y] and not (GLINT and pupil[i]):
             role[i] = LINE
 # Thin grey is the line's antialiased edge, not tin: tin is only where it's thick (the tail, the tape, the bolt).
 for T in [ROLES.index(n) for n in THIN]:
@@ -106,14 +178,21 @@ for i in range(w * h):
     if ok and len(seen) == 1:
         interior[i] = seen.pop() + 1
 # The line goes to whichever region reaches it first: a multi-source flood, so it splits down its middle.
-q = deque(i for i in range(w * h) if role[i] >= 0)
-while q:
-    i = q.popleft()
-    x, y = i % w, i // w
-    for j in ((i - 1) if x > 0 else -1, (i + 1) if x < w - 1 else -1, i - w if y > 0 else -1, i + w if y < h - 1 else -1):
-        if j >= 0 and role[j] == LINE:
-            role[j] = role[i]
-            q.append(j)
+wasline = bytearray(1 if r == LINE else 0 for r in role)
+
+
+def split_line():
+    q = deque(i for i in range(w * h) if role[i] >= 0)
+    while q:
+        i = q.popleft()
+        x, y = i % w, i // w
+        for j in ((i - 1) if x > 0 else -1, (i + 1) if x < w - 1 else -1, i - w if y > 0 else -1, i + w if y < h - 1 else -1):
+            if j >= 0 and role[j] == LINE:
+                role[j] = role[i]
+                q.append(j)
+
+
+split_line()
 # Line with no colour beside it (a stray stroke off the figure) is background.
 role = [-1 if r == LINE else r for r in role]
 
@@ -135,22 +214,38 @@ print('body', round(body * k * k, 1), 'height', round((bottom - top + 1) * k, 2)
 # each patch of near-white over `holes` world px² made background again, so the build cuts it through.
 # Off unless the kind asks: on a white goose the body itself is a closed-in white.
 HOLES = KIND.get('holes')
+# `white`: how light a pixel of a hole may be and still count as its background (default 228, the border's own
+# test). Lower takes in the antialiased rim round a hole, and the ink beside it then goes to the figure, as the
+# outline's does outside, not to a white rim inside the hole. A patch is a hole only if most of it passes the
+# border's test, so a white body (all of it under that) never is.
+WHITE = KIND.get('white', 228)
 if HOLES:
     seen = bytearray(w * h)
+    cut = False
     for i0 in range(w * h):
-        if bg[i0] or seen[i0] or min(px[i0 % w, i0 // w]) < 228:
+        if bg[i0] or seen[i0] or min(px[i0 % w, i0 // w]) < WHITE:
             continue
         patch = [i0]
         seen[i0] = 1
         for i in patch:
             x, y = i % w, i // w
             for j in ((i - 1) if x > 0 else -1, (i + 1) if x < w - 1 else -1, i - w if y > 0 else -1, i + w if y < h - 1 else -1):
-                if j >= 0 and not seen[j] and not bg[j] and min(px[j % w, j // w]) >= 228:
+                if j >= 0 and not seen[j] and not bg[j] and min(px[j % w, j // w]) >= WHITE:
                     seen[j] = 1
                     patch.append(j)
+        if WHITE < 228 and sum(1 for i in patch if min(px[i % w, i // w]) >= 228) * 2 < len(patch):
+            continue
         if len(patch) * k * k >= HOLES:
+            cut = True
             for i in patch:
                 role[i] = -1
+    # The ink split again with the holes open: what went to a hole's white goes to the figure beside it.
+    if cut and 'white' in KIND:
+        for i in range(w * h):
+            if wasline[i] and role[i] >= 0:
+                role[i] = LINE
+        split_line()
+        role = [-1 if r == LINE else r for r in role]
 
 W, H = (BOX['x1'] - BOX['x0']) * R, (BOX['y1'] - BOX['y0']) * R
 out = [-1] * (W * H)

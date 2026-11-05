@@ -11,7 +11,11 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { trace } from '../page/trace';
 import { BOX, type Settings } from '../settings';
-import { FLAT_KINDS, type FlatClip, posePrompt } from './kinds';
+import { FLAT_KINDS, type FlatClip, type FlatKind, posePrompt } from './kinds';
+
+/** What `rolemap.py` reads: the kind's map, and its eyes' glint (`eyes.glint`) with the band and the pupil size it's looked for at. */
+const mapFor = (k: FlatKind) =>
+  JSON.stringify(k.eyes?.glint ? { ...k.map, glint: { area: k.eyes.glint, band: k.eyes.band ?? [0, 0.5], pupil: k.eyes.area[1] } } : k.map);
 
 const [first, second, third] = process.argv.slice(2);
 // `build.ts pose KIND NAME`: the prompt for one pose drawing (Tripo `image … --ref design.png`).
@@ -21,13 +25,28 @@ if (first === 'pose') {
   console.log(posePrompt(p.pose, p.far));
   process.exit(0);
 }
+// `build.ts cut KIND SHEET NAME… [--design | --scale K] [--pad P]`: a sheet of poses drawn side by side, cut into
+// `art/sprites/KIND/flat/NAME.png` left to right (`skip` drops one), each at its drawn scale or all by one factor.
+if (first === 'cut') {
+  const args = process.argv.slice(5);
+  const names = args.filter((a, i) => !a.startsWith('--') && !(i && ['--scale', '--pad'].includes(args[i - 1])));
+  const opts = args.flatMap((a, i) => (a === '--scale' || a === '--pad' ? [a, args[i + 1]] : []));
+  if (!second || !third || !names.length)
+    throw new Error('build.ts cut KIND SHEET NAME… [--design | --scale K] [--pad P]: name each figure left to right, `skip` to drop one.');
+  const flat = resolve('art/sprites', second, 'flat');
+  mkdirSync(flat, { recursive: true });
+  const outs = names.map((n) => (n === 'skip' ? 'skip' : resolve(flat, `${n}.png`)));
+  const to = args.includes('--design') ? ['--to', resolve('art/sprites', second, 'design.png')] : [];
+  execFileSync('python3', ['-I', resolve('tools/art3d/flat/cut.py'), resolve(third), ...outs, ...to, ...opts], { stdio: 'inherit' });
+  process.exit(0);
+}
 // `build.ts body KIND HEIGHT`: the body size (`FlatKind.body`) that draws the design HEIGHT world px tall.
 if (first === 'body') {
   const k = FLAT_KINDS[second];
   if (!k) throw new Error(`No flat kind "${second}" in tools/art3d/flat/kinds/: add tools/art3d/flat/kinds/${second}.ts (any body) first.`);
   const dir = resolve('.cache/flat', second);
   mkdirSync(dir, { recursive: true });
-  writeFileSync(resolve(dir, 'map.json'), JSON.stringify(k.map));
+  writeFileSync(resolve(dir, 'map.json'), mapFor(k));
   const said = execFileSync(
     'python3',
     [
@@ -295,7 +314,7 @@ function frameOf(name: string, clip: FlatClip): Frame {
   const png = name === 'idle' ? resolve(art, 'design.png') : resolve(art, 'flat', `${name}.png`);
   const json = resolve(cache, `${name}.json`);
   const look = resolve(cache, 'map.json');
-  writeFileSync(look, JSON.stringify(spec.map));
+  writeFileSync(look, mapFor(spec));
   execFileSync(
     'python3',
     ['-I', resolve('tools/art3d/flat/rolemap.py'), png, json, resolve(cache, `${name}.png`), `a${spec.body}`, String(spec.map.ink ?? 9), '12', look],
